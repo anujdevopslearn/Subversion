@@ -2857,90 +2857,125 @@ sub displayResultSet {
 
     #### If the desired output format is Cytoscape, prepare a temp directory
     #### for the files and return the jnlp xml
-   
+
     if ($self->output_mode() eq 'cytoscape' && defined($cytoscape)) {
-      if ( ! -d "$PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/" &&
-      		$cytoscape->{cytoscape_type} ne 'cytoscape_ps') {
-	mkdir("$PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/") ||
-	  die("ERROR: Unable to mkdir $PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/");
-      }
 
+      my $template = $cytoscape->{template} || die("ERROR: Cytoscape template not defined");
       my $identifier = $rs_params_ref->{'set_name'} || 'unknown';
-      if ( ! -d "$PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/$identifier" &&
-      		 $cytoscape->{cytoscape_type} ne 'cytoscape_ps') {
-	mkdir("$PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/$identifier") ||
-	  die("ERROR: Unable to mkdir $PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/$identifier");
+
+      #### Try to create the predicted nested directory structure to hold files
+      my $tmp_base_dir = "$PHYSICAL_BASE_DIR/tmp";
+      my $tmp_html_base_dir = "$HTML_BASE_DIR/tmp";
+      my @subdirs = ( $SBEAMS_SUBDIR,$template,'jws',$identifier );
+      foreach my $subdir ( @subdirs ) {
+	$tmp_base_dir .= "/$subdir";
+	$tmp_html_base_dir .= "/$subdir";
+	if ( ! -d $tmp_base_dir ) {
+	  mkdir($tmp_base_dir) ||
+	    die("ERROR: Unable to mkdir '$tmp_base_dir'");
+	}
       }
 
-      #select the out folder, Currently must deside if this a Immunostain/SummarizeStains or Microarray/GetExpression session to
-      #launch the ps_cyctoscape flavor 
-	my $out_folder = "";
-  	if (defined $cytoscape->{cytoscape_type} && $cytoscape->{cytoscape_type} eq 'cytoscape_ps'){
-		$out_folder = "$PHYSICAL_BASE_DIR/tmp/Microarray/GetExpression/jws/$identifier";
-	}else{
-		$out_folder = "$PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/$identifier";
-	}
-     
-      my $template = $cytoscape->{template};
-      system("/bin/cp -p $PHYSICAL_BASE_DIR/lib/cytoscape/$SBEAMS_SUBDIR/$template/* $out_folder/");
-      
-        
+
+      ### Copy the template to the working directory
+      system("/bin/cp -p $PHYSICAL_BASE_DIR/lib/cytoscape/$SBEAMS_SUBDIR/$template/* $tmp_base_dir/");
+
+
+      #### Dump out the stored data arrays to files
       foreach my $file (keys %{$cytoscape->{files}}) {
-	my $outfile = "$out_folder/$file";
+	my $outfile = "$tmp_base_dir/$file";
 	
-	open(OUTFILE,">$outfile") || die("ERROR: Unable to open file $outfile");
+	open(OUTFILE,">$outfile") || die("ERROR: Unable to open file '$outfile'");
 	foreach my $line ( @{$cytoscape->{files}->{$file}} ) {
 	  print OUTFILE "$line\n" if (defined($line));
 	}
 	close(OUTFILE);
-
       }
 
- 
+
+      #### Update the makefile
+      my $infile = "$tmp_base_dir/makefile";
+      my $buffer = '';
+      open(INFILE,$infile) || die("ERROR: Unable to open '$infile'");
+      while (my $line = <INFILE>) {
+        $line =~ s/\$JAVA_PATH/$CONFIG_SETTING{JAVA_PATH}/;
+        $line =~ s/\$KEYSTORE_FILE/$CONFIG_SETTING{JNLP_KEYSTORE}/;
+        $line =~ s/\$KEYSTORE_PASSWD/$CONFIG_SETTING{KEYSTORE_PASSWD}/;
+        $line =~ s/\$KEYSTORE_ALIAS/$CONFIG_SETTING{KEYSTORE_ALIAS}/;
+	if ($line =~ /\$ALLFILESHERE/) {
+	  $line = "\t\t".join(" \\\n\t\t",keys(%{$cytoscape->{files}}))."\n";
+	}
+	$buffer .= $line;
+      }
+      close(INFILE);
+      open(OUTFILE,">$infile") || die("ERROR: Unable to open '$infile' for writing");
+      print OUTFILE $buffer;
+      close(OUTFILE);
+
+
+      #### Update the project-jnlp file
+      my $infile = "$tmp_base_dir/project-jnlp";
+      my $buffer = '';
+      open(INFILE,$infile) || die("ERROR: Unable to open '$infile'");
+      while (my $line = <INFILE>) {
+	if ($line =~ /\$ALLFILESHERE/) {
+	  foreach my $file ( keys(%{$cytoscape->{files}}) ) {
+	    if ($file =~ /^.+\.(\w+)$/) {
+	      $buffer .= "$1=jar://$file\n";
+	    }
+	  }
+	  $line = '';
+	}
+	$buffer .= $line;
+      }
+      close(INFILE);
+      open(OUTFILE,">$infile") || die("ERROR: Unable to open '$infile' for writing");
+      print OUTFILE $buffer;
+      close(OUTFILE);
+
+
       #### Make the data.jar
-      system("( cd $out_folder/ ; /usr/bin/make >& make.out )");
+      system("( cd $tmp_base_dir ; /usr/bin/make >& make.out )");
 
       ##Redirect to the gaggle version of cytoscape if we need to
       if(defined $cytoscape->{cytoscape_type} && $cytoscape->{cytoscape_type} eq 'cytoscape_ps'){
-      
-	my $url = "$HTML_BASE_DIR/tmp/Microarray/GetExpression/jws/$identifier/index.html";
-	
+	my $url = "$tmp_html_base_dir/index.html";
 	print $q->redirect("$url");
-      
+	return;
       }
-      
+
+
       #### If the invocation_mode is http, provide a header
       if ($self->invocation_mode() eq 'http') {
         print "Content-type: application/x-java-jnlp-file\n\n";
       }
 
-     
-      #### Update the jnlp file with the latest information
-     	 my $infile = "$PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/$identifier/cytoscape.jnlp";
-     	 open(INFILE,$infile) || die("ERROR: Unable to open $infile");
-     	my $buffer = '';
-     	 while (my $line = <INFILE>) {
-		if ($line =~ /codebase=/) {
-		  $line =~ s~codebase=\".+\"~codebase="$SERVER_BASE_DIR/$HTML_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/$identifier"~;
-		}elsif($line =~ /CYTOSCAPE_JAR_HOOK/){
-			$line =~ s~CYTOSCAPE_JAR_HOOK~$SERVER_BASE_DIR/$HTML_BASE_DIR/usr/java/share/Cytoscape/cytoscape_1.0.jar~;
-		}
-		
-		$buffer .= $line;
-     	 }
-      	close(INFILE);
-      	open(OUTFILE,">$infile") || die("ERROR: Unable to open $infile for writing");
-      	print OUTFILE $buffer;
-      	close(OUTFILE);
-    
-      #### Send the jnlp xml
-      print $buffer;
-     
-     
 
-     
+      #### Update the jnlp file with the latest information
+      $infile = "$tmp_base_dir/cytoscape.jnlp";
+      $buffer = '';
+      open(INFILE,$infile) || die("ERROR: Unable to open '$infile'");
+      while (my $line = <INFILE>) {
+	if ($line =~ /codebase=/) {
+	  $line =~ s~codebase=\".+\"~codebase="$SERVER_BASE_DIR/$tmp_html_base_dir"~;
+	}elsif($line =~ /CYTOSCAPE_JAR_HOOK/){
+	  $line =~ s~CYTOSCAPE_JAR_HOOK~$SERVER_BASE_DIR/$HTML_BASE_DIR/usr/java/share/Cytoscape/cytoscape_1.0.jar~;
+	}
+		
+	$buffer .= $line;
+      }
+
+      close(INFILE);
+      open(OUTFILE,">$infile") || die("ERROR: Unable to open $infile for writing");
+      print OUTFILE $buffer;
+      close(OUTFILE);
+
+
+      #### Send the jnlp xml to the client
+      print $buffer;
+
       return;
-    }
+    } # end if cytoscape format
 
 
     #### If a printable table was desired, use one format
