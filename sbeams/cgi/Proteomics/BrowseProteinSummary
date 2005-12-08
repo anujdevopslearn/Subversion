@@ -195,7 +195,8 @@ sub handle_request {
   #### Set some reasonable defaults if no parameters supplied
   unless ($n_params_found) {
     $parameters{input_form_format} = "minimum_detail";
-    $parameters{protein_group_probability_constraint} = '>0.7';
+    $parameters{protein_group_probability_constraint} = '>=0.9';
+    $parameters{protein_probability_constraint} = '>=0.9';
   }
 
 
@@ -731,6 +732,21 @@ sub handle_request {
     );
 
 
+    #### Create Cytoscape format files if selected
+    my $cytoscape = { template => 'BrowseProteinSummary' };
+    if ($sbeams->output_mode() eq 'cytoscape') {
+      prepareCytoscapeFiles(
+        rs_params_ref=>\%rs_params,
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
+        url_cols_ref=>\%url_cols,
+        column_titles_ref=>\@column_titles,
+        hidden_cols_ref=>\%hidden_cols,
+        cytoscape=>$cytoscape,
+      );
+    }
+
+
     #### Display the resultset
     $sbeams->displayResultSet(
       resultset_ref=>$resultset_ref,
@@ -741,6 +757,7 @@ sub handle_request {
       max_widths=>\%max_widths,
       column_titles_ref=>\@column_titles,
       base_url=>$base_url,
+      cytoscape=>$cytoscape,
     );
 
 
@@ -750,6 +767,7 @@ sub handle_request {
       query_parameters_ref=>\%parameters,
       rs_params_ref=>\%rs_params,
       base_url=>$base_url,
+      cytoscape=>$cytoscape,
     );
 
 
@@ -1211,4 +1229,97 @@ sub getURLColumns {
   return %url_cols;
 
 }
+
+
+
+###############################################################################
+# prepareCytoscapeFiles
+#
+# Prepares the required noa and sif files for this dataset
+###############################################################################
+sub prepareCytoscapeFiles {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $resultset_ref = $args{'resultset_ref'};
+  my $rs_params_ref = $args{'rs_params_ref'};
+  my $query_parameters_ref = $args{'query_parameters_ref'};
+  my $url_cols_ref = $args{'url_cols_ref'};
+  my $hidden_cols_ref = $args{'hidden_cols_ref'};
+  my $column_titles_ref = $args{'column_titles_ref'};
+  my $cytoscape = $args{'cytoscape'};
+  my %rs_params = %{$rs_params_ref};
+  my %parameters = %{$query_parameters_ref};
+
+
+  #### Set up some data data structures to hold Cytoscape data
+  my %cytoscape_file_header = ( 'network.sif' => undef,
+				'commonName.noa' => 'commonName',
+				'organism.noa' => 'species',
+				'webLookup.noa' => 'web lookup',
+			      );
+  while ( my ($filename,$header_name) = each %cytoscape_file_header ) {
+    my @tmp = ( $header_name );
+    $cytoscape->{files}->{$filename} = \@tmp;
+  }
+
+  #### Also include all other columns
+  my $all_columns = $resultset_ref->{column_list_ref};
+  my $i=0;
+  foreach my $column ( @{$all_columns} ) {
+    my $title = $column_titles_ref->[$i++];
+    next if (defined($hidden_cols_ref->{$title}));
+    my @tmp = ( $title || $column );
+    $cytoscape->{files}->{"$column.noa"} = \@tmp;
+  }
+
+
+  my $nrows = scalar(@{$resultset_ref->{data_ref}});
+  my $col = $resultset_ref->{column_hash_ref};
+  foreach my $row ( @{$resultset_ref->{data_ref}} ) {
+
+    #### Determine the best canonical name. We must have one
+    my $canonical_name = $row->[$col->{canonical_name}];
+    unless ($canonical_name) {
+      $canonical_name = $row->[$col->{biosequence_name}];
+    }
+
+    #### Write an attributes file for organism
+    my $organism = $row->[$col->{organism}];
+    push(@{$cytoscape->{files}->{'organism.noa'}},
+      "$canonical_name = $organism") if ($organism);
+
+
+    #### Write an attributes file for the common name
+    my $biosequence_name = $row->[$col->{biosequence_name}];
+    push(@{$cytoscape->{files}->{'commonName.noa'}},
+      "$canonical_name = $biosequence_name") if ($biosequence_name);
+
+    #### We have no interaction information, so just list all proteins
+    push(@{$cytoscape->{files}->{'network.sif'}},
+      "$canonical_name");
+
+    #### Create a protein web lookup attribute
+    if (defined($col->{biosequence_name}) &&
+	defined($col->{accessor}) && defined($col->{accessor_suffix})) {
+      push(@{$cytoscape->{files}->{'webLookup.noa'}},
+      "$canonical_name = $row->[$col->{accessor}]$biosequence_name$row->[$col->{accessor_suffix}]");
+    }
+
+    $i=0;
+    foreach my $column ( @{$all_columns} ) {
+      my $title = $column_titles_ref->[$i++];
+      my $value = $row->[$col->{$column}];
+      next if (defined($hidden_cols_ref->{$title}));
+      push(@{$cytoscape->{files}->{"$column.noa"}},
+        "$canonical_name = $value") if ($value);
+    }
+
+
+  } # end foreach my $row
+
+
+} # end prepareCytoscapeFiles
+
+
 
