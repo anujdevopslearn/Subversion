@@ -183,7 +183,9 @@ $SBEAMS/var/Microarray/Affy_data \
 $SBEAMS/var/Microarray/Affy_data/probe_data \
 $SBEAMS/var/Microarray/Affy_data/probe_data/external \
 $SBEAMS/var/Microarray/Affy_data/delivery \
-$SBEAMS/var/Microarray/Affy_data/annotation
+$SBEAMS/var/Microarray/Affy_data/annotation \
+$SBEAMS/tmp/Microarray/Make_MEV_jws_files \
+$SBEAMS/tmp/Microarray/Make_MEV_jws_files/jws
 
 chgrp -R sbeams $SBEAMS/tmp/Microarray; chgrp -R sbeams $SBEAMS/var/Microarray;
 chmod -R g+ws $SBEAMS/tmp/Microarray; chmod -R g+ws $SBEAMS/var/Microarray;
@@ -306,7 +308,7 @@ wget http://www.sbeams.org/sample_data/Microarray/Affy_test_data.tar.gz
 
 You can check the integrity of the downloads with the md5sum command:
 >md5sum External_test_data.tar.gz
-9dd1227992ddc99684ced06f08d637a0  External_test_data.tar.gz
+c3dcfff0526aaa9b0fa127f6f5c36e56  External_test_data.tar.gz
 
 >md5sum Affy_test_data.tar.gz
 04d81273f454701e74526b450e79b740  Affy_test_data.tar.gz
@@ -321,19 +323,19 @@ tar xvfz Affy_test_data.tar.gz
 ## Note that the directories below are based on the default directory structure,
 ## you may need to modify the paths if you've changed anything.
 
--Move the annotation file to annotation directory
-mv External_test_data/HG-U133A_annot.csv $SBEAMS/var/Microarray/Affy_data/annotation/
-mv Affy_test_data/HG-U133_Plus_2_annot.csv $SBEAMS/var/Microarray/Affy_data/annotation/
+-Copy the annotation file to annotation directory
+cp External_test_data/HG-U133A_annot.csv $SBEAMS/var/Microarray/Affy_data/annotation/
+cp Affy_test_data/HG-U133_Plus_2_annot.csv $SBEAMS/var/Microarray/Affy_data/annotation/
  
 - Make the folders to hold the CEL files
 mkdir $SBEAMS/var/Microarray/Affy_data/probe_data/external/External_test
 mkdir $SBEAMS/var/Microarray/Affy_data/probe_data/200404
 
-- Move the the CEL files and info file to the test folder
-mv External_test_data/* $SBEAMS/var/Microarray/Affy_data/probe_data/external/External_test/
+- Copy the the CEL files and info file to the test folder
+cp External_test_data/* $SBEAMS/var/Microarray/Affy_data/probe_data/external/External_test/
 
--Move All the files CEL, XML, RPT files from the Affy_test_data to the data folder
-mv Affy_test_data/* $SBEAMS/var/Microarray/Affy_data/probe_data/200404/
+-Copy All the files CEL, XML, RPT files from the Affy_test_data to the data folder
+cp Affy_test_data/* $SBEAMS/var/Microarray/Affy_data/probe_data/200404/
 
 ########################
 (logged in as your user account)
@@ -562,7 +564,7 @@ vi transformation_info.inc.php
 - Change the following variables to point to where the files are installed
 Example, Change $SBEAMS to suit your needs
 $URL_BASE  = "http://<$SBEAMS>/doc/Microarray/affy_help_pages"
-$BASE_PATH = "<$SBEAMS>/doc/Microarray/affy_help_pages"
+$BASE_PATH = "<$SBEAMS>/doc/Microarray/affy_help_pages/Affy_help"
 
 $HOME_PAGE_URL = "<Local intra-net page>"
 
