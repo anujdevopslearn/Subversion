@@ -20,6 +20,7 @@ use strict;
 use Getopt::Long;
 use XML::Xerces;
 use FindBin;
+use Data::Dumper;
 use lib "$FindBin::Bin/../../perl";
 
 use vars qw ($sbeams $sbeamsMOD $q
@@ -208,11 +209,166 @@ sub unhandled {
 }
 
 
-
 ###############################################################################
 # start_element
 ###############################################################################
 sub start_element {
+  my ($self,$uri,$localname,$qname,$attrs) = @_;
+
+  if ($self->{document_type} eq 'pepXML') {
+    pepXML_start_element(@_);
+  } elsif ($self->{document_type} eq 'protXML') {
+    protXML_start_element(@_);
+  } else {
+    die("ERROR: Unknown document_type '$self->{document_type}'");
+  }
+
+  return(1);
+}
+
+
+###############################################################################
+# pepXML_start_element
+###############################################################################
+sub pepXML_start_element {
+  my ($self,$uri,$localname,$qname,$attrs) = @_;
+
+  #### Make a hash to of the attributes
+  my %attrs = $attrs->to_hash();
+
+  #### Convert all the values from hashref to single value
+  while (my ($aa1,$aa2) = each (%attrs)) {
+    $attrs{$aa1} = $attrs{$aa1}->{value};
+  }
+
+  #### If this is a spectrum, then store some attributes
+  if ($localname eq 'spectrum_query') {
+    $self->{pepcache}->{spectrum} = $attrs{spectrum};
+    $self->{pepcache}->{charge} = $attrs{assumed_charge};
+  }
+
+  #### If this is the search_hit, then store some attributes
+  #### Note that this whole logic will break if there's more than one
+  #### search_hit, which shouldn't be true so far
+  if ($localname eq 'search_hit') {
+    die("ERROR: Multiple search_hits not yet supported!")
+      if (exists($self->{pepcache}->{peptide}));
+    $self->{pepcache}->{peptide} = $attrs{peptide};
+    $self->{pepcache}->{peptide_prev_aa} = $attrs{peptide_prev_aa};
+    $self->{pepcache}->{peptide_next_aa} = $attrs{peptide_next_aa};
+    $self->{pepcache}->{protein_name} = $attrs{protein};
+  }
+
+
+  #### If this is the first search_hit, then store some attributes
+  if ($localname eq 'mod_aminoacid_mass') {
+    $self->{pepcache}->{modifications}->{$attrs{position}} = $attrs{mass};
+  }
+
+
+  #### If this is the probability score, store the information if it
+  #### passes the threshold
+  if ($localname eq 'peptideprophet_result') {
+    my $peptide_sequence = $self->{pepcache}->{peptide}
+      || die("ERROR: No peptide sequence in the cache!");
+
+    #### If this peptide passes the threshold, store it
+    if ($attrs{probability} >= $self->{P_threshold}) {
+
+      #### Create the modified peptide string
+      my $modified_peptide = '';
+      my $modifications = $self->{pepcache}->{modifications};
+      if ($modifications) {
+	for (my $i=1; $i<=length($peptide_sequence); $i++) {
+	  my $aa = substr($peptide_sequence,$i-1,1);
+	  if ($modifications->{$i}) {
+	    $aa .= '['.int($modifications->{$i}).']';
+	  }
+	  $modified_peptide .= $aa;
+	}
+      } else {
+	$modified_peptide = $peptide_sequence;
+      }
+
+      my $charge = $self->{pepcache}->{charge};
+
+      #### Extract the spectrum and make sure we haven't already seen it
+      my $spectrum = $self->{pepcache}->{spectrum};
+      #$spectrum =~ s/\.\d$//;
+      if (exists($self->{all_spectra}->{$spectrum})) {
+	die("ERROR: I already have seen a spectrum with name '$spectrum'. ".
+	    "Maybe this just a naming problem, or maybe two different ".
+	    "search_batches on the same spectra.  I'm not smart enough ".
+	    "to deal with the gracefully yet. More code required.");
+      }
+      $self->{all_spectra}->{$spectrum} = 1;
+
+
+      #### If we've already seen this peptide
+      if ($self->{peptides}->{$peptide_sequence}) {
+	my $info = $self->{peptides}->{$peptide_sequence};
+	$info->{best_probability} = $attrs{probability}
+	  if ($info->{best_probability} < $attrs{probability});
+	$info->{n_instances}++;
+	$info->{search_batch_ids}->{$self->{search_batch_id}}++;
+
+	#### Else this is a new peptide
+      } else {
+	my $info;
+	$info->{best_probability} = $attrs{probability};
+	$info->{n_instances} = 1;
+	$info->{search_batch_ids}->{$self->{search_batch_id}} = 1;
+	$info->{protein_name} = $self->{pepcache}->{protein_name};
+	$info->{peptide_prev_aa} = $self->{pepcache}->{peptide_prev_aa};
+	$info->{peptide_next_aa} = $self->{pepcache}->{peptide_next_aa};
+
+	$self->{peptides}->{$peptide_sequence} = $info;
+      }
+
+
+      #### Store the modification information
+      my $info = $self->{peptides}->{$peptide_sequence};
+      my $modinfo = $info->{modifications}->{$modified_peptide}->{$charge};
+
+      if (defined($modinfo) && defined($modinfo->{best_probability})) {
+	if ($modinfo->{best_probability} < $attrs{probability}) {
+	  $modinfo->{best_probability} = $attrs{probability};
+	}
+      } else {
+	$modinfo->{best_probability} = $attrs{probability};
+      }
+
+      $modinfo->{n_instances}++;
+      $modinfo->{search_batch_ids}->{$self->{search_batch_id}}++;
+      $info->{modifications}->{$modified_peptide}->{$charge} = $modinfo;
+
+
+    }
+
+    #### Clear out the cache
+    delete($self->{pepcache});
+
+    #### Increase the counters and print some progress info
+    $self->{counter}++;
+    print $self->{counter}."..." if ($self->{counter} % 100 == 0);
+
+  }
+
+
+  #### Push information about this element onto the stack
+  my $tmp;
+  $tmp->{name} = $localname;
+  push(@{$self->object_stack},$tmp);
+
+
+} # end pepXML_start_element
+
+
+
+###############################################################################
+# protXML_start_element
+###############################################################################
+sub protXML_start_element {
   my ($self,$uri,$localname,$qname,$attrs) = @_;
 
   #### Make a hash to of the attributes
@@ -272,7 +428,7 @@ sub start_element {
   $self->{counter}++;
   print $self->{counter}."..." if ($self->{counter} % 100 == 0);
 
-}
+} # end protXML_start_element
 
 
 
@@ -375,16 +531,21 @@ sub main {
   $CONTENT_HANDLER->{P_threshold} = $P_threshold;
 
 
-  my %documents;
+  #### Array of documents to process in order
+  my @documents;
 
-  if ($search_batch_ids) {
+
+  #### If a list of search_batch_ids was provided, find the corresponding
+  #### documents
+  #### THIS IS NOW BROKEN.  NEED TO ADD SUPPORT FOR BOTH PepXML and ProtXML
+  if ($search_batch_ids && 0) {
     my @search_batch_ids = split(/,/,$search_batch_ids);
     foreach my $search_batch_id (@search_batch_ids) {
       my $ProteinProphet_file = guess_source_file(
         search_batch_id => $search_batch_id,
       );
       if ($ProteinProphet_file) {
-	$documents{$ProteinProphet_file}->{search_batch_id} = $search_batch_id;
+	#$documents{$ProteinProphet_file}->{search_batch_id} = $search_batch_id;
       } else {
 	die("ERROR: Unable to determine document for search_batch_id ".
 	    "$search_batch_id");
@@ -393,6 +554,8 @@ sub main {
   }
 
 
+  #### If a source file containing the list of search_batch_ids was provided,
+  #### read it and find the corresponding documents
   if ($source_file) {
     my @search_batch_ids;
     open(SOURCE_FILE,$source_file)
@@ -402,8 +565,19 @@ sub main {
       next if ($line =~ /^\s*#/);
       next if ($line =~ /^\s*$/);
       my ($search_batch_id,$path) = split(/\t/,$line);
-      $path .= "/interact-prob-prot.xml" unless ($path =~ /\.xml/);
-      $documents{$path}->{search_batch_id} = $search_batch_id;
+      die("ERROR: path contains 'xml'. Not allowed.") if($path =~ /\.xml/);
+      my ($pepXML_document,$protXML_document);
+
+      $pepXML_document->{filepath} = $path."/interact-prob.xml";
+      $pepXML_document->{search_batch_id} = $search_batch_id;
+      $pepXML_document->{document_type} = 'pepXML';
+      push(@documents,$pepXML_document);
+
+      $protXML_document->{filepath} = $path."/interact-prob-prot.xml";
+      $protXML_document->{search_batch_id} = $search_batch_id;
+      $protXML_document->{document_type} = 'protXML';
+      #push(@documents,$protXML_document);
+
       push(@search_batch_ids,$search_batch_id);
     }
     $search_batch_ids = join(',',@search_batch_ids);
@@ -411,13 +585,15 @@ sub main {
 
 
   #### Loops over all ProteinProphet files
-  while (my ($filepath,$fileinfo) = each %documents) {
-    $CONTENT_HANDLER->{search_batch_id} = $fileinfo->{search_batch_id};
+  #while (my ($filepath,$fileinfo) = each %documents) {
+  foreach my $document ( @documents ) {
+    my $filepath = $document->{filepath};
+    $CONTENT_HANDLER->{search_batch_id} = $document->{search_batch_id};
+    $CONTENT_HANDLER->{document_type} = $document->{document_type};
 
     #### Process the whole document
     print "INFO: Loading $filepath...\n" unless ($QUIET);
     $parser->parse (XML::Xerces::LocalFileInputSource->new($filepath));
-
 
     print "\n";
   }
@@ -428,7 +604,7 @@ sub main {
   open(OUTFILE,">$output_file")
     || die("ERROR: Unable to open '$output_file' for write");
 
-  print OUTFILE "peptide_identifier_str\tbiosequence_gene_name\tbiosequence_accession\treference\tpeptide n_peptides\tmaximum_probability\tn_experiments\tobserved_experiment_list\tbiosequence_desc\tsearched_experiment_list\n";
+  print OUTFILE "peptide_identifier_str\tbiosequence_gene_name\tbiosequence_accession\treference\tpeptide\tn_peptides\tmaximum_probability\tn_experiments\tobserved_experiment_list\tbiosequence_desc\tsearched_experiment_list\n";
 
   while (my ($peptide_sequence,$attributes) =
             each %{$CONTENT_HANDLER->{peptides}}) {
@@ -452,7 +628,7 @@ sub main {
 
     print OUTFILE "$peptide_accession\t$gene_name\t$protein_name\t$protein_name\t$peptide_sequence\t".
       $attributes->{n_instances}."\t  ".
-      $attributes->{best_probability}."0\t$n_experiments\t".
+      $attributes->{best_probability}."\t$n_experiments\t".
       join(",",keys(%{$attributes->{search_batch_ids}}))."\t".
       "\"$description\"\t\"$search_batch_ids\"\n";
 
@@ -484,7 +660,7 @@ sub main {
         foreach $key2 (@{$CONTENT_HANDLER->{$key}}) {
           print "  $key2\n";
         }
-      } elsif ($key eq "peptides") {
+      } elsif ($key eq "peptides" || $key eq "all_spectra") {
         my $tmpcnt = 0;
         while (($key2,$value2) = each %{$CONTENT_HANDLER->{$key}}) {
           print "  $key2 = $value2\n";
@@ -505,6 +681,9 @@ sub main {
     } # end while
 
   } # end if
+
+  #print Dumper($CONTENT_HANDLER->{peptides});
+
 
   print "\n\n" unless ($QUIET);
 
