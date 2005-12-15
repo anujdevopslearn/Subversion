@@ -585,7 +585,6 @@ sub main {
 
 
   #### Loops over all ProteinProphet files
-  #while (my ($filepath,$fileinfo) = each %documents) {
   foreach my $document ( @documents ) {
     my $filepath = $document->{filepath};
     $CONTENT_HANDLER->{search_batch_id} = $document->{search_batch_id};
@@ -599,90 +598,21 @@ sub main {
   }
 
 
+  #### Write out all the read-in data in a TSV format as written by
+  #### a BrowseAPD query
   my $output_file = $OPTIONS{output_file} || 'PeptideAtlasInput.tsv';
-  print "Writing output file '$output_file'...\n";
-  open(OUTFILE,">$output_file")
-    || die("ERROR: Unable to open '$output_file' for write");
-
-  print OUTFILE "peptide_identifier_str\tbiosequence_gene_name\tbiosequence_accession\treference\tpeptide\tn_peptides\tmaximum_probability\tn_experiments\tobserved_experiment_list\tbiosequence_desc\tsearched_experiment_list\n";
-
-  while (my ($peptide_sequence,$attributes) =
-            each %{$CONTENT_HANDLER->{peptides}}) {
-
-    my $n_experiments = scalar(keys(%{$attributes->{search_batch_ids}}));
-
-    my $peptide_accession = getPeptideAccession(
-      sequence => $peptide_sequence,
-    );
-    my $protein_name = $attributes->{protein_name};
-
-    my $biosequence_attributes;
-    my ($gene_name,$description) = ('','');
-    if ($biosequence_attributes = getBiosequenceAttributes(
-      biosequence_name => $protein_name,
-							  )
-       ) {
-      $gene_name = $biosequence_attributes->[2];
-      $description = $biosequence_attributes->[4];
-    }
-
-    print OUTFILE "$peptide_accession\t$gene_name\t$protein_name\t$protein_name\t$peptide_sequence\t".
-      $attributes->{n_instances}."\t  ".
-      $attributes->{best_probability}."\t$n_experiments\t".
-      join(",",keys(%{$attributes->{search_batch_ids}}))."\t".
-      "\"$description\"\t\"$search_batch_ids\"\n";
-
-  }
-
-  close(OUTFILE);
+  writeAPDFormatFile(
+    output_file => $output_file,
+    peptide_hash => $CONTENT_HANDLER->{peptides},
+  );
 
 
   #### Write out information about the objects we've loaded if verbose
   if ($VERBOSE) {
-    print "\n-------------------------------------------------\n";
-    my ($key,$value);
-    my ($key2,$value2);
-
-    print "CONTENT_HANDLER:\n";
-    while (($key,$value) = each %{$CONTENT_HANDLER}) {
-      print "CONTENT_HANDLER->{$key} = $value:\n";
-    }
-
-    print "\n";
-    while (($key,$value) = each %{$CONTENT_HANDLER}) {
-      print "CONTENT_HANDLER->{$key}\n";
-
-      if ($key eq "UNHANDLED") {
-        while (($key2,$value2) = each %{$CONTENT_HANDLER->{$key}}) {
-          print "  $key2 = $value2\n";
-        }
-      } elsif ($key eq "OBJ_STACK") {
-        foreach $key2 (@{$CONTENT_HANDLER->{$key}}) {
-          print "  $key2\n";
-        }
-      } elsif ($key eq "peptides" || $key eq "all_spectra") {
-        my $tmpcnt = 0;
-        while (($key2,$value2) = each %{$CONTENT_HANDLER->{$key}}) {
-          print "  $key2 = $value2\n";
-          $tmpcnt++;
-          if ($tmpcnt > 20) {
-            print "  etc...\n";
-            last;
-          }
-        }
-      } else {
-        if (ref($CONTENT_HANDLER->{$key})) {
-          foreach $key2 (@{$CONTENT_HANDLER->{$key}}) {
-            print "  $key2\n";
-          }
-        }
-      }
-
-    } # end while
-
-  } # end if
-
-  #print Dumper($CONTENT_HANDLER->{peptides});
+    showContentHandlerContents(
+      content_handler => $CONTENT_HANDLER,
+    );
+  }
 
 
   print "\n\n" unless ($QUIET);
@@ -874,4 +804,112 @@ sub getBiosequenceAttributes {
 } # end getBiosequenceAttributes
 
 
+
+###############################################################################
+# writeAPDFormatFile
+###############################################################################
+sub writeAPDFormatFile {
+  my %args = @_;
+  my $output_file = $args{'output_file'} || die("No output file provided");
+  my $peptides = $args{'peptide_hash'} || die("No output peptide_hash provided");
+
+  print "Writing output file '$output_file'...\n";
+
+  open(OUTFILE,">$output_file")
+    || die("ERROR: Unable to open '$output_file' for write");
+
+  print OUTFILE "peptide_identifier_str\tbiosequence_gene_name\tbiosequence_accession\treference\tpeptide\tn_peptides\tmaximum_probability\tn_experiments\tobserved_experiment_list\tbiosequence_desc\tsearched_experiment_list\n";
+
+  while (my ($peptide_sequence,$attributes) =
+            each %{$peptides}) {
+
+    my $n_experiments = scalar(keys(%{$attributes->{search_batch_ids}}));
+
+    my $peptide_accession = getPeptideAccession(
+      sequence => $peptide_sequence,
+    );
+    my $protein_name = $attributes->{protein_name};
+
+    my $biosequence_attributes;
+    my ($gene_name,$description) = ('','');
+    if ($biosequence_attributes = getBiosequenceAttributes(
+      biosequence_name => $protein_name,
+							  )
+       ) {
+      $gene_name = $biosequence_attributes->[2];
+      $description = $biosequence_attributes->[4];
+    }
+
+    print OUTFILE "$peptide_accession\t$gene_name\t$protein_name\t$protein_name\t$peptide_sequence\t".
+      $attributes->{n_instances}."\t  ".
+      $attributes->{best_probability}."\t$n_experiments\t".
+      join(",",keys(%{$attributes->{search_batch_ids}}))."\t".
+      "\"$description\"\t\"$search_batch_ids\"\n";
+
+  }
+
+  close(OUTFILE);
+
+  return(1);
+
+} # end writeAPDFormatFile
+
+
+###############################################################################
+# showContentHandlerContents
+###############################################################################
+sub showContentHandlerContents {
+  my %args = @_;
+  my $CONTENT_HANDLER = $args{'CONTENT_HANDLER'}
+    || die("No CONTENT_HANDLER provided");
+
+  print "\n-------------------------------------------------\n";
+  my ($key,$value);
+  my ($key2,$value2);
+
+  print "CONTENT_HANDLER:\n";
+  while (($key,$value) = each %{$CONTENT_HANDLER}) {
+    print "CONTENT_HANDLER->{$key} = $value:\n";
+  }
+
+  print "\n";
+  while (($key,$value) = each %{$CONTENT_HANDLER}) {
+    print "CONTENT_HANDLER->{$key}\n";
+
+    if ($key eq "UNHANDLED") {
+      while (($key2,$value2) = each %{$CONTENT_HANDLER->{$key}}) {
+        print "  $key2 = $value2\n";
+      }
+
+    } elsif ($key eq "OBJ_STACK") {
+      foreach $key2 (@{$CONTENT_HANDLER->{$key}}) {
+        print "  $key2\n";
+      }
+
+    } elsif ($key eq "peptides" || $key eq "all_spectra") {
+      my $tmpcnt = 0;
+      while (($key2,$value2) = each %{$CONTENT_HANDLER->{$key}}) {
+        print "  $key2 = $value2\n";
+        $tmpcnt++;
+        if ($tmpcnt > 20) {
+          print "  etc...\n";
+          last;
+        }
+      }
+
+    } else {
+      if (ref($CONTENT_HANDLER->{$key})) {
+        foreach $key2 (@{$CONTENT_HANDLER->{$key}}) {
+          print "  $key2\n";
+        }
+      }
+    }
+
+  } # end while
+
+
+  #print Dumper($CONTENT_HANDLER->{peptides});
+
+
+} # end showContentHandlerContents
 
