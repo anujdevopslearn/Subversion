@@ -707,8 +707,8 @@ if ($display_type eq 'TWO_COLOR' ) {
 		
 		
 		 %url_cols = (
-		 	 	'File_Root' => "${manage_table_url}affy_array&affy_array_id=\%0V",
-				'Sample_Tag'	=> "${manage_table_url}affy_array_sample&affy_array_sample_id=\%3V",
+		 	 	'File_Root' => "${manage_table_url}affy_array&affy_array_id=\%1V",
+				'Sample_Tag'	=> "${manage_table_url}affy_array_sample&affy_array_sample_id=\%4V",
 			     );
 
   		 
@@ -741,6 +741,10 @@ if ($display_type eq 'TWO_COLOR' ) {
     		$sbeams->fetchResultSet(sql_query=>$sql,
 					resultset_ref=>$resultset_ref,
 					);
+
+          $sbeams->addResultsetNumbering( rs_ref  => $resultset_ref,
+                                     colnames_ref => \@column_titles,
+                                        list_name => 'Array num' );
 
 	#### Store the resultset and parameters to disk resultset cache
 		$rs_params{set_name} = "SETME";
@@ -1543,7 +1547,7 @@ sub print_data_download_tab {
 	
 		print qq~
 		  <TR>
-		    <TD COLSPAN="2"><B>Number Affy Chips:  $n_affy_chips</B></TD>
+		    <TD COLSPAN="2"><B>Number LAffy Chips:  $n_affy_chips</B></TD>
 		  </TR>
 		  <TR>
 		    <TD COLSPAN="2"><B>Number Two Color Analysis Files:  $n_two_color_runs</B></TD>
