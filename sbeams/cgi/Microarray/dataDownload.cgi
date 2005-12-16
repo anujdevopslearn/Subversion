@@ -715,7 +715,7 @@ if ($display_type eq 'TWO_COLOR' ) {
 				  hidden_cols_ref=>\%hidden_cols,
 				  max_widths=>\%max_widths,
 				  column_titles_ref=>\@column_titles,
-				  base_url=>$base_url,
+				  base_url=>$base_url
 				 );
 
 	#### Display the resultset controls
@@ -1441,7 +1441,7 @@ sub print_data_download_tab {
 			exit;
 			
 		}elsif($parameters{Get_Data} eq 'SHOW_TWO_COLOR_DATA'){
-			print "DO SOMETHING COOL";	
+			print STDERR "DO SOMETHING COOL";	
 		}
 	
   ###############################################################################
@@ -1455,12 +1455,14 @@ sub print_data_download_tab {
 		my $n_two_color_runs = 0;
 		
 		if ($project_id > 0) {
-			my $sql = qq~ 	SELECT count(afa.affy_array_id)
-		   			FROM $TBMA_AFFY_ARRAY afa, $TBMA_AFFY_ARRAY_SAMPLE afs 
-					WHERE afs.project_id = $project_id 
-					AND afa.affy_array_sample_id = afs.affy_array_sample_id
-			
-				~;
+			my $sql = qq~ 
+      SELECT count(afa.affy_array_id)
+		  FROM $TBMA_AFFY_ARRAY afa, $TBMA_AFFY_ARRAY_SAMPLE afs 
+		  WHERE afs.project_id = $project_id 
+			AND afa.affy_array_sample_id = afs.affy_array_sample_id
+      AND afs.record_status <> 'D'
+      AND afa.record_status <> 'D'
+			~;
 			($n_affy_chips) = $sbeams->selectOneColumn($sql);	
  		}
     
@@ -1468,16 +1470,18 @@ sub print_data_download_tab {
 		<BR>
 		<TABLE WIDTH="50%" BORDER=0>
 		  <TR>
-		    <TD>
+		   <TD>
         <B>
-        This page shows the<FONT COLOR=RED> $n_affy_chips </FONT> Affymetrix arrays in this project.  Use the checkboxes underneath the individual file types
-        to select one or more files for download, then press the GET_AFFY_ARRAY_FILES button at the bottom of the page.
-        The checkboxes in the column headings can be used to toggle all the checkboxes for a particular file type.
-        All selected files will be packaged into a zip archive, to make the download easier.
+        This page shows the<FONT COLOR=RED> $n_affy_chips </FONT> Affymetrix
+        arrays in this project.  Use the checkboxes underneath the individual
+        file types to select one or more files for download, then press the 
+        GET_AFFY_ARRAY_FILES button at the bottom of the page.  The checkboxes
+        in the column headings can be used to toggle all the checkboxes for a
+        particular file type.  All selected files will be packaged into a zip
+        archive, to make the download easier.
         </B> 
-        </TD></TR>
-        <TR> <TD>
-        </TD></TR>
+       </TD></TR>
+       <TR><TD></TD></TR>
 		</TABLE>
     END
 
@@ -1490,16 +1494,6 @@ sub print_data_download_tab {
 	$n_two_color_runs = scalar @dir_contents;
 	
 	
-		print STDERR qq~
-		  <TR>
-		    <TD COLSPAN="2"><B>Number Affy Chips:  $n_affy_chips</B></TD>
-		  </TR>
-		  <TR>
-		    <TD COLSPAN="2"><B>Number Two Color Analysis Files:  $n_two_color_runs</B></TD>
-		  </TR>
-		</TABLE>
-		<p>
-		~;
 	#############
 	###Add different types of data to download
 	
@@ -1554,8 +1548,8 @@ sub print_data_download_tab {
 			$sql = $sbeams_affy_groups->get_affy_arrays_sql(project_id    => $project_id, );
 						     			
       #'Array_ID' 	=> "$CGI_BASE_DIR/Microarray/ProjectHome.cgi?tab=data_download&download_type=AFFY&affy_sample_id=\%0V",
-		 	%url_cols = ( 'Sample_Tag'	=> "${manage_table_url}affy_array_sample&affy_array_sample_id=\%3V",
-			     	     	  'File_Root' 	=> "${manage_table_url}affy_array&affy_array_id=\%0V",
+		 	%url_cols = ( 'Sample_Tag'	=> "${manage_table_url}affy_array_sample&affy_array_sample_id=\%4V",
+			     	     	  'File_Root' 	=> "${manage_table_url}affy_array&affy_array_id=\%1V",
 				          );
 
   		 
@@ -1590,57 +1584,62 @@ sub print_data_download_tab {
 		
 		
 	}
+  # get field->checkbox HTML for selecting files for download form
+  my $cbox = $sbeamsMOD->get_file_cbox( box_names => \@downloadable_file_types, 
+                               default_file_types => \@default_file_types );
+
   ###################################################################
   #### If the apply action was to recall a previous resultset, do it
- 	 
-	 if ($apply_action eq "VIEWRESULTSET") {
-   		$sbeams->readResultSet(
-     	 	resultset_file=>$rs_params{set_name},
+	if ($apply_action eq "VIEWRESULTSET") {
+  	$sbeams->readResultSet(
+    	 	resultset_file=>$rs_params{set_name},
      	 	resultset_ref=>$resultset_ref,
      	 	query_parameters_ref=>\%parameters,
     	  	resultset_params_ref=>\%rs_params,
    	 	);
-	  }
-		
-		
-		
-	#### Fetch the results from the database server
-    	$sbeams->fetchResultSet(sql_query=>$sql,
-				resultset_ref=>$resultset_ref,
-				);
+	} else {
+	  # Fetch the results from the database server
+    $sbeams->fetchResultSet( sql_query => $sql,
+	  	                   resultset_ref => $resultset_ref );
+
+    $sbeams->addResultsetNumbering( rs_ref       => $resultset_ref, 
+                                    colnames_ref => \@column_titles,
+                                    list_name => 'Array num' );	
+  
  
-  ####################################################################
-  ## Need to Append data onto the data returned from fetchResultsSet in order to use the writeResultsSet method to display a nice html table
+    ####################################################################
+    ## Need to Append data onto the data returned from fetchResultsSet in order 
+    # to use the writeResultsSet method to display a nice html table
   	
-  my $cbox;
-	if ($display_type eq 'AFFY' &! exists $parameters{Get_Data}) {
+  if ($display_type eq 'AFFY' &! exists $parameters{Get_Data}) {
 		
-    # get field->checkbox HTML for selecting files for download form
-    $cbox = $sbeamsMOD->get_file_cbox( box_names => \@downloadable_file_types, 
-                                       default_file_types => \@default_file_types
-                                     );
+      # Noticed that this gets pretty slow on moderate sized data sets (500),
+      # should rework if this becomes an issue. DC 2005/12/16
+		  append_new_data( resultset_ref => $resultset_ref, 
+			              	 file_types    => \@downloadable_file_types,			#append on new values to the data_ref foreach column to add
+				               default_files => \@default_file_types,
+                       display_files => \@diplay_files,       #Names for columns which will have urls to pop open files
+                       file_checkbox => $cbox
+				             );
+  	}
+  
+    ###################################################################
+  
+    $log->info( "writing" );
+  	#### Store the resultset and parameters to disk resultset cache
+  	$rs_params{set_name} = "SETME";
+	  $sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
+		  		resultset_ref=>$resultset_ref,
+			  	query_parameters_ref=>\%parameters,
+				  resultset_params_ref=>\%rs_params,
+  				query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+	  			);
 
-		append_new_data( resultset_ref => $resultset_ref, 
-			            	 file_types    => \@downloadable_file_types,			#append on new values to the data_ref foreach column to add
-				             default_files => \@default_file_types,
-                     display_files => \@diplay_files,       #Names for columns which will have urls to pop open files
-                     file_checkbox => $cbox
-				           );
-	}
-  
-  ####################################################################
-  
-	#### Store the resultset and parameters to disk resultset cache
-	$rs_params{set_name} = "SETME";
-	$sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
-				resultset_ref=>$resultset_ref,
-				query_parameters_ref=>\%parameters,
-				resultset_params_ref=>\%rs_params,
-				query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
-				);
+   } # End read or fetch resultset block
 		
 
-  # Set the column_titles to just the column_names
+  # Set the column_titles to just the column_names, reset first.
+  @column_titles = ();
   #  @column_titles = map "$_<INPUT NAME=foo TYPE=CHECKBOX CHECKED></INPUT>", @column_titles;
   for my $title ( @{$resultset_ref->{column_list_ref}} ) {
     if ( $cbox->{$title} ) {
@@ -1649,8 +1648,6 @@ sub print_data_download_tab {
       push @column_titles, $title;
     }
   }
-		
-#for ( keys %$cbox ) { print "KEY: $_ <BR>"; }
 		
 	#### Display the resultset
 	$sbeams->displayResultSet(resultset_ref=>$resultset_ref,
@@ -1663,6 +1660,7 @@ sub print_data_download_tab {
 				base_url=>$base_url,
 				no_escape=>1,
 				nowrap=>1,
+				show_numbering=>1,
 				);
 					
 	
@@ -1692,6 +1690,9 @@ sub print_data_download_tab {
 	
 }
 
+sub postProcessResultset {
+}
+
 ###############################################################################
 # append_new_data
 #
@@ -1709,6 +1710,8 @@ sub append_new_data {
 	
 	my $aref = $$resultset_ref{data_ref};		#data is stored as an array of arrays from the $sth->fetchrow_array each row a row from the database holding an aref to all the values
 	
+  my $id_idx = $resultset_ref->{column_hash_ref}->{Array_ID};
+  my $file_idx = $resultset_ref->{column_hash_ref}->{File_Root};
 	
 	
     my @new_data_ref;
@@ -1722,8 +1725,8 @@ sub append_new_data {
       my $checked = ( grep /$display_file/, @default_files ) ? 'checked' : '';
       
 			
-			my $array_id  = $row_aref->[0];		#need to make sure the query has the array_id in the first column since we are going directly into the array of arrays and pulling out values		
-			my $root_name = $row_aref->[1];	
+			my $array_id  = $row_aref->[$id_idx];		#need to make sure the query has the array_id in the first column since we are going directly into the array of arrays and pulling out values		
+			my $root_name = $row_aref->[$file_idx];	
 								#loop through the files to make sure they exists.  If they do not don't make a check box for the file
 			my $file_exists = check_for_file(	affy_array_id => $array_id, 
 								file_root_name =>$root_name, 
@@ -1758,20 +1761,22 @@ sub append_new_data {
     }
 	}
 	
+          
 	
    ########################################################################################
 	
 	foreach my $file_ext (@file_types) {			#loop through the column names to add checkboxes
-    print STDERR "FTYPE: $file_ext\n";
 		my $checked = '';
 		if ( grep {$file_ext eq $_} @default_files) {
 			$checked = "CHECKED";
 		}
+
+
 		
 		foreach my $row_aref (@{$aref} ) {		#serious breach of encapsulation,  !!!! De-reference the data array and pushes new values onto the end
 			
-			my $array_id  = $row_aref->[0];		#need to make sure the query has the array_id in the first column since we are going directly into the array of arrays and pulling out values			
-			my $root_name = $row_aref->[1];
+			my $array_id  = $row_aref->[$id_idx];		#need to make sure the query has the array_id in the first column since we are going directly into the array of arrays and pulling out values			
+			my $root_name = $row_aref->[$file_idx];
 			
 								#loop through the files to make sure they exists.  If they do not don't make a check box for the file
 			my $file_exists = check_for_file(	affy_array_id => $array_id, 
