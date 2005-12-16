@@ -2456,6 +2456,7 @@ sub decodeDataType {
 sub fetchResultSet {
     my $self = shift;
     my %args = @_;
+    $log->debug( "fetching resultset" );
 
     #### Process the arguments list
     my $sql_query = $args{'sql_query'} || croak "parameter sql_query missing";
@@ -3637,6 +3638,60 @@ sub displayResultSetPlot {
 
 } # end displayResultSetPlot
 
+
+#+
+# Routine to add numbering to a resultset
+# 
+# narg rs_ref        required reference to resultset object
+# narg colnames_ref  required reference to array of column names
+# narg head_name     name of column heading
+# narg list_name     name of field in list
+# narg manual_num    Indicates caller will add numbers in their own 
+#                    post-process loop
+#-
+sub addResultsetNumbering {
+  my $self = shift;
+#  return;
+  my %args = @_;
+  for my $p ( qw( rs_ref colnames_ref ) ) {
+    die unless defined $args{$p};
+  }
+
+  # Add new column heading, field list name
+  my $heading = $args{head_name} || 'Num';
+  my $list_name = $args{list_name} || 'rs_col_num';
+
+  # Unshift heading on to colnames
+  unshift @{$args{colnames_ref}}, $heading;
+
+  # unshift element to precisions aref
+  unshift @{$args{rs_ref}->{precisions_list_ref}}, 4;
+
+  # unshift element to types aref
+  unshift @{$args{rs_ref}->{types_list_ref}}, 'int';
+
+  # unshift element to names aref
+  unshift @{$args{rs_ref}->{column_list_ref}}, $list_name;
+
+  # update names href
+  $args{rs_ref}->{column_hash_ref} = {};
+  my $cnt = 0;
+  for my $name ( @{$args{rs_ref}->{column_list_ref}} ) {
+    ${args{rs_ref}->{column_hash_ref}}->{$name} = $cnt++;
+  }
+
+  # If specified, caller is adding these in their own loop.
+  return if $args{manual_num};
+
+  # Add number to each resultset row
+  $cnt = 1;
+  foreach my $row ( @{$args{rs_ref}->{data_ref}} ) {
+    unshift @$row, $cnt++;
+  }
+  return 1;
+}
+
+
 #+
 # Routine to cache url in database
 # arg:     url to convert, required
@@ -3796,6 +3851,7 @@ sub parseResultSetParams {
 sub readResultSet {
     my $self = shift;
     my %args = @_;
+    $log->info( "Reading rs $args{resultset_file}" );
 
     #### Process the arguments list
     my $resultset_file = $args{'resultset_file'};
@@ -3875,6 +3931,7 @@ sub readResultSet {
 sub writeResultSet {
     my $self = shift;
     my %args = @_;
+    $log->info( "Writing rs" );
 
     #### Process the arguments list
     my $resultset_file_ref = $args{'resultset_file_ref'};
