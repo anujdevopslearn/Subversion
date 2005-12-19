@@ -298,7 +298,7 @@ SELECT	A.array_id,A.array_name,
    AND ASCAN.record_status != 'D'
    --AND AQ.record_status != 'D'
    AND AQ.data_flag != 'BAD'
- ORDER BY A.array_name
+ ORDER BY A.array_id
      ~;
   }else {
     print qq~
@@ -1489,7 +1489,7 @@ SELECT	A.array_name,
    AND ASCAN.record_status != 'D'
    AND AQ.record_status != 'D'
    AND AQ.data_flag != 'BAD'
- ORDER BY A.array_name
+ ORDER BY A.array_id
      ~;
   #print "$sql_query\n";
   my @rows = $sbeams->selectSeveralColumns($sql_query);
