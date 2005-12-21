@@ -77,7 +77,7 @@ sub main
        # permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
        # 'PeptideAtlas_readonly'],
         #connect_read_only=>1,
-        allow_anonymous_access=>1,
+#allow_anonymous_access=>1,
     ));
 
 
