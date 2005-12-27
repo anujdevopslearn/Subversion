@@ -24,9 +24,10 @@ use lib "$FindBin::Bin/../../perl";
 
 use vars qw ($sbeams $sbeamsMOD $current_username 
              $PROG_NAME $USAGE %OPTIONS $TEST 
-             $repository_dir $public_outfile $notpublic_outfile 
-             $data_root_dir $errorfile $public_xml_outfile
+             $repository_dir $data_root_dir 
              $repository_url $repository_web_path
+             $public_outfile $notpublic_outfile $errorfile
+             $public_xml_outfile $notpublic_xml_outfile
             );
 
 #### Set up SBEAMS core module
@@ -118,6 +119,8 @@ $public_outfile = "$repository_dir/repository_public.txt";
 
 $public_xml_outfile = "$repository_dir/repository_public.xml";
 
+$notpublic_xml_outfile = "$repository_dir/repository_notpublic.xml";
+
 $notpublic_outfile = "$repository_dir/repository_notpublic.txt";
 
 $errorfile = "$repository_dir/errorfile.txt";
@@ -128,6 +131,8 @@ if ( $OPTIONS{"make_tmp_files"} )
     $public_outfile = $public_outfile . ".tmp";    
 
     $public_xml_outfile = $public_xml_outfile . ".tmp";    
+
+    $notpublic_xml_outfile = $notpublic_xml_outfile . ".tmp";    
 
     $notpublic_outfile = $notpublic_outfile . ".tmp";    
 
@@ -158,9 +163,9 @@ sub main
     exit unless ( $current_username = 
 
         $sbeams->Authenticate(
-
-        work_group=>'PeptideAtlas_admin')
+        connect_read_only => '1')
     );
+    #   work_group=>'PeptideAtlas_admin')
 
 
     ## make sure that user is on atlas:
@@ -172,18 +177,22 @@ sub main
 
 
     ## write namespace and root tag to xml file:
-    initializeXMLFile();
+    initializeXMLFile(xml_outfile => $public_xml_outfile);
 
-    ## write repository_public.txt, tar up relevant files and move em
-    ## if needed
+    initializeXMLFile(xml_outfile => $notpublic_xml_outfile);
+
+    ## write repository_public.txt and $public_xml_outfile, tar up 
+    ## relevant files and move em if needed
     write_public_file();
 
-    ## write repository_notpublic.txt
+    ## write repository_notpublic.txt and $notpublic_xml_outfile
     write_private_file();
 
 
     ## write ending root node and check that xml is well-formed
-    finalizeXMLFile();
+    finalizeXMLFile(xml_outfile => $public_xml_outfile);
+
+    finalizeXMLFile(xml_outfile => $notpublic_xml_outfile);
 
 
     print "\nWrote the following files:\n";
@@ -231,7 +240,7 @@ sub check_files()
 {
 
     my @outfiles =  ($public_outfile, $public_xml_outfile,
-        $notpublic_outfile, $errorfile);
+        $notpublic_xml_outfile, $notpublic_outfile, $errorfile);
 
     for (my $i=0; $i <= $#outfiles; $i++)
     {
@@ -244,10 +253,6 @@ sub check_files()
         close(OUTFILE) or die "cannot close $outfile";
 
     }
-
-
-    ## initialize the xml file:
-    
 
 
 }
@@ -619,7 +624,12 @@ sub write_to_public_file
 sub initializeXMLFile
 {
 
-    my $out = new IO::File(">$public_xml_outfile");
+    my %args = @_;
+
+    my $xml_outfile = $args{'xml_outfile'} || die "need xml_outfile ($!)";
+
+
+    my $out = new IO::File(">$xml_outfile");
 
     my $writer = new XML::Writer(OUTPUT=> $out, UNSAFE => 1);
 
@@ -639,7 +649,12 @@ sub initializeXMLFile
 sub finalizeXMLFile
 {
 
-    my $out = new IO::File(">>$public_xml_outfile");
+    my %args = @_;
+
+    my $xml_outfile = $args{xml_outfile} || die "need xml_outfile ($!)";
+
+
+    my $out = new IO::File(">>$xml_outfile");
 
     my $writer = new XML::Writer(OUTPUT=> $out, UNSAFE => 1);
 
@@ -1485,12 +1500,17 @@ sub get_notpublic_sample_info
 
     ## get sample info:
     my $sql = qq~
-        SELECT sample_tag,
-            cell_type_term,
-            data_contributors
-        FROM $TBAT_SAMPLE
+        SELECT S.sample_tag, S.cell_type_term, O.organism_name,
+            S.data_contributors
+        FROM $TBAT_SAMPLE S
+        JOIN $TBPR_SEARCH_BATCH SB 
+            ON (SB.search_batch_id = S.search_batch_id)
+        JOIN $TBPR_BIOSEQUENCE_SET BS 
+            ON (BS.biosequence_set_id = SB.biosequence_set_id)
+        JOIN $TB_ORGANISM O ON (BS.organism_id = O.organism_id)
         WHERE is_public = 'N'
     ~;
+
 
     my @rows = $sbeams->selectSeveralColumns($sql) or 
         die "Couldn't find sample records ($!)";
@@ -1499,9 +1519,13 @@ sub get_notpublic_sample_info
     foreach my $row (@rows) 
     {
 
-        my ($sample_tag, $cell_type, $data_contributors) = @{$row};
+        my ($sample_tag, $cell_type, $organism, $data_contributors) = @{$row};
+
+        chomp($data_contributors);
 
         $sample_info{$sample_tag}->{cell_type} = $cell_type;
+
+        $sample_info{$sample_tag}->{organism} = $organism;
 
         $sample_info{$sample_tag}->{data_contributors} = $data_contributors;
 
@@ -1516,7 +1540,7 @@ sub get_notpublic_sample_info
         foreach my $row (@rows)
         {
 
-            my ($sample_tag, $cell_type, $data_contributors) = @{$row};
+            my ($sample_tag, $cell_type, $organism, $data_contributors) = @{$row};
 
             if ($sample_info{$sample_tag}->{cell_type} ne $cell_type)
             {
@@ -1525,6 +1549,17 @@ sub get_notpublic_sample_info
                     "$sample_info{$sample_tag}->{cell_type} ($!)".
                     " ($sample_info{$sample_tag}->{cell_type} != " .
                     " $cell_type)\n";
+
+
+            }
+
+            if ($sample_info{$sample_tag}->{organism} ne $organism)
+            {
+
+                warn "TEST fails for " .
+                    "$sample_info{$sample_tag}->{organism} ($!)".
+                    " ($sample_info{$sample_tag}->{organism} != " .
+                    " $organism)\n";
 
 
             }
@@ -1752,21 +1787,30 @@ sub write_private_file()
 
     ## Get sample information. Structure is: 
     ##  $samples{$sample_tag}->{cell_type} = $cell_type;
+    ##  $samples{$sample_tag}->{organism} = $cell_type;
     ##  $samples{$sample_tag}->{data_contributors} = $data_contributors;
     my %samples = get_notpublic_sample_info();
 
 
     ## iterate over sample_tags, writing formatted info to file:
-    foreach my $sample_tag ( keys %samples)
+    foreach my $sample_tag ( sort keys %samples)
     {
+
+        my $cell_type = $samples{$sample_tag}->{cell_type};
+
+        my $organism = $samples{$sample_tag}->{organism};
+
+        my $data_contributors = $samples{$sample_tag}->{data_contributors};
 
         write_to_notpublic_file(
             
             sample_tag => $sample_tag,
 
-            cell_type => $samples{$sample_tag}->{cell_type},
+            organism => $organism,
 
-            data_contributors => $samples{$sample_tag}->{data_contributors},
+            data_contributors => $data_contributors,
+
+            cell_type => $cell_type
 
         );
 
@@ -1782,18 +1826,19 @@ sub write_to_notpublic_file
 
     my %args = @_;
 
-    my $sample_tag = $args{sample_tag} || die "need sample_tag ($!)";
+    my $sample_tag = $args{'sample_tag'} || die "need sample_tag ($!)";
 
-    my $cell_type = $args{cell_type} || "[]"; ## might not be in record
+    my $organism = $args{'organism'} || die "need organism for $sample_tag ($!)";
 
-    my $data_contributors = $args{data_contributors} ||
+    my $data_contributors = $args{'data_contributors'} ||
         die "need data_contributors for $sample_tag ($!)";
 
     chomp($data_contributors);
 
+    my $cell_type = $args{'cell_type'} || "[]"; ## might not be in record
 
-    my $str = "$sample_tag\t$cell_type\t$data_contributors";
 
+    my $str = "$sample_tag\t$cell_type\t$organism\t$data_contributors";
 
     open(OUTFILE,">>$notpublic_outfile") or die 
         "cannot open $notpublic_outfile for writing ($!)";
@@ -1803,6 +1848,14 @@ sub write_to_notpublic_file
 
     close(OUTFILE) or die
         "cannot close $notpublic_outfile ($!)";
+
+   ######## write to xml file: ########
+    writeNotPublicXMLSample(
+        sample_tag => $sample_tag,
+        organism => $organism,
+        cell_type => $cell_type,
+        data_contributors => $data_contributors,
+    );
 
 }
 
@@ -1872,35 +1925,20 @@ sub get_archive_filename
 #######################################################################
 # writeXMLSample -- write sample info to xml file.  
 #
-# Format will be:
-#  <sample>
-#    <tag>exp1</tag>
-#    <organism>Human</organism>
-#    <description>Erythroleukemia K562 cell line</description>
-#    <data_contributors>Katherine Resing (U Col), Meyer-Arendt K, Mendoza AM, Aveline-Wolf LD Jonscher KR, Pierce KG, Old WM, Cheung HT, Russell S, Wattawa JL, Goehle GR, Knight RD, Ahn NG</data_contributors>
-#    <resource>
-#      <README="http://www.peptideatlas.org/repository/pa_public_archive/A8_IP_README"/>
-#    </resource>
-#    <resource>
-#      <RAW_Format="http://www.peptideatlas.org/repository/pa_public_archive/A8_IP_RAW.tar.gz"/>
-#    </resource>
-#    <resource>
-#      <dat_Format="http://www.peptideatlas.org/repository/pa_public_archive/A8_IP_dat.tar.gz"/>
-#    </resource>
-#    <resource>
-#      <mzXML_Format="http://www.peptideatlas.org/repository/pa_public_archive/A8_IP_mzXML.tar.gz"/>
-#    </resource>
-#    <resource>
-#      <Search_Results="http://www.peptideatlas.org/repository/pa_public_archive/A8_IP_searched.tar.gz"/>
-#    </resource>
-#    <resource>
-#      <ProteinProphet_file="http://www.peptideatlas.org/repository/pa_public_archive/A8_IP_prot.tar.gz"/>
-#    </resource>
-#    <publication>
-#      <citation="Resing et al. 2004, Anal Chem"/>
-#      <url="http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?cmd=Retrieve&db=pubmed&dopt=Abstract&list_uids=15228325"/>
-#    </publication>
-#  </sample>
+# Format is:
+# <sample>
+#   <sample_tag>A8_IP</sample_tag>
+#   <organism>Human</organism>
+#   <description>Human Erythroleukemia K562 cell line</description>
+#   <data_contributors>Katherine Resing (U Col), Meyer-Arendt K, Mendoza AM, Aveline-Wolf LD Jonscher KR, Pierce KG, Old WM, Cheung HT, Russell S, Wattawa JL, Goehle GR, Knight RD, Ahn NG.</data_contributors>
+#   <resource README="http://www.peptideatlas.org/repository/pa_public_archive/A8_IP_README"></resource>
+#   <resource mzXML_format="http://www.peptideatlas.org/repository/pa_public_archive/A8_IP_mzXML.tar.gz"></resource>
+#   <resource RAW_format="http://www.peptideatlas.org/repository/pa_public_archive/A8_IP_RAW.tar.gz"></resource>
+#   <resource Search_Results="http://www.peptideatlas.org/repository/pa_public_archive/A8_IP_searched.tar.gz"></resource>
+#   <resource ProteinProphet_file="http://www.peptideatlas.org/repository/pa_public_archive/A8_IP_prot.tar.gz"></resource>
+#   <publication citation="Resing et al. 2004, Anal Chem. 2004 Jul 1;76(13):3556-68." url="http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?cmd=Retrieve&amp;db=pubmed&amp;dopt=Abstract&amp;list_uids=15228325"></publication>
+# </sample>
+#
 #######################################################################
 sub writeXMLSample
 {
@@ -2046,6 +2084,85 @@ sub writeXMLSample
     }
 
     ####### end resources #######
+
+
+    ## indent 2 spaces, write end sample tag:
+    $out->print("  ");
+    $writer->endTag("sample");
+
+    $writer->end();
+
+    $out->close();
+
+}
+
+#######################################################################
+# writeNotPublicXMLSample -- write not public sample info to xml file.  
+#
+# Format is:
+# <sample>
+#   <sample_tag>A8_IP</sample_tag>
+#   <organism>Human</organism>
+#   <cell_type>Human Erythroleukemia K562 cell line</cell_type>
+# </sample>
+#
+#######################################################################
+sub writeNotPublicXMLSample
+{
+
+    my %args = @_;
+
+    ## read arguments:
+    my $sample_tag = $args{'sample_tag'} || die "need sample tag ($!)";
+
+    my $cell_type = $args{'cell_type'} || die "need cell_type ($!)";
+
+    my $organism = $args{'organism'} || die "need organism ($!)";
+
+    my $data_contributors = $args{'data_contributors'} ||
+        die "need data_contributors ($!)";
+
+
+    ## open xml file and writer:
+    my $out = new IO::File(">>$notpublic_xml_outfile");
+
+    my $writer = new XML::Writer(OUTPUT=> $out, UNSAFE => 1);
+
+    ## indent 2 spaces, write start tag, write end-of line marker
+    $out->print("  ");
+    $writer->startTag("sample");
+    $out->print("\n");
+
+
+    ## indent 4 spaces, write tag, write end-of line marker
+    $out->print("    ");
+    $writer->startTag("sample_tag");
+    $writer->characters($sample_tag);
+    $writer->endTag("sample_tag");
+    $out->print("\n");
+
+
+    ## indent 4 spaces, write tag, write end-of line marker
+    $out->print("    ");
+    $writer->startTag("organism");
+    $writer->characters($organism);
+    $writer->endTag("organism");
+    $out->print("\n");
+
+
+    ## indent 4 spaces, write tag, write end-of line marker
+    $out->print("    ");
+    $writer->startTag("cell_type");
+    $writer->characters($cell_type);
+    $writer->endTag("cell_type");
+    $out->print("\n");
+
+    ## indent 4 spaces, write tag, write end-of line marker
+    $out->print("    ");
+    $writer->startTag("data_contributors");
+    $writer->characters($data_contributors);
+    $writer->endTag("data_contributors");
+    $out->print("\n");
 
 
     ## indent 2 spaces, write end sample tag:
