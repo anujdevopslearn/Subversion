@@ -104,7 +104,7 @@ sub process_file{
 	print "Prosessing file '$file'...";
 
 	my $temp_dir = mk_temp_dir($file);
-	copy_orginial_to_temp(temp_folder => $temp_dir,
+	copy_original_to_temp(temp_folder => $temp_dir,
 			     file	    => $file,
 			      );
 	unpack_jar(temp_folder => $temp_dir,
@@ -144,7 +144,7 @@ sub mk_temp_dir{
 	return ($temp_dir);	
 }
 
-sub copy_orginial_to_temp {
+sub copy_original_to_temp {
 	my %args = @_;
 	my $file = $args{file};
 	my $temp_folder = $args{temp_folder};
@@ -204,14 +204,14 @@ sub move_files{
 	my $file = $args{file};
 	my $temp_folder = $args{temp_folder};
 	
-	unless (-e "$DIR/ORGINIAL_JARS"){
+	unless (-e "$DIR/ORIGINAL_JARS"){
 	
-		mkdir "$DIR/ORGINIAL_JARS" or die "Cannot mk ORGINIAL DIR $!\n";
+		mkdir "$DIR/ORIGINAL_JARS" or die "Cannot mk ORIGINAL DIR $!\n";
 	}
-	print "Saving original jar $DIR/$file in $DIR/ORGINIAL_JARS/$file\n" .
+	print "Saving original jar $DIR/$file in $DIR/ORIGINAL_JARS/$file\n" .
 	      "Moving new jar $temp_folder/$file to $DIR/$file\n" if $VERBOSE;
 	#save_orginal
-	run_command("mv $DIR/$file $DIR/ORGINIAL_JARS/$file");
+	run_command("mv $DIR/$file $DIR/ORIGINAL_JARS/$file");
 	#copy in new file
 	run_command("mv $temp_folder/$file $DIR/$file");
 	
@@ -247,7 +247,7 @@ sub collect_good_manifest_info{
 	my $good_info = '';
 	while(<FILE>){
 		$good_info .= $_;
-		last if ($_ =~ /^\s+/)
+		last if ($_ =~ /Main-Class/)
 		
 	}
 	print "$good_info\n" if $VERBOSE;
