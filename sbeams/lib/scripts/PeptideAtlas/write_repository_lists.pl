@@ -50,6 +50,7 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
 ## USAGE:
+$PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
 Usage: [OPTIONS] key=value key=value ...
 Options:
@@ -1975,16 +1976,17 @@ sub writeXMLSample
     $writer->endTag("description");
     $out->print("\n");
 
+    ## indent 4 spaces, write tag, write end-of line marker
+    $out->print("    ");
+    $writer->startTag("data_contributors");
+    $writer->characters($data_contributors);
+    $writer->endTag("data_contributors");
+    $out->print("\n");
+
 
     ## indent 4 spaces, write tag, write end-of line marker
     $out->print("    ");
     $writer->startTag("resource", "README" => $READMELocation);
-    $writer->endTag("resource");
-    $out->print("\n");
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("resource", "Data_Contributors" => $data_contributors);
     $writer->endTag("resource");
     $out->print("\n");
 
@@ -1995,14 +1997,6 @@ sub writeXMLSample
     $writer->endTag("resource");
     $out->print("\n");
 
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("resource", "Search_Results" => $searchResultsLocation);
-    $writer->endTag("resource");
-    $out->print("\n");
-
-
     if ($rawDataLocation ne "")
     {
         ## indent 4 spaces, write tag, write end-of line marker
@@ -2011,6 +2005,14 @@ sub writeXMLSample
         $writer->endTag("resource");
         $out->print("\n");
     }
+
+
+    ## indent 4 spaces, write tag, write end-of line marker
+    $out->print("    ");
+    $writer->startTag("resource", "Search_Results" => $searchResultsLocation);
+    $writer->endTag("resource");
+    $out->print("\n");
+
 
     if ($proteinProphetLocation ne "")
     {
