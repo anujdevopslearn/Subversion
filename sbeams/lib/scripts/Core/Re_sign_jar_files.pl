@@ -247,8 +247,7 @@ sub collect_good_manifest_info{
 	my $good_info = '';
 	while(<FILE>){
 		$good_info .= $_;
-		last if ($_ =~ /Main-Class/)
-		
+		last if ($_ =~ /^\s$/);
 	}
 	print "$good_info\n" if $VERBOSE;
 	print "END PRINTING MANIFEST INFO ###################\n" if $VERBOSE;
