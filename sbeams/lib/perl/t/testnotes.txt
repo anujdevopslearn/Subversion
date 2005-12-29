@@ -1,0 +1,20 @@
+
+A few notes about SBEAMS tests:
+
+All tests are organized by:
+ - Core (automated tests that require no modules to run)
+ - Modulename (requires only that module plus Core plus BioLink)
+ - other (miscellaneous tests that are only to be used by hand)
+
+All .t tests can be run on a production system without disturbing anything
+
+All .full tests should be run on a test installation with known test
+data in it.
+
+Misc thoughts:
+- Maybe it would be useful to perform some tests within a transaction
+  which is rolled back at the end
+
+It would be nice to get to a state where we could set up a devTT instance,
+run all automated tests nightly via cron, and email the results to developers.
+
