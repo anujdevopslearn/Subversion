@@ -27,9 +27,6 @@ use GD::Graph::xypoints;
 use GD::Graph::bars;
 use GD::Text;
 
-use AvgMolWgt::AvgMolWgt;
-use TrypticDigestor::TrypticDigestor;
-
 use POSIX qw(ceil floor);
 
 
@@ -55,6 +52,10 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
+
+
+use SBEAMS::Proteomics::AvgMolWgt::AvgMolWgt;
+use SBEAMS::Proteomics::TrypticDigestor::TrypticDigestor;
 
 
 $sbeams = new SBEAMS::Connection;
