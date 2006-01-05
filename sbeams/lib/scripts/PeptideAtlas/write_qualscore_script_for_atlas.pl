@@ -7,6 +7,8 @@
 #     script is meant to be run on the regis cluster as a separate step
 #     afterwards.
 #
+#
+#
 # Author: Nichole King
 #######################################################################
 use strict;
@@ -19,8 +21,9 @@ use lib "$FindBin::Bin/../../perl";
 use vars qw ($sbeams $sbeamsMOD $current_username 
              $PROG_NAME $USAGE %OPTIONS $TEST 
              $data_root_dir $atlas_build_name $atlas_build_id
-             $errorfile $scriptfile $interact_datafile $qdir_locations_file
+             $errorfile $scriptfile $qdir_locations_file
             );
+#            $interact_datafile 
 
 #### Set up SBEAMS core module
 use SBEAMS::Connection qw($q);
@@ -34,7 +37,6 @@ use SBEAMS::PeptideAtlas::Tables;
 
 ## Proteomics (for search_batch::data_location)
 use SBEAMS::Proteomics::Tables;
-
 
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
@@ -77,7 +79,9 @@ $atlas_build_id  = $OPTIONS{atlas_build_id} || '';
 unless ($TEST || $atlas_build_name || $atlas_build_id)
 {
 
-    die "\n$USAGE\n";
+    print "\n$USAGE\n";
+
+    exit(0);
 
 }
 
@@ -90,7 +94,14 @@ $errorfile = "/sbeams/archive/qualscore_ERRORS.txt";
 
 $scriptfile = "/sbeams/archive/qualscore_script.csh";
 
-$interact_datafile = "interact-forqualscore-data.htm";
+##$interact_datafile = "interact-forqualscore-data.htm";
+## Qualscore works on modern interact.xml now!
+## Replacing interact_datafile with a search for the interact.xml 
+## files in each directory.  If more than one of the following are 
+## found, an error will be printed to error file, and will have to 
+## handle that case by hand.  File patterns looking for are: 
+## interact-prob.xml, interact-prob?.xml, and interact-prob??.xml   
+## (some of the largest datasets had to be put through the 'Prophets in pieces.)
 
 $qdir_locations_file = "/sbeams/archive/qualscore_locations.txt";
 
@@ -128,6 +139,10 @@ sub main
     ## write script (it has cmds to run qualscore on data directories)
     write_atlas_qualscore_script();
 
+    print "\nwrote $scriptfile\n";
+
+    print "wrote $errorfile\n\n";
+
 
 } ## end main
 
@@ -150,7 +165,9 @@ sub check_host()
     } else
     {
 
-        die "you must run this on atlas";
+        print "you must run this on atlas\n";
+
+        exit(0);
 
     }
 
@@ -199,48 +216,49 @@ sub write_atlas_qualscore_script()
 {
 
     ## Get sample information. Structure is: 
-    ##  $samples{$sample_tag}->{search_batch_id} = $search_batch_id;
+    ## key = sample_tag
+    ## value = search_batch_id
     my %samples = get_sample_info();
 
 
     ## Get experiment location information. Structure is simple hash with
     ##  key = $search_batch_id, 
     ##  value = $experiment_path
-    my %data_dirs = get_data_directories();
+    my %data_dirs = get_data_directories( sample_ref => \%samples );
 
 
     ## iterate over sample_tags, writing formatted info to file:
     foreach my $sample_tag ( keys %samples)
     {
 
-        my $sbid = $samples{$sample_tag}->{search_batch_id};
+        my $sbid = $samples{$sample_tag};
 
         ## identify data directories (spectra stored one level above search results):
         my $search_data_dir = $data_dirs{ $sbid };
 
-#       my $interactDataFileLocation = get_data_location( 
-#
-#           data_dir => $search_data_dir,
-#
-#           file_pattern => "interact*data.htm",
-#
-#           sample_tag => $sample_tag,
-#
-#       );
+        ## get data location, if more than one file matches pattern, prints
+        ## message to error log and returns empty string
+        my $interactDataFileLocation = get_data_location( 
+ 
+            data_dir => $search_data_dir,
+ 
+            file_pattern => "interact-prob.xml, interact-prob?.xml, interact-prob??.xml",
+ 
+            sample_tag => $sample_tag,
+ 
+        );
 
-
-#       if ($interactDataFileLocation)
-#       {
+        if ($interactDataFileLocation)
+        {
 
             write_script_file(
                 
                 data_dir => $search_data_dir,
 
+                interactDataFileLocation => $interactDataFileLocation,
             );
-#               interactDataFileLocation => $interactDataFileLocation,
-    
 
-#       }
+        }
 
     } ## end sample tag iteration
 
@@ -259,16 +277,16 @@ sub write_script_file
     my $dataDir = $args{data_dir} || 
         die "need data directory ($!)";
 
-#   my $interactDataFileLocation = $args{interactDataFileLocation} || 
-#       die "need interactDataFileLocation ($!)";
+    my $interactDataFileLocation = $args{interactDataFileLocation} || 
+        die "need interactDataFileLocation ($!)";
 
     chomp ($dataDir);
 
+    chomp ($interactDataFileLocation);
+
     my $str1 = "cd $dataDir";
 
-    my $str2 = "oldinteract -P0 -Nforqualscore *.html";
-
-    my $str3 = "qualscore $interact_datafile | grep -v WARN >>\& $errorfile";
+    my $str3 = "qualscore $interactDataFileLocation | grep -v WARN >>\& $errorfile";
 
     my $str4 = "echo \"$dataDir/interact-data.qdir\" >> $qdir_locations_file";
 
@@ -277,8 +295,6 @@ sub write_script_file
         "cannot open $scriptfile for writing ($!)";
 
     print OUTFILE "$str1\n";
-
-    print OUTFILE "$str2\n";
 
     print OUTFILE "$str3\n";
 
@@ -312,7 +328,7 @@ sub error_message
 
 
 #######################################################################
-# get_data_location -- given dir, and file pattern, returns found
+# get_data_location -- given dir, and file pattern; returns found
 #     file name.
 #######################################################################
 sub get_data_location
@@ -326,47 +342,60 @@ sub get_data_location
 
     my $file_pattern = $args{file_pattern} || die "need file_pattern for $sample_tag list ($!)";
 
-    my $search_pattern = "$data_dir/$file_pattern";
+    ## split, if more than one entry:
+    my @search_patterns = split(",",$file_pattern);
 
-    my @data_location = `ls $search_pattern`;
+    my @locations;
 
     my $location;
 
-    if ( $#data_location == -1)
+    ## find matching patterns in directory:
+    for (my $i=0; $i <=$#search_patterns; $i++)
     {
 
-        error_message( message => "couldn't find $search_pattern" );
+#       my $search_pattern = "$data_dir/$search_patterns[$i]";
+#       my @data_location = `ls $search_pattern`;
 
-    }
+        my $pat = $search_patterns[$i];
 
-    if ( $#data_location > 0)
-    {
+        my @data_location = `find $data_dir -name \'$pat\' -print`;
 
-        if ($file_pattern eq "interact*data.htm")
+        for (my $j=0; $j <=$#data_location; $j++)
         {
 
-            $location = get_data_location(
-
-                data_dir => $data_dir,
-
-                file_pattern => "interact*prob*data.htm",
-            );
-
-
-        } else
-        {
-            
-            error_message( message => "more than one match to $search_pattern" );
+            push(@locations, $data_location[$j]);
 
         }
 
     }
 
-    
-    if ( $#data_location == 0)
+    if ( $#locations == -1)
     {
 
-        $location = $data_location[0];
+        error_message( message => 
+            "couldn't find patterns $file_pattern in directory $data_dir" );
+
+        $location = "";
+
+    }
+
+    if ( $#locations == 0)
+    {
+
+        $location = $locations[0];
+
+    }
+
+    if ( $#locations > 0)
+    {
+
+        my $msg = "Found more than one file matching patterns "
+            . "$file_pattern in directory $data_dir. " 
+            . "You'll have to run qualscore on this directory by hand.";
+
+        error_message( message => $msg);
+
+        $location = "";
 
     }
 
@@ -376,7 +405,8 @@ sub get_data_location
 
 #######################################################################
 # get_sample_info -- 
-#    public sample records and store it by sample_tag
+#    public sample records and store it by sample_tag.  
+#    returns hash with key = sample_tag, value=search_batch_id
 #######################################################################
 sub get_sample_info
 {
@@ -384,16 +414,34 @@ sub get_sample_info
     my %sample_info;
 
     ## get sample info:
+    # my $sql = qq~
+    #     SELECT S.sample_tag, S.search_batch_id
+    #     FROM $TBAT_SAMPLE S
+    #     JOIN $TBAT_ATLAS_BUILD_SAMPLE ABS ON (ABS.sample_id = S.sample_id)
+    #     WHERE ABS.record_status != 'D'
+    #     AND S.record_status != 'D'
+    #     AND ABS.atlas_build_id = '$atlas_build_id'
+    # ~;
+
+    ## see that atlas_build_sample records have disappeared, so 
+    ## need to write that into/back into the loader!
+    ## xxxxxxx
+    ## meanwhile, work around is to get sample from an atlas build
+    ## via the peptide_instance records:
     my $sql = qq~
         SELECT S.sample_tag, S.search_batch_id
         FROM $TBAT_SAMPLE S
-        JOIN PeptideAtlas.dbo.atlas_build_sample ABS ON (ABS.sample_id = S.sample_id)
+        JOIN $TBAT_PEPTIDE_INSTANCE_SAMPLE PEPIS ON 
+            (PEPIS.sample_id = S.sample_id)
+        JOIN $TBAT_PEPTIDE_INSTANCE PEPI ON 
+            (PEPI.peptide_instance_id = PEPIS.peptide_instance_id)
         WHERE S.record_status != 'D'
-        AND ABS.atlas_build_id = $atlas_build_id
+        AND PEPI.atlas_build_id = '$atlas_build_id'
     ~;
+    
 
     my @rows = $sbeams->selectSeveralColumns($sql) or 
-        die "Couldn't find sample records ($!)";
+        die "Couldn't find sample records with \n$sql \n($!)";
 
     ## store query results in $sample_info
     foreach my $row (@rows) 
@@ -404,39 +452,40 @@ sub get_sample_info
         if ( $sample_tag ne "test" && $sample_tag ne "LnCAP_nuc3" )
         {
 
-            $sample_info{$sample_tag}->{search_batch_id} = $search_batch_id;
+            $sample_info{$sample_tag} = $search_batch_id;
 
         }
 
     }
 
+#   if ($TEST)
+#   {
+#       foreach my $st ( keys %sample_info )
+#       {
+#
+#           my $sb = $sample_info{$st};
+#
+#           print "---> $st : $sb\n";
+#
+#       }
+#
+#   }
+
 
     if ($TEST)
     {
  
-#       ## print out attribs if testing
-#       foreach my $st ( keys %sample_info )
-#       {
-#
-#           my $str = "\$sample_info{$st}->";
-#
-#           my $str2 = $sample_info{$st}->{search_batch_id};
-#
-#           print ("  $str", "{search_batch_id} = ", $str2, "\n");
-#
-
         ## assert data structure contents
         foreach my $row (@rows) 
         {
 
             my ($sample_tag,  $search_batch_id ) = @{$row};
 
-            if ($sample_info{$sample_tag}->{search_batch_id} ne
-            $search_batch_id)
+            if ($sample_info{$sample_tag} ne $search_batch_id)
             {
 
                 warn "TEST fails for 
-                    $sample_info{$sample_tag}->{search_batch_id} ($!)";
+                    $sample_info{$sample_tag} ($!)";
 
             }
 
@@ -454,8 +503,8 @@ sub get_sample_info
             while ($count < 1)
             {
 
-                $small_sample_info{$st}->{search_batch_id}
-                    = $sample_info{$st}->{search_batch_id};
+                $small_sample_info{$st}
+                    = $sample_info{$st};
 
                 $count++;
 
@@ -475,7 +524,7 @@ sub get_sample_info
 
 
 #######################################################################
-# get_data_directories -- gets all Proteomics search_batch_id records
+# get_data_directories -- gets Proteomics records for given search batches
 #       and stores the search_batch_id and data dir in a hash.
 #       key = search_batch_id, 
 #       value = experiment data dir
@@ -483,16 +532,37 @@ sub get_sample_info
 sub get_data_directories
 {
 
-    my %data_dir_hash;
+    my %args = @_;
 
+    my $sample_ref = $args{'sample_ref'} || die "need sample ref ($)";
+
+    my %sample = %{$sample_ref};
+
+
+    my @search_batch_ids;
+
+    ## make string of search_batch_id's for query
+    foreach my $sample_tag ( keys %sample)
+    {
+
+        my $sbid = $sample{$sample_tag};
+
+        push(@search_batch_ids, $sbid);
+
+    }
+
+    my $sb_string = join(",", @search_batch_ids);
+
+    my %data_dir_hash;
 
     my $sql = qq~
         SELECT search_batch_id, data_location
         FROM $TBPR_SEARCH_BATCH
+        WHERE search_batch_id IN ($sb_string)
     ~;
 
     my @rows = $sbeams->selectSeveralColumns($sql) or 
-        die "Couldn't find proteomics_experiment and search_batch records ($!)";
+        die "Query failed: \n $sql \n ($!)";
 
     ## store query results in $publ_info
     foreach my $row (@rows) 
@@ -512,19 +582,18 @@ sub get_data_directories
 
     }
 
-
-#   ## print out attribs if testing
-#   if ($TEST)
-#   {
-#
-#       foreach my $sbid ( keys %data_dir_hash )
-#       {
-#
-#           print "search_batch_id = $sbid ---> path = $data_dir_hash{$sbid}\n";
-#
-#       }
-#
-#   }
+    ## print out attribs if testing
+    if ($TEST)
+    {
+ 
+        foreach my $sbid ( keys %data_dir_hash )
+        {
+ 
+            print "search_batch_id = $sbid ---> path = $data_dir_hash{$sbid}\n";
+ 
+        }
+ 
+    }
 
     ## assert hash not empty
     if ($TEST)
@@ -552,7 +621,6 @@ sub get_data_directories
         }
  
     } ## end TEST
-
 
     return %data_dir_hash;
 

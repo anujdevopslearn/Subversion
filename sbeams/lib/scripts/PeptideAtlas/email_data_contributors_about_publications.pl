@@ -5,9 +5,9 @@
 # Author      : Nichole King <nking@systemsbiology.org>
 # $Id$
 #
-# Description : This script gathers info about samples to be encorporated into
-##              APD, and emails the data contributors asking them to edit
-#               their sample pages. 
+# Description : 
+##              
+#               
 #
 ###############################################################################
 

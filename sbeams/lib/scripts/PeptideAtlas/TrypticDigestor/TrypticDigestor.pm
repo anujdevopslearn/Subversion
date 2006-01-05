@@ -60,7 +60,9 @@ sub digestSequence
     ## chomp sequence, and remove trailing "*" if present:
     chomp($sequence);
 
-    $sequence =~ s/^(.*)\*$/$1/g;
+    #$sequence =~ s/^(.*)\*$/$1/g;
+    ## changing to remove all occurences of "*" as SGD sequences have them embedded
+    $sequence =~ s/\*//g;
 
     ## length of sequence:
     my $len = length($sequence);
@@ -74,7 +76,7 @@ sub digestSequence
     my @tryptic_positions;
 
     ######## get array of K and R positions, excluding when before a proline: ##############
-    for (my $i=0; $i <= $len; $i++)
+    for (my $i=0; $i <= $len - 1; $i++)
     {
 
         my $amino_acid = substr($sequence, $i, 1);
@@ -82,9 +84,19 @@ sub digestSequence
         if ( ($amino_acid eq "K") || ($amino_acid eq "R") )
         {
 
-            my $next_amino_acid = substr($sequence, $i+1, 1);
+            my $next_amino_acid;
 
-            unless ( $next_amino_acid eq "P" )
+            ## handle over-running sequence:
+            if ( $i == $len - 1)
+            {
+                $next_amino_acid = "";
+            } else 
+            {
+                $next_amino_acid = substr($sequence, $i+1, 1);
+            }
+
+
+            unless ( ($next_amino_acid eq "P") || ($next_amino_acid eq "") )
             {
 
                 push(@tryptic_positions, $i);
@@ -107,12 +119,12 @@ sub digestSequence
 
     my $avgMolWgt;
 
-    ## handling the first 2 cases:
     for (my $i=0; $i <= $#tryptic_positions; $i++)
     {
 
         my $nmc = $n_allowed_missed_cleavages;
 
+        ## params for case (1)
         if ($i == 0)
         {
 
@@ -121,12 +133,14 @@ sub digestSequence
 
         } else
         {
+            ## params for case (2)
             ## position of (value of last index) + 1
             $first_amino_acid_position = ($tryptic_positions[$i-1]) + 1;
 
         }
 
 
+        ## params for case (3)
         ## if on last tryptic position, don't look further for missed cleavages:
         if ( $i == $#tryptic_positions)
         {
@@ -135,6 +149,8 @@ sub digestSequence
 
         }
 
+
+        ## parse out peptides given params of cases, and get their avg mol wgts:
         for (my $j = 0; $j <= $nmc; $j++)
         {
 
@@ -143,21 +159,26 @@ sub digestSequence
 
                 my $seq_length = $tryptic_positions[$i + $j] - $first_amino_acid_position + 1;
 
-                $peptide = substr($sequence, $first_amino_acid_position, $seq_length);
-
-                ## now get avg mass of peptide sequence:
-                $avgMolWgt = AvgMolWgt::calcAvgMolWgt( sequence => $peptide );
-
-
-                ## if between lower and upper mass limits, store it in hash:
-                if ( ($avgMolWgt >= $min_avg_mol_wgt) && ($avgMolWgt <= $max_avg_mol_wgt) )
+                if ( $seq_length > 0 )
                 {
 
-                    $peptide_mass_hash{$peptide} = $avgMolWgt;
+                    $peptide = substr($sequence, $first_amino_acid_position, $seq_length);
+
+                    ## now get avg mass of peptide sequence:
+                    $avgMolWgt = AvgMolWgt::calcAvgMolWgt( sequence => $peptide );
+
+
+                    ## if between lower and upper mass limits, store it in hash:
+                    if ( ($avgMolWgt >= $min_avg_mol_wgt) && ($avgMolWgt <= $max_avg_mol_wgt) )
+                    {
+
+                        $peptide_mass_hash{$peptide} = $avgMolWgt;
+
+                    }
+
+##                  print "$peptide:$first_amino_acid_position:$tryptic_positions[$i + $j]\n";
 
                 }
-
-##              print "$peptide:$first_amino_acid_position:$tryptic_positions[$i + $j]\n";
 
             }
 
@@ -171,17 +192,21 @@ sub digestSequence
     ## peptide
     if ( $#tryptic_positions > 0)
     {
-        unless ( $tryptic_positions[$#tryptic_positions] == $len )
+
+        my $seq_length = $len - $tryptic_positions[$#tryptic_positions] + 1;
+
+        if ( $seq_length > 0 )
         {
+
             $first_amino_acid_position =
                 ($tryptic_positions[$#tryptic_positions]) + 1;
 
-            $peptide = substr($sequence, $first_amino_acid_position);
+            $peptide = substr($sequence, $first_amino_acid_position, $seq_length);
 
-            $avgMolWgt = AvgMolWgt::calcAvgMolWgt( sequence => $sequence );
+            $avgMolWgt = AvgMolWgt::calcAvgMolWgt( sequence => $peptide );
 
             ## if between lower and upper mass limits, store it in hash:
-            if ( ($avgMolWgt > $min_avg_mol_wgt) && ($avgMolWgt < $max_avg_mol_wgt) )
+            if ( ($avgMolWgt >= $min_avg_mol_wgt) && ($avgMolWgt <= $max_avg_mol_wgt) )
             {
 
                 $peptide_mass_hash{$peptide} = $avgMolWgt;
@@ -193,6 +218,7 @@ sub digestSequence
         }
 
     }
+
 
 
     return %peptide_mass_hash;
