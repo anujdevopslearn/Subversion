@@ -4,7 +4,7 @@ use 5.008;
 use strict;
 use warnings;
 
-use AvgMolWgt::AvgMolWgt;
+use SBEAMS::Proteomics::AvgMolWgt::AvgMolWgt;
 
 require Exporter;
 
