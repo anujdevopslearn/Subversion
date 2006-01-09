@@ -1852,9 +1852,13 @@ sub processEntryForm {
           if ( $tmp eq '') {
             #$query_part2 .= "NULL,";
 
-          #### If the datatype was fixed, then this can't be updated via MT
-          } elsif ($input_types{$element} eq "fixed") {
-	    #### Do nothing with this field, ignore it
+          #XXX If the datatype was fixed, then this can't be updated via MT
+	  #### Reversed previous decision to do above.  Insert of
+          #### fixed is needed to allow PR_search_hit_annotation and
+          #### SN_manual_genotype_call to function properly.
+          #### -EDeutsch 2006-01-08. See today's email
+          #} elsif ($input_types{$element} eq "fixed") {
+	  #  #### Do nothing with this field, ignore it
 
           # Change all ' to '' so that it can go in the INSERT statement
           } else {
