@@ -27,17 +27,25 @@ use vars qw(@ISA @EXPORT
     $TBAT_QUERY_OPTION
 
     $TBAT_ATLAS_BUILD
+    $TBAT_DEFAULT_ATLAS_BUILD
+    $TBAT_ATLAS_SEARCH_BATCH
     $TBAT_SAMPLE
     $TBAT_ATLAS_BUILD_SAMPLE
+    $TBAT_ATLAS_BUILD_SEARCH_BATCH
     $TBAT_PEPTIDE
     $TBAT_PEPTIDE_INSTANCE
     $TBAT_PEPTIDE_INSTANCE_SAMPLE
+    $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH
+    $TBAT_MODIFIED_PEPTIDE_INSTANCE
+    $TBAT_MODIFIED_PEPTIDE_INSTANCE_SAMPLE
+    $TBAT_MODIFIED_PEPTIDE_INSTANCE_SEARCH_BATCH
     $TBAT_PEPTIDE_MAPPING
+
     $TBAT_PUBLICATION
     $TBAT_BIOSEQUENCE_ANNOTATED_GENE
     $TBAT_BIOSEQUENCE_ANNOTATION
     $TBAT_SAMPLE_PUBLICATION
-    
+
     $TBAT_IPI_VERSION
     $TBAT_IPI_XREFS
     $TBAT_IPI_DATA
@@ -69,18 +77,34 @@ require Exporter;
     $TBAT_QUERY_OPTION
 
     $TBAT_ATLAS_BUILD
+    $TBAT_DEFAULT_ATLAS_BUILD
+    $TBAT_ATLAS_SEARCH_BATCH
     $TBAT_SAMPLE
     $TBAT_ATLAS_BUILD_SAMPLE
+    $TBAT_ATLAS_BUILD_SEARCH_BATCH
     $TBAT_PEPTIDE
     $TBAT_PEPTIDE_INSTANCE
     $TBAT_PEPTIDE_INSTANCE_SAMPLE
+    $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH
+    $TBAT_MODIFIED_PEPTIDE_INSTANCE
+    $TBAT_ATLAS_SEARCH_BATCH
+    $TBAT_SAMPLE
+    $TBAT_ATLAS_BUILD_SAMPLE
+    $TBAT_ATLAS_BUILD_SEARCH_BATCH
+    $TBAT_PEPTIDE
+    $TBAT_PEPTIDE_INSTANCE
+    $TBAT_PEPTIDE_INSTANCE_SAMPLE
+    $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH
+    $TBAT_MODIFIED_PEPTIDE_INSTANCE
+    $TBAT_MODIFIED_PEPTIDE_INSTANCE_SAMPLE
+    $TBAT_MODIFIED_PEPTIDE_INSTANCE_SEARCH_BATCH
     $TBAT_PEPTIDE_MAPPING
 
     $TBAT_PUBLICATION
     $TBAT_BIOSEQUENCE_ANNOTATED_GENE
     $TBAT_BIOSEQUENCE_ANNOTATION
     $TBAT_SAMPLE_PUBLICATION
-    
+
     $TBAT_IPI_VERSION
     $TBAT_IPI_XREFS
     $TBAT_IPI_DATA
@@ -108,18 +132,26 @@ $TB_ORGANISM                = "${core}organism";
 $TBBL_POLYMER_TYPE          = "${BioLink}polymer_type";
 
 $TBAT_BIOSEQUENCE_SET       = "${mod}biosequence_set";
-$TBAT_DBXREF                = "${mod}dbxref";
+$TBAT_DBXREF                = "${BioLink}dbxref";
 $TBAT_BIOSEQUENCE           = "${mod}biosequence";
 $TBAT_BIOSEQUENCE_PROPERTY_SET = "${mod}biosequence_property_set";
 $TBAT_QUERY_OPTION          = "${mod}query_option";
 
 $TBAT_ATLAS_BUILD           = "${mod}atlas_build";
+$TBAT_DEFAULT_ATLAS_BUILD   = "${mod}default_atlas_build";
+$TBAT_ATLAS_SEARCH_BATCH    = "${mod}atlas_search_batch";
 $TBAT_SAMPLE                = "${mod}sample";
 $TBAT_ATLAS_BUILD_SAMPLE    = "${mod}atlas_build_sample";
+$TBAT_ATLAS_BUILD_SEARCH_BATCH  = "${mod}atlas_build_search_batch";
 $TBAT_PEPTIDE               = "${mod}peptide";
 $TBAT_PEPTIDE_INSTANCE      = "${mod}peptide_instance";
 $TBAT_PEPTIDE_INSTANCE_SAMPLE  = "${mod}peptide_instance_sample";
+$TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH  = "${mod}peptide_instance_search_batch";
+$TBAT_MODIFIED_PEPTIDE_INSTANCE    = "${mod}modified_peptide_instance";
+$TBAT_MODIFIED_PEPTIDE_INSTANCE_SAMPLE  = "${mod}modified_peptide_instance_sample";
+$TBAT_MODIFIED_PEPTIDE_INSTANCE_SEARCH_BATCH  = "${mod}modified_peptide_instance_search_batch";
 $TBAT_PEPTIDE_MAPPING       = "${mod}peptide_mapping";
+
 $TBAT_PUBLICATION           = "${mod}publication";
 $TBAT_BIOSEQUENCE_ANNOTATED_GENE = "${mod}biosequence_annotated_gene";
 $TBAT_BIOSEQUENCE_ANNOTATION = "${mod}biosequence_annotation";
