@@ -245,6 +245,8 @@ sub pepXML_start_element {
   if ($localname eq 'spectrum_query') {
     $self->{pepcache}->{spectrum} = $attrs{spectrum};
     $self->{pepcache}->{charge} = $attrs{assumed_charge};
+    $self->{pepcache}->{spectrum_and_mass_uniq} = $attrs{spectrum}.
+      '-'.$attrs{precursor_neutral_mass}.'-'.$attrs{index};
   }
 
   #### If this is the search_hit, then store some attributes
@@ -292,14 +294,16 @@ sub pepXML_start_element {
 
       my $charge = $self->{pepcache}->{charge};
 
-      #### Extract the spectrum and make sure we haven't already seen it
-      my $spectrum = $self->{pepcache}->{spectrum};
+      #### Extract the spectrum uniqifier and make sure we haven't
+      #### already seen it
+      my $spectrum = $self->{pepcache}->{spectrum_and_mass_uniq};
       #$spectrum =~ s/\.\d$//;
       if (exists($self->{all_spectra}->{$spectrum})) {
-	die("ERROR: I already have seen a spectrum with name '$spectrum'. ".
-	    "Maybe this just a naming problem, or maybe two different ".
+	print "WARNING: A spectrum with tag '$spectrum' has already been. ".
+	    "loaded. Maybe this just a naming problem, or maybe two ".
+            "different ".
 	    "search_batches on the same spectra.  I'm not smart enough ".
-	    "to deal with the gracefully yet. More code required.");
+	    "to deal with the gracefully yet. More code required.";
       }
       $self->{all_spectra}->{$spectrum} = 1;
 
@@ -321,6 +325,11 @@ sub pepXML_start_element {
 	$info->{protein_name} = $self->{pepcache}->{protein_name};
 	$info->{peptide_prev_aa} = $self->{pepcache}->{peptide_prev_aa};
 	$info->{peptide_next_aa} = $self->{pepcache}->{peptide_next_aa};
+
+	my $peptide_accession = &main::getPeptideAccession(
+          sequence => $peptide_sequence,
+        );
+	$info->{peptide_accession} = $peptide_accession;
 
 	$self->{peptides}->{$peptide_sequence} = $info;
       }
@@ -350,7 +359,8 @@ sub pepXML_start_element {
 
     #### Increase the counters and print some progress info
     $self->{counter}++;
-    print $self->{counter}."..." if ($self->{counter} % 100 == 0);
+    #print $self->{counter}."..." if ($self->{counter} % 100 == 0);
+    print "." if ($self->{counter} % 1000 == 0);
 
   }
 
@@ -607,6 +617,16 @@ sub main {
   );
 
 
+  #### Write out all the read-in data in a PeptideAtlas XML format
+  $output_file =~ s/\.tsv$//i;
+  $output_file .= '.PAxml';
+  writePAxmlFile(
+    output_file => $output_file,
+    peptide_hash => $CONTENT_HANDLER->{peptides},
+    P_threshold => $CONTENT_HANDLER->{P_threshold},
+  );
+
+
   #### Write out information about the objects we've loaded if verbose
   if ($VERBOSE) {
     showContentHandlerContents(
@@ -860,7 +880,7 @@ sub writeAPDFormatFile {
 ###############################################################################
 sub showContentHandlerContents {
   my %args = @_;
-  my $CONTENT_HANDLER = $args{'CONTENT_HANDLER'}
+  my $CONTENT_HANDLER = $args{'content_handler'}
     || die("No CONTENT_HANDLER provided");
 
   print "\n-------------------------------------------------\n";
@@ -913,3 +933,169 @@ sub showContentHandlerContents {
 
 } # end showContentHandlerContents
 
+
+
+###############################################################################
+# writePAxmlFile
+###############################################################################
+sub writePAxmlFile {
+  my %args = @_;
+  my $output_file = $args{'output_file'} || die("No output file provided");
+  my $peptides = $args{'peptide_hash'}
+    || die("No output peptide_hash provided");
+  my $P_threshold = $args{'P_threshold'}
+    || die("No output P_threshold provided");
+
+
+  print "Writing output file '$output_file'...\n";
+
+
+  #### Open and write header
+  open(OUTFILE,">$output_file")
+    || die("ERROR: Unable to open '$output_file' for write");
+  print OUTFILE qq~<?xml version="1.0" encoding="UTF-8"?>\n~;
+
+
+  #### Write out parent build element
+  print OUTFILE encodeXMLEntity(
+    entity_name => 'atlas_build',
+    indent => 0,
+    entity_type => 'open',
+    attributes => {
+      probability_threshold => $P_threshold,
+    },
+  );
+
+
+  #### Loop over all peptides and write out as XML
+  while (my ($peptide_sequence,$attributes) = each %{$peptides}) {
+
+    print OUTFILE encodeXMLEntity(
+      entity_name => 'peptide_instance',
+      indent => 4,
+      entity_type => 'open',
+      attributes => {
+        original_protein_name => $attributes->{protein_name},
+        peptide_accession => $attributes->{peptide_accession},
+        peptide_sequence => $peptide_sequence,
+        peptide_prev_aa => $attributes->{peptide_prev_aa},
+        peptide_next_aa => $attributes->{peptide_next_aa},
+        best_probability => $attributes->{best_probability},
+        n_observations => $attributes->{n_instances},
+        search_batch_ids => join(",",keys(%{$attributes->{search_batch_ids}})),
+      },
+    );
+
+
+    #### Loop over all the observed modifications and write out
+    while (my ($mod_peptide_sequence,$mod_attributes) =
+      each %{$attributes->{modifications}}) {
+
+      while (my ($mod_charge,$charge_attributes) = each %{$mod_attributes}) {
+
+        print OUTFILE encodeXMLEntity(
+          entity_name => 'modified_peptide_instance',
+          indent => 8,
+          entity_type => 'openclose',
+          attributes => {
+            peptide_string => $mod_peptide_sequence,
+            charge_state => $mod_charge,
+            best_probability => $charge_attributes->{best_probability},
+            n_observations => $charge_attributes->{n_instances},
+            search_batch_ids =>
+              join(",",keys(%{$charge_attributes->{search_batch_ids}})),
+          },
+        );
+
+      }
+
+    }
+
+
+    #### Close peptide_instance tag
+    print OUTFILE encodeXMLEntity(
+      entity_name => 'peptide_instance',
+      indent => 4,
+      entity_type => 'close',
+    );
+
+  }
+
+
+  #### Close parent build element
+  print OUTFILE encodeXMLEntity(
+    entity_name => 'atlas_build',
+    indent => 0,
+    entity_type => 'close',
+  );
+
+
+  close(OUTFILE);
+
+  return(1);
+
+} # end writePAxmlFile
+
+
+
+###############################################################################
+# encodeXMLEntity
+###############################################################################
+sub encodeXMLEntity {
+  my %args = @_;
+  my $entity_name = $args{'entity_name'} || die("No entity_name provided");
+  my $indent = $args{'indent'} || 0;
+  my $entity_type = $args{'entity_type'} || 'openclose';
+  my $attributes = $args{'attributes'} || '';
+
+  #### Define a string from which to get padding
+  my $padstring = '                                                       ';
+  my $compact = 0;
+
+  #### Define a stack to make user we are nesting correctly
+  our @xml_entity_stack;
+
+  #### Close tag
+  if ($entity_type eq 'close') {
+
+    #### Verify that the correct item was on top of the stack
+    my $top_entity = pop(@xml_entity_stack);
+    if ($top_entity ne $entity_name) {
+      die("ERROR forming XML: Was told to close <$entity_name>, but ".
+	  "<$top_entity> was on top of the stack!");
+    }
+    return substr($padstring,0,$indent)."</$entity_name>\n";
+  }
+
+  #### Else this is an open tag
+  my $buffer = substr($padstring,0,$indent)."<$entity_name";
+
+
+  #### encode the attribute values if any
+  if ($attributes) {
+
+    while (my ($name,$value) = each %{$attributes}) {
+      if ($compact) {
+	$buffer .= qq~ $name="$value"~;
+      } else {
+	$buffer .= "\n".substr($padstring,0,$indent+8).qq~$name="$value"~;
+      }
+    }
+
+  }
+
+  #### If an open and close tag, write the trailing /
+  if ($entity_type eq 'openclose') {
+    $buffer .= "/";
+
+  #### Otherwise push the entity on our stack
+  } else {
+    push(@xml_entity_stack,$entity_name);
+  }
+
+
+  $buffer .= ">\n";
+
+  return($buffer);
+
+} # end encodeXMLEntity
