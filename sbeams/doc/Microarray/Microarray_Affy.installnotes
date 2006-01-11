@@ -101,14 +101,12 @@ databases.  This may or may not be a significant concern.
 
 
 cd $SBEAMS/lib/scripts/Core
-
-foreach dbtype ( mssql mysql pgsql oracle )
-  ./generate_schema.pl \
-    --table_prop ../../conf/Microarray/Microarray_table_property.txt \
-    --table_col ../../conf/Microarray/Microarray_table_column.txt \
-    --schema_file ../../sql/Microarray/Microarray --module Microarray \
-    --destination_type $dbtype --suppress
-end
+set dbtype=mssql      #### Set to your RDBMS type: mssql, mysql, etc.
+./generate_schema.pl \
+  --table_prop ../../conf/Microarray/Microarray_table_property.txt \
+  --table_col ../../conf/Microarray/Microarray_table_column.txt \
+  --schema_file ../../sql/Microarray/Microarray --module Microarray \
+  --destination_type $dbtype --suppress
 
 
 - Verify that the SQL CREATE and DROP statements have been correctly
