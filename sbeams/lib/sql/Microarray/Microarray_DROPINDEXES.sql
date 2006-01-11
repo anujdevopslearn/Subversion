@@ -54,9 +54,16 @@ DROP INDEX dbo.affy_gene_intensity.idx_affy_array_id
 go 
 -- affy_gene_intensity_   affy_array_id,probe_set_id, protocol_id
 DROP INDEX dbo.affy_gene_intensity.idx_afa_id_probe_set_id_protocol_id
+go
 
-go 
--- gene_expression
+-- gene_expression  condition_id
 DROP INDEX dbo.gene_expression.idx_condition_id
-
 go 
+
+-- gene_expression  gene_name
+DROP INDEX dbo.gene_expression.idx_gene_name
+go
+
+-- gene_expression  biosequence_id
+DROP INDEX dbo.gene_expression.idx_biosequence_id
+go
