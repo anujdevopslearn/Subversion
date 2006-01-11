@@ -914,7 +914,12 @@ sub selectSeveralColumns {
 
     #### FIX ME replace with $dbh->selectall_arrayref ?????
     my $sth = $dbh->prepare($sql) or confess($dbh->errstr);
-    my $rv  = $sth->execute or confess($dbh->errstr);
+    my $rv  = $sth->execute();
+    unless( $rv ) {
+      $log->error( "Error executing SQL:\n $sql" );
+      $log->printStack( 'error' );
+      confess $dbh->errstr;
+    }
 
     while (my @row = $sth->fetchrow_array) {
         push(@rows,\@row);
@@ -2666,29 +2671,17 @@ sub displayResultSet {
     }
 
 
+    my $output_mode = $self->output_mode();
+    my $header = $self->get_http_header( mode => $output_mode );
+    $log->debug( "header is: $header with mode $output_mode" );
+
     #### If the desired output format is TSV-like, dump out the data that way
-    if ($self->output_mode() =~ /tsv|csv|excel/) {
+    if ( $output_mode =~ /tsv|csv|excel/) {
       my @row;
+      my $delimiter = ( $output_mode =~ /csv/ ) ? ',' : "\t";
 
-      #### If the invocation_mode is http, provide a header
-      my $delimiter = "\t";
-      my $header = "Content-type: text/tab-separated-values\n\n";
-
-      if ($self->invocation_mode() eq 'http') {
-        if ($self->output_mode() =~ /tsv/) {
-          $header = "Content-type: text/tab-separated-values\n\n";
-          $delimiter = "\t";
-        } elsif ($self->output_mode() =~ /csv/) {
-          $header = "Content-type: text/comma-separated-values\n\n";
-          $delimiter = ",";
-        } elsif ($self->output_mode() =~ /excel/) {
-          $header = "Content-type: application/excel\n\n";
-          $delimiter = "\t";
-		}
-      }
-
-      print $header if ($self->invocation_mode() eq 'http');
-
+      # Print http header
+      print $header if $self->invocation_mode() eq 'http';
 
       #### Set a very high page size if using defaults
       $resultset_ref->{page_size} = 1000000
@@ -2731,8 +2724,8 @@ sub displayResultSet {
 		my $datum = $all_columns[$column];
 
 		#### Flag Columns to REMOVAL from printing. 
-		if ($self->output_mode() eq 'tsv' || $self->output_mode() eq 'csv' ||
-            $self->output_mode() eq 'excel') {
+		if ($output_mode eq 'tsv' || $output_mode eq 'csv' ||
+            $output_mode eq 'excel') {
 		  if ($hidden_cols{$datum}) {
 			$no_print_columns[$column] = 1;
 			next;
@@ -2741,7 +2734,7 @@ sub displayResultSet {
 		  }
 		}
 
-		if ($self->output_mode() eq 'tsvfull') {
+		if ($output_mode eq 'tsvfull') {
 		  if ($url_cols_ref->{$column_titles_ref->[$column]}) {
 			my $link = $url_cols_ref->{$column_titles_ref->[$column]};
 			$tsvfull_url_column_number{$link} = $column;
@@ -2752,7 +2745,7 @@ sub displayResultSet {
 		}
 
 		if ($datum =~ /[\t,\"]/) {
-		  $datum =~ s/\t/ /g if ($self->output_mode() =~ /tsv/);
+		  $datum =~ s/\t/ /g if ($output_mode =~ /tsv/);
 		  $datum =~ s/\"/""/g;
 		  $datum = "\"$datum\"";
 		}
@@ -2769,17 +2762,17 @@ sub displayResultSet {
 		  my $datum = $row[$column];
 		  next if ( defined $no_print_columns[$column] && $no_print_columns[$column] == 1);
           if ( defined $datum && $datum =~ /[\t,\",\n]/) {
-            $datum =~ s/\t/ /g if ($self->output_mode()  =~ /tsv/);
+            $datum =~ s/\t/ /g if ($output_mode  =~ /tsv/);
 
             # Substitute stray \n characters, Mantis bug 0000046
-            $datum =~ s/\r?\n/\\n/g if ($self->output_mode() =~ /tsv|csv/);
+            $datum =~ s/\r?\n/\\n/g if ($output_mode =~ /tsv|csv/);
             $datum =~ s/\"/""/g;
             $datum = "\"$datum\"";
           }
           push(@output_row,$datum);
         }
 
-		if ($self->output_mode() eq 'tsvfull') {
+		if ($output_mode eq 'tsvfull') {
 		  foreach my $tsvfull_url (@tsvfull_urls) {
 			my $temp_url = $tsvfull_url;
 			my $linked_column_number = $tsvfull_url_column_number{$temp_url};
@@ -2799,13 +2792,13 @@ sub displayResultSet {
 
     #### If the desired output format is 'interactive' or 'boxtable',
     #### dump out the data that way
-    if ($self->output_mode() eq 'interactive' ||
-        $self->output_mode() eq 'boxtable') {
+    if ($output_mode eq 'interactive' ||
+        $output_mode eq 'boxtable') {
 
       #### Set a very high page size if not interactive and using defaults
       $resultset_ref->{page_size} = 1000000
         if ($rs_params_ref->{default_values} eq 'YES' &&
-            $self->output_mode() ne 'interactive');
+            $output_mode ne 'interactive');
 
       #### Display the BoxTable
       ShowBoxTable{
@@ -2819,12 +2812,10 @@ sub displayResultSet {
 
 
     #### If the desired output format is XML, dump out the data that way
-    if ($self->output_mode() eq 'xml') {
+    if ($output_mode eq 'xml') {
 
       #### If the invocation_mode is http, provide a header
-      if ($self->invocation_mode() eq 'http') {
-        print "Content-type: text/xml\n\n";
-      }
+      print $header if $self->invocation_mode() eq 'http';
 
       my $identifier = $rs_params_ref->{'set_name'} || 'unknown';
       print "<?xml version=\"1.0\" standalone=\"yes\"?>\n";
@@ -2859,7 +2850,7 @@ sub displayResultSet {
     #### If the desired output format is Cytoscape, prepare a temp directory
     #### for the files and return the jnlp xml
 
-    if ($self->output_mode() eq 'cytoscape' && defined($cytoscape)) {
+    if ($output_mode eq 'cytoscape' && defined($cytoscape)) {
 
       my $template = $cytoscape->{template} || die("ERROR: Cytoscape template not defined");
       my $identifier = $rs_params_ref->{'set_name'} || 'unknown';
@@ -2947,10 +2938,7 @@ sub displayResultSet {
 
 
       #### If the invocation_mode is http, provide a header
-      if ($self->invocation_mode() eq 'http') {
-        print "Content-type: application/x-java-jnlp-file\n\n";
-      }
-
+      print $header if $self->invocation_mode() eq 'http';
 
       #### Update the jnlp file with the latest information
       $infile = "$tmp_base_dir/cytoscape.jnlp";
