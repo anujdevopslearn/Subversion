@@ -1868,10 +1868,11 @@ sub updateSearchResults {
   my %args = @_;
   my $SUB_NAME = 'updateSearchResults';
 
-  #### Set up use of some special stuff to calculate pI.  FIXME
-  #use lib qw (/net/db/projects/proteomics/src/Proteomics/blib/lib
-  #  /net/db/projects/proteomics/src/Proteomics/blib/arch/auto/Proteomics);
-  #use Proteomics;
+  #### Set up use of some special stuff to calculate pI.
+  #### This should probably be replaced with native Perl calculator
+  #use lib "$FindBin::Bin/../../c/Proteomics/pICalculator/blib/lib";
+  #use lib "$FindBin::Bin/../../c/Proteomics/pICalculator/blib/arch";
+  #use pICalculator;
 
 
   #### Decode the argument list
@@ -1992,7 +1993,8 @@ sub updateSearchResults {
       $peptide = $data[$i]->{peptide};
 
       #### Calculate pI (Isoelectric point)
-      #$pI = Proteomics::COMPUTE_PI($peptide,length($peptide),0);
+      #### This should probably be replaced with native Perl calculator
+      #$pI = pICalculator::COMPUTE_PI($peptide,length($peptide),0);
       #$coldata{isoelectric_point} = $pI;
 
       #### Calculate Gravy Score
