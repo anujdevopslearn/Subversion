@@ -624,7 +624,8 @@ sub dump_hashref {
   my $eol = ( $mode =~ /HTML/i ) ? "<BR>\n" : "\n";
   my $dumpstr = '';
   for my $k ( keys( %{$args{href}} ) ) {
-    $dumpstr .= "$k => $args{href}->{$_}" . $eol;
+    my $val = $args{href}->{$_} || '';
+    $dumpstr .= "$k => $val" . $eol;
   }
   return $dumpstr;
 }
