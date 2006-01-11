@@ -100,6 +100,12 @@ sub invocation_mode {
 
 } # end invocation_mode
 
+#+
+# Light-weight accessor
+#-
+sub get_output_mode {
+  return $output_mode || output_mode();
+}
 
 ###############################################################################
 # Getter/setter for output_mode
@@ -126,6 +132,7 @@ sub output_mode {
   #### Otherwise, verify that we have a value
   } else {
     unless ($output_mode) {
+      print STDERR $self->getStackTrace();
       print "$METHOD_NAME: value has not yet been set!  This should never ".
         "happen, but I will set it to interactive just to see where this ".
         "ends up.  It is almost surely a bug that needs ".
