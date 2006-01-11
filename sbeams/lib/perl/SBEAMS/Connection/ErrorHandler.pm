@@ -71,9 +71,15 @@ sub error {
   my $prefix = '';
   my $suffix = '';
 
-  if ($sbeams->output_mode eq 'html') {
+  if ($sbeams->get_output_mode() eq 'html') {
     $prefix = "<BR>\nSBEAMS Error:<BR><PRE>";
-    $suffix = "</PRE><BR></TABLE></TABLE></TABLE></TABLE>";
+    $suffix = "";#</PRE><BR></TABLE></TABLE></TABLE></TABLE>";
+  } else {
+    $sbeams->handle_error( error_type  => 'sbeams_error',
+                           message     => $message,
+                           h_printed   => 0,
+                           out_mode    => $sbeams->get_output_mode()
+                         ); 
   }
 
 
@@ -96,9 +102,79 @@ sub getStackTrace {
   my $i = 0;
   use File::Basename;
   while (($p, $f, $l, $s, $h, $w) = caller($i++)) {
-    $message .= "Package: $p\t File: " . basename($f) . "\t Line: $l\t Sub: $s\n";
+    my $file = basename( $f );
+    $message .= "Package: $p\t File: $file\t Line: $l\t Sub: $s\n";
   }
   return $message;
+}
+
+#+
+#
+#-
+sub handle_error {
+  my $self = shift;
+  my %args = @_;
+  $args{error_type} ||= 'unknown_error';
+  $args{out_mode}   ||= $sbeams->get_output_mode();
+  $args{message}    ||= 'Unknown problem';
+  $args{state}      ||= 'SBEAMS_ERROR';
+
+  # Use default routine if HTML and sbeams_error
+  if ($args{out_mode} eq 'html' && $args{error_type} =~ /unknown|sbeams_err/) {
+    die ( $args{message} );
+  }
+
+  $args{code} = $self->get_error_code( $args{error_type} );
+  
+  my $ctype = '';
+  my $content = '';
+  my @headings = qw( State Code Type Message );
+
+  if ( $args{out_mode} =~ /tsv|tsvfull/ ) {
+    $ctype = $sbeams->get_content_type( 'tsv' );
+    $content = join( "\t", @headings ) . "\n" .
+               join( "\t", @args{qw(state code error_type message)} );
+  } elsif ( $args{out_mode} =~ /csv|csvfull/ ) {
+    $ctype = $sbeams->get_content_type( 'csv' );
+    $content = join( ',', @headings ) . "\n" .
+               join( ',', @args{qw(state code error_type message)} );
+  } elsif ( $args{out_mode} =~ /html/ ) {
+    $content = '<TABLE><TR><TD>';
+    $content .= join( "</TD><TD>", @headings ) . '</TD></TR><TR><TD>';
+    $content .= join( "</TD><TD>", @args{qw(state code error_type message)} );
+    $content .= '</TD></TR></TABLE>';
+  } elsif ( $args{out_mode} =~ /interactive/ ) {
+    $content = join( "\t", @headings ) . "\n" .
+               join( "\t", @args{qw(state code error_type message)} );
+  } else {
+    $content = join( "\t", @headings ) . "\n" .
+               join( "\t", @args{qw(state code error_type message)} );
+  }
+
+  # Are we over-reliant on this?
+  if ( $ENV{REMOTE_ADDR} && $ctype ) {
+    print $sbeams->get_http_header( mode => $args{out_mode} ); 
+  }
+  print "$content\n";
+  exit;
+}
+
+sub get_error_code {
+  my $self = shift;
+  my $code = shift || 'unknown_error';
+  my %codes = (  sbeams_error    => '0100',
+                 server_disabled => '0200',
+                 authen_required => '0300',
+                 authen_failed   => '0400',
+                 access_denied   => '0500',
+                 unknown_error   => '0000',
+                'bad constraint' => '1000',
+      'insufficient constraints' => '1010',
+                'data mismatch'  => '1100', 
+            'permission denied'  => '0500'
+
+              );
+  return $codes{$code} || $codes{unknown_error};
 }
 
 ###############################################################################
