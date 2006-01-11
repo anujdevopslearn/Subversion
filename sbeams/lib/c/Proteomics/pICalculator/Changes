@@ -1,0 +1,6 @@
+Revision history for Perl extension pICalculator.
+
+0.01  Mon Nov  5 16:32:36 2001
+	- original version; created by h2xs 1.20 with options
+		-x -n pICalculator calc_pI.h
+

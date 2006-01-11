@@ -1,0 +1,14 @@
+
+setenv SBEAMS /net/dblocal/www/html/dev2/sbeams
+
+cd $SBEAMS/lib/c/Proteomics/pICalculator
+perl Makefile.PL
+make
+make test
+
+## Should see (among other output):
+ok 2  (result = 3.91362762451172)
+
+./example.pl
+pI for peptide 'PEPTIDE' is 3.91362762451172
+
