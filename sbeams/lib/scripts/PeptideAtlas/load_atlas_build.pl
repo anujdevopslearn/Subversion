@@ -17,12 +17,16 @@
 use strict;
 use Getopt::Long;
 use FindBin;
+use lib "$FindBin::Bin/../../perl/SBEAMS/PeptideAtlas";
+use PAxmlContentHandler;
+
 
 use lib "$FindBin::Bin/../../perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_username 
              $ATLAS_BUILD_ID 
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
              $TESTVARS $CHECKTABLES
+	     $source_dir
             );
 
 
@@ -308,8 +312,8 @@ sub removeAtlas {
    my $atlas_build_id = $args{'atlas_build_id'};
    my $keep_parent_record = $args{'keep_parent_record'} || 0;
 
+   my $database_name = $DBPREFIX{PeptideAtlas};
    my $table_name = "atlas_build";
-   my $database_name = "Peptideatlas.dbo.";
    my $full_table_name = "$database_name$table_name";
 
    my %table_child_relationship = (
@@ -419,7 +423,7 @@ sub loadAtlas {
 
 
     ## set source_dir as full path to data:
-    my $source_dir = $builds_directory.$relative_path;
+    $source_dir = $builds_directory.$relative_path;
      
     unless ( -e $source_dir) {
 
@@ -451,10 +455,10 @@ sub loadAtlas {
 ###############################################################################
 # buildAtlas -- populates PeptideAtlas records in requested atlas_build
 ###############################################################################
-sub buildAtlas {  
+sub buildAtlas {
 
     print "building atlas...\n" if ($TESTONLY);
-        
+
     my %args = @_;
 
     my $atlas_build_id = $args{'atlas_build_id'} or die "need atlas_build_id ($!)";
@@ -474,29 +478,48 @@ sub buildAtlas {
 
     ## get hash with key = search_batch_id, value = sample_id
     ## and create sample records if they don't already exist
-    my %sample_id_hash = get_sample_id_hash( atlas_build_id => $atlas_build_id,
+    my %sample_id_hash = get_sample_id_hash(
+        atlas_build_id => $atlas_build_id,
         APD_id => $APD_id
     );
 
 
+    #### If there is a .PAxml file, load data from that
+    my $PAxmlfile = $source_dir . "/APD_" . $organism_abbrev . "_all.PAxml";
+    my $TSVfile = $source_dir . "/APD_" . $organism_abbrev . "_all.tsv";
 
-    #### set infile to APD tsv file
-    my $infile = $source_dir . "/APD_" . $organism_abbrev . "_all.tsv";
-
-    ## read APD file, write peptide records, 
-    ## initialize peptide_instance, and peptide_instance_sample
-    readAPD_writeRecords( infile => $infile, 
-        sample_id_hash_ref => \%sample_id_hash, 
+    if (-e $PAxmlfile) {
+      loadFromPAxmlFile(
+        infile => $PAxmlfile,
+        sample_id_hash_ref => \%sample_id_hash,
         atlas_build_id => $ATLAS_BUILD_ID,
-    );
+      );
+
+    #### Otherwise, see if the old-style TSV file exists and load from that
+    } elsif (-e $TSVfile) {
+
+      ## read APD file, write peptide records,
+      ## initialize peptide_instance, and peptide_instance_sample
+      readAPD_writeRecords(
+        infile => $TSVfile,
+        sample_id_hash_ref => \%sample_id_hash,
+        atlas_build_id => $ATLAS_BUILD_ID,
+      );
+
+    #### Or if neither was found, we have to stop here
+    } else {
+      die("ERROR: Unable to find either '$PAxmlfile' or '$TSVfile' to ".
+	  "load data from.");
+    }
 
 
     ## set infile to coordinate mapping file
-    $infile = "$source_dir/coordinate_mapping.txt";
+    my $mapping_file = "$source_dir/coordinate_mapping.txt";
 
+    #### Update the build data already loaded with genomic coordinates
     readCoords_updateRecords_calcAttributes(
-        infile => $infile,
-        sample_id_hash_ref => \%sample_id_hash, 
+        infile => $mapping_file,
+        sample_id_hash_ref => \%sample_id_hash,
         atlas_build_id => $ATLAS_BUILD_ID,
         biosequence_set_id => $biosequence_set_id,
         organism_abbrev => $organism_abbrev
@@ -514,19 +537,18 @@ sub buildAtlas {
 # @param APD_id
 ###############################################################################
 sub get_sample_id_hash {
-
     my %args = @_;
 
-    my $atlas_build_id = $args{atlas_build_id} or die
-        " need atlas_build_id ($!)";
+    my $atlas_build_id = $args{atlas_build_id} or
+        die("need atlas_build_id");
 
-    my $APD_id = $args{APD_id} or die
-        " need APD_id ($!)";
+    my $APD_id = $args{APD_id} or
+        die(" need APD_id ($!)");
 
     my $sb_list = get_search_batch_id_list( APD_id => $APD_id );
-        
+
     ## fill in hash values with sample_id's
-    my %sb_s_hash = get_search_batch_sample_id_hash( 
+    my %sb_s_hash = get_search_batch_sample_id_hash(
         sb_list => $sb_list );
 
 
@@ -538,14 +560,11 @@ sub get_sample_id_hash {
 # get_search_batch_id_list -- get search_batch_id_list
 ###############################################################################
 sub get_search_batch_id_list {
-
+    my $METHOD='get_search_batch_id_list';
     my %args = @_;
 
-    my $APD_id = $args{APD_id} or die "need APD_id ($!)";
-
-
-    my $sb_list;
-
+    my $APD_id = $args{APD_id} or
+      die "ERROR[$METHOD]: Parameter APD_id not greater than 0";
 
     ## get the list of search batch ID's from the APD record:
     ## (experiment_list is actually search batch id's)
@@ -555,13 +574,38 @@ sub get_search_batch_id_list {
        WHERE peptide_summary_id = '$APD_id'
     ~;
 
-    ($sb_list) = $sbeams->selectOneColumn($sql) or die 
-        "could not find search_batch_id list for APD_id = ".
-        "$APD_id ? \n $sql \n ($!)";
+    my ($search_batch_list) = $sbeams->selectOneColumn($sql);
 
-    return $sb_list;
+    #### If we didn't get it from the database, try from a file
+    unless ($search_batch_list) {
+      my $filename = "$source_dir/../Experiments.list";
+      print "INFO[$METHOD]: No database record.  Trying file:\n$filename\n";
+      if (-e $filename) {
+	if (open(EXPFILE,$filename)) {
+	  my @search_batch_list;
+	  while (my $line = <EXPFILE>) {
+	    if ($line =~ /^(\d+)\s/) {
+	      push(@search_batch_list,$1);
+	    } else {
+	      print "ERROR[$METHOD]: Unable to parse: $line";
+	    }
+	  }
+	  $search_batch_list = join(",",@search_batch_list);
+	  close(EXPFILE);
+	}
+      }
+    }
+
+    #### If we still don't have the list, it's all over
+    unless ($search_batch_list) {
+      die("ERROR[$METHOD]: could not find search_batch_id list for APD_id = ".
+        "$APD_id ? \n $sql \n");
+    }
+
+    return $search_batch_list;
 
 }
+
 
 
 ###############################################################################
@@ -570,12 +614,12 @@ sub get_search_batch_id_list {
 # @param $search_batch_id_list
 ###############################################################################
 sub get_search_batch_sample_id_hash {
-
+    my $METHOD='get_search_batch_id_list';
     my %args = @_;
 
-    my %tmp_hash;
-  
-    my $search_batch_id_list = $args{sb_list} or die "need search batch list ($!)";
+    my $search_batch_id_list = $args{sb_list} or
+      die("ERROR[$METHOD]: Parameter 'sb_list' not passed");
+
 
     #### Get existing sample_id's in peptide atlas:
     my $sql = qq~
@@ -584,9 +628,7 @@ sub get_search_batch_sample_id_hash {
         WHERE search_batch_id IN ($search_batch_id_list)
         AND record_status != 'D'
     ~;
-
-    %tmp_hash = $sbeams->selectTwoColumnHash($sql) or die
-        "unable to execute statement:\n$sql\n($!)";
+    my %sample_ids = $sbeams->selectTwoColumnHash($sql);
 
 
     ## For older datasets where we have new search batches, this query
@@ -595,45 +637,16 @@ sub get_search_batch_sample_id_hash {
     ## batch table in PeptideAtlas...
     my @search_batch_array = split(",", $search_batch_id_list);
 
-    for (my $i=0; $i <= $#search_batch_array; $i++)
-    {
+    foreach my $search_batch_id (@search_batch_array) {
 
-        if (!exists $tmp_hash{$search_batch_array[$i]} )
-        {
+        if (!exists $sample_ids{$search_batch_id} ) {
 
             ## create sample record and atlas build sample record:
-            my $tmp_sample_id = createSampleRecords(
-                search_batch_id => $search_batch_array[$i],
-                atlas_build_id => $ATLAS_BUILD_ID
+            my $sample_id = get_sample_id(
+                search_batch_id => $search_batch_id,
+                atlas_build_id => $ATLAS_BUILD_ID,
             );
-
-        }
-
-    }
-
-
-    ## Make one more sql call to make sure records did get entered:
-
-    #### Get existing sample_id's in peptide atlas:
-    $sql = qq~
-        SELECT search_batch_id, sample_id
-        FROM $TBAT_SAMPLE
-        WHERE search_batch_id IN ($search_batch_id_list)
-        AND record_status != 'D'
-    ~;
-
-    my %hash = $sbeams->selectTwoColumnHash($sql) or die
-        "unable to execute statement:\n$sql\n($!)";
-
-    for (my $i=0; $i <= $#search_batch_array; $i++)
-    {
-
-        if (!exists $hash{$search_batch_array[$i]} )
-        {
-
-            die "No sample record with search_batch_id = "
-                . "$search_batch_array[$i].  There is probably a "
-                . "newer search batch associated with the sample?\n";
+	    $sample_ids{$search_batch_id} = $sample_id;
 
         }
 
@@ -642,45 +655,46 @@ sub get_search_batch_sample_id_hash {
 
     ## now make sure atlas_build_sample records exist ##
 
-    ## get all atlas_build_sample records into a hash:
+    ## get all atlas_build_sample records for this build into a hash:
     $sql = qq~
         SELECT sample_id, atlas_build_sample_id
-        FROM $TBAT_ATLAS_BUILD_SAMPLE
-        WHERE record_status != 'D'
+          FROM $TBAT_ATLAS_BUILD_SAMPLE
+         WHERE atlas_build_id = '$ATLAS_BUILD_ID'
+           AND record_status != 'D'
     ~;
- 
-     my %abs_hash = $sbeams->selectTwoColumnHash($sql) or die
-         "unable to execute statement:\n$sql\n($!)";
+    my %abs_hash = $sbeams->selectTwoColumnHash($sql);
 
-    ## check that there's an atals_build_sample_record, and if not, create one
-    foreach my $key (keys %hash)
-    {
+    ## check that there's an atlas_build_sample_record, and if not, create one
+    foreach my $key (keys %sample_ids) {
+        my $sample_id = $sample_ids{$key};
 
-        my $sample_id = $hash{$key};
+        if (!exists $abs_hash{$sample_id}) {
 
-        if (!exists $abs_hash{$sample_id})
-        {
-
-            my $tmp_abs_id = createAtlasBuildSampleRecords(
+            my $atlas_build_sample_id = createAtlasBuildSampleLink(
                 sample_id => $sample_id,
                 atlas_build_id => $ATLAS_BUILD_ID
             );
+  	    print "INFO[$METHOD]: created atlas_build_sample_id=".
+	      "$atlas_build_sample_id\n";
 
-        }
+        } else {
+	  print "INFO[$METHOD]: atlas_build_sample record already exists\n";
+	}
     }
-   
 
-    return %hash;
-     
+
+    return %sample_ids;
+
 }
 
 
+
 ###############################################################################
-#  createAtlasBuildSampleRecords -- create atlas build sample record 
+#  createAtlasBuildSampleLink -- create atlas build sample record
 # @param sample_id
 # @param atlas_build_id
 ###############################################################################
-sub createAtlasBuildSampleRecords {
+sub createAtlasBuildSampleLink {
 
     my %args = @_;
 
@@ -708,28 +722,28 @@ sub createAtlasBuildSampleRecords {
         testonly=>$TESTONLY,
     );
 
-    return $sample_id;
+    return $atlas_build_sample_id;
 
-} ## end createAtlasBuildSampleRecords
+} ## end createAtlasBuildSampleLink
+
+
 
 ###############################################################################
-#  createSampleRecords -- create sample record 
+#  get_sample_id -- get or create sample record
 #     with minimum info and some default settings 
 #     [ specifically: is_public='N', project_id='475' ]
 # @param search_batch_id
 # @param atlas_build_id
 ###############################################################################
-sub createSampleRecords {
-
+sub get_sample_id {
+    my $METHOD='get_sample_id';
     my %args = @_;
 
     my $sb_id = $args{search_batch_id} or die "need search_batch_id ($!)";
 
-    my $atlas_build_id = $args{atlas_build_id} or 
+    my $atlas_build_id = $args{atlas_build_id} or
         die "need atlas_build_id ($!)";
 
-    my ($sample_tag,$sample_title, $sample_id, $sample_description);
-    
 
     ## get experiment_tag, experiment_name, $TB_ORGANISM.organism_name
     my $sql = qq~
@@ -742,39 +756,64 @@ sub createSampleRecords {
         WHERE SB.search_batch_id = '$sb_id'
         AND PE.record_status != 'D'
     ~;
-        
+
     my @rows = $sbeams->selectSeveralColumns($sql) or die
         "Could not find proteomics experiment record for ".
         " search batch id $sb_id \n$sql\n ($!)";
 
-
-    foreach my $row (@rows) 
-    {
-
-        my ($tmp_experiment_tag, $tmp_experiment_name, $tmp_organism_name) = @{$row};
-
-        $sample_tag = $tmp_experiment_tag;
-
-        $sample_title = $tmp_experiment_name;
-
-        $sample_description = $tmp_organism_name;
-
+    #### If more than one row returned, this is very bad
+    if (scalar(@rows) > 1) {
+      die("ERROR[$METHOD]: More than 1 row returned for $sql");
     }
+
+    #### Put results into named variables
+    my ($experiment_tag, $experiment_name, $organism_name) = @{$rows[0]};
+
+
+    #### Check to see if there's already a sample record with the same
+    #### name as the experiment.  If so, squawk and use it
+    $sql = qq~
+      SELECT sample_id
+        FROM $TBAT_SAMPLE
+       WHERE sample_tag = '$experiment_tag'
+          OR original_experiment_tag = '$experiment_tag'
+         AND record_status != 'D'
+    ~;
+    my @sample_ids = $sbeams->selectOneColumn($sql);
+
+    #### If exactly one row is returned, assume it's the right one and return
+    if (scalar(@sample_ids) == 1) {
+      print "INFO[$METHOD]: Inferring that search_batch_id '$sb_id' ".
+	"corresponds to sample_id '$sample_ids[0]' based on similar name\n";
+      return($sample_ids[0]);
+
+    #### If more than one row returns, then die
+    } elsif (scalar(@sample_ids) > 1) {
+      print("ERROR[$METHOD]: More than 1 row returned for $sql");
+      print "This should be fatal, but we will continue this once\n";
+      print "INFO[$METHOD]: Inferring that search_batch_id '$sb_id' ".
+	"corresponds to sample_id '$sample_ids[0]' based on similar name\n";
+      return($sample_ids[0]);
+    }
+
+
+    #### Otherwise, we need to add a record
 
 
     ## assume is_public = 'N' and project_id='475' for public PA
     my %rowdata = ( ##   sample      some of the table attributes:
         search_batch_id => $sb_id,
-        sample_tag => $sample_tag,
-        sample_title => $sample_title,
-        sample_description => $sample_description,
+        sample_tag => $experiment_tag,
+        original_experiment_tag => $experiment_tag,
+        sample_title => $experiment_name,
+        sample_description => $experiment_name,
         is_public => 'N',
         project_id => '475',
     );
 
 
     ## create a sample record:
-    my $tmp_sample_id = $sbeams->updateOrInsertRow(
+    my $sample_id = $sbeams->updateOrInsertRow(
         table_name=>$TBAT_SAMPLE,
         insert=>1,
         rowdata_ref=>\%rowdata,
@@ -785,12 +824,10 @@ sub createSampleRecords {
         testonly=>$TESTONLY,
     );
 
-    $sample_id = $tmp_sample_id;
-
     return $sample_id;
 
+} ## end get_sample_id
 
-} ## end createSampleRecords
 
 
 #######################################################################
@@ -800,24 +837,22 @@ sub createSampleRecords {
 #######################################################################
 sub get_peptide_accession_id_hash {
 
-    my %hash;
-
     #### Get the current list of peptides in the peptide table
     my $sql = qq~
         SELECT peptide_accession,peptide_id
         FROM $TBAT_PEPTIDE
         ~;
 
-    %hash = $sbeams->selectTwoColumnHash($sql) or die
-        "unable to execute statement:\n$sql\n($!)";
+    my %peptide_ids_hash = $sbeams->selectTwoColumnHash($sql);
 
-
-    return %hash;
+    return %peptide_ids_hash;
 
 }
 
+
+
 #######################################################################
-#  get__peptide_accession_instance_id_hash -- get hash
+#  get_peptide_accession_instance_id_hash -- get hash
 #      key = peptide accession
 #      value = peptide_instance_id
 #######################################################################
@@ -866,8 +901,7 @@ sub get_peptide_accession_sequence_hash
         WHERE PEPI.atlas_build_id = $atlas_build_id
         ~;
 
-    %hash = $sbeams->selectTwoColumnHash($sql) or die
-        "unable to execute statement:\n$sql\n($!)";
+    %hash = $sbeams->selectTwoColumnHash($sql);
 
     return %hash;
 
@@ -1821,4 +1855,179 @@ sub readCoords_updateRecords_calcAttributes {
 
 
 }
+
+
+
+
+#######################################################################
+# loadFromPAxmlFile - reads APD file, writes peptide records,
+#######################################################################
+sub loadFromPAxmlFile {
+  my %args = @_;
+
+  my $infile = $args{'infile'} or die "need infile ($!)";
+  my $sample_id_hash_ref = $args{'sample_id_hash_ref'} or die
+    "need sample_id_hash reference ($!)";
+  my $atlas_build_id = $args{'atlas_build_id'} or die
+    "need atlas_build_id ($!)";
+
+
+  ## hash with key = search_batch_id, value = sample_id
+  my %searchBatchID_sampleId_hash = %{ $sample_id_hash_ref };
+
+  ## get hash with key=peptide_accession, value=peptide_id
+  my %peptide_acc_id_hash = get_peptide_accession_id_hash();
+
+  #### Process parser options
+  my $validate = $OPTIONS{validate} || 'auto';
+  my $namespace = $OPTIONS{namespaces} || 0;
+  my $schema = $OPTIONS{schemas} || 0;
+
+  if (uc($validate) eq 'ALWAYS') {
+    $validate = $XML::Xerces::SAX2XMLReader::Val_Always;
+  } elsif (uc($validate) eq 'NEVER') {
+    $validate = $XML::Xerces::SAX2XMLReader::Val_Never;
+  } elsif (uc($validate) eq 'AUTO') {
+    $validate = $XML::Xerces::SAX2XMLReader::Val_Auto;
+  } else {
+    die("Unknown value for -v: $validate\n$USAGE");
+  }
+
+  #### Set up the Xerces parser
+  my $parser = XML::Xerces::XMLReaderFactory::createXMLReader();
+  $parser->setFeature("http://xml.org/sax/features/namespaces", $namespace);
+
+  if ($validate eq $XML::Xerces::SAX2XMLReader::Val_Auto) {
+    $parser->setFeature("http://xml.org/sax/features/validation", 1);
+    $parser->setFeature("http://apache.org/xml/features/validation/dynamic",1);
+
+  } elsif ($validate eq $XML::Xerces::SAX2XMLReader::Val_Never) {
+    $parser->setFeature("http://xml.org/sax/features/validation", 0);
+
+  } elsif ($validate eq $XML::Xerces::SAX2XMLReader::Val_Always) {
+    $parser->setFeature("http://xml.org/sax/features/validation", 1);
+    $parser->setFeature("http://apache.org/xml/features/validation/dynamic",0);
+  }
+
+  $parser->setFeature("http://apache.org/xml/features/validation/schema",
+    $schema);
+
+
+  #### Create the error handler and content handler
+  my $error_handler = XML::Xerces::PerlErrorHandler->new();
+  $parser->setErrorHandler($error_handler);
+
+  my $CONTENT_HANDLER = PAxmlContentHandler->new();
+  $parser->setContentHandler($CONTENT_HANDLER);
+
+  $CONTENT_HANDLER->setVerbosity($VERBOSE);
+  $CONTENT_HANDLER->{counter} = 0;
+  $CONTENT_HANDLER->{atlas_build_id} = $atlas_build_id;
+
+  $CONTENT_HANDLER->{searchBatchID_sampleId_hash} = 
+    \%searchBatchID_sampleId_hash;
+  $CONTENT_HANDLER->{peptide_acc_id_hash} = \%peptide_acc_id_hash;
+
+
+  $parser->parse(XML::Xerces::LocalFileInputSource->new($infile));
+
+  return(1);
+
+}
+
+
+
+###############################################################################
+# insert_peptide
+###############################################################################
+sub insert_peptide {
+  my %args = @_;
+
+  my $rowdata_ref = $args{'rowdata_ref'} or die("need rowdata_ref");
+
+  my $peptide_id = $sbeams->updateOrInsertRow(
+    insert=>1,
+    table_name=>$TBAT_PEPTIDE,
+    rowdata_ref=>$rowdata_ref,
+    PK => 'peptide_id',
+    return_PK => 1,
+    verbose=>$VERBOSE,
+    testonly=>$TESTONLY,
+  );
+
+  return($peptide_id);
+
+} # end insert_peptide
+
+
+###############################################################################
+# insert_peptide_instance
+###############################################################################
+sub insert_peptide_instance {
+  my %args = @_;
+
+  my $rowdata_ref = $args{'rowdata_ref'} or die("need rowdata_ref");
+
+  my $peptide_instance_id = $sbeams->updateOrInsertRow(
+    insert=>1,
+    table_name=>$TBAT_PEPTIDE_INSTANCE,
+    rowdata_ref=>$rowdata_ref,
+    PK => 'peptide_instance_id',
+    return_PK => 1,
+    verbose=>$VERBOSE,
+    testonly=>$TESTONLY,
+  );
+
+  return($peptide_instance_id);
+
+} # end insert_peptide_instance
+
+
+###############################################################################
+# insert_peptide_instance_samples
+###############################################################################
+sub insert_peptide_instance_samples {
+  my %args = @_;
+
+  my $peptide_instance_id = $args{'peptide_instance_id'}
+    or die("need peptide_instance_id");
+  my $sample_ids = $args{'sample_ids'} or die("need sample_ids");
+
+  my @sample_ids = split(/,/,$sample_ids);
+
+  foreach my $sample_id ( @sample_ids ) {
+    my %rowdata = (
+      peptide_instance_id => $peptide_instance_id,
+      sample_id => $sample_id,
+    );
+
+    $sbeams->updateOrInsertRow(
+      insert=>1,
+      table_name=>$TBAT_PEPTIDE_INSTANCE_SAMPLE,
+      rowdata_ref=>\%rowdata,
+      PK => 'peptide_instance_sample_id',
+      add_audit_parameters => 1,
+      verbose=>$VERBOSE,
+      testonly=>$TESTONLY,
+    );
+
+  }
+
+  return(1);
+
+} # end insert_peptide_instance_samples
+
+
+###############################################################################
+# insert_peptide_instance_search_batches
+###############################################################################
+sub insert_peptide_instance_search_batches {
+  my %args = @_;
+
+  #### TBD
+
+  return(1);
+
+}
+
 
