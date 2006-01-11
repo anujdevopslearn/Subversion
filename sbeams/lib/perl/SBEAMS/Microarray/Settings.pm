@@ -41,10 +41,6 @@ require Exporter;
     $AFFY_TMP_DIR
 );
 
-for my $k ( keys %CONFIG_SETTING ) {
-#  print STDERR "CS: $k => $CONFIG_SETTING{$k}\n";
-}
-
 my $affy_file_types = $CONFIG_SETTING{MA_AFFY_DEFAULT_FILES} || '';
 @AFFY_DEFAULT_FILES = split ( /\s/, $affy_file_types);
 

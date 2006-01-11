@@ -5,7 +5,7 @@ package SBEAMS::Microarray;
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
 #
-# Description : Perl Module to handle all SBEAMS-MicroArray specific items.
+# Description : Perl Module to handle all SBEAMS-Microarray specific items.
 #
 ###############################################################################
 
@@ -21,6 +21,7 @@ use SBEAMS::Microarray::HTMLPrinter;
 use SBEAMS::Microarray::TableInfo;
 use SBEAMS::Microarray::Tables;
 use SBEAMS::Microarray::Settings;
+use SBEAMS::Microarray::Utilities;
 
 @ISA = qw(SBEAMS::Microarray::DBInterface
           SBEAMS::Microarray::HTMLPrinter
