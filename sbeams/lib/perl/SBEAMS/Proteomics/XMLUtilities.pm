@@ -113,12 +113,12 @@ sub start_element {
     $attrs{$aa1} = $attrs{$aa1}->{value};
   }
 
-
   #### If this is the start of a search_result, remember the name
   if ($localname eq 'spectrum_query') {
     my $spectrum = $attrs{spectrum}
       || die("ERROR: No spectrum attribute for this spectrum_query");
     $self->{current_search_result} = $attrs{spectrum};
+    #print "  \nspectrum=$spectrum\n";
   }
 
   #### If this is the start of a search_result, remember the name
@@ -136,10 +136,14 @@ sub start_element {
       die("ERROR: No probability attribute for peptideprophet_result: ".
           join(",",%attrs));
     }
+    #print "  \nprobability=$probability\n";
 
-    my $current_search_result = $self->{current_search_result}
-      || die("ERROR: Found a peptideprophet_result without knowing the ".
+    my $current_search_result = $self->{current_search_result};
+    unless ($current_search_result) {
+      print("ERROR: Found a peptideprophet_result without knowing the ".
 	     "current_search_result.");
+      return;
+    }
     $current_search_result .= ".out";
     $self->{files}->{$current_search_result}->{probability} =
       $attrs{probability};
