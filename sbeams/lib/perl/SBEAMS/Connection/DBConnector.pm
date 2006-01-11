@@ -104,7 +104,7 @@ sub dbConnect {
     $DBADMIN = _getDBAdmin();
 
     if ( !$ENC_KEY ) { # Couldn't get key.  Set bogus value so decrypt won't die
-      print STDERR "WARNING: Failed to find encryption key in SBEAMS.conf\n"; 
+      $log->warn("WARNING: Failed to find encryption key in SBEAMS.conf"); 
       $ENC_KEY = 1;
     }
     
@@ -116,7 +116,7 @@ sub dbConnect {
       $DB_PASS = $db_pass;
     } elsif ( !$connect_read_only ) { 
       # Decryption failed, log warning.
-      print STDERR <<"      END_WARN";
+      $log->warn( <<"      END_WARN" );
 WARNING: Decryption failed for main sbeams password. Reverting to insecure
 connection mode. Please contact $DBADMIN
 KEY: $ENC_KEY
@@ -125,7 +125,7 @@ KEY: $ENC_KEY
     if ( $db_ro_pass ) { # Decryption succeeded, use decrypted passwd.
       $DB_RO_PASS = $db_ro_pass;
     } elsif ( $connect_read_only ) { # Decryption failed, log warning.
-      print STDERR <<"      END_WARN";
+      $log->warn( <<"      END_WARN" );
 WARNING: Decryption failed for read-only sbeams password. Reverting to insecure
 connection mode. Please contact $DBADMIN
 KEY: $ENC_KEY
@@ -144,7 +144,7 @@ KEY: $ENC_KEY
 WARNING: Unable to connect to database, please contact $DBADMIN:
 $DBI::errstr
       END_ERR
-    print STDERR $err;
+    $log->warn( $err );
     die ( $err );
     }
 
@@ -304,6 +304,9 @@ sub decryptPassword {
 sub _getEncryptionKey {
   # We are using the value for INSTALL_DATE in sbeams.conf for crypt key
   my $key = $DBCONFIG->{$DBINSTANCE}->{INSTALL_DATE};
+
+  # Can't work with undefined key string
+  return undef if !defined $key;
 
   # Older versions of IDEA can only handle 16-bit keys; we'll get rid of 
   # spaces and :s, as they don't add much to the randomness anyway
