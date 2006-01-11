@@ -44,6 +44,8 @@ use SBEAMS::Connection::TableInfo;
 #$q = new CGI;
 $sbeams = new SBEAMS::Connection;
 
+use SBEAMS::Proteomics::Tables;
+
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
