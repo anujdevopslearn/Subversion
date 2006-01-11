@@ -28,7 +28,6 @@ use SBEAMS::Microarray;
 use SBEAMS::Microarray::Settings;
 use SBEAMS::Microarray::Tables;
 
-
 use SBEAMS::Microarray::Affy;
 use SBEAMS::Microarray::Affy_file_groups;
 
@@ -649,9 +648,6 @@ if ($display_type eq 'TWO_COLOR' ) {
    	--AND ( AQ.record_status != 'D' OR AQ.record_status IS NULL )
  	ORDER BY A.array_name,AR.array_request_id,ARSL.array_request_slide_id
         ~;
-       
-      
-
    
 	   %url_cols = ('array_name' => "${manage_table_url}array&array_id=%0V",
 		 	'Sample1Name' => "${manage_table_url}array_request_sample&array_request_sample_id=%17V",
@@ -742,9 +738,11 @@ if ($display_type eq 'TWO_COLOR' ) {
 					resultset_ref=>$resultset_ref,
 					);
 
+	if($display_type eq 'AFFY') {
           $sbeams->addResultsetNumbering( rs_ref  => $resultset_ref,
                                      colnames_ref => \@column_titles,
                                         list_name => 'Array num' );
+  }
 
 	#### Store the resultset and parameters to disk resultset cache
 		$rs_params{set_name} = "SETME";
@@ -802,7 +800,6 @@ sub display_sub_tabs {
 	my $selected_tab_numb 	= $args{selected_tab};
 	my $parent_tab 		= $args{parent_tab};
 	
-	$log->debug("SUB TAB INFO ".  Dumper(\%args));
 	my $count = 0;
 	foreach my $tab_name (@tabs_names){
 		#loop through the tabs to display.  When we get to the one that is the 
@@ -1850,7 +1847,6 @@ sub check_for_file {
 	
 	my $file_path = "$path/$root_name.$file_ext";
 	
-	$log->debug("FILE PATH '$file_path'");
 	if (-e $file_path){
 		return 1;
 	}else{
