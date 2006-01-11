@@ -22,12 +22,13 @@ package SBEAMS::Connection::HTMLPrinter;
 
 
 use strict;
-use vars qw($current_contact_id $current_username
+use vars qw($current_contact_id $current_username $q
              $current_work_group_id $current_work_group_name
              $current_project_id $current_project_name $current_user_context_id);
 use CGI::Carp qw(croak);
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Log;
+use SBEAMS::Connection::Authenticator qw( $q );
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
@@ -64,49 +65,45 @@ sub display_page_header {
 # printPageHeader
 ###############################################################################
 sub printPageHeader {
-    my $self = shift;
-    my %args = @_;
+  my $self = shift;
+  my %args = @_;
 
-    my $navigation_bar = $args{'navigation_bar'} || "YES";
-    my $minimal_header = $args{'minimal_header'} || "NO";
+  my $navigation_bar = $args{'navigation_bar'} || "YES";
+  my $minimal_header = $args{'minimal_header'} || "NO";
 
+  #### If the output mode is interactive text, display text header
+  if ($self->output_mode() eq 'interactive') {
+    $self->printTextHeader();
+    return;
+  }
 
-    #### If the output mode is interactive text, display text header
-    if ($self->output_mode() eq 'interactive') {
-      $self->printTextHeader();
-      return;
-    }
+  #### If the output mode is not html, then we don't need the rest
+  return unless $self->output_mode() eq 'html';
 
+  my $http_header = $self->get_http_header( $self->get_output_mode() );
+  print $http_header;
 
-    #### If the output mode is not html, then we don't want a header here
-    if ($self->output_mode() ne 'html') {
-      return;
-    }
-
-
-    my $http_header = $self->get_http_header();
-
-    print qq~$http_header
+  print qq~
 	<HTML><HEAD>
 	<TITLE>$DBTITLE - Systems Biology Experiment Analysis Management System</TITLE>
-    ~;
+  ~;
 
 
-    #### Only send Javascript functions if the full header desired
-    unless ($minimal_header eq "YES") {
-        $self->printJavascriptFunctions();
-    }
+  #### Only send Javascript functions if the full header desired
+  unless ($minimal_header eq "YES") {
+    $self->printJavascriptFunctions();
+  }
 
 
-    #### Send the style sheet
-    $self->printStyleSheet();
+  #### Send the style sheet
+  $self->printStyleSheet();
 
 
-    #### Determine the Title bar background decoration
-    my $header_bkg = "bgcolor=\"$BGCOLOR\"";
-    $header_bkg = "background=\"$HTML_BASE_DIR/images/plaintop.jpg\"" if ($DBVERSION =~ /Primary/);
+  #### Determine the Title bar background decoration
+  my $header_bkg = "bgcolor=\"$BGCOLOR\"";
+  $header_bkg = "background=\"$HTML_BASE_DIR/images/plaintop.jpg\"" if ($DBVERSION =~ /Primary/);
 
-    print qq~
+  print qq~
 	<!--META HTTP-EQUIV="Expires" CONTENT="Fri, Jun 12 1981 08:20:00 GMT"-->
 	<!--META HTTP-EQUIV="Pragma" CONTENT="no-cache"-->
 	<!--META HTTP-EQUIV="Cache-Control" CONTENT="no-cache"-->
@@ -124,10 +121,9 @@ sub printPageHeader {
 	</tr>
     ~;
 
-    #print ">>>http_header=$http_header<BR>\n";
 
-    if ($minimal_header eq "YES") {
-      print qq~
+  if ($minimal_header eq "YES") {
+    print qq~
 	<!------- Button Bar -------------------------------------------->
 	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
 	<table border=0 width="120" cellpadding=2 cellspacing=0>
@@ -203,8 +199,6 @@ sub printPageHeader {
     }
 
 }
-
-# 	<table border=0 width="680" bgcolor="#ffffff" cellpadding=4>
 
 
 ###############################################################################
@@ -500,7 +494,7 @@ sub printJavascriptFunctions {
 ###############################################################################
 sub printMinimalPageHeader {
     my $self = shift;
-    my $head = shift || "Content-type: text/html\n\n";
+    my $head = shift || $self->get_http_header;
     
     print qq~$head
 	<HTML>
@@ -805,7 +799,7 @@ sub printDebuggingInfo {
   my $element;
 
   #### Write out a HTTP header
-  print "Content-type: text/html\n\n<BR><BR><PRE>\n";
+  print $self->get_http_header;
 
   #### Write out all the environment variables
   print "Environment variables:\n";
@@ -831,7 +825,7 @@ sub printCGIParams {
   my $element;
 
   #### Write out a HTTP header
-  print "Content-type: text/html\n\n<BR><BR><PRE>\n";
+  print $self->get_http_header;
 
   #### Write out all the supplied parameters
   print "\nCGI parameters:\n";
@@ -934,6 +928,10 @@ sub reportException {
       print "$message</H4>\n";
     }
     return;
+  } else {
+    $self->handle_error( state => $args{state}, 
+                   error_type  => lc($args{type}).
+                       message => $args{message} );
   }
 
 
@@ -963,6 +961,64 @@ sub makeInfoText {
   my $text = shift;
   return( "<I><FONT COLOR=#666666>$text</FONT></I>" );
 }
+
+#+
+# returns http Content-type based on user-supplied 'mode' 
+#-
+sub get_content_type {
+  my $self = shift;
+  my $type = shift || 'html';
+
+  my %ctypes = (  tsv => 'text/tab-separated-values',
+              tsvfull => 'text/tab-separated-values',
+                  csv => 'text/comma-separated-values',
+              csvfull => 'text/comma-separated-values',
+                  css => 'text/css',
+                  xml => 'text/xml',
+                 text => 'text/plain',
+                 html => 'text/html',
+                excel => 'application/excel',
+                force => 'application/force-download',
+                 jpg  => 'image/jpeg',
+                 png  => 'image/png',
+                 jnlp => 'application/x-java-jnlp-file',
+            cytoscape => 'application/x-java-jnlp-file'
+               );
+  print STDERR "Returning $ctypes{$type}\n";
+  return $ctypes{$type};
+}
+
+#+
+# Method returns an http header based on user supplied info.
+# 
+# @narg type    Explicit content type supercedes mode-based type.
+# @narg mode    Output mode, will fetch if not supplied.  Begets content-type
+# @narg cookies Boolean (perl true/false), supply cookies with the header?
+# -
+sub get_http_header {
+  my $self = shift;
+  my %args = @_;
+
+  # output mode
+  my $mode = $args{mode} || $self->output_mode();
+  $mode =~ s/full//g; # Simplify tsvfull, csvfull modes
+
+  # explicit content type
+  my $type = $args{type} || $self->get_content_type( $mode );
+
+  # use cookies? 
+  my $cookies = $args{cookies} || 1;
+  
+  my $header;
+  if ( $self->{_cookie_jar} && $cookies ) {
+    $header = $q->header( -type => $type, -cookie => $self->{_cookie_jar} );
+  } else {
+    $header = $q->header( -type => $type );
+  }
+  $log->debug( "Header is $header for $mode, $type" );
+  return $header;
+}
+
 
 sub getModuleButton {
   my $self = shift;
