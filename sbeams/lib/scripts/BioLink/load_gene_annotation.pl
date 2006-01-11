@@ -12,17 +12,6 @@
 ###############################################################################
 
 
-###############################################################################
-#### Preamble to use GO
-###############################################################################
-BEGIN {
-  if (defined($ENV{GO_ROOT})) {
-#    use lib "$ENV{GO_ROOT}/perl-api";
-#    use lib "$ENV{GO_ROOT}/";
-  }
-}
-use GO::AppHandle;
-
 
 ###############################################################################
 # Generic SBEAMS setup for all the needed modules and objects
@@ -59,7 +48,6 @@ Options:
   --testonly          Set flag which prevents executing SQL writes
   --xref_dbname       Defines which GO xref_dbname to load (e.g. FB, SGD)
   --godatabaseprefix  Database prefix of the local Gene Onology database (e.g. go.dbo.)
-  --mysqlgodbname     Name of MySQL Gene Ontology database as needed for the Gene Ontology Perl API
 
  e.g.:  $PROG_NAME --testonly --xref_dbname FB
 
@@ -133,7 +121,6 @@ sub handleRequest {
   my $xref_dbname = $OPTIONS{xref_dbname};
   $DATABASE = $DBPREFIX{BioLink};
   $GODATABASE = $OPTIONS{godatabaseprefix};
-  $MYSQLGODBNAME = $OPTIONS{mysqlgodbname};
 
   #### Verify that xref_dbname was supplied
   unless ($xref_dbname) {
@@ -259,13 +246,6 @@ sub handleRequest {
   my %gene_data;
   my $prev_gene_product_id;
   my $gene_product_id;
-
-
-#goto INTERPROPART;
-
-
-  #### Make the GO Connections
-  my $apph = GO::AppHandle->connect(["-dbname","$MYSQLGODBNAME"]);
 
 
   $sql = qq~
@@ -570,7 +550,8 @@ sub handleRequest {
 
 
   #### If we've moved onto a new gene, write some summary above the previous
-  print "======",$prev_gene_product_id," , ",$gene_product_id,"\n" if ($VERBOSE);
+  print "======",$prev_gene_product_id," , ",$gene_product_id,"\n"
+    if ($VERBOSE);
   if (1) {
     while (($key,$value) = each %{$gene_data{$prev_gene_product_id}}) {
       print "  $key = $value\n" if ($VERBOSE);
