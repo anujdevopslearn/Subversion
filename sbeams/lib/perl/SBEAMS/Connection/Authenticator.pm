@@ -92,25 +92,45 @@ sub Authenticate {
   #### Obtain the database handle $dbh, thereby opening the DB connection
   my $dbh = $self->getDBHandle(connect_read_only=>$connect_read_only);
 
-  #### If there's a DISABLED file in the main HTML directory, do not allow
+  #### If there's a DISABLED file in the main sbeams directory, do not allow
   #### entry past here.  Same goes for DISABLE.modulename
   my $module_name = $self->getSBEAMS_SUBDIR() || '';
-  if ( ( -e "$PHYSICAL_BASE_DIR/DISABLED" ||
-         -e "$PHYSICAL_BASE_DIR/DISABLED.$module_name" ) ) {
-    $self->printMinimalPageHeader();
-    print "<H3>";
-    open(INFILE,"$PHYSICAL_BASE_DIR/DISABLED") ||
-      open(INFILE,"$PHYSICAL_BASE_DIR/DISABLED.$module_name") ||
-      print "ERROR Opening DISABLED file. SBEAMS is currently not available";
-    my $line;
-    while ($line = <INFILE>) { print $line; }
-    close(INFILE);
-    $self->printPageFooter();
+
+  my $file = '';
+  if ( -e "$PHYSICAL_BASE_DIR/DISABLED" ) {
+    $file = "$PHYSICAL_BASE_DIR/DISABLED"; 
+  } elsif ( -e "$PHYSICAL_BASE_DIR/DISABLED.$module_name" ) {
+    $file = "$PHYSICAL_BASE_DIR/DISABLED.$module_name";
+  }
+
+  if ( $file ) {
+    my $server_name = ($file =~ /DISABLED$/) ? 'SBEAMS' : "SBEAMS $module_name";
+
+    # Get message from disabled file, or else use default
+    my $message = "$server_name is currently unavailable (reason unknown)";
+
+    if ( open(INFILE, $file ) ) {
+      undef local $/;
+      $message = <INFILE>;
+      close(INFILE);
+    }
+
+    if ( $self->output_mode eq 'html' ) {
+      $self->printPageHeader( minimal_header => "YES", navigation_bar => 'NO' );
+      print qq~
+        <BR><H3>$message</H3><BR><BR>
+      ~;
+      $self->printPageFooter();
+    } else {
+      $self->handle_error( message => $message,
+                           error_type => 'server_disabled' );
+    }
     exit;
   }
 
   #### Get the cookies from the request
   my %cookie = $q->cookie('SBEAMSName');
+  $self->{_cgi} = $q; # Cache the cgi object for the less fortunate...
   my $session_cookie = $self->getSessionCookie();
   #$log->debug("session_cookie=\n".Data::Dumper->Dump([$session_cookie]));
   if (scalar(keys(%{$session_cookie}))) {
@@ -141,7 +161,7 @@ sub Authenticate {
 
     # Has cookie/login processing obtained a valid username?
     if ( !$current_username ) {
-      $log->info( "Testing alternate authentication modes" );
+      $log->debug( "Testing alternate authentication modes" );
 
       # Otherwise use SBEAMSentrycode if defined
       if ( my $entrycode = $q->param('SBEAMSentrycode') ) {
@@ -159,7 +179,6 @@ sub Authenticate {
       # Allow anonymous access?
       } elsif ( $allow_anonymous_access ) {
         $log->info( "allowing guest authentication" );
-        #print "Content-type: text/plain\n\nReceived no cookie; runs as guest\n";
         $current_username = 'guest';
       }
     }
@@ -180,15 +199,20 @@ sub Authenticate {
     # If we have cookie (forced login), destroy it
     $self->destroyAuthHeader() if %cookie;
 
-    # Draw a login form for the user to fill out
-    $self->printPageHeader(minimal_header=>"YES");
-    $self->printLoginForm();
-    $self->printPageFooter();
+    if ( $self->output_mode eq 'html' ) {
+      # Draw a login form for the user to fill out
+      $self->printPageHeader(minimal_header=>"YES");
+      $self->printLoginForm();
+      $self->printPageFooter();
+    } else {
+      my $msg = "Must provide valid authentication to access this resource";
+      $self->handle_error( message => $msg,
+                           error_type => 'authen_required' );
+    }
+#    } elsif ( requestingNoAuthPage() ) {
+#      # This is a dead end at the login page...
 
-  # Else if we've have a valid user, get additional information
-  } elsif ( requestingNoAuthPage() ) {
-
-    return $current_username;
+# return $current_username;
   } else {
 
       $current_contact_id = $self->getContact_id($current_username);
@@ -241,6 +265,7 @@ sub processLogin {
 
   # various options
   my %cookie = %{$args{cookie_ref}};
+
   my $new_cookie = 1;
   my $user  = $q->param('username');
   my $pass  = $q->param('password');
@@ -259,16 +284,22 @@ sub processLogin {
   # If user and pass were given in login context, use the info.
   if ( $user && $pass && $login ) { 
     if ($self->checkLogin($user, $pass)) {
+
       $http_header = $self->createAuthHeader(username => $user);
       $current_contact_id = $self->getContact_id($user);
       $current_username = $user;
       # $log->info( "User $user connected from " . $q->remote_host() );
     } else {
       $log->warn( "username ($user) failed checkLogin" );
-      $self->printPageHeader(minimal_header=>"YES");
-      $self->printAuthErrors();
-      $self->printPageFooter();
       $log->info( "User $user failed to connect from " . $q->remote_host() );
+      if ( $self->output_mode() eq 'html' ) {
+        $self->printPageHeader(minimal_header=>"YES");
+        $self->printAuthErrors();
+        $self->printPageFooter();
+      } else {
+        $self->handle_error( error_type => 'authen_errors',
+                                message => join(", ", @ERRORS ) );
+      }
       exit;
     } 
 
@@ -300,6 +331,7 @@ sub processLogin {
           $http_header = $self->createAuthHeader(username=>$valid_username);
           $log->info( "Cookie will expire soon or is postdated, reissuing" );
         }
+        $self->{_cookie_jar} = \%cookie;
         $current_username = $valid_username;
         $current_contact_id = $self->getContact_id($valid_username);
       }
@@ -320,6 +352,11 @@ sub processLogin {
 sub guessMode {
   my $self = shift;
 
+  my $mode = $q->param( 'output_mode' );
+  if ( defined $mode ) {
+    $self->output_mode( $mode );
+    return;
+  }
   #### Determine whether we've been invoked by HTTP request or on the
   #### command line by testing for env variable REMOTE_ADDR.  If a
   #### command-line user sets this variable, he can pretend to be coming
@@ -335,7 +372,10 @@ sub guessMode {
     $self->output_mode('interactive');
     #### Add in a fake reference to MOD_PERL to trick CGI::Carp into
     #### not printing the "Content: text/html\n\n" header
-    #$ENV{'MOD_PERL'} = 'FAKE'
+    $ENV{'MOD_PERL'} ||= 'FAKE'
+    ## Reinstated with the ||= syntax.  This keeps CGI::Carp from printing 
+    ## a header upon die, allowing us to do it explicitly (and print the 
+    ## appropriate Content-Type).
     #### Removed this 2005-06-23 EWD.  It's been here for years, but causes
     #### a problem at other sites.  I think it's best we try without this.
   }
@@ -343,21 +383,6 @@ sub guessMode {
   return 1;
 
 } # end guessMode
-
-
-###############################################################################
-# get HTTP Header
-###############################################################################
-sub get_http_header {
-    my $self = shift;
-
-    unless ($http_header) {
-      $http_header = "Content-type: text/html\n\n";
-    }
-
-    return $http_header;
-
-} # end get_http_header
 
 
 ###############################################################################
@@ -769,7 +794,7 @@ sub setCurrent_project_id {
 
     #### If this didn't turn up anything, return
     unless (exists($allowed_project_ids{$set_to_project_id})) {
-      print "Content-type: text/html\n\n".
+      print $self->get_http_header(); 
         "ERROR: You are not permitted to access ".
         "project_id $set_to_project_id (only $accessible_project_list)\n\n";
       return;
@@ -967,8 +992,6 @@ sub displaySBEAMSError{
 
   $self->printPageHeader(minimal_header=>"YES") if !$template;
 
-  my $email = 'edeutsch@systemsbiology.net';
-
   if ($self->output_mode() eq 'html') {
     print qq~
       <CENTER>
@@ -981,7 +1004,8 @@ sub displaySBEAMSError{
     $start_line = "<LI>";
     $end_line = "<P>\n";
   } else {
-    print "ERROR: Unknown error encountered:\n";
+    $self->handle_error( error_type => 'sbeams_error',
+                            message => join(", ", @{$errors} ) );
   }
 
 
@@ -1031,7 +1055,10 @@ sub displayPermissionToPageDenied{
     $start_line = "<LI>";
     $end_line = "<P>\n";
   } else {
-    print "ERROR: Permission to access this page denied:\n";
+    $self->handle_error( error_type => 'access_denied',
+                            message => 'Access to this resource is denied: ' .
+                                      join( ', ', @{$ra_errors} )  
+                         );
   }
 
 
@@ -1081,6 +1108,7 @@ sub destroyAuthHeader {
                             -value   => '0',
                             -expires => '-25h');
     $http_header = $q->header(-cookie => $cookie);
+    $log->debug( "Destroy auth" );
 
     return $http_header;
 }
@@ -1131,8 +1159,10 @@ sub createAuthHeader {
     my $head;
     if ($session_cookie) {
       $head = $q->header(-cookie => [$cookie,$session_cookie]);
+      $self->{_cookie_jar} = [ $cookie, $session_cookie ];
     } else {
       $head = $q->header(-cookie => $cookie);
+      $self->{_cookie_jar} = $cookie;
     }
 
     return $head;
