@@ -1223,7 +1223,7 @@ sub conditions_organism_info {
 	
 	my $sql = qq~
 		SELECT DISTINCT O.organism_name, O.genus, O.species
-		FROM $TBMA_CONDITION C 
+		FROM $TBMA_COMPARISON_CONDITION C 
 		JOIN $TB_ORGANISM O ON (C.organism_id = O.organism_id)
 		WHERE C.condition_name IN ($search_string)
 	~;

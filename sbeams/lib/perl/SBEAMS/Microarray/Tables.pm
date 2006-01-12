@@ -69,7 +69,7 @@ use vars qw(@ISA @EXPORT
     $TBMA_FILE_TYPE
     $TBMA_QUANTITATION_TYPE
 
-    $TBMA_CONDITION
+    $TBMA_COMPARISON_CONDITION
     $TBMA_GENE_EXPRESSION
     
     $TBMA_AFFY_ARRAY_SAMPLE
@@ -156,7 +156,7 @@ require Exporter;
     $TBMA_FILE_TYPE
     $TBMA_QUANTITATION_TYPE
 
-    $TBMA_CONDITION
+    $TBMA_COMPARISON_CONDITION
     $TBMA_GENE_EXPRESSION
 
     $TBMA_AFFY_ARRAY_SAMPLE
@@ -248,7 +248,7 @@ $TBMA_FILE_LOCATION       = "${modMARR}file_location";
 $TBMA_FILE_TYPE           = "${modMARR}file_type";
 $TBMA_QUANTITATION_TYPE   = "${modMARR}quantitation_type";
 
-$TBMA_CONDITION           = "${mod}condition";
+$TBMA_COMPARISON_CONDITION           = "${mod}comparison_condition";
 $TBMA_GENE_EXPRESSION     = "${mod}gene_expression";
 
 $TBMA_AFFY_ARRAY_SAMPLE	  = "${mod}affy_array_sample";
