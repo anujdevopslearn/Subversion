@@ -321,7 +321,7 @@ sub add_identified_peptides{
 	
     # returns identified_peptide_id for new row
   	$iden_pep_id = $sbeams->updateOrInsertRow(				
-							  table_name  => $TBAT_IDENTIFIED_PEPTIDE,
+							  table_name  => $TBGP_IDENTIFIED_PEPTIDE,
 				   			rowdata_ref => \%id_pep_row,
 				   			return_PK   => 1,
 				   			verbose     => $self->verbose(),
@@ -345,7 +345,7 @@ sub add_identified_peptides{
                         );
 
   # Insert row
-	$sbeams->updateOrInsertRow( table_name  => $TBAT_IDENTIFIED_TO_IPI,
+	$sbeams->updateOrInsertRow( table_name  => $TBGP_IDENTIFIED_TO_IPI,
               				   			rowdata_ref => \%iden_to_ipi_row,
 				   		               	return_PK   => 0,
 		              		   			verbose     => $self->verbose(),
@@ -378,7 +378,7 @@ sub peptide_to_tissue {
   my @samples = split( ",", $samples, -1 );
 
   if ( !$self->{_sample_tissues} ) {
-    my $sql = "SELECT sample_name, sample_id FROM $TBAT_GLYCO_SAMPLE";
+    my $sql = "SELECT sample_name, sample_id FROM $TBGP_GLYCO_SAMPLE";
     $self->{_sample_tissues} = $sbeams->selectTwoColumnHashref( $sql );
 #    foreach my $k ( keys ( %{$self->{_sample_tissues}} ) ) { print "$k\n"; }
   }
@@ -402,7 +402,7 @@ sub peptide_to_tissue {
                   );
 	
 	  $sbeams->updateOrInsertRow( return_PK   => 0,
-                                table_name  => $TBAT_PEPTIDE_TO_TISSUE,
+                                table_name  => $TBGP_PEPTIDE_TO_TISSUE,
 				   		                	rowdata_ref => \%rowdata,
 			                	   			verbose     => $self->verbose(),
 			                	   			testonly    => $self->testonly(),
@@ -418,7 +418,7 @@ sub newGlycoSample {
   my $sample = shift;
   my $tissue_sql = $sbeams->evalSQL ( <<"  END" );
   SELECT tissue_type_id 
-  FROM $TBAT_TISSUE_TYPE WHERE 
+  FROM $TBGP_TISSUE_TYPE WHERE 
   tissue_type_name = 'unknown'
   END
 
@@ -430,7 +430,7 @@ sub newGlycoSample {
                   sample_name => $sample );
 
   my $sample_id =  $sbeams->updateOrInsertRow( return_PK   => 1,
-                                table_name  => $TBAT_GLYCO_SAMPLE,
+                                table_name  => $TBGP_GLYCO_SAMPLE,
 				   		                	rowdata_ref => \%rowdata,
 			                	   			verbose     => $self->verbose(),
 			                	   			testonly    => $self->testonly(),
@@ -491,7 +491,7 @@ sub add_predicted_peptide {
 	
 
     	my $predicted_peptide_id = $sbeams->updateOrInsertRow(				
-							table_name=>$TBAT_PREDICTED_PEPTIDE,
+							table_name=>$TBGP_PREDICTED_PEPTIDE,
 				   			rowdata_ref=>$rowdata_ref,
 				   			return_PK=>1,
 				   			verbose=>$self->verbose(),
@@ -614,7 +614,7 @@ sub add_glyco_site {
 	
 
 	my $glyco_site_id = $sbeams->updateOrInsertRow(				
-							table_name=>$TBAT_GLYCO_SITE,
+							table_name=>$TBGP_GLYCO_SITE,
 				   			rowdata_ref=>$rowdata_ref,
 				   			return_PK=>1,
 				   			verbose=>$self->verbose(),
@@ -670,7 +670,7 @@ sub add_ipi_record {
 	
 
 	my $ipi_data_id = $sbeams->updateOrInsertRow(				
-							table_name=>$TBAT_IPI_DATA,
+							table_name=>$TBGP_IPI_DATA,
 				   			rowdata_ref=>$rowdata_ref,
 				   			return_PK=>1,
 				   			verbose=>$self->verbose(),
@@ -748,7 +748,7 @@ sub find_tissue_code {
                     ( $tissue =~ /breast/i ) ? 'breast' : 'unknown';
 	
 	my $sql = qq~ 	SELECT tissue_id
-					FROM $TBAT_TISSUE_TYPE
+					FROM $TBGP_TISSUE_TYPE
 					WHERE tissue_name = '$tissue_name'
 		      ~;
 	
@@ -816,7 +816,7 @@ sub find_cellular_code {
 
 	my $sql =<<"  END"; 
   SELECT cellular_location_id
-  FROM $TBAT_CELLULAR_LOCATION
+  FROM $TBGP_CELLULAR_LOCATION
   WHERE cellular_location_name = '$full_name'
   END
 	
@@ -881,7 +881,7 @@ sub check_version {
 	              
 		
 	my $sql = qq~ SELECT ipi_version_id
-					FROM $TBAT_IPI_VERSION
+					FROM $TBGP_IPI_VERSION
 					WHERE ipi_version_date = '$now_string'
 				~;
 	
@@ -925,7 +925,7 @@ sub add_new_ipi_version{
 			  );
 	
 	my $ipi_version_id = $sbeams->updateOrInsertRow(				
-							table_name=>$TBAT_IPI_VERSION,
+							table_name=>$TBGP_IPI_VERSION,
 				   			rowdata_ref=> \%rowdata_h,
 				   			return_PK=>1,
 				   			verbose=>$self->verbose(),

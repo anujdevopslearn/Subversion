@@ -1069,7 +1069,7 @@ sub gene_symbol_query{
 	my $term = shift;
 	
 	my $sql = qq~ SELECT ipi_data_id, protein_name, protein_symbol 
-				  FROM $TBAT_IPI_DATA 
+				  FROM $TBGP_IPI_DATA 
 				  WHERE protein_symbol like '$term'
 		  qq~;
 	return $sbeams->selectHashArray($sql);
@@ -1085,7 +1085,7 @@ sub gene_name_query{
 	my $self = shift;
 	my $term = shift;
 	my $sql = qq~ SELECT ipi_data_id, protein_name, protein_symbol 
-				  FROM $TBAT_IPI_DATA 
+				  FROM $TBGP_IPI_DATA 
 				  WHERE protein_name like '$term'
 		  qq~;
 	return $sbeams->selectHashArray($sql)
@@ -1098,7 +1098,7 @@ sub ipi_accession_query{
 	my $self = shift;
 	my $term = shift;
 	my $sql = qq~ SELECT ipi_data_id, protein_name, protein_symbol 
-				  FROM $TBAT_IPI_DATA 
+				  FROM $TBGP_IPI_DATA 
 				  WHERE ipi_accession like '$term'
 		  qq~;
 	return $sbeams->selectHashArray($sql)
@@ -1112,7 +1112,7 @@ sub protein_seq_query{
 	my $seq = shift;
 	
 	my $sql = qq~ SELECT ipi_data_id, protein_name, protein_symbol 
-				  FROM $TBAT_IPI_DATA 
+				  FROM $TBGP_IPI_DATA 
 				  WHERE protein_name like '%$seq%'
 		  qq~;
 	return $sbeams->selectHashArray($sql)

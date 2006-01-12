@@ -100,9 +100,9 @@ sub gene_symbol_query{
 	
 	my $sql = qq~
     SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
-    (SELECT COUNT(*) FROM $TBAT_IDENTIFIED_TO_IPI 
-    WHERE ipi_data_id = $TBAT_IPI_DATA.ipi_data_id ) AS num_identified 
-    FROM $TBAT_IPI_DATA
+    (SELECT COUNT(*) FROM $TBGP_IDENTIFIED_TO_IPI 
+    WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id ) AS num_identified 
+    FROM $TBGP_IPI_DATA
     WHERE protein_symbol like '$term'
   ~;
 	
@@ -121,9 +121,9 @@ sub gene_name_query{
 	
 	my $sql = qq~
     SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
-    (SELECT COUNT(*) FROM $TBAT_IDENTIFIED_TO_IPI 
-    WHERE ipi_data_id = $TBAT_IPI_DATA.ipi_data_id ) AS num_identified 
-    FROM $TBAT_IPI_DATA
+    (SELECT COUNT(*) FROM $TBGP_IDENTIFIED_TO_IPI 
+    WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id ) AS num_identified 
+    FROM $TBGP_IPI_DATA
     WHERE protein_name like '$term'
   ~;
 
@@ -151,9 +151,9 @@ sub ipi_accession_query{
 
 	my $sql = qq~
     SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
-    (SELECT COUNT(*) FROM $TBAT_IDENTIFIED_TO_IPI 
-    WHERE ipi_data_id = $TBAT_IPI_DATA.ipi_data_id ) AS num_identified 
-    FROM $TBAT_IPI_DATA
+    (SELECT COUNT(*) FROM $TBGP_IDENTIFIED_TO_IPI 
+    WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id ) AS num_identified 
+    FROM $TBGP_IPI_DATA
     WHERE $search_string
   ~;
 
@@ -195,9 +195,9 @@ sub swiss_prot_query{
 	
 	my $sql = qq~
     SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
-    (SELECT COUNT(*) FROM $TBAT_IDENTIFIED_TO_IPI 
-    WHERE ipi_data_id = $TBAT_IPI_DATA.ipi_data_id ) AS num_identified 
-    FROM $TBAT_IPI_DATA
+    (SELECT COUNT(*) FROM $TBGP_IDENTIFIED_TO_IPI 
+    WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id ) AS num_identified 
+    FROM $TBGP_IPI_DATA
 	  WHERE swiss_prot_acc like '$term'
   ~;
 
@@ -215,9 +215,9 @@ sub protein_seq_query{
 	confess(__PACKAGE__ . "::$method seq '$seq' is not good  \n") unless $seq;
 	my $sql = qq~
     SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
-    (SELECT COUNT(*) FROM $TBAT_IDENTIFIED_TO_IPI 
-    WHERE ipi_data_id = $TBAT_IPI_DATA.ipi_data_id ) AS num_identified 
-    FROM $TBAT_IPI_DATA
+    (SELECT COUNT(*) FROM $TBGP_IDENTIFIED_TO_IPI 
+    WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id ) AS num_identified 
+    FROM $TBGP_IPI_DATA
     WHERE protein_sequence like '%$seq%'
   ~;
 
@@ -249,8 +249,8 @@ sub query_ipi_data{
         transmembrane_info,
         signal_sequence_info,
         synonyms
-        FROM $TBAT_IPI_DATA ipid
-        JOIN $TBAT_CELLULAR_LOCATION cl ON (cl.cellular_location_id = ipid.cellular_location_id) 
+        FROM $TBGP_IPI_DATA ipid
+        JOIN $TBGP_CELLULAR_LOCATION cl ON (cl.cellular_location_id = ipid.cellular_location_id) 
         WHERE ipi_data_id =  $ipi_data_id
 		  ~;
 	
@@ -284,9 +284,9 @@ sub get_predicted_peptides{
 				gs.protein_glyco_site_position,
 				predicted_stop, 
         synthesized_sequence
-				FROM $TBAT_PREDICTED_PEPTIDE pp
-				JOIN $TBAT_GLYCO_SITE gs ON (gs.glyco_site_id = pp.glyco_site_id)
-				LEFT JOIN $TBAT_SYNTHESIZED_PEPTIDE sp 
+				FROM $TBGP_PREDICTED_PEPTIDE pp
+				JOIN $TBGP_GLYCO_SITE gs ON (gs.glyco_site_id = pp.glyco_site_id)
+				LEFT JOIN $TBGP_SYNTHESIZED_PEPTIDE sp 
          ON sp.glyco_site_id = pp.glyco_site_id
 				WHERE pp.ipi_data_id = $ipi_data_id
 				~;
@@ -315,10 +315,10 @@ sub get_identified_peptides{
 				gs.protein_glyco_site_position,
 				identified_start,
 				identified_stop 
-				FROM $TBAT_IDENTIFIED_PEPTIDE id
-        JOIN $TBAT_IDENTIFIED_TO_IPI iti 
+				FROM $TBGP_IDENTIFIED_PEPTIDE id
+        JOIN $TBGP_IDENTIFIED_TO_IPI iti 
           ON iti.identified_peptide_id = id.identified_peptide_id
-				JOIN $TBAT_GLYCO_SITE gs ON (gs.glyco_site_id = iti.glyco_site_id)
+				JOIN $TBGP_GLYCO_SITE gs ON (gs.glyco_site_id = iti.glyco_site_id)
 				WHERE iti.ipi_data_id = $ipi_data_id
 				~;
 	
@@ -339,7 +339,7 @@ sub get_glyco_sites{
 				glyco_site_id, 
 				protein_glyco_site_position,
 				glyco_score 
-				FROM $TBAT_GLYCO_SITE
+				FROM $TBGP_GLYCO_SITE
 				WHERE ipi_data_id = $ipi_data_id
 				~;
 	
@@ -358,9 +358,9 @@ sub get_identified_tissues{
 	confess(__PACKAGE__ . "::$method ID '$id' is not good  \n") unless $id; 
 	my $sql = qq~
 				SELECT t.tissue_type_name 
-				FROM $TBAT_PEPTIDE_TO_TISSUE ptp 
-				JOIN $TBAT_GLYCO_SAMPLE g ON ( ptp.sample_id = g.sample_id ) 
-				JOIN $TBAT_TISSUE_TYPE t ON (t.tissue_type_id = g.tissue_type_id) 
+				FROM $TBGP_PEPTIDE_TO_TISSUE ptp 
+				JOIN $TBGP_GLYCO_SAMPLE g ON ( ptp.sample_id = g.sample_id ) 
+				JOIN $TBGP_TISSUE_TYPE t ON (t.tissue_type_id = g.tissue_type_id) 
 				WHERE ptp.identified_peptide_id = $id
         ORDER BY ptp.peptide_to_tissue_id
 				~;
