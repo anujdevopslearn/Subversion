@@ -2,7 +2,7 @@ $Id:$
 
 Installing Gene Ontology support for SBEAMS
 
-In the follow document, two directory areas are reffered to:
+In the following document, two directory areas are referred to:
 $SBEAMS is the base area of your sbeams installation (or dev area)
 $GOARC is an area where various GO files are stored.  Best not within $SBEAMS
 
@@ -42,21 +42,20 @@ the process can be a little more difficult.
   'goadmin' is a user with ALL privileges in database 'go'.
 
 setenv DSN "-h mysql -p mysql"
-setenv ROOTDSN "-h mysql -u lmendoza -p go"
+setenv ROOTDSN "-h mysql -u goadmin -p go"
 
 - Verify login, drop and recreate database:
 mysql $ROOTDSN
 echo "SHOW PROCESSLIST;" | mysql $ROOTDSN
 echo "SHOW DATABASES;" | mysql $ROOTDSN
-echo "DROP DATABASE go;" | mysql $ROOTDSN
-echo "CREATE DATABASE go;" | mysql $ROOTDSN
+echo "DROP DATABASE go; CREATE DATABASE go;" | mysql $ROOTDSN
 
 - Verify regular user login (must have added user)
 mysql $DSN
 
 - Load!
 cd $GOARC/$MONTH
-date ; nice +19 zcat $GZFILE | mysql $DSN ; date
+date ; nice +19 cat $DATAFILE.mysql | mysql $DSN ; date
 (possibly several hours)
 
 
@@ -70,26 +69,32 @@ Create a database on SQL Server called 'go' or something like that.
 Let 'sbeamsadmin' or some similar account have dbo privileges.
 
 cd $GOARC/$MONTH
-tar -zxvf go_200508-assocdb-tables.tar.gz
-cd go_200508-assocdb-tables
+tar -zxvf $TGZFILE
+cd ${DATAFILE}-tables
+
 rm *.sql
-$SBEAMS/lib/scripts/BioLink/GOMySQL2MSSQL.pl --in ../go_200508-assocdb.mysql --out GO \
+$SBEAMS/lib/scripts/BioLink/GOMySQL2MSSQL.pl --in ../${DATAFILE}.mysql --out GO \
   --bcpuser sbeamsadmin --bcppass xxxxxx --bcpdatabase go
 
 $SBEAMS/lib/scripts/Core/runsql.pl --user sbeamsadmin --database go --delim GO \
   --sfile GO.CREATE.mssql
 
+
+The following command creates tab-delimited fields from the original dump
+file to use in the BCP loading process. It also translates embedded tabs
+to spaces:
+
 foreach file (*.txt)
   mv $file $file.before
-  cat $file.before | sed -e 's/\t\\N/\t/g' | unix2dos > $file
+  cat $file.before | sed -e 's/\t\\N/\t/g' | sed -e 's/\\\t/  /g' | unix2dos > $file
 end
 
-#### If the above produced no errors, then you could
+If the above produced no errors, then you could
 rm *.before
 
-Now copy the entire directory go_200508-assocdb-tables to a location that is
-visible from the SQL Server OS itself (if it is not already), then in a shell
-on the SQL Server itself (cmd.exe), cd to this diretory and run:
+Now copy the entire directory ${DATAFILE}-tables (e.g. go_200508-assocdb-tables)
+to a location that is visible from the SQL Server OS itself (if it is not already),
+then in a shell on the SQL Server itself (cmd.exe), cd to this diretory and run:
 
 GO.BCP.bat
 (usually under 30 mins)
@@ -102,8 +107,11 @@ GO.BCP.bat
 =======================================================================
 
 cd $GOARC
-wget http://archive.godatabase.org/full/2005-08-01/go200508-utilities-src.tar.gz
-tar -zxf go_200508-utilities-src.tar.gz
+setenv UTILS go_200508-utilities-src
+setenv UTILSFILE ${UTILS}.tar.gz
+
+wget http://archive.godatabase.org/full/$MONTH/$UTILSFILE
+tar -zxf $UTILSFILE
 
 cat > ~/.geneontologyrc
 dbms mysql
@@ -114,12 +122,13 @@ dbauth xxxxxxxxxx
 ^D
 
 
-cd $GOARC/go_200508-utilities-src/apps/query-utils
-setenv GO_ROOT $GOARC/go_200508-utilities-src
+cd $GOARC
+cd $UTILS/apps/query-utils
+setenv GO_ROOT $GOARC/$UTILS
 setenv PERL5LIB $GO_ROOT/go-db-perl:$GO_ROOT/go-perl
 setenv DBNAME sbeams_go
 
-- Make sure the below work okay
+- Make sure the below work okay  # TODO: update for new Toolkit
 
 ./get_term.pl -dbname $DBNAME 6044
 
@@ -132,19 +141,18 @@ setenv DBNAME sbeams_go
 ./get-seqs.pl -d $DBNAME GO:0003677
 
 
-
 =======================================================================
 3. Run gene_annotation scripts in BioLink
 =======================================================================
 
 #### Create tables in BioLink as sbeamsadmin
-$SBEAMS/lib/scripts/Core/runsql.pl --user SBsbeamsadmin \
+$SBEAMS/lib/scripts/Core/runsql.pl --user sbeamsadmin \
   --sfile $SBEAMS/lib/sql/BioLink/BioLink_GOAnnotation_CREATETABLES.sql
 setenv GO_ROOT $GOARC/go_200508-utilities-src
 setenv PERL5LIB $GO_ROOT/go-db-perl:$GO_ROOT/go-perl
 setenv DBNAME sbeams_go
 
-#### Test that the script can run
+#### Test that the script can run (expect errors here!)
 cd $SBEAMS/lib/scripts/BioLink
 ./load_gene_annotation.pl --testonly --verbose 2
  
@@ -152,14 +160,14 @@ cd $SBEAMS/lib/scripts/BioLink
 ./load_gene_annotation.pl --verbose 2 --xref_dbname SGD\
   --godatabaseprefix fgcz_go.fgcz_go.\
   --mysqlgodbname sbeams_go
-  2:25 mins
+  2:25 mins  -- should create about 48k records for Yeast
   Note lots of "ERROR: Unable to get definition for IPRnnnnn" errors!
 
 #### Repeat for xref_dbnames FB, TAIR,UniProt as desired
 as above
 
 #### Create indexes
-$SBEAMS/lib/scripts/Core/runsql.pl --user SBsbeamsadmin \
+$SBEAMS/lib/scripts/Core/runsql.pl --user sbeamsadmin \
   --sfile $SBEAMS/lib/sql/BioLink/BioLink_GOAnnotation_CREATEINDEXES.sql
 
 
@@ -168,7 +176,7 @@ $SBEAMS/lib/scripts/Core/runsql.pl --user SBsbeamsadmin \
 =======================================================================
 
 #### Create linking table in Proteomics with
-$SBEAMS/lib/scripts/Core/runsql.pl --user SBsbeamsadmin \
+$SBEAMS/lib/scripts/Core/runsql.pl --user sbeamsadmin \
   --sfile $SBEAMS/lib/sql/Proteomics/Proteomics_GOAnnotationLink_CREATETABLES.sql
 
 #### Populate it
