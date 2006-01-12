@@ -179,7 +179,7 @@ sub handle_primary_request {
 
   my $sql = qq~
 SELECT condition_id, condition_name
-  FROM $TBMA_CONDITION
+  FROM $TBMA_COMPARISON_CONDITION
  WHERE project_id IN ($project_list)
  ~;
 
@@ -359,7 +359,7 @@ sub get_data {
 
 	$sql = qq~
 SELECT condition_id
-  FROM $TBMA_CONDITION
+  FROM $TBMA_COMPARISON_CONDITION
  WHERE project_id IN ($project_id)
  ~;
 	@desired_conditions = $sbeams->selectOneColumn($sql);
@@ -374,7 +374,7 @@ SELECT condition_id
 
   my $sql = qq~
 SELECT condition_id, condition_name
-  FROM $TBMA_CONDITION
+  FROM $TBMA_COMPARISON_CONDITION
  WHERE project_id IN ($project_list)
  ~;
   my %valid_conditions = $sbeams->selectTwoColumnHash($sql);
@@ -406,7 +406,7 @@ SELECT condition_id, condition_name
 	$sql =~ s/,\n$/\n/;
 
 	$sql .= qq~
-  FROM $TBMA_CONDITION C
+  FROM $TBMA_COMPARISON_CONDITION C
  INNER JOIN $TBMA_GENE_EXPRESSION GE ON ( C.condition_id = GE.condition_id )
   LEFT JOIN microarray.dbo.biosequence BS ON ( GE.biosequence_id = BS.biosequence_id )
  WHERE 1 = 1

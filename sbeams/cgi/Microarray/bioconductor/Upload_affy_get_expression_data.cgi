@@ -359,7 +359,7 @@ sub getConditionNames {
   #### Get the data for all the specified condition_ids
   my $sql = qq~
       SELECT condition_id,condition_name
-        FROM $TBMA_CONDITION
+        FROM $TBMA_COMPARISON_CONDITION
        WHERE condition_id IN ( $condition_ids )
   ~;
   my %hash = $sbeams->selectTwoColumnHash($sql);
@@ -548,7 +548,7 @@ sub check_for_condition {
   #### Get the data for all the specified condition_ids
   my $sql = qq~
       SELECT condition_id
-        FROM $TBMA_CONDITION
+        FROM $TBMA_COMPARISON_CONDITION
        WHERE condition_name like '$condition_name' 
   ~;
   my ($condition_id) = $sbeams->selectOneColumn($sql);
@@ -703,7 +703,7 @@ $log->debug("ORGANISM_ID ID '$organism_id'");
 	$rowdata{analysis_type} = $args{analysis_type};
 	$rowdata{analysis_id} = $args{analysis_id};
 	$rowdata_ref = \%rowdata;
-	$pk = $sbeams->updateOrInsertRow(table_name=>$TBMA_CONDITION,
+	$pk = $sbeams->updateOrInsertRow(table_name=>$TBMA_COMPARISON_CONDITION,
 									 rowdata_ref=>$rowdata_ref,
 									 return_PK=>1,
 									 verbose=>$VERBOSE,
@@ -718,7 +718,7 @@ $log->debug("ORGANISM_ID ID '$organism_id'");
 	$rowdata{analysis_type} = $args{analysis_type};
 	$rowdata{analysis_id} = $args{analysis_id};
 	$rowdata_ref = \%rowdata;
-	$pk  = $sbeams->updateOrInsertRow(table_name=>$TBMA_CONDITION,
+	$pk  = $sbeams->updateOrInsertRow(table_name=>$TBMA_COMPARISON_CONDITION,
 									  rowdata_ref=>$rowdata_ref,
 									  return_PK=>1,
 									  verbose=>$VERBOSE,

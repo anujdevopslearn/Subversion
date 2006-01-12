@@ -422,7 +422,7 @@ sub print_project_info {
  if ($project_id > 0) {
  	$sql = qq~
 		SELECT count(condition_id)
-		FROM $TBMA_CONDITION  
+		FROM $TBMA_COMPARISON_CONDITION  
 		WHERE project_id = $project_id
 		AND record_status != 'D'
 		~;
@@ -635,7 +635,7 @@ if ($display_type eq 'TWO_COLOR' ) {
 		
 		$sql = qq~
 		   		SELECT condition_id, condition_name, comment
-				FROM $TBMA_CONDITION 
+				FROM $TBMA_COMPARISON_CONDITION 
 				WHERE project_id = $project_id
 				AND record_status != 'D'
 			~;
