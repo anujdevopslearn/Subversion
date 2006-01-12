@@ -33,7 +33,7 @@ MA_affy_gene_intensity	Affy Gene Intensity	arrays	NO	$TBMA_AFFY_GENE_INTENSITY	a
 MA_affy_annotation	Affy Annotaiton	arrays	NO	$TBMA_AFFY_ANNOTATION	affy_annotation_id			
 MA_affy_db_links	Affy DB Links	arrays	NO	$TBMA_AFFY_DB_LINKS	affy_db_link_id			
 MA_affy_annotation_set	Affy Annotaiton Set	arrays	YES	$TBMA_AFFY_ANNOTATION_SET	affy_annotation_set_id		ManageTable.cgi?TABLE_NAME=MA_affy_annotation_set	MA_affy_annotation_set
-MA_condition	Condition	arrays	YES	$TBMA_CONDITION	condition_id		ManageTable.cgi?TABLE_NAME=MA_condition	MA_condition
+MA_comparison_condition	Comparison Condition	arrays	YES	$TBMA_COMPARISON_CONDITION	condition_id		ManageTable.cgi?TABLE_NAME=MA_comparison_condition	MA_comparison_condition
 MA_gene_expression	Gene Expression	arrays	NO	$TBMA_GENE_EXPRESSION	affy_gene_expression_id			
 MA_overlapping_transcript	Affy overlapping Transcript	arrays	NO	$TBMA_OVERLAPPING_TRANSCRIPT	overlapping_transcript_id			
 MA_gene_ontology	Affy Gene Ontology	arrays	NO	$TBMA_GENE_ONTOLOGY	gene_ontology_id			
