@@ -328,7 +328,7 @@ sub insertCondition {
 	$rowdata{'project_id'} = $PROJECT_ID;
 	$rowdata{'processed_date'} = $processed_date;
 	$rowdata_ref = \%rowdata;
-	$pk = $sbeams->updateOrInsertRow(table_name=>$TBMA_CONDITION,
+	$pk = $sbeams->updateOrInsertRow(table_name=>$TBMA_COMPARISON_CONDITION,
 									 rowdata_ref=>$rowdata_ref,
 									 return_PK=>1,
 									 verbose=>$VERBOSE,
@@ -340,7 +340,7 @@ sub insertCondition {
 	$rowdata{'project_id'} = $PROJECT_ID;
 	$rowdata{'processed_Date'} = $processed_date;
 	$rowdata_ref = \%rowdata;
-	$pk  = $sbeams->updateOrInsertRow(table_name=>$TBMA_CONDITION,
+	$pk  = $sbeams->updateOrInsertRow(table_name=>$TBMA_COMPARISON_CONDITION,
 									  rowdata_ref=>$rowdata_ref,
 									  return_PK=>1,
 									  verbose=>$VERBOSE,
@@ -753,7 +753,7 @@ sub getConditionID {
 
   my $sql = qq~
       SELECT condition_id
-      FROM $TBMA_CONDITION
+      FROM $TBMA_COMPARISON_CONDITION
       WHERE condition_name = '$condition'
       AND record_status != 'D'
       ~;
