@@ -236,7 +236,8 @@ mkdir sbeamscommon
    since there could eventually be large amounts of data here!!!)
 cd sbeamscommon
 mkdir images images/tmp
-mkdir lib lib/conf
+mkdir lib lib/conf lib/conf/Core
+touch lib/conf/Core/AvailableModules.conf
 chmod a+w images/tmp
 mkdir var var/resultsets var/logs var/upload var/sessions
 chmod g+w var/*
@@ -266,8 +267,10 @@ rm images/tmp
 ln -s ../../sbeamscommon/images/tmp images/tmp
 cp lib/conf/SBEAMS.conf.template ../sbeamscommon/lib/conf/SBEAMS.conf
 ln -s ../../../sbeamscommon/lib/conf/SBEAMS.conf lib/conf/SBEAMS.conf
+ln -s ../../../../sbeamscommon/lib/conf/Core/AvailableModules.conf lib/conf/Core/AvailableModules.conf
 cd ../dev1/sbeams/
 ln -s ../../../../sbeamscommon/lib/conf/SBEAMS.conf lib/conf/SBEAMS.conf
+ln -s ../../../../../sbeamscommon/lib/conf/Core/AvailableModules.conf lib/conf/Core/AvailableModules.conf
 
 
 -------------------------------------------------------------------------------
@@ -441,7 +444,7 @@ contribute to this effort if you try different RDBMS engines.
 (and working in the dev1 area - this is a good habit)
 
 setenv SBEAMS /local/www/html/dev1/sbeams
-set DBTYPES="mssql"   #### or one or more of mssql mysql pgsql oracle etc.
+set dbtype=mssql      #### Set to your RDBMS type: mssql, mysql, oracle, etc.
 cd $SBEAMS/lib/scripts/Core 
 
 You will often need to define a prefix for the database you are going to build
@@ -452,11 +455,14 @@ When using generate schema you can either specify a module with --module, in
 which case the value defined in the SBEAMS.conf file is used, or else you can
 explicity specify a prefix with --dbprefix. 
 
-foreach dbtype ( $DBTYPES )
-  ./generate_schema.pl --dbprefix dbo. --table_prop ../../conf/Core/Core_table_property.txt \
-  --table_col ../../conf/Core/Core_table_column.txt --schema_file \
-  ../../sql/Core/Core --module Core --destination_type $dbtype 
-end
+./generate_schema.pl \
+ --dbprefix dbo. \
+ --table_prop ../../conf/Core/Core_table_property.txt \
+ --table_col ../../conf/Core/Core_table_column.txt \
+ --schema_file ../../sql/Core/Core \
+ --module Core \
+ --destination_type $dbtype
+
 
 ##### MySQL ###############
 #
@@ -518,12 +524,13 @@ as the owner of various records but other Administrators can modify
 those records if necessary, so logging in as admin is discouraged.
 
 - Execute the statements below to create and populate the database with some
-  bare bones data.
+  bare bones data and constraints:
 
 cd $SBEAMS/lib/sql/Core
-$SBEAMS/lib/scripts/Core/runsql.pl -s Core_CREATETABLES.mssql -u sbeamsadmin
-$SBEAMS/lib/scripts/Core/runsql.pl -s Core_POPULATE.mssql -u sbeamsadmin -d semicolon
-$SBEAMS/lib/scripts/Core/runsql.pl -s Core_CREATECONSTRAINTS.mssql -u sbeamsadmin
+$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_CREATETABLES.mssql
+$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_POPULATE.mssql -d semicolon
+$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_CREATECONSTRAINTS.mssql
+$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_CREATE_MANUAL_CONSTRAINTS.sql
 
 ##### MySQL ###############
 #
@@ -536,6 +543,8 @@ $SBEAMS/lib/scripts/Core/runsql.pl -s Core_CREATECONSTRAINTS.mssql -u sbeamsadmi
 # $SBEAMS/lib/scripts/Core/runsql.pl -s Core_POPULATE.mysql
 #      -u sbeamsadmin --delimiter semicolon
 # $SBEAMS/lib/scripts/Core/runsql.pl -s Core_CREATECONSTRAINTS.mysql
+#      -u sbeamsadmin --delimiter semicolon
+# $SBEAMS/lib/scripts/Core/runsql.pl -s Core_CREATE_MANUAL_CONSTRAINTS.sql
 #      -u sbeamsadmin --delimiter semicolon
 #
 ###########################
