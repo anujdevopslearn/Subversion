@@ -248,13 +248,13 @@ sub handle_request {
 
   # All conditions
   my @total = $sbeams->selectOneColumn( <<"  END_SQL" );
-  SELECT condition_id FROM $TBMA_CONDITION
+  SELECT condition_id FROM $TBMA_COMPARISON_CONDITION
   WHERE record_status != 'D'
   END_SQL
 
   # Accessible conditions
   my @accessible = $sbeams->selectOneColumn( <<"  END_SQL" );
-  SELECT condition_id FROM $TBMA_CONDITION
+  SELECT condition_id FROM $TBMA_COMPARISON_CONDITION
   WHERE project_id IN ($acc_proj)
   AND record_status != 'D'
   END_SQL
@@ -582,7 +582,7 @@ sub handle_request {
     $subselect_clause = qq~
           AND GE.gene_name IN (
               SELECT DISTINCT GE.gene_name
- 	        FROM $TBMA_CONDITION C
+ 	        FROM $TBMA_COMPARISON_CONDITION C
 	       INNER JOIN $TBMA_GENE_EXPRESSION GE
                      ON ( C.condition_id = GE.condition_id )
 	        LEFT JOIN $TBMA_BIOSEQUENCE BS
@@ -616,7 +616,7 @@ sub handle_request {
   #### Define the SQL statement
   $sql = qq~
 	SELECT $limit_clause->{top_clause} $columns_clause
-	  FROM $TBMA_CONDITION C
+	  FROM $TBMA_COMPARISON_CONDITION C
 	 INNER JOIN $TBMA_GENE_EXPRESSION GE
                ON ( C.condition_id = GE.condition_id )
 	  LEFT JOIN $TBMA_BIOSEQUENCE BS
@@ -781,7 +781,7 @@ sub getConditionNames {
   #### Get the data for all the specified condition_ids
   my $sql = qq~
       SELECT condition_id,condition_name
-        FROM $TBMA_CONDITION
+        FROM $TBMA_COMPARISON_CONDITION
        WHERE condition_id IN ( $condition_ids )
   ~;
   my %hash = $sbeams->selectTwoColumnHash($sql);

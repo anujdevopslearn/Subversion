@@ -118,7 +118,7 @@ sub projectMismatch {
   return "No conditions specified" unless $params->{condition};
   
   my $sql =<<"  END";
-  SELECT DISTINCT project_id FROM $TBMA_CONDITION WHERE condition_id IN ( $params->{condition} )
+  SELECT DISTINCT project_id FROM $TBMA_COMPARISON_CONDITION WHERE condition_id IN ( $params->{condition} )
   END
   print STDERR "$sql\n";
   my $current_project = $sbeams->getCurrent_project_id;
@@ -162,7 +162,7 @@ sub updateAnnotations {
   # Select condition info
   my $conSQL =<<"  END_SELECT";
   SELECT condition_id, condition_name, organism_id, analysis_type, analysis_id  
-  FROM $TBMA_CONDITION
+  FROM $TBMA_COMPARISON_CONDITION
   WHERE condition_id IN ( $params->{condition} );
   END_SELECT
 
@@ -305,7 +305,7 @@ sub updateAnnotations {
 
     print "Inserting $tot updated records $eol";
     my $gene_expr_table = $sbeams->evalSQL( $TBMA_GENE_EXPRESSION );
-    my $condition_table = $sbeams->evalSQL( $TBMA_CONDITION );
+    my $condition_table = $sbeams->evalSQL( $TBMA_COMPARISON_CONDITION );
 
     for my $row ( @expression ) {
 #     $sbeams->transferTable();
@@ -440,7 +440,7 @@ sub deleteConditions {
   END_DELETE
 
   my $delCondSQL =<<"  END_DELETE";
-  DELETE FROM $TBMA_CONDITION 
+  DELETE FROM $TBMA_COMPARISON_CONDITION 
   WHERE condition_id IN ( $params->{condition} )
   END_DELETE
 
@@ -475,7 +475,7 @@ sub getEntryForm {
   # For now, this only works for affy data
   my $sql =<<"  END";
   SELECT condition_name, condition_id, date_created, date_modified
-  FROM $TBMA_CONDITION
+  FROM $TBMA_COMPARISON_CONDITION
   WHERE analysis_type = 'Affymetrix Array'
   AND project_id = '$project_id'
   AND analysis_id IS NOT NULL
