@@ -457,11 +457,16 @@ sub determineDataPresence {
   # should we hammer an existing record just because it is similar to a
   # record that we are importing?  It seems we should be assuming one or the
   # other case.
+  #
+  # lm 01-11-2006
+  # Changed threshold to 0.9999 or bulk creation of new accounts overwrites
+  # its newly-created ones (no matter what -testonly outputs)
+
 
   #### If no rows were returned, or the PK row isn't very similar,
   #### try doing a search based on the key columns
   my $key_similarity;
-  if ($nrows == 0 || $PK_similarity < 0.7) {
+  if ($nrows == 0 || $PK_similarity < 0.9999) {
     #### Write this part!
 
   }
@@ -470,7 +475,7 @@ sub determineDataPresence {
   #### Decide what to return based on whether the data were found
 
 
-  if ($PK_similarity > 0.7) {
+  if ($PK_similarity > 0.9999) {
     print "INFO: This record is already in the database but needs to be ".
       "updated.\n" if ($VERBOSE > 1);
     $return_status->{present} = 'YES';
