@@ -63,6 +63,7 @@ CREATE TABLE dbo.gene_annotation (
   gene_annotation_id    int NOT NULL IDENTITY,
   annotated_gene_id     int NOT NULL REFERENCES annotated_gene(annotated_gene_id),
   gene_annotation_type_id    int NOT NULL REFERENCES gene_annotation_type(gene_annotation_type_id),
+  hierarchy_level       varchar(50) NOT NULL,
   idx                   int NULL,
   is_summary            char(1) NOT NULL,
   annotation            varchar(4000) NULL,
