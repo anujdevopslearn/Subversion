@@ -780,8 +780,9 @@ PR_BrowseProteinSummary	15	transmembrane_class_constraint	Transmembrane Class Co
 PR_BrowseProteinSummary	16	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	2	N	"Constraint for the number of transmembrane regions (based on TMHMM and SignalP calculation by rbonneau).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
 PR_BrowseProteinSummary	17	accession_constraint	Accesssion Number Constraint									N	text	40		Y	2	N	Constraint for the Accession Number. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 PR_BrowseProteinSummary	18	quantitation_constraint	Quantitation constraint									N	text	40		Y	2	N	"Constraint for the Quantitation (ICAT ratio) as a single decimal value.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
-PR_BrowseProteinSummary	19	display_options	Display Options									N	multioptionlist	5		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BPS_display_options' ORDER BY sort_order,option_value"
-PR_BrowseProteinSummary	20	row_limit	Maximum Rows									N	text	10		Y	2	N	"Limit the numbers of rows displayed.  If not provided, default is 5000 rows."	
+PR_BrowseProteinSummary	19	go_level_constraint	GO Level Constraint									N	optionlist			Y	2	N	"Constraint for the level of Gene Ontology annotation to view.  By default, the leaf level annotations are displayed"	"SELECT annotation_hierarchy_level_name,annotation_hierarchy_level_name FROM $TBBL_ANNOTATION_HIERARCHY_LEVEL ORDER BY annotation_hierarchy_level_id"
+PR_BrowseProteinSummary	20	display_options	Display Options									N	multioptionlist	5		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BPS_display_options' ORDER BY sort_order,option_value"
+PR_BrowseProteinSummary	21	row_limit	Maximum Rows									N	text	10		Y	2	N	"Limit the numbers of rows displayed.  If not provided, default is 5000 rows."		
 PR_proteomics_sample	1	proteomics_sample_id	Proteomics Sample ID	int	4	0	N		Y			Y				N	N	Y	Proteomics Sample ID		pkDEFAULT
 PR_proteomics_sample	2	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	FK to project.project_id	"SELECT project_id, UL.username + ' - ' + proj.name + ' ( ' + RTRIM(CAST(proj.project_id AS CHAR)) + ' )'   AS name FROM $TB_PROJECT proj JOIN $TB_USER_LOGIN UL ON (proj.PI_contact_id = UL.contact_id)  WHERE proj.project_tag IS NOT NULL AND proj.record_status != 'D' ORDER BY UL.username"	
 PR_proteomics_sample	3	sample_tag	Sample Tag	varchar	50	0	N		N			Y	text	50		Y	Y	N	Sample Name.  Keep it short.  Do not use any strange characters like /\*&$() (e.g. NP Epi 03-123)		
@@ -829,23 +830,23 @@ PR_experiments_samples	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact
 PR_experiments_samples	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 PR_experiments_samples	9	record_status	Record Status	char	1	0	N	N	N							N	N				
 APD_peptide_summary	1	peptide_summary_id	Peptide Summary ID	int	4	0	N		Y							N	N				pkDEFAULT
-APD_peptide_summary	2	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project to which the peptide summary belongs	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id"	
-APD_peptide_summary	3	peptide_summary_name	Peptide Summary Title	varchar	100	0	N		N			Y	text	50		Y	Y	Y	Title of this peptide summary
-APD_peptide_summary	4	description	Peptide Summary Description	text	16	0	N		N			Y	textarea	4		Y	Y	N	"Description of this APD peptide summary, from where it is derived, etc."
-APD_peptide_summary	5	minimum_probability	Minimum Probability	real	4	0	N		N			Y	text	10		Y	Y	N	Minimum P value for selecting good peptides
-APD_peptide_summary	6	experiment_list	Search Batch ID List	varchar	512	0	N		N			Y	text	50		Y	Y	N	List of search batch ids
-APD_peptide_summary	7	n_experiments	Number of Experiments	int	4	0	N		N			Y	text	10		Y	Y	N	Total number of experiments used for this summary
-APD_peptide_summary	8	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments
-APD_peptide_summary	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-APD_peptide_summary	10	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N		
-APD_peptide_summary	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-APD_peptide_summary	12	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N		
-APD_peptide_summary	13	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
-APD_peptide_summary	14	record_status	Record Status	char	1	0	N	N	N							N	N		
-APD_aggregated_peptide	1	peptide_id	APD Peptide ID	int	4	0	N		Y			Y						N	
-APD_aggregated_peptide	2	peptide_summary_id	APD Peptide Summary ID	int	4	0	N		N	APD_peptide_summary	peptide_summary_id							Y	
-APD_aggregated_peptide	3	peptide_identifier_id	APD Peptide Identifier ID	int	4	0	N		N	APD_peptide_identifier	peptide_identifier_id							Y	
-APD_aggregated_peptide	4	biosequence_id	BioSequence ID	int	4	0	N		N	PR_biosequence	biosequence_id							N	
+APD_peptide_summary	2	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project to which the peptide summary belongs	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id"
+APD_peptide_summary	3	peptide_summary_name	Peptide Summary Title	varchar	100	0	N		N			Y	text	50		Y	Y	Y	Title of this peptide summary	
+APD_peptide_summary	4	description	Peptide Summary Description	text	16	0	N		N			Y	textarea	4		Y	Y	N	"Description of this APD peptide summary, from where it is derived, etc."	
+APD_peptide_summary	5	minimum_probability	Minimum Probability	real	4	0	N		N			Y	text	10		Y	Y	N	Minimum P value for selecting good peptides	
+APD_peptide_summary	6	experiment_list	Search Batch ID List	varchar	512	0	N		N			Y	text	50		Y	Y	N	List of search batch ids	
+APD_peptide_summary	7	n_experiments	Number of Experiments	int	4	0	N		N			Y	text	10		Y	Y	N	Total number of experiments used for this summary	
+APD_peptide_summary	8	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments	
+APD_peptide_summary	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+APD_peptide_summary	10	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
+APD_peptide_summary	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+APD_peptide_summary	12	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
+APD_peptide_summary	13	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
+APD_peptide_summary	14	record_status	Record Status	char	1	0	N	N	N							N	N			
+APD_aggregated_peptide	1	peptide_id	APD Peptide ID	int	4	0	N		Y			Y						N		
+APD_aggregated_peptide	2	peptide_summary_id	APD Peptide Summary ID	int	4	0	N		N	APD_peptide_summary	peptide_summary_id							Y		
+APD_aggregated_peptide	3	peptide_identifier_id	APD Peptide Identifier ID	int	4	0	N		N	APD_peptide_identifier	peptide_identifier_id							Y		
+APD_aggregated_peptide	4	biosequence_id	BioSequence ID	int	4	0	N		N	PR_biosequence	biosequence_id							N
 APD_aggregated_peptide	5	biosequence_name	BioSequence Name	varchar	255	0	N		N									N
 APD_aggregated_peptide	6	peptide	Peptide	varchar	512	0	N		N									N
 APD_aggregated_peptide	7	n_peptides	Number of Peptides	int	4	0	N		N									N
@@ -877,7 +878,7 @@ APD_peptide_property_type	2	peptide_property_type_name	Peptide Property Type Nam
 APD_peptide_property_type	3	peptipe_property_type_decription	Peptide Property Type Description	text	16	0	Y		N									N
 APD_peptide_property_type	4	comment	Comment	text	16	0	Y		N									N
 APD_peptide_property_type	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N									N
-APD_peptide_property_type	6	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id							N
+APD_peptide_property_type	6	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id							N		
 APD_peptide_property_type	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N									N		
 APD_peptide_property_type	8	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id							N		
 APD_peptide_property_type	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id							N		
