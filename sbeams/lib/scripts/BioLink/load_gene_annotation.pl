@@ -25,6 +25,7 @@ use vars qw ($sbeams $sbeamsPROT $q
              $PROG_NAME $USAGE %OPTIONS $QUIET $DEBUG $DATABASE $TESTONLY
              %GO_leaf $GODATABASE $MYSQLGODBNAME
              $current_contact_id $current_username
+	     $MAX_LEVELS
             );
 
 
@@ -33,6 +34,7 @@ use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Proteomics::Tables;
+use SBEAMS::BioLink::Tables;
 
 $sbeams = SBEAMS::Connection->new();
 
@@ -137,6 +139,96 @@ sub handleRequest {
   }
 
 
+
+  ##########################################################################
+
+
+  #### Get entire flattened GO hierarchy
+
+  #### Maximum number of levels to flatten
+  $MAX_LEVELS = 20;
+
+
+  #### Refresh annotation_hierarchy_level
+  refreshAnnotationHierarchyLevels(
+    max_levels => $MAX_LEVELS,
+  );
+
+
+  #### Build the SQL query
+  my $sql_part1 = "SELECT OT.acc,OT.name,P1.acc,P1.name\n";
+  my $sql_part2 = qq~  FROM ${GODATABASE}term OT
+  LEFT JOIN ${GODATABASE}term2term TT1 ON ( OT.id = TT1.term2_id )
+  LEFT JOIN ${GODATABASE}term P1 ON ( TT1.term1_id = P1.id )
+~;
+
+  for ($i=2; $i<$MAX_LEVELS; $i++) {
+    my $pi = $i - 1;
+    $sql_part1 .= "         ,P$i.acc,P$i.name\n";
+    $sql_part2 .= "  LEFT JOIN ${GODATABASE}term2term TT$i ON ( P$pi.id = TT$i.term2_id )\n";
+    $sql_part2 .= "  LEFT JOIN ${GODATABASE}term P$i ON ( TT$i.term1_id = P$i.id )\n";
+  }
+
+  my $sql = $sql_part1.$sql_part2;
+  #$sql .=" WHERE OT.id BETWEEN 5000 AND 5005\n";
+  #print $sql;
+
+  #### Fetch all the term paths
+  print "INFO: Fetching paths for all terms...\n";
+  my @term_paths = $sbeams->selectSeveralColumns($sql);
+
+  #### Define a hash to store all organized lineages
+  my %term_lineage;
+
+  #### Loop over each flatten term path and store in the hash
+  foreach my $term_path ( @term_paths ) {
+    my $leaf_acc = $term_path->[0];
+    my $leaf_name = $term_path->[1];
+
+    #### Squawk if MAX LEVELS isn't deep enough
+    if ($term_path->[($MAX_LEVELS-1)*2]) {
+      print "WARNING: MAX_LEVELS is not enough!\n";
+    }
+
+    #### Construct the path
+    my @path;
+    my $level_counter = 1;
+    for ($i=$MAX_LEVELS-1; $i>0; $i--) {
+      my $next_acc = $term_path->[$i*2];
+      my $next_name = $term_path->[$i*2+1];
+      if ($next_acc && $next_name ne 'all'
+	  #&&
+          #$next_name ne 'molecular_function' &&
+          #$next_name ne 'biological_process' &&
+          #$next_name ne 'cellular_component'
+         ) {
+	$level_counter++;
+	push(@path,[$next_acc,$next_name]);
+      }
+    }
+    push(@path,[$leaf_acc,$leaf_name]);
+
+    #### If we already have information for this accession, add it.
+    #### else create a new entry in the hash
+    if (exists($term_lineage{$leaf_acc})) {
+      push(@{$term_lineage{$leaf_acc}},\@path);
+    } else{
+      $term_lineage{$leaf_acc} = [ \@path ];
+    }
+
+    #print "$leaf_name($level_counter): ".join(" -> ",@path)."\n\n";
+
+  }
+
+  @term_paths = undef;
+
+
+  ##########################################################################
+
+
+
+
+
   #### Load lookup hash for organism_namespace
   $sql = qq~
 	SELECT organism_namespace_tag,organism_namespace_id
@@ -191,6 +283,7 @@ sub handleRequest {
 	 INNER JOIN ${GODATABASE}dbxref D ON ( GP.dbxref_id = D.id )
 	 WHERE D.xref_dbname = '$xref_dbname'
            AND $accession_column_sql != ''
+        --   AND symbol LIKE 'FAA2'
     ~;
 
   }
@@ -282,6 +375,7 @@ sub handleRequest {
 	 INNER JOIN ${GODATABASE}dbxref D ON ( GP.dbxref_id = D.id )
 	 WHERE 1 = 1
 	--   AND GP.symbol LIKE 'Top2'
+	--   AND GP.symbol LIKE 'FAA2'
 	   AND D.xref_dbname = '$xref_dbname'
 	 ORDER BY GP.symbol,GP.id,T.acc
     ~;
@@ -291,6 +385,9 @@ sub handleRequest {
   print "\nGetting list of all GO annotations for $xref_dbname...\n";
   my @rows = $sbeams->selectSeveralColumns($sql);
   print "Found ".scalar(@rows)." rows...  Process them all\n";
+
+  #### Storage area for level-based annotations
+  my $level_annotations;
 
   #### Loop over all rows of returned data
   my $row_counter = 0;
@@ -313,11 +410,22 @@ sub handleRequest {
         gene_product_id => $prev_gene_product_id,
         annotated_gene_ids => \%annotated_gene_ids,
       );
+
+      writeLevelAnnotations(
+        gene_product_id => $prev_gene_product_id,
+        level_annotations => $level_annotations,
+        gene_annotation_type_ids => \%gene_annotation_type_ids,
+        annotated_gene_ids => \%annotated_gene_ids,
+      );
+
+      #### Reset the level-based annotations
+      $level_annotations = undef;
+
     }
 
 
     #### Set some column values for stuff to insert
-    my %rowdata = ();
+    my %rowdata;
     $rowdata{external_accession} = $external_accession;
     $rowdata{annotation} = $row->[3];
 
@@ -344,6 +452,7 @@ sub handleRequest {
     $rowdata{gene_annotation_type_id} = $gene_annotation_type_id;
     $rowdata{external_reference_set_id} = 1;
     $rowdata{is_summary} = 'N';
+    $rowdata{hierarchy_level} = 'leaf';
 
     #### If we don't already have a counter index for this gene's term-type
     #### then start a summary entry
@@ -379,6 +488,53 @@ sub handleRequest {
     );
 
 
+    #### Process all the annotations to a level-by-level format
+    print "Processing full level information ...\n" if ($VERBOSE);
+    my @term_lineages = @{$term_lineage{$external_accession}};
+    unless (@term_lineages) {
+      print "ERROR: No lineage found for term $external_accession\n";
+    }
+
+    my $lineage_num = 0;
+
+    foreach my $term_lineage ( @term_lineages ) {
+      my $gene_annotation_type = $term_lineage->[0]->[1];
+      my $gene_annotation_type_id =
+	$gene_annotation_type_ids{$gene_annotation_type} or
+	die("ERROR: Unable to decode '$gene_annotation_type'");
+
+      #print "  Lineage $lineage_num of type $gene_annotation_type".
+      #  "($gene_annotation_type_id)\n";
+
+      my $level_num = 0;
+      my $plevel;
+
+      #### Loop over each level in the hierarchy, storing the annotation
+      foreach my $level ( @{$term_lineage} ) {
+	#print "    $level_num - $level->[0]:$level->[1]\n";
+
+	#### If this is not the base category, store the annotation in a
+	#### hash.  This has the benefit of removing duplicates
+	if ($level_num>0) {
+	  $level_annotations->{$gene_annotation_type}->{$level_num}->
+	    {$level->[0]} = $level->[1];
+	}
+
+	$level_num++;
+	$plevel = $level;
+      }
+
+      #### Fill down the last annotation all the way to MAX_LEVELS
+      for ($i=$level_num; $i<$MAX_LEVELS; $i++) {
+	$level_annotations->{$gene_annotation_type}->{$i}->
+	  {$plevel->[0]} = $plevel->[1];
+      }
+
+      $lineage_num++;
+    }
+
+
+
     #### Set this gene_product_id to the previous one
     $prev_gene_product_id = $gene_product_id;
 
@@ -397,8 +553,16 @@ sub handleRequest {
     annotated_gene_ids => \%annotated_gene_ids,
   );
 
+  writeLevelAnnotations(
+    gene_product_id => $prev_gene_product_id,
+    level_annotations => $level_annotations,
+    gene_annotation_type_ids => \%gene_annotation_type_ids,
+    annotated_gene_ids => \%annotated_gene_ids,
+  );
+
 
   return if ($xref_dbname eq 'HuIPI');
+
 
 
   ##########################################################################
@@ -470,6 +634,7 @@ sub handleRequest {
         $rowdata{gene_annotation_type_id} = $key;
         $rowdata{idx} = 0;
         $rowdata{is_summary} = 'Y';
+        $rowdata{hierarchy_level} = 'leaf';
         $rowdata{external_reference_set_id} = 2;
         $rowdata{external_accession} = $value->{external_accession};
         $rowdata{annotation} = $value->{annotation};
@@ -509,6 +674,7 @@ sub handleRequest {
     $rowdata{gene_annotation_type_id} = $gene_annotation_type_id;
     $rowdata{external_reference_set_id} = 2;
     $rowdata{is_summary} = 'N';
+    $rowdata{hierarchy_level} = 'leaf';
 
     unless ($gene_data{$gene_product_id}->{$gene_annotation_type_id}->{idx}) {
       $gene_data{$gene_product_id}->{$gene_annotation_type_id}->{idx} = 0;
@@ -549,7 +715,7 @@ sub handleRequest {
 
 
 
-  #### If we've moved onto a new gene, write some summary above the previous
+  #### Write data for last entry
   print "======",$prev_gene_product_id," , ",$gene_product_id,"\n"
     if ($VERBOSE);
   if (1) {
@@ -559,6 +725,7 @@ sub handleRequest {
       $rowdata{annotated_gene_id} =
         $annotated_gene_ids{$prev_gene_product_id};
       $rowdata{gene_annotation_type_id} = $key;
+      $rowdata{hierarchy_level} = 'leaf';
       $rowdata{idx} = 0;
       $rowdata{is_summary} = 'Y';
       $rowdata{external_reference_set_id} = 2;
@@ -609,6 +776,7 @@ sub writeSummaryRecord {
     $rowdata{gene_annotation_type_id} = $key;
     $rowdata{idx} = 0;
     $rowdata{is_summary} = 'Y';
+    $rowdata{hierarchy_level} = 'leaf';
     $rowdata{external_reference_set_id} = 1;
     $rowdata{external_accession} = $value->{external_accession};
     #### Add goofy limitation in annotation size for indexing reasons
@@ -694,3 +862,148 @@ sub transformGeneName {
 
 }
 
+
+
+###############################################################################
+# writeLevelAnnotations
+###############################################################################
+sub writeLevelAnnotations {
+  my %args = @_;
+
+  my $gene_product_id = $args{'gene_product_id'} || die("error 1");
+  my $gene_annotation_type_ids = $args{'gene_annotation_type_ids'} or
+    die("error 2");
+  my $level_annotations = $args{'level_annotations'} || die("error 3");
+  my $annotated_gene_ids = $args{'annotated_gene_ids'} || die("error 4");
+
+
+  #### Create a hash for storing the values for each record
+  my %rowdata;
+  $rowdata{external_reference_set_id} = 1;
+
+  #### Now that all annotations have been stored, write them out
+
+  #### Loop over each annotation_type (e.g. molecular_function)
+  while ( my ($type,$level) = each %{$level_annotations} ) {
+    print "Level Annotations for $type(".
+      $gene_annotation_type_ids->{$type}.")\n" if ($VERBOSE);
+
+    #### Set the annotation_type_id (e.g. 1 for molecular_function)
+    $rowdata{gene_annotation_type_id} = $gene_annotation_type_ids->{$type};
+
+    #### Loop over each level
+    for (my $level_num=1; $level_num<$MAX_LEVELS; $level_num++) {
+      my $annotation = $level->{$level_num};
+      print "  $level_num: " if ($VERBOSE);
+      $rowdata{hierarchy_level} = $level_num;
+      $rowdata{is_summary} = 'N';
+      $rowdata{annotated_gene_id} = $annotated_gene_ids->{$gene_product_id};
+
+      #### Loop over each annotation associated at that level
+      my $idx = 1;
+      my @accessions;
+      my @descriptions;
+      while ( my ($accession,$description) = each %{$annotation} ) {
+        print "$description," if ($VERBOSE);
+
+	push(@accessions,$accession);
+	push(@descriptions,$description);
+
+	$rowdata{idx} = $idx;
+	$rowdata{external_accession} = $accession;
+	$rowdata{annotation} = $description;
+
+	#### Insert the row
+	my $result = $sbeams->insert_update_row(
+          insert=>1,
+          table_name=>"${DATABASE}gene_annotation",
+          rowdata_ref=>\%rowdata,
+          PK_name=>'gene_annotation_id',
+          verbose=>$VERBOSE,
+          testonly=>$TESTONLY,
+        );
+
+	$idx++;
+
+      } # endwhile each annotation within a level
+
+      #### Now create a summary record
+      $rowdata{idx} = 0;   # 0 means summary record
+      $rowdata{is_summary} = 'Y';
+      $rowdata{external_accession} = join(';',@accessions);
+      $rowdata{annotation} = join(';',@descriptions);
+      #### Add goofy limitation in annotation size for indexing reasons
+      $rowdata{annotation} = substr($rowdata{annotation},0,890);
+
+      #### Insert the row
+      my $result = $sbeams->insert_update_row(
+        insert=>1,
+        table_name=>"${DATABASE}gene_annotation",
+        rowdata_ref=>\%rowdata,
+        PK_name=>'gene_annotation_id',
+        verbose=>$VERBOSE,
+        testonly=>$TESTONLY,
+      );
+
+      print "\n" if ($VERBOSE);
+
+    } # endfor each level
+
+  } # endwhile each annotation_type
+
+
+} # end writeLevelAnnotations
+
+
+
+###############################################################################
+# refreshAnnotationHierarchyLevels
+###############################################################################
+sub refreshAnnotationHierarchyLevels {
+  my %args = @_;
+
+  my $max_levels = $args{'max_levels'} || die("error 1");
+
+  my $sql = "SELECT * FROM $TBBL_ANNOTATION_HIERARCHY_LEVEL";
+  my @rows = $sbeams->selectSeveralColumns($sql);
+
+  if ($VERBOSE) {
+    print "MAX_LEVELS = $max_levels\n";
+    print "n rows in annotation_hierarchy_level = ".scalar(@rows)."\n";
+  }
+
+  if (scalar(@rows) == $max_levels) {
+    print "Table annotation_hierarchy_levels has the correct number of rows\n";
+    return;
+  }
+
+  $sql = "DELETE FROM $TBBL_ANNOTATION_HIERARCHY_LEVEL";
+  $sbeams->executeSQL($sql);
+
+
+  my %rowdata = ( annotation_hierarchy_level_name => 'leaf' );
+  $sbeams->insert_update_row(
+    insert=>1,
+    table_name=>"$TBBL_ANNOTATION_HIERARCHY_LEVEL",
+    rowdata_ref=>\%rowdata,
+    PK_name=>'annotation_hierarchy_level_id',
+    verbose=>$VERBOSE,
+    testonly=>$TESTONLY,
+  );
+
+  for (my $level=1; $level < $MAX_LEVELS; $level++) {
+    $rowdata{annotation_hierarchy_level_name} = $level;
+    $sbeams->insert_update_row(
+      insert=>1,
+      table_name=>"$TBBL_ANNOTATION_HIERARCHY_LEVEL",
+      rowdata_ref=>\%rowdata,
+      PK_name=>'annotation_hierarchy_level_id',
+      verbose=>$VERBOSE,
+      testonly=>$TESTONLY,
+    );
+  }
+
+  print "Table annotation_hierarchy_levels updated to max_level=$max_levels\n";
+  return;
+
+}
