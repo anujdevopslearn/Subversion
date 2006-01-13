@@ -372,10 +372,11 @@ sub guessMode {
     $self->output_mode('interactive');
     #### Add in a fake reference to MOD_PERL to trick CGI::Carp into
     #### not printing the "Content: text/html\n\n" header
-    $ENV{'MOD_PERL'} ||= 'FAKE'
-    ## Reinstated with the ||= syntax.  This keeps CGI::Carp from printing 
-    ## a header upon die, allowing us to do it explicitly (and print the 
-    ## appropriate Content-Type).
+    # $ENV{'MOD_PERL'} ||= 'FAKE'
+    ## Re-delete this, because die in command-line scripts
+    ### Reinstated with the ||= syntax.  This keeps CGI::Carp from printing 
+    ### a header upon die, allowing us to do it explicitly (and print the 
+    ### appropriate Content-Type).
     #### Removed this 2005-06-23 EWD.  It's been here for years, but causes
     #### a problem at other sites.  I think it's best we try without this.
   }
@@ -1109,6 +1110,7 @@ sub destroyAuthHeader {
                             -expires => '-25h');
     $http_header = $q->header(-cookie => $cookie);
     $log->debug( "Destroy auth" );
+    $self->{_cookie_jar} = $cookie;
 
     return $http_header;
 }
