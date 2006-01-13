@@ -78,3 +78,11 @@ CREATE TABLE dbo.gene_annotation (
 )
 GO
 
+CREATE TABLE dbo.annotation_hierarchy_level (
+  annotation_hierarchy_level_id        int IDENTITY NOT NULL,
+  annotation_hierarchy_level_name      varchar(50) NOT NULL,
+  PRIMARY KEY (annotation_hierarchy_level_id)
+)
+GO
+
+
