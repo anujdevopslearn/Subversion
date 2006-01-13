@@ -1,4 +1,4 @@
-{package SBEAMS::PeptideAtlas::Test_glyco_data;
+{package SBEAMS::Glycopeptide::Test_glyco_data;
 	
 
 ####################################################
@@ -48,7 +48,7 @@ use Bio::Annotation::Collection;
 use Bio::Annotation::Comment;
 use Bio::Annotation::SimpleValue;
 
-use SBEAMS::PeptideAtlas::Get_peptide_seqs;
+use SBEAMS::Glycopeptide::Get_peptide_seqs;
 
 use SBEAMS::Connection qw($log);
 

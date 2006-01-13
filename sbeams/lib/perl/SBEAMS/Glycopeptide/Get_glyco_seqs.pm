@@ -1,4 +1,4 @@
-{package SBEAMS::PeptideAtlas::Get_glyco_seqs;
+{package SBEAMS::Glycopeptide::Get_glyco_seqs;
 	
 
 ####################################################
@@ -53,15 +53,15 @@ use Bio::Annotation::SimpleValue;
 
 use Data::Dumper;
 
-use SBEAMS::PeptideAtlas::Glyco_query;
+use SBEAMS::Glycopeptide::Glyco_query;
 
-use base qw(SBEAMS::PeptideAtlas::Glyco_query);		
+use base qw(SBEAMS::Glycopeptide::Glyco_query);		
 
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
-use SBEAMS::PeptideAtlas::Tables;
-use SBEAMS::PeptideAtlas::Test_glyco_data;
-use SBEAMS::PeptideAtlas::Get_peptide_seqs;
+use SBEAMS::Glycopeptide::Tables;
+use SBEAMS::Glycopeptide::Test_glyco_data;
+use SBEAMS::Glycopeptide::Get_peptide_seqs;
 
 
 
@@ -342,7 +342,7 @@ sub add_predicted_peptides {
 	my @array_hrefs = $self->get_predicted_peptides($ipi_data_id);
 	
 	
-	my $pep_o = new SBEAMS::PeptideAtlas::Get_peptide_seqs(glyco_obj => $self);
+	my $pep_o = new SBEAMS::Glycopeptide::Get_peptide_seqs(glyco_obj => $self);
 	
 
 	$pep_o->make_peptide_bio_seqs(data => \@array_hrefs,
@@ -362,7 +362,7 @@ sub add_identified_peptides {
 	my @array_hrefs = $self->get_identified_peptides($ipi_data_id);
 	
 	
-	my $pep_o = new SBEAMS::PeptideAtlas::Get_peptide_seqs(glyco_obj => $self);
+	my $pep_o = new SBEAMS::Glycopeptide::Get_peptide_seqs(glyco_obj => $self);
 	
 	
 	$pep_o->make_peptide_bio_seqs(data => \@array_hrefs,

@@ -1,4 +1,4 @@
-{package SBEAMS::PeptideAtlas::Glyco_query;
+{package SBEAMS::Glycopeptide::Glyco_query;
 	
 
 ####################################################
@@ -45,13 +45,13 @@ use FindBin;
 use SBEAMS::Connection qw($q $log);
 
 use Data::Dumper;
-use base qw(SBEAMS::PeptideAtlas);		
+use base qw(SBEAMS::Glycopeptide);		
 
 
 use SBEAMS::Connection::Tables;
-use SBEAMS::PeptideAtlas::Tables;
-use SBEAMS::PeptideAtlas::Test_glyco_data;
-use SBEAMS::PeptideAtlas::Get_peptide_seqs;
+use SBEAMS::Glycopeptide::Tables;
+use SBEAMS::Glycopeptide::Test_glyco_data;
+use SBEAMS::Glycopeptide::Get_peptide_seqs;
 
 
 

@@ -1,4 +1,4 @@
-{package SBEAMS::PeptideAtlas::Get_peptide_seqs;
+{package SBEAMS::Glycopeptide::Get_peptide_seqs;
 	
 
 ####################################################
@@ -51,8 +51,8 @@ use Bio::Annotation::Comment;
 use Bio::Annotation::SimpleValue;
 
 use Data::Dumper;
-use SBEAMS::PeptideAtlas::Get_glyco_seqs;
-use base qw(SBEAMS::PeptideAtlas::Get_glyco_seqs);		
+use SBEAMS::Glycopeptide::Get_glyco_seqs;
+use base qw(SBEAMS::Glycopeptide::Get_glyco_seqs);		
 
 
 

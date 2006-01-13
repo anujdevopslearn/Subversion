@@ -1,4 +1,4 @@
-{package SBEAMS::PeptideAtlas::Glyco_peptide_load;
+{package SBEAMS::Glycopeptide::Glyco_peptide_load;
 		
 
 
@@ -18,9 +18,9 @@ use Benchmark;
 
 		
 use SBEAMS::Connection::Tables;
-use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::Glycopeptide::Tables;
 
-#use base qw(SBEAMS::PeptideAtlas::Affy);		#declare superclass
+#use base qw(SBEAMS::Glycopeptide::Affy);		#declare superclass
 #
 # Hash for holding column headings
 my %heads;
