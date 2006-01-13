@@ -1,0 +1,30 @@
+
+The following changes to the BioLink database should be made when
+upgrading SBEAMS
+
+from version 0.21
+
+to 0.22 or later or to the latest code in the SVN repository
+
+---------------
+
+Change on: 2005-01-12
+
+Added column 'hierarchy_level' varchar(50) to
+table gene_annotation after 'idx'
+
+Another table `annotation_hierarchy_level` was added.  You can just
+create that table with the DDL in
+$SBEAMS/lib/sql/BioLink/BioLink_GOAnnotation_CREATETABLES.sql
+
+Also updated the indexes.  Drop all indexes with DDL in
+$SBEAMS/lib/sql/BioLink/BioLink_GOAnnotation_DROPINDEXES.sql
+and re-create with:
+$SBEAMS/lib/sql/BioLink/BioLink_GOAnnotation_CREATEINDEXES.sql
+
+Note that this causes 20 times more data to be loaded into the gene_annotation
+tables, making indexing more critical, and breaking most existing queries
+that use the gene_annotation tables.  All existing queries should be
+updated to include the constraint "AND hierarchy_level = 'leaf'" to
+preserve current functionality.
+
