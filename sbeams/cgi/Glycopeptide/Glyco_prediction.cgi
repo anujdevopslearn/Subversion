@@ -26,19 +26,19 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TabMenu;
 
-use SBEAMS::PeptideAtlas;
-use SBEAMS::PeptideAtlas::Settings;
-use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::Glycopeptide;
+use SBEAMS::Glycopeptide::Settings;
+use SBEAMS::Glycopeptide::Tables;
 
-use SBEAMS::PeptideAtlas::Get_glyco_seqs;
-use SBEAMS::PeptideAtlas::Glyco_query;
+use SBEAMS::Glycopeptide::Get_glyco_seqs;
+use SBEAMS::Glycopeptide::Glyco_query;
 
 $sbeams = new SBEAMS::Connection;
-$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD = new SBEAMS::Glycopeptide;
 $sbeamsMOD->setSBEAMS($sbeams);
 
 
-$glyco_query_o = new SBEAMS::PeptideAtlas::Glyco_query;
+$glyco_query_o = new SBEAMS::Glycopeptide::Glyco_query;
 $glyco_query_o->setSBEAMS($sbeams);
 
 
@@ -74,8 +74,8 @@ sub main
 { 
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate(
-       # permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
-       # 'PeptideAtlas_readonly'],
+       # permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin',
+       # 'Glycopeptide_readonly'],
         #connect_read_only=>1,
 #allow_anonymous_access=>1,
     ));
@@ -90,7 +90,7 @@ sub main
 
 
     ## get project_id to send to HTMLPrinter display
-    my $project_id = $sbeamsMOD->getProjectID();
+    my $project_id = $sbeams->getCurrent_project_id();
 
 
     #### Process generic "state" parameters before we start
@@ -618,7 +618,7 @@ sub display_detail_form{
 	
 	$log->debug("ABOUT TO MAKE GLYCO OBJ '$ipi_data_id'");
 	#go an query the db, add the peptide features and make into a big Bio::Seq object
-	my $glyco_o = new SBEAMS::PeptideAtlas::Get_glyco_seqs(ipi_data_id => $ipi_data_id);
+	my $glyco_o = new SBEAMS::Glycopeptide::Get_glyco_seqs(ipi_data_id => $ipi_data_id);
   	$glyco_o->setSBEAMS($sbeams);
   
    $log->debug("DONE MAKING GLYCO OBJ '$ipi_data_id'");
