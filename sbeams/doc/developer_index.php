@@ -108,6 +108,8 @@
      <P>
      <LI><A HREF="Immunostain/Immunostain.gif">Immunostain module schema</A>
      <P>
+     <LI><A HREF="BioLink/BioLink_Schema.gif">BioLink module schema</A>
+     <P>
      <LI><A HREF="PeptideAtlas/PeptideAtlas.gif">PeptideAtlas module schema</A>
      <P>
      <LI><A HREF="PhenoArray/PhenoArray_Schema.gif">PhenoArray module schema</A>
