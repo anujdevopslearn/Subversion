@@ -275,6 +275,11 @@ sub handle_request {
 	$sql = "SELECT * FROM ISB..education_registration";
   }
 
+  #### Define parameters for source 'education_registration'
+  if ($parameters{source_name} eq 'ISBDonation') {
+	$sql = "SELECT * FROM OPENQUERY (mysql_support,'SELECT * FROM SupportISB.ISBDonation')";
+  }
+
 
   #########################################################################
 
