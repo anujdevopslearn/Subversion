@@ -14,5 +14,8 @@ BL_cbil_genome_coordinates	cbil_genome_coordinates	BioLink_infrastructure	NO	$TB
 BL_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi		
 BL_MGEDOntologyRelationship	MGED Ontology RelationShip	BioLink_infrastructure	NO	$TBBL_MGED_ONTOLOGY_RELATIONSHIP	MGED_ontology_relationship_id				
 BL_MGEDOntologyTerm	MGED Ontology Term	BioLink_infrastructure	NO	$TBBL_MGED_ONTOLOGY_TERM	MGED_ontology_term_id				
-BL_OntologyRelationshipType	Ontology Relationship Type	BioLink_infrastructure	NO	$TBBL_ONTOLOGY_RELATIONSHIP_TYPE	ontology_relationship_type_id
-BL_OntologyTermType	Ontology Term Type	BioLink_infrastructure	NO	$TBBL_ONTOLOGY_TERM_TYPE	ontology_term_type_id
+BL_OntologyRelationshipType	Ontology Relationship Type	BioLink_infrastructure	NO	$TBBL_ONTOLOGY_RELATIONSHIP_TYPE	ontology_relationship_type_id				
+BL_OntologyTermType	Ontology Term Type	BioLink_infrastructure	NO	$TBBL_ONTOLOGY_TERM_TYPE	ontology_term_type_id				
+BL_data_object	Data Object	BioLink_infrastructure	YES	$TBBL_DATA_OBJECT	data_object_id		ManageTable.cgi?TABLE_NAME=BL_data_object	BL_data_object	
+BL_data_object_type	Data Object Type	BioLink_infrastructure	YES	$TBBL_DATA_OBJECT_TYPE	data_object_type_id		ManageTable.cgi?TABLE_NAME=BL_data_object_type	BL_data_object	
+BL_hypothesis	Hypothesis	BioLink_infrastructure	YES	$TBBL_HYPOTHESIS	hypothesist_id		ManageTable.cgi?TABLE_NAME=BL_hypothesis	BL_data_object	

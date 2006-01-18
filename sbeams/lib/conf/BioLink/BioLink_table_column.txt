@@ -146,7 +146,7 @@ BL_evidence	1	evidence_id	Evidence ID	int	4	0	N		Y							N	N				pkDEFAULT
 BL_evidence	2	relationship_id	Relationship ID	int	4	0	N		N	BL_relationship	relationship_id	Y	optionlist			Y	Y	N	Relationship ID this line of evidence presents	"SELECT relationship_id, relationship_name FROM $TB_RELATIONSHIP ORDER BY sort_order,relationship_name"	
 BL_evidence	3	evidence_source_id	Evidence Source ID	int	4	0	N		N	BL_evidence_source	evidence_source_id	Y	optionlist			Y	Y	N	Evidence Source that produced this line of evidence	"SELECT evidence_source_id, evidence_source_name FROM $TB_EVIDENCE_SOURCE ORDER BY sort_order,evidence_source_name"	
 BL_evidence	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-BL_evidence	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+BL_evidence	5	date_created	query_option_id	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 BL_evidence	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
 BL_evidence	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 BL_evidence	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
@@ -195,3 +195,36 @@ BL_OntologyRelationshipType	2	name	Ontology Relationship Name	varchar	255	0	Y		N
 BL_OntologyTermType	1	ontology_term_type_id	Ontology Term Type ID	int	4	0	N		N			Y									
 BL_OntologyTermType	2	name	Ontology Term Name	varchar	255	0	N		N			Y									
 BL_OntologyTermType	3	description	Ontology Term Description	varchar	255	0	Y		N			N									
+BL_data_object	1	data_object_id	Data Object ID	int	4	0	N		Y			Y				N	N		Primary Key		pkDEFAULT
+BL_data_object	2	object_name	Object Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name for this data object		
+BL_data_object	3	project_id	Owner Project	int	4	0	Y		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $writable_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
+BL_data_object	4	object_data	Object Data	varchar	255	0	Y		N			Y	file	40		Y	Y	N	Stored data object, generally serialized.		
+BL_data_object	5	description	Description	varchar	2000	0	Y		N			N	textarea	5		Y	Y	N	Description of stored data object		
+BL_data_object	6	data_object_type_id	Data Object Type ID	int	4	0	Y		N	data_object_type	data_object_type_id	Y	optionlist			Y	Y	N	Data type of this particular data object	SELECT DISTINCT data_object_type_id, data_object_type_name FROM $TBBL_DATA_OBJECT_TYPE	
+BL_data_object	7	hypothesis_id	Hypothesis ID	int	4	0	Y		N	hypothesis	hypothesis_id	Y	optionlist			Y	Y	N	Data type of this particular data object	SELECT DISTINCT hypothesis_id, hypothesis_name FROM $TBBL_HYPOTHESIS WHERE project_id IN ( $writable_project_ids)	
+BL_data_object	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+BL_data_object	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+BL_data_object	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+BL_data_object	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+BL_data_object	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+BL_data_object	13	record_status	Record Status	char	1	0	N	N	N							N	N				
+BL_data_object_type	1	data_object_type_id	Data Object Type ID	int	4	0	N		Y			Y				N	N		Primary Key		pkDEFAULT
+BL_data_object_type	2	data_object_type_name	Data Object Type Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of this data object type		
+BL_data_object_type	3	description	Description	varchar	2000	0	Y		N			N	textarea	5		Y	Y	N	Description of data object type		
+BL_data_object_type	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+BL_data_object_type	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+BL_data_object_type	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+BL_data_object_type	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+BL_data_object_type	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+BL_data_object_type	9	record_status	Record Status	char	1	0	N	N	N							N	N				
+BL_hypothesis	1	hypothesis_id	Hypothesis_id	int	4	0	N		Y			Y				N	N		Primary Key		pkDEFAULT
+BL_hypothesis	2	hypothesis_name	Hypothesis Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name for this data object		
+BL_hypothesis	3	project_id	Owner Project	int	4	0	Y		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this hypothesis is stored	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $writable_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
+BL_hypothesis	4	hypothesis	Hypothesis	text	16	0	Y		N			Y	textarea	6		Y	Y	N	Body of hypothesis		
+BL_hypothesis	5	comment	comment	varchar	255	0	Y		N			N	text	50		Y	Y	N	Brief description of hypothesis		
+BL_hypothesis	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+BL_hypothesis	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+BL_hypothesis	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+BL_hypothesis	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+BL_hypothesis	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+BL_hypothesis	11	record_status	Record Status	char	1	0	N	N	N							N	N				
