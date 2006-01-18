@@ -45,7 +45,11 @@ use vars qw(@ISA @EXPORT
     $TBBL_ANNOTATED_GENE
     $TBBL_GENE_ANNOTATION
     $TBBL_ANNOTATION_HIERARCHY_LEVEL
+
     $TBBL_GAGGLE_STORE
+    $TBBL_DATA_OBJECT
+    $TBBL_DATA_OBJECT_TYPE
+    $TBBL_HYPOTHESIS
 
 );
 
@@ -84,7 +88,9 @@ require Exporter;
     $TBBL_ANNOTATION_HIERARCHY_LEVEL
 
     $TBBL_GAGGLE_STORE
-
+    $TBBL_DATA_OBJECT
+    $TBBL_DATA_OBJECT_TYPE
+    $TBBL_HYPOTHESIS
 );
 
 
@@ -121,4 +127,7 @@ $TBBL_ANNOTATED_GENE = "${mod}annotated_gene";
 $TBBL_GENE_ANNOTATION = "${mod}gene_annotation";
 $TBBL_ANNOTATION_HIERARCHY_LEVEL = "${mod}annotation_hierarchy_level";
 
-$TBBL_GAGGLE_STORE = "${mod}GAGGLE_STORE";
+$TBBL_GAGGLE_STORE = "${core}gaggle_store";
+$TBBL_DATA_OBJECT = "${mod}data_object";
+$TBBL_DATA_OBJECT_TYPE = "${mod}data_object_type";
+$TBBL_HYPOTHESIS = "${mod}hypothesis";
