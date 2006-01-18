@@ -492,6 +492,7 @@ sub printEntryForm {
   # Build option lists for each optionlist query provided for this table
   my %optionlists;
   my $accessible_project_id_list = '';
+  my $writable_project_ids = '';
 
   foreach $element (keys %optionlist_queries) {
 
@@ -516,6 +517,14 @@ sub printEntryForm {
       	$accessible_project_id_list ||= '-1';
         $optionlist_queries{$element} =~
           s/\$accessible_project_ids/$accessible_project_id_list/g;
+      }
+
+      # Ditto for "$writable_project_ids" 
+      if ( $optionlist_queries{$element} =~ /\$writable_project_ids/ ) {
+        my @writable_project_ids = $sbeams->getWritableProjects();
+      	$writable_project_ids = join(',',@writable_project_ids) || -1;
+        $optionlist_queries{$element} =~
+          s/\$writable_project_ids/$writable_project_ids/g;
       }
 
 
