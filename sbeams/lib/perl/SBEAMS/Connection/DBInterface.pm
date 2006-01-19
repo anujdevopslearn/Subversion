@@ -2906,8 +2906,8 @@ sub displayResultSet {
 
 
       #### Update the project-jnlp file
-      my $infile = "$tmp_base_dir/project-jnlp";
-      my $buffer = '';
+      $infile = "$tmp_base_dir/project-jnlp";
+      $buffer = '';
       open(INFILE,$infile) || die("ERROR: Unable to open '$infile'");
       while (my $line = <INFILE>) {
 	if ($line =~ /\$ALLFILESHERE/) {

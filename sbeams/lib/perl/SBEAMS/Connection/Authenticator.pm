@@ -796,7 +796,7 @@ sub setCurrent_project_id {
     #### If this didn't turn up anything, return
     unless (exists($allowed_project_ids{$set_to_project_id})) {
       print $self->get_http_header(); 
-        "ERROR: You are not permitted to access ".
+      print  "ERROR: You are not permitted to access " .
         "project_id $set_to_project_id (only $accessible_project_list)\n\n";
       return;
     }
