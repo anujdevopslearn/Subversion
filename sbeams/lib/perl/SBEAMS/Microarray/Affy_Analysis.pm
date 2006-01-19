@@ -649,8 +649,9 @@ sub get_affy_intensity_data_sql {
 	
 	
 	my $constriants = join " ", @all_constriants;
-	
-	my $sql = qq~ SELECT top 10000( gi.probe_set_id), 
+  my $limit = $sbeams->buildLimitClause( row_limit => 10000 );	
+  my $sql = qq~
+      SELECT $limit->{top_clause} gi.probe_set_id, 
 			afa.file_root, 
 			gi.affy_array_id, 
 			gi.signal, 
@@ -667,6 +668,7 @@ sub get_affy_intensity_data_sql {
 			gi.affy_array_id IN ($affy_array_ids) 
 			$constriants
 			order BY gi.probe_set_id
+      $limit->{trailing_limit_clause}
 			 ~;
 	
 	return $sql;
