@@ -132,6 +132,27 @@ To CREATE indexes:
 To CREATE Manual Constraints (Constraints that could not be auto-generated)
 ./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_ADD_MANUAL_CONSTRAINTS.mssql
 
+##### MySQL ###############
+#
+# Copy:
+#   Microarray_ADD_MANUAL_CONSTRAINTS.mssql to Microarray_ADD_MANUAL_CONSTRAINTS.mysql
+#
+# Edit Microarray_ADD_MANUAL_CONSTRAINTS.mysql to remove dbo. from beginning
+# of table name on each line, and add a semicolon at the end of each line
+#
+# Edit Microarray_CREATEINDEXES.sql to remove dbo. from the beginning of each
+# table name and remove all comment lines (which begin with '--')
+#
+# Execute:
+#   ./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_CREATETABLES.mysql --delimiter semicolon
+#   ./runsql.pl -u sbeamsadmin -s $SBEAMS/lib/sql/Microarray/Microarray_POPULATE.sql --delimiter semicolon
+#   ./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_CREATECONSTRAINTS.mysql --delimiter semicolon
+#   ./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_CREATEINDEXES.sql --delimiter semicolon
+#   ./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_ADD_MANUAL_CONSTRAINTS.mysql --delimiter semicolon
+#
+###########################
+
+
 Note that the Microarray_POPULATE.mssql is not auto-generated and should
 probably work for all flavors of database
 
@@ -561,6 +582,9 @@ cd $SBEAMS/doc/Microarray/affy_help_pages/includes
 vi transformation_info.inc.php
 - Change the following variables to point to where the files are installed
 Example, Change $SBEAMS to suit your needs
+$XSLT_URL = "http://<$SBEAMS>/doc/Microarray/Affy_help/Affy_help.xslt";
+$XML_URL  = "http://<$SBEAMS>/doc/Microarray/Affy_help";
+
 $URL_BASE  = "http://<$SBEAMS>/doc/Microarray/affy_help_pages"
 $BASE_PATH = "<$SBEAMS>/doc/Microarray/affy_help_pages/Affy_help"
 
