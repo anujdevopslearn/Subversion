@@ -536,6 +536,8 @@ $SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_CREATE_MANUAL_CONSTRAI
 #
 # Copy Core_POPULATE.mssql to Core_POPULATE.mysql.
 #
+# Edit Core_CREATE_MANUAL_CONSTRAINTS.sql to remove the dbo. in front of user_login
+#
 # Execute these commands instead of the ones given above for MS SQL:
 #
 # $SBEAMS/lib/scripts/Core/runsql.pl -s Core_CREATETABLES.mysql
