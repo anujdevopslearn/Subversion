@@ -47,8 +47,56 @@ sub new {
 sub setNewDBHandle {
     my $self = shift;
     my %args = @_;
-
     $dbh = $self->dbConnect(%args);
+}
+
+###############################################################################
+# setRaiseErrorOn
+#  Set attribute for the global $dbh. 
+###############################################################################
+sub setRaiseErrorOn {
+    my $self = shift;
+    $dbh->{RaiseError} = 1;
+}
+
+###############################################################################
+# setRaiseErrorOff
+#  Set attribute for the global $dbh. 
+###############################################################################
+sub setRaiseErrorOff {
+    my $self = shift;
+    $dbh->{RaiseError} = 0;
+}
+
+###############################################################################
+# setAutoCommitOn
+#  Set attribute for the global $dbh. 
+###############################################################################
+sub setAutoCommitOn {
+    my $self = shift;
+    $dbh->{AutoCommit} = 1;
+}
+
+###############################################################################
+# setAutoCommitOff
+#  Set attribute for the global $dbh. 
+###############################################################################
+sub setAutoCommitOff {
+    my $self = shift;
+    $dbh->{AutoCommit} = 0;
+}
+
+###############################################################################
+# setDBHandle
+#
+#  Explicitly assign the dbhandle. 
+###############################################################################
+sub setDBHandle {
+    my $self = shift;
+    my %args = @_;
+    if ( $args{dbh} ) {
+      $dbh = $args{dbh};
+    }
 }
 
 ###############################################################################
@@ -207,12 +255,22 @@ sub getDBDriver {
 
 
 ###############################################################################
+# set DB Type
+# Cache a user-defined value in the sbeams object.
+###############################################################################
+sub setDBType {
+  my $self = shift;
+  $self->{DB_TYPE} = shift;
+}
+
+###############################################################################
 # get DB Type
 #
 # Return the server type of the database connection.
 ###############################################################################
 sub getDBType {
-  return $DBCONFIG->{$DBINSTANCE}->{DB_TYPE};
+  my $self = shift;
+  return $self->{DB_TYPE} || $DBCONFIG->{$DBINSTANCE}->{DB_TYPE};
 }
 
 
