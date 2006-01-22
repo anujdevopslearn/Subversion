@@ -1,0 +1,193 @@
+*************************************************
+* Notes on installation of MySQL 5.0 server and *
+* MySQL administrative tools under Linux        *
+*************************************************
+
+Author:		J. Jeffry Howbert
+Last update:	Dec. 21, 2005
+
+This document covers the author’s practical experience installing three MySQL modules under Linux:
+
+MySQL 5.0
+MySQL Administrator
+MySQL Query Browser
+
+The motivation for the install was a desire to port the database portion of the publicly available SBEAMS biological data management system (www.sbeams.org) from Microsoft SQL Server to MySQL.  Once the installs described below had been accomplished, it proved straightforward to rebuild the database portion of SBEAMS from scratch, and obtain a fully functional SBEAMS system.
+
+The MySQL installs were done on a Pentium III machine running a version of Linux produced by Mandriva (http://frontal2.mandriva.com/; formerly Mandrake Linux) known as Corporate Server 3.0.  The installs are expected to work comparably on other versions of Linux, although complications could arise from the library dependencies of MySQL modules, as discussed in several places below.
+
+New releases of MySQL modules seem to be built as a matter of policy using the very latest versions of all external libraries.  It is therefore highly likely that installation from source, as well as certain precompiled binaries, will generate unsatisfied dependencies on most Linux systems, unless their external libraries are exceptionally up-to-date.  Note that the three modules described herein were installed in the order:
+
+1) MySQL Administrator
+2) MySQL Query Browser
+3) MySQL 5.0
+
+It is believed that installation of each module resolved dependencies that would otherwise have existed for subsequent modules; therefore the dependency issues for all three modules should be understood before attempting the installation of any of them.
+
+
+*****************************
+*        MySQL 5.0          *
+*****************************
+
+This module includes the MySQL Server, along with a number of command-line clients such as mysqladmin.  The install was built from the MySQL source distribution contained in:
+
+mysql-5.0.15.tar.gz
+
+which can be found at:
+
+http://dev.mysql.com/downloads/mysql/5.0.html (tarball near bottom of page).
+
+The tarball was downloaded into /download/mysql-source (an arbitrary choice – could be anywhere).
+
+The source build was accomplished essentially as per the instructions in the MySQL documentation:
+
+http://dev.mysql.com/doc/refman/5.0/en/installing-source.html,
+
+especially section 2.8.1.  The exact sequence of commands used was (changes from documentation indicated with #):
+
+# shell> cd /download/mysql-source
+shell> groupadd mysql
+shell> useradd -g mysql mysql
+# shell> tar -zxvf mysql-5.0.15.tar.gz
+shell> cd mysql-5.0.15
+shell> CFLAGS="-O3" CXX=gcc CXXFLAGS="-O3 -felide-constructors \
+            -fno-exceptions -fno-rtti" ./configure \
+            --prefix=/usr/local/mysql --enable-assembler \
+            --with-mysqld-ldflags=-all-static
+shell> make
+shell> make install
+shell> cp support-files/my-medium.cnf /etc/my.cnf
+# shell> cd /etc
+# edit my.cnf to uncomment:
+            tmpdir=/tmp/				// see Note 1
+            10 lines with innodb parameters	// see Note 2
+shell> cd /usr/local/mysql
+shell> bin/mysql_install_db --user=mysql
+shell> chown -R root  .
+shell> chown -R mysql var
+shell> chgrp -R mysql .
+shell> bin/mysqld_safe --user=mysql &		// see Note 3
+# shell> cd /etc
+# edit my.cnf to add to [mysqld] section:
+            default-table-type=innodb		// see Note 2
+
+Note 1: This is required to solve a problem with Mandriva Linux Corporate Server 3.0, wherein access to the default MySQL tmp directory, /root/tmp, is restricted by root in a manner that prevents MySQL from creating temporary tables.
+
+Note 2: The default table type for MySQL 5.0 is still MyISAM.  This table type does not support foreign keys, and therefore cannot enforce relational integrity.  For any user database that will be in production use, and for which relational integrity is important, it is strongly recommended the default table type be changed to innodb, as shown above.  It is easiest to change the table type before the user database is built.  (Note: The mysql database, used for housekeeping by the server, must remain in the MyISAM table type.)  For more details, see:
+
+http://dev.mysql.com/doc/refman/5.0/en/storage-engines.html
+
+Note 3: This command starts the MySQL Server daemon in a safe manner, and is recommended by MySQL for use anytime the server is started or restarted.
+
+The layout of directories after installation is described at:
+
+http://dev.mysql.com/doc/refman/5.0/en/installation-layouts.html
+
+A sequence of steps very similar to the above was also used previously to install MySQL 4.1. 
+
+Dependencies:
+
+For this install of MySQL to proceed under this version of Linux, it was necessary to first install glibc 2.3.3, so that libpthread.a, libcrypt.a, libm.a, and libnsl.a were available.  This was accomplished by installing glibc-static-devel-2.3.3-12.6mdk with the Mandrake Control Center.
+
+
+*****************************
+*    MySQL Administrator    *
+*****************************
+
+This module includes the MySQL Administrator graphical administration client.
+
+Installation from source was beset with compilation errors and eventually abandoned.  Installation of a precompiled binary required solving a large number of library dependencies, but ultimately provided a stable, functioning application.
+
+The precompiled binary for Linux (X86, glibc 2.3), version 1.0.22a was used.  It was contained in the file:
+
+mysql-administrator-1.0.22a-linux.tar.gz
+
+formerly found at:
+
+http://dev.mysql.com/downloads/administrator/1.0.html
+
+[ NOTE: As of this writing, version 1.0 of the client has been superseded by version 1.1, which is recommended for users of MySQL 5.0, and is available at:
+
+http://dev.mysql.com/downloads/administrator/1.1.html ]
+
+The tarball was downloaded into /download (an arbitrary choice – could be anywhere), and unpacked into /download/mysql-administrator.  Attempting to run the binary at this point revealed a missing function in gtk+ (GIMP Toolkit):
+
+shell> cd mysql-administrator/bin
+shell> ./mysql-administrator
+          => ./mysql-administrator-bin: relocation error undefined symbol
+               gtk_toggle_tool_button_get_type
+
+Although the binary is supposed to be statically linked with most libraries, including gtk+, this problem was apparently due to not having a sufficiently new version of gtk+ on the system.  Updating gtk+ necessitated updating several other graphics libraries on which it depends; the following sequence was successful:
+
+Uninstalled using Mandrake Control Center (MCC):
+     libglib2.0_0-devel-2.2.3-2mdk
+     libatk1.0_0-devel-1.4.1-2mdk
+     libgdk_pixbuf2.0_0-devel2.2.4-10.2.100mdk
+     libglade2.0_0-devel-2.0.1-6mdk
+     libgtk+2.0_0-devel-2.2.4-10.2.100mdk
+     libgtkmm2.0_1-devel-2.2.9-1mdk
+     libpango1.0_0-devel-1.2.5-3mdk
+Installed from source on www.gtk.org:
+     glib-2.8.1.tar.gz
+     atk-1.10.1.tar.gz
+     pango-1.10.0.tar.gz
+Installed from source on www.cairographics.org:
+     cairo-1.0.0.tar.gz
+Installed using MCC:
+     libtiff3-devel-3.5.7-11.3.100mdk
+     libtiff3-static-devel-3.5.7-11.3.100mdk
+     libjpeg62-devel-6b-33mdk
+     libjpeg62-static-devel-6b-33mdk
+Installed from source on www.gtk.org:
+     gtk+-2.8.3.tar.gz
+NOTE: Before installing gtk+, you must first export LD_LIBRARY_PATH = /usr/local/lib.
+
+The following command will start MySQL Administrator (assuming it was installed in the directory mentioned above):
+
+shell> /download/mysql-administrator/bin/mysql-administrator &
+
+In the first window that appears, set server hostname and username as appropriate (probably “localhost” and “root”, respectively), then make sure Connect Using Socket File is set to “/tmp/mysql.sock”.
+
+
+*****************************
+*    MySQL Query Browser    *
+*****************************
+
+This module includes the MySQL Administrator graphical query client.
+
+Installation from source was not attempted.  Installation of a precompiled binary required solving certain library dependencies, but ultimately provided a stable, functioning application.
+
+The precompiled binary for Linux (X86, glibc 2.3), version 1.1.12 was used.  It was contained in the file:
+
+mysql-query-browser-1.1.12-linux.tar.gz
+
+formerly found at:
+
+http://dev.mysql.com/downloads/query-browser/1.1.html
+
+[ NOTE: As of this writing, current versions of the 1.1 client appear to be statically linked against glibc 2.2.5, which may obviate the problem described below. ]
+
+The tarball was downloaded into /download (an arbitrary choice – could be anywhere), and unpacked into /download/mysql-query-browser.  Attempting to run the binary at this point revealed the absence of a library required for dynamic linking:
+
+shell> cd mysql-query-browser/bin
+shell> ./mysql-query-browser
+          => /lib/tls/libc.so.6: version ‘GLIBC_2.3.4’ not found
+               (required by mysql-query-browser-bin)
+
+The following steps successfully updated glibc:
+
+Installed using Mandrake Control Center (MCC):
+     glibc-2.3.4-8mdk
+     glibc-devel-2.3.4-8mdk
+     glibc-static-devel-2.3.4-8mdk
+     locales-2.3.4-1mdk
+     locales-en-2.3.4-1mdk
+
+During the install process, a question appeared on whether to create /etc/nsswitch.conf as .rpmnew.  The decision was made to do nothing (i.e. not replace existing nsswitch.conf).
+
+The following command will start MySQL Query Browser (assuming it was installed in the directory mentioned above):
+
+shell> /download/mysql-query-browser/bin/mysql-query-browser &
+
+In the first window that appears, set server hostname and username as appropriate (probably “localhost” and “root”, respectively), then make sure Connect Using Socket File is set to “/tmp/mysql.sock”.
+
