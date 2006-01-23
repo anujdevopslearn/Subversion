@@ -327,7 +327,7 @@ wget http://www.sbeams.org/sample_data/Microarray/Affy_test_data.tar.gz
 
 You can check the integrity of the downloads with the md5sum command:
 >md5sum External_test_data.tar.gz
-c3dcfff0526aaa9b0fa127f6f5c36e56  External_test_data.tar.gz
+c3c4c2bffc2018025d5d2f91bd697baa  External_test_data.tar.gz
 
 >md5sum Affy_test_data.tar.gz
 04d81273f454701e74526b450e79b740  Affy_test_data.tar.gz
