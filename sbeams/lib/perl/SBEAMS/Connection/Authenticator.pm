@@ -148,8 +148,8 @@ sub Authenticate {
     # We are presumably here due to a cgi request.
 
     unless(scalar(keys(%{$session_cookie}))) {
-      $log->debug("Creating new session cookie\n");
       $session_cookie = $self->createSessionCookie();
+      $self->{_session_cookie} = $session_cookie;
       $http_header = $q->header(-cookie => $session_cookie);
       $self->setSessionAttribute(
         key=>'session_started_date',
@@ -331,7 +331,6 @@ sub processLogin {
           $http_header = $self->createAuthHeader(username=>$valid_username);
           $log->info( "Cookie will expire soon or is postdated, reissuing" );
         }
-        $self->{_cookie_jar} = \%cookie;
         $current_username = $valid_username;
         $current_contact_id = $self->getContact_id($valid_username);
       }
@@ -1110,7 +1109,7 @@ sub destroyAuthHeader {
                             -expires => '-25h');
     $http_header = $q->header(-cookie => $cookie);
     $log->debug( "Destroy auth" );
-    $self->{_cookie_jar} = $cookie;
+    $self->{_sbname_cookie} = $cookie;
 
     return $http_header;
 }
@@ -1161,10 +1160,11 @@ sub createAuthHeader {
     my $head;
     if ($session_cookie) {
       $head = $q->header(-cookie => [$cookie,$session_cookie]);
-      $self->{_cookie_jar} = [ $cookie, $session_cookie ];
+      $self->{_session_cookie} = $session_cookie;
+      $self->{_sbname_cookie} = $cookie;
     } else {
       $head = $q->header(-cookie => $cookie);
-      $self->{_cookie_jar} = $cookie;
+      $self->{_sbname_cookie} = $cookie;
     }
 
     return $head;
@@ -1193,6 +1193,7 @@ sub getSessionCookie {
 ###############################################################################
 sub createSessionCookie {
   my $self = shift;
+  print STDERR "Creating session cookie\n";
 
   my $cookie_path = $HTML_BASE_DIR;
 

@@ -1010,8 +1010,12 @@ sub get_http_header {
   my $cookies = $args{cookies} || 1;
   
   my $header;
-  if ( $self->{_cookie_jar} && $cookies ) {
-    $header = $q->header( -type => $type, -cookie => $self->{_cookie_jar} );
+  my @cookie_jar;
+  for ( qw( _session_cookie _sbname_cookie ) ) {
+    push @cookie_jar, $self->{$_} if $self->{$_};
+  }
+  if ( @cookie_jar && $cookies ) {
+    $header = $q->header( -type => $type, -cookie => \@cookie_jar );
   } else {
     $header = $q->header( -type => $type );
   }
