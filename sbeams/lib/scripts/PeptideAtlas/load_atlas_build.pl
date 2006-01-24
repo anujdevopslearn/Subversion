@@ -317,8 +317,12 @@ sub removeAtlas {
    my $full_table_name = "$database_name$table_name";
 
    my %table_child_relationship = (
-      atlas_build => 'peptide_instance(C),atlas_build_sample(C)',
-      peptide_instance =>'peptide_mapping(C),peptide_instance_sample(C)',
+      atlas_build => 'peptide_instance(C),atlas_build_sample(C),'.
+        'atlas_build_search_batch(C)',
+      peptide_instance => 'peptide_mapping(C),peptide_instance_sample(C),'.
+        'modified_peptide_instance(C),peptide_instance_search_batch(C)',
+      modified_peptide_instance => 'modified_peptide_instance_sample(C),'.
+        'modified_peptide_instance_search_batch(C)',
    );
 
    #my $TESTONLY = "0";
@@ -584,6 +588,8 @@ sub get_search_batch_id_list {
 	if (open(EXPFILE,$filename)) {
 	  my @search_batch_list;
 	  while (my $line = <EXPFILE>) {
+	    next if ($line =~ /^\s*#/);
+	    next if ($line =~ /^\s*$/);
 	    if ($line =~ /^(\d+)\s/) {
 	      push(@search_batch_list,$1);
 	    } else {
@@ -614,7 +620,7 @@ sub get_search_batch_id_list {
 # @param $search_batch_id_list
 ###############################################################################
 sub get_search_batch_sample_id_hash {
-    my $METHOD='get_search_batch_id_list';
+    my $METHOD='get_search_batch_id_hash';
     my %args = @_;
 
     my $search_batch_id_list = $args{sb_list} or
@@ -1073,7 +1079,7 @@ sub readAPD_writeRecords {
             n_observations => $n_obs,
             n_genome_locations => 0,
             sample_ids => $sample_id_list,
-            is_exon_spanning => 'n',
+            is_exon_spanning => 'N',
             n_protein_mappings => 0,
             search_batch_ids => $search_batch_id_list,
         );
@@ -1366,7 +1372,7 @@ sub readCoords_updateRecords_calcAttributes {
 
         push(@n_genome_locations, 1);  ##unless replaced in next section
 
-        push(@is_exon_spanning, 'n');  ##unless replaced in next section
+        push(@is_exon_spanning, 'N');  ##unless replaced in next section
 
         $ind++;
 
@@ -1423,7 +1429,7 @@ sub readCoords_updateRecords_calcAttributes {
    ## --> n_genome_locations =  keys of reverse protein_mappings_hash
    ##
    ## is_exon_spanning_hash:  key = protein,
-   ##                         value = 'y' if (  (diff_coords + 1) != (seq_length*3);
+   ##                         value = 'Y' if (  (diff_coords + 1) != (seq_length*3);
 
    print "\nCalculating n_protein_mappings, n_genome_locations, and is_exon_spanning\n";
 
@@ -1442,8 +1448,8 @@ sub readCoords_updateRecords_calcAttributes {
        my $peptide = $peptide_accession[$tmp_ind_array[0]];
        my $protein;
 
-       ## initialize to 'n'
-       $is_exon_spanning_hash{$protein} = 'n';
+       ## initialize to 'N'
+       $is_exon_spanning_hash{$protein} = 'N';
 
 
        ## for each index:
@@ -1475,10 +1481,10 @@ sub readCoords_updateRecords_calcAttributes {
            ## coordinates, it's exon spanning:
            if (  ($diff_coords + 1) != ($seq_length * 3) ) {
 
-               $is_exon_spanning_hash{$protein} = 'y';
+               $is_exon_spanning_hash{$protein} = 'Y';
 
                ## update larger scope variable too:
-               $is_exon_spanning[$i_ind] = 'y';
+               $is_exon_spanning[$i_ind] = 'Y';
 
            }
 
@@ -1537,7 +1543,7 @@ sub readCoords_updateRecords_calcAttributes {
            my @test_pep = ("PAp00011291", "PAp00004221", "PAp00004290", "PAp00005006");
            my @test_n_protein_mappings = ("2", "1", "2", "5");
            my @test_n_genome_locations = ("1", "1", "2", "5");
-           my @test_is_exon_spanning = ('n', 'y', 'y', 'n');
+           my @test_is_exon_spanning = ('N', 'Y', 'Y', 'N');
 
            for (my $jj = 0; $jj <= $#test_pep; $jj++) {
                if ($peptide_accession[$ii] eq $test_pep[$jj]) {
@@ -1983,6 +1989,31 @@ sub insert_peptide_instance {
 } # end insert_peptide_instance
 
 
+
+###############################################################################
+# insert_modified_peptide_instance
+###############################################################################
+sub insert_modified_peptide_instance {
+  my %args = @_;
+
+  my $rowdata_ref = $args{'rowdata_ref'} or die("need rowdata_ref");
+
+  my $modified_peptide_instance_id = $sbeams->updateOrInsertRow(
+    insert=>1,
+    table_name=>$TBAT_MODIFIED_PEPTIDE_INSTANCE,
+    rowdata_ref=>$rowdata_ref,
+    PK => 'modified_peptide_instance_id',
+    return_PK => 1,
+    verbose=>$VERBOSE,
+    testonly=>$TESTONLY,
+  );
+
+  return($modified_peptide_instance_id);
+
+} # end insert_modified_peptide_instance
+
+
+
 ###############################################################################
 # insert_peptide_instance_samples
 ###############################################################################
@@ -2018,6 +2049,7 @@ sub insert_peptide_instance_samples {
 } # end insert_peptide_instance_samples
 
 
+
 ###############################################################################
 # insert_peptide_instance_search_batches
 ###############################################################################
@@ -2029,5 +2061,56 @@ sub insert_peptide_instance_search_batches {
   return(1);
 
 }
+
+
+
+###############################################################################
+# insert_modified_peptide_instance_samples
+###############################################################################
+sub insert_modified_peptide_instance_samples {
+  my %args = @_;
+
+  my $modified_peptide_instance_id = $args{'modified_peptide_instance_id'}
+    or die("need modified_peptide_instance_id");
+  my $sample_ids = $args{'sample_ids'} or die("need sample_ids");
+
+  my @sample_ids = split(/,/,$sample_ids);
+
+  foreach my $sample_id ( @sample_ids ) {
+    my %rowdata = (
+      modified_peptide_instance_id => $modified_peptide_instance_id,
+      sample_id => $sample_id,
+    );
+
+    $sbeams->updateOrInsertRow(
+      insert=>1,
+      table_name=>$TBAT_MODIFIED_PEPTIDE_INSTANCE_SAMPLE,
+      rowdata_ref=>\%rowdata,
+      PK => 'modified_peptide_instance_sample_id',
+      add_audit_parameters => 1,
+      verbose=>$VERBOSE,
+      testonly=>$TESTONLY,
+    );
+
+  }
+
+  return(1);
+
+} # end insert_modified_peptide_instance_samples
+
+
+
+###############################################################################
+# insert_modified_peptide_instance_search_batches
+###############################################################################
+sub insert_modified_peptide_instance_search_batches {
+  my %args = @_;
+
+  #### TBD
+
+  return(1);
+
+} # end insert_modified_peptide_instance_search_batches
+
 
 
