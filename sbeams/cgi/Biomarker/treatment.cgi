@@ -61,8 +61,8 @@ use constant DEFAULT_VOLUME => 10;
       $q->delete( 'apply_action' );
 
 # Is this superfluous?
-      print $q->redirect( $q->self_url() );
-      exit;
+#      print $q->redirect( $q->self_url() );
+#      exit;
     }
 
   } elsif ( $params->{apply_action} eq 'Review' ) {
@@ -72,10 +72,13 @@ use constant DEFAULT_VOLUME => 10;
     $content = $biomarker->treatment_list($params);
 
   } elsif ( $params->{apply_action} eq 'treatment_details' ) {
-    treatment_details( $params );
+    $content = treatment_details( $params );
 
   } else {
-    $content = treatment_form( $params );
+    $sbeams->set_page_message( msg => "Error: Unknown action specified", type => 'Error' );
+    $q->delete( 'apply_action' );
+
+    $content = '';
 
   }
 
