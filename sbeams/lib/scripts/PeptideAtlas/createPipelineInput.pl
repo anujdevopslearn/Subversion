@@ -316,7 +316,7 @@ sub pepXML_start_element {
 	$info->{n_instances}++;
 	$info->{search_batch_ids}->{$self->{search_batch_id}}++;
 
-	#### Else this is a new peptide
+      #### Else this is a new peptide
       } else {
 	my $info;
 	$info->{best_probability} = $attrs{probability};
@@ -351,6 +351,11 @@ sub pepXML_start_element {
       $modinfo->{search_batch_ids}->{$self->{search_batch_id}}++;
       $info->{modifications}->{$modified_peptide}->{$charge} = $modinfo;
 
+
+      #### Store the peptide in a master full list to calculate stats
+      push(@{ $self->{peptide_list} },
+        [$self->{search_batch_id},$peptide_sequence,$attrs{probability},
+         $self->{pepcache}->{protein_name}]);
 
     }
 
@@ -618,13 +623,23 @@ sub main {
 
 
   #### Write out all the read-in data in a PeptideAtlas XML format
-  $output_file =~ s/\.tsv$//i;
-  $output_file .= '.PAxml';
+  my $file_root = $output_file;
+  $file_root =~ s/\.tsv$//i;
+  $output_file = $file_root.'.PAxml';
   writePAxmlFile(
     output_file => $output_file,
     peptide_hash => $CONTENT_HANDLER->{peptides},
     P_threshold => $CONTENT_HANDLER->{P_threshold},
   );
+
+
+  #### Write out all the peptides and probabilities for statistical analysis
+  $output_file = $file_root.'.peplist';
+  writePeptideListFile(
+    output_file => $output_file,
+    peptide_list => $CONTENT_HANDLER->{peptide_list},
+  );
+
 
 
   #### Write out information about the objects we've loaded if verbose
@@ -710,6 +725,9 @@ sub getPeptideAccession {
     print "Fetching all peptide accessions...\n";
     %peptide_accessions = $sbeams->selectTwoColumnHash($sql);
     print "  Loaded ".scalar(keys(%peptide_accessions))." peptides.\n";
+    #### Just in case the table is empty, put in a bogus hash entry
+    #### to prevent triggering a reload attempt
+    $peptide_accessions{' '} = ' ';
   }
 
 
@@ -810,12 +828,15 @@ sub getBiosequenceAttributes {
          FROM $TBAT_BIOSEQUENCE
         WHERE biosequence_set_id = 10
     ~;
-    print "Fetching all peptide accessions...\n";
+    print "Fetching all biosequence accessions...\n";
     my @rows = $sbeams->selectSeveralColumns($sql);
     foreach my $row (@rows) {
       $biosequence_attributes{$row->[1]} = $row;
     }
     print "  Loaded ".scalar(@rows)." biosequences.\n";
+    #### Just in case the table is empty, put in a bogus hash entry
+    #### to prevent triggering a reload attempt
+    $biosequence_attributes{' '} = ' ';
   }
 
 
@@ -1099,3 +1120,34 @@ sub encodeXMLEntity {
   return($buffer);
 
 } # end encodeXMLEntity
+
+
+
+###############################################################################
+# writePeptideListFile
+###############################################################################
+sub writePeptideListFile {
+  my %args = @_;
+  my $output_file = $args{'output_file'} || die("No output file provided");
+  my $peptide_list = $args{'peptide_list'}
+    || die("No output peptide_list provided");
+
+
+  print "Writing output file '$output_file'...\n";
+
+
+  #### Open and write header
+  open(OUTFILE,">$output_file")
+    || die("ERROR: Unable to open '$output_file' for write");
+
+  print OUTFILE "search_batch_id\tsequence\tprobability\tprotein\n";
+
+  foreach my $peptide ( @{$peptide_list} ) {
+    print OUTFILE "$peptide->[0]\t$peptide->[1]\t$peptide->[2]\t$peptide->[3]\n";
+  }
+
+  close(OUTFILE);
+
+  return(1);
+
+} # end writePeptideListFile
