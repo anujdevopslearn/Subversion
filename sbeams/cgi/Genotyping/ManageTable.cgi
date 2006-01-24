@@ -336,9 +336,9 @@ sub postUpdateOrInsertHook {
     #### Send an email to Marta
     my $mailprog = "/usr/lib/sendmail";
     my $recipient_name = "Genotyping_admin Contact";
-    my $recipient = "kdeutsch\@systemsbiology.org";
+    my $recipient = "mjaner\@systemsbiology.org";
     my $cc_name = "SBEAMS";
-    my $cc = "edeutsch\@systemsbiology.org";
+    my $cc = "kdeutsch\@systemsbiology.org";
 
     my $apply_action = $q->param('apply_action') || $parameters{'action'};
     my $subdir = $sbeams->getSBEAMS_SUBDIR();
@@ -363,7 +363,7 @@ sub postUpdateOrInsertHook {
     open (MAIL, "|$mailprog $recipient,$cc") || croak "Can't open $mailprog!\n";
     print MAIL "From: SBEAMS-Genotyping <kdeutsch\@systemsbiology.org>\n";
     print MAIL "To: $recipient_name <$recipient>\n";
-#    print MAIL "Cc: $cc_name <$cc>\n";
+    print MAIL "Cc: $cc_name <$cc>\n";
     print MAIL "Reply-to: $current_username <${current_username}\@systemsbiology.org>\n";
     print MAIL "Subject: Genotyping request submission\n\n";
     print MAIL "An $apply_action of a genotyping request was just executed in SBEAMS by ${current_username}.\n\n";
