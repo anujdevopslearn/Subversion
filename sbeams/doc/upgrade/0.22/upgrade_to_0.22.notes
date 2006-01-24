@@ -38,7 +38,3 @@ See $SBEAMS/lib/scripts/Core/batch_update_driver_tables.csh
 
 ---------
 
-Microarray: Altered the conditions table to include the columns analysis_type
-and analysis_id, to facilitate updating annotations.
-
----------

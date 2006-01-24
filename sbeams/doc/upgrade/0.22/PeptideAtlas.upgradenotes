@@ -37,6 +37,21 @@ There were many other changes to the tables in the driver table files, but
 these have not yet been created in our production database.  But they
 will be soon.
 
+2006-01-25
+
+- Removed Glycopeptide tables from PeptideAtlas schema, moved to Glycopeptide module.
+  GP_ipi_version
+  GP_ipi_data
+  GP_cellular_location
+  GP_glyco_site
+  GP_identified_peptide
+  GP_predicted_peptide
+  GP_peptide_to_tissue
+  GP_tissue_type
+  GP_identified_to_ipi
+  GP_glyco_sample
+  GP_synthesized_peptide
+
 ---------------
 
 

@@ -1,0 +1,17 @@
+
+The following changes to the Microarray database should be made when
+upgrading SBEAMS
+
+from version 0.21 to 0.22 or later or to the latest code in the SVN repository
+
+---------------
+
+2006-01-25
+
+Schema changes:
+
+--Changed the name of 'condition' table to comparison_condition, as the former
+is a reserved word in MySQL 5.x.
+
+--Added columns analysis_type, analysis_id, condition_file_name to 
+condition_comparison table.
