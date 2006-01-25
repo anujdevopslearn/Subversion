@@ -118,24 +118,38 @@ sub projectMismatch {
   return "No conditions specified" unless $params->{condition};
   
   my $sql =<<"  END";
-  SELECT DISTINCT project_id FROM $TBMA_COMPARISON_CONDITION WHERE condition_id IN ( $params->{condition} )
+  SELECT DISTINCT project_id FROM $TBMA_COMPARISON_CONDITION 
+  WHERE condition_id IN ( $params->{condition} )
   END
-  print STDERR "$sql\n";
+
   my $current_project = $sbeams->getCurrent_project_id;
   my @projects = $sbeams->selectOneColumn( $sql );
 
   if ( !scalar @projects ) {
-    return "Can't find project information";
-  } elsif ( scalar @projects > 1 ) {
-    return "<FONT=red>Can only work with conditions in a single project at a time</FONT>";
-  } elsif ( $sbeams->get_best_permission( project_id => $projects[0] ) > DATA_MODIFIER ) { 
-    return "<FONT=red>Nice try, weasel.  Conditions $params->{condition} and project $projects[0] do not match!</FONT>";
+    return warnHTML("Can't find project information");
+  } 
+  
+  my $max_perm = $sbeams->get_best_permission(project_id => $projects[0]);
+  if ( scalar @projects > 1 ) {
+    return warnHTML('Can only work with conditions from project at a time');
+  } elsif ( $max_perm > DATA_MODIFIER ) { 
+    return warnHTML( <<"    END" );
+    Unable to proceed, conditions $params->{condition} and 
+    project $projects[0] do not match!
+    END
   } elsif ( $current_project != $projects[0] ) {
-    return "<FONT COLOR=red>Can only operate on conditions in your current project ($current_project)</FONT>";
+    return warnHTML( <<"    END" );
+    Can only operate on conditions in your current project ($current_project)
+    END
   }
   
   return '';
 
+}
+
+sub warnHTML {
+  my $text = shift;
+  return "<FONT COLOR=red>$text</FONT>";
 }
 
 #+
