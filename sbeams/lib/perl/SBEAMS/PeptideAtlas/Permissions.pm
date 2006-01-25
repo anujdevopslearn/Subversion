@@ -279,21 +279,40 @@ sub getCurrentAtlasBuildID {
       key => 'PeptideAtlas_organism_name',
     );
 
+    my $default_atlas_build_name_clause;
     if ($organism_name) {
-      if ($organism_name eq 'Human') {
-	$atlas_build_id = 70;
-      } elsif ($organism_name eq 'Yeast') {
-	$atlas_build_id = 73;
-      } elsif ($organism_name eq 'Drosophila') {
-	$atlas_build_id = 75;
-      }
+      $default_atlas_build_name_clause =
+        "  AND O.organism_name = '$organism_name'\n";
+    } else {
+      $default_atlas_build_name_clause =
+        "  AND O.organism_name IS NULL\n";
     }
+
+    my $sql = qq~
+        SELECT atlas_build_id
+          FROM $TBAT_DEFAULT_ATLAS_BUILD DAB
+          LEFT JOIN $TB_ORGANISM O ON ( DAB.organism_id = O.organism_id )
+         WHERE 1=1
+           $default_atlas_build_name_clause
+           AND DAB.record_status != 'D'
+           AND O.record_status != 'D'
+    ~;
+    my @rows = $sbeams->selectOneColumn($sql);
+
+    if (scalar(@rows) > 1) {
+      die("ERROR: Too may rows returned for $sql");
+    }
+
+    if (defined(@rows)) {
+      $atlas_build_id = $rows[0];
+    }
+
   }
 
 
-  #### If we still don't have an atlas_build_id, just assume the latest human!
+  #### If we still don't have an atlas_build_id, just assume id 1!
   unless ($atlas_build_id) {
-    $atlas_build_id = 70;
+    $atlas_build_id = 1;
   }
 
 
