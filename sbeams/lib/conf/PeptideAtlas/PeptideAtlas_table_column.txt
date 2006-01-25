@@ -16,7 +16,7 @@ AT_atlas_build	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contac
 AT_atlas_build	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 AT_atlas_build	16	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_default_atlas_build	1	default_atlas_build_id	Default Atlas Build ID	int	4	0	N		Y							N	N				pkDEFAULT
-AT_default_atlas_build	2	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	Y	Organism for which this default applies.  Leave empty for overall default	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+AT_default_atlas_build	2	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	Y	Organism for which this default applies.  Leave empty for overall default	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 AT_default_atlas_build	3	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id	Y	optionlist			Y	Y	Y	Atlas Build that should be the default for this organism	"SELECT atlas_build_id,atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY atlas_build_name "	
 AT_default_atlas_build	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 AT_default_atlas_build	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
