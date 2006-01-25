@@ -1,0 +1,66 @@
+--  affy_db_links db_links
+DROP INDEX  idx_affy_annotation_id__db_id ON affy_db_links;
+
+-- affy_db_links affy_db_links_id 
+DROP INDEX  idx_affy_db_links_id ON affy_db_links;
+
+-- gene_ontology
+DROP INDEX  idx_affy_annotation_id ON gene_ontology;
+	
+-- gene_ontology affy_db_links_id
+DROP INDEX  idx_affy_db_links_id ON gene_ontology;  
+
+-- protein_families
+DROP INDEX  idx_affy_annotation_id ON protein_families;
+
+-- protein_families affy_db_links_id
+DROP INDEX  idx_affy_db_links_id ON protein_families;
+
+-- interpro
+DROP INDEX  idx_affy_annotation_id ON interpro;
+
+-- interpro affy_db_links_id
+DROP INDEX  idx_affy_db_links_id ON interpro;
+
+-- protein_domain
+DROP INDEX  idx_affy_annotation_id ON protein_domain;
+
+-- protein_domain affy_db_links_id
+DROP INDEX  idx_affy_db_links_id ON protein_domain;
+
+-- trans_membrane
+DROP INDEX  idx_affy_annotation_id ON trans_membrane;
+
+-- trans_membrane and Number of domains
+DROP INDEX  idx_numberofdomains__affy_annotation_id ON trans_membrane;
+
+-- alignment
+DROP INDEX  idx_affy_annotation_id ON alignment;
+
+-- overlapping_transcript
+DROP INDEX  idx_affy_annotation_id ON overlapping_transcript;
+
+-- affy_annotation
+DROP INDEX  idx_affy_annotation_id ON affy_annotation;
+
+-- affy_annotation probe_set annotation_set_id
+DROP INDEX  idx_affy_annotation_probe_set_id__annotation_set_id ON affy_annotation;
+
+-- affy_gene_intensity
+DROP INDEX  idx_probe_set_id ON affy_gene_intensity;
+
+-- affy_gene_intensity_ affy_array_id 
+DROP INDEX  idx_affy_array_id ON affy_gene_intensity;
+ 
+-- affy_gene_intensity_ affy_array_id,probe_set_id, protocol_id
+DROP INDEX  idx_afa_id_probe_set_id_protocol_id ON affy_gene_intensity;
+
+-- gene_expression  condition_id
+DROP INDEX  idx_condition_id ON gene_expression;
+ 
+-- gene_expression  gene_name
+DROP INDEX  idx_gene_name ON gene_expression;
+
+-- gene_expression  biosequence_id
+DROP INDEX  idx_biosequence_id ON gene_expression;
+
