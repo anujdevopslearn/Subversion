@@ -21,9 +21,14 @@ $|++; # don't buffer output
   }
 
   my $args = processArgs();
-  my $dbh = dbConnect( $args );
   my $cmds = parseFile ( $args );
-  if ( $args->{query} ) {
+  if ( $args->{test_mode} ) {
+    printCommands( $args, $cmds );
+    exit;
+  }
+  my $dbh = dbConnect( $args );
+
+ if ( $args->{query_mode} ) {
     printResults( $args, $dbh, $cmds );
   } else {
     insertRecords( $args, $dbh, $cmds );
@@ -39,7 +44,7 @@ sub parseFile {
   my $cmd = '';
 
   # Manual queries take precedence...
-  if ( $args->{manual} ) {
+  if ( $args->{manual_mode} ) {
     # This is gonna be querymode.
     $args->{query} ||= 1;
     print "Running manual query\n";
@@ -50,7 +55,8 @@ sub parseFile {
   print "Parsing command file $args->{sfile}\n" if $args->{verbose};
   open( FIL, $args->{sfile} ) || die "Unable to open file $args->{sfile}";
   while ( my $line = <FIL> ) {
-    chomp $line;
+    #chomp $line;
+    next if $line =~ /^\s*$/;
 
     #### If the user opts to ignore Audit Trail FOREIGN KEYS, stop when found
     if ($args->{no_audit_constraints} && $line =~ /Audit trail FOREIGN KEYS/) {
@@ -76,6 +82,17 @@ sub parseFile {
   }
   push @cmds, $cmd if $cmd;  # Leftovers
   return( \@cmds );
+}
+
+sub printCommands {
+  my $args = shift;
+  my $sql = shift;
+  my $cnt = 0;
+  foreach my $sql ( @$sql ) {
+    $cnt++;
+    print "--Stmt $cnt\n";
+    print "$sql\n";
+  }
 }
 
 sub printResults {
@@ -136,13 +153,14 @@ sub processArgs {
   my %args;
   unless( GetOptions ( \%args, 'pass=s', 'user=s', 'verbose', 'sfile=s',
                       'delimiter=s', 'ignore_errors', 'manual:s',
-                      'no_audit_constraints', 'database=s' ) ) {
+                      'no_audit_constraints', 'database=s', 'query_mode', 
+                      'test_mode' ) ) {
   printUsage("Error with options, please check usage:");
   }
 
   for ( qw( user ) ) {
     if ( !defined $args{$_} ) {
-    printUsage( "Missing required parameter: $_" ); 
+    printUsage( "Missing required parameter: $_" ) unless $args{test_mode}; 
     }
   }
   unless( $args{manual} || $args{sfile} ) {
@@ -151,6 +169,8 @@ sub processArgs {
 
   # User declined to enter a password, prompt for one
   while ( !$args{pass} ) {
+    $args{pass} = 'testing' if $args{test_mode};
+    next;
     print "Enter password, followed by [Enter] (cntl-C to quit):\t";
     $|++;
     system("stty -echo");
@@ -169,8 +189,8 @@ sub processArgs {
   }
   
   # Delimiter will either be semicolon or GO
-  $args{delimiter} = ( !$args{delimiter} ) ? 'GO' :
-                     ( $args{delimiter} eq 'semicolon' ) ? ';' : 'GO'; 
+  $args{delimiter} = ( !$args{delimiter} ) ? ';' :
+                     ( uc($args{delimiter}) eq 'GO' ) ? 'GO' : ';'; 
 
   return \%args;
 }
@@ -188,9 +208,10 @@ sub printUsage {
    -s --sfile xxxx    SQL file which defines table and columns etc
    -v --verbose       verbose output
    -i --ignore_errs   Ignore SQL errors and continue
-   -d --delimiter xx  Delimter for splitting file, either GO or semicolon
-   -q --query_mode    Run (SELECT) query(s) and return results
-   -m --manual_query  SELECT query provided explicitly, obviates the need for
+   -d --delimiter xx  Delimter for splitting file, semicolon (default) or GO.
+   -q --query_mode    Run (SELECT) query(s) and print results.
+   -t --test_mode     Parse file and simply print out each statement that would have been executed. 
+   -m --manual        SELECT query provided explicitly, obviates the need for
                       a SQL file.
    -n --no_audit_constraints  If set, then the Audit Trail FOREIGN KEYS are skipped
       --database      Specify a database to initially connect to besides the default
