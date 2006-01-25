@@ -1664,12 +1664,13 @@ sub getNextDemoAccount {
 		     demo06 => 1, demo07 => 1, demo08 => 1, demo09 => 1, demo10 => 1
 		     );
 
-    # Will this query ever get too large?  Might just select top 100...
+    # Will this query ever get too expensive?
     my $sql_query = qq~
 	  SELECT username
-	    FROM usage_log
+	    FROM $TB_USAGE_LOG
 	   WHERE username like 'demo%'
-	ORDER BY date_created desc
+        GROUP BY username
+        ORDER BY MAX(date_created) DESC
     ~;
     my @usernames = $self->selectOneColumn($sql_query);
 
