@@ -351,6 +351,7 @@ sub writeSchema {
 
 
       $line_buffer .= ")";
+      $line_buffer .= " ENGINE=InnoDB " if $destination_type eq 'mysql';
       $line_buffer .= "$SB";
       $create_tables_buffer .= $create_sequence_statement
         if ($create_sequence_statement);
@@ -385,7 +386,7 @@ sub writeSchema {
   }
 
 
-  #### Generate the DROP TABLE list
+  #### Generate the DROP FOREIGN KEY DROP TABLE list
   foreach $table_name (reverse @processed_table_list) {
     my $real_table_name = $table_properties->{$table_name}->{real_name};
     $drop_tables_buffer .= "DROP TABLE $table_prefix$real_table_name$SB";
@@ -512,7 +513,8 @@ sub generateColumnDefinition {
   } elsif ($destination_type eq 'mysql') {
     if ($datatype =~ /varchar\((\d+)\)/) {
       if ($1 > 255) {
-	      $datatype = 'text';
+           # Obsolete as of version 5.1, and dangerous regardless.
+	   #   $datatype = 'text';
       }
     }
   }
@@ -671,11 +673,14 @@ sub generateColumnDefinition {
         "$constraint_name FOREIGN KEY ($column_name) ".
         "REFERENCES $table_prefix$fk_table($fk_column)";
 
+    if ( $destination_type eq 'mysql' ) {
+      $drop_reference_constraint = "ALTER TABLE $table_prefix$table_name " .
+      "DROP FOREIGN KEY $constraint_name";
+    } else {
     $drop_reference_constraint = "ALTER TABLE $table_prefix$table_name DROP CONSTRAINT ".
       "$constraint_name";
+    }
 
-    #### MySQL 3.23.x doesn't support references yet
-    $drop_reference_constraint = "" if ($destination_type eq 'mysql');
   }
 
 
