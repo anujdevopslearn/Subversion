@@ -267,7 +267,7 @@ sub handle_request {
 		$log->debug("CONDITION NAME = '$condition_name'  ");
 		
 		#return the condition id or zero for ones that do not exists
-		$condition_id = check_for_condition($condition_name);
+		$condition_id = check_for_condition($condition_name, $file);
 		
 		my $checked_flag = $condition_id ? 0:1;
 ##If the condition exists in the db send out a big fat warning else show "Upload"
@@ -477,6 +477,7 @@ sub upload_files {
 									  analysis_type=>'Affymetrix Array',
 									  analysis_id=>$analysis_id,
 									  condition_id=>$condition_id,
+									  file_name =>$file,
 									  organism_id =>$organism_id,);
 	
 		$log->debug("CONDITION ID '$condition_id'");
@@ -545,20 +546,17 @@ sub check_files {
 ###############################################################################
 sub check_for_condition {
   my $condition_name = shift;
+  my $file_name = shift;
   #### Get the data for all the specified condition_ids
   my $sql = qq~
-      SELECT condition_id
-        FROM $TBMA_COMPARISON_CONDITION
-       WHERE condition_name like '$condition_name' 
+  SELECT condition_id
+    FROM $TBMA_COMPARISON_CONDITION
+  WHERE condition_name = '$condition_name' 
+  AND condition_file_name = '$file_name'
   ~;
   my ($condition_id) = $sbeams->selectOneColumn($sql);
   
-  if ($condition_id){
-  	return ($condition_id);
-  }else{
-  	return 0;
-  }
-  
+	return $condition_id || 0;
 }
 
 
@@ -702,6 +700,7 @@ $log->debug("ORGANISM_ID ID '$organism_id'");
 	$rowdata{'organism_id'} = $organism_id;
 	$rowdata{analysis_type} = $args{analysis_type};
 	$rowdata{analysis_id} = $args{analysis_id};
+	$rowdata{condition_file_name} = $args{file_name};
 	$rowdata_ref = \%rowdata;
 	$pk = $sbeams->updateOrInsertRow(table_name=>$TBMA_COMPARISON_CONDITION,
 									 rowdata_ref=>$rowdata_ref,
