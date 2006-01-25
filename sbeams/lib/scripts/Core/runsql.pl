@@ -65,7 +65,7 @@ sub parseFile {
         $cmd .= "$line\n";
       }
     } else {
-      if ( $line =~ /;/ ) {
+      if ( $line =~ /;\s*$/ ) {
         $cmd .= $line;
         push @cmds, $cmd;
         $cmd = '';
