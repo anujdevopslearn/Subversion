@@ -897,6 +897,15 @@ sub printLoginForm {
     my $self = shift;
     my $login_message = shift;
 
+    my $pre_username;
+    my $pre_password;
+
+    # retrieve demo account info if demo_login is set to 'yes'
+    if ($q->param('demo_login') eq 'yes') {
+	($pre_username, $pre_password) = $self->getNextDemoAccount();
+	# print "<br>Logging in with account: <b>$pre_username</b>($pre_password)<br><br>";
+    }
+
     my $table_name = $q->param('TABLE_NAME');
 
     print qq!
@@ -915,10 +924,10 @@ sub printLoginForm {
         <FORM METHOD="post">
         <TABLE BORDER=0><TR>
         <TD><B>Username:</B></TD>
-        <TD><INPUT TYPE="text" NAME="username" SIZE=15></TD>
+        <TD><INPUT TYPE="text" NAME="username" VALUE="$pre_username" SIZE="15"></TD>
         </TR><TR>
         <TD><B>Password:</B></TD>
-        <TD><INPUT TYPE="password" NAME="password" SIZE=15></TD>
+        <TD><INPUT TYPE="password" NAME="password" VALUE="$pre_password" SIZE="15"></TD>
         </TR><TR>
         <TD COLSPAN=2 ALIGN="center">
         <BR>
@@ -1640,6 +1649,47 @@ sub get_work_group_id {
 }
 
 
+###############################################################################
+# getNextDemoAccount
+#
+# Returns the most-idle demo account and password as a 2-element array
+###############################################################################
+sub getNextDemoAccount {
+    my $self = shift;
+
+    my $demopwd = 'sbeamsdemo';
+    my $demologin;
+    my %demonames = ( # add more demo account names to this hash, if needed
+		     demo01 => 1, demo02 => 1, demo03 => 1, demo04 => 1, demo05 => 1,
+		     demo06 => 1, demo07 => 1, demo08 => 1, demo09 => 1, demo10 => 1
+		     );
+
+    # Will this query ever get too large?  Might just select top 100...
+    my $sql_query = qq~
+	  SELECT username
+	    FROM usage_log
+	   WHERE username like 'demo%'
+	ORDER BY date_created desc
+    ~;
+    my @usernames = $self->selectOneColumn($sql_query);
+
+    foreach (@usernames) {
+	if (exists($demonames{$_})) {
+	    # delete from hash
+	    delete $demonames{$_};
+
+	    if (scalar(keys %demonames) == 1) {
+		# only the last demo account remains in hash; exit from loop
+		last;
+	    } 
+	}
+    }
+    # use 'pop' in case more than 1 element in hash (eg. accounts never used)
+    $demologin = pop @{[keys %demonames]};
+
+    $demopwd = '' if (!$demologin);   # just in case no account is returned
+    return ($demologin, $demopwd);
+}
 
 
 ###############################################################################
