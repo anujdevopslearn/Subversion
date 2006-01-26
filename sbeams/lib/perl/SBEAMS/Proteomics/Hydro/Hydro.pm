@@ -257,7 +257,7 @@ sub calcHydrophilicityHW
 
     }
 
-    my $mean_hydrophilicity = calcHydropho( sequence => $sequence,
+    my $mean_hydrophilicity = calcHydroph( sequence => $sequence,
         hash_ref => \%hash);
 
     if ($TEST)
