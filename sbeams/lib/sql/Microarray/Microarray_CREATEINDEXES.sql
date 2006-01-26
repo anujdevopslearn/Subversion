@@ -85,3 +85,9 @@ CREATE INDEX idx_gene_name
 -- condition  biosequence_id
 CREATE INDEX idx_biosequence_id
    ON gene_expression ( biosequence_id );    
+
+-- condition  condition_id,false_discovery_rate
+CREATE NONCLUSTERED INDEX idx_condition_id_fdr
+   ON dbo.gene_expression ( condition_id,false_discovery_rate );
+
+
