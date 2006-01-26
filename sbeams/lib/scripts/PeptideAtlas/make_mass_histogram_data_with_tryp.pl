@@ -10,7 +10,7 @@
 # --run             run program
 # --atlas_build_id  atlas build id
 # --use_last_run    use data collected from last run of this program
-#                   (serialization)
+#                   (de-serialization)
 #
 #   Author: Nichole King
 #######################################################################
