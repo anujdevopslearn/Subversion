@@ -76,11 +76,13 @@ sub start_element {
     $attrs{$aa1} = $attrs{$aa1}->{value};
   }
 
+  ##########################################################################
   #### If this is a spectrum, then store some attributes
   if ($localname eq 'atlas_build') {
     #### TODO UPDATE atlas_build table with probability
   }
 
+  ##########################################################################
   #### If this is the peptide_instance, store it
   if ($localname eq 'peptide_instance') {
 
@@ -139,6 +141,7 @@ sub start_element {
     my $peptide_instance_id = &main::insert_peptide_instance(
       rowdata_ref=>\%rowdata,
     );
+    $self->{peptide_instance_id} = $peptide_instance_id;
 
 
     #### Create peptide_instance_sample records
@@ -158,11 +161,58 @@ sub start_element {
   }
 
 
+  ##########################################################################
   #### If this is the peptide_instance, store it
   if ($localname eq 'modified_peptide_instance') {
-    #### This will contain some similar code as in peptide_instance
-    #### Get that part working first and then write this
+
+    #### Create a list of sample_ids
+    my @search_batch_ids = split(",",$attrs{search_batch_ids});
+    my @sample_ids;
+    foreach my $search_batch_id ( @search_batch_ids ) {
+      push(@sample_ids,
+        $self->{searchBatchID_sampleId_hash}->{$search_batch_id});
+    }
+    my $sample_ids = join(",",@sample_ids);
+
+
+    #### Get the peptide_instance_id for this modified_peptide
+    my $peptide_instance_id = $self->{peptide_instance_id} or
+      die("ERROR: Unable to find a valid peptide_instance_id in the ".
+	  "content handler.\n");
+
+
+    #### Create the peptide_instance record itself
+    my %rowdata = (
+      peptide_instance_id => $peptide_instance_id,
+      modified_peptide_sequence => $attrs{peptide_string},
+      peptide_charge => $attrs{charge_state},
+      best_probability => $attrs{best_probability},
+      best_adjusted_probability => $attrs{best_adjusted_probability},
+      n_observations => $attrs{n_observations},
+      sample_ids => $sample_ids,
+      search_batch_ids => $attrs{search_batch_ids},
+    );
+
+    my $modified_peptide_instance_id = &main::insert_modified_peptide_instance(
+      rowdata_ref=>\%rowdata,
+    );
+
+
+    #### Create peptide_instance_sample records
+    &main::insert_modified_peptide_instance_samples(
+      modified_peptide_instance_id => $modified_peptide_instance_id,
+      sample_ids => $sample_ids,
+    );
+
+
+    #### Create peptide_instance_search_batch records
+    &main::insert_modified_peptide_instance_search_batches(
+      modified_peptide_instance_id => $modified_peptide_instance_id,
+      search_batch_ids => $attrs{search_batch_ids},
+    );
+
   }
+
 
 
   #### Increase the counters and print some progress info
