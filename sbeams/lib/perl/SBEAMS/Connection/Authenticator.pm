@@ -1653,42 +1653,34 @@ sub get_work_group_id {
 # getNextDemoAccount
 #
 # Returns the most-idle demo account and password as a 2-element array
+# Demo accounts are designated by a special string in the user_login.comment
+#  field, which also contains the password
 ###############################################################################
 sub getNextDemoAccount {
     my $self = shift;
 
-    my $demopwd = 'sbeamsdemo';
     my $demologin;
-    my %demonames = ( # add more demo account names to this hash, if needed
-		     demo01 => 1, demo02 => 1, demo03 => 1, demo04 => 1, demo05 => 1,
-		     demo06 => 1, demo07 => 1, demo08 => 1, demo09 => 1, demo10 => 1
-		     );
+    my $demopwd;
+    my $comment_string = 'DEMO ACCOUNT: PASSWORD=';
 
     # Will this query ever get too expensive?
+    # The comment (text type) must be cast (char) in order to use the MAX function
     my $sql_query = qq~
-	  SELECT username
-	    FROM $TB_USAGE_LOG
-	   WHERE username like 'demo%'
-        GROUP BY username
-        ORDER BY MAX(date_created) DESC
+	  SELECT UL1.username, MAX(CAST(UL1.comment as CHAR(255))) as 'comment'
+	    FROM $TB_USER_LOGIN UL1
+       LEFT JOIN $TB_USAGE_LOG UL2 ON ( UL1.username = UL2.username )
+	   WHERE UL1.comment like '${comment_string}%'
+	GROUP BY UL1.username
+	ORDER BY MAX(UL2.date_created)
     ~;
-    my @usernames = $self->selectOneColumn($sql_query);
+    my @rows = $self->selectSeveralColumns($sql_query);
+    my ($q_username, $q_comment) = @{$rows[0]};
 
-    foreach (@usernames) {
-	if (exists($demonames{$_})) {
-	    # delete from hash
-	    delete $demonames{$_};
-
-	    if (scalar(keys %demonames) == 1) {
-		# only the last demo account remains in hash; exit from loop
-		last;
-	    } 
-	}
+    if ($q_comment =~ /${comment_string}(\w+)/) {
+	$demologin = $q_username;
+	$demopwd = $1;
     }
-    # use 'pop' in case more than 1 element in hash (eg. accounts never used)
-    $demologin = pop @{[keys %demonames]};
 
-    $demopwd = '' if (!$demologin);   # just in case no account is returned
     return ($demologin, $demopwd);
 }
 
