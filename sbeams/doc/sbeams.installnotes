@@ -32,8 +32,8 @@ The following software programs are required to run SBEAMS:
 - Perl (probably anything greater than version 5.0 will work)
 - A relational database engine.  This software was developed with SQL
   Server.  Products from either Microsoft or Sybase should work right away.
-  Attempts has been made to make this software operable with other 
-  engines such as Oracle, MySQL, and PostgreSQL, however some further
+  Attempts has been made to make this software operable with other engines
+  such as Oracle, MySQL (4.1 minimum), and PostgreSQL, however some further
   development is required to achieve this fully.  If you do so, please
   contribute your changes.
 
@@ -120,7 +120,7 @@ For example,
   /local/www/html/dev1/sbeams/ owned by the user1 account
   /local/www/html/dev2/sbeams/ owned by the user2 account
 
-Since the web server must read/write data within this heirarchy, you should
+Since the web server must read/write data within this hierarchy, you should
 create an 'sbeams' unix group, and make sure the sbeams, user1, user2, and 
 apache (or whichever user the web server runs as; see below) users all belong
 to this group.  All of the sbeams directories and their contents should be
@@ -209,7 +209,7 @@ cd /local/www/html
 
 mkdir dev1   (this may need to be done as root. then do: chown user1 dev1)
 cd dev1
-tar -zxvf ~/sbeams-0.20.1.tar.gz
+tar -zxvf ~/sbeams-0.22.0.tar.gz
 
 # or, you can set up sbeams directly from subversion, which will make updating
 # the system much easier.  (This will require that you have a subversion client
@@ -323,8 +323,8 @@ Important changes:
   'httpd', etc.  The easiest way to find the id of the user is the id command.
   Assuming the user is apache, try:
   id apache
-  The first part of the printout is uid=somenumber, this is the uid.  An alt-
-  ernative method for finding this information is:
+  The first part of the printout is uid=somenumber, this is the uid.  An 
+  alternative method for finding this information is:
   egrep apache /etc/passwd 
   The number after the first colon is the WWW_UID.  If you don't even know 
   which user the web server is running as, the value is set in http.conf, or
@@ -449,7 +449,7 @@ cd $SBEAMS/lib/scripts/Core
 
 You will often need to define a prefix for the database you are going to build
 the schema in.  In this example, we assume a database of sbeams and a default
-schema user of dbo, and use the mssql syntax.  This yeilds a dbprefix of
+schema user of dbo, and use the mssql syntax.  This yields a dbprefix of
 'sbeams.dbo'.  This corresponds to the DBPREFIX{Core} setting in SBEAMS.conf.
 When using generate schema you can either specify a module with --module, in  
 which case the value defined in the SBEAMS.conf file is used, or else you can
@@ -477,7 +477,8 @@ explicity specify a prefix with --dbprefix.
 # ./generate_schema.pl \
 # --table_prop ../../conf/Core/Core_table_property.txt \
 # --table_col ../../conf/Core/Core_table_column.txt \
-# --schema_file ../../sql/Core/Core --module Core \
+# --schema_file ../../sql/Core/Core \
+# --module Core \
 # --destination_type mysql
 #
 ###########################
@@ -527,10 +528,10 @@ those records if necessary, so logging in as admin is discouraged.
   bare bones data and constraints:
 
 cd $SBEAMS/lib/sql/Core
-$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_CREATETABLES.mssql
-$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_POPULATE.mssql -d semicolon
-$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_CREATECONSTRAINTS.mssql
-$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_CREATE_MANUAL_CONSTRAINTS.sql
+$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_CREATETABLES.mssql -delim GO
+$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_POPULATE.mssql
+$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_CREATECONSTRAINTS.mssql -delim GO
+$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_CREATE_MANUAL_CONSTRAINTS.sql -delim GO
 
 ##### MySQL ###############
 #
@@ -540,22 +541,18 @@ $SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_CREATE_MANUAL_CONSTRAI
 #
 # Execute these commands instead of the ones given above for MS SQL:
 #
-# $SBEAMS/lib/scripts/Core/runsql.pl -s Core_CREATETABLES.mysql
-#      -u sbeamsadmin --delimiter semicolon
-# $SBEAMS/lib/scripts/Core/runsql.pl -s Core_POPULATE.mysql
-#      -u sbeamsadmin --delimiter semicolon
-# $SBEAMS/lib/scripts/Core/runsql.pl -s Core_CREATECONSTRAINTS.mysql
-#      -u sbeamsadmin --delimiter semicolon
-# $SBEAMS/lib/scripts/Core/runsql.pl -s Core_CREATE_MANUAL_CONSTRAINTS.sql
-#      -u sbeamsadmin --delimiter semicolon
+# $SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_CREATETABLES.mysql
+# $SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_POPULATE.mysql
+# $SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_CREATECONSTRAINTS.mysql
+# $SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_CREATE_MANUAL_CONSTRAINTS.sql
 #
 ###########################
 
 Note that you will be prompted for the sbeamsadmin password; you can also 
 choose to specify it on the command-line with the -p flag, which is more
 convenient but somewhat less secure.  Also, the second command requires that
-you specify the statement delimeter (semicolon).  For help with this (and most
-other) sbeams scripts, simply invoke it without any arguements and it will 
+you specify the statement delimiter (semicolon).  For help with this (and most
+other) sbeams scripts, simply invoke it without any arguments and it will 
 print out some usage help text.
 
 You should now be able to log in via the web interface, either as the
@@ -636,8 +633,8 @@ $SBEAMS/doc/Proteomics/Proteomics.installnotes
 -------------------------------------------------------------------------------
 Troubleshooting:
 
-1) All of the setup and cgi scripts use /usr/local/bin/perl as the interpreter.  If
-your system doesn't have perl installed there, you have can either create a 
+1) All of the setup and cgi scripts use /usr/local/bin/perl as the interpreter.
+If your system doesn't have perl installed there, you have can either create a 
 symbolic link from your version of perl to /usr/local/bin, you can install a
 new version of perl at that location, or you can modify the #! lines of any 
 affected files.  If the following commands are run from the base of your sbeams 
@@ -655,5 +652,5 @@ not the same this is not an issue.
 
 3) The --schema_file argument of generate_schema.pl is both a path and a prefix for 
 naming the various files created.  If you simply give a path, you will see files such
-as _CREATTABLES.mssql instead of Module_CREATETABLES.mssql.  If the command is executed
+as _CREATETABLES.mssql instead of Module_CREATETABLES.mssql.  If the command is executed
 from the destination directory, need only define filename prefix.
