@@ -75,16 +75,15 @@ databases.  This may or may not be a significant concern.
 
 - Generate the appropriate schema for your type(s) of database as follows:
 
-set DBTYPES="mssql"   #### or one or more of mssql mysql pgsql oracle etc.
+set dbtype="mssql"   #### one of mssql mysql pgsql oracle etc.
 cd $SBEAMS/lib/scripts/Core
 
-foreach dbtype ( $DBTYPES )
-  ./generate_schema.pl \
-    --table_prop ../../conf/Proteomics/Proteomics_table_property.txt \
-    --table_col ../../conf/Proteomics/Proteomics_table_column.txt \
-    --schema_file ../../sql/Proteomics/Proteomics --module Proteomics \
-    --destination_type $dbtype
-end
+./generate_schema.pl \
+ --table_prop ../../conf/Proteomics/Proteomics_table_property.txt \
+ --table_col ../../conf/Proteomics/Proteomics_table_column.txt \
+ --schema_file ../../sql/Proteomics/Proteomics \
+ --module Proteomics \
+ --destination_type $dbtype
 
 
 - Verify that the SQL CREATE and DROP statements have been correctly
@@ -106,21 +105,21 @@ CREATECONSTRAINTS scripts with the -i (--ignore_errors) flag, as shown below.
 SQL Server Example:
 
 To CREATE and POPULATE:
-$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Proteomics_CREATETABLES.mssql -i
-$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Proteomics_POPULATE.mssql -d semicolon
-$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Proteomics_CREATECONSTRAINTS.mssql -i
+$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Proteomics_CREATETABLES.mssql -i -delim GO
+$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Proteomics_POPULATE.mssql
+$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Proteomics_CREATECONSTRAINTS.mssql -i -delim GO
   (you might notice 2 "Column x is not the same data type as referencing column
    y" errors while loading this file; you can safely ignore them.)
-$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Proteomics_ADD_MANUAL_CONSTRAINTS.mssql
+$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Proteomics_ADD_MANUAL_CONSTRAINTS.mssql -delim GO
 
 To CREATE indexes:
-$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Proteomics_CREATEINDEXES.mssql
+$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Proteomics_CREATEINDEXES.mssql -delim GO
 
 To DROP:
 #### FIXME: DON'T DO THIS BECAUSE THIS WILL AFFECT BIOLINK AS WELL!!!
-#$SBEAMS/lib/scripts/Core/runsql.pl Proteomics_DROP_MANUAL_CONSTRAINTS.mssql
-#$SBEAMS/lib/scripts/Core/runsql.pl Proteomics_DROPCONSTRAINTS.mssql
-#$SBEAMS/lib/scripts/Core/runsql.pl Proteomics_DROPTABLES.mssql
+#$SBEAMS/lib/scripts/Core/runsql.pl Proteomics_DROP_MANUAL_CONSTRAINTS.mssql -delim GO
+#$SBEAMS/lib/scripts/Core/runsql.pl Proteomics_DROPCONSTRAINTS.mssql -delim GO
+#$SBEAMS/lib/scripts/Core/runsql.pl Proteomics_DROPTABLES.mssql -delim GO
 
 
 Note that the Proteomics_POPULATE.mssql is not auto-generated and should
@@ -174,7 +173,7 @@ $SBEAMS/lib/scripts/Core/addModule.pl Proteomics
 cd $SBEAMS/lib/refdata/Proteomics
 
 - Add required Proteomics work_groups and TGS entries.  Section below outlines
-the proceedure for doing this manually.  The records indicated will be loaded
+the procedure for doing this manually.  The records indicated will be loaded
 via the DataImport, and shouldn't be repeated.  The instructions were left in
 place for reference purposes.
 
@@ -190,7 +189,7 @@ place for reference purposes.
 
 -- Instructions for manually adding work groups.  These were inserted via the 
 DataImport statement above, so while you should read this section for
-informational purposes, you needen't add any of the specified groups.
+informational purposes, you needn't add any of the specified groups.
 
 Log in via the web interface as a user with Administrator privileges,
 switch to the Admin group using the pull-down menu at the top, and add
