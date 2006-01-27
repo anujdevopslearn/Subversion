@@ -3415,6 +3415,13 @@ sub displayResultSetPlot {
     }
 
 
+    my $discard_non_numeric = 1;
+    if (defined($rs_params{rs_plot_type}) &&
+	$rs_params{rs_plot_type} eq 'discrete_histogram') {
+      $discard_non_numeric = 0;
+    }
+
+
     #### If rs_columnA,B is defined, extract it
     my $column_info;
     foreach my $column_index ( 'A','B' ) {
@@ -3424,11 +3431,13 @@ sub displayResultSetPlot {
 	  $rs_params{"rs_column$column_index"} gt '') {
         foreach my $element (@{$resultset_ref->{data_ref}}) {
           my $value = $element->[$rs_params{"rs_column$column_index"}];
-          if ($value =~ /([\d\.\-\+]+)/) {
-            $value = $1;
-          } else {
-            $value = '';
-          }
+	  if ($discard_non_numeric) {
+	    if ($value =~ /([\d\.\-\+]+)/) {
+	      $value = $1;
+	    } else {
+	      $value = '';
+	    }
+	  }
           push(@{$column_info->{$column_index}->{data}},$value);
         }
         $column_info->{$column_index}->{name} = 
@@ -3448,7 +3457,7 @@ sub displayResultSetPlot {
     my @data;
 
 
-    #### If the plot_type is histogram, plot it
+    #### If the plot_type is a continuous-value histogram, plot it
     if (defined($rs_params{rs_plot_type}) &&
 	$rs_params{rs_plot_type} eq 'histogram') {
       $result = $self->histogram(
@@ -3476,6 +3485,40 @@ sub displayResultSetPlot {
             x_label_position  => 0.5,
             y_min_value       => 0,
             x_halfstep_shift  => 0,
+        );
+
+      } else {
+        print "ERROR: Unable to calculate histogram for column ".
+          $rs_params{rs_columnA};
+        $result = undef;
+      }
+
+
+    #### If the plot_type is a discrete-value histogram, plot it
+    } elsif (defined($rs_params{rs_plot_type}) &&
+	$rs_params{rs_plot_type} eq 'discrete_histogram') {
+      $result = $self->discrete_value_histogram(
+        data_array_ref=>$column_info->{A}->{data},
+      );
+
+      if ($result->{result} eq 'SUCCESS') {
+
+        #### Populate a data structure to plot
+        @data = (
+          $result->{xaxis_disp},
+          $result->{yaxis},
+        );
+
+        #### Create the histogram canvas
+        $graph = GD::Graph::bars->new(900, 700);
+
+        #### Set the various plot parameters
+        $graph->set(
+            x_label           => $column_info->{A}->{name},
+            y_label           => 'Count',
+            title             => "Histogram of ".$column_info->{A}->{name},
+            rotate_chart    => 1,
+            y_max_value       => $result->{maximum},
         );
 
       } else {
@@ -3543,11 +3586,12 @@ sub displayResultSetPlot {
     }
 
     my %plot_type_names = (
-      'histogram'=>'Histogram of Column A',
+      'histogram'=>'Continuous Value Histogram of Column A',
+      'discrete_histogram'=>'Discrete Value Histogram of Column A',
       'xypoints'=>'Scatterplot B vs A',
     );
 
-    foreach $element ('histogram','xypoints') {
+    foreach $element ('histogram','discrete_histogram','xypoints') {
       my $selected_flag = '';
       my $option_name = $plot_type_names{$element} || $element;
       $selected_flag = 'SELECTED'

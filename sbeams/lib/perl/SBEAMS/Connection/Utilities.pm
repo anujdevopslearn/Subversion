@@ -58,7 +58,7 @@ sub histogram {
 
   #### extract out the data array and sort
   #my @data = @{$data_array_ref};
-  #### Extract on the non-empty elements
+  #### Extract only the non-empty elements
   my @data;
   foreach my $element (@{$data_array_ref}) {
     if (defined($element) && $element gt '' && $element !~ /^\s+$/) {
@@ -293,6 +293,99 @@ sub histogram {
 
 
 } # end histogram
+
+
+
+###############################################################################
+# discrete_value_histogram
+#
+# Given an input array of data, calculate a histogram using the discrete
+# values in the data
+###############################################################################
+sub discrete_value_histogram {
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+  my $SUB_NAME = "discrete_value_histogram";
+  my $VERBOSE = 0;
+
+  #### Decode the argument list
+  my $data_array_ref = $args{'data_array_ref'};
+
+
+  #### Create a return result structure
+  my $result;
+  $result->{result} = 'FAILED';
+
+
+  #### extract out the data array and sort
+  #my @data = @{$data_array_ref};
+  #### Extract only the non-empty elements
+  my @data;
+  foreach my $element (@{$data_array_ref}) {
+    if (defined($element) && $element gt '' && $element !~ /^\s+$/) {
+      push(@data,$element);
+    }
+  }
+  my $n_elements = scalar(@data);
+  return $result unless ($n_elements >= 1);
+
+  #### Build a hash of the discrete elements
+  my %discrete_elements;
+  $n_elements = 0;
+  foreach my $element (@data) {
+    #### If there are semicolons in the data; treat that as a delimiter
+    my @values = split (";",$element);
+    foreach my $value ( @values ) {
+      #### strip leading and trailing whitespace
+      $value =~ s/^\s+//;
+      $value =~ s/\s+$//;
+      $discrete_elements{$value}++;
+      $n_elements++;
+    }
+  }
+
+
+  my @xaxis;
+  my @xaxis_disp;
+  my @yaxis;
+  my $min = -1;
+  my $max = -1;
+
+  #### Loops over each discrete element and build the arrays needed
+  #### for the histogram
+  foreach my $element (sort(keys(%discrete_elements))) {
+    my $count = $discrete_elements{$element};
+    push(@xaxis,$element);
+    push(@xaxis_disp,sprintf("%s (%.1f%)",$element,
+			$count/$n_elements*100));
+    push(@yaxis,$count);
+    $max = $count if ($count > $max);
+    $min = $count if ($min == -1);
+    $min = $count if ($count < $min);
+  }
+  my $n_discrete_elements = scalar(@xaxis);
+
+
+  #### Fill the output data structure with goodies that we've learned
+  $result->{xaxis} = \@xaxis;
+  $result->{xaxis_disp} = \@xaxis_disp;
+  $result->{yaxis} = \@yaxis;
+
+  $result->{n_bins} = $n_discrete_elements;
+  $result->{n_elements} = $n_elements;
+
+  $result->{minimum} = $min;
+  $result->{maximum} = $max;
+
+  $result->{ordered_statistics} = ['n_elements','n_bins'];
+
+  $result->{result} = 'SUCCESS';
+
+  return $result;
+
+
+} # end discrete_value_histogram
+
 
 
 ###############################################################################
