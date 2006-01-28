@@ -155,12 +155,31 @@ sub main {
 		parameters_ref => \%parameters
 	);
 
-	 #$sbeams->printDebuggingInfo($cgi);
-#print Dumper ($sbeams);
 	#### Process generic "state" parameters before we start
 	$sbeams->processStandardParameters( parameters_ref => \%parameters );
 
-	
+  # Do some permissions checking early
+  if ( defined $submit && grep $submit, write_ops($submit) ) {
+    print STDERR "Here, spankasis\n";
+    unless ( $sbeams->isProjectWritable( admin_override => 0 ) ) {
+      $sbeams->set_page_message( type => 'Error',
+                                  msg => <<"      END" );
+      Unable to complete request, you lack write access to the current project.
+      END
+     print $q->redirect( 'upload.cgi' );
+     exit;
+    }
+  } elsif  ( defined $submit && grep $submit, modify_ops($submit) ) {
+    print STDERR "Here, Crankasis\n";
+    unless ( $sbeams->isProjectModifiable( admin_override => 0 ) ) {
+      $sbeams->set_page_message( type => 'Error',
+                                  msg => <<"      END" );
+      Unable to complete request, you lack modify access to the current project.
+      END
+     print $q->redirect( 'upload.cgi' );
+     exit;
+    }
+  }
 	
 	#### Decide what action to take based on information so far
 
@@ -219,7 +238,9 @@ sub handle_request {
   
 	print "<br/><br/>";
 	
-	start_button();						#add simple start button to start a new session
+  # Add button/form to start a new analysis session
+	start_button() if $sbeams->isProjectWritable( admin_override => 0);
+
 	print "$tabmenu";
 
   my $project = $sbeams->getCurrent_project_id();
@@ -894,6 +915,26 @@ sub error {
 	exit(1);
 }
 
+# Return a list of 'submit' types that require write access
+sub write_ops {
+  my $submit = shift || return;
+  return ( 'Start Normalization Run',
+           'Start Normalization',
+           'multtest',
+           'annaffy',
+		       'files_sample_group_pairs',
+		       'submit_group_names',
+		       'Start Session',
+		       'Add Arrays' );
+}
+
+# Return a list of 'submit' types that require write access
+sub modify_ops {
+  my $submit = shift || return;
+  return ( 'Delete Checked Files',
+           'Delete Analysis Run'
+         );
+}
 
 ###############################################################################
 # make_group_arrays_form
