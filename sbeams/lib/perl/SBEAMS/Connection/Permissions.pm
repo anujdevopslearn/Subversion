@@ -839,6 +839,26 @@ sub isProjectAccessible{
 }
 
 
+###############################################################################
+# isProjectModifiable
+###############################################################################
+sub isProjectModifiable{
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+
+  ## Decode Arguments
+  my $project_id = $args{'project_id'} || $self->getCurrent_project_id();
+
+  my @projects = $self->getModifiableProjects();
+  foreach my $id (@projects) {
+    if ($id == $project_id) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
 
 ###############################################################################
 # isProjectWritable
