@@ -489,7 +489,7 @@ explicity specify a prefix with --dbprefix.
 - Verify that the SQL CREATE and DROP statements have been correctly
   generated in $SBEAMS/lib/sql/Core/
 
-- Edit the bottom of the $SBEAMS/lib/sql/Core/Core_POPULATE.mssql file
+- Edit the bottom of the $SBEAMS/lib/sql/Core/Core_POPULATE.sql file
   to include entries for *you* and *your* local username on the SBEAMS
   server.  Give yourself an encrypted temporary password in the SQL
   statements, generated as described the following paragraph.
@@ -529,20 +529,18 @@ those records if necessary, so logging in as admin is discouraged.
 
 cd $SBEAMS/lib/sql/Core
 $SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_CREATETABLES.mssql -delim GO
-$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_POPULATE.mssql
+$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_POPULATE.sql
 $SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_CREATECONSTRAINTS.mssql -delim GO
 $SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_CREATE_MANUAL_CONSTRAINTS.sql -delim GO
 
 ##### MySQL ###############
-#
-# Copy Core_POPULATE.mssql to Core_POPULATE.mysql.
 #
 # Edit Core_CREATE_MANUAL_CONSTRAINTS.sql to remove the dbo. in front of user_login
 #
 # Execute these commands instead of the ones given above for MS SQL:
 #
 # $SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_CREATETABLES.mysql
-# $SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_POPULATE.mysql
+# $SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_POPULATE.sql
 # $SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_CREATECONSTRAINTS.mysql
 # $SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Core_CREATE_MANUAL_CONSTRAINTS.sql
 #
@@ -557,7 +555,7 @@ print out some usage help text.
 
 You should now be able to log in via the web interface, either as the
 "admin" account (if you set a password above; not recommended) or with
-your user account you added to Core_POPULATE.mssql.  Test your installation
+your user account you added to Core_POPULATE.sql.  Test your installation
 by pointing a browser to the proper location like:
 
 http://db.localdomain.org/dev1/sbeams/
@@ -577,7 +575,7 @@ try to determine the reason for failure.
 7) Populate the driver tables
 
 Logged in as your account (that has a matching SBEAMS account configured
-in the Core_POPULATE.mssql file), run the following:
+in the Core_POPULATE.sql file), run the following:
 
 cd $SBEAMS/lib/scripts/Core
 set CONFDIR = "../../conf"
