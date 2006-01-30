@@ -26,7 +26,7 @@
 <P>Revised: 2005-07-27</P>
 
 <P>Please enter your data in either 96 well plate format using the following Excel <A HREF="Genotyping_Samples.xlt">template</A>.</P>
-<P><B>All fields are required!</B>  Please take note of the assumed units (e.g. ng/&#181;l), but do not include the units in your file.</P>
+<P><B>All fields are required!</B>  Please take note of the assumed units (e.g. ng/&#181;l), but do not include the units in your file.  Please do not use any dashes ('-') in the sample ids.</P>
 <P>If you are submitting several plates together, simply replicate the tables, one for each plate.</P>
 
 <TABLE>
