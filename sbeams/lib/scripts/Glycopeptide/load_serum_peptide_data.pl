@@ -67,9 +67,9 @@ use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
-use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::Glycopeptide::Tables;
 
-use SBEAMS::PeptideAtlas::Glyco_peptide_load;
+use SBEAMS::Glycopeptide::Glyco_peptide_load;
 
 
 
@@ -154,8 +154,8 @@ sub main {
   # Try to determine which module we want to affect
   my $module = $sbeams->getSBEAMS_SUBDIR();
   my $work_group = 'unknown';
-  if ($module eq 'PeptideAtlas') {
-	$work_group = "PeptideAtlas_admin";
+  if ($module eq 'Glycopeptide') {
+	$work_group = "Glycopeptide_admin";
 	$DATABASE = $DBPREFIX{$module};
  	print "DATABASE '$DATABASE'\n" if ($DEBUG);
   } else {
@@ -176,7 +176,7 @@ sub load_file {
 	my %args = @_;
 	
   # The meat...
-	my $glyco_o = new SBEAMS::PeptideAtlas::Glyco_peptide_load(sbeams => $sbeams,
+	my $glyco_o = new SBEAMS::Glycopeptide::Glyco_peptide_load(sbeams => $sbeams,
 														   verbose => $VERBOSE,
 														   debug =>$DEBUG,
 														   test_only =>$TESTONLY,
