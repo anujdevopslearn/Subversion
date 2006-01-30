@@ -242,6 +242,10 @@ sub handleRequest {
     unless ($organism_namespace_ids{$ID}) {
       $organism_namespace_ids{$ID} = $organism_namespace_ids{$id};
     }
+    #### Hack to also have another capitalization
+    if ($id eq 'UniProt') {
+      $organism_namespace_ids{'Uniprot'} = $organism_namespace_ids{$id};
+    }
   }
 
 
@@ -778,9 +782,20 @@ sub writeSummaryRecord {
     $rowdata{is_summary} = 'Y';
     $rowdata{hierarchy_level} = 'leaf';
     $rowdata{external_reference_set_id} = 1;
+
+    #### Add unfortunate limitation in accession size for indexing reasons
     $rowdata{external_accession} = $value->{external_accession};
-    #### Add goofy limitation in annotation size for indexing reasons
-    $rowdata{annotation} = substr($value->{annotation},0,890);
+    if (length($rowdata{external_accession}) > 880) {
+      $rowdata{external_accession} = substr($rowdata{external_accession},0,880).
+        '[...]';
+    }
+
+    #### Add unfortunate limitation in annotation size for indexing reasons
+    $rowdata{annotation} = $value->{annotation};
+    if (length($rowdata{annotation}) > 880) {
+      $rowdata{annotation} = substr($rowdata{annotation},0,880).
+        '[...]';
+    }
 
     my $result = $sbeams->insert_update_row(
       insert=>1,
@@ -930,10 +945,20 @@ sub writeLevelAnnotations {
       #### Now create a summary record
       $rowdata{idx} = 0;   # 0 means summary record
       $rowdata{is_summary} = 'Y';
+
       $rowdata{external_accession} = join(';',@accessions);
+      #### Add unfortunate limitation in accession size for indexing reasons
+      if (length($rowdata{external_accession}) > 880) {
+	$rowdata{external_accession} = substr($rowdata{external_accession},0,880).
+	  '[...]';
+      }
+
       $rowdata{annotation} = join(';',@descriptions);
-      #### Add goofy limitation in annotation size for indexing reasons
-      $rowdata{annotation} = substr($rowdata{annotation},0,890);
+      #### Add unfortunate limitation in annotation size for indexing reasons
+      if (length($rowdata{annotation}) > 880) {
+	$rowdata{annotation} = substr($rowdata{annotation},0,880).
+	  '[...]';
+      }
 
       #### Insert the row
       my $result = $sbeams->insert_update_row(
