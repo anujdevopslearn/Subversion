@@ -338,7 +338,7 @@ sub postUpdateOrInsertHook {
     my $recipient_name = "Genotyping_admin Contact";
     my $recipient = "mjaner\@systemsbiology.org";
     my $cc_name = "SBEAMS";
-    my $cc = "kdeutsch\@systemsbiology.org";
+    my $cc = "kdeutsch\@systemsbiology.org,sli\@systemsbiology.org";
 
     my $apply_action = $q->param('apply_action') || $parameters{'action'};
     my $subdir = $sbeams->getSBEAMS_SUBDIR();
