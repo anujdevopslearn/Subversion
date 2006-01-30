@@ -291,11 +291,11 @@ sub getCurrentAtlasBuildID {
     my $sql = qq~
         SELECT atlas_build_id
           FROM $TBAT_DEFAULT_ATLAS_BUILD DAB
-          LEFT JOIN $TB_ORGANISM O ON ( DAB.organism_id = O.organism_id )
+          LEFT JOIN $TB_ORGANISM O
+               ON ( DAB.organism_id = O.organism_id AND O.record_status != 'D')
          WHERE 1=1
            $default_atlas_build_name_clause
            AND DAB.record_status != 'D'
-           AND O.record_status != 'D'
     ~;
     my @rows = $sbeams->selectOneColumn($sql);
 
