@@ -283,7 +283,7 @@ sub getCurrentAtlasBuildID {
 
     my @rows = $sbeams->selectOneColumn($sql);
 
-    if (defined(@rows))
+    if (!defined(@rows))
     {
         $atlas_build_id = "";
     }
