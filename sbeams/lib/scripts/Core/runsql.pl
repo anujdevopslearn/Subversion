@@ -169,8 +169,10 @@ sub processArgs {
 
   # User declined to enter a password, prompt for one
   while ( !$args{pass} ) {
-    $args{pass} = 'testing' if $args{test_mode};
-    next;
+    if ($args{test_mode}) {
+      $args{pass} = 'testing';
+      next;
+    }
     print "Enter password, followed by [Enter] (cntl-C to quit):\t";
     $|++;
     system("stty -echo");
