@@ -2,7 +2,7 @@
 <HTML>
 <?php
   /* $Id$ */
-  $TITLE="ISB Affymetrix Core Facility";
+  $TITLE="Affymetrix Facility Documentation";
 
   include("includes/transformation_info.inc.php");
   include("includes/style.inc.php");

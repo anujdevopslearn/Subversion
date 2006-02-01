@@ -2,7 +2,7 @@
 <HTML>
 <?php
   /* $Id$ */
-  $TITLE="ISB Affymetrix Core Facility";
+  $TITLE="Affymetrix Facility Documentation ";
   $DOCUMENT_ROOT="/net/dblocal/wwwspecial/sbeams/sample_data/Microarray/affy_help_pages";
 
   include("includes/style.inc.php");
