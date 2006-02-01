@@ -33,6 +33,8 @@ Statistics::R [Optional] Not used in production code.  Only used in a test scrip
 ---------------
 The following non-Perl software is required:
 
+Netpbm (http://netpbm.sourceforge.net)
+
 R -Version 2.0 or greater
 R -Bioconductor libraries, see below. 
 
