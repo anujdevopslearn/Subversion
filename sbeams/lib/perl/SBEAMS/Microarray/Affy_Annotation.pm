@@ -1198,7 +1198,7 @@ sub check_previous_annotation_set {
 
 	
 		##DEBUG
-		print "ADDING ANNOTION RECORD '$affy_annotation_set_id'\n";
+		print "ADDING ANNOTATION RECORD '$affy_annotation_set_id'\n";
 		
 		return $affy_annotation_set_id
 		
