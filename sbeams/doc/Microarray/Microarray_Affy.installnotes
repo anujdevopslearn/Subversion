@@ -294,7 +294,7 @@ $SBEAMS/lib/scripts/Core/DataImport.pl -s $SBEAMS/lib/refdata/Microarray/Microar
 You should now see a link for Microarray in the webUI (may require that you 
 log back in).  In order to use some of the administrative features you will 
 have to add yourself to one or more of the work_groups that you created in 
-the command above, importantly Microarray_admin.
+the command above, Microarray_admin and Microarray_user.
 
 With your browser, navigate to:
 [SBEAMS Home] [Admin] [Manage User Group Associations], [Add ...], and add
@@ -407,7 +407,7 @@ Add a second Project:
 Add An Array Type
 - Switch to the Microarray_admin group by using the drop-down box at top
 - Switch to the the Microarray Module, Click On [Microarray]
-- At the bottom of the page, on the Navigation bar click on [Slide Type] button
+- At the bottom of the page, on the Navigation bar click on [Slide Types] button
 - Click On [Add Slide Type]
 - Fill in the Data
    Name: "HG-U133A"
@@ -494,15 +494,16 @@ http://<server_name>/sbeams/cgi/Microarray/ManageTable.cgi?TABLE_NAME=MA_server
 ########################
 Add the Annotation for this array type
 
-- Annotation are downloaded from Affymetrix on quarterly basis.  This must be done manually.  The file provided in the 
+- Annotations are downloaded from Affymetrix on quarterly basis, and must be done manually.  The file provided in the 
 test data set was downloaded from Affymetrix.
-- Use the script to upload the annotation into SBEAMS
+- Use the script to upload the annotation into SBEAMS.  These are large files,
+- and the process could take 20 minutes or more per file.  Note that the
+- Plus 2 array has about twice as many probsets as the 133A. 
+
 
 cd $SBEAMS/lib/scripts/Microarray
 ./load_affy_annotation_files.pl --run_mode update \
 --file_name $SBEAMS/var/Microarray/Affy_data/annotation/HG-U133A_annot.csv
-
-It could take about 15-30 minutes to upload the data...
 
 - Add the annotation for the second array
 ./load_affy_annotation_files.pl --run_mode update \
