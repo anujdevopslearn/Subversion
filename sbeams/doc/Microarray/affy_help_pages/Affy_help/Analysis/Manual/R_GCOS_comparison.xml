@@ -73,7 +73,7 @@ write.table(output,file=output.file.name,sep="\t",row.names=FALSE)]]></code>
 			</extra_data>
 			<extra_data data_type="link">
 				<description>Open Link</description>
-				<link_info href="/downloads/R_vs_GCOS_mas5.xls">R vs GCOS Excel Data</link_info>
+				<link_info href="http://www.sbeams.org/Microarray/download/R_vs_GCOS_mas5.xls">R vs GCOS Excel Data</link_info>
 			</extra_data>
 		</summary>
 		<summary>
