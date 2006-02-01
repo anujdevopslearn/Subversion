@@ -62,3 +62,16 @@ jar:
      $jsign_cmd 
   ~;
 }
+
+# Routine determines if current project is writable ( should allow bioconductor
+# pipeline usage 
+sub is_pipeline_project {
+  my $self = shift;
+  my $sbeams = $self->getSBEAMS();
+  my $project = $self->getCurrent_project_id();
+  
+  for my $writable ( $self->getWritableProjects() ) {
+    return 1 if $writable == $project;
+  }
+  return 0;
+}
