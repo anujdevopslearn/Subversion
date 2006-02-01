@@ -270,31 +270,6 @@ sub getCurrentAtlasBuildID {
     $atlas_build_id = $sbeams->getSessionAttribute(
       key => 'PeptideAtlas_atlas_build_id',
     );
-    ## check that $atlas_build_id exists in current database.  If going back and
-    ## forth between diff databases (for example, dev area pointing to different
-    ## database than production area), the id retrieved from session may not be
-    ## present in current database.
-    my $sql = qq~
-      SELECT atlas_build_id
-      FROM $TBAT_ATLAS_BUILD
-      WHERE atlas_build_id = '$atlas_build_id'
-      AND record_status != 'D'
-    ~;
-
-    my @rows = $sbeams->selectOneColumn($sql);
-
-    if (!defined(@rows))
-    {
-        $atlas_build_id = "";
-    }
-
-    ## also, for this case, it's possible that atlas id exists,
-    ## but don't have permission to access it, so need to unset
-    ## id if project permission check returns 0
-    if ( $self->getProjectID(atlas_build_id=>$atlas_build_id) == 0)
-    {
-        $atlas_build_id = "";
-    }
 
   }
 
