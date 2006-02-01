@@ -125,9 +125,6 @@ sub displaySBEAMSPageHeader
 	<TITLE>$DBTITLE - $SBEAMS_PART</TITLE>
   ~;
 
-  
-
-
   $self->printJavascriptFunctions();
   $self->printStyleSheet();
 
@@ -224,6 +221,7 @@ sub displaySBEAMSPageHeader
     }
 #	<tr><td>&nbsp;</td></tr>
 #	<tr><td>Array Requests:</td></tr>
+my $message = $sbeams->get_page_message();
 
     print qq~
         $admin_menu
@@ -233,7 +231,7 @@ sub displaySBEAMSPageHeader
 	<!-------- Main Page ------------------------------------------->
 	<td valign=top>
 	<table border=0 bgcolor="#ffffff" cellpadding=4>
-	<tr><td>
+	<tr><td>$message
     ~;
  
     } else {
@@ -246,16 +244,6 @@ sub displaySBEAMSPageHeader
 
 }
 
-
-sub getMofoMenu {
-
-  my $pad = '&nbsp;&nbsp;';
-  return <<"  END";
-
-      
-  END
-
-}
 
 ###############################################################################
 # printStyleSheet
