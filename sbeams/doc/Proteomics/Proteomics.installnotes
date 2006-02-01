@@ -378,7 +378,7 @@ cd $SBEAMS/lib/scripts/Proteomics
 
 Now you can load extra data (update command):
 
-./load_proteomics_experiment.pl
+./load_proteomics_experiment.pl \
   --experiment_tag $EXPERIMENT_TAG \
   --search_subdir=$SEARCH_BATCH_TAG \
   --update_from_summary_files \
