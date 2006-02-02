@@ -54,8 +54,6 @@ use SBEAMS::Glycopeptide::Test_glyco_data;
 use SBEAMS::Glycopeptide::Get_peptide_seqs;
 
 
-
-
 ##############################################################################
 #constructor
 ###############################################################################
@@ -374,6 +372,46 @@ sub get_identified_tissues{
     $seen{$tissue->{tissue_type_name}}++;
   }
   return \@coalesced_tissues;
+}
+
+sub ipi_name_from_accession {
+  my $self = shift;
+  my $args = @_;
+  return unless $args{ipi};
+  my $sbeams = $self->getSBEAMS() || return;
+  my ($ipi) = $sbeams->selectrow_array( <<"  END" ) || 0;
+  SELECT protein_name FROM $TBGP_IPI_DATA
+  WHERE ipi_accession_number = '$args{ipi}'
+  END
+  return $ipi;
+}
+
+sub ipi_seq_from_accession {
+  my $self = shift;
+  my $args = @_;
+  return unless $args{ipi};
+  my $sbeams = $self->getSBEAMS() || return;
+  my ($seq) = $sbeams->selectrow_array( <<"  END" ) || 0;
+  SELECT protein_sequence FROM $TBGP_IPI_DATA
+  WHERE ipi_accession_number = '$args{ipi}'
+  END
+  return $seq;
+}
+
+sub lookup_glycosite {
+  my $self = shift;
+  my %args = @_;
+  for my $key ( qw( ipi start ) ) {
+    return unless $args{$key};
+  }
+
+  my $sbeams = $self->getSBEAMS() || return;
+  my ($id) = $sbeams->selectrow_array( <<"  END" ) || 0;
+  SELECT glyco_site_id FROM $TBGP_GLYCO_SITE
+  WHERE protein_glyco_site_position = $args{start}
+    AND ipi_data_id = '$args{ipi}'
+  END
+  return $id;
 }
 
 } #end of package
