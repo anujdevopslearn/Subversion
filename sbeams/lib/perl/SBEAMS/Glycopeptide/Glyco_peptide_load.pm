@@ -5,7 +5,7 @@
 
 ##############################################################
 use strict;
-use vars qw($sbeams $self);		#HACK within the read_dir method had to set self to global: read below for more info
+#use vars qw($sbeams $self);		#HACK within the read_dir method had to set self to global: read below for more info
 
 use File::Basename;
 use File::Find;
@@ -20,13 +20,6 @@ use Benchmark;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Glycopeptide::Tables;
 
-#use base qw(SBEAMS::Glycopeptide::Affy);		#declare superclass
-#
-# Hash for holding column headings
-my %heads;
-
-
-
 
 #######################################################
 # Constructor
@@ -36,13 +29,14 @@ sub new {
 	
 	my %args = @_;
 	my $sbeams = $args{sbeams};
-	my $verbose = $args{verbose};
+	my $verbose = $args{verbose} || 0;
 	my $debug  = $args{debug};
 	my $test_only = $args{test_only};
 	my $file = $args{file};
-	
-	die "Must give file name '$file' is not good\n" unless $file;
-	my $self = {_file => $file};
+	my $release = $args{release} || $args{file};
+  
+	my $self = {   _file => $file,
+             	_release => $release};
 	
 	bless $self, $class;
 	
@@ -60,9 +54,9 @@ sub new {
 # Receive the main SBEAMS object
 ###############################################################################
 sub setSBEAMS {
-    my $self = shift;
-    $sbeams = shift;
-    return($sbeams);
+  my $self = shift;
+  my $sbeams = shift;
+  $self->{_SBEAMS} = $sbeams;
 }
 
 
@@ -70,8 +64,8 @@ sub setSBEAMS {
 # Provide the main SBEAMS object
 ###############################################################################
 sub getSBEAMS {
-    my $self = shift;
-    return($sbeams);
+  my $self = shift;
+  return $self->{_SBEAMS};
 }
 
 ###############################################################################
@@ -81,15 +75,13 @@ sub getSBEAMS {
 ###############################################################################
 sub verbose {
 	my $self = shift;
-	
+  my $verbose = shift;
 		
-	if (@_){
-		#it's a setter
-		$self->{_VERBOSE} = $_[0];
-	}else{
-		#it's a getter
-		$self->{_VERBOSE};
+	if (defined $verbose){ #it's a setter
+		$self->{_VERBOSE} = $verbose;
 	}
+
+	return $self->{_VERBOSE};
 }
 ###############################################################################
 # Get/Set the DEBUG status
@@ -142,46 +134,51 @@ sub getfile {
 ###############################################################################
 sub process_data_file {
 	my $self = shift;
+  my %args = @_;
+  $args{load_peptides} = 1 if !defined $args{load_peptides};
 	
   my @all_data = ();
   
   my $file = $self->getfile();
 
   open DATA, $file || die "Unable to open file $file $!\n";
+  my %heads;
 
 	my $count = 0;
 	my $insert_count = 1;
   my $t0 = new Benchmark;
-    while(<DATA>){
-      chomp;
-			my @tokens = split( /\t/, $_, -1);
+  while(<DATA>){
+    chomp;
+    my @tokens = split( /\t/, $_, -1);
 			
-      # populate global hash of col_name => col_index. 
-			if ($count == 0){
-        # Make them lower case for consistancy
-        @tokens = map {lc($_)} @tokens;
+    # populate global hash of col_name => col_index. 
+		if ($count == 0){
+      # Make them lower case for consistancy
+      @tokens = map {lc($_)} @tokens;
 
-        # Build header index hash
-			  @heads{@tokens} = 0..$#tokens;
-				$count ++;
+      # Build header index hash
+		  @heads{@tokens} = 0..$#tokens;
+			$count ++;
 
-        # See if col headers have changed
-        $self->checkHeaders;
-				next;
-      }
+      # See if col headers have changed
+      $self->checkHeaders(\%heads);
+      next;
+    }
 
-			$self->add_ipi_record( \@tokens ) unless $self->check_ipi($tokens[$heads{'ipi'}]);
+		$self->add_ipi_record( \@tokens ) unless 
+                                      $self->check_ipi($tokens[$heads{'ipi'}]);
 		
-			my $glyco_pk = $self->add_glyco_site( \@tokens );
+		my $glyco_pk = $self->add_glyco_site( \@tokens );
 			
-			$self->add_predicted_peptide( glyco_pk   => $glyco_pk,
+		$self->add_predicted_peptide( glyco_pk   => $glyco_pk,
 									              	  line_parts => \@tokens);
 			
-      # add identifed peptide iff there is one.
-	    if ( $tokens[$heads{'identified sequences'}] ) {
-			  $self->add_identified_peptides( glyco_pk   => $glyco_pk,
-		                   								  line_parts => \@tokens);
-      }
+    # add identifed peptide iff there is one.
+	  if ( $args{load_peptides} && $tokens[$heads{'identified sequences'}] ) {
+    
+		  $self->add_identified_peptides( glyco_pk   => $glyco_pk,
+	                  								  line_parts => \@tokens);
+    }
 		
 			
 			$count ++;
@@ -204,6 +201,8 @@ sub process_data_file {
 
 sub checkHeaders {
   my $self = shift;
+  my $heads = shift;
+  my %heads = %$heads;
   my @version_8_columns = ( 'IPI',
                             'Protein Name',
                             'Protein Sequences',
@@ -248,6 +247,8 @@ sub checkHeaders {
       exit;
     }
   }
+  # We got past the checks, cache the header values.
+  $self->{_heads} = \%heads;
   
 }
 
@@ -289,6 +290,8 @@ sub add_identified_peptides{
 	my %args = @_;
 	my $row = $args{line_parts};
 	my $glyco_pk = $args{glyco_pk};
+  my %heads = %{$self->{_heads}};
+  my $sbeams = $self->getSBEAMS;
 	
   # make sure we have an identifed peptide otherwise do nothing
 	return unless ($row->[$heads{'identified sequences'}]); 
@@ -318,6 +321,7 @@ sub add_identified_peptides{
 					peptide_mass 			        	=> $row->[$heads{'identified peptide mass'}],
 					glyco_site_id  		          => $glyco_pk
 			);
+    my $sbeams = $self->getSBEAMS();
 	
     # returns identified_peptide_id for new row
   	$iden_pep_id = $sbeams->updateOrInsertRow(				
@@ -370,12 +374,15 @@ sub add_identified_peptides{
 ###############################################################################
 sub peptide_to_tissue {
 	my $self = shift;
-	my $method = 'peptide_to_tissue';
 	my $identified_peptide_id = shift;
 	my $row = shift;
+  my %heads = %{$self->{_heads}};
 	
+	my $method = 'peptide_to_tissue';
 	my $samples = $row->[$heads{'identified tissues'}];
+
   my @samples = split( ",", $samples, -1 );
+  my $sbeams = $self->getSBEAMS();
 
   if ( !$self->{_sample_tissues} ) {
     my $sql = "SELECT sample_name, sample_id FROM $TBGP_GLYCO_SAMPLE";
@@ -416,6 +423,7 @@ sub peptide_to_tissue {
 sub newGlycoSample {
   my $self = shift;
   my $sample = shift;
+  my $sbeams = $self->getSBEAMS();
   my $tissue_sql = $sbeams->evalSQL ( <<"  END" );
   SELECT tissue_type_id 
   FROM $TBGP_TISSUE_TYPE WHERE 
@@ -456,13 +464,16 @@ sub add_predicted_peptide {
 	my %args = @_;
 	my $row = $args{line_parts};
 	my $glyco_pk = $args{glyco_pk};
-	
+  my %heads = %{$self->{_heads}};
 	
 	my $ipi_acc = $row->[$heads{'ipi'}];
 	my $clean_seq = $self->clean_seq($row->[$heads{'predicted tryptic nxt/s peptide sequence'}]); 
+
+  my $sbeams = $self->getSBEAMS();
 	
    # We may now be getting proteins only, skip this bloc if no predicted peptide
-  if ( $row->[$heads{predicted}] && $ipi_acc && $clean_seq ) {
+  if ( $row->[$heads{'predicted tryptic nxt/s peptide sequence'}] 
+       && $ipi_acc && $clean_seq ) {
 
   	#my $fixed_predicted_seq = $self->fix_predicted_peptide_seq($row->[16]);
   	my ($start, $stop) = $self->map_peptide_to_protein(peptide=> $clean_seq,
@@ -602,6 +613,7 @@ sub add_glyco_site {
 	my $self = shift;
 	my $row = shift;
 	
+  my %heads = %{$self->{_heads}};
 	my $ipi_id = $row->[$heads{'ipi'}];
 	
 	my %rowdata_h = ( 	
@@ -611,7 +623,7 @@ sub add_glyco_site {
 			  );
 	
 	my $rowdata_ref = \%rowdata_h;
-	
+  my $sbeams = $self->getSBEAMS();
 
 	my $glyco_site_id = $sbeams->updateOrInsertRow(				
 							table_name=>$TBGP_GLYCO_SITE,
@@ -639,6 +651,9 @@ sub add_ipi_record {
 	my $row = shift;
 	die 'Did not pass data ref' unless ( $row && ref($row) =~/ARRAY/ );
 	
+  my $sbeams = $self->getSBEAMS();
+  my %heads = %{$self->{_heads}};
+
 	my $cellular_location_id = $self->find_cellular_location_id($row->[$heads{'protein location'}]);
 	
 	my $ipi_id = $row->[$heads{'ipi'}];
@@ -658,7 +673,7 @@ sub add_ipi_record {
 				synonyms => $row->[$heads{'synonyms'}],
 			  );
 
-	my %rowdata_h = $self->truncate_data(record_href => \%rowdata_h); #some of the data will need to truncated to make it easy to put all data in varchar 255 or less
+	%rowdata_h = $self->truncate_data(record_href => \%rowdata_h); #some of the data will need to truncated to make it easy to put all data in varchar 255 or less
 	
 	##Add in the big columns that should not be truncated
 	
@@ -742,6 +757,9 @@ sub find_tissue_code {
 	my $method = 'find_tissue_code';
 	my $self = shift;
   my $tissue = shift;
+
+  my $sbeams = $self->getSBEAMS();
+  
 	my $tissue_name = ( $tissue =~ /serum/i ) ? 'serum' :
                     ( $tissue =~ /prostate/i ) ? 'prostate' :
                     ( $tissue =~ /ovary/i ) ? 'ovary' :
@@ -753,7 +771,7 @@ sub find_tissue_code {
 		      ~;
 	
 	
-	 my ($id) = $sbeams->selectOneColumn($sql);
+	my ($id) = $sbeams->selectOneColumn($sql);
 	if ($self->verbose){
 		print __PACKAGE__. "::$method FOUND TISSUE ID '$id' FOR TISSUE '$tissue_name'\n";
 		
@@ -794,6 +812,7 @@ sub find_cellular_code {
 	my $method = 'find_cellular_code';
 	my $self = shift;
 	my $code = shift;
+  my $sbeams = $self->getSBEAMS();
 
   # Lets not look it up every single time, eh?
   my $cached = $self->cellular_code_id( $code );
@@ -871,6 +890,7 @@ sub check_ipi {
 sub check_version {
 	my $method = 'check_version';
 	my $self = shift;
+  my $sbeams = $self->getSBEAMS();
 	
 	my $file = $self->getfile();
 	
@@ -913,13 +933,17 @@ sub add_new_ipi_version{
 	my $self = shift;
 	my $file = $self->getfile();
 	my $file_name = basename($file);
+  my $sbeams = $self->getSBEAMS();
 	
 	my $st = stat($file);
 	my $mod_time_string = strftime "%F %H:%M:%S.00", localtime($st->mtime);
+	my $release = $self->{_release} || $file;
 	
-	
+# FIXME Add to schema
+#				ipi_file_name => $file,
+
 	my %rowdata_h = ( 	
-				ipi_version_name => $file_name,
+				ipi_version_name => $release,
 				ipi_version_date => $mod_time_string,
 				
 			  );
