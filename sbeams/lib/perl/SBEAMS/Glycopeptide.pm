@@ -11,29 +11,23 @@ package SBEAMS::Glycopeptide;
 
 
 use strict;
-use vars qw($VERSION @ISA $sbeams);
+use vars qw(@ISA);
 use CGI::Carp qw(fatalsToBrowser croak);
 
 use SBEAMS::Glycopeptide::DBInterface;
 use SBEAMS::Glycopeptide::HTMLPrinter;
 use SBEAMS::Glycopeptide::TableInfo;
 use SBEAMS::Glycopeptide::Settings;
+use SBEAMS::Glycopeptide::Utilities;
 
 @ISA = qw(SBEAMS::Glycopeptide::DBInterface
           SBEAMS::Glycopeptide::HTMLPrinter
           SBEAMS::Glycopeptide::TableInfo
+          SBEAMS::Glycopeptide::Utilities
           SBEAMS::Glycopeptide::Settings);
 
 
-###############################################################################
-# Global Variables
-###############################################################################
-$VERSION = '0.02';
-
-
-###############################################################################
 # Constructor
-###############################################################################
 sub new {
     my $this = shift;
     my $class = ref($this) || $this;
@@ -43,30 +37,20 @@ sub new {
 }
 
 
-###############################################################################
-# Receive the main SBEAMS object
-###############################################################################
+# Cache SBEAMS object
 sub setSBEAMS {
-    my $self = shift;
-    $sbeams = shift;
-    return($sbeams);
+  my $self = shift;
+  my $sbeams = shift;
+  $self->{_sbeams} = $sbeams;
 }
 
 
-###############################################################################
 # Provide the main SBEAMS object
-###############################################################################
 sub getSBEAMS {
     my $self = shift;
-    return($sbeams);
+    return($self->{_sbeams});
 }
-
-
-###############################################################################
 
 1;
 
 __END__
-###############################################################################
-###############################################################################
-###############################################################################
