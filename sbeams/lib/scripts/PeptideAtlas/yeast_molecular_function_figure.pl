@@ -146,39 +146,14 @@ sub main
     my %molecular_function_terms = get_level1_term_hash();
 
 
-    ## get hash with key = gene_name 
-    ##             value = not important
-    my %atlas_gene_names = get_atlas_gene_names( 
-        atlas_build_id => $atlas_build_id);
-
-
-    ## get hash with key = molecular function term,
-    ##             value = number of genes in bin
-    my %molecular_function_counts_atlas = 
-        get_mf_bins( term_hash_ref => \%molecular_function_terms,
-        gene_names_hash_ref => \%atlas_gene_names);
-
-
-    my %referenceDB_gene_names = get_referenceDB_gene_names(
-        atlas_build_id => $atlas_build_id);
-
-
-    ## get hash with key = molecular function term,
-    ##             value = number of genes in bin
-    my %molecular_function_counts_referenceDB = 
-        get_mf_bins( term_hash_ref => \%molecular_function_terms,
-        gene_names_hash_ref => \%referenceDB_gene_names);
-
-
-    write_to_outfile( term_hash_ref => \%molecular_function_terms,
-        atlas_counts_ref => \%molecular_function_counts_atlas,
-        referenceDB_counts_ref => \%molecular_function_counts_referenceDB,
+    my %termFractionHash = getTermFractions(
+        term_hash_ref => \%molecular_function_terms
     );
 
-    make_percent_bar_graph( term_hash_ref => \%molecular_function_terms,
-        atlas_counts_ref => \%molecular_function_counts_atlas,
-        referenceDB_counts_ref => \%molecular_function_counts_referenceDB,
-    );
+    write_to_outfile( term_fraction_hash_ref => \%termFractionHash);
+
+    make_percent_bar_graph( 
+        term_fraction_hash_ref => \%termFractionHash);
 
 
     ##$sbeams->printPageFooter() unless ($QUIET);
@@ -258,314 +233,34 @@ sub get_level1_term_hash
 
 }
 
-#######################################################################
-# get_atlas_gene_names -- get hash with key = gene name for all mapped
-# peptides
-# @param atlas_build_id
-# #return hash with key = gene name
-#######################################################################
-sub get_atlas_gene_names
-{
-
-    my %args = @_;
-
-    my %gene_hash;
-
-    my $atlasBuildId = $args{'atlas_build_id'} or die
-        "need atlas build id ($!)";
-
-    my $sql = qq~
-        SELECT B.biosequence_gene_name, B.biosequence_gene_name
-        FROM $TBAT_BIOSEQUENCE B, $TBAT_PEPTIDE_INSTANCE PEPI,
-        $TBAT_PEPTIDE_MAPPING PM
-        WHERE PEPI.atlas_build_id = '$atlas_build_id'
-        AND PEPI.peptide_instance_id = PM.peptide_instance_id
-        AND PM.matched_biosequence_id = B.biosequence_id
-    ~;
-
-    %gene_hash = $sbeams->selectTwoColumnHash($sql);
-
-    return %gene_hash;
-
-}
-
-
-#######################################################################
-# get_referenceDB_gene_names -- get hash with key = gene name
-#
-# @param atlas_build_id
-# #return hash with key = gene name
-#######################################################################
-sub get_referenceDB_gene_names
-{
-
-    my %args = @_;
-
-    my %gene_hash;
-
-    my $atlasBuildId = $args{'atlas_build_id'} or die
-        "need atlas build id ($!)";
-
-    my $sql = qq~
-        SELECT B.biosequence_gene_name, B.biosequence_gene_name
-        FROM $TBAT_BIOSEQUENCE B, $TBAT_ATLAS_BUILD AB
-        WHERE AB.atlas_build_id = '$atlas_build_id'
-        AND B.biosequence_set_id = AB.biosequence_set_id
-    ~;
-
-    %gene_hash = $sbeams->selectTwoColumnHash($sql);
-
-    return %gene_hash;
-
-}
-
-
-#######################################################################
-#  get_mf_bins - get hash with key = molecular funtion term
-#                             value = number of genes in bin
-#
-# @param hash reference for gene names
-# @param hash reference for hash with GO ID's and terms
-# @return hash with key = molecular funtion term, value= num genes
-####################################################################
-sub get_mf_bins
-{
-
-    my %args = @_;
-
-    my $term_hash_ref = $args{term_hash_ref} || 
-        die "ERROR: Must pass term hash reference ($!)";
-
-    my %term_hash= %{$term_hash_ref};
-
-    my $gene_names_hash_ref = $args{'gene_names_hash_ref'} ||
-        die "ERROR: Must pass gene_names hash reference ($!)";
-
-    my %gene_names_hash = %{$gene_names_hash_ref};
-
-
-    ## making hash to hold key=mf term, val=num genes
-    ## initializing values to zero:
-    my %mf_num_hash;
-
-    foreach my $go_id (keys %term_hash)
-    {
-
-        my $term = $term_hash{$go_id};
-
-        $mf_num_hash{$term} = 0;
-
-    }
-
-
-    foreach my $go_id (keys %term_hash)
-    {
-
-        ## molecular_function:  GA.gene_annotation_type_id='1'
-        ## yeast: AG.organism_namespace_id='2'
-        #my $sql = qq~
-        #SELECT B.biosequence_gene_name, GA.external_accession
-        #FROM $TBAT_PEPTIDE_INSTANCE PI, $TBAT_PEPTIDE P,
-        #PEPTIDE_MAPPING PM, $TBAT_BIOSEQUENCE B,
-        #$TBAT_BIOSEQUENCE_ANNOTATED_GENE BAG,
-        #$TBBL_ANNOTATED_GENE AG, $TBBL_GENE_ANNOTATION GA 
-        #WHERE PI.atlas_build_id = '$atlas_build_id'
-        #AND GA.gene_annotation_type_id='1' 
-        #AND GA.hierarchy_level='1' 
-        #AND AG.organism_namespace_id='2'   
-        #AND P.peptide_id = PI.peptide_id
-        #AND PM.peptide_instance_id = PI.peptide_instance_id
-        #AND B.biosequence_id = PM.matched_biosequence_id
-        #AND BAG.biosequence_id = B.biosequence_id
-        #AND BAG.annotated_gene_id = AG.annotated_gene_id
-        #AND GA.annotated_gene_id = AG.annotated_gene_id
-        #AND GA.external_accession = '$go_id'
-        #~;
-
-        my $sql = qq~
-        SELECT B.biosequence_gene_name, GA.external_accession
-        FROM $TBAT_ATLAS_BUILD AB, $TBAT_BIOSEQUENCE B, 
-        $TBAT_BIOSEQUENCE_ANNOTATED_GENE BAG,
-        $TBBL_ANNOTATED_GENE AG, $TBBL_GENE_ANNOTATION GA 
-        WHERE AB.atlas_build_id = '$atlas_build_id'
-        AND AB.biosequence_set_id = B.biosequence_set_id
-        AND BAG.biosequence_id = B.biosequence_id
-        AND BAG.annotated_gene_id = AG.annotated_gene_id
-        AND GA.annotated_gene_id = AG.annotated_gene_id
-        AND AG.organism_namespace_id='2'   
-        AND GA.gene_annotation_type_id='1' 
-        AND GA.hierarchy_level='1' 
-        AND GA.external_accession = '$go_id'
-        ~;
-
-        ## hash to store keys = gene_name, value = only this GO id
-        my %tmp_gene_hash = $sbeams->selectTwoColumnHash($sql);
-
-        my $term = $term_hash{$go_id};
-
-        foreach my $gene (keys %tmp_gene_hash)
-        {
-
-            ## if gene_name is in gene_hash:
-            if (exists $gene_names_hash{$gene})
-            {
-                $mf_num_hash{$term} = $mf_num_hash{$term} + 1;
-            }
-
-        }
-
-    }
-
-    return %mf_num_hash;
-
-}
-
-
-#######################################################################
-#
-# make_bar_graph
-#
-#######################################################################
-sub make_bar_graph
-{
-
-    my %args = @_;
-
-    my $term_hash_ref = $args{term_hash_ref} || 
-        die "ERROR: Must pass term hash ($!)";
-
-    my %term_hash= %{$term_hash_ref};
-
-    my $atlas_counts_ref = $args{atlas_counts_ref} || 
-        die "ERROR: Must pass atlas_counts_ref ($!)";
-
-    my %atlas_counts = %{$atlas_counts_ref};
-
-    my $sgd_counts_ref = $args{sgd_counts_ref} || 
-        die "ERROR: Must pass sgd_counts_ref ($!)";
-
-    my %sgd_counts = %{$sgd_counts_ref};
-
-    ## %term_hash :      keys = GO id, value = the GO term
-    ## %binsHash  :      keys = GO id, value = num genes per bin
-
-    my (@x, @y, @y2, @data);
-
-    my $ymax = 0;
-
-
-    ## fill x, y, y2 and data arrays:
-    foreach my $term ( keys %term_hash )
-    {
-
-        push(@x, $term_hash{$term});
-
-        push(@y, $atlas_counts{$term});
-
-        push(@y2, $sgd_counts{$term});
-
-        $ymax = $sgd_counts{$term} if ( $sgd_counts{$term} > $ymax);
-
-    }
-
-    @data = ([@x], [@y], [@y2]);
-
-    my $graph = new GD::Graph::bars( 512, 512);
-
-#   $graph->set_x_label_font(gdMediumBoldFont);
-
-#   $graph->set_y_label_font(gdMediumBoldFont);
-
-#   $graph->set_x_axis_font(gdMediumBoldFont);
-
-#   $graph->set_y_axis_font(gdMediumBoldFont);
-
-#   $graph->set_title_font(gdGiantFont);
-
-    $graph->set(
-        line_width      => 2,
-    #   title           => "Yeast PeptideAtlas (Jul 2005, P>0.9)",
-        x_label         => "GO Molecular Function bin",
-        y_label         => "Number of Genes",
-        x_labels_vertical => 1,
-        y_max_value     => $ymax,
-        l_margin => 10,
-        r_margin => 10,
-        b_margin => 10,
-        t_margin => 10,
-        dclrs    => [ qw(lblue green) ],
-        markers => [2,1],
-        bgclr    => 'white',
-        transparent   => 0,
-        fgclr         => 'black',
-        labelclr      => 'black',
-        legendclr      => 'black',
-        axislabelclr  => 'black',
-        textclr      => 'black',
-    ) or die $graph->error;
-    #   bar_width  => 
-    #   bar_spacing =>
-
-    $graph->set_legend( "Yeast PeptideAtlas Genes", "All SGD Genes" );
-
-    my $gd_image = $graph->plot( \@data ) or die $graph->error;
-
-    open(PLOT, ">go_molecular_function.png") or 
-        die("Cannot open file for writing");
-
-    # Make sure we are writing to a binary stream
-    binmode PLOT;
-
-    # Convert the image to PNG and print it to the file PLOT
-    print PLOT $gd_image->png;
-
-    close PLOT;
-
-    print "wrote go_molecular_function.png\n";
-
-}
-
-
 
 #######################################################################
 # write_to_outfile - write to outfile the GO molecular term,
-# the number of SGD genes in the term bin, the number of Yeast
-# atlas genes in the term bin
+# and the percent of genes in that term foudn in the atlas
+# @param term_fraction_hash_ref 
 #######################################################################
 sub write_to_outfile
 {
 
     my %args = @_;
 
-    my $term_hash_ref = $args{term_hash_ref} || 
-        die "ERROR: Must pass term hash ($!)";
+    my $term_fraction_hash_ref = $args{term_fraction_hash_ref} || 
+        die "ERROR: Must pass term fraction hash ($!)";
 
-    my %term_hash= %{$term_hash_ref};
-
-    my $atlas_counts_ref = $args{atlas_counts_ref} || 
-        die "ERROR: Must pass atlas_counts_ref ($!)";
-
-    my %atlas_counts = %{$atlas_counts_ref};
-
-    my $referenceDB_counts_ref = $args{referenceDB_counts_ref} || 
-        die "ERROR: Must pass referenceDB_counts_ref ($!)";
-
-    my %referenceDB_counts = %{$referenceDB_counts_ref};
-
-    ## %term_hash :      keys = GO id, value = the GO term
-    ## %binsHash  :      keys = GO id, value = num genes per bin
+    my %term_fraction_hash= %{$term_fraction_hash_ref};
 
     open(OUTFILE,">$outfile") or die "cannot write to $outfile";
 
     ## fill x, y, and data arrays:
-    foreach my $go_id ( keys %term_hash )
+    foreach my $go_term ( keys %term_fraction_hash )
     {
 
-        my $term = $term_hash{$go_id};
+#       my $go_term = $term_fraction_hash{$go_id};
+ 
+        my $percent = ($term_fraction_hash{$go_term}) * 100;
 
-        print OUTFILE sprintf("%45s    %8.0f    %8.0f\n",
-            $term, $referenceDB_counts{$term}, 
-            $atlas_counts{$term});
+        print OUTFILE sprintf("%45s  %8.0f\n",
+            $go_term, $percent );
 
     }
 
@@ -578,30 +273,17 @@ sub write_to_outfile
 #######################################################################
 #
 # make_percent_bar_graph
-#
+# @param term_fraction_hash
 #######################################################################
 sub make_percent_bar_graph
 {
 
     my %args = @_;
 
-    my $term_hash_ref = $args{term_hash_ref} || 
-        die "ERROR: Must pass term hash ($!)";
+    my $term_fraction_hash_ref = $args{term_fraction_hash_ref} || 
+        die "ERROR: Must pass term fraction hash ($!)";
 
-    my %term_hash= %{$term_hash_ref};
-
-    my $atlas_counts_ref = $args{atlas_counts_ref} || 
-        die "ERROR: Must pass atlas_counts_ref ($!)";
-
-    my %atlas_counts = %{$atlas_counts_ref};
-
-    my $referenceDB_counts_ref = $args{referenceDB_counts_ref} || 
-        die "ERROR: Must pass referenceDB_counts_ref ($!)";
-
-    my %referenceDB_counts = %{$referenceDB_counts_ref};
-
-    ## %term_hash :      keys = GO id, value = the GO term
-    ## %binsHash  :      keys = GO id, value = num genes per bin
+    my %term_fraction_hash= %{$term_fraction_hash_ref};
 
     my (@x, @y, @data);
 
@@ -609,28 +291,16 @@ sub make_percent_bar_graph
 
 
     ## fill x, y, and data arrays:
-    foreach my $go_id ( keys %term_hash )
+    foreach my $go_term ( keys %term_fraction_hash )
     {
 
-        my $term = $term_hash{$go_id};
+#       my $go_term = $term_fraction_hash{$go_id};
+ 
+        my $percent = ($term_fraction_hash{$go_term}) * 100;
 
-        my $tmp_y;
+        push(@x, $go_term);
 
-        if ( $referenceDB_counts{$term} == 0 )
-        {
-
-            $tmp_y = 0;
-
-        } else
-        {
-
-            $tmp_y = 100. * ($atlas_counts{$term} / $referenceDB_counts{$term});
-
-        }
-
-        push(@x, $term);
-
-        push(@y, $tmp_y );
+        push(@y, $percent);
 
     }
 
@@ -651,10 +321,11 @@ sub make_percent_bar_graph
     $graph->set(
         line_width      => 2,
     #   title           => "Yeast PeptideAtlas (Jul 2005, P>0.9)",
-        x_label         => "GO Molecular Function bin",
-        y_label         => "Percentage of GO annotated DB Reference Genes",
+        x_label         => "GO Molecular Function Level 1 Leaf Terms",
+        y_label         => "Percentage of Term Genes in Yeast PeptideAtlas",
         x_labels_vertical => 1,
         y_max_value     => $ymax,
+        y_min_value     => 0,
         l_margin => 10,
         r_margin => 10,
         b_margin => 10,
@@ -714,3 +385,87 @@ sub print_hash
     }
 
 }
+
+
+#######################################################################
+# getTermFractions
+# @param $term_hash_ref
+# @return hash with key = term, value = fraction atlas genes in term
+#######################################################################
+sub getTermFractions
+{
+
+    my %args = @_;
+
+    my $term_hash_ref = $args{'term_hash_ref'} or die 
+        "need term_hash_ref ($!)";
+
+    my %term_hash = %{$term_hash_ref};
+
+    my %term_fraction_hash;
+
+    foreach my $go_id (keys %term_hash)
+    {
+        my $sql = qq~
+        SELECT COUNT (DISTINCT B.biosequence_gene_name)
+        FROM $TBAT_ATLAS_BUILD AB, $TBAT_BIOSEQUENCE B,
+        $TBAT_BIOSEQUENCE_ANNOTATED_GENE BAG,
+        $TBBL_ANNOTATED_GENE AG, $TBBL_GENE_ANNOTATION GA
+        WHERE AB.atlas_build_id = '$atlas_build_id'
+        AND AB.biosequence_set_id = B.biosequence_set_id
+        AND BAG.biosequence_id = B.biosequence_id
+        AND BAG.annotated_gene_id = AG.annotated_gene_id
+        AND GA.annotated_gene_id = AG.annotated_gene_id
+        AND AG.organism_namespace_id='2'
+        AND GA.gene_annotation_type_id='1'
+        AND GA.hierarchy_level='1'
+        AND GA.external_accession = '$go_id'
+        ~;
+
+        my ($n_all_genes_in_term) = $sbeams->selectOneColumn($sql);
+
+        $sql = qq~
+        SELECT COUNT (DISTINCT B.biosequence_gene_name)
+        FROM  $TBAT_BIOSEQUENCE B,
+        $TBAT_BIOSEQUENCE_ANNOTATED_GENE BAG,
+        $TBBL_ANNOTATED_GENE AG, 
+        $TBBL_GENE_ANNOTATION GA,
+        $TBAT_PEPTIDE_INSTANCE PEPI, 
+        $TBAT_PEPTIDE_MAPPING PM
+        WHERE PEPI.atlas_build_id = '$atlas_build_id'
+        AND PEPI.peptide_instance_id = PM.peptide_instance_id
+        AND PM.matched_biosequence_id = B.biosequence_id
+        AND BAG.biosequence_id = B.biosequence_id
+        AND BAG.annotated_gene_id = AG.annotated_gene_id
+        AND GA.annotated_gene_id = AG.annotated_gene_id
+        AND AG.organism_namespace_id='2'
+        AND GA.gene_annotation_type_id='1'
+        AND GA.hierarchy_level='1'
+        AND GA.external_accession = '$go_id'
+        ~;
+
+        my ($n_atlas_genes_in_term) = $sbeams->selectOneColumn($sql);
+
+        my $frac;
+        if ($n_all_genes_in_term == 0)
+        {
+            #$frac = -99;
+            $frac = 0;
+        } else
+        {
+            $frac = $n_atlas_genes_in_term / $n_all_genes_in_term;
+        }
+        $frac = sprintf("%6.2f", $frac);
+
+        my $go_term = $term_hash{$go_id};
+
+#       print "$frac $go_term\n";
+        
+        $term_fraction_hash{ $go_term } = $frac;
+
+    }
+
+    return %term_fraction_hash;
+
+}
+
