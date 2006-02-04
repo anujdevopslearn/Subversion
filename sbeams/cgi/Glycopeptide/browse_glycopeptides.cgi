@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 
 ###############################################################################
-# $Id$
+# $Id: Glyco_prediction.cgi 4280 2006-01-13 06:02:10Z dcampbel $
 #
 # SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
@@ -15,8 +15,6 @@
 # Get the script set up with everything it will need
 ###############################################################################
 use strict;
-use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
-             $current_contact_id $current_username $glyco_query_o);
 use lib qw (../../lib/perl);
 use CGI::Carp qw(fatalsToBrowser croak);
 use Data::Dumper;
@@ -33,32 +31,20 @@ use SBEAMS::Glycopeptide::Tables;
 use SBEAMS::Glycopeptide::Get_glyco_seqs;
 use SBEAMS::Glycopeptide::Glyco_query;
 
-$sbeams = new SBEAMS::Connection;
-$sbeamsMOD = new SBEAMS::Glycopeptide;
-$sbeamsMOD->setSBEAMS($sbeams);
-
-
-$glyco_query_o = new SBEAMS::Glycopeptide::Glyco_query;
-$glyco_query_o->setSBEAMS($sbeams);
-
-
-###############################################################################
 # Global Variables
 ###############################################################################
-$PROG_NAME = 'main.cgi';
-my $file_name    = $$ . "_glyco_predict.png";
-my $tmp_img_path = "images/tmp";
-my $img_file     = "$PHYSICAL_BASE_DIR/$tmp_img_path/$file_name";
+#
+my $sbeams = new SBEAMS::Connection;
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+my $sbeamsMOD = new SBEAMS::Glycopeptide;
+$sbeamsMOD->setSBEAMS($sbeams);
+
+my $glyco_query_o = new SBEAMS::Glycopeptide::Glyco_query;
+$glyco_query_o->setSBEAMS($sbeams);
+
 my $predicted_track_type = "Predicted Peptides";
 my $id_track_type 		 = 'Identified Peptides';
-$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
-my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/Glyco_prediction.cgi";
-
-my @search_types = ('Gene Symbol',
-					'Gene Name/Alias',
-					'Swiss Prot Accession Number',
-					'IPI Accession Number',
-					  );
 
 
 main();
@@ -72,6 +58,7 @@ main();
 ###############################################################################
 sub main 
 { 
+  my $current_username;
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate(
        # permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin',
@@ -92,44 +79,21 @@ sub main
     ## get project_id to send to HTMLPrinter display
     my $project_id = $sbeams->getCurrent_project_id();
 
-
     #### Process generic "state" parameters before we start
     $sbeams->processStandardParameters(parameters_ref=>\%parameters);
     #$sbeams->printDebuggingInfo($q);
-
+   
+    my $content;
     #### Decide what action to take based on information so far
-    if ($parameters{action} eq "Show_detail_form" || $parameters{redraw_protein_sequence} == 1) {
-		
-		 clean_params(\%parameters);
-		
-		 my $ipi_data_id = $parameters{'ipi_data_id'};
-		
-		 $sbeamsMOD->display_page_header(project_id => $project_id);
-		print $sbeams->getPopupDHTML();
-		display_detail_form(ref_parameters=>\%parameters,
-							ipi_data_id => $ipi_data_id,
-							);
-		
-		$sbeamsMOD->display_page_footer();
-		
-	}elsif($parameters{action} eq 'Show_hits_form'){
-		
-		 $sbeamsMOD->display_page_header(project_id => $project_id);
-		print $sbeams->getPopupDHTML();
-		
-		display_hits_form(ref_parameters=>\%parameters);
-		$sbeamsMOD->display_page_footer();
-    
+    if ($parameters{action} eq "show_all") {
+	    $content = display_proteins( 'all' );	
     } else {
-
-        $sbeamsMOD->display_page_header(project_id => $project_id);
-		handle_request(ref_parameters=>\%parameters);
-		$sbeamsMOD->display_page_footer();
-
+	    $content = display_proteins( 'identified' );	
     }
 
-
-
+    $sbeamsMOD->display_page_header(project_id => $project_id);
+    print "$content";
+		$sbeamsMOD->display_page_footer();
 
 } # end main
 
@@ -138,14 +102,72 @@ sub main
 ###############################################################################
 sub handle_request {
  	my %args = @_;
+  my $params = shift;
+ 	my %params = %{$params};
+}
 
-    #### Process the arguments list
-    	my $ref_parameters = $args{'ref_parameters'}
-        || die "ref_parameters not passed";
 
-    	my %parameters = %{$ref_parameters};
-$log->debug(Dumper($ref_parameters));
+sub display_proteins{
+  my $mode = shift;
+
+	my @results_set = $glyco_query_o->all_proteins_query($mode);	
+  my $html = '';
+
+	$html .= $q->start_table() .
+           $q->Tr({class=>'rev_gray'},
+           $q->td('IPI ID'),
+           $q->td('Protein Name'),
+           $q->td('Protein Symbol'),
+           $q->td('Identified Peptides')
+           );
+
+	my $cgi_url = "Glyco_prediction.cgi?action=Show_detail_form&ipi_data_id";
+
+	foreach my $h_ref (@results_set){
+		my $ipi_id = $h_ref->{ipi_data_id};
+		my $num_identified = $h_ref->{num_identified};
+		my $ipi_acc = $h_ref->{ipi_accession_number};
+		my $protein_name = nice_term_print($h_ref->{protein_name});
+		my $protein_sym = $h_ref->{protein_symbol};
+		
+		$html .= $q->Tr(
+			        $q->td( $q->a({href=>"$cgi_url=$ipi_id"},$ipi_acc)),
+			        $q->td($protein_name),
+			        $q->td($protein_sym),
+			        $q->td({ALIGN=>'right'},$num_identified)
+			        );
+	}
+	$html .= "</table>";
+}
 	
+###############################################################################
+#nice_term_print
+#put breaks into long lines
+###############################################################################
+sub nice_term_print{
+	my $info = shift;
+	my @html = ();
+	
+	my $info = substr($info, 0, 75, '...'); #chop things down to 75 or less
+	my @hold = split /\s/, $info;
+	
+	my $count = 0;
+	foreach my $term(@hold){
+		if ($count <= 5){
+			push @html, $term;
+		}else{
+			$count == 0;
+			push @html, "$term<br>";
+		}
+	
+	}
+	return join " ", @html;
+}
+
+###############################################################################
+
+
+__DATA__
 	print 
 	$q->table({class=>'table_setup'},
           $q->Tr({class=>'rev_gray'},
@@ -334,15 +356,13 @@ sub find_hits{
 	}
 
 }
-###############################################################################
 #print_out_hits_page
-#
 ###############################################################################
 sub print_out_hits_page{
 	
 	my %args = @_;
 
-	my @results_set = @{ $args{results_set_aref} };
+	my @results_set = $glyco_query_o->gene_symbol_query($parameters{search_term});	
 	my %parameters = %{ $args{ref_parameters} };
 
 	if (exists $parameters{similarity_score} && defined $parameters{similarity_score}){
@@ -380,31 +400,6 @@ sub print_out_hits_page{
 	print "</table>";
 }
 
-###############################################################################
-#nice_term_print
-#put breaks into long lines
-###############################################################################
-sub nice_term_print{
-	my $info = shift;
-	my @html = ();
-	
-	my $info = substr($info, 0, 75, '...'); #chop things down to 75 or less
-	my @hold = split /\s/, $info;
-	
-	my $count = 0;
-	foreach my $term(@hold){
-		if ($count <= 5){
-			push @html, $term;
-		}else{
-			$count == 0;
-			push @html, "$term<br>";
-		}
-	
-	}
-	return join " ", @html;
-}
-
-###############################################################################
 #print_error
 #print a simple error message
 ###############################################################################
