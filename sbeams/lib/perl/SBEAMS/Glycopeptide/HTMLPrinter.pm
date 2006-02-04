@@ -280,6 +280,7 @@ sub display_page_header {
     ~;
 
     #print ">>>http_header=$http_header<BR>\n";
+    my $prophet_control = $self->get_prophet_control();
 
     if ($navigation_bar eq "YES") {
       print qq~
@@ -296,7 +297,11 @@ sub display_page_header {
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Glyco_prediction.cgi"><nobr>&nbsp;&nbsp;&nbsp;Search Glycopeptides</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/browse_glycopeptides.cgi"><nobr>&nbsp;&nbsp;&nbsp;Identified Proteins</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
+
+  $prophet_control
+
 	</table>
 	</td>
 
@@ -316,6 +321,20 @@ sub display_page_header {
 
 # 	<table border=0 width="680" bgcolor="#ffffff" cellpadding=4>
 
+sub get_prophet_control {
+  my $self = shift;
+  my $current = $self->get_current_prophet_cutoff();
+  my @stock = qw( 0.5 0.6 0.7 0.8 0.9 1.0 );
+  if ( defined $current && !grep /^$current$/, @stock ) {
+    push @stock, $current;
+    @stock = sort(@stock);
+  }
+  my $select = $sbeams->new_option_list(  names => \@stock,
+                                       'values' => \@stock,
+                                       selected => $current,
+                                      list_name => 'prophet_score',
+                                        );
+}
 
 ###############################################################################
 # printStyleSheet
