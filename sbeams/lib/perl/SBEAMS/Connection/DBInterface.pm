@@ -731,7 +731,7 @@ sub selectrow_hashref {
   #### Convert the SQL dialect if necessary
   $sql = $self->translateSQL( sql => $sql );
 
-  my $row;
+  my $row = {};
 
   eval {
     $row = $dbh->selectrow_hashref( $sql );
@@ -2284,6 +2284,30 @@ sub buildOptionList {
 
     return $options;
 
+}
+
+sub new_option_list {
+  my $self = shift;
+  my %args = @_;
+  for my $req ( qw(values names list_name) ) {
+    $log->error( "Missing required parameter $req" );
+    return undef;
+  }
+  unless ( ref $args{values} eq 'ARRAY' &&
+           ref $args{names} eq 'ARRAY' &&
+           $#{$args{values}} == $#{$args{names}} ) {
+    $log->error( "Problem with value/name arrays" );
+    return undef;
+  }
+  $args{selected} = '' if !defined $args{selected}; 
+
+  my $list = "<SELECT NAME=$args{list_name}>\n";
+  for ( my $i = 0; $i <= $#{$args{names}}; $i++ ) {
+    my $sel = ( "$args{selected}" eq "$args{names}->[$i]" ) ? 'SELECTED' : '';
+    $list .= "<OPTION NAME=$args{values}->[$i] $sel>$args{names}->[$i]\n";
+  }
+  $list .= "</SELECT>";
+  return $list;
 }
 
 
