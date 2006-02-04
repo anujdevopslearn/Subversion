@@ -47,6 +47,24 @@ sub get_site_positions {
   return \@posn;
 }
 
+sub get_current_prophet_cutoff {
+  my $self = shift;
+  my $sbeams = $self->getSBEAMS();
+  my $cutoff = $sbeams->getSessionAttribute( key => 'glyco_prophet_cutoff' );
+  $cutoff = 0.5 if !defined $cutoff;
+  return $cutoff;
+}
+
+sub process_prophet_cutoff {
+  my $self = shift;
+  my $sbeams = $self->getSBEAMS();
+  my $cutoff = $sbeams->getSessionAttribute( key => 'glyco_prophet_cutoff' );
+  $cutoff = 0.5 if !defined $cutoff;
+  return $cutoff;
+}
+
+
+
 
 
 sub clean_pepseq {
