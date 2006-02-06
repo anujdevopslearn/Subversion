@@ -1,0 +1,25 @@
+
+Notes installing the SBEAMS - Biomarker module
+
+1) Background:
+
+This SBEAMS module is designed to track sample information in a lab workflow,
+specifically LC/MS sample processing.  
+
+-------------------------------------------------------------------------------
+1) Software and module Dependencies
+
+The Biomarker module depends on the 2 'base' SBEAMS modules, i.e. Core and 
+BioLink.  These prerequisites must be installed before the Biomarker 
+installation can proceed.
+
+
+The following Perl Modules are required, in addition to those specified in the
+SBEAMS Core installation notes:
+
+
+Spreadsheet::ParseExcel
+Spreadsheet::ParseExcel::Simple
+
+
+-------------------------------------------------------------------------------
