@@ -227,7 +227,6 @@ sub printStyleSheet {
 
     print qq~
 	<style type="text/css">
-	//<!--
 	body {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt}
 	th   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; font-weight: bold;}
 	td   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt;}
@@ -250,13 +249,13 @@ sub printStyleSheet {
 	.nav {  font-family: Helvetica, Arial, sans-serif; color: #000000}
 	.white_bg{background-color: #FFFFFF }
 	.grey_bg{ background-color: #CCCCCC }
-	.med_gray_bg{ background-color: #CCCCCC; ${FONT_SIZE_LG}pt; font-weight: bold; Padding:2}
+	.med_gray_bg{ background-color: #CCCCCC; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; Padding:2}
 	.grey_header{ font-family: Helvetica, Arial, sans-serif; color: #000000; font-size: ${FONT_SIZE_HG}pt; background-color: #CCCCCC; font-weight: bold; padding:1 2}
-	.rev_gray{background-color: #555555; ${FONT_SIZE_LG}pt; font-weight: bold; color:white; line-height: 25px;}
-	.blue_bg{ font-family: Helvetica, Arial, sans-serif; background-color: #4455cc; ${FONT_SIZE_HG}pt; font-weight: bold; color: white}
-	.lite_blue_bg{font-family: Helvetica, Arial, sans-serif; background-color: #eeeeff; ${FONT_SIZE_HG}pt; color: #cc1111; font-weight: bold;border-style: solid; border-width: 1px; border-color: #555555 #cccccc #cccccc #555555;}
-	.orange_bg{ background-color: #FFCC66; ${FONT_SIZE_LG}pt; font-weight: bold}
-	.red_bg{ background-color: #882222; ${FONT_SIZE_LG}pt; font-weight: bold; color:white; Padding:2}
+	.rev_gray{background-color: #555555; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; color:white; line-height: 25px;}
+	.blue_bg{ font-family: Helvetica, Arial, sans-serif; background-color: #4455cc; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; color: white}
+	.lite_blue_bg{font-family: Helvetica, Arial, sans-serif; background-color: #eeeeff; font-size: ${FONT_SIZE_HG}pt; color: #cc1111; font-weight: bold;border-style: solid; border-width: 1px; border-color: #555555 #cccccc #cccccc #555555;}
+	.orange_bg{ background-color: #FFCC66; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
+	.red_bg{ background-color: #882222; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; color:white; Padding:2}
 	.small_cell {font-size: 8; background-color: #CCCCCC; white-space: nowrap  }
 	.anno_cell {white-space: nowrap  }
 	.present_cell{border: none}
@@ -265,7 +264,7 @@ sub printStyleSheet {
 	.small_text{font-family: Helvetica,Arial,sans-serif; font-size:x-small; color:#aaaaaa}
 	.table_setup{border: 0px ; border-collapse: collapse;   }
 	.pad_cell{padding:5px;  }
-	.sequence_font{font-family:courier; ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5}	
+	.sequence_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5}	
 	.white_hyper_text{font-family: Helvetica,Arial,sans-serif; color:#000000;}
 	
 	.white_text    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: white; CURSOR: help;}
@@ -273,7 +272,7 @@ sub printStyleSheet {
 	
 	.identified_pep{ 
 	background-color: #882222; 
-	${FONT_SIZE_LG}pt; 
+	font-size: ${FONT_SIZE_LG}pt; 
 	font-weight: bold ; 
 	color:white; 
 	Padding:1;
@@ -288,7 +287,7 @@ sub printStyleSheet {
 	}
 	.predicted_pep{ 
 	background-color: #FFCC66; 
-	${FONT_SIZE_LG}pt; 
+	font-size: ${FONT_SIZE_LG}pt; 
 	font-weight: bold; 
 	border-style: solid;
 	border-width: 1px;
@@ -298,14 +297,14 @@ sub printStyleSheet {
 	
 	}
 	
-	.sseq{ background-color: #CCCCFF; ${FONT_SIZE_LG}pt; font-weight: bold}
-	.tmhmm{ background-color: #CCFFCC; ${FONT_SIZE_LG}pt; font-weight: bold; text-decoration:underline}
+	.sseq{ background-color: #CCCCFF; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
+	.tmhmm{ background-color: #CCFFCC; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; text-decoration:underline}
 	
 	.glyco_site{ background-color: #ee9999; 
 	border-style: solid;
 	border-width: 1px;
 	/* top right bottom left */
-	border-color: #444444 #eeeeee #eeeee #444444; }	
+	border-color: #444444 #eeeeee #eeeeee #444444; }	
 	
 	
 	a.edit_menuButton:link {
@@ -435,8 +434,6 @@ a.blue_button:active{
 	border-bottom: 1px solid #003366; \
 	border-left:1px solid #B7CFEB; 
 }
-	
-	//-->
 	</style>
     ~;
 
@@ -1066,6 +1063,85 @@ sub getModuleButton {
   }
    
   END
+}
+
+#+
+# Generates CSS, javascript, and HTML to render a section (DIV) 'toggleable'
+# @narg content  - The actual content (generally HTML) to hide/show, required
+# @narg visible  - default visiblity, orignal state of content (default is 0)
+# @narg helptext - 0/1, should show/hide help text be shown (default is 0)
+# @narg name     - Name for this toggle thingy
+#-
+sub make_toggle_section {
+  my $self = shift;
+  my %args = @_;
+  my $html = '';
+  return $html unless $args{content};
+
+  my $hidetext = '';
+  my $showtext = '';
+  $args{helptext} = 0 unless defined $args{helptext};
+  if ( $args{helptext} ) {
+    $hidetext = ( $args{hidetext} ) ? $args{hidetext} : ' hide ';
+    $showtext = ( $args{helptext} ) ? $args{showtext} : ' show ' ;
+  }
+      
+  $args{visible} = 0 unless defined $args{visible};
+  my $hideclass = ( $args{visible} ) ? 'visible' : 'hidden';
+  my $showclass = ( $args{visible} ) ? 'hidden'  : 'visible';
+
+
+  # Add css if necessary
+  unless ( $self->{_show_hide_css} ) {
+    $self->{_show_hide_css}++;
+    $html =<<"    END"
+    <STYLE TYPE="text/css" media="screen">
+    div.visible {
+    display: inline;
+    white-space: nowrap;         
+    }
+    div.hidden {
+    display: none;
+    }
+    </STYLE>
+    END
+  }
+
+  $args{name} ||= $self->getRandomString( num_chars => 12,
+                                          char_set => [ 'A'..'z' ]
+                                        ); 
+  $html .=<<"  END";
+    <SCRIPT TYPE="text/javascript">
+    function toggle_${args{name}}() {
+      var mtable = document.getElementById('$args{name}');
+      var show = document.getElementById('showtext');
+      var hide = document.getElementById('hidetext');
+      var tgif = document.getElementById('$args{name}_gif');
+      if ( mtable.className == 'hidden' ) {
+        mtable.className = 'visible';
+        hide.className = 'visible';
+        show.className = 'hidden';
+        tgif.src =  '$HTML_BASE_DIR/images/small_gray_minus.gif'
+      } else {
+        mtable.className = 'hidden';
+        hide.className = 'hidden';
+        show.className = 'visible';
+        tgif.src =  '$HTML_BASE_DIR/images/small_gray_plus.gif'
+      }
+    }
+    </SCRIPT>
+
+    <DIV ID=$args{name} class="hidden"> $args{content} </DIV>
+  END
+
+  my $imagelink .=<<"  END";
+    <A ONCLICK="toggle_${args{name}}()"><IMG ID="$args{name}_gif" SRC="$HTML_BASE_DIR/images/small_gray_plus.gif"></A>
+    <DIV ID=hidetext class="$hideclass"> $hidetext</DIV>
+    <DIV ID=showtext class="$showclass"> $showtext</DIV>
+  END
+
+  # Return html as separate content/widget, or as a concatentated thingy
+  return wantarray ? ( $html, $imagelink ) : $html . $imagelink;
 }
 
 ###############################################################################

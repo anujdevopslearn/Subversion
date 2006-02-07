@@ -365,15 +365,15 @@ sub asCSSHTML {
              position:relative;
 	           float:left;
 	           width:100%;
-	           padding:0 0 0 0
-	           margin:0;
+	           padding:0 0 0 0;
+	           margin: 0px;
 	           list-style:none;
 	           line-height:1.75em;  
              }
    
     #menuset LI {
                 float:left;
-	              margin:0;
+	              margin: 0px;
 	              padding:0;
                 }
 
@@ -386,9 +386,9 @@ sub asCSSHTML {
                 padding:0.25em 1em;
               	font-weight:bold;
               	background:#$this->{inactiveColor};
-              	margin:0;
+              	margin: 0px;
               	border-left:1.25px solid #FFFFFF;
-              	border-top:1.25px solid #FFFFFFF;
+              	border-top:1.25px solid #FFFFFF;
               	border-right:1.25px solid #AAAAAA;
                 }
 
