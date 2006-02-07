@@ -24,6 +24,7 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::Biomarker;
 use SBEAMS::Biomarker::Biosample;
 use SBEAMS::Biomarker::Settings;
+use SBEAMS::Biomarker::Tables;
 
 
 ## Globals ##
@@ -64,6 +65,9 @@ use constant DEFAULT_VOLUME => 10;
 #      print $q->redirect( $q->self_url() );
 #      exit;
     }
+
+  } elsif ( $params->{apply_action} eq 'new_treatment' ) {
+    $content = treatment_form($params);
 
   } elsif ( $params->{apply_action} eq 'Review' ) {
     $content = verify_change( $params );
@@ -110,6 +114,13 @@ sub process_params {
   return $params;
 }
 
+sub error_redirect {
+  my $msg = shift || '';
+  my $type = shift || 'Error';
+  $sbeams->set_page_message( msg => $msg, type => $type );
+  print $q->redirct( "treatmentList.cgi" );
+  exit;
+}
 
 #+
 # Print treatment form
@@ -222,8 +233,12 @@ sub get_input_fields_hash {
                                    current => [$p->{experiment_id}] );
 
   # Get list of treatment_types from db 
-  $fields{treatment} = $biomarker->get_treatment_type_select( types => ['glycocap'],
-                                                        current => [$p->{treatment_type}] );
+  $fields{treatment} = $biomarker->get_treatment_type_select( 
+                                                        types => ['glycocap'],
+                                            current => [$p->{treatment_type}] );
+
+  error_redirect( "No experiments found, please switch projects" ) 
+                                                   unless $fields{treatment};
 
   # Get list of sample_types from db 
   $fields{input} = $biomarker->get_sample_type_select(  current => [$p->{input_type}],
@@ -491,6 +506,39 @@ sub get_treatment_summary {
 
 sub treatment_details {
   my $params = shift;
+  
+  my $stable = SBEAMS::Connection::DataTable->new();
+
+  my $row = $sbeams->selectrow_hashref( <<"  END" ) || {};
+  SELECT treatment_name,  treatment_type_name, treatment_description, input_volume, 
+         number_fractions, notebook_page, treatment_status, 
+   ( SELECT COUNT(*) FROM $TBBM_BIOSAMPLE WHERE treatment_id = $params->{treatment_id} ) AS total_samples,
+   ( SELECT COUNT(distinct parent_biosample_id) FROM $TBBM_BIOSAMPLE WHERE treatment_id = $params->{treatment_id} ) AS input_samples
+  FROM $TBBM_TREATMENT t JOIN  $TBBM_TREATMENT_TYPE tt ON t.treatment_type_id = tt.treatment_type_id 
+  WHERE treatment_id = $params->{treatment_id}
+  END
+
+  $log->error( $sbeams->evalSQL( <<"  EBD" ) );
+  SELECT treatment_name,  treatment_type_name, treatment_description, input_volume, 
+         number_fractions, notebook_page, treatment_status, 
+   ( SELECT COUNT(*) FROM $TBBM_BIOSAMPLE WHERE treatment_id = $params->{treatment_id} ) AS total_samples,
+   ( SELECT COUNT(distinct parent_sample_id) FROM $TBBM_BIOSAMPLE WHERE treatment_id = $params->{treatment_id} ) AS input_samples
+  FROM $TBBM_TREATMENT t JOIN  $TBBM_TREATMENT_TYPE tt ON t.treatment_type_id = tt.treatment_type_id 
+  WHERE treatment_id = $params->{treatment_id}
+  EBD
+
+  for my $key ( keys( %$row ) ) {
+    $stable->addRow( [ $key, $row->{$key} ] );
+  }
+
+  return <<"  END";
+  <H1>Details for $row->{treatment_type_name} $row->{treatment_name} (ID: $params->{treatment_id})</H1>
+	<BR>
+  $stable
+	<BR>
+  END
+
+  return;
   $sbeams->set_page_message( msg => 'Show details functionality is not yet complete', type => 'Info' );
   $q->delete( $q->param() );
   my $url = $q->self_url() . "?apply_action=list_treatments";

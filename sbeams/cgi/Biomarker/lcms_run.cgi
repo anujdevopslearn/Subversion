@@ -74,7 +74,7 @@ use constant DEFAULT_VOLUME => 10;
     download_run($params);
 
   } elsif ( $params->{apply_action} eq 'run_details'  ) {
-    run_details($params);
+    $content = run_details($params);
 
   } else {
     $content = get_lcms_form($params);
@@ -367,10 +367,38 @@ sub download_run {
 
 sub run_details {
   my $params = shift;
-  $sbeams->set_page_message( msg => 'Show details functionality is not yet complete', type => 'Info' );
-  $q->delete( $q->param() );
-  my $url = $q->self_url() . "?apply_action=list_runs";
-  print $q->redirect( $url );
-  exit;
+
+  my $stable = SBEAMS::Connection::DataTable->new();
+
+  my $row = $sbeams->selectrow_hashref( <<"  END" ) || {};
+  SELECT ms_run_id, ms_run_name, ms_run_description, ms_run_parameters, ms_instrument, 
+   injection_volume, ms_protocol, lc_run_description, lc_instrument, 
+   lc_gradient_program, ms_run_date, 
+   (SELECT COUNT(*) FROM $TBBM_MS_RUN_SAMPLE WHERE ms_run_id = $params->{ms_run_id})
+            AS total_samples
+  FROM $TBBM_MS_RUN t
+  WHERE ms_run_id = $params->{ms_run_id}
+  END
+
+  $log->error( $sbeams->evalSQL( <<"  EBD" ) );
+  SELECT ms_run_id, ms_run_name, ms_run_description, ms_run_parameters, ms_instrument, 
+   injection_volume, ms_protocol, lc_run_description, lc_instrument, 
+   lc_gradient_program, ms_run_date, 
+   (SELECT COUNT(*) FROM $TBBM_MS_RUN_SAMPLE WHERE ms_run_id = $params->{ms_run_id})
+            AS total_samples
+  FROM $TBBM_MS_RUN t
+  WHERE ms_run_id = $params->{ms_run_id}
+  EBD
+
+  for my $key ( keys( %$row ) ) {
+    $stable->addRow( [ $key, $row->{$key} ] );
+  }
+
+  return <<"  END";
+  <H1>Details for $row->{ms_run_name} (ID: $params->{ms_run_id})</H1>
+	<BR>
+  $stable
+	<BR>
+  END
 }
 
