@@ -102,6 +102,45 @@ sub display_page_header {
 
     if ($navigation_bar eq "YES") {
 		  my $pad = "<NOBR>&nbsp;&nbsp;&nbsp;";
+      my $management_table =<<"      END";
+      <table>
+      <tr><td>
+        <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Analysis_file">$pad Analysis_file</nobr></a>
+      </td></tr>
+      <tr><td>
+      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Attribute">$pad Attribute</nobr></a>
+      </td></tr>
+      <tr><td>
+      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Attribute_type">$pad Attribute_type</nobr></a>
+      </td></tr>
+      <tr><td>
+      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Biosample">$pad Biosample</nobr></a>
+      </td></tr>
+      <tr><td>
+      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Biosource">$pad Biosource</nobr></a>
+      </td></tr>
+      <tr><td>
+      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Disease">$pad Disease</nobr></a>
+      </td></tr>
+      <tr><td>
+      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Disease_type">$pad Disease_type</nobr></a>
+      </td></tr>
+      <tr><td>
+      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Experiment">$pad Experiment</nobr></a>
+      </td></tr>
+      <tr><td>
+      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Storage_location">$pad Storage_location</nobr></a>
+      </td></tr>
+      <tr><td>
+      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Treatment">$pad Treatment</nobr></a>
+      </td></tr>
+      <tr><td>
+      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Treatment_type">$pad Treatment_type</nobr></a>
+      </td></tr>
+      </table>
+      END
+      my ( $content, $link ) = $sbeams->make_toggle_section( content => $management_table );
+
       print qq~
 	<!------- Button Bar -------------------------------------------->
 	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
@@ -119,18 +158,9 @@ sub display_page_header {
 	<tr><td><a href="lcms_run.cgi?apply_action=list_runs">$pad View LC/MS runs</nobr></a></td></tr>
 	<tr><td><a href="lcms_run.cgi">$pad $pad Add LC/MS run</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td>Manage Tables:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Analysis_file">$pad Analysis_file</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Attribute">$pad Attribute</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Attribute_type">$pad Attribute_type</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Biosample">$pad Biosample</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Biosource">$pad Biosource</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Disease">$pad Disease</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Disease_type">$pad Disease_type</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Experiment">$pad Experiment</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Storage_location">$pad Storage_location</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Treatment">$pad Treatment</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Treatment_type">$pad Treatment_type</nobr></a></td></tr>
+	<tr><td>$link Manage Tables: </td></tr>
+	<tr><td> $content
+  </td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
@@ -139,6 +169,7 @@ sub display_page_header {
 
 	<!-------- Main Page ------------------------------------------->
 	<td valign=top>
+  <IMG SRC="$HTML_BASE_DIR/images/clear.gif" width=800 height=2
 	<table border=0 bgcolor="#ffffff" cellpadding=4>
 	<tr><td>$message
 
@@ -278,6 +309,7 @@ sub get_treatment_sample_select {
   my $type = $args{types} || die "missing required parameter types";
 
   $params->{experiment_id} ||= $this->get_first_experiment_id(@_);
+  return undef unless $params->{experiment_id};
   
   die "Must pass type as an arrayref" unless (ref($type) eq 'ARRAY');
 
@@ -330,6 +362,7 @@ sub get_lcms_sample_select {
   my $type = $args{types} || die "missing required parameter types";
 
   $params->{treatment_id} ||= $this->get_first_treatment_id(@_);
+  return 'n/a' if !defined $params->{treatment_id};
   
   die "Must pass type as an arrayref" unless (ref($type) eq 'ARRAY');
 
