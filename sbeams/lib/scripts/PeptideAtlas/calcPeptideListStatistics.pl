@@ -200,15 +200,42 @@ sub main {
   #### Now build a hash out of all peptides and count the distinct ones
   my %distinct_peptides;
   foreach my $peptide (@peptides) {
-    $distinct_peptides{$peptide->[1]}++;
+    $distinct_peptides{$peptide->[1]}->{count}++;
+    if (! $distinct_peptides{$peptide->[1]}->{best_probability}) {
+      $distinct_peptides{$peptide->[1]}->{best_probability} = $peptide->[2];
+    } elsif ($peptide->[2] >
+               $distinct_peptides{$peptide->[1]}->{best_probability}) {
+      $distinct_peptides{$peptide->[1]}->{best_probability} = $peptide->[2];
+    }
   }
+
+
+  #### If we want to write a revised 2+ton peptide list
+  my $write_filtered_peptide_list = 1;
+  if ($write_filtered_peptide_list) {
+    open(OUTFILT,">out.filtsequences");
+  }
+
 
   #### Count how many singleton peptides there are
   my $n_singleton_distinct_peptides = 0;
+  my $n_P1_singleton_distinct_peptides = 0;
   foreach my $peptide (keys(%distinct_peptides)) {
     $n_singleton_distinct_peptides++
-      if ($distinct_peptides{$peptide} == 1);
+      if ($distinct_peptides{$peptide}->{count} == 1);
+    $n_P1_singleton_distinct_peptides++
+      if ($distinct_peptides{$peptide}->{count} == 1 &&
+	  $distinct_peptides{$peptide}->{best_probability} == 1);
+    if ($write_filtered_peptide_list &&
+	$distinct_peptides{$peptide}->{count} > 1) {
+      print OUTFILT "$peptide\n";
+    }
   }
+
+  if ($write_filtered_peptide_list) {
+    close(OUTFILT);
+  }
+
 
 
   #### Now build a hash out of all peptides and count the distinct ones
@@ -252,10 +279,26 @@ sub main {
 
   print "Total distinct peptides: $n_distinct_peptides\n";
   print "Total singleton distinct peptides: $n_singleton_distinct_peptides\n";
+  print "Total P=1 singleton distinct peptides: $n_P1_singleton_distinct_peptides\n";
   print "Simulated correct distinct peptides: $n_correct_distinct_peptides\n";
   print "Simulated incorrect distinct peptides: $n_incorrect_distinct_peptides\n";
   print "Simulated distinct peptide FPR: $distinct_peptide_FPR\n";
-  print "Most pessimistic distinct peptide FPR: $most_pessimistic_distinct_peptide_FPR\n";
+  print "Most pessimistic distinct peptide FPR: $most_pessimistic_distinct_peptide_FPR\n\n";
+
+  my $num_incorr_mult_hit_percent = 6;
+  if ($P_threshold < .75) {
+    $num_incorr_mult_hit_percent = 10;
+  }
+
+
+  print "Discard all singletons and assume that $num_incorr_mult_hit_percent% of incorrect are 2+tons\n";
+  my $n_nonsingleton_distinct_peptides = $n_distinct_peptides-$n_singleton_distinct_peptides;
+  print "Non-singleton distinct peptides: $n_nonsingleton_distinct_peptides\n";
+  my $n_nonsingleton_incorrect_assignments = int($n_incorrect_assignments*$num_incorr_mult_hit_percent/100);
+  print "$num_incorr_mult_hit_percent% of incorrect peptides: $n_nonsingleton_incorrect_assignments\n";
+  my $better_distinct_peptide_FPR = round($n_nonsingleton_incorrect_assignments/
+    $n_nonsingleton_distinct_peptides,3);
+  print "Estimated non-singleton distinct peptide FPR: $better_distinct_peptide_FPR\n\n";
 
 
   my $totREV = 0;
