@@ -25,7 +25,7 @@ use vars qw ($sbeams $sbeamsPROT $q
              $PROG_NAME $USAGE %OPTIONS $QUIET $DEBUG $DATABASE $TESTONLY
              %GO_leaf $GODATABASE $MYSQLGODBNAME
              $current_contact_id $current_username
-	     $MAX_LEVELS
+	     $MAX_LEVELS $gene_annotation_id
             );
 
 
@@ -50,6 +50,10 @@ Options:
   --testonly          Set flag which prevents executing SQL writes
   --xref_dbname       Defines which GO xref_dbname to load (e.g. FB, SGD)
   --godatabaseprefix  Database prefix of the local Gene Onology database (e.g. go.dbo.)
+  --bulk_import_file  If provided, the gene_annotation data will be written
+                      to a file of the provided name which will be suitable
+                      for bulk import into a database, which will be faster
+                      than INSERTs
 
  e.g.:  $PROG_NAME --testonly --xref_dbname FB
 
@@ -58,7 +62,7 @@ EOU
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-  "xref_dbname:s","godatabaseprefix:s","mysqlgodbname:s",
+  "xref_dbname:s","godatabaseprefix:s","mysqlgodbname:s","bulk_import_file:s",
   )) {
   print "$USAGE";
   exit;
@@ -175,13 +179,14 @@ sub handleRequest {
 
   #### Fetch all the term paths
   print "INFO: Fetching paths for all terms...\n";
-  my @term_paths = $sbeams->selectSeveralColumns($sql);
+  #my @term_paths = $sbeams->selectSeveralColumns($sql);
 
   #### Define a hash to store all organized lineages
   my %term_lineage;
 
   #### Loop over each flatten term path and store in the hash
-  foreach my $term_path ( @term_paths ) {
+  #foreach my $term_path ( @term_paths ) {
+  while (my $term_path = $sbeams->selectSeveralColumnsRow(sql=>$sql) ) {
     my $leaf_acc = $term_path->[0];
     my $leaf_name = $term_path->[1];
 
@@ -220,12 +225,11 @@ sub handleRequest {
 
   }
 
-  @term_paths = undef;
+  #### Free term_paths memory.  Really should use non-memory looping
+  #@term_paths = undef;
 
 
   ##########################################################################
-
-
 
 
 
@@ -339,6 +343,28 @@ sub handleRequest {
   ##########################################################################
 
 
+  #### If the output is a bulk import file
+  if ($OPTIONS{bulk_import_file}) {
+
+    #### Open the outfile file
+    open(OUTFILE,">".$OPTIONS{bulk_import_file}) or
+      die("ERROR: Unable to open $OPTIONS{bulk_import_file} for write");
+
+    #### Determine the starting gene_annotation_id
+    $gene_annotation_id = 1;
+
+
+    #### This would not survive concurrency, but is much faster
+    $sql = qq~
+	SELECT MAX(gene_annotation_id)
+	  FROM ${DATABASE}gene_annotation
+    ~;
+    my ($gene_annotation_id) = $sbeams->selectOneColumn($sql);
+    $gene_annotation_id++;
+
+  }
+
+
   #### Set up a hash of hashes to contain index and summary information
   my %gene_data;
   my $prev_gene_product_id;
@@ -387,15 +413,17 @@ sub handleRequest {
   }
 
   print "\nGetting list of all GO annotations for $xref_dbname...\n";
-  my @rows = $sbeams->selectSeveralColumns($sql);
-  print "Found ".scalar(@rows)." rows...  Process them all\n";
+  #my @rows = $sbeams->selectSeveralColumns($sql);
+  #print "Found ".scalar(@rows)." rows...  Process them all\n";
 
   #### Storage area for level-based annotations
   my $level_annotations;
 
   #### Loop over all rows of returned data
   my $row_counter = 0;
-  foreach my $row (@rows) {
+  #foreach my $row (@rows) {
+  #while (my $row = shift(@rows)) {
+  while (my $row = $sbeams->selectSeveralColumnsRow(sql=>$sql)) {
 
     #### Extract some values from this row
     $gene_product_id = $row->[0];
@@ -480,15 +508,9 @@ sub handleRequest {
     $rowdata{idx} =
       $gene_data{$gene_product_id}->{$gene_annotation_type_id}->{idx};
 
-    #### Insert the row
-    my $result = $sbeams->insert_update_row(
-      insert=>1,
-      table_name=>"${DATABASE}gene_annotation",
+    #### Write the row
+    writeGeneAnnotationRow(
       rowdata_ref=>\%rowdata,
-      PK_name=>'gene_annotation_id',
-      #return_PK=>1,
-      verbose=>$VERBOSE,
-      testonly=>$TESTONLY,
     );
 
 
@@ -611,7 +633,7 @@ sub handleRequest {
 	 ORDER BY GP.id,GP.symbol,D2.xref_key
   ~;
 
-  @rows = $sbeams->selectSeveralColumns($sql);
+  my @rows = $sbeams->selectSeveralColumns($sql);
 
   #### Loop over all rows of returned data
   my $row_counter = 0;
@@ -643,14 +665,9 @@ sub handleRequest {
         $rowdata{external_accession} = $value->{external_accession};
         $rowdata{annotation} = $value->{annotation};
 
-        my $result = $sbeams->insert_update_row(
-          insert=>1,
-          table_name=>"${DATABASE}gene_annotation",
+        #### Write the row
+        writeGeneAnnotationRow(
           rowdata_ref=>\%rowdata,
-          PK_name=>'gene_annotation_id',
-          #return_PK=>1,
-          verbose=>$VERBOSE,
-          testonly=>$TESTONLY,
         );
 
       }
@@ -697,14 +714,9 @@ sub handleRequest {
     $rowdata{idx} =
       $gene_data{$gene_product_id}->{$gene_annotation_type_id}->{idx};
 
-    my $result = $sbeams->insert_update_row(
-      insert=>1,
-      table_name=>"${DATABASE}gene_annotation",
+    #### Write the row
+    writeGeneAnnotationRow(
       rowdata_ref=>\%rowdata,
-      PK_name=>'gene_annotation_id',
-      #return_PK=>1,
-      verbose=>$VERBOSE,
-      testonly=>$TESTONLY,
     );
 
 
@@ -736,20 +748,18 @@ sub handleRequest {
       $rowdata{external_accession} = $value->{external_accession};
       $rowdata{annotation} = $value->{annotation};
 
-      my $result = $sbeams->insert_update_row(
-        insert=>1,
-        table_name=>"${DATABASE}gene_annotation",
+      #### Write the row
+      writeGeneAnnotationRow(
         rowdata_ref=>\%rowdata,
-        PK_name=>'gene_annotation_id',
-        #return_PK=>1,
-        verbose=>$VERBOSE,
-        testonly=>$TESTONLY,
       );
 
     }
   }
 
-
+  if ($OPTIONS{bulk_import_file}) {
+    close(OUTFILE);
+    print "Bulk import file is closed.\n";
+  }
 
   return;
 
@@ -764,7 +774,7 @@ sub handleRequest {
 ###############################################################################
 
 ###############################################################################
-# transformGeneName
+# writeSummaryRecord
 ###############################################################################
 sub writeSummaryRecord {
   my %args = @_;
@@ -797,13 +807,9 @@ sub writeSummaryRecord {
         '[...]';
     }
 
-    my $result = $sbeams->insert_update_row(
-      insert=>1,
-      table_name=>"${DATABASE}gene_annotation",
+    #### Write the row
+    writeGeneAnnotationRow(
       rowdata_ref=>\%rowdata,
-      PK_name=>'gene_annotation_id',
-      verbose=>$VERBOSE,
-      testonly=>$TESTONLY,
     );
 
   }
@@ -928,14 +934,9 @@ sub writeLevelAnnotations {
 	$rowdata{external_accession} = $accession;
 	$rowdata{annotation} = $description;
 
-	#### Insert the row
-	my $result = $sbeams->insert_update_row(
-          insert=>1,
-          table_name=>"${DATABASE}gene_annotation",
+        #### Write the row
+        writeGeneAnnotationRow(
           rowdata_ref=>\%rowdata,
-          PK_name=>'gene_annotation_id',
-          verbose=>$VERBOSE,
-          testonly=>$TESTONLY,
         );
 
 	$idx++;
@@ -960,14 +961,9 @@ sub writeLevelAnnotations {
 	  '[...]';
       }
 
-      #### Insert the row
-      my $result = $sbeams->insert_update_row(
-        insert=>1,
-        table_name=>"${DATABASE}gene_annotation",
+      #### Write the row
+      writeGeneAnnotationRow(
         rowdata_ref=>\%rowdata,
-        PK_name=>'gene_annotation_id',
-        verbose=>$VERBOSE,
-        testonly=>$TESTONLY,
       );
 
       print "\n" if ($VERBOSE);
@@ -1032,3 +1028,51 @@ sub refreshAnnotationHierarchyLevels {
   return;
 
 }
+
+
+
+###############################################################################
+# writeGeneAnnotationRow
+###############################################################################
+sub writeGeneAnnotationRow {
+  my %args = @_;
+
+  my $rowdata = $args{'rowdata_ref'} || die("ERROR: rowdata not passed");
+
+  #### If we want to write to a bulk import file, write out a line
+  if ($OPTIONS{bulk_import_file}) {
+    my @columns = (
+      $gene_annotation_id,
+      $rowdata->{annotated_gene_id},
+      $rowdata->{gene_annotation_type_id},
+      $rowdata->{hierarchy_level},
+      $rowdata->{idx},
+      $rowdata->{is_summary},
+      $rowdata->{annotation},
+      $rowdata->{external_reference_set_id},
+      $rowdata->{external_accession},
+      '','','','','','a',
+    );
+    my $colstr = join("\t",@columns);
+    chop($colstr);
+    chop($colstr);
+    print OUTFILE $colstr."\r\n";
+    $gene_annotation_id++;
+    return(1);
+  }
+
+
+  #### Else insert a database record
+  $sbeams->insert_update_row(
+    insert=>1,
+    table_name=>"${DATABASE}gene_annotation",
+    rowdata_ref=>$rowdata,
+    PK_name=>'gene_annotation_id',
+    verbose=>$VERBOSE,
+    testonly=>$TESTONLY,
+  );
+
+
+  return(1);
+
+} # end writeGeneAnnotationRow
