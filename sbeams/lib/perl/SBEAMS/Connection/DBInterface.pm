@@ -996,6 +996,54 @@ sub selectSeveralColumns {
 
 
 ###############################################################################
+# selectSeveralColumnsRow
+#
+# Given a SQL statement which returns one or more columns, return one at a
+# time array refs for each row.  This is useful when the result of the query
+# may be very large and loading the full result into memory is undesirable.
+###############################################################################
+sub selectSeveralColumnsRow {
+    my $self = shift || croak("parameter self not passed");
+    my %args = @_;
+
+    my $sql = $args{sql} || croak("parameter sql not passed");
+    our $selectSeveralColumns_sth;
+
+    unless ($selectSeveralColumns_sth) {
+
+      #### Get the database handle
+      $dbh = $self->getDBHandle();
+
+      #### Convert the SQL dialect if necessary
+      $sql = $self->translateSQL(sql=>$sql);
+
+      $selectSeveralColumns_sth = $dbh->prepare($sql) or confess($dbh->errstr);
+      my $rv  = $selectSeveralColumns_sth->execute();
+
+      unless( $rv ) {
+        $log->error( "Error executing SQL:\n $sql" );
+        $log->printStack( 'error' );
+        confess $dbh->errstr;
+      }
+    }
+
+
+    #### If there's another row to return, return it
+    if (my $row = $selectSeveralColumns_sth->fetchrow_arrayref()) {
+      return($row);
+
+    #### Otherwise we're done
+    } else {
+      $selectSeveralColumns_sth->finish();
+      $selectSeveralColumns_sth = undef;
+      return(undef);
+    }
+
+} # end selectSeveralColumnsRow
+
+
+
+###############################################################################
 # selectHashArray
 #
 # Given a SQL statement which returns one or more columns, return an array
