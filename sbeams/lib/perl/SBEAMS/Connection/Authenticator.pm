@@ -1500,7 +1500,7 @@ sub checkLogin {
       } elsif ( $authResult == 3 ) {
         if ($more_helpful_message) {
           push(@ERRORS, "Incorrect password for this username");
-          $log->info( "Incorrect SMB password for $user ");
+          $log->warn( "Incorrect SMB password for $user ");
         } else {
           push(@ERRORS, "Login Incorrect");
         }
@@ -1509,8 +1509,9 @@ sub checkLogin {
 
       } else {
         if ($more_helpful_message) {
-          push(@ERRORS, "ERROR communication with Domain Controller");
-          $log->warn( " SMB Error with $SMBAUTH->{Domain} ");
+          push(@ERRORS, "ERROR communicating with the Domain Controller");
+          my $etype = ( $authResult == 1 ) ? 'SERVER_ERROR' : 'PROTOCOL_ERROR';
+          $log->error( "SMB Error with $SMBAUTH->{Domain}: $etype");
         } else {
           push(@ERRORS, "Login Incorrect");
         }
