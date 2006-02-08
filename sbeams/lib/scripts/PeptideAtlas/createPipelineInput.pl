@@ -355,7 +355,7 @@ sub pepXML_start_element {
       #### Store the peptide in a master full list to calculate stats
       push(@{ $self->{peptide_list} },
         [$self->{search_batch_id},$peptide_sequence,$attrs{probability},
-         $self->{pepcache}->{protein_name}]);
+         $self->{pepcache}->{protein_name},$self->{pepcache}->{spectrum}]);
 
     }
 
@@ -580,10 +580,13 @@ sub main {
       next if ($line =~ /^\s*#/);
       next if ($line =~ /^\s*$/);
       my ($search_batch_id,$path) = split(/\t/,$line);
-      die("ERROR: path contains 'xml'. Not allowed.") if($path =~ /\.xml/);
+      my $filepath = $path;
+      if ($filepath !~ /\.xml/) {
+	$filepath = $path."/interact-prob.xml";
+      }
       my ($pepXML_document,$protXML_document);
 
-      $pepXML_document->{filepath} = $path."/interact-prob.xml";
+      $pepXML_document->{filepath} = $filepath;
       $pepXML_document->{search_batch_id} = $search_batch_id;
       $pepXML_document->{document_type} = 'pepXML';
       push(@documents,$pepXML_document);
@@ -760,6 +763,8 @@ sub getPeptideAccession {
 
   #### If we get exactly one back, then return it
   if (scalar(@peptides) == 1) {
+    #### Put this new one in the hash for the next lookup
+    $peptide_accessions{$sequence} = $peptides[0];
     return $peptides[0];
   }
 
@@ -769,6 +774,9 @@ sub getPeptideAccession {
   my %rowdata;
   $rowdata{peptide} = $peptide;
   $rowdata{peptide_identifier_str} = 'tmp';
+
+  #### Do the next two statements as a transaction
+  $sbeams->initiate_transaction();
 
   #### Insert the data into the database
   my $peptide_identifier_id = $sbeams->insert_update_row(
@@ -806,6 +814,12 @@ sub getPeptideAccession {
     verbose=>$VERBOSE,
     testonly=>$TESTONLY,
   );
+
+  #### Commit the INSERT+UPDATE pair
+  $sbeams->commit_transaction();
+
+  #### Put this new one in the hash for the next lookup
+  $peptide_accessions{$sequence} = $identifier;
 
   return($identifier);
 
@@ -1140,10 +1154,12 @@ sub writePeptideListFile {
   open(OUTFILE,">$output_file")
     || die("ERROR: Unable to open '$output_file' for write");
 
-  print OUTFILE "search_batch_id\tsequence\tprobability\tprotein\n";
+  print OUTFILE "search_batch_id\tsequence\tprobability\t".
+    "protein_name\tspectrum_query\n";
 
   foreach my $peptide ( @{$peptide_list} ) {
-    print OUTFILE "$peptide->[0]\t$peptide->[1]\t$peptide->[2]\t$peptide->[3]\n";
+    print OUTFILE "$peptide->[0]\t$peptide->[1]\t$peptide->[2]\t".
+      "$peptide->[3]\t$peptide->[4]\n";
   }
 
   close(OUTFILE);
