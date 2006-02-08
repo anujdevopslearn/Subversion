@@ -2746,7 +2746,7 @@ sub cleanupArchive {
       print "  TGZ file OK\n";
       if ( -d "$root/$fraction_tag" ) {
         print "  Data subdir also exists, so purge it\n";
-        system("/bin/rm -r $root/$fraction_tag");
+        system("/bin/rm -rf $root/$fraction_tag");
       } else {
         print "  Data subdir not present which is OK\n";
       }
