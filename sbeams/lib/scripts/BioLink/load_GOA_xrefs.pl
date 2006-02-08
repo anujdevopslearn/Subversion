@@ -144,14 +144,45 @@ sub handleRequest {
     die("ERROR: option link_set_tag must be provided");
 
 
-  #### FIXME
-  $DATABASE = 'BioLink.dbo.';
+  $DATABASE = $DBPREFIX{BioLink};
 
 
   #### Print out the header
   unless ($QUIET) {
     $sbeams->printUserContext();
     print "\n";
+  }
+
+
+  #### If deletion was chosen, delete the relationships for the given
+  #### biosequence_set
+  if ($delete_existing) {
+
+    my $biosequence_set_id = get_biosequence_set_id(
+      biosequence_set_tag => $link_set_tag);
+
+    print "Would delete relationships for set $biosequence_set_id\n";
+    return;
+
+    my %table_child_relationship = (
+        biosequence_set => 'biosequence(C)',
+        biosequence =>'relationship(C)',
+        relationship =>'relationship_evidence(C)',
+    );
+
+    my $result = $sbeams->deleteRecordsAndChildren(
+      table_name => 'biosequence_set',
+      table_child_relationship => \%table_child_relationship,
+      delete_PKs => [ $biosequence_set_id ],
+      delete_batch => 1000,
+      database => $DATABASE,
+      verbose => $VERBOSE,
+      testonly => $TESTONLY,
+      keep_parent_record => 1,
+    );
+    print "All relationships deleted for this biosequence_set, and so were ".
+      "the biosequences.  You will need to rerun load_biosequence_set.";
+    return;
   }
 
 
