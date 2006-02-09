@@ -721,9 +721,13 @@ sub getPeptideAccession {
 
   #### If we haven't loaded the peptide accessions hash yet, do it now
   unless (%peptide_accessions) {
+    #my $sql = qq~
+    #   SELECT peptide_sequence,peptide_accession
+    #     FROM $TBAT_PEPTIDE P
+    #~;
     my $sql = qq~
-       SELECT peptide_sequence,peptide_accession
-         FROM $TBAT_PEPTIDE P
+       SELECT peptide,peptide_identifier_str
+         FROM $TBAPD_PEPTIDE_IDENTIFIER
     ~;
     print "Fetching all peptide accessions...\n";
     %peptide_accessions = $sbeams->selectTwoColumnHash($sql);
