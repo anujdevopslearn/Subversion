@@ -1,4 +1,5 @@
 props=jar://cytoscape.props
-dataServer=http://db.systemsbiology.net:8080/cytoscape/annotation/mouse/manifest
+dataServer=http://db.systemsbiology.net:8080/cytoscape/annotation/all.manifest
+species=Saccharomyces cerevisiae
 vprops=jar://vizmap.props
 $ALLFILESHERE
