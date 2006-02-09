@@ -6368,15 +6368,23 @@ function switchProject(){
 <SELECT NAME="projectIDChooser" onChange="switchProject()">
     ~;
 
+    #### Make the first option no project if no project is set
+    unless ($current_project_id) {
+      my $null_row = [ '','' ];
+      unshift(@rows,$null_row);
+    }
+
     foreach my $row_ref (@rows) {
       my ($project_id, $project_name) = @{$row_ref};
+      my $project_id_str = '';
+      $project_id_str = " ($project_id)" if ($project_id);
       if ($project_id == $current_project_id) {
 	$project_chooser .= qq~
-<OPTION SELECTED VALUE="$project_id">$project_name ($project_id)
+<OPTION SELECTED VALUE="$project_id">$project_name$project_id_str
         ~;
       }else {
 	$project_chooser .= qq~
-<OPTION VALUE="$project_id">$project_name ($project_id)
+<OPTION VALUE="$project_id">$project_name$project_id_str
         ~;
       }
     }
