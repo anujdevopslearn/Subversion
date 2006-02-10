@@ -1071,6 +1071,8 @@ sub getModuleButton {
 # @narg visible  - default visiblity, orignal state of content (default is 0)
 # @narg helptext - 0/1, should show/hide help text be shown (default is 0)
 # @narg name     - Name for this toggle thingy
+# @narg sticky   - Remember the state of this toggle in session?  Requires name
+# @narg width    - Maximum width to reserve for hidden items.
 #-
 sub make_toggle_section {
   my $self = shift;
@@ -1106,6 +1108,8 @@ sub make_toggle_section {
     </STYLE>
     END
   }
+  my $width = ( !$args{width} ) ? '' :
+    "<IMG SRC=$HTML_BASE_DIR/images/clear.gif WIDTH=$args{width} HEIGHT=2>";
 
   $args{name} ||= $self->getRandomString( num_chars => 12,
                                           char_set => [ 'A'..'z' ]
@@ -1130,8 +1134,8 @@ sub make_toggle_section {
       }
     }
     </SCRIPT>
-
-    <DIV ID=$args{name} class="hidden"> $args{content} </DIV>
+     $width
+    <DIV ID=$args{name} class="$hideclass"> $args{content} </DIV>
   END
 
   my $imagelink .=<<"  END";
