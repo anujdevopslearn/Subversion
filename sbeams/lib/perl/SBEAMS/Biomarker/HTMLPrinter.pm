@@ -36,6 +36,77 @@ sub printPageHeader {
   $this->display_page_header(@_);
 }
 
+sub getMenu {
+  my $self = shift;
+  my $sbeams = $self->getSBEAMS();
+  my $pad = "<NOBR>&nbsp;&nbsp;&nbsp;";
+  my $optional =<<"  END";
+  <TABLE>
+   <tr><td>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Analysis_file">$pad Analysis_file</nobr></a>
+   </td></tr>
+   <tr><td>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Attribute">$pad Attribute</nobr></a>
+   </td></tr>
+   <tr><td>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Attribute_type">$pad Attribute_type</nobr></a>
+   </td></tr>
+   <tr><td>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Biosample">$pad Biosample</nobr></a>
+   </td></tr>
+   <tr><td>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Biosource">$pad Biosource</nobr></a>
+   </td></tr>
+   <tr><td>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Disease">$pad Disease</nobr></a>
+   </td></tr>
+   <tr><td>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Disease_type">$pad Disease_type</nobr></a>
+   </td></tr>
+   <tr><td>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Experiment">$pad Experiment</nobr></a>
+   </td></tr>
+   <tr><td>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Storage_location">$pad Storage_location</nobr></a>
+   </td></tr>
+   <tr><td>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Treatment">$pad Treatment</nobr></a>
+   </td></tr>
+   <tr><td>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Treatment_type">$pad Treatment_type</nobr></a>
+   </td></tr>
+  </TABLE>
+  END
+  my ( $content, $link ) = $sbeams->make_toggle_section( content => $optional );
+
+  my $menu = qq~
+	<!------- Button Bar -------------------------------------------->
+	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
+	<TABLE border=0 width="120" cellpadding=2 cellspacing=0>
+
+	<tr><td><a href="$CGI_BASE_DIR/main.cgi">$DBTITLE Home</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/main.cgi">$SBEAMS_PART Home</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
+	<tr><td>&nbsp;</td></tr>
+	<tr><td>Lab Workflow:</td></tr>
+	<tr><td><a href="main.cgi">$pad View experiments</nobr></a></td></tr>
+	<tr><td><a href="upload_workbook.cgi">$pad Upload samples</nobr></a></td></tr>
+	<tr><td><a href="treatment.cgi?apply_action=list_treatments">$pad View treatments</nobr></a></td></tr>
+	<tr><td><a href="treatment.cgi">$pad $pad Add treatment</nobr></a></td></tr>
+	<tr><td><a href="lcms_run.cgi?apply_action=list_runs">$pad View LC/MS runs</nobr></a></td></tr>
+	<tr><td><a href="lcms_run.cgi">$pad $pad Add LC/MS run</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
+	<tr><td>$link Manage Tables: </td></tr>
+	<tr><td>$content</td></tr>
+	<tr><td>&nbsp;</td></tr>
+	<tr><td>Browse Data:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
+	</TABLE>
+  ~;
+  print STDERR "In getMenu\n";
+  return $menu;
+
+}
 
 ###############################################################################
 # display_page_header
@@ -86,7 +157,7 @@ sub display_page_header {
 
 	<!-- Background white, links blue (unvisited), navy (visited), red (active) -->
 	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" TOPMARGIN=0 LEFTMARGIN=0 OnLoad="self.focus();">
-	<table border=0 width="100%" cellspacing=0 cellpadding=1>
+	<TABLE border=0 width="100%" cellspacing=0 cellpadding=1>
 
 	<!------- Header ------------------------------------------------>
 	<a name="TOP"></a>
@@ -103,7 +174,7 @@ sub display_page_header {
     if ($navigation_bar eq "YES") {
 		  my $pad = "<NOBR>&nbsp;&nbsp;&nbsp;";
       my $management_table =<<"      END";
-      <table>
+      <TABLE>
       <tr><td>
         <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Analysis_file">$pad Analysis_file</nobr></a>
       </td></tr>
@@ -137,14 +208,14 @@ sub display_page_header {
       <tr><td>
       <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Treatment_type">$pad Treatment_type</nobr></a>
       </td></tr>
-      </table>
+      </TABLE>
       END
       my ( $content, $link ) = $sbeams->make_toggle_section( content => $management_table );
 
       print qq~
 	<!------- Button Bar -------------------------------------------->
 	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
-	<table border=0 width="120" cellpadding=2 cellspacing=0>
+	<TABLE border=0 width="120" cellpadding=2 cellspacing=0>
 
 	<tr><td><a href="$CGI_BASE_DIR/main.cgi">$DBTITLE Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/main.cgi">$SBEAMS_PART Home</a></td></tr>
@@ -158,19 +229,20 @@ sub display_page_header {
 	<tr><td><a href="lcms_run.cgi?apply_action=list_runs">$pad View LC/MS runs</nobr></a></td></tr>
 	<tr><td><a href="lcms_run.cgi">$pad $pad Add LC/MS run</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td>$link Manage Tables: </td></tr>
-	<tr><td> $content
-  </td></tr>
+	<tr><td NOWRAP>$link Manage Tables: </td></tr>
+	<tr><td>$content</td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
-	</table>
+	</TABLE>
 	</td>
 
 	<!-------- Main Page ------------------------------------------->
 	<td valign=top>
-  <IMG SRC="$HTML_BASE_DIR/images/clear.gif" width=800 height=2
-	<table border=0 bgcolor="#ffffff" cellpadding=4>
+	<TABLE border=0 bgcolor="#ffffff" cellpadding=4>
+  <TR><TD>
+      <IMG SRC="$HTML_BASE_DIR/images/clear.gif" width=720 height=1>
+  </TD></TR>
 	<tr><td>$message
 
     ~;
@@ -257,10 +329,11 @@ sub display_page_footer {
   my %args = @_;
 
 
+  # Surely this is a cut and paste residue...
   #### If the output mode is interactive text, display text header
   my $sbeams = $this->get_sbeams();
   if ($sbeams->output_mode() eq 'interactive') {
-    $sbeams->printTextHeader(%args);
+    # $sbeams->printTextHeader(%args);
     return;
   }
 
@@ -280,8 +353,8 @@ sub display_page_footer {
   #### If closing the content tables is desired
   if ($close_tables eq 'YES') {
     print qq~
-	</TD></TR></TABLE>
-	</TD></TR></TABLE>
+	</TD></TR></TABLE ID=BAR>
+	</TD></TR></TABLE ID=GAR>
     ~;
   }
 
