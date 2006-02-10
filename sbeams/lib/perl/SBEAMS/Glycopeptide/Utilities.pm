@@ -63,10 +63,6 @@ sub process_prophet_cutoff {
   return $cutoff;
 }
 
-
-
-
-
 sub clean_pepseq {
   my $this = shift;
   my $seq = shift || return;
@@ -82,5 +78,66 @@ sub clean_pepseq {
   $seq =~ s/\..$//g;
   return $seq;
 }
+
+###############################################################################
+# getResidueMasses: Get a hash of masses for each of the residues
+###############################################################################
+sub getResidueMasses {
+  my %args = @_;
+  my $SUB_NAME = 'getResidueMasses';
+
+  #### Define the residue masses
+  my %residue_masses = (
+    I => 113.1594,   # Isoleucine
+    V =>  99.1326,   # Valine
+    L => 113.1594,   # Leucine
+    F => 147.1766,   # Phenyalanine
+    C => 103.1388,   # Cysteine
+    M => 131.1926,   # Methionine
+    A =>  71.0788,   # Alanine
+    G =>  57.0519,   # Glycine
+    T => 101.1051,   # Threonine
+    W => 186.2132,   # Tryptophan
+    S =>  87.0782,   # Serine
+    Y => 163.1760,   # Tyrosine
+    P =>  97.1167,   # Proline
+    H => 137.1411,   # Histidine
+    E => 129.1155,   # Glutamic_Acid (Glutamate)
+    Q => 128.1307,   # Glutamine
+    D => 115.0886,   # Aspartic_Acid (Aspartate)
+    N => 114.1038,   # Asparagine
+    K => 128.1741,   # Lysine
+    R => 156.1875,   # Arginine
+
+    X => 113.1594,   # L or I
+    B => 114.5962,   # avg N and D
+    Z => 128.6231,   # avg Q and E
+    U => 100,        # ?????
+
+  );
+
+  return \%residue_masses;
+
+}
+
+sub getPeptideMass {
+  my $self = shift;
+  my $args = @_;
+  return undef unless $args{sequence};
+  my $rmass = $self->getResidueMasses();
+  my $seq = uc( $args{sequence} );
+  my @seq = split( "", $seq );
+  my $mass = 0;
+  foreach my $r ( @seq ) {
+    if ( !defined $rmass->{$r} ) {
+      print STDERR "Undefined residue $r is getPeptideMass\n";
+      return undef;
+    }
+    $mass += $rmass{$r};
+  }
+  return $mass;
+}
+
+
 1;
 
