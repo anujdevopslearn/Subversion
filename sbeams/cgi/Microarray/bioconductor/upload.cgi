@@ -8,7 +8,7 @@
 # Description : This program that allows users to
 #              view affy gene expression intensity
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2006 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -236,10 +236,43 @@ sub handle_request {
   	$tabmenu->addTab( label => 'Normalized Data', helptext => 'View completed normalized analysis runs' );
   	$tabmenu->addTab( label => 'Analysis Results', helptext => 'View differential expression runs' );
   
-	print "<br/><br/>";
+	print "<br>";
 	
-  # Add button/form to start a new analysis session
-	start_button() if $sbeams->isProjectWritable( admin_override => 0);
+  if( $sbeams->isProjectWritable( admin_override => 0) ) {
+    # Add button/form to start a new analysis session
+	  start_button(); 
+  } else {
+    print $sbeams->getPopupDHTML();
+    my $title = $q->escape('Project Permissions');
+    my $text = $q->escape( <<"    END" );
+    You lack write permission to the current project.  To create an analysis
+    session, please switch to a project for which you have write privilege, 
+    or request write privileges from the PI of the current project
+    END
+    my $url = "$HTML_BASE_DIR/cgi/help_popup.cgi?text=$text;title=$title;email_link=no";
+
+    print <<"    END";  
+    <FONT COLOR="green"> Cannot create new analysis session in current project </FONT>
+    <A HREF="" onclick='popitup("$url")'> (details) </A>
+	  <br>
+	  <br>
+    END
+
+    my $deadend =<<"    END";  
+    <SCRIPT LANGUAGE="javascript">
+    function submit_form() {
+      document.INFO_FORM.submit();
+      return true;
+    }
+    </SCRIPT>
+    <FORM METHOD=POST ACTION="../../help_popup.cgi" NAME=INFO_FORM>
+    <INPUT TYPE=HIDDEN NAME=title VALUE="Project Permissions">
+    <INPUT TYPE=HIDDEN NAME=text VALUE="Project Permission info">
+    <FONT COLOR="green"> Unable to create new analysis session</FONT>
+    <A onclick="submit_form()" TARGET=info_window> details </A>
+    </FORM>
+    END
+  }
 
 	print "$tabmenu";
 
