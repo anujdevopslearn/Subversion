@@ -7,7 +7,7 @@
 #
 # Description : Window to be popped up by JavaScript, with help text.
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2006 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -59,6 +59,7 @@ my $table_name     = $q->param( 'table_name' );
 my $table_group    = $q->param( 'table_group' );
 my @groups         = $q->param( 'groupinfo' );
 my $project_id     = $q->param( 'project_id' );
+my $email_link     = $q->param( 'email_link' ) || 'yes';
 
 if ($help_text_id) {
 ######################################
@@ -98,35 +99,39 @@ if ($help_text_id) {
 my $FONT_SIZE=12;
 $FONT_SIZE=10 if ( $HTTP_USER_AGENT =~ /Win/ );
 
-print $q->header( "text/html" );
+print $q->header('text/html');
 
+my $email_help = '<BR>';
+if ( $email_link =~ /yes/i ) {
+$email_help =<<"  END";
+  <table border=0 cellspacing=0 cellpadding=0 width=100%>
+  	<tr height=25>
+  		<td bgcolor=#99cc66 align=right>
+  			<font size=2>
+  			Need more help? Email <a href="mailto:$DBADMIN">your local $DBTITLE administrator $DBADMIN</a>&nbsp;
+  		</td>
+  	</tr>
+  </table>
+  END
+}
 
 print qq~
 <HTML>
 <HEAD>
 <TITLE>SBEAMS Help - $title</TITLE>
 <style type="text/css">
-//<!--
 body {  font-family: Tahoma, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt;}
 td   {  font-family: Tahoma, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt;}
 form   {  font-family: Tahoma, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt;}
-//-->
 </style>
 </HEAD>
 
 <BODY bgcolor="#ffffff" alink=#ff3399 link=#6600cc text=#000000 vlink=#993366 leftmargin=0 topmargin=0>
-<table border=0 cellspacing=0 cellpadding=0 width=100%>
-	<tr height=25>
-		<td bgcolor=#99cc66 align=right>
-			<font size=2>
-			Need more help? Email <a href="mailto:$DBADMIN">your local $DBTITLE administrator $DBADMIN</a>&nbsp;
-		</td>
-	</tr>
-</table>
+$email_help
 <p>
 <table border=0 cellspacing=0 cellpadding=0 width=90% align=center>
 	<tr>
-		<td>
+		<td ALIGN=CENTER>
 			<font size=2>
 			<b>$title</b>
 			<p>
@@ -178,12 +183,10 @@ print $q->header( "text/html" );
 <HTML>
 <HEAD>
 <TITLE>SBEAMs help - $title</TITLE>
-  <style type="text/css">
-  //<!--
+<style type="text/css">
   body {  font-family: Tahoma, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt;}
   td   {  font-family: Tahoma, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt;}
   form   {  font-family: Tahoma, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt;}
-  //-->
   </style>
   </HEAD>
 
