@@ -129,16 +129,20 @@ sub Authenticate {
   }
 
   #### Get the cookies from the request
+  # SBEAMSName == Autentication cookie
+  # SBEAMSession == Session cookie
+  # SBEAMUI == ui cookie
   my %cookie = $q->cookie('SBEAMSName');
   $self->{_cgi} = $q; # Cache the cgi object for the less fortunate...
   my $session_cookie = $self->getSessionCookie();
   #$log->debug("session_cookie=\n".Data::Dumper->Dump([$session_cookie]));
   if (scalar(keys(%{$session_cookie}))) {
     my $tmp = $self->getSessionAttribute(key=>'session_started_date');
-    #$log->debug("session_started_date=$tmp");
     #$log->debug("session data=\n".Data::Dumper->Dump([\%session]));
   }
 
+  # Check for SBEAMSui cookie, process if it exists.
+  $self->processSBEAMSui();
 
   #### If the effective UID is the apache user, then go through the
   #### cookie authentication mechanism

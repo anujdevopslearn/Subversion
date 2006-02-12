@@ -1008,7 +1008,7 @@ sub get_http_header {
   
   my $header;
   my @cookie_jar;
-  for ( qw( _session_cookie _sbname_cookie ) ) {
+  for ( qw( _session_cookie _sbname_cookie  _sbeamsui ) ) {
     push @cookie_jar, $self->{$_} if $self->{$_};
   }
   if ( @cookie_jar && $cookies ) {
@@ -1016,10 +1016,58 @@ sub get_http_header {
   } else {
     $header = $q->header( -type => $type );
   }
-  $log->debug( "Header is $header for $mode, $type" );
+#$log->debug( "Header is $header for $mode, $type" );
   return $header;
 }
 
+sub processSBEAMSui {
+
+  my $self = shift;
+  my %ui_cookie = $q->cookie('SBEAMSui');
+  if ( scalar(keys(%ui_cookie)) ) {
+
+    for my $key ( keys (%ui_cookie) ) {
+#      print STDERR "SBEAMSui::::: $key => $ui_cookie{$key}\n";
+    }
+      
+    my ($ckey) = keys(%ui_cookie);
+
+    # FIXME cookie guts are in the key, what the?
+    my ( $cval, $pathinfo ) = split( " ", $ckey );
+    
+    my @items = split "___", $cval;
+    my %coalesce; # May have multiple settings; last one overrides
+#  print STDERR "What is cval: $cval\n";
+#  print STDERR "What is ckey: $ckey\n";
+    for my $item ( @items ) {
+      my ($key, $value) = split "=", $item;
+      $key = $q->unescape( $key ); # Key should probably always be clean...
+      $value = $q->unescape( $value );
+      $coalesce{$key} = $value;
+#      print STDERR "SBEAMSui: $key => $value\n";
+    }
+    for my $k ( keys( %coalesce ) ) {
+      print $log->debug("setting session attribute: $k => $coalesce{$k}\n");
+      $self->setSessionAttribute( key => $k,
+                                  value => $coalesce{$k} );
+    }
+    my $ref = $q->referer();
+    $ref =~ /.*($HTML_BASE_DIR.*\/).*/;
+    my $cpath = $1 || '/';
+
+#print STDERR "Cookie path is $1!\n";
+
+    my $cookie = $q->cookie(-name    => 'SBEAMSui',
+                            -path   => $cpath,
+                            -value   => [] );
+    $self->{_sbeamsui} = $cookie;
+#    print STDERR "SEAMSui is a $cookie\n";
+#    print STDERR "Refered by " . $q->referer() . "\n";
+#    print STDERR "BASE is $HTML_BASE_DIR\n";
+  }
+
+
+}
 
 sub getModuleButton {
   my $self = shift;
@@ -1071,7 +1119,8 @@ sub getModuleButton {
 # @narg visible  - default visiblity, orignal state of content (default is 0)
 # @narg helptext - 0/1, should show/hide help text be shown (default is 0)
 # @narg name     - Name for this toggle thingy
-# @narg sticky   - Remember the state of this toggle in session?  Requires name
+# @narg sticky   - Remember the state of this toggle in session?  Requires name,
+#                  defaults to 0 (false)
 # @narg width    - Maximum width to reserve for hidden items.
 #-
 sub make_toggle_section {
@@ -1088,14 +1137,48 @@ sub make_toggle_section {
     $showtext = ( $args{helptext} ) ? $args{showtext} : ' show ' ;
   }
       
+  # Default visiblity is hidden
   $args{visible} = 0 unless defined $args{visible};
+
+  my $set_cookie_code = '';
+
+  # If it is a sticky cookie, we might have a cached value
+  if ( $args{sticky} && $args{name} ) {
+    $set_cookie_code =<<"    END";
+      // Set cookie?
+      make_sticky_toggle( div_name, new_appearance );
+    END
+
+    my $sticky_value = $self->getSessionAttribute( key => $args{name} );
+    if ( $sticky_value ) {
+      $args{visible} = ( $sticky_value eq 'visible' ) ? 1 : 0;
+      $log->debug( "Got a sticky name: $args{name} is $sticky_value so visarg is $args{visible}" );
+    }
+  
+      
+#    my %cookie = $q->cookie('SBEAMSui');
+#    if ( defined %cookie ) {
+#      print STDERR "Cookie SBEAMSui is defined!";
+#      if ( $cookie{$args{name}} ) {
+#        print STDERR "Setting for $args{name} exists: $cookie{$args{name}}";
+#        $args{visible} ( $cookie{$args{name}} eq 'visible' ) ? 1 : 0;
+#      }
+#    }
+  }
+
+  $args{name} ||= $self->getRandomString( num_chars => 12,
+                                          char_set => [ 'A'..'z' ]
+                                        ); 
+  
   my $hideclass = ( $args{visible} ) ? 'visible' : 'hidden';
   my $showclass = ( $args{visible} ) ? 'hidden'  : 'visible';
+  my $initial_gif = ( $args{visible} ) ? 'small_gray_minus.gif'  
+                                       : 'small_gray_plus.gif';
 
 
-  # Add css if necessary
-  unless ( $self->{_show_hide_css} ) {
-    $self->{_show_hide_css}++;
+  # Add css/javascript iff necessary
+  unless ( $self->{_toggle_section_exists} ) {
+    $self->{_toggle_section_exists}++;
     $html =<<"    END"
     <STYLE TYPE="text/css" media="screen">
     div.visible {
@@ -1106,27 +1189,48 @@ sub make_toggle_section {
     display: none;
     }
     </STYLE>
-    END
-  }
-  my $width = ( !$args{width} ) ? '' :
-    "<IMG SRC=$HTML_BASE_DIR/images/clear.gif WIDTH=$args{width} HEIGHT=2>";
-
-  $args{name} ||= $self->getRandomString( num_chars => 12,
-                                          char_set => [ 'A'..'z' ]
-                                        ); 
-  $html .=<<"  END";
     <SCRIPT TYPE="text/javascript">
-    function toggle_${args{name}}() {
-      var mtable = document.getElementById('$args{name}');
+    function make_sticky_toggle( div_name, appearance ) {
+      var cookie = document.cookie;
+      var regex = new RegExp( "SBEAMSui=([^;]+)" );
+      var match = regex.exec( cookie + ";" );
+      var newval = div_name + "=" + appearance;
+      var cookie = "";
+      if ( match ) {
+      //  var split_cookie = match[0].split(" ");
+      //  cookie = split_cookie[0] + "___" + newval + " " + split_cookie[1];
+        cookie = match[0] + "___" + newval;
+      } else { 
+        //cookie = "SBEAMSui=" + newval + " path=$HTML_BASE_DIR"
+        cookie = "SBEAMSui=" + newval;
+      }
+      document.cookie = cookie;
+    }
+    function toggle_content(div_name) {
+      
+      // Grab page elements by their IDs
+      var mtable = document.getElementById(div_name);
       var show = document.getElementById('showtext');
       var hide = document.getElementById('hidetext');
-      var tgif = document.getElementById('$args{name}_gif');
-      if ( mtable.className == 'hidden' ) {
+      var gif_file = div_name + "_gif";
+      var tgif = document.getElementById(gif_file);
+
+      var current_appearance = mtable.className;
+
+      var new_appearance = 'hidden';
+      if ( current_appearance == 'hidden' ) {
+        new_appearance = 'visible';
+      }
+
+      // If hidden set visible, and vice versa
+      if ( current_appearance == 'hidden' ) {
+        $set_cookie_code;
         mtable.className = 'visible';
         hide.className = 'visible';
         show.className = 'hidden';
         tgif.src =  '$HTML_BASE_DIR/images/small_gray_minus.gif'
       } else {
+        $set_cookie_code;
         mtable.className = 'hidden';
         hide.className = 'hidden';
         show.className = 'visible';
@@ -1134,12 +1238,19 @@ sub make_toggle_section {
       }
     }
     </SCRIPT>
+    END
+  }
+
+  my $width = ( !$args{width} ) ? '' :
+    "<IMG SRC=$HTML_BASE_DIR/images/clear.gif WIDTH=$args{width} HEIGHT=2>";
+
+  $html .=<<"  END";
      $width
     <DIV ID=$args{name} class="$hideclass"> $args{content} </DIV>
   END
 
   my $imagelink .=<<"  END";
-    <A ONCLICK="toggle_${args{name}}()"><IMG ID="$args{name}_gif" SRC="$HTML_BASE_DIR/images/small_gray_plus.gif"></A>
+    <A ONCLICK="toggle_content('${args{name}}')"><IMG ID="$args{name}_gif" SRC="$HTML_BASE_DIR/images/$initial_gif"></A>
     <DIV ID=hidetext class="$hideclass"> $hidetext</DIV>
     <DIV ID=showtext class="$showclass"> $showtext</DIV>
   END
