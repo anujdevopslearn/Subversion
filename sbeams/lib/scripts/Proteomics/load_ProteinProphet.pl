@@ -318,6 +318,8 @@ sub start_element {
     #### anyone else, provide a facility to kill some attributes while trying
     #### to load
     my %attrs_to_drop = (
+      heavy2light_ratio_mean => 1,
+      heavy2light_ratio_standard_dev => 1,
       group_sibling_id => 1,
       unique_stripped_peptides => 1,
       is_contributing_evidence => 1,
@@ -415,10 +417,10 @@ sub start_element {
 
     #### If this is a reverse referring object, then update the parent
     if ($localname eq 'ASAPRatio') {
-      my $parent_PK = $self->object_stack->[-1]->{PK_value};
+      my $parent_PK = $self->object_stack->[-2]->{PK_value};
 
       #### Determine the table name into which the data go
-      my $parent_table_name = $self->object_stack->[-1]->{name};
+      my $parent_table_name = $self->object_stack->[-2]->{name};
       if ($regular_elements{$parent_table_name} gt '1') {
         $parent_table_name = $regular_elements{$parent_table_name};
       }
@@ -427,7 +429,7 @@ sub start_element {
         table_name=>$parent_table_name,
         attrs_ref=>{"${table_name}_id"=>$PK},
         PK=>"${parent_table_name}_id",
-        PK_value=>$self->object_stack->[-1]->{PK_value},
+        PK_value=>$self->object_stack->[-2]->{PK_value},
       );
     }
 
@@ -749,7 +751,6 @@ sub update_row {
   my $attrs_ref = $args{'attrs_ref'} || die "ERROR: attrs_ref not passed";
   my $PK_name = $args{'PK'} || die "ERROR: PK_name not passed";
   my $PK_value = $args{'PK_value'} || die "ERROR: PK_value not passed";
-
 
   my $result = $sbeams->insert_update_row(
     update=>1,
