@@ -10,7 +10,7 @@ INSERT INTO biosequence_annotated_gene
 SELECT BS.biosequence_id,AG.annotated_gene_id
   FROM biosequence BS
   JOIN biosequence_set BSS ON ( BS.biosequence_set_id = BSS.biosequence_set_id )
-  JOIN BioLink..annotated_gene AG ON ( BS.biosequence_accession = AG.gene_accession )
+  JOIN BioLink..annotated_gene AG ON ( BS.biosequence_gene_name = AG.gene_name )
  WHERE BSS.set_tag LIKE 'YeastORF%'
    AND AG.organism_namespace_id=2
 
