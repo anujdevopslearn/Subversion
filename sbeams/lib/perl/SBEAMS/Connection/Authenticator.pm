@@ -141,8 +141,8 @@ sub Authenticate {
     #$log->debug("session data=\n".Data::Dumper->Dump([\%session]));
   }
 
-  # Check for SBEAMSui cookie, process if it exists.
-  $self->processSBEAMSui();
+  # Process SBEAMS UI cookie if it exists.
+  $self->processSBEAMSuiCookie();
 
   #### If the effective UID is the apache user, then go through the
   #### cookie authentication mechanism
