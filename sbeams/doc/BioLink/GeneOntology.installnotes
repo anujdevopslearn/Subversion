@@ -38,7 +38,7 @@ the process can be a little more difficult.
 
 --- MySQL Example
 
-- In the following alises, 'mysql' is the name of the database server,
+- In the following aliases, 'mysql' is the name of the database server,
   'go' is the name of the database where the GO tables will be created,
   'goadmin' is a user with ALL privileges in database 'go'.
 
@@ -105,7 +105,7 @@ $SBEAMS/lib/scripts/Core/runsql.pl --user sbeamsadmin --database go --delim GO \
 
 Now copy the entire directory ${DATAFILE}-tables (e.g. go_200601-assocdb-tables)
 to a location that is visible from the SQL Server OS itself (if it is not already),
-then in a shell on the SQL Server itself (cmd.exe), cd to this diretory and run
+then in a shell on the SQL Server itself (cmd.exe), cd to this directory and run
 the batch script created by GOMySQL2MSSQL.pl:
 
 GO.BCP.bat
@@ -113,9 +113,10 @@ GO.BCP.bat
 GO.BCP.bat > bcpout.txt    (to be able to examine the diagnostic messages more easily)
 (This BCP usually under 30 mins, depending on the server hardware)
 
-When this is complete, delete GO.BCP.bat since it contains a password in it
+When this is complete, delete GO.BCP.bat (and bcpout.txt) since it contains a
+password in it:
 rm GO.BCP.bat
-
+rm bcpout.txt
 
 =======================================================================
 2. Run gene_annotation scripts in BioLink
@@ -168,8 +169,10 @@ $SBEAMS/lib/scripts/Core/runsql.pl --user sbeamsadmin \
 #### Populate it
 #### At present it is probably best to study this file and only execute
 #### the SQL that is relevant to your local installation
+#### (Remove 'Biolink..' if installing on a single-database instance.)
 edit $SBEAMS/lib/sql/Proteomics/Proteomics_GOAnnotationLink_POPULATE.sql
 
-
+#### Remember to (re-)create the indexes after every time you modify
+#### this table.
 ================================= FIN =================================  
 
