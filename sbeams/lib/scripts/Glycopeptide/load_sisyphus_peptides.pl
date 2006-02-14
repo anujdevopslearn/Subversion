@@ -150,11 +150,12 @@ while ( my $row = <$fh> ) {
     print STDERR "Unable to map glycosite\n";
     next;
   }
-  
+
   # is identified peptide already there?
   my $identified_id = $glycopep->lookup_identified( sequence => $row[$heads{'peptide sequence'}] );
   my $exists = 0;
   if ( $identified_id ) {
+    print "Wow, it exists: $identified_id\n";
     my $exists = $glycopep->lookup_id_to_ipi( identified_id => $identified_id,
                                               glyco_site_id => $glycosite );
   }
@@ -166,12 +167,14 @@ while ( my $row = <$fh> ) {
   $sbeams->initiate_transaction();
   eval {
     # insert identified_peptide
-    if ( $identifed_id ) {
-      $identified_id = $glycopep->insert_identified( $row )
+    if ( !$identified_id ) {
+      push @row, $args{sample};
+      $heads{sample} = $#row;
+      $identified_id = $glycopep->insert_identified( \@row, \%heads );
       die "Unable to insert identified peptide" unless $identified_id
     }
     # insert id2ipi
-    $identified_id = $glycopep->insert_id_to_ipi( $row )
+    $identified_id = $glycopep->insert_id_to_ipi( $row );
     
     # insert pep2tissue 
     $glycopep->insert_pep_to_tissue();
@@ -193,12 +196,17 @@ sub sequences_match {
   my %args = @_;
   my $fseq = $args{fseq};
   my $dbseq =  $args{dbseq};
-  $dbseq = uc($dbseq);
-  $fseq = uc($fseq);
-  print "Testing\n";
+  for my $seq( $dbseq, $fseq ) {
+    $seq = uc($seq);
+  }
   return 1 if $dbseq eq $fseq;
-  print "Failed!\n";
-  print STDERR "dbseq is " . length( $dbseq ) . ", fseq is " .  length( $fseq ) . " amino acids\n ";
+  print STDERR "dbseq is " . length( $dbseq ) . ", fseq is " .  length( $fseq ) . " amino acids\n";
+  my @f = split "", $fseq;
+  my @d = split "", $dbseq;
+  for( my $i = 0; $i <= $#f; $i++ ) {
+    next if $f[$i] eq $d[$i];
+    print STDERR "$f[$i] ne $d[$i] at position $i\n";
+  }
   return 0;
 }
 
@@ -221,15 +229,15 @@ sub check_headers {
     die "Bad data format: heading $key missing\n" unless defined $heads->{lc($key)};
   }
   # Map cols to those we know...
-  $heads->{'protein name'} = $heads->{'description'};
+  $heads->{'protein_name'} = $heads->{'description'};
   $heads->{'ipi'} = $heads->{'ipi_link'};
-  $heads->{'identified sequences'} = $heads->{'peptide sequence'};
+  $heads->{'identified_sequences'} = $heads->{'peptide sequence'};
   $heads->{'tm'} = $heads->{'ipi.h_m.xrefs::tm'};
-  $heads->{'protein location'} = $heads->{'ipi.h_m.xrefs::sec_mem_class'};
+  $heads->{'protein_location'} = $heads->{'ipi.h_m.xrefs::sec_mem_class'};
   $heads->{'signalp'} = $heads->{'ipi.h_m.xrefs::sigp'};
-  $heads->{'protein sequence'} = $heads->{'ipi.h_m.xrefs::sequence'};
+  $heads->{'protein_sequence'} = $heads->{'ipi.h_m.xrefs::sequence'};
   $heads->{'summary'} = $heads->{'entrez::summary'};
-  $heads->{'peptide prophet'} = $heads->{'initial probability'};
+  $heads->{'peptide_prophet'} = $heads->{'initial probability'};
 
 }
 
