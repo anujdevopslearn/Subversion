@@ -54,6 +54,8 @@ Options:
   --GOA_directory        Directory where the latest GOA files are
   --SGD_directory        Directory where the latest SGD files are
   --organism_name        Name of organism to process (Human,Yeast)
+  --atlas_build_id       atlas_build_id of the build for which number of
+                         matching peptides should be populated
 
  e.g.: $PROG_NAME --organism_name Yeast --SGD_directory ./annotations
 EOU
@@ -61,6 +63,7 @@ EOU
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
                    "GOA_directory:s","SGD_directory:s","organism_name:s",
+		   "atlas_build_id:i",
     )) {
 
     print "\n$USAGE";
@@ -122,6 +125,7 @@ sub handleRequest {
   my $GOA_directory = $OPTIONS{"GOA_directory"};
   my $SGD_directory = $OPTIONS{"SGD_directory"};
   my $organism_name = $OPTIONS{"organism_name"};
+  my $atlas_build_id = $OPTIONS{"atlas_build_id"};
 
 
   #### If there are any unresolved parameters, exit
@@ -136,6 +140,11 @@ sub handleRequest {
     exit;
   }
 
+  unless ($atlas_build_id) {
+    print "\n$USAGE\nINSUFFICIENT OPTIONS: You must supply --atlas_build_id\n";
+    exit;
+  }
+
 
 
   my $keySearch = new SBEAMS::PeptideAtlas::KeySearch;
@@ -146,6 +155,7 @@ sub handleRequest {
     GOA_directory => $GOA_directory,
     SGD_directory => $SGD_directory,
     organism_name => $organism_name,
+    atlas_build_id => $atlas_build_id,
     verbose => $VERBOSE,
     testonly => $TESTONLY,
   );

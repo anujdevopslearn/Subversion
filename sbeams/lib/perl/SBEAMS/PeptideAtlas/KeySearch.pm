@@ -98,6 +98,9 @@ sub rebuildKeyIndex {
   print "INFO[$METHOD]: Rebuilding key index..." if ($VERBOSE);
 
   #### Retreive parameters
+  my $atlas_build_id = $args{atlas_build_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+
   my $organism_name = $args{organism_name}
     or die("ERROR[$METHOD]: Parameter organism_name not passed");
 
@@ -112,10 +115,14 @@ sub rebuildKeyIndex {
     $self->buildGoaKeyIndex(
       GOA_directory => $GOA_directory,
       organism_name => 'human',
+      atlas_build_id => $atlas_build_id,
     );
 
     print "Loading peptides keys...\n";
-    $self->buildPeptideKeyIndex(organism_id=>2);
+    $self->buildPeptideKeyIndex(
+      organism_id=>2,
+      atlas_build_id=>$atlas_build_id,
+    );
 
     print "\n";
 
@@ -132,10 +139,14 @@ sub rebuildKeyIndex {
     print "Loading protein keys from SGD_features.tab...\n";
     $self->buildSGDKeyIndex(
       SGD_directory => $SGD_directory,
+      atlas_build_id => $atlas_build_id,
     );
 
     print "Loading peptides keys...\n";
-    $self->buildPeptideKeyIndex(organism_id=>3);
+    $self->buildPeptideKeyIndex(
+      organism_id=>3,
+      atlas_build_id=>$atlas_build_id,
+    );
 
     print "\n";
 
@@ -198,6 +209,9 @@ sub buildGoaKeyIndex {
     die("ERROR[$METHOD]: '$GOA_directory' is not a directory");
   }
 
+  my $atlas_build_id = $args{atlas_build_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+
   my $organism_name = $args{organism_name}
     or die("ERROR[$METHOD]: Parameter organism_name not passed");
 
@@ -212,7 +226,10 @@ sub buildGoaKeyIndex {
   );
 
   #### Get the list of proteins that have a match
-  my $matched_proteins = $self->getNProteinHits(organism_id=>2);
+  my $matched_proteins = $self->getNProteinHits(
+    organism_id=>2,
+    atlas_build_id=>$atlas_build_id,
+  );
 
   #### Read all the data
   my $line;
@@ -345,7 +362,7 @@ sub buildGoaKeyIndex {
         organism_id => 2,
         resource_name => $Ensembl_ID,
         resource_type => 'Ensembl Protein',
-        resource_url => "GetProtein?atlas_build_id=70&protein_name=$Ensembl_ID&action=QUERY",
+        resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$Ensembl_ID&action=QUERY",
         resource_n_matches => $matched_proteins->{$Ensembl_ID},
       );
       $sbeams->updateOrInsertRow(
@@ -365,7 +382,7 @@ sub buildGoaKeyIndex {
           organism_id => 2,
 	  resource_name => $Ensembl_ID,
 	  resource_type => 'Ensembl Protein',
-	  resource_url => "GetProtein?atlas_build_id=70&protein_name=$Ensembl_ID&action=QUERY",
+	  resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$Ensembl_ID&action=QUERY",
           resource_n_matches => $matched_proteins->{$Ensembl_ID},
         );
         $sbeams->updateOrInsertRow(
@@ -455,6 +472,9 @@ sub buildSGDKeyIndex {
 
   print "INFO[$METHOD]: Building SGD key index...\n" if ($VERBOSE);
 
+  my $atlas_build_id = $args{atlas_build_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+
   my $SGD_directory = $args{SGD_directory}
     or die("ERROR[$METHOD]: Parameter SGD_directory not passed");
 
@@ -469,7 +489,10 @@ sub buildSGDKeyIndex {
 
 
   #### Get the list of proteins that have a match
-  my $matched_proteins = $self->getNProteinHits(organism_id=>3);
+  my $matched_proteins = $self->getNProteinHits(
+    organism_id=>3,
+    atlas_build_id=>$atlas_build_id,
+  );
 
 
   #### Read all the data
@@ -561,7 +584,7 @@ sub buildSGDKeyIndex {
         organism_id => 3,
         resource_name => $feature_name,
         resource_type => 'Yeast ORF Name',
-        resource_url => "GetProtein?atlas_build_id=73&protein_name=$feature_name&action=QUERY",
+        resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$feature_name&action=QUERY",
         resource_n_matches => $matched_proteins->{$feature_name},
       );
       $sbeams->updateOrInsertRow(
@@ -622,6 +645,9 @@ sub buildPeptideKeyIndex {
   my $organism_id = $args{organism_id}
     or die("ERROR[$METHOD]: Parameter organism_id not passed");
 
+  my $atlas_build_id = $args{atlas_build_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+
   print "INFO[$METHOD]: Building Peptide key index...\n" if ($VERBOSE);
 
   #### Get all the peptides in the database, regardless of build
@@ -637,10 +663,6 @@ sub buildPeptideKeyIndex {
   my @peptides = $sbeams->selectSeveralColumns($sql);
 
   my $counter = 0;
-
-  #### FIXME!!!
-  my $atlas_build_id = 70;
-  $atlas_build_id = 73 if ($organism_id == 3);
 
   #### Loop over each one, inserting records for both the accession numbers
   #### and the sequences
@@ -670,7 +692,7 @@ sub buildPeptideKeyIndex {
       organism_id => $organism_id,
       resource_name => $peptide->[0],
       resource_type => 'PeptideAtlas peptide',
-      resource_url => "GetPeptide?atlas_build_id=70&searchWithinThis=Peptide+Name&searchForThis=$peptide->[0]&action=QUERY",
+      resource_url => "GetPeptide?atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$peptide->[0]&action=QUERY",
     );
     $sbeams->updateOrInsertRow(
       insert => 1,
@@ -702,9 +724,8 @@ sub getNProteinHits {
   my $organism_id = $args{organism_id}
     or die("ERROR[$METHOD]: Parameter organism_id not passed");
 
-  #### FIXME!!!
-  my $atlas_build_id = 70;
-  $atlas_build_id = 73 if ($organism_id == 3);
+  my $atlas_build_id = $args{atlas_build_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
 
   #### Get all the peptides in the database, regardless of build
   my $sql = qq~
