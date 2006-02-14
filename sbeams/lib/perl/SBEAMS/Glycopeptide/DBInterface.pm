@@ -82,11 +82,38 @@ sub lookup_glycosite {
   my ($id) = $sbeams->selectrow_array( <<"  END" ) || 0;
   SELECT glyco_site_id FROM $TBGP_GLYCO_SITE
   WHERE protein_glyco_site_position = $args{start}
-    AND ipi_data_id = '$args{ipi}'
+  AND ipi_data_id = ( SELECT ipi_data_id FROM $TBGP_IPI_DATA 
+                      WHERE ipi_accession = '$args{ipi}' )
   END
   return $id;
 }
 
 
+sub lookup_identified {
+  my $self = shift;
+  my %args = @_;
+  for my $key ( qw( sequence ) ) {
+    return unless $args{$key};
+  }
+  my $sbeams = $self->getSBEAMS() || return;
+  my ($id) = $sbeams->selectrow_array( <<"  END" );
+  SELECT identified_peptide_id FROM $TBGP_IDENTIFIED_PEPTIDE
+  WHERE matching_sequence = '$args{sequence}'
+  END
+
+  return $id;
+}
+
+sub insert_identified {
+  my $self = shift;
+  my $row = shift;
+  my $heads = shift;
+
+  for my $key ( keys( %$heads ) ) {
+    print "$key => $heads->{$key} => $row->[$heads->{$key}]\n";
+  }
+  exit;
+  my $sbeams = $self->getSBEAMS() || return;
+}
 
 1;
