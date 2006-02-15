@@ -693,7 +693,8 @@ PR_possible_peptide	7	following_residue	Following Residue	char	1	0	N		N
 PR_possible_peptide	8	n_tryptic_terminii	Number of Tryptic Termini	int	4	0	N		N											
 PR_possible_peptide	9	is_cysteine_containing	Is Cytsteine Containing	char	1	0	N		N											
 PR_possible_peptide	10	is_unique	Is Unique	char	1	0	N		N											
-PR_possible_peptide	11	isoelectric_point	Isoelectric Point	real	4	0	N		N											
+PR_possible_peptide	11	isoelectric_point	Isoelectric Point	real	4	0	Y		N											
+PR_possible_peptide	12	elution_index	Elution Index	real	4	0	Y		N											
 PR_BrowsePossiblePeptides	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"
 PR_BrowsePossiblePeptides	2	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBPR_BIOSEQUENCE_SET ORDER BY sort_order,set_name"
 PR_BrowsePossiblePeptides	3	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
