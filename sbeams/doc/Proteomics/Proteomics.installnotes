@@ -162,6 +162,10 @@ set CONFDIR = "../../conf"
 
 If this doesn't work.  Do not proceed, debug first.
 
+NOTE: You will potentially need to re-run this step every time either
+of these files is updated (Proteomics_table_property.txt and _column.txt)
+
+
 -Register the Proteomics module:
 
 $SBEAMS/lib/scripts/Core/addModule.pl Proteomics
@@ -272,6 +276,7 @@ Register an Experiment as follows:
   the Instrument window and click on the [REFRESH] button at the bottom
   of the form, and then select the new Instrument Type
 
+- See section 9 if you wish to enter a Gradient Program (optional)
 
 Register a Biosequence Set as follows:
 
@@ -316,11 +321,67 @@ the tag of your Biosequence Set as defined in step 7.
 If this doesn't work.  Do not proceed, debug first.
 
 
+8b) Load possible (enzymatic) peptide list [optional; can be done later]
+
+Procedure: generate a formatted list of tryptic peptides from the
+Biosequence Set you used above by using digestdb, then load to database.
+
+- Compile the digestdb program (if not already done so):
+cd $SBEAMS/lib/c/Proteomics/digestdb
+make digestdb
+(If this doesn't work.  Do not proceed, debug first.)
+
+- Generate file to load:
+cd $SBEAMS/lib/scripts/Proteomics
+$SBEAMS/lib/c/Proteomics/digestdb/digestdb $SET_PATH > peptides.out
+
+where $SET_PATH is the location of FASTA input file.
+
+- Now load the file:
+./load_possible_peptides.pl --set_tag YeastORF --source_file peptides.out \
+  --halt_at SWN:K1CL_HUMAN
+
+Replace YeastORF with the tag of your Biosequence Set as defined in step 7;
+replace SWN:K1CL_HUMAN with the first line in the file you want to stop
+loadng (e.g. where contaminants begin).
+
+- You can then check the status of the loaded data:
+./load_possible_peptides.pl --set_tag YeastORF --check_status
+
+
 -------------------------------------------------------------------------------
 9) Add a Gradient Program
 
 If you didn't already in step 7 as part of adding an experiment add a
 gradient program, it is recommended that you do so now.  It is not necessary.
+
+Click [Core Management: Gradient Program] [Add Gradient Program]
+Fill in the appropriate information for Name and Description.
+
+Under Program Data, enter rows with four space-separated columns representing
+the following information: Time(minutes), %ACN in buffer A, %ACN in buffer B,
+and flow rate (mL/min). The last value can be set to zero if not known.
+
+------------ Example:
+This is an example for a "LC Gradient 5-65% in 0-165 min" gradient:
+
+Time  Buf A %  Buf B %  Flow mL/min
+----  -------  -------  -----------
+  0   95        5        0.01
+165   35       65        0.01
+166   20       80        0.01
+170   20       80        0.01
+171   95        5        0.01
+196   95        5        0.01
+
+[Note that the header can be left on the form, and any number of spaces
+can delimit the fields.]
+------------
+
+[INSERT] the record.
+
+You can now go back and update any experiments that used this gradient;
+simply select the appropriate gradient from the drop-down list.
 
 
 -------------------------------------------------------------------------------
@@ -385,6 +446,11 @@ Now you can load extra data (update command):
   --update_search \
   --update_probabilities
 
+If this experiment has a gradient program associated with it, you
+will want to update the elution information by also using the
+--update_timing_info flag.
+
+
 -You may also want to take a look at the $SBEAMS/lib/scripts/Proteomics/
  load_proteomics_experiment.start and load_proteomics_experiment.csh scripts
  to accomplish the unpacking, loading, and updating of an experiment.
@@ -393,8 +459,8 @@ Now you can load extra data (update command):
 To load Protein Prophet xml output:
 ./load_ProteinProphet.pl --search_batch_id 1
 
--Now log into SBEAMS and explore the data for your experiment. Refer to the SBEAMS
-tutorial for an intro to using SBEAMS.
+-Now log into SBEAMS and explore the data for your experiment. Refer to the
+SBEAMS tutorial for an intro to using SBEAMS.
 
 
 -------------------------------------------------------------------------------
