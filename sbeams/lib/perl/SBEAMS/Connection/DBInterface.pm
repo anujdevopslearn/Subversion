@@ -648,7 +648,7 @@ sub getDbTableName {
   WHERE table_name = '$name'
   END
 
-  return $sbeams->evalSQL( $dbname );
+  return $self->evalSQL( $dbname );
 } # End getDbTableName
 
 
