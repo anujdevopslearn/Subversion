@@ -2338,18 +2338,22 @@ sub new_option_list {
   my $self = shift;
   my %args = @_;
   for my $req ( qw(values names list_name) ) {
+    next if defined $args{$req};
     $log->error( "Missing required parameter $req" );
     return undef;
   }
-  unless ( ref $args{values} eq 'ARRAY' &&
+  unless ( ref $args{'values'} eq 'ARRAY' &&
            ref $args{names} eq 'ARRAY' &&
            $#{$args{values}} == $#{$args{names}} ) {
     $log->error( "Problem with value/name arrays" );
     return undef;
   }
   $args{selected} = '' if !defined $args{selected}; 
+  $args{attrs} ||= '';
 
-  my $list = "<SELECT NAME=$args{list_name}>\n";
+  $args{list_id} ||= $args{list_name};
+
+  my $list = "<SELECT NAME=$args{list_name} ID=$args{list_id} $args{attrs}>\n";
   for ( my $i = 0; $i <= $#{$args{names}}; $i++ ) {
     my $sel = ( "$args{selected}" eq "$args{names}->[$i]" ) ? 'SELECTED' : '';
     $list .= "<OPTION NAME=$args{values}->[$i] $sel>$args{names}->[$i]\n";
@@ -2808,7 +2812,6 @@ sub displayResultSet {
 
     my $output_mode = $self->output_mode();
     my $header = $self->get_http_header( mode => $output_mode );
-    $log->debug( "header is: $header with mode $output_mode" );
 
     #### If the desired output format is TSV-like, dump out the data that way
     if ( $output_mode =~ /tsv|csv|excel/) {
