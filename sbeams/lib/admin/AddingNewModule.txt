@@ -51,6 +51,7 @@ cd /net/dblocal/www/html/dev2/sbeams/lib/conf
 ed SBEAMS.conf
 ed SBEAMS.conf.template
   to add database location definitions for new module
+DBPREFIX{Genotyping}    = sbeams.dbo.
 
 ---
 
