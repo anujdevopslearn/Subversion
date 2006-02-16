@@ -6,21 +6,28 @@ TRUNCATE TABLE biosequence_annotated_gene
 
 
 -- Yeast
+SELECT * from biosequence_set WHERE set_tag LIKE 'YeastORF%'
 INSERT INTO biosequence_annotated_gene
 SELECT BS.biosequence_id,AG.annotated_gene_id
   FROM biosequence BS
   JOIN biosequence_set BSS ON ( BS.biosequence_set_id = BSS.biosequence_set_id )
-  JOIN BioLink..annotated_gene AG ON ( BS.biosequence_gene_name = AG.gene_name )
+  JOIN BioLink..annotated_gene AG
+       ON ( BS.biosequence_gene_name = AG.gene_name
+            OR BS.biosequence_accession = AG.gene_accession
+            OR BS.biosequence_gene_name = AG.gene_accession )
  WHERE BSS.set_tag LIKE 'YeastORF%'
    AND AG.organism_namespace_id=2
 
 
 -- Drosophila
+SELECT * from biosequence_set WHERE set_tag LIKE 'Dros%'
 INSERT INTO biosequence_annotated_gene
 SELECT BS.biosequence_id,AG.annotated_gene_id
   FROM biosequence BS
   JOIN biosequence_set BSS ON ( BS.biosequence_set_id = BSS.biosequence_set_id )
-  JOIN BioLink..annotated_gene AG ON ( BS.biosequence_accession = AG.gene_accession )
+  JOIN BioLink..annotated_gene AG
+       ON ( BS.biosequence_accession = AG.gene_accession
+         OR BS.biosequence_gene_name = AG.gene_accession )
  WHERE BSS.set_tag LIKE 'Dros%'
    AND AG.organism_namespace_id=1
 
@@ -36,6 +43,7 @@ SELECT BS.biosequence_id,AG.annotated_gene_id
 
 
 -- Human NCI biosequence_sets
+SELECT * from biosequence_set WHERE set_tag LIKE 'HuNCI%' OR set_tag LIKE 'HsNCI%'
 INSERT INTO biosequence_annotated_gene
 SELECT BS.biosequence_id,AG.annotated_gene_id
   FROM biosequence BS
@@ -43,10 +51,11 @@ SELECT BS.biosequence_id,AG.annotated_gene_id
   JOIN BioLink..annotated_gene AG ON ( BS.biosequence_accession = AG.gene_accession )
  WHERE BSS.set_tag LIKE 'HuNCI%'
     OR BSS.set_tag LIKE 'HsNCI%'
-   AND AG.organism_namespace_id=3
+   AND AG.organism_namespace_id=5
 
 
 -- Human IPI biosequence_sets
+SELECT * from biosequence_set WHERE set_tag IN ( 'HuIPI','HepC','OldHuIPI','HIVHepCHuIPI200308' ) OR set_tag LIKE 'HsIPI_v%'
 INSERT INTO biosequence_annotated_gene
 SELECT DISTINCT BS.biosequence_id,AG.annotated_gene_id
   FROM biosequence BS
@@ -55,7 +64,7 @@ SELECT DISTINCT BS.biosequence_id,AG.annotated_gene_id
   JOIN BioLink..annotated_gene AG ON ( GOAA.ref_db_symbol = AG.gene_accession )
  WHERE BSS.set_tag IN ( 'HuIPI','HepC','OldHuIPI','HIVHepCHuIPI200308' )
     OR BSS.set_tag LIKE 'HsIPI_v%'
-   AND AG.organism_namespace_id=4
+   AND AG.organism_namespace_id=5
 
 
 INSERT INTO biosequence_annotated_gene
@@ -91,4 +100,3 @@ SELECT TOP 100 * FROM biosequence WHERE biosequence_set_id=10
 SELECT * FRom BioLink..organism_namespace
 
 SELECT TOP 100 * FROM BioLink..annotated_gene WHERE organism_namespace_id=2
-
