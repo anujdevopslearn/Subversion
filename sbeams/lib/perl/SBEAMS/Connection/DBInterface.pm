@@ -636,7 +636,7 @@ sub getDbTableName {
 
   $dbh = $self->getDBHandle();
 
-  my $dbname = $dbh->selectrow_array( <<"  END" );
+  my $dbname = $self->selectrow_array( <<"  END" );
   SELECT db_table_name
   FROM $TB_TABLE_PROPERTY
   WHERE table_name = '$name'
@@ -648,7 +648,7 @@ sub getDbTableName {
   WHERE table_name = '$name'
   END
 
-  return eval "\"$dbname\"";
+  return $sbeams->evalSQL( $dbname );
 } # End getDbTableName
 
 
@@ -717,11 +717,11 @@ sub selectrow_hashref {
 
 
 #+
-# selectrow_hashref
+# selectrow_arrayref
 #
 # Thinly wrapped dbh->selectrow_arrayref call
 #-
-sub selectrow_hashref {
+sub selectrow_arrayref {
   my $self = shift || croak("parameter self not passed");
   my $sql = shift || croak("parameter sql not passed");
 
@@ -731,10 +731,10 @@ sub selectrow_hashref {
   #### Convert the SQL dialect if necessary
   $sql = $self->translateSQL( sql => $sql );
 
-  my $row = {};
+  my $row = [];
 
   eval {
-    $row = $dbh->selectrow_hashref( $sql );
+    $row = $dbh->selectrow_arrayref( $sql );
   };
   if ( $@ ) {
     my $msg =<<"    END";
