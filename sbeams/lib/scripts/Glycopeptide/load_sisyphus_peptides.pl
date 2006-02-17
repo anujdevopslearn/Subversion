@@ -38,6 +38,7 @@ use SBEAMS::Glycopeptide::Glyco_peptide_load;
 my $glycopep = new SBEAMS::Glycopeptide;
 $glycopep->setSBEAMS( $sbeams );
 
+use constant DEBUG => 0;
 
 
 my $program = $FindBin::Script;
@@ -77,6 +78,8 @@ $fh->open( "< $args{file}" ) || die ( "Unable to open file $args{file}" );
 
 my $token_cnt;
 my %heads;
+my %error;
+my %noipi;
 
 # loop through
 while ( my $row = <$fh> ) {
@@ -101,95 +104,159 @@ while ( my $row = <$fh> ) {
   unless ( $ipi_data->{ipi_data_id} ) {
     # Warn and skip for now
     print STDERR "IPI $row[$heads{ipi}] doesn't exist, skipping\n";
+    $noipi{$row[$heads{ipi}]}++;
+    $error{no_ipi}++;
     next;
   }
 
+  push @row, $ipi_data->{ipi_data_id};
+  $heads{ipi_data_id} = $#row;
+
   # Make sure we are uppercase
-  $row[$heads{'protein sequence'}] = uc($row[$heads{'protein sequence'}]);
+  $row[$heads{'protein_sequence'}] = uc($row[$heads{'protein_sequence'}]);
   $row[$heads{'peptide sequence'}] = uc($row[$heads{'peptide sequence'}]);
   
   # Does protein seq match db seq?
 #  for my $h ( keys(%heads) ) { print STDERR "key $h => $heads{$h}, leads to $row[$heads{$h}]\n"; }
-  if ( !sequences_match( fseq => $row[$heads{'protein sequence'}], 
+  if ( !sequences_match( fseq => $row[$heads{'protein_sequence'}], 
                             dbseq => $ipi_data->{protein_sequence})  ) {
     print STDERR "Sequence mismatch for IPI: $row[$heads{'ipi'}]\n";
 # next;
   }
 
   # Is peptide repeat
-  my $mcnt = $glycopep->match_count( protseq => $row[$heads{'protein sequence'}],
+  my $mcnt = $glycopep->match_count( protseq => $row[$heads{'protein_sequence'}],
                                       pepseq => $row[$heads{'peptide sequence'}] );
   if ( $mcnt > 1 ) {
     print STDERR "Peptide position ambiguous\n";
+    $error{multi_match}++;
     next;
   } elsif ( $mcnt == 0 ) {
     print STDERR "Peptide doesn't match given protein\n";
+    $error{no_match}++;
     next;
   }
       
-  # map peptide
-  my ( $beg, $end ) = $glycopep->map_peptide_to_protein( protseq => $row[$heads{'protein sequence'}],
+  # map peptide - get beginning and ending indices of peptide match
+  my ( $beg, $end ) = $glycopep->map_peptide_to_protein( protseq => $row[$heads{'protein_sequence'}],
                                                            pepseq => $row[$heads{'peptide sequence'}] );
+
+  push @row, $beg;
+  $heads{identified_start} = $#row;
+  push @row, $end;
+  $heads{identified_stop} = $#row;
+  
+  my $digested = $glycopep->getDigestPeptide( begin => $beg,
+                                                end => $end,
+                                            protseq => $row[$heads{'protein_sequence'}] );
+
+  push @row, $glycopep->annotateAsn( $digested );
+  $heads{identified_peptide_sequence} = $#row;
+
+  push @row, $glycopep->countTrypticEnds($digested);
+  $heads{tryptic_end} = $#row;
   
   my $posn = $glycopep->get_site_positions( seq => $row[$heads{'peptide sequence'}] );
   unless ( defined $posn && scalar( @$posn ) ) {
-    print STDERR "Can't find glycosites in specified sequence\n";
+    print STDERR "Can't find glycosites in specified sequence ($row[$heads{'peptide sequence'}])\n";
+    $error{no_glyco}++;
     next; 
   }
 
   if ( scalar( @$posn ) > 1 ) {
     print STDERR "Multiple glyco sites in peptide\n";
+    $error{multi_glyco}++;
     next; 
   }
+  print STDERR $posn->[0] + $beg - 2 . " is gs for $row[$heads{ipi}]\n";
+
 
   # get glycosite
-  my $glycosite = $glycopep->lookup_glycosite( start => $posn->[0] + $beg + 1,
+  my $glycosite = $glycopep->lookup_glycosite( start => $posn->[0] + $beg ,
                                                  ipi => $row[$heads{ipi}] );
 
   if ( !$glycosite ) {
     print STDERR "Unable to map glycosite\n";
+    print STDERR "$row[$heads{'peptide sequence'}]\n";
+    print STDERR pretty_seq($row[$heads{'protein_sequence'}]) . "\n";
+    print STDERR "start is $posn->[0] + $beg + 1\n";
+    print STDERR "$row[$heads{ipi_data_id}]\n";
+    $error{no_glyco_two}++;
     next;
   }
+  push @row, $glycosite;
+  $heads{glyco_site_id} = $#row;
 
   # is identified peptide already there?
   my $identified_id = $glycopep->lookup_identified( sequence => $row[$heads{'peptide sequence'}] );
   my $exists = 0;
   if ( $identified_id ) {
-    print "Wow, it exists: $identified_id\n";
-    my $exists = $glycopep->lookup_id_to_ipi( identified_id => $identified_id,
+    my $exists = $glycopep->lookup_identified_to_ipi( identified__peptide_id => $identified_id,
                                               glyco_site_id => $glycosite );
+    if ( $exists ) {
+      print STDERR "Fully duplicate peptide\n";
+    } else {
+      print STDERR "Partially duplicate peptide\n";
+    }
+    next;
   }
+  push @row, $args{sample};
+  $heads{sample} = $#row;
+
+  push @row, $glycopep->getPeptideMass( sequence => $row[$heads{'peptide sequence'}] );
+  $heads{peptide_mass} = $#row;
+
   # cache initial values for these
   my $ac = $sbeams->isAutoCommit();
   my $re = $sbeams->isRaiseError();
-
   # Isolate transaction
   $sbeams->initiate_transaction();
   eval {
     # insert identified_peptide
     if ( !$identified_id ) {
-      push @row, $args{sample};
-      $heads{sample} = $#row;
-      $identified_id = $glycopep->insert_identified( \@row, \%heads );
+      $identified_id = $glycopep->insertIdentified( \@row, \%heads );
       die "Unable to insert identified peptide" unless $identified_id
     }
+    push @row, $identified_id;
+    $heads{identified_peptide_id} = $#row;
+
     # insert id2ipi
-    $identified_id = $glycopep->insert_id_to_ipi( $row );
+    my $identified_to_ipi_id = $glycopep->insertIdentifiedToIPI( \@row, \%heads );
     
     # insert pep2tissue 
-    $glycopep->insert_pep_to_tissue();
+    $glycopep->insertPeptideToTissue(\@row, \%heads );
+    next;
 
   };
     if ( $@ ) {
       print STDERR "$@\n";
       $sbeams->rollback_transaction();
+      next;
       exit;
     }  # End eval catch-error block
+#      $sbeams->rollback_transaction();
   $sbeams->commit_transaction();
-  $sbeams->setAutoCommit( $ac );
-  $sbeams->setRaiseError( $re );
+#  $sbeams->setAutoCommit( $ac );
+#  $sbeams->setRaiseError( $re );
 
+  }
 }
+
+sub pretty_seq {
+  my $seq = shift;
+  my $chunk = 10;
+  my $line = 0;
+  my $pseq = '';
+  for ( my $i = 0; $i < length( $seq ) + $chunk ; $i += $chunk ) {
+    $pseq .= substr( $seq, $i, $chunk ) . ' ';
+    $line++;
+    if ( $line >= 5 ) {
+      $pseq .= "\n"; 
+        $line = 0;
+    }
+  }
+  return $pseq;
+
 }
 
 sub sequences_match {
@@ -198,14 +265,18 @@ sub sequences_match {
   my $dbseq =  $args{dbseq};
   for my $seq( $dbseq, $fseq ) {
     $seq = uc($seq);
+#  print STDERR "$seq\n";
+#  exit;
   }
   return 1 if $dbseq eq $fseq;
+  return unless DEBUG;
   print STDERR "dbseq is " . length( $dbseq ) . ", fseq is " .  length( $fseq ) . " amino acids\n";
   my @f = split "", $fseq;
   my @d = split "", $dbseq;
   for( my $i = 0; $i <= $#f; $i++ ) {
     next if $f[$i] eq $d[$i];
     print STDERR "$f[$i] ne $d[$i] at position $i\n";
+    last;
   }
   return 0;
 }
@@ -228,16 +299,16 @@ sub check_headers {
   for my $key ( @known ) {
     die "Bad data format: heading $key missing\n" unless defined $heads->{lc($key)};
   }
-  # Map cols to those we know...
+  # Map cols to db names...
   $heads->{'protein_name'} = $heads->{'description'};
   $heads->{'ipi'} = $heads->{'ipi_link'};
-  $heads->{'identified_sequences'} = $heads->{'peptide sequence'};
+  $heads->{'matching_sequence'} = $heads->{'peptide sequence'};
   $heads->{'tm'} = $heads->{'ipi.h_m.xrefs::tm'};
   $heads->{'protein_location'} = $heads->{'ipi.h_m.xrefs::sec_mem_class'};
   $heads->{'signalp'} = $heads->{'ipi.h_m.xrefs::sigp'};
   $heads->{'protein_sequence'} = $heads->{'ipi.h_m.xrefs::sequence'};
   $heads->{'summary'} = $heads->{'entrez::summary'};
-  $heads->{'peptide_prophet'} = $heads->{'initial probability'};
+  $heads->{'peptide_prophet_score'} = $heads->{'initial probability'};
 
 }
 
