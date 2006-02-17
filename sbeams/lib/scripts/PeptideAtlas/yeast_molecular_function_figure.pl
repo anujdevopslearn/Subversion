@@ -68,23 +68,22 @@ Options:
 
   --atlas_build_id     id of atlas
 
+  --outfile            name of output file
+
  e.g.:  ./$PROG_NAME --run --atlas_build_id '73'
 
 EOU
 
 
-GetOptions(\%OPTIONS, "test", "run", "atlas_build_id:s");
+GetOptions(\%OPTIONS, "test", "run", "atlas_build_id:s", "outfile:s");
 
 
 if ( ($OPTIONS{"run"} && $OPTIONS{"atlas_build_id"}) || $OPTIONS{"test"} )
 {
-
-    $atlas_build_id =  $OPTIONS{"atlas_build_id"};
-
+    $atlas_build_id = $OPTIONS{"atlas_build_id"};
 
 } else
 {
-
     print "$USAGE\n";
 
     exit(0);
@@ -96,14 +95,12 @@ if ( ($OPTIONS{"run"} && $OPTIONS{"atlas_build_id"}) || $OPTIONS{"test"} )
 ## if test, using yeast atlas P>0.9 characteristics 
 if ( $OPTIONS{"test"} )
 {
-
     $atlas_build_id = '73';
 
     $TEST = $OPTIONS{"test"};
 
 } else
 {
-
     $TEST = 0;
 
 }
@@ -112,7 +109,16 @@ if ( $OPTIONS{"test"} )
 ## set default test pass to zero
 $PASS = 0;
 
-$outfile = "molecularFunctionData.txt";
+if ( $OPTIONS{"outfile"} )
+{
+
+    $outfile = $OPTIONS{"outfile"};
+
+} else 
+{
+    $outfile = "molecularFunctionData.txt";
+
+}
 
 
 main();
@@ -129,16 +135,13 @@ sub main
     ## validate user
     check_authentication();
 
-
     ##$sbeams->printPageHeader() unless ($QUIET);
 
     #### Print out the header
     ##$sbeams->printUserContext() if ($QUIET > 0);
 
-
     ## check that can write to outfile (also initialize):
     check_file();
-
 
     ## get term hash for the molecular function level1 children bins.
     ## data structure is a hash with   key = GO id
@@ -236,12 +239,11 @@ sub get_level1_term_hash
 
 #######################################################################
 # write_to_outfile - write to outfile the GO molecular term,
-# and the percent of genes in that term foudn in the atlas
+# the percent of genes, and the number of atlas genes in that term 
 # @param term_fraction_hash_ref 
 #######################################################################
 sub write_to_outfile
 {
-
     my %args = @_;
 
     my $term_fraction_hash_ref = $args{term_fraction_hash_ref} || 
@@ -251,16 +253,17 @@ sub write_to_outfile
 
     open(OUTFILE,">$outfile") or die "cannot write to $outfile";
 
-    ## fill x, y, and data arrays:
-    foreach my $go_term ( keys %term_fraction_hash )
+    ## fill x, y, and data arrays, sort keys alphabetically:
+    foreach my $go_term ( sort keys %term_fraction_hash )
     {
+        my $percent = ($term_fraction_hash{$go_term}{fraction}) * 100;
 
-#       my $go_term = $term_fraction_hash{$go_id};
- 
-        my $percent = ($term_fraction_hash{$go_term}) * 100;
+        my $nAtlas = $term_fraction_hash{$go_term}{PA};
 
-        print OUTFILE sprintf("%45s  %8.0f\n",
-            $go_term, $percent );
+        my $nRefDB = $term_fraction_hash{$go_term}{refDB};
+
+        print OUTFILE sprintf("%45s  %8.0f  %8.0f  %8.0f\n",
+            $go_term, $percent, $nAtlas, $nRefDB );
 
     }
 
@@ -270,6 +273,7 @@ sub write_to_outfile
 
 }
 
+
 #######################################################################
 #
 # make_percent_bar_graph
@@ -277,7 +281,6 @@ sub write_to_outfile
 #######################################################################
 sub make_percent_bar_graph
 {
-
     my %args = @_;
 
     my $term_fraction_hash_ref = $args{term_fraction_hash_ref} || 
@@ -290,13 +293,10 @@ sub make_percent_bar_graph
     my $ymax = 100;
 
 
-    ## fill x, y, and data arrays:
-    foreach my $go_term ( keys %term_fraction_hash )
+    ## fill x, y, and data arrays, sort keys alphabetically
+    foreach my $go_term ( sort keys %term_fraction_hash )
     {
-
-#       my $go_term = $term_fraction_hash{$go_id};
- 
-        my $percent = ($term_fraction_hash{$go_term}) * 100;
+        my $percent = ($term_fraction_hash{$go_term}{fraction}) * 100;
 
         push(@x, $go_term);
 
@@ -322,8 +322,7 @@ sub make_percent_bar_graph
         line_width      => 2,
     #   title           => "Yeast PeptideAtlas (Jul 2005, P>0.9)",
         x_label         => "GO Molecular Function Level 1 Leaf Terms",
-        y_label         => "Percentage of Term Genes in Yeast PeptideAtlas",
-        x_labels_vertical => 1,
+        y_label         => "Atlas Genes (percent of total SGD)",
         y_max_value     => $ymax,
         y_min_value     => 0,
         l_margin => 10,
@@ -339,9 +338,8 @@ sub make_percent_bar_graph
         legendclr      => 'black',
         axislabelclr  => 'black',
         textclr      => 'black',
+        rotate_chart    => 1,
     ) or die $graph->error;
-    #   bar_width  => 
-    #   bar_spacing =>
 
     $graph->set_legend( "Yeast PeptideAtlas Genes");
 
@@ -370,7 +368,6 @@ sub make_percent_bar_graph
 #######################################################################
 sub print_hash
 {
-
     my %args = @_;
 
     my $hr = $args{hash_ref};
@@ -388,13 +385,17 @@ sub print_hash
 
 
 #######################################################################
-# getTermFractions
-# @param $term_hash_ref
-# @return hash with key = term, value = fraction atlas genes in term
+#getTermFractions
+#@param $term_hash_ref
+#@return complex hash with 
+#              key = term, value = small hashes
+#Ex.access to values:
+#  $numPAGenesInTerm = $hash{'termA'}{PA}
+#  $numREfDBGenesInTerm = $hash{'termA'}{refDB}
+#  $fractionPAGenesInTerm = $hash{'termA'}{fraction}
 #######################################################################
 sub getTermFractions
 {
-
     my %args = @_;
 
     my $term_hash_ref = $args{'term_hash_ref'} or die 
@@ -449,7 +450,6 @@ sub getTermFractions
         my $frac;
         if ($n_all_genes_in_term == 0)
         {
-            #$frac = -99;
             $frac = 0;
         } else
         {
@@ -459,13 +459,14 @@ sub getTermFractions
 
         my $go_term = $term_hash{$go_id};
 
-#       print "$frac $go_term\n";
-        
-        $term_fraction_hash{ $go_term } = $frac;
+        $term_fraction_hash{$go_term}{'fraction'} = $frac;
+
+        $term_fraction_hash{$go_term}{'PA'} = $n_atlas_genes_in_term;
+
+        $term_fraction_hash{$go_term}{'refDB'} = $n_all_genes_in_term;
 
     }
 
     return %term_fraction_hash;
 
 }
-
