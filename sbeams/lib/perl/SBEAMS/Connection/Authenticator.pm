@@ -1689,6 +1689,21 @@ sub getNextDemoAccount {
     return ($demologin, $demopwd);
 }
 
+sub get_self_url {
+  my $self = shift;
+  return $q->self_url();
+}
+
+sub get_url_params {
+  my $self = shift;
+  my $html = '';
+  for my $p ( $q->param() ) {
+    my $v = $q->escape( $q->param( $p ) );
+    $html .= "<INPUT TYPE=HIDDEN NAME=$p VALUE=$v>\n";
+  }
+  return $html;
+}
+
 
 ###############################################################################
 

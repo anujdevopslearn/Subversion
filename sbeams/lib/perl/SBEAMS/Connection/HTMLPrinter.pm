@@ -1126,6 +1126,9 @@ sub make_toggle_section {
     $hidetext = ( $args{hidetext} ) ? $args{hidetext} : ' hide ';
     $showtext = ( $args{textlink} ) ? $args{showtext} : ' show ' ;
   }
+  for my $i ( $hidetext, $showtext ) {
+    $i = "<FONT COLOR=blue> $i </FONT>";
+  }
       
   # Default visiblity is hidden
   $args{visible} = 0 unless defined $args{visible};
@@ -1202,16 +1205,24 @@ sub make_toggle_section {
       if ( current_appearance == 'hidden' ) {
         $set_cookie_code;
         mtable.className = 'visible';
-        hide.className = 'visible';
-        show.className = 'hidden';
+        if ( hide ) {
+          hide.className = 'visible';
+        }
+        if ( show ) {
+          show.className = 'hidden';
+        }
         if ( tgif ) {
           tgif.src =  '$HTML_BASE_DIR/images/small_gray_minus.gif'
         }
       } else {
         $set_cookie_code;
         mtable.className = 'hidden';
-        hide.className = 'hidden';
-        show.className = 'visible';
+        if ( hide ) {
+          hide.className = 'hidden';
+        }
+        if ( show ) {
+          show.className = 'visible';
+        }
         if ( tgif ) {
           tgif.src =  '$HTML_BASE_DIR/images/small_gray_plus.gif'
         }
@@ -1229,22 +1240,26 @@ sub make_toggle_section {
     <DIV ID=$args{name} class="$hideclass"> $args{content} </DIV>
   END
 
-
   my $imghtml = '';
   if ($args{imglink} ) {
     $imghtml = "<IMG ID='$args{name}_gif' SRC='$HTML_BASE_DIR/images/$initial_gif'>"; 
   }
+  my $texthtml = '';
+  if ( $args{textlink} ) {
+    $texthtml = "<DIV ID=hidetext class='$hideclass'> $hidetext</DIV>";
+    $texthtml .= "<DIV ID=showtext class='$showclass'> $showtext</DIV><HR>";
+  }
 
-  my $linkhtml .=<<"  END";
-    <A ONCLICK="toggle_content('${args{name}}')">
-      $imghtml
-      <DIV ID=hidetext class="$hideclass"> $hidetext</DIV>
-      <DIV ID=showtext class="$showclass"> $showtext</DIV>
-    </A>
-  END
+  my $linkhtml = qq~<A ONCLICK="toggle_content('${args{name}}')"> $imghtml $texthtml </A>~;
 
   # Return html as separate content/widget, or as a concatentated thingy
   return wantarray ? ( $html, $linkhtml ) : $linkhtml . $html;
+}
+
+sub getGifSpacer {
+  my $self = shift;
+  my $size = shift || 120;  # Default?
+  return "<IMG SRC=$HTML_BASE_DIR/images/clear.gif WIDTH=$size HEIGHT=2>";
 }
 
 ###############################################################################
