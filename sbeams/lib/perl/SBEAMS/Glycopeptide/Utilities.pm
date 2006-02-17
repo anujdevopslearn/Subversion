@@ -10,7 +10,7 @@ sub new {
 sub match_count {
   my $self = shift;
   my %args = @_;
-  print STDERR "pep: $args{pepseq}\n";
+#  print STDERR "pep: $args{pepseq}\n";
   return unless $args{pepseq} && $args{protseq};
 
   my @cnt = split( $args{pepseq}, $args{protseq}, -1 );
@@ -65,7 +65,7 @@ sub get_site_positions {
     my $posn = length($`);
     push @posn, $posn;# pos($string); # - length($&) # start position of match
   }
-  print STDERR "Found $posn[0] for NxS/T in $args{seq}\n";
+#  print STDERR "Found $posn[0] for NxS/T in $args{seq}\n";
   return \@posn;
 }
 
@@ -153,12 +153,12 @@ sub getPeptideMass {
   my $mass = 0;
   foreach my $r ( @seq ) {
     if ( !defined $self->{_rmass}->{$r} ) {
-      print STDERR "Undefined residue $r is getPeptideMass\n";
+#      print STDERR "Undefined residue $r is getPeptideMass\n";
       $self->{_rmass}->{$r} = $self->{_rmass}->{U} # Assign 'average' mass.
     }
     $mass += $self->{_rmass}->{$r};
   }
-  print STDERR "$args{sequence} => $mass\n";
+#  print STDERR "$args{sequence} => $mass\n";
   return $mass;
 }
 
