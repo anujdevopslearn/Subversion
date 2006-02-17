@@ -66,8 +66,8 @@ sub ipi_seq_from_accession {
   SELECT protein_sequence FROM $TBGP_IPI_DATA
   WHERE ipi_accession_number = '$args{ipi}'
   END
-  my ($seq) = $sbeams->selectrow_array($sql) || 0;
-  print STDERR "$seq from $sql\n";
+  my $seq = $sbeams->selectrow_array($sql);
+  $seq ||= 0;
   return $seq;
 }
 
@@ -79,15 +79,33 @@ sub lookup_glycosite {
   }
 
   my $sbeams = $self->getSBEAMS() || return;
-  my ($id) = $sbeams->selectrow_array( <<"  END" ) || 0;
+  my ($id) = $sbeams->selectrow_array( <<"  END" );
   SELECT glyco_site_id FROM $TBGP_GLYCO_SITE
   WHERE protein_glyco_site_position = $args{start}
   AND ipi_data_id = ( SELECT ipi_data_id FROM $TBGP_IPI_DATA 
-                      WHERE ipi_accession = '$args{ipi}' )
+                      WHERE ipi_accession_number = '$args{ipi}' )
   END
+  my $sql = " SELECT glyco_site_id FROM $TBGP_GLYCO_SITE WHERE protein_glyco_site_position = $args{start} AND ipi_data_id = ( SELECT ipi_data_id FROM $TBGP_IPI_DATA WHERE ipi_accession_number = '$args{ipi}' )";
+#  die $sql unless $id;
   return $id;
 }
 
+
+sub lookup_identified_to_ipi {
+  my $self = shift;
+  my %args = @_;
+  for my $key ( qw( identified_id glyco_site_id ) ) {
+    return unless $args{$key};
+  }
+  my $sbeams = $self->getSBEAMS() || return;
+  my ($id) = $sbeams->selectrow_array( <<"  END" );
+  SELECT identified_peptide_id FROM $TBGP_IDENTIFIED_TO_IPI
+  WHERE identified_peptide_id = $args{identified_peptide_id}
+  AND glyco_site_id = $args{glyco_site_id}
+  END
+
+  return $id;
+}
 
 sub lookup_identified {
   my $self = shift;
@@ -104,16 +122,110 @@ sub lookup_identified {
   return $id;
 }
 
-sub insert_identified {
+sub annotateAsn {
+  my $self = shift;
+  my $seq = shift;
+  $seq =~ s/(N)(.[S|T])/$1#$2/;
+  return $seq;
+}
+
+sub countTrypticEnds {
+  my $self = shift;
+  my $seq = shift || return;
+  my $cnt = 0;
+  # Does sequence start with -, R, or K
+  $cnt++ if $seq =~ /^[-|R|K].*$/;
+
+  if ( $seq =~ /.*-$/ ) { # Does sequence end with -?
+    $cnt++ 
+  } elsif ( $seq =~ /.*[R|K]\..$/ ) { # Does observed sequence end with R or K?
+    $cnt++ 
+  }
+#  print STDERR "Sequence $seq has $cnt tryptic ends, yo!\n";
+  return $cnt;
+
+}
+
+sub insertIdentified {
   my $self = shift;
   my $row = shift;
   my $heads = shift;
+  
+  my @cols = qw( identified_peptide_sequence
+                 peptide_prophet_score
+                 peptide_mass
+                 glyco_site_id
+                 matching_sequence
+                 tryptic_end
+                );
 
-  for my $key ( keys( %$heads ) ) {
-    print "$key => $heads->{$key} => $row->[$heads->{$key}]\n";
+  my %rowdata;
+  for my $col ( @cols ) {
+    $rowdata{$col} = $row->[$heads->{$col}];
+#  print STDERR "Missing $col in insID, $rowdata{$col}\n";
   }
-  exit;
-  my $sbeams = $self->getSBEAMS() || return;
+  my $sbeams = $self->getSBEAMS();
+  my $id = $sbeams->updateOrInsertRow( insert => 1,
+                                    return_PK => 1,
+                                   table_name => $TBGP_IDENTIFIED_PEPTIDE,
+                                  rowdata_ref => \%rowdata );
+  return $id;
+}
+
+sub insertIdentifiedToIPI {
+  my $self = shift;
+  my $row = shift;
+  my $heads = shift;
+  
+  my @cols = qw( ipi_data_id
+                 identified_peptide_id 
+                 glyco_site_id
+                 identified_start
+                 identified_stop
+                );
+
+  my %rowdata;
+  for my $col ( @cols ) {
+    $rowdata{$col} = $row->[$heads->{$col}];
+  print STDERR "Missing $col in insId2ipi, $rowdata{$col}\n";
+ #   print STDERR "Missing $col in inId2ipi\n"; # unless $rowdata{$col};
+  }
+  my $sbeams = $self->getSBEAMS();
+  my $id = $sbeams->updateOrInsertRow( insert => 1,
+                                    return_PK => 1,
+                                   table_name => $TBGP_IDENTIFIED_TO_IPI,
+                                  rowdata_ref => \%rowdata );
+   return $id;
+}
+
+sub insertPeptideToTissue {
+  my $self = shift;
+  my $row = shift;
+  my @row = @$row;
+  my $heads = shift;
+
+  my $sbeams = $self->getSBEAMS();
+  my ( $sample_id ) = $sbeams->selectrow_array( <<"  END" );
+  SELECT sample_id FROM $TBGP_GLYCO_SAMPLE
+  WHERE sample_name = '$row->[$heads->{sample}]'
+  END
+  push @row, $sample_id;
+  $heads->{sample_id} =  $#row;
+  
+  my @cols = qw( sample_id 
+                 identified_peptide_id 
+                );
+
+  my %rowdata;
+  for my $col ( @cols ) {
+    $rowdata{$col} = $row[$heads->{$col}];
+    print STDERR "Missing $col in pep2tiss\n" unless $rowdata{$col};
+  }
+  my $id = $sbeams->updateOrInsertRow( insert => 1,
+                                    return_PK => 1,
+                                   table_name => $TBGP_PEPTIDE_TO_TISSUE,
+                                  rowdata_ref => \%rowdata );
+   return $id;
 }
 
 1;

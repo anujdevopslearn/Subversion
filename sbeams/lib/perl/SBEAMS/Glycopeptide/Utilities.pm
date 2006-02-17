@@ -10,6 +10,7 @@ sub new {
 sub match_count {
   my $self = shift;
   my %args = @_;
+  print STDERR "pep: $args{pepseq}\n";
   return unless $args{pepseq} && $args{protseq};
 
   my @cnt = split( $args{pepseq}, $args{protseq}, -1 );
@@ -32,8 +33,27 @@ sub map_peptide_to_protein {
 	}
 }
 
+sub getDigestPeptide {
+  my $self = shift;
+  my %args = @_;
+  for my $req ( qw( begin end protseq ) ) {
+    die "Missing required parameter $req" unless defined $args{$req};
+  }
+  my $length =  $args{end} - $args{begin};
+  my $seq = '';
+  if ( !$args{begin} ) {
+    $seq = substr( '-' . $args{protseq}, $args{begin}, $length + 2 );
+  } elsif ( $args{end} == length($args{protseq}) ) {
+    $seq = substr( $args{protseq} . '-' , $args{begin} -1, $length + 2 );
+  } else {
+    $seq = substr( $args{protseq}, $args{begin} -1, $length + 2 );
+  }
+  $seq =~ s/^(.)(.*)(.)$/$1\.$2\.$3/;
+  return $seq;
+}
+
 # Returns reference to an array holding the 0-based indices of a pattern 'X'
-# in the sequence
+# in the peptide sequence
 sub get_site_positions {
   my $self = shift;
   my %args = @_;
@@ -42,8 +62,10 @@ sub get_site_positions {
 
   my @posn;
   while ( $args{seq} =~ m/$args{pattern}/g ) {
-    push @posn, pos($string) - length($&) # start position of match
+    my $posn = length($`);
+    push @posn, $posn;# pos($string); # - length($&) # start position of match
   }
+  print STDERR "Found $posn[0] for NxS/T in $args{seq}\n";
   return \@posn;
 }
 
@@ -55,12 +77,13 @@ sub get_current_prophet_cutoff {
   return $cutoff;
 }
 
-sub process_prophet_cutoff {
+sub set_prophet_cutoff {
   my $self = shift;
+  my $cutoff = shift || return;
   my $sbeams = $self->getSBEAMS();
-  my $cutoff = $sbeams->getSessionAttribute( key => 'glyco_prophet_cutoff' );
-  $cutoff = 0.5 if !defined $cutoff;
-  return $cutoff;
+  $sbeams->setSessionAttribute( key => 'glyco_prophet_cutoff',
+                              value => $cutoff );
+  return 1;
 }
 
 sub clean_pepseq {
@@ -122,19 +145,20 @@ sub getResidueMasses {
 
 sub getPeptideMass {
   my $self = shift;
-  my $args = @_;
-  return undef unless $args{sequence};
-  my $rmass = $self->getResidueMasses();
+  my %args = @_;
+  die "Missing required parameter sequence" unless $args{sequence};
+  $self->{_rmass} ||= $self->getResidueMasses();
   my $seq = uc( $args{sequence} );
   my @seq = split( "", $seq );
   my $mass = 0;
   foreach my $r ( @seq ) {
-    if ( !defined $rmass->{$r} ) {
+    if ( !defined $self->{_rmass}->{$r} ) {
       print STDERR "Undefined residue $r is getPeptideMass\n";
-      return undef;
+      $self->{_rmass}->{$r} = $self->{_rmass}->{U} # Assign 'average' mass.
     }
-    $mass += $rmass{$r};
+    $mass += $self->{_rmass}->{$r};
   }
+  print STDERR "$args{sequence} => $mass\n";
   return $mass;
 }
 
