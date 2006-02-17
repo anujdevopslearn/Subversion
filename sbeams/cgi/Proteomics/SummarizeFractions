@@ -261,7 +261,7 @@ sub handle_request {
     ["gradient_program_id","GP.gradient_program_id","gradient_program_id"],
     ["gradient_program_name","GP.gradient_program_name","LC Gradient Program"],
     ["TIC_plot","'TIC Plot'","TIC_plot"],
-    ["MSRun_summary","'MS Run Summary'","MS Run Summary"],
+#    ["MSRun_summary","'MS Run Summary'","MS Run Summary"],
     ["n_scans","COUNT(*)","# CID spectra"],
   );
 
@@ -329,6 +329,7 @@ sub handle_request {
                'TIC_plot' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ShowTICPlot?fraction_id=\%$colnameidx{fraction_id}V",
                'TIC_plot_ATAG' => 'TARGET="Win2"',
 
+	       # FIXME: will revisit what this link should do (launch Pep3D?), or remove permanently
                'MS Run Summary' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ShowMSRunSummary?fraction_id=\%$colnameidx{fraction_id}V",
                'MS Run Summary_ATAG' => 'TARGET="Win2"',
 
