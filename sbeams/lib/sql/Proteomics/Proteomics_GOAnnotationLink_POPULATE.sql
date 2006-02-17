@@ -4,6 +4,7 @@ DROP INDEX biosequence_annotated_gene.idx_annotated_gene_id
 
 TRUNCATE TABLE biosequence_annotated_gene
 
+--------
 
 -- Yeast
 SELECT * from biosequence_set WHERE set_tag LIKE 'YeastORF%'
@@ -83,20 +84,19 @@ CREATE NONCLUSTERED INDEX idx_annotated_gene_id ON dbo.biosequence_annotated_gen
 
 -------
 
-For PeptideAtlas we use:
+-- Testing queries:
 
-INSERT INTO biosequence_annotated_gene
-SELECT BS.biosequence_id,AG.annotated_gene_id
-  FROM biosequence BS
-  JOIN biosequence_set BSS ON ( BS.biosequence_set_id = BSS.biosequence_set_id )
-  JOIN BioLink..annotated_gene AG ON ( BS.biosequence_gene_name = AG.gene_accession )
- WHERE BSS.set_tag LIKE 'SGD%'
-   AND AG.organism_namespace_id=2
-
+SELECT COUNT(*) FROM biosequence_annotated_gene
+ 
 SELECT TOP 100 * FROM biosequence_set
-
-SELECT TOP 100 * FROM biosequence WHERE biosequence_set_id=10
-
+ 
+SELECT TOP 100 * FROM biosequence WHERE biosequence_set_id=2
+ 
 SELECT * FRom BioLink..organism_namespace
-
+ 
 SELECT TOP 100 * FROM BioLink..annotated_gene WHERE organism_namespace_id=2
+ 
+SELECT TOP 100 * FROM BioLink..goa_association
+ 
+SELECT TOP 100 * FROM BioLink..goa_xref
+
