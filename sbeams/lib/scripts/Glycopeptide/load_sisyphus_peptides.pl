@@ -103,7 +103,7 @@ while ( my $row = <$fh> ) {
   
   unless ( $ipi_data->{ipi_data_id} ) {
     # Warn and skip for now
-    print STDERR "IPI $row[$heads{ipi}] doesn't exist, skipping\n";
+#    print STDERR "IPI $row[$heads{ipi}] doesn't exist, skipping\n";
     $noipi{$row[$heads{ipi}]}++;
     $error{no_ipi}++;
     next;
@@ -120,7 +120,7 @@ while ( my $row = <$fh> ) {
 #  for my $h ( keys(%heads) ) { print STDERR "key $h => $heads{$h}, leads to $row[$heads{$h}]\n"; }
   if ( !sequences_match( fseq => $row[$heads{'protein_sequence'}], 
                             dbseq => $ipi_data->{protein_sequence})  ) {
-    print STDERR "Sequence mismatch for IPI: $row[$heads{'ipi'}]\n";
+#    print STDERR "Sequence mismatch for IPI: $row[$heads{'ipi'}]\n";
 # next;
   }
 
@@ -128,11 +128,11 @@ while ( my $row = <$fh> ) {
   my $mcnt = $glycopep->match_count( protseq => $row[$heads{'protein_sequence'}],
                                       pepseq => $row[$heads{'peptide sequence'}] );
   if ( $mcnt > 1 ) {
-    print STDERR "Peptide position ambiguous\n";
+#    print STDERR "Peptide position ambiguous\n";
     $error{multi_match}++;
     next;
   } elsif ( $mcnt == 0 ) {
-    print STDERR "Peptide doesn't match given protein\n";
+#    print STDERR "Peptide doesn't match given protein\n";
     $error{no_match}++;
     next;
   }
@@ -158,29 +158,44 @@ while ( my $row = <$fh> ) {
   
   my $posn = $glycopep->get_site_positions( seq => $row[$heads{'peptide sequence'}] );
   unless ( defined $posn && scalar( @$posn ) ) {
-    print STDERR "Can't find glycosites in specified sequence ($row[$heads{'peptide sequence'}])\n";
+#    print STDERR "Can't find glycosites in specified sequence ($row[$heads{'peptide sequence'}])\n";
     $error{no_glyco}++;
     next; 
   }
 
   if ( scalar( @$posn ) > 1 ) {
-    print STDERR "Multiple glyco sites in peptide\n";
+#    print STDERR "Multiple glyco sites in peptide\n";
     $error{multi_glyco}++;
     next; 
   }
-  print STDERR $posn->[0] + $beg - 2 . " is gs for $row[$heads{ipi}]\n";
 
+  # position of glyco motif in protein; use to lookup db glycosite
+  push @row, $posn->[0] + $beg + 1;
+  $heads{motif_position} = $#row;
 
   # get glycosite
-  my $glycosite = $glycopep->lookup_glycosite( start => $posn->[0] + $beg ,
-                                                 ipi => $row[$heads{ipi}] );
+  my $glycosite = $glycopep->lookup_glycosite( start => $row[$heads{motif_position}],
+                                         ipi_data_id => $row[$heads{ipi_data_id}] );
+  if ( !$glycosite ) {
+    $row[$heads{motif_position}] += 2;
+    $glycosite = $glycopep->lookup_glycosite( start => $row[$heads{motif_position}],
+                                        ipi_data_id => $row[$heads{ipi_data_id}] );
+    print STDERR "Using fallback!\n"; 
+    $error{two_based_posn}++;
+  } else {
+    $error{zero_based_posn}++;
+  }
+
 
   if ( !$glycosite ) {
-    print STDERR "Unable to map glycosite\n";
-    print STDERR "$row[$heads{'peptide sequence'}]\n";
-    print STDERR pretty_seq($row[$heads{'protein_sequence'}]) . "\n";
-    print STDERR "start is $posn->[0] + $beg + 1\n";
-    print STDERR "$row[$heads{ipi_data_id}]\n";
+#    print STDERR "Unable to map glycosite\n";
+    my ( $pre, $post ) = $glycopep->findAdjacentGlycosites ( position => $row[$heads{motif_position}],
+                                                       ipi_data_id => $row[$heads{ipi_data_id}] );
+#    print STDERR "$row[$heads{'peptide sequence'}]\n";
+    $glycosite ||= 'none';
+    print STDERR "Our position is $row[$heads{motif_position}], closest are $pre and $post: $glycosite\n";
+#    print STDERR "$row[$heads{ipi_data_id}]\n";
+    print STDERR pretty_seq_2($row[$heads{'protein_sequence'}], $row[$heads{motif_position}] ) . "\n";
     $error{no_glyco_two}++;
     next;
   }
@@ -194,9 +209,9 @@ while ( my $row = <$fh> ) {
     my $exists = $glycopep->lookup_identified_to_ipi( identified__peptide_id => $identified_id,
                                               glyco_site_id => $glycosite );
     if ( $exists ) {
-      print STDERR "Fully duplicate peptide\n";
+#      print STDERR "Fully duplicate peptide\n";
     } else {
-      print STDERR "Partially duplicate peptide\n";
+#      print STDERR "Partially duplicate peptide\n";
     }
     next;
   }
@@ -240,6 +255,27 @@ while ( my $row = <$fh> ) {
 #  $sbeams->setRaiseError( $re );
 
   }
+  for my $k ( keys( %error ) ) {
+    print "$k => $error{$k}\n";
+  }
+}
+
+sub pretty_seq_2 {
+  my $seq = shift;
+  my $posn = shift;
+  while ( $posn % 10 ) {
+      $posn++;
+  }
+  my $min = $posn - 30;
+  my $max = $posn + 20;
+  $max = ( length($seq) > $max ) ? $max : length($seq);
+
+  my $chunk = 10;
+  my $pseq = '';
+  for ( my $i = $min; $i <= $max ; $i += $chunk ) {
+    $pseq .= substr( $seq, $i, $chunk ) . ' ';
+  }
+  return "$min: $pseq :$max";
 }
 
 sub pretty_seq {
@@ -256,7 +292,6 @@ sub pretty_seq {
     }
   }
   return $pseq;
-
 }
 
 sub sequences_match {
@@ -269,8 +304,8 @@ sub sequences_match {
 #  exit;
   }
   return 1 if $dbseq eq $fseq;
-  return unless DEBUG;
-  print STDERR "dbseq is " . length( $dbseq ) . ", fseq is " .  length( $fseq ) . " amino acids\n";
+  return; # unless DEBUG;
+#  print STDERR "dbseq is " . length( $dbseq ) . ", fseq is " .  length( $fseq ) . " amino acids\n";
   my @f = split "", $fseq;
   my @d = split "", $dbseq;
   for( my $i = 0; $i <= $#f; $i++ ) {
