@@ -279,7 +279,6 @@ sub display_page_header {
 
     ~;
 
-    #print ">>>http_header=$http_header<BR>\n";
     my $prophet_control = $self->get_prophet_control();
 
     if ($navigation_bar eq "YES") {
@@ -300,7 +299,9 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/browse_glycopeptides.cgi"><nobr>&nbsp;&nbsp;&nbsp;Identified Proteins</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
 
-  $prophet_control
+	<tr><td>&nbsp;</td></tr>
+	<tr><td>&nbsp;</td></tr>
+	<tr><td>$prophet_control</td></tr>
 
 	</table>
 	</td>
@@ -319,21 +320,44 @@ sub display_page_header {
 
 }
 
-# 	<table border=0 width="680" bgcolor="#ffffff" cellpadding=4>
-
 sub get_prophet_control {
   my $self = shift;
   my $current = $self->get_current_prophet_cutoff();
   my @stock = qw( 0.5 0.6 0.7 0.8 0.9 1.0 );
   if ( defined $current && !grep /^$current$/, @stock ) {
     push @stock, $current;
-    @stock = sort(@stock);
+    @stock = sort{ $a <=> $b }(@stock);
   }
+  my $update_script = 'ONCHANGE="update_prophet_score()"';
+  my $self_url = $sbeams->get_self_url();
+
   my $select = $sbeams->new_option_list(  names => \@stock,
                                        'values' => \@stock,
                                        selected => $current,
-                                      list_name => 'prophet_score',
+                                      list_name => 'prophet_list',
+                                          attrs => $update_script
                                         );
+  my $form =<<"  END";
+  <SCRIPT LANGUAGE=javascript>
+    function update_prophet_score() {
+      var list = document.getElementById('prophet_list');
+      var text = document.getElementById('prophet_score');
+      if ( list ) {
+        if ( text ) {
+          text.value = list.options[list.selectedIndex].value;
+        }
+      }
+    }
+  </SCRIPT>
+  <FORM METHOD=POST ACTION=$self_url NAME=set_prophet_score ID=set_prophet_score>
+  <TABLE>
+    <TR><TD><INPUT TYPE=submit VALUE="Set prophet cutoff" NAME=prophet_cutoff ID=prophet_cutoff></TD></TR>
+    <TR><TD><INPUT TYPE=text NAME=prophet_score SIZE=8 ID=prophet_score></TD></TR>
+    <TR><TD>$select </TD></TR>
+  </TABLE>
+  </FORM>
+  END
+  return $form
 }
 
 ###############################################################################
