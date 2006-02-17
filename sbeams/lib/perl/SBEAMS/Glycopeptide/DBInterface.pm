@@ -74,7 +74,7 @@ sub ipi_seq_from_accession {
 sub lookup_glycosite {
   my $self = shift;
   my %args = @_;
-  for my $key ( qw( ipi start ) ) {
+  for my $key ( qw( ipi_data_id start ) ) {
     return unless $args{$key};
   }
 
@@ -82,12 +82,41 @@ sub lookup_glycosite {
   my ($id) = $sbeams->selectrow_array( <<"  END" );
   SELECT glyco_site_id FROM $TBGP_GLYCO_SITE
   WHERE protein_glyco_site_position = $args{start}
-  AND ipi_data_id = ( SELECT ipi_data_id FROM $TBGP_IPI_DATA 
-                      WHERE ipi_accession_number = '$args{ipi}' )
+  AND ipi_data_id = $args{ipi_data_id}
   END
-  my $sql = " SELECT glyco_site_id FROM $TBGP_GLYCO_SITE WHERE protein_glyco_site_position = $args{start} AND ipi_data_id = ( SELECT ipi_data_id FROM $TBGP_IPI_DATA WHERE ipi_accession_number = '$args{ipi}' )";
-#  die $sql unless $id;
   return $id;
+}
+
+sub findAdjacentGlycosites {
+  my $self = shift;
+  my %args = @_;
+  for my $key ( qw( ipi_data_id position ) ) {
+    return unless $args{$key};
+  }
+  my $sbeams = $self->getSBEAMS() || return;
+
+  my ($pre) = $sbeams->selectrow_array( <<"  END" );
+  SELECT MAX(protein_glyco_site_position) 
+  FROM $TBGP_GLYCO_SITE
+  WHERE protein_glyco_site_position <= $args{position}
+  AND ipi_data_id = $args{ipi_data_id}
+  END
+  my $sql =<<"  END";
+  SELECT MAX(protein_glyco_site_position) 
+  FROM $TBGP_GLYCO_SITE
+  WHERE protein_glyco_site_position <= $args{position}
+  AND ipi_data_id = $args{ipi_data_id}
+  END
+#  print STDERR "$sql\n";
+
+  my ($post) = $sbeams->selectrow_array( <<"  END" );
+  SELECT MIN(protein_glyco_site_position) 
+  FROM $TBGP_GLYCO_SITE
+  WHERE protein_glyco_site_position >= $args{position}
+  AND ipi_data_id = $args{ipi_data_id}
+  END
+
+  return ( $pre, $post );
 }
 
 
@@ -187,7 +216,7 @@ sub insertIdentifiedToIPI {
   my %rowdata;
   for my $col ( @cols ) {
     $rowdata{$col} = $row->[$heads->{$col}];
-  print STDERR "Missing $col in insId2ipi, $rowdata{$col}\n";
+#  print STDERR "Missing $col in insId2ipi, $rowdata{$col}\n";
  #   print STDERR "Missing $col in inId2ipi\n"; # unless $rowdata{$col};
   }
   my $sbeams = $self->getSBEAMS();
@@ -219,7 +248,7 @@ sub insertPeptideToTissue {
   my %rowdata;
   for my $col ( @cols ) {
     $rowdata{$col} = $row[$heads->{$col}];
-    print STDERR "Missing $col in pep2tiss\n" unless $rowdata{$col};
+#    print STDERR "Missing $col in pep2tiss\n" unless $rowdata{$col};
   }
   my $id = $sbeams->updateOrInsertRow( insert => 1,
                                     return_PK => 1,
