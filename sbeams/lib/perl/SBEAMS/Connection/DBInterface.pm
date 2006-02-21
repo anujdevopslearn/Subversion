@@ -717,40 +717,6 @@ sub selectrow_hashref {
 
 
 #+
-# selectrow_arrayref
-#
-# Thinly wrapped dbh->selectrow_arrayref call
-#-
-sub selectrow_arrayref {
-  my $self = shift || croak("parameter self not passed");
-  my $sql = shift || croak("parameter sql not passed");
-
-  #### Get the database handle
-  $dbh = $self->getDBHandle();
-
-  #### Convert the SQL dialect if necessary
-  $sql = $self->translateSQL( sql => $sql );
-
-  my $row = [];
-
-  eval {
-    $row = $dbh->selectrow_arrayref( $sql );
-  };
-  if ( $@ ) {
-    my $msg =<<"    END";
-    Error executing SQL: $@
-    SQL causing error: $sql
-    END
-    $log->error( $msg );
-    die $msg;
-  }
-  return $row;
-}
-
-###
-
-
-#+
 # selectrow_array
 #
 # Thinly wrapped dbh->selectrow_array call
