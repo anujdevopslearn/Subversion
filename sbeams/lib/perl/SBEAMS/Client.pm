@@ -89,11 +89,12 @@ sub authenticate {
 					  server_uri=>$server_uri,
 					  SBEAMSentrycode=>$entrycode,
 									);
-  #### Since we got the authentication cookie, cache it
-  $SBEAMS_auth->save($SBEAMSAuth_file);
-  #### And make sure only the user can read the file
-  chmod(0600,$SBEAMSAuth_file);
+    #### Since we got the authentication cookie, cache it
+    $SBEAMS_auth->save($SBEAMSAuth_file);
+    #### And make sure only the user can read the file
+    chmod(0600,$SBEAMSAuth_file);
   }
+
 
   #### See if the SBEAMSAuth file exists
   if (-e $SBEAMSAuth_file ) {
@@ -114,8 +115,26 @@ sub authenticate {
       if (defined($cookie_jar->{COOKIES}->{$server}->{$path})) {
         $self->set_authentication(authentication => $cookie_jar);
         return $cookie_jar;
+
+      #### If we don't have an exact match to the path, just go ahead
+      #### and use one of them.  This works around dev area-specific
+      #### encodings
+      } elsif (defined($cookie_jar->{COOKIES}->{$server})) {
+	my $otherpath = '';
+	foreach my $tmp (keys(%{$cookie_jar->{COOKIES}->{$server}})) {
+	  $otherpath = $tmp;
+	}
+	$cookie_jar->{COOKIES}->{$server}->{$path} =
+	  $cookie_jar->{COOKIES}->{$server}->{$otherpath};
+        $self->set_authentication(authentication => $cookie_jar);
+        return $cookie_jar;
       }
+
+    #} else {
+    #  print "ERROR: Unable to load auth file '$SBEAMSAuth_file'\n";
+    #  return;
     }
+
   }
 
 
