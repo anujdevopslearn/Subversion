@@ -2,7 +2,8 @@
 
 use strict;
 
-use lib "/net/dblocal/www/html/devDC/sbeams/lib/perl";
+use lib qw (../../lib/perl);
+
 use SBEAMS::Client;
 use SBEAMS::Connection::DataTable;
 use SBEAMS::Connection qw( $q $log );
@@ -12,7 +13,7 @@ use File::Basename;
 
 $|++;
 
-use constant URI => 'http://db.systemsbiology.net/devDC/sbeams';
+use constant URI => 'http://db.systemsbiology.net/dev2/sbeams';
 use constant AUTH => '/net/dblocal/wwwspecial/scgap/SCGAPAuth2';
 
 #my $q = CGI->new();
@@ -24,7 +25,7 @@ use constant AUTH => '/net/dblocal/wwwspecial/scgap/SCGAPAuth2';
   my @allowed_projects = qw( 511 517 413 414 423 458 435 460 );
   unless( grep /^$pid$/, @allowed_projects ) {
     print $q->header();
-    print "Error: illegal project id, you loser!";
+    print "ERROR: You are not permitted to access project_id '$pid'";
     exit;
   }
 
@@ -36,8 +37,12 @@ use constant AUTH => '/net/dblocal/wwwspecial/scgap/SCGAPAuth2';
 
 
   # Authenticate
-  $sbeams->authenticate( server_uri => URI,
-                         SBEAMSAuth_file => AUTH );
+  unless ( $sbeams->authenticate( server_uri => URI,
+				  SBEAMSAuth_file => AUTH )) {
+    print "Content-type: html/text\n\n";
+    print "ERROR: Unable to authenticate with these credentials\n";
+    exit;
+  }
 
   # Fetch results
   my $rset = $sbeams->fetch_data(  server_uri         => URI,
