@@ -15,8 +15,10 @@ my $sbeams = SBEAMS::Connection->new();
 $sbeams->Authenticate( allow_anonymous_access => 1 );
 
 
-#Main
-{
+main();
+
+sub main {
+
 ## The next 3 lines seriously chap my ass.
   my $params = {};
   $sbeams->parse_input_parameters( q => $q, parameters_ref=> $params );
