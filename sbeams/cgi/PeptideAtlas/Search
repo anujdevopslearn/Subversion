@@ -292,10 +292,33 @@ sub handle_request {
   return if ($search_key_clause eq '-1');
 
 
+  #### Define the desired columns in the query
+  #### [friendly name used in url_cols,SQL,displayed column title]
+  my @column_array = (
+    ["search_key_name","SK.search_key_name","Search Key"],
+    ["search_key_type","SK.search_key_type","search_key_type"],
+    ["organism_name","O.organism_name","Organism"],
+    ["resource_name","SK.resource_name","Identifier"],
+    ["resource_type","SK.resource_type","resource_type"],
+    ["resource_n_matches","SK.resource_n_matches","N Peptides"],
+    ["resource_url","SK.resource_url","resource_url"],
+    ["organism_id","O.organism_id","organism_id"],
+  );
+
+
+  #### Build the columns part of the SQL statement
+  my %colnameidx = ();
+  my @column_titles = ();
+  my $columns_clause = $sbeams->build_SQL_columns_list(
+    column_array_ref=>\@column_array,
+    colnameidx_ref=>\%colnameidx,
+    column_titles_ref=>\@column_titles
+  );
+
+
   #### Define the SQL statement to find the biosequence
   $sql = qq~
-       SELECT search_key_name,search_key_type,organism_name,resource_name,
-              resource_type,resource_n_matches,resource_url,O.organism_id
+       SELECT $columns_clause
          FROM $TBAT_SEARCH_KEY SK
          JOIN $TB_ORGANISM O ON (O.organism_id = SK.organism_id)
         WHERE 1 = 1
@@ -307,11 +330,14 @@ sub handle_request {
 
   #### Define the hypertext links for columns that need them
   %url_cols = (
-    	       'resource_name' => "$CGI_BASE_DIR/PeptideAtlas/%6V",
+    	       'Identifier' => "$CGI_BASE_DIR/PeptideAtlas/\%$colnameidx{resource_url}V",
+	       'Search Key_OPTIONS' => {allow_wrap=>1},
   );
 
   #### Define the hidden columns
   %hidden_cols = (
+    	       'search_key_type' => 1,
+    	       'resource_type' => 1,
     	       'resource_url' => 1,
     	       'organism_id' => 1,
   );
@@ -400,7 +426,7 @@ sub handle_request {
       url_cols_ref=>\%url_cols,
       hidden_cols_ref=>\%hidden_cols,
       max_widths=>\%max_widths,
-      #column_titles_ref=>\@column_titles,
+      column_titles_ref=>\@column_titles,
       base_url=>$base_url,
     );
 
