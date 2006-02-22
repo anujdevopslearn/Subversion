@@ -401,21 +401,23 @@ sub handle_request {
       print "There were no matches in the index to match your search key '$search_key'<BR>";
       if ($search_key !~ /%/) {
         print qq~
+          <TABLE BORDER="0" WIDTH="570"><TR><TD>
           <BR>You can broaden the search by placing wildcards around your search key like this:
           <A HREF="$base_url?search_key=$cleaned_search_key%25&action=GO">$cleaned_search_key%</A>,
           <A HREF="$base_url?search_key=%25$cleaned_search_key%25&action=GO">%$cleaned_search_key%</A>
+          </TD></TR></TABLE>
         ~;
       }
       return(0);
     }
 
     print qq~
-      <P>
+          <TABLE BORDER="0" WIDTH="570"><TR><TD>
       Your search returned $n_results matches.  Please choose one from below.
       Or you can broaden the search by placing wildcards around your search key like this:
           <A HREF="$base_url?search_key=$cleaned_search_key%25&action=GO">$cleaned_search_key%</A>,
           <A HREF="$base_url?search_key=%25$cleaned_search_key%25&action=GO">%$cleaned_search_key%</A>
-      </P>
+          </TD></TR></TABLE><BR>
     ~;
 
     #### Display the resultset
