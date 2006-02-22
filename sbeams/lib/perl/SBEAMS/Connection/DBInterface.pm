@@ -3236,7 +3236,7 @@ sub displayResultSetControls {
     if ($self->output_mode() eq 'html') {
       $BR = "<BR>\n";
       print qq~
-      <TABLE WIDTH="800" BORDER=0><TR><TD>
+      <TABLE WIDTH="570" BORDER="0"><TR><TD>
       <FORM METHOD="POST">
       ~;
     }
