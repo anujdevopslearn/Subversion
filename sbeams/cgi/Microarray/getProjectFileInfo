@@ -19,7 +19,7 @@ main();
 
 sub main {
 
-## The next 3 lines seriously chap my ass.
+  # use SBEAMS parameter handling 
   my $params = {};
   $sbeams->parse_input_parameters( q => $q, parameters_ref=> $params );
   $sbeams->processStandardParameters( parameters_ref=> $params );
@@ -42,9 +42,6 @@ sub main {
 
 	$sbeams->fetchResultSet( sql_query=>$sql,
                            resultset_ref=>$rs_ref );
-
-  use Data::Dumper;
-  print STDERR Dumper( $rs_ref );
   
   $sbeams->displayResultSet( resultset_ref => $rs_ref );
 
