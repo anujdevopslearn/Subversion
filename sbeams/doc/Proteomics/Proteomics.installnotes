@@ -10,8 +10,10 @@ $Id$
 You must first install the SBEAMS Core.  See the separate installation
 notes (sbeams.installnotes) on how to accomplish that. You must also
 install the BioLink module; follow the installation instructions
-provided with that module first (BioLink.installnotes).
-
+provided with that module first (BioLink.installnotes). Furthermore,
+you must also install the Gene Ontology module if you want to make 
+use of the Gene Ontology Annotations (BioLink/GeneOntology.installnotes),
+though this can be done at a later time.
 
 The following Perl Modules often not found on a standard UNIX/Linux
 setup are required to successfully use SBEAMS - Proteomics (in addition

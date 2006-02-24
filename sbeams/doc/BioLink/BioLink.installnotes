@@ -127,6 +127,8 @@ just empty resultsets.
 
 If this doesn't work.  Do not proceed, debug first.
 
+NOTE: You will potentially need to re-run this step every time either
+of these files is updated (BioLink_table_property.txt and _column.txt)
 
 -------------------------------------------------------------------------------
 6) Populate some of the tables with initial data
@@ -156,3 +158,16 @@ With your browser, navigate to:
 yourself (and appropriate others) to these groups.
 
 You are now ready to install any of the specific modules!
+
+-------------------------------------------------------------------------------
+8) Install Optional Modules
+
+While not required to run SBEAMS, the Gene Ontology module provides a very
+convenient way to view Gene Ontology Annotations (GO) in some SBEAMS queries.
+
+Instructions can be found at:
+
+$SBEAMS/doc/BioLink/GeneOntology.installnotes
+
+You can always install this at a later time as well.
+

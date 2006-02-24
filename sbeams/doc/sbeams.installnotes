@@ -204,7 +204,7 @@ cd /local/www/html
 
 #####
 # There are two ways to acquire the source code, now that the SBEAMS subversion
-# repository it online.  You can download a distribution tar archive and follow
+# repository is online.  You can download a distribution tar archive and follow
 # these instructions:
 
 mkdir dev1   (this may need to be done as root. then do: chown user1 dev1)
@@ -591,6 +591,8 @@ individual modules yet; they are not configured.
 
 If this doesn't work.  Do not proceed, debug first.
 
+NOTE: You will potentially need to re-run this step every time either
+of these files is updated (Core_table_property.txt and _column.txt)
 
 -------------------------------------------------------------------------------
 8) Populate core database tables
@@ -627,6 +629,8 @@ SBEAMS/doc/BioLink/BioLink.installnotes
 Now follow the individual module install notes, e.g.:
 
 $SBEAMS/doc/Proteomics/Proteomics.installnotes
+
+$SBEAMS/doc/BioLink/GeneOntology.installnotes
 
 -------------------------------------------------------------------------------
 Troubleshooting:
