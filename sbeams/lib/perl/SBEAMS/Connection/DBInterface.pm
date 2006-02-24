@@ -2255,27 +2255,28 @@ sub buildOptionList {
     $dbh = $self->getDBHandle();
 
     #### Convert the SQL dialect if necessary
-    $sql_query = $self->translateSQL(sql=>$sql_query); 
-      
+    $sql_query = $self->translateSQL(sql=>$sql_query);
+
     ##for debugging:
     ##$self->display_sql(sql=>$sql_query);
     my $options="";
     my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
     my $rv  = $sth->execute;
     unless( $rv ) {
-      $log->printStack();
-      $log->error( "DBI ERR:\n" . $dbh->errstr . "\nSQL: $sql_query" );
-      croak $dbh->errstr;  
-    }
+	$log->printStack();
+	$log->error( "DBI ERR:\n" . $dbh->errstr . "\nSQL: $sql_query" );
+	$options = qq%<OPTION SELECTED VALUE="">--- NOT AVAILABLE ! ---</OPTION>\n%;
+    } else {
 
-    while (my @row = $sth->fetchrow_array) {
-        $selected_flag="";
-	if ($selected_options{$row[0]}) {
-	  $selected_flag=" SELECTED";
-	  delete($selected_options{$row[0]});
-	}
-        $options .= qq!<OPTION$selected_flag VALUE="$row[0]">$row[1]\n!;
-    } # end while
+	while (my @row = $sth->fetchrow_array) {
+	    $selected_flag="";
+	    if ($selected_options{$row[0]}) {
+		$selected_flag=" SELECTED";
+		delete($selected_options{$row[0]});
+	    }
+	    $options .= qq!<OPTION$selected_flag VALUE="$row[0]">$row[1]</OPTION>\n!;
+	} # end while
+    } # end else
 
     $sth->finish;
 
