@@ -50,9 +50,6 @@
   ./update_driver_tables.pl $CONFDIR/BEDB/BEDB_table_property.txt
   ./update_driver_tables.pl $CONFDIR/BEDB/BEDB_table_column.txt
 
-  ./update_driver_tables.pl $CONFDIR/GEAP/GEAP_table_property.txt
-  ./update_driver_tables.pl $CONFDIR/GEAP/GEAP_table_column.txt
-
   ./update_driver_tables.pl $CONFDIR/Immunostain/Immunostain_table_property.txt
   ./update_driver_tables.pl $CONFDIR/Immunostain/Immunostain_table_column.txt
 
@@ -80,6 +77,11 @@
   ./update_driver_tables.pl $CONFDIR/Oligo/Oligo_table_property.txt
   ./update_driver_tables.pl $CONFDIR/Oligo/Oligo_table_column.txt
 
+  ./update_driver_tables.pl $CONFDIR/Biomarker/Biomarker_table_property.txt
+  ./update_driver_tables.pl $CONFDIR/Biomarker/Biomarker_table_column.txt
+
+  ./update_driver_tables.pl $CONFDIR/Glycopeptide/Glycopeptide_table_property.txt
+  ./update_driver_tables.pl $CONFDIR/Glycopeptide/Glycopeptide_table_column.txt
 
 
 
