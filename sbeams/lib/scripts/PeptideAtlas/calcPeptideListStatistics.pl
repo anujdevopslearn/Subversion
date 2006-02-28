@@ -113,13 +113,16 @@ sub main {
   my $process_search_batch_id = $OPTIONS{search_batch_id} || 0;
 
   my $this_search_batch_id;
-  my $n_experiments;
+  my $n_experiments = 0;
 
   my @peptides;
   my @correct_peptides;
   my @search_batch_peptides;
   my @stats_table;
 
+  #### Array of search_batch_ids and a hash of all peptides by search_batch_id
+  my @all_search_batch_ids;
+  my %all_peptides;
 
   #### Skip header
   <INFILE>;
@@ -156,9 +159,12 @@ sub main {
     #### then finish processing the last peptides of previous search_batch_id
     if ($this_search_batch_id != $columns[0]) {
 
-      #print "  search_batch_peptides has ".scalar(@search_batch_peptides).
-      #" elements\n";
-      $n_experiments++;
+      #### Store all the peptides in a hash
+      my @tmp = @search_batch_peptides;
+      push(@all_search_batch_ids,$this_search_batch_id);
+      $all_peptides{$this_search_batch_id} = \@tmp;
+
+      #### Remove some peptides according to their probabilities
       my $result = removePeptides(
         peptide_list => \@search_batch_peptides,
       );
@@ -181,8 +187,11 @@ sub main {
       #### Prepare for next search_batch_id
       $this_search_batch_id = $columns[0];
       @search_batch_peptides = ();
-      print "Processing search_batch_id=$this_search_batch_id\n"
-	unless ($this_search_batch_id == -998899);
+      unless ($this_search_batch_id == -998899) {
+	print "Processing search_batch_id=$this_search_batch_id\n";
+	$n_experiments++;
+      }
+
     }
 
     #### Put this peptide entry to the arrays
@@ -213,7 +222,7 @@ sub main {
   #### If we want to write a revised 2+ton peptide list
   my $write_filtered_peptide_list = 1;
   if ($write_filtered_peptide_list) {
-    open(OUTFILT,">out.filtsequences");
+    open(OUTFILT,">out.2tonsequences");
   }
 
 
@@ -269,6 +278,8 @@ sub main {
 
   my $most_pessimistic_distinct_peptide_FPR =
     round($n_incorrect_assignments/$n_distinct_peptides,3);
+  my $most_pessimistic_distinct_peptides =
+    $n_distinct_peptides*(1-($n_incorrect_assignments/$n_distinct_peptides));
 
 
   print "Total experiments: $n_experiments\n";
@@ -280,10 +291,11 @@ sub main {
   print "Total distinct peptides: $n_distinct_peptides\n";
   print "Total singleton distinct peptides: $n_singleton_distinct_peptides\n";
   print "Total P=1 singleton distinct peptides: $n_P1_singleton_distinct_peptides\n";
-  print "Simulated correct distinct peptides: $n_correct_distinct_peptides\n";
-  print "Simulated incorrect distinct peptides: $n_incorrect_distinct_peptides\n";
-  print "Simulated distinct peptide FPR: $distinct_peptide_FPR\n";
-  print "Most pessimistic distinct peptide FPR: $most_pessimistic_distinct_peptide_FPR\n\n";
+  print "Naively simulated correct distinct peptides: $n_correct_distinct_peptides\n";
+  print "Naively simulated incorrect distinct peptides: $n_incorrect_distinct_peptides\n";
+  print "Naively simulated distinct peptide FPR: $distinct_peptide_FPR\n";
+  print "Most pessimistic distinct peptide FPR: $most_pessimistic_distinct_peptide_FPR\n";
+  print "Most pessimistic distinct peptides: $most_pessimistic_distinct_peptides\n\n";
 
   my $num_incorr_mult_hit_percent = 6;
   if ($P_threshold < .75) {
@@ -321,6 +333,55 @@ sub main {
     printf OUTFILE ("%8.2f %8.2f %8d %8d %8d\n",@{$stat_row});
   }
   close(OUTFILE);
+
+
+
+    my $outfile2="experiment_contribution_summary.out";
+    open (OUTFILE2, ">", $outfile2) or die "can't open $outfile2 ($!)";
+    print OUTFILE2 "          sample_tag sbid ngoodspec      npep n_new_pep cum_nspec cum_n_new is_pub\n";
+    print OUTFILE2 "-------------------- ---- --------- --------- --------- --------- --------- ------\n";
+
+
+  #### Calculate the number of distinct peptides as a function of exp
+  my $niter = 1;
+
+  for (my $iter=0; $iter<$niter; $iter++) {
+
+    my @shuffled_search_batch_ids = @all_search_batch_ids;
+    if ($iter > 0) {
+      my $result = shuffleArray(array_ref=>\@all_search_batch_ids);
+      @shuffled_search_batch_ids = @{$result};
+    }
+
+    my %total_distinct_peptides;
+    my $p_cum_n_new = 0;
+    my $cum_nspec = 0;
+
+    foreach my $search_batch_id ( @shuffled_search_batch_ids ) {
+      my $peptide_list = $all_peptides{$search_batch_id};
+      my %batch_distinct_peptides;
+      foreach my $peptide ( @{$peptide_list} ) {
+	if ($distinct_peptides{$peptide->[1]}->{count} > 1) {
+	  $total_distinct_peptides{$peptide->[1]}++;
+	  $batch_distinct_peptides{$peptide->[1]}++;
+	}
+      }
+      my $n_goodspec = scalar(@{$peptide_list});
+      $cum_nspec += $n_goodspec;
+      my $n_peptides = scalar(keys(%batch_distinct_peptides));
+      my $cum_n_new = scalar(keys(%total_distinct_peptides));
+      my $n_new_pep = $cum_n_new - $p_cum_n_new;
+
+      printf OUTFILE2 "%20s %4.0f %9.0f %9.0f %9.0f %9.0f %9.0f %6s\n",
+	      'xx', $search_batch_id,$n_goodspec ,
+	      $n_peptides, $n_new_pep,
+	      $cum_nspec, $cum_n_new, 'N',
+	     ;
+
+      $p_cum_n_new = $cum_n_new;
+    }
+  }
+
 
   return(1);
 
@@ -585,5 +646,38 @@ sub removePeptidesWithinWindow2 {
 
 } # end removePeptidesWithinWindow2
 
+
+
+###############################################################################
+# shuffleArray
+###############################################################################
+sub shuffleArray {
+  my $METHOD = 'shuffleArray';
+  my %args = @_;
+  my $array_ref = $args{'array_ref'} || die("No array_ref provided");
+
+  my $n_elements = scalar(@{$array_ref});
+
+  my @new_array;
+
+  my %hash;
+  foreach my $element ( @{$array_ref} ) {
+    $hash{$element} = 1;
+  }
+
+  my $n_left = $n_elements;
+  for (my $i=0; $i<$n_elements; $i++) {
+    my $index = rand($n_left);
+    my @tmp_array = keys(%hash);
+    my $id = $tmp_array[$index];
+    push(@new_array,$id);
+    delete($hash{$id});
+    #print "$n_left\t$index\t$tmp_array[$index]\n";
+    $n_left--;
+  }
+
+  return(\@new_array);
+
+}
 
 
