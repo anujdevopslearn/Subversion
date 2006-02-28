@@ -429,19 +429,27 @@ sub updateObservedProteotypicScores {
   }
 
   my $predicted_scores = readPredictorOutput(
-    source_file => 'zz3.tsv',
+    source_file => 'calculated_proteotypic.tsv',
   );
 
 
-  my $export_file = 'zz2.tsv';
+  my $export_file = 'proteotypic_scores.tsv';
   open(OUTFILE,">$export_file") or
     die("ERROR[$SUB]: Unable to write to '$export_file'");
-  open(OUTFILE2,">${export_file}2") or
-    die("ERROR[$SUB]: Unable to write to '${export_file}2'");
+  my $export_file2 = $export_file;
+  $export_file2 =~ s/\.tsv/-simplified.tsv/;
+  open(OUTFILE2,">$export_file2") or
+    die("ERROR[$SUB]: Unable to write to '$export_file2'");
 
   print OUTFILE "peptide_instance_id\tflanked_peptide_sequence\tn_peptide_samples\t".
     "n_protein_samples\tproteotypic_fraction\tpredicted_score\tprotein_name\n";
 
+
+  #### Hash for tracking proteins containing proteotypic peptides
+  my %proteoproteins;
+  my %threeplusproteins;
+
+  my $proteotypic_score_threshold = 0.5;
 
   foreach my $peptide ( keys(%peptide_scores) ) {
     if ($peptide_scores{$peptide}->{n_protein_samples} > 2 &&
@@ -465,12 +473,42 @@ sub updateObservedProteotypicScores {
 	sprintf("%4.3f",$predicted_scores->{$peptide})."\n";
       #}
 
+      #### Store protein information
+      my $protein_name = $peptide_scores{$peptide}->{protein_name};
+      $threeplusproteins{$protein_name}++;
+      if ($peptide_scores{$peptide}->{score} > $proteotypic_score_threshold) {
+	$proteoproteins{$protein_name}->{$peptide} = 
+	  $peptide_scores{$peptide}->{score};
+      }
+
+
     }
   }
 
 
   close(OUTFILE);
   close(OUTFILE2);
+
+
+  #### Calculate histogram of how many proteotypic peptides per protein
+  my %peptide_counts;
+  foreach my $proteoprotein ( keys(%proteoproteins) ) {
+    my $n_peptides = scalar(keys(%{$proteoproteins{$proteoprotein}}));
+    $peptide_counts{$n_peptides}++;
+  }
+
+
+  print "\nNumber of proteins observed in more than 2 samples: ".
+    scalar(keys(%threeplusproteins))."\n";
+  print "With proteotypic threshold $proteotypic_score_threshold\n";
+  print "Number of proteins with at least one proteotypic peptide: ".
+    scalar(keys(%proteoproteins))."\n";
+
+
+  foreach my $count ( sort numerically (keys(%peptide_counts)) ) {
+    print "$count\t$peptide_counts{$count}\n";
+  }
+
 
   return;
 
@@ -528,3 +566,13 @@ sub readPredictorOutput {
 
 
 
+###############################################################################
+# numerically
+###############################################################################
+sub numerically {
+ 
+  return $a <=> $b;
+ 
+} # end numerically
+ 
+ 
