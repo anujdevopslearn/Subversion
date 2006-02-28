@@ -939,21 +939,20 @@ for (class.numb in unique.classes){
 		  
 	}else{
 ##Grab the cols for this particular loop
-			cols <- c( which(classlabel == class.numb), which(classlabel == 0))
-			current.classlabel <- as.integer(classlabel[cols])
+	cols <- c(which(classlabel == class.numb),which(classlabel == reference.class.id))
+	current.classlabel <- as.integer(classlabel[cols])
 ##Change in classlabels to 0 for the reference sample and 1 for the other sample class
-	#current.classlabel[which(current.classlabel>1)] <- 1
-	current.classlabel[which(current.classlabel == reference.class.id)] <- 0
- 	current.classlabel[which(current.classlabel == class.numb)] <- 1
-		
-		if (length(condition.ids)>=1){
-			#Map the current class to the correct condition name
-		condition.id.key <- which(condition.ids == class.numb) 
-		condition.name <- condition.names[condition.id.key]
-			outFileRoot <- paste(jobname, "_", condition.name, sep="")
-			print (outFileRoot)
-		}
-	}
+##Modified 2/21/06 by bmarzolf, since original code would result in all data getting marked as
+##reference if the class.number==0 and reference.class.id==1
+	current.classlabel.sample <- which(current.classlabel == class.numb)
+  current.classlabel.reference <- which(current.classlabel == reference.class.id)
+	if (class.numb == 0){
+ 		current.classlabel[current.classlabel.sample] <- 1
+ 		current.classlabel[current.classlabel.reference] <- 0
+ 	}else{
+ 		current.classlabel[current.classlabel.reference] <- 0
+  		current.classlabel[current.classlabel.sample] <- 1
+ 	}
 	
 	#initilize and set the title
 	title <- in.title
@@ -1229,9 +1228,11 @@ for (class.numb in unique.classes){
 	cols <- c(which(classlabel == class.numb), which(classlabel == reference.class.id) )
 	current.classlabel <- as.integer(classlabel[cols])
 ##Change in classlabels to 0 for the reference sample and 1 for the other sample class
-	#current.classlabel[which(current.classlabel>1)] <- 1
-	current.classlabel[which(current.classlabel == reference.class.id)] <- 0
- 	current.classlabel[which(current.classlabel == class.numb)] <- 1
+	current.classlabel.sample <- which(current.classlabel == class.numb)
+  current.classlabel.reference <- which(current.classlabel == reference.class.id)
+ 	current.classlabel[current.classlabel.sample] <- 1
+ 	current.classlabel[current.classlabel.reference] <- 0
+
 	
 	if (length(condition.ids)>=1){
 		#Map the current class to the correct condition name
@@ -1478,12 +1479,14 @@ for (class.numb in unique.classes){
 	cols <- c(which(classlabel == class.numb),which(classlabel == reference.class.id))
 	current.classlabel <- as.integer(classlabel[cols])
 ##Change in classlabels to 0 for the reference sample and 1 for the other sample class
+	current.classlabel.sample <- which(current.classlabel == class.numb)
+  current.classlabel.reference <- which(current.classlabel == reference.class.id)
 	if (class.numb == 0){
- 		current.classlabel[which(current.classlabel == class.numb)] <- 1
- 		current.classlabel[which(current.classlabel == reference.class.id)] <- 0
+ 		current.classlabel[current.classlabel.sample] <- 1
+ 		current.classlabel[current.classlabel.reference] <- 0
  	}else{
- 		current.classlabel[which(current.classlabel == reference.class.id)] <- 0
-  		current.classlabel[which(current.classlabel == class.numb)] <- 1
+ 		current.classlabel[current.classlabel.reference] <- 0
+  		current.classlabel[current.classlabel.sample] <- 1
  	}
 	
 	if (length(condition.ids)>=1){
