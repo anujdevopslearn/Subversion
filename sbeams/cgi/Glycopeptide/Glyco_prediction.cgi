@@ -77,7 +77,7 @@ sub main
        # permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin',
        # 'Glycopeptide_readonly'],
         #connect_read_only=>1,
-      allow_anonymous_access=>1,
+#   allow_anonymous_access=>1,
     ));
 
 
