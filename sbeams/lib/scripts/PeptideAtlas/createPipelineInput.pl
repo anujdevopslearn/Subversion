@@ -602,7 +602,7 @@ sub main {
   }
 
 
-  #### Loops over all ProteinProphet files
+  #### Loops over all input files
   foreach my $document ( @documents ) {
     my $filepath = $document->{filepath};
     $CONTENT_HANDLER->{search_batch_id} = $document->{search_batch_id};
