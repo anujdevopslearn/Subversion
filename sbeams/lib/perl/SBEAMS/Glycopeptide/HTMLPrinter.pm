@@ -63,27 +63,29 @@ sub displayUnipepHeader {
   my $ua = LWP::UserAgent->new();
   my $skinLink = 'http://www.unipep.org';
 #  my $skinLink = 'http://www.peptideatlas.org';
-  print STDERR "\n\n\nSkin link is $skinLink\n\n\n";
   my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index.dbbrowse.php" ) );
   my @page = split( "\r", $response->content() );
   my $skin = '';
-  for ( @page ) {
-    if ( $_ =~ /LOGIN/ ) {
-       $_ =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
-    } elsif ( $_ =~ /td\s+\{font/ ) {
+  my $cnt = 0;
+#  print STDERR "Original content is " . $response->content() . "\n";
+  for my $line ( @page ) {
+    $cnt++;
+    if ( $line =~ /LOGIN/ ) {
+       $line =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
+    } elsif ( $line =~ /td\s+\{font/ ) {
   #    next;
-    } elsif ( $_ =~ /body\s+\{font/ ) {
+    } elsif ( $line =~ /body\s+\{font/ ) {
   #    next;
     }
-    last if $_ =~ /--- Main Page Content ---/;
-    $skin .= $_;
+    $skin .= $line;
+    last if $line =~ /--- Main Page Content ---/;
   }
   $skin =~ s/\/images\//\/sbeams\/images\//gm;
  
   print "$http_header\n\n";
   print <<"  END_PAGE";
   <HTML>
-    $skin
+  $skin
   END_PAGE
   print '<STYLE TYPE=text/css>' . $self->getGlycoStyleSheet() . '</STYLE>';
 
