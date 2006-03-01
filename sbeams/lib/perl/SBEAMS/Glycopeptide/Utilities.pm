@@ -7,6 +7,9 @@ sub new {
   return $this;
 }
 
+#+
+# Routine counts the number of times pepseq matches protseq
+# -
 sub match_count {
   my $self = shift;
   my %args = @_;
@@ -17,7 +20,9 @@ sub match_count {
   return $#cnt;
 }
 
-# map_peptide_to_protein, 0-based
+#+
+# Routine finds and returns 0-based start/end coordinates of pepseq in protseq
+# -
 sub map_peptide_to_protein {
 	my $self = shift;
 	my %args = @_;
@@ -33,6 +38,10 @@ sub map_peptide_to_protein {
 	}
 }
 
+#+
+# Routine generates standard 'tryptic' peptide from observed sequence,
+# i.e. -.SHGTLFK.N
+# -
 sub getDigestPeptide {
   my $self = shift;
   my %args = @_;
