@@ -42,7 +42,9 @@ sub displayUnipepHeader {
  	my $self = shift;
   my %args = @_;
 
+  #### Obtain main SBEAMS object and use its http_header
   my $sbeams = $self->getSBEAMS();
+  my $http_header = $sbeams->get_http_header();
 
   my $navigation_bar = $args{'navigation_bar'} || "YES";
 
@@ -55,9 +57,6 @@ sub displayUnipepHeader {
   my $LOGIN_LINK = qq~<A HREF="$LOGIN_URI" class="leftnavlink">LOGIN</A>~;
 
 
-  #### Obtain main SBEAMS object and use its http_header
-  my $sbeams = $self->getSBEAMS();
-  my $http_header = $sbeams->get_http_header();
   use LWP::UserAgent;
   use HTTP::Request;
   my $ua = LWP::UserAgent->new();
