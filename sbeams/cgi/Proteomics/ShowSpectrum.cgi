@@ -643,6 +643,7 @@ sub get_msms_spectrum_from_file {
 
   my @mass_intensities;
 
+
   #### Set the file name as a dta file
   my $filename = "$location/$file_root.dta";
   unless ($filename =~ /^\//) {
@@ -650,16 +651,21 @@ sub get_msms_spectrum_from_file {
   }
 
 
-  #### Instead of accessing the .dta file directly, pull it out of the .tgz
-  my $use_tgz_file = 1;
-  if ($use_tgz_file) {
+  #### If the file doesn't exist, try to pull it out of a tgz file
+  if ( -e $filename ) {
+    #### Fine, proceed
+    #print "Using dta file: $filename<BR>\n";
+  } else {
     my $prefix = "$RAW_DATA_DIR{Proteomics}/";
     $prefix = '' if ($location =~ /^\//);
-    $filename = "/bin/tar -xzOf $prefix$data_location/".
-      "$fraction_tag.tgz ./$file_root.dta|";
+    my $tgz_filename = "$prefix$data_location/$fraction_tag.tgz";
+    if ( -e $tgz_filename ) {
+      $filename = "/bin/tar -xzOf $tgz_filename ./$file_root.dta|";
+      #print "Pulling from tarfile: $tgz_filename<BR>\n";
+    }
   }
 
-  if ( $use_tgz_file || -e $filename ) {
+  if ( $filename ) {
     my $line;
     unless (open(INFILE,$filename)) {
       print "Cannot open file $filename!!<BR>\n";
