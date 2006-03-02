@@ -104,7 +104,7 @@ sub invocation_mode {
 # Light-weight accessor
 #-
 sub get_output_mode {
-  $self = shift;
+  my $self = shift;
   return $output_mode || $self->output_mode();
 }
 
