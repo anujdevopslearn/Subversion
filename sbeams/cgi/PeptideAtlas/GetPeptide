@@ -32,7 +32,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              @MENU_OPTIONS);
 ##use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TabMenu;
@@ -161,13 +161,19 @@ sub main {
 ###############################################################################
 sub handle_request {
 
-    my %args = @_;
+  my %args = @_;
 
-    #### Process the arguments list
+  #### Process the arguments list
     my $ref_parameters = $args{'ref_parameters'}
         || die "ref_parameters not passed";
 
     my %parameters = %{$ref_parameters};
+
+    # Handle search tool links...
+    if ($parameters{searchWithinThis} eq 'Peptide+Name') {
+      $log->info( "Adjusted Peptide+Name to Peptide Name.");
+      $parameters{searchWithinThis} = 'Peptide Name';
+    }
 
     print <<"    END";
         <BR>
@@ -415,7 +421,6 @@ sub handle_request {
     return if ($peptide_name_clause eq '-1');
 
 
-
     #### Build PEPTIDE_SEQUENCE constraint
     my $peptide_sequence_clause = $sbeams->parseConstraint2SQL(
         constraint_column=>"P.peptide_sequence",
@@ -439,50 +444,38 @@ sub handle_request {
          P.peptide_accession, P.peptide_sequence,
          PI.best_probability, PI.n_observations, PI.n_genome_locations, PI.n_protein_mappings,
          PM.chromosome, PM.start_in_chromosome, PM.end_in_chromosome, PM.strand,
-         BS.biosequence_name,
-         PS.sample_tag, PS.sample_title
-
+         BS.biosequence_name
          FROM $TBAT_PEPTIDE_INSTANCE PI
-
          INNER JOIN $TBAT_PEPTIDE P
-         ON ( PI.peptide_id = P.peptide_id )
-
-         INNER JOIN $TBAT_PEPTIDE_INSTANCE_SAMPLE PIS
-         ON ( PI.peptide_instance_id = PIS.peptide_instance_id )
-
-         INNER JOIN $TBAT_SAMPLE PS
-         ON ( PIS.sample_id = PS.sample_id )
-
-         INNER JOIN $TBAT_ATLAS_BUILD AB
-         ON ( PI.atlas_build_id = AB.atlas_build_id )
-
+          ON ( PI.peptide_id = P.peptide_id )
+         INNER JOIN $TBAT_ATLAS_BUILD AB 
+          ON ( PI.atlas_build_id = AB.atlas_build_id )
          LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
-         ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
-
+          ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
          LEFT JOIN $TB_ORGANISM O
-         ON ( BSS.organism_id = O.organism_id )
-
+          ON ( BSS.organism_id = O.organism_id )
          LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
-         ON ( PI.peptide_instance_id = PM.peptide_instance_id )
-
+          ON ( PI.peptide_instance_id = PM.peptide_instance_id )
          LEFT JOIN $TBAT_BIOSEQUENCE BS
-         ON ( PM.matched_biosequence_id = BS.biosequence_id )
-
+          ON ( PM.matched_biosequence_id = BS.biosequence_id )
          LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
-
          WHERE 1 = 1
             $atlas_build_clause
             $peptide_name_clause
             $peptide_sequence_clause
-
         ORDER BY PM.chromosome, BS.biosequence_name, PM.start_in_chromosome
     ~;
-    #$sbeams->display_sql(sql=>$sql);
-
+    unless ( $peptide_name_clause || $peptide_sequence_clause ) {
+      $sbeams->display_sql(sql=>$sql);
+      print qq~
+      <FONT COLR=red>No name or sequence constraint found, unable to proceed</FONT>
+      ~;
+      return;
+    }
 
     #########################################################################
     #### If QUERY,  display the data
-    if ($apply_action =~ /QUERY/i ) {
+if ($apply_action =~ /QUERY/i ) {
 
         my @rows = $sbeams->selectSeveralColumns($sql)
         or print "Peptide not found.  Please check selections and try again.<br>";
@@ -493,15 +486,13 @@ sub handle_request {
             my (@best_probability, @n_observations, @n_genome_locations, @n_protein_mappings);
             my (@chrom, @start_chrom, @end_chrom, @strand);
             my (@biosequence_name);
-            my (@sample_tag, @sample_title);
-            my %sample_H;
 
             my $i=0;  ##index counter
 
             foreach my $row (@rows) {
 
                 my ($pa, $seq, $prob, $n_obs, $n_g_loc, $n_prot_map, 
-                $chr, $s_chr, $e_chr, $str, $b_name, $s_tag, $s_title) = @{$row};
+                $chr, $s_chr, $e_chr, $str, $b_name) = @{$row};
 
                 $peptide_accession[$i] = $pa;
                 $peptide_sequence[$i] = $seq;
@@ -514,224 +505,169 @@ sub handle_request {
                 $end_chrom[$i] = $e_chr;
                 $strand[$i] = $str;
                 $biosequence_name[$i] = $b_name;
-                $sample_tag[$i] = $s_tag;
-                $sample_title[$i] = $s_title;
-
-                $sample_H{$sample_tag[$i]} = $i;
-
                 #print "sql returns: $n_observations[$i] $sample_tag[$i] <br>";
-
                 $i++;
             }
             
             ##xxxx PRINT RETURN to HTML HERE... 
 
-            ## Tan section:
-            my $prnt = "<DIV ID='Section1' DIR='LTR' STYLE='background: #ffcc99'>
-	         <P>
-                 <BR>
-                 &nbsp;&nbsp;&nbsp;<B>Peptide Accession:</B>&nbsp;&nbsp;&nbsp; 
-                     $peptide_accession[0] &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                 &nbsp;&nbsp;&nbsp;<B>Peptide Sequence:</B>&nbsp;&nbsp;&nbsp; 
-                     $peptide_sequence[0] <br>
-                 <HR>
-                 <BR>
-                 &nbsp;&nbsp;&nbsp;<B>Best Probability:</B>&nbsp;&nbsp;&nbsp;
-                     $best_probability[0] <br>
-                 &nbsp;&nbsp;&nbsp;<B>Number of Times Observed: </B>&nbsp;&nbsp;&nbsp;
-                     $n_observations[0]  <br>
-                 &nbsp;&nbsp;&nbsp;<B>Molecular Weight:</B>&nbsp;&nbsp;&nbsp;
-                                         <br>
-                 &nbsp;&nbsp;&nbsp;<B>pI: </B>&nbsp;&nbsp;&nbsp;
-                                         <br>
-                 <BR>
-                 </P>
-                 </DIV>";
-            print $prnt;
+  my $summary_header = $sbeamsMOD->encodeSectionHeader(
+    text => "$peptide_accession[0]",
+    bold => 1
+  );
 
-            
-            ## Yellow section:
-            print "<DIV ID='Section2' DIR='LTR' STYLE='background: #ffffcc'>";
-            $prnt = "<BR>&nbsp;&nbsp;&nbsp;<B>Genome Mappings:</B>&nbsp;&nbsp;&nbsp; 
-                     $n_genome_locations[0] <BR><HR>";
-            print $prnt;
+  my $summ =<<"  END"; 
+    <TABLE BORDER=0>
+    $summary_header 
+  END
 
-            my $last_chrom = "";
+  $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Peptide Accession',
+                                          value => $peptide_accession[0] );
+  $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Peptide Sequence',
+                                          value => $peptide_sequence[0] );
+  $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Best Probability',
+                                          value => $best_probability[0] );
+  $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Times Observed:',
+                                          value => $n_observations[0] );
+  $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Molecular Weight',
+                                          value => ''    );
+  $summ .= $sbeamsMOD->encodeSectionItem( key   => 'PI',
+                                          value => ''    );
 
-            my $last_protein = "";
-
-            my $last_seq_used_length = "";
+  print "<BR><BR>\n";
+  print "$summ\n";
 
 
-            my $n_indices=$#peptide_accession;
+  my $mapHTML = qq~
+  <TR><TD COLSPAN=2>&nbsp;</TD></TR>
+  ~; # <TABLE>';
 
-            for ($i = 0; $i <= $n_indices; $i++) 
-            {
+  $mapHTML .= $sbeamsMOD->encodeSectionHeader(
+    text => "Genome Mappings: $n_genome_locations[0]",
+    bold => 1
+  );
+  my $last_chrom = "";
+  my $last_protein = "";
+  my $last_seq_used_length = "";
+  my $n_indices=$#peptide_accession;
 
-                my $current_chrom = $chrom[$i];
+  my @rows;
+  for ($i = 0; $i <= $n_indices; $i++) {
+    my $current_chrom = $chrom[$i];
+    my $current_prot = $biosequence_name[$i];
+    ## $current_peptide_seq is the entire peptide sequence, even if split over 2 exons
+    my $current_peptide_seq = $peptide_sequence[$i];
 
-                my $current_prot = $biosequence_name[$i];
-
-                ## $current_peptide_seq is the entire peptide sequence, even if split over 2 exons
-                my $current_peptide_seq = $peptide_sequence[$i];
-
-
-                if ($current_chrom ne $last_chrom)
-                {
-
-                    print "<BR>&nbsp;&nbsp;&nbsp;&nbsp;";
-
-                    print "<nobr><B>Chromosome $current_chrom :</B></nobr><BR>";
-
-                    print "<TABLE border=1>";
-
-                }
-
-                my $tmp_start = $start_chrom[$i];
-
-                my $tmp_end = $end_chrom[$i];
-
-                my $tmp_strand = $strand[$i];
-
-                my $tmp_protein = $biosequence_name[$i];
-
-                my $tmp_seq;
-
+    if ($current_chrom ne $last_chrom) {
+      $mapHTML .= "<TR><TD NOWRAP COLSPAN=2><B>Chromosome $current_chrom: </B></TD><TD></TD></TR>\n";
+    }
+    my $tmp_start = $start_chrom[$i];
+    my $tmp_end = $end_chrom[$i];
+    my $tmp_strand = $strand[$i];
+    my $tmp_protein = $biosequence_name[$i];
+    my $tmp_seq;
                     
-                #### get residues on given exons ####
-
-                my $exon_bp_length = ceil( (abs($tmp_end - $tmp_start)/3.) );
+    #### get residues on given exons ####
+    my $exon_bp_length = ceil( (abs($tmp_end - $tmp_start)/3.) );
                                         
-                ## reverse peptide residues if strand is reverse
-                #$tmp_peptide = reverse $tmp_peptide if ($tmp_strand eq "-");
+    ## if the strand is negative, count residues on exon starting from end
+    if ($tmp_strand eq "-") {
+      if ($tmp_protein eq $last_protein) {
+        $tmp_seq = substr($current_peptide_seq, 
+                        ((length $current_peptide_seq) - $last_seq_used_length - $exon_bp_length), 
+                        ((length $current_peptide_seq) - $last_seq_used_length ) );
+     } else {
+       $tmp_seq = substr($current_peptide_seq, 
+                        ((length $current_peptide_seq) - $exon_bp_length), 
+                        (length $current_peptide_seq) );
+      }
+    } elsif ($tmp_strand eq "+") {
+    if ($tmp_protein eq $last_protein) {
+      $tmp_seq = substr($current_peptide_seq, $last_seq_used_length, (length $current_peptide_seq));
+    } else {
+      $tmp_seq = substr($current_peptide_seq, 0, $exon_bp_length);
+    }
+  }
 
-                ## if the strand is negative, count residues on exon starting from end
-                if ($tmp_strand eq "-")
-                {
+  $last_seq_used_length = length($tmp_seq);
+  my $protlink = qq~ 
+  <A HREF="$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$parameters{atlas_build_id}&protein_name=$tmp_protein&action=QUERY" class="text_link">$tmp_protein</A>
+  ~;
+  push @rows, [ $protlink, $tmp_seq, "$tmp_start - $tmp_end", "<B>$tmp_strand</B>" ] if $tmp_seq;
 
-                    if ($tmp_protein eq $last_protein)
-                    {
+  $last_chrom = $current_chrom;
+  $last_protein = $current_prot;
 
-                        #$tmp_seq = substr($current_peptide_seq, $last_seq_used_length, (length $current_peptide_seq));
-                        $tmp_seq = substr($current_peptide_seq, 
-                            ((length $current_peptide_seq) - $last_seq_used_length - $exon_bp_length), 
-                            ((length $current_peptide_seq) - $last_seq_used_length ) );
- 
-                    } else 
-                    {
-
-                        #$tmp_seq = substr($current_peptide_seq, 0, $exon_bp_length);
-                        $tmp_seq = substr($current_peptide_seq, 
-                            ((length $current_peptide_seq) - $exon_bp_length), 
-                            (length $current_peptide_seq));
-                                        
-                    }
-
-                }
-
-
-                if ($tmp_strand eq "+")
-                {
-
-                    if ($tmp_protein eq $last_protein)
-                    {
-
-                        $tmp_seq = substr($current_peptide_seq, $last_seq_used_length, (length $current_peptide_seq));
- 
-                    } else 
-                    {
-
-                        $tmp_seq = substr($current_peptide_seq, 0, $exon_bp_length);
-                                        
-                    }
-
-                }
-
-
-                $last_seq_used_length = length($tmp_seq);
-
-                print "<TR><TD>";
-
-                print "&nbsp;&nbsp;&nbsp;&nbsp;";
-
-                print "&nbsp;&nbsp;&nbsp;&nbsp;";
-
-                print "Protein: &nbsp;&nbsp;";
-
-                print "<A HREF=\"$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$parameters{atlas_build_id}&protein_name=$tmp_protein&action=QUERY\" class=\"text_link\">$tmp_protein</A>";
-
-                print "</TD>";
-
-                print "<TD>";
-
-                print "&nbsp;&nbsp;&nbsp;&nbsp;";
-
-                print "residues on exon:&nbsp;&nbsp;$tmp_seq";
-
-                print "&nbsp;&nbsp;&nbsp;&nbsp;";
-
-                print "</TD>";
-
-                print "<TD>";
-
-                print "exon:&nbsp;&nbsp;$tmp_start - $tmp_end";
-
-                print "&nbsp;&nbsp;&nbsp;&nbsp;";
-
-                print "</TD>";
-
-                print "<TD>";
-
-                print "strand: &nbsp;$tmp_strand";
-
-                print "</TD></TR>";
-
-                $last_chrom = $current_chrom;
-
-                $last_protein = $current_prot;
-
-                if ($i < $n_indices && ($current_chrom ne $chrom[$i+1]) )
-                {
-
-                    print "</TABLE>";
-
-                }
+  if ($i < $n_indices && ($current_chrom ne $chrom[$i+1]) ) {
+    next unless @rows;
+    unshift @rows, ['Protein', 'Residues on Exon', 'Exon Range', 'Strand'];
+    $mapHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
+                                                rows   => \@rows,
+                                                width => '600',
+                                                align  => [qw(left left center center)]
+                                                );
+    @rows = ();
+  }
+}
+  unshift @rows, ['Protein', 'Residues on Exon', 'Exon Range', 'Strand'];
+  $mapHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
+                                              width => '600',
+                                              align  => [qw(left left center center)],
+                                              rows => \@rows );
 
 
-            }
+  print "$mapHTML\n";
 
-            print "</TABLE>";
-
-            print "</DIV>";
-
-
-            print "<BR>";
             
+  my $sampleHTML = qq~
+  <TR><TD COLSPAN=2>&nbsp;</TD></TR>
+  ~;
 
-            ## Pale Green section:
-            print "<DIV ID='Section3' DIR='LTR' STYLE='background: #ccffff'>";
-            print "<BR>";
+  $sampleHTML .= $sbeamsMOD->encodeSectionHeader(
+    text=>'Observed in Samples:',
+    bold => 1
+  );
 
-            print "&nbsp;&nbsp;&nbsp;&nbsp;";
-            print "<B>Observed in Samples:</B><BR>";
-            print "<BR>";
-            print "<TABLE border=1>";
-            print "<TH> Sample Tag</TH>";
-            print "<TH> Sample Title</TH>";
+  my $sampleSQL = qq ~
+     SELECT distinct
+     PS.sample_tag, PS.sample_title
+     FROM $TBAT_PEPTIDE_INSTANCE PI
+     INNER JOIN $TBAT_PEPTIDE P
+      ON ( PI.peptide_id = P.peptide_id )
+     INNER JOIN $TBAT_ATLAS_BUILD AB 
+      ON ( PI.atlas_build_id = AB.atlas_build_id )
+       INNER JOIN $TBAT_PEPTIDE_INSTANCE_SAMPLE PIS
+       ON ( PI.peptide_instance_id = PIS.peptide_instance_id )
+      INNER JOIN $TBAT_SAMPLE PS
+      ON ( PIS.sample_id = PS.sample_id )
+     WHERE 1 = 1
+     $atlas_build_clause
+     $peptide_name_clause
+     $peptide_sequence_clause
+     ORDER BY PS.sample_tag, PS.sample_title
+  ~;
 
-            foreach my $k (keys %sample_H ) {
-                my $i = $sample_H{$k};
-                print "<TR><TD>$sample_tag[$i]</TD><TD>$sample_title[$i]</TD></TR>";
-            }
-            print "</TABLE>";
+  my @samples = $sbeams->selectSeveralColumns( $sampleSQL );
 
-            print "<BR>";
-            print "</DIV>";
+  if ( @samples ) {
+    # Add column headings
+    @rows = ();
+    push @rows, ['Sample Tag', 'Sample Title'];
 
+    for my $sample ( @samples ) {
+      push @rows, $sample;
+    }
+
+    $sampleHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
+                                        rows => \@rows );
+    $sampleHTML .= "</TABLE>\n";
+  }
+  print "$sampleHTML\n";
+            
         }
 
     #### If QUERY was not selected, then tell the user to enter some parameters
-    } else {
+  } else {
 
         if ($sbeams->invocation_mode() eq 'http') {
 
