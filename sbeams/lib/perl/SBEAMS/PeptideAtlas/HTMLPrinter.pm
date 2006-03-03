@@ -22,6 +22,7 @@ use CGI::Carp qw(fatalsToBrowser croak);
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::TableInfo;
+use SBEAMS::Connection::DataTable;
 
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::TableInfo;
@@ -394,6 +395,7 @@ sub encodeSectionHeader {
   my %args = @_;
 
   my $text = $args{text} || '';
+  $text = "<B>$text</B>" if $args{bold};
 
   my $buffer = qq~
         <TR><TD colspan="2" background="$HTML_BASE_DIR/images/fade_orange_header_2.png" width="600"><font color="white">$text</font></TD></TR>
@@ -426,7 +428,7 @@ sub encodeSectionItem {
   }
 
   my $buffer = qq~
-        <TR><TD NOWRAP bgcolor="cccccc">$key</TD><TD>$astart$value$aend</TD></TR>
+        <TR><TD NOWRAP bgcolor="cccccc" WIDTH="20%">$key</TD><TD>$astart$value$aend</TD></TR>
 ~;
 
   return $buffer;
@@ -434,8 +436,53 @@ sub encodeSectionItem {
 }
 
 
-
 ###############################################################################
+# encodeSectionTable
+###############################################################################
+sub encodeSectionTable {
+  my $METHOD = 'encodeSectionTable';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  my @table_attrs = ( 'BORDER' => 0 );
+  
+  return '' unless $args{rows};
+  $args{header} ||= 0;
+  if ( $args{width} ) {
+    push @table_attrs, 'WIDTH', $args{width};
+  }
+
+  my $first = 1;
+  my $sbeams = $self->getSBEAMS();
+  my $tab = SBEAMS::Connection::DataTable->new( @table_attrs );
+  for my $row ( @{$args{rows}} ) {
+    $tab->addRow( $row );
+  }
+
+  # How many do we have?
+  my $tot = $tab->getRowNum();
+
+  # No wrapping desired...
+  $tab->setRowAttr( ROWS => [1..$tot], NOWRAP => 1 ); 
+
+  # Set header attributes
+  if ( $args{header} ) {
+    $tab->setRowAttr( ROWS => [1], BGCOLOR => '#CCCCCC' ); 
+    $tab->setRowAttr( ROWS => [1], ALIGN => 'CENTER' ) unless $args{nocenter};
+  }
+
+  if ( $args{align} ) {
+    for ( my $i = 0; $i <= $#{$args{align}}; $i++ ) {
+      $tab->setColAttr( ROWS => [2..$tot], COLS => [$i + 1], ALIGN => $args{align}->[$i] );
+    }
+  }
+
+  my $html =<<"  END";
+  <TR><TD NOWRAP COLSPAN=2>$tab</TD></TR>
+  END
+
+  return $html;
+}
 
 1;
 
