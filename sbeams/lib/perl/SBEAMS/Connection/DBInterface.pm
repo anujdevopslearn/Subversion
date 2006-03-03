@@ -2116,11 +2116,15 @@ sub parseConstraint2SQL {
   if ($constraint_type eq "plain_text") {
     print "Parsing plain_text $constraint_name<BR>\n" if ($verbose);
     my @items = split(";",$constraint_value);
+
     my $constraint_string = '';
 
     #### Loop over all items, building constraint list
     my $combiner = '';
     foreach my $element (@items) {
+
+      # Strip leading and lagging white space from each.
+      $element =~ s/^ *| *$//g;
 
       #### Allow individual negations
       my $is_negated = 0;
@@ -4501,6 +4505,7 @@ sub display_input_form {
   my $mask_user_context = $args{'mask_user_context'};
   my $allow_NOT_flags = $args{'allow_NOT_flags'};
   my $onSubmit = $args{onSubmit} || '';
+  my $detail_level = $parameters{input_form_format};
 
 
   #### Define popular variables
@@ -4520,7 +4525,6 @@ sub display_input_form {
        ORDER BY column_index
   ~;
   my @columns_data = $self->selectSeveralColumns($sql);
-
 
   # First just extract any valid optionlist entries.  This is done
   # first as opposed to within the loop below so that a single DB connection
@@ -4555,6 +4559,8 @@ sub display_input_form {
       <TABLE BORDER=0>
   !;
 
+  # Set a sensible default
+  $parameters{input_form_format} ||= 'minimum_detail';
 
   # ---------------------------
   # Build option lists for each optionlist query provided for this table
@@ -4632,7 +4638,6 @@ sub display_input_form {
         #### If there are any double quotes, need to escape them first
         $tmp =~ s/\"/\\\"/g;
          $optionlist_queries{$element} = $self->evalSQL($tmp);
-     #   $optionlist_queries{$element} = main::evalSQL($tmp);
 	unless ($optionlist_queries{$element}) {
 	  print "<font color=\"red\">ERROR: SQL for field '$element' fails to resolve embedded \$TB table name variable(s)</font><BR><PRE>$tmp</PRE><BR>\n";
       
@@ -4671,7 +4676,6 @@ sub display_input_form {
         $optionlist_query,$onChange) = @row;
     $onChange = '' unless (defined($onChange));
 
-
     #### Set the JavaScript onChange string if supplied
     if ($onChange gt '') {
       $onChange = " onChange=\"$onChange\"";
@@ -4697,30 +4701,16 @@ sub display_input_form {
       next;
     }
 
-
     #### If some level of detail is chosen, don't show this constraint if
     #### it doesn't meet the detail requirements
-    #print "input_form_format = ",$parameters{input_form_format},", - - ",
-    #  "is_display_column = ",$is_display_column,"<BR>\n";
-    if (defined($parameters{input_form_format})) {
-      if ( ($parameters{input_form_format} eq 'minimum_detail'
-                     && $is_display_column ne 'Y') ||
-           ($parameters{input_form_format} eq 'medium_detail'
-                     && $is_display_column eq '2') ||
-           $is_display_column eq 'N'
-         ) {
+    if ( ($detail_level eq 'minimum_detail' && $is_display_column ne 'Y') ||
+         ($detail_level eq 'medium_detail' && $is_display_column eq '2') ||
+          $is_display_column eq 'N'
+       ) {
 
-        #### And finally if there's not a value in it, then hide it
-        unless ($parameters{$column_name}) {
-          print qq!
-            <TD><INPUT TYPE="hidden" NAME="$column_name"
-             VALUE="$parameters{$column_name}"></TD>
-          !;
-          next;
-        }
-      }
+      #### If there's not a value in it, then skip it  
+      next unless defined $parameters{$column_name};
     }
-
 
     # FIXME 'static conditional' for image link column text
     # Should/could be replaced by a user-configuration option
