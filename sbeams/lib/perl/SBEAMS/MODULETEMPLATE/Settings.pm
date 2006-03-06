@@ -1,11 +1,11 @@
-package SBEAMS::MODULETEMPLATE::Settings;
+package SBEAMS::SIGID::Settings;
 
 ###############################################################################
-# Program     : SBEAMS::MODULETEMPLATE::Settings
+# Program     : SBEAMS::SIGID::Settings
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
 #
-# Description : This is part of the SBEAMS::MODULETEMPLATE module which handles
+# Description : This is part of the SBEAMS::SIGID module which handles
 #               setting location-dependant variables.
 #
 ###############################################################################
@@ -31,8 +31,8 @@ require Exporter;
 
 
 #### Define new variables
-$SBEAMS_PART            = 'MODULETEMPLATE';
+$SBEAMS_PART            = 'SIGID';
 
 
 #### Override variables from main Settings.pm
-$SBEAMS_SUBDIR          = 'MODULETEMPLATE';
+$SBEAMS_SUBDIR          = 'SIGID';
