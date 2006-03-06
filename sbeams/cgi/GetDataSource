@@ -281,6 +281,11 @@ sub handle_request {
   }
 
   #### Define parameters for source 'education_registration'
+  if ($parameters{source_name} eq 'womens_conference_ext') {
+	$sql = "SELECT * FROM OPENQUERY (mysql_support,'SELECT * FROM SupportISB.WomenConference')";
+  }
+
+  #### Define parameters for source 'education_registration'
   if ($parameters{source_name} eq 'ISBDonation') {
 	$sql = "SELECT * FROM OPENQUERY (mysql_support,'SELECT * FROM SupportISB.ISBDonation')";
   }
