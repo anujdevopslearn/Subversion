@@ -1,11 +1,11 @@
-package SBEAMS::MODULETEMPLATE::TableInfo;
+package SBEAMS::SIGID::TableInfo;
 
 ###############################################################################
-# Program     : SBEAMS::MODULETEMPLATE::TableInfo
+# Program     : SBEAMS::SIGID::TableInfo
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
 #
-# Description : This is part of the SBEAMS::MODULETEMPLATE module which returns
+# Description : This is part of the SBEAMS::SIGID module which returns
 #               information about various tables.
 #
 ###############################################################################
@@ -13,8 +13,8 @@ package SBEAMS::MODULETEMPLATE::TableInfo;
 use strict;
 use CGI::Carp qw( croak);
 
-use SBEAMS::MODULETEMPLATE::Settings;
-use SBEAMS::MODULETEMPLATE::Tables;
+use SBEAMS::SIGID::Settings;
+use SBEAMS::SIGID::Tables;
 use SBEAMS::Connection::Tables;
 
 
