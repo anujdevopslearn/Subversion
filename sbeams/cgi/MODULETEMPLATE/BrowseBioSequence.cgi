@@ -158,7 +158,7 @@ sub handle_request {
 
   #### Set some specific settings for this program
   my $CATEGORY="BioSequence Search";
-  $TABLE_NAME="ModTmpTAG_BrowseBioSequence" unless ($TABLE_NAME);
+  $TABLE_NAME="SI_BrowseBioSequence" unless ($TABLE_NAME);
   ($PROGRAM_FILE_NAME) =
     $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
@@ -435,8 +435,8 @@ sub handle_request {
   #### Define the SQL statement
   $sql = qq~
       SELECT $limit_clause $columns_clause
-        FROM $TBModTmpTAG_BIOSEQUENCE BS
-        LEFT JOIN $TBModTmpTAG_BIOSEQUENCE_SET BSS
+        FROM $TBSI_BIOSEQUENCE BS
+        LEFT JOIN $TBSI_BIOSEQUENCE_SET BSS
              ON ( BS.biosequence_set_id = BSS.biosequence_set_id )
 --        LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
         $GO_join
