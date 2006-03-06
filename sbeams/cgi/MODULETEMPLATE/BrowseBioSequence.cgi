@@ -36,12 +36,12 @@ use SBEAMS::Connection::Tables;
 
 use SBEAMS::BioLink::Tables;
 
-use SBEAMS::MODULETEMPLATE;
-use SBEAMS::MODULETEMPLATE::Settings;
-use SBEAMS::MODULETEMPLATE::Tables;
+use SBEAMS::SIGID;
+use SBEAMS::SIGID::Settings;
+use SBEAMS::SIGID::Tables;
 
 $sbeams = new SBEAMS::Connection;
-$sbeamsMOD = new SBEAMS::MODULETEMPLATE;
+$sbeamsMOD = new SBEAMS::SIGID;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 

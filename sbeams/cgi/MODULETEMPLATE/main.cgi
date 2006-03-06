@@ -21,7 +21,7 @@
 # Get the script set up with everything it will need
 ###############################################################################
 use strict;
-use vars qw ($q $sbeams $sbeamsMODULETEMPLATE $PROGRAM_FILE_NAME
+use vars qw ($q $sbeams $sbeamsSIGID $PROGRAM_FILE_NAME
              $current_contact_id $current_username);
 use lib qw (../../lib/perl);
 #use CGI;
@@ -30,13 +30,13 @@ use CGI::Carp qw(fatalsToBrowser croak);
 use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 
-use SBEAMS::MODULETEMPLATE;
-use SBEAMS::MODULETEMPLATE::Settings;
+use SBEAMS::SIGID;
+use SBEAMS::SIGID::Settings;
 
 #$q   = new CGI;
 $sbeams = new SBEAMS::Connection;
-$sbeamsMODULETEMPLATE = new SBEAMS::MODULETEMPLATE;
-$sbeamsMODULETEMPLATE->setSBEAMS($sbeams);
+$sbeamsSIGID = new SBEAMS::SIGID;
+$sbeamsSIGID->setSBEAMS($sbeams);
 
 
 ###############################################################################
@@ -58,9 +58,9 @@ sub main {
     exit unless ($current_username = $sbeams->Authenticate());
 
     #### Print the header, do what the program does, and print footer
-    $sbeamsMODULETEMPLATE->printPageHeader();
+    $sbeamsSIGID->printPageHeader();
     showMainPage();
-    $sbeamsMODULETEMPLATE->printPageFooter();
+    $sbeamsSIGID->printPageFooter();
 
 } # end main
 
@@ -84,7 +84,7 @@ sub showMainPage {
 	<BR>
 
 	<UL>
-	<LI> Here is the starter stub for the MODULETEMPLATE area.
+	<LI> Here is the starter stub for the SIGID area.
 	</UL>
 
 	<BR>
