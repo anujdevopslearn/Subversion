@@ -1,0 +1,44 @@
+
+The following changes to the PeptideAtlas database should be made when
+upgrading SBEAMS
+
+from version 0.22
+
+to 0.23 or later or to the latest code in the SVN repository
+
+---------------
+
+2006-03-06
+
+Schema changes (see full definitions in driver tables):
+
+- Added to table 'peptide' column 'peptide_isoelectric_point'
+
+- Added to table 'peptide_instance' columns 'preceding_residue',
+  'following_residue', 'original_protein_name', 'best_adjusted_probability'
+
+- Added to table 'peptide_instance' columns 'n_samples', 'n_protein_samples',
+  'empirical_proteotypic_score', 'predicted_proteotypic_score'
+
+- The following new tables were added
+  - atlas_build_search_batch
+  - atlas_search_batch
+  - peptide_instance_search_batch
+  - modified_peptide_instance
+  - modified_peptide_instance_sample
+  - modified_peptide_instance_search_batch
+
+To create these tables, check the definitions produced by generate_schema
+with something like:
+
+cd $SBEAMS/lib/scripts/Core
+set dbtype="mssql"
+./generate_schema.pl \
+  --table_prop ../../conf/PeptideAtlas/PeptideAtlas_table_property.txt \
+  --table_col ../../conf/PeptideAtlas/PeptideAtlas_table_column.txt \
+  --schema_file ../../sql/PeptideAtlas/PeptideAtlas \
+  --module PeptideAtlas \
+  --destination_type $dbtype
+
+---------------
+
