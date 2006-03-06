@@ -212,6 +212,10 @@ sub main {
     $work_group = "PeptideAtlas_admin";
     $DATABASE = $DBPREFIX{$module};
   }
+  if ($module eq 'SIGID') {
+    $work_group = "SIGID_admin";
+    $DATABASE = $DBPREFIX{$module};
+  }
 
 
   #### Do the SBEAMS authentication and exit if a username is not returned
