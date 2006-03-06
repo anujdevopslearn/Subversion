@@ -42,6 +42,7 @@ use SBEAMS::Ontology::Tables;
 use SBEAMS::PhenoArray::Tables;
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::ProteinStructure::Tables;
+use SBEAMS::SIGID::Tables;
 use SBEAMS::SNP::Tables;
 use SBEAMS::Tools::Tables;
 
