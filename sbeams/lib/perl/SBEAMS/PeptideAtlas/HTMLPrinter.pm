@@ -393,6 +393,9 @@ sub encodeSectionHeader {
   my $METHOD = 'encodeSectionHeader';
   my $self = shift || die ("self not passed");
   my %args = @_;
+  
+  # Default to BOLD
+  $args{bold} = 1 if !defined $args{bold};
 
   my $text = $args{text} || '';
   $text = "<B>$text</B>" if $args{bold};
@@ -417,6 +420,8 @@ sub encodeSectionItem {
   my $key = $args{key} || '';
   my $value = $args{value} || '';
   my $url = $args{url} || '';
+  my $kwid = ( $args{key_width} ) ? "WIDTH='$args{key_width}'" : '';
+  my $vwid = ( $args{val_width} ) ? "WIDTH='$args{val_width}'" : '';
 
   $url =~ s/ /+/g;
 
@@ -428,7 +433,7 @@ sub encodeSectionItem {
   }
 
   my $buffer = qq~
-        <TR><TD NOWRAP bgcolor="cccccc" WIDTH="20%">$key</TD><TD>$astart$value$aend</TD></TR>
+        <TR><TD NOWRAP bgcolor="cccccc" $kwid>$key</TD><TD $vwid>$astart$value$aend</TD></TR>
 ~;
 
   return $buffer;
