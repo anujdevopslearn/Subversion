@@ -44,11 +44,11 @@ use SBEAMS::Connection::TableInfo;
 #$q = new CGI;
 $sbeams = new SBEAMS::Connection;
 
-use SBEAMS::MODULETEMPLATE;
-use SBEAMS::MODULETEMPLATE::Settings;
-use SBEAMS::MODULETEMPLATE::Tables;
-use SBEAMS::MODULETEMPLATE::TableInfo;
-$sbeamsMOD = new SBEAMS::MODULETEMPLATE;
+use SBEAMS::SIGID;
+use SBEAMS::SIGID::Settings;
+use SBEAMS::SIGID::Tables;
+use SBEAMS::SIGID::TableInfo;
+$sbeamsMOD = new SBEAMS::SIGID;
 
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
