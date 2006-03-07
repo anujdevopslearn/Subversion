@@ -490,7 +490,7 @@ sub handle_request {
     ~;
 
     $section_header = $sbeamsMOD->encodeSectionHeader(
-      text=>'SEQUENCE',
+      text=>'Sequence',
     );
     print qq~
       <TABLE width="600">
@@ -593,9 +593,12 @@ sub handle_request {
       resultset_ref=>$resultset_ref,
     );
 
+    my $observed_header = $sbeamsMOD->encodeSectionHeader(
+                           text => 'Observed Peptides'
+                           );
     print qq~
       <TABLE width="600">
-        <TR><TD colspan="2" background="$HTML_BASE_DIR/images/fade_orange_header_2.png" width="680"><font color="white">Observed Peptides</font></TD></TR>
+      $observed_header
       </TABLE>
     ~ if ($sbeams->output_mode() eq 'html');
 
