@@ -1,7 +1,7 @@
-package SBEAMS::MODULETEMPLATE::HTMLPrinter;
+package SBEAMS::SIGID::HTMLPrinter;
 
 ###############################################################################
-# Program     : SBEAMS::MODULETEMPLATE::HTMLPrinter
+# Program     : SBEAMS::SIGID::HTMLPrinter
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
 #
@@ -23,8 +23,8 @@ use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::TableInfo;
 
-use SBEAMS::MODULETEMPLATE::Settings;
-use SBEAMS::MODULETEMPLATE::TableInfo;
+use SBEAMS::SIGID::Settings;
+use SBEAMS::SIGID::TableInfo;
 
 
 ###############################################################################
@@ -109,7 +109,7 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=ModTmpTAG_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SI_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>

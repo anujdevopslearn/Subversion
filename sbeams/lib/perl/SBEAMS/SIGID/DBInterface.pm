@@ -1,11 +1,11 @@
-package SBEAMS::MODULETEMPLATE::DBInterface;
+package SBEAMS::SIGID::DBInterface;
 
 ###############################################################################
-# Program     : SBEAMS::MODULETEMPLATE::DBInterface
+# Program     : SBEAMS::SIGID::DBInterface
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
 #
-# Description : This is part of the SBEAMS::MODULETEMPLATE module which handles
+# Description : This is part of the SBEAMS::SIGID module which handles
 #               general communication with the database.
 #
 ###############################################################################
