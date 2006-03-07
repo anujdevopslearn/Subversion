@@ -522,17 +522,29 @@ if ($apply_action =~ /QUERY/i ) {
   END
 
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Peptide Accession',
-                                          value => $peptide_accession[0] );
+                                          value => $peptide_accession[0],
+                                          key_width => '10%'
+                                         );
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Peptide Sequence',
-                                          value => $peptide_sequence[0] );
+                                          value => $peptide_sequence[0],
+                                          key_width => '10%'
+                                         );
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Best Probability',
-                                          value => $best_probability[0] );
+                                          value => $best_probability[0],
+                                          key_width => '10%'
+                                         );
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Times Observed:',
-                                          value => $n_observations[0] );
+                                          value => $n_observations[0],
+                                          key_width => '10%'
+                                         );
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Molecular Weight',
-                                          value => ''    );
+                                          value => '',
+                                          key_width => '10%'
+                                         );
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'PI',
-                                          value => ''    );
+                                          value => '',
+                                          key_width => '10%'
+                                         );
 
   print "<BR><BR>\n";
   print "$summ\n";
