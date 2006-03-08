@@ -167,7 +167,7 @@ sub getPeptideMass {
     }
     $mass += $self->{_rmass}->{$r};
   }
-#  print STDERR "$args{sequence} => $mass\n";
+  $mass += 18; # N and C termini have extra H, OH.
   return $mass;
 }
 
