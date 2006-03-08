@@ -160,78 +160,139 @@ sub displaySBEAMSPageHeader
   
     $current_work_group_name = $sbeams->getCurrent_work_group_name();
 
-    my $admin_menu;
-    if ($current_work_group_name eq "Microarray_admin" || $current_work_group_name eq "Admin" ) {
-      $admin_menu =<<"      END";
-	<tr><td>Administration: </td></tr>
-  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array">$pad Arrays</a></td></tr>
-    	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_scan">$pad Array scans</a></td></tr>
-    	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_slide_lot">$pad Slide Lots</a></td></tr>
-  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_layout">$pad Array Layouts</a></td></tr>
-    	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_printing_batch">$pad Printing Batches</a></td></tr>
-  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_slide_type">$pad Slide Types</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=protocol">$pad Protocols</a></td></tr>
-      END
-    }
       
     my $mod_link = ucfirst( lc($SBEAMS_PART) );
-  
+
+    my $affy =<<"    END";
+    <TABLE>
+    <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/bioconductor/upload.cgi">$pad Data Pipeline</td></tr>
+    <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/dataDownload.cgi?type=affy">$pad Download Data</td></tr>
+    <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetExpression">$pad Get Expression</td></tr>
+    <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetAffy_GeneIntensity.cgi">$pad Affy Gene Intensity</td></tr>
+    <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/bioconductor/Add_affy_annotation.cgi">$pad Annotate Files</td></tr>
+    <tr><td>$affy_docs</td></tr>
+    <tr><td>&nbsp;</td></tr>
+    </TABLE>
+    END
+    my ($af_content, $af_link) = $sbeams->make_toggle_section( content => $affy,
+                                                                  name => 'ma_affy_toggle',
+                                                                sticky => 1,
+                                                               visible => 1 );
     print qq~
-	<!------- Button Bar ------------------------------------------>
+  	<!------- Button Bar ------------------------------------------>
 	
-	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
-	<table border=0 width="120" cellpadding=1 cellspacing=0>
-	<tr><td><a href="$CGI_BASE_DIR/main.cgi">$DBTITLE Home</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$mod_link/main.cgi">$mod_link Home</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
+    <tr><td bgcolor="$BARCOLOR" align="left" valign="top">
+    <table border=0 width="120" cellpadding=1 cellspacing=0>
+    <tr><td><a href="$CGI_BASE_DIR/main.cgi">$DBTITLE Home</a></td></tr>
+    <tr><td><a href="$CGI_BASE_DIR/$mod_link/main.cgi">$mod_link Home</a></td></tr>
+    <tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
+    <tr><td>&nbsp;</td></tr>
+    <tr><td NOWRAP>$af_link Affymetrix Arrays: </td></tr>
+    <tr><td>$af_content </td></tr>
+     ~;
 
-	<tr><td>&nbsp;</td></tr>
-	<tr><td>Affymetrix Arrays: </td></tr>
-  <!--<A HREF="$CGI_BASE_DIR/main.cgi"><IMG SRC=$HTML_BASE_DIR/images/home_small.gif></A>-->
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/bioconductor/upload.cgi">$pad Data Pipeline</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/dataDownload.cgi?type=affy">$pad Download Data</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetExpression">$pad Get Expression</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetAffy_GeneIntensity.cgi">$pad Affy Gene Intensity</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/bioconductor/Add_affy_annotation.cgi">$pad Annotate Files</td></tr>
-	<tr><td>$affy_docs</td></tr>
-  ~;
+    my $two_color_section = '';
     unless ( $CONFIG_SETTING{MA_HIDE_TWO_COLOR} ) {
-      print qq~
-
-	<tr><td>&nbsp;</td></tr>
-	<tr><td>Two Color Arrays:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/PipelineSetup.cgi">$pad Data Pipeline</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/dataDownload.cgi?type=2color">$pad Download Data</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetExpression">$pad Get Expression</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/graphicalOverview.cgi">$pad Graphical Overview</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request">$pad Array Requests</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_labeling">$pad Labeling</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_hybridization">$pad Hybridization</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_quantitation">$pad Quantitation</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GridAlignCheck.cgi">$pad Check Alignment </td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?mode=miame_status">$pad MIAME Status</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?mode=management">$pad Manage Arrays</td></tr>
-	<tr><td><a href="http://db.systemsbiology.net/software/ArrayProcess" TARGET=_blank>$pad Pipeline Help</td></tr>
-
-	<!--<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/graphicalOverview.cgi?tab=news_and_links">$pad News and Links</td></tr>-->
-	<tr><td>&nbsp;</td></tr>
+      my $two_color =<<"      END";
+      <TABLE>
+      <tr><td>
+        <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/PipelineSetup.cgi">$pad Data Pipeline</a>
+      </td></tr>
+      <tr><td>
+        <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/dataDownload.cgi?type=2color">$pad Download Data</a>
+      </td></tr>
+      <tr><td>
+        <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetExpression">$pad Get Expression</a>
+      </td></tr>
+      <tr><td>
+        <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/graphicalOverview.cgi">$pad Graphical Overview</a>
+      </td></tr>
+      <tr><td>
+        <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request">$pad Array Requests</a>
+      </td></tr>
+      <tr><td>
+        <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_labeling">$pad Labeling</a>
+      </td></tr>
+      <tr><td>
+        <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_hybridization">$pad Hybridization</a>
+      </td></tr>
+      <tr><td>
+        <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_quantitation">$pad Quantitation</a>
+      </td></tr>
+      <tr><td>
+        <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GridAlignCheck.cgi">$pad Check Alignment </a>
+      </td></tr>
+      <tr><td>
+        <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?mode=miame_status">$pad MIAME Status</a>
+      </td></tr>
+      <tr><td>
+        <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?mode=management">$pad Manage Arrays</a>
+      </td></tr>
+      <tr><td>
+        <a href="http://db.systemsbiology.net/software/ArrayProcess" TARGET=_blank>$pad Pipeline Help</a>
+      </td></tr>
+      <tr><td>&nbsp;</td></tr>
+      </TABLE>
+      END
+      my ($tc_content, $tc_link) = $sbeams->make_toggle_section( content => $two_color,
+                                                                  sticky => 1,
+                                                                    name => 'ma_twocolor_toggle');
+      $two_color_section = qq~
+      <tr><td NOWRAP>$tc_link Two Color Arrays:</td></tr>
+      <tr><td>$tc_content</td></tr>
       ~;
-
-
     }
-#	<tr><td>&nbsp;</td></tr>
-#	<tr><td>Array Requests:</td></tr>
-my $message = $sbeams->get_page_message();
+
+    my $admin_section = '';
+    if ($current_work_group_name eq "Microarray_admin" || $current_work_group_name eq "Admin" ) {
+      my $admin =<<"      END";
+      <TABLE>
+      <tr><td>
+        <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array">$pad Arrays</a>
+      </td></tr>
+      <tr><td>
+        <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_scan">$pad Array scans</a>
+      </td></tr>
+      <tr><td>
+        <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_slide_lot">$pad Slide Lots</a>
+      </td></tr>
+      <tr><td>
+        <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_layout">$pad Array Layouts</a>
+      </td></tr>
+      <tr><td>
+        <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_printing_batch">$pad Printing Batches</a>
+      </td></tr>
+      <tr><td>
+        <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_slide_type">$pad Slide Types</a>
+      </td></tr>
+      <tr><td>
+        <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=protocol">$pad Protocols</a>
+      </td></tr>
+      </TABLE>
+      END
+      my ($ad_content, $ad_link) = $sbeams->make_toggle_section( content => $admin, 
+                                                                    name => 'ma_admin_toggle',
+                                                                  sticky => 1,
+                                                                 visible => 1 );
+      $admin_section =<<"      END";
+	    <tr><td NOWRAP>$ad_link Administration: </td></tr>
+	    <tr><td>$ad_content </td></tr>
+	    <tr><td>&nbsp; </td></tr>
+      END
+    }
+
+    my $message = $sbeams->get_page_message();
 
     print qq~
-        $admin_menu
-	</table>
-	</td>
+    $two_color_section
+    $admin_section
+	  </table>
+	  </td>
 
-	<!-------- Main Page ------------------------------------------->
-	<td valign=top>
-	<table border=0 bgcolor="#ffffff" cellpadding=4>
-	<tr><td>$message
+	  <!-------- Main Page ------------------------------------------->
+	  <td valign=top>
+	  <table border=0 bgcolor="#ffffff" cellpadding=4>
+	  <tr><td>$message
     ~;
  
     } else {
