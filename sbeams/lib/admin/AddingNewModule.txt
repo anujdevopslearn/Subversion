@@ -1,11 +1,19 @@
 
 Notes add a new module:
 
+#### Set this to the full name of the new module
+set DEST = Genotyping
+
+#### Set this to a unique two-letter code for the new module.
+#### Do not duplicate existing two-letter codes. Code may be
+#### longer than two letters, but not recommended.
+set TAG = GT
+
+--
+
+#### DO NOT CHANGE THIS
 set TEMPLATE = MODULETEMPLATE
 set TMPLTAG = ModTmpTAG
-
-set DEST = Genotyping
-set TAG = GT
 
 ---
 
@@ -17,7 +25,7 @@ replaceall.pl $TEMPLATE $DEST $DEST.pm
 cd $DEST
 replaceall.pl $TEMPLATE $DEST *.pm
 replaceall.pl ${TMPLTAG}_ ${TAG}_ *.pm
-rm -r CVS
+rm -r CVS .svn
 
 ---
 
@@ -28,7 +36,7 @@ cd $DEST
 replaceall.pl $TEMPLATE $DEST *.cgi
 replaceall.pl sbeams$TMPLTAG sbeams$TAG *.cgi
 replaceall.pl ${TMPLTAG}_ ${TAG}_ *.cgi
-rm -r CVS
+rm -r CVS .svn
 
 ---
 
@@ -126,7 +134,7 @@ execute
 
 
 ---
-Test in your dev2 area.  Once all is good, check into CVS:
+Test in your dev2 area.  Once all is good, check into CVS or Subversion:
 
 
 cd /net/dblocal/www/html/dev2/sbeams/cgi
