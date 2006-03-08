@@ -1667,7 +1667,6 @@ sub print_data_download_tab {
 	unless ($parameters{Get_Data}) {
 		print "<h3>To start the download click the button below<br>";
 		print "<h3>A single Zip file will be downloaded to a location of your choosing *</h3>";
-		print "<p>*Please note that the actual file size being downloaded will be about half the size the browser maybe indicating</p>";
 		
 		
 		print   $q->br,
@@ -1889,19 +1888,25 @@ sub zip_data  {
 	
 	
 	my $zip = Archive::Zip->new();
-	my $member = '';
 	my $compressed_size = '';
 	my $uncompressed_size = '';
+
+  my $dir_name = $sbeams->getCurrent_project_name() . '_files/';
+  $dir_name =~ s/\s/_/g;
+
+	my $member = $zip->addDirectory( $dir_name );
+  $compressed_size   += $member->compressedSize();
+  $uncompressed_size += $member->uncompressedSize();
 	
 	foreach my $file_path ( @files_to_zip){
 		
-    $log->error( 'Here I am, spanky' );
 		my ($file, $dir, $ext) = fileparse( $file_path) ;
     unless ( -e $file_path ) {
       $log->error( "File $file_path does not exist" );
       next;
     }
-	 	my $member = $zip->addFile( $file_path, "$file$ext") ;	#don't use the full file path for the file names, just use the file name
+    # don't use the full file path for the file names, just use the file name
+	 	my $member = $zip->addFile( $file_path, "$dir_name$file$ext");
     unless ( ref $member ) {
       $log->error( "Add to zip file failed for $file_path" );
       next;
@@ -1912,10 +1917,11 @@ sub zip_data  {
 		$uncompressed_size += $member->uncompressedSize();
 	}
 	
-	$member = $zip->addString($array_info, "Array_info.txt");
+	$member = $zip->addString($array_info, $dir_name . 'Array_info.txt');
 	
 	print "Content-Disposition: filename=$zip_file_name\n";
-	print "Content-Length: $compressed_size\n"; 
+# Was only a (bad) estimate, seemed to cause Firefox significant grief
+#	print "Content-Length: $compressed_size\n"; 
 	print "Content-Transfer-Encoding: binary\n";
 	print "Content-type: application/force-download \n\n";
 	
