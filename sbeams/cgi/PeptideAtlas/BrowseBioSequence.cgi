@@ -43,6 +43,7 @@ $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
+use SBEAMS::BioLink::Tables;
 
 #use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
@@ -325,6 +326,17 @@ sub handle_request {
   return if ($n_transmembrane_regions_clause eq '-1');
 
 
+  #### Build GENE ANNOTATION LEVEL constraint
+  $parameters{gene_annotation_level_constraint} = 'leaf'
+    unless ($parameters{gene_annotation_level_constraint});
+  my $gene_annotation_level_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"hierarchy_level",
+    constraint_type=>"plain_text",
+    constraint_name=>"Gene Annotation Level Constraint",
+    constraint_value=>$parameters{gene_annotation_level_constraint} );
+  return if ($gene_annotation_level_clause eq '-1');
+
+
   #### Build SORT ORDER
   my $order_by_clause = "";
   if ($parameters{sort_order}) {
@@ -375,20 +387,24 @@ sub handle_request {
        $molecular_function_clause.$biological_process_clause.
        $cellular_component_clause.$protein_domain_clause ) {
     $GO_join = qq~
-        LEFT JOIN flybase.dbo.annotated_gene AG
-             ON ( BS.biosequence_accession = AG.gene_accession )
-        LEFT JOIN flybase.dbo.gene_annotation MFA
+        LEFT JOIN $TBAT_BIOSEQUENCE_ANNOTATED_GENE AG
+             ON ( BS.biosequence_id = AG.biosequence_id )
+        LEFT JOIN $TBBL_GENE_ANNOTATION MFA
              ON ( AG.annotated_gene_id = MFA.annotated_gene_id
-                   AND MFA.gene_annotation_type_id = 1 AND MFA.idx = 0 )
-        LEFT JOIN flybase.dbo.gene_annotation BPA
+                   AND MFA.gene_annotation_type_id = 1 AND MFA.idx = 0
+                   AND MFA.hierarchy_level = '$parameters{gene_annotation_level_constraint}' )
+        LEFT JOIN $TBBL_GENE_ANNOTATION BPA
              ON ( AG.annotated_gene_id = BPA.annotated_gene_id
-                   AND BPA.gene_annotation_type_id = 2 AND BPA.idx = 0 )
-        LEFT JOIN flybase.dbo.gene_annotation CCA
+                   AND BPA.gene_annotation_type_id = 2 AND BPA.idx = 0
+                   AND BPA.hierarchy_level = '$parameters{gene_annotation_level_constraint}' )
+        LEFT JOIN $TBBL_GENE_ANNOTATION CCA
              ON ( AG.annotated_gene_id = CCA.annotated_gene_id
-                   AND CCA.gene_annotation_type_id = 3 AND CCA.idx = 0 )
-        LEFT JOIN flybase.dbo.gene_annotation IPDA
+                   AND CCA.gene_annotation_type_id = 3 AND CCA.idx = 0
+                   AND CCA.hierarchy_level = '$parameters{gene_annotation_level_constraint}' )
+        LEFT JOIN $TBBL_GENE_ANNOTATION IPDA
              ON ( AG.annotated_gene_id = IPDA.annotated_gene_id
-                   AND IPDA.gene_annotation_type_id = 4 AND IPDA.idx = 0 )
+                   AND IPDA.gene_annotation_type_id = 4 AND IPDA.idx = 0
+                   AND IPDA.hierarchy_level = '$parameters{gene_annotation_level_constraint}' )
     ~;
   }
 
