@@ -8,7 +8,7 @@
 # Description : This script authenticates the user, and then
 #               displays the opening access page.
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2006 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -25,6 +25,7 @@ use lib qw (../../lib/perl);
 use CGI::Carp qw(fatalsToBrowser croak);
 
 use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::SBPage;
 use SBEAMS::Connection::Settings;
 
 use SBEAMS::Biomarker;
@@ -47,9 +48,14 @@ $biomarker->setSBEAMS($sbeams);
 
   test_session_cookie();
 
-  $biomarker->printPageHeader();
-  showMainPage();
-  $biomarker->printPageFooter();
+#  $biomarker->printPageHeader();
+  my $page = SBEAMS::Connection::SBPage->new( user_context => 1, 
+                                              sbeams => $sbeams );
+  $page->setSBEAMSMod( sbeamsMOD => $biomarker );
+  my $content = getMainPage();
+  $page->addContent( $content );
+  $page->printPage();
+#  $biomarker->printPageFooter(close_tables => 'NO');
 
 } # end main
 
@@ -57,9 +63,9 @@ $biomarker->setSBEAMS($sbeams);
 ###############################################################################
 # Show the main welcome page
 ###############################################################################
-sub showMainPage {
+sub getMainPage {
 
-  $sbeams->printUserContext();
+#  $sbeams->printUserContext();
   my $tab = $sbeams->getMainPageTabMenuObj( cgi => $q );
 #  $tab->addHRule();
 
@@ -78,7 +84,7 @@ sub showMainPage {
     $tab->addContent( "$content $expTable" );
   }
 
-  print qq!
+  return qq!
 	<BR>
   $tab
 	<BR>
