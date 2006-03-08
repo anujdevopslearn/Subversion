@@ -4505,7 +4505,9 @@ sub display_input_form {
   my $mask_user_context = $args{'mask_user_context'};
   my $allow_NOT_flags = $args{'allow_NOT_flags'};
   my $onSubmit = $args{onSubmit} || '';
-  my $detail_level = $parameters{input_form_format};
+
+  # Set a sensible default
+  my $detail_level = $parameters{input_form_format} || 'minimum_detail';
 
 
   #### Define popular variables
@@ -4559,8 +4561,6 @@ sub display_input_form {
       <TABLE BORDER=0>
   !;
 
-  # Set a sensible default
-  $parameters{input_form_format} ||= 'minimum_detail';
 
   # ---------------------------
   # Build option lists for each optionlist query provided for this table
@@ -4708,8 +4708,9 @@ sub display_input_form {
           $is_display_column eq 'N'
        ) {
 
-      #### If there's not a value in it, then skip it  
-      next unless defined $parameters{$column_name};
+      #### If there's not a value in it, then skip it
+      next unless (defined $parameters{$column_name} &&
+		   $parameters{$column_name} gt '');
     }
 
     # FIXME 'static conditional' for image link column text
