@@ -109,18 +109,6 @@
         modified_by_id="1"
         option_key="DASFormat" />
     <AT_query_option
-        query_option_id="10"
-        record_status="N"
-        created_by_id="1"
-        sort_order="60"
-        date_modified="2003-12-03 12:54:52"
-        date_created="2003-12-03 12:54:52"
-        option_type="GP_display_options"
-        option_value="Coalesce over Introns"
-        owner_group_id="1"
-        modified_by_id="1"
-        option_key="CoalesceOverIntrons" />
-    <AT_query_option
         query_option_id="12"
         record_status="N"
         created_by_id="1"
