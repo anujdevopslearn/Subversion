@@ -214,6 +214,7 @@ sub handle_request {
 
   #### Set some reasonable defaults if no parameters supplied
   unless ($n_params_found) {
+    $parameters{input_form_format} = "minimum_detail";
   }
 
 
@@ -223,7 +224,9 @@ sub handle_request {
 
   #### Display the user-interaction input form
   $sbeams->display_input_form(
-    TABLE_NAME=>$TABLE_NAME,CATEGORY=>$CATEGORY,apply_action=>$apply_action,
+    TABLE_NAME=>$TABLE_NAME,
+    CATEGORY=>$CATEGORY,
+    apply_action=>$apply_action,
     PROGRAM_FILE_NAME=>$PROG_NAME,
     parameters_ref=>\%parameters,
     input_types_ref=>\%input_types,
@@ -281,9 +284,16 @@ sub handle_request {
   return if ($biosequence_gene_name_clause eq '-1');
 
 
+  #### Build BIOSEQUENCE_DESC constraint
+  my $biosequence_desc_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_desc",
+    constraint_type=>"plain_text",
+    constraint_name=>"BioSequence Description",
+    constraint_value=>$parameters{biosequence_desc_constraint} );
+  return if ($biosequence_desc_clause eq '-1');
+
   #### Build PEPTIDE_NAME constraint
   my $peptide_name_clause = $sbeams->parseConstraint2SQL(
-#   constraint_column=>"P.peptide_name",
     constraint_column=>"P.peptide_accession",
     constraint_type=>"plain_text",
     constraint_name=>"Peptide Name",
@@ -316,6 +326,50 @@ sub handle_request {
     constraint_name=>"Number of Observations",
     constraint_value=>$parameters{n_observations_constraint} );
   return if ($n_observations_clause eq '-1');
+
+
+  #### Build N_SAMPLES constraint
+  my $n_samples_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PI.n_samples",
+    constraint_type=>"flexible_int",
+    constraint_name=>"Number of Samples",
+    constraint_value=>$parameters{n_samples_constraint} );
+  return if ($n_samples_clause eq '-1');
+
+
+  #### Build EMPIRICAL_PROTEOTYPIC_SCORE constraint
+  my $empirical_proteotypic_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PI.empirical_proteotypic_score",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Empirical Proteotypic Score",
+    constraint_value=>$parameters{empirical_proteotypic_constraint} );
+  return if ($empirical_proteotypic_clause eq '-1');
+
+
+  #### Build n_protein_mappings constraint
+  my $n_protein_mappings_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PI.n_protein_mappings",
+    constraint_type=>"flexible_int",
+    constraint_name=>"n_protein_mappings",
+    constraint_value=>$parameters{n_protein_mappings_constraint} );
+  return if ($n_protein_mappings_clause eq '-1');
+
+  #### Build n_genome_locations constraint
+  my $n_genome_locations_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PI.n_genome_locations",
+    constraint_type=>"flexible_int",
+    constraint_name=>"n_genome_locations",
+    constraint_value=>$parameters{n_genome_locations_constraint} );
+  return if ($n_genome_locations_clause eq '-1');
+
+
+  #### Build is_exon_spanning constraint
+  my $is_exon_spanning_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PI.is_exon_spanning",
+    constraint_type=>"plain_text",
+    constraint_name=>"is_exon_spanning",
+    constraint_value=>$parameters{is_exon_spanning_constraint} );
+  return if ($is_exon_spanning_clause eq '-1');
 
 
   #### Build CHROMOSOME constraint
@@ -353,39 +407,6 @@ sub handle_request {
     constraint_value=>$parameters{strand_constraint} );
   return if ($chromosome_clause eq '-1');
 
-  #### Build n_protein_mappings constraint
-  my $n_protein_mappings_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"PI.n_protein_mappings",
-    constraint_type=>"flexible_int",
-    constraint_name=>"n_protein_mappings",
-    constraint_value=>$parameters{n_protein_mappings_constraint} );
-  return if ($n_protein_mappings_clause eq '-1');
-
-  #### Build n_genome_locations constraint
-  my $n_genome_locations_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"PI.n_genome_locations",
-    constraint_type=>"flexible_int",
-    constraint_name=>"n_genome_locations",
-    constraint_value=>$parameters{n_genome_locations_constraint} );
-  return if ($n_genome_locations_clause eq '-1');
-
-
-  #### Build is_exon_spanning constraint
-  my $is_exon_spanning_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"PI.is_exon_spanning",
-    constraint_type=>"plain_text",
-    constraint_name=>"is_exon_spanning",
-    constraint_value=>$parameters{is_exon_spanning_constraint} );
-  return if ($is_exon_spanning_clause eq '-1');
-
-  #### Build BIOSEQUENCE_DESC constraint
-  my $biosequence_desc_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"BS.biosequence_desc",
-    constraint_type=>"plain_text",
-    constraint_name=>"BioSequence Description",
-    constraint_value=>$parameters{biosequence_desc_constraint} );
-  return if ($biosequence_desc_clause eq '-1');
-
 
   #### Build peptide_ids constraint
   my $peptide_ids_clause = $sbeams->parseConstraint2SQL(
@@ -420,7 +441,21 @@ sub handle_request {
 
   #### Define some variables needed to build the query
   my @column_array;
+  my $mapping_join = qq~
+       LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
+            ON ( PI.peptide_instance_id = PM.peptide_instance_id )
+       LEFT JOIN $TBAT_BIOSEQUENCE BS
+            ON ( PM.matched_biosequence_id = BS.biosequence_id )
+       LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
 
+  ~;
+  my $mapping_constraints = qq~
+        $chromosome_clause
+        $start_in_chromosome_clause
+        $end_in_chromosome_clause
+        $strand_clause
+  ~;
+  my $mapping_sort = ',PM.chromosome,PM.start_in_chromosome';
 
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
@@ -440,9 +475,8 @@ sub handle_request {
       ["n_genome_locations","PI.n_genome_locations","N Unique Locations on Genome"],
     );
 
-  } else {
+  } elsif ($parameters{display_options} =~ /ShowMappings/) {
     @column_array = (
-      #["atlas_build_name","AB.atlas_build_name","Atlas Build"],
       ["peptide_accession","P.peptide_accession","Peptide Accession"],
       ["peptide_sequence","P.peptide_sequence","Peptide Sequence"],
 
@@ -453,7 +487,8 @@ sub handle_request {
 
       ["best_probability","STR(PI.best_probability,7,3)","Best Prob"],
       ["n_observations","PI.n_observations","N Obs"],
-      ["sample_ids","PI.sample_ids","Sample IDs"],
+      ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","Empirical Proteotypic Score"],
+      ["n_samples","PI.n_samples","N Samples"],
 
       ["chromosome","PM.chromosome","Chrom"],
       ["start_in_chromosome","PM.start_in_chromosome","Start Position"],
@@ -466,10 +501,34 @@ sub handle_request {
 
       ["is_subpeptide_of","PI.is_subpeptide_of","Peptides that include this sequence"],
 
-      ["atlas build name","AB.atlas_build_name","PeptideAtlas name"],
+      ["atlas build name","AB.atlas_build_name","PeptideAtlas Name"],
 
       ["organism_full_name","O.full_name","Organism"],
     );
+
+  } else {
+    @column_array = (
+      ["peptide_accession","DISTINCT P.peptide_accession","Peptide Accession"],
+      ["peptide_sequence","P.peptide_sequence","Peptide Sequence"],
+
+      ["best_probability","STR(PI.best_probability,7,3)","Best Prob"],
+      ["n_observations","PI.n_observations","N Obs"],
+      ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","Empirical Proteotypic Score"],
+      ["n_samples","PI.n_samples","N Samples"],
+
+      ["n_protein_mappings","PI.n_protein_mappings","N Protein Mappings"],
+      ["n_genome_locations","PI.n_genome_locations","N Unique Locations on Genome"],
+      ["is_exon_spanning","PI.is_exon_spanning","Spans exons? (Y,N)"],
+
+      ["is_subpeptide_of","PI.is_subpeptide_of","Peptides that include this sequence"],
+
+      ["atlas build name","AB.atlas_build_name","PeptideAtlas Name"],
+
+      ["organism_full_name","O.full_name","Organism"],
+    );
+    #$mapping_join = '';
+    #$mapping_constraints = '';
+    $mapping_sort = '';
   }
 
 
@@ -496,47 +555,34 @@ sub handle_request {
   #### Define the SQL statement
   $sql = qq~
      SELECT $limit_clause $columns_clause
-     FROM $TBAT_PEPTIDE_INSTANCE PI
-
-     INNER JOIN $TBAT_PEPTIDE P
-     ON ( PI.peptide_id = P.peptide_id )
-
-     INNER JOIN $TBAT_ATLAS_BUILD AB
-     ON ( PI.atlas_build_id = AB.atlas_build_id )
-
-     LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
-     ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
-
-     LEFT JOIN $TB_ORGANISM O
-     ON ( BSS.organism_id = O.organism_id )
-
-     LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
-     ON ( PI.peptide_instance_id = PM.peptide_instance_id )
-
-     LEFT JOIN $TBAT_BIOSEQUENCE BS
-     ON ( PM.matched_biosequence_id = BS.biosequence_id )
-
-     LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
-
+       FROM $TBAT_PEPTIDE_INSTANCE PI
+      INNER JOIN $TBAT_PEPTIDE P
+            ON ( PI.peptide_id = P.peptide_id )
+      INNER JOIN $TBAT_ATLAS_BUILD AB
+            ON ( PI.atlas_build_id = AB.atlas_build_id )
+       LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
+            ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
+       LEFT JOIN $TB_ORGANISM O
+            ON ( BSS.organism_id = O.organism_id )
+     $mapping_join
      WHERE 1 = 1
         $atlas_build_clause
 	$biosequence_name_clause
 	$biosequence_gene_name_clause
+        $biosequence_desc_clause
 	$peptide_name_clause
 	$peptide_sequence_clause
         $best_probability_clause
         $n_observations_clause
-        $chromosome_clause
-        $start_in_chromosome_clause
-        $end_in_chromosome_clause
-        $strand_clause
+        $n_samples_clause
+        $empirical_proteotypic_clause
         $n_protein_mappings_clause
         $n_genome_locations_clause
         $is_exon_spanning_clause
-        $biosequence_desc_clause
         $peptide_ids_clause
+        $mapping_constraints
 
-    ORDER BY P.peptide_accession,PM.chromosome,PM.start_in_chromosome
+    ORDER BY P.peptide_accession$mapping_sort
   ~;
 
 
@@ -589,6 +635,7 @@ sub handle_request {
 		  'biosequence_accessor_suffix' => 1,
 #		  'peptide_accession' => 1, not sure why this was here but it was causing "DAS Format" TSC resultsets to be bad. Deutsch
                   'Organism' => 1,
+                  'PeptideAtlas Name' => 1,
   );
 
 
