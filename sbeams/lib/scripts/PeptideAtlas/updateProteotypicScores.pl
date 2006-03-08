@@ -11,7 +11,7 @@
 
 
 ###############################################################################
-   # Generic SBEAMS setup for all the needed modules and objects
+# Generic SBEAMS setup for all the needed modules and objects
 ###############################################################################
 use strict;
 use Getopt::Long;
@@ -449,13 +449,13 @@ sub updateObservedProteotypicScores {
   my %proteoproteins;
   my %threeplusproteins;
 
-  my $proteotypic_score_threshold = 0.5;
+  my $proteotypic_score_threshold = 0.3;
+  my $counter = 0;
 
   foreach my $peptide ( keys(%peptide_scores) ) {
     if ($peptide_scores{$peptide}->{n_protein_samples} > 2 &&
 	$predicted_scores->{$peptide}) {
 
-      #if ($peptide_scores{$peptide}->{sequence} =~ /^\w.*[KR].*\w\w$/) {
       print OUTFILE $peptide."\t".
         $peptide_scores{$peptide}->{sequence}."\t".
 	$peptide_scores{$peptide}->{n_search_batch_ids}."\t".
@@ -463,31 +463,52 @@ sub updateObservedProteotypicScores {
 	sprintf("%4.3f",$peptide_scores{$peptide}->{score})."\t".
 	sprintf("%4.3f",$predicted_scores->{$peptide})."\t".
         $peptide_scores{$peptide}->{protein_name}."\n";
-      #}
 
-      #if ($peptide_scores{$peptide}->{sequence} =~ /^\w.*[KR].*\w\w$/) {
       print OUTFILE2 $peptide."\t".
 	$peptide_scores{$peptide}->{n_search_batch_ids}."\t".
         $peptide_scores{$peptide}->{n_protein_samples}."\t".
 	sprintf("%4.3f",$peptide_scores{$peptide}->{score})."\t".
 	sprintf("%4.3f",$predicted_scores->{$peptide})."\n";
-      #}
 
-      #### Store protein information
+      #### Store protein information for later histogram calculation
       my $protein_name = $peptide_scores{$peptide}->{protein_name};
       $threeplusproteins{$protein_name}++;
       if ($peptide_scores{$peptide}->{score} > $proteotypic_score_threshold) {
-	$proteoproteins{$protein_name}->{$peptide} = 
+	$proteoproteins{$protein_name}->{$peptide} =
 	  $peptide_scores{$peptide}->{score};
       }
 
-
     }
+
+    #### Update database records
+    my %rowdata = (
+      n_samples => $peptide_scores{$peptide}->{n_search_batch_ids},
+      n_protein_samples => $peptide_scores{$peptide}->{n_protein_samples},
+      empirical_proteotypic_score => $peptide_scores{$peptide}->{score},
+      predicted_proteotypic_score => $predicted_scores->{$peptide},
+    );
+    $sbeams->updateOrInsertRow(
+      update=>1,
+      table_name=>$TBAT_PEPTIDE_INSTANCE,
+      rowdata_ref=>\%rowdata,
+      PK => 'peptide_instance_id',
+      PK_value => $peptide,
+      verbose=>$VERBOSE,
+      testonly=>$TESTONLY,
+    );
+
+    #### Show progress
+    $counter++;
+    if ($counter/100 == int($counter/100)) {
+      print "$counter...";
+    }
+
   }
 
 
   close(OUTFILE);
   close(OUTFILE2);
+  print "\n$counter rows updated.\n";
 
 
   #### Calculate histogram of how many proteotypic peptides per protein
