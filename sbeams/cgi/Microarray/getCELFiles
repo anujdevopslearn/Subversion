@@ -13,7 +13,7 @@ use File::Basename;
 
 $|++;
 
-use constant URI => 'http://db.systemsbiology.net/dev2/sbeams';
+use constant URI => 'http://db.systemsbiology.net/sbeams';
 use constant AUTH => '/net/dblocal/wwwspecial/scgap/SCGAPAuth2';
 
 #my $q = CGI->new();
