@@ -61,6 +61,7 @@ sub calcAvgMolWgt {
         "L" => "113.1594",
         "I" => "113.1594",
         "N" => "114.1038",
+        "B" => "114.6",
         "D" => "115.0886",
         "Q" => "128.1307",
         "K" => "128.1741",
@@ -84,22 +85,25 @@ sub calcAvgMolWgt {
     # Split sequence into individual chars
     my @sequence_letters = split( // , $sequence );
 
-    my $sequence_length = $#sequence_letters;
+    my $sequence_length = $#sequence_letters + 1;
 
     my $mass = 0;
 	
-    for ( my $counter = 0 ; $counter <= $sequence_length ; $counter++ ) {
+    for ( my $counter = 0 ; $counter < $sequence_length ; $counter++ ) {
+
+        my $letter = $sequence_letters[$counter];
 
 #       ## xxxx ...comment out when not needed
-#       unless ($amino_acid_ave_mass_hash{$sequence_letters[$counter]}) {
+#       unless (exists $amino_acid_ave_mass_hash{$letter}) {
 
-#           die "could not identify $counter letter $sequence_letters[$counter]".
+#           die "could not identify ($counter/$sequence_length) ".
+#               "letter $letter".
 #               " in sequence $sequence";
 
 #       }
 
         ##get mass from letter hash:
-        $mass = $mass + $amino_acid_ave_mass_hash{$sequence_letters[$counter]};
+        $mass = $mass + $amino_acid_ave_mass_hash{$letter};
 
     }
 
