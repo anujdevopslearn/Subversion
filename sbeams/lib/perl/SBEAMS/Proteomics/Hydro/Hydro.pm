@@ -17,10 +17,11 @@ our @ISA = qw(Exporter);
 ##                          16 August 2004)
 
 ## hydrophobicity parameters:
-## Kyte-Doolittle;
-## Eisenberg et al.; 
+## Kyte-Doolittle et al. 1982
+## Eisenberg et al. 1984 
+## Guo et al. 1986
 ## hydrophilicity parameters:
-## Hopp & Woods; 
+## Hopp & Woods 1981
 
 ## Is it okay to use the parameters above, with a locked window-size = sequence length?
 ## the rest of the protein is gone, so window size is only useful for big peptides, correct?
@@ -46,9 +47,99 @@ our $VERSION = '0.01';
 # Preloaded methods go here.
 
 #######################################################################
+#  calcHydrophobicityG -- calculate hydrophobicity using Guo params.
+#
+#  Reference: Guo D., Mant C.T., Taneja A.K., Parker J.M.R. and 
+#  Hodges R.S.: J. Chromatogr. 359, 499 (1986) 
+#  "Prediction of peptide retention times in reversed-phase high-performance 
+#  liquid chromatography I. Determination of retention coefficients of 
+#  amino acid residues of model synthetic peptides" ??
+#
+#  Taking coefficients from Krohin et al. 2004, Table II
+#
+#  @param sequence  peptide sequence
+#  @return mean hydrophobicity
+#######################################################################
+sub calcHydrophobicityG
+{
+
+    my %args = @_;
+
+    my $TEST = $args{'test'} || "";
+
+    my $sequence = $args{'sequence'} || ""; 
+
+    ## chomp sequence, and remove trailing "*" if present:
+    chomp($sequence);
+
+    $sequence =~ s/^(.*)\*$/$1/g;
+
+
+    my %hash = (
+          'W',    8.8,
+          'F',    8.1,
+          'L',    8.1,
+          'I',    7.4,
+          'M',    5.5,
+          'V',    5.0,
+          'Y',    4.5,
+          'A',    2.0,
+          'T',    0.6,
+          'P',    2.0,
+          'E',    1.1,
+          'Z',    1.1,
+          'D',    0.2,
+          'B',    0.2,
+          'C',    2.6,
+          'S',   -0.2,
+          'Q',    0.0,
+          'G',   -0.2,
+          'N',   -0.6,
+          'R',   -0.6,
+          'H',   -2.1,
+          'K',   -2.1,
+    );
+
+    if ($TEST)
+    {
+
+        $sequence = "GASP";
+
+    }
+
+    my $mean_hydrophobicity = calcHydroph( sequence => $sequence,
+        hash_ref => \%hash);
+
+    if ($TEST)
+    {
+
+        my $testExpected = 3.6;
+
+        my $testCalculated = sprintf("%.2f", $mean_hydrophobicity);
+
+        if ($testExpected != $testCalculated)
+        {
+
+            print "TEST FAILED in calcHydrophobicityG\n";
+            print "expected: $testExpected, but calculated: $testCalculated\n"
+
+        }
+
+    }
+
+    return $mean_hydrophobicity;    
+}
+
+
+#######################################################################
 #  calcHydrophobicityKD -- calculate hydrophobicity using Kyte-Doolittle
 #  params.  uses window_size = peptide length for length < 19 and
 #  window_size = 19 for length >= 19.
+#
+#  Reference: Kyte, J. and Doolittle, R. 1982. 
+#  "A simple method for displaying the hydropathic character of a protein."
+#   J. Mol. Biol. 157: 105-132.
+#
 #  @param sequence  peptide sequence
 #  @return mean hydrophobicity
 #######################################################################
@@ -76,6 +167,7 @@ sub calcHydrophobicityKD
           'C',    2.500,
           'Q',   -3.500,
           'E',   -3.500,
+          'Z',   -3.500,
           'G',   -0.400,
           'H',   -3.200,
           'I',    4.500,
@@ -153,9 +245,11 @@ sub calcHydrophobicityE
         'R',  -2.530,
         'N',  -0.780,
         'D',  -0.900,
+        'B',  -0.900,
         'C',   0.290,
         'Q',  -0.850,
         'E',  -0.740,
+        'Z',  -0.740,
         'G',   0.480,
         'H',  -0.400,
         'I',   1.380,
@@ -233,9 +327,11 @@ sub calcHydrophilicityHW
         'R',     3.000,
         'N',     0.200,
         'D',     3.000,
+        'B',     3.000,
         'C',    -1.000,
         'Q',     0.200,
         'E',     3.000,
+        'Z',     3.000,
         'G',     0.000,
         'H',    -0.500,
         'I',    -1.800,
