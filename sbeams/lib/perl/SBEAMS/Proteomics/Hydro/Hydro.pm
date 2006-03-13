@@ -12,9 +12,8 @@ our @ISA = qw(Exporter);
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 
-## NOTE: Adopting code from HydroProfiler.pl
-##                          (Author: Ian Forsythe, Canadian Bioinformatics Help Desk
-##                          16 August 2004)
+## NOTE: Adopting some params from HydroProfiler.pl
+##       (Author: Ian Forsythe, Canadian Bioinformatics Help Desk 16 August 2004)
 
 ## hydrophobicity parameters:
 ## Kyte-Doolittle et al. 1982
@@ -488,6 +487,9 @@ Hydrophobicity and Hydrophility module
 
   ## to use Hopp - Woods params:
   my $hydrophilicity = Hydro::calcHydrophilicityHW( sequence => $peptideSequence );
+
+  ## to use Guo et al. params:
+  my $hydrophilicity = Hydro::calcHydrophilicityG( sequence => $peptideSequence );
 
 
 
