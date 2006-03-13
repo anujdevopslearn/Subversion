@@ -44,6 +44,7 @@ use vars qw(@ISA @EXPORT
 
     $TBBL_ANNOTATED_GENE
     $TBBL_GENE_ANNOTATION
+    $TBBL_GENE_ANNOTATION_TYPE
     $TBBL_ANNOTATION_HIERARCHY_LEVEL
 
     $TBBL_GAGGLE_STORE
@@ -85,6 +86,7 @@ require Exporter;
 
     $TBBL_ANNOTATED_GENE
     $TBBL_GENE_ANNOTATION
+    $TBBL_GENE_ANNOTATION_TYPE
     $TBBL_ANNOTATION_HIERARCHY_LEVEL
 
     $TBBL_GAGGLE_STORE
@@ -125,6 +127,7 @@ $TBBL_ONTOLOGY_TERM_TYPE           = "${mod}OntologyTermType";
 
 $TBBL_ANNOTATED_GENE = "${mod}annotated_gene";
 $TBBL_GENE_ANNOTATION = "${mod}gene_annotation";
+$TBBL_GENE_ANNOTATION_TYPE = "${mod}gene_annotation_type";
 $TBBL_ANNOTATION_HIERARCHY_LEVEL = "${mod}annotation_hierarchy_level";
 
 $TBBL_GAGGLE_STORE = "${core}gaggle_store";
