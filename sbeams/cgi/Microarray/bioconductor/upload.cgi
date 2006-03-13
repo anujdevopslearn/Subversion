@@ -160,7 +160,6 @@ sub main {
 
   # Do some permissions checking early
   if ( defined $submit && grep $submit, write_ops($submit) ) {
-    print STDERR "Here, spankasis\n";
     unless ( $sbeams->isProjectWritable( admin_override => 0 ) ) {
       $sbeams->set_page_message( type => 'Error',
                                   msg => <<"      END" );
@@ -170,7 +169,6 @@ sub main {
      exit;
     }
   } elsif  ( defined $submit && grep $submit, modify_ops($submit) ) {
-    print STDERR "Here, Crankasis\n";
     unless ( $sbeams->isProjectModifiable( admin_override => 0 ) ) {
       $sbeams->set_page_message( type => 'Error',
                                   msg => <<"      END" );
