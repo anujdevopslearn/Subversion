@@ -28,7 +28,7 @@ use vars qw($current_contact_id $current_username $q
 use CGI::Carp qw(croak);
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Log;
-use SBEAMS::Connection::Authenticator qw( $q );
+use SBEAMS::Connection::Authenticator qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
@@ -1016,7 +1016,6 @@ sub get_http_header {
   } else {
     $header = $q->header( -type => $type );
   }
-  $log->debug( "Header is $header for $mode, $type" );
   return $header;
 }
 
@@ -1037,7 +1036,6 @@ sub processSBEAMSuiCookie {
     for my $key ( keys (%ui_cookie) ) {
       $key = $q->unescape( $key ); # Key should probably always be clean...
       my $value = $q->unescape( $ui_cookie{$key} );
-      $log->debug("setting session attr: $key => $ui_cookie{$key}\n");
       $self->setSessionAttribute( key => $key,
                                   value => $ui_cookie{$key} );
     }
@@ -1260,6 +1258,16 @@ sub getGifSpacer {
   my $self = shift;
   my $size = shift || 120;  # Default?
   return "<IMG SRC=$HTML_BASE_DIR/images/clear.gif WIDTH=$size HEIGHT=2>";
+}
+
+sub truncateStringWithMouseover {
+  my $self = shift;
+  my %args = @_;
+  return undef unless $args{string};
+  my $string = $args{string};
+  my $len = $args{len} || 35;
+  my $shorty = $self->truncateString( %args );
+  return qq~<DIV TITLE="$string">$shorty</DIV>~;
 }
 
 ###############################################################################
