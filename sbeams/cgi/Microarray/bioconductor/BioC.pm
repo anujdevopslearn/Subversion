@@ -143,6 +143,7 @@ $jobsummary
 </html>
 END
 	close(INDEX);
+	chmod(0666, "$RESULT_DIR/$jobname/index.html");
 	
 	# Create results index file
 	open(INDEXRESULT, ">$RESULT_DIR/$jobname/indexresult.html") ||
@@ -240,6 +241,7 @@ else
   touch $RESULT_DIR/$jobname/index.html
 #  rm $RESULT_DIR/$jobname/indexresult.html
   chgrp affydata $RESULT_DIR/$jobname/$jobname.tar.gz
+  chmod g+rw $RESULT_DIR/$jobname/*
 END
  
     $sh .= $email ? <<END : "";
