@@ -776,6 +776,23 @@ sub get_page_message {
   return $msg;
 }
 
+sub truncateString {
+  my $self = shift;
+  my %args = @_;
+  return undef unless $args{string};
+  my $string = $args{string};
+  my $len = $args{len} || 35;
+
+  # Trim trailing space
+  chomp( $string );
+  $string =~ s/\s*$//;
+
+  if ( $len < length($string) ) {
+    return substr( $string, 0, $len-3 ) . '...'; 
+  }
+  return $string;
+}
+
 1;
 
 __END__
