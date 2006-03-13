@@ -765,3 +765,10 @@ Alternatively, producing JPEG images from the chips during
 load_affy_R_CHP_files.pl runs may not work.
 
 Fix: Install AFPL Ghostscript 8.51.
+
+Problem: Analysis Pipeline produces truncated (size 0) png files during
+normalization and SAM/ttest analysis.
+
+Fix: Netpbm libraries not installed or not in path of analysis user (arraybot),
+download and install from http://netpbm.sourceforge.net
+
