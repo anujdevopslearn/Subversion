@@ -2,7 +2,6 @@ package SBEAMS::Glycopeptide::HTMLPrinter;
 
 ###############################################################################
 # Program     : SBEAMS::Glycopeptide::HTMLPrinter
-# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id: HTMLPrinter.pm 3976 2005-09-26 17:25:12Z dcampbel $
 #
 # Description : This is part of the SBEAMS::WebInterface module which handles
@@ -330,37 +329,38 @@ sub getStatsHTML {
 sub get_prophet_control {
   my $self = shift;
   my $current = $self->get_current_prophet_cutoff();
-  my @stock = qw( 0.5 0.6 0.7 0.8 0.9 1.0 );
+  my @stock = qw( 0.5 0.6 0.7 0.8 0.9 0.95 0.99 1.0 );
   if ( defined $current && !grep /^$current$/, @stock ) {
     push @stock, $current;
     @stock = sort{ $a <=> $b }(@stock);
   }
   my $update_script = 'ONCHANGE="update_prophet_score()"';
   my $self_url = $sbeams->get_self_url();
+  $self_url =~ s/\?.*$//g;
+
+  my $url_params = $sbeams->get_url_params( escape => 0,
+                                            omit => [qw( glyco_prophet_cutoff )] );
 
   my $select = $sbeams->new_option_list(  names => \@stock,
                                        'values' => \@stock,
                                        selected => $current,
-                                      list_name => 'prophet_list',
+                                      list_name => 'glyco_prophet_cutoff',
                                           attrs => $update_script
                                         );
   my $form =<<"  END";
   <SCRIPT LANGUAGE=javascript>
     function update_prophet_score() {
-      var list = document.getElementById('prophet_list');
-      var text = document.getElementById('prophet_score');
-      if ( list ) {
-        if ( text ) {
-          text.value = list.options[list.selectedIndex].value;
-        }
-      }
+      var form = document.getElementById('prophet_form' );
+      form.submit();
     }
   </SCRIPT>
-  <FORM METHOD=POST ACTION=$self_url NAME=set_prophet_score ID=set_prophet_score>
+  <FORM METHOD=POST ACTION=$self_url NAME=set_prophet_score ID=prophet_form>
+  $url_params
   <TABLE>
-    <TR><TD><INPUT TYPE=submit VALUE="Set prophet cutoff" NAME=prophet_cutoff ID=prophet_cutoff></TD></TR>
-    <TR><TD><INPUT TYPE=text NAME=prophet_score SIZE=8 ID=prophet_score></TD></TR>
-    <TR><TD>$select </TD></TR>
+    <TR>
+     <TD NOWRAP=1 ALIGN=RIGHT><B>Prophet cutoff:</B></TD>
+     <TD ALIGN=LEFT>$select</TD>
+    </TR>
   </TABLE>
   </FORM>
   END
@@ -381,7 +381,6 @@ sub printStyleSheet {
     #### Obtain main SBEAMS object and use its style sheet
     $sbeams = $self->getSBEAMS();
     $sbeams->printStyleSheet();
-
 }
 
 
