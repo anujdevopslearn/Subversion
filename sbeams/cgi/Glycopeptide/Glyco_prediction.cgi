@@ -108,6 +108,7 @@ sub main
 		 my $ipi_data_id = $parameters{'ipi_data_id'};
 		
 		 $sbeamsMOD->display_page_header(project_id => $project_id);
+    print $sbeams->getGifSpacer(800);
 		print $sbeams->getPopupDHTML();
 		display_detail_form(ref_parameters=>\%parameters,
 							ipi_data_id => $ipi_data_id,
@@ -118,6 +119,7 @@ sub main
 	}elsif($parameters{action} eq 'Show_hits_form'){
 		
 		 $sbeamsMOD->display_page_header(project_id => $project_id);
+    print $sbeams->getGifSpacer(800);
 		print $sbeams->getPopupDHTML();
 		
 		display_hits_form(ref_parameters=>\%parameters);
@@ -126,6 +128,7 @@ sub main
     } else {
 
         $sbeamsMOD->display_page_header(project_id => $project_id);
+    print $sbeams->getGifSpacer(800);
 		handle_request(ref_parameters=>\%parameters);
 		$sbeamsMOD->display_page_footer();
 
@@ -151,7 +154,7 @@ $log->debug(Dumper($ref_parameters));
 	
 	print 
 	$q->table({class=>'table_setup'},
-          $q->Tr({class=>'rev_gray'},
+          $q->Tr({class=>'rev_gray_head'},
 	     $q->td({colspan=>2}, $q->h2("ISB N-glycosylation peptide prediction server")),
 	  	 
 	  ),
@@ -170,7 +173,7 @@ $log->debug(Dumper($ref_parameters));
 	$q->Tr(
 	   $q->td({colspan=>2},'&nbsp; <br><br> &nbsp;') 
 	 ),	    
-	 $q->Tr({class=>'rev_gray'},
+	 $q->Tr({class=>'rev_gray_head'},
 	   $q->td({colspan=>2}, $q->h2("Text Search"))
 	 ),
 	 $q->Tr(
@@ -200,7 +203,7 @@ $log->debug(Dumper($ref_parameters));
 	 $q->Tr(
 	   $q->td({colspan=>2}, "<br> -- or -- <br><br>")
 	 ), 
-	 $q->Tr({class=>'rev_gray'},
+	 $q->Tr({class=>'rev_gray_head'},
 	   $q->td({colspan=>2}, $q->h2("Sequence Search") )
 	 ), 
 	 
@@ -232,7 +235,7 @@ $log->debug(Dumper($ref_parameters));
 	"<br><br>",
 	$q->table(
 	   $q->Tr(
-	      $q->td({class=>'rev_gray', colspan=>2}, $q->h2("Examples"))
+	      $q->td({class=>'rev_gray_head', colspan=>2}, $q->h2("Examples"))
 	   ),
 	   $q->Tr(
               $q->td({class=>'grey_bg'}, "Gene Name"),
@@ -333,30 +336,37 @@ sub print_out_hits_page{
 
 	my @results_set = @{ $args{results_set_aref} };
 	my %parameters = %{ $args{ref_parameters} };
+  my $html;
 
 	if (exists $parameters{similarity_score} && defined $parameters{similarity_score}){
-		print $q->p(
+		$html .= $q->p(
 			$q->h3("Protein Similarity Score (Percent Match) <span class='lite_blue_bg'>" . $parameters{similarity_score} . "</span>"),
 		);
 	}
 	
-	print $q->start_table(),
-			$q->Tr({class=>'rev_gray'},
+	$html .= $q->start_table();
+  $html .= $q->Tr({class=>'rev_gray_head'},
 			  $q->td('IPI ID'),
 			  $q->td('Protein Name'),
 			  $q->td('Protein Symbol'),
 			  $q->td('Identified Peptides')
-			
 			);
+  $log->info( $html );
 	my $cgi_url = "$base_url?action=Show_detail_form&ipi_data_id";
+  my $protcnt = 0;
+  my $pepprotcnt = 0;
+  my $cutoff = $sbeamsMOD->get_current_prophet_cutoff();
+  my $pepcnt = 0;
 	foreach my $h_ref (@results_set){
 		my $ipi_id = $h_ref->{ipi_data_id};
 		my $num_identified = $h_ref->{num_identified};
 		my $ipi_acc = $h_ref->{ipi_accession_number};
 		my $protein_name = nice_term_print($h_ref->{protein_name});
 		my $protein_sym = $h_ref->{protein_symbol};
-		
-		print $q->Tr(
+    $protcnt++;
+    $pepprotcnt++ if $num_identified;
+    $pepcnt += $num_identified;
+		$html .= $q->Tr(
 			    $q->td(
 			    	$q->a({href=>"$cgi_url=$ipi_id"},$ipi_acc)
 			    ),
@@ -365,8 +375,37 @@ sub print_out_hits_page{
 			    $q->td({ALIGN=>'right'},$num_identified)
 			  );
 	}
+	$html .= "</table>";
 
-	print "</table>";
+  my $type = ( check_search_params(\%parameters) eq 'text' ) ? 
+                                                      $parameters{search_type} :
+                                                       'sequence';
+  my $value = '';
+  if ($type eq 'sequence') {
+    $value = $parameters{sequence_search};
+    if ( length($value) > 12 ) {
+      $value = substr($value, 0, 12) . '...';
+    }
+  } else {
+    $value = $parameters{search_term};
+  }
+
+  my $ofwhich = "of which $pepprotcnt";
+  my $contain = ( $pepprotcnt > 1 ) ? 'contain' : 'contains';
+  if ( $pepprotcnt == $protcnt || $pepcnt == 0 ) {
+    $ofwhich = 'which';
+  }
+
+  my $stats = qq~
+  <BR><FONT COLOR=GREEN>
+  Your search for proteins with $type = 
+  '$value'  found  $protcnt proteins $ofwhich $contain
+  a total of $pepcnt peptides at a prophet cutoff of $cutoff
+  </FONT>
+  <BR>
+  <BR>
+  ~;
+  print "$stats $html";
 }
 
 ###############################################################################
@@ -629,6 +668,7 @@ sub display_detail_form{
                                     );
  
     
+  my $spacer = $sbeams->getGifSpacer( 600 );
 ### Print Out the HTML to Make Dispaly the info About the the Protein and all it's Glyco-Peptides
 	print $q->table({border=>0},
 			
@@ -637,15 +677,15 @@ sub display_detail_form{
 				$q->td({class=>'grey_header', colspan=>2}, "Protein Info"),
 			),
 			 $q->Tr(
-				$q->td({class=>'rev_gray'}, "IPI ID"),
+				$q->td({class=>'rev_gray_head'}, "IPI ID"),
 				$q->td($ipi_url)
 			  ),
 			$q->Tr(
-				$q->td({class=>'rev_gray'}, "Protein Name"),
+				$q->td({class=>'rev_gray_head'}, "Protein Name"),
 				$q->td($protein_name)
 			  ),
 			$q->Tr(
-				$q->td({class=>'rev_gray'}, 
+				$q->td({class=>'rev_gray_head'}, 
 				$glyco_o->linkToColumnText(display => "Protein Symbol",
 								 title   =>"Protein Symbol Info", 
 								 column  =>"protein_symbol", 
@@ -654,11 +694,11 @@ sub display_detail_form{
 								)),
 				$q->td(get_annotation(glyco_o   => $glyco_o,
 									  anno_type => 'symbol'
-									  )
+									  ) . $spacer
 					   )
 			  ),
 		   $q->Tr(
-				$q->td({class=>'rev_gray'}, 
+				$q->td({class=>'rev_gray_head'}, 
 				$glyco_o->linkToColumnText(display => "Subcellular Location",
 								 title   =>"Find More Info About the Subcellular Location Call", 
 								 column  =>"cellular_location_id", 
@@ -672,11 +712,11 @@ sub display_detail_form{
 					   )
 			  ),
 			 $q->Tr(
-				$q->td({class=>'rev_gray'}, "Swiss Prot ID"),
+				$q->td({class=>'rev_gray_head'}, "Swiss Prot ID"),
 				$q->td($swiss_prot_url)
 			  ),
 			$q->Tr(
-				$q->td({class=>'rev_gray'}, 
+				$q->td({class=>'rev_gray_head'}, 
 				$glyco_o->linkToColumnText(display => "Synonyms",
 								 title   =>"Synonyms Info", 
 								 column  =>"synonyms", 
@@ -689,7 +729,7 @@ sub display_detail_form{
 					   )
 			  ),
 			$q->Tr(
-				$q->td({class=>'rev_gray'}, "Protein Summary"),
+				$q->td({class=>'rev_gray_head'}, "Protein Summary"),
 				$q->td(get_annotation(glyco_o   => $glyco_o,
 									  anno_type => 'summary'
 									  )
