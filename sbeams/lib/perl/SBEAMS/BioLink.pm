@@ -18,11 +18,14 @@ use SBEAMS::BioLink::DBInterface;
 use SBEAMS::BioLink::HTMLPrinter;
 use SBEAMS::BioLink::TableInfo;
 use SBEAMS::BioLink::Settings;
+use SBEAMS::BioLink::Utilities;
 
 @ISA = qw(SBEAMS::BioLink::DBInterface
           SBEAMS::BioLink::HTMLPrinter
+          SBEAMS::BioLink::Settings
           SBEAMS::BioLink::TableInfo
-          SBEAMS::BioLink::Settings);
+          SBEAMS::BioLink::Utilities
+         );
 
 
 ###############################################################################
