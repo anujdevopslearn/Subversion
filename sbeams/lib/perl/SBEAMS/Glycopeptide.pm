@@ -14,6 +14,8 @@ use strict;
 use vars qw(@ISA);
 use CGI::Carp qw(fatalsToBrowser croak);
 
+use SBEAMS::Connection qw($log);
+
 use SBEAMS::Glycopeptide::DBInterface;
 use SBEAMS::Glycopeptide::HTMLPrinter;
 use SBEAMS::Glycopeptide::TableInfo;
@@ -48,6 +50,9 @@ sub setSBEAMS {
 # Provide the main SBEAMS object
 sub getSBEAMS {
     my $self = shift;
+    unless ( $self->{_sbeams} ) {
+      $self->{_sbeams} = new SBEAMS::Connection;
+    }
     return($self->{_sbeams});
 }
 
