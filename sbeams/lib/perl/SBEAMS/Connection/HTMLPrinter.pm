@@ -214,12 +214,14 @@ sub printStyleSheet {
 
     my $FONT_SIZE=9;
     my $FONT_SIZE_SM=8;
+    my $FONT_SIZE_MED=12;
     my $FONT_SIZE_LG=12;
     my $FONT_SIZE_HG=14;
 
     if ( $HTTP_USER_AGENT =~ /Mozilla\/4.+X11/ ) {
-      $FONT_SIZE=12;
       $FONT_SIZE_SM=11;
+      $FONT_SIZE=12;
+      $FONT_SIZE_MED=3;
       $FONT_SIZE_LG=14;
       $FONT_SIZE_HG=19;
     }
@@ -251,7 +253,8 @@ sub printStyleSheet {
 	.grey_bg{ background-color: #CCCCCC }
 	.med_gray_bg{ background-color: #CCCCCC; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; Padding:2}
 	.grey_header{ font-family: Helvetica, Arial, sans-serif; color: #000000; font-size: ${FONT_SIZE_HG}pt; background-color: #CCCCCC; font-weight: bold; padding:1 2}
-	.rev_gray{background-color: #555555; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; color:white; line-height: 25px;}
+	.rev_gray{background-color: #555555; font-size: ${FONT_SIZE_MED}pt; font-weight: bold; color:white; line-height: 25px;}
+	.rev_gray_head{background-color: #555555; font-size: ${FONT_SIZE}pt; font-weight: bold; color:white; line-height: 25px;}
 	.blue_bg{ font-family: Helvetica, Arial, sans-serif; background-color: #4455cc; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; color: white}
 	.lite_blue_bg{font-family: Helvetica, Arial, sans-serif; background-color: #eeeeff; font-size: ${FONT_SIZE_HG}pt; color: #cc1111; font-weight: bold;border-style: solid; border-width: 1px; border-color: #555555 #cccccc #cccccc #555555;}
 	.orange_bg{ background-color: #FFCC66; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
@@ -268,12 +271,14 @@ sub printStyleSheet {
 	.white_hyper_text{font-family: Helvetica,Arial,sans-serif; color:#000000;}
 	
 	.white_text    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: white; CURSOR: help;}
+	.white_text_head {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: white; CURSOR: help;}
 	
 	
 	.identified_pep{ 
 	background-color: #882222; 
 	font-size: ${FONT_SIZE_LG}pt; 
-	font-weight: bold ; 
+	font-weight: bold; 
+  letter-spacing:0.5;	
 	color:white; 
 	Padding:1;
 	border-style: solid;
@@ -288,7 +293,9 @@ sub printStyleSheet {
 	.predicted_pep{ 
 	background-color: #FFCC66; 
 	font-size: ${FONT_SIZE_LG}pt; 
+  font-family:courier;
 	font-weight: bold; 
+  letter-spacing:0.5;	
 	border-style: solid;
 	border-width: 1px;
 	
@@ -302,7 +309,11 @@ sub printStyleSheet {
 	
 	.glyco_site{ background-color: #ee9999; 
 	border-style: solid;
+	font-size: ${FONT_SIZE_LG}pt; 
+	font-weight: bold; 
+  font-family:courier;
 	border-width: 1px;
+  letter-spacing:0.5;	
 	/* top right bottom left */
 	border-color: #444444 #eeeeee #eeeeee #444444; }	
 	
@@ -981,7 +992,6 @@ sub get_content_type {
                  jnlp => 'application/x-java-jnlp-file',
             cytoscape => 'application/x-java-jnlp-file'
                );
-  print STDERR "Returning $ctypes{$type}\n";
   return $ctypes{$type};
 }
 
