@@ -74,14 +74,11 @@ sub calcAvgMolWgt {
         "Y" => "163.1760",
         "W" => "186.2132",
         "X" => "119.",
-        "U" => "112.087",
+        "U" => "150.03",
         "*" => "0.0",
     );
     ## X corresponds to any residue
-    ## U is uracil in RNA; 
-    ## from PubMed: http://pubchem.ncbi.nlm.nih.gov/substance/PcsSrv.cgi?cid=6814
-    ## Molecular Weight: 112.087
-    ## Molecular Formula: C4H4N2O
+    ## U is Selenocysteine: C3H5NOSe : SeC : U with monoisoptopic wgt 150.95364
 
     # Split sequence into individual chars
     my @sequence_letters = split( // , $sequence );
