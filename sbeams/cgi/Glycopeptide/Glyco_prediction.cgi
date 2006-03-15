@@ -76,10 +76,13 @@ sub main
     exit unless ($current_username = $sbeams->Authenticate(
        # permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin',
        # 'Glycopeptide_readonly'],
-        #connect_read_only=>1,
-#   allow_anonymous_access=>1,
+       # connect_read_only=>1,
+       # allow_anonymous_access=>1,
     ));
 
+#    for my $p ( $q->param() ) {
+#      $log->info( "$p => " . $q->param( $p ) );
+#    }
 
     #### Read in the default input parameters
     my %parameters;
@@ -255,18 +258,9 @@ $log->debug(Dumper($ref_parameters));
 sub display_hits_form {
  	my %args = @_;
 
-    #### Process the arguments list
-    	my $ref_parameters = $args{'ref_parameters'}
-        || die "ref_parameters not passed";
-
-    	
-    	$ref_parameters = clean_params($ref_parameters);
-    	my %parameters = %{$ref_parameters};
-		
-		my $sql_data = find_hits($ref_parameters);
-	
-
-
+  #### Process the arguments list
+  my $params = $args{'ref_parameters'} || die "ref_parameters not passed";
+  my $sql_data = find_hits($params);
 
 }
 
@@ -285,28 +279,23 @@ sub find_hits{
 	my $type = check_search_params($ref_parameters);
 	my @results_set = ();
 	
-	if ($type eq 'text'){
-		if ($parameters{search_type} eq 'Gene Symbol'){
-			@results_set = $glyco_query_o->gene_symbol_query($parameters{search_term});	
-		
-		}elsif($parameters{search_type} eq 'Gene Name/Alias'){
-			@results_set = $glyco_query_o->gene_name_query($parameters{search_term});	
-			
-		}elsif($parameters{search_type} eq 'Swiss Prot Accession Number'){
-			@results_set = $glyco_query_o->swiss_prot_query($parameters{search_term});	
-		}elsif($parameters{search_type} eq 'IPI Accession Number'){
-			@results_set = $glyco_query_o->ipi_accession_query($parameters{search_term});	
-		}else{
-			print_error("Cannot find correct textsearch to run");
-		}
-	
-	}elsif($type eq 'sequence_search'){
-		
-		@results_set = $glyco_query_o->protein_seq_query($parameters{sequence_search});	
-		
-	}else{
-		print_error("Cannot find correct search type to run '$type'");
-	}
+  if ($type eq 'text'){
+    if ($parameters{search_type} eq 'Gene Symbol'){
+      @results_set = $glyco_query_o->gene_symbol_query($parameters{search_term});	
+    }elsif($parameters{search_type} eq 'Gene Name/Alias'){
+      @results_set = $glyco_query_o->gene_name_query($parameters{search_term});	
+    }elsif($parameters{search_type} eq 'Swiss Prot Accession Number'){
+      @results_set = $glyco_query_o->swiss_prot_query($parameters{search_term});	
+    }elsif($parameters{search_type} eq 'IPI Accession Number'){
+      @results_set = $glyco_query_o->ipi_accession_query($parameters{search_term});	
+    }else{
+      print_error("Cannot find correct textsearch to run");
+    }
+  }elsif($type eq 'sequence_search'){
+    @results_set = $glyco_query_o->protein_seq_query($parameters{sequence_search});	
+  }else{
+    print_error("Cannot find correct search type to run '$type'");
+  }
 	
 	
 	
@@ -427,11 +416,11 @@ sub print_error{
 sub check_search_params{
 	my $ref_parameters = shift;
 	
-	if ($ref_parameters->{search_term} =~ /^\w/){
-		if ($ref_parameters->{sequence_search} =~ /^\w/ ){
+	if ($ref_parameters->{search_term} =~ /\w/){
+		if ($ref_parameters->{sequence_search} =~ /\w/ ){
 			print_error("Cannot have a Text Search and Sequence Search in the same query");
 		}
-	}elsif($ref_parameters->{sequence_search} =~ /^\w/ ) {
+	}elsif($ref_parameters->{sequence_search} =~ /\w/ ) {
 		return ('sequence_search');
 	}
 	return 'text';
@@ -465,7 +454,6 @@ sub clean_params{
 		
 		}elsif($k eq 'sequence_search'){
 			$ref_parameters->{$k} = clean_seq($ref_parameters->{$k});
-		
 		}elsif($k eq 'ipi_data_id'){
 			$ref_parameters->{$k} = clean_term($ref_parameters->{$k});
 		}elsif($k eq 'similarity_score'){
@@ -493,25 +481,25 @@ sub clean_params{
 }
 ###############################################################################
 #clean_seq
-#Clean the sequence to a sigle clean AA string
+#Clean the sequence to a single clean AA string, but allow wild cards to pass
 ###############################################################################
 sub clean_seq{
 	my $seq = shift;
 	
-	my @seq_lines = split/\n/, $seq;
+  # Does this work on winders?
+  my @seq_lines = split/\n/, $seq;
+  chomp @seq_lines;
+
 	my @clean_seq = ();
 	
 	foreach my $line (@seq_lines){
 		next if( $line =~ /^>/);
-		$line =~ s/[^A-Z]//g;
+		$line =~ s/[^A-Z\%]//g;
 		push @clean_seq, $line
 	}
 	my $seq_line = join '', @clean_seq;
 	$seq_line = substr($seq_line, 0, 500);
-	$log->debug("CLEAN SEQ '$seq_line'");
 	return $seq_line;
-	
-		
 }
 
 
