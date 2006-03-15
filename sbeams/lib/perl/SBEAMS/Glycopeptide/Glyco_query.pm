@@ -48,6 +48,7 @@ use Data::Dumper;
 use base qw(SBEAMS::Glycopeptide);		
 
 
+use SBEAMS::Connection;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Glycopeptide::Tables;
 use SBEAMS::Glycopeptide::Test_glyco_data;
@@ -83,6 +84,7 @@ sub setSBEAMS {
 ###############################################################################
 sub getSBEAMS {
     my $self = shift;
+    $sbeams ||= new SBEAMS::Connection();
     return($sbeams);
 }
 
@@ -94,17 +96,16 @@ sub gene_symbol_query{
 	my $self = shift;
 	my $term = shift;
 	
-	confess(__PACKAGE__ . "::$method term '$term' is not good  \n") unless $term;
-	
-	my $sql = qq~
+	my $osql = qq~
     SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
     (SELECT COUNT(*) FROM $TBGP_IDENTIFIED_TO_IPI 
     WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id ) AS num_identified 
     FROM $TBGP_IPI_DATA
     WHERE protein_symbol like '$term'
   ~;
+
+  my $sql = $self->get_query_sql( type => 'protsymbol', term => $term );
 	
-	$log->debug(__PACKAGE__. "::$method $sql");
 	return $sbeams->selectHashArray($sql);
 }
 ################################
@@ -115,15 +116,15 @@ sub gene_name_query{
 	my $self = shift;
 	my $term = shift;
 	
-	confess(__PACKAGE__ . "::$method term '$term' is not good  \n") unless $term;
-	
-	my $sql = qq~
+	my $osql = qq~
     SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
     (SELECT COUNT(*) FROM $TBGP_IDENTIFIED_TO_IPI 
     WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id ) AS num_identified 
     FROM $TBGP_IPI_DATA
     WHERE protein_name like '$term'
   ~;
+
+  my $sql = $self->get_query_sql( type => 'protname', term => $term );
 
 	return $sbeams->selectHashArray($sql)
 }
@@ -134,12 +135,16 @@ sub all_proteins_query {
 	my $mode = shift;
   my $identified = ( $mode eq 'all' ) ? '' : "WHERE num_identified > 0 ";
   my $order = ( $mode eq 'all' ) ? 'protein_name ASC' : 'num_identified DESC, protein_name ASC';
+  my $cutoff = $self->get_current_prophet_cutoff();
 	
 	my $sql = qq~
     SELECT * FROM (
     SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
-    (SELECT COUNT(*) FROM $TBGP_IDENTIFIED_TO_IPI 
-    WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id ) AS num_identified 
+    ( SELECT COUNT(*) 
+      FROM $TBGP_IDENTIFIED_TO_IPI ITI
+      JOIN $TBGP_IDENTIFIED_PEPTIDE IP ON ITI.identified_peptide_id = IP.identified_peptide_id
+      WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id 
+      AND peptide_prophet_score >= $cutoff ) AS num_identified 
     FROM $TBGP_IPI_DATA
     ) AS temp
     $identified
@@ -157,7 +162,7 @@ sub ipi_accession_query{
 	my $self = shift;
 	my $term = shift;
 	
-	confess(__PACKAGE__ . "::$method term '$term' is not good  \n") unless $term;
+
 	my $search_string = '';
 	my $table_name = 'ipi_accession_number';
 	
@@ -168,7 +173,7 @@ sub ipi_accession_query{
 		$search_string = "$table_name like '$term' ";
 	}
 
-	my $sql = qq~
+	my $osql = qq~
     SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
     (SELECT COUNT(*) FROM $TBGP_IDENTIFIED_TO_IPI 
     WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id ) AS num_identified 
@@ -176,7 +181,8 @@ sub ipi_accession_query{
     WHERE $search_string
   ~;
 
-	$log->debug($sql);
+  my $sql = $self->get_query_sql( type => 'ipi', term => $search_string );
+
 	return $sbeams->selectHashArray($sql)
 }
 ################################
@@ -202,6 +208,43 @@ sub make_or_search_string {
 
 }
 
+sub get_query_sql {
+  my $self = shift;
+  my %args = @_;
+  my $cutoff = $self->get_current_prophet_cutoff();
+  my $clause = '';
+  if ( $args{type} eq 'swissprot' ) {
+	  $clause = "WHERE swiss_prot_acc like '$args{term}'";
+  } elsif ( $args{type} eq 'protseq' ) {
+    $clause = "WHERE protein_sequence like '$args{term}'";
+  } elsif ( $args{type} eq 'protsymbol' ) {
+    $clause = "WHERE protein_symbol like '$args{term}'";
+  } elsif ( $args{type} eq 'protname' ) {
+    $clause = "WHERE protein_name like '$args{term}'";
+  } elsif ( $args{type} eq 'ipi' ) {
+    $clause = "WHERE $args{term}";
+  } else {
+    $log->error( "Unknown type" );
+    return '';
+  }
+
+  my $sql = qq~
+  SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
+    ( SELECT COUNT(*) 
+      FROM $TBGP_IDENTIFIED_TO_IPI ITI 
+      JOIN $TBGP_IDENTIFIED_PEPTIDE IP
+        ON IP.identified_peptide_id = ITI.identified_peptide_id
+      WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id
+      AND peptide_prophet_score >= $cutoff ) AS num_identified 
+  FROM $TBGP_IPI_DATA
+  $clause
+  ~;
+  $log->info( $sbeams->evalSQL( $sql ) );
+  return $sql;
+  
+#AND peptide_prophet_score >= $cutoff
+
+}
 ################################
 #swiss_prot_query
 ###############################
@@ -217,8 +260,11 @@ sub swiss_prot_query{
     (SELECT COUNT(*) FROM $TBGP_IDENTIFIED_TO_IPI 
     WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id ) AS num_identified 
     FROM $TBGP_IPI_DATA
-	  WHERE swiss_prot_acc like '$term'
+	  WHERE swiss_prot_acc LIKE '$term'
   ~;
+
+  # Newfangled
+  my $sql = $self->get_query_sql( type => 'swissprot', term => $term );
 
 	return $sbeams->selectHashArray($sql)
 }
@@ -232,7 +278,8 @@ sub protein_seq_query{
 	my $self = shift;
 	my $seq = shift;
 	confess(__PACKAGE__ . "::$method seq '$seq' is not good  \n") unless $seq;
-	my $sql = qq~
+
+	my $osql = qq~
     SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
     (SELECT COUNT(*) FROM $TBGP_IDENTIFIED_TO_IPI 
     WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id ) AS num_identified 
@@ -240,7 +287,10 @@ sub protein_seq_query{
     WHERE protein_sequence like '%$seq%'
   ~;
 
-	$log->debug($sql);
+  # Newfangled
+  chomp $seq;
+  my $sql = $self->get_query_sql( type => 'protseq', term => $seq );
+
 	
 	return $sbeams->selectHashArray($sql)
 }
@@ -274,7 +324,6 @@ sub query_ipi_data{
 		  ~;
 	
 	my @results = $sbeams->selectHashArray($sql);
-	#$log->debug(Dumper($results[0]));
 	return $results[0];
 	
 }
