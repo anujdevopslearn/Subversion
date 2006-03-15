@@ -248,7 +248,13 @@ sub parse_modfied_pep_seq {
 	#  R.AN#LTNFPEN#GTFVVNIAQLSQDDSGR.Y
 	#  M.GAAVTLKN#LTGLNQRR.-
 	
+  # Added multi-offset 3-14-2006, a terrible hack to patch a curious algorithm.
+  # It is trying to get accurate motif indexes into a sequence that has leading
+  # and lagging characters that will later be shorn, as well as internal motifs
+  # labeled by characters (#, *) that will also be eliminated.  FIXME!
+  my $multi_offset = 0;
 	for (my $i = 0; $i<=$#parts; $i ++){
+    my $cnt = $i - $multi_offset;
 		
 		my $aa = $parts[$i];
 		
@@ -261,8 +267,9 @@ sub parse_modfied_pep_seq {
 			$end_aa = $aa;
 			next;
 		}elsif($aa =~ /\*/) {#Oxidized Met
+      $multi_offset++;
 			#print "FOUND OX MET\n";
-			my $new_i = _check_location(location => $i, type=>$pep_type);
+			my $new_i = _check_location(location => $cnt, type=>$pep_type);
 			my $ox_met = Bio::SeqFeature::Generic->new(
 								-start        => $new_i,
 								-end          => $new_i,
@@ -273,8 +280,8 @@ sub parse_modfied_pep_seq {
 			push @met_mods, $ox_met;
 			next;
 		}elsif($aa =~ /#/){	#Glyco Site
-			#$log->debug("I SEE A GLYCO SITE");
-			my $new_i = _check_location(location => $i, type =>$pep_type);
+      $multi_offset++;
+			my $new_i = _check_location(location => $cnt, type =>$pep_type);
 			my $glyco = Bio::SeqFeature::Generic->new(
 								-start        => $new_i,
 								-end          => $new_i + 2,
