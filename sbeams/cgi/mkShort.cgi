@@ -35,11 +35,16 @@ use SBEAMS::Connection::Tables;
   
   my $extra = '';
 
+  my $id;
   if ( $params{url} ) {
     my $id = $sbeams->setShortURL( $params{url} );
     my $shorty = $q->url();
     $shorty =~ s/mkShort\.cgi/shortURL/;
-    $extra = "$shorty?key=$id";
+    my $url = "$shorty?key=$id";
+    $extra = qq~
+    Short URL: $url<BR>
+    Try link: <A HREF=$url target=_blank> $id </A><BR><BR>
+    ~;
   } else { 
 
     my $page = SBEAMS::Connection::SBPage->new( user_context => 1,
