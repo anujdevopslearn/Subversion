@@ -165,7 +165,6 @@ sub get_protein_info {
 	my $self = shift; 
 	my %args = @_;
 	
-
 	$self->get_ipi_data();
 	
 	$self->add_predicted_peptides();
@@ -254,8 +253,6 @@ sub add_glyco_site{
 		my $location = $href->{'protein_glyco_site_position'};
 		my $glyco_score = $href->{'glyco_score'};
 		
-		#$log->debug(__PACKAGE__ ."::$method LOCATION '$location' SCORE '$glyco_score'");
-		
 		my $glyco = Bio::SeqFeature::Generic->new(
 									-start        => $location,
 									-end          => $location +2,
@@ -336,7 +333,7 @@ sub add_transmembrane_domains {
 #Add add the pepredicted peptide seqs to the seq obj
 #########################################
 sub add_predicted_peptides {
-	my $mehtod= 'add_predicted_peptides';
+	my $method= 'add_predicted_peptides';
 	my $self = shift;
 	my $ipi_data_id = $self->get_ipi_data_id;
 	my @array_hrefs = $self->get_predicted_peptides($ipi_data_id);
@@ -361,15 +358,11 @@ sub add_identified_peptides {
 	my $ipi_data_id = $self->get_ipi_data_id;
 	my @array_hrefs = $self->get_identified_peptides($ipi_data_id);
 	
-	
 	my $pep_o = new SBEAMS::Glycopeptide::Get_peptide_seqs(glyco_obj => $self);
-	
 	
 	$pep_o->make_peptide_bio_seqs(data => \@array_hrefs,
 								  type => 'Identified Peptides',	
 								);
-	
-
 }
 
 #########################################################
@@ -838,8 +831,8 @@ sub predicted_pep_html{
 	
 	my $html  = "<table>";
 	$html .= $q->Tr({class=>'rev_gray'},
-			       $q->td( $self->linkToColumnText(
-			       				display => "NXS/T<br>Location",
+			       $q->td( {NOWRAP => 1}, $self->linkToColumnText(
+			       				display => "NXS/T Location",
 						    		title   =>"Glyco Site Location within the protein", 
 								    column  =>"protein_glyco_site_position", 
 							    	table   => "AT_glyco_site" )
@@ -890,11 +883,9 @@ my $foo=<<'  END';
 
             my $pep_seq_obj = $self->extract_first_val(feature => $f, tag => 'Peptide_seq_obj');
             $id = $pep_seq_obj->display_id;
-            #	$log->debug(Dumper($pep_seq_obj));
 			my @all_peptide_features = $pep_seq_obj->all_SeqFeatures;
 			my $feature_href = $self->make_features_hash(@all_peptide_features);
 			if (exists $feature_href->{'Start_end_aa'}){
-				#$log->debug("I SEE FIRST AA");
 				$first_aa = $self->extract_first_val(feature => $feature_href->{'Start_end_aa'}->[0], 
 													 tag => 'start_aa');
 				$end_aa = $self->extract_first_val(feature => $feature_href->{'Start_end_aa'}->[0], 
@@ -971,8 +962,8 @@ sub identified_pep_html{
 	#start the HTML
 	my $html  = "<table>";
 	$html .= $q->Tr({class=>'rev_gray'},
-			       $q->td( $self->linkToColumnText(
-			       				display => "NXS/T<br>Location",
+			       $q->td( { NOWRAP => 1 }, $self->linkToColumnText(
+			       				display => "NXS/T Location",
 								title   =>"Glyco Site Location within the protein", 
 								column  =>"protein_glyco_site_position", 
 								table   => "AT_glyco_site" 
@@ -994,10 +985,7 @@ sub identified_pep_html{
 			     );
 				 
 	
-#	$log->debug("HTML DUMP '$html'");
-	
-			    
-
+  my $cutoff = $self->get_current_prophet_cutoff();
 			      
 	foreach my $f (@{$features_aref}){
 		my $start = $f->start;
@@ -1013,17 +1001,24 @@ sub identified_pep_html{
 		my $tissues = 'None';
 		my $protein_glyco_site = 1;
 		
+    my $gb = '';
+    my $ge = '';
 		
 		if ($f->has_tag('Peptide_seq_obj')){
 
-            my $pep_seq_obj = $self->extract_first_val(feature => $f, tag => 'Peptide_seq_obj');
-            #	$log->debug(Dumper($pep_seq_obj));
-            $id = $pep_seq_obj->display_id;
+      my $pep_seq_obj = $self->extract_first_val(feature => $f, tag => 'Peptide_seq_obj');
+
+      my $pp_value = $self->extract_data_value( obj => $pep_seq_obj,
+                                                             tag => 'peptide_prophet_score' );
+      $gb = ( $pp_value >= $cutoff ) ? '' : '<I><FONT COLOR=#AAAAAA>';
+      $ge = ( $pp_value >= $cutoff ) ? '' : '</FONT></I>';
+
+
+      $id = $pep_seq_obj->display_id;
 			my @all_peptide_features = $pep_seq_obj->all_SeqFeatures;
 			my $feature_href = $self->make_features_hash(@all_peptide_features);
 			
 			if (exists $feature_href->{'Start_end_aa'}){
-			#	$log->debug("I SEE FIRST AA");
 				$first_aa = $self->extract_first_val(feature => $feature_href->{'Start_end_aa'}->[0], 
 													 tag => 'start_aa');
 				$end_aa = $self->extract_first_val(feature => $feature_href->{'Start_end_aa'}->[0], 
@@ -1049,12 +1044,12 @@ sub identified_pep_html{
 		            ( $tissues =~ /\w/ ) ? 'other' : '';
 
 		 $html .= $q->Tr(
-				$q->td($protein_glyco_site),
-				$q->td("$first_aa.$html_seq.$end_aa"),
-				$q->td($peptide_prophet_score),
-				$q->td($tryptic_end),
-				$q->td($peptide_mass),
-				$q->td($tissues),
+				$q->td($gb.$protein_glyco_site.$ge),
+				$q->td("$gb$first_aa.$html_seq.$end_aa$ge"),
+				$q->td($gb.$peptide_prophet_score.$ge),
+				$q->td($gb.$tryptic_end.$ge),
+				$q->td($gb.$peptide_mass.$ge),
+				$q->td($gb.$tissues.$ge),
 			     );
 		}
 	$html .= "</table>";
@@ -1129,9 +1124,17 @@ sub extract_first_val{
 	my $tag = $args{tag};
 
 	 my @hold_vals = $f->get_tag_values($tag);
-        #$log->debug(Dumper($hold_vals[0])); 
 	return $hold_vals[0];
 
+}
+
+#+
+# Klugy method to extract a data value from a bioperl annotation object.
+sub extract_data_value {
+  my $self = shift;
+  my %args = @_;
+  my $obj = $args{obj};
+  return $obj->{_annotation}->{_annotation}->{$args{tag}}->[0]->{value}; 
 }
 
 ################################
