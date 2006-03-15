@@ -60,6 +60,7 @@ my $table_group    = $q->param( 'table_group' );
 my @groups         = $q->param( 'groupinfo' );
 my $project_id     = $q->param( 'project_id' );
 my $email_link     = $q->param( 'email_link' ) || 'yes';
+my $session_key     = $q->param( 'session_key' );
 
 if ($help_text_id) {
 ######################################
@@ -86,6 +87,16 @@ if ($help_text_id) {
 
   displayGroupInfo( \@groups, $table_name, $table_group );
   exit 0;
+
+}elsif ( $session_key ) { # Text passed via session_id 
+
+  # Pick your poison!  One of these is required to make it work
+  $sbeams->getSessionCookie();
+#  $sbeams->Authenticate();
+
+  $title = $q->param('title');
+  $text = $sbeams->getSessionAttribute( key => $session_key );
+  print STDERR "got key  $session_key => $text\n";
 
 }else {
 	 $title = $q->param('title');
