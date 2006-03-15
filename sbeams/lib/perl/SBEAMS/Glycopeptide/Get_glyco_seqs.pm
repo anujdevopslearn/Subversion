@@ -830,7 +830,7 @@ sub predicted_pep_html{
 	my $synth = ( $sbeams->isGuestUser() ) ? '' : $q->td( text_class("Synthesized Peptide") );
 	
 	my $html  = "<table>";
-	$html .= $q->Tr({class=>'rev_gray'},
+	$html .= $q->Tr({class=>'rev_gray_head'},
 			       $q->td( {NOWRAP => 1}, $self->linkToColumnText(
 			       				display => "NXS/T Location",
 						    		title   =>"Glyco Site Location within the protein", 
@@ -948,7 +948,7 @@ my $foo=<<'  END';
 
 sub text_class {
   my $text = shift;
-  return "<SPAN CLASS=rev_gray>$text</SPAN>";
+  return "<SPAN CLASS=rev_gray_head>$text</SPAN>";
 }
 
 ###############################################
@@ -961,7 +961,7 @@ sub identified_pep_html{
 	
 	#start the HTML
 	my $html  = "<table>";
-	$html .= $q->Tr({class=>'rev_gray'},
+	$html .= $q->Tr({class=>'rev_gray_head'},
 			       $q->td( { NOWRAP => 1 }, $self->linkToColumnText(
 			       				display => "NXS/T Location",
 								title   =>"Glyco Site Location within the protein", 
