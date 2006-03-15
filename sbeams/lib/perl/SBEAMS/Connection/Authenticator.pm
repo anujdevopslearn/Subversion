@@ -1696,12 +1696,23 @@ sub get_self_url {
 
 sub get_url_params {
   my $self = shift;
+  my %args = @_;
+  $args{escape} = 1 unless defined $args{escape};
+  my @omit = ( defined($args{omit}) ) ? @{$args{omit}} : ();
   my $html = '';
   for my $p ( $q->param() ) {
-    my $v = $q->escape( $q->param( $p ) );
-    $html .= "<INPUT TYPE=HIDDEN NAME=$p VALUE=$v>\n";
+    next if grep( /^$p$/, @omit );
+    my $v = $q->param( $p );
+    $v = escape( $v ) if $args{escape};
+    $html .= "<INPUT TYPE=HIDDEN NAME='$p' VALUE='$v'>\n";
   }
   return $html;
+}
+
+sub get_cgi_param {
+  my $self = shift;
+  my $param = shift;
+  return $q->param($param);
 }
 
 
