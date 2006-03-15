@@ -262,111 +262,27 @@ sub pepXML_start_element {
   }
 
 
-  #### If this is the first search_hit, then store some attributes
+  #### If this is the mass mod info, then store some attributes
   if ($localname eq 'mod_aminoacid_mass') {
     $self->{pepcache}->{modifications}->{$attrs{position}} = $attrs{mass};
   }
 
 
-  #### If this is the probability score, store the information if it
-  #### passes the threshold
+  #### If this is the search score info, then store some attributes
+  if ($localname eq 'search_score') {
+    $self->{pepcache}->{scores}->{$attrs{name}} = $attrs{value};
+  }
+
+
+  #### If this is the Peptide Prophet derived values, store some attributes
+  if ($localname eq 'parameter') {
+    $self->{pepcache}->{scores}->{$attrs{name}} = $attrs{value};
+  }
+
+
+  #### If this is the probability score, store some attributes
   if ($localname eq 'peptideprophet_result') {
-    my $peptide_sequence = $self->{pepcache}->{peptide}
-      || die("ERROR: No peptide sequence in the cache!");
-
-    #### If this peptide passes the threshold, store it
-    if ($attrs{probability} >= $self->{P_threshold}) {
-
-      #### Create the modified peptide string
-      my $modified_peptide = '';
-      my $modifications = $self->{pepcache}->{modifications};
-      if ($modifications) {
-	for (my $i=1; $i<=length($peptide_sequence); $i++) {
-	  my $aa = substr($peptide_sequence,$i-1,1);
-	  if ($modifications->{$i}) {
-	    $aa .= '['.int($modifications->{$i}).']';
-	  }
-	  $modified_peptide .= $aa;
-	}
-      } else {
-	$modified_peptide = $peptide_sequence;
-      }
-
-      my $charge = $self->{pepcache}->{charge};
-
-      #### Extract the spectrum uniqifier and make sure we haven't
-      #### already seen it
-      my $spectrum = $self->{pepcache}->{spectrum_and_mass_uniq};
-      #$spectrum =~ s/\.\d$//;
-      if (exists($self->{all_spectra}->{$spectrum})) {
-	print "WARNING: A spectrum with tag '$spectrum' has already been. ".
-	    "loaded. Maybe this just a naming problem, or maybe two ".
-            "different ".
-	    "search_batches on the same spectra.  I'm not smart enough ".
-	    "to deal with the gracefully yet. More code required.";
-      }
-      $self->{all_spectra}->{$spectrum} = 1;
-
-
-      #### If we've already seen this peptide
-      if ($self->{peptides}->{$peptide_sequence}) {
-	my $info = $self->{peptides}->{$peptide_sequence};
-	$info->{best_probability} = $attrs{probability}
-	  if ($info->{best_probability} < $attrs{probability});
-	$info->{n_instances}++;
-	$info->{search_batch_ids}->{$self->{search_batch_id}}++;
-
-      #### Else this is a new peptide
-      } else {
-	my $info;
-	$info->{best_probability} = $attrs{probability};
-	$info->{n_instances} = 1;
-	$info->{search_batch_ids}->{$self->{search_batch_id}} = 1;
-	$info->{protein_name} = $self->{pepcache}->{protein_name};
-	$info->{peptide_prev_aa} = $self->{pepcache}->{peptide_prev_aa};
-	$info->{peptide_next_aa} = $self->{pepcache}->{peptide_next_aa};
-
-	my $peptide_accession = &main::getPeptideAccession(
-          sequence => $peptide_sequence,
-        );
-	$info->{peptide_accession} = $peptide_accession;
-
-	$self->{peptides}->{$peptide_sequence} = $info;
-      }
-
-
-      #### Store the modification information
-      my $info = $self->{peptides}->{$peptide_sequence};
-      my $modinfo = $info->{modifications}->{$modified_peptide}->{$charge};
-
-      if (defined($modinfo) && defined($modinfo->{best_probability})) {
-	if ($modinfo->{best_probability} < $attrs{probability}) {
-	  $modinfo->{best_probability} = $attrs{probability};
-	}
-      } else {
-	$modinfo->{best_probability} = $attrs{probability};
-      }
-
-      $modinfo->{n_instances}++;
-      $modinfo->{search_batch_ids}->{$self->{search_batch_id}}++;
-      $info->{modifications}->{$modified_peptide}->{$charge} = $modinfo;
-
-
-      #### Store the peptide in a master full list to calculate stats
-      push(@{ $self->{peptide_list} },
-        [$self->{search_batch_id},$peptide_sequence,$attrs{probability},
-         $self->{pepcache}->{protein_name},$self->{pepcache}->{spectrum}]);
-
-    }
-
-    #### Clear out the cache
-    delete($self->{pepcache});
-
-    #### Increase the counters and print some progress info
-    $self->{counter}++;
-    #print $self->{counter}."..." if ($self->{counter} % 100 == 0);
-    print "." if ($self->{counter} % 1000 == 0);
-
+    $self->{pepcache}->{scores}->{probability} = $attrs{probability};
   }
 
 
@@ -453,6 +369,134 @@ sub protXML_start_element {
 sub end_element {
   my ($self,$uri,$localname,$qname) = @_;
 
+  if ($self->{document_type} eq 'pepXML') {
+    pepXML_end_element(@_);
+  } elsif ($self->{document_type} eq 'protXML') {
+    protXML_end_element(@_);
+  } else {
+    die("ERROR: Unknown document_type '$self->{document_type}'");
+  }
+
+  return(1);
+}
+
+
+
+###############################################################################
+# pepXML_end_element
+###############################################################################
+sub pepXML_end_element {
+  my ($self,$uri,$localname,$qname) = @_;
+
+
+  #### If this is the end of the spectrum_query, store the information if it
+  #### passes the threshold
+  if ($localname eq 'spectrum_query') {
+    my $peptide_sequence = $self->{pepcache}->{peptide}
+      || die("ERROR: No peptide sequence in the cache!");
+
+    my $probability = $self->{pepcache}->{scores}->{probability};
+
+    #### If this peptide passes the threshold, store it
+    if ($probability >= $self->{P_threshold}) {
+
+      #### Create the modified peptide string
+      my $modified_peptide = '';
+      my $modifications = $self->{pepcache}->{modifications};
+      if ($modifications) {
+	for (my $i=1; $i<=length($peptide_sequence); $i++) {
+	  my $aa = substr($peptide_sequence,$i-1,1);
+	  if ($modifications->{$i}) {
+	    $aa .= '['.int($modifications->{$i}).']';
+	  }
+	  $modified_peptide .= $aa;
+	}
+      } else {
+	$modified_peptide = $peptide_sequence;
+      }
+
+      my $charge = $self->{pepcache}->{charge};
+
+      #### Extract the spectrum uniqifier and make sure we haven't
+      #### already seen it
+      my $spectrum = $self->{pepcache}->{spectrum_and_mass_uniq};
+      #$spectrum =~ s/\.\d$//;
+      if (exists($self->{all_spectra}->{$spectrum})) {
+	print "WARNING: A spectrum with tag '$spectrum' has already been. ".
+	    "loaded. Maybe this just a naming problem, or maybe two ".
+            "different ".
+	    "search_batches on the same spectra.  I'm not smart enough ".
+	    "to deal with the gracefully yet. More code required.";
+      }
+      $self->{all_spectra}->{$spectrum} = 1;
+
+
+      #### If we've already seen this peptide
+      if ($self->{peptides}->{$peptide_sequence}) {
+	my $info = $self->{peptides}->{$peptide_sequence};
+	$info->{best_probability} = $probability
+	  if ($info->{best_probability} < $probability);
+	$info->{n_instances}++;
+	$info->{search_batch_ids}->{$self->{search_batch_id}}++;
+
+      #### Else this is a new peptide
+      } else {
+	my $info;
+	$info->{best_probability} = $probability;
+	$info->{n_instances} = 1;
+	$info->{search_batch_ids}->{$self->{search_batch_id}} = 1;
+	$info->{protein_name} = $self->{pepcache}->{protein_name};
+	$info->{peptide_prev_aa} = $self->{pepcache}->{peptide_prev_aa};
+	$info->{peptide_next_aa} = $self->{pepcache}->{peptide_next_aa};
+
+	my $peptide_accession = &main::getPeptideAccession(
+          sequence => $peptide_sequence,
+        );
+	$info->{peptide_accession} = $peptide_accession;
+
+	$self->{peptides}->{$peptide_sequence} = $info;
+      }
+
+
+      #### Store the modification information
+      my $info = $self->{peptides}->{$peptide_sequence};
+      my $modinfo = $info->{modifications}->{$modified_peptide}->{$charge};
+
+      if (defined($modinfo) && defined($modinfo->{best_probability})) {
+	if ($modinfo->{best_probability} < $probability) {
+	  $modinfo->{best_probability} = $probability;
+	}
+      } else {
+	$modinfo->{best_probability} = $probability;
+      }
+
+      $modinfo->{n_instances}++;
+      $modinfo->{search_batch_ids}->{$self->{search_batch_id}}++;
+      $info->{modifications}->{$modified_peptide}->{$charge} = $modinfo;
+
+
+      #### Store the peptide in a master full list to calculate stats
+      push(@{ $self->{peptide_list} },
+        [$self->{search_batch_id},
+	 $peptide_sequence,
+         $probability,
+         $self->{pepcache}->{protein_name},
+	 $self->{pepcache}->{spectrum},
+         $self->{pepcache}->{scores},
+	]);
+
+    }
+
+    #### Clear out the cache
+    delete($self->{pepcache});
+
+    #### Increase the counters and print some progress info
+    $self->{counter}++;
+    #print $self->{counter}."..." if ($self->{counter} % 100 == 0);
+    print "." if ($self->{counter} % 1000 == 0);
+
+  }
+
 
   #### If there's an object on the stack consider popping it off
   if (scalar @{$self->object_stack()}){
@@ -462,7 +506,35 @@ sub end_element {
     if ($self->object_stack->[-1]->{name} eq "$localname") {
       pop(@{$self->object_stack});
     } else {
-      die("STACK ERROR: Wanted to pop off an element fo type '$localname'".
+      die("STACK ERROR: Wanted to pop off an element of type '$localname'".
+        " but instead we found '".$self->object_stack->[-1]->{name}."'!");
+    }
+
+  } else {
+    die("STACK ERROR: Wanted to pop off an element of type '$localname'".
+        " but instead we found the stack empty!");
+  }
+
+}
+
+
+
+###############################################################################
+# protXML_end_element
+###############################################################################
+sub protXML_end_element {
+  my ($self,$uri,$localname,$qname) = @_;
+
+
+  #### If there's an object on the stack consider popping it off
+  if (scalar @{$self->object_stack()}){
+
+    #### If the top object on the stack is the correct one, pop it off
+    #### else die bitterly
+    if ($self->object_stack->[-1]->{name} eq "$localname") {
+      pop(@{$self->object_stack});
+    } else {
+      die("STACK ERROR: Wanted to pop off an element of type '$localname'".
         " but instead we found '".$self->object_stack->[-1]->{name}."'!");
     }
 
@@ -1158,12 +1230,19 @@ sub writePeptideListFile {
   open(OUTFILE,">$output_file")
     || die("ERROR: Unable to open '$output_file' for write");
 
+  my @score_columns = qw ( xcorr deltacn deltacnstar spscore sprank
+			   fval ntt nmc massd icat );
+
   print OUTFILE "search_batch_id\tsequence\tprobability\t".
-    "protein_name\tspectrum_query\n";
+    "protein_name\tspectrum_query\t".join("\t",@score_columns)."\n";
 
   foreach my $peptide ( @{$peptide_list} ) {
     print OUTFILE "$peptide->[0]\t$peptide->[1]\t$peptide->[2]\t".
-      "$peptide->[3]\t$peptide->[4]\n";
+      "$peptide->[3]\t$peptide->[4]";
+    foreach my $column (@score_columns) {
+      print OUTFILE "\t".$peptide->[5]->{$column};
+    }
+    print OUTFILE "\n";
   }
 
   close(OUTFILE);
