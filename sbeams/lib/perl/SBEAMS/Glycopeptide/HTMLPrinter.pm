@@ -294,7 +294,8 @@ sub display_page_header {
 	<tr><td>Browse Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Glyco_prediction.cgi"><nobr>&nbsp;&nbsp;&nbsp;Search Glycopeptides</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/browse_glycopeptides.cgi"><nobr>&nbsp;&nbsp;&nbsp;Identified Proteins</nobr></a></td></tr>
-<!--	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr> -->
+<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/peptide_properties.cgi"><nobr>&nbsp;&nbsp;&nbsp;Peptide Properties</nobr></a></td></tr>
+<tr><td><a href="http://www.unipep.org"><nobr>&nbsp;&nbsp;&nbsp;Unipep home</nobr></a></td></tr>
 
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
