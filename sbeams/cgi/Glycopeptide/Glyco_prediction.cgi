@@ -167,11 +167,10 @@ $log->debug(Dumper($ref_parameters));
 		   <br>
 		   Click <a href='http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?cmd=Retrieve&db=pubmed&dopt=Abstract&list_uids=15637048'>here</a>
 		   for more information."
-		   
 	     )
 	 ), 
 	$q->Tr(
-	   $q->td({colspan=>2},'&nbsp; <br><br> &nbsp;') 
+	   $q->td({colspan=>2},'&nbsp; <br> &nbsp;') 
 	 ),	    
 	 $q->Tr({class=>'rev_gray_head'},
 	   $q->td({colspan=>2}, $q->h2("Text Search"))
@@ -197,11 +196,11 @@ $log->debug(Dumper($ref_parameters));
 	  )  
 	 ),
 	 $q->Tr(
- 	   $q->td({class=>'blue_bg', colspan=>2}, "Wild Card Searching with '%' at the start and/or end of the Search Term")
+ 	   $q->td({class=>'blue_bg_glyco', colspan=>2}, "Wildcard character '%' can be used to broaden the search")
 	 ),
 	
 	 $q->Tr(
-	   $q->td({colspan=>2}, "<br> -- or -- <br><br>")
+	   $q->td({colspan=>2}, " <B>-- or --</B> <br>")
 	 ), 
 	 $q->Tr({class=>'rev_gray_head'},
 	   $q->td({colspan=>2}, $q->h2("Sequence Search") )
@@ -212,12 +211,12 @@ $log->debug(Dumper($ref_parameters));
 	    $q->td(
 	       $q->textarea(-name=>'sequence_search',
                           -default=>'',
-                          -rows=>10,
+                          -rows=>8,
                           -columns=>50)
 	    )
 	 ),
 	 $q->Tr(
-	    $q->td({class=>'blue_bg', colspan=>2}, "Sequence search is by perfect match only, no wild cards.  Sequences will be truncated at 500 residues.")
+	    $q->td({class=>'blue_bg_glyco', colspan=>2}, "Sequence search wildcard is also '%', sequences will be truncated at 500 residues.")
 	 ),
 	
 
