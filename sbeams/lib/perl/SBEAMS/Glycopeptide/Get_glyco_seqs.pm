@@ -59,6 +59,7 @@ use base qw(SBEAMS::Glycopeptide::Glyco_query);
 
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
+use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::Glycopeptide::Tables;
 use SBEAMS::Glycopeptide::Test_glyco_data;
 use SBEAMS::Glycopeptide::Get_peptide_seqs;
@@ -982,6 +983,7 @@ sub identified_pep_html{
 			     	$q->td(text_class("Tryptic Ends")),
 			     	$q->td(text_class("Peptide Mass")),
 			     	$q->td(text_class("Tissues")),
+			     	$q->td(text_class("Atlas"))
 			     );
 				 
 	
@@ -1004,12 +1006,15 @@ sub identified_pep_html{
     my $gb = '';
     my $ge = '';
 		
+    my $atlas_link = '';
 		if ($f->has_tag('Peptide_seq_obj')){
 
-      my $pep_seq_obj = $self->extract_first_val(feature => $f, tag => 'Peptide_seq_obj');
+      my $pep_seq_obj = $self->extract_first_val( feature => $f, 
+                                                  tag => 'Peptide_seq_obj');
 
       my $pp_value = $self->extract_data_value( obj => $pep_seq_obj,
-                                                             tag => 'peptide_prophet_score' );
+                                                tag => 'peptide_prophet_score' );
+
       $gb = ( $pp_value >= $cutoff ) ? '' : '<I><FONT COLOR=#AAAAAA>';
       $ge = ( $pp_value >= $cutoff ) ? '' : '</FONT></I>';
 
@@ -1026,6 +1031,12 @@ sub identified_pep_html{
 			}
 			
 			$html_seq = $self->get_html_protein_seq(seq => $pep_seq_obj);
+
+      # Get link to peptide atlas
+      my $aa_value = $html_seq;
+      $aa_value =~ s/<[^>]+>//g;
+      $atlas_link = $self->get_atlas_link( seq => $aa_value );
+
 			$protein_glyco_site =  $self->get_annotation(seq_obj =>$pep_seq_obj,
                                                                          anno_type => 'protein_glyco_site');
 			$tryptic_end = $self->get_annotation(seq_obj =>$pep_seq_obj, 
@@ -1050,6 +1061,7 @@ sub identified_pep_html{
 				$q->td($gb.$tryptic_end.$ge),
 				$q->td($gb.$peptide_mass.$ge),
 				$q->td($gb.$tissues.$ge),
+				$q->td({ALIGN=>'CENTER'},$gb.$atlas_link.$ge),
 			     );
 		}
 	$html .= "</table>";
@@ -1072,6 +1084,46 @@ sub gene_symbol_query{
 
 }
 
+#+
+# get_atlas_link
+#-
+sub get_atlas_link {
+  my $self = shift;
+  my %args = @_;
+  return undef unless $args{seq} || $args{name};
+  my $type = 'text';
+
+  my $url = '';
+  if ( $args{seq} ) {
+    my $sql = qq~
+    SELECT peptide_accession 
+    FROM $TBAT_PEPTIDE P 
+    JOIN $TBAT_PEPTIDE_INSTANCE PI
+    ON PI.peptide_id = P.peptide_id
+    WHERE peptide_sequence = '$args{seq}'
+    AND PI.atlas_build_id = ( SELECT atlas_build_id 
+                        FROM $TBAT_DEFAULT_ATLAS_BUILD 
+                        WHERE organism_id = 2 )
+    ~;
+    $log->info( $sbeams->evalSQL( $sql ) );
+    my ( $match ) = $sbeams->selectrow_array( $sql );
+    my $key = ( $match ) ? $args{seq} : '%' . $args{seq} . '%';
+    $key = $q->escape($key);
+    $type = 'image' if $match;
+    $log->info( $HTML_BASE_DIR );
+    $url = "../PeptideAtlas/Search?organism_name=Human;search_key=$key;action=GO";
+  } else {
+    my $key = $q->escape($args{name});
+    $url = "../PeptideAtlas/Search?organism_name=Human;search_key=$key;action=GO";
+  }
+  my $link;
+  if ( $type eq 'image' ) {
+    $link = "<A HREF='$url' TARGET=_atlas><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/pa_tiny.png' ALT=search></A>";
+  } else {
+    $link = "<A HREF='$url' TARGET=_atlas><B>S</B></A>";
+  }
+  return $link;
+}
 
 ################################
 #gene_name_query
@@ -1134,6 +1186,8 @@ sub extract_data_value {
   my $self = shift;
   my %args = @_;
   my $obj = $args{obj};
+  my $a = $obj->{_annotation}->{_annotation};
+#  for my $k ( keys( %$a ) ) { $log->info( "$k => $a->{$k}" ); }
   return $obj->{_annotation}->{_annotation}->{$args{tag}}->[0]->{value}; 
 }
 
