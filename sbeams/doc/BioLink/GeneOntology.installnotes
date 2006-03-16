@@ -1,22 +1,23 @@
 $Id:$
-
-Installing Gene Ontology (GO) support for SBEAMS
+=======================================================================
+         Installing Gene Ontology (GO) support for SBEAMS
+=======================================================================
 
 In the following document, two directory areas are referred to:
 $SBEAMS is the base area of your sbeams installation (or dev area)
 $GOARC is an area where the GO source files will be stored and unpacked,
-which is best not under $SBEAMS.
+which is best not under $SBEAMS (e.g. /local/data/GeneOntology/  ).
 
 
 =======================================================================
 1. Download and import the Gene Ontology data
 =======================================================================
 
+    __________
+___/ Download \________________________________________________________
 
---- Download ----------------------------------------------------------
-
-Visit http://archive.godatabase.org/full to see
-what is the latest monthly build. In this example, it is 2006-01-01:
+Visit http://archive.godatabase.org/full to see what is the latest
+monthly build. In this example, it is 2006-01-01:
 
 cd $GOARC
 setenv MONTH 2006-01-01
@@ -29,94 +30,102 @@ wget -O $GZFILE http://archive.godatabase.org/full/$MONTH/$GZFILE
 wget -O $TGZFILE http://archive.godatabase.org/full/$MONTH/$TGZFILE
 gunzip -c $GZFILE > $DATAFILE.mysql
 
+    ______
+___/ Load \____________________________________________________________
 
---- Load -------------------------------------------------------------
-
-If your SBEAMS back-end is MySQL, then you can load the direct distribution as
-provided by the Gene Ontology folks.  If you have a different back-end,
+If your SBEAMS back-end is MySQL, then you can load the direct distribution
+as provided by the Gene Ontology folks.  If you have a different back-end,
 the process can be a little more difficult.
 
---- MySQL Example
 
-- In the following aliases, 'mysql' is the name of the database server,
-  'go' is the name of the database where the GO tables will be created,
-  'goadmin' is a user with ALL privileges in database 'go'.
+--- MySQL Example -------------------------------------------------
 
-setenv DSN "-h mysql -p mysql"
-setenv ROOTDSN "-h mysql -u goadmin -p go"
+    In the following aliases, 'mysql' is the name of the database
+    server, 'go' is the name of the database where the GO tables
+    will be created (this should be separate from the main 'sbeams'
+    database), 'goadmin' is a user with ALL privileges in database 'go' 
 
-- Verify login, drop and recreate database:
-mysql $ROOTDSN
-echo "SHOW PROCESSLIST;" | mysql $ROOTDSN
-echo "SHOW DATABASES;" | mysql $ROOTDSN
-echo "DROP DATABASE go; CREATE DATABASE go;" | mysql $ROOTDSN
+    setenv DSN "-h mysql -p mysql"
+    setenv ROOTDSN "-h mysql -u goadmin -p go"
 
-- Verify regular user login (must have added user)
-mysql $DSN
+    - Verify login, drop and recreate database:
 
-- Load!
-cd $GOARC/$MONTH
-date ; nice +19 cat $DATAFILE.mysql | mysql $DSN ; date
-(possibly several hours)
+    mysql $ROOTDSN
+    echo "SHOW PROCESSLIST;" | mysql $ROOTDSN
+    echo "SHOW DATABASES;" | mysql $ROOTDSN
+    echo "DROP DATABASE go; CREATE DATABASE go;" | mysql $ROOTDSN
 
+    - Verify regular user login (must have added user)
 
---- SQL Server/Sybase Example
-
-No direct dump is provided for SQL Server, so the data must be BCPed in.
-(BCP is a SQL server/SYBASE specific tool for bulk copying data into 
-tables)
-
-Create a database on SQL Server called 'go' or something like that.
-Let 'sbeamsadmin' or some similar account have dbo privileges.
-
-cd $GOARC/$MONTH
-tar -zxvf $TGZFILE
-cd ${DATAFILE}-tables
-
-rm *.sql
-$SBEAMS/lib/scripts/BioLink/GOMySQL2MSSQL.pl --in ../${DATAFILE}.mysql --out GO \
-  --bcpuser sbeamsadmin --bcppass xxxxxx --bcpdatabase go
+    mysql $DSN
 
 
-The following command creates tab-delimited fields from the original dump
-file to use in the BCP loading process. It also translates embedded tabs
-to spaces:
-
-foreach file (*.txt)
-  echo $file
-  mv $file $file.before
-  cat $file.before | sed -e 's/\t\\N/\t/g' | sed -e 's/\\\t/  /g' | unix2dos > $file
-end
-
-If the above produced no errors, then you could
-rm *.before
+    - Load!  (could possibly take several hours)
+    cd $GOARC/$MONTH
+    date ; nice +19 cat $DATAFILE.mysql | mysql $DSN ; date
 
 
-If there's a previous database, drop all tables with:
+--- SQL Server/Sybase Example -------------------------------------
 
-$SBEAMS/lib/scripts/Core/runsql.pl --user sbeamsadmin --database go --delim GO \
-  --sfile GO.DROP.mssql
+    No direct dump is provided for SQL Server, so the data must be
+    BCPed in. (BCP is a SQL server/SYBASE specific tool for bulk
+    copying data into tables)
 
-Then create all GO tables with:
+    - Create a database on SQL Server called 'go' or something like
+      that. Let 'sbeamsadmin' or some similar account have dbo privileges.
 
-$SBEAMS/lib/scripts/Core/runsql.pl --user sbeamsadmin --database go --delim GO \
-  --sfile GO.CREATE.mssql
+    cd $GOARC/$MONTH
+    tar -zxvf $TGZFILE
+    cd ${DATAFILE}-tables
+
+    rm *.sql
+    $SBEAMS/lib/scripts/BioLink/GOMySQL2MSSQL.pl \
+      --in ../${DATAFILE}.mysql --out GO \
+      --bcpuser sbeamsadmin --bcppass xxxxxx --bcpdatabase go
 
 
-Now copy the entire directory ${DATAFILE}-tables (e.g. go_200601-assocdb-tables)
-to a location that is visible from the SQL Server OS itself (if it is not already),
-then in a shell on the SQL Server itself (cmd.exe), cd to this directory and run
-the batch script created by GOMySQL2MSSQL.pl:
+    - The following command creates tab-delimited fields from the
+      original dump file to use in the BCP loading process. It also
+      translates embedded tabs to spaces:
 
-GO.BCP.bat
-  or
-GO.BCP.bat > bcpout.txt    (to be able to examine the diagnostic messages more easily)
-(This BCP usually under 30 mins, depending on the server hardware)
+    foreach file (*.txt)
+      echo $file
+      mv $file $file.before
+      cat $file.before | sed -e 's/\t\\N/\t/g' | sed -e 's/\\\t/  /g' | unix2dos > $file
+    end
 
-When this is complete, delete GO.BCP.bat (and bcpout.txt) since it contains a
-password in it:
-rm GO.BCP.bat
-rm bcpout.txt
+    - If the above produced no errors, then you could:
+    rm *.before
+
+
+    - If there's a previous database, drop all tables with:
+
+    $SBEAMS/lib/scripts/Core/runsql.pl --user sbeamsadmin \
+      --database go --delim GO --sfile GO.DROP.mssql
+
+    - Then create all GO tables with:
+
+    $SBEAMS/lib/scripts/Core/runsql.pl --user sbeamsadmin \
+      --database go --delim GO --sfile GO.CREATE.mssql
+
+
+    - Now copy the entire directory ${DATAFILE}-tables (e.g.
+      go_200601-assocdb-tables) to a location that is visible from
+      the SQL Server OS itself (if it is not already), then in a
+      shell on the SQL Server itself (cmd.exe), cd to this directory
+      and run the batch script created by GOMySQL2MSSQL.pl:
+
+    GO.BCP.bat
+      or
+    GO.BCP.bat > bcpout.txt  (to be able to examine the diagnostic messages more easily)
+    (This BCP usually under 30 mins, depending on the server hardware)
+
+    - When this is complete, delete GO.BCP.bat (and bcpout.txt) since
+      it contains a password in it:
+    rm GO.BCP.bat
+    rm bcpout.txt
+
+
 
 =======================================================================
 2. Run gene_annotation scripts in BioLink
@@ -174,5 +183,6 @@ edit $SBEAMS/lib/sql/Proteomics/Proteomics_GOAnnotationLink_POPULATE.sql
 
 #### Remember to (re-)create the indexes after every time you modify
 #### this table.
+
 ================================= FIN =================================  
 
