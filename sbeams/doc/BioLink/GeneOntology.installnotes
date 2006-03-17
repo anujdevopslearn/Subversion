@@ -43,7 +43,22 @@ the process can be a little more difficult.
     In the following aliases, 'mysql' is the name of the database
     server, 'go' is the name of the database where the GO tables
     will be created (this should be separate from the main 'sbeams'
-    database), 'goadmin' is a user with ALL privileges in database 'go' 
+    database), 'goadmin' is a user with ALL privileges in database
+    'go', with password 'xx22++'.
+
+    - One way to create the database is the following:
+      CREATE DATABASE go;
+      GRANT ALL ON go.* TO "goadmin"@"localhost" IDENTIFIED BY 'xx22++';
+      GRANT FILE ON *.* TO "goadmin"@"localhost" IDENTIFIED BY 'xx22++';
+
+    - Furthermore, if the database server will be accessed over the
+      network (i.e. SBEAMS is installed on a separate machine), you
+      might also have to:
+      GRANT ALL ON go.* TO "goadmin"@"10.%" IDENTIFIED BY 'xx22++';
+      GRANT FILE ON *.* TO "goadmin"@"10.%" IDENTIFIED BY 'xx22++';
+
+
+    - Set up some variables:
 
     setenv DSN "-h mysql -p mysql"
     setenv ROOTDSN "-h mysql -u goadmin -p go"
@@ -74,6 +89,8 @@ the process can be a little more difficult.
     - Create a database on SQL Server called 'go' or something like
       that. Let 'sbeamsadmin' or some similar account have dbo privileges.
 
+    --- Prepare files ---------------------------------------------
+
     cd $GOARC/$MONTH
     tar -zxvf $TGZFILE
     cd ${DATAFILE}-tables
@@ -83,6 +100,8 @@ the process can be a little more difficult.
       --in ../${DATAFILE}.mysql --out GO \
       --bcpuser sbeamsadmin --bcppass xxxxxx --bcpdatabase go
 
+    ( Replace 'xxxxxx' in the previous command with the sbeamsadmin
+      password in database 'go'.)
 
     - The following command creates tab-delimited fields from the
       original dump file to use in the BCP loading process. It also
@@ -97,6 +116,8 @@ the process can be a little more difficult.
     - If the above produced no errors, then you could:
     rm *.before
 
+
+    --- Load files ------------------------------------------------
 
     - If there's a previous database, drop all tables with:
 
@@ -183,6 +204,26 @@ edit $SBEAMS/lib/sql/Proteomics/Proteomics_GOAnnotationLink_POPULATE.sql
 
 #### Remember to (re-)create the indexes after every time you modify
 #### this table.
+
+
+
+=======================================================================
+4. Extra information and troubleshooting
+=======================================================================
+
+- You will need to execute most of the procedure outlined in this 
+  document whenever you wish to load updated GO data. The data at
+  godatabase.org is updated more or less on a monthly basis. You 
+  may want to take a look at, and make use of the following script
+  to help you through part of the process:
+
+  $SBEAMS/lib/scripts/BioLink/get_GO.sh
+
+  Please look through the code first so you understand it before
+  running it.
+
+
+
 
 ================================= FIN =================================  
 
