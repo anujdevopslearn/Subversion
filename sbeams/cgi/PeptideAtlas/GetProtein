@@ -29,16 +29,19 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TabMenu;
+$sbeams = new SBEAMS::Connection;
+
+use SBEAMS::BioLink;
+my $biolink = SBEAMS::BioLink->new();
+$biolink->setSBEAMS($sbeams);
 
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
-
-$sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
@@ -431,12 +434,15 @@ sub handle_request {
        SELECT BS.biosequence_id, BS.biosequence_name,BS.biosequence_gene_name,
               BS.biosequence_accession, BS.biosequence_desc,
               BS.biosequence_seq,BSS.set_name,
-              DBX.accessor,DBX.accessor_suffix
+              DBX.accessor,DBX.accessor_suffix, 
+              BAG.annotated_gene_id 
          FROM $TBAT_BIOSEQUENCE_SET BSS
         INNER JOIN $TBAT_BIOSEQUENCE BS
               ON ( BSS.biosequence_set_id = BS.biosequence_set_id )
          LEFT JOIN $TBAT_DBXREF DBX
               ON ( BS.dbxref_id = DBX.dbxref_id )
+         LEFT JOIN $TBAT_BIOSEQUENCE_ANNOTATED_GENE BAG
+              ON ( BAG.biosequence_id = BS.biosequence_id )
        WHERE BS.biosequence_id = $biosequence_id
   ~;
   my @rows = $sbeams->selectHashArray($sql);
@@ -483,6 +489,23 @@ sub handle_request {
       );
     }
 
+    # If we have annotations
+    if ( $biosequence->{annotated_gene_id} ){
+      my $annot = $biolink->get_leaf_annotations( annotated_gene_id => $biosequence->{annotated_gene_id} );
+      my %fx = ( C => 'Cellular Location',
+                 F => 'Molecular Function',
+                 P => 'Biological Process' );
+      for my $type ( qw(F P C) ) {
+        my $key = $type . 'pri';
+        if ( $annot->{$key} ) {
+          my $display = $sbeams->truncateStringWithMouseover( len => 80,
+                                                 string => $annot->{$key});
+
+          print $sbeamsMOD->encodeSectionItem( key   => $fx{$type},
+                                               value => $display );
+        }
+      }
+    }
 
     print qq~
       </TABLE>
@@ -626,9 +649,9 @@ sub handle_request {
 
 
     #### Display the samples list
-    displaySamples(
-      resultset_ref=>$resultset_ref,
-    );
+    my $sample_ids = getSampleList( resultset_ref=>$resultset_ref,);
+    my $sampleHTML = $sbeamsMOD->getSampleDisplay( sample_ids => $sample_ids );
+    print "<TABLE width='600'>$sampleHTML</TABLE>";
 
 
   #### If QUERY was not selected, then tell the user to enter some parameters
@@ -762,12 +785,9 @@ sub getSamples {
 } # end getSamples
 
 
-###############################################################################
-# displaySamples
-###############################################################################
-sub displaySamples {
+sub getSampleList {
   my %args = @_;
-  my $SUB_NAME = 'displaySamples';
+  my $SUB_NAME = 'getSampleList';
 
   #### Decode the argument list
   my $resultset_ref = $args{'resultset_ref'}
@@ -783,40 +803,11 @@ sub displaySamples {
     my $observed_sample_list = $row->[$col{sample_ids}];
     my @all = split(/[,;]/,$observed_sample_list);
     foreach my $element ( @all ) {
-      $observed_samples{$element} = 1;
+      $observed_samples{$element}++;
     }
   }
-
-  my $samples = getSamples();
-
-  my $section_header = $sbeamsMOD->encodeSectionHeader(
-    text=>'Observed in Samples:',
-  );
-
-  print qq~
-      <TABLE width="600">
-        $section_header
-    ~;
-
-  foreach my $sample (@{$samples}) {
-    my ($sample_id,$sample_title) = @{$sample};
-    if ($observed_samples{$sample_id}) {
-      print $sbeamsMOD->encodeSectionItem(
-        key=>$sample_id,
-        value=>$sample_title,
-        url=>"$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=$sample_id",
-      );
-    }
-
-  }
-
-  print qq~
-      </TABLE>
-      <BR>
-  ~;
-
-
-} # end displaySamples
-
+  my @keys = keys( %observed_samples );
+  return \@keys;
+}
 
 

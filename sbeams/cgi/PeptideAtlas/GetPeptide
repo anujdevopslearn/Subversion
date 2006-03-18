@@ -175,9 +175,7 @@ sub handle_request {
       $parameters{searchWithinThis} = 'Peptide Name';
     }
 
-    print <<"    END";
-        <BR>
-    END
+    print "<BR>\n";
 
     my ($atlas_build_name, $atlas_build_id);
 
@@ -196,8 +194,15 @@ sub handle_request {
 
         #$sbeams->display_sql(sql=>$sql);
 
-        my ($tmp) = $sbeams->selectOneColumn($sql) or
-            die "Cannot complete $sql ($!)";
+        my ($tmp) = $sbeams->selectOneColumn($sql);
+        unless ( $tmp ) {
+      print qq~
+      <BR><BR>
+      <FONT COLOR=red>Unable to use specified Atlas, please select a new one </FONT>
+      <BR><A HREF="main.cgi?_tab=2">Choose new Atlas Build</A>
+      ~;
+      exit; 
+        }
 
         $parameters{'atlas_build_id'} = $tmp;
 
@@ -281,8 +286,15 @@ sub handle_request {
 	ORDER BY atlas_build_name
     ~;
 
-    my @rows = $sbeams->selectSeveralColumns($sql) or
-        die "Cannot complete $sql ($!)";
+    my @rows = $sbeams->selectSeveralColumns($sql); 
+    unless ( @rows ) {
+      print qq~
+      <BR><BR>
+      <FONT COLOR=red>Unable to use specified Atlas, please select a new one </FONT>
+      <BR><A HREF="main.cgi?_tab=2">Choose new Atlas Build</A>
+      ~;
+      exit; 
+    }
 
     foreach my $row (@rows) {
 
@@ -442,9 +454,12 @@ sub handle_request {
     $sql = qq~
          SELECT distinct
          P.peptide_accession, P.peptide_sequence,
-         PI.best_probability, PI.n_observations, PI.n_genome_locations, PI.n_protein_mappings,
-         PM.chromosome, PM.start_in_chromosome, PM.end_in_chromosome, PM.strand,
-         BS.biosequence_name
+         PI.best_probability, PI.n_observations, PI.n_genome_locations, 
+         PI.n_protein_mappings, PM.chromosome, PM.start_in_chromosome, 
+         PM.end_in_chromosome, PM.strand, BS.biosequence_name,
+         P.molecular_weight, P.peptide_isoelectric_point,
+         PI.n_samples, PI.n_protein_samples, PI.empirical_proteotypic_score,
+         O.full_name
          FROM $TBAT_PEPTIDE_INSTANCE PI
          INNER JOIN $TBAT_PEPTIDE P
           ON ( PI.peptide_id = P.peptide_id )
@@ -486,13 +501,16 @@ if ($apply_action =~ /QUERY/i ) {
             my (@best_probability, @n_observations, @n_genome_locations, @n_protein_mappings);
             my (@chrom, @start_chrom, @end_chrom, @strand);
             my (@biosequence_name);
+            my ( @mw, @pi, @nsamp, @nprotsamp, @epscore, @organism );
 
             my $i=0;  ##index counter
 
+            my %chrom_map;
             foreach my $row (@rows) {
 
                 my ($pa, $seq, $prob, $n_obs, $n_g_loc, $n_prot_map, 
-                $chr, $s_chr, $e_chr, $str, $b_name) = @{$row};
+                    $chr, $s_chr, $e_chr, $str, $b_name, $mw, $pi, 
+                    $ns, $nps, $eps, $org ) = @{$row};
 
                 $peptide_accession[$i] = $pa;
                 $peptide_sequence[$i] = $seq;
@@ -505,7 +523,24 @@ if ($apply_action =~ /QUERY/i ) {
                 $end_chrom[$i] = $e_chr;
                 $strand[$i] = $str;
                 $biosequence_name[$i] = $b_name;
+                $mw[$i] = sprintf( "%0.2f", $mw);
+                $pi[$i] = sprintf( "%0.1f", $pi );
+                $nsamp[$i] = $ns;
+                $nprotsamp[$i] = $nps;
+                $epscore[$i] = $eps;
+                $organism[$i] = $org;
                 #print "sql returns: $n_observations[$i] $sample_tag[$i] <br>";
+                
+                my $key = join( ':::', $chr, $s_chr, $e_chr, $str, $seq );
+
+                # Could just push, thought this was clearer.
+                if ( !$chrom_map{$key} ) {
+                  # First time through, point to arrayref
+                  $chrom_map{$key} = [$b_name]; 
+                } else {
+                  # Subsequent visits push an item onto the list
+                  push @{$chrom_map{$key}}, $b_name; 
+                }
                 $i++;
             }
             
@@ -523,28 +558,34 @@ if ($apply_action =~ /QUERY/i ) {
 
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Peptide Accession',
                                           value => $peptide_accession[0],
-                                          key_width => '10%'
+                                          key_width => '20%'
                                          );
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Peptide Sequence',
                                           value => $peptide_sequence[0],
-                                          key_width => '10%'
                                          );
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Best Probability',
                                           value => $best_probability[0],
-                                          key_width => '10%'
                                          );
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Times Observed:',
                                           value => $n_observations[0],
-                                          key_width => '10%'
                                          );
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Molecular Weight',
-                                          value => '',
-                                          key_width => '10%'
-                                         );
-  $summ .= $sbeamsMOD->encodeSectionItem( key   => 'PI',
-                                          value => '',
-                                          key_width => '10%'
-                                         );
+                                          value => "$mw[0]",
+                                         ) if $mw[0];
+  $summ .= $sbeamsMOD->encodeSectionItem( key   => 'pI (approx)',
+                                          value => "$pi[0]",
+                                         ) if $pi[0];
+  if ( defined $epscore[0] ) {
+    $summ .= $sbeamsMOD->encodeSectionItem( key   => '# Samples',
+                                            value => "$nsamp[0]",
+                                           );
+    $summ .= $sbeamsMOD->encodeSectionItem( key   => '# Protein Samples',
+                                            value => "$nprotsamp[0]",
+                                           );
+    $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Proteotypic score',
+                                            value => sprintf( "%0.1f", $epscore[0] ),
+                                           );
+  }
 
   print "<BR><BR>\n";
   print "$summ\n";
@@ -564,19 +605,25 @@ if ($apply_action =~ /QUERY/i ) {
   my $n_indices=$#peptide_accession;
 
   my @rows;
-  for ($i = 0; $i <= $n_indices; $i++) {
-    my $current_chrom = $chrom[$i];
-    my $current_prot = $biosequence_name[$i];
-    ## $current_peptide_seq is the entire peptide sequence, even if split over 2 exons
-    my $current_peptide_seq = $peptide_sequence[$i];
+  for my $key ( keys( %chrom_map ) ) {
+    my @map = split( ':::', $key );
+# my @map = split( ':::', $chr, $s_chr, $e_chr, $str, $seq );
 
-    if ($current_chrom ne $last_chrom) {
-      $mapHTML .= "<TR><TD NOWRAP COLSPAN=2><B>Chromosome $current_chrom: </B></TD><TD></TD></TR>\n";
-    }
-    my $tmp_start = $start_chrom[$i];
-    my $tmp_end = $end_chrom[$i];
-    my $tmp_strand = $strand[$i];
-    my $tmp_protein = $biosequence_name[$i];
+    my $current_chrom = $map[0];
+    my $tmp_start = $map[1];
+    my $tmp_end = $map[2];
+    my $tmp_strand = $map[3];
+    my $peptide_sequence = $map[4];
+
+# Defer...    my $current_prot = $map[$i];
+    my $current_prot = $chrom_map{$key}->[0]; # For now just use the first
+    ## $current_peptide_seq is the entire peptide sequence, even if split over 2 exons
+    my $current_peptide_seq = $peptide_sequence;
+
+#    if ($current_chrom ne $last_chrom) {
+#      $mapHTML .= "<TR><TD NOWRAP COLSPAN=2><B>Chromosome $current_chrom: </B></TD><TD></TD></TR>\n";
+#    }
+    my $tmp_protein = $current_prot;
     my $tmp_seq;
                     
     #### get residues on given exons ####
@@ -602,47 +649,68 @@ if ($apply_action =~ /QUERY/i ) {
   }
 
   $last_seq_used_length = length($tmp_seq);
-  my $protlink = qq~ 
-  <A HREF="$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$parameters{atlas_build_id}&protein_name=$tmp_protein&action=QUERY" class="text_link">$tmp_protein</A>
-  ~;
-  push @rows, [ $protlink, $tmp_seq, "$tmp_start - $tmp_end", "<B>$tmp_strand</B>" ] if $tmp_seq;
+
+  # Set up protein[s] display
+  my $protein_display = makeProteinLink( name  => $tmp_protein, 
+                                         build => $parameters{atlas_build_id}); 
+
+  my $extra = $#{$chrom_map{$key}};
+  if ( $extra ) {
+    my $all = join ', ', @{$chrom_map{$key}};
+    my $all_links;
+    for my $p ( @{$chrom_map{$key}} ) {
+      $all_links .= makeProteinLink( build => $parameters{atlas_build_id},
+                                     name  => $p,
+                                     target => '_prot_info' ) . "<BR>\n"; 
+    }
+
+    $mapHTML .= $sbeams->getPopupDHTML();
+    my $session_key = $sbeams->getRandomString( num_chars => 20,
+                                                char_set => ['A'..'Z', 'a'..'z', 0..9] );
+
+    $sbeams->setSessionAttribute( key => $session_key,  value => $all_links );
+
+    my $url = "$CGI_BASE_DIR/help_popup.cgi?title=Alternate%20Mappings;session_key=$session_key;email_link=no";
+    my $more = qq~<A HREF="" onClick=popitup("$url")>[ $extra more ]</A>~;
+    $protein_display = "<DIV TITLE='$all'>$protein_display $more</DIV>";
+  }
+
+
+  my $range = makeEntrezLink( start => $tmp_start,
+                              end => $tmp_end,
+                              strand => $tmp_strand,
+                              chrom => $current_chrom,
+                              org => $organism[0] );
+
+  push @rows, [ $current_chrom, $protein_display, $tmp_seq, $range, "<B>$tmp_strand</B>" ] if $tmp_seq;
 
   $last_chrom = $current_chrom;
   $last_protein = $current_prot;
 
-  if ($i < $n_indices && ($current_chrom ne $chrom[$i+1]) ) {
-    next unless @rows;
-    unshift @rows, ['Protein', 'Residues on Exon', 'Exon Range', 'Strand'];
-    $mapHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
-                                                rows   => \@rows,
-                                                width => '600',
-                                                align  => [qw(left left center center)]
-                                                );
-    @rows = ();
-  }
+#  if ($i < $n_indices && ($current_chrom ne $chrom[$i+1]) ) {
+#    next unless @rows;
+#    unshift @rows, ['Chrom', 'Protein', 'Residues on Exon', 'Exon Range', 'Strand'];
+#    $mapHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
+#                                                rows   => \@rows,
+#                                                width => '600',
+#                                                align  => [qw(left left center center)]
+#                                                );
+#    @rows = ();
+#  }
 }
-  unshift @rows, ['Protein', 'Residues on Exon', 'Exon Range', 'Strand'];
+  unshift @rows, ['Chr', 'Protein', 'Residues on Exon', 'Exon Range', 'Strand'];
   $mapHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
                                               width => '600',
-                                              align  => [qw(left left center center)],
+                                              align  => [qw(center left left center center)],
                                               rows => \@rows );
-
 
   print "$mapHTML\n";
 
+
+##  End mapping loop
             
-  my $sampleHTML = qq~
-  <TR><TD COLSPAN=2>&nbsp;</TD></TR>
-  ~;
-
-  $sampleHTML .= $sbeamsMOD->encodeSectionHeader(
-    text=>'Observed in Samples:',
-    bold => 1
-  );
-
   my $sampleSQL = qq ~
-     SELECT distinct
-     PS.sample_tag, PS.sample_title
+     SELECT PS.sample_id
      FROM $TBAT_PEPTIDE_INSTANCE PI
      INNER JOIN $TBAT_PEPTIDE P
       ON ( PI.peptide_id = P.peptide_id )
@@ -656,25 +724,13 @@ if ($apply_action =~ /QUERY/i ) {
      $atlas_build_clause
      $peptide_name_clause
      $peptide_sequence_clause
-     ORDER BY PS.sample_tag, PS.sample_title
   ~;
 
-  my @samples = $sbeams->selectSeveralColumns( $sampleSQL );
+  my @samples = $sbeams->selectOneColumn( $sampleSQL );
 
-  if ( @samples ) {
-    # Add column headings
-    @rows = ();
-    push @rows, ['Sample Tag', 'Sample Title'];
-
-    for my $sample ( @samples ) {
-      push @rows, $sample;
-    }
-
-    $sampleHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
-                                        rows => \@rows );
-    $sampleHTML .= "</TABLE>\n";
-  }
-  print "$sampleHTML\n";
+  my ($sheader, $sHTML) = $sbeamsMOD->getSampleDisplay(sample_ids => \@samples);
+  print "<TR><TD COLSPAN=2>&nbsp;</TD></TR>" . $sheader;
+  print "<TABLE WIDTH='600'>$sHTML</TABLE>\n";
             
         }
 
@@ -694,3 +750,52 @@ if ($apply_action =~ /QUERY/i ) {
     }
 
 } # end handle_request
+
+sub makeProteinLink {
+  my %args = @_;
+  for ( qw( name build ) ) {
+    die "missing parameter $_" unless $args{$_};
+  }
+  my $target = ( $args{target} ) ? "TARGET=$args{target}" : '';
+
+  my $link = "<A HREF='$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=";
+  $link   .= "$args{build}&protein_name=$args{name}&action=QUERY' ";
+  $link   .= "class='text_link' $target>$args{name}</A>";
+
+  return $link;
+}
+
+sub makeEntrezLink {
+  my %args = @_;
+  for ( qw( start end strand chrom org ) ) {
+    die "missing parameter $_" unless $args{$_};
+  }
+  # Length specified by range
+  my $len = abs( $args{start} - $args{end} );
+
+  # want to show some flanking info, minimun 2KB
+#  my $extra = ( $len >= 2000 ) ? 0 : int((2000 - $len)/2);
+  my $extra = 1000;
+
+  my $org = $args{org};
+  $org =~ s/ /_/g;
+  my $chr = $args{chrom};
+
+   # Entrez uses roman numerals for yeast chromosomes...
+  if ( $org =~ /^Sacch/ ) {
+    $chr = $sbeams->getRomanNumeral( number => $chr ) || $chr; # Fallback...
+  }
+
+  my $vc_start = $args{start} - $extra;
+  my $vc_end = $args{end} + $extra;
+  if ( $args{start} > $args{end} ) {
+    $vc_start = $args{end} - $extra;
+    $vc_end = $args{start} + $extra;
+  }
+  $vc_start = 0 if $vc_start < 0;
+
+  my $link = "<A HREF='http://www.ensembl.org/$org/contigview?region=$chr;vc_start=$vc_start;vc_end=$vc_end' TARGET=_ensembl>" .
+         "<DIV Title='Explore range in Ensembl contig viewer'> $args{start} - $args{end} </DIV> </A>";
+  return $link;
+
+}
