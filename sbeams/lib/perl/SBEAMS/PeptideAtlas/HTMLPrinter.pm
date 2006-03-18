@@ -19,6 +19,7 @@ use vars qw($sbeams $current_contact_id $current_username
              $current_work_group_id $current_work_group_name
              $current_project_id $current_project_name $current_user_context_id);
 use CGI::Carp qw(fatalsToBrowser croak);
+use SBEAMS::Connection qw($log);
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::TableInfo;
@@ -26,6 +27,7 @@ use SBEAMS::Connection::DataTable;
 
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::TableInfo;
+use SBEAMS::PeptideAtlas::Tables;
 
 
 ###############################################################################
@@ -488,6 +490,55 @@ sub encodeSectionTable {
 
   return $html;
 }
+
+###############################################################################
+# displaySamples
+###############################################################################
+sub getSampleDisplay {
+  my $self = shift;
+  my $sbeams = $self->getSBEAMS();
+  my %args = @_;
+  my $SUB_NAME = 'getSampleDisplay';
+
+  unless( $args{sample_ids} ) {
+    $log->error( "No samples passed to display samples" );
+    return;
+  }
+
+  my $in = join( ", ", @{$args{sample_ids}} );
+  return unless $in;
+
+  my $sql = qq~
+    SELECT sample_id,sample_title
+      FROM $TBAT_SAMPLE
+     WHERE sample_id IN ( $in )
+     AND record_status != 'D'
+     ORDER BY sample_id ASC
+  ~;
+
+  my @samples = $sbeams->selectSeveralColumns($sql);
+
+  my $header = $self->encodeSectionHeader(
+    text=>'Observed in Samples:',
+  );
+
+  my $html = '';
+
+  foreach my $sample (@samples) {
+    my ($sample_id,$sample_title) = @{$sample};
+    $html .= $self->encodeSectionItem(
+      key=>$sample_id,
+      value=>$sample_title,
+      key_width => '5%',
+      val_width => '95%',
+      url=>"$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=$sample_id",
+    );
+  }
+
+  return ( wantarray() ) ? ($header, $html) : $header . "\n" . $html;
+} # end getSampleDisplay
+
+
 
 1;
 
