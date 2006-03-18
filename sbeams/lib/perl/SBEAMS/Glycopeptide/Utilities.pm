@@ -268,8 +268,8 @@ sub calculatePeptidePI {
   }
 
   # pKa at C/N termini vary by amino acid
-  my $nterm_pka = $pka{$seq[0]}->[0];
-  my $cterm_pka = $pka{$seq[$#seq]}->[1];
+  my $nterm_pka = $pka{$seq[0]}->[1];
+  my $cterm_pka = $pka{$seq[$#seq]}->[0];
 
   # Range of pH values
   my $ph_min = 0;
@@ -320,7 +320,7 @@ sub calculatePeptidePI {
 #-
 sub getResiduePKAvalues {
   my $self = shift;
-                   # -NH3, -COOH -R grp
+                   #-COOH  -NH3  -R grp
   my %pka = ( A => [ 3.55, 7.59, 0.0 ],
 
               D => [ 4.55, 7.50, 4.05 ], # IS => ionizable sidechain
