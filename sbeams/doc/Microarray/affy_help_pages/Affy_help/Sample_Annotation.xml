@@ -24,7 +24,7 @@
 			
 			<extra_data data_type="link">
 				<description>Open Link</description>
-				<link_info type="sbeams_page" href="cgi/Microarray/ProjectHome.cgi">ProjectHome Page</link_info>
+				<link_info type="sbeams_page" href="cgi/Microarray/main.cgi">ProjectHome Page</link_info>
 			</extra_data>
 		
 		</summary>
@@ -42,7 +42,7 @@
 			
 			<extra_data data_type="link">
 				<description>Open Link</description>
-				<link_info type="sbeams_page" href="cgi/Microarray/ProjectHome.cgi">ProjectHome Page</link_info>
+				<link_info type="sbeams_page" href="cgi/Microarray/main.cgi">ProjectHome Page</link_info>
 			</extra_data>
 		
 		</summary>

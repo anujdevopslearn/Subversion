@@ -59,7 +59,7 @@
 			<description>Go to the Microarray ProjectHome page to see if a project of interest has any data for Affymetrix, two color arrays or any GetExpression result sets </description>
 			<extra_data data_type="link">
 				<description>Open Link</description>
-				<link_info type="sbeams_page" href="cgi/Microarray/ProjectHome.cgi">Project Home</link_info>
+				<link_info type="sbeams_page" href="cgi/Microarray/main.cgi">Project Home</link_info>
 			</extra_data>
 		</summary>
 		<!-- OLD STUFF 
