@@ -274,6 +274,7 @@ sub printStyleSheet {
 	.white_text    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: white; CURSOR: help;}
 	.white_text_head {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: white; CURSOR: help;}
 	
+	.pseudo_link    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration:none; color: blue; CURSOR: help;}
 	
 	.identified_pep{ 
 	background-color: #882222; 
