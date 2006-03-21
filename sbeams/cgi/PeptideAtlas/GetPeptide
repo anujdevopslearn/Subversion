@@ -671,7 +671,7 @@ if ($apply_action =~ /QUERY/i ) {
     $sbeams->setSessionAttribute( key => $session_key,  value => $all_links );
 
     my $url = "$CGI_BASE_DIR/help_popup.cgi?title=Alternate%20Mappings;session_key=$session_key;email_link=no";
-    my $more = qq~<A HREF="" onClick=popitup("$url")>[ $extra more ]</A>~;
+    my $more = qq~ &nbsp;&nbsp;[<A onClick=popitup("$url"); CLASS=pseudo_link>$extra more</A>]~;
     $protein_display = "<DIV TITLE='$all'>$protein_display $more</DIV>";
   }
 
