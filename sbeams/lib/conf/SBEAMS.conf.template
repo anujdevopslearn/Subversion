@@ -142,7 +142,7 @@ CONFIG_SETTING{MA_AFFY_HELPDOCS_URL} = provide url if needed, see install notes
 CONFIG_SETTING{MA_ADMIN_EMAIL} = sbeams@localdomain.org 
 
 # Is set to true value, 2-color menus and options will not be shown
-CONFIG_SETTING{MA_HIDE_TWO_COLOR} = 0
+CONFIG_SETTING{MA_HIDE_TWO_COLOR} = 1
 
 # Specify paths to R executable and library
 CONFIG_SETTING{MA_R_EXE_PATH} = /usr/local/bin/R
