@@ -672,7 +672,7 @@ sub display_detail_form{
 				$glyco_o->linkToColumnText(display => "Protein Symbol",
 								 title   =>"Protein Symbol Info", 
 								 column  =>"protein_symbol", 
-								 table   => "AT_ipi_data" 
+								 table   => "GP_ipi_data" 
 								 
 								)),
 				$q->td(get_annotation(glyco_o   => $glyco_o,
@@ -685,7 +685,7 @@ sub display_detail_form{
 				$glyco_o->linkToColumnText(display => "Subcellular Location",
 								 title   =>"Find More Info About the Subcellular Location Call", 
 								 column  =>"cellular_location_id", 
-								 table   => "AT_ipi_data" 
+								 table   => "GP_ipi_data" 
 								 
 								)),
 				
@@ -703,7 +703,7 @@ sub display_detail_form{
 				$glyco_o->linkToColumnText(display => "Synonyms",
 								 title   =>"Synonyms Info", 
 								 column  =>"synonyms", 
-								 table   => "AT_ipi_data" 
+								 table   => "GP_ipi_data" 
 								 
 								)),
 				$q->td(get_annotation(glyco_o   => $glyco_o,
