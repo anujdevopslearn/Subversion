@@ -1552,9 +1552,9 @@ for (class.numb in unique.classes){
 			print (paste("LAST DELTA", last.delta.cutoff , "CONDITION" , condition.name, "I COUNT ", i))
 			break
 		}else{
- 			gatherdataMatrix[sum.sam.output$row.sig.genes,"FDR"] <- sum.sam.output$mat.fdr[1,5]
-			gatherdataMatrix[sum.sam.output$mat.sig[,1],"SAM_ratio"] <- sum.sam.output$mat.sig[,6]
-			gatherdataMatrix[sum.sam.output$mat.sig[,1],"D_stat"] <- sum.sam.output$mat.sig[,2]
+ 			gatherdataMatrix[sum.sam.output@row.sig.genes,"FDR"] <- sum.sam.output@mat.fdr[1,5]
+			gatherdataMatrix[sum.sam.output@mat.sig[,1],"SAM_ratio"] <- sum.sam.output@mat.sig[,6]
+			gatherdataMatrix[sum.sam.output@mat.sig[,1],"D_stat"] <- sum.sam.output@mat.sig[,2]
 		}
 	}
 ##Assign the probe set ids as the row names of the annotation matrix, and
