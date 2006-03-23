@@ -624,6 +624,7 @@ if ($apply_action =~ /QUERY/i ) {
 #      $mapHTML .= "<TR><TD NOWRAP COLSPAN=2><B>Chromosome $current_chrom: </B></TD><TD></TD></TR>\n";
 #    }
     my $tmp_protein = $current_prot;
+    next unless $tmp_protein;
     my $tmp_seq;
                     
     #### get residues on given exons ####
