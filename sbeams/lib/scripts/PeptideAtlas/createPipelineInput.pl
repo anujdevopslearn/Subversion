@@ -316,36 +316,21 @@ sub protXML_start_element {
   }
 
 
-  #### If this is a pepetide, then update the number of peptides
+  #### If this is the mass mod info, then store some attributes
+  if ($localname eq 'mod_aminoacid_mass') {
+    $self->{pepcache}->{modifications}->{$attrs{position}} = $attrs{mass};
+  }
+
+
+  #### If this is a pepetide, then store some attributes
   if ($localname eq 'peptide') {
     my $peptide_sequence = $attrs{peptide_sequence} || die("No sequence");
-
-    #### If this peptide doesn't meet the threshold, skip
-    if ($attrs{initial_probability} >= $self->{P_threshold}) {
-
-      #### If we've already seen this peptide
-      if ($self->{peptides}->{$peptide_sequence}) {
-	my $info = $self->{peptides}->{$peptide_sequence};
-	$info->{best_probability} = $attrs{initial_probability}
-	  if ($info->{best_probability} < $attrs{initial_probability});
-	$info->{n_instances} += $attrs{n_instances};
-	$info->{search_batch_ids}->{$self->{search_batch_id}} +=
-	  $attrs{n_instances};
-
-	#### Else this is a new peptide
-      } else {
-	my $info;
-	$info->{best_probability} = $attrs{initial_probability};
-	$info->{n_instances} = $attrs{n_instances};
-	$info->{search_batch_ids}->{$self->{search_batch_id}} =
-	  $attrs{n_instances};
-	$info->{protein_name} = $self->{protein_name};
-
-	$self->{peptides}->{$peptide_sequence} = $info;
-      }
-
-    }
-
+    $self->{pepcache}->{peptide} = $attrs{peptide_sequence};
+    $self->{pepcache}->{charge} = $attrs{charge};
+    $self->{pepcache}->{initial_probability} = $attrs{initial_probability};
+    $self->{pepcache}->{nsp_adjusted_probability} = $attrs{nsp_adjusted_probability};
+    $self->{pepcache}->{n_sibling_peptides} = $attrs{n_sibling_peptides};
+    $self->{pepcache}->{n_instances} = $attrs{n_instances};
   }
 
 
@@ -502,7 +487,8 @@ sub pepXML_end_element {
   if (scalar @{$self->object_stack()}){
 
     #### If the top object on the stack is the correct one, pop it off
-    #### else die bitterly
+    #### else die bitterly    my $peptide_sequence = $attrs{peptide_sequence} || die("No sequence");
+
     if ($self->object_stack->[-1]->{name} eq "$localname") {
       pop(@{$self->object_stack});
     } else {
@@ -524,6 +510,93 @@ sub pepXML_end_element {
 ###############################################################################
 sub protXML_end_element {
   my ($self,$uri,$localname,$qname) = @_;
+
+  #### If this is a pepetide, then update the number of peptides
+  if ($localname eq 'peptide') {
+    my $peptide_sequence = $self->{pepcache}->{peptide}
+      || die("ERROR: No peptide sequence in the cache!");
+
+    my $initial_probability = $self->{pepcache}->{initial_probability};
+
+    #### If this peptide passes the threshold, store it
+    if ($initial_probability >= $self->{P_threshold}) {
+
+      #### Create the modified peptide string
+      my $modified_peptide = '';
+      my $modifications = $self->{pepcache}->{modifications};
+      if ($modifications) {
+	for (my $i=1; $i<=length($peptide_sequence); $i++) {
+	  my $aa = substr($peptide_sequence,$i-1,1);
+	  if ($modifications->{$i}) {
+	    $aa .= '['.int($modifications->{$i}).']';
+	  }
+	  $modified_peptide .= $aa;
+	}
+      } else {
+	$modified_peptide = $peptide_sequence;
+      }
+
+      my $charge = $self->{pepcache}->{charge};
+
+
+      #### If we've already seen this peptide
+      if ($self->{ProPro_peptides}->{$peptide_sequence}) {
+	my $info = $self->{ProPro_peptides}->{$peptide_sequence};
+	$info->{best_intitial_probability} = $initial_probability
+	  if ($info->{best_initial_probability} < $initial_probability);
+	$info->{n_instances} += $self->{pepcache}->{n_instances};
+	$info->{n_sibling_peptides} += $self->{pepcache}->{n_sibling_peptides};
+	$info->{search_batch_ids}->{$self->{search_batch_id}}++;
+
+      #### Else this is a new peptide
+      } else {
+	my $info;
+	$info->{best_initial_probability} = $initial_probability;
+	$info->{best_adjusted_probability} = $self->{pepcache}->{nsp_adjusted_probability};
+	$info->{n_instances} = $self->{pepcache}->{n_instances};
+	$info->{n_sibling_peptides} = $self->{pepcache}->{n_sibling_peptides};
+	$info->{search_batch_ids}->{$self->{search_batch_id}} = 1;
+	$info->{protein_name} = $self->{pepcache}->{protein_name};
+
+	$self->{ProPro_peptides}->{$peptide_sequence} = $info;
+      }
+
+      #### Store the modification information
+      my $info = $self->{ProPro_peptides}->{$peptide_sequence};
+      my $modinfo = $info->{modifications}->{$modified_peptide}->{$charge};
+
+      if (defined($modinfo) && defined($modinfo->{best_initial_probability})) {
+	if ($modinfo->{best_initial_probability} < $initial_probability) {
+	  $modinfo->{best_initial_probability} = $initial_probability;
+	}
+      } else {
+	$modinfo->{best_initial_probability} = $initial_probability;
+      }
+
+      if (defined($modinfo) && defined($modinfo->{best_adjusted_probability})) {
+	if ($modinfo->{best_adjusted_probability} < $self->{pepcache}->{nsp_adjusted_probability}) {
+	  $modinfo->{best_adjusted_probability} = $self->{pepcache}->{nsp_adjusted_probability};
+	}
+      } else {
+	$modinfo->{best_adjusted_probability} = $self->{pepcache}->{nsp_adjusted_probability};
+      }
+
+      $modinfo->{n_instances} += $self->{pepcache}->{n_instances};
+      $modinfo->{search_batch_ids}->{$self->{search_batch_id}}++;
+      $modinfo->{n_sibling_peptides} += $self->{pepcache}->{n_sibling_peptides};
+      $info->{modifications}->{$modified_peptide}->{$charge} = $modinfo;
+
+    }
+
+    #### Clear out the cache
+    delete($self->{pepcache});
+
+    #### Increase the counters and print some progress info
+    $self->{counter}++;
+    #print $self->{counter}."..." if ($self->{counter} % 100 == 0);
+    print "." if ($self->{counter} % 1000 == 0);
+
+  }
 
 
   #### If there's an object on the stack consider popping it off
@@ -663,10 +736,11 @@ sub main {
       $pepXML_document->{document_type} = 'pepXML';
       push(@documents,$pepXML_document);
 
-      $protXML_document->{filepath} = $path."/interact-prob-prot.xml";
+      $protXML_document->{filepath} = $filepath;
+      $protXML_document->{filepath} =~ s/\.xml/-prot.xml/;
       $protXML_document->{search_batch_id} = $search_batch_id;
       $protXML_document->{document_type} = 'protXML';
-      #push(@documents,$protXML_document);
+      push(@documents,$protXML_document);
 
       push(@search_batch_ids,$search_batch_id);
     }
@@ -704,6 +778,7 @@ sub main {
   writePAxmlFile(
     output_file => $output_file,
     peptide_hash => $CONTENT_HANDLER->{peptides},
+    ProPro_peptide_hash => $CONTENT_HANDLER->{ProPro_peptides},
     P_threshold => $CONTENT_HANDLER->{P_threshold},
   );
 
@@ -1054,6 +1129,8 @@ sub writePAxmlFile {
   my $output_file = $args{'output_file'} || die("No output file provided");
   my $peptides = $args{'peptide_hash'}
     || die("No output peptide_hash provided");
+  my $ProPro_peptides = $args{'ProPro_peptide_hash'}
+    || die("No output ProPro_peptide_hash provided");
   my $P_threshold = $args{'P_threshold'}
     || die("No output P_threshold provided");
 
@@ -1081,6 +1158,12 @@ sub writePAxmlFile {
   #### Loop over all peptides and write out as XML
   while (my ($peptide_sequence,$attributes) = each %{$peptides}) {
 
+    my $ProteinProphet_info = $ProPro_peptides->{$peptide_sequence};
+    my $best_initial_probability = $ProteinProphet_info->{best_initial_probability};
+    my $best_adjusted_probability = $ProteinProphet_info->{best_adjusted_probability};
+    my $n_adjusted_observations = $ProteinProphet_info->{n_instances};
+    my $n_sibling_peptides = $ProteinProphet_info->{n_sibling_peptides};
+
     print OUTFILE encodeXMLEntity(
       entity_name => 'peptide_instance',
       indent => 4,
@@ -1094,8 +1177,19 @@ sub writePAxmlFile {
         best_probability => $attributes->{best_probability},
         n_observations => $attributes->{n_instances},
         search_batch_ids => join(",",keys(%{$attributes->{search_batch_ids}})),
+        best_adjusted_probability => $best_adjusted_probability,
+        #best_initial_probability => $best_initial_probability,
+        n_adjusted_observations => $n_adjusted_observations,
+        n_sibling_peptides => $n_sibling_peptides,
       },
     );
+
+
+    #### Diagnostic dump
+    #if ($peptide_sequence eq 'SENLVSCVDKNLR') {
+    #  use Data::Dumper;
+    #  print "\n-----\n".Dumper([$ProPro_peptides->{$peptide_sequence}])."\n-----\n";
+    #}
 
 
     #### Loop over all the observed modifications and write out
@@ -1103,6 +1197,13 @@ sub writePAxmlFile {
       each %{$attributes->{modifications}}) {
 
       while (my ($mod_charge,$charge_attributes) = each %{$mod_attributes}) {
+
+	my $ProteinProphet_info = $ProPro_peptides->{$peptide_sequence}->
+          {modifications}->{$mod_peptide_sequence}->{$mod_charge};
+	my $best_initial_probability = $ProteinProphet_info->{best_initial_probability};
+	my $best_adjusted_probability = $ProteinProphet_info->{best_adjusted_probability};
+	my $n_adjusted_observations = $ProteinProphet_info->{n_instances};
+        y $n_sibling_peptides = $ProteinProphet_info->{n_sibling_peptides};
 
         print OUTFILE encodeXMLEntity(
           entity_name => 'modified_peptide_instance',
@@ -1115,6 +1216,10 @@ sub writePAxmlFile {
             n_observations => $charge_attributes->{n_instances},
             search_batch_ids =>
               join(",",keys(%{$charge_attributes->{search_batch_ids}})),
+            best_adjusted_probability => $best_adjusted_probability,
+            #best_initial_probability => $best_initial_probability,
+            n_adjusted_observations => $n_adjusted_observations,
+            n_sibling_peptides => $n_sibling_peptides,
           },
         );
 
