@@ -22,5 +22,8 @@ AT_biosequence_annotation	Biosequence Annotation	PeptideAtlas_project	YES	$TBAT_
 AT_search_key	Search Key	PeptideAtlas_infrastructure	NO	$TBAT_SEARCH_KEY	search_key_id			
 AT_query_option	Query Option	PeptideAtlas_infrastructure	YES	$TBAT_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=AT_query_option	AT_query_option
 AT_sample_publication	Sample Publication	PeptideAtlas_user	NO	$TBAT_SAMPLE_PUBLICATION	sample_publication_id			
+AT_atlas_search_batch_parameter	Atlas Search Batch Parameter	PeptideAtlas_infrastructure	NO	$TBAT_ATLAS_SEARCH_BATCH_PARAMETER	atlas_search_batch_id			
+AT_atlas_search_batch_parameter_set	Atlas Search Batch Parameter Set	PeptideAtlas_infrastructure	NO	$TBAT_ATLAS_SEARCH_BATCH_PARAMETER_SET	atlas_search_batch_id			
+AT_spectra_description_set	Spectra Description Set	PeptideAtlas_infrastructure	NO	$TBAT_SPECTRA_DESCRIPTION_SET	spectra_description_set_id			
 AT_BrowseBiosequence	Browse Biosequence	QUERY					BrowseBioSequence.cgi	
 AT_GetPeptides	Get Peptides	QUERY					GetPeptides	

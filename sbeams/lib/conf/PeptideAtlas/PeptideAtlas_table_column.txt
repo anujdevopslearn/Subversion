@@ -32,7 +32,7 @@ AT_sample	4	sample_tag	Sample Tag	varchar	50	0	N		N			Y	text	30		Y	Y	Y	"Short ta
 AT_sample	5	original_experiment_tag	Original Experiment Tag	varchar	50	0	Y		N			Y	text	30		Y	Y	N	"Short tag (mnenomic) for the original experiment, perhaps superceded with a better name in sample_tag"		
 AT_sample	6	sample_date	Sample Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	textdate	20		Y	Y	N	Date on which this sample was prepared	
 AT_sample	7	sample_description	Sample Description	text	16	0	Y		N			N	textarea	10		Y	Y	N	Full description of this sample	
-AT_sample	8	instrument_model_id	Instrument Model	int	4	0	Y		N	PR_instrument	instrument_id	N	optionlist			Y	Y	N	Instrument (mass spectrometer) manufacturer model name	"SELECT instrument_id,instrument_name FROM $TBPR_INSTRUMENT WHERE record_status != 'D' ORDER BY instrument_name"
+AT_sample	8	instrument_model_id	Instrument Model ID	int	4	0	Y		N	PR_instrument	instrument_id	N	optionlist			Y	Y	N	Instrument (mass spectrometer) manufacturer model name	"SELECT instrument_id,instrument_name FROM $TBPR_INSTRUMENT WHERE record_status != 'D' ORDER BY instrument_name"
 AT_sample	9	search_batch_id	Search Batch ID	int	4	0	N		N				fixed			Y	P		Search Batch ID	
 AT_sample	10	sample_publication_ids	Sample Publications	varchar	255	0	Y		N	AT_sample_publication	sample_publication_id	N	multilink	4		Y	Y	N	Select all publications that apply to this sample.	"SELECT P.publication_id,P.publication_name FROM $TBAT_PUBLICATION P WHERE P.record_status != 'D' ORDER BY P.publication_name"
 AT_sample	11	data_contributors	Data Contributors	text	16	0	Y		N			Y	textarea	10		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)	
@@ -75,12 +75,22 @@ AT_atlas_search_batch	2	proteomics_search_batch_id	Proteomics Search Batch ID	in
 AT_atlas_search_batch	3	n_searched_spectra	Number of Searched spectra	int	4	0	N		N							N	N		Number of spectra searched in this search_batch		
 AT_atlas_search_batch	4	data_location	File Path to search_batch output	varchar	255	0	N		N							Y	Y		Absolute or relative location of the raw data for this search batch		
 AT_atlas_search_batch	5	search_batch_subdir	Search Batch Subdirectory	varchar	100	0	N		N							Y	Y		Subdirectory under the experiment where the data for this search resides		
-AT_atlas_search_batch	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_atlas_search_batch	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_atlas_search_batch	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_atlas_search_batch	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_atlas_search_batch	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_atlas_search_batch	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_atlas_search_batch	6	TPP_version	TPP version used in peptide identification scoring	varchar	100	0	N		N							Y	Y		TPP version used for peptide identification scores		
+AT_atlas_search_batch	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_atlas_search_batch	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_atlas_search_batch	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_atlas_search_batch	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_atlas_search_batch	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_atlas_search_batch	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_atlas_search_batch_parameter	1	atlas_search_batch_id	Atlas Search Batch ID	int	4	0	N		N	AT_atlas_search_batch	atlas_search_batch_id					N	N	Y	Atlas search batch to which this search parameter belongs		pkDEFAULT
+AT_atlas_search_batch_parameter	2	key_order	Key Order	int	4	0	N		N			Y				Y	Y	N	Monotonically increasing number to denote key order		
+AT_atlas_search_batch_parameter	3	parameter_key	Parameter Key	varchar	100	0	N		N			Y	text	50		Y	Y	Y	The key of the key/value pair		
+AT_atlas_search_batch_parameter	4	parameter_value	Parameter Value	varchar	255	0	N		N			Y	text	50		Y	Y	N	The value of the key/value pair		
+AT_atlas_search_batch_parameter_set	1	atlas_search_batch_id	Atlas Search Batch ID	int	4	0	N		Y	AT_atlas_search_batch	atlas_search_batch_id					N	N	Y	Search batch to which this set of search parameters belong		pkDEFAULT
+AT_atlas_search_batch_parameter_set	2	peptide_mass_tolerance	Peptide Mass Tolerance	varchar	100	0	N		N			Y	text	50		Y	Y	N	Peptide Mass Tolerance		
+AT_atlas_search_batch_parameter_set	3	peptide_ion_tolerance	Peptide Ion Tolerance	varchar	100	0	N		N			Y	text	50		Y	Y	N	Peptide Ion Tolerance		
+AT_atlas_search_batch_parameter_set	4	enzyme	Enzyme used in search parameters	varchar	100	0	N		N			Y	text	50		Y	Y	N	Enzyme parameter in search		
+AT_atlas_search_batch_parameter_set	5	num_enzyme_termini	Num code used in SEQUEST for enzyme termini	int	4	0	N		N			Y	text	50		Y	Y	N	Number code used for enzyme termini in SEQUEST params		
 AT_peptide	1	peptide_id	Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_peptide	3	peptide_accession	Peptide Accession	varchar	255	0	N		N			Y	text	20		Y	Y	Y	APD peptide accession number of the the peptide		
 AT_peptide	3	peptide_sequence	Peptide Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	N	Sequence of the peptide		
@@ -96,16 +106,18 @@ AT_peptide_instance	6	original_protein_name	Original Protein Name	varchar	255	0	
 AT_peptide_instance	7	best_probability	Best Observed Probability	real	4	0	N		N			Y	text	10		Y	Y	N	Best observed PeptideProphet probablity of being correct over all samples		
 AT_peptide_instance	8	best_adjusted_probability	Best Adjusted Probability	real	4	0	Y		N			Y	text	10		Y	Y	N	Best probability observed as adjusted by ProteinProphet within all samples		
 AT_peptide_instance	9	n_observations	Number of Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in the input samples		
-AT_peptide_instance	10	n_genome_locations	Number of Genome Locations Mapped to	int	4	0	N		N			Y	text	10		Y	Y	N	Number of Genome locations for this peptide 		
-AT_peptide_instance	11	sample_ids	Samples Observed in	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of sample_ids in which which peptide was observed		
-AT_peptide_instance	12	is_exon_spanning	Does it span over introns?	char	1	0	Y		N			Y	text	3		Y	Y	N	Comma-separated list of sample_ids in which which peptide was observed		
-AT_peptide_instance	13	n_protein_mappings	Number of Proteins for this Peptide 	int	4	0	N		N			Y	text	10		Y	Y	N	Number of distinct accession numbers (proteins) for peptide in Genome		
-AT_peptide_instance	14	search_batch_ids	Search batches	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of search_bartch ids		
-AT_peptide_instance	15	is_subpeptide_of	superpeptide list	varchar	255	0	Y		N			N	textarea	3		Y	Y	N	Comma-separated list of peptide ids that include this peptide's sequence		
-AT_peptide_instance	16	n_samples	Number of Samples Exhibiting Peptide	int	4	0	Y		N			N	text	10		Y	Y	N	Number of samples/experiments in which this peptide was observed		
-AT_peptide_instance	17	n_protein_samples	Number of Samples Exhibiting Protein	int	4	0	Y		N			N	text	10		Y	Y	N	Number of samples/experiments in which the parent protein of this peptide was observed		
-AT_peptide_instance	18	empirical_proteotypic_score	Empirical Proteotypic Score	real	4	0	Y		N			N	text	10		Y	Y	N	Fraction of samples that exhibit this peptide divided by fraction of samples that exhibit the parent protein		
-AT_peptide_instance	19	predicted_proteotypic_score	Predicted Proteotypic Score	real	4	0	Y		N			N	text	10		Y	Y	N	Theoretically predicted proteotypic score following Mallick et al. 2006		
+AT_peptide_instance	10	n_adjusted_observations	Number of Adjusted Observations	int	4	0	Y		N			N	text	10		Y	Y	N	Number of adjusted observations		
+AT_peptide_instance	11	n_sibling_peptides	Number of Sibling Peptides	real	4	0	Y		N			N	text	10		Y	Y	N	Number of sibling peptides		
+AT_peptide_instance	12	n_genome_locations	Number of Genome Locations Mapped to	int	4	0	N		N			Y	text	10		Y	Y	N	Number of Genome locations for this peptide 		
+AT_peptide_instance	13	sample_ids	Samples Observed in	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of sample_ids in which which peptide was observed		
+AT_peptide_instance	14	is_exon_spanning	Does it span over introns?	char	1	0	Y		N			Y	text	3		Y	Y	N	Comma-separated list of sample_ids in which which peptide was observed		
+AT_peptide_instance	15	n_protein_mappings	Number of Proteins for this Peptide 	int	4	0	N		N			Y	text	10		Y	Y	N	Number of distinct accession numbers (proteins) for peptide in Genome		
+AT_peptide_instance	16	search_batch_ids	Search batches	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of search_bartch ids		
+AT_peptide_instance	17	is_subpeptide_of	superpeptide list	varchar	255	0	Y		N			N	textarea	3		Y	Y	N	Comma-separated list of peptide ids that include this peptide's sequence		
+AT_peptide_instance	18	n_samples	Number of Samples Exhibiting Peptide	int	4	0	Y		N			N	text	10		Y	Y	N	Number of samples/experiments in which this peptide was observed		
+AT_peptide_instance	19	n_protein_samples	Number of Samples Exhibiting Protein	int	4	0	Y		N			N	text	10		Y	Y	N	Number of samples/experiments in which the parent protein of this peptide was observed		
+AT_peptide_instance	20	empirical_proteotypic_score	Empirical Proteotypic Score	real	4	0	Y		N			N	text	10		Y	Y	N	Fraction of samples that exhibit this peptide divided by fraction of samples that exhibit the parent protein		
+AT_peptide_instance	21	predicted_proteotypic_score	Predicted Proteotypic Score	real	4	0	Y		N			N	text	10		Y	Y	N	Theoretically predicted proteotypic score following Mallick et al. 2006		
 AT_peptide_instance_sample	1	peptide_instance_sample_id	Peptide Instance Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_peptide_instance_sample	2	peptide_instance_id	Peptide Instance ID	int	4	0	N		N	AT_peptide_instance	peptide_instance_id					N	N		Associated Atlas Build		
 AT_peptide_instance_sample	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
@@ -131,8 +143,10 @@ AT_modified_peptide_instance	4	peptide_charge	Peptide Charge	int	4	0	N		N			Y	te
 AT_modified_peptide_instance	5	best_probability	Best Observed Probability	real	4	0	N		N			Y	text	10		Y	Y	N	Best observed PeptideProphet probablity of being correct over all samples		
 AT_modified_peptide_instance	6	best_adjusted_probability	Best Adjusted Probability	real	4	0	N		N			Y	text	10		Y	Y	N	Best probability observed as adjusted by ProteinProphet within all samples		
 AT_modified_peptide_instance	7	n_observations	Number of Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in the input samples		
-AT_modified_peptide_instance	8	sample_ids	Samples Observed in	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of sample_ids in which which peptide was observed		
-AT_modified_peptide_instance	9	search_batch_ids	Search batches	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of search_bartch ids		
+AT_modified_peptide_instance	8	n_adjusted_observations	Number of Adjusted Observations	int	4	0	Y		N			N	text	10		Y	Y	N	Number of adjusted observations		
+AT_modified_peptide_instance	9	n_sibling_peptides	Number of Sibling Peptides	real	4	0	Y		N			N	text	10		Y	Y	N	Number of sibling peptides		
+AT_modified_peptide_instance	10	sample_ids	Samples Observed in	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of sample_ids in which which peptide was observed		
+AT_modified_peptide_instance	11	search_batch_ids	Search batches	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of search_bartch ids		
 AT_modified_peptide_instance_sample	1	modified_peptide_instance_sample_id	Modified Peptide Instance Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_modified_peptide_instance_sample	2	modified_peptide_instance_id	Modified Peptide Instance ID	int	4	0	N		N	AT_modified_peptide_instance	modified_peptide_instance_id					N	N		Associated Atlas Build		
 AT_modified_peptide_instance_sample	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
@@ -286,16 +300,16 @@ AT_sample_publication	6	date_modified	Date Record Modified	datetime	8	0	N	CURREN
 AT_sample_publication	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 AT_sample_publication	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 AT_sample_publication	9	record_status	Record Status	char	1	0	N	N	N							N	N				
-AT_BrowseBiosequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBAT_BIOSEQUENCE_SET WHERE project_id IN (  $accessible_project_ids ) ORDER BY sort_order,set_name"
-AT_BrowseBiosequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+AT_BrowseBiosequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBAT_BIOSEQUENCE_SET WHERE project_id IN (  $accessible_project_ids ) ORDER BY sort_order,set_name"	
+AT_BrowseBiosequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
 AT_BrowseBiosequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 AT_BrowseBiosequence	4	molecular_function_constraint	Molecular Function Constraint									N	text	40		Y	Y	N	Constraint for the GO Molecular Function. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 AT_BrowseBiosequence	5	biological_process_constraint	Biological Process Constraint									N	text	40		Y	Y	N	Constraint for the GO Biological Process. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 AT_BrowseBiosequence	6	cellular_component_constraint	Cellular Component Constraint									N	text	40		Y	Y	N	Constraint for the GO Cellular Component. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 AT_BrowseBiosequence	7	protein_domain_constraint	Protein Domain Constraint									N	text	40		Y	Y	N	Constraint for the InterPro Protein Domain. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-AT_BrowseBiosequence	8	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	Y	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
+AT_BrowseBiosequence	8	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	Y	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: "n.n", "> n.n", "< n.n", "between n.n and n.n", "n.n +- n.n""	
 AT_BrowseBiosequence	9	transmembrane_class_constraint	Transmembrane Class Constraint									N	multioptionlist	3		Y	Y	N	Constraint for the transmembrane class as annotated by TMHMM and SignalP	"SELECT DISTINCT transmembrane_class,transmembrane_class FROM $TBAT_BIOSEQUENCE_PROPERTY_SET ORDER BY transmembrane_class"
-AT_BrowseBiosequence	10	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	Y	N	"Constraint for the number of transmembrane regions (based on TMHMM and SignalP calculation by rbonneau).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
+AT_BrowseBiosequence	10	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	Y	N	"Constraint for the number of transmembrane regions (based on TMHMM and SignalP calculation by rbonneau).  Allowed syntax: "n", "> n", "< n", "between n and n", "n +- n""	
 AT_BrowseBiosequence	11	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 AT_BrowseBiosequence	12	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 AT_BrowseBiosequence	13	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"
@@ -308,15 +322,29 @@ AT_GetPeptides	4	biosequence_gene_name_constraint	Gene Name Constraint									N
 AT_GetPeptides	5	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the Protein description (description string from input FASTA file). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.	
 AT_GetPeptides	6	peptide_name_constraint	Peptide Name Constraint									N	text	40		Y	Y	N	Constraint for the Peptide Name (i.e PApxxxxxxxx). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.	
 AT_GetPeptides	7	peptide_sequence_constraint	Peptide Sequence Constraint									N	text	40		Y	Y	N	Constraint for the Peptide Sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.	
-AT_GetPeptides	8	best_probability_constraint	Best Probability Constraint									N	text	15		Y	Y	N	"Constraint for the best observed probability for a peptide.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
-AT_GetPeptides	9	n_observations_constraint	Number of Observations Constraint									N	text	10		Y	Y	N	"Constraint for the number of observations for a peptide.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
-AT_GetPeptides	10	n_samples_constraint	Number of Different Samples Constraint									N	text	15		Y	Y	N	"Constraint for the number of different samples in which the peptide was observed.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
-AT_GetPeptides	11	empirical_proteotypic_constraint	Empirical Proteotypic Score Constraint									N	text	10		Y	Y	N	"Constraint for the empirical proteotypic score for a peptide.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
+AT_GetPeptides	8	best_probability_constraint	Best Probability Constraint									N	text	15		Y	Y	N	"Constraint for the best observed probability for a peptide.  Allowed syntax: "n.n", "> n.n", "< n.n", "between n.n and n.n", "n.n +- n.n""	
+AT_GetPeptides	9	n_observations_constraint	Number of Observations Constraint									N	text	10		Y	Y	N	"Constraint for the number of observations for a peptide.  Allowed syntax: "n", "> n", "< n", "between n and n", "n +- n""	
+AT_GetPeptides	10	n_samples_constraint	Number of Different Samples Constraint									N	text	15		Y	Y	N	"Constraint for the number of different samples in which the peptide was observed.  Allowed syntax: "n", "> n", "< n", "between n and n", "n +- n""	
+AT_GetPeptides	11	empirical_proteotypic_constraint	Empirical Proteotypic Score Constraint									N	text	10		Y	Y	N	"Constraint for the empirical proteotypic score for a peptide.  Allowed syntax: "n.n", "> n.n", "< n.n", "between n.n and n.n", "n.n +- n.n""	
 AT_GetPeptides	12	n_protein_mappings_constraint	Number of Proteins Mapped Constraint									N	text	5		Y	Y	N	Constraint for number of distinct proteins for this peptide ( >=0 )	
 AT_GetPeptides	13	n_genome_locations_constraint	Number of Genome Locations Mapped Constraint									N	text	5		Y	Y	N	Constraint for number of genome locations for this peptide ( >=0 )	
 AT_GetPeptides	14	is_exon_spanning_constraint	Is Exon Spanning?									N	optionlist			Y	Y	N	Does at least one of the mappings of this peptide span from one exon to another?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"
 AT_GetPeptides	15	chromosome_constraint	Chromosome Constraint									N	text	10		Y	1	N	Constraint for the Chromosome onto which the peptide was mapped. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.	
-AT_GetPeptides	16	start_in_chromosome_constraint	Start in Chromosome Constraint									N	text	20		Y	1	N	"Constraint for the start position of the peptide in nucleotides along the chromosome.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
-AT_GetPeptides	17	end_in_chromosome_constraint	End in Chromosome Constraint									N	text	20		Y	1	N	"Constraint for the end position of the peptide in nucleotides along the chromosome.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
+AT_GetPeptides	16	start_in_chromosome_constraint	Start in Chromosome Constraint									N	text	20		Y	1	N	"Constraint for the start position of the peptide in nucleotides along the chromosome.  Allowed syntax: "n", "> n", "< n", "between n and n", "n +- n""	
+AT_GetPeptides	17	end_in_chromosome_constraint	End in Chromosome Constraint									N	text	20		Y	1	N	"Constraint for the end position of the peptide in nucleotides along the chromosome.  Allowed syntax: "n", "> n", "< n", "between n and n", "n +- n""	
 AT_GetPeptides	18	strand_constraint	Strand									N	text	5		Y	1	N	Constraint for the strand (orientiation) of the chromosome mapping (must be either + or -)	
 AT_GetPeptides	19	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'GP_display_options' ORDER BY sort_order,option_value"
+AT_spectra_description_set	1	spectra_description_set_id	Spectra Description Set ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_spectra_description_set	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id					N	N		Associated Atlas Build		
+AT_spectra_description_set	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
+AT_spectra_description_set	4	atlas_search_batch_id	Atlas Search Batch ID	int	4	0	N		N	AT_atlas_search_batch	atlas_search_batch_id					N	N		Associated Atlas Search Batch (which can link to a Proteomics Search Batch)		
+AT_spectra_description_set	5	instrument_model_id	Instrument Model ID	int	4	0	Y		N	PR_instrument	instrument_id	N	optionlist			Y	Y	N	Instrument (mass spectrometer) manufacturer model name	"SELECT instrument_id,instrument_name FROM $TBPR_INSTRUMENT WHERE record_status != 'D' ORDER BY instrument_name"	
+AT_spectra_description_set	6	conversion_software_name	Conversion Software Name	varchar	255	0	N		N							N	N		Name of software used in conversion to mzXML		
+AT_spectra_description_set	7	conversion_software_version	Conversion Software Version	real	4	0	N		N							N	N		Version of software used in conversion to mzXML		
+AT_spectra_description_set	8	mzXML_schema	mzXML Schema	varchar	1024	0	N		N							N	N		mzXML schema		
+AT_spectra_description_set	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_spectra_description_set	10	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_spectra_description_set	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_spectra_description_set	12	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_spectra_description_set	13	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_spectra_description_set	14	record_status	Record Status	char	1	0	N	N	N							N	N				
