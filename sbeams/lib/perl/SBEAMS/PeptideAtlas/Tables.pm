@@ -59,6 +59,10 @@ use vars qw(@ISA @EXPORT
     $TBAT_IDENTIFIED_TO_IPI
     $TBAT_SYNTHESIZED_PEPTIDE
 
+    $TBAT_SPECTRA_DESCRIPTION_SET
+    $TBAT_ATLAS_SEARCH_BATCH_PARAMETER
+    $TBAT_ATLAS_SEARCH_BATCH_PARAMETER_SET
+
     $TBAT_SEARCH_KEY
 );
 
@@ -118,6 +122,10 @@ require Exporter;
     $TBAT_IDENTIFIED_TO_IPI
     $TBAT_SYNTHESIZED_PEPTIDE
 
+    $TBAT_SPECTRA_DESCRIPTION_SET
+    $TBAT_ATLAS_SEARCH_BATCH_PARAMETER
+    $TBAT_ATLAS_SEARCH_BATCH_PARAMETER_SET
+
     $TBAT_SEARCH_KEY
 );
 
@@ -170,6 +178,10 @@ $TBAT_TISSUE_TYPE			= "${glycomod}tissue_type";
 $TBAT_IDENTIFIED_TO_IPI= "${glycomod}identified_to_ipi";
 $TBAT_GLYCO_SAMPLE   = "${glycomod}glyco_sample";
 $TBAT_SYNTHESIZED_PEPTIDE	= "${glycomod}synthesized_peptide";
+
+$TBAT_SPECTRA_DESCRIPTION_SET = "${mod}spectra_description_set";
+$TBAT_ATLAS_SEARCH_BATCH_PARAMETER = "${mod}atlas_search_batch_parameter";
+$TBAT_ATLAS_SEARCH_BATCH_PARAMETER_SET = "${mod}atlas_search_batch_parameter_set";
 
 $TBAT_SEARCH_KEY                = "${mod}search_key";
 
