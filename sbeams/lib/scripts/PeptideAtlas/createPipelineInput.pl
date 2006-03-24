@@ -728,6 +728,13 @@ sub main {
       my $filepath = $path;
       if ($filepath !~ /\.xml/) {
 	$filepath = $path."/interact-prob.xml";
+	if (! -e $filepath) {
+	  $filepath = $path."/interact.xml";
+	  if (! -e $filepath) {
+	    print "ERROR: Unable to find $filepath\n";
+	    next;
+	  }
+	}
       }
       my ($pepXML_document,$protXML_document);
 
@@ -1203,7 +1210,7 @@ sub writePAxmlFile {
 	my $best_initial_probability = $ProteinProphet_info->{best_initial_probability};
 	my $best_adjusted_probability = $ProteinProphet_info->{best_adjusted_probability};
 	my $n_adjusted_observations = $ProteinProphet_info->{n_instances};
-        y $n_sibling_peptides = $ProteinProphet_info->{n_sibling_peptides};
+        my $n_sibling_peptides = $ProteinProphet_info->{n_sibling_peptides};
 
         print OUTFILE encodeXMLEntity(
           entity_name => 'modified_peptide_instance',
