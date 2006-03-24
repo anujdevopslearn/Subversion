@@ -60,7 +60,36 @@ $SBEAMS/lib/scripts/Core/DataImport.pl \
   --source_file $SBEAMS/lib/refdata/PeptideAtlas/PeptideAtlas_query_option.xml
 
 
+---------------
+
+2006-03-23
+
+Schema changes (see full definitions in driver tables):
+
+- Added to table 'atlas_search_batch' column 'TPP_version'
+- Added to table 'peptide_instance' column 'n_adjusted_observations'
+- Added to table 'peptide_instance' column 'n_sibling_peptides'
+- Added to table 'modified_peptide_instance' column 'n_adjusted_observations'
+- Added to table 'modified_peptide_instance' column 'n_sibling_peptides'
+- Added table 'spectra_description_set'
+- Added table 'atlas_search_batch_parameter'
+- Added table 'atlas_search_batch_parameter_set'
+
+- Reran update driver tables
+
+- Populated the SQL scripts:
+
+    setenv SBEAMS fullPathToYourDevArea/sbeams
+    cd $SBEAMS/lib/scripts/Core
+
+    foreach dbtype ( mssql mysql pgsql )
+        ./generate_schema.pl --table_prop ../../conf/PeptideAtlas/PeptideAtlas_table_property.txt \
+        --table_col ../../conf/PeptideAtlas/PeptideAtlas_table_column.txt --schema_file \
+        ../../sql/PeptideAtlas/PeptideAtlas --destination_type $dbtype
+    end
 
 
+- Altered with sql the server tables with CREATE TABLE and ALTER TABLE statements
 
+- Added the new tables to $SBEAMS/lib/perl/SBEAMS/PeptideAtlas/Tables.pm
 
