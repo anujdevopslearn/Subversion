@@ -1536,7 +1536,8 @@ for (class.numb in unique.classes){
 	for(i in 1:numb.loops){
 		sum.sam.output <- try( summary(sam.output,delta.list[i],ll=FALSE))
  
-		if (class(sum.sam.output) == "try-error" || i == numb.loops){
+		if (class(sum.sam.output) == "try-error" || i == numb.loops ||
+			dim(sum.sam.output@mat.sig)[2] == 0){
 #if we are breaking out of the list since there are no more genes then set the last delta cutoff
 #which produced some genes which will be used for graphing
 			
@@ -1552,12 +1553,9 @@ for (class.numb in unique.classes){
 			print (paste("LAST DELTA", last.delta.cutoff , "CONDITION" , condition.name, "I COUNT ", i))
 			break
 		}else{
-			# make sure the mat.sig table is populated (prevents crash on R2.2.1/BioC1.7+
-			if(dim(sum.sam.output@mat.sig)[2] == 6) {
- 				gatherdataMatrix[sum.sam.output@row.sig.genes,"FDR"] <- sum.sam.output@mat.fdr[1,5]
-				gatherdataMatrix[sum.sam.output@mat.sig[,1],"SAM_ratio"] <- sum.sam.output@mat.sig[,6]
-				gatherdataMatrix[sum.sam.output@mat.sig[,1],"D_stat"] <- sum.sam.output@mat.sig[,2]
-			}
+ 			gatherdataMatrix[sum.sam.output@row.sig.genes,"FDR"] <- sum.sam.output@mat.fdr[1,5]
+			gatherdataMatrix[sum.sam.output@mat.sig[,1],"SAM_ratio"] <- sum.sam.output@mat.sig[,6]
+			gatherdataMatrix[sum.sam.output@mat.sig[,1],"D_stat"] <- sum.sam.output@mat.sig[,2]
 		}
 	}
 ##Assign the probe set ids as the row names of the annotation matrix, and
