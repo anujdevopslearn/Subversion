@@ -518,7 +518,7 @@ sub buildAtlas {
         infile => "$source_dir../Experiments.list" );
 
 
-    ## get hash with key = search_batch_id, value = sample_id
+    ## get hash with key = atlas_search_batch_id, value = sample_id
     ## and create [*sample] records and [*search_batch] records if they don't already exist
     my %sample_id_hash = get_sample_id_hash(
         atlas_build_id => $atlas_build_id,
@@ -527,6 +527,8 @@ sub buildAtlas {
     );
 
 ##xxxxxxxxxxxxxxxxxxxxxxxx  stopped editing here
+print_hash( hash_ref => \%sample_id_hash);
+die;
 
     #### If there is a .PAxml file, load data from that
     my $PAxmlfile = $source_dir . "/APD_" . $organism_abbrev . "_all.PAxml";
@@ -575,7 +577,7 @@ sub buildAtlas {
 
 
 ###############################################################################
-# get_sample_id_hash -- get hash with key= search_batch_id, value=sample_id
+# get_sample_id_hash -- get hash with key= atlas_search_batch_id, value=sample_id
 # creates relevant sample and search_batch records if they don't exist yet
 # @param atlas_build_id
 # @param search_batch_hash_ref reference to hash with key = search_batch_id
@@ -599,6 +601,8 @@ sub get_sample_id_hash
     ## hash with key = search_batch_id, value = $search_dir
     my %loading_sbid_searchdir_hash = %{$loading_sbid_searchdir_hash_ref};
 
+    ## loading_sbid_searchdir_hash is used to get the sbid's to access
+    ## the Proteomic records
 
     my $loading_sbid_list = get_string_list_of_keys(
         hash_ref => \%loading_sbid_searchdir_hash);
@@ -612,7 +616,6 @@ sub get_sample_id_hash
     ##   $existing_sb_hash{$sbid}->{proteomics_experiment_tag}
     my %existing_sb_hash = get_sb_hash(
         search_batch_id_list => $loading_sbid_list );
-
 
     #### Get complex hash of existing search_batches and their search dirs
     ## if the atlas_build_search_batch record is filled
@@ -668,12 +671,26 @@ sub get_sample_id_hash
             $existing_absb_hash{$sbid}->{search_dir_path}
                 = $search_batch_path;
 
+            $existing_sb_hash{$sbid}->{proteomics_search_batch_id} = 
+                $sbid;
+
+            $existing_sb_hash{$sbid}->{atlas_search_batch_id} = 
+                $atlas_search_batch_id;
+
+            $existing_sb_hash{$sbid}->{search_dir_path} = 
+                $search_batch_path;
+
+            my $et = getProteomicsExpTag( search_batch_id => $sbid );
+
+            $existing_sb_hash{$sbid}->{proteomics_experiment_tag} =  $et;
+               
+
         } else
         { ## else, the atlas_search_batch records exist, and just need to create
           ## the atlas_build_search_batch_record
             my $asbid = $existing_sb_hash{$sbid}->{atlas_search_batch_id};
 
-            my $search_batch_path = $existing_sb_hash{$sbid}->{search_batch_path};
+            my $search_batch_path = $existing_sb_hash{$sbid}->{search_dir_path};
 
             my $atlas_build_search_batch_id =
                 create_atlas_build_search_batch( 
@@ -697,7 +714,6 @@ sub get_sample_id_hash
         ## if a sample record doesn't exist, create one
         if (!exists $existing_samples_hash{$exp_tag} )
         {
-
             my $sample_id = insert_sample( 
                 proteomics_experiment_tag => $exp_tag,
                 search_batch_id => $sbid,
@@ -712,13 +728,16 @@ sub get_sample_id_hash
 
         }
 
+        $loaded_asbid_sid_hash{ $existing_absb_hash{$sbid}->{atlas_search_batch_id} } = 
+            $existing_samples_hash{$exp_tag}->{sample_id};
+
         ## create a [spectra_description_set] record
         insert_spectra_description_set( 
             atlas_build_id => $atlas_build_id,
             sample_id => $existing_samples_hash{$exp_tag}->{sample_id},
             atlas_search_batch_id => 
                 $existing_absb_hash{$sbid}->{atlas_search_batch_id},
-            search_batch_dir_path => existing_absb_hash{$sbid}->{search_dir_path}
+            search_batch_dir_path => $existing_absb_hash{$sbid}->{search_dir_path}
         );
          
 
@@ -730,11 +749,12 @@ sub get_sample_id_hash
 
         ## update [atlas_build_search_batch] record with sample_id
         update_atlas_build_search_batch(
-            sample_id => $existing_samples_hash{$exp_tag}->{sample_id} );
-    }
+            sample_id => $existing_samples_hash{$exp_tag}->{sample_id},
+            atlas_build_search_batch_id => 
+                $existing_absb_hash{$sbid}->{atlas_build_search_batch_id},
+        );
 
-##xxxxxxxxxxxxxxxxxxxxxxxx  stopped editing here
-die;
+    }
 
     return %loaded_asbid_sid_hash;
 
@@ -853,6 +873,43 @@ sub get_sb_hash
 
 }
 
+#######################################################################
+# getProteomicsExpTag -- get proteomics experiment tag, given search
+# batch id
+# @param search_batch_id
+# @return exp_tag
+#######################################################################
+sub getProteomicsExpTag
+{
+
+    my %args = @_;
+
+    my $search_batch_id = $args{search_batch_id} or die
+        "need search_batch_id ($!)";
+
+    my $exp_tag;
+    
+    my $sql = qq~
+        SELECT PE.experiment_tag
+        FROM $TBPR_SEARCH_BATCH SB 
+        JOIN $TBPR_PROTEOMICS_EXPERIMENT PE
+        ON (PE.experiment_id = SB.experiment_id)
+        WHERE SB.search_batch_id = '$search_batch_id'
+        AND PE.record_status != 'D'
+    ~;
+
+    my @rows = $sbeams->selectSeveralColumns($sql) or 
+        print "[WARN] could not find proteomics experiment tag for "
+        . "search_batch_id = $search_batch_id\n";
+
+    foreach my $row (@rows)
+    {
+        $exp_tag = @{$row};
+    }
+
+    return $exp_tag;
+
+}
 
 ###############################################################################
 # get_absb_hash -- get complex hash of existing search_batches and their search 
@@ -1114,6 +1171,9 @@ sub update_atlas_build_search_batch
 
     my $sample_id = $args{sample_id} or die "need sample_id ($!)";
 
+    my $atlas_build_search_batch_id = $args{atlas_build_search_batch_id} 
+        or die "need atlas_build_search_batch_id ($!)";
+
     ## attributes for atlas_build_search_batch_record
     my %rowdata = (             ##  atlas_search_batch
         sample_id => $sample_id,
@@ -1124,6 +1184,7 @@ sub update_atlas_build_search_batch
         table_name => $TBAT_ATLAS_BUILD_SEARCH_BATCH,
         rowdata_ref => \%rowdata,
         PK => 'atlas_build_search_batch_id',
+        PK_value => $atlas_build_search_batch_id,
         verbose => $VERBOSE,
         testonly => $TESTONLY,
     );
@@ -1261,7 +1322,7 @@ sub create_atlas_search_batch_parameter_recs
 ###############################################################################
 #  insert_sample -- get or create sample record
 #     with minimum info and some default settings 
-#     [ specifically: is_public='N', project_id='475' ]
+#     [ specifically: is_public='N', project_id='476' ]
 # @param search_batch_id
 # @param atlas_build_id
 # @param proteomics_experiment_tag
@@ -1570,13 +1631,12 @@ sub insert_spectra_description_set
     my $search_batch_dir_path = $args{search_batch_dir_path} or die
         "need search_batch_dir_path ($!)";
 
-
     ## There could be [spectra_description_set records for this
     ## sample_id and atlas_search_batch
     my $sql = qq~
         SELECT distinct sample_id, atlas_search_batch_id, 
         instrument_model_id, instrument_model_name, conversion_software_name, 
-        conversion_software_version, mxXML_schema
+        conversion_software_version, mzXML_schema
         FROM $TBAT_SPECTRA_DESCRIPTION_SET
         WHERE atlas_search_batch_id = '$atlas_search_batch_id'
         AND sample_id = '$sample_id'
@@ -1587,7 +1647,7 @@ sub insert_spectra_description_set
 
     my ($instrument_model_id, $conversion_software_name, 
     $instrument_model_id, $instrument_model_name, $conversion_software_name,
-    $conversion_software_version, $mxXML_schema);
+    $conversion_software_version, $mzXML_schema);
 
 
     ## If record exists, use attributes to create new record afterwards
@@ -1606,20 +1666,20 @@ sub insert_spectra_description_set
 
             $conversion_software_version = $csv;
 
-            $mxXML_schema = $ms;
+            $mzXML_schema = $ms;
 
         }
 
     } else
     { 
 
-        ## read experiment's pepXML file to get an mxXML file name
+        ## read experiment's pepXML file to get an mzXML file name
         my $singleMzXMLFileName = getAnMzXMLFileName( search_batch_dir_path => $search_batch_dir_path);
 
 
         #### read the mzXML file to get needed attributes... could make a content hndler for this, but only need
         ####  the first dozen or so lines of file, and the mzXML files are huge...
-        $infile = $singleMzXMLFileName;
+        my $infile = $singleMzXMLFileName;
 
         # $instrument_model_id         ==> <msManufacturer category="msManufacturer" value="ThermoFinnigan"/>
         #                                  <msModel category="msModel" value="LCQ Deca"/>
@@ -1627,7 +1687,7 @@ sub insert_spectra_description_set
         #                                       name="Thermo2mzXML"
         #                                       version="1"/>
         # $conversion_software_version ==>
-        # $mxXML_schema                ==>  xsi:schemaLocation="http://sashimi.sourceforge.net/schema_revision/mzXML_2.0 http://sashimi.sourceforge.net/schema_revision/mzXML_2.0/mzXML_idx_2.0.xsd">
+        # $mzXML_schema                ==>  xsi:schemaLocation="http://sashimi.sourceforge.net/schema_revision/mzXML_2.0 http://sashimi.sourceforge.net/schema_revision/mzXML_2.0/mzXML_idx_2.0.xsd">
 
         open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
 
@@ -1637,7 +1697,7 @@ sub insert_spectra_description_set
 
             if ($line =~ /.+schemaLocation=\".+(\/)(.+)(\/)(.+\.xsd)\">/ )
             {
-                $mxXML_schema = $2;
+                $mzXML_schema = $2;
             }
 
             if ($line =~ /.+\<msManufacturer\scategory=\".+\"\svalue=\"(.+)\"\/\>/)
@@ -1679,7 +1739,7 @@ sub insert_spectra_description_set
 
         close(INFILE) or die "Cannot close $infile";
 
-        if ( ($mxXML_schema eq "") || ($instrument_model_name eq "")
+        if ( ($mzXML_schema eq "") || ($instrument_model_name eq "")
         || ($conversion_software_name eq "") || 
         ($conversion_software_version eq "") )
         {
@@ -1698,7 +1758,7 @@ sub insert_spectra_description_set
         instrument_model_name  => $instrument_model_name,
         conversion_software_name => $conversion_software_name,
         conversion_software_version => $conversion_software_version,
-        mxXML_schema => $mzXML_schema
+        mzXML_schema => $mzXML_schema
     );
 
     my $spectra_description_set_id = $sbeams->updateOrInsertRow(
@@ -2678,8 +2738,8 @@ sub loadFromPAxmlFile {
     "need atlas_build_id ($!)";
 
 
-  ## hash with key = search_batch_id, value = sample_id
-  my %searchBatchID_sampleId_hash = %{ $sample_id_hash_ref };
+  ## hash with key = atlas_search_batch_id, value = sample_id
+  my %atlasSearchBatchID_sampleId_hash = %{ $sample_id_hash_ref };
 
   ## get hash with key=peptide_accession, value=peptide_id
   my %peptide_acc_id_hash = get_peptide_accession_id_hash();
@@ -2730,8 +2790,8 @@ sub loadFromPAxmlFile {
   $CONTENT_HANDLER->{counter} = 0;
   $CONTENT_HANDLER->{atlas_build_id} = $atlas_build_id;
 
-  $CONTENT_HANDLER->{searchBatchID_sampleId_hash} = 
-    \%searchBatchID_sampleId_hash;
+  $CONTENT_HANDLER->{atlasSearchBatchID_sampleId_hash} = 
+    \%atlasSearchBatchID_sampleId_hash;
   $CONTENT_HANDLER->{peptide_acc_id_hash} = \%peptide_acc_id_hash;
 
 
@@ -2773,15 +2833,24 @@ sub getAnMzXMLFileName
 
     open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
 
-    my $str1 = '\<inputfile name=\"';
-
     while (my $line = <INFILE>)
     {
         chomp($line);
 
-        if ($line =~ /^($str1)(.+)(\"\/\>)/)
+        if ($line =~ /^(\<inputfile name=\")(.+)(\/)(.+)(\/)(.+)(\")(\/\>)/)
         {
-            $msRunPepXMLFileName = $2;
+
+            my $exp_dir = $2;
+
+            my $tmp = $6;
+
+            if ($tmp =~ /(.+)\.xml/)
+            {
+
+                $tmp = $1;
+            }
+
+            $mzXMLFileName = "$exp_dir/$tmp" . ".mzXML";
 
             last;
         }
