@@ -93,3 +93,28 @@ Schema changes (see full definitions in driver tables):
 
 - Added the new tables to $SBEAMS/lib/perl/SBEAMS/PeptideAtlas/Tables.pm
 
+
+---------------
+
+2006-03-28
+
+Schema changes (see full definitions in driver tables):
+
+- Added to table 'spectra_description_set' column 'instrument_model_name'
+
+- Reran update driver tables
+
+- Populated the SQL scripts:
+
+    setenv SBEAMS fullPathToYourDevArea/sbeams
+    cd $SBEAMS/lib/scripts/Core
+
+    foreach dbtype ( mssql mysql pgsql )
+        ./generate_schema.pl --table_prop ../../conf/PeptideAtlas/PeptideAtlas_table_property.txt \
+        --table_col ../../conf/PeptideAtlas/PeptideAtlas_table_column.txt --schema_file \
+        ../../sql/PeptideAtlas/PeptideAtlas --destination_type $dbtype
+    end
+
+
+- Altered with sql the server table with ALTER TABLE statement
+
