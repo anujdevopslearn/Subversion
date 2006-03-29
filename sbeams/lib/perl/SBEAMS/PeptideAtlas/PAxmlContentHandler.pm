@@ -87,11 +87,11 @@ sub start_element {
   if ($localname eq 'peptide_instance') {
 
     #### Create a list of sample_ids
-    my @search_batch_ids = split(",",$attrs{search_batch_ids});
+    my @atlas_search_batch_ids = split(",",$attrs{atlas_search_batch_ids});
     my @sample_ids;
-    foreach my $search_batch_id ( @search_batch_ids ) {
+    foreach my $atlas_search_batch_id ( @atlas_search_batch_ids ) {
       push(@sample_ids,
-        $self->{searchBatchID_sampleId_hash}->{$search_batch_id});
+        $self->{atlasSearchBatchID_sampleId_hash}->{$atlas_search_batch_id});
     }
     my $sample_ids = join(",",@sample_ids);
 
@@ -135,7 +135,7 @@ sub start_element {
       sample_ids => $sample_ids,
       is_exon_spanning => '?',
       n_protein_mappings => -1,
-      search_batch_ids => $attrs{search_batch_ids},
+      search_batch_ids => $attrs{atlas_search_batch_ids},
       preceding_residue => $attrs{peptide_prev_aa},
       following_residue => $attrs{peptide_next_aa},
       original_protein_name => $attrs{original_protein_name},
@@ -157,7 +157,7 @@ sub start_element {
     #### Create peptide_instance_search_batch records
     &main::insert_peptide_instance_search_batches(
       peptide_instance_id => $peptide_instance_id,
-      search_batch_ids => $attrs{search_batch_ids},
+      search_batch_ids => $attrs{atlas_search_batch_ids},
     );
 
 
@@ -169,11 +169,11 @@ sub start_element {
   if ($localname eq 'modified_peptide_instance') {
 
     #### Create a list of sample_ids
-    my @search_batch_ids = split(",",$attrs{search_batch_ids});
+    my @atlas_search_batch_ids = split(",",$attrs{atlas_search_batch_ids});
     my @sample_ids;
-    foreach my $search_batch_id ( @search_batch_ids ) {
+    foreach my $atlas_search_batch_id ( @atlas_search_batch_ids ) {
       push(@sample_ids,
-        $self->{searchBatchID_sampleId_hash}->{$search_batch_id});
+        $self->{atlasSearchBatchID_sampleId_hash}->{$atlas_search_batch_id});
     }
     my $sample_ids = join(",",@sample_ids);
 
@@ -195,7 +195,7 @@ sub start_element {
       n_sibling_peptides => $attrs{n_sibling_peptides},
       best_adjusted_probability => $attrs{best_adjusted_probability},
       sample_ids => $sample_ids,
-      search_batch_ids => $attrs{search_batch_ids},
+      search_batch_ids => $attrs{atlas_search_batch_ids},
     );
 
     my $modified_peptide_instance_id = &main::insert_modified_peptide_instance(
@@ -213,7 +213,7 @@ sub start_element {
     #### Create peptide_instance_search_batch records
     &main::insert_modified_peptide_instance_search_batches(
       modified_peptide_instance_id => $modified_peptide_instance_id,
-      search_batch_ids => $attrs{search_batch_ids},
+      search_batch_ids => $attrs{atlas_search_batch_ids},
     );
 
   }
