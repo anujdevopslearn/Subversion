@@ -307,9 +307,9 @@ AT_BrowseBiosequence	4	molecular_function_constraint	Molecular Function Constrai
 AT_BrowseBiosequence	5	biological_process_constraint	Biological Process Constraint									N	text	40		Y	Y	N	Constraint for the GO Biological Process. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 AT_BrowseBiosequence	6	cellular_component_constraint	Cellular Component Constraint									N	text	40		Y	Y	N	Constraint for the GO Cellular Component. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 AT_BrowseBiosequence	7	protein_domain_constraint	Protein Domain Constraint									N	text	40		Y	Y	N	Constraint for the InterPro Protein Domain. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-AT_BrowseBiosequence	8	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	Y	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: "n.n", "> n.n", "< n.n", "between n.n and n.n", "n.n +- n.n""	
+AT_BrowseBiosequence	8	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	Y	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""""	
 AT_BrowseBiosequence	9	transmembrane_class_constraint	Transmembrane Class Constraint									N	multioptionlist	3		Y	Y	N	Constraint for the transmembrane class as annotated by TMHMM and SignalP	"SELECT DISTINCT transmembrane_class,transmembrane_class FROM $TBAT_BIOSEQUENCE_PROPERTY_SET ORDER BY transmembrane_class"
-AT_BrowseBiosequence	10	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	Y	N	"Constraint for the number of transmembrane regions (based on TMHMM and SignalP calculation by rbonneau).  Allowed syntax: "n", "> n", "< n", "between n and n", "n +- n""	
+AT_BrowseBiosequence	10	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	Y	N	"Constraint for the number of transmembrane regions (based on TMHMM and SignalP calculation by rbonneau).  Allowed syntax: n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""""	
 AT_BrowseBiosequence	11	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 AT_BrowseBiosequence	12	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 AT_BrowseBiosequence	13	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"
@@ -322,7 +322,7 @@ AT_GetPeptides	4	biosequence_gene_name_constraint	Gene Name Constraint									N
 AT_GetPeptides	5	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the Protein description (description string from input FASTA file). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.	
 AT_GetPeptides	6	peptide_name_constraint	Peptide Name Constraint									N	text	40		Y	Y	N	Constraint for the Peptide Name (i.e PApxxxxxxxx). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.	
 AT_GetPeptides	7	peptide_sequence_constraint	Peptide Sequence Constraint									N	text	40		Y	Y	N	Constraint for the Peptide Sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.	
-AT_GetPeptides	8	best_probability_constraint	Best Probability Constraint									N	text	15		Y	Y	N	"Constraint for the best observed probability for a peptide.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", "between n.n and n.n"", ""n.n +- n.n"""	
+AT_GetPeptides	8	best_probability_constraint	Best Probability Constraint									N	text	15		Y	Y	N	"Constraint for the best observed probability for a peptide.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", between n.n and n.n"""", """"n.n +- n.n"""""""	
 AT_GetPeptides	9	n_observations_constraint	Number of Observations Constraint									N	text	10		Y	Y	N	"Constraint for the number of observations for a peptide.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
 AT_GetPeptides	10	n_samples_constraint	Number of Different Samples Constraint									N	text	15		Y	Y	N	"Constraint for the number of different samples in which the peptide was observed.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
 AT_GetPeptides	11	empirical_proteotypic_constraint	Empirical Proteotypic Score Constraint									N	text	10		Y	Y	N	"Constraint for the empirical proteotypic score for a peptide.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
@@ -338,13 +338,14 @@ AT_spectra_description_set	1	spectra_description_set_id	Spectra Description Set 
 AT_spectra_description_set	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id					N	N		Associated Atlas Build		
 AT_spectra_description_set	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
 AT_spectra_description_set	4	atlas_search_batch_id	Atlas Search Batch ID	int	4	0	N		N	AT_atlas_search_batch	atlas_search_batch_id					N	N		Associated Atlas Search Batch (which can link to a Proteomics Search Batch)		
-AT_spectra_description_set	5	instrument_model_id	Instrument Model ID	int	4	0	Y		N	PR_instrument	instrument_id	N	optionlist			Y	Y	N	Instrument (mass spectrometer) manufacturer model name	"SELECT instrument_id,instrument_name FROM $TBPR_INSTRUMENT WHERE record_status != 'D' ORDER BY instrument_name"	
-AT_spectra_description_set	6	conversion_software_name	Conversion Software Name	varchar	255	0	N		N							N	N		Name of software used in conversion to mzXML		
-AT_spectra_description_set	7	conversion_software_version	Conversion Software Version	real	4	0	N		N							N	N		Version of software used in conversion to mzXML		
-AT_spectra_description_set	8	mzXML_schema	mzXML Schema	varchar	1024	0	N		N							N	N		mzXML schema		
-AT_spectra_description_set	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_spectra_description_set	10	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_spectra_description_set	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_spectra_description_set	12	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_spectra_description_set	13	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_spectra_description_set	14	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_spectra_description_set	5	instrument_model_id	Instrument Model ID	int	4	0	Y		N	PR_instrument	instrument_id	N	optionlist			Y	Y	N	Instrument (mass spectrometer) manufacturer model id	"SELECT instrument_id,instrument_name FROM $TBPR_INSTRUMENT WHERE record_status != 'D' ORDER BY instrument_name"	
+AT_spectra_description_set	6	instrument_model_name	Instrument Model Name	varchar	100	0	Y		N			N				Y	Y	N	Instrument (mass spectrometer) manufacturer model name		
+AT_spectra_description_set	7	conversion_software_name	Conversion Software Name	varchar	255	0	N		N							N	N		Name of software used in conversion to mzXML		
+AT_spectra_description_set	8	conversion_software_version	Conversion Software Version	real	4	0	N		N							N	N		Version of software used in conversion to mzXML		
+AT_spectra_description_set	9	mzXML_schema	mzXML Schema	varchar	1024	0	N		N							N	N		mzXML schema		
+AT_spectra_description_set	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_spectra_description_set	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_spectra_description_set	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_spectra_description_set	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_spectra_description_set	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_spectra_description_set	15	record_status	Record Status	char	1	0	N	N	N							N	N				
