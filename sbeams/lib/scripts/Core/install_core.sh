@@ -12,38 +12,23 @@
 
 # Will set up a main sbeams and a dev1 dev branch.
 
-# Requires sudo access; not a surprise since we need to chown and whatnot.
-
-
 if [ "$SBEAMS" == "" ]
 then
   echo "Please set SBEAMS environment variable"
   exit
 fi
-arg=""
-for i in $* 
-do
-  arg=$i
-done
-  
 
-if [ ! -d "$SBEAMS/sbeams" ]
+if [ ! -d "$SBEAMS/lib" ]
 then
-  echo "You must first install the codebase";
-  if [ "$arg" == "download" ]
-  then
-    wget http://www.sbeams.org/download/sbeams-0.22.0.tar.gz
-    tar xvfz sbeams-0.22.0.tar.gz
-  else
-    exit;
-  fi
+  echo "Missing target directories, please check your installation";
+  exit;
 fi
 
 echo Clean up...
 cd $SBEAMS
-sudo rm -Rf sbeamscommon/ dev1/
+rm -Rf sbeamscommon/ dev1/
 cd sbeams
-sudo rm -f tmp var doc/includes lib/conf/Core/AvailableModules.conf lib/conf/SBEAMS.conf
+rm -f tmp var doc/includes lib/conf/Core/AvailableModules.conf lib/conf/SBEAMS.conf
 find lib/refdata/Microarray/*data* -exec rm -Rf {} \;
 
 
@@ -55,8 +40,8 @@ cd sbeamscommon
 # Set up tmp spaces
 mkdir tmp tmp/images
 mkdir images images/tmp
-sudo chmod a+rw images/tmp
-sudo chmod -R a+rw tmp
+chmod a+rw images/tmp
+chmod -R a+rw tmp
 
 # Set up shared conf area
 mkdir lib lib/conf lib/conf/Core
@@ -72,10 +57,10 @@ fi
 # Set up shared var
 mkdir var var/resultsets var/logs var/upload var/sessions
 touch var/logs/debug.log var/logs/info.log var/logs/warn.log var/logs/error.log
-sudo chmod -R g+w var
+chmod -R g+w var
 cd $SBEAMS 
-sudo chmod -R g+w sbeamscommon/lib/conf
-sudo chown -R apache:sbeams sbeamscommon
+chmod -R g+w sbeamscommon/lib/conf
+chgrp -R sbeams sbeamscommon
 
 # Use the common stuff
 cd sbeams
