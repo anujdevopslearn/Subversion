@@ -2,7 +2,6 @@
 
 # Safety catch, must be removed prior to use
 echo "Do not run vs. production database!";
-exit;
 
 # Simple shell script which runs through a series of steps for core,
 # biolink, and any other modules specified on the command line.
@@ -22,8 +21,20 @@ exit;
 user='database'
 pass='password'
 db='mysql'
-#db='pgsql'
-#db='mssql'
+
+# Allow these to be set via enviroment variables, which have precedence
+if [ "$DBUSER" != "" ]
+then
+  user="$DBUSER";
+fi
+if [ "$DBPASS" != "" ]
+then
+  pass="$DBPASS";
+fi
+if [ "$DBTYPE" != "" ]
+then
+  db="$DBTYPE";
+fi
 
 if [ "$SBEAMS" == "" ]
 then
@@ -38,6 +49,8 @@ then
 fi
 
 
+echo "Are you sure you want to continue?  10 seconds to press cntl-C and stop."
+sleep 10
 
 #for mod in Core BioLink $*
 #do
