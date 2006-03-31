@@ -223,7 +223,8 @@ sub extractInstanceParams {
 
 #### Otherwise, we're probably not coming through HTTP, so just set it
     } else {
-	$SERVER_BASE_DIR = "http://$HOSTNAME";
+      $HOSTNAME = '' if !defined $HOSTNAME;
+      $SERVER_BASE_DIR = "http://$HOSTNAME";
     }
 
 #### Set some additional settings which depend on version-specific parameters

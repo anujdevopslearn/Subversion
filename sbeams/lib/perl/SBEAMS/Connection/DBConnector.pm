@@ -187,10 +187,12 @@ KEY: $ENC_KEY
     } else {
       $this_dbh = DBI->connect($DB_DRIVER,$DB_USER,$DB_PASS,\%error_attr);
     }
+    $DBADMIN ||= '';
+    my $error = $DBI::errstr || '';
     if ( !$this_dbh ) {
       my $err =<<"      END_ERR";
 WARNING: Unable to connect to database, please contact $DBADMIN:
-$DBI::errstr
+$error
       END_ERR
     $log->warn( $err );
     die ( $err );
