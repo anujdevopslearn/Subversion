@@ -157,7 +157,7 @@ sub start_element {
     #### Create peptide_instance_search_batch records
     &main::insert_peptide_instance_search_batches(
       peptide_instance_id => $peptide_instance_id,
-      search_batch_ids => $attrs{atlas_search_batch_ids},
+      atlas_search_batch_ids => $attrs{atlas_search_batch_ids},
     );
 
 
@@ -184,7 +184,7 @@ sub start_element {
 	  "content handler.\n");
 
 
-    #### Create the peptide_instance record itself
+    #### Create the modified_peptide_instance record itself
     my %rowdata = (
       peptide_instance_id => $peptide_instance_id,
       modified_peptide_sequence => $attrs{peptide_string},
@@ -203,17 +203,17 @@ sub start_element {
     );
 
 
-    #### Create peptide_instance_sample records
+    #### Create modified_peptide_instance_sample records
     &main::insert_modified_peptide_instance_samples(
       modified_peptide_instance_id => $modified_peptide_instance_id,
       sample_ids => $sample_ids,
     );
 
 
-    #### Create peptide_instance_search_batch records
+    #### Create modified_peptide_instance_search_batch records
     &main::insert_modified_peptide_instance_search_batches(
       modified_peptide_instance_id => $modified_peptide_instance_id,
-      search_batch_ids => $attrs{atlas_search_batch_ids},
+      atlas_search_batch_ids => $attrs{atlas_search_batch_ids},
     );
 
   }
