@@ -86,41 +86,49 @@ sub start_element {
   #### If this is the peptide_instance, store it
   if ($localname eq 'peptide_instance') {
 
-    #### Create a list of sample_ids
-    my @atlas_search_batch_ids = split(",",$attrs{atlas_search_batch_ids});
+    #### Create a list of sample_ids, using proteomics sbid
+    my @search_batch_ids = split(",",$attrs{search_batch_ids});
+
     my @sample_ids;
-    foreach my $atlas_search_batch_id ( @atlas_search_batch_ids ) {
-      push(@sample_ids,
-        $self->{atlasSearchBatchID_sampleId_hash}->{$atlas_search_batch_id});
+
+    my @atlas_search_batch_ids;
+
+    foreach my $search_batch_id ( @search_batch_ids ) 
+    {
+        push(@sample_ids,
+            $self->{sbid_asbid_sid_hash}->{$search_batch_id}->{sample_id});
+        push(@atlas_search_batch_ids,
+            $self->{sbid_asbid_sid_hash}->{$search_batch_id}->{atlas_search_batch_id});
     }
+
     my $sample_ids = join(",",@sample_ids);
 
+    $attrs{atlas_search_batch_ids} = join(",",@atlas_search_batch_ids);
 
     my %peptide_acc_id_hash = %{$self->{peptide_acc_id_hash}};
 
     #### If this peptide_id doesn't yet exist in the peptide table, add it
     if (!exists $peptide_acc_id_hash{$attrs{peptide_accession}}) {
 
-      my %rowdata = (
-        peptide_accession => $attrs{peptide_accession},
-        peptide_sequence => $attrs{peptide_sequence},
-        peptide_length => length($attrs{peptide_sequence}),
-      );
+        my %rowdata = (
+            peptide_accession => $attrs{peptide_accession},
+            peptide_sequence => $attrs{peptide_sequence},
+            peptide_length => length($attrs{peptide_sequence}),
+        );
 
-      my $peptide_id = &main::insert_peptide(
-        rowdata_ref=>\%rowdata,
-      );
+        my $peptide_id = &main::insert_peptide(
+            rowdata_ref=>\%rowdata,
+        );
 
 
-      ## add new peptide_id to hash:
-      $peptide_acc_id_hash{$attrs{peptide_accession}} = $peptide_id;
+        ## add new peptide_id to hash:
+        $peptide_acc_id_hash{$attrs{peptide_accession}} = $peptide_id;
 
     }
 
 
     #### Get the peptide_id for this peptide
     my $peptide_id = $peptide_acc_id_hash{$attrs{peptide_accession}};
-
 
     #### Create the peptide_instance record itself
     my %rowdata = (
@@ -169,13 +177,23 @@ sub start_element {
   if ($localname eq 'modified_peptide_instance') {
 
     #### Create a list of sample_ids
-    my @atlas_search_batch_ids = split(",",$attrs{atlas_search_batch_ids});
+    my @search_batch_ids = split(",",$attrs{search_batch_ids});
+
     my @sample_ids;
-    foreach my $atlas_search_batch_id ( @atlas_search_batch_ids ) {
-      push(@sample_ids,
-        $self->{atlasSearchBatchID_sampleId_hash}->{$atlas_search_batch_id});
+
+    my @atlas_search_batch_ids;
+
+    foreach my $search_batch_id ( @search_batch_ids ) 
+    {
+        push(@sample_ids,
+            $self->{sbid_asbid_sid_hash}->{$search_batch_id}->{sample_id});
+        push(@atlas_search_batch_ids,
+            $self->{sbid_asbid_sid_hash}->{$search_batch_id}->{atlas_search_batch_id});
     }
+
     my $sample_ids = join(",",@sample_ids);
+
+    $attrs{atlas_search_batch_ids} = join(",",@atlas_search_batch_ids);
 
 
     #### Get the peptide_instance_id for this modified_peptide
