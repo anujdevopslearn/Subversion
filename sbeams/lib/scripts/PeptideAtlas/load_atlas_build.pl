@@ -518,44 +518,40 @@ sub buildAtlas {
         infile => "$source_dir../Experiments.list" );
 
 
-    ## get hash with key = atlas_search_batch_id, value = sample_id
-    ## and create [*sample] records and [*search_batch] records if they don't already exist
-    my %sample_id_hash = get_sample_id_hash(
+#   ## get hash with key = atlas_search_batch_id, value = sample_id
+#   ## and create [*sample] records and [*search_batch] records if they don't already exist
+#   my %sample_id_hash = get_sample_id_hash(
+#       atlas_build_id => $atlas_build_id,
+#       loading_sbid_searchdir_hash_ref => \%loading_sbid_searchdir_hash,   
+#       source_dir => $source_dir, 
+#   );
+
+    ## the content handler for loadFromPAxmlFile is using search_batch_id's 
+    ## which are the proteomics search_batch_id's because that's what's 
+    ## stored in the PAxml, so we need to send it
+    ## a hash to look-up atlas_search_batch_id's using keys search_batch_id
+    ## and it needs sample_ids
+    my %proteomicsSBID_hash =  get_search_batch_and_sample_id_hash(
         atlas_build_id => $atlas_build_id,
-        loading_sbid_searchdir_hash_ref => \%loading_sbid_searchdir_hash,   
-        source_dir => $source_dir, 
+        loading_sbid_searchdir_hash_ref => \%loading_sbid_searchdir_hash,
+        source_dir => $source_dir,
     );
 
-##xxxxxxxxxxxxxxxxxxxxxxxx  stopped editing here
-print_hash( hash_ref => \%sample_id_hash);
-die;
+        
+    #### Load from .PAxml file
+    my $PAxmlfile = $source_dir . "APD_" . $organism_abbrev . "_all.PAxml";
 
-    #### If there is a .PAxml file, load data from that
-    my $PAxmlfile = $source_dir . "/APD_" . $organism_abbrev . "_all.PAxml";
-    my $TSVfile = $source_dir . "/APD_" . $organism_abbrev . "_all.tsv";
+    if (-e $PAxmlfile) 
+    {
+        loadFromPAxmlFile(
+            infile => $PAxmlfile,
+            sbid_asbid_sid_hash_ref => \%proteomicsSBID_hash,
+            atlas_build_id => $ATLAS_BUILD_ID,
+        );
 
-    if (-e $PAxmlfile) {
-      loadFromPAxmlFile(
-        infile => $PAxmlfile,
-        sample_id_hash_ref => \%sample_id_hash,
-        atlas_build_id => $ATLAS_BUILD_ID,
-      );
-
-    #### Otherwise, see if the old-style TSV file exists and load from that
-    } elsif (-e $TSVfile) {
-
-      ## read APD file, write peptide records,
-      ## initialize peptide_instance, and peptide_instance_sample
-      readAPD_writeRecords(
-        infile => $TSVfile,
-        sample_id_hash_ref => \%sample_id_hash,
-        atlas_build_id => $ATLAS_BUILD_ID,
-      );
-
-    #### Or if neither was found, we have to stop here
-    } else {
-      die("ERROR: Unable to find either '$PAxmlfile' or '$TSVfile' to ".
-	  "load data from.");
+    } else 
+    {
+        die("ERROR: Unable to find '$PAxmlfile' to load data from.");
     }
 
 
@@ -565,7 +561,6 @@ die;
     #### Update the build data already loaded with genomic coordinates
     readCoords_updateRecords_calcAttributes(
         infile => $mapping_file,
-        sample_id_hash_ref => \%sample_id_hash,
         atlas_build_id => $ATLAS_BUILD_ID,
         biosequence_set_id => $biosequence_set_id,
         organism_abbrev => $organism_abbrev
@@ -577,17 +572,20 @@ die;
 
 
 ###############################################################################
-# get_sample_id_hash -- get hash with key= atlas_search_batch_id, value=sample_id
-# creates relevant sample and search_batch records if they don't exist yet
+# get_search_batch_and_sample_id_hash --  get complex hash, and create all
+# sample and search_batch records in the process
+#
 # @param atlas_build_id
 # @param search_batch_hash_ref reference to hash with key = search_batch_id
-# @return hash with key = search_batch_id, value=sample_id
+# @return complex hash accessed as:
+#     $hash{$proteomics_search_batch_id}->{atlas_search_batch_id}
+#     $hash{$proteomics_search_batch_id}->{sample_id}
 ###############################################################################
-sub get_sample_id_hash 
+sub get_search_batch_and_sample_id_hash
 {
-    my $METHOD='get_sample_id_hash';
+    my $METHOD='get_search_batch_and_sample_id_hash';
 
-    my %loaded_asbid_sid_hash;
+    my %loaded_sbid_asbid_sid_hash;
 
     my %args = @_;
 
@@ -595,8 +593,8 @@ sub get_sample_id_hash
 
     my $source_dir = $args{source_dir} or die(" need source_dir ($!)");
 
-    my $loading_sbid_searchdir_hash_ref = $args{loading_sbid_searchdir_hash_ref} or
-       die "need loading_sbid_searchdir_hash_ref ($)";
+    my $loading_sbid_searchdir_hash_ref = $args{loading_sbid_searchdir_hash_ref} 
+       or die "need loading_sbid_searchdir_hash_ref ($)";
 
     ## hash with key = search_batch_id, value = $search_dir
     my %loading_sbid_searchdir_hash = %{$loading_sbid_searchdir_hash_ref};
@@ -616,6 +614,7 @@ sub get_sample_id_hash
     ##   $existing_sb_hash{$sbid}->{proteomics_experiment_tag}
     my %existing_sb_hash = get_sb_hash(
         search_batch_id_list => $loading_sbid_list );
+
 
     #### Get complex hash of existing search_batches and their search dirs
     ## if the atlas_build_search_batch record is filled
@@ -728,8 +727,18 @@ sub get_sample_id_hash
 
         }
 
-        $loaded_asbid_sid_hash{ $existing_absb_hash{$sbid}->{atlas_search_batch_id} } = 
-            $existing_samples_hash{$exp_tag}->{sample_id};
+        my $proteomics_sbid = $existing_sb_hash{$sbid}->{proteomics_search_batch_id};
+
+        my $atlas_sbid = $existing_absb_hash{$sbid}->{atlas_search_batch_id};
+
+        my $atlas_sample_id = $existing_samples_hash{$exp_tag}->{sample_id};
+
+        $loaded_sbid_asbid_sid_hash{$proteomics_sbid}->{atlas_search_batch_id}
+            = $atlas_sbid;
+
+        $loaded_sbid_asbid_sid_hash{$proteomics_sbid}->{sample_id} 
+            = $atlas_sample_id;
+
 
         ## create a [spectra_description_set] record
         insert_spectra_description_set( 
@@ -755,8 +764,10 @@ sub get_sample_id_hash
         );
 
     }
+##### xxxxxxx need to check this section carefully...worried that
+####  mistakes may damage existing records...
 
-    return %loaded_asbid_sid_hash;
+    return %loaded_sbid_asbid_sid_hash;
 
 }
 
@@ -855,7 +866,7 @@ sub get_sb_hash
 
         unless (-e $path)
         {
-            print "[WARNING] cannot locate $path for " .
+            print "[WARN] cannot locate $path for " .
             "atlas_search_batch w/ id=$asbid ";
         }
 
@@ -876,6 +887,7 @@ sub get_sb_hash
 #######################################################################
 # getProteomicsExpTag -- get proteomics experiment tag, given search
 # batch id
+#
 # @param search_batch_id
 # @return exp_tag
 #######################################################################
@@ -890,7 +902,7 @@ sub getProteomicsExpTag
     my $exp_tag;
     
     my $sql = qq~
-        SELECT PE.experiment_tag
+        SELECT PE.experiment_tag, SB.search_batch_id
         FROM $TBPR_SEARCH_BATCH SB 
         JOIN $TBPR_PROTEOMICS_EXPERIMENT PE
         ON (PE.experiment_id = SB.experiment_id)
@@ -904,7 +916,11 @@ sub getProteomicsExpTag
 
     foreach my $row (@rows)
     {
-        $exp_tag = @{$row};
+        my ($et, $sbid) = @{$row};
+
+        $exp_tag = $et;
+
+#       print "$et, $sbid\n";
     }
 
     return $exp_tag;
@@ -964,7 +980,7 @@ sub get_absb_hash
 
         unless (-e $path)
         {
-            print "[WARNING] cannot locate $path for " .
+            print "[WARN] cannot locate $path for " .
             "atlas_build_search_batch w/ id=$absbid ";
         }
 
@@ -1346,14 +1362,14 @@ sub insert_sample
 
     ## get experiment_tag, experiment_name, $TB_ORGANISM.organism_name
     my $sql = qq~
-        SELECT distinct PE.experiment_name
+        SELECT distinct SB.search_batch_id, PE.experiment_name
         FROM $TBPR_PROTEOMICS_EXPERIMENT PE
         JOIN $TBPR_SEARCH_BATCH SB
         ON ( PE.experiment_id = SB.experiment_id)
         WHERE SB.search_batch_id = '$sb_id'
-        AND PE.experiment_tag = '$experiment_tag'
         AND PE.record_status != 'D'
     ~;
+#       AND PE.experiment_tag = '$experiment_tag'
 
     my @rows = $sbeams->selectSeveralColumns($sql) or die
         "Could not find proteomics experiment record for ".
@@ -1361,7 +1377,10 @@ sub insert_sample
 
     foreach my $row (@rows)
     {
-        $experiment_name = @{$row};
+        ## xxxxxxx might want to check that PE.experiment_tag = $experiment_tag too
+        my ($sbid, $exp_name) = @{$row};
+
+        $experiment_name = $exp_name;
     }
 
 
@@ -1455,9 +1474,9 @@ sub getInfoFromExperimentsList
 
 
 #######################################################################
-#  get_peptide_accession_instance_id_hash -- get hash
-#      key = peptide accession
-#      value = peptide_instance_id
+# get_peptide_accession_instance_id_hash -- get hash
+#     key = peptide accession
+#     value = peptide_instance_id
 #######################################################################
 sub get_peptide_accession_instance_id_hash {
 
@@ -1695,7 +1714,15 @@ sub insert_spectra_description_set
         {
             chomp($line);
 
-            if ($line =~ /.+schemaLocation=\".+(\/)(.+)(\/)(.+\.xsd)\">/ )
+            ## recent schema:
+            if ($line =~ /.+schemaLocation=\".+\/(.+)\/schema_revision\/(.+)\/(.+\.xsd)\">/)
+            {
+                $mzXML_schema = $2;
+            }
+
+            ## former MsXML schema:
+            ## xsi:schemaLocation="http://sashimi.sourceforge.net/schema/ http://sashimi.sourceforge.net/schema/MsXML.xsd
+            if ($line =~ /.+schemaLocation=\".+\/(.+)\/schema\/(.+)\.xsd\"/ )
             {
                 $mzXML_schema = $2;
             }
@@ -1707,6 +1734,20 @@ sub insert_spectra_description_set
             if ($line =~ /.+\<msModel\scategory=\".+\"\svalue=\"(.+)\"\/\>/)
             {
                 $instrument_model_name = $instrument_model_name . " $1";
+            }
+
+            ## former MsXML schema:
+            if ($line =~ /.+\<instrument\smanufacturer=\"(.+)\"/ )
+            {
+                $instrument_model_name = $1;
+
+                ## read the next line, and get model name
+                $line = <INFILE>;
+                chomp($line);
+                $line =~ /.+\<instrument\smanufacturer=\"(.+)\"/;
+
+                $instrument_model_name = $instrument_model_name . " $1";
+
             }
 
             if ($line =~ /.+\<software\stype=\"conversion(.+)/)
@@ -1743,7 +1784,7 @@ sub insert_spectra_description_set
         || ($conversion_software_name eq "") || 
         ($conversion_software_version eq "") )
         {
-            print "[WARN] please edit parser to pick up spectra attributes ($!)";
+            print "[WARN] please edit parser to pick up spectra attributes for $infile ($!)";
         }
 
     }
@@ -1808,304 +1849,15 @@ sub getNSpecFromProteomics
 }
 
 
-#######################################################################
-# readAPD_writeRecords - reads APD file, writes peptide records,
-#   initialize peptide_instance, and peptide_instance_sample
-# @param infile
-# @param sample_id_hash_ref
-#######################################################################
-sub readAPD_writeRecords {
-
-    my %args = @_;
-
-    my $infile = $args{'infile'} or die "need infile ($!)";
-
-    my $sample_id_hash_ref = $args{'sample_id_hash_ref'} or die
-        "need sample_id_hash reference ($!)";
-
-    my $atlas_build_id = $args{'atlas_build_id'} or die
-        "need atlas_build_id ($!)";
-
-    ## hash with key = search_batch_id, value = sample_id
-    my %searchBatchID_sampleId_hash = %{ $sample_id_hash_ref };
-
-
-    ## get hash with key=peptide_accession, value=peptide_id
-    my %peptide_acc_id_hash = get_peptide_accession_id_hash();
-        
-
-    #### READ  {organism}_all.tsv ##############
-    print "\nReading $infile\n";
-    open(INFILE, $infile) or die "ERROR: Unable to open for reading $infile ($!)";
- 
-    my $line;
-
-    chomp($line = <INFILE>);
-
-    my @column_names = split(/\t/,$line);
-
-    my $i = 0;
-
-    my %column_indices;
-
-    foreach my $column_name (@column_names) {
-
-        $column_indices{$column_name} = $i;
-
-        $i++;
-
-    }
- 
-    my ($pep_acc, $pep_seq, $pep_length, $best_prob, $n_obs, $search_batch_id_list);
- 
-    #### read the rest of the file  APD_{organism}_all.tsv and store in hashes with
-    ##   keys of peptide_accession 
-    while ($line = <INFILE>) {
-
-        chomp($line);
-
-        my @columns = split(/\t/,$line);
- 
-        $pep_acc = $columns[$column_indices{peptide_identifier_str}];
-
-        $pep_seq = $columns[$column_indices{peptide}];
-
-        $pep_length = length($pep_seq);
-
-        $best_prob = $columns[$column_indices{maximum_probability}];
-
-        $best_prob =~ s/\s+//g; ## remove empty spaces
-
-        $n_obs = $columns[$column_indices{n_peptides}];
-
-        $search_batch_id_list = $columns[$column_indices{observed_experiment_list}];
-
-        $search_batch_id_list =~ s/\"//g;  ## removing quotes " from string
-
-        my @search_batch = split(",", $search_batch_id_list);
-        
-
-        ## create string of sample_ids:
-        my $sample_id_list = $searchBatchID_sampleId_hash{$search_batch[0]};
-
-        for (my $i=1; $i <= $#search_batch; $i++)
-        {
-
-            $sample_id_list = $sample_id_list . "," .
-                $searchBatchID_sampleId_hash{$search_batch[$i]} ;
-
-        }
-
-
-        #### If this peptide_id doesn't yet exist in the database table 
-        #### "peptide", add it
-        if (!exists $peptide_acc_id_hash{$pep_acc})
-        {
-
-            ## insert into peptide  table
-            my %rowdata = (             ##  peptide     table attributes:
-                peptide_accession => $pep_acc,
-                peptide_sequence => $pep_seq,
-                peptide_length => $pep_length,
-            );
- 
-            my $peptide_id = $sbeams->updateOrInsertRow(
-                insert=>1,
-                table_name=>$TBAT_PEPTIDE,
-                rowdata_ref=>\%rowdata,
-                PK => 'peptide_id',
-                return_PK => 1,
-                verbose=>$VERBOSE,
-                testonly=>$TESTONLY,
-            );
- 
-
-            ## include new peptide_id in hash:
-            $peptide_acc_id_hash{$pep_acc} = $peptide_id;
-
-        } 
-
-        my $peptide_id = $peptide_acc_id_hash{$pep_acc};
-
-        ## Create/initialize peptide_instance 
-
-        ## (setting n_genome_locations = 0, n_protein_mappings=0, 
-        ## is_exon_spanning='N'---> they're updated in coordinate 
-        ## mapping section)
-        my %rowdata = (   ##   peptide_instance    table attributes
-            atlas_build_id => $atlas_build_id,
-            peptide_id => $peptide_id,
-            best_probability => $best_prob,
-            n_observations => $n_obs,
-            n_genome_locations => 0,
-            sample_ids => $sample_id_list,
-            is_exon_spanning => 'N',
-            n_protein_mappings => 0,
-            search_batch_ids => $search_batch_id_list,
-        );
-
-
-        my $peptide_instance_id = $sbeams->updateOrInsertRow(
-            insert=>1,
-            table_name=>$TBAT_PEPTIDE_INSTANCE,
-            rowdata_ref=>\%rowdata,
-            PK => 'peptide_instance_id',
-            return_PK => 1,
-            verbose=>$VERBOSE,
-            testonly=>$TESTONLY,
-        );
-
-
-        ## Create a peptide_instance_sample record for each sample
-        for (my $i=0; $i <= $#search_batch; $i++)
-        {
-
-            my $sample_id =  $searchBatchID_sampleId_hash{$search_batch[$i]} ;
-
-            ## initialize peptide_instance and peptide_instance_sample:
-            my %rowdata = (   ##   peptide_instance_sample    table attributes
-                peptide_instance_id => $peptide_instance_id,
-                sample_id => $sample_id,
-            );
-
-            my $success = $sbeams->updateOrInsertRow(
-                insert=>1,
-                table_name=>$TBAT_PEPTIDE_INSTANCE_SAMPLE,
-                rowdata_ref=>\%rowdata,
-                PK => 'peptide_instance_sample_id',
-                add_audit_parameters => 1,
-                verbose=>$VERBOSE,
-                testonly=>$TESTONLY,
-            );
-
-        }
-
-    } # end while INFILE
-
-    close(INFILE) or die "Cannot close $infile ($!)";
-
-
-}  ## end readAPD_writeRecords
-
-
-
-#######################################################################
-#  testAPDVars  -- tests that APD variables were filled
-#######################################################################
-sub testAPDVars {
-
-   my %args = @_;
-
-   my $pep_acc_ref = $args{'pep_acc_ref'};
-
-   my $pep_seq_ref = $args{'pep_seq_ref'};
-
-   my $pep_length_ref = $args{'pep_length_ref'};
-
-   my $best_prob_ref = $args{'best_prob_ref'};
-
-   my $n_obs_ref = $args{'n_obs_ref'};
-
-   my $sb_ids_ref = $args{'sb_ids_ref'};
-
-   my $sample_ids_ref = $args{'sample_ids_ref'};
-
-   my $pep_id_ref = $args{'pep_id_ref'};
-
-   my $pep_ref = $args{'pep_ref'};
-
-
-   my %peptide_accession = %{$pep_acc_ref};
-   my %peptide_sequence = %{$pep_seq_ref};
-   my %peptide_length = %{$pep_length_ref};
-   my %best_probability = %{$best_prob_ref};
-   my %n_observations = %{$n_obs_ref};
-   my %search_batch_ids = %{$sb_ids_ref};
-   my %sample_ids = %{$sample_ids_ref};
-   my %peptide_id = %{$pep_id_ref};
-   my %peptides = %{$pep_ref};
-
-
-   my $n = keys %peptide_accession;
-
-   print "\nChecking hash values after read of APD file.  $n entries\n";
-
-   foreach my $tmp_pep_acc (keys %peptide_accession) {
-
-       my $pep_acc = $peptide_accession{$tmp_pep_acc};
-       my $pep_seq = $peptide_sequence{$tmp_pep_acc};
-       my $pep_length = $peptide_length{$tmp_pep_acc};
-       my $best_prob = $best_probability{$tmp_pep_acc};
-       my $n_obs = $n_observations{$tmp_pep_acc};
-       my $sb_ids=$search_batch_ids{$tmp_pep_acc};
-       my $pep_id = $peptide_id{$tmp_pep_acc};
-
-       my $str = "    $peptide_accession{$tmp_pep_acc}\t".
-               "$peptide_sequence{$tmp_pep_acc}\t".
-               "$peptide_length{$tmp_pep_acc}\t".
-               "$best_probability{$tmp_pep_acc}\t".
-               "$n_observations{$tmp_pep_acc}\t".
-               "$search_batch_ids{$tmp_pep_acc}\t".
-               "$sample_ids{$tmp_pep_acc}\t".
-               "$peptide_id{$tmp_pep_acc}\n";
-
-
-       if ( !$pep_acc ) {
-
-           print "PROBLEM...missing info for \$pep_acc for peptide $pep_acc\n"; ##this won't happen
-
-           print $str;
-
-       } elsif (!$pep_seq) {
-
-           print "PROBLEM...missing info for \$pep_seq for peptide $pep_acc\n";
-
-           print $str;
-
-       } elsif (!$pep_length) {
-
-           print "PROBLEM...missing info for \$pep_length for peptide $pep_acc\n";
-
-           print $str;
-
-       } elsif (!$best_prob) {
-
-           print "PROBLEM...missing info for \$best_prob for peptide $pep_acc\n";
-
-           print $str;
-
-       } elsif (!$n_obs) {
-
-           print "PROBLEM...missing info for \$n_obs for peptide $pep_acc\n";
-
-           print $str;
-
-       } elsif (!$sb_ids) {
-
-           print "PROBLEM...missing info for \$sb_ids for peptide $pep_acc\n";
-
-           print $str;
-
-       } elsif (!$pep_id) {
-
-           print "PROBLEM...missing info for \$pep_id for peptide $pep_acc\n";
-
-           print $str;
-
-       } 
-
-   } 
-
-   print "-->end first stage test of vars\n";
-        
-
-}  ## end testAPDVars
-
 
 #######################################################################
 # readCoords_updateRecords_calcAttributes -- read coordinate mapping
-#   file, calculate mapping attributes, update peptide_instance
-#   record, and create peptide_mapping records 
+# file, calculate mapping attributes, update peptide_instance
+# record, and create peptide_mapping records 
+# @infile
+# @atlas_build_id 
+# @biosequence_set_id 
+# @organism_abbrev 
 #######################################################################
 sub readCoords_updateRecords_calcAttributes {
 
@@ -2113,10 +1865,10 @@ sub readCoords_updateRecords_calcAttributes {
 
     my $infile = $args{'infile'} or die "need infile ($!)";
 
-    my $sample_id_hash_ref = $args{'sample_id_hash_ref'} or die
-        " need sample_id_hash_ref ($!)";
+    my $proteomicsSBID_hash_ref = $args{'proteomicsSBID_hash_ref'} or die
+        " need proteomicsSBID_hash_ref ($!)";
 
-    my %searchBatchID_sampleID_id_hash = %{$sample_id_hash_ref};
+    my %proteomicsSBID_hash = %{$proteomicsSBID_hash_ref};
 
     my $atlas_build_id = $args{atlas_build_id} or die "need atlas_build_id ($!)";
 
@@ -2273,82 +2025,82 @@ sub readCoords_updateRecords_calcAttributes {
     } ## end TEST
  
 
-   ## n_protein_mappings -- Number of distinct proteins that a peptide maps to
-   ## n_genome_locations -- Number of mappings to Genome where protein is not the same
-   ##                       (in other words, counts span over exons only once)
-   ## is_exon_spanning   -- Whether a peptide has been mapped to a protein more than
-   ##                       once (with different chromosomal coordinates)...each coord
-   ##                       set should be shorter in length than the entire sequence...
-   ##                       This avoids counting repeat occurrences of an entire
-   ##                       peptide in a protein or ORF.
+    ## n_protein_mappings -- Number of distinct proteins that a peptide maps to
+    ## n_genome_locations -- Number of mappings to Genome where protein is not the same
+    ##                       (in other words, counts span over exons only once)
+    ## is_exon_spanning   -- Whether a peptide has been mapped to a protein more than
+    ##                       once (with different chromosomal coordinates)...each coord
+    ##                       set should be shorter in length than the entire sequence...
+    ##                       This avoids counting repeat occurrences of an entire
+    ##                       peptide in a protein or ORF.
 
-   ## For each peptide:
-   ## protein_mappings_hash:  key = protein, value="$chrom:$start:$end"
-   ## --> n_protein_mappings = keys ( %protein_mappings_hash )
-   ##
-   ## --> n_genome_locations =  keys of reverse protein_mappings_hash
-   ##
-   ## is_exon_spanning_hash:  key = protein,
-   ##                         value = 'Y' if (  (diff_coords + 1) != (seq_length*3);
+    ## For each peptide:
+    ## protein_mappings_hash:  key = protein, value="$chrom:$start:$end"
+    ## --> n_protein_mappings = keys ( %protein_mappings_hash )
+    ##
+    ## --> n_genome_locations =  keys of reverse protein_mappings_hash
+    ##
+    ## is_exon_spanning_hash:  key = protein,
+    ##                         value = 'Y' if (  (diff_coords + 1) != (seq_length*3);
 
-   print "\nCalculating n_protein_mappings, n_genome_locations, and is_exon_spanning\n";
+    print "\nCalculating n_protein_mappings, n_genome_locations, and is_exon_spanning\n";
 
-   ## looping through a peptide's array indices to calculate these:
-   foreach my $tmp_ind_str (values ( %index_hash ) ) {  #key = peptide_accession
+    ## looping through a peptide's array indices to calculate these:
+    foreach my $tmp_ind_str (values ( %index_hash ) ) {  #key = peptide_accession
 
-       my @tmp_ind_array = split(" ", $tmp_ind_str);
+        my @tmp_ind_array = split(" ", $tmp_ind_str);
  
-       my (%protein_mappings_hash, %is_exon_spanning_hash);
+        my (%protein_mappings_hash, %is_exon_spanning_hash);
 
-       ## will skip 1st key = peptide in hashes below, and instead, 
-       ## reset hash for each peptide
-       reset %protein_mappings_hash; ## necessary?  above declaration should have cleared these?
-       reset %is_exon_spanning_hash;
+        ## will skip 1st key = peptide in hashes below, and instead, 
+        ## reset hash for each peptide
+        reset %protein_mappings_hash; ## necessary?  above declaration should have cleared these?
+        reset %is_exon_spanning_hash;
 
-       my $peptide = $peptide_accession[$tmp_ind_array[0]];
-       my $protein;
+        my $peptide = $peptide_accession[$tmp_ind_array[0]];
+        my $protein;
 
-       ## initialize to 'N'
-       $is_exon_spanning_hash{$protein} = 'N';
+        ## initialize to 'N'
+        $is_exon_spanning_hash{$protein} = 'N';
 
 
-       ## for each index:
-       for (my $ii = 0; $ii <= $#tmp_ind_array; $ii++) {
+        ## for each index:
+        for (my $ii = 0; $ii <= $#tmp_ind_array; $ii++) {
 
-           my $i_ind=$tmp_ind_array[$ii];
+            my $i_ind=$tmp_ind_array[$ii];
 
-           $protein = $biosequence_name[$i_ind];
+            $protein = $biosequence_name[$i_ind];
 
-           my $chrom = $chromosome[$i_ind];
+            my $chrom = $chromosome[$i_ind];
 
-           my $start = $start_in_chromosome[$i_ind];
+            my $start = $start_in_chromosome[$i_ind];
 
-           my $end = $end_in_chromosome[$i_ind];
+            my $end = $end_in_chromosome[$i_ind];
 
-           my $coord_str = "$chrom:$start:$end";
+            my $coord_str = "$chrom:$start:$end";
 
           
-           $protein_mappings_hash{$protein} = $coord_str;
+            $protein_mappings_hash{$protein} = $coord_str;
 
 
-           my $diff_coords = abs($start - $end );
+            my $diff_coords = abs($start - $end );
+ 
+            my $seq_length = 
+                length($peptideAccession_peptideSequence{$peptide});
 
-           my $seq_length = 
-               length($peptideAccession_peptideSequence{$peptide});
+            ## If entire sequence fits between coordinates, the protein has
+            ## redundant sequences.  If the sequence doesn't fit between
+            ## coordinates, it's exon spanning:
+            if (  ($diff_coords + 1) != ($seq_length * 3) ) {
 
-           ## If entire sequence fits between coordinates, the protein has
-           ## redundant sequences.  If the sequence doesn't fit between
-           ## coordinates, it's exon spanning:
-           if (  ($diff_coords + 1) != ($seq_length * 3) ) {
+                $is_exon_spanning_hash{$protein} = 'Y';
 
-               $is_exon_spanning_hash{$protein} = 'Y';
+                ## update larger scope variable too:
+                $is_exon_spanning[$i_ind] = 'Y';
 
-               ## update larger scope variable too:
-               $is_exon_spanning[$i_ind] = 'Y';
+            }
 
-           }
-
-       } 
+        } 
 
        ## Another iteration through indices to count n_genome_locations
        ## want the number of unique coord strings, corrected to count is_exon_spanning peptides as only 1 addition.
@@ -2535,7 +2287,7 @@ sub readCoords_updateRecords_calcAttributes {
        }
 
        print "-->end third stage test of vars\n";
-   }
+    }
 
 
     ####----------------------------------------------------------------------------
@@ -2723,23 +2475,30 @@ sub readCoords_updateRecords_calcAttributes {
 }
 
 
-
-
 #######################################################################
-# loadFromPAxmlFile - reads APD file, writes peptide records,
+# loadFromPAxmlFile - uses SAX Content handler to parse APD_*all.PAxml 
+# and call methods within this code to insert [peptide], 
+# [peptide_instance*], and [modified_peptide_instance*] records
+#
+# @param atlas_build_id
+# @param sbid_asbid_sid_hash_ref reference to complex hash holding
+#    atlas_search_batch_id and sample_id using key = protomics
+#    search_batch_id
+# @param $infile the APD_<organism>_all.PAxml file
 #######################################################################
 sub loadFromPAxmlFile {
   my %args = @_;
 
   my $infile = $args{'infile'} or die "need infile ($!)";
-  my $sample_id_hash_ref = $args{'sample_id_hash_ref'} or die
+
+  my $sbid_asbid_sid_hash_ref = $args{'sbid_asbid_sid_hash_ref'} or die
     "need sample_id_hash reference ($!)";
+
   my $atlas_build_id = $args{'atlas_build_id'} or die
     "need atlas_build_id ($!)";
 
-
   ## hash with key = atlas_search_batch_id, value = sample_id
-  my %atlasSearchBatchID_sampleId_hash = %{ $sample_id_hash_ref };
+  my %sbid_asbid_sid_hash = %{ $sbid_asbid_sid_hash_ref };
 
   ## get hash with key=peptide_accession, value=peptide_id
   my %peptide_acc_id_hash = get_peptide_accession_id_hash();
@@ -2790,8 +2549,9 @@ sub loadFromPAxmlFile {
   $CONTENT_HANDLER->{counter} = 0;
   $CONTENT_HANDLER->{atlas_build_id} = $atlas_build_id;
 
-  $CONTENT_HANDLER->{atlasSearchBatchID_sampleId_hash} = 
-    \%atlasSearchBatchID_sampleId_hash;
+  $CONTENT_HANDLER->{sbid_asbid_sid_hash} = 
+    \%sbid_asbid_sid_hash;
+
   $CONTENT_HANDLER->{peptide_acc_id_hash} = \%peptide_acc_id_hash;
 
 
@@ -2954,12 +2714,17 @@ sub insert_modified_peptide_instance {
 
 ###############################################################################
 # insert_peptide_instance_samples
+#
+# @param $peptide_instance_id
+# @param $sample_ids string of sample_ids separated by commas
 ###############################################################################
 sub insert_peptide_instance_samples {
+
   my %args = @_;
 
   my $peptide_instance_id = $args{'peptide_instance_id'}
     or die("need peptide_instance_id");
+
   my $sample_ids = $args{'sample_ids'} or die("need sample_ids");
 
   my @sample_ids = split(/,/,$sample_ids);
@@ -2990,15 +2755,44 @@ sub insert_peptide_instance_samples {
 
 ###############################################################################
 # insert_peptide_instance_search_batches
+#  
+# @param $peptide_instance_id
+# @param $atlas_search_batch_ids
 ###############################################################################
-sub insert_peptide_instance_search_batches {
-  my %args = @_;
+sub insert_peptide_instance_search_batches 
+{
+    my %args = @_;
 
-  #### TBD
+    my $peptide_instance_id = $args{'peptide_instance_id'}
+        or die("need peptide_instance_id");
 
-  return(1);
+    my $atlas_search_batch_ids = $args{'atlas_search_batch_ids'} 
+        or die("need atlas_search_batch_ids");
 
-}
+    my @atlas_search_batch_id_array = split(/,/,$atlas_search_batch_ids);
+
+    foreach my $atlas_search_batch_id ( @atlas_search_batch_id_array ) 
+    {
+        my %rowdata = (
+            peptide_instance_id => $peptide_instance_id,
+            atlas_search_batch_id => $atlas_search_batch_id,
+        );
+
+        $sbeams->updateOrInsertRow(
+            insert=>1,
+            table_name=>$TBAT_PEPTIDE_INSTANCE_SAMPLE,
+            rowdata_ref=>\%rowdata,
+            PK => 'peptide_instance_sample_id',
+            add_audit_parameters => 1,
+            verbose=>$VERBOSE,
+            testonly=>$TESTONLY,
+        );
+
+    }
+
+    return(1);
+
+} # end insert_modified_peptide_instance_search_batches
 
 
 
@@ -3040,13 +2834,42 @@ sub insert_modified_peptide_instance_samples {
 
 ###############################################################################
 # insert_modified_peptide_instance_search_batches
+#  
+# @param $modified_peptide_instance_id
+# @param $atlas_search_batch_ids
 ###############################################################################
-sub insert_modified_peptide_instance_search_batches {
-  my %args = @_;
+sub insert_modified_peptide_instance_search_batches 
+{
+    my %args = @_;
 
-  #### TBD
+    my $modified_peptide_instance_id = $args{'modified_peptide_instance_id'}
+        or die("need modified_peptide_instance_id");
 
-  return(1);
+    my $atlas_search_batch_ids = $args{'atlas_search_batch_ids'} 
+        or die("need atlas_search_batch_ids");
+
+    my @atlas_search_batch_id_array = split(/,/,$atlas_search_batch_ids);
+
+    foreach my $atlas_search_batch_id ( @atlas_search_batch_id_array ) 
+    {
+        my %rowdata = (
+            modified_peptide_instance_id => $modified_peptide_instance_id,
+            atlas_search_batch_id => $atlas_search_batch_id,
+        );
+
+        $sbeams->updateOrInsertRow(
+            insert=>1,
+            table_name=>$TBAT_MODIFIED_PEPTIDE_INSTANCE_SAMPLE,
+            rowdata_ref=>\%rowdata,
+            PK => 'modified_peptide_instance_sample_id',
+            add_audit_parameters => 1,
+            verbose=>$VERBOSE,
+            testonly=>$TESTONLY,
+        );
+
+    }
+
+    return(1);
 
 } # end insert_modified_peptide_instance_search_batches
 
@@ -3068,7 +2891,7 @@ sub print_hash
     foreach my $k (keys %h)
     {
 
-        print "key:$k  value:$h{$k}\n";
+        print "key: $k   value:$h{$k}\n";
 
     }
 
