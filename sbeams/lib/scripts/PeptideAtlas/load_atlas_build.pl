@@ -1696,8 +1696,8 @@ sub insert_spectra_description_set
         my $singleMzXMLFileName = getAnMzXMLFileName( search_batch_dir_path => $search_batch_dir_path);
 
 
-        #### read the mzXML file to get needed attributes... could make a content hndler for this, but only need
-        ####  the first dozen or so lines of file, and the mzXML files are huge...
+        #### read the mzXML file to get needed attributes... could make a content hndler for this, 
+        #### but only need the first dozen or so lines of file, and the mzXML files are huge...
         my $infile = $singleMzXMLFileName;
 
         # $instrument_model_id         ==> <msManufacturer category="msManufacturer" value="ThermoFinnigan"/>
@@ -2780,9 +2780,9 @@ sub insert_peptide_instance_search_batches
 
         $sbeams->updateOrInsertRow(
             insert=>1,
-            table_name=>$TBAT_PEPTIDE_INSTANCE_SAMPLE,
+            table_name=>$TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH,
             rowdata_ref=>\%rowdata,
-            PK => 'peptide_instance_sample_id',
+            PK => 'peptide_instance_search_batch_id',
             add_audit_parameters => 1,
             verbose=>$VERBOSE,
             testonly=>$TESTONLY,
@@ -2792,18 +2792,21 @@ sub insert_peptide_instance_search_batches
 
     return(1);
 
-} # end insert_modified_peptide_instance_search_batches
+} # end insert_peptide_instance_search_batches
 
 
 
 ###############################################################################
 # insert_modified_peptide_instance_samples
 ###############################################################################
-sub insert_modified_peptide_instance_samples {
+sub insert_modified_peptide_instance_samples 
+{
+
   my %args = @_;
 
   my $modified_peptide_instance_id = $args{'modified_peptide_instance_id'}
     or die("need modified_peptide_instance_id");
+
   my $sample_ids = $args{'sample_ids'} or die("need sample_ids");
 
   my @sample_ids = split(/,/,$sample_ids);
@@ -2859,9 +2862,9 @@ sub insert_modified_peptide_instance_search_batches
 
         $sbeams->updateOrInsertRow(
             insert=>1,
-            table_name=>$TBAT_MODIFIED_PEPTIDE_INSTANCE_SAMPLE,
+            table_name=>$TBAT_MODIFIED_PEPTIDE_INSTANCE_SEARCH_BATCH,
             rowdata_ref=>\%rowdata,
-            PK => 'modified_peptide_instance_sample_id',
+            PK => 'modified_peptide_instance_search_batch_id',
             add_audit_parameters => 1,
             verbose=>$VERBOSE,
             testonly=>$TESTONLY,
