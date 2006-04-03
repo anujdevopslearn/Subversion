@@ -736,7 +736,7 @@ sub display_detail_form{
 			  ),
 ## Display the predicted Peptide info
 		$q->Tr(
-				$q->td({class=>'grey_header', colspan=>2}, "Predicted N-linked Proteotypic Glycopeptides"),
+				$q->td({class=>'grey_header', colspan=>2}, "Predicted N-linked Glycopeptides"),
 			),
 		$q->Tr(
 				$q->td({colspan=>2},$glyco_o->display_peptides('Predicted Peptides'))
@@ -744,7 +744,7 @@ sub display_detail_form{
 			),
 ## Dispaly Identified Peptides
 		$q->Tr(
-				$q->td({class=>'grey_header', colspan=>2}, "Identified N-linked Proteotypic Glycopeptides"),
+				$q->td({class=>'grey_header', colspan=>2}, "Identified N-linked Glycopeptides"),
 			),
 		$q->Tr(
 				$q->td({colspan=>2},$glyco_o->display_peptides('Identified Peptides'))
