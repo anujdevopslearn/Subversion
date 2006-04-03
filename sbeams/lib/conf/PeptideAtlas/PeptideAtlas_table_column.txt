@@ -112,7 +112,7 @@ AT_peptide_instance	12	n_genome_locations	Number of Genome Locations Mapped to	i
 AT_peptide_instance	13	sample_ids	Samples Observed in	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of sample_ids in which which peptide was observed		
 AT_peptide_instance	14	is_exon_spanning	Does it span over introns?	char	1	0	Y		N			Y	text	3		Y	Y	N	Comma-separated list of sample_ids in which which peptide was observed		
 AT_peptide_instance	15	n_protein_mappings	Number of Proteins for this Peptide 	int	4	0	N		N			Y	text	10		Y	Y	N	Number of distinct accession numbers (proteins) for peptide in Genome		
-AT_peptide_instance	16	search_batch_ids	Search batches	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of search_bartch ids		
+AT_peptide_instance	16	search_batch_ids	Search batches	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of proteomics_search_batch ids		
 AT_peptide_instance	17	is_subpeptide_of	superpeptide list	varchar	255	0	Y		N			N	textarea	3		Y	Y	N	Comma-separated list of peptide ids that include this peptide's sequence		
 AT_peptide_instance	18	n_samples	Number of Samples Exhibiting Peptide	int	4	0	Y		N			N	text	10		Y	Y	N	Number of samples/experiments in which this peptide was observed		
 AT_peptide_instance	19	n_protein_samples	Number of Samples Exhibiting Protein	int	4	0	Y		N			N	text	10		Y	Y	N	Number of samples/experiments in which the parent protein of this peptide was observed		
@@ -146,7 +146,7 @@ AT_modified_peptide_instance	7	n_observations	Number of Peptide Observations	int
 AT_modified_peptide_instance	8	n_adjusted_observations	Number of Adjusted Observations	int	4	0	Y		N			N	text	10		Y	Y	N	Number of adjusted observations		
 AT_modified_peptide_instance	9	n_sibling_peptides	Number of Sibling Peptides	real	4	0	Y		N			N	text	10		Y	Y	N	Number of sibling peptides		
 AT_modified_peptide_instance	10	sample_ids	Samples Observed in	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of sample_ids in which which peptide was observed		
-AT_modified_peptide_instance	11	search_batch_ids	Search batches	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of search_bartch ids		
+AT_modified_peptide_instance	11	search_batch_ids	Search batches	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of proteomics_search_batch ids		
 AT_modified_peptide_instance_sample	1	modified_peptide_instance_sample_id	Modified Peptide Instance Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_modified_peptide_instance_sample	2	modified_peptide_instance_id	Modified Peptide Instance ID	int	4	0	N		N	AT_modified_peptide_instance	modified_peptide_instance_id					N	N		Associated Atlas Build		
 AT_modified_peptide_instance_sample	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
