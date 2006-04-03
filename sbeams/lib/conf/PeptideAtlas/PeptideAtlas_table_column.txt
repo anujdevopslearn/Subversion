@@ -141,7 +141,7 @@ AT_modified_peptide_instance	2	peptide_instance_id	Peptide Instance ID	int	4	0	N
 AT_modified_peptide_instance	3	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Sequence of the peptide including modification notations		
 AT_modified_peptide_instance	4	peptide_charge	Peptide Charge	int	4	0	N		N			Y	text	10		Y	Y	Y	Charge on the precursor ion		
 AT_modified_peptide_instance	5	best_probability	Best Observed Probability	real	4	0	N		N			Y	text	10		Y	Y	N	Best observed PeptideProphet probablity of being correct over all samples		
-AT_modified_peptide_instance	6	best_adjusted_probability	Best Adjusted Probability	real	4	0	N		N			Y	text	10		Y	Y	N	Best probability observed as adjusted by ProteinProphet within all samples		
+AT_modified_peptide_instance	6	best_adjusted_probability	Best Adjusted Probability	real	4	0	Y		N			Y	text	10		Y	Y	N	Best probability observed as adjusted by ProteinProphet within all samples		
 AT_modified_peptide_instance	7	n_observations	Number of Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in the input samples		
 AT_modified_peptide_instance	8	n_adjusted_observations	Number of Adjusted Observations	int	4	0	Y		N			N	text	10		Y	Y	N	Number of adjusted observations		
 AT_modified_peptide_instance	9	n_sibling_peptides	Number of Sibling Peptides	real	4	0	Y		N			N	text	10		Y	Y	N	Number of sibling peptides		
