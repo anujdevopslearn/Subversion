@@ -143,7 +143,7 @@ sub start_element {
       sample_ids => $sample_ids,
       is_exon_spanning => '?',
       n_protein_mappings => -1,
-      search_batch_ids => $attrs{atlas_search_batch_ids},
+      search_batch_ids => $attrs{search_batch_ids},
       preceding_residue => $attrs{peptide_prev_aa},
       following_residue => $attrs{peptide_next_aa},
       original_protein_name => $attrs{original_protein_name},
@@ -213,13 +213,12 @@ sub start_element {
       n_sibling_peptides => $attrs{n_sibling_peptides},
       best_adjusted_probability => $attrs{best_adjusted_probability},
       sample_ids => $sample_ids,
-      search_batch_ids => $attrs{atlas_search_batch_ids},
+      search_batch_ids => $attrs{search_batch_ids},
     );
 
     my $modified_peptide_instance_id = &main::insert_modified_peptide_instance(
       rowdata_ref=>\%rowdata,
     );
-
 
     #### Create modified_peptide_instance_sample records
     &main::insert_modified_peptide_instance_samples(
