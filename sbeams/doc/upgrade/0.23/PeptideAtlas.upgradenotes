@@ -118,3 +118,8 @@ Schema changes (see full definitions in driver tables):
 
 - Altered with sql the server table with ALTER TABLE statement
 
+---------------
+
+2006-04-03
+
+- changed is_nullable to 'Y' for modified_peptide_instance's best_adjusted_probability
