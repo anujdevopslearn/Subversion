@@ -381,7 +381,7 @@ sub removeAtlas {
 
    my %table_child_relationship = (
       atlas_build => 'peptide_instance(C),atlas_build_sample(C),'.
-        'atlas_build_search_batch(C),spectra_description_sample(C)',
+        'atlas_build_search_batch(C),spectra_description_set(C)',
 
       peptide_instance => 'peptide_mapping(C),peptide_instance_sample(C),'.
         'modified_peptide_instance(C)',
