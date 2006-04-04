@@ -123,3 +123,46 @@ Schema changes (see full definitions in driver tables):
 2006-04-03
 
 - changed is_nullable to 'Y' for modified_peptide_instance's best_adjusted_probability
+
+---------------
+
+2006-04-04
+setenv SBEAMS fullPathToYourDevArea/sbeams
+
+- edited  $SBEAMS/lib/conf/PeptideAtlas/PeptideAtlas_table_property.txt
+   --> added sample_id to table atlas_search_batch
+   --> removed data_path from table atlas_build_search_batch
+   --> added n_spectra to table spectra_description_set
+   --> removed n_searched_spectra from  table atlas_build_search_batch
+
+- Reran update driver tables
+   cd $SBEAMS/sbeams/lib/scripts/Core
+
+    set CONFDIR = "../../conf"
+
+    ./update_driver_tables.pl $CONFDIR/PeptideAtlas/PeptideAtlas_table_column.txt
+
+    ./update_driver_tables.pl $CONFDIR/PeptideAtlas/PeptideAtlas_table_property.txt
+
+
+- Populated the SQL scripts:
+    cd $SBEAMS/lib/scripts/Core
+
+    foreach dbtype ( mssql mysql pgsql )
+        ./generate_schema.pl --table_prop ../../conf/PeptideAtlas/PeptideAtlas_table_property.txt \
+        --table_col ../../conf/PeptideAtlas/PeptideAtlas_table_column.txt --schema_file \
+        ../../sql/PeptideAtlas/PeptideAtlas --destination_type $dbtype
+    end
+
+- sql calls to update server tables:
+
+*NOTE: tailor these to your table names*
+
+    ALTER TABLE atlas_search_batch ADD sample_id int
+
+    ALTER TABLE atlas_build_search_batch DROP COLUMN data_path
+
+    ALTER TABLE spectra_description_set ADD n_spectra int
+
+    ALTER TABLE atlas_build_search_batch DROP COLUMN n_searched_spectra
+
