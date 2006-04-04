@@ -60,28 +60,26 @@ AT_atlas_build_sample	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	w
 AT_atlas_build_sample	9	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_atlas_build_search_batch	1	atlas_build_search_batch_id	Atlas Build Search Batch ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_atlas_build_search_batch	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id					N	N		Associated Atlas Build		
-AT_atlas_build_search_batch	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
-AT_atlas_build_search_batch	4	atlas_search_batch_id	Atlas Search Batch ID	int	4	0	N		N	AT_atlas_search_batch	atlas_search_batch_id					N	N		Associated Atlas Search Batch (which can link to a Proteomics Search Batch)		
-AT_atlas_build_search_batch	5	n_searched_spectra	Number of Searched spectra	int	4	0	N		N							N	N		Number of spectra searched in this search_batch		
-AT_atlas_build_search_batch	6	data_path	Relative Path to search_batch output	varchar	255	0	N		N							N	N		Relative path to the search results		
-AT_atlas_build_search_batch	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_atlas_build_search_batch	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_atlas_build_search_batch	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_atlas_build_search_batch	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_atlas_build_search_batch	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_atlas_build_search_batch	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_atlas_build_search_batch	3	atlas_search_batch_id	Atlas Search Batch ID	int	4	0	N		N	AT_atlas_search_batch	atlas_search_batch_id					N	N		Associated Atlas Search Batch (which can link to a Proteomics Search Batch)		
+AT_atlas_build_search_batch	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_atlas_build_search_batch	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_atlas_build_search_batch	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_atlas_build_search_batch	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_atlas_build_search_batch	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_atlas_build_search_batch	9	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_atlas_search_batch	1	atlas_search_batch_id	Atlas Search Batch ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_atlas_search_batch	2	proteomics_search_batch_id	Proteomics Search Batch ID	int	4	0	Y		N							N	N		Associated Proteomics module search_batch_id		
-AT_atlas_search_batch	3	n_searched_spectra	Number of Searched spectra	int	4	0	N		N							N	N		Number of spectra searched in this search_batch		
-AT_atlas_search_batch	4	data_location	File Path to search_batch output	varchar	255	0	N		N							Y	Y		Absolute or relative location of the raw data for this search batch		
-AT_atlas_search_batch	5	search_batch_subdir	Search Batch Subdirectory	varchar	100	0	N		N							Y	Y		Subdirectory under the experiment where the data for this search resides		
-AT_atlas_search_batch	6	TPP_version	TPP version used in peptide identification scoring	varchar	100	0	N		N							Y	Y		TPP version used for peptide identification scores		
-AT_atlas_search_batch	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_atlas_search_batch	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_atlas_search_batch	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_atlas_search_batch	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_atlas_search_batch	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_atlas_search_batch	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_atlas_search_batch	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
+AT_atlas_search_batch	4	n_searched_spectra	Number of Searched spectra	int	6	0	N		N							N	N		Number of spectra searched in this search_batch		
+AT_atlas_search_batch	5	data_location	File Path to search_batch output	varchar	255	0	N		N							Y	Y		Absolute or relative location of the raw data for this search batch		
+AT_atlas_search_batch	6	search_batch_subdir	Search Batch Subdirectory	varchar	100	0	N		N							Y	Y		Subdirectory under the experiment where the data for this search resides		
+AT_atlas_search_batch	7	TPP_version	TPP version used in peptide identification scoring	varchar	100	0	N		N							Y	Y		TPP version used for peptide identification scores		
+AT_atlas_search_batch	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_atlas_search_batch	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_atlas_search_batch	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_atlas_search_batch	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_atlas_search_batch	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_atlas_search_batch	13	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_atlas_search_batch_parameter	1	atlas_search_batch_id	Atlas Search Batch ID	int	4	0	N		N	AT_atlas_search_batch	atlas_search_batch_id					N	N	Y	Atlas search batch to which this search parameter belongs		pkDEFAULT
 AT_atlas_search_batch_parameter	2	key_order	Key Order	int	4	0	N		N			Y				Y	Y	N	Monotonically increasing number to denote key order		
 AT_atlas_search_batch_parameter	3	parameter_key	Parameter Key	varchar	100	0	N		N			Y	text	50		Y	Y	Y	The key of the key/value pair		
@@ -343,9 +341,10 @@ AT_spectra_description_set	6	instrument_model_name	Instrument Model Name	varchar
 AT_spectra_description_set	7	conversion_software_name	Conversion Software Name	varchar	255	0	N		N							N	N		Name of software used in conversion to mzXML		
 AT_spectra_description_set	8	conversion_software_version	Conversion Software Version	real	4	0	N		N							N	N		Version of software used in conversion to mzXML		
 AT_spectra_description_set	9	mzXML_schema	mzXML Schema	varchar	1024	0	N		N							N	N		mzXML schema		
-AT_spectra_description_set	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_spectra_description_set	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_spectra_description_set	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_spectra_description_set	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_spectra_description_set	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_spectra_description_set	15	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_spectra_description_set	10	n_spectra	Number of Spectra	int	6	0	N		N							N	N		Number of spectra		
+AT_spectra_description_set	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_spectra_description_set	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_spectra_description_set	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_spectra_description_set	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_spectra_description_set	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_spectra_description_set	16	record_status	Record Status	char	1	0	N	N	N							N	N				
