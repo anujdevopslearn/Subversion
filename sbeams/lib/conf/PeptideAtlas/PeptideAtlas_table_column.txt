@@ -340,7 +340,7 @@ AT_spectra_description_set	4	atlas_search_batch_id	Atlas Search Batch ID	int	4	0
 AT_spectra_description_set	5	instrument_model_id	Instrument Model ID	int	4	0	Y		N	PR_instrument	instrument_id	N	optionlist			Y	Y	N	Instrument (mass spectrometer) manufacturer model id	"SELECT instrument_id,instrument_name FROM $TBPR_INSTRUMENT WHERE record_status != 'D' ORDER BY instrument_name"	
 AT_spectra_description_set	6	instrument_model_name	Instrument Model Name	varchar	100	0	Y		N			N				Y	Y	N	Instrument (mass spectrometer) manufacturer model name		
 AT_spectra_description_set	7	conversion_software_name	Conversion Software Name	varchar	255	0	N		N							N	N		Name of software used in conversion to mzXML		
-AT_spectra_description_set	8	conversion_software_version	Conversion Software Version	varchar	10	0	N		N							N	N		Version of software used in conversion to mzXML		
+AT_spectra_description_set	8	conversion_software_version	Conversion Software Version	varchar	50	0	N		N							N	N		Version of software used in conversion to mzXML		
 AT_spectra_description_set	9	mzXML_schema	mzXML Schema	varchar	1024	0	N		N							N	N		mzXML schema		
 AT_spectra_description_set	10	n_spectra	Number of Spectra	int	6	0	N		N							N	N		Number of spectra		
 AT_spectra_description_set	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
