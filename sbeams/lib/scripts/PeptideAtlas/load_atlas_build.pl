@@ -58,23 +58,25 @@ $PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
 Usage: $PROG_NAME [OPTIONS]
 Options:
-  --verbose n            Set verbosity level.  default is 0
-  --quiet                Set flag to print nothing at all except errors
-  --debug n              Set debug flag
-  --testonly             If set, rows in the database are not changed or added
-  --testvars             If set, makes sure all vars are filled
-  --check_tables         will not insert or update.  does a check of peptide_instance_sample
+  --verbose n                 Set verbosity level.  default is 0
+  --quiet                     Set flag to print nothing at all except errors
+  --debug n                   Set debug flag
+  --testonly                  If set, rows in the database are not changed or added
+  --testvars                  If set, makes sure all vars are filled
+  --check_tables              will not insert or update.  does a check of peptide_instance_sample
 
-  --delete               Delete an atlas build (does not build an atlas).
-  --purge                Delete child records in atlas build (retains parent atlas record).
-  --load                 Build an atlas (can be used in conjunction with --purge).
+  --delete                    Delete an atlas build (does not build an atlas).
+  --purge                     Delete child records in atlas build (retains parent atlas record).
+  --load                      Build an atlas (can be used in conjunction with --purge).
 
-  --organism_abbrev      Abbreviation of organism like Hs
+  --organism_abbrev           Abbreviation of organism like Hs
 
-  --atlas_build_name     Name of the atlas build (already entered by hand in
-                         the atlas_build table) into which to load the data
+  --atlas_build_name          Name of the atlas build (already entered by hand in
+                              the atlas_build table) into which to load the data
+  --default_sample_project_id default project_id  needed for auto-creation of tables (best to set
+                              default to dev/private access and open access later)
 
- e.g.:  ./load_atlas_build.pl --atlas_build_name \'Human_P0.9_Ens26_NCBI35\' --organism_abbrev \'Hs\' --purge --load 
+ e.g.:  ./load_atlas_build.pl --atlas_build_name \'Human_P0.9_Ens26_NCBI35\' --organism_abbrev \'Hs\' --purge --load --default_sample_project_id 476
 
  e.g.: ./load_atlas_build.pl --atlas_build_name \'TestAtlas\' --delete
 EOU
@@ -82,7 +84,7 @@ EOU
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
         "testvars","delete", "purge", "load", "check_tables",
-        "atlas_build_name:s", "organism_abbrev:s"
+        "atlas_build_name:s", "organism_abbrev:s", "default_sample_project_id:s"
     )) {
 
     die "\n$USAGE";
@@ -174,6 +176,8 @@ sub handleRequest {
 
   my $atlas_build_name = $OPTIONS{"atlas_build_name"} || '';
 
+  my $default_sample_project_id = $OPTIONS{"default_sample_project_id"} || '';
+
 
   #### Verify required parameters
   unless ($atlas_build_name) {
@@ -229,6 +233,7 @@ sub handleRequest {
 
       loadAtlas( atlas_build_id=>$ATLAS_BUILD_ID,
           organism_abbrev => $organism_abbrev,
+          default_sample_project_id => $default_sample_project_id,
       );
 
   } ## end --load
@@ -429,6 +434,7 @@ sub removeAtlas {
 # loadAtlas -- load an atlas
 # @param atlas_build_id
 # @param organism_abbrev
+# @param default_sample_project_id  project_id to be used when creating new samples
 ###############################################################################
 sub loadAtlas {
 
@@ -439,6 +445,9 @@ sub loadAtlas {
 
     my $organism_abbrev = $args{'organism_abbrev'} or die
         " need organism_abbrev ($!)";
+
+    my $default_sample_project_id = $args{'default_sample_project_id'} or
+       die "need default_sample_project_id ($!)";
 
 
     {
@@ -481,6 +490,7 @@ sub loadAtlas {
     buildAtlas(atlas_build_id => $atlas_build_id,
                biosequence_set_id => $biosequence_set_id,
                source_dir => $builds_directory,
+               default_sample_project_id => $default_sample_project_id,
                organism_abbrev => $organism_abbrev,
     );
 
@@ -494,6 +504,11 @@ sub loadAtlas {
 
 ###############################################################################
 # buildAtlas -- populates PeptideAtlas records in requested atlas_build
+# @param atlas_build_id 
+# @param default_sample_project_id
+# @param biosequence_set_id
+# @param source_dir
+# @param organism_abbrev
 ###############################################################################
 sub buildAtlas {
 
@@ -502,6 +517,9 @@ sub buildAtlas {
     my %args = @_;
 
     my $atlas_build_id = $args{'atlas_build_id'} or die "need atlas_build_id ($!)";
+
+    my $default_sample_project_id = $args{'default_sample_project_id'} or die
+        "need default_sample_project_id ($!)";
 
     my $biosequence_set_id = $args{'biosequence_set_id'} or 
         die "need biosequence_set_id ($!)";
@@ -518,21 +536,13 @@ sub buildAtlas {
         infile => "$source_dir../Experiments.list" );
 
 
-#   ## get hash with key = atlas_search_batch_id, value = sample_id
-#   ## and create [*sample] records and [*search_batch] records if they don't already exist
-#   my %sample_id_hash = get_sample_id_hash(
-#       atlas_build_id => $atlas_build_id,
-#       loading_sbid_searchdir_hash_ref => \%loading_sbid_searchdir_hash,   
-#       source_dir => $source_dir, 
-#   );
-
     ## the content handler for loadFromPAxmlFile is using search_batch_id's 
-    ## which are the proteomics search_batch_id's because that's what's 
-    ## stored in the PAxml, so we need to send it
-    ## a hash to look-up atlas_search_batch_id's using keys search_batch_id
-    ## and it needs sample_ids
+    ## from proteomics so we need to send it hash to look up atlas_search_batch_ids
+    ## and sample_ids when needed.  
+    ## note, this method creates sample and *search_batch records when necessary
     my %proteomicsSBID_hash =  get_search_batch_and_sample_id_hash(
         atlas_build_id => $atlas_build_id,
+        default_sample_project_id => $default_sample_project_id,
         loading_sbid_searchdir_hash_ref => \%loading_sbid_searchdir_hash,
         source_dir => $source_dir,
     );
@@ -576,6 +586,7 @@ sub buildAtlas {
 # sample and search_batch records in the process
 #
 # @param atlas_build_id
+# @param default_sample_project_id default project_id used in creating new samples
 # @param search_batch_hash_ref reference to hash with key = search_batch_id
 # @return complex hash accessed as:
 #     $hash{$proteomics_search_batch_id}->{atlas_search_batch_id}
@@ -591,6 +602,9 @@ sub get_search_batch_and_sample_id_hash
 
     my $atlas_build_id = $args{atlas_build_id} or die("need atlas_build_id");
 
+    my $default_sample_project_id = $args{'default_sample_project_id'} or
+        die "need default_sample_project_id ($!)";
+
     my $source_dir = $args{source_dir} or die(" need source_dir ($!)");
 
     my $loading_sbid_searchdir_hash_ref = $args{loading_sbid_searchdir_hash_ref} 
@@ -605,167 +619,61 @@ sub get_search_batch_and_sample_id_hash
     my $loading_sbid_list = get_string_list_of_keys(
         hash_ref => \%loading_sbid_searchdir_hash);
 
-
-    #### Get complex hash of existing search_batches and their search dirs
+    #### Get complex hash of search_batches and info (creates samples if not existing)
     ## accessed as 
     ##   $existing_sb_hash{$sbid}->{proteomics_search_batch_id}
     ##   $existing_sb_hash{$sbid}->{atlas_search_batch_id}
     ##   $existing_sb_hash{$sbid}->{search_dir_path}}
     ##   $existing_sb_hash{$sbid}->{proteomics_experiment_tag}
+    ##   $existing_sb_hash{$sbid}->{sample_id}
+    ##   $existing_sb_hash{$sbid}->{sample_tag}
     my %existing_sb_hash = get_sb_hash(
-        search_batch_id_list => $loading_sbid_list );
+        atlas_build_id => $atlas_build_id,
+        search_batch_id_list => $loading_sbid_list,
+        default_sample_project_id => $default_sample_project_id,
+        loading_sbid_searchdir_hash_ref => \%loading_sbid_searchdir_hash );
+    ##  note: $existing_sb_hash{$sbid}->{atlas_search_batch_id} will be 
+    ## empty when need to create them;  using that in get_absb_hash
 
 
-    #### Get complex hash of existing search_batches and their search dirs
-    ## if the atlas_build_search_batch record is filled
+    #### Get complex hash of existing search_batches and create related records when needed
     ## accessed as $existing_absb_hash{$sbid}->{atlas_build_search_batch_id}
     ##             $existing_absb_hash{$sbid}->{atlas_search_batch_id}
     ##             $existing_absb_hash{$sbid}->{search_dir_path}
+    ##             $existing_absb_hash{$sbid}->{proteomics_search_batch_id}
+    ##             $existing_absb_hash{$sbid}->{proteomics_experiment_tag}
     my %existing_absb_hash = get_absb_hash(
         search_batch_id_list => $loading_sbid_list,
-        atlas_build_id => $atlas_build_id );
+        atlas_build_id => $atlas_build_id,
+        loading_sbid_searchdir_hash_ref => \%loading_sbid_searchdir_hash,
+        existing_sb_hash_ref => \%existing_sb_hash,
+    );
 
-
-    ## Get complex hash of existing sample information, 
-    ## accessed as: 
-    ##  $existing_samples_hash{$original_experiment_tag}->{original_experiment_tag}
-    ##  $existing_samples_hash{$original_experiment_tag}->{sample_id}
-    ##  $existing_samples_hash{$original_experiment_tag}->{sample_tag}
-    my %existing_samples_hash = get_samples_hash();
-    
 
     foreach my $sbid (keys %loading_sbid_searchdir_hash)
     {
 
-        ## if [atlas_search_batch] record doesn't exist:
-        if (! exists $existing_sb_hash{$sbid} )
-        {
-            my $search_batch_path = $loading_sbid_searchdir_hash{$sbid};
-
-            my $atlas_search_batch_id = create_atlas_search_batch(
-                search_batch_id => $sbid,
-                search_batch_path => $search_batch_path
-            );
-
-            $existing_sb_hash{$sbid}->{search_dir_path} = $search_batch_path;
-
-            my $atlas_build_search_batch_id = 
-                create_atlas_build_search_batch(
-                    search_batch_id => $sbid,
-                    atlas_search_batch_id => $atlas_search_batch_id,
-                    search_batch_path => $search_batch_path
-                );
-
-            my $successful = create_atlas_search_batch_parameter_recs(
-                atlas_search_batch_id => $atlas_search_batch_id,
-                search_batch_path => $search_batch_path
-            );
-
-            $existing_absb_hash{$sbid}->{atlas_build_search_batch_id}
-                = $atlas_build_search_batch_id;
-
-            $existing_absb_hash{$sbid}->{atlas_search_batch_id}
-                = $atlas_search_batch_id;
-
-            $existing_absb_hash{$sbid}->{search_dir_path}
-                = $search_batch_path;
-
-            $existing_sb_hash{$sbid}->{proteomics_search_batch_id} = 
-                $sbid;
-
-            $existing_sb_hash{$sbid}->{atlas_search_batch_id} = 
-                $atlas_search_batch_id;
-
-            $existing_sb_hash{$sbid}->{search_dir_path} = 
-                $search_batch_path;
-
-            my $et = getProteomicsExpTag( search_batch_id => $sbid );
-
-            $existing_sb_hash{$sbid}->{proteomics_experiment_tag} =  $et;
-               
-
-        } else
-        { ## else, the atlas_search_batch records exist, and just need to create
-          ## the atlas_build_search_batch_record
-            my $asbid = $existing_sb_hash{$sbid}->{atlas_search_batch_id};
-
-            my $search_batch_path = $existing_sb_hash{$sbid}->{search_dir_path};
-
-            my $atlas_build_search_batch_id =
-                create_atlas_build_search_batch( 
-                    search_batch_id => $sbid,
-                    atlas_search_batch_id => $asbid,
-                    search_batch_path => $search_batch_path);
-
-            $existing_absb_hash{$sbid}->{atlas_search_batch_id}
-                = $asbid;
-
-            $existing_absb_hash{$sbid}->{atlas_build_search_batch_id}
-                = $atlas_build_search_batch_id;
-
-            $existing_absb_hash{$sbid}->{search_dir_path}
-                = $search_batch_path;
-
-        }
-
-        my $exp_tag = $existing_sb_hash{$sbid}->{proteomics_experiment_tag};
- 
-        ## if a sample record doesn't exist, create one
-        if (!exists $existing_samples_hash{$exp_tag} )
-        {
-            my $sample_id = insert_sample( 
-                proteomics_experiment_tag => $exp_tag,
-                search_batch_id => $sbid,
-                atlas_build_id => $atlas_build_id );
-
-            $existing_samples_hash{$exp_tag}->{original_experiment_tag}
-                = $exp_tag;
-
-            $existing_samples_hash{$exp_tag}->{sample_id} = $sample_id;
-
-            $existing_samples_hash{$exp_tag}->{sample_tag} = $exp_tag;
-
-        }
-
-        my $proteomics_sbid = $existing_sb_hash{$sbid}->{proteomics_search_batch_id};
-
-        my $atlas_sbid = $existing_absb_hash{$sbid}->{atlas_search_batch_id};
-
-        my $atlas_sample_id = $existing_samples_hash{$exp_tag}->{sample_id};
-
-        $loaded_sbid_asbid_sid_hash{$proteomics_sbid}->{atlas_search_batch_id}
-            = $atlas_sbid;
-
-        $loaded_sbid_asbid_sid_hash{$proteomics_sbid}->{sample_id} 
-            = $atlas_sample_id;
-
-
         ## create a [spectra_description_set] record
         insert_spectra_description_set( 
             atlas_build_id => $atlas_build_id,
-            sample_id => $existing_samples_hash{$exp_tag}->{sample_id},
-            atlas_search_batch_id => 
-                $existing_absb_hash{$sbid}->{atlas_search_batch_id},
+            sample_id => $existing_sb_hash{$sbid}->{sample_id},
+            atlas_search_batch_id => $existing_absb_hash{$sbid}->{atlas_search_batch_id},
             search_batch_dir_path => $existing_absb_hash{$sbid}->{search_dir_path}
         );
          
 
         my $atlas_build_sample_id = createAtlasBuildSampleLink(
-            sample_id => $existing_samples_hash{$exp_tag}->{sample_id},
+            sample_id => $existing_sb_hash{$sbid}->{sample_id},
             atlas_build_id => $atlas_build_id,
         );
 
+        $loaded_sbid_asbid_sid_hash{$sbid}->{sample_id} = 
+            $existing_sb_hash{$sbid}->{sample_id};
 
-        ## update [atlas_build_search_batch] record with sample_id
-        update_atlas_build_search_batch(
-            sample_id => $existing_samples_hash{$exp_tag}->{sample_id},
-            atlas_build_search_batch_id => 
-                $existing_absb_hash{$sbid}->{atlas_build_search_batch_id},
-        );
+        $loaded_sbid_asbid_sid_hash{$sbid}->{atlas_search_batch_id} = 
+            $existing_absb_hash{$sbid}->{atlas_search_batch_id};
 
     }
-##### xxxxxxx need to check this section carefully...worried that
-####  mistakes may damage existing records...
 
     return %loaded_sbid_asbid_sid_hash;
 
@@ -818,14 +726,20 @@ sub createAtlasBuildSampleLink {
 
 
 ###############################################################################
-# get_sb_hash -- get complex hash of search_batch_id's and search directories
+# get_sb_hash -- get complex hash of search_batch_id's and create sample_ids'
+# when necessary;
 # accessed as:
 #   $hash{$proteomics_search_batch_id}->{proteomics_search_batch_id}
-#   $hash{$proteomics_search_batch_id}->{atlas_search_batch_id}
+#   $hash{$proteomics_search_batch_id}->{atlas_search_batch_id} <-- might be empty
 #   $hash{$proteomics_search_batch_id}->{search_dir_path}
 #   $hash{$proteomics_search_batch_id}->{proteomics_experiment_tag}
+#   $hash{$proteomics_search_batch_id}->{sample_id}
+#   $hash{$proteomics_search_batch_id}->{sample_tag}
 #
 # @param search_batch_id_list
+# @param default_sample_project_id default project_id to be used in creating samples
+# @param atlas_build_id
+# @param loading_sbid_searchdir_hash_ref
 # @return %hash
 ###############################################################################
 sub get_sb_hash
@@ -836,16 +750,30 @@ sub get_sb_hash
     my $sbid_list = $args{search_batch_id_list} or die 
         "need search_batch_id_list ($!)";
 
+    my $atlas_build_id = $args{atlas_build_id} or die 
+        "need atlas_build_id ($!)";
+
+    my $default_sample_project_id = $args{'default_sample_project_id'} or die 
+        "need default_sample_project_id ($!)";
+
+    my $loading_sbid_searchdir_hash_ref = $args{loading_sbid_searchdir_hash_ref} 
+        or die "need loading_sbid_searchdir_hash_ref";
+
+    ## hash with key = search_batch_id, value = $search_dir
+    my %loading_sbid_searchdir_hash = %{$loading_sbid_searchdir_hash_ref};
+
+
     my %hash;
 
+    ## see if sample_id exists in atlas_search_batch
     my $sql = qq~
         SELECT ASB.atlas_search_batch_id, ASB.proteomics_search_batch_id, 
-        ASB.data_location, ASB.search_batch_subdir, PE.experiment_tag
+        ASB.data_location, ASB.search_batch_subdir, ASB.sample_id,
+        PE.experiment_tag, S.sample_tag
         FROM $TBAT_ATLAS_SEARCH_BATCH ASB
-            JOIN $TBPR_SEARCH_BATCH SB 
-            ON (ASB.proteomics_search_batch_id = SB.search_batch_id)
-            JOIN $TBPR_PROTEOMICS_EXPERIMENT PE
-            ON (PE.experiment_id = SB.experiment_id)
+        INNER JOIN $TBAT_SAMPLE S ON (S.sample_id = ASB.sample_id)
+        INNER JOIN $TBPR_SEARCH_BATCH SB ON (ASB.proteomics_search_batch_id = SB.search_batch_id)
+        INNER JOIN $TBPR_PROTEOMICS_EXPERIMENT PE ON (PE.experiment_id = SB.experiment_id)
         WHERE ASB.proteomics_search_batch_id IN ($sbid_list)
         AND ASB.record_status != 'D'
     ~;
@@ -854,7 +782,7 @@ sub get_sb_hash
 
     foreach my $row (@rows)
     {
-        my ($asbid, $sbid, $dl, $sub_dir, $exp_tag) = @{$row};
+        my ($asbid, $sbid, $dl, $sub_dir, $sid, $exp_tag, $sample_tag) = @{$row};
 
         my $path = "$dl/$sub_dir";
 
@@ -878,6 +806,76 @@ sub get_sb_hash
 
         $hash{$sbid}->{proteomics_experiment_tag} = $exp_tag;
 
+        $hash{$sbid}->{sample_id} = $sid;
+
+        $hash{$sbid}->{sample_tag} = $sample_tag;
+
+    }
+
+
+    foreach my $sbid (keys %loading_sbid_searchdir_hash)
+    {
+        ## if a sample_id doesn't exist for this sb, create one:
+        if (!exists $hash{$sbid}->{sample_id})
+        {
+            my $sql = qq~
+                SELECT distinct SB.search_batch_id, PE.experiment_name, PE.experiment_tag,
+                SB.data_location
+                FROM $TBPR_PROTEOMICS_EXPERIMENT PE
+                JOIN $TBPR_SEARCH_BATCH SB
+                ON ( PE.experiment_id = SB.experiment_id)
+                WHERE SB.search_batch_id = '$sbid'
+                AND PE.record_status != 'D'
+            ~;
+
+            my @rows = $sbeams->selectSeveralColumns($sql) or die
+                "Could not find proteomics experiment record for ".
+                " search batch id $sbid \n$sql\n ($!)";
+
+            foreach my $row (@rows)
+            {
+                my ($sb_id, $exp_name, $exp_tag, $d_l) = @{$row};
+
+                my %rowdata = (
+                    search_batch_id => $sb_id,
+                    sample_tag => $exp_tag,
+                    original_experiment_tag => $exp_tag,
+                    sample_title => $exp_name,
+                    sample_description => $exp_name,
+                    s_public => 'N',
+                    project_id => $default_sample_project_id,
+                );
+
+                my $s_id = insert_sample( rowdata_ref => \%rowdata );
+
+                my $path = $d_l;
+
+                unless (-e $path)
+                {
+                    $path = $RAW_DATA_DIR{Proteomics} . "/path";
+                }
+
+                unless (-e $path)
+                {
+                    print "[WARN] cannot locate $path for " .
+                    "search_batch w/ id=$sb_id ";
+                }
+
+
+                $hash{$sbid}->{search_dir_path} = $path;
+    
+                $hash{$sbid}->{proteomics_search_batch_id} = $sb_id;
+
+                $hash{$sbid}->{proteomics_experiment_tag} = $exp_tag;
+
+                $hash{$sbid}->{sample_id} = $s_id;
+
+                $hash{$sbid}->{sample_tag} = $exp_tag;
+
+            }
+
+        }
+
     }
 
     return %hash;
@@ -886,7 +884,7 @@ sub get_sb_hash
 
 #######################################################################
 # getProteomicsExpTag -- get proteomics experiment tag, given search
-# batch id
+#     batch id
 #
 # @param search_batch_id
 # @return exp_tag
@@ -934,13 +932,16 @@ sub getProteomicsExpTag
 #     $existing_absb_hash{$sbid}->{atlas_build_search_batch_id}
 #     $existing_absb_hash{$sbid}->{atlas_search_batch_id}
 #     $existing_absb_hash{$sbid}->{search_dir_path}
+#     $existing_absb_hash{$sbid}->{proteomics_search_batch_id}
+#     $existing_absb_hash{$sbid}->{proteomics_experiment_tag}
 #
 # @param search_batch_id_list
 # @param atlas_build_id
+# @param loading_sbid_searchdir_hash_ref
+# @param existing_sb_hash_ref
 ###############################################################################
 sub get_absb_hash
 {
-
     my %args = @_;
 
     my $sbid_list = $args{search_batch_id_list} or die 
@@ -949,8 +950,21 @@ sub get_absb_hash
     my $atlas_build_id = $args{atlas_build_id} or die 
         "need atlas_build_id ($!)";
 
+    my $loading_sbid_searchdir_hash_ref = 
+        $args{loading_sbid_searchdir_hash_ref} or 
+        die "need loading_sbid_searchdir_hash_ref ($!)";
+
+    my %loading_sbid_searchdir_hash = %{$loading_sbid_searchdir_hash_ref};
+
+    my $existing_sb_hash_ref = $args{existing_sb_hash_ref} or
+        die "need existing_sb_hash_ref ($!)";
+
+    my %existing_sb_hash = %{$existing_sb_hash_ref};
+
+
     my %hash;
 
+    ## store existing info in hash:
     my $sql = qq~
         SELECT ABSB.atlas_build_search_batch_id, ASB.atlas_search_batch_id,
         ASB.proteomics_search_batch_id,
@@ -992,48 +1006,55 @@ sub get_absb_hash
 
     }
 
-    return %hash;
 
-}
-
-
-#######################################################################
-#  get_samples_hash - get complex hash of sample information
-#  accessed as:
-#  $hash{$original_experiment_tag}->{original_experiment_tag}
-#  $hash{$original_experiment_tag}->{sample_id}
-#  $hash{$original_experiment_tag}->{sample_tag}
-#
-#  @return complex hash
-#######################################################################
-sub get_samples_hash
-{
-
-    ## get hash of existing samples and their sample_tags
-    my %hash;
-
-    my $sql = qq~
-        SELECT sample_id, sample_tag, original_experiment_tag
-        FROM $TBAT_SAMPLE
-        WHERE record_status != 'D'
-    ~;
-
-    my @rows = $sbeams->selectSeveralColumns($sql);
-
-    foreach my $row (@rows)
+    ## create [atlas_search_batch] records and [atlas_build_search_batch] records
+    ## when they don't exist yet
+    foreach my $sbid (keys %loading_sbid_searchdir_hash)
     {
-        my ($sid, $st, $et) = @{$row};
-    
-        $hash{$et}->{original_experiment_tag} = $et;
-    
-        $hash{$et}->{sample_id} = $sid;
-    
-        $hash{$et}->{sample_tag} = $st;
-    }
+        if (!exists $hash{$sbid}->{atlas_search_batch_id})
+        {
+            my $search_batch_path = $loading_sbid_searchdir_hash{$sbid};
+
+            my $atlas_search_batch_id = create_atlas_search_batch(
+                proteomics_search_batch_id => $sbid,
+                sample_id => $existing_sb_hash{$sbid}->{sample_id},
+                search_batch_path => $search_batch_path
+            );
+
+            $hash{$sbid}->{atlas_search_batch_id} = $atlas_search_batch_id;
+
+            $hash{$sbid}->{search_dir_path} = $search_batch_path;
+
+
+            my $atlas_build_search_batch_id = 
+                create_atlas_build_search_batch(
+                    sample_id => $existing_sb_hash{$sbid}->{sample_id},
+                    search_batch_id => $sbid,
+                    atlas_search_batch_id => $atlas_search_batch_id,
+                );
+
+            
+            $hash{$sbid}->{atlas_build_search_batch_id} = $atlas_build_search_batch_id;
+
+            my $successful = create_atlas_search_batch_parameter_recs(
+                atlas_search_batch_id => $atlas_search_batch_id,
+                search_batch_path => $search_batch_path
+            );
+
+        }
+
+        $hash{$sbid}->{proteomics_search_batch_id} = $sbid;
+
+        my $et = getProteomicsExpTag( search_batch_id => $sbid );
+
+        $hash{$sbid}->{proteomics_experiment_tag} =  $et;
+
+    } 
 
     return %hash;
 
 }
+
 
 
 #######################################################################
@@ -1071,7 +1092,8 @@ sub get_string_list_of_keys
 # create_atlas_search_batch -- create atlas_search_batch record
 # using assumption that atlas_search_batch_id should be equal to
 # the Proteomics search_batch_id
-# @param search_batch_id  search batch id to look-up Proteomics info
+# @param proteomics_search_batch_id  search batch id to look-up Proteomics info
+# @param sample_id
 # @param search_batch_path absolute path to search_batch information
 # @return atlas_search_batch_id
 #######################################################################
@@ -1080,9 +1102,11 @@ sub create_atlas_search_batch
 
     my %args = @_;
 
-    my $sbid = $args{search_batch_id} or die "need search_batch_id ($!)";
+    my $sbid = $args{proteomics_search_batch_id} or die "need search_batch_id ($!)";
 
-    my $search_batch_path = $args{search_batch_path}
+    my $sid = $args{sample_id} or die "need sample_id ($!)";
+
+    my $proteomics_search_batch_path = $args{search_batch_path}
         or die "need search_batch_path ($!)";
 
     my $atlas_search_batch_id;
@@ -1090,21 +1114,22 @@ sub create_atlas_search_batch
 
     my $nspec = getNSpecFromProteomics( search_batch_id => $sbid );
 
-    my $search_batch_subdir =  $search_batch_path;
+    my $search_batch_subdir =  $proteomics_search_batch_path;
 
     ##trim off all except last directory
     $search_batch_subdir =~ s/^(.+)\/(.+)/$2/gi;
 
-    my $experiment_dir = $search_batch_path;
+    my $experiment_dir = $proteomics_search_batch_path;
 
     ##trim off all except second to last directory
     $experiment_dir =~ s/^(.+)\/(.+)\/(.+)/$2/gi;
 
-    my $TPP_version = getTPPVersion( directory => $search_batch_path);
+    my $TPP_version = getTPPVersion( directory => $proteomics_search_batch_path);
 
     ## attributes for atlas_search_batch_record
     my %rowdata = (             ##  atlas_search_batch
         proteomics_search_batch_id => $sbid,
+        sample_id => $sid,
         n_searched_spectra => $nspec,
         data_location => $experiment_dir,
         search_batch_subdir => $search_batch_subdir,
@@ -1129,8 +1154,8 @@ sub create_atlas_search_batch
 #######################################################################
 # create_atlas_build_search_batch -- create atlas_build_search_batch record
 # @param search_batch_id  search batch id to look-up Proteomics info
+# @param sample_id  sample_id
 # @param atlas_search_batch_id  atlas_search_batch_id
-# @param search_batch_path absolute path to search_batch information
 # @return atlas_build_search_batch_id
 #######################################################################
 sub create_atlas_build_search_batch
@@ -1140,24 +1165,15 @@ sub create_atlas_build_search_batch
 
     my $sbid = $args{search_batch_id} or die "need search_batch_id ($!)";
 
-    my $search_batch_path = $args{search_batch_path}
-        or die "need search_batch_path ($!)";
+    my $sid = $args{sample_id} or die "need sample_id ($!)";
 
     my $atlas_search_batch_id = $args{atlas_search_batch_id}
         or die "need atlas_search_batch_id ($!)";
 
-    my $nspec = getNSpecFromProteomics( search_batch_id=>$sbid);
-
-    my $search_batch_subdir =  $search_batch_path;
-
-    ##trim off all except last directory
-    $search_batch_subdir =~ s/^(.+)\/(.+)/$2/gi;
-
 
     ## attributes for atlas_build_search_batch_record
     my %rowdata = (             ##  atlas_search_batch
-        n_searched_spectra => $nspec,
-        data_path => $search_batch_subdir,
+        sample_id => $sid,
         atlas_search_batch_id => $atlas_search_batch_id,
     );
 
@@ -1172,38 +1188,6 @@ sub create_atlas_build_search_batch
     );
 
     return $atlas_build_search_batch_id;
-
-}
-
-#######################################################################
-# update_atlas_build_search_batch -- update atlas_build_search_batch record
-# with sample_id
-# @param sample_id
-#######################################################################
-sub update_atlas_build_search_batch
-{
-
-    my %args = @_;
-
-    my $sample_id = $args{sample_id} or die "need sample_id ($!)";
-
-    my $atlas_build_search_batch_id = $args{atlas_build_search_batch_id} 
-        or die "need atlas_build_search_batch_id ($!)";
-
-    ## attributes for atlas_build_search_batch_record
-    my %rowdata = (             ##  atlas_search_batch
-        sample_id => $sample_id,
-    );
-
-    $sbeams->updateOrInsertRow(
-        update => 1,
-        table_name => $TBAT_ATLAS_BUILD_SEARCH_BATCH,
-        rowdata_ref => \%rowdata,
-        PK => 'atlas_build_search_batch_id',
-        PK_value => $atlas_build_search_batch_id,
-        verbose => $VERBOSE,
-        testonly => $TESTONLY,
-    );
 
 }
 
@@ -1338,10 +1322,7 @@ sub create_atlas_search_batch_parameter_recs
 ###############################################################################
 #  insert_sample -- get or create sample record
 #     with minimum info and some default settings 
-#     [ specifically: is_public='N', project_id='476' ]
-# @param search_batch_id
-# @param atlas_build_id
-# @param proteomics_experiment_tag
+# @param $rowdata_ref  reference to hash holding table attributes
 ###############################################################################
 sub insert_sample
 {
@@ -1350,50 +1331,9 @@ sub insert_sample
 
     my %args = @_;
 
-    my $sb_id = $args{search_batch_id} or die "need search_batch_id ($!)";
+    my $rowdata_ref = $args{'rowdata_ref'} or die("need rowdata_ref");
 
-    my $atlas_build_id = $args{atlas_build_id} or
-        die "need atlas_build_id ($!)";
-
-    my $experiment_tag = $args{proteomics_experiment_tag} or
-        die "need proteomics_experiment_tag($!)";
-
-    my $experiment_name;
-
-    ## get experiment_tag, experiment_name, $TB_ORGANISM.organism_name
-    my $sql = qq~
-        SELECT distinct SB.search_batch_id, PE.experiment_name
-        FROM $TBPR_PROTEOMICS_EXPERIMENT PE
-        JOIN $TBPR_SEARCH_BATCH SB
-        ON ( PE.experiment_id = SB.experiment_id)
-        WHERE SB.search_batch_id = '$sb_id'
-        AND PE.record_status != 'D'
-    ~;
-#       AND PE.experiment_tag = '$experiment_tag'
-
-    my @rows = $sbeams->selectSeveralColumns($sql) or die
-        "Could not find proteomics experiment record for ".
-        " search batch id $sb_id \n$sql\n ($!)";
-
-    foreach my $row (@rows)
-    {
-        ## xxxxxxx might want to check that PE.experiment_tag = $experiment_tag too
-        my ($sbid, $exp_name) = @{$row};
-
-        $experiment_name = $exp_name;
-    }
-
-
-    ## assume is_public = 'N' and project_id='476' for development PA
-    my %rowdata = ( ##   sample      some of the table attributes:
-        search_batch_id => $sb_id,
-        sample_tag => $experiment_tag,
-        original_experiment_tag => $experiment_tag,
-        sample_title => $experiment_name,
-        sample_description => $experiment_name,
-        is_public => 'N',
-        project_id => '476',
-    );
+    my %rowdata = %{$rowdata_ref};
 
 
     ## create a sample record:
@@ -1634,6 +1574,7 @@ sub getTPPVersion
 #######################################################################
 sub insert_spectra_description_set
 {
+
     my $METHOD = "insert_spectra_description_set";
 
     my %args = @_;
@@ -1650,12 +1591,12 @@ sub insert_spectra_description_set
     my $search_batch_dir_path = $args{search_batch_dir_path} or die
         "need search_batch_dir_path ($!)";
 
-    ## There could be [spectra_description_set records for this
+    ## There could be [spectra_description_set] records for this
     ## sample_id and atlas_search_batch
     my $sql = qq~
         SELECT distinct sample_id, atlas_search_batch_id, 
         instrument_model_id, instrument_model_name, conversion_software_name, 
-        conversion_software_version, mzXML_schema
+        conversion_software_version, mzXML_schema, n_spectra
         FROM $TBAT_SPECTRA_DESCRIPTION_SET
         WHERE atlas_search_batch_id = '$atlas_search_batch_id'
         AND sample_id = '$sample_id'
@@ -1666,16 +1607,15 @@ sub insert_spectra_description_set
 
     my ($instrument_model_id, $conversion_software_name, 
     $instrument_model_id, $instrument_model_name, $conversion_software_name,
-    $conversion_software_version, $mzXML_schema);
+    $conversion_software_version, $mzXML_schema, $n_spectra);
 
 
     ## If record exists, use attributes to create new record afterwards
     if ($#rows > -1)
     {
-
         foreach my $row (@rows)
         {
-            my ($sid, $asbid, $imid, $imn, $csn, $csv, $ms) = @{$row}; 
+            my ($sid, $asbid, $imid, $imn, $csn, $csv, $ms, $ns) = @{$row}; 
 
             $instrument_model_id = $imid;
 
@@ -1687,18 +1627,20 @@ sub insert_spectra_description_set
 
             $mzXML_schema = $ms;
 
+            $n_spectra = $ns;
+
         }
 
     } else
     { 
 
         ## read experiment's pepXML file to get an mzXML file name
-        my $singleMzXMLFileName = getAnMzXMLFileName( search_batch_dir_path => $search_batch_dir_path);
+        my @mzXMLFileNames = getMzXMLFileNames( search_batch_dir_path => $search_batch_dir_path);
 
 
-        #### read the mzXML file to get needed attributes... could make a content hndler for this, 
+        #### read an mzXML file to get needed attributes... could make a content hndler for this, 
         #### but only need the first dozen or so lines of file, and the mzXML files are huge...
-        my $infile = $singleMzXMLFileName;
+        my $infile = $mzXMLFileNames[0];
 
         # $instrument_model_id         ==> <msManufacturer category="msManufacturer" value="ThermoFinnigan"/>
         #                                  <msModel category="msModel" value="LCQ Deca"/>
@@ -1787,6 +1729,22 @@ sub insert_spectra_description_set
             print "[WARN] please edit parser to pick up spectra attributes for $infile ($!)";
         }
 
+
+        ## count the number of MS/MS in the mzXML files: ##
+        my $sum = 0;
+
+        foreach my $mzXMLFile (@mzXMLFileNames)
+        {
+            my $nspec = `cat $mzXMLFile | grep 'msLevel="2"' | wc -l`;
+
+            $sum = $sum + $nspec;
+
+        }
+
+        $n_spectra = $sum;
+##qqqqqqqqqqqqqq
+##print "*************** ==== > $n_spectra in $search_batch_dir_path\n < ============ ***************";
+
     }
 
 
@@ -1799,7 +1757,8 @@ sub insert_spectra_description_set
         instrument_model_name  => $instrument_model_name,
         conversion_software_name => $conversion_software_name,
         conversion_software_version => $conversion_software_version,
-        mzXML_schema => $mzXML_schema
+        mzXML_schema => $mzXML_schema,
+        n_spectra => $n_spectra,
     );
 
     my $spectra_description_set_id = $sbeams->updateOrInsertRow(
@@ -2563,6 +2522,87 @@ sub loadFromPAxmlFile {
 
 
 #######################################################################
+#  getMzXMLFileNames -- get mzXML File Names used in the interact pepXML
+# @param search_batch_dir_path absolute path to search_batch_dir
+# @return mzXMLFileNames
+#######################################################################
+sub getMzXMLFileNames
+{
+    my %args = @_;
+
+    my $search_batch_dir_path = $args{search_batch_dir_path} or die
+        " need search_batch_dir_path ($!)";
+
+    my $infile = "$search_batch_dir_path/interact-prob.xml";
+
+    ## to handle both older and newer formats:
+    my ($msRunPepXMLFileName, $mzXMLFileName);
+    my (@msRunPepXMLFileNames, @mzXMLFileNames);
+
+    unless(-e $infile)
+    {
+        print "[WARN] could not find $infile\n";
+
+        $infile = "$search_batch_dir_path/interact.xml";
+    }
+    unless(-e $infile)
+    {
+        die "could not find $infile either\n";
+    }
+
+    open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
+
+    while (my $line = <INFILE>)
+    {
+        chomp($line);
+
+        if ($line =~ /^(\<inputfile name=\")(.+)(\/)(.+)(\/)(.+)(\")(\/\>)/)
+        {
+            my $exp_dir = $2;
+
+            my $tmp = $6;
+
+            if ($tmp =~ /(.+)\.xml/)
+            {
+                $tmp = $1;
+            }
+
+            $mzXMLFileName = "$exp_dir/$tmp" . ".mzXML";
+
+            push (@mzXMLFileNames, $mzXMLFileName);
+
+        }
+
+        if ($line =~ /(\<roc)(.+)/ )
+        {
+            last;
+        }
+
+    }
+
+    close(INFILE) or die "Cannot close $infile";
+
+#   if ($msRunPepXMLFileName)
+#   {
+#       ## remove the .xml and search_dir
+#       $msRunPepXMLFileName =~ /^(.+)\/(.+)\/(.+)(xml)/;
+
+#       $mzXMLFileName = "$1/$3" . "mzXML";
+
+#       unless( -e $mzXMLFileName)
+#       {
+#           die "could not find $mzXMLFileName ($!)\n";
+
+#       }
+
+#   }
+
+    return @mzXMLFileNames;
+
+}
+
+
+#######################################################################
 #  getAnMzXMLFileName -- get an mzXML File Name by reading the interact
 #  pepXML file, and parsing a foudn pepXML name
 # @param search_batch_dir_path absolute path to search_batch_dir
@@ -2599,7 +2639,6 @@ sub getAnMzXMLFileName
 
         if ($line =~ /^(\<inputfile name=\")(.+)(\/)(.+)(\/)(.+)(\")(\/\>)/)
         {
-
             my $exp_dir = $2;
 
             my $tmp = $6;
@@ -2621,7 +2660,6 @@ sub getAnMzXMLFileName
 
     if ($msRunPepXMLFileName)
     {
-
         ## remove the .xml and search_dir
         $msRunPepXMLFileName =~ /^(.+)\/(.+)\/(.+)(xml)/;
 
