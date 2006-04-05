@@ -219,6 +219,7 @@ sub start_element {
     my $modified_peptide_instance_id = &main::insert_modified_peptide_instance(
       rowdata_ref=>\%rowdata,
     );
+    $self->{modified_peptide_instance_id} = $modified_peptide_instance_id;
 
     #### Create modified_peptide_instance_sample records
     &main::insert_modified_peptide_instance_samples(
