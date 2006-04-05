@@ -387,18 +387,10 @@ sub removeAtlas {
    my %table_child_relationship = (
       atlas_build => 'peptide_instance(C),atlas_build_sample(C),'.
         'atlas_build_search_batch(C),spectra_description_set(C)',
-
       peptide_instance => 'peptide_mapping(C),peptide_instance_sample(C),'.
-        'modified_peptide_instance(C)',
-
+        'modified_peptide_instance(C),peptide_instance_search_batch(C)',
       modified_peptide_instance => 'modified_peptide_instance_sample(C),',
-
-      atlas_build_search_batch => 'atlas_search_batch(C)',
-
-      atlas_search_batch => 'atlas_search_batch_parameter(C),'.
-        'atlas_search_batch_parameter_set(C),'.
-        'peptide_instance_search_batch(C),'.
-        'modified_peptide_instance_search_batch(C)'
+        'modified_peptide_instance_search_batch(C)',
    );
 
    #my $TESTONLY = "0";
@@ -535,7 +527,6 @@ sub buildAtlas {
     my %loading_sbid_searchdir_hash = getInfoFromExperimentsList(
         infile => "$source_dir../Experiments.list" );
 
-
     ## the content handler for loadFromPAxmlFile is using search_batch_id's 
     ## from proteomics so we need to send it hash to look up atlas_search_batch_ids
     ## and sample_ids when needed.  
@@ -567,6 +558,8 @@ sub buildAtlas {
 
     ## set infile to coordinate mapping file
     my $mapping_file = "$source_dir/coordinate_mapping.txt";
+
+    print "\n Begin calc coordinates \n";
 
     #### Update the build data already loaded with genomic coordinates
     readCoords_updateRecords_calcAttributes(
@@ -744,19 +737,18 @@ sub createAtlasBuildSampleLink {
 ###############################################################################
 sub get_sb_hash
 {
-
     my %args = @_;
 
-    my $sbid_list = $args{search_batch_id_list} or die 
+    my $sbid_list = $args{'search_batch_id_list'} or die 
         "need search_batch_id_list ($!)";
 
-    my $atlas_build_id = $args{atlas_build_id} or die 
+    my $atlas_build_id = $args{'atlas_build_id'} or die 
         "need atlas_build_id ($!)";
 
     my $default_sample_project_id = $args{'default_sample_project_id'} or die 
         "need default_sample_project_id ($!)";
 
-    my $loading_sbid_searchdir_hash_ref = $args{loading_sbid_searchdir_hash_ref} 
+    my $loading_sbid_searchdir_hash_ref = $args{'loading_sbid_searchdir_hash_ref'} 
         or die "need loading_sbid_searchdir_hash_ref";
 
     ## hash with key = search_batch_id, value = $search_dir
@@ -769,7 +761,7 @@ sub get_sb_hash
     my $sql = qq~
         SELECT ASB.atlas_search_batch_id, ASB.proteomics_search_batch_id, 
         ASB.data_location, ASB.search_batch_subdir, ASB.sample_id,
-        PE.experiment_tag, S.sample_tag
+        PE.experiment_tag, S.sample_tag, PE.experiment_path
         FROM $TBAT_ATLAS_SEARCH_BATCH ASB
         INNER JOIN $TBAT_SAMPLE S ON (S.sample_id = ASB.sample_id)
         INNER JOIN $TBPR_SEARCH_BATCH SB ON (ASB.proteomics_search_batch_id = SB.search_batch_id)
@@ -782,14 +774,14 @@ sub get_sb_hash
 
     foreach my $row (@rows)
     {
-        my ($asbid, $sbid, $dl, $sub_dir, $sid, $exp_tag, $sample_tag) = @{$row};
+        my ($asbid, $sbid, $dl, $sub_dir, $sid, $exp_tag, $sample_tag, $exp_path) = @{$row};
 
-        my $path = "$dl/$sub_dir";
+        my $path = "$exp_path/$sub_dir";
 
         ## if doesn't exist, use global var for archive area
         unless (-e $path)
         {
-            $path = $RAW_DATA_DIR{Proteomics} . "/path";
+            $path = $RAW_DATA_DIR{Proteomics} . "/$path";
         }
 
         unless (-e $path)
@@ -842,7 +834,7 @@ sub get_sb_hash
                     original_experiment_tag => $exp_tag,
                     sample_title => $exp_name,
                     sample_description => $exp_name,
-                    s_public => 'N',
+                    is_public => 'N',
                     project_id => $default_sample_project_id,
                 );
 
@@ -1028,6 +1020,7 @@ sub get_absb_hash
 
             my $atlas_build_search_batch_id = 
                 create_atlas_build_search_batch(
+                    atlas_build_id => $atlas_build_id,
                     sample_id => $existing_sb_hash{$sbid}->{sample_id},
                     search_batch_id => $sbid,
                     atlas_search_batch_id => $atlas_search_batch_id,
@@ -1155,6 +1148,7 @@ sub create_atlas_search_batch
 # create_atlas_build_search_batch -- create atlas_build_search_batch record
 # @param search_batch_id  search batch id to look-up Proteomics info
 # @param sample_id  sample_id
+# @param atlas_build_id
 # @param atlas_search_batch_id  atlas_search_batch_id
 # @return atlas_build_search_batch_id
 #######################################################################
@@ -1167,6 +1161,8 @@ sub create_atlas_build_search_batch
 
     my $sid = $args{sample_id} or die "need sample_id ($!)";
 
+    my $atlas_build_id = $args{atlas_build_id} or die "need atlas_build_id ($!)";
+
     my $atlas_search_batch_id = $args{atlas_search_batch_id}
         or die "need atlas_search_batch_id ($!)";
 
@@ -1175,6 +1171,7 @@ sub create_atlas_build_search_batch
     my %rowdata = (             ##  atlas_search_batch
         sample_id => $sid,
         atlas_search_batch_id => $atlas_search_batch_id,
+        atlas_build_id => $atlas_build_id,
     );
 
     my $atlas_build_search_batch_id = $sbeams->updateOrInsertRow(
@@ -1824,10 +1821,10 @@ sub readCoords_updateRecords_calcAttributes {
 
     my $infile = $args{'infile'} or die "need infile ($!)";
 
-    my $proteomicsSBID_hash_ref = $args{'proteomicsSBID_hash_ref'} or die
-        " need proteomicsSBID_hash_ref ($!)";
-
-    my %proteomicsSBID_hash = %{$proteomicsSBID_hash_ref};
+#   my $proteomicsSBID_hash_ref = $args{'proteomicsSBID_hash_ref'} or die
+#       " need proteomicsSBID_hash_ref ($!)";
+#
+#   my %proteomicsSBID_hash = %{$proteomicsSBID_hash_ref};
 
     my $atlas_build_id = $args{atlas_build_id} or die "need atlas_build_id ($!)";
 
