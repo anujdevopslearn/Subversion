@@ -886,8 +886,6 @@ sub get_string_list_of_keys
 
 #######################################################################
 # create_atlas_search_batch -- create atlas_search_batch record
-# using assumption that atlas_search_batch_id should be equal to
-# the Proteomics search_batch_id
 # @param proteomics_search_batch_id  search batch id to look-up Proteomics info
 # @param sample_id
 # @param search_batch_path absolute path to search_batch information
