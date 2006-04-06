@@ -19,7 +19,7 @@ use strict;
 my %opts = ( module => [] );
 
 # paths (relative to $SBEAMS) of helper scripts
-my %scripts = ( Core       => 'lib/scripts/build_core_dirs.sh',
+my %scripts = ( Core       => 'lib/scripts/Core/build_core_dirs.sh',
                 Microarray => 'lib/scripts/Microarray/build_ma_dirs.sh',
                 encrypt_db => 'lib/scripts/Core/encryptDbPasswd.pl',
                 crypt_pass => 'lib/scripts/Core/crypt.pl',
@@ -53,13 +53,13 @@ my @modules = qw(Microarray);
 
   # Run core installer shell script, builds dirs/links
   print "Building Core directory structure\n" if $opts{verbose};
-#  system( "$ENV{SBEAMS}/$scripts{Core}" );
+  system( "$ENV{SBEAMS}/$scripts{Core}" );
 
   # Optionally run individual module installer scripts 
   for my $m ( @{$opts{module}} ) {
     next unless $scripts{$m};
     print "Building Core directory structure\n" if $opts{verbose};
-#  my $results = system( "$ENV{SBEAMS}/$scripts{$m}" );
+    my $results = system( "$ENV{SBEAMS}/$scripts{$m}" );
   }
   
   # Get user settings from sbeams.config file

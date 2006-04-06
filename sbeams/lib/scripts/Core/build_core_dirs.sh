@@ -25,7 +25,7 @@ then
 fi
 
 echo Clean up...
-cd $SBEAMS
+cd $SBEAMS/..
 rm -Rf sbeamscommon/ dev1/
 cd sbeams
 rm -f tmp var doc/includes lib/conf/Core/AvailableModules.conf lib/conf/SBEAMS.conf
@@ -33,7 +33,7 @@ find lib/refdata/Microarray/*data* -exec rm -Rf {} \;
 
 
 echo "Setting up sbeamscommon"
-cd $SBEAMS
+cd $SBEAMS/..
 mkdir sbeamscommon
 cd sbeamscommon
 
@@ -51,7 +51,7 @@ then
   echo "using stored config file"
   cp /tmp/staging/SBEAMS.conf lib/conf/SBEAMS.conf
 else
-  cp $SBEAMS/sbeams/lib/conf/SBEAMS.conf.template lib/conf/SBEAMS.conf
+  cp $SBEAMS/lib/conf/SBEAMS.conf.template lib/conf/SBEAMS.conf
 fi
 
 # Set up shared var
@@ -59,30 +59,29 @@ mkdir var var/resultsets var/logs var/upload var/sessions
 touch var/logs/debug.log var/logs/info.log var/logs/warn.log var/logs/error.log
 chmod -R g+w var
 cd $SBEAMS 
-chmod -R g+w sbeamscommon/lib/conf
-chgrp -R sbeams sbeamscommon
+chmod -R g+w ../sbeamscommon/lib/conf
+chgrp -R sbeams ../sbeamscommon
 
 # Use the common stuff
-cd sbeams
-ln -s includes doc/includes
-ln -s $SBEAMS/sbeamscommon/var .
-ln -s $SBEAMS/sbeamscommon/tmp .
-ln -s $SBEAMS/sbeamscommon/images/tmp images/tmp
-ln -s $SBEAMS/sbeamscommon/lib/conf/SBEAMS.conf lib/conf
-ln -s $SBEAMS/sbeamscommon/lib/conf/Core/AvailableModules.conf lib/conf/Core
+ln -sf includes doc/includes
+ln -sf $SBEAMS/../sbeamscommon/var .
+ln -sf $SBEAMS/../sbeamscommon/tmp .
+ln -sf $SBEAMS/../sbeamscommon/images/tmp images/tmp
+ln -sf $SBEAMS/../sbeamscommon/lib/conf/SBEAMS.conf lib/conf
+ln -sf $SBEAMS/../sbeamscommon/lib/conf/Core/AvailableModules.conf lib/conf/Core
 
-if [ -e /tmp/staging/Core_POPULATE.sql ]
-then
-  cp /tmp/staging/Core_POPULATE.sql $SBEAMS/sbeams/lib/sql/Core
-fi
-perl -pi -e '$name=`whoami`;chomp $name;s/NISusername/$name/' $SBEAMS/sbeams/lib/sql/Core/Core_POPULATE.sql
-perl -pi -e '$name=`whoami`;chomp $name; $name=`crypt.pl $name`;chomp $name;s/PutOutputOfcrypt\.plHere/$name/' $SBEAMS/sbeams/lib/sql/Core/Core_POPULATE.sql
+#if [ -e /tmp/staging/Core_POPULATE.sql ]
+#then
+#  cp /tmp/staging/Core_POPULATE.sql $SBEAMS/sbeams/lib/sql/Core
+#fi
+#perl -pi -e '$name=`whoami`;chomp $name;s/NISusername/$name/' $SBEAMS/sbeams/lib/sql/Core/Core_POPULATE.sql
+#perl -pi -e '$name=`whoami`;chomp $name; $name=`crypt.pl $name`;chomp $name;s/PutOutputOfcrypt\.plHere/$name/' $SBEAMS/sbeams/lib/sql/Core/Core_POPULATE.sql
 
-cd $SBEAMS/sbeams/doc/POD
+cd $SBEAMS/doc/POD
 ./createPOD.csh
 
 # Why use dev1 first?
-cd $SBEAMS
+cd $SBEAMS/..
 mkdir dev1
 cd dev1/
 echo Copying codebase...
