@@ -31,6 +31,14 @@ use lib ".";
 use SBEAMS::Connection qw($log);
 
 
+
+
+
+
+
+
+my $tmp_project_id = 0;
+
 ###############################################################################
 # Print Options Page
 ###############################################################################
@@ -1487,8 +1495,12 @@ sub showTable {
     print STDERR "SQL => $sql_query\n" if DEBUG;
 
     #### Fetch the results from the database server
-    $sbeams->fetchResultSet(sql_query=>$sql_query,
-      resultset_ref=>$resultset_ref);
+
+ $sbeams->fetchResultSet(sql_query=>$sql_query, 
+			 resultset_ref=>$resultset_ref);
+
+
+
 
     #### Store the resultset and parameters to disk resultset cache
     $rs_params{set_name} = "SETME";
@@ -1833,6 +1845,8 @@ sub processEntryForm {
 	    $unique_values{$element} = $parameters{$element};
           }
         }
+	$tmp_project_id = $parameters{project_id};
+
         my $existing_record = checkForPreexistingRecord(%unique_values);
         if ($existing_record) {
             printPreexistingRecord($existing_record);
@@ -2021,10 +2035,26 @@ sub checkForPreexistingRecord {
   my $foundvalue = '';
   my $error_message = '';
 
+
   my $sql_query = qq!
 	SELECT $PK_COLUMN_NAME
 	  FROM $DB_TABLE_NAME
 	 WHERE $PK_COLUMN_NAME > 0!;
+
+
+  ## in case uniqueness is checked when a proteomics experiment is supposed
+  ## to be entered: do not check for unique experiment_tag - but for a unique
+  ## combination of experiment_tag and project_id
+  if ($DB_TABLE_NAME eq $TBPR_PROTEOMICS_EXPERIMENT ){
+
+      $sql_query = qq!
+	  SELECT $PK_COLUMN_NAME
+ 	  FROM $DB_TABLE_NAME
+	  WHERE $TBPR_PROTEOMICS_EXPERIMENT.project_id = $tmp_project_id
+            AND $PK_COLUMN_NAME > 0!;
+
+  }
+
 
   foreach $element (keys %unique_values) {
     my $value = $unique_values{$element};
