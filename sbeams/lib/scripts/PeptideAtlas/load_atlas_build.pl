@@ -633,8 +633,8 @@ sub get_search_batch_and_sample_id_hash
         }
 
         ## if no sample_id in ATLAS_SEARCH_BATCH, there may still be one existing from former
-        ## schema, so check before trying to create one:  NOTE, this should go away someday, as we
-        ## the [sample]:search_batch_id will go away
+        ## schema, so check before trying to create one:  NOTE, this will disappear soon
+        ## because [sample]:search_batch_id will be dropped from the table
         unless ($sid)
         {
             $sql = qq~
@@ -683,7 +683,7 @@ sub get_search_batch_and_sample_id_hash
                 $sid = insert_sample( rowdata_ref => \%rowdata );
 
 
-                ## now create [atlas_search_batch]
+                ## create [atlas_search_batch]
                 my $search_batch_path = $loading_sbid_searchdir_hash{$loading_sb_id};
         
                 $atlas_search_batch_id = create_atlas_search_batch(
@@ -694,7 +694,7 @@ sub get_search_batch_and_sample_id_hash
 
 
             
-                ## now create [atlas_search_batch_parameter]s and [atlas_search_batch_parameter_set]
+                ## create [atlas_search_batch_parameter]s and [atlas_search_batch_parameter_set]
                 my $successful = create_atlas_search_batch_parameter_recs(
                     atlas_search_batch_id => $atlas_search_batch_id,
                     search_batch_path => $search_batch_path
@@ -712,7 +712,7 @@ sub get_search_batch_and_sample_id_hash
             $atlas_search_batch_id;
 
 
-        ## now create [atlas_build_search_batch] record
+        ## create [atlas_build_search_batch] record
         my $atlas_build_search_batch_id = 
             create_atlas_build_search_batch(
                 atlas_build_id => $atlas_build_id,
@@ -1438,7 +1438,7 @@ sub insert_spectra_description_set
         my @mzXMLFileNames = getMzXMLFileNames( search_batch_dir_path => $search_batch_dir_path);
 
 
-        #### read an mzXML file to get needed attributes... could make a content hndler for this, 
+        #### read an mzXML file to get needed attributes... could make a sax content handler for this, 
         #### but only need the first dozen or so lines of file, and the mzXML files are huge...
         my $infile = $mzXMLFileNames[0];
 
@@ -1542,8 +1542,6 @@ sub insert_spectra_description_set
         }
 
         $n_spectra = $sum;
-##qqqqqqqqqqqqqq
-##print "*************** ==== > $n_spectra in $search_batch_dir_path\n < ============ ***************";
 
     }
 
@@ -1575,7 +1573,8 @@ sub insert_spectra_description_set
 
 
 #######################################################################
-# getNSpecFromProteomics
+# getNSpecFromProteomics - get the number of spectra with P>=0 loaded 
+#    into Proteomics for this search batch
 # @param search_batch_id
 # @return number of spectra with P>=0 loaded into Proteomics for search_batch
 #######################################################################
@@ -2382,98 +2381,7 @@ sub getMzXMLFileNames
 
     close(INFILE) or die "Cannot close $infile";
 
-#   if ($msRunPepXMLFileName)
-#   {
-#       ## remove the .xml and search_dir
-#       $msRunPepXMLFileName =~ /^(.+)\/(.+)\/(.+)(xml)/;
-
-#       $mzXMLFileName = "$1/$3" . "mzXML";
-
-#       unless( -e $mzXMLFileName)
-#       {
-#           die "could not find $mzXMLFileName ($!)\n";
-
-#       }
-
-#   }
-
     return @mzXMLFileNames;
-
-}
-
-
-#######################################################################
-#  getAnMzXMLFileName -- get an mzXML File Name by reading the interact
-#  pepXML file, and parsing a foudn pepXML name
-# @param search_batch_dir_path absolute path to search_batch_dir
-# @return anMzXMLFileName
-#######################################################################
-sub getAnMzXMLFileName
-{
-
-    my %args = @_;
-
-    my $search_batch_dir_path = $args{search_batch_dir_path} or die
-        " need search_batch_dir_path ($!)";
-
-    my $infile = "$search_batch_dir_path/interact-prob.xml";
-
-    my ($msRunPepXMLFileName, $mzXMLFileName);
-
-    unless(-e $infile)
-    {
-        print "[WARN] could not find $infile\n";
-
-        $infile = "$search_batch_dir_path/interact.xml";
-    }
-    unless(-e $infile)
-    {
-        die "could not find $infile either\n";
-    }
-
-    open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
-
-    while (my $line = <INFILE>)
-    {
-        chomp($line);
-
-        if ($line =~ /^(\<inputfile name=\")(.+)(\/)(.+)(\/)(.+)(\")(\/\>)/)
-        {
-            my $exp_dir = $2;
-
-            my $tmp = $6;
-
-            if ($tmp =~ /(.+)\.xml/)
-            {
-
-                $tmp = $1;
-            }
-
-            $mzXMLFileName = "$exp_dir/$tmp" . ".mzXML";
-
-            last;
-        }
-
-    }
-
-    close(INFILE) or die "Cannot close $infile";
-
-    if ($msRunPepXMLFileName)
-    {
-        ## remove the .xml and search_dir
-        $msRunPepXMLFileName =~ /^(.+)\/(.+)\/(.+)(xml)/;
-
-        $mzXMLFileName = "$1/$3" . "mzXML";
-
-        unless( -e $mzXMLFileName)
-        {
-            die "could not find $mzXMLFileName ($!)\n";
-
-        }
-
-    }
-
-    return $mzXMLFileName;
 
 }
 
