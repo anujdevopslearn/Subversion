@@ -103,6 +103,8 @@ sub start_element {
 
     my $sample_ids = join(",",@sample_ids);
 
+    my $n_samples = $#sample_ids + 1;
+
     $attrs{atlas_search_batch_ids} = join(",",@atlas_search_batch_ids);
 
     my %peptide_acc_id_hash = %{$self->{peptide_acc_id_hash}};
@@ -141,6 +143,7 @@ sub start_element {
       best_adjusted_probability => $attrs{best_adjusted_probability},
       n_genome_locations => -1,
       sample_ids => $sample_ids,
+      n_samples => $n_samples,
       is_exon_spanning => '?',
       n_protein_mappings => -1,
       search_batch_ids => $attrs{search_batch_ids},
