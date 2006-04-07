@@ -15,8 +15,6 @@ cd $SBEAMS
 
 if [  -e tmp ]
 then
-# These should already exist from the installation of the Core module
-mkdir $SBEAMS/tmp $SBEAMS/var 
 
 # These will have to be created.
 mkdir $SBEAMS/tmp/Microarray \

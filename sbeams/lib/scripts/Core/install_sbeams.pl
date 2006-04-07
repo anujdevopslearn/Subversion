@@ -80,13 +80,13 @@ my @modules = qw(Microarray);
 sub build_schema {
   my $conf = shift;
   print "Building schema\n" if $opts{verbose};
-  my $modstring = ( $opts{modules} ) ? join " ", @{$opts{modules}} : '';
+  my $modstring = ( $opts{module} ) ? join " ", @{$opts{module}} : '';
   $ENV{DBUSER} = $conf->{DB_USER};
   $ENV{DBPASS} = $conf->{_DB_PASS};
   $ENV{DBTYPE} = ( $conf->{DB_TYPE} =~ /MS SQL/ ) ? 'mssql' :
                  ( $conf->{DB_TYPE} =~ /MySQL/ ) ? 'mysql' : 'pgsql';
 
-  system( "$ENV{SBEAMS}/$scripts{schema} " . $modstring  );
+  system( "$ENV{SBEAMS}/$scripts{schema}  $modstring "  );
 
 }
 
@@ -208,11 +208,13 @@ sub update_core_populate {
     $line =~ s/LastName/$info{LASTNAME}/g;
     $line =~ s/NISusername/$info{USERNAME}/g;
 
-    if ( $info{PASSWORD} ) {
-      $info{PASSWORD} = `$ENV{SBEAMS}/$scripts{crypt_pass} $info{PASSWORD}`;
-      chomp $info{PASSWORD};
+    if ( $info{PASSWORD} && $line =~ /NULL/ ) {
+      #$info{PASSWORD} = `$ENV{SBEAMS}/$scripts{crypt_pass} $info{PASSWORD}`;
+      my $passwd = `$ENV{SBEAMS}/$scripts{crypt_pass} $info{PASSWORD}`;
+      chomp $passwd;
+      print "Translated $info{PASSWORD} into $passwd\n";  
 
-      $line =~ s/NULL/\'$info{PASSWORD}\'/g;
+      $line =~ s/NULL/\'$passwd\'/g;
     } elsif ( $line =~ /UPDATE user_login SET password/ ) {
       # Skip this line (don't print it)
       next;
@@ -233,30 +235,7 @@ sub write_config_file {
   my %config = ( %$user_config ); 
   my @keys = (sort(keys(%config)));
 
-  # Now we have the values to transfer the the main SBEAMS.conf file.  Make
-  # sure the file doesn't already exist, exit if it does unless -force 
   my $conf = "$ENV{SBEAMS}/lib/conf/SBEAMS.conf";
-  if ( -e "$conf" ) {
-    if ( !$opts{force} ) {
-      usage( "Found existing SBEAMS.conf file, use --force to overwrite" );  
-    } else {
-      # Try to save a version
-      for( my $i = 1; $i < 10; $i++ ) {
-        unless( -e "$conf.$i" ) {
-          system( "cp $conf $conf.$i" );
-          last;
-        }
-      }
-    }
-  } else {
-    if ( -e "$conf.template" ) {
-      # Placate the parser
-      system( "cp $conf.template $conf" );
-    } else {
-      usage( "Unable to find SBEAMS.conf template file" );
-    }
-  }
-
 
   for my $k ( @keys ) {
     if ( !defined $config{$k} || $config{$k} eq '' ) {

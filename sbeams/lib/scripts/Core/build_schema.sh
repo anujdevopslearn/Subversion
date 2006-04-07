@@ -87,7 +87,6 @@ do
         echo GO
         $SBEAMS/lib/scripts/Core/runsql.pl -u $user -p $pass -i --delimit GO -s ${mod}_${cfile}.${db}
       else
-        echo NOGO
         $SBEAMS/lib/scripts/Core/runsql.pl -u $user -p $pass -i -s ${mod}_${cfile}.${db}
       fi
 
@@ -100,7 +99,6 @@ do
         echo GO
         $SBEAMS/lib/scripts/Core/runsql.pl -u $user -p $pass -i --delimit GO -s ${mod}_${cfile}.sql
       else
-        echo NOGO
         $SBEAMS/lib/scripts/Core/runsql.pl -u $user -p $pass -i -s ${mod}_${cfile}.sql
       fi
 
