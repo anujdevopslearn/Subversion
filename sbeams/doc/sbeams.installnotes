@@ -21,6 +21,10 @@ helpful to do them manually to learn how the systems is set up and
 development would proceed.
 
 Typical installation time of this module for an experienced user is 50 minutes.
+It is recommended that you read this entire document and install the software
+manually by following the instructions in sections 1-9 below.  However, there 
+is an automated installation script, described in Appendix, that will allow
+the installation of a basic system with a minimum of configuration. 
 
 -------------------------------------------------------------------------------
 1) Software Dependencies
@@ -633,7 +637,7 @@ $SBEAMS/doc/Proteomics/Proteomics.installnotes
 $SBEAMS/doc/BioLink/GeneOntology.installnotes
 
 -------------------------------------------------------------------------------
-Troubleshooting:
+Appendix A: Troubleshooting.
 
 1) All of the setup and cgi scripts use /usr/local/bin/perl as the interpreter.
 If your system doesn't have perl installed there, you have can either create a 
@@ -656,3 +660,40 @@ not the same this is not an issue.
 naming the various files created.  If you simply give a path, you will see files such
 as _CREATETABLES.mssql instead of Module_CREATETABLES.mssql.  If the command is executed
 from the destination directory, need only define filename prefix.
+
+Appendix B: Quick Start.
+
+  In order to make the initial installation easier, there is a perl script that
+will run the most important steps described in sections 1-9.  It makes calls to
+many of the command line tools, and should allow a user to get a system up and 
+running very quickly.  Note that some initial preparation is needed, and some
+further customization will likely be desired after using this method.
+
+Prerequisites:
+-Obtain SBEAMS source via a tar.gz distribution, or via the anonymous subversion
+server, as described at http://www.sbeams/org/svn.php (section x)
+-Install apache web server (section y)
+-Install needed perl modules (section z)
+-Create sbeams group and make web server and installer users members(section A)
+-Create a database instance in a supported rdbms, along with a db user with the
+ability to create database objects (section )
+-Edit the minimal configuration file, located at /lib/conf/Core/sbeams.conf, 
+relative to the sbeams directory at the base of the source distribution (known
+as $SBEAMS).
+
+Once this is done, you are ready to run the install script:
+$SBEAMS/lib/scripts/Core/install_sbeams.pl 
+
+It is recommended that it be run once with the -u flag, which will cause it to
+print a usage summary.  The script will perform the following tasks:
+-Verify that the needed perl modules are installed
+-Write the minimal config values to the actual configuration file, SBEAMS.conf
+-Build the sbeamscommon infrastructure, with needed directories and sym links
+-Test the connection to the database using the settings provided
+-Run the schema generation scripts to generate DDL files appropriate for the 
+configured database type
+-Run the SQL installer to build the schema objects as per the DDL files
+-Populate the database with the initial configuration data
+-Run the directory building and schema creation scripts for any supported 
+modules specified on the command line (see usage).
+
