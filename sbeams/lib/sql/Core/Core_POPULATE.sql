@@ -107,9 +107,9 @@ VALUES ( 'gender','F','Female',20 );
 
 
 
-/* EDIT BELOW: "Campbell", "David", "dcampbel" to reflect yourself */
-INSERT INTO contact ( last_name,first_name,middle_name,contact_type_id, organization_id ) VALUES ( 'Campbell','David','',9,2 );
-INSERT INTO user_login ( contact_id,username,password,privilege_id ) VALUES ( 3,'dcampbel',NULL,10 );
+/* EDIT BELOW: "LastName", "First", "NISusername" to reflect yourself */
+INSERT INTO contact ( last_name,first_name,middle_name,contact_type_id, organization_id ) VALUES ( 'LastName','First','',9,2 );
+INSERT INTO user_login ( contact_id,username,password,privilege_id ) VALUES ( 3,'NISusername',NULL,10 );
 
 /* If you choose to set up an SBEAMS password for yourself, do it here */
 /* Read the notes in the sbeams.installnotes first, though! */
