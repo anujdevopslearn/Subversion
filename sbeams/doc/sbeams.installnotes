@@ -33,11 +33,15 @@ The following software programs are required to run SBEAMS:
 - Apache or similar web server software
 - PHP (There are a few PHP pages, but nothing elaborate.  As long as basic
        PHP works with the web server, this should be fine)
-- Perl (probably anything greater than version 5.0 will work)
+- Perl ( 5.0 or greater required, recommend 5.8 or greater).  SBEAMS
+  scripts assume perl will be located at /usr/local/bin/perl; see Appendix 1
+  for more details
 - A relational database engine.  This software was developed with SQL
   Server.  Products from either Microsoft or Sybase should work right away.
+  The Core, BioLink, and Microarray modules are known to work with mysql 
+  (v5.x or above), and others are being actively ported.
   Attempts has been made to make this software operable with other engines
-  such as Oracle, MySQL (4.1 minimum), and PostgreSQL, however some further
+  such as Oracle, MySQL (5.0 minimum), and PostgreSQL, however some further
   development is required to achieve this fully.  If you do so, please
   contribute your changes.
 
@@ -94,7 +98,7 @@ Proteomics:
 
 
 -------------------------------------------------------------------------------
-2) Installation Location
+2) Installation Location and unix users/groups
 
 SBEAMS is designed to live entirely in the "htdocs" area of your Apache
 web server.  For the remainder of this installation, it will be assumed
@@ -106,6 +110,7 @@ specific setup:
                    /local/www/html/sbeams  --> http:/db/sbeams/
   Development location: In a dev1 tree starting in the DocumentRoot,
                    /local/www/html/dev1/sbeams  -> http:/db/dev1/sbeams/
+
 
 There is typically significant ongoing development in an SBEAMS environment
 and it is recommended that all development work be done in a devN area
@@ -143,8 +148,8 @@ This assumes you are setting the user to apache and the group to sbeams, the -R
 flag is working as stated above.
   
 Developers need only log into the sbeams account to "roll out" code
-to production (from CVS is recommended).  All development is done by each
-user in their area.  Finished changes are checked into CVS and rolled out
+to production (from SVN is recommended).  All development is done by each
+user in their area.  Finished changes are checked into SVN and rolled out
 to production using the sbeams account. Smaller sites with one developer
 may choose to have everything owned by one person.  It is not recommended
 that the code be owned by root.  Since you are the installer, your
@@ -200,9 +205,10 @@ or:
 
 
 -------------------------------------------------------------------------------
-4) Unpack files and set up misc directories and links
+4) Obtain and (optionally) unpack SBEAMS source files.
 
-Do as much of this as possible as a regular user account, i.e. yours.
+Do as much of this as possible as a regular user account, i.e. yours.  These 
+notes assume an apache document root of /local/www/html.
 
 cd /local/www/html
 
@@ -226,8 +232,40 @@ svn checkout http://www.sbeams.org/svn/sbeams/trunk/sbeams
 
 http://subversion.tigris.org/
 
-# The rest of the instructions are the same regardless of the method.
-##### 
+-------------------------------------------------------------------------------
+5) Create database instance and users
+
+SBEAMS is being developed on SQL Server and should work quite easily
+with either the Sybase or Microsoft versions.  Most modules also work
+with MySQL (version 5.x or above).  Attempts are being made
+to make it work equally well with DB2, Oracle, and PostgreSQL;
+it's pretty close to working well, but this is not finished so please
+contribute to this effort if you try different RDBMS engines.
+
+(You can skip the following 3 steps if you already have a database and login.
+ No need to create "sbeams" dB. Use existing login/pwd for both accounts.)
+
+- First, create a database called 'sbeams' or 'sbeamsdev' or similar
+  (whatever was referred to in the SBEAMS.conf DBPREFIX{Core} setting).  If you
+  wish each module to exist in its own database, you must create those as well.
+
+- Within it(them), create users "sbeams" and "sbeamsro" as a read/write
+  account and a read-only account, respectively.
+
+- You will also need to create an administration account, "sbeamsadmin".
+  This account should be the one used to make changes to the schema, i.e.
+  create, update, and drop tables and constraints.
+
+See Appendix C for information on the MySQL gui console.
+
+-------------------------------------------------------------------------------
+
+Sections 6-13 can be handled by quick start script, see Appendix B near the 
+end of this document.
+
+-------------------------------------------------------------------------------
+6) Create common directory structure (quickstart)
+
 
 Create a sbeamscommon directory for sharing dynamic files between
 different instances and create symlinks:
@@ -278,7 +316,7 @@ ln -s ../../../../../sbeamscommon/lib/conf/Core/AvailableModules.conf lib/conf/C
 
 
 -------------------------------------------------------------------------------
-5) Edit the SBEAMS Configuration files
+7) Edit the SBEAMS Configuration files (quickstart*)
 
 This is an important step!  If you do not set the configurations for your
 site properly, you will have trouble later!
@@ -399,46 +437,9 @@ Important changes:
 This should allow for a fairly flexible development and production
 environment.
 
-
 -------------------------------------------------------------------------------
-6) Create and populate the database
+8) build and populate database schema (quickstart)
 
-SBEAMS is being developed on SQL Server and should work quite easily
-with either the Sybase or Microsoft versions.  Attempts are being made
-to make it work equally well with DB2, Oracle, PostgreSQL, and MySQL;
-it's pretty close to working well, but this is not finished so please
-contribute to this effort if you try different RDBMS engines.
-
-(You can skip the following 3 steps if you already have a database and login.
- No need to create "sbeams" dB. Use existing login/pwd for both accounts.)
-
-- First, create a database called 'sbeams' or 'sbeamsdev' or similar
-  (whatever was referred to in the SBEAMS.conf DBPREFIX{Core} setting).  If you
-  wish each module to exist in its own database, you must create those as well.
-
-- Within it(them), create users "sbeams" and "sbeamsro" as a read/write
-  account and a read-only account, respectively.
-
-- You will also need to create an administration account, "sbeamsadmin".
-  This account should be the one used to make changes to the schema, i.e.
-  create, update, and drop tables and constraints.
-
-##### MySQL ###############
-#
-# The above steps to create the database, user accounts, and passwords
-# are most conveniently done using MySQL Administrator, a GUI admin
-# tool available from MySQL.  See separate document on installing MySQL
-# 5.0 server for details on installing MySQL Administrator.
-#
-# After user accounts are created, the password for each account must
-# be reset to the old-style 16-byte encryption hash, since there is
-# no guarantee that clients connecting to the database will understand
-# the newer password hashing mechanism.  From a shell, invoke the
-# mysql monitor, and issue this command for each account:
-#
-# SET PASSWORD FOR <user>@<host> = OLD_PASSWORD( <password> );
-#
-##########################
 
 - Generate the appropriate schema for your type(s) of database as follows,
   using the generate_schema.pl script.  You can see the usage notes for this
@@ -576,7 +577,7 @@ try to determine the reason for failure.
 
 
 -------------------------------------------------------------------------------
-7) Populate the driver tables
+9) Populate the driver tables (quickstart)
 
 Logged in as your account (that has a matching SBEAMS account configured
 in the Core_POPULATE.sql file), run the following:
@@ -599,7 +600,7 @@ NOTE: You will potentially need to re-run this step every time either
 of these files is updated (Core_table_property.txt and _column.txt)
 
 -------------------------------------------------------------------------------
-8) Populate core database tables
+10) Populate core database tables (quickstart)
 
 - Organism table:
 cd $SBEAMS/lib/refdata/Core
@@ -614,21 +615,21 @@ to the Core:
 $SBEAMS/lib/scripts/Core/addModule.pl Tools
 
 -------------------------------------------------------------------------------
-9) Build the POD docs
+11) Build the POD docs (quickstart)
 
 cd $SBEAMS/doc/POD
 ./createPOD.csh
 
 
 -------------------------------------------------------------------------------
-10) Install required Modules
+12) Install required Modules (quickstart)
 
 Follow the install notes for any required modules, currently BioLink.
 
 SBEAMS/doc/BioLink/BioLink.installnotes
 
 -------------------------------------------------------------------------------
-11) Install Individual Modules
+13) Install Individual Modules (quickstart*)
 
 Now follow the individual module install notes, e.g.:
 
@@ -636,8 +637,15 @@ $SBEAMS/doc/Proteomics/Proteomics.installnotes
 
 $SBEAMS/doc/BioLink/GeneOntology.installnotes
 
+*For supported modules, must be specified when running
+
+
 -------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+
+============================
 Appendix A: Troubleshooting.
+============================
 
 1) All of the setup and cgi scripts use /usr/local/bin/perl as the interpreter.
 If your system doesn't have perl installed there, you have can either create a 
@@ -661,22 +669,25 @@ naming the various files created.  If you simply give a path, you will see files
 as _CREATETABLES.mssql instead of Module_CREATETABLES.mssql.  If the command is executed
 from the destination directory, need only define filename prefix.
 
+========================
 Appendix B: Quick Start.
+========================
 
   In order to make the initial installation easier, there is a perl script that
-will run the most important steps described in sections 1-9.  It makes calls to
+will handled the tasks described in sections 6-13 above.  It makes calls to
 many of the command line tools, and should allow a user to get a system up and 
 running very quickly.  Note that some initial preparation is needed, and some
-further customization will likely be desired after using this method.
+further customization (i.e. editing of the SBEAMS.conf file) will likely be 
+desired after using this method.
 
 Prerequisites:
--Obtain SBEAMS source via a tar.gz distribution, or via the anonymous subversion
-server, as described at http://www.sbeams/org/svn.php (section x)
--Install apache web server (section y)
--Install needed perl modules (section z)
--Create sbeams group and make web server and installer users members(section A)
+-Install needed perl modules (section 1)
+-Create sbeams group and make web server and installer users members(section 2)
+-Install and configure apache web server (section 3)
+-Obtain SBEAMS source as a tar.gz file or from subversion repository (section 4)
 -Create a database instance in a supported rdbms, along with a db user with the
-ability to create database objects (section )
+ability to create database objects (section 5)
+
 -Edit the minimal configuration file, located at /lib/conf/Core/sbeams.conf, 
 relative to the sbeams directory at the base of the source distribution (known
 as $SBEAMS).
@@ -697,3 +708,23 @@ configured database type
 -Run the directory building and schema creation scripts for any supported 
 modules specified on the command line (see usage).
 
+==============================
+Appendix C: MySQL GUI console.
+==============================
+
+##### MySQL ###############
+#
+# The above steps to create the database, user accounts, and passwords
+# are most conveniently done using MySQL Administrator, a GUI admin
+# tool available from MySQL.  See separate document on installing MySQL
+# 5.0 server for details on installing MySQL Administrator.
+#
+# After user accounts are created, the password for each account must
+# be reset to the old-style 16-byte encryption hash, since there is
+# no guarantee that clients connecting to the database will understand
+# the newer password hashing mechanism.  From a shell, invoke the
+# mysql monitor, and issue this command for each account:
+#
+# SET PASSWORD FOR <user>@<host> = OLD_PASSWORD( <password> );
+#
+##########################
