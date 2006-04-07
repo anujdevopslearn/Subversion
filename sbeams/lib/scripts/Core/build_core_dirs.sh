@@ -33,9 +33,9 @@ find lib/refdata/Microarray/*data* -exec rm -Rf {} \;
 
 
 echo "Setting up sbeamscommon"
-cd $SBEAMS/..
-mkdir sbeamscommon
-cd sbeamscommon
+cd $SBEAMS
+mkdir ../sbeamscommon
+cd ../sbeamscommon
 
 # Set up tmp spaces
 mkdir tmp tmp/images
@@ -46,29 +46,33 @@ chmod -R a+rw tmp
 # Set up shared conf area
 mkdir lib lib/conf lib/conf/Core
 touch lib/conf/Core/AvailableModules.conf
-if [ -e /tmp/staging/SBEAMS.conf ] 
-then
-  echo "using stored config file"
-  cp /tmp/staging/SBEAMS.conf lib/conf/SBEAMS.conf
-else
-  cp $SBEAMS/lib/conf/SBEAMS.conf.template lib/conf/SBEAMS.conf
-fi
+#if [ -e /tmp/staging/SBEAMS.conf ] 
+#then
+#  echo "using stored config file"
+#  cp /tmp/staging/SBEAMS.conf lib/conf/SBEAMS.conf
+#else
+cp $SBEAMS/lib/conf/SBEAMS.conf.template lib/conf/SBEAMS.conf
+#fi
 
 # Set up shared var
 mkdir var var/resultsets var/logs var/upload var/sessions
 touch var/logs/debug.log var/logs/info.log var/logs/warn.log var/logs/error.log
+chgrp -R sbeams .
 chmod -R g+w var
-cd $SBEAMS 
-chmod -R g+w ../sbeamscommon/lib/conf
-chgrp -R sbeams ../sbeamscommon
+chmod -R g+w lib/conf
 
 # Use the common stuff
+cd $SBEAMS 
 ln -sf includes doc/includes
 ln -sf $SBEAMS/../sbeamscommon/var .
 ln -sf $SBEAMS/../sbeamscommon/tmp .
-ln -sf $SBEAMS/../sbeamscommon/images/tmp images/tmp
-ln -sf $SBEAMS/../sbeamscommon/lib/conf/SBEAMS.conf lib/conf
-ln -sf $SBEAMS/../sbeamscommon/lib/conf/Core/AvailableModules.conf lib/conf/Core
+cd images
+ln -sf $SBEAMS/../sbeamscommon/images/tmp .
+cd ..
+cd lib/conf
+ln -sf $SBEAMS/../sbeamscommon/lib/conf/SBEAMS.conf .
+cd Core
+ln -sf $SBEAMS/../sbeamscommon/lib/conf/Core/AvailableModules.conf .
 
 #if [ -e /tmp/staging/Core_POPULATE.sql ]
 #then

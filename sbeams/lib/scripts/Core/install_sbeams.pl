@@ -58,7 +58,7 @@ my @modules = qw(Microarray);
   # Optionally run individual module installer scripts 
   for my $m ( @{$opts{module}} ) {
     next unless $scripts{$m};
-    print "Building Core directory structure\n" if $opts{verbose};
+    print "Building $m directory structure\n" if $opts{verbose};
     my $results = system( "$ENV{SBEAMS}/$scripts{$m}" );
   }
   
@@ -212,7 +212,7 @@ sub update_core_populate {
       $info{PASSWORD} = `$ENV{SBEAMS}/$scripts{crypt_pass} $info{PASSWORD}`;
       chomp $info{PASSWORD};
 
-      $line =~ s/PutOutputOfcrypt.plHere/$info{PASSWORD}/g;
+      $line =~ s/NULL/\'$info{PASSWORD}\'/g;
     } elsif ( $line =~ /UPDATE user_login SET password/ ) {
       # Skip this line (don't print it)
       next;

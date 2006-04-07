@@ -1,8 +1,5 @@
 #!/bin/sh
 
-echo "Hello world";
-exit;
-
 if [ "$SBEAMS" == "" ]
 then
   echo "Please set SBEAMS environment variable"
@@ -14,8 +11,9 @@ then
   exit
 fi
 
+cd $SBEAMS
 
-if [  -e /tmp ]
+if [  -e tmp ]
 then
 # These should already exist from the installation of the Core module
 mkdir $SBEAMS/tmp $SBEAMS/var 
@@ -46,6 +44,10 @@ chmod -R g+ws $SBEAMS/var/Microarray;
 chgrp -R affydata $SBEAMS/var/Microarray/Affy_data/delivery
 chmod g+s  $SBEAMS/var/Microarray/Affy_data/delivery
 
+
+#  Stop here; If desired, can copy below and use to load data.
+exit;
+
 echo "Fetching sample data"
 cd $SBEAMS/lib/refdata/Microarray
 wget http://www.sbeams.org/sample_data/Microarray/External_test_data.tar.gz
@@ -64,8 +66,6 @@ mkdir $SBEAMS/var/Microarray/Affy_data/probe_data/200404
 cp External_test_data/* $SBEAMS/var/Microarray/Affy_data/probe_data/external/External_test/
 cp Affy_test_data/* $SBEAMS/var/Microarray/Affy_data/probe_data/200404/
 
-chgrp -R sbeams $SBEAMS/var/Microarray;
-chmod -R g+ws $SBEAMS/var/Microarray;
 fi
 
 cd $SBEAMS/lib/scripts/Microarray
