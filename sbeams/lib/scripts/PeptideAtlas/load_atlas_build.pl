@@ -615,6 +615,10 @@ sub get_search_batch_and_sample_id_hash
 
         my ($atlas_search_batch_id, $sid);
 
+        my $asb_exists = "false";
+
+        my $sample_exists = "false";
+
         ##########  handle sample records ##################
         ## since there are so few sample_records, will query one at a time instead of large select
         my $sql = qq~
@@ -630,12 +634,15 @@ sub get_search_batch_and_sample_id_hash
             my ($s_id, $asb_id) = @{$row};
             $sid = $s_id;
             $atlas_search_batch_id = $asb_id;
+
+            $asb_exists = "true" if ($sid);
         }
+
 
         ## if no sample_id in ATLAS_SEARCH_BATCH, there may still be one existing from former
         ## schema, so check before trying to create one:  NOTE, this will disappear soon
         ## because [sample]:search_batch_id will be dropped from the table
-        unless ($sid)
+        if ($asb_exists eq "false")
         {
             $sql = qq~
                 SELECT sample_id
@@ -645,13 +652,16 @@ sub get_search_batch_and_sample_id_hash
 
             ($sid) = $sbeams->selectOneColumn($sql);
 
+            $sample_exists = "true" if ($sid);
+
         }
             
         ## Lastly, if no sample_id, create one from protomics record.  
         ## if this is true, then also will be missing [atlas_search_batch] and 
         ## [atlas_search_batch_parameter] and [atlas_search_batch_parameter_set]
-        unless ($sid)
+        if ( ($asb_exists eq "false") || ($sample_exists eq "false") )
         {
+
             $sql = qq~
                 SELECT distinct SB.search_batch_id, PE.experiment_name, PE.experiment_tag,
                 SB.data_location
@@ -670,17 +680,21 @@ sub get_search_batch_and_sample_id_hash
             {
                 my ($sb_id, $exp_name, $exp_tag, $d_l) = @{$row};
 
-                my %rowdata = (
-                    search_batch_id => $sb_id,
-                    sample_tag => $exp_tag,
-                    original_experiment_tag => $exp_tag,
-                    sample_title => $exp_name,
-                    sample_description => $exp_name,
-                    is_public => 'N',
-                    project_id => $default_sample_project_id,
-                );
+                ## create [sample] record if it doesn't exist:
+                if ($sample_exists eq "false")
+                {
+                    my %rowdata = (
+                        search_batch_id => $sb_id,
+                        sample_tag => $exp_tag,
+                        original_experiment_tag => $exp_tag,
+                        sample_title => $exp_name,
+                        sample_description => $exp_name,
+                        is_public => 'N',
+                        project_id => $default_sample_project_id,
+                    );
 
-                $sid = insert_sample( rowdata_ref => \%rowdata );
+                    $sid = insert_sample( rowdata_ref => \%rowdata );
+                }
 
 
                 ## create [atlas_search_batch]
@@ -701,6 +715,7 @@ sub get_search_batch_and_sample_id_hash
                 );
 
             }
+
         } ## end of the "no sample_id" loop
 
         ### okay, all [sample] records exist now, and [atlas_search_batch]s
