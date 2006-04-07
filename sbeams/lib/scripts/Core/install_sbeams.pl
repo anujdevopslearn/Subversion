@@ -369,8 +369,10 @@ sub get_password {
 
 sub process_options {
 
-  GetOptions(\%opts, qw( verbose base=s force 
+  GetOptions(\%opts, qw( verbose base=s force usage
                          config=s module=s )) || usage( $! );
+
+  usage() if $opts{usage};
 
   # was base specified?  If not, calculate relative to self
   my $sbeams = $opts{base} || `cd $Bin/../../..; pwd;`;
