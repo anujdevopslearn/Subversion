@@ -29,7 +29,6 @@ cd $SBEAMS/..
 rm -Rf sbeamscommon/ dev1/
 cd sbeams
 rm -f tmp var doc/includes lib/conf/Core/AvailableModules.conf lib/conf/SBEAMS.conf
-find lib/refdata/Microarray/*data* -exec rm -Rf {} \;
 
 
 echo "Setting up sbeamscommon"
