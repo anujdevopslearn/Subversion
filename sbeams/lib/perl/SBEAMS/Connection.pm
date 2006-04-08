@@ -202,6 +202,51 @@ sub table_nest_level {
 } # end table_nest_level
 
 
+sub collectSTDOUT {
+  my $self = shift;
+  use IO::Scalar;
+
+  # dup STDOUT
+  open( OLDOUT, ">>&STDOUT" ) || die ("can't redirect STDOUT");
+  print OLDOUT '';
+  close(STDOUT);
+
+  # Ties that bind
+  my $scalar;
+  my $io = tie *STDOUT, 'IO::Scalar', \$scalar;
+
+  $self->{_OUTPUT} = \$scalar; 
+  $self->{_IO} = \$io; 
+  $self->{_OLDOUT} = *OLDOUT;
+
+#  my $string = '';
+#  my $IO = IO::Scalar->new(\$string);
+#  $self->{_OLD_SELECT} = select( $IO );
+#  $self->{_STDOUT} = \$string;
+
+}
+
+sub printThis {
+  print "Choans";
+}
+
+sub fetchSTDOUT {
+  my $self = shift;
+
+  undef $self->{_IO};
+  untie *STDOUT;
+
+  *OLD = $self->{_OLDOUT};
+  open(STDOUT, ">&OLD" );
+
+  return ${$self->{_OUTPUT}};
+
+#  my $sref = $self->{_STDOUT};
+#  my $string = $$sref;
+#  chomp $string;
+#  select( $self->{_OLD_SELECT} );
+#  return "$string  gidget";
+}
 
 
 
