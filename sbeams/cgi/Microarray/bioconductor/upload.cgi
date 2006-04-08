@@ -735,7 +735,7 @@ sub filelist {
 	my ($filestat, $size, $date);
 
 	return unless @filenames;
-  $sbeams->unstickToggleSection(stuck_name => '_project_cel_files');
+#  $sbeams->unstickToggleSection(stuck_name => '_project_cel_files');
 	print h2("Current File Listing"),
 	       start_multipart_form(-name=>'Selectedfiles_form'),
 	      hidden(-name=>'token', -default=>$fm->token, -override=>1),
