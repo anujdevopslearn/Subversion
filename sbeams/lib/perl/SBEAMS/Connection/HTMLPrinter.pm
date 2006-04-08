@@ -1108,6 +1108,18 @@ sub getModuleButton {
 }
 
 #+
+# Routine to unset sticky toggle; not a display method per se, but placed
+# here as it is a companion method to make_toggle_section
+#-
+sub unstickToggleSection {
+  my $self = shift;
+  my %args = @_;
+  $log->debug( "Made the call" );
+  return unless $args{stuck_name};
+  $self->deleteSessionAttribute( key => $args{stuck_name} );
+}
+
+#+
 # Generates CSS, javascript, and HTML to render a section (DIV) 'toggleable'
 # @narg content  - The actual content (generally HTML) to hide/show, required
 # @narg visible  - default visiblity, orignal state of content (default is 0)
@@ -1126,6 +1138,7 @@ sub make_toggle_section {
   my $html = '';      # HTML string to return
   my $hidetext = '';  # Text for 'hide content' link
   my $showtext = '';  # Text for 'show content' link
+  my $neuttext = '';  # Auxilary text for show/hide
 
   # No content, bail
   return $html unless $args{content};
@@ -1133,8 +1146,9 @@ sub make_toggle_section {
   $args{imglink} = 1 unless defined $args{textlink};
   $args{textlink} = 0 unless defined $args{textlink};
   if ( $args{textlink} ) {
-    $hidetext = ( $args{hidetext} ) ? $args{hidetext} : ' hide ';
+    $hidetext = ( $args{textlink} ) ? $args{hidetext} : ' hide ';
     $showtext = ( $args{textlink} ) ? $args{showtext} : ' show ' ;
+    $neuttext = $args{neutraltext} if $args{neutraltext};
   }
   for my $i ( $hidetext, $showtext ) {
     $i = "<FONT COLOR=blue> $i </FONT>";
@@ -1256,11 +1270,11 @@ sub make_toggle_section {
   }
   my $texthtml = '';
   if ( $args{textlink} ) {
-    $texthtml = "<DIV ID=hidetext class='$hideclass'> $hidetext</DIV>";
-    $texthtml .= "<DIV ID=showtext class='$showclass'> $showtext</DIV><HR>";
+    $texthtml = "<DIV ID=hidetext class='$hideclass'> $hidetext </DIV>";
+    $texthtml .= "<DIV ID=showtext class='$showclass'> $showtext </DIV>";
   }
 
-  my $linkhtml = qq~<A ONCLICK="toggle_content('${args{name}}')"> $imghtml $texthtml </A>~;
+  my $linkhtml = qq~<A ONCLICK="toggle_content('${args{name}}')"> $imghtml $texthtml </A> $neuttext~;
 
   # Return html as separate content/widget, or as a concatentated thingy
   return wantarray ? ( $html, $linkhtml ) : $linkhtml . $html;
