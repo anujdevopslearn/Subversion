@@ -183,8 +183,8 @@ sub main {
 
 	if (defined($submit) && $submit eq "Show Job") {
 	    showjob($token);
-	} elsif (defined($submit) && $submit eq "Start Normalization Run") {
-		affy($token);
+	} elsif (defined($submit) && $submit eq "Complete File Grouping") {
+     affy($token);
 	} elsif (defined($submit) && $submit eq "multtest") {
 		multtest($token);
 	} elsif (defined($submit) && $submit eq "annaffy") {
@@ -295,7 +295,7 @@ sub handle_request {
 
 ###Choose the correct tab or default to the first tab File Groups
 	if ( $tabmenu->getActiveTab() == 2 
-		|| $submit eq 'Start Normalization' 
+		|| $submit eq 'Continue File Grouping' 
 		|| $submit eq 'files_sample_group_pairs'){
 		my $folder_names_aref = $data_analysis_o->check_for_analysis_data_type(
 			analysis_name_type => 'normalization'
@@ -309,8 +309,8 @@ sub handle_request {
 		}elsif($submit eq 'Show Old Analysis' 
 			||( ref($data_analysis_o) 
 	 		&& ref($folder_names_aref) 
-	 		&& $submit ne 'Start Normalization' 
-	 		&& $submit ne 'submit_group_names'
+	 		&& $submit ne 'Continue File Grouping' 
+	 		&& $submit ne 'Submit Group Names'
 	 		&! $cgi->param('number_of_groups')
 	 		)
 	 		){
@@ -361,6 +361,7 @@ sub check_for_token {
 	
 	my $submit = $cgi->param('Submit');
 	my $token  = $cgi->param('token') ;
+  $log->debug("No token here boss") unless $token;
 	my $analysis_id = '';
 	my ($status);
 	# Handle initializing the FileManager session
@@ -457,7 +458,6 @@ sub print_display_files_form {
 		}else{
 			$all_project_ids = $project_id;
 		}
-		$log->debug( "ALL PROJECT IDs '$all_project_ids'\n");
 	
 		
 		my $apply_action=$parameters{'action'} || $parameters{'apply_action'} || '';
@@ -497,8 +497,10 @@ sub print_display_files_form {
 
 #############################################
 ## Make form to print all availiable projects
+    
+    my $project_form;
 		
-		print <<'END';
+		$project_form .= <<'END';
 			<h2 class='grey_bg'> Select Additional Projects To view arrays to include in analysis</h2>
 			<FORM NAME="MainForm" METHOD="GET" ACTION=""> 
 			<SELECT NAME="apply_action_hidden" MULTIPLE SIZE=10  onChange="refreshDocument()">	
@@ -508,16 +510,16 @@ END
 			my ($proj_id, $user_name__proj_name) = @{$proj_array_ref};
 			
 			if (grep{ $_ == $proj_id} @additional_project_ids){	#look to see what projects have allready been selected
-				print "<OPTION SELECTED VALUE='$proj_id'> $user_name__proj_name - ($proj_id)\n";
+				$project_form .= "<OPTION SELECTED VALUE='$proj_id'> $user_name__proj_name - ($proj_id)\n";
 			}else{
-				print "<OPTION VALUE='$proj_id'> $user_name__proj_name - ($proj_id)\n";
+				$project_form .= "<OPTION VALUE='$proj_id'> $user_name__proj_name - ($proj_id)\n";
 			}
 		}
 
-	print "</SELECT>", 
+	$project_form .= join( ' ', "</SELECT>", 
 	       "<input type='hidden' name='token' value='". $fm->token() ."'>\n",
 	       "<input type='hidden' name='analysis_id' value='$analysis_id'>\n",
-	       "</FORM>";
+	       "</FORM>" );
 		
 #################################	
 	  ## Print the data
@@ -529,127 +531,147 @@ END
 		my $constraint_column = "afa.affy_array_id";
 		my $constraint        = "AND $constraint_column IN ($constraint_data)";
 
-		unless ($constraint_data) {
-			print
-			  "SORRY NO DATA FOR THIS PROJECT\n";
-			return;
-		}
+		if ( !$constraint_data ) {
+			$project_form .= "<BR><B>No data found for current project\n";
+		} else {
 
-		print "<h2 class='grey_bg'> Please Select the arrays to utilize in the analysis pipeline </h2>";
+      # This will collect STDOUT into a scalar, fetched below with a call 
+      # to fetchSTDOUT 
+      $sbeams->collectSTDOUT();
 
-####################################
-###Start the form to choose the arrays 
-			print $cgi->start_form(
-				-name   => 'all_arrays', 
+
+		  print "<h2 class='grey_bg'> Please Select the arrays to utilize in the analysis pipeline </h2>";
+
+      # Start the form to choose the arrays 
+			print $cgi->start_form( -name   => 'all_arrays', 
 				-action => "$CGI_BASE_DIR/Microarray/bioconductor/upload.cgi",
 			);
 
-			$sbeamsMOD->make_checkbox_control_table(
-				box_names          => \@downloadable_file_types,
-				default_file_types => \@default_file_types,
-			);
+      $sbeamsMOD->make_checkbox_control_table(
+        box_names          => \@downloadable_file_types,
+        default_file_types => \@default_file_types,
+      );
 
-		$sql = $sbeams_affy_groups->get_affy_arrays_sql(
-			project_id => $all_project_ids, #return a sql statement to display all the arrays for a particular project
-			constraint => $constraint
-		);
-#$sbeams->display_sql(sql=>$sql);
-		%url_cols = (
-			'Sample_Tag' =>"${manage_table_url}affy_array_sample&affy_array_sample_id=\%3V",
-			'File_Root' => "${manage_table_url}affy_array&affy_array_id=\%0V",
-		);
+      $sql = $sbeams_affy_groups->get_affy_arrays_sql(
+        project_id => $all_project_ids, #return a sql statement to display all the arrays for a particular project
+        constraint => $constraint
+      );
+      %url_cols = (
+        'Sample_Tag' =>"${manage_table_url}affy_array_sample&affy_array_sample_id=\%3V",
+        'File_Root' => "${manage_table_url}affy_array&affy_array_id=\%0V",
+      );
 
-		%hidden_cols = (
-			'Sample_ID' => 1,
-			'Array_ID'  => 1,
-		);
+      %hidden_cols = (
+        'Sample_ID' => 1,
+        'Array_ID'  => 1,
+      );
 
-################################################################################
-### Print out the data
-		$rs_params{page_size} = 500;    #need to override the default 50 row max display for a page
-		if ( $apply_action eq "VIEWRESULTSET" ) {
-			$sbeams->readResultSet(
-				resultset_file       => $rs_params{set_name},
-				resultset_ref        => $resultset_ref,
-				query_parameters_ref => \%parameters,
-				resultset_params_ref => \%rs_params,
-			);
-		}else{
-			#### Fetch the results from the database server
-			$sbeams->fetchResultSet(
-				sql_query     => $sql,
-				resultset_ref => $resultset_ref,
-			);
-		}
+      # Print out the data
+      $rs_params{page_size} = 500;    #need to override the default 50 row max display for a page
+      if ( $apply_action eq "VIEWRESULTSET" ) {
+        $sbeams->readResultSet(
+          resultset_file       => $rs_params{set_name},
+          resultset_ref        => $resultset_ref,
+          query_parameters_ref => \%parameters,
+          resultset_params_ref => \%rs_params,
+        );
+      } else {
+        # Fetch the results from the database server
+        $sbeams->fetchResultSet(
+          sql_query     => $sql,
+          resultset_ref => $resultset_ref,
+        );
+      }
 
-####################################################################
-## Need to Append data onto the data returned from fetchResultsSet in order to use the writeResultsSet method to display a nice html table
+      ####################################################################
+      # Need to Append data onto the data returned from fetchResultsSet in 
+      # order to use the writeResultsSet method to display a nice html table
+      unless ( exists $parameters{Display_Data} ) {
+        
+        my $m_sbeams = SBEAMS::Connection::Merge_results_sets->new();
+        
+        $m_sbeams->append_new_data( 
+          resultset_ref => $resultset_ref,
+          file_types    => \@downloadable_file_types,    #append on new values to the data_ref foreach column to add
+          default_files => \@default_file_types,
+          display_files => \@diplay_files,  #Names for columns which will have urls to pop  open files
+          image_url	=> '<a href=View_Affy_files.cgi?action=view_image&affy_array_id=$pk_id&file_ext=$display_file>View</a>',
+          text_url	=> '<a href=View_Affy_files.cgi?action=view_file&affy_array_id=$pk_id&file_ext=$display_file>View</a>',
+          find_file_object => $sbeams_affy_groups,		#send in an object that has a method called check_for_file that will be called, the method will be called with three arguments
+          );
+        
+      }
+        
+      ####################################################################
+        
+      #### Store the resultset and parameters to disk resultset cache
+      $rs_params{set_name} = "SETME";
+      $sbeams->writeResultSet(
+        resultset_file_ref   => \$rs_params{set_name},
+        resultset_ref        => $resultset_ref,
+        query_parameters_ref => \%parameters,
+        resultset_params_ref => \%rs_params,
+        query_name           => "$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+      );
+        
+      #### Set the column_titles to just the column_names
+      @column_titles = @{ $resultset_ref->{column_list_ref} };
+        
+      #print "COLUMN NAMES 1 '@column_titles'<br>";
+        
+      #### Display the resultset
+      $sbeams->displayResultSet(
+        resultset_ref        => $resultset_ref,
+        query_parameters_ref => \%parameters,
+        rs_params_ref        => \%rs_params,
+        url_cols_ref         => \%url_cols,
+        hidden_cols_ref      => \%hidden_cols,
+        max_widths           => \%max_widths,
+        column_titles_ref    => \@column_titles,
+        base_url             => "$base_url?token=".$fm->token()."&apply_action_hidden=$all_project_ids&analysis_id=$analysis_id",
+      );
+        
+      print $cgi->hidden( -name   => 'token',
+                         -default => $fm->token(),),
+            $cgi->hidden(-name   =>'analysis_id',
+                         -default =>$fm->analysis_id(),),
+            $cgi->hidden(-name  =>"apply_action_hidden",
+                         -value =>"$all_project_ids"),
+            $cgi->br,
+            $cgi->submit( -name  => 'Submit',
+                          -value => 'Add Arrays' ); 
+      
+      print $cgi->reset;
+      
+      print $cgi->endform;
+        
+      print "<br><h>";
+        
+      # This returns the collected standard output (and fixes STDOUT)
+      my $stdout = $sbeams->fetchSTDOUT(); 
+      $project_form .= $stdout;
+    }
+        
+    if ( $fm->filenames() ) {
+      
+      my $hidetext = '<B>Hide</B>';
+      my $showtext = '<B>Show</B>';
 
-		unless ( exists $parameters{Display_Data} ) {
-		
-		my $m_sbeams = SBEAMS::Connection::Merge_results_sets->new();
-		
-			$m_sbeams->append_new_data( 
-				resultset_ref => $resultset_ref,
-				file_types    => \@downloadable_file_types,    #append on new values to the data_ref foreach column to add
-				default_files => \@default_file_types,
-				display_files => \@diplay_files,  #Names for columns which will have urls to pop  open files
-				image_url	=> '<a href=View_Affy_files.cgi?action=view_image&affy_array_id=$pk_id&file_ext=$display_file>View</a>',
-				text_url	=> '<a href=View_Affy_files.cgi?action=view_file&affy_array_id=$pk_id&file_ext=$display_file>View</a>',
-				find_file_object => $sbeams_affy_groups,		#send in an object that has a method called check_for_file that will be called, the method will be called with three arguments
-			);
-		
-		}
+      my $toggle = $sbeams->make_toggle_section ( content => $project_form,
+                                                  visible => 0,
+                                                  textlink => 1,
+                                                  sticky => 1,
+                                                  imglink => 1,
+                                                  hidetext => $hidetext,
+                                                  showtext => $showtext,
+                                               neutraltext => 'CEL file selection form',
+                                                  name => '_project_cel_files',);
+      print $toggle;
 
-		####################################################################
-
-		#### Store the resultset and parameters to disk resultset cache
-		$rs_params{set_name} = "SETME";
-		$sbeams->writeResultSet(
-			resultset_file_ref   => \$rs_params{set_name},
-			resultset_ref        => $resultset_ref,
-			query_parameters_ref => \%parameters,
-			resultset_params_ref => \%rs_params,
-			query_name           => "$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
-		);
-
-#### Set the column_titles to just the column_names
-		@column_titles = @{ $resultset_ref->{column_list_ref} };
-
-		#print "COLUMN NAMES 1 '@column_titles'<br>";
-
-		#### Display the resultset
-		$sbeams->displayResultSet(
-			resultset_ref        => $resultset_ref,
-			query_parameters_ref => \%parameters,
-			rs_params_ref        => \%rs_params,
-			url_cols_ref         => \%url_cols,
-			hidden_cols_ref      => \%hidden_cols,
-			max_widths           => \%max_widths,
-			column_titles_ref    => \@column_titles,
-			base_url             => "$base_url?token=".$fm->token()."&apply_action_hidden=$all_project_ids&analysis_id=$analysis_id",
-		);
-		
-		print $cgi->hidden(-name   =>'token',
-						   -default=>$fm->token(),
-						   ),
-			  $cgi->hidden(-name   =>'analysis_id',
-						   -default=>$fm->analysis_id(),
-						   ),
-			  $cgi->hidden(-name  =>"apply_action_hidden",
-			  			   -value =>"$all_project_ids"),
-			  $cgi->br,
-			  $cgi->submit(
-				-name  => 'Submit',
-				-value => 'Add Arrays'
-			  )
-			  ; 
-
-			print $cgi->reset;
-			
-			print $cgi->endform;
-
-			print "<br><h>";
+    } else {
+      print $project_form;
+    }
+      
 	}
 
 
@@ -713,6 +735,7 @@ sub filelist {
 	my ($filestat, $size, $date);
 
 	return unless @filenames;
+  $sbeams->unstickToggleSection(stuck_name => '_project_cel_files');
 	print h2("Current File Listing"),
 	       start_multipart_form(-name=>'Selectedfiles_form'),
 	      hidden(-name=>'token', -default=>$fm->token, -override=>1),
@@ -736,24 +759,23 @@ sub filelist {
 					 td({-style=>"text-align: right"}, $date));
 		}
 				
-		print '</table>';
+		print '</table><BR>';
 	}
 	
 	#print p(@filenames . " files", br, hr);
-	
-	print h3("Choose Additional Files Below or proceed to next step");
 	
 	if (@filenames != 0) {
 	
 		print 
 			  table({-cellspacing=>2, -cellpadding=>1}, 
-					Tr({-class=>"grey_bg"}, td("Use checked files to:"), 
-					   td(submit("Submit", "Start Normalization")),
+					Tr({-class=>"grey_bg"}, td(""), 
+					   td(submit("Submit", "Continue File Grouping")),
 					   #td(submit(-name=>"Submit", -value=>"Delete Checked Files", -onClick=>'return confirm("Really delete checked files?")')))), 
-			td(submit(-name=>"Submit", -value=>"Delete Checked Files", -onclick=>"changetabnumber()")))), 
-			 br;
+			td(submit(-name=>"Submit", -value=>"Delete Checked Files", -onclick=>"changetabnumber()")))) 
 	}    
 	      
+	print h3("Proceed to next step, or choose more files below");
+
 	print end_form;	
 	
 }
@@ -785,6 +807,7 @@ sub showjob {
 # Use checked files with affy
 #####################################################
 sub affy {
+  $log->printStack( 'debug' );
 	#my $parent_analysis_token = shift;
 	my $parent_analysis_id = $cgi->param('analysis_id');
 	unless ($parent_analysis_id =~ /^\d/){
@@ -949,12 +972,12 @@ sub error {
 # Return a list of 'submit' types that require write access
 sub write_ops {
   my $submit = shift || return;
-  return ( 'Start Normalization Run',
-           'Start Normalization',
+  return ( 'Complete File Grouping',
+           'Continue File Grouping',
            'multtest',
            'annaffy',
 		       'files_sample_group_pairs',
-		       'submit_group_names',
+		       'Submit Group Names',
 		       'Start Session',
 		       'Add Arrays' );
 }
@@ -993,6 +1016,8 @@ sub make_group_arrays_form{
 		print "ERROR:Cannot Find Any Sample Group Names<br>";
 		return;
 	}
+
+  my $sample_group_form = '';
 	
 ###Find the number of sample groups
 	if($cgi->param('number_of_groups')){
@@ -1009,32 +1034,34 @@ sub make_group_arrays_form{
 		$number_of_sample_groups = scalar @sample_group_names;
 	}
 	
+  $sbeams->unstickToggleSection(stuck_name => '_project_cel_files');
 ###Make the form to control the number of sample groups
-	print "<h2 class='grey_bg'>Choose the number of Sample Comparison Groups</h2>\n<br>";
+	$sample_group_form .= "<h2 class='grey_bg'>Choose the number of Sample Comparison Groups</h2>\n<br>";
 	
 	
 			
 	if ($number_of_sample_groups > 0){
-		print $cgi->start_form(-name => 'number_option_groups');
-		print $cgi->hidden(-name=>'files', -values=>\@files),
+		$sample_group_form .= $cgi->start_form(-name => 'number_option_groups');
+		$sample_group_form .= join( ' ', $cgi->hidden(-name=>'files', -values=>\@files),
 		$cgi->hidden(-name=>"_tab", -value=>'2'),
 		$cgi->hidden(-name=>"all_sample_group_names", -value=>\@all_sample_group_names),
 		$cgi->hidden(-name=>"token", -value=>$token),
-		$cgi->hidden(-name=>"analysis_id", -value=>$analysis_id),;
+		$cgi->hidden(-name=>"analysis_id", -value=>$analysis_id) );
 		
-		print $cgi->textfield(-name		=> 'number_of_groups',
+		$sample_group_form .= $cgi->textfield(-name		=> 'number_of_groups',
                              -default	=> $number_of_sample_groups,
                              -size   	=> 10,
                              -maxlength => 3,
 					 		 -onChange  =>"javascript:document.number_option_groups.submit();");
 	}else{
-		print "ERROR: Cannot find the number of sample groups<br>";
+		$sample_group_form .= "ERROR: Cannot find the number of sample groups<br>";
+    print $sample_group_form;
 		return;
 	}
 	
 	
 ###Print out the Sample Group Names form elements
-	print qq~ <h2 class='grey_bg'>Sample Groups</h2> <br>
+	$sample_group_form .= qq~ <h2 class='grey_bg'>Sample Groups</h2> <br>
 		  	<table border=0>
 		 	  <tr>
 		 	    <td>Group</td>
@@ -1051,7 +1078,7 @@ sub make_group_arrays_form{
 		my $default_name = $sample_group_names[$i] ? $sample_group_names[$i] : "Default Sample Group $i";
 		
 		my $checked_html = "CHECKED" if ($i == 0);
-		print Tr(
+		$sample_group_form .= Tr(
 				td({class=>'grey_bg'}, "Sample Group"),
 				td($cgi->textfield(-name=>"sample_group_order",
                             	   -default	=> $i + 1,
@@ -1071,19 +1098,18 @@ sub make_group_arrays_form{
 		
 	}
 	
-	print "</table>";
+	$sample_group_form .= "</table>";
 	
-	print br,
+	$sample_group_form .= join( " ", br,
 		  $cgi->submit(-name=>"update_order", 
 		  			   -value=>"Update Order",
 		  			   -onClick=>"javascript:document.number_option_groups.submit()"
 		  			   ),
+		  $cgi->submit(-name=>"Submit", -value=>"Submit Group Names"),
 		  br,
-		  $cgi->submit(-name=>"Submit", -value=>"submit_group_names"),
-		  br,
-		  $cgi->end_form();
+		  $cgi->end_form() );
 	
-	print <<END;
+	$sample_group_form .= <<END;
  <p>The Reference Sample, will be compared to all additional samples groups provided if you whish to run t-test
 between two different sample groups.
 The "control group" should almost always be the Reference Sample, 
@@ -1099,7 +1125,7 @@ END
 	#print "NUMBER OF GROUPS '$number_of_sample_groups'<br>";
 	
 ###Print out the radio buttons to pair up sample groups to file names	
-	if ($cgi->param('Submit') eq 'submit_group_names'){
+	if ($cgi->param('Submit') eq 'Submit Group Names'){
 #Group and order the files within the different sample groups	
 		my ($ordered_files_aref, $ordered_all_sample_groups_aref) = 
 		order_all_files(files_names 	  => \@files,
@@ -1110,21 +1136,22 @@ END
 		my @ordered_files = @$ordered_files_aref;
 		my @ordered_all_sample_groups = @$ordered_all_sample_groups_aref;
 		
-		print "<h2 class='grey_bg'>Select the File Sample groups</h2><br>";
+    my $group_member_form = '';
+		$group_member_form .= "<h2 class='grey_bg'>Select the File Sample groups</h2><br>";
 				
-		print $cgi->start_form(-name => 'file_groups', -method => 'POST'),
+		$group_member_form .= join( '', $cgi->start_form(-name => 'file_groups', -method => 'POST'),
 			  $cgi->hidden(-name=>"_tab", -value=>'2'),
 			  $cgi->hidden(-name=>"previous_token", -value=>$token),
 			  $cgi->hidden(-name=>"analysis_id", -value=>$analysis_id),
-			  $cgi->hidden(-name=>"reference_sample_group", -value=>$cgi->param('reference_sample_group') );
+			  $cgi->hidden(-name=>"reference_sample_group", -value=>$cgi->param('reference_sample_group') ) );
 		
-		print "<table border=1>\n";
+		$group_member_form .= "<table border=1>\n";
 		
 		for(my $i; $i<=$#ordered_files; $i++){
 			my $file = $ordered_files[$i];
 			my $escaped_file_name = $file;
 			$escaped_file_name =~ s/\+/%2B/g; #users wanted to use + in file names it needs to be escaped for the cgi page to work correctly
-			print Tr(
+			$group_member_form .= Tr(
 						td({class=>'grey_bg'}, "$file"),
 						td( $cgi->radio_group(-name=>"SG_$escaped_file_name",
 	                             -values=>\@sample_group_names,
@@ -1132,18 +1159,37 @@ END
 	                             )),
 	                );       
 		}
-		print "</table><br>";	
-    print <<"    END";
+		$group_member_form .= "</table><br>";	
+    $group_member_form .= <<"    END";
         <B>Default sample names:</B> 
           <INPUT TYPE="radio" NAME="default_sample_names" VALUE="sample_tag" CHECKED>Sample Tag
           <INPUT TYPE="radio" NAME="default_sample_names" VALUE="file_root"> File Root
           <BR><BR>
     END
 
-		print $cgi->submit(-name=>"Submit", -value=>"Start Normalization Run"),	
-		 	  $cgi->end_form();
-	}
-		
+    my $info = h3("Complete file grouping, or change group info below<BR>");
+
+		$group_member_form .= $cgi->submit(-name=>"Submit", -value=>"Complete File Grouping") .	
+		 	                    $cgi->end_form() . $info;
+
+    my $hidetext = '<B>Hide</B>';
+    my $showtext = '<B>Show</B>';
+
+
+    my $toggle = $sbeams->make_toggle_section ( content => $sample_group_form,
+                                                visible => 0,
+                                                textlink => 1,
+                                                imglink => 1,
+                                                hidetext => '<B>Hide</B>',
+                                                showtext => '<B>Show</B>',
+                                             neutraltext => 'Sample grouping form',
+                                                name => 'sample_group_form');
+      print $group_member_form . '<BR>';
+      print $toggle;
+        
+	} else {
+    print "$sample_group_form";    
+  }
 }
 
 ###############################################################################

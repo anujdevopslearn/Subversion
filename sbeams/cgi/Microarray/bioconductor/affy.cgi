@@ -232,7 +232,7 @@ sub step2 {
 		  p($cgi->checkbox('corrMat','checked','YES','Produce correlation matrix for this normalization set?')),
 		  p('Enter description for analysis set (optional)<BR>', $cgi->textfield('user_description', '', 40)),
 		  p("E-mail address where you would like your job status sent: (optional)", br(), textfield('email', $email, 40)),
-	      p(submit("Submit Job")),
+	      p(submit("Start Normalization")),
 	      end_form;
 	
     print <<'END';
