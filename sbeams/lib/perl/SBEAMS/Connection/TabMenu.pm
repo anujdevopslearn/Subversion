@@ -244,7 +244,7 @@ sub setDefaultTab {
 #  Add a new tab to menuset
 #  @narg label  Name to put on tab itself REQ
 #  @narg helptext Optional text to put in 'mouseover' info window. 
-#  @narg URL    Optional URL for this tab, overrides self URL if provided.
+#  @narg url    Optional URL for this tab, overrides self URL if provided.
 #-
 sub addTab {
   my $this = shift;
