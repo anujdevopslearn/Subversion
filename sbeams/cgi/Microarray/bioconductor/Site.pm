@@ -3,7 +3,9 @@ package Site;
 use FindBin;
 use lib "$FindBin::Bin/../../../lib/perl";
 
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::TabMenu;
 use SBEAMS::Microarray;
 use SBEAMS::Microarray::Settings;
 use strict;
@@ -87,13 +89,43 @@ our $BATCH_ARG = "";
 sub site_header {
 	my ($title) = @_;
 
-	print <<END;
-<div style="text-align: center">
-<a href="upload.cgi?_tab=1">Upload Files</a> |
-<a href="upload.cgi?_tab=2" >View Normalized Data</a> |
-<a href="upload.cgi?_tab=3">View Experimental results</a> |
-</div>
-END
+  # Switched to manual FORM declaration, start_form method wouldn't allow
+  # needed override of '_tab' parameter.
+  my $form =<<"  END";
+  <FORM ACTION='upload.cgi' enctype="application/x-www-form-urlencoded">
+    <INPUT TYPE=hidden NAME='_tab' VALUE=1>
+		<TABLE BORDER=>0>
+    <TR CLASS=grey_bg>
+		      <TD>"Start a New Analysis Session"</TD>
+	      	<TD><INPUT TYPE="Submit" VALUE="Start Session"></INPUT></TD>
+    </TR></TABLE>
+  </FORM>
+  END
+
+  my $tabmenu = SBEAMS::Connection::TabMenu->new( cgi => $q, maSkin => 1 );
+
+  	
+  	
+ 	# Preferred way to add tabs.  label is required, helptext optional
+ 	$tabmenu->addTab( label    => 'File Groups', 
+                    url      => "upload.cgi?_tab=1",
+                    helptext => 'View Groups of affy Files' );
+ 	$tabmenu->addTab( label    => 'Normalized Data', 
+                    url      => "upload.cgi?_tab=2",
+                    helptext => 'View completed normalized analysis runs' );
+ 	$tabmenu->addTab( label    => 'Analysis Results', 
+                    url      => "upload.cgi?_tab=3",
+                    helptext => 'View differential expression runs' );
+
+  print "$form<BR>\n $tabmenu\n";
+
+#  print <<END;
+#<div style="text-align: center">
+#<a href="upload.cgi?_tab=1">Upload Files</a> |
+#<a href="upload.cgi?_tab=2" >View Normalized Data</a> |
+#<a href="upload.cgi?_tab=3">View Experimental results</a> |
+#</div>
+#END
 }
 
 #### Subroutine: site_footer
