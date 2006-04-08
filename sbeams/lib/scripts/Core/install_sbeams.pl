@@ -39,6 +39,8 @@ my @modules = qw(Microarray);
 
 { # Main
 
+  check_requirements();
+
   # collect and validate cmdline opts, set SBEAMS environment variable
   process_options();
 
@@ -76,6 +78,21 @@ my @modules = qw(Microarray);
   build_schema($conf);
 
 }
+
+sub check_requirements {
+  my @required = ( qw( Crypt::CBC Crypt::IDEA DBI GD GD::Graph::xypoints 
+                       Regexp::Common Time::HiRes XML::Parser 
+                       XML::XPath Data::ShowTable GD::Graph URI ) );
+  for my $m ( @required ) {
+    eval "use $m";
+    if ( $@ ) {
+      usage( "Missing module $m: $@" );
+    }
+  }
+
+
+}
+
 
 sub build_schema {
   my $conf = shift;
@@ -212,7 +229,6 @@ sub update_core_populate {
       #$info{PASSWORD} = `$ENV{SBEAMS}/$scripts{crypt_pass} $info{PASSWORD}`;
       my $passwd = `$ENV{SBEAMS}/$scripts{crypt_pass} $info{PASSWORD}`;
       chomp $passwd;
-      print "Translated $info{PASSWORD} into $passwd\n";  
 
       $line =~ s/NULL/\'$passwd\'/g;
     } elsif ( $line =~ /UPDATE user_login SET password/ ) {
