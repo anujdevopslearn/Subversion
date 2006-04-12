@@ -670,7 +670,7 @@ sub get_datetime {
 #
 # narg: num_chars   Optional, length of character string, def = 8.
 # narg: char_set    Optional, character set to use passed as array reference,
-#                   def = ( 'A'-'Z', 'a'-'z', 0-9, !, @, #, $, %, ^, &, *, ? )
+#                   def = ( 'A'-'Z', 'a'-'z', 0-9 )
 # ret:              Random string of specified length comprised of elements of 
 #                   character set.
 #-
@@ -683,7 +683,10 @@ sub getRandomString {
 
   # Use passed char set if any, else use default a-z, A-Z, 0-9
   my @chars = ( ref( $args{char_set} ) eq 'ARRAY' ) ?  @{$args{char_set}} :
-                         ( 'A'..'Z', 'a'..'z', 0..9, qw( ! @ $ % ^ & * ? ) );
+                         ( 'A'..'Z', 'a'..'z', 0..9 );
+
+# removed these from default set, 4/2006 (DC)
+# qw( ! @ $ % ^ & * ? ) );
 
   # Thank you perl cookbook... 
   my $rstring = join( "", @chars[ map {rand @chars} ( 1..$args{num_chars} ) ]);
