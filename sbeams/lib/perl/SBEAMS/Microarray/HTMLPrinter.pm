@@ -447,6 +447,7 @@ sub printJavascriptFunctions {
 
 function refreshDocument() {
   document.MainForm.apply_action_hidden.value = "REFRESH";
+  document.MainForm.project_select_change.value = "TRUE";
   document.MainForm.submit();
 }
 
