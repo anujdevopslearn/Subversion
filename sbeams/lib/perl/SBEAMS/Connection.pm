@@ -201,51 +201,67 @@ sub table_nest_level {
 
 } # end table_nest_level
 
-
+#+
+# Method allows temporary shunting of STDOUT to a file.  Useful if you wish
+# to make grab output from a printing method into a scalar.
+#
+# Must be called in pairs with fetchSTDOUT method below, which cleans up and
+# returns the captured output.
+#-
 sub collectSTDOUT {
   my $self = shift;
-  use IO::Scalar;
+
+  if ( $self->{_stdout_collector} ) {
+    die 'Can\'t call collectSTDOUT twice without calling fetchSTDOUT';
+  }
+
+  # Generate random filename
+  $self->{_stdout_collector} = $self->getRandomString( num_chars => 20 );
+  my $so_file = "$PHYSICAL_BASE_DIR/tmp/$self->{_stdout_collector}";
 
   # dup STDOUT
   open( OLDOUT, ">>&STDOUT" ) || die ("can't redirect STDOUT");
-  print OLDOUT '';
   close(STDOUT);
 
-  # Ties that bind
-  my $scalar;
-  my $io = tie *STDOUT, 'IO::Scalar', \$scalar;
-
-  $self->{_OUTPUT} = \$scalar; 
-  $self->{_IO} = \$io; 
+  # store dup'd STDOUT
   $self->{_OLDOUT} = *OLDOUT;
+  
+  # Open STDOUT as a filehandle to a temporary file
+  open( STDOUT, ">$so_file" ) || die "Canna open STDOUT $!";
+  return;
 
-#  my $string = '';
-#  my $IO = IO::Scalar->new(\$string);
-#  $self->{_OLD_SELECT} = select( $IO );
-#  $self->{_STDOUT} = \$string;
-
+  # Original version relied on IO::Scalar, removed so as not to introduce
+  # that dependancy.
 }
 
-sub printThis {
-  print "Choans";
-}
-
+#+
+# Method reads cached STDOUT from tmp file and returns it as a scalar.
+#-
 sub fetchSTDOUT {
   my $self = shift;
 
-  undef $self->{_IO};
-  untie *STDOUT;
+  # Close file writing STDOUT
+  close(STDOUT);
 
-  *OLD = $self->{_OLDOUT};
-  open(STDOUT, ">&OLD" );
+  # Read from temp file
+  my $so_file = "$PHYSICAL_BASE_DIR/tmp/$self->{_stdout_collector}";
+  open( FILEOUT, "$so_file" ) || die "Canna open FILEOUT";
 
-  return ${$self->{_OUTPUT}};
+  my $fileout;
+  {
+    undef local $/;
+    $fileout = <FILEOUT>;
+  }
+  close FILEOUT;
 
-#  my $sref = $self->{_STDOUT};
-#  my $string = $$sref;
-#  chomp $string;
-#  select( $self->{_OLD_SELECT} );
-#  return "$string  gidget";
+  system( "rm $so_file" );
+#  delete $self->{_stdout_collector};
+
+  # Restore normal STDOUT
+  open(STDOUT, ">&OLDOUT") || die "Can't restore stdout: $!";
+
+  return $fileout;
+
 }
 
 
