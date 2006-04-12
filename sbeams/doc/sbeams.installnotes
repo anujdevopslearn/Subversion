@@ -210,15 +210,27 @@ or:
 Do as much of this as possible as a regular user account, i.e. yours.  These 
 notes assume an apache document root of /local/www/html.
 
-cd /local/www/html
+# Set up HTMLROOT environment variable to point to the base html directory
+
+# tcsh syntax:
+setenv HTMLROOT /local/www/html
+
+# *OR* bash syntax:
+export HTMLROOT=/local/www/html
+
+# Installation into your apache document root requires the ability to write to
+# the html root folder. Substitute your username here for 'user1'. You will
+# likely need root access (logging in as root or prefixing the command with 'sudo')
+# to chmod this directory. Once sections 4 and 6 are complete, you may want to
+# chmod this directory back to its previous permissions.
+chmod a+w $HTMLROOT
+cd $HTMLROOT
 
 #####
 # There are two ways to acquire the source code, now that the SBEAMS subversion
 # repository is online.  You can download a distribution tar archive and follow
 # these instructions:
 
-mkdir dev1   (this may need to be done as root. then do: chown user1 dev1)
-cd dev1
 tar -zxvf ~/sbeams-0.22.0.tar.gz
 
 # or, you can set up sbeams directly from subversion, which will make updating
@@ -266,11 +278,12 @@ end of this document.
 -------------------------------------------------------------------------------
 6) Create common directory structure (quickstart)
 
-
 Create a sbeamscommon directory for sharing dynamic files between
 different instances and create symlinks:
 
-cd ..
+# This requires ownership of the base directory (as described in section 4)
+
+cd $HTMLROOT
 mkdir sbeamscommon
 
   (for now, just create the directories for stuff to live in right here, but
@@ -288,32 +301,24 @@ chmod g+w var/*
     sbeams is being installed. Please adjust accordingly, or do a+w 
     instead.)
 
-cd ..
-cd dev1/sbeams
+cd $HTMLROOT/sbeams
 ln -s ../includes doc/includes
-ln -s ../../sbeamscommon/var
-ln -s ../../../sbeamscommon/images/tmp images/tmp
+ln -s $HTMLROOT/sbeamscommon/var
+ln -s $HTMLROOT/sbeamscommon/images/tmp images/tmp
+cp lib/conf/SBEAMS.conf.template $HTMLROOT/sbeamscommon/lib/conf/SBEAMS.conf
+ln -s $HTMLROOT/sbeamscommon/lib/conf/SBEAMS.conf lib/conf/SBEAMS.conf
+ln -s $HTMLROOT/sbeamscommon/lib/conf/Core/AvailableModules.conf lib/conf/Core/AvailableModules.conf
 
-For now, duplicate the main site from dev1, but eventually when there is
+For now, duplicate the main site to dev1, but eventually when there is
 parallel development and production usage, these should be separate trees
-kept in sync with CVS or some other such tool.
+kept in sync with SVN or some other such tool.
 
-(may require root privilege)
-cd ../..
-cp -a dev1/sbeams sbeams
+mkdir $HTMLROOT/dev1
+cd $HTMLROOT/dev1
+cp -a ../sbeams .
 
-cd sbeams
-rm var
-ln -s ../sbeamscommon/var
-rm images/tmp
-ln -s ../../sbeamscommon/images/tmp images/tmp
-cp lib/conf/SBEAMS.conf.template ../sbeamscommon/lib/conf/SBEAMS.conf
-ln -s ../../../sbeamscommon/lib/conf/SBEAMS.conf lib/conf/SBEAMS.conf
-ln -s ../../../../sbeamscommon/lib/conf/Core/AvailableModules.conf lib/conf/Core/AvailableModules.conf
-cd ../dev1/sbeams/
-ln -s ../../../../sbeamscommon/lib/conf/SBEAMS.conf lib/conf/SBEAMS.conf
-ln -s ../../../../../sbeamscommon/lib/conf/Core/AvailableModules.conf lib/conf/Core/AvailableModules.conf
-
+cd $HTMLROOT
+chgrp -R sbeams dev1 sbeams sbeamscommon
 
 -------------------------------------------------------------------------------
 7) Edit the SBEAMS Configuration files (quickstart*)
@@ -321,12 +326,9 @@ ln -s ../../../../../sbeamscommon/lib/conf/Core/AvailableModules.conf lib/conf/C
 This is an important step!  If you do not set the configurations for your
 site properly, you will have trouble later!
 
-# Set up SBEAMS environment variable.  tcsh syntax:
+# Set the base sbeams directory in the dev1 branch. Working in the dev1
+# area is a good habit.
 setenv SBEAMS /local/www/html/dev1/sbeams
-
-# *OR* bash syntax:
-export SBEAMS=/local/www/html/dev1/sbeams
-
 cd $SBEAMS/lib/conf
 
 Almost all of the scripts used during the installation of sbeams reside in
@@ -446,9 +448,6 @@ environment.
   script by invoking the command without any arguments.
 
 (logged in as your account ("user1" above))
-(and working in the dev1 area - this is a good habit)
-
-setenv SBEAMS /local/www/html/dev1/sbeams
 set dbtype=mssql      #### Set to your RDBMS type: mssql, mysql, oracle, etc.
 cd $SBEAMS/lib/scripts/Core 
 
