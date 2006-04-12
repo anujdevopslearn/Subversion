@@ -1114,7 +1114,6 @@ sub getModuleButton {
 sub unstickToggleSection {
   my $self = shift;
   my %args = @_;
-  $log->debug( "Made the call" );
   return unless $args{stuck_name};
   $self->deleteSessionAttribute( key => $args{stuck_name} );
 }
