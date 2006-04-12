@@ -361,7 +361,6 @@ sub check_for_token {
 	
 	my $submit = $cgi->param('Submit');
 	my $token  = $cgi->param('token') ;
-  $log->debug("No token here boss") unless $token;
 	my $analysis_id = '';
 	my ($status);
 	# Handle initializing the FileManager session
@@ -503,6 +502,7 @@ sub print_display_files_form {
 		$project_form .= <<'END';
 			<h2 class='grey_bg'> Select Additional Projects To view arrays to include in analysis</h2>
 			<FORM NAME="MainForm" METHOD="GET" ACTION=""> 
+      <INPUT TYPE=HIDDEN NAME=project_select_change VALUE='FALSE'></INPUT>
 			<SELECT NAME="apply_action_hidden" MULTIPLE SIZE=10  onChange="refreshDocument()">	
 END
 		
@@ -735,7 +735,10 @@ sub filelist {
 	my ($filestat, $size, $date);
 
 	return unless @filenames;
-#  $sbeams->unstickToggleSection(stuck_name => '_project_cel_files');
+  my $select_changed = $q->param( 'project_select_change' );
+  if ( !$select_changed || $select_changed eq 'FALSE' ) {
+    $sbeams->unstickToggleSection(stuck_name => '_project_cel_files');
+  }
 	print h2("Current File Listing"),
 	       start_multipart_form(-name=>'Selectedfiles_form'),
 	      hidden(-name=>'token', -default=>$fm->token, -override=>1),
