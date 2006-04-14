@@ -1,25 +1,46 @@
-#!/tools/bin/perl -w
+#!/local/programs/bin/perl -w
+#!/usr/local/bin/perl -w
 
+#$Id$
 
 use DBI;
-use Test::More tests => 32;
+use Test::More tests => 102;
 use Test::Harness;
 use strict;
 
+# Limit the noise to beautify the output.  Sometimes need to comment this out to troubleshoot
 close(STDERR);
 
 $|++; # don't buffer output
 my $numrows;
 my $msg;
-my $test = 'sbeams_test.dbo.testagain';
+
+# Name of test table
+my $test = 'test';
   
-# Set up user agent and sbeams objects
+# Make as many database connections as possible, those that fail are dropped. 
 my %dbh;
 ok( $dbh{sqlserv} = dbConnect( 'sqlserv' ), 'Connect to SQL Server database' );
+ok( $dbh{mysql} = dbConnect( 'mysql' ), 'Connect to MySQL database' );
+ok( $dbh{pgsql} = dbConnect( 'pgsql' ), 'Connect to PostgreSQL database' );
 print "\n";
 
-for my $db ( qw( sqlserv ) ) {
-  print "Working on $db ( $dbh{$db}->{Driver}->{Name} )...\n";
+# Iterate through hash of dbhandles, or some salient subset.
+#for my $db ( qw( mysql ) ) {
+for my $db ( keys( %dbh ) ) {
+
+  # Bail if a particular handle didn't 'take'
+  next unless defined $dbh{$db};
+
+  # Print our header line, check driver name and version.
+  print "Working on $db ( $dbh{$db}->{Driver}->{Name}, version $dbh{$db}->{Driver}->{Version}   )...\n";
+
+  # Reset the test table.
+  ok( dropTable( $db ), 'Drop test table');
+  ok( createTable( $db ), 'Create test table');
+
+  # Optionally change dbname
+#  $test = ( $db eq 'mysql' ) ? 'test' : 'sbeams_test.dbo.test';
 
   # Set up database, test inserts with autocommit ON
   ok( deleteRows( $db ), "Clean up database" );
@@ -91,6 +112,20 @@ for my $db ( qw( sqlserv ) ) {
 END {
   breakdown();
 } # End END
+
+sub createTable {
+  my $db = shift;
+  my $sql = "CREATE TABLE $test ( f_one INTEGER, f_two VARCHAR(36) )";
+  $sql .= " TYPE InnoDB" if $db eq 'mysql';
+  $dbh{$db}->do( $sql );
+}
+
+sub dropTable {
+  my $db = shift;
+  my $sql = "DROP TABLE $test";
+  $dbh{$db}->do( $sql );
+}
+
 
 sub breakdown {
 }
@@ -172,18 +207,29 @@ sub setAutoCommit {
 sub dbConnect {
   my $db = shift;
 
-  my $connect = ( $db eq 'mysql' ) ?  "DBI:mysql:host=pandora;database=dcampbel" :
-#"DBI:mysql:host=mysql;database=test" :
-                                     "DBI:Sybase:server=mssql;database=sbeams_test";
-#                                     "DBI:Sybase:server=mssql;database=dcampbel";
-  my $user = 'dcampbel';
-#  my $user = ( $db eq 'mysql' ) ? 'guest' : 'user';
-  my $pass = ( $db eq 'mysql' ) ? 'pass' : 'pass';
-#  my $pass = ( $db eq 'mysql' ) ? 'pass' : 'pass';
+  my $connect = ( $db eq 'mysql' ) ?   "DBI:mysql:host=pandora;database=dcampbel" :
+                                     # "DBI:mysql:host=mysql;database=test" :
+                ( $db eq 'sqlserv' ) ? "DBI:Sybase:server=mssql;database=sbeams_test" :
+                                       "DBI:Pg:host=pgsql;dbname=sbeamstest1";
 
-  my $dbh = DBI->connect( $connect, $user, $pass, { RaiseError => 0, AutoCommit => 1 } ) || die;
+#  my $user = ( $db eq 'mysql' ) ? 'guest' : 
+  my $user = ( $db eq 'mysql' ) ? 'dcampbel' : 
+             ( $db eq 'sqlserv' ) ? 'dcampbel' : 'tsbeamsadmin';
+
+#  my $pass = ( $db eq 'mysql' ) ? 'guest' : 
+  my $pass = ( $db eq 'mysql' ) ? 'xxxxxx' : 
+             ( $db eq 'sqlserv' ) ? 'xxxxxx' : 'xxxxxx'; 
+
+  my $dbh;
+  eval {
+    $dbh = DBI->connect( $connect, $user, $pass, { RaiseError => 0, AutoCommit => 1 } );
+  };
   return $dbh;
 }
 
 #  $dbh->{AutoCommit} = 0;
+
+
+__DATA__
+
 
