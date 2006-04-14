@@ -3,7 +3,7 @@
 #$Id$
 
 use DBI;
-use Test::More tests => 42;
+use Test::More tests => 36;
 use Test::Harness;
 use strict;
 
@@ -37,11 +37,21 @@ my $re = '';
 
 my $cid = $sbeams->getCurrent_contact_id();
 
-
-  # Set up database, test inserts with autocommit ON
+  # Test ability to set AutoCommit ON, setup db
+  ok( setAutoCommit( 1 ), 'Set Autocommit ON' );
+  ok( checkCommitState( 1 ), "Verify autocommit state - ON" );
   ok( deleteRows(), "Clean up database" );
+
+
+  # Test inserts with autocommit ON
   setNumrows();
-  ok( testInsert(  ), "Insert $iter rows" );
+  ok( testInsert(), "Insert $iter rows" );
+  ok( checkNumrows( $numrows + $iter ), "Check number of rows: $msg" );
+
+  # Test rolled-back inserts with autocommit ON
+  setNumrows( );
+  ok( testInsert( ), "Insert $iter rows" );
+  ok( testRollback( ), 'Rollback transaction' );
   ok( checkNumrows( $numrows + $iter ), "Check number of rows: $msg" );
 
   # Test interrupted inserts with autocommit ON
@@ -50,25 +60,23 @@ my $cid = $sbeams->getCurrent_contact_id();
   ok( testInterrupt(), 'Interrupt transaction' );
   ok( checkNumrows( $numrows + $iter ), "Check number of rows: $msg" );
   print "\n";
+  print "\n";
 
   # Test ability to turn autocommit off
   ok( setAutoCommit(  0 ), 'Set Autocommit OFF' );
   ok( checkCommitState(  0 ), "Verify autocommit state - OFF" );
-  print "\n";
   
   # Test committed inserts with autocommit OFF
   setNumrows();
   ok( testInsert(), "Insert $iter rows" );
   ok( testCommit(), 'Commit transaction' );
   ok( checkNumrows(  $numrows + $iter ), "Check number of rows: $msg" );
-  print "\n";
 
   # Test rolled-back inserts with autocommit OFF
   setNumrows( );
   ok( testInsert( ), "Insert $iter rows" );
   ok( testRollback( ), 'Rollback transaction' );
   ok( checkNumrows(  $numrows ), "Check number of rows: $msg" );
-  print "\n";
 
   # Test interrupted inserts with autocommit OFF
   setNumrows();
@@ -76,33 +84,8 @@ my $cid = $sbeams->getCurrent_contact_id();
   ok( testInterrupt(), 'Interrupt transaction' );
   ok( checkNumrows( $numrows ), "Check number of rows: $msg" );
   print "\n";
-
-  # Test ability to set AutoCommit ON
-  ok( setAutoCommit( 1 ), 'Set Autocommit ON' );
-  ok( checkCommitState( 1 ), "Verify autocommit state - ON" );
   print "\n";
 
-  # Test rolled-back inserts with autocommit ON
-  setNumrows( );
-  ok( testInsert( ), "Insert $iter rows" );
-  ok( testRollback( ), 'Rollback transaction' );
-  ok( checkNumrows(  $numrows + $iter ), "Check number of rows: $msg" );
-  print "\n";
-
-  # Test interrupted inserts with autocommit ON
-  print "Test interrupted inserts with autocommit ON\n";
-  setNumrows();
-  ok( testInsert(), "Insert $iter rows" );
-  ok( testInterrupt(), 'Interrupt transaction' );
-  ok( checkNumrows( $numrows + $iter ), "Check number of rows: $msg" );
-  print "\n";
-
-  # Test ability to turn autocommit off
-  ok( setAutoCommit(  0 ), 'Set Autocommit OFF' );
-  ok( checkCommitState(  0 ), "Verify autocommit state - OFF" );
-  ok( setRaiseError(1), 'Set raise error ' );
-  print "\n";
-  
   # Test transaction isolation
   ok( testInitiateTransaction(), 'Isolate transaction' );
 
@@ -111,7 +94,6 @@ my $cid = $sbeams->getCurrent_contact_id();
   ok( testInsert( ), "Insert $iter rows" );
   ok( testCommit(), 'Commit isolated transaction' );
   ok( checkNumrows(  $numrows + $iter ), "Check number of rows: $msg" );
-  print "\n";
 
   # Test rolled-back inserts within transaction
   ok( testInitiateTransaction(), 'Isolate transaction' );
@@ -120,7 +102,6 @@ my $cid = $sbeams->getCurrent_contact_id();
   ok( testRollback( ), 'Rollback transaction' );
   ok( dbping( ), 'Ping database' );
   ok( checkNumrows(  $numrows ), "Check number of rows: $msg" );
-  print "\n";
 
   # Test interrupted inserts within transaction
   ok( testInitiateTransaction(), 'Isolate transaction' );
@@ -129,7 +110,6 @@ my $cid = $sbeams->getCurrent_contact_id();
   ok( testInterrupt(), 'Interrupt transaction' );
   ok( dbping( ), 'Ping database' );
   ok( checkNumrows( $numrows ), "Check number of rows: $msg" );
-  print "\n";
 
   print "\n\n";
 
@@ -157,6 +137,7 @@ sub testInterrupt {
   eval {
     undef( $dbh );
   }; 
+  $sbeams->setNewDBHandle();
   $dbh = dbConnect();
   return ( defined $dbh ) ? 1 : 0;
 }
@@ -184,7 +165,11 @@ sub testBegin {
 }
 
 sub testRollback {
-  $sbeams->rollback_transaction();
+  eval {
+    $sbeams->rollback_transaction();
+    $dbh->rollback();
+  };
+  return 1 unless $@;
 }
 
 sub testInsert {
@@ -241,7 +226,6 @@ sub setNumrows {
   ( $numrows ) = $dbh->selectrow_array( <<"  END" );
   SELECT COUNT(*) FROM $TB_TEST_SAMPLE
   END
-  print "\tFound $numrows rows\n";
 }
 
 sub setAutoCommit {
