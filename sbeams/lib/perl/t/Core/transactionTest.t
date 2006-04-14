@@ -3,7 +3,7 @@
 #$Id$
 
 use DBI;
-use Test::More tests => 40;
+use Test::More tests => 42;
 use Test::Harness;
 use strict;
 
@@ -15,6 +15,8 @@ my $sbeams = SBEAMS::Connection->new();
 
 # uncomment to troubleshoot
 close(STDERR);
+
+use constant REFRESH_HANDLE => 1;
 
 $|++; # unbuffer output
 my $iter = 3;
