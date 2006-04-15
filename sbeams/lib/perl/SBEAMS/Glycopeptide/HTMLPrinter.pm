@@ -21,6 +21,8 @@ use CGI::Carp qw( croak);
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::TableInfo;
+use SBEAMS::Connection::Log;
+my $log = SBEAMS::Connection::Log->new();
 
 use SBEAMS::Glycopeptide::Settings;
 use SBEAMS::Glycopeptide::TableInfo;
@@ -85,7 +87,8 @@ sub displayUnipepHeader {
   <HTML>
   $skin
   END_PAGE
-  print '<STYLE TYPE=text/css>' . $self->getGlycoStyleSheet() . '</STYLE>';
+#  print '<STYLE TYPE=text/css>' . $self->getGlycoStyleSheet() . '</STYLE>';
+  $self->printStyleSheet();
 
   $self->printJavascriptFunctions();
   }
@@ -93,6 +96,7 @@ sub displayUnipepHeader {
 
 sub getGlycoStyleSheet {
   use Env qw (HTTP_USER_AGENT);   
+  $log->debug( "Hi mom" );
    
   my $FONT_SIZE=9;
   my $FONT_SIZE_SM=8;
@@ -106,7 +110,7 @@ sub getGlycoStyleSheet {
     $FONT_SIZE_HG=19;
   }
 
-return <<END;
+my $css =<<END;
    .table_setup{border: 0px ; border-collapse: collapse;   }
    .pad_cell{padding:5px;  }
    .sequence_font{font-family:courier; ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5}
@@ -203,6 +207,8 @@ return <<END;
   	 }
      td {white-text}
 END
+  $log->debug( "$css" );
+return $css;
 
 }
 
