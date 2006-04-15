@@ -24,6 +24,7 @@ my $iter = 3;
 
 # db handle
 my $dbh = dbConnect();
+print "\t$dbh->{Driver}->{Name}, version $dbh->{Driver}->{Version}\n\n";
 
 # number of rows in test table at any point in time
 my $numrows;
@@ -157,7 +158,10 @@ sub checkNumrows {
 }
 
 sub testCommit {
+  eval {
   $dbh->commit();
+  };
+  return ( $! ) ? 0 : 1;
 }
 
 sub testBegin {
@@ -246,6 +250,7 @@ sub dbConnect {
   my $status = $sbeams->Authenticate( connect_read_only => 0 );
   return $status unless $status;
   my $dbh = $sbeams->getDBHandle();
+
   return $dbh;
 }
 
