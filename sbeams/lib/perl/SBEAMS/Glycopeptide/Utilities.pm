@@ -168,6 +168,9 @@ sub calculatePeptideMass {
   my %args = @_;
   die "Missing required parameter sequence" unless $args{sequence};
   $self->{_rmass} ||= $self->getResidueMasses();
+  if ( $args{flanking} ) {
+    $args{sequence} = substr( $args{sequence}, 2, length( $args{sequence} ) - 4 )
+  }
   my $seq = uc( $args{sequence} );
   my @seq = split( "", $seq );
   my $mass = 0;
