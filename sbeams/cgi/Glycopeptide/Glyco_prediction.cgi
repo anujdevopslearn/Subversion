@@ -74,8 +74,7 @@ sub main
 { 
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate(
-       # permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin',
-       # 'Glycopeptide_readonly'],
+       permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin', 'Glycopeptide_readonly'],
        # connect_read_only=>1,
        # allow_anonymous_access=>1,
     ));
@@ -101,39 +100,40 @@ sub main
     #$sbeams->printDebuggingInfo($q);
 
     #### Decide what action to take based on information so far
+    $sbeamsMOD->display_page_header(project_id => $project_id);
+    $sbeams->printStyleSheet();
     if ($parameters{action} eq "Show_detail_form" || $parameters{redraw_protein_sequence} == 1) {
 		
 		 clean_params(\%parameters);
 		
 		 my $ipi_data_id = $parameters{'ipi_data_id'};
 		
-		 $sbeamsMOD->display_page_header(project_id => $project_id);
     print $sbeams->getGifSpacer(800);
 		print $sbeams->getPopupDHTML();
 		display_detail_form(ref_parameters=>\%parameters,
 							ipi_data_id => $ipi_data_id,
 							);
 		
-		$sbeamsMOD->display_page_footer();
 		
 	}elsif($parameters{action} eq 'Show_hits_form'){
 		
-		 $sbeamsMOD->display_page_header(project_id => $project_id);
+#		 $sbeamsMOD->display_page_header(project_id => $project_id);
     print $sbeams->getGifSpacer(800);
 		print $sbeams->getPopupDHTML();
 		
 		display_hits_form(ref_parameters=>\%parameters);
-		$sbeamsMOD->display_page_footer();
+#		$sbeamsMOD->display_page_footer();
     
     } else {
 
-        $sbeamsMOD->display_page_header(project_id => $project_id);
+#        $sbeamsMOD->display_page_header(project_id => $project_id);
     print $sbeams->getGifSpacer(800);
 		handle_request(ref_parameters=>\%parameters);
-		$sbeamsMOD->display_page_footer();
+#		$sbeamsMOD->display_page_footer();
 
     }
 
+		$sbeamsMOD->display_page_footer();
 
 
 
@@ -155,7 +155,7 @@ $log->debug(Dumper($ref_parameters));
 	print 
 	$q->table({class=>'table_setup'},
           $q->Tr({class=>'rev_gray_head'},
-	     $q->td({colspan=>2}, $q->h2("ISB N-glycosylation peptide prediction server")),
+	     $q->td({colspan=>2, class=>'rev_gray_head'}, $q->h2("ISB N-glycosylation peptide prediction server")),
 	  	 
 	  ),
 	  $q->Tr(
@@ -173,7 +173,7 @@ $log->debug(Dumper($ref_parameters));
 	   $q->td({colspan=>2},'&nbsp; <br> &nbsp;') 
 	 ),	    
 	 $q->Tr({class=>'rev_gray_head'},
-	   $q->td({colspan=>2}, $q->h2("Text Search"))
+	   $q->td({colspan=>2, class=>'rev_gray_head'}, $q->h2("Text Search"))
 	 ),
 	 $q->Tr(
 	   $q->td({class=>'grey_bg'}, "Choose Search option"),
@@ -203,7 +203,7 @@ $log->debug(Dumper($ref_parameters));
 	   $q->td({colspan=>2}, " <B>-- or --</B> <br>")
 	 ), 
 	 $q->Tr({class=>'rev_gray_head'},
-	   $q->td({colspan=>2}, $q->h2("Sequence Search") )
+	   $q->td({colspan=>2, class=>'rev_gray_head'}, $q->h2("Sequence Search") )
 	 ), 
 	 
 	 $q->Tr(
@@ -680,11 +680,11 @@ sub display_detail_form{
 				$q->td($ipi_url)
 			  ),
 			$q->Tr(
-				$q->td({class=>'rev_gray_head'}, "Protein Name"),
+				$q->td({class=>'rev_gray_head', nowrap=>1}, "Protein Name"),
 				$q->td($protein_name)
 			  ),
 			$q->Tr(
-				$q->td({class=>'rev_gray_head'}, 
+				$q->td({class=>'rev_gray_head', nowrap=>1}, 
 				$glyco_o->linkToColumnText(display => "Protein Symbol",
 								 title   =>"Protein Symbol Info", 
 								 column  =>"protein_symbol", 
@@ -697,7 +697,7 @@ sub display_detail_form{
 					   )
 			  ),
 		   $q->Tr(
-				$q->td({class=>'rev_gray_head'}, 
+				$q->td({class=>'rev_gray_head', nowrap=>1}, 
 				$glyco_o->linkToColumnText(display => "Subcellular Location",
 								 title   =>"Find More Info About the Subcellular Location Call", 
 								 column  =>"cellular_location_id", 
@@ -711,7 +711,7 @@ sub display_detail_form{
 					   )
 			  ),
 			 $q->Tr(
-				$q->td({class=>'rev_gray_head'}, "Swiss Prot ID"),
+				$q->td({class=>'rev_gray_head', nowrap=>1}, "Swiss Prot ID"),
 				$q->td($swiss_prot_url)
 			  ),
 			$q->Tr(
@@ -728,7 +728,7 @@ sub display_detail_form{
 					   )
 			  ),
 			$q->Tr(
-				$q->td({class=>'rev_gray_head'}, "Protein Summary"),
+				$q->td({class=>'rev_gray_head', nowrap=>1}, "Protein Summary"),
 				$q->td(get_annotation(glyco_o   => $glyco_o,
 									  anno_type => 'summary'
 									  )
@@ -1044,3 +1044,4 @@ sub get_annotation {
 }
 
 
+       # permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin',
