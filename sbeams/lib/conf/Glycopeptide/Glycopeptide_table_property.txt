@@ -5,14 +5,14 @@ GP_biosequence	BioSequence	Glycopeptide_infrastructure	NO	$TBGP_BIOSEQUENCE	bios
 GP_biosequence_property_set	Biosequence Property Set	Glycopeptide_infrastructure	NO	$TBGP_BIOSEQUENCE_PROPERTY_SET	biosequence_property_set_id				
 GP_query_option	Query Option	Glycopeptide_infrastructure	YES	$TBGP_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=GP_query_option	GP_query_option	
 GP_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi		
-GP_ipi_version	IPI Version	PeptideAtlas_infrastructure	YES	$TBGP_IPI_VERSION	ipi_version_id		ManageTable.cgi?TABLE_NAME=GP_ipi_version		
-GP_ipi_data	IPI Data	PeptideAtlas_infrastructure	YES	$TBGP_IPI_DATA	ipi_data_id		ManageTable.cgi?TABLE_NAME=GP_ipi_data		
-GP_cellular_location	Cellular Location	PeptideAtlas_infrastructure	YES	$TBGP_CELLULAR_LOCATION	cellular_location_id		ManageTable.cgi?TABLE_NAME=GP_cellular_location		
-GP_glyco_site	Glyco Site	PeptideAtlas_infrastructure	NO	$TBGP_GLYCO_SITE	glyco_site_id				
-GP_identified_peptide	Identified Peptide	PeptideAtlas_infrastructure	NO	$TBGP_IDENTIFIED_PEPTIDE	identified_peptide_id				
-GP_predicted_peptide	Predicted Peptide	PeptideAtlas_infrastructure	NO	$TBGP_PREDICTED_PEPTIDE	predicted_peptide_id				
-GP_peptide_to_tissue	Peptide to tissue	PeptideAtlas_infrastructure	NO	$TBGP_PEPTIDE_TO_TISSUE	peptide_to_tissue_id				
-GP_tissue_type	Sample	PeptideAtlas_infrastructure	YES	$TBGP_TISSUE_TYPE	tissue_type_id		ManageTable.cgi?TABLE_NAME=GP_tissue_type		
-GP_identified_to_ipi	Identified To IPI	PeptideAtlas_infrastructure	NO	$TBGP_IDENTIFIED_TO_IPI	identified_to_ipi_id				
-GP_glyco_sample	Sample	PeptideAtlas_infrastructure	YES	$TBGP_GLYCO_SAMPLE	sample_id		ManageTable.cgi?TABLE_NAME=GP_glyco_sample		
-GP_synthesized_peptide	Synthesized Peptide	PeptideAtlas_infrastructure	NO	$TBGP_SYNTHESIZED_PEPTIDE	synthesized_peptide_id				
+GP_ipi_version	IPI Version	Glycopeptide_infrastructure	YES	$TBGP_IPI_VERSION	ipi_version_id		ManageTable.cgi?TABLE_NAME=GP_ipi_version		
+GP_ipi_data	IPI Data	Glycopeptide_infrastructure	YES	$TBGP_IPI_DATA	ipi_data_id		ManageTable.cgi?TABLE_NAME=GP_ipi_data		
+GP_cellular_location	Cellular Location	Glycopeptide_infrastructure	YES	$TBGP_CELLULAR_LOCATION	cellular_location_id		ManageTable.cgi?TABLE_NAME=GP_cellular_location		
+GP_glyco_site	Glyco Site	Glycopeptide_infrastructure	NO	$TBGP_GLYCO_SITE	glyco_site_id				
+GP_identified_peptide	Identified Peptide	Glycopeptide_infrastructure	NO	$TBGP_IDENTIFIED_PEPTIDE	identified_peptide_id				
+GP_predicted_peptide	Predicted Peptide	Glycopeptide_infrastructure	NO	$TBGP_PREDICTED_PEPTIDE	predicted_peptide_id				
+GP_peptide_to_tissue	Peptide to tissue	Glycopeptide_infrastructure	NO	$TBGP_PEPTIDE_TO_TISSUE	peptide_to_tissue_id				
+GP_tissue_type	Sample	Glycopeptide_infrastructure	YES	$TBGP_TISSUE_TYPE	tissue_type_id		ManageTable.cgi?TABLE_NAME=GP_tissue_type		
+GP_identified_to_ipi	Identified To IPI	Glycopeptide_infrastructure	NO	$TBGP_IDENTIFIED_TO_IPI	identified_to_ipi_id				
+GP_glyco_sample	Sample	Glycopeptide_infrastructure	YES	$TBGP_GLYCO_SAMPLE	sample_id		ManageTable.cgi?TABLE_NAME=GP_glyco_sample		
+GP_synthesized_peptide	Synthesized Peptide	Glycopeptide_infrastructure	NO	$TBGP_SYNTHESIZED_PEPTIDE	synthesized_peptide_id				
