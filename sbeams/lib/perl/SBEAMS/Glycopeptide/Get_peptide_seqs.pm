@@ -174,6 +174,7 @@ sub add_peptide_annotation{
 	my $tissues				= Bio::Annotation::Comment->new;
 	
 	my $number_tryptic_ends = new Bio::Annotation::SimpleValue(-value => $href->{'tryptic_end'});
+	my $number_obs = new Bio::Annotation::SimpleValue(-value => $href->{'n_obs'});
 
 #annotation specific for predicted peptides	
 	my $db_hits 	= new Bio::Annotation::SimpleValue(-value => $href->{'number_proteins_match_peptide'});
@@ -200,6 +201,7 @@ sub add_peptide_annotation{
 	$coll->add_Annotation('peptide_mass', $peptide_mass);
 	$coll->add_Annotation('detection_probability', $detection_probability);
 	$coll->add_Annotation('tissues', $tissues);
+	$coll->add_Annotation('number_obs', $number_obs);
 	$coll->add_Annotation('synthesized_seq', $synthesized_seq);
 	
 	
