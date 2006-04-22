@@ -17,8 +17,12 @@ use POSIX qw(strftime);
 use Benchmark;
 
 		
+use SBEAMS::Connection qw($log);
 use SBEAMS::Connection::Tables;
 use SBEAMS::Glycopeptide::Tables;
+use SBEAMS::Glycopeptide;
+
+my $module = SBEAMS::Glycopeptide->new();
 
 
 #######################################################
@@ -170,8 +174,10 @@ sub process_data_file {
 		
 		my $glyco_pk = $self->add_glyco_site( \@tokens );
 			
-		$self->add_predicted_peptide( glyco_pk   => $glyco_pk,
+	  if ( $tokens[$heads{'identified sequences'}] ) {
+	  	$self->add_predicted_peptide( glyco_pk   => $glyco_pk,
 									              	  line_parts => \@tokens);
+    }
 			
     # add identifed peptide iff there is one.
 	  if ( $args{load_peptides} && $tokens[$heads{'identified sequences'}] ) {
@@ -195,6 +201,8 @@ sub process_data_file {
 			}
     }
     my $t2 = new Benchmark;
+    my $pcnt = $self->{_id_peps};
+    print "Total peptides was " .  scalar(keys(%$pcnt) ) ."\n";
     print "\n\nLoaded $count total records in " . timestr(timediff($t2, $t0)) . "\n";
   }
 
@@ -228,6 +236,7 @@ sub checkHeaders {
                             'Peptide ProPhet',
                             'Identified Peptide Mass',
                             'Identified Tissues',
+                            'Number Observations',
                          );
   @version_8_columns = map { lc($_) } @version_8_columns;
   my @current_cols = keys(%heads);
@@ -293,33 +302,37 @@ sub add_identified_peptides{
   my %heads = %{$self->{_heads}};
   my $sbeams = $self->getSBEAMS;
 	
+  my $id_seq = $row->[$heads{'identified sequences'}];
+
   # make sure we have an identifed peptide otherwise do nothing
-	return unless ($row->[$heads{'identified sequences'}]); 
+	return unless ( $id_seq ); 
 
   # Special case, some peptides have the sequence 'N.AME.?', has some meaning
   # Can't cope with this now, log it and return FIXME
-  if ( $row->[$heads{'identified sequences'}] eq 'N.AME.?' ) {
-    print STDERR "Got an oddball, $row->[$heads{'ipi'}]: $row->[$heads{'predicted tryptic nxt/s peptide sequence'}]\n"; 
+  if ( $id_seq eq 'N.AME.?' || $id_seq eq '...' ) {
+#    print STDERR "Got an oddball, $row->[$heads{'ipi'}]: $id_seq ($row->[$heads{'predicted tryptic nxt/s peptide sequence'}])\n"; 
     return;
     }
 	
 	my $ipi_acc = $row->[$heads{'ipi'}];
-	my $clean_seq = $self->clean_seq($row->[$heads{'identified sequences'}]); 
+	my $clean_seq = $self->clean_seq($id_seq); 
 	my ($start, $stop) = $self->map_peptide_to_protein(peptide=> $clean_seq,
 													   protein_seq => $row->[$heads{'protein sequences'}]);
 
   my $iden_pep_id;
   # Insert new id'd peptide or use cached version
-  if ( !$self->{_id_peps}->{$row->[$heads{'identified sequences'}]} ) {
-#    print "Got a new one, $row->[$heads{'identified sequences'}]\n";
+  if ( !$self->{_id_peps}->{$id_seq} ) {
+    my $matching_sequence = $module->clean_pepseq( $id_seq );
 	
     # First, add row to the identified peptide table
 	  my %id_pep_row = ( 	
-					identified_peptide_sequence => $row->[$heads{'identified sequences'}],
+					identified_peptide_sequence => $id_seq,
   				tryptic_end				        	=> $row->[$heads{'tryptic ends'}],
 					peptide_prophet_score 		  => $row->[$heads{'peptide prophet'}],
 					peptide_mass 			        	=> $row->[$heads{'identified peptide mass'}],
-					glyco_site_id  		          => $glyco_pk
+					glyco_site_id  		          => $glyco_pk,
+					matching_sequence           => $matching_sequence,
+					n_obs                       =>  $row->[$heads{'number observations'}]
 			);
     my $sbeams = $self->getSBEAMS();
 	
@@ -334,9 +347,9 @@ sub add_identified_peptides{
 				   			PK          => 'identified_peptide_id',
 				   		   );
     # Cache value for later use!
-    $self->{_id_peps}->{$row->[$heads{'identified sequences'}]} = $iden_pep_id;
+    $self->{_id_peps}->{$id_seq} = $iden_pep_id;
   } else {
-    $iden_pep_id = $self->{_id_peps}->{$row->[$heads{'identified sequences'}]};
+    $iden_pep_id = $self->{_id_peps}->{$id_seq};
 #    print "Using cached, $row->[$heads{'identified sequences'}] => $iden_pep_id\n";
   }
 
@@ -467,7 +480,12 @@ sub add_predicted_peptide {
   my %heads = %{$self->{_heads}};
 	
 	my $ipi_acc = $row->[$heads{'ipi'}];
-	my $clean_seq = $self->clean_seq($row->[$heads{'predicted tryptic nxt/s peptide sequence'}]); 
+	my $peptide_sequence = $row->[$heads{'predicted tryptic nxt/s peptide sequence'}];
+  if ( length($peptide_sequence) > 900 ) {
+    $peptide_sequence = substr( $peptide_sequence, 0, 900 );
+  }
+
+	my $clean_seq = $self->clean_seq($peptide_sequence); 
 
   my $sbeams = $self->getSBEAMS();
 	
@@ -481,6 +499,7 @@ sub add_predicted_peptide {
 	
     my $det_prob = 0 ; #$row->[$heads{'detection probablility'}] || 0;
 
+    my $matching_sequence = $module->clean_pepseq( $peptide_sequence );
 
   	#TODO WARNING DETECTION PROBABLITY IS FAKE>  DATA IS NOT COMPLETE
   	my %rowdata_h = ( 	
@@ -494,7 +513,7 @@ sub add_predicted_peptide {
 					predicted_start 			=> $start,
 					predicted_stop 				=> $stop,
 					glyco_site_id  				=> $glyco_pk,
-					
+          matching_sequence => $matching_sequence
 	  		);
     #TODO REMOVE SIZE LIMIT OF DATA	
   	#my %rowdata_h = $self->truncate_data(record_href => \%rowdata_h); #some of the data will need to truncated to make it easy to put all data in varchar 255 or less
@@ -549,11 +568,11 @@ sub clean_seq {
 	my $self = shift;
 	my $pep_seq = shift;
 	unless($pep_seq){
-    return $pep_seq;
 		confess(__PACKAGE__."$method MUST PROVIDE A PEPTIDE SEQUENCE YOU GAVE '$pep_seq'\n");
 	}	
 	 $pep_seq =~ s/^.//; #remove first aa
 		unless($pep_seq){
+#      return '';
 		confess(__PACKAGE__."$method PEP SEQ IS GONE'$pep_seq'\n");
 	}	
 	
@@ -562,6 +581,7 @@ sub clean_seq {
 	 $pep_seq =~ s/\W//g;	#remove any '*' '.' '#' signs
 	
 	unless($pep_seq){
+#      return '';
 		confess(__PACKAGE__."$method PEP SEQ IS GONE'$pep_seq'\n");
 	}	
 	
@@ -583,6 +603,7 @@ sub map_peptide_to_protein {
 	my %args = @_;
 	my $pep_seq = $args{peptide};
 	my $protein_seq = $args{protein_seq};
+#  return ( 0, 0 ) unless $args{peptide};
 	
 	if ( $protein_seq =~ /$pep_seq/ ) {
 
@@ -598,6 +619,8 @@ sub map_peptide_to_protein {
 		}
 		return ($start_pos, $stop_pos);	
 	}else{
+		print STDERR "No mapping possible: PEPTIDE '$pep_seq' DOES NOT MATCH '$protein_seq'\n";
+    return( 0, 0 );
 		confess(__PACKAGE__. "::$method PEPTIDE '$pep_seq' DOES NOT MATCH '$protein_seq'\n");
 	}
 	
