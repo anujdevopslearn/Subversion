@@ -382,7 +382,8 @@ sub get_identified_peptides{
 				gs.glyco_score,
 				gs.protein_glyco_site_position,
 				identified_start,
-				identified_stop 
+				identified_stop,
+        n_obs
 				FROM $TBGP_IDENTIFIED_PEPTIDE id
         JOIN $TBGP_IDENTIFIED_TO_IPI iti 
           ON iti.identified_peptide_id = id.identified_peptide_id

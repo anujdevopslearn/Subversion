@@ -983,6 +983,7 @@ sub identified_pep_html{
 			     	$q->td(text_class("Tryptic Ends")),
 			     	$q->td(text_class("Peptide Mass")),
 			     	$q->td(text_class("Tissues")),
+			     	$q->td(text_class("# Obs")),
 			     	$q->td(text_class("Atlas"))
 			     );
 				 
@@ -1000,6 +1001,7 @@ sub identified_pep_html{
 		my $tryptic_end = '-1';
 		my $peptide_prophet_score = '-1';
 		my $peptide_mass = '1';
+		my $num_obs = '1';
 		my $tissues = 'None';
 		my $protein_glyco_site = 1;
 		
@@ -1047,12 +1049,14 @@ sub identified_pep_html{
 									 anno_type => 'peptide_mass');
 			$tissues = $self->get_annotation(seq_obj =>$pep_seq_obj, 
 									 anno_type => 'tissues');
+			$num_obs = $self->get_annotation(seq_obj =>$pep_seq_obj, 
+									 anno_type => 'number_obs');
 					
 		}
 ### Start writing some html that can be returned
-		 $tissues = ( $tissues =~ /^serum$/ ) ? 'serum' :
-		            ( $tissues =~ /serum/ ) ? 'serum, other' :
-		            ( $tissues =~ /\w/ ) ? 'other' : '';
+#		 $tissues = ( $tissues =~ /^serum$/ ) ? 'serum' :
+#		            ( $tissues =~ /serum/ ) ? 'serum, other' :
+#		            ( $tissues =~ /\w/ ) ? 'other' : '';
 
 		 $html .= $q->Tr(
 				$q->td($gb.$protein_glyco_site.$ge),
@@ -1061,6 +1065,7 @@ sub identified_pep_html{
 				$q->td($gb.$tryptic_end.$ge),
 				$q->td($gb.$peptide_mass.$ge),
 				$q->td($gb.$tissues.$ge),
+				$q->td($gb.$num_obs.$ge),
 				$q->td({ALIGN=>'CENTER'},$gb.$atlas_link.$ge),
 			     );
 		}
@@ -1110,7 +1115,6 @@ sub get_atlas_link {
     my $key = ( $match ) ? $args{seq} : '%' . $args{seq} . '%';
     $key = $q->escape($key);
     $type = 'image' if $match;
-    $log->info( $HTML_BASE_DIR );
     $url = "../PeptideAtlas/Search?organism_name=Human;search_key=$key;action=GO";
   } else {
     my $key = $q->escape($args{name});
