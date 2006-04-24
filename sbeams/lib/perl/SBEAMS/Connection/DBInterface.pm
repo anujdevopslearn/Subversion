@@ -785,6 +785,8 @@ sub selectrow_arrayref {
 #-
 sub initiate_transaction {
   my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+  $args{no_raise_error} = 0 unless defined $args{no_raise_error};
 
   #### Get the database handle
   $dbh = $self->getDBHandle();
@@ -793,7 +795,13 @@ sub initiate_transaction {
   $dbh->{AutoCommit} = 0;
 
   # Finish any incomplete transactions
-  $dbh->commit();
+  eval {
+    $dbh->commit();
+  };
+  if ( $@ ) {
+    $log->error( "DBI error: $@\n" );
+  }
+    $dbh->commit();
 
   # Turn RaiseError off, because mssql begin_work is AFU
   $dbh->{RaiseError} = 0;
@@ -801,8 +809,8 @@ sub initiate_transaction {
   # Begin transaction
   $dbh->begin_work();
 
-  # Turn RaiseError on
-  $dbh->{RaiseError} = 1;
+  # Turn RaiseError on unless asked not to
+  $dbh->{RaiseError} = 1 unless $args{no_raise_error};
 
 }
 
