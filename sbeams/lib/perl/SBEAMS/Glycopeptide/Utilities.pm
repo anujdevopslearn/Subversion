@@ -96,7 +96,7 @@ sub getCurrentBuild {
   my $self = shift;
   my $sql = "Select ipi_version_name FROM $TBGP_IPI_VERSION";
   my ( $build ) = $self->getSBEAMS->selectrow_array( $sql );
-  $build = 'V13';  # Fixme!
+  $build = 'V15';  # Fixme!
 }
 
 sub set_prophet_cutoff {
