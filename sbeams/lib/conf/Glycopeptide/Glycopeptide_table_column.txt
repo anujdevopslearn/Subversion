@@ -45,9 +45,9 @@ GP_biosequence	8	biosequence_seq	Sequence	text	16	0	Y		N			N	file	40		Y	Y	N	Actu
 GP_biosequence_property_set	1	biosequence_property_set_id	BioSequence Property Set ID	int	4	0	N		Y							N	N				pkDEFAULT
 GP_biosequence_property_set	2	biosequence_id	BioSequence ID	int	4	0	N		N	GP_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		pkDEFAULT
 GP_biosequence_property_set	3	n_transmembrane_regions	Number of Transmembrane Regions	int	4	0	Y		N							Y	Y	N	Number of transmembrane regions		pkDEFAULT
-GP_biosequence_property_set	4	transmembrane_class	Transmembrane Region Class	varchar	10	0	Y		N			Y	text	50		Y	Y	N	"Class of the transmembrane region.  May be 0, TM, A, S, TM_xS based on output from TMHMM and signalP"		
+GP_biosequence_property_set	4	transmembrane_class	Transmembrane Region Class	varchar	10	0	Y		N			Y	text	50		Y	Y	N	Class of the transmembrane region.  May be 0, TM, A, S, TM_xS based on output from TMHMM and signalP		
 GP_biosequence_property_set	5	transmembrane_topology	Transmembrane Region Topology	varchar	1024	0	Y		N			Y	text	20		Y	Y	N	Coding of which residues belong in the transmembrane regions		
-GP_biosequence_property_set	6	has_signal_peptide	Has a Signal Peptide	char	1	0	Y		N			N	text	50		Y	Y	N	"Does this protein have a signal peptide on the end Y/N? (Note that Y means that there is some non-zero probability that it does, not that is necessarily does)"		
+GP_biosequence_property_set	6	has_signal_peptide	Has a Signal Peptide	char	1	0	Y		N			N	text	50		Y	Y	N	Does this protein have a signal peptide on the end Y/N? (Note that Y means that there is some non-zero probability that it does, not that is necessarily does)		
 GP_biosequence_property_set	7	has_signal_peptide_probability	Probability that it has a Signal Peptide	real	4	0	Y		N			N	text	50		Y	Y	N	Probability that there is a signal peptide on the end as calculated by SignalP		
 GP_biosequence_property_set	8	signal_peptide_length	Length of the Signal Peptide	int	4	0	Y		N			N	text	50		Y	Y	N	Length in residues of the signal peptide		
 GP_biosequence_property_set	9	signal_peptide_is_cleaved	Signal Peptide gets Cleaved	char	1	0	Y		N			N	text	50		Y	Y	N	Does the signal peptide get cleaved off Y/N?		
@@ -55,7 +55,7 @@ GP_biosequence_property_set	10	genome_build	Genome Build	varchar	50	0	Y		N			N	t
 GP_biosequence_property_set	11	chromosome	Chromosome	varchar	50	0	Y		N			N	text	50		Y	Y	N	Chromosome in which this mapping occurs		
 GP_biosequence_property_set	12	start_in_chromosome	Start Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	Start position of the biosequence in the chromosome		
 GP_biosequence_property_set	13	end_in_chromosome	End Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	End position of the biosequence in the chromosome		
-GP_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"Strand (+,-) of the biosequence in the chromosome"		
+GP_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	Strand (+,-) of the biosequence in the chromosome		
 GP_biosequence_property_set	15	isoelectric_point	Isoelectric Point	real	4	0	Y		N			N	text	10		Y	Y	N	Isoelectric Point (pI) of the protein		
 GP_biosequence_property_set	16	fav_codon_frequency	Favorite Codon Frequency	real	4	0	Y		N			N	text	10		Y	Y	N	Favorite Codon Frequency		
 GP_biosequence_property_set	17	duplicate_biosequences	Duplicate Biosequences	varchar	255	0	Y		N			N	text	50		Y	Y	N	Semicolon delimited list of duplicate sequences within the same set		
@@ -71,20 +71,20 @@ GP_query_option	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIME
 GP_query_option	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 GP_query_option	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 GP_query_option	11	record_status	Record Status	char	1	0	N	N	N							N	N				
-GP_BrowseBioSequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBGP_BIOSEQUENCE_SET ORDER BY sort_order,set_name"	
+GP_BrowseBioSequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched.	SELECT biosequence_set_id,set_name FROM $TBGP_BIOSEQUENCE_SET ORDER BY sort_order,set_name	
 GP_BrowseBioSequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
 GP_BrowseBioSequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
 GP_BrowseBioSequence	4	molecular_function_constraint	Molecular Function Constraint									N	text	40		Y	Y	N	Constraint for the GO Molecular Function. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
 GP_BrowseBioSequence	5	biological_process_constraint	Biological Process Constraint									N	text	40		Y	Y	N	Constraint for the GO Biological Process. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
 GP_BrowseBioSequence	6	cellular_component_constraint	Cellular Component Constraint									N	text	40		Y	Y	N	Constraint for the GO Cellular Component. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
 GP_BrowseBioSequence	7	protein_domain_constraint	Protein Domain Constraint									N	text	40		Y	Y	N	Constraint for the InterPro Protein Domain. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-GP_BrowseBioSequence	8	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	Y	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""		
-GP_BrowseBioSequence	9	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	Y	N	"Constraint for the number of transmembrane regions (based on a 19-residue wide sliding window of hydropathy indexes above 1.58).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
+GP_BrowseBioSequence	8	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	Y	N	Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: "n.n", "> n.n", "< n.n", "between n.n and n.n", "n.n +- n.n"		
+GP_BrowseBioSequence	9	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	Y	N	Constraint for the number of transmembrane regions (based on a 19-residue wide sliding window of hydropathy indexes above 1.58).  Allowed syntax: "n", "> n", "< n", "between n and n", "n +- n"		
 GP_BrowseBioSequence	10	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
 GP_BrowseBioSequence	11	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-GP_BrowseBioSequence	12	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBGP_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"	
-GP_BrowseBioSequence	13	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBGP_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value"	
-GP_BrowseBioSequence	14	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."		
+GP_BrowseBioSequence	12	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	SELECT option_key,option_value FROM $TBGP_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value	
+GP_BrowseBioSequence	13	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	SELECT option_key,option_value FROM $TBGP_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value	
+GP_BrowseBioSequence	14	row_limit	Maximum Rows									N	text	10		Y	Y	N	Limit the numbers of rows displayed.  If not provided, default is 100 rows.		
 GP_ipi_version	1	ipi_version_id	IPI Version ID	int	4	0	N		Y							N	N				pkDEFAULT
 GP_ipi_version	2	ipi_version_name	IPI Version Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	IPI database name/ Source of Predicted and identified peptides		
 GP_ipi_version	3	ipi_version_date	IPI Version Date	datetime	8	0	N		N				text	50		Y	Y	N	Date the data file was produced		
@@ -101,14 +101,14 @@ GP_ipi_data	3	ipi_accession_number	IPI Accession Number	varchar	50	0	N		N			Y	te
 GP_ipi_data	4	protein_name	Protein Name	varchar	500	0	N		N			Y	text	50		Y	Y	N	Descriptive IPI Protein Name 		
 GP_ipi_data	5	protein_symbol	Protein Symbol	varchar	50	0	Y		N			N	text	30		Y	Y	N	Short Protein Symbol from IPI		
 GP_ipi_data	6	swiss_prot_acc	SwissPro Accession Numbers	varchar	50	0	Y		N			N	text	30		Y	Y	N	Swiss Prot Accession number		
-GP_ipi_data	7	cellular_location_id	Cellular Location	int	4	0	Y		N			N				N	N	Y	"Subcelluar location: ie Secreted, Transmembrane"		
+GP_ipi_data	7	cellular_location_id	Cellular Location	int	4	0	Y		N			N				N	N	Y	Subcelluar location: ie Secreted, Transmembrane		
 GP_ipi_data	8	protein_summary	Protein Summary	text	16	0	Y		N			N	textarea	4		Y	Y	N	Protein Summary Information		
 GP_ipi_data	9	protein_sequence	Protein Sequence	text	16	0	N		N			Y	textarea	4		Y	Y	N	Protein Sequence		
 GP_ipi_data	10	transmembrane_info	Transmembrane Info	varchar	255	0	N		N			Y	text	50		Y	Y	N	Encoded TM domain informaion from TMHMM  ie o528-550i		
 GP_ipi_data	11	signal_sequence_info	Signal Sequence Info	varchar	255	0	N		N			Y	text	50		Y	Y	N	Encoded Signal sequence information from SignalP: ie 28 Y 0.988 Y		
 GP_ipi_data	12	synonyms	Synonyms	varchar	500	0	N		N			Y	text	50		Y	Y	N	Synonyms		
 GP_cellular_location	1	cellular_location_id	Cellular Location	int	4	0	N		Y							N	N				pkDEFAULT
-GP_cellular_location	2	cellular_location_name	Cellular Location Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	"Name of the subcellular location: Secreted, Transmembrane"		
+GP_cellular_location	2	cellular_location_name	Cellular Location Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	Name of the subcellular location: Secreted, Transmembrane		
 GP_cellular_location	3	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 GP_cellular_location	4	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
 GP_cellular_location	5	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -126,12 +126,13 @@ GP_identified_peptide	4	peptide_mass	Peptide Mass	real	4	0	N		N			Y	text	50		Y	Y
 GP_identified_peptide	5	glyco_site_id	Glyco Site ID	int	4	0	N		N	GP_glyco_site	glyco_site_id					N	N				
 GP_identified_peptide	6	tryptic_end	Tryptic Ends	int	4	0	Y		N										Number of tryptic ends for this identified peptide		
 GP_identified_peptide	7	matching_sequence	Matching Sequence	varchar	900	0	N		N			Y	text	50		Y	Y	N	Undecorated sequence suitable for searching		
+GP_identified_peptide	8	n_obs	Number of Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times peptide was observed in all tissue types		
 GP_predicted_peptide	1	predicted_peptide_id	Predicted Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
 GP_predicted_peptide	2	ipi_data_id	IPI Data ID	int	4	0	N		N	GP_ipi_data	ipi_data_id	Y				N	N	Y			
 GP_predicted_peptide	3	predicted_peptide_sequence	Predicted Peptide Sequence	text	16	0	N		N			Y	text	50		Y	Y	N	Peptide Sequence Identified by MS/MS run		
 GP_predicted_peptide	4	predicted_peptide_mass	Predicted Peptide Mass	real	4	0	N		N			Y	text	50		Y	Y	N	Predicted Peptide Mass		
 GP_predicted_peptide	5	detection_probability	Detection Probability	real	4	0	N		N			Y	text	50		Y	Y	N	Probability that this peptide will be detected in a MS run		
-GP_predicted_peptide	6	number_proteins_match_peptide	Number of Proteins Matching Peptide	int	4	0	N		N			Y	text	10		N	N	Y	"Number of Proteins that match this protein, including the current protein"		
+GP_predicted_peptide	6	number_proteins_match_peptide	Number of Proteins Matching Peptide	int	4	0	N		N			Y	text	10		N	N	Y	Number of Proteins that match this protein, including the current protein		
 GP_predicted_peptide	7	matching_protein_ids	IPI Protein Ids	text	16	0	N		N			Y	text	50		Y	Y	N	IPI accession numbers for all the proteins that contain this predicted peptide		
 GP_predicted_peptide	8	protein_similarity_score	Protein Similarity Score	real	4	0	N		N			Y	text	50		Y	Y	N	Smiliarity score for all the IPI proteins that match this peptide		
 GP_predicted_peptide	9	glyco_site_id	Glyco Site ID	int	4	0	N		N	GP_glyco_site	glyco_site_id					N	N				
@@ -158,8 +159,8 @@ GP_glyco_sample	3	sample_description	Sample Description	text	16	0	Y		N			N	text	
 GP_glyco_sample	4	source_id	Source ID	int	4	0	Y		N			N				Y	Y	N	Source of sample		
 GP_glyco_sample	5	parent_sample_id	Parent Sample ID	int	4	0	Y		N			N				Y	Y	N	Source of sample		
 GP_glyco_sample	6	root_sample_id	Root Sample ID	int	4	0	Y		N			N				Y	Y	N	Source of sample		
-GP_glyco_sample	7	tissue_type_id	Tissue Type ID	int	4	0	N		N	tissue_type	tissue_type_id	N	optionlist			Y	Y	Y	Tissue type of this sample	"SELECT  tissue_type_id, tissue_type_name FROM $TBGP_TISSUE_TYPE ORDER BY sort_order ASC, tissue_type_name ASC"	
-GP_glyco_sample	8	project_id	Owner Project	int	4	0	Y		N	project	project_id	N	optionlist			Y	Y	N	Project under which this Sample is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id, UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name"	
+GP_glyco_sample	7	tissue_type_id	Tissue Type ID	int	4	0	N		N	tissue_type	tissue_type_id	N	optionlist			Y	Y	Y	Tissue type of this sample	SELECT  tissue_type_id, tissue_type_name FROM $TBGP_TISSUE_TYPE ORDER BY sort_order ASC, tissue_type_name ASC	
+GP_glyco_sample	8	project_id	Owner Project	int	4	0	Y		N	project	project_id	N	optionlist			Y	Y	N	Project under which this Sample is organized and for which user privileges is controlled	SELECT DISTINCT P.project_id, UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name	
 GP_glyco_sample	9	generation_date	Sample Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	textdate	20		Y	Y	N	Date on which this sample was prepared		
 GP_glyco_sample	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 GP_glyco_sample	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
