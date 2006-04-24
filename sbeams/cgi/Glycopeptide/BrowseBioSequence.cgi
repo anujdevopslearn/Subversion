@@ -99,7 +99,8 @@ sub main {
 
   #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($current_username = $sbeams->Authenticate(
-    #connect_read_only=>1,allow_anonymous_access=>1
+    permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin']
+    #connect_read_only=>1,allow_anonymous_access=>0
   ));
 
 
@@ -711,7 +712,3 @@ sub displaySequenceView {
   return;
 
 }
-
-
-
-

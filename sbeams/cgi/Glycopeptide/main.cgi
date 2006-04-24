@@ -59,7 +59,9 @@ main();
 sub main { 
 
     #### Do the SBEAMS authentication and exit if a username is not returned
-    exit unless ($current_username = $sbeams->Authenticate());
+    exit unless ($current_username = $sbeams->Authenticate(
+       permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin']
+          ));
 
     #### Print the header, do what the program does, and print footer
     $glyco->printPageHeader();
