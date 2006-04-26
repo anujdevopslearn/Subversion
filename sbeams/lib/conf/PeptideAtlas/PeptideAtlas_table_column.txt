@@ -27,28 +27,29 @@ AT_default_atlas_build	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	
 AT_default_atlas_build	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_sample	1	sample_id	Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_sample	2	project_id	Owner Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Sample is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id"	
-AT_sample	3	sample_title	Sample Title	varchar	255	0	N		N			Y	textarea	2		Y	Y	Y	Title of this Sample		
-AT_sample	4	sample_tag	Sample Tag	varchar	50	0	N		N			Y	text	30		Y	Y	Y	"Short tag (mnenomic) for this sample (e.g., THP1sLPS)"		
-AT_sample	5	original_experiment_tag	Original Experiment Tag	varchar	50	0	Y		N			Y	text	30		Y	Y	N	"Short tag (mnenomic) for the original experiment, perhaps superceded with a better name in sample_tag"		
-AT_sample	6	sample_date	Sample Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	textdate	20		Y	Y	N	Date on which this sample was prepared	
-AT_sample	7	sample_description	Sample Description	text	16	0	Y		N			N	textarea	10		Y	Y	N	Full description of this sample	
-AT_sample	8	instrument_model_id	Instrument Model ID	int	4	0	Y		N	PR_instrument	instrument_id	N	optionlist			Y	Y	N	Instrument (mass spectrometer) manufacturer model name	"SELECT instrument_id,instrument_name FROM $TBPR_INSTRUMENT WHERE record_status != 'D' ORDER BY instrument_name"
-AT_sample	9	search_batch_id	Search Batch ID	int	4	0	N		N				fixed			Y	P		Search Batch ID	
-AT_sample	10	sample_publication_ids	Sample Publications	varchar	255	0	Y		N	AT_sample_publication	sample_publication_id	N	multilink	4		Y	Y	N	Select all publications that apply to this sample.	"SELECT P.publication_id,P.publication_name FROM $TBAT_PUBLICATION P WHERE P.record_status != 'D' ORDER BY P.publication_name"
-AT_sample	11	data_contributors	Data Contributors	text	16	0	Y		N			Y	textarea	10		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)	
-AT_sample	12	primary_contact_email	Primary Email Contact	text	16	0	Y		N			Y	text	40		Y	P	N	Email address of primary contact for data	
-AT_sample	13	is_public	Is the dataset publicly available?	char	1	0	Y		N			Y	optionlist			Y	Y	N	Indicates whether the dataset is public	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"
-AT_sample	14	anatomical_site_term	Anatomical Site (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Anatomical site from which this sample was obtained	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"
-AT_sample	15	developmental_stage_term	Developmental Stage (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Developmental stage of the sample donor individual	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"
-AT_sample	16	pathology_term	Pathology (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Pathology of the sample	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"
-AT_sample	17	cell_type_term	Cell Type (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Cell type of the sample	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"
-AT_sample	18	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments	
-AT_sample	19	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-AT_sample	20	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
-AT_sample	21	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-AT_sample	22	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_sample	23	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_sample	24	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_sample	3	sample_accession	Sample Accession	varchar	255	0	Y		N			N	text	20		Y	Y	Y	stable accession identifier for the sample (e.g. PAe000001)		
+AT_sample	4	sample_title	Sample Title	varchar	255	0	N		N			Y	textarea	2		Y	Y	Y	Title of this Sample		
+AT_sample	5	sample_tag	Sample Tag	varchar	50	0	N		N			Y	text	30		Y	Y	Y	"Short tag (mnenomic) for this sample (e.g., THP1sLPS)"		
+AT_sample	6	original_experiment_tag	Original Experiment Tag	varchar	50	0	Y		N			Y	text	30		Y	Y	N	"Short tag (mnenomic) for the original experiment, perhaps superceded with a better name in sample_tag"	
+AT_sample	7	sample_date	Sample Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	textdate	20		Y	Y	N	Date on which this sample was prepared	
+AT_sample	8	sample_description	Sample Description	text	16	0	Y		N			N	textarea	10		Y	Y	N	Full description of this sample	
+AT_sample	9	instrument_model_id	Instrument Model ID	int	4	0	Y		N	PR_instrument	instrument_id	N	optionlist			Y	Y	N	Instrument (mass spectrometer) manufacturer model name	"SELECT instrument_id,instrument_name FROM $TBPR_INSTRUMENT WHERE record_status != 'D' ORDER BY instrument_name"
+AT_sample	10	search_batch_id	Search Batch ID	int	4	0	N		N				fixed			Y	P		Search Batch ID	
+AT_sample	11	sample_publication_ids	Sample Publications	varchar	255	0	Y		N	AT_sample_publication	sample_publication_id	N	multilink	4		Y	Y	N	Select all publications that apply to this sample.	"SELECT P.publication_id,P.publication_name FROM $TBAT_PUBLICATION P WHERE P.record_status != 'D' ORDER BY P.publication_name"
+AT_sample	12	data_contributors	Data Contributors	text	16	0	Y		N			Y	textarea	10		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)	
+AT_sample	13	primary_contact_email	Primary Email Contact	text	16	0	Y		N			Y	text	40		Y	P	N	Email address of primary contact for data	
+AT_sample	14	is_public	Is the dataset publicly available?	char	1	0	Y		N			Y	optionlist			Y	Y	N	Indicates whether the dataset is public	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"
+AT_sample	15	anatomical_site_term	Anatomical Site (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Anatomical site from which this sample was obtained	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"
+AT_sample	16	developmental_stage_term	Developmental Stage (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Developmental stage of the sample donor individual	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"
+AT_sample	17	pathology_term	Pathology (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Pathology of the sample	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"
+AT_sample	18	cell_type_term	Cell Type (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Cell type of the sample	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"
+AT_sample	19	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments	
+AT_sample	20	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+AT_sample	21	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
+AT_sample	22	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_sample	23	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_sample	24	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_sample	25	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_atlas_build_sample	1	atlas_build_sample_id	Atlas Build Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_atlas_build_sample	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id					N	N		Associated Atlas Build		
 AT_atlas_build_sample	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
