@@ -690,7 +690,7 @@ if ($display_type eq 'TWO_COLOR' ) {
 			~;
 		
 		 %url_cols = (
-		 	 	'condition_id' => "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_condition&condition_id=\%0V",
+		 	 	'condition_id' => "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_comparison_condition&condition_id=\%0V",
 		 	 	'condition_name' => "$CGI_BASE_DIR/Microarray/GetExpression?condition_id=\%0V",
 			     );
 
