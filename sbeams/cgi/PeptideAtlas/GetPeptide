@@ -557,6 +557,8 @@ if ($apply_action =~ /QUERY/i ) {
     $summary_header 
   END
 
+  my $bestp = ( $best_probability[0] == 1 ) ? 1 : sprintf( "%0.2f", $best_probability[0] );
+
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Peptide Accession',
                                           value => $peptide_accession[0],
                                           key_width => '20%'
@@ -565,7 +567,7 @@ if ($apply_action =~ /QUERY/i ) {
                                           value => $peptide_sequence[0],
                                          );
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Best Probability',
-                                          value => $best_probability[0],
+                                          value => $bestp,
                                          );
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Times Observed:',
                                           value => $n_observations[0],
@@ -728,6 +730,56 @@ if ($apply_action =~ /QUERY/i ) {
 
 
 ##  End mapping loop
+## Begin modified peptide table
+
+  my $modHTML .= $sbeamsMOD->encodeSectionHeader(
+    text => "Modified Peptides",
+    bold => 1
+  );
+  my $modSQL = qq~
+  SELECT distinct
+  modified_peptide_sequence, MPI.peptide_charge, MPI.best_probability, 
+  MPI.n_observations, MPI.n_sibling_peptides, MPI.sample_ids  
+  FROM $TBAT_PEPTIDE_INSTANCE PI
+  INNER JOIN $TBAT_PEPTIDE P
+   ON ( PI.peptide_id = P.peptide_id )
+  JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI
+   ON ( PI.peptide_instance_id = MPI.peptide_instance_id )
+  INNER JOIN $TBAT_ATLAS_BUILD AB 
+   ON ( PI.atlas_build_id = AB.atlas_build_id )
+  LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
+   ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
+  LEFT JOIN $TB_ORGANISM O
+   ON ( BSS.organism_id = O.organism_id )
+  LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
+   ON ( PI.peptide_instance_id = PM.peptide_instance_id )
+  LEFT JOIN $TBAT_BIOSEQUENCE BS
+   ON ( PM.matched_biosequence_id = BS.biosequence_id )
+  LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
+  WHERE 1 = 1
+     $atlas_build_clause
+     $peptide_name_clause
+     $peptide_sequence_clause
+  ORDER BY modified_peptide_sequence, MPI.peptide_charge ASC
+  ~;
+
+  my @mod_peps = $sbeams->selectSeveralColumns( $modSQL );
+  if ( scalar @mod_peps ) {
+    $modHTML .= $sbeams->getPopupDHTML();
+    for my $pep ( @mod_peps ) {
+      $pep->[2] = sprintf("%0.2f", $pep->[2]) unless $pep->[2] == 1;
+      $pep->[2] = 1 if $pep->[2] == 1;
+      $pep->[5] = sample_view( $pep->[5] );
+    }
+    unshift @mod_peps, ['Modified Sequence', 'Charge', 'Best Probability', '# Obs', '# Siblings', 'Sample IDs' ];
+  
+    $modHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
+                                                 width => '600',
+                                                align  => [qw(left center left right center center)],
+                                                  rows => \@mod_peps );
+    print "<BR>$modHTML\n";
+  }
+
             
   my $sampleSQL = qq ~
      SELECT PS.sample_id
@@ -770,6 +822,41 @@ if ($apply_action =~ /QUERY/i ) {
     }
 
 } # end handle_request
+
+sub sample_view {
+  my $samples = shift;
+  my $tot = $samples =~ tr/,/,/;
+
+  # If we have 5 or fewer, go with the flow
+  return($samples) if $tot <= 5;
+
+  $samples =~ s/\s//g;
+  my @samples = split(',', $samples);
+
+  my $viewable = join( ',', @samples[0..3] );
+  my $session_samples = "$viewable,<BR>\n";
+  my $cnt = 0;
+  my $sep = '';
+  for ( my $j = 4; $j <= $#samples; $j++ ) {
+    $cnt++;
+    $session_samples .= $sep . $samples[$j];
+    $sep = ',';
+    unless( $cnt % 4 ) {
+      $session_samples .= ",<BR>\n"; 
+      $sep = '';
+    }
+  }
+  $session_samples .= "<BR>\n";
+
+  my $more = $tot - 4;
+
+  my $key = $sbeams->getRandomString(num_chars => 20);
+  $sbeams->setSessionAttribute( key => $key,  value => $session_samples );
+
+  my $url = "$CGI_BASE_DIR/help_popup.cgi?title=Observed%20in%20Samples;session_key=$key;email_link=no";
+  my $morelink = qq~ &nbsp;&nbsp;[<A onClick=popitup("$url"); CLASS=pseudo_link>$more more</A>]~;
+  return "$viewable $morelink";
+}
 
 sub makeProteinLink {
   my %args = @_;
