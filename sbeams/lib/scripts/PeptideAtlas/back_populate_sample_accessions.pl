@@ -51,12 +51,11 @@ Options:
   --quiet                Set flag to print nothing at all except errors
   --debug n              Set debug flag
   --test                 test only, don't write records
- e.g.: ./$PROG_NAME --atlas_build_id \'73\' 
+ e.g.: ./$PROG_NAME 
 EOU
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","test",
-        "atlas_build_id:s"
     )) {
 
     die "\n$USAGE";
