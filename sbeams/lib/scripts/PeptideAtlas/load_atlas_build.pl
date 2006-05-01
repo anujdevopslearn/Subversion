@@ -236,6 +236,8 @@ sub handleRequest {
           default_sample_project_id => $default_sample_project_id,
       );
 
+      populateSampleRecordsWithSampleAccession();
+
   } ## end --load
 
 
@@ -430,13 +432,13 @@ sub loadAtlas {
     my %args = @_;
 
     my $atlas_build_id = $args{'atlas_build_id'} or die
-        " need atlas_build_id ($!)";
+        " need atlas_build_id";
 
     my $organism_abbrev = $args{'organism_abbrev'} or die
-        " need organism_abbrev ($!)";
+        " need organism_abbrev";
 
     my $default_sample_project_id = $args{'default_sample_project_id'} or
-       die "need default_sample_project_id ($!)";
+       die "need default_sample_project_id";
 
 
     {
@@ -595,7 +597,7 @@ sub get_search_batch_and_sample_id_hash
     my $default_sample_project_id = $args{'default_sample_project_id'} or
         die "need default_sample_project_id ($!)";
 
-    my $source_dir = $args{source_dir} or die(" need source_dir ($!)");
+    my $source_dir = $args{source_dir} or die("need source_dir ($!)");
 
     my $loading_sbid_searchdir_hash_ref = $args{loading_sbid_searchdir_hash_ref} 
        or die "need loading_sbid_searchdir_hash_ref ($)";
@@ -612,7 +614,6 @@ sub get_search_batch_and_sample_id_hash
 
     foreach my $loading_sb_id (keys %loading_sbid_searchdir_hash )
     {
-
         my ($atlas_search_batch_id, $sid);
 
         my $asb_exists = "false";
@@ -620,7 +621,8 @@ sub get_search_batch_and_sample_id_hash
         my $sample_exists = "false";
 
         ##########  handle sample records ##################
-        ## since there are so few sample_records, will query one at a time instead of large select
+        ## since there are so few sample_records, will query one at a 
+        ## time instead of large select
         my $sql = qq~
             SELECT ASB.sample_id, ASB.atlas_search_batch_id
             FROM $TBAT_ATLAS_SEARCH_BATCH ASB
@@ -2635,6 +2637,226 @@ sub insert_modified_peptide_instance_search_batches
 
 } # end insert_modified_peptide_instance_search_batches
 
+#######################################################################
+# populateSampleRecordsWithSampleAccession - 
+# update sample records that need accession numbers
+#######################################################################
+sub populateSampleRecordsWithSampleAccession
+{
+
+    ## get hash with key=sample_id, value=sample_accession
+    ##                              (where values may be '')
+    my %sampleId_sampleAccession_hash = getSampleIdSampleAccessionHash();
+
+
+    ## accession root name and number of digits:
+    my $root_name = "PAe";
+
+    my $num_digits = 6;
+
+    ## get last number used, will return 0 if none were set yet
+    my $last_number_used = getLastNumberFromAccessions(
+        hash_ref => \%sampleId_sampleAccession_hash,
+        root_name => $root_name,
+    ); 
+
+
+    ## sort numerically by key:
+    foreach my $sample_id (sort { $a <=> $b } keys %sampleId_sampleAccession_hash)
+    {
+ 
+        my $existing_accession = $sampleId_sampleAccession_hash{$sample_id};
+
+        ## execute only if there isn't a sample_accession
+        unless ($existing_accession )
+        {
+            my $next_accession;
+
+            my $next_number = $last_number_used + 1;
+
+            my $next_number_length =  length($next_number);
+
+            # exit with error if num digits needed is larger than num digits expected
+            if ($next_number_length > $num_digits)
+            {
+                print "number of digits exceeds $num_digits\n";
+
+                exit(0);
+            }
+
+
+            my $next_accession = $root_name;
+
+            for (my $i=0; $i < ($num_digits - $next_number_length); $i++ )
+            {
+                $next_accession = $next_accession . "0";
+            }
+
+            $next_accession = $next_accession . $next_number;
+     
+            updateSampleRecord(
+                sample_id => $sample_id,
+                sample_accession => $next_accession,
+            );
+ 
+            $last_number_used = $last_number_used + 1;
+ 
+        }
+ 
+    }
+ 
+}
+
+
+###############################################################################
+#  getSampleIdSampleAccessionHash
+#
+# @return hash with key = sample_id, value = sample_accession
+###############################################################################
+sub getSampleIdSampleAccessionHash
+{
+    my %args = @_;
+
+    ## having to go around through peptide records, then using hash to
+    ## store distinct returned rows
+    my $sql = qq~
+        SELECT sample_id, sample_accession
+        FROM $TBAT_SAMPLE 
+        WHERE record_status != 'D'
+    ~;
+
+    my %hash = $sbeams->selectTwoColumnHash($sql) or die
+        "unable to execute statement:\n$sql\n($!)";
+
+    return %hash;
+
+}
+
+#######################################################################
+# getLastNumberFromAccessions
+# @param ref to sample_id, sample_accession hash
+# @param default_first_accession
+# @return the latest accession in hash, or zero if none present
+#######################################################################
+sub getLastNumberFromAccessions
+{
+    my %args = @_;
+
+    my $hash_ref = $args{hash_ref} or die "need hash_ref";
+
+    my $root_name = $args{root_name} or die "need root_name";
+
+    my %hash = %{$hash_ref};
+
+    my $last_number = 0;
+
+    my $last_written_accession;
+
+    my $n = keys %hash;
+
+    if ($n > 0)
+    {
+        ## sort by hash values in descending asciibetical order:
+        my @sorted_keys = sort { $hash{$b} cmp $hash{$a} } keys %hash;
+
+        if (@sorted_keys)
+        {
+            $last_written_accession = $hash{$sorted_keys[0]};
+
+            $last_number = $last_written_accession;
+
+            $last_number =~ s/($root_name)(\d+)$/$2/;
+
+            $last_number = int($last_number);
+        }
+
+    }
+
+    return $last_number;
+}
+
+
+
+###############################################################################
+# updateSampleRecord -- update sample record...
+# @param sample_id
+# @param sample_accession
+###############################################################################
+sub updateSampleRecord 
+{
+
+    my %args = @_;
+
+    my $sample_id = $args{sample_id} or die "need sample_id";
+
+    my $sample_accession = $args{sample_accession} 
+        or die "need sample_accession";
+
+
+    my %rowdata = (  
+        sample_accession => $sample_accession,
+    );
+
+    my $success = $sbeams->updateOrInsertRow(
+        update=>1,
+        table_name=>$TBAT_SAMPLE,
+        rowdata_ref=>\%rowdata,
+        PK => 'sample_id',
+        PK_value => $sample_id,
+        verbose=>$VERBOSE,
+        testonly=>$TESTONLY,
+    );
+
+    return $success;
+
+} 
+
+
+#######################################################################
+# getNextAccession - get next accession
+# @param root_name - root of accession name (e.g. "PAe")
+# @param num_digits - number of digits in accession string
+# @param last_num_used - last number used
+# @return next_accession
+#######################################################################
+sub getNextAccession
+{
+    my %args = @_;
+
+    my $num_digits = $args{num_digits} or die "need num_digits";
+
+    my $last_number_used = $args{last_num_used} or die "need last_num_used";
+
+    my $root_name = $args{root_name} or die "need root_name";
+
+    my $next_accession;
+
+    my $next_number = $last_number_used + 1;
+
+    my $next_number_length =  length($next_number);
+
+    # exit with error if num digits needed is larger than num digits expected
+    if ($next_number_length > $num_digits)
+    {
+        print "number of digits exceeds $num_digits\n";
+
+        exit(0);
+    }
+
+
+    my $next_accession = $root_name;
+
+    for (my $i=0; $i < ($num_digits - $next_number_length); $i++ )
+    {
+        $next_accession = $next_accession . "0";
+    }
+
+    $next_accession = $next_accession . $next_number;
+
+    return $next_accession;
+
+}
+
 
 #######################################################################
 #  print_hash
@@ -2652,10 +2874,8 @@ sub print_hash
 
     foreach my $k (keys %h)
     {
-
         print "key: $k   value:$h{$k}\n";
 
     }
 
 }
-
