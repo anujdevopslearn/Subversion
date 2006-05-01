@@ -166,3 +166,33 @@ setenv SBEAMS fullPathToYourDevArea/sbeams
 
     ALTER TABLE atlas_build_search_batch DROP COLUMN n_searched_spectra
 
+---------------
+
+2006-05-01
+
+Schema changes (see full definitions in driver tables):
+
+- Added to PeptideAtlas_table_column.txt
+ a new column 'sample_accession' in table 'sample'
+
+- Updated driver tables
+
+- Populated the SQL scripts:
+
+    setenv SBEAMS fullPathToYourDevArea/sbeams
+    cd $SBEAMS/lib/scripts/Core
+
+    foreach dbtype ( mssql mysql pgsql )
+        ./generate_schema.pl --table_prop ../../conf/PeptideAtlas/PeptideAtlas_table_property
+.txt \
+        --table_col ../../conf/PeptideAtlas/PeptideAtlas_table_column.txt --schema_file \
+        ../../sql/PeptideAtlas/PeptideAtlas --destination_type $dbtype
+    end
+
+
+- Altered with sql the server table with ALTER TABLE statement
+
+begin transaction
+ALTER TABLE PeptideAtlas.dbo.sample ADD sample_accession varchar(255)
+commit transaction
+
