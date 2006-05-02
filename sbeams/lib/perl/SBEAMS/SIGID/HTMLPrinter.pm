@@ -108,11 +108,32 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/main.cgi">$SBEAMS_PART Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td>Manage Tables:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SI_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td>Browse Data:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
+        <tr><td>Information for Caregivers & Collaborators</td></tr>
+        <tr><td><a href="$HTML_BASE_DIR/doc/SIGID/SIGID_collaborators_fr.pdf"><nobr>&nbsp;&nbsp;&nbsp;Formulaire d'information</nobr></a></td></tr>
+        <tr><td><a href="$HTML_BASE_DIR/doc/SIGID/SIGID_collaborators_ger.pdf"><nobr>&nbsp;&nbsp;&nbsp;Informazion f&#252r Krankenpfleger</nobr></a></td></tr>
+	<tr><td>Forms</td></tr>
+        <tr><td><a href="$HTML_BASE_DIR/doc/SIGID/SIGID_informed_consent_fr.pdf"><nobr>&nbsp;&nbsp;&nbsp;Formulaire de consentement &#233clair&#233</nobr></a></td></tr>
+        <tr><td><a href="$HTML_BASE_DIR/doc/SIGID/SIGID_informed_consent_ger.pdf"><nobr>&nbsp;&nbsp;&nbsp;Informierte Zustimmungform</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
+        <tr><td>Physician Tasks:</td></tr>
+        <tr><td><nobr>Verify inclusion/exclusion status</nobr></td></tr>
+        <tr><FORM METHOD="post">
+        <TD><B>Patient Study ID:</B><INPUT TYPE="text" NAME="patient_study_id" VALUE="" SIZE="15"></TD>
+        </TR><TR>
+        <TD COLSPAN=2 ALIGN="center">
+        <BR>
+        <INPUT TYPE="hidden" NAME="force_login" VALUE="">
+        </FORM>
+
+	<tr><td>Administrative Tasks:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SI_patient"><nobr>&nbsp;&nbsp;&nbsp;Manage patient clinical data</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SI_patient_clinical_status"><nobr>&nbsp;&nbsp;&nbsp;Enter patient's daily assessment</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SI_patient_history"><nobr>&nbsp;&nbsp;&nbsp;Enter patient's medical history</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SI_blood_culture"><nobr>&nbsp;&nbsp;&nbsp;Enter a blood culture measurement</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SI_cerebrospinal_fluid_culture"><nobr>&nbsp;&nbsp;&nbsp;Enter a CSF culture measurement</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SI_patient_genetic_history"><nobr>&nbsp;&nbsp;&nbsp;Enter a patient's genetic history</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SI_disease_specification"><nobr>&nbsp;&nbsp;&nbsp;Add Disease Types</nobr></a></td></tr>
 	</table>
 	</td>
 
