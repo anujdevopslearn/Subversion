@@ -1193,7 +1193,10 @@ sub Fragment {
     my $i;
 
     for ($i=0; $i<$length; $i++) {
-      if (substr($peptide,$i+1,1) =~ /\W/) {
+      if (substr($peptide,$i+1,1) eq '[') {
+        push (@residues, substr($peptide,$i,6));
+        $i = $i + 5;
+      } elsif (substr($peptide,$i+1,1) =~ /\W/) {
         push (@residues, substr($peptide,$i,2));
         $i = $i + 1;
       } else {
@@ -1226,8 +1229,18 @@ sub CalcIons {
     my @Bcolor = (14) x $length;
     my @Ycolor = (14) x $length;
 
+    my @masses;
     for ($i=0; $i<$length; $i++) {
-      $Yion += $massarray{$residues[$i]};
+      my $mass = $massarray{$residues[$i]};
+      unless ($mass) {
+	if ($residues[$i] =~ /\w\[(\d+)\]/) {
+	  $mass = $1;
+	} else {
+	  print "WARNING: Unable to find mass for 'residues[$i]'<BR>\n";
+	}
+      }
+      $masses[$i] = $mass;
+      $Yion += $mass;
     }
 
     my %masslist;
@@ -1235,8 +1248,8 @@ sub CalcIons {
 
     #### Compute the ion masses
     for ($i = 0; $i<$length; $i++) {
-      $Bion += $massarray{$residues[$i]};
-      $Yion -= $massarray{$residues[$i-1]} if ($i > 0);
+      $Bion += $masses[$i];
+      $Yion -= $masses[$i-1] if ($i > 0);
 
       #### B index & Y index
       $indices[$i] = $i;
