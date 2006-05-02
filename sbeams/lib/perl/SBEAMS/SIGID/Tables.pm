@@ -31,7 +31,7 @@ use vars qw(@ISA @EXPORT
     $TBSI_DISEASE_SPECIFICATION
     $TBSI_ANTIBIOTIC_TREATMENT
     $TBSI_PATIENT_GENETIC_HISTORY
-    $TBSI_PATIENT_HOSPITAL_HISTORY
+    $TBSI_PATIENT_CLINICAL_STATUS
     $TBSI_PATIENT_HISTORY
     $TBSI_ETHNICITY
     $TBSI_BIRTH_COUNTRY
@@ -39,6 +39,7 @@ use vars qw(@ISA @EXPORT
 
 
     $TBSI_QUERY_OPTION
+    $TBSI_MISC_OPTION
 
 );
 
@@ -57,7 +58,7 @@ require Exporter;
     $TBSI_DISEASE_SPECIFICATION
     $TBSI_ANTIBIOTIC_TREATMENT
     $TBSI_PATIENT_GENETIC_HISTORY
-    $TBSI_PATIENT_HOSPITAL_HISTORY
+    $TBSI_PATIENT_CLINICAL_STATUS
     $TBSI_PATIENT_HISTORY
     $TBSI_ETHNICITY
     $TBSI_BIRTH_COUNTRY
@@ -69,6 +70,7 @@ require Exporter;
     $TBSI_BIOSEQUENCE_PROPERTY_SET
 
     $TBSI_QUERY_OPTION
+    $TBSI_MISC_OPTION
 
 );
 
@@ -83,7 +85,7 @@ $TBSI_BIOSEQUENCE_SET       = "${mod}biosequence_set";
 $TBSI_DBXREF                = "${mod}dbxref";
 $TBSI_BIOSEQUENCE           = "${mod}biosequence";
 $TBSI_BIOSEQUENCE_PROPERTY_SET   = "${mod}biosequence_property_set";
-$TBSI_QUERY_OPTION          = "${mod}query_option";
+
 
 $TBSI_PATIENT                     = "${mod}patient";
 $TBSI_PATIENT_TYPE                ="${mod}patient_type";
@@ -92,11 +94,14 @@ $TBSI_CEREBROSPINAL_FLUID_CULTURE ="${mod}cerebrospinal_fluid_culture";
 $TBSI_DISEASE_SPECIFICATION       ="${mod}disease_specification";
 $TBSI_ANTIBIOTIC_TREATMENT        ="${mod}antibiotic_treatment";
 $TBSI_PATIENT_GENETIC_HISTORY     ="${mod}patient_genetic_history";
-$TBSI_PATIENT_HOSPITAL_HISTORY    ="${mod}patient_hospital_history";
+$TBSI_PATIENT_CLINICAL_STATUS     ="${mod}patient_clinical_status";
 $TBSI_PATIENT_HISTORY             ="${mod}patient_history";
 $TBSI_ETHNICITY                   ="${mod}ethnicity";
 $TBSI_BIRTH_COUNTRY               ="${mod}birth_country";
 $TBSI_GLASGOW_SCORE               ="${mod}glasgow_score";
 
+
+$TBSI_QUERY_OPTION          = "${mod}query_option";
+$TBSI_MISC_OPTION          = "${mod}misc_option";
 
 
