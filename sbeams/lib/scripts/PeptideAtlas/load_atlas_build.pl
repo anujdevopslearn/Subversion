@@ -19,6 +19,8 @@ use Getopt::Long;
 use FindBin;
 use lib "$FindBin::Bin/../../perl/SBEAMS/PeptideAtlas";
 use PAxmlContentHandler;
+use SpectraDescriptionSetParametersParser;
+use SearchResultsParametersParser;
 
 
 use lib "$FindBin::Bin/../../perl";
@@ -1330,53 +1332,15 @@ sub getTPPVersion
     my $directory = $args{directory} or die
         "need path to search_batch directory file($!)";
 
-    my $METHOD = "getTPPVersion";
+    my $results_parser = new SearchResultsParametersParser();
 
-    ## get pepXML file
-    my $infile = "$directory/interact-prob.xml";
+    $results_parser->setSearch_batch_directory($dirName);
 
-    unless(-e $infile)
-    {
-        print "[WARN] could not find $infile\n";
+    $results_parser->parse();
 
-        $infile = "$directory/interact.xml";
-    }
-    unless(-e $infile)
-    {
-        die "could not find $infile either\n";
-    }
+    my $TPP_version = $results_parser->getTPP_version();
 
-    open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
-
-    ## example entry:
-    ## <peptideprophet_summary version="PeptideProphet v3.0 April 1, 2004 (TPP v2.6 Quantitative Precipitation Forecast rev.2, Build 200512211154)" author="AKeller@ISB" min_prob="0.00" options=" MINPROB=0" est_tot_num_correct="12527.0">
-
-    my $str1 = '\<peptideprophet_summary version=\"PeptideProphet';
-
-    my $versionString;
-
-    while (my $line = <INFILE>) 
-    {
-        chomp($line);
-
-        if ($line =~ /^($str1)(.+)(\()(TPP\sv)(\d\.\d+\.*\d*)\s(.+)(\))(.+)/)
-        {
-            $versionString = $5;
-
-            last;
-        }
-
-    }
-
-    close(INFILE) or die "Cannot close $infile";
-
-    if ($versionString eq "")
-    {
-        print "[WARN] could not find TPP version in $infile\n";
-
-    }
-
-    return $versionString;
+    return $TPP_version;
 
 }
 
@@ -1457,92 +1421,17 @@ sub insert_spectra_description_set
         #### but only need the first dozen or so lines of file, and the mzXML files are huge...
         my $infile = $mzXMLFileNames[0];
 
-        # $instrument_model_id         ==> <msManufacturer category="msManufacturer" value="ThermoFinnigan"/>
-        #                                  <msModel category="msModel" value="LCQ Deca"/>
-        # $conversion_software_name    ==> <software type="conversion"
-        #                                       name="Thermo2mzXML"
-        #                                       version="1"/>
-        # $conversion_software_version ==>
-        # $mzXML_schema                ==>  xsi:schemaLocation="http://sashimi.sourceforge.net/schema_revision/mzXML_2.0 http://sashimi.sourceforge.net/schema_revision/mzXML_2.0/mzXML_idx_2.0.xsd">
+        my $spectrum_parser = new SpectraDescriptionSetParametersParser();
 
-        open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
+        $spectrum_parser->setMzXML_file($infile);
 
-        while (my $line = <INFILE>)
-        {
-            chomp($line);
+        $spectrum_parser->parse();
 
-            ## recent schema:
-            if ($line =~ /.+schemaLocation=\".+\/(.+)\/schema_revision\/(.+)\/(.+\.xsd)\">/)
-            {
-                $mzXML_schema = $2;
-            }
+        $mzXML_schema = $spectrum_parser->getMzXML_schema();
 
-            ## former MsXML schema:
-            ## xsi:schemaLocation="http://sashimi.sourceforge.net/schema/ http://sashimi.sourceforge.net/schema/MsXML.xsd
-            if ($line =~ /.+schemaLocation=\".+\/(.+)\/schema\/(.+)\.xsd\"/ )
-            {
-                $mzXML_schema = $2;
-            }
+        $conversion_software_name = $spectrum_parser->getConversion_software_name();
 
-            if ($line =~ /.+\<msManufacturer\scategory=\".+\"\svalue=\"(.+)\"\/\>/)
-            {
-                $instrument_model_name = $1;
-            }
-            if ($line =~ /.+\<msModel\scategory=\".+\"\svalue=\"(.+)\"\/\>/)
-            {
-                $instrument_model_name = $instrument_model_name . " $1";
-            }
-
-            ## former MsXML schema:
-            if ($line =~ /.+\<instrument\smanufacturer=\"(.+)\"/ )
-            {
-                $instrument_model_name = $1;
-
-                ## read the next line, and get model name
-                $line = <INFILE>;
-                chomp($line);
-                $line =~ /.+\<instrument\smanufacturer=\"(.+)\"/;
-
-                $instrument_model_name = $instrument_model_name . " $1";
-
-            }
-
-            if ($line =~ /.+\<software\stype=\"conversion(.+)/)
-            {
-                $line = <INFILE>;
-
-                chomp($line);
-
-                if ($line =~ /.+name=\"(.+)\"/)
-                {
-                    $conversion_software_name = $1;
-                } else
-                {
-                    print "[WARN] please edit parser to pick up software attributes ($!)";
-                }
-
-                $line = <INFILE>;
-
-                chomp($line);
-
-                if ($line =~ /.+version=\"(.+)\"/)
-                {
-                    $conversion_software_version = $1;
-                }
-
-                last; ## done
-            }
-
-        }
-
-        close(INFILE) or die "Cannot close $infile";
-
-        if ( ($mzXML_schema eq "") || ($instrument_model_name eq "")
-        || ($conversion_software_name eq "") || 
-        ($conversion_software_version eq "") )
-        {
-            print "[WARN] please edit parser to pick up spectra attributes for $infile ($!)";
-        }
+        $conversion_software_version = $spectrum_parser->getConversion_software_version();
 
 
         ## count the number of MS/MS in the mzXML files: ##
