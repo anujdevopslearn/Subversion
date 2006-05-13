@@ -625,6 +625,9 @@ sub get_search_batch_and_sample_id_hash
         ##########  handle sample records ##################
         ## since there are so few sample_records, will query one at a 
         ## time instead of large select
+
+
+        #### see if an atlas_search_batch record exists ####
         my $sql = qq~
             SELECT ASB.sample_id, ASB.atlas_search_batch_id
             FROM $TBAT_ATLAS_SEARCH_BATCH ASB
@@ -639,26 +642,27 @@ sub get_search_batch_and_sample_id_hash
             $sid = $s_id;
             $atlas_search_batch_id = $asb_id;
 
-            $asb_exists = "true" if ($sid);
+            $asb_exists = "true";
         }
 
 
-        ## if no sample_id in ATLAS_SEARCH_BATCH, there may still be one existing from former
-        ## schema, so check before trying to create one:  NOTE, this will disappear soon
-        ## because [sample]:search_batch_id will be dropped from the table
-        if ($asb_exists eq "false")
+        #### see if a sample record exists ####
+        $sql = qq~
+            SELECT sample_id
+            FROM $TBAT_SAMPLE
+            WHERE search_batch_id = '$loading_sb_id'
+        ~;
+
+        @rows = $sbeams->selectSeveralColumns($sql);
+
+        foreach my $row (@rows)
         {
-            $sql = qq~
-                SELECT sample_id
-                FROM $TBAT_SAMPLE
-                WHERE search_batch_id = '$loading_sb_id'
-            ~;
-
-            ($sid) = $sbeams->selectOneColumn($sql);
-
-            $sample_exists = "true" if ($sid);
-
+            my ($s_id) = @{$row};
+            $sid = $s_id;
+            $sample_exists = "true";
         }
+
+
             
         ## Lastly, if no sample_id, create one from protomics record.  
         ## if this is true, then also will be missing [atlas_search_batch] and 
@@ -1334,7 +1338,7 @@ sub getTPPVersion
 
     my $results_parser = new SearchResultsParametersParser();
 
-    $results_parser->setSearch_batch_directory($dirName);
+    $results_parser->setSearch_batch_directory($directory);
 
     $results_parser->parse();
 
