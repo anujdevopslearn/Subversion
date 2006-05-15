@@ -916,7 +916,6 @@ sub get_string_list_of_keys
 #######################################################################
 sub create_atlas_search_batch
 {
-
     my %args = @_;
 
     my $sbid = $args{proteomics_search_batch_id} or die "need search_batch_id ($!)";
@@ -936,10 +935,9 @@ sub create_atlas_search_batch
     ##trim off all except last directory
     $search_batch_subdir =~ s/^(.+)\/(.+)/$2/gi;
 
-    my $experiment_dir = $proteomics_search_batch_path;
+    my $experiment_path = $proteomics_search_batch_path;
 
-    ##trim off all except second to last directory
-    $experiment_dir =~ s/^(.+)\/(.+)\/(.+)/$2/gi;
+    $experiment_path =~ s/^(.+)\/(.+)\/(.+)\/(.+)\/(.+)/$2\/$3\/$4/gi;
 
     my $TPP_version = getTPPVersion( directory => $proteomics_search_batch_path);
 
@@ -948,7 +946,7 @@ sub create_atlas_search_batch
         proteomics_search_batch_id => $sbid,
         sample_id => $sid,
         n_searched_spectra => $nspec,
-        data_location => $experiment_dir,
+        data_location => $experiment_path,
         search_batch_subdir => $search_batch_subdir,
         TPP_version => $TPP_version,
     );
