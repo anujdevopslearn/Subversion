@@ -157,9 +157,7 @@ sub main
 {
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ( $current_username = 
-
-        $sbeams->Authenticate(
-        connect_read_only => '1')
+        $sbeams->Authenticate(connect_read_only => '1')
     );
     #   work_group=>'PeptideAtlas_admin')
 
@@ -171,7 +169,10 @@ sub main
     check_files();
 
     ## check that mandatory sample annotation exists
-    check_samples() unless ($TEST);
+    unless ($TEST)
+    {
+        check_samples();
+    }
 
 
     ## write namespace and root tag to xml file:
@@ -248,7 +249,7 @@ sub check_files()
 sub check_samples
 {
     my $sql = qq~
-        SELECT distinct S.sample_tag, S.data_contributors
+        SELECT S.sample_tag, S.data_contributors
         FROM $TBAT_SAMPLE S
         WHERE S.is_public = 'Y' AND S.record_status != 'D'
         ORDER BY S.sample_tag
@@ -270,10 +271,18 @@ sub check_samples
             $exit_flag = 1;
         }
 
-        die if ($exit_flag);
+    }
+
+    if ($exit_flag)
+    {
+        die "\nNeed to fill in data_contributors before running this\n";
+    } else
+    {
+        print "\nHave all of minimum required sample annotation\n";
     }
 
 }
+
 
 #######################################################################
 # write_public_file -- writes repository_public.xml file.  
