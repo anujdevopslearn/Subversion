@@ -1022,7 +1022,7 @@ sub ShowHTMLTable {
 	    if ($resort_url && $image_dir) {
 		$title_line .= "<BR>".
 		  "<A HREF=\"$resort_url&rs_resort_column=$c&rs_resort_type=ASC\">".
-		  "<IMG BORDER=0 SRC=\"$image_dir/greyarrowupdkblue.gif\"></A>&nbsp;".
+		  "<IMG BORDER=0 SRC=\"$image_dir/greyarrowupdkblue.gif\"></A>".
 		  "<A HREF=\"$resort_url&rs_resort_column=$c&rs_resort_type=DESC\">".
 		  "<IMG BORDER=0 SRC=\"$image_dir/greyarrowdowndkblue.gif\"></A>";
 	    }
@@ -1085,11 +1085,16 @@ sub ShowHTMLTable {
 	    #### If the value of the cell is defined, process it
 	    if (defined($val)) {
 
+	        #### Find out if there are specific options set for this column
+      		my $cell_option_string = &PlainText($titles->[$c]) . "_OPTIONS";
+		my $embed_html = '';
+      		$embed_html = 1 if ($url_keys->{$cell_option_string}->{embed_html});
+
 		#### In HTML mode, all CHAR, TEXT, SYMBOL, or STRING data should
 		#### be escaped to protect HTML syntax "<", ">", "\", and "&"
 		#### and also aligned LEFT instead of RIGHT
 		if ($types->[$c] =~ /char|text|symbol|string/i) {
-		    $val = &htmltext($val) unless $no_escape;
+		    $val = &htmltext($val) unless ($no_escape || $embed_html);
 		    $out .= " ALIGN=LEFT";
 		} else {
 		    $out .= " ALIGN=RIGHT";
@@ -1128,11 +1133,10 @@ sub ShowHTMLTable {
 
 
       		#### Find out if there are any options set
-      		my $tmp = &PlainText($titles->[$c]) . "_OPTIONS";
 		my $semicolon_separated_list_flag = '';
-      		if ($url_keys->{$tmp}->{semicolon_separated_list}) {
+      		if ($url_keys->{$cell_option_string}->{semicolon_separated_list}) {
       		  $semicolon_separated_list_flag =
-                    $url_keys->{$tmp}->{semicolon_separated_list};
+                    $url_keys->{$cell_option_string}->{semicolon_separated_list};
                 }
 
 
@@ -1233,31 +1237,38 @@ sub ShowHTMLTable {
   		    }
 
 
-  		    #### Call the formatting subroutine
-  		    $val = &$fmt_sub($val, $types->[$c], 0, $widths->[$c], 
-  				     $precision->[$c], 'html');
+		    #### Unless this is already embedded HTML, tidy it up
+		    unless ($embed_html) {
 
-  		    #### Strip off all leading and trailing whitespace
-  		    $val =~ s/^\s+//;
-  		    $val =~ s/\s+$//;
+  		      #### Call the formatting subroutine
+  		      $val = &$fmt_sub($val, $types->[$c], 0, $widths->[$c], 
+  			  	       $precision->[$c], 'html');
 
-
-  		    #### Add data prefixes to this cell data
-  		    if (($x = $#$dprefixes) >= 0) {
-  			$out .= $dprefixes->[$c > $x ? $x : $c];
-  		    }
+  		      #### Strip off all leading and trailing whitespace
+  		      $val =~ s/^\s+//;
+  		      $val =~ s/\s+$//;
 
 
-  		    #### If value is longer than width then truncate it
-  		    if ( length($val) > $widths->[$c] && $widths->[$c] > 0 &&
-  		       ($types->[$c] =~ /char|text|symbol|string/i) ) {
-  		      $val = substr($val,0,$widths->[$c]-1) . "...";
-  		    }
+  		      #### Add data prefixes to this cell data
+  		      if (($x = $#$dprefixes) >= 0) {
+  			  $out .= $dprefixes->[$c > $x ? $x : $c];
+  		      }
 
 
-  		    #### Make sure cell value is at least a &nbsp; and write
-  		    $val = "&nbsp;" if ($val eq "");
+  		      #### If value is longer than width then truncate it
+  		      if ( length($val) > $widths->[$c] && $widths->[$c] > 0 &&
+  		         ($types->[$c] =~ /char|text|symbol|string/i) ) {
+  		        $val = substr($val,0,$widths->[$c]-1) . "...";
+  		      }
+
+
+  		      #### Make sure cell value is at least a &nbsp; and write
+  		      $val = "&nbsp;" if ($val eq "");
+		    }
+
+		    #### Add the value to the buffer
   		    $out .= $val;
+
   		    #### Add data suffixes to this cell data
   		    if (($x = $#$dsuffixes) >= 0) {
   			$out .= $dsuffixes->[$c > $x ? $x : $c];
