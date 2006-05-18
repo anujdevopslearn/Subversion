@@ -1688,6 +1688,11 @@ sub specialParsing {
   my ($n_other_names,@other_names);
 
 
+  #### Failing anything else, make the accession and gene_name the name
+  $rowdata_ref->{biosequence_gene_name} = $rowdata_ref->{biosequence_name};
+  $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
+
+
   #### Encoding popular among a bunch of databases
   #### Can be overridden later on a case-by-case basis
   if ($rowdata_ref->{biosequence_name} =~ /^SW.{0,1}\:(.+)$/ ) {
