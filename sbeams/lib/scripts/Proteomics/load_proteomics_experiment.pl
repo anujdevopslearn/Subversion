@@ -116,6 +116,8 @@ Options:
   --interact_fname    name of interact file (e.g. interact-prob.xml, or
                       older format interact-prob-data.htm,  etc.).  use this
                       in conjunction with --search_subdir "subdirectory"
+  --pepxml_load       If set, the whole experiment will be loaded from
+                      the pepXML file instead of subdirectories with .out files
 
  e.g.:  $PROG_NAME --list_all
         $PROG_NAME --check --experiment_tag=rafapr
@@ -140,7 +142,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
   "update_timing_info","gradient_program_id:i","column_delay:i",
   "cleanup_archive","delete_search_batch","delete_experiment",
   "delete_fraction:s","force_search_batch","fix_ipi",
-  "interact_fname:s", "experiment_id:s",
+  "interact_fname:s", "experiment_id:s","pepxml_load",
   )) {
   print "$USAGE";
   exit;
@@ -217,6 +219,7 @@ sub handleRequest {
   my $force_ref_db = $OPTIONS{'force_ref_db'} || '';
   $interact_fname = $OPTIONS{"interact_fname"} || '';
   my $experiment_id = $OPTIONS{"experiment_id"} || '';
+  my $pepxml_load = $OPTIONS{"pepxml_load"} || '';
 
   $TESTONLY = $OPTIONS{'testonly'} || 0;
   $DATABASE = $DBPREFIX{'Proteomics'};
@@ -267,7 +270,7 @@ sub handleRequest {
           exit;
 
       }
-       
+
   }
 
 
@@ -394,16 +397,32 @@ sub handleRequest {
 
         $prefix = '' if ($status->{experiment_path} =~ /\/dblocal/);
 
-        my $source_dir = $prefix."/".$status->{experiment_path}."/".
+        my $source_dir;
+	if ($status->{experiment_path} =~ /^\//) {
+	  $source_dir = $status->{experiment_path}."/".
           $search_batch_subdir;
+	} else {
+	  $source_dir = $prefix."/".$status->{experiment_path}."/".
+          $search_batch_subdir;
+	}
 
 
   	#### If user asked for a load, do it
   	if ($load) {
           print "Loading data in $source_dir\n";
-  	  $result = loadProteomicsExperiment(
-  	    experiment_tag=>$status->{experiment_tag},
-  	    source_dir=>$source_dir);
+
+	  if ($pepxml_load) {
+  	    $result = loadProteomicsExperimentFromPepXML(
+  	      experiment_tag=>$status->{experiment_tag},
+  	      source_dir=>$source_dir
+            );
+
+	  } else {
+  	    $result = loadProteomicsExperiment(
+  	      experiment_tag=>$status->{experiment_tag},
+  	      source_dir=>$source_dir
+            );
+	}
   	  print "\n";
   	}
 
@@ -597,7 +616,7 @@ sub getExperimentStatus {
 ###############################################################################
 # loadProteomicsExperiment - load spectra and .out's
 ###############################################################################
-sub loadProteomicsExperiment { 
+sub loadProteomicsExperiment {
   my %args = @_;
   my $SUB_NAME = 'loadProteomicsExperiment';
 
@@ -626,7 +645,8 @@ sub loadProteomicsExperiment {
   }
 
   unless ( -f "$source_dir/interact.htm" ||
-           -f "$source_dir/finalInteract/interact.htm" ||
+           -f "$source_dir/interact.xml" ||
+           -f "$source_dir/interact-prob.xml" ||
            -f "$source_dir/sequest.params" ||
            -f "source_dir/interact-prob-data.htm" ) {
     die("ERROR: '$source_dir' just doesn't look like a sequest search ".
@@ -933,6 +953,85 @@ sub loadProteomicsExperiment {
 
 
 ###############################################################################
+# loadProteomicsExperimentFromPepXML - load experiment for single pepXML
+###############################################################################
+sub loadProteomicsExperimentFromPepXML {
+  my %args = @_;
+  my $SUB_NAME = 'loadProteomicsExperimentFromPepXML';
+
+
+  #### Decode the argument list
+  my $experiment_tag = $args{'experiment_tag'}
+   || die "ERROR[$SUB_NAME]: experiment_tag not passed";
+  my $source_dir = $args{'source_dir'}
+   || die "ERROR[$SUB_NAME]: source_file not passed";
+
+
+  #### Set the command-line options
+  my $check_status = $OPTIONS{"check_status"};
+  my $file_prefix = $OPTIONS{"file_prefix"} || '';
+  my $force_ref_db = $OPTIONS{'force_ref_db'};
+
+
+  #### Verify that the source directory looks right
+  unless ( -d "$source_dir" ) {
+    die("ERROR: '$source_dir' is not a directory!\n");
+  }
+
+
+  #### Try to find if this setname already exists in database
+  my $sql="SELECT experiment_id ".
+      "FROM $TBPR_PROTEOMICS_EXPERIMENT ".
+      "WHERE experiment_tag = '$experiment_tag'";
+  my ($experiment_id) = $sbeams->selectOneColumn($sql);
+  unless ($experiment_id) {
+    print "\nERROR: Unable to find experiment tag '$experiment_tag'.\n".
+          "       This experiment must already exist in the database\n\n";
+    return;
+  }
+
+
+  #### Find the pepXML file to load from
+  my $infile;
+  if ($OPTIONS{interact_fname}) {
+    $infile = $OPTIONS{interact_fname};
+    unless ( -f $infile ) {
+      die("ERROR: Unable to find specified input file '$infile'");
+    }
+  } else {
+    my @potential_xml_files = (
+      "$source_dir/interact-prob.xml",
+      "$source_dir/interact.xml",
+    );
+    foreach my $potential_xml_file ( @potential_xml_files ) {
+      if ( -f $potential_xml_file ) {
+	$infile = $potential_xml_file;
+	last;
+      }
+    }
+  }
+
+  unless ($infile) {
+    die("ERROR: Unable to find a suitable pepXML file to load from");
+  }
+
+
+  print "INFO: Loading from $infile\n";
+  use SBEAMS::Proteomics::PepXMLLoader;
+  my $pepXMLLoader = new SBEAMS::Proteomics::PepXMLLoader;
+  my $result = $pepXMLLoader->loadExperimentFromPepXMLFile(
+    experiment_id=>$experiment_id,
+    search_directory=>$source_dir,
+    source_file => $infile,
+    verbose=>$VERBOSE,
+  );
+
+  return 1;
+
+  }
+
+
+###############################################################################
 ###############################################################################
 ###############################################################################
 
@@ -1139,7 +1238,8 @@ sub addSearchBatchEntry {
     #### Read in the sequest.params file in the same subdirectory
     #### and store its contents
     unless (addParamsEntries($search_batch_id,$fraction_directory)) {
-      die "ERROR: addParamsEntries failed.\n";
+      #die "ERROR: addParamsEntries failed.\n";
+      print "ERROR: addParamsEntries failed. Will continue anyway\n";
     }
 
 
@@ -1157,6 +1257,56 @@ sub addSearchBatchEntry {
 
   return $search_batch_id;
 
+}
+
+
+
+###############################################################################
+# addMsrunEntry: Insert a new entry in fraction table
+###############################################################################
+sub addMsrunEntry {
+  my %args = @_;
+  my $SUB_NAME = 'addMsrunEntry';
+
+  #### Decode the argument list
+  my $experiment_id = $args{'experiment_id'}
+   || die "ERROR[$SUB_NAME]: experiment_id not passed";
+  my $fraction_tag = $args{'fraction_tag'}
+   || die "ERROR[$SUB_NAME]: fraction_tag not passed";
+
+  #### Caculate a fraction number
+  my $fraction_number;
+
+  #### If it looks like a 96 well plate ID, turn into number
+  if ($fraction_tag =~ /^([A-H])(\d{1,2})$/ && $2 <= 12) {
+    my $letter = $1;
+    my $number = $2;
+    $letter =~ tr/A-H/1-8/;
+    $fraction_number = ($number - 1) * 8 + $letter;
+
+  #### Else just pull out a number
+  } elsif ($fraction_tag =~ /^.*?(\d+).*?$/) {
+    $fraction_number = $1;
+    # Guard against numbers too big
+    $fraction_number = substr($fraction_number,0,8);
+  }
+
+
+  my %rowdata;
+  $rowdata{experiment_id} = $experiment_id;
+  $rowdata{fraction_tag} = $fraction_tag;
+  $rowdata{fraction_number} = $fraction_number;
+  my $fraction_id = $sbeams->insert_update_row(
+    insert=>1,
+    table_name=>$TBPR_FRACTION,
+    rowdata_ref=>\%rowdata,
+    PK_name=>'fraction_id',
+    return_PK=>1,
+    verbose=>$VERBOSE,
+    testonly=>$TESTONLY,
+  );
+
+  return($fraction_id);
 }
 
 
