@@ -734,8 +734,10 @@ sub handle_request {
       ["accessor","DBX.accessor","accessor"],
       ["accessor_suffix","DBX.accessor_suffix","accessor_suffix"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
+      ["peptideatlas_protein_link","''","PA Prot"],
       ["reference","BS.biosequence_name","Reference"],
       ["$colname","$colname","$dispname"],
+      ["peptideatlas_peptide_link","''","PA Pep"],
     );
 
     my @search_batch_ids = split(/,/,$parameters{search_batch_id});
@@ -765,6 +767,7 @@ sub handle_request {
       ["accessor","DBX.accessor","accessor"],
       ["accessor_suffix","DBX.accessor_suffix","accessor_suffix"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
+      ["peptideatlas_protein_link","''","PA Prot"],
       ["reference","BS.biosequence_name","Reference"],
     );
 
@@ -794,8 +797,10 @@ sub handle_request {
       ["accessor","DBX.accessor","accessor"],
       ["accessor_suffix","DBX.accessor_suffix","accessor_suffix"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
+      ["peptideatlas_protein_link","''","PA Prot"],
       ["reference","BS.biosequence_name","Reference"],
       ["peptide","peptide","Peptide"],
+      ["peptideatlas_peptide_link","''","PA Pep"],
     );
 
     my @search_batch_ids = split(/,/,$parameters{search_batch_id});
@@ -991,6 +996,16 @@ sub handle_request {
                'InterPro Protein Domain' => "http://www.ebi.ac.uk/interpro/IEntry?ac=\%$colnameidx{interpro_protein_domain_GO}V",
                'InterPro Protein Domain_ATAG' => 'TARGET="WinExt"',
                'InterPro Protein Domain_OPTIONS' => {semicolon_separated_list=>1},
+
+               'PA Prot' => "http://db.systemsbiology.net/dev2/sbeams/cgi/PeptideAtlas/Search?search_key=\%$colnameidx{biosequence_accession}V&action=GO",
+               'PA Prot_ATAG' => 'TARGET="WinPeptideAtlas"',
+               'PA Prot_ISNULL' => '<IMG BORDER="0" SRC="/sbeams/images/pa_tiny.png">',
+               'PA Prot_OPTIONS' => {embed_html=>1},
+
+               'PA Pep' => "http://db.systemsbiology.net/dev2/sbeams/cgi/PeptideAtlas/Search?search_key=\%$colnameidx{peptide}V&action=GO",
+               'PA Pep_ATAG' => 'TARGET="WinPeptideAtlas"',
+               'PA Pep_ISNULL' => '<IMG BORDER="0" SRC="/sbeams/images/pa_tiny.png">',
+               'PA Pep_OPTIONS' => {embed_html=>1},
   );
 
 

@@ -530,6 +530,7 @@ sub handle_request {
   if ( $parameters{display_options} =~ /ShowPeptides/ ) {
     @peptide_columns = (
       ["peptide_sequence","PEP.peptide_sequence","Peptide"],
+      ["peptideatlas_peptide_link","''","PA Pep"],
       ["charge","PEP.charge","Chg"],
       ["peptide_probability","STR(PEP.nsp_adjusted_probability,7,3)","Peptide Prob"],
       ["peptide_n_instances","PEP.n_instances","Peptide N Instances"],
@@ -554,6 +555,7 @@ sub handle_request {
       ["accessor","DBX.accessor","accessor"],
       ["accessor_suffix","DBX.accessor_suffix","accessor_suffix"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
+      ["peptideatlas_protein_link","''","PA Prot"],
       ["canonical_name","BSCAN.biosequence_name","Canonical Name"],
       ["protein_probability","STR(PROT.probability,7,3)","Protein Prob"],
       @peptide_columns,
@@ -1238,6 +1240,16 @@ sub getURLColumns {
                'InterPro Protein Domain' => "http://www.ebi.ac.uk/interpro/IEntry?ac=\%$colnameidx{interpro_protein_domain_GO}V",
                'InterPro Protein Domain_ATAG' => 'TARGET="WinExt"',
                'InterPro Protein Domain_OPTIONS' => {semicolon_separated_list=>1},
+
+               'PA Prot' => "http://db.systemsbiology.net/dev2/sbeams/cgi/PeptideAtlas/Search?search_key=\%$colnameidx{biosequence_accession}V&action=GO",
+               'PA Prot_ATAG' => 'TARGET="WinPeptideAtlas"',
+               'PA Prot_ISNULL' => '<IMG BORDER="0" SRC="/sbeams/images/pa_tiny.png">',
+               'PA Prot_OPTIONS' => {embed_html=>1},
+
+               'PA Pep' => "http://db.systemsbiology.net/dev2/sbeams/cgi/PeptideAtlas/Search?search_key=\%$colnameidx{peptide_sequence}V&action=GO",
+               'PA Pep_ATAG' => 'TARGET="WinPeptideAtlas"',
+               'PA Pep_ISNULL' => '<IMG BORDER="0" SRC="/sbeams/images/pa_tiny.png">',
+               'PA Pep_OPTIONS' => {embed_html=>1},
   );
 
 

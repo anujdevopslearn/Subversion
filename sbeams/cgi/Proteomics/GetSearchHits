@@ -594,9 +594,11 @@ sub handle_request {
     ["ions","STR(SH.identified_ions,2,0) + '/' + STR(SH.total_ions,3,0)","Ions"],
     #["ions_old","STR(SH.identified_ions,2,0) + '/' + STR(SH.total_ions,3,0)","!Ions"],
     ["reference","reference","Reference"],
+    ["peptideatlas_protein_link","''","PA Prot"],
     ["additional_proteins","additional_proteins","N+"],
     ["additional_proteins_old","additional_proteins","!N+"],
     ["peptide_string","peptide_string","Peptide"],
+    ["peptideatlas_peptide_link","''","PA Pep"],
     ["isoelectric_point","STR(SH.isoelectric_point,8,3)","Calc pI"],
     ["gravy_score","STR(gravy_score,8,3)","Gravy Score"],
     ["quantitation_dat","$quant_format_clause","DAT Quant"],
@@ -736,6 +738,16 @@ sub handle_request {
 	       'DAT Quant_ATAG' => 'TARGET="Win1"',
                'mzXML Quant' => "$CGI_BASE_DIR/Proteomics/Xpress-mzXML.cgi?quantitation_id=\%$colnameidx{quantitation_id}V&OutFile=\%$colnameidx{file_root}V",
 	       'mzXML Quant_ATAG' => 'TARGET="Win1"',
+
+               'PA Prot' => "http://db.systemsbiology.net/dev2/sbeams/cgi/PeptideAtlas/Search?search_key=\%$colnameidx{reference}V&action=GO",
+               'PA Prot_ATAG' => 'TARGET="WinPeptideAtlas"',
+               'PA Prot_ISNULL' => '<IMG BORDER="0" SRC="/sbeams/images/pa_tiny.png">',
+               'PA Prot_OPTIONS' => {embed_html=>1},
+
+               'PA Pep' => "http://db.systemsbiology.net/dev2/sbeams/cgi/PeptideAtlas/Search?search_key=\%$colnameidx{peptide}V&action=GO",
+               'PA Pep_ATAG' => 'TARGET="WinPeptideAtlas"',
+               'PA Pep_ISNULL' => '<IMG BORDER="0" SRC="/sbeams/images/pa_tiny.png">',
+               'PA Pep_OPTIONS' => {embed_html=>1},
   );
 
 
