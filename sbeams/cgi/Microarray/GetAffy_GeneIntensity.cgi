@@ -54,11 +54,13 @@ use POSIX qw(log10 pow);
 use CGI qw(:standard);
 #$q = new CGI;
 
-my $max_data_spread = 5;    #working with log10
-my $conversion_f    =
-  256 / $max_data_spread
-  ; #need to scale all data to 0-256 since that is the number of grey scale values we have
+# working range 10-10000, 3 logs wide 
+my $max_data_spread = 3; 
+
+# Use 250 hex colors, omitting the 6 lightest
+my $conversion_f = 250/$max_data_spread; 
 make_color_h();
+
 ###############################################################################
 # Set program name and usage banner for command like use
 ###############################################################################
@@ -137,7 +139,6 @@ sub main {
 
 	#### Decide what action to take based on information so far
 	if ( defined( $parameters{action} ) && $parameters{action} eq "???" ) {
-
 		# Some action
 	}else {
 		$sbeamsMOD->printPageHeader();
@@ -152,6 +153,7 @@ sub main {
 ###############################################################################
 sub handle_request {
 	my %args = @_;
+#  $log->debug( $q->self_url());
 
 	#### Process the arguments list
 	my $ref_parameters = $args{'ref_parameters'}
@@ -199,7 +201,7 @@ sub handle_request {
 	}else {
 		$sbeamsMOD->change_views_javascript();
 		$sbeamsMOD->updateCheckBoxButtons_javascript();
-		print_simple_form();
+		print_simple_form( \%parameters );
 		show_arrays();
 	}
 
@@ -340,7 +342,7 @@ sub print_full_form {
 		return if ( $genome_coordinates_clause eq '-1' );
 	}
 	#### If there is no genome_coordiante_constriant check to see if there is a request to show genomic data
-	#### If so set the $parameters{genome_coordinates_constraint} to a true val, which will then 
+	#### If so set the $parameters{genome_coordinates_#constraint} to a true val, which will then 
 	#### add the columns to the output
 	our $show_genome_2nd_query = '';
 	unless($parameters{genome_coordinates_constraint}){
@@ -1040,40 +1042,58 @@ sub getArrayNames {
 	return %hash;
 } # end getArrayNames
 
-		  ###############################################################################
-		  # print_simple_form
-		  ###############################################################################
-		  sub print_simple_form {
+###############################################################################
+# print_simple_form
+###############################################################################
+sub print_simple_form {
+  my $params = shift;
 
-		  $sbeams->printUserContext();
+  for my $p ( qw( probe_set_id gene_name accession_number ) ) {
+    $params->{$p} = '' unless defined $params->{$p};
+  }
+  # Make this sticky?
+  my $cp = ( $params->{coalesce_probesets} ) ? 'CHECKED' : '';
+  my $cr = ( $params->{coalesce_replicates} ) ? 'CHECKED' : '';
 
-		  print "<br><hr>";
+  $sbeams->printUserContext();
 
-		  show_other_query_page(type_to_show=>'Advanced');
+  print "<br><hr>";
+  show_other_query_page(type_to_show=>'Advanced');
+  print $q->start_form({-name=>'get_all_files'});		#Same form element is used for the array check boxes
+  print "<br/><br/>";
 
-		  print $q->start_form({-name=>'get_all_files'});		#Same form element is used for the array check boxes
-
-		  print "<br/><br/>";
-
-		  print $q->table({-border=>0},
+  print $q->table( {-border=>0},
 		  caption({-class=>'grey_bg'},'Simple Query'),
 		  Tr({-class=>'grey_bg'},
 		  td("Affy Probe Set ID"),
-		  td($q->textfield(-name=>'probe_set_id',
-		  -size=>25,
-		  -maxlength=>80)),
-		  ),
+		  td($q->textfield( -name=>'probe_set_id',
+                  		  -size=>25,
+                  		  -value=>$params->{probe_set_id},
+                        -maxlength=>256)),
+  ),
 		  Tr( {-class=>'grey_bg'},
 		  td("Gene Name"),
 		  td($q->textfield(-name=>'gene_name',
 		  -size=>25,
-		  -maxlength=>80)),
+		  -maxlength=>256)),
 		  ),
 		  Tr( {-class=>'grey_bg'},
 		  td("Accession Number"),
 		  td($q->textfield(-name=>'accession_number',
 		  -size=>25,
-		  -maxlength=>80)),
+		  -maxlength=>256)),
+
+      Tr( {-class=>'grey_bg'},
+		  td("Coalesce probesets"),
+		  td("<INPUT TYPE=checkbox name='coalesce_probesets' $cp></INPUT>")
+      ),
+
+		  Tr( {-class=>'grey_bg'},
+		  td("Coalesce replicates"),
+		  td("<INPUT TYPE=checkbox name='coalesce_replicates' $cr></INPUT>")
+      ),
+
+      
 		  Tr(
 		  td("'%' is wildcard character")),
 		  Tr(
@@ -1082,23 +1102,17 @@ sub getArrayNames {
 		  td("character range search '[a-m]'; no other regexps supported")),
 		  )
   
-		  );
+  );
 
-		  print "<br/>";
-		  
-		  print $q->submit(-name=>'submit_query',
-		  -value=>'simple_query');
+  print "<br/>";
+  print $q->submit( -name=>'submit_query', -value=>'Run Query');
+  print $q->hidden(-name=>'action', -default=>'SIMPLE_QUERY');
+  print "<p><hr><p>";
+}
 
-		  print $q->hidden(-name=>'action',
-		  -default=>'SIMPLE_QUERY');
-
-		  print "<p><hr><p>";
-
-		  }
-
-	  ###############################################################################
-	  # show_arrays Show all the arrays that can provide data
-	  ###############################################################################
+###############################################################################
+# show_arrays Show all the arrays that can provide data
+###############################################################################
 	sub show_arrays {
 
 		my %args = @_;
@@ -1458,15 +1472,15 @@ sub getArrayNames {
 			affy_array_ids     => $arrays,
 			annotation_display => 'lite'
 			,    #control if a little or a lot of annotation should be displayed nothing implemneted yet
-			constriants => [
+			constraints => [
 				$probe_set_id_clause, $gene_name_clause,
 				$accession_number_clause,
 			],
 			r_chp_protocol => $R_CHP_protocol_id,
 			annotation_id  => $annotation_set_id,
 		);
-#print STDERR "$sql\n";
-		#$sbeams->display_sql(sql=>$sql);
+#$sbeams->display_sql(sql=>$sql);
+#$log->debug( $sql );
 		#### Fetch the results from the database server
 		$sbeams->fetchResultSet(
 			sql_query     => $sql,
@@ -1479,108 +1493,157 @@ sub getArrayNames {
 			, #data_display_type html turn values into colors, text show the numbers
 			data_display_type => 'html',
 			annotation_set_id => $annotation_set_id,
+      coalesce_replicates => $parameters{coalesce_replicates},
+      coalesce_probesets => $parameters{coalesce_probesets}
 		);
 
 		
 	}
+
+sub deconvert_numerical_data {
+  my @deconverted;
+  foreach my $num (@_) {
+    my $trans =  10**(($num/$conversion_f)+1); 
+    my $converted = ( ( $trans - int($trans) ) > 0.5 ) ? int( $trans + 1 ) : int( $trans );
+#    $log->debug( "$num => $converted" );
+#      $converted = 1 if $converted < 1;
+#      $converted = 250 if $converted > 250;
+    push @deconverted, $converted;
+  }
+  return @deconverted;
+}
+
 ##############################################################################
 # convert_numerical_data
 #
-# Convert an array of numbers to log10 based numbers and do a crude rounding by just giving back the integer of the number
+# Convert an array of numbers to log10 based numbers and round to nearest int
 ###############################################################################
-	sub convert_numerical_data {
-		my @converted_data = ();
-		foreach (@_) {
-			push @converted_data, int( ( $conversion_f * log10($_) ) );
-		}
-		return @converted_data;
-	}
+sub convert_numerical_data {
+  my @converted_data = ();
+  foreach my $original (@_) {
+#      my $converted =  int( ( $conversion_f * log10($_) ) );
+    my $num = ( $original < 10 ) ? 10 : 
+              ( $original > 10000 ) ? 10000 : $original;
+
+    my $trans = ( $conversion_f * (log10($num) - 1 ) );
+    my $converted = ( ( $trans - int($trans) ) > 0.5 ) ? int( $trans + 1 ) : int( $trans );
+#    $log->debug( "$num => $trans => $converted" );
+#      $converted = 1 if $converted < 1;
+#      $converted = 250 if $converted > 250;
+    push @converted_data, $converted;
+  }
+  return @converted_data;
+}
 ##############################################################################
 	# make_color_h
 	#
 	# Make a hash to hold the grey scale color conversion map
 ###############################################################################
-	sub make_color_h {
+sub make_color_h {
 
-		my @digit = qw(0 1 2 3 4 5 6 7 8 9 A B C D E F);
+  my @digit = reverse(qw(0 1 2 3 4 5 6 7 8 9 A B C D E F));
 
-		my $count = 0;
-		for ( my $i = 0 ; $i <= $#digit ; $i++ ) {
-			for ( my $i2 = 0 ; $i2 <= $#digit ; $i2++ ) {
+  my $count = 0;
+  for ( my $i = 0 ; $i <= $#digit ; $i++ ) {
+    for ( my $j = 0 ; $j <= $#digit ; $j++ ) {
+      # Going to skip the lightest colors...
+      if ( $digit[$i] eq 'F' &&  $digit[$j] =~ /F|E|D|C|B/ ) {
+        next;
+      }
+      $CONVERSION_H{$count++} = "$digit[$i]$digit[$j]" x 3; # make the hex grey color
+    }
+  }
+  return;
+  print "<TABLE>\n";
+  for my $k ( sort { $a <=> $b }( keys( %CONVERSION_H ) ) ) { print FIL "<TR><TD BGCOLOR=$CONVERSION_H{$k}>$k</TD></TR>\n"; }
+  print  "</TABLE>\n";
+}
 
-				my $grey_color =
-				  "$digit[$i]$digit[$i2]" x 3;    #make the hex grey color
-
-		 #print "GREY $count <font color='#$grey_color'>$grey_color</font><br>";
-				$count++;
-
-				$CONVERSION_H{$count} = $grey_color;
-			}
-		}
-
-	}
 ##############################################################################
-	# print_table_legend
-	#
-	#  make a description of what all the boxes are
+# print_table_legend
+#
+#  make a description of what all the boxes are
 ###############################################################################
-	sub print_table_legend {
+sub print_table_legend {
+  my $coalesced = shift;
+  my $table_cells = '';
 
-		my $table_cells = '';
+  my $end_space = $max_data_spread + 1;
+  my @log_space = 2 .. $end_space ;
 
-		my @log_space = 1 .. $max_data_spread;
+  print qq~ <hr>
+  <P>
+  <H3 class='grey_bg'>Affy R_CHP Intensity Values Key</H3>
+  ~;
 
-		print qq~ <hr>
-		  <P>
-		  <H3 class='grey_bg'>Affy R_CHP Intensity Values Key</H3>
-		 ~;
+  $table_cells = "<table border=0>";
+  $table_cells .= "<tr><td>10 (and below) </td>";    #start the first row of the table
 
-		$table_cells = "<table border=0>";
+  my $start_range; # = 10;
+  my $end_range; #   = 10;
+  my $key_count = 0;
+  my @range = 0 .. int($conversion_f);
 
-		$table_cells .= "<tr><td>1</td>";    #start the first row of the table
+  foreach my $log_base (@log_space) {    #loop thru the log space
+    my $end_range = convert_number($log_base);
+    my $and_above = ( $end_range ==  10000 ) ? ' (and above)' : '';
 
-		my $start_range = 1;
-		my $end_range   = 1;
-		my $key_count   = 1;
-		my @range       = 1 .. int($conversion_f);
+    for ( my $i = 0 ; $i <= $#range; $i += 2 ) { # for each log show the number of cells the space is broken into
+      my ( $decon ) = deconvert_numerical_data( $key_count );
+      $table_cells .= "<td bgcolor='$CONVERSION_H{$key_count}' width=6><DIV TITLE='$decon'> &nbsp;</DIV></td>";
+      $key_count += 2;
+      die( "COUNT AT $key_count I= $i SOME THING IS WORONG MAKING TABLE LEGEND<br>") if $key_count == 258;
+    }
 
-		foreach my $log_base (@log_space) {    #loop thru the log space
-			my $end_range = convert_number($log_base);
+    my $exp_end_range = 1;
+    if ( $end_range == 10 ) { $exp_end_range = 10; 
+    } elsif ( $end_range == 100 ) { $exp_end_range = "10<SUP>2</SUP>"; 
+    } elsif ( $end_range == 1000 ) { $exp_end_range = "10<SUP>3</SUP>"; 
+    } elsif ( $end_range == 10000 ) { $exp_end_range = "10<SUP>4</SUP>"; 
+    } elsif ( $end_range == 100000 ) { $exp_end_range = "10<SUP>5</SUP>"; 
+    }  
 
-			for ( my $i = 0 ; $i <= $#range ; $i++ )
-			{    #for each log show the number of cells the space is broken into
+    # end the row give the number in real space not log space
+    $table_cells .= "<td>$end_range $and_above</td></tr>";
+    # start the new row
+    $table_cells .= "<tr><td>" . ( $end_range + 1 ) . "</td>" unless ( $log_base == $end_space );
+      $start_range = $end_range + 1;
+  }
 
-				$table_cells .=
-				  "<td bgcolor='$CONVERSION_H{$key_count}' width=4>&nbsp;</td>";
-
-				$key_count++;
-				die(
-"COUNT AT $key_count I= $i SOME THING IS WORONG MAKING TABLE LEGEND<br>"
-				  )
-				  if $key_count == 258;
-
-			}
-
-			$table_cells .=
-			  "<td>$end_range</td></tr>"
-			  ;    #end the row give the number in real space not log space
-			$table_cells .= "<tr><td>" . ( $end_range + 1 ) . "</td>"
-			  unless ( $log_base == $max_data_spread );    #start the new row
-			$start_range = $end_range + 1;
-		}
-
-		#information about the present absent calls
-		$table_cells .=
+  #information about the present absent calls
+  unless ( $coalesced ) {
+    $table_cells .=
 "<tr><td class='present_cell'>Present Call No border</td><td class='present_cell' bg_color=#FFFFFF width=7 height=7>&nbsp;</td></tr>";
-		$table_cells .=
+    $table_cells .=
 "<tr><td class='marginal_cell'>Marginal Call Blue border</td><td class='marginal_cell' bg_color=#0000FF width=7 height=7>&nbsp;</td></tr>";
-		$table_cells .=
+    $table_cells .=
 "<tr><td class='absent_cell'>Absent Call Red border</td><td class='absent_cell' bg_color=#FFFFFF width=7 height=7>&nbsp;</td></tr>";
+  }
 
-		$table_cells .= "</table>";
-		print $table_cells;
+  $table_cells .= "</table>";
+  print $table_cells;
+  return;
 
-	}
+  print "<TABLE>\n";
+#  for my $k ( sort { $a <=> $b }( keys( %CONVERSION_H ) ) ) { 
+  for my $k ( qw( 1 5 10 50 100 500 1000 5000 10000 50000 100000 ) ) { 
+  my ( $converted ) = convert_numerical_data($k);
+  my $fb = ( $converted <= 125 ) ? '' : '<FONT COLOR=white>';
+  my $fe = ( $converted <= 125 ) ? '' : '</FONT>';
+  print "<TR><TD BGCOLOR=$CONVERSION_H{$converted}>$fb $k => $converted $fe</TD></TR>\n";
+  }
+  print  "</TABLE>\n";
+  return;
+
+  my $tab = '<TABLE><TR>';
+  my $space = '&nbsp;';
+  for ( my $i = 0; $i <= $max_data_spread; $i += .25 ) {
+    $tab .= "<TD bgcolor='$CONVERSION_H{$i}' width=4>$space</TD>";
+  }
+  $tab .= '</TR></TABLE>';
+  print $tab;
+}
+
 ##############################################################################
 	# convert_number
 	#raise 10 to the given exp number
@@ -1614,18 +1677,20 @@ sub getArrayNames {
 
 			my $class    = '';
 			my $bg_color = '';
-			my $cell_val = '&nbsp;';
+      my $title = 'Signal = ' . sprintf( "%0.2f", $numerical_data[$i] );
+   		my $cell_val = "<DIV TITLE= '$title'> &nbsp;</DIV>";
 			if ( exists $CONVERSION_H{$number} ) {
 				$bg_color = $CONVERSION_H{$number};
 
 			}
 			else {
+#        $log->debug( "for number $i, numeric is $numerical_data[$i] and converted is $number; color is $CONVERSION_H{$number}" );
 				$bg_color = '#000000'
 				  ; #if the value is very low set the bg_color to Black and put "L" in the cell to indicate what we did
 				$cell_val = 'L';
 			}
 
-			if ( $detection_call eq 'P' ) {
+			if ( $detection_call eq 'P' || $args{coalesced} ) {
 				$class = 'present_cell';
 			}
 			elsif ( $detection_call eq 'M' ) {
@@ -1649,73 +1714,85 @@ sub getArrayNames {
  #
  # Take the resultset_ref pivot the data and add color for the expression values
 ###############################################################################
-	sub convert_data {
+sub convert_data {
 
 #gi.probe_set_id), afa.file_root, gi.affy_array_id, gi.signal, gi.detection_call, anno.gene_symbol, anno.gene_title, gi.protocol_id
-		my %args = @_;
+  my %args = @_;
 
-		my $resultset_ref     = $args{resultset_ref};
-		my $data_display_type = $args{data_display_type};
-		my $annotation_set_id = $args{annotation_set_id};
-		my $anno_base_url     =
+  my $resultset_ref     = $args{resultset_ref};
+  my $data_display_type = $args{data_display_type};
+  my $annotation_set_id = $args{annotation_set_id};
+  $args{coalesce_replicates} ||= '';
+  $args{coalesce_probesets} ||= '';
+  my $rep_key = ( $args{coalesce_replicates} ) ? 'sample_group_name' : 'file_root';
+  my $id_key = ( $args{coalesce_probesets} ) ? 'gene_symbol' : 'probe_set_id';
+  my $coalesced = ( $args{coalesce_replicates} || $args{coalesce_probesets} ) ? 1 : 0;
+
+  my $anno_base_url     =
 "$CGI_BASE_DIR/Microarray/$PROG_NAME?action=SHOW_ANNO&annotation_set_id=$annotation_set_id";
 
-		my $aref =
-		  $$resultset_ref{data_ref}; #data is stored as an array of arrays from the $sth->fetchrow_array each row a row from the database holding an aref to all the values
+  # data is stored as an array of arrays from the $sth->fetchrow_array 
+  my $aref = $$resultset_ref{data_ref}; 
 
-		unless ( defined $$aref[0] )
-		{    #peak inside the data structure and see if the query hit anything
-			print
-"<h2>Sorry Your Search Did Term Did Not Return Any Results Please Try Again</h2>";
-			return;
-		}
+  # see if query hit anything
+  unless ( defined $$aref[0] ) { 
+    print "<h2>Sorry Your Search Did Term Did Not Return Any Results Please Try Again</h2>";
+  return;
+  }
 
 		
 
-		my @column_titles = @{ $resultset_ref->{column_list_ref} };
+  my @column_titles = @{ $resultset_ref->{column_list_ref} };
+    
+  # going to make a hash of hashes to do the pivot
+  my %pivot_h = ();
+  foreach my $aref_row (@$aref) {
+    my %data_h = make_hash_of_row( aref         => $aref_row,
+                                   column_names => \@column_titles );
+#      for my $k ( keys( %data_h ) ) { print "$k => $data_h{$k}\n<BR>"; }
+#      $log->debug( $data_h{sample_group_name} );
+#      exit;
 
-		#going to make a hash of hashes to do the pivot
+  # load the pivot hash with data  Very strange way to look at entering data into
+  # a hash of hashes of hashes....  Yes, very strange indeed (DSC)
+    $pivot_h{$data_h{$id_key}}{R_PROTOCOL}{$data_h{protocol_id}}{ARRAYS}{$data_h{$rep_key}}->{TOT_SIGNAL} += $data_h{signal};
+    $pivot_h{$data_h{$id_key}}{R_PROTOCOL}{$data_h{protocol_id}}{ARRAYS}{$data_h{$rep_key}}->{NUMBER}++;
+    $pivot_h{$data_h{$id_key}}{R_PROTOCOL}{$data_h{protocol_id}}{ARRAYS}{$data_h{$rep_key}}->{DETECTION_CALL} = $data_h{detection_call};
+#			$pivot_h{$data_h{$id_key}}{R_PROTOCOL}{$data_h{protocol_id}}{ARRAYS}{$data_h{$rep_key}}->{SIGNAL} = $data_h{signal};
+    $pivot_h{$data_h{$id_key}}{R_PROTOCOL}{$data_h{protocol_id}}{ARRAYS}{$data_h{$rep_key}}->{SIGNAL} = 
+    $pivot_h{$data_h{$id_key}}{R_PROTOCOL}{$data_h{protocol_id}}{ARRAYS}{$data_h{$rep_key}}->{TOT_SIGNAL}/ 
+    $pivot_h{$data_h{$id_key}}{R_PROTOCOL}{$data_h{protocol_id}}{ARRAYS}{$data_h{$rep_key}}->{NUMBER}; 
 
-		my %pivot_h = ();
-		foreach my $aref_row (@$aref) {
-			my %data_h = make_hash_of_row(
-				aref         => $aref_row,
-				column_names => \@column_titles
-			);
+    for my $k ( qw( TOT_SIGNAL NUMBER DETECTION_CALL SIGNAL AVERAGE ) ) {
+      $log->debug( "$data_h{$id_key}->$k => $pivot_h{$data_h{$id_key}}{R_PROTOCOL}{$data_h{protocol_id}}{ARRAYS}{$data_h{$rep_key}}->{$k}" ) if $data_h{gene_symbol} eq 'KLK14';
+# && $data_h{sample_group_name} eq 'CD104t' ); 
+    }
+    $log->debug( "" ) if $data_h{gene_symbol} eq 'KLK14'; #if ( $data_h{$id_key} eq '242127_at' && $data_h{sample_group_name} eq 'CD104t' ); 
 
-#load the pivot hash with data  Very strange way to look at entering data into a hash of hashes of hashes....
-			$pivot_h{ $data_h{probe_set_id} }{R_PROTOCOL}
-			  { $data_h{protocol_id} }{ARRAYS}{ $data_h{file_root} } = {
-				SIGNAL         => $data_h{signal},
-				DETECTION_CALL => $data_h{detection_call},
-			  };
+    #load the pivot hash with annotation
+    $pivot_h{ $data_h{$id_key} }{ANNOTATION} = { GENE_SYMBOL => $data_h{gene_symbol},
+                                                 GENE_TITLE  => $data_h{gene_title} };
 
-			#load the pivot hash with annotation
-			$pivot_h{ $data_h{probe_set_id} }{ANNOTATION} = {
-				GENE_SYMBOL => $data_h{gene_symbol},
-				GENE_TITLE  => $data_h{gene_title},
-			};
-
-		}
+  }
 
 =head 1	
 
 example view of pivot hash
 	
-		my $probe_set_id = $data_h{probe_set_id};
+		my $$id_key = $data_h{$id_key};
 	
-	    	$pivot_h{$probe_set_id} = { 
+	    	$pivot_h{$$id_key} = { 
 						  R_PROTOCOL => { 
 								$data_h{protocol_id} =>
 											{ARRAYS => {	#using the file_root name instead of the array id check for problems of uniquness .....
-												     $data_h{file_root} => { SIGNAL 	   => $data_h{signal},
+												     $data_h{$rep_key} => { SIGNAL 	   => $data_h{signal},
 												     			    DETECTION_CALL => $data_h{detection_call},
 															   },
 													     },
 									         	 },
 								},
 								
-						  ANNOTATAION => {GENE_SYMBOL => $data_h{gene_symbol}, 
+						  ANNOTATION => {GENE_SYMBOL => $data_h{gene_symbol}, 
 						  		  GENE_TITLE  => $data_h{gene_title},
 								  },
 					     };
@@ -1723,119 +1800,91 @@ example view of pivot hash
 
 =cut
 
-		#print Dumper (\%pivot_h);
+  #print Dumper (\%pivot_h);
 
-		#rearange the data to make a new results set
+  # rearange the data to make a new results set
 
 
-		my @data_rows            = ();
-		my @new_column_names     = ();
-		my @new_percision_column = ( 10, 10, -10, );
+  my @data_rows            = ();
+  my @new_column_names     = ();
 
-		push @new_column_names, "Affy Probe Set ID";
-		push @new_column_names, "Gene Symbol";
+  push @new_column_names, "Affy Probe Set ID" unless $args{coalesce_probesets};
+  push @new_column_names, "Gene Symbol";
 
-		my $count = 1;
+  my $count = 1;
+  foreach my $probe_set_id ( sort keys %pivot_h ) {
+    my @column_of_data;
+    # Add the probeset id iff we didn't coalesce probesets into genes
+    push @column_of_data, $probe_set_id unless $args{coalesce_probesets};
+    # Add the gene symbol
+    push @column_of_data, $pivot_h{$probe_set_id}{ANNOTATION}{GENE_SYMBOL};
 
-		foreach my $probe_set_id ( sort keys %pivot_h ) {
-			my @column_of_data = ();
-			push @column_of_data, $probe_set_id;    #add the probe_set_id
-			push @column_of_data, $pivot_h{$probe_set_id}{ANNOTATION}
-			  {GENE_SYMBOL};                        #Added the Annotation
+    foreach my $r_protocol_href ( sort keys %{ $pivot_h{$probe_set_id}{R_PROTOCOL} } ) {
+      my @numerical_data = ();
+      my @detection_call = ();
+      foreach my $arrays_href ( sort (keys %{$pivot_h{$probe_set_id}{R_PROTOCOL}{$r_protocol_href}{ARRAYS}}) ) {
+#        $log->debug( "here comes $arrays_href" );
+        # collect the numerical data to color the cells	#collect the signal intensity
+        push @numerical_data, $pivot_h{$probe_set_id}{R_PROTOCOL}{$r_protocol_href}{ARRAYS}{$arrays_href}{SIGNAL}; 
+        push @detection_call, $pivot_h{$probe_set_id}{R_PROTOCOL}{$r_protocol_href}{ARRAYS}{$arrays_href}{DETECTION_CALL};
 
-			foreach my $r_protocol_href (
-				sort keys %{ $pivot_h{$probe_set_id}{R_PROTOCOL} } )
-			{
-				my @numerical_data = ();
-				my @detection_call = ();
-				foreach my $arrays_href (
-					sort keys %{
-						$pivot_h{$probe_set_id}{R_PROTOCOL}{$r_protocol_href}
-						  {ARRAYS}
-					}
-				  )
-				{
+        # Collect the array file_root names.  Removed protocol 05/2006 DSC
+        # push @new_column_names, "${arrays_href}_P_${r_protocol_href}_CALL" if $count == 1;
+        push @new_column_names, make_table_name(${arrays_href}) if $count == 1;
+      }
+      #return list of table cells with bk_ground coloring
+      my @table_cells = make_table_cells( numerical_data => \@numerical_data,
+                                          detection_call => \@detection_call,
+                                          coalesced => $coalesced );
 
-					push @numerical_data,
-					  $pivot_h{$probe_set_id}{R_PROTOCOL}{$r_protocol_href}
-					  {ARRAYS}{$arrays_href}
-					  {SIGNAL}; #collect the numerical data to color the cells	#collect the signal intensity
-					push @detection_call,
-					  $pivot_h{$probe_set_id}{R_PROTOCOL}{$r_protocol_href}
-					  {ARRAYS}{$arrays_href}{DETECTION_CALL};
-					push @new_column_names,
-					  make_table_name("${arrays_href} P_${r_protocol_href}")
-					  if $count == 1;    #collect the array file_root names
+      # compute the mean and max intensity, useful for sorting the data
+      my ( $avg_intensity, $max_intensity ) = compute_mean(@numerical_data); 
 
-#push @new_column_names, "${arrays_href}_P_${r_protocol_href}_CALL" if $count == 1;
+      push @column_of_data, [@table_cells];
 
-				}
-				my @table_cells = make_table_cells(
-					numerical_data => \@numerical_data
-					,    #return list of table cells with bk_ground coloring
-					detection_call => \@detection_call,
-				);
+      push @column_of_data, $avg_intensity, $max_intensity;
+      push @new_column_names, "Mean Intensity", "Max Intensity" if $count == 1;
 
-				my ( $avg_intensity, $max_intensity ) =
-				  compute_mean(@numerical_data)
-				  ; #compute the mean and max intensity, useful for sorting the data
+      $count++;
+    }
+    push @column_of_data, $pivot_h{$probe_set_id}{ANNOTATION}{GENE_TITLE};
+    push @data_rows, [@column_of_data];
+  }
+  push @new_column_names, "Gene Title";
 
-				push @column_of_data, [@table_cells];
+  # Begin to print out the content 
+  print "<table border=0> <tr>";
+  foreach my $col_name (@new_column_names) {   #Print out the Column names
+    print "<td class='grey_bg'>$col_name</td>";
+  }
+  print "</tr>\n";
 
-				push @column_of_data, $avg_intensity, $max_intensity;
-				push @new_column_names, "Mean Intensity", "Max Intensity"
-				  if $count == 1;
-
-				$count++;
-
-			}
-			push @column_of_data,
-			  $pivot_h{$probe_set_id}{ANNOTATION}{GENE_TITLE};
-			push @data_rows, [@column_of_data];
-
-		}
-
-		push @new_column_names, "Gene Title";
-
-		print "<table border=0> <tr>";
-
-		foreach my $col_name (@new_column_names) {   #Print out the Column names
-
-			print "<td class='grey_bg'>$col_name</td>";
-		}
-
-		print "</tr>\n";
-
-		my @sorted_data = sort_data_rows(@data_rows);
-		foreach my $row (@sorted_data) {             #Print out the data rows
-			print "<tr>";
-
-			my $col_number = 1;
-			foreach my $col (@$row) {                #print the data
-				if ( $col_number == 1 ) {    #add link to annotation page
-					print
-"<td class='anno_cell'><a href='$anno_base_url&probe_set_id=$col'>$col</a></td>";
-					$col_number++;
-					next;
-				}
-
-				if ( ref($col) eq 'ARRAY' )
-				{    #dereference the colored table cells
-					foreach my $cell (@$col) {
-						print $cell;
-					}
-					next;
-				}
-				print "<td class='anno_cell'>$col</td>";
-
-			}
-			print "</tr>\n";
-		}
-
-		print "</table>\n";
-		print_table_legend();
-
-	}
+#  my @sorted_data = sort_data_rows(@data_rows);
+#  foreach my $row (@sorted_data) { 
+  # Print out the data rows
+  foreach my $row (sort { $a->[1] cmp $b->[1] }(@data_rows)) { 
+    print "<tr>";
+    my $col_number = 1;
+    my $cnt = 0;
+    foreach my $col (@$row) { # print the data
+      $cnt++;
+      # add link to annotation page
+      if ( $col_number == 1 && !$args{coalesce_probesets} ) { 
+        print "<td class='anno_cell'><a href='$anno_base_url&$id_key=$col'>$col</a></td>";
+        $col_number++;
+        next;
+      }
+      if ( ref($col) eq 'ARRAY' ) { # dereference the colored table cells
+        print join "", @$col;
+        next;
+      } 
+      print "<td class='anno_cell'>$col</td>";
+    }
+    print "</tr>\n";
+  }
+  print "</table>\n";
+  print_table_legend( $coalesced );
+}
 
 ###############################################################################
 	# sort_data_rows
@@ -1843,9 +1892,11 @@ example view of pivot hash
 	# Sort the data on the mean intensity value for each gene
 ###############################################################################
 	sub sort_data_rows {
-
-		return sort { $$a[3] <=> $$b[3] } @_; #the mean value is in the 3 column
-
+    my @in = @_;
+#    for my $row( @in ) { $log->debug( "Symbol is $row->[1]" ); }
+    my @out = sort { $a->[3] <=> $b->[3] } @_; #the mean value is in the 3 column
+#   for my $row( @out ) { $log->debug( "Symbol is $row->[1]" ); }
+    return @out;
 	}
 ###############################################################################
 	# compute_mean
@@ -1875,30 +1926,22 @@ example view of pivot hash
 	# Take the column name and turn it side ways
 ###############################################################################
 	sub make_table_name {
-
-		my $header_name = shift;
-
-		my $sample_tag = '';
-		if ( $header_name =~ /^\d+_\d+_(.*)/ )
-		{ #Parse the Sample tag from the root_file name example 20040707_05_PAM2B-80
-			$sample_tag = $1;
-
-		}
+    my $name = shift;
 		my $table = "<table border=0>";
 
-		my @letters = split //, $sample_tag;
+		my @letters = split //, $name;
 
 		my $count = 0;
 		foreach my $letter (@letters) {
 			$letter =~ s/_/|/;
 			$letter =~ s/\s/***/g;
 
-			$table .=
-			  "<tr valign='bottom'><td class='small_cell'>$letter</td></tr>";
-			if ( $count > 30 ) {
-				print "<td class='small_cell'>...</td>";
-				last;
-			}
+    $table .= "<tr valign='bottom'><td class='med_cell'>$letter</td></tr>";
+    if ( $count > 30 ) {
+      print "<td class='med_cell'>...</td>";
+      last;
+    }
+
 		}
 		$table .= "</table>";
 	}
@@ -1908,24 +1951,26 @@ example view of pivot hash
 #
 # take an aref and the column names and make a hash key = column name, val= value from database
 ###############################################################################
-	sub make_hash_of_row {
-		my %args = @_;
+sub make_hash_of_row {
+  my %args = @_;
 
-		my $aref         = $args{aref};
-		my @column_names = @{ $args{column_names} };
-		my %hash         = ();
-		for ( my $i = 0 ; $i <= $#column_names ; $i++ ) {
+  my $aref = $args{aref};
+  my @column_names = @{ $args{column_names} };
+  my %hash;
+  for ( my $i = 0 ; $i <= $#column_names ; $i++ ) {
+    my $val = $$aref[$i];
 
-			my $val = $$aref[$i];
-
-			my $key = $column_names[$i];
-
-			#print "$i COLUMN NAME '$key' VAL '$val'<br>";
-
-			$hash{$key} = $val;
-		}
-		return %hash;
-	}
+    # Parse the Sample tag from the root_file name example 20040707_05_PAM2B-80
+    if ( $column_names[$i] eq 'file_root' ) {
+      if ( $val =~ /^\d+_\d+_(.*)/ ) { 
+			  $val = $1;
+		  }
+    }
+    my $key = $column_names[$i];
+    $hash{$key} = $val;
+  }
+  return %hash;
+}
 
 ###############################################################################
 # check_for_file_existance
@@ -2014,7 +2059,7 @@ example view of pivot hash
 
 		$sql = "$sql $annotation_set_id_clause $probe_set_id_clause";    #append on the constriants to the main sql
 		$sql =~ s/SELECT/SELECT top 1 affy_annotation_id,/; 
-		#$sbeams->display_sql(sql=>$sql);
+#		$sbeams->display_sql(sql=>$sql);
 
 		my @anno_data = $sbeams->selectHashArray($sql);
 
@@ -2481,6 +2526,9 @@ sub format_protein_info {
 	sub show_other_query_page {
 		my %args          = @_;
 		my $query_to_show = $args{type_to_show};
+    if ( $query_to_show eq 'Advanced' ) {
+      return '' if $sbeams->isGuestUser();
+    }
 
 		print $q->start_form()
 		  ;    #Select if user wants to see simple or full interface
