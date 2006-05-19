@@ -641,29 +641,40 @@ sub get_search_batch_and_sample_id_hash
             my ($s_id, $asb_id) = @{$row};
             $sid = $s_id;
             $atlas_search_batch_id = $asb_id;
-
             $asb_exists = "true";
         }
 
 
-        #### see if a sample record exists ####
-        $sql = qq~
-            SELECT sample_id
-            FROM $TBAT_SAMPLE
-            WHERE search_batch_id = '$loading_sb_id'
-        ~;
-
-        @rows = $sbeams->selectSeveralColumns($sql);
-
-        foreach my $row (@rows)
-        {
-            my ($s_id) = @{$row};
-            $sid = $s_id;
+        if ( $asb_exists )
+        { ## If $TBAT_ATLAS_SEARCH_BATCH exists, then so does a sample, and just got it in last query
             $sample_exists = "true";
+        } else
+        {   ## [cases: either this is a new sample, or the new table/records for any atlas_search_batch
+            ## of this sample haven't been written yet (adjusting to new schema)
+
+            ## For both cases, need to look for a sample record.  Will have to make assumption
+            ## that PeptideAtlas sample_tag equals Proteomics exp_tag, until enough atlases
+            ## have been built to have populated atlas_search_batch table, then we
+            ## can skip this sample_exists check section
+            $sql = qq~
+                SELECT S.sample_id
+                FROM $TBAT_SAMPLE S
+                JOIN $TBPR_PROTEOMICS_EXPERIMENT PE ON (S.sample_tag = PE.experiment_tag)
+                JOIN $TBPR_SEARCH_BATCH PSB ON (PE.experiment_id = PE.experiment_id)
+                where PSB.search_batch_id = '$loading_sb_id'
+            ~;
+
+            @rows = $sbeams->selectSeveralColumns($sql);
+            
+            foreach my $row (@rows)
+            {
+                my ($s_id) = @{$row};
+                $sid = $s_id;
+                $sample_exists = "true";
+            }
         }
 
 
-            
         ## Lastly, if no sample_id, create one from protomics record.  
         ## if this is true, then also will be missing [atlas_search_batch] and 
         ## [atlas_search_batch_parameter] and [atlas_search_batch_parameter_set]
@@ -702,6 +713,8 @@ sub get_search_batch_and_sample_id_hash
                     );
 
                     $sid = insert_sample( rowdata_ref => \%rowdata );
+
+                    print "INFO[$METHOD]: created sample record $sid\n";
                 }
 
 
