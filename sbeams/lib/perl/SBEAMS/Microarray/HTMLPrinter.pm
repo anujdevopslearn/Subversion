@@ -100,13 +100,46 @@ sub displaySCGAPPageHeader
   }
   $skin =~ s/\/images\//\/sbeams\/images\//gm;
  
+	
+  my $affy_css = $self->getAffyCSS();
   print "$http_header\n\n";
   print <<"  END_PAGE";
   <HTML>
+    $affy_css;
     $skin
   END_PAGE
 
   $self->printJavascriptFunctions();
+}
+sub getAffyCSS {
+  my $self = shift;
+  my $FONT_SIZE=10;
+  my $FONT_SIZE_SM=9;
+  my $FONT_SIZE_MED=10;
+  my $FONT_SIZE_LG=11;
+  my $FONT_SIZE_HG=12;
+
+  my $css =<<"  END";
+	<STYLE TYPE="text/css">	
+	.white_bg{background-color: #FFFFFF }
+	.grey_bg{ background-color: #CCCCCC }
+	.med_gray_bg{ background-color: #CCCCCC; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; Padding:2}
+	.grey_header{ font-family: Helvetica, Arial, sans-serif; color: #000000; font-size: ${FONT_SIZE_HG}pt; background-color: #CCCCCC; font-weight: bold; padding:1 2}
+	.rev_gray{background-color: #555555; font-size: ${FONT_SIZE_MED}pt; font-weight: bold; color:white; line-height: 25px;}
+	.rev_gray_head{background-color: #555555; font-size: ${FONT_SIZE}pt; font-weight: bold; color:white; line-height: 25px;}
+  .small_cell {font-size: 8; background-color: #CCCCCC; white-space: nowrap  }
+	.med_cell {font-size: 10; background-color: #CCCCCC; white-space: nowrap  }
+	.anno_cell {white-space: nowrap  }
+	.present_cell{border: none}
+	.marginal_cell{border: 1px solid #0033CC}
+	.absent_cell{border: 2px solid #660033}
+	.small_text{font-family: Helvetica,Arial,sans-serif; font-size:x-small; color:#aaaaaa}
+	.table_setup{border: 0px ; border-collapse: collapse;   }
+	.pad_cell{padding:5px;  }
+	.white_hyper_text{font-family: Helvetica,Arial,sans-serif; color:#000000;}
+  </STYLE>
+  END
+  return $css;
 }
 
 sub displaySBEAMSPageHeader
