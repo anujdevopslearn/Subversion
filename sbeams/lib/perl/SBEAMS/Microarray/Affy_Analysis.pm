@@ -618,10 +618,11 @@ sub get_affy_intensity_data_sql {
 	my $method = 'get_affy_intensity_data_sql';
 	my $self = shift;
 	my %args = @_;
+#  $log->printStack( 'debug' );
 	
 	my $affy_array_ids = $args{affy_array_ids};
 	my $annotation_display = $args{annotation_display};
-	my @all_constriants = @ {$args{constriants}};
+	my @all_constraints = @{$args{constraints}};
 	
 	my $R_protocol_id     = $args{r_chp_protocol};
 	my $annotation_set_id = $args{annotation_id};
@@ -631,24 +632,31 @@ sub get_affy_intensity_data_sql {
 	my $add_affy_db_link_table = '';
 	
 	
-	for (my $i; $i<=$#all_constriants; $i++){ 
-		my $constraint = $all_constriants[$i];
+	for (my $i; $i<=$#all_constraints; $i++){ 
+		my $constraint = $all_constraints[$i];
 		
-		if ($constraint =~ /link\.db_id/){			#only add the affy_db_links table if we have a constriant for it 
+		if ($constraint =~ /link\.db_id/){			#only add the affy_db_links table if we have a constraints for it 
 			$add_affy_db_link_table = "JOIN $TBMA_AFFY_DB_LINKS link ON (anno.affy_annotation_id = link.affy_annotation_id)";
 		
-		}elsif($constraint =~ /anno\.gene_name (LIKE.*)/){	#the gene name constrain needs to search two fields
-			my $search_term = $1;
-			my $new_constriant = "AND (anno.gene_symbol $search_term OR anno.gene_title $search_term) ";
-			$all_constriants[$i] = $new_constriant;
+		} elsif( $constraint =~ /anno\.gene_name/ ) {	
+      my @subclauses = split / OR /, $constraint;
+			my $new_constraint = 'AND ( ';
+# = "AND (anno.gene_symbol $search_term OR anno.gene_title $search_term) ";
+
+      my $sep = '';
+      for my $sc ( @subclauses ) {
+        chomp $sc;
+        ( my $term ) = $sc =~ /anno\.gene_name LIKE(.*)/;
+        $new_constraint .=  "$sep anno.gene_symbol LIKE $term OR anno.gene_title LIKE $term \n";
+        $sep = ' OR ';
+      }
+			$new_constraint .= ' )'; 
+			$all_constraints[$i] = $new_constraint;
 		}else{
 		}
 	}
 		
-		
-	
-	
-	my $constriants = join " ", @all_constriants;
+	my $constraints = join " ", @all_constraints;
   my $limit = $sbeams->buildLimitClause( row_limit => 10000 );	
   my $sql = qq~
       SELECT $limit->{top_clause} gi.probe_set_id, 
@@ -658,16 +666,18 @@ sub get_affy_intensity_data_sql {
 			gi.detection_call, 
 			anno.gene_symbol, 
 			anno.gene_title, 
-			gi.protocol_id
+			gi.protocol_id,
+      sample_group_name
 			FROM $TBMA_AFFY_GENE_INTENSITY gi 
 			JOIN $TBMA_AFFY_ARRAY afa ON (gi.affy_array_id = afa.affy_array_id)
+			JOIN $TBMA_AFFY_ARRAY_SAMPLE afas ON (afa.affy_array_sample_id = afas.affy_array_sample_id)
 			JOIN $TBMA_AFFY_ANNOTATION anno ON (anno.probe_set_id = gi.probe_set_id)
 			JOIN $TBMA_AFFY_ANNOTATION_SET anno_s ON (anno.affy_annotation_set_id = anno_s.affy_annotation_set_id) $add_affy_db_link_table
 			WHERE anno_s.affy_annotation_set_id = $annotation_set_id AND 
 			gi.protocol_id = $R_protocol_id AND
 			gi.affy_array_id IN ($affy_array_ids) 
-			$constriants
-			order BY gi.probe_set_id
+			$constraints
+			order BY anno.gene_symbol, gi.probe_set_id
       $limit->{trailing_limit_clause}
 			 ~;
 	
