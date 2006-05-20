@@ -632,6 +632,7 @@ sub get_search_batch_and_sample_id_hash
             SELECT ASB.sample_id, ASB.atlas_search_batch_id
             FROM $TBAT_ATLAS_SEARCH_BATCH ASB
             WHERE ASB.proteomics_search_batch_id = '$loading_sb_id'
+            AND ASB.record_status != 'D'
         ~;
 
         my @rows = $sbeams->selectSeveralColumns($sql);
@@ -661,7 +662,8 @@ sub get_search_batch_and_sample_id_hash
                 FROM $TBAT_SAMPLE S
                 JOIN $TBPR_PROTEOMICS_EXPERIMENT PE ON (S.sample_tag = PE.experiment_tag)
                 JOIN $TBPR_SEARCH_BATCH PSB ON (PE.experiment_id = PE.experiment_id)
-                where PSB.search_batch_id = '$loading_sb_id'
+                WHERE PSB.search_batch_id = '$loading_sb_id'
+                AND S.record_status != 'D'
             ~;
 
             @rows = $sbeams->selectSeveralColumns($sql);
@@ -689,6 +691,7 @@ sub get_search_batch_and_sample_id_hash
                 ON ( PE.experiment_id = SB.experiment_id)
                 WHERE SB.search_batch_id = '$loading_sb_id'
                 AND PE.record_status != 'D'
+                AND SB.record_status != 'D'
             ~;
 
             my @rows = $sbeams->selectSeveralColumns($sql) or die
@@ -1322,6 +1325,7 @@ sub get_biosequence_name_id_hash {
         SELECT biosequence_name,biosequence_id
         FROM $TBAT_BIOSEQUENCE
         WHERE biosequence_set_id = '$biosequence_set_id'
+        AND record_status != 'D'
     ~;
 
 
@@ -1514,6 +1518,8 @@ sub getNSpecFromProteomics
         AND PE.experiment_id = SB.experiment_id
         AND PE.experiment_id = F.experiment_id
         AND F.fraction_id = MSS.fraction_id
+        AND PE.record_status != 'D'
+        AND SB.record_status != 'D'
     ~;
 
     my @rows = $sbeams->selectOneColumn($sql) or die
@@ -2066,7 +2072,7 @@ sub readCoords_updateRecords_calcAttributes {
 
        my $sql = qq~
            SELECT peptide_instance_id, sample_ids
-           FROM PeptideAtlas.dbo.peptide_instance
+           FROM $TBAT_PEPTIDE_INSTANCE
            WHERE atlas_build_id ='$ATLAS_BUILD_ID'
        ~;
 
@@ -2082,8 +2088,9 @@ sub readCoords_updateRecords_calcAttributes {
        ## get an array of sample_id for a given atlas_id
        $sql = qq~
            SELECT sample_id
-           FROM PeptideAtlas.dbo.atlas_build_sample
+           FROM $TBAT_ATLAS_BUILD_SAMPLE
            WHERE atlas_build_id ='$ATLAS_BUILD_ID'
+           AND record_status != 'D'
         ~;
 
        my @sample_id_array =  $sbeams->selectOneColumn($sql) 
@@ -2100,8 +2107,9 @@ sub readCoords_updateRecords_calcAttributes {
        ## sample_id = one of "sample_id_string"
        $sql = qq~
            SELECT peptide_instance_id, sample_id
-           FROM PeptideAtlas.dbo.peptide_instance_sample
-            WHERE sample_id IN ( $sample_id_string )
+           FROM $TBAT_PEPTIDE_INSTANCE_SAMPLE
+           WHERE sample_id IN ( $sample_id_string )
+           AND record_status != 'D'
        ~;
        ## returns an array of references to arrays (each of which is a returned row?)
        my @peptide_instance_id_ref_array = $sbeams->selectSeveralColumns($sql)
