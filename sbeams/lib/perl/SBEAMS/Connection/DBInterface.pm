@@ -4837,6 +4837,27 @@ sub display_input_form {
       !;
     }
 
+    if ($input_type eq "radio") {
+
+	# hack-ish replacement of optionlist html to generate radio button html
+	$optionlists{$column_name} =~ 
+	    s/<OPTION VALUE=/
+	    <INPUT TYPE="radio" NAME="$column_name" VALUE=/g;
+
+	$optionlists{$column_name} =~ 
+	    s/<OPTION SELECTED VALUE=/
+	    <INPUT TYPE="radio" NAME="$column_name" CHECKED="checked" VALUE=/g;
+
+	$optionlists{$column_name} =~ 
+	    s|</OPTION>|</INPUT>|g;
+
+      print qq~
+        <TD>
+	  $optionlists{$column_name}</TD>
+      ~;
+    }
+
+
     if ($input_type eq "current_contact_id") {
       my $username = "";
       my $current_username = $self->getCurrent_username();
