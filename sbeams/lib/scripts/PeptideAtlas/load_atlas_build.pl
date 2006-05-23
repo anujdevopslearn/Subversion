@@ -309,7 +309,6 @@ sub get_atlas_build_id {
 ###############################################################################
 sub get_atlas_build_directory
 {
-
     my %args = @_;
 
     my $atlas_build_id = $args{atlas_build_id} or die "need atlas build id($!)";
@@ -613,10 +612,9 @@ sub get_search_batch_and_sample_id_hash
     my $loading_sbid_list = get_string_list_of_keys(
         hash_ref => \%loading_sbid_searchdir_hash);
 
-
     foreach my $loading_sb_id (keys %loading_sbid_searchdir_hash )
     {
-        my ($atlas_search_batch_id, $sid);
+        my ($atlas_search_batch_id, $sample_id);
 
         my $asb_exists = "false";
 
@@ -625,7 +623,6 @@ sub get_search_batch_and_sample_id_hash
         ##########  handle sample records ##################
         ## since there are so few sample_records, will query one at a 
         ## time instead of large select
-
 
         #### see if an atlas_search_batch record exists ####
         my $sql = qq~
@@ -640,13 +637,13 @@ sub get_search_batch_and_sample_id_hash
         foreach my $row (@rows)
         {
             my ($s_id, $asb_id) = @{$row};
-            $sid = $s_id;
+            $sample_id = $s_id;
             $atlas_search_batch_id = $asb_id;
             $asb_exists = "true";
         }
 
 
-        if ( $asb_exists )
+        if ( $asb_exists eq "true" )
         { ## If $TBAT_ATLAS_SEARCH_BATCH exists, then so does a sample, and just got it in last query
             $sample_exists = "true";
         } else
@@ -661,8 +658,9 @@ sub get_search_batch_and_sample_id_hash
                 SELECT S.sample_id
                 FROM $TBAT_SAMPLE S
                 JOIN $TBPR_PROTEOMICS_EXPERIMENT PE ON (S.sample_tag = PE.experiment_tag)
-                JOIN $TBPR_SEARCH_BATCH PSB ON (PE.experiment_id = PE.experiment_id)
+                JOIN $TBPR_SEARCH_BATCH PSB ON (PE.experiment_id = PSB.experiment_id)
                 WHERE PSB.search_batch_id = '$loading_sb_id'
+                AND PE.record_status != 'D'
                 AND S.record_status != 'D'
             ~;
 
@@ -671,18 +669,16 @@ sub get_search_batch_and_sample_id_hash
             foreach my $row (@rows)
             {
                 my ($s_id) = @{$row};
-                $sid = $s_id;
+                $sample_id = $s_id;
                 $sample_exists = "true";
             }
         }
-
 
         ## Lastly, if no sample_id, create one from protomics record.  
         ## if this is true, then also will be missing [atlas_search_batch] and 
         ## [atlas_search_batch_parameter] and [atlas_search_batch_parameter_set]
         if ( ($asb_exists eq "false") || ($sample_exists eq "false") )
         {
-
             $sql = qq~
                 SELECT distinct SB.search_batch_id, PE.experiment_name, PE.experiment_tag,
                 SB.data_location
@@ -691,10 +687,9 @@ sub get_search_batch_and_sample_id_hash
                 ON ( PE.experiment_id = SB.experiment_id)
                 WHERE SB.search_batch_id = '$loading_sb_id'
                 AND PE.record_status != 'D'
-                AND SB.record_status != 'D'
             ~;
 
-            my @rows = $sbeams->selectSeveralColumns($sql) or die
+            @rows = $sbeams->selectSeveralColumns($sql) or die
                 "Could not find proteomics experiment record for ".
                 " search batch id $loading_sb_id \n$sql\n ($!)";
 
@@ -715,9 +710,7 @@ sub get_search_batch_and_sample_id_hash
                         project_id => $default_sample_project_id,
                     );
 
-                    $sid = insert_sample( rowdata_ref => \%rowdata );
-
-                    print "INFO[$METHOD]: created sample record $sid\n";
+                    $sample_id = insert_sample( rowdata_ref => \%rowdata );
                 }
 
 
@@ -726,12 +719,10 @@ sub get_search_batch_and_sample_id_hash
         
                 $atlas_search_batch_id = create_atlas_search_batch(
                     proteomics_search_batch_id => $loading_sb_id,
-                    sample_id => $sid,
+                    sample_id => $sample_id,
                     search_batch_path => $search_batch_path
                 );
 
-
-            
                 ## create [atlas_search_batch_parameter]s and [atlas_search_batch_parameter_set]
                 my $successful = create_atlas_search_batch_parameter_recs(
                     atlas_search_batch_id => $atlas_search_batch_id,
@@ -745,7 +736,7 @@ sub get_search_batch_and_sample_id_hash
         ### okay, all [sample] records exist now, and [atlas_search_batch]s
 
         ## load 'em into hash
-        $loaded_sbid_asbid_sid_hash{$loading_sb_id}->{sample_id} = $sid;
+        $loaded_sbid_asbid_sid_hash{$loading_sb_id}->{sample_id} = $sample_id;
 
         $loaded_sbid_asbid_sid_hash{$loading_sb_id}->{atlas_search_batch_id} = 
             $atlas_search_batch_id;
@@ -755,16 +746,14 @@ sub get_search_batch_and_sample_id_hash
         my $atlas_build_search_batch_id = 
             create_atlas_build_search_batch(
                 atlas_build_id => $atlas_build_id,
-                sample_id => $sid,
-                search_batch_id => $loading_sb_id,
+                sample_id => $sample_id,
                 atlas_search_batch_id => $atlas_search_batch_id,
             );
-
 
         ## create a [spectra_description_set] record
         insert_spectra_description_set( 
             atlas_build_id => $atlas_build_id,
-            sample_id => $sid,
+            sample_id => $sample_id,
             atlas_search_batch_id => $atlas_search_batch_id,
             search_batch_dir_path =>$loading_sbid_searchdir_hash{$loading_sb_id}
         );
@@ -772,7 +761,7 @@ sub get_search_batch_and_sample_id_hash
 
         ## create [atlas_build_sample] record
         my $atlas_build_sample_id = createAtlasBuildSampleLink(
-            sample_id => $sid,
+            sample_id => $sample_id,
             atlas_build_id => $atlas_build_id,
         );
 
@@ -977,6 +966,8 @@ sub create_atlas_search_batch
         testonly=>$TESTONLY,
     );
 
+    print "[INFO] Created  atlas_search_batch record $atlas_search_batch_id\n";
+
     return $atlas_search_batch_id;
 
 }
@@ -984,7 +975,6 @@ sub create_atlas_search_batch
 
 #######################################################################
 # create_atlas_build_search_batch -- create atlas_build_search_batch record
-# @param search_batch_id  search batch id to look-up Proteomics info
 # @param sample_id  sample_id
 # @param atlas_build_id
 # @param atlas_search_batch_id  atlas_search_batch_id
@@ -994,8 +984,6 @@ sub create_atlas_build_search_batch
 {
 
     my %args = @_;
-
-    my $sbid = $args{search_batch_id} or die "need search_batch_id ($!)";
 
     my $sid = $args{sample_id} or die "need sample_id ($!)";
 
@@ -1161,7 +1149,6 @@ sub create_atlas_search_batch_parameter_recs
 ###############################################################################
 sub insert_sample
 {
-
     my $METHOD='insert_sample';
 
     my %args = @_;
@@ -1182,6 +1169,8 @@ sub insert_sample
         verbose=>$VERBOSE,
         testonly=>$TESTONLY,
     );
+
+    print "INFO[$METHOD]: created sample record $sample_id\n";
 
     return $sample_id;
 
@@ -1519,7 +1508,6 @@ sub getNSpecFromProteomics
         AND PE.experiment_id = F.experiment_id
         AND F.fraction_id = MSS.fraction_id
         AND PE.record_status != 'D'
-        AND SB.record_status != 'D'
     ~;
 
     my @rows = $sbeams->selectOneColumn($sql) or die
