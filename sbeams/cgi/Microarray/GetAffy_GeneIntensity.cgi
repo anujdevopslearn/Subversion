@@ -1060,7 +1060,9 @@ sub print_simple_form {
   print "<br><hr>";
   show_other_query_page(type_to_show=>'Advanced');
   print $q->start_form({-name=>'get_all_files'});		#Same form element is used for the array check boxes
-  print "<br/><br/>";
+  print "<br/>";
+
+  print get_documentation_link() . "<BR>";
 
   print $q->table( {-border=>0},
 		  caption({-class=>'grey_bg'},'Simple Query'),
@@ -1577,7 +1579,7 @@ sub print_table_legend {
   ~;
 
   $table_cells = "<table border=0>";
-  $table_cells .= "<tr><td>10 (and below) </td>";    #start the first row of the table
+  $table_cells .= "<tr><td NOWRAP=1>10 (and below) </td>";    #start the first row of the table
 
   my $start_range; # = 10;
   my $end_range; #   = 10;
@@ -1604,7 +1606,7 @@ sub print_table_legend {
     }  
 
     # end the row give the number in real space not log space
-    $table_cells .= "<td>$end_range $and_above</td></tr>";
+    $table_cells .= "<td NOWRAP=1>$end_range $and_above</td></tr>";
     # start the new row
     $table_cells .= "<tr><td>" . ( $end_range + 1 ) . "</td>" unless ( $log_base == $end_space );
       $start_range = $end_range + 1;
@@ -1854,6 +1856,11 @@ example view of pivot hash
 
   # Begin to print out the content 
   print "<table border=0> <tr>";
+
+  my $back_link = get_back_link();
+  my $total_columns = scalar( @new_column_names );
+  print "<TD ALIGN=left COLSPAN=$total_columns>$back_link</TD></TR><TR>";
+
   foreach my $col_name (@new_column_names) {   #Print out the Column names
     print "<td class='grey_bg'>$col_name</td>";
   }
@@ -1884,6 +1891,22 @@ example view of pivot hash
   }
   print "</table>\n";
   print_table_legend( $coalesced );
+}
+
+sub get_documentation_link {
+  return '<A HREF=http://scgap.systemsbiology.net/doc/gene_expression_search.pdf>Search Help</A>';
+}
+
+sub get_back_link {
+  $q->delete( 'get_all_files' );
+  $q->delete( 'probe_set_id' );
+  $q->delete( 'gene_name' );
+  $q->delete( 'accession_number' );
+  $q->delete( 'submit_query' );
+  $q->delete( 'action' );
+
+  my $url = $q->self_url();
+  return "<A HREF=$url>New Search</A>";
 }
 
 ###############################################################################
