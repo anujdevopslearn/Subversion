@@ -1535,7 +1535,7 @@ sub updateOrInsertRow {
 
   #### If we're just testing
   if ( $testonly ) {
-      print "          ( not actually executing SQL ... )\n";
+      print "          ( not actually executing SQL ... )\n" if ($verbose > 0);
       $self->prepareSQL( sql => $sql );
 
       #### If the user asked for the PK to be returned, make a random one up
