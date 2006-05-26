@@ -2,7 +2,7 @@
 
 UPDATE table_column
   SET optionlist_query = '
-SELECT DISTINCT search_batch_id,username + '' - '' + experiment_tag + '' -> '' + set_tag,username,experiment_tag,set_tag
+SELECT DISTINCT search_batch_id,username + '' - '' + experiment_tag + '' -> '' + search_batch_subdir + '' ('' + set_tag + '' )'',username,experiment_tag,set_tag
   FROM $TBPR_PROTEOMICS_EXPERIMENT PE
   INNER JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
   INNER JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
@@ -23,7 +23,7 @@ GO
 
 UPDATE table_column
   SET optionlist_query = '
-SELECT DISTINCT SB.search_batch_id,username + '' - '' + experiment_tag + '' -> '' + set_tag,username,experiment_tag,set_tag
+SELECT DISTINCT SB.search_batch_id,username + '' - '' + experiment_tag + '' -> '' + search_batch_subdir + '' ('' + set_tag + '' )'',username,experiment_tag,set_tag
   FROM $TBPR_PROTEOMICS_EXPERIMENT PE
   INNER JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
   INNER JOIN $TBPR_SEARCH_BATCH_PROTEIN_SUMMARY SBPS ON ( SB.search_batch_id = SBPS.search_batch_id )
