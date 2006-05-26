@@ -570,7 +570,8 @@ sub handle_request {
   #### [friendly name used in url_cols,SQL,displayed column title]
   my @column_array = (
     ["experiment_tag","experiment_tag","Exp"],
-    ["set_tag","set_tag","DB"],
+    #["set_tag","set_tag","DB"],
+    ["search_batch_subdir","search_batch_subdir","Search Batch"],
     ["file_root","S.file_root","file_root"],
     ["out_file","'.out'",".out"],
     ["fraction_number","F.fraction_number","Frac #"],
