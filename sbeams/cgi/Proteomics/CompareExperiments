@@ -997,12 +997,12 @@ sub handle_request {
                'InterPro Protein Domain_ATAG' => 'TARGET="WinExt"',
                'InterPro Protein Domain_OPTIONS' => {semicolon_separated_list=>1},
 
-               'PA Prot' => "http://db.systemsbiology.net/dev2/sbeams/cgi/PeptideAtlas/Search?search_key=\%$colnameidx{biosequence_accession}V&action=GO",
+               'PA Prot' => "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/Search?search_key=\%$colnameidx{biosequence_accession}V&action=GO",
                'PA Prot_ATAG' => 'TARGET="WinPeptideAtlas"',
                'PA Prot_ISNULL' => '<IMG BORDER="0" SRC="/sbeams/images/pa_tiny.png">',
                'PA Prot_OPTIONS' => {embed_html=>1},
 
-               'PA Pep' => "http://db.systemsbiology.net/dev2/sbeams/cgi/PeptideAtlas/Search?search_key=\%$colnameidx{peptide}V&action=GO",
+               'PA Pep' => "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/Search?search_key=\%$colnameidx{peptide}V&action=GO",
                'PA Pep_ATAG' => 'TARGET="WinPeptideAtlas"',
                'PA Pep_ISNULL' => '<IMG BORDER="0" SRC="/sbeams/images/pa_tiny.png">',
                'PA Pep_OPTIONS' => {embed_html=>1},

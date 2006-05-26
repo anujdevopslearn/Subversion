@@ -740,12 +740,12 @@ sub handle_request {
                'mzXML Quant' => "$CGI_BASE_DIR/Proteomics/Xpress-mzXML.cgi?quantitation_id=\%$colnameidx{quantitation_id}V&OutFile=\%$colnameidx{file_root}V",
 	       'mzXML Quant_ATAG' => 'TARGET="Win1"',
 
-               'PA Prot' => "http://db.systemsbiology.net/dev2/sbeams/cgi/PeptideAtlas/Search?search_key=\%$colnameidx{reference}V&action=GO",
+               'PA Prot' => "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/Search?search_key=\%$colnameidx{reference}V&action=GO",
                'PA Prot_ATAG' => 'TARGET="WinPeptideAtlas"',
                'PA Prot_ISNULL' => '<IMG BORDER="0" SRC="/sbeams/images/pa_tiny.png">',
                'PA Prot_OPTIONS' => {embed_html=>1},
 
-               'PA Pep' => "http://db.systemsbiology.net/dev2/sbeams/cgi/PeptideAtlas/Search?search_key=\%$colnameidx{peptide}V&action=GO",
+               'PA Pep' => "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/Search?search_key=\%$colnameidx{peptide}V&action=GO",
                'PA Pep_ATAG' => 'TARGET="WinPeptideAtlas"',
                'PA Pep_ISNULL' => '<IMG BORDER="0" SRC="/sbeams/images/pa_tiny.png">',
                'PA Pep_OPTIONS' => {embed_html=>1},
