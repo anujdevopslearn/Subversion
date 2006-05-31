@@ -658,6 +658,14 @@ sub printEntryForm {
         # Null out val so it isn't passed on.
         $parameters{$column_name} = '';
       }
+    } elsif ( defined($is_display_column) && $is_display_column ne '2' &&
+	      defined($parameters{detail_level}) &&
+	      $parameters{detail_level} eq 'minimum_detail') {
+      print qq~
+        <INPUT TYPE="hidden" NAME="$column_name"
+         VALUE="$parameters{$column_name}">
+      ~;
+      next;
     }
 
     # Begin display block for read-only data.  Render as a simple HTML <TABLE>
