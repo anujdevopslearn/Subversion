@@ -115,11 +115,18 @@ sub display_page_header {
 	<tr><td>Forms</td></tr>
         <tr><td><a href="$HTML_BASE_DIR/doc/SIGID/SIGID_informed_consent_fr.pdf"><nobr>&nbsp;&nbsp;&nbsp;Formulaire de consentement &#233clair&#233</nobr></a></td></tr>
         <tr><td><a href="$HTML_BASE_DIR/doc/SIGID/SIGID_informed_consent_ger.pdf"><nobr>&nbsp;&nbsp;&nbsp;Informierte Zustimmungform</nobr></a></td></tr>
+
 	<tr><td>&nbsp;</td></tr>
         <tr><td>Physician Tasks:</td></tr>
         <tr><td><nobr>Verify inclusion/exclusion status</nobr></td></tr>
-        <tr><FORM METHOD="post">
-        <TD><B>Patient Study ID:</B><INPUT TYPE="text" NAME="patient_study_id" VALUE="" SIZE="15"></TD>
+        <tr>
+        <FORM NAME="PhysInclExlForm" METHOD="get" ACTION="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi">
+        <TD><NOBR><B>Patient Study ID:</B><INPUT TYPE="text" NAME="patient_id" VALUE="" SIZE="10">
+               <input type="hidden" name="TABLE_NAME" value="SI_patient"/>
+               <input type="hidden" name="detail_level" value="minimum_detail"/>
+            </NOBR>
+        </TD>
+        </FORM
         </TR><TR>
         <TD COLSPAN=2 ALIGN="center">
         <BR>
