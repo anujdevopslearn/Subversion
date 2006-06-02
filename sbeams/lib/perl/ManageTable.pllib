@@ -2085,10 +2085,10 @@ sub checkForPreexistingRecord {
     $value =~ s/\'/\'\'/g;
     if ($value eq '') {
       $sql_query .= "
-         AND ( $element LIKE '$value' OR $element IS NULL )";
+         AND ( $element = '$value' OR $element IS NULL )";
     } else {
       $sql_query .= "
-         AND $element LIKE '$value'";
+         AND $element = '$value'";
     }
     $error_message .= "<B>$element</B> = '$unique_values{$element}'<BR>\n";
   }
