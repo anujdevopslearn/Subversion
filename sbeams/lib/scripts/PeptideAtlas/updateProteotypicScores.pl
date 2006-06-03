@@ -428,10 +428,18 @@ sub updateObservedProteotypicScores {
 
   }
 
-  my $predicted_scores = readPredictorOutput(
-    source_file => 'calculated_proteotypic.tsv',
-  );
 
+
+  my $predicted_scores;
+  if (-e 'calculated_proteotypic.tsv') {
+    $predicted_scores = readPredictorOutput(
+      source_file => 'calculated_proteotypic.tsv',
+    );
+  } else {
+    print "WARNING: Unable to find 'calculated_proteotypic.tsv'. All ".
+      "calculated values will be 0\n";
+    $predicted_scores->{'N/A'} = 1;
+  }
 
   my $export_file = 'proteotypic_scores.tsv';
   open(OUTFILE,">$export_file") or
@@ -453,8 +461,13 @@ sub updateObservedProteotypicScores {
   my $counter = 0;
 
   foreach my $peptide ( keys(%peptide_scores) ) {
+
+    if ($predicted_scores->{'N/A'}) {
+      $predicted_scores->{$peptide} = 0;
+    }
+
     if ($peptide_scores{$peptide}->{n_protein_samples} > 2 &&
-	$predicted_scores->{$peptide}) {
+	exists($predicted_scores->{$peptide})) {
 
       print OUTFILE $peptide."\t".
         $peptide_scores{$peptide}->{sequence}."\t".
