@@ -179,6 +179,7 @@ sub handle_request {
   #### Get the passed parameters
   my $search_key = $parameters{"search_key"};
   my $organism_name = $parameters{"organism_name"};
+  my $build_type_name = $parameters{"build_type_name"};
 
   #### If a new search_key was supplied, store it
   if ($search_key) {
@@ -195,9 +196,10 @@ sub handle_request {
   }
 
 
-  #### Build the list of organism_names
-  my $organism_selection = getOrganismSelection(
+  #### Build the list of build type names
+  my $build_type_selection = getBuildTypeSelection(
     organism_name => $organism_name,
+    build_type_name => $build_type_name,
   );
 
 
@@ -253,8 +255,8 @@ sub handle_request {
           <A HREF="$base_url?search_key=PAp00000097&action=GO">PAp00000097</A>,
           <A HREF="$base_url?search_key=AAVEEGIVLGGGCALLR&action=GO">AAVEEGIVLGGGCALLR</A>
         )<BR>
-        Organism: <select name="organism_name">
-        $organism_selection->{HTML_optionlist}
+        Build type: <select name="build_type_name">
+        $build_type_selection->{HTML_optionlist}
         </select>
         </CENTER></nobr>
         </P>
@@ -297,7 +299,7 @@ sub handle_request {
   my @column_array = (
     ["search_key_name","SK.search_key_name","Search Key"],
     ["search_key_type","SK.search_key_type","search_key_type"],
-    ["organism_name","O.organism_name","Organism"],
+    ["build_type","(CASE WHEN DAB.organism_specialized_build IS NULL THEN O.organism_name ELSE DAB.organism_specialized_build END)","Build Type"],
     ["resource_name","SK.resource_name","Identifier"],
     ["resource_type","SK.resource_type","resource_type"],
     ["resource_n_matches","SK.resource_n_matches","N Peptides"],
@@ -321,9 +323,12 @@ sub handle_request {
        SELECT $columns_clause
          FROM $TBAT_SEARCH_KEY SK
          JOIN $TB_ORGANISM O ON (O.organism_id = SK.organism_id)
+         JOIN $TBAT_DEFAULT_ATLAS_BUILD DAB
+              ON ( SK.atlas_build_id = DAB.atlas_build_id
+                   AND DAB.organism_id IS NOT NULL )
         WHERE 1 = 1
           $search_key_clause
-          AND O.organism_id IN ( $organism_selection->{organism_ids} )
+          AND SK.atlas_build_id IN ( $build_type_selection->{atlas_build_ids} )
        ORDER BY search_key_name
   ~;
 
@@ -458,26 +463,34 @@ sub handle_request {
 
 
 ###############################################################################
-# getOrganismSelection
+# getBuildTypeSelection
 ###############################################################################
-sub getOrganismSelection {
-  my $SUB_NAME = 'getOrganismSelection';
+sub getBuildTypeSelection {
+  my $SUB_NAME = 'getBuildTypeSelection';
   my %args = @_;
 
   #### Decode the argument list
   my $organism_name = $args{'organism_name'};
+  my $build_type_name = $args{'build_type_name'};
 
 
-  #### If none was supplied, see if it was cached for this session
+  #### If no organism was supplied, see if it was cached for this session
   unless ($organism_name) {
     $organism_name = $sbeams->getSessionAttribute(
       key => 'PeptideAtlas_organism_name',
     );
   }
 
+  #### If no build_type_name was supplied, see if it's cached for this session
+  unless ($build_type_name) {
+    $build_type_name = $sbeams->getSessionAttribute(
+      key => 'PeptideAtlas_build_type_name',
+    );
+  }
+
   #### Or default to Any
-  unless ($organism_name) {
-    $organism_name = 'Any';
+  unless ($build_type_name) {
+    $build_type_name = $organism_name || 'Any';
   }
 
 
@@ -487,27 +500,31 @@ sub getOrganismSelection {
 
   #### Get a hash of available organisms via atlas builds
   my $sql = qq~
-      SELECT DISTINCT O.organism_id,O.organism_name
+      SELECT DISTINCT DAB.atlas_build_id,O.organism_name,DAB.organism_specialized_build
         FROM $TBAT_ATLAS_BUILD AB
+        JOIN $TBAT_DEFAULT_ATLAS_BUILD DAB
+             ON (AB.atlas_build_id = DAB.atlas_build_id)
         JOIN $TBAT_BIOSEQUENCE_SET BS
              ON (BS.biosequence_set_id = AB.biosequence_set_id)
         JOIN $TB_ORGANISM O ON (O.organism_id = BS.organism_id)
        WHERE AB.project_id IN ( $accessible_project_ids )
          AND AB.record_status!='D'
-       ORDER BY organism_name
+         AND DAB.record_status!='D'
+       ORDER BY organism_name,DAB.organism_specialized_build
   ~;
-  my @organisms = $sbeams->selectSeveralColumns($sql);
+  #print "Content-type: text/html\n\n<PRE>$sql</PRE>\n";
+  my @build_types = $sbeams->selectSeveralColumns($sql);
 
   my @options = ('Any');
   my %options = ('Any'=>'Any');
-  my %organism_ids;
+  my %atlas_build_ids;
 
   #### Build the list of available organisms
-  foreach my $organism ( @organisms ) {
-    my $each_organism_name = $organism->[1];
-    push(@options,$each_organism_name);
-    $options{$each_organism_name} = $each_organism_name;
-    $organism_ids{$each_organism_name} = $organism->[0];
+  foreach my $build_type ( @build_types ) {
+    my $build_type_name = $build_type->[2] || $build_type->[1];
+    push(@options,$build_type_name);
+    $options{$build_type_name} = $build_type_name;
+    $atlas_build_ids{$build_type_name} = $build_type->[0];
   }
 
 
@@ -516,7 +533,7 @@ sub getOrganismSelection {
   my $matched_parameter = 0;
   foreach my $key ( @options ) {
     my $flag = '';
-    if ($key eq $organism_name) {
+    if ($key eq $build_type_name) {
       $flag = 'SELECTED';
       $matched_parameter++;
     }
@@ -526,31 +543,31 @@ sub getOrganismSelection {
 
   #### Also make sure the user selected a valid option
   unless ($matched_parameter) {
-    $organism_name = 'Any';
+    $build_type_name = 'Any';
   }
 
 
-  #### Get the organism_ids
-  my $organism_ids = $organism_ids{$organism_name};
-  if ($organism_name eq 'Any') {
-    $organism_ids = join(",",values(%organism_ids));
+  #### Get the atlas_build_ids
+  my $atlas_build_ids = $atlas_build_ids{$build_type_name};
+  if ($build_type_name eq 'Any') {
+    $atlas_build_ids = join(",",values(%atlas_build_ids));
   }
 
   #### Build a data structure to return
   my %tmp = (
     HTML_optionlist => $optionlist,
-    organism_name => $organism_name,
-    organism_ids => $organism_ids,
+    build_type_name => $build_type_name,
+    atlas_build_ids => $atlas_build_ids,
   );
 
   #### Store the selected organism_name in the session cache
-  if ($organism_name) {
+  if ($build_type_name) {
     $sbeams->setSessionAttribute(
-      key => 'PeptideAtlas_organism_name',
-      value => $organism_name,
+      key => 'PeptideAtlas_build_type_name',
+      value => $build_type_name,
     );
   }
 
   return \%tmp;
 
-} # end getOrganismSelection
+} # end getBuildTypeSelection
