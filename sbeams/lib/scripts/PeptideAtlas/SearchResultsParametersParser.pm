@@ -76,6 +76,11 @@ sub parse
     ## get pepXML file
     my $infile = $self->{search_batch_directory} . "/interact-prob.xml";
 
+    #### Sometimes search_batch_dir_path is actually a file??
+    if ($self->{search_batch_directory} =~ /\.xml/) {
+      $infile = $self->{search_batch_directory};
+    }
+
     unless(-e $infile)
     {
         print "[WARN] could not find $infile\n";
