@@ -104,12 +104,18 @@ sub rebuildKeyIndex {
   my $organism_name = $args{organism_name}
     or die("ERROR[$METHOD]: Parameter organism_name not passed");
 
+  my $organism_specialized_build = $args{organism_specialized_build};
+
+
   if ($organism_name eq 'Human') {
 
     my $GOA_directory = $args{GOA_directory}
       or die("ERROR[$METHOD]: Parameter GOA_directory not passed");
 
-    $self->dropKeyIndex(organism_id=>2);
+    $self->dropKeyIndex(
+      atlas_build_id => $atlas_build_id,
+      organism_specialized_build => $organism_specialized_build,
+    );
 
     print "Loading protein keys from GOA...\n";
     $self->buildGoaKeyIndex(
@@ -120,8 +126,8 @@ sub rebuildKeyIndex {
 
     print "Loading peptides keys...\n";
     $self->buildPeptideKeyIndex(
-      organism_id=>2,
-      atlas_build_id=>$atlas_build_id,
+      organism_id => 2,
+      atlas_build_id => $atlas_build_id,
     );
 
     print "\n";
@@ -134,7 +140,10 @@ sub rebuildKeyIndex {
     my $SGD_directory = $args{SGD_directory}
       or die("ERROR[$METHOD]: Parameter SGD_directory not passed");
 
-    $self->dropKeyIndex(organism_id=>3);
+    $self->dropKeyIndex(
+      atlas_build_id => $atlas_build_id,
+      organism_specialized_build => $organism_specialized_build,
+    );
 
     print "Loading protein keys from SGD_features.tab...\n";
     $self->buildSGDKeyIndex(
@@ -170,10 +179,10 @@ sub dropKeyIndex {
   my $self = shift || die ("self not passed");
   my %args = @_;
 
-  my $organism_id = $args{organism_id}
-    or die("ERROR[$METHOD]: Parameter organism_id not passed");
+  my $atlas_build_id = $args{atlas_build_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
 
-  print "INFO[$METHOD] Dropping key index for organism_id=$organism_id...\n"
+  print "INFO[$METHOD] Dropping key index for atlas_build_id=$atlas_build_id...\n"
     if ($VERBOSE);
 
   unless ($sbeams) {
@@ -183,7 +192,7 @@ sub dropKeyIndex {
   #my $sql = "DROP INDEX $TBAT_SEARCH_KEY.idx_search_key_name";
   #$sbeams->executeSQL($sql);
 
-  my $sql = "DELETE FROM $TBAT_SEARCH_KEY WHERE organism_id = '$organism_id'";
+  my $sql = "DELETE FROM $TBAT_SEARCH_KEY WHERE atlas_build_id = '$atlas_build_id'";
   $sbeams->executeSQL($sql);
 
   return(1);
@@ -227,8 +236,8 @@ sub buildGoaKeyIndex {
 
   #### Get the list of proteins that have a match
   my $matched_proteins = $self->getNProteinHits(
-    organism_id=>2,
-    atlas_build_id=>$atlas_build_id,
+    organism_id => 2,
+    atlas_build_id => $atlas_build_id,
   );
 
   #### Read all the data
@@ -360,6 +369,7 @@ sub buildGoaKeyIndex {
         search_key_type => 'Ensembl Protein',
         search_key_dbxref_id => 20,
         organism_id => 2,
+        atlas_build_id => $atlas_build_id,
         resource_name => $Ensembl_ID,
         resource_type => 'Ensembl Protein',
         resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$Ensembl_ID&action=QUERY",
@@ -380,6 +390,7 @@ sub buildGoaKeyIndex {
 	  search_key_type => $link->[0],
 	  search_key_dbxref_id => $link->[2],
           organism_id => 2,
+          atlas_build_id => $atlas_build_id,
 	  resource_name => $Ensembl_ID,
 	  resource_type => 'Ensembl Protein',
 	  resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$Ensembl_ID&action=QUERY",
@@ -582,6 +593,7 @@ sub buildSGDKeyIndex {
         search_key_type => $link->[0],
         search_key_dbxref_id => $link->[2],
         organism_id => 3,
+        atlas_build_id => $atlas_build_id,
         resource_name => $feature_name,
         resource_type => 'Yeast ORF Name',
         resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$feature_name&action=QUERY",
@@ -673,6 +685,7 @@ sub buildPeptideKeyIndex {
       search_key_name => $peptide->[0],
       search_key_type => 'PeptideAtlas',
       organism_id => $organism_id,
+      atlas_build_id => $atlas_build_id,
       resource_name => $peptide->[0],
       resource_type => 'PeptideAtlas peptide',
       resource_url => "GetPeptide?atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$peptide->[0]&action=QUERY",
@@ -690,6 +703,7 @@ sub buildPeptideKeyIndex {
       search_key_name => $peptide->[1],
       search_key_type => 'peptide sequence',
       organism_id => $organism_id,
+      atlas_build_id => $atlas_build_id,
       resource_name => $peptide->[0],
       resource_type => 'PeptideAtlas peptide',
       resource_url => "GetPeptide?atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$peptide->[0]&action=QUERY",
@@ -760,7 +774,7 @@ sub getProteinSynonyms {
 
   #### Get all the peptides in the database, regardless of build
   my $sql = qq~
-       SELECT search_key_name,search_key_type,accessor,accessor_suffix
+       SELECT DISTINCT search_key_name,search_key_type,accessor,accessor_suffix
          FROM $TBAT_SEARCH_KEY SK
          LEFT JOIN $TB_DBXREF D
               ON ( SK.search_key_dbxref_id = D.dbxref_id )
