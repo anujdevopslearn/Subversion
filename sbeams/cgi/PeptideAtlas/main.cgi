@@ -123,7 +123,8 @@ sub handle_request {
     parameters_ref => \%parameters,
   );
   if (defined($atlas_build_id) && $atlas_build_id < 0) {
-    return;
+    #### Don't return. Let the user pick from a valid one.
+    #return;
   }
 
 
@@ -187,6 +188,10 @@ sub handle_request {
                              -action=>"$base_url",
 			     -name=>"AtlasBuildList",
                             );
+
+	unless ($default_build_name) {
+	  $default_build_name = qq~<FONT COLOR="red"> - NONE - </FONT>~;
+	}
 
         print qq~
 <P>Below is a listing of the PeptideAtlas builds available to
