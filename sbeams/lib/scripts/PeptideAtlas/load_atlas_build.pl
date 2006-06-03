@@ -1120,6 +1120,10 @@ sub create_atlas_search_batch_parameter_recs
 
     }
 
+    #### If there was no NumEnzymeTermini specified, the default is 0
+    $num_enzyme_termini = 0 unless ($num_enzyme_termini);
+
+
     my %rowdata = ( ##   ATLAS_SEARCH_BATCH_PARAMETER_SET attributes
         peptide_mass_tolerance => $peptide_mass_tolerance,
         peptide_ion_tolerance => $peptide_ion_tolerance,
@@ -2249,9 +2253,15 @@ sub getMzXMLFileNames
 
     my $infile = "$search_batch_dir_path/interact-prob.xml";
 
+    #### Sometimes search_batch_dir_path is actually a file??
+    if ($search_batch_dir_path =~ /\.xml/) {
+      $infile = $search_batch_dir_path;
+    }
+
     ## to handle both older and newer formats:
     my ($msRunPepXMLFileName, $mzXMLFileName);
     my (@msRunPepXMLFileNames, @mzXMLFileNames);
+    my $guessed_experiment_dir;
 
     unless(-e $infile)
     {
@@ -2261,7 +2271,7 @@ sub getMzXMLFileNames
     }
     unless(-e $infile)
     {
-        die "could not find $infile either\n";
+        die "could not find $infile either. Abort.\n";
     }
 
     open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
@@ -2287,10 +2297,25 @@ sub getMzXMLFileNames
 
         }
 
-        if ($line =~ /(\<roc)(.+)/ )
+        #### Workaround for problem Qstar experiments, specifically
+        #### /sbeams/archive/rossola/HUPO-ISB/b1-CIT_glyco_qstar
+	if ($line =~ m~directory="(.+)/.+">~) {
+	  $guessed_experiment_dir = $1;
+	}
+        if ($line =~ m~<inputfile name="(.+)\.xml"/>~) {
+	  $mzXMLFileName = "$guessed_experiment_dir/$1.mzXML";
+	  push (@mzXMLFileNames, $mzXMLFileName);
+	}
+
+
+	#### Finish parsing if we get to <roc> element and we've found something
+        if ($line =~ /(\<roc)(.+)/ && $mzXMLFileName)
         {
             last;
         }
+
+	#### Finish parsing that <spectrum_query> for sure
+        last if ($line =~ /\<spectrum_query/);
 
     }
 
