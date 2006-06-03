@@ -114,31 +114,42 @@ sub parse
             $schema = $2;
         }
 
-        if ($line =~ /.+\<msManufacturer\scategory=\".+\"\svalue=\"(.+)\"\/\>/)
+        if ($line =~ /\<msManufacturer\scategory=\".+\"\svalue=\"(.+)\"\/\>/)
         {
             $model_name = $1;
         }
-        if ($line =~ /.+\<msModel\scategory=\".+\"\svalue=\"(.+)\"\/\>/)
+        if ($line =~ /\<msModel\scategory=\".+\"\svalue=\"(.+)\"\/\>/)
         {
             $model_name = $model_name . " $1";
         }
 
         ## former MsXML schema:
-        if ($line =~ /.+\<instrument\smanufacturer=\"(.+)\"/ )
+        if ($line =~ /\<instrument\smanufacturer=\"(.+)\"/ )
         {
             $model_name = $1;
 
             ## read the next line, and get model name
             $line = <INFILE>;
             chomp($line);
-            $line =~ /.+\<instrument\smanufacturer=\"(.+)\"/;
+            $line =~ /\<instrument\smanufacturer=\"(.+)\"/;
 
             $model_name = $model_name . " $1";
 
         }
 
-        if ($line =~ /.+\<software\stype=\"conversion(.+)/)
+        if ($line =~ /\<software\stype=\"conversion(.+)/)
         {
+
+	    #### why oh why aren't we using an xml parser?
+	    my $morecontent = $1;
+	    if ($morecontent =~ /name\s*=\s*\"(.*?)\"/) {
+	      $software_name = $1;
+	    }
+	    if ($morecontent =~ /version\s*=\s*\"(.*?)\"/) {
+	      $software_version = $1;
+	    }
+
+
             $line = <INFILE>;
 
             chomp($line);
