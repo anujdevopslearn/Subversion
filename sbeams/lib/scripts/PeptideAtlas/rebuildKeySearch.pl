@@ -54,6 +54,8 @@ Options:
   --GOA_directory        Directory where the latest GOA files are
   --SGD_directory        Directory where the latest SGD files are
   --organism_name        Name of organism to process (Human,Yeast)
+  --organism_specialized_build    If there is more than one default build
+                         for an organism, this must be supplied, too
   --atlas_build_id       atlas_build_id of the build for which number of
                          matching peptides should be populated
 
@@ -63,7 +65,7 @@ EOU
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
                    "GOA_directory:s","SGD_directory:s","organism_name:s",
-		   "atlas_build_id:i",
+		   "atlas_build_id:i","organism_specialized_build:s",
     )) {
 
     print "\n$USAGE";
@@ -126,7 +128,7 @@ sub handleRequest {
   my $SGD_directory = $OPTIONS{"SGD_directory"};
   my $organism_name = $OPTIONS{"organism_name"};
   my $atlas_build_id = $OPTIONS{"atlas_build_id"};
-
+  my $organism_specialized_build = $OPTIONS{"organism_specialized_build"};
 
   #### If there are any unresolved parameters, exit
   if ($ARGV[0]){
@@ -155,6 +157,7 @@ sub handleRequest {
     GOA_directory => $GOA_directory,
     SGD_directory => $SGD_directory,
     organism_name => $organism_name,
+    organism_specialized_build => $organism_specialized_build,
     atlas_build_id => $atlas_build_id,
     verbose => $VERBOSE,
     testonly => $TESTONLY,
