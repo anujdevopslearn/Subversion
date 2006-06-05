@@ -210,6 +210,16 @@ sub printJavascriptFunctions {
 	} // end showPassed
 
 
+function ClickedNowButton(input_field) {
+  today = new Date();
+  date_value =
+      today.getFullYear() + "-" + (today.getMonth()+1) + "-" +
+      today.getDate();
+  
+  input_field.value = date_value;
+  return;
+}
+
 
         // -->
         </SCRIPT>
