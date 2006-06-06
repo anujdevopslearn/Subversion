@@ -818,7 +818,7 @@ sub printEntryForm {
     }
 
 
-    if ($input_type eq "fixed") {
+    if ($input_type eq "fixed" || $input_type eq "calc") {
       print qq!
         <TD><INPUT TYPE="hidden" NAME="$column_name"
          VALUE="$param">$param</TD>
@@ -1824,6 +1824,9 @@ sub processEntryForm {
                 }
 
               #### If the datatype was fixed, then this can't be updated via MT
+	      #### but note that 'calc' can, as it is assumed that
+	      #### preUpdateDataCheck verifies/fixes the values so user cannot
+	      #### inject foolishness
               } elsif ($input_types{$element} eq "fixed") {
 		#### Do nothing with this field, ignore it
 
@@ -1903,6 +1906,7 @@ sub processEntryForm {
           #### fixed is needed to allow PR_search_hit_annotation and
           #### SN_manual_genotype_call to function properly.
           #### -EDeutsch 2006-01-08. See today's email
+	  #### Note that type 'calc' should also be allowed
           #} elsif ($input_types{$element} eq "fixed") {
 	  #  #### Do nothing with this field, ignore it
 
