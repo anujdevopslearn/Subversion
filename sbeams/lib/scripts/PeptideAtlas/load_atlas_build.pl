@@ -22,10 +22,11 @@ use PAxmlContentHandler;
 use SpectraDescriptionSetParametersParser;
 use SearchResultsParametersParser;
 
+use XML::Parser;
 
 use lib "$FindBin::Bin/../../perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_username 
-             $ATLAS_BUILD_ID 
+             $ATLAS_BUILD_ID %spectra
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
              $TESTVARS $CHECKTABLES
              $sbeamsPROT
@@ -877,10 +878,6 @@ sub getProteomicsExpTag
 }
 
 
-
-
-
-
 #######################################################################
 # get_string_list_of_keys -- get string list of keys
 # @param hash_ref 
@@ -933,7 +930,10 @@ sub create_atlas_search_batch
     my $atlas_search_batch_id;
 
 
-    my $nspec = getNSpecFromProteomics( search_batch_id => $sbid );
+#   my $nspec = getNSpecFromProteomics( search_batch_id => $sbid );
+
+    my $nspec = getNSpecFromFlatFiles( search_batch_path =>
+        $proteomics_search_batch_path );
 
     my $search_batch_subdir =  $proteomics_search_batch_path;
 
@@ -1523,6 +1523,68 @@ sub getNSpecFromProteomics
 
 }
 
+#######################################################################
+# getNSpecFromFlatFiles
+# @param search_batch_path
+# @return number of spectra with P>=0 for search_batch
+#######################################################################
+sub getNSpecFromFlatFiles
+{
+    my %args = @_;
+
+    my $search_batch_path = $args{search_batch_path} or die
+        "need search_batch_path ($!)";
+
+    my $pepXMLfile = "$search_batch_path/interact-prob.xml";
+
+    my $n0;
+
+#   print "    file: $pepXMLfile\n";
+
+##  Need to make this a global var, as perl doesn't have nested
+##  subroutines (i.e., can't include sub local_start_handler
+##  in this subroutine and have %spectra be accessible to it)
+
+    %spectra = ();
+
+    if (-e $pepXMLfile)
+    {
+        my $parser = new XML::Parser( );
+
+        $parser->setHandlers(Start => \&local_start_handler);
+
+        $parser->parsefile($pepXMLfile);
+    }
+
+    $n0 = keys %spectra;
+
+    print "Num spectra searched: $n0\n" if ($TESTONLY);
+
+    return $n0;
+}
+
+
+###################################################################
+# local_start_handler -- local content handler for parsing of a
+# pepxml to get number of spectra in interact-prob.xml file
+###################################################################
+sub local_start_handler
+{
+    my ($expat, $element, %attrs) = @_;
+
+    ## need to get attribute spectrum from spectrum_query element,
+    ## drop the last .\d from the string to get the spectrum name,
+    ## then count the number of unique spectrum names in the file
+    if ($element eq 'spectrum_query')
+    {
+        my $spectrum = $attrs{spectrum};
+
+        ## drop the last . followed by number
+        $spectrum =~ s/(.*)(\.)(\d)/$1/;
+
+        $spectra{$spectrum} = $spectrum;
+    }
+}
 
 
 #######################################################################
