@@ -1311,6 +1311,12 @@ sub prepareCytoscapeFiles {
       $canonical_name = $row->[$col->{biosequence_name}];
     }
 
+    #### If there's a bait protein named, then use it to draw an edge
+    if ($col->{pulldown_protein_name} && $row->[$col->{pulldown_protein_name}]) {
+      push(@{$cytoscape->{files}->{'network.sif'}},
+        "$canonical_name pp $row->[$col->{pulldown_protein_name}]");
+    }
+
     #### Write an attributes file for organism
     my $organism = $row->[$col->{organism}];
     push(@{$cytoscape->{files}->{'organism.noa'}},
