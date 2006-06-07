@@ -242,8 +242,8 @@ sub get_search_batch_directory
         ## check that path exists
         unless ( -e $search_batch_absolute_path) 
         {
-            die "\n Can't find path $search_batch_absolute_path in file system.  Please check ".
-            " atlas_search_batch $atlas_search_batch_id";
+            print "\n Can't find path $search_batch_absolute_path in file system.  Please check ".
+            " atlas_search_batch $atlas_search_batch_id\n";
         }
     }
 
