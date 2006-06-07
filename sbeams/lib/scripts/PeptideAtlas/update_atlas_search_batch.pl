@@ -22,7 +22,7 @@ use lib "$FindBin::Bin/../../perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_username 
              $ATLAS_BUILD_ID %spectra
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
-             $sbeamsPROT
+             $sbeamsPROT  $UPDATE_ALL
             );
 
 
@@ -64,14 +64,16 @@ Options:
 
   --atlas_build_name          Name of the atlas build (already entered by hand in
                               the atlas_build table) into which to load the data
+  --update_all
 
- e.g.:  ./$PROG_NAME --atlas_build_name \'Human_P0.9_Ens26_NCBI35\' --updat
+ e.g.:  ./$PROG_NAME --atlas_build_name \'Human_P0.9_Ens26_NCBI35\' --update
+ e.g.:  ./$PROG_NAME --update_all
 
 EOU
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-        "update", "atlas_build_name:s", 
+        "update", "atlas_build_name:s", "update_all"
     )) {
 
     die "\n$USAGE";
@@ -87,20 +89,8 @@ $DEBUG = $OPTIONS{"debug"} || 0;
 
 $TESTONLY = $OPTIONS{"testonly"} || 0;
 
-if ($DEBUG) {
+$UPDATE_ALL = $OPTIONS{"update_all"} || 0;
 
-    print "Options settings:\n";
-
-    print "  VERBOSE = $VERBOSE\n";
-
-    print "  QUIET = $QUIET\n";
-
-    print "  DEBUG = $DEBUG\n";
-
-    print "  TESTONLY = $TESTONLY\n";
-
-}
-   
    
 ###############################################################################
 # Set Global Variables and execute main()
@@ -140,12 +130,13 @@ sub handleRequest {
 
   my $update = $OPTIONS{"update"} || '';
 
+  my $update_all = $OPTIONS{"update_all"} || '';
+
   my $atlas_build_name = $OPTIONS{"atlas_build_name"} || '';
 
-
   #### Verify required parameters
-  unless ($atlas_build_name) {
-    print "\nERROR: You must specify an --atlas_build_name\n\n";
+  unless ($atlas_build_name || $update_all) {
+    print "\nERROR: You must specify an --atlas_build_name or --update_all\n\n";
     die "\n$USAGE";
   }
 
@@ -156,14 +147,33 @@ sub handleRequest {
     exit;
   }
 
-  ## get ATLAS_BUILD_ID:
-  $ATLAS_BUILD_ID = get_atlas_build_id(atlas_build_name=>$atlas_build_name);
-
-  if ($update) 
+  if ($atlas_build_name)
   {
-      update_atlas_search_batch_records( atlas_build_id=>$ATLAS_BUILD_ID);
-  } 
+      $ATLAS_BUILD_ID = get_atlas_build_id(atlas_build_name=>$atlas_build_name);
 
+      if ($update) 
+      {
+          update_atlas_search_batch_records( atlas_build_id=>$ATLAS_BUILD_ID);
+      } 
+
+  }  elsif ($UPDATE_ALL)
+  {
+      my $sql = qq~
+          SELECT atlas_search_batch_id
+          FROM $TBAT_ATLAS_SEARCH_BATCH
+          WHERE record_status != 'D'
+          order by atlas_search_batch_id
+      ~;
+
+     my @rows = $sbeams->selectSeveralColumns($sql);
+
+     foreach my $row (@rows)
+     {
+         my ($asb_id) = @{$row};
+
+         update_atlas_search_batch_record(atlas_search_batch_id=>$asb_id);
+     }
+  }
 } # end handleRequest
 
 ###############################################################################
@@ -196,15 +206,12 @@ sub get_atlas_build_id
 
 ###############################################################################
 # get_search_batch_directory
-# @param atlas_build_id
 # @param atlas_search_batch_id
 # @return directory holding search batch data
 ###############################################################################
 sub get_search_batch_directory
 {
     my %args = @_;
-
-    my $atlas_build_id = $args{atlas_build_id} or die "need atlas build id";
 
     my $atlas_search_batch_id = $args{atlas_search_batch_id} or
         "die need atlas_search_batch_id";
@@ -214,11 +221,7 @@ sub get_search_batch_directory
     my $sql = qq~
         SELECT ASB.data_location, ASB.search_batch_subdir
         FROM $TBAT_ATLAS_SEARCH_BATCH ASB
-        JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
-        ON (ABSB.atlas_search_batch_id = ASB.atlas_search_batch_id)
-        WHERE ABSB.atlas_build_id = '$atlas_build_id'
-        AND ASB.atlas_search_batch_id = '$atlas_search_batch_id'
-        AND ABSB.record_status != 'D'
+        WHERE ASB.atlas_search_batch_id = '$atlas_search_batch_id'
         AND ASB.record_status != 'D'
     ~;
 
@@ -274,6 +277,39 @@ sub get_biosequence_set_id
     return $b_id;
 }
 
+###############################################################################
+# update_atlas_search_batch_record
+# @param atlas_search_batch_id
+##############################################################################
+sub update_atlas_search_batch_record
+{
+    my %args = @_;
+
+    my $atlas_search_batch_id = $args{atlas_search_batch_id} or 
+        die "need atlas_search_batch_id";
+
+    my $path = get_search_batch_directory(
+          atlas_search_batch_id=>$atlas_search_batch_id);
+
+    my $nspec = getNSpecFromFlatFiles (search_batch_path => $path);
+
+    ## UPDATE atlas_search_batch record
+    my %rowdata = (
+       n_searched_spectra => $nspec,
+    );
+
+    my $success = $sbeams->updateOrInsertRow(
+        update=>1,
+        table_name=>$TBAT_ATLAS_SEARCH_BATCH,
+        rowdata_ref=>\%rowdata,
+        PK => 'atlas_search_batch_id',
+        PK_value => $atlas_search_batch_id,
+        verbose=>$VERBOSE,
+        testonly=>$TESTONLY,
+    );
+
+}
+
 
 ###############################################################################
 # update_atlas_search_batch_records -- updates the n_searched_spectra field of atlas_search_batch
@@ -301,8 +337,8 @@ sub update_atlas_search_batch_records
         order by ASB.atlas_search_batch_id;
     ~;
 
-    my @rows = $sbeams->selectSeveralColumns($sql) or
-        die "\nERROR: n_seached_spectra not stored?  $sql \n\n";
+    my @rows = $sbeams->selectSeveralColumns($sql);
+#       or die "\nERROR: n_seached_spectra not stored?  $sql \n\n";
 
     foreach my $row (@rows)
     {
@@ -313,7 +349,6 @@ sub update_atlas_search_batch_records
 #       if ($n == 0)
 #       {
             my $path = get_search_batch_directory(
-                atlas_build_id=>$atlas_build_id,
                 atlas_search_batch_id=>$atlas_search_batch_id);
 
             my $nspec = getNSpecFromFlatFiles (search_batch_path => $path);
