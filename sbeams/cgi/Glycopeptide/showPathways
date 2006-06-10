@@ -1,0 +1,371 @@
+#!/usr/local/bin/perl -w
+
+###############################################################################
+# Program treatment.cgi    
+# $Id: $
+#
+# Description : Form and processing logic for applying laboratory 
+# manipulation or treatment to a set of samples.
+#
+# SBEAMS is Copyright (C) 2000-2006 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+use strict;
+use lib qw (../../lib/perl);
+use File::Basename;
+use Benchmark;
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+
+use SBEAMS::BioLink::KeggMaps;
+
+use SBEAMS::Glycopeptide;
+#use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::Glycopeptide::Tables;
+
+## Globals ##
+my $sbeams = new SBEAMS::Connection;
+my $glyco = new SBEAMS::Glycopeptide;
+$glyco->setSBEAMS($sbeams);
+my $program = basename( $0 );
+
+my $keggmap = SBEAMS::BioLink::KeggMaps->new();
+
+my $kegg_organism;
+
+my $verbose = 1;
+
+# Don't buffer output
+$|++;
+
+{ # Main 
+
+  $log->debug( localtime(time()) );
+  my $t0 = new Benchmark;
+  
+  # Authenticate user.
+  my $current_username = $sbeams->Authenticate() || die "Authentication failed";
+
+  # Process cgi parameters
+  my $params = process_params();
+  
+  $kegg_organism = $glyco->getKeggOrganism( );
+
+  my $content = '';
+  $params->{apply_action} ||= 'list_pathways';
+
+  # Decision block, what type of page are we going to display?
+  if ( $params->{apply_action} eq 'list_pathways' ) {
+    $content = list_pathways( $params );
+    # Print cgi headers
+    $glyco->printPageHeader(); # onload => 'hideTimerInfo()' );
+    #  $sbeams->printUserContext();
+    print $content;
+    $glyco->printPageFooter( close_tables=>'NO');
+
+  } elsif ( $params->{apply_action} eq 'pathway_details' ) {
+
+    # Until caching is available, will print out as we go.
+    $glyco->printPageHeader( onload => 'hideTimerInfo()' );
+    $content = pathway_details( $params );
+    print $content;
+    $glyco->printPageFooter( close_tables=>'NO');
+
+  } else {
+    $content = list_pathways( $params );
+
+  }
+
+  my $t1 = new Benchmark;
+  $log->debug( localtime(time()) );
+  $log->debug( "$params->{apply_action} took " . timestr(timediff($t1, $t0)) );
+
+} # end Main
+
+#+
+# Routine to list all available pathways for current organism
+#-
+sub list_pathways {
+  my $url = $q->url( -full=>1 );
+  my $page = $sbeams->getGifSpacer(900);
+
+  my $t0 = new Benchmark;
+  my $pathways = $keggmap->getKeggPathways( organism => $kegg_organism, 
+                                              source => 'db' );
+  $page .= "<BR><TABLE>\n";
+  for my $path ( @{$pathways} ) {
+    my $desc = $q->escape( $path->{definition} );
+    $page .=<<"    END";
+    <TR>
+     <TD>$path->{definition} </TD>
+     <TD>
+      <A HREF=$url?apply_action=pathway_details;path_id=$path->{entry_id};path_def=$desc TARGET=_pathdetails>$path->{entry_id}</A>
+     </TD>
+    </TR>
+    END
+  }
+  $page .= "</TABLE><BR>\n";
+
+  my $t1 = new Benchmark;
+  $log->debug( parseTime( $t1, $t0, "seconds to fetch pathways for $kegg_organism" ) );
+
+  return $page;
+}
+
+
+#+
+# Main functionality of page.  Print image mapped, colored pathway
+#-
+sub pathway_details {
+  my $params = shift;
+  my $url = $q->self_url();
+  my @url = split( /\?/, $url );
+  $url = $url[0];
+
+  #  Due to performance issues, we will print this out as we go along until
+  #  feature is better implemented.
+  print $sbeams->getGifSpacer(1200) . "<BR>\n";
+
+  # Some page-specific javascript/css.  Allows loading info to get hidden, 
+  # draws box around legend
+  print <<"  END";
+  <SCRIPT LANGUAGE='javascript'>
+  function hideTimerInfo() {
+    var info = document.getElementById( '1234321' );
+    info.className = 'hidden';
+  }
+  </SCRIPT>
+  <STYLE TYPE="text/css" media="screen">
+    div.visible {
+    display: inline;
+    white-space: nowrap;         
+    }
+    div.hidden {
+    display: none;
+    }
+    span { 
+     border: solid;
+     border-width: 1px;
+    }
+  </STYLE> 
+  END
+
+#  Turned off
+#  my $addpath = ( $params->{path_def} =~ /pathway/i ) ? '' : 'Pathway ';
+  print "<DIV ID=1234321 CLASS=visible>\n";
+  print "  * Looking up genes in $params->{path_def} ($params->{path_id}) at KEGG <BR>\n";
+
+  my $t0 = new Benchmark;
+
+  $keggmap->setPathway( pathway => $params->{path_id} );
+  my $gene_list = $keggmap->getPathwayGenes(); # pathway => $params->{path_id} );
+  
+  my $tot = scalar( @{$gene_list} );
+  my $t1 = new Benchmark;
+  $log->debug( parseTime( $t1, $t0, "seconds to fetch genes for $params->{path_def}" ) );
+
+  print "* Found $tot genes in pathway, looking up data in Unipep<BR>\n";
+
+  # Fetches expression info from db, returns arrays of bg/fg colors
+  my ( $bg, $fg, $glyco_hits, $cnt ) = getExpressionValues($gene_list);
+
+  my $t2 = new Benchmark;
+  $log->debug( parseTime( $t2, $t1, "seconds to get glyco data for $params->{path_def}" ) );
+
+  print "* Found glyco data for $cnt of $tot, plotting on KEGG map<BR>\n";
+
+  # Send gene/color info to kegg for a map
+  my $url = $keggmap->getColoredPathway( bg => $bg,
+                                         fg => $fg,
+                                      genes => $gene_list,
+                                       );
+  $log->debug( "URL was $url" );
+  
+  my $t3 = new Benchmark;
+  $log->debug( parseTime( $t3, $t2, "seconds to get color pathway" ) );
+
+
+  # Get info from pathway XML
+  my $processed = $keggmap->parsePathwayXML();
+  unless ( $processed ) {
+    # Fetching XML must have failed, simply print mapped image and exit
+    $log->warn( "Missing XML for pathway $params->{path_id}" );
+    print <<"    END"; 
+    </DIV>
+    END
+    print "<IMG SRC=$url>";
+    exit;
+  }
+
+  my $organism = keggOrg2Std( $kegg_organism );
+  my @links;
+  my @text;
+  my %entry2genes = %{$processed->{entry2genes}};
+  for my $en ( @{$processed->{entries}} ) {
+    if ( $entry2genes{$en} ) {
+      my @genes = map( /$kegg_organism:(.*)/, @{$entry2genes{$en}} );
+#      @genes = map { $glyco_hits->{$_}->[2]  } @genes;
+      my $gene = join( '%3B', @genes ); # @{$entry2genes{$en}} );
+      push @links, "Glyco_prediction.cgi?search_type=GeneID;search_term=$gene;action=Show_hits_form";
+      push @text, "Gene ID(s) " . join( ", ", @genes );
+    } else {
+      log->warn( "No entry for $en" );
+    }
+  } 
+  my $t4 = new Benchmark;
+  $log->debug( parseTime( $t4, $t3, "seconds to get KGML" ) );
+
+  print <<"  END"; 
+  </DIV>
+  END
+
+  # Get hashref of pathway info (mostly for image URL); 
+  # Get image map for links to peptide glyco 
+  my $image_map = $keggmap->getImageMap( coords => $processed->{coords},
+                                        name   => 'kegg_map',
+                                        links  => \@links,
+                                        text   => \@text,
+                                        colors => $bg,
+                                        img_src => $url );
+  my $legend = getExpressionLegend();
+  print "$legend<BR>\n";
+  print "$image_map<BR>\n";
+
+  my @coordinates = @{$processed->{coords}};
+  
+  my $t5 = new Benchmark;
+  $log->debug( parseTime( $t5, $t4, "seconds to get finish" ) );
+
+# return $page;
+  return '';
+}
+
+sub getExpressionValues {
+
+  my $gene_list = shift;
+  my $cutoff = $glyco->get_current_prophet_cutoff();
+  
+  my $gene_string = join( ", ", @{$gene_list} );
+
+  my $sql =<<"  END";
+  SELECT  entrez_id, ipi_accessions, 'nada', 'nada', 1
+  FROM dcampbel.dbo.ipi_xrefs IX JOIN $TBGP_IPI_DATA ID 
+    ON IX.ipi_accessions = ID.ipi_accession_number
+  JOIN $TBGP_IDENTIFIED_TO_IPI ITI 
+    ON ITI.ipi_data_id = ID.ipi_data_id
+  JOIN $TBGP_IDENTIFIED_PEPTIDE IP 
+    ON ITI.identified_peptide_id = IP.identified_peptide_id
+  WHERE entrez_id IN ($gene_string)
+  AND peptide_prophet_score >= $cutoff 
+  END
+
+  # ref to hash keyed by gene_id, points to arrayref of one or more peptides
+  my %glyco_hits;
+  my @rows = $sbeams->selectSeveralColumns( $sql );
+  for my $row ( @rows ) {
+    # just need to look at the first one
+    next if $glyco_hits{$row->[0]}; 
+    $glyco_hits{$row->[0]} = $row; 
+#    push @{$glyco_hits{$row->[0]}}, $row;
+    $log->debug( "Got data for $row->[0]" );
+  }
+
+  # define colors
+  my $seen = 'yellow';
+  my $uniq = 'green';
+  my @bg;
+  my @fg;
+  my $gene_cnt = 0;
+  for my $gene ( @{$gene_list} ) {
+    # Has quotes if it is a string
+    $gene =~ s/\'//g;
+    # Assume it's neutral
+    my $color = '#E0FFFF';
+    if ( $glyco_hits{$gene} ) {
+      $gene_cnt++;
+      $color = ( $glyco_hits{$gene}->[4] > 1 ) ? $seen : $uniq;
+    }
+    push @bg, $color;
+    push @fg, 'black';
+  }
+  return ( \@bg, \@fg, \%glyco_hits, $gene_cnt );
+}
+
+sub getExpressionLegend {
+  my $cell = $sbeams->getGifSpacer(20); # . "<BR>\n";
+  my $table =<<"  END";
+  <TABLE BORDER=0>
+   <TR> 
+    <TD BGCOLOR='#7CFC00'> <SPAN> $cell </SPAN> </TD>
+    <TD> Peptides observed </TD>
+   </TR>
+   <TR> 
+    <TD BGCOLOR='#E0FFFF'> <SPAN> $cell </SPAN> </TD>
+    <TD> No peptides observed </TD>
+   </TR>
+   <TR> 
+    <TD > <SPAN> $cell </SPAN> </TD>
+    <TD> N/A </TD>
+   </TR>
+  </TABLE>
+  END
+  return $table;
+}
+
+#+
+# Read/process CGI parameters
+#-
+sub process_params {
+  my $params = { null => 'filler' };
+
+  # Standard SBEAMS processing
+  $sbeams->parse_input_parameters( parameters_ref => $params, q => $q );
+
+#for ( keys( %$params ) ){ print "$_ = $params->{$_}<BR>" } 
+
+  # Process "state" parameters
+  $sbeams->processStandardParameters( parameters_ref => $params );
+
+  return $params;
+}
+
+#+
+# Extract wallclock seconds from time diff, append message, and return
+#-
+sub parseTime {
+  my @args = @_;
+  my $time = timestr(timediff( $args[0], $args[1] ));
+  $time =~ /(\d+) wallclock.*/;
+  return "$1 $args[2]";
+}
+
+#+
+# Translate kegg organism to Standard glyco
+#-
+sub keggOrg2Std {
+  my $korg = shift;
+  return '' unless $korg; 
+  my %k2s = ( hsa => 'Human',
+              dme => 'Drosophila',
+              sce => 'Yeast',
+              mmu => 'Mouse'
+            );
+  return $k2s{$korg} || '';
+}
+
+__DATA__
+
+sub error_redirect {
+  my $msg = shift || '';
+  my $type = shift || 'Error';
+  $sbeams->set_page_message( msg => $msg, type => $type );
+  print $q->redirct( "treatmentList.cgi" );
+  exit;
+}
+
