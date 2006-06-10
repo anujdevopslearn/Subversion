@@ -174,7 +174,7 @@ sub process_data_file {
 		
 		my $glyco_pk = $self->add_glyco_site( \@tokens );
 			
-	  if ( $tokens[$heads{'identified sequences'}] ) {
+	  if ( $tokens[$heads{'predicted tryptic nxt/s peptide sequence'}] ) {
 	  	$self->add_predicted_peptide( glyco_pk   => $glyco_pk,
 									              	  line_parts => \@tokens);
     }
