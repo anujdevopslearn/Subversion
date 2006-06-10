@@ -58,6 +58,7 @@ my @search_types = ('Gene Symbol',
 					'Gene Name/Alias',
 					'Swiss Prot Accession Number',
 					'IPI Accession Number',
+          'GeneID'
 					  );
 
 
@@ -252,6 +253,10 @@ $log->debug(Dumper($ref_parameters));
               $q->td({class=>'grey_bg'}, "Protein Sequence"),
               $q->td(">IPI00015102|Partial protein sequence|Cut and paste into sequence search window<br>MESKGASSCRLLFCLLISATVFRPGLGWYTVNSAYGDTIIIPCRLDVPQNLMF") 
 	   ),
+	   $q->Tr(
+              $q->td({class=>'grey_bg'}, "Gene ID"),
+              $q->td($q->a({href=>"$cgi_url=GeneID&search_term=214"}, "214") )
+	   ),
 	);
 }
 ###############################################################################
@@ -290,6 +295,8 @@ sub find_hits{
       @results_set = $glyco_query_o->swiss_prot_query($parameters{search_term});	
     }elsif($parameters{search_type} eq 'IPI Accession Number'){
       @results_set = $glyco_query_o->ipi_accession_query($parameters{search_term});	
+    }elsif($parameters{search_type} eq 'GeneID'){
+      @results_set = $glyco_query_o->gene_id_query($parameters{search_term});	
     }else{
       print_error("Cannot find correct textsearch to run");
     }
