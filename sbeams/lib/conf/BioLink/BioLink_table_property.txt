@@ -16,6 +16,10 @@ BL_MGEDOntologyRelationship	MGED Ontology RelationShip	BioLink_infrastructure	NO
 BL_MGEDOntologyTerm	MGED Ontology Term	BioLink_infrastructure	NO	$TBBL_MGED_ONTOLOGY_TERM	MGED_ontology_term_id				
 BL_OntologyRelationshipType	Ontology Relationship Type	BioLink_infrastructure	NO	$TBBL_ONTOLOGY_RELATIONSHIP_TYPE	ontology_relationship_type_id				
 BL_OntologyTermType	Ontology Term Type	BioLink_infrastructure	NO	$TBBL_ONTOLOGY_TERM_TYPE	ontology_term_type_id				
-BL_data_object	Data Object	BioLink_infrastructure	YES	$TBBL_DATA_OBJECT	data_object_id		ManageTable.cgi?TABLE_NAME=BL_data_object	BL_data_object	
-BL_data_object_type	Data Object Type	BioLink_infrastructure	YES	$TBBL_DATA_OBJECT_TYPE	data_object_type_id		ManageTable.cgi?TABLE_NAME=BL_data_object_type	BL_data_object	
-BL_hypothesis	Hypothesis	BioLink_infrastructure	YES	$TBBL_HYPOTHESIS	hypothesist_id		ManageTable.cgi?TABLE_NAME=BL_hypothesis	BL_data_object	
+BL_data_object	Hypothesis	BioLink_infrastructure	YES	$TBBL_DATA_OBJECT	data_object_id		ManageTable.cgi?TABLE_NAME=BL_data_object		
+BL_data_object_type	Hypothesis	BioLink_infrastructure	YES	$TBBL_DATA_OBJECT_TYPE	data_object_type_id		ManageTable.cgi?TABLE_NAME=BL_data_object_type		
+BL_hypothesis	Hypothesis	BioLink_infrastructure	YES	$TBBL_HYPOTHESIS	hypothesist_id		ManageTable.cgi?TABLE_NAME=BL_hypothesis		
+BL_kegg_gene	KEGG	BioLink_infrastructure	YES	$TBBL_KEGG_GENE	kegg_gene_id		ManageTable.cgi?TABLE_NAME=BL_kegg_gene		
+BL_kegg_pathway	KEGG	BioLink_infrastructure	YES	$TBBL_KEGG_PATHWAY	kegg_pathway_id		ManageTable.cgi?TABLE_NAME=BL_kegg_pathway		
+BL_kegg_organism	KEGG	BioLink_infrastructure	YES	$TBBL_KEGG_ORGANISM	kegg_organism_id		ManageTable.cgi?TABLE_NAME=BL_kegg_organism		
+BL_kegg_pathway_genes	KEGG	BioLink_infrastructure	YES	$TBBL_KEGG_PATHWAY_GENES			ManageTable.cgi?TABLE_NAME=BL_kegg_pathway_genes		

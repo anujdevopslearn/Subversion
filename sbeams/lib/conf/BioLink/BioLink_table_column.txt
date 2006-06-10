@@ -228,3 +228,24 @@ BL_hypothesis	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMEST
 BL_hypothesis	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 BL_hypothesis	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 BL_hypothesis	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+BL_kegg_organism	1	kegg_organism_id	KEGG Organism ID	int	4	0	N		Y			Y				N	N		Primary Key		pkDEFAULT
+BL_kegg_organism	2	kegg_organism_name	KEGG Organism name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	KEGG name for this organism		
+BL_kegg_organism	3	organism_id	Organism	int	4	0	Y		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism_id which corresponds to this entry	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+BL_kegg_pathway	1	kegg_pathway_id	KEGG Pathway ID	int	4	0	N		Y			Y				N	N		Primary Key		pkDEFAULT
+BL_kegg_pathway	2	kegg_pathway_name	KEGG pathway name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	KEGG name for this pathway		
+BL_kegg_pathway	3	kegg_pathway_description	KEGG pathway description	varchar	255	0	N		N			Y	text	50		Y	Y	Y	KEGG description for this pathway		
+BL_kegg_pathway	4	kegg_organism_id	Kegg Organism	int	4	0	Y		N	kegg_organism	kegg_organism_id	Y	optionlist			Y	Y	N	Foreign key to kegg_organism table	"SELECT kegg_organism_id, kegg_organism_name FROM $TBBL_KEGG_ORGANISM ORDER BY kegg_organism_name"	
+BL_kegg_pathway	5	pathway_category	Pathway Category	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Grouping for pathway		
+BL_kegg_pathway	6	kgml	KGML	text	16	0	Y		N			Y	file	8		Y	Y	N	XML representation of this pathway		
+BL_kegg_pathway	7	kgml_url	KGML URL	varchar	255	0	Y		N			Y	text	50		Y	Y	N	URL to KGML file		
+BL_kegg_pathway	8	image	Image	text	16	0	Y		N			Y	file	50		Y	Y	N	Blank gif image of this pathway		
+BL_kegg_pathway	9	image_url	Image URL	varchar	255	0	Y		N			Y	text	50		Y	Y	N	URL to pathway image		
+BL_kegg_pathway	10	date_modified	Date Modified	datetime	8	0	Y	CURRENT_TIMESTAMP	N			Y	text	50		Y	Y	N	When record was updated		
+BL_kegg_gene	1	kegg_gene_id	KEGG Gene ID	int	4	0	N		Y			Y				N	N		Primary Key		pkDEFAULT
+BL_kegg_gene	2	kegg_organism_id	Kegg Organism	int	4	0	Y		N	kegg_organism	kegg_organism_id	Y	optionlist			Y	Y	N	Foreign key to kegg_organism table	"SELECT kegg_organism_id, kegg_organism_name FROM $TBBL_KEGG_ORGANISM ORDER BY kegg_organism_name"	
+BL_kegg_gene	3	gene_id	Gene ID	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Gene ID associated with this gene		
+BL_kegg_gene	4	gene_symbol	Gene Symbol	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Gene Symbol associated with this gene		
+BL_kegg_gene	5	gene_description	Gene Description	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Description information for gene		
+BL_kegg_gene	6	annotation_line	Annotation Line	text	16	0	Y		N			Y	text	50		Y	Y	N	Entire definition line for this gene		
+BL_kegg_pathway_genes	1	kegg_gene_id	KEGG Gene	int	4	0	Y		N	kegg_organism	kegg_organism_id	Y	optionlist			Y	Y	N	Foreign key to kegg_gene table	"SELECT kegg_organism_id, kegg_organism_name FROM $TBBL_KEGG_ORGANISM ORDER BY kegg_organism_name"	
+BL_kegg_pathway_genes	2	kegg_pathway_id	KEGG Pathway	int	4	0	Y		N	kegg_pathway	kegg_pathway_id	Y	optionlist			Y	Y	N	Foreign key to kegg pathway table	"SELECT kegg_pathway_id, kegg_pathway_name FROM $TBBL_KEGG_PATHWAY ORDER BY kegg_pathway_name"	
