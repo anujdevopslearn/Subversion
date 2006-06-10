@@ -264,6 +264,7 @@ sub getCurrentAtlasBuildID {
     } else {
       $atlas_build_id = $rows[0];
     }
+    print "atlas build ios $atlas_build_id\n";
 
   #### Otherwise try to get it from the session cookie
   } else {
@@ -331,10 +332,12 @@ sub getCurrentAtlasBuildID {
 
   #### If not, stop here
   unless (scalar(@rows) == 1 && $rows[0] eq $atlas_build_id) {
+
+    my $reset_link = "<A HREF=$CGI_BASE_DIR/PeptideAtlas/main.cgi?tab=1;reset_id=true> reset build_id here </A>";
     print "<BR>ERROR: You are not permitted to access atlas_build_id ".
-      "'$atlas_build_id' with your current credentials.  You may need to ".
+      "'$atlas_build_id' with your current credentials.<BR>  You may need to ".
       "login with your username and password.  Click on the LOGIN link at ".
-      "left.<BR>\n";
+      "left,<BR> or $reset_link\n";
     return(-1);
   }
 
@@ -356,6 +359,61 @@ sub getCurrentAtlasBuildID {
 
 } # end getCurrentAtlasBuildID
 
+sub clearBuildSettings {
+  my $self = shift;
+  my $sbeams = $self->getSBEAMS();
+  $sbeams->deleteSessionAttribute(
+    key => 'PeptideAtlas_atlas_build_id',
+  );
+
+  $sbeams->deleteSessionAttribute(
+      key => 'PeptideAtlas_organism_name',
+  );
+}
+
+sub getCurrentAtlasOrganism {
+  my $self = shift();
+  my %args = @_;
+
+  my $params = $args{'parameters_ref'} || die "parameters_ref not passed";
+  my $sbeams = $self->getSBEAMS();
+
+  my $build_id = $params->{atlas_build_id} || 
+                 $self->getCurrentAtlasBuildID(%args);
+  
+  my $sql = qq~
+  SELECT organism_name
+  FROM $TBAT_BIOSEQUENCE_SET BSS
+  LEFT JOIN $TB_ORGANISM O
+    ON ( BSS.organism_id = O.organism_id )
+  WHERE BSS.biosequence_set_id IN (
+  SELECT DISTINCT B.biosequence_set_id FROM
+  $TBAT_ATLAS_BUILD AB
+  LEFT JOIN $TBAT_BIOSEQUENCE B
+    ON ( AB.biosequence_set_id = B.biosequence_set_id )
+  WHERE 1=1
+  AND atlas_build_id = $build_id 
+  AND AB.record_status != 'D'
+  AND B.record_status != 'D'
+  )
+  AND O.record_status != 'D' 
+  AND BSS.record_status != 'D'  
+  ~;
+
+  my @rows = $sbeams->selectOneColumn($sql);
+  die "Couldn't find specified organism: $sql" if !scalar(@rows);
+  die "Too many rows from query: $sql" if scalar(@rows) > 1;
+  print STDERR "Basal organism is $rows[0]\n";
+
+  if ( $args{type} && $args{type} eq 'kegg' ) {
+    return  ( $rows[0] =~ /Human/ ) ? 'hsa' :
+            ( $rows[0] =~ /Yeast/ ) ? 'sce' :
+            ( $rows[0] =~ /Mouse/ ) ? 'mmu' :
+            ( $rows[0] =~ /Drosophila/ ) ? 'dme' : '';
+  } else {
+    return $rows[0];
+  }
+}
 
 
 ###############################################################################
