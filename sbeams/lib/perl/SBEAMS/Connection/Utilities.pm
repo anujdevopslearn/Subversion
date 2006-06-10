@@ -18,8 +18,10 @@ package SBEAMS::Connection::Utilities;
 
 
 use strict;
+use SBEAMS::Connection::Log;
 use vars qw(@ERRORS
            );
+my $log = SBEAMS::Connection::Log->new();
 
 ###############################################################################
 # Constructor
@@ -820,15 +822,52 @@ sub getRomanNumeral {
                 17 => 'XVII',
                 18 => 'XVIII',
                 19 => 'XIX',
-                20 => 'XX' );
+                20 => 'XX',
+                21 => 'XXI',
+                22 => 'XXII',
+                23 => 'XXIII',
+                24 => 'XXIV',
+                25 => 'XXV',
+                26 => 'XXVI',
+                27 => 'XXVII' );
     $self->{_rnumerals} = \%num;
   }
   return $self->{_rnumerals}->{$args{number}};
 }
 
+
+sub getGaggleXML {
+  my $self = shift;
+  my %args = @_;
+  $args{type} ||= 'direct';
+  $args{name} ||= 'generic';
+  my $xml;
+
+  if ( $args{start} ) {
+    $xml =<<"    END";
+  <!-- GAGGLE
+   <gaggleData version="0.1">
+    END
+  }
+
+  if ( $args{object} =~ /^namelist$/i ) {
+    return unless @{$args{data}};
+    my $items = join( "\t", @{$args{data}} );
+    $xml .=<<"    END";
+    <namelist type='$args{type}' name='$args{name}'>  
+    $items
+    </namelist>
+    END
+  } else {
+    $log->error( "Unknown object type" );
+  }
+
+  $xml .= "</gaggleData>\n  -->" if $args{end};
+  return $xml;
+}
+
 1;
 
-__END__
 
 ###############################################################################
 ###############################################################################
