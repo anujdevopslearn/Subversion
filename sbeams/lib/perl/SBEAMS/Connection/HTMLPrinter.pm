@@ -261,6 +261,7 @@ sub printStyleSheet {
 	.orange_bg{ background-color: #FFCC66; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
 	.red_bg{ background-color: #882222; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; color:white; Padding:2}
 	.small_cell {font-size: 8; background-color: #CCCCCC; white-space: nowrap  }
+	.med_cell {font-size: 10; background-color: #CCCCCC; white-space: nowrap  }
 	.anno_cell {white-space: nowrap  }
 	.present_cell{border: none}
 	.marginal_cell{border: 1px solid #0033CC}
@@ -1293,6 +1294,51 @@ sub truncateStringWithMouseover {
   my $len = $args{len} || 35;
   my $shorty = $self->truncateString( %args );
   return qq~<DIV TITLE="$string">$shorty</DIV>~;
+}
+#+
+# Returns array of HTML form buttons
+#
+# arg types    arrayref, required, values of submit, back, reset
+# arg name     name of submit button (if any)
+# arg value    value of submit button (if any)
+# arg back_name     name of submit button (if any)
+# arg back_value    value of submit button (if any)
+# arg reset_value    value of reset button (if any)
+#-
+sub getFormButtons {
+  my $this = shift;
+  my %args = @_;
+  $args{name} ||= 'Submit';
+  $args{value} ||= 'Submit';
+  $args{onclick} ||= '';
+
+  $args{back_name} ||= 'Back';
+  $args{back_value} ||= 'Back';
+  $args{back_onclick} ||= '';
+
+  $args{reset_value} ||= 'Reset';
+  $args{reset_onclick} ||= '';
+
+  for ( qw( reset_onclick back_onclick onclick ) ) {
+    $args{$_} = "onClick=$args{$_}" if $args{$_};
+  }
+  
+  $args{types} ||= [];
+
+  my @b;
+
+  for my $type ( @{$args{types}} ) {
+    push @b, <<"    END" if $type =~ /^submit$/i; 
+    <INPUT TYPE=SUBMIT NAME='$args{name}' VALUE='$args{value}' $args{onclick}>
+    END
+    push @b, <<"    END" if $type =~ /^back$/i; 
+    <INPUT TYPE=SUBMIT NAME=$args{back_name} VALUE=$args{back_value} $args{back_onclick}>
+    END
+    push @b, <<"    END" if $type =~ /^reset$/i; 
+    <INPUT TYPE=RESET VALUE=$args{reset_value} $args{reset_onclick}>
+    END
+  }
+  return @b;
 }
 
 ###############################################################################
