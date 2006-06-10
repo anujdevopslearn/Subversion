@@ -118,6 +118,11 @@ CONFIG_SETTING{JNLP_KEYSTORE} = lib/java/.keystore
 CONFIG_SETTING{KEYSTORE_PASSWD} = sbeams_distro
 CONFIG_SETTING{KEYSTORE_ALIAS} = sbeamsDistro
 
+# BioLink Module settings
+CONFIG_SETTING{KEGG_WSDL} = http://soap.genome.jp/KEGG.wsdl
+CONFIG_SETTING{KEGG_IMAGE_URL} = ftp://ftp.genome.ad.jp/pub/kegg/pathways/__KEGG_ORG__/BASE.gif
+CONFIG_SETTING{KGML_URL} = ftp://ftp.genome.jp/pub/kegg/xml/KGML_v0.6.1/__KEGG_ORG__/BASE.xml
+
 
 #### Define the place where Proteomics MS/MS spectrum peaks are written
 #### either TABLE, SKIP, or a file path (Default is TABLE)
