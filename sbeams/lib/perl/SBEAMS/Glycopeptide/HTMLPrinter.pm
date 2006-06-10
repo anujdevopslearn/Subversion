@@ -237,6 +237,7 @@ sub display_page_header {
       return;
     }
 
+    my $loadscript = "$args{onload};" || '';
 
     #### If the output mode is not html, then we don't want a header here
     if ($sbeams->output_mode() ne 'html') {
@@ -273,7 +274,7 @@ sub display_page_header {
 	</HEAD>
 
 	<!-- Background white, links blue (unvisited), navy (visited), red (active) -->
-	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" TOPMARGIN=0 LEFTMARGIN=0 OnLoad="self.focus();">
+	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" TOPMARGIN=0 LEFTMARGIN=0 OnLoad="$loadscript self.focus();">
 	<table border=0 width="100%" cellspacing=0 cellpadding=1>
 
 	<!------- Header ------------------------------------------------>
@@ -300,7 +301,8 @@ sub display_page_header {
 	<tr><td>Browse Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Glyco_prediction.cgi"><nobr>&nbsp;&nbsp;&nbsp;Search Glycopeptides</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/browse_glycopeptides.cgi"><nobr>&nbsp;&nbsp;&nbsp;Identified Proteins</nobr></a></td></tr>
-<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/peptide_properties.cgi"><nobr>&nbsp;&nbsp;&nbsp;Peptide Properties</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/showPathways"><nobr>&nbsp;&nbsp;&nbsp;Pathway Search</nobr></a></td></tr>
+<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch"><nobr>&nbsp;&nbsp;&nbsp;Mass Search</nobr></a></td></tr>
 <tr><td><a href="http://www.unipep.org"><nobr>&nbsp;&nbsp;&nbsp;Unipep home</nobr></a></td></tr>
 
 	<tr><td>&nbsp;</td></tr>
