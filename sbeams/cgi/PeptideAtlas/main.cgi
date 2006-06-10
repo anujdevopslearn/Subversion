@@ -71,6 +71,9 @@ sub main
         parameters_ref=>\%parameters
         );
 
+    if ( $parameters{reset_id} && $parameters{reset_id} eq 'true' ) {
+      $sbeamsMOD->clearBuildSettings();
+    }
 
     ## get project_id to send to HTMLPrinter display
     my $project_id = $sbeamsMOD->getProjectID(
