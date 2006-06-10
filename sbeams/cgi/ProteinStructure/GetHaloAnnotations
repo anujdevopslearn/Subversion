@@ -632,6 +632,9 @@ $LINESEPARATOR
 	my @d_ids;
 
 	my $counter = 0;
+  # list to store gaggle data
+  my @glist;
+
 	foreach my $row (@rows) {
 	  my $protein_biosequence_id    = $row->[0];
 	  my $biosequence_annotation_id = $row->[1];
@@ -651,6 +654,7 @@ $LINESEPARATOR
 	  push @p_ids, $protein_biosequence_id;
 	  push @d_ids, $dna_biosequence_id if ($dna_biosequence_id);
 
+    push @glist, $biosequence_name;
 
 	  #### Special (fragile?) handling for halo aliases
 	  my @alias_items = split ",", $aliases;
@@ -672,6 +676,7 @@ $LINESEPARATOR
 
 	  $aliases = join ",",@alias_items;
 
+    
 
 	  $table_html  .= qq~
 
@@ -771,6 +776,15 @@ $LINESEPARATOR
 	~;
 	  $counter++;
 	}
+
+  my $gXML = $sbeams->getGaggleXML( object => 'namelist', 
+                                      type => 'direct',
+                                      name => "Orf names",
+                                      data => \@glist,
+                                     start => 1, 
+                                       end => 1 );
+  print "$gXML\n";
+  
 
 	# End the table
 	$table_html .= qq~
