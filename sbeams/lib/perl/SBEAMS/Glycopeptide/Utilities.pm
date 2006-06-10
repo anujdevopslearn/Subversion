@@ -67,7 +67,7 @@ sub getDigestPeptide {
 sub get_site_positions {
   my $self = shift;
   my %args = @_;
-  $args{pattern} ||= 'N.[S|T]';
+  $args{pattern} = 'N.[S|T]' if !defined $args{pattern};
   return unless $args{seq};
 
   my @posn;
@@ -157,32 +157,93 @@ sub getResidueMasses {
     X => 118.8860,   # Unknown, avg of 20 common AA.
     B => 114.5962,   # avg N and D
     Z => 128.6231,   # avg Q and E
+#  '#' => 0.9848
   );
 
+  $residue_masses{C} += 57.0215 if $args{alkyl_cys};
   return \%residue_masses;
-
 }
 
+
+###############################################################################
+# getMonoResidueMasses: Get a hash of masses for each of the residues
+###############################################################################
+sub getMonoResidueMasses {
+  my %args = @_;
+  my $SUB_NAME = 'getResidueMasses';
+
+  #### Define the residue masses
+  my %residue_masses = (
+    G => 57.021464,
+    D => 115.02694,
+    A => 71.037114,
+    Q => 128.05858,
+    S => 87.032029,
+    K => 128.09496,
+    P => 97.052764,
+    E => 129.04259,
+    V => 99.068414,
+    M => 131.04048,
+    T => 101.04768,
+    H => 137.05891,
+    C => 103.00919,
+    F => 147.06841,
+    L => 113.08406,
+    R => 156.10111,
+    I => 113.08406,
+    N => 114.04293,
+    Y => 163.06333,
+    W => 186.07931 ,
+   '#' => 0.98401,
+    
+    X => 118.8057,   # Unknown, avg of 20 common AA.
+    B => 114.5349,   # avg N and D
+    Z => 128.5506,   # avg Q and E
+    );
+
+  $residue_masses{C} += 57.0215 if $args{alkyl_cys};
+  return \%residue_masses;
+}
+    
 sub calculatePeptideMass {
   my $self = shift;
   my %args = @_;
+
+  # Must specify sequence
   die "Missing required parameter sequence" unless $args{sequence};
-  $self->{_rmass} ||= $self->getResidueMasses();
+  $args{alkyl_cys} ||= '';
+
+  # Mass of subject peptide
+  my $mass = 0;
+  # Ref to hash of masses
+  my $rmass;
+
+  if ( $args{average} ) {
+    $rmass = getResidueMasses( %args );
+    $mass += 18.0153; # N and C termini have extra H, OH.
+  } else {
+    print STDERR "Going mono!\n";
+    $rmass = getMonoResidueMasses( %args );
+    $mass += 18.0105; # N and C termini have extra H, OH.
+  }
+
+  # has leading.sequence.lagging format trim all but sequence
   if ( $args{flanking} ) {
     $args{sequence} = substr( $args{sequence}, 2, length( $args{sequence} ) - 4 )
   }
+
   my $seq = uc( $args{sequence} );
   my @seq = split( "", $seq );
-  my $mass = 0;
   foreach my $r ( @seq ) {
-    if ( !defined $self->{_rmass}->{$r} ) {
+    if ( !defined $rmass->{$r} ) {
       $log->error("Undefined residue $r in getPeptideMass");
-      $self->{_rmass}->{$r} = $self->{_rmass}->{X} # Assign 'average' mass.
+      $rmass->{$r} = $rmass->{X} # Assign 'average' mass.
     }
-    $mass += $self->{_rmass}->{$r};
+    print STDERR "Mass of $r is $rmass->{$r}\n"; 
+    $mass += $rmass->{$r};
   }
-  $mass += 18.0153; # N and C termini have extra H, OH.
-  return sprintf( "%0.2f", $mass);
+
+  return sprintf( "%0.4f", $mass);
 }
 
 #+
@@ -382,6 +443,125 @@ sub getResiduePKAs {
               Y => 10.0 );
 
   return \%pka;
+}
+
+#+
+# Runs mass search vs database
+#-
+sub runMassSearch {
+  my $self = shift;
+  my %args = @_;
+
+  my @results = ( 'Group', 'Search Mass', 'IPI', 'Sequence', 'DB Mass', 'Delta', 'Protein Name', '# ox Met' );
+
+  my $sbeams = $self->getSBEAMS();
+
+  my $sql;
+  if ( !$args{search} eq 'pred' ) {
+    $sql =<<"    END";
+    SELECT DISTINCT ipi_accession_number, CAST( predicted_peptide_sequence AS VARCHAR) ,
+           experimental_peptide_mass, protein_name, 
+           ABS( experimental_peptide_mass - SEARCHMASS ) delta
+    FROM biomarker.dbo.predicted_peptide PP JOIN biomarker.dbo.ipi_data ID
+    ON ID.ipi_data_id = PP.ipi_data_id
+    WHERE ( (experimental_peptide_mass BETWEEN MINMASS AND MAXMASS )  OXCLAUSE )
+    AND predicted_peptide_sequence LIKE '%#%'
+    ORDER BY ABS( experimental_peptide_mass - SEARCHMASS ) ASC, experimental_peptide_mass ASC
+    END
+  } else {
+    $sql =<<"    END";
+    SELECT DISTINCT ipi_accession_number, identified_peptide_sequence,
+           experimental_peptide_mass, protein_name,
+           ABS( experimental_peptide_mass - SEARCHMASS ) delta
+    FROM biomarker.dbo.identified_peptide IP JOIN biomarker.dbo.identified_to_ipi ITI
+    ON ITI.identified_peptide_id = IP.identified_peptide_id
+    JOIN biomarker.dbo.ipi_data ID
+    ON ID.ipi_data_id = ITI.ipi_data_id
+    WHERE ( (experimental_peptide_mass BETWEEN MINMASS AND MAXMASS )  OXCLAUSE )
+    ORDER BY ABS( experimental_peptide_mass - SEARCHMASS ) ASC, experimental_peptide_mass ASC
+    END
+  }
+
+  my $cnt;
+  my @all_matches;
+  for my $mass ( @{$args{masses}} ) {
+    $log->debug( "MASS IS: $mass" );
+    $cnt++;
+    chomp $mass;
+    my @matches;
+
+#    Add proton mass?
+#    my $mass = $mz * $ch - 1.0072;
+
+    my $tolerance;
+    if ( $args{mw_units} eq 'ppm' ) {
+      my $mppm = $mass/1000000;
+      $tolerance = $args{mass_window}/2*$mppm;
+    } else {
+      $tolerance = $args{mass_window}/2;
+    }
+    my $minmass = $mass - $tolerance;
+    my $maxmass = $mass + $tolerance;
+
+    my $ox_mass = 15.9949;
+
+    my $ox_clause = '';
+    if ( $args{ox_met} ) {
+      my $ox_min = $minmass + $ox_mass;
+      my $ox_max = $maxmass + $ox_mass;
+      $ox_clause .= " OR ( experimental_peptide_mass BETWEEN $ox_min AND $ox_max ) \n"; 
+      if ( $args{ox_met} > 1 ) {
+        my $ox_min = $minmass + 2 * $ox_mass;
+        my $ox_max = $maxmass + 2 * $ox_mass;
+        $ox_clause .= " OR ( experimental_peptide_mass BETWEEN $ox_min AND $ox_max ) \n"; 
+      }
+    }
+
+    my $mass_sql = $sql;
+    $mass_sql =~ s/MINMASS/$minmass/g;
+    $mass_sql =~ s/MAXMASS/$maxmass/g;
+    $mass_sql =~ s/OXCLAUSE/$ox_clause/g;
+    $mass_sql =~ s/SEARCHMASS/$mass/g;
+   $log->debug( $mass_sql );
+
+    my @results = $sbeams->selectSeveralColumns( $mass_sql );
+    if ( scalar @results ) {
+      for my $result ( @results ) {
+        my $ox_num = 0;
+        if ( $args{ox_met} ) {
+          # Searched with ox_met, looking for +16 and maybe +32
+          if ( $args{ox_met} > 1 ) {
+          $log->debug( "Croaker " . $args{ox_met} .  " $result->[4] " );
+            if ( $result->[2] > ($maxmass + $ox_mass) ) {
+              if ( $result->[1] =~ /\..*M.*M.*\./ ) {
+                $ox_num = 2;
+              } else {
+                $log->debug( "skippy" . $result->[1] );
+                next;
+              }
+            } elsif ( $result->[2] > $maxmass ) {
+              if ( $result->[1] =~ /\..*M.*\./ ) {
+                $log->debug( "$result->[1] matched!" );
+                $ox_num = 1;
+              } else {
+                $log->debug( "skiipy" . $result->[1] );
+                next;
+              }
+            }
+          }
+        }
+        $ox_num = ( $result->[4] > 1 ) ? 1 : 0;
+        $log->debug( "pushing $result->[1]" );
+        my @row = ( $cnt, $mass, @$result, $ox_num );
+        push @matches, \@row;
+      }
+    } 
+    unless ( scalar @matches ) {
+        push @matches, [$cnt, $mass, 'n/a', 'n/a', 'n/a', 'n/a', 'n/a', 'n/a' ];
+    }
+    push @all_matches, @matches;
+  }
+  return \@all_matches;
 }
 
 1;
