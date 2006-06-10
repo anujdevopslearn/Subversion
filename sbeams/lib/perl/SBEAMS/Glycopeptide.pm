@@ -56,6 +56,13 @@ sub getSBEAMS {
     return($self->{_sbeams});
 }
 
+#+
+# Stub routine for selecting current unipep organism.
+#-
+sub getKeggOrganism {
+  return 'hsa';
+}
+
 1;
 
 __END__
