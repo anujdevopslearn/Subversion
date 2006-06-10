@@ -245,6 +245,32 @@ sub get_query_sql {
 #AND peptide_prophet_score >= $cutoff
 
 }
+
+#+
+# Entrez gene id query
+#-
+sub gene_id_query {
+	my $method = 'gene_id_query';
+	my $self = shift;
+	my $term = shift;
+
+  $term =~ s/\;/\,/g;
+	
+	my $sql = qq~
+    SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
+    (SELECT COUNT(*) FROM $TBGP_IDENTIFIED_TO_IPI 
+    WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id ) AS num_identified 
+    FROM $TBGP_IPI_DATA
+	  WHERE ipi_accession_number IN 
+      ( SELECT ipi_accessions FROM DCAMPBEL.dbo.ipi_xrefs WHERE 
+        entrez_id IN ( $term ) )
+  ~;
+
+  # Newfangled
+#  my $sql = $self->get_query_sql( type => 'swissprot', term => $term );
+	return $sbeams->selectHashArray($sql)
+}
+
 ################################
 #swiss_prot_query
 ###############################
@@ -431,7 +457,7 @@ sub get_identified_tissues{
 				JOIN $TBGP_GLYCO_SAMPLE g ON ( ptp.sample_id = g.sample_id ) 
 				JOIN $TBGP_TISSUE_TYPE t ON (t.tissue_type_id = g.tissue_type_id) 
 				WHERE ptp.identified_peptide_id = $id
-        ORDER BY ptp.peptide_to_tissue_id
+        ORDER BY t.tissue_type_name
 				~;
 	
 	my @all_tissues = $sbeams->selectHashArray($sql);	
