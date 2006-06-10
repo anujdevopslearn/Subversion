@@ -52,6 +52,11 @@ use vars qw(@ISA @EXPORT
     $TBBL_DATA_OBJECT_TYPE
     $TBBL_HYPOTHESIS
 
+    $TBBL_KEGG_PATHWAY
+    $TBBL_KEGG_ORGANISM
+    $TBBL_KEGG_GENE
+    $TBBL_KEGG_PATHWAY_GENES
+
 );
 
 
@@ -93,6 +98,11 @@ require Exporter;
     $TBBL_DATA_OBJECT
     $TBBL_DATA_OBJECT_TYPE
     $TBBL_HYPOTHESIS
+
+    $TBBL_KEGG_PATHWAY
+    $TBBL_KEGG_ORGANISM
+    $TBBL_KEGG_GENE
+    $TBBL_KEGG_PATHWAY_GENES
 );
 
 
@@ -134,3 +144,10 @@ $TBBL_GAGGLE_STORE = "${core}gaggle_store";
 $TBBL_DATA_OBJECT = "${mod}data_object";
 $TBBL_DATA_OBJECT_TYPE = "${mod}data_object_type";
 $TBBL_HYPOTHESIS = "${mod}hypothesis";
+
+$TBBL_KEGG_PATHWAY = "${mod}kegg_pathway";
+$TBBL_KEGG_ORGANISM = "${mod}kegg_organism";
+$TBBL_KEGG_GENE = "${mod}kegg_gene";
+$TBBL_KEGG_PATHWAY_GENES = "${mod}kegg_pathway_genes";
+
+1;
