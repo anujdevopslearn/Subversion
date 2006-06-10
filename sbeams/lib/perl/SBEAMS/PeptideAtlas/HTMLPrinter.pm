@@ -77,7 +77,7 @@ sub display_page_header {
     $self->displayInternalResearcherPageHeader();
   } else
   {
-    $self->displayStandardPageHeader();
+    $self->displayStandardPageHeader(@_);
    }
   }
 
@@ -194,6 +194,8 @@ sub displayStandardPageHeader {
   $self->printJavascriptFunctions();
   $self->printStyleSheet();
 
+  my $loadscript = "$args{onload};" || '';
+
 
   #### Determine the Title bar background decoration
   my $header_bkg = "bgcolor=\"$BGCOLOR\"";
@@ -206,7 +208,7 @@ sub displayStandardPageHeader {
 	</HEAD>
 
 	<!-- Background white, links blue (unvisited), navy (visited), red (active) -->
-	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" TOPMARGIN=0 LEFTMARGIN=0 OnLoad="self.focus();">
+	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" TOPMARGIN=0 LEFTMARGIN=0 OnLoad="$loadscript self.focus();">
 	<table border=0 width="100%" cellspacing=0 cellpadding=1>
 
 	<!------- Header ------------------------------------------------>
@@ -235,6 +237,7 @@ sub displayStandardPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse Bioseqs</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetPeptide"><nobr>&nbsp;&nbsp;&nbsp;Get Peptide Summary</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetProtein"><nobr>&nbsp;&nbsp;&nbsp;Get Protein Summary</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/showPathways"><nobr>&nbsp;&nbsp;&nbsp;Pathway Search</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/Glycopeptide/Glyco_prediction.cgi"><nobr>&nbsp;&nbsp;&nbsp;Search Glyco-Peptides</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
