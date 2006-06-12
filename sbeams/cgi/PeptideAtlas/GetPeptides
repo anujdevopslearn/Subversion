@@ -447,7 +447,6 @@ sub handle_request {
        LEFT JOIN $TBAT_BIOSEQUENCE BS
             ON ( PM.matched_biosequence_id = BS.biosequence_id )
        LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
-
   ~;
   my $mapping_constraints = qq~
         $chromosome_clause
@@ -460,6 +459,7 @@ sub handle_request {
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
 
+  #### If the DASFormat view was selected
   if ($parameters{display_options} =~ /DASFormat/) {
     @column_array = (
       ["label","DISTINCT 'Similarity'","Label"],
@@ -475,6 +475,34 @@ sub handle_request {
       ["n_genome_locations","PI.n_genome_locations","N Unique Locations on Genome"],
     );
 
+  #### If the modifications view was selected
+  } elsif ($parameters{display_options} =~ /ShowModifications/) {
+    @column_array = (
+      ["peptide_accession","DISTINCT P.peptide_accession","Peptide Accession"],
+      ["modified_peptide_sequence","MPI.modified_peptide_sequence","Modified Peptide Sequence"],
+      ["peptide_charge","MPI.peptide_charge","Observed Charge"],
+
+      ["best_probability","STR(MPI.best_probability,7,3)","Best Prob"],
+      ["n_observations","MPI.n_observations","N Obs"],
+      ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","Empirical Proteotypic Score"],
+
+      ["n_protein_mappings","PI.n_protein_mappings","N Protein Mappings"],
+      ["n_genome_locations","PI.n_genome_locations","N Unique Locations on Genome"],
+      ["is_exon_spanning","PI.is_exon_spanning","Spans exons? (Y,N)"],
+
+      ["is_subpeptide_of","PI.is_subpeptide_of","Peptides that include this sequence"],
+
+      ["atlas build name","AB.atlas_build_name","PeptideAtlas Name"],
+
+      ["organism_full_name","O.full_name","Organism"],
+    );
+    $mapping_join .= qq~
+       LEFT JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI
+            ON ( PI.peptide_instance_id = MPI.peptide_instance_id )
+    ~;
+    $mapping_sort = '';
+
+  #### If the chromosomal coordinate mappings view was selected
   } elsif ($parameters{display_options} =~ /ShowMappings/) {
     @column_array = (
       ["peptide_accession","P.peptide_accession","Peptide Accession"],
@@ -506,6 +534,7 @@ sub handle_request {
       ["organism_full_name","O.full_name","Organism"],
     );
 
+  #### Otherwise just the regular peptide list view
   } else {
     @column_array = (
       ["peptide_accession","DISTINCT P.peptide_accession","Peptide Accession"],
