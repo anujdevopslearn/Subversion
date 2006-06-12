@@ -38,6 +38,8 @@ use SBEAMS::ProteinStructure;
 use SBEAMS::ProteinStructure::Settings;
 use SBEAMS::ProteinStructure::Tables;
 
+use SBEAMS::Microarray::Tables;
+
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::ProteinStructure;
 $sbeamsMOD->setSBEAMS($sbeams);
@@ -82,6 +84,10 @@ if ($DEBUG) {
 }
 
 
+###############################################################################
+# PUBLICLY ACCESSIBLE PROJECTS
+###############################################################################
+my $PUBLIC_PROJECTS = "385,398,558,587";
 ###############################################################################
 # Set Global Variables and execute main()
 ###############################################################################
@@ -219,12 +225,6 @@ sub handle_request {
 	
 
     print qq~
-<tr><td><span class="sub_header">BROWSE THE PROTEOME</span></td></tr>
-
-<tr><td height="1"><img src="$HTML_BASE_DIR/images/bg_Nav.gif" width="518" height="1" border="0"></td></tr>
-<tr><td height="5"><img src="$HTML_BASE_DIR/images/clear.gif" width="1" height="1" border="0"></td></tr>
-
-<tr><td>
 <P><FORM NAME="SearchForm" ACTION="$base_url" METHOD="POST">
 Search
 <SELECT NAME="search_scope">
@@ -630,6 +630,18 @@ $LINESEPARATOR
 	# Keep track of protein and dna biosequence IDs
 	my @p_ids;
 	my @d_ids;
+	my @array_expression_genes = ();
+
+	# Get accessible conditions
+	my @accessible_project_ids = $sbeams->getAccessibleProjects();
+	my $project_ids_clause = join ",", @accessible_project_ids;
+	my $halo_conditions_sql = qq~
+		SELECT condition_id
+		FROM $TBMA_COMPARISON_CONDITION
+		WHERE project_id IN ($PUBLIC_PROJECTS)
+		~;
+	my @conditions = $sbeams->selectOneColumn ($halo_conditions_sql);
+	my $condition_ids_clause = join ",", @conditions;
 
 	my $counter = 0;
   # list to store gaggle data
@@ -695,6 +707,15 @@ $LINESEPARATOR
 		~;
 
 
+	  push @array_expression_genes,$biosequence_name;
+	  my $array_expression_link = getColorizedTD (tag=>'Gene Expression',
+												  text=>'M',
+												  data=>$biosequence_name,
+												  target=>'array_expression',
+												  link=>"$CGI_BASE_DIR/Microarray/GetHaloExpression?canonical_name_constraint=$biosequence_name&condition_id=$condition_ids_clause&row_limit=10000&input_form_format=minimum_detail&QUERY_NAME=MA_GetExpression&action=QUERY&apply_action=QUERY",
+												  tooltip=>"Microarray Data Containing $biosequence_name");
+
+
 	  my $dna_link = getColorizedTD (tag=>'DNA Sequences',
 									 data=>$dna_biosequence_id,
 									 text=>'D',
@@ -736,6 +757,7 @@ $LINESEPARATOR
 	  $table_html .= qq~
 		$prot_link
 		$annot_link
+		$array_expression_link
 		$duplicates_link
 		</TR>
 		</TABLE>
@@ -838,8 +860,13 @@ $LINESEPARATOR
 	  <A HREF="BrowseBioSequence.cgi?project_id=$project_list&biosequence_set_id=$parameters{dna_biosequence_set_id}&biosequence_id_constraint=$d_list&action=QUERYHIDE&display_options=SequenceFormat&display_mode=FASTA">-View all DNA Entries</A><BR>
 	  ~ . $table_html;
 	}
-
-
+	if (@array_expression_genes) {
+	  my $array_expression_ids = join "%3B", @array_expression_genes;
+	  $table_html = qq~
+		<A HREF="$CGI_BASE_DIR/Microarray/GetHaloExpression?condition_id=$condition_ids_clause&canonical_name_constraint=$array_expression_ids&row_limit=10000&input_form_format=minimum_detail&QUERY_NAME=MA_GetExpression&action=QUERY&apply_action=QUERY&sort_order=condition_name" TARGET="array_expression">-View Microarray data</A><BR>
+		<A HREF="$CGI_BASE_DIR/Microarray/GetHaloExpression?condition_id=$condition_ids_clause&canonical_name_constraint=$array_expression_ids&row_limit=10000&input_form_format=minimum_detail&QUERY_NAME=MA_GetExpression&action=QUERY&apply_action=QUERY&sort_order=condition_name&output_mode=tsv">-Download Microarray data</A><BR>
+		~ . $table_html;
+	}
 
 	#### Print HTML
 	print $table_html;
