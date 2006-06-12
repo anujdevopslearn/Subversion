@@ -706,6 +706,15 @@ $LINESEPARATOR
 		<TR>
 		~;
 
+	  my $microbes_online_url = 'http://www.microbesonline.org/cgi-bin/keywordSearch.cgi?type=0&mapId=MAPID&term=1&locus=0&hit=0&disp=0&homolog=0&format=1&favorites=&taxTyping=halo&taxSelector=64091&taxId=64091&keyword='.$biosequence_name;
+	  my $microbes_online_link =  getColorizedTD (tag=>'Microbes Online',
+												  text=>'O',
+												  data=>$biosequence_name,
+												  target=>'microbes_onlines',
+												  link=>$microbes_online_url,
+												  tooltip=>"Microbes Online Search for$biosequence_name");
+
+	 
 
 	  push @array_expression_genes,$biosequence_name;
 	  my $array_expression_link = getColorizedTD (tag=>'Gene Expression',
@@ -757,6 +766,7 @@ $LINESEPARATOR
 	  $table_html .= qq~
 		$prot_link
 		$annot_link
+		$microbes_online_link
 		$array_expression_link
 		$duplicates_link
 		</TR>
