@@ -406,6 +406,9 @@ sub handleRequest {
           $search_batch_subdir;
 	}
 
+	if (!-d $source_dir) {
+	    print "WARNING: Directory not found! $source_dir\n";
+	}
 
   	#### If user asked for a load, do it
   	if ($load) {
@@ -770,7 +773,7 @@ sub loadProteomicsExperiment {
     if (! @returned_fraction_ids) {
       $lower_case_fractions{lc($element)} = 1;
       if ($check_status) {
-        print "Entry for faction '$element' needs to be added\n";
+        print "Entry for fraction '$element' needs to be added\n";
         next;
       }
       print "Adding fraction '$element' to database\n";
@@ -1237,9 +1240,10 @@ sub addSearchBatchEntry {
 
     #### Read in the sequest.params file in the same subdirectory
     #### and store its contents
+    #### TODO: Load Mascot search analogue
     unless (addParamsEntries($search_batch_id,$fraction_directory)) {
       #die "ERROR: addParamsEntries failed.\n";
-      print "ERROR: addParamsEntries failed. Will continue anyway\n";
+      print "WARNING: addParamsEntries failed. Will continue anyway\n";
     }
 
 
@@ -1532,7 +1536,7 @@ sub addParamsEntries {
     $file = "$directory/../sequest.params";
 
     if ( ! -e "$file" ) {
-      print "ERROR: Unable to find sequest parameter file: '$file'\n";
+      print "WARNING: Unable to find sequest parameter file: '$file'\n";
       return;
     }
 
@@ -1718,7 +1722,7 @@ sub updateFromSummaryFiles {
         next;
       }
 
-      #### If a quantitation_id also turned up, kip this one
+      #### If a quantitation_id also turned up, skip this one
       if ($quantitation_id) {
         print "INFO: There is already a quantitation record for $file_root ".
           "(search_hit_id $search_hit_id).  Skip.\n";
