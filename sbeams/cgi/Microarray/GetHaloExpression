@@ -1,0 +1,1598 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : GetExpression
+# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
+# $Id: GetExpression 4262 2006-01-12 06:27:40Z dcampbel $
+#
+# Description : This program that allows users to
+#               access expression ratios for one or more conditions
+#
+# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+use XML::Writer;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $sbeamsPS $affy_o $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
+
+use SBEAMS::Connection qw($log $q);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+
+use SBEAMS::ProteinStructure;
+use SBEAMS::ProteinStructure::Settings;
+ 
+use SBEAMS::Microarray;
+use SBEAMS::Microarray::Settings;
+use SBEAMS::Microarray::Tables;
+use SBEAMS::Microarray::Affy_Analysis;
+
+
+
+use Data::Dumper;
+$sbeams = new SBEAMS::Connection;
+$sbeamsPS = new SBEAMS::ProteinStructure;
+$sbeamsPS->setSBEAMS($sbeams);
+$sbeamsMOD = new SBEAMS::Microarray;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+
+$affy_o = new SBEAMS::Microarray::Affy_Analysis;
+$affy_o->setSBEAMS($sbeams);
+
+#use CGI;
+#$q = new CGI;
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+print "OBJECT TYPES 'sbeamMOD' = " .ref($sbeams). "\n";
+print Dumper($sbeams);
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+my $jws_base_dir = "$PHYSICAL_BASE_DIR/tmp/Microarray/GetExpression/jws";
+my $jws_base_html ="$SERVER_BASE_DIR$HTML_BASE_DIR/tmp/Microarray/GetExpression/jws";
+my $shared_java_dir = "$PHYSICAL_BASE_DIR/usr/java/shared";
+my $shared_java_html = "$SERVER_BASE_DIR$HTML_BASE_DIR/usr/java/share/Cytoscape/cytoscape_ps";
+main();
+exit(0);
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    permitted_work_groups_ref=>['Microarray_readonly', 
+								 'Microarray_user',
+								 'Microarray_admin',
+								 'Admin'],
+    #connect_read_only=>1,
+    #allow_anonymous_access=>1,
+  ));
+
+
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($q);
+
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+
+  #### Decide what action to take based on information so far
+  if (defined($parameters{action}) && $parameters{action} eq "???") {
+    # Some action
+  } else {
+    $sbeamsPS->display_page_header(navigation_bar=>$parameters{navigation_bar});
+	handle_request(ref_parameters=>\%parameters);
+    $sbeamsPS->display_page_footer();
+  }
+
+
+} # end main
+
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+
+  #### Define some generic varibles
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+
+  #### Read in the standard form values
+  my $apply_action=$parameters{'action'} || $parameters{'apply_action'} || '';
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+
+  #### Set some specific settings for this program
+  my $CATEGORY="Get Expression Values";
+  $TABLE_NAME="MA_GetExpression" unless ($TABLE_NAME);
+#  ($PROGRAM_FILE_NAME) =
+#    $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+  my $PROGRAM_FILE_NAME = "GetHaloExpression";
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+
+
+  #### Get the columns and input types for this table/query
+  my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+  my %input_types = 
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+
+
+  #### Read the input parameters for each column
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters,
+    columns_ref=>\@columns,input_types_ref=>\%input_types);
+
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  if ($apply_action eq "VIEWRESULTSET") {
+    $sbeams->readResultSet(
+      resultset_file=>$rs_params{set_name},
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      resultset_params_ref=>\%rs_params,
+    );
+    $n_params_found = 99;
+  }
+
+
+  #### Set some reasonable defaults if no parameters supplied
+  unless ($n_params_found) {
+    $parameters{input_form_format} = "minimum_detail";
+  }
+
+
+  #### Apply any parameter adjustment logic
+  unless ($parameters{project_id}) {
+    $parameters{project_id} = $sbeams->getCurrent_project_id();
+  }
+
+
+  #### Display the form action buttons
+  #$sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
+
+
+  #### Finish the upper part of the page and go begin the full-width
+  #### data portion of the page
+#  $sbeams->display_page_footer(close_tables=>'YES',
+ #   separator_bar=>'YES',display_footer=>'NO');
+
+
+
+  #########################################################################
+  #### Process all the constraints
+
+  #### Build PROJECT_ID constraint
+  my $project_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"C.project_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Projects",
+    constraint_value=>$parameters{project_id} );
+  return if ($project_clause eq '-1');
+
+  # Make sure we only show info for conditions in accessible projects
+  my $acc_proj = join( ', ', $sbeams->getAccessibleProjects() );
+
+  # All conditions
+  my @total = $sbeams->selectOneColumn( <<"  END_SQL" );
+  SELECT condition_id FROM $TBMA_COMPARISON_CONDITION
+  WHERE record_status != 'D'
+  END_SQL
+
+  # Accessible conditions
+  my @accessible = $sbeams->selectOneColumn( <<"  END_SQL" );
+  SELECT condition_id FROM $TBMA_COMPARISON_CONDITION
+  WHERE project_id IN ($acc_proj)
+  AND record_status != 'D'
+  END_SQL
+
+  $parameters{condition_id} =~ s/\s//g;
+  $log->warn( "Before, $parameters{condition_id} " );
+  my @input_cond = split ",", $parameters{condition_id};
+
+  my $valid_cond = $sbeams->validateParamList( name       => 'condition_id',
+                                               total      => \@total,
+                                               accessible => \@accessible,
+                                               input      => \@input_cond
+                                            );
+
+  my $valid_str = join ",", @$valid_cond;
+  $log->warn( $valid_str );
+  
+  #### Build CONDITION constraint
+  my $condition_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"C.condition_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Condition List",
+    constraint_value=>$valid_str );
+  return if ($condition_clause eq '-1');
+
+
+  #### Build COMMON NAME constraint
+  my $common_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"GE.common_name",
+    constraint_type=>"plain_text",
+    constraint_name=>"Common Name",
+    constraint_value=>$parameters{common_name_constraint} );
+  return if ($common_name_clause eq '-1');
+
+
+  #### Build CANONICAL NAME constraint
+  my $canonical_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"GE.canonical_name",
+    constraint_type=>"plain_text",
+    constraint_name=>"Canonical Name FOOOOO",
+    constraint_value=>$parameters{canonical_name_constraint} );
+  return if ($canonical_name_clause eq '-1');
+  
+
+  #### Build LOG10 RATIO constraint
+  my $log10_ratio_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"GE.log10_ratio",
+    constraint_type=>"flexible_float",
+    constraint_name=>"log10 Ratio",
+    constraint_value=>$parameters{log10_ratio_constraint} );
+  return if ($log10_ratio_clause eq '-1');
+
+
+  #### Build Lambda constraint
+  my $lambda_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"GE.lambda",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Lambda",
+    constraint_value=>$parameters{lambda_constraint} );
+  return if ($lambda_clause eq '-1');
+
+  #### Build mu_x OR mu_y constraint
+  my $mu_x_or_mu_y_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"GE.mu_x",
+    constraint_type=>"flexible_float",
+    constraint_name=>"mu_x",
+    constraint_value=>$parameters{mu_x_or_mu_y_constraint} );
+  return if ($mu_x_or_mu_y_clause eq '-1');
+  if ($mu_x_or_mu_y_clause) {
+    if ($mu_x_or_mu_y_clause =~ /(\s*AND\s+)(GE.mu_x.+)/) {
+      my $first_part = $1;
+      my $mu_x_part = $2;
+      my $mu_y_part = $2;
+      $mu_y_part =~ s/mu_x/mu_y/;
+      $mu_x_or_mu_y_clause = "$first_part($mu_x_part OR $mu_y_part)";
+    }
+  }
+
+
+  #### Build SORT ORDER
+  my $order_by_clause = "";
+  if ($parameters{sort_order}) {
+    if ($parameters{sort_order} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
+      print "<H4>Cannot parse Sort Order!  Check syntax.</H4>\n\n";
+      return;
+    } else {
+      $order_by_clause = " ORDER BY $parameters{sort_order}";
+    }
+  }
+
+
+  #### Build ROWCOUNT constraint
+  $parameters{row_limit} = 10000
+    unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
+  my $limit_clause = $sbeams->buildLimitClause(
+   row_limit=>$parameters{row_limit});
+
+
+  #### Define some variables needed to build the query
+  my $group_by_clause = "";
+  my @column_array;
+
+
+  #### Get some information about the conditions involved
+  my %condition_names;
+  %condition_names = getConditionNames($parameters{condition_id})
+    if ($parameters{condition_id});
+  my @condition_names_and_ids;
+
+
+  #### Define the available data columns
+  my %available_columns = (
+    "GE.log10_ratio"=>["log10_ratio","GE.log10_ratio","log10 Ratio"],
+    "GE.log10_uncertainty"=>["log10_uncertainty","GE.log10_uncertainty","log10 Uncertainty"],
+    "GE.log10_std_deviation"=>["log10_std_deviation","GE.log10_std_deviation","log10 Std Dev"],
+    "GE.p_value"=>["p_value","GE.p_value","P Value"],
+    "GE.lambda"=>["lambda","GE.lambda","Lambda"],
+    "GE.mu_x"=>["mu_x","GE.mu_x","mu_x"],
+    "GE.mu_y"=>["mu_y","GE.mu_y","mu_y"],
+    "GE.mean_intensity"=>["mean_intensity","GE.mean_intensity","Mean Level"],
+    "GE.mean_intensity_uncertainty"=>["mean_intensity_uncertainty", "GE.mean_intensity_uncertainty", "Mean intensity Uncertainty"],
+   "GE.false_discovery_rate"=>["false_discovery_rate","GE.false_discovery_rate","False Discovery Rate"],
+   "GE.quality_flag"=>["quality_flag","GE.quality_flag","Quality Flag"],
+  );
+
+
+  #### If the user does not choose which data columns to show, set defaults
+  my @additional_columns = ();
+  my $display_columns = $parameters{display_columns};
+  unless (defined($parameters{display_columns}) &&
+          $parameters{display_columns}) {
+    #### just choose four interesting columns
+	$display_columns = "GE.log10_ratio,GE.lambda";
+  }
+
+
+  #### Add the desired display columns to the assitional_columns array
+  my @tmp = split(",",$display_columns);
+
+  #### If the coaelsce over reporters is chosen, then define some things special
+  my $aggregate_type = "MAX";
+  my $reporter_column = "GE.reporter_name";
+  my $reporter_group_by = "$reporter_column,";
+  my $extid_column = "GE.external_identifier";
+  my $extid_group_by = "$extid_column,";
+  my $gene_column = "GE.gene_name";
+  my $gene_group_by = "$gene_column,";
+  if ($parameters{display_options} =~ /CoalesceReporters/) {
+    $aggregate_type = "AVG";
+    $reporter_column = "MAX(GE.reporter_name)";
+    $reporter_group_by = "";
+    $extid_column = "MAX(GE.external_identifier)";
+    $extid_group_by = "";
+    $gene_column = "MAX(GE.gene_name)";
+    $gene_group_by = "";
+  }
+
+
+
+
+  #### If this is a pivot query, design the aggregate data columns
+  if ($parameters{display_options} =~ /PivotConditions/) {
+    my @condition_ids = split(/,/,$parameters{condition_id});
+    my $counter = 1;
+    foreach my $id (@condition_ids) {
+      foreach my $option (@tmp) {
+  	if (defined($available_columns{$option})) {
+          my @elements = @{$available_columns{$option}};
+          $elements[0] = $condition_names{$id}.'__'.$elements[0];
+          $elements[1] = "$aggregate_type(CASE WHEN GE.condition_id = $id ".
+            "THEN $elements[1] ELSE NULL END)";
+          $elements[2] = $condition_names{$id}.' '.$elements[2];
+  	  push(@additional_columns,\@elements);
+  	}
+      }
+      $counter++;
+    }
+
+    $group_by_clause = "   GROUP BY BS.biosequence_name,".
+      "${reporter_group_by}GE.common_name,GE.canonical_name,".
+      "${extid_group_by}".
+      "${gene_group_by}GE.second_name,GE.full_name";
+
+
+  #### Else, no pivot, just use the columns as is
+  } else {
+    foreach my $option (@tmp) {
+      if (defined($available_columns{$option})) {
+  	push(@additional_columns,$available_columns{$option});
+      }
+    }
+  }
+
+
+  #### Define the desired columns in the query
+  #### [friendly name used in url_cols,SQL,displayed column title]
+  my @column_array = (
+    ["condition_name","C.condition_name","Condition"],
+    ["common_name","GE.common_name","Common Name"],
+    ["canonical_name","GE.canonical_name","Canonical Name"],
+    @additional_columns,
+  );
+
+
+  #### Hack to remove first column if GROUPing
+  shift(@column_array) if ($parameters{display_options} =~ /PivotConditions/);
+
+
+  #### Adjust the columns definition based on user-selected options
+  if ( $parameters{display_options} =~ /BSDesc/ ) {
+    push(@column_array,
+      ["biosequence_desc","BS.biosequence_desc","Biosequence Description"],
+    );
+    $group_by_clause .= ",BS.biosequence_desc" if ($group_by_clause);
+  }
+
+
+  #### Set the show_sql flag if the user requested
+  if ( $parameters{display_options} =~ /ShowSQL/ ) {
+    $show_sql = 1;
+  }
+
+
+  #### Build the columns part of the SQL statement
+  my %colnameidx = ();
+  my @column_titles = ();
+  my $columns_clause = $sbeams->build_SQL_columns_list(
+    column_array_ref=>\@column_array,
+    colnameidx_ref=>\%colnameidx,
+    column_titles_ref=>\@column_titles
+  );
+
+
+  #### In some cases, we need to have a subselect clause
+  my $subselect_clause = '';
+  if ( $parameters{display_options} =~ /AllConditions/ &&
+       ( $log10_ratio_clause ||
+         $lambda_clause
+		 )
+     ) {
+    $subselect_clause = qq~
+          AND GE.gene_name IN (
+              SELECT DISTINCT GE.gene_name
+ 	        FROM $TBMA_COMPARISON_CONDITION C
+	       INNER JOIN $TBMA_GENE_EXPRESSION GE
+                     ON ( C.condition_id = GE.condition_id )
+	        LEFT JOIN $TBMA_BIOSEQUENCE BS
+                     ON ( GE.biosequence_id = BS.biosequence_id )
+	       WHERE 1 = 1
+    	      $condition_clause
+  	      $common_name_clause
+  	      $canonical_name_clause
+	      $log10_ratio_clause
+	      $lambda_clause
+		  $mu_x_or_mu_y_clause
+	     )
+    ~;
+
+
+    #### Remove contraints that might limit conditions
+    $log10_ratio_clause = '';
+    $lambda_clause = '';
+    $mu_x_or_mu_y_clause = '';
+  }
+
+
+  #### Define the SQL statement
+  $sql = qq~
+	SELECT $limit_clause->{top_clause} $columns_clause
+	  FROM $TBMA_COMPARISON_CONDITION C
+	 INNER JOIN $TBMA_GENE_EXPRESSION GE
+               ON ( C.condition_id = GE.condition_id )
+	  LEFT JOIN $TBMA_BIOSEQUENCE BS
+               ON ( GE.biosequence_id = BS.biosequence_id )
+	 WHERE 1 = 1
+	$condition_clause
+    $common_name_clause
+    $canonical_name_clause
+	$log10_ratio_clause
+	$lambda_clause
+    $mu_x_or_mu_y_clause
+	
+	$subselect_clause
+	$group_by_clause
+	$order_by_clause
+	$limit_clause->{trailing_limit_clause}
+       ~;
+
+
+  #### Certain types of actions should be passed to links
+  my $pass_action = "QUERY";
+  $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
+
+  #### Define the hypertext links for columns that need them
+  %url_cols = (
+  );
+
+
+  #### Define columns that should be hidden in the output table
+  %hidden_cols = ('xxx' => 1,
+  );
+
+
+  #########################################################################
+  #### If QUERY or VIEWRESULTSET was selected, display the data
+  if ($apply_action =~ /QUERY/i || $apply_action eq "VIEWRESULTSET") {
+
+    #### If the action contained QUERY, then fetch the results from
+    #### the database
+    if ($apply_action =~ /QUERY/i) {
+
+      #### Show the SQL that will be or was executed
+      $sbeams->display_sql(sql=>$sql) if ($show_sql);
+
+      #### Fetch the results from the database server
+      $sbeams->fetchResultSet(
+        sql_query=>$sql,
+        resultset_ref=>$resultset_ref,
+      );
+
+      #### Store the resultset and parameters to disk resultset cache
+      $rs_params{set_name} = "SETME";
+      $sbeams->writeResultSet(
+        resultset_file_ref=>\$rs_params{set_name},
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
+        resultset_params_ref=>\%rs_params,
+        query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+      );
+    }
+    
+     #### Post process the resultset FIX ME NEED TO DETERMINE IF THE DATA HAS BEEN PIVOTED FIRST>>>
+     ##OTHER WISE THIS WILL NOT WORK
+    
+    my $cytoscape = { template => 'GetExpression',
+    				  cytoscape_type => 'cytoscape_ps', };
+    
+    if ($rs_params{output_mode} eq 'cytoscape'){
+	    
+	    
+	    postProcessResultset(
+	      rs_params_ref=>\%rs_params,
+	      resultset_ref=>$resultset_ref,
+	      query_parameters_ref=>\%parameters,
+	      column_titles_ref=>\@column_titles,
+	      cytoscape=>$cytoscape,
+	    );
+    } 
+  
+
+    #### Display the resultset
+    $sbeams->displayResultSet(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      url_cols_ref=>\%url_cols,
+      hidden_cols_ref=>\%hidden_cols,
+      max_widths=>\%max_widths,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
+      cytoscape=>$cytoscape,
+    );
+
+
+    #### Display the resultset controls
+    $sbeams->displayResultSetControls(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      base_url=>$base_url,
+      cytoscape=>$cytoscape,
+    );
+
+
+    #### Display a plot of data from the resultset
+    $sbeams->displayResultSetPlot(
+      rs_params_ref=>\%rs_params,
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
+    );
+
+
+  #### If QUERY was not selected, then tell the user to enter some parameters
+  } else {
+    if ($sbeams->invocation_mode() eq 'http') {
+      print "<H4>Select parameters above and press QUERY</H4>\n";
+    } else {
+      print "You need to supply some parameters to contrain the query\n";
+    }
+  }
+
+
+} # end handle_request
+
+
+
+###############################################################################
+# evalSQL
+#
+# Callback for translating Perl variables into their values,
+# especially the global table variables to table names
+###############################################################################
+sub evalSQL {
+  my $sql = shift;
+
+  return eval "\"$sql\"";
+
+} # end evalSQL
+
+
+###############################################################################
+# getConditionNames: return a hash of the conditions
+#         names of the supplied list of id's.
+#         This might need to be more complicated if condition names
+#         are duplicated under different projects or such.
+###############################################################################
+sub getConditionNames {
+  my $condition_ids = shift || die "getConditionNames: missing condition_ids";
+
+  my @condition_ids = split(/,/,$condition_ids);
+
+  #### Get the data for all the specified condition_ids
+  my $sql = qq~
+      SELECT condition_id,condition_name
+        FROM $TBMA_COMPARISON_CONDITION
+       WHERE condition_id IN ( $condition_ids )
+  ~;
+  my %hash = $sbeams->selectTwoColumnHash($sql);
+
+  return %hash;
+
+} # end getConditionNames
+
+###############################################################################
+# postProcessResultset: Perform some additional processing on the resultset that would otherwise
+# be very awkward to do in SQL. Currently this is tweaking the data to be loaded into cytoscape
+###############################################################################
+sub postProcessResultset {
+	my %args = @_;
+    my ($i,$key,$line,$result,$sql,$cellTypeIndex,$antibodyIndex,
+      $intenseIndex,$equivocalIndex,$nonIndex, $organismID);
+
+  	my (%dataHash,%cellTypeHash,%RefSeqIDs);
+
+
+	#### Process the arguments list
+  	my $resultset_ref = $args{'resultset_ref'};
+  	my $rs_params_ref = $args{'rs_params_ref'};
+  	my $query_parameters_ref = $args{'query_parameters_ref'};
+ 	my $column_titles_ref = $args{'column_titles_ref'};
+ 	my $cytoscape_href = $args{'cytoscape'};
+ 	my $option;
+ 	
+ 	
+ 	#$log->debug(Dumper($query_parameters_ref));
+ 	
+  	#MAKE SURE THE DATA IS PIVIOTED
+  	unless($query_parameters_ref->{display_options} =~ /Pivot/){
+	   
+	   
+	    die "Error: Cannot display data in cytoscape without pivoting the data first.
+	    Please go back and select 'Pivot Conditions as columns' within the Display Options drop down";
+	  
+  	}
+  	unless($query_parameters_ref->{display_options} =~ /AllConditions/){
+	    die"Error: Cannot display data in cytoscape without selecting all conditions.
+	    Please go back and select 'Show All Conditions if one condition meets criteria' within the Display Options drop down";
+  	}
+  	
+	   
+  my @row;
+  my $irow = 0;
+  my ($value,$element);
+  my $nrows = scalar(@{$resultset_ref->{data_ref}});
+
+  if ( !$nrows ) {
+    print "<center>
+           <table>
+             <tr>
+               <td align = center>
+                 <b> Sorry, no data available for this Query </b>
+               </td>
+             </tr>
+           </table>
+           </center>";
+     # Can't see why they'd want to see anything else;
+      exit;
+  }
+   
+  my @all_GE_data_types = get_data_display_types();
+
+ 	#$log->debug(Dumper(\@all_GE_data_types));
+ 	#Need to figure out what data types should go into the expression data matrix file.
+	 #Extra data columns will be used in node files
+ 
+	my $first_loop = 0;
+ 	my @condition_names = ();
+ 
+ 	my $found_exp_col_flag 		= 0;
+ 	my $found_significant_col_flag = 0;
+ 	my %condition_names_h = ();
+##Loop thru all the possible numerical data types from the GetExpression page
+##Make a map of all the conditions names and what type of data was returned in the query, also record the column index 
+ 	foreach my $data_type ( @all_GE_data_types){			
+	# $log->debug("DATA TYPE '$data_type'");
+ 	
+ ##Each column name with numerical data has two parts condition: name__data_column_name
+ ##example 'G85_yf_vs_G85_yf_2__false_discovery_rate'
+ 
+	 	if ( my @col_names = grep {/$data_type/} @{$resultset_ref->{column_list_ref}} ) {
+	 		my $count = 0;
+	 		foreach my $col_name (@col_names){
+	 			my ($condition_name, $data_type);
+	 			if ($col_name =~ /(.+?)__(.*)/){
+	 				$condition_name = $1;
+	 				$data_type		= $2;
+	 			}else{
+	 				print "ERROR: '$col_name' Does not look good";
+	 			}
+	 	#pull the column index number form the results hash
+	 			my $col_index = $resultset_ref->{column_hash_ref}{$col_name};
+	 	#After finding the frist piece of data record the order the conditions were in	
+	 			if ($first_loop == 0){
+	 				$condition_names_h{$condition_name} = {ORDER => $count,
+	 													   DATA_TYPE => {}
+	 													   };
+	 				$count ++;
+	 			}
+	 			$condition_names_h{$condition_name}{DATA_TYPE}{$data_type} = $col_index;
+	 		}
+	 		$first_loop++;
+	 	}
+	}
+ 
+# 	$log->debug(Dumper(\%condition_names_h));
+ 
+	
+
+ #Find What data type should be used for the expression data
+	 my ($first_condition_name) = keys %condition_names_h;
+	 my $gene_exprssion_data_type = '';
+	 foreach my $data_type (qw(log10_ratio mean_intensity mu_x mu_y)){
+	 	if  (exists $condition_names_h{$first_condition_name}{DATA_TYPE}{$data_type}){
+	 		$gene_exprssion_data_type = $data_type;
+	 		last;
+	 	}
+	 }
+	 unless ($gene_exprssion_data_type){
+	 	$log->error("ERROR CANNOT FIND GENE EXPRSSION DATA TYPE");
+	 	exit;
+	 }
+ #Now Find what data type should be used for significant values for loading up the expession matrix
+ 
+ 
+ 	my @significant_data_types = qw(lambda
+	 							p_value
+	 							log10_uncertainty
+	 						   	log10_std_deviation
+	 						   	mean_intensity_uncertainty
+	 							false_discovery_rate
+	 						);
+ 	my $sig_data_type = '';
+	foreach my $data_type (@significant_data_types){
+	 				
+	 	if  (exists $condition_names_h{$first_condition_name}{DATA_TYPE}{$data_type}){
+	 		$sig_data_type = $data_type;
+	 		last;
+	 	}	
+	}
+
+	unless($sig_data_type){
+		die "ERROR: No significance value was selected. Please go back and choose one";
+	}
+		 
+		
+	
+	
+  #Collect all the column index numbers to collect all the expression data 
+	my @exp_data_col_numbs = ();
+ 	my @sig_data_col_numbs = ();
+	my @all_condition_names =();
+	foreach my $condition_name (sort{$condition_names_h{$a}{ORDER}
+											<=>
+									 $condition_names_h{$b}{ORDER}
+								}keys %condition_names_h){
+		push @exp_data_col_numbs, $condition_names_h{$condition_name}{DATA_TYPE}{$gene_exprssion_data_type};
+		push @sig_data_col_numbs, $condition_names_h{$condition_name}{DATA_TYPE}{$sig_data_type};
+		push @all_condition_names, $condition_name;
+	}
+  	
+	#$log->debug(Dumper(\@exp_data_col_numbs));
+#### Set up some data structures to hold Cytoscape data
+ 
+ 	my @gene_anno_noa_files = (	'biosequence_name.noa',
+						  	'reporter_name.noa',
+						  	'common_name.noa',
+							'external_identifier.noa',
+							'gene_name.noa',
+							'second_name.noa',
+							'full_name.noa'
+							);
+  	
+  	my @cytoscape_files = ( 
+  							'network.sif',
+  							@gene_anno_noa_files,
+  	
+    						'NodeType.noa', 
+    						'Expression_edges.eda',
+    						'Significance_edges.eda',
+    						
+    						'ExpressionLevel.mrna',
+    						'Significance.pval',
+    					 );
+  
+    	my $expression_file_header = "Genes\t" . join "\t", @all_condition_names;
+    	my %cytoscape_header = ( 
+  			   'network.sif' => undef,
+			   'biosequence_name.noa' 	=> 'Biosequence_name',
+			 	'reporter_name.noa' 	=> 'Reporter_name',
+				'common_name.noa' 		=> 'commonName', #Common_name
+				'external_identifier.noa' => 'External_identifier',
+				'gene_name.noa' 		=> 'Gene_name',
+				'second_name.noa' 		=> 'Second_name',
+				'full_name.noa' 		=> 'Full_name',
+			   'NodeType.noa' 			=> 'NodeType',
+			   
+			   'Expression_edges.eda'	=> "Expression_edges",
+			   'Significance_edges.eda' => "Significance_edges", 
+			   
+			   'ExpressionLevel.mrna' 	=> $expression_file_header,
+			   'Significance.pval' 		=> $expression_file_header,
+			 );
+  	foreach my $file ( @cytoscape_files ) {
+    	my @tmp = ( $cytoscape_header{$file} );
+    	$cytoscape_href->{files}->{$file} = \@tmp;
+  	}
+#$log->debug(Dumper $cytoscape_href);
+
+
+#Loop thru all the data collecting data for the cytoscape data matrix files, nodes files and edg files
+	my %organism_names = ();
+	for (@{$resultset_ref->{data_ref}}) {
+    
+    	my $canonical_name_col_index = $resultset_ref->{column_hash_ref}{canonical_name};
+    	@row = @{$resultset_ref->{data_ref}->[$irow++]};
+		my $canonical_name = $row[$canonical_name_col_index];
+		
+		push(@{$cytoscape_href->{files}->{'ExpressionLevel.mrna'}}, ("$canonical_name\t". join "\t", @row[@exp_data_col_numbs]));
+		push(@{$cytoscape_href->{files}->{'Significance.pval'}},    ("$canonical_name\t". join "\t", @row[@sig_data_col_numbs]));
+		
+		
+	#collect the Annotation too
+		foreach my $noa_file (@gene_anno_noa_files){
+				my $clean_name = $noa_file;
+				#example 'second_name.noa' Remove the suffix
+				$clean_name =~ s/\..*//;
+				my $col_index = $resultset_ref->{column_hash_ref}{$clean_name};
+				next unless $col_index =~ /^\d/;
+				my $val = ("$canonical_name\t=\t". @row[$col_index]);
+				
+				push @{$cytoscape_href->{files}->{$noa_file}},$val;
+		}
+		
+		push(@{$cytoscape_href->{files}->{'NodeType.noa'}}, $canonical_name . "\t=\tgene" );
+		#Collect the organism name too
+		$organism_names{species}{ $resultset_ref->{column_hash_ref}{organism_name} } = 1;
+		#$log->debug(Dumper(\@row));
+  	} 	# End resultset loop
+  	
+ #Add in the condition names to the NodeType file 
+ #also add the condition names to the common_name.noa file.  Bit of a hack to have the condition
+ #name show up while using the common name as the node labels
+ 	foreach my $condition_name (@all_condition_names){
+ 		push(@{$cytoscape_href->{files}->{'NodeType.noa'}}, $condition_name . "\t=\tcondition" );
+ 		push(@{$cytoscape_href->{files}->{'common_name.noa'}}, $condition_name . "\t=\t$condition_name" );
+ 	}
+ 	
+ 	
+ 	#$log->debug( Dumper($cytoscape_href));
+ 	collect_data_for_sif_file(cyto_href =>$cytoscape_href,
+ 							  query_params_ref =>$query_parameters_ref,);
+ 	
+ 	make_folders_for_jws(rs_params_ref =>$rs_params_ref,);
+ 	
+ 	#make_and_sign_jws_data_jar(rs_params_ref =>$rs_params_ref,
+ 	#						   data_files_href => \%cytoscape_header,);
+ 	
+ 	write_condition_file(rs_params_ref =>$rs_params_ref,
+ 						 condition_names => \@all_condition_names,
+ 						 );
+ 	write_cytoscape_jnlp_file(rs_params_ref =>$rs_params_ref);
+ 	write_kegg_jnlp(rs_params_ref =>$rs_params_ref);
+ 	write_plotter_jnlp(rs_params_ref =>$rs_params_ref);
+ 	write_boss_jnlp(rs_params_ref =>$rs_params_ref);
+ 	
+ 	
+ 	write_dmv_jnlp_file(rs_params_ref =>$rs_params_ref,
+ 						 );
+	write_props_file(rs_params_ref =>$rs_params_ref,
+					 condition_names => \@all_condition_names,);
+	write_index_file(rs_params_ref =>$rs_params_ref,
+					 condition_names => \@all_condition_names,);
+					 
+					 
+
+}#end postProcessResultset
+
+
+
+###############################################################################
+# get_data_display_types: Pull all the data types from the database
+###############################################################################
+sub get_data_display_types {
+	my $sql = qq~ SELECT option_key 
+				  FROM $TBMA_QUERY_OPTION 
+				  WHERE option_type  
+				  like 'GE_data_columns'
+				 ~;
+	my @data_types = $sbeams->selectOneColumn($sql);
+	return (grep { s/^GE\.//} @data_types); #remove the GE.prefix
+	
+}
+
+###############################################################################
+# collect_data_for_sif_file: Collect and sort the data that will be used to generate a sif file
+###############################################################################
+sub collect_data_for_sif_file {
+	my %args = @_;
+	
+	my $cytoscape_href = $args{cyto_href};
+	my $query_params_ref  = $args{query_params_ref};
+
+##If the user supplied a cut off value for the "significance" values make sure not to include any values
+##Below this cutof in the sif (network) file
+	my $cut_off_val = '';
+	my @constriants = ('p_value_constriant', 'false_discovery_rate_constraint');
+	foreach my $constriant (@constriants){    
+		if (exists $query_params_ref->{$constriant} && defined $query_params_ref->{$constriant}){
+			$cut_off_val = $query_params_ref->{$constriant};
+		}
+	}
+	$cut_off_val =~ s/[<>|]//g; #remove any non digit char from the number	
+	$log->debug("CONSTRIANT CUTOFF '$cut_off_val'");
+	#$log->debug(Dumper($query_params_ref));
+	#get the first row of the expression hash which has the condition names
+	my $first_line = $cytoscape_href->{files}->{'ExpressionLevel.mrna'}->[0];
+	my @condition_names = split /\t/, $first_line;
+	my $row_count = scalar @{$cytoscape_href->{files}->{'ExpressionLevel.mrna'}};
+	#skip the first element since it's the gene name column header
+	
+	$log->debug("CONDITION NAMES SIF  '@condition_names' $condition_names[1]");
+	
+	for (my $i=1; $i <= $#condition_names ; $i++){
+		my $condition_name = $condition_names[$i];
+		$log->debug("CONDITION NAME '$condition_name' INDEX '$i' ROW COUNT '$row_count'");
+		#my $key = 0;
+		my %data_h = ();
+		#load up hash for each condition which will then be sorted
+		#skip the frist line which is a column header
+		
+		for (my $l=1; $l <  $row_count; $l++){
+
+			my $exp_line = $cytoscape_href->{files}->{'ExpressionLevel.mrna'}->[$l];
+			my $sig_line = $cytoscape_href->{files}->{'Significance.pval'}->[$l];
+			
+			
+			my @exp_parts = split /\t/, $exp_line;
+			my @sig_parts = split /\t/, $sig_line;
+			
+			
+			$data_h{$l} = {EXP => $exp_parts[$i],
+					       SIG => $sig_parts[$i],
+						   NAME => $exp_parts[0] ,
+						  };
+			
+			
+		}#end collecting data
+		#$log->debug(Dumper (\%data_h));
+		
+		#sort the data on the significance score
+		my @sorted_keys = 
+				map {$_->[0]}
+				sort{ $a->[1] <=> $b->[1]}
+				map{ [$_, $data_h{$_}{SIG} ]  } keys %data_h;
+	
+	generate_sif_data(data_h=>\%data_h,
+				 sorted_keys => \@sorted_keys,
+				 condition_name => $condition_name,
+				 cytoscape_href => $cytoscape_href,
+				 cutoff_val 	=> $cut_off_val,
+				 );
+	
+	}#end conditions loop
+	
+	#$log->debug(Dumper ($cytoscape_href));
+	
+	
+}
+
+###############################################################################
+# generate_sif_data:Collect just the top data for each condition and collect data in a sif file
+###############################################################################
+sub generate_sif_data {
+	
+	my %args = @_;
+	
+	my $data_href = $args{data_h};
+	my @sorted_keys = @{ $args{sorted_keys} } ;
+  	my $condition_name = $args{condition_name};
+	my $cytoscape_href = $args{cytoscape_href};
+	my $cut_off_val    = $args{cutoff_val};
+	#$log->debug("CONDITION NAME '$condition_name'");
+	
+	#grab the top data orginally setup to be top 100 genes and appened the data to the 
+	#sif file portion of the cytoscape_href data hash.
+	for (my $i=1; $i <= $#sorted_keys && $i <= 200 ; $i++){
+		my $key = $sorted_keys[$i];
+		my $name = $data_href->{$key}{NAME};
+		my $exp_val = $data_href->{$key}{EXP}? $data_href->{$key}{EXP} : 0;
+		my $sig_val = $data_href->{$key}{SIG}? $data_href->{$key}{SIG} : 0;
+ 		
+   		my ($sif_info, $exp_info,$sig_info);
+   		
+   		if ($exp_val > 0){
+   			$sif_info = "$name upregulated_in $condition_name";
+   			$exp_info = "$name (upregulated_in) $condition_name = $exp_val";
+   			$sig_info = "$name (upregulated_in) $condition_name = $sig_val";	
+   		}elsif ($exp_val < 0){
+   			$sif_info = "$name downregulated_in $condition_name";
+   			$exp_info = "$name (downregulated_in) $condition_name = $exp_val";
+   			$sig_info = "$name (downregulated_in) $condition_name = $sig_val";
+   			
+   		}else{
+   			$sif_info = "$name not_in $condition_name";
+   			$exp_info = "$name (not_in) $condition_name = $exp_val";
+   			$sig_info = "$name (not_in) $condition_name = $sig_val";
+   		}
+   		if ($sig_val <= $cut_off_val || !$cut_off_val ){ #if the cut off value is undef collect all the data
+   			push @{$cytoscape_href->{files}->{'network.sif'}}, $sif_info;
+   		}
+   		
+   		#need to make sure all the data is the type of number, so make all the number a float otherwies cytoscape can become confused
+   		push @{$cytoscape_href->{files}->{'Expression_edges.eda'}}, make_float($exp_info);
+   		push @{$cytoscape_href->{files}->{'Significance_edges.eda'}}, make_float($sig_info); 
+	 
+	}
+	
+}
+###############################################################################
+# make_float: Check to see if a number is a float.  If not make it one
+###############################################################################
+sub make_float {
+	my $numb = shift;
+	return $numb if ($numb =~ /\./); #it's a float
+	return ("$numb.0")			#now it's a float 
+}
+###############################################################################
+# make_folders_for_jws: Make sure and make if nessesary a series of folders to hold 
+#data for cytoscape jws
+###############################################################################
+sub make_folders_for_jws {
+	my %args = @_;
+	my $rs_params_ref = $args{rs_params_ref};
+	
+	my $identifier = $rs_params_ref->{'set_name'} || 'unknown';
+##HACK this folder is being made here. Orginally it was being created by displayResultSet within the cytoscape loop
+
+	if ( ! -d $jws_base_dir) {
+			mkdir($jws_base_dir) ||
+	  die("ERROR: Unable to mkdir $jws_base_dir");
+    }
+    
+    
+    if ( ! -d "$jws_base_dir/$identifier") {
+			mkdir("$jws_base_dir/$identifier") ||
+	  die("ERROR: Unable to mkdir $jws_base_dir/$identifier");
+    }
+    
+    if ( ! -d "$jws_base_dir/$identifier/Condition_xml") {
+			mkdir("$jws_base_dir/$identifier/Condition_xml") ||
+	  die("ERROR: Unable to mkdir $jws_base_dir/$identifier/Condition_xml");
+    }
+	
+	
+}
+###############################################################################
+# write_condition_file: Write a XML file that will be used by the data matrix browser 
+#to organize the data
+###############################################################################
+sub write_condition_file {
+	my %args = @_;
+	
+	#$log->debug(Dumper (\%args));
+	my $rs_params_ref = $args{rs_params_ref};
+	my @all_conditions_names = @{ $args{condition_names} };
+	
+	
+    my $identifier = $rs_params_ref->{'set_name'} || 'unknown';
+ 	my $xml_out_file = "Conditions.xml";
+	my $url_path = "$jws_base_html/$identifier";
+	
+	
+	my $output = new IO::File(">$jws_base_dir/$identifier/Condition_xml/$xml_out_file") ||
+		die ("ERROR:Cannot Make Condition XML file $!");
+##Produce the conditions XML file
+	my $wr = new XML::Writer (  OUTPUT => $output, DATA_MODE => 'true', DATA_INDENT => 2, NEWLINED => 'true' );
+
+	$wr->startTag('experiment', 'name'=>'Affy Expression Data', 'date'=>"2005-01-09");
+
+		$wr->emptyTag('predicate', category=>'species', value=>'Homo sapiens' );
+		$wr->emptyTag('predicate', category=>'wild type', value=>'wild type' );
+		$wr->emptyTag('predicate', category=>'perturbation', value=>'Expression:Conditions' );
+##Make the data files log10 and p-vals (note that the p-vals might hold more thne just p-vals.....)
+		$wr->startTag('dataset', 'status'=>'primary','type'=>'log10 ratios');
+			$wr->startTag('uri');
+				$wr->characters("$url_path/ExpressionLevel.mrna");
+			$wr->endTag();
+		$wr->endTag();
+		
+		$wr->startTag('dataset', 'status'=>'primary','type'=>'p vals');
+			$wr->startTag('uri');
+				$wr->characters("$url_path/Significance.pval");
+			$wr->endTag();
+		$wr->endTag();
+##Write out the conditions
+	foreach my $condition (@all_conditions_names){
+		my $val = $condition;
+		$val =~ s/.+?_vs_//;
+		#TODO  need to see if all the conditions are compared to the same reference material
+		$val = $val ? $val : $condition; #default to the full condition name
+		
+		$wr->startTag('condition', 'alias'=>"$condition");
+			$wr->emptyTag('variable','name'=>'stimulus', 'value'=>$val);
+		$wr->endTag();
+		
+	}
+	
+	$wr->endTag();#close the experiment tag	
+	
+	
+	
+}
+
+
+###############################################################################
+# write_dmv_jnlp_file: Write a jnlp file to control the data matrix browser
+#
+###############################################################################
+sub write_dmv_jnlp_file {
+	my %args = @_;
+	
+	my $rs_params_ref = $args{rs_params_ref};
+
+	my $identifier = $rs_params_ref->{'set_name'} || 'unknown';
+	
+	
+ 	my $xml_out_file = "dmv.jnlp";
+
+	my $xml_data = qq~
+<jnlp
+  codebase="$jws_base_html/$identifier"
+  href="dmv.jnlp">
+  <information>
+    <title>DataMatrixViewer</title>
+    <vendor> (8 Jan 2005)</vendor>
+    <homepage href="docs/help.html"/>
+    <offline-allowed/>
+  </information>
+  <security>
+      <all-permissions/>
+  </security>
+  <resources>
+    <j2se version="1.4+" max-heap-size="1024M"/>
+    <jar href="$shared_java_html/jars/dmv.jar"/>
+    <jar href="$shared_java_html/jars/jdom.jar"/>
+    <jar href="$shared_java_html/jars/cytoscape.jar"/>
+    <jar href="$shared_java_html/jars/jcommon-0.9.5.jar"/>
+    <jar href="$shared_java_html/jars/jfreechart-0.9.20.jar"/>
+    <jar href="$shared_java_html/jars/jython.jar"/>
+    <jar href="$shared_java_html/jars/jython-lib.jar"/>
+    <jar href="$shared_java_html/jars/syspatharchivehack.jar"/>
+  </resources>
+  <application-desc>
+  <argument>$jws_base_html/$identifier/Condition_xml</argument>
+  </application-desc>
+</jnlp>
+~;
+	
+	
+	open OUT, ">$jws_base_dir/$identifier/$xml_out_file" or 
+	error("Cannot open file to create dmv.xml file  $!"); 
+	print OUT $xml_data;
+	close OUT;     
+	
+}
+
+
+###############################################################################
+# write_props_file: Write an project props file that will control which data jars are loaded
+#and set the species info
+###############################################################################
+sub write_props_file {
+	my %args = @_;
+	my @all_conditions_names = @{ $args{condition_names} };
+	my $rs_params_ref = $args{rs_params_ref};
+
+	my $identifier = $rs_params_ref->{'set_name'} || 'unknown';
+	
+	my @all_organism_info = $affy_o->conditions_organism_info(condition_names_aref => \@all_conditions_names);
+	
+	my $props_file = '';
+	if (scalar(@all_organism_info) > 1){
+		$log->debug("WARNING THERE IS MORE THEN ONE ORGANISM IN THESE CONDITION " . Dumper(\@all_organism_info));
+		die"ERROR:More then one species within this dataset.  This is currently not allowed for importing data into cytoscape";
+	}else{
+		my %org_info = %{$all_organism_info[0]};
+		$log->debug("ORGANISM INFO" . Dumper(\%org_info));
+ #use lower case only, since ISB annotation server is setup with lower case names
+		my $organism_name = lc($org_info{organism_name});	
+		my $genus	= $org_info{genus};
+		my $species = $org_info{species};
+		my $genus_species = "$genus $species";
+	
+	$props_file = <<END;
+props=jar://cytoscape.props
+dataServer=http://db.systemsbiology.net:8080/cytoscape/annotation/$organism_name/manifest
+species=$genus_species
+vprops=jar://vizmap.props
+sif=jar://network.sif
+eda=jar://Expression_edges.eda
+eda=jar://Significance_edges.eda
+noa=jar://NodeType.noa
+noa=jar://biosequence_name.noa
+noa=jar://reporter_name.noa
+noa=jar://common_name.noa
+noa=jar://external_identifier.noa
+noa=jar://gene_name.noa
+noa=jar://second_name.noa
+noa=jar://full_name.noa	
+END
+		open OUT, ">$jws_base_dir/$identifier/project-jnlp" or 
+		error("Cannot open file to create project-jnlp file  $!"); 
+		print OUT $props_file;
+		close OUT;     
+
+	}
+	
+}
+
+###############################################################################
+# write_index_file: Write an index file to control all the java web starts
+###############################################################################
+sub write_index_file {
+	my %args = @_;
+	
+	my $rs_params_ref = $args{rs_params_ref};
+	my @all_conditions_names = @{ $args{condition_names} };
+	
+	my $identifier = $rs_params_ref->{'set_name'} || 'unknown';
+	my $html_condition_names = '';
+	
+	foreach my $condition (@all_conditions_names){
+		$html_condition_names .= "<li>$condition</li>";
+	}
+	
+	my $html = <<END;
+	
+<html>
+<head> <title> Affy Expression Cytoscape Web Start</title> </head>
+<body bgcolor=white>
+<center>
+<h3> Affy Expression Cytoscape Web Start </h3>
+</center>
+<ol>
+  <li> <a href='boss.jnlp'> Boss </a>
+  <li> <a href='cytoscape.jnlp'> Network </a>
+  <li> <a href='dmv.jnlp'> DataMatrixViewer </a>
+  <li> <a href='keggwbi.jnlp'> KEGG Search </a>
+</ol>
+
+<h3>All Condition Names</h3>
+<ol>
+  $html_condition_names
+</ol>
+
+<h4> Tutorial (a very rough draft!) </h4>
+
+<ol>
+  <li> Start all 4 webstars listed above.  Be sure to start the boss first.
+  <li> Once all 4 appear (though note that the KEGG Search has no visible window; instead, it
+       displays results in your web browser), play around with the boss, getting
+       used to the following commands: &nbsp; <i> show, hide, tile</i> and the <i>listening</i>
+       checkbox.
+  <li> In the DataMatrixViewer (DMV), click on the "Expression" folder -- which is displayed in the
+       tree widget in the leftmost panel.  With that selected, click on the funny-looking
+       button at the top left of the DMV's window (next to the New... button).  This will load the expression matrix in to a spreadsheet
+       view in the DMV.
+  <li> Once that data is loaded, you can run the movie:  just press the start button 
+       at the top of the DMV.  With a frame time (allegedly) of 1 second, cytoscape will
+       run through the different colors, reflecting the differential expression of the
+       genes.
+  <li> Now make a selection in the Cytoscape window, using your mouse.  
+       And Click the Broadcast button
+  <li> Try the 'Find Correlations' button -- it (like the others, looks pretty funky)
+       but can be recognized by its two plot figures, one over the other.
+  <li> Broadcast this to the gaggle, by pressing the <i>Broadcast button</i> at the top
+       right of the cytoscape window.
+  <li> This selection will be sent to the DMV, and to the KEGG wbi (web intermediary).
+       Your browser will soon display a pathways list from KEGG, and one row will
+       be selected in the DMV.
+</ol>
+
+
+
+</body>
+</html>
+
+END
+	
+	
+	#$log->debug("INDEX OUT '$jws_base_dir/$identifier/index.html' HTML '$html'");
+	open OUT, ">$jws_base_dir/$identifier/index.html" ||
+		die "ERROR:Cannot open index.html file for writing $!";
+	
+	print OUT $html;
+	close OUT;
+	
+	
+}
+
+###############################################################################
+# write_cytoscape_jnlp_file: Write jnlp to start cytoscape
+###############################################################################
+sub write_cytoscape_jnlp_file {
+	my %args = @_;
+	my $rs_params_ref = $args{rs_params_ref};
+	my $identifier = $rs_params_ref->{'set_name'} || 'unknown';
+	
+	my $xml = <<END;
+<?xml version="1.0" encoding="utf-8"?>
+<jnlp
+  codebase="$jws_base_html/$identifier"
+  href="cytoscape.jnlp">
+  <information>
+    <title>Affy Expression Network </title>
+    <vendor> (January 9th 2004)</vendor>
+    <homepage href="docs/help.html"/>
+    <offline-allowed/>
+  </information>
+  <security>
+      <all-permissions/>
+  </security>
+  <resources>
+    <j2se version="1.4+" max-heap-size="1024M"/>
+    <jar href="$shared_java_html/jars/cytoscape.jar"/>
+    <jar href="$shared_java_html/jars/cyGagglePlugin.jar"/>
+    <jar href="$shared_java_html/jars/dmv.jar"/>
+    <jar href="$shared_java_html/jars/images.jar"/>
+    <jar href="data.jar"/>
+    <jar href="$shared_java_html/jars/jython.jar"/>
+    <jar href="$shared_java_html/jars/jython-lib.jar"/>
+    <jar href="$shared_java_html/jars/ouai.jar"/>
+    <jar href="$shared_java_html/jars/cytoAux.jar"/>
+    <jar href="$shared_java_html/jars/syspatharchivehack.jar"/>
+  	<!-- <jar href="$SERVER_BASE_DIR$HTML_BASE_DIR/usr/java/share/Cytoscape/plugins_1.0/Y2Layouters.jar"/> -->
+  	<jar href="$SERVER_BASE_DIR$HTML_BASE_DIR/usr/java/share/Cytoscape/plugins_1.0/getInteractions.jar"/>
+  	<jar href="$SERVER_BASE_DIR$HTML_BASE_DIR/usr/java/share/Cytoscape/plugins_1.0/httpdata.jar"/>
+  	<jar href="$SERVER_BASE_DIR$HTML_BASE_DIR/usr/java/share/Cytoscape/plugins_1.0/sequence.jar"/>
+  </resources>
+  <application-desc>
+    <argument>-p</argument>
+    <argument>jar://project-jnlp</argument>
+  </application-desc>
+</jnlp>
+END
+
+	open OUT, ">$jws_base_dir/$identifier/cytoscape.jnlp" ||
+		die "ERROR:Cannot open cytoscape-jnlp file for writing $!";
+	print OUT $xml;
+	close OUT;
+
+}
+
+##############################################################################
+# write_boss_jnlp: Write jnlp to start the gaggle boss
+###############################################################################
+sub write_boss_jnlp {
+	my %args = @_;
+	my $rs_params_ref = $args{rs_params_ref};
+	my $identifier = $rs_params_ref->{'set_name'} || 'unknown';
+	
+	my $xml = <<END;
+<?xml version="1.0" encoding="utf-8"?>
+<jnlp
+  codebase="$jws_base_html/$identifier"
+  href="boss.jnlp">
+  <information>
+    <title>Affy Expression Gaggle Boss</title>
+    <vendor> (7 Jan 2005) </vendor>
+    <homepage href="docs/help.html"/>
+    <offline-allowed/>
+  </information>
+  <security>
+      <all-permissions/>
+  </security>
+  <resources>
+    <j2se version="1.4+" max-heap-size="1024M"/>
+    <jar href="$shared_java_html/jars/boss.jar"/>
+  </resources>
+  <application-desc>
+  </application-desc>
+</jnlp>
+END
+
+	open OUT, ">$jws_base_dir/$identifier/boss.jnlp" ||
+		die "ERROR:Cannot open boss.jnlp file for writing $!";
+	print OUT $xml;
+	close OUT;
+
+}
+
+##############################################################################
+# write_plotter_jnlp: Write jnlp to start the plotter within the dmv
+###############################################################################
+sub write_plotter_jnlp {
+	my %args = @_;
+	my $rs_params_ref = $args{rs_params_ref};
+	my $identifier = $rs_params_ref->{'set_name'} || 'unknown';
+	
+	my $xml = <<END;
+<?xml version="1.0" encoding="utf-8"?>
+<jnlp
+  codebase="$jws_base_html/$identifier"
+  href="plotter.jnlp">
+  <information>
+    <title>Plotter </title>
+    <vendor> (9 Dec 2004)</vendor>
+    <homepage href="docs/help.html"/>
+    <offline-allowed/>
+  </information>
+  <security>
+      <all-permissions/>
+  </security>
+  <resources>
+    <j2se version="1.4+" max-heap-size="1024M"/>
+    <jar href="$shared_java_html/jars/gaggledPlotter.jar"/>
+    <jar href="$shared_java_html/jars/jdom.jar"/>
+    <jar href="$shared_java_html/jars/cytoscapeForDataBrowser.jar"/>
+    <jar href="$shared_java_html/jars/jcommon-0.9.5.jar"/>
+    <jar href="$shared_java_html/jars/jfreechart-0.9.20.jar"/>
+    <jar href="$shared_java_html/jars/jython.jar"/>
+    <jar href="$shared_java_html/jars/jython-lib.jar"/>
+    <jar href="$shared_java_html/jars/syspatharchivehack.jar"/>
+  </resources>
+  <application-desc>
+  </application-desc>
+</jnlp>
+END
+
+	open OUT, ">$jws_base_dir/$identifier/plotter.jnlp" ||
+		die "ERROR:Cannot open plotter.jnlp file for writing $!";
+	print OUT $xml;
+	close OUT;
+
+
+}
+
+
+##############################################################################
+# write_kegg_jnlp: Write jnlp to start the kegg 
+###############################################################################
+sub write_kegg_jnlp {
+	my %args = @_;
+	my $rs_params_ref = $args{rs_params_ref};
+	my $identifier = $rs_params_ref->{'set_name'} || 'unknown';
+	
+	my $xml = <<END;
+<?xml version="1.0" encoding="utf-8"?>
+<jnlp
+  codebase="$jws_base_html/$identifier"
+  href="keggwbi.jnlp">
+  <information>
+    <title>KEGG</title>
+    <vendor> (6 January 2005)</vendor>
+    <homepage href="docs/help.html"/>
+    <offline-allowed/>
+  </information>
+  <security>
+      <all-permissions/>
+  </security>
+  <resources>
+    <j2se version="1.4+" max-heap-size="1024M"/>
+    <jar href="$shared_java_html/jars/keggwbi.jar"/>
+    <jar href="$shared_java_html/jars/cytoAux.jar"/>
+  </resources>
+  <application-desc>
+  </application-desc>
+</jnlp>
+END
+	open OUT, ">$jws_base_dir/$identifier/keggwbi.jnlp" ||
+		die "ERROR:Cannot open keggwbi.jnlp file for writing $!";
+	print OUT $xml;
+	close OUT;
+
+
+}
+
+##############################################################################
+# make_and_sign_jws_data_jar: Make and sign the data jar (CURRENTLY NOT USED) Function still performed by the make file
+###############################################################################
+sub make_and_sign_jws_data_jar {
+	my %args = @_;
+	my $rs_params_ref = $args{rs_params_ref};
+	my %cytoscape_header = %{ $args{data_files_href} };
+	
+	my $identifier = $rs_params_ref->{'set_name'} || 'unknown';
+	
+	my $out_folder = "$jws_base_dir/$identifier";
+	
+#Make the data jar 
+	my $files = join " ", keys %cytoscape_header;
+	
+	my $command_line = "cd $out_folder; /tools/java/sdk/bin/jar cvf data.jar $files";
+	my $results = `$command_line`;
+	$log->debug("DATA JAR COMMAND '$command_line' RESULTS '$results' ");
+
+##Sign the data jar
+	$command_line = "/tools/java/j2sdk1.4.2/bin/jarsigner -keystore /users/pshannon/.keystore -storepass cytokey $out_folder/data.jar cytoscape";
+	$results = `$command_line`;
+	$log->debug("RESULTS SIGN DATA JAR '$results' ");
+	
+}
+
+
+
+
