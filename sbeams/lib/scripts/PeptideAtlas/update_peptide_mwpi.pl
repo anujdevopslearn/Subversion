@@ -26,12 +26,18 @@ use SBEAMS::PeptideAtlas::Tables;
 
 use SBEAMS::Glycopeptide;
 
-use strict; 
-
 my $sbeams = new SBEAMS::Connection;
 my $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+#### Create and initialize SSRCalc object with 3.0
+use lib '/net/db/src/SSRCalc/ssrcalc';
+$ENV{SSRCalc} = '/net/db/src/SSRCalc/ssrcalc';
+use SSRCalculator;
+my $SSRCalculator = new SSRCalculator;
+$SSRCalculator->initializeGlobals3();
+$SSRCalculator->ReadParmFile3();
 
 
 my $prog_name = $FindBin::Script;
@@ -64,7 +70,9 @@ unless (GetOptions(\%opts,"verbose","quiet","test","recalc")) {
   WHERE ( peptide_isoelectric_point IS NULL or 
           peptide_isoelectric_point = 0 or 
           molecular_weight IS NULL or 
-          molecular_weight = 0 )
+          molecular_weight = 0 or
+          SSRCalc_relative_hydrophobicity IS NULL or 
+          SSRCalc_relative_hydrophobicity = 0 )
   ~;
 
   my $select = $sbeams->evalSQL( <<"  END_SQL" );
@@ -94,13 +102,23 @@ unless (GetOptions(\%opts,"verbose","quiet","test","recalc")) {
       print '*';
     }
     print "\n" unless $cnt % 5000;
-    my $mw = $glyco->calculatePeptideMass( sequence => $row->[1] );
-    my $pi = $glyco->calculatePeptidePI( sequence => $row->[1] );
+    my $sequence = $row->[1];
+    my $mw = $glyco->calculatePeptideMass( sequence => $sequence );
+    my $pi = $glyco->calculatePeptidePI( sequence => $sequence );
+
+    my $hp = 'NULL';
+    if ($SSRCalculator->checkSequence($sequence) && $sequence !~ /X/) {
+      $hp = $SSRCalculator->TSUM3($sequence);
+    } else {
+      print "WARNING: peptide '$sequence' contains residues invalid for SSRCalc\n";
+    }
+
     next if $opts{test};
     my $update =<<"    END_UPDATE";
     UPDATE $TBAT_PEPTIDE
     SET peptide_isoelectric_point = $pi,
-        molecular_weight = $mw
+        molecular_weight = $mw,
+        SSRCalc_relative_hydrophobicity = $hp
     WHERE peptide_id = $row->[0]
     END_UPDATE
     $sbeams->do( $update );
