@@ -132,4 +132,16 @@
         owner_group_id="1"
         modified_by_id="1"
         option_key="ShowMappings" />
+    <AT_query_option
+        query_option_id="14"
+        record_status="N"
+        created_by_id="1"
+        sort_order="40"
+        date_modified="2006-03-08 12:00:17"
+        date_created="2006-03-08 12:00:17"
+        option_type="GP_display_options"
+        option_value="Show Modifications"
+        owner_group_id="1"
+        modified_by_id="1"
+        option_key="ShowModifications" />
 </SBEAMS_EXPORT>
