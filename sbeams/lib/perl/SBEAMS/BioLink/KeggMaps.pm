@@ -204,7 +204,7 @@ sub processEntries {
 #+
 # Returns image map HTML
 #-
-sub getImageMap {
+sub get_image_map {
   my $self = shift;
   my %args = @_;
 
@@ -234,6 +234,7 @@ sub getImageMap {
   for my $coords ( @coords ) {
     my $href = ( $links[$cnt] ) ? "HREF=$links[$cnt]" : 'HREF=www.peptideatlas.org';
     my $text = ( $text[$cnt] ) ? "$text[$cnt]" : '';
+    $colors[$cnt] ||= 'red';
     $map .= "<AREA SHAPE='RECT' CLASS='expressed_gene' COLOR=$colors[$cnt] COORDS='$coords' TITLE='$text' TARGET='_evidence' $href>\n";
     $cnt++;
   }
@@ -277,7 +278,7 @@ sub getKeggPathways {
   }
 
   # Check args and set defaults
-  $args{source} ||= 'kegg';
+  $args{source} ||= 'db';
 
   if ( $args{source} eq 'db' ) {
     unless ( $self->kegg_tables_exist() ) {
@@ -380,11 +381,14 @@ sub fetch_image {
   $base =~ s/BASE/$path/g;
   $base =~ s/__KEGG_ORG__/$org/g;
 
+  my $image_path = "/net/dblocal/data/sbeams/KEGG_MAPS/$org/$path.gif";
+
+  return $image_path if -e $image_path;  #short circuit if image is already there.
+
   # Fetch response
   my $ua = LWP::UserAgent->new();
   my $response = $ua->get( $base );
 
-  my $image_path = "/net/dblocal/data/sbeams/KEGG_MAPS/$org/$path.gif";
 
   my $image = $response->content;
 
@@ -623,7 +627,7 @@ sub get_db_pathway_genes { # $args{organism} );
 #+
 # Delete pathway data for specified organism
 #-
-sub deletePathwayCache {
+sub delete_pathway_cache {
   my $self = shift;
   my %args = @_;
 
@@ -666,7 +670,7 @@ sub deletePathwayCache {
 #  }
 }
 
-sub loadPathwayCache {
+sub load_pathway_cache {
   my $self = shift;
   my %args = @_;
 
@@ -700,7 +704,7 @@ sub loadPathwayCache {
     $sbeams->initiate_transaction();
 
     eval {
-      my $path_id = $sbeams->selectrow_array( <<"      END" );
+      my ($path_id) = $sbeams->selectrow_array( <<"      END" );
       SELECT kegg_pathway_id 
       FROM $TBBL_KEGG_PATHWAY 
       WHERE kegg_pathway_name = '$path->{entry_id}'
@@ -724,7 +728,7 @@ sub loadPathwayCache {
 
       for my $gene ( @$gene_info ) {
 
-        my $kgene_id = $sbeams->selectrow_array( <<"        END" );
+        my ($kgene_id) = $sbeams->selectrow_array( <<"        END" );
         SELECT kegg_gene_id 
         FROM $TBBL_KEGG_GENE 
         WHERE gene_id = '$gene->{gene_id}'
