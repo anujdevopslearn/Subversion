@@ -141,7 +141,6 @@ sub main {
 
 	
 	if ($action eq 'download') {
-	   
 	    
 	    
 		print "Content-type: application/force-download \n";
@@ -166,7 +165,7 @@ sub main {
 	  # print "INFO $output_dir/$file_name.$file_ext'<br>";
 
     # This block of code removes the pbs job out/err file if it exists.  This
-    # will keep us from accreting these files, that are unused anyway.  If this
+    # will keep us from accreting these files, which are unused anyway.  If this
     # block fails at a remote site it is likely that the permissions on the 
     # job dir are flawed.
     if ( -e "${output_dir}/pbs_job.out" ) {
@@ -195,7 +194,7 @@ sub linkImage {
   my $error = 0;
   open(INFILE, "< $file") || sub{$error = -1;};
 
-  if ($error == 0) {
+  if ($error == 0 && 0) {
 			print "Content-type: image/jpeg\n\tname=\"file.jpg\"";
 			print "Content-Transfer-Encoding: base64\n";
 			print "Content-Disposition: inline\n";
@@ -209,12 +208,13 @@ sub linkImage {
 			}
   }
   else{
-      print qq~
+    my $mailto = $sbeams->get_admin_mailto('administrator');
+    print qq~
 	  $file
 	  <CENTER><FONT COLOR="red"><h1><B>FILE COULD NOT BE OPENED FOR VIEWING</B></h1>
-	  Please report this to <a href="mailto:mailto:pmoss\@systemsbiology.org">Pat Moss</a>
+	  Please report this to $mailto
 	  </FONT></CENTER>
-      ~;
+     ~;
   }
 	  
 } # end printFile
@@ -233,35 +233,25 @@ sub printFile {
   
   my $error = 0;
 
-  #print "FILE TO OPEN '$file'<br>";
-  
-  open(INFILE, "< $file") || sub{$error = -1;};
+  open(INFILE, "< $file") || sub{ $error++; };
   my $all_data;
-  if ($error == 0) {
-     if ($file_ext eq 'html'){
-     	while(<INFILE>){
-     		print $_;
-     	}
-     }else{
-      # print qq~ <PRE> ~;
-      print "<plaintext>";
-      my $count ++;
-      while (<INFILE>) {
-	 # print "$count '$_'<br>";
-	  print "$_" ;
-      	$all_data .= $_;
-      	$count ++;
-      }
-      print qq~ </plaintext>~;
-     }
-  }
-  else{
-      print qq~
+  if ( $error ) {
+    my $mailto = $sbeams->get_admin_mailto('administrator');
+    print qq~
 	  $file
 	  <CENTER><FONT COLOR="red"><h1><B>FILE COULD NOT BE OPENED FOR VIEWING</B></h1>
-	  Please report this to <a href="mailto:mailto:pmoss\@systemsbiology.org">Pat Moss</a>
+	  Please report this to the SBEAMS $mailto.
 	  </FONT></CENTER>
-      ~;
+    ~;
+
+  } else {
+    print "<PRE>\n" if $file_ext ne 'html';
+    while(<INFILE>){ 
+    # The following line was put in to remove a mysterious '<b>' tag
+#      $_ =~ s/\<[^>]+?\>//g if $file_ext ne 'html';
+      print $_;
+    }
+    print "</PRE>\n" if $file_ext ne 'html';
   }
 	  
 } # end printFile
