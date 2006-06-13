@@ -19,6 +19,7 @@ package SBEAMS::Connection::Utilities;
 
 use strict;
 use SBEAMS::Connection::Log;
+use SBEAMS::Connection::Settings qw( $DBADMIN);
 use vars qw(@ERRORS
            );
 my $log = SBEAMS::Connection::Log->new();
@@ -865,6 +866,18 @@ sub getGaggleXML {
   $xml .= "</gaggleData>\n  -->" if $args{end};
   return $xml;
 }
+
+
+sub get_admin_mailto {
+  my $self = shift;
+  my $linktext = shift;
+
+  my ( $email ) = $DBADMIN =~ /(\w+@\w+\.\w+[\w\.]*)/;
+  $log->debug( "Email $email extracted from DBADMIN setting: $DBADMIN" );
+  return ( $email ) ? "<A HREF=mailto:$email>$linktext</A>" : '';
+}
+
+
 
 1;
 
