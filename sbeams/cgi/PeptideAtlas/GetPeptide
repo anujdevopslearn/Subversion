@@ -747,7 +747,8 @@ if ($apply_action =~ /QUERY/i ) {
   );
   my $modSQL = qq~
   SELECT distinct
-  modified_peptide_sequence, MPI.peptide_charge, MPI.best_probability, 
+  modified_peptide_sequence, MPI.peptide_charge, MPI.monoisotopic_parent_mz,
+  MPI.best_probability, 
   MPI.n_observations, MPI.n_sibling_peptides, MPI.sample_ids  
   FROM $TBAT_PEPTIDE_INSTANCE PI
   INNER JOIN $TBAT_PEPTIDE P
@@ -776,15 +777,16 @@ if ($apply_action =~ /QUERY/i ) {
   if ( scalar @mod_peps ) {
     $modHTML .= $sbeams->getPopupDHTML();
     for my $pep ( @mod_peps ) {
-      $pep->[2] = sprintf("%0.2f", $pep->[2]) unless $pep->[2] == 1;
-      $pep->[2] = 1 if $pep->[2] == 1;
-      $pep->[5] = sample_view( $pep->[5] );
+      $pep->[2] = sprintf("%0.4f", $pep->[2]);
+      $pep->[3] = sprintf("%0.2f", $pep->[3]) unless $pep->[3] == 1;
+      $pep->[3] = 1 if $pep->[3] == 1;
+      $pep->[6] = sample_view( $pep->[6] );
     }
-    unshift @mod_peps, ['Modified Sequence', 'Charge', 'Best Probability', '# Obs', '# Siblings', 'Sample IDs' ];
+    unshift @mod_peps, ['Modified Sequence', 'Charge', 'Mono Parent m/z', 'Best Prob', '# Obs', '# Siblings', 'Sample IDs' ];
   
     $modHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
                                                  width => '600',
-                                                align  => [qw(left center left right center center)],
+                                                align  => [qw(left center right right right center center)],
                                                   rows => \@mod_peps );
     print "<BR>$modHTML\n";
   }
