@@ -33,6 +33,7 @@ use SBEAMS::Connection::TableInfo;
 use SBEAMS::Proteomics::Settings;
 use SBEAMS::Proteomics::TableInfo;
 
+use constant MENU_WIDTH => 138;
 
 ###############################################################################
 # Constructor
@@ -95,6 +96,7 @@ sub display_page_header {
     #### Determine the Title bar background decoration
     my $header_bkg = "bgcolor=\"$BGCOLOR\"";
     $header_bkg = "background=\"$HTML_BASE_DIR//images/plaintop.jpg\"" if ($DBVERSION =~ /Primary/);
+    my $gwidth = ( MENU_WIDTH ) ? MENU_WIDTH/2 : 64;
 
     print qq~
 	<!--META HTTP-EQUIV="Expires" CONTENT="Fri, Jun 12 1981 08:20:00 GMT"-->
@@ -109,10 +111,13 @@ sub display_page_header {
 	<!------- Header ------------------------------------------------>
 	<a name="TOP"></a>
 	<tr>
-	  <td bgcolor="$BARCOLOR"><a href="http://db.systemsbiology.net/"><img height=64 width=64 border=0 alt="ISB DB" src="$HTML_BASE_DIR/images/dbsmltblue.gif"></a><a href="https://db.systemsbiology.net/sbeams/cgi/main.cgi"><img height=64 width=64 border=0 alt="SBEAMS" src="$HTML_BASE_DIR/images/sbeamssmltblue.gif"></a></td>
+	  <td bgcolor="$BARCOLOR"><a href="http://db.systemsbiology.net/">
+    <img height=64 width=64 border=0 alt="ISB DB" src="$HTML_BASE_DIR/images/dbsmltblue.gif"></a>
+    <a href="https://db.systemsbiology.net/sbeams/cgi/main.cgi">
+    <img height=64 width=64 border=0 alt="SBEAMS" src="$HTML_BASE_DIR/images/sbeamssmltblue.gif"></a>
+    </td>
 	  <td align="left" $header_bkg><H1>$DBTITLE - $SBEAMS_PART<BR>$DBVERSION</H1></td>
 	</tr>
-
     ~;
 
     #print ">>>http_header=$http_header<BR>\n";
@@ -129,19 +134,22 @@ sub display_page_header {
       ~;
 
       if (uc($navigation_bar) eq 'YES') {
-        print qq~
-	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Help?document=all"><nobr>Documentation</nobr></a></td></tr>
-	<tr><td>&nbsp;</td></tr>
-	<tr><td>Manage Data:</td></tr>
+
+        my $spad = '&nbsp;' x 3;
+
+        my $datamenu = qq~
+        <TABLE>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi"><nobr>&nbsp;&nbsp;&nbsp;My Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project"<nobr>&nbsp;&nbsp;&nbsp;Projects</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment"><nobr>&nbsp;&nbsp;&nbsp;Experiments</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_sample"><nobr>&nbsp;&nbsp;&nbsp;Samples</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=protocol"><nobr>&nbsp;&nbsp;&nbsp;Protocols</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_publication"><nobr>&nbsp;&nbsp;&nbsp;Publications</nobr></a></td></tr>
-	<tr><td>&nbsp;</td></tr>
-	<tr><td>Browse Data:</td></tr>
+        </TABLE>
+  ~;
+
+        my $browsemenu = qq~
+        <TABLE>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeFractions"><nobr>&nbsp;&nbsp;&nbsp;Summarize Fractions</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetSearchHits"><nobr>&nbsp;&nbsp;&nbsp;Browse Search Hits</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizePeptides"><nobr>&nbsp;&nbsp;&nbsp;Summarize over</nobr><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Proteins/Peptides</a></td></tr>
@@ -152,8 +160,11 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseAPD"><nobr>&nbsp;&nbsp;&nbsp;Browse APD</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowsePossiblePeptides"><nobr>&nbsp;&nbsp;&nbsp;Browse Possible</nobr><BR><nobr>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Tryptic Peptides</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseProteinSummary"><nobr>&nbsp;&nbsp;&nbsp;Protein Summary</nobr></a></td></tr>
-	<tr><td>&nbsp;</td></tr>
-	<tr><td>Core Management:</td></tr>
+        </TABLE>
+  ~;
+
+        my $coremenu = qq~
+        <TABLE>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_dbxref"><nobr>&nbsp;&nbsp;&nbsp;DB XRefs</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_gradient_program"><nobr>&nbsp;&nbsp;&nbsp;Gradient Program</nobr></a></td></tr>
@@ -162,10 +173,43 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_experiment_type"><nobr>&nbsp;&nbsp;&nbsp;Request Management</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_raw_data_file"><nobr>&nbsp;&nbsp;&nbsp;Data Processing</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=APD_peptide_summary"><nobr>&nbsp;&nbsp;&nbsp;APD Tables</nobr></a></td></tr>
-	<tr><td>&nbsp;</td></tr>
-	<tr><td>Other Tools:</td></tr>
+        </TABLE>
+  ~;
+
+        my $othermenu = qq~
+        <TABLE>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Help?document=all"><nobr>${spad}Documentation</nobr></a></td></tr>
 	<tr><td><a href="http://db.systemsbiology.net:8080/proteomicsToolkit/"><nobr>&nbsp;&nbsp;&nbsp;Proteomics Toolkit</nobr></a></td></tr>
 	<tr><td><a href="http://mss.systemsbiology.net/"><nobr>&nbsp;&nbsp;&nbsp;MassSpec Schedule</nobr></a></td></tr>
+        </TABLE>
+  ~;
+
+  my ($corecontent,$corelink) = $sbeams->make_toggle_section( content => $coremenu,
+                                                                 name => 'pr_core_menu',
+                                                               sticky => 1 );
+  my ($browsecontent,$browselink) = $sbeams->make_toggle_section( content => $browsemenu,
+                                                                     name => 'pr_browse_menu',
+                                                                  visible => 1,
+                                                                   sticky => 1 );
+  my ($datacontent,$datalink) = $sbeams->make_toggle_section( content => $datamenu,
+                                                                 name => 'pr_data_menu',
+                                                               sticky => 1 );
+  my ($othercontent,$otherlink) = $sbeams->make_toggle_section( content => $othermenu,
+                                                                visible => 1,
+                                                                   name => 'pr_other_menu',
+                                                                 sticky => 1 );
+  my $gif_spacer = $sbeams->getGifSpacer(MENU_WIDTH);
+        print qq~
+	<tr><td>$gif_spacer</td></tr>
+	<tr><td NOWRAP>$datalink Manage Data:</td></tr>
+	<tr><td>$datacontent </td></tr>
+	<tr><td NOWRAP>$browselink Browse Data:</td></tr>
+	<tr><td>$browsecontent </td></tr>
+	<tr><td NOWRAP>${corelink}Core Management:</td></tr>
+	<tr><td>$corecontent </td></tr>
+	<tr><td NOWRAP>${otherlink}Other Tools:</td></tr>
+	<tr><td>$othercontent </td></tr>
+
         ~;
       }
 
@@ -176,6 +220,9 @@ sub display_page_header {
 	<!-------- Main Page ------------------------------------------->
 	<td valign=top>
 	<table border=0 bgcolor="#ffffff" cellpadding=4>
+   <TR><TD>
+    <IMG SRC="$HTML_BASE_DIR/images/clear.gif" width=1000 height=1>
+   </TD></TR>
 	<tr><td>
 
       ~;
