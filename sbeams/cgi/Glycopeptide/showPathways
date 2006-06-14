@@ -227,7 +227,7 @@ sub pathway_details {
 
   # Get hashref of pathway info (mostly for image URL); 
   # Get image map for links to peptide glyco 
-  my $image_map = $keggmap->getImageMap( coords => $processed->{coords},
+  my $image_map = $keggmap->get_image_map( coords => $processed->{coords},
                                         name   => 'kegg_map',
                                         links  => \@links,
                                         text   => \@text,
