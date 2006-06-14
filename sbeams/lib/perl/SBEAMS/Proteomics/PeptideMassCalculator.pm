@@ -44,20 +44,26 @@ sub new {
   #### Define supported modifications
   %supported_modifications = (
     'monoisotopic' => {
-      'C[147]' => 57.02146,
-      'C[330]' => 227.13,   # mono from ABI cl-ICAT literature
-      'C[339]' => 236.16,   # mono from ABI cl-ICAT literature
-      'C[545]' => 442.2,   # approx
-      'C[553]' => 442.2+8*$H,   # approx
-      'M[160]' => $O,
+      'C[160]' => 57.021464,    # Cys_CAM (UniMod)
+      'C[161]' => 57.021464,    # Search ERROR, remove!!
+      'C[330]' => 227.126991,   # ABI cl-ICAT light (UniMod)
+      'C[339]' => 236.157185,   # ABI cl-ICAT heavy (Unimod)
+      'C[517]' => 414.193691,   # Glycopeptide capture ?? (UniMod)
+      'C[545]' => 442.224991,   # ABI old ICAT light (UniMod)
+      'C[553]' => 450.275205,   # ABI old ICAT heavy (UniMod)
+      'M[147]' => 15.994915,    # Oxidation (UniMod)
+      'N[115]' => 0.984016,     # Glyc-Asn (UniMod)
     },
     'average' => {
-      'C[147]' => 57.052,
-      'C[330]' => 227.13,   # mono from ABI cl-ICAT literature
-      'C[339]' => 236.16,   # mono from ABI cl-ICAT literature
-      'C[545]' => 442.2,   # approx
-      'C[553]' => 442.2+8*$H,   # approx
-      'M[160]' => $O,
+      'C[160]' => 57.0513,    # Cys_CAM (UniMod)
+      'C[161]' => 57.0513,    # Search ERROR, remove!!
+      'C[330]' => 227.2603,   # ABI cl-ICAT light (UniMod)
+      'C[339]' => 236.1942,   # ABI cl-ICAT heavy (Unimod)
+      'C[517]' => 414.5196,   # Glycopeptide capture ?? (Unimod)
+      'C[545]' => 442.5728,   # ABI old ICAT light (UniMod)
+      'C[553]' => 450.6221,   # ABI old ICAT heavy (UniMod)
+      'M[147]' => 15.9848,    # Oxidation (UniMod)
+      'N[115]' => 0.9848,     # Glyc-Asn (UniMod)
     },
   );
 
@@ -108,6 +114,10 @@ sub getPeptideMass {
       return(undef);
     }
   }
+
+  #### Fail if imprecise AA's are present
+  return(undef) if ($sequence =~ /[BZX]/);
+
 
   #### Calculate the neutral peptide mass using InSilicoSpectro
   my @modif = ();
