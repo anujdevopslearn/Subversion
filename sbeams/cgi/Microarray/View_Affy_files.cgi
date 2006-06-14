@@ -194,7 +194,7 @@ sub linkImage {
   my $error = 0;
   open(INFILE, "< $file") || sub{$error = -1;};
 
-  if ($error == 0 && 0) {
+  if ($error == 0) {
 			print "Content-type: image/jpeg\n\tname=\"file.jpg\"";
 			print "Content-Transfer-Encoding: base64\n";
 			print "Content-Disposition: inline\n";
