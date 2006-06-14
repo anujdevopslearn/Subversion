@@ -1203,84 +1203,81 @@ END
 sub order_all_files{
 	my %args = @_;
 	
+  # Files in order from cgi params
 	my @files = @{ $args{files_names} };
+  
+  # Sample groups in order from db
 	my @all_sample_group_names = @{ $args{all_sample_groups} };
+
+  # groups defined by user
 	my @user_sample_groups 	   = @{ $args{sample_groups} };
 
-
-
-	my %file_names_groups_h = ();
-	#make a hash from the two arrays....tricky
-	@file_names_groups_h{@files} = @all_sample_group_names;
+  my %file_names_groups_h = ();
+  #make a hash from the two arrays....tricky
+  @file_names_groups_h{@files} = @all_sample_group_names;
 	
-	
-	$log->debug(Dumper(\%file_names_groups_h));
-	
-	
-	 my @final_file_order = ();
-	 my @final_groups_order = ();
+  my @final_file_order = ();
+  my @final_groups_order = ();
 	 
 	 
-	 #Need to out put a list of all the file names and a array of what
-	#sample group each file belongs to.  This will be used to make the list
-	#of radio buttons to allow the user to select which sample belongs to each group.
+  #Need to out put a list of all the file names and a array of what
+  #sample group each file belongs to.  This will be used to make the list
+  #of radio buttons to allow the user to select which sample belongs to each group.
 	
-	#If the user changes the sample group names there is no way to figure out what file
-	#belongs to which sample group.  So if a group is missing or changes to who knows what group the files
-	#under the unknown Group
-	
-	foreach my $file_name (keys %file_names_groups_h ){
+  #If the user changes the sample group names there is no way to figure out what
+  #file belongs to which sample group.  So if a group is missing or changes to
+  #who knows what group the files under the unknown Group
+
+  # Modified 6/2006 to maintain user specified group order.
+  my %groups_to_files;
+ 
+  foreach my $file_name (keys %file_names_groups_h ){
+    my $orginal_group_name = $file_names_groups_h{$file_name};
+    my $new_group = '';
 		
+    foreach my $user_group_name (@user_sample_groups){
+      if ($user_group_name eq $orginal_group_name){
+      # print "Matched original to user group name '$orginal_group_name'\n";
+      $new_group = $orginal_group_name;
+      last;
+      }
+    }
 		
-		my $orginal_group_name = $file_names_groups_h{$file_name};
-		$log->debug("$file_name => $orginal_group_name");
-		my $new_group = '';
+    $new_group ||= 'Unknown';
 		
-		foreach my $user_group_name (@user_sample_groups){
-			if ($user_group_name eq $orginal_group_name){
-			#print "MATCHED ORGINAL GROUP TO USER DEFINED GROUP '$orginal_group_name'\n";
-				$new_group = $orginal_group_name;
-				last;
-			}
-		}
-		
-		$new_group =$new_group ?$new_group:'Unknown';
-		
-		#print "NEW GROUP SET TO '$new_group'\n";
-		
-		push @final_groups_order, $new_group ;
-	 	
-	 	push @final_file_order, $file_name;
+    push @final_groups_order, $new_group ;
+    push @final_file_order, $file_name;
+    $groups_to_files{$new_group} ||= [];
+    # Push each file into an arrayref keyed by its group
+    push @{$groups_to_files{$new_group}}, $file_name;
 	}
 	
-	#now that we have the file to group mapping sort on the sample group names to make it print nice
 	my %final_h = ();
 	@final_h{@final_file_order} = @final_groups_order;
 	
 	my @final_file_order_sorted = ();
 	my @final_groups_order_sorted = ();
 	
-	foreach my $file (sort{$final_h{$a} cmp $final_h{$b}
-					     ||
-				         $a cmp $b}
-			 keys %final_h){
-		push @final_file_order_sorted, $file;
-		push @final_groups_order_sorted, $final_h{$file};
-	}
-	
-	
-	$log->debug("FINAL GROUP ORDER". Dumper( \@final_groups_order_sorted));
-	 
-	$log->debug("FINAL FILE ORDER". Dumper(\@final_file_order_sorted));
-	
-	error("The number of ordered files does not contain the same number of files as the user selected. ")
-		unless (  @final_file_order_sorted == @files);
-		
-		
-		return (\@final_file_order_sorted, \@final_groups_order_sorted);
-	
+  # loop through user-ordered groups
+  for my $group ( @user_sample_groups ){
+    
+    # User defined groups won't have any files
+    next unless ref( $groups_to_files{$group} ) eq 'ARRAY';
 
+    # Loop through files in a particular group, adding them
+    for my $file ( @{$groups_to_files{$group}} ){
+      push @final_file_order_sorted, $file;
+      push @final_groups_order_sorted, $group;
+    }
+  }
 	
+  $log->debug("FINAL FILE ORDER". Dumper(\@final_file_order_sorted));
+	
+  error("The number of ordered files does not contain the same number of files as the user selected. ")
+  unless (  @final_file_order_sorted == @files);
+		
+		
+  return (\@final_file_order_sorted, \@final_groups_order_sorted);
 }
 
 ###############################################################################
