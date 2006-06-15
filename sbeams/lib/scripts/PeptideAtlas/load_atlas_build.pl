@@ -29,7 +29,8 @@ use vars qw ($sbeams $sbeamsMOD $q $current_username
              $ATLAS_BUILD_ID %spectra
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
              $TESTVARS $CHECKTABLES
-             $sbeamsPROT
+             $sbeamsPROT $SSRCalculator $GlycoPeptideModule
+	     $massCalculator
             );
 
 
@@ -53,6 +54,21 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 $sbeamsPROT = new SBEAMS::Proteomics;
 $sbeamsPROT->setSBEAMS($sbeams);
+
+use SBEAMS::Glycopeptide;
+$GlycoPeptideModule = new SBEAMS::Glycopeptide();
+
+#### Create and initialize SSRCalc object with 3.0
+use lib '/net/db/src/SSRCalc/ssrcalc';
+$ENV{SSRCalc} = '/net/db/src/SSRCalc/ssrcalc';
+use SSRCalculator;
+my $SSRCalculator = new SSRCalculator;
+$SSRCalculator->initializeGlobals3();
+$SSRCalculator->ReadParmFile3();
+
+use SBEAMS::Proteomics::PeptideMassCalculator;
+$massCalculator = new SBEAMS::Proteomics::PeptideMassCalculator;
+
 
 ###############################################################################
 # Set program name and usage banner for command like use
@@ -2397,6 +2413,18 @@ sub insert_peptide {
 
   my $rowdata_ref = $args{'rowdata_ref'} or die("need rowdata_ref");
 
+  my $sequence = $rowdata_ref->{peptide_sequence};
+  my $mw = $GlycoPeptideModule->calculatePeptideMass( sequence => $sequence );
+  my $pI = $GlycoPeptideModule->calculatePeptidePI( sequence => $sequence );
+  my $hp;
+  if ($SSRCalculator->checkSequence($sequence)) {
+    $hp = $SSRCalculator->TSUM3($sequence);
+  }
+
+  $rowdata_ref->{peptide_molecular_weight} = $mw;
+  $rowdata_ref->{peptide_isoelectric_point} = $pI;
+  $rowdata_ref->{SSRCalc_relative_hydrophobicity} = $hp;
+
   my $peptide_id = $sbeams->updateOrInsertRow(
     insert=>1,
     table_name=>$TBAT_PEPTIDE,
@@ -2444,6 +2472,39 @@ sub insert_modified_peptide_instance {
 
   my $rowdata_ref = $args{'rowdata_ref'} or die("need rowdata_ref");
 
+
+  #### Calculate some mass values based on the sequence
+  my $modified_peptide_sequence = $rowdata_ref->{modified_peptide_sequence};
+  my $peptide_charge = $rowdata_ref->{peptide_charge};
+
+  $rowdata_ref->{monoisotopic_peptide_mass} =
+    $massCalculator->getPeptideMass(
+				    sequence => $modified_peptide_sequence,
+				    mass_type => 'monoisotopic',
+				   );
+
+  $rowdata_ref->{average_peptide_mass} =
+    $massCalculator->getPeptideMass(
+				    sequence => $modified_peptide_sequence,
+				    mass_type => 'average',
+				   );
+
+  $rowdata_ref->{monoisotopic_parent_mz} =
+    $massCalculator->getPeptideMass(
+				    sequence => $modified_peptide_sequence,
+				    mass_type => 'monoisotopic',
+				    charge => $peptide_charge,
+				   );
+
+  $rowdata_ref->{average_parent_mz} =
+    $massCalculator->getPeptideMass(
+				    sequence => $modified_peptide_sequence,
+				    mass_type => 'average',
+				    charge => $peptide_charge,
+				   );
+
+
+  #### INSERT the record
   my $modified_peptide_instance_id = $sbeams->updateOrInsertRow(
     insert=>1,
     table_name=>$TBAT_MODIFIED_PEPTIDE_INSTANCE,
