@@ -17,39 +17,41 @@ AT_atlas_build	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_gr
 AT_atlas_build	16	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_default_atlas_build	1	default_atlas_build_id	Default Atlas Build ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_default_atlas_build	2	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	Y	Organism for which this default applies.  Leave empty for overall default	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-AT_default_atlas_build	3	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id	Y	optionlist			Y	Y	Y	Atlas Build that should be the default for this organism	"SELECT atlas_build_id,atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY atlas_build_name "	
-AT_default_atlas_build	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-AT_default_atlas_build	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_default_atlas_build	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_default_atlas_build	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_default_atlas_build	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_default_atlas_build	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_default_atlas_build	10	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_default_atlas_build	3	organism_specialized_build	Organism Specialized Build	varchar	50	0	Y		N			N	text	40		Y	Y	Y	"If not NULL, a specialized build within this organism, e.g. Human Plasma"		
+AT_default_atlas_build	4	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id	Y	optionlist			Y	Y	N	Atlas Build that should be the default for this organism	"SELECT atlas_build_id,atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY atlas_build_name "	
+AT_default_atlas_build	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_default_atlas_build	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_default_atlas_build	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_default_atlas_build	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_default_atlas_build	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_default_atlas_build	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_default_atlas_build	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_sample	1	sample_id	Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_sample	2	project_id	Owner Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Sample is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id"	
 AT_sample	3	sample_accession	Sample Accession	varchar	255	0	Y		N			N	text	20		Y	Y	Y	stable accession identifier for the sample (e.g. PAe000001)		
-AT_sample	4	sample_title	Sample Title	varchar	255	0	N		N			Y	textarea	2		Y	Y	Y	Title of this Sample		
-AT_sample	5	sample_tag	Sample Tag	varchar	50	0	N		N			Y	text	30		Y	Y	Y	"Short tag (mnenomic) for this sample (e.g., THP1sLPS)"		
-AT_sample	6	original_experiment_tag	Original Experiment Tag	varchar	50	0	Y		N			Y	text	30		Y	Y	N	"Short tag (mnenomic) for the original experiment, perhaps superceded with a better name in sample_tag"	
-AT_sample	7	sample_date	Sample Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	textdate	20		Y	Y	N	Date on which this sample was prepared	
-AT_sample	8	sample_description	Sample Description	text	16	0	Y		N			N	textarea	10		Y	Y	N	Full description of this sample	
-AT_sample	9	instrument_model_id	Instrument Model ID	int	4	0	Y		N	PR_instrument	instrument_id	N	optionlist			Y	Y	N	Instrument (mass spectrometer) manufacturer model name	"SELECT instrument_id,instrument_name FROM $TBPR_INSTRUMENT WHERE record_status != 'D' ORDER BY instrument_name"
-AT_sample	10	search_batch_id	Search Batch ID	int	4	0	N		N				fixed			Y	P		Search Batch ID	
-AT_sample	11	sample_publication_ids	Sample Publications	varchar	255	0	Y		N	AT_sample_publication	sample_publication_id	N	multilink	4		Y	Y	N	Select all publications that apply to this sample.	"SELECT P.publication_id,P.publication_name FROM $TBAT_PUBLICATION P WHERE P.record_status != 'D' ORDER BY P.publication_name"
-AT_sample	12	data_contributors	Data Contributors	text	16	0	Y		N			Y	textarea	10		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)	
-AT_sample	13	primary_contact_email	Primary Email Contact	text	16	0	Y		N			Y	text	40		Y	P	N	Email address of primary contact for data	
-AT_sample	14	is_public	Is the dataset publicly available?	char	1	0	Y		N			Y	optionlist			Y	Y	N	Indicates whether the dataset is public	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"
-AT_sample	15	anatomical_site_term	Anatomical Site (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Anatomical site from which this sample was obtained	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"
-AT_sample	16	developmental_stage_term	Developmental Stage (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Developmental stage of the sample donor individual	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"
-AT_sample	17	pathology_term	Pathology (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Pathology of the sample	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"
-AT_sample	18	cell_type_term	Cell Type (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Cell type of the sample	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"
-AT_sample	19	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments	
-AT_sample	20	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-AT_sample	21	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
-AT_sample	22	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_sample	23	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_sample	24	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_sample	25	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_sample	4	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	Y	Organism for which this default applies.  Leave empty for overall default	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+AT_sample	5	sample_title	Sample Title	varchar	255	0	N		N			Y	textarea	2		Y	Y	Y	Title of this Sample	
+AT_sample	6	sample_tag	Sample Tag	varchar	50	0	N		N			Y	text	30		Y	Y	Y	"Short tag (mnenomic) for this sample (e.g., THP1sLPS)"	
+AT_sample	7	original_experiment_tag	Original Experiment Tag	varchar	50	0	Y		N			Y	text	30		Y	Y	N	"Short tag (mnenomic) for the original experiment, perhaps superceded with a better name in sample_tag"	
+AT_sample	8	sample_date	Sample Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	textdate	20		Y	Y	N	Date on which this sample was prepared	
+AT_sample	9	sample_description	Sample Description	text	16	0	Y		N			N	textarea	10		Y	Y	N	Full description of this sample	
+AT_sample	10	instrument_model_id	Instrument Model ID	int	4	0	Y		N	PR_instrument	instrument_id	N	optionlist			Y	Y	N	Instrument (mass spectrometer) manufacturer model name	"SELECT instrument_id,instrument_name FROM $TBPR_INSTRUMENT WHERE record_status != 'D' ORDER BY instrument_name"
+AT_sample	11	search_batch_id	Search Batch ID	int	4	0	N		N				fixed			Y	P		Search Batch ID	
+AT_sample	12	sample_publication_ids	Sample Publications	varchar	255	0	Y		N	AT_sample_publication	sample_publication_id	N	multilink	4		Y	Y	N	Select all publications that apply to this sample.	"SELECT P.publication_id,P.publication_name FROM $TBAT_PUBLICATION P WHERE P.record_status != 'D' ORDER BY P.publication_name"
+AT_sample	13	data_contributors	Data Contributors	text	16	0	Y		N			Y	textarea	10		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)	
+AT_sample	14	primary_contact_email	Primary Email Contact	text	16	0	Y		N			Y	text	40		Y	P	N	Email address of primary contact for data	
+AT_sample	15	is_public	Is the dataset publicly available?	char	1	0	Y		N			Y	optionlist			Y	Y	N	Indicates whether the dataset is public	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"
+AT_sample	16	anatomical_site_term	Anatomical Site (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Anatomical site from which this sample was obtained	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"
+AT_sample	17	developmental_stage_term	Developmental Stage (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Developmental stage of the sample donor individual	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"
+AT_sample	18	pathology_term	Pathology (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Pathology of the sample	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"
+AT_sample	19	cell_type_term	Cell Type (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Cell type of the sample	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"
+AT_sample	20	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments	
+AT_sample	21	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_sample	22	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_sample	23	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_sample	24	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_sample	25	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_sample	26	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_atlas_build_sample	1	atlas_build_sample_id	Atlas Build Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_atlas_build_sample	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id					N	N		Associated Atlas Build		
 AT_atlas_build_sample	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
@@ -75,13 +77,14 @@ AT_atlas_search_batch	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id				
 AT_atlas_search_batch	4	n_searched_spectra	Number of Searched spectra	int	6	0	N		N							N	N		Number of spectra searched in this search_batch		
 AT_atlas_search_batch	5	data_location	File Path to search_batch output	varchar	255	0	N		N							Y	Y		Absolute or relative location of the raw data for this search batch		
 AT_atlas_search_batch	6	search_batch_subdir	Search Batch Subdirectory	varchar	100	0	N		N							Y	Y		Subdirectory under the experiment where the data for this search resides		
-AT_atlas_search_batch	7	TPP_version	TPP version used in peptide identification scoring	varchar	100	0	N		N							Y	Y		TPP version used for peptide identification scores		
-AT_atlas_search_batch	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_atlas_search_batch	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_atlas_search_batch	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_atlas_search_batch	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_atlas_search_batch	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_atlas_search_batch	13	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_atlas_search_batch	7	pepXML_source_files	pepXML Source Files	varchar	255	0	N		N							Y	Y		comma separated list of one or some xinteract pepXML files used as input for this search_batch		
+AT_atlas_search_batch	8	TPP_version	TPP version used in peptide identification scoring	varchar	100	0	N		N							Y	Y		TPP version used for peptide identification scores		
+AT_atlas_search_batch	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_atlas_search_batch	10	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_atlas_search_batch	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_atlas_search_batch	12	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_atlas_search_batch	13	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_atlas_search_batch	14	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_atlas_search_batch_parameter	1	atlas_search_batch_id	Atlas Search Batch ID	int	4	0	N		N	AT_atlas_search_batch	atlas_search_batch_id					N	N	Y	Atlas search batch to which this search parameter belongs		pkDEFAULT
 AT_atlas_search_batch_parameter	2	key_order	Key Order	int	4	0	N		N			Y				Y	Y	N	Monotonically increasing number to denote key order		
 AT_atlas_search_batch_parameter	3	parameter_key	Parameter Key	varchar	100	0	N		N			Y	text	50		Y	Y	Y	The key of the key/value pair		
@@ -97,6 +100,7 @@ AT_peptide	3	peptide_sequence	Peptide Sequence	varchar	255	0	N		N			Y	text	50		Y
 AT_peptide	4	peptide_length	Peptide Length	int	4	0	N		N			Y	text	10		Y	Y	N	Length of the peptide in amino acids		
 AT_peptide	5	peptide_isoelectric_point	Isoelectric Point	real	4	0	Y		N			Y	text	10		Y	Y	N	Calculated isoelectric point of the peptide		
 AT_peptide	6	molecular_weight	Molecular Weight	real	4	0	Y		N			Y	text	10		Y	Y	N	Calculated molecular weight of the peptide		
+AT_peptide	7	SSRCalc_relative_hydrophobicity	SSRCalc Relative Hydrophobicity	real	4	0	Y		N			Y	text	10		Y	Y	N	Calculated hydrophobicity of the peptide using SSRCalc algorithm		
 AT_peptide_instance	1	peptide_instance_id	Peptide Instance ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_peptide_instance	2	atlas_build_id	Atlas Build	int	4	0	N		N	AT_atlas_build	atlas_build_id	Y	optionlist			Y	Y	Y	Associated Atlas Build		
 AT_peptide_instance	3	peptide_id	Peptide	int	4	0	N		N	AT_peptide	peptide_id	Y	optionlist			Y	Y	Y	Peptide		
@@ -140,13 +144,17 @@ AT_modified_peptide_instance	1	modified_peptide_instance_id	Modified Peptide Ins
 AT_modified_peptide_instance	2	peptide_instance_id	Peptide Instance ID	int	4	0	N		N	AT_peptide_instance	peptide_instance_id	Y	text	10		Y	Y	Y	Parent peptide_instance_id		
 AT_modified_peptide_instance	3	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Sequence of the peptide including modification notations		
 AT_modified_peptide_instance	4	peptide_charge	Peptide Charge	int	4	0	N		N			Y	text	10		Y	Y	Y	Charge on the precursor ion		
-AT_modified_peptide_instance	5	best_probability	Best Observed Probability	real	4	0	N		N			Y	text	10		Y	Y	N	Best observed PeptideProphet probablity of being correct over all samples		
-AT_modified_peptide_instance	6	best_adjusted_probability	Best Adjusted Probability	real	4	0	Y		N			Y	text	10		Y	Y	N	Best probability observed as adjusted by ProteinProphet within all samples		
-AT_modified_peptide_instance	7	n_observations	Number of Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in the input samples		
-AT_modified_peptide_instance	8	n_adjusted_observations	Number of Adjusted Observations	int	4	0	Y		N			N	text	10		Y	Y	N	Number of adjusted observations		
-AT_modified_peptide_instance	9	n_sibling_peptides	Number of Sibling Peptides	real	4	0	Y		N			N	text	10		Y	Y	N	Number of sibling peptides		
-AT_modified_peptide_instance	10	sample_ids	Samples Observed in	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of sample_ids in which which peptide was observed		
-AT_modified_peptide_instance	11	search_batch_ids	Search batches	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of proteomics_search_batch ids		
+AT_modified_peptide_instance	5	monoisotopic_peptide_mass	Monoisotopic Neutral Peptide Mass	float	8	0	N		N			Y	text	10		Y	Y	N	Neutral peptide monoisotopic mass		
+AT_modified_peptide_instance	6	average_peptide_mass	Average Neutral Peptide Mass	float	8	0	N		N			Y	text	10		Y	Y	N	Neutral peptide average mass		
+AT_modified_peptide_instance	7	monoisotopic_parent_mz	Monoisotopic Parent m/z	float	8	0	N		N			Y	text	10		Y	Y	N	(M+H)+ charged parent ion monoisotopic mass		
+AT_modified_peptide_instance	8	average_parent_mz	Average Parent m/z	float	8	0	N		N			Y	text	10		Y	Y	N	(M+H)+ charged parent ion average mass		
+AT_modified_peptide_instance	9	best_probability	Monoisotopic Neutral Peptide Mass	real	4	0	N		N			Y	text	10		Y	Y	N	Best observed PeptideProphet probablity of being correct over all samples		
+AT_modified_peptide_instance	10	best_adjusted_probability	Best Adjusted Probability	real	4	0	Y		N			Y	text	10		Y	Y	N	Best probability observed as adjusted by ProteinProphet within all samples		
+AT_modified_peptide_instance	11	n_observations	Number of Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in the input samples		
+AT_modified_peptide_instance	12	n_adjusted_observations	Number of Adjusted Observations	int	4	0	Y		N			N	text	10		Y	Y	N	Number of adjusted observations		
+AT_modified_peptide_instance	13	n_sibling_peptides	Number of Sibling Peptides	real	4	0	Y		N			N	text	10		Y	Y	N	Number of sibling peptides		
+AT_modified_peptide_instance	14	sample_ids	Samples Observed in	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of sample_ids in which which peptide was observed		
+AT_modified_peptide_instance	15	search_batch_ids	Search batches	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of proteomics_search_batch ids		
 AT_modified_peptide_instance_sample	1	modified_peptide_instance_sample_id	Modified Peptide Instance Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_modified_peptide_instance_sample	2	modified_peptide_instance_id	Modified Peptide Instance ID	int	4	0	N		N	AT_modified_peptide_instance	modified_peptide_instance_id					N	N		Associated Atlas Build		
 AT_modified_peptide_instance_sample	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
@@ -214,22 +222,22 @@ AT_biosequence	17	record_status	Record Status	char	1	0	N	N	N							N	N
 AT_biosequence_property_set	1	biosequence_property_set_id	BioSequence Property Set ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_biosequence_property_set	2	biosequence_id	BioSequence ID	int	4	0	N		N	AT_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		pkDEFAULT
 AT_biosequence_property_set	3	n_transmembrane_regions	Number of Transmembrane Regions	int	4	0	Y		N							Y	Y	N	Number of transmembrane regions		pkDEFAULT
-AT_biosequence_property_set	4	transmembrane_class	Transmembrane Region Class	varchar	10	0	Y		N			Y	text	50		Y	Y	N	"Class of the transmembrane region.  May be 0, TM, A, S, TM_xS based on output from TMHMM and signalP"		
-AT_biosequence_property_set	5	transmembrane_topology	Transmembrane Region Topology	varchar	1024	0	Y		N			Y	text	20		Y	Y	N	Coding of which residues belong in the transmembrane regions		
-AT_biosequence_property_set	6	has_signal_peptide	Has a Signal Peptide	char	1	0	Y		N			N	text	50		Y	Y	N	"Does this protein have a signal peptide on the end Y/N? (Note that Y means that there is some non-zero probability that it does, not that is necessarily does)"		
-AT_biosequence_property_set	7	has_signal_peptide_probability	Probability that it has a Signal Peptide	real	4	0	Y		N			N	text	50		Y	Y	N	Probability that there is a signal peptide on the end as calculated by SignalP		
-AT_biosequence_property_set	8	signal_peptide_length	Length of the Signal Peptide	int	4	0	Y		N			N	text	50		Y	Y	N	Length in residues of the signal peptide		
-AT_biosequence_property_set	9	signal_peptide_is_cleaved	Signal Peptide gets Cleaved	char	1	0	Y		N			N	text	50		Y	Y	N	Does the signal peptide get cleaved off Y/N?		
-AT_biosequence_property_set	10	genome_build	Genome Build	varchar	50	0	Y		N			N	text	50		Y	Y	N	Genome build name for which the following mapping parameters are valid		
-AT_biosequence_property_set	11	chromosome	Chromosome	varchar	50	0	Y		N			N	text	50		Y	Y	N	Chromosome in which this mapping occurs		
-AT_biosequence_property_set	12	start_in_chromosome	Start Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	Start position of the biosequence in the chromosome		
-AT_biosequence_property_set	13	end_in_chromosome	End Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	End position of the biosequence in the chromosome		
-AT_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"Strand (+,-) of the biosequence in the chromosome"		
-AT_biosequence_property_set	15	isoelectric_point	Isoelectric Point	real	4	0	Y		N			N	text	10		Y	Y	N	Isoelectric Point (pI) of the protein		
-AT_biosequence_property_set	16	fav_codon_frequency	Favorite Codon Frequency	real	4	0	Y		N			N	text	10		Y	Y	N	Favorite Codon Frequency		
-AT_biosequence_property_set	17	duplicate_biosequences	Duplicate Biosequences	varchar	255	0	Y		N			N	text	50		Y	Y	N	Semicolon delimited list of duplicate sequences within the same set		
-AT_biosequence_property_set	18	category	Category	varchar	255	0	Y		N			N	text	50		Y	Y	N	Biosequence category		
-AT_biosequence_annotated_gene	1	biosequence_id	BioSequence ID	int	4	0	N		N	AT_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		
+AT_biosequence_property_set	4	transmembrane_class	Transmembrane Region Class	varchar	10	0	Y		N			Y	text	50		Y	Y	N	"Class of the transmembrane region.  May be 0, TM, A, S, TM_xS based on output from TMHMM and signalP"
+AT_biosequence_property_set	5	transmembrane_topology	Transmembrane Region Topology	varchar	1024	0	Y		N			Y	text	20		Y	Y	N	Coding of which residues belong in the transmembrane regions
+AT_biosequence_property_set	6	has_signal_peptide	Has a Signal Peptide	char	1	0	Y		N			N	text	50		Y	Y	N	"Does this protein have a signal peptide on the end Y/N? (Note that Y means that there is some non-zero probability that it does, not that is necessarily does)"
+AT_biosequence_property_set	7	has_signal_peptide_probability	Probability that it has a Signal Peptide	real	4	0	Y		N			N	text	50		Y	Y	N	Probability that there is a signal peptide on the end as calculated by SignalP
+AT_biosequence_property_set	8	signal_peptide_length	Length of the Signal Peptide	int	4	0	Y		N			N	text	50		Y	Y	N	Length in residues of the signal peptide
+AT_biosequence_property_set	9	signal_peptide_is_cleaved	Signal Peptide gets Cleaved	char	1	0	Y		N			N	text	50		Y	Y	N	Does the signal peptide get cleaved off Y/N?
+AT_biosequence_property_set	10	genome_build	Genome Build	varchar	50	0	Y		N			N	text	50		Y	Y	N	Genome build name for which the following mapping parameters are valid
+AT_biosequence_property_set	11	chromosome	Chromosome	varchar	50	0	Y		N			N	text	50		Y	Y	N	Chromosome in which this mapping occurs
+AT_biosequence_property_set	12	start_in_chromosome	Start Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	Start position of the biosequence in the chromosome
+AT_biosequence_property_set	13	end_in_chromosome	End Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	End position of the biosequence in the chromosome
+AT_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"Strand (+,-) of the biosequence in the chromosome"
+AT_biosequence_property_set	15	isoelectric_point	Isoelectric Point	real	4	0	Y		N			N	text	10		Y	Y	N	Isoelectric Point (pI) of the protein
+AT_biosequence_property_set	16	fav_codon_frequency	Favorite Codon Frequency	real	4	0	Y		N			N	text	10		Y	Y	N	Favorite Codon Frequency
+AT_biosequence_property_set	17	duplicate_biosequences	Duplicate Biosequences	varchar	255	0	Y		N			N	text	50		Y	Y	N	Semicolon delimited list of duplicate sequences within the same set
+AT_biosequence_property_set	18	category	Category	varchar	255	0	Y		N			N	text	50		Y	Y	N	Biosequence category
+AT_biosequence_annotated_gene	1	biosequence_id	BioSequence ID	int	4	0	N		N	AT_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs
 AT_biosequence_annotated_gene	2	annotated_gene_id	Annotated Gene ID	int	4	0	N		N	BL_annotated_gene	annotated_gene_id					N	N	Y	Gene ID associated with Biosequence ID		
 AT_biosequence_annotation	1	biosequence_annotation_id	Domain Match Type	int	4	0	N		Y							N	N				pkDEFAULT
 AT_biosequence_annotation	2	biosequence_id	BioSequence	int	4	0	N		N	AT_biosequence	biosequence_id	Y	fixed			Y	Y	Y	BioSequence to which this annotation belongs		
@@ -275,11 +283,12 @@ AT_search_key	1	search_key_id	Search Key ID	int	4	0	N		Y
 AT_search_key	2	search_key_name	Search Key Name	varchar	800	0	N		N												
 AT_search_key	3	search_key_type	Search Key Type	varchar	50	0	N		N												
 AT_search_key	4	search_key_dbxref_id	Database Cross Reference	int	4	0	Y		N												
-AT_search_key	5	organism_id	Organism	int	4	0	Y		N												
-AT_search_key	6	resource_name	Resource Name	varchar	255	0	N		N												
-AT_search_key	7	resource_type	Resource Type	varchar	50	0	N		N												
-AT_search_key	8	resource_url	Resource URL	varchar	255	0	N		N												
-AT_search_key	9	resource_n_matches	Resource N Matches	int	4	0	Y		N												
+AT_search_key	5	atlas_build_id	Atlas Build ID	int	4	0	Y		N												
+AT_search_key	6	organism_id	Organism	int	4	0	Y		N												
+AT_search_key	7	resource_name	Resource Name	varchar	255	0	N		N												
+AT_search_key	8	resource_type	Resource Type	varchar	50	0	N		N												
+AT_search_key	9	resource_url	Resource URL	varchar	255	0	N		N												
+AT_search_key	10	resource_n_matches	Resource N Matches	int	4	0	Y		N												
 AT_query_option	1	query_option_id	Query Option ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_query_option	2	option_type	Option Type	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Type or category of this option		
 AT_query_option	3	option_key	Option Key	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Key for this key/value pair option		
@@ -293,15 +302,15 @@ AT_query_option	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_g
 AT_query_option	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_sample_publication	1	sample_publication_id	Sample Publication ID	int	4	0	N		Y			Y				N	N	N			pkDEFAULT
 AT_sample_publication	2	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id	Y				Y	N	Y			
-AT_sample_publication	3	publication_id	Publication ID	int	4	0	N		N	AT_publication	publication_id	Y				N	N	Y	Publication ID		
-AT_sample_publication	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_sample_publication	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_sample_publication	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_sample_publication	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_sample_publication	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_sample_publication	9	record_status	Record Status	char	1	0	N	N	N							N	N				
-AT_BrowseBiosequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBAT_BIOSEQUENCE_SET WHERE project_id IN (  $accessible_project_ids ) ORDER BY sort_order,set_name"	
-AT_BrowseBiosequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+AT_sample_publication	3	publication_id	Publication ID	int	4	0	N		N	AT_publication	publication_id	Y				N	N	Y	Publication ID	
+AT_sample_publication	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+AT_sample_publication	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
+AT_sample_publication	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+AT_sample_publication	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
+AT_sample_publication	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
+AT_sample_publication	9	record_status	Record Status	char	1	0	N	N	N							N	N			
+AT_BrowseBiosequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBAT_BIOSEQUENCE_SET WHERE project_id IN (  $accessible_project_ids ) ORDER BY sort_order,set_name"
+AT_BrowseBiosequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 AT_BrowseBiosequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 AT_BrowseBiosequence	4	molecular_function_constraint	Molecular Function Constraint									N	text	40		Y	Y	N	Constraint for the GO Molecular Function. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 AT_BrowseBiosequence	5	biological_process_constraint	Biological Process Constraint									N	text	40		Y	Y	N	Constraint for the GO Biological Process. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
@@ -325,15 +334,15 @@ AT_GetPeptides	7	peptide_sequence_constraint	Peptide Sequence Constraint								
 AT_GetPeptides	8	best_probability_constraint	Best Probability Constraint									N	text	15		Y	Y	N	"Constraint for the best observed probability for a peptide.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", between n.n and n.n"""", """"n.n +- n.n"""""""	
 AT_GetPeptides	9	n_observations_constraint	Number of Observations Constraint									N	text	10		Y	Y	N	"Constraint for the number of observations for a peptide.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
 AT_GetPeptides	10	n_samples_constraint	Number of Different Samples Constraint									N	text	15		Y	Y	N	"Constraint for the number of different samples in which the peptide was observed.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
-AT_GetPeptides	11	empirical_proteotypic_constraint	Empirical Proteotypic Score Constraint									N	text	10		Y	Y	N	"Constraint for the empirical proteotypic score for a peptide.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
-AT_GetPeptides	12	n_protein_mappings_constraint	Number of Proteins Mapped Constraint									N	text	5		Y	Y	N	Constraint for number of distinct proteins for this peptide ( >=0 )	
-AT_GetPeptides	13	n_genome_locations_constraint	Number of Genome Locations Mapped Constraint									N	text	5		Y	Y	N	Constraint for number of genome locations for this peptide ( >=0 )	
-AT_GetPeptides	14	is_exon_spanning_constraint	Is Exon Spanning?									N	optionlist			Y	Y	N	Does at least one of the mappings of this peptide span from one exon to another?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"
-AT_GetPeptides	15	chromosome_constraint	Chromosome Constraint									N	text	10		Y	1	N	Constraint for the Chromosome onto which the peptide was mapped. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.	
-AT_GetPeptides	16	start_in_chromosome_constraint	Start in Chromosome Constraint									N	text	20		Y	1	N	"Constraint for the start position of the peptide in nucleotides along the chromosome.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
-AT_GetPeptides	17	end_in_chromosome_constraint	End in Chromosome Constraint									N	text	20		Y	1	N	"Constraint for the end position of the peptide in nucleotides along the chromosome.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
-AT_GetPeptides	18	strand_constraint	Strand									N	text	5		Y	1	N	Constraint for the strand (orientiation) of the chromosome mapping (must be either + or -)	
-AT_GetPeptides	19	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'GP_display_options' ORDER BY sort_order,option_value"
+AT_GetPeptides	11	empirical_proteotypic_constraint	Empirical Proteotypic Score Constraint									N	text	10		Y	Y	N	"Constraint for the empirical proteotypic score for a peptide.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""		
+AT_GetPeptides	12	n_protein_mappings_constraint	Number of Proteins Mapped Constraint									N	text	5		Y	Y	N	Constraint for number of distinct proteins for this peptide ( >=0 )		
+AT_GetPeptides	13	n_genome_locations_constraint	Number of Genome Locations Mapped Constraint									N	text	5		Y	Y	N	Constraint for number of genome locations for this peptide ( >=0 )		
+AT_GetPeptides	14	is_exon_spanning_constraint	Is Exon Spanning?									N	optionlist			Y	Y	N	Does at least one of the mappings of this peptide span from one exon to another?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+AT_GetPeptides	15	chromosome_constraint	Chromosome Constraint									N	text	10		Y	1	N	Constraint for the Chromosome onto which the peptide was mapped. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
+AT_GetPeptides	16	start_in_chromosome_constraint	Start in Chromosome Constraint									N	text	20		Y	1	N	"Constraint for the start position of the peptide in nucleotides along the chromosome.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
+AT_GetPeptides	17	end_in_chromosome_constraint	End in Chromosome Constraint									N	text	20		Y	1	N	"Constraint for the end position of the peptide in nucleotides along the chromosome.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
+AT_GetPeptides	18	strand_constraint	Strand									N	text	5		Y	1	N	Constraint for the strand (orientiation) of the chromosome mapping (must be either + or -)		
+AT_GetPeptides	19	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'GP_display_options' ORDER BY sort_order,option_value"	
 AT_spectra_description_set	1	spectra_description_set_id	Spectra Description Set ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_spectra_description_set	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id					N	N		Associated Atlas Build		
 AT_spectra_description_set	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
@@ -341,12 +350,12 @@ AT_spectra_description_set	4	atlas_search_batch_id	Atlas Search Batch ID	int	4	0
 AT_spectra_description_set	5	instrument_model_id	Instrument Model ID	int	4	0	Y		N	PR_instrument	instrument_id	N	optionlist			Y	Y	N	Instrument (mass spectrometer) manufacturer model id	"SELECT instrument_id,instrument_name FROM $TBPR_INSTRUMENT WHERE record_status != 'D' ORDER BY instrument_name"	
 AT_spectra_description_set	6	instrument_model_name	Instrument Model Name	varchar	100	0	Y		N			N				Y	Y	N	Instrument (mass spectrometer) manufacturer model name		
 AT_spectra_description_set	7	conversion_software_name	Conversion Software Name	varchar	255	0	N		N							N	N		Name of software used in conversion to mzXML		
-AT_spectra_description_set	8	conversion_software_version	Conversion Software Version	varchar	50	0	N		N							N	N		Version of software used in conversion to mzXML		
-AT_spectra_description_set	9	mzXML_schema	mzXML Schema	varchar	1024	0	N		N							N	N		mzXML schema		
-AT_spectra_description_set	10	n_spectra	Number of Spectra	int	6	0	N		N							N	N		Number of spectra		
-AT_spectra_description_set	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_spectra_description_set	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_spectra_description_set	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_spectra_description_set	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_spectra_description_set	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_spectra_description_set	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_spectra_description_set	8	conversion_software_version	Conversion Software Version	varchar	50	0	N		N							N	N		Version of software used in conversion to mzXML
+AT_spectra_description_set	9	mzXML_schema	mzXML Schema	varchar	1024	0	N		N							N	N		mzXML schema
+AT_spectra_description_set	10	n_spectra	Number of Spectra	int	6	0	N		N							N	N		Number of spectra
+AT_spectra_description_set	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
+AT_spectra_description_set	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N		
+AT_spectra_description_set	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
+AT_spectra_description_set	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N		
+AT_spectra_description_set	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
+AT_spectra_description_set	16	record_status	Record Status	char	1	0	N	N	N							N	N		
