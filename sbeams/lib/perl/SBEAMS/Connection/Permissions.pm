@@ -1581,6 +1581,23 @@ sub isGuestUser {
   }
 }
 
+###############################################################################
+# Utility routine, checks if current user is 'ext_halo' user.
+# FIXME: make id lookup dynamic
+###############################################################################
+sub is_ext_halo_user {
+  my $sbeams = shift;
+  my $currID =  $sbeams->getCurrent_contact_id();
+  my $username =  $sbeams->getCurrent_username();
+
+  if ( $username eq 'ext_halo' ) {
+    $log->debug( "Returning guest mode due to username" );
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
 
 ###############################################################################
 # Utility routine, checks if current user is member of
