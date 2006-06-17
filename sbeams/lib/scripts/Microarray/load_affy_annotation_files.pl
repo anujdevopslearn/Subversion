@@ -280,10 +280,17 @@ sub add_affy_annotation {
 			print Dumper ($sbeams_affy_anno);
 		}
 		my $count = 0;
-		my $total_record_count = $sbeams_affy_anno->get_record_count;
+		my $total_records = $sbeams_affy_anno->get_record_count;
 		while (my $record_href = $sbeams_affy_anno->get_record){
-			
-			my $affy_anno_pk = $sbeams_affy_anno->add_record_to_annotation_table(record =>$record_href,);
+	  my $affy_anno_pk;		
+      eval {
+			$affy_anno_pk = $sbeams_affy_anno->add_record_to_annotation_table(record =>$record_href,);
+      }; if ( $@ ) {
+        for my $k ( keys( %$record_href ) ) {
+          print "$k is " . length($record_href->{$k}) . "\n";
+        }
+        die "Load failed on above record\n";
+      }
 			
 			$sbeams_affy_anno->add_record_to_affy_db_links( record =>$record_href,
 									affy_annotation_pk => $affy_anno_pk);
@@ -295,17 +302,18 @@ sub add_affy_annotation {
 			if ($VERBOSE >0){
 				print "$count - $affy_anno_pk\n";
 			}
-			if ($count % 100 == 0){
-				printf "ENTERED $count records of '$total_record_count' Percent Done:%.2f\n",  ($count/$total_record_count)*100 ;
+			if ( $count && !($count % 100) ){
+				printf "Loaded $count of $total_records records (%.2f\%)\n",  ($count/$total_records)*100 ;
 			}
-			
 			$count ++;	
 		}
 	my $end_time = `date`;	
+  chomp( $START_TIME );
+  chomp( $end_time );
 	
 	print "Finished uploading '$count' Records\n",
-	      "START TIME '$START_TIME'\n", 
-	      "END   TIME '$end_time'\n";
+	      "Start time: $START_TIME\n", 
+	      "End time:  $end_time\n";
 
 }
 ###############################################################################
@@ -325,8 +333,8 @@ sub write_error_log{
 	my $SUB_NAME = 'write_error_log';
 	
 	my $tmp_dir = $sbeams_affy->get_affy_temp_dir_path();
-	open ERROR_LOG, ">$tmp_dir/AFFY_ANNO_LOGS/AFFY_ANNO_ERROR_LOG_$file_base_name.txt" or 
-		die "CANNOT OPEN AFFY ERROR LOG $!\n";
+  my $log_file = "$tmp_dir/AFFY_ANNO_LOGS/AFFY_ANNO_ERROR_LOG_$file_base_name.txt"; 
+	open ERROR_LOG, ">$log_file" or die "CANNOT OPEN AFFY ERROR LOG: $log_file $!\n";
 	
 	my $date = `date`;
 	chomp $date;
