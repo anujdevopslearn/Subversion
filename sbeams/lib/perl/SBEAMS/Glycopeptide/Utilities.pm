@@ -124,6 +124,15 @@ sub clean_pepseq {
   return $seq;
 }
 
+sub get_charged_mass {
+  my $self = shift;
+  my %args = @_;
+  return unless $args{mass} && $args{charge};
+#  my $hmass = 1.00794;
+  my $hmass = 1.0078;
+  return sprintf( '%0.4f', ( $args{mass} + $args{charge} * $hmass )/ $args{charge} ); 
+}
+
 ###############################################################################
 # getResidueMasses: Get a hash of masses for each of the residues
 ###############################################################################
@@ -222,7 +231,6 @@ sub calculatePeptideMass {
     $rmass = getResidueMasses( %args );
     $mass += 18.0153; # N and C termini have extra H, OH.
   } else {
-    print STDERR "Going mono!\n";
     $rmass = getMonoResidueMasses( %args );
     $mass += 18.0105; # N and C termini have extra H, OH.
   }
@@ -239,7 +247,6 @@ sub calculatePeptideMass {
       $log->error("Undefined residue $r in getPeptideMass");
       $rmass->{$r} = $rmass->{X} # Assign 'average' mass.
     }
-    print STDERR "Mass of $r is $rmass->{$r}\n"; 
     $mass += $rmass->{$r};
   }
 
