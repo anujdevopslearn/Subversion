@@ -140,7 +140,11 @@ sub main {
   if (defined($parameters{action}) && $parameters{action} eq "???") {
     # Some action
   } else {
+    $sbeams->collectSTDOUT();
     $sbeamsPS->display_page_header(navigation_bar=>$parameters{navigation_bar});
+    my $header = $sbeams->fetchSTDOUT();
+    $header =~ s/Proteome( Search Results)/Microarray$1/;
+    print $header;
 	handle_request(ref_parameters=>\%parameters);
     $sbeamsPS->display_page_footer();
   }
