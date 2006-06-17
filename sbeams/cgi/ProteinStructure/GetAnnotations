@@ -118,8 +118,8 @@ sub main {
   #### Decide what action to take based on information so far
   if ($parameters{action} eq "xxxx") {
   } else {
-    $sbeamsMOD->display_page_header(
-      navigation_bar=>$parameters{navigation_bar});
+    $sbeamsMOD->display_page_header();
+#      navigation_bar=>$parameters{navigation_bar});
     handle_request(ref_parameters=>\%parameters);
     $sbeamsMOD->display_page_footer();
   }
@@ -209,9 +209,11 @@ sub handle_request {
       $optionlist .= "<OPTION VALUE=\"$key\" $flag>$options{$key}</OPTION>\n";
     };
 
+# Had to wrap this its own table tags 'cause it was rendering very poorly 
+# with new halo 'skin'
     print qq~
+<TABLE>
 <tr><td><span class="sub_header">BROWSE THE PROTEOME</span></td></tr>
-
 <tr><td height="1"><img src="$HTML_BASE_DIR/images/bg_Nav.gif" width="518" height="1" border="0"></td></tr>
 <tr><td height="5"><img src="$HTML_BASE_DIR/images/clear.gif" width="1" height="1" border="0"></td></tr>
 
@@ -225,6 +227,7 @@ $optionlist
 <INPUT NAME="biosequence_set_id" TYPE="hidden" VALUE="$parameters{biosequence_set_id}">
 <INPUT TYPE="submit" NAME="action" VALUE="GO">
 </FORM></P>
+</TABLE>
     ~;
   }
 
