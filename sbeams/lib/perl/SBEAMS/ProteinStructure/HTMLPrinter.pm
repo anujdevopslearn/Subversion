@@ -86,14 +86,16 @@ sub display_page_header {
 
 	   ~;
 	my @rows = $sbeams->selectOneColumn($sql);
-	if (scalar(@rows) > 0 ) {
-	  $self->display_ext_halo_template();
+#	if (scalar(@rows) > 0 ) {
+	if ( $sbeams->is_ext_halo_user() ) {
+	  $self->display_ext_halo_template( %args );
 	  return;
 	}
 
     $self->printJavascriptFunctions();
     $self->printStyleSheet();
 
+    my $loadscript = "$args{onload};" || '';
 
     #### Determine the Title bar background decoration
     my $header_bkg = "bgcolor=\"$BGCOLOR\"";
@@ -106,7 +108,7 @@ sub display_page_header {
 	</HEAD>
 
 	<!-- Background white, links blue (unvisited), navy (visited), red (active) -->
-	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" TOPMARGIN=0 LEFTMARGIN=0 OnLoad="self.focus();">
+	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" TOPMARGIN=0 LEFTMARGIN=0 OnLoad="$loadscript self.focus();">
 	<table border=0 width="100%" cellspacing=0 cellpadding=1>
 
 	<!------- Header ------------------------------------------------>
@@ -265,21 +267,6 @@ sub display_page_footer {
   my $display_footer = $args{'display_footer'} || 'YES';
   my $separator_bar = $args{'separator_bar'} || 'NO';
 
-
-  #### If closing the content tables is desired
-  if ($close_tables eq 'YES') {
-    print qq~
-	</TD></TR></TABLE>
-	</TD></TR></TABLE>
-    ~;
-  }
-
-
-  #### If displaying a fat bar separtor is desired
-  if ($separator_bar eq 'YES') {
-    print "<BR><HR SIZE=5 NOSHADE><BR>\n";
-  }
-
   #### Check to see if the PI of the curernt project is a Halobacterium guy.
   #### If so, print the halo skin
   if ($display_footer eq 'YES') {
@@ -295,7 +282,27 @@ sub display_page_footer {
 
 	   ~;
 	my @rows = $sbeams->selectOneColumn($sql);
-	if (scalar(@rows) > 0 ) {
+
+
+  #### If closing the content tables is desired
+  if ($args{'close_tables'} eq 'YES') {
+    print qq~
+	</TD></TR></TABLE>
+	</TD></TR></TABLE>
+    ~;
+  }
+
+
+  #### If displaying a fat bar separtor is desired
+  if ($separator_bar eq 'YES') {
+    print "<BR><HR SIZE=5 NOSHADE><BR>\n";
+  }
+
+
+
+#	if (scalar(@rows) > 0 ) {
+  # Note that we are using is_ext_user as opposed to is PI logic above
+	if ( $sbeams->is_ext_halo_user() ) {
 	  $self->display_ext_halo_footer();
 	  return;
 	}else {
@@ -323,6 +330,8 @@ sub display_ext_halo_template {
   my $self = shift;
   my %args = @_;
 
+  my $loadscript = "$args{onload};" || '';
+
   $self->printJavascriptFunctions();
   $self->display_ext_halo_style_sheet();
 
@@ -333,163 +342,274 @@ sub display_ext_halo_template {
     $LOGIN_URI .= "?force_login=yes";
   }
 
-
-  my $buf = qq~
-<!-- Begin body: background white, text black -------------------------------->
-<body TOPMARGIN=0 LEFTMARGIN=0 background="/images/bg.gif" bgcolor="#FBFCFE">
-
-<!-- Begin the whole-page table -->
-<a name="TOP"></a>
-<table border="0" width="680" cellspacing="0" cellpadding="0">
-
-<!-- -------------- Top Line Header: logo and big title ------------------- -->
-<tr valign="baseline">
-<td width="150" bgcolor="#0E207F">
-<a href="http://www.systemsbiology.org/" target="_blank"><img src="/images/Logo_left.jpg" width="150" height="85" border="0" align="bottom"></a>
-</td>
-<td width="12"><img src="/images/clear.gif" width="12" height="85" border="0"></td>
-
-<td width="518" align="left" valign="bottom">
-<span class="page_header">$DBTITLE - $SBEAMS_PART<BR>$DBVERSION<BR>&nbsp;<BR></span>
-</td>
-
-</tr>
-<tr valign="bottom">
-<td colspan="3"><img src="/images/nav_orange_bar.gif" width="680" height="18" border="0"></td>
-</tr>
-  ~;
-
   my $HALO_HOME = 'http://halo.systemsbiology.net';
+  my $buf = qq~
+<body OnLoad="$loadscript self.focus()" leftmargin="0" rightmargin="0" marginspace="0" topmargin="3" bottommargin="3" marginheight="3" marginwidth="0">
+
+<table bordercolor="#827975" cellpadding="0" cellspacing="0" width="680" border="1" align="center">
+	<tr>
+		<td>
+		<!-- top image bar -->
+		<table id="Table_01" align="center" bgcolor="f7f5ea" width="680" height="132" border="0" cellpadding="0" cellspacing="0">
+		<tr>
+			<td colspan="2" bgcolor="#827975" height="8"></td>
+		</tr>
+		<tr>
+			<td colspan="2" bgcolor="B25D3C" height="1"></td>
+		</tr>
+		<tr>
+			<td colspan="2" height="36" valign="top" background="/images/topbluebar.gif">
+			<a href="http://www.systemsbiology.org/"><img src="/images/isbhome.gif" alt="" height="16" width="70" align="right" border="0"></a>
+			<div class="TopTitle">
+			<font color="white"><!--Top Title of Website goes here--><strong><font size="5" face="Arial, Helvetica, Verdana, sans-serif">
+						&nbsp;&nbsp;Halo Research at ISB</font></strong></font></div></td>
+		</tr>
+		<tr>
+			<td width="255"><img src="/images/bottombluebar.gif" width="255" height="77" alt=""></td>
+			<td><img src="/images/imgbar.jpg" width="425" height="77" alt=""></td>
+		</tr>
+		<tr>
+			<td colspan="2" bgcolor="B25D3C" height="1"></td>
+		</tr>
+		<tr>
+			<td colspan="2" bgcolor="827975" height="4"></td>
+		</tr>
+		<tr>
+			<td colspan="2" bgcolor="C6C1B8" height="3"></td>
+		</tr>
+		<tr>
+			<td colspan="2"><img src="/images/clear.gif" alt="" height="10" width="680" border="0"></td>
+		</tr>
+		</table>
+		
+		<!--end top bar-->
+	~;
 
   $buf .= qq~
 <!-- --------------- Navigation Bar: List of links ------------------------ -->
-<tr>
-<td align="left" valign="top" background="/images/bg_Nav.gif">
+<!-- START Main page table -->
+<table align="center" bgcolor="#f3f1e4" border="0" cellpadding="0" cellspacing="0" width="677">
+<tbody>
+		<tr>
+			<td width="1"></td>
+			<td width="130"><img src="/images/clear.gif" border="0" height="1" width="130"></td>
+			<td width="550"><img src="/images/clear.gif" border="0" height="1" width="545"></td>
+		</tr>
+		<tr valign="top" height="601">
+			<td width="1" height="601"></td>
+			<td width="120" height="601"><!-- START Secondary navigation table -->
+				<table align="center" bgcolor="#ffffff" border="0" cellpadding="0" cellspacing="0" width="134">
+					<tbody>
+						<tr height="2">
+							<td bgcolor="#c6c1b8" height="2" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td colspan="3" bgcolor="#c6c1b8" width="132" height="2"><img src="/images/clear.gif" border="0" height="2" width="1"></td>
+							<td bgcolor="#c6c1b8" height="2" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+						</tr>
+						<tr height="20">
+							<td bgcolor="#c6c1b8" height="20" width="1"><img src="/images/clear.gif" border="0" height="20" width="1"></td>
+							<td class="SecondNavTitle" colspan="2" align="center" bgcolor="#c6c1b8" width="129" height="20"><img src="/images/redarrow.gif" alt="" height="8" width="8" border="0" />&nbsp;&nbsp;<a href="http://halo.systemsbiology.net/" class="SecondNavTitle">Halo Home</a></td>
+							<td bgcolor="#c6c1b8" height="20" width="3"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td bgcolor="#c6c1b8" width="1" height="20"></td>
+						</tr>
+						<tr>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td colspan="3" bgcolor="#c6c1b8" width="132" height="2"><img src="/images/clear.gif" border="0" height="2" width="1"></td>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+						</tr>
+						<tr>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="5"><img src="/images/clear.gif" border="0" height="1" width="5"></td>
+							<td width="124"><img src="/images/clear.gif" border="0" height="1" width="110"></td>
+							<td width="3"><img src="/images/clear.gif" border="0" height="1" width="3"></td>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+						</tr>
+						<tr>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="5"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="124"><p class="SecondNavOff">Project Information</p></td>
+							<td width="3"><img src="/images/clear.gif" border="0" height="1" width="3"></td>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+						</tr>
+						<tr>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="5"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="124" height="1"><img src="/images/textmarker.gif" alt="" height="7" width="10" border="0">&nbsp;<a href="http://halo.systemsbiology.net/background.php" class="leftnavlink">Background</a><br>
+								<img src="/images/textmarker.gif" alt="" height="7" width="10" border="0">&nbsp;<a href="http://halo.systemsbiology.net/systems.php" class="leftnavlink">Systems Approach</a><br>
+								<img src="/images/textmarker.gif" alt="" height="7" width="10" border="0">&nbsp;<a href="http://halo.systemsbiology.net/data.php" class="leftnavlink">Data Integration</a><br>
+								<img src="/images/textmarker.gif" alt="" height="7" width="10" border="0">&nbsp;<a href="http://halo.systemsbiology.net/publications.php" class="leftnavlink">Publications</a><br>
+								<img src="/images/textmarker.gif" alt="" height="7" width="10" border="0">&nbsp;<a href="http://halo.systemsbiology.net/contacts.php" class="leftnavlink">Contacts</a><br>
+							</td>
+							<td width="3"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+						</tr>
+						<tr>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="5"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="124" height="32"><img src="/images/SecondNavSpacer.gif" alt="" height="4" width="110" border="0" /></td>
+							<td width="3"><img src="/images/clear.gif" border="0" height="1" width="3"></td>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+						</tr>
+						<!--Place Holder -->
+						<tr>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="5"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="124"><p class="SecondNavOff">Organisms</p></td>
+							<td width="3"><img src="/images/clear.gif" border="0" height="1" width="3"></td>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+						</tr>
+						<tr>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="5"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="124" height="1"><img src="/images/textmarker.gif" alt="" height="7" width="10" border="0">&nbsp;<a href="http://halo.systemsbiology.net/halobacterium/" class="leftnavlink"><i>Halobacterium &nbsp;&nbsp;&nbsp;&nbsp;sp.NRC-1</i></a><br>
+							         <img src="/images/textmarker.gif" alt="" height="7" width="10" border="0">&nbsp;<a href="http://halo.systemsbiology.net/haloarcula/" class="leftnavlink"><i>Haloarcula &nbsp;&nbsp;&nbsp;&nbsp;marismortui</i></a><br>
+							</td>
+							<td width="3"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+						</tr>
+						<tr>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="5"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="124" height="32"><img src="/images/SecondNavSpacer.gif" alt="" height="4" width="110" border="0" /></td>
+							<td width="3"><img src="/images/clear.gif" border="0" height="1" width="3"></td>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+						</tr>
+						<!--Place Holder -->
+						<tr>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="5"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="124"><p class="SecondNavOff">Halo Group Resources</p></td>
+							<td width="3"><img src="/images/clear.gif" border="0" height="1" width="3"></td>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+						</tr>
+						<tr>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="5"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="124" height="1"><img src="/images/textmarker.gif" alt="" height="7" width="10" border="0">&nbsp;<a href="http://db.systemsbiology.net/sbeams/cgi/Oligo/Search_Oligo.cgi" class="leftnavlink">Oligo Search &nbsp;&nbsp;&nbsp;&nbsp;(Internal)</a><br>
+								<img src="/images/textmarker.gif" alt="" height="7" width="10" border="0">&nbsp;<a href="http://db/%7Emjohnson/faq/index.html" class="leftnavlink" target="_blank">Data FAQ (Internal)</a><br>
+								<img src="/images/textmarker.gif" alt="" height="7" width="10" border="0">&nbsp;<a href="http://halo.systemsbiology.net/students/home.htm" class="leftnavlink">Student Intern Site</a><br>
+								<img src="/images/textmarker.gif" alt="" height="7" width="10" border="0">&nbsp;<a href="http://halo.systemsbiology.net/cytoscape/cellphone/index.php" class="leftnavlink">High School &nbsp;&nbsp;&nbsp;&nbsp;Education</a><br>
+								<img src="/images/textmarker.gif" alt="" height="7" width="10" border="0">&nbsp;<a href="http://halo.systemsbiology.net/purplemembrane/PurpleMembrane.html" class="leftnavlink" target="new">Purple Membrane &nbsp;&nbsp;&nbsp;&nbsp;Model</a><br>
+								<img src="/images/textmarker.gif" alt="" height="7" width="10" border="0">&nbsp;<a href="http://halo.systemsbiology.net/cytoscape/cellphone/cy.jnlp" class="leftnavlink">Cell Phone Simulation</a><br>
+							</td>
+							<td width="3"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+						</tr>
+						<tr>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="5"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="124" height="32"><img src="/images/SecondNavSpacer.gif" alt="" height="4" width="110" border="0" /></td>
+							<td width="3"><img src="/images/clear.gif" border="0" height="1" width="3"></td>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+						</tr>
+						<!--Place Holder -->
+						<tr>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="5"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="124"><p class="SecondNavOff">Software Links</p></td>
+							<td width="3"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+						</tr>
+						<tr>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="5"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="124" height="1"><img src="/images/textmarker.gif" alt="" height="7" width="10" border="0">&nbsp;<a href="http://www.cytoscape.org/" target="new" class="leftnavlink">Cytoscape</a><br>
+								                                           <img src="/images/textmarker.gif" alt="" height="7" width="10" border="0">&nbsp;<a href="http://www.sbeams.org/" target="new" class="leftnavlink">SBEAMS</a><br>
+					        </td>
+							<td width="3"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+						</tr>
+						<tr>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="5"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td width="124" height="32"><img src="/images/SecondNavSpacer.gif" alt="" height="4" width="110" border="0" /></td>
+							<td width="3"><img src="/images/clear.gif" border="0" height="1" width="3"></td>
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+						</tr>
+						<!--Place Holder -->
+						<tr height="1">
+							<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+							<td bgcolor="white" height="1" width="5"></td>
+							<td width="124" height="1"><p class="SecondNavOff">Baliga Group Links</p></td>
+							<td width="3" height="1"></td>
+							<td bgcolor="#c6c1b8" height="1" width="1"></td>
+						</tr>
+						<!--Place Holder -->
+						<tr height="1">
+							<td bgcolor="#c6c1b8" height="1" width="1"></td>
+							<td bgcolor="white" height="1" width="5"></td>
+							<td width="124" height="1"><img src="/images/textmarker.gif" alt="" height="7" width="10" border="0">&nbsp;<a href="http://www.systemsbiology.org/Scientists_and_Research/Faculty_Groups/Baliga_Group" target="new" class="leftnavlink">Baliga Group</a><br>
+								<img src="/images/textmarker.gif" alt="" height="7" width="10" border="0">&nbsp;<a href="http://www.systemsbiology.org/Scientists_and_Research/Faculty_Groups/Baliga_Group/Profile" target="new" class="leftnavlink">Dr. Nitin Baliga\'s &nbsp;&nbsp;&nbsp;&nbsp;Profile</a><br>
+								<!--<a href="http://www.systemsbiology.org/Scientists_and_Research/Faculty_Groups/Baliga_Group/Research_Projects" target="new" class="leftnavlink">Research Projects</a><br>--></td>
+							<td width="3" height="1"></td>
+							<td bgcolor="#c6c1b8" height="1" width="1"></td>
+						</tr>
 
-<table border="0" width="150" cellpadding="0" cellspacing="0">
-
-<tr>
-<td><img src="/images/clear.gif" width="2" height="10" border="0"></td>
-<td><img src="/images/clear.gif" width="5" height="10" border="0"></td>
-<td><img src="/images/clear.gif" width="132" height="10" border="0"></td>
-<td><img src="/images/clear.gif" width="11" height="10" border="0"></td>
-</tr>
-
-
-
-<tr>
-<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
-<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
-<td colspan="2">
-<a href="http://www.systemsbiology.org/" class="Nav_link">ISB Main</a><br>
-<a href="http://halo.systemsbiology.net/" class="Nav_link">Halo Research at ISB</a><br>
-</tr>
-<tr>
-<td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
-</tr>
+						<!--Place Holder -->
+						<tr height="1">
+							<td bgcolor="#c6c1b8" height="1" width="1"></td>
+							<td bgcolor="white" height="1" width="5"></td>
+							<td width="124" height="1">&nbsp;&nbsp;</td>
+							<td width="3" height="1"></td>
+							<td bgcolor="#c6c1b8" height="1" width="1"></td>
+						</tr>
+						<tr>
+							<td bgcolor="#c6c1b8" height="1" width="1"></td>
+							<td width="5" bgcolor="#c6c1b8"></td>
+							<td width="124" bgcolor="#c6c1b8" height="1"></td>
+							<td width="3" height="1" bgcolor="#c6c1b8"></td>
+							<td width="1" height="1" bgcolor="#c6c1b8"></td>
+						</tr>
 
 
-
-<tr>
-<td background="/images/nav_subTitles.gif"><img src="/images/clear.gif" width="1" height="18" border="0"></td>
-<td background="/images/nav_subTitles.gif" colspan="2"><span class="nav_Sub">Project Information</span></td>
-<td><img src="/images/nav_subTitles_cr.gif" width="11" height="18" border="0"></td>
-</tr>
-
-<tr>
-<td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
-</tr>
-<tr>
-<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
-<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
-<td colspan="2">
-<a href="$HALO_HOME/" class="Nav_link">Project Home</a><br>
-<a href="$HALO_HOME/background.php" class="Nav_link">Background</a><br>
-<a href="$HALO_HOME/systems.php" class="Nav_link">Systems Approach</a><br>
-<a href="$HALO_HOME/data.php" class="Nav_link">Data Integration</a><br>
-<a href="$HALO_HOME/publications.php" class="Nav_link">Publications</a><br>
-<a href="$HALO_HOME/contacts.php" class="Nav_link">Contacts</a><br>
-</td>
-</tr>
-<tr>
-<td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
-</tr>
-
-
-
-<tr>
-<td background="/images/nav_subTitles.gif"><img src="/images/clear.gif" width="1" height="18" border="0"></td>
-<td background="/images/nav_subTitles.gif" colspan="2"><span class="nav_Sub">Organisms</span></td>
-
-<td><img src="/images/nav_subTitles_cr.gif" width="11" height="18" border="0"></td>
-</tr>
-<tr>
-<td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
-</tr>
-<tr>
-<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
-<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
-<td colspan="2">
-<a href="$HALO_HOME/halobacterium/" class="Nav_link">Halobacterium sp. NRC-1</a><br>
-<a href="$HALO_HOME/haloarcula/" class="Nav_link">Haloarcula marismortui</a><br>
-</tr>
-<tr>
-<td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
-</tr>
-
-
-
-<tr>
-<td background="/images/nav_subTitles.gif"><img src="/images/clear.gif" width="1" height="18" border="0"></td>
-<td background="/images/nav_subTitles.gif" colspan="2"><span class="nav_Sub">Software Links</span></td>
-
-<td><img src="/images/nav_subTitles_cr.gif" width="11" height="18" border="0"></td>
-</tr>
-<tr>
-<td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
-</tr>
-<tr>
-<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
-<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
-<td colspan="2">
-<a href="http://www.cytoscape.org/" class="Nav_link">Cytoscape</a><br>
-<a href="http://www.sbeams.org/" class="Nav_link">SBEAMS</a><br>
-<BR>
-<BR>
-<a href="$LOGIN_URI" class="Nav_link">LOGIN</a><br>
-</td>
-</tr>
-<tr>
-<td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
-</tr>
-
-
-
-</table>
-
-</td>
-<td width="12"><img src="/images/clear.gif" alt="" width="12" height="1" border="0"></td>
-<!-- -------------------------- End Navigation Bar ------------------------ -->
-
-<td valign="top">
-
+					</tbody>
+				</table>
+				<!-- END Secondary navigation table --><br>
+				<center>
+				<a href="http://www.systemsbiology.org/"><img src="/images/isblogo.gif" alt="" height="65" width="115" align="baseline" border="0"></a></center>
+			</td>
+			<!-- <td width="550" height="601"> -->
+			<td>
   ~;
 
 
   $buf .= qq~
-<!-- --------------------------- Main Page Content ------------------------ -->
 
-<table border="0" width="100%" cellpadding="0" cellspacing="0">
-<tr>
-<td>
-<img src="/images/clear.gif" width="1" height="15" border="0">
-</td>
-</tr>
-
+<!-- START Body content table -->
+									<table align="center" bgcolor="white" border="0" cellpadding="0" cellspacing="0" width="540">
+										<tbody>
+											<tr>
+												<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+												<td colspan="3" bgcolor="#c6c1b8" width="538" height="2"><img src="/images/clear.gif" border="0" height="2" width="1"></td>
+												<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+											</tr>
+											<tr height="20">
+												<td bgcolor="#c6c1b8" height="20" width="1"><img src="/images/clear.gif" border="0" height="20" width="1"></td>
+												
+												
+												<td colspan="3" class="Pagetitle" bgcolor="#c6c1b8" width="538" height="20"><img src="/images/clear.gif" border="0" height="1" width="6">
+									<!--Header of Content page goes here.  Should match left nav that was clicked-->Proteome Search Results</td>
+												<td bgcolor="#c6c1b8" height="20" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+											</tr>
+											<tr>
+												<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+												<td colspan="3" bgcolor="#c6c1b8" width="538" height="2"><img src="/images/clear.gif" border="0" height="2" width="1"></td>
+												<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+											</tr>
+											<tr>
+												<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+												<td width="4"></td>
+												<td width="521"></td>
+												<td bgcolor="white" height="1" width="9"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+												<td width="1" bgcolor="#c6c1b8"><img src="/images/clear.gif" alt="" height="2" width="1" border="0"></td>
+											</tr>
+											<tr valign="top" height="598">
+												<td bgcolor="#c6c1b8" height="598" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+												<td width="4" height="598"><img src="/images/clear.gif" border="0" height="1" width="8"></td>
+												<td width="521" height="598"><!-- This space is reserved for the Content of your Site-->	
   ~;
 
 
-  $buf =~ s/=\"\/images/=\"$HTML_BASE_DIR\/images/g;
+  $buf =~ s/=\"\/images/=\"$HALO_HOME\/images/g;
   #$buf =~ s/href=\"\//href=\"$HTML_BASE_DIR\//g;
   $buf =~ s/href=\"\//href=\"http:\/\/halo.systemsbiology.net\//g;
   print $buf;
@@ -523,31 +643,302 @@ sub display_ext_halo_style_sheet {
 	<style type="text/css">	<!--
 
 	//
-	body  	{font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; color:#33333; line-height:1.8}
+
+	.TopTitle { font-family: Arial, Helvetica, Verdana, sans-serif; font-size:24px; color:#ffffff; font-weight: bold; }
+
+.leftnavlink {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:11px;
+	color:#294A93;
+	text-decoration:none;
+	line-height:18px;
+	 letter-spacing:.3px;
+	font-weight:normal}
+.leftnavlink:hover {color: #c28962;}
+.leftnavlinkstate {cursor: hand; font-family:arial,helvetica,sans serif; font-size:11px; letter-spacing:.3px; color:#F3F1E4;}
 
 
-	th    	{font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; font-weight: bold;}
-	td    	{font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; color:#333333;}
-	form  	{font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt}
-	pre   	{font-family: Courier New, Courier; font-size: ${FONT_SIZE_SM}pt}
-	h1   	{font-family: Helvetica, Arial, Verdana, sans-serif; font-size: ${FONT_SIZE_HG}px; font-weight:bold; color:#0E207F;line-height:20px;}
-	h2   	{font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
-	h3   	{font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_LG}pt; color:#FF8700}
-	h4   	{font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_LG}pt;}
-	.text_link  {font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration:none; color:blue}
-	.text_linkstate {font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration:none; color:#0E207F}
-	.text_link:hover   {font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration:none; color:#DC842F}
+.textlink {
+	font-family: Helvetica, Arial,  Verdana, sans-serif;
+	font-size:12px;
+	color:#c28962;
+	line-height:16px;
+	font-weight:normal}
+.textlink:hover {color: #294A93;}
+.textlinkstate {cursor: hand; font-family: helvetica, arial, sans serif; font-size:12px; letter-spacing:.5px; color:#F3F1E4;}
 
-	.page_header {font-family: Helvetica, Arial, sans-serif; font-size:18px; font-weight:bold; color:#0E207F; line-height:1.2}
-	.sub_header {font-family: Helvetica, Arial, sans-serif; font-size:12px; font-weight:bold; color:#FF8700; line-height:1.8}
-	.Nav_link {font-family: Helvetica, Arial, sans-serif; font-size:${FONT_SIZE}pt; line-height:1.3; color:#DC842F; text-decoration:none;}
-	.Nav_link:hover {color: #FFFFFF; text-decoration: none;}
-	.Nav_linkstate {cursor:hand; font-family:Helvetica, Arial, sans-serif; font-size:11px; color:#DC842F; text-decoration:none;}
-	.nav_Sub {font-family: Helvetica, Arial, sans-serif; font-size:12px; font-weight:bold; color:#ffffff; line-height:1.3;}
 
+
+
+
+
+h1  {font-family: Helvetica, Arial, Verdana, sans-serif; font-size: 14px; font-weight:bold; color:#666;line-height:20px;}
+h2  { color: #004896; font-family: Helvetica, Arial, sans-serif; font-size: 18pt; font-weight: bold; }
+h3  {font-family: Helvetica, Arial, sans-serif; font-size: 12pt; color:#004896}
+h4  { color: #004896; font-family: Helvetica, Arial, sans-serif; font-size: 10pt; font-weight:normal; font-weight:bold }
+
+
+
+
+
+
+.TopNavlink {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:14px;
+	color:#fff;
+	font-variant: small-caps;
+	text-decoration:none;
+	line-height:20px;
+	letter-spacing:1px;
+	font-weight:bold}
+.TopNavlink:hover {color: #D99B67;}
+.TopNavlinkstate {cursor: hand; font-family:verdana,arial,helvetica,sans serif; font-size:11px; letter-spacing:1px; font-variant: small-caps; color:#F3F1E4;}
+
+.speaker_link {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:13px;
+	color:#000000;
+	line-height:20px;
+	font-weight:normal}
+.speaker_link:hover {color: #000000;}
+.speaker_linkstate {cursor: hand; font-family:verdana,arial,helvetica,sans serif; font-size:13px; color:#000000;}
+
+.TrailNav {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:10px;
+	color:#827975;
+	text-decoration:none;
+	line-height:20px;
+	letter-spacing:.5px;
+	font-weight:normal}
+
+.SecondNavTitle {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:14px;
+	color:#827975;
+	font-variant:small-caps;
+	text-decoration:none;
+	line-height:14px;
+	font-weight:bold}
+
+.SecondNavTitle:hover {color: #827975;}
+.SecondNavTitlestate {cursor:hand; font-family:verdana,arial,helvetica,sans serif; font-size:13px; text-decoration:none; color:#827975;}
+
+.SecondNavOn {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:13px;
+	color:#B35F3E;
+	font-variant: small-caps;
+	text-decoration:none;
+	line-height:13px;
+	letter-spacing:.5px;
+	font-weight:bold}
+
+.SecondNavOff {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:13px;
+	color:#827975;
+	text-decoration:none;
+	line-height:18px;
+	letter-spacing:.5px;
+	font-weight:bold}
+
+.SecondNav2Off { font-family: Arial, Helvetica, Verdana, sans-serif; font-size:11px; color:#827975; font-weight: 600; text-decoration:none; line-height:13px; letter-spacing:0.5px; }
+.SecondNav2On {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-weight: normal;
+	font-size: 11px;
+	color:#B35F3E;
+	text-decoration:none;
+	line-height:13px;
+	letter-spacing:.5px;}
+
+.PageTitle {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:15px;
+	color:#827975;
+	text-decoration:none;
+	line-height:14px;
+	letter-spacing:0.5px;
+	font-weight:bold}
+
+.texttitle {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:12px;
+	color:#B35F3E;
+	line-height:16px;
+	letter-spacing:.5px;
+	font-weight:normal;
+	font-weight:bold}
+.texttitle:hover {color: #B35F3E;}
+.texttitlestate {cursor: hand; font-family:verdana,arial,helvetica,sans serif; font-size:12px; letter-spacing:.5px; font-weight:bold; color:#B35F3E;}
+
+.text {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:12px;
+	color:#555555;
+	line-height:16px;
+	letter-spacing:.5px;
+	font-weight:normal}
+
+
+.textsm {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:11px;
+	color:#555555;
+	line-height:13px;
+	letter-spacing:.5px;
+	font-weight:normal}
+.textsm:hover {color: #B35F3E;}
+.textsmstate {cursor: hand; font-family:verdana,arial,helvetica,sans serif; font-size:11px; letter-spacing:.5px; color:#F3F1E4;}
+
+.top {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:11px;
+	color:#B35F3E;
+	line-height:16px;
+	font-variant: small-caps;
+	text-decoration:none;
+	letter-spacing:.5px;
+	font-weight:normal;
+	font-weight:bold}
+.top:hover {color: #B35F3E;}
+.topstate {cursor: hand; font-family:verdana,arial,helvetica,sans serif; font-size:11px; letter-spacing:.5px; text-decoration:none; font-variant: small-caps; font-weight:bold; color:#B35F3E;}
+
+
+.RL {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:11px;
+	color:#294A93;
+	line-height:14px;
+	text-decoration:none;
+	letter-spacing:.5px;
+	font-weight:normal}
+.RL:hover {color: #B35F3E;}
+.RLstate {cursor: hand; font-family:verdana,arial,helvetica,sans serif; font-size:11px; text-decoration:none; font-weight:bold; letter-spacing:.5px; text-decoration:none; color:#294A93;}
+
+
+.RelatedLinksTitle {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:13px;
+	color:#827975;
+	font-variant: small-caps;
+	text-decoration:none;
+	line-height:13px;
+	letter-spacing:.5px;
+	font-weight:bold}
+
+.RelatedLinks {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:11px;
+	color:#294A93;
+	text-decoration:none;
+	letter-spacing:.5px;
+	font-weight:bold}
+.RelatedLinks:hover {color: #B35F3E;}
+.RelatedLinksstate {cursor: hand; font-family:verdana,arial,helvetica,sans serif; font-size:11px; font-weight:bold; letter-spacing:.5px; text-decoration:none; color:#294A93;}
+
+.BottomNav {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:9px;
+	color:#fff;
+	text-decoration:none;
+	font-variant: small-caps;
+	line-height:14px;
+	letter-spacing:0.5px;
+	font-weight:normal}
+.BottomNav:hover {color: #c2c2c2;}
+.BottomNavstate {cursor: hand; font-family:verdana, arial, helvetica, "sans serif"; font-size:9px; font-variant: small-caps; letter-spacing:0.5px; color:#c28962;}
+
+.copyright {
+	font-family: Verdana, Helvetica, Arial, sans-serif;
+	font-size:9px;
+	color:#fff}
+
+.textform {
+ color: #000000;
+ font-family: Verdana, Arial, Helvetica, sans-serif;
+ font-size: 10px;
+ text-align: center;}
+
+.PressTitle {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:13px;
+	color:#555555;
+	line-height:16px;
+	letter-spacing:.5px;
+	font-weight:bold}
+
+.PressLink {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:11px;
+	color:#294A93;
+	text-decoration:none;
+	line-height:normal;
+	letter-spacing:.2px;
+	font-weight:normal}
+.PressLink:hover {color: #B35F3E;}
+.PressLinkstate {cursor: hand; font-family:verdana,arial,helvetica,sans serif; text-decoration:none; font-size:11px; font-weight:normal; letter-spacing:.5px; color:#F3F1E4;}
+
+.PressHeadline_inside {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:14px;
+	color:#294A93;
+	text-decoration:none;
+	line-height:14px;
+	letter-spacing:.5px;
+	font-weight:bold}
+
+.ACWhiteTitle {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:12px;
+	color:#FFFFFF;
+	text-decoration:none;
+	line-height:13px;
+	letter-spacing:.1px;
+	}
+
+.table{
+	background-color: #FFFFFF;
+	border-color: #827975;
+	border-width: 1px 1px 1px 1px;
+	border-style: solid;
+	margin-bottom: 8px
+	}
+.brown {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:12px;
+	color:#946000;
+	line-height:16px;
+	letter-spacing:.5px;
+	text-decoration:none;
+	font-weight:normal}
+
+.black {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:12px;
+	color:#000000;
+	line-height:16px;
+	letter-spacing:.5px;
+	text-decoration:none;
+	font-weight:normal}
+
+.form {
+	font-family: Verdana, Arial, Helvetica, Verdana, sans-serif;
+	font-size:11px;
+	color:#555555;}
+
+.bullets {
+	font-family: Arial, Helvetica, Verdana, sans-serif;
+	font-size:12px;
+	color:#555555;
+	line-height:16px;
+	letter-spacing:.5px;
+	font-weight:normal}
 	//
 	-->
 </style>
+</head>
   ~;
 
   return;
@@ -565,27 +956,54 @@ sub display_ext_halo_footer {
   my $tooltip_footer = $self->getToolTip;
 
   my $buf = qq~
-<!-- ------------------------ End of main content ----------------------- -->
+	<!-- End Content-->												
+		</td>
+		<td width="9" height="598"><img src="/images/clear.gif" border="0" height="1" width="9"></td>
+		<td bgcolor="#c6c1b8" height="598" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+	</tr>
+	<tr>
+		<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+		<td colspan="3" bgcolor="#c6c1b8" width="538" height="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+		<td bgcolor="#c6c1b8" height="1" width="1"><img src="/images/clear.gif" border="0" height="1" width="1"></td>
+	</tr>
+	</tbody>
+	</table>
 
-</td></tr>
+	<!-- END Body content table -->
+</td>
+
+<!-- End Main page table -->
+			
+<table width="100%" align="center" cellpadding="0" cellspacing="0" border="0" bordercolor="#827975" height="30">
+	<tr>
+		<td bgcolor="#827975" height="18" align="left">
+				
+		<!-- START copyright content -->
+
+		<center>
+		<span class="BottomNav">
+<a href="http://halo.systemsbiology.net/" class="BottomNav">HOME</a>  |  <a href="http://halo.systemsbiology.net/background.php" class="BottomNav">BACKGROUND</a>  |  <a href="http://halo.systemsbiology.net/systems.php" class="BottomNav">SYSTEMS APPROACH</a>  |  <a href="http://halo.systemsbiology.net/data.php" class="BottomNav">DATA INTEGRATION</a>  |  <a href="http://halo.systemsbiology.net/contacts.php" class="BottomNav">CONTACTS</a>  |  <a href="http://halo.systemsbiology.net/publications.php" class="BottomNav">PUBLICATIONS</a>  |  <a href="http://halo.systemsbiology.net/halobacterium/" class="BottomNav">ORGANISMS</a> |  <a href="http://intranet.systemsbiology.net/" class="BottomNav">INTRANET</a>
+		</span>
+
+		<br>
+		<span class="copyright">© 2005, Institute for Systems Biology, All Rights Reserved</span>
+		<br>
+		</center>
+		<!-- END copyright content -->
+				
+		</td>
+	</tr>
+	<tr height="12">
+		<td bgcolor="#294a93" height="12">
+		</td>
+	</tr>
 </table>
 
-
-</td></tr>
-</table>
+</tr></table>
 
 $tooltip_footer
-
-<BR>
-<hr size=1 noshade width="55%" align="left" color="#FF8700">
-<TABLE border="0">
-<TR><TD><IMG SRC="/images/ISB_symbol_tiny.jpg"></TD>
-<TD><nowrap>ISB Halo Group</nowrap></A></TD></TR>
-</TABLE>
-<BR>
-<BR>
-
-</body>
+		
+	</body>
 </html>
   ~;
 
