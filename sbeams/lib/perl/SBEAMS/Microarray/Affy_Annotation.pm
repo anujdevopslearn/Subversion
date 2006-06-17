@@ -25,7 +25,7 @@ use Data::Dumper;
 use Carp;
 use FindBin;
 
-		
+use SBEAMS::Connection qw($log);
 use SBEAMS::Connection::Tables;
 use SBEAMS::Microarray::Tables;
 
@@ -1031,51 +1031,44 @@ sub get_xref_id {
 #write out to the error log if any extra fields are truncated
 ###############################################################################
 sub truncate_data {
-    	my $method = 'truncate_data';
-    	
 	my $self = shift;
+  my %args = @_;
+  my $method = 'truncate_data';
+
+  unless ( $args{record_href} || $args{data_aref} ) {
+    $log->error( "$method requires either record or data ref" );
+    return undef;
+  }
+  unless ( ref($args{record_href}) eq 'HASH' || ref($args{data_aref}) eq 'ARRAY' ) {
+    $log->error( "Invalid reference type in $method" );
+    return undef;
+  }
+  
+  if ($args{record_href}){ # Cleaned up 6/06 DSC
+    my %record_h = %{$args{record_href}};
 	
-	my %args = @_;
-	
-	my $record_href = $args{record_href};
-	my $data_aref	= $args{data_aref};
-	
-	confess(__PACKAGE__ . "::$method Need to provide key value pair 'record_href' OR  'data_aref'\n") unless ( ref($record_href) eq 'HASH' || ref($data_aref) eq 'ARRAY' );
-	
-	my %record_h = ();
-	my @data = ();
-	
-	if ($record_href){
-		%record_h = %{$record_href};
-	
-		foreach my $key ( keys %record_h){
-	                next if !defined $key;	
-			if ( $key eq 'gene_symbol' || $key eq 'chromosomal_location' || $key eq 'archival_unigene_cluster'){			#some gene symbol rows were comming in way to big chop them down to size
-				if ( $record_h{$key} && length $record_h{$key} > 50){
-					my $big_val = $record_h{$key};
-		
-					my $truncated_val = substr($record_h{$key}, 0, 49);
-			
-					$self->anno_error(error => "Warning HASH Value truncated\n,ORIGINAL VAL SIZE:". length($big_val). "'$big_val'\nNEW VAL SIZE:" . length($truncated_val) . "'$truncated_val'");
-					#print "VAL '$record_h{$key}'\n"
-					$record_h{$key} = $truncated_val;
-				}
-			}
-			
-			if ( $record_h{$key} && length $record_h{$key} > 255){
-				my $big_val = $record_h{$key};
-		
-				my $truncated_val = substr($record_h{$key}, 0, 254);
-			
-				$self->anno_error(error => "Warning HASH Value truncated\n,ORIGINAL VAL SIZE:". length($big_val). "'$big_val'\nNEW VAL SIZE:" . length($truncated_val) . "'$truncated_val'");
-				#print "VAL '$record_h{$key}'\n"
-				$record_h{$key} = $truncated_val;
-			}
-		}
+    my %fieldsize = ( gene_symbol => 50,
+              chromosomal_location => 50,
+          archival_unigene_cluster => 50,
+                               qtl => 100 );
+    
+    # Trim values to match data type 
+    foreach my $key ( keys %record_h){
+      next unless defined $key;	
+
+      $fieldsize{$key} ||= 255;
+      my $orig_len = length( $record_h{$key} );
+      if ( $record_h{$key} && $fieldsize{$key} && $orig_len > $fieldsize{$key} ){
+        my $trunc = substr($record_h{$key}, 0, $fieldsize{$key} );
+        my $trunc_len = length( $trunc );
+        $self->anno_error( error => "Hash value truncated from $orig_len to $trunc_len ($record_h{$key})");
+        $record_h{$key} = $trunc;
+      }
+    }
 		return %record_h;
-	
-	}elsif($data_aref){
-		@data = @$data_aref;
+
+  } elsif($args{data_aref}){ # left alone for now
+		my @data = @{$args{data_aref}};
 		
 		for(my $i=0; $i<=$#data; $i++){
 			if ( $data[$i] && length $data[$i] > 255){
@@ -1089,12 +1082,7 @@ sub truncate_data {
 			}
 		}
 		return @data;
-	}else{
-		die "Unknown DATA TYPE FOR $method\n";
 	}
-
-	
-
 }
 
 
