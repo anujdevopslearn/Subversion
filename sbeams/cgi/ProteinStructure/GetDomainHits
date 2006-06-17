@@ -119,7 +119,8 @@ sub main {
   if ($parameters{action} eq "???") {
     # Some action
   } else {
-    $sbeamsMOD->display_page_header();
+    $sbeamsMOD->display_page_header( onload => 'hide_processing_info()' );
+    print_hide_script();
     handle_request(ref_parameters=>\%parameters);
     $sbeamsMOD->display_page_footer();
   }
@@ -127,6 +128,18 @@ sub main {
 
 } # end main
 
+sub print_hide_script {
+  
+  # Some page-specific javascript/css.  Allows loading info to get hidden, 
+  # draws box around legend
+  print <<"  END";
+  <SCRIPT LANGUAGE='javascript'>
+  function hide_processing_info() {
+    toggle_content( '_GetDomainHits' );
+  }
+  </SCRIPT>
+  END
+}
 
 ###############################################################################
 # Handle Request
@@ -213,8 +226,8 @@ sub handle_request {
 
   #### Finish the upper part of the page and go begin the full-width
   #### data portion of the page
-  $sbeams->display_page_footer(close_tables=>'YES',
-    separator_bar=>'YES',display_footer=>'NO');
+#  $sbeams->display_page_footer(close_tables=>'YES',
+#    separator_bar=>'YES',display_footer=>'NO');
 
 
 
@@ -1315,16 +1328,33 @@ sub postProcessResultset {
   }
 
   #### If there are any surviving proteins
-  if (defined(%surviving_proteins)) {
-    $buf .= "<font color=\"red\">Proteins that make the Chilli Filter cut:</font> (can be pasted up in Biosequence Name Constraint)\n".join(';',keys(%surviving_proteins))."\n";
-    $buf .= "\n";
+  if ( defined(%surviving_proteins)) {
+    $buf .= "<font color='red'>Proteins that make the Chilli Filter cut:" .
+            "</font> (can be pasted up in Biosequence Name Constraint)\n";
+    my $cnt = 0;
+    for my $k ( sort(keys(%surviving_proteins)) ) {
+      $buf .= ( $cnt ) ? ";$k" : $k;
+      $cnt++;
+      if ( $cnt > 12 ) {
+        $buf .= "\n";
+        $cnt = 0;
+      }
+    }
   }
-
   $buf.="\n";
 
-
   $buf =~ s/\n/<BR>\n/g;
-  print "$buf" if ($sbeams->output_mode() eq 'interactive' ||
+  my $toggle = $sbeams->make_toggle_section ( content => $buf,
+                                              visible => 1,
+                                             textlink => 1,
+                                               sticky => 0,
+                                              imglink => 1,
+                                             hidetext => 'Hide',
+                                             showtext => 'Show',
+                                          neutraltext => 'processing info',
+                                                 name => '_GetDomainHits',);
+  
+  print "$toggle<BR><BR>" if ($sbeams->output_mode() eq 'interactive' ||
     $sbeams->output_mode() eq 'html');
 
 
