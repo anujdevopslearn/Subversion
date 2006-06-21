@@ -532,9 +532,11 @@ sub handle_request {
     ["peptide_sequence","P.peptide_sequence","Peptide Sequence"],
     ["best_probability","STR(PI.best_probability,7,3)","Best Prob"],
     ["n_observations","PI.n_observations","N Obs"],
-    ["sample_ids","PI.sample_ids","Sample IDs"],
+    ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","Empirical Proteotypic Score"],
+    ["SSRCalc_relative_hydrophobicity","STR(P.SSRCalc_relative_hydrophobicity,7,2)","SSRCalc Relative Hydrophob"],
     ["n_protein_mappings","PI.n_protein_mappings","N Protein Mappings"],
     ["n_genome_locations","PI.n_genome_locations","N Genome Locations"],
+    ["sample_ids","PI.sample_ids","Sample IDs"],
     ["is_subpeptide_of","PI.is_subpeptide_of","Parent Peptides"],
   );
 

@@ -485,6 +485,8 @@ sub handle_request {
       ["best_probability","STR(MPI.best_probability,7,3)","Best Prob"],
       ["n_observations","MPI.n_observations","N Obs"],
       ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","Empirical Proteotypic Score"],
+      ["SSRCalc_relative_hydrophobicity","STR(P.SSRCalc_relative_hydrophobicity,7,2)","SSRCalc Relative Hydrophob"],
+      ["monoisotopic_parent_mz","STR(MPI.monoisotopic_parent_mz,10,4)","Monoisotopic Parent m/z"],
 
       ["n_protein_mappings","PI.n_protein_mappings","N Protein Mappings"],
       ["n_genome_locations","PI.n_genome_locations","N Unique Locations on Genome"],
