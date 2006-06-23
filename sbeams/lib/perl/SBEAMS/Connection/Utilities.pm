@@ -842,12 +842,22 @@ sub getGaggleXML {
   my %args = @_;
   $args{type} ||= 'direct';
   $args{name} ||= 'generic';
+  $args{organism} ||= 'unknown';
   my $xml;
 
   if ( $args{start} ) {
     $xml =<<"    END";
-  <!-- GAGGLE
-   <gaggleData version="0.1">
+    <STYLE TYPE="text/css" media="screen">
+    div.visible {
+    display: inline;
+    white-space: nowrap;         
+    }
+    div.hidden {
+    display: none;
+    }
+    </STYLE>
+    <DIV name=gaggle_xml class=hidden>
+    <gaggleData version="0.1">
     END
   }
 
@@ -855,7 +865,7 @@ sub getGaggleXML {
     return unless @{$args{data}};
     my $items = join( "\t", @{$args{data}} );
     $xml .=<<"    END";
-    <namelist type='$args{type}' name='$args{name}'>  
+    <namelist type='$args{type}' name='$args{name}' species='$args{organism}'>  
     $items
     </namelist>
     END
@@ -863,7 +873,8 @@ sub getGaggleXML {
     $log->error( "Unknown object type" );
   }
 
-  $xml .= "</gaggleData>\n  -->" if $args{end};
+#  $xml .= "</gaggleData>\n  -->" if $args{end};
+  $xml .= "</gaggleData>\n </DIV>" if $args{end};
   return $xml;
 }
 
