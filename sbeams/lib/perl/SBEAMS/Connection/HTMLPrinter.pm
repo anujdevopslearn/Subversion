@@ -546,7 +546,9 @@ sub printMinimalPageHeader {
 ###############################################################################
 sub printUserContext {
     my $self = shift;
-    my %args = @_;
+    my %args  = @_;
+    
+
 
     #### This is now obsoleted and ignored
     my $style = $args{'style'} || "HTML";
@@ -564,9 +566,9 @@ sub printUserContext {
     } elsif ($self->output_mode() eq 'html') {
       $style = 'HTML';
 #      if ($subdir eq 'Proteomics/' || $subdir eq 'Microarray/' || $subdir eq '') {
-        $self->printUserChooser();
-        return;
-#      }
+      $self->printUserChooser(%args);
+      return;
+#      } 
 
     #### Otherwise, we're in some data mode and don't want to see this
     } else {
