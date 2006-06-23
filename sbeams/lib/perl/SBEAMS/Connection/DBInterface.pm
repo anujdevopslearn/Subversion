@@ -3764,8 +3764,8 @@ sub displayResultSetPlot {
     if ($self->output_mode() eq 'html') {
       print qq~
         </FORM>
-        </TABLE>
       ~;
+      print "</TABLE>" unless $args{quell_tables};
     }
 
 
@@ -6391,13 +6391,15 @@ function switchProject(){
   
   #### PRINT HTML ####
   if ($style eq "HTML") {
+
+    $args{login_link} ||= '';
     print qq~
 
 <FORM NAME="userChooser">
 <TABLE WIDTH="100%"  CELLPADDING="0">
 <TR>
   <TD NOWRAP>
-  <IMG SRC="$HTML_BASE_DIR/images/bullet.gif">Login:&nbsp;&nbsp;<B>$current_username</B> ($current_contact_id)&nbsp;&nbsp;&nbsp;&nbsp;Group:&nbsp;&nbsp;$work_group_chooser
+  <IMG SRC="$HTML_BASE_DIR/images/bullet.gif">Login:&nbsp;&nbsp;<B>$current_username</B> ($current_contact_id)&nbsp;$args{login_link}&nbsp;&nbsp;&nbsp;Group:&nbsp;&nbsp;$work_group_chooser
   </TD>
 </TR>
 
