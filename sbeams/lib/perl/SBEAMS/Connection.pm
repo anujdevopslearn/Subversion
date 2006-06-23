@@ -255,7 +255,7 @@ sub fetchSTDOUT {
   close FILEOUT;
 
   system( "rm $so_file" );
-#  delete $self->{_stdout_collector};
+  delete $self->{_stdout_collector};
 
   # Restore normal STDOUT
   open(STDOUT, ">&OLDOUT") || die "Can't restore stdout: $!";
