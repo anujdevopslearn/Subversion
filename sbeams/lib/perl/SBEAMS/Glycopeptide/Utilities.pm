@@ -1,6 +1,7 @@
 package SBEAMS::Glycopeptide::Utilities;
 
 use SBEAMS::Connection qw( $log );
+use SBEAMS::Glycopeptide::Tables;
 
 sub new {
   my $class = shift;
@@ -451,6 +452,38 @@ sub getResiduePKAs {
 
   return \%pka;
 }
+
+#+
+# Runs mass search vs database
+#-
+sub runBulkSearch {
+  my $self = shift;
+  my %args = @_;
+
+  my @ids = @{$args{ids}};
+  @ids = map { "'" . $_ . "'" } @ids;
+
+  my $sbeams = $self->getSBEAMS();
+  my $ids = join( ',', @ids );
+
+  my $type = ( $args{id_type} eq 'swiss_prot' ) ? 'swiss_prot_acc' : 'ipi_accession_number';
+
+  my $sql =<<"  END";
+  SELECT DISTINCT ipi_accession_number, swiss_prot_acc, ID.ipi_data_id,
+             identified_peptide_sequence, protein_symbol, protein_name 
+  FROM $TBGP_IPI_DATA ID join $TBGP_IDENTIFIED_TO_IPI ITI
+  ON ID.ipi_data_id = ITI.ipi_data_id
+  JOIN $TBGP_IDENTIFIED_PEPTIDE IP
+  ON IP.identified_peptide_id = ITI.identified_peptide_id
+  WHERE $type IN ( $ids )
+  END
+  $log->debug( $sql );
+
+  my @results = $sbeams->selectSeveralColumns( $sql );
+  return \@results;
+}
+
+###
 
 #+
 # Runs mass search vs database
