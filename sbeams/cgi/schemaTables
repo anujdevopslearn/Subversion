@@ -1,0 +1,223 @@
+#!/usr/local/bin/perl -w
+
+###############################################################################
+# Program    
+# $Id: $
+#
+# Description : Form and processing logic for applying laboratory 
+# manipulation or treatment to a set of samples.
+#
+# SBEAMS is Copyright (C) 2000-2006 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+use strict;
+use lib qw (../lib/perl);
+use File::Basename;
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+
+
+## Globals ##
+my $sbeams = new SBEAMS::Connection;
+
+{ # Main 
+
+  # Authenticate user.
+  my $current_username = $sbeams->Authenticate() || die "Authentication failed";
+
+  # Process cgi parameters
+  my $params = process_params();
+
+  my $content = 'placeholder';
+  $params->{action} ||= 'show_modules';
+
+  # Decision block, what type of page are we going to display?
+  if ( $params->{action} eq 'show_modules' ) {
+    $content = get_modules( $params );
+  } elsif ( $params->{action} eq 'show_tables'  ) {
+    $content = get_tables($params);
+  } else {
+  }
+
+  # Print cgi headers
+  $sbeams->printPageHeader();
+
+  # Don't think I really need this, but...
+  $sbeams->printUserContext();
+
+  print $content;
+  $sbeams->printPageFooter();
+
+} # end Main
+
+#+
+# Read/process CGI parameters
+#-
+sub process_params {
+  my $params = {};
+
+  # Standard SBEAMS processing
+  $sbeams->parse_input_parameters( parameters_ref => $params, q => $q );
+
+#for ( keys( %$params ) ){ print "$_ = $params->{$_}<BR>" } 
+
+  # Process "state" parameters
+  $sbeams->processStandardParameters( parameters_ref => $params );
+
+  return $params;
+}
+
+
+#+
+#-
+sub get_modules {
+
+  my $params = shift;
+
+  my $sql =<<"  END";
+  SELECT dbname, COUNT(*)  FROM 
+  (SELECT 
+  CASE WHEN db_table_name LIKE '\$TB^_%' ESCAPE '^' 
+        THEN substring( db_table_name, 2, 3)
+       WHEN db_table_name LIKE '\$TB__^_%' ESCAPE '^' 
+        THEN substring( db_table_name, 2, 5)
+       ELSE 'XX' 
+  END AS dbname 
+  FROM $TB_TABLE_PROPERTY) AS namequery
+  GROUP BY dbname
+  END
+
+  my %modules = $sbeams->selectTwoColumnHash( $sql );
+
+  my $module_names = get_module_names ();
+
+  my %named_modules;
+  my @available = $sbeams->getModules();
+  for my $k ( keys( %modules ) ) {
+    $log->debug( "key is $k, val is $modules{$k}" );
+    unless( $module_names->{$k} && grep( /^$module_names->{$k}$/, @available) ) {
+      $log->debug( "skipping $k, val is $module_names->{$k}" );
+      next;
+    }
+    $module_names->{$k} ||= 'XX';
+    $named_modules{$module_names->{$k}} = $modules{$k};
+  }
+
+  my $table = SBEAMS::Connection::DataTable->new( BORDER => 0, 
+                                              CELLSPACING => 2,
+                                              CELLPADDING => 2
+                                                 );
+
+  
+  $table->addRow( [ "Module Name", 'total tables' ] );
+#  for my $m ( sort { $named_modules{a} cmp $named_modules{b} } ( keys(%named_modules) ) ) {
+  for my $m ( sort ( keys(%named_modules) ) ) {
+    my $link = "<A HREF=schemaTables?action=show_tables;module=$m>$m</A>";
+    $table->addRow( [ $link, $named_modules{$m} ] );
+  }
+
+  # General caption/field rows
+#  $table->setColAttr( ROWS=>[1..8], COLS=>[1,3], ALIGN => 'RIGHT' );
+  return "<H3>Tables in SBEAMS modules (<A HREF=AdHocQuery>Query Form</A>) <BR>\n $table</H3><BR><BR>";
+}
+
+sub get_module_names {
+  my %mods = ( TB_   => 'Core',
+               TBAT_ => 'PeptideAtlas',
+               TBBE_ => 'BEDB',
+               TBBM_ => 'Biomarker',
+               TBBL_ => 'BioLink',
+               TBBS_ => 'Biosap',
+               TBCY_ => 'Cytometry',
+               TBGP_ => 'Glycopeptide',
+               TBGT_ => 'Genotyping',
+               TBIJ_ => 'Inkjet',
+               TBIN_ => 'Interactions',
+               TBIS_ => 'Immunostain',
+               TBMA_ => 'Microarray',
+               TBOG_ => 'Oligo',
+               TBON_ => 'Ontology',
+               TBPH_ => 'PhenoArray',
+               TBPR_ => 'Proteomics',
+               TBPS_ => 'ProteinStructure',
+               TBSI_ => 'SIGID',
+               TBSN_ => 'SNP' );
+  return \%mods;
+}
+
+sub error_text {
+  my $text = shift;
+  return "<FONT COLOR=red>$text</FONT>";
+}
+
+#+
+#-
+sub get_tables {
+
+  my $params = shift;
+  my $module = $params->{module};
+  return error_text( "Error: No module specified" ) if !$module;
+
+  my $module_names = get_module_names ();
+  my %mod2prefix = reverse( %$module_names );
+  my $modprefix = $mod2prefix{$module};
+  return error_text( "Error: Unknown module $module" ) if !$modprefix;
+
+  my $content =<<"  END";
+  <FONT SIZE=+1>Tables in the<B><I>$params->{module}</I></B> Module</FONT>
+  (<A HREF=AdHocQuery>Query Form</A>);
+  <BR><BR>
+  END
+
+  $modprefix =~ s/_/\^_/g;
+
+  my $sql =<<"  END";
+  SELECT tp.table_name, db_table_name, tc.column_name, tc.data_type || 
+       '(' || CAST(tc.data_scale AS VARCHAR) || ')', column_text
+  FROM $TB_TABLE_PROPERTY tp  JOIN $TB_TABLE_COLUMN tc
+  ON tc.table_name = tp.table_name
+  WHERE db_table_name LIKE '_${modprefix}%' ESCAPE '^'
+  ORDER BY tc.table_name, tc.column_index
+  END
+
+  my @results = $sbeams->selectSeveralColumns( $sql );
+  my @tables;
+  my %tables;
+
+  for my $row ( @results ) {
+    unless ( defined $tables{$row->[0]} ) { # First sighting
+      $tables{$row->[0]} = [];
+      push @tables, $row->[0];
+    }
+    push @{$tables{$row->[0]}}, $row;
+  }
+
+  my $space = '&nbsp;' x 5;
+  for my $table (@tables) {
+    my $display =  SBEAMS::Connection::DataTable->new( BORDER => 0, 
+                                                  CELLSPACING => 2,
+                                                  CELLPADDING => 2
+                                                   );
+    my $cnt = 0;
+
+    for my $column (@{$tables{$table}} ) {
+    unless ( $cnt++ ) {
+      my $db_name = $sbeams->evalSQL( $column->[1] );
+      $content .= "$table ($db_name):<BR>\n"
+    }
+#      $content .= "Column definitions for $table ($column->[1]):<BR>\n" unless $cnt++;
+      $display->addRow( [$space, $column->[2], $column->[3], $column->[4]] );
+    }
+    $content .= "$display <BR><BR>\n";
+  }
+  return $content;
+
+}
+
