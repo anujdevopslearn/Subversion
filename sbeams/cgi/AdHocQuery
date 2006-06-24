@@ -195,6 +195,7 @@ sub handle_request {
   # currently in the group.
   if ( $isAdmin ) {
   
+    $CATEGORY = $CATEGORY . "(<A HREF=schemaTables>table info</A>)";
     #### Display the user-interaction input form
     $sbeams->display_input_form(
       TABLE_NAME=>$TABLE_NAME,CATEGORY=>$CATEGORY,apply_action=>$apply_action,
