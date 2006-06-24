@@ -26,6 +26,7 @@ use SBEAMS::Microarray::Utilities;
 @ISA = qw(SBEAMS::Microarray::DBInterface
           SBEAMS::Microarray::HTMLPrinter
           SBEAMS::Microarray::TableInfo
+          SBEAMS::Microarray::Utilities
           SBEAMS::Microarray::Settings);
 
 
