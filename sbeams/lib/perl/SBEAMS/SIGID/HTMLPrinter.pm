@@ -121,9 +121,11 @@ sub display_page_header {
         <tr><td><nobr>Verify inclusion/exclusion status</nobr></td></tr>
         <tr>
         <FORM NAME="PhysInclExlForm" METHOD="get" ACTION="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi">
-        <TD><NOBR><B>Patient Study ID:</B><INPUT TYPE="text" NAME="patient_id" VALUE="" SIZE="10">
+        <TD><NOBR><B>Patient Study ID:</B><INPUT TYPE="text" NAME="patient_id" VALUE="" SIZE="10"><BR>
                <input type="hidden" name="TABLE_NAME" value="SI_patient"/>
-               <input type="hidden" name="detail_level" value="minimum_detail"/>
+               <input type="submit" name="detail_level" value="minimum_detail"/>
+               <input type="submit" name="detail_level" value="incl"/>
+               <input type="submit" name="detail_level" value="excl"/>
             </NOBR>
         </TD>
         </FORM
@@ -140,7 +142,7 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SI_blood_culture"><nobr>&nbsp;&nbsp;&nbsp;Enter a blood culture measurement</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SI_cerebrospinal_fluid_culture"><nobr>&nbsp;&nbsp;&nbsp;Enter a CSF culture measurement</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SI_patient_genetic_history"><nobr>&nbsp;&nbsp;&nbsp;Enter a patient's genetic history</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SI_disease_specification"><nobr>&nbsp;&nbsp;&nbsp;Add Disease Types</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SI_icd_term"><nobr>&nbsp;&nbsp;&nbsp;Add ICD Disease Entry</nobr></a></td></tr>
 	</table>
 	</td>
 
