@@ -28,7 +28,7 @@ use vars qw(@ISA @EXPORT
     $TBSI_PATIENT_TYPE
     $TBSI_BLOOD_CULTURE
     $TBSI_CEREBROSPINAL_FLUID_CULTURE
-    $TBSI_DISEASE_SPECIFICATION
+    $TBSI_ICD_TERM
     $TBSI_ANTIBIOTIC_TREATMENT
     $TBSI_PATIENT_GENETIC_HISTORY
     $TBSI_PATIENT_CLINICAL_STATUS
@@ -55,7 +55,7 @@ require Exporter;
     $TBSI_PATIENT_TYPE
     $TBSI_BLOOD_CULTURE
     $TBSI_CEREBROSPINAL_FLUID_CULTURE
-    $TBSI_DISEASE_SPECIFICATION
+    $TBSI_ICD_TERM
     $TBSI_ANTIBIOTIC_TREATMENT
     $TBSI_PATIENT_GENETIC_HISTORY
     $TBSI_PATIENT_CLINICAL_STATUS
@@ -91,7 +91,7 @@ $TBSI_PATIENT                     = "${mod}patient";
 $TBSI_PATIENT_TYPE                ="${mod}patient_type";
 $TBSI_BLOOD_CULTURE               ="${mod}blood_culture";
 $TBSI_CEREBROSPINAL_FLUID_CULTURE ="${mod}cerebrospinal_fluid_culture";
-$TBSI_DISEASE_SPECIFICATION       ="${mod}disease_specification";
+$TBSI_DISEASE_SPECIFICATION       ="${mod}icd_term";
 $TBSI_ANTIBIOTIC_TREATMENT        ="${mod}antibiotic_treatment";
 $TBSI_PATIENT_GENETIC_HISTORY     ="${mod}patient_genetic_history";
 $TBSI_PATIENT_CLINICAL_STATUS     ="${mod}patient_clinical_status";
