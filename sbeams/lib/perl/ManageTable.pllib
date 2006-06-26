@@ -650,71 +650,15 @@ sub printEntryForm {
       ~ if (defined($parameters{$column_name}) && $parameters{$column_name} > '');
     }
 
-
-    #### If there is a value in is_display_column, determine how to render it
-    if (defined($is_display_column)) {
-
-      #### Special P (Private) columns are only visible for users with
-      #### update privileges, else totally obscure it
-      if ($is_display_column eq 'P') {
-        if ( $viewStates{read_only} || $viewStates{read_insert} ) {
-          next;
-        } elsif ( $viewStates{insert_template} ) {
-          # Null out val so it isn't passed on.
-          $parameters{$column_name} = '';
-        }
-
-      #### If it's N (No), then hide it
-      } elsif ($is_display_column eq 'N') {
-	print qq~
-          <INPUT TYPE="hidden" NAME="$column_name"
-           VALUE="$parameters{$column_name}">
-        ~;
-	next;
-
-      #### If the user provides a detail_level, consider if the column
-      #### should be hidden
-      } elsif (defined($parameters{detail_level})) {
-	#### Initial default is hidden
-	my $hidden = 0;
-
-	#### If the detail_level is full_detail, show everything
-	if ($parameters{detail_level} eq 'full_detail') {
-	  $hidden = 0;
-
-	#### If it's medium, obscure columns 2
-	} elsif ($parameters{detail_level} eq 'medium_detail' &&
-		 $is_display_column eq '2') {
-	  $hidden = 1;
-
-	#### If it's minumum, obscure 1,2
-	} elsif ($parameters{detail_level} eq 'minimum_detail' &&
-		 ($is_display_column eq '1' || $is_display_column eq '2')) {
-	  $hidden = 1;
-
-	#### Otherwise if the user specified some custom view level,
-        #### only display those columns which match it
-	} else {
-	  my @valid_views = split(",",$is_display_column);
-	  $hidden = 1;
-	  foreach my $valid_view (@valid_views) {
-	    if ($parameters{detail_level} eq $valid_view) {
-	      $hidden = 0;
-	    }
-	  }
-	}
-
-        #### If we wanted it hidden, make a hidden tag and move on
-	if ($hidden) {
-	  print qq~
-            <INPUT TYPE="hidden" NAME="$column_name"
-             VALUE="$parameters{$column_name}">
-          ~;
-	  next;
-	}
+    # For now just handle 'P', come back to N/null/1/2
+    if ( defined $is_display_column && $is_display_column eq 'P' ) {
+      if ( $viewStates{read_only} || $viewStates{read_insert} ) {
+        next;
+      } elsif ( $viewStates{insert_template} ) {
+        # Null out val so it isn't passed on.
+        $parameters{$column_name} = '';
       }
     }
-
 
     # Begin display block for read-only data.  Render as a simple HTML <TABLE>
     # instead of as a <FORM>
@@ -931,7 +875,7 @@ sub printEntryForm {
 	    <INPUT TYPE="radio" NAME="$column_name" CHECKED="checked" VALUE=/g;
 
 	$optionlists{$column_name} =~ 
-	    s|</OPTION>|</INPUT>|g;
+	    s|</OPTION>|</INPUT><BR>|g;
 
       print qq~
         <TD>
@@ -1872,9 +1816,9 @@ sub processEntryForm {
                 }
 
               #### If the datatype was fixed, then this can't be updated via MT
-	      #### but note that 'calc' can, as it is assumed that
-	      #### preUpdateDataCheck verifies/fixes the values so user cannot
-	      #### inject foolishness
+              #### but note that 'calc' can, as it is assumed that
+              #### preUpdateDataCheck verifies/fixes the values so user cannot
+              #### inject foolishness
               } elsif ($input_types{$element} eq "fixed") {
 		#### Do nothing with this field, ignore it
 
@@ -1954,7 +1898,7 @@ sub processEntryForm {
           #### fixed is needed to allow PR_search_hit_annotation and
           #### SN_manual_genotype_call to function properly.
           #### -EDeutsch 2006-01-08. See today's email
-	  #### Note that type 'calc' should also be allowed
+          #### Note that type 'calc' should also be allowed
           #} elsif ($input_types{$element} eq "fixed") {
 	  #  #### Do nothing with this field, ignore it
 
@@ -2137,10 +2081,10 @@ sub checkForPreexistingRecord {
     $value =~ s/\'/\'\'/g;
     if ($value eq '') {
       $sql_query .= "
-         AND ( $element = '$value' OR $element IS NULL )";
+         AND ( $element LIKE '$value' OR $element IS NULL )";
     } else {
       $sql_query .= "
-         AND $element = '$value'";
+         AND $element LIKE '$value'";
     }
     $error_message .= "<B>$element</B> = '$unique_values{$element}'<BR>\n";
   }
