@@ -214,8 +214,6 @@ sub handle_request {
     separator_bar=>'YES',display_footer=>'NO');
 
 
-
-
   #########################################################################
   #### Process all the constraints
 
@@ -251,6 +249,14 @@ sub handle_request {
     constraint_value=>$parameters{sample_id_constraint} );
   return if ($sample_id_clause == -1);
 
+  #### Build SAMPLE DESCRIPTION constraint
+  my $sample_description_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"ERV.sample_description",
+    constraint_type=>"text_list",
+    constraint_name=>"Sample Type",
+    constraint_value=>$parameters{sample_description_constraint} );
+  return if ($sample_description_clause == -1);
+
   #### Build CALL QUALITY constraint
   my $call_quality_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"ERV.description",
@@ -278,7 +284,7 @@ sub handle_request {
     ["well_position","ERV.well_position","Well Position"],
     ["assay_id","ERV.assay_id","Assay Name"],
     ["sample_id","ERV.sample_id","Sample Name"],
-    ["sample_description","ERV.sample_description","Sample Description"],
+    ["sample_description","ERV.sample_description","Sample Type"],
     ["genotype_id","ERV.genotype_id","Genotype"],
     ["call_quality","ERV.description","Call Quality"],
     ["call_date","ERV.call_date","Call Date"],
@@ -317,6 +323,7 @@ sub handle_request {
       $plate_id_clause
       $assay_id_clause
       $sample_id_clause
+      $sample_description_clause
       $call_quality_clause
       AND genotype_id IS NOT NULL
  ORDER BY project_id,plate_id,exp_no,well_position,assay_id,sample_id,sample_description,call_date
