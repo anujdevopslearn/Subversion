@@ -189,6 +189,12 @@ sub preFormHook {
   }
 
 
+  #### If table SI_patient_clinical_status
+  if ($TABLE_NAME eq "SI_patient_clinical_status") {
+    updateSummaryScores(parameters_ref=>$query_parameters_ref);
+  }
+
+
   #### Otherwise, no special processing, so just return undef
   return;
 
@@ -242,12 +248,18 @@ sub preUpdateDataCheck {
                                          tname => $TABLE_NAME,
                                          dbtname => $DB_TABLE_NAME );
     return ( $errstr ) if $errstr;
-    
+
   } elsif ($TABLE_NAME eq "XXXX") {
 
     return "An error of some sort $parameters{something} invalid";
 
   }
+
+  #### If table SI_patient_clinical_status
+  if ($TABLE_NAME eq "SI_patient_clinical_status") {
+    updateSummaryScores(parameters_ref=>$query_parameters_ref);
+  }
+
 
   #### Otherwise, no special processing, so just return empty string
   return '';
@@ -280,3 +292,52 @@ sub postUpdateOrInsertHook {
 
 } # end postUpdateOrInsertHook
 
+
+###############################################################################
+# updateSummaryScores
+#
+# This calculates the Glasgow and SOFA scores
+###############################################################################
+sub updateSummaryScores {
+  my %args = @_;
+
+  my $query_parameters_ref = $args{'parameters_ref'};
+
+  #### Calculate Glasgow and SOFA scores if appropriate variables are filled in.
+  my $glasgow_score;
+  if ($query_parameters_ref->{eyes_open_score} &&
+      $query_parameters_ref->{verbal_score} &&
+      $query_parameters_ref->{motor_score}) {
+
+    $query_parameters_ref->{Glasgow_score} = 15 -
+      $query_parameters_ref->{eyes_open_score} -
+      $query_parameters_ref->{verbal_score} -
+      $query_parameters_ref->{motor_score};
+
+    if ($query_parameters_ref->{respiration_mmHg_score} &&
+	$query_parameters_ref->{renal_score} &&
+	$query_parameters_ref->{cardiovascular_score} &&
+	$query_parameters_ref->{liver_score} &&
+	$query_parameters_ref->{coagulation_score}) {
+
+      $glasgow_score = 0 if $query_parameters_ref->{Glasgow_score} == 15;
+      $glasgow_score = 1 if ($query_parameters_ref->{Glasgow_score} >= 13 or $query_parameters_ref->{Glasgow_score} <= 14);
+      $glasgow_score = 2 if ($query_parameters_ref->{Glasgow_score} >= 10 and $query_parameters_ref->{Glasgow_score} <= 12);
+      $glasgow_score = 3 if ($query_parameters_ref->{Glasgow_score} >= 6 and $query_parameters_ref->{Glasgow_score} <= 9);
+      $glasgow_score = 4 if $query_parameters_ref->{Glasgow_score} < 6;
+
+      $query_parameters_ref->{sofa_score} =
+	$query_parameters_ref->{respiration_mmHg_score} +
+	$query_parameters_ref->{renal_score} +
+	$query_parameters_ref->{cardiovascular_score} +
+	$query_parameters_ref->{liver_score} +
+	$query_parameters_ref->{coagulation_score} +
+	$glasgow_score;
+    }
+  }
+
+  #print "glasgow: $query_parameters_ref->{Glasgow_score}  sofa: $query_parameters_ref->{sofa_score}<BR>";
+
+  return;
+
+} # end updateSummaryScores
