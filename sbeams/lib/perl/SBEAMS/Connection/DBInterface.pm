@@ -4673,8 +4673,19 @@ sub display_input_form {
 
   }
 
-  # Add CSS and javascript for popup column_text info (if configured).
+  # Add CSS and javascript for popup column_text info (if configured) and full form fields show/hide toggle button
   print $self->getPopupDHTML();
+  print $self->getFullFormDHTML();
+
+  # ...add said button
+  print qq!
+      <TR>
+      <TD><hr color="#ffffff" width="275"></TD>
+      <TD colspan="2">
+      <input type="button" id="form_detail_control" onClick="toggleFullForm()" value="Show All Query Constraints">
+      </TD></TR>
+      !;
+
 
   #### Now loop through again and write the HTML
   foreach $row (@columns_data) {
@@ -4709,16 +4720,24 @@ sub display_input_form {
       next;
     }
 
-    #### If some level of detail is chosen, don't show this constraint if
+
+    #### If some level of detail is chosen, don't show (hide) this constraint if
     #### it doesn't meet the detail requirements
     if ( ($detail_level eq 'minimum_detail' && $is_display_column ne 'Y') ||
          ($detail_level eq 'medium_detail' && $is_display_column eq '2') ||
           $is_display_column eq 'N'
        ) {
 
-      #### If there's not a value in it, then skip it
-      next unless (defined $parameters{$column_name} &&
-		   $parameters{$column_name} gt '');
+      #### If there's a value in it, then display it
+	if (defined $parameters{$column_name} && $parameters{$column_name} gt '') {
+	    print '<TR bgcolor="#efefef">';
+	} else {
+	    print qq!
+		<TR bgcolor="#efefef" name="full_detail_field" id="full_detail_field" class="rowhidden">
+		!;
+	}
+    } else {
+	print '<TR>';
     }
 
     # FIXME 'static conditional' for image link column text
@@ -4732,12 +4751,12 @@ sub display_input_form {
     #### Write the parameter name, in red if required
     if ($is_required eq "N") {
       print qq!
-        <TR><TD><B>$column_title:</B></TD>
+        <TD><B>$column_title:</B></TD>
             <TD BGCOLOR="E0E0E0">$column_text</TD>
               !;
     } else {
       print qq!
-        <TR><TD><B><font color=red>$column_title:</font></B></TD>
+        <TD><B><font color=red>$column_title:</font></B></TD>
             <TD BGCOLOR="E0E0E0">$column_text</TD>
               !;
     }
@@ -6505,6 +6524,63 @@ sub linkToColumnText {
   END_LINK
   return $link;
 } # End linkToColumnText
+
+
+###############################################################################
+# getFullFormDHTML: returns CSS and javascript for Full Form Detail toggling
+#
+# returns CSS/javascript in a scalar
+# 
+###############################################################################
+sub getFullFormDHTML {
+  my $this = shift;
+
+  # add CSS class to show/hide table rows
+  my $dhtml =<<"  END_CLASS";
+  <STYLE>
+  tr.rowvisible {
+    display: table-row;
+  }
+  tr.rowhidden {
+    display: none;
+  }
+  </STYLE>
+  END_CLASS
+
+  # add javascript function to show/hide fields and change button text
+  $dhtml .=<<"  END_JS";
+  <SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript">
+  <!--
+
+  function toggleFullForm() {
+    var new_state, new_text;
+    var button = document.getElementById('form_detail_control');
+
+    if (button.value == 'Show All Query Constraints') {
+	new_state = 'rowvisible';
+	new_text = 'Show Most Common Constraints';
+    } else {
+	new_state = 'rowhidden';
+	new_text = 'Show All Query Constraints';
+    }
+
+    // Grab page elements by their Names
+    var aTableRows = document.getElementsByName('full_detail_field');
+
+    for(var i=0; i<aTableRows.length; i++) {
+	aTableRows[i].className = new_state;
+    }
+    // Update button text
+    button.value = new_text;
+  }
+
+  // -->
+  </SCRIPT>
+  END_JS
+
+  return $dhtml;
+  } # end getFullFormDHTML
+
 
 ###############################################################################
 # getPopupDHTML: returns CSS and javascript for popups

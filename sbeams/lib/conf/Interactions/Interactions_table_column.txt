@@ -1,12 +1,12 @@
 table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
 IN_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	4	0	N		Y							N	N				pkDEFAULT
-IN_biosequence_set	2	project_id	Owner Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id	
-IN_biosequence_set	3	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism to which the BioSequences in this database belong	SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name	
+IN_biosequence_set	2	project_id	Owner Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id"	
+IN_biosequence_set	3	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism to which the BioSequences in this database belong	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 IN_biosequence_set	4	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
 IN_biosequence_set	5	set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
 IN_biosequence_set	6	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioSequence database		
 IN_biosequence_set	7	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	N	Version of this BioSequence database		
-IN_biosequence_set	8	polymer_type_id	Polymer Type	int	4	0	N		N	BL_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	Polymer type (e.g. protein, DNA, RNA) for the BioSequences in this database	SELECT polymer_type_id, polymer_type_name FROM $TBBL_POLYMER_TYPE ORDER BY sort_order,polymer_type_name	
+IN_biosequence_set	8	polymer_type_id	Polymer Type	int	4	0	N		N	BL_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	"Polymer type (e.g. protein, DNA, RNA) for the BioSequences in this database"	"SELECT polymer_type_id, polymer_type_name FROM $TBBL_POLYMER_TYPE ORDER BY sort_order,polymer_type_name"	
 IN_biosequence_set	9	upload_file	Upload file	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
 IN_biosequence_set	10	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
 IN_biosequence_set	11	source_file_date	Source File Date	datetime	8	0	Y		N			N	text	40		N	N	N	Date of the FASTA file at last update		
@@ -270,36 +270,35 @@ IN_assay	6	assay_description	Description	varchar	255	0	N		N			Y	textarea	4		Y	Y	
 IN_assay	7	assay_date	Date Assay Performed	datetime	8	0	Y		N			N	text	20		Y	Y	N	Date of Assay		
 IN_assay	8	lab_notebook	Lab Notebook	varchar	255	0	Y		N			N	text	40		Y	Y	N	Lab Notebook		
 IN_assay	9	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-IN_assay	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-IN_assay	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-IN_assay	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-IN_assay	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-IN_assay	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-IN_assay	15	record_status	Record Status	char	1	0	N	N	N							N	N				
-IN_GetInteractions	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TBIN_QUERY_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"	
-IN_GetInteractions	2	project_id	Projects									Y	multioptionlist	4	refreshDocument()	Y	Y	N	Constrain Interactions to one or more projects.  At least one project must be selected.	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P INNER JOIN $TBIN_INTERACTION_GROUP IG ON ( P.project_id = IG.project_id ) LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' ORDER BY UL.username+' - '+P.name,P.project_id"	
-IN_GetInteractions	3	organism_id	Organisms									N	multioptionlist	4		Y	Y	N	"Constrain Interactions to selected Organisms.  Multiple Organisms may be selected.  If no Organisms are selected, ALL Interactions are searched."	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-IN_GetInteractions	4	interaction_group_id	Interaction Groups									N	multioptionlist	4		Y	Y	N	"Constrain Interactions to selected Interaction Groups.  Multiple Interaction Groups may be selected.  If no Interaction Groups are selected, ALL Interaction Groups are searched."	"SELECT interaction_group_id,UL.username+' - '+P.project_tag+' - '+O.organism_name+' - '+IG.interaction_group_name FROM $TBIN_INTERACTION_GROUP IG INNER JOIN $TB_PROJECT P ON ( IG.project_id = P.project_id ) INNER JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id ) INNER JOIN $TB_ORGANISM O ON ( IG.organism_id = O.organism_id ) WHERE IG.project_id IN ( $parameters{project_id} ) ORDER BY UL.username,P.project_tag,O.organism_name,IG.interaction_group_name"	
-IN_GetInteractions	5	bioentity_id	BioEntities									N	multioptionlist	4		Y	Y	N	"Constrain Interactions to selected BioEntities.  Multiple BioEntities may be selected.  If no BioEntities are selected, ALL Interactions are searched."	"SELECT bioentity_id, bioentity_common_name + ' ' + ISNULL(BT.bioentity_type_name,'BioEntity Type?') + ' (' + ISNULL(O.organism_name,'Organism?') +')' AS ""bioentity_descriptor"" FROM $TBIN_BIOENTITY BE LEFT JOIN $TBIN_BIOENTITY_TYPE BT ON ( BE.bioentity_type_id = BT.bioentity_type_id ) LEFT JOIN $TB_ORGANISM O ON ( BE.organism_id = O.organism_id ) ORDER BY bioentity_common_name"	
-IN_GetInteractions	6	bioentity_common_name	BioEntity Common Name Constraint									N	text	40		Y	Y	N	Constraint for BioEntity Common Names. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-IN_GetInteractions	7	interaction_type_id	Interaction Types									N	multioptionlist	4		Y	Y	N	"Constrain Interactions to selected Interaction Types.  Multiple Interaction Types may be selected.  If no Interaction Types are selected, ALL Interaction Groups are searched."	"SELECT interaction_type_id, interaction_type_name  FROM $TBIN_INTERACTION_TYPE order by interaction_type_name"	
-IN_GetInteractions	8	interactionDetailConstraintID	Interaction Detail									N	optionlist	4		Y	Y	N	"Constrain Interactions to Inter / Intra or All Interactions.  If no Interaction Detail is selected, ALL Interactions are searched."	"SELECT otherid , otherText FROM $TBIN_OTHER where otherTable = 'interaction' order by sortOrder"	
-IN_GetInteractions	9	parentConstraintID	BioEntity Parent Constraint									N	optionlist	4		Y	Y	N	"Constrain Interactions to Inter / Intra or All Interactions.  If no Interaction Detail is selected, ALL Interactions are searched."	"SELECT otherid , otherText FROM $TBIN_OTHER where otherTable = 'bioentityMember' order by sortOrder"	
-IN_GetInteractions	10	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBIN_QUERY_OPTION WHERE option_type = 'GI_display_options' ORDER BY sort_order,option_value"	
-IN_GetInteractions	11	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 5000 rows."		
-IN_bioentity_member	1	bioentity_member_id	BioEntity Member	int	4	0	N		Y			N				N	N	N	BioEntity Member ID		
-IN_bioentity_member	2	parent_bioentity_id	BioEntity Member Parent	int	4	0	Y		N	IN_bioentity	bioentity_id					N	N		BioEntity Member Parent ID		
-IN_bioentity_member	3	child_bioentity_id	BioEntity Member Parent	int	4	0	Y		N	IN_bioentity	bioentity_id					N	N		BioEntity Member Child ID		
-IN_bioentity_member	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-IN_bioentity_member	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-IN_bioentity_member	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-IN_bioentity_member	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-IN_bioentity_member	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-IN_bioentity_member	9	record_status	Record Status	char	1	0	N	N	N							N	N				
-IN_GetBioentities	1	organism_id	Organisms									N	multioptionlist	4		Y	Y	N	"Constrain Bioentities to selected Organisms.  Multiple Organisms may be selected.  If no Organisms are selected, ALL Interactions are searched."	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-IN_GetBioentities	2	bioentity_exact_name	BioEntity Exact Name Constraint									N	text	40		Y	Y	N	Constraint for an exact Bioentity Name (common or canonical)		
-IN_GetBioentities	3	bioentity_search_fragment	BioEntity Search Fragment									N	text	40		Y	Y	N	Fragment to search for in any of the bioentity names. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-IN_Other	1	otherID	Option ID	int	4	0	N		Y			N				N	N				
-IN_Other	2	otherText	Option text	varchar	255	0	Y					N				N	N	N			
-IN_Other	3	otherTable	Option Table	varchar	255	0	Y					N				N	N	N			
-IN_Other	4	sortOrder	Sort Order	int	4	0	Y									N	N	N			
+IN_assay	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+IN_assay	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
+IN_assay	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+IN_assay	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
+IN_assay	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
+IN_assay	15	record_status	Record Status	char	1	0	N	N	N							N	N			
+IN_GetInteractions	1	project_id	Projects									Y	multioptionlist	4	refreshDocument()	Y	Y	N	Constrain Interactions to one or more projects.  At least one project must be selected.	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P INNER JOIN $TBIN_INTERACTION_GROUP IG ON ( P.project_id = IG.project_id ) LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' ORDER BY UL.username+' - '+P.name,P.project_id"
+IN_GetInteractions	2	organism_id	Organisms									N	multioptionlist	4		Y	Y	N	"Constrain Interactions to selected Organisms.  Multiple Organisms may be selected.  If no Organisms are selected, ALL Interactions are searched."	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"
+IN_GetInteractions	3	interaction_group_id	Interaction Groups									N	multioptionlist	4		Y	Y	N	"Constrain Interactions to selected Interaction Groups.  Multiple Interaction Groups may be selected.  If no Interaction Groups are selected, ALL Interaction Groups are searched."	"SELECT interaction_group_id,UL.username+' - '+P.project_tag+' - '+O.organism_name+' - '+IG.interaction_group_name FROM $TBIN_INTERACTION_GROUP IG INNER JOIN $TB_PROJECT P ON ( IG.project_id = P.project_id ) INNER JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id ) INNER JOIN $TB_ORGANISM O ON ( IG.organism_id = O.organism_id ) WHERE IG.project_id IN ( $parameters{project_id} ) ORDER BY UL.username,P.project_tag,O.organism_name,IG.interaction_group_name"
+IN_GetInteractions	4	bioentity_id	BioEntities									N	multioptionlist	4		Y	Y	N	"Constrain Interactions to selected BioEntities.  Multiple BioEntities may be selected.  If no BioEntities are selected, ALL Interactions are searched."	"SELECT bioentity_id, bioentity_common_name + ' ' + ISNULL(BT.bioentity_type_name,'BioEntity Type?') + ' (' + ISNULL(O.organism_name,'Organism?') +')' AS ""bioentity_descriptor"" FROM $TBIN_BIOENTITY BE LEFT JOIN $TBIN_BIOENTITY_TYPE BT ON ( BE.bioentity_type_id = BT.bioentity_type_id ) LEFT JOIN $TB_ORGANISM O ON ( BE.organism_id = O.organism_id ) ORDER BY bioentity_common_name"
+IN_GetInteractions	5	bioentity_common_name	BioEntity Common Name Constraint									N	text	40		Y	Y	N	Constraint for BioEntity Common Names. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+IN_GetInteractions	6	interaction_type_id	Interaction Types									N	multioptionlist	4		Y	Y	N	"Constrain Interactions to selected Interaction Types.  Multiple Interaction Types may be selected.  If no Interaction Types are selected, ALL Interaction Groups are searched."	"SELECT interaction_type_id, interaction_type_name  FROM $TBIN_INTERACTION_TYPE order by interaction_type_name"
+IN_GetInteractions	7	interactionDetailConstraintID	Interaction Detail									N	optionlist	4		Y	Y	N	"Constrain Interactions to Inter / Intra or All Interactions.  If no Interaction Detail is selected, ALL Interactions are searched."	"SELECT otherid , otherText FROM $TBIN_OTHER where otherTable = 'interaction' order by sortOrder"
+IN_GetInteractions	8	parentConstraintID	BioEntity Parent Constraint									N	optionlist	4		Y	Y	N	"Constrain Interactions to Inter / Intra or All Interactions.  If no Interaction Detail is selected, ALL Interactions are searched."	"SELECT otherid , otherText FROM $TBIN_OTHER where otherTable = 'bioentityMember' order by sortOrder"
+IN_GetInteractions	9	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBIN_QUERY_OPTION WHERE option_type = 'GI_display_options' ORDER BY sort_order,option_value"
+IN_GetInteractions	10	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 5000 rows."	
+IN_bioentity_member	1	bioentity_member_id	BioEntity Member	int	4	0	N		Y			N				N	N	N	BioEntity Member ID	
+IN_bioentity_member	2	parent_bioentity_id	BioEntity Member Parent	int	4	0	Y		N	IN_bioentity	bioentity_id					N	N		BioEntity Member Parent ID	
+IN_bioentity_member	3	child_bioentity_id	BioEntity Member Parent	int	4	0	Y		N	IN_bioentity	bioentity_id					N	N		BioEntity Member Child ID	
+IN_bioentity_member	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+IN_bioentity_member	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
+IN_bioentity_member	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+IN_bioentity_member	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
+IN_bioentity_member	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
+IN_bioentity_member	9	record_status	Record Status	char	1	0	N	N	N							N	N			
+IN_GetBioentities	1	organism_id	Organisms									N	multioptionlist	4		Y	Y	N	"Constrain Bioentities to selected Organisms.  Multiple Organisms may be selected.  If no Organisms are selected, ALL Interactions are searched."	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"
+IN_GetBioentities	2	bioentity_exact_name	BioEntity Exact Name Constraint									N	text	40		Y	Y	N	Constraint for an exact Bioentity Name (common or canonical)	
+IN_GetBioentities	3	bioentity_search_fragment	BioEntity Search Fragment									N	text	40		Y	Y	N	Fragment to search for in any of the bioentity names. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+IN_Other	1	otherID	Option ID	int	4	0	N		Y			N				N	N			
+IN_Other	2	otherText	Option text	varchar	255	0	Y					N				N	N	N		
+IN_Other	3	otherTable	Option Table	varchar	255	0	Y					N				N	N	N		
+IN_Other	4	sortOrder	Sort Order	int	4	0	Y									N	N	N		
