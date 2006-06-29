@@ -211,7 +211,7 @@ sub handle_request
 
     } else
     {
-        print "looks like binary or file is too big<br/>";
+#       print "looks like binary or file is too big<br/>";
     }
 
 }
