@@ -252,7 +252,7 @@ sub check_samples
     my $sql = qq~
         SELECT S.sample_tag, S.data_contributors
         FROM $TBAT_SAMPLE S
-        WHERE S.is_public = 'Y' AND S.record_status != 'D'
+        WHERE S.record_status != 'D'
         ORDER BY S.sample_tag
     ~;
 
@@ -438,7 +438,7 @@ sub write_public_file
         ###########  iterate over all search batches for this sample #############
 
         my $sql2 = qq~
-            SELECT ASB.TPP_version, ASB.atlas_search_batch_id, ASB.data_location,
+            SELECT distinct ASB.TPP_version, ASB.atlas_search_batch_id, ASB.data_location,
             ASB.search_batch_subdir
             FROM $TBAT_ATLAS_SEARCH_BATCH ASB
             JOIN $TBAT_SPECTRA_DESCRIPTION_SET SDS
@@ -861,7 +861,8 @@ sub get_data_url
 
     my $pat = $sample_accession . "*" . $file_pattern . "*" . "gz";
 
-    my $cmd = "find $repository_path/ -name \'$pat\' -print > $fileWithFileNames";
+    ## files are in $repository_path, but be careful not to include $repository_path/TESTFILES
+    my $cmd = "find $repository_path/ -name \'$pat\' -maxdepth 1 -print > $fileWithFileNames";
     ## where each file in $fileWithFileNames is given as the absolute path to the file
     print "$cmd\n" if ($VERBOSE);
     system $cmd;
@@ -1232,7 +1233,7 @@ sub get_public_sample_info
 }
    
 #######################################################################
-# write_private_file -- writes repository_notpublic.txt file.  
+# write_private_file -- writes repository_notpublic.xml file.  
 #
 #######################################################################
 sub write_private_file()
@@ -1272,9 +1273,9 @@ sub write_to_notpublic_file
 {
     my %args = @_;
 
-    my $sample_tag = $args{'sample_tag'} || die "need sample_tag ($!)";
+    my $sample_tag = $args{'sample_tag'} || die "need sample_tag";
 
-    my $organism = $args{'organism'} || die "need organism for $sample_tag ($!)";
+    my $organism = $args{'organism'} || die "need organism for $sample_tag";
 
     my $data_contributors; 
     if ($TEST)
@@ -1282,7 +1283,8 @@ sub write_to_notpublic_file
         $data_contributors = $args{data_contributors}; ## dev database isn't annotated
     } else
     {
-       $data_contributors = $args{data_contributors} or die "need data_contributors";
+        $data_contributors = $args{data_contributors} or 
+            die "need data_contributors for sample_tag $sample_tag";
     }
 
     chomp($data_contributors);
@@ -1902,7 +1904,6 @@ sub makeNewArchiveAndProperties
 
     $versioned_properties_filename =~ s/\.tar\.gz/\.properties/;
 
-
     print "making $versioned_compressed_archive_filename may take awhile, patience...\n";
 
     ## get pwd, chdir to orig_data_dir, tar up files, gzip 'em, move 'em
@@ -2263,7 +2264,7 @@ sub get_orig_data_url
     ## does an archive file already exist in the repository?
     my $filelist = "tt.txt";
     my $pat = "*$sample_accession*$orig_data_type*";
-    my $cmd = "find $repository_path -name \'$pat\' -print > $filelist";
+    my $cmd = "find $repository_path/ -name \'$pat\' -maxdepth 1 -print > $filelist";
     print "$cmd\n" if ($VERBOSE);
     system $cmd;
 
@@ -2395,7 +2396,7 @@ sub get_search_results_url
     my $data_dir = $args{search_results_dir} or die
         "need search_results_dir";
 
-    my $TPP_version = $args{TPP_version};
+    my $TPP_version = $args{TPP_version}; ## some pepXML files don't contain TPP version
 
     my $atlas_search_batch_id = $args{atlas_search_batch_id} or
         die "need atlas_search_batch_id";
@@ -2408,10 +2409,9 @@ sub get_search_results_url
     ## the archive?  if not, make one:
     my $filelist = "tt.txt";
     my $pat = "$sample_accession*$suffix*gz";
-    my $cmd = "find $repository_path -name \'$pat\' -print > $filelist";
+    my $cmd = "find $repository_path/ -name \'$pat\' -maxdepth 1 -print > $filelist";
     print "$cmd\n" if ($VERBOSE);
     system $cmd;
-
     my $file_path;
 
     if (-s $filelist)
@@ -2483,7 +2483,7 @@ sub get_protein_prophet_url
     ## the archive?  if not, make one:
     my $filelist = "tt.txt";
     my $pat = "$sample_accession*$suffix*gz";
-    my $cmd = "find $repository_path -name \'$pat\' -print > $filelist";
+    my $cmd = "find $repository_path/ -name \'$pat\' -maxdepth 1 -print > $filelist";
     print "$cmd\n" if ($VERBOSE);
     system $cmd;
 
