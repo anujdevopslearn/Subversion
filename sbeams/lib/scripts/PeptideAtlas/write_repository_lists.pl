@@ -87,10 +87,12 @@ Options:
 
 e.g.:  ./$PROG_NAME --repository_url "http://www.peptideatlas.org/repository" --public_archive_uri "/pa_public_archive" --sbeams_data_path "/disk2/archive" --repository_path "/www/peptideatlas/repository/pa_public_archive" --run --make_tmp_files
 
+e.g.:  ./$PROG_NAME --repository_url "http://www.peptideatlas.org/repository" --public_archive_uri "/pa_public_archive" --sbeams_data_path "/disk2/archive" --repository_path "/www/peptideatlas/repository/pa_public_archive" --make_tmp_files --test --verbose 1
+
 EOU
 
 ## get arguments:
-GetOptions(\%OPTIONS, "test", "run", "make_tmp_files", 
+GetOptions(\%OPTIONS, "test", "run", "make_tmp_files", "verbose:s",
 "repository_url:s", "public_archive_uri:s", "sbeams_data_path:s",
 "repository_path:s");
 
@@ -109,7 +111,7 @@ $OPTIONS{"sbeams_data_path"} && $OPTIONS{"repository_path"})
 ## set some vars based upon arguments:
 $TEST = $OPTIONS{"test"} || 0;
 
-$VERBOSE = 0;
+$VERBOSE = $OPTIONS{"verbose"} || 0;
 
 $repository_url = $OPTIONS{"repository_url"};
 
@@ -159,7 +161,6 @@ sub main
     exit unless ( $current_username = 
         $sbeams->Authenticate(connect_read_only => '1')
     );
-    #   work_group=>'PeptideAtlas_admin')
 
     ## make sure that user is on atlas:
     check_host();
@@ -356,6 +357,7 @@ sub write_public_file
         SELECT S.sample_description, S.data_contributors
         FROM $TBAT_SAMPLE S
         WHERE S.sample_id = '$sample_id'
+        AND S.record_status != 'D'
         ~;
 
         my @rows2 = $sbeams->selectSeveralColumns($sql2) or 
@@ -545,6 +547,7 @@ sub write_public_file
             JOIN $TBAT_SAMPLE_PUBLICATION SP ON (P.publication_id = SP.publication_id)
             JOIN $TBAT_SAMPLE S ON (S.sample_id = SP.sample_id)
             WHERE S.sample_id = '$sample_id'
+            AND SP.record_status != 'D'
         ~;
 
         my @rows3 = $sbeams->selectSeveralColumns($sql3);
@@ -860,7 +863,7 @@ sub get_data_url
 
     my $cmd = "find $repository_path/ -name \'$pat\' -print > $fileWithFileNames";
     ## where each file in $fileWithFileNames is given as the absolute path to the file
-    print "$cmd\n" if ($TEST);
+    print "$cmd\n" if ($VERBOSE);
     system $cmd;
 
     my $latestFile = "";
@@ -1161,17 +1164,6 @@ sub get_notpublic_sample_info
                     " ($sample_info{$sample_tag}->{organism} != " .
                     " $organism)\n";
             }
-
-
-            if ($sample_info{$sample_tag}->{data_contributors} ne 
-                $data_contributors)
-            {
-                warn "TEST fails for " .
-                    "$sample_info{$sample_tag}->{data_contributors} ($!)\n".
-                    " ( $sample_info{$sample_tag}->{data_contributors} != " .
-                    " $data_contributors )\n";
-            }
-
         }
 
     } ## end TEST
@@ -1917,12 +1909,12 @@ sub makeNewArchiveAndProperties
     my $progwd = `pwd`;
 
     chdir $data_dir || die "cannot chdir to $data_dir ($!)";
-    print "chdir $data_dir\n" if ($TEST);
+    print "chdir $data_dir\n" if ($VERBOSE);
 
     #### make a file containing files with pattern: ####
     my $filelist = "tt.txt";
     my $cmd = "rm -f $filelist";
-    print "$cmd\n" if ($TEST);
+    print "$cmd\n" if ($VERBOSE);
     system $cmd;
     my $pat = "*$file_pattern";
 
@@ -1935,7 +1927,7 @@ sub makeNewArchiveAndProperties
     {
         $cmd = "find . -name \'$pat\' -print > $filelist";
     }
-    print "$cmd\n" if ($TEST);
+    print "$cmd\n" if ($VERBOSE);
     system $cmd;
 
     ## if filelist is empty, report error message, and set final file to null: 
@@ -1997,21 +1989,21 @@ sub makeNewArchiveAndProperties
 
         ## make tar file
         my $cmd = "tar -cf $versioned_archive_filename --files-from=$filelist";
-        print "$cmd\n" if ($TEST);
+        print "$cmd\n" if ($VERBOSE);
         system $cmd;
     
         ## compress the tar file:
         my $cmd = "gzip $versioned_archive_filename";
-        print "$cmd\n" if ($TEST);
+        print "$cmd\n" if ($VERBOSE);
         system $cmd;
 
         ## move them to $repository_path/  
         $cmd = "mv $versioned_compressed_archive_filename $repository_path/";
-        print "$cmd\n" if ($TEST);
+        print "$cmd\n" if ($VERBOSE);
         system $cmd;
 
         $cmd = "mv $versioned_properties_filename $repository_path/";
-        print "$cmd\n" if ($TEST);
+        print "$cmd\n" if ($VERBOSE);
         system $cmd;
 
         my $check_path1 = $repository_path . "/" . $versioned_compressed_archive_filename;
@@ -2045,7 +2037,7 @@ sub makeNewArchiveAndProperties
                     {
                         my $new_file_name = "$repository_path/$prefix" . "_sequest.params";
                         $cmd = "cp sequest.params $new_file_name";
-                        print "$cmd\n" if ($TEST);
+                        print "$cmd\n" if ($VERBOSE);
                         system $cmd;
                     }
                     ## if qualscore file exists, copy it over
@@ -2053,7 +2045,7 @@ sub makeNewArchiveAndProperties
                     {
                         my $new_file_name = "$repository_path/$prefix" . "_qualscore_results";
                         $cmd = "cp qualscore_results $new_file_name";
-                        print "$cmd\n" if ($TEST);
+                        print "$cmd\n" if ($VERBOSE);
                         system $cmd;
                     }
                 }
@@ -2272,7 +2264,7 @@ sub get_orig_data_url
     my $filelist = "tt.txt";
     my $pat = "*$sample_accession*$orig_data_type*";
     my $cmd = "find $repository_path -name \'$pat\' -print > $filelist";
-    print "$cmd\n" if ($TEST);
+    print "$cmd\n" if ($VERBOSE);
     system $cmd;
 
     my $versioned_compressed_archive_file_path;
@@ -2283,7 +2275,7 @@ sub get_orig_data_url
            getLatestFileName( fileWithFileNames => $filelist ); 
 
         print "Found archive file: $versioned_compressed_archive_file_path\n"
-            if ($TEST);
+            if ($VERBOSE);
     }
 
     if (-z $filelist)
@@ -2315,16 +2307,16 @@ sub get_orig_data_url
             my $progwd = `pwd`;
 
             chdir $data_dir || die "cannot chdir to $data_dir ($!)";
-            print "chdir $data_dir\n" if ($TEST);
+            print "chdir $data_dir\n" if ($VERBOSE);
 
             #### make a file containing files with pattern: ####
             $filelist = "tt.txt";
             my $cmd = "rm -f $filelist";
-            print "$cmd\n" if ($TEST);
+            print "$cmd\n" if ($VERBOSE);
             system $cmd;
             my $pat = "*$orig_data_type";
             $cmd = "find . -name \'$pat\' -print > $filelist";
-            print "$cmd\n" if ($TEST);
+            print "$cmd\n" if ($VERBOSE);
             system $cmd;
 
             ## if filelist is empty, report error message, and set final file to null: 
@@ -2344,35 +2336,34 @@ sub get_orig_data_url
 
                 ## make tar file
                 my $cmd = "tar -cf $tar_file_name --files-from=$filelist";
-                print "$cmd\n" if ($TEST);
+                print "$cmd\n" if ($VERBOSE);
                 system $cmd;
     
                 ## compress the tar file:
                 my $cmd = "gzip $tar_file_name";
-                print "$cmd\n" if ($TEST);
+                print "$cmd\n" if ($VERBOSE);
                 system $cmd;
 
                 ####  move them to $repository_path/  ####
                 $cmd = "mv $versioned_compressed_archive_filename $versioned_compressed_archive_file_path";
-                print "$cmd\n" if ($TEST);
+                print "$cmd\n" if ($VERBOSE);
                 system $cmd;
 
             }
 
             ## return to former directory
             chdir $progwd;
-            print "chdir $progwd\n" if ($TEST);
+            print "chdir $progwd\n" if ($VERBOSE);
 
             print "versioned_compressed_archive_file_path: $versioned_compressed_archive_file_path\n"
-                if ($TEST);
+                if ($VERBOSE);
         } 
     }
 
     $data_url = convertAbsolutePathToURL( 
         file_path => $versioned_compressed_archive_file_path );
 
-    print "url for archive file: $data_url\n"
-        if ($TEST);
+    print "url for archive file: $data_url\n" if ($VERBOSE);
 
     return $data_url;
 }
@@ -2393,7 +2384,6 @@ sub get_orig_data_url
 #######################################################################
 sub get_search_results_url
 {
-    print "get_search_results_url(...)\n" if ($TEST);
     my %args =@_;
 
     ## search results file name will be:
@@ -2419,7 +2409,7 @@ sub get_search_results_url
     my $filelist = "tt.txt";
     my $pat = "$sample_accession*$suffix*gz";
     my $cmd = "find $repository_path -name \'$pat\' -print > $filelist";
-    print "$cmd\n" if ($TEST);
+    print "$cmd\n" if ($VERBOSE);
     system $cmd;
 
     my $file_path;
@@ -2428,8 +2418,7 @@ sub get_search_results_url
     { ## [case: file list is not empty]
         $file_path = getLatestFileName( fileWithFileNames => $filelist ); 
 
-        print "Found archive file: $file_path\n"
-            if ($TEST);
+        print "Found archive file: $file_path\n" if ($VERBOSE);
     }
 
     ## if filelist is empty
@@ -2495,7 +2484,7 @@ sub get_protein_prophet_url
     my $filelist = "tt.txt";
     my $pat = "$sample_accession*$suffix*gz";
     my $cmd = "find $repository_path -name \'$pat\' -print > $filelist";
-    print "$cmd\n" if ($TEST);
+    print "$cmd\n" if ($VERBOSE);
     system $cmd;
 
     my $file_path;
@@ -2503,7 +2492,7 @@ sub get_protein_prophet_url
     if (-s $filelist)
     { ## [case: file list is not empty]
         $file_path = getLatestFileName( fileWithFileNames => $filelist );
-        print "Found archive file: $file_path\n" if ($TEST);
+        print "Found archive file: $file_path\n" if ($VERBOSE);
     }
 
     ## if filelist is empty
