@@ -2421,7 +2421,7 @@ sub insert_peptide {
     $hp = $SSRCalculator->TSUM3($sequence);
   }
 
-  $rowdata_ref->{peptide_molecular_weight} = $mw;
+  $rowdata_ref->{molecular_weight} = $mw;
   $rowdata_ref->{peptide_isoelectric_point} = $pI;
   $rowdata_ref->{SSRCalc_relative_hydrophobicity} = $hp;
 
