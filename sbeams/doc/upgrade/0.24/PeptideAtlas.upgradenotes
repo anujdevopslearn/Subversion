@@ -196,3 +196,107 @@ begin transaction
 ALTER TABLE PeptideAtlas.dbo.sample ADD sample_accession varchar(255)
 commit transaction
 
+---------------
+
+2006-07-06
+
+Schema changes (see full definitions in driver tables):
+
+- Added to PeptideAtlas_table_column.txt, new tables:
+
+      NIST_library_spectrum
+      NIST_library_spectrum_peak
+      NIST_spectrum_type
+      spectrum_identification
+      spectrum
+      spectrum_peak
+ a new column 'sample_accession' in table 'sample'
+
+- Updated driver tables
+
+- Populated the SQL scripts:
+
+    setenv SBEAMS fullPathToYourDevArea/sbeams
+    cd $SBEAMS/lib/scripts/Core
+
+    foreach dbtype ( mssql mysql pgsql )
+        ./generate_schema.pl --table_prop ../../conf/PeptideAtlas/PeptideAtlas_table_property
+.txt \
+        --table_col ../../conf/PeptideAtlas/PeptideAtlas_table_column.txt --schema_file \
+        ../../sql/PeptideAtlas/PeptideAtlas --destination_type $dbtype
+    end
+
+- Altered the SQL server tables
+  
+    [Can copy the sql statements directly from lib/sql/PeptideAtlas/PeptideAtlas_CREATETABLES.mssql]
+
+
+CREATE TABLE NIST_library_spectrum (
+  NIST_library_spectrum_id   int IDENTITY NOT NULL,
+  sequence                   varchar(255) NOT NULL,
+  modified_sequence          varchar(255) NOT NULL,
+  charge                     int NOT NULL,
+  spectrum_type_id           int NOT NULL,
+  modifications              varchar(255) NULL,
+  organism_id                int NULL,
+  protein_name               varchar(255) NULL,
+  mz_exact                   float NOT NULL,
+  PRIMARY KEY (NIST_library_spectrum_id)
+)
+GO
+
+CREATE TABLE NIST_library_spectrum_peak (
+  NIST_library_spectrum_peak_id  int IDENTITY NOT NULL,
+  NIST_library_spectrum_id   int NOT NULL,
+  mz                         float NOT NULL,
+  relative_intensity         int NOT NULL,
+  ion_label                  varchar(255) NULL,
+  peak_label                 varchar(255) NULL,
+  PRIMARY KEY (NIST_library_spectrum_peak_id)
+)
+GO
+
+CREATE TABLE NIST_spectrum_type (
+  NIST_spectrum_type_id      int IDENTITY NOT NULL,
+  NIST_spectrum_type_name    varchar(50) NOT NULL,
+  NIST_spectrum_type_description  varchar(1024) NOT NULL,
+  PRIMARY KEY (NIST_spectrum_type_id)
+)
+GO
+
+
+CREATE TABLE spectrum_identification (
+  spectrum_identification_id  int IDENTITY NOT NULL,
+  modified_peptide_instance_id  int NOT NULL,
+  probability                real NOT NULL,
+  spectrum_id                int NOT NULL,
+  atlas_search_batch_id      int NOT NULL,
+  PRIMARY KEY (spectrum_identification_id)
+)
+GO
+
+
+CREATE TABLE spectrum (
+  spectrum_id                int IDENTITY NOT NULL,
+  sample_id                  int NOT NULL,
+  spectrum_name              varchar(50) NOT NULL,
+  start_scan                 int NOT NULL,
+  end_scan                   int NOT NULL,
+  scan_index                 int NOT NULL,
+  PRIMARY KEY (spectrum_id)
+)
+GO
+
+
+CREATE TABLE spectrum_peak (
+  spectrum_peak_id           int IDENTITY NOT NULL,
+  spectrum_id                int NOT NULL,
+  mz                         float NOT NULL,
+  relative_intensity         int NOT NULL,
+  PRIMARY KEY (spectrum_peak_id)
+)
+GO
+
+
+-- Add the new tables to lib/perl/SBEAMS/PeptideAtlas/Tables.pm
+
