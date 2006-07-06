@@ -362,7 +362,7 @@ AT_NIST_library_spectrum	1	NIST_library_spectrum_id	NIST Library Spectrum ID	int
 AT_NIST_library_spectrum	2	sequence	Amino Acid Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	N	Amino acid sequence assigned to the spectrum		
 AT_NIST_library_spectrum	3	modified_sequence	Modified Sequence	varchar	255	0	N		N			N	text	50		Y	Y	N	Sequence including modification notations		
 AT_NIST_library_spectrum	4	charge	Charge State	int	4	0	N		N			N				Y	Y	N	charge		
-AT_NIST_library_spectrum	5	spectrum_type_id	Spectrum Type ID	int	4	0	N		N	AT_spectrum_type	spectrum_type_id	Y				N	N	Y	Spectrum Type ID		
+AT_NIST_library_spectrum	5	NIST_spectrum_type_id	NIST Spectrum Type ID	int	4	0	N		N	AT_NIST_spectrum_type	NIST_spectrum_type_id	Y				N	N	Y	NIST Spectrum Type ID		
 AT_NIST_library_spectrum	6	modifications	Modifications	varchar	255	0	Y		N			N	text	20		Y	Y	N	Modifications to the amino acid sequence		
 AT_NIST_library_spectrum	7	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	N	Organism for which this default applies.  Leave empty for overall default	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 AT_NIST_library_spectrum	8	protein_name	Protein Name	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Name of this Protein		
