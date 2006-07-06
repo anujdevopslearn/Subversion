@@ -293,7 +293,13 @@ sub exportBuildToDAS {
          '$peptide_sequence')
     ~;
 
-    my $sth = $dbh->prepare ($sql)
+#   my $sth = $dbh->prepare ($sql)
+    my $sth = $dbh->prepare (q{INSERT INTO $atlas_build_tag
+        (contig_id,start,end,strand,id,score,gff_feature,gff_source,name)
+        VALUES
+        ('$chromosome',$start_in_chromosome,$end_in_chromosome,$strand,
+         '$peptide_accession',$best_probability,'peptide','$peptide_degen_class',
+         '$peptide_sequence') })
       or die("ERROR[$SUB]: Cannot prepare query $DBI::err ($DBI::errstr)");
     $sth->execute()
       or die("ERROR[$SUB]: Cannot execute query\n$sql\n".
@@ -332,11 +338,9 @@ sub clearDASTable {
   my $atlas_build_id = $args{atlas_build_id} or
     die("ERROR[$SUB]: parameter atlas_build_id not provided");
 
-
   my $atlas_build_tag = getAtlasBuildTag(
     atlas_build_id => $atlas_build_id,
   ) or die("ERROR[$SUB]: Unable to get atlas_build_tag");
-
 
   #### connect to database
   my $dbh = connectToDASDB()
@@ -345,16 +349,17 @@ sub clearDASTable {
 
   #### DROP the table if it exists
   print "INFO[$SUB] Dropping DAS table...\n" if ($VERBOSE);
+##xxxxxxx
   my $sql = "DROP TABLE IF EXISTS $atlas_build_tag";
   print "[SQL]: ",$sql,"\n" if ($VERBOSE);
-  my $sth = $dbh->prepare ($sql)
+# my $sth = $dbh->prepare ($sql)
+  my $sth = $dbh->prepare (q{DROP TABLE IF EXISTS $atlas_build_tag})
     or die("ERROR[$SUB]: Cannot prepare query $DBI::err ($DBI::errstr)");
   $sth->execute()
     or die("ERROR[$SUB]: Cannot execute query\n$sql\n".
 	   "$DBI::err ($DBI::errstr)");
   $sth->finish()
     or die("ERROR[$SUB]: Cannot finish query $DBI::err ($DBI::errstr)");
-
 
   #### CREATE the table
   print "INFO[$SUB] Creating DAS table...\n" if ($VERBOSE);
@@ -383,7 +388,29 @@ sub clearDASTable {
   ~;
 
   print "[SQL]: ",$sql,"\n" if ($VERBOSE);
-  my $sth = $dbh->prepare ($sql)
+# my $sth = $dbh->prepare ($sql)
+  my $sth = $dbh->prepare ( q{ CREATE TABLE $atlas_build_tag (
+      contig_id    varchar(40) NOT NULL default '',
+      start        int(10) NOT NULL default '0',
+      end          int(10) NOT NULL default '0',
+      strand       int(2) NOT NULL default '0',
+      id           varchar(40) NOT NULL default '',
+      score        double(16,4) NOT NULL default '0.0000',
+      gff_feature  varchar(40) default NULL,
+      gff_source   varchar(40) default NULL,
+      name         varchar(40) default NULL,
+      hstart       int(11) NOT NULL default '0',
+      hend         int(11) NOT NULL default '0',
+      hid          varchar(40) NOT NULL default'',
+      evalue       varchar(40) default NULL,
+      perc_id      int(10) default NULL,
+      phase        int(11) NOT NULL default '0',
+      end_phase    int(11) NOT NULL default '0',
+
+      KEY id_contig(contig_id),
+      KEY id_pos(id,start,end)
+    )
+    })
     or die("ERROR[$SUB]: Cannot prepare query $DBI::err ($DBI::errstr)");
   $sth->execute()
     or die("ERROR[$SUB]: Cannot execute query\n$sql\n".
@@ -551,8 +578,11 @@ sub getAllPeptideMappings {
             ON ( PI.peptide_instance_id = PM.peptide_instance_id )
       WHERE 1 = 1
         AND PI.atlas_build_id = '$atlas_build_id'
+        AND PI.n_genome_locations > 0
       ORDER BY P.peptide_accession,PM.chromosome,PM.start_in_chromosome
   ~;
+
+  print "\n$sql\n" if ($VERBOSE);
 
   my @peptide_mappings = $sbeams->selectSeveralColumns($sql);
 
@@ -586,7 +616,7 @@ sub updateDazzleConfigFile {
   my $password = $connection_params{password};
   my $DASURL = $connection_params{DASURL};
 
-  my $linkout_URL = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=####&action=QUERY";
+  my $linkout_URL = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptide?_tab=4&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=####&action=QUERY";
   $linkout_URL =~ s/\&/&amp;/g;
 
   print qq~
@@ -604,7 +634,7 @@ sub updateDazzleConfigFile {
     <string name="name" value="PeptideAtlas build $atlas_build_tag" />
     <string name="description" value="Peptides from the PeptideAtlas build $atlas_build_tag" />
     <string name="version" value="1" />
-    <string name="mapMaster" value="http://das.ensembl.org/das/ensembl_Homo_sapiens_core_30_35c" />
+    <string name="mapMaster" value="http://das.ensembl.org/das/ensembl_Homo_sapiens_core_39_36a" />
     <string name="dbHolder" value="PeptideAtlasDASConn" />
     <string name="tableName" value="$atlas_build_tag" />
     <map name="uriPatterns">
