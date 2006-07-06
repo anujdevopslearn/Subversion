@@ -27,3 +27,9 @@ AT_atlas_search_batch_parameter_set	Atlas Search Batch Parameter Set	PeptideAtla
 AT_spectra_description_set	Spectra Description Set	PeptideAtlas_infrastructure	NO	$TBAT_SPECTRA_DESCRIPTION_SET	spectra_description_set_id			
 AT_BrowseBiosequence	Browse Biosequence	QUERY					BrowseBioSequence.cgi	
 AT_GetPeptides	Get Peptides	QUERY					GetPeptides	
+AT_NIST_library_spectrum	NIST Library Spectrum	PeptideAtlas_infrastructure	NO	$TBAT_NIST_LIBRARY_SPECTRUM	NIST_library_spectrum_id			
+AT_NIST_library_spectrum_peak	NIST Library Spectrum Peak	PeptideAtlas_infrastructure	NO	$TBAT_NIST_LIBRARY_SPECTRUM_PEAK	NIST_library_spectrum_peak_id			
+AT_NIST_spectrum_type	NIST Spectrum Type	PeptideAtlas_infrastructure	NO	$TBAT_NIST_SPECTRUM_TYPE	NIST_spectrum_type_id			
+AT_spectrum_identification	Spectrum Identification	PeptideAtlas_infrastructure	NO	$TBAT_SPECTRUM_IDENTIFICATION	spectrum_identification_id
+AT_spectrum	Spectrum	PeptideAtlas_infrastructure	NO	$TBAT_SPECTRUM	spectrum_id
+AT_spectrum_peak	Spectrum Peak	PeptideAtlas_infrastructure	NO	$TBAT_SPECTRUM_PEAK	spectrum_peak_id

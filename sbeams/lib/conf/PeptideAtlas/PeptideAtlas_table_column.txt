@@ -350,11 +350,44 @@ AT_spectra_description_set	5	instrument_model_id	Instrument Model ID	int	4	0	Y		
 AT_spectra_description_set	6	instrument_model_name	Instrument Model Name	varchar	100	0	Y		N			N				Y	Y	N	Instrument (mass spectrometer) manufacturer model name		
 AT_spectra_description_set	7	conversion_software_name	Conversion Software Name	varchar	255	0	N		N							N	N		Name of software used in conversion to mzXML		
 AT_spectra_description_set	8	conversion_software_version	Conversion Software Version	varchar	50	0	N		N							N	N		Version of software used in conversion to mzXML		
-AT_spectra_description_set	9	mzXML_schema	mzXML Schema	varchar	1024	0	N		N							N	N		mzXML schema
-AT_spectra_description_set	10	n_spectra	Number of Spectra	int	6	0	N		N							N	N		Number of spectra
-AT_spectra_description_set	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-AT_spectra_description_set	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N		
-AT_spectra_description_set	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-AT_spectra_description_set	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N		
-AT_spectra_description_set	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
-AT_spectra_description_set	16	record_status	Record Status	char	1	0	N	N	N							N	N		
+AT_spectra_description_set	9	mzXML_schema	mzXML Schema	varchar	1024	0	N		N							N	N		mzXML schema		
+AT_spectra_description_set	10	n_spectra	Number of Spectra	int	6	0	N		N							N	N		Number of spectra		
+AT_spectra_description_set	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_spectra_description_set	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_spectra_description_set	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_spectra_description_set	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_spectra_description_set	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_spectra_description_set	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_NIST_library_spectrum	1	NIST_library_spectrum_id	NIST Library Spectrum ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_NIST_library_spectrum	2	sequence	Amino Acid Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	N	Amino acid sequence assigned to the spectrum		
+AT_NIST_library_spectrum	3	modified_sequence	Modified Sequence	varchar	255	0	N		N			N	text	50		Y	Y	N	Sequence including modification notations		
+AT_NIST_library_spectrum	4	charge	Charge State	int	4	0	N		N			N				Y	Y	N	charge		
+AT_NIST_library_spectrum	5	spectrum_type_id	Spectrum Type ID	int	4	0	N		N	AT_spectrum_type	spectrum_type_id	Y				N	N	Y	Spectrum Type ID		
+AT_NIST_library_spectrum	6	modifications	Modifications	varchar	255	0	Y		N			N	text	20		Y	Y	N	Modifications to the amino acid sequence		
+AT_NIST_library_spectrum	7	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	N	Organism for which this default applies.  Leave empty for overall default	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+AT_NIST_library_spectrum	8	protein_name	Protein Name	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Name of this Protein		
+AT_NIST_library_spectrum	9	mz_exact	Exact M/Z	float	8	0	N		N			Y	text	10		Y	Y	N	(M+H)+ charged parent ion		
+AT_NIST_library_spectrum_peak	1	NIST_library_spectrum_peak_id	NIST Library Spectrum Peak ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_NIST_library_spectrum_peak	2	NIST_library_spectrum_id	NIST Library Spectrum ID	int	4	0	N		N	AT_NIST_library_spectrum	NIST_library_spectrum_id	Y				Y	Y	N	NIST Library Spectrum in which this peak exists	SELECT NIST_library_spectrum_id FROM $TBAT_NIST_library_spectrum ORDER BY sort_order	
+AT_NIST_library_spectrum_peak	3	mz	M/Z	float	8	0	N		N			Y	text	10		Y	Y	N	Fragment ion M/Z		
+AT_NIST_library_spectrum_peak	4	relative_intensity	Relative Intensity	int	8	0	N		N							N	N	N	Intensity of the peak relative to a scale		
+AT_NIST_library_spectrum_peak	5	ion_label	Ion Label	varchar	255	0	Y		N			N	text	20		Y	Y	N	Fragment ion label		
+AT_NIST_library_spectrum_peak	6	peak_label	Peak Label	varchar	255	0	Y		N			N	text	20		Y	Y	N	Peak Label		
+AT_NIST_spectrum_type	1	NIST_spectrum_type_id	NIST Spectrum Type ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_NIST_spectrum_type	2	NIST_spectrum_type_name	NIST Spectrum Type Name	varchar	50	0	N		N			Y	text	30		Y	Y	N	"Spectrum Type Name (i.e., consensus, replicate, or single)"		
+AT_NIST_spectrum_type	3	NIST_spectrum_type_description	NIST Spectrum Type Description	varchar	1024	0	N		N			Y	text	30		Y	Y	N	Spectrum Type Description		
+AT_spectrum_identification	1	spectrum_identification_id	Spectrum Identification ID	int	4	0	N		Y							N	N				PkDEFAULT
+AT_spectrum_identification	2	modified_peptide_instance_id	Modified Peptide Instance ID	int	4	0	N		N	AT_modified_peptide_instance	modified_peptide_instance_id	Y	text	10		Y	Y		Parent modified_peptide_instance_id		
+AT_spectrum_identification	3	probability	Probability	real	4	0	N		N			Y	text	10		Y	Y	N	PeptideProphet probability for assignment to peptide		
+AT_spectrum_identification	4	spectrum_id	Spectrum ID	int	4	0	N		N	AT_spectrum	spectrum_id	Y	text	10		Y	Y		spectrum_id		
+AT_spectrum_identification	5	atlas_search_batch_id	Atlas Search Batch ID	int	4	0	N		N	AT_atlas_search_batch	atlas_search_batch_id	Y	text	10		Y	Y		atlas_search_batch_id		
+AT_spectrum	1	spectrum_id	Spectrum ID	int	4	0	N		Y							N	N				PkDEFAULT
+AT_spectrum	2	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id	Y	text	10		Y	Y		sample_id		
+AT_spectrum	3	spectrum_name	Spectrum Name	varchar	50	0	N		N			Y	text	30		Y	Y	N	Spectrum Name		
+AT_spectrum	4	start_scan	Start scan number	int	4	0	N		N			N				Y	Y	N	Start scan number of MS/MS spectrum		
+AT_spectrum	5	end_scan	End scan number	int	4	0	N		N			N				Y	Y	N	End scan number of MS/MS spectrum		
+AT_spectrum	6	scan_index	Scan Index	int	4	0	N		N			N				Y	Y	N	Scan index		
+AT_spectrum_peak	1	spectrum_peak_id	Spectrum Peak ID	int	4	0	N		Y							N	N				PkDEFAULT
+AT_spectrum_peak	2	spectrum_id	Spectrum ID	int	4	0	N		N	AT_spectrum	spectrum_id	Y	text	10		Y	Y		spectrum_id		
+AT_spectrum_peak	3	mz	M/Z	float	8	0	N		N			Y	text	10		Y	Y	N	Fragment ion M/Z		
+AT_spectrum_peak	4	relative_intensity	Relative Intensity	int	8	0	N		N							N	N	N	Integrated Intensity of the peak profile		
