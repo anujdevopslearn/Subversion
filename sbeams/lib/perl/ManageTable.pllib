@@ -1232,8 +1232,8 @@ sub addProjectErrors {
   if ( scalar( @rows ) ) {
     push @$errors, <<"    END_ERR";
     You do not have sufficient privileges ($auth) to access data in the
-    current project, $rows[0]->[2] ( $rows[0]->[1] ).  Please contact the the
-    project PI ( $rows[0]->[0] ) about granting you access.
+    current project, $rows[0]->[2] ( $rows[0]->[1] ).  Please contact the
+    project PI or proxy ( $rows[0]->[0] ) about granting you access.
     END_ERR
   }
 }
