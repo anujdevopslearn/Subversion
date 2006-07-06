@@ -236,7 +236,7 @@ CREATE TABLE NIST_library_spectrum (
   sequence                   varchar(255) NOT NULL,
   modified_sequence          varchar(255) NOT NULL,
   charge                     int NOT NULL,
-  spectrum_type_id           int NOT NULL,
+  NIST_spectrum_type_id      int NOT NULL,
   modifications              varchar(255) NULL,
   organism_id                int NULL,
   protein_name               varchar(255) NULL,
@@ -296,6 +296,32 @@ CREATE TABLE spectrum_peak (
   PRIMARY KEY (spectrum_peak_id)
 )
 GO
+
+
+Update the sql server tables with forein key constraints also
+
+ALTER TABLE NIST_library_spectrum ADD CONSTRAINT fk_NIST_library_spectrum_NIST_spectrum_type_id FOREIGN KEY (NIST_spectrum_type_id) REFERENCES NIS
+T_spectrum_type(NIST_spectrum_type_id)
+GO
+ALTER TABLE NIST_library_spectrum ADD CONSTRAINT fk_NIST_library_spectrum_organism_id FOREIGN KEY (organism_id) REFERENCES organism(organism_id)
+GO
+ALTER TABLE NIST_library_spectrum_peak ADD CONSTRAINT fk_NIST_library_spectrum_peak_NIST_library_spectrum_id FOREIGN KEY (NIST_library_spectrum_id
+) REFERENCES NIST_library_spectrum(NIST_library_spectrum_id)
+GO
+ALTER TABLE spectrum_identification ADD CONSTRAINT fk_spectrum_identification_modified_peptide_instance_id FOREIGN KEY (modified_peptide_instance_
+id) REFERENCES modified_peptide_instance(modified_peptide_instance_id)
+GO
+ALTER TABLE spectrum_identification ADD CONSTRAINT fk_spectrum_identification_spectrum_id FOREIGN KEY (spectrum_id) REFERENCES spectrum(spectrum_i
+d)
+GO
+ALTER TABLE spectrum_identification ADD CONSTRAINT fk_spectrum_identification_atlas_search_batch_id FOREIGN KEY (atlas_search_batch_id) REFERENCES
+ atlas_search_batch(atlas_search_batch_id)
+GO
+ALTER TABLE spectrum ADD CONSTRAINT fk_spectrum_sample_id FOREIGN KEY (sample_id) REFERENCES sample(sample_id)
+GO
+ALTER TABLE spectrum_peak ADD CONSTRAINT fk_spectrum_peak_spectrum_id FOREIGN KEY (spectrum_id) REFERENCES spectrum(spectrum_id)
+GO
+
 
 
 -- Add the new tables to lib/perl/SBEAMS/PeptideAtlas/Tables.pm
