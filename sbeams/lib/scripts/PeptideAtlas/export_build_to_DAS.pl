@@ -297,8 +297,8 @@ sub exportBuildToDAS {
     my $sth = $dbh->prepare (q{INSERT INTO $atlas_build_tag
         (contig_id,start,end,strand,id,score,gff_feature,gff_source,name)
         VALUES
-        ('$chromosome',$start_in_chromosome,$end_in_chromosome,$strand,
-         '$peptide_accession',$best_probability,'peptide','$peptide_degen_class',
+        ('$chromosome','$start_in_chromosome','$end_in_chromosome','$strand',
+         '$peptide_accession','$best_probability','peptide','$peptide_degen_class',
          '$peptide_sequence') })
       or die("ERROR[$SUB]: Cannot prepare query $DBI::err ($DBI::errstr)");
     $sth->execute()
@@ -582,7 +582,7 @@ sub getAllPeptideMappings {
       ORDER BY P.peptide_accession,PM.chromosome,PM.start_in_chromosome
   ~;
 
-  print "\n$sql\n" if ($VERBOSE);
+# print "\n$sql\n" if ($VERBOSE);
 
   my @peptide_mappings = $sbeams->selectSeveralColumns($sql);
 
