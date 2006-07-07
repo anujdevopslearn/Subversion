@@ -88,6 +88,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
   exit;
 }
 
+
 $VERBOSE = $OPTIONS{"verbose"} || 0;
 $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
@@ -103,6 +104,7 @@ if ($DEBUG) {
 
 #### Get the search_batch_id parameter
 my $source_file = $OPTIONS{source_file} || '';
+my $APDTsvFileName = $OPTIONS{output_file} || '';
 my $search_batch_ids = $OPTIONS{search_batch_ids} || '';
 
 
@@ -651,12 +653,21 @@ sub main {
     print "\n";
   }
 
-
   #### Process additional input parameters
   my $P_threshold = $OPTIONS{P_threshold};
   $P_threshold = '0.9' unless (defined($P_threshold));
 
-
+  ## check that --output_file was passed and that the directory of output_file exists
+  my $check_dir = $OPTIONS{output_file} || die "need output file path: --output_file";
+  $check_dir =~ s/(.+)\/(.*)$/$1/gi;
+  if (-d $check_dir)
+  {
+    print "Checked: The output directory ($check_dir) exists\n";
+  } else
+  {
+    print "ERROR: The output directory ($check_dir) does not exist($!)\n";
+    exit;
+  }
 
   #### Set up the Xerces parser
   my $parser = XML::Xerces::XMLReaderFactory::createXMLReader();
@@ -690,10 +701,8 @@ sub main {
   $CONTENT_HANDLER->{counter} = 0;
   $CONTENT_HANDLER->{P_threshold} = $P_threshold;
 
-
   #### Array of documents to process in order
   my @documents;
-
 
   #### If a list of search_batch_ids was provided, find the corresponding
   #### documents
@@ -712,7 +721,6 @@ sub main {
       }
     }
   }
-
 
   #### If a source file containing the list of search_batch_ids was provided,
   #### read it and find the corresponding documents
@@ -754,7 +762,6 @@ sub main {
     $search_batch_ids = join(',',@search_batch_ids);
   }
 
-
   #### Loops over all input files
   foreach my $document ( @documents ) {
     my $filepath = $document->{filepath};
@@ -768,7 +775,6 @@ sub main {
     print "\n";
   }
 
-
   #### Write out all the read-in data in a TSV format as written by
   #### a BrowseAPD query
   my $output_file = $OPTIONS{output_file} || 'PeptideAtlasInput.tsv';
@@ -776,7 +782,6 @@ sub main {
     output_file => $output_file,
     peptide_hash => $CONTENT_HANDLER->{peptides},
   );
-
 
   #### Write out all the read-in data in a PeptideAtlas XML format
   my $file_root = $output_file;
@@ -789,15 +794,12 @@ sub main {
     P_threshold => $CONTENT_HANDLER->{P_threshold},
   );
 
-
   #### Write out all the peptides and probabilities for statistical analysis
   $output_file = $file_root.'.peplist';
   writePeptideListFile(
     output_file => $output_file,
     peptide_list => $CONTENT_HANDLER->{peptide_list},
   );
-
-
 
   #### Write out information about the objects we've loaded if verbose
   if ($VERBOSE) {
@@ -806,9 +808,7 @@ sub main {
     );
   }
 
-
   print "\n\n" unless ($QUIET);
-
 
 } # end main
 
