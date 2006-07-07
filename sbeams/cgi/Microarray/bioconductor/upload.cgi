@@ -1087,13 +1087,15 @@ sub make_group_arrays_form{
                             	   -default	=> $i + 1,
                             	   -size   	=> 3,
                             	   -maxlength	=>2,
-				 			   	   -override => 1,
+                                 -override => 1,
+					 		                   -onChange  =>"javascript:document.getElementById('Submit').disabled=true;",
 				 			       )),
 				td($cgi->textfield(-name=>'sample_group_names',
                             	   -default	=> "$default_name",
                             	   -size   	=> 30,
                             	   -maxlength	=>50,
-				 			   	   -override => 1,
+				 			   	               -override => 1,
+					 		                   -onChange  =>"javascript:document.getElementById('Submit').disabled=true;",
 				 			       )),
 				 			       
 				td("<input type='radio' name='reference_sample_group' value='$default_name' $checked_html>"),
@@ -1108,7 +1110,9 @@ sub make_group_arrays_form{
 		  			   -value=>"Update Order",
 		  			   -onClick=>"javascript:document.number_option_groups.submit()"
 		  			   ),
-		  $cgi->submit(-name=>"Submit", -value=>"Submit Group Names"),
+		  $cgi->submit(-name=>"Submit", 
+                   -value=>"Submit Group Names",
+                   -Id=>"Submit"),
 		  br,
 		  $cgi->end_form() );
 	
