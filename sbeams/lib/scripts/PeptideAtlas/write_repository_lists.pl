@@ -1236,7 +1236,7 @@ sub get_public_sample_info
 # write_private_file -- writes repository_notpublic.xml file.  
 #
 #######################################################################
-sub write_private_file()
+sub write_private_file
 {
 
     ## Get sample information. Structure is: 
@@ -2631,11 +2631,17 @@ sub write_readme_and_get_readme_url
     {
         my $url          = $array_of_file_urls[$i];
         my $file_path    = convertURLToAbsolutePath( url => $url );
-        my $file_name    = convertURLToFileName( url => $url );
-        my $file_size    = stat($file_path)->size;
-        my $file_content = deriveFileContentFromName( filename => $file_path );
-        $str = sprintf("$fmt", $file_name, $file_size, $file_content);
-        print OUTFILE "$str";
+        if (!-e $file_path)
+        {
+            error_message( message => "file does not exist: $file_path");
+        } else
+        {
+            my $file_name    = convertURLToFileName( url => $url );
+            my $file_size    = stat($file_path)->size;
+            my $file_content = deriveFileContentFromName( filename => $file_path );
+            $str = sprintf("$fmt", $file_name, $file_size, $file_content);
+            print OUTFILE "$str";
+        }
     }
 
     close(OUTFILE) or die "cannot close $outfile ($!)";
