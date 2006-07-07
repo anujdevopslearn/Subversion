@@ -1271,10 +1271,18 @@ sub order_all_files{
     }
   }
 	
+  # If the user specified a number of groups smaller than the original, we have
+  # to push the extras on the end.
+  for my $file ( @files ) {
+    unless ( grep /$file/, @final_file_order_sorted ) {
+      push @final_file_order_sorted, $file;
+    }
+  }
   $log->debug("FINAL FILE ORDER". Dumper(\@final_file_order_sorted));
 	
-  error("The number of ordered files does not contain the same number of files as the user selected. ")
-  unless (  @final_file_order_sorted == @files);
+  unless (  @final_file_order_sorted == @files) {
+    error("Mismatch in the number of files selected.") 
+  }
 		
 		
   return (\@final_file_order_sorted, \@final_groups_order_sorted);
@@ -1652,6 +1660,28 @@ sub display_files {
 				),  #close the cell
 			  );#close the row
 		
+      my $gaggle_link =
+      Tr(
+        td({class=>'grey_header', colspan=>'2'}, "Add Results to Gaggle Express"),
+      );
+      $gaggle_link .= 
+      Tr(
+        td({class=>'grey_bg'}, "Add Data"),
+        td(table({-border=>0},
+          Tr(
+            th({class=>'grey_bg'}, "Link"),
+            th({class=>'grey_bg'}, "Info")
+          ),
+          Tr(
+            td("<a href='$CGI_BASE_DIR/Microarray/fetchConditionFile?action=initialize;token=$token'>Add Gaggle Data</a>"),
+            td("Store experimental data using the DataLoader")
+          )
+        ), #close the mini-table
+      ),  #close the cell
+    );#close the row
+
+    $start_analysis_run_html .= $gaggle_link if 0;
+
 		}
 	
 	
