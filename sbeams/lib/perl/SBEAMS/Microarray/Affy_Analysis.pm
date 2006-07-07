@@ -1147,7 +1147,7 @@ sub find_organism_name_form_ids {
 	my %args = @_;
 	my @org_ids= @{ $args{organism_id_aref} };
 	
-	unless ($org_ids[0] =~ /^\d$/ ) {
+	unless ($org_ids[0] =~ /^\d+$/ ) {
 		confess( __PACKAGE__ . "::$method Need to provide a Integer for the Organism ID you gave '$org_ids[0]'\n");
 	}
 	
