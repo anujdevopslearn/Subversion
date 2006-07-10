@@ -204,7 +204,7 @@ sub getMonoResidueMasses {
     N => 114.04293,
     Y => 163.06333,
     W => 186.07931 ,
-   '#' => 0.98401,
+#   '#' => 0.98401,
     
     X => 118.8057,   # Unknown, avg of 20 common AA.
     B => 114.5349,   # avg N and D
@@ -240,6 +240,36 @@ sub calculatePeptideMass {
   if ( $args{flanking} ) {
     $args{sequence} = substr( $args{sequence}, 2, length( $args{sequence} ) - 4 )
   }
+
+  my $bail;
+  while ( $args{sequence} !~ /^[a-zA-Z]+$/ ) {
+    die "Had to bail\n" if $bail++ > 10;
+    if ( $args{sequence} =~ /([a-zA-Z][*#@])/ ) {
+      my $mod = $1;
+      my $orig = $mod;
+      $orig =~ s/[@#*]//;
+      if ( $mod =~ /M/ ) {
+        $mass += 15.9949;
+        print "$args{sequence} => Got a mod M\n";
+      } elsif ( $mod =~ /C/ ) {
+        print "$args{sequence} => Got a mod C\n";
+        $mass += 57.0215;
+      } elsif ( $mod =~ /N/ ) {
+        $mass += 0.9848;
+        print "$args{sequence} => Got a mod N\n";
+      } else {
+        die "Unknown modification $mod!\n";
+      }
+      unless ( $args{sequence} =~ /$mod/ ) {
+        die "how can it not match?";
+      }
+      print "mod is >$mod<, orig is >$orig<, seq is $args{sequence}\n";
+      $args{sequence} =~ s/$mod//;
+      $args{sequence} =~ s/N\*//;
+      print "mod is $mod, orig is $orig, seq is $args{sequence}\n";
+    }
+  }
+  
 
   my $seq = uc( $args{sequence} );
   my @seq = split( "", $seq );
@@ -466,11 +496,13 @@ sub runBulkSearch {
   my $sbeams = $self->getSBEAMS();
   my $ids = join( ',', @ids );
 
-  my $type = ( $args{id_type} eq 'swiss_prot' ) ? 'swiss_prot_acc' : 'ipi_accession_number';
+  my $type = ( $args{id_type} eq 'swp' ) ? 'swiss_prot_acc' : 'ipi_accession_number';
+  $log->debug( "Type is $type" );
 
   my $sql =<<"  END";
   SELECT DISTINCT ipi_accession_number, swiss_prot_acc, ID.ipi_data_id,
-             identified_peptide_sequence, protein_symbol, protein_name 
+             identified_peptide_sequence, protein_symbol, protein_name, IP.identified_peptide_id,
+             peptide_prophet_score, peptide_mass
   FROM $TBGP_IPI_DATA ID join $TBGP_IDENTIFIED_TO_IPI ITI
   ON ID.ipi_data_id = ITI.ipi_data_id
   JOIN $TBGP_IDENTIFIED_PEPTIDE IP
