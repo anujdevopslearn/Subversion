@@ -1015,6 +1015,8 @@ sub get_http_header {
   my $mode = $args{mode} || $self->output_mode();
   $mode =~ s/full//g; # Simplify tsvfull, csvfull modes
 
+  my %param_hash;
+
   # explicit content type
   my $type = $args{type} || $self->get_content_type( $mode );
 
@@ -1027,10 +1029,15 @@ sub get_http_header {
     push @cookie_jar, $self->{$_} if $self->{$_};
   }
   if ( @cookie_jar && $cookies ) {
-    $header = $q->header( -type => $type, -cookie => \@cookie_jar );
+    $param_hash{'-cookie'} = \@cookie_jar;
+#    $header = $q->header( -type => $type, -cookie => \@cookie_jar );
+  } elsif ( $args{filename} ) {
+    $param_hash{'Content-Disposition'}="attachment;filename=$args{filename}";
+#    $header = $q->header( -type => $type );
   } else {
-    $header = $q->header( -type => $type );
+#    $header = $q->header( -type => $type );
   }
+  $header = $q->header( '-type' => $type, %param_hash );
   return $header;
 }
 
