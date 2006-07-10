@@ -76,8 +76,9 @@ my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch";
       $page .= print_form( \%params );
       $page .= run_search( \%params ); 
 	  } elsif( $params{action} =~ /^download$/ ) {
-      print $sbeams->get_http_header( mode => 'tsvfull' );
-      $log->debug( "Heading south" );
+      my $header = $sbeams->get_http_header( mode => 'tsvfull', filename => 'search_results.xls' );
+      print $header;
+      $log->debug( "Heading south with $header " );
       print run_search( \%params ); 
       exit;
     } else {
@@ -93,11 +94,21 @@ my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch";
 
 } # end main
 
-sub get_download_url {
-  my $url = $q->self_url;
-  $url =~ s/action\=search/action\=download/;
-  $url =~ s/bulkSearch/bulkSearch\/search_results.tsv/;
-  return "<A HREF=$url>Download table</A>";
+sub get_download_form {
+  my $params = shift;
+  my $url = $q->url( -full => 1 );
+  my $form = "<FORM NAME=download_form METHOD=POST>";
+  for my $p ( keys( %$params ) ) { 
+    my $value = $params->{$p};
+    $value = 'download' if $p eq 'action';
+
+    $form .= "<INPUT TYPE=HIDDEN NAME='$p' VALUE='$value'></INPUT>";
+#    $log->debug( "$p -> $params->{$p}");
+  }
+  $form .= "</FORM>";
+  my $url = "<A OnClick='document.download_form.submit();'><FONT COLOR=BLUE>Download table</FONT></A>";
+  return $form . "\n" . $url;
+#  return "<A HREF=$url>Download table</A>";
 }
 
 sub run_search {
@@ -121,6 +132,7 @@ sub run_search {
   $table->addRow( ['IPI', 'SwissProt', 'Symbol', 'Sequence', 'Prophet', 'Mass', 'Tissues', 'Protein Name' ] );
   $table->setRowAttr( ROWS => [1], BGCOLOR => '#C0D0C0' );
   my $current;
+  my $prot_cnt = 1;
   my $grp_row = 2;
   my $bgcolor = '#FFFFFF';
   for my $peptide ( @$results ) {
@@ -150,6 +162,7 @@ sub run_search {
     $table->addRow( [ $ipi, $swiss_id, $symbol, $seq, $prophet_score, $peptide_mass, $tissues, $protein_name] );
 #    $log->debug( "ipi_base is $ipi_base, current is $current" );
     if ( $ipi_base ne $current ) {
+      $prot_cnt++;
 #      $log->debug( "In da not current loop" );
       my $current_row = $table->getRowNum();
 #      $log->info( "group row is $grp_row, current row is $current_row, bgcolor is $bgcolor" );
@@ -164,13 +177,17 @@ sub run_search {
   }
 
   return "<FONT COLOR=BLUE SIZE=+1>Query returned no results</FONT>" unless @$results;
-  $log->debug( "Are we gonna print?" );
 
   if ( $params->{action} eq 'download' ) {
     $content = $table->asTSV();
     $log->debug( "Content is " . length($content) . " characters long" );
   } else {
-    $content .= get_download_url();
+    my $prot = ( $prot_cnt > 1 ) ? 'proteins' : 'protein';
+    my $num = ( @ids > 1 ) ? 'numbers' : 'number';
+    my $pep = ( $table->getRowNum() > 2 ) ? 'peptides' : 'peptide';
+    $content .= "<FONT COLOR=GREEN>Search with " . scalar( @ids ) . " accession $num yeilded ";
+    $content .= $table->getRowNum() - 1 . " $pep from $prot_cnt $prot </FONT><BR>\n"; 
+    $content .= get_download_form($params);
     $content .= $table->asHTML();
   }
   return $content;
@@ -234,7 +251,7 @@ sub get_input_fields {
   my $params = shift;
 
   my $id_list = $params->{id_list} || '';
-  $id_list = "<TEXTAREA ROWS=4 COLS=12 NAME=id_list>$id_list</TEXTAREA>";
+  $id_list = "<TEXTAREA ROWS=4 COLS=30 NAME=id_list>$id_list</TEXTAREA>";
 
 
 #  my $id_ipi = $paramsid_ipi;
