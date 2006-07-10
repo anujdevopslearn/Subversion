@@ -608,6 +608,7 @@ sub printEntryForm {
 
   # Add CSS and javascript for popup column_text info (if configured).
   print $sbeams->getPopupDHTML();
+  print $sbeams->getFieldRevealDHTML();
 
   #### Now loop through again and write the HTML
   foreach $row (@columns_data) {
@@ -624,9 +625,9 @@ sub printEntryForm {
     $column_text = linkToColumnText( $column_text, $column_name, $TABLE_NAME );
     }
 
-    
+
     # Determine if (potential) fk table can be managed
-    my $manage;  
+    my $manage;
     if ($fk_table) {
       my ( $infoRef ) = \$sbeamsMOD->returnTableInfo($fk_table, "ManageTableAllowed");
       $manage = $$infoRef;
@@ -667,13 +668,13 @@ sub printEntryForm {
       } elsif ($is_display_column eq 'N') {
 	print qq~
           <INPUT TYPE="hidden" NAME="$column_name"
-          VALUE="$parameters{$column_name}">
+           VALUE="$parameters{$column_name}">
         ~;
         next;
 
       #### If the user provides a detail_level, consider if the column
       #### should be hidden
-      } elsif (defined($parameters{$detail_level})) {
+      } elsif (defined($parameters{detail_level})) {
         #### Initial default is hidden
 	my $hidden = 0;
 
@@ -682,7 +683,7 @@ sub printEntryForm {
 	  $hidden = 0;
 
 	#### If it's medium, obscure columns 2
-	} elsif ($paramters{detail_level} eq 'medium_detail' &&
+	} elsif ($parameters{detail_level} eq 'medium_detail' &&
                  $is_display_column eq '2') {
 	  $hidden = 1;
 
@@ -707,7 +708,7 @@ sub printEntryForm {
 	if ($hidden) {
 	  print qq~
             <INPUT TYPE="hidden" NAME="$column_name"
-            VALUE="$parameters{$colunn_name}">
+            VALUE="$parameters{$column_name}">
           ~;
 	  next;
 	}
@@ -774,7 +775,7 @@ sub printEntryForm {
         <TD VALIGN="top"><B>$column_title:</B></TD>
         <TD BGCOLOR="E0E0E0">$column_text</TD>
         <TD VALIGN="top">$text $view_obj_details</TD>
-      <TR>
+      </TR>
       END_PRINT
 
       next;
@@ -787,15 +788,21 @@ sub printEntryForm {
     }
 
 
-    #### Write the parameter name, in red if required
-    if ($is_required eq "N") {
-      print <<"      END"; 
+    #### Write the parameter name, in red, or hide the field, if required
+    if ($is_display_column eq "H") {
+      print <<"      END";
+        <TR id="tr_$column_name" class="fieldhidden"><TD><B>$column_title:</B></TD>
+            <TD BGCOLOR="E0E0E0">$column_text</TD>
+      END
+
+    } elsif ($is_required eq "N") {
+      print <<"      END";
         <TR><TD><B>$column_title:</B></TD>
             <TD BGCOLOR="E0E0E0">$column_text</TD>
       END
 
     } else {
-      print <<"      END"; 
+      print <<"      END";
         <TR><TD><B><font color=red>$column_title:</font></B></TD>
             <TD BGCOLOR="E0E0E0">$column_text</TD>
       END
@@ -923,11 +930,11 @@ sub printEntryForm {
 	# hack-ish replacement of optionlist html to generate radio button html
 	$optionlists{$column_name} =~ 
 	    s/<OPTION VALUE=/
-	    <INPUT TYPE="radio" NAME="$column_name" VALUE=/g;
+	    <INPUT TYPE="radio" NAME="$column_name" $onChange VALUE=/g;
 
 	$optionlists{$column_name} =~ 
 	    s/<OPTION SELECTED VALUE=/
-	    <INPUT TYPE="radio" NAME="$column_name" CHECKED="checked" VALUE=/g;
+	    <INPUT TYPE="radio" NAME="$column_name" $onChange CHECKED="checked" VALUE=/g;
 
 	$optionlists{$column_name} =~ 
 	    s|</OPTION>|</INPUT><BR>|g;
@@ -2136,10 +2143,10 @@ sub checkForPreexistingRecord {
     $value =~ s/\'/\'\'/g;
     if ($value eq '') {
       $sql_query .= "
-         AND ( $element eq '$value' OR $element IS NULL )";
+         AND ( $element = '$value' OR $element IS NULL )";
     } else {
       $sql_query .= "
-         AND $element eq '$value'";
+         AND $element = '$value'";
     }
     $error_message .= "<B>$element</B> = '$unique_values{$element}'<BR>\n";
   }
