@@ -4861,14 +4861,14 @@ sub display_input_form {
 	# hack-ish replacement of optionlist html to generate radio button html
 	$optionlists{$column_name} =~ 
 	    s/<OPTION VALUE=/
-	    <INPUT TYPE="radio" NAME="$column_name" VALUE=/g;
+	    <INPUT TYPE="radio" NAME="$column_name" $onChange VALUE=/g;
 
 	$optionlists{$column_name} =~ 
 	    s/<OPTION SELECTED VALUE=/
-	    <INPUT TYPE="radio" NAME="$column_name" CHECKED="checked" VALUE=/g;
+	    <INPUT TYPE="radio" NAME="$column_name" $onChange CHECKED="checked" VALUE=/g;
 
 	$optionlists{$column_name} =~ 
-	    s|</OPTION>|</INPUT>|g;
+	    s|</OPTION>|</INPUT><BR/>|g;
 
       print qq~
         <TD>
@@ -6524,6 +6524,50 @@ sub linkToColumnText {
   END_LINK
   return $link;
 } # End linkToColumnText
+
+
+###############################################################################
+# getFieldRevealDHTML: returns CSS and javascript for Field-level show/hide 
+#
+# returns CSS/javascript in a scalar
+# 
+###############################################################################
+sub getFieldRevealDHTML {
+  my $this = shift;
+
+  # add CSS class to show/hide table rows
+  my $dhtml =<<"  END_CLASS";
+  <STYLE>
+  tr.fieldvisible {
+    display: table-row;
+  }
+  tr.fieldhidden {
+    display: none;
+  }
+  </STYLE>
+  END_CLASS
+
+  # add javascript function to show/hide fields and change button text
+  $dhtml .=<<"  END_JS";
+  <SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript">
+  <!--
+
+  function reveal(state,trigger,field) {
+    var id = 'tr_' + field;
+
+    if (state == trigger) {
+	document.getElementById(id).className = 'fieldvisible';
+    } else {
+	document.getElementById(id).className = 'fieldhidden';
+    }
+  }
+
+  // -->
+  </SCRIPT>
+  END_JS
+
+  return $dhtml;
+  } # end getFieldRevealDHTML 
 
 
 ###############################################################################
