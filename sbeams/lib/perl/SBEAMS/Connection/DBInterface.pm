@@ -4856,19 +4856,24 @@ sub display_input_form {
       !;
     }
 
-    if ($input_type eq "radio") {
+    if ($input_type eq "radio" || $input_type eq "radioh" || $input_type eq "radiov") {
 
 	# hack-ish replacement of optionlist html to generate radio button html
-	$optionlists{$column_name} =~ 
+	$optionlists{$column_name} =~
 	    s/<OPTION VALUE=/
 	    <INPUT TYPE="radio" NAME="$column_name" $onChange VALUE=/g;
 
-	$optionlists{$column_name} =~ 
+	$optionlists{$column_name} =~
 	    s/<OPTION SELECTED VALUE=/
 	    <INPUT TYPE="radio" NAME="$column_name" $onChange CHECKED="checked" VALUE=/g;
 
-	$optionlists{$column_name} =~ 
+	if ($input_type eq "radioh" || $input_type eq "radio") {
+	  $optionlists{$column_name} =~
+            s|</OPTION>|</INPUT>|g;
+	} elsif ($input_type eq "radiov") {
+	  $optionlists{$column_name} =~
 	    s|</OPTION>|</INPUT><BR/>|g;
+	}
 
       print qq~
         <TD>
