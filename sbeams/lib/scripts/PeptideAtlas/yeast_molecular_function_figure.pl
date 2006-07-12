@@ -1,22 +1,21 @@
 #!/usr/local/bin/perl -w
 
-###############################################################################
-# Program     : yeast_molecular_function_figure.pl
-# Author      : N. King 
-# $Id:
-#
-# Description : 
-#        Makes a figure of the number of Yeast PeptideAtlas genes
-#        in first level children of molecular_function.  
-#
-#        NOTE: At this time, this should only be used for Yeast (Sc).
-#        as have organism, etc hard wired, and yeast file name.
-#        should be generalized one day soon...
-#
-# Also writes an output yeastMolecularFunctionData.txt for use with
-# IDL plotting program
-#
-###############################################################################
+########################################################################
+# Program     : yeast_molecular_function_figure.pl                     
+# Author      : N. King                                                
+# $Id:                                                                 
+#                                                                      
+# Description :                                                        
+#     Makes a figure of the number of Yeast PeptideAtlas genes         
+#     in first level children of molecular_function.                   
+#                                                                      
+#     NOTE: At this time, this should only be used for Yeast (Sc).     
+#     as have organism, etc hard wired, and yeast file name.           
+#     should be generalized one day soon...                            
+#                                                                      
+# Also writes an output yeastMolecularFunctionData.txt for use with    
+# IDL plotting program                                                 
+########################################################################
 
 use strict;
 use Getopt::Long;
@@ -25,7 +24,7 @@ use FindBin;
 use lib "$FindBin::Bin/../../perl";
 
 use vars qw ($sbeams $sbeamsMOD $current_username
-             $PROG_NAME $USAGE %OPTIONS $TEST $QUIET
+             $PROG_NAME $USAGE %OPTIONS $QUIET
              $atlas_build_id $PASS $outfile
             );
 
@@ -62,8 +61,6 @@ $PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
 Usage: [OPTIONS] key=value key=value ...
 Options:
-  --test               test program
-
   --run                run program
 
   --atlas_build_id     id of atlas
@@ -75,35 +72,17 @@ Options:
 EOU
 
 
-GetOptions(\%OPTIONS, "test", "run", "atlas_build_id:s", "outfile:s");
+GetOptions(\%OPTIONS, "run", "atlas_build_id:s", "outfile:s");
 
 
-if ( ($OPTIONS{"run"} && $OPTIONS{"atlas_build_id"}) || $OPTIONS{"test"} )
+if (($OPTIONS{"run"} && $OPTIONS{"atlas_build_id"}) )
 {
     $atlas_build_id = $OPTIONS{"atlas_build_id"};
-
 } else
 {
     print "$USAGE\n";
-
     exit(0);
-
 };
-
-
-
-## if test, using yeast atlas P>0.9 characteristics 
-if ( $OPTIONS{"test"} )
-{
-    $atlas_build_id = '73';
-
-    $TEST = $OPTIONS{"test"};
-
-} else
-{
-    $TEST = 0;
-
-}
 
 
 ## set default test pass to zero
@@ -111,13 +90,10 @@ $PASS = 0;
 
 if ( $OPTIONS{"outfile"} )
 {
-
     $outfile = $OPTIONS{"outfile"};
-
 } else 
 {
     $outfile = "molecularFunctionData.txt";
-
 }
 
 
@@ -464,6 +440,9 @@ sub getTermFractions
         $term_fraction_hash{$go_term}{'PA'} = $n_atlas_genes_in_term;
 
         $term_fraction_hash{$go_term}{'refDB'} = $n_all_genes_in_term;
+
+##xxxxxxx
+print "$go_term  $frac  $n_atlas_genes_in_term  $n_all_genes_in_term\n";
 
     }
 
