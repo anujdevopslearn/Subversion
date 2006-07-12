@@ -3,8 +3,9 @@ The following changes to the PeptideAtlas database should be made when
 upgrading SBEAMS
 
 from version 0.22
-
-to 0.23 or later or to the latest code in the SVN repository
+  to 0.23 (development branch)
+     0.24 (next release)
+     or later
 
 ---------------
 
@@ -192,9 +193,28 @@ Schema changes (see full definitions in driver tables):
 
 - Altered with sql the server table with ALTER TABLE statement
 
-begin transaction
 ALTER TABLE PeptideAtlas.dbo.sample ADD sample_accession varchar(255)
-commit transaction
+
+
+---------------
+
+2006-06-15
+
+Schema changes (see full definitions in driver tables):
+
+default_atlas_build: added column organism_specialized_build varchar(50) after organism_id
+
+sample: added column organism_id int after sample_accession
+
+atlas_search_batch: added column pepXML_source_files varchar(255) after search_batch_subdir
+
+peptide: added column SSRCalc_relative_hydrophobicity after molecular_weight
+modified_peptide_instance: added columns monoisotopic_peptide_mass, average_peptide_mass, monoisotopic_parent_mz, average_parent_mz all float*8 (double precision) after peptide_charge
+
+search_key: added column atlas_build_id int after search_key_dbxref_id
+
+After updating the tables, rerun update_driver_tables.pl as described
+above.
 
 ---------------
 
