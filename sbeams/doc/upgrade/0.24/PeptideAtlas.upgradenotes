@@ -27,7 +27,7 @@ Schema changes (see full definitions in driver tables):
   - peptide_instance_search_batch
   - modified_peptide_instance
   - modified_peptide_instance_sample
-  - modified_peptide_instance_search_batchCCT11M
+  - modified_peptide_instance_search_batch
 
 To create these tables, check the definitions produced by generate_schema
 with something like:
@@ -102,6 +102,7 @@ Schema changes (see full definitions in driver tables):
 Schema changes (see full definitions in driver tables):
 
 - Added to table 'spectra_description_set' column 'instrument_model_name'
+    ALTER TABLE spectra_description_set ADD instrument_model_name varchar(100)
 
 - Reran update driver tables
 
@@ -124,6 +125,7 @@ Schema changes (see full definitions in driver tables):
 2006-04-03
 
 - changed is_nullable to 'Y' for modified_peptide_instance's best_adjusted_probability
+    ALTER TABLE modified_peptide_instance ALTER sample_id int NULL
 
 ---------------
 
