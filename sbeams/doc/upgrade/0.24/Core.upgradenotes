@@ -1,0 +1,25 @@
+The following changes to the core SBEAMS database should be made when
+upgrading SBEAMS
+
+from version 0.22
+  to 0.23 (development branch)
+     0.24 (next release)
+     or later
+
+---------------
+
+2006-07-13
+
+Remove some obsolete fields from query forms. Have been replaced
+with a new widget
+
+DELETE FROM table_column WHERE column_name = 'input_form_format'
+
+---------------
+
+
+
+
+
+
+
