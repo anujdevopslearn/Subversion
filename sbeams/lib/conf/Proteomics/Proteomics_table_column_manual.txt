@@ -8,6 +8,7 @@ SELECT DISTINCT search_batch_id,username + '' - '' + experiment_tag + '' -> '' +
   INNER JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
   INNER JOIN $TB_USER_LOGIN UL ON ( PE.contact_id = UL.contact_id )
  WHERE PE.project_id IN ( $accessible_project_ids )
+   AND PE.record_status != ''D''
  ORDER BY username,experiment_tag,set_tag'
  WHERE (   table_name = 'PR_GetSearchHits'
         OR table_name = 'PR_GetSearch'
@@ -30,6 +31,7 @@ SELECT DISTINCT SB.search_batch_id,username + '' - '' + experiment_tag + '' -> '
   INNER JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
   INNER JOIN $TB_USER_LOGIN UL ON ( PE.contact_id = UL.contact_id )
  WHERE PE.project_id IN ( $accessible_project_ids )
+   AND PE.record_status != ''D''
  ORDER BY username,experiment_tag,set_tag'
  WHERE (   table_name = 'PR_BrowseProteinSummary'
        )
@@ -79,6 +81,7 @@ SELECT DISTINCT fraction_id,username + '' - '' + experiment_tag + '' -> '' + set
   INNER JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
   INNER JOIN $TB_USER_LOGIN UL ON ( PE.contact_id = UL.contact_id )
  WHERE SB.search_batch_id IN ( $parameters{search_batch_id} )
+   AND PE.record_status != ''D''
  ORDER BY username,experiment_tag,set_tag,fraction_tag'
  WHERE table_name = 'PR_CompareMSRuns'
    AND column_name = 'fraction_id'
