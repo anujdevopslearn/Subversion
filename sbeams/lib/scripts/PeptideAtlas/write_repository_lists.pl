@@ -348,7 +348,7 @@ sub write_public_file
     {
         $count = $count + 1;
 
-        print "\n";
+#       print "\n";
 
         my ($sample_accession, $sample_tag, $sample_id, $organism, 
             $is_public) = @{$row};
@@ -727,10 +727,12 @@ sub get_mzXML_url
     ## and mzXML_schema
     my %spectra_properties = get_spectra_properties_info_from_db( sample_id => $sample_id);
 
-    ## Look for latest mzXML file in the archive (it will need to have timestamp already in it, no
-    ## compatibility with old unversioned files, as want to create structure anew, while preserving old
+    ## Look for latest mzXML file in the archive (it will need to have 
+    ## timestamp already in it, no compatibility with old unversioned 
+    ## files, as want to create structure anew, while preserving old
     ## files in the archive for people to find if they are looking)
-    ##    if latest mzXML is found, get the timestamp txt file and compare it to database properties
+    ##    if latest mzXML is found, get the timestamp txt file and 
+    ##        compare it to database properties
     ##        if properties file is lagging behind database,
     ##            create new properties file and new gzipped archive
     ##            return that url
@@ -883,7 +885,8 @@ sub get_data_url
     if (-s $fileWithFileNames)
     {
         ## [case: files matching pattern exist (could be versioned and un-versioned)]
-        $latestFile = getLatestFileName( fileWithFileNames => $fileWithFileNames ); ## this is absolute path
+        $latestFile = getLatestFileName( fileWithFileNames => $fileWithFileNames ); 
+        ## this is absolute path
     }
 
     if ($latestFile)
@@ -1933,7 +1936,7 @@ sub makeNewArchiveAndProperties
         $cmd = "ls $pat > $filelist";
     } else
     {
-        $cmd = "find . -name \'$pat\' -print > $filelist";
+        $cmd = "find . -name \'$pat\' -print -maxdepth 1 > $filelist";
     }
     print "$cmd\n" if ($VERBOSE);
     system $cmd;
@@ -2219,7 +2222,7 @@ sub addPublicationTag
 
     my $citation = $args{citation} or die "need citation";
 
-    my $url = $args{url} or die "need url";
+    my $url = $args{url} or die "need url for citation: $citation";
 
     ## write opening sample tag information to xml:
     ## open xml file and writer:
@@ -2325,7 +2328,7 @@ sub get_orig_data_url
             system $cmd;
             my $pat = "*$orig_data_type";
             $pat = "*_dta.tar" if ($orig_data_type eq "dtapack");
-            $cmd = "find . -name \'$pat\' -print > $filelist";
+            $cmd = "find . -name \'$pat\' -print -maxdepth 1 > $filelist";
             print "$cmd\n" if ($VERBOSE);
             system $cmd;
 
@@ -2436,7 +2439,7 @@ sub get_an_sb_file_url
         print "$cmd\n" if ($VERBOSE);
         system $cmd;
         my $pat = "$sb_file_name";
-        $cmd = "find . -name \'$pat\' -print > $filelist";
+        $cmd = "find . -name \'$pat\' -print -maxdepth 1 > $filelist";
         print "$cmd\n" if ($VERBOSE);
         system $cmd;
         ## if filelist is not empty
