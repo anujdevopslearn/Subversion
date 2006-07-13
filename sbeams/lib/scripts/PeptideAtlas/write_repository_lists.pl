@@ -420,6 +420,11 @@ sub write_public_file
         {
             ## get original data url, if don't see it in the public repository, pack up files etc, 
             ## [this uses a subset of get_data_url, so one day, could redesign those few subs...]
+            ## For some of the older HUPO datasets, the original spectra aren't available,
+            ## so we only have the dtas.  We're giving those a datatype/suffix of dtapack
+            ## which means there are a few special edits for it in several places in this
+            ## script (search for dta to edit those)
+
             my $orig_data_url = get_orig_data_url(  
                 sample_id => $sample_id,
                 sample_accession => $sample_accession, 
@@ -966,7 +971,7 @@ sub get_orig_data_type
     my $orig_data_type="";
 
     ## check for .dat files:
-    my @files = `find $data_dir -name \'*.dat\' -print`;
+    my @files = `find $data_dir -name \'*.dat\' -maxdepth 1 -print`;
 
     if ( $#files > -1)
     {
@@ -976,7 +981,7 @@ sub get_orig_data_type
     ## check for .RAW files:
     unless ($orig_data_type)
     {
-        my @files = `find $data_dir -name \'*.RAW\' -print`;
+        my @files = `find $data_dir -name \'*.RAW\' -maxdepth 1 -print`;
 
         if ( $#files > -1)
         {
@@ -988,7 +993,7 @@ sub get_orig_data_type
     ## check for .raw files:
     unless ($orig_data_type)
     {
-        my @files = `find $data_dir -name \'*.raw\' -print`;
+        my @files = `find $data_dir -name \'*.raw\' -maxdepth 1 -print`;
 
         if ( $#files > -1)
         {
@@ -997,15 +1002,14 @@ sub get_orig_data_type
     }
 
 
-    ##xxxxxxxxxxx this is funny logic, might need to change
-    ## check for .dta tar files:
+    ## check for dta.tar files:
     unless ($orig_data_type)
     {
-        my @files = `find $data_dir -name \'*_dta.tar\' -print`;
+        my @files = `find $data_dir -name \'*_dta.tar\' -maxdepth 1 -print`;
 
         if ( $#files > -1)
         {
-            $orig_data_type = "TarOfDtas";
+            $orig_data_type = "dtapack";
         }
     }
 
@@ -2114,9 +2118,10 @@ sub get_versioned_archive_filename
 
     my $file_suffix = $args{file_suffix} || die "need file suffix ($!)";
 
-    if ($file_suffix eq "TarOfDtas")
+    ## special treatement for the dta tars
+    if ($file_suffix eq "dta.tar")
     {
-        $file_suffix = "dtas";
+        $file_suffix = "dtapack";
     }
 
     my $timestamp = `date $timestamp_pattern`;
@@ -2265,7 +2270,7 @@ sub get_orig_data_url
     my $filelist = "tt.txt";
     my $pat = "*$sample_accession*$orig_data_type*";
     my $cmd = "find $repository_path/ -name \'$pat\' -maxdepth 1 -print > $filelist";
-    print "$cmd\n" if ($VERBOSE);
+    print "[get_orig_data_url:] $cmd\n" if ($VERBOSE);
     system $cmd;
 
     my $versioned_compressed_archive_file_path;
@@ -2316,6 +2321,7 @@ sub get_orig_data_url
             print "$cmd\n" if ($VERBOSE);
             system $cmd;
             my $pat = "*$orig_data_type";
+            $pat = "*_dta.tar" if ($orig_data_type eq "dtapack");
             $cmd = "find . -name \'$pat\' -print > $filelist";
             print "$cmd\n" if ($VERBOSE);
             system $cmd;
