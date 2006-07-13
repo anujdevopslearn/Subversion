@@ -1930,16 +1930,17 @@ sub makeNewArchiveAndProperties
     my $pat = "*$file_pattern";
 
     ## if file_pattern is 'inter* *ASAP* *.tgz *.html sequest.params', we'll
-    ## want to use ls -l instead:
-    if ($file_pattern =~ /(.*)inter(.*)/)
-    {
-        $cmd = "ls $pat > $filelist";
-    } else
-    {
-        $cmd = "find . -name \'$pat\' -print -maxdepth 1 > $filelist";
-    }
+    ## need separate finds
+    my @pats = split(" ", $pat);
+    $cmd = "find . -name \'$pats[0]\' -print -maxdepth 1 > $filelist";
     print "$cmd\n" if ($VERBOSE);
     system $cmd;
+    for (my $i=1; $i <= $#pats; $i++)
+    {
+        $cmd = "find . -name \'$pats[$i]\' -print -maxdepth 1 >> $filelist";
+        print "$cmd\n" if ($VERBOSE);
+        system $cmd;
+    }
 
     ## if filelist is empty, report error message, and set final file to null: 
     if (-z $filelist)
