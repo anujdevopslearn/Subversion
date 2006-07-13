@@ -392,7 +392,8 @@ sub write_public_file
         #### resource RAW_format
         #### resource Search_Results
         #### resource ProteinProphet_file
-        #### resource HQUS_list <not implemented yet>
+        #### resource sequest.params
+        #### resource qualscore_results
         #### publication citation
         #### resource README
 
@@ -495,37 +496,41 @@ sub write_public_file
 
             push(@file_array_for_README, $search_results_url);
 
-            ## Write tags for sequest.params and qualscore_results 
-            ## files that might be in repository (would have been cleaner to record it
-            ## while checking or writing in the other methods...)
-            {
-                my $prefix = $sample_accession . "_" . $atlas_search_batch_id;
-                my $params_file_name = "$repository_path/$prefix" . "_sequest.params";
-                my $hqus_file_name = "$repository_path/$prefix" . "_qualscore_results";
+            ## retrieve and write tags for sequest.params and qualscore_results 
+            my $prefix = $sample_accession . "_" . $atlas_search_batch_id;
+            my $sequest_params_file_name = "$prefix" . "_sequest.params";
+            my $hqus_file_name = "$prefix" . "_qualscore_results";
+
+            my $sequest_params_file_url = get_an_sb_file_url (
+                file_name => $sequest_params_file_name,
+                sb_file_name => "sequest.params",
+                search_results_dir => $data_location,
+            );
+
+            my $hqus_file_url = get_an_sb_file_url (
+                file_name => $hqus_file_name,
+                sb_file_name => "qualscore_results",
+                search_results_dir => $data_location,
+            );
+
+            $sequest_params_file_name = "$repository_path/$sequest_params_file_name";
+            $hqus_file_name = "$repository_path/$hqus_file_name";
                 
-                if (-e $params_file_name)
-                {
-                    my $file_name = $prefix . "_sequest.params";
-                    my $file_url = convertFileNameToURL( file_name => $file_name );
+            if (-e $sequest_params_file_name)
+            {
+                push(@file_array_for_README, $sequest_params_file_url);
+                ## write url to xml file as attribute in a resource element
+                addResourceTag(attr_name => "sequest_params", 
+                    attr_value => $sequest_params_file_url);
+            }
 
-                    push(@file_array_for_README, $file_url);
+            if (-e $hqus_file_name)
+            {
+                push(@file_array_for_README, $hqus_file_url);
 
-                    ## write url to xml file as attribute in a resource element
-                    addResourceTag(attr_name => "sequest_params", 
-                        attr_value => $file_url);
-                }
-
-                if (-e $hqus_file_name)
-                {
-                    my $file_name = $prefix . "_qualscore_results";
-                    my $file_url = convertFileNameToURL( file_name => $file_name );
-
-                    push(@file_array_for_README, $file_url);
-
-                    ## write url to xml file as attribute in a resource element
-                    addResourceTag(attr_name => "qualscore_list", 
-                        attr_value => $file_url);
-                }
+                ## write url to xml file as attribute in a resource element
+                addResourceTag(attr_name => "qualscore_results", 
+                    attr_value => $hqus_file_url);
             }
 
 
@@ -1790,15 +1795,13 @@ sub convertAbsolutePathToURL
 
     my $file_path = $args{file_path} or die "need file_path";
 
-    my $file_name = "";
+    my $file_name = $file_path;
  
-    my $file_url;
+    ## get file name (drop directory path)
+    $file_name =~ s/^(.*)\/(.+\.tar\.gz)$/$2/;
+    $file_name =~ s/^(.*)\/(.+\.gz)$/$2/;
 
-    if ($file_path =~ /^(.*)\/(.+\.tar\.gz)$/ )
-    {
-        $file_name = $2;
-        $file_url = $repository_url . $public_archive_uri . "/" . $file_name;
-    }
+    my $file_url = $repository_url . $public_archive_uri . "/" . $file_name;
 
     return $file_url;
 } 
@@ -2270,7 +2273,7 @@ sub get_orig_data_url
     my $filelist = "tt.txt";
     my $pat = "*$sample_accession*$orig_data_type*";
     my $cmd = "find $repository_path/ -name \'$pat\' -maxdepth 1 -print > $filelist";
-    print "[get_orig_data_url:] $cmd\n" if ($VERBOSE);
+    print "$cmd\n" if ($VERBOSE);
     system $cmd;
 
     my $versioned_compressed_archive_file_path;
@@ -2375,6 +2378,88 @@ sub get_orig_data_url
     return $data_url;
 }
 
+
+#######################################################################
+# get_an_sb_file_url - looks for file in public archive, and
+# if not there, generates it and puts it there.
+# (this is written to handle sequest.params and qualscore_results)
+# @param file_name - the public archive file name to look for
+# @param sb_file_name - the file name in the search batch directory
+# @param search_results_dir
+# @return URL for gzipped file of sequest.params file
+#######################################################################
+sub get_an_sb_file_url
+{
+    my %args =@_;
+
+    my $file_name = $args{file_name} or die "need file_name";
+
+    my $sb_file_name = $args{sb_file_name} or die "need sb_file_name";
+
+    my $data_dir = $args{search_results_dir} or die
+        "need search_results_dir";
+
+    my $file_url;
+        
+    ## does a search_batch for this atlas_search_batch_id already exist in
+    ## the archive?  if not, make one:
+    my $filelist = "tt.txt";
+    my $pat = "$file_name*gz";
+    my $cmd = "find $repository_path/ -name \'$pat\' -maxdepth 1 -print > $filelist";
+    print "$cmd\n" if ($VERBOSE);
+    system $cmd;
+    my $file_path;
+    my $file_url ="";
+
+    if (-s $filelist)
+    { ## [case: file list is not empty]
+        $file_path = "$repository_path/$file_name.gz";
+
+        print "Found archive file: $file_path\n" if ($VERBOSE);
+
+        $file_url = convertAbsolutePathToURL( file_path => $file_path );
+    }
+
+    ## if filelist is empty
+    if (-z $filelist)
+    {
+        my $file_pattern = $sb_file_name;
+
+        ## get pwd, chdir to search_batch_dir, gzip file and move it to public archive
+        my $progwd = `pwd`;
+        chdir $data_dir || die "cannot chdir to $data_dir ($!)";
+        print "chdir $data_dir\n" if ($VERBOSE);
+
+        #### make a file containing files with pattern: ####
+        my $filelist = "tt.txt";
+        my $cmd = "rm -f $filelist";
+        print "$cmd\n" if ($VERBOSE);
+        system $cmd;
+        my $pat = "$sb_file_name";
+        $cmd = "find . -name \'$pat\' -print > $filelist";
+        print "$cmd\n" if ($VERBOSE);
+        system $cmd;
+        ## if filelist is not empty
+        unless (-z $filelist)
+        {
+            ## copy the file to repository name and compress it:
+            my $cmd = "cp $sb_file_name $file_name";
+            print "$cmd\n" if ($VERBOSE);
+            system $cmd;
+            my $cmd = "gzip $file_name";
+            print "$cmd\n" if ($VERBOSE);
+            system $cmd;
+            ## move it to $repository_path/
+            $cmd = "mv $file_name.gz $repository_path/";
+            print "$cmd\n" if ($VERBOSE);
+            system $cmd;
+            $file_path = "$repository_path/$file_name.gz";
+            $file_url = convertAbsolutePathToURL( file_path => $file_path );
+        }
+    }
+
+    return $file_url;
+}
 
 #######################################################################
 # get_search_results_url - get repository URL for gzipped tar file
