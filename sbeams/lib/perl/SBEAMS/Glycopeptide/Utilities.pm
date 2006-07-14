@@ -496,8 +496,8 @@ sub runBulkSearch {
   my $sbeams = $self->getSBEAMS();
   my $ids = join( ',', @ids );
 
-  my $type = ( $args{id_type} eq 'swp' ) ? 'swiss_prot_acc' : 'ipi_accession_number';
-  $log->debug( "Type is $type" );
+  my $type = ( $args{id_type} eq 'swp' ) ? 'swiss_prot_acc' :
+             ( $args{id_type} eq 'sym' ) ? 'protein_symbol' : 'ipi_accession_number';
 
   my $sql =<<"  END";
   SELECT DISTINCT ipi_accession_number, swiss_prot_acc, ID.ipi_data_id,
