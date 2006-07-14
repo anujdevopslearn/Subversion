@@ -78,7 +78,6 @@ my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch";
 	  } elsif( $params{action} =~ /^download$/ ) {
       my $header = $sbeams->get_http_header( mode => 'tsvfull', filename => 'search_results.xls' );
       print $header;
-      $log->debug( "Heading south with $header " );
       print run_search( \%params ); 
       exit;
     } else {
@@ -254,18 +253,20 @@ sub get_input_fields {
   $id_list = "<TEXTAREA ROWS=4 COLS=30 NAME=id_list>$id_list</TEXTAREA>";
 
 
-#  my $id_ipi = $paramsid_ipi;
-#  my $id_swp = '' unless $id_swp;
-  my $ipi_chk = 'checked';
-  my $swp_chk = '';
-  if ( $params->{id_type} eq 'swp' ) {
-    $ipi_chk = ''; 
-    $swp_chk = 'checked';
+  my %id_chk = ( ipi => '', swp => '', sym => '' ); 
+
+  if ( $params->{id_type} ) {
+    for my $id_type ( qw( swp sym ipi ) ) {
+      $id_chk{$id_type} = 'checked' if $params->{id_type} eq $id_type;
+    }
+  } else {
+    $id_chk{ipi} = 'checked';
   }
 
   my $id_type_radio =<<"  END";
-  IPI <INPUT TYPE=radio NAME=id_type VALUE=ipi $ipi_chk> 
-  Swiss Prot <INPUT TYPE=radio NAME=id_type VALUE=swp $swp_chk > 
+  IPI <INPUT TYPE=radio NAME=id_type VALUE=ipi $id_chk{ipi}> 
+  Swiss Prot <INPUT TYPE=radio NAME=id_type VALUE=swp $id_chk{swp} > 
+  Gene Symbol <INPUT TYPE=radio NAME=id_type VALUE=sym $id_chk{sym} > 
   END
 
   my %in = ( 
