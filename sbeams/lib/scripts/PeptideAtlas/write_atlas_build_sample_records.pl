@@ -105,7 +105,6 @@ sub main {
 } # end main
 
 
-
 ###############################################################################
 # handleRequest
 ###############################################################################
@@ -149,76 +148,57 @@ sub handleRequest {
 ###############################################################################
 sub writeRecords 
 {
-
     my %args = @_;
 
     my $atlas_build_id = $args{'atlas_build_id'} or die
         " need atlas_build_id ($!)";
 
-
     ## get array of sample_id's
     my @samples = get_sample_id_array( atlas_build_id => $atlas_build_id );
-
-
 
     ## get all atlas_build_sample records into a hash:
     my $sql = qq~
         SELECT sample_id, atlas_build_sample_id
         FROM $TBAT_ATLAS_BUILD_SAMPLE
         WHERE record_status != 'D'
+        AND atlas_build_id='$atlas_build_id'
     ~;
  
-    my %abs_hash = $sbeams->selectTwoColumnHash($sql) or die
-         "unable to execute statement:\n$sql\n($!)";
-
+    my %abs_hash = $sbeams->selectTwoColumnHash($sql);
 
     if ($TEST)
     {
-
        ## check that there's an atlas_build_sample_record, and if not, create one
         for (my $i=0; $i <= $#samples; $i++)
         {
-
             my $sample_id = $samples[$i];
 
             if (!exists $abs_hash{$sample_id})
             {
-
                 print "would create an atlas_build_sample "
                 . " for sample_id $sample_id\n";
-
             } else
             {
-
                 print "found atlas_build_sample $abs_hash{$sample_id} "
                 . " for sample_id $sample_id\n";
-
             }
 
         }
-
-
     } else
     {
-
         ## check that there's an atlas_build_sample_record, and if not, create one
         for (my $i=0; $i <= $#samples; $i++)
         {
-
             my $sample_id = $samples[$i];
 
             if (!exists $abs_hash{$sample_id})
             {
-
                 my $tmp_abs_id = createAtlasBuildSampleRecord(
                     sample_id => $sample_id,
                     atlas_build_id => $ATLAS_BUILD_ID
                 );
-
             }
-
         }
-
     }
    
 
@@ -231,7 +211,6 @@ sub writeRecords
 ###############################################################################
 sub get_sample_id_array 
 {
-
     my %args = @_;
 
     my @s;
@@ -260,13 +239,10 @@ sub get_sample_id_array
 
     foreach my $sample_id (keys %sample_hash)
     {
-
         push(@s, $sample_id);
-
     }
 
     return @s;
-
 }
 
 
@@ -284,13 +260,11 @@ sub createAtlasBuildSampleRecord {
     my $atlas_build_id = $args{atlas_build_id} or 
         die "need atlas_build_id ($!)";
 
-
     ## Populate atlas_build_sample table
     my %rowdata = (   ##   atlas_build_sample    table attributes
         atlas_build_id => $atlas_build_id,
         sample_id => $sample_id,
     );
-
 
     my $atlas_build_sample_id = $sbeams->updateOrInsertRow(
         insert=>1,
@@ -306,4 +280,3 @@ sub createAtlasBuildSampleRecord {
     return $sample_id;
 
 } ## end createAtlasBuildSampleRecord
-
