@@ -2,7 +2,7 @@
 
 ###############################################################################
 # Program     : calculate_basic_build_stats.pl
-# Author      : nking
+# Author      : Nichole King
 #
 # Description : calculates basic build stats - the spectra stats are from 
 # new database records and from flatfiles because the spectra are still not
@@ -57,11 +57,8 @@ Options:
   --debug n                    Set debug flag
   --testonly                   If set, rows in the database are not changed or added
   --atlas_build_id             atlas build id 
-  --use_nobs_greater_than_one  use only the counts derived from peptides with n_obs>1
-
   --organism_abbrev            organism abbreviation 
-
-  --write_lists                if set, will write the ORFs in lists: uncharacterized_pa.txt and dubious_pa.txt
+  --use_nobs_greater_than_one  use only the counts derived from peptides with n_obs>1
 
  e.g.:  ./$PROG_NAME --atlas_build_id 83 --organism_abbrev Sc
 
