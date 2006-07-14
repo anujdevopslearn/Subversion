@@ -20,7 +20,7 @@ use strict;
 use Getopt::Long;
 use FindBin;
 
-use lib "$FindBin::Bin/../../perl";
+use lib "$FindBin::Bin/../../../perl";
 use vars qw ($current_username $BASE_DIR $ORGANISM $ATLAS_BUILD_ID
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
              $sbeams $sbeamsMOD $q $current_username $N_OBS_GT_1
