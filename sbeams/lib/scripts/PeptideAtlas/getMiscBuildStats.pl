@@ -133,49 +133,47 @@ sub handleRequest {
   }
 
 
-  #### Determine the corresponding APD_id
+  ## get SB id's (xxxxxxxx THIS will change with new schema)
   my $sql = qq~
-      SELECT APD_id
-        FROM $TBAT_ATLAS_BUILD
-       WHERE atlas_build_id = '$atlas_build_id'
-         AND record_status != 'D'
-    ~;
-  my ($APD_id) =  $sbeams->selectOneColumn($sql) or
-    die "Cannot get APD_id from atlas_build_id = $atlas_build_id ($!)";
-
-
-  #### Get the experiment_list
-  $sql = qq~
-     SELECT experiment_list,minimum_probability
-       FROM $TBAPD_PEPTIDE_SUMMARY
-      WHERE peptide_summary_id = '$APD_id'
-        AND record_status != 'D'
+    SELECT S.search_batch_id
+    FROM PeptideAtlas_TEST.dbo.sample S
+    JOIN PeptideAtlas_TEST.dbo.atlas_build_sample ABS
+    ON (ABS.sample_id = S.sample_id)
+    WHERE ABS.atlas_build_id = '2'
   ~;
 
-  my @rows = $sbeams->selectSeveralColumns($sql)
-    or die "Could not complete query: $sql ($!)";
+  my @rows = $sbeams->selectSeveralColumns($sql);
 
-  #my $search_batch_id_list = @rows[0]->[0];
-  #my $minimum_probability = @rows[0]->[1];
-  my ($search_batch_id_list, $minimum_probability);
+  my @sbids;
+
   foreach my $row (@rows)
   {
-    ($search_batch_id_list, $minimum_probability) = @{$row};
+    my ($tmp) = @{$row};
+    push(@sbids, $tmp);
   }
-   
 
+  my $search_batch_id_list = join ",", @sbids;
+
+  ## get probability threshold used to create atlas
+  $sql = qq~
+    SELECT probability_threshold
+    FROM PeptideAtlas_TEST.dbo.atlas_build
+    WHERE atlas_build_id = '2'
+  ~;
+
+  my ($minimum_probability) = $sbeams->selectOneColumn($sql);
 
   #### Number of distinct peptide names mapped to in build
   $sql = qq~
   SELECT COUNT(DISTINCT PI.peptide_instance_id),
-       'Number of distinct peptide names mapped to in build'
-  FROM $TBAT_PEPTIDE_INSTANCE PI
-  JOIN $TBAT_PEPTIDE_MAPPING PM
-       ON ( PI.peptide_instance_id = PM.peptide_instance_id )
- WHERE PI.atlas_build_id='$atlas_build_id'
+  'Number of distinct peptide names mapped to in build'
+  FROM PeptideAtlas_TEST.dbo.PEPTIDE_INSTANCE PI
+  JOIN PeptideAtlas_TEST.dbo.PEPTIDE_MAPPING PM
+  ON ( PI.peptide_instance_id = PM.peptide_instance_id )
+  WHERE PI.atlas_build_id='$atlas_build_id'
   ~;
 
-  my @rows = $sbeams->selectSeveralColumns($sql);
+  @rows = $sbeams->selectSeveralColumns($sql);
   foreach my $row ( @rows ) {
     print join("\t",@{$row}),"\n";
   }
@@ -183,34 +181,36 @@ sub handleRequest {
 
   #### Total number of MS/MS spectra w/ P >= NN
   $sql = qq~
-SELECT COUNT(*),
-       'Total number of MS/MS spectra w/ P >= $minimum_probability'
+  SELECT COUNT(*),
+  'Total number of MS/MS spectra w/ P >= $minimum_probability'
   FROM $TBPR_PROTEOMICS_EXPERIMENT PE
   JOIN $TBPR_SEARCH_BATCH SB ON (PE.experiment_id = SB.experiment_id)
   JOIN $TBPR_SEARCH S ON (S.search_batch_id = SB.search_batch_id)
   JOIN $TBPR_SEARCH_HIT SH ON (S.search_id = SH.search_id)
- WHERE SH.probability >= '$minimum_probability'
-   AND SB.search_batch_id IN ($search_batch_id_list)
-~;
+  WHERE SH.probability >= '$minimum_probability'
+  AND SB.search_batch_id IN ($search_batch_id_list)
+  ~;
 
-  my @rows = $sbeams->selectSeveralColumns($sql);
+  @rows = $sbeams->selectSeveralColumns($sql);
   foreach my $row ( @rows ) {
     print join("\t",@{$row}),"\n";
   }
 
 
+
+
   #### Total number of searched MS/MS spectra
   $sql = qq~
-SELECT COUNT(*),
+  SELECT COUNT(*),
        'Total number of searched MS/MS spectra'
   FROM $TBPR_PROTEOMICS_EXPERIMENT PE
   JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
   JOIN $TBPR_FRACTION F ON ( PE.experiment_id = F.experiment_id )
   JOIN $TBPR_MSMS_SPECTRUM MSS ON ( F.fraction_id = MSS.fraction_id )
- WHERE SB.search_batch_id IN ($search_batch_id_list)
-~;
+  WHERE SB.search_batch_id IN ($search_batch_id_list)
+  ~;
 
-  my @rows = $sbeams->selectSeveralColumns($sql);
+  @rows = $sbeams->selectSeveralColumns($sql);
   foreach my $row ( @rows ) {
     print join("\t",@{$row}),"\n";
   }
@@ -218,12 +218,12 @@ SELECT COUNT(*),
 
   #### Total number of msruns in used experiments
   $sql = qq~
-SELECT COUNT(*),
+  SELECT COUNT(*),
        'Total number of msruns in used experiments'
   FROM $TBPR_PROTEOMICS_EXPERIMENT PE
   JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
   JOIN $TBPR_FRACTION F ON ( PE.experiment_id = F.experiment_id )
- WHERE SB.search_batch_id IN ($search_batch_id_list)
+  WHERE SB.search_batch_id IN ($search_batch_id_list)
 ~;
 
   my @rows = $sbeams->selectSeveralColumns($sql);
