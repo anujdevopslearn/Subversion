@@ -304,10 +304,6 @@ sub check_samples
 #######################################################################
 sub write_public_file
 {
-    my (@file_array_for_README, @pubmed_id_array_for_README);
-
-    my (@pub_cit_array_for_README, @pub_url_array_for_README);
-
     my $sql;
 
     if ($TEST)
@@ -347,6 +343,10 @@ sub write_public_file
     foreach my $row (@rows) 
     {
         $count = $count + 1;
+
+        my (@file_array_for_README, @pubmed_id_array_for_README);
+
+        my (@pub_cit_array_for_README, @pub_url_array_for_README);
 
 #       print "\n";
 
