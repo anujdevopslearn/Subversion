@@ -65,6 +65,7 @@ use vars qw(@ISA @EXPORT
 
     $TBAT_SEARCH_KEY
 
+    $TBAT_NIST_LIBRARY
     $TBAT_NIST_LIBRARY_SPECTRUM
     $TBAT_NIST_LIBRARY_SPECTRUM_PEAK
     $TBAT_NIST_LIBRARY_SPECTRUM_COMMENT
@@ -136,6 +137,7 @@ require Exporter;
 
     $TBAT_SEARCH_KEY
 
+    $TBAT_NIST_LIBRARY
     $TBAT_NIST_LIBRARY_SPECTRUM
     $TBAT_NIST_LIBRARY_SPECTRUM_PEAK
     $TBAT_NIST_LIBRARY_SPECTRUM_COMMENT
@@ -202,6 +204,7 @@ $TBAT_ATLAS_SEARCH_BATCH_PARAMETER_SET = "${mod}atlas_search_batch_parameter_set
 
 $TBAT_SEARCH_KEY                = "${mod}search_key";
 
+$TBAT_NIST_LIBRARY              = "${mod}nist_library";
 $TBAT_NIST_LIBRARY_SPECTRUM     = "${mod}nist_library_spectrum";
 $TBAT_NIST_LIBRARY_SPECTRUM_PEAK     = "${mod}nist_library_spectrum_peak";
 $TBAT_NIST_LIBRARY_SPECTRUM_COMMENT     = "${mod}nist_library_spectrum_comment";
