@@ -33,3 +33,4 @@ AT_NIST_spectrum_type	NIST Spectrum Type	PeptideAtlas_infrastructure	NO	$TBAT_NI
 AT_spectrum_identification	Spectrum Identification	PeptideAtlas_infrastructure	NO	$TBAT_SPECTRUM_IDENTIFICATION	spectrum_identification_id
 AT_spectrum	Spectrum	PeptideAtlas_infrastructure	NO	$TBAT_SPECTRUM	spectrum_id
 AT_spectrum_peak	Spectrum Peak	PeptideAtlas_infrastructure	NO	$TBAT_SPECTRUM_PEAK	spectrum_peak_id
+AT_NIST_library_spectrum_comment	NIST library spectrum comment	PeptideAtlas_infrastructure	NO	$TBAT_NIST_LIBRARY_SPECTRUM_COMMENT	NIST_library_spectrum_comment_id			

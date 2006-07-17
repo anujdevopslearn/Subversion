@@ -391,3 +391,6 @@ AT_spectrum_peak	1	spectrum_peak_id	Spectrum Peak ID	int	4	0	N		Y							N	N				P
 AT_spectrum_peak	2	spectrum_id	Spectrum ID	int	4	0	N		N	AT_spectrum	spectrum_id	Y	text	10		Y	Y		spectrum_id		
 AT_spectrum_peak	3	mz	M/Z	float	8	0	N		N			Y	text	10		Y	Y	N	Fragment ion M/Z		
 AT_spectrum_peak	4	relative_intensity	Relative Intensity	int	8	0	N		N							N	N	N	Integrated Intensity of the peak profile		
+AT_NIST_library_spectrum_comment	1	NIST_library_spectrum_comment_id	NIST library spectrum comment ID	int	4	0	N		N	AT_NIST_library_spectrum_comment	NIST_library_spectrum_comment_id					N	N	Y	comment in the library spectrum		pkDEFAULT
+AT_NIST_library_spectrum_comment	2	parameter_key	Parameter Key	varchar	100	0	N		N			Y	text	50		Y	Y	Y	The key of the key/value pair		
+AT_NIST_library_spectrum_comment	3	parameter_value	Parameter Value	varchar	255	0	N		N			Y	text	50		Y	Y	N	The value of the key/value pair		
