@@ -43,41 +43,44 @@ sub getMenu {
   my $optional =<<"  END";
   <TABLE>
    <tr><td>
-    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Analysis_file">$pad Analysis_file</nobr></a>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Analysis_file">$pad Analysis_file</nobr></a>
    </td></tr>
    <tr><td>
-    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Attribute">$pad Attribute</nobr></a>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Attribute">$pad Attribute</nobr></a>
    </td></tr>
    <tr><td>
-    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Attribute_type">$pad Attribute_type</nobr></a>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Attribute_type">$pad Attribute_type</nobr></a>
    </td></tr>
    <tr><td>
-    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Biosample">$pad Biosample</nobr></a>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Biosample">$pad Biosample</nobr></a>
    </td></tr>
    <tr><td>
-    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Biosource">$pad Biosource</nobr></a>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Biosource">$pad Biosource</nobr></a>
    </td></tr>
    <tr><td>
-    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Disease">$pad Disease</nobr></a>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Disease">$pad Disease</nobr></a>
    </td></tr>
    <tr><td>
-    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Disease_type">$pad Disease_type</nobr></a>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Disease_type">$pad Disease_type</nobr></a>
    </td></tr>
    <tr><td>
-    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Experiment">$pad Experiment</nobr></a>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Experiment">$pad Experiment</nobr></a>
    </td></tr>
    <tr><td>
-    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Storage_location">$pad Storage_location</nobr></a>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Storage_location">$pad Storage_location</nobr></a>
    </td></tr>
    <tr><td>
-    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Treatment">$pad Treatment</nobr></a>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Treatment">$pad Treatment</nobr></a>
    </td></tr>
    <tr><td>
-    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Treatment_type">$pad Treatment_type</nobr></a>
+    <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Treatment_type">$pad Treatment_type</nobr></a>
    </td></tr>
   </TABLE>
   END
-  my ( $content, $link ) = $sbeams->make_toggle_section( content => $optional );
+  my ( $content, $link ) = $sbeams->make_toggle_section( content => $optional,
+                                                            name => 'biomarker',
+                                                          sticky => 1,
+                                                         visible => 1 );
 
   my $menu = qq~
 	<!------- Button Bar -------------------------------------------->
@@ -176,41 +179,44 @@ sub display_page_header {
       my $management_table =<<"      END";
       <TABLE>
       <tr><td>
-        <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Analysis_file">$pad Analysis_file</nobr></a>
+        <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Analysis_file">$pad Analysis_file</nobr></a>
       </td></tr>
       <tr><td>
-      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Attribute">$pad Attribute</nobr></a>
+      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Attribute">$pad Attribute</nobr></a>
       </td></tr>
       <tr><td>
-      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Attribute_type">$pad Attribute_type</nobr></a>
+      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Attribute_type">$pad Attribute_type</nobr></a>
       </td></tr>
       <tr><td>
-      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Biosample">$pad Biosample</nobr></a>
+      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Biosample">$pad Biosample</nobr></a>
       </td></tr>
       <tr><td>
-      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Biosource">$pad Biosource</nobr></a>
+      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Biosource">$pad Biosource</nobr></a>
       </td></tr>
       <tr><td>
-      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Disease">$pad Disease</nobr></a>
+      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Disease">$pad Disease</nobr></a>
       </td></tr>
       <tr><td>
-      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Disease_type">$pad Disease_type</nobr></a>
+      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Disease_type">$pad Disease_type</nobr></a>
       </td></tr>
       <tr><td>
-      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Experiment">$pad Experiment</nobr></a>
+      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Experiment">$pad Experiment</nobr></a>
       </td></tr>
       <tr><td>
-      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Storage_location">$pad Storage_location</nobr></a>
+      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Storage_location">$pad Storage_location</nobr></aO
       </td></tr>
       <tr><td>
-      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Treatment">$pad Treatment</nobr></a>
+      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Treatment">$pad Treatment</nobr></a>
       </td></tr>
       <tr><td>
-      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Treatment_type">$pad Treatment_type</nobr></a>
+      <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Treatment_type">$pad Treatment_type</nobr></a>
       </td></tr>
       </TABLE>
       END
-      my ( $content, $link ) = $sbeams->make_toggle_section( content => $management_table );
+      my ( $content, $link ) = $sbeams->make_toggle_section( content => $management_table,
+                                                                name => 'biomarker',
+                                                                sticky => 1,
+                                                               visible => 1 );
 
       print qq~
 	<!------- Button Bar -------------------------------------------->
@@ -1155,19 +1161,19 @@ sub get_experiment_samples {
     $row[0] =<<"    END";
     <A HREF=sample_details.cgi?sample_id=$id>$row[0]</A>
     END
-    if ( $cnt > 5 ) {
+    if ( 1 || $cnt > 5 ) {
       $row[7] = undef;
       $row[6] = undef;
     } else {
       $row[6] = 'Yes';
       $row[7] = '<A HREF=/tmp/pep3d.gif>Yes</A>';
     }
-    if ( $cnt > 11 ) {
+    if ( 1 || $cnt > 11 ) {
       $row[5] = undef;
     } else {
       $row[5] = '<A HREF=/tmp/pep3d.gif>Yes</A>';
     }
-    if ( $cnt > 108 ) {
+    if ( 1 || $cnt > 108 ) {
       $row[4] = undef;
     } else {
       $row[4] = '<A HREF=/tmp/pep3d.gif>Yes</A>';
