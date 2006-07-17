@@ -242,8 +242,7 @@ Schema changes (see full definitions in driver tables):
     cd $SBEAMS/lib/scripts/Core
 
     foreach dbtype ( mssql mysql pgsql )
-        ./generate_schema.pl --table_prop ../../conf/PeptideAtlas/PeptideAtlas_table_property
-.txt \
+        ./generate_schema.pl --table_prop ../../conf/PeptideAtlas/PeptideAtlas_table_property.txt \
         --table_col ../../conf/PeptideAtlas/PeptideAtlas_table_column.txt --schema_file \
         ../../sql/PeptideAtlas/PeptideAtlas --destination_type $dbtype
     end
@@ -344,7 +343,49 @@ GO
 ALTER TABLE spectrum_peak ADD CONSTRAINT fk_spectrum_peak_spectrum_id FOREIGN KEY (spectrum_id) REFERENCES spectrum(spectrum_id)
 GO
 
+-- Add the new tables to lib/perl/SBEAMS/PeptideAtlas/Tables.pm
 
+-----------------------------------------------------------------------
+
+2006-07-17
+
+Schema changes (see full definitions in driver tables):
+
+- Added to PeptideAtlas_table_column.txt, new tables:
+
+      NIST_library_spectrum_comment
+
+- Updated driver tables
+
+- Populated the SQL scripts:
+
+    setenv SBEAMS fullPathToYourDevArea/sbeams
+    cd $SBEAMS/lib/scripts/Core
+
+    foreach dbtype ( mssql mysql pgsql )
+        ./generate_schema.pl --table_prop ../../conf/PeptideAtlas/PeptideAtlas_table_property.txt \
+        --table_col ../../conf/PeptideAtlas/PeptideAtlas_table_column.txt --schema_file \
+        ../../sql/PeptideAtlas/PeptideAtlas --destination_type $dbtype
+    end
+
+- Altered the SQL server tables
+  
+[Can copy the sql statements directly from lib/sql/PeptideAtlas/PeptideAtlas_CREATETABLES.mssql]
+
+CREATE TABLE NIST_library_spectrum_comment (
+  NIST_library_spectrum_id   int NOT NULL,
+  parameter_key              varchar(100) NOT NULL,
+  parameter_value            varchar(255) NOT NULL
+)
+GO
+
+-- Alter the foreign key constraints in server table:
+
+ALTER TABLE NIST_library_spectrum_comment 
+ADD CONSTRAINT fk_NIST_library_spectrum_comment_NIST_library_spectrum_id 
+FOREIGN KEY (NIST_library_spectrum_id) 
+REFERENCES NIST_library_spectrum(NIST_library_spectrum_id)
+GO
 
 -- Add the new tables to lib/perl/SBEAMS/PeptideAtlas/Tables.pm
 
