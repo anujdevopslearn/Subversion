@@ -354,9 +354,13 @@ Schema changes (see full definitions in driver tables):
 - Added to PeptideAtlas_table_column.txt, new tables:
 
       NIST_library_spectrum_comment
+      NIST_library
 
 - Added to PeptideAtlas_table_column.txt
        charge int(4) to table NIST_library_spectrum_peak
+
+- Removed from NIST_library_spectrum, the organism_id field
+(it's now in NIST_library)
 
 - Updated driver tables
 
@@ -382,7 +386,16 @@ CREATE TABLE NIST_library_spectrum_comment (
 )
 GO
 
-  ALTER TABLE NIST_library_spectrum_peak ADD charge int
+ALTER TABLE NIST_library_spectrum_peak ADD charge int
+
+CREATE TABLE NIST_library (
+  NIST_library_id            int IDENTITY NOT NULL,
+  organism_id                int NULL,
+  PRIMARY KEY (NIST_library_id)
+)
+GO
+
+ALTER TABLE NIST_library_spectrum DROP COLUMN organism_id
 
 
 -- Alter the foreign key constraints in server table:
