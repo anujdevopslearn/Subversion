@@ -355,6 +355,9 @@ Schema changes (see full definitions in driver tables):
 
       NIST_library_spectrum_comment
 
+- Added to PeptideAtlas_table_column.txt
+       charge int(4) to table NIST_library_spectrum_peak
+
 - Updated driver tables
 
 - Populated the SQL scripts:
@@ -378,6 +381,9 @@ CREATE TABLE NIST_library_spectrum_comment (
   parameter_value            varchar(255) NOT NULL
 )
 GO
+
+  ALTER TABLE NIST_library_spectrum_peak ADD charge int
+
 
 -- Alter the foreign key constraints in server table:
 
