@@ -373,6 +373,7 @@ AT_NIST_library_spectrum_peak	3	mz	M/Z	float	8	0	N		N			Y	text	10		Y	Y	N	Fragmen
 AT_NIST_library_spectrum_peak	4	relative_intensity	Relative Intensity	int	8	0	N		N							N	N	N	Intensity of the peak relative to a scale		
 AT_NIST_library_spectrum_peak	5	ion_label	Ion Label	varchar	255	0	Y		N			N	text	20		Y	Y	N	Fragment ion label		
 AT_NIST_library_spectrum_peak	6	peak_label	Peak Label	varchar	255	0	Y		N			N	text	20		Y	Y	N	Peak Label		
+AT_NIST_library_spectrum_peak	7	charge	Charge State	int	4	0	N		N			N				Y	Y	N	charge		
 AT_NIST_spectrum_type	1	NIST_spectrum_type_id	NIST Spectrum Type ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_NIST_spectrum_type	2	NIST_spectrum_type_name	NIST Spectrum Type Name	varchar	50	0	N		N			Y	text	30		Y	Y	N	"Spectrum Type Name (i.e., consensus, replicate, or single)"		
 AT_NIST_spectrum_type	3	NIST_spectrum_type_description	NIST Spectrum Type Description	varchar	1024	0	N		N			Y	text	30		Y	Y	N	Spectrum Type Description		
