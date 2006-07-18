@@ -648,7 +648,7 @@ sub removeNISTLibrary
 
     my %table_child_relationship = (
         NIST_library => 'NIST_library_spectrum(C)',
-        NIST_library_spectrum => 'NIST_library_spectrum_peak(C)',
+        NIST_library_spectrum => 'NIST_library_spectrum_peak(C),NIST_library_spectrum_comment(C)',
     );
 
     my $result = $sbeams->deleteRecordsAndChildren(
