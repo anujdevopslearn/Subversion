@@ -134,6 +134,12 @@ sub handleRequest
     {
         my $nist_library_spectrum_id = $OPTIONS{delete};
 
+        unless ($nist_library_spectrum_id > 0)
+        {
+            print "\n$USAGE\n";
+            print "need --delete nist_library_spectrum_id \n";
+        }
+
         removeNISTLibrary( nist_library_spectrum_id => 
             $nist_library_spectrum_id);
     }
@@ -160,6 +166,8 @@ sub populateRecords
     open(INFILE, "<$infile") || die "ERROR: Unable to open for reading $infile";
 
     my $count = 0;
+
+    ## can't use prepared statements, so one by one inserts here.
 
     while (my $line = <INFILE>) 
     {
@@ -205,6 +213,12 @@ sub populateRecords
             mz_exact => $commentHash{Mz_exact},
         );
 
+        ## insert comments
+        insert_nist_library_comments (
+            comment_hash_ref => \%commentHash,
+            nist_library_spectrum_id => $nist_library_spectrum_id,
+        );
+
         ## line 4 is Num Peaks:
         $line = <INFILE>;
         chomp($line);
@@ -212,8 +226,6 @@ sub populateRecords
         $line =~ /Num peaks:\s(\d+)/;
         my $num_peaks = $1;
         
-#       my (@mz, @rel_inten, @ion_label, @ion_charge, @peak_label);
-
         ## loop over next num_peaks lines to get peaks and ions
         for (my $ii = 0; $ii < $num_peaks; $ii++)
         {
@@ -221,12 +233,11 @@ sub populateRecords
             chomp($line);
             my ($m, $inten, $annot) = split("\t", $line);
 
+            ## remove enclosing double quotes
+            $annot =~ s/\"//g;
+
             my $label =""; ## unless overridden below
             my $chg = $charge; ## unless overridden below
-
-#           push(@mz, $m);
-#           push(@rel_inten, $inten);
-#           push(@peak_label, $annot);
 
             ## xxxxxxx note this is only surface parsing of first ion labeled
             my @sannot = split("/", $annot);
@@ -238,22 +249,20 @@ sub populateRecords
                     if ($label =~ /(.*)\^(.*)/)
                     {
                        $chg = $2;
+                       ## remove asterick if present
+                       $chg =~ s/\*//g;
                        $label = $1;
                     }
                 }
             }
 
-#           push(@ion_label, $label);
-#           push(@ion_charge, $chg);
-            
-            ## unless have ability for batch insert, single inserts here
             my %rowdata = (
                 NIST_library_spectrum_id => $nist_library_spectrum_id,
                 mz => $m,
                 relative_intensity => $inten,
                 ion_label => $label,
-                peak_label => $annot,
                 charge => $chg,
+                peak_label => $annot,
             );
 
             $sbeams->updateOrInsertRow(
@@ -267,8 +276,6 @@ sub populateRecords
                 testonly=>$TESTONLY,
             );
         }
-
-        ## would be better to do batch inserts outside of loop if possible in SBEAMS API...
 
         $count++;
         
@@ -333,7 +340,7 @@ sub insert_nist_library
         rowdata_ref=>\%rowdata,
         PK => 'NIST_library_id',
         return_PK=>1,
-        add_audit_parameters => 0,
+        add_audit_parameters => 1,
         verbose=>$VERBOSE,
         testonly=>$TESTONLY,
     );
@@ -582,7 +589,8 @@ sub parseComment
     {
         $hash{$1} = $2;
     }
-    if ($line =~ /.*(Specqual)=(.+?)\s.*/)
+    ## Specqual is the last entry in comment field:
+    if ($line =~ /.*(Specqual)=(.*)/)
     {
         $hash{$1} = $2;
     }
@@ -648,7 +656,7 @@ sub removeNISTLibrary
 
     my %table_child_relationship = (
         NIST_library => 'NIST_library_spectrum(C)',
-        NIST_library_spectrum => 'NIST_library_spectrum_peak(C),NIST_library_spectrum_comment(C)',
+        NIST_library_spectrum => 'NIST_library_spectrum_peak(C),NIST_library_spectrum_comment(PKLC)',
     );
 
     my $result = $sbeams->deleteRecordsAndChildren(
@@ -661,3 +669,46 @@ sub removeNISTLibrary
          testonly => $TESTONLY,
       );
 }
+
+
+#######################################################################
+# insert_nist_library_comments
+#
+# @param nist_library_spectrum_id
+# @param reference to hash with comment key,value pairs
+#######################################################################
+sub insert_nist_library_comments
+{
+    my %args = @_;
+
+    my $comment_hash_ref = $args{comment_hash_ref} || die 
+        "need comment_hash_ref";
+
+    my %hash = %{$comment_hash_ref};
+
+    my $nist_library_spectrum_id = $args{nist_library_spectrum_id} ||
+        die "need nist_library_spectrum_id";
+
+    my %rowdata;
+
+    $rowdata{NIST_library_spectrum_id} = $nist_library_spectrum_id;
+
+    foreach my $key (qw/ Inst Sample Dotbest Dottheory Probcorr Specqual Unassigned Fullname /)
+    {
+        $rowdata{parameter_key} = $key;
+
+        $rowdata{parameter_value} = $hash{$key};
+
+        $sbeams->updateOrInsertRow(
+            table_name=>$TBAT_NIST_LIBRARY_SPECTRUM_COMMENT,
+            insert=>1,
+            rowdata_ref=>\%rowdata,
+            PK => 'NIST_library_spectrum_comment_id',
+            return_PK=>0,
+            add_audit_parameters => 0,
+            verbose=>$VERBOSE,
+            testonly=>$TESTONLY,
+        );
+    }
+}
+
