@@ -360,6 +360,13 @@ AT_spectra_description_set	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_g
 AT_spectra_description_set	16	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_NIST_library	1	NIST_library_id	NIST Library ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_NIST_library	2	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	N	Organism for which this default applies.  Leave empty for overall default	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+AT_NIST_library	3	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_NIST_library	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_NIST_library	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_NIST_library	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_atlas_build	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_atlas_build	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_atlas_build	16	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_NIST_library_spectrum	1	NIST_library_spectrum_id	NIST Library Spectrum ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_NIST_library_spectrum	2	NIST_library_id	NIST Library ID	int	4	0	N		N	AT_NIST_library	NIST_library_id	Y				N	N	Y	NIST library ID		
 AT_NIST_library_spectrum	3	sequence	Amino Acid Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	N	Amino acid sequence assigned to the spectrum		
@@ -396,4 +403,4 @@ AT_spectrum_peak	3	mz	M/Z	float	8	0	N		N			Y	text	10		Y	Y	N	Fragment ion M/Z
 AT_spectrum_peak	4	relative_intensity	Relative Intensity	int	8	0	N		N							N	N	N	Integrated Intensity of the peak profile		
 AT_NIST_library_spectrum_comment	1	NIST_library_spectrum_id	NIST library spectrum ID	int	4	0	N		N	AT_NIST_library_spectrum	NIST_library_spectrum_id					N	N	Y	library spectrum to which this comment belongs		pkDEFAULT
 AT_NIST_library_spectrum_comment	2	parameter_key	Parameter Key	varchar	100	0	N		N			Y	text	50		Y	Y	Y	The key of the key/value pair		
-AT_NIST_library_spectrum_comment	3	parameter_value	Parameter Value	varchar	255	0	N		N			Y	text	50		Y	Y	N	The value of the key/value pair		
+AT_NIST_library_spectrum_comment	3	parameter_value	Parameter Value	varchar	1023	0	N		N			Y	text	50		Y	Y	N	The value of the key/value pair		
