@@ -174,7 +174,7 @@ sub add_biosource_attrs {
 
     my $dataref = { biosource_id => $args{src_id},
                     attribute_id => $attr_hash{$key},
-                    attribute_value => $args{attr}->{$key} };
+                    attribute_value => $args{attrs}->{$key} };
 
     my $id = $sbeams->updateOrInsertRow( insert => 1,
                                       return_PK => 1,
@@ -212,7 +212,8 @@ sub add_biosource_diseases {
     print "$key, $diseases{$key}\n";
 
     my $dataref = { biosource_id => $args{src_id},
-                    disease_id => $dnames{$key} };
+                    disease_id => $dnames{$key},
+                    disease_stage => $diseases{$key} };
 
     my $id = $sbeams->updateOrInsertRow( insert => 1,
                                       return_PK => 1,
