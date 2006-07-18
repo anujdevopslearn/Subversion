@@ -408,12 +408,21 @@ GO
 
 -- Add the new tables to lib/perl/SBEAMS/PeptideAtlas/Tables.pm
 
--- populate NIST_spectrum_type with 'Consensus'
+-- populate NIST_spectrum_type with 'Consensus', 'Replicate', and
+'Single' types
 begin transaction
-    insert into NIST_spectrum_type
+  insert into PeptideAtlas.dbo.NIST_spectrum_type
     (NIST_spectrum_type_name, NIST_spectrum_type_description)
     VALUES
     ('Consensus', 'Spectrum of a peptide ion constructed from multiple spectra')
+  insert into PeptideAtlas.dbo.NIST_spectrum_type
+    (NIST_spectrum_type_name, NIST_spectrum_type_description)
+    VALUES
+    ('Single', 'Spectrum of a peptide ion with a reliable identification, but seen only once ')
+  insert into PeptideAtlas.dbo.NIST_spectrum_type
+     (NIST_spectrum_type_name, NIST_spectrum_type_description)
+     VALUES
+    ('Replicate', 'Spectrum of a peptide ion from a single acquisition that is the best matching used in making a Consensus spectrum')
 commit transaction
 
 
