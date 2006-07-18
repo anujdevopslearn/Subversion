@@ -433,9 +433,13 @@ commit transaction
 Schema changes (see full definitions in driver tables):
 
 - Added to PeptideAtlas_table_column.txt, 
-NIST_library_id foreign key in NIST_library_spectrum table
+  added field NIST_library_id foreign key to NIST_library_spectrum table
 
--- made modified_sequence nullable in NIST_library_spectrum table
+  made field modified_sequence nullable in NIST_library_spectrum table
+
+  added fields comment, created_by_id, date_modified, modified_by_id,
+  owner_group_id, and record_status to NIST_library
+
 
 - Updated driver tables
 
@@ -462,3 +466,15 @@ NIST_library_id foreign key in NIST_library_spectrum table
   ALTER TABLE NIST_library_spectrum DROP COLUMN modified_sequence
   ALTER TABLE NIST_library_spectrum ADD modified_sequence varchar(255)
 
+  ALTER TABLE NIST_library ADD comment       text
+  ALTER TABLE NIST_library ADD date_created  datetime
+  ALTER TABLE NIST_library ADD created_by_id    int 
+  ALTER TABLE NIST_library ADD date_modified    datetime
+  ALTER TABLE NIST_library ADD modified_by_id   int
+  ALTER TABLE NIST_library ADD owner_group_id   int
+  ALTER TABLE NIST_library ADD record_status    char(1) 
+
+  ALTER TABLE NIST_library_spectrum_comment 
+      ALTER COLUMN parameter_value varchar(1023)
+
+  edited lib/perl/SBEAMS/PeptideAtlas/Tables.pm to capitalize NIST
