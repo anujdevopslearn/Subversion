@@ -104,7 +104,7 @@ sub process_data {
       foreach my $key ( keys(%{$head{$tag}}) ) {
         $subitem{$key} = ( !defined( $idx->{${$head{$tag}}{$key}} ) ? undef :
                                      $row->[$idx->{${$head{$tag}}{$key}}] ); 
-#        print "$key, $subitem{$key}\n" if $tag eq 'biosource';
+#        print "looping items: $key, $head{$tag}->{$key}\n"; 
       }
       $item{$tag} = \%subitem;
     }
@@ -343,6 +343,7 @@ sub _getParser2DbMap {
     'PARAM:Date of Sample Collection' => 'collection_date',   
     'PARAM:Others' => 'other',   
     'PARAM:Strain' => 'strain',
+    'Cat_who_Dx' => 'Diagnosis category',
 
     'others' => 'other',  # type => general, name => others, value => value
 #    'Plate Layout' => 'plate_layout',      
@@ -354,6 +355,8 @@ sub _getParser2DbMap {
   # biosource_disease.disease_stage
   my %biosource_disease_stage = (
     'Disease Stage' => 'disease_stage',
+    # temp for diabetes data
+#    'Cat_who_Dx' => 'disease_stage',
   );
   return \%biosource_disease_stage if $mode eq 'biosource_disease_stage';
 
@@ -366,6 +369,7 @@ sub _getParser2DbMap {
     'Disease:Skin cancer' => 'skin_cancer',    # source disease
     'Disease:Lung cancer' => 'lung_cancer',    # source disease
     "Disease: Huntington's Disease" => 'huntingtons_disease',    # source disease
+    'diabetic' => 'diabetic',
     'Disease:other cancers' => 'other_cancers',
   );
   return \%biosource_disease if $mode eq 'biosource_disease';
@@ -392,7 +396,6 @@ sub _getParser2DbMap {
     'heart' => 'heart',
     'blood' => 'blood',
     'liver' => 'liver',
-    'diabetic' => 'diabetic',
     'neuron' => 'neuron',
     'lung' => 'lung',
     'bone' => 'bone'
