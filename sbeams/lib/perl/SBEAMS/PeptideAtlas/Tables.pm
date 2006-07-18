@@ -204,11 +204,11 @@ $TBAT_ATLAS_SEARCH_BATCH_PARAMETER_SET = "${mod}atlas_search_batch_parameter_set
 
 $TBAT_SEARCH_KEY                = "${mod}search_key";
 
-$TBAT_NIST_LIBRARY              = "${mod}nist_library";
-$TBAT_NIST_LIBRARY_SPECTRUM     = "${mod}nist_library_spectrum";
-$TBAT_NIST_LIBRARY_SPECTRUM_PEAK     = "${mod}nist_library_spectrum_peak";
-$TBAT_NIST_LIBRARY_SPECTRUM_COMMENT     = "${mod}nist_library_spectrum_comment";
-$TBAT_NIST_SPECTRUM_TYPE     = "${mod}nist_spectrum_type";
+$TBAT_NIST_LIBRARY              = "${mod}NIST_library";
+$TBAT_NIST_LIBRARY_SPECTRUM     = "${mod}NIST_library_spectrum";
+$TBAT_NIST_LIBRARY_SPECTRUM_PEAK     = "${mod}NIST_library_spectrum_peak";
+$TBAT_NIST_LIBRARY_SPECTRUM_COMMENT     = "${mod}NIST_library_spectrum_comment";
+$TBAT_NIST_SPECTRUM_TYPE     = "${mod}NIST_spectrum_type";
 $TBAT_SPECTRUM_IDENTIFICATION     = "${mod}spectrum_identificaton";
 $TBAT_SPECTRUM     = "${mod}spectrum";
 $TBAT_SPECTRUM_PEAK     = "${mod}spectrum_peak";
