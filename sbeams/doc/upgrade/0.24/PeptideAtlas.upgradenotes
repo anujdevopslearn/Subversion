@@ -408,3 +408,12 @@ GO
 
 -- Add the new tables to lib/perl/SBEAMS/PeptideAtlas/Tables.pm
 
+-- populate NIST_spectrum_type with 'Consensus'
+begin transaction
+    insert into NIST_spectrum_type
+    (NIST_spectrum_type_name, NIST_spectrum_type_description)
+    VALUES
+    ('Consensus', 'Spectrum of a peptide ion constructed from multiple spectra')
+commit transaction
+
+
