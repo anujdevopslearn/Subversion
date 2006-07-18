@@ -262,7 +262,7 @@ sub populateRecords
                 rowdata_ref=>\%rowdata,
                 PK => 'NIST_library_spectrum_peak_id',
                 return_PK=>0,
-                add_audit_parameters => 1,
+                add_audit_parameters => 0,
                 verbose=>$VERBOSE,
                 testonly=>$TESTONLY,
             );
@@ -314,7 +314,7 @@ sub getOrganismId
 # @param organism_id
 # @return nist_library_id
 #######################################################################
-sub  insert_nist_library
+sub insert_nist_library
 {
     my  %args = @_;
 
@@ -333,7 +333,7 @@ sub  insert_nist_library
         rowdata_ref=>\%rowdata,
         PK => 'NIST_library_id',
         return_PK=>1,
-        add_audit_parameters => 1,
+        add_audit_parameters => 0,
         verbose=>$VERBOSE,
         testonly=>$TESTONLY,
     );
@@ -391,7 +391,7 @@ sub insert_nist_library_spectrum
         rowdata_ref=>\%rowdata,
         PK => 'NIST_library_spectrum_id',
         return_PK=>1,
-        add_audit_parameters => 1,
+        add_audit_parameters => 0,
         verbose=>$VERBOSE,
         testonly=>$TESTONLY,
     );
