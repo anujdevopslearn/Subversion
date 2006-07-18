@@ -435,6 +435,8 @@ Schema changes (see full definitions in driver tables):
 - Added to PeptideAtlas_table_column.txt, 
 NIST_library_id foreign key in NIST_library_spectrum table
 
+-- made modified_sequence nullable in NIST_library_spectrum table
+
 - Updated driver tables
 
 - Populated the SQL scripts:
@@ -456,4 +458,7 @@ NIST_library_id foreign key in NIST_library_spectrum table
   ADD CONSTRAINT fk_NIST_library_spectrum_NIST_library_id 
   FOREIGN KEY (NIST_library_id) REFERENCES NIST_library(NIST_library_id)
   GO
+
+  ALTER TABLE NIST_library_spectrum DROP COLUMN modified_sequence
+  ALTER TABLE NIST_library_spectrum ADD modified_sequence varchar(255)
 
