@@ -140,6 +140,7 @@ sub add_items {
     # Missing peripherals that we cannot autocreate
     if ( @{$results->{manual}} ) {
       print "Unable to proceed, cannot manually add one or more results attributes\n";
+      for my $m ( @{$results->{manual}} ) { print "$m\n"; }
       exit;
     }
   }
@@ -405,6 +406,16 @@ sub test_data {
     ### Check organism ###
     my $organism = $item->{biosource}->{organism_id} || '';
 
+    # Organism is in essence common name for a species, so we will try to
+    # figure out what was meant
+    if ( $organism =~ /mouse/i ) {
+      $organism = 'Mouse';
+      $item->{biosource}->{organism_id} = 'Mouse';
+    } elsif  ( $organism =~ /human/i ) {
+      $organism = 'Human';
+      $item->{biosource}->{organism_id} = 'Human';
+    }
+    
     dumpstuff( $item_no, $item ) if !$organism;
     
     # Skip if we've seen it (unless redundant mode)
@@ -421,6 +432,12 @@ sub test_data {
     ### Check organization ###
     my $organization = $item->{biosource}->{organization_id} || '';
     
+    # Don't want replicate orgs, try to guess... 
+    if ( $organization =~ /UW/i ) {
+      $organization = 'University of Washington';
+      $item->{biosource}->{organization_id} = 'University of Washington';
+    }
+
     # Skip if we've seen it (unless redundant mode)
     if( !$redundant_organization{$organization} || $args{redundant} ) {
     
