@@ -260,7 +260,7 @@ sub pepXML_start_element {
     $attrs{$aa1} = $attrs{$aa1}->{value};
   }
 
-  my @attributes = ();
+  my @attributes = undef;
 
   if ($localname eq 'spectrum_query') 
   {
@@ -322,7 +322,7 @@ sub protXML_start_element {
     $attrs{$aa1} = $attrs{$aa1}->{value};
   }
 
-  my @attributes = ();
+  my @attributes = undef;
 
   if ($localname eq 'protein') 
   {
