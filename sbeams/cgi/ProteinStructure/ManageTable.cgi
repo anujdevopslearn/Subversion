@@ -145,12 +145,14 @@ sub main {
   if ($parameters{"GetFile"} && $parameters{"$PK_COLUMN_NAME"}) {
     getFile(); return;
   }
+
+  
   $sbeamsMOD->printPageHeader();
   if      ($parameters{action} eq 'VIEWRESULTSET') { printOptions();
-  } elsif ($parameters{action} eq 'REFRESH') { printEntryForm();
+  } elsif ($parameters{action} eq 'REFRESH') { printEntryForm( show_login_link => $sbeams->is_ext_halo_user() );
   } elsif ($parameters{action} eq 'SAVE TEMPLATE') { saveTemplate();
   } elsif ($parameters{action} eq 'SET FIELDS TO THIS TEMPLATE') {
-    printEntryForm();
+    printEntryForm( show_login_link => $sbeams->is_ext_halo_user() );
   } elsif ($parameters{action} eq 'DELETE THIS TEMPLATE') {
     deleteTemplate(
       selected_template => $parameters{selected_template},
@@ -159,9 +161,9 @@ sub main {
   } elsif ($parameters{action} eq 'INSERT' ||
 	   $parameters{action} eq 'UPDATE' ||
 	   $parameters{action} eq 'DELETE') { processEntryForm();
-  } elsif ($q->param('apply_action_hidden')) { printEntryForm();
-  } elsif ($q->param('ShowEntryForm')) { printEntryForm();
-  } elsif ($parameters{"$PK_COLUMN_NAME"}) { printEntryForm();
+  } elsif ($q->param('apply_action_hidden')) { printEntryForm( show_login_link => $sbeams->is_ext_halo_user() );
+  } elsif ($q->param('ShowEntryForm')) { printEntryForm( show_login_link => $sbeams->is_ext_halo_user() );
+  } elsif ($parameters{"$PK_COLUMN_NAME"}) { printEntryForm( show_login_link => $sbeams->is_ext_halo_user() );
   } else { printOptions(); }
 
   $sbeamsMOD->printPageFooter();
