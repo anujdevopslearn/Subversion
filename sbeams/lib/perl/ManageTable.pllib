@@ -368,8 +368,21 @@ sub printEntryForm {
     }
   }
 
-  # Prints the group/project selection widgets.
-  $sbeams->printUserContext();
+  my $login_link = '';
+  if ( $args{show_login_link} ) {
+    my $url = $q->self_url();
+    if ( $url =~ /\?/ ) {
+      $url .= ';force_login=true';
+    } else {
+      $url .= '?force_login=true';
+    }
+# print "<FONT SIZE=-1><A HREF=$url>Login</A> to edit this information </FONT>";
+    print "[<A HREF=$url>LOGIN</A>] to edit this information ";
+  } else {
+    # Prints the group/project selection widgets.
+    # $sbeams->printUserContext( login_link => $login_link );
+    $sbeams->printUserContext();
+  }
 
   print qq!
       <P>
