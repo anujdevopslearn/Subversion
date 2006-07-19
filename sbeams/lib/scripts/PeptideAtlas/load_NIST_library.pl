@@ -550,8 +550,14 @@ sub parseComment
         $hash{$1} = $2;
     }
 
+    if ($line =~ /.*(Fullname)=(.+?)\s.*/)
+    {
+        $hash{$1} = $2;
+    }
+
     ## only storing Mods if not equal to 0
-    if ($line =~ /.*(Mods)=(\d+?)\s.*/)
+    ## Mods=1/17,C,ICAT_light
+    if ($line =~ /.*(Mods)=(.+?)\s.*/)
     {
         my $k = $1;
         my $v = $2;
@@ -595,10 +601,6 @@ sub parseComment
         $hash{$1} = $2;
     }
     if ($line =~ /.*(Unassigned)=(.+?)\s.*/)
-    {
-        $hash{$1} = $2;
-    }
-    if ($line =~ /.*(Fullname)=(.+?)\s.*/)
     {
         $hash{$1} = $2;
     }
