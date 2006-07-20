@@ -117,7 +117,7 @@ AT_peptide_instance	13	sample_ids	Samples Observed in	varchar	255	0	N		N			Y	tex
 AT_peptide_instance	14	is_exon_spanning	Does it span over introns?	char	1	0	Y		N			Y	text	3		Y	Y	N	Comma-separated list of sample_ids in which which peptide was observed		
 AT_peptide_instance	15	n_protein_mappings	Number of Proteins for this Peptide 	int	4	0	N		N			Y	text	10		Y	Y	N	Number of distinct accession numbers (proteins) for peptide in Genome		
 AT_peptide_instance	16	search_batch_ids	Search batches	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of proteomics_search_batch ids		
-AT_peptide_instance	17	is_subpeptide_of	superpeptide list	varchar	255	0	Y		N			N	textarea	3		Y	Y	N	Comma-separated list of peptide ids that include this peptide's sequence		
+AT_peptide_instance	17	is_subpeptide_of	superpeptide list	varchar	1023	0	Y		N			N	textarea	3		Y	Y	N	Comma-separated list of peptide ids that include this peptide's sequence		
 AT_peptide_instance	18	n_samples	Number of Samples Exhibiting Peptide	int	4	0	Y		N			N	text	10		Y	Y	N	Number of samples/experiments in which this peptide was observed		
 AT_peptide_instance	19	n_protein_samples	Number of Samples Exhibiting Protein	int	4	0	Y		N			N	text	10		Y	Y	N	Number of samples/experiments in which the parent protein of this peptide was observed		
 AT_peptide_instance	20	empirical_proteotypic_score	Empirical Proteotypic Score	real	4	0	Y		N			N	text	10		Y	Y	N	Fraction of samples that exhibit this peptide divided by fraction of samples that exhibit the parent protein		
