@@ -478,3 +478,20 @@ Schema changes (see full definitions in driver tables):
       ALTER COLUMN parameter_value varchar(1023)
 
   edited lib/perl/SBEAMS/PeptideAtlas/Tables.pm to capitalize NIST
+
+-----------------------------------------------------------------------
+
+2006-07-19
+
+Schema change (see full definitions in driver tables):
+
+- expnded is_subpeptide_of from 255 to 1023 in peptide_instance table
+
+- Updated driver tables
+
+- Populated the SQL scripts
+
+- alter server table with sql:
+ALTER TABLE peptide_instance ALTER COLUMN is_subpeptide_id (1023)
+
+
