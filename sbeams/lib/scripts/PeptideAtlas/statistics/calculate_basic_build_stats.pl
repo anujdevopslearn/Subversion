@@ -150,12 +150,6 @@ sub handleRequest
         get_number_of_distinct_peptides_aligned_to_reference
         (atlas_build_id=>$ATLAS_BUILD_ID);
 
-    ## get number of proteins/ORFs in reference protein fasta file:
-    my %reference_protein_hash = get_reference_protein_hash( atlas_build_id=>$ATLAS_BUILD_ID);
-
-    ## get number of proteins/ORFs in atlas:
-    my %pa_protein_hash = get_protein_hash( atlas_build_id=>$ATLAS_BUILD_ID);
-
     print "Number of experiments: $n_exp\n";
 
     print "Number of MS runs: $n_ms_runs\n";
@@ -170,13 +164,31 @@ sub handleRequest
 
     print "Number of distinct peptides aligned to reference genome: $n_distinct_peptides_aligned_to_reference\n";
     
+    ## get number of proteins/ORFs in reference protein fasta file:
+    my %reference_protein_hash = get_reference_protein_hash( atlas_build_id=>$ATLAS_BUILD_ID);
+
+    ## get number of proteins/ORFs in atlas:
+    my %pa_protein_hash = get_protein_hash( atlas_build_id=>$ATLAS_BUILD_ID);
+
+    ## get only those proteins with peptides which map to only one protein
+    ## (in other words, not counting ambiguous peptide identifications)
+    my %pa_unambiguous_protein_hash = 
+        get_unambiguous_protein_hash( atlas_build_id=>$ATLAS_BUILD_ID);
+
     my $n_atlas = keys %pa_protein_hash;
 
     my $n_ref = keys %reference_protein_hash;
 
+    my $n_unambiguous_atlas = keys %pa_unambiguous_protein_hash;
+
     my $percent = ($n_atlas / $n_ref) * 100.;
 
+    my $percent_unambiguous = ($n_unambiguous_atlas / $n_ref) * 100.;
+
     print "Number of proteins or ORFs seen in PeptideAtlas: $n_atlas ($percent %)\n";
+
+    print "Number of unambiguous proteins or ORFs seen in PeptideAtlas: "
+        . "$n_unambiguous_atlas ($percent_unambiguous %)\n";
 
     print "Number of proteins or ORFs in reference database: $n_ref\n";
 
@@ -528,6 +540,7 @@ sub get_reference_protein_hash
     return %reference_protein_hash;
 
 }
+
 #######################################################################
 # get_protein_hash - get hash with key = protein name, value = num peptides
 # @param atlas_build_id
@@ -596,6 +609,82 @@ sub get_protein_hash
     return %protein_hash;
 
 }
+
+#######################################################################
+# get_unambiguous_protein_hash - get hash with key = protein name, 
+# value = num peptides, where only using prots id'ed through peps
+# which map to only 1 prot (no ambiguous peptide id's used)
+# @param atlas_build_id
+# @return protein_hash
+#######################################################################
+sub get_unambiguous_protein_hash
+{
+    my %args = @_;
+
+    my $atlas_build_id = $args{atlas_build_id} || die "need atlas_build_id";
+
+    my $sql;
+
+    if ($N_OBS_GT_1)
+    {
+        $sql = qq~
+        SELECT B.biosequence_name,
+            (SELECT SUM(PEPI.n_observations)
+            FROM $TBAT_PEPTIDE_INSTANCE PEPI,
+            $TBAT_PEPTIDE_MAPPING PM,
+            $TBAT_BIOSEQUENCE BB
+            WHERE PEPI.peptide_instance_id=PM.peptide_instance_id
+            AND PM.matched_biosequence_id=BB.biosequence_id
+            AND PEPI.atlas_build_id='$atlas_build_id'
+            AND PEPI.is_subpeptide_of is NULL
+            AND BB.biosequence_name = B.biosequence_name
+            AND PEPI.n_observations > 1
+            AND PEPI.n_protein_mappings = 1
+            AND BB.record_status != 'D'
+            )
+        FROM $TBAT_PEPTIDE_INSTANCE PEPI,
+        $TBAT_PEPTIDE_MAPPING PM, $TBAT_BIOSEQUENCE B
+        WHERE PM.matched_biosequence_id=B.biosequence_id
+        AND PEPI.peptide_instance_id=PM.peptide_instance_id
+        AND PEPI.atlas_build_id='$atlas_build_id'
+        AND PEPI.n_observations > 1
+        AND PEPI.n_protein_mappings = 1
+        AND B.record_status != 'D'
+        ~;
+
+    } else
+    {
+        $sql = qq~
+        SELECT B.biosequence_name,
+            (SELECT SUM(PEPI.n_observations)
+            FROM $TBAT_PEPTIDE_INSTANCE PEPI,
+            $TBAT_PEPTIDE_MAPPING PM,
+            $TBAT_BIOSEQUENCE BB
+            WHERE PEPI.peptide_instance_id=PM.peptide_instance_id
+            AND PM.matched_biosequence_id=BB.biosequence_id
+            AND PEPI.atlas_build_id='$atlas_build_id'
+            AND PEPI.is_subpeptide_of is NULL
+            AND PEPI.n_protein_mappings = 1
+            AND BB.biosequence_name = B.biosequence_name
+            AND BB.record_status != 'D'
+            )
+        FROM $TBAT_PEPTIDE_INSTANCE PEPI,
+        $TBAT_PEPTIDE_MAPPING PM, $TBAT_BIOSEQUENCE B
+        WHERE PM.matched_biosequence_id=B.biosequence_id
+        AND PEPI.peptide_instance_id=PM.peptide_instance_id
+        AND PEPI.n_protein_mappings = 1
+        AND PEPI.atlas_build_id='$atlas_build_id'
+        AND B.record_status != 'D'
+        ~;
+    }
+
+    my %protein_hash = $sbeams->selectTwoColumnHash($sql) or
+        die "\nERROR: in sql?  $sql \n\n";
+
+    return %protein_hash;
+
+}
+
 
 ###############################################################################
 # get_atlas_build_directory  --  get atlas build directory
