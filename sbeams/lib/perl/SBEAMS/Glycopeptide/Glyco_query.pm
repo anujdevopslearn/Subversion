@@ -453,8 +453,8 @@ sub get_identified_tissues{
 	confess(__PACKAGE__ . "::$method ID '$id' is not good  \n") unless $id; 
 	my $sql = qq~
 				SELECT t.tissue_type_name 
-				FROM $TBGP_PEPTIDE_TO_TISSUE ptp 
-				JOIN $TBGP_GLYCO_SAMPLE g ON ( ptp.sample_id = g.sample_id ) 
+				FROM $TBGP_PEPTIDE_TO_SAMPLE ptp 
+				JOIN $TBGP_UNIPEP_SAMPLE g ON ( ptp.sample_id = g.sample_id ) 
 				JOIN $TBGP_TISSUE_TYPE t ON (t.tissue_type_id = g.tissue_type_id) 
 				WHERE ptp.identified_peptide_id = $id
         ORDER BY t.tissue_type_name

@@ -235,7 +235,7 @@ sub insertPeptideToTissue {
 
   my $sbeams = $self->getSBEAMS();
   my ( $sample_id ) = $sbeams->selectrow_array( <<"  END" );
-  SELECT sample_id FROM $TBGP_GLYCO_SAMPLE
+  SELECT sample_id FROM $TBGP_UNIPEP_SAMPLE
   WHERE sample_name = '$row->[$heads->{sample}]'
   END
   push @row, $sample_id;
@@ -252,7 +252,7 @@ sub insertPeptideToTissue {
   }
   my $id = $sbeams->updateOrInsertRow( insert => 1,
                                     return_PK => 1,
-                                   table_name => $TBGP_PEPTIDE_TO_TISSUE,
+                                   table_name => $TBGP_PEPTIDE_TO_SAMPLE,
                                   rowdata_ref => \%rowdata );
    return $id;
 }

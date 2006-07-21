@@ -26,17 +26,19 @@ use vars qw(@ISA @EXPORT
     $TBGP_QUERY_OPTION
 
     $TBGP_IPI_VERSION
-    $TBGP_IPI_XREFS
     $TBGP_IPI_DATA
+    $TBGP_IPI_XREFS
     $TBGP_CELLULAR_LOCATION
     $TBGP_GLYCO_SITE
+    $TBGP_OBSERVED_PEPTIDE
     $TBGP_IDENTIFIED_PEPTIDE
     $TBGP_PREDICTED_PEPTIDE
-    $TBGP_PEPTIDE_TO_TISSUE
+    $TBGP_PEPTIDE_TO_SAMPLE
     $TBGP_TISSUE_TYPE
-    $TBGP_GLYCO_SAMPLE
+    $TBGP_UNIPEP_SAMPLE
     $TBGP_IDENTIFIED_TO_IPI
     $TBGP_SYNTHESIZED_PEPTIDE
+    $TBGP_PEPTIDE_SEARCH
 );
 
 
@@ -58,12 +60,14 @@ require Exporter;
     $TBGP_CELLULAR_LOCATION
     $TBGP_GLYCO_SITE
     $TBGP_IDENTIFIED_PEPTIDE
+    $TBGP_OBSERVED_PEPTIDE
     $TBGP_PREDICTED_PEPTIDE
-    $TBGP_PEPTIDE_TO_TISSUE
+    $TBGP_PEPTIDE_TO_SAMPLE
     $TBGP_TISSUE_TYPE
-    $TBGP_GLYCO_SAMPLE
+    $TBGP_UNIPEP_SAMPLE
     $TBGP_IDENTIFIED_TO_IPI
     $TBGP_SYNTHESIZED_PEPTIDE
+    $TBGP_PEPTIDE_SEARCH
 );
 
 
@@ -85,12 +89,14 @@ $TBGP_IPI_XREFS	    	= "${mod}ipi_xrefs";
 $TBGP_IPI_DATA			= "${mod}ipi_data";
 $TBGP_CELLULAR_LOCATION		= "${mod}cellular_location";
 $TBGP_GLYCO_SITE		= "${mod}glyco_site";
+$TBGP_OBSERVED_PEPTIDE	= "${mod}observed_peptide";
 $TBGP_IDENTIFIED_PEPTIDE	= "${mod}identified_peptide";
 $TBGP_PREDICTED_PEPTIDE		= "${mod}predicted_peptide";
-$TBGP_PEPTIDE_TO_TISSUE		= "${mod}peptide_to_tissue";
+$TBGP_PEPTIDE_TO_SAMPLE		= "${mod}peptide_to_sample";
 $TBGP_TISSUE_TYPE			= "${mod}tissue_type";
 $TBGP_IDENTIFIED_TO_IPI= "${mod}identified_to_ipi";
-$TBGP_GLYCO_SAMPLE   = "${mod}glyco_sample";
+$TBGP_UNIPEP_SAMPLE   = "${mod}unipep_sample";
 $TBGP_SYNTHESIZED_PEPTIDE	= "${mod}synthesized_peptide";
+$TBGP_PEPTIDE_SEARCH			= "${mod}peptide_search";
 
 1;
