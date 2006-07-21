@@ -19,7 +19,7 @@ use strict;
 use lib qw (../../lib/perl);
 use File::Basename;
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 
 use SBEAMS::Biomarker;
@@ -68,19 +68,43 @@ sub print_sample_details {
   $sbeams->printUserContext();
   my $stable = SBEAMS::Connection::DataTable->new();
 
-  my $row = $sbeams->selectrow_hashref( <<"  END" ) || {};
-  SELECT * FROM $TBBM_BIOSAMPLE
+  my $sql =<<"  END";
+SELECT biosource_name, age, organism_name, organization_id, external_id, gender, BSO.investigators, patient_id, biosource_description, tissue_type_name, bio_group_name, source_type, well_id, biosample_name, experiment_name, original_volume, location_name
+  FROM $TBBM_BIOSAMPLE BSA 
+    JOIN $TBBM_BIOSOURCE BSO ON BSA.biosource_id = BSO.biosource_id
+    JOIN $TB_ORGANISM O ON O.organism_id = BSO.organism_id
+    JOIN $TBBM_TISSUE_TYPE TT ON TT.tissue_type_id = BSO.tissue_type_id
+    JOIN $TBBM_BIO_GROUP BG ON BSO.biosource_group_id = BG.bio_group_id
+    JOIN $TBBM_STORAGE_LOCATION SL ON BSA.storage_location_id =  SL.storage_location_id 
+    JOIN $TBBM_EXPERIMENT EX ON BSA.experiment_id =  EX.experiment_id 
   WHERE biosample_id = $params->{sample_id}
   END
-
-  print STDERR $sbeams->evalSQL( <<"  EBD" );
-  SELECT * FROM $TBBM_BIOSAMPLE WHERE biosample_id = $params->{sample_id}
-  EBD
+  my $row = $sbeams->selectrow_hashref( $sql ) || {};
+  $log->debug( $sql );
 
   for my $key ( keys( %$row ) ) {
+    next unless defined $row->{$key};
+    next if $key =~ /record_status|created_by_id|modified_by_id|date_modified|date_created|owner_group_id/;
     $stable->addRow( [ $key, $row->{$key} ] );
   }
+
+  my $attr_sql =<<"  ENDSQL";
+  SELECT A.attribute_name, BSOA.attribute_value
+  FROM $TBBM_BIOSOURCE_ATTRIBUTE BSOA 
+  JOIN $TBBM_ATTRIBUTE A ON A.attribute_id = BSOA.attribute_id
+  WHERE BSOA.biosource_id = (SELECT biosource_id FROM $TBBM_BIOSAMPLE BSA WHERE biosample_id = $params->{sample_id} )
+  ENDSQL
   
+  my @attrs = $sbeams->selectSeveralColumns( $attr_sql );
+  for my $attr (@attrs) {
+#    next if $key =~ /record_status|created_by_id|modified_by_id|date_modified|date_created|owner_group_id/;
+    if ( $attr->[1] ) {
+      $stable->addRow( [ "$attr->[0] => $attr->[1]", undef ] );
+    } else {
+      $stable->addRow( [ "$attr->[0]", undef ] );
+    }
+  }
+
 
   print <<"  END";
   <H1>Details for $row->{biosample_name} (ID: $params->{sample_id})</H1>
