@@ -1,28 +1,16 @@
 #!/usr/local/bin/perl -w
 
-###############################################################################
-#
-# Description : Script will parse the peptide data from Paul L into tables
-#
-###############################################################################
-our $VERSION = '1.00';
+# Description : load (specifically formatted) ipi db file into 
+# unipep tables.  Split out from monolithic ipi_data/peptides file
 
-
-###############################################################################
-# Generic SBEAMS setup for all the needed modules and objects
-###############################################################################
 use strict;
 use File::Basename;
 use Data::Dumper;
-
 use Getopt::Long;
 use FindBin;
 use Cwd;
 
 use lib "$FindBin::Bin/../../perl";
-
-# Unbuffer STDOUT
-$|++;
 
 use vars (qw($DBRPEFIX));
 
@@ -30,37 +18,40 @@ use vars (qw($DBRPEFIX));
 use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
-my $sbeams = new SBEAMS::Connection;
 
 use SBEAMS::Glycopeptide::Tables;
 use SBEAMS::Glycopeptide::Glyco_peptide_load;
 
+# Unbuffer STDOUT
+$|++;
 
-my $program = $FindBin::Script;
+# Global express...
+my $sbeams = new SBEAMS::Connection;
+my $program = basename( $0 ); 
 my %args;
 
 #### Process options
 unless (GetOptions(\%args, "verbose:i", "release:s", "file:s", 
-                           "testonly", "overwrite" )) {
+                   "testonly", 'organism:s', 'comment:s' )) {
   printUsage('Failed to fetch options');
 }
 
-printUsage('Missing required parameter "file"') unless $args{file};
-$args{release} ||= $args{file};
+my $missing;
+for my $opt ( qw( file organism release ) ) {
+  $missing = ( $missing ) ? $missing . ', ' . $opt : $opt unless defined $args{$opt};
+}
+printUsage( "Missing required parameter(s): $missing " ) if $missing;
+
 
 { # Main
   
-  # Try to determine which module we want to affect
-  my $module = $sbeams->getSBEAMS_SUBDIR();
-  my $work_group = 'unknown';
-  if ($module eq 'Glycopeptide') {
-	$work_group = "Glycopeptide_admin";
-	my $db = $DBPREFIX{$module};
- 	print "Database '$db'\n" if ($args{verbose});
-  } else {
-    printUsage( "Unknown module: $module" );
-  }
-  print "$DBPREFIX{$module}\n" if $args{verbose};
+  my $work_group = "Glycopeptide_admin";
+  my $db = lc($DBPREFIX{Glycopeptide});
+  $db =~ s/\.dbo\.//g;
+  print "Database '$db'\n" if ($args{verbose});
+
+  # Safety catch
+  die( "Wrong db target: $db" ) unless $db eq 'glycopeptide';
 	
   # Authenticate() or exit
   my $username = $sbeams->Authenticate(work_group => $work_group) ||
@@ -74,23 +65,12 @@ $args{release} ||= $args{file};
 sub load_file {
 	
   # The meat...
-  my $glyco_o = SBEAMS::Glycopeptide::Glyco_peptide_load->new(sbeams => $sbeams,
-                                                      verbose => $args{verbose},
-                                                              sbeams => $sbeams,
-                                                      release => $args{release},
-                                                           file => $args{file});
+  my $glyco_o = SBEAMS::Glycopeptide::Glyco_peptide_load->new(sbeams => $sbeams, %args);
   # and potatoes.
-	$glyco_o->process_data_file(load_peptides => 0);
+	$glyco_o->insert_ipi_db( %args );
 	
-	if ($glyco_o->anno_error){
-		print "*" x 75 .  "\n\n";
-		print "Errors are below\n";
-		print $glyco_o->anno_error;
-	}else{
-		print "No Errors reported\n";	
-	}
-	
- 
+	print $glyco_o->anno_error();
+
 }
 
 sub printUsage {
@@ -98,17 +78,18 @@ sub printUsage {
 my $usage = <<EOU;
 $msg
 
-$program is used load ipi data. 
+$program is used load ipi db into Unipep/Glycopeptide tables. 
 
-Usage: $program --file [OPTIONS]
+Usage: $program -f ipi_file -r ipi_version -o organism [-v level -t -d -c 'comment here' ]
 Options:
-    --verbose <num>    Set verbosity level.  Default is 0
-    --file <file path> file path to the file to upload
-    --testonly         Information in the database is not altered
-    --release          Version of the IPI database
+    -v, --verbose <num>    Set verbosity level.  Default is 0
+    -f, --file <file path> file path to the file to upload
+    -t, --testonly         Information in the database is not altered
+    -r, --release          Version of the IPI database
+    -d, --default          Specify this as the default version for organism 
+    -o, --organism         Common name (i.e. Mouse or Human) for organism
+    -c, --comment          comment
 
- 
-$program -f <path to file> -v 2.28
 EOU
   print "\n$usage\n";
   exit;
