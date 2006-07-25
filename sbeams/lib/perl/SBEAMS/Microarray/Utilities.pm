@@ -36,6 +36,26 @@ sub new {
     return($self);
 }
 
+sub copyDataLoaderTemplate {
+  my $self = shift;
+  my %args = @_;
+
+  my $baseurl = $args{cgi}->url( -base => 1 );
+  
+  my $token = $args{token} || die "missing required token";
+  open FIL, "$PHYSICAL_BASE_DIR/lib/meta_data_loader/Microarray/GetExpression/MetaDataLoaderTemplate.jnlp";
+  open OUTFIL, ">$PHYSICAL_BASE_DIR/tmp/Microarray/dataLoader/Affy/$token.jnlp";
+  {
+    undef local $/;
+    my $temp = <FIL>;
+    close FIL;
+    $temp =~ s/SERVER_ROOT/$baseurl/g;
+    $temp =~ s/TOKEN_NAME/$token/g;
+    print OUTFIL $temp;
+    close OUTFIL;
+  }
+
+}
 
 sub get_cytoscape_makefile {
   my $self = shift;
