@@ -52,7 +52,7 @@ sub new
 
     $self->{pepEndInProt} = undef;
 
-    ## main, plasmid1, plasmid2 where the plasmids are the mini-chromosomes
+    ## main, pNRC100, are pNRC200 where p* are the plasmids
     $self->{chromName} = undef; 
 
     $self->{strand} = undef; 
@@ -154,7 +154,7 @@ sub readMainFeaturesFile
     die ("missing argument to readMainFeaturesFile")
         unless defined $featuresFile;
 
-    $self->readFeaturesFile( $featuresFile, "main" );
+    $self->readFeaturesFile( $featuresFile, "MAIN" );
 }
 
 sub readP1FeaturesFile 
@@ -164,7 +164,7 @@ sub readP1FeaturesFile
     die ("missing argument to readP1FeaturesFile")
         unless defined $featuresFile;
 
-    $self->readFeaturesFile( $featuresFile, "plasmid1" );
+    $self->readFeaturesFile( $featuresFile, "PNRC100" );
 }
 
 sub readP2FeaturesFile 
@@ -174,7 +174,7 @@ sub readP2FeaturesFile
     die ("missing argument to readMainFeaturesFile")
         unless defined $featuresFile;
 
-    $self->readFeaturesFile( $featuresFile, "plasmid2" );
+    $self->readFeaturesFile( $featuresFile, "PNRC200" );
 }
 
 
