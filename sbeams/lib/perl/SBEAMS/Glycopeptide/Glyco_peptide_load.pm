@@ -135,12 +135,6 @@ sub insert_ipi_db {
 	my $self = shift;
   my %args = @_;
 
-  # Does this version already exist?
-	$self->check_version(%args);
-
-  # Version doesn't exist, insert it
-  $self->add_ipi_version( %args ) unless $args{testonly};
-	
   my @all_data = ();
   
   my $file = $self->getfile();
@@ -152,6 +146,10 @@ sub insert_ipi_db {
 	my $insert_count = 1;
   my $t0 = new Benchmark;
   my %stats;
+
+  my $sbeams = $self->getSBEAMS();
+  $sbeams->initiate_transaction();
+  
   while(<DATA>) {
     chomp;
     my @tokens = split( /\t/, $_, -1);
@@ -167,6 +165,14 @@ sub insert_ipi_db {
 
       # See if col headers have changed
       $self->checkHeaders(\%heads);
+ 
+      # Everything has checked out, start inserts.
+      # Does this version already exist?
+    	$self->check_version(%args);
+
+      # Version doesn't exist, insert it
+      $self->add_ipi_version( %args ) unless $args{testonly};
+
       next;
     }
 
@@ -190,9 +196,25 @@ sub insert_ipi_db {
       $stats{$ipi}++;
       $stats{total}++;
       next if $args{testonly};
-      $self->add_ipi_record( \@tokens );
-      $self->add_glycosites( \@tokens );
-      $self->add_predicted( \@tokens );
+      eval {
+        my $ipi_id = $self->add_ipi_record( \@tokens );
+
+	
+        my $site_idx = $self->add_glycosites( glyco_score => $tokens[$heads{'nxt/s score'}],
+                                              ipi_data_id => $ipi_id,
+                                              protein_sequence => $tokens[$heads{'protein sequences'}],
+                                            );
+
+        $self->add_predicted( tokens => \@tokens,
+                              ipi_id => $ipi_id, 
+                                 idx => $site_idx );
+      };
+      if ( 1 || $@ ) {
+        $sbeams->rollback_transaction();
+        die( "$@" );
+      } else {
+        $sbeams->commit_transaction();
+      }
     }
     $stats{max} = ( $stats{$ipi} > $stats{max} ) ? $stats{$ipi} : $stats{max};
   }
@@ -698,11 +720,89 @@ sub map_peptide_to_protein {
 }
 
 
+###############################################################################
+#Add the glycosite for this row
+###############################################################################
+sub add_glycosites {
+
+	my $self = shift;
+  my %args = @_;
+
+  my $missing;
+  for my $opt ( qw( protein_sequence ipi_data_id ) ) {
+    $missing = ( $missing ) ? $missing . ', ' . $opt : $opt unless defined $args{$opt};
+  }
+  die ( "Missing required parameter(s): $missing " ) if $missing;
+
+  my $motif = 'N.[ST]';
+  my $sites = $module->get_site_positions( seq => $args{protein_sequence},
+                                       pattern => $motif );
+  print STDERR "Found " . scalar( @$sites ) . " total sites\n";
+  my $sbeams = $self->getSBEAMS();
+
+  for my $site ( @$sites ) {
+    print STDERR "inserting site $site\n";
+    my $glyco_score = -1;
+    my $motif_context = motif_context( undef, seq => $args{protein_sequence}, site => $site );
+
+
+  	my $rowdata = { protein_glycosite_position => $site,
+                                  site_context => $motif_context,
+                                    glyco_score => $glyco_score,  # Fixme 
+                                    ipi_data_id => $args{ipi_data_id}
+                  };
+	
+    $sbeams->updateOrInsertRow( table_name  => $TBGP_GLYCOSITE,
+                                rowdata_ref => $rowdata,
+                                return_PK   => 1,
+                                verbose     => $self->verbose(),
+                                testonly    => $self->testonly(),
+                                insert      => 1,
+                                PK          => 'glycosite_id' ) || die "putresence";
+  }
+  return $sites;
+				   		   
+	}
+	
+sub motif_context {
+  my $self = shift;
+  my %args = @_;
+
+  my $missing;
+  for my $opt ( qw( seq site ) ) {
+    $missing = ( $missing ) ? $missing . ', ' . $opt : $opt unless defined $args{$opt};
+  }
+  die ( "Missing required parameter(s): $missing " ) if $missing;
+
+  my $lpad = 0;
+  my $rpad = 0;
+  my $beg = $args{site} - 5;
+  my $end = 13;
+  my $len = length( $args{seq} );
+
+  if ( $args{site} <= 5 ) {
+    $lpad = 5 - $args{site};
+    $beg = 0;
+    $end -= $lpad;
+  } 
+
+  if ( $args{site} + 8 > $len ) {
+
+      $rpad = ($args{site} + 8) - $len;
+      $end -= $rpad;
+  }
+
+  my $context = substr( $args{seq}, $beg, $end );
+  $context = '-' x $lpad . $context . '-' x $rpad;
+  my $slen = length($context);
+
+  return $context;
+}
 
 ###############################################################################
 #Add the glycosite for this row
 ###############################################################################
-sub add_glyco_site {
+sub add_glyco_site_old {
 	my $method = 'add_glyco_site';
 	my $self = shift;
 	my $row = shift;
@@ -711,7 +811,7 @@ sub add_glyco_site {
 	my $ipi_id = $row->[$heads{'ipi'}];
 	
 	my %rowdata_h = ( 	
-				protein_glyco_site_position => $row->[$heads{'nxt/s location'}],
+				protein_glycosite_position => $row->[$heads{'nxt/s location'}],
 				glyco_score =>$row->[$heads{'nxt/s score'}],
 				ipi_data_id => $self->get_ipi_data_id( $ipi_id ),
 			  );
@@ -720,7 +820,7 @@ sub add_glyco_site {
   my $sbeams = $self->getSBEAMS();
 
 	my $glyco_site_id = $sbeams->updateOrInsertRow(				
-							table_name=>$TBGP_GLYCO_SITE,
+							table_name=>$TBGP_GLYCOSITE,
 				   			rowdata_ref=>$rowdata_ref,
 				   			return_PK=>1,
 				   			verbose=>$self->verbose(),
@@ -790,7 +890,7 @@ sub add_ipi_record {
 	
 	$self->{All_records}{$ipi_id} = {ipi_data_id => $ipi_data_id};
 
-	return 1;
+	return $ipi_data_id;
 }
 ###############################################################################
 #get ipi_data_id 

@@ -80,7 +80,7 @@ sub lookup_glycosite {
 
   my $sbeams = $self->getSBEAMS() || return;
   my ($id) = $sbeams->selectrow_array( <<"  END" );
-  SELECT glyco_site_id FROM $TBGP_GLYCO_SITE
+  SELECT glyco_site_id FROM $TBGP_GLYCOSITE
   WHERE protein_glyco_site_position = $args{start}
   AND ipi_data_id = $args{ipi_data_id}
   END
@@ -97,13 +97,13 @@ sub findAdjacentGlycosites {
 
   my ($pre) = $sbeams->selectrow_array( <<"  END" );
   SELECT MAX(protein_glyco_site_position) 
-  FROM $TBGP_GLYCO_SITE
+  FROM $TBGP_GLYCOSITE
   WHERE protein_glyco_site_position <= $args{position}
   AND ipi_data_id = $args{ipi_data_id}
   END
   my $sql =<<"  END";
   SELECT MAX(protein_glyco_site_position) 
-  FROM $TBGP_GLYCO_SITE
+  FROM $TBGP_GLYCOSITE
   WHERE protein_glyco_site_position <= $args{position}
   AND ipi_data_id = $args{ipi_data_id}
   END
@@ -111,7 +111,7 @@ sub findAdjacentGlycosites {
 
   my ($post) = $sbeams->selectrow_array( <<"  END" );
   SELECT MIN(protein_glyco_site_position) 
-  FROM $TBGP_GLYCO_SITE
+  FROM $TBGP_GLYCOSITE
   WHERE protein_glyco_site_position >= $args{position}
   AND ipi_data_id = $args{ipi_data_id}
   END

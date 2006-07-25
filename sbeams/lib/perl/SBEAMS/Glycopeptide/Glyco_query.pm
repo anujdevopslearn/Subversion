@@ -379,7 +379,7 @@ sub get_predicted_peptides{
 				predicted_stop, 
         synthesized_sequence
 				FROM $TBGP_PREDICTED_PEPTIDE pp
-				JOIN $TBGP_GLYCO_SITE gs ON (gs.glyco_site_id = pp.glyco_site_id)
+				JOIN $TBGP_GLYCOSITE gs ON (gs.glyco_site_id = pp.glyco_site_id)
 				LEFT JOIN $TBGP_SYNTHESIZED_PEPTIDE sp 
          ON sp.glyco_site_id = pp.glyco_site_id
 				WHERE pp.ipi_data_id = $ipi_data_id
@@ -413,7 +413,7 @@ sub get_identified_peptides{
 				FROM $TBGP_IDENTIFIED_PEPTIDE id
         JOIN $TBGP_IDENTIFIED_TO_IPI iti 
           ON iti.identified_peptide_id = id.identified_peptide_id
-				JOIN $TBGP_GLYCO_SITE gs ON (gs.glyco_site_id = iti.glyco_site_id)
+				JOIN $TBGP_GLYCOSITE gs ON (gs.glyco_site_id = iti.glyco_site_id)
 				WHERE iti.ipi_data_id = $ipi_data_id
 				~;
 	
@@ -434,7 +434,7 @@ sub get_glyco_sites{
 				glyco_site_id, 
 				protein_glyco_site_position,
 				glyco_score 
-				FROM $TBGP_GLYCO_SITE
+				FROM $TBGP_GLYCOSITE
 				WHERE ipi_data_id = $ipi_data_id
 				~;
 	
