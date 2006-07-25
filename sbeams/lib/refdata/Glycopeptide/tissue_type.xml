@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <SBEAMS_EXPORT>
-    <AT_tissue_type
+    <GP_tissue_type
         tissue_type_name="prostate"
         record_status="N"
         created_by_id="372"
@@ -12,7 +12,7 @@
         owner_group_id="8"
         modified_by_id="372"
         tissue_type_description="A gland of the male reproductive system." />
-    <AT_tissue_type
+    <GP_tissue_type
         tissue_type_name="ovary"
         record_status="N"
         created_by_id="372"
@@ -24,7 +24,7 @@
         owner_group_id="8"
         modified_by_id="372"
         tissue_type_description="female reproductive organ which produces ova" />
-    <AT_tissue_type
+    <GP_tissue_type
         tissue_type_name="lymphocytes"
         record_status="N"
         created_by_id="372"
@@ -36,7 +36,7 @@
         owner_group_id="8"
         modified_by_id="372"
         tissue_type_description="Nearly colorless cells found in the blood, lymph, and lymphoid tissues" />
-    <AT_tissue_type
+    <GP_tissue_type
         tissue_type_name="serum"
         record_status="N"
         created_by_id="372"
@@ -49,7 +49,7 @@
         owner_group_id="8"
         modified_by_id="372"
         tissue_type_description="lear yellowish fluid obtained upon separating whole blood into its solid and liquid components" />
-    <AT_tissue_type
+    <GP_tissue_type
         tissue_type_name="breast"
         record_status="N"
         created_by_id="372"
@@ -61,7 +61,7 @@
         owner_group_id="8"
         modified_by_id="372"
         tissue_type_description="Milk-secreting, glandular organs on the chest of female mammals" />
-    <AT_tissue_type
+    <GP_tissue_type
         tissue_type_name="liver"
         record_status="N"
         created_by_id="372"
@@ -73,7 +73,7 @@
         owner_group_id="8"
         modified_by_id="372"
         tissue_type_description="glandular vertebrate organ active in the metabolism of carbohydrates, fats, and proteins." />
-    <AT_tissue_type
+    <GP_tissue_type
         tissue_type_name="bladder"
         record_status="N"
         created_by_id="372"
@@ -87,7 +87,7 @@ Anatomy. Any of various distensible membranous sacs, such as the urinary bladder
         owner_group_id="8"
         modified_by_id="372"
         tissue_type_description="Distensible membranous sacs, typically the urinary bladder" />
-    <AT_tissue_type
+    <GP_tissue_type
         tissue_type_name="unknown"
         record_status="N"
         created_by_id="372"
@@ -98,7 +98,7 @@ Anatomy. Any of various distensible membranous sacs, such as the urinary bladder
         owner_group_id="8"
         modified_by_id="372"
         tissue_type_description="unspecified tissue type" />
-    <AT_tissue_type
+    <GP_tissue_type
         tissue_type_name="lung"
         record_status="N"
         created_by_id="372"
@@ -110,7 +110,7 @@ Anatomy. Any of various distensible membranous sacs, such as the urinary bladder
         owner_group_id="1"
         modified_by_id="372"
         tissue_type_description="Spongy, saclike respiratory organs in most vertebrates" />
-    <AT_tissue_type
+    <GP_tissue_type
         tissue_type_name="blood"
         record_status="N"
         created_by_id="372"
@@ -122,7 +122,7 @@ Anatomy. Any of various distensible membranous sacs, such as the urinary bladder
         owner_group_id="40"
         modified_by_id="372"
         tissue_type_description="Fluid consisting of plasma, blood cells, and platelets that is circulated by the heart" />
-    <AT_tissue_type
+    <GP_tissue_type
         tissue_type_name="heart"
         record_status="N"
         created_by_id="372"
@@ -134,7 +134,7 @@ Anatomy. Any of various distensible membranous sacs, such as the urinary bladder
         owner_group_id="40"
         modified_by_id="372"
         tissue_type_description="Chambered muscular organ in vertebrates that pumps blood" />
-    <AT_tissue_type
+    <GP_tissue_type
         tissue_type_name="bone"
         record_status="N"
         created_by_id="372"
@@ -146,7 +146,7 @@ Anatomy. Any of various distensible membranous sacs, such as the urinary bladder
         owner_group_id="40"
         modified_by_id="372"
         tissue_type_description="Dense, semirigid, porous, calcified connective tissue" />
-    <AT_tissue_type
+    <GP_tissue_type
         tissue_type_name="diabetic"
         record_status="N"
         created_by_id="372"
@@ -158,7 +158,7 @@ Anatomy. Any of various distensible membranous sacs, such as the urinary bladder
         owner_group_id="40"
         modified_by_id="372"
         tissue_type_description="Sample from diabetic organism" />
-    <AT_tissue_type
+    <GP_tissue_type
         tissue_type_name="neuron"
         record_status="N"
         created_by_id="372"

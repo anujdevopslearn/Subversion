@@ -1,5 +1,5 @@
 <SBEAMS_EXPORT>
-    <AT_glyco_sample
+    <GP_unipep_sample
         record_status="N"
         generation_date="2005-06-24 11:50:00"
         created_by_id="3"
@@ -12,7 +12,7 @@
         sample_id="1"
         sample_name="prostate1"
         project_id="1" />
-    <AT_glyco_sample
+    <GP_unipep_sample
         record_status="N"
         generation_date="2005-06-24 11:50:00"
         created_by_id="3"
@@ -25,7 +25,7 @@
         sample_id="2"
         sample_name="serum"
         project_id="1" />
-    <AT_glyco_sample
+    <GP_unipep_sample
         record_status="N"
         generation_date="2005-06-24 12:05:00"
         created_by_id="3"
@@ -38,7 +38,7 @@
         sample_id="3"
         sample_name="ovarian_p"
         project_id="1" />
-    <AT_glyco_sample
+    <GP_unipep_sample
         record_status="N"
         generation_date="2005-06-24 12:05:00"
         created_by_id="3"
@@ -51,7 +51,7 @@
         sample_id="4"
         sample_name="ovarian_s"
         project_id="1" />
-    <AT_glyco_sample
+    <GP_unipep_sample
         record_status="N"
         generation_date="2005-06-24 12:14:00"
         created_by_id="3"
@@ -64,7 +64,7 @@
         sample_id="5"
         sample_name="breast_all"
         project_id="1" />
-    <AT_glyco_sample
+    <GP_unipep_sample
         record_status="N"
         generation_date="2005-06-24 12:14:00"
         created_by_id="3"
@@ -77,7 +77,7 @@
         sample_id="6"
         sample_name="breast_cell"
         project_id="1" />
-    <AT_glyco_sample
+    <GP_unipep_sample
         record_status="N"
         generation_date="2005-06-24 12:14:00"
         created_by_id="3"
@@ -90,7 +90,7 @@
         sample_id="7"
         sample_name="lymphocytes"
         project_id="1" />
-    <AT_glyco_sample
+    <GP_unipep_sample
         record_status="N"
         generation_date="2005-06-24 11:50:00"
         created_by_id="3"
@@ -103,7 +103,7 @@
         sample_id="8"
         sample_name="prostate2"
         project_id="1" />
-    <AT_glyco_sample
+    <GP_unipep_sample
         record_status="N"
         generation_date="2005-06-26 01:52:00"
         created_by_id="3"
@@ -116,7 +116,7 @@
         sample_id="9"
         sample_name="liver"
         project_id="1" />
-    <AT_glyco_sample
+    <GP_unipep_sample
         record_status="N"
         generation_date="2005-06-26 10:28:00"
         created_by_id="3"
@@ -129,7 +129,7 @@
         sample_id="10"
         sample_name="bladder"
         project_id="1" />
-    <AT_glyco_sample
+    <GP_unipep_sample
         record_status="N"
         generation_date="2005-06-26 10:30:00"
         created_by_id="3"
