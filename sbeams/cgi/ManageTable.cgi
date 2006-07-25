@@ -166,18 +166,13 @@ sub preFormHook {
   my %args = @_;
 
   my $param_ref = $args{'parameters_ref'};
+  $log->debug( "In local " . $sbeams->get_subname() );
 
   #### If table XXXX
   if ($TABLE_NAME eq "XXXX") {
     $param_ref->{YYYY} = 'XXXX' unless ($param_ref->{YYYY});
 
-  } elsif ($TABLE_NAME eq "project") {
-    # If we're inserting a new record, set the current contact as default PI
-    if ( !defined $param_ref->{PI_contact_id} ) {
-    $param_ref->{PI_contact_id} ||= $sbeams->getCurrent_contact_id();
-    }
-
-  }
+  } 
 
   #### Otherwise, no special processing, so just return undef
   return;
@@ -196,9 +191,9 @@ sub preFormHook {
 sub postFormHook {
   my %args = @_;
 
-  my $query_parameters_ref = $args{'parameters_ref'};
-  my %parameters = %{$query_parameters_ref};
+  my %parameters = %{$args{parameters_ref}};
 
+  $log->debug( "In local " . $sbeams->get_subname() );
 
   #### If table XXXX
   if ($TABLE_NAME eq "XXXX") {
@@ -222,37 +217,14 @@ sub postFormHook {
 sub preUpdateDataCheck {
   my %args = @_;
 
-  my $query_parameters_ref = $args{'parameters_ref'};
-  my %parameters = %{$query_parameters_ref};
-
+  my %parameters = %{$args{'parameters_ref'}};
+  
+  $log->debug( "In local " . $sbeams->get_subname() );
 
   #### If table XXXX
   if ($TABLE_NAME eq "XXXX") {
     return "An error of some sort $parameters{something} invalid";
-    
-  } elsif ($TABLE_NAME eq "project") {
-    # If updating project need to know existing PI and contact.priv <= DATA_ADM 
-    if ( $parameters{apply_action} eq 'UPDATE' ) {
-      my $contact_id = $sbeams->getCurrent_contact_id();
-      
-      my ( $original_pi ) = $sbeams->selectOneColumn( <<"      END" );
-      SELECT pi_contact_id FROM $TB_PROJECT
-      WHERE project_id = $parameters{project_id}
-      END
-      $query_parameters_ref->{original_pi} = $original_pi;
-      return if $original_pi eq $parameters{PI_contact_id};
-      
-      # Make sure current user has admin on this project if PI changed
-      my $best = $sbeams->get_best_permission (
-                                          project_id => $parameters{project_id},
-                                          contact_id => $contact_id
-                                               );
-      unless ( $best && $best <= DATA_ADMIN ) {
-        return "You must be an administrator on this project to edit the PI";
-      }
-    } 
-  }
-
+  } 
 
   #### Otherwise, no special processing, so just return empty string
   return '';
@@ -269,138 +241,11 @@ sub preUpdateDataCheck {
 sub postUpdateOrInsertHook {
   my %args = @_;
 
-  my $query_parameters_ref = $args{'parameters_ref'};
-  my %parameters = %{$query_parameters_ref};
-  my $pk_value = $args{'pk_value'};
-   
-  my $contact_id = $sbeams->getCurrent_contact_id();
-  my $work_group_id = $sbeams->getCurrent_work_group_id();
+  my %parameters = %{$args{parameters_ref}};
+  $log->debug( "In local " . $sbeams->get_subname() );
 
-  if ($TABLE_NAME eq "project") { # Project AMD has extra baggage
-
-    my $priv;
-    my $stat;
-    # Prepare hashes for updates/inserts
-    # Values needed for INSERT into user_proj_perms
-    my %insertUPP = ( project_id => $parameters{project_id},
-                   privilege_id => DATA_ADMIN,
-                   comment => 'Autocreated by SBEAMS',
-                   record_status => 'N' );
-
-    # Values needed for UPDATE of user_proj_perms
-    my %updateUPP = ( privilege_id => DATA_ADMIN, record_status => 'N' );
-
-    # Common values for updateOrInsertRow
-    my %updOrInsInfo = ( table_name => $TB_USER_PROJECT_PERMISSION,
-                         add_audit_parameters => 1,
-                       );
-    my $project = $parameters{project_id};
-
-
-    # orig_id, only applicable on updates.
-    my $orig_pi = $parameters{original_pi};
-
-    # pi_contact, the person the current for has set as pi.
-    my $pi_contact = $parameters{PI_contact_id};
-                         
-    if ( $parameters{apply_action} eq 'INSERT' ) { 
-
-      if ( $pi_contact != $contact_id ) { 
-        # We inserted by proxy. Insert contact_id as a user_project admin
-
-        $sbeams->updateOrInsertRow( %updOrInsInfo,
-                                    insert => 1,
-                                    rowdata_ref => { %insertUPP,
-                                                     contact_id => $contact_id }
-                                   );
-      }
-
-    } elsif ( $parameters{apply_action} eq 'UPDATE' ) { 
-      
-      # UPDATE; PI changed ?
-      if ( $orig_pi == $pi_contact ) {
-
-        # PI unchanged, do nothing
-      } else {
-      
-        # Fetch existing UPP entries for contact and original pi
-        my $upp_orig_pi = $sbeams->getUserProjectPermission(
-                                                      project_id => $project,
-                                                      contact_id => $orig_pi
-                                                           );
-        my $upp_new_pi = $sbeams->getUserProjectPermission(
-                                                      project_id => $project,
-                                                      contact_id => $pi_contact
-                                                           );
-
-        # Since the pi changed, we need to make sure the current PI doesn't
-        # have a stray upp record. 
-        if ( defined $$upp_new_pi{id} ) {
-
-          # Well, we should delete the old record, but it turns out that 
-          # this causes other problems.  Leaving stub in here in case we
-          # ever get a chance to do the right thing.
-          # 'delete' old record
-          if ( 0 && $$upp_new_pi{status} ne 'D' ) {
-          $sbeams->updateOrInsertRow( %updOrInsInfo,
-                                      update => 1,
-                                      PK_value => $$upp_new_pi{id},
-                                      PK_name => 'user_project_permission_id',
-                                      rowdata_ref => 
-                                      { %updateUPP, record_status => 'D' } 
-                                );
-          }
-        } # end upp exists block
-          
-        # Does upp entry already exist for original_pi? 
-        if ( !defined $$upp_orig_pi{id} ) {
-          # No; insert upp for original pi 
-          $sbeams->updateOrInsertRow( %updOrInsInfo,
-                                      insert => 1,
-                                      rowdata_ref => 
-                                       { %insertUPP, contact_id => $orig_pi } 
-                                );
-        } else {
-          # Yes; upgrade to admin iff necessary 
-          if ( $$upp_orig_pi{privilege} != DATA_ADMIN ||
-               $$upp_orig_pi{status} eq 'D' ) {
-
-            $sbeams->updateOrInsertRow( %updOrInsInfo,
-                                        update => 1,
-                                        PK_value => $$upp_orig_pi{id},
-                                        PK_name => 'user_project_permission_id',
-                                        rowdata_ref => 
-                                        { %updateUPP } 
-                                      );
-          }
-
-        }
-
-      } # end upp_exists block
-         
-    } elsif ( $parameters{apply_action} eq 'DELETE' ) {
-      # DELETE; will we even get here? 
-    } else {
-      # Shouldn't get here
-      print STDERR "Unknown action, report this error\n";
-    } # end apply_action block
-
-
-  if ( $parameters{apply_action} eq 'INSERT' ) {
-    # Chose to keep this separate from the block above for clarity.  If the 
-    # user creates a project *and* their current project_id is null, then we
-    # will set this as their current project_id.
-    if ( ! $sbeams->getCurrent_project_id() ) {
-      $sbeams->setCurrent_project_id( set_to_project_id => $args{pk_value} ); 
-    }
-      
-  }
-    
-  # end tablename eq 'project' block
-  } elsif ($TABLE_NAME eq "XXXX") { # Insert other table-specific instrux here.
-
+  if ($TABLE_NAME eq "X") { # Insert other table-specific instrux here.
     return "An error of some sort $parameters{something} invalid";
-
   }
 
   #### Otherwise, no special processing, so just return undef

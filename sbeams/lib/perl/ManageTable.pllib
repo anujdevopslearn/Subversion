@@ -262,8 +262,9 @@ sub printEntryForm {
   $current_project_name = $sbeams->getCurrent_project_name;
 
 
-  #### Execute some special code for the current table
-  preFormHook(parameters_ref=>\%parameters);
+  # Execute some special code for the current table
+  # Execute the global hook, it calls module-specific version 
+  globalPreFormHook(parameters_ref=>\%parameters);
 
 
   #### Query to obtain column information about the table being managed
@@ -995,8 +996,9 @@ sub printEntryForm {
   }
 
 
-  #### Allow some additional processing here based on current table
-  postFormHook(parameters_ref=>\%parameters);
+  # Allow some additional processing here based on current table
+  # Execute the global hook, it calls module-specific version 
+  globalPostFormHook(parameters_ref=>\%parameters);
 
   if ( $viewStates{read_insert} || $viewStates{read_only} ) {
 
@@ -1775,8 +1777,8 @@ sub processEntryForm {
 
       } # end foreach element
 
-      #### Run the module-specific data check
-      my $chk_err = preUpdateDataCheck(parameters_ref=>\%parameters);
+      # Run global data check, which calls module-specific version 
+      my $chk_err = globalPreUpdateDataCheck(parameters_ref=>\%parameters);
       if ($chk_err) {
         $sbeams->printInsufficientPermissions($chk_err, 'Permissions');
         return 0;
@@ -2104,8 +2106,8 @@ sub processEntryForm {
 
       } # end foreach
 
-      #### Execute the postUpdateOrInsertHook()
-      postUpdateOrInsertHook(
+      # Execute the global hook, it calls module-specific version 
+      globalPostUpdateOrInsertHook(
         parameters_ref => \%parameters,
         pk_value => $parameters{$PK_COLUMN_NAME},
       );
@@ -3254,8 +3256,251 @@ sub addPrivilegeError {
   END_ERR
 }
 
+### Added global versions of the 'hook' routines, each will call out to 
+### the corresponding local version.  DSC 2006-07-25
+
+###############################################################################
+# globalPreFormHook
+#
+# This is a hook to do some processing before all the lines of data entry
+# form have been displayed based on the current table name.  This might be
+# used to set some defaults or something.
+###############################################################################
+sub globalPreFormHook {
+  my %args = @_;
+
+  my %params = %{$args{parameters_ref}};
+  $log->debug( "In global " . $sbeams->get_subname() );
+
+  #### If table eq X
+  if ($TABLE_NAME eq "project") {
+    # If we're inserting a new record, set the current contact as default PI
+    $params{PI_contact_id} = $sbeams->getCurrent_contact_id() if !defined $params{PI_contact_id};
+  }
+
+  # Run local version 
+  return preFormHook(%args);
+
+} # end globalPreFormHook
+
+
+
+###############################################################################
+# globalPostFormHook
+#
+# This is a hook to do some processing after all the lines of data entry
+# form have been displayed but before the table has been closed based on
+# the current table name.
+###############################################################################
+sub globalPostFormHook {
+  my %args = @_;
+
+  my %parameters = %{$args{parameters_ref}};
+
+  #### If table eq X
+  if ($TABLE_NAME eq "X") {
+    return "An error of some sort $parameters{something} invalid";
+  }
+  $log->debug( "In global " . $sbeams->get_subname() );
+
+  # Run local version 
+  return postFormHook(%args);
+
+} # end globalPostFormHook
+
+
+###############################################################################
+# globalPreUpdateDataCheck
+#
+# For certain tables, there are additional checks that should be made before
+# an INSERT or UPDATE is performed.
+###############################################################################
+sub globalPreUpdateDataCheck {
+  my %args = @_;
+
+  my %parameters = %{$args{'parameters_ref'}};
+
+  # If table eq 'X' then some error
+  if ($TABLE_NAME eq "project") {
+
+    # If updating project need to know existing PI and contact.priv <= DATA_ADM 
+    if ( $parameters{apply_action} eq 'UPDATE' ) {
+      my $contact_id = $sbeams->getCurrent_contact_id();
+      
+      my ( $original_pi ) = $sbeams->selectOneColumn( <<"      END" );
+      SELECT pi_contact_id FROM $TB_PROJECT
+      WHERE project_id = $parameters{project_id}
+      END
+      $parameters{original_pi} = $original_pi;
+      return if $original_pi eq $parameters{PI_contact_id};
+      
+      # Make sure current user has admin on this project if PI changed
+      my $best = $sbeams->get_best_permission (
+                                          project_id => $parameters{project_id},
+                                          contact_id => $contact_id
+                                               );
+      unless ( $best && $best <= DATA_ADMIN ) {
+        return "You must be an administrator on this project to edit the PI";
+      }
+    } 
+  }
+  $log->debug( "In global " . $sbeams->get_subname() );
+
+  return preUpdateDataCheck( %args );
+
+} # end globalPreUpdateDataCheck
+
+
+
+###############################################################################
+# globalPostUpdateOrInsertHook
+#
+# This is a hook to do some processing after the record has been updated
+# or inserted.
+###############################################################################
+sub globalPostUpdateOrInsertHook {
+  my %args = @_;
+  $log->debug( "In global " . $sbeams->get_subname() );
+
+  my $query_parameters_ref = $args{'parameters_ref'};
+  my %parameters = %{$query_parameters_ref};
+  my $pk_value = $args{'pk_value'};
+   
+  my $contact_id = $sbeams->getCurrent_contact_id();
+  my $work_group_id = $sbeams->getCurrent_work_group_id();
+
+  if ($TABLE_NAME eq "project") { # Project AMD has extra baggage
+
+    my $priv;
+    my $stat;
+    # Prepare hashes for updates/inserts
+    # Values needed for INSERT into user_proj_perms
+    my %insertUPP = ( project_id => $parameters{project_id},
+                   privilege_id => DATA_ADMIN,
+                   comment => 'Autocreated by SBEAMS',
+                   record_status => 'N' );
+
+    # Values needed for UPDATE of user_proj_perms
+    my %updateUPP = ( privilege_id => DATA_ADMIN, record_status => 'N' );
+
+    # Common values for updateOrInsertRow
+    my %updOrInsInfo = ( table_name => $TB_USER_PROJECT_PERMISSION,
+                         add_audit_parameters => 1,
+                       );
+    my $project = $parameters{project_id};
+
+
+    # orig_id, only applicable on updates.
+    my $orig_pi = $parameters{original_pi};
+
+    # pi_contact, the person the current for has set as pi.
+    my $pi_contact = $parameters{PI_contact_id};
+                         
+    if ( $parameters{apply_action} eq 'INSERT' ) { 
+
+      if ( $pi_contact != $contact_id ) { 
+        # We inserted by proxy. Insert contact_id as a user_project admin
+
+        $sbeams->updateOrInsertRow( %updOrInsInfo,
+                                    insert => 1,
+                                    rowdata_ref => { %insertUPP,
+                                                     contact_id => $contact_id }
+                                   );
+      }
+
+    } elsif ( $parameters{apply_action} eq 'UPDATE' ) { 
+      
+      # UPDATE; PI changed ?
+      if ( $orig_pi == $pi_contact ) {
+
+        # PI unchanged, do nothing
+      } else {
+      
+        # Fetch existing UPP entries for contact and original pi
+        my $upp_orig_pi = $sbeams->getUserProjectPermission(
+                                                      project_id => $project,
+                                                      contact_id => $orig_pi
+                                                           );
+        my $upp_new_pi = $sbeams->getUserProjectPermission(
+                                                      project_id => $project,
+                                                      contact_id => $pi_contact
+                                                           );
+
+        # Since the pi changed, we need to make sure the current PI doesn't
+        # have a stray upp record. 
+        if ( defined $$upp_new_pi{id} ) {
+
+          # Well, we should delete the old record, but it turns out that 
+          # this causes other problems.  Leaving stub in here in case we
+          # ever get a chance to do the right thing.
+          # 'delete' old record
+          if ( 0 && $$upp_new_pi{status} ne 'D' ) {
+          $sbeams->updateOrInsertRow( %updOrInsInfo,
+                                      update => 1,
+                                      PK_value => $$upp_new_pi{id},
+                                      PK_name => 'user_project_permission_id',
+                                      rowdata_ref => 
+                                      { %updateUPP, record_status => 'D' } 
+                                );
+          }
+        } # end upp exists block
+          
+        # Does upp entry already exist for original_pi? 
+        if ( !defined $$upp_orig_pi{id} ) {
+          # No; insert upp for original pi 
+          $sbeams->updateOrInsertRow( %updOrInsInfo,
+                                      insert => 1,
+                                      rowdata_ref => 
+                                       { %insertUPP, contact_id => $orig_pi } 
+                                );
+        } else {
+          # Yes; upgrade to admin iff necessary 
+          if ( $$upp_orig_pi{privilege} != DATA_ADMIN ||
+               $$upp_orig_pi{status} eq 'D' ) {
+
+            $sbeams->updateOrInsertRow( %updOrInsInfo,
+                                        update => 1,
+                                        PK_value => $$upp_orig_pi{id},
+                                        PK_name => 'user_project_permission_id',
+                                        rowdata_ref => 
+                                        { %updateUPP } 
+                                      );
+          }
+
+        }
+
+      } # end upp_exists block
+         
+    } elsif ( $parameters{apply_action} eq 'DELETE' ) {
+      # DELETE; will we even get here? 
+    } else {
+      # Shouldn't get here
+      print STDERR "Unknown action, report this error\n";
+    } # end apply_action block
+
+
+  if ( $parameters{apply_action} eq 'INSERT' ) {
+    # Chose to keep this separate from the block above for clarity.  If the 
+    # user creates a project *and* their current project_id is null, then we
+    # will set this as their current project_id.
+    if ( ! $sbeams->getCurrent_project_id() ) {
+      $sbeams->setCurrent_project_id( set_to_project_id => $args{pk_value} ); 
+    }
+      
+  } 
+# end tablename eq 'project' block
+  } elsif ($TABLE_NAME eq "XXXX") { # Insert other table-specific instrux here.
+    return "An error of some sort $parameters{something} invalid";
+  }
+
+  return postUpdateOrInsertHook(%args);
+
+} # end globalPostUpdateOrInsertHook
+
+
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 1;
+
