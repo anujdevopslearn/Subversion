@@ -1146,9 +1146,8 @@ sub get_experiment_samples {
   ORDER BY biosample_group_id, biosample_name ASC
   END
        
-  $log->debug( $sql );
   my $table = SBEAMS::Connection::DataTable->new( WIDTH => '80%' );
-  $table->addResultsetHeader( ['Sample Name', 'Tissue', 'Vol (&#181;l)',
+  $table->addResultsetHeader( ['Sample Name', 'Organism', 'Vol (&#181;l)',
                        'Storage location', 'Glycocap', 'MS_run', 'mzXML', 'pep3D' ] );
 
   my $cnt = 0;
@@ -1161,22 +1160,22 @@ sub get_experiment_samples {
     $row[0] =<<"    END";
     <A HREF=sample_details.cgi?sample_id=$id>$row[0]</A>
     END
-    if ( 1 || $cnt > 5 ) {
+    if ( $cnt > 5 ) {
       $row[7] = undef;
       $row[6] = undef;
     } else {
       $row[6] = 'Yes';
-      $row[7] = '<A HREF=/tmp/pep3d.gif>Yes</A>';
+      $row[7] = '<A HREF=notyet.cgi>Yes</A>';
     }
-    if ( 1 || $cnt > 11 ) {
+    if ( $cnt > 11 ) {
       $row[5] = undef;
     } else {
-      $row[5] = '<A HREF=/tmp/pep3d.gif>Yes</A>';
+      $row[5] = '<A HREF=notyet.cgi>Yes</A>';
     }
-    if ( 1 || $cnt > 108 ) {
+    if (  $cnt > 108 ) {
       $row[4] = undef;
     } else {
-      $row[4] = '<A HREF=/tmp/pep3d.gif>Yes</A>';
+      $row[4] = '<A HREF=notyet.cgi>Yes</A>';
     }
     $cnt++;
     $table->addRow( \@row )
