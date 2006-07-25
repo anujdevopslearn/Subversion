@@ -8,7 +8,7 @@ GP_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi
 GP_ipi_version	IPI Version	Glycopeptide_infrastructure	YES	$TBGP_IPI_VERSION	ipi_version_id		ManageTable.cgi?TABLE_NAME=GP_ipi_version		
 GP_ipi_data	IPI Data	Glycopeptide_infrastructure	YES	$TBGP_IPI_DATA	ipi_data_id		ManageTable.cgi?TABLE_NAME=GP_ipi_data		
 GP_cellular_location	Cellular Location	Glycopeptide_infrastructure	YES	$TBGP_CELLULAR_LOCATION	cellular_location_id		ManageTable.cgi?TABLE_NAME=GP_cellular_location		
-GP_glyco_site	Glyco Site	Glycopeptide_infrastructure	NO	$TBGP_GLYCO_SITE	glyco_site_id				
+GP_glycosite	Glyco Site	Glycopeptide_infrastructure	NO	$TBGP_GLYCOSITE	glycosite_id				
 GP_identified_peptide	Identified Peptide	Glycopeptide_infrastructure	NO	$TBGP_IDENTIFIED_PEPTIDE	identified_peptide_id				
 GP_predicted_peptide	Predicted Peptide	Glycopeptide_infrastructure	NO	$TBGP_PREDICTED_PEPTIDE	predicted_peptide_id				
 GP_observed_to_sample	Peptide to Sample	Glycopeptide_infrastructure	NO	$TBGP_PEPTIDE_TO_SAMPLE	peptide_to_sample_id				
@@ -18,3 +18,5 @@ GP_unipep_sample	Sample	Glycopeptide_infrastructure	YES	$TBGP_UNIPEP_SAMPLE	samp
 GP_synthesized_peptide	Synthesized Peptide	Glycopeptide_infrastructure	NO	$TBGP_SYNTHESIZED_PEPTIDE	synthesized_peptide_id				
 GP_observed_peptide	Observed Peptide	Glycopeptide_infrastructure	NO	$TBGP_OBSERVED_PEPTIDE	observed_peptide_id				
 GP_peptide_search	Peptide Search	Glycopeptide_infrastructure	NO	$TBGP_PEPTIDE_SEARCH	peptide_search_id				
+GP_predicted_to_glycosite	Predicted to Glycosite	Glycopeptide_infrastructure	NO	$TBGP_PREDICTED_TO_GLYCOSITE	predicted_to_glycosite_id				
+GP_identified_to_glycosite	Identified to Glycosite	Glycopeptide_infrastructure	NO	$TBGP_IDENTIFIED_TO_GLYCOSITE	identified_to_glycosite_id				

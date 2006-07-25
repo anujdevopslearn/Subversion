@@ -87,17 +87,17 @@ GP_BrowseBioSequence	13	display_options	Display Options									N	multioptionlis
 GP_BrowseBioSequence	14	row_limit	Maximum Rows									N	text	10		Y	Y	N	Limit the numbers of rows displayed.  If not provided, default is 100 rows.		
 GP_ipi_version	1	ipi_version_id	IPI Version ID	int	4	0	N		Y							N	N				pkDEFAULT
 GP_ipi_version	2	ipi_version_name	IPI Version Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	IPI database name/ Source of Predicted and identified peptides		
-GP_ipi_version	2	ipi_version_file	IPI Version File	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Name of file from which db was loaded		
-GP_ipi_version	3	ipi_version_date	IPI Version Date	datetime	8	0	N		N				text	50		Y	Y	N	Date the data file was produced		
-GP_ipi_version	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-GP_ipi_version	5	organism_id	Organism	int	4	0	N		N	organism	organism_id	N	text	6		N	N	Y	Organism_id for dataset	SELECT organism_id, organism_name FROM $TB_ORGANISM WHERE record_status != 'D' ORDER BY sort_order,organism_name	
-GP_ipi_version	6	is_default	Is default	char	1	0	N	N	N			Y	text	6		Y	Y	N	Is this the default db for this particular organism		
-GP_ipi_version	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-GP_ipi_version	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-GP_ipi_version	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-GP_ipi_version	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-GP_ipi_version	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-GP_ipi_version	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+GP_ipi_version	3	ipi_version_file	IPI Version File	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Name of file from which db was loaded		
+GP_ipi_version	4	ipi_version_date	IPI Version Date	datetime	8	0	N		N				text	50		Y	Y	N	Date the data file was produced		
+GP_ipi_version	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+GP_ipi_version	6	organism_id	Organism	int	4	0	N		N	organism	organism_id	N	text	6		N	N	Y	Organism_id for dataset	SELECT organism_id, organism_name FROM $TB_ORGANISM WHERE record_status != 'D' ORDER BY sort_order,organism_name	
+GP_ipi_version	7	is_default	Is default	char	1	0	N	N	N			Y	text	6		Y	Y	N	Is this the default db for this particular organism		
+GP_ipi_version	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GP_ipi_version	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+GP_ipi_version	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GP_ipi_version	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+GP_ipi_version	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+GP_ipi_version	13	record_status	Record Status	char	1	0	N	N	N							N	N				
 GP_ipi_data	1	ipi_data_id	IPI Data ID	int	4	0	N		Y							N	N				
 GP_ipi_data	2	ipi_version_id	IPI Version ID	int	4	0	N		N	GP_ipi_version	ipi_version_id	Y				N	N	Y			
 GP_ipi_data	3	ipi_accession_number	IPI Accession Number	varchar	50	0	N		N			Y	text	30		Y	Y	N	IPI Accession Number ie IPI0000123		
@@ -118,10 +118,11 @@ GP_cellular_location	5	date_modified	Date Record Modified	datetime	8	0	N	CURRENT
 GP_cellular_location	6	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 GP_cellular_location	7	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 GP_cellular_location	8	record_status	Record Status	char	1	0	N	N	N							N	N				
-GP_glyco_site	1	glyco_site_id	Glyco Site ID	int	4	0	N		Y							N	N				pkDEFAULT
-GP_glyco_site	2	protein_glyco_site_position	Protein Glyco Site Prosition	int	4	0	N		N			Y				N	N	Y			
-GP_glyco_site	3	ipi_data_id	IPI Data ID	int	4	0	N		N	GP_ipi_data	ipi_data_id	Y				N	N	Y			
-GP_glyco_site	4	glyco_score	Glyco Score	real	4	0	N		N			Y	text	50		Y	Y	N	Probability that there is glyco site		
+GP_glycosite	1	glycosite_id	Glyco Site ID	int	4	0	N		Y							N	N				pkDEFAULT
+GP_glycosite	2	protein_glycosite_position	Protein Glyco Site Prosition	int	4	0	N		N			Y				N	N	Y			
+GP_glycosite	3	ipi_data_id	IPI Data ID	int	4	0	N		N	GP_ipi_data	ipi_data_id	Y				N	N	Y			
+GP_glycosite	4	glyco_score	Glyco Score	real	4	0	N		N			Y	text	50		Y	Y	N	Probability that there is glyco site		
+GP_glycosite	5	site_context	Site Context	varchar	64	0	N		N				text	50		Y	Y	N	Amino Acids around the Motif site		
 GP_identified_peptide	1	identified_peptide_id	Identified Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
 GP_identified_peptide	2	identified_peptide_sequence	Identified Peptide Sequence	varchar	900	0	N		N			Y	text	50		Y	Y	N	Peptide Sequence Identified by MS/MS run		
 GP_identified_peptide	3	best_peptide_prophet_score	Best Peptide Prophet Score 	real	4	0	Y		N			Y	text	6		Y	Y	N	Peptide Prophet Score		
@@ -129,6 +130,14 @@ GP_identified_peptide	4	peptide_mass	Peptide Mass	real	4	0	N		N			Y	text	50		Y	Y
 GP_identified_peptide	5	n_tryptic_ends	Number of Tryptic Ends	int	4	0	Y		N										Number of tryptic ends for this identified peptide		
 GP_identified_peptide	6	matching_sequence	Matching Sequence	varchar	900	0	N		N			Y	text	50		Y	Y	N	Undecorated sequence suitable for searching		
 GP_identified_peptide	7	n_obs	Number of Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times peptide was observed in all tissue types		
+GP_identified_to_ipi	1	identified_to_ipi	Identified to IPI ID	int	4	0	N		Y			Y				N	N	Y			
+GP_identified_to_ipi	2	identified_peptide_id	Identified peptide ID	int	4	0	N		N	GP_identified_peptide	identified_peptide_id	Y				N	N	Y			
+GP_identified_to_ipi	3	ipi_data_id	IPI Data ID	int	4	0	N		N	GP_ipi_data	ipi_data_id	Y				N	N	Y			
+GP_identified_to_glycosite	1	identified_to_glycosite_id	Identified to GlycositeI ID	int	4	0	N		Y			Y				N	N	Y	Primary key		
+GP_identified_to_glycosite	2	identified_peptide_id	Identified peptide ID	int	4	0	N		N	GP_identified_peptide	identified_peptide_id	Y				N	N	Y	Glyco site ID		
+GP_identified_to_glycosite	3	glycosite_id	Glyco Site ID	int	4	0	N		N	GP_glycosite	glycosite_id	Y				N	N	Y	Identified peptide ID		
+GP_identified_to_glycosite	4	identified_start	Identified Peptide Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of the peptide on the IPI protein		
+GP_identified_to_glycosite	5	identified_stop	Identified  Peptide Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein		
 GP_observed_peptide	1	observed_peptide_id	Observed Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
 GP_observed_peptide	2	identified_peptide_id	Identified Peptide ID	int	4	0	N		N	GP_identified_peptide	identified_peptide_id	Y	optionlist			N	N		Identified peptide which this peptide maps to	SELECT identified_peptide_id,matching_sequence FROM $TBGP_IDENTIFIED_PEPTIDE WHERE record_status != 'D' 	
 GP_observed_peptide	3	search_file_id	Search File ID	int	4	0	N		N	GP_search_file	search_file_id	Y	optionlist			N	N		Sequence search file from which identification was obtained	SELECT search_file_id, search_file_name FROM $RBGP_SEARCH_FILE WHERE record_status != 'D'	
@@ -144,7 +153,10 @@ GP_observed_peptide	12	experimental_percent_ACN	Experimental Percent ACN	real	4	
 GP_observed_peptide	13	derived_percent_ACN	Derived percent ACN	real	4	0	Y		N			Y	text	10		N	N	N	Computationally derived Percent ACN		
 GP_observed_peptide	14	spectrum_path	Spectrum Path	varchar	256	0	Y		N			Y	text	10		N	N	N	Path to spectrum file		
 GP_observed_peptide	15	charge_state	Charge State	varchar	36	0	Y		N			Y	text	10		N	N	N	Path to spectrum file		
-GP_observed_peptide	15	search_file	Search File	int	4	0	Y		N	GP_peptide_search	peptide_search_id	Y	text	10		N	N	N	Search results file from which observation is taken		
+GP_observed_peptide	16	mass_to_charge	Mass To Charge	real	4	0	Y		N	GP_peptide_search	peptide_search_id	Y	text	10		N	N	N	Search results file from which observation is taken		
+GP_observed_to_sample	1	observed_to_sample_id	Observed To Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
+GP_observed_to_sample	2	identified_peptide_id	Identified Peptide ID	int	4	0	N		N	GP_observed_peptide	observed_peptide_id	Y				N	N				pkDEFAULT
+GP_observed_to_sample	3	sample_id	Sample ID	int	4	0	N		N	GP_glyco_sample	sample_id	Y				N	N				pkDEFAULT
 GP_predicted_peptide	1	predicted_peptide_id	Predicted Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
 GP_predicted_peptide	2	ipi_data_id	IPI Data ID	int	4	0	N		N	GP_ipi_data	ipi_data_id	Y				N	N	Y			
 GP_predicted_peptide	3	predicted_peptide_sequence	Predicted Peptide Sequence	text	16	0	N		N			Y	text	50		Y	Y	N	Peptide Sequence Identified by MS/MS run		
@@ -153,13 +165,15 @@ GP_predicted_peptide	5	detection_probability	Detection Probability	real	4	0	N		N
 GP_predicted_peptide	6	n_proteins_match_peptide	Number of Proteins Matching Peptide	int	4	0	N		N			Y	text	10		N	N	Y	Number of Proteins that match this protein, including the current protein		
 GP_predicted_peptide	7	matching_protein_ids	IPI Protein Ids	text	16	0	N		N			Y	text	50		Y	Y	N	IPI accession numbers for all the proteins that contain this predicted peptide		
 GP_predicted_peptide	8	protein_similarity_score	Protein Similarity Score	real	4	0	N		N			Y	text	50		Y	Y	N	Smiliarity score for all the IPI proteins that match this peptide		
-GP_predicted_peptide	9	glyco_site_id	Glyco Site ID	int	4	0	Y		N	GP_glyco_site	glyco_site_id					N	N				
-GP_predicted_peptide	10	predicted_start	Peptide Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of the peptide on the IPI protein		
-GP_predicted_peptide	11	predicted_stop	Peptide Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein		
+GP_predicted_peptide	9	glycosite_id	Glyco Site ID	int	4	0	Y		N	GP_glycosite	glycosite_id					N	N				
+GP_predicted_peptide	10	predicted_start	Predicted Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of the peptide on the IPI protein		
+GP_predicted_peptide	11	predicted_stop	Predicted Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein		
 GP_predicted_peptide	12	matching_sequence	Matching Sequence	varchar	900	0	N		N			Y	text	50		Y	Y	N	Undecorated sequence suitable for searching		
-GP_observed_to_sample	1	observed_to_sample_id	Observed To Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
-GP_observed_to_sample	2	identified_peptide_id	Identified Peptide ID	int	4	0	N		N	GP_observed_peptide	observed_peptide_id	Y				N	N				pkDEFAULT
-GP_observed_to_sample	3	sample_id	Sample ID	int	4	0	N		N	GP_glyco_sample	sample_id	Y				N	N				pkDEFAULT
+GP_predicted_to_glycosite	1	predicted_to_glycosite_id	Predicted to IPI ID	int	4	0	N		Y			Y				N	N	Y			
+GP_predicted_to_glycosite	2	predicted_peptide_id	Predicted peptide ID	int	4	0	N		N	GP_predicted_peptide	predicted_peptide_id	Y				N	N	Y			
+GP_predicted_to_glycosite	3	glycosite_id	Glycosite ID	int	4	0	N		N	GP_glycosite	glycosite_id	Y				N	N	Y			
+GP_predicted_to_glycosite	4	peptide_start	Peptide Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of the peptide on the IPI protein		
+GP_predicted_to_glycosite	5	peptide_stop	Peptide Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein		
 GP_tissue_type	1	tissue_type_id	Tissue Type ID	int	4	0	N		Y							N	N				pkDEFAULT
 GP_tissue_type	2	tissue_type_name	Tissue Type Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of Tissue		
 GP_tissue_type	3	sort_order	Sort Order	int	4	0	Y	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
@@ -187,14 +201,6 @@ GP_unipep_sample	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TI
 GP_unipep_sample	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 GP_unipep_sample	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 GP_unipep_sample	16	record_status	Record Status	char	1	0	N	N	N							N	N				
-GP_identified_to_ipi	1	identified_to_ipi	Identified to IPI ID	int	4	0	N		Y			Y				N	N	Y			
-GP_identified_to_ipi	2	identified_peptide_id	Identified peptide ID	int	4	0	N		N	GP_identified_peptide	identified_peptide_id	Y				N	N	Y			
-GP_identified_to_ipi	3	ipi_data_id	IPI Data ID	int	4	0	N		N	GP_ipi_data	ipi_data_id	Y				N	N	Y			
-GP_identified_to_glycosite	1	identified_to_glycosite_id	Identified to GlycositeI ID	int	4	0	N		Y			Y				N	N	Y	Primary key		
-GP_identified_to_glycosite	2	identified_peptide_id	Identified peptide ID	int	4	0	N		N	GP_identified_peptide	identified_peptide_id	Y				N	N	Y	Glyco site ID		
-GP_identified_to_glycosite	3	glyco_site_id	Glyco Site ID	int	4	0	N		N	GP_glyco_site	glyco_site_id	Y				N	N	Y	Identified peptide ID		
-GP_identified_to_glycosite	4	identified_start	Identified Peptide Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of the peptide on the IPI protein		
-GP_identified_to_glycosite	5	identified_stop	Identified  Peptide Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein		
 GP_synthesized_peptide	1	synthesized_peptide_id	Synthesized Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
 GP_synthesized_peptide	2	peptide_name	Peptide Name	varchar	255	0	N		N			Y	text	2		Y	Y	Y	Name of this Sample		
 GP_synthesized_peptide	3	vendor_peptide_name	Vendor Peptide Name	varchar	255	0	Y		N			Y	text	2		Y	Y	Y	Name of this Sample		
@@ -203,7 +209,7 @@ GP_synthesized_peptide	5	synthesized_sequence	Synthesized Sequence	varchar	2000	
 GP_synthesized_peptide	6	matching_sequence	Predicted Sequence	varchar	2000	0	Y		N			Y	text	50		Y	Y	N	Undecorated sequence suitable for searching		
 GP_synthesized_peptide	7	mass	Mass	real	4	0	Y		N			Y	text	50		Y	Y	N	Mass in daltons		
 GP_synthesized_peptide	8	concentration	Concentration	real	4	0	Y		N			Y	text	50		Y	Y	N	Concentration in pm/ul		
-GP_synthesized_peptide	9	glyco_site_id	Glyco Site ID	int	4	0	Y		N	GP_glyco_site	glyco_site_id					N	N		Glyco site index this peptide represents		
+GP_synthesized_peptide	9	glycosite_id	Glyco Site ID	int	4	0	Y		N	GP_glycosite	glycosite_id					N	N		Glyco site index this peptide represents		
 GP_synthesized_peptide	10	synthesized_by	Synthesized_by	int	4	0	Y		N	organization	organization_id	Y				Y	Y	N	Company synthesizing peptide		
 GP_synthesized_peptide	11	ipi_data_id	IPI Data ID	int	4	0	Y		N	GP_ipi_data	ipi_data_id	Y				N	N	Y	IPI data ID for the protein this peptide was patterned after		
 GP_synthesized_peptide	12	plate_position	Plate Position	varchar	36	0	Y		N			Y	text	2		Y	Y	Y	Plate position for synthesized peptide		
