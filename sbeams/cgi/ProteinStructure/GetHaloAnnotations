@@ -1014,28 +1014,47 @@ sub verify_biosequence_set_ids {
 
     my @input_ids = split(',',$ids);
     my @verified_ids;
-    foreach my $id ( @input_ids ) {
 
-      #### If the requested biosequence_set_id doesn't exist
-      if (! defined($project_ids{$id})) {
-		$sbeams->reportException(
-          state => 'ERROR',
-          type => 'BAD CONSTRAINT',
-          message => "Non-existent biosequence_set_id = $id specified",
-        );
+    foreach my $id ( @input_ids ) 
+    {
+        ## requested bio seq set id exists:
+        if (exists $project_ids{$id} )
+        {
+            my $okay = 0;
+            if ($project_ids{$id} eq "")
+            {
+                ## let it through, bioseq set has no project id
+                $okay = 1;
+            }
 
-      #### If the project for this biosequence_set is not accessible
-      } elsif (! defined($accessible_project_ids{$project_ids{$id}})) {
-		$sbeams->reportException(
-          state => 'ERROR',
-          type => 'PERMISSION DENIED',
-          message => "Your current privilege settings do not allow you to access biosequence_set_id = $id.  See project owner to gain permission.",
-        );
+            ## if have a project_id but it isn't accessible, print message
+            if ( ($okay == 0) && ! defined($accessible_project_ids{$project_ids{$id}}) )
+            { 
+                ## id exists, but is not accessible project
+                $sbeams->reportException(
+                    state => 'ERROR',
+                    type => 'PERMISSION DENIED',
+                    message => "Your current privilege settings do not allow you to access biosequence_set_id = $id.  See project owner to gain permission.",
+                );
+            } elsif (($okay == 0) && (exists $accessible_project_ids{$project_ids{$id}}))
+            {
+                $okay = 1;
+            }
 
-      #### Else, let it through
-      } else {
-		push(@verified_ids,$id);
-      }
+            if ($okay == 1)
+            {
+                push(@verified_ids,$id);
+            }
+           
+        } else 
+        {
+            #### requested biosequence_set_id doesn't exist
+            $sbeams->reportException(
+                state => 'ERROR',
+                type => 'BAD CONSTRAINT',
+                message => "Non-existent biosequence_set_id = $id specified",
+            );
+        }
 
     }
 
