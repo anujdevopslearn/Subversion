@@ -39,9 +39,9 @@ sub main {
 
 
   #### Define the desired command and parameters
-  my $server_command = "Proteomics/BrowseBioSequence.cgi";
+  my $server_command = "PeptideAtlas/BrowseBioSequence.cgi";
   my $command_parameters = {
-    biosequence_set_id => 3,
+    biosequence_set_id => 20,
     biosequence_gene_name_constraint => "bo%",
     #output_mode => "tsv",
     #apply_action => "QUERY",
@@ -50,9 +50,9 @@ sub main {
 
   #### Another example getting the contents of table PR_dbxref
   if (0 == 1) {
-    $server_command = "Proteomics/ManageTable.cgi";
+    $server_command = "PeptideAtlas/ManageTable.cgi";
     $command_parameters = {
-      TABLE_NAME => "PR_dbxref",
+      TABLE_NAME => "BL_dbxref",
       output_mode => "tsv",
       apply_action => "",
     };
@@ -107,13 +107,15 @@ sub main {
   print "Number of data rows: ",scalar(@{$resultset->{data_ref}}),"\n\n";
 
 
-  #### Print out a column of data
+  #### Print two selected columns of data
   my $column_index = $resultset->{column_hash_ref}->{biosequence_name};
+  my $column_index2 = $resultset->{column_hash_ref}->{biosequence_gene_name};
   if (defined($column_index)) {
-    print $resultset->{column_list_ref}->[$column_index],"\n";
+    print $resultset->{column_list_ref}->[$column_index2],"\t",
+      $resultset->{column_list_ref}->[$column_index],"\n";
     print "---------------------------------\n";
     foreach my $row (@{$resultset->{data_ref}}) {
-      print $row->[$column_index],"\n";
+      print $row->[$column_index2],"\t",$row->[$column_index],"\n";
     }
   }
   print "\n";
