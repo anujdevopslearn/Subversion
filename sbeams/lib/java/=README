@@ -2,7 +2,8 @@ Remember to set this directory (e.g /root/to/sbeams/lib/java) in your CLASSPATH.
 
 #### Make sure Java is in your PATH
 which java javac
-#setenv PATH /tools/java/j2sdk1.4.2/bin:$PATH
+#setenv PATH /tools/java/jdk1.5.0/bin:$PATH
+#rehash
 
 #### Set SBEAMS env variable for convenience only
 #setenv SBEAMS /net/dblocal/www/html/dev2/sbeams
