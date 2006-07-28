@@ -903,7 +903,7 @@ sub evalSQL {
 }
 
 #+
-# Returns reference to a list of tables that this routine knows about.
+# Returns reference to a list of tables that this module knows about.
 #-
 sub get_info_tables {
   return [qw(organization project contact user_work_group protocol
@@ -913,7 +913,7 @@ sub get_info_tables {
 }
 
 #+
-# Returns reference to a list of info_keys that this routine knows about.
+# Returns reference to a list of info_keys that this module knows about.
 #-
 sub get_info_keys {
   return [ qw( ManageTableAllowed CATEGORY DB_TABLE_NAME PK_COLUMN_NAME
@@ -924,6 +924,19 @@ sub get_info_keys {
          ];
 }
 
+#+
+# Method to fetch organism_id from database from provided name
+#-
+sub get_organism_id {
+  my $self = shift;
+  my %args = @_;
+  return unless $args{organism};
+  my ( $id ) = $self->selectrow_array( <<"  END" );
+  SELECT organism_id FROM $TB_ORGANISM where 
+  organism_name = '$args{organism}'
+  END
+  return $id;
+}
 
 
 ###############################################################################
