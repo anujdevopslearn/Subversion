@@ -149,6 +149,7 @@ sub insert_ipi_db {
 
   my $sbeams = $self->getSBEAMS();
   $sbeams->initiate_transaction();
+  my $commit_interval = 10;
   
   while(<DATA>) {
     chomp;
@@ -205,15 +206,16 @@ sub insert_ipi_db {
                                               protein_sequence => $tokens[$heads{'protein sequences'}],
                                             );
 
-        $self->add_predicted( tokens => \@tokens,
-                              ipi_id => $ipi_id, 
-                                 idx => $site_idx );
+        $self->process_ipi_sequence( sequence => $tokens[$heads{'protein sequences'}],
+                              ipi_data_id => $ipi_id, 
+                                 site_idx => $site_idx );
       };
-      if ( 1 || $@ ) {
+      if ( $@ ) {
         $sbeams->rollback_transaction();
         die( "$@" );
       } else {
-        $sbeams->commit_transaction();
+        # Space commits to once per n sequences
+        $sbeams->commit_transaction() unless $count % $commit_interval;
       }
     }
     $stats{max} = ( $stats{$ipi} > $stats{max} ) ? $stats{$ipi} : $stats{max};
@@ -719,10 +721,177 @@ sub map_peptide_to_protein {
 	
 }
 
+#
+# Add predicted tryptic peptide
+#
+sub add_predicted {
 
-###############################################################################
-#Add the glycosite for this row
-###############################################################################
+	my $self = shift;
+  my %args = @_;
+
+  my $err;
+  for my $opt ( qw( ipi_data_id aa_seq start_idx stop_idx ) ) {
+    $err = ( $err ) ? $err . ', ' . $opt : $opt if !defined $args{$opt};
+  }
+  die ( "Missing required parameter(s): $err in " . $self->whatsub() ) if $err;
+
+  my $match = $module->clean_pepseq( $args{aa_seq} );
+  my $mass = $module->calculatePeptideMass( sequence => $match); # Fixme use methyl Cys & N => D?
+  my $detection_prob = -1;
+  my $prot_sim_score = -1;
+
+
+  my $rowdata = { ipi_data_id => $args{ipi_data_id},
+   predicted_peptide_sequence => $args{aa_seq},
+       predicted_peptide_mass => $mass,
+        detection_probability => $detection_prob,
+     n_proteins_match_peptide => 1,
+         matching_protein_ids => 'fixme',
+     protein_similarity_score => $prot_sim_score,
+              predicted_start => $args{start_idx},
+               predicted_stop =>  $args{stop_idx},
+            matching_sequence => $match};
+  
+  my $sbeams = $self->getSBEAMS();
+
+ 	my $predicted_id = $sbeams->updateOrInsertRow( return_PK => 1,
+                                                table_name => $TBGP_PREDICTED_PEPTIDE,
+                                               rowdata_ref => $rowdata,
+                                                   verbose => $self->verbose(),
+                                                  testonly => $self->testonly(),
+                                                    insert => 1,
+                                                        PK => 'predicted_peptide_id',
+                                             );
+  return $predicted_id;
+}
+
+sub whatsub {
+  my $self = shift;
+  my $package = shift || 0;
+  my @call = caller(1);
+  $call[3] =~ s/.*:+([^\:]+)$/$1/ unless $package;
+  return $call[3];
+}
+
+sub add_predicted2glycosite {
+	my $self = shift;
+  my %args = @_;
+
+  my $err;
+  for my $opt ( qw( ipi_data_id site predicted_id ) ) {
+    $err = ( $err ) ? $err . ', ' . $opt : $opt if !$args{$opt};
+  }
+  die ( "Missing required parameter(s): $err in " . $self->whatsub() ) if $err;
+
+  my $key = $args{ipi_data_id} . $args{site};
+  my $glycosite_id = $self->{_ipi2gs}->{$key} || die "Unknown site";  
+  
+  my $rowdata = { glycosite_id => $glycosite_id,
+                 peptide_start => $args{site},
+                  peptide_stop => $args{site} + 3,
+          predicted_peptide_id => $args{predicted_id} };
+
+  my $sb = $self->getSBEAMS();
+
+
+ 	my $id = $sb->updateOrInsertRow( return_PK => 1,
+                                      table_name => $TBGP_PREDICTED_TO_GLYCOSITE,
+                                     rowdata_ref => $rowdata,
+                                          insert => 1,
+                                         PK_name => 'predicted_to_glycosite_id',
+                                                 );
+  return $id;
+}
+
+sub update_peptide_sequence {
+	my $self = shift;
+  my %args = @_;
+
+  my $err;
+  for my $opt ( qw( aa_seq predicted_id ) ) {
+    $err = ( $err ) ? $err . ', ' . $opt : $opt if !defined $args{$opt};
+  }
+  die ( "Missing required parameter(s): $err in " . $self->whatsub() ) if $err;
+
+  my $sbeams = $self->getSBEAMS();
+ 	my $result = $sbeams->updateOrInsertRow( table_name => $TBGP_PREDICTED_PEPTIDE,
+                                          rowdata_ref => { predicted_peptide_sequence => $args{aa_seq} },
+                                               update => 1,
+                                              PK_name => 'predicted_peptide_id',
+                                             PK_value => $args{predicted_id},
+                                           );
+  return $result;
+
+}
+
+#
+# Add predicted tryptic peptides, plus glycosite record if appropriate.
+#
+sub process_ipi_sequence {
+
+	my $self = shift;
+  my %args = @_;
+
+  my $err;
+  for my $opt ( qw( ipi_data_id site_idx sequence ) ) {
+    $err = ( $err ) ? $err . ', ' . $opt : $opt if !defined $args{$opt};
+  }
+  die ( "Missing required parameter(s): $err in " . $self->whatsub() ) if $err;
+
+  # Index into protein
+  my $pidx = 0;
+
+  # Array of glycosite locations
+  my $site = shift( @{$args{site_idx}} );
+
+  # Get theoretical digestion of protein
+  my $peptides = $module->do_tryptic_digestion( aa_seq => $args{sequence},
+                                              flanking => 1 );
+
+  for my $peptide ( @{$peptides} ) {
+    # index of glycosite in peptide
+    my $sidx = $pidx;
+
+    # Increment index
+    $pidx += (length( $peptide ) - 4);
+
+    # Cruft
+    my $num_motifs = 0;
+
+    # Add predicted peptide record
+    my $predicted_id = $self->add_predicted( %args,  # pass through ipi_data_id
+                                             aa_seq => $peptide,
+                                          start_idx => $sidx,
+                                           stop_idx => $pidx
+                                     ) or die "Insert failed $!";
+
+    # If we are in a glyco
+    while ( defined $site && $pidx >= ($site + 1) ) {
+      my $pepidx = ( $site - $sidx ) + 2 + $num_motifs;
+      my $annot_pep = $peptide;
+      substr( $annot_pep, $pepidx, 1 ) = 'N#';
+      print "$peptide => $annot_pep\n";
+      my $aa = substr( $peptide, $pepidx , 3 );
+#      print "\t$pidx\t$pepidx\t$aa\t$site\n";
+      $self->add_predicted2glycosite( %args, site => $site, predicted_id => $predicted_id );
+
+      $site = shift( @{$args{site_idx}} );
+#      print "\t$pidx\t$pepidx\t$aa\t$site\n";
+      $peptide = $annot_pep;
+      $num_motifs++;
+      last if !defined $site;
+    }
+    if ( $peptide =~ /#/ ) {
+      $self->update_peptide_sequence( predicted_id => $predicted_id,
+                                          aa_seq => $peptide );
+    }
+  }
+
+}
+
+#
+# Add the glycosite(s) for current protein
+#
 sub add_glycosites {
 
 	my $self = shift;
@@ -732,18 +901,19 @@ sub add_glycosites {
   for my $opt ( qw( protein_sequence ipi_data_id ) ) {
     $missing = ( $missing ) ? $missing . ', ' . $opt : $opt unless defined $args{$opt};
   }
-  die ( "Missing required parameter(s): $missing " ) if $missing;
+  die ( "Missing required parameter(s): $missing in " . $self->whatsub() ) if $missing;
 
   my $motif = 'N.[ST]';
   my $sites = $module->get_site_positions( seq => $args{protein_sequence},
                                        pattern => $motif );
   print STDERR "Found " . scalar( @$sites ) . " total sites\n";
   my $sbeams = $self->getSBEAMS();
+  $self->{_ipi2gs} ||= {};
 
   for my $site ( @$sites ) {
-    print STDERR "inserting site $site\n";
+#    print STDERR "inserting site $site\n";
     my $glyco_score = -1;
-    my $motif_context = motif_context( undef, seq => $args{protein_sequence}, site => $site );
+    my $motif_context = $self->motif_context( seq => $args{protein_sequence}, site => $site );
 
 
   	my $rowdata = { protein_glycosite_position => $site,
@@ -752,13 +922,14 @@ sub add_glycosites {
                                     ipi_data_id => $args{ipi_data_id}
                   };
 	
-    $sbeams->updateOrInsertRow( table_name  => $TBGP_GLYCOSITE,
+    my $pk = $sbeams->updateOrInsertRow( table_name  => $TBGP_GLYCOSITE,
                                 rowdata_ref => $rowdata,
                                 return_PK   => 1,
                                 verbose     => $self->verbose(),
                                 testonly    => $self->testonly(),
                                 insert      => 1,
                                 PK          => 'glycosite_id' ) || die "putresence";
+    $self->{_ipi2gs}->{$args{ipi_data_id} . $site} = $pk;
   }
   return $sites;
 				   		   
@@ -772,7 +943,7 @@ sub motif_context {
   for my $opt ( qw( seq site ) ) {
     $missing = ( $missing ) ? $missing . ', ' . $opt : $opt unless defined $args{$opt};
   }
-  die ( "Missing required parameter(s): $missing " ) if $missing;
+  die ( "Missing required parameter(s): $missing in " . $self->whatsub() ) if $missing;
 
   my $lpad = 0;
   my $rpad = 0;
