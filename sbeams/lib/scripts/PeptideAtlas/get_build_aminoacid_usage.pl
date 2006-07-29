@@ -74,7 +74,7 @@ sub get_aa_usage {
   END
 
   $pepsql = $sb->evalSQL( $pepsql );
-  print STDERR "$pepsql\n";
+#  print STDERR "$pepsql\n";
   my $sth = $dbh->prepare( $pepsql );
   $sth->execute();
 
@@ -148,8 +148,10 @@ sub process_args {
   my %args;
 
   GetOptions(\%args, 'atlas_build=i', 'n_obs_cutoff:i', 'show_builds:s', 
-                     'percentages', 'organism:s' );
-#      'tsv_file=s', 
+                     'percentages', 'organism:s', 'help' );
+#      'tsv_file=s' 
+
+  print_usage() if $args{help};
   if ( $args{show_builds} ) {
     $args{show_builds} = 'def' unless $args{show_builds} eq 'all';  
   }
@@ -177,6 +179,7 @@ usage: $sub -a build_id [ -t outfile -n obs_cutoff -s [all|def] ]
    -n, --n_obs_cutoff   Only show peptides observed > n times (default 0)
    -s, --show_builds    Print info about builds in db 
    -p, --percentages    Return information as percentages instead of raw counts 
+   -h, --help           Print usage
   END
 #   -t, --tsv_file       print output to specified file rather than stdout
 # End of the line
