@@ -687,7 +687,7 @@ Prerequisites:
 -Create a database instance in a supported rdbms, along with a db user with the
 ability to create database objects (section 5)
 
--Edit the minimal configuration file, located at /lib/conf/Core/sbeams.conf, 
+-Edit the minimal configuration file, located at /lib/conf/Core/sbeams.config, 
 relative to the sbeams directory at the base of the source distribution (known
 as $SBEAMS or $HTMLROOT/sbeams).
 
