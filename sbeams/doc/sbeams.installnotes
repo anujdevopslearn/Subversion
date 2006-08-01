@@ -268,53 +268,10 @@ contribute to this effort if you try different RDBMS engines.
   This account should be the one used to make changes to the schema, i.e.
   create, update, and drop tables and constraints.
 
-See Appendix C for information on the MySQL gui console.
+See Appendix C for information on the MySQL gui console or terminal.
 
 - set your environment variable to be the sbeams base directory
   ( mostly commonly this is $HTMLROOT/sbeams)
-
-**Here are explicit instructions for step 5 and MySQL database using
-  the command line (not the gui):**
- -- Decide on passwords for 3 users: sbeamsadmin, sbeams and sbeamsro
-
- -- cd $HTMLROOT/sbeams/lib/scripts/Core
-
- -- Encrypt the passwords of your users:
-    encryptDbPasswd.pl -p password1 ../../conf/SBEAMS.conf
-    encryptDbPasswd.pl -p password2 ../../conf/SBEAMS.conf
-    encryptDbPasswd.pl -p password3 ../../conf/SBEAMS.conf
-    (and copy those passwords somewhere for reference)
-    The encryption uses the date field in ../../conf/SBEAMS.conf only.
-
- -- Connect to the mysql server as your admin (this assumes you've already created the mysql user,
-    -- otherwise, you'll have to login as root and proceed):
-    mysql -u sbeamsadmin --password='the_password_for_the_admin' mysql
-
-    create database sbeams;
-
-    use mysql;
-
-    grant all on sbeams.* to 'sbeamsadmin'@'%' identified by 'the_hash_of_the_encrypted_password';
-
-    grant select on sbeams.* to 'sbeamsro'@'%' identified by 'the_hash_of_the_encrypted_password';
-
-    grant select,create,insert on sbeams.* to 'sbeams'@'%' by 'the_hash_of_the_encrypted_password';
-
-    flush privileges;
-
-    -- might need to be followed up with:
-    SET PASSWORD FOR "sbeamsadmin"@"%" = OLD_PASSWORD('the_hash_of_the_encrypted_password');
-
-    SET PASSWORD FOR "sbeams"@"%" = OLD_PASSWORD('the_hash_of_the_encrypted_password');
-
-    SET PASSWORD FOR "sbeamsro"@"%" = OLD_PASSWORD('the_hash_of_the_encrypted_password');
-
-    flush privileges;
-
-    -- check entries with:
-    select * from db where user like 'sbeams%';
-
-    exit;
 
 -------------------------------------------------------------------------------
 
@@ -733,7 +690,7 @@ Prerequisites:
 -Create a database instance in a supported rdbms, along with a db user with the
 ability to create database objects (section 5)
 
--Edit the minimal configuration file, located at /lib/conf/Core/sbeams.config, 
+-Edit the minimal configuration file, located at /lib/conf/Core/install_sbeams.config, 
 relative to the sbeams directory at the base of the source distribution (known
 as $SBEAMS or $HTMLROOT/sbeams).
 
@@ -754,22 +711,44 @@ configured database type
 modules specified on the command line (see usage).
 
 ==============================
-Appendix C: MySQL GUI console.
+Appendix C: MySQL 
 ==============================
 
-##### MySQL ###############
-#
-# The above steps to create the database, user accounts, and passwords
-# are most conveniently done using MySQL Administrator, a GUI admin
-# tool available from MySQL.  See separate document on installing MySQL
-# 5.0 server for details on installing MySQL Administrator.
-#
-# After user accounts are created, the password for each account must
-# be reset to the old-style 16-byte encryption hash, since there is
-# no guarantee that clients connecting to the database will understand
-# the newer password hashing mechanism.  From a shell, invoke the
-# mysql monitor, and issue this command for each account:
-#
-# SET PASSWORD FOR <user>@<host> = OLD_PASSWORD( <password> );
-#
-##########################
+******** Can use MySQL from command line terminal ***************
+--log in as root or someone with mysql insert privileges
+mysql --user=root mysql
+
+-- create sbeams database
+mysql> create database sbeams;
+
+mysql> use mysql;
+
+-- create users sbeamsadmin, sbeams, and sbeamsro
+mysql> grant all privileges on sbeams.* to 'sbeamsadmin'@'%' 
+identified by 'password' with grant option;
+
+mysql> grant select,create,insert on sbeams.* to 'sbeams'@'%' identified by 'password' ;
+
+mysql> grant select on sbeams.* to 'sbeamsro'@'%' identified by 'password' ;
+
+mysql> flush privileges;
+
+mysql> exit;
+
+
+******** OR USE MySQL GUI ***************
+
+ The above steps to create the database, user accounts, and passwords
+ are most conveniently done using MySQL Administrator, a GUI admin
+ tool available from MySQL.  See separate document on installing MySQL
+ 5.0 server for details on installing MySQL Administrator.
+
+ After user accounts are created, the password for each account must
+ be reset to the old-style 16-byte encryption hash, since there is
+ no guarantee that clients connecting to the database will understand
+ the newer password hashing mechanism.  From a shell, invoke the
+ mysql monitor, and issue this command for each account:
+
+ SET PASSWORD FOR <user>@<host> = OLD_PASSWORD( <password> );
+
+
