@@ -270,6 +270,8 @@ contribute to this effort if you try different RDBMS engines.
 
 See Appendix C for information on the MySQL gui console.
 
+- set your environment variable to be the sbeams base directory
+  ( mostly commonly this is $HTMLROOT/sbeams)
 
 **Here are explicit instructions for step 5 and MySQL database using
   the command line (not the gui):**
