@@ -270,6 +270,48 @@ contribute to this effort if you try different RDBMS engines.
 
 See Appendix C for information on the MySQL gui console.
 
+
+**Here are explicit instructions for step 5 and MySQL database using
+  the command line (not the gui):**
+ -- Decide on passwords for 3 users: sbeamsadmin, sbeams and sbeamsro
+
+ -- cd $HTMLROOT/sbeams/lib/scripts/Core
+
+ -- Encrypt the passwords of your users:
+    encryptDbPasswd.pl -p password1 ../../conf/SBEAMS.conf
+    encryptDbPasswd.pl -p password2 ../../conf/SBEAMS.conf
+    encryptDbPasswd.pl -p password3 ../../conf/SBEAMS.conf
+    (and copy those passwords somewhere for reference)
+    The encryption uses the date field in ../../conf/SBEAMS.conf only.
+
+ -- Connect to the mysql server as your admin :
+    mysql -u admin --password='the_password_for_the_admin'
+
+    create database sbeams;
+
+    insert into user (Host,User,Password)
+    values ('%','sbeamsadmin','the_hash_of_the_encrypted_password');
+
+    insert into user (Host,User,Password)
+    values ('%','sbeams','the_hash_of_the_encrypted_password');
+
+    insert into user (Host,User,Password)
+    values ('%','sbeamsro','the_hash_of_the_encrypted_password');
+
+    flush privileges;
+
+    grant all on sbeams.* to 'sbeamsadmin'@'%';
+
+    grant select on sbeams.* to 'sbeamsro'@'%';
+
+    grant select,create,insert on sbeams.* to 'sbeams'@'%';
+
+    flush privileges;
+
+    select * from db where user like 'sbeams%';
+
+    exit;
+
 -------------------------------------------------------------------------------
 
 Sections 6-13 can be handled by quick start script, see Appendix B near the 
