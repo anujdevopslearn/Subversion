@@ -26,7 +26,7 @@ my %scripts = ( Core       => 'lib/scripts/Core/build_core_dirs.sh',
                 schema     => 'lib/scripts/Core/build_schema.sh' );
 
 # Array of supported modules
-my @modules = qw(Microarray);
+my @modules = qw(Microarray Proteomics PeptideAtlas);
 
 # Failed attempt to resolve the chicken/egg paradox
 #BEGIN {
