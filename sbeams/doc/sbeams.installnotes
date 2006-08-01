@@ -689,7 +689,7 @@ ability to create database objects (section 5)
 
 -Edit the minimal configuration file, located at /lib/conf/Core/sbeams.conf, 
 relative to the sbeams directory at the base of the source distribution (known
-as $SBEAMS).
+as $SBEAMS or $HTMLROOT/sbeams).
 
 Once this is done, you are ready to run the install script:
 $SBEAMS/lib/scripts/Core/install_sbeams.pl 
