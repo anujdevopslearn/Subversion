@@ -289,6 +289,8 @@ See Appendix C for information on the MySQL gui console.
 
     create database sbeams;
 
+    use mysql;
+
     insert into user (Host,User,Password)
     values ('%','sbeamsadmin','the_hash_of_the_encrypted_password');
 
