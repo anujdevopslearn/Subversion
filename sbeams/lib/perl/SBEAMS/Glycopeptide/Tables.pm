@@ -26,21 +26,17 @@ use vars qw(@ISA @EXPORT
     $TBGP_QUERY_OPTION
 
     $TBGP_IPI_VERSION
-    $TBGP_IPI_DATA
     $TBGP_IPI_XREFS
+    $TBGP_IPI_DATA
     $TBGP_CELLULAR_LOCATION
-    $TBGP_GLYCOSITE
-    $TBGP_OBSERVED_PEPTIDE
+    $TBGP_GLYCO_SITE
     $TBGP_IDENTIFIED_PEPTIDE
     $TBGP_PREDICTED_PEPTIDE
-    $TBGP_PEPTIDE_TO_SAMPLE
+    $TBGP_PEPTIDE_TO_TISSUE
     $TBGP_TISSUE_TYPE
-    $TBGP_UNIPEP_SAMPLE
+    $TBGP_GLYCO_SAMPLE
     $TBGP_IDENTIFIED_TO_IPI
     $TBGP_SYNTHESIZED_PEPTIDE
-    $TBGP_PEPTIDE_SEARCH
-    $TBGP_IDENTIFIED_TO_GLYCOSITE
-    $TBGP_PREDICTED_TO_GLYCOSITE
 );
 
 
@@ -60,18 +56,14 @@ require Exporter;
     $TBGP_IPI_XREFS
     $TBGP_IPI_DATA
     $TBGP_CELLULAR_LOCATION
-    $TBGP_GLYCOSITE
+    $TBGP_GLYCO_SITE
     $TBGP_IDENTIFIED_PEPTIDE
-    $TBGP_OBSERVED_PEPTIDE
     $TBGP_PREDICTED_PEPTIDE
-    $TBGP_PEPTIDE_TO_SAMPLE
+    $TBGP_PEPTIDE_TO_TISSUE
     $TBGP_TISSUE_TYPE
-    $TBGP_UNIPEP_SAMPLE
+    $TBGP_GLYCO_SAMPLE
     $TBGP_IDENTIFIED_TO_IPI
     $TBGP_SYNTHESIZED_PEPTIDE
-    $TBGP_PEPTIDE_SEARCH
-    $TBGP_IDENTIFIED_TO_GLYCOSITE
-    $TBGP_PREDICTED_TO_GLYCOSITE
 );
 
 
@@ -92,17 +84,13 @@ $TBGP_IPI_VERSION	    	= "${mod}ipi_version";
 $TBGP_IPI_XREFS	    	= "${mod}ipi_xrefs";
 $TBGP_IPI_DATA			= "${mod}ipi_data";
 $TBGP_CELLULAR_LOCATION		= "${mod}cellular_location";
-$TBGP_GLYCOSITE		= "${mod}glycosite";
-$TBGP_OBSERVED_PEPTIDE	= "${mod}observed_peptide";
+$TBGP_GLYCO_SITE		= "${mod}glyco_site";
 $TBGP_IDENTIFIED_PEPTIDE	= "${mod}identified_peptide";
 $TBGP_PREDICTED_PEPTIDE		= "${mod}predicted_peptide";
-$TBGP_PEPTIDE_TO_SAMPLE		= "${mod}peptide_to_sample";
+$TBGP_PEPTIDE_TO_TISSUE		= "${mod}peptide_to_tissue";
 $TBGP_TISSUE_TYPE			= "${mod}tissue_type";
 $TBGP_IDENTIFIED_TO_IPI= "${mod}identified_to_ipi";
-$TBGP_UNIPEP_SAMPLE   = "${mod}unipep_sample";
+$TBGP_GLYCO_SAMPLE   = "${mod}glyco_sample";
 $TBGP_SYNTHESIZED_PEPTIDE	= "${mod}synthesized_peptide";
-$TBGP_PEPTIDE_SEARCH			= "${mod}peptide_search";
-$TBGP_IDENTIFIED_TO_GLYCOSITE= "${mod}identified_to_glycosite";
-$TBGP_PREDICTED_TO_GLYCOSITE= "${mod}predicted_to_glycosite";
 
 1;
