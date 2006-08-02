@@ -1,0 +1,1 @@
+ALTER TABLE experiments_samples DROP FOREIGN KEY Unique_experiment_id_proteomics__sample_id;
