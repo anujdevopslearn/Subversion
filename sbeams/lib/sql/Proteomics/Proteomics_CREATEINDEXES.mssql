@@ -1,70 +1,70 @@
 
-ALTER TABLE dbo.biosequence ADD CONSTRAINT biosequence_set_name_uk UNIQUE (biosequence_set_id,biosequence_name)
-ALTER TABLE dbo.search ADD CONSTRAINT search_SB_SPEC_uk UNIQUE (search_batch_id,msms_spectrum_id,file_root)
-ALTER TABLE dbo.quantitation ADD CONSTRAINT quantitation_search_hit_id_uk UNIQUE (search_hit_id)
+ALTER TABLE biosequence ADD CONSTRAINT biosequence_set_name_uk UNIQUE (biosequence_set_id,biosequence_name)
+ALTER TABLE search ADD CONSTRAINT search_SB_SPEC_uk UNIQUE (search_batch_id,msms_spectrum_id,file_root)
+ALTER TABLE quantitation ADD CONSTRAINT quantitation_search_hit_id_uk UNIQUE (search_hit_id)
 
 
 --DROP INDEX biosequence.idx_biosequence_name
-CREATE NONCLUSTERED INDEX idx_biosequence_name ON dbo.biosequence ( biosequence_set_id,biosequence_name ) 
+CREATE NONCLUSTERED INDEX idx_biosequence_name ON biosequence ( biosequence_set_id,biosequence_name ) 
 
 --DROP INDEX biosequence.idx_biosequence_accession
-CREATE NONCLUSTERED INDEX idx_biosequence_accession ON dbo.biosequence ( biosequence_set_id,biosequence_accession ) 
+CREATE NONCLUSTERED INDEX idx_biosequence_accession ON biosequence ( biosequence_set_id,biosequence_accession ) 
 
 --DROP INDEX search.idx_search_batch_id
-CREATE NONCLUSTERED INDEX idx_search_batch_id ON dbo.search ( search_batch_id ) 
+CREATE NONCLUSTERED INDEX idx_search_batch_id ON search ( search_batch_id ) 
 
 --DROP INDEX search.idx_search_file_root
-CREATE NONCLUSTERED INDEX idx_search_file_root ON dbo.search ( search_batch_id,file_root ) 
+CREATE NONCLUSTERED INDEX idx_search_file_root ON search ( search_batch_id,file_root ) 
 
 -- This index is needed for load_proteomics_experiment.pl to be fast enough.  It can degrade
 -- the load speed significantly.  Unfortunately, the index fragments during the load.
 --DROP INDEX msms_spectrum.idx_msms_spectrum_file_root
-CREATE NONCLUSTERED INDEX idx_msms_spectrum_file_root ON dbo.msms_spectrum ( msms_spectrum_file_root ) 
+CREATE NONCLUSTERED INDEX idx_msms_spectrum_file_root ON msms_spectrum ( msms_spectrum_file_root ) 
 
 --DROP INDEX msms_spectrum.idx_msms_spectrum_fraction_id
-CREATE NONCLUSTERED INDEX idx_msms_spectrum_fraction_id ON dbo.msms_spectrum ( fraction_id ) 
+CREATE NONCLUSTERED INDEX idx_msms_spectrum_fraction_id ON msms_spectrum ( fraction_id ) 
 
 --DROP INDEX search_hit.idx_search_hit_search_index
-CREATE NONCLUSTERED INDEX idx_search_hit_search_index ON dbo.search_hit ( search_id,hit_index,probability ) 
+CREATE NONCLUSTERED INDEX idx_search_hit_search_index ON search_hit ( search_id,hit_index,probability ) 
 
 --DROP INDEX search_hit.idx_search_hit_reference
-CREATE NONCLUSTERED INDEX idx_search_hit_reference ON dbo.search_hit ( reference ) 
+CREATE NONCLUSTERED INDEX idx_search_hit_reference ON search_hit ( reference ) 
 
 --DROP INDEX search_hit.idx_search_hit_peptide
-CREATE NONCLUSTERED INDEX idx_search_hit_peptide ON dbo.search_hit ( peptide ) 
+CREATE NONCLUSTERED INDEX idx_search_hit_peptide ON search_hit ( peptide ) 
 
 --DROP INDEX search_hit.idx_search_hit_peptide_string
-CREATE NONCLUSTERED INDEX idx_search_hit_peptide_string ON dbo.search_hit ( peptide_string ) 
+CREATE NONCLUSTERED INDEX idx_search_hit_peptide_string ON search_hit ( peptide_string ) 
 
 --DROP INDEX search_hit.idx_search_hit_cross_corr
-CREATE NONCLUSTERED INDEX idx_search_hit_cross_corr ON dbo.search_hit ( cross_corr ) 
+CREATE NONCLUSTERED INDEX idx_search_hit_cross_corr ON search_hit ( cross_corr ) 
 
 --DROP INDEX search_hit.idx_search_hit_probability
-CREATE NONCLUSTERED INDEX idx_search_hit_probability ON dbo.search_hit ( probability ) 
+CREATE NONCLUSTERED INDEX idx_search_hit_probability ON search_hit ( probability ) 
 
 
 --DROP INDEX search_hit_annotation.idx_search_hit_id
-CREATE NONCLUSTERED INDEX idx_search_hit_id ON dbo.search_hit_annotation ( search_hit_id ) 
+CREATE NONCLUSTERED INDEX idx_search_hit_id ON search_hit_annotation ( search_hit_id ) 
 
---DROP INDEX dbo.quantitation.idx_search_hit_id
-CREATE NONCLUSTERED INDEX idx_search_hit_id ON dbo.quantitation ( search_hit_id ) 
+--DROP INDEX quantitation.idx_search_hit_id
+CREATE NONCLUSTERED INDEX idx_search_hit_id ON quantitation ( search_hit_id ) 
 
 --DROP INDEX search_hit_protein.idx_search_hit_id
-CREATE NONCLUSTERED INDEX idx_search_hit_id ON dbo.search_hit_protein ( search_hit_id ) 
+CREATE NONCLUSTERED INDEX idx_search_hit_id ON search_hit_protein ( search_hit_id ) 
 
 
 --DROP INDEX search_hit.idx_search_hit_search_id
-CREATE NONCLUSTERED INDEX idx_search_hit_search_id ON dbo.search_hit ( search_id ) 
+CREATE NONCLUSTERED INDEX idx_search_hit_search_id ON search_hit ( search_id ) 
 
 
 --DROP INDEX biosequence_property_set.idx_biosequence_id
-CREATE NONCLUSTERED INDEX idx_biosequence_id ON dbo.biosequence_property_set ( biosequence_id ) 
+CREATE NONCLUSTERED INDEX idx_biosequence_id ON biosequence_property_set ( biosequence_id ) 
 
 --DROP INDEX biosequence_property_set.idx_BPS_transmembrane_class
-CREATE NONCLUSTERED INDEX idx_BPS_transmembrane_class ON dbo.biosequence_property_set ( transmembrane_class ) 
+CREATE NONCLUSTERED INDEX idx_BPS_transmembrane_class ON biosequence_property_set ( transmembrane_class ) 
 
 --DROP INDEX search.idx_msms_spectrum_id
-CREATE NONCLUSTERED INDEX idx_msms_spectrum_id ON dbo.search ( msms_spectrum_id ) 
+CREATE NONCLUSTERED INDEX idx_msms_spectrum_id ON search ( msms_spectrum_id ) 
 
 
 
@@ -74,7 +74,7 @@ CREATE NONCLUSTERED INDEX idx_msms_spectrum_id ON dbo.search ( msms_spectrum_id 
 
 --#### Needed for deleting spectra
 -- DROP INDEX msms_spectrum_peak.idx_msms_spectrum_id
--- NO, DOESN'T HELP AFTER ALL.  Need INDEX on search.  CREATE NONCLUSTERED INDEX idx_msms_spectrum_id ON dbo.msms_spectrum_peak ( msms_spectrum_id,mass ) 
+-- NO, DOESN'T HELP AFTER ALL.  Need INDEX on search.  CREATE NONCLUSTERED INDEX idx_msms_spectrum_id ON msms_spectrum_peak ( msms_spectrum_id,mass ) 
 -- 1 hr
 
 GO
