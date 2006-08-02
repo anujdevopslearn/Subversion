@@ -1,475 +1,966 @@
-{package SBEAMS::Glycopeptide::Glyco_query;
-	
-
-####################################################
-=head1 NAME
-
-=head1 DESCRIPTION
-
-
-=head2 EXPORT
-
-None by default.
 
 
 
-=head1 SEE ALSO
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+"http://www.w3.org/TR/REC-html40/loose.dtd">
+<!-- ViewCVS - http://viewcvs.sourceforge.net/
+by Greg Stein - mailto:gstein@lyra.org -->
+<html>
+<head>
+<title>[svn] Log of /sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm</title>
+<meta name="generator" content="ViewCVS 1.0-dev">
+<link rel="stylesheet" href="/cgi/viewcvs/viewcvs.cgi/*docroot*/styles.css" type="text/css">
+</head>
+<body>
+<div class="vc_navheader">
+<table width="100%" border="0" cellpadding="0" cellspacing="0">
+<tr>
+<td align="left"><b>
+
+<a href="/cgi/viewcvs/viewcvs.cgi/?rev=4921&amp;sortby=date">
+
+[svn]</a>
+/
+
+<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/?rev=4921&amp;sortby=date">
+
+sbeams</a>
+/
+
+<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/?rev=4921&amp;sortby=date">
+
+trunk</a>
+/
+
+<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/?rev=4921&amp;sortby=date">
+
+sbeams</a>
+/
+
+<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/?rev=4921&amp;sortby=date">
+
+lib</a>
+/
+
+<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/?rev=4921&amp;sortby=date">
+
+perl</a>
+/
+
+<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/?rev=4921&amp;sortby=date">
+
+SBEAMS</a>
+/
+
+<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/?rev=4921&amp;sortby=date">
+
+Glycopeptide</a>
+/
 
 
-=head1 AUTHOR
 
-Pat Moss, E<lt>pmoss@systemsbiology.org<gt>
-
-=head1 COPYRIGHT AND LICENSE
-
-Copyright (C) 2004 by Pat Moss
-
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.8.3 or,
-at your option, any later version of Perl 5 you may have available.
+Glyco_query.pm
 
 
-=cut
-##############################################################
-use strict;
-use vars qw($sbeams);		
+</b></td>
+<td align="right">
 
-use File::Basename;
-use File::Find;
-use File::Path;
-use Data::Dumper;
-use Carp;
-use FindBin;
+&nbsp;
 
+</td>
+</tr>
+</table>
+</div>
+<h1><img align=right src="/cgi/viewcvs/viewcvs.cgi/*docroot*/images/logo.png" width=128 height=48>Log of /sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm</h1>
 
-use SBEAMS::Connection qw($q $log);
-
-use Data::Dumper;
-use base qw(SBEAMS::Glycopeptide);		
+<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/?sortby=date"><img src="/cgi/viewcvs/viewcvs.cgi/*docroot*/images/back_small.png" width=16 height=16 border=0> Parent Directory</a>
 
 
-use SBEAMS::Connection;
-use SBEAMS::Connection::Tables;
-use SBEAMS::Glycopeptide::Tables;
-use SBEAMS::Glycopeptide::Test_glyco_data;
-use SBEAMS::Glycopeptide::Get_peptide_seqs;
+
+<hr noshade>
+<p>No default branch<br>
+Bookmark a link to HEAD:
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm">download</a>)
 
 
-##############################################################################
-#constructor
-###############################################################################
-sub new {
-    my $method = 'new';
-    my $this = shift;
-    my $class = ref($this) || $this;
-    
-    
-    my $self = {};
-    bless $self, $class;
-    return($self);
-}
-
-###############################################################################
-# Receive the main SBEAMS object
-###############################################################################
-sub setSBEAMS {
-    my $self = shift;
-    $sbeams = shift;
-    return($sbeams);
-}
+</p>
 
 
-###############################################################################
-# Provide the main SBEAMS object
-###############################################################################
-sub getSBEAMS {
-    my $self = shift;
-    $sbeams ||= new SBEAMS::Connection();
-    return($sbeams);
-}
 
-################################
-#gene_symbol_query
-###############################
-sub gene_symbol_query{
-	my $method = 'gene_symbol_query';
-	my $self = shift;
-	my $term = shift;
-	
-	my $osql = qq~
-    SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
-    (SELECT COUNT(*) FROM $TBGP_IDENTIFIED_TO_IPI 
-    WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id ) AS num_identified 
-    FROM $TBGP_IPI_DATA
-    WHERE protein_symbol like '$term'
-  ~;
-
-  my $sql = $self->get_query_sql( type => 'protsymbol', term => $term );
-	
-	return $sbeams->selectHashArray($sql);
-}
-################################
-#gene_name_query
-###############################
-sub gene_name_query{
-	my $method = 'gene_name_query';
-	my $self = shift;
-	my $term = shift;
-	
-	my $osql = qq~
-    SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
-    (SELECT COUNT(*) FROM $TBGP_IDENTIFIED_TO_IPI 
-    WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id ) AS num_identified 
-    FROM $TBGP_IPI_DATA
-    WHERE protein_name like '$term'
-  ~;
-
-  my $sql = $self->get_query_sql( type => 'protname', term => $term );
-
-	return $sbeams->selectHashArray($sql)
-}
-
-sub all_proteins_query {
-
-	my $self = shift;
-	my $mode = shift;
-  my $identified = ( $mode eq 'all' ) ? '' : "WHERE num_identified > 0 ";
-  my $order = ( $mode eq 'all' ) ? 'protein_name ASC' : 'num_identified DESC, protein_name ASC';
-  my $cutoff = $self->get_current_prophet_cutoff();
-	
-	my $sql = qq~
-    SELECT * FROM (
-    SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
-    ( SELECT COUNT(*) 
-      FROM $TBGP_IDENTIFIED_TO_IPI ITI
-      JOIN $TBGP_IDENTIFIED_PEPTIDE IP ON ITI.identified_peptide_id = IP.identified_peptide_id
-      WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id 
-      AND peptide_prophet_score >= $cutoff ) AS num_identified 
-    FROM $TBGP_IPI_DATA
-    ) AS temp
-    $identified
-    ORDER BY $order
-  ~;
-
-	return $sbeams->selectHashArray($sql)
-}
-
-################################
-#ipi_accession_query
-###############################
-sub ipi_accession_query{
-	my $method = 'ipi_accession_query';
-	my $self = shift;
-	my $term = shift;
-	
-
-	my $search_string = '';
-	my $table_name = 'ipi_accession_number';
-	
-	if ($term =~ /,/){
-		$search_string = $self->make_or_search_string(term => $term,
-								table_name =>$table_name);
-	}else{
-		$search_string = "$table_name like '$term' ";
-	}
-
-	my $osql = qq~
-    SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
-    (SELECT COUNT(*) FROM $TBGP_IDENTIFIED_TO_IPI 
-    WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id ) AS num_identified 
-    FROM $TBGP_IPI_DATA
-    WHERE $search_string
-  ~;
-
-  my $sql = $self->get_query_sql( type => 'ipi', term => $search_string );
-
-	return $sbeams->selectHashArray($sql)
-}
-################################
-#make_or_search_string
-###############################
-sub make_or_search_string {
-	my $method = 'make_or_search_strin';
-	my $self = shift;
-	my %args = @_;
-	my $term = $args{term};
-	my $table_name = $args{table_name};
-	 
-	confess(__PACKAGE__ . "::$method Table Name '$table_name' is not good  \n") unless $table_name;
-
-	my @parts = split /,/, $term;
-	my @info = ();
-	foreach my $part(@parts){
-		push @info, "$table_name = '$part'";
-	}
-	my $string = join(" OR ", @info);
-	return $string;
+ 
 
 
-}
 
-sub get_query_sql {
-  my $self = shift;
-  my %args = @_;
-  my $cutoff = $self->get_current_prophet_cutoff();
-  my $clause = '';
-  if ( $args{type} eq 'swissprot' ) {
-	  $clause = "WHERE swiss_prot_acc like '$args{term}'";
-  } elsif ( $args{type} eq 'protseq' ) {
-    $clause = "WHERE protein_sequence like '$args{term}'";
-  } elsif ( $args{type} eq 'protsymbol' ) {
-    $clause = "WHERE protein_symbol like '$args{term}'";
-  } elsif ( $args{type} eq 'protname' ) {
-    $clause = "WHERE protein_name like '$args{term}'";
-  } elsif ( $args{type} eq 'ipi' ) {
-    $clause = "WHERE $args{term}";
-  } else {
-    $log->error( "Unknown type" );
-    return '';
-  }
+<hr size=1 noshade>
 
-  my $sql = qq~
-  SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
-    ( SELECT COUNT(*) 
-      FROM $TBGP_IDENTIFIED_TO_IPI ITI 
-      JOIN $TBGP_IDENTIFIED_PEPTIDE IP
-        ON IP.identified_peptide_id = ITI.identified_peptide_id
-      WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id
-      AND peptide_prophet_score >= $cutoff ) AS num_identified 
-  FROM $TBGP_IPI_DATA
-  $clause
-  ~;
-  $log->info( $sbeams->evalSQL( $sql ) );
-  return $sql;
-  
-#AND peptide_prophet_score >= $cutoff
 
-}
 
-#+
-# Entrez gene id query
-#-
-sub gene_id_query {
-	my $method = 'gene_id_query';
-	my $self = shift;
-	my $term = shift;
 
-  $term =~ s/\;/\,/g;
-	
-	my $sql = qq~
-    SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
-    (SELECT COUNT(*) FROM $TBGP_IDENTIFIED_TO_IPI 
-    WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id ) AS num_identified 
-    FROM $TBGP_IPI_DATA
-	  WHERE ipi_accession_number IN 
-      ( SELECT ipi_accessions FROM DCAMPBEL.dbo.ipi_xrefs WHERE 
-        entrez_id IN ( $term ) )
-  ~;
+<a name="rev4921"></a>
 
-  # Newfangled
-#  my $sql = $self->get_query_sql( type => 'swissprot', term => $term );
-	return $sbeams->selectHashArray($sql)
-}
 
-################################
-#swiss_prot_query
-###############################
-sub swiss_prot_query{
-	my $method = 'swiss_prot_query';
-	my $self = shift;
-	my $term = shift;
-	
-	confess(__PACKAGE__ . "::$method term '$term' is not good  \n") unless $term;
-	
-	my $sql = qq~
-    SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
-    (SELECT COUNT(*) FROM $TBGP_IDENTIFIED_TO_IPI 
-    WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id ) AS num_identified 
-    FROM $TBGP_IPI_DATA
-	  WHERE swiss_prot_acc LIKE '$term'
-  ~;
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4921&amp;sortby=date&amp;view=rev"><b>4921</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?rev=4921&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?rev=4921">download</a>)
 
-  # Newfangled
-  my $sql = $self->get_query_sql( type => 'swissprot', term => $term );
 
-	return $sbeams->selectHashArray($sql)
-}
 
-################################
-#protein_seq_query
-###############################
-sub protein_seq_query{
-	my $method = 'protein_seq_query';
-	
-	my $self = shift;
-	my $seq = shift;
-	confess(__PACKAGE__ . "::$method seq '$seq' is not good  \n") unless $seq;
 
-	my $osql = qq~
-    SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
-    (SELECT COUNT(*) FROM $TBGP_IDENTIFIED_TO_IPI 
-    WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id ) AS num_identified 
-    FROM $TBGP_IPI_DATA
-    WHERE protein_sequence like '%$seq%'
-  ~;
 
-  # Newfangled
-  chomp $seq;
-  my $sql = $self->get_query_sql( type => 'protseq', term => $seq );
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?r1=4921&amp;rev=4921&amp;sortby=date&amp;view=log">[select for diffs]</a>
 
-	
-	return $sbeams->selectHashArray($sql)
-}
 
-################################
-#query_ipi_data
-#Give a ipi_data_id
-#return a href of the sql query results or nothing
-###############################
-sub query_ipi_data{
-	my $method = 'query_ipi_data';
-	my $self = shift;
-	my $ipi_data_id = shift;
-	confess(__PACKAGE__ . "::$method ID '$ipi_data_id' is not good  \n") unless $ipi_data_id; 
-	my $sql = qq~ 
-	    SELECT  
-	    ipi_data_id,
-        ipi_accession_number,
-        protein_name, 
-        protein_symbol,
-        swiss_prot_acc,
-        cellular_location_name,
-        protein_summary,
-        protein_sequence,
-        transmembrane_info,
-        signal_sequence_info,
-        synonyms
-        FROM $TBGP_IPI_DATA ipid
-        JOIN $TBGP_CELLULAR_LOCATION cl ON (cl.cellular_location_id = ipid.cellular_location_id) 
-        WHERE ipi_data_id =  $ipi_data_id
-		  ~;
-	
-	my @results = $sbeams->selectHashArray($sql);
-	return $results[0];
-	
-}
-################################
-#get_predicted_peptides
-#Give a ipi_data_id
-#return an array of hashref or nothing
-###############################
-sub get_predicted_peptides{
-	my $method = 'get_predicted_peptides';
-	my $self = shift;
-	
-	my $ipi_data_id = shift;
-	confess(__PACKAGE__ . "::$method ipi_data_id '$ipi_data_id' is not good  \n") unless $ipi_data_id  ; 
-	my $sql = qq~
-				SELECT 
-				pp.predicted_peptide_id,
-				pp.predicted_peptide_sequence,
-				predicted_peptide_mass,
-				detection_probability,
-				number_proteins_match_peptide,
-				matching_protein_ids,
-				predicted_start,
-				protein_similarity_score,
-				gs.glyco_score,
-				gs.protein_glyco_site_position,
-				predicted_stop, 
-        synthesized_sequence
-				FROM $TBGP_PREDICTED_PEPTIDE pp
-				JOIN $TBGP_GLYCOSITE gs ON (gs.glyco_site_id = pp.glyco_site_id)
-				LEFT JOIN $TBGP_SYNTHESIZED_PEPTIDE sp 
-         ON sp.glyco_site_id = pp.glyco_site_id
-				WHERE pp.ipi_data_id = $ipi_data_id
-				~;
-	
-		return $sbeams->selectHashArray($sql);		
-}			
 
-################################
-#get_identified_peptides
-#Give a ipi_data_id
-#return an array of hashref or nothing
-###############################
-sub get_identified_peptides{
-	my $method = 'get_identified_peptides';
-	my $self = shift;
-	my $ipi_data_id = shift;
-	confess(__PACKAGE__ . "::$method ID '$ipi_data_id' is not good  \n") unless $ipi_data_id; 
-	my $sql = qq~
-				SELECT 
-				id.identified_peptide_id,
-				identified_peptide_sequence,
-				peptide_prophet_score,
-				peptide_mass,
-				tryptic_end,
-				gs.glyco_score,
-				gs.protein_glyco_site_position,
-				identified_start,
-				identified_stop,
-        n_obs
-				FROM $TBGP_IDENTIFIED_PEPTIDE id
-        JOIN $TBGP_IDENTIFIED_TO_IPI iti 
-          ON iti.identified_peptide_id = id.identified_peptide_id
-				JOIN $TBGP_GLYCOSITE gs ON (gs.glyco_site_id = iti.glyco_site_id)
-				WHERE iti.ipi_data_id = $ipi_data_id
-				~;
-	
-		return $sbeams->selectHashArray($sql);	
-}	
-################################
-#get_glyco_sites
-#Give a ipi_data_id
-#return an array of hashref or nothing
-###############################
-sub get_glyco_sites{
-	my $method = 'get_glyco_sites';
-	my $self = shift;
-	my $ipi_data_id = shift;
-	confess(__PACKAGE__ . "::$method ID '$ipi_data_id' is not good  \n") unless $ipi_data_id; 
-	my $sql = qq~
-				SELECT 
-				glyco_site_id, 
-				protein_glyco_site_position,
-				glyco_score 
-				FROM $TBGP_GLYCOSITE
-				WHERE ipi_data_id = $ipi_data_id
-				~;
-	
-		return $sbeams->selectHashArray($sql);	
 
-}
-###############################
-#get_identified_tissues
-#Give a identified_peptide_id
-#return an array of hashref or nothing
-###############################
-sub get_identified_tissues{
-	my $method = 'get_identified_tissues';
-	my $self = shift;
-	my $id = shift;
-	confess(__PACKAGE__ . "::$method ID '$id' is not good  \n") unless $id; 
-	my $sql = qq~
-				SELECT t.tissue_type_name 
-				FROM $TBGP_PEPTIDE_TO_SAMPLE ptp 
-				JOIN $TBGP_UNIPEP_SAMPLE g ON ( ptp.sample_id = g.sample_id ) 
-				JOIN $TBGP_TISSUE_TYPE t ON (t.tissue_type_id = g.tissue_type_id) 
-				WHERE ptp.identified_peptide_id = $id
-        ORDER BY t.tissue_type_name
-				~;
-	
-	my @all_tissues = $sbeams->selectHashArray($sql);	
-  my @coalesced_tissues;
-  my %seen;
-  for my $tissue ( @all_tissues ) {
-    next if $seen{$tissue->{tissue_type_name}};
-    push @coalesced_tissues, $tissue->{tissue_type_name};
-    $seen{$tissue->{tissue_type_name}}++;
-  }
-  return \@coalesced_tissues;
-}
+<br>
 
-} #end of package
-1;
+Modified
+
+<i>Tue Jul 25 00:52:43 2006 UTC</i> (8 days, 17 hours ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 12767 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?r1=4915&amp;r2=4921&amp;rev=4921&amp;sortby=date">previous 4915</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Changes for new schema, loading paradigm.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4915"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4915&amp;sortby=date&amp;view=rev"><b>4915</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?rev=4915&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?rev=4915">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?r1=4915&amp;rev=4921&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Fri Jul 21 01:06:18 2006 UTC</i> (12 days, 17 hours ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 12770 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?r1=4743&amp;r2=4915&amp;rev=4915&amp;sortby=date">previous 4743</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Schema and new build process related changes.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4743"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4743&amp;sortby=date&amp;view=rev"><b>4743</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?rev=4743&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?rev=4743">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?r1=4743&amp;rev=4921&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Sat Jun 10 01:28:13 2006 UTC</i> (7 weeks, 4 days ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 12769 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?r1=4673&amp;r2=4743&amp;rev=4743&amp;sortby=date">previous 4673</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Added ability to search with entrez gene_id, allows links from kegg maps to work.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4673"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4673&amp;sortby=date&amp;view=rev"><b>4673</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?rev=4673&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?rev=4673">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?r1=4673&amp;rev=4921&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Sat Apr 22 01:56:25 2006 UTC</i> (3 months, 1 week ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 12124 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?r1=4539&amp;r2=4673&amp;rev=4673&amp;sortby=date">previous 4539</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Changes for n_obs and tissue display.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4539"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4539&amp;sortby=date&amp;view=rev"><b>4539</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?rev=4539&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?rev=4539">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?r1=4539&amp;rev=4921&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Wed Mar 15 18:51:07 2006 UTC</i> (4 months, 2 weeks ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 12110 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?r1=4392&amp;r2=4539&amp;rev=4539&amp;sortby=date">previous 4392</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Added peptide_cutoff constraint to approptiate queries.  Also unified SQL building for various query types, rather than replicating the above 5 times.  Made seq search wildcarding explicit.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4392"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4392&amp;sortby=date&amp;view=rev"><b>4392</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?rev=4392&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?rev=4392">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?r1=4392&amp;rev=4921&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Sat Feb  4 02:07:05 2006 UTC</i> (5 months, 3 weeks ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 10617 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?r1=4388&amp;r2=4392&amp;rev=4392&amp;sortby=date">previous 4388</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Moved ipi accessors to DBInterface, added new protein query to Glyco_query.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4388"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4388&amp;sortby=date&amp;view=rev"><b>4388</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?rev=4388&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?rev=4388">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?r1=4388&amp;rev=4921&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Thu Feb  2 23:18:12 2006 UTC</i> (5 months, 4 weeks ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 11030 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?r1=4279&amp;r2=4388&amp;rev=4388&amp;sortby=date">previous 4279</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Added ipi lookup queries.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4279"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4279&amp;sortby=date&amp;view=rev"><b>4279</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?rev=4279&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?rev=4279">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?r1=4279&amp;rev=4921&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Fri Jan 13 06:01:36 2006 UTC</i> (6 months, 2 weeks ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 10025 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?r1=4269&amp;r2=4279&amp;rev=4279&amp;sortby=date">previous 4269</a>
+
+
+
+
+
+
+
+<pre class="vc_log">More Atlas/Glyco peptide split.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4269"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4269&amp;sortby=date&amp;view=rev"><b>4269</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?rev=4269&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?rev=4269">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?r1=4269&amp;rev=4921&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Thu Jan 12 21:48:50 2006 UTC</i> (6 months, 2 weeks ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 10025 byte(s)</b>
+
+
+<br>Copied from: <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm?rev=4268&amp;sortby=date&amp;view=log">sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm</a> revision 4268
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?p1=sbeams%2Ftrunk%2Fsbeams%2Flib%2Fperl%2FSBEAMS%2FPeptideAtlas%2FGlyco_query.pm&amp;r1=4174&amp;r2=4269&amp;rev=4269&amp;sortby=date">previous 4174</a>
+
+
+
+
+
+
+
+<pre class="vc_log">More fallout from the Atlas/Glyco peptide divorce...
+</pre>
+
+<hr size=1 noshade>
+
+Filename: sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm<br>
+
+
+<a name="rev4174"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4174&amp;sortby=date&amp;view=rev"><b>4174</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm?rev=4174&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm?rev=4174">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?p1=sbeams%2Ftrunk%2Fsbeams%2Flib%2Fperl%2FSBEAMS%2FPeptideAtlas%2FGlyco_query.pm&amp;r1=4174&amp;rev=4921&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Wed Nov 30 19:18:31 2005 UTC</i> (8 months ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 10025 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm?r1=4052&amp;r2=4174&amp;rev=4174&amp;sortby=date">previous 4052</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Added SQL to count # of ID'd peptides for each protein in list context, fixed join between glycosite and identified lookup table to use glyco_site_id.
+</pre>
+
+<hr size=1 noshade>
+
+Filename: sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm<br>
+
+
+<a name="rev4052"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4052&amp;sortby=date&amp;view=rev"><b>4052</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm?rev=4052&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm?rev=4052">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?p1=sbeams%2Ftrunk%2Fsbeams%2Flib%2Fperl%2FSBEAMS%2FPeptideAtlas%2FGlyco_query.pm&amp;r1=4052&amp;rev=4921&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Wed Oct 19 23:47:14 2005 UTC</i> (9 months, 1 week ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 9456 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm?r1=3709&amp;r2=4052&amp;rev=4052&amp;sortby=date">previous 3709</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Modified queries to use glyco_site_id from identified_to_ipi.
+</pre>
+
+<hr size=1 noshade>
+
+Filename: sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm<br>
+
+
+<a name="rev3709"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=3709&amp;sortby=date&amp;view=rev"><b>3709</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm?rev=3709&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm?rev=3709">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?p1=sbeams%2Ftrunk%2Fsbeams%2Flib%2Fperl%2FSBEAMS%2FPeptideAtlas%2FGlyco_query.pm&amp;r1=3709&amp;rev=4921&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Tue Jun 28 05:56:21 2005 UTC</i> (13 months ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 9291 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm?r1=3701&amp;r2=3709&amp;rev=3709&amp;sortby=date">previous 3701</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Allow tissues to display.
+</pre>
+
+<hr size=1 noshade>
+
+Filename: sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm<br>
+
+
+<a name="rev3701"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=3701&amp;sortby=date&amp;view=rev"><b>3701</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm?rev=3701&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm?rev=3701">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?p1=sbeams%2Ftrunk%2Fsbeams%2Flib%2Fperl%2FSBEAMS%2FPeptideAtlas%2FGlyco_query.pm&amp;r1=3701&amp;rev=4921&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Mon Jun 27 04:45:01 2005 UTC</i> (13 months ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 8985 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm?r1=3672&amp;r2=3701&amp;rev=3701&amp;sortby=date">previous 3672</a>
+
+
+
+
+
+
+
+<pre class="vc_log">SQL changes due to new schema layout.
+</pre>
+
+<hr size=1 noshade>
+
+Filename: sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm<br>
+
+
+<a name="rev3672"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=3672&amp;sortby=date&amp;view=rev"><b>3672</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm?rev=3672&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm?rev=3672">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?p1=sbeams%2Ftrunk%2Fsbeams%2Flib%2Fperl%2FSBEAMS%2FPeptideAtlas%2FGlyco_query.pm&amp;r1=3672&amp;rev=4921&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Tue Jun 21 23:31:38 2005 UTC</i> (13 months, 1 week ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 8900 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm?r1=3588&amp;r2=3672&amp;rev=3672&amp;sortby=date">previous 3588</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Modified query to use join table, reflects potential one to many relationship.
+</pre>
+
+<hr size=1 noshade>
+
+Filename: sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm<br>
+
+
+<a name="rev3588"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=3588&amp;sortby=date&amp;view=rev"><b>3588</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm?rev=3588&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/PeptideAtlas/Glyco_query.pm?rev=3588">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm?p1=sbeams%2Ftrunk%2Fsbeams%2Flib%2Fperl%2FSBEAMS%2FPeptideAtlas%2FGlyco_query.pm&amp;r1=3588&amp;rev=4921&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Added
+
+<i>Wed May 18 21:36:32 2005 UTC</i> (14 months, 2 weeks ago) by <i>pmoss</i>
+
+
+
+
+
+
+<br>File length: 8788 byte(s)</b>
+
+
+
+
+
+
+
+
+
+
+<pre class="vc_log">Methods to query the glyco prediction talbes
+</pre>
+
+ 
+
+
+
+<a name="diff"></a>
+<hr noshade>
+This form allows you to request diffs between any two revisions of
+a file. You may select a symbolic revision name using the selection
+box or you may type in a numeric name using the type-in text box.
+<p>
+<form method="get" action="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm" name="diff_select">
+<input type="hidden" name="sortby" value="date" />
+<table border="0" cellpadding="2" cellspacing="0">
+<tr>
+<td>&nbsp;</td>
+<td>
+Diffs between
+
+<input type="text" size="12" name="r1" value="3588">
+
+and
+
+<input type="text" size="12" name="r2" value="3588">
+
+</td>
+</tr>
+<tr>
+<td><input type="checkbox" name="makepatch" id="makepatch" value="1"></td>
+<td><label for="makepatch">Generate output suitable for use with a patch
+program</label></td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td>
+Type of Diff should be a
+<select name="diff_format" onchange="submit()">
+<option value="h" selected>Colored Diff</option>
+<option value="l" >Long Colored Diff</option>
+<option value="u" >Unidiff</option>
+<option value="c" >Context Diff</option>
+<option value="s" >Side by Side</option>
+</select>
+<input type="submit" value=" Get Diffs ">
+</td>
+</tr>
+</table>
+</form>
+
+
+
+
+<hr noshade>
+<a name=logsort></a>
+<form method=get action="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Glyco_query.pm">
+<input type="hidden" name="sortby" value="date" /><input type="hidden" name="view" value="log" />
+Sort log by:
+<select name="logsort" onchange="submit()">
+<option value="cvs" >Not sorted</option>
+<option value="date" selected>Commit date</option>
+<option value="rev" >Revision</option>
+</select>
+<input type=submit value=" Sort ">
+</form>
+
+
+<hr noshade>
+<table width="100%" border="0" cellpadding="0" cellspacing="0">
+<tr>
+<td align="left">
+<address><a href="mailto:edeutsch@systemsbiology.org">Email questions or problems to Eric Deutsch</a></address><br />
+Powered by <a href="http://viewcvs.sourceforge.net/">ViewCVS 1.0-dev</a>
+</td>
+<td align="right">
+<h3><a target="_blank" href="/cgi/viewcvs/viewcvs.cgi/*docroot*/help_log.html">ViewCVS and CVS Help</a></h3>
+</td>
+</tr>
+</table>
+</body>
+</html>
+

@@ -80,7 +80,7 @@ sub lookup_glycosite {
 
   my $sbeams = $self->getSBEAMS() || return;
   my ($id) = $sbeams->selectrow_array( <<"  END" );
-  SELECT glyco_site_id FROM $TBGP_GLYCOSITE
+  SELECT glyco_site_id FROM $TBGP_GLYCO_SITE
   WHERE protein_glyco_site_position = $args{start}
   AND ipi_data_id = $args{ipi_data_id}
   END
@@ -97,13 +97,13 @@ sub findAdjacentGlycosites {
 
   my ($pre) = $sbeams->selectrow_array( <<"  END" );
   SELECT MAX(protein_glyco_site_position) 
-  FROM $TBGP_GLYCOSITE
+  FROM $TBGP_GLYCO_SITE
   WHERE protein_glyco_site_position <= $args{position}
   AND ipi_data_id = $args{ipi_data_id}
   END
   my $sql =<<"  END";
   SELECT MAX(protein_glyco_site_position) 
-  FROM $TBGP_GLYCOSITE
+  FROM $TBGP_GLYCO_SITE
   WHERE protein_glyco_site_position <= $args{position}
   AND ipi_data_id = $args{ipi_data_id}
   END
@@ -111,7 +111,7 @@ sub findAdjacentGlycosites {
 
   my ($post) = $sbeams->selectrow_array( <<"  END" );
   SELECT MIN(protein_glyco_site_position) 
-  FROM $TBGP_GLYCOSITE
+  FROM $TBGP_GLYCO_SITE
   WHERE protein_glyco_site_position >= $args{position}
   AND ipi_data_id = $args{ipi_data_id}
   END
@@ -235,7 +235,7 @@ sub insertPeptideToTissue {
 
   my $sbeams = $self->getSBEAMS();
   my ( $sample_id ) = $sbeams->selectrow_array( <<"  END" );
-  SELECT sample_id FROM $TBGP_UNIPEP_SAMPLE
+  SELECT sample_id FROM $TBGP_GLYCO_SAMPLE
   WHERE sample_name = '$row->[$heads->{sample}]'
   END
   push @row, $sample_id;
@@ -252,7 +252,7 @@ sub insertPeptideToTissue {
   }
   my $id = $sbeams->updateOrInsertRow( insert => 1,
                                     return_PK => 1,
-                                   table_name => $TBGP_PEPTIDE_TO_SAMPLE,
+                                   table_name => $TBGP_PEPTIDE_TO_TISSUE,
                                   rowdata_ref => \%rowdata );
    return $id;
 }

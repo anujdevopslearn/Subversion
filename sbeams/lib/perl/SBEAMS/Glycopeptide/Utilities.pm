@@ -1,729 +1,1176 @@
-package SBEAMS::Glycopeptide::Utilities;
-
-use SBEAMS::Connection qw( $log );
-use SBEAMS::Glycopeptide::Tables;
-
-sub new {
-  my $class = shift;
-  my $this = {};
-  bless $this, $class;
-  return $this;
-}
-
-#+
-# Routine counts the number of times pepseq matches protseq
-# -
-sub match_count {
-  my $self = shift;
-  my %args = @_;
-  return unless $args{pepseq} && $args{protseq};
-
-  my @cnt = split( $args{pepseq}, $args{protseq}, -1 );
-  return $#cnt;
-}
-
-#+
-# Routine finds and returns 0-based start/end coordinates of pepseq in protseq
-# -
-sub map_peptide_to_protein {
-	my $self = shift;
-	my %args = @_;
-	my $pep_seq = $args{pepseq};
-	my $protein_seq = $args{protseq};
-	
-	if ( $protein_seq =~ /$pep_seq/ ) {
-		my $start_pos = length($`);    
-		my $stop_pos = length($pep_seq) + $start_pos;  
-		return ($start_pos, $stop_pos);	
-	}else{
-		return;
-	}
-}
-
-#+
-# @nparam aa_seq
-# @nparam min_len
-# @nparam max_len
-# @nparam flanking
-#-
-sub do_tryptic_digestion {
-  my $self = shift;
-  my %args = @_;
-
-  # Check for required params
-  my $missing;
-  for my $param ( qw( aa_seq ) ) {
-    $missing = ( $missing ) ? $missing . ',' . $param : $param if !defined $args{$param};
-  }
-  die "Missing required parameter(s) $missing" if $missing;
-  
-  # Set default param values
-  $args{flanking} ||= 0;
-  $args{min_len} ||= 1;
-  $args{max_len} ||= 10e6;
-
-  # Store list to pass back
-  my @peptides;
-  
-  # previous, current, next amino acid
-  my ( $prev, $curr, $next );
-
-  # current peptide and length
-  my ($peptide, $length);
-
-  my @aa = split "", $args{aa_seq};
-
-  for ( my $i = 0; $i <= $#aa; $i++ ) {
-
-    # Set the values for the position stores
-    $prev = ( !$i ) ? '-' : $aa[$i - 1];
-    $curr = $aa[$i];
-    $next = ( $i == $#aa ) ? '-' : $aa[$i + 1];
-#    print STDERR "i:$i, prev:$prev, curr:$curr, next:$next, aa:$#aa, pep:$peptide, len:$length flk:$args{flanking}\n";
-
-    if ( !$peptide ) { # assumes we won't start with a non-aa character
-      $peptide .= ( $args{flanking} ) ? "$prev.$curr" : $curr; 
-      $length++;
-      if ( $curr =~ /[RK]/i ) {
-        if ( $next !~ /P/ ) {
-          $peptide .= ( $args{flanking} ) ? ".$next" : ''; 
-          if ( $length <= $args{max_len} && $length >= $args{min_len} ) {
-            push @peptides, $peptide 
-          }
-          $peptide = '';
-          $length = 0;
-        }
-      }
-    } elsif ( $curr !~ /[a-zA-Z]/ ) { # Probably a modification symbol
-      $peptide .= @curr;
-      $length++;
-    } elsif ( $curr =~ /[RK]/i ) {
-      if ( $next =~ /P/ ) {
-        $peptide .= $curr;
-        $length++;
-      } else { 
-        $length++;
-        $peptide .= ( $args{flanking} ) ? "$curr.$next" : $curr; 
-        if ( $length <= $args{max_len} && $length >= $args{min_len} ) {
-          push @peptides, $peptide 
-        }
-        $peptide = '';
-        $length = 0;
-      }
-    } elsif ( $i == $#aa ) {
-      $length++;
-      $peptide .= ( $args{flanking} ) ? "$curr.$next" : $curr; 
-      if ( $length <= $args{max_len} && $length >= $args{min_len} ) {
-        push @peptides, $peptide 
-      }
-      $peptide = '';
-      $length = 0;
-    } else {
-      $length++;
-      $peptide .= $curr; 
-#      die "What the, i:$i, prev:$prev, curr:$curr, next:$next, aa:$#aa, pep:$peptide, len:$length\n";
-    }
-  }
-  return \@peptides;
-}
-
-
-#+
-# Routine generates standard 'tryptic' peptide from observed sequence,
-# i.e. -.SHGTLFK.N
-# -
-sub getDigestPeptide {
-  my $self = shift;
-  my %args = @_;
-  for my $req ( qw( begin end protseq ) ) {
-    die "Missing required parameter $req" unless defined $args{$req};
-  }
-  my $length =  $args{end} - $args{begin};
-  my $seq = '';
-  if ( !$args{begin} ) {
-    $seq = substr( '-' . $args{protseq}, $args{begin}, $length + 2 );
-  } elsif ( $args{end} == length($args{protseq}) ) {
-    $seq = substr( $args{protseq} . '-' , $args{begin} -1, $length + 2 );
-  } else {
-    $seq = substr( $args{protseq}, $args{begin} -1, $length + 2 );
-  }
-  $seq =~ s/^(.)(.*)(.)$/$1\.$2\.$3/;
-  return $seq;
-}
-
-# Returns reference to an array holding the 0-based indices of a pattern 'X'
-# in the peptide sequence
-sub get_site_positions {
-  my $self = shift;
-  my %args = @_;
-  $args{pattern} = 'N.[S|T]' if !defined $args{pattern};
-  return unless $args{seq};
-
-  my @posn;
-  while ( $args{seq} =~ m/$args{pattern}/g ) {
-    my $posn = length($`);
-    push @posn, $posn;# pos($string); # - length($&) # start position of match
-  }
-#  $log->debug( "Found $posn[0] for NxS/T in $args{seq}\n" );
-  return \@posn;
-}
-
-sub get_current_prophet_cutoff {
-  my $self = shift;
-  my $sbeams = $self->getSBEAMS() || new SBEAMS::Connection;
-  my $cutoff = $sbeams->get_cgi_param( 'glyco_prophet_cutoff' );
-  if ( $cutoff ) {
-    $self->set_prophet_cutoff( $cutoff );
-  } else  {
-    $cutoff = $sbeams->getSessionAttribute( key => 'glyco_prophet_cutoff' );
-  }
-  $cutoff ||= 0.5; 
-  return $cutoff;
-}
-
-sub getCurrentBuild {
-  my $self = shift;
-  my $sql = "Select ipi_version_name FROM $TBGP_IPI_VERSION";
-  my ( $build ) = $self->getSBEAMS->selectrow_array( $sql );
-  $build = 'V15';  # Fixme!
-}
-
-sub set_prophet_cutoff {
-  my $self = shift;
-  my $cutoff = shift || return;
-  my $sbeams = $self->getSBEAMS();
-  $sbeams->setSessionAttribute( key => 'glyco_prophet_cutoff',
-                              value => $cutoff );
-  return 1;
-}
-
-sub clean_pepseq {
-  my $this = shift;
-  my $seq = shift || return;
-  $seq =~ s/\-MET\(O\)/m/g;
-  $seq =~ s/N\*/n/g;
-  $seq =~ s/N\#/n/g;
-  $seq =~ s/M\#/m/g;
-  $seq =~ s/d/n/g;
-  $seq =~ s/U/n/g;
-
-  # Trim off leading/lagging amino acids
-  $seq =~ s/^.\.//g;
-  $seq =~ s/\..$//g;
-  return $seq;
-}
-
-sub get_charged_mass {
-  my $self = shift;
-  my %args = @_;
-  return unless $args{mass} && $args{charge};
-#  my $hmass = 1.00794;
-  my $hmass = 1.0078;
-  return sprintf( '%0.4f', ( $args{mass} + $args{charge} * $hmass )/ $args{charge} ); 
-}
-
-###############################################################################
-# getResidueMasses: Get a hash of masses for each of the residues
-###############################################################################
-sub getResidueMasses {
-  my %args = @_;
-  my $SUB_NAME = 'getResidueMasses';
-
-  #### Define the residue masses
-  my %residue_masses = (
-    I => 113.1594,   # Isoleucine
-    V =>  99.1326,   # Valine
-    L => 113.1594,   # Leucine
-    F => 147.1766,   # Phenyalanine
-    C => 103.1388,   # Cysteine
-    M => 131.1926,   # Methionine
-    A =>  71.0788,   # Alanine
-    G =>  57.0519,   # Glycine
-    T => 101.1051,   # Threonine
-    W => 186.2132,   # Tryptophan
-    S =>  87.0782,   # Serine
-    Y => 163.1760,   # Tyrosine
-    P =>  97.1167,   # Proline
-    H => 137.1411,   # Histidine
-    E => 129.1155,   # Glutamic Acid (Glutamate)
-    Q => 128.1307,   # Glutamine
-    D => 115.0886,   # Aspartic Acid (Aspartate)
-    N => 114.1038,   # Asparagine
-    K => 128.1741,   # Lysine
-    R => 156.1875,   # Arginine
-
-    X => 118.8860,   # Unknown, avg of 20 common AA.
-    B => 114.5962,   # avg N and D
-    Z => 128.6231,   # avg Q and E
-#  '#' => 0.9848
-  );
-
-  $residue_masses{C} += 57.0215 if $args{alkyl_cys};
-  return \%residue_masses;
-}
-
-
-###############################################################################
-# getMonoResidueMasses: Get a hash of masses for each of the residues
-###############################################################################
-sub getMonoResidueMasses {
-  my %args = @_;
-  my $SUB_NAME = 'getResidueMasses';
-
-  #### Define the residue masses
-  my %residue_masses = (
-    G => 57.021464,
-    D => 115.02694,
-    A => 71.037114,
-    Q => 128.05858,
-    S => 87.032029,
-    K => 128.09496,
-    P => 97.052764,
-    E => 129.04259,
-    V => 99.068414,
-    M => 131.04048,
-    T => 101.04768,
-    H => 137.05891,
-    C => 103.00919,
-    F => 147.06841,
-    L => 113.08406,
-    R => 156.10111,
-    I => 113.08406,
-    N => 114.04293,
-    Y => 163.06333,
-    W => 186.07931 ,
-#   '#' => 0.98401,
-    
-    X => 118.8057,   # Unknown, avg of 20 common AA.
-    B => 114.5349,   # avg N and D
-    Z => 128.5506,   # avg Q and E
-    );
-
-  $residue_masses{C} += 57.0215 if $args{alkyl_cys};
-  return \%residue_masses;
-}
-    
-sub calculatePeptideMass {
-  my $self = shift;
-  my %args = @_;
-
-  # Must specify sequence
-  die "Missing required parameter sequence" unless $args{sequence};
-  $args{alkyl_cys} ||= '';
-
-  # Mass of subject peptide
-  my $mass = 0;
-  # Ref to hash of masses
-  my $rmass;
-
-  if ( $args{average} ) {
-    $rmass = getResidueMasses( %args );
-    $mass += 18.0153; # N and C termini have extra H, OH.
-  } else {
-    $rmass = getMonoResidueMasses( %args );
-    $mass += 18.0105; # N and C termini have extra H, OH.
-  }
-
-  # has leading.sequence.lagging format trim all but sequence
-  if ( $args{flanking} ) {
-    $args{sequence} = substr( $args{sequence}, 2, length( $args{sequence} ) - 4 )
-  }
-
-  my $bail;
-  while ( $args{sequence} !~ /^[a-zA-Z]+$/ ) {
-    die "Had to bail\n" if $bail++ > 10;
-    if ( $args{sequence} =~ /([a-zA-Z][*#@])/ ) {
-      my $mod = $1;
-      my $orig = $mod;
-      $orig =~ s/[@#*]//;
-      if ( $mod =~ /M/ ) {
-        $mass += 15.9949;
-        print "$args{sequence} => Got a mod M\n";
-      } elsif ( $mod =~ /C/ ) {
-        print "$args{sequence} => Got a mod C\n";
-        $mass += 57.0215;
-      } elsif ( $mod =~ /N/ ) {
-        $mass += 0.9848;
-        print "$args{sequence} => Got a mod N\n";
-      } else {
-        die "Unknown modification $mod!\n";
-      }
-      unless ( $args{sequence} =~ /$mod/ ) {
-        die "how can it not match?";
-      }
-      print "mod is >$mod<, orig is >$orig<, seq is $args{sequence}\n";
-      $args{sequence} =~ s/$mod//;
-      $args{sequence} =~ s/N\*//;
-      print "mod is $mod, orig is $orig, seq is $args{sequence}\n";
-    }
-  }
-  
-
-  my $seq = uc( $args{sequence} );
-  my @seq = split( "", $seq );
-  foreach my $r ( @seq ) {
-    if ( !defined $rmass->{$r} ) {
-      $log->error("Undefined residue $r in getPeptideMass");
-      $rmass->{$r} = $rmass->{X} # Assign 'average' mass.
-    }
-    $mass += $rmass->{$r};
-  }
-
-  return sprintf( "%0.4f", $mass);
-}
-
-#+
-# Returns hashref with isoelectric points of various single amino acids.
-#-
-sub getResidueIsoelectricPoints {
-  my $self = shift;
-  my %pi = ( A => 6.00,
-             R => 11.15,
-             N => 5.41,
-             D => 2.77,
-             C => 5.02,
-             Q => 5.65,
-             E => 3.22,
-             G => 5.97,
-             H => 7.47,
-             I => 5.94,
-             L => 5.98,
-             K => 9.59,
-             M => 5.74,
-             F => 5.48,
-             P => 6.30,
-             S => 5.68,
-             T => 5.64,
-             W => 5.89,
-             Y => 5.66,
-             V => 5.96,
-             
-             X => 6.03,   # Unknown, avg of 20 common AA.
-             B => 4.09,   # avg N and D
-             Z => 4.44   # avg Q and E 
-           );
-  return \%pi;
-}
-
-
-#+ 
-# Simple minded pI calculator, simply takes an average.
-#-
-sub calculatePeptidePI_old {
-  my $self = shift;
-  my %args = @_;
-  die "Missing required parameter sequence" unless $args{sequence};
-  $self->{_rpka} ||= $self->getResiduePKAs();
-  my $seq = uc( $args{sequence} );
-  my @seq = split( "", $seq );
-#  my $pi = 2.2 + 9.5; # Average C and N terminal pKA
-  my $pi = 3.1 + 8.0; # Average C and N terminal pKA
-  my $cnt = 2;        # We have termini, if nothing else
-  foreach my $r ( @seq ) {
-    next if !defined $self->{_rpka}->{$r}; 
-#    print "Calculating with $self->{_rpka}->{$r}\n";
-    $pi += $self->{_rpka}->{$r};
-    $cnt++;
-  }
-#  print "total pi is $pi, total cnt is $cnt\n";
-  return sprintf( "%0.1f", $pi/$cnt );
-}
-
-
-#+
-# pI calculator algorithm taken from proteomics toolkit 'Isotope Servlet'
-#-
-sub calculatePeptidePI {
-  my $self = shift;
-  my %args = @_;
-  die "Missing required parameter sequence" unless $args{sequence};
-
-  # Get pKa values
-  $self->{_rpkav} ||= $self->getResiduePKAvalues();
-  my %pka = %{$self->{_rpkav}};
-
-  # split sequence into an array
-  my $seq = uc( $args{sequence} );
-  my @seq = split "", $seq;
-  my %cnt;
-
-  my $side_total = 0;
-  for my $aa ( keys(%pka) ) {
-    # Only consider amino acids that can carry a charge
-    next unless $pka{$aa}->[2];
-
-    # Count the occurences of each salient amino acid (C, D, E, H, K, R, Y)
-    $cnt{$aa} = eval "$seq =~ tr/$aa/$aa/";
-    $side_total += $cnt{$aa};
-  }
-
-  # pKa at C/N termini vary by amino acid
-  my $nterm_pka = $pka{$seq[0]}->[1];
-  my $cterm_pka = $pka{$seq[$#seq]}->[0];
-
-  # Range of pH values
-  my $ph_min = 0;
-  my $ph_max = 14;
-  my $ph_mid;
-
-  # Don't freak out if we can't converge
-  my $max_iterations = 200;
-
-  # This is all approximate anyway
-  my $precision = 0.01;
-
-  # Loop de loop
-  for( my $i = 0; $i <= $max_iterations; $i++ ) {
-    $ph_mid =  $ph_min + ($ph_max - $ph_min)/2; 
-
-    # Positive contributors
-    my $cNter = 10**-$ph_mid / ( 10**-$nterm_pka + 10**-$ph_mid );
-    my $carg  = $cnt{R} * 10**-$ph_mid / ( 10**-$pka{R}->[2] + 10**-$ph_mid );
-    my $chis  = $cnt{H} * 10**-$ph_mid / ( 10**-$pka{H}->[2] + 10**-$ph_mid );
-    my $clys  = $cnt{K} * 10**-$ph_mid / ( 10**-$pka{K}->[2] + 10**-$ph_mid );
-
-    # Negative contributors
-    my $cCter = 10**-$cterm_pka / ( 10**-$cterm_pka + 10**-$ph_mid );
-    my $casp  = $cnt{D} * 10**-$pka{D}->[2] / ( 10**-$pka{D}->[2] + 10**-$ph_mid );
-    my $cglu  = $cnt{E} * 10**-$pka{E}->[2] / ( 10**-$pka{E}->[2] + 10**-$ph_mid );
-    my $ccys  = $cnt{C} * 10**-$pka{C}->[2] / ( 10**-$pka{C}->[2] + 10**-$ph_mid );
-    my $ctyr  = $cnt{Y} * 10**-$pka{Y}->[2] / ( 10**-$pka{Y}->[2] + 10**-$ph_mid );
-    
-    # Charge, trying to minimize absolute value
-    my $charge = $carg + $clys + $chis + $cNter - ($casp + $cglu + $ctyr + $ccys + $cCter);
-    
-    if ( $charge > 0.0) {
-      $ph_min = $ph_mid; 
-    } else {
-      $ph_max = $ph_mid;
-    }
-    last if abs($ph_max - $ph_min) < $precision;
-  }
-
-  # Let lack of return precision reflect the fact that this is an estimate 
-  return sprintf( "%0.1f", ($ph_max + $ph_min)/ 2 );
-}
-
-#+
-# Returns ref to hash of one-letter amino acid => arrayref of N, 
-# C and side-chain pKa values
-#-
-sub getResiduePKAvalues {
-  my $self = shift;
-                   #-COOH  -NH3  -R grp
-  my %pka = ( A => [ 3.55, 7.59, 0.0 ],
-
-              D => [ 4.55, 7.50, 4.05 ], # IS => ionizable sidechain
-              N => [ 3.55, 7.50, 0.0 ],
-              B => [ 4.35, 7.50, 2.0 ], # Asx
-
-              C => [ 3.55, 7.50, 9.00  ], # IS
-
-              E => [ 4.75, 7.70, 4.45 ], # IS
-              Q => [ 3.55, 7.00, 0.0 ],
-              Z => [ 4.15, 7.25, 2.2 ], # Glx
-
-              F => [ 3.55, 7.50, 0.0 ],
-              G => [ 3.55, 7.50, 0.0 ],
-              H => [ 3.55, 7.50, 5.98  ], # IS
-              I => [ 3.55, 7.50, 0.0 ],
-              K => [ 3.55, 7.50, 10.0 ], # IS
-              L => [ 3.55, 7.50, 0.0 ],
-              M => [ 3.55, 7.00, 0.0 ],
-              P => [ 3.55, 8.36, 0.0 ],
-              R => [ 3.55, 7.50, 12.0  ], # IS
-              S => [ 3.55, 6.93, 0.0  ],
-              T => [ 3.55, 6.82, 0.0  ],
-              V => [ 3.55, 7.44, 0.0 ],
-              W => [ 3.55, 7.50, 0.0 ],
-              Y => [ 3.55, 7.50, 10.0 ], # IS
-              
-              X => [ 3.55, 7.50, 2.3 ], # Unknown aa
-              );
-
-  return \%pka;
-}
-
-
-#+
-# Returns hash of amino acid to pKa value; various tables exist.
-#-
-sub getResiduePKAs {
-  my $self = shift;
-  my $old = shift;
-  my %pka1 = ( C => 8.4, 
-               D => 3.9,
-               E => 4.1,
-               H => 6.0,
-               K => 10.5,
-               R => 12.5,
-               Y => 10.5 );
-  return \%pka1 if $old;
-
-  my %pka = ( C => 9.0, 
-              D => 4.05,
-              E => 4.45,
-              H => 5.98,
-              K => 10.0,
-              R => 12.0,
-              Y => 10.0 );
-
-  return \%pka;
-}
-
-#+
-# Runs mass search vs database
-#-
-sub runBulkSearch {
-  my $self = shift;
-  my %args = @_;
-
-  my @ids = @{$args{ids}};
-  @ids = map { "'" . $_ . "'" } @ids;
-
-  my $sbeams = $self->getSBEAMS();
-  my $ids = join( ',', @ids );
-
-  my $type = ( $args{id_type} eq 'swp' ) ? 'swiss_prot_acc' :
-             ( $args{id_type} eq 'sym' ) ? 'protein_symbol' : 'ipi_accession_number';
-
-
-  my $sql =<<"  END";
-  SELECT DISTINCT ipi_accession_number, swiss_prot_acc, ID.ipi_data_id,
-             identified_peptide_sequence, protein_symbol, protein_name, IP.identified_peptide_id,
-             peptide_prophet_score, peptide_mass
-  FROM $TBGP_IPI_DATA ID join $TBGP_IDENTIFIED_TO_IPI ITI
-  ON ID.ipi_data_id = ITI.ipi_data_id
-  JOIN $TBGP_IDENTIFIED_PEPTIDE IP
-  ON IP.identified_peptide_id = ITI.identified_peptide_id
-  WHERE $type IN ( $ids )
-  END
-  $log->debug( $sql );
-
-  my @results = $sbeams->selectSeveralColumns( $sql );
-  return \@results;
-}
-
-###
-
-#+
-# Runs mass search vs database
-#-
-sub runMassSearch {
-  my $self = shift;
-  my %args = @_;
-
-  my @results = ( 'Group', 'Search Mass', 'IPI', 'Sequence', 'DB Mass', 'Delta', 'Protein Name', '# ox Met' );
-
-  my $sbeams = $self->getSBEAMS();
-
-  my $sql;
-  if ( !$args{search} eq 'pred' ) {
-    $sql =<<"    END";
-    SELECT DISTINCT ipi_accession_number, CAST( predicted_peptide_sequence AS VARCHAR) ,
-           experimental_peptide_mass, protein_name, 
-           ABS( experimental_peptide_mass - SEARCHMASS ) delta
-    FROM biomarker.dbo.predicted_peptide PP JOIN biomarker.dbo.ipi_data ID
-    ON ID.ipi_data_id = PP.ipi_data_id
-    WHERE ( (experimental_peptide_mass BETWEEN MINMASS AND MAXMASS )  OXCLAUSE )
-    AND predicted_peptide_sequence LIKE '%#%'
-    ORDER BY ABS( experimental_peptide_mass - SEARCHMASS ) ASC, experimental_peptide_mass ASC
-    END
-  } else {
-    $sql =<<"    END";
-    SELECT DISTINCT ipi_accession_number, identified_peptide_sequence,
-           experimental_peptide_mass, protein_name,
-           ABS( experimental_peptide_mass - SEARCHMASS ) delta
-    FROM biomarker.dbo.identified_peptide IP JOIN biomarker.dbo.identified_to_ipi ITI
-    ON ITI.identified_peptide_id = IP.identified_peptide_id
-    JOIN biomarker.dbo.ipi_data ID
-    ON ID.ipi_data_id = ITI.ipi_data_id
-    WHERE ( (experimental_peptide_mass BETWEEN MINMASS AND MAXMASS )  OXCLAUSE )
-    ORDER BY ABS( experimental_peptide_mass - SEARCHMASS ) ASC, experimental_peptide_mass ASC
-    END
-  }
-
-  my $cnt;
-  my @all_matches;
-  for my $mass ( @{$args{masses}} ) {
-    $log->debug( "MASS IS: $mass" );
-    $cnt++;
-    chomp $mass;
-    my @matches;
-
-#    Add proton mass?
-#    my $mass = $mz * $ch - 1.0072;
-
-    my $tolerance;
-    if ( $args{mw_units} eq 'ppm' ) {
-      my $mppm = $mass/1000000;
-      $tolerance = $args{mass_window}/2*$mppm;
-    } else {
-      $tolerance = $args{mass_window}/2;
-    }
-    my $minmass = $mass - $tolerance;
-    my $maxmass = $mass + $tolerance;
-
-    my $ox_mass = 15.9949;
-
-    my $ox_clause = '';
-    if ( $args{ox_met} ) {
-      my $ox_min = $minmass + $ox_mass;
-      my $ox_max = $maxmass + $ox_mass;
-      $ox_clause .= " OR ( experimental_peptide_mass BETWEEN $ox_min AND $ox_max ) \n"; 
-      if ( $args{ox_met} > 1 ) {
-        my $ox_min = $minmass + 2 * $ox_mass;
-        my $ox_max = $maxmass + 2 * $ox_mass;
-        $ox_clause .= " OR ( experimental_peptide_mass BETWEEN $ox_min AND $ox_max ) \n"; 
-      }
-    }
-
-    my $mass_sql = $sql;
-    $mass_sql =~ s/MINMASS/$minmass/g;
-    $mass_sql =~ s/MAXMASS/$maxmass/g;
-    $mass_sql =~ s/OXCLAUSE/$ox_clause/g;
-    $mass_sql =~ s/SEARCHMASS/$mass/g;
-   $log->debug( $mass_sql );
-
-    my @results = $sbeams->selectSeveralColumns( $mass_sql );
-    if ( scalar @results ) {
-      for my $result ( @results ) {
-        my $ox_num = 0;
-        if ( $args{ox_met} ) {
-          # Searched with ox_met, looking for +16 and maybe +32
-          if ( $args{ox_met} > 1 ) {
-          $log->debug( "Croaker " . $args{ox_met} .  " $result->[4] " );
-            if ( $result->[2] > ($maxmass + $ox_mass) ) {
-              if ( $result->[1] =~ /\..*M.*M.*\./ ) {
-                $ox_num = 2;
-              } else {
-                $log->debug( "skippy" . $result->[1] );
-                next;
-              }
-            } elsif ( $result->[2] > $maxmass ) {
-              if ( $result->[1] =~ /\..*M.*\./ ) {
-                $log->debug( "$result->[1] matched!" );
-                $ox_num = 1;
-              } else {
-                $log->debug( "skiipy" . $result->[1] );
-                next;
-              }
-            }
-          }
-        }
-        $ox_num = ( $result->[4] > 1 ) ? 1 : 0;
-        $log->debug( "pushing $result->[1]" );
-        my @row = ( $cnt, $mass, @$result, $ox_num );
-        push @matches, \@row;
-      }
-    } 
-    unless ( scalar @matches ) {
-        push @matches, [$cnt, $mass, 'n/a', 'n/a', 'n/a', 'n/a', 'n/a', 'n/a' ];
-    }
-    push @all_matches, @matches;
-  }
-  return \@all_matches;
-}
-
-1;
+
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+"http://www.w3.org/TR/REC-html40/loose.dtd">
+<!-- ViewCVS - http://viewcvs.sourceforge.net/
+by Greg Stein - mailto:gstein@lyra.org -->
+<html>
+<head>
+<title>[svn] Log of /sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm</title>
+<meta name="generator" content="ViewCVS 1.0-dev">
+<link rel="stylesheet" href="/cgi/viewcvs/viewcvs.cgi/*docroot*/styles.css" type="text/css">
+</head>
+<body>
+<div class="vc_navheader">
+<table width="100%" border="0" cellpadding="0" cellspacing="0">
+<tr>
+<td align="left"><b>
+
+<a href="/cgi/viewcvs/viewcvs.cgi/?rev=4915&amp;sortby=date">
+
+[svn]</a>
+/
+
+<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/?rev=4915&amp;sortby=date">
+
+sbeams</a>
+/
+
+<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/?rev=4915&amp;sortby=date">
+
+trunk</a>
+/
+
+<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/?rev=4915&amp;sortby=date">
+
+sbeams</a>
+/
+
+<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/?rev=4915&amp;sortby=date">
+
+lib</a>
+/
+
+<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/?rev=4915&amp;sortby=date">
+
+perl</a>
+/
+
+<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/?rev=4915&amp;sortby=date">
+
+SBEAMS</a>
+/
+
+<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/?rev=4915&amp;sortby=date">
+
+Glycopeptide</a>
+/
+
+
+
+Utilities.pm
+
+
+</b></td>
+<td align="right">
+
+&nbsp;
+
+</td>
+</tr>
+</table>
+</div>
+<h1><img align=right src="/cgi/viewcvs/viewcvs.cgi/*docroot*/images/logo.png" width=128 height=48>Log of /sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm</h1>
+
+<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/?sortby=date"><img src="/cgi/viewcvs/viewcvs.cgi/*docroot*/images/back_small.png" width=16 height=16 border=0> Parent Directory</a>
+
+
+
+<hr noshade>
+<p>No default branch<br>
+Bookmark a link to HEAD:
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm">download</a>)
+
+
+</p>
+
+
+
+ 
+
+
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4915"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4915&amp;sortby=date&amp;view=rev"><b>4915</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4915&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4915">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4915&amp;rev=4915&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Fri Jul 21 01:06:18 2006 UTC</i> (12 days, 17 hours ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 20682 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4870&amp;r2=4915&amp;rev=4915&amp;sortby=date">previous 4870</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Schema and new build process related changes.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4870"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4870&amp;sortby=date&amp;view=rev"><b>4870</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4870&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4870">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4870&amp;rev=4915&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Fri Jul 14 00:43:28 2006 UTC</i> (2 weeks, 5 days ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 18252 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4827&amp;r2=4870&amp;rev=4870&amp;sortby=date">previous 4827</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Added gene_symbol lookup.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4827"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4827&amp;sortby=date&amp;view=rev"><b>4827</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4827&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4827">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4827&amp;rev=4915&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Mon Jul 10 06:53:38 2006 UTC</i> (3 weeks, 2 days ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 18224 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4798&amp;r2=4827&amp;rev=4827&amp;sortby=date">previous 4798</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Fixed some issues with bulkSearch.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4798"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4798&amp;sortby=date&amp;view=rev"><b>4798</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4798&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4798">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4798&amp;rev=4915&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Sat Jun 24 04:44:29 2006 UTC</i> (5 weeks, 4 days ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 17204 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4785&amp;r2=4798&amp;rev=4798&amp;sortby=date">previous 4785</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Added bulkSearch routine
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4785"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4785&amp;sortby=date&amp;view=rev"><b>4785</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4785&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4785">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4785&amp;rev=4915&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Sat Jun 17 01:17:05 2006 UTC</i> (6 weeks, 4 days ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 16354 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4744&amp;r2=4785&amp;rev=4785&amp;sortby=date">previous 4744</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Added quick sub to calculate m/z of different charges states, mostly for testing mono mass vs. inSilicoSpectro, cleaned up some debug stmts.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4744"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4744&amp;sortby=date&amp;view=rev"><b>4744</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4744&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4744">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4744&amp;rev=4915&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Sat Jun 10 01:29:09 2006 UTC</i> (7 weeks, 4 days ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 16196 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4677&amp;r2=4744&amp;rev=4744&amp;sortby=date">previous 4677</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Added mass search routine, refined peptide mass calculator.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4677"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4677&amp;sortby=date&amp;view=rev"><b>4677</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4677&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4677">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4677&amp;rev=4915&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Mon Apr 24 16:07:04 2006 UTC</i> (3 months, 1 week ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 10718 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4667&amp;r2=4677&amp;rev=4677&amp;sortby=date">previous 4667</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Patching a patch, version # is still hard coded...
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4667"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4667&amp;sortby=date&amp;view=rev"><b>4667</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4667&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4667">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4667&amp;rev=4915&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Sat Apr 15 00:23:06 2006 UTC</i> (3 months, 2 weeks ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 10718 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4566&amp;r2=4667&amp;rev=4667&amp;sortby=date">previous 4566</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Added optional workaround for lead/lag annotated peptides.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4566"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4566&amp;sortby=date&amp;view=rev"><b>4566</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4566&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4566">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4566&amp;rev=4915&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Sat Mar 18 01:34:45 2006 UTC</i> (4 months, 2 weeks ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 10605 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4549&amp;r2=4566&amp;rev=4566&amp;sortby=date">previous 4549</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Fixed bug in pI calculation.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4549"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4549&amp;sortby=date&amp;view=rev"><b>4549</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4549&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4549">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4549&amp;rev=4915&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Wed Mar 15 22:10:21 2006 UTC</i> (4 months, 2 weeks ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 10605 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4537&amp;r2=4549&amp;rev=4549&amp;sortby=date">previous 4537</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Added 'getCurrentBuild' method.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4537"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4537&amp;sortby=date&amp;view=rev"><b>4537</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4537&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4537">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4537&amp;rev=4915&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Wed Mar 15 18:23:07 2006 UTC</i> (4 months, 2 weeks ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 10409 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4505&amp;r2=4537&amp;rev=4537&amp;sortby=date">previous 4505</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Added pI calculator, updated residue MW, added getCurrentCutoff method.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4505"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4505&amp;sortby=date&amp;view=rev"><b>4505</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4505&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4505">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4505&amp;rev=4915&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Wed Mar  8 01:45:34 2006 UTC</i> (4 months, 3 weeks ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 4545 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4476&amp;r2=4505&amp;rev=4505&amp;sortby=date">previous 4476</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Fixed mass calculator to add 18 for extra atoms at termini.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4476"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4476&amp;sortby=date&amp;view=rev"><b>4476</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4476&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4476">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4476&amp;rev=4915&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Wed Mar  1 02:08:26 2006 UTC</i> (5 months ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 4540 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4452&amp;r2=4476&amp;rev=4476&amp;sortby=date">previous 4452</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Added subroutine documentation.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4452"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4452&amp;sortby=date&amp;view=rev"><b>4452</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4452&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4452">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4452&amp;rev=4915&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Fri Feb 17 23:10:06 2006 UTC</i> (5 months, 1 week ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 4324 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4444&amp;r2=4452&amp;rev=4452&amp;sortby=date">previous 4444</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Turned off debugging stmts.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4444"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4444&amp;sortby=date&amp;view=rev"><b>4444</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4444&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4444">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4444&amp;rev=4915&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Fri Feb 17 06:59:30 2006 UTC</i> (5 months, 2 weeks ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 4320 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4419&amp;r2=4444&amp;rev=4444&amp;sortby=date">previous 4419</a>
+
+
+
+
+
+
+
+<pre class="vc_log">fleshing out de-novo load capabilities.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4419"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4419&amp;sortby=date&amp;view=rev"><b>4419</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4419&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4419">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4419&amp;rev=4915&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Fri Feb 10 06:28:06 2006 UTC</i> (5 months, 3 weeks ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 3401 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4391&amp;r2=4419&amp;rev=4419&amp;sortby=date">previous 4391</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Grabbed peptideMass hash generator from proteomics (should move to core or biolink?), wrote simple string mass calculator.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4391"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4391&amp;sortby=date&amp;view=rev"><b>4391</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4391&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4391">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4391&amp;rev=4915&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Sat Feb  4 02:05:45 2006 UTC</i> (5 months, 3 weeks ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 1775 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4387&amp;r2=4391&amp;rev=4391&amp;sortby=date">previous 4387</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Added routines for fetching/setting prophet cutoff score.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4387"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4387&amp;sortby=date&amp;view=rev"><b>4387</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4387&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4387">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4387&amp;rev=4915&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Modified
+
+<i>Thu Feb  2 23:17:53 2006 UTC</i> (5 months, 4 weeks ago) by <i>dcampbel</i>
+
+
+
+
+
+
+
+
+<br>File length: 1329 byte(s)</b>
+
+
+
+
+
+
+<br>Diff to <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4383&amp;r2=4387&amp;rev=4387&amp;sortby=date">previous 4383</a>
+
+
+
+
+
+
+
+<pre class="vc_log">Added sequence matching utility routines.
+</pre>
+
+<hr size=1 noshade>
+
+
+
+
+<a name="rev4383"></a>
+
+
+Revision <a href="/cgi/viewcvs/viewcvs.cgi?rev=4383&amp;sortby=date&amp;view=rev"><b>4383</b></a>
+ -
+(<a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4383&amp;sortby=date&amp;view=markup">view</a>)
+(<a href="/cgi/viewcvs/viewcvs.cgi/*checkout*/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?rev=4383">download</a>)
+
+
+
+
+
+- <a href="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm?r1=4383&amp;rev=4915&amp;sortby=date&amp;view=log">[select for diffs]</a>
+
+
+
+
+<br>
+
+Added
+
+<i>Thu Feb  2 02:55:09 2006 UTC</i> (5 months, 4 weeks ago) by <i>dcampbel</i>
+
+
+
+
+
+
+<br>File length: 15038 byte(s)</b>
+
+
+
+
+
+
+
+
+
+
+<pre class="vc_log">Initial revision of Utility module.
+</pre>
+
+ 
+
+
+
+<a name="diff"></a>
+<hr noshade>
+This form allows you to request diffs between any two revisions of
+a file. You may select a symbolic revision name using the selection
+box or you may type in a numeric name using the type-in text box.
+<p>
+<form method="get" action="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm" name="diff_select">
+<input type="hidden" name="sortby" value="date" />
+<table border="0" cellpadding="2" cellspacing="0">
+<tr>
+<td>&nbsp;</td>
+<td>
+Diffs between
+
+<input type="text" size="12" name="r1" value="4383">
+
+and
+
+<input type="text" size="12" name="r2" value="4383">
+
+</td>
+</tr>
+<tr>
+<td><input type="checkbox" name="makepatch" id="makepatch" value="1"></td>
+<td><label for="makepatch">Generate output suitable for use with a patch
+program</label></td>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td>
+Type of Diff should be a
+<select name="diff_format" onchange="submit()">
+<option value="h" selected>Colored Diff</option>
+<option value="l" >Long Colored Diff</option>
+<option value="u" >Unidiff</option>
+<option value="c" >Context Diff</option>
+<option value="s" >Side by Side</option>
+</select>
+<input type="submit" value=" Get Diffs ">
+</td>
+</tr>
+</table>
+</form>
+
+
+
+
+<hr noshade>
+<a name=logsort></a>
+<form method=get action="/cgi/viewcvs/viewcvs.cgi/sbeams/trunk/sbeams/lib/perl/SBEAMS/Glycopeptide/Utilities.pm">
+<input type="hidden" name="sortby" value="date" /><input type="hidden" name="view" value="log" />
+Sort log by:
+<select name="logsort" onchange="submit()">
+<option value="cvs" >Not sorted</option>
+<option value="date" selected>Commit date</option>
+<option value="rev" >Revision</option>
+</select>
+<input type=submit value=" Sort ">
+</form>
+
+
+<hr noshade>
+<table width="100%" border="0" cellpadding="0" cellspacing="0">
+<tr>
+<td align="left">
+<address><a href="mailto:edeutsch@systemsbiology.org">Email questions or problems to Eric Deutsch</a></address><br />
+Powered by <a href="http://viewcvs.sourceforge.net/">ViewCVS 1.0-dev</a>
+</td>
+<td align="right">
+<h3><a target="_blank" href="/cgi/viewcvs/viewcvs.cgi/*docroot*/help_log.html">ViewCVS and CVS Help</a></h3>
+</td>
+</tr>
+</table>
+</body>
+</html>
 
