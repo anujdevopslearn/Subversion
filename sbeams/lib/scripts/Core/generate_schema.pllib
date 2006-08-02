@@ -164,6 +164,11 @@ sub writeSchema {
   my $destination_type = $args{'destination_type'}
     || die "destination_type not passed";
 
+  if ($args{'verbose'})
+  {
+      $VERBOSE = $args{'verbose'};
+  }
+
 
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
