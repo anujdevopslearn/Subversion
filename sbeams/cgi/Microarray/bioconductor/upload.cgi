@@ -567,7 +567,7 @@ END
       );
 
       # Print out the data
-      $rs_params{page_size} = 500;    #need to override the default 50 row max display for a page
+      $rs_params{page_size} = 1000;    #need to override the default 50 row max display for a page
       if ( $apply_action eq "VIEWRESULTSET" ) {
         $sbeams->readResultSet(
           resultset_file       => $rs_params{set_name},
