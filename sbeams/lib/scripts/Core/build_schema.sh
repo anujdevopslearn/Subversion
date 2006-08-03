@@ -103,7 +103,7 @@ do
       fi
 
     else
-      echo "${mod}_${cfile}.xxx Not found";
+      echo "${mod}_${cfile}.${db} Not found";
     fi
    
    done
