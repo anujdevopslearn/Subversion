@@ -1,8 +1,0 @@
-DROP TABLE modified_peptide_property;
-DROP TABLE modified_peptide;
-DROP TABLE peptide;
-DROP TABLE peptide_property_type;
-DROP TABLE peptide_summary_experiment;
-DROP TABLE peptide_summary;
-ALTER TABLE peptide_identifier DROP FOREIGN KEY peptide_identifier_str_uk;
-DROP TABLE peptide_identifier;
