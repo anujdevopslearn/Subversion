@@ -48,19 +48,18 @@ my @modules = qw(Microarray Proteomics PeptideAtlas);
   if ( -e "$ENV{SBEAMS}/../sbeamscommon" ) 
   {
     # Setup is partially complete.
-    unless ( $opts{force} || $opts{addModuleToExistingInstallation} ) 
+    unless ( $opts{force} ) 
     {
         my $str = "(at least) partial setup detected\n"
-        . "use --force to overwrite "
-        . "or --addModuleToExistingInstallation";
+        . "use --force to overwrite ";
 
         usage( $str );
     } 
-    print "Continuing install with force or addModuleToExistingInstallation\n" if $opts{verbose};
+    print "Continuing install with --force \n" if $opts{verbose};
   }
 
   # Run core installer shell script, builds dirs/links unless structure exists and adding a new module
-  unless ($opts{addModuleToExistingInstallation} && (-e "$ENV{SBEAMS}/../sbeamscommon") )
+  unless ($opts{addModuleToExistingInstallation} )
   {
       print "Building Core directory structure\n" if $opts{verbose};
       system( "$ENV{SBEAMS}/$scripts{Core}" );
@@ -305,12 +304,12 @@ sub write_config_file {
   my @conf_file;
   { 
     undef local $/;
-    open ( CONF,  $conf ) || usage( "Unable to open SBEAMS.conf file for reading" );
+    open ( CONF,  $conf ) || usage( "Unable to open $conf file for reading" );
     @conf_file = split /\n/, <CONF>;
   }
   close CONF;
   
-  open ( CONF_W,  ">$conf" ) || usage( "Unable to open SBEAMS.conf file for writing" );
+  open ( CONF_W,  ">$conf" ) || usage( "Unable to open $conf file for writing" );
 
   my $default = 0;
   my $main = 0;
