@@ -223,6 +223,8 @@ sub handle_request {
 		}//end verifyNumber
 		  </SCRIPT>
 		  
+      
+      <TABLE> # Added table tags to fix rendering issue.
 		  <tr><td><H1>Sequence Viewer</H1></td></tr>
 		  <tr><td height="1"><img src="$HTML_BASE_DIR/images/bg_Nav.gif" width="518" height="1" border="0"></td></tr>
 		  <tr><td height="5"><img src="$HTML_BASE_DIR/images/clear.gif" width="1" height="1" border="0"></td></tr>
@@ -263,6 +265,7 @@ sub handle_request {
         ~;	
 	}
   }
+  print "</TABLE>";
 
   #### Get all the necessary biosequence information, if possible
   ## We need EITHER
