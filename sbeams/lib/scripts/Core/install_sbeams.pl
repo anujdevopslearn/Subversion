@@ -45,17 +45,26 @@ my @modules = qw(Microarray Proteomics PeptideAtlas);
   process_options();
 
   # Does sbeamscommon infrastructure exist?
-  if ( -e "$ENV{SBEAMS}/../sbeamscommon" ) {
+  if ( -e "$ENV{SBEAMS}/../sbeamscommon" ) 
+  {
     # Setup is partially complete.
-    unless ( $opts{force} ) {
-      usage( "(at least) partial setup detected, use --force to overwrite" );
+    unless ( $opts{force} || $opts{addModuleToExistingInstallation} ) 
+    {
+        my $str = "(at least) partial setup detected\n"
+        . "use --force to overwrite "
+        . "or --addModuleToExistingInstallation";
+
+        usage( $str );
     } 
-    print "Continuing install with force option\n" if $opts{verbose};
+    print "Continuing install with force or addModuleToExistingInstallation\n" if $opts{verbose};
   }
 
-  # Run core installer shell script, builds dirs/links
-  print "Building Core directory structure\n" if $opts{verbose};
-  system( "$ENV{SBEAMS}/$scripts{Core}" );
+  # Run core installer shell script, builds dirs/links unless structure exists and adding a new module
+  unless ($opts{addModuleToExistingInstallation} && (-e "$ENV{SBEAMS}/../sbeamscommon") )
+  {
+      print "Building Core directory structure\n" if $opts{verbose};
+      system( "$ENV{SBEAMS}/$scripts{Core}" );
+  }
 
   # Optionally run individual module installer scripts 
   for my $m ( @{$opts{module}} ) {
@@ -71,8 +80,11 @@ my @modules = qw(Microarray Proteomics PeptideAtlas);
   print "Writing config files\n" if $opts{verbose};
   write_config_file( $conf );
 
-  # Update Core POPULATE script 
-  update_core_populate($pop);
+  unless ($opts{addModuleToExistingInstallation})
+  {
+      # Update Core POPULATE script 
+      update_core_populate($pop);
+  }
 
   # Run build_schema script for core, biolink, and optional modules
   build_schema($conf);
@@ -346,7 +358,7 @@ sub get_password {
   my $pass = '';
   my $type = ( $key eq 'DB_PASS' ) ? 'main' : 'read-only';
   while( $pass eq '' ) {
-    print "Enter password for $type db user then [Enter] (cntl-C to quit):\t";
+    print "Enter encrypted password for $type db user then [Enter] (cntl-C to quit):\t";
     $|++;
     system("stty -echo");
     $pass = <>;
@@ -364,8 +376,8 @@ sub get_password {
 
 sub process_options {
 
-  GetOptions(\%opts, qw( verbose base=s force usage
-                         config=s module=s )) || usage( $! );
+  GetOptions(\%opts, qw( verbose base=s force addModuleToExistingInstallation
+              usage config=s module=s )) || usage( $! );
 
   usage() if $opts{usage};
 
@@ -416,6 +428,7 @@ Options:
 -c --config       Config file to use, defaults to \$base/var/tmp/sbeams.config
 -m --module       Module(s) to install, prepend each with -m flag. 
                   ($modlist) 
+-a --addModuleToExistingInstallation add a module to an existing installation
 
 e.g. $script -v -b /var/www/html/sbeams -m Microarray -m Module2
 
