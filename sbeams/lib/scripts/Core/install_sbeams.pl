@@ -59,7 +59,7 @@ my @modules = qw(Microarray Proteomics PeptideAtlas);
   }
 
   # Run core installer shell script, builds dirs/links unless structure exists and adding a new module
-  unless ($opts{addModuleToExistingInstallation} )
+  unless ($opts{addMod} )
   {
       print "Building Core directory structure\n" if $opts{verbose};
       system( "$ENV{SBEAMS}/$scripts{Core}" );
@@ -79,7 +79,7 @@ my @modules = qw(Microarray Proteomics PeptideAtlas);
   print "Writing config files\n" if $opts{verbose};
   write_config_file( $conf );
 
-  unless ($opts{addModuleToExistingInstallation})
+  unless ($opts{addMod})
   {
       # Update Core POPULATE script 
       update_core_populate($pop);
@@ -375,8 +375,8 @@ sub get_password {
 
 sub process_options {
 
-  GetOptions(\%opts, qw( verbose base=s force addModuleToExistingInstallation
-              usage config=s module=s )) || usage( $! );
+  GetOptions(\%opts, qw( verbose base=s force addMod
+              usage config=s module=s supDupErr )) || usage( $! );
 
   usage() if $opts{usage};
 
@@ -403,6 +403,11 @@ sub process_options {
       usage( "Invalid module $m specified, see below for supported modules" );
     }
   }
+
+  if ($opts{supDupErr})
+  {
+     $scripts{schema} = 'lib/scripts/Core/build_schema_fudge.sh';
+  }
 }
 
 
@@ -427,7 +432,9 @@ Options:
 -c --config       Config file to use, defaults to \$base/var/tmp/sbeams.config
 -m --module       Module(s) to install, prepend each with -m flag. 
                   ($modlist) 
--a --addModuleToExistingInstallation add a module to an existing installation
+-a --addMod       Add a module to an existing installation 
+                  (won't rewrite conf files, tmp dirs, etc,
+                  and won't use POPULATE sql on Core)
 
 e.g. $script -v -b /var/www/html/sbeams -m Microarray -m Module2
 
