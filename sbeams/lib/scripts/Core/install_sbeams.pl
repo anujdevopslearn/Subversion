@@ -357,7 +357,7 @@ sub get_password {
   my $pass = '';
   my $type = ( $key eq 'DB_PASS' ) ? 'main' : 'read-only';
   while( $pass eq '' ) {
-    print "Enter encrypted password for $type db user then [Enter] (cntl-C to quit):\t";
+    print "Enter password for $type db user then [Enter] (cntl-C to quit):\t";
     $|++;
     system("stty -echo");
     $pass = <>;
