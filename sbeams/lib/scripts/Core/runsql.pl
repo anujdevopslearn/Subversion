@@ -124,13 +124,27 @@ sub insertRecords {
   my $cmds = shift;
   
   my $cnt;
-  foreach my $cmd ( @$cmds ) {
-    $cnt++;
-    print "$cmd\n" if $args->{verbose};
-    $dbh->do( $cmd );
-#    $dbh->commit() unless $cnt % COMMIT;
+  foreach my $cmd ( @$cmds ) 
+  {
+      $cnt++;
+      print "$cmd\n" if $args->{verbose};
+
+      if ($args->{verbose})
+      {
+          eval 
+          {
+              $dbh->do( $cmd );
+              $dbh->commit();
+          };
+          if( $@ ) 
+          {
+              $dbh->rollback();
+          }
+      } else 
+      {
+          $dbh->do( $cmd );
+      }
   }
-#  $dbh->commit();
 }
 
 sub dbConnect {
@@ -145,6 +159,13 @@ sub dbConnect {
 #  $dbh->{AutoCommit} = 0;
   $dbh->{RaiseError} = ( $args->{ignore_errors} ) ? 0 : 1;
 
+  if ($args->{fudge})
+  {
+      $dbh->{RaiseError} = 0; ## no errors raised
+      $dbh->{AutoCommit} = 0; ## no auto commit
+      $dbh->{PrintError} = 0; ## no errors printed
+  }
+
   print "Connected to database successfully\n" if $args->{verbose};
   return $dbh;
 }
@@ -154,7 +175,7 @@ sub processArgs {
   unless( GetOptions ( \%args, 'pass=s', 'user=s', 'verbose', 'sfile=s',
                       'delimiter=s', 'ignore_errors', 'manual:s',
                       'no_audit_constraints', 'database=s', 'query_mode', 
-                      'test_mode' ) ) {
+                      'test_mode', 'fudge' ) ) {
   printUsage("Error with options, please check usage:");
   }
 
@@ -217,6 +238,11 @@ sub printUsage {
                       a SQL file.
    -n --no_audit_constraints  If set, then the Audit Trail FOREIGN KEYS are skipped
       --database      Specify a database to initially connect to besides the default
+   -f --fudge         Current design of tables is such that new installations may
+                      have modules with tables in common.  Create table and constraint
+                      statements no that case leads to a flood of errors, which
+                      are inherent to the design.  Silencing those errors here is
+                      a fudge until table design changes.
 
   EOU
   exit;
