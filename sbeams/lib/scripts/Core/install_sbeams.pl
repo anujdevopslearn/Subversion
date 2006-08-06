@@ -85,6 +85,21 @@ my @modules = qw(Microarray Proteomics PeptideAtlas);
       update_core_populate($pop);
   }
 
+
+  ## update the populate scripts to use specified dbprefix
+  my @mods = (@{$opts{module}}, "Core", "BioLink");
+
+  for my $m ( @mods )
+  {
+      my $conf_key = "DBPREFIX{" . $m . "}";
+
+      my $dbprefix = $$conf{$conf_key};
+
+      update_populate_sql_with_dbprefix(dbprefix => $dbprefix, 
+          mod => $m, dbtype => $conf->{DB_TYPE} );
+  }
+
+
   # Run build_schema script for core, biolink, and optional modules
   build_schema($conf);
 
@@ -186,6 +201,69 @@ sub test_db_connection {
 #  };
 #  usage($@) if $@;
 }
+
+#######################################################################
+# update_populate_sql_with_dbprefix -- adding dbprefix to table names
+# in the populate scripts
+# @param $dprefix -- dbprefix of table name (e.g. sbeams.)
+# @param $mod -- module name                (e.g. Core)
+# @param $dptype -- type of db server (e.g. mssql, mysql, ...)
+#######################################################################
+sub update_populate_sql_with_dbprefix 
+{
+    my %args = @_;
+
+    my $dbprefix = $args{dbprefix} || die "need dbprefix";
+
+    my $mod = $args{mod} || die "need mod";
+
+    my $dbtype = $args{dbtype} || die "need dbtype";
+    $dbtype =~ s/[A-Z]/[a-z]/;
+
+    my $populate_file = "$ENV{SBEAMS}/lib/sql/$mod/$mod"."_POPULATE.$dbtype";
+
+    if (!-e $populate_file)
+    {
+        $populate_file = "$ENV{SBEAMS}/lib/sql/$mod/$mod"."_POPULATE.sql";
+    }
+
+    if (-e $populate_file)
+    {
+        system("cp $populate_file $populate_file.sav");
+
+        my @lines;
+
+        ## read populate file:
+        open(INFILE,"<$populate_file") or die "cannot write to $populate_file ($!)";
+
+        while (my $line = <INFILE>)
+        {
+            chomp($line);
+
+            unless ($line =~ /INSERT INTO $dbprefix/)
+            {
+                ## add dbprefix into INSERT INTO statements
+                $line =~ s/INSERT INTO /INSERT INTO $dbprefix/g;
+            }
+
+            push(@lines, $line);
+
+        }
+        close(INFILE) or die "cannot close $populate_file ($!)";
+
+
+        ## write populate file:
+        open(OUTFILE,">$populate_file") or die "cannot write to $populate_file ($!)";
+
+        for (my $i = 0; $i < $#lines; $i++)
+        {
+            print OUTFILE "$lines[$i]\n";
+        }
+
+        close(OUTFILE) or die "cannot close $populate_file ($!)";
+    }
+}
+
 
 sub update_core_populate {
 
