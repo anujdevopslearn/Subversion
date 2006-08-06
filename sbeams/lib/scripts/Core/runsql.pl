@@ -124,27 +124,13 @@ sub insertRecords {
   my $cmds = shift;
   
   my $cnt;
-  foreach my $cmd ( @$cmds ) 
-  {
-      $cnt++;
-      print "$cmd\n" if $args->{verbose};
-
-      if ($args->{verbose})
-      {
-          eval 
-          {
-              $dbh->do( $cmd );
-              $dbh->commit();
-          };
-          if( $@ ) 
-          {
-              $dbh->rollback();
-          }
-      } else 
-      {
-          $dbh->do( $cmd );
-      }
+  foreach my $cmd ( @$cmds ) {
+    $cnt++;
+    print "$cmd\n" if $args->{verbose};
+    $dbh->do( $cmd );
+#    $dbh->commit() unless $cnt % COMMIT;
   }
+#  $dbh->commit();
 }
 
 sub dbConnect {
@@ -159,12 +145,7 @@ sub dbConnect {
 #  $dbh->{AutoCommit} = 0;
   $dbh->{RaiseError} = ( $args->{ignore_errors} ) ? 0 : 1;
 
-  if ($args->{fudge})
-  {
-      $dbh->{RaiseError} = 0; ## no errors raised
-      $dbh->{AutoCommit} = 0; ## no auto commit
-      $dbh->{PrintError} = 0; ## no errors printed
-  }
+  $dbh->{PrintError} = ( $args->{quiet} ) ? 0 : 1;
 
   print "Connected to database successfully\n" if $args->{verbose};
   return $dbh;
@@ -175,7 +156,7 @@ sub processArgs {
   unless( GetOptions ( \%args, 'pass=s', 'user=s', 'verbose', 'sfile=s',
                       'delimiter=s', 'ignore_errors', 'manual:s',
                       'no_audit_constraints', 'database=s', 'query_mode', 
-                      'test_mode', 'fudge' ) ) {
+                      'test_mode', 'quiet|q' ) ) {
   printUsage("Error with options, please check usage:");
   }
 
@@ -231,19 +212,15 @@ sub printUsage {
    -s --sfile xxxx    SQL file which defines table and columns etc
    -v --verbose       verbose output
    -i --ignore_errs   Ignore SQL errors and continue
-   -d --delimiter xx  Delimter for splitting file, semicolon (default) or GO.
-   -q --query_mode    Run (SELECT) query(s) and print results.
+      --delimiter xx  Delimter for splitting file, semicolon (default) or GO.
+      --query_mode    Run (SELECT) query(s) and print results.
    -t --test_mode     Parse file and simply print out each statement that would have been executed. 
    -m --manual        SELECT query provided explicitly, obviates the need for
                       a SQL file.
    -n --no_audit_constraints  If set, then the Audit Trail FOREIGN KEYS are skipped
       --database      Specify a database to initially connect to besides the default
-   -f --fudge         Current design of tables is such that new installations may
-                      have modules with tables in common.  Create table and constraint
-                      statements no that case leads to a flood of errors, which
-                      are inherent to the design.  Silencing those errors here is
-                      a fudge until table design changes.
-
+      --quiet         Suppress printing of database errors
+     
   EOU
   exit;
 }
