@@ -97,6 +97,9 @@ my @modules = qw(Microarray Proteomics PeptideAtlas);
 
       update_populate_sql_with_dbprefix(dbprefix => $dbprefix, 
           mod => $m, dbtype => $conf->{DB_TYPE} );
+
+      update_manual_sql_with_dbprefix(dbprefix => $dbprefix, 
+          mod => $m, dbtype => $conf->{DB_TYPE} );
   }
 
 
@@ -218,49 +221,123 @@ sub update_populate_sql_with_dbprefix
     my $mod = $args{mod} || die "need mod";
 
     my $dbtype = $args{dbtype} || die "need dbtype";
-    $dbtype =~ s/[A-Z]/[a-z]/;
 
-    my $populate_file = "$ENV{SBEAMS}/lib/sql/$mod/$mod"."_POPULATE.$dbtype";
+    update_file_with_dprefix(sql_file_type => "POPULATE",
+        dbprefix => $dbprefix, mod => $mod, dbtype => $dbtype,
+        pat1 => 'INSERT INTO ',
+        pat2 => "INSERT INTO $dbprefix",
+    );
 
-    if (!-e $populate_file)
+}
+
+#######################################################################
+# update_manual_sql_with_dbprefix -- adding dbprefix to table names
+# in the manual scripts
+# @param $dprefix -- dbprefix of table name (e.g. sbeams.)
+# @param $mod -- module name                (e.g. Core)
+# @param $dptype -- type of db server (e.g. mssql, mysql, ...)
+#######################################################################
+sub update_manual_sql_with_dbprefix 
+{
+    my %args = @_;
+
+    my $dbprefix = $args{dbprefix} || die "need dbprefix";
+
+    my $mod = $args{mod} || die "need mod";
+
+    my $dbtype = $args{dbtype} || die "need dbtype";
+
+    ## Core has CREATE_MANUAL_CONSTRAINTS
+    update_file_with_dprefix(sql_file_type => "CREATE_MANUAL_CONSTRAINTS",
+        dbprefix => $dbprefix, mod => $mod, dbtype => $dbtype,
+        pat1 => "ALTER TABLE ",
+        pat2 => "ALTER TABLE $dbprefix",
+    );
+
+    ## Proteomics has ADD_MANUAL_CONSTRAINTS
+    update_file_with_dprefix(sql_file_type => "ADD_MANUAL_CONSTRAINTS",
+        dbprefix => $dbprefix, mod => $mod, dbtype => $dbtype,
+        pat1 => "ALTER TABLE ",
+        pat2 => "ALTER TABLE $dbprefix",
+    );
+
+    update_file_with_dprefix(sql_file_type => "DROP_MANUAL_CONSTRAINTS",
+        dbprefix => $dbprefix, mod => $mod, dbtype => $dbtype,
+        pat1 => "ALTER TABLE ",
+        pat2 => "ALTER TABLE $dbprefix",
+    );
+
+}
+
+#######################################################################
+# update_file -- given sql filename type, dbtype, module, and regex 
+# patterns 1 and 2, this will update the tables in the file
+# @param $sql_file_type -- (e.g. POPULATE, CREATE_MANUAL_CONSTRAINTS, 
+#     DROP_MANUAL_CONSTRAINTS, ...)
+# @param $dprefix -- dbprefix of table name (e.g. sbeams.)
+# @param $mod -- module name                (e.g. Core)
+# @param $dbtype -- type of db server (e.g. mssql, mysql, ...)
+# @param pat1 -- pattern to search for (eg. INSERT INTO)
+# @param pat2 -- pattern to replace pat1 with (eg. INSERT INTO $dbprefix.)
+#######################################################################
+sub update_file_with_dprefix
+{
+    my %args = @_;
+
+    my $sql_file_type = $args{sql_file_type} || die "need sql_file_type";
+
+    my $dbprefix = $args{dbprefix} || die "need dbprefix";
+
+    my $mod = $args{mod} || die "need mod";
+
+    my $dbtype = $args{dbtype} || die "need dbtype";
+    $dbtype =~ s/(.*)/\L$1/; ## convert it all to lower case
+
+    my $pat1 = $args{pat1} || die "need pat1";
+
+    my $pat2 = $args{pat2} || die "need pat2";
+
+    my $fl = "$ENV{SBEAMS}/lib/sql/$mod/$mod" . "_" . $sql_file_type . ".$dbtype";
+
+    if (!-e $fl)
     {
-        $populate_file = "$ENV{SBEAMS}/lib/sql/$mod/$mod"."_POPULATE.sql";
+        $fl = "$ENV{SBEAMS}/lib/sql/$mod/$mod" . "_" . $sql_file_type . ".sql";
     }
 
-    if (-e $populate_file)
+    if (-e $fl)
     {
-        system("cp $populate_file $populate_file.sav");
+        system("cp $fl $fl.sav");
 
         my @lines;
 
         ## read populate file:
-        open(INFILE,"<$populate_file") or die "cannot write to $populate_file ($!)";
+        open(INFILE,"<$fl") or die "cannot read $fl ($!)";
 
         while (my $line = <INFILE>)
         {
             chomp($line);
 
-            unless ($line =~ /INSERT INTO $dbprefix/)
+            ## replace if replacement has not already happened
+            unless ($line =~ /$pat2/)
             {
-                ## add dbprefix into INSERT INTO statements
-                $line =~ s/INSERT INTO /INSERT INTO $dbprefix/g;
+                $line =~ s/$pat1/$pat2/g;
             }
 
             push(@lines, $line);
 
         }
-        close(INFILE) or die "cannot close $populate_file ($!)";
+        close(INFILE) or die "cannot close $fl ($!)";
 
 
-        ## write populate file:
-        open(OUTFILE,">$populate_file") or die "cannot write to $populate_file ($!)";
+        ## write file:
+        open(OUTFILE,">$fl") or die "cannot write to $fl ($!)";
 
-        for (my $i = 0; $i < $#lines; $i++)
+        for (my $i = 0; $i <= $#lines; $i++)
         {
             print OUTFILE "$lines[$i]\n";
         }
 
-        close(OUTFILE) or die "cannot close $populate_file ($!)";
+        close(OUTFILE) or die "cannot close $fl ($!)";
     }
 }
 
@@ -268,6 +345,8 @@ sub update_populate_sql_with_dbprefix
 sub update_core_populate {
 
   my $pop = shift;
+
+  my $dbprefix = shift;
 
   my %info = %$pop;
 
