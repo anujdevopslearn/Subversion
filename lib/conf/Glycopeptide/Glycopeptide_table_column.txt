@@ -104,7 +104,7 @@ GP_ipi_data	3	ipi_accession_number	IPI Accession Number	varchar	50	0	N		N			Y	te
 GP_ipi_data	4	protein_name	Protein Name	varchar	500	0	N		N			Y	text	50		Y	Y	N	Descriptive IPI Protein Name 		
 GP_ipi_data	5	protein_symbol	Protein Symbol	varchar	50	0	Y		N			N	text	30		Y	Y	N	Short Protein Symbol from IPI		
 GP_ipi_data	6	swiss_prot_acc	SwissPro Accession Numbers	varchar	50	0	Y		N			N	text	30		Y	Y	N	Swiss Prot Accession number		
-GP_ipi_data	7	cellular_location_id	Cellular Location	int	4	0	Y		N			N				N	N	Y	Subcelluar location: ie Secreted, Transmembrane		
+GP_ipi_data	7	cellular_location_id	Cellular Location	int	4	0	N		N	GP_cellular_location	cellular_location_id	N				N	N	Y	Subcelluar location: ie Secreted, Transmembrane		
 GP_ipi_data	8	protein_summary	Protein Summary	text	16	0	Y		N			N	textarea	4		Y	Y	N	Protein Summary Information		
 GP_ipi_data	9	protein_sequence	Protein Sequence	text	16	0	N		N			Y	textarea	4		Y	Y	N	Protein Sequence		
 GP_ipi_data	10	transmembrane_info	Transmembrane Info	varchar	255	0	N		N			Y	text	50		Y	Y	N	Encoded TM domain informaion from TMHMM  ie o528-550i		
@@ -130,7 +130,7 @@ GP_identified_peptide	4	peptide_mass	Peptide Mass	real	4	0	N		N			Y	text	50		Y	Y
 GP_identified_peptide	5	n_tryptic_ends	Number of Tryptic Ends	int	4	0	Y		N										Number of tryptic ends for this identified peptide		
 GP_identified_peptide	6	matching_sequence	Matching Sequence	varchar	900	0	N		N			Y	text	50		Y	Y	N	Undecorated sequence suitable for searching		
 GP_identified_peptide	7	n_obs	Number of Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times peptide was observed in all tissue types		
-GP_identified_to_ipi	1	identified_to_ipi	Identified to IPI ID	int	4	0	N		Y			Y				N	N	Y			
+GP_identified_to_ipi	1	identified_to_ipi_id	Identified to IPI ID	int	4	0	N		Y			Y				N	N	Y			
 GP_identified_to_ipi	2	identified_peptide_id	Identified peptide ID	int	4	0	N		N	GP_identified_peptide	identified_peptide_id	Y				N	N	Y			
 GP_identified_to_ipi	3	ipi_data_id	IPI Data ID	int	4	0	N		N	GP_ipi_data	ipi_data_id	Y				N	N	Y			
 GP_identified_to_glycosite	1	identified_to_glycosite_id	Identified to GlycositeI ID	int	4	0	N		Y			Y				N	N	Y	Primary key		
@@ -139,24 +139,35 @@ GP_identified_to_glycosite	3	glycosite_id	Glyco Site ID	int	4	0	N		N	GP_glycosit
 GP_identified_to_glycosite	4	identified_start	Identified Peptide Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of the peptide on the IPI protein		
 GP_identified_to_glycosite	5	identified_stop	Identified  Peptide Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein		
 GP_observed_peptide	1	observed_peptide_id	Observed Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
-GP_observed_peptide	2	identified_peptide_id	Identified Peptide ID	int	4	0	N		N	GP_identified_peptide	identified_peptide_id	Y	optionlist			N	N		Identified peptide which this peptide maps to	SELECT identified_peptide_id,matching_sequence FROM $TBGP_IDENTIFIED_PEPTIDE WHERE record_status != 'D' 	
-GP_observed_peptide	3	search_file_id	Search File ID	int	4	0	N		N	GP_search_file	search_file_id	Y	optionlist			N	N		Sequence search file from which identification was obtained	SELECT search_file_id, search_file_name FROM $RBGP_SEARCH_FILE WHERE record_status != 'D'	
-GP_observed_peptide	4	observed_peptide_sequence	Observed Peptide Sequence	varchar	900	0	N		N			Y	text	50		Y	Y	N	Peptide Sequence Identified by MS/MS scan		
-GP_observed_peptide	5	peptide_prophet_score	Peptide Prophet Score 	real	4	0	Y		N			Y	text	6		Y	Y	N	Peptide Prophet Score		
-GP_observed_peptide	6	peptide_mass	Peptide Mass	real	4	0	N		N			Y	text	50		Y	Y	N	Mass of the identified peptide		
-GP_observed_peptide	7	experimental_mass	Experimental_mass	real	4	0	Y		N			Y	text	12		Y	Y	N	Experimentally derived mass of peptide		
-GP_observed_peptide	8	matching_sequence	Matching Sequence	varchar	900	0	N		N			Y	text	50		Y	Y	N	Undecorated sequence suitable for searching		
-GP_observed_peptide	9	scan_number	Scan Number	int	4	0	Y		N			Y	text	10		N	N	N	Scan number of observation		
-GP_observed_peptide	10	experimental_retention_time	Experimental retention time	int	4	0	Y		N			Y	text	10		N	N	N	Experimentally derived retention time (seconds)		
-GP_observed_peptide	11	derived_retention_time	Derived retention time	int	4	0	Y		N			Y	text	10		N	N	N	Computationally derived retention time (seconds)		
-GP_observed_peptide	12	experimental_percent_ACN	Experimental Percent ACN	real	4	0	Y		N			Y	text	10		N	N	N	Experimentally derived Percent ACN		
-GP_observed_peptide	13	derived_percent_ACN	Derived percent ACN	real	4	0	Y		N			Y	text	10		N	N	N	Computationally derived Percent ACN		
-GP_observed_peptide	14	spectrum_path	Spectrum Path	varchar	256	0	Y		N			Y	text	10		N	N	N	Path to spectrum file		
-GP_observed_peptide	15	charge_state	Charge State	varchar	36	0	Y		N			Y	text	10		N	N	N	Path to spectrum file		
-GP_observed_peptide	16	mass_to_charge	Mass To Charge	real	4	0	Y		N	GP_peptide_search	peptide_search_id	Y	text	10		N	N	N	Search results file from which observation is taken		
-GP_observed_to_sample	1	observed_to_sample_id	Observed To Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
-GP_observed_to_sample	2	identified_peptide_id	Identified Peptide ID	int	4	0	N		N	GP_observed_peptide	observed_peptide_id	Y				N	N				pkDEFAULT
-GP_observed_to_sample	3	sample_id	Sample ID	int	4	0	N		N	GP_glyco_sample	sample_id	Y				N	N				pkDEFAULT
+GP_observed_peptide	2	ipi_data_id	IPI Data ID	int	4	0	N		N	GP_ipi_data	ipi_data_id	Y	optionlist			N	N		Identified peptide which this peptide maps to	SELECT identified_peptide_id,matching_sequence FROM $TBGP_IDENTIFIED_PEPTIDE WHERE record_status != 'D' 	
+GP_observed_peptide	3	sample_id	Sample ID	int	4	0	N		N	GP_unipep_sample	unipep_sample_id	Y	optionlist			N	N		Identified peptide which this peptide maps to	SELECT identified_peptide_id,matching_sequence FROM $TBGP_IDENTIFIED_PEPTIDE WHERE record_status != 'D' 	
+GP_observed_peptide	4	peptide_search_id	Peptide Search ID	int	4	0	N		N	GP_peptide_search	peptide_search_id	Y	optionlist			N	N		Sequence search file from which identification was obtained	SELECT search_file_id, search_file_name FROM $RBGP_SEARCH_FILE WHERE record_status != 'D'	
+GP_observed_peptide	5	observed_peptide_sequence	Observed Peptide Sequence	varchar	900	0	N		N			Y	text	50		Y	Y	N	Peptide Sequence Identified by MS/MS scan		
+GP_observed_peptide	6	peptide_prophet_score	Peptide Prophet Score 	real	4	0	Y		N			Y	text	6		Y	Y	N	Peptide Prophet Score		
+GP_observed_peptide	7	peptide_mass	Peptide Mass	real	4	0	N		N			Y	text	50		Y	Y	N	Mass of the identified peptide		
+GP_observed_peptide	8	experimental_mass	Experimental_mass	real	4	0	Y		N			Y	text	12		Y	Y	N	Experimentally derived mass of peptide		
+GP_observed_peptide	9	matching_sequence	Matching Sequence	varchar	900	0	N		N			Y	text	50		Y	Y	N	Undecorated sequence suitable for searching		
+GP_observed_peptide	10	scan_number	Scan Number	int	4	0	Y		N			Y	text	10		N	N	N	Scan number of observation		
+GP_observed_peptide	11	experimental_retention_time	Experimental retention time	int	4	0	Y		N			Y	text	10		N	N	N	Experimentally derived retention time (seconds)		
+GP_observed_peptide	12	derived_retention_time	Derived retention time	int	4	0	Y		N			Y	text	10		N	N	N	Computationally derived retention time (seconds)		
+GP_observed_peptide	13	experimental_percent_ACN	Experimental Percent ACN	real	4	0	Y		N			Y	text	10		N	N	N	Experimentally derived Percent ACN		
+GP_observed_peptide	14	derived_percent_ACN	Derived percent ACN	real	4	0	Y		N			Y	text	10		N	N	N	Computationally derived Percent ACN		
+GP_observed_peptide	15	spectrum_path	Spectrum Path	varchar	256	0	Y		N			Y	text	10		N	N	N	Path to spectrum file		
+GP_observed_peptide	16	charge_state	Charge State	int	4	0	Y		N			Y	text	10		N	N	N	Charge State of observed ion		
+GP_observed_peptide	17	mass_to_charge	Mass To Charge	real	4	0	Y		N			Y	text	10		N	N	N	Search results file from which observation is taken		
+GP_observed_peptide	18	mh_plus	MH+	real	4	0	Y		N			Y	text	10		N	N	N	MH+ value from search		
+GP_observed_peptide	19	mh_delta	MH Delta	real	4	0	Y		N			Y	text	10		N	N	N	Mass discrepancy from search		
+GP_observed_to_sample	1	observed_to_sample_id	Observed to Sample ID	int	4	0	N		Y			Y				N	N	Y			
+GP_observed_to_sample	2	observed_peptide_id	Observed peptide ID	int	4	0	N		N	GP_observed_peptide	observed_peptide_id	Y				N	N	Y			
+GP_observed_to_sample	3	sample_id	Sample ID	int	4	0	N		N	GP_unipep_sample	sample_id	Y				N	N	Y			
+GP_observed_to_ipi	1	observed_to_ipi_id	Observed to IPI ID	int	4	0	N		Y			Y				N	N	Y			
+GP_observed_to_ipi	2	observed_peptide_id	Observed peptide ID	int	4	0	N		N	GP_observed_peptide	observed_peptide_id	Y				N	N	Y			
+GP_observed_to_ipi	3	ipi_data_id	IPI Data ID	int	4	0	N		N	GP_ipi_data	ipi_data_id	Y				N	N	Y			
+GP_observed_to_glycosite	1	observed_to_glycosite_id	Identified to GlycositeI ID	int	4	0	N		Y			Y				N	N	Y	Primary key		
+GP_observed_to_glycosite	2	identified_peptide_id	Identified peptide ID	int	4	0	N		N	GP_observed_peptide	observed_peptide_id	Y				N	N	Y	Glyco site ID		
+GP_observed_to_glycosite	3	glycosite_id	Glyco Site ID	int	4	0	N		N	GP_glycosite	glycosite_id	Y				N	N	Y	Observed peptide ID		
+GP_observed_to_glycosite	4	site_start	Site Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of the peptide on the IPI protein		
+GP_observed_to_glycosite	5	site_stop	Site Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein		
 GP_predicted_peptide	1	predicted_peptide_id	Predicted Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
 GP_predicted_peptide	2	ipi_data_id	IPI Data ID	int	4	0	N		N	GP_ipi_data	ipi_data_id	Y				N	N	Y			
 GP_predicted_peptide	3	predicted_peptide_sequence	Predicted Peptide Sequence	text	16	0	N		N			Y	text	50		Y	Y	N	Peptide Sequence Identified by MS/MS run		
@@ -191,7 +202,7 @@ GP_unipep_sample	3	sample_description	Sample Description	text	16	0	Y		N			N	text
 GP_unipep_sample	4	source_id	Source ID	int	4	0	Y		N			N				Y	Y	N	Source of sample		
 GP_unipep_sample	5	parent_sample_id	Parent Sample ID	int	4	0	Y		N			N				Y	Y	N	Source of sample		
 GP_unipep_sample	6	root_sample_id	Root Sample ID	int	4	0	Y		N			N				Y	Y	N	Source of sample		
-GP_unipep_sample	7	tissue_type_id	Tissue Type ID	int	4	0	N		N	tissue_type	tissue_type_id	N	optionlist			Y	Y	Y	Tissue type of this sample	SELECT  tissue_type_id, tissue_type_name FROM $TBGP_TISSUE_TYPE ORDER BY sort_order ASC, tissue_type_name ASC	
+GP_unipep_sample	7	tissue_type_id	Tissue Type ID	int	4	0	N		N	GP_tissue_type	tissue_type_id	N	optionlist			Y	Y	Y	Tissue type of this sample	SELECT  tissue_type_id, tissue_type_name FROM $TBGP_TISSUE_TYPE ORDER BY sort_order ASC, tissue_type_name ASC	
 GP_unipep_sample	8	project_id	Owner Project	int	4	0	Y		N	project	project_id	N	optionlist			Y	Y	N	Project under which this Sample is organized and for which user privileges is controlled	SELECT DISTINCT P.project_id, UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name	
 GP_unipep_sample	9	generation_date	Sample Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	textdate	20		Y	Y	N	Date on which this sample was prepared		
 GP_unipep_sample	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		

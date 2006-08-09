@@ -11,7 +11,8 @@ GP_cellular_location	Cellular Location	Glycopeptide_infrastructure	YES	$TBGP_CEL
 GP_glycosite	Glyco Site	Glycopeptide_infrastructure	NO	$TBGP_GLYCOSITE	glycosite_id				
 GP_identified_peptide	Identified Peptide	Glycopeptide_infrastructure	NO	$TBGP_IDENTIFIED_PEPTIDE	identified_peptide_id				
 GP_predicted_peptide	Predicted Peptide	Glycopeptide_infrastructure	NO	$TBGP_PREDICTED_PEPTIDE	predicted_peptide_id				
-GP_observed_to_sample	Peptide to Sample	Glycopeptide_infrastructure	NO	$TBGP_PEPTIDE_TO_SAMPLE	peptide_to_sample_id				
+GP_observed_to_sample	Observed to Sample	Glycopeptide_infrastructure	NO	$TBGP_OBSERVED_TO_SAMPLE	observed_to_sample_id				
+GP_observed_to_ipi	Observed to IPI	Glycopeptide_infrastructure	NO	$TBGP_OBSERVED_TO_IPI	observed_to_ipi_id				
 GP_tissue_type	Sample	Glycopeptide_infrastructure	YES	$TBGP_TISSUE_TYPE	tissue_type_id		ManageTable.cgi?TABLE_NAME=GP_tissue_type		
 GP_identified_to_ipi	Identified to IPI	Glycopeptide_infrastructure	NO	$TBGP_IDENTIFIED_TO_IPI	identified_to_ipi_id				
 GP_unipep_sample	Sample	Glycopeptide_infrastructure	YES	$TBGP_UNIPEP_SAMPLE	sample_id		ManageTable.cgi?TABLE_NAME=GP_unipep_sample		
