@@ -72,9 +72,9 @@ sub display_page_header {
 
   if( $sbeams->isGuestUser() ) {
     $self->displayGuestPageHeader();
-  } elsif ( $self->isYeastPA(project_id => $project_id) )
-  {
-    $self->displayInternalResearcherPageHeader();
+# } elsif ( $self->isYeastPA(project_id => $project_id) )
+# {
+#   $self->displayInternalResearcherPageHeader();
   } else
   {
     $self->displayStandardPageHeader(@_);
