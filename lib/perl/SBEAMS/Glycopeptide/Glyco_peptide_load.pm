@@ -1,11 +1,10 @@
 {package SBEAMS::Glycopeptide::Glyco_peptide_load;
 		
+# Module handles loading peptide/protein information into the unipep
+# database (AKA glycopeptide).  Due to a change in input file format 
+# there are currently some unused subroutines, will cull when possible.
 
-
-
-##############################################################
 use strict;
-#use vars qw($sbeams $self);		#HACK within the read_dir method had to set self to global: read below for more info
 
 use File::Basename;
 use File::Find;
@@ -22,6 +21,8 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::Glycopeptide::Tables;
 use SBEAMS::Glycopeptide;
 
+use SBEAMS::Proteomics::TrypticDigestor::TrypticDigestor;
+
 my $module = SBEAMS::Glycopeptide->new();
 
 
@@ -31,31 +32,28 @@ my $module = SBEAMS::Glycopeptide->new();
 sub new {
 	my $class = shift;
 	
-	my %args = @_;
-	my $sbeams = $args{sbeams};
-	my $verbose = $args{verbose} || 0;
-	my $debug  = $args{debug};
-	my $test_only = $args{test_only};
-	my $file = $args{file};
-	my $release = $args{release} || $args{file};
+  my %args = @_;
+  my $sbeams = $args{sbeams} || SBEAMS::Connection->new();
+  my $verbose = $args{verbose} || 0;
+  my $debug  = $args{debug};
+  my $test_only = $args{test_only};
+  my $file = $args{file};
+  my $release = $args{release} || $args{file};
   
-	my $self = {   _file => $file,
-             	_release => $release};
+  my $self = {    _file => $file,
+               _release => $release};
 	
-	bless $self, $class;
+  bless $self, $class;
 	
-	$self->setSBEAMS($sbeams);
-	$self->verbose($verbose);
-	$self->debug($debug);
-	$self->testonly($test_only);
-	$self->check_version();
+  $self->setSBEAMS($sbeams);
+  $self->verbose($verbose);
+  $self->debug($debug);
+  $self->testonly($test_only);
 	
-	return $self;
-	
-	
+  return $self;
 }
 ###############################################################################
-# Receive the main SBEAMS object
+# Cache the main SBEAMS object
 ###############################################################################
 sub setSBEAMS {
   my $self = shift;
@@ -132,6 +130,157 @@ sub getfile {
 	return	$self->{_file};
 }
 
+sub insert_ipi_db {
+	my $self = shift;
+  my %args = @_;
+
+  my @all_data = ();
+  
+  my $file = $self->getfile();
+
+  open DATA, $file || die "Unable to open file $file $!\n";
+  my %heads;
+
+	my $count = 0;
+	my $insert_count = 1;
+  my $t0 = new Benchmark;
+  my %stats;
+
+  my $sbeams = $self->getSBEAMS();
+  my %time;
+
+  # Hash of info for IPI records
+  my %file_data;
+  my %seq_to_accession;
+  
+  print "Processing file\n";
+  while(<DATA>) {
+    chomp;
+    my @tokens = split( /\t/, $_, -1);
+    $count ++;
+			
+    # populate global hash of col_name => col_index. 
+		if ($count == 1){
+      # Make them lower case for consistancy
+      @tokens = map {lc($_)} @tokens;
+
+      # Build header index hash
+		  @heads{@tokens} = 0..$#tokens;
+
+      # See if col headers have changed
+      $self->checkHeaders(\%heads);
+ 
+      # Everything has checked out, start inserts.
+      # Does this version already exist?
+    	$self->check_version(%args);
+
+      next;
+    }
+
+    # print progress 'bar'
+    unless ( $count % 100 ){
+      print '*';
+    }
+    unless ( $count % 5000 ){
+      my $t1 = new Benchmark;
+      my $time =  timestr(timediff($t1, $t0)); 
+      $time =~ s/^[^\d]*(\d+) wallclock secs.*/$1/;
+      my $verb = ( $args{testonly} ) ? 'Found' : 'Processed';
+      print "$verb $count records, $time seconds\n";
+    }
+
+    my $ipi = $tokens[$heads{'ipi'}];
+                                      
+    if ( $stats{$ipi} || $self->check_ipi($ipi) ) {
+      $stats{$ipi}++;
+    } else {
+      $stats{$ipi}++;
+      $stats{total}++;
+
+      my $motif = 'N.[ST]';
+
+      my $sites = $module->get_site_positions( seq => $tokens[$heads{'protein sequences'}],
+                                           pattern => $motif );
+
+
+      # Get theoretical digestion of protein
+      my $peptides = $module->do_tryptic_digestion( aa_seq => $tokens[$heads{'protein sequences'}],
+                                                  flanking => 1 );
+     
+      foreach my $pep ( @$peptides ) {
+        my $match = $module->clean_pepseq( $pep );
+        $match = substr( $match, 0, 900 ) if length($match) > 900; 
+        # hash peptide sequence to ipi_data_id info
+        $self->{_seq_to_id}->{$match} ||= {};
+        $self->{_seq_to_id}->{$match}->{$args{ipi}}++;
+      }
+
+      $file_data{$ipi} = { rowdata => \@tokens,
+                          peptides => $peptides,
+                             sites => $sites };
+    }
+  } # End file reading loop
+
+  print "Read $count records\n";
+#  return if $args{testonly};
+
+  # Rubber, meet road...
+  print "Inserting data\n";
+
+  $sbeams->initiate_transaction();
+  my $commit_interval = 20;
+  # Insert version record
+  $self->add_ipi_version( %args ) unless $args{testonly};
+  $count = 0;
+  for my $acc ( sort(keys( %file_data) ) ) {
+    $count++;
+    # print progress 'bar'
+    unless ( $count % 100 ){
+      print '*';
+    }
+    unless ( $count % 5000 ){
+      my $t1 = new Benchmark;
+      my $time =  timestr(timediff($t1, $t0)); 
+      $time =~ s/^[^\d]*(\d+) wallclock secs.*/$1/;
+      my $verb = ( $args{testonly} ) ? 'loaded' : 'processed';
+      print "$verb $count records, $time seconds\n";
+    }
+
+
+    my $tokens = $file_data{$acc}->{rowdata};
+    eval {
+      my $ipi_id = $self->add_ipi_record( $tokens );
+      my $site_idx = $self->add_glycosites( glyco_score => $tokens->[$heads{'nxt/s score'}],
+                                            ipi_data_id => $ipi_id,
+                                       protein_sequence => $tokens->[$heads{'protein sequences'}],
+                                               site_idx => $file_data{$acc}->{sites}
+                                            );
+
+       $self->add_predicted_peptides( sequence => $tokens->[$heads{'protein sequences'}],
+                                   ipi_data_id => $ipi_id, 
+                                      site_idx => $file_data{$acc}->{sites},
+                                           ipi => $acc,
+                                      peptides => $file_data{$acc}->{peptides} );
+      };
+      if ( $@ ) {
+        $sbeams->rollback_transaction();
+        die( "$@" );
+      } else {
+        # Space commits to once per n sequences
+        unless ( $count % $commit_interval ) {
+          $sbeams->commit_transaction(); 
+          $sbeams->initiate_transaction();
+        }
+      }
+    }
+#    $stats{max} = ( $stats{$ipi} > $stats{max} ) ? $stats{$ipi} : $stats{max};
+#  for my $k ( keys(%time) ) { print "$k => $time{$k}\n"; }
+#  $count -= 1;
+#  print "\n\n$stats{total} unique ipi entries in $count total rows (max count was $stats{max})\n";
+#  my $t2 = new Benchmark;
+#  print "\nFinished in " . timestr(timediff($t2, $t0)) . "\n";
+}
+
 ###############################################################################
 # process_data_file
 #
@@ -151,7 +300,7 @@ sub process_data_file {
 	my $count = 0;
 	my $insert_count = 1;
   my $t0 = new Benchmark;
-  while(<DATA>){
+  while(<DATA>) {
     chomp;
     my @tokens = split( /\t/, $_, -1);
 			
@@ -166,16 +315,28 @@ sub process_data_file {
 
       # See if col headers have changed
       $self->checkHeaders(\%heads);
-      next;
+
+    }
+    $count ++;
+
+    # print progress 'bar'
+    unless ( $count % 100 ){
+      print '*';
+    }
+    unless ( $count % 5000 ){
+      my $t1 = new Benchmark;
+      my $time =  timestr(timediff($t1, $t0)); 
+      $time =~ s/^[^\d]*(\d+) wallclock secs.*/$1/;
+      my $verb = ( $args{testonly} ) ? 'Found' : 'Processed';
+      print "$verb $count records, elapsed time $time seconds\n";
     }
 
-		$self->add_ipi_record( \@tokens ) unless 
-                                      $self->check_ipi($tokens[$heads{'ipi'}]);
+		$self->add_ipi_record( \@tokens ) unless $self->check_ipi($tokens[$heads{'ipi'}]);
 		
 		my $glyco_pk = $self->add_glyco_site( \@tokens );
 			
 	  if ( $tokens[$heads{'predicted tryptic nxt/s peptide sequence'}] ) {
-	  	$self->add_predicted_peptide( glyco_pk   => $glyco_pk,
+	  	$self->add_erpdicted_peptide( glyco_pk   => $glyco_pk,
 									              	  line_parts => \@tokens);
     }
 			
@@ -185,33 +346,24 @@ sub process_data_file {
 		  $self->add_identified_peptides( glyco_pk   => $glyco_pk,
 	                  								  line_parts => \@tokens);
     }
-		
 			
-			$count ++;
-
-			# print progress 'bar'
-			unless ( $count % 100 ){
-				print '*';
-			}
-			unless ( $count % 5000 ){
-        my $t1 = new Benchmark;
-        my $time =  timestr(timediff($t1, $t0)); 
-        $time =~ s/^[^\d]*(\d+) wallclock secs.*/$1/;
-				print "Loaded $count records, elapsed time $time seconds\n";
-			}
-    }
-    my $t2 = new Benchmark;
-    my $pcnt = $self->{_id_peps};
-    print "Total peptides was " .  scalar(keys(%$pcnt) ) ."\n";
-    print "\n\nLoaded $count total records in " . timestr(timediff($t2, $t0)) . "\n";
   }
+  if ( $args{testonly} ) {
+    print "\nIPI file had correct headers, $count total rows\n";
+    exit;
+  }
+  my $t2 = new Benchmark;
+  my $pcnt = $self->{_id_peps};
+  print "\nTotal peptides was " .  scalar(keys(%$pcnt) ) ."\n";
+  print "\n\nLoaded $count total records in " . timestr(timediff($t2, $t0)) . "\n";
+}
 
 
 sub checkHeaders {
   my $self = shift;
   my $heads = shift;
   my %heads = %$heads;
-  my @version_8_columns = ( 'IPI',
+  my @known_columns = ( 'IPI',
                             'Protein Name',
                             'Protein Sequences',
                             'Protein Symbol',
@@ -238,27 +390,23 @@ sub checkHeaders {
                             'Identified Tissues',
                             'Number Observations',
                          );
-  @version_8_columns = map { lc($_) } @version_8_columns;
+  @known_columns = map { lc($_) } @known_columns;
   my @current_cols = keys(%heads);
 
   for my $curr_col ( @current_cols ) {
-    print "Checking for curr_col $curr_col\n";
-    unless( grep /$curr_col/, @version_8_columns ) {
-      print STDERR "Column $curr_col is not known by the parser\n";
-      exit;
+    unless( grep /$curr_col/, @known_columns ) {
+      die "Column $curr_col is not known by the parser\n";
     }
   }
 
-  for my $parser_col ( @version_8_columns ) {
-#    print "Checking for parser_col $parser_col\n";
+  for my $parser_col ( @known_columns ) {
     unless( grep /$parser_col/, @current_cols ) {
-      print STDERR "Column $parser_col is missing in this file\n";
-      exit;
+      die "Column $parser_col is missing in this file\n";
     }
   }
   # We got past the checks, cache the header values.
   $self->{_heads} = \%heads;
-  
+  return 1;
 }
 
 =head1 example columns
@@ -290,10 +438,128 @@ sub checkHeaders {
 25 Identified Peptide Mass => 1315.7
 
 =cut
+
+sub insert_peptides {
+  my $self = shift;
+  my %args = @_;
+
+  my $err;
+  for my $opt ( qw( release peptide_file format ) ) {
+    $err = ( $err ) ? $err . ', ' . $opt : $opt if !defined $args{$opt};
+  }
+  die ( "Missing required parameter(s): $err in " . $self->whatsub() ) if $err;
+
+  my $observed;
+  # check which format was specified
+  if ( $args{format} eq 'interact-tsv' ) {
+    $observed = $self->read_tsv( %args );
+  } else {
+    die "Unsupported file format\n";
+  }
+  # read file
+
+  # insert observed peptide
+  $self->insert_observed_peptides( %args, peptides => $observed );
+
+
+  # insert observed_to_ipi record(s) - indicate original
+
+
+  my $match = $module->clean_pepseq( $args{aa_seq} );
+  if ( length($match) > 900 ) {
+    print STDERR "Truncating long value for matching sequence\n";
+    $match = substr( $match, 0, 900 );
+  }
+}
+
+sub insert_observed_peptides {
+  my $self = shift;
+  my %args = @_;
+  my $err;
+  for my $opt ( qw( peptides ) ) {
+    $err = ( $err ) ? $err . ', ' . $opt : $opt if !defined $args{$opt};
+  }
+  die ( "Missing required parameter(s): $err in " . $self->whatsub() ) if $err;
+
+  my $heads = get_interact_tsv_headers();
+
+  for my $obs ( @{$args{peptides}} ) {
+    my $row = { sample_id => $args{sample_id},
+                search_file
+              };
+
+    
+  }
+
+  
+}
+
+sub get_interact_tsv_headers {
+  my $self = shift;
+  my %heads = ( prob => 0,
+              ignore => 1,
+                file => 2,
+               'MH+' => 3,
+          'MH error' => 4,
+               XCorr => 5,
+                 dCn => 6,
+                  Sp => 7,
+              SpRank => 8,
+           IonsMatch => 9,
+             IonsTot => 10,
+             Protein => 11,
+          '#DupProt' => 12,
+             Peptide => 13 );
+  for my $k (keys( %heads ) ) {
+    $heads{lc($k)} = $heads{$k};
+  }
+  return \%heads;
+}
+
+sub read_tsv {
+  my $self = shift;
+  my %args = @_;
+
+  my $sbeams = $self->getSBEAMS();
+
+  my $file = $args{peptide_file};
+  open DATA, $file || die "Unable to open file $file $!\n";
+
+  my $heads = get_interact_tsv_headers();
+	my $count = 0;
+  my @peptides;
+  print "Processing peptides\n";
+  while(<DATA>) {
+    chomp;
+    my @tokens = split( /\t/, $_, -1);
+    for my $t ( @tokens ) {
+      $t =~ s/^\s*\"*//;
+      $t =~ s/\"*\s*$//;
+    }
+    if ( $tokens[0] eq 'prob' && $tokens[1] eq 'ignore' && $tokens[2] eq 'file' ) {
+      # this column has a header row
+      next;
+    }
+    $count ++;
+    push @peptides, \@tokens;
+
+    # print progress 'bar'
+    unless ( $count % 100 ){
+      print '*';
+    }
+    unless ( $count % 5000 ){
+      print "\n";
+    }
+  }
+  print "\n";
+  return \@peptides;
+}
+
+
 ##############################################################################
 #Add the identifed_peptide for a row
 ###############################################################################
-sub add_identified_peptides{
+sub add_identified_peptides{  # deprecated
 	my $self = shift;
 	my $method = 'add_identified_peptides';
 	my %args = @_;
@@ -398,7 +664,7 @@ sub peptide_to_tissue {
   my $sbeams = $self->getSBEAMS();
 
   if ( !$self->{_sample_tissues} ) {
-    my $sql = "SELECT sample_name, sample_id FROM $TBGP_GLYCO_SAMPLE";
+    my $sql = "SELECT sample_name, sample_id FROM $TBGP_UNIPEP_SAMPLE";
     $self->{_sample_tissues} = $sbeams->selectTwoColumnHashref( $sql );
 #    foreach my $k ( keys ( %{$self->{_sample_tissues}} ) ) { print "$k\n"; }
   }
@@ -422,7 +688,7 @@ sub peptide_to_tissue {
                   );
 	
 	  $sbeams->updateOrInsertRow( return_PK   => 0,
-                                table_name  => $TBGP_PEPTIDE_TO_TISSUE,
+                                table_name  => $TBGP_PEPTIDE_TO_SAMPLE,
 				   		                	rowdata_ref => \%rowdata,
 			                	   			verbose     => $self->verbose(),
 			                	   			testonly    => $self->testonly(),
@@ -451,7 +717,7 @@ sub newGlycoSample {
                   sample_name => $sample );
 
   my $sample_id =  $sbeams->updateOrInsertRow( return_PK   => 1,
-                                table_name  => $TBGP_GLYCO_SAMPLE,
+                                table_name  => $TBGP_UNIPEP_SAMPLE,
 				   		                	rowdata_ref => \%rowdata,
 			                	   			verbose     => $self->verbose(),
 			                	   			testonly    => $self->testonly(),
@@ -470,8 +736,8 @@ sub newGlycoSample {
 ##############################################################################
 #Add the predicted peptide for a row
 ###############################################################################
-sub add_predicted_peptide {
-	my $method = 'add_predicted_peptide';
+sub add_erpdicted_peptide {
+	my $method = 'add_erpdicted_peptide';
 	my $self = shift;
 	
 	my %args = @_;
@@ -626,12 +892,267 @@ sub map_peptide_to_protein {
 	
 }
 
+#
+# Add predicted tryptic peptide
+#
+sub insert_predicted {
 
+	my $self = shift;
+  my %args = @_;
+
+  my $err;
+  for my $opt ( qw( ipi ipi_data_id aa_seq start_idx stop_idx ) ) {
+    $err = ( $err ) ? $err . ', ' . $opt : $opt if !defined $args{$opt};
+  }
+  die ( "Missing required parameter(s): $err in " . $self->whatsub() ) if $err;
+
+  my $match = $module->clean_pepseq( $args{aa_seq} );
+  if ( length($match) > 900 ) {
+    print STDERR "Truncating long value for matching sequence\n";
+    $match = substr( $match, 0, 900 );
+  }
+
+  $self->{_seq_to_id}->{$match}->{$args{ipi}}++;
+  my $n_match = 0;
+  my $match_str = '';
+  for my $k ( keys( %{$self->{_seq_to_id}->{$match}} ) ) {
+    next unless $k;
+    $n_match++;
+    $match_str = ( $match_str ) ? "$match_str, $k" : $k;
+  }
+
+  my $mass = $module->calculatePeptideMass( sequence => $match); # Fixme use methyl Cys & N => D?
+  my $detection_prob = -1;
+  my $prot_sim_score = -1;
+
+  my $rowdata = { ipi_data_id => $args{ipi_data_id},
+   predicted_peptide_sequence => $args{aa_seq},
+       predicted_peptide_mass => $mass,
+        detection_probability => $detection_prob,
+     n_proteins_match_peptide => $n_match,
+         matching_protein_ids => $match_str,
+     protein_similarity_score => $prot_sim_score,
+              predicted_start => $args{start_idx},
+               predicted_stop =>  $args{stop_idx},
+            matching_sequence => $match};
+  
+  my $sbeams = $self->getSBEAMS();
+
+
+ 	my $predicted_id = $sbeams->updateOrInsertRow( return_PK => 1,
+                                                table_name => $TBGP_PREDICTED_PEPTIDE,
+                                               rowdata_ref => $rowdata,
+                                                   verbose => $self->verbose(),
+                                                  testonly => $self->testonly(),
+                                                    insert => 1,
+                                                        PK => 'predicted_peptide_id',
+                                             ); 
+  return $predicted_id;
+}
+
+sub whatsub {
+  my $self = shift;
+  my $package = shift || 0;
+  my @call = caller(1);
+  $call[3] =~ s/.*:+([^\:]+)$/$1/ unless $package;
+  return $call[3];
+}
+
+sub add_predicted2glycosite {
+	my $self = shift;
+  my %args = @_;
+
+  my $err;
+  for my $opt ( qw( ipi_data_id site predicted_id ) ) {
+    $err = ( $err ) ? $err . ', ' . $opt : $opt if !defined $args{$opt};
+  }
+  die ( "Missing required parameter(s): $err in " . $self->whatsub() ) if $err;
+
+  my $key = $args{ipi_data_id} . $args{site};
+  my $glycosite_id = $self->{_ipi2gs}->{$key} || die "Unknown site";  
+  
+  my $rowdata = { glycosite_id => $glycosite_id,
+                 peptide_start => $args{site},
+                  peptide_stop => $args{site} + 3,
+          predicted_peptide_id => $args{predicted_id} };
+
+  my $sb = $self->getSBEAMS();
+
+
+ 	my $id = $sb->updateOrInsertRow( return_PK => 1,
+                                      table_name => $TBGP_PREDICTED_TO_GLYCOSITE,
+                                     rowdata_ref => $rowdata,
+                                          insert => 1,
+                                         PK_name => 'predicted_to_glycosite_id',
+                                                 );
+  return $id;
+}
+
+sub update_peptide_sequence {
+	my $self = shift;
+  my %args = @_;
+
+  my $err;
+  for my $opt ( qw( aa_seq predicted_id ) ) {
+    $err = ( $err ) ? $err . ', ' . $opt : $opt if !defined $args{$opt};
+  }
+  die ( "Missing required parameter(s): $err in " . $self->whatsub() ) if $err;
+
+  my $sbeams = $self->getSBEAMS();
+ 	my $result = $sbeams->updateOrInsertRow( table_name => $TBGP_PREDICTED_PEPTIDE,
+                                          rowdata_ref => { predicted_peptide_sequence => $args{aa_seq} },
+                                               update => 1,
+                                              PK_name => 'predicted_peptide_id',
+                                             PK_value => $args{predicted_id},
+                                           );
+  return $result;
+
+}
+
+#
+# Add predicted tryptic peptides, plus glycosite record if appropriate.
+#
+sub add_predicted_peptides {
+
+	my $self = shift;
+  my %args = @_;
+
+  my $err;
+  for my $opt ( qw( ipi ipi_data_id site_idx sequence peptides ) ) {
+    $err = ( $err ) ? $err . ', ' . $opt : $opt if !defined $args{$opt};
+  }
+  die ( "Missing required parameter(s): $err in " . $self->whatsub() ) if $err;
+
+  # Index into protein
+  my $pidx = 0;
+
+  # Array of glycosite locations
+  my $site = shift( @{$args{site_idx}} );
+
+  for my $peptide ( @{$args{peptides}} ) {
+    # index of glycosite in peptide
+    my $sidx = $pidx;
+
+    # Increment index
+    $pidx += (length( $peptide ) - 4);
+
+    my $num_motifs = 0;
+ 
+    my $predicted_id;
+    my $do_insert = ( length($peptide) > 8 || ( $site && $pidx >= $site + 1 ) ) ? 1 : 0;
+    # Add predicted peptide record
+    $predicted_id = $self->insert_predicted( %args,  # pass through ipi_data_id, ipi accession
+                                             aa_seq => $peptide,
+                                          start_idx => $sidx,
+                                           stop_idx => $pidx
+                                    ) or die "Insert failed $!" if $do_insert;
+
+    # If we are in a glyco
+    while ( defined $site && $pidx >= ($site + 1) ) {
+      my $pepidx = ( $site - $sidx ) + 2 + $num_motifs;
+      my $annot_pep = $peptide;
+      substr( $annot_pep, $pepidx, 1 ) = 'N#';
+#     print "$peptide => $annot_pep\n";
+      my $aa = substr( $peptide, $pepidx , 3 );
+#      print "\tDataID: $args{ipi_data_id}\t$pidx\t$pepidx\t$aa\t$site\n";
+      $self->add_predicted2glycosite( %args, site => $site, predicted_id => $predicted_id ) if $predicted_id;
+#      print "Added 2 for $predicted_id\n" if $num_motifs > 1;
+
+      $site = shift( @{$args{site_idx}} );
+#      print "\t\t$pidx\t$pepidx\t$aa\t$site\n";
+      $peptide = $annot_pep;
+      $num_motifs++;
+      last if !defined $site;
+    }
+    if ( $predicted_id && $peptide =~ /#/ ) {
+      $self->update_peptide_sequence( predicted_id => $predicted_id,
+                                          aa_seq => $peptide );
+    }
+  }
+
+}
+
+#
+# Add the glycosite(s) for current protein
+#
+sub add_glycosites {
+
+	my $self = shift;
+  my %args = @_;
+
+  my $missing;
+  for my $opt ( qw( protein_sequence ipi_data_id site_idx ) ) {
+    $missing = ( $missing ) ? $missing . ', ' . $opt : $opt unless defined $args{$opt};
+  }
+  die ( "Missing required parameter(s): $missing in " . $self->whatsub() ) if $missing;
+
+  my $sbeams = $self->getSBEAMS();
+  $self->{_ipi2gs} ||= {};
+
+  for my $site ( @{$args{site_idx}} ) {
+#    print STDERR "inserting site $site\n";
+    my $glyco_score = -1;
+    my $motif_context = $self->motif_context( seq => $args{protein_sequence}, site => $site );
+
+
+  	my $rowdata = { protein_glycosite_position => $site,
+                                  site_context => $motif_context,
+                                    glyco_score => $glyco_score,  # Fixme 
+                                    ipi_data_id => $args{ipi_data_id}
+                  };
+	
+    my $pk = $sbeams->updateOrInsertRow( table_name  => $TBGP_GLYCOSITE,
+                                rowdata_ref => $rowdata,
+                                return_PK   => 1,
+                                verbose     => $self->verbose(),
+                                testonly    => $self->testonly(),
+                                insert      => 1,
+                                PK          => 'glycosite_id' ) || die "putresence";
+    $self->{_ipi2gs}->{$args{ipi_data_id} . $site} = $pk;
+  }
+  return 1;
+				   		   
+}
+	
+sub motif_context {
+  my $self = shift;
+  my %args = @_;
+
+  my $missing;
+  for my $opt ( qw( seq site ) ) {
+    $missing = ( $missing ) ? $missing . ', ' . $opt : $opt unless defined $args{$opt};
+  }
+  die ( "Missing required parameter(s): $missing in " . $self->whatsub() ) if $missing;
+
+  my $lpad = 0;
+  my $rpad = 0;
+  my $beg = $args{site} - 5;
+  my $end = 13;
+  my $len = length( $args{seq} );
+
+  if ( $args{site} <= 5 ) {
+    $lpad = 5 - $args{site};
+    $beg = 0;
+    $end -= $lpad;
+  } 
+
+  if ( $args{site} + 8 > $len ) {
+
+      $rpad = ($args{site} + 8) - $len;
+      $end -= $rpad;
+  }
+
+  my $context = substr( $args{seq}, $beg, $end );
+  $context = '-' x $lpad . $context . '-' x $rpad;
+  my $slen = length($context);
+
+  return $context;
+}
 
 ###############################################################################
 #Add the glycosite for this row
 ###############################################################################
-sub add_glyco_site {
+sub add_glyco_site_old {
 	my $method = 'add_glyco_site';
 	my $self = shift;
 	my $row = shift;
@@ -640,7 +1161,7 @@ sub add_glyco_site {
 	my $ipi_id = $row->[$heads{'ipi'}];
 	
 	my %rowdata_h = ( 	
-				protein_glyco_site_position => $row->[$heads{'nxt/s location'}],
+				protein_glycosite_position => $row->[$heads{'nxt/s location'}],
 				glyco_score =>$row->[$heads{'nxt/s score'}],
 				ipi_data_id => $self->get_ipi_data_id( $ipi_id ),
 			  );
@@ -649,7 +1170,7 @@ sub add_glyco_site {
   my $sbeams = $self->getSBEAMS();
 
 	my $glyco_site_id = $sbeams->updateOrInsertRow(				
-							table_name=>$TBGP_GLYCO_SITE,
+							table_name=>$TBGP_GLYCOSITE,
 				   			rowdata_ref=>$rowdata_ref,
 				   			return_PK=>1,
 				   			verbose=>$self->verbose(),
@@ -719,7 +1240,7 @@ sub add_ipi_record {
 	
 	$self->{All_records}{$ipi_id} = {ipi_data_id => $ipi_data_id};
 
-	return 1;
+	return $ipi_data_id;
 }
 ###############################################################################
 #get ipi_data_id 
@@ -818,7 +1339,6 @@ sub find_cellular_location_id{
 	
 	my $code = '';
 	if ($self->cellular_code_id($cellular_code)){
-		#print "I SEE THE CODE **\n";
 		return 	$self->cellular_code_id($cellular_code);
 		
 	}else{
@@ -853,7 +1373,7 @@ sub find_cellular_code {
 	}elsif($code eq 'A_low' ){
 		$full_name = 'Anchor';
 	} else {
-  	print STDERR "ERROR:Cannot find full name for CELLULAR CODE '$code'\n";
+  	die "Unknown cellular code $code\n";
   }
 
 	my $sql =<<"  END"; 
@@ -862,17 +1382,13 @@ sub find_cellular_code {
   WHERE cellular_location_name = '$full_name'
   END
 	
-	 my ($id) = $sbeams->selectOneColumn($sql);
-	if ($self->verbose){
-		print __PACKAGE__. "::$method FOUND CELLULAR LOCATION ID '$id' FOR CODE '$code' FULL NAME '$full_name'\n";
-		
-	}
-	unless ($id) {
-		confess(__PACKAGE__ ."::$method CANNOT FIND ID FOR CODE '$code' FULL NAME '$full_name'\n");
-	}
+  my ($id) = $sbeams->selectOneColumn($sql);
+  unless ($id) {
+    die "DB lookup failed for cellular code $code ($full_name)\n";
+  }
 	
-	$self->cellular_code_id($code, $id);
-	return $id;
+  $self->cellular_code_id($code, $id);
+  return $id;
 }
 ###############################################################################
 #Get/Set the cellular code_id cellular_code
@@ -913,37 +1429,22 @@ sub check_ipi {
 sub check_version {
 	my $method = 'check_version';
 	my $self = shift;
+  my %args = @_;
+
   my $sbeams = $self->getSBEAMS();
-	
-	my $file = $self->getfile();
-	
-	my $st = stat($file);
-	
-	#DB time '2005-05-06 14:24:37.63' 
-	my $now_string = strftime "%F %H:%M:%S.00", localtime($st->mtime);
-	              
 		
-	my $sql = qq~ SELECT ipi_version_id
-					FROM $TBGP_IPI_VERSION
-					WHERE ipi_version_date = '$now_string'
-				~;
-	
-	if ($self->debug >0){
-		print __PACKAGE__ ."::$method SQL '$sql'\n";
-	}
-	
-	 my ($id) = $sbeams->selectOneColumn($sql);	
-	 
-	 if ($id){
-	 	$self->ipi_version_id($id);
-	 	if ($self->verbose){
-	 		print __PACKAGE__. "::$method FOUND IPI VERSION ID IN THE DB '$id'\n";
-	 	}
-	 }else{
-	 	my $id = $self->add_new_ipi_version();
-	 	print __PACKAGE__ ."::$method MADE NEW IPI VESION ID '$id'\n";
-	 	
-	 }
+	my $sql = qq~
+  SELECT ipi_version_id
+  FROM $TBGP_IPI_VERSION
+  WHERE ipi_version_name = '$args{release}'
+  ~;
+
+  my ($id) = $sbeams->selectOneColumn($sql);	
+#  print STDERR "$sql Found matching version $id\n";
+
+  if ($id){
+    die "Version $args{version} already exists, quitting\n";
+  }
 	return 1;
 }
 
@@ -951,9 +1452,10 @@ sub check_version {
 ###############################################################################
 #add_new_ipi_version/set ipi_version_id
 ###############################################################################	
-sub add_new_ipi_version{
-
+sub add_ipi_version{
 	my $self = shift;
+  my %args = @_;
+
 	my $file = $self->getfile();
 	my $file_name = basename($file);
   my $sbeams = $self->getSBEAMS();
@@ -962,13 +1464,20 @@ sub add_new_ipi_version{
 	my $mod_time_string = strftime "%F %H:%M:%S.00", localtime($st->mtime);
 	my $release = $self->{_release} || $file;
 	
+  my $orgID = $sbeams->get_organism_id( organism => $args{organism} );
+  die "Unable to find organism $args{organism} in the database" unless $orgID;
+  
+  my $is_default = ( $args{default} ) ? 1 : 0;
 # FIXME Add to schema
 #				ipi_file_name => $file,
 
 	my %rowdata_h = ( 	
-				ipi_version_name => $release,
+				ipi_version_name => $args{release},
 				ipi_version_date => $mod_time_string,
-				
+				ipi_version_file => $file_name,
+        organism_id => $orgID,
+        is_default => $is_default,
+			  comment => $args{comment},	
 			  );
 	
 	my $ipi_version_id = $sbeams->updateOrInsertRow(				
@@ -1054,11 +1563,9 @@ sub truncate_data {
 			if (length $record_h{$key} > 255){
 				my $big_val = $record_h{$key};
 		
-				my $truncated_val = substr($record_h{$key}, 0, 254);
+				$record_h{$key} = substr($record_h{$key}, 0, 255);
 			
-				$self->anno_error(error => "Warning HASH Value truncated for key '$key'\n,ORIGINAL VAL SIZE:". length($big_val). "'$big_val'\nNEW VAL SIZE:" . length($truncated_val) . "'$truncated_val'");
-				#print "VAL '$record_h{$key}'\n"
-				$record_h{$key} = $truncated_val;
+				$self->anno_error(error => 'trunc');
 			}
 		}
 		return %record_h;
@@ -1070,11 +1577,9 @@ sub truncate_data {
 			if (length $data[$i] > 255){
 				my $big_val = $data[$i];
 		
-				my $truncated_val = substr($data[$i], 0, 254);
+				$data[$i] = substr($data[$i], 0, 255);
 			
-				$self->anno_error(error => "Warning DATA Val truncated\n,ORIGINAL VAL SIZE:". length($big_val). "'$big_val'\nNEW VAL SIZE:" . length($truncated_val) . "'$truncated_val'");
-				#print "VAL '$record_h{$key}'\n"
-				$data[$i] = $truncated_val;
+				$self->anno_error(error => 'trunc');
 			}
 		}
 		return @data;
@@ -1091,23 +1596,21 @@ sub truncate_data {
 # anno_error
 ###############################################################################
 sub  anno_error {
-	my $method = 'anno_error';
 	my $self = shift;
-	
 	my %args = @_;
-	
-	if (exists $args{error} ){
-		if ($self->verbose() > 0){
-			print "$args{error}\n";
-		}
-		return $self-> {ERROR} .= "\n$args{error}";	#might be more then one error so append on new errors
-		
-	}else{
-		$self->{ERROR};
-	
-	}
 
+  $self->{_anno_error} ||= { trunc => 0, };
 
+  if ( $args{error} ) {
+    $self->{_anno_error}->{$args{error}}++;
+    return;
+  } 
+  
+  my $errstr = 'No errors reported';
+  if ( $self->{_anno_error}->{trunc} ) {
+    $errstr .= "Warning: $self->{_anno_error}->{trunc} values were truncated";
+  }
+  return $errstr;
 }
 
 
