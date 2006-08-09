@@ -282,6 +282,11 @@ sub printStyleSheet {
     #### Obtain main SBEAMS object and use its style sheet
     $sbeams = $self->getSBEAMS();
     $sbeams->printStyleSheet();
+    print <<"    END";
+    <STYLE>
+     TD { background-repeat: no-repeat; }
+    </STYLE>
+    END
 
 }
 
