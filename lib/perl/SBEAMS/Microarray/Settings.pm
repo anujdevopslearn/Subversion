@@ -70,7 +70,7 @@ $AFFY_R_CHP_ANALYSIS_PROTOCOL = $CONFIG_SETTING{MA_AFFY_R_CHP_PROTOCOL} || '';
 
 #### Override variables from main Settings.pm
 $SBEAMS_SUBDIR          = 'Microarray';
-$SBEAMS_PART            = 'MicroArray';
+$SBEAMS_PART            = 'Microarray';
 
 
 ##############################
