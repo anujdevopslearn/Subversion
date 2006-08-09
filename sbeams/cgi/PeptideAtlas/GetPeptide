@@ -780,6 +780,7 @@ if ($apply_action =~ /QUERY/i ) {
       $pep->[2] = sprintf("%0.4f", $pep->[2]);
       $pep->[3] = sprintf("%0.2f", $pep->[3]) unless $pep->[3] == 1;
       $pep->[3] = 1 if $pep->[3] == 1;
+      $pep->[5] = sprintf("%0.1f", $pep->[5]) if $pep->[5];
       $pep->[6] = sample_view( $pep->[6] );
     }
     unshift @mod_peps, ['Modified Sequence', 'Charge', 'Mono Parent m/z', 'Best Prob', '# Obs', '# Siblings', 'Sample IDs' ];
