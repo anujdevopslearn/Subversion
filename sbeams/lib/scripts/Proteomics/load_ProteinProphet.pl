@@ -261,7 +261,6 @@ sub start_element {
     ASAPRatio => 'summary_quantitation',
   );
 
-# nlk:  changing peptide => 'protein_id', to: peptide => 'peptide_id'?
   #### Define the parent IDs
   my %parent_ids = (
     protein_summary => '',
@@ -878,9 +877,9 @@ sub deleteProteinSummary {
       'nsp_information(C)',
     nsp_information => 'nsp_distribution(C)',
     protein_group => 'protein(C)',
-    protein => 'peptide(C),indistinguishable_protein(C),'.
+    protein => 'proteomics_peptide(C),indistinguishable_protein(C),'.
       'summary_quantitation(A)',
-    peptide => 'peptide_parent_protein(C),indistinguishable_peptide(C)',
+    proteomics_peptide => 'peptide_parent_protein(C),indistinguishable_peptide(C)',
   );
 
 
