@@ -437,7 +437,6 @@ $LINESEPARATOR
 	$temp_duplicate_biosequences_clause =~ s/AND/ OR/;
 	$duplicate_biosequences_clause .= $temp_duplicate_biosequences_clause;
 
-
 	#### Build FUNCTIONAL DESCRIPTION constraint
 	my $temp_functional_description_clause = '';
 	if ($parameters{search_scope} =~ /(All)/) {
@@ -579,8 +578,9 @@ $LINESEPARATOR
 		 AND BS.biosequence_seq IS NOT NULL
       ORDER BY BS.biosequence_name
    ~;
-
+# print "SQL for selectSeveralColumns is $sql";
   my @rows = $sbeams->selectSeveralColumns($sql);
+
 
   #### Start the table
   my $table_html;
@@ -667,7 +667,6 @@ $LINESEPARATOR
 	  push @d_ids, $dna_biosequence_id if ($dna_biosequence_id);
 
     push @glist, $biosequence_name;
-
 	  #### Special (fragile?) handling for halo aliases
 	  my @alias_items = split ",", $aliases;
 	  my $NCBI_PID_BASE = "http://www.ncbi.nlm.nih.gov/sutils/blink.cgi?pid=";
@@ -688,7 +687,64 @@ $LINESEPARATOR
 
 	  $aliases = join ",",@alias_items;
 
-    
+}
+# print "glist should only be run once and contains: @glist<p>";
+my $glist_clean = "";
+my $peptide_hit_list = "";
+foreach my $glist_item (@glist){
+	$glist_item = "'" . $glist_item . "'";
+	$glist_clean = $glist_clean . $glist_item  . ",";	
+}
+
+#ugh, this is pretty nasty !
+chop ($glist_clean);
+
+#print "peptide_hit_list is $peptide_hit_list";
+
+# glist now has what we need, but need to surround the ORFs with '' for valid SQL to work!
+#my $good_sql = "SELECT DISTINCT PI.peptide_id, PI.original_protein_name FROM PeptideAtlas.dbo.peptide_instance PI  INNER JOIN PeptideAtlas.dbo.peptide P ON ( PI.peptide_id = P.peptide_id ) INNER JOIN PeptideAtlas.dbo.atlas_build AB ON ( PI.atlas_build_id = AB.atlas_build_id ) LEFT JOIN PeptideAtlas.dbo.biosequence_set BSS ON ( AB.biosequence_set_id = BSS.biosequence_set_id ) LEFT JOIN sbeams.dbo.organism O ON ( BSS.organism_id = O.organism_id ) LEFT JOIN PeptideAtlas.dbo.peptide_mapping PM ON ( PI.peptide_instance_id = PM.peptide_instance_id ) LEFT JOIN PeptideAtlas.dbo.biosequence BS ON ( PM.matched_biosequence_id = BS.biosequence_id ) WHERE O.organism_name = 'Halobacterium' AND AB.atlas_build_id = '91' AND BS.biosequence_gene_name IN ($glist_clean) ORDER BY PI.original_protein_name";
+# print "SQL is $good_sql<br>";
+
+my $ok_sql = "SELECT DISTINCT PI.original_protein_name, SUM(PI.n_observations) AS 'peptide_hits' FROM PeptideAtlas.dbo.peptide_instance PI INNER JOIN PeptideAtlas.dbo.peptide P ON ( PI.peptide_id = P.peptide_id ) INNER JOIN PeptideAtlas.dbo.atlas_build AB ON ( PI.atlas_build_id = AB.atlas_build_id ) LEFT JOIN PeptideAtlas.dbo.biosequence_set BSS ON ( AB.biosequence_set_id = BSS.biosequence_set_id ) LEFT JOIN sbeams.dbo.organism O ON ( BSS.organism_id = O.organism_id ) LEFT JOIN PeptideAtlas.dbo.peptide_mapping PM ON ( PI.peptide_instance_id = PM.peptide_instance_id ) LEFT JOIN PeptideAtlas.dbo.biosequence BS ON ( PM.matched_biosequence_id = BS.biosequence_id ) WHERE O.organism_name = 'Halobacterium' AND AB.atlas_build_id = '91' AND BS.biosequence_gene_name IN ($glist_clean) GROUP BY  PI.original_protein_name ORDER BY PI.original_protein_name";
+# print "SQL is $ok_sql<br>";
+#my @atlas_hit = $sbeams->selectSeveralColumns($good_sql);
+my %atlas_hit_h = $sbeams->selectTwoColumnHash($ok_sql);
+
+#while( my ($k, $v) = each %atlas_hit_h ) {
+#        print "key: $k, value: $v.\n";
+#    }
+
+#set this variable so we can have the nice background-coloring of the <TD> below.
+my $atlas_data;
+#if ($atlas_hit_count > 0) {$atlas_data = $atlas_hit_count}
+
+#print "<p>Found $atlas_hit_count hits: $atlas_hit<br>";
+
+#foreach my $atlas_hits (@atlas_hit){
+#	$peptide_hit_list = $atlas_hits . " ," . $peptide_hit_list;
+#} 
+#chop ($peptide_hit_list);
+   
+ foreach my $row (@rows) {
+ my $protein_biosequence_id    = $row->[0];
+          my $biosequence_annotation_id = $row->[1];
+          my $biosequence_name          = $row->[2];
+          my $gene_symbol               = $row->[3] || "[+]";
+          my $functional_description    = $row->[4] || "[+]";
+          my $chromosome                = $row->[5] || "[+]";
+          my $start                     = $row->[6] || "[+]";
+          my $stop                      = $row->[7] || "[+]";
+          my $aliases                   = $row->[8] || "[+]";
+          my $duplicate_biosequences    = $row->[9];
+          my $comments                  = $row->[10] || "[+]";
+          $comments =~ s/\t/ /g;
+          $comments =~ s/\n/\<BR\>/g;
+          my $biosequence_accession     = $row->[11] || "[+]";
+          my $dna_biosequence_id        = $row->[12] if ($row->[12]);
+          push @p_ids, $protein_biosequence_id;
+          push @d_ids, $dna_biosequence_id if ($dna_biosequence_id);
+
+    push @glist, $biosequence_name;
 
 	  $table_html  .= qq~
 
@@ -712,7 +768,7 @@ $LINESEPARATOR
 												  data=>$biosequence_name,
 												  target=>'microbes_onlines',
 												  link=>$microbes_online_url,
-												  tooltip=>"Microbes Online Search for$biosequence_name");
+												  tooltip=>"Microbes Online Search for $biosequence_name");
 
 	 
 
@@ -743,8 +799,26 @@ $LINESEPARATOR
 									   text=>'A',
 									   target=>'annotation',
 									   link=>"ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation&biosequence_annotation_id=$biosequence_annotation_id&biosequence_id=$protein_biosequence_id&ShowEntryForm=1",
-									   tooltip=>"Edit Annotation (restricted)");
-	  
+tooltip=>"Edit Annotation (restricted)");
+
+#hard-coded atlas ID, FIX THIS !!!
+	 my $atlas_id = '91'; 
+	## if there are hits against the peptideAtlas, say so, otherwise, say none
+	my $peptide_tip = "None";
+	if (%atlas_hit_h->{$biosequence_name} eq ""){} else {
+	$peptide_tip = %atlas_hit_h->{$biosequence_name};
+	}
+	if ($peptide_tip eq "None"){}else{
+	$atlas_data = %atlas_hit_h->{$biosequence_name};
+	}
+#	print "atlas_data is $atlas_data<br>";
+	my $atlas_link = getColorizedTD (tag=>'Peptide Atlas', 
+									data=>$atlas_data, 
+									text=>'T', 
+									target=>'atlas', 
+									link=>"$CGI_BASE_DIR/PeptideAtlas/GetPeptides-pvan?atlas_build_id=$atlas_id&biosequence_gene_name_constraint=$biosequence_name&query_name=AT_GetPeptides&action=QUERY&apply_action=QUERY&display_options=ShowMappings", 
+									tooltip=>"$biosequence_name peptides: $peptide_tip");
+	$atlas_data = "";
 	  ## put a space in between redundant ORFs so the tooltip will wrap the text
 	  $duplicate_biosequences =~ s/,/, /g;
 	  my $tip = "None";
@@ -758,17 +832,16 @@ $LINESEPARATOR
 											tooltip=>"Redundant ORFS: $tip");
 	
 
-
 	  $table_html .= qq~
 		$dna_link
 		~if ($dna_biosequence_id);
-
 	  $table_html .= qq~
 		$prot_link
 		$annot_link
 		$microbes_online_link
 		$array_expression_link
 		$duplicates_link
+		$atlas_link
 		</TR>
 		</TABLE>
 		</TD>
@@ -814,8 +887,9 @@ $LINESEPARATOR
                                       name => "Orf names",
                                       data => \@glist,
                                      start => 1, 
-                                       end => 1 );
-  print "$gXML\n";
+                                       end => 1 ); 
+ print "$gXML\n";
+
 
 	# End the table
 	$table_html .= qq~
