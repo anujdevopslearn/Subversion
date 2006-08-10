@@ -74,8 +74,6 @@ use vars qw(@ISA @EXPORT
 
     $TBPR_POSSIBLE_PEPTIDE
 
-    $TBPR_PUBLICATION_CATEGORY
-    $TBPR_PUBLICATION_RATING
     $TBPR_PUBLICATION
 
     $TBPR_SEARCH_BATCH_PROTEIN_SUMMARY
@@ -160,8 +158,6 @@ require Exporter;
 
     $TBPR_POSSIBLE_PEPTIDE
 
-    $TBPR_PUBLICATION_CATEGORY
-    $TBPR_PUBLICATION_RATING
     $TBPR_PUBLICATION
 
     $TBPR_SEARCH_BATCH_PROTEIN_SUMMARY
@@ -250,8 +246,6 @@ $TBAPD_PEPTIDE_PROPERTY_TYPE      = "${APD}peptide_property_type";
 
 $TBPR_POSSIBLE_PEPTIDE            = "${mod}possible_peptide";
 
-$TBPR_PUBLICATION_CATEGORY        = "${mod}publication_category";
-$TBPR_PUBLICATION_RATING          = "${mod}publication_rating";
 $TBPR_PUBLICATION                 = "${mod}publication";
 
 $TBPR_SEARCH_BATCH_PROTEIN_SUMMARY= "${mod}search_batch_protein_summary";
