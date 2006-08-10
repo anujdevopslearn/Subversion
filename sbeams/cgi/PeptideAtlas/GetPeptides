@@ -30,7 +30,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TabMenu;
@@ -431,7 +431,7 @@ sub handle_request {
   ## handle file upload and clause for sql for $parameters{upload_file}
   my $biosequence_names_clause;
   my %protein_hash;
-  if ($parameters{upload_file} ne '-1')
+  if ( $parameters{upload_file} && $parameters{upload_file} ne '-1')
   {
      ## upload the file to a file handler
      my $fh = $q->upload('upload_file');
