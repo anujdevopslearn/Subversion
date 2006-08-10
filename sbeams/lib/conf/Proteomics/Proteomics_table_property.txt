@@ -40,7 +40,7 @@ PR_summary_quantitation	Protein Summary Quantitation	Proteomics_infrastructure	N
 PR_protein_group	Protein Group	Proteomics_infrastructure	NO	$TBPR_PROTEIN_GROUP	protein_group_id			
 PR_protein	Protein	Proteomics_infrastructure	NO	$TBPR_PROTEIN	protein_id			
 PR_indistinguishable_protein	Inditinguishable Protein	Proteomics_infrastructure	NO	$TBPR_INDISTINGUISHABLE_PROTEIN	indistinguishable_protein_id			
-PR_peptide	Peptide	Proteomics_infrastructure	NO	$TBPR_PEPTIDE	peptide_id			
+PR_proteomics_peptide	Peptide	Proteomics_infrastructure	NO	$TBPR_PROTEOMICS_PEPTIDE	peptide_id			
 PR_peptide_parent_protein	Peptide Parent Protein	Proteomics_infrastructure	NO	$TBPR_PEPTIDE_PARENT_PROTEIN	peptide_parent_protein_id			
 PR_indistinguishable_peptide	Indistinguishable Peptide	Proteomics_infrastructure	NO	$TBPR_INDISTINGUISHABLE_PEPTIDE	indistinguishable_peptide_id			
 PR_search_batch_protein_summary	Search Batcht Protein Summary	Proteomics_infrastructure	NO	$TBPR_SEARCH_BATCH_PROTEIN_SUMMARY	search_batch_protein_summary_id			

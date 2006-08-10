@@ -652,20 +652,20 @@ PR_indistinguishable_protein	1	indistinguishable_protein_id	Indistinguishable Pr
 PR_indistinguishable_protein	2	protein_id	Lead Protein	int	4	0	N		N	PR_protein	protein_id										
 PR_indistinguishable_protein	3	protein_name	Protein Name	varchar	255	0	N		N												
 PR_indistinguishable_protein	4	biosequence_id	Biosequence ID	int	4	0	N		N												
-PR_peptide	1	peptide_id	Peptide ID	int	4	0	N		Y												pkDEFAULT
-PR_peptide	2	protein_id	Protein	int	4	0	N		N	PR_protein	protein_id										
-PR_peptide	3	peptide_sequence	Peptide Sequence	varchar	255	0	N		N												
-PR_peptide	4	charge	Charge	int	4	0	N		N												
-PR_peptide	6	initial_probability	Initial Probability	real	4	0	N		N												
-PR_peptide	7	nsp_adjusted_probability	NSP Adjusted Probability	real	4	0	N		N												
-PR_peptide	8	peptide_group_designator	Peptide Twin Designator	varchar	10	0	Y		N												
-PR_peptide	9	weight	Weight	real	4	0	N		N												
-PR_peptide	10	is_nondegenerate_evidence	Is Nondegenerate Evidence?	char	1	0	N		N												
-PR_peptide	11	n_enzymatic_termini	Number of Enzymatic Termini	int	4	0	N		N												
-PR_peptide	12	n_sibling_peptides	Number of Sibling Peptides	real	4	0	Y		N												
-PR_peptide	13	n_sibling_peptides_bin	Number of Sibling Peptides Bin	int	4	0	N		N												
-PR_peptide	14	n_instances	Number of Observed Instances	int	4	0	N		N												
-PR_peptide	15	summary_quantitation_id	Summary Quantitation	int	4	0	Y		N	PR_summary_quantitation	summary_quantitation_id										
+PR_proteomics_peptide	1	peptide_id	Peptide ID	int	4	0	N		Y												pkDEFAULT
+PR_proteomics_peptide	2	protein_id	Protein	int	4	0	N		N	PR_protein	protein_id										
+PR_proteomics_peptide	3	peptide_sequence	Peptide Sequence	varchar	255	0	N		N												
+PR_proteomics_peptide	4	charge	Charge	int	4	0	N		N												
+PR_proteomics_peptide	6	initial_probability	Initial Probability	real	4	0	N		N												
+PR_proteomics_peptide	7	nsp_adjusted_probability	NSP Adjusted Probability	real	4	0	N		N												
+PR_proteomics_peptide	8	peptide_group_designator	Peptide Twin Designator	varchar	10	0	Y		N												
+PR_proteomics_peptide	9	weight	Weight	real	4	0	N		N												
+PR_proteomics_peptide	10	is_nondegenerate_evidence	Is Nondegenerate Evidence?	char	1	0	N		N												
+PR_proteomics_peptide	11	n_enzymatic_termini	Number of Enzymatic Termini	int	4	0	N		N												
+PR_proteomics_peptide	12	n_sibling_peptides	Number of Sibling Peptides	real	4	0	Y		N												
+PR_proteomics_peptide	13	n_sibling_peptides_bin	Number of Sibling Peptides Bin	int	4	0	N		N												
+PR_proteomics_peptide	14	n_instances	Number of Observed Instances	int	4	0	N		N												
+PR_proteomics_peptide	15	summary_quantitation_id	Summary Quantitation	int	4	0	Y		N	PR_summary_quantitation	summary_quantitation_id										
 PR_peptide_parent_protein	1	peptide_parent_protein_id	Peptide Parent Protein ID	int	4	0	N		Y												pkDEFAULT
 PR_peptide_parent_protein	2	peptide_id	Peptide	int	4	0	N		N	PR_peptide	peptide_id										
 PR_peptide_parent_protein	3	protein_name	Protein Name	varchar	255	0	N		N												
