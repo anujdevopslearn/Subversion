@@ -537,7 +537,7 @@ sub handle_request {
     );
     $order_by_clause = ",PEP.nsp_adjusted_probability,PEP.peptide_sequence,PEP.charge";
     $peptide_join = qq~
-         INNER JOIN $TBPR_PEPTIDE PEP
+         INNER JOIN $TBPR_PROTEOMICS_PEPTIDE PEP
                ON ( PROT.protein_id = PEP.protein_id )
     ~;
   }
