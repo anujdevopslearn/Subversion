@@ -13,7 +13,7 @@ PR_biosequence_property_set	BioSequence Property Set	Proteomics_infrastructure	N
 PR_search_batch	Search Batch	Proteomics_infrastructure	NO	$TBPR_SEARCH_BATCH	search_batch_id				
 PR_search_batch_parameter	Search Batch Parameter	Proteomics_infrastructure	NO	$TBPR_SEARCH_BATCH_PARAMETER					
 PR_search_batch_parameter_set	Search Batch Parameter Set	Proteomics_infrastructure	NO	$TBPR_SEARCH_BATCH_PARAMETER_SET					
-PR_search	Search	Proteomics_infrastructure	NO	$TBPR_SEARCH	search_id			
+PR_search	Search	Proteomics_infrastructure	NO	$TBPR_SEARCH	search_id				
 PR_search_hit	Search Hit	Proteomics_infrastructure	NO	$TBPR_SEARCH_HIT	search_hit_id			
 PR_search_hit_protein	Search Hit Protein	Proteomics_infrastructure	NO	$TBPR_SEARCH_HIT_PROTEIN	search_hit_protein_id			
 PR_quantitation	Quantitation	Proteomics_infrastructure	NO	$TBPR_QUANTITATION	quantitation_id			
@@ -45,8 +45,6 @@ PR_peptide_parent_protein	Peptide Parent Protein	Proteomics_infrastructure	NO	$T
 PR_indistinguishable_peptide	Indistinguishable Peptide	Proteomics_infrastructure	NO	$TBPR_INDISTINGUISHABLE_PEPTIDE	indistinguishable_peptide_id			
 PR_search_batch_protein_summary	Search Batcht Protein Summary	Proteomics_infrastructure	NO	$TBPR_SEARCH_BATCH_PROTEIN_SUMMARY	search_batch_protein_summary_id			
 PR_possible_peptide	Possible Peptide	Proteomics_infrastructure	NO	$TBPR_POSSIBLE_PEPTIDE	possible_peptide_id			
-PR_publication_category	Publication Category	Proteomics_user	YES	$TBPR_PUBLICATION_CATEGORY	publication_category_id		ManageTable.cgi?TABLE_NAME=PR_publication_category	"PR_publication,PR_publication_category,PR_publication_rating"
-PR_publication_rating	Publication Rating	Proteomics_infrastructure	YES	$TBPR_PUBLICATION_RATING	publication_rating_id		ManageTable.cgi?TABLE_NAME=PR_publication_rating	"PR_publication,PR_publication_category,PR_publication_rating"
 PR_publication	Publication	Proteomics_user	YES	$TBPR_PUBLICATION	publication_id		ManageTable.cgi?TABLE_NAME=PR_publication	"PR_publication,PR_publication_category,PR_publication_rating"
 PR_GetSearchHits	Browse Search Hits	QUERY	NO				GetSearchHits	
 PR_GetSearch	Browse Search	QUERY	NO				GetSearchHits	
@@ -64,8 +62,8 @@ PR_experiments_samples	Experiments Samples	Proteomics_user	NO	$TBPR_EXPERIMENTS_
 APD_peptide_summary	Peptide Summary	Proteomics_infrastructure	YES	$TBAPD_PEPTIDE_SUMMARY	peptide_summary_id		ManageTable.cgi?TABLE_NAME=APD_peptide_summary	APD_peptide_summary
 APD_aggregated_peptide	Aggregated Peptide	Proteomics_infrastructure	NO	$TBAPD_PEPTIDE	peptide_id			
 APD_peptide_summary_experiment	Peptide Summary Experiment	Proteomics_infrastructure	NO	$TBAPD_PEPTIDE_SUMMARY_EXPERIMENT				
-APD_peptide_identifier	APD Peptide Identifier	Proteomics_infrastructure	NO	$TBAPD_PEPTIDE_IDENTIFIER	peptide_identifier_id			
-APD_modified_peptide	APD Modified Peptide	Proteomics_infrastructure	NO	$TBAPD_MODIFIED_PEPTIDE	modified_peptide_id			
-APD_peptide_property_type	APD Peptide Property Type	Proteomics_infrastructure	NO	$TBAPD_PEPTIDE_PROPERTY_TYPE	peptide_property_type_id			
-APD_modified_peptide_property	APD Modified Peptide Property	Proteomics_infrastructure	NO	$TBAPD_MODIFIED_PEPTIDE_PROPERTY	modified_peptide_property_id			
-APD_BrowseAPD	Browse Annotated Peptide Database	QUERY	NO				BrowseAPD	
+APD_peptide_identifier	APD Peptide Identifier	Proteomics_infrastructure	NO	$TBAPD_PEPTIDE_IDENTIFIER	peptide_identifier_id		
+APD_modified_peptide	APD Modified Peptide	Proteomics_infrastructure	NO	$TBAPD_MODIFIED_PEPTIDE	modified_peptide_id		
+APD_peptide_property_type	APD Peptide Property Type	Proteomics_infrastructure	NO	$TBAPD_PEPTIDE_PROPERTY_TYPE	peptide_property_type_id		
+APD_modified_peptide_property	APD Modified Peptide Property	Proteomics_infrastructure	NO	$TBAPD_MODIFIED_PEPTIDE_PROPERTY	modified_peptide_property_id		
+APD_BrowseAPD	Browse Annotated Peptide Database	QUERY	NO				BrowseAPD
