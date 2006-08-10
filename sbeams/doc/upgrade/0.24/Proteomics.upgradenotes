@@ -1,0 +1,38 @@
+
+The following changes to the Proteomics database should be made when
+upgrading SBEAMS
+
+from version 0.22
+  to 0.23 (development branch)
+     0.24 (next release)
+     or later
+
+---------------
+
+Aug 9, 2006
+
+Made Proteomics publication table identical to PeptideAtlas
+publication table
+
+- server sql calls to drop constraints, tables, and columns:
+
+  ALTER TABLE publication drop constraint fk_publication_publication_category_id
+  ALTER TABLE publication drop constraint fk_publication_publication_rating_id
+  DROP TABLE publication_category, publication_rating
+  ALTER TABLE publication drop column publication_category_id
+  ALTER TABLE publication drop column publication_rating_id
+  ALTER TABLE publication drop column presented_on_date
+  ALTER TABLE publication drop column presented_by_contact_id
+
+- edit $SBEAMS/lib/conf/Proteomics/Proteomics_table_column.txt
+  to remove the columns publication_category_id, publication_rating_id,
+  presented_on_date, and presented_by_contact_id
+
+- edit $SBEAMS/lib/conf/Proteomics/Proteomics_table_property.txt
+  to remove the publication_category and publication_rating tables
+
+- update driver tables
+  cd $SBEAMS/lib/script/Core
+  ./update_driver_tables.pl ../../conf/Proteomics/Proteomics_table_column.txt
+  ./update_driver_tables.pl ../../conf/Proteomics/Proteomics_table_property.txt
+
