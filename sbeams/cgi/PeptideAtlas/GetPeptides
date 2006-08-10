@@ -103,7 +103,7 @@ sub main {
   my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
-  #$sbeams->printDebuggingInfo($q);
+     #$sbeams->printDebuggingInfo($q);
 
 
   #### Process generic "state" parameters before we start
@@ -221,10 +221,6 @@ sub handle_request {
   #### Apply any parameter adjustment logic
   # None
 
-#while( my ($k, $v) = each %parameters ) {
-#        print "<p>key: $k, value: $v.\n";
-#    }
-print "SQL is $sql";
 
   #### Display the user-interaction input form
   $sbeams->display_input_form(
@@ -237,7 +233,6 @@ print "SQL is $sql";
     mask_user_context=> '1',
   );
 
-
   #### Display the form action buttons
   $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
 
@@ -246,7 +241,6 @@ print "SQL is $sql";
   #### data portion of the page
   $sbeams->display_page_footer(close_tables=>'YES',
     separator_bar=>'YES',display_footer=>'NO');
-
 
 
   #########################################################################
@@ -277,7 +271,6 @@ print "SQL is $sql";
     constraint_name=>"BioSequence Name",
     constraint_value=>$parameters{biosequence_name_constraint} );
   return if ($biosequence_name_clause eq '-1');
-
 
   #### Build BIOSEQUENCE_GENE_NAME constraint
   my $biosequence_gene_name_clause = $sbeams->parseConstraint2SQL(
@@ -434,6 +427,44 @@ print "SQL is $sql";
        " with $tsql\n\n";
 
   $parameters{organism_id} = $organism_id;
+
+  ## handle file upload and clause for sql for $parameters{upload_file}
+  my $biosequence_names_clause;
+  my %protein_hash;
+  if ($parameters{upload_file} ne '-1')
+  {
+     ## upload the file to a file handler
+     my $fh = $q->upload('upload_file');
+
+     if (!$fh && $q->cgi_error)
+     {
+       print $q->header(-status=>$q->cgi_error);
+     }
+     if ( (-T $fh) && (-s $fh < 1000000)) ##size constraint of 10 MB, restrict $count < 30000
+     {
+       my $count = 0;
+       my $read_file=0;
+       ## protein list
+       while (<$fh>)
+       {
+         my $str=$_;
+         chomp($str);
+         $protein_hash{$str} = $str;
+         $count = $count + 1;
+         last if ($count > 30000);
+      }
+    }
+    ## join with a commas:
+    my $protein_list = "";
+    foreach my $pr (keys %protein_hash)
+    {
+       $protein_list = "'$protein_hash{$pr}',$protein_list"; 
+    }
+    ## trim off last comma:
+    $protein_list =~ s/(.*)(,)$/$1/;
+    $biosequence_names_clause = "   AND BS.biosequence_name IN ( $protein_list )";
+  }
+
 
   #### Build ROWCOUNT constraint
   $parameters{row_limit} = 5000
@@ -603,6 +634,7 @@ print "SQL is $sql";
      WHERE 1 = 1
         $atlas_build_clause
 	$biosequence_name_clause
+	$biosequence_names_clause
 	$biosequence_gene_name_clause
         $biosequence_desc_clause
 	$peptide_name_clause
