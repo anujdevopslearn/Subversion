@@ -431,7 +431,7 @@ sub handle_request {
   ## handle file upload and clause for sql for $parameters{upload_file}
   my $biosequence_names_clause;
   my %protein_hash;
-  if ( $parameters{upload_file} && $parameters{upload_file} ne '-1')
+  if ( $parameters{upload_file} )
   {
      ## upload the file to a file handler
      my $fh = $q->upload('upload_file');
