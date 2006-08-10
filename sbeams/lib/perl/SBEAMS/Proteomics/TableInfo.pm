@@ -294,10 +294,6 @@ sub returnTableInfo {
 		       full_manuscript_file,
 		       uri
 		  FROM $TBPR_PUBLICATION P
-		  LEFT JOIN $TBPR_PUBLICATION_CATEGORY PC
-                       ON (P.publication_category_id = PC.publication_category_id)
-		  LEFT JOIN $TBPR_PUBLICATION_RATING PR
-                       ON (P.publication_rating_id = PR.publication_rating_id)
 		  LEFT JOIN $TB_USER_LOGIN UL ON (P.presented_by_contact_id = UL.contact_id)
 		 WHERE 1 =1
                    AND P.record_status!='D'
