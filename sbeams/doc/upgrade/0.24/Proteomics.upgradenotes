@@ -59,4 +59,5 @@ Changed Proteomics peptide table name to proteomics_peptide
   cd $SBEAMS/lib/script/Core
   ./update_driver_tables.pl ../../conf/Proteomics/Proteomics_table_column.txt
   ./update_driver_tables.pl ../../conf/Proteomics/Proteomics_table_property.txt
+  ./update_driver_tables.pl ../../conf/Proteomics/Proteomics_table_column_manual.txt
 
