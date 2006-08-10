@@ -36,3 +36,27 @@ publication table
   ./update_driver_tables.pl ../../conf/Proteomics/Proteomics_table_column.txt
   ./update_driver_tables.pl ../../conf/Proteomics/Proteomics_table_property.txt
 
+---------------
+
+Aug 10, 2006
+
+Changed Proteomics peptide table name to proteomics_peptide
+
+- edited $SBEAMS/lib/conf/Proteomics/Proteomics_table_column.txt
+  and $SBEAMS/lib/conf/Proteomics/Proteomics_table_property.txt
+
+- edited $SBEAMS/cgi/Proteomics/BrowseProteinSummary to use
+  $TBPR_PROTEOMICS_TABLE
+
+- edited $SBEAMS/lib/scripts/Proteomics/load_ProteinProphet.pl 
+  to use proteomics_peptide in delete tables subroutine
+
+- edited $SBEAMS/lib/perl/SBEAMS/Proteomics/Tables.pm
+
+- Change the server table name (used the MSSQL tool)
+
+- updated the driver tables:
+  cd $SBEAMS/lib/script/Core
+  ./update_driver_tables.pl ../../conf/Proteomics/Proteomics_table_column.txt
+  ./update_driver_tables.pl ../../conf/Proteomics/Proteomics_table_property.txt
+
