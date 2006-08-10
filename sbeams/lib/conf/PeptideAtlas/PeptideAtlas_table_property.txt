@@ -4,7 +4,7 @@ AT_default_atlas_build	Default Atlas Build	PeptideAtlas_infrastructure	YES	$TBAT
 AT_sample	Sample	PeptideAtlas_user	YES	$TBAT_SAMPLE	sample_id		ManageTable.cgi?TABLE_NAME=AT_sample	"""AT_atlas_build,AT_default_atlas_build,AT_sample"""	
 AT_atlas_build_sample	Atlas Build Sample Link	PeptideAtlas_infrastructure	NO	$TBAT_ATLAS_BUILD_SAMPLE	atlas_build_sample_id				
 AT_atlas_build_search_batch	Atlas Build Search Batch Link	PeptideAtlas_infrastructure	NO	$TBAT_ATLAS_BUILD_SEARCH_BATCH	atlas_build_search_batch_id				
-AT_atlas_search_batch	Atlas Search Batch	PeptideAtlas_infrastructure	NO	$TBAT_ATLAS_SEARCH_BATCH	atlas_search_batch_id				
+AT_atlas_search_batch	Atlas Search Batch	PeptideAtlas_infrastructure	YES	$TBAT_ATLAS_SEARCH_BATCH	atlas_search_batch_id		ManageTable.cgi?TABLE_NAME=AT_atlas_search_batch	AT_atlas_search_batch	
 AT_peptide	Peptide	PeptideAtlas_infrastructure	NO	$TBAT_PEPTIDE	peptide_id				
 AT_peptide_instance	Peptide Instance	PeptideAtlas_infrastructure	NO	$TBAT_PEPTIDE_INSTANCE	peptide_instance_id				
 AT_peptide_instance_sample	Peptide Instance Sample Link	PeptideAtlas_infrastructure	NO	$TBAT_PEPTIDE_INSTANCE_SAMPLE	peptide_instance_sample_id				
