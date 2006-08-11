@@ -4773,7 +4773,7 @@ sub display_input_form {
       print qq!
         <TD><INPUT TYPE="$input_type" NAME="$column_name"
          VALUE="$parameters{$column_name}" SIZE=$input_length $onChange>!;
-      if ($parameters{$column_name}) {
+      if ($parameters{$column_name} && !$parameters{uploaded_file_not_saved}) {
         print qq!<A HREF="$DATA_DIR/$parameters{$column_name}">[view&nbsp;file]</A>
         !;
       }
