@@ -184,6 +184,9 @@ sub Authenticate {
       } elsif ( $allow_anonymous_access ) {
         $log->info( "allowing guest authentication" );
         $current_username = 'guest';
+        $current_contact_id = $self->getContact_id($current_username);
+        $current_work_group_id = $self->getCurrent_work_group_id();
+        return $current_username;
       }
     }
 
