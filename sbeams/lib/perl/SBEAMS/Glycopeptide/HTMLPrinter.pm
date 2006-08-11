@@ -344,6 +344,7 @@ sub get_prophet_control {
     @stock = sort{ $a <=> $b }(@stock);
   }
   my $update_script = 'ONCHANGE="update_prophet_score()"';
+  $sbeams ||= $self->getSBEAMS();
   my $self_url = $sbeams->get_self_url();
   $self_url =~ s/\?.*$//g;
 
