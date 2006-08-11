@@ -49,6 +49,7 @@ $PROG_NAME = 'main.cgi';
 my $file_name    = $$ . "_glyco_predict.png";
 my $tmp_img_path = "images/tmp";
 my $img_file     = "$PHYSICAL_BASE_DIR/$tmp_img_path/$file_name";
+
 my $predicted_track_type = "Predicted Peptides";
 my $id_track_type 		 = 'Identified Peptides';
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
@@ -76,8 +77,8 @@ sub main
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate(
        permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin', 'Glycopeptide_readonly'],
-       # connect_read_only=>1,
-       # allow_anonymous_access=>1,
+        # connect_read_only=>1,
+        allow_anonymous_access=>1,
     ));
 
 #    for my $p ( $q->param() ) {
@@ -975,7 +976,7 @@ sub make_image {
 	}
 	
 	
-	open( OUT, ">$img_file" ) || die $!;
+	open( OUT, ">$img_file" ) || die "$!: $img_file";
 	binmode(OUT);
 	
 	print OUT $panel->png;

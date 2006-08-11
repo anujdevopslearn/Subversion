@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl -w
 
 ###############################################################################
-# Program treatment.cgi    
+# Program showPathways
 # $Id: $
 #
 # Description : Form and processing logic for applying laboratory 
@@ -50,7 +50,7 @@ $|++;
   my $t0 = new Benchmark;
   
   # Authenticate user.
-  my $current_username = $sbeams->Authenticate() || die "Authentication failed";
+  my $current_username = $sbeams->Authenticate( allow_anonymous_access => 1 ) || die "Authentication failed";
 
   # Process cgi parameters
   my $params = process_params();
