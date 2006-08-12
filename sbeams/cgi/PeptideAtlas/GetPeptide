@@ -112,46 +112,22 @@ sub main {
         );
 
 
-    ## If no parameters are defined, set up some defaults to help with browsing
-    ## until I get a help menu set-up
-    if ( !exists $parameters{'searchWithinThis'}  && !exists $parameters{'searchForThis'}
-         && ( !exists $parameters{'atlas_build_name'}  && !exists $parameters{'atlas_build_id'} ) ) {
-
-        $parameters{'atlas_build_name'} = "Human_P0.9_Ens30_NCBI35";
-
-        $parameters{'searchWithinThis'} = "Peptide Name";
-
-        $parameters{'searchForThis'} = "PAp00000001";
-
-    }
-
-
-    ## get project_id to send to HTMLPrinter display
-    my $project_id = $sbeamsMOD->getProjectID(
-        atlas_build_name => $parameters{'atlas_build_name'},
-        atlas_build_id => $parameters{'atlas_build_id'}
-        );
-
-
-    #### Process generic "state" parameters before we start
-    $sbeams->processStandardParameters(parameters_ref=>\%parameters);
-    #$sbeams->printDebuggingInfo($q);
-
     #### Decide what action to take based on information so far
-    if ($parameters{'action'} eq "???") {
-
-        # Some action
-
-    } else {
+    if ($parameters{action} eq "???") 
+    {
+      # Some action
+    } else 
+    {
+        my $project_id = $sbeamsMOD->getProjectID(
+            atlas_build_id => $parameters{atlas_build_id}
+        );
 
         $sbeamsMOD->display_page_header(project_id => $project_id);
 
         handle_request(ref_parameters=>\%parameters);
 
         $sbeamsMOD->display_page_footer();
-
     }
-
 
 } # end main
 
@@ -169,84 +145,17 @@ sub handle_request {
 
     my %parameters = %{$ref_parameters};
 
-    # Handle search tool links...
-    if ($parameters{searchWithinThis} eq 'Peptide+Name') {
-      $log->info( "Adjusted Peptide+Name to Peptide Name.");
-      $parameters{searchWithinThis} = 'Peptide Name';
-    }
+    #### Show current user context information
+    print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+    #$sbeams->printUserContext();
+  
+    #### Get the HTML to display the tabs
+    my $tabMenu = $sbeamsMOD->getTabMenu(
+        parameters_ref => \%parameters,
+        program_name => $PROG_NAME,
+    );
 
-    print "<BR>\n";
-
-    my ($atlas_build_name, $atlas_build_id);
-
-
-    ## if have atlas_build_name, but no id, get the id:
-    if ( (exists $parameters{'atlas_build_name'}) && (!exists $parameters{'atlas_build_id'}))
-    {
-        $atlas_build_name = $parameters{'atlas_build_name'};
-
-        my $sql = qq~
-            SELECT atlas_build_id
-            FROM $TBAT_ATLAS_BUILD
-            WHERE atlas_build_name = '$atlas_build_name'
-            AND record_status != 'D'
-            ~;
-
-        #$sbeams->display_sql(sql=>$sql);
-
-        my ($tmp) = $sbeams->selectOneColumn($sql);
-        unless ( $tmp ) {
-      print qq~
-      <BR><BR>
-      <FONT COLOR=red>Unable to use specified Atlas, please select a new one </FONT>
-      <BR><A HREF="main.cgi?_tab=2">Choose new Atlas Build</A>
-      ~;
-      exit; 
-        }
-
-        $parameters{'atlas_build_id'} = $tmp;
-
-        $atlas_build_id = $tmp;
-
-    }
-
-
-    ## if have atlas_build_id, but no name, get the name
-    if ( (exists $parameters{'atlas_build_id'})  && (!exists $parameters{'atlas_build_name'}) )
-    {
-        $atlas_build_id = $parameters{'atlas_build_id'};
-
-        my $sql = qq~
-            SELECT atlas_build_name
-            FROM $TBAT_ATLAS_BUILD
-            WHERE atlas_build_id = '$atlas_build_id'
-            AND record_status != 'D'
-            ~;
-
-#       $sbeams->display_sql(sql=>$sql);
-
-        my ($tmp) = $sbeams->selectOneColumn($sql) or
-            die "Cannot complete $sql ($!)";
-
-        $atlas_build_name = $tmp;
-
-        $parameters{'atlas_build_name'} = $atlas_build_name;
-
-    }
-
-
-    ## if tab menu is requested, display tabs and append parameters to PROG_NAME
-#   if ( $parameters{_tab} )  
-#   {
-        my $parameters_string = $sbeamsMOD->printTabMenu( 
-            parameters_ref => \%parameters, 
-            program_name => $PROG_NAME,
-            );
-
-        #print "<BR>parameters_string:$parameters_string<BR>";
-
-#   }
-
+    print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
 
     #### Define some generic variables
     my ($i,$element,$key,$value,$line,$result,$sql);
@@ -262,12 +171,94 @@ sub handle_request {
     my $TABLE_NAME = $parameters{'QUERY_NAME'};
 
 
-
     #### Set some specific settings for this program
     my $CATEGORY="Get Peptide";
     my $PROGRAM_FILE_NAME = $PROG_NAME;
     my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
     my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
+
+    my ($atlas_build_name, $atlas_build_id);
+
+    if (defined($atlas_build_id) && $atlas_build_id < 0) 
+    {
+        $parameters{'atlas_build_id'} = $atlas_build_id;
+        return;
+    }
+
+    ## If no parameters are defined, set up some defaults to help with browsing
+    ## until I get a help menu set-up
+    if ( !exists $parameters{'searchWithinThis'}  && !exists $parameters{'searchForThis'}
+         && ( !exists $parameters{'atlas_build_name'}  && !exists $parameters{'atlas_build_id'} ) ) {
+
+        my $atlas_build_id = get_default_atlas_build_id();
+
+        $parameters{'atlas_build_id'} = $atlas_build_id;
+
+        if ( $atlas_build_id )
+        {
+            $parameters{'atlas_build_name'} = get_atlas_build_name(atlas_build_id => $atlas_build_id ); 
+
+            $atlas_build_name = $parameters{'atlas_build_name'};
+
+            $parameters{'searchWithinThis'} = "Peptide Sequence";
+
+            $parameters{'searchForThis'} = "VSFLSALEEYTK";
+        }
+    }
+
+    # Handle search tool links...
+    if ($parameters{searchWithinThis} eq 'Peptide+Name') {
+      $log->info( "Adjusted Peptide+Name to Peptide Name.");
+      $parameters{searchWithinThis} = 'Peptide Name';
+    }
+
+    ## if have atlas_build_name, but no id, get the id:
+    if ( (exists $parameters{'atlas_build_name'}) && (!exists $parameters{'atlas_build_id'}))
+    {
+        $atlas_build_name = $parameters{'atlas_build_name'};
+
+        if ($atlas_build_name)
+        {
+            my ($tmp) = get_atlas_build_id( atlas_build_name => $parameters{'atlas_build_name'});
+
+            unless ( $tmp ) 
+            {
+                print qq~
+                <BR><BR>
+                <FONT COLOR=red>Unable to use specified Atlas, please select a new one </FONT>
+                <BR><A HREF="main.cgi?_tab=2">Choose new Atlas Build</A>
+                ~;
+                exit; 
+            }
+
+            $parameters{'atlas_build_id'} = $tmp;
+
+            $atlas_build_id = $tmp;
+        }
+    }
+
+
+    ## if have atlas_build_id, but no name, get the name
+    if ( (exists $parameters{'atlas_build_id'})  && (!exists $parameters{'atlas_build_name'}) )
+    {
+        $atlas_build_id = $parameters{'atlas_build_id'};
+
+        my ($tmp) = get_atlas_build_name( atlas_build_id => $atlas_build_id);
+
+        unless ( $tmp ) 
+        {
+            print qq~
+                <BR><BR>
+                <FONT COLOR=red>Unable to use specified Atlas, please select a new one </FONT>
+                <BR><A HREF="main.cgi?_tab=2">Choose new Atlas Build</A>
+            ~;
+            exit;
+        }
+
+        $atlas_build_name = $tmp;
+
+        $parameters{'atlas_build_name'} = $atlas_build_name;
+    }
 
 
     ## Get and store list of atlases for use with form:  
@@ -346,9 +337,7 @@ sub handle_request {
     #}
 
 
-
     if ($sbeams->output_mode() eq 'html') {
-
 
         print "<p>";
 
@@ -366,7 +355,7 @@ sub handle_request {
                              -default=>$searchKey,
             );
         print "&nbsp;for:&nbsp;";
-        print $q->textfield( "searchForThis", $selected_key_search);
+        print $q->textfield( "searchForThis", $searchValue);
         print $q->submit(-name => "query", 
                          -value => 'QUERY',
                          -label => 'QUERY');
@@ -905,6 +894,9 @@ sub makeEntrezLink {
     $chr = $sbeams->getRomanNumeral( number => $chr ) || $chr; # Fallback...
   }
 
+## xxxxxxx is this a debug statement?
+# print "<br/><br/>$org<br/<br/>";
+
   my $vc_start = $args{start} - $extra;
   my $vc_end = $args{end} + $extra;
   if ( $args{start} > $args{end} ) {
@@ -918,3 +910,78 @@ sub makeEntrezLink {
   return $link;
 
 }
+
+
+#######################################################################
+# get_atlas_build_id -- get atlas_build_id, given name
+# @param atlas_build_name
+# @return atlas_build_id
+#######################################################################
+sub get_atlas_build_id
+{
+    my %args = @_;
+
+    my $atlas_build_name = $args{atlas_build_name}
+      || die "need atlas_build_name";
+
+    my $sql = qq~
+        SELECT atlas_build_id
+        FROM $TBAT_ATLAS_BUILD
+        WHERE atlas_build_name = '$atlas_build_name'
+    ~;
+
+    my ($atlas_build_id) = $sbeams->selectOneColumn($sql);
+
+    return $atlas_build_id;
+}
+
+#######################################################################
+# get_atlas_build_name -- get atlas_build_name, given id
+# @param atlas_build_id
+# @return atlas_build_name
+#######################################################################
+sub get_atlas_build_name
+{
+    my %args = @_;
+
+    my $atlas_build_id = $args{atlas_build_id}
+      || die "need atlas_build_id";
+
+    my $sql = qq~
+        SELECT atlas_build_name
+        FROM $TBAT_ATLAS_BUILD
+        WHERE atlas_build_id = '$atlas_build_id'
+    ~;
+
+    my ($atlas_build_name) = $sbeams->selectOneColumn($sql);
+
+    return $atlas_build_name;
+}
+
+#######################################################################
+# get_default_atlas_build_id
+# @return default_atlas_build_id if there is one
+#######################################################################
+sub get_default_atlas_build_id
+{
+    my %args = @_;
+
+    my $default_atlas_build_id;
+
+    my $sql = qq~
+        SELECT atlas_build_id
+        FROM $TBAT_DEFAULT_ATLAS_BUILD
+        where atlas_build_id > 0
+        order by atlas_build_id 
+    ~;
+
+    my @rows = $sbeams->selectSeveralColumns($sql);
+
+    foreach my $row (@rows)
+    {
+        ($default_atlas_build_id) = @{$row};
+    }
+
+    return $default_atlas_build_id;
+}
+
