@@ -73,12 +73,12 @@ AT_atlas_build_search_batch	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_g
 AT_atlas_build_search_batch	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_atlas_search_batch	1	atlas_search_batch_id	Atlas Search Batch ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_atlas_search_batch	2	proteomics_search_batch_id	Proteomics Search Batch ID	int	4	0	Y		N							N	N		Associated Proteomics module search_batch_id		
-AT_atlas_search_batch	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id	N	optionlist			N	N		Associated Sample	"SELECT S.sample_id,S.sample_tag FROM $TBAT_SAMPLE WHERE record_status != 'D' ORDER BY S.sample_tag, S.sample_id"	
-AT_atlas_search_batch	4	n_searched_spectra	Number of Searched spectra	int	6	0	Y		N							Y	Y		Number of spectra searched in this search_batch		
+AT_atlas_search_batch	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id	Y	optionlist			Y	Y		Associated Sample	"SELECT S.sample_id,S.sample_tag FROM $TBAT_SAMPLE WHERE record_status != 'D' ORDER BY S.sample_tag, S.sample_id"	
+AT_atlas_search_batch	4	n_searched_spectra	Number of Searched spectra	int	6	0	Y		N							N	N		Number of spectra searched in this search_batch		
 AT_atlas_search_batch	5	data_location	File Path to search_batch output	varchar	255	0	N		N			N	text	50		Y	Y		Absolute or relative location of the raw data for this search batch		
 AT_atlas_search_batch	6	search_batch_subdir	Search Batch Subdirectory	varchar	100	0	N		N			N	text	50		Y	Y		Subdirectory under the experiment where the data for this search resides		
 AT_atlas_search_batch	7	pepXML_source_files	pepXML Source Files	varchar	255	0	N		N			N	text	50		Y	Y		comma separated list of one or some xinteract pepXML files used as input for this search_batch		
-AT_atlas_search_batch	8	TPP_version	TPP version used in peptide identification scoring	varchar	100	0	Y		N							Y	Y		TPP version used for peptide identification scores		
+AT_atlas_search_batch	8	TPP_version	TPP version used in peptide identification scoring	varchar	100	0	Y		N							N	N		TPP version used for peptide identification scores		
 AT_atlas_search_batch	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 AT_atlas_search_batch	10	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
 AT_atlas_search_batch	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
