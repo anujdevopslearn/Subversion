@@ -545,7 +545,6 @@ if ($apply_action =~ /QUERY/i ) {
   );
 
   my $summ =<<"  END"; 
-    <TABLE BORDER=0>
     $summary_header 
   END
 
@@ -588,13 +587,13 @@ if ($apply_action =~ /QUERY/i ) {
                                            );
   }
 
-  print "<BR><BR>\n";
-  print "$summ\n";
+  print "<BR>\n";
+  print "<TABLE WIDTH=600><BR>$summ</TABLE>\n";
 
 
   my $mapHTML = qq~
   <TR><TD COLSPAN=2>&nbsp;</TD></TR>
-  ~; # <TABLE>';
+  ~; 
   $n_genome_locations[0] = 0 if $n_genome_locations[0] < 0;
   $mapHTML .= $sbeamsMOD->encodeSectionHeader(
     text => "Genome Mappings: $n_genome_locations[0]",
@@ -724,7 +723,7 @@ if ($apply_action =~ /QUERY/i ) {
     ~;
   }
 
-  print "$mapHTML\n";
+  print "<TABLE WIDTH=600>$mapHTML</TABLE>\n";
 
 
 ##  End mapping loop
@@ -778,7 +777,7 @@ if ($apply_action =~ /QUERY/i ) {
                                                  width => '600',
                                                 align  => [qw(left center right right right center center)],
                                                   rows => \@mod_peps );
-    print "<BR>$modHTML\n";
+    print "<TABLE WIDTH=600><BR>$modHTML</TABLE>\n";
   }
 
             
@@ -802,8 +801,9 @@ if ($apply_action =~ /QUERY/i ) {
   my @samples = $sbeams->selectOneColumn( $sampleSQL );
 
   my ($sheader, $sHTML) = $sbeamsMOD->getSampleDisplay(sample_ids => \@samples);
-  print "<TR><TD COLSPAN=2>&nbsp;</TD></TR>" . $sheader;
-  print "<TABLE WIDTH='600'>$sHTML</TABLE>\n";
+  print "<TABLE WIDTH=600><TR><TD COLSPAN=2>&nbsp;</TD></TR>" . $sheader;
+  print "$sHTML";
+  print "</TABLE>\n";
             
         }
 
