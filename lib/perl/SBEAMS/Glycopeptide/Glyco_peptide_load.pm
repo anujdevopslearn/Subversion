@@ -21,8 +21,6 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::Glycopeptide::Tables;
 use SBEAMS::Glycopeptide;
 
-use SBEAMS::Proteomics::TrypticDigestor::TrypticDigestor;
-
 my $module = SBEAMS::Glycopeptide->new();
 
 
@@ -114,7 +112,7 @@ sub testonly {
 		$self->{_TESTONLY} = $_[0];
 	}else{
 		#it's a getter
-		$self->{_TESTONLY};
+		return $self->{_TESTONLY} || 0;
 	}
 }
 
@@ -449,17 +447,24 @@ sub insert_peptides {
   }
   die ( "Missing required parameter(s): $err in " . $self->whatsub() ) if $err;
 
+  $self->testonly( $args{testonly} );
+
   my $observed;
-  # check which format was specified
+  # check which format was specified, read file
   if ( $args{format} eq 'interact-tsv' ) {
     $observed = $self->read_tsv( %args );
   } else {
     die "Unsupported file format\n";
   }
-  # read file
+
+  # insert peptide search record
+  my $psid = $self->insert_peptide_search( %args );
 
   # insert observed peptide
-  $self->insert_observed_peptides( %args, peptides => $observed );
+  $self->insert_observed_peptides( %args, 
+                                   peptides => $observed, 
+                              pep_search_id => $psid
+                                 );
 
 
   # insert observed_to_ipi record(s) - indicate original
@@ -472,26 +477,244 @@ sub insert_peptides {
   }
 }
 
-sub insert_observed_peptides {
+sub insert_peptide_search {
   my $self = shift;
   my %args = @_;
   my $err;
-  for my $opt ( qw( peptides ) ) {
+  for my $opt ( qw( peptide_file sample_id ipi_version_id ) ) {
     $err = ( $err ) ? $err . ', ' . $opt : $opt if !defined $args{$opt};
   }
   die ( "Missing required parameter(s): $err in " . $self->whatsub() ) if $err;
 
-  my $heads = get_interact_tsv_headers();
+  my $fname = basename( $args{peptide_file} );
 
-  for my $obs ( @{$args{peptides}} ) {
-    my $row = { sample_id => $args{sample_id},
-                search_file
-              };
+  my $sbeams = $self->getSBEAMS();
 
-    
-  }
+  # Make sure this file hasn't already been loaded
+  my ($dup) = $sbeams->selectrow_array( <<"  END" );
+  SELECT COUNT(*) FROM $TBGP_PEPTIDE_SEARCH 
+  WHERE search_file = '$fname'
+  AND sample_id = $args{sample_id}
+  AND ref_db_id = $args{ipi_version_id}
+  END
+
+#  die "Duplicate input file detected: $fname\n" if $dup;
+  
+  my $rowdata = { search_file => $fname,
+                  sample_id => $args{sample_id},
+                  ref_db_id => $args{ipi_version_id},
+                  comment => "Loaded " . $sbeams->get_datetime(),
+  };
 
   
+  # Insert row
+  my $id = $sbeams->updateOrInsertRow( table_name  => $TBGP_PEPTIDE_SEARCH,
+                                       rowdata_ref => $rowdata,
+                                       return_PK   => 1,
+                                       verbose     => $self->verbose(),
+                                       testonly    => $self->testonly(),
+                                       insert      => 1,
+                                       PK          => 'peptide_search_id',
+                                     );
+  return $id;
+}
+
+
+sub insert_observed_peptides {
+  my $self = shift;
+  my %args = @_;
+  my $err;
+  for my $opt ( qw( ipi_version_id peptides pep_search_id ) ) {
+    $err = ( $err ) ? $err . ', ' . $opt : $opt if !defined $args{$opt};
+  }
+  die ( "Missing required parameter(s): $err in " . $self->whatsub() ) if $err;
+
+  # this call will populate 2 hashes, seq->data_id and ipi_id -> data_id
+  $self->get_ipi_seqs( ipi_version_id => $args{ipi_version_id} );
+
+  my $seqs = $self->{_seq_to_id};
+  my $accs = $self->{_acc_to_id};
+
+  my @keys = keys( %{$seqs} );
+  
+  my $heads = get_interact_tsv_headers();
+  my $sbeams = $self->getSBEAMS();
+
+  my $cnt;
+  my $insert_cnt;
+  my $t0 = time();
+  for my $obs ( @{$args{peptides}} ) {
+    $cnt++;
+
+    my $clean_pep = $module->clean_pepseq( $obs->[$heads->{Peptide}] );
+    my $clean_prot = $self->trim_space( $obs->[$heads->{Protein}] );
+
+    my $mapteins = [];
+    my $seq = uc( $clean_pep );
+#    $mapteins = $self->map_proteins( peptide => $seq, 
+#                                        %args
+#                                      );
+     my @map = grep( /$seq/, @keys );
+     for my $k ( @map ) {
+       foreach my $ipi ( @{$seqs->{$k}} ) {
+       push @$mapteins, $ipi;
+       }
+     }
+
+    # Test for error conditions.
+    
+    if ( !scalar(@$mapteins) ) { # Can't map peptide to reference db
+      print STDERR "Unable to map sequence: $clean_pep\n";
+      next;
+
+    } elsif ( $obs->[$heads->{prob}] < 0.5 ) { # detection probability too low
+      print STDERR "Low probability: $obs->[$heads->{prob}]\n";
+      next;
+    }
+    $insert_cnt++;
+
+    my $exp_mass = $module->mh_plus_to_mass($obs->[$heads->{'MH+'}]);
+    my $calc_mass = $module->calculatePeptideMass( sequence => $clean_pep ); 
+    my $out = basename( $obs->[$heads->{file}] );
+    my @name = split( /\./, $out );
+    unless ( scalar(@name) == 4 && $name[1] == $name[2] ) {
+      die "Mismatch in out $out: " . join( ", ", @name ) . "\n";
+    }
+    my ( $delta ) = $self->extract_delta( $obs->[$heads->{'MH error'}] );
+
+    # Set ipi data id to search match if available, else first db match
+    my $ipi = $accs->{$obs->[$heads->{Protein}]} || $mapteins->[0];
+    
+    my $rowdata = { observed_peptide_sequence => $obs->[$heads->{Peptide}],
+                                    sample_id => $args{sample_id},
+                            peptide_search_id => $args{pep_search_id},
+                                  ipi_data_id => $ipi,
+                        peptide_prophet_score => $obs->[$heads->{prob}],
+                            experimental_mass => $exp_mass,
+                                spectrum_path => $obs->[$heads->{file}],
+                               mass_to_charge => $exp_mass/$name[3],
+                                      mh_plus => $obs->[$heads->{'MH+'}],
+                                     mh_delta => $delta,
+                            matching_sequence => $clean_pep,
+                                  scan_number => $name[2],
+                                 charge_state => $name[3],
+                                 peptide_mass => $calc_mass
+              };
+
+   
+  # Insert row
+  my $obs_id = $sbeams->updateOrInsertRow( table_name  => $TBGP_OBSERVED_PEPTIDE,
+                                           rowdata_ref => $rowdata,
+                                           return_PK   => 1,
+                                           verbose     => $self->verbose(),
+                                           testonly    => $self->testonly(),
+                                           insert      => 1,
+                                           PK          => 'peptide_search_id',
+                                         );
+
+  my %seen;
+  for my $id ( @$mapteins ) {
+    next if $seen{$id};
+    $seen{$id}++;
+    # Insert rows into observed_to_ipi table
+    $sbeams->updateOrInsertRow( table_name  => $TBGP_OBSERVED_TO_IPI,
+                                 rowdata_ref => { ipi_data_id => $id, observed_peptide_id => $obs_id },
+                                 return_PK   => 0,
+                                 verbose     => $self->verbose(),
+                                 testonly    => $self->testonly(),
+                                 insert      => 1,
+                                 PK          => 'observed_to_ipi_id',
+                               );
+  }
+
+
+
+#  last if $cnt >= 100;
+  }
+  my $tdiff = time() - $t0;
+  print "Inserted $insert_cnt rows of $cnt in $tdiff seconds\n"; 
+}
+
+sub extract_delta {
+  my $self = shift;
+  my $delta = shift;
+
+# has the form of (+2.4) or (-0.4)
+  $delta = s/\(//g;
+  $delta = s/\)//g;
+  $delta = s/\+//g;
+  return $delta;
+}
+
+sub map_proteins {
+  my $self = shift;
+  my %args = @_;
+  my $err;
+  for my $opt ( qw( peptide ipi_version_id ) ) {
+    $err = ( $err ) ? $err . ', ' . $opt : $opt if !defined $args{$opt};
+  }
+  die ( "Missing required parameter(s): $err in " . $self->whatsub() ) if $err;
+
+  if ( !$self->{_db_seqs} ) {
+    $self->{_db_seqs} = $self->get_ipi_seqs( ipi_version_id => $args{ipi_version_id} );
+    $self->{_db_keys} = [ keys( %{$self->{_db_seqs}} ) ];
+  }
+  
+  my $seq = uc( $args{peptide} );
+  my @mapteins; # array of ipi's to which this peptide maps
+  my @map = grep( /$seq/, @{$self->{_db_keys}} );
+  for my $k ( @map ) {
+    foreach my $ipi ( @{$self->{_db_seqs}->{$k}} ) {
+      push @mapteins, $ipi;
+    }
+  }
+  return \@mapteins;
+
+  # DB lookup was too dang slow
+  my $peptide = '%' . $args{peptide} . '%';
+  my $sql =<<"  END";
+  SELECT ipi_data_id, ipi_accession_number FROM $TBGP_IPI_DATA 
+  WHERE ipi_version_id = $args{ipi_version_id}
+  AND protein_sequence like '$peptide'
+  END
+
+  my $sbeams = $self->getSBEAMS();
+  my @ipi_data;
+  while( my $row = $sbeams->selectSeveralColumnsRow( sql => $sql ) ) {
+    if ( $row->[1] eq $args{protein} ) {
+      unshift @ipi_data, $row->[0];
+    } else {
+      push @ipi_data, $row->[0];
+    }
+  }
+  return \@ipi_data;
+}
+
+sub get_ipi_seqs {
+  my $self = shift;
+  my %args = @_;
+  my $err;
+  for my $opt ( qw( ipi_version_id ) ) {
+    $err = ( $err ) ? $err . ', ' . $opt : $opt if !defined $args{$opt};
+  }
+  die ( "Missing required parameter(s): $err in " . $self->whatsub() ) if $err;
+
+  my $peptide = '%' . $args{peptide} . '%';
+  my $sql =<<"  END";
+  SELECT ipi_data_id, protein_sequence, ipi_accession_number FROM $TBGP_IPI_DATA 
+  WHERE ipi_version_id = $args{ipi_version_id}
+  END
+  my %seq2id;
+  my %acc2id;
+  my $sbeams = $self->getSBEAMS();
+  while( my $row = $sbeams->selectSeveralColumnsRow( sql => $sql ) ) {
+#    $seq2ipi{$row->[1]} ||= [];
+    push @{$seq2id{$row->[1]}}, $row->[0];
+    $acc2id{$row->[2]} = $row->[0];
+  }
+  $self->{_seq_to_id} = \%seq2id;
+  $self->{_acc_to_id} = \%acc2id;
+  return 1;
 }
 
 sub get_interact_tsv_headers {
@@ -825,6 +1048,16 @@ sub fix_predicted_peptide_seq {
 	}
 	
 }
+
+
+sub trim_space {
+	my $self = shift;
+	my $seq = shift;
+  $seq =~ s/^\s*//g;
+  $seq =~ s/\s*$//g;
+  return $seq;
+}
+
 ###############################################################################
 # clean_seq remove the start and finish protein aa.  Remove any non aa from
 # from a peptide sequence

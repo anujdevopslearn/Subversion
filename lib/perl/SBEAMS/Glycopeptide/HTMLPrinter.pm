@@ -301,9 +301,10 @@ sub display_page_header {
 	<tr><td>Browse Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Glyco_prediction.cgi"><nobr>&nbsp;&nbsp;&nbsp;Search Glycopeptides</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/browse_glycopeptides.cgi"><nobr>&nbsp;&nbsp;&nbsp;Identified Proteins</nobr></a></td></tr>
+  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch"><nobr>&nbsp;&nbsp;&nbsp;Peptide Mass Search</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/showPathways"><nobr>&nbsp;&nbsp;&nbsp;Pathway Search</nobr></a></td></tr>
-<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch"><nobr>&nbsp;&nbsp;&nbsp;Mass Search</nobr></a></td></tr>
-<tr><td><a href="http://www.unipep.org"><nobr>&nbsp;&nbsp;&nbsp;Unipep home</nobr></a></td></tr>
+  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/bulkSearch"><nobr>&nbsp;&nbsp;&nbsp;Bulk Search</nobr></a></td></tr>
+  <tr><td><a href="http://www.unipep.org"><nobr>&nbsp;&nbsp;&nbsp;Unipep home</nobr></a></td></tr>
 
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
@@ -337,6 +338,7 @@ sub getStatsHTML {
 
 sub get_prophet_control {
   my $self = shift;
+  my %args = @_;
   my $current = $self->get_current_prophet_cutoff();
   my @stock = qw( 0.5 0.6 0.7 0.8 0.9 0.95 0.99 1.0 );
   if ( defined $current && !grep /^$current$/, @stock ) {
@@ -344,6 +346,7 @@ sub get_prophet_control {
     @stock = sort{ $a <=> $b }(@stock);
   }
   my $update_script = 'ONCHANGE="update_prophet_score()"';
+  $sbeams ||= $self->getSBEAMS();
   my $self_url = $sbeams->get_self_url();
   $self_url =~ s/\?.*$//g;
 
@@ -356,6 +359,9 @@ sub get_prophet_control {
                                       list_name => 'glyco_prophet_cutoff',
                                           attrs => $update_script
                                         );
+  my $label = 'Prophet cutoff';
+  $label = "<FONT COLOR=white>$label</FONT>" if $args{white_label};
+
   my $form =<<"  END";
   <SCRIPT LANGUAGE=javascript>
     function update_prophet_score() {
@@ -367,7 +373,7 @@ sub get_prophet_control {
   $url_params
   <TABLE>
     <TR>
-     <TD NOWRAP=1 ALIGN=RIGHT><B>Prophet cutoff:</B></TD>
+     <TD NOWRAP=1 ALIGN=RIGHT><B>$label:</B></TD>
      <TD ALIGN=LEFT>$select</TD>
     </TR>
   </TABLE>

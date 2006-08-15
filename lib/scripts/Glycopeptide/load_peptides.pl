@@ -93,7 +93,7 @@ sub process_options {
   while ( my $row = $sbeams->selectSeveralColumnsRow( sql => $sql ) ) {
     if ( $opts{release} eq $row->[0] ) {
       $match++;
-      $opts{release_id} = $row->[1];
+      $opts{ipi_version_id} = $row->[1];
     }
     $msg .= "$row->[0]\n";
   }

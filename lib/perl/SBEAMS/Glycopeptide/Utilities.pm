@@ -3,6 +3,8 @@ package SBEAMS::Glycopeptide::Utilities;
 use SBEAMS::Connection qw( $log );
 use SBEAMS::Glycopeptide::Tables;
 
+use constant HYDROGEN_MASS => 1.0078;
+
 sub new {
   my $class = shift;
   my $this = {};
@@ -213,12 +215,25 @@ sub clean_pepseq {
   return $seq;
 }
 
+sub mh_plus_to_mass {
+  my $self = shift;
+  my $mass = shift || return;
+  return $mass - HYDROGEN_MASS;
+}
+
+sub mass_to_mh_plus {
+  my $self = shift;
+  my $mass = shift || return;
+  return $mass + HYDROGEN_MASS;
+}
+
+
 sub get_charged_mass {
   my $self = shift;
   my %args = @_;
   return unless $args{mass} && $args{charge};
 #  my $hmass = 1.00794;
-  my $hmass = 1.0078;
+  my $hmass = HYDROGEN_MASS;
   return sprintf( '%0.4f', ( $args{mass} + $args{charge} * $hmass )/ $args{charge} ); 
 }
 

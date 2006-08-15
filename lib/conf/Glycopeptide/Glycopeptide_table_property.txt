@@ -1,23 +1,23 @@
 table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
-GP_biosequence_set	BioSequence Set	Glycopeptide_infrastructure	YES	$TBGP_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=GP_biosequence_set	GP_biosequence_set	
-GP_dbxref	Biosequence Database Cross Reference	Glycopeptide_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=GP_dbxref	GP_biosequence_dbxref	
-GP_biosequence	BioSequence	Glycopeptide_infrastructure	NO	$TBGP_BIOSEQUENCE	biosequence_id				
-GP_biosequence_property_set	Biosequence Property Set	Glycopeptide_infrastructure	NO	$TBGP_BIOSEQUENCE_PROPERTY_SET	biosequence_property_set_id				
-GP_query_option	Query Option	Glycopeptide_infrastructure	YES	$TBGP_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=GP_query_option	GP_query_option	
-GP_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi		
-GP_ipi_version	IPI Version	Glycopeptide_infrastructure	YES	$TBGP_IPI_VERSION	ipi_version_id		ManageTable.cgi?TABLE_NAME=GP_ipi_version		
-GP_ipi_data	IPI Data	Glycopeptide_infrastructure	YES	$TBGP_IPI_DATA	ipi_data_id		ManageTable.cgi?TABLE_NAME=GP_ipi_data		
-GP_cellular_location	Cellular Location	Glycopeptide_infrastructure	YES	$TBGP_CELLULAR_LOCATION	cellular_location_id		ManageTable.cgi?TABLE_NAME=GP_cellular_location		
-GP_glycosite	Glyco Site	Glycopeptide_infrastructure	NO	$TBGP_GLYCOSITE	glycosite_id				
+GP_ipi_version	Database	Glycopeptide_infrastructure	YES	$TBGP_IPI_VERSION	ipi_version_id		ManageTable.cgi?TABLE_NAME=GP_ipi_version		
+GP_ipi_data	Database	Glycopeptide_infrastructure	YES	$TBGP_IPI_DATA	ipi_data_id		ManageTable.cgi?TABLE_NAME=GP_ipi_data		
+GP_identified_to_glycosite	Identified Peptide	Glycopeptide_infrastructure	NO	$TBGP_IDENTIFIED_TO_GLYCOSITE	identified_to_glycosite_id				
+GP_identified_to_ipi	Identified Peptide	Glycopeptide_infrastructure	NO	$TBGP_IDENTIFIED_TO_IPI	identified_to_ipi_id				
 GP_identified_peptide	Identified Peptide	Glycopeptide_infrastructure	NO	$TBGP_IDENTIFIED_PEPTIDE	identified_peptide_id				
-GP_predicted_peptide	Predicted Peptide	Glycopeptide_infrastructure	NO	$TBGP_PREDICTED_PEPTIDE	predicted_peptide_id				
-GP_observed_to_sample	Observed to Sample	Glycopeptide_infrastructure	NO	$TBGP_OBSERVED_TO_SAMPLE	observed_to_sample_id				
-GP_observed_to_ipi	Observed to IPI	Glycopeptide_infrastructure	NO	$TBGP_OBSERVED_TO_IPI	observed_to_ipi_id				
-GP_tissue_type	Sample	Glycopeptide_infrastructure	YES	$TBGP_TISSUE_TYPE	tissue_type_id		ManageTable.cgi?TABLE_NAME=GP_tissue_type		
-GP_identified_to_ipi	Identified to IPI	Glycopeptide_infrastructure	NO	$TBGP_IDENTIFIED_TO_IPI	identified_to_ipi_id				
+GP_observed_to_ipi	Observed	Glycopeptide_infrastructure	NO	$TBGP_OBSERVED_TO_IPI	observed_to_ipi_id				
+GP_observed_peptide	Observed	Glycopeptide_infrastructure	NO	$TBGP_OBSERVED_PEPTIDE	observed_peptide_id				
+GP_observed_to_glycosite	Observed	Glycopeptide_infrastructure	NO	$TBGP_OBSERVED_TO_GLYCOSITE	observed_to_glycosite_id				
 GP_unipep_sample	Sample	Glycopeptide_infrastructure	YES	$TBGP_UNIPEP_SAMPLE	sample_id		ManageTable.cgi?TABLE_NAME=GP_unipep_sample		
+GP_peptide_search	Sample	Glycopeptide_infrastructure	NO	$TBGP_PEPTIDE_SEARCH	peptide_search_id				
+GP_cellular_location	Sample	Glycopeptide_infrastructure	YES	$TBGP_CELLULAR_LOCATION	cellular_location_id		ManageTable.cgi?TABLE_NAME=GP_cellular_location		
+GP_tissue_type	Sample	Glycopeptide_infrastructure	YES	$TBGP_TISSUE_TYPE	tissue_type_id		ManageTable.cgi?TABLE_NAME=GP_tissue_type		
+GP_biosequence_set	SBEAMS_infrastructure	Glycopeptide_infrastructure	YES	$TBGP_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=GP_biosequence_set	GP_biosequence_set	
+GP_biosequence_property_set	SBEAMS_infrastructure	Glycopeptide_infrastructure	NO	$TBGP_BIOSEQUENCE_PROPERTY_SET	biosequence_property_set_id				
+GP_BrowseBioSequence	SBEAMS_infrastructure	QUERY	NO				BrowseBioSequence.cgi		
+GP_dbxref	SBEAMS_infrastructure	Glycopeptide_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=GP_dbxref	GP_biosequence_dbxref	
+GP_biosequence	SBEAMS_infrastructure	Glycopeptide_infrastructure	NO	$TBGP_BIOSEQUENCE	biosequence_id				
+GP_query_option	SBEAMS_infrastructure	Glycopeptide_infrastructure	YES	$TBGP_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=GP_query_option	GP_query_option	
 GP_synthesized_peptide	Synthesized Peptide	Glycopeptide_infrastructure	NO	$TBGP_SYNTHESIZED_PEPTIDE	synthesized_peptide_id				
-GP_observed_peptide	Observed Peptide	Glycopeptide_infrastructure	NO	$TBGP_OBSERVED_PEPTIDE	observed_peptide_id				
-GP_peptide_search	Peptide Search	Glycopeptide_infrastructure	NO	$TBGP_PEPTIDE_SEARCH	peptide_search_id				
-GP_predicted_to_glycosite	Predicted to Glycosite	Glycopeptide_infrastructure	NO	$TBGP_PREDICTED_TO_GLYCOSITE	predicted_to_glycosite_id				
-GP_identified_to_glycosite	Identified to Glycosite	Glycopeptide_infrastructure	NO	$TBGP_IDENTIFIED_TO_GLYCOSITE	identified_to_glycosite_id				
+GP_glycosite	Theoretical	Glycopeptide_infrastructure	NO	$TBGP_GLYCOSITE	glycosite_id				
+GP_predicted_peptide	Theoretical	Glycopeptide_infrastructure	NO	$TBGP_PREDICTED_PEPTIDE	predicted_peptide_id				
+GP_predicted_to_glycosite	Theoretical	Glycopeptide_infrastructure	NO	$TBGP_PREDICTED_TO_GLYCOSITE	predicted_to_glycosite_id				
