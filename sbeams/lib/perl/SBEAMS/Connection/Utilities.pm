@@ -19,7 +19,7 @@ package SBEAMS::Connection::Utilities;
 
 use strict;
 use SBEAMS::Connection::Log;
-use SBEAMS::Connection::Settings qw( $DBADMIN);
+use SBEAMS::Connection::Settings qw( $DBADMIN $PHYSICAL_BASE_DIR );
 use vars qw(@ERRORS
            );
 my $log = SBEAMS::Connection::Log->new();
@@ -765,6 +765,7 @@ sub get_page_message {
                 Info => $args{info_color} || 'green' );
 
   my $sbeams_msg = $this->getSessionAttribute( key => '_SBEAMS_message' );
+  return '' unless $sbeams_msg;
   my ( $mode, $msg ) = $sbeams_msg =~ /^(\w+)::(.+)$/;
 
   # In case the format was goofy:
@@ -779,6 +780,21 @@ sub get_page_message {
     $msg = "<FONT COLOR=$color{$mode}>$msg</FONT>"; 
     $msg = "<I>$msg</I>" unless $args{no_italics};
   }
+  return $msg;
+}
+
+sub get_notice {
+  my $this = shift;
+
+  # Default to Core
+  my $module = shift || 'Core';
+  
+  my $file = $PHYSICAL_BASE_DIR . '/lib/conf/' . $module . '/notice.txt';
+  open( NOTICE, $file ) || return '';
+  
+  undef local $/;
+  my $msg = <NOTICE>;
+
   return $msg;
 }
 
