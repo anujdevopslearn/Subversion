@@ -858,6 +858,32 @@ tooltip=>"Edit Annotation (restricted)");
 		$table_html .= "BGCOLOR=\"$pnrc200_color\"";
 	  }	
 
+
+	  #### Special (fragile?) handling for halo aliases
+	  my @alias_items = split ",", $aliases;
+	  my $NCBI_PID_BASE = "http://www.ncbi.nlm.nih.gov/sutils/blink.cgi?pid=";
+#	  my $COG_BASE = "http://www.ncbi.nlm.nih.gov/COG/new/release/cow.cgi?cog=";
+	  my $COG_BASE = "http://www.ncbi.nlm.nih.gov/COG/old/palox.cgi?txt=";
+
+	  foreach my $item (@alias_items) {
+		if ($item =~ /^\d+$/) {
+		  $item = "<A HREF=\"$NCBI_PID_BASE$item\" TARGET=\"Win1\" onmouseover=\"showTooltip(event,'NCBI Protein Annotation')\" onmouseout=\"hideTooltip()\">$item</A>";
+		}elsif ($item =~ /^COG.*/) {
+		  $item = "<A HREF=\"$COG_BASE$item\" TARGET=\"Win1\" onmouseover=\"showTooltip(event,'COG Protein Annotation')\" onmouseout=\"hideTooltip()\">$item</A>";
+		}else {
+		  $item = "<A HREF=\"GetHaloAnnotations?search_scope=All&search_key=$item&action=GO&dna_biosequence_set_id=$parameters{dna_biosequence_set_id}&protein_biosequence_set_id=$parameters{protein_biosequence_set_id}&apply_action=QUERY\" onmouseover=\"showTooltip(event,'Search SBEAMS for this gene')\" onmouseout=\"hideTooltip()\">$item</A>";
+		}
+	  }
+	  my $add_an_alias = "<A HREF=\"ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation&biosequence_annotation_id=$biosequence_annotation_id&biosequence_id=$protein_biosequence_id&ShowEntryForm=1\" onmouseover=\"showTooltip(event,'Add Alias to $biosequence_name')\" onmouseout=\"hideTooltip()\" target=\"annotation\">[+]</A>";
+	  push @alias_items, $add_an_alias if ($sbeams->getCurrent_username() ne 'ext_halo');
+
+	  $alias_links = join ",",@alias_items;
+
+
+
+    
+
+    
 	  $table_html .= qq~><A HREF="SequenceViewer.cgi?biosequence_id=$protein_biosequence_id" onmouseover="showTooltip(event,'View ORF in chromosomal context')" onmouseout="hideTooltip()">$start..$stop</A></TD>
 
 	  <!----------------- ORF Name -------------------->
