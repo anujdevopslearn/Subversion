@@ -646,6 +646,7 @@ $LINESEPARATOR
 	my $counter = 0;
   # list to store gaggle data
   my @glist;
+  my $alias_links ='';
 
 	foreach my $row (@rows) {
 	  my $protein_biosequence_id    = $row->[0];
@@ -685,7 +686,7 @@ $LINESEPARATOR
 	  my $add_an_alias = "<A HREF=\"ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation&biosequence_annotation_id=$biosequence_annotation_id&biosequence_id=$protein_biosequence_id&ShowEntryForm=1\" onmouseover=\"showTooltip(event,'Add Alias to $biosequence_name')\" onmouseout=\"hideTooltip()\" target=\"annotation\">[+]</A>";
 	  push @alias_items, $add_an_alias if ($sbeams->getCurrent_username() ne 'ext_halo');
 
-	  $aliases = join ",",@alias_items;
+	  $alias_links = join ",",@alias_items;
 
 }
 # print "glist should only be run once and contains: @glist<p>";
@@ -864,7 +865,7 @@ tooltip=>"Edit Annotation (restricted)");
 	  <!----------------- Gene Symbol -------------------->
 	  <TD><B>$gene_symbol</B></TD>
 	  <!----------------- Aliases -------------------->
-	  <TD>$aliases</TD>
+	  <TD>$alias_links</TD>
 	  <!----------------- Function -------------------->
 	  <TD><A HREF="$CGI_BASE_DIR/ProteinStructure/GetDomainHits?project_id=150&biosequence_set_id=$parameters{protein_biosequence_set_id}&biosequence_accession_constraint=$biosequence_accession&action=QUERYHIDE&display_options=ApplyChilliFilter,ShowExtraProteinProps" onmouseover="showTooltip(event,'View Domain Hits')" onmouseout="hideTooltip()" target="function">$functional_description</A></TD>
 	  ~;

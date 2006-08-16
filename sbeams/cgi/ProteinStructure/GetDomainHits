@@ -30,7 +30,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -120,11 +120,13 @@ sub main {
     # Some action
   } else {
     $sbeamsMOD->display_page_header( onload => 'hide_processing_info()' );
+#    print $sbeamsMOD->get_ext_halo_header( onload => 'hide_processing_info()' );
     print_hide_script();
     handle_request(ref_parameters=>\%parameters);
     $sbeamsMOD->display_page_footer();
+#    print $sbeamsMOD->get_ext_halo_footer();
   }
-
+  exit;
 
 } # end main
 
@@ -210,10 +212,13 @@ sub handle_request {
     $parameters{project_id} = $sbeams->getCurrent_project_id();
   }
 
-
+  #### Display the form action buttons
   #### Display the user-interaction input form
   $sbeams->display_input_form(
-    TABLE_NAME=>$TABLE_NAME,CATEGORY=>$CATEGORY,apply_action=>$apply_action,
+    TABLE_NAME=>$TABLE_NAME,
+    CATEGORY=>$CATEGORY,
+    apply_action=>$apply_action,
+    mask_user_context=>$sbeams->is_ext_halo_user(),
     PROGRAM_FILE_NAME=>$PROGRAM_FILE_NAME,
     parameters_ref=>\%parameters,
     input_types_ref=>\%input_types,
@@ -564,7 +569,13 @@ sub handle_request {
 
   #### Add in some extra columns if the user wants to see them
   my @tmhmm_columns = ();
+  my @bioseq_set_name;
+  my @full_gene_name;
+  my @bioseq_desc;
   if ( $parameters{display_options} =~ /ShowExtraProteinProps/ ) {
+    push @bioseq_set_name,  ["biosequence_set_name","BSS.set_name","Biosequence Set Name"];
+    push @full_gene_name, ["full_gene_name","BSA.full_gene_name","Full Gene Name"];
+    push @bioseq_desc, ["biosequence_desc","BS.biosequence_desc","Biosequence Description"];
     @tmhmm_columns = (
       #["fav_codon_frequency","STR(BPS.fav_codon_frequency,10,3)","Favored Codon Frequency"],
       ["transmembrane_class","BPS.transmembrane_class","TMR Class"],
@@ -577,13 +588,13 @@ sub handle_request {
   #### [friendly name used in url_cols,SQL,displayed column title]
 
   @column_array = (
-    ["biosequence_set_name","BSS.set_name","Biosequence Set Name"],
+    @bioseq_set_name,
     ["biosequence_name","BS.biosequence_name","Biosequence Name"],
     ["biosequence_accessor","DBX.accessor","biosequence_accessor"],
     ["biosequence_accessor_suffix","DBX.accessor_suffix","biosequence_accessor_suffix"],
     ["biosequence_accession","BS.biosequence_accession","Biosequence Accession"],
     ["gene_symbol","BSA.gene_symbol","Gene Symbol"],
-    ["full_gene_name","BSA.full_gene_name","Full Gene Name"],
+    @full_gene_name,  
     ["protein_EC_numbers","BSA.EC_numbers","Protein EC Numbers"],
 
     @tmhmm_columns,
@@ -620,7 +631,8 @@ sub handle_request {
     ["chromosome","BPS.chromosome","Chromosome"],
     ["start_in_chromosome","BPS.start_in_chromosome","Start"],
     ["end_in_chromosome","BPS.end_in_chromosome","End"],
-    ["biosequence_desc","BS.biosequence_desc","Biosequence Description"],
+    @bioseq_desc,
+    
 
     ["project_id","BSS.project_id","project_id"],
     ["biosequence_set_id","BSS.biosequence_set_id","biosequence_set_id"],
@@ -870,6 +882,7 @@ sub handle_request {
 
     #### Display a plot of data from the resultset
     $sbeams->displayResultSetPlot(
+      quell_tables=>1,
       rs_params_ref=>\%rs_params,
       resultset_ref=>$resultset_ref,
       query_parameters_ref=>\%parameters,
