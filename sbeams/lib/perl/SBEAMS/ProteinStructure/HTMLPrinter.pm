@@ -342,7 +342,7 @@ sub display_ext_halo_template {
     $LOGIN_URI .= "?force_login=yes";
   }
 
-  my $HALO_HOME = 'http://halo.systemsbiology.net';
+  my $HALO_HOME = 'http://baliga.systemsbiology.net';
   my $buf = qq~
 <body OnLoad="$loadscript self.focus()" leftmargin="0" rightmargin="0" marginspace="0" topmargin="3" bottommargin="3" marginheight="3" marginwidth="0">
 
@@ -362,7 +362,7 @@ sub display_ext_halo_template {
 			<a href="http://www.systemsbiology.org/"><img src="/images/isbhome.gif" alt="" height="16" width="70" align="right" border="0"></a>
 			<div class="TopTitle">
 			<font color="white"><!--Top Title of Website goes here--><strong><font size="5" face="Arial, Helvetica, Verdana, sans-serif">
-						&nbsp;&nbsp;Halo Research at ISB</font></strong></font></div></td>
+						&nbsp;&nbsp;Baliga Lab at ISB</font></strong></font></div></td>
 		</tr>
 		<tr>
 			<td width="255"><img src="/images/bottombluebar.gif" width="255" height="77" alt=""></td>
@@ -982,7 +982,7 @@ sub display_ext_halo_footer {
 
 		<center>
 		<span class="BottomNav">
-<a href="http://halo.systemsbiology.net/" class="BottomNav">HOME</a>  |  <a href="http://halo.systemsbiology.net/background.php" class="BottomNav">BACKGROUND</a>  |  <a href="http://halo.systemsbiology.net/systems.php" class="BottomNav">SYSTEMS APPROACH</a>  |  <a href="http://halo.systemsbiology.net/data.php" class="BottomNav">DATA INTEGRATION</a>  |  <a href="http://halo.systemsbiology.net/contacts.php" class="BottomNav">CONTACTS</a>  |  <a href="http://halo.systemsbiology.net/publications.php" class="BottomNav">PUBLICATIONS</a>  |  <a href="http://halo.systemsbiology.net/halobacterium/" class="BottomNav">ORGANISMS</a> |  <a href="http://intranet.systemsbiology.net/" class="BottomNav">INTRANET</a>
+<a href="http://baliga.systemsbiology.net/" class="BottomNav">HOME</a>  |  <a href="http://baliga.systemsbiology.net/background.php" class="BottomNav">BACKGROUND</a>  |  <a href="http://baliga.systemsbiology.net/systems.php" class="BottomNav">SYSTEMS APPROACH</a>  |  <a href="http://baliga.systemsbiology.net/data.php" class="BottomNav">DATA INTEGRATION</a>  |  <a href="http://baliga.systemsbiology.net/contacts.php" class="BottomNav">CONTACTS</a>  |  <a href="http://baliga.systemsbiology.net/publications.php" class="BottomNav">PUBLICATIONS</a>  |  <a href="http://baliga.systemsbiology.net/halobacterium/" class="BottomNav">ORGANISMS</a> |  <a href="http://intranet.systemsbiology.net/" class="BottomNav">INTRANET</a>
 		</span>
 
 		<br>
