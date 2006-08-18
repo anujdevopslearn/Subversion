@@ -313,11 +313,11 @@ sub getEnsembl
     my $data_files_dir = $args{data_files_dir} || die
         "ERROR: Must pass data_files_dir";
 
-    my $pep_file = "$data_files_dir/$organism_name.pep.fa";
+    my $pep_file = "$data_files_dir/$organism_name.pep.all.fa";
 
     my $pep_file_gz = $pep_file . ".gz";
 
-    system("wget -O $pep_file_gz 'ftp://ftp.ensembl.org/pub/$ensembl_dir/data/fasta/pep/*.pep.fa.gz'");
+    system("wget -O $pep_file_gz 'ftp://ftp.ensembl.org/pub/$ensembl_dir/data/fasta/pep/*.pep.all.fa.gz'");
 
     system("gunzip $pep_file_gz");
 
