@@ -592,14 +592,18 @@ sub getCoords
 	        print "$buffer\n";
 	        print COORD "$buffer\n";
 
+                $transcript_stable_id = $transcript->{stable_id};
+
+                $gene_stable_id = $gene->{stable_id};
+
 	        #### Save this information to the cache
 	        my %tmp = (
 		    id =>  $chr_name,
 		    strand =>  $i->{strand},
 		    start =>  $i->{start},
 		    end =>  $i->{end},
-                    transcript_stable_id  => $transcript->{stable_id},
-                    gene_stable_id  => $gene->{stable_id},
+                    transcript_stable_id  => $transcript_stable_id,
+                    gene_stable_id  => $gene_stable_id,
                 );
                 push(@{$new_cache->{$query_name}->{$stableId}->{"$start,$end"}->{"$transcript_stable_id"}->{"$gene_stable_id"}},\%tmp);
             }
