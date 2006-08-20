@@ -1298,10 +1298,13 @@ sub encodeXMLEntity {
   if ($attributes) {
 
     while (my ($name,$value) = each %{$attributes}) {
-      if ($compact) {
-	$buffer .= qq~ $name="$value"~;
-      } else {
-	$buffer .= "\n".substr($padstring,0,$indent+8).qq~$name="$value"~;
+      if ($value  && $value ne "")
+      {
+        if ($compact) {
+  	$buffer .= qq~ $name="$value"~;
+        } else {
+  	$buffer .= "\n".substr($padstring,0,$indent+8).qq~$name="$value"~;
+        }
       }
     }
 
