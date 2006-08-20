@@ -19,7 +19,6 @@ setenv ORGANISM_LABEL human
 setenv ORGANISM_ABBREV Hs
 ### subdirectory in ftp.ensembl.org/pub:
 setenv ENSEMBL_DIR "release-39/homo_sapiens_39_36a"
-setenv MAP_ADAPTOR NCBI36
 ### for remote calls to Sanger's database:
 setenv ENSMYSQLDBNAME homo_sapiens_core_39_36a
 setenv ENSMYSQLDBHOST "kaka.sanger.ac.uk"
@@ -93,7 +92,6 @@ echo "   Align peptides with protein reference database, then calc coords..."
     --getCoordinates \
     --build_abs_path $BUILD_ABS_PATH \
     --build_abs_data_path $BUILD_ABS_DATA_PATH \
-    --map_adaptor $MAP_ADAPTOR \
     --mysqldbhost $ENSMYSQLDBHOST \
     --mysqldbname $ENSMYSQLDBNAME \
     --mysqldbuser $ENSMYSQLDBUSER \
