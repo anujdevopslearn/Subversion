@@ -51,7 +51,6 @@ Options:
   --organism_abbrev      Abbreviation of organism like Hs
   --min_probability      Limit to a minimum probability
   --ensembl_dir          Ensembl pub ftp directory name
-  --map_adaptor          Map adaptor like NCBI36
   --mysqldbhost          Hostname of MySQL database of Ensembl tables
   --mysqldbname          Ensembl MySQL database name
   --mysqldbuser          User name to login to Ensembl MySQL host
@@ -78,7 +77,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
 "getPeptideList","getEnsembl","BLASTP","BLASTParse","getCoordinates",
 "IPIBLASTParse","lostAndFound",
 "ensembl_dir:s", "build_abs_path:s","build_abs_data_path:s",
-"map_adaptor:s", "blast_matrices_path:s", "coord_cache_dir:s",
+"blast_matrices_path:s", "coord_cache_dir:s",
 "mysqldbpsswd:s","mysqldbuser:s","mysqldbhost:s","mysqldbname:s",
 ))
 {
@@ -184,14 +183,14 @@ sub main
   #### If the BLASTParse step is requested
   if ($OPTIONS{'BLASTParse'} || $OPTIONS{'IPIBLASTParse'}) 
   {
-    unless ($OPTIONS{'mysqldbname'} && $OPTIONS{'map_adaptor'}
+    unless ($OPTIONS{'mysqldbname'} 
     && $OPTIONS{'mysqldbhost'} && $OPTIONS{'mysqldbuser'}
     && $OPTIONS{'mysqldbpsswd'} && $OPTIONS{'build_abs_data_path'} && 
     $OPTIONS{'coord_cache_dir'}
     ) 
     {
       print "\n$USAGE\n";
-      print "ERROR: Must supply mysqldbname, map_adaptor, "
+      print "ERROR: Must supply mysqldbname, "
       . "mysqldbhost, mysqldbuser, mysqldbpsswd, build_abs_data_path, "
       . " and coord_cache_dir.\n";
       return;
@@ -215,8 +214,8 @@ sub main
       $db = new Bio::EnsEMBL::DBSQL::DBAdaptor(
         -host => $host,
         -user => $user,
-        -pass => $password,
         -dbname => $dbname,
+        -driver => 'mysql',
       );
       $exon_adaptor = $db->get_ExonAdaptor();
       $map_adaptor = $db->get_AssemblyMapperAdaptor();
