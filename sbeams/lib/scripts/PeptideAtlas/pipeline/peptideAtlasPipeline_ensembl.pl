@@ -215,6 +215,7 @@ sub main
         -host => $host,
         -user => $user,
         -dbname => $dbname,
+        -password => $password,
         -driver => 'mysql',
       );
       $exon_adaptor = $db->get_ExonAdaptor();
