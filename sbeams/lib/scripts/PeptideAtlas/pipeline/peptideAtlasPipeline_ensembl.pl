@@ -687,7 +687,7 @@ sub lostAndFound
 
     foreach my $query ( keys( %query_hash ) ) 
     {
-        if ( $response_hash{$query} == 0 ) 
+        if (exists  $response_hash{$query} && $response_hash{$query} == 0 ) 
         { #if there isn't a matching key
              print LOST "$query\n"; #other info wanted besides name?
         }
