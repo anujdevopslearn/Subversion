@@ -908,7 +908,7 @@ sub get_string_list_of_keys
 
     my %hash = %{$hash_ref};
 
-    my $str_list;
+    my $str_list = "";
 
     foreach my $key ( keys %hash)
     {
@@ -972,7 +972,7 @@ sub create_atlas_search_batch
         TPP_version => $TPP_version,
     );
 
-    my $atlas_search_batch_id = $sbeams->updateOrInsertRow(
+    $atlas_search_batch_id = $sbeams->updateOrInsertRow(
         insert=>1,
         table_name=>$TBAT_ATLAS_SEARCH_BATCH,
         rowdata_ref=>\%rowdata,
@@ -1050,7 +1050,7 @@ sub create_atlas_search_batch_parameter_recs
         or die "need search_batch_path ($!)";
 
 
-    my ($peptide_mass_tolerance, $peptide_ion_tolerance, $peptide_ion_tolerance,
+    my ($peptide_mass_tolerance, $peptide_ion_tolerance, 
         $enzyme, $num_enzyme_termini);
 
 
@@ -1412,8 +1412,7 @@ sub insert_spectra_description_set
 
     my @rows = $sbeams->selectSeveralColumns($sql);
 
-    my ($instrument_model_id, $conversion_software_name, 
-    $instrument_model_id, $instrument_model_name, $conversion_software_name,
+    my ($instrument_model_id, $instrument_model_name, $conversion_software_name,
     $conversion_software_version, $mzXML_schema, $n_spectra);
 
 
@@ -1694,8 +1693,8 @@ sub readCoords_updateRecords_calcAttributes {
         if ($tmp_chromosome =~ /^(chromosome:)(DROM.+:)(.+)(:.+:.+:.+)/ ) {
             $tmp_chromosome = $3;
         }
-        ## and for yeast:
-        if ($tmp_chromosome =~ /^S/) {
+        ## and for yeast and halo:
+        if ( ($tmp_chromosome =~ /^S/) || ($organism_abbrev eq "Hbt")) {
             $tmp_chromosome = $columns[12];
         }
 
@@ -1989,7 +1988,6 @@ sub readCoords_updateRecords_calcAttributes {
            my $tmp_chromosome = $chromosome[$i];
            my $tmp_start_in_chromosome = $start_in_chromosome[$i];
            my $tmp_end_in_chromosome = $end_in_chromosome[$i];
-           my $tmp_strand = $strand[$i];
 
 
            if (!$tmp_pep_acc) {
@@ -2104,7 +2102,7 @@ sub readCoords_updateRecords_calcAttributes {
 
 
         ## CREATE peptide_mapping record
-        my %rowdata = (   ##   peptide_mapping      table attributes
+        %rowdata = (   ##   peptide_mapping      table attributes
             peptide_instance_id => $peptide_instance_id,
             matched_biosequence_id => $biosequence_id,
             start_in_biosequence => $start_in_biosequence[$i],
@@ -2718,8 +2716,6 @@ sub populateSampleRecordsWithSampleAccession
         ## execute only if there isn't a sample_accession
         unless ($existing_accession )
         {
-            my $next_accession;
-
             my $next_number = $last_number_used + 1;
 
             my $next_number_length =  length($next_number);
@@ -2876,8 +2872,6 @@ sub getNextAccession
     my $last_number_used = $args{last_num_used} or die "need last_num_used";
 
     my $root_name = $args{root_name} or die "need root_name";
-
-    my $next_accession;
 
     my $next_number = $last_number_used + 1;
 
