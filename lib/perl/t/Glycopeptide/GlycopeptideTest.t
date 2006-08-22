@@ -3,7 +3,7 @@
 #$Id: $
 
 use DBI;
-use Test::More tests => 8;
+use Test::More tests => 9;
 use Test::Harness;
 use strict;
 
@@ -38,6 +38,8 @@ my $glyco;
   # Check glycosite detection
   ok( test_glycosite_detection(), 'Testing Glycosite parser' );
 
+  # Check glycosite detection
+  ok( test_multiglycosite_detection(), 'Testing multi-site mapping' );
 
   use_ok( 'SBEAMS::Glycopeptide::Glyco_peptide_load' );
   ok ( test_motif_context(), "Get motif context" );
@@ -113,12 +115,33 @@ sub test_glycosite_detection {
 
   for ( my $i = 0; $i <= $#sites; $i++ ) {
 #    print "$i) calc: $sites->[$i]\tman: $sites[$i]\n";
+#    print substr( $seq, $sites[$i], 3 ) . "\n";
     $test = 0 unless $sites[$i] eq $sites->[$i];
   }
   return $test;
 
+}
+
+
+sub test_multiglycosite_detection {
+  my $seq = 'AAAAAKAANATAAAAAAANTAAAANSAAAANASAAANKT';
+
+  my $motif = 'N.[ST]';
+  my $sites = $glyco->map_peptide_to_protein( protseq => $seq,
+                                          multiple_mappings => 1,
+                                          pepseq => $motif );
+  my $test = 1;
+
+  my @sites = ( 8, 30, 36 );
+
+  for ( my $i = 0; $i <= $#sites; $i++ ) {
+    my @prow = @{$sites->[$i]};
+    $test = 0 unless $prow[0] == $sites[$i];
+    $test = 0 unless $prow[1] == $prow[0] + 6;
+  }
   return $test;
 }
+
 
 sub test_cleanseq {
   my $test = 1;
