@@ -32,6 +32,18 @@ sub map_peptide_to_protein {
 	my %args = @_;
 	my $pep_seq = $args{pepseq};
 	my $protein_seq = $args{protseq};
+  die 'doh' unless $pep_seq && $protein_seq;
+
+  if ( $args{multiple_mappings} ) {
+    my $posn = $self->get_site_positions( seq => $protein_seq,
+                                      pattern => $pep_seq );
+    my @posn;
+    for my $pos ( @$posn ) {
+      my @p = ( $pos, $pos + length( $pep_seq ) );
+      push @posn, \@p;
+    }
+    return \@posn;
+  }
 	
 	if ( $protein_seq =~ /$pep_seq/ ) {
 		my $start_pos = length($`);    
@@ -619,7 +631,23 @@ sub runBulkSearch {
   return \@results;
 }
 
-###
+sub getIPIGlycosites {
+  my $self = shift;
+  my %args = @_;
+  return undef unless $args{ipi_data_id};
+
+  my $sbeams = $self->getSBEAMS();
+
+  my $sql =<<"  END";
+  SELECT glycosite_id, protein_glycosite_position
+  FROM $TBGP_GLYCOSITE 
+  WHERE ipi_data_id = $args{ipi_data_id}
+  END
+
+  my @rows = $sbeams->selectSeveralColumns( $sql );
+  return \@rows;
+}
+
 
 #+
 # Runs mass search vs database

@@ -217,6 +217,7 @@ sub insert_ipi_db {
                           peptides => $peptides,
                              sites => $sites };
     }
+#    last if $stats{total} > 100;
   } # End file reading loop
 
   print "Read $count records\n";
@@ -529,11 +530,12 @@ sub insert_observed_peptides {
   }
   die ( "Missing required parameter(s): $err in " . $self->whatsub() ) if $err;
 
-  # this call will populate 2 hashes, seq->data_id and ipi_id -> data_id
+  # this call will populate 3 hashes, seq->data_id, data_id => sequence, and ipi_id -> data_id
   $self->get_ipi_seqs( ipi_version_id => $args{ipi_version_id} );
 
   my $seqs = $self->{_seq_to_id};
   my $accs = $self->{_acc_to_id};
+  my $ids = $self->{_id_to_seq};
 
   my @keys = keys( %{$seqs} );
   
@@ -551,15 +553,12 @@ sub insert_observed_peptides {
 
     my $mapteins = [];
     my $seq = uc( $clean_pep );
-#    $mapteins = $self->map_proteins( peptide => $seq, 
-#                                        %args
-#                                      );
-     my @map = grep( /$seq/, @keys );
-     for my $k ( @map ) {
-       foreach my $ipi ( @{$seqs->{$k}} ) {
-       push @$mapteins, $ipi;
-       }
-     }
+    my @map = grep( /$seq/, @keys );
+    for my $k ( @map ) {
+      foreach my $ipi ( @{$seqs->{$k}} ) {
+        push @$mapteins, $ipi;
+      }
+    }
 
     # Test for error conditions.
     
@@ -613,23 +612,62 @@ sub insert_observed_peptides {
                                          );
 
   my %seen;
-  for my $id ( @$mapteins ) {
-    next if $seen{$id};
-    $seen{$id}++;
-    # Insert rows into observed_to_ipi table
-    $sbeams->updateOrInsertRow( table_name  => $TBGP_OBSERVED_TO_IPI,
-                                 rowdata_ref => { ipi_data_id => $id, observed_peptide_id => $obs_id },
-                                 return_PK   => 0,
-                                 verbose     => $self->verbose(),
-                                 testonly    => $self->testonly(),
-                                 insert      => 1,
-                                 PK          => 'observed_to_ipi_id',
-                               );
-  }
+  for my $id ( @$mapteins ) { # For each IPI that this peptide maps to
+    unless ( $seen{$id} ) {
+      $seen{$id}++;
+      # Insert rows into observed_to_ipi table
+      $sbeams->updateOrInsertRow( table_name  => $TBGP_OBSERVED_TO_IPI,
+                                   rowdata_ref => { ipi_data_id => $id, observed_peptide_id => $obs_id },
+                                   return_PK   => 0,
+                                   verbose     => $self->verbose(),
+                                   testonly    => $self->testonly(),
+                                   insert      => 1,
+                                   PK          => 'observed_to_ipi_id',
+                                  );
+
+
+      # Insert row(s) into observed_to_glycosite table
+      my $coords = $module->map_peptide_to_protein( protseq => $ids->{$id},
+                                        multiple_mappings => 1,
+                                                   pepseq => uc($clean_pep)
+                                                 );
+
+#      print "Does $clean_pep map to $ids->{$id}\n";
+#      for my $cd ( @$coords ) { print "$cd->[0], $cd->[1]\n"; }
+#      print "Done coords\n";
+      my $gsites = $module->getIPIGlycosites( ipi_data_id => $id );
+#      for my $gs ( @$gsites ) { print "$gs->[0] => $gs->[1]\n"; }
+
+      my $mapped = 0;
+      for my $coord_pair ( @$coords ) {
+        for my $ipi_sites ( @$gsites ) {
+          if ( $coord_pair->[0] <= $ipi_sites->[1] &&  $coord_pair->[1] >= $ipi_sites->[1] ) {
+            $mapped++;
+            # Insert rows into observed_to_glycosite table
+            $sbeams->updateOrInsertRow( table_name  => $TBGP_OBSERVED_TO_GLYCOSITE,
+                                   rowdata_ref => { observed_peptide_id => $obs_id, 
+                                                    glycosite_id => $ipi_sites->[0],
+                                                    site_start => $ipi_sites->[1],
+                                                    site_stop => $ipi_sites->[1] + length($clean_pep),
+                                                  },
+                                   return_PK   => 0,
+                                   verbose     => $self->verbose(),
+                                   testonly    => $self->testonly(),
+                                   insert      => 1,
+                                   PK          => 'observed_to_glycosite_id',
+                                  );
+            }
+          }
+        # If a peptide spans multiple sites, we'll map them all, but we won't try 
+        # to map a peptide to a protein in multiple places.
+        last if $mapped;  
+        }
+      }
+    }
 
 
 
-#  last if $cnt >= 100;
+#  last if $cnt >= 1;
   }
   my $tdiff = time() - $t0;
   print "Inserted $insert_cnt rows of $cnt in $tdiff seconds\n"; 
@@ -706,14 +744,17 @@ sub get_ipi_seqs {
   END
   my %seq2id;
   my %acc2id;
+  my %id2seq;
   my $sbeams = $self->getSBEAMS();
   while( my $row = $sbeams->selectSeveralColumnsRow( sql => $sql ) ) {
 #    $seq2ipi{$row->[1]} ||= [];
     push @{$seq2id{$row->[1]}}, $row->[0];
     $acc2id{$row->[2]} = $row->[0];
+    $id2seq{$row->[0]} = $row->[1];
   }
   $self->{_seq_to_id} = \%seq2id;
   $self->{_acc_to_id} = \%acc2id;
+  $self->{_id_to_seq} = \%id2seq;
   return 1;
 }
 
@@ -1205,8 +1246,8 @@ sub add_predicted2glycosite {
   my $glycosite_id = $self->{_ipi2gs}->{$key} || die "Unknown site";  
   
   my $rowdata = { glycosite_id => $glycosite_id,
-                 peptide_start => $args{site},
-                  peptide_stop => $args{site} + 3,
+                    site_start => $args{site},
+                     site_stop => $args{site} + 3,
           predicted_peptide_id => $args{predicted_id} };
 
   my $sb = $self->getSBEAMS();
@@ -1272,7 +1313,12 @@ sub add_predicted_peptides {
     my $num_motifs = 0;
  
     my $predicted_id;
-    my $do_insert = ( length($peptide) > 8 || ( $site && $pidx >= $site + 1 ) ) ? 1 : 0;
+#    If peptide is 5 aa's or more -or- is a glycosite
+#    my $do_insert = ( length($peptide) > 8 || ( $site && $pidx >= $site + 1 ) ) ? 1 : 0;
+
+#
+#    If peptide is a glycosite
+    my $do_insert = ( $site && $pidx >= $site + 1 ) ? 1 : 0;
     # Add predicted peptide record
     $predicted_id = $self->insert_predicted( %args,  # pass through ipi_data_id, ipi accession
                                              aa_seq => $peptide,
