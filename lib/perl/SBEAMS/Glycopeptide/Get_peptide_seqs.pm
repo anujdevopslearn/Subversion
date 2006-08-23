@@ -125,11 +125,15 @@ sub make_peptide_bio_seqs {
 		my $identified_tissues = '';
 		
 	#pull out the sequence and id for the different types of peptides 
-		if ($pep_type eq 'Identified Peptides'){
+   if ($pep_type eq 'Identified Peptides'){
 			$modified_pep_seq = $href->{'identified_peptide_sequence'};
 			$peptide_id =  $href->{'identified_peptide_id'};
 			$identified_tissues = $self->identified_tissues($peptide_id);
-		}elsif ($pep_type eq 'Predicted Peptides'){
+   } elsif ($pep_type eq 'Observed Peptides'){
+			$modified_pep_seq = $href->{'observed_peptide_sequence'};
+			$peptide_id =  $href->{'observed_peptide_id'};
+			$identified_tissues = $self->observed_tissues($peptide_id);
+		} elsif ($pep_type eq 'Predicted Peptides'){
 			$modified_pep_seq = $href->{'predicted_peptide_sequence'};
 			$peptide_id =  $href->{'predicted_peptide_id'};
 		}	

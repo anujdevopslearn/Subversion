@@ -150,6 +150,7 @@ sub insert_ipi_db {
   # Hash of info for IPI records
   my %file_data;
   my %seq_to_accession;
+  $self->{_seq_to_id} = {};
   
   print "Processing file\n";
   while(<DATA>) {
@@ -195,7 +196,7 @@ sub insert_ipi_db {
       $stats{$ipi}++;
       $stats{total}++;
 
-      my $motif = 'N.[ST]';
+      my $motif = 'N[^P][ST]';
 
       my $sites = $module->get_site_positions( seq => $tokens[$heads{'protein sequences'}],
                                            pattern => $motif );
@@ -209,8 +210,8 @@ sub insert_ipi_db {
         my $match = $module->clean_pepseq( $pep );
         $match = substr( $match, 0, 900 ) if length($match) > 900; 
         # hash peptide sequence to ipi_data_id info
-        $self->{_seq_to_id}->{$match} ||= {};
-        $self->{_seq_to_id}->{$match}->{$args{ipi}}++;
+        $self->{_seq_to_id}->{uc($match)} ||= {};
+        $self->{_seq_to_id}->{uc($match)}->{$ipi}++;
       }
 
       $file_data{$ipi} = { rowdata => \@tokens,
@@ -450,6 +451,9 @@ sub insert_peptides {
 
   $self->testonly( $args{testonly} );
 
+  # insert peptide search record
+  my $psid = $self->insert_peptide_search( %args );
+
   my $observed;
   # check which format was specified, read file
   if ( $args{format} eq 'interact-tsv' ) {
@@ -457,9 +461,6 @@ sub insert_peptides {
   } else {
     die "Unsupported file format\n";
   }
-
-  # insert peptide search record
-  my $psid = $self->insert_peptide_search( %args );
 
   # insert observed peptide
   $self->insert_observed_peptides( %args, 
@@ -499,7 +500,7 @@ sub insert_peptide_search {
   AND ref_db_id = $args{ipi_version_id}
   END
 
-#  die "Duplicate input file detected: $fname\n" if $dup;
+  die "Duplicate input file detected: $fname\n" if $dup;
   
   my $rowdata = { search_file => $fname,
                   sample_id => $args{sample_id},
@@ -545,6 +546,8 @@ sub insert_observed_peptides {
   my $cnt;
   my $insert_cnt;
   my $t0 = time();
+  my $pcnt = scalar( @{$args{peptides}} );
+  print "Inserting peptides ($pcnt candidates)\n"; 
   for my $obs ( @{$args{peptides}} ) {
     $cnt++;
 
@@ -611,6 +614,13 @@ sub insert_observed_peptides {
                                            PK          => 'peptide_search_id',
                                          );
 
+  unless ( $cnt % 25 ){
+    print '*';
+  }
+  unless ( $cnt % 500 ){
+    print "\n";
+  }
+
   my %seen;
   for my $id ( @$mapteins ) { # For each IPI that this peptide maps to
     unless ( $seen{$id} ) {
@@ -670,6 +680,7 @@ sub insert_observed_peptides {
 #  last if $cnt >= 1;
   }
   my $tdiff = time() - $t0;
+  print "\n\n";
   print "Inserted $insert_cnt rows of $cnt in $tdiff seconds\n"; 
 }
 
@@ -808,14 +819,14 @@ sub read_tsv {
     push @peptides, \@tokens;
 
     # print progress 'bar'
-    unless ( $count % 100 ){
+    unless ( $count % 25 ){
       print '*';
     }
-    unless ( $count % 5000 ){
+    unless ( $count % 500 ){
       print "\n";
     }
   }
-  print "\n";
+  print "\n\n";
   return \@peptides;
 }
 
@@ -1186,9 +1197,16 @@ sub insert_predicted {
     $match = substr( $match, 0, 900 );
   }
 
-  $self->{_seq_to_id}->{$match}->{$args{ipi}}++;
+  $self->{_loaded_peptide} ||= {};
+  if ( $self->{_loaded_peptide}->{$args{aa_seq}} ) {
+    return $self->{_loaded_peptide}->{$args{aa_seq}};
+  }
+
+
+#  $self->{_seq_to_id}->{$match}->{$args{ipi}}++;
   my $n_match = 0;
   my $match_str = '';
+
   for my $k ( keys( %{$self->{_seq_to_id}->{$match}} ) ) {
     next unless $k;
     $n_match++;
@@ -1221,6 +1239,7 @@ sub insert_predicted {
                                                     insert => 1,
                                                         PK => 'predicted_peptide_id',
                                              ); 
+  $self->{_loaded_peptide}->{$args{aa_seq}} = $predicted_id;
   return $predicted_id;
 }
 

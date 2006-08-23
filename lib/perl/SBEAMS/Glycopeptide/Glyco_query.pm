@@ -108,6 +108,29 @@ sub gene_symbol_query{
 	
 	return $sbeams->selectHashArray($sql);
 }
+
+sub keyword_search {
+	my $self = shift;
+  my %args = @_;
+
+  my $err;
+  for my $key ( qw( search_type search_term ) ) {
+    $err .= ( $err ) ? ", $key" : $key unless $args{$key};  
+  }
+  die "Missing required params: $err" if $err;
+
+  my $sql = $self->get_query_sql( type => $args{search_type},
+                                  term => $args{search_term} );
+
+  if ( !$sql ) {
+    $log->error( "No SQL generated from query: $args{search_type}, $args{search_term}" );
+    return undef;
+  }
+  $log->debug( $sql );
+	my @results = $sbeams->selectHashArray($sql);
+  return \@results;
+}
+
 ################################
 #gene_name_query
 ###############################
@@ -133,23 +156,40 @@ sub all_proteins_query {
 
 	my $self = shift;
 	my $mode = shift;
-  my $identified = ( $mode eq 'all' ) ? '' : "WHERE num_identified > 0 ";
-  my $order = ( $mode eq 'all' ) ? 'protein_name ASC' : 'num_identified DESC, protein_name ASC';
+  my $observed = ( $mode eq 'all' ) ? '' : "WHERE num_observed > 0 ";
+  my $order = ( $mode eq 'all' ) ? 'protein_name ASC' : 'num_observed DESC, protein_name ASC';
   my $cutoff = $self->get_current_prophet_cutoff();
 	
 	my $sql = qq~
     SELECT * FROM (
-    SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
-    ( SELECT COUNT(*) 
-      FROM $TBGP_IDENTIFIED_TO_IPI ITI
-      JOIN $TBGP_IDENTIFIED_PEPTIDE IP ON ITI.identified_peptide_id = IP.identified_peptide_id
-      WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id 
-      AND peptide_prophet_score >= $cutoff ) AS num_identified 
-    FROM $TBGP_IPI_DATA
+    SELECT ID.ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
+    ( SELECT COUNT(DISTINCT matching_sequence) 
+      FROM $TBGP_OBSERVED_TO_IPI ITI
+      JOIN $TBGP_OBSERVED_PEPTIDE OP ON ITI.observed_peptide_id = OP.observed_peptide_id
+      WHERE ITI.ipi_data_id = ID.ipi_data_id 
+      AND peptide_prophet_score >= $cutoff
+      ) AS num_observed 
+    FROM $TBGP_IPI_DATA ID
     ) AS temp
-    $identified
+    $observed
     ORDER BY $order
   ~;
+  $log->debug( $sql );
+  
+
+# my $sql = qq~
+#  SELECT * FROM (
+#  SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
+#  ( SELECT COUNT(*) 
+#  FROM $TBGP_IDENTIFIED_TO_IPI ITI
+#  JOIN $TBGP_IDENTIFIED_PEPTIDE IP ON ITI.identified_peptide_id = IP.identified_peptide_id
+#  WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id 
+#  AND peptide_prophet_score >= $cutoff ) AS num_identified 
+#  FROM $TBGP_IPI_DATA
+#  ) AS temp
+#  $identified
+#  ORDER BY $order
+#  ~;
 
 	return $sbeams->selectHashArray($sql)
 }
@@ -189,7 +229,7 @@ sub ipi_accession_query{
 #make_or_search_string
 ###############################
 sub make_or_search_string {
-	my $method = 'make_or_search_strin';
+	my $method = 'make_or_search_string';
 	my $self = shift;
 	my %args = @_;
 	my $term = $args{term};
@@ -211,39 +251,66 @@ sub make_or_search_string {
 sub get_query_sql {
   my $self = shift;
   my %args = @_;
+  for my $k ( keys ( %args ) ) { $log->debug( "querysql: $k => $args{$k}" ); }
+
   my $cutoff = $self->get_current_prophet_cutoff();
-  my $clause = '';
-  if ( $args{type} eq 'swissprot' ) {
-	  $clause = "WHERE swiss_prot_acc like '$args{term}'";
+
+  my $subclause = '';
+
+  if ( $args{type} eq 'swiss_prot' ) {
+	  $subclause = " swiss_prot_acc like 'ID_VALUE'";
   } elsif ( $args{type} eq 'protseq' ) {
-    $clause = "WHERE protein_sequence like '$args{term}'";
-  } elsif ( $args{type} eq 'protsymbol' ) {
-    $clause = "WHERE protein_symbol like '$args{term}'";
-  } elsif ( $args{type} eq 'protname' ) {
-    $clause = "WHERE protein_name like '$args{term}'";
-  } elsif ( $args{type} eq 'ipi' ) {
-    $clause = "WHERE $args{term}";
+    $subclause = " protein_sequence like 'ID_VALUE'";
+  } elsif ( $args{type} eq 'gene_symbol' ) {
+    $subclause = " protein_symbol like 'ID_VALUE'";
+  } elsif ( $args{type} eq 'gene_name' ) {
+    $subclause = " protein_name like 'ID_VALUE'";
+  } elsif ( $args{type} eq 'accession' ) {
+    $subclause = " ipi_accession_number like 'ID_VALUE'";
+  } elsif ( $args{type} eq 'gene_id' ) {
+    $subclause = " ipi_accession_number IN ( SELECT ipi_accessions FROM DCAMPBEL.dbo.ipi_xrefs WHERE entrez_id IN ($args{term}) ) ";
   } else {
     $log->error( "Unknown type" );
     return '';
   }
+  my $terms = $self->split_string( $args{term} );
+  my $joiner = ' ';
+  my $clause = '';
+  for my $term ( @$terms ) {
+    my $sc = $subclause;
+    $sc =~ s/ID_VALUE/$term/g;
+    $clause .= $joiner . $sc;
+    $joiner = "\n        OR ";
+  }
+  $clause = $subclause if $args{type} eq 'gene_id';
 
   my $sql = qq~
-  SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
+  SELECT ID.ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
     ( SELECT COUNT(*) 
-      FROM $TBGP_IDENTIFIED_TO_IPI ITI 
-      JOIN $TBGP_IDENTIFIED_PEPTIDE IP
-        ON IP.identified_peptide_id = ITI.identified_peptide_id
-      WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id
-      AND peptide_prophet_score >= $cutoff ) AS num_identified 
-  FROM $TBGP_IPI_DATA
-  $clause
+      FROM $TBGP_OBSERVED_TO_IPI ITI 
+      JOIN $TBGP_OBSERVED_PEPTIDE IP
+        ON IP.observed_peptide_id = ITI.observed_peptide_id
+      WHERE ITI.ipi_data_id = ID.ipi_data_id
+      AND peptide_prophet_score >= $cutoff ) AS num_observed 
+  FROM $TBGP_IPI_DATA ID
+  WHERE(  $clause )
   ~;
   $log->info( $sbeams->evalSQL( $sql ) );
   return $sql;
   
 #AND peptide_prophet_score >= $cutoff
 
+}
+
+sub split_string {
+  my $self = shift;
+  my $string = shift || return;
+  my @ids = split ",", $string;
+  for my $id ( @ids ) {
+    $id =~ s/^\s*//g;
+    $id =~ s/\s*$//g;
+  }
+  return \@ids;
 }
 
 #+
@@ -262,8 +329,7 @@ sub gene_id_query {
     WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id ) AS num_identified 
     FROM $TBGP_IPI_DATA
 	  WHERE ipi_accession_number IN 
-      ( SELECT ipi_accessions FROM DCAMPBEL.dbo.ipi_xrefs WHERE 
-        entrez_id IN ( $term ) )
+      ( SELECT ipi_accessions FROM DCAMPBEL.dbo.ipi_xrefs WHERE entrez_id IN ( $term ) )
   ~;
 
   # Newfangled
@@ -370,25 +436,57 @@ sub get_predicted_peptides{
 				pp.predicted_peptide_sequence,
 				predicted_peptide_mass,
 				detection_probability,
-				number_proteins_match_peptide,
+				n_proteins_match_peptide,
 				matching_protein_ids,
 				predicted_start,
 				protein_similarity_score,
 				gs.glyco_score,
-				gs.protein_glyco_site_position,
+				gs.protein_glycosite_position,
 				predicted_stop, 
         synthesized_sequence
 				FROM $TBGP_PREDICTED_PEPTIDE pp
-				JOIN $TBGP_GLYCOSITE gs ON (gs.glyco_site_id = pp.glyco_site_id)
+				JOIN $TBGP_GLYCOSITE gs ON (gs.glycosite_id = pp.glycosite_id)
 				LEFT JOIN $TBGP_SYNTHESIZED_PEPTIDE sp 
-         ON sp.glyco_site_id = pp.glyco_site_id
+         ON sp.glycosite_id = pp.glycosite_id
 				WHERE pp.ipi_data_id = $ipi_data_id
 				~;
 	
 		return $sbeams->selectHashArray($sql);		
 }			
 
-################################
+##############################
+#get_observed_peptides
+#Give a ipi_data_id
+#return an array of hashref or nothing
+###############################
+sub get_observed_peptides{
+	my $self = shift;
+	my $ipi_data_id = shift;
+	my $sql = qq~
+				SELECT OB.observed_peptide_id,
+				observed_peptide_sequence,
+				peptide_prophet_score,
+				peptide_mass,
+				2 AS tryptic_end,
+				gs.glyco_score,
+				gs.protein_glycosite_position,
+				site_start,
+				site_start,
+        1 AS n_obs
+				FROM $TBGP_OBSERVED_PEPTIDE OB
+          JOIN $TBGP_OBSERVED_TO_IPI OTI 
+            ON OTI.observed_peptide_id = OB.observed_peptide_id
+          JOIN $TBGP_OBSERVED_TO_GLYCOSITE OTG 
+            ON OTG.observed_peptide_id = OB.observed_peptide_id
+	  			JOIN $TBGP_GLYCOSITE GS 
+            ON (GS.glycosite_id = OTG.glycosite_id)
+				WHERE OTI.ipi_data_id = $ipi_data_id
+				~;
+	
+  		return $sbeams->selectHashArray($sql);	
+}	
+
+##############################
 #get_identified_peptides
 #Give a ipi_data_id
 #return an array of hashref or nothing
@@ -399,25 +497,47 @@ sub get_identified_peptides{
 	my $ipi_data_id = shift;
 	confess(__PACKAGE__ . "::$method ID '$ipi_data_id' is not good  \n") unless $ipi_data_id; 
 	my $sql = qq~
-				SELECT 
-				id.identified_peptide_id,
-				identified_peptide_sequence,
+				SELECT OB.observed_peptide_id,
+				observed_peptide_sequence,
 				peptide_prophet_score,
 				peptide_mass,
-				tryptic_end,
+				2 AS tryptic_end,
 				gs.glyco_score,
-				gs.protein_glyco_site_position,
-				identified_start,
-				identified_stop,
-        n_obs
-				FROM $TBGP_IDENTIFIED_PEPTIDE id
-        JOIN $TBGP_IDENTIFIED_TO_IPI iti 
-          ON iti.identified_peptide_id = id.identified_peptide_id
-				JOIN $TBGP_GLYCOSITE gs ON (gs.glyco_site_id = iti.glyco_site_id)
-				WHERE iti.ipi_data_id = $ipi_data_id
+				gs.protein_glycosite_position,
+				site_start,
+				site_start,
+        1 AS n_obs
+				FROM $TBGP_OBSERVED_PEPTIDE OB
+          JOIN $TBGP_OBSERVED_TO_IPI OTI 
+            ON OTI.observed_peptide_id = OB.observed_peptide_id
+          JOIN $TBGP_OBSERVED_TO_GLYCOSITE OTG 
+            ON OTG.observed_peptide_id = OB.observed_peptide_id
+	  			JOIN $TBGP_GLYCOSITE GS 
+            ON (GS.glycosite_id = OTG.glycosite_id)
+				WHERE OTI.ipi_data_id = $ipi_data_id
 				~;
 	
-		return $sbeams->selectHashArray($sql);	
+#  	my $sql = qq~
+#  				SELECT 
+#  				id.identified_peptide_id
+#  				identified_peptide_sequence
+#  				peptide_prophet_score,
+#  				peptide_mass,
+#  				tryptic_end,
+#  				gs.glyco_score,
+#  				gs.protein_glycosite_position,
+#  				identified_start,
+#  				identified_stop,
+#  n_obs
+#  				FROM $TBGP_IDENTIFIED_PEPTIDE id
+#  JOIN $TBGP_IDENTIFIED_TO_IPI iti 
+#  ON iti.identified_peptide_id = id.identified_peptide_id
+#  				JOIN $TBGP_GLYCOSITE gs ON (gs.glycosite_id = iti.glycosite_id)
+#  				WHERE iti.ipi_data_id = $ipi_data_id
+#  				~;
+  	
+  		return $sbeams->selectHashArray($sql);	
+  		return $sbeams->selectHashArray($sql);	
 }	
 ################################
 #get_glyco_sites
@@ -431,8 +551,8 @@ sub get_glyco_sites{
 	confess(__PACKAGE__ . "::$method ID '$ipi_data_id' is not good  \n") unless $ipi_data_id; 
 	my $sql = qq~
 				SELECT 
-				glyco_site_id, 
-				protein_glyco_site_position,
+				glycosite_id, 
+				protein_glycosite_position,
 				glyco_score 
 				FROM $TBGP_GLYCOSITE
 				WHERE ipi_data_id = $ipi_data_id
