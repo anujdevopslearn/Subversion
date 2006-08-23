@@ -518,3 +518,24 @@ Updated driver tables
   ./update_driver_tables.pl ../../conf/PeptideAtlas/PeptideAtlas_table_column.txt
   ./update_driver_tables.pl ../../conf/PeptideAtlas/PeptideAtlas_table_property.txt
 
+-----------------------------------------------------------------------
+
+2006-08-23
+
+Added GetMRMList cgi fields to PeptideAtlas_table_column.txt
+
+Added NIST_library_name to NIST_library table in PeptideAtlas_table_column.txt
+
+Added otein_name_alt to NIST_library_spectrum table in PeptideAtlas_table_column.txt
+
+Updated drivers:
+    cd $SBEAMS/lib/scripts/Core
+    set CONFDIR = "../../conf"
+    ./update_driver_tables.pl $CONFDIR/PeptideAtlas/PeptideAtlas_table_column.txt
+    ./update_driver_tables.pl $CONFDIR/PeptideAtlas/PeptideAtlas_table_property.txt
+
+Altered server tables:
+    ALTER TABLE NIST_library ADD NIST_library_name  varchar(100)
+    ALTER TABLE NIST_library_spectrum ADD protein_name_alt  varchar(255)
+
+
