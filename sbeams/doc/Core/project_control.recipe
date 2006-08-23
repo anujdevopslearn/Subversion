@@ -22,8 +22,8 @@ ManageTable.cgi script (D below).
 
 C) The TableInfo.pm files are used to define table-specific SQL for display and 
 manipulation of various tables within a given module.  There are two specific
-methods that must my modified here.  First, place a block in the subroutine
-returnTableInfo() to return 2 bits of SQL: one is to get the array_id from the
+methods that must be modified here.  First, place a block in the subroutine
+returnTableInfo() to return 2 bits of SQL: one is to get the project_id from the
 foreign key related table (if any) given that foreign key.  For instance, in the
 array_quantitation table, the user must specify an array_scan.  The array_scan
 in turn implies an array, which has a project_id.  The second bit of SQL defines
@@ -60,7 +60,10 @@ The array quantitation code is shown here:
          the foreign-key and existing db record respectivly.
          3) The SQL should include the string KEYVAL, which will be interpolated
          by the caller to specify the appropriate value.
-         4> Most table will have an exiting elsif tablename = block into which
+         4> The sql definition code should be placed in an if tablename = 'xxx'
+         block within the returnTableInfo routine in any given TableInfo.pm
+         module; use the existing one if possible else create one.
+         module will have an exiting elsif tablename = block into which
          you should integrate the new code.
          5> In the event that the table in question has a project_id field, you
          may simply define the fsql to be an empty string.

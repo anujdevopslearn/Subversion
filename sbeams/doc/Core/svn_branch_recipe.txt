@@ -18,8 +18,9 @@ ln -s sbeams_svn_devDC/ sbeams
 svn co file:///net/dblocal/svn/sbeams/sbeams/trunk/sbeams sbeams_svn_pure
 
 # Assuming we've made changes to a file in the branch repository, this code will
-# merge those changes back to the trunk we've just checked out
-svn merge file:///net/dblocal/svn/sbeams/sbeams/trunk/sbeams/lib/perl/SBEAMS/Connection file:///net/dblocal/svn/sbeams/sbeams/branches/devDC/lib/perl/SBEAMS/Connection
+# merge those changes back to the trunk we've just checked out (branch rev at
+# 5053, trunk version at 5050)
+svn merge -r 5050:5053 file:///net/dblocal/svn/sbeams/sbeams/branches/devDC/lib/perl/SBEAMS/Connection/ .
 
 # We can check the status, and check in the changes if satisfied.
 svn status
