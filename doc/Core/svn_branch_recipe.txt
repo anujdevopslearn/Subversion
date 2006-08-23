@@ -1,0 +1,35 @@
+## This document illustrates the creation of a branch within subversion (svn),
+## and the subsequent merging of that file back into the trunk
+
+# A branch is simply an svn copy operation.  We store branches in
+# /sbeams/sbeams/branches relative to svnroot.  Here we provide a source and
+# destination for the copy command, as well as a comment.
+svn copy file:///net/dblocal/svn/sbeams/sbeams/trunk/sbeams file:///net/dblocal/svn/sbeams/sbeams/branches/devDC -m "Creating a dev branch to allow glycopeptide commits without disrupting Unipep"
+
+# Once a branch is created, you can check it out normally by specifying the
+# appropriate path
+svn co file:///net/dblocal/svn/sbeams/sbeams/branches/devDC sbeams_svn_devDC
+
+# In order to use if for sbeams development, you can symlink it to a directory
+# called sbeams
+ln -s sbeams_svn_devDC/ sbeams
+
+# In this case we are checking out a clean version of the trunk
+svn co file:///net/dblocal/svn/sbeams/sbeams/trunk/sbeams sbeams_svn_pure
+
+# Assuming we've made changes to a file in the branch repository, this code will
+# merge those changes back to the trunk we've just checked out
+svn merge file:///net/dblocal/svn/sbeams/sbeams/trunk/sbeams/lib/perl/SBEAMS/Connection file:///net/dblocal/svn/sbeams/sbeams/branches/devDC/lib/perl/SBEAMS/Connection
+
+# We can check the status, and check in the changes if satisfied.
+svn status
+svn info
+svn ci Settings.pm -m 'Merging revisions from devDC branch 4982:4984'
+
+# You can read more about this in the svn manual, available at 
+# http://svnbook.red-bean.com/.  There are HTML and PDF versions for the
+# various releases of svn itself, the current version on db is 1.2.0(r14790):
+wget http://svnbook.red-bean.com/en/1.2/svn-book.pdf
+
+
+
