@@ -54,12 +54,12 @@ my $id_track_type 		 = 'Identified Peptides';
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/Glyco_prediction.cgi";
 
-my @search_types = ('Gene Symbol',
-					'Gene Name/Alias',
-					'Swiss Prot Accession Number',
-					'IPI Accession Number',
-          'GeneID'
-					  );
+my %search_types = ( gene_symbol => 'Gene Symbol',
+                     gene_name   => 'Gene Name/Alias',
+                     swiss_prot  => 'Swiss Prot Accession Number',
+                     accession   => 'IPI Accession Number',
+                     gene_id     => 'GeneID'
+                   );
 
 
 main();
@@ -180,10 +180,11 @@ $log->debug(Dumper($ref_parameters));
 	   $q->td({class=>'grey_bg'}, "Choose Search option"),
 	   $q->td(
 	      $q->start_form(),
-	      $q->popup_menu(-name=>'search_type',
-                                -values=>\@search_types,
-                                -default=>['Gene Symbol'],
-                                -size=>1,      
+	      $q->popup_menu( -name=>'search_type',
+                        -values=> [ keys(%search_types) ],
+                        -labels => \%search_types,
+                        -default=>['Gene Symbol'],
+                        -size=>1,      
 	   			)
 	   )
 	 ),
@@ -276,32 +277,35 @@ sub display_hits_form {
 #Check the parameter and figure out what query to run
 ###############################################################################
 sub find_hits{
-	my $method = 'find_hits';
-	
+
 	my $ref_parameters = shift;
-	my %parameters = %{$ref_parameters};
-	
 				  
 	#check to see if this is a sequence or text search
-	my $type = check_search_params($ref_parameters);
-	my @results_set = ();
+	my $type = check_search_params( $ref_parameters );
+	my $results_set = [];
 	
   if ($type eq 'text'){
-    if ($parameters{search_type} eq 'Gene Symbol'){
-      @results_set = $glyco_query_o->gene_symbol_query($parameters{search_term});	
-    }elsif($parameters{search_type} eq 'Gene Name/Alias'){
-      @results_set = $glyco_query_o->gene_name_query($parameters{search_term});	
-    }elsif($parameters{search_type} eq 'Swiss Prot Accession Number'){
-      @results_set = $glyco_query_o->swiss_prot_query($parameters{search_term});	
-    }elsif($parameters{search_type} eq 'IPI Accession Number'){
-      @results_set = $glyco_query_o->ipi_accession_query($parameters{search_term});	
-    }elsif($parameters{search_type} eq 'GeneID'){
-      @results_set = $glyco_query_o->gene_id_query($parameters{search_term});	
-    }else{
-      print_error("Cannot find correct textsearch to run");
-    }
+
+
+    $results_set = $glyco_query_o->keyword_search( %$ref_parameters );	
+
+# ALTERED to use a single subroutine
+#    if ($parameters{search_type} eq 'Gene Symbol'){
+#      @results_set = $glyco_query_o->gene_symbol_query($parameters{search_term});	
+#    }elsif($parameters{search_type} eq 'Gene Name/Alias'){
+#      @results_set = $glyco_query_o->gene_name_query($parameters{search_term});	
+#    }elsif($parameters{search_type} eq 'Swiss Prot Accession Number'){
+#      @results_set = $glyco_query_o->swiss_prot_query($parameters{search_term});	
+#    }elsif($parameters{search_type} eq 'IPI Accession Number'){
+#      @results_set = $glyco_query_o->ipi_accession_query($parameters{search_term});	
+#    }elsif($parameters{search_type} eq 'GeneID'){
+#      @results_set = $glyco_query_o->gene_id_query($parameters{search_term});	
+#    }else{
+#      print_error("Cannot find correct textsearch to run");
+#    }
+
   }elsif($type eq 'sequence_search'){
-    @results_set = $glyco_query_o->protein_seq_query($parameters{sequence_search});	
+    $results_set = $glyco_query_o->protein_seq_query( $ref_parameters->{sequence_search} );	
   }else{
     print_error("Cannot find correct search type to run '$type'");
   }
@@ -311,27 +315,28 @@ sub find_hits{
 	
 	
 	
-    $log->debug(Dumper("RESULTS SET DATA", \@results_set));
+#    $log->debug(Dumper("RESULTS SET DATA", \@results_set));
     
-    if (@results_set){
+  if ( $results_set ){
     	
-    	if (scalar(@results_set) == 1 ){
-			#pull out the ipi_id and directly dispaly the details page since there is only one hit
-			my $href_results_info = $results_set[0];
-			my $ipi_data_id = $href_results_info->{'ipi_data_id'};
-			display_detail_form(ipi_data_id 	=> $ipi_data_id, 
-								ref_parameters 	=> $ref_parameters);
-		}else{
-			print_out_hits_page(results_set_aref =>\@results_set,
-					     ref_parameters  => $ref_parameters);
-    	}
-	}else{
-		my $term = $parameters{search_term} ?$parameters{search_term}:$parameters{sequence_search};
-		print $q->h3("Sorry No Hits were found for the query '$term'
-		");
-	}
+    if ( scalar(@$results_set) == 1 ) {
+      #pull out the ipi_id and directly display the details page since there is only one hit
+      my $href_results_info = $results_set->[0];
+      my $ipi_data_id = $href_results_info->{'ipi_data_id'};
+      display_detail_form( ipi_data_id 	=> $ipi_data_id, 
+                         ref_parameters	=> $ref_parameters );
+		} else {
+			print_out_hits_page(results_set_aref => $results_set,
+					                 ref_parameters  => $ref_parameters);
+    }
+
+  }else{
+    my $term = $ref_parameters->{search_term} || $ref_parameters->{sequence_search};
+    print $q->h3( "No hits were found with the query '$term'" );
+  }
 
 }
+
 ###############################################################################
 #print_out_hits_page
 #
@@ -561,7 +566,7 @@ sub check_search_term{
 	print_error("Must Supply A Serch Term, you gave '$term'") unless ($term);
 	
 	
-	unless ( (grep {$_ eq $type} @search_types) ){
+	unless ( grep /^$type$/, keys(%search_types) ){
 		print_error("Search Type '$type' is Not vaild, please fix the problem") unless ($type);
 	}
 	
@@ -604,12 +609,12 @@ sub clean_term{
 	$term =~ s/^\s+//g; 		#Remove white space at the start
 	$term =~ s/\s+$//g;		#Remove white space at the end
 	
-	if ($term =~ /^\%$/){ #check for just a wild car search
-		print_error("Must provide more then just a wild card '$term' ") unless ($term);
+	if ($term =~ /^\%$/){ #check for just a wild card search
+		print_error("Must provide more than just a wild card '$term' ") unless ($term);
 	}
-	unless ( (grep {$_ eq $term} @search_types) ){
-		print_error("Search Term '$term' HAS BEEN DELTED") unless ($term);
-	}
+#unless ( grep /^$type$/, keys(%search_types) ){
+  print_error("Search Term '$term' HAS BEEN DELETED") unless ($term);
+#}
 	$log->debug("CLEAN TERM '$term'\n");
 	return $term;
 }

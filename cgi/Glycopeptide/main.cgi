@@ -92,10 +92,17 @@ sub get_intro {
 
 sub get_content {
   my $cutoff = $glyco->get_current_prophet_cutoff();
+  # ALTERED from 
+#  my $sql = qq~
+#  SELECT identified_peptide_sequence, peptide_prophet_score
+#  FROM $TBGP_IDENTIFIED_PEPTIDE
+#
   my $sql = qq~
-  SELECT identified_peptide_sequence, peptide_prophet_score
-  FROM $TBGP_IDENTIFIED_PEPTIDE
+  SELECT observed_peptide_sequence, MAX(peptide_prophet_score)
+  FROM $TBGP_OBSERVED_PEPTIDE
+  GROUP BY observed_peptide_sequence
   ~;
+
   my @results = $sbeams->selectSeveralColumns( $sql );
   my %stats;
   my $cnt;
