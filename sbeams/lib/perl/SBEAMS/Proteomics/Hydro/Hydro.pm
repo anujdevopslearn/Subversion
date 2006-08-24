@@ -449,7 +449,7 @@ sub calcHydroph
             } elsif ($residue ne "X")
             {
 
-                die "hmm, what's this residue: $residue? Seen in sequence: $sequence ($!)";
+                print "hmm, what's the hydro* of this residue: $residue? Seen in sequence: $sequence \n";
 
             }
 
