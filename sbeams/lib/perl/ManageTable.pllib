@@ -3331,7 +3331,7 @@ sub globalPreUpdateDataCheck {
       SELECT pi_contact_id FROM $TB_PROJECT
       WHERE project_id = $parameters{project_id}
       END
-      $parameters{original_pi} = $original_pi;
+      $args{parameters_ref}->{original_pi} = $original_pi;
       return if $original_pi eq $parameters{PI_contact_id};
       
       # Make sure current user has admin on this project if PI changed
@@ -3389,7 +3389,6 @@ sub globalPostUpdateOrInsertHook {
                        );
     my $project = $parameters{project_id};
 
-
     # orig_id, only applicable on updates.
     my $orig_pi = $parameters{original_pi};
 
@@ -3404,7 +3403,7 @@ sub globalPostUpdateOrInsertHook {
         $sbeams->updateOrInsertRow( %updOrInsInfo,
                                     insert => 1,
                                     rowdata_ref => { %insertUPP,
-                                                     contact_id => $contact_id }
+                                     contact_id => $contact_id }
                                    );
       }
 
