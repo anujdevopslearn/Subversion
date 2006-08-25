@@ -220,6 +220,12 @@ sub postFormHook {
   }
 
 
+  #### If table PS_biosequence_annotation
+  if ($TABLE_NAME eq "PS_biosequence_annotation") {
+    $query_parameters_ref->{SUPPRESS_FULL_TABLE} = 1;
+  }
+
+
   #### Otherwise, no special processing, so just return undef
   return;
 
