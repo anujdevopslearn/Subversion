@@ -1271,7 +1271,8 @@ sub printEntryForm {
 
   $sbeamsMOD->printPageFooter(close_tables=>'YES',display_footer=>'NO');
 
-  if ($current_username ne 'guest') {
+  if ($current_username eq 'guest' || $parameters{SUPPRESS_FULL_TABLE}) {
+  } else {
     showTable(with_options=>'',parameters_ref=>\%parameters);
   }
 
