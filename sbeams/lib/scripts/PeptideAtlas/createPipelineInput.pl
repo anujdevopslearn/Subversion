@@ -750,12 +750,31 @@ sub main {
       $pepXML_document->{search_batch_id} = $search_batch_id;
       $pepXML_document->{document_type} = 'pepXML';
       push(@documents,$pepXML_document);
+      print "Will read $pepXML_document->{filepath}\n";
 
       $protXML_document->{filepath} = $filepath;
       $protXML_document->{filepath} =~ s/\.xml/-prot.xml/;
       $protXML_document->{search_batch_id} = $search_batch_id;
       $protXML_document->{document_type} = 'protXML';
-      push(@documents,$protXML_document);
+
+      unless (-e $protXML_document->{filepath}) {
+	#### Hard coded funny business for Novartis
+	if ($filepath =~ /Novartis/) {
+	  if ($filepath =~ /interact-prob08/) {
+	    $protXML_document->{filepath} =~ s/prob08/proball/;
+	  } else {
+	    $protXML_document = undef;
+	  }
+	} else {
+	  print "ERROR: No ProteinProphet file found for\n  $filepath\n";
+	  $protXML_document = undef;
+	}
+      }
+
+      if (defined($protXML_document)) {
+	push(@documents,$protXML_document);
+        print "Will read $protXML_document->{filepath}\n";
+      }
 
       push(@search_batch_ids,$search_batch_id);
     }
