@@ -333,11 +333,23 @@ sub getCurrentAtlasBuildID {
   #### If not, stop here
   unless (scalar(@rows) == 1 && $rows[0] eq $atlas_build_id) {
 
-    my $reset_link = "<A HREF=$CGI_BASE_DIR/PeptideAtlas/main.cgi?tab=1;reset_id=true> reset build_id here </A>";
-    print "<BR>ERROR: You are not permitted to access atlas_build_id ".
-      "'$atlas_build_id' with your current credentials.<BR>  You may need to ".
-      "login with your username and password.  Click on the LOGIN link at ".
-      "left,<BR> or $reset_link\n";
+    my $reset_link = "$CGI_BASE_DIR/PeptideAtlas/main.cgi?tab=1;reset_id=true";
+    my $current_username = $sbeams->getCurrent_username();
+
+    my $LOGIN_URI = "$SERVER_BASE_DIR$ENV{REQUEST_URI}";
+    if ($LOGIN_URI =~ /\?/) {
+      $LOGIN_URI .= "&force_login=yes";
+    } else {
+      $LOGIN_URI .= "?force_login=yes";
+    }
+
+    print qq~
+      <BR>Sorry, you are not permitted to access atlas_build_id
+      '$atlas_build_id' with your current credentials as
+      user '$current_username'.<BR><BR>
+      - <A HREF="$LOGIN_URI">LOGIN</A> as a different user.<BR><BR>
+      - <A HREF="$reset_link">SELECT</A> a different atlas build to explore<BR>
+    ~;
     return(-1);
   }
 
