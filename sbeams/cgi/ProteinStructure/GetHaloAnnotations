@@ -578,7 +578,7 @@ $LINESEPARATOR
 		 AND BS.biosequence_seq IS NOT NULL
       ORDER BY BS.biosequence_name
    ~;
-# print "SQL for selectSeveralColumns is $sql";
+  #print "<PRE>SQL for selectSeveralColumns is\n $sql</PRE>";
   my @rows = $sbeams->selectSeveralColumns($sql);
 
 
@@ -699,6 +699,12 @@ foreach my $glist_item (@glist){
 
 #ugh, this is pretty nasty !
 chop ($glist_clean);
+
+#### glist cannot be an empty string else query below will fail
+unless ($glist_clean) {
+  $glist_clean = "''";
+}
+
 
 #print "peptide_hit_list is $peptide_hit_list";
 
