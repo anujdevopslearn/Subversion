@@ -247,7 +247,7 @@ sub buildGoaKeyIndex {
   while ($line=<INFILE>) {
     chomp($line);
     my ($Database,$Accession,$IPI,$UniProtSP,$UniProtTR,$Ensembl,$RefSeqNP,
-        $RefSeqXP,$TAIR,$Hinv,$proteins,$HGNCgenew,$EntrezGene,$UNIPARC,
+        $RefSeqXP,$Hinv,$proteins,$HGNCgenew,$EntrezGene,$UNIPARC,
 	$UniGene) = split(/\t/,$line);
 
     if (0) {
@@ -260,7 +260,6 @@ sub buildGoaKeyIndex {
       print "Ensembl=$Ensembl\n";
       print "RefSeqNP=$RefSeqNP\n";
       print "RefSeqXP=$RefSeqXP\n";
-      print "TAIR=$TAIR\n";
       print "Hinv=$Hinv\n";
       print "proteins=$proteins\n";
       print "HGNCgenew=$HGNCgenew\n";
@@ -314,6 +313,7 @@ sub buildGoaKeyIndex {
     if ($RefSeqNP) {
       my @list = splitEntities(list=>$RefSeqNP,delimiter=>';');
       foreach my $item ( @list ) {
+	$item =~ s/^\w://;
         my @tmp = ('RefSeq',$item,39);
         push(@links,\@tmp);
       }
@@ -322,6 +322,7 @@ sub buildGoaKeyIndex {
     if ($RefSeqXP) {
       my @list = splitEntities(list=>$RefSeqXP,delimiter=>';');
       foreach my $item ( @list ) {
+	$item =~ s/^\w://;
         my @tmp = ('RefSeq',$item,39);
         push(@links,\@tmp);
       }
@@ -362,6 +363,9 @@ sub buildGoaKeyIndex {
 
     #### Write the links for each Ensembl IP
     foreach my $Ensembl_ID (@Ensembl_IDS) {
+
+      #### Strip HAVANA prefix
+      $Ensembl_ID =~ s/HAVANA://;
 
       #### Insert an entry for the Ensembl ID itself
       my %rowdata = (
