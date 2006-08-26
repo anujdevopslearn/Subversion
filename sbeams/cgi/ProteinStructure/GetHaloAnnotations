@@ -825,7 +825,7 @@ tooltip=>"Edit Annotation (restricted)");
 									target=>'atlas', 
 									#link=>"$CGI_BASE_DIR/PeptideAtlas/GetPeptides?atlas_build_id=$atlas_id&biosequence_gene_name_constraint=$biosequence_name&query_name=AT_GetPeptides&action=QUERY&apply_action=QUERY&display_options=ShowMappings", 
 									link=>"$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_id&protein_name=$biosequence_name&action=GO",
-									tooltip=>"$biosequence_name peptides: $peptide_tip");
+									tooltip=>"$biosequence_name peptides: $peptide_tip (Restricted Access)");
 	$atlas_data = "";
 	  ## put a space in between redundant ORFs so the tooltip will wrap the text
 	  $duplicate_biosequences =~ s/,/, /g;
