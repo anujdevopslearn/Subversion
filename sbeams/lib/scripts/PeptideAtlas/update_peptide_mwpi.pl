@@ -39,6 +39,8 @@ my $SSRCalculator = new SSRCalculator;
 $SSRCalculator->initializeGlobals3();
 $SSRCalculator->ReadParmFile3();
 
+use SBEAMS::Proteomics::PeptideMassCalculator;
+my $massCalculator = new SBEAMS::Proteomics::PeptideMassCalculator;
 
 my $prog_name = $FindBin::Script;
 my $usage = <<EOU;
@@ -47,13 +49,25 @@ Usage: $prog_name [ options ]
 -q  --quiet       print minimal info 
 -t  --test        test only, db not updated
 -r  --recalc      recalculate all values, not just nulls 
+
+  # If none of the below options is specified, all three will be updated
+-m  --mw          Update molecular weight
+-p  --pi          Update isoelectric point
+-h  --hp          Update relative hydrophobicity  
 EOU
 
 my %opts;
 
 #### Process options
-unless (GetOptions(\%opts,"verbose","quiet","test","recalc")) {
+unless (GetOptions(\%opts,"verbose","quiet","test","recalc","mw","hp","pi")) {
   die "\n$usage";
+}
+
+# If none is specified, update all
+unless ( $opts{mw} || $opts{hp} || $opts{pi} ) {
+  $opts{pi}++;
+  $opts{mw}++;
+  $opts{hp}++;
 }
 
 { # Main Program:
@@ -76,7 +90,8 @@ unless (GetOptions(\%opts,"verbose","quiet","test","recalc")) {
   ~;
 
   my $select = $sbeams->evalSQL( <<"  END_SQL" );
-  SELECT peptide_id, peptide_sequence 
+  SELECT peptide_id, peptide_sequence, peptide_isoelectric_point,molecular_weight,
+         SSRCalc_relative_hydrophobicity
   FROM $TBAT_PEPTIDE
   $where
   ORDER BY peptide_id
@@ -95,6 +110,18 @@ unless (GetOptions(\%opts,"verbose","quiet","test","recalc")) {
   }
   $sth->finish();
   my $cnt = 0;
+
+  my %calc_vals;
+  my %fields = ( mw => 'molecular_weight',
+                 pi => 'peptide_isoelectric_point',
+                 hp => 'SSRCalc_relative_hydrophobicity',
+               );
+  
+  print "Running against $TBAT_PEPTIDE, 5 seconds to quit if that is incorrect:\n" ;
+  sleep 5;
+
+
+#  print STDERR join( "\t", qw(ID Seq MW_db MW diff ppm pI_db pI HP_db HP ) ) . "\n";
   for my $row ( @allpeps ) {
     $cnt++;
     unless ( $cnt % 100 ){
@@ -104,23 +131,44 @@ unless (GetOptions(\%opts,"verbose","quiet","test","recalc")) {
     print "\n" unless $cnt % 5000;
     my $sequence = $row->[1];
     my $mw = $glyco->calculatePeptideMass( sequence => $sequence );
-    my $pi = $glyco->calculatePeptidePI( sequence => $sequence );
+    
+    $calc_vals{mw} = $massCalculator->getPeptideMass( sequence => $sequence,
+                                                     mass_type => 'monoisotopic'
+                                                    );
 
-    my $hp = 'NULL';
+    $calc_vals{pi} = $glyco->calculatePeptidePI( sequence => $sequence );
+
     if ($SSRCalculator->checkSequence($sequence) && $sequence !~ /X/) {
-      $hp = $SSRCalculator->TSUM3($sequence);
+      $calc_vals{hp} = $SSRCalculator->TSUM3($sequence);
     } else {
-      print "WARNING: peptide '$sequence' contains residues invalid for SSRCalc\n";
+      print "WARNING: peptide '$sequence' contains residues invalid for SSRCalc\n" if $opts{verbose};
     }
 
-    next if $opts{test};
+#    my $delta = abs($calc_vals{mw} - $row->[3]);
+#    my $ppm = ( $delta < 0.01 ) ? 'Yes' : 'No';
+#    $calc_vals{mw} = sprintf( "%0.4f", $calc_vals{mw} );
+#    $row->[3] = sprintf( "%0.4f", $row->[3] );
+#    $row->[2] = sprintf( "%0.1f", $row->[2] );
+#    print STDERR join( "\t", $row->[0], $row->[1], "$row->[3]($mw)", $calc_vals{mw}, $delta, $ppm, $row->[2], $calc_vals{pi}, $row->[4], $calc_vals{hp} ) . "\n" if $ppm eq 'No' || !$calc_vals{mw};
+
+    my $items = '';
+    for ( qw( mw pi hp ) ) {
+      if ( $opts{$_} ) {
+        if ( !defined $calc_vals{$_} || $calc_vals{$_} == '' ) {
+          $calc_vals{$_} = 'NULL' ;
+        }
+        $items .= ( $items ) ? ",\n" : "SET \n";
+        $items .= " $fields{$_} = $calc_vals{$_}" 
+      }
+    }
+
     my $update =<<"    END_UPDATE";
-    UPDATE $TBAT_PEPTIDE
-    SET peptide_isoelectric_point = $pi,
-        molecular_weight = $mw,
-        SSRCalc_relative_hydrophobicity = $hp
-    WHERE peptide_id = $row->[0]
+UPDATE $TBAT_PEPTIDE $items 
+WHERE peptide_id = $row->[0]
     END_UPDATE
+#   print "$update\n" if $opts{verbose};
+
+    next if $opts{test};
     $sbeams->do( $update );
   }
   $dbh->commit();
