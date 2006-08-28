@@ -2412,8 +2412,11 @@ sub insert_peptide {
   my $rowdata_ref = $args{'rowdata_ref'} or die("need rowdata_ref");
 
   my $sequence = $rowdata_ref->{peptide_sequence};
-  my $mw = $GlycoPeptideModule->calculatePeptideMass( sequence => $sequence );
+  my $mw =  $massCalculator->getPeptideMass( mass_type => 'monoisotopic',
+                                              sequence => $sequence );
+  
   my $pI = $GlycoPeptideModule->calculatePeptidePI( sequence => $sequence );
+
   my $hp;
   if ($SSRCalculator->checkSequence($sequence)) {
     $hp = $SSRCalculator->TSUM3($sequence);
