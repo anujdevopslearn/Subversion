@@ -15,7 +15,7 @@
 ###############################################################################
 
 use strict;
-use lib qw (../lib/perl);
+use lib qw (../../lib/perl);
 use File::Basename;
 
 use SBEAMS::Connection qw($q $log);
@@ -66,6 +66,12 @@ my $sbeams = new SBEAMS::Connection;
   } elsif ( $params->{apply_action} eq 'gaggle_store_details'  ) {
     $sql = gaggle_store_details_sql( $params );
     $log->debug( $sql );
+
+  } elsif ( $params->{apply_action} eq 'get_host_user'  ) {
+    $sql = host_user_sql( $params );
+
+  } elsif ( $params->{apply_action} eq 'get_user_host'  ) {
+    $sql = user_host_sql( $params );
 
   } elsif ( $params->{apply_action} eq 'new_gaggle_store'  ) {
     print STDERR "We be sushi\n";
@@ -214,6 +220,33 @@ sub process_params {
   $sbeams->processStandardParameters( parameters_ref => $params );
 
   return $params;
+}
+
+sub user_host_sql {
+  my $params = shift;
+  die unless $params->{username};
+
+##$TB_USAGE_LOG 
+  return <<"  END";
+  SELECT username, remote_host, COUNT(*) FROM sbeams.dbo.usage_log
+  WHERE username LIKE '$params->{username}%'
+  GROUP BY remote_host, username
+  ORDER BY COUNT(*) DESC
+  END
+}
+
+sub host_user_sql {
+  my $params = shift;
+  die unless $params->{host};
+
+##$TB_USAGE_LOG 
+#  WHERE remote_host = '$params->{host}' OR remote_host = '$params->{host}.systemsbiology.net'
+  return <<"  END";
+  SELECT username, remote_host, COUNT(*) FROM sbeams.dbo.usage_log
+  WHERE remote_host LIKE '$params->{host}%'
+  GROUP BY username, remote_host
+  ORDER BY COUNT(*) DESC
+  END
 }
 
 sub writable_project_sql {
