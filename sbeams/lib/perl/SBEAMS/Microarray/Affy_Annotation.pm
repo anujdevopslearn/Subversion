@@ -642,7 +642,7 @@ sub add_data_child_tables {
 								
 								TABLE_NAME => $TBMA_TRANS_MEMBRANE,
 								PK	   => 'trans_membrane_id',	
-								#MULTIPULE_RECORDS => 'NO',
+								#MULTIPLE_RECORDS => 'NO',
 								
 								},
 				"Overlapping Transcripts"      =>{					#Example 'NM_173599 // hypothetical protein FLJ40126 // chr12:38306286-38588369 (+)'
@@ -771,9 +771,9 @@ sub add_data_child_tables {
 		my @multi_records = ();
 
                 # Set a default
-                $child_tables{$record_key}{MULTIPULE_RECORDS} ||= 'NO';
+                $child_tables{$record_key}{MULTIPLE_RECORDS} ||= 'NO';
 
-		if ( $child_tables{$record_key}{MULTIPULE_RECORDS} eq 'NO'){
+		if ( $child_tables{$record_key}{MULTIPLE_RECORDS} eq 'NO'){
 		 	push @multi_records, $full_record_value;			 	
 		}else{
 			@multi_records = split /\/\/\//,$full_record_value;		#split on the /// to make individual records
@@ -837,7 +837,12 @@ sub add_data_child_tables {
 				if ($self->verbose() >0 ){
 					print "ADDING ONTOLOGY INFO RECORD_TYPE '$record_key' AFFY_DB_LINK_ID '$affy_db_linds_id' GO ACCESSION '$go_accession_numb'\n ONTOLOGY_TYPE_ID '$ontology_type_id'\n";
 				}
-			}
+			} elsif ( $record_key =~ /^Alignments$/) {
+        if ( length( $rowdata_ref->{match_chromosome} ) > 25 ) {
+          $log->warn( "Truncating match_chromosome: $rowdata_ref->{match_chromosome}" );
+			  	$$rowdata_ref{match_chromosome} = substr( $$rowdata_ref{match_chromosome}, 0, 25 );
+        }
+      }
 
 ###################################################################			
 ### Add in link to Affy_Db_links table if needed
