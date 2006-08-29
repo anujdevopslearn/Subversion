@@ -1,0 +1,36 @@
+# RCSid:  $Revision: 1915 $   $Date: 2004-01-07 23:49:54 -0800 (Wed, 07 Jan 2004) $
+#-------------------------------------------------------------------------------
+# remove useless node attributes
+nodeAttributeCategories.invisibleToBrowser=ignore
+#----------------------------------- plugins
+plugin.expProfView.load=csplugins.expressionData.ExpressionProfileViewer
+plugin.expCorView.load=csplugins.expressionData.ExpressionCorrelationViewer
+plugin.dynamicXpr.load=csplugins.dynamicXpr.DynamicXprPlugIn
+plugin.seq.load=csplugins.isb.dreiss.sequence.SequencePlugin
+plugin.hom.load=csplugins.isb.dreiss.sequence.HomologPlugin
+plugin.syn.load=csplugins.isb.dreiss.sequence.SynonymPlugin
+plugin.int.load=csplugins.isb.dreiss.getInteractions.GetInteractions
+plugin.layout.load=csplugins.trial.pshannon.Y2Layouters
+plugin.ser.load=csplugins.serializable.CytoscapeSerializePlugIn
+plugin.cyto.load=csplugins.isb.dreiss.cytoTalk.CytoTalkPlugin
+
+plugin.visClust.load=csplugins.isb.dreiss.visualClustering.VisualClusteringPlugin
+plugin.dataCube.load=csplugins.trial.pshannon.dataCube.DataCubePlugin
+
+#plugin.activeMod.load=csplugins.jActiveModules.ActiveModulesUI
+#plugin.expRand.load=csplugins.jActiveModules.ExpressionRandomizer
+#plugin.subnetExpand.load=csplugins.jActiveModules.SubnetworkExpander
+#plugin.biomod.load=csplugins.biomodules.BiomodulesPlugIn
+
+plugin.projectio.load=csplugins.trial.pshannon.projectIO.ProjectIOPlugin
+plugin.keggover.load=csplugins.trial.pshannon.keggOverlay.KeggOverlayPlugin
+#plugin.refnet.load=csplugins.homology.ReferenceNetworkPlugin
+
+# ----------------------------- motif finder plugin 
+plugin.motif.load = csplugins.isb.dreiss.motifFinder.MotifFinderPlugin
+plugin.motifFinder.class = djr.motif.sampler.MultiSampler
+plugin.motifFinder.args.dna = -W 9 -i1 50 -min 0 -max 3 -quiet -thread -N 2 -bgo 3
+plugin.motifFinder.args.protein = -W 9 -i1 50 -min 0 -max 3 -quiet -thread -N 2 -fg dirichlet -dirich dirichlet/hydro-cons.3comp
+
+#----------------------------------- vizmapper
+visualStyle=PeptideAtlas
