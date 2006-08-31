@@ -150,6 +150,7 @@ my $css =<<END;
   	 
   	         .sseq{ background-color: #CCCCFF; ${FONT_SIZE_LG}pt; font-weight: bold}
   	         .tmhmm{ background-color: #CCFFCC; ${FONT_SIZE_LG}pt; font-weight: bold; text-decoration:underline}
+  	         .instruction_text{ ${FONT_SIZE_LG}pt; font-weight: bold}
   	 
   	         .glyco_site{ background-color: #ee9999;
   	         border-style: solid;
