@@ -133,7 +133,8 @@ sub all_proteins_query {
 
 	my $self = shift;
 	my $mode = shift;
-  my $identified = ( $mode eq 'all' ) ? '' : "WHERE num_identified > 0 ";
+  my $identified = ( $mode eq 'all' ) ? '' : 
+                   ( $mode eq 'identified' ) ? "WHERE num_identified > 0 " : "WHERE num_identified > 0 AND transmembrane_info like '%-%'";
   my $order = ( $mode eq 'all' ) ? 'protein_name ASC' : 'num_identified DESC, protein_name ASC';
   my $cutoff = $self->get_current_prophet_cutoff();
 	
@@ -144,7 +145,7 @@ sub all_proteins_query {
       FROM $TBGP_IDENTIFIED_TO_IPI ITI
       JOIN $TBGP_IDENTIFIED_PEPTIDE IP ON ITI.identified_peptide_id = IP.identified_peptide_id
       WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id 
-      AND peptide_prophet_score >= $cutoff ) AS num_identified 
+      AND peptide_prophet_score >= $cutoff ) AS num_identified, transmembrane_info 
     FROM $TBGP_IPI_DATA
     ) AS temp
     $identified
