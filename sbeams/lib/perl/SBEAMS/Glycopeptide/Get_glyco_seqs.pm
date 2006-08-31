@@ -60,12 +60,12 @@ use base qw(SBEAMS::Glycopeptide::Glyco_query);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::Glycopeptide;
 use SBEAMS::Glycopeptide::Tables;
 use SBEAMS::Glycopeptide::Test_glyco_data;
 use SBEAMS::Glycopeptide::Get_peptide_seqs;
 
-
-
+my $glyco = SBEAMS::Glycopeptide->new();
 
 ##############################################################################
 #constructor
@@ -74,17 +74,19 @@ sub new {
     my $method = 'new';
     my $this = shift;
     my $class = ref($this) || $this;
-    my %args = @_;
+    my $self = { @_ };
     
-    my $ipi_data_id = $args{ipi_data_id};
-    confess(__PACKAGE__ . "::$method Need to provide IPI data id '$ipi_data_id' is not good  \n") 
-    unless ($ipi_data_id =~ /^\d+$/);
-    
-    my $self = {_ipi_data_id => $ipi_data_id};
+    $self->{_ipi_data_id} ||= $self->{ipi_data_id};
+    unless ( $self->{ipi_data_id} && $self->{ipi_data_id} =~ /^\d+$/ ) {
+      $log->error( "Missing or invalid ipi_data_id" );
+      die("Missing or invalid ipi_data_id");
+    }
     bless $self, $class;
-    
+
+    # global $sbeams NMF, but not able to deal with it now...
+    $sbeams ||= $self->{_sbeams};
+
     $self->get_protein_info(); 
-    
     return($self);
 }
 
@@ -93,7 +95,8 @@ sub new {
 ###############################################################################
 sub setSBEAMS {
     my $self = shift;
-    $sbeams = shift;
+    my $sbeams = shift;
+    $self->{_sbeams} = $sbeams;
     return($sbeams);
 }
 
@@ -103,7 +106,7 @@ sub setSBEAMS {
 ###############################################################################
 sub getSBEAMS {
     my $self = shift;
-    return($sbeams);
+    return($self->{_sbeams});
 }
 ###############################################################################
 #get_ipi_data_id
@@ -244,7 +247,6 @@ sub add_glyco_site{
 	my $self = shift;
 	my $ipi_data_id = $self->get_ipi_data_id;
 	my @array_hrefs = $self->get_glyco_sites($ipi_data_id);
-	#$log->debug(Dumper(\@array_hrefs));
 	return 0 unless @array_hrefs;
 	my $seq_obj = $self->seq_info;
 	
@@ -296,29 +298,24 @@ sub add_signal_sequence {
 sub add_transmembrane_domains {
 	my $method = 'add_transmembrane_domains';
 	my $self = shift;
-	my $tmhmm_info = $self->transmembrane_info;
+	my $tmhmm_info = $self->transmembrane_info();
+	my $seq = $self->raw_protein_sequence();
 	
 	#examples o528-550i, 'o408-430i447-469o555-577i584-606o652-674i785-807o', 'o'
-	
-	$log->debug("TM INFO '$tmhmm_info'");
-	
-	my @regions = split(/[io]/,$tmhmm_info);
+  my $tm_sites = $glyco->get_transmembrane_info( tm_info => $tmhmm_info, end => length( $seq ) );
 	
 	my $seq_obj = $self->seq_info();
 	
-	
-	foreach my $region (@regions) {
-		next unless $region;
-		my ($start,$end) = split(/-/,$region);
+  foreach my $region (@$tm_sites) {
+    my $primary = ( $region->[0] eq 'tm' ) ? 'Transmembrane' : $region->[0];
+    my $tag = ( $region->[0] eq 'tm' ) ? 'TMHMM' : $region->[0];
 		
-		$log->debug("TM INFO START END '$start' '$end'");
-	
-		my $tmhmm_f = Bio::SeqFeature::Generic->new(
-													-start        =>$start,
-													-end          =>$end ,
-                                                    -primary          => "Transmembrane",
-                                                    -tag              =>{Transmembrane => 'TMHMM'},
-                                        );
+    my $tmhmm_f = Bio::SeqFeature::Generic->new(
+                                 -start        => $region->[1],
+                                 -end          => $region->[2] ,
+                                 -primary          => $primary,
+                                 -tag              => { $primary => $tag }
+                                               );
 
 		$seq_obj->add_SeqFeature($tmhmm_f);
 
@@ -386,7 +383,6 @@ sub make_url {
         my ($href) = $sbeams->selectHashArray($sql);
 	my $url = $href->{accessor} . $term . $href->{accessor_suffix};
 	$url =~ s/ /+/g;	#repalce any spaces with a plus.  Needed for EBI_IPI to work
-	$log->debug("MAKE URL '$url'");
 	$url = "<a href='$url'>$term</a>";
 	return $url;
 
@@ -425,111 +421,79 @@ sub sorted_freatures {
 #make a nice protein sequence suitable to print out
 ###############################################################################
 sub get_html_protein_seq {
-	my $method = 'get_html_protein_seq';
-	my $self = shift;
+  my $method = 'get_html_protein_seq';
+  my $self = shift;
 	
-	my %args = @_;
+  my %args = @_;
 	
-	my $seq = $args{seq};
-	my $ref_parameters = $args{'ref_parameters'};
+  my $seq = $args{seq};
+  my $ref_parameters = $args{'ref_parameters'};
 	
 #$log->debug(Dumper($seq));
-	unless(ref($seq)){
+  unless(ref($seq)){
 		 $seq = $self->seq_info();
-	}	
+  }	
 		
-	my $aa_seq = $seq->seq();
-	 my @array_of_arrays = $self->make_array_of_arrays($seq);
+  my $aa_seq = $seq->seq();
+  my @array_of_arrays = $self->make_array_of_arrays($seq);
 
     
-        my @sorted_features = $self->sorted_freatures($seq->all_SeqFeatures);# descend into sub features
+  my @sorted_features = $self->sorted_freatures($seq->all_SeqFeatures);# descend into sub features
         
-        #$log->debug(@sorted_features);
-        for my $f (@sorted_features) {
-			my $tag = $f->primary_tag;
+  #$log->debug(@sorted_features);
+  for my $f (@sorted_features) {
+    my $tag = $f->primary_tag;
 			
 			
-            #subtract one since we are indexing into a zero based array
-            my $start =  $f->start - 1;
-            my $end =  $f->end - 1;
+    #subtract one since we are indexing into a zero based array
+    my $start =  $f->start - 1;
+    my $end =  $f->end - 1;
             
-            my ($css_class, $title) = _choose_css_type(tag => $tag,
-														ref_parameters=>$ref_parameters,
-													   	start => $start,
-													   );
-                
-			if ($css_class){
-                	#my $html_tag = 'span';
-                	#$html_tag = 'text' if $tag eq 'N-Glyco Sites';
-                	
-                	#$log->debug("TAG '$tag' HTMLTAG '$html_tag' CLASS '$css_class' $start $end");
-                	my $start_tag = "<span class='$css_class' $title>";
-                	my $end_tag   = "</span>";
-                	unshift @{$array_of_arrays[$start]}, $start_tag;
-                	push @{$array_of_arrays[$end]}, $end_tag;
-			}
-			
-        }
-       #print( Dumper(\@array_of_arrays));
-        my $string = $self->flatten_array_of_arrays(@array_of_arrays);
-        return  $string;
+    my ($css_class, $title) = _choose_css_type( tag  => $tag,
+                                              params => $ref_parameters,
+                                               start => $start );
 
+    if ($css_class){
+      my $start_tag = "<span class='$css_class' $title>";
+      my $end_tag   = "</span>";
+      unshift @{$array_of_arrays[$start]}, $start_tag;
+      push @{$array_of_arrays[$end]}, $end_tag;
+    }
+			
+  }
+  #print( Dumper(\@array_of_arrays));
+  my $string = $self->flatten_array_of_arrays(@array_of_arrays);
+  return  $string;
 }
+
 #########################################
 #_choose_css_type
 #########################################
 sub _choose_css_type {
 	my %args = @_;
 	
-	my $ref_parameters = $args{'ref_parameters'};
-	my $tag = $args{tag};
-	my $start = $args{start};
-	my $css_class = '';
-	my $title = '';
-	my %parameters = ();
-	
-	my $start = $start + 1; #HACK add one to get correct glycosite location.	
-#If we have some parameters, only return one css_class for the one matching info in the parameter hash
-#N-Glyco Sites sites will always displayed
-	if ($ref_parameters->{'redraw_protein_sequence'} == 1){
-		%parameters = %{$ref_parameters};
-		
-		if ($tag eq 'Predicted Peptides' && exists $parameters{'Predicted Peptide'}){
-			$css_class='predicted_pep';
-	              	
-		}elsif($tag eq 'Identified Peptides' && exists $parameters{'Identified Peptide'}){
-			$css_class='identified_pep';
-			
-		}elsif($tag eq 'Signal Sequence' && exists $parameters{'Signal Sequence'}){
-			$css_class='sseq';
-		}elsif($tag eq 'Transmembrane' && exists $parameters{'Trans Membrane Seq'}){
-			$css_class='tmhmm';
-		}elsif($tag eq 'N-Glyco Sites'){
-			$css_class='glyco_site';
-			$title = "title='Glyco Site $start'";
-		}
-	}else{
-	
-	
-		if ($tag eq 'Predicted Peptides'){
-			$css_class='predicted_pep';
-	                		
-		}elsif($tag eq 'Identified Peptides'){
-			$css_class='identified_pep';
-			next; #turn off for defualt view
-		}elsif($tag eq 'Signal Sequence'){
-			$css_class='sseq';
-		}elsif($tag eq 'Transmembrane'){
-			$css_class='tmhmm';
-		}elsif($tag eq 'N-Glyco Sites'){
-			$css_class='glyco_site';
-			$title = "title='Glyco Site $start'";
-		}
-	}
-	#$log->debug( __PACKAGE__ . "::$method FEATURE PRIMARY TAG '$tag' CLASS '$css_class'\n");
-                
+	my $params = $args{'params'};
+	my $start = $args{start} + 1;
 
-	return ($css_class, $title);
+  my %classes = ( 'Predicted Peptides'  => 'predicted_pep',
+                  'Identified Peptides' => 'identified_pep',
+                  'N-Glyco Sites'       => 'glyco_site',
+                  'Signal Sequence'     => 'sseq',
+                  'Transmembrane'       => 'tmhmm',
+                  intracellular         => '',
+                  extracellular         => '',
+                );
+
+	my $tag = $classes{$args{tag}};
+	my %title = ( glyco_site => "Glyco Site $start" );
+	
+  if ( $args{tag} eq 'N-Glyco Sites' ) {
+    return ($tag, $title{$tag} );
+  } elsif ( $params->{redraw_protein_sequence} ) {
+    return ( '', '' ) unless $params->{$classes{$args{tag}}};
+  }
+	return ($tag, $title{$tag} );
+
 }
 
 #################################################
@@ -1096,7 +1060,7 @@ sub get_atlas_link {
   my $self = shift;
   my %args = @_;
   return undef unless $args{seq} || $args{name};
-  my $type = 'text';
+  my $type = $args{type} || 'text';
 
   my $url = '';
   if ( $args{seq} ) {
@@ -1106,10 +1070,18 @@ sub get_atlas_link {
     JOIN $TBAT_PEPTIDE_INSTANCE PI
     ON PI.peptide_id = P.peptide_id
     WHERE peptide_sequence = '$args{seq}'
-    AND PI.atlas_build_id = ( SELECT atlas_build_id 
+    AND PI.atlas_build_id IN ( SELECT atlas_build_id 
                         FROM $TBAT_DEFAULT_ATLAS_BUILD 
                         WHERE organism_id = 2 )
     ~;
+
+    $sql = qq~
+    SELECT search_key_name 
+    FROM $TBAT_SEARCH_KEY K 
+    WHERE search_key_type = 'peptide sequence'
+    AND search_key_name = '$args{seq}'
+    ~;
+
     $log->info( $sbeams->evalSQL( $sql ) );
     my ( $match ) = $sbeams->selectrow_array( $sql );
     my $key = ( $match ) ? $args{seq} : '%' . $args{seq} . '%';
@@ -1122,7 +1094,7 @@ sub get_atlas_link {
   }
   my $link;
   if ( $type eq 'image' ) {
-    $link = "<A HREF='$url' TARGET=_atlas><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/pa_tiny.png' ALT=search></A>";
+    $link = "<A HREF='$url' TARGET=_atlas TITLE='$args{onmouseover}'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/pa_tiny.png' ALT=search></A>";
   } else {
     $link = "<A HREF='$url' TARGET=_atlas><B>S</B></A>";
   }
