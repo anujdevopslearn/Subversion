@@ -309,6 +309,7 @@ sub printStyleSheet {
 	
 	.sseq{ background-color: #CCCCFF; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
 	.tmhmm{ background-color: #CCFFCC; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; text-decoration:underline}
+  .instruction_text{ ${FONT_SIZE_LG}pt; font-weight: bold}
 	
 	.glyco_site{ background-color: #ee9999; 
 	border-style: solid;
