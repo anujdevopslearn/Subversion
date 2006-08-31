@@ -86,7 +86,11 @@ sub main
     if ($parameters{action} eq "show_all") {
 	    $content = display_proteins( 'all' );	
     } else {
-	    $content = display_proteins( 'identified' );	
+      if ( $parameters{multi_tmm} ) {
+	      $content = display_proteins( 'multi_tmm' );	
+      } else {
+	      $content = display_proteins( 'identified' );	
+      }
     }
 
     $sbeamsMOD->display_page_header(project_id => $project_id);
@@ -111,14 +115,24 @@ sub display_proteins{
 
 	my @results_set = $glyco_query_o->all_proteins_query($mode);	
   my $html = '';
-
-	$html .= $q->start_table() .
-           $q->Tr({class=>'rev_gray_head'},
-           $q->td('IPI ID'),
-           $q->td('Protein Name'),
-           $q->td('Protein Symbol'),
-           $q->td('Identified Peptides')
-           );
+  if ( $mode eq 'multi_tmm' ) {
+	  $html .= $q->start_table() .
+             $q->Tr({class=>'rev_gray_head'},
+             $q->td('IPI ID'),
+             $q->td('Protein Name'),
+             $q->td('Protein Symbol'),
+             $q->td('Identified Peptides'),
+             $q->td('# TMM domains')
+             );
+  } else {
+	  $html .= $q->start_table() .
+             $q->Tr({class=>'rev_gray_head'},
+             $q->td('IPI ID'),
+             $q->td('Protein Name'),
+             $q->td('Protein Symbol'),
+             $q->td('Identified Peptides')
+             );
+  }
 
 	my $cgi_url = "Glyco_prediction.cgi?action=Show_detail_form&ipi_data_id";
 
@@ -135,15 +149,27 @@ sub display_proteins{
 		my $ipi_acc = $h_ref->{ipi_accession_number};
 		my $protein_name = nice_term_print($h_ref->{protein_name});
 		my $protein_sym = $h_ref->{protein_symbol};
+    my $tmm = $h_ref->{transmembrane_info};
+    my @tmm_cnt = split( '-', $tmm );
     $protcnt++;
     $pepcnt += $num_identified;
 		
-		$html .= $q->Tr(
-			        $q->td( $q->a({href=>"$cgi_url=$ipi_id"},$ipi_acc)),
-			        $q->td($protein_name),
-			        $q->td($protein_sym),
-			        $q->td({ALIGN=>'right'},$num_identified)
-			        );
+    if ( $mode eq 'multi_tmm' ) {
+      $html .= $q->Tr(
+                      $q->td( $q->a({href=>"$cgi_url=$ipi_id"},$ipi_acc)),
+                      $q->td($protein_name),
+                      $q->td($protein_sym),
+                      $q->td({ALIGN=>'right'},$num_identified),
+                      $q->td( {ALIGN=>'right'}, $#tmm_cnt ),
+                     );
+    } else {
+      $html .= $q->Tr(
+                      $q->td( $q->a({href=>"$cgi_url=$ipi_id"},$ipi_acc)),
+                      $q->td($protein_name),
+                      $q->td($protein_sym),
+                      $q->td({ALIGN=>'right'},$num_identified)
+                     );
+    }
 	}
 	$html .= "</table>";
   my $stats = qq~
