@@ -666,15 +666,12 @@ sub buildPeptideKeyIndex {
 
   print "INFO[$METHOD]: Building Peptide key index...\n" if ($VERBOSE);
 
-  #### Get all the peptides in the database, regardless of build
+  #### Get all the peptides for this build
   my $sql = qq~
-       SELECT DISTINCT peptide_accession,peptide_sequence
+       SELECT peptide_accession,peptide_sequence,n_observations
          FROM $TBAT_PEPTIDE P
          JOIN $TBAT_PEPTIDE_INSTANCE PI ON (P.peptide_id = PI.peptide_id)
-         JOIN $TBAT_ATLAS_BUILD AB ON (AB.atlas_build_id = PI.atlas_build_id)
-         JOIN $TBAT_BIOSEQUENCE_SET BS
-              ON (BS.biosequence_set_id = AB.biosequence_set_id)
-        WHERE BS.organism_id = '$organism_id'
+        WHERE PI.atlas_build_id = '$atlas_build_id'
   ~;
   my @peptides = $sbeams->selectSeveralColumns($sql);
 
@@ -693,6 +690,7 @@ sub buildPeptideKeyIndex {
       resource_name => $peptide->[0],
       resource_type => 'PeptideAtlas peptide',
       resource_url => "GetPeptide?atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$peptide->[0]&action=QUERY",
+      resource_n_matches => $peptide->[2],
     );
     $sbeams->updateOrInsertRow(
       insert => 1,
@@ -711,6 +709,7 @@ sub buildPeptideKeyIndex {
       resource_name => $peptide->[0],
       resource_type => 'PeptideAtlas peptide',
       resource_url => "GetPeptide?atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$peptide->[0]&action=QUERY",
+      resource_n_matches => $peptide->[2],
     );
     $sbeams->updateOrInsertRow(
       insert => 1,
