@@ -56,8 +56,62 @@ Changed Proteomics peptide table name to proteomics_peptide
 - Change the server table name (used the MSSQL tool)
 
 - updated the driver tables:
-  cd $SBEAMS/lib/script/Core
+  cd $SBEAMS/lib/scripts/Core
   ./update_driver_tables.pl ../../conf/Proteomics/Proteomics_table_column.txt
   ./update_driver_tables.pl ../../conf/Proteomics/Proteomics_table_property.txt
   ./update_driver_tables.pl ../../conf/Proteomics/Proteomics_table_column_manual.txt
+
+---------------
+
+Sep 1, 2006
+
+Complete change for Proteomics peptide table name to proteomics_peptide
+by renaming peptide_id to proteomics_peptide_id
+
+#### SQL Server:
+cd $SBEAMS/lib/scripts/Core
+cat > zz9
+EXEC sp_rename 'proteomics_peptide.peptide_id', 'proteomics_peptide_id', 'COLUMN'
+EXEC sp_rename 'indistinguishable_peptide.peptide_id', 'proteomics_peptide_id', 'COLUMN'
+EXEC sp_rename 'peptide_parent_protein.peptide_id', 'proteomics_peptide_id', 'COLUMN'
+^D
+./runsql.pl -u sbeamsadmin -s zz9
+rm zz9
+
+#### or MySQL:
+cd $SBEAMS/lib/scripts/Core
+cat > zz9
+alter table proteomics_peptide rename column peptide_id to proteomics_peptide_id;
+alter table indistinguishable_peptide rename column peptide_id to proteomics_peptide_id;
+alter table peptide_parent_protein rename column peptide_id to proteomics_peptide_id;
+^D
+./runsql.pl -u sbeamsadmin -s zz9
+rm zz9
+
+
+#### Clear and reload the driver tables:
+cd $SBEAMS/lib/scripts/Core
+cat > zz9
+DELETE FROM table_column
+ WHERE table_name IN (
+       'PR_peptide',
+       'PR_proteomics_peptide',
+       'PR_indistinguishable_peptide',
+       'PR_peptide_parent_protein' )
+^D
+./runsql.pl -u sbeamsadmin -s zz9
+rm zz9
+./update_driver_tables.pl ../../conf/Proteomics/Proteomics_table_column.txt
+./update_driver_tables.pl ../../conf/Proteomics/Proteomics_table_column_manual.txt
+
+---------------
+
+
+
+
+
+
+
+
+
 
