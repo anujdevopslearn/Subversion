@@ -255,7 +255,7 @@ sub start_element {
     protein_group => 1,
     protein => 1,
     indistinguishable_protein => 1,
-    peptide => 1,
+    peptide => 'proteomics_peptide',
     peptide_parent_protein => 1,
     indistinguishable_peptide => 1,
     ASAPRatio => 'summary_quantitation',
@@ -272,8 +272,8 @@ sub start_element {
     protein => 'protein_group_id',
     indistinguishable_protein => 'protein_id',
     peptide => 'protein_id',
-    peptide_parent_protein => 'peptide_id',
-    indistinguishable_peptide => 'peptide_id',
+    peptide_parent_protein => 'proteomics_peptide_id',
+    indistinguishable_peptide => 'proteomics_peptide_id',
     ASAPRatio => '',
   );
 
@@ -400,18 +400,19 @@ sub start_element {
     if ($regular_elements{$localname} gt '1') {
       $table_name = $regular_elements{$localname};
     }
+    my $pk_name = "${table_name}_id";
 
 
     #### Store the attributes in the table
     $PK = main::insert_attrs(
       table_name=>$table_name,
       attrs_ref=>\%attrs,
-      PK=>"${table_name}_id",
+      PK=>$pk_name,
       return_PK=>1,
     );
 
     #### Store the returned PK
-    $self->{id_cache}->{"${table_name}_id"} = $PK;
+    $self->{id_cache}->{$pk_name} = $PK;
 
 
     #### If this is a reverse referring object, then update the parent
@@ -426,7 +427,7 @@ sub start_element {
 
       main::update_row(
         table_name=>$parent_table_name,
-        attrs_ref=>{"${table_name}_id"=>$PK},
+        attrs_ref=>{$pk_name=>$PK},
         PK=>"${parent_table_name}_id",
         PK_value=>$self->object_stack->[-2]->{PK_value},
       );
