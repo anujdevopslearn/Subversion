@@ -385,9 +385,12 @@ sub printEntryForm {
     $sbeams->printUserContext();
   }
 
+  my $form_headline = $parameters{CUSTOM_FORM_HEADLINE} ||
+    "Maintain $CATEGORY";
+
   print qq!
       <P>
-      <H2>Maintain $CATEGORY</H2>
+      <H2>$form_headline</H2>
       $LINESEPARATOR
       <FORM METHOD="post" NAME="MainForm" $file_upload_flag>
       <TABLE BORDER=0>
@@ -666,7 +669,13 @@ sub printEntryForm {
     }
 
     #### If there is a value in is_display_column, determine how to render it
+    my %valid_display_views;
     if (defined($is_display_column)) {
+
+      my @valid_views = split(",",$is_display_column);
+      foreach my $valid_view ( @valid_views ) {
+	$valid_display_views{$valid_view} = 1;
+      }
 
       #### Special P (Private) columns are only visible for users with
       #### update privileges, else totally obscure it
@@ -709,12 +718,9 @@ sub printEntryForm {
         #### Otherwise if the user specified some custom view level,
 	#### only display those columns which match it
         } else {
-          my @valid_views = split(",",$is_display_column);
           $hidden = 1;
-	  foreach my $valid_view (@valid_views) {
-	    if ($parameters{detail_level} eq $valid_view) {
-	      $hidden = 0;
-	    }
+	  if ($valid_display_views{$parameters{detail_level}}) {
+	    $hidden = 0;
 	  }
 	}
 
@@ -803,7 +809,7 @@ sub printEntryForm {
 
 
     #### Write the parameter name, in red, or hide the field, if required
-    if ($is_display_column eq "H") {
+    if ($valid_display_views{"H"}) {
       print <<"      END";
         <TR id="tr_$column_name" class="fieldhidden"><TD><B>$column_title:</B></TD>
             <TD BGCOLOR="E0E0E0">$column_text</TD>
@@ -886,12 +892,9 @@ sub printEntryForm {
     }
 
 
-    if ($input_type eq "fixed" || $input_type eq "calc") {
-      print qq!
-        <TD><INPUT TYPE="hidden" NAME="$column_name"
-         VALUE="$param">$param</TD>
-      !;
-    }
+    if ($input_type eq "fixed" || $input_type eq "calc") { print qq!
+    <TD><INPUT TYPE="hidden" NAME="$column_name" VALUE="$param"><A
+    NAME="${column_name}_value">$param</A></TD> !; }
 
     if ($input_type eq "textarea") {
       print qq~
@@ -964,6 +967,30 @@ sub printEntryForm {
       ~;
     }
 
+    if ($input_type eq "checkbox" || $input_type eq "checkboxh" || $input_type eq "checkboxv") {
+
+	# hack-ish replacement of optionlist html to generate radio button html
+	$optionlists{$column_name} =~
+	    s/<OPTION VALUE=/
+	    <INPUT TYPE="checkbox" NAME="$column_name" $onChange VALUE=/g;
+
+	$optionlists{$column_name} =~
+	    s/<OPTION SELECTED VALUE=/
+	    <INPUT TYPE="checkbox" NAME="$column_name" $onChange CHECKED="checked" VALUE=/g;
+
+	if ($input_type eq "checkboxh" || $input_type eq "checkbox") {
+	  $optionlists{$column_name} =~
+            s|</OPTION>|</INPUT>|g;
+	} elsif ($input_type eq "checkboxv") {
+	  $optionlists{$column_name} =~
+	    s|</OPTION>|</INPUT><BR>|g;
+	}
+
+      print qq~
+        <TD>
+	  $optionlists{$column_name}</TD>
+      ~;
+    }
 
     if ($input_type eq "fixedfromlist") {
       print qq!
@@ -1518,7 +1545,7 @@ sub showTable {
 
 
   #### Get the specified level of detail or set to BASIC
-  my $detail_level = $q->param('detail_level') || "BASIC";
+  my $detail_level = $q->param('table_detail_level') || "BASIC";
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
   my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
 
