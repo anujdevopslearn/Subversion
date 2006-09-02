@@ -4237,7 +4237,7 @@ sub processTableDisplayControls {
     my $TABLE_NAME = shift;
     
 
-    my $detail_level  = $q->param('detail_level') || "BASIC";
+    my $detail_level  = $q->param('table_detail_level') || "BASIC";
     my $where_clause  = $q->param('where_clause');
     my $orderby_clause  = $q->param('orderby_clause');
 
@@ -4272,7 +4272,7 @@ sub processTableDisplayControls {
       print qq!
         <BR><HR SIZE=5 NOSHADE><BR>
         <FORM METHOD="post">
-            <SELECT NAME="detail_level">
+            <SELECT NAME="table_detail_level">
               <OPTION$basic_flag VALUE="BASIC">BASIC
               <OPTION$full_flag VALUE="FULL">FULL
             </SELECT>
@@ -4881,6 +4881,30 @@ sub display_input_form {
       ~;
     }
 
+    if ($input_type eq "checkbox" || $input_type eq "checkboxh" || $input_type eq "checkboxv") {
+
+	# hack-ish replacement of optionlist html to generate radio button html
+	$optionlists{$column_name} =~
+	    s/<OPTION VALUE=/
+	    <INPUT TYPE="checkbox" NAME="$column_name" $onChange VALUE=/g;
+
+	$optionlists{$column_name} =~
+	    s/<OPTION SELECTED VALUE=/
+	    <INPUT TYPE="checkbox" NAME="$column_name" $onChange CHECKED="checked" VALUE=/g;
+
+	if ($input_type eq "checkboxh" || $input_type eq "checkbox") {
+	  $optionlists{$column_name} =~
+            s|</OPTION>|</INPUT>|g;
+	} elsif ($input_type eq "checkboxv") {
+	  $optionlists{$column_name} =~
+	    s|</OPTION>|</INPUT><BR/>|g;
+	}
+
+      print qq~
+        <TD>
+	  $optionlists{$column_name}</TD>
+      ~;
+    }
 
     if ($input_type eq "current_contact_id") {
       my $username = "";
