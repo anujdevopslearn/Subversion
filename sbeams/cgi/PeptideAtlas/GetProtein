@@ -666,6 +666,13 @@ sub handle_request {
     );
 
 
+    #### Display a hyperlink for viewing this information in Cytoscape
+    if ($sbeams->output_mode() eq 'html') {
+      my $GetProtein_hlink = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id&protein_name=$parameters{protein_name}&output_mode=cytoscape&action=GO";
+      print qq~<TABLE><TR><TD><A HREF="$GetProtein_hlink"><IMG BORDER="0" SRC="$HTML_BASE_DIR/images/PAcyto_icon.png"></A></TD><TD valign="center"><A HREF="$GetProtein_hlink">[View peptides and related proteins as a network with Cytoscape]</A></TD></TR></TABLE><BR>~;
+    }
+
+
     #### Display the resultset controls
     $sbeams->displayResultSetControls(
       resultset_ref=>$resultset_ref,
@@ -679,7 +686,7 @@ sub handle_request {
     my $sample_ids = getSampleList( resultset_ref=>$resultset_ref,);
     my $sampleHTML = $sbeamsMOD->getSampleDisplay( sample_ids => $sample_ids );
     print "<TABLE width='600'>$sampleHTML</TABLE>"
-       if ($sbeams->output_mode() eq 'html');;
+       if ($sbeams->output_mode() eq 'html');
 
 
   #### If QUERY was not selected, then tell the user to enter some parameters
@@ -973,6 +980,7 @@ sub prepareJavaWebStartFiles {
   my %rs_params = %{$rs_params_ref};
   my %parameters = %{$query_parameters_ref};
 
+  my $atlas_build_id = $parameters{atlas_build_id};
 
   #### Set up some data data structures to hold Java Web Start data
   my %java_web_start_file_header = ( 'network.sif' => undef,
@@ -986,8 +994,8 @@ sub prepareJavaWebStartFiles {
     $java_web_start->{files}->{$filename} = \@tmp;
   }
 
-  my %protein_hash = ( $query_parameters_ref->{protein_name} => 1 );
-  my @new_protein_list = keys(%protein_hash);
+  my %protein_hash = ();
+  my @new_protein_list = ( $query_parameters_ref->{protein_name} );
   my %peptide_hash = ();
   my @new_peptide_list = keys(%peptide_hash);
   my %interaction_hash;
@@ -1003,12 +1011,17 @@ sub prepareJavaWebStartFiles {
 
     #### Also include all other columns
     my $all_columns = $peptide_resultset->{column_list_ref};
+    my $cols = $peptide_resultset->{column_hash_ref};
     my $i=0;
     foreach my $column ( @{$all_columns} ) {
       my $title = $peptide_resultset->{column_titles_ref}->[$i++];
       my @tmp = ( $title || $column );
-      $java_web_start->{files}->{"$column.noa"} = \@tmp;
+      unless ($java_web_start->{files}->{"$column.noa"}) {
+	$java_web_start->{files}->{"$column.noa"} = \@tmp;
+      }
     }
+
+#print "Content-type: text/html\n\n<PRE>\n";
 
     my $nrows = scalar(@{$peptide_resultset->{data_ref}});
     my $col = $peptide_resultset->{column_hash_ref};
@@ -1016,16 +1029,12 @@ sub prepareJavaWebStartFiles {
 
       #### Determine the best canonical name. We must have one
       my $canonical_name = $row->[$col->{peptide_accession}];
+      my $is_new_peptide = 0;
       unless ($peptide_hash{$canonical_name}) {
         $peptide_hash{$canonical_name}++;
         push(@new_peptide_list,$canonical_name);
+	$is_new_peptide = 1;
       }
-
-      #### Add standard attributes
-      push(@{$java_web_start->{files}->{'commonName.noa'}},"$canonical_name = $canonical_name");
-      push(@{$java_web_start->{files}->{'organism.noa'}},"$canonical_name = foo");
-      push(@{$java_web_start->{files}->{'webLookup.noa'}},"$canonical_name = foo");
-      push(@{$java_web_start->{files}->{'bioentityType.noa'}},"$canonical_name = peptide");
 
       #### Add connections to proteins
       my $edge = "$row->[$col->{biosequence_name}] contains $canonical_name";
@@ -1033,6 +1042,13 @@ sub prepareJavaWebStartFiles {
 	push(@{$java_web_start->{files}->{'network.sif'}},$edge);
 	$interaction_hash{$edge}++;
       }
+
+      next unless ($is_new_peptide);
+
+      #### Add standard attributes
+      push(@{$java_web_start->{files}->{'commonName.noa'}},"$canonical_name = $canonical_name");
+      push(@{$java_web_start->{files}->{'organism.noa'}},"$canonical_name = unknown");
+      push(@{$java_web_start->{files}->{'webLookup.noa'}},"$canonical_name = $SERVER_BASE_DIR/$CGI_BASE_DIR/PeptideAtlas/GetPeptide?&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$canonical_name&action=QUERY");
 
       #### Add regular peptide attributes
       $i=0;
@@ -1043,11 +1059,22 @@ sub prepareJavaWebStartFiles {
           "$canonical_name = $value") if ($value);
       }
 
+
+      #### Calculate a special proteotypic attribute
+      my $peptide_type = 'peptide';
+      if ($row->[$cols->{n_protein_mappings}] == 1 &&
+	  $row->[$cols->{n_observations}] > 2 &&
+	  $row->[$cols->{empirical_proteotypic_score}] > 0.3) {
+	$peptide_type = 'proteotypic peptide';
+      }
+      push(@{$java_web_start->{files}->{'bioentityType.noa'}},"$canonical_name = $peptide_type");
+
     }
 
     last if (scalar(@new_peptide_list) == 0);
     @new_protein_list = ();
 
+    #######################################################
     #### Now get the protein information for these peptides
 
     #### Return protein information for these peptides
@@ -1062,7 +1089,9 @@ sub prepareJavaWebStartFiles {
     foreach my $column ( @{$all_columns} ) {
       my $title = $protein_resultset->{column_titles_ref}->[$i++];
       my @tmp = ( $title || $column );
-      $java_web_start->{files}->{"$column.noa"} = \@tmp;
+      unless ($java_web_start->{files}->{"$column.noa"}) {
+	$java_web_start->{files}->{"$column.noa"} = \@tmp;
+      }
     }
 
     my $nrows = scalar(@{$protein_resultset->{data_ref}});
@@ -1071,23 +1100,27 @@ sub prepareJavaWebStartFiles {
 
       #### Determine the best canonical name. We must have one
       my $canonical_name = $row->[$col->{biosequence_name}];
+      my $is_new_protein = 0;
       unless ($protein_hash{$canonical_name}) {
         $protein_hash{$canonical_name}++;
         push(@new_protein_list,$canonical_name);
+	$is_new_protein = 1;
       }
 
-      #### Add standard attributes
-      push(@{$java_web_start->{files}->{'commonName.noa'}},"$canonical_name = $canonical_name");
-      push(@{$java_web_start->{files}->{'organism.noa'}},"$canonical_name = foo");
-      push(@{$java_web_start->{files}->{'webLookup.noa'}},"$canonical_name = foo");
-      push(@{$java_web_start->{files}->{'bioentityType.noa'}},"$canonical_name = protein");
-
-      #### Add connections to peptides
+      #### Add edges to peptides
       my $edge = "$row->[$col->{biosequence_name}] contains $row->[$col->{peptide_accession}]";
       unless ($interaction_hash{$edge}) {
 	push(@{$java_web_start->{files}->{'network.sif'}},$edge);
 	$interaction_hash{$edge}++;
       }
+
+      next unless ($is_new_protein);
+
+      #### Add standard attributes
+      push(@{$java_web_start->{files}->{'commonName.noa'}},"$canonical_name = $canonical_name");
+      push(@{$java_web_start->{files}->{'organism.noa'}},"$canonical_name = unknown");
+      push(@{$java_web_start->{files}->{'webLookup.noa'}},"$canonical_name = $SERVER_BASE_DIR/$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id&protein_name=$canonical_name&action=GO");
+      push(@{$java_web_start->{files}->{'bioentityType.noa'}},"$canonical_name = protein");
 
       #### Add regular proteins attributes
       $i=0;
