@@ -652,7 +652,7 @@ PR_indistinguishable_protein	1	indistinguishable_protein_id	Indistinguishable Pr
 PR_indistinguishable_protein	2	protein_id	Lead Protein	int	4	0	N		N	PR_protein	protein_id										
 PR_indistinguishable_protein	3	protein_name	Protein Name	varchar	255	0	N		N												
 PR_indistinguishable_protein	4	biosequence_id	Biosequence ID	int	4	0	N		N												
-PR_proteomics_peptide	1	peptide_id	Peptide ID	int	4	0	N		Y												pkDEFAULT
+PR_proteomics_peptide	1	proteomics_peptide_id	Peptide ID	int	4	0	N		Y												pkDEFAULT
 PR_proteomics_peptide	2	protein_id	Protein	int	4	0	N		N	PR_protein	protein_id										
 PR_proteomics_peptide	3	peptide_sequence	Peptide Sequence	varchar	255	0	N		N												
 PR_proteomics_peptide	4	charge	Charge	int	4	0	N		N												
@@ -667,11 +667,11 @@ PR_proteomics_peptide	13	n_sibling_peptides_bin	Number of Sibling Peptides Bin	i
 PR_proteomics_peptide	14	n_instances	Number of Observed Instances	int	4	0	N		N												
 PR_proteomics_peptide	15	summary_quantitation_id	Summary Quantitation	int	4	0	Y		N	PR_summary_quantitation	summary_quantitation_id										
 PR_peptide_parent_protein	1	peptide_parent_protein_id	Peptide Parent Protein ID	int	4	0	N		Y												pkDEFAULT
-PR_peptide_parent_protein	2	peptide_id	Peptide	int	4	0	N		N	PR_peptide	peptide_id										
+PR_peptide_parent_protein	2	proteomics_peptide_id	Peptide	int	4	0	N		N	PR_peptide	peptide_id										
 PR_peptide_parent_protein	3	protein_name	Protein Name	varchar	255	0	N		N												
 PR_peptide_parent_protein	4	biosequence_id	Biosequence ID	int	4	0	N		N												
 PR_indistinguishable_peptide	1	indistinguishable_peptide_id	Indistinguishable Peptide ID	int	4	0	N		Y												pkDEFAULT
-PR_indistinguishable_peptide	2	peptide_id	Peptide	int	4	0	N		N	PR_peptide	peptide_id										
+PR_indistinguishable_peptide	2	proteomics_peptide_id	Peptide	int	4	0	N		N	PR_peptide	peptide_id										
 PR_indistinguishable_peptide	3	peptide_sequence	Peptide Sequence	varchar	255	0	N		N												
 PR_search_batch_protein_summary	1	search_batch_protein_summary_id	Search Batch Protein Summary ID	int	4	0	N		Y												pkDEFAULT
 PR_search_batch_protein_summary	2	protein_summary_id	Protein Summary	int	4	0	N		N	PR_protein_summary	protein_summary_id										
