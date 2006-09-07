@@ -436,7 +436,13 @@ sub handle_request {
               BS.biosequence_accession, BS.biosequence_desc,
               BS.biosequence_seq,BSS.set_name,
               DBX.accessor,DBX.accessor_suffix,
-              BAG.annotated_gene_id
+              BAG.annotated_gene_id,
+              BPS.transmembrane_class,
+              BPS.transmembrane_topology,
+              BPS.has_signal_peptide,
+              BPS.has_signal_peptide_probability,
+              BPS.signal_peptide_length,
+              BPS.signal_peptide_is_cleaved
          FROM $TBAT_BIOSEQUENCE_SET BSS
         INNER JOIN $TBAT_BIOSEQUENCE BS
               ON ( BSS.biosequence_set_id = BS.biosequence_set_id )
@@ -688,6 +694,15 @@ sub handle_request {
     print "<TABLE width='600'>$sampleHTML</TABLE>"
        if ($sbeams->output_mode() eq 'html');
 
+    #### Display the sequence graphic 
+    my $graphic_section = getSequenceGraphic( build_id => $atlas_build_id,
+                                         protein_data  => $biosequence );
+    $log->debug( $biosequence );
+
+    my $grapic_head = $sbeamsMOD->encodeSectionHeader( text => 'Sequence Motifs');
+    print "<BR><TABLE width=600>$grapic_head </TABLE>";
+    print $graphic_section;
+
 
   #### If QUERY was not selected, then tell the user to enter some parameters
   } else {
@@ -701,6 +716,393 @@ sub handle_request {
 
 } # end handle_request
 
+
+sub getSequenceGraphic {
+
+  ## read passed args, set up variables ##
+  my %args = @_;
+
+  my $tmhmm = $args{protein_data}->{transmembrane_topology};
+  my $id =  $args{protein_data}->{biosequence_id};
+  my $protseq = $args{protein_data}->{biosequence_seq};
+  my $protlen = length( $protseq );
+
+  $log->debug( "Funk dat $tmhmm!" );
+
+  # Had initially used the peptide query above, but the start/end coordinates 
+  # were problematic.  Thus we need to do it again.
+  my $sql = qq~
+     SELECT DISTINCT
+           P.peptide_accession,
+           P.peptide_sequence,
+           PI.n_genome_locations,
+           PM.start_in_biosequence,
+           PM.end_in_biosequence
+    FROM $TBAT_PEPTIDE_INSTANCE PI INNER JOIN $TBAT_PEPTIDE P
+      ON ( PI.peptide_id = P.peptide_id )
+    LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
+      ON ( PI.peptide_instance_id = PM.peptide_instance_id )
+    INNER JOIN $TBAT_ATLAS_BUILD AB
+      ON ( PI.atlas_build_id = AB.atlas_build_id )
+    LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
+      ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
+    WHERE AB.atlas_build_id IN ( $args{build_id} )
+	  AND PM.matched_biosequence_id = $id
+    ORDER BY P.peptide_accession
+  ~;
+  my @rows = $sbeams->selectSeveralColumns( $sql );
+
+  # Set up hash for storing point by point coverage info
+  my %coverage;
+  for my $idx ( 1..$protlen ) { $coverage{$idx} = 0; }
+
+  # Define color mapping for various features.
+  my %colors = ( Signal => 'cornflowerblue',
+                 Anchor => 'lightskyblue',
+          Transmembrane => 'greenyellow',
+          Intracellular => 'coral',
+          Extracellular => 'mediumseagreen',
+               Coverage => 'beige',
+             Translated => 'gainsboro',
+               Observed => 'goldenrod' );
+
+  # Define CSS classes
+  my $sp = '&nbsp;' x 4;
+  my $style =<<"  END_STYLE";
+  <STYLE>
+   .obs_sing { background-color: $colors{Observed} ;border-style: solid; border-color:gray; border-width: 1px  }
+   .obs_multi { background-color: white ;border-style: solid; border-color:gray; border-width: 1px  }
+   .tm_dom { background-color: $colors{Transmembrane} ;border-style: solid; border-color:gray; border-width: 1px  }
+   .in_dom { background-color: $colors{Intracellular} ;border-style: solid; border-color:gray; border-width: 1px  }
+   .ex_dom { background-color: $colors{Extracellular} ;border-style: solid; border-color:gray; border-width: 1px  }
+   .anc_seq { background-color: $colors{Anchor};border-style: solid; border-color:gray; border-width: 1px  }
+   .sig_seq { background-color: $colors{Signal};border-style: solid; border-color:gray; border-width: 1px  }
+   .trans_seq { background-color: $colors{Translated};border-style: solid; border-color:gray; border-width: 1px  }
+   .pep_cov { background-color: $colors{Coverage};border-style: solid; border-color:gray; border-width: 1px  }
+   .outline { border-style: solid; border-color:gray; border-width: 1px }
+   .sm_txt {  font-family: Helvetica, Arial, sans-serif; font-size: 8pt}
+  </STYLE>
+  END_STYLE
+
+
+  ## Create main panel + sequence 'ruler' ##
+
+  my $panel = Bio::Graphics::Panel->new( -length    => $protlen + 2,
+                                         -key_style => 'between',
+                                         -width     => 800,
+                                      -empty_tracks => 'suppress',
+                                         -pad_top   => 5,
+                                        -pad_bottom => 5,
+                                         -pad_left  => 10,
+                                         -pad_right => 50 );
+
+  open( FIL, ">/tmp/colors.html" );
+  print FIL "<HTML><HEAD></HEAD><BODY><TABLE WIDTH=600>\n";
+  my @c = $panel->color_names();
+  for my $c ( @c ) { print FIL "<TR><TD BGCOLOR=$c WIDTH=5%>$sp</TD><TD>$c$sp$sp</TD></TR>\n"; }
+  print FIL "</TABLE></BODY></HTML>\n";
+  close FIL;
+
+  my $ruler = Bio::SeqFeature::Generic->new( -end => $protlen,
+                                           -start => 2,
+                                    -display_name => 'Sequence Position');
+
+  my $sequence = Bio::SeqFeature::Generic->new( -end => $protlen,
+                                              -start => 1,
+                                       -display_name => 'Sequence Position');
+
+  ## Generage observed peptide tracks ##
+
+  # Loop over peptides
+  my @peptides;
+  my %pep_info;
+  my ( $multi, $single );
+  foreach my $row (@rows) {
+    my $acc  =  $row->[0];
+    my $seq  =  $row->[1];
+    my $score = ( $row->[2] > 1 ) ? 0 : 1;
+    my $start =  $row->[3];
+    my $stop  =  $row->[4];
+    # accession isn't necessarily unique, need compound key...
+    my $ugly_key = $acc . '::::' . $start . $stop; 
+    my $f = Bio::SeqFeature::Generic->new(
+                             -start => $start, 
+                               -end => $stop,
+                           -primary => $acc,
+                      -display_name => $ugly_key,
+                             -score => $score );
+
+    push @peptides, $f;
+
+    # Record the coverage for this peptide
+    for my $idx ( $start..$stop ) { $coverage{$idx}++; }
+
+    # count peptide type, to build appropriate legend 
+    if ( $score ) {
+      $single++; 
+    } else {
+      $multi++;
+    }
+
+    $pep_info{$ugly_key} = "$start - $stop, $seq";
+  }
+
+  # Calculate the coverage 'domains' 
+  my @coverage;
+  my $cstart = 0;
+  my $cend = 0;
+  my $in_coverage = 0;
+  for my $key ( sort{ $a <=> $b } keys( %coverage ) ) {
+    if ( !$in_coverage ) { # Not in coverage
+      if ( $coverage{$key} ) {
+        $cstart = $key;
+        $cend = $key;
+        $in_coverage = 1;
+      } else {
+        $in_coverage = 0;
+        # No-op
+      }
+    } else { # Already in coverage
+      if ( $coverage{$key} ) {
+        # Start stays the same, increment end
+        $cend = $key;
+        $in_coverage = 1;
+      } else {
+        $in_coverage = 0;
+        # Its showtime!
+        my $f = Bio::SeqFeature::Generic->new( -start   => $cstart,
+                                               -end     => $cend,
+                                               -primary => 'Coverage',
+                                               -display_name => 'Coverage' );
+        push @coverage, $f;
+        $cstart = 0;
+        $cend = 0;
+      }
+    }
+  }
+  if ( $cend ) {
+    my $f = Bio::SeqFeature::Generic->new( -start   => $cstart,
+                                           -end     => $cend,
+                                           -primary => 'Coverage',
+                                      -display_name => 'Coverage' );
+    push @coverage, $f;
+  }
+
+
+  ## Generate TMHMM-derived tracks ##
+
+  # parse domain info
+  my $tm_info = $biolink->get_transmembrane_info ( tm_info => $tmhmm, 
+                                                       end => $protlen );
+  # loop over domains, create features for each
+  my @intra;
+  my @extra;
+  my @tmm;
+  foreach my $region (@$tm_info) {
+    my $primary = $region->[0];
+    my $tag = $primary;
+		
+    my $f = Bio::SeqFeature::Generic->new(
+                                 -start        => $region->[1],
+                                 -end          => $region->[2] ,
+                             -primary          => $primary ,
+                             -display_name     => $primary ,
+                             -tag              => { $primary => $tag }
+                                         );
+    if ( $tag =~ /Intracellular/i ) {
+      push @intra, $f;
+    } elsif ( $tag =~ /Extracellular/i ) {
+      push @extra, $f;
+    } else {
+      push @tmm, $f;
+    }
+  }
+
+
+  ## Generate Signal P related tracks ##
+
+  my @signalp;
+  my ( $anchor, $signal );
+  if ( $args{protein_data}->{has_signal_peptide} ) {
+
+    my $seqtype;
+    if ( $args{protein_data}->{signal_peptide_is_cleaved} =~ /y/i ) {
+      $seqtype = 'Signal';
+      $signal++;
+    } else {
+      $seqtype = 'Anchor';
+      $anchor++;
+    }
+
+    my $f = Bio::SeqFeature::Generic->new( -start => 1,
+                                             -end => 1 + $args{protein_data}->{signal_peptide_length},
+                                    -display_name => $seqtype ,
+                                           -label => 0
+                                         );
+
+    push @signalp, $f;
+
+  }
+
+
+  ## Add all the tracks to the panel ##
+
+  $panel->add_track( $ruler,
+	                 	-glyph  => 'anchored_arrow',
+                    -tick   => 2,
+                    -height => 8,
+                    -key  => 'Sequence Position' );
+
+  # Add observed peptide track
+  $panel->add_track( \@peptides,
+                      -glyph       => 'graded_segments',
+                      -bgcolor     => $colors{Observed},
+                      -fgcolor     => 'black',
+                      -font2color  => '#882222',
+                      -key         => 'Observed Peptides',
+                      -bump        => 1,
+                      -height      => 8,
+                      -label       => sub { my $f = shift; my $n = $f->display_name(); $n =~ s/(.*)::::.*/$1/g; return $n },
+                      -min_score   => 0,
+                      -max_score   => 1,
+                     );
+
+  # Add signalP track
+  my $sigtype = ( $anchor ) ? 'Anchor' : 'Signal';
+  $panel->add_track(
+			\@signalp,
+			-glyph       => 'segments',
+			-bgcolor     => $colors{$sigtype},
+			-fgcolor     => 'black',
+			-key         => $sigtype . ' Sequence',
+			-bump        => +1,
+			-height      => 8,
+      -legend      => 1,
+			-label       => 0,
+  );
+
+
+  my %tracs = ( Intracellular => \@intra,
+                Extracellular => \@extra,
+                Transmembrane => \@tmm,
+              );
+
+  # Add tmhmm-related tracks
+  for my $t ( qw( Transmembrane Intracellular Extracellular ) ) {
+      $panel->add_track(
+			$tracs{$t},
+			-glyph       => 'segments',
+			-bgcolor     => $colors{$t},
+			-fgcolor     => 'black',
+			-font2color  => 'red',
+			-key         => "${t} Domain",
+			-bump        => +1,
+			-height      => 8,
+      -legend      => 1,
+			-label       => 0,
+		);
+  }
+
+  # Add coverage track
+  $panel->add_track( \@coverage,
+                      -glyph       => 'segments',
+                      -bgcolor     => $colors{Coverage},
+                      -fgcolor     => 'black',
+                      -key         => 'Sequence Coverage',
+                      -connector   => 'solid',
+                      -bump        => 0,
+                      -height      => 8,
+                      -label       => 0, # sub { my $f = shift; return $f->display_name},
+      );
+
+  $panel->add_track( $ruler,
+	                 	-glyph  => 'anchored_arrow',
+                    -tick   => 2,
+                    -height => 8,
+                    -key  => 'Sequence Position' );
+
+  
+#  $panel->add_track( $sequence,
+#                    -glyph   => 'segments',
+#                -bgcolor     => $colors{Translated},
+#                      -key   => 'Translated Sequence',
+#                     -tick   => 2 );
+
+  # Set up graphic legend
+  my @legend; 
+  push @legend, "<TR> <TD CLASS=obs_sing>$sp</TD> <TD class=sm_txt>Observed peptide with single genome mapping</TD> </TR>\n" if $single;
+  push @legend, "<TR> <TD CLASS=obs_multi>$sp</TD> <TD class=sm_txt>Observed peptide with ambiguous genome mapping</TD> </TR>\n" if $multi;
+  push @legend, "<TR> <TD CLASS=sig_seq>$sp</TD> <TD class=sm_txt>Signal sequence predicted by Signal P</TD> </TR>\n" if $signal; 
+  push @legend, "<TR> <TD CLASS=anc_seq>$sp</TD> <TD class=sm_txt>Anchor sequence predicted by Signal P</TD> </TR>\n" if $anchor;
+  push @legend, "<TR> <TD CLASS=tm_dom>$sp</TD> <TD class=sm_txt>Transmembrane domain predicted by TMHMM</TD> </TR>\n" if @tmm;
+  push @legend, "<TR> <TD CLASS=in_dom>$sp</TD> <TD class=sm_txt>Intracellular domain predicted by TMHMM</TD> </TR>\n" if @intra;
+  push @legend, "<TR> <TD CLASS=ex_dom>$sp</TD> <TD class=sm_txt>Extracellular domain predicted by TMHMM</TD> </TR>\n" if @extra;
+  push @legend, "<TR> <TD CLASS=pep_cov>$sp</TD> <TD class=sm_txt>Protein coverage by observed peptides</TD> </TR>\n" if @coverage;
+#  push @legend, "<TR> <TD CLASS=trans_seq>$sp</TD> <TD class=sm_txt>Entire Translated Protein Sequence</TD> </TR>\n";
+
+  my $legend = '';
+  for my $item ( @legend ) {
+    $legend .= $item;
+  }
+
+  # Create image map from panel objects. 
+  # links and mouseover coords for peptides, mouseover coords only for others
+  my $baselink = "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$args{build_id}&searchWithinThis=Peptide+Name&searchForThis=_PA_Accession_&action=QUERY";
+  my $pid = $$;
+  my @objects = $panel->boxes();
+  my $map = "<MAP NAME='$pid'>\n";
+  for my $obj ( @objects ) {
+    my $hkey_name = $obj->[0]->display_name();
+    my $link_name = $hkey_name;
+    $link_name =~ s/(.*)::::.*/$1/g;  # Grrr...
+    if ( $link_name =~ /^PAp\d+$/ ) { # Peptide, add link + mouseover coords/sequence
+      my $coords = join( ", ", @$obj[1..4] );
+      my $link = $baselink;
+      $link =~ s/_PA_Accession_/$link_name/g;
+      $map .= "<AREA SHAPE='RECT' ONMOUSEOVER=popup($pep_info{$hkey_name}); COORDS='$coords' TITLE='$pep_info{$hkey_name}' TARGET='_peptides' HREF='$link'>\n";
+    } else {
+      my $f = $obj->[0];
+      my $coords = join( ", ", @$obj[1..4] );
+      my $text = $f->start() . '-' . $f->end();
+      $map .= "<AREA SHAPE='RECT' COORDS='$coords' TITLE='$text'>\n";
+    }
+  }
+  $map .= '</MAP>';
+
+
+  # Create image in tmp space 
+  my $file_name    = $pid . "_glyco_predict.png";
+  my $tmp_img_path = "images/tmp";
+  my $img_file     = "$PHYSICAL_BASE_DIR/$tmp_img_path/$file_name";
+
+ 	open( OUT, ">$img_file" ) || die "$!: $img_file";
+	binmode(OUT);
+	print OUT $panel->png;
+	close OUT;
+
+  # Generate and return HTML for graphic
+  my $graphic =<<"  EOG";
+  <TABLE width='600'>
+    <TR> 
+      <TD>
+ 	      <img src='$HTML_BASE_DIR/$tmp_img_path/$file_name' ISMAP USEMAP='#$pid' alt='Sorry No Img' BORDER=0>
+  $map
+      </TD>
+    </TR>
+    <TR>
+      <TD COLSPAN=2 ALIGN=RIGHT>
+        <TABLE BORDER=0 class=outline>
+        $legend
+        </TABLE> 
+      </TD>
+    </TR>
+  </TABLE>
+  $style
+  EOG
+
+  return $graphic;
+
+}
 
 
 
