@@ -667,7 +667,7 @@ $LINESEPARATOR
 	  push @p_ids, $protein_biosequence_id;
 	  push @d_ids, $dna_biosequence_id if ($dna_biosequence_id);
 
-    push @glist, $biosequence_name;
+#    push @glist, $biosequence_name;
 	  #### Special (fragile?) handling for halo aliases
 	  my @alias_items = split ",", $aliases;
 	  my $NCBI_PID_BASE = "http://www.ncbi.nlm.nih.gov/sutils/blink.cgi?pid=";
