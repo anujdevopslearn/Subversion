@@ -144,6 +144,10 @@ sub handle_request {
 
   my %args = @_;
 
+  my $spacer = $sbeams->getGifSpacer( 900 );
+  my $htmlmode = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
+
+
   #### Process the arguments list
   my $ref_parameters = $args{'ref_parameters'}
       || die "ref_parameters not passed";
@@ -151,9 +155,8 @@ sub handle_request {
   my %parameters = %{$ref_parameters};
 
 
-  #### Show current user context information
-  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
-  #$sbeams->printUserContext();
+  # put a spacer so that showing hidden content doesn't mangle the layout
+  print "<BR>$spacer\n" if $htmlmode;
 
   #### Get the HTML to display the tabs
   my $tabMenu = $sbeamsMOD->getTabMenu(
@@ -457,11 +460,19 @@ sub handle_request {
   my @rows = $sbeams->selectHashArray($sql);
   my $biosequence = $rows[0];
 
+  # Widget to allow show/hide of overview section
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_overview',
+                                                visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                imglink => 1,
+                                                sticky => 1 );
+
 
   #### Print out a summary of the protein
   if ($sbeams->output_mode() eq 'html') {
     my $section_header = $sbeamsMOD->encodeSectionHeader(
-      text=>$biosequence->{biosequence_name},
+      text => $biosequence->{biosequence_name},
+      link => $link
     );
 
     print qq~
@@ -470,17 +481,20 @@ sub handle_request {
     ~;
     print $sbeamsMOD->encodeSectionItem(
       key=>'Protein Name',
+ tr_info => $tr,
       value=>$biosequence->{biosequence_name},
       #url=>"$biosequence->{accessor}$biosequence->{biosequence_accession}$biosequence->{accessor_suffix}",
     );
 
     print $sbeamsMOD->encodeSectionItem(
       key=>'Gene Name',
+ tr_info => $tr,
       value=>$biosequence->{biosequence_gene_name},
     );
 
     print $sbeamsMOD->encodeSectionItem(
       key=>'Description',
+ tr_info => $tr,
       value=>$biosequence->{biosequence_desc},
     );
 
@@ -494,6 +508,7 @@ sub handle_request {
       print $sbeamsMOD->encodeSectionItem(
         key=>$synonym->[1],
         value=>$synonym->[0],
+ tr_info => $tr,
         url=>$url,
       );
     }
@@ -511,6 +526,7 @@ sub handle_request {
                                                  string => $annot->{$key});
 
           print $sbeamsMOD->encodeSectionItem( key   => $fx{$type},
+ tr_info => $tr,
                                                value => $display );
         }
       }
@@ -613,8 +629,38 @@ sub handle_request {
       biosequence_id => $biosequence_id,
     );
 
+    my ( $obs, $peptides ) = getPeptideCount( biosequence => $biosequence,
+                                            resultset_ref => $resultset_ref );
+
+    # Straggler for protein section, doh!
+    print $sbeamsMOD->encodeSectionItem(
+ tr_info => $tr,
+      key=>'Total peptides',
+      value=>$obs
+    ) . "</TABLE>\n" if $htmlmode;
+
+
+  ## Display the sequence graphic ##
+
+  # Widget to allow show/hide of graphic section
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_graphic',
+                                                visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                imglink => 1,
+                                                sticky => 1 );
+
+     
+    my $graphic_section = getSequenceGraphic( build_id => $atlas_build_id,
+                                         protein_data  => $biosequence,
+                                               tr_info => $tr,
+                                              );
+
+    my $graphic_head = $sbeamsMOD->encodeSectionHeader( text => "Sequence Motifs", link => $link );
+    print "<TABLE width=600>$graphic_head </TABLE> $graphic_section" if $htmlmode;
+
     #### Display the annotated sequence
     displayAnnotatedSequence(
+         peptides => $peptides,
       biosequence => $biosequence,
       resultset_ref=>$resultset_ref,
       protein_structure => $protein_structure,
@@ -629,19 +675,19 @@ sub handle_request {
     #  protein_structure => $protein_structure,
     #);
 
+  # Widget to allow show/hide of observed peptides section
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_observedlist',
+                                                visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                imglink => 1,
+                                                sticky => 1 );
+
+
     my $observed_header = $sbeamsMOD->encodeSectionHeader(
-                           text => 'Observed Peptides'
-                           );
-    print qq~
-      <TABLE width="600">
-      $observed_header
-      </TABLE>
-    ~ if ($sbeams->output_mode() eq 'html');
+                           text => 'Observed Peptides',
+                           link => $link );
 
-
-
-    #print "Content-type: text/html\n\n<PRE>\n";
-
+    print qq~ <TABLE width="600">$observed_header</TABLE><TABLE><TR $tr><TD COLSPAN=2>~ if $htmlmode;
 
     #### Create Cytoscape format files if selected
     my $java_web_start = { template => 'GetProtein' };
@@ -686,22 +732,24 @@ sub handle_request {
       rs_params_ref=>\%rs_params,
       base_url=>$base_url,
     ) if (0);
+    
+    print "</TD></TR></TABLE>" if $htmlmode;
 
 
-    #### Display the samples list
+    ## Display the samples list ##
+
+    # Widget to allow show/hide of samples section
+    my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_samplelist',
+                                                  visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                 imglink => 1,
+                                                  sticky => 1 );
+
     my $sample_ids = getSampleList( resultset_ref=>$resultset_ref,);
-    my $sampleHTML = $sbeamsMOD->getSampleDisplay( sample_ids => $sample_ids );
-    print "<TABLE width='600'>$sampleHTML</TABLE>"
-       if ($sbeams->output_mode() eq 'html');
-
-    #### Display the sequence graphic 
-    my $graphic_section = getSequenceGraphic( build_id => $atlas_build_id,
-                                         protein_data  => $biosequence );
-    $log->debug( $biosequence );
-
-    my $grapic_head = $sbeamsMOD->encodeSectionHeader( text => 'Sequence Motifs');
-    print "<BR><TABLE width=600>$grapic_head </TABLE>";
-    print $graphic_section;
+    my $samples = $sbeamsMOD->getSampleDisplay( sample_ids => $sample_ids,
+                                                      link => $link,
+                                                      tr_info => $tr );
+    print "<TABLE width='600'>$samples</TABLE>" if $htmlmode;
 
 
   #### If QUERY was not selected, then tell the user to enter some parameters
@@ -726,8 +774,6 @@ sub getSequenceGraphic {
   my $id =  $args{protein_data}->{biosequence_id};
   my $protseq = $args{protein_data}->{biosequence_seq};
   my $protlen = length( $protseq );
-
-  $log->debug( "Funk dat $tmhmm!" );
 
   # Had initially used the peptide query above, but the start/end coordinates 
   # were problematic.  Thus we need to do it again.
@@ -796,12 +842,12 @@ sub getSequenceGraphic {
                                          -pad_left  => 10,
                                          -pad_right => 50 );
 
-  open( FIL, ">/tmp/colors.html" );
-  print FIL "<HTML><HEAD></HEAD><BODY><TABLE WIDTH=600>\n";
-  my @c = $panel->color_names();
-  for my $c ( @c ) { print FIL "<TR><TD BGCOLOR=$c WIDTH=5%>$sp</TD><TD>$c$sp$sp</TD></TR>\n"; }
-  print FIL "</TABLE></BODY></HTML>\n";
-  close FIL;
+#  open( FIL, ">/tmp/colors.html" );
+#  print FIL "<HTML><HEAD></HEAD><BODY><TABLE WIDTH=600>\n";
+#  my @c = $panel->color_names();
+#  for my $c ( @c ) { print FIL "<TR><TD BGCOLOR=$c WIDTH=5%>$sp</TD><TD>$c$sp$sp</TD></TR>\n"; }
+#  print FIL "</TABLE></BODY></HTML>\n";
+#  close FIL;
 
   my $ruler = Bio::SeqFeature::Generic->new( -end => $protlen,
                                            -start => 2,
@@ -1059,7 +1105,7 @@ sub getSequenceGraphic {
       my $coords = join( ", ", @$obj[1..4] );
       my $link = $baselink;
       $link =~ s/_PA_Accession_/$link_name/g;
-      $map .= "<AREA SHAPE='RECT' ONMOUSEOVER=popup($pep_info{$hkey_name}); COORDS='$coords' TITLE='$pep_info{$hkey_name}' TARGET='_peptides' HREF='$link'>\n";
+      $map .= "<AREA SHAPE='RECT' COORDS='$coords' TITLE='$pep_info{$hkey_name}' TARGET='_peptides' HREF='$link'>\n";
     } else {
       my $f = $obj->[0];
       my $coords = join( ", ", @$obj[1..4] );
@@ -1080,16 +1126,18 @@ sub getSequenceGraphic {
 	print OUT $panel->png;
 	close OUT;
 
+  my $tr = $args{tr_info} || '';
+#  my $tr_link =  "<TR><TD>$link</TD></TR>";
   # Generate and return HTML for graphic
   my $graphic =<<"  EOG";
   <TABLE width='600'>
-    <TR> 
+    <TR $tr> 
       <TD>
  	      <img src='$HTML_BASE_DIR/$tmp_img_path/$file_name' ISMAP USEMAP='#$pid' alt='Sorry No Img' BORDER=0>
   $map
       </TD>
     </TR>
-    <TR>
+    <TR $tr>
       <TD COLSPAN=2 ALIGN=RIGHT>
         <TABLE BORDER=0 class=outline>
         $legend
@@ -1101,10 +1149,39 @@ sub getSequenceGraphic {
   EOG
 
   return $graphic;
-
 }
 
+sub getPeptideCount {
+  my %args = @_;
+  my $SUB_NAME = $sbeams->get_subname();
 
+  #### Decode the argument list
+  my $resultset_ref = $args{'resultset_ref'}
+   || die "ERROR[$SUB_NAME]: resultset_ref not passed";
+  my $biosequence = $args{'biosequence'}
+   || die "ERROR[$SUB_NAME]: biosequence not passed";
+  my $line_length = $args{'line_length'} || 70;
+  my $word_length = $args{'word_length'} || 10;
+  my $enzyme = $args{'enzyme'} || '';
+  my $protein_structure = $args{'protein_structure'};
+  my $total_observations = $args{'total_observations'};
+
+  #### Don't display unless HTML
+  return unless ($sbeams->output_mode() eq 'html');
+
+  #### Get the hash of indices of the columns
+  my %col = %{$resultset_ref->{column_hash_ref}};
+
+  #### Loop over all the peptides
+  my $data_ref = $resultset_ref->{data_ref};
+  my @peptides = ();
+  foreach my $row (@{$data_ref}) {
+    push(@peptides,$row->[$col{peptide_sequence}]);
+   $total_observations += $row->[$col{n_observations}];
+  }
+
+  return( $total_observations, \@peptides );
+}
 
 ###############################################################################
 # displayAnnotatedSequence
@@ -1135,32 +1212,21 @@ sub displayAnnotatedSequence {
 
   #### Loop over all the peptides
   my $data_ref = $resultset_ref->{data_ref};
-  my @peptides = ();
-  $total_observations = 0;
-  foreach my $row (@{$data_ref}) {
-    push(@peptides,$row->[$col{peptide_sequence}]);
-   $total_observations += $row->[$col{n_observations}];
-  }
+  my @peptides = @{$args{peptides}};
 
-  print $sbeamsMOD->encodeSectionItem(
-    key=>'Total peptides',
-    value=>$total_observations,
-  );
+  # Widget to allow show/hide of sequence display section
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_sequence',
+                                                visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                imglink => 1,
+                                                sticky => 1 );
 
-
-  print qq~
-    </TABLE>
-    <BR>
-  ~;
 
   my $section_header = $sbeamsMOD->encodeSectionHeader(
     text=>'Sequence',
+    link =>$link,
   );
-  print qq~
-    <TABLE width="600">
-      $section_header
-    </TABLE>
-  ~;
+  print qq~ <TABLE width="600"> $section_header <TR $tr><TD> ~;
 
 
   my $sequence = $biosequence->{biosequence_seq};
@@ -1275,9 +1341,9 @@ sub displayAnnotatedSequence {
   print "Protein Coverage = ",int($observed_residues/$seq_length*1000)/10,
     "%";
 
+  print "</TD></TR></TABLE>\n";
   #print "<BR><BR>Notes:<BR>\n$notes_buffer" if ($notes_buffer);
 
-  print "<BR>";
 
 } # end displayAnnotatedSequence
 
