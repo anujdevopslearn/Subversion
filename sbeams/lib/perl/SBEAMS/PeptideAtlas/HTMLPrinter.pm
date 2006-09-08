@@ -411,8 +411,10 @@ sub encodeSectionHeader {
   my $text = $args{text} || '';
   $text = "<B>$text</B>" if $args{bold};
 
+  my $link = $args{link} || '';
+
   my $buffer = qq~
-        <TR><TD colspan="2" background="$HTML_BASE_DIR/images/fade_orange_header_2.png" width="600"><font color="white">$text</font></TD></TR>
+        <TR><TD colspan="2" background="$HTML_BASE_DIR/images/fade_orange_header_2.png" width="600">$link<font color="white">$text</font></TD></TR>
 ~;
 
   return $buffer;
@@ -433,6 +435,8 @@ sub encodeSectionItem {
   my $url = $args{url} || '';
   my $kwid = ( $args{key_width} ) ? "WIDTH='$args{key_width}'" : '';
   my $vwid = ( $args{val_width} ) ? "WIDTH='$args{val_width}'" : '';
+  
+  my $tr = $args{tr_info} || ''; 
 
   $url =~ s/ /+/g;
 
@@ -444,7 +448,7 @@ sub encodeSectionItem {
   }
 
   my $buffer = qq~
-        <TR><TD NOWRAP bgcolor="cccccc" $kwid>$key</TD><TD $vwid>$astart$value$aend</TD></TR>
+        <TR $tr><TD NOWRAP bgcolor="cccccc" $kwid>$key</TD><TD $vwid>$astart$value$aend</TD></TR>
 ~;
 
   return $buffer;
@@ -527,11 +531,16 @@ sub getSampleDisplay {
 
   my @samples = $sbeams->selectSeveralColumns($sql);
 
-  my $header = $self->encodeSectionHeader(
-    text=>'Observed in Samples:',
-  );
+  my $header;
+  if ( $args{link} ) {
+    $header = $self->encodeSectionHeader( text => 'Observed in Samples:',
+                                          link => $args{link} );
+  } else {
+    $header = $self->encodeSectionHeader( text => 'Observed in Samples:',);
+  }
 
   my $html = '';
+  my $trinfo = $args{tr_info} || '';
 
   foreach my $sample (@samples) {
     my ($sample_id,$sample_title) = @{$sample};
@@ -540,6 +549,7 @@ sub getSampleDisplay {
       value=>$sample_title,
       key_width => '5%',
       val_width => '95%',
+      tr_info => $trinfo,
       url=>"$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=$sample_id",
     );
   }
