@@ -920,8 +920,8 @@ tooltip=>"Edit Annotation (restricted)");
                                       type => 'direct',
                                       name => "Orf names",
                                       data => \@glist,
-                                     start => 1, 
-                                       end => 1 ); 
+                                  organism => 'Halobacterium', 
+                                  ); 
  print "$gXML\n";
 
 
