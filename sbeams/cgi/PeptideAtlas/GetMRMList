@@ -74,6 +74,30 @@ if ($DEBUG)
 ###############################################################################
 # Set Global Variables and execute main()
 ###############################################################################
+my %monoIsoMass = 
+(
+    "G" => "57.02146",
+    "A" => "71.03711",
+    "S" => "87.02303",
+    "P" => "97.05276",
+    "V" => "99.06841",
+    "T" => "101.04768",
+    "C" => "103.00919",
+    "L" => "113.08406",
+    "I" => "113.08406",
+    "N" => "114.04293",
+    "D" => "115.02694",
+    "Q" => "128.05858",
+    "K" => "128.09496",
+    "E" => "129.04259",
+    "M" => "131.04049",
+    "H" => "137.05891",
+    "F" => "147.06841",
+    "R" => "156.10111",
+    "Y" => "163.06333",
+    "W" => "186.07931",
+);
+
 main();
 exit(0);
 
@@ -425,12 +449,12 @@ sub handle_request
     #### If QUERY or VIEWRESULTSET was selected, display the data
     if ($apply_action =~ /QUERY/i ) 
     {
+        my $ed = "<td>&nbsp;</td>";
+
         ##xxxxxxx instead of joining NIST to PA by peptide sequence below, 
         ##  should use protein name for case when protein name or list was set... 
 
         ##xxxxxxx add ability to search by CID precursor m/z, and fragment ion m/z
-
-##xxxxxx check that empty table elements print with correct spacing in IE
 
         ## If any of the PeptideAtlas params are set, query PA tables,
         ## else, query only NIST tables.
@@ -504,11 +528,6 @@ sub handle_request
 
             my @rows = $sbeams->selectSeveralColumns($sql);
 
-##xxxxxxx  will replace with sbeams result set set/write/display 
-print "<table border=2>";
-print "<th>protein</th> <th>alt name</th> <th>sequence</th>";
-print "<th>CID precursor m/z</th> <th>CID charge</th> <th>Prob</th> <th>n obs</th>";
-print "<th>fragment m/z</th> <th>fragment rel. inten</th><th>ion label</th>";
             foreach my $row (@rows)
             {
                 my ($nlsid, $seq, $prot, $precur_mz, $pep_chg, $alt_name,
@@ -525,28 +544,81 @@ print "<th>fragment m/z</th> <th>fragment rel. inten</th><th>ion label</th>";
         
                 my @rows2 = $sbeams->selectSeveralColumns($sql2);
 
-##xxxxxxx
+##xxxxxxx  will replace with sbeams result set set/write/display 
+print "<table border=2>";
 print "<tr>";
-print "<td>$prot</td><td>$alt_name</td><td>$seq</td>";
-print "<td>$precur_mz</td><td>$pep_chg</td><td>$prob</td><td>$n_obs</td>";
-
-print "<td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>";
+print "<th>protein</th> <th>alt name</th>";
+print "<th>CID precursor m/z</th> <th>CID charge</th> <th>Prob</th> <th>n obs</th>";
+print "<th>b<sup>+</sup></th> <th>#</th> <th>AA</th> <th>#</th>";
+print " <th>y<sup>+</sup></th> <th>y<sup>2+</sup></th>";
+print "<th>b<sup>+</sup> NIST</th><th>b<sup>+</sup> NIST rel. inten</th>";
+print "<th>y<sup>+</sup> NIST</th><th>y<sup>+</sup> NIST rel. inten</th>";
+print "<th>y<sup>+2</sup> NIST</th><th>y<sup>+</sup> NIST rel. inten</th>";
 print "</tr>";
+
+$prob = sprintf("%.2f", $prob);
+my @aa = split(//,$seq);
+my @b1 = getB1FragMassArray(seqArrayRef => \@aa );
+my @y1 = getY1FragMassArray(seqArrayRef => \@aa );
+my @y2 = getY2FragMassArray(y1ArrayRef => \@y1 );
+my @b1_nist = initArray( li => $#aa);
+my @y1_nist = initArray( li => $#aa);
+my @y2_nist = initArray( li => $#aa);
+my @b1_nist_inten = initArray( li => $#aa);
+my @y1_nist_inten = initArray( li => $#aa);
+my @y2_nist_inten = initArray( li => $#aa);
+print "<tr>";
+print "<td>$prot</td><td>$alt_name</td>";
+print "<td>$precur_mz</td><td>$pep_chg</td><td>$prob</td><td>$n_obs</td>";
 
                 foreach my $row2 (@rows2)
                 {
                     my ($frag_mz, $inten, $ion_label, $frag_chg)
                     = @{$row2};
- print "<tr>";
- print "<td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>";
- print "<td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>";
- print "<td>$frag_mz</td><td>$inten</td><td>$ion_label</td>";
- print "</tr>";
+
+                    ## parse ion label to store in parallel arrays
+                    ## will print these alongside the fragment ion m/z calculated
+                    ## from sequence
+                    if ( $ion_label =~ /y(\d+)(.*)/)
+                    {
+                        my $ind = $1;
+
+                        if ($frag_chg == 1)
+                        {
+                            $y1_nist[$#aa - $ind + 1] = $frag_mz;
+                            $y1_nist_inten[$#aa - $ind + 1] = $inten;
+                        } elsif ( $frag_chg == 2)
+                        {
+                            $y2_nist[$#aa - $ind + 1] = $frag_mz;
+                            $y2_nist_inten[$#aa - $ind + 1] = $inten;
+                        }
+                    } elsif ( $ion_label =~ /b(\d+)(.*)/)
+                    {
+                        my $ind = $1;
+                        if ($frag_chg == 1)
+                        {
+                            $b1_nist[$ind + 1] = $frag_mz;
+                            $b1_nist_inten[$ind + 1] = $inten;
+                        }
+                    }
                 }
-            }
+
+
+for (my $i=0; $i <= $#aa; $i++)
+{
+    my $bn = $i + 1;
+    my $yn = $#aa - $i + 1;
+    print "<tr> $ed $ed $ed $ed $ed $ed" if ($i > 0);
+    print "<td>$b1[$i]</td> <td>$bn</td> <td>$aa[$i]</td> <td>$yn</td> <td>$y1[$yn-1]</td> <td>$y2[$yn-1]</td>";
+    print "<td>$b1_nist[$i]</td> <td>$b1_nist_inten[$i]</td>";
+    print "<td>$y1_nist[$i]</td> <td>$y1_nist_inten[$i]</td>";
+    print "<td>$y2_nist[$i]</td> <td>$y2_nist_inten[$i]</td>";
+    print "</tr>";
+}
 print "</table>";
 print "<br/>";
 ##xxxxxxx
+            }
 
         } else
         {
@@ -578,6 +650,130 @@ print "<br/>";
         {
             print "You need to supply some parameters to contrain the query\n";
         }
+    }
+
+    ###################################################################
+    # getB1FragMassArray - get array of frag masses for b+
+    #
+    # @param seqArrayRef - ref to array of amino acid sequences
+    # @return @b1
+    ###################################################################
+    sub getB1FragMassArray
+    {
+        my %args = @_;
+      
+        my $seqArrayRef = $args{seqArrayRef};
+
+        my @aa = @{$seqArrayRef};
+
+        my @b1; 
+
+        ## calc b+ ions:
+        my $b1_sum = 1.00794;
+
+        for (my $i=0; $i <= $#aa; $i++)
+        {
+            $b1_sum = $b1_sum + $monoIsoMass{$aa[$i]};
+
+            if ($i == $#aa)
+            {
+                push(@b1, "&nbsp;");
+            } else
+            {
+                push(@b1, sprintf("%.4f",$b1_sum));
+            }
+        }
+
+        return @b1;
+    }
+
+    ###################################################################
+    # getY1FragMassArray - get array of frag masses for y+
+    #
+    # @param seqArrayRef - ref to array of amino acid sequences
+    # @return @y1
+    ###################################################################
+    sub getY1FragMassArray
+    {
+        my %args = @_;
+      
+        my $seqArrayRef = $args{seqArrayRef};
+
+        my @aa = @{$seqArrayRef};
+
+        my @y1; 
+
+        ## calc y+ ions:
+        my $y1_sum = 19.0184;
+
+        for (my $i=0; $i <= $#aa; $i++)
+        {
+            my $yn = $#aa - $i ;
+
+            $y1_sum = $y1_sum + $monoIsoMass{$aa[$yn]};
+
+            if ($i == $#aa)
+            {
+                push(@y1, "&nbsp;");
+            } else
+            {
+                push(@y1, sprintf("%.4f",$y1_sum));
+            }
+        }
+
+        return @y1;
+    }
+
+    ###################################################################
+    # getY2FragMassArray - get array of frag masses for y+
+    #
+    # @param y1ArrayRef - ref to array of y+ fragment masses
+    # @return @y2
+    ###################################################################
+    sub getY2FragMassArray
+    {
+        my %args = @_;
+      
+        my $y1ArrayRef = $args{y1ArrayRef};
+
+        my @y1 = @{$y1ArrayRef};
+
+        my @y2;
+
+        for (my $i=0; $i <= $#y1; $i++)
+        {
+            if ($i == $#y1)
+            {
+                push(@y2, "&nbsp;");
+            } else
+            {
+                my $t = ($y1[$i] + 1.00794)/2.;
+                push(@y2, sprintf("%.4f",$t));
+            }
+        }
+
+        return @y2;
+    }
+
+    ###################################################################
+    # initArray - initialize array to size li
+    # @param li - size of array
+    # @return ia - array initialized to hold &nbsp; for each element
+    ###################################################################
+    sub initArray
+    {
+        my %args = @_;
+        
+        my $li = $args{li};
+
+        my @ia;
+
+        for (my $i=0; $i <= $li; $i++)
+        {
+            push(@ia, "&nbsp;"); 
+        }
+
+        return @ia;
     }
 
 } # end handle_request
