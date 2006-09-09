@@ -237,7 +237,7 @@ sub populateRecords
             $annot =~ s/\"//g;
 
             my $label =""; ## unless overridden below
-            my $chg = $charge; ## unless overridden below
+            my $chg = 1; ## unless overridden below
 
             ## xxxxxxx note this is only surface parsing of first ion labeled
             my @sannot = split("/", $annot);
