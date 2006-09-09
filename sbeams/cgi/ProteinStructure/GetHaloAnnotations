@@ -30,7 +30,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -667,7 +667,7 @@ $LINESEPARATOR
 	  push @p_ids, $protein_biosequence_id;
 	  push @d_ids, $dna_biosequence_id if ($dna_biosequence_id);
 
-#    push @glist, $biosequence_name;
+    push @glist, $biosequence_name;
 	  #### Special (fragile?) handling for halo aliases
 	  my @alias_items = split ",", $aliases;
 	  my $NCBI_PID_BASE = "http://www.ncbi.nlm.nih.gov/sutils/blink.cgi?pid=";
@@ -693,8 +693,7 @@ $LINESEPARATOR
 my $glist_clean = "";
 my $peptide_hit_list = "";
 foreach my $glist_item (@glist){
-	$glist_item = "'" . $glist_item . "'";
-	$glist_clean = $glist_clean . $glist_item  . ",";	
+	$glist_clean .= "'$glist_item',";	
 }
 
 #ugh, this is pretty nasty !
@@ -751,7 +750,7 @@ my $atlas_data;
           push @p_ids, $protein_biosequence_id;
           push @d_ids, $dna_biosequence_id if ($dna_biosequence_id);
 
-    push @glist, $biosequence_name;
+#    push @glist, $biosequence_name;
 
 	  $table_html  .= qq~
 
@@ -920,6 +919,8 @@ tooltip=>"Edit Annotation (restricted)");
                                       type => 'direct',
                                       name => "Orf names",
                                       data => \@glist,
+                                     start => 1,
+                                       end => 1,
                                   organism => 'Halobacterium', 
                                   ); 
  print "$gXML\n";
