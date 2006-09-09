@@ -47,15 +47,16 @@ Options:
   --test                 test only, don't write records
   --load                 load the library
   --delete id            delete the library with NIST_library_id
-  --organism_name name   organism name (e.g. yeast, Human,...)
   --library_path path    path to library file
+  --nist_library_name    name to give to NIST library
+  --organism_name name   organism name (e.g. yeast, Human,...)
 
- e.g.: ./$PROG_NAME --library_path /data/yeast.msp --organism_name Yeast --load
+ e.g.: ./$PROG_NAME --library_path /data/yeast.msp --nist_library_name 'NIST Sc' --organism_name Yeast --load
 EOU
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","test",
-"load", "organism_name:s", "library_path:s", "delete:s")) 
+"load", "nist_library_name:s", "organism_name:s", "library_path:s", "delete:s")) 
 {
     print "\n$USAGE\n";
     exit;
@@ -69,11 +70,23 @@ $DEBUG = $OPTIONS{"debug"} || 0;
 
 $TESTONLY = $OPTIONS{"test"} || 0;
 
-unless ( $OPTIONS{delete} || $OPTIONS{organism_name} && $OPTIONS{library_path} )
+unless ( $OPTIONS{'delete'}  || $OPTIONS{'load'} || $OPTIONS{'test'})
 {
     print "\n$USAGE\n";
-    print "Need --organism_name and --library_path\n";
+    print "Need --load or --test or --delete id\n";
     exit(0);
+}
+
+if ($OPTIONS{'load'} || $OPTIONS{'test'})
+{
+    unless ($OPTIONS{library_path} && $OPTIONS{nist_library_name}
+    && $OPTIONS{organism_name})
+    {
+        print "\n$USAGE\n";
+        print "Need --library_path and --nist_library_name ";
+        print " and --organism_name\n";
+        exit(0);
+    }
 }
 
 
@@ -127,7 +140,8 @@ sub handleRequest
         }
 
         populateRecords(organism_id => $organism_id, 
-            file_path => $file_path);
+            file_path => $file_path,
+            nist_library_name => $OPTIONS{nist_library_name});
     }
 
     if ($OPTIONS{delete})
@@ -161,7 +175,12 @@ sub populateRecords
 
     my $infile = $args{file_path} || die "need file_path";
 
-    my $nist_library_id = insert_nist_library(organism_id => $organism_id);
+    my $nist_library_name = $args{nist_library_name} || 
+        die "need nist_library_name";
+
+    my $nist_library_id = insert_nist_library(
+        organism_id => $organism_id,
+        nist_library_name => $nist_library_name);
 
     open(INFILE, "<$infile") || die "ERROR: Unable to open for reading $infile";
 
@@ -246,11 +265,16 @@ sub populateRecords
                 if ( $sannot[0] =~ /^(y|b|a)(.*)/ )
                 {
                     $label  = $1 . $2;
-                    if ($label =~ /(.*)\^(.*)/)
+                    if ($label =~ /(.*)\^(.*)\^(.*)/)
                     {
                        $chg = $2;
                        ## remove asterick if present
                        $chg =~ s/\*//g;
+                       $label = $1;
+                    }
+                    if ($label =~ /(.*)\^(.*)/)
+                    {
+                       $chg = $2;
                        $label = $1;
                     }
                 }
@@ -329,8 +353,12 @@ sub insert_nist_library
 
     my $organism_id = $args{organism_id} || die "need organsim_id";
 
+    my $nist_library_name = $args{nist_library_name} || 
+        die "need nist_library_name";
+
     my %rowdata = (
        organism_id => $organism_id,
+       NIST_library_name => $nist_library_name,
     );
 
     ## create a sample record:
@@ -540,15 +568,20 @@ sub parseComment
 
     my %hash;
 
-    if ($line =~ /.*(Spec)=(\D+?)\s.*/)
+#   if ($line =~ /.*(Spec)=(\D+?)\s.*/)
+#   {
+#       $hash{$1} = $2;
+#   }
+
+    if ($line =~ /^(Comments:\s)(\w+)\s.*/)
     {
-        $hash{$1} = $2;
+        $hash{'Spec'} = $2;
     }
 
-    if ($line =~ /.*(Inst)=(\D+?)\s.*/)
-    {
-        $hash{$1} = $2;
-    }
+#   if ($line =~ /.*(Inst)=(\D+?)\s.*/)
+#   {
+#       $hash{$1} = $2;
+#   }
 
     if ($line =~ /.*(Fullname)=(.+?)\s.*/)
     {
@@ -564,9 +597,13 @@ sub parseComment
         $hash{$k} = $v if ($v != 0);
     }
 
-    if ($line =~ /.*(Mz_exact)=(.+?)\s.*/)
+#   if ($line =~ /.*(Mz_exact)=(.+?)\s.*/)
+#   {
+#       $hash{$1} = $2;
+#   }
+    if ($line =~ /.*(Parent)=(.+?)\s.*/)
     {
-        $hash{$1} = $2;
+        $hash{'Mz_exact'} = $2;
     }
 
     if ($line =~ /.*(Protein)=(.+?)\s.*/)
@@ -583,23 +620,49 @@ sub parseComment
         $hash{$1} = $2;
     }
 
-    if ($line =~ /.*(Dotbest)=(.+?)\s.*/)
+#   if ($line =~ /.*(Dotbest)=(.+?)\s.*/)
+#   {
+#       $hash{$1} = $2;
+#   }
+#   if ($line =~ /.*(Dottheory)=(.+?)\s.*/)
+#   {
+#       $hash{$1} = $2;
+#   }
+#   if ($line =~ /.*(Probcorr)=(.+?)\s.*/)
+#   {
+#       $hash{$1} = $2;
+#   }
+    if ($line =~ /.*(Dotfull)=(.+?)\s.*/)
     {
         $hash{$1} = $2;
     }
-    if ($line =~ /.*(Dottheory)=(.+?)\s.*/)
+    if ($line =~ /.*(Dot_cons)=(.+?)\s.*/)
     {
         $hash{$1} = $2;
     }
-    if ($line =~ /.*(Probcorr)=(.+?)\s.*/)
+    if ($line =~ /.*(Dotrev_consens)=(.+?)\s.*/)
     {
         $hash{$1} = $2;
     }
-    ## Specqual is the last entry in comment field:
-    if ($line =~ /.*(Specqual)=(.*)/)
+
+    if ($line =~ /.*(Suspect)=(.+?)\s.*/)
     {
         $hash{$1} = $2;
     }
+    if ($line =~ /.*(Look)=(.+?)\s.*/)
+    {
+        $hash{$1} = $2;
+    }
+    if ($line =~ /.*(Isgood)=(.+?)\s.*/)
+    {
+        $hash{$1} = $2;
+    }
+
+#   ## Specqual is the last entry in comment field:
+#   if ($line =~ /.*(Specqual)=(.*)/)
+#   {
+#       $hash{$1} = $2;
+#   }
     if ($line =~ /.*(Unassigned)=(.+?)\s.*/)
     {
         $hash{$1} = $2;
@@ -695,7 +758,8 @@ sub insert_nist_library_comments
 
     $rowdata{NIST_library_spectrum_id} = $nist_library_spectrum_id;
 
-    foreach my $key (qw/ Inst Sample Dotbest Dottheory Probcorr Specqual Unassigned Fullname /)
+#   foreach my $key (qw/ Inst Sample Dotbest Dottheory Probcorr Specqual Unassigned Fullname /)
+    foreach my $key (qw/ Sample Dotfull Dot_cons Dotrev_consens Suspect Look Isgood Unassigned Fullname /)
     {
         $rowdata{parameter_key} = $key;
 
