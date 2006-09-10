@@ -583,22 +583,35 @@ print "<td>$precur_mz</td><td>$pep_chg</td><td>$prob</td><td>$n_obs</td>";
                     {
                         my $ind = $1;
 
-                        if ($frag_chg == 1)
+                        my $rem = $2;
+
+                        ## ignore ions with -I and -num
+                        unless ($rem =~ /(.*)\-(.*)/)
                         {
-                            $y1_nist[$#aa - $ind + 1] = $frag_mz;
-                            $y1_nist_inten[$#aa - $ind + 1] = $inten;
-                        } elsif ( $frag_chg == 2)
-                        {
-                            $y2_nist[$#aa - $ind + 1] = $frag_mz;
-                            $y2_nist_inten[$#aa - $ind + 1] = $inten;
+                            if ($frag_chg == 1)
+                            {
+                                $y1_nist[$#aa - $ind + 1] = $frag_mz;
+                                $y1_nist_inten[$#aa - $ind + 1] = $inten;
+                            } elsif ( $frag_chg == 2)
+                            {
+                                $y2_nist[$#aa - $ind + 1] = $frag_mz;
+                                $y2_nist_inten[$#aa - $ind + 1] = $inten;
+                            }
                         }
                     } elsif ( $ion_label =~ /b(\d+)(.*)/)
                     {
                         my $ind = $1;
-                        if ($frag_chg == 1)
+
+                        my $rem = $2;
+
+                        ## ignore ions with -I and -num
+                        unless ($rem =~ /(.*)\-(.*)/)
                         {
-                            $b1_nist[$ind + 1] = $frag_mz;
-                            $b1_nist_inten[$ind + 1] = $inten;
+                            if ($frag_chg == 1)
+                            {
+                                $b1_nist[$ind - 1] = $frag_mz;
+                                $b1_nist_inten[$ind - 1] = $inten;
+                            }
                         }
                     }
                 }
