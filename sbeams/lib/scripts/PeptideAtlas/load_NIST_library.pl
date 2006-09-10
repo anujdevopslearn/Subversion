@@ -262,17 +262,25 @@ sub populateRecords
             my @sannot = split("/", $annot);
             if (@sannot)
             {
+                my $ignore = 0;
                 if ( $sannot[0] =~ /^(y|b|a)(.*)/ )
                 {
                     $label  = $1 . $2;
+                    
+                    ## won't use multiply charged ions eg: y^2^3
                     if ($label =~ /(.*)\^(.*)\^(.*)/)
                     {
-                       $chg = $2;
-                       ## remove asterick if present
-                       $chg =~ s/\*//g;
-                       $label = $1;
+#                      $chg = $2;
+#                      $label = $1;
+#                      ## asterick means dubious peak, so removing it
+#                      if ( $chg =~ s/\*//g)
+#                      {
+                           $chg = 1;
+                           $label = "";
+#                      }
+                       $ignore=1;
                     }
-                    if ($label =~ /(.*)\^(.*)/)
+                    if (($ignore ==0) && $label =~ /(.*)\^(.*)/)
                     {
                        $chg = $2;
                        $label = $1;
