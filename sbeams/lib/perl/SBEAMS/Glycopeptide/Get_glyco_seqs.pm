@@ -277,20 +277,23 @@ sub add_signal_sequence {
 	my $method = 'add_signal_sequence';
 	my $self = shift;
 	my $signal_sequence_info = $self->signal_sequence_info;
-	if ($signal_sequence_info =~ /(\d+).*Y$/){
-		$log->debug(__PACKAGE__. "::$method FOUND SIGNAL SEQUENCE");
-		my $seq_obj = $self->seq_info();
-				
-		my $sigseq = Bio::SeqFeature::Generic->new(
-                                                                -start        =>1,
-                                                                -end          =>$1 ,
-                                                                -primary          => "Signal Sequence",
-                                                                -tag              =>{Signal_sequence => 'signalsequence'
-                                                                                                 },
+# 42 N 0.002 N
+	$signal_sequence_info =~ /(\d+) (\w) (\d\.\d+) (\w)/;
+  my $end = $1;
+  my $cleaved = $2;
+  my $signal = $4;
+  $log->debug( "$signal_sequence_info yields end $end, cleaved $cleaved, and sig $signal" );
+  return if $signal =~ /N/i;
+  my $type = ( $cleaved =~ /Y/i ) ? 'Signal Sequence' : 'Anchor';
+  
+  my $sigseq = Bio::SeqFeature::Generic->new( -start        => 1,
+                                              -end          => $end,
+                                              -display_name => $type ,
+                                              -primary      => $type,
+                                              -tag          => { $type => $type } 
                                         );
 
-		$seq_obj->add_SeqFeature($sigseq);
-	}
+  $self->seq_info()->add_SeqFeature($sigseq);
 }
 # ###########################################
 #Add the transmembrane domains sequence 
@@ -795,7 +798,7 @@ sub predicted_pep_html{
 	my $synth = ( $sbeams->isGuestUser() ) ? '' : $q->td( text_class("Synthesized Peptide") );
 	
 	my $html  = "<table>";
-	$html .= $q->Tr({class=>'rev_gray_head'},
+	$html .= join( "\n", $q->Tr({class=>'rev_gray_head'},
 			       $q->td( {NOWRAP => 1}, $self->linkToColumnText(
 			       				display => "NXS/T Location",
 						    		title   =>"Glyco Site Location within the protein", 
@@ -805,7 +808,7 @@ sub predicted_pep_html{
 			       $q->td( text_class("Predicted Sequence")),
 			     	 $q->td(text_class("Predicted Mass")),
 			     	 $q->td( {NOBR => 1}, text_class("# Proteins with Peptide")),
-             $synth
+             $synth )
 			     );
 
 my $foo=<<'  END';
@@ -875,9 +878,9 @@ my $foo=<<'  END';
 									 anno_type => 'protein_similarity_score');
 			$synthesized_seq = $self->get_annotation( seq_obj =>$pep_seq_obj, 
 									                        anno_type => 'synthesized_seq') unless $sbeams->isGuestUser();
-      use Data::Dumper;
-      my $dump = Dumper( $feature_href );
-      $dump =~ s/\n/\<BR\>/g;
+#      use Data::Dumper;
+#      my $dump = Dumper( $feature_href );
+#      $dump =~ s/\n/\<BR\>/g;
 #      print $dump;
 #      exit;
 					
@@ -893,13 +896,13 @@ my $foo=<<'  END';
 ### Start writing some html that can be returned
 				#$q->td({align=>'center'}, $glyco_score),
 
-		 $html .= $q->Tr(
+		 $html .= join( "\n", $q->Tr(
 				$q->td($protein_glyco_site),
 				$q->td("$first_aa.$html_seq.$end_aa"),
 				$q->td({align=>'center'},$predicted_mass),
 				$q->td({align=>'center'},$hit_link),
 				$q->td({align=>'center'},$synthesized_seq),
-				
+        )
 			     );
 
 		}
@@ -925,8 +928,8 @@ sub identified_pep_html{
 	my $features_aref = shift;
 	
 	#start the HTML
-	my $html  = "<table>";
-	$html .= $q->Tr({class=>'rev_gray_head'},
+	my $html  = "<table>\n";
+  $html .= join( "\n", $q->Tr( {class=>'rev_gray_head'},
 			       $q->td( { NOWRAP => 1 }, $self->linkToColumnText(
 			       				display => "NXS/T Location",
 								title   =>"Glyco Site Location within the protein", 
@@ -949,7 +952,8 @@ sub identified_pep_html{
 			     	$q->td(text_class("Tissues")),
 			     	$q->td(text_class("# Obs")),
 			     	$q->td(text_class("Atlas"))
-			     );
+              ) # End Tr
+			     ); # End join
 				 
 	
   my $cutoff = $self->get_current_prophet_cutoff();
@@ -1022,7 +1026,7 @@ sub identified_pep_html{
 #		            ( $tissues =~ /serum/ ) ? 'serum, other' :
 #		            ( $tissues =~ /\w/ ) ? 'other' : '';
 
-		 $html .= $q->Tr(
+		 $html .= join( "\n", $q->Tr(
 				$q->td($gb.$protein_glyco_site.$ge),
 				$q->td("$gb$first_aa.$html_seq.$end_aa$ge"),
 				$q->td($gb.$peptide_prophet_score.$ge),
@@ -1031,7 +1035,8 @@ sub identified_pep_html{
 				$q->td($gb.$tissues.$ge),
 				$q->td($gb.$num_obs.$ge),
 				$q->td({ALIGN=>'CENTER'},$gb.$atlas_link.$ge),
-			     );
+			     )  # End Tr
+         ); # End join
 		}
 	$html .= "</table>";
 	return $html;
