@@ -3,6 +3,8 @@ package SBEAMS::Glycopeptide::Utilities;
 use SBEAMS::Connection qw( $log );
 use SBEAMS::Glycopeptide::Tables;
 
+use Bio::Graphics::Panel;
+
 sub new {
   my $class = shift;
   my $this = {};
