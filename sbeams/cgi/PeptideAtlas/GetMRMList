@@ -451,6 +451,8 @@ sub handle_request
     {
         my $ed = "<td>&nbsp;</td>";
 
+        print "Note that mono-isotopic masses are reported below.<br/><br/>";
+
         ##xxxxxxx instead of joining NIST to PA by peptide sequence below, 
         ##  should use protein name for case when protein name or list was set... 
 
@@ -476,24 +478,6 @@ sub handle_request
                 );
                 return;
             }
-
-            ## How do I get this to happen?
-            ## -- select peptide sequences into #tmp1
-            ## -- select top 10 highest inten peaks for each seq into #tmp2 
-            ##    order by inten
-            ## -- select prot, pep, from #tmp1, join to #tmp2 where 
-            ##    sequences are equal
-            ## How do I iterate over step 2 for each sequence, storing it 
-            ##    into one temp table?
-            ## ==> select top 10 inten with order by doesn't look like the right tool...
-            
-            ## Can only think to iterate over NIST_library_spectrum_id in perl...
-            ##    problem is lose the storage and persistence of returned 
-            ##    ResultSet in Eric's expected format by handing the sql 
-            ##    call here... so need to reproduce the saving into sbeams result_set
-            ##    (from DBInterface.pm) here...  started down this road,
-            ##    but the amount of code need to reproduce this and refs it needs for columns
-            ##    is large so not getting there quickly enough...
 
             $sql = qq~
             SELECT NLS.NIST_library_spectrum_id, NLS.sequence,
@@ -544,7 +528,7 @@ sub handle_request
         
                 my @rows2 = $sbeams->selectSeveralColumns($sql2);
 
-##xxxxxxx  will replace with sbeams result set set/write/display 
+##xxxxxxx  will replace with sbeams result set set/write/display soon-ish
 print "<table border=2>";
 print "<tr>";
 print "<th>protein</th> <th>alt name</th>";
