@@ -682,7 +682,7 @@ print "<br/>";
         my @b1; 
 
         ## calc b+ ions:
-        my $b1_sum = 1.00794;
+        my $b1_sum = 1.0078;
 
         for (my $i=0; $i <= $#aa; $i++)
         {
@@ -760,7 +760,7 @@ print "<br/>";
                 push(@y2, "&nbsp;");
             } else
             {
-                my $t = ($y1[$i] + 1.00794)/2.;
+                my $t = ($y1[$i] + 1.0078)/2.;
                 push(@y2, sprintf("%.4f",$t));
             }
         }
