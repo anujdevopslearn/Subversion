@@ -103,7 +103,7 @@ sub main
 
     #### Decide what action to take based on information so far
     $sbeamsMOD->display_page_header(project_id => $project_id);
-    $sbeams->printStyleSheet();
+#    $sbeams->printStyleSheet();
     if ($parameters{action} eq "Show_detail_form" || $parameters{redraw_protein_sequence} == 1) {
 		
 		 clean_params(\%parameters);
@@ -646,7 +646,12 @@ sub display_detail_form{
   my $swiss_id = get_annotation(glyco_o   => $glyco_o,
 								  anno_type => 'swiss_prot'
 							     );
-  my $html_protein_seq = $glyco_o->get_html_protein_seq(ref_parameters=>\%parameters);
+
+  my @prechecked = qw( identified_pep sseq tmhmm glyco_site );
+  my $html_protein_seq = $glyco_o->get_html_protein_seq( ref_parameters => \%parameters,
+                                                         prechecked => \@prechecked
+                                                       );
+
   my $protein_name = get_annotation(glyco_o   => $glyco_o,
 									  anno_type => 'protein_name'
 									  );
@@ -729,7 +734,7 @@ sub display_detail_form{
     my $protein_url = $glyco_o->get_atlas_link( name => $glyco_o->ipi_accession(), 
                                                 type => 'image',
                                               onmouseover => 'View Peptide Atlas information' );
-#
+
 			
 	## Print out the protein Information
   my $prot_info = join( "\n", 
@@ -793,91 +798,93 @@ sub display_detail_form{
     );  # End prot_info
 
 ## Display the predicted Peptide info
+
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => '_gpre_prepep',
+                                                visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                imglink => 1,
+                                                sticky => 1 );
     
   my $predicted_info = join( "\n", 
 		$q->Tr(
-				$q->td({class=>'grey_header', colspan=>2}, "Predicted N-linked Glycopeptides"),
+				$q->td({class=>'grey_header', colspan=>2}, "$link Predicted N-linked Glycopeptides"),
 			),
-		$q->Tr(
-				$q->td({colspan=>2},$glyco_o->display_peptides('Predicted Peptides'))
-			
-			)
+		  $q->Tr( "<TD COLSPAN=2 $tr>" .  $glyco_o->display_peptides('Predicted Peptides') . "</TD>" ), 
     ); # End predicted info
 
-    my $hidepred = '<B>Hide predicted peptides</B>';
-    my $showpred = '<B>Show predicted peptides</B>';
-
-    my $predicted_info_toggle = $sbeams->make_toggle_section ( content => $predicted_info,
-                                                  visible => 1,
-                                                 textlink => 1,
-                                                   sticky => 1,
-                                                  imglink => 1,
-                                                 hidetext => $hidepred,
-                                                 showtext => $showpred,
-                                              neutraltext => '',
-                                                     name => '_glycoprotein_prediced_peptides',);
 ## Display Identified Peptides
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => '_gpre_idpep',
+                                                visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                imglink => 1,
+                                                sticky => 1 );
   my $identified_info = join( "\n", 
 		$q->Tr(
-				$q->td({class=>'grey_header', colspan=>2}, "Identified N-linked Glycopeptides"),
+				$q->td({class=>'grey_header', colspan=>2 }, "$link Identified N-linked Glycopeptides"),
 			),
-		$q->Tr(
-				$q->td({colspan=>2},$glyco_o->display_peptides('Identified Peptides'))
-			
+		$q->Tr( "<TD COLSPAN=2 $tr>" .  $glyco_o->display_peptides('Identified Peptides') . "</TD>" 
 			),
     ); # End identified info
-#    $log->debug( $identified_info );
 
 ### Display the Amino Acid Sequence ###
-    
-  my $prot_seq = join( "\n", 
-			$q->Tr(
-				$q->td({class=>'grey_header', colspan=>2}, 
-				"Protein/Peptide Sequence"),
-			),
-			$q->Tr(
-				$q->td({colspan=>2, class=>'sequence_font'},">$ipi_url|$protein_name<br>$html_protein_seq")
-			
-			),
-    ); # End identified info
-
-  my %chk = ( predicted_pep => '',identified_pep => '',sseq => '',tmhmm => '' );
+  my %chk = ( predicted_pep => '',identified_pep => '',sseq => '',tmhmm => '', glyco_site => '' );
 
   if ( $parameters{redraw_protein_sequence} ) {
     for my $tag ( keys(%chk) ) {
       $chk{$tag} = 'checked' if $parameters{$tag};
     }
+  } else { # fresh load
+    for my $tag ( @prechecked )  { 
+      $chk{$tag} = 'checked';
+    }
   }
 
-# FIXME change to javascript/DHTML
+
+	
   my $sp = '&nbsp;';
   my $display_form = join( "\n", 
     $q->start_form(-action=>$q->script_name().'#protein_sequence'),
     $q->table( {border=>0, width=>'40%'},
     $q->Tr( 
     $q->Tr( 
-      $q->td( {class=>'predicted_pep', nowrap => 1 }, "$sp Predicted <INPUT TYPE=CHECKBOX NAME=predicted_pep $chk{predicted_pep}></INPUT>" ),
-      $q->td( {class=>'identified_pep', nowrap => 1  },"$sp Identified <INPUT TYPE=CHECKBOX NAME=identified_pep $chk{identified_pep}></INPUT>" ),
-      $glyco_o->has_signal_sequence() ?  $q->td( {class=>'sseq', nowrap => 1 },"$sp Signal Sequence <INPUT TYPE=CHECKBOX NAME=sseq $chk{sseq}></INPUT>" ) : '',
-      $glyco_o->has_transmembrane_seq() ? $q->td( {class=>'tmhmm', nowrap => 1  },"$sp Transmembrane <INPUT TYPE=CHECKBOX NAME=tmhmm $chk{tmhmm}></INPUT>" ) : '',
+      $q->td( {class=>'instruction_text', nowrap => 1 }, "Update:" ),
+      $q->td( {class=>'pred_pep', nowrap => 1 }, "$sp Predicted <INPUT TYPE=CHECKBOX NAME=predicted_pep $chk{predicted_pep} ONCHANGE='toggle_state(predicted_pep);'></INPUT>" ),
+      $q->td( {class=>'obs_pep', nowrap => 1  },"$sp Identified <INPUT TYPE=CHECKBOX NAME=identified_pep $chk{identified_pep} ONCHANGE='toggle_state(identified_pep);'></INPUT>" ),
+      $glyco_o->has_signal_sequence() ?  $q->td( {class=>'sig_seq', nowrap => 1 },"$sp Signal Sequence <INPUT TYPE=CHECKBOX NAME=sseq $chk{sseq} ONCHANGE='toggle_state(sseq);'></INPUT>" ) : '',
+      $glyco_o->has_transmembrane_seq() ? $q->td( {class=>'tm_dom', nowrap => 1  },"$sp Transmembrane <INPUT TYPE=CHECKBOX NAME=tmhmm $chk{tmhmm} ONCHANGE='toggle_state(tmhmm);'></INPUT>" ) : '',
+      $q->td( {class=>'glyco_seq', nowrap => 1 }, "$sp NxS/T site <INPUT TYPE=CHECKBOX NAME=glyco_site $chk{glyco_site} ONCHANGE='toggle_state(glyco_site);'></INPUT>" ),
           ),
       $q->hidden(-name=>'ipi_data_id', -value=>$ipi_data_id, -override => 1),
       $q->hidden(-name=>'redraw_protein_sequence', -value=>1),
-      $q->td( {colspan=>4, class=>'instruction_text',nowrap=>1 }, 
-              "<INPUT TYPE=SUBMIT NAME='redisplay' VALUE='Update Display'></INPUT> Select items above to customize displayed sequence annotations " ),
           ),
     $q->end_form()
     ) # End table
-  ); # End identified info
-			
-	
+  ); # End form
+
+    my ( $seq_html, $toggle ) = $sbeams->make_toggle_section ( content => "$ipi_url|$protein_name <BR>$html_protein_seq <BR> $display_form",
+                                                           visible => 1,
+                                                            sticky => 1,
+                                                            tooltip => 'Show/Hide Section',
+                                                           imglink => 1,
+                                                              name => '_gpre_protseq',);
+
+    
+  my $prot_seq = join( "\n", 
+			$q->Tr(
+				$q->td({class=>'grey_header', colspan=>2}, 
+				"${toggle}Protein/Peptide Sequence"),
+			),
+			$q->Tr(
+				$q->td({colspan=>2, class=>'sequence_font'}, $seq_html )
+			),
+    ); # End identified info
+
 ### Print Out the HTML to Make Dispaly the info About the the Protein and all it's Glyco-Peptides
   print $q->table({border=>0},
            $prot_info,
            $predicted_info,
            $identified_info,
            $prot_seq,
-           $display_form,
            $protein_map
 				);#end_table	
 		
@@ -902,15 +909,18 @@ sub make_protein_map_graphic {
 
   my $seq =  $args{glyco_o}->seq_info();					
    
-  my %colors = ( 'Signal Sequence' => 'cornflowerblue',
-                 Anchor => 'lightskyblue',
-          Transmembrane => 'greenyellow',
+  my %colors = ( 'Signal Sequence' => 'lavender',
+                 'Signal Sequence web' => '#CCCCFF',
+                 Anchor => 'lavender',
+                 Anchor_web => '#CCCCFF',
+          Transmembrane => 'lightgreen',
+          Transmembrane_web => '#CCFFCC',
           Intracellular => 'coral',
           Intracellular => 'coral',
   $id_track_type => 'firebrick',
           Extracellular => 'mediumseagreen',
                Coverage => 'beige',
-      $glyco_site_track => 'salmon',
+      $glyco_site_track => '#EE9999',
   $predicted_track_type => 'goldenrod' );
   # Define CSS classes
   my $sp = '&nbsp;' x 4;
@@ -918,11 +928,11 @@ sub make_protein_map_graphic {
   <STYLE>
    .obs_pep { background-color: $colors{$id_track_type} ;border-style: solid; border-color:gray; border-width: 1px  }
    .pred_pep { background-color: $colors{$predicted_track_type} ;border-style: solid; border-color:gray; border-width: 1px  }
-   .tm_dom { background-color: $colors{Transmembrane} ;border-style: solid; border-color:gray; border-width: 1px  }
+   .tm_dom { background-color: $colors{Transmembrane_web} ;border-style: solid; border-color:gray; border-width: 1px  }
    .in_dom { background-color: $colors{Intracellular} ;border-style: solid; border-color:gray; border-width: 1px  }
    .ex_dom { background-color: $colors{Extracellular} ;border-style: solid; border-color:gray; border-width: 1px  }
-   .anc_seq { background-color: $colors{Anchor};border-style: solid; border-color:gray; border-width: 1px  }
-   .sig_seq { background-color: $colors{'Signal Sequence'};border-style: solid; border-color:gray; border-width: 1px  }
+   .anc_seq { background-color: $colors{Anchor_web};border-style: solid; border-color:gray; border-width: 1px  }
+   .sig_seq { background-color: $colors{'Signal Sequence web'};border-style: solid; border-color:gray; border-width: 1px  }
    .glyco_seq { background-color: $colors{$glyco_site_track};border-style: solid; border-color:gray; border-width: 1px  }
    .pep_cov { background-color: $colors{Coverage};border-style: solid; border-color:gray; border-width: 1px  }
    .outline { border-style: solid; border-color:gray; border-width: 1px }
@@ -951,7 +961,6 @@ sub make_protein_map_graphic {
   my %sorted_features;
 	for my $f (@features) {
     my $tag = $f->primary_tag;
-#    $log->debug( $tag );
     push @{ $sorted_features{ucfirst($tag)} }, $f;
   }
 
@@ -1106,7 +1115,7 @@ sub make_protein_map_graphic {
                                                 sticky => 1 );
   # Generate and return HTML for graphic
   my $graphic =<<"  EOG";
-  <TABLE width='600'>
+  <TABLE width='100%'>
     <TR><TD CLASS='grey_header'>$link Protein/Peptide Map</TD></TR>
     <TR $tr> 
       <TD>
@@ -1192,7 +1201,6 @@ sub get_annotation {
 		$info = "Cannot find Info for '$anno_type'";
 	}
 	
-	#$log->debug(Dumper(\@annotations));
    
 	return $info;
 }
