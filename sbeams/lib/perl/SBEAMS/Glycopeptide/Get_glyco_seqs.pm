@@ -282,7 +282,6 @@ sub add_signal_sequence {
   my $end = $1;
   my $cleaved = $2;
   my $signal = $4;
-  $log->debug( "$signal_sequence_info yields end $end, cleaved $cleaved, and sig $signal" );
   return if $signal =~ /N/i;
   my $type = ( $cleaved =~ /Y/i ) ? 'Signal Sequence' : 'Anchor';
   
@@ -402,7 +401,6 @@ sub sorted_freatures {
 	my $count = 0;
 	#foreach my $f (@_){
 		
-	#	$log->debug("$count UNSORTED FEATURE " . $f->primary_tag);
 	#	$count ++;
 	#}
 	
@@ -432,18 +430,16 @@ sub get_html_protein_seq {
   my $seq = $args{seq};
   my $ref_parameters = $args{'ref_parameters'};
 	
-#$log->debug(Dumper($seq));
   unless(ref($seq)){
 		 $seq = $self->seq_info();
   }	
-		
+
   my $aa_seq = $seq->seq();
   my @array_of_arrays = $self->make_array_of_arrays($seq);
 
     
   my @sorted_features = $self->sorted_freatures($seq->all_SeqFeatures);# descend into sub features
         
-  #$log->debug(@sorted_features);
   for my $f (@sorted_features) {
     my $tag = $f->primary_tag;
 			
@@ -452,17 +448,30 @@ sub get_html_protein_seq {
     my $start =  $f->start - 1;
     my $end =  $f->end - 1;
             
-    my ($css_class, $title) = _choose_css_type( tag  => $tag,
-                                              params => $ref_parameters,
-                                               start => $start );
+    my ($name, $title) = _choose_css_type( tag  => $tag,
+                                         params => $ref_parameters,
+                                          start => $start );
+    next unless $name;
 
-    if ($css_class){
-      my $start_tag = "<span class='$css_class' $title>";
-      my $end_tag   = "</span>";
-      unshift @{$array_of_arrays[$start]}, $start_tag;
-      push @{$array_of_arrays[$end]}, $end_tag;
+    if ( !$title ) {
+      $title = $tag;
+      $title =~ s/s$//;
+      if ( $f->start() ) {
+        $title .= " " . $f->start() . '-' . $f->end();
+      }
     }
-			
+
+    my $css_class = $name || 'sequence_font';
+
+    if ( $args{prechecked} ) {
+      $css_class = 'sequence_font' if !grep( /$name/i, @{$args{prechecked}} )
+    }
+
+    my $start_tag = "<span class='$css_class' TITLE='$title' NAME=$name ID=$name>";
+    my $end_tag   = "</span>";
+    unshift @{$array_of_arrays[$start]}, $start_tag;
+    push @{$array_of_arrays[$end]}, $end_tag;
+  
   }
   #print( Dumper(\@array_of_arrays));
   my $string = $self->flatten_array_of_arrays(@array_of_arrays);
@@ -1208,11 +1217,9 @@ sub get_annotation {
         if ($annotations[0]){
                 $info = $annotations[0]->hash_tree;
         }else{
-          $log->debug( "$ac" );
                 $info = "Cannot find Info for '$anno_type'";
         }
 
-        #$log->debug(Dumper(\@annotations));
 
         return $info;
 }
