@@ -309,7 +309,7 @@ sub printStyleSheet {
 	
 	.sseq{ background-color: #CCCCFF; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
 	.tmhmm{ background-color: #CCFFCC; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; text-decoration:underline}
-  .instruction_text{ ${FONT_SIZE_LG}pt; font-weight: bold}
+  .instruction_text{ font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
 	
 	.glyco_site{ background-color: #ee9999; 
 	border-style: solid;
@@ -1274,9 +1274,10 @@ sub make_toggle_section {
     <DIV ID=$args{name} class="$hideclass"> $args{content} </DIV>
   END
 
+  my $tip = ( $args{tooltip} ) ? "TITLE='$args{tooltip}'" : '';
   my $imghtml = '';
   if ($args{imglink} ) {
-    $imghtml = "<IMG ID='$args{name}_gif' SRC='$HTML_BASE_DIR/images/$initial_gif'>"; 
+    $imghtml = "<IMG ID='$args{name}_gif' $tip SRC='$HTML_BASE_DIR/images/$initial_gif'>"; 
   }
   my $texthtml = '';
   if ( $args{textlink} ) {
@@ -1284,7 +1285,7 @@ sub make_toggle_section {
     $texthtml .= "<DIV ID=showtext class='$showclass'> $showtext </DIV>";
   }
 
-  my $linkhtml = qq~<A ONCLICK="toggle_content('${args{name}}')"> $imghtml $texthtml </A> $neuttext~;
+  my $linkhtml = qq~<A ONCLICK="toggle_content('${args{name}}')">$imghtml $texthtml</A> $neuttext~;
 
   # Return html as separate content/widget, or as a concatentated thingy
   return wantarray ? ( $html, $linkhtml ) : $linkhtml . $html;
