@@ -86,7 +86,7 @@ my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch";
 
     # Display page
     $sbeamsMOD->display_page_header(project_id => $project_id);
-    $sbeams->printStyleSheet();
+#    $sbeams->printStyleSheet();
     print $page;
     my $url = $q->self_url();
 		$sbeamsMOD->display_page_footer();
