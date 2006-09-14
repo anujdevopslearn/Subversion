@@ -156,7 +156,7 @@ sub handle_request {
 	print 
 	$q->table({class=>'table_setup'},
           $q->Tr({class=>'rev_gray_head'},
-	     $q->td({colspan=>2, class=>'rev_gray_head'}, $q->h2("ISB N-glycosylation peptide prediction server")),
+	     $q->td({colspan=>2, class=>'rev_gray_head'}, "ISB N-glycosylation peptide prediction server"),
 	  	 
 	  ),
 	  $q->Tr(
@@ -174,7 +174,7 @@ sub handle_request {
 	   $q->td({colspan=>2},'&nbsp; <br> &nbsp;') 
 	 ),	    
 	 $q->Tr({class=>'rev_gray_head'},
-	   $q->td({colspan=>2, class=>'rev_gray_head'}, $q->h2("Text Search"))
+	   $q->td({colspan=>2, class=>'rev_gray_head'}, "Text Search")
 	 ),
 	 $q->Tr(
 	   $q->td({class=>'grey_bg'}, "Choose Search option"),
@@ -204,7 +204,7 @@ sub handle_request {
 	   $q->td({colspan=>2}, " <B>-- or --</B> <br>")
 	 ), 
 	 $q->Tr({class=>'rev_gray_head'},
-	   $q->td({colspan=>2, class=>'rev_gray_head'}, $q->h2("Sequence Search") )
+	   $q->td({colspan=>2, class=>'rev_gray_head'}, "Sequence Search" )
 	 ), 
 	 
 	 $q->Tr(
@@ -235,7 +235,7 @@ sub handle_request {
 	"<br><br>",
 	$q->table(
 	   $q->Tr(
-	      $q->td({class=>'rev_gray_head', colspan=>2}, $q->h2("Examples"))
+	      $q->td({class=>'rev_gray_head', colspan=>2}, "Examples")
 	   ),
 	   $q->Tr(
               $q->td({class=>'grey_bg'}, "Gene Name"),

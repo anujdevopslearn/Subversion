@@ -149,7 +149,7 @@ sub print_form {
 	my $content = <<"  END";
   <TABLE>
    <TR CLASS='rev_gray_head'>
-    <TD><H1>Run Mass Search</H1></TD>
+    <TD class=rev_gray_head>Run Mass Search</TD>
    </TR>
    <TR>
     <TD>

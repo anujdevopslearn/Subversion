@@ -197,8 +197,8 @@ sub print_form {
 	
 	my $content = <<"  END";
   <TABLE>
-   <TR CLASS='rev_gray_head'>
-    <TD><H1>Search protein list</H1></TD>
+   <TR>
+    <TD class='rev_gray_head'>Search protein list</TD>
    </TR>
    <TR>
     <TD>

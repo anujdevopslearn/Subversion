@@ -117,20 +117,20 @@ sub display_proteins{
   my $html = '';
   if ( $mode eq 'multi_tmm' ) {
 	  $html .= $q->start_table() .
-             $q->Tr({class=>'rev_gray_head'},
-             $q->td('IPI ID'),
-             $q->td('Protein Name'),
-             $q->td('Protein Symbol'),
-             $q->td('Identified Peptides'),
-             $q->td('# TMM domains')
+             $q->Tr(
+             $q->td({class=>'rev_gray_head'},'IPI ID'),
+             $q->td({class=>'rev_gray_head'},'Protein Name'),
+             $q->td({class=>'rev_gray_head'},'Protein Symbol'),
+             $q->td({class=>'rev_gray_head'},'Identified Peptides'),
+             $q->td({class=>'rev_gray_head'},'# TMM domains')
              );
   } else {
 	  $html .= $q->start_table() .
-             $q->Tr({class=>'rev_gray_head'},
-             $q->td('IPI ID'),
-             $q->td('Protein Name'),
-             $q->td('Protein Symbol'),
-             $q->td('Identified Peptides')
+             $q->Tr({class=>'rev_grey', nowrap=>1 },
+             $q->td({class=>'rev_grey', nowrap=>1},'IPI ID'),
+             $q->td({class=>'rev_grey', nowrap=>1},'Protein Name'),
+             $q->td({class=>'rev_grey', nowrap=>1},'Protein Symbol'),
+             $q->td({class=>'rev_grey', nowrap=>1},'Identified Peptides')
              );
   }
 
