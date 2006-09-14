@@ -61,8 +61,8 @@ sub displayUnipepHeader {
   use LWP::UserAgent;
   use HTTP::Request;
   my $ua = LWP::UserAgent->new();
+#  my $skinLink = 'http://www.unipep.org/newlook/';
   my $skinLink = 'http://www.unipep.org';
-#  my $skinLink = 'http://www.peptideatlas.org';
   my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index.dbbrowse.php" ) );
   my @page = split( "\r", $response->content() );
   my $skin = '';
@@ -88,7 +88,7 @@ sub displayUnipepHeader {
   $skin
   END_PAGE
 #  print '<STYLE TYPE=text/css>' . $self->getGlycoStyleSheet() . '</STYLE>';
-  $self->printStyleSheet();
+#  $self->printStyleSheet();
 
   $self->printJavascriptFunctions();
   }
@@ -96,7 +96,6 @@ sub displayUnipepHeader {
 
 sub getGlycoStyleSheet {
   use Env qw (HTTP_USER_AGENT);   
-  $log->debug( "Hi mom" );
    
   my $FONT_SIZE=9;
   my $FONT_SIZE_SM=8;
@@ -150,7 +149,72 @@ my $css =<<END;
   	 
   	         .sseq{ background-color: #CCCCFF; ${FONT_SIZE_LG}pt; font-weight: bold}
   	         .tmhmm{ background-color: #CCFFCC; ${FONT_SIZE_LG}pt; font-weight: bold; text-decoration:underline}
-  	         .instruction_text{ ${FONT_SIZE_LG}pt; font-weight: bold}
+  	         .instruction_text{ font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
+  	 
+  	         .glyco_site{ background-color: #ee9999;
+  	         border-style: solid;
+  	         border-width: 1px;
+  	         /* top right bottom left */
+  	         border-color: #444444 #eeeeee #eeeee #444444; }
+  	 
+  	 
+         a.edit_menuButton:link { 	         a.edit_menuButton:link {
+         /* font-size: 12px; */ 	         /* font-size: 12px; */
+         background-color: #ff0066; 	         background-color: #ff0066;
+ } 	 }
+  	 
+  	 a.blue_button:link{
+  	         background: #366496;
+  	         color: #ffffff;
+  	         text-decoration: none;
+  	         padding:0px 3px 0px 3px;
+  	         border-top: 1px solid #CBE3FF;
+  	         border-right: 1px solid #003366;
+  	         border-bottom: 1px solid #003366; \
+  	         border-left:1px solid #B7CFEB;
+  	 }
+  	 
+  	 a.blue_button:visited{
+  	         background: #366496;
+  	         color: #ffffff;
+  	         text-decoration: none;
+  	         padding:0px 3px 0px 3px;
+  	         border-top: 1px solid #CBE3FF;
+  	         border-right: 1px solid #003366;
+  	         border-bottom: 1px solid #003366; \
+  	         border-left:1px solid #B7CFEB;
+  	 }
+  	 a.blue_button:hover{
+  	         background: #366496;
+  	         color: #777777;
+  	         text-decoration: none;
+  	         padding:0px 3px 0px 3px;
+  	         border-top: 1px solid #CBE3FF;
+  	         border-right: 1px solid #003366;
+  	         border-bottom: 1px solid #003366; \
+  	         border-left:1px solid #B7CFEB;
+  	 }
+  	 
+  	 a.blue_button:active{
+  	         background: #366496;
+  	         color: #ffffff;
+  	         text-decoration: none;
+  	         padding:0px 3px 0px 3px;
+  	         border-top: 1px solid #CBE3FF;
+  	         border-right: 1px solid #003366;
+  	         border-bottom: 1px solid #003366; \
+  	         border-left:1px solid #B7CFEB;
+  	 }
+     td {white-text} 	         border-width: 1px;
+  	 
+  	         border-right-color: blue ;
+  	         border-left-color:  red ;
+  	 
+  	         }
+  	 
+  	         .sseq{ background-color: #CCCCFF; ${FONT_SIZE_LG}pt; font-weight: bold}
+  	         .tmhmm{ background-color: #CCFFCC; ${FONT_SIZE_LG}pt; font-weight: bold; text-decoration:underline}
+  	         .instruction_text{ font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
   	 
   	         .glyco_site{ background-color: #ee9999;
   	         border-style: solid;
@@ -208,7 +272,6 @@ my $css =<<END;
   	 }
      td {white-text}
 END
-  $log->debug( "$css" );
 return $css;
 
 }
@@ -425,6 +488,21 @@ sub printJavascriptFunctions {
 	    return;
 	} // end showPassed
 
+  function toggle_state( element ) {
+    var state = element.checked; 
+    var name = element.name; 
+    var new_state = 'sequence_font';
+    if ( state ) {
+      new_state = element.name;
+    }
+
+    var element_spans = document.getElementsByName( name );
+    for (var i=0; i < element_spans.length; i++) {
+      element_spans[i].className = new_state; 
+    }
+
+    
+  }
 
 
         // -->
