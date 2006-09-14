@@ -31,7 +31,6 @@ use XML::Writer;
 use XML::Parser;
 use IO::File;
 
-
 use lib "$FindBin::Bin/../../perl";
 
 use vars qw ($sbeams $sbeamsMOD $current_username 
@@ -54,6 +53,9 @@ use SBEAMS::PeptideAtlas::Tables;
 
 ## Proteomics (for search_batch::data_location)
 use SBEAMS::Proteomics::Tables;
+
+use SBEAMS::PeptideAtlas::SpectraDescriptionSetParametersParser; 	 
+use SBEAMS::PeptideAtlas::SearchResultsParametersParser;
 
 
 $sbeams = new SBEAMS::Connection;
@@ -250,6 +252,7 @@ sub check_samples
         SELECT S.sample_tag, S.data_contributors
         FROM $TBAT_SAMPLE S
         WHERE S.record_status != 'D'
+        AND is_public='Y'
         ORDER BY S.sample_tag
     ~;
 
