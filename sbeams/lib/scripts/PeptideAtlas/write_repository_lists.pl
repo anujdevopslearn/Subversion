@@ -31,9 +31,6 @@ use XML::Writer;
 use XML::Parser;
 use IO::File;
 
-use SpectraDescriptionSetParametersParser;
-use SearchResultsParametersParser;
-
 
 use lib "$FindBin::Bin/../../perl";
 
