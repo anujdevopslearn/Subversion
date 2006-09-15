@@ -19,7 +19,7 @@ use vars qw($sbeams $current_contact_id $current_username
              $current_work_group_id $current_work_group_name
              $current_project_id $current_project_name $current_user_context_id);
 use CGI::Carp qw( croak);
-use SBEAMS::Connection qw( $log );
+use SBEAMS::Connection qw( $log $q );
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::TableInfo;
@@ -56,9 +56,13 @@ sub printPageHeader {
     return;
   }
 
-
   #### If the output mode is not html, then we don't want a header here
   if ($sbeams->output_mode() ne 'html') {
+    if ( $sbeams->output_mode() eq 'print') {
+      print $sbeams->get_http_header();
+      $self->printStyleSheet();
+      print "<TABLE border=0 CELLPADDING=5 CELLSPACING=5><TR><TD>\n";
+    }
     return;
   }
 
@@ -105,7 +109,7 @@ sub displaySCGAPPageHeader
   print "$http_header\n\n";
   print <<"  END_PAGE";
   <HTML>
-    $affy_css;
+    $affy_css
     $skin
   END_PAGE
 
@@ -137,8 +141,15 @@ sub getAffyCSS {
 	.table_setup{border: 0px ; border-collapse: collapse;   }
 	.pad_cell{padding:5px;  }
 	.white_hyper_text{font-family: Helvetica,Arial,sans-serif; color:#000000;}
-  </STYLE>
   END
+
+  my $agent = $q->user_agent();
+  $log->debug( $agent );
+  if ( $agent =~ /MSIE/ ) {
+    $css .= " .med_vert_cell {font-size: 10; background-color: #CCCCCC; white-space: nowrap; writing-mode: tb-rl; filter: flipv fliph;  }\n";
+  }
+  $css .= "</style>\n";
+
   return $css;
 }
 
@@ -356,6 +367,7 @@ sub displaySBEAMSPageHeader
 sub printStyleSheet {
     my $self = shift;
 
+    $log->debug( "gonna print yo" );
     #### Obtain main SBEAMS object and use its style sheet
     $sbeams = $self->getSBEAMS();
     $sbeams->printStyleSheet();
@@ -676,6 +688,7 @@ sub printPageFooter {
 
   #### If the output mode is not html, then we don't want a header here
   if ($sbeams->output_mode() ne 'html') {
+    print "</TD></TR></TABLE>\n" if $sbeams->output_mode() eq 'print';
     return;
   }
 

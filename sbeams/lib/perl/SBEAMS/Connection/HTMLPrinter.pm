@@ -449,8 +449,14 @@ a.blue_button:active{
 	border-bottom: 1px solid #003366; \
 	border-left:1px solid #B7CFEB; 
 }
-	</style>
     ~;
+
+  my $agent = $q->user_agent();
+  $log->debug( $agent );
+  if ( $agent =~ /MSIE/ ) {
+    print " .med_vert_cell {font-size: 10; background-color: #CCCCCC; white-space: nowrap; writing-mode: tb-rl; filter: flipv fliph;  }\n";
+  }
+  print "</style>\n";
 
     #### Boneyard:
     #	th   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt; font-weight: bold; background-color: #A0A0A0;}

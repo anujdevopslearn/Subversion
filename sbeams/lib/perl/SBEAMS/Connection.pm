@@ -126,6 +126,7 @@ sub output_mode {
               $new_value eq 'xml' ||
               $new_value eq 'cytoscape' ||
               $new_value eq 'boxtable' ||
+              $new_value eq 'print' ||
 	      $new_value eq 'excel' || $new_value eq 'excelfull'
       );
     $output_mode = $new_value;

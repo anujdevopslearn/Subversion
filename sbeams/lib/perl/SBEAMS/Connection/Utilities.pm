@@ -810,7 +810,7 @@ sub truncateString {
   $string =~ s/\s*$//;
 
   if ( $len < length($string) ) {
-    return substr( $string, 0, $len-3 ) . '...'; 
+    $string = substr( $string, 0, $len - 3 ) . '...'; 
   }
   return $string;
 }
