@@ -105,8 +105,8 @@ sub rebuildKeyIndex {
   my $organism_name = $args{organism_name}
     or die("ERROR[$METHOD]: Parameter organism_name not passed");
 
-  my $organism_id = $sbeams->get_organism_id( organism => $organism_name );
-    die( "Unable to find organism ID for $organism_name" ) if !$organism_id;
+  my $organism_id = $sbeams->get_organism_id( organism => $organism_name )
+    or die( "ERROR[$METHOD] Unable to find organism ID for $organism_name" );
 
   my $organism_specialized_build = $args{organism_specialized_build};
 
@@ -806,7 +806,6 @@ sub checkAtlasBuild {
   die "Missing required argument build_id" if !$args{build_id};
   
   my $sbeams = $self->getSBEAMS();
-  print "sbeams is $sbeams";
   my ($cnt) = $sbeams->selectrow_array( <<"  END" );
   SELECT COUNT(*) 
   FROM $TBAT_ATLAS_BUILD 
