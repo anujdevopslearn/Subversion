@@ -26,6 +26,7 @@ require Exporter;
 $VERSION = q[$Id$];
 @EXPORT_OK = qw();
 
+use SBEAMS::Connection;
 use SBEAMS::Connection::Tables;
 use SBEAMS::PeptideAtlas::Tables;
 
@@ -64,7 +65,7 @@ sub setSBEAMS {
 ###############################################################################
 sub getSBEAMS {
     my $self = shift;
-    return($sbeams);
+    return $sbeams || SBEAMS::Connection->new();
 } # end getSBEAMS
 
 
@@ -104,10 +105,12 @@ sub rebuildKeyIndex {
   my $organism_name = $args{organism_name}
     or die("ERROR[$METHOD]: Parameter organism_name not passed");
 
+  my $organism_id = $sbeams->get_organism_id( organism => $organism_name );
+    die( "Unable to find organism ID for $organism_name" ) if !$organism_id;
+
   my $organism_specialized_build = $args{organism_specialized_build};
 
-
-  if ($organism_name eq 'Human') {
+  if ($organism_name =~ /^Human$|^Mouse$/i ) {
 
     my $GOA_directory = $args{GOA_directory}
       or die("ERROR[$METHOD]: Parameter GOA_directory not passed");
@@ -120,13 +123,14 @@ sub rebuildKeyIndex {
     print "Loading protein keys from GOA...\n";
     $self->buildGoaKeyIndex(
       GOA_directory => $GOA_directory,
-      organism_name => 'human',
+      organism_name => lc($organism_name), 
+      organism_id => $organism_id, 
       atlas_build_id => $atlas_build_id,
     );
 
     print "Loading peptides keys...\n";
     $self->buildPeptideKeyIndex(
-      organism_id => 2,
+      organism_id => $organism_id,
       atlas_build_id => $atlas_build_id,
     );
 
@@ -153,7 +157,7 @@ sub rebuildKeyIndex {
 
     print "Loading peptides keys...\n";
     $self->buildPeptideKeyIndex(
-      organism_id=>3,
+      organism_id=>$organism_id,
       atlas_build_id=>$atlas_build_id,
     );
 
@@ -224,6 +228,11 @@ sub buildGoaKeyIndex {
   my $organism_name = $args{organism_name}
     or die("ERROR[$METHOD]: Parameter organism_name not passed");
 
+  # Use passed organism ID if available, else use lookup.
+  my $organism_id = $args{organism_id} || 
+                    $sbeams->get_organism_id( organism => $args{organism_name} ) ||
+    die("ERROR[$METHOD]: Unable to determine organism_id for $args{organism_name}");
+
   #### Open the provided GOA xrefs file
   my $GOA_file = "$GOA_directory/${organism_name}.xrefs";
   open(INFILE,$GOA_file)
@@ -236,7 +245,7 @@ sub buildGoaKeyIndex {
 
   #### Get the list of proteins that have a match
   my $matched_proteins = $self->getNProteinHits(
-    organism_id => 2,
+    organism_id => $args{organism_id},
     atlas_build_id => $atlas_build_id,
   );
 
@@ -791,6 +800,21 @@ sub getProteinSynonyms {
 } # end getProteinSynonyms
 
 
+sub checkAtlasBuild {
+  my $self = shift;
+  my %args = @_;
+  die "Missing required argument build_id" if !$args{build_id};
+  
+  my $sbeams = $self->getSBEAMS();
+  print "sbeams is $sbeams";
+  my ($cnt) = $sbeams->selectrow_array( <<"  END" );
+  SELECT COUNT(*) 
+  FROM $TBAT_ATLAS_BUILD 
+  WHERE atlas_build_id = $args{build_id}
+  AND record_status = 'N'
+  END
+  return $cnt;
+}
 
 
 
