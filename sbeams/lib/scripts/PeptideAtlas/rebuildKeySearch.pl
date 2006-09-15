@@ -51,9 +51,9 @@ Options:
   --quiet                Set flag to print nothing at all except errors
   --debug n              Set debug flag
   --testonly             If set, rows in the database are not changed or added
-  --GOA_directory        Directory where the latest GOA files are
-  --SGD_directory        Directory where the latest SGD files are
-  --organism_name        Name of organism to process (Human,Yeast)
+  --GOA_directory        Directory where the latest GOA files are (Human, Mouse)
+  --SGD_directory        Directory where the latest SGD files are (Yeast)
+  --organism_name        Name of organism to process (Human, Yeast, Mouse)
   --organism_specialized_build    If there is more than one default build
                          for an organism, this must be supplied, too
   --atlas_build_id       atlas_build_id of the build for which number of
@@ -150,6 +150,11 @@ sub handleRequest {
 
 
   my $keySearch = new SBEAMS::PeptideAtlas::KeySearch;
+
+  unless ( $keySearch->checkAtlasBuild(build_id => $atlas_build_id) ) {
+    print "\n$USAGE\nInvalid build id: $atlas_build_id\n";
+    exit;
+  }
 
   $keySearch->setSBEAMS($sbeams);
 
