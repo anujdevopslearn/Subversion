@@ -444,7 +444,7 @@ sub handle_request {
   }
 
   #### Color and format the sequence
-  print "START:" . $start;
+  print "START " . $start;
   my %colorings = ();
   my $start_len = length($start_offset_seq);
   my $orf_len = length($ORF);
