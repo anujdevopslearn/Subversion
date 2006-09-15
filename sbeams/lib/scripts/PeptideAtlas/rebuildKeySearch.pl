@@ -53,6 +53,7 @@ Options:
   --testonly             If set, rows in the database are not changed or added
   --GOA_directory        Directory where the latest GOA files are (Human, Mouse)
   --SGD_directory        Directory where the latest SGD files are (Yeast)
+  --reference_directory  Directory where reference input files are found (Halo,?)
   --organism_name        Name of organism to process (Human, Yeast, Mouse)
   --organism_specialized_build    If there is more than one default build
                          for an organism, this must be supplied, too
@@ -66,6 +67,7 @@ EOU
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
                    "GOA_directory:s","SGD_directory:s","organism_name:s",
 		   "atlas_build_id:i","organism_specialized_build:s",
+		   "reference_directory:s",
     )) {
 
     print "\n$USAGE";
@@ -126,6 +128,7 @@ sub handleRequest {
   #### Set the command-line options
   my $GOA_directory = $OPTIONS{"GOA_directory"};
   my $SGD_directory = $OPTIONS{"SGD_directory"};
+  my $reference_directory = $OPTIONS{"reference_directory"};
   my $organism_name = $OPTIONS{"organism_name"};
   my $atlas_build_id = $OPTIONS{"atlas_build_id"};
   my $organism_specialized_build = $OPTIONS{"organism_specialized_build"};
@@ -161,6 +164,7 @@ sub handleRequest {
   $keySearch->rebuildKeyIndex(
     GOA_directory => $GOA_directory,
     SGD_directory => $SGD_directory,
+    reference_directory => $reference_directory,
     organism_name => $organism_name,
     organism_specialized_build => $organism_specialized_build,
     atlas_build_id => $atlas_build_id,
