@@ -166,6 +166,33 @@ sub rebuildKeyIndex {
   }
 
 
+  if ($organism_name eq 'Halobacterium') {
+
+    my $reference_directory = $args{reference_directory}
+      or die("ERROR[$METHOD]: Parameter reference_directory not passed");
+
+    $self->dropKeyIndex(
+      atlas_build_id => $atlas_build_id,
+      organism_specialized_build => $organism_specialized_build,
+    );
+
+    print "Loading protein keys from SBEAMS and reference files...\n";
+    $self->buildHalobacteriumKeyIndex(
+      reference_directory => $reference_directory,
+      atlas_build_id => $atlas_build_id,
+    );
+
+    print "Loading peptides keys...\n";
+    $self->buildPeptideKeyIndex(
+      organism_id=>$organism_id,
+      atlas_build_id=>$atlas_build_id,
+    );
+
+    print "\n";
+
+  }
+
+
   #my $sql = "CREATE NONCLUSTERED INDEX idx_search_key_name ON $TBAT_SEARCH_KEY ( search_key_name )";
   #$sbeams->executeSQL($sql);
 
@@ -634,6 +661,172 @@ sub buildSGDKeyIndex {
 
 } # end buildGoaKeyIndex
 
+
+
+###############################################################################
+# buildHalobacteriumKeyIndex
+###############################################################################
+sub buildHalobacteriumKeyIndex {
+  my $METHOD = 'buildHalobacteriumKeyIndex';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  print "INFO[$METHOD]: Building Halobacterium key index...\n" if ($VERBOSE);
+
+  my $atlas_build_id = $args{atlas_build_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+
+  my $reference_directory = $args{reference_directory}
+    or die("ERROR[$METHOD]: Parameter reference_directory not passed");
+
+  unless (-d $reference_directory) {
+    die("ERROR[$METHOD]: '$reference_directory' is not a directory");
+  }
+
+  my $organism_id = 4;
+
+  #### Load the ancient ORF names and create a lookup table
+  my $reference_file = "$reference_directory/ORFmatches-edited.txt";
+  my %oldORFnames;
+  open(INFILE,$reference_file)
+    or die("ERROR[$METHOD]: Unable to open file '$reference_file'");
+  while (my $line = <INFILE>) {
+    $line =~ s/[\r\n]//g;
+    my ($ORFname,$VNGname) = split("\t",$line);
+    if ($VNGname) {
+      $oldORFnames{$VNGname} = $ORFname;
+    }
+  }
+  close(INFILE);
+
+
+  #### Get the list of proteins that have a match
+  my $matched_proteins = $self->getNProteinHits(
+    organism_id=>$organism_id,
+    atlas_build_id=>$atlas_build_id,
+  );
+
+
+  #### Fetch the latest data from SBEAMS
+  use SBEAMS::Client;
+  my $remote_sbeams = new SBEAMS::Client;
+  my $server_uri = "https://db.systemsbiology.net/sbeams";
+
+
+  #### Define the desired command and parameters
+  my $server_command = "ProteinStructure/BrowseBioSequence.cgi";
+  my $command_parameters = {
+    biosequence_set_id => 5,
+    #biosequence_gene_name_constraint => "bo%", for testing
+    display_options => "limit_sequence_width",
+    SBEAMSentrycode => "DF45jasj23jh",
+  };
+
+
+  #### Fetch the desired data from the SBEAMS server
+  my $resultset = $remote_sbeams->fetch_data(
+    server_uri => $server_uri,
+    server_command => $server_command,
+    command_parameters => $command_parameters,
+  );
+
+  #### Stop if the fetch was not a success
+  unless ($resultset->{is_success}) {
+    print "ERROR: Unable to fetch data.\n\n";
+    exit;
+  }
+  unless ($resultset->{data_ref}) {
+    print "ERROR: Unable to parse data result.  See raw_response.\n\n";
+    exit;
+  }
+
+  #### Find the indexes of the columns of interest
+  my @columns_names = qw ( biosequence_name biosequence_gene_name
+    biosequence_accession aliases functional_description );
+  my %idx;
+  foreach my $column_name ( @columns_names ) {
+    my $offset = $resultset->{column_hash_ref}->{$column_name};
+    if ($offset gt '') {
+      $idx{$column_name} = $offset;
+    } else {
+      die("ERROR: Unable to find column $column_name");
+    }
+  }
+
+  #### Loop over all input rows processing information
+  my $counter = 0;
+  foreach my $row (@{$resultset->{data_ref}}) {
+
+    my $biosequence_name = $row->[$idx{biosequence_name}];
+    next unless ($biosequence_name);
+
+    #### Build a list of protein links
+    my @links;
+
+    if ($biosequence_name) {
+      my @tmp = ('ORF Name',$biosequence_name);
+      push(@links,\@tmp);
+    }
+
+    my $biosequence_gene_name = $row->[$idx{biosequence_gene_name}];
+    if ($biosequence_gene_name &&
+      $biosequence_gene_name ne $biosequence_name) {
+      my @tmp = ('Common Name',$biosequence_gene_name);
+      push(@links,\@tmp);
+    }
+
+    my $biosequence_accession = $row->[$idx{biosequence_accession}];
+    if ($biosequence_accession) {
+      my @tmp = ('Gene ID',$biosequence_accession);
+      push(@links,\@tmp);
+    }
+
+    my $functional_description = $row->[$idx{functional_description}];
+    if ($functional_description) {
+      my @tmp = ('Functional Description',$functional_description);
+      push(@links,\@tmp);
+    }
+
+    my $ancient_name = $oldORFnames{$biosequence_name};
+    if ($ancient_name) {
+      my @tmp = ('Old ORF Name',$ancient_name);
+      push(@links,\@tmp);
+    }
+
+
+    foreach my $link (@links) {
+      #print "    ".join("=",@{$link})."\n";
+      my %rowdata = (
+        search_key_name => $link->[1],
+        search_key_type => $link->[0],
+        search_key_dbxref_id => $link->[2],
+        organism_id => $organism_id,
+        atlas_build_id => $atlas_build_id,
+        resource_name => $biosequence_name,
+        resource_type => 'Halobacterium ORF Name',
+        resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$biosequence_name&action=QUERY",
+        resource_n_matches => $matched_proteins->{$biosequence_name},
+      );
+      $sbeams->updateOrInsertRow(
+        insert => 1,
+        table_name => "$TBAT_SEARCH_KEY",
+        rowdata_ref => \%rowdata,
+        verbose=>$VERBOSE,
+        testonly=>$TESTONLY,
+      );
+    }
+
+
+    $counter++;
+    print "$counter... " if ($counter/100 eq int($counter/100));
+
+    my $xx=<STDIN> if (0);
+
+  } # endfor each row
+
+  print "\n";
+
+} # end buildHalobacteriumKeyIndex
 
 
 ###############################################################################
