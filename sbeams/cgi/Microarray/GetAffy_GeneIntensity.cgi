@@ -1885,6 +1885,9 @@ example view of pivot hash
         print join "", @$col;
         next;
       } 
+      if ( $cnt == @$row ) {
+        $col = $sbeams->truncateStringWithMouseover( string => $col, len => 40 )
+      }
       print "<td class='anno_cell'>$col</td>";
     }
     print "</tr>\n";
@@ -1898,15 +1901,41 @@ sub get_documentation_link {
 }
 
 sub get_back_link {
-  $q->delete( 'get_all_files' );
+  
+  my $full_url = $q->self_url();
+  
+  $q->delete( 'output_mode' );
+  my $back_url = $q->self_url();
+
+  $q->delete( 'click_all_files' );
   $q->delete( 'probe_set_id' );
   $q->delete( 'gene_name' );
   $q->delete( 'accession_number' );
   $q->delete( 'submit_query' );
   $q->delete( 'action' );
 
-  my $url = $q->self_url();
-  return "<A HREF=$url>New Search</A>";
+  my $newsearch_url = $q->self_url();
+
+  return <<"  END" if $sbeams->output_mode() =~ /print/;
+  <STYLE>
+  .hideme { display: none; }
+  </STYLE>
+
+  <SCRIPT>
+  function printWindow( ) {
+    var printbutton = document.getElementById( 'print_button' );
+    printbutton.className='hideme';
+    window.print();
+    var backbutton = document.getElementById( 'back_button' );
+    backbutton.className='';
+  }
+  </SCRIPT>
+
+  <DIV ID=print_button name=print_button CLASS=''><A HREF='javascript:printWindow()'>Print Window</A></DIV>
+  <A HREF=$back_url ID=back_button class=hideme> Back </A>
+  END
+
+  return "<A HREF=$newsearch_url>New Search</A>&nbsp;&nbsp;<A HREF=$full_url;output_mode=print>Printable View</A>";
 }
 
 ###############################################################################
@@ -1950,7 +1979,16 @@ sub get_back_link {
 ###############################################################################
 	sub make_table_name {
     my $name = shift;
-		my $table = "<table border=0>";
+    my $agent = $q->user_agent();
+
+    my $table = "<table border=0>";
+
+    # Will print sideways for IE
+    if ( $agent =~ /MSIE.*6/ ) {
+      $table .= "<tr valign='bottom'><td class='med_vert_cell'>$name</td></tr>";
+      $table .= "</table>";
+      return $table;
+    }
 
 		my @letters = split //, $name;
 
@@ -1967,6 +2005,7 @@ sub get_back_link {
 
 		}
 		$table .= "</table>";
+      return $table;
 	}
 
 ###############################################################################
