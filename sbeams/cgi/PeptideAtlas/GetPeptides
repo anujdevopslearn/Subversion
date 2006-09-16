@@ -446,13 +446,17 @@ sub handle_request {
      {
        my $count = 0;
        my $read_file=0;
+       my $prt;
        ## protein list
-       while (<$fh>)
+       while ($prt=<$fh>)
        {
-         my $str=$_;
-         chomp($str);
-         $protein_hash{$str} = $str;
-         $count = $count + 1;
+         chomp($prt);
+         $prt =~ s/\s+$//;
+         if ($prt)
+         {
+             $protein_hash{$prt} = $prt;
+             $count = $count + 1;
+         }
          last if ($count > 30000);
       }
     }
@@ -653,7 +657,6 @@ sub handle_request {
 
     ORDER BY P.peptide_accession$mapping_sort
   ~;
-
 
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
