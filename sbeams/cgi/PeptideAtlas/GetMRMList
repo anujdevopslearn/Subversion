@@ -122,7 +122,8 @@ sub main
 
     my $n_params_found = $sbeams->parse_input_parameters(
         q=>$q,parameters_ref=>\%parameters);
-#$sbeams->printDebuggingInfo($q);
+
+    #$sbeams->printDebuggingInfo($q);
 
     #### Process generic "state" parameters before we start
     $sbeams->processStandardParameters(parameters_ref=>\%parameters);
@@ -366,12 +367,16 @@ sub handle_request
              my $count = 0;
              my $read_file=0;
              ## protein list
-             while (<$fh>)
+             my $prt;
+             while ($prt=<$fh>)
              {
-                 my $str=$_;
-                 chomp($str);
-                 $protein_hash{$str} = $str;
-                 $count = $count + 1;
+                 chomp($prt);
+                 $prt =~ s/\s+$//;
+                 if ($prt)
+                 {
+                     $protein_hash{$prt} = $prt;
+                     $count = $count + 1;
+                 }
                  last if ($count > 30000);
             }
         }
@@ -386,21 +391,20 @@ sub handle_request
         ## trim off last comma:
         $protein_list =~ s/(.*)(,)$/$1/;
 
-        $biosequence_names_clause_nist = 
+        $biosequence_names_clause_pa = 
             "     AND BS.biosequence_name IN ( $protein_list )";
 
-        $biosequence_names_clause_pa = 
+        $biosequence_names_clause_nist = 
             "     AND NLS.protein_name IN ( $protein_list )";
 
         $biosequence_names_mapping_join =
             "   LEFT JOIN $TBAT_PEPTIDE_MAPPING PM "
            ."   ON ( PI.peptide_instance_id = PM.peptide_instance_id ) "
-           ."   LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS "
-           ."   ON (PI.atlas_build_id = BSS.atlas_build_id) "
            ."   LEFT JOIN $TBAT_BIOSEQUENCE BS "
-           ."   ON (BS.biosequence_id = PM.matched_biosequence_id) ";
+           ."   ON (BS.biosequence_id = PM.matched_biosequence_id) "
+           ."   LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS "
+           ."   ON (BS.biosequence_set_id = BSS.biosequence_set_id)";
     }
-
 
     ## if n_highest_intensity_fragment_ions not set, use default of 10
     if ($parameters{'n_highest_intensity_fragment_ions'})
