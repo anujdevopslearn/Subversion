@@ -915,15 +915,19 @@ tooltip=>"Edit Annotation (restricted)");
 	  $counter++;
 	}
 
+  # FIXME! Hard coded reference to halobacterium genus/species!
+  my $organism = 'Halobacterium sp. NRC-1';
+
   my $gXML = $sbeams->getGaggleXML( object => 'namelist', 
                                       type => 'direct',
                                       name => "Orf names",
                                       data => \@glist,
                                      start => 1,
                                        end => 1,
-                                  organism => 'Halobacterium', 
+                                  organism => $organism
                                   ); 
- print "$gXML\n";
+
+  print "$gXML\n";
 
 
 	# End the table
