@@ -309,6 +309,7 @@ sub printStyleSheet {
 	
 	.sseq{ background-color: #CCCCFF; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
 	.tmhmm{ background-color: #CCFFCC; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; text-decoration:underline}
+  .instruction_text{ font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
 	
 	.glyco_site{ background-color: #ee9999; 
 	border-style: solid;
@@ -448,8 +449,14 @@ a.blue_button:active{
 	border-bottom: 1px solid #003366; \
 	border-left:1px solid #B7CFEB; 
 }
-	</style>
     ~;
+
+  my $agent = $q->user_agent();
+  $log->debug( $agent );
+  if ( $agent =~ /MSIE/ ) {
+    print " .med_vert_cell {font-size: 10; background-color: #CCCCCC; white-space: nowrap; writing-mode: tb-rl; filter: flipv fliph;  }\n";
+  }
+  print "</style>\n";
 
     #### Boneyard:
     #	th   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt; font-weight: bold; background-color: #A0A0A0;}
@@ -1273,9 +1280,10 @@ sub make_toggle_section {
     <DIV ID=$args{name} class="$hideclass"> $args{content} </DIV>
   END
 
+  my $tip = ( $args{tooltip} ) ? "TITLE='$args{tooltip}'" : '';
   my $imghtml = '';
   if ($args{imglink} ) {
-    $imghtml = "<IMG ID='$args{name}_gif' SRC='$HTML_BASE_DIR/images/$initial_gif'>"; 
+    $imghtml = "<IMG ID='$args{name}_gif' $tip SRC='$HTML_BASE_DIR/images/$initial_gif'>"; 
   }
   my $texthtml = '';
   if ( $args{textlink} ) {
@@ -1283,11 +1291,161 @@ sub make_toggle_section {
     $texthtml .= "<DIV ID=showtext class='$showclass'> $showtext </DIV>";
   }
 
-  my $linkhtml = qq~<A ONCLICK="toggle_content('${args{name}}')"> $imghtml $texthtml </A> $neuttext~;
+  my $linkhtml = qq~<A ONCLICK="toggle_content('${args{name}}')">$imghtml $texthtml</A> $neuttext~;
 
   # Return html as separate content/widget, or as a concatentated thingy
   return wantarray ? ( $html, $linkhtml ) : $linkhtml . $html;
 }
+
+
+#+
+# Generates CSS, javascript, and HTML to render table row or column 'toggleable'
+# @narg visible  - default visiblity, orignal state of content (default is 0)
+# @narg textlink - 0/1, should show/hide text be shown (default is 0)
+# @narg imglink  - 0/1, should plus/minus widget be shown (default is 1)
+# @narg name     - Name for this toggle thingy
+# @narg tooltip  - Help text to display on image link 
+# @narg sticky   - Remember the state of this toggle in session?  Requires name,
+#                  defaults to 0 (false)
+#-
+sub make_table_toggle {
+  my $self = shift;
+  my %args = @_;
+
+  # Initialize some variables
+  my $html = '';      # HTML string to return
+  my $hidetext = '';  # Text for 'hide content' link
+  my $showtext = '';  # Text for 'show content' link
+  my $neuttext = '';  # Auxilary text for show/hide
+
+  $args{imglink} = 1 unless defined $args{textlink};
+  $args{textlink} = 0 unless defined $args{textlink};
+  if ( $args{textlink} ) {
+    $hidetext = ( $args{textlink} ) ? $args{hidetext} : ' hide ';
+    $showtext = ( $args{textlink} ) ? $args{showtext} : ' show ' ;
+    $neuttext = $args{neutraltext} if $args{neutraltext};
+  }
+  for my $i ( $hidetext, $showtext ) {
+    $i = "<FONT COLOR=blue> $i </FONT>";
+  }
+      
+  # Default visiblity is hidden
+  $args{visible} = 0 unless defined $args{visible};
+
+  my $set_cookie_code = '';
+
+  # If it is a sticky cookie, we might have a cached value
+  if ( $args{sticky} && $args{name} ) {
+    $set_cookie_code =<<"    END";
+      // Set cookie?
+      make_sticky_tbl_toggle( obj_name, new_state );
+    END
+
+    my $sticky_value = $self->getSessionAttribute( key => $args{name} );
+    if ( $sticky_value ) {
+      $args{visible} = ( $sticky_value eq 'tbl_visible' ) ? 1 : 0;
+    }
+  }
+
+  $args{name} ||= $self->getRandomString( num_chars => 12,
+                                          char_set => [ 'A'..'z' ]
+                                        ); 
+  
+  my $hideclass = ( $args{visible} ) ? 'tbl_visible' : 'tbl_hidden';
+  my $showclass = ( $args{visible} ) ? 'tbl_hidden'  : 'tbl_visible';
+  my $initial_gif = ( $args{visible} ) ? 'small_gray_minus.gif'  
+                                       : 'small_gray_plus.gif';
+
+
+  # Add css/javascript iff necessary
+  unless ( $self->{_tbl_toggle_section_exists} ) {
+    $self->{_tbl_toggle_section_exists}++;
+    $html =<<"    END";
+    <STYLE TYPE="text/css" media="screen">
+    tr.tbl_visible { display: table-row; }
+    tr.tbl_hidden { display: none; }
+    td.tbl_visible { display: table-cell; }
+    td.tbl_hidden { display: none; }
+    </STYLE>
+    <SCRIPT TYPE="text/javascript">
+    function make_sticky_tbl_toggle( obj_name, appearance ) {
+      var cookie = document.cookie;
+      var regex = new RegExp( "SBEAMSui=([^;]+)" );
+      var match = regex.exec( cookie + ";" );
+      var newval = obj_name + "&" + appearance;
+      var cookie = "";
+      if ( match ) {
+        cookie = match[0] + "&" + newval;
+      } else { 
+        cookie = "SBEAMSui=" + newval;
+      }
+      document.cookie = cookie;
+    }
+
+    function toggle_tbl(obj_name) {
+      
+      // Grab page elements by their IDs
+      var gif_file = obj_name + "_gif";
+      var tgif = document.getElementById(gif_file);
+      var tbl_obj = document.getElementsByName( obj_name );
+
+      for (var i=0; i < tbl_obj.length; i++) {
+        var current_state = tbl_obj[i].className;
+        var new_state = 'none';
+        if ( current_state == 'tbl_hidden' ) {
+          new_state = 'tbl_visible';
+          if ( tgif ) {
+            tgif.src =  '$HTML_BASE_DIR/images/small_gray_minus.gif'
+          }
+        } else if (  current_state == 'tbl_visible' ) {
+          new_state = 'tbl_hidden';
+          if ( tgif ) {
+            tgif.src =  '$HTML_BASE_DIR/images/small_gray_plus.gif'
+          }
+        }
+        tbl_obj[i].className = new_state;
+      }
+      $set_cookie_code
+    }
+    </SCRIPT>
+    END
+
+
+    # Put this here for expediency.  If it causes trouble we can cat it 
+    # together with one of the other returned items.
+    print $html if $self->output_mode() =~ /html/i;
+  }
+
+  # Set up the TR/TD attributes
+  my $tbl_html .= "NAME=$args{name} ID=$args{name} ";
+  
+  # Image isn't hidden, it is switched in the javascript
+  my $imghtml = '';
+  if ( $args{imglink} ) {
+    my $tip = ( $args{tooltip} ) ? "TITLE='$args{tooltip}'" : '';
+    $imghtml = "<IMG ID='$args{name}_gif' $tip SRC='$HTML_BASE_DIR/images/$initial_gif'>"; 
+  }
+
+  # The show/hide text is in two opposite toggling sections 
+  my $texthtml = '';
+  if ( $args{textlink} ) {
+    $texthtml = "<TD $tbl_html CLASS=$hideclass>$hidetext</TD><TD $tbl_html CLASS=$showclass>$showtext</TD>";
+  }
+  
+  $tbl_html .= "CLASS='$hideclass'";
+
+
+  my $linkhtml = ( $texthtml ) ?  
+        qq~<A ONCLICK="toggle_tbl('${args{name}}');"><TABLE><TR><TD>$imghtml</TD>$texthtml </TR></TABLE></A> $neuttext~ : 
+        qq~<A ONCLICK="toggle_tbl('${args{name}}');">$imghtml</A> ~;
+
+  # Return html as separate content/widget, or as a concatentated thingy
+  return wantarray ? ( $tbl_html, $linkhtml ) : $linkhtml . $tbl_html;
+
+  
+}
+
+############
 
 sub getGifSpacer {
   my $self = shift;
