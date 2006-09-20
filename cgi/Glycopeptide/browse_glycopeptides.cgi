@@ -110,7 +110,11 @@ sub handle_request {
 sub display_proteins{
   my $mode = shift;
 
+  my $t1 = time();
 	my @results_set = $glyco_query_o->all_proteins_query($mode);	
+  my $t2 = time();
+  my $elapsed = $t2 - $t1;
+  $log->debug( "Elapsed: $elapsed" );
   my $html = '';
 
 	$html .= $q->start_table() .

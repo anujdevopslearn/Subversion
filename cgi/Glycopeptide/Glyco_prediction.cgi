@@ -50,7 +50,7 @@ my $file_name    = $$ . "_glyco_predict.png";
 my $tmp_img_path = "images/tmp";
 my $img_file     = "$PHYSICAL_BASE_DIR/$tmp_img_path/$file_name";
 my $predicted_track_type = "Predicted Peptides";
-my $id_track_type 		 = 'Identified Peptides';
+my $id_track_type 		 = 'Observed Peptides';
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/Glyco_prediction.cgi";
 
@@ -657,7 +657,7 @@ sub display_detail_form{
 	$log->debug("ABOUT TO MAKE GLYCO OBJ '$ipi_data_id'");
 	#go an query the db, add the peptide features and make into a big Bio::Seq object
 	my $glyco_o = new SBEAMS::Glycopeptide::Get_glyco_seqs(ipi_data_id => $ipi_data_id);
-  	$glyco_o->setSBEAMS($sbeams);
+ 	$glyco_o->setSBEAMS($sbeams);
   
    $log->debug("DONE MAKING GLYCO OBJ '$ipi_data_id'");
     make_image(glyco_o => $glyco_o);
@@ -754,12 +754,12 @@ sub display_detail_form{
 				$q->td({colspan=>2},$glyco_o->display_peptides('Predicted Peptides'))
 			
 			),
-## Dispaly Identified Peptides
+## Display Identified Peptides
 		$q->Tr(
-				$q->td({class=>'grey_header', colspan=>2}, "Identified N-linked Glycopeptides"),
+				$q->td({class=>'grey_header', colspan=>2}, "Observed Peptides"),
 			),
 		$q->Tr(
-				$q->td({colspan=>2},$glyco_o->display_peptides('Identified Peptides'))
+				$q->td({colspan=>2},$glyco_o->display_peptides('Observed Peptides'))
 			
 			),
 
@@ -980,6 +980,7 @@ sub make_image {
 	}
 	
 	
+  $log->debug( "Trying to make: $img_file" );
 	open( OUT, ">$img_file" ) || die $!;
 	binmode(OUT);
 	
