@@ -4,6 +4,7 @@ use SBEAMS::Connection qw( $log );
 use SBEAMS::Glycopeptide::Tables;
 
 use constant HYDROGEN_MASS => 1.0078;
+vdse Bio::Graphics::Panel;
 
 sub new {
   my $class = shift;
@@ -194,6 +195,38 @@ sub get_current_prophet_cutoff {
   }
   $cutoff ||= 0.5; 
   return $cutoff;
+}
+
+sub get_transmembrane_info {
+  my $self = shift;
+  my %args = @_;
+  return unless $args{tm_info};
+  my $string = $args{tm_info};
+  my $plen = $args{end} || '_END_';
+
+  my @tminfo;
+  my $start = 0;
+  my $side = '';
+  my ($posn, $beg, $end );
+  while ( $string =~ m/[^oi]*[oi]/g ) {
+    next unless $&;
+    my $range = $&;
+    my ($beg, $end);
+    if ( !$side ) {
+      $side = ( $range eq 'i' ) ? 'intracellular' : 'extracellular';
+      $posn = 1;
+    } else {
+      $range =~ m/(\d+)\-(\d+)([io])/g;
+      $beg = $1;
+      $end = $2;
+      push @tminfo, [ $side, $posn, ($beg - 1) ];
+      push @tminfo, ['tm', $beg, $end ];
+      $posn = $end + 1;
+      $side = ( $3 eq 'i' ) ? 'intracellular' : 'extracellular';
+    }
+  }
+  push @tminfo, [ $side, $posn, $plen ];
+  return \@tminfo;
 }
 
 sub getCurrentBuild {
