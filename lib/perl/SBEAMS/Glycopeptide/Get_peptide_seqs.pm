@@ -67,7 +67,6 @@ sub new {
     my %args = @_;
     
     my $glyco_obj = $args{glyco_obj};
-#    $log->debug(__PACKAGE__ . "::$method NEW PEPTIDE OBJECT WITH GLYCO OBJ.". Dumper($glyco_obj));
 		
     confess(__PACKAGE__ . "::$method Must have Bio::Seq object  \n") unless ref($glyco_obj);
     
@@ -117,12 +116,16 @@ sub make_peptide_bio_seqs {
 	my $data_aref = $args{data};
 	my $pep_type = $args{type};
 
-				
 	foreach my $href (@{$data_aref}){
+    next unless %$href;
+#    $log->debug( "Made a $pep_type" );
+#    $log->debug( join ",", keys(  %$href ) );
+#    $log->debug( join ",", values(  %$href ) );
 		
 		my $modified_pep_seq = '';
 		my $peptide_id = '';
 		my $identified_tissues = '';
+
 		
 	#pull out the sequence and id for the different types of peptides 
    if ($pep_type eq 'Identified Peptides'){
@@ -130,10 +133,12 @@ sub make_peptide_bio_seqs {
 			$peptide_id =  $href->{'identified_peptide_id'};
 			$identified_tissues = $self->identified_tissues($peptide_id);
    } elsif ($pep_type eq 'Observed Peptides'){
+    $log->debug( "Obs is $href->{observed_peptide_sequence}, match is $href->{matching_sequence}" );
 			$modified_pep_seq = $href->{'observed_peptide_sequence'};
 			$peptide_id =  $href->{'observed_peptide_id'};
-			$identified_tissues = $self->observed_tissues($peptide_id);
+			$identified_tissues = $self->observed_tissues($href->{matching_sequence});
 		} elsif ($pep_type eq 'Predicted Peptides'){
+#    $log->debug( "Pred is $href->{predicted_peptide_sequence}, match is $href->{matching_sequence}" );
 			$modified_pep_seq = $href->{'predicted_peptide_sequence'};
 			$peptide_id =  $href->{'predicted_peptide_id'};
 		}	
@@ -165,8 +170,8 @@ sub add_peptide_annotation{
 	my $mehtod = 'add_peptide_annotation';
 	my $self = shift;
 	my %args = @_;
-  $log->printStack();
-  $log->debug( "Called with args: " . join( ", ", keys %args ) );
+#  $log->printStack();
+#  $log->debug( "Called with args: " . join( ", ", keys %args ) );
 	my $href = $args{data};
 	my $seq  = $args{seq};
 	my $tissue_info = $args{tissue_info};	
@@ -190,7 +195,7 @@ sub add_peptide_annotation{
 #	my $synthesized_seq	= new Bio::Annotation::SimpleValue(-value => 'Yes' );	
 	my $synthesized_seq	= new Bio::Annotation::SimpleValue(-value => $href->{'synthesized_sequence'} );	
 	my $glyco_score		= new Bio::Annotation::SimpleValue(-value => sprintf("%01.2f", $href->{'glyco_score'}));	
-	my $protein_glyco_position   = new Bio::Annotation::SimpleValue(-value =>  $href->{'protein_glyco_site_position'});
+	my $protein_glyco_position   = new Bio::Annotation::SimpleValue(-value =>  $href->{'protein_glycosite_position'});
 	
 	$tissues->text($tissue_info);
 	
@@ -355,10 +360,11 @@ sub map_pep_to_protein {
 	
 	my $pep_obj = $args{pep_bioseq};
 	my $track_type = $args{peptide_type};
+  $log->debug( "Predict this!" ) if $track_type =~ /pre/i;
 	
 	
 	confess(__PACKAGE__ . "::$method pep Bio::Seq object  \n") unless (ref($pep_obj));
-	confess(__PACKAGE__ . "::$method track type Can Only be 'Predicted or Identified Peptides'  \n") unless ($track_type =~ /Pr|Id/);
+#	confess(__PACKAGE__ . "::$method track type Can Only be 'Predicted or Identified Peptides'  \n") unless ($track_type =~ /Pr|Id/);
 	
 	my $glyco_obj = $self->get_glyco_object();
 	my $seq_obj = $glyco_obj->seq_info();
@@ -367,12 +373,13 @@ sub map_pep_to_protein {
 	
 	#$log->debug( "PEP '" . $pep_obj->seq() . "' " ); #$seq_obj->seq() 
 
-	my $pep_seq = $pep_obj->seq();
+	my $pep_seq = uc($pep_obj->seq());
 	if ( $seq_obj->seq() =~ /$pep_seq/ ) {
 		#add one for the starting position since we want the start of the peptide location
 		
 		my $start_pos = length($`) +1;    
 		my $stop_pos = $pep_obj->length() + $start_pos - 1 ;    #subtract 1 since we want the ture end 
+  $log->debug( "Adding a $track_type object starting at $start_pos, ending at $stop_pos" );
 		#$log->debug(" $pep_seq START '$start_pos' STOP '$stop_pos'");
 		$self->add_peptide_to_sequence(
 			peptide => $pep_obj,
@@ -381,7 +388,8 @@ sub map_pep_to_protein {
 			end     => $stop_pos
 		);
 	}else {
-		print (__PACKAGE__ . "::$method Could not find peptide in protein seq\n");
+    $log->error( "failed to map peptide to protein: $pep_seq " . $seq_obj->seq() );
+
 	}
 
 }
@@ -463,6 +471,15 @@ sub identified_tissues {
 	
 	confess(__PACKAGE__ . "::$method NEED identified_peptide_id '$identified_peptide_id'  \n") unless ($identified_peptide_id =~ /^\d+$/); 
 	my $tissues = $self->get_identified_tissues($identified_peptide_id);
+	
+	return join ",", @$tissues;
+}
+
+sub observed_tissues {
+	my $self = shift;
+	my $seq = shift;
+	
+	my $tissues = $self->get_observed_tissues($seq);
 	
 	return join ",", @$tissues;
 }

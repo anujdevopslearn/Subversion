@@ -171,12 +171,13 @@ sub get_site_positions {
   my $self = shift;
   my %args = @_;
   $args{pattern} = 'N.[S|T]' if !defined $args{pattern};
+  my $idx = $args{index_base} || 0;
   return unless $args{seq};
 
   my @posn;
   while ( $args{seq} =~ m/$args{pattern}/g ) {
     my $posn = length($`);
-    push @posn, $posn;# pos($string); # - length($&) # start position of match
+    push @posn, ($posn + $idx);# pos($string); # - length($&) # start position of match
   }
 #  $log->debug( "Found $posn[0] for NxS/T in $args{seq}\n" );
   return \@posn;

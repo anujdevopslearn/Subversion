@@ -71,21 +71,20 @@ use SBEAMS::Glycopeptide::Get_peptide_seqs;
 #constructor
 ###############################################################################
 sub new {
-    my $method = 'new';
-    my $this = shift;
-    my $class = ref($this) || $this;
-    my %args = @_;
+  my $method = 'new';
+  my $this = shift;
+  my $class = ref($this) || $this;
+  my %args = @_;
     
-    my $ipi_data_id = $args{ipi_data_id};
-    confess(__PACKAGE__ . "::$method Need to provide IPI data id '$ipi_data_id' is not good  \n") 
-    unless ($ipi_data_id =~ /^\d+$/);
+  my $ipi_data_id = $args{ipi_data_id};
+  die( "Must provide IPI data id ('$ipi_data_id')") if !$ipi_data_id;
     
-    my $self = {_ipi_data_id => $ipi_data_id};
-    bless $self, $class;
+  my $self = {_ipi_data_id => $ipi_data_id};
+  bless $self, $class;
     
-    $self->get_protein_info(); 
+  $self->get_protein_info(); 
     
-    return($self);
+  return($self);
 }
 
 ###############################################################################
@@ -118,20 +117,21 @@ sub get_ipi_data_id {
 #ipi_accession
 ###############################################################################
 sub ipi_accession {
-    my $method = 'ipi_accession';
-    my $self = shift;
-    my $accession = shift;
+  my $method = 'ipi_accession';
+  my $self = shift;
+  my $accession = shift;
     
-    if ($accession){# it's a setter
-    	if ($accession =~ /^IPI\d+$/){#it's a good setter.  it should be like IPI001234
-    		$self->{_ipi_accession_number} = $accession;
-    	}else{
-    		confess(__PACKAGE__ . "::$method BAD IPI ACCESSION NUMBER '$accession'\n"); 
-    	}
+  if ($accession){# it's a setter
+      # it's a good setter.  it should be like IPI001234
+#    	if ($accession =~ /^IPI\d+$/){
+    $self->{_ipi_accession_number} = $accession;
+#    	}else{
+#    		confess(__PACKAGE__ . "::$method BAD IPI ACCESSION NUMBER '$accession'\n"); 
+#   	}
     
-    }else{#it's a getter
-    	return $self->{_ipi_accession_number}
-   } 
+  }else{#it's a getter
+    return $self->{_ipi_accession_number}
+  } 
   
 }
 
@@ -169,11 +169,13 @@ sub get_protein_info {
 	$self->get_ipi_data();
 	
 	$self->add_predicted_peptides();
-	$self->add_identified_peptides();
+#	$self->add_identified_peptides();
+	$self->add_observed_peptides();
 	$self->add_signal_sequence();
 	$self->add_transmembrane_domains();
 	$self->add_cellular_location();
 	$self->add_glyco_site();
+  return;
 }
 
 
@@ -245,13 +247,14 @@ sub add_glyco_site{
 	my $ipi_data_id = $self->get_ipi_data_id;
 	my @array_hrefs = $self->get_glyco_sites($ipi_data_id);
 	#$log->debug(Dumper(\@array_hrefs));
+  $log->debug( "Found " . scalar(@array_hrefs) . " sites for $ipi_data_id") ;
 	return 0 unless @array_hrefs;
 	my $seq_obj = $self->seq_info;
 	
 	foreach my $href (@array_hrefs){ 
 		
 		
-		my $location = $href->{'protein_glyco_site_position'};
+		my $location = $href->{'protein_glycosite_position'};
 		my $glyco_score = $href->{'glyco_score'};
 		
 		my $glyco = Bio::SeqFeature::Generic->new(
@@ -264,6 +267,7 @@ sub add_glyco_site{
 		
 		
 		#add all the feature to the protein Bio::Seq object
+   $log->debug( "Adding $location" );
 		$seq_obj->add_SeqFeature($glyco);
 	}
 	return 1;
@@ -346,6 +350,7 @@ sub add_predicted_peptides {
 	$pep_o->make_peptide_bio_seqs(data => \@array_hrefs,
 								  type => 'Predicted Peptides',	
 								);
+  $log->debug( "Added predicted" );
 	
 
 }
@@ -354,17 +359,34 @@ sub add_predicted_peptides {
 #Add add the identified peptide seqs to the seq obj
 #########################################
 sub add_identified_peptides {
-	my $mehtod= 'add_identified_peptides';
+	my $method= 'add_identified_peptides';
 	my $self = shift;
 	my $ipi_data_id = $self->get_ipi_data_id;
 	my @array_hrefs = $self->get_identified_peptides($ipi_data_id);
 	
 	my $pep_o = new SBEAMS::Glycopeptide::Get_peptide_seqs(glyco_obj => $self);
 	
-	$pep_o->make_peptide_bio_seqs(data => \@array_hrefs,
-								  type => 'Identified Peptides',	
-								);
+#  $pep_o->make_peptide_bio_seqs( data => \@array_hrefs,
+#                                 type => 'Identified Peptides' );
+ 
+  die ( 'Should not be here' );
+  $pep_o->make_peptide_bio_seqs( data => \@array_hrefs,
+                                 type => 'Observed Peptides' );
 }
+
+sub add_observed_peptides {
+	my $self = shift;
+	my $ipi_data_id = $self->get_ipi_data_id;
+	my @array_hrefs = $self->get_observed_peptides($ipi_data_id);
+	
+	my $pep_o = new SBEAMS::Glycopeptide::Get_peptide_seqs(glyco_obj => $self);
+	
+	$pep_o->make_peptide_bio_seqs(data => \@array_hrefs,
+								  type => 'Observed Peptides',	
+								);
+  return;
+}
+
 
 #########################################################
 #make_url
@@ -500,6 +522,10 @@ sub _choose_css_type {
 		}elsif($tag eq 'Identified Peptides' && exists $parameters{'Identified Peptide'}){
 			$css_class='identified_pep';
 			
+		}elsif($tag eq 'Observed Peptides' && exists $parameters{'Observed Peptide'}){
+			$css_class='identified_pep';
+			
+		}elsif($tag eq 'Signal Sequence' && exists $parameters{'Signal Sequence'}){
 		}elsif($tag eq 'Signal Sequence' && exists $parameters{'Signal Sequence'}){
 			$css_class='sseq';
 		}elsif($tag eq 'Transmembrane' && exists $parameters{'Trans Membrane Seq'}){
@@ -796,7 +822,7 @@ sub display_peptides{
 	
 	if ($type eq 'Predicted Peptides'){
 		$html .= $self->predicted_pep_html($sorted_features{$type});
-	}elsif($type eq 'Identified Peptides'){
+	}elsif($type eq 'Observed Peptides'){
 		if (exists $sorted_features{$type}){
 			$html .= $self->identified_pep_html($sorted_features{$type});
 		}else{
@@ -898,7 +924,7 @@ my $foo=<<'  END';
 			$glyco_score = $self->get_annotation(seq_obj =>$pep_seq_obj, 
 									 anno_type => 'glyco_score');
 			$protein_glyco_site =  $self->get_annotation(seq_obj =>$pep_seq_obj,
-                                                                         anno_type => 'protein_glyco_site');
+                                                   anno_type => 'protein_glyco_site');
 			$detection_prop = $self->get_annotation(seq_obj =>$pep_seq_obj, 
 									 anno_type => 'detection_probability');
 			$database_hits = $self->get_annotation(seq_obj =>$pep_seq_obj, 
@@ -911,9 +937,9 @@ my $foo=<<'  END';
 									 anno_type => 'protein_similarity_score');
 			$synthesized_seq = $self->get_annotation( seq_obj =>$pep_seq_obj, 
 									                        anno_type => 'synthesized_seq') unless $sbeams->isGuestUser();
-      use Data::Dumper;
-      my $dump = Dumper( $feature_href );
-      $dump =~ s/\n/\<BR\>/g;
+#      use Data::Dumper;
+#      my $dump = Dumper( $feature_href );
+#      $dump =~ s/\n/\<BR\>/g;
 #      print $dump;
 #      exit;
 					
@@ -964,9 +990,9 @@ sub identified_pep_html{
 	my $html  = "<table>";
 	$html .= $q->Tr({class=>'rev_gray_head'},
 			       $q->td( { NOWRAP => 1 }, $self->linkToColumnText(
-			       				display => "NXS/T Location",
+	       				display => "NXS/T Location",
 								title   =>"Glyco Site Location within the protein", 
-								column  =>"protein_glyco_site_position", 
+								column  =>"protein_glycosite_position", 
 								table   => "AT_glyco_site" 
 								 
 								)
@@ -1265,7 +1291,7 @@ sub linkToColumnText {
   <SPAN title="$text" class="white_text" ONCLICK="popitup($url);">$display_name</SPAN>
 
   END_LINK
-  return $link;
+  return( $link );
 } # End linkToColumnText
 
 } #end of package

@@ -162,14 +162,14 @@ sub all_proteins_query {
 	
 	my $sql = qq~
     SELECT * FROM (
-    SELECT ID.ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
-    ( SELECT COUNT(DISTINCT matching_sequence) 
+     SELECT ID.ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
+     COUNT(DISTINCT matching_sequence) AS num_observed
       FROM $TBGP_OBSERVED_TO_IPI ITI
-      JOIN $TBGP_OBSERVED_PEPTIDE OP ON ITI.observed_peptide_id = OP.observed_peptide_id
-      WHERE ITI.ipi_data_id = ID.ipi_data_id 
-      AND peptide_prophet_score >= $cutoff
-      ) AS num_observed 
-    FROM $TBGP_IPI_DATA ID
+       JOIN $TBGP_OBSERVED_PEPTIDE OP ON ITI.observed_peptide_id = OP.observed_peptide_id
+       JOIN $TBGP_IPI_DATA ID ON ID.ipi_data_id = ITI.ipi_data_id
+      WHERE peptide_prophet_score >= $cutoff
+      GROUP BY ID.ipi_data_id, ipi_accession_number, protein_name, protein_symbol
+      HAVING COUNT(*) > 0
     ) AS temp
     $observed
     ORDER BY $order
@@ -190,7 +190,6 @@ sub all_proteins_query {
 #  $identified
 #  ORDER BY $order
 #  ~;
-
 	return $sbeams->selectHashArray($sql)
 }
 
@@ -445,11 +444,13 @@ sub get_predicted_peptides{
 				predicted_stop, 
         synthesized_sequence
 				FROM $TBGP_PREDICTED_PEPTIDE pp
-				JOIN $TBGP_GLYCOSITE gs ON (gs.glycosite_id = pp.glycosite_id)
+				JOIN $TBGP_PREDICTED_TO_GLYCOSITE ptg ON (ptg.predicted_peptide_id = pp.predicted_peptide_id)
+				JOIN $TBGP_GLYCOSITE gs ON (gs.glycosite_id = ptg.glycosite_id AND gs.ipi_data_id = pp.ipi_data_id )
 				LEFT JOIN $TBGP_SYNTHESIZED_PEPTIDE sp 
          ON sp.glycosite_id = pp.glycosite_id
 				WHERE pp.ipi_data_id = $ipi_data_id
 				~;
+#   $log->debug( $sql );
 	
 		return $sbeams->selectHashArray($sql);		
 }			
@@ -462,6 +463,61 @@ sub get_predicted_peptides{
 sub get_observed_peptides{
 	my $self = shift;
 	my $ipi_data_id = shift;
+	my $sql = qq~
+				SELECT OB.observed_peptide_id, peptide_prophet_score,
+				matching_sequence, observed_peptide_sequence,
+				peptide_mass,
+				gs.protein_glycosite_position,
+				site_start,
+				site_start
+				FROM $TBGP_OBSERVED_PEPTIDE OB
+          JOIN $TBGP_OBSERVED_TO_IPI OTI 
+            ON OTI.observed_peptide_id = OB.observed_peptide_id
+          JOIN $TBGP_OBSERVED_TO_GLYCOSITE OTG 
+            ON OTG.observed_peptide_id = OB.observed_peptide_id
+	  			JOIN $TBGP_GLYCOSITE GS 
+            ON (GS.glycosite_id = OTG.glycosite_id AND OTI.ipi_data_id = GS.ipi_data_id)
+				WHERE OTI.ipi_data_id = $ipi_data_id
+        ORDER BY site_start, site_stop
+				~;
+  $log->debug( $sql );
+  my @rows = $sbeams->selectHashArray( $sql );
+  my @observed;
+  my %current;
+  my $cnt = 0;
+  for my $row ( @rows ) {
+#    $log->debug( "PGP is $row->{protein_glycosite_position}, SS is $row->{site_start}/$row->{site_stop}" );
+    $cnt++;
+    if ( %current && $current{matching_sequence} =~ /$row->{matching_sequence}/i ) {
+      $current{n_obs}++;
+    } else {  
+      if ( %current ) {
+        my %finished = %current;
+        push @observed, \%finished;
+      }
+      %current = %{$row};
+#      $log->debug( "Pre: $current{observed_peptide_sequence}" );
+      $current{observed_peptide_sequence} =~ s/N[\W]/N#/g;
+      $current{observed_peptide_sequence} =~ s/[^a-zA-Z\#\.]//g;
+      $current{observed_peptide_sequence} =~ s/([^N])\#/$1/g;
+#      $log->debug( "Post: $current{observed_peptide_sequence}" );
+      $current{n_obs}++;
+      $current{tryptic_end} = SBEAMS::Glycopeptide->countTrypticEnds( $row->{observed_peptide_sequence} );
+    }
+  }
+  return ( @observed, \%current );
+}	
+
+##############################
+#get_identified_peptides
+#Give a ipi_data_id
+#return an array of hashref or nothing
+###############################
+sub get_identified_peptides{
+	my $method = 'get_identified_peptides';
+	my $self = shift;
+	my $ipi_data_id = shift;
+	confess(__PACKAGE__ . "::$method ID '$ipi_data_id' is not good  \n") unless $ipi_data_id; 
 	my $sql = qq~
 				SELECT OB.observed_peptide_id,
 				observed_peptide_sequence,
@@ -483,6 +539,25 @@ sub get_observed_peptides{
 				WHERE OTI.ipi_data_id = $ipi_data_id
 				~;
 	
+#  	my $sql = qq~
+#  				SELECT 
+#  				id.identified_peptide_id
+#  				identified_peptide_sequence
+#  				peptide_prophet_score,
+#  				peptide_mass,
+#  				tryptic_end,
+#  				gs.glyco_score,
+#  				gs.protein_glycosite_position,
+#  				identified_start,
+#  				identified_stop,
+#  n_obs
+#  				FROM $TBGP_IDENTIFIED_PEPTIDE id
+#  JOIN $TBGP_IDENTIFIED_TO_IPI iti 
+#  ON iti.identified_peptide_id = id.identified_peptide_id
+#  				JOIN $TBGP_GLYCOSITE gs ON (gs.glycosite_id = iti.glycosite_id)
+#  				WHERE iti.ipi_data_id = $ipi_data_id
+#  				~;
+  	
   		return $sbeams->selectHashArray($sql);	
 }	
 
@@ -537,8 +612,9 @@ sub get_identified_peptides{
 #  				~;
   	
   		return $sbeams->selectHashArray($sql);	
-  		return $sbeams->selectHashArray($sql);	
 }	
+
+
 ################################
 #get_glyco_sites
 #Give a ipi_data_id
@@ -570,6 +646,7 @@ sub get_identified_tissues{
 	my $method = 'get_identified_tissues';
 	my $self = shift;
 	my $id = shift;
+  $log->printStack('debug');
 	confess(__PACKAGE__ . "::$method ID '$id' is not good  \n") unless $id; 
 	my $sql = qq~
 				SELECT t.tissue_type_name 
@@ -577,6 +654,37 @@ sub get_identified_tissues{
 				JOIN $TBGP_UNIPEP_SAMPLE g ON ( ptp.sample_id = g.sample_id ) 
 				JOIN $TBGP_TISSUE_TYPE t ON (t.tissue_type_id = g.tissue_type_id) 
 				WHERE ptp.identified_peptide_id = $id
+        ORDER BY t.tissue_type_name
+				~;
+  $log->debug( $sql );
+	
+	my @all_tissues = $sbeams->selectHashArray($sql);	
+  my @coalesced_tissues;
+  my %seen;
+  for my $tissue ( @all_tissues ) {
+    next if $seen{$tissue->{tissue_type_name}};
+    push @coalesced_tissues, $tissue->{tissue_type_name};
+    $seen{$tissue->{tissue_type_name}}++;
+  }
+  return \@coalesced_tissues;
+}
+
+
+###############################
+#get_identified_tissues
+#Give a identified_peptide_id
+#return an array of hashref or nothing
+###############################
+sub get_observed_tissues{
+	my $self = shift;
+	my $seq = shift;
+	my $sql = qq~
+				SELECT t.tissue_type_name 
+				FROM $TBGP_OBSERVED_PEPTIDE op
+        JOIN $TBGP_PEPTIDE_SEARCH ps ON ( ps.peptide_search_id = op.peptide_search_id ) 
+				JOIN $TBGP_UNIPEP_SAMPLE g ON ( ps.sample_id = g.sample_id ) 
+				JOIN $TBGP_TISSUE_TYPE t ON (t.tissue_type_id = g.tissue_type_id) 
+				WHERE op.matching_sequence = '$seq'
         ORDER BY t.tissue_type_name
 				~;
 	
@@ -590,6 +698,7 @@ sub get_identified_tissues{
   }
   return \@coalesced_tissues;
 }
+
 
 } #end of package
 1;

@@ -179,6 +179,7 @@ sub insert_ipi_db {
     # print progress 'bar'
     unless ( $count % 100 ){
       print '*';
+#      print "\n"; last;  # Short circuit!
     }
     unless ( $count % 5000 ){
       my $t1 = new Benchmark;
@@ -199,7 +200,8 @@ sub insert_ipi_db {
       my $motif = 'N[^P][ST]';
 
       my $sites = $module->get_site_positions( seq => $tokens[$heads{'protein sequences'}],
-                                           pattern => $motif );
+                                           pattern => $motif,
+                                        index_base => 1);
 
 
       # Get theoretical digestion of protein
@@ -273,6 +275,7 @@ sub insert_ipi_db {
         }
       }
     }
+    $sbeams->commit_transaction(); 
 #    $stats{max} = ( $stats{$ipi} > $stats{max} ) ? $stats{$ipi} : $stats{max};
 #  for my $k ( keys(%time) ) { print "$k => $time{$k}\n"; }
 #  $count -= 1;
@@ -1346,8 +1349,8 @@ sub add_predicted_peptides {
                                     ) or die "Insert failed $!" if $do_insert;
 
     # If we are in a glyco
-    while ( defined $site && $pidx >= ($site + 1) ) {
-      my $pepidx = ( $site - $sidx ) + 2 + $num_motifs;
+    while ( defined $site && $pidx >= $site ) {
+      my $pepidx = ( $site - $sidx ) + 1 + $num_motifs;
       my $annot_pep = $peptide;
       substr( $annot_pep, $pepidx, 1 ) = 'N#';
 #     print "$peptide => $annot_pep\n";
