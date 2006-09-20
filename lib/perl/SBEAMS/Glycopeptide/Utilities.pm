@@ -4,7 +4,7 @@ use SBEAMS::Connection qw( $log );
 use SBEAMS::Glycopeptide::Tables;
 
 use constant HYDROGEN_MASS => 1.0078;
-vdse Bio::Graphics::Panel;
+use Bio::Graphics::Panel;
 
 sub new {
   my $class = shift;
