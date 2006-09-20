@@ -49,7 +49,7 @@ my %opts;
 sub load_file {
   my $glyco_o = SBEAMS::Glycopeptide::Glyco_peptide_load->new( %opts ) || die "No object";
 	$glyco_o->insert_peptides( %opts );
-	print $glyco_o->anno_error();
+	print $glyco_o->anno_error() . "\n";
 }
 
 sub print_usage {
