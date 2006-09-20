@@ -158,6 +158,9 @@ sub all_proteins_query {
 	my $mode = shift;
   my $observed = ( $mode eq 'all' ) ? '' : "WHERE num_observed > 0 ";
   my $order = ( $mode eq 'all' ) ? 'protein_name ASC' : 'num_observed DESC, protein_name ASC';
+#  my $identified = ( $mode eq 'all' ) ? '' : 
+#                   ( $mode eq 'identified' ) ? "WHERE num_identified > 0 " : "WHERE num_identified > 0 AND transmembrane_info like '%-%'";
+#  my $order = ( $mode eq 'all' ) ? 'protein_name ASC' : 'num_identified DESC, protein_name ASC';
   my $cutoff = $self->get_current_prophet_cutoff();
 	
 	my $sql = qq~
