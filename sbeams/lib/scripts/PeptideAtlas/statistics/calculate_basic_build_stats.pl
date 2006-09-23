@@ -865,7 +865,7 @@ sub get_unambiguous_protein_hash
                 AND PEPI.is_subpeptide_of is NULL
                 AND BB.biosequence_name = B.biosequence_name
                 AND PEPI.n_observations > 1
-                AND PEPI.best_probabillity >= '$probability'
+                AND PEPI.best_probability >= '$probability'
                 AND PEPI.n_protein_mappings = 1
                 AND BB.record_status != 'D'
                 )
@@ -875,7 +875,7 @@ sub get_unambiguous_protein_hash
             AND PEPI.peptide_instance_id=PM.peptide_instance_id
             AND PEPI.atlas_build_id='$atlas_build_id'
             AND PEPI.n_observations > 1
-            AND PEPI.best_probabillity >= '$probability'
+            AND PEPI.best_probability >= '$probability'
             AND PEPI.n_protein_mappings = 1
             AND B.record_status != 'D'
             ~;
