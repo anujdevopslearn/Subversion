@@ -49,8 +49,10 @@ $PROG_NAME = 'main.cgi';
 my $file_name    = $$ . "_glyco_predict.png";
 my $tmp_img_path = "images/tmp";
 my $img_file     = "$PHYSICAL_BASE_DIR/$tmp_img_path/$file_name";
+
 my $predicted_track_type = "Predicted Peptides";
 my $id_track_type 		 = 'Observed Peptides';
+my $glyco_site_track = "N-Glyco Sites";
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/Glyco_prediction.cgi";
 
@@ -76,13 +78,11 @@ sub main
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate(
        permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin', 'Glycopeptide_readonly'],
-       # connect_read_only=>1,
-       # allow_anonymous_access=>1,
+        # connect_read_only=>1,
+        allow_anonymous_access=>1,
     ));
 
-#    for my $p ( $q->param() ) {
-#      $log->info( "$p => " . $q->param( $p ) );
-#    }
+    for my $p ( $q->param() ) { $log->info( "$p => " . $q->param( $p ) ); }
 
     #### Read in the default input parameters
     my %parameters;
@@ -90,6 +90,7 @@ sub main
         q=>$q,
         parameters_ref=>\%parameters
         );
+#    $sbeams->printCGIParams($q);
 
 
     ## get project_id to send to HTMLPrinter display
@@ -102,7 +103,7 @@ sub main
 
     #### Decide what action to take based on information so far
     $sbeamsMOD->display_page_header(project_id => $project_id);
-    $sbeams->printStyleSheet();
+#    $sbeams->printStyleSheet();
     if ($parameters{action} eq "Show_detail_form" || $parameters{redraw_protein_sequence} == 1) {
 		
 		 clean_params(\%parameters);
@@ -134,7 +135,7 @@ sub main
 
     }
 
-		$sbeamsMOD->display_page_footer();
+		$sbeamsMOD->display_page_footer(close_tables=>'NO');
 
 
 
@@ -151,12 +152,11 @@ sub handle_request {
         || die "ref_parameters not passed";
 
     	my %parameters = %{$ref_parameters};
-$log->debug(Dumper($ref_parameters));
 	
 	print 
 	$q->table({class=>'table_setup'},
           $q->Tr({class=>'rev_gray_head'},
-	     $q->td({colspan=>2, class=>'rev_gray_head'}, $q->h2("ISB N-glycosylation peptide prediction server")),
+	     $q->td({colspan=>2, class=>'rev_gray_head'}, "ISB N-glycosylation peptide prediction server"),
 	  	 
 	  ),
 	  $q->Tr(
@@ -174,7 +174,7 @@ $log->debug(Dumper($ref_parameters));
 	   $q->td({colspan=>2},'&nbsp; <br> &nbsp;') 
 	 ),	    
 	 $q->Tr({class=>'rev_gray_head'},
-	   $q->td({colspan=>2, class=>'rev_gray_head'}, $q->h2("Text Search"))
+	   $q->td({colspan=>2, class=>'rev_gray_head'}, "Text Search")
 	 ),
 	 $q->Tr(
 	   $q->td({class=>'grey_bg'}, "Choose Search option"),
@@ -205,7 +205,7 @@ $log->debug(Dumper($ref_parameters));
 	   $q->td({colspan=>2}, " <B>-- or --</B> <br>")
 	 ), 
 	 $q->Tr({class=>'rev_gray_head'},
-	   $q->td({colspan=>2, class=>'rev_gray_head'}, $q->h2("Sequence Search") )
+	   $q->td({colspan=>2, class=>'rev_gray_head'}, "Sequence Search" )
 	 ), 
 	 
 	 $q->Tr(
@@ -236,7 +236,7 @@ $log->debug(Dumper($ref_parameters));
 	"<br><br>",
 	$q->table(
 	   $q->Tr(
-	      $q->td({class=>'rev_gray_head', colspan=>2}, $q->h2("Examples"))
+	      $q->td({class=>'rev_gray_head', colspan=>2}, "Examples")
 	   ),
 	   $q->Tr(
               $q->td({class=>'grey_bg'}, "Gene Name"),
@@ -312,11 +312,6 @@ sub find_hits{
 	
 	
 	
-	
-	
-	
-#    $log->debug(Dumper("RESULTS SET DATA", \@results_set));
-    
   if ( $results_set ){
     	
     if ( scalar(@$results_set) == 1 ) {
@@ -368,25 +363,38 @@ sub print_out_hits_page{
   my $pepprotcnt = 0;
   my $cutoff = $sbeamsMOD->get_current_prophet_cutoff();
   my $pepcnt = 0;
+  my @symbols;
 	foreach my $h_ref (@results_set){
 		my $ipi_id = $h_ref->{ipi_data_id};
 		my $num_identified = $h_ref->{num_identified};
 		my $ipi_acc = $h_ref->{ipi_accession_number};
 		my $protein_name = nice_term_print($h_ref->{protein_name});
 		my $protein_sym = $h_ref->{protein_symbol};
+    push @symbols, $protein_sym if $protein_sym;
     $protcnt++;
     $pepprotcnt++ if $num_identified;
     $pepcnt += $num_identified;
-		$html .= $q->Tr(
+		$html .= join( "\n", $q->Tr(
 			    $q->td(
 			    	$q->a({href=>"$cgi_url=$ipi_id"},$ipi_acc)
 			    ),
 			    $q->td($protein_name),
 			    $q->td($protein_sym),
 			    $q->td({ALIGN=>'right'},$num_identified)
-			  );
+          )
+        );
 	}
 	$html .= "</table>";
+
+  my $organism = 'human';
+  my $gXML = $sbeams->getGaggleXML( object => 'namelist', 
+                                      type => 'direct',
+                                      name => "Gene symbols",
+                                      data => \@symbols,
+                                     start => 1, 
+                                       end => 1,
+                                     organism => $organism );
+  $html .= "\n$gXML\n";
 
   my $type = ( check_search_params(\%parameters) eq 'text' ) ? 
                                                       $parameters{search_type} :
@@ -483,8 +491,6 @@ sub check_search_params{
 ###############################################################################
 sub clean_params{
 	my $ref_parameters = shift;
-	$log->debug("RUNNING CLEAN PARAMS");
-	$log->debug(Dumper($ref_parameters));
 	
 	KEY:foreach my $k (keys %{$ref_parameters}){
 
@@ -588,11 +594,7 @@ sub check_search_term{
 			print_error("IPI Accession Number does not look good '$clean_term'");
 		}
 		
-		$log->debug("IPI CLEAN TERM '$clean_term'");
-		
-	
 	}
-	$log->debug("CHECK SEARCH TERMS '$type' '$clean_term'\n");
 	return ($type, $clean_term);
 	
 }
@@ -603,7 +605,6 @@ sub check_search_term{
 ###############################################################################
 sub clean_term{
 	my $term = shift;
-	$log->debug("TERM TO CLEAN '$term'");
 	
 	$term =~ s/["'*.]//g; #Remove quotes, "*",  "."
 	$term =~ s/^\s+//g; 		#Remove white space at the start
@@ -615,7 +616,6 @@ sub clean_term{
 #unless ( grep /^$type$/, keys(%search_types) ){
   print_error("Search Term '$term' HAS BEEN DELETED") unless ($term);
 #}
-	$log->debug("CLEAN TERM '$term'\n");
 	return $term;
 }
 
@@ -646,70 +646,140 @@ sub clean_action{
 #display_detail_form
 ###############################################################################
 sub display_detail_form{
-	my %args = @_;
-	
-	my $ref_parameters = $args{ref_parameters};
-    my $ipi_data_id = $args{ipi_data_id}; 
-    
-    print_error("Must provide a ipi_id to display Glyco Info. '$ipi_data_id' is not valid")unless 
-    ($ipi_data_id =~ /^\d+$/);
-	
-	$log->debug("ABOUT TO MAKE GLYCO OBJ '$ipi_data_id'");
-	#go an query the db, add the peptide features and make into a big Bio::Seq object
-	my $glyco_o = new SBEAMS::Glycopeptide::Get_glyco_seqs(ipi_data_id => $ipi_data_id);
- 	$glyco_o->setSBEAMS($sbeams);
+
+  my %args = @_;
   
-   $log->debug("DONE MAKING GLYCO OBJ '$ipi_data_id'");
-    make_image(glyco_o => $glyco_o);
-    my $swiss_id = get_annotation(glyco_o   => $glyco_o,
+  my %parameters = %{$args{ref_parameters}};
+  my $ipi_data_id = $args{ipi_data_id}; 
+    
+  print_error("Must provide a ipi_id to display Glyco Info. '$ipi_data_id' is not valid")unless 
+  ($ipi_data_id =~ /^\d+$/);
+	
+  #go an query the db, add the peptide features and make into a big Bio::Seq object
+  my $glyco_o = new SBEAMS::Glycopeptide::Get_glyco_seqs( ipi_data_id => $ipi_data_id,
+                                                              _sbeams => $sbeams );
+  
+  my $protein_map = make_protein_map_graphic ( glyco_o => $glyco_o );
+  my $swiss_id = get_annotation(glyco_o   => $glyco_o,
 								  anno_type => 'swiss_prot'
 							     );
-	my $html_protein_seq = $glyco_o->get_html_protein_seq(ref_parameters=>$ref_parameters);
-	my $protein_name = get_annotation(glyco_o   => $glyco_o,
+
+  my @prechecked = qw( sseq tmhmm glyco_site );
+  my $html_protein_seq = $glyco_o->get_html_protein_seq( ref_parameters => \%parameters,
+                                                         prechecked => \@prechecked
+                                                       );
+
+  my $protein_name = get_annotation(glyco_o   => $glyco_o,
 									  anno_type => 'protein_name'
 									  );
-    my $ipi_acc = $glyco_o->ipi_accession();
+  my $ipi_acc = $glyco_o->ipi_accession();
     
-   my $ipi_url = $glyco_o->make_url(term=> $glyco_o->ipi_accession(),
+  my $ipi_url = $glyco_o->make_url(term=> $glyco_o->ipi_accession(),
 				     dbxref_tag => 'EBI_IPI'
-				    );
+  );
     
-    my $swiss_prot_url = $glyco_o->make_url(term=>$swiss_id, 
+  my $swiss_prot_url = $glyco_o->make_url(term=>$swiss_id, 
                                      dbxref_tag => 'SwissProt'
                                     );
  
+
+###
+### Display the Protein peptide image ###
+#    my $protein_map = join( "\n", 
+#			$q->Tr(
+#				$q->td({class=>'grey_header', colspan=>2}, "Protein/Peptide Map"),
+#			),
+#			$q->Tr(
+#				$q->td({colspan=>2},"<img src='$HTML_BASE_DIR/$tmp_img_path/$file_name' alt='Sorry No Img'>")
+#			
+#			),
+#			$q->Tr(
+#				$q->td({colspan=>2},
+#					#make a table to describe what is in the table
+#					$q->table(
+#						$q->Tr({class=>'small_text'},
+#							$q->td({class=>'blue_bg'}, "Track Name"),
+#							$q->td({class=>'blue_bg'}, "Description"),
+#						),
+#						$q->Tr({class=>'small_cell'},
+#							$q->td("Identified Peptides"),
+#							$q->td( "Glyco Site Location (Protein Prophet Score).  Color is scaled based on prophet score, light to dark between 0.5 and 1.0" ),
+#						),
+#						$q->Tr({class=>'small_cell'},
+#							$q->td("N-Glyco Sites"),
+#							$q->td( "Location of all theoretical NXS/T-motif Glycosylation sites"),
+#						),
+#						$q->Tr({class=>'small_cell'},
+#							$q->td("Signal Sequence"),
+#							$q->td( "Location of the Signal or Anchor sequence as predicted by Signal P"),
+#						),
+#            $q->Tr({class=>'small_cell'},
+#              $q->td("Transmembrane"),
+#              $q->td( "Predicted as a transmembrane domain by TMHMM"),
+#            ),
+#            $q->Tr({class=>'small_cell'},
+#              $q->td("Intracellular"),
+#              $q->td( "Predicted as intracellular by TMHMM"),
+#            ),
+#            $q->Tr({class=>'small_cell'},
+#              $q->td("Extracellular"),
+#              $q->td( "Predicted as Extracellular by TMHMM"),
+#            ),
+#					)
+#
+#				
+#				)
+#			
+#			)
+#    );
+#    $protein_map = "<TABLE WIDTH=100%>$protein_map</TABLE>\n";
+
+# $q->Tr({class=>'small_cell'},
+# $q->td("Predicted Peptides"),
+# $q->td( "Glyco Site Location, GS = N-Glycosylation Score. 1 low, 0 high probability of N linked Glycosylation site"),
+# ),
+# $q->Tr({class=>'small_cell'},
+# $q->td("Identified/Predicted Peptides"),
+# $q->td( "Peptides are color coded according to scores assoicated with each track.  More intense color means better score"),
+# ),
+#    my $hidetext = '<B>Hide protein map</B>';
+#    my $showtext = '<B>Show protein map</B>';
+#
+    
     
   my $spacer = $sbeams->getGifSpacer( 600 );
-### Print Out the HTML to Make Dispaly the info About the the Protein and all it's Glyco-Peptides
-	print $q->table({border=>0},
+    my $protein_url = $glyco_o->get_atlas_link( name => $glyco_o->ipi_accession(), 
+                                                type => 'image',
+                                              onmouseover => 'View Peptide Atlas information' );
+
 			
 	## Print out the protein Information
-			$q->Tr(
-				$q->td({class=>'grey_header', colspan=>2}, "Protein Info"),
-			),
-			 $q->Tr(
-				$q->td({class=>'rev_gray_head'}, "IPI ID"),
-				$q->td($ipi_url)
-			  ),
-			$q->Tr(
-				$q->td({class=>'rev_gray_head', nowrap=>1}, "Protein Name"),
-				$q->td($protein_name)
-			  ),
-			$q->Tr(
-				$q->td({class=>'rev_gray_head', nowrap=>1}, 
-				$glyco_o->linkToColumnText(display => "Protein Symbol",
-								 title   =>"Protein Symbol Info", 
-								 column  =>"protein_symbol", 
-								 table   => "GP_ipi_data" 
-								 
-								)),
-				$q->td(get_annotation(glyco_o   => $glyco_o,
+  my $prot_info = join( "\n", 
+    $q->Tr(
+      $q->td({class=>'grey_header', colspan=>2}, "Protein Info"),),
+    $q->Tr(
+      $q->td({class=>'rev_gray_head'}, "IPI ID"),
+      $q->td("$ipi_url  [ View in Peptide Atlas: $protein_url ]")),
+    $q->Tr(
+      $q->td({class=>'rev_gray_head', nowrap=>1}, "Protein Name"),
+      $q->td( $protein_name )),
+
+    $q->Tr(
+      $q->td({class=>'rev_gray_head', nowrap=>1}, 
+              $glyco_o->linkToColumnText(display => "Protein Symbol",
+                                         title   => "Protein Symbol Info", 
+                                         column  => "protein_symbol", 
+                                         table   => "GP_ipi_data" 
+                 
+                                   )),
+      $q->td(get_annotation(glyco_o   => $glyco_o,
 									  anno_type => 'symbol'
 									  ) . $spacer
 					   )
 			  ),
-		   $q->Tr(
-				$q->td({class=>'rev_gray_head', nowrap=>1}, 
+
+    $q->Tr(
+      $q->td({class=>'rev_gray_head', nowrap=>1}, 
 				$glyco_o->linkToColumnText(display => "Subcellular Location",
 								 title   =>"Find More Info About the Subcellular Location Call", 
 								 column  =>"cellular_location_id", 
@@ -717,136 +787,127 @@ sub display_detail_form{
 								 
 								)),
 				
-				$q->td(get_annotation(glyco_o   => $glyco_o,
-									  anno_type => 'cellular_location'
-									  )
-					   )
+      $q->td(get_annotation(glyco_o   => $glyco_o,
+	        								  anno_type => 'cellular_location' ) )
+			    ),
+
+    $q->Tr(
+      $q->td({class=>'rev_gray_head', nowrap=>1}, "Swiss Prot ID"),
+      $q->td($swiss_prot_url)
 			  ),
-			 $q->Tr(
-				$q->td({class=>'rev_gray_head', nowrap=>1}, "Swiss Prot ID"),
-				$q->td($swiss_prot_url)
-			  ),
-			$q->Tr(
-				$q->td({class=>'rev_gray_head'}, 
+    $q->Tr(
+      $q->td({class=>'rev_gray_head'}, 
 				$glyco_o->linkToColumnText(display => "Synonyms",
 								 title   =>"Synonyms Info", 
 								 column  =>"synonyms", 
 								 table   => "GP_ipi_data" 
 								 
 								)),
-				$q->td(get_annotation(glyco_o   => $glyco_o,
+      $q->td(get_annotation(glyco_o   => $glyco_o,
 									  anno_type => 'synonyms'
 									  )
 					   )
 			  ),
-			$q->Tr(
-				$q->td({class=>'rev_gray_head', nowrap=>1}, "Protein Summary"),
-				$q->td(get_annotation(glyco_o   => $glyco_o,
-									  anno_type => 'summary'
-									  )
-					   )
-			  ),
-## Display the predicted Peptide info
-		$q->Tr(
-				$q->td({class=>'grey_header', colspan=>2}, "Predicted N-linked Glycopeptides"),
-			),
-		$q->Tr(
-				$q->td({colspan=>2},$glyco_o->display_peptides('Predicted Peptides'))
-			
-			),
-## Display Identified Peptides
-		$q->Tr(
-				$q->td({class=>'grey_header', colspan=>2}, "Observed Peptides"),
-			),
-		$q->Tr(
-				$q->td({colspan=>2},$glyco_o->display_peptides('Observed Peptides'))
-			
-			),
+    $q->Tr(
+      $q->td({class=>'rev_gray_head', nowrap=>1}, "Protein Summary"),
+      $q->td(get_annotation(glyco_o   => $glyco_o, anno_type => 'summary') )
+			    ) 
+    );  # End prot_info
 
-### Display the Protein peptide image ###
-			#$q->Tr(
-			#	$q->td({class=>'grey_header', colspan=>2}, "Protein/Peptide Map"),
-			#),
-			#$q->Tr(
-			#	$q->td({colspan=>2},"<img src='$HTML_BASE_DIR/$tmp_img_path/$file_name' alt='Sorry No Img'>")
-			
-			#),
-			#$q->Tr(
-			#	$q->td({colspan=>2},
-					#make a table to describe what is in the table
-			#		$q->table(
-			#			$q->Tr({class=>'small_text'},
-			#				$q->td({class=>'blue_bg'}, "Track Name"),
-			#				$q->td({class=>'blue_bg'}, "Description"),
-			#			),
-			#			$q->Tr({class=>'small_cell'},
-			#				$q->td("Identified Peptides"),
-			#				$q->td( "Glyco Site Location, PP = Protein Prophet Score. 0 low, 1 high probability of peptide identification"),
-			#			),
-			#			$q->Tr({class=>'small_cell'},
-			#				$q->td("Predicted Peptides"),
-			#				$q->td( "Glyco Site Location, GS = N-Glycosylation Score. 1 low, 0 high probability of N linked Glycosylation site"),
-			#			),
-			#			$q->Tr({class=>'small_cell'},
-			#				$q->td("Identified/Predicted Peptides"),
-			#				$q->td( "Peptides are color coded according to scores assoicated with each track.  More intense color means better score"),
-			#			),
-			#			$q->Tr({class=>'small_cell'},
-			#				$q->td("N-Glyco Sites"),
-			#				$q->td( "Location of all the predicted N-Glycosylation sites"),
-			#			),
-			#			$q->Tr({class=>'small_cell'},
-			#				$q->td("Transmembrane"),
-			#				$q->td( "Location of all the transmembrane domains as predicted by TMHMM"),
-			#			),
-			#			$q->Tr({class=>'small_cell'},
-			#				$q->td("Singal Sequence"),
-			#				$q->td( "Location of the Signal Sequence or Anchor as predicted by Singal P"),
-			#			),
-			#		)
-				
-				
-			#	)
-			
-			#),
+## Display the predicted Peptide info
+
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => '_gpre_prepep',
+                                                visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                imglink => 1,
+                                                sticky => 1 );
+    
+  my $predicted_info = join( "\n", 
+		$q->Tr(
+				$q->td({class=>'grey_header', colspan=>2}, "$link Predicted N-linked Glycopeptides"),
+			),
+		  $q->Tr( "<TD COLSPAN=2 $tr>" .  $glyco_o->display_peptides('Predicted Peptides') . "</TD>" ), 
+    ); # End predicted info
+
+## Display Identified Peptides
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => '_gpre_idpep',
+                                                visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                imglink => 1,
+                                                sticky => 1 );
+  my $identified_info = join( "\n", 
+		$q->Tr(
+				$q->td({class=>'grey_header', colspan=>2 }, "$link Observed Glycopeptides"),
+			),
+		$q->Tr( "<TD COLSPAN=2 $tr>" .  $glyco_o->display_peptides('Observed Peptides') . "</TD>" 
+			),
+    ); # End identified info
+
 ### Display the Amino Acid Sequence ###
+  my %chk = ( predicted_pep => '', identified_pep => '', observed_pep => '',
+             sseq => '', tmhmm => '', glyco_site => '' );
+
+  if ( $parameters{redraw_protein_sequence} ) {
+    for my $tag ( keys(%chk) ) {
+      $chk{$tag} = 'checked' if $parameters{$tag};
+    }
+  } else { # fresh load
+    for my $tag ( @prechecked )  { 
+      $chk{$tag} = 'checked';
+    }
+  }
+
+
+	
+  my $sp = '&nbsp;';
+  my $display_form = join( "\n", 
+    $q->start_form(-action=>$q->script_name().'#protein_sequence'),
+    $q->table( {border=>0, width=>'40%'},
+    $q->Tr( 
+    $q->Tr( 
+      $q->td( {class=>'instruction_text', nowrap => 1 }, "Update:" ),
+      $q->td( {class=>'pred_pep', nowrap => 1 }, "$sp Predicted <INPUT TYPE=CHECKBOX NAME=predicted_pep $chk{predicted_pep} ONCHANGE='toggle_state(predicted_pep);'></INPUT>" ),
+#      $q->td( {class=>'iden_pep', nowrap => 1  },"$sp Identified <INPUT TYPE=CHECKBOX NAME=identified_pep $chk{identified_pep} ONCHANGE='toggle_state(identified_pep);'></INPUT>" ),
+      $q->td( {class=>'obs_pep', nowrap => 1  },"$sp Observed <INPUT TYPE=CHECKBOX NAME=observed_pep $chk{observed_pep} ONCHANGE='toggle_state(observed_pep);'></INPUT>" ),
+      $glyco_o->has_signal_sequence() ?  $q->td( {class=>'sig_seq', nowrap => 1 },"$sp Signal Sequence <INPUT TYPE=CHECKBOX NAME=sseq $chk{sseq} ONCHANGE='toggle_state(sseq);'></INPUT>" ) : '',
+      $glyco_o->has_transmembrane_seq() ? $q->td( {class=>'tm_dom', nowrap => 1  },"$sp Transmembrane <INPUT TYPE=CHECKBOX NAME=tmhmm $chk{tmhmm} ONCHANGE='toggle_state(tmhmm);'></INPUT>" ) : '',
+      $q->td( {class=>'glyco_seq', nowrap => 1 }, "$sp NxS/T site <INPUT TYPE=CHECKBOX NAME=glyco_site $chk{glyco_site} ONCHANGE='toggle_state(glyco_site);'></INPUT>" ),
+          ),
+      $q->hidden(-name=>'ipi_data_id', -value=>$ipi_data_id, -override => 1),
+      $q->hidden(-name=>'redraw_protein_sequence', -value=>1),
+          ),
+    $q->end_form()
+    ) # End table
+  ); # End form
+
+    my ( $seq_html, $toggle ) = $sbeams->make_toggle_section ( content => "$ipi_url|$protein_name <BR>$html_protein_seq <BR> $display_form",
+                                                           visible => 1,
+                                                            sticky => 1,
+                                                            tooltip => 'Show/Hide Section',
+                                                           imglink => 1,
+                                                              name => '_gpre_protseq',);
+
+    
+  my $prot_seq = join( "\n", 
 			$q->Tr(
 				$q->td({class=>'grey_header', colspan=>2}, 
-				"Protein/Peptide Sequence"),
+				"${toggle}Protein/Peptide Sequence"),
 			),
 			$q->Tr(
-				$q->td({colspan=>2, class=>'sequence_font'},">$ipi_url|$protein_name<br>$html_protein_seq")
-			
+				$q->td({colspan=>2, class=>'sequence_font'}, $seq_html )
 			),
-			
-            $q->Tr(
-                   $q->start_form(-action=>$q->script_name()."#protein_sequence"),
-                   $q->td({colspan=>2, class=>'sequence_font'},
-					   $q->table({border=>0},
-					      $q->Tr(
-					        $q->td({class=>'blue_bg', colspan=>5}, "Click a button to highlight different sequence features")
-					      ),
-					      $q->Tr({class=>'sequence_font'},
-					       	$q->td($q->submit({-name=>'Glyco Site',  -value=>'Glyco Site', class=>'glyco_site' })),
-						 	$q->td($q->submit({-name=>'Predicted Peptide',  -value=>'Predicted Peptide', class=>'predicted_pep' })),
-						 	$q->td($q->submit({-name=>'Identified Peptide',  -value=>'Identified Peptide', class=>'identified_pep' })),
-							$glyco_o->has_signal_sequence()? $q->td($q->submit({-name=>'Signal Sequence',  -value=>'Signal Sequence', class=>'sseq' })):"",
-							$glyco_o->has_transmembrane_seq()  ?$q->td($q->submit({-name=>'Trans Membrane Seq',  -value=>'Trans Membrane Seq', class=>'tmhmm' })):"",
-					     ),
-					   )#close sequencetable header
-				   ),
-				   $q->hidden(-name=>'ipi_data_id', -value=>$ipi_data_id, -override => 1),
-				   $q->hidden(-name=>'redraw_protein_sequence', -value=>1),
-				   
-				   $q->end_form()
+    ); # End identified info
 
-             ),
-	     #add in an anchor id tag to make protein higlights come back here
-	    
-				
-	
+### Print Out the HTML to Make Dispaly the info About the the Protein and all it's Glyco-Peptides
+  print $q->table({border=>0},
+           $prot_info,
+           $predicted_info,
+           $identified_info,
+           $prot_seq,
+           $protein_map
 				);#end_table	
 		
+#	print "$protein_map\n";	
 	print $q->a({id=>'protein_sequence'});
 	
 	
@@ -861,131 +922,244 @@ sub display_detail_form{
 #make imgae
 #
 #####################################################
-sub make_image {
-	my %args = @_;
-	my $glyco_o = $args{glyco_o};
+sub make_protein_map_graphic {
+  my %args = @_;
+  my %tracks;
 
-	
-   my $seq =  $glyco_o->seq_info();					
+  my $seq =  $args{glyco_o}->seq_info();					
    
+  my %colors = ( 'Signal Sequence' => 'lavender',
+                 'Signal Sequence web' => '#CCCCFF',
+                 Anchor => 'lavender',
+                 Anchor_web => '#CCCCFF',
+          Transmembrane => 'lightgreen',
+          Transmembrane_web => '#CCFFCC',
+          Intracellular => 'coral',
+          Intracellular => 'coral',
+  $id_track_type => 'firebrick',
+          Extracellular => 'mediumseagreen',
+               Coverage => 'beige',
+      $glyco_site_track => '#EE9999',
+  $predicted_track_type => 'goldenrod' );
+  # Define CSS classes
+  my $sp = '&nbsp;' x 4;
+  my $style =<<"  END_STYLE";
+  <STYLE>
+   .obs_pep { background-color: $colors{$id_track_type} ;border-style: solid; border-color:gray; border-width: 1px  }
+   .iden_pep { background-color: $colors{$id_track_type} ;border-style: solid; border-color:gray; border-width: 1px  }
+   .pred_pep { background-color: $colors{$predicted_track_type} ;border-style: solid; border-color:gray; border-width: 1px  }
+   .tm_dom { background-color: $colors{Transmembrane_web} ;border-style: solid; border-color:gray; border-width: 1px  }
+   .in_dom { background-color: $colors{Intracellular} ;border-style: solid; border-color:gray; border-width: 1px  }
+   .ex_dom { background-color: $colors{Extracellular} ;border-style: solid; border-color:gray; border-width: 1px  }
+   .anc_seq { background-color: $colors{Anchor_web};border-style: solid; border-color:gray; border-width: 1px  }
+   .sig_seq { background-color: $colors{'Signal Sequence web'};border-style: solid; border-color:gray; border-width: 1px  }
+   .glyco_seq { background-color: $colors{$glyco_site_track};border-style: solid; border-color:gray; border-width: 1px  }
+   .pep_cov { background-color: $colors{Coverage};border-style: solid; border-color:gray; border-width: 1px  }
+   .outline { border-style: solid; border-color:gray; border-width: 1px }
+   .sm_txt {  font-family: Helvetica, Arial, sans-serif; font-size: 8pt}
+  </STYLE>
+  END_STYLE
   
-   my $wholeseq = Bio::SeqFeature::Generic->new(
-	-start        =>1,
-	-end          => $seq->length(),
-	-display_name => $seq->display_id
-	);
+  my $panel = Bio::Graphics::Panel->new( -length    => $seq->length,
+                                         -key_style => 'between',
+                                         -width     => 800,
+                                         -pad_top   => 5,
+                                             -empty_tracks => 'suppress',
+                                         -pad_bottom => 5,
+                                         -pad_left  => 10,
+                                         -pad_right => 50 );
+  
+  my $length = $seq->length();
+  my $ruler = Bio::SeqFeature::Generic->new( -start        => 2,
+                                            -end          => $seq->length(),
+                                            -display_name => $seq->display_id
+                                           );
 
-	my @features = $seq->all_SeqFeatures;
+  my @features = $seq->all_SeqFeatures;
 	
-### partition features by their primary tags
-	my %sorted_features;
+  # partition features by their primary tags
+  my %sorted_features;
 	for my $f (@features) {
-		my $tag = $f->primary_tag;
-	#	print "FEATURE PRIMARY TAG '$tag'\n<br>";
-		push @{ $sorted_features{$tag} }, $f;
-	}
-	
-	
-	my $panel = Bio::Graphics::Panel->new(
-		-length    => $seq->length,
-		-key_style => 'between',
-		-width     => 800,
-		-pad_top   => 20,
-		-pad_bottom => 20,
-		-pad_left  => 20,
-		-pad_right => 20,
-	);
-	#add the scale bar
-	$panel->add_track(
-		$wholeseq,
-		-glyph  => 'arrow',
-		-bump   => 0,
-		-double => 1,
-		-tick   => 2
-	);
-	
-	$panel->add_track(
-		$wholeseq,
-		-glyph   => 'generic',
-		-bgcolor => 'blue',
-		-label   => 1,
-	);
-	
-	##### Add Track for Identified Sequences
- ##Adjust score to Protein Prohet score
-   
-   if ($sorted_features{$id_track_type}) {
-     $panel->add_track($sorted_features{$id_track_type},
-                       -glyph       => 'graded_segments',
-					   -bgcolor     => '#882222',
-						-fgcolor     => 'black',
-						-font2color  => '#882222',
-						-key         => $id_track_type,
-						-bump        => +1,
-						-height      => 8,
-						-label       => 1,
-						-description => \&peptide_label,
-						-min_score => 0,
-	    				-max_score => 1,
-                      );
+    my $tag = $f->primary_tag;
+    push @{ $sorted_features{ucfirst($tag)} }, $f;
+  }
+
+  $panel->add_track( $ruler,
+                     -glyph  => 'anchored_arrow',
+                     -tick   => 2,
+                     -height => 8,
+                     -key  => 'Sequence Position' );
+
+  # Add Track for Identified Sequences
+  # Adjust score to Protein Prohet score
+  if ($sorted_features{$id_track_type}) {
+    my %seen;
+    my @non_redundant;
+    my $max = 0;
+    for my $f ( @{$sorted_features{$id_track_type}} ) {
+      my $key = $f->seq()->seq() . $f->start() . $f->end;
+      $max = ( $f->score() && $f->score() > $max ) ? $f->score() : $max; 
+      next if $seen{$key};
+      push @non_redundant, $f;
+      $seen{$key}++;
+    }
+    $tracks{observed}++ if @non_redundant;
+    $panel->add_track( \@non_redundant,
+            -glyph       => 'graded_segments',
+            -bgcolor     => $colors{$id_track_type},
+            -fgcolor     => 'black',
+            -font2color  => '#882222',
+            -key         => $id_track_type,
+            -bump        => 1,
+            -bump_limit  => -1,
+            -height      => 8,
+            -label => \&peptide_label,
+            -min_score => 0,
+            -max_score => $max,
+                   );
     delete $sorted_features{$id_track_type};
-   }
+  }
    
-  ##### Add Track for Predicted Sequences
-  ##### Adjust score to Prediction Score
+  ##### Add Track for Predicted Sequences  -- taken out for now
    if ($sorted_features{$predicted_track_type}) {
+     $tracks{predicted}++;
      $panel->add_track($sorted_features{$predicted_track_type},
-                       -glyph       => 'graded_segments',
-					   -bgcolor     => 'orange',
-						-fgcolor     => 'black',
-						-font2color  => 'red',
-						-key         => $predicted_track_type,
-						-bump        => +1,
-						-height      => 8,
-						-label       => 1,
-						-description => \&peptide_label,
-						-min_score => 0,
-	    				-max_score => 1, #Remember the score is reversed down below so 0 is the best score and boldest color
+            -glyph       => 'segments',
+            -bgcolor     => $colors{$predicted_track_type},
+            -fgcolor     => 'black',
+            -font2color  => 'red',
+            -key         => $predicted_track_type,
+            -bump        => 0,
+            -height      => 8,
+            -label       => 0,
+#-description => \&peptide_label,
+#            -min_score => 0,
+#            -max_score => 1, #Remember the score is reversed down below so 0 is the best score and boldest color
                       );
-    delete $sorted_features{$predicted_track_type};
+     delete $sorted_features{$predicted_track_type};
    } 
 
-
-
+   if ($sorted_features{$glyco_site_track}) {
+     $tracks{glyco}++;
+     $panel->add_track($sorted_features{$glyco_site_track},
+            -glyph       => 'segments',
+            -bgcolor     => $colors{$glyco_site_track},
+            -fgcolor     => 'black',
+            -font2color  => 'red',
+            -key         => $glyco_site_track,
+            -bump        => 1,
+            -bump_limit  => 2,
+            -height      => 8,
+						-label       =>  sub {my $feature = shift; return $feature->start},
+						-description => '',
+                      );
+    delete $sorted_features{$glyco_site_track};
+   } 
 
 	# general case
-	my @colors = qw(red green blue purple chartreuse magenta yellow aqua);
-	my $idx    = 0;
-	for my $tag ( sort keys %sorted_features ) {
+	for my $tag ( 'Signal Sequence', qw(Anchor Transmembrane Extracellular Intracellular) ) {
 		#print "SORTED TAG '$tag'\n";
 		 
 		#feature objects have the score tag built in which is mapped to inbetween the low and high
-		my $features = $sorted_features{$tag};
+		my $features = $sorted_features{$tag} || next;
+#    $features ||= $sorted_features{ucfirst($tag)};
+    
+    $tracks{$tag}++;
 		
 		#make color gradient colors s
 		my $track = $panel->add_track(
 			$features,
-			-glyph       => 'generic',
-			-bgcolor     => $colors[ $idx++ % @colors ],
+			-glyph       => 'segments',
+			-bgcolor     => $colors{$tag},
 			-fgcolor     => 'black',
 			-font2color  => 'red',
 			-key         => "${tag}",
 			-bump        => +1,
 			-height      => 8,
-			-label       => 1,
-			-description => sub {my $feature = shift; return $feature->display_name},
-			-min_score => 0,
-		    -max_score => 10,
 		);
 	}
 	
-	
-  $log->debug( "Trying to make: $img_file" );
-	open( OUT, ">$img_file" ) || die $!;
+	#add the scale bar
+	$panel->add_track(
+		$ruler,
+		-glyph  => 'arrow',
+		-bump   => 0,
+		-double => 1,
+		-tick   => 2
+	);
+
+
+  # Create image map from panel objects. 
+  # mouseover coords for segment glyphs
+  my $pid = $$;
+  my @objects = $panel->boxes();
+  my $map = "<MAP NAME='$pid'>\n";
+  for my $obj ( @objects ) {
+    my $hkey_name = $obj->[0]->display_name();
+    my $f = $obj->[0];
+    my $coords = join( ", ", @$obj[1..4] );
+    my $text = $f->start() . '-' . $f->end();
+    $text .= '  ' . $f->seq()->seq() if $f->seq();
+    $map .= "<AREA SHAPE='RECT' COORDS='$coords' TITLE='$text'>\n";
+  }
+  $map .= '</MAP>';
+  
+  my $image_html = "<img BORDER=0 src='$HTML_BASE_DIR/$tmp_img_path/$file_name' ISMAP USEMAP='#$pid'  alt='Sorry No Img'>";
+  
+
+    # Set up graphic legend
+  my @legend; 
+  push @legend, "<TR> <TD CLASS=obs_pep>$sp</TD> <TD class=sm_txt>Observed peptide: (# observations) </TD> </TR>\n" if $tracks{observed};
+  push @legend, "<TR> <TD CLASS=obs_pep>$sp</TD> <TD class=sm_txt>Identified peptide: glycosite # (peptide prophet score) </TD> </TR>\n" if $tracks{identified};
+  push @legend, "<TR> <TD CLASS=pred_pep>$sp</TD> <TD class=sm_txt>Predicted NxS/T motif tryptic peptide</TD> </TR>\n" if $tracks{predicted};
+  push @legend, "<TR> <TD CLASS=glyco_seq>$sp</TD> <TD class=sm_txt>NxS/T Concensus glycosylation site</TD> </TR>\n"  if $tracks{glyco};
+  push @legend, "<TR> <TD CLASS=sig_seq>$sp</TD> <TD class=sm_txt>Signal sequence predicted by Signal P</TD> </TR>\n"  if $tracks{'Signal Sequence'};
+  push @legend, "<TR> <TD CLASS=anc_seq>$sp</TD> <TD class=sm_txt>Anchor sequence predicted by Signal P</TD> </TR>\n" if $tracks{anchor};
+  push @legend, "<TR> <TD CLASS=tm_dom>$sp</TD> <TD class=sm_txt>Transmembrane domain predicted by TMHMM</TD> </TR>\n" if $tracks{Transmembrane};
+  push @legend, "<TR> <TD CLASS=ex_dom>$sp</TD> <TD class=sm_txt>Extracellular domain predicted by TMHMM</TD> </TR>\n" if $tracks{Extracellular};
+  push @legend, "<TR> <TD CLASS=in_dom>$sp</TD> <TD class=sm_txt>Intracellular domain predicted by TMHMM</TD> </TR>\n" if $tracks{Intracellular};
+  push @legend, "<TR> <TD CLASS=pep_cov>$sp</TD> <TD class=sm_txt>Protein coverage by observed peptides</TD> </TR>\n" if $tracks{coverage};
+
+  my $legend = '';
+  for my $item ( @legend ) {
+    $legend .= $item;
+  }
+  
+  # Print graphic to file
+	open( OUT, ">$img_file" ) || die "$!: $img_file";
 	binmode(OUT);
-	
 	print OUT $panel->png;
 	close OUT;
+
+  # Widget to allow show/hide of sequence graphic section
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getglyseqs_graphic',
+                                                visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                imglink => 1,
+                                                sticky => 1 );
+  # Generate and return HTML for graphic
+  my $graphic =<<"  EOG";
+  <TABLE width='100%'>
+    <TR><TD CLASS='grey_header'>$link Protein/Peptide Map</TD></TR>
+    <TR $tr> 
+      <TD>
+       $image_html
+       $map
+      </TD>
+    </TR>
+    <TR $tr>
+      <TD COLSPAN=2 ALIGN=RIGHT>
+        <TABLE BORDER=0 class=outline>
+        $legend
+        </TABLE> 
+      </TD>
+    </TR>
+  </TABLE>
+  $style
+  EOG
+
+  return $graphic;
+  
 
 }
 #######################################################
@@ -1005,7 +1179,7 @@ sub peptide_label {
      }else{
      	#Identified score is peptide prophet
      	$score = $feature->score();
-     	$note .= sprintf(" PP = %01.2f",$score);
+     	$note = $feature->start() . ' (' . sprintf("%01i",$score) . ')';
      }
     
      
@@ -1051,7 +1225,6 @@ sub get_annotation {
 		$info = "Cannot find Info for '$anno_type'";
 	}
 	
-	#$log->debug(Dumper(\@annotations));
    
 	return $info;
 }

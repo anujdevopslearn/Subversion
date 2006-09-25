@@ -134,12 +134,14 @@ sub display_proteins{
 
   my (%upep, %uprot);
 
+  my @symbols;
 	foreach my $h_ref (@results_set){
 		my $ipi_id = $h_ref->{ipi_data_id};
 		my $num_identified = $h_ref->{num_observed};
 		my $ipi_acc = $h_ref->{ipi_accession_number};
 		my $protein_name = nice_term_print($h_ref->{protein_name});
 		my $protein_sym = $h_ref->{protein_symbol};
+    push @symbols, $protein_sym if $protein_sym;
     $protcnt++;
     $pepcnt += $num_identified;
 		
@@ -151,6 +153,17 @@ sub display_proteins{
 			        );
 	}
 	$html .= "</table>";
+
+  my $organism = 'hsa';
+  my $gXML = $sbeams->getGaggleXML( object => 'namelist', 
+                                      type => 'direct',
+                                      name => "Gene symbols",
+                                      data => \@symbols,
+                                     start => 1, 
+                                       end => 1,
+                                     organism => $organism );
+  $html .= "\n$gXML\n";  
+  
   my $stats = qq~
   <BR><FONT COLOR=GREEN>
   Found $pepcnt peptides which are derived from maximally $protcnt proteins at a peptide prophet cutoff of $cutoff
