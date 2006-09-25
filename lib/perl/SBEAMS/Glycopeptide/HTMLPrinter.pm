@@ -120,8 +120,23 @@ my $css =<<END;
 	 .blue_bg{ font-family: Helvetica, Arial, sans-serif; background-color: #4455cc; ${FONT_SIZE_HG}pt; font-weight: bold; color: white}
 	 .lite_blue_bg{font-family: Helvetica, Arial, sans-serif; background-color: #eeeeff; ${FONT_SIZE_HG}pt; color: #cc1111; font-weight: bold;border-style: solid; border-width: 1px; border-color: #555555 #cccccc #cccccc #555555;}
   	 
-       .identified_pep{
+       .observed_pep{
   	         background-color: #882222;
+  	         ${FONT_SIZE_LG}pt;
+  	         font-weight: bold ;
+  	         color:white;
+  	         Padding:1;
+  	         border-style: solid;
+  	         border-left-width: 1px;
+  	         border-right-width: 1px;
+  	         border-top-width: 1px;
+  	         border-left-color: #eeeeee;
+  	         border-right-color: #eeeeee;
+  	         border-top-color: #aaaaaa;
+  	         border-bottom-color:#aaaaaa;
+  	         }
+       .identified_pep{
+  	         background-color: #228822;
   	         ${FONT_SIZE_LG}pt;
   	         font-weight: bold ;
   	         color:white;
@@ -460,6 +475,7 @@ sub printStyleSheet {
     #### Obtain main SBEAMS object and use its style sheet
     $sbeams = $self->getSBEAMS();
     $sbeams->printStyleSheet();
+#    print '<STYLE TYPE=TEXT/CSS>' . $self->getGlycoStyleSheet() . '</STYLE>';
 }
 
 

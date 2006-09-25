@@ -133,7 +133,7 @@ sub make_peptide_bio_seqs {
 			$peptide_id =  $href->{'identified_peptide_id'};
 			$identified_tissues = $self->identified_tissues($peptide_id);
    } elsif ($pep_type eq 'Observed Peptides'){
-    $log->debug( "Obs is $href->{observed_peptide_sequence}, match is $href->{matching_sequence}" );
+#    $log->debug( "Obs is $href->{observed_peptide_sequence}, match is $href->{matching_sequence}" );
 			$modified_pep_seq = $href->{'observed_peptide_sequence'};
 			$peptide_id =  $href->{'observed_peptide_id'};
 			$identified_tissues = $self->observed_tissues($href->{matching_sequence});
@@ -360,11 +360,9 @@ sub map_pep_to_protein {
 	
 	my $pep_obj = $args{pep_bioseq};
 	my $track_type = $args{peptide_type};
-  $log->debug( "Predict this!" ) if $track_type =~ /pre/i;
 	
 	
 	confess(__PACKAGE__ . "::$method pep Bio::Seq object  \n") unless (ref($pep_obj));
-#	confess(__PACKAGE__ . "::$method track type Can Only be 'Predicted or Identified Peptides'  \n") unless ($track_type =~ /Pr|Id/);
 	
 	my $glyco_obj = $self->get_glyco_object();
 	my $seq_obj = $glyco_obj->seq_info();
@@ -379,7 +377,7 @@ sub map_pep_to_protein {
 		
 		my $start_pos = length($`) +1;    
 		my $stop_pos = $pep_obj->length() + $start_pos - 1 ;    #subtract 1 since we want the ture end 
-  $log->debug( "Adding a $track_type object starting at $start_pos, ending at $stop_pos" );
+#  $log->debug( "Adding a $track_type object starting at $start_pos, ending at $stop_pos" );
 		#$log->debug(" $pep_seq START '$start_pos' STOP '$stop_pos'");
 		$self->add_peptide_to_sequence(
 			peptide => $pep_obj,
@@ -423,7 +421,9 @@ sub add_peptide_to_sequence {
 		 						  score_type => 'peptide_prophet_score'
 		 						 );
 	}else{
-		$score = 'Unknown_score';
+		$score = $self->get_score(pep_object =>$pep_obj,
+		 						  score_type => 'number_obs'
+		 						 );
 	}
 	
 	

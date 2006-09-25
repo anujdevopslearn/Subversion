@@ -249,7 +249,7 @@ sub add_glyco_site{
 	my $self = shift;
 	my $ipi_data_id = $self->get_ipi_data_id;
 	my @array_hrefs = $self->get_glyco_sites($ipi_data_id);
-  $log->debug( "Found " . scalar(@array_hrefs) . " sites for $ipi_data_id") ;
+#  $log->debug( "Found " . scalar(@array_hrefs) . " sites for $ipi_data_id") ;
 	return 0 unless @array_hrefs;
 	my $seq_obj = $self->seq_info;
 	
@@ -281,20 +281,22 @@ sub add_signal_sequence {
 	my $method = 'add_signal_sequence';
 	my $self = shift;
 	my $signal_sequence_info = $self->signal_sequence_info;
-	if ($signal_sequence_info =~ /(\d+).*Y$/){
-		$log->debug(__PACKAGE__. "::$method FOUND SIGNAL SEQUENCE");
-		my $seq_obj = $self->seq_info();
-				
-		my $sigseq = Bio::SeqFeature::Generic->new(
-                                                                -start        =>1,
-                                                                -end          =>$1 ,
-                                                                -primary          => "Signal Sequence",
-                                                                -tag              =>{Signal_sequence => 'signalsequence'
-                                                                                                 },
+# 42 N 0.002 N
+	$signal_sequence_info =~ /(\d+) (\w) (\d\.\d+) (\w)/;
+  my $end = $1;
+  my $cleaved = $2;
+  my $signal = $4;
+  return if $signal =~ /N/i;
+  my $type = ( $cleaved =~ /Y/i ) ? 'Signal Sequence' : 'Anchor';
+  
+  my $sigseq = Bio::SeqFeature::Generic->new( -start        => 1,
+                                              -end          => $end,
+                                              -display_name => $type ,
+                                              -primary      => $type,
+                                              -tag          => { $type => $type } 
                                         );
 
-		$seq_obj->add_SeqFeature($sigseq);
-	}
+  $self->seq_info()->add_SeqFeature($sigseq);
 }
 # ###########################################
 #Add the transmembrane domains sequence 
@@ -406,7 +408,6 @@ sub make_url {
   my $url = $href->{accessor} . $term . $href->{accessor_suffix};
   $url =~ s/ /+/g;	#repalce any spaces with a plus.  Needed for EBI_IPI to work
   $url = "<a href='$url'>$term</a>";
-  return $url;
 
 }
 
@@ -421,7 +422,6 @@ sub sorted_freatures {
 	my $count = 0;
 	#foreach my $f (@_){
 		
-	#	$log->debug("$count UNSORTED FEATURE " . $f->primary_tag);
 	#	$count ++;
 	#}
 	
@@ -451,18 +451,16 @@ sub get_html_protein_seq {
   my $seq = $args{seq};
   my $ref_parameters = $args{'ref_parameters'};
 	
-#$log->debug(Dumper($seq));
   unless(ref($seq)){
-		 $seq = $self->seq_info();
+    $seq = $self->seq_info();
   }	
-		
+
   my $aa_seq = $seq->seq();
   my @array_of_arrays = $self->make_array_of_arrays($seq);
 
     
   my @sorted_features = $self->sorted_freatures($seq->all_SeqFeatures);# descend into sub features
         
-  #$log->debug(@sorted_features);
   for my $f (@sorted_features) {
     my $tag = $f->primary_tag;
 			
@@ -471,17 +469,30 @@ sub get_html_protein_seq {
     my $start =  $f->start - 1;
     my $end =  $f->end - 1;
             
-    my ($css_class, $title) = _choose_css_type( tag  => $tag,
-                                              params => $ref_parameters,
-                                               start => $start );
+    my ($name, $title) = _choose_css_type( tag  => $tag,
+                                         params => $ref_parameters,
+                                          start => $start );
+    next unless $name;
 
-    if ($css_class){
-      my $start_tag = "<span class='$css_class' $title>";
-      my $end_tag   = "</span>";
-      unshift @{$array_of_arrays[$start]}, $start_tag;
-      push @{$array_of_arrays[$end]}, $end_tag;
+    if ( !$title ) {
+      $title = $tag;
+      $title =~ s/s$//;
+      if ( $f->start() ) {
+        $title .= " " . $f->start() . '-' . $f->end();
+      }
     }
-			
+
+    my $css_class = $name || 'sequence_font';
+
+    if ( $args{prechecked} ) {
+      $css_class = 'sequence_font' if !grep( /$name/i, @{$args{prechecked}} )
+    }
+
+    my $start_tag = "<span class='$css_class' TITLE='$title' NAME=$name ID=$name>";
+    my $end_tag   = "</span>";
+    unshift @{$array_of_arrays[$start]}, $start_tag;
+    push @{$array_of_arrays[$end]}, $end_tag;
+  
   }
   #print( Dumper(\@array_of_arrays));
   my $string = $self->flatten_array_of_arrays(@array_of_arrays);
@@ -499,6 +510,7 @@ sub _choose_css_type {
 
   my %classes = ( 'Predicted Peptides'  => 'predicted_pep',
                   'Identified Peptides' => 'identified_pep',
+                  'Observed Peptides' => 'observed_pep',
                   'N-Glyco Sites'       => 'glyco_site',
                   'Signal Sequence'     => 'sseq',
                   'Transmembrane'       => 'tmhmm',
@@ -555,7 +567,7 @@ sub flatten_array_of_arrays{
         my @flat_array = ();
         foreach my $aref ( @array_of_arrays){
               # if (ref($aref)){ #for some reason undef elements are finding their way into the array this does not seem good and needs to be fixed
-		push @flat_array, @{$aref}; #FIX ME IF THE GLYCO SITE EXTENTS BEYOND THE TRYPTIC SITE WE HAVE AN ERROR
+		push @flat_array, @{$aref} if ref( $aref); #FIX ME IF THE GLYCO SITE EXTENTS BEYOND THE TRYPTIC SITE WE HAVE AN ERROR
 	#	}
         }
         my $string = join "", @flat_array;
@@ -763,8 +775,8 @@ sub synonyms {
 #display_peptides
 ##############################################
 sub display_peptides{
-    my $method = 'display_peptides';
-    my $self = shift;
+  my $method = 'display_peptides';
+  my $self = shift;
 	my $type = shift;
 	
 	my $html = '';
@@ -791,7 +803,6 @@ sub display_peptides{
 		
 	}
 	
-	
 	return $html;
 }
 
@@ -817,7 +828,7 @@ sub predicted_pep_html{
 	my $synth = ( $sbeams->isGuestUser() ) ? '' : $q->td( text_class("Synthesized Peptide") );
 	
 	my $html  = "<table>";
-	$html .= $q->Tr({class=>'rev_gray_head'},
+	$html .= join( "\n", $q->Tr({class=>'rev_gray_head'},
 			       $q->td( {NOWRAP => 1}, $self->linkToColumnText(
 			       				display => "NXS/T Location",
 						    		title   =>"Glyco Site Location within the protein", 
@@ -827,7 +838,7 @@ sub predicted_pep_html{
 			       $q->td( text_class("Predicted Sequence")),
 			     	 $q->td(text_class("Predicted Mass")),
 			     	 $q->td( {NOBR => 1}, text_class("# Proteins with Peptide")),
-             $synth
+             $synth )
 			     );
 
 my $foo=<<'  END';
@@ -915,13 +926,13 @@ my $foo=<<'  END';
 ### Start writing some html that can be returned
 				#$q->td({align=>'center'}, $glyco_score),
 
-		 $html .= $q->Tr(
+		 $html .= join( "\n", $q->Tr(
 				$q->td($protein_glyco_site),
 				$q->td("$first_aa.$html_seq.$end_aa"),
 				$q->td({align=>'center'},$predicted_mass),
 				$q->td({align=>'center'},$hit_link),
 				$q->td({align=>'center'},$synthesized_seq),
-				
+        )
 			     );
 
 		}
@@ -947,8 +958,8 @@ sub identified_pep_html{
 	my $features_aref = shift;
 	
 	#start the HTML
-	my $html  = "<table>";
-	$html .= $q->Tr({class=>'rev_gray_head'},
+	my $html  = "<table>\n";
+  $html .= join( "\n", $q->Tr( {class=>'rev_gray_head'},
 			       $q->td( { NOWRAP => 1 }, $self->linkToColumnText(
 	       				display => "NXS/T Location",
 								title   =>"Glyco Site Location within the protein", 
@@ -971,7 +982,8 @@ sub identified_pep_html{
 			     	$q->td(text_class("Tissues")),
 			     	$q->td(text_class("# Obs")),
 			     	$q->td(text_class("Atlas"))
-			     );
+              ) # End Tr
+			     ); # End join
 				 
 	
   my $cutoff = $self->get_current_prophet_cutoff();
@@ -1044,7 +1056,7 @@ sub identified_pep_html{
 #		            ( $tissues =~ /serum/ ) ? 'serum, other' :
 #		            ( $tissues =~ /\w/ ) ? 'other' : '';
 
-		 $html .= $q->Tr(
+		 $html .= join( "\n", $q->Tr(
 				$q->td($gb.$protein_glyco_site.$ge),
 				$q->td("$gb$first_aa.$html_seq.$end_aa$ge"),
 				$q->td($gb.$peptide_prophet_score.$ge),
@@ -1053,7 +1065,8 @@ sub identified_pep_html{
 				$q->td($gb.$tissues.$ge),
 				$q->td($gb.$num_obs.$ge),
 				$q->td({ALIGN=>'CENTER'},$gb.$atlas_link.$ge),
-			     );
+			     )  # End Tr
+         ); # End join
 		}
 	$html .= "</table>";
 	return $html;
@@ -1082,36 +1095,12 @@ sub get_atlas_link {
   my $self = shift;
   my %args = @_;
   return undef unless $args{seq} || $args{name};
-  my $type = $args{type} || 'text';
+  my $type = $args{type} || 'image';
 
   my $url = '';
   if ( $args{seq} ) {
-    my $sql = qq~
-    SELECT peptide_accession 
-    FROM $TBAT_PEPTIDE P 
-    JOIN $TBAT_PEPTIDE_INSTANCE PI
-    ON PI.peptide_id = P.peptide_id
-    WHERE peptide_sequence = '$args{seq}'
-    AND PI.atlas_build_id IN ( SELECT atlas_build_id 
-                        FROM $TBAT_DEFAULT_ATLAS_BUILD 
-                        WHERE organism_id = 2 )
-    ~;
-
-    $sql = qq~
-    SELECT search_key_name 
-    FROM $TBAT_SEARCH_KEY K 
-    WHERE search_key_type = 'peptide sequence'
-    AND search_key_name = '$args{seq}'
-    ~;
-
-    $log->info( $sbeams->evalSQL( $sql ) );
-    my ( $match ) = $sbeams->selectrow_array( $sql );
-    my $key = ( $match ) ? $args{seq} : '%' . $args{seq} . '%';
+    my $key = '%' . $args{seq} . '%';
     $key = $q->escape($key);
-    $type = 'image' if $match;
-    $url = "../PeptideAtlas/Search?organism_name=Human;search_key=$key;action=GO";
-  } else {
-    my $key = $q->escape($args{name});
     $url = "../PeptideAtlas/Search?organism_name=Human;search_key=$key;action=GO";
   }
   my $link;
@@ -1225,11 +1214,9 @@ sub get_annotation {
         if ($annotations[0]){
                 $info = $annotations[0]->hash_tree;
         }else{
-          $log->debug( "$ac" );
                 $info = "Cannot find Info for '$anno_type'";
         }
 
-        #$log->debug(Dumper(\@annotations));
 
         return $info;
 }

@@ -171,6 +171,7 @@ sub all_proteins_query {
        JOIN $TBGP_OBSERVED_PEPTIDE OP ON ITI.observed_peptide_id = OP.observed_peptide_id
        JOIN $TBGP_IPI_DATA ID ON ID.ipi_data_id = ITI.ipi_data_id
       WHERE peptide_prophet_score >= $cutoff
+      AND ipi_version_id = 27
       GROUP BY ID.ipi_data_id, ipi_accession_number, protein_name, protein_symbol
       HAVING COUNT(*) > 0
     ) AS temp
@@ -458,6 +459,7 @@ sub get_predicted_peptides{
 		return $sbeams->selectHashArray($sql);		
 }			
 
+
 ##############################
 #get_observed_peptides
 #Give a ipi_data_id
@@ -466,44 +468,72 @@ sub get_predicted_peptides{
 sub get_observed_peptides{
 	my $self = shift;
 	my $ipi_data_id = shift;
+
+  #  Broke out the glycosite fetch, couldn't get it to work with
+  # without either no non-site mapped peptides or an excess copies of peps.
+  my $siteSQL = qq~
+  SELECT observed_peptide_id,
+    gs.glycosite_id,
+  	gs.protein_glycosite_position,
+			site_start,
+      site_stop
+      FROM $TBGP_OBSERVED_TO_GLYCOSITE OTG 
+		  JOIN $TBGP_GLYCOSITE GS ON ( GS.glycosite_id = OTG.glycosite_id )
+			WHERE ipi_data_id = $ipi_data_id
+  ~;
+
+  # hash values keyed by observed_id
+  my @rows = $sbeams->selectSeveralColumns( $siteSQL );
+  my %sites;
+  for my $row ( @rows ) {
+    $sites{$row->[0]} = $row;
+  }
+  
+  # Fetch all peptides for given protein entry
 	my $sql = qq~
 				SELECT OB.observed_peptide_id, peptide_prophet_score,
 				matching_sequence, observed_peptide_sequence,
-				peptide_mass,
-				gs.protein_glycosite_position,
-				site_start,
-				site_start
+				peptide_mass
 				FROM $TBGP_OBSERVED_PEPTIDE OB
           JOIN $TBGP_OBSERVED_TO_IPI OTI 
-            ON OTI.observed_peptide_id = OB.observed_peptide_id
-          JOIN $TBGP_OBSERVED_TO_GLYCOSITE OTG 
-            ON OTG.observed_peptide_id = OB.observed_peptide_id
-	  			JOIN $TBGP_GLYCOSITE GS 
-            ON (GS.glycosite_id = OTG.glycosite_id AND OTI.ipi_data_id = GS.ipi_data_id)
+          ON OTI.observed_peptide_id = OB.observed_peptide_id
 				WHERE OTI.ipi_data_id = $ipi_data_id
-        ORDER BY site_start, site_stop
+        ORDER BY matching_sequence
 				~;
-  $log->debug( $sql );
+
   my @rows = $sbeams->selectHashArray( $sql );
   my @observed;
   my %current;
   my $cnt = 0;
   for my $row ( @rows ) {
-#    $log->debug( "PGP is $row->{protein_glycosite_position}, SS is $row->{site_start}/$row->{site_stop}" );
     $cnt++;
-    if ( %current && $current{matching_sequence} =~ /$row->{matching_sequence}/i ) {
+
+    # Merge in glycosite info
+    my $opi = $row->{observed_peptide_id};
+    if ( $sites{$opi} ) {
+      $row->{protein_glycosite_position} = $sites{$opi}->[2]; 
+      $row->{site_start} = $sites{$opi}->[3]; 
+      $row->{site_stop} = $sites{$opi}->[4]; 
+    }
+
+    if ( %current && $current{matching_sequence} =~ /^$row->{matching_sequence}$/i ) {
+      $log->debug( "cache" );
       $current{n_obs}++;
+      $current{peptide_prophet_score} = $row->{peptide_prophet_score} if $row->{peptide_prophet_score} > $current{peptide_prophet_score};
     } else {  
       if ( %current ) {
+        $log->debug( 'save' );
         my %finished = %current;
         push @observed, \%finished;
+      } else {
+        $log->debug( 'debut' );
       }
       %current = %{$row};
-#      $log->debug( "Pre: $current{observed_peptide_sequence}" );
+      $log->debug( "Pre: $current{observed_peptide_sequence}" );
       $current{observed_peptide_sequence} =~ s/N[\W]/N#/g;
       $current{observed_peptide_sequence} =~ s/[^a-zA-Z\#\.]//g;
       $current{observed_peptide_sequence} =~ s/([^N])\#/$1/g;
-#      $log->debug( "Post: $current{observed_peptide_sequence}" );
+      $log->debug( "Post: $current{observed_peptide_sequence}" );
       $current{n_obs}++;
       $current{tryptic_end} = SBEAMS::Glycopeptide->countTrypticEnds( $row->{observed_peptide_sequence} );
     }

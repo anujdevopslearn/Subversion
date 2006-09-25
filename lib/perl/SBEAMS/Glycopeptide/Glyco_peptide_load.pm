@@ -1202,7 +1202,8 @@ sub insert_predicted {
 
   $self->{_loaded_peptide} ||= {};
   if ( $self->{_loaded_peptide}->{$args{aa_seq}} ) {
-    return $self->{_loaded_peptide}->{$args{aa_seq}};
+# This code kept multiple instances of the same aa sequence from being loaded.
+#    return $self->{_loaded_peptide}->{$args{aa_seq}};
   }
 
 
@@ -1341,13 +1342,13 @@ sub add_predicted_peptides {
 #
 #    If peptide is a glycosite
     my $do_insert = ( $site && $pidx >= $site + 1 ) ? 1 : 0;
-    # Add predicted peptide record
     $predicted_id = $self->insert_predicted( %args,  # pass through ipi_data_id, ipi accession
                                              aa_seq => $peptide,
                                           start_idx => $sidx,
                                            stop_idx => $pidx
                                     ) or die "Insert failed $!" if $do_insert;
 
+    
     # If we are in a glyco
     while ( defined $site && $pidx >= $site ) {
       my $pepidx = ( $site - $sidx ) + 1 + $num_motifs;
@@ -1391,7 +1392,6 @@ sub add_glycosites {
   $self->{_ipi2gs} ||= {};
 
   for my $site ( @{$args{site_idx}} ) {
-#    print STDERR "inserting site $site\n";
     my $glyco_score = -1;
     my $motif_context = $self->motif_context( seq => $args{protein_sequence}, site => $site );
 
@@ -1411,6 +1411,7 @@ sub add_glycosites {
                                 PK          => 'glycosite_id' ) || die "putresence";
     $self->{_ipi2gs}->{$args{ipi_data_id} . $site} = $pk;
   }
+  print 
   return 1;
 				   		   
 }

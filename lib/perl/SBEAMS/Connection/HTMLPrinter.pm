@@ -277,35 +277,40 @@ sub printStyleSheet {
 	
 	.pseudo_link    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration:none; color: blue; CURSOR: help;}
 	
-	.identified_pep{ 
-	background-color: #882222; 
-	font-size: ${FONT_SIZE_LG}pt; 
-	font-weight: bold; 
+  .observed_pep{ 
+  background-color: #882222; 
+  font-size: ${FONT_SIZE_LG}pt; 
+  font-weight: bold; 
   letter-spacing:0.5;	
-	color:white; 
-	Padding:1;
-	border-style: solid;
-	border-left-width: 1px;
-	border-right-width: 1px;
-	border-top-width: 1px;
-	border-left-color: #eeeeee;
-	border-right-color: #eeeeee;
-	border-top-color: #aaaaaa;
-	border-bottom-color:#aaaaaa;
-	}
-	.predicted_pep{ 
-	background-color: #FFCC66; 
-	font-size: ${FONT_SIZE_LG}pt; 
+  color:white; 
+  }
+  .identified_pep{ 
+  background-color: #EEEEEE; 
+  font-size: ${FONT_SIZE_LG}pt; 
+  font-weight: bold; 
+  letter-spacing:0.5;	
+  color:white; 
+  Padding:1;
+  border-style: solid;
+  border-left-width: 1px;
+  border-right-width: 1px;
+  border-top-width: 1px;
+  border-left-color: #eeeeee;
+  border-right-color: #eeeeee;
+  border-top-color: #aaaaaa;
+  border-bottom-color:#aaaaaa;
+  }
+  .predicted_pep{ 
+  background-color: #FFCC66; 
+  font-size: ${FONT_SIZE_LG}pt; 
   font-family:courier;
-	font-weight: bold; 
+  font-weight: bold; 
   letter-spacing:0.5;	
-	border-style: solid;
-	border-width: 1px;
-	
-	border-right-color: blue ;
-	border-left-color:  red ;
-	
-	}
+  border-style: solid;
+  border-width: 1px;
+  border-right-color: blue ;
+  border-left-color:  red ;
+  }
 	
 	.sseq{ background-color: #CCCCFF; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
 	.tmhmm{ background-color: #CCFFCC; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; text-decoration:underline}
