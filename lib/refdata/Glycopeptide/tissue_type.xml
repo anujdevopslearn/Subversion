@@ -44,8 +44,7 @@
         date_modified="2005-12-09 11:07:50"
         date_created="2005-06-26 01:47:19"
         tissue_type_id="4"
-        comment="#  The clear yellowish fluid obtained upon separating whole blood into its solid and liquid components after it has been allowed to clot. Also called blood serum.
-# Blood serum from the tissues of immunized animals, containing antibodies and used to transfer immunity to another individual."
+        comment="#  The clear yellowish fluid obtained upon separating whole blood into its solid and liquid components after it has been allowed to clot. Also called blood serum. # Blood serum from the tissues of immunized animals, containing antibodies and used to transfer immunity to another individual."
         owner_group_id="8"
         modified_by_id="372"
         tissue_type_description="lear yellowish fluid obtained upon separating whole blood into its solid and liquid components" />
@@ -81,9 +80,7 @@
         date_modified="2005-12-09 11:13:26"
         date_created="2005-06-26 10:28:05"
         tissue_type_id="7"
-        comment="
-
-Anatomy. Any of various distensible membranous sacs, such as the urinary bladder (An elastic, muscular sac situated in the anterior part of the pelvic cavity in which urine collects before excretion.) or the swim bladder, that serve as receptacles for fluid or gas."
+        comment="  Anatomy. Any of various distensible membranous sacs, such as the urinary bladder (An elastic, muscular sac situated in the anterior part of the pelvic cavity in which urine collects before excretion.) or the swim bladder, that serve as receptacles for fluid or gas."
         owner_group_id="8"
         modified_by_id="372"
         tissue_type_description="Distensible membranous sacs, typically the urinary bladder" />
@@ -105,7 +102,7 @@ Anatomy. Any of various distensible membranous sacs, such as the urinary bladder
         sort_order="10"
         date_modified="2005-12-09 11:51:18"
         date_created="2005-12-09 11:51:18"
-        tissue_type_id="34"
+        tissue_type_id="9"
         comment="Either of two spongy, saclike respiratory organs in most vertebrates, occupying the chest cavity together with the heart and functioning to remove carbon dioxide from the blood and provide it with oxygen."
         owner_group_id="1"
         modified_by_id="372"
@@ -117,8 +114,8 @@ Anatomy. Any of various distensible membranous sacs, such as the urinary bladder
         sort_order="10"
         date_modified="2005-12-09 11:51:57"
         date_created="2005-12-09 11:51:57"
-        tissue_type_id="35"
-        comment="Fluid consisting of plasma, blood cells, and platelets that is circulated by the heart 	The fluid consisting of plasma, blood cells, and platelets that is circulated by the heart through the vertebrate vascular system, carrying oxygen and nutrients to and waste materials away from all body tissues."
+        tissue_type_id="10"
+        comment="Fluid consisting of plasma, blood cells, and platelets that is circulated by the heart  The fluid consisting of plasma, blood cells, and platelets that is circulated by the heart through the vertebrate vascular system, carrying oxygen and nutrients to and waste materials away from all body tissues."
         owner_group_id="40"
         modified_by_id="372"
         tissue_type_description="Fluid consisting of plasma, blood cells, and platelets that is circulated by the heart" />
@@ -129,8 +126,8 @@ Anatomy. Any of various distensible membranous sacs, such as the urinary bladder
         sort_order="10"
         date_modified="2005-12-09 11:52:23"
         date_created="2005-12-09 11:52:23"
-        tissue_type_id="36"
-        comment="Chambered muscular organ in vertebrates that pumps blood 	The chambered muscular organ in vertebrates that pumps blood received from the veins into the arteries, thereby maintaining the flow of blood through the entire circulatory system."
+        tissue_type_id="11"
+        comment="Chambered muscular organ in vertebrates that pumps blood  The chambered muscular organ in vertebrates that pumps blood received from the veins into the arteries, thereby maintaining the flow of blood through the entire circulatory system."
         owner_group_id="40"
         modified_by_id="372"
         tissue_type_description="Chambered muscular organ in vertebrates that pumps blood" />
@@ -141,7 +138,7 @@ Anatomy. Any of various distensible membranous sacs, such as the urinary bladder
         sort_order="10"
         date_modified="2005-12-09 11:52:49"
         date_created="2005-12-09 11:52:49"
-        tissue_type_id="37"
+        tissue_type_id="12"
         comment="The dense, semirigid, porous, calcified connective tissue forming the major portion of the skeleton of most vertebrates. It consists of a dense organic matrix and an inorganic, mineral component. "
         owner_group_id="40"
         modified_by_id="372"
@@ -153,7 +150,7 @@ Anatomy. Any of various distensible membranous sacs, such as the urinary bladder
         sort_order="10"
         date_modified="2005-12-09 11:53:15"
         date_created="2005-12-09 11:53:15"
-        tissue_type_id="38"
+        tissue_type_id="13"
         comment="Of, relating to, having, or resulting from diabetes: diabetic patients; a diabetic coma. "
         owner_group_id="40"
         modified_by_id="372"
@@ -165,9 +162,8 @@ Anatomy. Any of various distensible membranous sacs, such as the urinary bladder
         sort_order="10"
         date_modified="2005-12-09 11:53:40"
         date_created="2005-12-09 11:53:40"
-        tissue_type_id="39"
-        comment="The characteristic specialized cell that is part of the nervous system, serving to conduct electrical impulses to and from the brain, and also between other parts of the body, and composed of a main cell body, the axon, with a varying number of processes of varying length, the dendrites; a nerve cell. The movement and behavior of higher animals depends on the signals tranmsitted by such nerve cells.
-"
+        tissue_type_id="14"
+        comment="The characteristic specialized cell that is part of the nervous system, serving to conduct electrical impulses to and from the brain, and also between other parts of the body, and composed of a main cell body, the axon, with a varying number of processes of varying length, the dendrites; a nerve cell. The movement and behavior of higher animals depends on the signals tranmsitted by such nerve cells. "
         owner_group_id="40"
         modified_by_id="372"
         tissue_type_description="Characteristic specialized cell that is part of the nervous system" />
