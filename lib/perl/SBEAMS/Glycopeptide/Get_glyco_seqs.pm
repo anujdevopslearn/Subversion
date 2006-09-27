@@ -177,7 +177,11 @@ sub get_protein_info {
 	$self->add_signal_sequence();
 	$self->add_transmembrane_domains();
 	$self->add_cellular_location();
-	$self->add_glyco_site();
+  if ( $glyco->get_current_motif_type() eq 'glycopeptide' ) {
+	  $self->add_glyco_site();
+  } else {
+	  $self->add_phospho_site();
+  }
   return;
 }
 
@@ -236,6 +240,33 @@ sub get_ipi_data {
 
 }
 
+#######################################################
+# Given a peptide_obj, get the main protein bioseq and add 
+# the position for the predicted N-link glyco site.
+#this method is here because of the way the data was setup
+#return 1 for success 0 for everything else
+#######################################################
+sub add_phospho_site{
+	my $method = 'add_phospho_site';
+	my $self = shift;
+	my $ipi_data_id = $self->get_ipi_data_id;
+	my $seq_obj = $self->seq_info;
+  my $sequence = $seq_obj->seq();
+	
+  my $sites = $glyco->get_site_positions(    pattern => 'S|T|Y',
+                                          index_base => 1,
+                                                 seq => $sequence );
+		
+  for my $site ( @$sites ) {
+		my $feature = Bio::SeqFeature::Generic->new( -start => $site,
+                                                 -end   => $site,
+                                                 -primary => "Phosphorylation Sites" );
+		
+		#add all the feature to the protein Bio::Seq object
+		$seq_obj->add_SeqFeature($feature);
+  }
+}
+
 
 #######################################################
 #add_glyco_site
@@ -274,6 +305,7 @@ sub add_glyco_site{
 	}
 	return 1;
 }
+
 # ###########################################
 #Add the predicted peptide to the sequence 
 #########################################
@@ -376,13 +408,17 @@ sub add_identified_peptides {
 sub add_observed_peptides {
 	my $self = shift;
 	my $ipi_data_id = $self->get_ipi_data_id;
-	my @array_hrefs = $self->get_observed_peptides($ipi_data_id);
-	
+	my @array_hrefs;
 	my $pep_o = new SBEAMS::Glycopeptide::Get_peptide_seqs(glyco_obj => $self);
+  
+  if ( $glyco->get_current_motif_type() =~ /glyco/ ) {
+    @array_hrefs = $self->get_observed_peptides($ipi_data_id);
+  } else {
+    @array_hrefs = $self->get_observed_phosphopeptides($ipi_data_id);
+  }
+
+  $pep_o->make_peptide_bio_seqs( data => \@array_hrefs, type => 'Observed Peptides' );
 	
-	$pep_o->make_peptide_bio_seqs(data => \@array_hrefs,
-								  type => 'Observed Peptides',	
-								);
   return;
 }
 
@@ -445,7 +481,8 @@ sub sorted_freatures {
 sub get_html_protein_seq {
   my $method = 'get_html_protein_seq';
   my $self = shift;
-	
+
+  my $motif = $glyco->get_current_motif_type();
   my %args = @_;
 	
   my $seq = $args{seq};
@@ -463,6 +500,7 @@ sub get_html_protein_seq {
         
   for my $f (@sorted_features) {
     my $tag = $f->primary_tag;
+    $log->debug( "tag is $tag!");
 			
 			
     #subtract one since we are indexing into a zero based array
@@ -512,11 +550,16 @@ sub _choose_css_type {
                   'Identified Peptides' => 'identified_pep',
                   'Observed Peptides' => 'observed_pep',
                   'N-Glyco Sites'       => 'glyco_site',
+                  'Phosphorylation Sites' => 'phospho',
                   'Signal Sequence'     => 'sseq',
                   'Transmembrane'       => 'tmhmm',
                   intracellular         => '',
                   extracellular         => '',
                 );
+
+  if ( $args{tag} =~ /Predicted/ ) {
+   return ( '','' ) if $glyco->get_current_motif_type() =~ /phospho/;
+  }
 
 	my $tag = $classes{$args{tag}};
 	my %title = ( glyco_site => "Glyco Site $start" );
@@ -801,6 +844,13 @@ sub display_peptides{
 			$html .= $self->nothing_found_html($type);
 		}
 		
+	}elsif($type eq 'Observed Phosphopeptides'){
+		if (exists $sorted_features{'Observed Peptides'}){
+			$html .= $self->phospho_pep_html($sorted_features{'Observed Peptides'});
+		}else{
+			$html .= $self->nothing_found_html($type);
+		}
+		
 	}
 	
 	return $html;
@@ -949,6 +999,130 @@ sub text_class {
   return "<SPAN CLASS=rev_gray_head>$text</SPAN>";
 }
 
+###############################################
+#phospho_pep_html
+##############################################
+sub phospho_pep_html{
+        my $method = 'phospho_pep_html';
+        my $self = shift;
+	my $features_aref = shift;
+	
+	#start the HTML
+	my $html  = "<table>\n";
+  $html .= join( "\n", $q->Tr( {class=>'rev_gray_head'},
+			        $q->td(text_class("Identifed Sequence")),
+			     	$q->td($self->linkToColumnText(
+			       				display => "PeptideProphet Score",
+								title   => "PeptideProphet Score: 1 Best, 0 Worst", 
+								column  => "peptide_prohet_score", 
+								table   => "AT_identified_peptide" 
+								)
+			     	
+			     	),
+			     	$q->td(text_class("Tryptic Ends")),
+			     	$q->td(text_class("Peptide Mass")),
+			     	$q->td(text_class("Tissues")),
+			     	$q->td(text_class("# Obs")),
+			     	$q->td(text_class("Atlas"))
+              ) # End Tr
+			     ); # End join
+				 
+	
+  my $cutoff = $self->get_current_prophet_cutoff();
+			      
+	foreach my $f (@{$features_aref}){
+		my $start = $f->start;
+		my $seq = $f->seq;
+		
+		my $id = '';
+		my $first_aa = 'X';
+		my $end_aa = 'X';
+		my $html_seq = '';
+		my $tryptic_end = '-1';
+		my $peptide_prophet_score = '-1';
+		my $peptide_mass = '1';
+		my $observed_seq = '1';
+		my $num_obs = '1';
+		my $tissues = 'None';
+		my $protein_glyco_site = 1;
+		
+    my $gb = '';
+    my $ge = '';
+		
+    my $atlas_link = '';
+		if ($f->has_tag('Peptide_seq_obj')){
+
+      my $pep_seq_obj = $self->extract_first_val( feature => $f, 
+                                                  tag => 'Peptide_seq_obj');
+
+      my $pp_value = $self->extract_data_value( obj => $pep_seq_obj,
+                                                tag => 'peptide_prophet_score' );
+
+      $gb = ( $pp_value >= $cutoff ) ? '' : '<I><FONT COLOR=#AAAAAA>';
+      $ge = ( $pp_value >= $cutoff ) ? '' : '</FONT></I>';
+
+
+      $id = $pep_seq_obj->display_id;
+			my @all_peptide_features = $pep_seq_obj->all_SeqFeatures;
+			my $feature_href = $self->make_features_hash(@all_peptide_features);
+			
+			if (exists $feature_href->{'Start_end_aa'}){
+				$first_aa = $self->extract_first_val(feature => $feature_href->{'Start_end_aa'}->[0], 
+													 tag => 'start_aa');
+				$end_aa = $self->extract_first_val(feature => $feature_href->{'Start_end_aa'}->[0], 
+												   tag => 'end_aa');
+			}
+			
+			$html_seq = $self->get_html_protein_seq(seq => $pep_seq_obj);
+
+      # Get link to peptide atlas
+      my $aa_value = $html_seq;
+      $aa_value =~ s/<[^>]+>//g;
+      $atlas_link = $self->get_atlas_link( seq => $aa_value );
+
+			$protein_glyco_site =  $self->get_annotation(seq_obj =>$pep_seq_obj,
+                                                                         anno_type => 'protein_glyco_site');
+			$tryptic_end = $self->get_annotation(seq_obj =>$pep_seq_obj, 
+									 anno_type => 'tryptic_end');
+			$peptide_prophet_score = $self->get_annotation(seq_obj =>$pep_seq_obj, 
+									 anno_type => 'peptide_prophet_score');
+			$peptide_mass = $self->get_annotation(seq_obj =>$pep_seq_obj, 
+									 anno_type => 'peptide_mass');
+			$tissues = $self->get_annotation(seq_obj =>$pep_seq_obj, 
+									 anno_type => 'tissues');
+			$num_obs = $self->get_annotation(seq_obj =>$pep_seq_obj, 
+									 anno_type => 'number_obs');
+			$observed_seq = $self->get_annotation(seq_obj =>$pep_seq_obj, 
+									 anno_type => 'observed_seq');
+      $observed_seq = get_phospho_html( seq => $observed_seq );
+					
+		}
+### Start writing some html that can be returned
+#		 $tissues = ( $tissues =~ /^serum$/ ) ? 'serum' :
+#		            ( $tissues =~ /serum/ ) ? 'serum, other' :
+#		            ( $tissues =~ /\w/ ) ? 'other' : '';
+
+		 $html .= join( "\n", $q->Tr(
+				$q->td("$gb$first_aa.$observed_seq.$end_aa$ge"),
+				$q->td($gb.$peptide_prophet_score.$ge),
+				$q->td($gb.$tryptic_end.$ge),
+				$q->td($gb.$peptide_mass.$ge),
+				$q->td($gb.$tissues.$ge),
+				$q->td($gb.$num_obs.$ge),
+				$q->td({ALIGN=>'CENTER'},$gb.$atlas_link.$ge),
+			     )  # End Tr
+         ); # End join
+		}
+	$html .= "</table>";
+	return $html;
+}
+
+sub get_phospho_html {
+  my %args = @_;
+  return '' unless $args{seq};
+  $args{seq} =~ s/([STY]\*)/\<SPAN class=phospho NAME=phospho ID=phospho\>$1\<\/SPAN\>/g;
+  return $args{seq};
+}
 ###############################################
 #identified_pep_html
 ##############################################

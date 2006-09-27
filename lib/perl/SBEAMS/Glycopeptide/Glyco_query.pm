@@ -162,6 +162,7 @@ sub all_proteins_query {
 #                   ( $mode eq 'identified' ) ? "WHERE num_identified > 0 " : "WHERE num_identified > 0 AND transmembrane_info like '%-%'";
 #  my $order = ( $mode eq 'all' ) ? 'protein_name ASC' : 'num_identified DESC, protein_name ASC';
   my $cutoff = $self->get_current_prophet_cutoff();
+  my $build = $self->get_current_build();
 	
 	my $sql = qq~
     SELECT * FROM (
@@ -171,7 +172,7 @@ sub all_proteins_query {
        JOIN $TBGP_OBSERVED_PEPTIDE OP ON ITI.observed_peptide_id = OP.observed_peptide_id
        JOIN $TBGP_IPI_DATA ID ON ID.ipi_data_id = ITI.ipi_data_id
       WHERE peptide_prophet_score >= $cutoff
-      AND ipi_version_id = 27
+      AND ipi_version_id = ( SELECT ipi_version FROM glycopeptide.dbo.unipep_build WHERE unipep_build_id = $build ) 
       GROUP BY ID.ipi_data_id, ipi_accession_number, protein_name, protein_symbol
       HAVING COUNT(*) > 0
     ) AS temp
@@ -465,6 +466,34 @@ sub get_predicted_peptides{
 #Give a ipi_data_id
 #return an array of hashref or nothing
 ###############################
+sub get_observed_phosphopeptides{
+	my $self = shift;
+	my $ipi_data_id = shift;
+
+  # Fetch all peptides for given protein entry
+	my $sql = qq~
+				SELECT MAX(peptide_prophet_score) as peptide_prophet_score, observed_peptide_sequence, 
+               MAX( peptide_mass ) as peptide_mass, COUNT(*) as n_obs
+				FROM $TBGP_OBSERVED_PEPTIDE OB
+          JOIN $TBGP_OBSERVED_TO_IPI OTI 
+          ON OTI.observed_peptide_id = OB.observed_peptide_id
+				WHERE OTI.ipi_data_id = $ipi_data_id
+        GROUP BY observed_peptide_sequence 
+				~;
+
+  my @observed;
+  for my $row ( $sbeams->selectHashArray( $sql ) ) {
+    $row->{tryptic_end} = SBEAMS::Glycopeptide->countTrypticEnds( $row->{observed_peptide_sequence} ) + 1;
+    push @observed, $row;
+  }
+  return ( @observed );
+}  # get_observed_phosphopeps	
+
+##############################
+#get_observed_peptides
+#Give a ipi_data_id
+#return an array of hashref or nothing
+###############################
 sub get_observed_peptides{
 	my $self = shift;
 	my $ipi_data_id = shift;
@@ -647,6 +676,24 @@ sub get_identified_peptides{
   		return $sbeams->selectHashArray($sql);	
 }	
 
+################################
+#get_phosphosites
+#Give a ipi_data_id
+#return an array of hashref or nothing
+###############################
+sub get_phosphosites{
+	my $method = 'get_phosphosites';
+	my $self = shift;
+	my $ipi_data_id = shift;
+	my $sql = qq~
+    SELECT protein_sequence
+    FROM $TBGP_IPI_DATA
+    WHERE ipi_data_id = $ipi_data_id
+    ~;
+	
+  my ($seq) = $sbeams->selectrow_array($sql);	
+
+}
 
 ################################
 #get_glyco_sites

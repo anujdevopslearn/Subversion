@@ -542,6 +542,7 @@ sub insert_observed_peptides {
   my $ids = $self->{_id_to_seq};
 
   my @keys = keys( %{$seqs} );
+  print "Found $#keys seqs\n";
   
   my $heads = get_interact_tsv_headers();
   my $sbeams = $self->getSBEAMS();
@@ -583,21 +584,23 @@ sub insert_observed_peptides {
     my $out = basename( $obs->[$heads->{file}] );
     my @name = split( /\./, $out );
     unless ( scalar(@name) == 4 && $name[1] == $name[2] ) {
-      die "Mismatch in out $out: " . join( ", ", @name ) . "\n";
+      warn "Mismatch in out $out: " . join( ", ", @name ) . "\n";
     }
     my ( $delta ) = $self->extract_delta( $obs->[$heads->{'MH error'}] );
+
+    my $mass2ch = ( $name[3] ) ? $exp_mass/$name[3] : undef;
 
     # Set ipi data id to search match if available, else first db match
     my $ipi = $accs->{$obs->[$heads->{Protein}]} || $mapteins->[0];
     
     my $rowdata = { observed_peptide_sequence => $obs->[$heads->{Peptide}],
-                                    sample_id => $args{sample_id},
+#    sample_id => $args{sample_id},
                             peptide_search_id => $args{pep_search_id},
                                   ipi_data_id => $ipi,
                         peptide_prophet_score => $obs->[$heads->{prob}],
                             experimental_mass => $exp_mass,
                                 spectrum_path => $obs->[$heads->{file}],
-                               mass_to_charge => $exp_mass/$name[3],
+                               mass_to_charge => $mass2ch,
                                       mh_plus => $obs->[$heads->{'MH+'}],
                                      mh_delta => $delta,
                             matching_sequence => $clean_pep,

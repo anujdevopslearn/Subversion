@@ -197,6 +197,15 @@ sub get_current_prophet_cutoff {
   return $cutoff;
 }
 
+# Stubs
+sub get_current_build {
+  return 2;
+}
+sub get_current_motif_type {
+  return 'phospho';
+  return 'glycopeptide';
+}
+
 sub get_transmembrane_info {
   my $self = shift;
   my %args = @_;
@@ -406,6 +415,9 @@ sub calculatePeptideMass {
       } elsif ( $mod =~ /N/ ) {
         $mass += 0.9848;
         print "$args{sequence} => Got a mod N\n";
+      } elsif ( $mod =~ /S|T|Y/ ) {
+        $mass += 79.996;
+        print "$args{sequence} => Got a mod S/T/Y\n";
       } else {
         die "Unknown modification $mod!\n";
       }
@@ -413,8 +425,13 @@ sub calculatePeptideMass {
         die "how can it not match?";
       }
       print "mod is >$mod<, orig is >$orig<, seq is $args{sequence}\n";
-      $args{sequence} =~ s/$mod//;
-      $args{sequence} =~ s/N\*//;
+      if ( $mod =~ /(\w)\*/ ) {
+        print "Special\n";
+        $args{sequence} =~ s/$1\*//;
+      } else {
+        $args{sequence} =~ s/$mod//;
+      }
+#      $args{sequence} =~ s/N\*//;
       print "mod is $mod, orig is $orig, seq is $args{sequence}\n";
     }
   }

@@ -196,6 +196,7 @@ sub add_peptide_annotation{
 	my $synthesized_seq	= new Bio::Annotation::SimpleValue(-value => $href->{'synthesized_sequence'} );	
 	my $glyco_score		= new Bio::Annotation::SimpleValue(-value => sprintf("%01.2f", $href->{'glyco_score'}));	
 	my $protein_glyco_position   = new Bio::Annotation::SimpleValue(-value =>  $href->{'protein_glycosite_position'});
+	my $observed_seq   = new Bio::Annotation::SimpleValue(-value =>  $href->{'observed_peptide_sequence'});
 	
 	$tissues->text($tissue_info);
 	
@@ -206,6 +207,7 @@ sub add_peptide_annotation{
 	my $coll = new Bio::Annotation::Collection();
 	
 	$coll->add_Annotation('tryptic_end', $number_tryptic_ends);
+	$coll->add_Annotation('observed_seq', $observed_seq);
 	$coll->add_Annotation('peptide_prophet_score', $pep_prophet_score);
 	$coll->add_Annotation('peptide_mass', $peptide_mass);
 	$coll->add_Annotation('detection_probability', $detection_probability);
@@ -322,9 +324,16 @@ sub parse_modfied_pep_seq {
 					},
 	);
 	
+
+#  use SBEAMS::Glycopeptide;
+#  my $gp = SBEAMS::Glycopeptide->new();
+#  my $motif = $gp->get_current_motif_type();
+  my $motif = 'glyco';
+  my $dseq = ( $motif =~ /phospho/ ) ? $aa_seq : $clean_seq_string;
+
 	my $seq = Bio::Seq->new(
         	-display_id => $peptide_id,
-        	-seq        => $clean_seq_string,
+        	-seq        => $dseq,
 	);
 	#add all the features to the peptide Bio::Seq object
 	$seq->add_SeqFeature($start_end,@met_mods, @glyco_locations );
