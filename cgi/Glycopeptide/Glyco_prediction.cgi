@@ -967,8 +967,9 @@ sub make_protein_map_graphic {
     delete $sorted_features{$id_track_type};
   }
    
+  my $motif = $sbeamsMOD->get_current_motif_type();
   ##### Add Track for Predicted Sequences  -- taken out for now
-   if ($sorted_features{$predicted_track_type} && $sbeamsMOD->get_current_motif_type() != /phospho/ ) {
+   if ($sorted_features{$predicted_track_type} && $motif =~ /glycopeptide/ ) {
      $tracks{predicted}++;
      $panel->add_track($sorted_features{$predicted_track_type},
             -glyph       => 'segments',
@@ -986,22 +987,41 @@ sub make_protein_map_graphic {
      delete $sorted_features{$predicted_track_type};
    } 
 
-   if ($sorted_features{'Phosphorylation Sites'}) {
-     $tracks{phospho}++;
-     $panel->add_track( $sorted_features{'Phosphorylation Sites'},
-            -glyph       => 'segments',
-            -bgcolor     => $colors{$glyco_site_track},
-            -fgcolor     => 'black',
-            -font2color  => 'red',
-            -key         => 'Phosphorylation Sites',
-            -bump        => 1,
-            -bump_limit  => 2,
-            -height      => 8,
-						-label       => 0, #  sub {my $feature = shift; return $feature->start},
-						-description => '',
+   if ( $motif =~ /phospho/ ) {
+     if ($sorted_features{'Phosphorylation Sites'}) {
+       $tracks{phospho}++;
+       $panel->add_track( $sorted_features{'Phosphorylation Sites'},
+              -glyph       => 'segments',
+              -bgcolor     => $colors{$glyco_site_track},
+              -fgcolor     => 'black',
+              -font2color  => 'red',
+              -key         => 'Phosphorylation Sites',
+              -bump        => 1,
+              -bump_limit  => 2,
+              -height      => 8,
+				  		-label       => 0, #  sub {my $feature = shift; return $feature->start},
+					  	-description => '',
                       );
-    delete $sorted_features{'Phosphorylation sites'};
-   } 
+      delete $sorted_features{'Phosphorylation sites'};
+     } 
+   } else {
+     if ($sorted_features{$glyco_site_track}) {
+       $tracks{phospho}++;
+       $panel->add_track( $sorted_features{$glyco_site_track},
+              -glyph       => 'segments',
+              -bgcolor     => $colors{$glyco_site_track},
+              -fgcolor     => 'black',
+              -font2color  => 'red',
+              -key         => $glyco_site_track,
+              -bump        => 1,
+              -bump_limit  => 2,
+              -height      => 8,
+				  		-label       => sub {my $feature = shift; return $feature->start},
+					  	-description => '',
+                      );
+       delete $sorted_features{$glyco_site_track};
+     }
+   }
 
 	# general case
   my $any = 0;
@@ -1077,7 +1097,7 @@ sub make_protein_map_graphic {
   push @legend, "<TR> <TD CLASS=obs_pep>$sp</TD> <TD class=sm_txt>Identified peptide: glycosite # (peptide prophet score) </TD> </TR>\n" if $tracks{identified};
   push @legend, "<TR> <TD CLASS=pred_pep>$sp</TD> <TD class=sm_txt>Predicted NxS/T motif tryptic peptide</TD> </TR>\n" if $tracks{predicted};
   push @legend, "<TR> <TD CLASS=glyco_seq>$sp</TD> <TD class=sm_txt>NxS/T Concensus glycosylation site</TD> </TR>\n"  if $tracks{glyco};
-  push @legend, "<TR> <TD CLASS=phospho>$sp</TD> <TD class=sm_txt>Potential Phosphorylation Sites</TD> </TR>\n"  if $tracks{phospho};
+  push @legend, "<TR> <TD CLASS=phospho>$sp</TD> <TD class=sm_txt>Observed Phosphorylation Sites</TD> </TR>\n"  if $tracks{phospho};
   push @legend, "<TR> <TD CLASS=sig_seq>$sp</TD> <TD class=sm_txt>Signal sequence predicted by Signal P</TD> </TR>\n"  if $tracks{'Signal Sequence'};
   push @legend, "<TR> <TD CLASS=anc_seq>$sp</TD> <TD class=sm_txt>Anchor sequence predicted by Signal P</TD> </TR>\n" if $tracks{anchor};
   push @legend, "<TR> <TD CLASS=tm_dom>$sp</TD> <TD class=sm_txt>Transmembrane domain predicted by TMHMM</TD> </TR>\n" if $tracks{Transmembrane};
