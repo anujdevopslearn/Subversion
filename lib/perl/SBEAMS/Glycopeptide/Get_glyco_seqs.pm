@@ -252,22 +252,52 @@ sub add_phospho_site{
 	my $ipi_data_id = $self->get_ipi_data_id;
 	my $seq_obj = $self->seq_info;
   my $sequence = $seq_obj->seq();
+#  $log->debug( "sequence is $sequence" );
 	
-  my $sites = $glyco->get_site_positions(    pattern => 'S|T|Y',
-                                          index_base => 1,
-                                                 seq => $sequence );
-		
-  for my $site ( @$sites ) {
-		my $feature = Bio::SeqFeature::Generic->new( -start => $site,
-                                                 -end   => $site,
-                                                 -primary => "Phosphorylation Sites" );
-		
-		#add all the feature to the protein Bio::Seq object
-		$seq_obj->add_SeqFeature($feature);
+  if ( 0 ) {
+    my $sites = $glyco->get_site_positions(    pattern => 'S|T|Y',
+                                            index_base => 1,
+                                                   seq => $sequence );
+  		
+    for my $site ( @$sites ) {
+  		my $feature = Bio::SeqFeature::Generic->new( -start => $site,
+                                                   -end   => $site,
+                                                   -primary => "Phosphorylation Sites" );
+  		
+  		#add all the feature to the protein Bio::Seq object
+  		$seq_obj->add_SeqFeature($feature);
+    }
+  } else {
+    my @peptides = $self->get_observed_phosphopeptides($ipi_data_id);
+#    for my $peptide ( @peptides ) { for my $k (keys(%$peptide) ) { $log->debug( "$k => $peptide->{$k}" ); } die; }
+    for my $peptide ( @peptides ) { 
+      my $site_in_pep = $glyco->get_site_positions( pattern => '\*',
+                                                       seq => $peptide->{observed_peptide_sequence} );
+#      $log->debug( "for sequence $peptide->{observed_peptide_sequence}, we see " . join( ', ', @$site_in_pep ) );
+      $peptide->{observed_peptide_sequence} =~ s/\*//g;
+      my $pep_in_prot =  $glyco->get_site_positions( pattern => $peptide->{observed_peptide_sequence},
+                                                         seq => $sequence );
+      my $dec = 0;
+      foreach my $pip ( @$pep_in_prot ) {
+#        $log->debug( "peptide maps at $pip" );
+        foreach my $sip ( @$site_in_pep ) {
+#          $log->debug( "site maps at $sip" );
+          my $coord = $pip + $sip - $dec;
+#          $log->debug( "Site at $coord, the amino acid is " . substr( $sequence, $coord, 1 ) );
+  		    my $feature = Bio::SeqFeature::Generic->new( -start => $coord,
+                                                       -end   => $coord,
+                                                     -primary => "Phosphorylation Sites" );
+  		
+      		#add all the feature to the protein Bio::Seq object
+          $seq_obj->add_SeqFeature($feature);
+          $dec++;
+        }
+      }
+    }
   }
 }
-
-
+  
+  
 #######################################################
 #add_glyco_site
 # Given a peptide_obj, get the main protein bioseq and add 
