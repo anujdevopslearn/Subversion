@@ -1,0 +1,1043 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : ShowOneSpectrum.cgi
+#
+# Description : This CGI program recieves NIST_library_spectrum_id and plots it.
+#               Has feedback loop for changing plot.
+#
+# Based upon the ShowSpectrum.cgi in the Proteomics module by 
+# Kerry & Eric Deutsch
+#
+###############################################################################
+
+
+###############################################################################
+# Basic SBEAMS setup
+###############################################################################
+use strict;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
+             $current_username );
+
+use SBEAMS::Connection qw($q);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+use PGPLOT;
+use PDL;
+use PDL::Graphics::PGPLOT;
+
+use File::Basename;
+
+#$q = new CGI;
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+
+$PROG_NAME="ShowOneSpectrum";
+
+###############################################################################
+# Define global variables if any and execute main()
+###############################################################################
+main();
+
+
+###############################################################################
+# Main Program:
+#
+# If $sbeams->Authenticate() succeeds, print header, process the CGI request,
+# print the footer, and end.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+      'PeptideAtlas_readonly'],
+    #connect_read_only=>1,
+    allow_anonymous_access=>1,
+  ));
+
+  #### Print the header, figure and do what the user want, and print footer
+  $sbeamsMOD->display_page_header();
+  processRequest();
+  $sbeamsMOD->display_page_footer();
+
+  $sbeams->display_page_footer(close_tables=>'YES',
+    separator_bar=>'YES',display_footer=>'NO');
+
+} # end main
+
+
+###############################################################################
+# Print Entry Form
+###############################################################################
+sub processRequest {
+
+    #### Define some general variables
+    my ($i,$element,$key,$value,$sql);
+
+    my %parameters;
+
+    $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
+
+    $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+    my $apply_action  = $q->param('apply_action');
+
+    #$sbeams->printDebuggingInfo($q);
+
+#   my @charge = split(',',$parameters{'charge'});
+    my @charge;
+    push (@charge, 1);
+    push (@charge, 2);
+    push (@charge, 3);
+
+    $parameters{'ionlab'} = "Horizontal" unless $parameters{'ionlab'};
+    my ($labangle,$fjust);
+    if ($parameters{'ionlab'} eq "Vertical") {
+      $labangle = 90;
+      $fjust = 0;
+    } else {
+      $labangle = 0;
+      $fjust = 0.5;
+    }
+
+    print qq!
+	<P>
+	<FORM METHOD="post" action="$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME">
+    !;
+
+    #### Set up the table and data column
+    print qq!
+	<TABLE BORDER=0 CELLPADDING=3 WIDTH="675">
+	<TR VALIGN=top>
+	<TD VALIGN=top >
+	<PRE>\n!;
+
+    #### If we have a NIST_library_spectrum_id, find the mass modifications
+    if ($parameters{'NIST_library_spectrum_id'}) 
+    {
+        my $sql = qq~
+            SELECT sequence,charge,mz_exact,protein_name,
+            protein_name_alt,modified_sequence
+            FROM $TBAT_NIST_LIBRARY_SPECTRUM
+            WHERE NIST_library_spectrum_id = '$parameters{NIST_library_spectrum_id}'
+        ~;
+
+        my @rows = $sbeams->selectSeveralColumns($sql);
+
+        foreach my $row (@rows)
+        {
+            my ($seq, $chg, $mz, $pn, $pn_alt, $mod_seq) = @{$row};
+            $parameters{'peptide'} = $seq;
+            $parameters{'charge'} = $chg;
+            $parameters{'precursor_mass'} = $mz;
+            $parameters{'protein_name'} = $pn;
+            $parameters{'protein_name_alt'} = $pn_alt;
+            $parameters{'modified_sequence'} = $mod_seq;
+        }
+    }
+    my $peptide = $parameters{peptide};
+    $peptide =~ s/^.\.//;
+    $peptide =~ s/\..$//;
+    my $precursor_mass = $parameters{'precursor_mass'};
+    my $charge = $parameters{'charge'};
+    my $protein_name = $parameters{'protein_name'};
+    my $protein_name_alt = $parameters{'protein_name_alt'};
+    my $modified_sequence = $parameters{'modified_sequence'};
+
+    $parameters{assumed_charge} = $charge;
+
+
+    #### Calculate peptide mass information
+    my $masstype = $parameters{masstype} || 0;
+    my ($AAmasses_ref) = InitializeMass($masstype);
+
+    my %spectrum = get_library_spectrum(
+        NIST_library_spectrum_id=>$parameters{NIST_library_spectrum_id});
+
+    unless (%spectrum) 
+    {
+      print "ERROR: Unable to load spectrum\n";
+      return;
+    }
+
+    my ($i,$mass,$intensity,$massmin,$xticks);
+    my ($massmax,$intenmax)=(0,0);
+    my @spectrum_array;
+
+    for ($i=0; $i<$spectrum{n_peaks}; $i++) {
+      $mass = $spectrum{masses}->[$i];
+      $intensity = $spectrum{intensities}->[$i];
+      push(@spectrum_array,[$mass,$intensity]);
+      $massmin = $mass if ($i == 0);
+      $massmax = $mass if ($mass > $massmax);
+      $intenmax = $intensity if ($intensity > $intenmax);
+    }
+
+    #### Compute data and plot bounds
+    $parameters{xmin} = int($massmin/100)*100 unless $parameters{xmin};
+    $parameters{xmax} = int($massmax/100)*100+100 unless $parameters{xmax};
+
+    unless (exists $parameters{ymax})
+    {
+        $parameters{ymax} = $intenmax;
+    }
+
+    if ($q->param("reset") eq "ZOOM OUT")
+    {
+      $parameters{ymax} = $intenmax;
+      $parameters{xmin} = int($massmin/100)*100;
+      $parameters{xmax} = int($massmax/100)*100+100;
+    }
+
+    my $maxval = $intenmax;
+    my $interval = $parameters{ymax} / 20;
+    my $interval_power = int( log($interval) / log(10) );
+    my $roundval = 10**$interval_power;
+    $parameters{ymax} = int( $parameters{ymax} /$roundval)*$roundval;
+    my $ydiv = $parameters{ymax} / 5;
+
+    #### Calculate fragment ions for the given peptide
+    my @residues = Fragment($peptide);
+    my $length = $#residues + 1;
+
+    #### Initialize the plot environment
+    my($progname)= basename $0;
+    #my($tmpfile) = "$progname.$$.@{[time]}.gif";
+    #### Reduce length because of PGPLOT 80 char limit??
+    my($tmpfile) = "Spec.$$.@{[time]}.gif";
+
+#   $parameters{gifwidth} = 640 unless $parameters{gifwidth};
+#   $parameters{gifheight} = 480 unless $parameters{gifheight};
+    $parameters{gifwidth} = 800 unless $parameters{gifwidth};
+    $parameters{gifheight} = 400 unless $parameters{gifheight};
+
+    if ($apply_action eq "PRINTABLE FORMAT") {
+      $parameters{gifwidth} = 480;
+      $parameters{gifheight} = 384;
+    }
+
+    #print "Writing GIF to: $PHYSICAL_BASE_DIR/images/tmp/$tmpfile\n";
+    my $win = pg_setup(Device=>"$PHYSICAL_BASE_DIR/images/tmp/$tmpfile/gif",
+        title=>"$parameters{peptide}",
+        xmin=>$parameters{xmin}, xmax=>$parameters{xmax},
+        ymax=>$parameters{ymax}, ydiv=>$ydiv, nyticks=>5,
+        gifwidth=>$parameters{gifwidth},
+        gifheight=>$parameters{gifheight}
+    );
+
+    pgsch 0.9;
+    pgmtext 'T',0.7,.01,0,"Peak value = $maxval";
+#   pgmtext 'RV',-2,1.02,1,"Assumed charge = $parameters{assumed_charge}";
+    pgmtext 'RV',-2,1.02,1,"Charge = $parameters{charge}";
+
+    my @peakcolors;
+    my @theoretical_spectrum;
+
+    #### Loop over each desired charge
+    my $charge;
+    foreach $charge (@charge) {
+      my ($masslist_ref) = CalcIons(Residues=>\@residues, Charge=>$charge,
+                                    MassArray=>$AAmasses_ref);
+      my ($B_ref,$Y_ref);
+
+      #### Make the plot
+      ($win,$B_ref,$Y_ref) = PlotPeaks(SpecData=>\%spectrum,
+                                       Masslist=>$masslist_ref, Charge=>$charge,
+                                       Win=>$win, Length=>$length,
+                                       PeakColors=>\@peakcolors);
+
+      #### Print out the peptide ion information
+      printIons(masslist_ref=>$masslist_ref,color=>1,html=>1,
+        charge=>$charge,length=>$length,
+        theoretical_spectrum_ref=>\@theoretical_spectrum);
+
+      #### Label the peaks on the plot
+      LabelResidues(Ionmasses=>$masslist_ref, Binten=>$B_ref, Yinten=>$Y_ref,
+                    Charge=>$charge, Win=>$win, Length=>$length,
+                    Xmin=>$parameters{xmin}, Xmax=>$parameters{xmax},
+                    Ymax=>$parameters{ymax}, Angle=>$labangle, Fjust=>$fjust);
+
+    } # end foreach
+
+
+    #### Draw Precursor mass symbol
+    if ($parameters{precursor_mass}) {
+      pgsci 2;    #### Default color
+      pgsch 2;    #### Character size
+      pgslw 5;    #### Line thinkness
+      pgsclp(0);   #### Disable clipping
+      pgpt(1,$parameters{precursor_mass},-0.34 * $interval,7);
+      pgsch 1;    #### Character size
+      pgpt(1,$parameters{precursor_mass},-0.34 * $interval,7);
+    }
+
+
+    #### Finish and close the plot
+    $win->close();
+
+
+    #### Set up the image cell
+    print qq~</PRE>
+	</TD>
+	<TD VALIGN=top>
+	<IMG SRC="$HTML_BASE_DIR/images/tmp/$tmpfile"><BR>
+    ~;
+
+    print qq~
+        <INPUT TYPE="hidden" NAME="NIST_library_spectrum_id" VALUE="$parameters{NIST_library_spectrum_id}">
+    ~;
+
+    #### Charge selector
+    my $onChange = "";
+#   $sql = "SELECT option_key,option_value FROM $TBAT_QUERY_OPTION " .
+#          " WHERE option_type = 'charge_constraint' " .
+#          " ORDER BY sort_order,option_value";
+#   my $optionlist = $sbeams->buildOptionList($sql,$parameters{'charge'});
+#
+#   print qq~
+#       Charge: <SELECT NAME="charge" $onChange>
+#       $optionlist</SELECT>
+#   ~;
+
+    print qq~
+        <nobr>
+	Xmin: <INPUT NAME="xmin" VALUE="$parameters{xmin}" SIZE="4" $onChange>
+	Xmax: <INPUT NAME="xmax" VALUE="$parameters{xmax}" SIZE="4" $onChange>
+	Ymax: <INPUT NAME="ymax" VALUE="$parameters{ymax}" SIZE="8" $onChange>
+        <INPUT TYPE="submit" NAME="apply_action" VALUE="DISPLAY"/>
+	<INPUT TYPE="submit" NAME="reset" VALUE="ZOOM OUT">
+        <INPUT TYPE="submit" NAME="apply_action" VALUE="PRINTABLE FORMAT">
+        </nobr>
+    ~;
+
+
+
+    #### Store the observed spectrum data as a recallable resultset
+    my %dataset;
+    $dataset{data_ref} = \@spectrum_array;
+    $dataset{column_list_ref} = ['m/z','intensity'];
+    my $rs_set_name = "SETME";
+    $sbeams->writeResultSet(resultset_file_ref=>\$rs_set_name,
+      resultset_ref=>\%dataset,
+      file_prefix=>'spec_',
+      query_parameters_ref=>\%parameters);
+
+
+    #### Store the peptide data as a recallable resultset
+    my %peptide_dataset;
+    $peptide_dataset{data_ref} = \@theoretical_spectrum;
+    $peptide_dataset{column_list_ref} = ['Residue','Index','Ion','Charge','m/z'];
+    my $pep_rs_set_name = "SETME";
+    $sbeams->writeResultSet(resultset_file_ref=>\$pep_rs_set_name,
+      resultset_ref=>\%peptide_dataset,
+      file_prefix=>'peptide_',
+      query_parameters_ref=>\%parameters);
+
+    #### Finish up the table and form
+    print qq~<BR>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <BR>Download spectrum in Format: 
+        <a href="$CGI_BASE_DIR/GetResultSet.cgi/$rs_set_name.tsv?rs_set_name=$rs_set_name&format=tsv">TSV</a>,
+        <a href="$CGI_BASE_DIR/GetResultSet.cgi/$rs_set_name.xls?rs_set_name=$rs_set_name&format=excel">Excel</a>
+        <BR>Download peptide data in Format: 
+        <a href="$CGI_BASE_DIR/GetResultSet.cgi/$pep_rs_set_name.tsv?rs_set_name=$pep_rs_set_name&format=tsv">TSV</a>,
+        <a href="$CGI_BASE_DIR/GetResultSet.cgi/$pep_rs_set_name.xls?rs_set_name=$pep_rs_set_name&format=excel">Excel</a>
+        <BR>
+	</TD>
+	</TR>
+	</TABLE>
+        </FORM>
+    ~;
+
+} # end printEntryForm
+
+
+###############################################################################
+# get_library_spectrum
+###############################################################################
+sub get_library_spectrum 
+{
+  my %args = @_;
+
+  my $inputfile = $args{'inputfile'} || "";
+  my $verbose = $args{'verbose'} || "";
+  my $NIST_library_spectrum_id = $args{'NIST_library_spectrum_id'} || "";
+
+
+  #### Define some general variables
+  my ($i,$element,$key,$value,$sql);
+  my (@rows,$nrows);
+
+
+  #### Define the data hash
+  my %spectrum;
+  my @mass_intensities;
+
+
+  #### If we have a msms_spectrum_id, get the data from the database
+  if ($NIST_library_spectrum_id) {
+
+    #### Extract the actual mass,intensity pairs from database
+    $sql = "SELECT mz, relative_intensity ".
+           "  FROM PeptideAtlas.dbo.NIST_library_spectrum_peak ".
+           " WHERE NIST_library_spectrum_id = '$NIST_library_spectrum_id'";
+    my @mass_intensities = $sbeams->selectSeveralColumns($sql);
+
+
+    #### If we still have no spectrum data, then bail out
+    unless (@mass_intensities) {
+      print "\nERROR: Unable to get m/z,intensity pairs for ".
+	"NIST_library_spectrum_id '$NIST_library_spectrum_id'.\n\n";
+      return;
+    }
+
+    #### Extract rows into two arrays of masses and intensities
+    my (@masses,@intensities);
+    for ($i=0; $i<=$#mass_intensities; $i++) {
+      push(@masses,$mass_intensities[$i]->[0]);
+      push(@intensities,$mass_intensities[$i]->[1]);
+    }
+
+    $spectrum{n_peaks} = $#mass_intensities + 1;
+
+
+    #### Put data into hash and return
+    $spectrum{masses} = \@masses;
+    $spectrum{intensities} = \@intensities;
+
+    return %spectrum;
+
+  #### Otherwise complain and return
+  } else {
+    print "\nERROR: Unable to determine which NIST_library_spectrum_id to load.\n\n";
+    return;
+  }
+
+}
+
+
+###############################################################################
+# InitializeMass -- returns reference to hash of amino acid mono-isotopic masses
+###############################################################################
+sub InitializeMass {
+    my %AAmasses = (
+    "G" => "57.02146",
+    "A" => "71.03711",
+    "S" => "87.02303",
+    "P" => "97.05276",
+    "V" => "99.06841",
+    "T" => "101.04768",
+    "C" => "103.00919",
+    "L" => "113.08406",
+    "I" => "113.08406",
+    "N" => "114.04293",
+    "D" => "115.02694",
+    "Q" => "128.05858",
+    "K" => "128.09496",
+    "E" => "129.04259",
+    "M" => "131.04049",
+    "H" => "137.05891",
+    "F" => "147.06841",
+    "R" => "156.10111",
+    "Y" => "163.06333",
+    "W" => "186.07931",
+    );
+
+    return (\%AAmasses);
+}
+
+###############################################################################
+# pg_setup
+###############################################################################
+sub pg_setup {
+    my %args = @_;
+
+    #### Default device is to screen (xserver)
+    my $device = $args{'Device'} || "\/xs";
+    #$device = "/xs";
+
+    #### Plot title
+    my $title = $args{'title'} || "";
+
+    #### Default x limits are (0,2000)
+    my $xmin = $args{'xmin'} || 0;
+    my $xmax = $args{'xmax'} || 2000;
+
+    #### Default y limits are (0,500000)
+    my $ymin = $args{'ymin'} || 0;
+    my $ymax = $args{'ymax'} || 500000;
+
+    #### Default separation between ticks is 100000
+    my $ytickdiv = $args{'ydiv'} || 100000;
+
+    #### Default number of y ticks
+    my $nyticks = ($args{'nyticks'}+1) || 4;
+
+    #### Default image size is 640x480
+    my $gifwidth = $args{'gifwidth'} || 640;
+    my $gifheight = $args{'gifheight'} || 480;
+
+    #### Set needed PGPLOT environment variables
+    $ENV{"PGPLOT_GIF_WIDTH"} = $gifwidth;
+    $ENV{"PGPLOT_GIF_HEIGHT"} = $gifheight;
+    $ENV{"PGPLOT_RGB"} = "/usr/X11R6/lib/X11/rgb.txt";
+    $ENV{"PGPLOT_FONT"} = $CONFIG_SETTING{PGPLOT_FONT} ||
+      "/usr/local/lib/grfont.dat";
+    $ENV{"PGPLOT_BACKGROUND"} = "white";
+
+    #### Create a new graphics device
+    #### WARNING: If the device is a filename, it apparently gets
+    #### truncated at 80 characters!!!
+    my $win = PDL::Graphics::PGPLOT::Window -> new({Device => "$device"});
+
+    #### Set window limits
+    pgswin $xmin, $xmax, 0, $ymax;
+
+    #### Set viewport limits
+    pgsvp .095,.9775,.065,.95;
+
+    #### Set axis color to black (stealing lt. gray color)
+    pgscr 15, 0,0,0;
+
+    #### Set color index
+    pgsci 15;
+
+    #### Set character height
+    pgsch 0.9;
+
+    #### Set line width
+    pgslw 1;
+
+    #### Set character font (Normal)
+    pgscf 1;
+
+    #### Draw labeled frame around viewport: full frame (BC), labels on
+    #### bottom and left of frame (N), major tick marks (T), y labels
+    #### normal to y-axis (V), decimal labels instead of scientific
+    #### notation (1), automatic x major ticks, $ytickdiv between y ticks,
+    #### with $nyticks major divisions.
+    pgbox 'BCNT',0,0,'BCNTV1',$ytickdiv,$nyticks;
+
+    #### Reset character height (make labels larger)
+    pgsch 1;
+
+    #### Y label on left, centered vertically along axis
+    pgmtxt 'L',3.8,.5,.5,'Intensity';
+
+    #### X label on bottom, centered vertically along axis
+    pgmtxt 'B',2.25,.5,.5,'m/z';
+
+    #### Main title above, centered vertically along top
+    pgmtxt 'T',1,.5,.5,"$title";
+
+    #### Reset character height (want in-plot labels small)
+    pgsch .8;
+
+    #### Allow overplotting of this frame
+    $win -> hold;
+
+    return $win;
+}
+
+###############################################################################
+# PlotPeaks
+###############################################################################
+sub PlotPeaks {
+    my %args = @_;
+
+    #### Spectrum data to be plotted
+    my $specdata = $args{'SpecData'};
+
+    #### Ions to be plotted
+    my $masslist_ref = $args{'Masslist'};
+
+    #### Charge
+    my $charge = $args{'Charge'};
+
+    #### Plot frame
+    my $win = $args{'Win'};
+
+    #### Peak Colors
+    my $peakcolors_ref = $args{'PeakColors'};
+
+    #### Peak finding window
+    my $window = $args{'Window'} || 2;
+
+    my $length = $args{'Length'};
+    my @Bmaxinten = (0) x $length;
+    my @Ymaxinten = (0) x $length;
+    my @BYmaxinten = (0) x $length;
+
+    my @Bmass;
+    my @Ymass;
+    my @BYmass;
+    my @Rmass;
+
+    my @Binten;
+    my @Yinten;
+    my @BYinten;
+    my @Rinten;
+    #my @Rinten = (0) x $specdata->{n_peaks};
+
+
+    my ($redcol,$bluecol,$grcol);
+
+    #### Define pink color to be lightcoral
+    pgscr 6,0.94,0.5,0.5;
+
+    #### Define lt. blue color to be navy
+    pgscr 11,0,0,.5;
+
+    #### Define lt. green color to be DarkSeaGreen
+    pgscr 10,0.56,0.74,0.56;
+
+    #### Define red color to be red
+    pgscr 2,1,0,0;
+
+    #### Define blue color to be blue
+    pgscr 4,0,0,1;
+
+    #### Define green color to be ForestGreen
+    pgscr 3,0.13,0.55,0.13;
+
+    if ($charge == 1) {
+      $redcol = 2;
+      $bluecol = 4;
+      $grcol = 3;
+    } else {
+      $redcol = 6;
+      $bluecol = 11;
+      $grcol = 10;
+    }
+
+
+    #### Convert to piddle for easy sub-selecting
+    my $bdata = pdl $masslist_ref->{Bions};
+    my $ydata = pdl $masslist_ref->{Yions};
+
+    #### Draw peaks
+    my $i;
+    my $lineclr;
+    my ($mass, $intensity);
+
+    for ($i=0; $i<$specdata->{n_peaks}; $i++) {
+      $mass = $specdata->{masses}->[$i];
+      $intensity = $specdata->{intensities}->[$i];
+
+      #### Set default line color to Black
+      $lineclr = $peakcolors_ref->[$i] || 14;
+
+      my $mainx = pdl [$mass, $mass];
+      my $mainy = pdl [0, $intensity];
+
+
+      #### This kludge lets me not colorize the last B and/or
+      #### first Y peaks found
+## problem i'ere
+      set $bdata, ($length-1),-9999;
+      set $ydata, 0, -9999;
+
+      my $Bind = which($bdata >= ($mass-$window) & $bdata <= ($mass+$window));
+      my $Yind = which($ydata >= ($mass-$window) & $ydata <= ($mass+$window));
+
+      #### If there are just B fragments with mass near enough this peak
+      if (($Bind !~ 'Empty') && ($Yind =~ 'Empty')) {
+        $lineclr = $redcol;
+        push(@Binten,$intensity);
+        push(@Bmass,$mass);
+        if ($Bmaxinten[$Bind->at(0)] < $intensity) {
+          $Bmaxinten[$Bind->at(0)] = $intensity;
+          $masslist_ref->{Bcolor}->[$Bind->at(0)] = $lineclr
+            unless ($masslist_ref->{Bcolor}->[$Bind->at(0)]);
+        }
+
+      #### Else if there are just Y fragments with mass near enough this peak
+      } elsif (($Yind !~ 'Empty') && ($Bind =~ 'Empty')) {
+        $lineclr = $bluecol;
+        push(@Yinten,$intensity);
+        push(@Ymass,$mass);
+        if ($Ymaxinten[$Yind->at(0)] < $intensity) {
+          $Ymaxinten[$Yind->at(0)] = $intensity;
+          $masslist_ref->{Ycolor}->[$Yind->at(0)] = $lineclr;
+        }
+
+      #### Else if both B and Y fragments with mass near enough this peak
+      } elsif (($Bind !~ 'Empty') && ($Yind !~ 'Empty')) {
+        $lineclr = $grcol;
+        push(@BYinten,$intensity);
+        push(@BYmass,$mass);
+        if ($Ymaxinten[$Yind->at(0)] < $intensity) {
+          $Ymaxinten[$Yind->at(0)] = $intensity;
+          $masslist_ref->{Ycolor}->[$Yind->at(0)] = $lineclr;
+        }
+        if ($Bmaxinten[$Bind->at(0)] < $intensity) {
+          $Bmaxinten[$Bind->at(0)] = $intensity;
+          $masslist_ref->{Bcolor}->[$Bind->at(0)] = $lineclr;
+        }
+
+      #### else if there are no fragments with mass near enough this peak
+      } else {
+        if (($peakcolors_ref->[$i] != 2) & ($peakcolors_ref->[$i] != 3) &
+            ($peakcolors_ref->[$i] != 4) & ($peakcolors_ref->[$i] != 6) &
+            ($peakcolors_ref->[$i] != 10) & ($peakcolors_ref->[$i] != 11)) {
+          #$Rinten[$i] = $intensity
+          push(@Rinten,$intensity);
+          push(@Rmass,$mass);
+        }
+
+      }
+
+      $peakcolors_ref->[$i] = $lineclr;
+    }
+
+    my ($mass2, $intensity2);
+    $mass2 = $specdata->{masses};
+    $intensity2 = $specdata->{intensities};
+
+    #### Now we resort to plotting all peaks by "never lifting the pen"
+    #### and drawing it all in a continuous line with line() because this
+    #### is much faster
+    my $rx = pdl (\@Rmass,\@Rmass,\@Rmass)->xchg(0,1)->clump(2);
+    #my $rx = pdl ($mass2,$mass2,$mass2)->xchg(0,1)->clump(2);
+    my $ra = [(0) x scalar(@Rinten)];
+    my $ry = pdl ($ra,\@Rinten,$ra)->xchg(0,1)->clump(2);
+    my $rh = {Color => 14};
+    $win -> line ($rx,$ry,$rh);
+
+    my $bx = pdl (\@Bmass,\@Bmass,\@Bmass)->xchg(0,1)->clump(2);
+    my $ba = [(0) x scalar(@Binten)];
+    my $by = pdl ($ba,\@Binten,$ba)->xchg(0,1)->clump(2);
+    my $bh = {Color => $redcol};
+    $win -> line ($bx,$by,$bh);
+
+    my $yx = pdl (\@Ymass,\@Ymass,\@Ymass)->xchg(0,1)->clump(2);
+    my $ya = [(0) x scalar(@Yinten)];
+    my $yy = pdl ($ya,\@Yinten,$ya)->xchg(0,1)->clump(2);
+    my $yh = {Color => $bluecol};
+    $win -> line ($yx,$yy,$yh);
+
+    my $byx = pdl (\@BYmass,\@BYmass,\@BYmass)->xchg(0,1)->clump(2);
+    my $bya = [(0) x scalar(@BYinten)];
+    my $byy = pdl ($bya,\@BYinten,$bya)->xchg(0,1)->clump(2);
+    my $byh = {Color => $grcol};
+    $win -> line ($byx,$byy,$byh);
+
+    return ($win,\@Bmaxinten,\@Ymaxinten);
+}
+
+
+###############################################################################
+# LabelResidues
+###############################################################################
+sub LabelResidues {
+    my %args = @_;
+
+    my $Ionmasses_ref = $args{'Ionmasses'};
+    my $Bdata = pdl $Ionmasses_ref->{Bions};
+    my $Ydata = pdl $Ionmasses_ref->{Yions};
+    my $charge = $args{'Charge'};
+    my $win = $args{'Win'};
+    my $Binten_ref = $args{'Binten'};
+    my @Binten = @$Binten_ref;
+    my $Yinten_ref = $args{'Yinten'};
+    my @Yinten = @$Yinten_ref;
+    my $length = $args{'Length'};
+    my $labht;
+    my $angle = $args{'Angle'} || 0;
+    my $fjust = $args{'Fjust'};
+    my ($Bcol,$Ycol,$bothcol);
+    my $i;
+    my ($lineclr,$redcol,$bluecol,$grcol);
+    my $Ymax = $args{'Ymax'};
+    my $Xmin = $args{'Xmin'};
+    my $Xmax = $args{'Xmax'};
+    my $interval = $Ymax / 50.0;
+    my $xshift = ($Xmax - $Xmin) / 200.0;
+
+    #### Define pink color to be lightcoral
+    pgscr 6,0.94,0.5,0.5;
+
+    #### Define lt. blue color to be navy
+    pgscr 11,0,0,.5;
+
+    #### Define lt. green color to be DarkSeaGreen
+    pgscr 10,0.56,0.74,0.56;
+
+    #### Define red color to be lightcoral
+    pgscr 2,1,0,0;
+
+    #### Define blue color to be navy
+    pgscr 4,0,0,1;
+
+    #### Define green color to be DarkSeaGreen
+    pgscr 3,0.13,0.55,0.13;
+
+    if ($charge == 1) {
+      $redcol = 2;
+      $bluecol = 4;
+      $grcol = 3;
+    } else {
+      $redcol = 6;
+      $bluecol = 11;
+      $grcol = 10;
+    }
+
+    for ($i=0; $i < $length; $i++) {
+      if (($Binten[$i] != 0) && ($i != ($length-1))) {
+        my $val = $Ionmasses_ref->{indices}->[$i];
+        ++$val;
+        my $index = "B$charge\-$val";
+        my $mass = $Bdata->at($i);
+        my $matchx = pdl [$mass, $mass];
+        my $y = $Binten[$i];
+        my $matchy = pdl [$y+($interval/3.), $y+4*($interval/3.)];
+        my $Yind = which($Ydata >= ($mass-2) & $Ydata <= ($mass+2));
+        if ($Yind !~ 'Empty') {
+          #### Green text and line for both ion match
+          pgsci $grcol;
+          $lineclr = $grcol;
+
+          #### Location of label above tick mark (moved up)
+          $labht = $y+8.5*($interval/3.);
+        } else {
+          #### Red text and line for B ion match
+          pgsci $redcol;
+          $lineclr = $redcol;
+
+          #### Location of label above tick mark
+          $labht = $y+5*($interval/3.);
+        }
+        #### Plot ion marker line
+        $win -> line($matchx, $matchy, {Color=>$lineclr});
+        $win -> hold;
+
+        #### Add ion label
+        pgptext $mass+$xshift,$labht,$angle,$fjust,"$index"
+          if (($labht < $Ymax) && ($mass > $Xmin) && ($mass < $Xmax));
+      }
+
+
+      if (($Yinten[$i] != 0) && ($i != 0)) {
+        my $index = "Y$charge\-$Ionmasses_ref->{rev_indices}->[$i]";
+        my $mass = $Ydata->at($i);
+        my $matchx = pdl [$mass, $mass];
+        my $y = $Yinten[$i];
+        my $matchy = pdl [$y+($interval/3.), $y+4*($interval/3.)];
+        my $Bind = which($Bdata >= ($mass-2) & $Bdata <= ($mass+2));
+        if ($Bind !~ 'Empty') {
+          #### Green text and line for both ion match
+          pgsci $grcol;
+          $lineclr = $grcol;
+
+          #### Location of label above tick mark
+          $labht = $y+5*($interval/3.);
+        } else {
+          #### Blue text and line for Y ion match
+          pgsci $bluecol;
+          $lineclr = $bluecol;
+
+          #### Location of label above tick mark
+          $labht = $y+5*($interval/3.);
+        }
+        #### Plot ion marker line
+        $win -> line($matchx, $matchy, {Color=>$lineclr});
+        $win -> hold;
+
+        #### Add ion label
+        pgptext $mass+$xshift,$labht,$angle,$fjust,"$index"
+          if (($labht < $Ymax) && ($mass > $Xmin) && ($mass < $Xmax));
+      }
+    }
+    return $win;
+}
+
+###############################################################################
+# Fragment
+###############################################################################
+sub Fragment {
+    my $peptide = shift;
+    my $length = length($peptide);
+    my @residues = ();
+    my $i;
+
+    for ($i=0; $i<$length; $i++) {
+      if (substr($peptide,$i+1,1) eq '[') {
+        push (@residues, substr($peptide,$i,6));
+        $i = $i + 5;
+      } elsif (substr($peptide,$i+1,1) =~ /\W/) {
+        push (@residues, substr($peptide,$i,2));
+        $i = $i + 1;
+      } else {
+        push (@residues, substr($peptide,$i,1));
+      }
+    }
+
+    #### Return residue array
+    return @residues;
+}
+
+###############################################################################
+# CalcIons
+###############################################################################
+sub CalcIons {
+    my %args = @_;
+    my $i;
+
+    my $residues_ref = $args{'Residues'};
+    my @residues = @$residues_ref;
+    my $charge = $args{'Charge'} || 1;
+    my $massarray_ref = $args{'MassArray'};
+    my %massarray = %$massarray_ref;
+    my $length = scalar(@residues);
+
+    my $Nterm = 1.0078;
+    my $Bion = 0.;
+    my $Yion  = 19.0184;  ## H_2 + O
+
+    my @Bcolor = (14) x $length;
+    my @Ycolor = (14) x $length;
+
+    my @masses;
+    for ($i=0; $i<$length; $i++) {
+      my $mass = $massarray{$residues[$i]};
+      unless ($mass) {
+	if ($residues[$i] =~ /\w\[(\d+)\]/) {
+	  $mass = $1;
+	} else {
+	  print "WARNING: Unable to find mass for 'residues[$i]'<BR>\n";
+	}
+      }
+      $masses[$i] = $mass;
+      $Yion += $mass;
+    }
+    my %masslist;
+    my (@aminoacids, @indices, @rev_indices, @Bions, @Yions);
+
+    #### Compute the ion masses
+    for ($i = 0; $i<$length; $i++) {
+      $Bion += $masses[$i];
+      $Yion -= $masses[$i-1] if ($i > 0);
+
+      #### B index & Y index
+      $indices[$i] = $i;
+      $rev_indices[$i] = $length-$i;
+
+      #### B ion mass & Y ion mass
+      $Bions[$i] = ($Bion + $charge*$Nterm)/$charge;
+      $Yions[$i] = ($Yion + $charge*$Nterm)/$charge;
+    }
+
+    $masslist{residues} = \@residues;
+    $masslist{indices} = \@indices;
+    $masslist{Bions} = \@Bions;
+    $masslist{Yions} = \@Yions;
+    $masslist{rev_indices} = \@rev_indices;
+
+    #### Return reference to a hash of array references
+    return (\%masslist);
+}
+
+###############################################################################
+# printIons
+###############################################################################
+sub printIons {
+  my %args = @_;
+
+  my $masslist_ref = $args{'masslist_ref'};
+  my $color = $args{'color'} || 0;
+  my $html = $args{'html'} || 0;
+  my $charge = $args{'charge'};
+  my $length = $args{'length'};
+  my $theoretical_spectrum_ref = $args{'theoretical_spectrum_ref'};
+
+# print "SEQ  #     B       Y    +$charge\n";
+# print "--- --  ------  ------  --\n";
+
+# my ($bcolbegin, $bcolend, $ycolbegin, $ycolend);
+
+# my (%colors);
+# $colors{2} = "#FF0000";
+# $colors{4} = "#0000FF";
+# $colors{3} = "#218D21";
+# $colors{6} = "#F18080";
+# $colors{11} = "#00088";
+# $colors{10} = "#8FBE8F";
+
+
+# #### Printing stuff
+  for (my $i=0; $i < $length; $i++) {
+
+#   #### If the output is in HTML, define the colorizing tags
+#   if ($html) {
+
+#     #### If a color for this B ion mass, set color tags
+#     if ($masslist_ref->{Bcolor}->[$i] >= 2) {
+#       $bcolbegin = "<FONT COLOR = $colors{$masslist_ref->{Bcolor}->[$i]}>";
+#       $bcolend = "</FONT>";
+#     #### else no color (default black)
+#     } else {
+#       $bcolbegin = "";
+#       $bcolend = "";
+#     }
+
+#     #### If a color for this Y ion mass, set color tags
+#     if ($masslist_ref->{Ycolor}->[$i] >= 2) {
+#       $ycolbegin = "<FONT COLOR = $colors{$masslist_ref->{Ycolor}->[$i]}>";
+#       $ycolend = "</FONT>";
+#     #### else no color (default black)
+#     } else {
+#       $ycolbegin = "";
+#       $ycolend = "";
+#     }
+
+#   }
+
+
+    #### Define the m/z columns formats and values
+    my $B_format = '%7.1f';
+    my $Y_format = '%7.1f';
+    my $B_value = $masslist_ref->{Bions}->[$i];
+    my $Y_value = $masslist_ref->{Yions}->[$i];
+
+
+    #### Special case --'s for first row
+    if ($i == 0) {
+      $Y_format = '%7s';
+      $Y_value = '--  ';
+
+    #### Special case --'s for last row
+    } elsif ($i == ($length-1)) {
+      $B_format = '%7s';
+      $B_value = '--  ';
+    }
+
+#   #### Print out the data
+#   printf "%3s %2d $bcolbegin$B_format$bcolend ".
+#          "$ycolbegin$Y_format$ycolend %3d\n",
+#     $masslist_ref->{residues}->[$i], $i+1,
+#     $B_value, $Y_value, $length-$i;
+
+    #### Fill the theoretical spectrum data in a different format
+    #### (Residue,Index,Ion,Charge,m/z)
+    $theoretical_spectrum_ref->[2*$length*($charge-1)+$i] =
+      [$masslist_ref->{residues}->[$i],$i+1,'B',$charge,$B_value];
+    $theoretical_spectrum_ref->[2*$length*($charge-1)+2*$length-1-$i] =
+      [$masslist_ref->{residues}->[$i],$length-$i,'Y',
+      $charge,$Y_value];
+
+
+  } # end for
+
+# print "\n";
+
+} # end printIons
