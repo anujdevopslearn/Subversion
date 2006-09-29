@@ -298,6 +298,16 @@ sub handle_request
         constraint_value=>$parameters{peptide_length} );
     return if ($peptide_length_clause eq '-1');
 
+
+    #### Build PROTEIN_NAME constraint
+      my $biosequence_name_clause = $sbeams->parseConstraint2SQL(
+          constraint_column=>"BS.biosequence_name",
+          constraint_type=>"plain_text",
+          constraint_name=>"Protein Name",
+          constraint_value=>$parameters{protein_name_constraint} );
+      return if ($biosequence_name_clause eq '-1');
+
+
     ## handle file upload and clause for sql for $parameters{upload_file}
     my ($biosequence_names_clause_nist, $biosequence_names_clause_pa,
     $biosequence_names_mapping_join, $biosequence_name_clause_pa);
@@ -350,6 +360,15 @@ sub handle_request
         $biosequence_names_clause_nist = 
             "     AND NLS.protein_name IN ( $protein_list )";
 
+        $biosequence_names_mapping_join =
+            "   LEFT JOIN $TBAT_PEPTIDE_MAPPING PM "
+           ."   ON ( PI.peptide_instance_id = PM.peptide_instance_id ) "
+           ."   LEFT JOIN $TBAT_BIOSEQUENCE BS "
+           ."   ON (BS.biosequence_id = PM.matched_biosequence_id) "
+           ."   LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS "
+           ."   ON (BS.biosequence_set_id = BSS.biosequence_set_id)";
+    } elsif ($biosequence_name_clause)
+    {
         $biosequence_names_mapping_join =
             "   LEFT JOIN $TBAT_PEPTIDE_MAPPING PM "
            ."   ON ( PI.peptide_instance_id = PM.peptide_instance_id ) "
@@ -411,7 +430,7 @@ sub handle_request
             }
 
             $sql = qq~
-            SELECT NLS.NIST_library_spectrum_id, NLS.sequence,
+            SELECT distinct NLS.NIST_library_spectrum_id, NLS.sequence,
             NLS.protein_name, NLS.mz_exact, NLS.charge, NLS.protein_name_alt,
             PI.best_probability, PI.n_observations, PI.n_samples,
             PI.n_protein_mappings, PI.n_genome_locations
@@ -438,6 +457,7 @@ sub handle_request
             $n_genome_locations_clause
             $peptide_length_clause
             $biosequence_names_clause_pa
+            $biosequence_name_clause
             AND NST.NIST_spectrum_type_name='Consensus'
             ~;
 
