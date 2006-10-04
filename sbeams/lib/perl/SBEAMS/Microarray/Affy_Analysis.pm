@@ -236,6 +236,124 @@ END
 }
 
 ###############################################################################
+# make_chip_jpeg_file
+#make a jpeg image of chip by making an R script and shell script 
+#Using the shell script to facilitate making graphics.
+#Give file_name and full path to cel_file
+#will make a R script file, shell script, run the shell script and log results
+#returns the results of running the shell script if there is a problem running R or 1 if no errors detected  
+###############################################################################
+sub make_chip_jpeg_file {
+	my $method = 'make_chip_jpeg_file';
+    	my $self = shift;
+    
+   	my %args = @_;
+    
+    	my $file_name = $args{file_name};
+    	my $cel_file = $args{cel_file};
+    
+    
+    	confess(__PACKAGE__ . "::$method Need to provide arugments 'cel_file' & 'file_name \n") unless ($file_name =~ /^\w/ && $cel_file =~ /CEL$/);
+    
+   	
+  # temp dir for storing R/shell scripts, use config value or fall back
+	my $R_temp_dir = ( $AFFY_TMP_DIR ) ? "${AFFY_TMP_DIR}/R_CHP_RUNS/${file_name}_R_CHP" : 
+                           "$PHYSICAL_BASE_DIR/tmp/Microarray/R_CHP_RUNS/${file_name}_R_CHP";
+
+        my $out_shell_script = "${file_name}_shell.sh";
+	my $out_R_script = "${file_name}_R_script.R";					#these paths will be relative to where the shell script will be running, they all should be in the same directory
+	my $out_error_log = "${file_name}_error.txt";
+	
+	
+	my $base_dir = dirname($cel_file);
+	my $out_R_CHP_file = "$base_dir/${file_name}.R_CHP";		#Write the R_CHP file to the same directory the CEL file was found
+	my $out_chip_image = "$base_dir/${file_name}.JPEG";
+	
+##############################################################################################
+### Make and Write out the R script	
+	my  $R_script = <<END;
+.libPaths("$R_library")
+library(affy)
+cel.file.name    <- c("$cel_file")
+data <- ReadAffy(filenames =  cel.file.name)
+
+bitmap(file="$out_chip_image",  res=72*4, pointsize = 12 )
+	image( data[,1] )
+dev.off()
+
+#jpeg("$out_chip_image", width=1000, height=1000)
+#image( data[,1] )
+#dev.off()
+END
+
+
+	
+	if (-d $R_temp_dir){
+		my $command_line = "rm -r $R_temp_dir";
+		my $results = `$command_line`;
+		print "REMOVED OLD R TEMP DIR EXIT STATUS '$results'\n";
+		
+	}
+
+	mkdir $R_temp_dir;
+		
+	open OUT,  ">$R_temp_dir/$out_R_script" or 
+		die "Cannot open R temp dir '$out_R_script' $!\n";
+	
+	print OUT $R_script;
+	close OUT;
+	
+################################################################################################
+### Make shell script 
+	my $shell_script = <<END;
+#!/bin/sh
+
+R_LIBS=$R_library
+$R_program --no-save  < $out_R_script 2>$out_error_log
+
+STATUS=\$?
+
+if [ \$STATUS == 0 ]
+
+	then
+		echo "R Exit Status 0"
+		chgrp affydata $out_chip_image
+	
+	else
+		echo "ERROR: R Exit Status \$STATUS";
+fi
+
+END
+
+	open OUT, ">$R_temp_dir/$out_shell_script"
+		or die "Cannot open '/$R_temp_dir/$out_shell_script'\n";
+		
+	print OUT $shell_script;
+	close OUT;
+	sleep 1;
+	die "DID NOT CHMOD \n" unless (chmod 0777, "$R_temp_dir/$out_shell_script");
+	
+################################################################################################
+### actually run the shell script 
+
+	my $command_line = "cd $R_temp_dir; ./$out_shell_script";
+	
+	print "Starting R Job for $file_name\n";
+	my $results = `$command_line`;
+	
+	if ($results =~ /ERROR: R Exit Status/){
+		$self->log_R_run("\tERROR: R EXITED WITH ERROR CODE\t$file_name");
+		return $results;
+	}else{
+		$self->log_R_run("\tRUN COMPLETED\t$file_name");
+		$self->R_CHP_file_name($out_R_CHP_file);
+		return 1;
+	}
+	
+
+}
+
+###############################################################################
 # parse_R_CHP_file
 #Get/Set full path to R_CHP file
 #
