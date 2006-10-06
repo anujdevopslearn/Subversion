@@ -7,7 +7,7 @@
 #
 # Description : This program shows a users personal view of the data
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2006 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -271,25 +271,42 @@ sub getCurrentProjectDetails {
 
   }
 
-	
- my @experiment_rows = $prot_exp_obj->get_experiment_info(project_id=>$project_id);#rows
- my @all_samples_results = $prot_exp_obj->get_sample_info(project_id=>$project_id);
-  
- 
- $content .= '<h2 class="med_gray_bg">Experiment Information</h2>';
+
+  my @experiment_rows = $prot_exp_obj->get_experiment_info(project_id=>$project_id);#rows
+  my @all_samples_results = $prot_exp_obj->get_sample_info(project_id=>$project_id);
+
+
+  $content .= '<h2 class="med_gray_bg">Experiment Information';
   #### If there are experiments, display them in one of two formats: compact or full
   if (@experiment_rows) {
-	
-	if ($parameters{expt_format} eq "compact"){
+
+      my $expt_frmt = 'full';  # default value
+      if ($parameters{expt_format}){
+	  $expt_frmt = $parameters{expt_format};
+	  if ($sbeams->getSessionAttribute(key => 'ProteomicsExperimentFormat') ne $expt_frmt) {
+	      $sbeams->setSessionAttribute(key => 'ProteomicsExperimentFormat',
+					   value=>$expt_frmt);
+	  }
+
+      } elsif ($sbeams->getSessionAttribute(key => 'ProteomicsExperimentFormat')){
+	  $expt_frmt = $sbeams->getSessionAttribute(key => 'ProteomicsExperimentFormat');
+      }
+
+
+	if ($expt_frmt eq "compact"){
+	        $content .= "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font size=\"-2\">[ <a href=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?_tab=1&expt_format=full\">Full</a> | COMPACT ]</font></h2>";
 		#make "the condensed table";
-		$content .= $prot_exp_obj->make_compact_experiment_html(exp_results_set_aref => \@experiment_rows);
+		$content .= make_compact_experiment_html(exp_results_set_aref => \@experiment_rows);
   	}else{
+	        $content .= "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<font size=\"-2\">[ FULL | <a href=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?_tab=1&expt_format=compact\">Compact</a> ]</font></h2>";
+
 		##make the full-size results table
    		$content .= make_full_experiment_html(exp_results_set_aref => \@experiment_rows,
-   											 sample_results_set_aref => \@all_samples_results);
+						      sample_results_set_aref => \@all_samples_results);
 	}
-  
+
   }else{
+    $content .= '</h2>';
     if ($project_id == -99) {
       $content .= qq~	<TR><TD WIDTH="100%">You do not have access to this project.  Contact the owner of this project if you want to have access.</TD></TR>\n ~;
     } else {
@@ -310,8 +327,8 @@ sub getCurrentProjectDetails {
   }
 	
 	$content .= make_all_samples_for_project_html(sample_results_set_aref => \@all_samples_results,
-												  project_id => $project_id,
-												  );
+						      project_id => $project_id,
+						      );
 	
  #### Finish the table 
   $content .= qq~
@@ -380,7 +397,7 @@ sub make_option_list{
 	my $experiment_id			 = $args{experiment_id};
 	my %seen = ();	
 	my @unique_sample_name = ();
-	
+
 	#$log->debug(Dumper($all_sample_info_aref));
 ##make hash of the samples in this experiment
 	foreach my $exp_sample_info (@{$samles_per_exp_info_aref}){
@@ -388,7 +405,7 @@ sub make_option_list{
 		$seen{$exp_sample_info->[0]} = 1;
 	}
 	
-	$log->debug('SEEN', Dumper(\%seen));
+	#$log->debug('SEEN', Dumper(\%seen));
 
 ##Grab on the sample names not already listed for this experiment
 	foreach my $sample_info (@{$all_sample_info_aref}){
@@ -438,73 +455,70 @@ sub make_option_list{
 #
 # Return a block of html to print a compact experimental form
 ###############################################################################
-
 sub make_compact_experiment_html {
-	my %args = @_;
-	my $results_set_array_ref = $args{exp_results_set_aref};
-	
-	my @rows = @{$results_set_array_ref};
+    my %args = @_;
+    my $results_set_array_ref = $args{exp_results_set_aref};
 
-#tag below with colspan=3 would be better suited as colspan=$#search_batch_rows+1, though expts are -not- sorted by number of search batches at this time
+    my @rows = @{$results_set_array_ref};
 
-
-my $content .= qq~
+    my $content .= qq~
 <TABLE BORDER=0>
-  <tr>
-<th align=left><font color="green">- Experiment Name</font> : Description</th>
-<th nowrap>View/Edit<br/>Record</th>
-<th>Fraction<br/>Data</th>
-<th colspan=4 nowrap><font color="green">Search Batch</font><br/>(SBEAMS number: <font color="blue">High-Probability Peptides</font>&nbsp;--<font color="blue">Annotation</font>)<th>
-</tr>
+ <tr>
+ <th align=left><font color="green">- Experiment Name</font> : Description</th>
+ <th nowrap>View/Edit<br/>Record</th>
+ <th>Fraction<br/>Data</th>
+ <th nowrap><font color="green">Search Batch</font><br/>(SBEAMS number: <font color="blue">High-Probability Peptides</font>&nbsp;--<font color="blue">Annotation</font>)<th>
+ </tr>
     ~;
-      my $search_batch_counter = 0;
+    my $search_batch_counter = 0;
     foreach my $row (@rows) {
-      my ($experiment_id,$experiment_tag,$experiment_name) = @{$row};
+	my ($experiment_id,$experiment_tag,$experiment_name) = @{$row};
 
-      #### Find out what search_batches exist for this experiment
-      my $sql = qq~
+	#### Find out what search_batches exist for this experiment
+	my $sql = qq~
 	SELECT SB.search_batch_id,SB.search_batch_subdir,BSS.set_tag
 	  FROM $TBPR_SEARCH_BATCH SB
 	 INNER JOIN $TBPR_BIOSEQUENCE_SET BSS
 	       ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
 	 WHERE SB.experiment_id = '$experiment_id'
 	 ORDER BY BSS.set_tag,SB.search_batch_subdir
-      ~;
-      my @search_batch_rows = $sbeams->selectSeveralColumns($sql);
+	 ~;
+	my @search_batch_rows = $sbeams->selectSeveralColumns($sql);
 
-      $search_batch_counter++;
-      if (($search_batch_counter % 2) == 1){
-	  $content .= "<TR BGCOLOR='#efefef'> \n";
-      }else{
-	  $content .= "<TR> \n";
-      }
-      $content .= qq~
+	$search_batch_counter++;
+	if (($search_batch_counter % 2) == 1){
+	    $content .= "<TR VALIGN='top' BGCOLOR='#efefef'> \n";
+	}else{
+	    $content .= "<TR VALIGN='top'> \n";
+	}
+	$content .= qq~
 	<TD NOWRAP>- <font color="green">$experiment_tag:</font> $experiment_name</TD>
 	<TD NOWRAP ALIGN=CENTER><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&experiment_id=$experiment_id">[View/Edit]</A></TD>
 	<TD NOWRAP ALIGN=CENTER><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeFractions?action=QUERYHIDE&QUERY_NAME=PR_SummarizeFractions&experiment_id=$experiment_id">[View]</A></TD>
+	<TD>
       ~;
 
-      foreach my $search_batch_row (@search_batch_rows) {
-        my ($search_batch_id,$search_batch_subdir,$set_tag) = @{$search_batch_row};
-        $content .= qq~
-	  <TD>&nbsp;&nbsp;&nbsp;<font color="green">$set_tag</font> ($search_batch_id:&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizePeptides?action=QUERY&QUERY_NAME=PR_SummarizePeptides&search_batch_id=$search_batch_id&probability_constraint=\%3E.9&n_annotations_constraint=%3E0&sort_order=tABS.row_count%20DESC&display_options=GroupReference&input_form_format=minimum_detail">P&gt;0.9</A>&nbsp;--&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizePeptides?action=QUERY&QUERY_NAME=PR_SummarizePeptides&search_batch_id=$search_batch_id&annotation_status_id=Annot&n_annotations_constraint=%3E0&sort_order=tABS.row_count%20DESC&display_options=GroupReference&input_form_format=minimum_detail">Annot</A>)</TD>
-        ~;
-      }
+	foreach my $search_batch_row (@search_batch_rows) {
+	    my ($search_batch_id,$search_batch_subdir,$set_tag) = @{$search_batch_row};
+	    $content .= qq~
+	    &nbsp;&nbsp;&#8211;&nbsp;<font color="green">$set_tag</font> ($search_batch_id:&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizePeptides?action=QUERY&QUERY_NAME=PR_SummarizePeptides&search_batch_id=$search_batch_id&probability_constraint=\%3E.9&n_annotations_constraint=%3E0&sort_order=tABS.row_count%20DESC&display_options=GroupReference&input_form_format=minimum_detail">P&gt;0.9</A>&nbsp;--&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizePeptides?action=QUERY&QUERY_NAME=PR_SummarizePeptides&search_batch_id=$search_batch_id&annotation_status_id=Annot&n_annotations_constraint=%3E0&sort_order=tABS.row_count%20DESC&display_options=GroupReference&input_form_format=minimum_detail">Annot</A>)<BR/>
+	    ~;
+	}
 
-	  $content .= qq~
+	$content .= qq~
+	</TD>
       	</TR>
-      ~;
+	~;
     }
-	return $content;
+    return $content;
 }
 
 
 ##############################################################################
 # make_full_experiment_html
 #
-# Return a block of html to print a compact experimental form
+# Return a block of html to print a full experimental form
 ###############################################################################
-
 sub make_full_experiment_html {
 	my ($content);
 	
@@ -574,8 +588,8 @@ WHERE es.experiment_id = $experiment_id
   ###Provide a drop down to select a sample already entered for this project
 	  
 	   my $sample_option_list_html = make_option_list(sample_info => \@all_samples_results,
-	   												  experiment_info => \@samples_per_exp_results,
-	   												  experiment_id   => $experiment_id);
+							  experiment_info => \@samples_per_exp_results,
+							  experiment_id   => $experiment_id);
    ###Only display the drop down if user has write access
 	   if  ($sbeams->isProjectWritable()){
 		   $sample_info_html .= qq~
@@ -603,10 +617,10 @@ WHERE es.experiment_id = $experiment_id
 	}else{
   ##If no samples have been associated with this experiment show some defualt info if they have write access 
 	  if  ($sbeams->isProjectWritable()){
-		  my $sample_option_list_html = make_option_list(sample_info => \@all_samples_results,
-		   												 experiment_info => [],
-		   												 experiment_id   => $experiment_id);
-		   												 
+	      my $sample_option_list_html = make_option_list(sample_info => \@all_samples_results,
+							     experiment_info => [],
+							     experiment_id   => $experiment_id);
+
 		  $sample_info_html .= "No Samples Registered for this project<br>";
 		  $sample_info_html .= $sample_option_list_html;
 		  $sample_info_html .=  "<a href='$add_sample_cgi_url?experiment_id=$experiment_id&action=Pick_sample' target='_blank'>View All Proteomic Samples</a>";
