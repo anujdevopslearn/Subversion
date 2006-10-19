@@ -1227,9 +1227,11 @@ sub finalize {
 	my $array = $parameters{'array_'.$m};
 
 	## Format array_id so that it's a five digit number (e.g. '2886' --> '02886')
-	while ($array =~ /\d{5}/){
-	  $array = "0".$array;
-	}
+  # BUGFIX - this actually never ran until the array ids got > 9999, whereupon
+  # it caused an infinite loop.  Will comment out, since it was a no-op
+#	while ($array =~ /\d{5}/){
+#	  $array = "0".$array;
+#	}
 
 	$rowdata{'array_request_id'} = $array_request_id;
 	$rowdata{'slide_index'}= $m;
