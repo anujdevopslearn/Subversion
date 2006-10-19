@@ -408,7 +408,7 @@ sub buildGoaKeyIndex {
         search_key_name => $Ensembl_ID,
         search_key_type => 'Ensembl Protein',
         search_key_dbxref_id => 20,
-        organism_id => 2,
+        organism_id => $organism_id,
         atlas_build_id => $atlas_build_id,
         resource_name => $Ensembl_ID,
         resource_type => 'Ensembl Protein',
@@ -429,7 +429,7 @@ sub buildGoaKeyIndex {
           search_key_name => $link->[1],
 	  search_key_type => $link->[0],
 	  search_key_dbxref_id => $link->[2],
-          organism_id => 2,
+          organism_id => $organism_id,
           atlas_build_id => $atlas_build_id,
 	  resource_name => $Ensembl_ID,
 	  resource_type => 'Ensembl Protein',
@@ -538,10 +538,11 @@ sub buildSGDKeyIndex {
   open(INFILE,$SGD_file)
     or die("ERROR[$METHOD]: Unable to open file '$SGD_file'");
 
+  my $organism_id = 3;
 
   #### Get the list of proteins that have a match
   my $matched_proteins = $self->getNProteinHits(
-    organism_id=>3,
+    organism_id=>$organism_id,
     atlas_build_id=>$atlas_build_id,
   );
 
@@ -632,7 +633,7 @@ sub buildSGDKeyIndex {
         search_key_name => $link->[1],
         search_key_type => $link->[0],
         search_key_dbxref_id => $link->[2],
-        organism_id => 3,
+        organism_id => $organism_id,
         atlas_build_id => $atlas_build_id,
         resource_name => $feature_name,
         resource_type => 'Yeast ORF Name',
