@@ -261,7 +261,8 @@ sub buildGoaKeyIndex {
     die("ERROR[$METHOD]: Unable to determine organism_id for $args{organism_name}");
 
   #### Open the provided GOA xrefs file
-  my $GOA_file = "$GOA_directory/${organism_name}.xrefs";
+  #my $GOA_file = "$GOA_directory/${organism_name}.xrefs";
+  my $GOA_file = "$GOA_directory/ipi.".uc($organism_name).".xrefs";
   open(INFILE,$GOA_file)
     or die("ERROR[$METHOD]: Unable to open file '$GOA_file'");
 
@@ -308,7 +309,8 @@ sub buildGoaKeyIndex {
     #### Skip if we don't have an ENSP number
     unless ($Ensembl) {
       #print "WARNING[$METHOD]: No ENSP for $Database:$Accession. Ignoring..\n";
-      next;
+      #next;
+      $Ensembl = '';
     }
 
     #### Split the Ensembl ID's
@@ -316,8 +318,10 @@ sub buildGoaKeyIndex {
     my $n_Ensembl_IDS = scalar(@Ensembl_IDS);
 
     if ($n_Ensembl_IDS == 0) {
-      print "WARNING[$METHOD]: No valid ENSP for $Database:$Accession. Ignoring..\n" if ($VERBOSE > 1);
-      next;
+      #print "WARNING[$METHOD]: No valid ENSP for $Database:$Accession. Ignoring..\n" if ($VERBOSE > 1);
+      #next;
+      @Ensembl_IDS = ( 'NO_ENSP' );
+      $n_Ensembl_IDS = scalar(@Ensembl_IDS);
     }
 
 
@@ -349,7 +353,7 @@ sub buildGoaKeyIndex {
     if ($RefSeqNP) {
       my @list = splitEntities(list=>$RefSeqNP,delimiter=>';');
       foreach my $item ( @list ) {
-	$item =~ s/^\w://;
+	$item =~ s/^\w+://;
         my @tmp = ('RefSeq',$item,39);
         push(@links,\@tmp);
       }
@@ -358,7 +362,7 @@ sub buildGoaKeyIndex {
     if ($RefSeqXP) {
       my @list = splitEntities(list=>$RefSeqXP,delimiter=>';');
       foreach my $item ( @list ) {
-	$item =~ s/^\w://;
+	$item =~ s/^\w+://;
         my @tmp = ('RefSeq',$item,39);
         push(@links,\@tmp);
       }
