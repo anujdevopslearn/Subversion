@@ -44,28 +44,33 @@ sub new {
   #### Define supported modifications
   %supported_modifications = (
     'monoisotopic' => {
-      'C[160]' => 57.021464,    # Cys_CAM (UniMod)
-      'C[161]' => 57.021464,    # Search ERROR, remove!!
+      'C[160]' => 57.021464,    # Carbamidomethyl (UniMod)Cys_CAM
+      'C[161]' => 58.005479,    # Search ERROR?? Maybe not, maybe Carboxymethyl?? Latin Square?
       'C[330]' => 227.126991,   # ABI cl-ICAT light (UniMod)
       'C[339]' => 236.157185,   # ABI cl-ICAT heavy (Unimod)
       'C[517]' => 414.193691,   # Glycopeptide capture ?? (UniMod)
       'C[545]' => 442.224991,   # ABI old ICAT light (UniMod)
       'C[553]' => 450.275205,   # ABI old ICAT heavy (UniMod)
+      'K[272]' => 144.10206,    # ABI iTRAQ (UniMod)
       'M[147]' => 15.994915,    # Oxidation (UniMod)
       'N[115]' => 0.984016,     # Glyc-Asn (UniMod)
     },
     'average' => {
       'C[160]' => 57.0513,    # Cys_CAM (UniMod)
-      'C[161]' => 57.0513,    # Search ERROR, remove!!
+      'C[161]' => 58.0361,    # Search ERROR?? Maybe not, maybe Carboxymethyl?? Latin Square?
       'C[330]' => 227.2603,   # ABI cl-ICAT light (UniMod)
       'C[339]' => 236.1942,   # ABI cl-ICAT heavy (Unimod)
       'C[517]' => 414.5196,   # Glycopeptide capture ?? (Unimod)
       'C[545]' => 442.5728,   # ABI old ICAT light (UniMod)
       'C[553]' => 450.6221,   # ABI old ICAT heavy (UniMod)
+      'K[272]' => 144.1544,   # ABI iTRAQ (UniMod)
       'M[147]' => 15.9848,    # Oxidation (UniMod)
       'N[115]' => 0.9848,     # Glyc-Asn (UniMod)
     },
   );
+
+
+
 
   return($self);
 }
