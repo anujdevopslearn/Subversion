@@ -704,6 +704,10 @@ sub handle_request {
     }
 
 
+    #### Since we don't display the controls, make the default page size
+    #### huge, otherwise the user may not see all peptides
+    $rs_params{page_size} = 500;
+
     #### Display the resultset
     $sbeams->displayResultSet(
       resultset_ref=>$resultset_ref,
@@ -726,13 +730,13 @@ sub handle_request {
 
 
     #### Display the resultset controls
-    $sbeams->displayResultSetControls(
-      resultset_ref=>$resultset_ref,
-      query_parameters_ref=>\%parameters,
-      rs_params_ref=>\%rs_params,
-      base_url=>$base_url,
-    ) if (0);
-    
+#    $sbeams->displayResultSetControls(
+#      resultset_ref=>$resultset_ref,
+#      query_parameters_ref=>\%parameters,
+#      rs_params_ref=>\%rs_params,
+#      base_url=>$base_url,
+#    );
+
     print "</TD></TR></TABLE>" if $htmlmode;
 
 
