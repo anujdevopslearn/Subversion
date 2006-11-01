@@ -70,6 +70,7 @@ sub printPageHeader {
 
   my $navigation_bar = $args{'navigation_bar'} || "YES";
   my $minimal_header = $args{'minimal_header'} || "NO";
+  my $loadscript = ( $args{onload} ) ? $args{onload} : "self.focus()"; 
 
   #### If the output mode is interactive text, display text header
   if ($self->output_mode() eq 'interactive') {
@@ -110,7 +111,7 @@ sub printPageHeader {
 	</HEAD>
 
 	<!-- Background white, links blue (unvisited), navy (visited), red (active) -->
-	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" TOPMARGIN=0 LEFTMARGIN=0 OnLoad="self.focus();">
+	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" TOPMARGIN=0 LEFTMARGIN=0 OnLoad="$loadscript();">
 	<table border=0 width="100%" cellspacing=0 cellpadding=1>
 
 	<!------- Header ------------------------------------------------>
