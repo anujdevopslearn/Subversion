@@ -27,6 +27,8 @@ use SBEAMS::Connection::Tables;
 
   my $sbeams = new SBEAMS::Connection;
 
+  exit unless $sbeams->Authenticate( allow_anonymous_access => 1 );
+
   # Read cgi parameters
   my %params;
   $sbeams->parse_input_parameters( q => $q, parameters_ref => \%params );
@@ -42,24 +44,64 @@ use SBEAMS::Connection::Tables;
   # and when it becomes feasible, patch with this hack for now:
   $url =~ s/\'\'/\'/g;
 
+  # HTML page to return;
+  my $page;
+
   if ( $url ) {
-    # We got a valid url, we'll redirect and let that page handle authentication
-    $sbeams->sbeams_redirect( uri => $url );
+    my $form =  getPOSTForm( $url );
+
+    if ( $form !~ /\<FORM/ || $params{get_only} ) {
+      # URL but no params, simple redirect
+      $sbeams->sbeams_redirect( uri => $url );
+      exit;  # superfluous?
+    }
+    
+    # Otherwise, make an autosubmit form page.
+    $page = SBEAMS::Connection::SBPage->new( user_context => 0,
+                                                      sbeams => $sbeams,
+                                                      minimal => 1,
+                                                       onload => "document.shortform.submit()" );
+    $page->addContent( $form );
 
   } else { 
-    my $username = $sbeams->Authenticate();
-    exit unless $username;
 
-    my $page = SBEAMS::Connection::SBPage->new( user_context => 1,
+    $page = SBEAMS::Connection::SBPage->new( user_context => 1,
                                                       sbeams => $sbeams );
 
     $page->addContent( <<"    END" );
-      <FONT SIZE='+1'><B> Error: </B></FONT>
+      <FONT COLOR=RED ><B> Error: </B></FONT>
       The specified url key ($params{url_key}) wasn't found in the database
     END
-    $page->printPage(); 
   }
+  $page->printPage(); 
 
 } # end main
 
+#
+# A little dicey, but we are trying to parse params and pass them as hidden
+# parameters in a form that gets submitted on load.
+#
+sub getPOSTForm { 
+  my $url = shift || die "Missing required parameter: URL";
+
+  my ( $action, $querystring ) = split( /\?/, $url);
+
+  return $action unless $querystring;
+
+  my $form = "<FORM ACTION='$action' NAME=shortform METHOD=POST >\n";
+
+  my @args = split "&", $querystring;
+  for my $arg ( @args ) {
+    my @opts = split ";", $arg;
+    for my $param ( @opts ) {
+      my ($name, $value) = split("=", $param);
+      $name = $q->unescape( $name );
+      $value = $q->unescape( $value );
+      $form .= "<INPUT TYPE=HIDDEN NAME='$name' VALUE='$value'>\n";
+    }
+  }
+  $form .= "<FORM>\n";
+#  $log->debug( $form );
+  return $form;
+}
 
