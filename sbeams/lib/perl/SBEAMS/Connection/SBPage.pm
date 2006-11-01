@@ -54,7 +54,6 @@ sub setSBEAMS {
 }
 
 sub setSBEAMSMod {
-  $log->debug( "Setting sbeamsmod" );
   my $this = shift;
   my %args = @_;
   die "Missing sbeamsMOD object" unless $args{sbeamsMOD};
@@ -81,7 +80,8 @@ sub addContent {
 sub printPage {
   my $this = shift;
   my $sbeams = $this->getSBEAMS();
-  print $this->asHTML();
+  my $page = $this->asHTML();
+  print $page;
   
 }
 
@@ -96,10 +96,30 @@ sub asHTML {
   my $sbeamsMOD = $this->getSBEAMSMod();
    
   my $header = $sbeams->get_http_header();
+  my $onload = ( $this->{onload} ) ? $this->{onload} : "self.focus()";
+
+  if ( $this->{minimal} ) {
+    $log->debug( "minimosity!" );
+    return <<"    END";
+$header
+
+
+<HTML>
+ <HEAD></HEAD>
+ <BODY OnLoad='$onload;'>
+ $this->{_content}
+ </BODY>
+</HTML>
+    END
+  }
+    
+
+  
   my $jscript = $this->_getJavascriptFunctions();
   my $style = $this->_getStyleSheet();
   my $navbar = $this->_getNavBar( $sbeams );
   my $footer = $this->_getFooter();
+
 
   #### Determine the Title bar background decoration
   my $head_bkg = ( $DBVERSION =~ /Primary/ ) ? "$HTML_BASE_DIR/images/plaintop.jpg" : $BGCOLOR;
@@ -157,7 +177,7 @@ $header
 	<!--META HTTP-EQUIV="Cache-Control" CONTENT="no-cache"-->
 	</HEAD>
 	<!-- Background white, links blue (unvisited), navy (visited), red (active) -->
-	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" TOPMARGIN=0 LEFTMARGIN=0 OnLoad="this.focus();">
+	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" TOPMARGIN=0 LEFTMARGIN=0 OnLoad="$onload;">
 	<a name="TOP"></a>
 
   <!------- Javascript functions --------------------------------------------->
@@ -232,6 +252,7 @@ sub _getNavBar {
 
 	$ntable->addRow( [ '&nbsp;' ] );
 
+  my $ia = $sbeams->isAdminUser();
 
   if ( $sbeams->isAdminUser ) {
 	  $ntable->addRow( [ '&nbsp;' ] );
