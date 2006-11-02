@@ -120,6 +120,7 @@ my $manage_table_url =
 my $open_file_url = "$CGI_BASE_DIR/Microarray/View_Affy_files.cgi";
 my $multtest_url = "$CGI_BASE_DIR/Microarray/bioconductor/multtest.cgi";
 my $make_java_files_url = "$CGI_BASE_DIR/Microarray/bioconductor/Make_MEV_jws_files.cgi";
+my $geo_submission_url = "$CGI_BASE_DIR/Microarray/bioconductor/Create_GEO_file.cgi";
 
 main();
 exit(0);
@@ -1642,6 +1643,15 @@ sub display_files {
 			Tr(
 			  td({class=>'grey_bg'}, "Process file to view in Mev"),
 			  td("<a href='$make_java_files_url?token=$token'>Start Mev</a>"),
+			 );
+			$start_analysis_run_html .=
+			Tr(
+			  td({class=>'grey_header', colspan=>'2'}, "Prepare GEO Submission"),
+			);
+			$start_analysis_run_html .= 
+			Tr(
+			  td({class=>'grey_bg'}, "Create GEO submission file"),
+			  td("<a href='$geo_submission_url?token=$token'>Prepare GEO submission</a>"),
 			 );
 		}elsif($analysis_name_type eq 'differential_expression'){
 			$start_analysis_run_html =

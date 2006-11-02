@@ -584,6 +584,66 @@ sub get_all_affy_info_sql{
 	 
 	return $sql;
 }
+
+###############################################################################
+# get get_affy_geo_info_sql
+#
+# get all the (affy_array_sample, affy_array) info for a group of arrays
+# querying on file root
+###############################################################################
+sub get_affy_geo_info_sql{
+	my $method = 'get_affy_arrays';
+	
+	my $self = shift;
+	my %args = @_;
+	
+	unless ($args{file_roots} ){
+		confess(__PACKAGE__ . "::$method Need to provide key value pairs 'file_roots' => 'string of csv file root(s)' ");
+	}
+
+ 	my $file_roots =  $args{file_roots}; #pass in a string of comma delimited affy array ids
+	
+	
+	my $sql = qq~
+
+		SELECT afa.affy_array_id AS "Array ID", 
+		afa.file_root            AS "File Root", 
+		afs.sample_tag           AS "Sample Tag",
+		o.organism_name          AS "Organism",
+		afs.sample_description      AS "Sample Description",
+		afs.treatment_description   AS "Treatment Description",
+		st.comment               AS "Slide Type Comment",
+		afa.affy_array_protocol_ids AS "Array Protcol Ids",
+		afa.protocol_deviations  AS "Array Protocol Deviations",
+		afs.full_sample_name     AS "Full Name",
+		afs.strain_or_line       AS "Strian or Line",
+		afs.individual           AS "Individual",
+		MOT2.name                AS "Sex",
+		afs.age                  AS "Age",
+		afs.organism_part        AS "Organism Part",
+		afs.cell_line            AS "Cell Line",
+		afs.cell_type            AS "Cell Type",
+		afs.disease_state        AS "Disease_state",
+		afs.rna_template_mass 	 AS "Mass of RNA Labeled (ng)",
+		afs.affy_sample_protocol_ids AS "Sample Protocol Ids",
+		afs.protocol_deviations  AS "Sample Protocol Deviations",
+		afs.sample_preparation_date AS "Sample Prep Date",
+		afs.comment                 AS "Comment"
+		FROM $TBMA_AFFY_ARRAY afa 
+		JOIN $TBMA_AFFY_ARRAY_SAMPLE afs ON (afa.affy_array_sample_id = afs.affy_array_sample_id)
+		JOIN $TBMA_SLIDE_TYPE st ON (afa.array_type_id = st.slide_type_id) 
+		JOIN $TB_ORGANISM o ON (afs.organism_id = o.organism_id)
+		LEFT JOIN $TB_PROJECT proj ON ( afs.project_id = proj.project_id)
+		JOIN $TB_USER_LOGIN ul ON  (ul.user_login_id = afa.user_id)
+		LEFT JOIN $TBBL_MGED_ONTOLOGY_TERM MOT2 ON ( MOT2.MGED_ontology_term_id = afs.sex_ontology_term_id ) 
+		WHERE afa.file_root IN ($file_roots)
+	    AND afa.record_status != 'D'
+	~;
+	 
+	 
+	return $sql;
+}
+
 ###############################################################################
 # export_data_array_sample_info
 #
