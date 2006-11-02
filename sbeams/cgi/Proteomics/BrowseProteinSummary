@@ -367,35 +367,6 @@ sub handle_request {
   return if ($accession_clause eq '-1');
 
 
-  #### Build ANNOTATION_STATUS and ANNOTATION_LABELS constraint
-  my $annotation_status_clause = "";
-  my $annotation_label_clause = "";
-
-  if ($parameters{annotation_label_id}) {
-    if ($parameters{annotation_status_id} eq 'Annot') {
-      $annotation_label_clause = "   AND SHA.annotation_label_id IN ( $parameters{annotation_label_id} )";
-    } elsif ($parameters{annotation_status_id} eq 'UNAnnot') {
-      $annotation_status_clause = "   AND SHA.annotation_label_id IS NULL";
-      $annotation_label_clause = "";
-      print "WARNING: Annotation status and Annotation label constraints conflict!<BR>\n";
-    } else {
-      $annotation_label_clause = "   AND ( SHA.annotation_label_id IN ( $parameters{annotation_label_id} ) ".
-        "OR SHA.annotation_label_id IS NULL )";
-    }
-
-
-  } else {
-    if ($parameters{annotation_status_id} eq 'Annot') {
-      $annotation_status_clause = "   AND SHA.annotation_label_id IS NOT NULL";
-    } elsif ($parameters{annotation_status_id} eq 'UNAnnot') {
-      $annotation_status_clause = "   AND SHA.annotation_label_id IS NULL";
-    } else {
-      #### Nothing
-    }
-
-  }
-
-
   #### Build NUMBER OF ANNOTATIONS constraint
   my $n_annotations_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"row_count",
@@ -646,8 +617,6 @@ sub handle_request {
 	$protein_group_probability_clause
 	$protein_probability_clause
 	$quantitation_clause
-	$annotation_label_clause
-	$annotation_status_clause
 	$group_by_clause
 	$order_by_clause
 	$limit_clause->{trailing_limit_clause}

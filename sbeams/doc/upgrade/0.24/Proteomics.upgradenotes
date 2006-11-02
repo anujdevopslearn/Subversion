@@ -117,12 +117,22 @@ rm zz9
 
 ---------------
 
+Nov 1, 2006
+
+Removed two obsolete query options from BrowseProteinSummary:
+
+- server sql calls to delete table_column entries:
+
+DELETE FROM table_column WHERE table_name = 'PR_BrowseProteinSummary' AND column_name = 'annotation_status_id'
+DELETE FROM table_column WHERE table_name = 'PR_BrowseProteinSummary' AND column_name = 'annotation_label_id'
 
 
+- update the driver tables:
+  cd $SBEAMS/lib/scripts/Core
+  ./update_driver_tables.pl ../../conf/Proteomics/Proteomics_table_column.txt
+  ./update_driver_tables.pl ../../conf/Proteomics/Proteomics_table_property.txt
+  ./update_driver_tables.pl ../../conf/Proteomics/Proteomics_table_column_manual.txt
 
-
-
-
-
+---------------
 
 
