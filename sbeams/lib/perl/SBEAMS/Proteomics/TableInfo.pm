@@ -286,20 +286,12 @@ sub returnTableInfo {
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT publication_id,publication_name,
-		       publication_category_name AS "Category",
-		       STR(publication_rating_number,5,0)+' - '+publication_rating_name AS "Rating",
-		       presented_on_date AS "Date Presented",
-		       username AS "Presented By",
 		       title,
 		       full_manuscript_file,
 		       uri
 		  FROM $TBPR_PUBLICATION P
-		  LEFT JOIN $TB_USER_LOGIN UL ON (P.presented_by_contact_id = UL.contact_id)
 		 WHERE 1 =1
                    AND P.record_status!='D'
-		   AND ( PC.record_status!='D' OR PC.record_status IS NULL )
-		   AND ( PR.record_status!='D' OR PR.record_status IS NULL )
-		   AND ( UL.record_status!='D' OR UL.record_status IS NULL )
 		 ORDER BY publication_id
             ~;
 
