@@ -24,17 +24,28 @@ publication table
   ALTER TABLE publication drop column presented_on_date
   ALTER TABLE publication drop column presented_by_contact_id
 
-- edit $SBEAMS/lib/conf/Proteomics/Proteomics_table_column.txt
-  to remove the columns publication_category_id, publication_rating_id,
-  presented_on_date, and presented_by_contact_id
+- server sql calls to delete table_column entries:
 
-- edit $SBEAMS/lib/conf/Proteomics/Proteomics_table_property.txt
-  to remove the publication_category and publication_rating tables
+  DELETE FROM table_column WHERE table_name = 'PR_publication' AND column_name = 'publication_category_id'
+  DELETE FROM table_column WHERE table_name = 'PR_publication' AND column_name = 'presented_by_contact_id'
+  DELETE FROM table_column WHERE table_name = 'PR_publication' AND column_name = 'presented_on_date'
+  DELETE FROM table_column WHERE table_name = 'PR_publication' AND column_name = 'publication_rating_id'
 
-- update driver tables
-  cd $SBEAMS/lib/script/Core
+  DELETE FROM table_column WHERE table_name = 'PR_publication_category'
+  DELETE FROM table_column WHERE table_name = 'PR_publication_rating'
+
+
+- server sql calls to delete table_property entries:
+
+  DELETE from table_property WHERE table_name = 'PR_publication_category'
+  DELETE from table_property WHERE table_name = 'PR_publication_rating'
+
+
+- update driver tables (make sure you have latest code)
+  cd $SBEAMS/lib/scripts/Core
   ./update_driver_tables.pl ../../conf/Proteomics/Proteomics_table_column.txt
   ./update_driver_tables.pl ../../conf/Proteomics/Proteomics_table_property.txt
+  ./update_driver_tables.pl ../../conf/Proteomics/Proteomics_table_column_manual.txt
 
 ---------------
 
