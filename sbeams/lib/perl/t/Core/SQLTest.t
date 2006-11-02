@@ -29,7 +29,7 @@ use Test::More;
 # BEGIN
 ###############################################################################
 BEGIN {
-    plan tests => 9;
+    plan tests => 10;
     use_ok( 'SBEAMS::Connection' );
     use_ok( 'SBEAMS::Connection::Settings' );
     use_ok( 'SBEAMS::Connection::Tables' );
@@ -67,6 +67,7 @@ ok(testSimpleStringColumnConcat(),"Simple varchar column concatenation");
 ok(testStringColumnConcat(),"Varchar column concatenation");
 ok(testANSIConcat(),"Varchar concatenation with ANSI concat operator ||");
 ok(testANSIStringConcat(),"String concatenation with ANSI concat operator ||");
+ok(testSTRFunction(),"Test STR usage with translate SQL");
 
 ###############################################################################
 # testSimpleStringColumnConcat
@@ -88,6 +89,38 @@ SELECT first_name+' '+last_name
 
   return(0);
 }
+
+###############################################################################
+# testSTRfunction
+###############################################################################
+sub testSTRFunction {
+
+  my @sql = ( "SELECT STR(32.313, 7, 3) AS str_col, contact_id FROM $TB_CONTACT ",
+              "SELECT\n STR(32.313, 7, 3) AS str_col, contact_id FROM $TB_CONTACT ",
+              "SELECT STR(32.313,7,3) AS str_col, contact_id FROM $TB_CONTACT ",
+              "SELECT STR(32.313,7,3)  AS str_col, contact_id FROM $TB_CONTACT ",
+              "SELECT STR( 32.313,7,3)  AS str_col, contact_id FROM $TB_CONTACT ",
+              "SELECT STR( 32.313,7,3), contact_id FROM $TB_CONTACT ",
+              "SELECT STR(32.313,7,3 )  AS str_col, contact_id FROM $TB_CONTACT ",
+              "SELECT\nSTR(32.313,7,3) AS str_col, contact_id FROM $TB_CONTACT ",
+              "SELECT STR(  32.313 ,  7 , 3  ) AS str_col, contact_id FROM $TB_CONTACT ",
+              "SELECT STR(  32.313 ,\n7\n, 3  ) AS str_col, contact_id FROM $TB_CONTACT " );
+
+  my $dbh = $sbeams->getDBHandle();
+  $dbh->{RaiseError} = 0;
+  eval {
+    for my $sql ( @sql ) {
+      my $tsql = $sbeams->translateSQL( sql => $sbeams->evalSQL( $sql ) );
+      my $sth = $dbh->prepare( $tsql );
+      $sth->execute();
+    }
+  };
+  if ( $@ ) {
+    return 0;
+  }
+  return 1;
+  }
+
 
 
 ###############################################################################
