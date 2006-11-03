@@ -151,7 +151,7 @@ sub displayGuestPageHeader {
   my $skinLink = 'http://www.peptideatlas.org';
   #my $skinLink = 'http://dbtmp.systemsbiology.net/';
   my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index.dbbrowse.php" ) );
-  my @page = split( "\r", $response->content() );
+  my @page = split( "\n", $response->content() );
   my $skin = '';
   for ( @page ) {
     $_ =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
