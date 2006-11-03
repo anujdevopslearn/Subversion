@@ -156,7 +156,7 @@ sub displayGuestPageHeader {
   for ( @page ) {
     $_ =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
     last if $_ =~ /--- Main Page Content ---/;
-    $skin .= $_;
+    $skin .= "$_\n";
   }
   $skin =~ s#/images/#/sbeams/images/#gm;
   #$skin =~ s#/images/#/dev2/sbeams/images/#gm;
