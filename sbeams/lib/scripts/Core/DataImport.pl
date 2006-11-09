@@ -45,10 +45,6 @@ $sbeams = new SBEAMS::Connection;
 
 #### To get the table names resolving to work all affected modules must
 #### Be listed here.  This is bad.  Is there any way around it?
-use SBEAMS::Microarray::Tables;
-use SBEAMS::Proteomics::Tables;
-use SBEAMS::Immunostain::Tables;
-use SBEAMS::BioLink::Tables;
 
 
 #### Process options
@@ -150,20 +146,10 @@ sub importTableData {
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
 
-
-  #### Read in the command file into a buffer
-  open(INFILE,$source_file)
-     || die("Unable to open command_file '$source_file'");
-  my $xml = '';
-  while ($line = <INFILE>) {
-    $xml .= $line;
-  }
-  close(INFILE);
-
-
-  #### Set up the XML parser and parse the XML in the buffer
+  # Set up the XML parser and parse directly from file
   my $parser = new XML::Parser(Handlers => {Start => \&start_element});
-  $parser->parse($xml);
+
+  $parser->parsefile($source_file);
 
   return 1;
 
@@ -175,12 +161,23 @@ sub importTableData {
 # start_element
 ###############################################################################
 sub start_element {
+
+
   my $handler = shift;
   my $element = shift;
   my %attrs = @_;
 
   #### If this is the main containter tag, just return
   return if ($element eq 'SBEAMS_EXPORT');
+
+  if ( $element eq 'synonym_cols' ) {
+    while ( my ($key,$value) = each %attrs ) {
+      $content_handler->{synonyms}->{$key} = $value;
+      print "$key is a synonym for $value\n" if $VERBOSE > 1;
+    }
+    # nothing more for us here...
+    return;
+  }
 
 
   #### Print some verbose dianogtic information
@@ -268,6 +265,12 @@ sub start_element {
       print "INFO: Remapping $key value from $value to $newvalue\n"
         if ($VERBOSE);
       $attrs{$key} = $newvalue;
+    } elsif ( $content_handler->{synonyms}->{$key} ) {
+      if (defined($content_handler->{$content_handler->{synonyms}->{$key}}->{PK_map}->{$value})) {
+        my $newvalue = $content_handler->{$content_handler->{synonyms}->{$key}}->{PK_map}->{$value};
+        print "INFO: Remapping $key value from $value to $newvalue via synonym hash\n" if ($VERBOSE);
+        $attrs{$key} = $newvalue;
+      } 
     }
   }
 
@@ -285,12 +288,7 @@ sub start_element {
     my $contact = $sbeams->getCurrent_contact_id();
     my $workgroup = $sbeams->getCurrent_work_group_id();
     my $time = $sbeams->get_datetime();
-    print <<"    END";
-    Gonna be setting:
-        Group => $workgroup
-        Contact => $contact
-        Time => $time
-    END
+
     $attrs{owner_group_id} = $workgroup if defined $cols{owner_group_id};
 
     $attrs{created_by_id} = $contact if defined $cols{created_by_id};
@@ -461,12 +459,19 @@ sub determineDataPresence {
   # lm 01-11-2006
   # Changed threshold to 0.9999 or bulk creation of new accounts overwrites
   # its newly-created ones (no matter what -testonly outputs)
+  # dsc 10-25-2006
+  # The change to 0.9999 effectively quashes updates, and more importantly 
+  # causes duplicates to get loaded if more than one import of the same
+  # data is run.  Changed to make threshold configurable via -u or 
+  # --update_threshold ( original .7 is default). 
+
+  my $upd_threshold = $OPTIONS{update_threshold} || 0.7;
 
 
   #### If no rows were returned, or the PK row isn't very similar,
   #### try doing a search based on the key columns
   my $key_similarity;
-  if ($nrows == 0 || $PK_similarity < 0.9999) {
+  if ($nrows == 0 || $PK_similarity < $upd_threshold ) {
     #### Write this part!
 
   }
@@ -475,7 +480,7 @@ sub determineDataPresence {
   #### Decide what to return based on whether the data were found
 
 
-  if ($PK_similarity > 0.9999) {
+  if ($PK_similarity > $upd_threshold) {
     print "INFO: This record is already in the database but needs to be ".
       "updated.\n" if ($VERBOSE > 1);
     $return_status->{present} = 'YES';
@@ -531,7 +536,9 @@ sub calcRowDiff {
     if (exists($new_row{$key})) {
       my $value2 = $new_row{$key};
 
+
       ### Special handling for NULLs
+      ## ?? What if field is blank, i.e. defined but == '' ??
       my $mvalue = $value;
       $mvalue = '<NULL>' unless (defined($mvalue));
       my $mvalue2 = $value2;
@@ -663,7 +670,8 @@ sub evalSQL {
 sub processOptions {
   GetOptions( \%OPTIONS, "verbose:s", "quiet", "debug:s", "testonly", 'help', 
              'new_audit_info', 'print_ddl', "source_file:s", 'contact_id=s',
-             'work_group_id=s', 'ignore_pK') || printUsage( "Failed to get parameters" );
+             'work_group_id=s', 'ignore_pK', 'update_threshold=f'
+            ) || printUsage( "Failed to get parameters" );
   
   for my $param ( qw(source_file) ) {
     print "$param\n";
@@ -693,7 +701,10 @@ sub printUsage {
     -c, --contact_id n        Explicit contact_id to use for audit fields,
                               supercedes -n.
     -p, --print_ddl           Print out DDL stmts, don't execute.
-    -i, --ignore_pK	      Ignore returning the PK after updating or inserting a record
+    -i, --ignore_pK	      Ignore returning the PK after updating or 
+                              inserting a record
+    -u, --update_threshold    Similarity threshold (as fraction) which must be
+                              exceeded before forcing an update, default 0.7
 
    e.g.:  $0 --source_file SBEAMSdata.xml
 
