@@ -109,6 +109,7 @@ sub handleRequest {
   my $cascade = $OPTIONS{"cascade"} || '';
   my $map_audit_user_to = $OPTIONS{"user_map_to"} || '';
   my $map_audit_group_to = $OPTIONS{"workgroup_map_to"} || '';
+  my $synonyms = $OPTIONS{"synonyms"} || '';
 
 
   #### If there are any parameters left, complain and print usage
@@ -151,6 +152,16 @@ sub handleRequest {
   #$writer->startTag("SBEAMS_EXPORT");
   print OUTFIL "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
   print OUTFIL "<SBEAMS_EXPORT>\n";
+
+  if ( $synonyms ) {
+    print OUTFIL "  <synonym_cols\n";
+    my @pairs = split( ",", $synonyms );
+    for my $pair ( @pairs ) {
+      my ( $n, $v ) = split "=", $pair;
+      print OUTFIL qq(    $n="$v"\n);
+    }
+    print OUTFIL "  />\n";
+  }
 
   #### Loop over each command, exporting the results
   foreach my $command (@export_list) {
@@ -216,12 +227,15 @@ sub exportTableData {
 
   #### Fetch the appropriate rows from the database
   #print "$sql\n";
-  my @rows = $sbeams->selectHashArray($sql);
 
+  #  This call creates 2 arrays of size = num_rows, changed DSC 11/2006
+  #  my @rows = $sbeams->selectHashArray($sql);
+
+  my $hashref = $sbeams->get_statement_handle( $sql );
 
   #### Loop over each row, writing out the data
-  foreach my $row (@rows) {
-
+  while ( my $row = $hashref->fetchrow_hashref() ) {
+  
     my $result = exportDataRow(
       table_name => $table_handle,
       writer => $writer,
@@ -232,7 +246,6 @@ sub exportTableData {
     if ($result != 1) {
       die("ERROR: Received bad return value from exportDataRow(): $result");
     }
-
   }
 
 
@@ -303,6 +316,7 @@ sub exportDataRow {
       $row->{$key} =~ s/\&/&amp;/g;
       $row->{$key} =~ s/\</&lt;g/;
       $row->{$key} =~ s/\>/&gt;/g;
+      $row->{$key} =~ s/\>/&quot;/g;
     } else {
       delete($row->{$key});
     }
@@ -319,6 +333,11 @@ sub exportDataRow {
     }
 
     while ( ($key,$value) = each %{$row}) {
+
+      if ( !$OPTIONS{pseudo_keys} ) {
+        next unless $table_info->{$table_handle}->{columns}->{$key}->{data_type} =~ /int/i;
+      }
+
       if ($table_info->{$table_handle}->{columns}->{$key}->{fk_table}) {
         my $fk_table =
           $table_info->{$table_handle}->{columns}->{$key}->{fk_table};
@@ -558,12 +577,13 @@ sub processOptions {
  
   # map_audit_xxx_to provided for backwards compatability.
   GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-              "output_file:s","command_file:s","recursive", 
-              "user_map_to:i", "workgroup_map_to:i", 'help',
-              'map_audit_user_to:i', 'map_audit_group_to:i' );
+              "output_file:s","command_file:s","recursive", 'help',
+              "user_map_to:i", "pseudo_keys:i", "workgroup_map_to:i", 
+              'synonyms:s', 'map_audit_user_to:i', 'map_audit_group_to:i' );
 
   $OPTIONS{map_audit_user_to} ||= $OPTIONS{user_map_to}; 
   $OPTIONS{map_audit_group_to} ||= $OPTIONS{workgroup_map_to}; 
+  $OPTIONS{pseudo_keys} = 1 unless defined $OPTIONS{pseudo_keys}; 
 
   # Pleas for help get precedence
   printUsage() if $OPTIONS{help};
@@ -589,10 +609,15 @@ sub printUsage {
   -d,  --debug n             Set debug flag
   -h,  --help                Print this usage info and quit.
   -o,  --output_file         Output file to which to write XML
+  -p,  --pseudo_keys         Allow pseudo key relationships (varchar key lists)
+                             0 = False, 1 = true = default
   -q,  --quiet               Set flag to print nothing at all except errors
   -r,  --recursive           Recursive export (cascade), get dependent records.
   -u,  --user_map_to n       User (contact_id) to which to map audit info.
   -v,  --verbose n           Set verbosity level.  default is 0
+  -s,  --synonyms            Synonym column mappings, temporary fix to foreign
+                             key mismatch issue.  Expects comma separated list
+                             of column=synonym pairs.
   -w,  --work_group_map_to n Work_group_id id to which to map audit info.
 
   e.g.:  $PROG_NAME --command_file test.exportcmd --output_file SBEAMSdata.xml
