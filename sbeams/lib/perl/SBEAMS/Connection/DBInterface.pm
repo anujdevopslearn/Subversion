@@ -685,6 +685,53 @@ sub do {
 
 ###
 #+
+# get_statement_handle
+#
+# Given SQL stmt, translate, prepare, execute and return stmt handle.  Caller
+# can then write a loop based on any of several DBI functions, such as:
+#
+# fetchrow_array()
+# fetchrow_arrayref()
+# fetchrow_hash()
+# fetchrow_hashref()
+#
+# Example loop:
+# 
+# my $sth = $sbeams->get_statement_handle( $sql );
+# while ( my $row = $sth->fetchrow_hashref() ) {
+# }
+#-
+sub get_statement_handle {
+  my $self = shift || croak("parameter self not passed");
+  my $sql = shift || croak("parameter sql not passed");
+
+  #### Get the database handle
+  $dbh = $self->getDBHandle();
+
+  #### Convert the SQL dialect if necessary
+  $sql = $self->translateSQL( sql => $sql );
+
+  my $sth;
+
+  eval {
+    $self->setRaiseError(1);
+    $sth = $dbh->prepare( $sql );
+    $sth->execute();
+  };
+  if ( $@ ) {
+    my $msg =<<"    END";
+    Error executing SQL: $@
+    SQL causing error: $sql
+    END
+    $log->error( $msg );
+    die $msg;
+  }
+  # return by value, makes copy but its just a ref anyway...
+  return $sth;
+}
+
+###
+#+
 # selectrow_hashref
 #
 # Thinly wrapped dbh->selectrow_hashref call
