@@ -10,10 +10,10 @@ use FindBin qw ( $Bin );
 use lib( "$Bin/../.." );
 
 # Need to provide username/password for registered user on target system.
-#use constant BASE_URL => 'http://db.systemsbiology.net/devDC/sbeams';
-use constant BASE_URL => 'http://db.systemsbiology.net/sbeams';
-use constant USERNAME => 'cytoscape';
-use constant PASSWORD => 'cytoscape';
+use constant BASE_URL => 'http://db.systemsbiology.net/devDC/sbeams';
+#use constant BASE_URL => 'http://db.systemsbiology.net/sbeams';
+use constant USERNAME => 'guest';
+use constant PASSWORD => 'gessst!';
 
 use CGI;
 use SBEAMS::Connection qw( $log $q );
@@ -33,11 +33,11 @@ my %auth = ( username => USERNAME, password => PASSWORD, login => 'yes' );
 # Set up user agent and sbeams objects
 ok( sbeams_connect(), 'sbeams connection' );
 ok( store_cookie(), 'authenticated and stored cookies' );
-ok( test_cookie(), 'Use user agent cached cookie' );
+ok( test_cached_cookie(), 'Use user agent cached cookie' );
 ok( test_force_login(), 'Checking forced login with existing cookie' );
 ok( test_force_with_auth(), 'Checking forced login without cookie' );
 ok( load_cookie(), 'Reauthenticate with cookie stored on disk' );
-ok( test_cookie(), 'Testing loaded cookie' );
+ok( test_cached_cookie(), 'Testing loaded cookie' );
 
 #+
 # create sbeams object
@@ -57,7 +57,7 @@ sub test_force_login {
 #+
 # Show that cookie that useragent has cached works
 #-
-sub test_cookie {
+sub test_cached_cookie {
   my $response = $ua->get( BASE_URL . '/cgi/main.cgi' );
   return ( $response->content() =~ /INPUT TYPE.*password.*NAME.*password/ ) ? 0 : 1; 
 }
@@ -66,7 +66,8 @@ sub test_cookie {
 # Does force login rule even if authen credentials are passed?
 #-
 sub test_force_with_auth {
-  my $response = $ua->post( BASE_URL . '/cgi/main.cgi?force_login=yes', {%auth, force_login => 'yes' } );
+  my $agent = LWP::UserAgent->new( );
+  my $response = $agent->post( BASE_URL . '/cgi/main.cgi?force_login=yes', {%auth, force_login => 'yes' } );
   return ( $response->content() =~ /INPUT TYPE.*password.*NAME.*password/ ) ? 1 : 0; 
 }
 
@@ -89,11 +90,10 @@ sub store_cookie {
   $ua = LWP::UserAgent->new( );
   my $time = time();
   $ua->cookie_jar( HTTP::Cookies->new( file     => '/tmp/lwpcookies.txt', 
-                                       autosave => 1, 
+                                       autosave => 0, 
                                        ignore_discard => 1 ) );
   my $response = $ua->post( BASE_URL . '/cgi/main.cgi' , \%auth );
   $ua->cookie_jar()->save( '/tmp/lwpcookies.txt' );
-  print "Cjar is " . $ua->cookie_jar();
   return ( $ua->cookie_jar() ) ? 1 : 0;
 } 
 
@@ -102,6 +102,7 @@ END {
 } # End END
 
 sub breakdown {
+  system( 'rm /tmp/lwpcookies.txt' );
 }
 
 
