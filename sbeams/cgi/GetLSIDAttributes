@@ -1,0 +1,644 @@
+#!/usr/local/bin/perl -w
+
+###############################################################################
+# Program     : GetLSIDAttributes
+# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
+# $Id$
+#
+# Description : This program that allows users to
+#               get access to SBEAMS records given an LSID
+#
+# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
+use SBEAMS::Connection qw($q);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+
+$sbeams = new SBEAMS::Connection;
+
+
+###############################################################################
+# Set program name and usage banner for command line use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag to level n
+  --testonly          Set testonly flag which simulates INSERTs/UPDATEs only
+
+ e.g.:  $PROG_NAME --verbose 2 keyword=value
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","quiet")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+$TESTONLY = $OPTIONS{"testonly"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "   VERBOSE = $VERBOSE\n";
+  print "     QUIET = $QUIET\n";
+  print "     DEBUG = $DEBUG\n";
+  print "  TESTONLY = $TESTONLY\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    #permitted_work_groups_ref=>['xxx','yyy'],
+    connect_read_only=>1,
+    allow_anonymous_access=>1,
+  ));
+
+
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($q);
+
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+
+  #### Decide what action to take based on information so far
+  if (defined($parameters{action}) && $parameters{action} eq "???") {
+    # Some action
+  } else {
+    $sbeams->display_page_header();
+    handle_request(ref_parameters=>\%parameters);
+    $sbeams->display_page_footer();
+  }
+
+
+} # end main
+
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+
+  #### Read in the standard form values
+  my $apply_action=$parameters{'action'} || $parameters{'apply_action'} || '';
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+
+  #### Set some specific settings for this program
+  my $CATEGORY="Get LSID Attrbiutes";
+  my $base_url = "$CGI_BASE_DIR/$PROGRAM_FILE_NAME";
+
+
+  #### Define the available parameters
+  my @columns = qw ( lsid namespace object_id revision_id extended );
+  my %input_types = ();
+
+  #### Read the input parameters for each column
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters,
+    columns_ref=>\@columns,input_types_ref=>\%input_types);
+
+
+
+  #########################################################################
+  #### Process all the paramters
+
+  my %rs_params;
+
+  #### Process LSID
+  if ($parameters{lsid}) {
+    $sbeams->handle_error(
+      message => "Parameter 'lsid' not yet supported",
+      error_type => '',
+    );
+  }
+
+  #### Process namespace
+  my ($namespace,$module,$class);
+  if ($parameters{namespace}) {
+    $namespace = $parameters{namespace};
+    if ($namespace =~ /^\s*(\w+)\.(\w+)\.(\w+)\s*$/) {
+      if ($1 ne 'sbeams') {
+        $sbeams->handle_error(
+          message => "Expected first block of namespace to be 'sbeams' in ".
+		     "'$namespace'",
+          error_type => '',
+        );
+      }
+      $module = $2;
+      $class = $3;
+
+    } else {
+      $sbeams->handle_error(
+        message => "Unable to parse namespace '$namespace' into ".
+		   "sbeams.module.class",
+        error_type => '',
+      );
+    }
+  }
+
+
+  #### Process object_id
+  my $object_id;
+  if ($parameters{object_id}) {
+    $object_id = $parameters{object_id};
+    if ($object_id =~ /^\s*(\d+)\s*/) {
+      $object_id = $1;
+    } else {
+      $sbeams->handle_error(
+        message => "Unable to parse object_id '$object_id' as an integer",
+        error_type => '',
+      );
+    }
+  }
+
+
+  #### Process version_id
+  my $version_id;
+  if ($parameters{version_id}) {
+    $sbeams->handle_error(
+      message => "version_id is not currently supported",
+      error_type => '',
+    );
+  }
+
+
+  #### Make sure we have enough information
+  unless ($module) {
+    $sbeams->handle_error(
+      message => "module was not supplied",
+      error_type => '',
+    );
+  }
+
+  unless ($class) {
+    $sbeams->handle_error(
+      message => "class was not supplied",
+      error_type => '',
+    );
+  }
+
+
+  unless ($object_id) {
+    $sbeams->handle_error(
+      message => "object_id was not supplied",
+      error_type => '',
+    );
+  }
+
+
+  ##########################################
+  #### If a request for project information
+  if ($class eq 'project') {
+
+    #### First find the object if possible
+    my $sql = "SELECT * FROM $TB_PROJECT WHERE project_id='$object_id' ".
+	"AND record_status != 'D'";
+    my @rows = $sbeams->selectHashArray($sql);
+    enforceOneRow( rows => \@rows, module => $module, class => $class,
+		   object_id => $object_id );
+
+    #### Then check to make sure the user can access it
+    my @accessible_projects = $sbeams->getAccessibleProjects();
+    my $project_id;
+    my $is_permitted;
+    foreach $project_id ( sort(@accessible_projects) ) {
+      if ($project_id == $object_id) {
+	$is_permitted = 1;
+	last;
+      }
+    }
+    unless ($is_permitted) {
+      $sbeams->handle_error(
+        message => "Currently authenticated user '$current_username' does ".
+	  "not have access privilege to sbeams.$module.$class:$object_id",
+        error_type => 'access_denied',
+      );
+    }
+
+    my $suppress_footer = 0;
+    if ($parameters{extended}) {
+      $suppress_footer = 1;
+    }
+
+
+    print encodeAttributes(
+      class => $class,
+      object_id => $object_id,
+      hash => $rows[0],
+      suppress_footer => $suppress_footer,
+    );
+
+    return unless ($parameters{extended});
+
+
+    #### Get user project privilege information
+    $sql = qq ~
+      SELECT * FROM $TB_USER_PROJECT_PERMISSION
+       WHERE project_id='$object_id'
+	AND record_status != 'D'
+    ~;
+    my @rows = $sbeams->selectHashArray($sql);
+    foreach my $row ( @rows ) {
+      print encodeAttributes(
+        class => 'user_project_permission',
+        object_id => $row->{user_project_permission_id},
+        hash => $row,
+        suppress_header => 'Y',
+        suppress_footer => 'Y',
+      );
+    }
+
+
+    #### Get group project privilege information
+    $sql = qq ~
+      SELECT * FROM $TB_GROUP_PROJECT_PERMISSION
+       WHERE project_id='$object_id'
+	AND record_status != 'D'
+    ~;
+    my @rows = $sbeams->selectHashArray($sql);
+    foreach my $row ( @rows ) {
+      print encodeAttributes(
+        class => 'group_project_permission',
+        object_id => $row->{group_project_permission_id},
+        hash => $row,
+        suppress_header => 'Y',
+        suppress_footer => 'Y',
+      );
+    }
+
+
+    #### See if this project contains data in various modules
+    my ($modules, $mdata) = $sbeams->getDataFromModules(
+     projects => [ $object_id ],
+     modules => [ 'Microarray' ]
+    );
+
+    foreach my $module_name ( @{$modules} ) {
+      #print "  There is data in $module_name\n";
+    }
+
+
+    if ($parameters{extended}) {
+      print encodeAttributes(
+        class => $class,
+        object_id => $object_id,
+        hash => $rows[0],
+        only_footer => 'Y',
+      );
+    }
+
+    return;
+  }
+
+
+  ##########################################
+  #### If a request for contact information
+  if ($class eq 'contact') {
+
+    #### First find the object if possible
+    my $sql = "SELECT * FROM $TB_CONTACT WHERE contact_id='$object_id' ".
+	"AND record_status != 'D'";
+    my @rows = $sbeams->selectHashArray($sql);
+    enforceOneRow( rows => \@rows, module => $module, class => $class,
+		   object_id => $object_id );
+
+    print encodeAttributes(
+      class => $class,
+      object_id => $object_id,
+      hash => $rows[0],
+    );
+
+    return;
+  }
+
+
+  ##########################################
+  #### If a request for username information
+  if ($class eq 'user_login') {
+
+    #### First find the object if possible
+    my $sql = "SELECT * FROM $TB_USER_LOGIN WHERE contact_id='$object_id' ".
+	"AND record_status != 'D'";
+    my @rows = $sbeams->selectHashArray($sql);
+    enforceOneRow( rows => \@rows, module => $module, class => $class,
+		   object_id => $object_id );
+
+    print encodeAttributes(
+      class => $class,
+      object_id => $object_id,
+      hash => $rows[0],
+    );
+
+    return;
+  }
+
+
+  ##########################################
+  #### If a request for username information
+  if ($class eq 'work_group') {
+
+    #### First find the object if possible
+    my $sql = "SELECT * FROM $TB_WORK_GROUP WHERE work_group_id='$object_id' ".
+	"AND record_status != 'D'";
+    my @rows = $sbeams->selectHashArray($sql);
+    enforceOneRow( rows => \@rows, module => $module, class => $class,
+		   object_id => $object_id );
+
+    print encodeAttributes(
+      class => $class,
+      object_id => $object_id,
+      hash => $rows[0],
+    );
+
+    return;
+  }
+
+
+  ##########################################
+  #### If a request for Microarray.comparison_condition information
+  if ($module eq 'Microarray' && $class eq 'comparison_condition') {
+
+    #### First find the object if possible
+    use SBEAMS::Microarray::Tables;
+    my $sql = qq ~
+      SELECT * FROM $TBMA_COMPARISON_CONDITION
+       WHERE condition_id='$object_id'
+	 AND record_status != 'D'
+    ~;
+    my @rows = $sbeams->selectHashArray($sql);
+    enforceOneRow( rows => \@rows, module => $module, class => $class,
+		   object_id => $object_id );
+
+    print encodeAttributes(
+      class => $class,
+      object_id => $object_id,
+      hash => $rows[0],
+    );
+
+    return;
+  }
+
+
+  ##########################################
+  #### If we got here, there this is not a valid class
+  $sbeams->handle_error(
+    message => "sbeams.$module.$class is not a valid or supported namespace",
+    error_type => 'bad constraint',
+  );
+
+} # end handle_request
+
+
+
+###############################################################################
+# evalSQL
+#
+# Callback for translating Perl variables into their values,
+# especially the global table variables to table names
+###############################################################################
+sub evalSQL {
+  my $sql = shift;
+
+  return eval "\"$sql\"";
+
+} # end evalSQL
+
+
+###############################################################################
+# enforceOneRow
+#
+# Throw errors if 0 or more than 1 row returned
+###############################################################################
+sub enforceOneRow {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $rows = $args{'rows'} || die("parameter 'rows' not passed");
+  my $module = $args{'module'} || die("parameter 'module' not passed");
+  my $class = $args{'class'} || die("parameter 'class' not passed");
+  my $object_id = $args{'object_id'} ||
+    die("parameter 'object_id' not passed");
+
+  if (scalar(@{$rows}) == 0) {
+    $sbeams->handle_error(
+      message => "There is no $module.$class with object_id '$object_id'",
+      error_type => '',
+    );
+  }
+  if (scalar(@{$rows}) > 1) {
+    $sbeams->handle_error(
+      message => "Internal error: incorrect number of rows",
+      error_type => '',
+    );
+  }
+
+  return(1);
+
+} # end enforceOneRow
+
+
+###############################################################################
+# encodeAttributes
+#
+# Encode the attributes of the requested object
+###############################################################################
+sub encodeAttributes {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $hash = $args{'hash'} || die("parameter 'hash' not passed");
+  my $class = $args{'class'} || die("parameter 'class' not passed");
+  my $object_id = $args{'object_id'} ||
+    die("parameter 'object_id' not passed");
+  my $suppress_footer = $args{'suppress_footer'};
+  my $suppress_header = $args{'suppress_header'};
+  my $only_footer = $args{'only_footer'};
+
+  my $buffer = '';
+
+  if ($only_footer) {
+    if ($sbeams->output_mode() eq 'html') {
+      $buffer .= "</PRE>\n";
+    } elsif ($sbeams->output_mode() =~ /tsv/) {
+    } elsif ($sbeams->output_mode() =~ /xml/) {
+      $buffer .= "</data>\n";
+    }
+    return($buffer);
+  }
+
+
+  #### Generate headers as appropriate
+  unless ($suppress_header) {
+    if ($sbeams->output_mode() eq 'html') {
+      $buffer .= "<PRE>\n";
+    } elsif ($sbeams->output_mode() =~ /tsv/) {
+      $buffer .= "Content-type: text/plain\n\n";
+    } elsif ($sbeams->output_mode() =~ /xml/) {
+      $buffer .= "Content-type: text/xml\n\n";
+      $buffer .= "<?xml version=\"1.0\" standalone=\"yes\"?>\n";
+      $buffer .= "<data>\n";
+    }
+  }
+
+  if ($sbeams->output_mode() =~ /xml/) {
+    $buffer .= encodeXMLEntity(
+      entity_name => $class,
+      indent => 2,
+      attributes => $hash,
+    );
+    $buffer .= "</data>\n" unless ($suppress_footer);
+    return($buffer);
+  }
+
+  #### Print a header for the class and object_id
+  $buffer .= "====\t$class\t$object_id\n";
+
+  #### Print column headings
+  $buffer .= "column\tvalue\n";
+
+  #### Dump the attributes
+  while (my ($key,$value) = each %{$hash}) {
+    $value =~ s/\n/\\n/g;
+    $value =~ s/\r/\\r/g;
+    $value =~ s/\t/\\t/g;
+    $buffer .= "$key\t$value\n";
+  }
+
+  #### Print footers if necessary
+  if ($sbeams->output_mode() eq 'html' && ! $suppress_footer) {
+    $buffer .= "</PRE>\n";
+  }
+
+  #### Return the buffered output
+  return($buffer);
+
+} # end encodeAttributes
+
+
+
+###############################################################################
+# encodeXMLEntity
+###############################################################################
+sub encodeXMLEntity {
+  my %args = @_;
+  my $entity_name = $args{'entity_name'} || die("No entity_name provided");
+  my $indent = $args{'indent'} || 0;
+  my $entity_type = $args{'entity_type'} || 'openclose';
+  my $attributes = $args{'attributes'} || '';
+
+  #### Define a string from which to get padding
+  my $padstring = '                                                       ';
+  my $compact = 0;
+
+  #### Define a stack to make user we are nesting correctly
+  our @xml_entity_stack;
+
+  #### Close tag
+  if ($entity_type eq 'close') {
+
+    #### Verify that the correct item was on top of the stack
+    my $top_entity = pop(@xml_entity_stack);
+    if ($top_entity ne $entity_name) {
+      die("ERROR forming XML: Was told to close <$entity_name>, but ".
+          "<$top_entity> was on top of the stack!");
+    }
+    return substr($padstring,0,$indent)."</$entity_name>\n";
+  }
+
+  #### Else this is an open tag
+  my $buffer = substr($padstring,0,$indent)."<$entity_name";
+
+
+  #### encode the attribute values if any
+  if ($attributes) {
+
+    while (my ($name,$value) = each %{$attributes}) {
+      if ($value  && $value ne "")
+      {
+        if ($compact) {
+        $buffer .= qq~ $name="$value"~;
+        } else {
+        $buffer .= "\n".substr($padstring,0,$indent+8).qq~$name="$value"~;
+        }
+      }
+    }
+
+  }
+
+  #### If an open and close tag, write the trailing /
+  if ($entity_type eq 'openclose') {
+    $buffer .= "/";
+
+  #### Otherwise push the entity on our stack
+  } else {
+    push(@xml_entity_stack,$entity_name);
+  }
+
+
+  $buffer .= ">\n";
+
+  return($buffer);
+
+} # end encodeXMLEntity
+
+
+
