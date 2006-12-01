@@ -624,6 +624,7 @@ Current Project: $current_project_name ($current_project_id)
 ###############################################################################
 sub printPageFooter {
   my $self = shift;
+  $log->debug( "We be in the footer yo" );
   $self->display_page_footer(@_);
 }
 
@@ -1006,6 +1007,130 @@ sub get_content_type {
             cytoscape => 'application/x-java-jnlp-file'
                );
   return $ctypes{$type};
+}
+
+sub getTableXML {
+  my $self = shift;
+  my %args = @_;
+  for my $k ( qw(table_name col_names col_values ) ) {
+    return unless defined $args{$k};
+  }
+  my $xml =<<"  XML";
+<?xml version="1.0" standalone="yes"?>
+<data>
+  XML
+
+# Adapted to use encodeXMLEntity routine, below
+#  $xml .= "   <$args{table_name}";
+#  for ( my $i = 0; $i < scalar(@{$args{col_names}} ); $i++ ) {
+#    my $evalue = $self->escapeXML( value => $args{col_values}->[$i] );
+#    $xml .= qq/ $args{col_names}->[$i]="$evalue"/;
+#  }
+
+  my %attrs;
+  @attrs{@{$args{col_names}}} = @{$args{col_values}};
+  $xml .= $self->encodeXMLEntity( entity_name => $args{table_name},
+                                  entity_type => 'openclose',
+                                 stack_indent => 1,
+                                   attributes => \%attrs ) . "\n";
+  
+  $xml .= "</data>\n";
+  return $xml;
+}
+
+###############################################################################
+# encodeXMLEntity
+# 
+# creates a block of nicely formatted XML for a given entity and its associated
+# attributes
+#
+# @narg entity_name  - Required, name of XML entity
+# @narg indent       - Number of spaces to indent, default 0
+# @narg attributes   - Reference to hash of attributes
+# @narg entity_type  - Type of XML tag, one of open, openclose, or close.  If 
+#                      type is close, will ensure that this is correct tag to 
+#                      close (on top of the entity stack). default openclose
+# @narg compact      - Write attributes compactly (space delim), default 0
+# @narg stack_indent - Indent based on the depth of entity stack, default 0
+# @narg escape_vals  - Escape problem characters in attribute values ("<>'&)
+#                      default 1 (true)
+# 
+###############################################################################
+sub encodeXMLEntity {
+  my $self = shift;
+  my %args = @_;
+  my $entity_name = $args{'entity_name'} || die("No entity_name provided");
+  my $indent = $args{'indent'} || 0;
+  my $entity_type = $args{'entity_type'} || 'openclose';
+  my $attributes = $args{'attributes'} || {};
+  $args{stack_indent} || 0;
+  $args{escape_vals} = 0 if !defined $args{escape_vals};
+
+  #### Define a string from which to get padding
+  my $padstring = '                                                       ';
+  my $compact = $args{compact} || 0;
+  my $vindent = 8;  # Amount to indent attributes relative to entity 
+
+  #### Define a stack to make user we are nesting correctly
+  our @xml_entity_stack;
+  if ( !defined $args{indent} && $args{stack_indent} ) {
+    $indent = scalar(@xml_entity_stack);
+  }
+
+  #### Close tag
+  if ($entity_type eq 'close') {
+
+    #### Verify that the correct item was on top of the stack
+    my $top_entity = pop(@xml_entity_stack);
+    if ($top_entity ne $entity_name) {
+      die("ERROR forming XML: Was told to close <$entity_name>, but ".
+          "<$top_entity> was on top of the stack!");
+    }
+    return substr($padstring,0,$indent)."</$entity_name>\n";
+  }
+
+  #### Else this is an open tag
+  my $buffer = substr($padstring,0,$indent)."<$entity_name";
+
+
+  #### encode the attribute values if any
+  while (my ($name,$value) = each %{$attributes}) {
+    if ( defined $value ) {
+      $value = $self->escapeXML( value => $value );
+      if ($compact) {
+        $buffer .= qq~ $name="$value"~;
+      } else {
+        $buffer .= "\n".substr($padstring,0,$indent+$vindent).qq~$name="$value"~;
+      }
+    }
+  }
+
+  #### If an open and close tag, write the trailing /
+  if ($entity_type eq 'openclose') {
+    $buffer .= "/";
+
+  #### Otherwise push the entity on our stack
+  } else {
+    push(@xml_entity_stack,$entity_name);
+  }
+
+
+  $buffer .= ">\n";
+
+  return($buffer);
+
+} # end encodeXMLEntity
+
+sub escapeXML {
+  my $self = shift;
+  my %args = @_;
+  return '' unless defined $args{value};
+  $args{value} =~ s/\&/&amp;/gm;
+  $args{value} =~ s/\</&lt;g/gm;
+  $args{value} =~ s/\>/&gt;/gm;
+  $args{value} =~ s/"/&quot;/gm;
+  $args{value} =~ s/'/&apos;/gm;
+  return $args{value};
 }
 
 #+
