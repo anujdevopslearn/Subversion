@@ -43,7 +43,7 @@ sub printOptions {
 
 
   #### Print the current user context information
-  $sbeams->printUserContext();
+  $sbeams->printUserContext(); # honors output_mode
 
   #### Read in the default input parameters
   my %parameters;
@@ -173,6 +173,23 @@ sub printEntryForm {
        WHERE $PK_COLUMN_NAME='$parameters{$PK_COLUMN_NAME}'
     ~;
     my @rows = $sbeams->selectSeveralColumns($sql);
+
+    my $output_mode = $sbeams->output_mode();
+    my $content;
+    if ( $output_mode ne 'html') {
+      if ( $output_mode eq 'xml' ) {
+        $content = $sbeams->getTableXML( table_name => $TABLE_NAME,
+                                          col_names => \@columns,
+                                         col_values => $rows[0] );
+      } else {
+        my $sep = ( $output_mode =~ /^csv/ ) ? ',' : "\t";
+        $content = join( $sep, @columns ) . "\n";
+        $content .= join( $sep, @{$rows[0]} ) . "\n";
+      }
+      print $sbeams->get_http_header() if $sbeams->invocation_mode() eq 'http';
+      print $content;
+      return;
+    }
 
     # Found cases where this throws an error, next stmt throws perl error.
     if ( !scalar @rows ) { 
