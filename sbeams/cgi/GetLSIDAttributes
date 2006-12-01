@@ -540,7 +540,7 @@ sub encodeAttributes {
   }
 
   if ($sbeams->output_mode() =~ /xml/) {
-    $buffer .= encodeXMLEntity(
+    $buffer .= $sbeams->encodeXMLEntity(
       entity_name => $class,
       indent => 2,
       attributes => $hash,
@@ -577,6 +577,9 @@ sub encodeAttributes {
 
 ###############################################################################
 # encodeXMLEntity
+#
+# Depricated, now using $sbeams->encodeXMLEntity() routine
+#
 ###############################################################################
 sub encodeXMLEntity {
   my %args = @_;
@@ -589,7 +592,7 @@ sub encodeXMLEntity {
   my $padstring = '                                                       ';
   my $compact = 0;
 
-  #### Define a stack to make user we are nesting correctly
+  #### Define a stack to make sure we are nesting correctly
   our @xml_entity_stack;
 
   #### Close tag
