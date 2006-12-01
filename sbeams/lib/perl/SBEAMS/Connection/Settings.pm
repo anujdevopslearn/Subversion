@@ -331,6 +331,16 @@ sub getSite {
   return $site;
 }
 
+sub getServerURI {
+  my $sbeams = shift;
+  return $SERVER_BASE_DIR;
+}
+
+sub getCGIBaseURI {
+  my $sbeams = shift;
+  return $SERVER_BASE_DIR . $CGI_BASE_DIR;
+}
+
 
 ###############################################################################
 # readMainConfFile: Read the contents of the main conf file
