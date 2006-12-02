@@ -30,7 +30,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -167,7 +167,7 @@ sub handle_request {
   if ($parameters{lsid}) {
     $sbeams->handle_error(
       message => "Parameter 'lsid' not yet supported",
-      error_type => '',
+      error_type => 'Bad Constraint',
     );
   }
 
@@ -249,9 +249,34 @@ sub handle_request {
   #### If a request for project information
   if ($class eq 'project') {
 
+  my @project_fields = qw(project_id name project_tag description
+     budget project_status uri additional_information comment 
+     date_created date_modified record_status );
+
+#     modified_by_id 
+#     owner_group_id 
+#     created_by_id 
+#      PI_contact_id 
+
+    my $fields = 'P.' . join( ", P.", @project_fields );
+#( SELECT first_name || ' ' || last_name || ' (' || organization || ' )' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON C.organization_id = O.organization_id WHERE P.created_by_id = C.contact_id ) AS Created_by,
+#( SELECT first_name || ' ' || last_name || ' (' || organization || ' )' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON C.organization_id = O.organization_id WHERE P.modified_by_id = C.contact_id ) AS Modified_by,
+#( SELECT work_group_name FROM $TB_WORK_GROUP W WHERE W.work_group_id = work_group_id ) AS Owner_group 
+      
     #### First find the object if possible
-    my $sql = "SELECT * FROM $TB_PROJECT WHERE project_id='$object_id' ".
-	"AND record_status != 'D'";
+    my $sql =<<"    END_SQL";
+    SELECT $fields, 
+    ( SELECT first_name || ' ' || last_name || ' (' || organization || ' )' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON C.organization_id = O.organization_id WHERE PI_contact_id = C.contact_id ) AS PI_contact,
+    ( SELECT first_name || ' ' || last_name || ' (' || organization || ' )' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON C.organization_id = O.organization_id WHERE P.created_by_id = C.contact_id ) AS Created_by,
+    ( SELECT first_name || ' ' || last_name || ' (' || organization || ' )' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON C.organization_id = O.organization_id WHERE P.modified_by_id = C.contact_id ) AS Modified_by,
+    ( SELECT work_group_name FROM $TB_WORK_GROUP W WHERE W.work_group_id = owner_group_id ) AS Owner_group 
+    FROM $TB_PROJECT P
+    WHERE project_id=$object_id 
+	  AND record_status != 'D'
+    END_SQL
+
+#    my $sql = " SELECT * FROM $TB_PROJECT P WHERE project_id=$object_id AND record_status != 'D'";
+
     my @rows = $sbeams->selectHashArray($sql);
     enforceOneRow( rows => \@rows, module => $module, class => $class,
 		   object_id => $object_id );
@@ -514,12 +539,13 @@ sub encodeAttributes {
   my $only_footer = $args{'only_footer'};
 
   my $buffer = '';
+  my $output_mode = $sbeams->output_mode();
 
   if ($only_footer) {
-    if ($sbeams->output_mode() eq 'html') {
+    if ($output_mode eq 'html') {
       $buffer .= "</PRE>\n";
-    } elsif ($sbeams->output_mode() =~ /tsv/) {
-    } elsif ($sbeams->output_mode() =~ /xml/) {
+    } elsif ($output_mode =~ /tsv/) {
+    } elsif ($output_mode =~ /xml/) {
       $buffer .= "</data>\n";
     }
     return($buffer);
@@ -527,27 +553,22 @@ sub encodeAttributes {
 
 
   #### Generate headers as appropriate
-  unless ($suppress_header) {
-    if ($sbeams->output_mode() eq 'html') {
+  unless ($suppress_header && 0) {
+    $buffer .= $sbeams->get_http_header() unless $output_mode eq 'html'; 
+    if ($output_mode eq 'html') {
       $buffer .= "<PRE>\n";
-    } elsif ($sbeams->output_mode() =~ /tsv/) {
-      $buffer .= "Content-type: text/plain\n\n";
-    } elsif ($sbeams->output_mode() =~ /xml/) {
-      $buffer .= "Content-type: text/xml\n\n";
+    } elsif ($output_mode =~ /tsv/) {
+    } elsif ($output_mode =~ /xml/) {
       $buffer .= "<?xml version=\"1.0\" standalone=\"yes\"?>\n";
       $buffer .= "<data>\n";
+      $buffer .= $sbeams->encodeXMLEntity( entity_name => $class,
+                                                indent => 2,
+                                            attributes => $hash );
+      $buffer .= "</data>\n" unless ($suppress_footer);
+      return($buffer);
     }
   }
 
-  if ($sbeams->output_mode() =~ /xml/) {
-    $buffer .= $sbeams->encodeXMLEntity(
-      entity_name => $class,
-      indent => 2,
-      attributes => $hash,
-    );
-    $buffer .= "</data>\n" unless ($suppress_footer);
-    return($buffer);
-  }
 
   #### Print a header for the class and object_id
   $buffer .= "====\t$class\t$object_id\n";
@@ -564,7 +585,7 @@ sub encodeAttributes {
   }
 
   #### Print footers if necessary
-  if ($sbeams->output_mode() eq 'html' && ! $suppress_footer) {
+  if ($output_mode eq 'html' && ! $suppress_footer) {
     $buffer .= "</PRE>\n";
   }
 
