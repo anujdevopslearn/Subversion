@@ -89,10 +89,11 @@ sub invocation_mode {
     $invocation_mode = $new_value;
 
   #### Otherwise, verify that we have a value or set a blank
-  } else {
-    #die "$METHOD_NAME: value has not yet been set!"
-    $invocation_mode = ""
-      unless ($invocation_mode);
+  } elsif ( !$invocation_mode ) {
+    $invocation_mode = ( $ENV{REMOTE_ADDR} ) ? 'http' : 'user';
+    if ( defined $q ) {
+      $invocation_mode = 'https' if $q->url() =~ /https/;
+    }
   }
 
   #### Return the current value in either case
@@ -117,28 +118,29 @@ sub output_mode {
 
   my $METHOD_NAME = "output_mode()";
 
-  #### If a new value was supplied, set it
-  if ($new_value) {
-    die "$METHOD_NAME: Illegal value '$new_value'"
-      unless ($new_value eq 'html' || $new_value eq 'interactive' ||
-              $new_value eq 'tsv' || $new_value eq 'tsvfull' ||
-              $new_value eq 'csv' || $new_value eq 'csvfull' ||
-              $new_value eq 'xml' ||
-              $new_value eq 'cytoscape' ||
-              $new_value eq 'boxtable' ||
-              $new_value eq 'print' ||
-	      $new_value eq 'excel' || $new_value eq 'excelfull'
-      );
-    $output_mode = $new_value;
+  my @legal_modes = (qw( html interactive tsv tsvfull csv csvfull xml cytoscape
+                         boxtable print excel excelfull) );
 
+  #### If a new value was supplied, set it
+  if ( $new_value ) {
+    if ( grep(/^$new_value$/, @legal_modes) ) {
+    $output_mode = $new_value;
+    } else {
+     $output_mode = ( $self->invocation_mode() eq 'http' ) ? 'html' : 'tsv';
+     $self->handle_error( error_type => 'bad constraint',
+                             message => "'$new_value' is not a recognized output mode",
+                         output_mode => $output_mode, 
+                        force_header => 1 );
+    }
   #### Otherwise, verify that we have a value
   } else {
     unless ($output_mode) {
+      $output_mode = 'interactive';
+      $log->printStack();
       print "$METHOD_NAME: value has not yet been set!  This should never ".
         "happen, but I will set it to interactive just to see where this ".
         "ends up.  It is almost surely a bug that needs ".
         "to be reported.<BR><BR>\n\n";
-      $output_mode = $self->output_mode('interactive');
     }
   }
 
