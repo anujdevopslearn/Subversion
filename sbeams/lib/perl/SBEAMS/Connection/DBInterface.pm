@@ -4394,7 +4394,7 @@ sub parse_input_parameters {
     if ( ($key,$value) = split("=",$element) ) {
       my $tmp = $value;
       $tmp = '' unless (defined($tmp));
-      print "$key = '$tmp'<BR>\n";
+      #print "$key = '$tmp'<BR>\n";
       $cmdln_parameters{$key} = $value;
       $ref_parameters->{$key} = $value;
       $n_cmdln_params_found++;
