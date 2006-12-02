@@ -26,6 +26,9 @@ use Exporter;
 use CGI;
 use CGI::Carp;
 
+use SBEAMS::Connection::Log;
+my $log = SBEAMS::Connection::Log->new();
+
 
 
 
@@ -114,10 +117,13 @@ sub getStackTrace {
 sub handle_error {
   my $self = shift;
   my %args = @_;
-  $args{error_type} ||= 'unknown_error';
-  $args{out_mode}   ||= $sbeams->get_output_mode();
-  $args{message}    ||= 'Unknown problem';
-  $args{state}      ||= 'SBEAMS_ERROR';
+  $args{error_type}   ||= 'unknown_error';
+  $args{out_mode}     ||= $sbeams->get_output_mode();
+  $args{message}      ||= 'Unknown problem';
+  $args{state}        ||= 'SBEAMS_ERROR';
+  $args{force_header} ||= 0;
+
+  $args{type} = $args{error_type};
 
   # Use default routine if HTML and sbeams_error
   if ($args{out_mode} eq 'html' && $args{error_type} =~ /unknown|sbeams_err/) {
@@ -128,32 +134,59 @@ sub handle_error {
   
   my $ctype = '';
   my $content = '';
-  my @headings = qw( State Code Type Message );
+  my @headings = qw( state code type message );
+  my @uc_headings = map( ucfirst($_), @headings );
 
   if ( $args{out_mode} =~ /tsv|tsvfull/ ) {
     $ctype = $sbeams->get_content_type( 'tsv' );
-    $content = join( "\t", @headings ) . "\n" .
-               join( "\t", @args{qw(state code error_type message)} );
+    $content = join( "\t", @uc_headings ) . "\n" .
+               join( "\t", @args{@headings} );
   } elsif ( $args{out_mode} =~ /csv|csvfull/ ) {
     $ctype = $sbeams->get_content_type( 'csv' );
     $content = join( ',', @headings ) . "\n" .
-               join( ',', @args{qw(state code error_type message)} );
+               join( ',', @args{@headings} );
   } elsif ( $args{out_mode} =~ /html/ ) {
-    $content = '<TABLE><TR><TD>';
-    $content .= join( "</TD><TD>", @headings ) . '</TD></TR><TR><TD>';
-    $content .= join( "</TD><TD>", @args{qw(state code error_type message)} );
-    $content .= '</TD></TR></TABLE>';
+    # It seems like this should be handled here, since it is for other output
+    # types.  DSC 12-2006
+    $ctype = $sbeams->get_content_type( 'html' ) if $args{force_header};
+
+#   Changed formatting to show col: value as a horizontal list.
+#    $content = '<TABLE BORDER=1 WIDTH="100%"><TR><TD>';
+#    $content .= join( "</TD><TD>", @headings ) . '</TD></TR><TR><TD>';
+#    $content .= join( "</TD><TD>", @args{qw(state code error_type message)} );
+#    $content .= '</TD></TR></TABLE>';
+
+    $content = $self->getGifSpacer(720) . '<TABLE WIDTH="100%" BORDER=1>';
+#    $content = '<TABLE WIDTH="100%">';
+    for ( my $j = 0; $j <= $#headings; $j++ ) {
+      $content .= "<TR><TD ALIGN=RIGHT WIDTH='10%'><B>$uc_headings[$j]:</B></TD>";
+      $content .= "<TD ALIGN=LEFT>$args{$headings[$j]}</TD></TR>";
+    }
+    $content .= '</TABLE>';
+  } elsif ( $args{out_mode} =~ /xml/ ) {
+    # Added XML error output, chose to use state as entity name, and the 
+    # other information as attributes.
+    $ctype = $sbeams->get_content_type( 'xml' );
+    $content = $self->getTableXML( table_name => $args{state},
+                                    col_names => [@uc_headings[1..3]],
+                                   col_values => [@args{@headings[1..3]}]
+                                 );
   } elsif ( $args{out_mode} =~ /interactive/ ) {
+    # Add this content type setting, presumably won't be a problem since 
+    # interactive implies user invocation_mode. 
+    $ctype = $sbeams->get_content_type( 'text' );
     $content = join( "\t", @headings ) . "\n" .
                join( "\t", @args{qw(state code error_type message)} );
   } else {
+    $ctype = $sbeams->get_content_type( 'text' );
     $content = join( "\t", @headings ) . "\n" .
                join( "\t", @args{qw(state code error_type message)} );
   }
 
   # Are we over-reliant on this?
-  if ( $ENV{REMOTE_ADDR} && $ctype ) {
-    print $sbeams->get_http_header( mode => $args{out_mode} ); 
+  if ( $ctype && $self->invocation_mode() eq 'http' ) {
+#    print $sbeams->get_http_header( mode => $args{out_mode} ); 
+    print $sbeams->get_http_header(); 
   }
   print "$content\n";
   exit;
