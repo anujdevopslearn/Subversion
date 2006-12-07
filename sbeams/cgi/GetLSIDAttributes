@@ -266,10 +266,10 @@ sub handle_request {
     #### First find the object if possible
     my $sql =<<"    END_SQL";
     SELECT $fields, 
-    ( SELECT first_name || ' ' || last_name || ' (' || organization || ' )' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON C.organization_id = O.organization_id WHERE PI_contact_id = C.contact_id ) AS PI_contact,
-    ( SELECT first_name || ' ' || last_name || ' (' || organization || ' )' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON C.organization_id = O.organization_id WHERE P.created_by_id = C.contact_id ) AS Created_by,
-    ( SELECT first_name || ' ' || last_name || ' (' || organization || ' )' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON C.organization_id = O.organization_id WHERE P.modified_by_id = C.contact_id ) AS Modified_by,
-    ( SELECT work_group_name FROM $TB_WORK_GROUP W WHERE W.work_group_id = owner_group_id ) AS Owner_group 
+    ( SELECT first_name || ' ' || last_name || ' (' || organization || ')' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON C.organization_id = O.organization_id WHERE PI_contact_id = C.contact_id ) AS pi_contact,
+    ( SELECT first_name || ' ' || last_name || ' (' || organization || ')' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON C.organization_id = O.organization_id WHERE P.created_by_id = C.contact_id ) AS created_by,
+    ( SELECT first_name || ' ' || last_name || ' (' || organization || ')' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON C.organization_id = O.organization_id WHERE P.modified_by_id = C.contact_id ) AS modified_by,
+    ( SELECT work_group_name FROM $TB_WORK_GROUP W WHERE W.work_group_id = owner_group_id ) AS owner_group 
     FROM $TB_PROJECT P
     WHERE project_id=$object_id 
 	  AND record_status != 'D'
