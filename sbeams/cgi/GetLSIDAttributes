@@ -75,6 +75,8 @@ if ($DEBUG) {
 ###############################################################################
 # Set Global Variables and execute main()
 ###############################################################################
+my $headers_printed = 0;
+
 main();
 exit(0);
 
@@ -553,7 +555,9 @@ sub encodeAttributes {
 
 
   #### Generate headers as appropriate
-  unless ($suppress_header && 0) {
+  unless ($suppress_header || $headers_printed ) {
+    $headers_printed++;
+    # This is a problem waiting to happen.  HTML headers are handled elsewhere
     $buffer .= $sbeams->get_http_header() unless $output_mode eq 'html'; 
     if ($output_mode eq 'html') {
       $buffer .= "<PRE>\n";
@@ -561,14 +565,16 @@ sub encodeAttributes {
     } elsif ($output_mode =~ /xml/) {
       $buffer .= "<?xml version=\"1.0\" standalone=\"yes\"?>\n";
       $buffer .= "<data>\n";
+    }
+  }
+
+  if ($output_mode =~ /xml/) {
       $buffer .= $sbeams->encodeXMLEntity( entity_name => $class,
                                                 indent => 2,
                                             attributes => $hash );
       $buffer .= "</data>\n" unless ($suppress_footer);
       return($buffer);
-    }
   }
-
 
   #### Print a header for the class and object_id
   $buffer .= "====\t$class\t$object_id\n";
