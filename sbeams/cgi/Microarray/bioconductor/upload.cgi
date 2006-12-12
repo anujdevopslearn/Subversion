@@ -131,7 +131,6 @@ exit(0);
 # Call $sbeams->Authenticate() and exit if it fails or continue if it works.
 ###############################################################################
 sub main {
-#$sbeams->printCGIParams($cgi);
 
 	#### Do the SBEAMS authentication and exit if a username is not returned
 	exit
@@ -147,6 +146,13 @@ sub main {
 	#### Read in the default input parameters
 	my %parameters;
 	my $submit = $cgi->param('Submit');
+
+  # Second submit botton which leads to gene pattern pipeline pages. 
+  if ( !$submit ) {
+    $submit = $cgi->param('gpSubmit');
+#   log->debug($submit);
+  }
+
 	my $token = $cgi->param('token');
 	my $delete_sub = $cgi->param('delete_sub');
 	
@@ -186,10 +192,17 @@ sub main {
 	    showjob($token);
 	} elsif (defined($submit) && $submit eq "Complete File Grouping") {
      affy($token);
+#	} elsif (defined($submit) && $submit eq "Normalize Exon Arrays") {
+	} elsif (defined($submit) && $submit eq "Exon_Array_Analysis") {
+		$sbeamsMOD->printPageHeader();
+    my $content = launch_gp_pipeline($token);
+		handle_request( ref_parameters => \%parameters, content => $content );
+		$sbeamsMOD->printPageFooter();
 	} elsif (defined($submit) && $submit eq "multtest") {
 		multtest($token);
 	} elsif (defined($submit) && $submit eq "annaffy") {
 		annaffy($token);
+
 ##Delete setup
 	}elsif(defined($delete_sub) 
 			&& $delete_sub eq "GO"){
@@ -274,6 +287,11 @@ sub handle_request {
   }
 
 	print "$tabmenu";
+
+  if ( $args{content} ) {
+    print $args{content};
+    return;
+  }
 
   my $project = $sbeams->getCurrent_project_id();
   $data_analysis_o = $affy_o->check_for_analysis_data( project_id => $project );
@@ -546,7 +564,7 @@ END
       # Start the form to choose the arrays 
 			print $cgi->start_form( -name   => 'all_arrays', 
 				-action => "$CGI_BASE_DIR/Microarray/bioconductor/upload.cgi",
-			);
+        -onsubmit => 'return check_array_types()' ); 
 
       $sbeamsMOD->make_checkbox_control_table(
         box_names          => \@downloadable_file_types,
@@ -632,15 +650,101 @@ END
         base_url             => "$base_url?token=".$fm->token()."&apply_action_hidden=$all_project_ids&analysis_id=$analysis_id",
       );
         
+
       print $cgi->hidden( -name   => 'token',
                          -default => $fm->token(),),
             $cgi->hidden(-name   =>'analysis_id',
                          -default =>$fm->analysis_id(),),
             $cgi->hidden(-name  =>"apply_action_hidden",
                          -value =>"$all_project_ids"),
+            $cgi->hidden(-name   =>'array_type',
+                         -value  => 'naiive' ),
+            $cgi->hidden(-name   =>'analysis_type',
+                         -value  => 'naiive' ),
             $cgi->br,
             $cgi->submit( -name  => 'Submit',
-                          -value => 'Add Arrays' ); 
+                          -value => 'Add Arrays',
+                          -title => 'Make file groups for normalization and analysis',
+                          -onclick => "set_analysis_type('file_grouping')" ); 
+
+      my $array_types = get_array_types( $resultset_ref );
+      my $exon_types  = get_exon_types();
+
+      print <<"      END";
+      <SCRIPT>
+        function set_analysis_type(a_type) {
+          document.all_arrays.analysis_type.value = a_type;
+        }
+      function check_array_types(){
+        var checkboxes = document.all_arrays.get_all_files;
+        $array_types
+        var type = 'naiive';
+        for ( var i = 0; i < checkboxes.length; i++ ) {
+          if ( checkboxes[i].checked ) {
+            if ( type == 'naiive' ) {
+              type = arraytypes[checkboxes[i].value];
+            } else if ( type != arraytypes[checkboxes[i].value] ) {
+              // alert and return if we have more than one
+              alert ( "All arrays must be of the same type for this analysis" );
+              return false;
+            }
+          }
+        }
+        if ( type == 'naiive' ) {
+          alert( "You must select at least one array" );
+          return false;
+        }
+        document.all_arrays.array_type.value = type;
+
+        // FIXME make this configurable
+        var exon_allowed = new Object;
+        $exon_types
+
+        var filegroup_allowed = new Object;
+        filegroup_allowed['HG-U133_Plus_2'] = true;
+        filegroup_allowed['Mouse430_2'] = true;
+        filegroup_allowed['YG_S98'] = true;
+        filegroup_allowed['HG-Focus'] = true;
+        filegroup_allowed['HG_U95A'] = true;
+        filegroup_allowed['HG-U133A'] = true;
+        filegroup_allowed['Hu6800'] = true;
+        filegroup_allowed['MG_U74Av2'] = true;
+        filegroup_allowed['MG_U74Bv2'] = true;
+        filegroup_allowed['MG_U74Cv2'] = true;
+        filegroup_allowed['HG-U133A_2'] = true;
+        filegroup_allowed['Rat230_2'] = true;
+        filegroup_allowed['Rhesus'] = true;
+        filegroup_allowed['ATH1-121501'] = true;
+
+        if ( document.all_arrays.analysis_type.value == 'exon_array_pipeline' ) {
+          if ( !exon_allowed[type] ) {
+            alert ( "Selected array type " + type + " is not valid for this type of analysis"  );
+            return false;
+          }
+         // No longer going to redirect from here
+         // alert( "You will be redirected to the Gene Pattern server for this analysis" );
+         // document.all_arrays.action="http://deimos:8081/gptrigger/ExonArrayAnalysis";
+ 
+        } else if ( document.all_arrays.analysis_type.value == 'file_grouping' ) {
+          if ( !filegroup_allowed[type] ) {
+            alert ( "Selected array type " + type + " is not valid for this type of analysis" );
+            return false;
+          }
+        } else {
+          alert("Unknown analysis type, quitting" );
+          return false;
+        }
+        return true;
+      }
+      </SCRIPT>
+      END
+
+      # Show a submit button to the exon array pipeline only if we have qualified arrays.
+      if ( has_exon_arrays( $array_types ) ) {
+        print <<"        END";
+        <INPUT TYPE=SUBMIT NAME=gpSubmit TITLE='Submit job to GenePattern exon array analysis pipeline' VALUE=Exon_Array_Analysis ONCLICK="set_analysis_type('exon_array_pipeline')"> 
+        END
+      }
       
       print $cgi->reset;
       
@@ -675,6 +779,41 @@ END
       
 	}
 
+sub get_array_types {
+  my $rs_ref = shift;
+  my $dataref = $rs_ref->{data_ref};
+  my $colref = $rs_ref->{column_hash_ref};
+  my $arraytypes = "var arraytypes = new Object;\n";
+  for my $row ( @$dataref ) {
+    my $design = $row->[$colref->{'Affy Chip Design'}];
+    my $chipname = $row->[$colref->{'Array_ID'}] . '__CEL';
+    $arraytypes .= "          arraytypes['$chipname'] = '$design';\n";
+  }
+  return $arraytypes;
+}
+
+sub get_exon_types {
+  my @exon_names = exon_array_names();
+  my $exon_types = '';
+  for my $en ( @exon_names ) {
+    $exon_types .= q(exon_allowed[') . $en . q('] = true;) . "\n";
+  }
+  return $exon_types;
+#        exon_allowed['MoEx-10-st-v1'] = true;
+}
+
+sub exon_array_names {
+  return qw(MoEx-1_0-st-v1 MoEx-10-st-v1 HuEx-1_0-st-v2);
+}
+
+sub has_exon_arrays {
+  my $array_types = shift;
+  my @names = exon_array_names();
+  for my $name ( @names ) {
+    return 1 if $array_types =~ /$name/;
+  }
+  return 0;
+}
 
 #### Subroutine: start#################################################
 # Session new session
@@ -922,6 +1061,167 @@ my  $fm = new FileManager;
 }
 
 
+#+
+# launch_gp_pipeline
+#-
+sub launch_gp_pipeline {
+
+# create normalization record
+# print form with action => deimos
+# sayonara!
+
+# Sort out the parameters that were sent over.
+	my $parent_analysis_id = $cgi->param('analysis_id');
+	unless ($parent_analysis_id =~ /^\d/){
+		error("Cannot find parent analysis id.  affy sub FOUND '$parent_analysis_id' ");
+		return;
+	}
+	my @param_keys = $cgi->param;
+	
+	my @sample_groups = ();
+	my @filenames = $cgi->param('get_all_files');
+#  $log->debug( "files are: " . join(':', @filenames) );
+	
+	my $parent_token = $cgi->param('token');
+#  $log->debug( "Token is $parent_token" );
+	
+  # Need global $fm...
+  $fm = new FileManager;
+  $fm->init_with_token($Site::BC_UPLOAD_DIR, $parent_token);
+
+# Write symlinks into analysis directory
+  upload_files();
+
+#  my @p = $q->param();
+#  for my $p ( @p ) { $log->debug( "param: $p => " . $q->param($p) ); }
+  
+  # We haven't gone through the grouping process, use a constant value here.
+  my $sample_group = 'normalization_only';
+	my $reference_sample_group = $sample_group;
+	
+  ### Resgister the start of a normalization run	
+	my $user_id = $affy_o->get_user_id_from_user_name($current_username);
+	my $project_id	= $sbeams->getCurrent_project_id();
+
+  # Create new directory/bioC token 
+	my $token = "affynorm-" . rand_token();	
+  my $analysis_id = 123456;
+	my $error = create_directory($token);
+	error($error) if $error;
+	
+  # Create analysis record in the database.
+	my $rowdata_ref = {folder_name => $token,
+					   user_id => $user_id,
+					   project_id => $project_id,
+					   parent_analysis_id => $parent_analysis_id,
+					   affy_analysis_type_id => $affy_o->find_analysis_type_id("normalization"),
+					   analysis_description => "Adding New Exon Array Normalization",
+					  };
+	
+	my $analysis_id = $affy_o->add_analysis_session(rowdata_ref => $rowdata_ref);
+	
+  # create some semblance of an XML grouping file
+	my $path = "$RESULT_DIR/$token";
+	my $xml_out_file = "$path/$SAMPLE_GROUP_XML";
+	my $date = `date`;
+	my $output = new IO::File(">$xml_out_file");
+
+	my $wr = new XML::Writer (  OUTPUT      => $output, 
+                              DATA_MODE   => 'true', 
+                              DATA_INDENT => 2, 
+                              NEWLINED    => 'true' );
+
+	$wr->startTag('file_sample_group_info');
+		
+		$wr->startTag('date');
+			$wr->characters($date);
+		$wr->endTag();
+		$wr->startTag('analysis_id');
+			$wr->characters($analysis_id);
+		$wr->endTag();
+		$wr->startTag('previous_token',  'analysis_id'=>$parent_analysis_id);
+			$wr->characters($parent_token);
+		$wr->endTag();
+		$wr->startTag('reference_sample_group');
+			$wr->characters($reference_sample_group);
+		$wr->endTag();
+		
+		$wr->startTag('sample_groups');
+			for (my $i=0; $i <= $#filenames ; $i++){
+				my $filename = $filenames[$i];
+				my $sample_group_name = $sample_group;
+				
+				$wr->startTag('file_name', 'sample_group_name'=>$sample_group_name);
+					$wr->characters($filename);
+				$wr->endTag();
+			}
+		$wr->endTag();
+	$wr->endTag();
+			
+	$wr->end();
+	$output->close();
+
+## Print form with mapping database select list, submits to exon pipeline
+  # Gather missing params and other values
+  my %cookie = $q->cookie( 'SBEAMSName' );
+  my $cookie = $q->cookie( -name => 'SBEAMSName',
+                           -path => $HTML_BASE_DIR,
+                          -value => \%cookie );
+  my $email = $sbeams->getEmailAddress() || $sbeams->getCurrent_username();
+  my $db_map_select = get_db_map_select();
+  my $file_input = '';
+  for my $file ( @filenames ) {
+    $file_input .= "<INPUT TYPE=hidden NAME=get_all_files VALUE=$file>\n";
+  }
+  my $analysis_type = $cgi->param('analysis_type');
+  my $submit = $cgi->param('gpSubmit');
+  my $gp_trigger_URL='http://deimos:8081/gptrigger/ExonArrayAnalysis';
+#  my $gp_trigger_URL='/devDC/sbeams/cgi/showparams.cgi';
+
+  # Assemble FORM HTML
+  my $gp_pipeline_form =<<"  END_FORM";
+  You are submitting a job to the Gene Pattern analysis pipeline, please select a mapping
+  database.  This is the database to which the Exon array probe sequences will be mapped 
+  for this analysis.
+  <BR>
+  <BR>
+  <FORM NAME=gp_exon_array ACTION='$gp_trigger_URL' METHOD=POST>
+  <B>Mapping database:</B> $db_map_select
+  <BR>
+  <BR>
+  $file_input
+  <INPUT TYPE=hidden NAME=CEL_token VALUE='$parent_token'>
+  <INPUT TYPE=hidden NAME=parent_analysis_id VALUE='$parent_analysis_id'>
+  <INPUT TYPE=hidden NAME=normalization_token VALUE='$token'>
+  <INPUT TYPE=hidden NAME=analysis_id VALUE='$analysis_id'>
+  <INPUT TYPE=hidden NAME=project_id VALUE='$project_id'>
+  <INPUT TYPE=hidden NAME=user_email VALUE='$email'>
+  <INPUT TYPE=hidden NAME=cookie VALUE='$cookie'>
+  <INPUT TYPE=hidden NAME=analysis_type VALUE='$analysis_type'>
+  <INPUT TYPE=submit NAME=gpSubmit VALUE='Submit job'><INPUT TYPE=reset>
+  </FORM>
+  END_FORM
+ 
+  # Send it back for rendering
+  return $gp_pipeline_form;
+}
+
+#+
+# Returns select list with current Exon array mapping dbs
+#-
+sub get_db_map_select {
+  return <<"  END";
+  <SELECT NAME=db_name>
+  <OPTION VALUE='ENSEMBL'>ENSEMB</OPTION>
+  <OPTION VALUE='ENSEMBL gene'>ENSEMBL gene</OPTION>
+  <OPTION VALUE='ENSEMBL transcript prediction'>ENSEBML transcript prediction</OPTION>
+  <OPTION VALUE='Entrez gene'>Entrez gene</OPTION>
+  <OPTION VALUE='RefSeq'>RefSeq</OPTION>
+  <OPTION VALUE='UniGene'>UniGene</OPTION>
+  </SELECT>
+  END
+}
+
 #### Subroutine: multtest#################################################
 # Use checked file with multtest
 #####################################################
@@ -978,6 +1278,7 @@ sub write_ops {
   my $submit = shift || return;
   return ( 'Complete File Grouping',
            'Continue File Grouping',
+           'Exon_Array_Analysis',
            'multtest',
            'annaffy',
 		       'files_sample_group_pairs',
@@ -1283,7 +1584,7 @@ sub order_all_files{
       push @final_file_order_sorted, $file;
     }
   }
-  $log->debug("FINAL FILE ORDER". Dumper(\@final_file_order_sorted));
+#  $log->debug("FINAL FILE ORDER". Dumper(\@final_file_order_sorted));
 	
   unless (  @final_file_order_sorted == @files) {
     error("Mismatch in the number of files selected.") 
@@ -1590,21 +1891,22 @@ sub show_previous_normalization_groups{
 # upload the files requested by the user to a particular direcotry
 ###############################################################################
 sub upload_files {
-	my @array_file_names = $cgi->param('get_all_files');
-		my $path = $fm->path();
+  my @array_file_names = $cgi->param('get_all_files');
+  my $path = $fm->path();
+  my $return;
+
+  foreach  my $array_info (@array_file_names){
+    my ($arry_id, $file_ext) = split /__/, $array_info;  #example array_info "134__CEL"
+    my ($affy_file_root, $file_path) =	$sbeams_affy_groups->get_file_path_from_id(affy_array_id=>$arry_id);
+    my $cel_file = "$file_path/$affy_file_root.$file_ext";
+    #my $out_path = "$path/$affy_file_root.$file_ext";
+    my $out_path = "$path/$affy_file_root.$file_ext";
 		
-	foreach  my $array_info (@array_file_names){
-		my ($arry_id, $file_ext) = split /__/, $array_info;  #example array_info "134__CEL"
-		my ($affy_file_root, $file_path) =	$sbeams_affy_groups->get_file_path_from_id(affy_array_id=>$arry_id);
-		my $cel_file = "$file_path/$affy_file_root.$file_ext";
-		#my $out_path = "$path/$affy_file_root.$file_ext";
-		my $out_path = "$path/$affy_file_root.$file_ext";
-		
-		my $command_line = "ln -s $cel_file $path";
-		#print "ln COMMAND LINE $command_line<br>";
-		my $return = system($command_line);
-		#print "RETURN LINK $return<br>";
-	}
+    my $command_line = "ln -s $cel_file $path";
+    #print "ln COMMAND LINE $command_line<br>";
+    $return = system($command_line);
+  }
+  return ( $return );  # status from final system call.
 }
 
 ###############################################################################
@@ -1619,8 +1921,8 @@ sub display_files {
 	my @filenames = $fm->filenames();
 	my $token = $fm->token();
 	
-	$log->debug("PATH '" . $fm->path());
-	$log->debug("FILES '@filenames'");
+#	$log->debug("PATH '" . $fm->path());
+# $log->debug("FILES '@filenames'");
 	my ($analysis_id, $user_desc, $analysis_desc, $parent_analysis_id) = $data_analysis_o->get_analysis_info(
 											analysis_name_type => $analysis_name_type,
 											folder_name => $token,
@@ -1925,7 +2227,7 @@ $log->debug("I'm about to delete some data ");
 
 	my $best_permission = $sbeams->get_best_permission();
 $log->debug("BEST PERMISSION '$best_permission'\n");
-$log->debug(Dumper($ref_parameters));
+# log->debug(Dumper($ref_parameters));
 
 #make sure this user has permission to edit this data
 	if ($best_permission <= SBEAMS::Connection::Permissions::DATA_ADMIN ||
@@ -1943,7 +2245,7 @@ $log->debug(Dumper($ref_parameters));
 	
 	my $analysis_o = $affy_o->find_child_analysis_runs($analysis_id);
 	
-	$log->debug(Dumper($analysis_o));
+# log->debug(Dumper($analysis_o));
 	
 ##If the analysis has child analysis runs make a form for the user to delete them first
 	if (ref $analysis_o && $delete_action ne 'delete_run'){
