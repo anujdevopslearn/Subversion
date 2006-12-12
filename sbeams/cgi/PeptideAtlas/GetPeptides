@@ -317,6 +317,14 @@ sub handle_request {
     constraint_value=>$parameters{best_probability_constraint} );
   return if ($best_probability_clause eq '-1');
 
+  #### Build ATLAS_BUILD constraint
+  my $samples_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PIS.sample_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Samples ",
+    constraint_value=>$parameters{sample_ids} );
+  return if ($samples_clause eq '-1');
+
 
   #### Build N_OBSERVATIONS constraint
   my $n_observations_clause = $sbeams->parseConstraint2SQL(
@@ -630,6 +638,8 @@ sub handle_request {
        FROM $TBAT_PEPTIDE_INSTANCE PI
       INNER JOIN $TBAT_PEPTIDE P
             ON ( PI.peptide_id = P.peptide_id )
+      INNER JOIN $TBAT_PEPTIDE_INSTANCE_SAMPLE PIS
+            ON ( PI.peptide_instance_id = PIS.peptide_instance_id )
       INNER JOIN $TBAT_ATLAS_BUILD AB
             ON ( PI.atlas_build_id = AB.atlas_build_id )
        LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
@@ -648,6 +658,7 @@ sub handle_request {
         $best_probability_clause
         $n_observations_clause
         $n_samples_clause
+        $samples_clause
         $empirical_proteotypic_clause
         $n_protein_mappings_clause
         $n_genome_locations_clause
