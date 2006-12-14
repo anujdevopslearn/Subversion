@@ -33,8 +33,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
 use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
-
-$sbeams = new SBEAMS::Connection;
+use SBEAMS::Microarray::Tables;
 
 
 ###############################################################################
@@ -75,7 +74,12 @@ if ($DEBUG) {
 ###############################################################################
 # Set Global Variables and execute main()
 ###############################################################################
-my $headers_printed = 0;
+$sbeams = new SBEAMS::Connection;
+my %parameters;
+my $output_mode;
+my %module_coderefs = ( core => \&get_core_data,
+                        microarray => \&get_microarray_data );
+
 
 main();
 exit(0);
@@ -97,7 +101,6 @@ sub main {
 
 
   #### Read in the default input parameters
-  my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
   #$sbeams->printDebuggingInfo($q);
@@ -106,13 +109,14 @@ sub main {
   #### Process generic "state" parameters before we start
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
+  $output_mode = $sbeams->output_mode();
 
   #### Decide what action to take based on information so far
   if (defined($parameters{action}) && $parameters{action} eq "???") {
     # Some action
   } else {
     $sbeams->display_page_header();
-    handle_request(ref_parameters=>\%parameters);
+    handle_request();
     $sbeams->display_page_footer();
   }
 
@@ -126,12 +130,6 @@ sub main {
 ###############################################################################
 sub handle_request {
   my %args = @_;
-
-  #### Process the arguments list
-  my $ref_parameters = $args{'ref_parameters'}
-    || die "ref_parameters not passed";
-  my %parameters = %{$ref_parameters};
-
 
   #### Define some variables for a query and resultset
   my %resultset = ();
@@ -180,9 +178,9 @@ sub handle_request {
     if ($namespace =~ /^\s*(\w+)\.(\w+)\.(\w+)\s*$/) {
       if ($1 ne 'sbeams') {
         $sbeams->handle_error(
-          message => "Expected first block of namespace to be 'sbeams' in ".
+          message => "First block of namespace must be 'sbeams': ".
 		     "'$namespace'",
-          error_type => '',
+          error_type => 'bad constraint',
         );
       }
       $module = $2;
@@ -192,7 +190,7 @@ sub handle_request {
       $sbeams->handle_error(
         message => "Unable to parse namespace '$namespace' into ".
 		   "sbeams.module.class",
-        error_type => '',
+        error_type => 'bad constraint',
       );
     }
   }
@@ -207,7 +205,7 @@ sub handle_request {
     } else {
       $sbeams->handle_error(
         message => "Unable to parse object_id '$object_id' as an integer",
-        error_type => '',
+        error_type => 'data mismatch',
       );
     }
   }
@@ -227,14 +225,15 @@ sub handle_request {
   unless ($module) {
     $sbeams->handle_error(
       message => "module was not supplied",
-      error_type => '',
+      error_type => 'insufficient constraints',
     );
   }
+  $module = lc($module); # We won't worry about case...
 
   unless ($class) {
     $sbeams->handle_error(
       message => "class was not supplied",
-      error_type => '',
+      error_type => 'insufficient constraints',
     );
   }
 
@@ -242,252 +241,82 @@ sub handle_request {
   unless ($object_id) {
     $sbeams->handle_error(
       message => "object_id was not supplied",
-      error_type => '',
+      error_type => 'insufficient constraints',
     );
   }
-
-
-  ##########################################
-  #### If a request for project information
-  if ($class eq 'project') {
-
-  my @project_fields = qw(project_id name project_tag description
-     budget project_status uri additional_information comment 
-     date_created date_modified record_status );
-
-#     modified_by_id 
-#     owner_group_id 
-#     created_by_id 
-#      PI_contact_id 
-
-    my $fields = 'P.' . join( ", P.", @project_fields );
-#( SELECT first_name || ' ' || last_name || ' (' || organization || ' )' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON C.organization_id = O.organization_id WHERE P.created_by_id = C.contact_id ) AS Created_by,
-#( SELECT first_name || ' ' || last_name || ' (' || organization || ' )' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON C.organization_id = O.organization_id WHERE P.modified_by_id = C.contact_id ) AS Modified_by,
-#( SELECT work_group_name FROM $TB_WORK_GROUP W WHERE W.work_group_id = work_group_id ) AS Owner_group 
-      
-    #### First find the object if possible
-    my $sql =<<"    END_SQL";
-    SELECT $fields, 
-    ( SELECT first_name || ' ' || last_name || ' (' || organization || ')' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON C.organization_id = O.organization_id WHERE PI_contact_id = C.contact_id ) AS pi_contact,
-    ( SELECT first_name || ' ' || last_name || ' (' || organization || ')' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON C.organization_id = O.organization_id WHERE P.created_by_id = C.contact_id ) AS created_by,
-    ( SELECT first_name || ' ' || last_name || ' (' || organization || ')' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON C.organization_id = O.organization_id WHERE P.modified_by_id = C.contact_id ) AS modified_by,
-    ( SELECT work_group_name FROM $TB_WORK_GROUP W WHERE W.work_group_id = owner_group_id ) AS owner_group 
-    FROM $TB_PROJECT P
-    WHERE project_id=$object_id 
-	  AND record_status != 'D'
-    END_SQL
-
-#    my $sql = " SELECT * FROM $TB_PROJECT P WHERE project_id=$object_id AND record_status != 'D'";
-
-    my @rows = $sbeams->selectHashArray($sql);
-    enforceOneRow( rows => \@rows, module => $module, class => $class,
-		   object_id => $object_id );
-
-    #### Then check to make sure the user can access it
-    my @accessible_projects = $sbeams->getAccessibleProjects();
-    my $project_id;
-    my $is_permitted;
-    foreach $project_id ( sort(@accessible_projects) ) {
-      if ($project_id == $object_id) {
-	$is_permitted = 1;
-	last;
-      }
-    }
-    unless ($is_permitted) {
-      $sbeams->handle_error(
-        message => "Currently authenticated user '$current_username' does ".
-	  "not have access privilege to sbeams.$module.$class:$object_id",
-        error_type => 'access_denied',
-      );
-    }
-
-    my $suppress_footer = 0;
-    if ($parameters{extended}) {
-      $suppress_footer = 1;
-    }
-
-
-    print encodeAttributes(
-      class => $class,
-      object_id => $object_id,
-      hash => $rows[0],
-      suppress_footer => $suppress_footer,
+ 
+  my @supported = get_supported_modules();
+  unless ( grep /^$module$/, @supported ) {
+    $sbeams->handle_error(
+      message => "Invalid module '$module', supported options are: " . get_supported_modules(),
+      error_type => 'bad constraint',
     );
-
-    return unless ($parameters{extended});
-
-
-    #### Get user project privilege information
-    $sql = qq ~
-      SELECT * FROM $TB_USER_PROJECT_PERMISSION
-       WHERE project_id='$object_id'
-	AND record_status != 'D'
-    ~;
-    my @rows = $sbeams->selectHashArray($sql);
-    foreach my $row ( @rows ) {
-      print encodeAttributes(
-        class => 'user_project_permission',
-        object_id => $row->{user_project_permission_id},
-        hash => $row,
-        suppress_header => 'Y',
-        suppress_footer => 'Y',
-      );
-    }
-
-
-    #### Get group project privilege information
-    $sql = qq ~
-      SELECT * FROM $TB_GROUP_PROJECT_PERMISSION
-       WHERE project_id='$object_id'
-	AND record_status != 'D'
-    ~;
-    my @rows = $sbeams->selectHashArray($sql);
-    foreach my $row ( @rows ) {
-      print encodeAttributes(
-        class => 'group_project_permission',
-        object_id => $row->{group_project_permission_id},
-        hash => $row,
-        suppress_header => 'Y',
-        suppress_footer => 'Y',
-      );
-    }
-
-
-    #### See if this project contains data in various modules
-    my ($modules, $mdata) = $sbeams->getDataFromModules(
-     projects => [ $object_id ],
-     modules => [ 'Microarray' ]
-    );
-
-    foreach my $module_name ( @{$modules} ) {
-      #print "  There is data in $module_name\n";
-    }
-
-
-    if ($parameters{extended}) {
-      print encodeAttributes(
-        class => $class,
-        object_id => $object_id,
-        hash => $rows[0],
-        only_footer => 'Y',
-      );
-    }
-
-    return;
   }
+  
 
+  # fetch data based on the module/class
+  my $data = '';
+  if ( $module_coderefs{$module} ) {
 
-  ##########################################
-  #### If a request for contact information
-  if ($class eq 'contact') {
+    # Run module-specific fetch, module decides if class is legal
+    $data = $module_coderefs{$module}( class     => $class, 
+                                       object_id => $object_id, 
+                                       module    => $module,
+                                       paramref  => \%parameters );
 
-    #### First find the object if possible
-    my $sql = "SELECT * FROM $TB_CONTACT WHERE contact_id='$object_id' ".
-	"AND record_status != 'D'";
-    my @rows = $sbeams->selectHashArray($sql);
-    enforceOneRow( rows => \@rows, module => $module, class => $class,
-		   object_id => $object_id );
-
-    print encodeAttributes(
-      class => $class,
-      object_id => $object_id,
-      hash => $rows[0],
+  } else {
+    $log->error( "Code missing for nominally supported module: $module" );
+    $sbeams->handle_error(
+      message => "Unable to process request",
+      error_type => 'sbeams_error',
     );
-
-    return;
   }
-
-
-  ##########################################
-  #### If a request for username information
-  if ($class eq 'user_login') {
-
-    #### First find the object if possible
-    my $sql = "SELECT * FROM $TB_USER_LOGIN WHERE contact_id='$object_id' ".
-	"AND record_status != 'D'";
-    my @rows = $sbeams->selectHashArray($sql);
-    enforceOneRow( rows => \@rows, module => $module, class => $class,
-		   object_id => $object_id );
-
-    print encodeAttributes(
-      class => $class,
-      object_id => $object_id,
-      hash => $rows[0],
-    );
-
-    return;
-  }
-
-
-  ##########################################
-  #### If a request for username information
-  if ($class eq 'work_group') {
-
-    #### First find the object if possible
-    my $sql = "SELECT * FROM $TB_WORK_GROUP WHERE work_group_id='$object_id' ".
-	"AND record_status != 'D'";
-    my @rows = $sbeams->selectHashArray($sql);
-    enforceOneRow( rows => \@rows, module => $module, class => $class,
-		   object_id => $object_id );
-
-    print encodeAttributes(
-      class => $class,
-      object_id => $object_id,
-      hash => $rows[0],
-    );
-
-    return;
-  }
-
-
-  ##########################################
-  #### If a request for Microarray.comparison_condition information
-  if ($module eq 'Microarray' && $class eq 'comparison_condition') {
-
-    #### First find the object if possible
-    use SBEAMS::Microarray::Tables;
-    my $sql = qq ~
-      SELECT * FROM $TBMA_COMPARISON_CONDITION
-       WHERE condition_id='$object_id'
-	 AND record_status != 'D'
-    ~;
-    my @rows = $sbeams->selectHashArray($sql);
-    enforceOneRow( rows => \@rows, module => $module, class => $class,
-		   object_id => $object_id );
-
-    print encodeAttributes(
-      class => $class,
-      object_id => $object_id,
-      hash => $rows[0],
-    );
-
-    return;
-  }
-
-
-  ##########################################
-  #### If we got here, there this is not a valid class
-  $sbeams->handle_error(
-    message => "sbeams.$module.$class is not a valid or supported namespace",
-    error_type => 'bad constraint',
-  );
+  
+  print get_headers();
+  print "$data\n";
+  print get_footers();
 
 } # end handle_request
 
+#+
+# Generate markup headers as needed
+#-
+sub get_headers {
+  my $header = '';
+  if ($output_mode eq 'html') { 
+    $header .= "<PRE>\n";
+  } elsif ($output_mode =~ /xml/) {
+    $header .= $sbeams->get_http_header();
+    $header .= "<?xml version=\"1.0\" standalone=\"yes\"?>\n<data>\n";
+  } else {
+    $header .= $sbeams->get_http_header();
+  }
+  return $header;
+}
 
 
-###############################################################################
-# evalSQL
-#
-# Callback for translating Perl variables into their values,
-# especially the global table variables to table names
-###############################################################################
-sub evalSQL {
-  my $sql = shift;
+#+
+# Generate markup footers as needed
+#-
+sub get_footers {
+  my $footer = '';
+  # Print any closing markup
+  if ($output_mode eq 'html') {
+    $footer .= "</PRE>\n";
+  } elsif ($output_mode =~ /xml/) {
+    $footer .= "</data>\n";
+  } 
+  return $footer;
+}
 
-  return eval "\"$sql\"";
 
-} # end evalSQL
+#+
+# Return array or comma sep string based on call context.
+#-
+sub get_supported_modules {
+  my @supported = qw( core microarray );
+  return (wantarray()) ? @supported : join ", ", @supported;
+}
 
 
 ###############################################################################
@@ -536,43 +365,13 @@ sub encodeAttributes {
   my $class = $args{'class'} || die("parameter 'class' not passed");
   my $object_id = $args{'object_id'} ||
     die("parameter 'object_id' not passed");
-  my $suppress_footer = $args{'suppress_footer'};
-  my $suppress_header = $args{'suppress_header'};
-  my $only_footer = $args{'only_footer'};
 
   my $buffer = '';
-  my $output_mode = $sbeams->output_mode();
-
-  if ($only_footer) {
-    if ($output_mode eq 'html') {
-      $buffer .= "</PRE>\n";
-    } elsif ($output_mode =~ /tsv/) {
-    } elsif ($output_mode =~ /xml/) {
-      $buffer .= "</data>\n";
-    }
-    return($buffer);
-  }
-
-
-  #### Generate headers as appropriate
-  unless ($suppress_header || $headers_printed ) {
-    $headers_printed++;
-    # This is a problem waiting to happen.  HTML headers are handled elsewhere
-    $buffer .= $sbeams->get_http_header() unless $output_mode eq 'html'; 
-    if ($output_mode eq 'html') {
-      $buffer .= "<PRE>\n";
-    } elsif ($output_mode =~ /tsv/) {
-    } elsif ($output_mode =~ /xml/) {
-      $buffer .= "<?xml version=\"1.0\" standalone=\"yes\"?>\n";
-      $buffer .= "<data>\n";
-    }
-  }
 
   if ($output_mode =~ /xml/) {
       $buffer .= $sbeams->encodeXMLEntity( entity_name => $class,
                                                 indent => 2,
                                             attributes => $hash );
-      $buffer .= "</data>\n" unless ($suppress_footer);
       return($buffer);
   }
 
@@ -588,11 +387,6 @@ sub encodeAttributes {
     $value =~ s/\r/\\r/g;
     $value =~ s/\t/\\t/g;
     $buffer .= "$key\t$value\n";
-  }
-
-  #### Print footers if necessary
-  if ($output_mode eq 'html' && ! $suppress_footer) {
-    $buffer .= "</PRE>\n";
   }
 
   #### Return the buffered output
@@ -671,4 +465,372 @@ sub encodeXMLEntity {
 } # end encodeXMLEntity
 
 
+
+###############################################################################
+## Core module
+###############################################################################
+
+#+
+# Handle calls to the core module
+#-
+sub get_core_data {
+
+  my %args = @_;
+  my $class = lc($args{class});
+  my $object_id = $args{object_id};
+  my $module =  $args{module};
+  my $paramref =  $args{paramref};
+
+  my $content = '';
+
+  # Make sure we have a valid class
+  my @supported_classes = qw( project user_login );
+  unless ( grep /^$class$/, @supported_classes ) {
+    $sbeams->handle_error(
+      message => "sbeams.$module.$class is not a valid or supported namespace",
+      error_type => 'bad constraint',
+    );
+  }
+
+  # If a request for project information
+  if ($class eq 'project') {
+
+    $content .= get_core_project( object_id => $object_id, module => $module );
+
+    if ($paramref->{extended}) {
+      $content .= get_extended_project_data( $object_id );
+
+      for my $module ( get_supported_modules() ) {
+        next if $module eq 'core';
+        $content .= $module_coderefs{$module}( class     => $class,
+                                               module    => 'core',
+                                               object_id => $object_id );
+      }
+    }
+
+  } elsif ($class eq 'contact') {
+
+    #### First find the object if possible
+    my $sql = "SELECT * FROM $TB_CONTACT WHERE contact_id='$object_id' ".
+	"AND record_status != 'D'";
+    my @rows = $sbeams->selectHashArray($sql);
+    enforceOneRow( rows => \@rows, module => $module, class => $class,
+		   object_id => $object_id );
+
+    $content .= encodeAttributes(
+      class => $class,
+      object_id => $object_id,
+      hash => $rows[0],
+    );
+
+  } elsif ($class eq 'user_login') {
+
+    #### First find the object if possible
+    my $sql = "SELECT * FROM $TB_USER_LOGIN WHERE contact_id='$object_id' ".
+	"AND record_status != 'D'";
+    my @rows = $sbeams->selectHashArray($sql);
+    enforceOneRow( rows => \@rows, module => $module, class => $class,
+		   object_id => $object_id );
+
+    $content .= encodeAttributes(
+      class => $class,
+      object_id => $object_id,
+      hash => $rows[0],
+    );
+    
+  } elsif ($class eq 'work_group') {
+
+    #### First find the object if possible
+    my $sql = "SELECT * FROM $TB_WORK_GROUP WHERE work_group_id='$object_id' ".
+	"AND record_status != 'D'";
+    my @rows = $sbeams->selectHashArray($sql);
+    enforceOneRow( rows => \@rows, module => $module, class => $class,
+		   object_id => $object_id );
+
+    $content .= encodeAttributes(
+      class => $class,
+      object_id => $object_id,
+      hash => $rows[0],
+    );
+  }
+  return($content);
+} # end get_core_data
+
+
+#+
+# Fetch core project info, with foreign keys resolved for clarity
+#-
+sub get_core_project {
+
+  my %args = @_;
+  my $module = $args{module};
+  my $object_id = $args{object_id};
+  my $class = 'project';
+
+  my $content = '';
+
+  my @project_fields = qw(project_id name project_tag description
+     budget project_status uri additional_information comment 
+     date_created date_modified record_status );
+
+#     modified_by_id 
+#     owner_group_id 
+#     created_by_id 
+#      PI_contact_id 
+
+    my $fields = 'P.' . join( ", P.", @project_fields );
+      
+    my $sql =<<"    END_SQL";
+    SELECT $fields, 
+    ( SELECT first_name || ' ' || last_name || ' (' || organization || ')' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON C.organization_id = O.organization_id WHERE PI_contact_id = C.contact_id ) AS pi_contact,
+    ( SELECT first_name || ' ' || last_name || ' (' || organization || ')' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON C.organization_id = O.organization_id WHERE P.created_by_id = C.contact_id ) AS created_by,
+    ( SELECT first_name || ' ' || last_name || ' (' || organization || ')' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON C.organization_id = O.organization_id WHERE P.modified_by_id = C.contact_id ) AS modified_by,
+    ( SELECT work_group_name FROM $TB_WORK_GROUP W WHERE W.work_group_id = owner_group_id ) AS owner_group 
+    FROM $TB_PROJECT P
+    WHERE project_id=$object_id 
+	  AND record_status != 'D'
+    END_SQL
+
+    # First find the project if possible
+    my @rows = $sbeams->selectHashArray($sql);
+    enforceOneRow( rows => \@rows, module => $module, 
+                  class => $class, object_id => $object_id );
+
+    # Then check to make sure the user can access it
+    my @accessible_projects = $sbeams->getAccessibleProjects();
+    my $project_id;
+    my $is_permitted;
+    foreach $project_id ( sort(@accessible_projects) ) {
+      if ($project_id == $object_id) {
+        $is_permitted = 1;
+        last;
+      }
+    }
+    unless ($is_permitted) {
+      $sbeams->handle_error(
+        message => "Currently authenticated user '$current_username' does ".
+	  "not have access privilege to sbeams.$module.$class:$object_id",
+        error_type => 'access_denied',
+      );
+    }
+
+    $content .= encodeAttributes(
+      class => $class,
+      object_id => $object_id,
+      hash => $rows[0],
+    );
+  return $content;
+
+}
+
+
+
+#+
+# Fetch extended core project info, user/group project permissions 
+#-
+sub get_extended_project_data {
+
+  my $object_id = shift;
+  my $content;
+
+  #### Get user project privilege information
+  my $sql = qq ~
+    SELECT * FROM $TB_USER_PROJECT_PERMISSION
+     WHERE project_id='$object_id'
+	AND record_status != 'D'
+  ~;
+  my @rows = $sbeams->selectHashArray($sql);
+  foreach my $row ( @rows ) {
+    $content .= encodeAttributes(
+      class => 'user_project_permission',
+      object_id => $row->{user_project_permission_id},
+      hash => $row,
+    );
+  }
+
+  #### Get group project privilege information
+  $sql = qq ~
+    SELECT * FROM $TB_GROUP_PROJECT_PERMISSION
+     WHERE project_id='$object_id'
+	AND record_status != 'D'
+  ~;
+  my @rows = $sbeams->selectHashArray($sql);
+  foreach my $row ( @rows ) {
+    $content .= encodeAttributes(
+      class => 'group_project_permission',
+      object_id => $row->{group_project_permission_id},
+      hash => $row,
+    );
+  }
+  return $content;
+}
+
+
+
+###############################################################################
+## Microarray Module
+###############################################################################
+
+
+#+
+# Handle calls to the microarray module
+#-
+sub get_microarray_data {
+
+  my %args = @_;
+  my $class = lc($args{class});
+  my $object_id = $args{object_id};
+  my $module =  $args{module};
+  my $paramref =  $args{paramref};
+
+  my $content = '';
+
+  # Make sure we have a valid class
+  my @supported_classes = qw( project comparison_condition );
+  unless ( grep /^$class$/, @supported_classes ) {
+    $sbeams->handle_error(
+      message => "sbeams.$module.$class is not a valid or supported namespace",
+      error_type => 'bad constraint',
+    );
+  }
+
+  # If a request for project information
+  if ($class eq 'project') {
+
+    if ( $module eq 'microarray' ) {
+      $log->debug( "My module is MA?" );
+      $content = get_core_project( object_id => $object_id, 
+                                   module    => $module );
+    }
+    $content .= get_project_arrays( $object_id );
+    $content .= get_project_analyses( $object_id );
+    $content .= get_project_conditions( $object_id );
+  }
+
+
+  #### If a request for Microarray.comparison_condition information
+  if ( $class =~ /comparison_condition/i ) {
+
+    #### First find the object if possible
+    my $sql = qq ~
+      SELECT * FROM $TBMA_COMPARISON_CONDITION
+       WHERE condition_id='$object_id'
+	 AND record_status != 'D'
+    ~;
+    my @rows = $sbeams->selectHashArray($sql);
+    enforceOneRow( rows => \@rows, module => $module, class => $class,
+		   object_id => $object_id );
+
+    $content .= encodeAttributes(
+      class => $class,
+      object_id => $object_id,
+      hash => $rows[0],
+    );
+
+  }
+
+  return( $content );
+  
+} # end get_microarray_data 
+
+
+#+
+# Get all arrays for specified project
+#-
+sub get_project_arrays {
+  my $project_id = shift;
+  my $content = '';
+
+  # Get affy array sample info
+  my $sql = qq ~
+    SELECT AAS.* 
+    FROM $TBMA_AFFY_ARRAY_SAMPLE AAS 
+    JOIN $TBMA_AFFY_ARRAY AA 
+    ON AA.affy_array_sample_id = AAS.affy_array_sample_id
+    WHERE project_id='$project_id'
+    AND AAS.record_status != 'D'
+    AND AA.record_status != 'D'
+  ~;
+  my @rows = $sbeams->selectHashArray($sql);
+  foreach my $row ( @rows ) {
+    $content .= encodeAttributes(
+      class => 'affy_array_sample',
+      object_id => $row->{affy_array_sample_id},
+      hash => $row,
+    );
+  }
+
+   #### Get affy array info
+   $sql = qq ~
+    SELECT AA.* 
+    FROM $TBMA_AFFY_ARRAY_SAMPLE AAS 
+    JOIN $TBMA_AFFY_ARRAY AA 
+    ON AA.affy_array_sample_id = AAS.affy_array_sample_id
+    WHERE project_id='$project_id'
+    AND AAS.record_status != 'D'
+    AND AA.record_status != 'D'
+   ~;
+   my @rows = $sbeams->selectHashArray($sql);
+   foreach my $row ( @rows ) {
+     $content .= encodeAttributes(
+       class => 'affy_array',
+       object_id => $row->{affy_array_id},
+       hash => $row,
+     );
+   }
+   return $content;
+}
+
+#+
+# Get all (type 3) analyses for specified project
+#-
+sub get_project_analyses {
+  my $project_id = shift;
+  my $content = '';
+
+    #### Get affy analysis info
+    my $sql = qq ~
+      SELECT * FROM $TBMA_AFFY_ANALYSIS 
+      WHERE project_id='$project_id'
+      AND affy_analysis_type_id = 3
+      AND record_status != 'D'
+    ~;
+    $log->debug( $sql );
+    my @rows = $sbeams->selectHashArray($sql);
+    foreach my $row ( @rows ) {
+      $content .= encodeAttributes(
+        class => 'affy_analysis',
+        object_id => $row->{affy_analysis_id},
+        hash => $row,
+        );
+    }
+    return($content);
+}
+
+#+
+# Get all comparison_conditions for specified project
+#-
+sub get_project_conditions {
+  my $project_id = shift;
+  my $content = '';
+
+    #### Get affy analysis info
+    my $sql = qq ~
+      SELECT * FROM $TBMA_COMPARISON_CONDITION 
+      WHERE project_id='$project_id'
+      AND analysis_type IS NOT NULL
+      AND record_status != 'D'
+    ~;
+    $log->debug( $sql );
+    my @rows = $sbeams->selectHashArray($sql);
+    foreach my $row ( @rows ) {
+      $content .= encodeAttributes(
+        class => 'comparison_condition',
+        object_id => $row->{condition_id},
+        hash => $row,
+        );
+    }
+
+    return($content);
+}
 
