@@ -376,7 +376,7 @@ sub encodeAttributes {
   }
 
   #### Print a header for the class and object_id
-  $buffer .= "====\t$class\t$object_id\n";
+  $buffer .= "\n====\t$class\t$object_id\n";
 
   #### Print column headings
   $buffer .= "column\tvalue\n";
@@ -397,77 +397,7 @@ sub encodeAttributes {
 
 
 ###############################################################################
-# encodeXMLEntity
-#
-# Depricated, now using $sbeams->encodeXMLEntity() routine
-#
-###############################################################################
-sub encodeXMLEntity {
-  my %args = @_;
-  my $entity_name = $args{'entity_name'} || die("No entity_name provided");
-  my $indent = $args{'indent'} || 0;
-  my $entity_type = $args{'entity_type'} || 'openclose';
-  my $attributes = $args{'attributes'} || '';
-
-  #### Define a string from which to get padding
-  my $padstring = '                                                       ';
-  my $compact = 0;
-
-  #### Define a stack to make sure we are nesting correctly
-  our @xml_entity_stack;
-
-  #### Close tag
-  if ($entity_type eq 'close') {
-
-    #### Verify that the correct item was on top of the stack
-    my $top_entity = pop(@xml_entity_stack);
-    if ($top_entity ne $entity_name) {
-      die("ERROR forming XML: Was told to close <$entity_name>, but ".
-          "<$top_entity> was on top of the stack!");
-    }
-    return substr($padstring,0,$indent)."</$entity_name>\n";
-  }
-
-  #### Else this is an open tag
-  my $buffer = substr($padstring,0,$indent)."<$entity_name";
-
-
-  #### encode the attribute values if any
-  if ($attributes) {
-
-    while (my ($name,$value) = each %{$attributes}) {
-      if ($value  && $value ne "")
-      {
-        if ($compact) {
-        $buffer .= qq~ $name="$value"~;
-        } else {
-        $buffer .= "\n".substr($padstring,0,$indent+8).qq~$name="$value"~;
-        }
-      }
-    }
-
-  }
-
-  #### If an open and close tag, write the trailing /
-  if ($entity_type eq 'openclose') {
-    $buffer .= "/";
-
-  #### Otherwise push the entity on our stack
-  } else {
-    push(@xml_entity_stack,$entity_name);
-  }
-
-
-  $buffer .= ">\n";
-
-  return($buffer);
-
-} # end encodeXMLEntity
-
-
-
-###############################################################################
-## Core module
+## Core Module
 ###############################################################################
 
 #+
@@ -686,7 +616,8 @@ sub get_microarray_data {
   my $content = '';
 
   # Make sure we have a valid class
-  my @supported_classes = qw( project comparison_condition );
+  my @supported_classes = qw( project comparison_condition affy_array_sample
+                              affy_array affy_analysis );
   unless ( grep /^$class$/, @supported_classes ) {
     $sbeams->handle_error(
       message => "sbeams.$module.$class is not a valid or supported namespace",
@@ -694,11 +625,14 @@ sub get_microarray_data {
     );
   }
 
+  # OK, kluge fans, here it is!  We will cache the returned object row in 
+  # this scalar for possible later use (in extended realm).
+  my $object_row;
+
   # If a request for project information
   if ($class eq 'project') {
 
     if ( $module eq 'microarray' ) {
-      $log->debug( "My module is MA?" );
       $content = get_core_project( object_id => $object_id, 
                                    module    => $module );
     }
@@ -708,18 +642,22 @@ sub get_microarray_data {
   }
 
 
-  #### If a request for Microarray.comparison_condition information
-  if ( $class =~ /comparison_condition/i ) {
+  elsif ( $class =~ /some special case/i ) {
 
     #### First find the object if possible
     my $sql = qq ~
-      SELECT * FROM $TBMA_COMPARISON_CONDITION
-       WHERE condition_id='$object_id'
-	 AND record_status != 'D'
+      SELECT * FROM TBMA_SPECIAL_CASE
+      WHERE condition_id='$object_id'
+	    AND record_status != 'D'
     ~;
     my @rows = $sbeams->selectHashArray($sql);
-    enforceOneRow( rows => \@rows, module => $module, class => $class,
-		   object_id => $object_id );
+    enforceOneRow( rows => \@rows,
+                   module => $module, 
+                   class => $class,
+		               object_id => $object_id );
+
+    # Must have just had one row, let the kluge roll on!
+    $object_row = $rows[0];
 
     $content .= encodeAttributes(
       class => $class,
@@ -727,6 +665,62 @@ sub get_microarray_data {
       hash => $rows[0],
     );
 
+  } else {  # Generic fetch
+    my $sql = $sbeams->get_object_SQL( table_name => 'MA_' . $class,
+                                       module_prefix => '$TBMA',
+                                       object_id => $object_id );
+    
+    my @rows = $sbeams->selectHashArray($sql);
+    enforceOneRow( rows => \@rows,
+                   module => $module, 
+                   class => $class,
+		               object_id => $object_id );
+
+    # Must have just had one row, let the kluge roll on!
+    $object_row = $rows[0];
+
+    $content .= encodeAttributes(
+      class => $class,
+      object_id => $object_id,
+      hash => $rows[0],
+    );
+
+  }
+
+  # May have some 'extended' data to return...
+  if ( $parameters{extended} ) {
+    if ( $class =~ /affy_analysis/i ) {
+      # for my $k ( keys( %$object_row) ) { $log->debug( "$k => $object_row->{$k}" ); }
+ 
+      # Must... Hack... Wildly...
+      my $desc = $object_row->{analysis_description} || '';
+      $desc =~ /File Names\ *=>(.*)\/\/Class\&nbsp\;labels/;
+      my @files = split( /, /, $1 );
+      for my $f ( @files ) { $f =~ s/\.CEL$//g }
+      my $file_list = "'" . join( "','", @files ) . "'";
+
+
+      my $sql = qq ~
+      SELECT * FROM $TBMA_AFFY_ARRAY
+      WHERE file_root IN ( $file_list )
+      AND record_status <> 'D'
+      ~;
+      # Add project limitation here!
+
+      my $filecnt = scalar( @files );
+
+      my @rows = $sbeams->selectHashArray($sql);
+      my $rowcnt = scalar( @rows );
+
+      for my $row ( @rows ) {
+        $content .= encodeAttributes(
+          class => 'affy_array',
+          object_id => $row->{affy_array_id},
+          hash => $row,
+        );
+      }
+      $log->error( "Got $rowcnt files from $filecnt files " ) if $filecnt != $rowcnt;
+    } # End extended affy_analysis
   }
 
   return( $content );
@@ -795,7 +789,6 @@ sub get_project_analyses {
       AND affy_analysis_type_id = 3
       AND record_status != 'D'
     ~;
-    $log->debug( $sql );
     my @rows = $sbeams->selectHashArray($sql);
     foreach my $row ( @rows ) {
       $content .= encodeAttributes(
@@ -821,7 +814,6 @@ sub get_project_conditions {
       AND analysis_type IS NOT NULL
       AND record_status != 'D'
     ~;
-    $log->debug( $sql );
     my @rows = $sbeams->selectHashArray($sql);
     foreach my $row ( @rows ) {
       $content .= encodeAttributes(
@@ -832,5 +824,18 @@ sub get_project_conditions {
     }
 
     return($content);
+}
+
+get_microarray_objects {
+  my %args = @_;
+  for my $key ( qw( class object_id ) ) {
+    $sbeams->handle_error(
+      message => "Missing required parameter $key",
+      error_type => 'Bad Constraint',
+    ) unless $args{$key};
+  }
+
+  if ( $args{class} =~ /^affy_array$/i ) {
+  }
 }
 
