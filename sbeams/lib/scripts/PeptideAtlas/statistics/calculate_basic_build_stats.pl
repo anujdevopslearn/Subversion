@@ -274,7 +274,7 @@ sub get_number_of_ms_runs
         $data_location =~ s/\/data3(.*)/$1/;
 
         ## count number of mzXML files there... trouble if no mzXML files or multiple versions...
-        my $nfiles = `find $data_location -name '*.mzXML' -maxdepth 1 | wc -l`;
+        my $nfiles = `find $data_location -name '*.mzXML' -maxdepth 1 -follow | wc -l`;
 
         unless ($nfiles > 0)
         {
