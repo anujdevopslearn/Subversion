@@ -712,8 +712,6 @@ sub returnTableInfo {
     return $self->selectTwoColumnHash($sql_query);
   }
 
-
-
 ###############################################################################
 
 
@@ -937,6 +935,48 @@ sub get_organism_id {
   END
   return $id;
 }
+
+#+
+# Method to construct SQL to fetch a record from a generic SBEAMS table
+#
+# @narg table_name    module-qualified table name, i.e. MA_affy_array, REQUIRED
+# @narg module_prefix module db_table_name prefix, i.e. $TBPR, REQUIRED
+# @narg object_id     Build SQL including explicit object_id, else placeholder
+# @narg skip_status   Omit clause limiting return to record_status <> D
+#
+#-
+sub get_object_SQL {
+  my $self = shift;
+  my %args = @_;
+
+  for my $key ( qw(table_name module_prefix) ) {
+    return unless $args{$key};
+  }
+
+  my $pk_value = ( defined $args{object_id} ) ? $args{object_id} : 'OBJECT_ID';
+
+  # Figure out primary key, table name, and if it has audit cols
+  my @row = $self->selectrow_array( <<"  END" );
+  SELECT db_table_name, PK_column_name, 
+  (SELECT COUNT(*) FROM $TB_TABLE_COLUMN TC 
+      WHERE TP.table_name = TC.table_name 
+      AND column_name = 'RECORD_STATUS') AS has_audit
+  FROM $TB_TABLE_PROPERTY TP 
+  WHERE db_table_name LIKE '$args{module_prefix}%'
+  AND TP.table_name = '$args{table_name}';
+  END
+
+  my $sql =<<"  END";
+  SELECT * 
+  FROM $row[0]
+  WHERE $row[1] = $pk_value
+  END
+  unless ( $args{skip_status} ) {
+    $sql .= "AND record_status <> 'D'" if $row[2];
+  }
+  return $self->evalSQL( $sql );
+}
+
 
 
 ###############################################################################
