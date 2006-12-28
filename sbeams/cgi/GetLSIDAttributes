@@ -617,7 +617,7 @@ sub get_microarray_data {
 
   # Make sure we have a valid class
   my @supported_classes = qw( project comparison_condition affy_array_sample
-                              affy_array affy_analysis );
+                              affy_array affy_analysis slide_type );
   unless ( grep /^$class$/, @supported_classes ) {
     $sbeams->handle_error(
       message => "sbeams.$module.$class is not a valid or supported namespace",
