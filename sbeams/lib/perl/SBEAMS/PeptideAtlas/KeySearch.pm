@@ -305,6 +305,17 @@ sub buildGoaKeyIndex {
       print "UniGene=$UniGene\n";
     }
 
+    #### The database entry itself may be one of the other types in
+    #### which case it's not repeated later, so map the initial
+    #### entries to something else
+    if ($Database && $Accession) {
+      if ($Database =~ /ENSEMBL/) {
+	$Ensembl = $Accession;
+      } elsif ($Database =~ /REFSEQ/) {
+	$RefSeqNP = $Accession;
+      }
+    }
+
 
     #### Skip if we don't have an ENSP number
     unless ($Ensembl) {
@@ -330,8 +341,9 @@ sub buildGoaKeyIndex {
 
     if ($Database and $Accession) {
       $Database = 'UniProt' if ($Database eq 'SP');
+      $Database = 'TrEMBL' if ($Database eq 'TR');
       my @tmp = ($Database,$Accession,40);
-      push(@links,\@tmp);
+      push(@links,\@tmp) unless ($Database =~ /ENSEMBL/);
     }
 
     if ($IPI) {
@@ -390,7 +402,8 @@ sub buildGoaKeyIndex {
 
     my $handle = "$Database:$Accession";
     if ($associations->{$handle}) {
-      if ($associations->{$handle}->{Symbol}) {
+      if ($associations->{$handle}->{Symbol} &&
+        $associations->{$handle}->{Symbol} ne $Accession) {
         my @tmp = ('UniProt Symbol',$associations->{$handle}->{Symbol},35);
         push(@links,\@tmp);
       }
