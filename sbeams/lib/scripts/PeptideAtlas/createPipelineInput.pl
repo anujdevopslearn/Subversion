@@ -247,8 +247,12 @@ sub pepXML_start_element {
   if ($localname eq 'spectrum_query') {
     $self->{pepcache}->{spectrum} = $attrs{spectrum};
     $self->{pepcache}->{charge} = $attrs{assumed_charge};
+#    $self->{pepcache}->{spectrum_and_mass_uniq} = $attrs{spectrum}.
+#      '-'.$attrs{precursor_neutral_mass}.'-'.$attrs{index};
     $self->{pepcache}->{spectrum_and_mass_uniq} = $attrs{spectrum}.
-      '-'.$attrs{precursor_neutral_mass}.'-'.$attrs{index};
+      '-'.$attrs{precursor_neutral_mass};
+    #### Fudged for SpectraST problem
+    #$self->{pepcache}->{spectrum_and_mass_uniq} = $attrs{spectrum};
   }
 
   #### If this is the search_hit, then store some attributes
@@ -408,14 +412,30 @@ sub pepXML_end_element {
       #### already seen it
       my $spectrum = $self->{pepcache}->{spectrum_and_mass_uniq};
       #$spectrum =~ s/\.\d$//;
+      #print "INFO: Processing spectrum $spectrum\n";
+      my $other_search_info;
       if (exists($self->{all_spectra}->{$spectrum})) {
-	print "WARNING: A spectrum with tag '$spectrum' has already been. ".
+	if ($self->{all_spectra}->{$spectrum} =~ /HASH/) {
+	  $other_search_info = $self->{all_spectra}->{$spectrum};
+          #print "      - other_search_info = $other_search_info\n";
+	} else {
+	  print "WARNING: A spectrum with tag '$spectrum' has already been. ".
 	    "loaded. Maybe this just a naming problem, or maybe two ".
             "different ".
 	    "search_batches on the same spectra.  I'm not smart enough ".
 	    "to deal with the gracefully yet. More code required.";
+	}
+
       }
-      $self->{all_spectra}->{$spectrum} = 1;
+
+
+      #### Store the information for this query_spectrum in case we
+      #### need it again when there's a re-search of this spectrum
+      my $query_spectrum_result = 1;
+      if (1) {
+	$query_spectrum_result = $self->{pepcache};
+      }
+      $self->{all_spectra}->{$spectrum} = $query_spectrum_result;
 
 
       #### If we've already seen this peptide
@@ -423,7 +443,7 @@ sub pepXML_end_element {
 	my $info = $self->{peptides}->{$peptide_sequence};
 	$info->{best_probability} = $probability
 	  if ($info->{best_probability} < $probability);
-	$info->{n_instances}++;
+	$info->{n_instances}++ unless ($other_search_info);
 	$info->{search_batch_ids}->{$self->{search_batch_id}}++;
 
       #### Else this is a new peptide
@@ -448,6 +468,7 @@ sub pepXML_end_element {
       #### Store the modification information
       my $info = $self->{peptides}->{$peptide_sequence};
       my $modinfo = $info->{modifications}->{$modified_peptide}->{$charge};
+      #print "      - Modified sequence and charge: $modified_peptide/$charge\n";
 
       if (defined($modinfo) && defined($modinfo->{best_probability})) {
 	if ($modinfo->{best_probability} < $probability) {
@@ -457,21 +478,38 @@ sub pepXML_end_element {
 	$modinfo->{best_probability} = $probability;
       }
 
-      $modinfo->{n_instances}++;
-      $modinfo->{search_batch_ids}->{$self->{search_batch_id}}++;
+      #### Unless we already had search info on this spectrum, incr counters
+      #$other_search_info = $modinfo->{search_batch_ids}->{$self->{search_batch_id}};
+
+      #### This is no good. It triggers on any previous same peptide!
+      #my $has_previous_entry = $modinfo->{n_instances};
+
+      my $has_previous_entry = undef;
+
+      #print "      - has_previous_entry = $has_previous_entry\n";
+      unless ($other_search_info || $has_previous_entry) {
+	$modinfo->{n_instances}++;
+	$modinfo->{search_batch_ids}->{$self->{search_batch_id}}++;
+      }
+
       $info->{modifications}->{$modified_peptide}->{$charge} = $modinfo;
 
 
       #### Store the peptide in a master full list to calculate stats
-      push(@{ $self->{peptide_list} },
-        [$self->{search_batch_id},
-	 $peptide_sequence,
-         $probability,
-         $self->{pepcache}->{protein_name},
-	 $self->{pepcache}->{spectrum},
-         $self->{pepcache}->{scores},
-	]);
-
+      #unless ($other_search_info || $has_previous_entry) {
+      unless ($has_previous_entry) {
+        #print "Added $modified_peptide/$charge\n";
+	push(@{ $self->{peptide_list} },
+          [$self->{search_batch_id},
+	   $peptide_sequence,
+	   $modified_peptide,
+	   $charge,
+           $probability,
+           $self->{pepcache}->{protein_name},
+	   $self->{pepcache}->{spectrum},
+           $self->{pepcache}->{scores},
+	  ]);
+      }
     }
 
     #### Clear out the cache
@@ -546,9 +584,31 @@ sub protXML_end_element {
 	my $info = $self->{ProPro_peptides}->{$peptide_sequence};
 	$info->{best_intitial_probability} = $initial_probability
 	  if ($info->{best_initial_probability} < $initial_probability);
-	$info->{n_instances} += $self->{pepcache}->{n_instances};
-	$info->{n_sibling_peptides} += $self->{pepcache}->{n_sibling_peptides};
-	$info->{search_batch_ids}->{$self->{search_batch_id}}++;
+
+	#### Assume that if we've already seen this search_batch_id for this
+	#### peptide, then this is probably additional search_engine data
+	#### and we shouldn't just add in the results blindly.
+	#### This is isn't really correct, but I don't know what else to do
+	if (exists($info->{search_batch_ids}->{$self->{search_batch_id}})) {
+	  if ($info->{n_instances} < $self->{pepcache}->{n_instances}) {
+	    $info->{n_instances} = $self->{pepcache}->{n_instances};
+	  } else {
+	    $info->{n_instances} += int($self->{pepcache}->{n_instances}/2);
+	  }
+
+	  if ($info->{n_sibling_peptides} < $self->{pepcache}->{n_sibling_peptides}) {
+	    $info->{n_sibling_peptides} = $self->{pepcache}->{n_sibling_peptides};
+	  } else {
+	    $info->{n_sibling_peptides} += int($self->{pepcache}->{n_sibling_peptides}/2);
+	  }
+	  $info->{search_batch_ids}->{$self->{search_batch_id}}++;
+
+	#### Otherwise add in the result
+	} else {
+	  $info->{n_instances} += $self->{pepcache}->{n_instances};
+	  $info->{n_sibling_peptides} += $self->{pepcache}->{n_sibling_peptides};
+	  $info->{search_batch_ids}->{$self->{search_batch_id}}++;
+	}
 
       #### Else this is a new peptide
       } else {
@@ -583,9 +643,33 @@ sub protXML_end_element {
 	$modinfo->{best_adjusted_probability} = $self->{pepcache}->{nsp_adjusted_probability};
       }
 
-      $modinfo->{n_instances} += $self->{pepcache}->{n_instances};
-      $modinfo->{search_batch_ids}->{$self->{search_batch_id}}++;
-      $modinfo->{n_sibling_peptides} += $self->{pepcache}->{n_sibling_peptides};
+
+
+      #### Assume that if we've already seen this search_batch_id for this
+      #### peptide, then this is probably additional search_engine data
+      #### and we shouldn't just add in the results blindly.
+      #### This is isn't really correct, but I don't know what else to do
+      if (exists($modinfo->{search_batch_ids}->{$self->{search_batch_id}})) {
+	  if ($modinfo->{n_instances} < $self->{pepcache}->{n_instances}) {
+	    $modinfo->{n_instances} = $self->{pepcache}->{n_instances};
+	  } else {
+	    $modinfo->{n_instances} += int($self->{pepcache}->{n_instances}/2);
+	  }
+
+	  if ($modinfo->{n_sibling_peptides} < $self->{pepcache}->{n_sibling_peptides}) {
+	    $modinfo->{n_sibling_peptides} = $self->{pepcache}->{n_sibling_peptides};
+	  } else {
+	    $modinfo->{n_sibling_peptides} += int($self->{pepcache}->{n_sibling_peptides}/2);
+	  }
+	  $modinfo->{search_batch_ids}->{$self->{search_batch_id}}++;
+
+	#### Otherwise add in the result
+	} else {
+	  $modinfo->{n_instances} += $self->{pepcache}->{n_instances};
+	  $modinfo->{search_batch_ids}->{$self->{search_batch_id}}++;
+	  $modinfo->{n_sibling_peptides} += $self->{pepcache}->{n_sibling_peptides};
+	}
+
       $info->{modifications}->{$modified_peptide}->{$charge} = $modinfo;
 
     }
@@ -706,7 +790,6 @@ sub main {
 
   #### If a list of search_batch_ids was provided, find the corresponding
   #### documents
-  #### THIS IS NOW BROKEN.  NEED TO ADD SUPPORT FOR BOTH PepXML and ProtXML
   if ($search_batch_ids && 0) {
     my @search_batch_ids = split(/,/,$search_batch_ids);
     foreach my $search_batch_id (@search_batch_ids) {
@@ -760,8 +843,8 @@ sub main {
       unless (-e $protXML_document->{filepath}) {
 	#### Hard coded funny business for Novartis
 	if ($filepath =~ /Novartis/) {
-	  if ($filepath =~ /interact-prob08/) {
-	    $protXML_document->{filepath} =~ s/prob08/proball/;
+	  if ($filepath =~ /interact-prob_2/) {
+	    $protXML_document->{filepath} =~ s/prob_2/prob_all/;
 	  } else {
 	    $protXML_document = undef;
 	  }
@@ -1367,18 +1450,21 @@ sub writePeptideListFile {
   my @score_columns = qw ( xcorr deltacn deltacnstar spscore sprank
 			   fval ntt nmc massd icat );
 
-  print OUTFILE "search_batch_id\tsequence\tprobability\t".
+  print OUTFILE "search_batch_id\tsequence\tmodified_sequence\tcharge\tprobability\t".
     "protein_name\tspectrum_query\t".join("\t",@score_columns)."\n";
 
+  print "  - writing ".scalar(@{$peptide_list})." peptides\n";
   foreach my $peptide ( @{$peptide_list} ) {
     print OUTFILE "$peptide->[0]\t$peptide->[1]\t$peptide->[2]\t".
-      "$peptide->[3]\t$peptide->[4]";
+      "$peptide->[3]\t$peptide->[4]\t$peptide->[5]\t$peptide->[6]";
     foreach my $column (@score_columns) {
-      print OUTFILE "\t".$peptide->[5]->{$column};
+      print OUTFILE "\t".$peptide->[7]->{$column};
     }
     print OUTFILE "\n";
+    print '.';
   }
 
+  print "\n";
   close(OUTFILE);
 
   return(1);
