@@ -41,6 +41,8 @@ use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 
+use SBEAMS::Proteomics::Tables;
+
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
@@ -725,9 +727,11 @@ if ($apply_action =~ /QUERY/i ) {
 
   print "<TABLE WIDTH=600>$mapHTML</TABLE>\n";
 
-
 ##  End mapping loop
-## Begin modified peptide table
+
+
+  #############################################################################
+  #### Modified Peptides Section
 
   my $modHTML .= $sbeamsMOD->encodeSectionHeader(
     text => "Modified Peptides",
@@ -762,8 +766,12 @@ if ($apply_action =~ /QUERY/i ) {
   ~;
 
   my @mod_peps = $sbeams->selectSeveralColumns( $modSQL );
+
+  #### If a result is returned
   if ( scalar @mod_peps ) {
     $modHTML .= $sbeams->getPopupDHTML();
+
+    #### Loops through resultset and do formatting
     for my $pep ( @mod_peps ) {
       $pep->[2] = sprintf("%0.4f", $pep->[2]);
       $pep->[3] = sprintf("%0.2f", $pep->[3]) unless $pep->[3] == 1;
@@ -771,16 +779,86 @@ if ($apply_action =~ /QUERY/i ) {
       $pep->[5] = sprintf("%0.1f", $pep->[5]) if $pep->[5];
       $pep->[6] = sample_view( $pep->[6] );
     }
+
+    #### Add table column headings
     unshift @mod_peps, ['Modified Sequence', 'Charge', 'Mono Parent m/z', 'Best Prob', '# Obs', '# Siblings', 'Sample IDs' ];
-  
+
+    #### Format table
     $modHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
                                                  width => '600',
                                                 align  => [qw(left center right right right center center)],
                                                   rows => \@mod_peps );
+    #### Display table
     print "<TABLE WIDTH=600><BR>$modHTML</TABLE>\n";
   }
 
-            
+
+  #############################################################################
+  #### Spectra Section
+
+  my $modHTML .= $sbeamsMOD->encodeSectionHeader(
+    text => "Individual Spectra",
+    bold => 1
+  );
+  my $modSQL = qq~
+  SELECT modified_peptide_sequence, MPI.peptide_charge,
+         SMP.sample_id,I.instrument_name, SI.probability, S.spectrum_name,
+         SI.spectrum_identification_id
+    FROM $TBAT_PEPTIDE_INSTANCE PI
+   INNER JOIN $TBAT_PEPTIDE P
+         ON ( PI.peptide_id = P.peptide_id )
+    JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI
+         ON ( PI.peptide_instance_id = MPI.peptide_instance_id )
+   INNER JOIN $TBAT_ATLAS_BUILD AB
+         ON ( PI.atlas_build_id = AB.atlas_build_id )
+    LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
+         ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
+    LEFT JOIN $TB_ORGANISM O
+         ON ( BSS.organism_id = O.organism_id )
+   INNER JOIN $TBAT_SPECTRUM_IDENTIFICATION SI
+         ON ( MPI.modified_peptide_instance_id = SI.modified_peptide_instance_id )
+    LEFT JOIN $TBAT_SPECTRUM S
+         ON ( SI.spectrum_id = S.spectrum_id )
+    LEFT JOIN $TBAT_SAMPLE SMP
+         ON ( S.sample_id = SMP.sample_id )
+    LEFT JOIN $TBPR_INSTRUMENT I
+         ON ( SMP.instrument_model_id = I.instrument_id )
+   WHERE 1 = 1
+     $atlas_build_clause
+     $peptide_name_clause
+     $peptide_sequence_clause
+  ORDER BY modified_peptide_sequence, MPI.peptide_charge, S.spectrum_name ASC
+  ~;
+
+  my @mod_peps = $sbeams->selectSeveralColumns( $modSQL );
+
+  #### If a result is returned
+  if ( scalar @mod_peps ) {
+    $modHTML .= $sbeams->getPopupDHTML();
+
+    #### Loops through resultset and do formatting
+    for my $pep ( @mod_peps ) {
+      $pep->[4] = sprintf("%0.3f", $pep->[4]) unless $pep->[4] == 1;
+      $pep->[4] = 1 if $pep->[4] == 1;
+      $pep->[6] = qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowObservedSpectrum?spectrum_identification_id=$pep->[6]&peptide=$pep->[0]&assumed_charge=$pep->[1]">[View]</A>~;
+    }
+
+    #### Add table column headings
+    unshift @mod_peps, ['Modified Sequence', 'Chg', 'Smpl', 'Instr', 'Prob', 'Spectrum Name', 'Spectrum' ];
+
+    #### Format table
+    $modHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
+                                                 width => '600',
+                                                align  => [qw(left center right right right center center)],
+                                                  rows => \@mod_peps );
+    #### Display table
+    print "<TABLE WIDTH=600><BR>$modHTML</TABLE>\n";
+  }
+
+
+  #############################################################################
+  #### Samples Section
+
   my $sampleSQL = qq ~
      SELECT PS.sample_id
      FROM $TBAT_PEPTIDE_INSTANCE PI
