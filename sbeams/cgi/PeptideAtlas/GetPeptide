@@ -525,7 +525,7 @@ if ($apply_action =~ /QUERY/i ) {
                 $original_name[$i] = $orig_name;
                 $SSRCalc_relative_hydrophobicity[$i] = $SSRCalc_relative_hydrophobicity;
                 #print "sql returns: $n_observations[$i] $sample_tag[$i] <br>";
-                
+
                 my $key = join( ':::', $chr, $s_chr, $e_chr, $str, $seq );
 
                 # Could just push, thought this was clearer.
@@ -538,7 +538,7 @@ if ($apply_action =~ /QUERY/i ) {
                 }
                 $i++;
             }
-            
+
             ##xxxx PRINT RETURN to HTML HERE... 
 
   my $summary_header = $sbeamsMOD->encodeSectionHeader(
@@ -616,7 +616,7 @@ if ($apply_action =~ /QUERY/i ) {
     my $tmp_strand = $map[3];
     my $peptide_sequence = $map[4];
 
-# Defer...    my $current_prot = $map[$i];
+    # Defer...    my $current_prot = $map[$i];
     my $current_prot = $chrom_map{$key}->[0]; # For now just use the first
 
     # This indicates an unmapped peptide
@@ -626,90 +626,86 @@ if ($apply_action =~ /QUERY/i ) {
     ## $current_peptide_seq is the entire peptide sequence, even if split over 2 exons
     my $current_peptide_seq = $peptide_sequence;
 
-#    if ($current_chrom ne $last_chrom) {
-#      $mapHTML .= "<TR><TD NOWRAP COLSPAN=2><B>Chromosome $current_chrom: </B></TD><TD></TD></TR>\n";
-#    }
+    #if ($current_chrom ne $last_chrom) {
+    #  $mapHTML .= "<TR><TD NOWRAP COLSPAN=2><B>Chromosome $current_chrom: </B></TD><TD></TD></TR>\n";
+    #}
     my $tmp_protein = $current_prot;
     my $tmp_seq;
-                    
+
     #### get residues on given exons ####
     my $exon_bp_length = ceil( (abs($tmp_end - $tmp_start)/3.) );
-                                        
+
     ## if the strand is negative, count residues on exon starting from end
     if ($tmp_strand eq "-") {
       if ($tmp_protein eq $last_protein) {
         $tmp_seq = substr($current_peptide_seq, 
                         ((length $current_peptide_seq) - $last_seq_used_length - $exon_bp_length), 
                         ((length $current_peptide_seq) - $last_seq_used_length ) );
-     } else {
-       $tmp_seq = substr($current_peptide_seq, 
+      } else {
+	$tmp_seq = substr($current_peptide_seq, 
                         ((length $current_peptide_seq) - $exon_bp_length), 
                         (length $current_peptide_seq) );
       }
+
     } elsif ($tmp_strand eq "+") {
-    if ($tmp_protein eq $last_protein) {
-      $tmp_seq = substr($current_peptide_seq, $last_seq_used_length, (length $current_peptide_seq));
-    } else {
-      $tmp_seq = substr($current_peptide_seq, 0, $exon_bp_length);
-    }
-  }
-
-  $last_seq_used_length = length($tmp_seq);
-
-  # Set up protein[s] display
-  my $protein_display = makeProteinLink( name  => $tmp_protein, 
-                                         build => $parameters{atlas_build_id}); 
-
-  my $extra = $#{$chrom_map{$key}};
-  if ( $extra ) {
-    my $all = join ', ', @{$chrom_map{$key}};
-    my $all_links;
-    for my $p ( @{$chrom_map{$key}} ) {
-      $all_links .= makeProteinLink( build => $parameters{atlas_build_id},
-                                     name  => $p,
-                                     target => '_prot_info' ) . "<BR>\n"; 
+      if ($tmp_protein eq $last_protein) {
+	$tmp_seq = substr($current_peptide_seq, $last_seq_used_length, (length $current_peptide_seq));
+      } else {
+	$tmp_seq = substr($current_peptide_seq, 0, $exon_bp_length);
+      }
     }
 
-    $mapHTML .= $sbeams->getPopupDHTML();
-    my $session_key = $sbeams->getRandomString( num_chars => 20,
-                                                char_set => ['A'..'Z', 'a'..'z', 0..9] );
+    $last_seq_used_length = length($tmp_seq);
 
-    $sbeams->setSessionAttribute( key => $session_key,  value => $all_links );
+    # Set up protein[s] display
+    my $protein_display = makeProteinLink( name  => $tmp_protein, 
+					   build => $parameters{atlas_build_id}); 
 
-    my $url = "$CGI_BASE_DIR/help_popup.cgi?title=Alternate%20Mappings;session_key=$session_key;email_link=no";
-    my $more = qq~ &nbsp;&nbsp;[<A onClick=popitup("$url"); CLASS=pseudo_link>$extra more</A>]~;
-    $protein_display = "<DIV TITLE='$all'>$protein_display $more</DIV>";
-  }
+    my $extra = $#{$chrom_map{$key}};
+    if ( $extra ) {
+      my $all = join ', ', @{$chrom_map{$key}};
+      my $all_links;
+      for my $p ( @{$chrom_map{$key}} ) {
+	$all_links .= makeProteinLink( build => $parameters{atlas_build_id},
+				       name  => $p,
+				       target => '_prot_info' ) . "<BR>\n"; 
+      }
+
+      $mapHTML .= $sbeams->getPopupDHTML();
+      my $session_key = $sbeams->getRandomString( num_chars => 20,
+						  char_set => ['A'..'Z', 'a'..'z', 0..9] );
+
+      $sbeams->setSessionAttribute( key => $session_key,  value => $all_links );
+
+      my $url = "$CGI_BASE_DIR/help_popup.cgi?title=Alternate%20Mappings;session_key=$session_key;email_link=no";
+      my $more = qq~ &nbsp;&nbsp;[<A onClick=popitup("$url"); CLASS=pseudo_link>$extra more</A>]~;
+      $protein_display = "<DIV TITLE='$all'>$protein_display $more</DIV>";
+    }
 
 
-  my $range = makeEntrezLink( start => $tmp_start,
-                              end => $tmp_end,
-                              strand => $tmp_strand,
-                              chrom => $current_chrom,
-                              org => $organism[0] );
+    my $range = makeEntrezLink( start => $tmp_start,
+				end => $tmp_end,
+				strand => $tmp_strand,
+				chrom => $current_chrom,
+				org => $organism[0] );
 
-  push @rows, [ $current_chrom, $protein_display, $tmp_seq, $range, "<B>$tmp_strand</B>" ] if $tmp_seq;
+    push @rows, [ $current_chrom, $protein_display, $tmp_seq, $range, "<B>$tmp_strand</B>" ] if $tmp_seq;
 
-  $last_chrom = $current_chrom;
-  $last_protein = $current_prot;
+    $last_chrom = $current_chrom;
+    $last_protein = $current_prot;
 
-#  if ($i < $n_indices && ($current_chrom ne $chrom[$i+1]) ) {
-#    next unless @rows;
-#    unshift @rows, ['Chrom', 'Protein', 'Residues on Exon', 'Exon Range', 'Strand'];
-#    $mapHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
-#                                                rows   => \@rows,
-#                                                width => '600',
-#                                                align  => [qw(left left center center)]
-#                                                );
-#    @rows = ();
-#  }
-}
+  } # end for
+
+
+  #### If there are some protein entries to display
   if ( @rows ) {
     unshift @rows, ['Chr', 'Protein', 'Residues on Exon', 'Exon Range', 'Strand'];
     $mapHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
                                                 width => '600',
                                                 align  => [qw(center left left center center)],
                                                 rows => \@rows );
+
+  #### Otherwise, just confess what the original name was
   } else {
     $mapHTML .= qq~
     <TR><TD COLSPAN=2>
@@ -724,6 +720,7 @@ if ($apply_action =~ /QUERY/i ) {
     </TD></TR>
     ~;
   }
+
 
   print "<TABLE WIDTH=600>$mapHTML</TABLE>\n";
 
