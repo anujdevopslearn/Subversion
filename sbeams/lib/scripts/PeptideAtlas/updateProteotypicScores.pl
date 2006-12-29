@@ -135,10 +135,13 @@ sub handleRequest {
   }
 
 
-  #### If a listing was desired, do that and exist
+  #### If a listing was requested, list and return
   if ($OPTIONS{"list"}) {
-    listBuilds();
-    exit;
+    use SBEAMS::PeptideAtlas::AtlasBuild;
+    my $builds = new SBEAMS::PeptideAtlas::AtlasBuild();
+    $builds->setSBEAMS($sbeams);
+    $builds->listBuilds();
+    return;
   }
 
 
@@ -179,31 +182,6 @@ sub handleRequest {
   return;
 
 } # end handleRequest
-
-
-
-###############################################################################
-# listBuilds -- List all PeptideAtlas builds
-###############################################################################
-sub listBuilds {
-  my $SUB = 'listBuilds';
-  my %args = @_;
-
-  my $sql = qq~
-    SELECT atlas_build_id,atlas_build_name
-      FROM $TBAT_ATLAS_BUILD
-     WHERE record_status != 'D'
-     ORDER BY atlas_build_name
-      ~;
-
-  my @atlas_builds = $sbeams->selectSeveralColumns($sql) or
-    die("ERROR[$SUB]: There appear to be no atlas builds in your database");
-
-  foreach my $atlas_build (@atlas_builds) {
-    printf("%5d %s\n",$atlas_build->[0],$atlas_build->[1]);
-  }
-
-} # end listBuilds
 
 
 
