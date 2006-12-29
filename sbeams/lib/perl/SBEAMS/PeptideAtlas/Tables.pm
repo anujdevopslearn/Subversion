@@ -209,7 +209,7 @@ $TBAT_NIST_LIBRARY_SPECTRUM     = "${mod}NIST_library_spectrum";
 $TBAT_NIST_LIBRARY_SPECTRUM_PEAK     = "${mod}NIST_library_spectrum_peak";
 $TBAT_NIST_LIBRARY_SPECTRUM_COMMENT     = "${mod}NIST_library_spectrum_comment";
 $TBAT_NIST_SPECTRUM_TYPE     = "${mod}NIST_spectrum_type";
-$TBAT_SPECTRUM_IDENTIFICATION     = "${mod}spectrum_identificaton";
+$TBAT_SPECTRUM_IDENTIFICATION     = "${mod}spectrum_identification";
 $TBAT_SPECTRUM     = "${mod}spectrum";
 $TBAT_SPECTRUM_PEAK     = "${mod}spectrum_peak";
 
