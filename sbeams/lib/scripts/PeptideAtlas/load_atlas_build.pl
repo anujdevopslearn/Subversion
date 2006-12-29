@@ -84,9 +84,12 @@ Options:
   --testvars                  If set, makes sure all vars are filled
   --check_tables              will not insert or update.  does a check of peptide_instance_sample
 
+  --list                      If set, list the available builds and exit
   --delete                    Delete an atlas build (does not build an atlas).
   --purge                     Delete child records in atlas build (retains parent atlas record).
   --load                      Build an atlas (can be used in conjunction with --purge).
+  --spectra                   Loads or updates the individual spectra for a build
+  --coordinates               Loads or updates the peptide coordinates
 
   --organism_abbrev           Abbreviation of organism like Hs
 
@@ -103,7 +106,8 @@ EOU
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
         "testvars","delete", "purge", "load", "check_tables",
-        "atlas_build_name:s", "organism_abbrev:s", "default_sample_project_id:s"
+        "atlas_build_name:s", "organism_abbrev:s", "default_sample_project_id:s",
+        "list","spectra","coordinates",
     )) {
 
     die "\n$USAGE";
@@ -198,6 +202,16 @@ sub handleRequest {
   my $default_sample_project_id = $OPTIONS{"default_sample_project_id"} || '';
 
 
+  #### If a listing was requested, list and return
+  if ($OPTIONS{"list"}) {
+    use SBEAMS::PeptideAtlas::AtlasBuild;
+    my $builds = new SBEAMS::PeptideAtlas::AtlasBuild();
+    $builds->setSBEAMS($sbeams);
+    $builds->listBuilds();
+    return;
+  }
+
+
   #### Verify required parameters
   unless ($atlas_build_name) {
     print "\nERROR: You must specify an --atlas_build_name\n\n";
@@ -259,6 +273,45 @@ sub handleRequest {
 
   } ## end --load
 
+
+  #### If spectrum loading was requested
+  if ($OPTIONS{"spectra"}) {
+    use SBEAMS::PeptideAtlas::Spectrum;
+    my $spectra = new SBEAMS::PeptideAtlas::Spectrum;
+    my $atlas_build_directory = get_atlas_build_directory(
+      atlas_build_id => $ATLAS_BUILD_ID,
+    );
+    $spectra->setSBEAMS($sbeams);
+    $spectra->setVERBOSE($VERBOSE);
+    $spectra->setTESTONLY($TESTONLY);
+    $spectra->loadBuildSpectra(
+      atlas_build_id => $ATLAS_BUILD_ID,
+      atlas_build_directory => $atlas_build_directory,
+      organism_abbrev => $organism_abbrev,
+    );
+  }
+
+
+  #### If spectrum loading was requested
+  if ($OPTIONS{"coordinates"}) {
+    print "\n Begin calc coordinates \n";
+
+    ## set infile to coordinate mapping file
+    my $builds_directory = get_atlas_build_directory (atlas_build_id =>
+        $ATLAS_BUILD_ID);
+    my $mapping_file = "$builds_directory/coordinate_mapping.txt";
+    my $biosequence_set_id = get_biosequence_set_id (atlas_build_id =>
+        $ATLAS_BUILD_ID);
+
+    #### Update the build data already loaded with genomic coordinates
+    readCoords_updateRecords_calcAttributes(
+        infile => $mapping_file,
+        atlas_build_id => $ATLAS_BUILD_ID,
+        biosequence_set_id => $biosequence_set_id,
+        organism_abbrev => $organism_abbrev
+    );
+
+  }
 
 
   #### Print out the header
@@ -328,7 +381,7 @@ sub get_atlas_build_directory
 {
     my %args = @_;
 
-    my $atlas_build_id = $args{atlas_build_id} or die "need atlas build id($!)";
+    my $atlas_build_id = $args{atlas_build_id} or die "need atlas build id";
 
     my $path;
 
@@ -2054,7 +2107,8 @@ sub readCoords_updateRecords_calcAttributes {
 
 
     my %strand_xlate = ( '-' => '-',   '+' => '+',  '-1' => '-',
-                        '+1' => '+',   '1' => '+'
+                        '+1' => '+',   '1' => '+',
+			'0'  => '?',
     );
 
 
