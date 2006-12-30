@@ -647,13 +647,19 @@ if ($apply_action =~ /QUERY/i ) {
                         (length $current_peptide_seq) );
       }
 
+    #### Else from the start
     } elsif ($tmp_strand eq "+") {
       if ($tmp_protein eq $last_protein) {
 	$tmp_seq = substr($current_peptide_seq, $last_seq_used_length, (length $current_peptide_seq));
       } else {
 	$tmp_seq = substr($current_peptide_seq, 0, $exon_bp_length);
       }
+
+    #### Otherwise, there's no proper mapping, but show information anyway
+    } else {
+      $tmp_seq = $current_peptide_seq;
     }
+
 
     $last_seq_used_length = length($tmp_seq);
 
