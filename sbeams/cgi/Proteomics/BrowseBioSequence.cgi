@@ -511,7 +511,6 @@ sub handle_request {
   #### Define the SQL statement
   $sql = qq~
       SELECT $limit->{top_clause} $columns_clause
-             $limit->{trailing_limit_clause}
         FROM $TBPR_BIOSEQUENCE BS
         LEFT JOIN $TBPR_BIOSEQUENCE_SET BSS
              ON ( BS.biosequence_set_id = BSS.biosequence_set_id )
@@ -534,6 +533,7 @@ sub handle_request {
       $fav_codon_frequency_clause
       $protein_length_clause
       $order_by_clause
+      $limit->{trailing_limit_clause}
    ~;
 
 
