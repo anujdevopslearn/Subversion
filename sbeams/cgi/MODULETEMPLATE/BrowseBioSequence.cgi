@@ -332,8 +332,8 @@ sub handle_request {
   #### Build ROWCOUNT constraint
   $parameters{row_limit} = 5000
     unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
-  my $limit_clause = "TOP $parameters{row_limit}";
 
+  my $limit = $sbeams->buildLimitClause( row_limit => $parameters{row_limit} );
 
   #### Define some variables needed to build the query
   my $group_by_clause = "";
@@ -434,7 +434,7 @@ sub handle_request {
 
   #### Define the SQL statement
   $sql = qq~
-      SELECT $limit_clause $columns_clause
+      SELECT $limit->{top_clause} $columns_clause
         FROM $TBModTmpTAG_BIOSEQUENCE BS
         LEFT JOIN $TBModTmpTAG_BIOSEQUENCE_SET BSS
              ON ( BS.biosequence_set_id = BSS.biosequence_set_id )
@@ -452,6 +452,7 @@ sub handle_request {
       $n_transmembrane_regions_clause
       $fav_codon_frequency_clause
       $order_by_clause
+      $limit->{trailing_limit_clause}
    ~;
 
 
