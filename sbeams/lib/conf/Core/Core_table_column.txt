@@ -176,7 +176,7 @@ work_group	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	
 work_group	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 work_group	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 user_login	1	user_login_id	User Login ID	int	4	0	N		Y							N	N				pkDEFAULT
-user_login	2	contact_id	Contact	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	N	Contact entry for this user	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS ""name"" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+user_login	2	contact_id	Contact	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	N	Contact entry for this user	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS ""name"" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) WHERE C.record_status <> 'D' AND O.record_status <> 'D'  ORDER BY last_name,first_name,organization"	
 user_login	3	username	Username	varchar	50	0	N		N			Y	text	25		Y	Y	Y	user login alias (preferably same as unix user alias)		
 user_login	4	password	password	varchar	50	0	Y		N			N	password	25		Y	Y	N	password (leave blank to use unix password of this username)		
 user_login	5	privilege_id	Privilege	int	4	0	N		N	privilege	privilege_id	Y	optionlist			Y	Y	N	General privilege of this user (different privileges may also be set by group)	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
