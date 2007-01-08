@@ -1179,6 +1179,11 @@ sub launch_gp_pipeline {
   my $gp_trigger_URL='http://deimos:8081/gptrigger/ExonArrayAnalysis';
 #  my $gp_trigger_URL='/devDC/sbeams/cgi/showparams.cgi';
 
+  # Calculate server 'root', $q doesn't have exactly what we need...
+  my $path = $HTML_BASE_DIR;
+  $path = '/' . $path unless $HTML_BASE_DIR =~ /^\//;
+  my $url = $q->url( -base => 1 ) . $path;
+  
   # Assemble FORM HTML
   my $gp_pipeline_form =<<"  END_FORM";
   You are submitting a job to the Gene Pattern analysis pipeline, please select a mapping
@@ -1199,6 +1204,7 @@ sub launch_gp_pipeline {
   <INPUT TYPE=hidden NAME=user_email VALUE='$email'>
   <INPUT TYPE=hidden NAME=cookie VALUE='$cookie'>
   <INPUT TYPE=hidden NAME=array_type VALUE='$array_type'>
+  <INPUT TYPE=hidden NAME=sbeams_server VALUE='$url'>
   <INPUT TYPE=hidden NAME=analysis_type VALUE='$analysis_type'>
   <INPUT TYPE=submit NAME=gpSubmit VALUE='Submit job'><INPUT TYPE=reset>
   </FORM>
