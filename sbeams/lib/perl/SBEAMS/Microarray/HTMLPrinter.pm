@@ -144,7 +144,6 @@ sub getAffyCSS {
   END
 
   my $agent = $q->user_agent();
-  $log->debug( $agent );
   if ( $agent =~ /MSIE/ ) {
     $css .= " .med_vert_cell {font-size: 10; background-color: #CCCCCC; white-space: nowrap; writing-mode: tb-rl; filter: flipv fliph;  }\n";
   }
@@ -367,7 +366,6 @@ sub displaySBEAMSPageHeader
 sub printStyleSheet {
     my $self = shift;
 
-    $log->debug( "gonna print yo" );
     #### Obtain main SBEAMS object and use its style sheet
     $sbeams = $self->getSBEAMS();
     $sbeams->printStyleSheet();
