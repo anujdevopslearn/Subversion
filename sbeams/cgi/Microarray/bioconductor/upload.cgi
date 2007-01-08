@@ -1174,6 +1174,7 @@ sub launch_gp_pipeline {
     $file_input .= "<INPUT TYPE=hidden NAME=get_all_files VALUE=$file>\n";
   }
   my $analysis_type = $cgi->param('analysis_type');
+  my $array_type = $cgi->param('array_type');
   my $submit = $cgi->param('gpSubmit');
   my $gp_trigger_URL='http://deimos:8081/gptrigger/ExonArrayAnalysis';
 #  my $gp_trigger_URL='/devDC/sbeams/cgi/showparams.cgi';
@@ -1197,6 +1198,7 @@ sub launch_gp_pipeline {
   <INPUT TYPE=hidden NAME=project_id VALUE='$project_id'>
   <INPUT TYPE=hidden NAME=user_email VALUE='$email'>
   <INPUT TYPE=hidden NAME=cookie VALUE='$cookie'>
+  <INPUT TYPE=hidden NAME=array_type VALUE='$array_type'>
   <INPUT TYPE=hidden NAME=analysis_type VALUE='$analysis_type'>
   <INPUT TYPE=submit NAME=gpSubmit VALUE='Submit job'><INPUT TYPE=reset>
   </FORM>
@@ -1212,14 +1214,20 @@ sub launch_gp_pipeline {
 sub get_db_map_select {
   return <<"  END";
   <SELECT NAME=db_name>
-  <OPTION VALUE='ENSEMBL'>ENSEMB</OPTION>
-  <OPTION VALUE='ENSEMBL gene'>ENSEMBL gene</OPTION>
-  <OPTION VALUE='ENSEMBL transcript prediction'>ENSEBML transcript prediction</OPTION>
-  <OPTION VALUE='Entrez gene'>Entrez gene</OPTION>
-  <OPTION VALUE='RefSeq'>RefSeq</OPTION>
-  <OPTION VALUE='UniGene'>UniGene</OPTION>
+  <option value="ense">ENSEMBL</option>
+  <option value="ensg">ENSEMBL gene</option>
+  <option value="enst">ENSEMBL transcript prediction</option>
+  <option value="entrezg" selected>Entrez gene</option>
+  <option value="refseq">RefSeq</option>
+  <option value="ug">UniGene</option>
   </SELECT>
   END
+#  <OPTION VALUE='ENSEMBL'>ENSEMB</OPTION>
+#  <OPTION VALUE='ENSEMBL gene'>ENSEMBL gene</OPTION>
+#  <OPTION VALUE='ENSEMBL transcript prediction'>ENSEBML transcript prediction</OPTION>
+#  <OPTION VALUE='Entrez gene'>Entrez gene</OPTION>
+#  <OPTION VALUE='RefSeq'>RefSeq</OPTION>
+#  <OPTION VALUE='UniGene'>UniGene</OPTION>
 }
 
 #### Subroutine: multtest#################################################
