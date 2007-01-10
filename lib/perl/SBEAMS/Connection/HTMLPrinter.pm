@@ -1389,6 +1389,7 @@ sub make_table_toggle {
 
     function toggle_tbl(obj_name) {
       
+      alert(obj_name);
       // Grab page elements by their IDs
       var gif_file = obj_name + "_gif";
       var tgif = document.getElementById(gif_file);
@@ -1422,7 +1423,7 @@ sub make_table_toggle {
   }
 
   # Set up the TR/TD attributes
-  my $tbl_html .= "NAME=$args{name} ID=$args{name} ";
+  my $tbl_html .= "NAME='$args{name}' ID='$args{name}' ";
   
   # Image isn't hidden, it is switched in the javascript
   my $imghtml = '';
@@ -1445,6 +1446,14 @@ sub make_table_toggle {
         qq~<A ONCLICK="toggle_tbl('${args{name}}');">$imghtml</A> ~;
 
   # Return html as separate content/widget, or as a concatentated thingy
+  if ( $args{as_hashref} ) {
+    $tbl_html =~ s/=/=>/g;
+    $tbl_html =~ s/\s+/,/g;
+#    $log->debug( $tbl_html );
+    my %ashash = eval("$tbl_html");
+#    for my $k (keys( %ashash)){ $log->debug( "$k -> $ashash{$k}" );}
+    return wantarray ? ( \%ashash, $linkhtml ) : $linkhtml . $tbl_html;
+  }
   return wantarray ? ( $tbl_html, $linkhtml ) : $linkhtml . $tbl_html;
 
   
