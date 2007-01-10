@@ -129,12 +129,12 @@ sub get_content {
     }
   }
   my @table = ( ['Category', "Prophet cutoff ($cutoff)", "Total" ] );
-  push @table, [ 'Unique peptides:', $stats{cutcnt} . ' (' . sprintf( "%d\%", $stats{cutcnt}/$stats{cnt}*100 ) . ')', $stats{cnt} ];
-  push @table, [ 'Cysteine containing:', $stats{cutcys} . ' (' . sprintf( "%d\%", $stats{cutcys}/$stats{cys}*100 ) . ')', $stats{cys} ];
-  push @table, [ 'Singly tryptic:', $stats{cutsing_tryp} . ' (' . sprintf( "%d\%", $stats{cutsing_tryp}/$stats{sing_tryp}*100 ) . ')', $stats{sing_tryp} ];
-  push @table, [ 'Doubly tryptic:', $stats{cutdoub_tryp} .  ' (' . sprintf( "%d\%", $stats{cutdoub_tryp}/$stats{doub_tryp}*100 ) . ')', $stats{doub_tryp} ];
-  push @table, [ 'Non tryptic:', $stats{cutnotryp} . ' (' . sprintf( "%d\%", $stats{cutnotryp}/$stats{notryp}*100 ) . ')', $stats{notryp} ];
-  push @table, [ 'Missed Cleavage:', $stats{cutmissed} . ' (' . sprintf( "%d\%", $stats{cutmissed}/$stats{missed}*100 ) . ')', $stats{missed} ];
+  push @table, [ 'Unique peptides:', $stats{cutcnt} . ' (' . sprintf( "%d\%", $stats{cutcnt}/$stats{cnt}*100 ) . ')', $stats{cnt} ] if $stats{cnt};
+  push @table, [ 'Cysteine containing:', $stats{cutcys} . ' (' . sprintf( "%d\%", $stats{cutcys}/$stats{cys}*100 ) . ')', $stats{cys} ] if $stats{cys};
+  push @table, [ 'Singly tryptic:', $stats{cutsing_tryp} . ' (' . sprintf( "%d\%", $stats{cutsing_tryp}/$stats{sing_tryp}*100 ) . ')', $stats{sing_tryp} ] if $stats{sing_tryp};
+  push @table, [ 'Doubly tryptic:', $stats{cutdoub_tryp} .  ' (' . sprintf( "%d\%", $stats{cutdoub_tryp}/$stats{doub_tryp}*100 ) . ')', $stats{doub_tryp} ] if $stats{doub_tryp};
+  push @table, [ 'Non tryptic:', $stats{cutnotryp} . ' (' . sprintf( "%d\%", $stats{cutnotryp}/$stats{notryp}*100 ) . ')', $stats{notryp} ] if $stats{notryp};
+  push @table, [ 'Missed Cleavage:', $stats{cutmissed} . ' (' . sprintf( "%d\%", $stats{cutmissed}/$stats{missed}*100 ) . ')', $stats{missed} ] if $stats{missed};
   my $table = $atlas->encodeSectionTable( header => 1,
                                           width => 400,
                                           align => [qw(right right right)],
