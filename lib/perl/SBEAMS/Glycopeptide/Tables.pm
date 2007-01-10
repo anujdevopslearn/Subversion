@@ -43,6 +43,8 @@ use vars qw(@ISA @EXPORT
     $TBGP_PEPTIDE_SEARCH
     $TBGP_IDENTIFIED_TO_GLYCOSITE
     $TBGP_PREDICTED_TO_GLYCOSITE
+    $TBGP_UNIPEP_BUILD
+    $TBGP_BUILD_TO_SEARCH
 );
 
 
@@ -76,6 +78,8 @@ require Exporter;
     $TBGP_PEPTIDE_SEARCH
     $TBGP_IDENTIFIED_TO_GLYCOSITE
     $TBGP_PREDICTED_TO_GLYCOSITE
+    $TBGP_UNIPEP_BUILD
+    $TBGP_BUILD_TO_SEARCH
 );
 
 
@@ -108,7 +112,9 @@ $TBGP_IDENTIFIED_TO_IPI= "${mod}identified_to_ipi";
 $TBGP_UNIPEP_SAMPLE   = "${mod}unipep_sample";
 $TBGP_SYNTHESIZED_PEPTIDE	= "${mod}synthesized_peptide";
 $TBGP_PEPTIDE_SEARCH			= "${mod}peptide_search";
-$TBGP_IDENTIFIED_TO_GLYCOSITE= "${mod}identified_to_glycosite";
-$TBGP_PREDICTED_TO_GLYCOSITE= "${mod}predicted_to_glycosite";
+$TBGP_IDENTIFIED_TO_GLYCOSITE = "${mod}identified_to_glycosite";
+$TBGP_PREDICTED_TO_GLYCOSITE = "${mod}predicted_to_glycosite";
+$TBGP_UNIPEP_BUILD = "${mod}unipep_build";
+$TBGP_BUILD_TO_SEARCH = "${mod}build_to_search";
 
 1;

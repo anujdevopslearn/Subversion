@@ -199,6 +199,7 @@ sub get_current_prophet_cutoff {
 
 # Stubs
 sub get_current_build {
+  return 1;
   return 2;
 }
 sub get_current_motif_type {

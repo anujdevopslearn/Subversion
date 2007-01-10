@@ -375,6 +375,7 @@ sub display_page_header {
 
 	<tr><td><a href="$CGI_BASE_DIR/main.cgi">$DBTITLE Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/main.cgi">$SBEAMS_PART Home</a></td></tr>
+  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/bulkSearch">Manage Settings</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
@@ -419,6 +420,9 @@ sub get_prophet_control {
   my $self = shift;
   my %args = @_;
   my $current = $self->get_current_prophet_cutoff();
+
+  my $show_form = $args{show_form} || 1;
+
   my @stock = qw( 0.5 0.6 0.7 0.8 0.9 0.95 0.99 1.0 );
   if ( defined $current && !grep /^$current$/, @stock ) {
     push @stock, $current;
@@ -458,7 +462,7 @@ sub get_prophet_control {
   </TABLE>
   </FORM>
   END
-  return $form
+  return ( $show_form ) ? $form : $select;
 }
 
 ###############################################################################
