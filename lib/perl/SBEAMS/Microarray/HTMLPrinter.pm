@@ -315,6 +315,12 @@ sub displaySBEAMSPageHeader
     }
 
     my $message = $sbeams->get_page_message();
+    my $notice = $sbeams->get_notice( 'Microarray' );
+    if ( $message ) {
+      $message .= "<BR>$notice\n" if $message;
+    } else {
+      $message = $notice if $notice;
+    }
 
     print qq~
     $two_color_section
