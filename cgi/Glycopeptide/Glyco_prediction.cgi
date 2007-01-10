@@ -37,7 +37,6 @@ $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::Glycopeptide;
 $sbeamsMOD->setSBEAMS($sbeams);
 
-
 $glyco_query_o = new SBEAMS::Glycopeptide::Glyco_query;
 $glyco_query_o->setSBEAMS($sbeams);
 
@@ -1344,6 +1343,10 @@ sub display_phospho_detail_form{
   my $protein_name = get_annotation(glyco_o   => $glyco_o,
 									  anno_type => 'protein_name'
 									  );
+
+  my $pseq = $glyco_o->seq_info()->seq();
+  my $scanlink = getScansiteForm( seq => $pseq, name => $glyco_o->ipi_accession() );
+
   my $ipi_acc = $glyco_o->ipi_accession();
     
   my $ipi_url = $glyco_o->make_url(term=> $glyco_o->ipi_accession(),
@@ -1367,7 +1370,7 @@ sub display_phospho_detail_form{
       $q->td({class=>'grey_header', colspan=>2}, "Protein Info"),),
     $q->Tr(
       $q->td({class=>'rev_gray_head'}, "IPI ID"),
-      $q->td("$ipi_url  ")),
+      $q->td("$ipi_url  $scanlink")),
     $q->Tr(
       $q->td({class=>'rev_gray_head', nowrap=>1}, "Protein Name"),
       $q->td( $protein_name )),
@@ -1518,12 +1521,40 @@ END_DREK
 		
 #	print "$protein_map\n";	
 	print $q->a({id=>'protein_sequence'});
-	
-	
-
-
-
-	
 
 } #end display_phospho
 
+
+sub getScansiteForm {
+  my %args = @_;
+  for my $arg ( qw( seq name ) ) {
+    return "" unless $args{$arg};
+  }
+
+#  <FORM NAME="scanners" ACTION="http://scansite.mit.edu/cgi-bin/motifscan_seq" METHOD=POST ONSUBMIT="alert('phooey')">
+
+  my $img = "$HTML_BASE_DIR/images/scansite.png";
+  return <<"  END";
+  <A ONCLICK="submit_scansite();"><IMG BORDER=0 TITLE="Search protein sequence at scansite" SRC=$img></A>
+  <FORM NAME="scansite" ACTION="http://scansite.mit.edu/cgi-bin/motifscan_seq" METHOD="POST" TARGET="scansite">
+  <INPUT TYPE=HIDDEN NAME=sequence VALUE="$args{seq}"></INPUT>
+  <INPUT TYPE=HIDDEN NAME=protein_id VALUE="$args{name}"></INPUT>
+  <INPUT TYPE=HIDDEN NAME=motif_option VALUE="select"></INPUT>
+  <INPUT TYPE=HIDDEN NAME=groups VALUE="1"></INPUT>
+  <INPUT TYPE=HIDDEN NAME=groups VALUE="2"></INPUT>
+  <INPUT TYPE=HIDDEN NAME=groups VALUE="5"></INPUT>
+  <INPUT TYPE=HIDDEN NAME=groups VALUE="7"></INPUT>
+  <INPUT TYPE=HIDDEN NAME=groups VALUE="8"></INPUT>
+  <INPUT TYPE=HIDDEN NAME=groups VALUE="9"></INPUT>
+  <INPUT TYPE=HIDDEN NAME=groups VALUE="11"></INPUT>
+  <INPUT TYPE=HIDDEN NAME=stringency VALUE="Medium"></INPUT>
+  <INPUT TYPE=HIDDEN NAME=domain_flag VALUE="on"></INPUT>
+  <INPUT TYPE=HIDDEN NAME=submitme VALUE="Submit Request"></INPUT>
+  </FORM>
+  <SCRIPT LANGUAGE="javascript">
+  function submit_scansite() {
+    document.scansite.submit();
+  }
+  </SCRIPT>
+  END
+}
