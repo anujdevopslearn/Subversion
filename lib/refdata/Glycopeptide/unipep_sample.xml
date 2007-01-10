@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <SBEAMS_EXPORT>
+    <project
+        record_status="N"
+        created_by_id="3"
+        name="Glycopeptide"
+        PI_contact_id="3"
+        date_modified="2006-09-25 17:04:59"
+        date_created="2005-06-24 12:02:50"
+        owner_group_id="8"
+        modified_by_id="3" />
     <GP_unipep_sample
         record_status="N"
         generation_date="2005-06-24 11:50:00"
@@ -9,7 +18,7 @@
         date_created="2005-06-24 12:02:50"
         tissue_type_id="8"
         owner_group_id="8"
-        modified_by_id="372"
+        modified_by_id="3"
         sample_id="1"
         sample_name="drosophila" />
     <GP_unipep_sample
