@@ -1389,7 +1389,6 @@ sub make_table_toggle {
 
     function toggle_tbl(obj_name) {
       
-      alert(obj_name);
       // Grab page elements by their IDs
       var gif_file = obj_name + "_gif";
       var tgif = document.getElementById(gif_file);
