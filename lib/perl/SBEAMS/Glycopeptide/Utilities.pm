@@ -199,14 +199,98 @@ sub get_current_prophet_cutoff {
 
 # Stubs
 sub get_current_build {
-  return 1;
-  return 3;
-  return 2;
+  my $self = shift;
+  my %args = @_;
+
+  # Check self for value
+  if ( $self->{_build_id} ) {
+    return $self->{_build_id};
+  }
+  my $sbeams = $self->getSBEAMS();
+
+  my $build_id = $sbeams->getSessionAttribute( key   => 'unipep_build_id' );
+
+  if ( $build_id ) {
+    $self->set_current_build( build_id => $build_id );
+    return $build_id 
+  }
+  
+  # Get database default?
+  ( $build_id ) = $sbeams->selectrow_array( <<"  END" );
+  SELECT unipep_build_id FROM $TBGP_UNIPEP_BUILD WHERE is_default  = 1
+  END
+
+  # Last option
+  $build_id ||= 1;
+
+  $self->set_current_build( build_id => $build_id );
+  return $build_id 
+}
+
+sub set_current_build {
+  my $self = shift;
+  my %args = @_;
+
+  # Nothing to set
+  return unless $args{build_id};
+  # Nothing to set
+
+  unless ( $self->is_valid_build( build_id => $args{build_id} ) ) {
+    $log->error( "invalid build ID specified" );
+    return '';
+  }
+  
+  # Make sure we have an sbeams object
+  my $sbeams = $self->getSBEAMS();
+
+  # Cache in the object
+  $self->{_build_id} = $args{build_id};
+
+  # Cache in the session
+  $sbeams->setSessionAttribute( key   => 'unipep_build_id',
+                                value => $args{build_id} );
+
   return 1;
 }
+
+sub is_valid_build {
+  my $self = shift;
+  my %args = @_;
+
+  # Did we get a reasonable value?
+  if ( !$args{build_id} ) {
+    $log->error( "Must pass build_id as a named param" );
+    return 0;
+  } elsif ( $args{build_id} !~ /^\d+$/ ) {
+    $log->error( "build_id must be a number" );
+    return 0;
+  }
+
+  # Make sure we have an sbeams object
+  my $sbeams = $self->getSBEAMS();
+
+  # See if it is in the database
+  ( $build_id ) = $sbeams->selectrow_array( <<"  END" );
+  SELECT COUNT(*) 
+  FROM $TBGP_UNIPEP_BUILD 
+  WHERE unipep_build_id = $args{build_id} 
+  END
+
+  return $build_id;
+}
+
 sub get_current_motif_type {
-  return 'phospho';
-  return 'glycopeptide';
+  my $self = shift;
+  my $build_id = $self->get_current_build();
+
+  my $sbeams = $self->getSBEAMS();
+  # Check db for motif type
+  my ( $motif ) = $sbeams->selectrow_array( <<"  END" );
+  SELECT motif_type 
+  FROM $TBGP_UNIPEP_BUILD 
+  WHERE unipep_build_id = $build_id 
+  END
+  return ( $motif =~ /glyco/ ) ? 'glycopeptide' : 'phospho';
 }
 
 sub get_transmembrane_info {

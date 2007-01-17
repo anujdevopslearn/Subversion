@@ -367,6 +367,7 @@ sub display_page_header {
 
     my $prophet_control = $self->get_prophet_control();
     my $message = $sbeams->get_page_message();
+    my $sp = '&nbsp;' x 3;
 
     if ($navigation_bar eq "YES") {
       print qq~
@@ -376,7 +377,6 @@ sub display_page_header {
 
 	<tr><td><a href="$CGI_BASE_DIR/main.cgi">$DBTITLE Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/main.cgi">$SBEAMS_PART Home</a></td></tr>
-  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/bulkSearch">Manage Settings</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
@@ -390,6 +390,7 @@ sub display_page_header {
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=GP_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
+  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/settings.cgi">${sp} UniPep Settings</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>$prophet_control</td></tr>
 
