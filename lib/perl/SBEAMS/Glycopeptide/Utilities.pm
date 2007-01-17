@@ -197,6 +197,21 @@ sub get_current_prophet_cutoff {
   return $cutoff;
 }
 
+sub get_current_build_name {
+  my $self = shift;
+
+  my $build_id = $self->get_current_build();
+
+  my $sbeams = $self->getSBEAMS();
+
+  my ( $build_name ) = $sbeams->selectrow_array( <<"  END" );
+  SELECT build_name FROM $TBGP_UNIPEP_BUILD 
+  WHERE unipep_build_id  = $build_id
+  END
+  return $build_name || 'Unknown';
+
+}
+  
 # Stubs
 sub get_current_build {
   my $self = shift;

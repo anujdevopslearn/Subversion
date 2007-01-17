@@ -77,7 +77,7 @@ sub main {
 
 
 sub get_intro {
-  my $build = $glyco->getCurrentBuild();
+  my $build = "<I>" . $glyco->get_current_build_name() . "</I>\n";
   my $address = 'dcampbel@systemsbiology.net';
   my $content = qq~
   <P>
@@ -97,9 +97,19 @@ sub get_content {
 #  SELECT identified_peptide_sequence, peptide_prophet_score
 #  FROM $TBGP_IDENTIFIED_PEPTIDE
 #
+  
+  my $build_id = $glyco->get_current_build();
+
   my $sql = qq~
   SELECT observed_peptide_sequence, MAX(peptide_prophet_score)
-  FROM $TBGP_OBSERVED_PEPTIDE
+  FROM $TBGP_OBSERVED_PEPTIDE OP 
+  JOIN $TBGP_OBSERVED_TO_IPI OTI 
+    ON OTI.observed_peptide_id = OP.observed_peptide_id 
+  JOIN $TBGP_IPI_DATA ID 
+    ON OTI.ipi_data_id = ID.ipi_data_id 
+  JOIN $TBGP_UNIPEP_BUILD UB 
+    ON UB.ipi_version = ID.ipi_version_id 
+  WHERE unipep_build_id = $build_id
   GROUP BY observed_peptide_sequence
   ~;
 
