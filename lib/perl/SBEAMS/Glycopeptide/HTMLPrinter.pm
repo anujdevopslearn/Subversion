@@ -399,12 +399,12 @@ sub display_page_header {
 	<!-------- Main Page ------------------------------------------->
 	<td valign=top>
 	<table border=0 bgcolor="#ffffff" cellpadding=4>
-	<tr><td>$message choans
+	<tr><td>$message
 
     ~;
     } else {
       print qq~
-	</TABLE>$message moans
+	</TABLE>$message
       ~;
     }
 

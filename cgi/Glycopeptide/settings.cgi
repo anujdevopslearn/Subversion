@@ -59,11 +59,11 @@ main();
 sub main 
 { 
   my $current_username;
-  $sbeams->set_page_message( type => 'Info', msg => 'Hello World' );
   # Authenticate and exit if a username is not returned
   $current_username = $sbeams->Authenticate(
         permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin','Glycopeptide_readonly'],
         allow_anonymous_access=>0 ) || exit;
+  $sbeams->set_page_message( type => 'Info', msg => 'Hello World' );
 
   #### Read in the default input parameters
   my $params = process_params();

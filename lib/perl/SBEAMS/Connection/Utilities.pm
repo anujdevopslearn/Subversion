@@ -749,16 +749,11 @@ sub set_page_message {
   my $this = shift;
   my %args = @_;
   return unless $args{msg};
-  $log->debug( "setting message $args{msg}" );
 
   my $type = ( $args{type} && $args{type} eq 'Error' ) ? 'Error' : 'Info';
 
   $this->setSessionAttribute( key => '_SBEAMS_message', 
                             value => $type . '::' . $args{msg} );
-  $log->debug( "setting Attribute" );
-  $log->debug( "Getting the Attribute" );
-  my $sbeams_msg = $this->getSessionAttribute( key => '_SBEAMS_message' );
-  $log->debug( "The winner is $sbeams_msg" );
   
 }
 
@@ -769,9 +764,7 @@ sub get_page_message {
   my %color = ( Error => $args{error_color} || 'red',
                 Info => $args{info_color} || 'green' );
 
-  $log->debug( "Getting the Attribute" );
   my $sbeams_msg = $this->getSessionAttribute( key => '_SBEAMS_message' );
-  $log->debug( "The winner is $sbeams_msg" );
   return '' unless $sbeams_msg;
   my ( $mode, $msg ) = $sbeams_msg =~ /^(\w+)::(.+)$/;
 
