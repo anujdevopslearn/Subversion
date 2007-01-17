@@ -22,4 +22,4 @@ GP_glycosite	Theoretical	Glycopeptide_infrastructure	NO	$TBGP_GLYCOSITE	glycosit
 GP_predicted_peptide	Theoretical	Glycopeptide_infrastructure	NO	$TBGP_PREDICTED_PEPTIDE	predicted_peptide_id				
 GP_predicted_to_glycosite	Theoretical	Glycopeptide_infrastructure	NO	$TBGP_PREDICTED_TO_GLYCOSITE	predicted_to_glycosite_id				
 GP_unipep_build	Theoretical	Glycopeptide_infrastructure	YES	$TBGP_UNIPEP_BUILD	unipep_build_id		ManageTable.cgi?TABLE_NAME=GP_unipep_build		
-GP_build_to_search	Theoretical	Glycopeptide_infrastructure	NO	$TBGP_BUILD_TO_SEARCH	build_to_search_id				
+GP_build_to_search	Theoretical	Glycopeptide_infrastructure	YES	$TBGP_BUILD_TO_SEARCH	build_to_search_id				
