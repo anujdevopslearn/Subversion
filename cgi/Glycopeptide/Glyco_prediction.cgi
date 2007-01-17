@@ -943,6 +943,7 @@ sub make_protein_map_graphic {
     my @non_redundant;
     my $max = 0;
     for my $f ( @{$sorted_features{$id_track_type}} ) {
+#  $f->score( log( $f->score() ) );
       my $key = $f->seq()->seq() . $f->start() . $f->end;
       $max = ( $f->score() && $f->score() > $max ) ? $f->score() : $max; 
       next if $seen{$key};
