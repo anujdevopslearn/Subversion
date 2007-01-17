@@ -366,6 +366,7 @@ sub display_page_header {
     ~;
 
     my $prophet_control = $self->get_prophet_control();
+    my $message = $sbeams->get_page_message();
 
     if ($navigation_bar eq "YES") {
       print qq~
@@ -398,12 +399,12 @@ sub display_page_header {
 	<!-------- Main Page ------------------------------------------->
 	<td valign=top>
 	<table border=0 bgcolor="#ffffff" cellpadding=4>
-	<tr><td>
+	<tr><td>$message choans
 
     ~;
     } else {
       print qq~
-	</TABLE>
+	</TABLE>$message moans
       ~;
     }
 

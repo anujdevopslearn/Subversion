@@ -77,6 +77,10 @@ sub returnTableInfo {
         }
 
 
+    } elsif ($table_name eq "GP_build_to_search") {
+      if ($info_key =~ /Query/ ) {
+        return "SELECT * FROM $TBGP_BUILD_TO_SEARCH";
+      }
     }
 
 

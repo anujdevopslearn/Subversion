@@ -1718,7 +1718,7 @@ sub check_ipi {
 	my $self = shift;
 	my $ipi_id = shift;
 	
-	confess(__PACKAGE__ . "::$method Need to provide IPI id '$ipi_id' is not good  \n")unless $ipi_id =~ /^IPI/;
+#	confess(__PACKAGE__ . "::$method Need to provide IPI id '$ipi_id' is not good  \n")unless $ipi_id =~ /^IPI/;
 	if (exists $self->{All_records}{$ipi_id} ){
 		return 1;
 	}else{
