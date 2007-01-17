@@ -126,7 +126,8 @@ sub make_peptide_bio_seqs {
 		my $peptide_id = '';
 		my $identified_tissues = '';
 
-		
+    $log->printStack( 'debug' );
+
 	#pull out the sequence and id for the different types of peptides 
    if ($pep_type eq 'Identified Peptides'){
 			$modified_pep_seq = $href->{'identified_peptide_sequence'};
