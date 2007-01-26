@@ -93,8 +93,10 @@ sub main
       }
     }
 
-    $sbeamsMOD->display_page_header(project_id => $project_id);
+    $sbeamsMOD->display_page_header(project_id => $project_id,
+                                    onload => 'sortables_init()' );
     print $sbeams->getGifSpacer(800);
+    import_sort_table();
     print "$content";
 		$sbeamsMOD->display_page_footer();
 
@@ -109,6 +111,11 @@ sub handle_request {
  	my %params = %{$params};
 }
 
+sub import_sort_table {
+  print <<"  END";
+  <SCRIPT LANGUAGE=javascript SRC="$HTML_BASE_DIR/usr/javascript/sorttable.js">
+  END
+}
 
 sub display_proteins{
   my $mode = shift;
@@ -116,7 +123,7 @@ sub display_proteins{
 	my @results_set = $glyco_query_o->all_proteins_query($mode);	
   my $html = '';
   if ( $mode eq 'multi_tmm' ) {
-	  $html .= $q->start_table() .
+	  $html .= $q->start_table( {ID => 'hits', CLASS => 'sortable'} ) .
              $q->Tr(
              $q->td({class=>'rev_gray_head'},'IPI ID'),
              $q->td({class=>'rev_gray_head'},'Protein Name'),
@@ -125,7 +132,7 @@ sub display_proteins{
              $q->td({class=>'rev_gray_head'},'# TMM domains')
              );
   } else {
-	  $html .= $q->start_table() .
+	  $html .= $q->start_table( ID => 'hits', CLASS => 'sortable' ) .
              $q->Tr({class=>'rev_grey', nowrap=>1 },
              $q->td({class=>'rev_grey', nowrap=>1},'IPI ID'),
              $q->td({class=>'rev_grey', nowrap=>1},'Protein Name'),
@@ -133,7 +140,7 @@ sub display_proteins{
              $q->td({class=>'rev_grey', nowrap=>1},'Identified Peptides')
              );
   }
-
+#  $html =~ s/(<table)/$1 ID=hits CLASS=sortable/gi;
 	my $cgi_url = "Glyco_prediction.cgi?action=Show_detail_form&ipi_data_id";
 
   my $protcnt = 0;
