@@ -367,7 +367,7 @@ sub display_page_header {
 
     my $prophet_control = $self->get_prophet_control();
     my $message = $sbeams->get_page_message();
-    my $sp = '&nbsp;' x 3;
+    my $sp = '&nbsp;' x 2;
 
     if ($navigation_bar eq "YES") {
       print qq~
