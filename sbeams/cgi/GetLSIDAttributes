@@ -156,7 +156,7 @@ sub handle_request {
     q=>$q,parameters_ref=>\%parameters,
     columns_ref=>\@columns,input_types_ref=>\%input_types);
 
-
+  print_usage() unless $q->param();
 
   #########################################################################
   #### Process all the paramters
@@ -277,6 +277,14 @@ sub handle_request {
   print get_footers();
 
 } # end handle_request
+
+sub print_usage {
+
+  print get_headers();
+  print "Whoa, no params!\n";
+  print get_footers();
+  exit;
+}
 
 #+
 # Generate markup headers as needed
@@ -414,7 +422,7 @@ sub get_core_data {
   my $content = '';
 
   # Make sure we have a valid class
-  my @supported_classes = qw( project user_login );
+  my @supported_classes = qw( project user_login user_project_permissions );
   unless ( grep /^$class$/, @supported_classes ) {
     $sbeams->handle_error(
       message => "sbeams.$module.$class is not a valid or supported namespace",
@@ -617,7 +625,7 @@ sub get_microarray_data {
 
   # Make sure we have a valid class
   my @supported_classes = qw( project comparison_condition affy_array_sample
-                              affy_array affy_analysis slide_type );
+                              affy_array affy_analysis slide_type file_path );
   unless ( grep /^$class$/, @supported_classes ) {
     $sbeams->handle_error(
       message => "sbeams.$module.$class is not a valid or supported namespace",
@@ -756,10 +764,12 @@ sub get_project_arrays {
 
    #### Get affy array info
    $sql = qq ~
-    SELECT AA.* 
+    SELECT AA.*, FP.file_path 
     FROM $TBMA_AFFY_ARRAY_SAMPLE AAS 
     JOIN $TBMA_AFFY_ARRAY AA 
     ON AA.affy_array_sample_id = AAS.affy_array_sample_id
+    JOIN $TBMA_FILE_PATH FP 
+    ON AA.file_path_id = FP.file_path_id
     WHERE project_id='$project_id'
     AND AAS.record_status != 'D'
     AND AA.record_status != 'D'
