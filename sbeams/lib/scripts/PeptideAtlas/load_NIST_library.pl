@@ -272,13 +272,14 @@ sub populateRecords
                     {
 #                      $chg = $2;
 #                      $label = $1;
-#                      ## asterick means dubious peak, so removing it
-#                      if ( $chg =~ s/\*//g)
-#                      {
-                           $chg = 1;
-                           $label = "";
-#                      }
                        $ignore=1;
+                    }
+                    ## asterick means dubious peak, so removing it
+                    if ( $label =~ s/\*//g)
+                    {
+                        $chg = 1;
+                        $label = "";
+                        $ignore=1;
                     }
                     if (($ignore ==0) && $label =~ /(.*)\^(.*)/)
                     {
@@ -331,8 +332,6 @@ sub getOrganismId
     my %args = @_;
 
     my $organism_name = $args{organism_name} || die "need organism_name";
-
-    my $organism_id;
 
     my $sql = qq~
         SELECT O.organism_id
@@ -459,16 +458,40 @@ sub getModSeq
 
     my $mods = $args{mods} || die "need mods";
 
-    my $modSeq;
+    my $modSeq ='';
 
-    ## parse the mods string
-    ## format is: #/n,aa,tag/n,aa,tag...
-    ## where # is number of modifications, with mods sep by /
-    ##  n is the substituted position of amino acid
-    ##  if mutliple mods occur, they're arranged al[phabet by tag
-    ##    where tag is name of modif as given by unimod
+    ## Peptide modifications are given in the following format:
+    ##    Mods=#/n,aa,tag/n,aa,tag
+    ##
+    ##    # is number of modifications with modifications separated
+    ##        by a forward slash '/'.
+    ##    mods are arranged in order of amino acid position, and if
+    ##        multiple mods are arranged at a single position, they're
+    ##        ordered alphabetically by a tag
+    ##    n is the position of the substituted amino acid (starting from 0)
+    ##    aa is the modified amino acid symbol
+    ##    tag is the name of the modifications as given by Unimod (unimod.org)
+    ##
+    ## Only these mods have been used:
+    ## { "Oxidation", 15.994915 },
+    ## { "Carbamidomethyl ", 57.02146 },
+    ## { "ICAT_light", 227.12 },
+    ## { "ICAT_heavy", 236.12 },
+    ## { "AB_old_ICATd0", 442.20 },
+    ## { "AB_old_ICATd8", 450.20 },
+    ## { "Acetyl", 42.0106 },
+    ## { "Deamidation", 0.9840 },
+    ## { "Pyro-cmC", -17.026549 },
+    ## { "Pyro-glu", -17.026549 },
+    ## { "Pyro_glu", -18.010565 },
+    ## { "Amide", -0.984016 },
+    ## { "Phospho", 79.9663},
+    ## { "Methyl", 14.0157 },
+    ## { "Carbamyl", 43.00581 },
 
     ## example: 2/3,C,Carbamidomethyl/16,C,Carbamidomethyl
+
+    ## haven't yet accounted for them all below...
 
     my ($n, @loc, @aa, @modName);
 
@@ -493,7 +516,6 @@ sub getModSeq
         }
     }
 
-  
     ## need to parse from bottom of loc stack to not be affected by
     ## expanding string while inserting mod strings
     for (my $i=$#loc; $i >=0; $i--)
@@ -536,6 +558,9 @@ sub getModSeq
             } elsif ( $modName[$i] eq "Acetyl" && $aa[$i] eq "M")
             {
                 $seq_1 = "M[173]";
+            } elsif ( $modName[$i] eq "Acetyl" && $aa[$i] eq "A")
+            {
+                $seq_1 = "A[113]"; 
             } else
             {
                 print "[WARNING] didn't code for this modification: "
@@ -574,17 +599,17 @@ sub parseComment
 
     my $line = $args{comment_line} || die "need comment_line";
 
-    my %hash;
+    my %hash =();
 
-#   if ($line =~ /.*(Spec)=(\D+?)\s.*/)
-#   {
-#       $hash{$1} = $2;
-#   }
-
-    if ($line =~ /^(Comments:\s)(\w+)\s.*/)
+    if ($line =~ /.*(Spec)=(\D+?)\s.*/)
     {
-        $hash{'Spec'} = $2;
+        $hash{$1} = $2;
     }
+
+#   if ($line =~ /^(Comments:\s)(\w+)\s.*/)
+#   {
+#       $hash{'Spec'} = $2;
+#   }
 
 #   if ($line =~ /.*(Inst)=(\D+?)\s.*/)
 #   {
