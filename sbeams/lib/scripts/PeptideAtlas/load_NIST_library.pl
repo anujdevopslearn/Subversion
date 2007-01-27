@@ -561,6 +561,30 @@ sub getModSeq
             } elsif ( $modName[$i] eq "Acetyl" && $aa[$i] eq "A")
             {
                 $seq_1 = "A[113]"; 
+            } elsif ( $modName[$i] eq "Acetyl" && $aa[$i] eq "C")
+            {
+                $seq_1 = "C[145]"; 
+            } elsif ( $modName[$i] eq "Acetyl" && $aa[$i] eq "D")
+            {
+                $seq_1 = "D[157]"; 
+            } elsif ( $modName[$i] eq "Acetyl" && $aa[$i] eq "E")
+            {
+                $seq_1 = "E[171]"; 
+            } elsif ( $modName[$i] eq "Acetyl" && $aa[$i] eq "G")
+            {
+                $seq_1 = "G[99]"; 
+            } elsif ( $modName[$i] eq "Acetyl" && $aa[$i] eq "L")
+            {
+                $seq_1 = "L[155]"; 
+            } elsif ( $modName[$i] eq "Acetyl" && $aa[$i] eq "S")
+            {
+                $seq_1 = "S[129]"; 
+            } elsif ( $modName[$i] eq "Acetyl" && $aa[$i] eq "T")
+            {
+                $seq_1 = "T[143]"; 
+            } elsif ( $modName[$i] eq "Acetyl" && $aa[$i] eq "V")
+            {
+                $seq_1 = "V[141]"; 
             } else
             {
                 print "[WARNING] didn't code for this modification: "
