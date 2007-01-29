@@ -1089,8 +1089,8 @@ sub launch_gp_pipeline {
   $fm = new FileManager;
   $fm->init_with_token($Site::BC_UPLOAD_DIR, $parent_token);
 
-# Write symlinks into analysis directory
-  upload_files();
+# Write symlinks into analysis directory, returns info -> root mapping hash
+  my $file_root = upload_files();
 
 #  my @p = $q->param();
 #  for my $p ( @p ) { $log->debug( "param: $p => " . $q->param($p) ); }
@@ -1172,6 +1172,8 @@ sub launch_gp_pipeline {
   my $file_input = '';
   for my $file ( @filenames ) {
     $file_input .= "<INPUT TYPE=hidden NAME=get_all_files VALUE=$file>\n";
+#    $file_input .= "<INPUT TYPE=hidden NAME=file_root VALUE=$file_root->{$file}>\n";
+    $file_input .= "<INPUT TYPE=hidden NAME=file_info VALUE='$file_root->{$file}::::$file'>\n";
   }
   my $analysis_type = $cgi->param('analysis_type');
   my $array_type = $cgi->param('array_type');
@@ -1908,10 +1910,11 @@ sub upload_files {
   my @array_file_names = $cgi->param('get_all_files');
   my $path = $fm->path();
   my $return;
+  my %file_root;
 
   foreach  my $array_info (@array_file_names){
-    my ($arry_id, $file_ext) = split /__/, $array_info;  #example array_info "134__CEL"
-    my ($affy_file_root, $file_path) =	$sbeams_affy_groups->get_file_path_from_id(affy_array_id=>$arry_id);
+    my ($array_id, $file_ext) = split /__/, $array_info;  #example array_info "134__CEL"
+    my ($affy_file_root, $file_path) =	$sbeams_affy_groups->get_file_path_from_id(affy_array_id=>$array_id);
     my $cel_file = "$file_path/$affy_file_root.$file_ext";
     #my $out_path = "$path/$affy_file_root.$file_ext";
     my $out_path = "$path/$affy_file_root.$file_ext";
@@ -1919,8 +1922,9 @@ sub upload_files {
     my $command_line = "ln -s $cel_file $path";
     #print "ln COMMAND LINE $command_line<br>";
     $return = system($command_line);
+    $file_root{$array_info} = $affy_file_root;
   }
-  return ( $return );  # status from final system call.
+  return ( \%file_root ); 
 }
 
 ###############################################################################
