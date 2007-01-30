@@ -576,6 +576,9 @@ sub getModSeq
             } elsif ( $modName[$i] eq "Acetyl" && $aa[$i] eq "L")
             {
                 $seq_1 = "L[155]"; 
+            } elsif ( $modName[$i] eq "Acetyl" && $aa[$i] eq "P")
+            {
+                $seq_1 = "P[139]"; 
             } elsif ( $modName[$i] eq "Acetyl" && $aa[$i] eq "S")
             {
                 $seq_1 = "S[129]"; 
