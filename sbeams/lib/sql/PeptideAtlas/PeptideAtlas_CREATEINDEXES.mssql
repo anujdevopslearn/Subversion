@@ -32,5 +32,4 @@ CREATE NONCLUSTERED INDEX idx_sequence ON dbo.NIST_library_spectrum ( sequence )
 CREATE NONCLUSTERED INDEX idx_peptide_sequence ON dbo.peptide ( peptide_sequence ) --WITH DROP_EXISTING
 CREATE NONCLUSTERED INDEX idx_mz_exact ON dbo.NIST_library_spectrum ( mz_exact ) --WITH DROP_EXISTING
 CREATE NONCLUSTERED INDEX idx_mz ON dbo.NIST_library_spectrum_peak ( mz ) --WITH DROP_EXISTING
-
-
+CREATE NONCLUSTERED INDEX relative_intensity ON dbo.NIST_library_spectrum_peak (relative_intensity) --WITH DROP_EXISTING 
