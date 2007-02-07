@@ -243,7 +243,7 @@ sub getExpressionValues {
   
   my $gene_string = join( ", ", @{$gene_list} );
 
-  my $search_type = ( $kegg_organism eq 'hsa' ) ? 'Entrez GeneID' : 'ORF NAME';
+  my $search_type = ( grep $kegg_organism qw( hsa mme )  ) ? 'Entrez GeneID' : 'ORF NAME';
 
   my $sql =<<"  END";
   select DISTINCT search_key_name, resource_name, search_key_id,
