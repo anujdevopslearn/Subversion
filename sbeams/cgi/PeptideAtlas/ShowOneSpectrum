@@ -532,7 +532,7 @@ sub pg_setup {
     pgsch 1;
 
     #### Y label on left, centered vertically along axis
-    pgmtxt 'L',3.8,.5,.5,'Intensity';
+    pgmtxt 'L',3.8,.5,.5,'Normalized Intensity';
 
     #### X label on bottom, centered vertically along axis
     pgmtxt 'B',2.25,.5,.5,'m/z';
