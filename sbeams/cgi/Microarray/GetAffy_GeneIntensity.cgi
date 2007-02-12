@@ -2119,9 +2119,16 @@ sub make_hash_of_row {
 
 		$sql = $affy_anno->get_annotation_sql();    			#returns just the sql text
 
-		$sql = "$sql $annotation_set_id_clause $probe_set_id_clause";    #append on the constriants to the main sql
-		$sql =~ s/SELECT/SELECT top 1 affy_annotation_id,/; 
-#		$sbeams->display_sql(sql=>$sql);
+	  my $limit_clause = $sbeams->buildLimitClause( row_limit => 1 );
+
+    $sql .= <<"    END";
+    $annotation_set_id_clause
+    $probe_set_id_clause
+    $limit_clause->{trailing_limit_clause};
+    END
+
+    $sql =~ s/SELECT/SELECT $limit_clause->{top_clause} affy_annotation_id,/; 
+		$sbeams->display_sql(sql=>$sql);
 
 		my @anno_data = $sbeams->selectHashArray($sql);
 
