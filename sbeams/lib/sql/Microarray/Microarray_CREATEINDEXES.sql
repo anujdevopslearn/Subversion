@@ -8,7 +8,7 @@ CREATE INDEX idx_affy_db_links_id
 
 -- gene_ontology
 CREATE INDEX idx_affy_annotation_id
-   ON gene_ontology ( affy_annotation_id )
+   ON gene_ontology ( affy_annotation_id );
 	
 -- gene_ontology affy_db_links_id
 CREATE INDEX idx_affy_db_links_id
@@ -87,7 +87,11 @@ CREATE INDEX idx_biosequence_id
    ON gene_expression ( biosequence_id );    
 
 -- condition  condition_id,false_discovery_rate
-CREATE NONCLUSTERED INDEX idx_condition_id_fdr
+CREATE INDEX idx_condition_id_fdr
    ON dbo.gene_expression ( condition_id,false_discovery_rate );
+
+-- condition  condition_id,canonical_name
+CREATE INDEX idx_cond_id_canonical
+   ON dbo.gene_expression ( condition_id,canonical_name );
 
 
