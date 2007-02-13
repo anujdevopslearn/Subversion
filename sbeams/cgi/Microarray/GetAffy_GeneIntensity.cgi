@@ -2128,7 +2128,7 @@ sub make_hash_of_row {
     END
 
     $sql =~ s/SELECT/SELECT $limit_clause->{top_clause} affy_annotation_id,/; 
-		$sbeams->display_sql(sql=>$sql);
+#		$sbeams->display_sql(sql=>$sql);
 
 		my @anno_data = $sbeams->selectHashArray($sql);
 
