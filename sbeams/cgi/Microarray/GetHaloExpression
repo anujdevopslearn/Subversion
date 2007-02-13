@@ -638,7 +638,6 @@ sub handle_request {
 
     #### Display a plot of data from the resultset
     $sbeams->displayResultSetPlot(
-      quell_tables=>1,
       rs_params_ref=>\%rs_params,
       resultset_ref=>$resultset_ref,
       query_parameters_ref=>\%parameters,
