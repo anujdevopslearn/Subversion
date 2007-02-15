@@ -537,10 +537,18 @@ mva.pairs.custom <- function (x, labels = colnames(x), log.it = TRUE, span = 2/3
         text(1, 1, labels[j], cex = .75)
         for (k in (j + 1):J) {
             par(mfg = c(j, k))
-            yy <- x[, j] - x[, k]
-            xx <- (x[, j] + x[, k])/2
-            sigma <- IQR(yy)
-            mean <- median(yy)
+
+
+            yy <- rm.na(x[, j] - x[, k]);
+            xx <- rm.na((x[, j] + x[, k])/2);
+
+            if ( length(yy) != length(xx) ) {
+              print( paste( "Error, vector lengths differ:", length(xx), "is not equal to", length(yy) ) );
+            }
+
+            sigma <- IQR(xx, na.rm =  TRUE );
+            mean <- median(xx);
+
             subset <- sample(1:length(x), min(c(10000, length(x))))
             ma.plot(xx, yy, tck = 0, subset = subset, show.statistics = FALSE, 
                 pch = ".", xlab = "", ylab = "", tck = 0, ...)
@@ -577,10 +585,12 @@ path.to.annotation <- "$AFFY_ANNO_PATH/"
 
 END
 
-  my %group_files;
-  foreach ( @{$info->{sample_groups}} ) {
-    $group_files{$_}++;
-  }
+# Count the files in each group
+my %group_files;
+foreach my $grp ( @{$info->{sample_groups}} ) {
+  $grp =~ s/ +/_/g;
+  $group_files{$grp}++;
+}
 
 # Generate plot code/dimensions for MVA and correlation plots.
 my %mva_dim;
@@ -590,6 +600,8 @@ my $tot = 0;
 my %seenit;
 foreach my $grp ( @{$info->{sample_groups}} ) {
 
+  $grp =~ s/ +/_/g;
+  
   # Will do this only once per group
   next if $seenit{$grp};
   $seenit{$grp}++;
@@ -620,9 +632,27 @@ my %corr_dims = ( height => 6, # + .04*$tot,
   # Main data processing, entirely R
   $script .= <<"END";
 .libPaths(lib_path)
+library(Biobase)
+library(tools)
+library(limma)
+library(marray)
 library(affy)
+library(matchprobes)
+library(splines)
 library(gcrma)
 library(vsn)
+package.version('affy');
+package.version('Biobase');
+package.version('tools');
+package.version('limma');
+package.version('marray');
+package.version('gcrma');
+package.version('matchprobes');
+package.version('splines');
+package.version('vsn');
+
+print ( paste( Sys.time(), "Loaded libraries" ));
+
 bgcorrect.methods <- c(bgcorrect.methods, "gcrma")
 normalize.AffyBatch.methods <- c(normalize.AffyBatch.methods, "vsn")
 express.summary.stat.methods <- c(express.summary.stat.methods, "rlm")
@@ -633,6 +663,7 @@ annot.orders <- order(annot[-1,1])
 annot.header <- as.matrix(annot[1,])
 annot.noheader <- annot[-1,]
 annot.grab.columns <- c( grep("Representative Public ID",annot.header),grep("Gene Symbol",annot.header),grep("Gene Title",annot.header),grep("LocusLink",annot.header) )
+print ( paste( Sys.time(), "Read annotation files" ));
 
 # Set working directory, and read CEL files
 setwd(filepath)
@@ -705,6 +736,7 @@ if (log2trans) {
         exprset\@se.exprs <- 2^exprset\@se.exprs
     }
 }
+
 END
 
 
