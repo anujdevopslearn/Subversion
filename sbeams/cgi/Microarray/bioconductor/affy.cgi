@@ -546,8 +546,8 @@ mva.pairs.custom <- function (x, labels = colnames(x), log.it = TRUE, span = 2/3
               print( paste( "Error, vector lengths differ:", length(xx), "is not equal to", length(yy) ) );
             }
 
-            sigma <- IQR(xx, na.rm =  TRUE );
-            mean <- median(xx);
+            sigma <- IQR(yy, na.rm =  TRUE );
+            mean <- median(yy);
 
             subset <- sample(1:length(x), min(c(10000, length(x))))
             ma.plot(xx, yy, tck = 0, subset = subset, show.statistics = FALSE, 
