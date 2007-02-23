@@ -705,7 +705,13 @@ sub loadProteomicsExperiment {
   #### then add a search_batch records but nothing else to do
   unless (@fractions) {
     if ($OPTIONS{force_search_batch}) {
-      if (-e "$source_dir/sequest.params") {
+
+      #### If the --force_ref_db option was supplied, use that
+      if ($OPTIONS{force_ref_db}) {
+	$search_database = $OPTIONS{force_ref_db};
+
+      #### Else try to get the information from the params file
+      } elsif (-e "$source_dir/sequest.params") {
 	my $line;
 	open(INF,"$source_dir/sequest.params");
 	while ($line = <INF>) {
@@ -722,6 +728,7 @@ sub loadProteomicsExperiment {
 	}
 	close(INF);
       }
+
 
       if ($search_database) {
 	my $search_batch_id = addSearchBatchEntry(
@@ -1526,24 +1533,31 @@ sub addParamsEntries {
     || die "ERROR addSearchBatch: missing parameter 2: directory\n";
 
 
-  #### Assume the location of the search parameters file
-  my $file = "$directory/sequest.params";
+  #### Make a list of guesses for params files
+  my @params_files = ( "$directory/sequest.params",
+    "$directory/../sequest.params", "$directory/comet.def" );
 
-  #### Complain and return if the file does not exist
-  if ( ! -e "$file" ) {
-
-    #### Also try the parent directory
-    $file = "$directory/../sequest.params";
-
-    if ( ! -e "$file" ) {
-      print "WARNING: Unable to find sequest parameter file: '$file'\n";
-      return;
+  #### Try to find the files in order
+  my $found = '??';
+  my $file;
+  foreach $file ( @params_files ) {
+    print "Looking for $file...";
+    if ( -e $file ) {
+      print "found!\n";
+      $found = $file;
+      last;
     }
+    print "\n";
+  }
 
+  unless ($found) {
+    print "WARNING: Unable to find any search engine parameter file\n";
+    return;
   }
 
 
   #### Read in the search parameters file
+  $file = $found;
   my $result = $sbeamsPROT->readParamsFile(inputfile => "$file");
   unless ($result) {
     print "ERROR: Unable to read sequest parameter file: '$file'\n";
