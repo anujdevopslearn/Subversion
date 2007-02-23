@@ -1107,22 +1107,29 @@ sub create_atlas_search_batch_parameter_recs
         $enzyme, $num_enzyme_termini);
 
 
-    #### Assume the location of the search parameters file
-    my $infile = "$search_batch_path/sequest.params";
+    #### Make a list of guesses for params files
+    my @params_files = ( "$search_batch_path/sequest.params",
+      "$search_batch_path/../sequest.params", "$search_batch_path/comet.def" );
 
-    #### Complain and return if the file does not exist
-    if ( ! -e "$infile" ) 
-    {
-        #### Also try the parent directory
-        $infile = "$search_batch_path/../sequest.params";
-
-        if ( ! -e "$infile" ) 
-        {
-            print "ERROR: Unable to find sequest parameter file: '$infile'\n";
-            return;
-        }
-
+    #### Try to find the files in order
+    my $found = '??';
+    my $infile;
+    foreach $infile ( @params_files ) {
+      print "Looking for $infile...";
+      if ( -e $infile ) {
+	print "found!\n";
+	$found = $infile;
+	last;
+      }
+      print "\n";
     }
+
+    unless ($found) {
+      print "WARNING: Unable to find any search engine parameter file\n";
+      return;
+    }
+    $infile = $found;
+
 
     ## if can't find readParamsFile, instantiate Protoeomics module 
     ## $sbeamsPROT = SBEAMS::Proteomics->new();
@@ -1166,8 +1173,12 @@ sub create_atlas_search_batch_parameter_recs
 
         $counter++;
 
+	#### Not all search engines specify this, and it always seems to
+	#### be 0 anyway. Set a default of 0 in case it is not seen.
+	$peptide_ion_tolerance = 0;
+
         ## pick up params needed for ATLAS_SEARCH_BATCH_PARAMETER_SET
-        if ($key eq "peptide_mass_tolerance")
+        if ($key eq "peptide_mass_tolerance" or $key eq "MassTol")
         {
             $peptide_mass_tolerance = $rowdata{parameter_value};
         }
@@ -1177,7 +1188,7 @@ sub create_atlas_search_batch_parameter_recs
             $peptide_ion_tolerance = $rowdata{parameter_value};
         }
 
-        if ($key eq "enzyme_number")
+        if ($key eq "enzyme_number" or $key eq "EnzymeNum")
         {
             $enzyme = $rowdata{parameter_value};
         }
@@ -1500,6 +1511,10 @@ sub insert_spectra_description_set
         #### read an mzXML file to get needed attributes... could make a sax content handler for this, 
         #### but only need the first dozen or so lines of file, and the mzXML files are huge...
         my $infile = $mzXMLFileNames[0];
+
+print "search_batch_dir_path=$search_batch_dir_path\n";
+print "infile=$infile\n";
+
 
         my $spectrum_parser = new SpectraDescriptionSetParametersParser();
 
@@ -2421,6 +2436,11 @@ sub getMzXMLFileNames
                 $tmp = $1;
             }
 
+	    #### Attempted workaround for more crazy Qstar files
+	    if ($tmp =~ /\.(\d+)\.\d$/) {
+	      next;
+	    }
+
             $mzXMLFileName = "$exp_dir/$tmp" . ".mzXML";
 
             push (@mzXMLFileNames, $mzXMLFileName);
@@ -2450,6 +2470,23 @@ sub getMzXMLFileNames
     }
 
     close(INFILE) or die "Cannot close $infile";
+
+
+    #### There are often absolute paths in the pepXML, but if the experimnts
+    #### were not searched locally or were move, this may well be wrong.
+    #### Verify the locations and if inaccessible try the search_batch_dir
+    for (my $i=0; $i< scalar(@mzXMLFileNames); $i++) {
+      my $file = $mzXMLFileNames[$i];
+      next if ( -e $file);
+      my $barefilename = $file;
+      $barefilename =~ s#.+/##;
+      $file = "$search_batch_dir_path/$barefilename";
+      if ( -e $file ) {
+	$mzXMLFileNames[$i] = $file;
+      } else {
+	print "ERROR: Unable to determine location of file '$mzXMLFileNames[$i]'\n";
+      }
+    }
 
     return @mzXMLFileNames;
 
