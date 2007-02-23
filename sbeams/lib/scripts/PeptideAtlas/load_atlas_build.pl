@@ -1512,10 +1512,6 @@ sub insert_spectra_description_set
         #### but only need the first dozen or so lines of file, and the mzXML files are huge...
         my $infile = $mzXMLFileNames[0];
 
-print "search_batch_dir_path=$search_batch_dir_path\n";
-print "infile=$infile\n";
-
-
         my $spectrum_parser = new SpectraDescriptionSetParametersParser();
 
         $spectrum_parser->setMzXML_file($infile);
