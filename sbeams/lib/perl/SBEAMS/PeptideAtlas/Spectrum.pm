@@ -583,20 +583,48 @@ sub getSpectrumPeaks {
     $data_location = $RAW_DATA_DIR{Proteomics}."/$data_location";
   }
 
+  #### Infomational/problem message buffer, only printed if get fails
+  my $buffer = '';
+
   #### Sometimes a data_location will be a specific xml file
   if ($data_location =~ /^(.+)\/interac.+xml$/i) {
     $data_location = $1;
   }
-  #print "data_location = $data_location\n";
+  $buffer .= "data_location = $data_location\n";
 
+
+  #### First try ISB SEQUEST style .tgz file
   my $tgz_filename = "$data_location/$fraction_tag.tgz";
-  my $filename = "/bin/tar -xzOf $tgz_filename ./$spectrum_name.dta|";
-  #print "Pulling from tarfile: $tgz_filename<BR>\n";
-  #print "Extracting: $filename<BR>\n";
+  $buffer .= "INFO: Looking for '$data_location/$fraction_tag.tgz'<BR>\n";
+  if ( -e $tgz_filename ) {
+    $buffer .= "INFO: Found '$tgz_filename'<BR>\n";
+    $spectrum_name = "./$spectrum_name.dta";
+
+  #### Since we didn't find that, try a Comet style access method
+  } else {
+    $tgz_filename = "$data_location/$fraction_tag.cmt.tar.gz";
+
+    unless ( -e $tgz_filename ) {
+      $buffer .= "WARNING: Unable to find Comet style .cmt.tar.gz<BR>\n";
+      $buffer .= "ERROR: Unable to find spectrum archive to pull from<BR>\n";
+      print $buffer;
+      return;
+    }
+    $buffer .= "INFO: Found '$tgz_filename'\n";
+  }
+
+
+  my $filename = "/bin/tar -xzOf $tgz_filename $spectrum_name.dta|";
+
+  $buffer .= "Pulling from tarfile: $tgz_filename<BR>\n";
+  $buffer .= "Extracting: $filename<BR>\n";
 
   unless (open(DTAFILE,$filename)) {
-    print "Cannot open file $filename!!<BR>\n";
+    $buffer .= "ERROR Cannot open '$filename'!!<BR>\n";
+    print $buffer;
+    return;
   }
+
 
   #### Read in but ignore header line
   my $headerline = <DTAFILE>;
