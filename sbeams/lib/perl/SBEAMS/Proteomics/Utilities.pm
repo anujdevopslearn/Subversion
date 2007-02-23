@@ -510,7 +510,7 @@ sub readParamsFile {
 
   #### Open the specified file
   if ( open(INFILE, "$inputfile") == 0 ) {
-    die "\nCannot open input file $inputfile\n\n";
+    die "\nCannot open input file '$inputfile'\n\n";
   }
 
 
@@ -531,8 +531,11 @@ sub readParamsFile {
       #### If a suitable key was found then store the key value pair
       if ($key) {
 
-        #### Strip off a possible trailing comment
+        #### Strip off a possible trailing comment identified by ;
         $value =~ s/\s*;.*$//;
+
+        #### Strip off a possible trailing comment identified by #
+        $value =~ s/\s*#.*$//;
 
         #print "$key = $value\n";
         $parameters{$key} = $value;
