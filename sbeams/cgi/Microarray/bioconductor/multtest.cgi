@@ -620,7 +620,7 @@ my $parital_image_url = "$RESULT_URL?action=view_image&analysis_folder=$jobname&
 <a href='$parital_url&file_ext=html'>$jobname.html</a><br>
 <a href='$parital_url&file_ext=txt'>$jobname.txt</a><br>
 <a href='$RESULT_URL?action=download&analysis_folder=$jobname&analysis_file=$jobname'>$jobname.aafTable</a><br>
-<p><img src='$parital_image_url&file_ext=rvsa.png'></p>";
+<p><img src='${parital_image_url}_rvsa&file_ext=png'></p>";
 			
 
 #Finish making the HTML page
@@ -891,10 +891,35 @@ END
 	# Main data processing, entirely R
 	$script .= <<'END';
 .libPaths(rlibpath)
+library(tools)
 library(Biobase)
+library(splines);
+library(survival);
 library(multtest)
+library(GO);
+library(KEGG);
 library(annaffy)
+library(affy)
+library(vsn)
+library(affy)
+library(matchprobes)
+library(gcrma)
 library(webbioc)
+package.version('affy');
+package.version('Biobase');
+package.version('tools');
+package.version('gcrma');
+package.version('matchprobes');
+package.version('splines');
+package.version('vsn');
+package.version('survival');
+package.version('splines');
+package.version('multtest');
+package.version('GO');
+package.version('KEGG');
+package.version('annaffy');
+package.version('webbioc');
+
 
 #Turn the annotation matrix into a dataframe
 anno.df      <- data.frame(anno.matrix,  row.names = anno.matrix[,"Probe_set_id"])
@@ -925,17 +950,24 @@ if (any (grep("f", test)) ) {
 	)
 }
 
+condition.cnt <- 0;
+print ( paste( Sys.time(), "Entering for loop" ));
 for (class.numb in unique.classes){
 	class.numb <- as.numeric(class.numb)
 	if (identical(class.numb,  reference.class.id)) {next}
+
+  condition.cnt <- condition.cnt + 1;
+  condition.name <- condition.names[condition.cnt];
+  print ( paste( Sys.time(), "condition.cnt is ", condition.cnt ));
+  print ( paste( Sys.time(), "condition.name is ", condition.name ));
+  outFileRoot <- paste( jobname, condition.name, sep="_" );
 
 ##If this an ANOVA Like test then do not try and loop data
 	if (any(grep("f", test)) ) {
 		  cols <- which(classlabel != "Ignore")
 		  current.classlabel <- as.integer(classlabel[cols])
 		  condition.name <- "All_samples"
-		  	
-		  outFileRoot <- jobname
+      outFileRoot <- jobname;
 		  
 	}else{
 ##Grab the cols for this particular loop
@@ -953,6 +985,8 @@ for (class.numb in unique.classes){
  		current.classlabel[current.classlabel.reference] <- 0
   		current.classlabel[current.classlabel.sample] <- 1
  	}
+
+  } #  End of else (if any(grep("f", tests) )
 	
 	#initilize and set the title
 	title <- in.title
@@ -1051,8 +1085,6 @@ for (class.numb in unique.classes){
 	    lim <- !lim
 	limall <- logical(dim(X)[1])
 	limall[which(selected)[lim[order(index)]]] <- TRUE;
-	
-	
 
 END
 
@@ -1116,12 +1148,11 @@ plot(alpha, r, main = "Multiple Testing Procedure Selectivity",
 if (limit)
     points(alpha[r<=sum(lim)], r[r<=sum(lim)], type = "l", col = "red")
 dev.off()
+
 END
 
 $script .= <<END;
-if (any(grep("f", test))){break} #do not loop if this is an ANOVA like test
 } #end of for loop to loop conditions 
-save(aaftable, file = "$RESULT_DIR/$jobname/$jobname.aafTable" )
 
 END
 
