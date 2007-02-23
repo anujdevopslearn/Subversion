@@ -253,6 +253,7 @@ sub pepXML_start_element {
       '-'.$attrs{precursor_neutral_mass};
     #### Fudged for SpectraST problem
     #$self->{pepcache}->{spectrum_and_mass_uniq} = $attrs{spectrum};
+    #print "$attrs{index}..";
   }
 
   #### If this is the search_hit, then store some attributes
@@ -383,10 +384,16 @@ sub pepXML_end_element {
   #### If this is the end of the spectrum_query, store the information if it
   #### passes the threshold
   if ($localname eq 'spectrum_query') {
-    my $peptide_sequence = $self->{pepcache}->{peptide}
-      || die("ERROR: No peptide sequence in the cache!");
+    my $peptide_sequence = $self->{pepcache}->{peptide};
 
-    my $probability = $self->{pepcache}->{scores}->{probability};
+    my $probability;
+    if ($peptide_sequence) {
+      $probability = $self->{pepcache}->{scores}->{probability};
+    } else {
+      #die("ERROR: No peptide sequence in the cache!");
+      print "WARNING: No search result for this query!\n";
+      $probability = -1;
+    }
 
     #### If this peptide passes the threshold, store it
     if ($probability >= $self->{P_threshold}) {
