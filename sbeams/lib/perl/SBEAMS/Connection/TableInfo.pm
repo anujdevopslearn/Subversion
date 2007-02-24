@@ -34,7 +34,7 @@ use SBEAMS::Biomarker::Tables;
 use SBEAMS::Cytometry::Tables;
 use SBEAMS::Genotyping::Tables;
 use SBEAMS::Glycopeptide::Tables;
-use SBEAMS::Imaging::Tables;
+#use SBEAMS::Imaging::Tables;
 use SBEAMS::Immunostain::Tables;
 use SBEAMS::Inkjet::Tables;
 use SBEAMS::Interactions::Tables;
