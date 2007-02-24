@@ -292,7 +292,7 @@ sub handleRequest {
   }
 
 
-  #### If spectrum loading was requested
+  #### If coordinates only was requested
   if ($OPTIONS{"coordinates"}) {
     print "\n Begin calc coordinates \n";
 
