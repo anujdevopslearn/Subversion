@@ -598,7 +598,7 @@ sub getSpectrumPeaks {
   $buffer .= "INFO: Looking for '$data_location/$fraction_tag.tgz'<BR>\n";
   if ( -e $tgz_filename ) {
     $buffer .= "INFO: Found '$tgz_filename'<BR>\n";
-    $spectrum_name = "./$spectrum_name.dta";
+    $spectrum_name = "./$spectrum_name";
 
   #### Since we didn't find that, try a Comet style access method
   } else {
@@ -628,6 +628,12 @@ sub getSpectrumPeaks {
 
   #### Read in but ignore header line
   my $headerline = <DTAFILE>;
+
+  unless ($headerline) {
+    $buffer .= "ERROR: No result returned from extraction attempt<BR>\n";
+    print $buffer;
+    return;
+  }
 
   my @mz_intensities;
   while (my $line = <DTAFILE>) {
