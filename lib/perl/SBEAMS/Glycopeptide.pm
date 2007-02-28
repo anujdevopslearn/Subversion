@@ -63,6 +63,53 @@ sub getKeggOrganism {
   return 'hsa';
 }
 
+sub fetchSpectrastOffset {
+  my $self = shift;
+  my %args = @_;
+  return '' unless $args{pep_seq};
+  
+  my $clean_seq = $args{pep_seq};
+  $clean_seq =~ s/\*//g;
+
+  my @matches;
+
+# Hard-code intial version
+  open ( LIB, "/net/dblocal/wwwspecial/sbeams/devDC/sbeams/cgi/Glycopeptide/raw_consensus.pepidx" ) || return '';
+  my $cnt = 0;
+  while ( my $line = <LIB> ) {
+    $cnt++;
+    push @matches, $line if $line =~ /^$clean_seq\t/;
+  }
+
+  return '' unless scalar(@matches);
+
+  # We have at least one match...
+  my $positions = $self->get_site_positions( seq => $args{pep_seq}, pattern => '[S|T]\*' );
+  my @seq_bits = split '', $clean_seq;
+
+  # Calculate phospho pattern
+  my $spectrast_str = '';
+  my $p_offset = 0;
+  for my $posn ( @$positions ) {
+    my $adj_offset = $posn - $p_offset;
+    $p_offset++;
+    $spectrast_str .=  '/' . $adj_offset . ',' . $seq_bits[$adj_offset] . ',Phospho';
+  }
+
+  # Loop over matches, looking for pattern
+  for my $match ( @matches ) {
+    if ( $match =~ /$clean_seq\s+.*$spectrast_str\s+/ ) {
+      my @match_attrs = split ( /\t/, $match, -1 );
+      return $match_attrs[2];
+    }
+  }
+
+
+  
+
+  
+}
+
 
 1;
 

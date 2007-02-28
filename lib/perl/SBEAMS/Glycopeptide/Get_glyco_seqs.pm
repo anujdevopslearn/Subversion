@@ -1053,7 +1053,8 @@ sub phospho_pep_html{
 			     	$q->td(text_class("Peptide Mass")),
 			     	$q->td(text_class("Tissues")),
 			     	$q->td(text_class("# Obs")),
-			     	$q->td(text_class("Atlas"))
+			     	$q->td(text_class("Atlas")),
+			     	$q->td(text_class("Spectrum"))
               ) # End Tr
 			     ); # End join
 				 
@@ -1080,6 +1081,8 @@ sub phospho_pep_html{
     my $ge = '';
 		
     my $atlas_link = '';
+    my $spectrum_link = '';
+
 		if ($f->has_tag('Peptide_seq_obj')){
 
       my $pep_seq_obj = $self->extract_first_val( feature => $f, 
@@ -1110,6 +1113,8 @@ sub phospho_pep_html{
       $aa_value =~ s/<[^>]+>//g;
       $atlas_link = $self->get_atlas_link( seq => $aa_value );
 
+      $atlas_link = $self->get_atlas_link( seq => $aa_value );
+
 			$protein_glyco_site =  $self->get_annotation(seq_obj =>$pep_seq_obj,
                                                                          anno_type => 'protein_glyco_site');
 			$tryptic_end = $self->get_annotation(seq_obj =>$pep_seq_obj, 
@@ -1124,7 +1129,10 @@ sub phospho_pep_html{
 									 anno_type => 'number_obs');
 			$observed_seq = $self->get_annotation(seq_obj =>$pep_seq_obj, 
 									 anno_type => 'observed_seq');
+      $spectrum_link = '<A HREF="showSpectrum.cgi?query_peptide_seq=' . $observed_seq . '" >view</A>';
       $observed_seq = get_phospho_html( seq => $observed_seq );
+
+
 					
 		}
 ### Start writing some html that can be returned
@@ -1140,6 +1148,7 @@ sub phospho_pep_html{
 				$q->td($gb.$tissues.$ge),
 				$q->td($gb.$num_obs.$ge),
 				$q->td({ALIGN=>'CENTER'},$gb.$atlas_link.$ge),
+				$q->td($gb.$spectrum_link.$ge),
 			     )  # End Tr
          ); # End join
 		}
@@ -1185,7 +1194,7 @@ sub identified_pep_html{
 			     	$q->td(text_class("Peptide Mass")),
 			     	$q->td(text_class("Tissues")),
 			     	$q->td(text_class("# Obs")),
-			     	$q->td(text_class("Atlas"))
+			     	$q->td(text_class("Atlas")),
               ) # End Tr
 			     ); # End join
 				 

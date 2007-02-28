@@ -380,11 +380,12 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Glyco_prediction.cgi"><nobr>&nbsp;&nbsp;&nbsp;Search Glycopeptides</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/browse_glycopeptides.cgi"><nobr>&nbsp;&nbsp;&nbsp;Identified Proteins</nobr></a></td></tr>
-  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch"><nobr>&nbsp;&nbsp;&nbsp;Peptide Mass Search</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/showPathways"><nobr>&nbsp;&nbsp;&nbsp;Pathway Search</nobr></a></td></tr>
-  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/bulkSearch"><nobr>&nbsp;&nbsp;&nbsp;Bulk Search</nobr></a></td></tr>
+ 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Glyco_prediction.cgi" TITLE="Search by accession, sequence, name"><nobr>&nbsp;&nbsp;&nbsp;Search Glycopeptides</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/browse_glycopeptides.cgi" TITLE="View list of all observed proteins"><nobr>&nbsp;&nbsp;&nbsp;Identified Proteins</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/showPathways" TITLE="View observed peptides in context of KEGG maps"><nobr>&nbsp;&nbsp;&nbsp;Pathway Search</nobr></a></td></tr>
+  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch" TITLE="Search for peptides by mass range"><nobr>&nbsp;&nbsp;&nbsp;Mass Search</nobr></a></td></tr>
+  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/bulkSearch" TITLE="Perform batch search with list of accessions"><nobr>&nbsp;&nbsp;&nbsp;Bulk Search</nobr></a></td></tr>
+  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/getAnnotations" TITLE="Get annotations from list of reference accessions"><nobr>&nbsp;&nbsp;&nbsp;Fetch Annotations</nobr></a></td></tr>
   <tr><td><a href="http://www.unipep.org"><nobr>&nbsp;&nbsp;&nbsp;Unipep home</nobr></a></td></tr>
 
 	<tr><td>&nbsp;</td></tr>
@@ -600,6 +601,64 @@ sub display_page_footer {
 }
 
 
+sub getSpectrastViewer {
+  my $self = shift;
+  my %args = @_;
+
+  return '' unless $args{offset};
+
+  my $url = "http://regis-web/tpp-hlam/cgi-bin/plotspectrast.cgi?LibFile=/data2/search/hlam/ForDaveC/raw_consensus.splib&LibFileOffset=FILE_OFFSET&QueryFile=/data2/search/hlam/ForDaveC/spectrum.none";
+  $url =~ s/FILE_OFFSET/$args{offset}/;
+
+  my $cipher = $self->getSBEAMS()->getAuthCipher;
+  my @auth = split "::", $cipher->decrypt_hex( '645c9938dc49eccc193553a57950ac78e5b0d69106f72331');
+
+# Subclass LWP::UserAgent for Auth
+{
+  package SpectrastViewerAgent;
+  our @ISA = qw(LWP::UserAgent);
+
+  sub new { 
+    my $self = LWP::UserAgent::new(@_);
+    $self->agent("SpectraSTViewer");
+    return $self;
+  }
+
+  sub get_basic_credentials {
+    return( @auth );
+  }
+} # End UserAgent subclass
+
+  my $ua = SpectrastViewerAgent->new();
+  my $req = HTTP::Request->new(GET=>$url);
+  my $response = $ua->request( $req );
+
+  my $content = $response->content();
+
+  # Remove submit button
+  # Pull out png link
+  # get png, save to /tmp/
+  # Rewrite png link to local
+#<IMG SRC="/data2/search/hlam/ForDaveC/spectrum.png" BORDER=0><BR>
+#    <INPUT TYPE="SUBMIT" VALUE="GO"><BR>
+  my $file_name = $args{pep_seq} || $self->getSBEAMS()->getRandomString(num_chars => 24);
+  $file_name .= '.png';
+  $file_name =~ s/\*/\[167\]/g;
+
+  my $local_img = $HTML_BASE_DIR . "/tmp/images/" . $file_name;
+  $content =~ s/\<INPUT TYPE\=\"SUBMIT\" VALUE\=\"GO\"\>//gm;
+  $content =~ s/\/data2.*spectrum\.png/$local_img/gm;
+  
+  my $img_url = "http://regis-web/data2/search/hlam/ForDaveC/spectrum.png";
+  my $tmpdir = $PHYSICAL_BASE_DIR . '/tmp/images/';
+  my $req = HTTP::Request->new(GET=>$img_url);
+  my $response = $ua->request( $req );
+
+  open ( PNG, ">$tmpdir/$file_name" ) || return '';
+  print PNG $response->content();
+  return $content;
+  
+}
 
 ###############################################################################
 
