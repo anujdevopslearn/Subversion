@@ -271,7 +271,7 @@ sub printStyleSheet {
 	.pad_cell{padding:5px;  }
 	.sequence_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5}	
 	.white_hyper_text{font-family: Helvetica,Arial,sans-serif; color:#000000;}
-	
+
 	.white_text    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: white; CURSOR: help;}
 	.white_text_head {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: white; CURSOR: help;}
 	
@@ -432,6 +432,7 @@ a.blue_button:visited{
 	border-right: 1px solid #003366; 
 	border-bottom: 1px solid #003366; \
 	border-left:1px solid #B7CFEB; 
+
 }
 a.blue_button:hover{ 
 	background: #366496;
@@ -453,14 +454,22 @@ a.blue_button:active{
 	border-right: 1px solid #003366; 
 	border-bottom: 1px solid #003366; \
 	border-left:1px solid #B7CFEB; 
+
 }
+
+  .invalid_parameter_value  {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_LG}pt; text-decoration: none; color: #FC0; font-style: Oblique; }
+  .missing_required_parameter  {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_LG}pt; text-decoration: none; color: #F03; font-style: Italic; }
+  .section_title  {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_HG}pt; text-decoration: none; color: #090; font-style: Normal; }
     ~;
 
+  # Style for turning text sideways for vertical printing, MSIE only
   my $agent = $q->user_agent();
-  $log->debug( $agent );
   if ( $agent =~ /MSIE/ ) {
     print " .med_vert_cell {font-size: 10; background-color: #CCCCCC; white-space: nowrap; writing-mode: tb-rl; filter: flipv fliph;  }\n";
   }
+
+
+
   print "</style>\n";
 
     #### Boneyard:
