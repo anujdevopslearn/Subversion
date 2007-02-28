@@ -404,12 +404,7 @@ sub checkCachedAuth {
   # Time must be a 10-digit integer 
   return 0 unless $args{ctime} =~ /^\d{10}$/;
 
-  my $cipher = new Crypt::CBC( {
-				key => $self->getCryptKey(),
-				cipher => 'IDEA',
-				prepend_iv => 0,
-				iv => 'd%&jHE3%',
-			       } );
+  my $cipher = $self->getAuthCipher();
 
   $args{name} = $cipher->decrypt($args{name});
   my $sql_name = $self->convertSingletoTwoQuotes($args{name});
@@ -1133,6 +1128,17 @@ sub destroyAuthHeader {
     return $http_header;
 }
 
+###############################################################################
+# getAuthCipher
+###############################################################################
+sub getAuthCipher {
+  my $self = shift;
+  my $cipher = new Crypt::CBC( { key => $self->getCryptKey(),
+                                 cipher => 'IDEA',
+                                 prepend_iv => 0,
+                                 iv => 'd%&jHE3%' } );
+  return $cipher;
+}
 
 ###############################################################################
 # createAuthHeader
@@ -1155,12 +1161,7 @@ sub createAuthHeader {
     my $cookie_path = $HTML_BASE_DIR;
     #$cookie_path =~ s'/[^/]+$'/'; Removed 6/7/2002 Deutsch
 
-    my $cipher = new Crypt::CBC( {
-				  key => $self->getCryptKey(),
-				  cipher => 'IDEA',
-				  prepend_iv => 0,
-				  iv => 'd%&jHE3%',
-				 } );
+    my $cipher = $self->getAuthCipher();
 
     my $encrypted_user = $cipher->encrypt("$username");
     my $ctime = time();
