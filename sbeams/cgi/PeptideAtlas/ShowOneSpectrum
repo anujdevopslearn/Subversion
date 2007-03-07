@@ -389,7 +389,7 @@ sub get_library_spectrum
 
     #### Extract the actual mass,intensity pairs from database
     $sql = "SELECT mz, relative_intensity ".
-           "  FROM PeptideAtlas.dbo.NIST_library_spectrum_peak ".
+           "  FROM $TBAT_NIST_LIBRARY_SPECTRUM_PEAK ".
            " WHERE NIST_library_spectrum_id = '$NIST_library_spectrum_id'";
     my @mass_intensities = $sbeams->selectSeveralColumns($sql);
 
