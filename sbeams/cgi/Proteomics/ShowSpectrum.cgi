@@ -295,8 +295,8 @@ sub printEntryForm {
       $parameters{gifheight} = 384;
     }
 
-    #print "Writing GIF to: $PHYSICAL_BASE_DIR/images/tmp/$tmpfile\n";
-    my $win = pg_setup(Device=>"$PHYSICAL_BASE_DIR/images/tmp/$tmpfile/gif",
+    #print "Writing GIF to: $PHYSICAL_BASE_DIR/tmp/images/$tmpfile\n";
+    my $win = pg_setup(Device=>"$PHYSICAL_BASE_DIR/tmp/images/$tmpfile/gif",
                        title=>"$spectrum{msms_spectrum_file_root}",
                        xmin=>$parameters{xmin}, xmax=>$parameters{xmax},
                        ymax=>$intenmax, ydiv=>$ydiv, nyticks=>5,
@@ -367,7 +367,7 @@ sub printEntryForm {
     print qq~</PRE>
 	</TD>
 	<TD VALIGN=top>
-	<IMG SRC="$HTML_BASE_DIR/images/tmp/$tmpfile"><BR>
+	<IMG SRC="$HTML_BASE_DIR/tmp/images/$tmpfile"><BR>
     ~;
 
 
