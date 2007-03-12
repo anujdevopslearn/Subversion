@@ -954,6 +954,7 @@ condition.cnt <- 0;
 print ( paste( Sys.time(), "Entering for loop" ));
 for (class.numb in unique.classes){
 	class.numb <- as.numeric(class.numb)
+  print ( paste( Sys.time(), "Class number", class.numb ));
 	if (identical(class.numb,  reference.class.id)) {next}
 
   condition.cnt <- condition.cnt + 1;
@@ -964,12 +965,14 @@ for (class.numb in unique.classes){
 
 ##If this an ANOVA Like test then do not try and loop data
 	if (any(grep("f", test)) ) {
+    print ( paste( Sys.time(), "Anova-like test" ));
 		  cols <- which(classlabel != "Ignore")
 		  current.classlabel <- as.integer(classlabel[cols])
 		  condition.name <- "All_samples"
       outFileRoot <- jobname;
 		  
 	}else{
+    print ( paste( Sys.time(), "Going to loop" ));
 ##Grab the cols for this particular loop
 	cols <- c(which(classlabel == class.numb),which(classlabel == reference.class.id))
 	current.classlabel <- as.integer(classlabel[cols])
@@ -993,18 +996,23 @@ for (class.numb in unique.classes){
 	title <- paste(title, condition.name)
 	
 	
+  print ( paste( Sys.time(), "Make expression set" ));
 	X <- exprs(exprset)[,cols]
 	selected <- geneNames(exprset) %in% genenames
 	if (!sum(selected) && !is.null(genenames))
 	    stop("None of the entered gene names were found in the exprSet.")
 	if (!sum(selected))
 	    selected <- !selected
+  print ( paste( Sys.time(), "mt.wrapper" ));
 	mtdata <- mt.wrapper(proc, X[selected,,drop=F], current.classlabel, test, rawpcalc, side)
 	index <- mtdata$index
+  print ( paste( Sys.time(), "teststat" ));
 	teststat <- mt.teststat(X, current.classlabel, test)
 	adjp <- mtdata$adjp
+  print ( paste( Sys.time(), "lim" ));
 	lim <- ! logical(dim(mtdata)[1])
 	if (limit) {
+    print ( paste( Sys.time(), "Subject to limit" ));
 		if (limittype == "total" && limitnum < length(lim))
 		    lim[(limitnum+1):length(lim)] <- FALSE
 		if (limittype == "teststat")
@@ -1030,6 +1038,7 @@ for (class.numb in unique.classes){
 	colnames(mtdata)      <- out.colnames
 	colnames(full.mtdata) <- out.colnames
 	
+  print ( paste( Sys.time(), "Merging" ));
 	aaftable <- merge(aafTableFrame(mtdata[1], signed = (side == "abs")),
 	                  aafTableFrame(mtdata[2:3]));
 	                  
@@ -1037,6 +1046,7 @@ for (class.numb in unique.classes){
 	#                  aafTableFrame(full.mtdata[2:3]));
 	                  
 	if (max(current.classlabel) == 1) {
+      print ( paste( Sys.time(), "calc fold change, etc." ));
 	    y <- as.numeric(mean(as.data.frame(2^t(X[,(current.classlabel == 0)]))))
 	    x <- as.numeric(mean(as.data.frame(2^t(X[,(current.classlabel == 1)]))))
 	    fold <- x/y
@@ -1067,6 +1077,7 @@ for (class.numb in unique.classes){
     	colnames(full.mtdata)<- my.colnames
     
     
+      print ( paste( Sys.time(), "merge again" ));
     	aaftable <- merge(aafTable(items = list("Fold Change" = fold[index[lim]],
     							        "mu_X" =x[index[lim]],
     							        "mu_Y" = y[index[lim]],
@@ -1117,6 +1128,7 @@ END
     # MA plot
     $script .= (grep(/t/, $test)) ? <<END : "";
 bitmap(paste("$RESULT_DIR/$jobname/", outFileRoot, "_ma.png", sep = ""), res = 72*4, pointsize = 12)
+print ( paste( Sys.time(), "made png, create matrix" ));
 macoords <- matrix(c(log2(sqrt(x*y)), log2(y/x)), ncol = 2)
 plot(macoords, main=paste(condition.name,"M vs. A Plot"), xlab="A", ylab="M", type="n")
 points(macoords[!selected,,drop=F], pch=20, col=grey(.5))
@@ -1128,6 +1140,7 @@ END
     # Normal QQ plot
     $script .= (grep(/t/, $test)) ? <<END : "";
 bitmap(paste("$RESULT_DIR/$jobname/", outFileRoot, "_qq.png", sep = ""), res = 72*4, pointsize = 12)
+print ( paste( Sys.time(), "made png, create qqplot" ));
 qqcoords <- qqnorm(teststat, type="n")
 qqcoords <- matrix(c(qqcoords[[1]], qqcoords[[2]]), ncol = 2)
 points(qqcoords[!selected,,drop=F], pch=20, col=grey(.5))
@@ -1140,6 +1153,7 @@ END
     # Selectivity plot
     $script .= <<END;
 bitmap(paste("$RESULT_DIR/$jobname/", outFileRoot, "_rvsa.png", sep = ""), res = 72*4, pointsize = 12)
+print ( paste( Sys.time(), "made png, create selectivity plot" ));
 alpha <- seq(0, 0.99, length = 100)
 r <- mt.reject(adjp[!is.na(adjp)], alpha)[["r"]]
 plot(alpha, r, main = "Multiple Testing Procedure Selectivity", 
@@ -1530,9 +1544,11 @@ for (class.numb in unique.classes){
 ##initilize the title var each loop
 	title <- in.title
 	
+  print ( paste( Sys.time(), "going to run sam and create matrix" ));
 	Matrix <- exprs(exprset)[,cols]
          #sam.output<-sam(Matrix,current.classlabel,rand=123)
 	sam.output<- sam.dstat(Matrix, current.classlabel, var.equal=FALSE, rand=123, med=TRUE)
+  print ( paste( Sys.time(), "sam run complete, make delta list" ));
 
 #make a small matrix to hold the FDR cuttoffs and the ratio data
 	numb.loops <- 2500
@@ -1547,11 +1563,13 @@ for (class.numb in unique.classes){
 							"Log_10_Ratio",
 							"D_stat")
 							
+  print ( paste( Sys.time(), "gather data" ));
 	gatherdataMatrix <- matrix(data=1, nrow=length(anno.probesetid),ncol=length(matrix.column.names) )
 	colnames(gatherdataMatrix) <- matrix.column.names
 	rownames(gatherdataMatrix) <- rownames(exprs(exprset))
 	
 ##Make the log 2 ratios from the data
+  print ( paste( Sys.time(), "calc means, log2 values" ));
 	 y <- as.numeric(mean(as.data.frame(2^t(exprs(exprset)[,which(classlabel == reference.class.id)]))))
      x <- as.numeric(mean(as.data.frame(2^t(exprs(exprset)[,which(classlabel == class.numb)]))))
     foldlog2 <- log2(x/y)
@@ -1564,6 +1582,7 @@ for (class.numb in unique.classes){
 
 	last.delta.cutoff <- 0
 ##Loop through all the fdr points collecting data fdr, fold change 
+  print ( paste( Sys.time(), "Loop over fdr results" ));
 	for(i in 1:numb.loops){
 		sum.sam.output <- try( summary(sam.output,delta.list[i],ll=FALSE))
  
@@ -1610,6 +1629,7 @@ for (class.numb in unique.classes){
 	lim <- ! logical(dim(output.df)[1])
 if (limit) {
 	
+  print ( paste( Sys.time(), "Setting limits" ));
 	if (limittype == "fdr_cutoff"){
 	    lim <- (output.df$FDR <= limitnum/100)
 		newlimitNumb <- 0 #initilize var to be used later
