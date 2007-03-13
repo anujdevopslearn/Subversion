@@ -248,8 +248,8 @@ sub processRequest {
       $parameters{gifheight} = 384;
     }
 
-    #print "Writing GIF to: $PHYSICAL_BASE_DIR/images/tmp/$tmpfile\n";
-    my $win = pg_setup(Device=>"$PHYSICAL_BASE_DIR/images/tmp/$tmpfile/gif",
+    #print "Writing GIF to: $PHYSICAL_BASE_DIR/tmp/images/$tmpfile\n";
+    my $win = pg_setup(Device=>"$PHYSICAL_BASE_DIR/tmp/images/$tmpfile/gif",
         title=>"$parameters{peptide}",
         xmin=>$parameters{xmin}, xmax=>$parameters{xmax},
         ymax=>$parameters{ymax}, ydiv=>$ydiv, nyticks=>5,
@@ -312,7 +312,7 @@ sub processRequest {
     print qq~</PRE>
 	</TD>
 	<TD VALIGN=top>
-	<IMG SRC="$HTML_BASE_DIR/images/tmp/$tmpfile"><BR>
+	<IMG SRC="$HTML_BASE_DIR/tmp/images/$tmpfile"><BR>
     ~;
 
     print qq~
