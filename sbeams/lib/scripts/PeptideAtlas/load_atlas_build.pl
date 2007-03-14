@@ -1834,9 +1834,6 @@ sub readCoords_updateRecords_calcAttributes {
     ## --> n_protein_mappings = keys ( %protein_mappings_hash )
     ##
     ## --> n_genome_locations =  keys of reverse protein_mappings_hash
-    ##
-    ## is_exon_spanning_hash:  key = protein,
-    ##                         value = 'Y' if (  (diff_coords + 1) != (seq_length*3);
 
     print "\nCalculating n_protein_mappings, n_genome_locations, and is_exon_spanning\n";
 
@@ -1846,18 +1843,10 @@ sub readCoords_updateRecords_calcAttributes {
         #### Recreate an array of rows for this peptide from the space-separated string
         my @tmp_ind_array = split(" ", $tmp_ind_str);
 
-        my (%protein_mappings_hash, %is_exon_spanning_hash);
-
-        ## will skip 1st key = peptide in hashes below, and instead, 
-        ## reset hash for each peptide
-        reset %protein_mappings_hash; ## necessary?  above declaration should have cleared these?
-        reset %is_exon_spanning_hash;
+        my (%protein_mappings_hash, %chromosomal_mappings_hash);
 
         my $peptide = $peptide_accession[$tmp_ind_array[0]];
         my $protein;
-
-        ## initialize to 'N'
-        $is_exon_spanning_hash{$protein} = 'N';
 
 
         #### Loop over all the rows for this peptide
@@ -1876,8 +1865,6 @@ sub readCoords_updateRecords_calcAttributes {
             my $end = $end_in_chromosome[$i_ind];
             my $coord_str = "$chrom:$start:$end";
 
-            $protein_mappings_hash{$protein} = $coord_str;
-
             my $diff_coords = abs($start - $end);
 
             my $seq_length = 
@@ -1886,34 +1873,33 @@ sub readCoords_updateRecords_calcAttributes {
             ## If entire sequence fits between coordinates, the protein has
             ## redundant sequences.  If the sequence doesn't fit between
             ## coordinates, it's exon spanning:
-            if (  $diff_coords > 0 && ($diff_coords + 1) != ($seq_length * 3) ) {
+            if ( $diff_coords > 0 ) {
+	      if ( ($diff_coords + 1) != ($seq_length * 3) ) {
                 $is_exon_spanning[$first_index] = 'Y';
-	        $is_exon_spanning_hash{$protein} = 'Y';
+	      }
+
+	      #### Only count a chromosomal mapping the first time it is seen for a protein
+	      #### FIXME: Note if a peptide legitimately maps to two different places
+	      #### in a protein, then this logic fails. Always has and continues to...
+	      unless ($protein_mappings_hash{$protein}) {
+		$chromosomal_mappings_hash{$coord_str} = $protein;
+	      }
+
 	    }
 
+            $protein_mappings_hash{$protein} = $coord_str;
 	}
 
 
-        ## Another iteration through indices to count n_genome_locations
-        ## want the number of unique coord strings, corrected to count is_exon_spanning peptides as only 1 addition.
-        my %inverse_protein_hash = reverse %protein_mappings_hash;
-
-        my $pep_n_genome_locations = keys( %inverse_protein_hash);
-
-
+        ## Count the number of chromosomal mappings and protein_mappings
+        my $pep_n_genome_locations = keys( %chromosomal_mappings_hash);
         my $pep_n_protein_mappings = keys( %protein_mappings_hash );
 
-
-        ## need to assign values to array members now:
+        ## Assign values to all array members:
         foreach my $tmpind (@tmp_ind_array) {
-
             $protein = $biosequence_name[$tmpind];
-
-
             $n_protein_mappings[$tmpind] = $pep_n_protein_mappings;
-
             $n_genome_locations[$tmpind] = $pep_n_genome_locations;
-
         }
 
     } ## end calculate n_genome_locations, n_protein_mappings and is_exon_spanning loop
