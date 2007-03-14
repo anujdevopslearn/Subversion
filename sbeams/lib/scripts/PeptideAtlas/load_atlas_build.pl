@@ -308,7 +308,8 @@ sub handleRequest {
         infile => $mapping_file,
         atlas_build_id => $ATLAS_BUILD_ID,
         biosequence_set_id => $biosequence_set_id,
-        organism_abbrev => $organism_abbrev
+        organism_abbrev => $organism_abbrev,
+        source_dir => $builds_directory,
     );
 
   }
@@ -636,7 +637,8 @@ sub buildAtlas {
         infile => $mapping_file,
         atlas_build_id => $ATLAS_BUILD_ID,
         biosequence_set_id => $biosequence_set_id,
-        organism_abbrev => $organism_abbrev
+        organism_abbrev => $organism_abbrev,
+        source_dir => $source_dir,
     );
 
 
@@ -1674,6 +1676,7 @@ sub local_start_handler
 # @atlas_build_id 
 # @biosequence_set_id 
 # @organism_abbrev 
+# $source_dir
 #######################################################################
 sub readCoords_updateRecords_calcAttributes {
 
@@ -1694,12 +1697,34 @@ sub readCoords_updateRecords_calcAttributes {
     my $organism_abbrev = $args{organism_abbrev} or die
         "need organism_abbrev ($!)";
 
+    my $source_dir = $args{source_dir} or die("need source_dir");
+
+
     ## get hash with key=peptide_accession, value=peptide_id
     my %peptides = get_peptide_accession_id_hash();
 
     ## get hash with key=biosequence_name, value=biosequence_id
     my %biosequence_ids = get_biosequence_name_id_hash(
         biosequence_set_id => $biosequence_set_id);
+
+
+    #### Load the duplicate mapping file if available
+    my %duplicate_proteins;
+    if ( -e "$source_dir/duplicate_groups.txt" ) {
+      if (open(INFILE,"$source_dir/duplicate_groups.txt")) {
+	my $header = <INFILE>;
+	while (my $line = <INFILE>) {
+	  chomp($line);
+	  my @protein_names = split(/\s+/,$line);
+	  my $reference = shift(@protein_names);
+	  foreach my $duplicate ( @protein_names ) {
+	    $duplicate_proteins{$duplicate} = $reference;
+	    #print "$duplicate = $reference\n";
+	  }
+	}
+      }
+      close(INFILE);
+    }
 
 
     my (@peptide_accession, @biosequence_name);
@@ -1844,6 +1869,7 @@ sub readCoords_updateRecords_calcAttributes {
         my @tmp_ind_array = split(" ", $tmp_ind_str);
 
         my (%protein_mappings_hash, %chromosomal_mappings_hash);
+	my %distinct_proteins_hash;
 
         my $peptide = $peptide_accession[$tmp_ind_array[0]];
         my $protein;
@@ -1888,16 +1914,23 @@ sub readCoords_updateRecords_calcAttributes {
 	    }
 
             $protein_mappings_hash{$protein} = $coord_str;
+
+	    #### If this protein is really a duplicate of another, then reset the
+	    #### protein name to the primary refernce for counting purposes
+	    if ($duplicate_proteins{$protein}) {
+	      $protein = $duplicate_proteins{$protein};
+	    }
+
+            $distinct_proteins_hash{$protein} = $coord_str;
 	}
 
 
         ## Count the number of chromosomal mappings and protein_mappings
         my $pep_n_genome_locations = keys( %chromosomal_mappings_hash);
-        my $pep_n_protein_mappings = keys( %protein_mappings_hash );
+        my $pep_n_protein_mappings = keys( %distinct_proteins_hash );
 
         ## Assign values to all array members:
         foreach my $tmpind (@tmp_ind_array) {
-            $protein = $biosequence_name[$tmpind];
             $n_protein_mappings[$tmpind] = $pep_n_protein_mappings;
             $n_genome_locations[$tmpind] = $pep_n_genome_locations;
         }
