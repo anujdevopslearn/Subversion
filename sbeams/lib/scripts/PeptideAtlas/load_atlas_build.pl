@@ -1860,24 +1860,25 @@ sub readCoords_updateRecords_calcAttributes {
         $is_exon_spanning_hash{$protein} = 'N';
 
 
-        ## for each index:
+        #### Loop over all the rows for this peptide
+	my $first_index = -1;
         for (my $ii = 0; $ii <= $#tmp_ind_array; $ii++) {
 
             my $i_ind=$tmp_ind_array[$ii];
+	    if ($ii == 0) {
+	      $first_index = $i_ind;
+	    }
 
             $protein = $biosequence_name[$i_ind];
 
             my $chrom = $chromosome[$i_ind];
-
             my $start = $start_in_chromosome[$i_ind];
-
             my $end = $end_in_chromosome[$i_ind];
-
             my $coord_str = "$chrom:$start:$end";
 
             $protein_mappings_hash{$protein} = $coord_str;
 
-            my $diff_coords = abs($start - $end );
+            my $diff_coords = abs($start - $end);
 
             my $seq_length = 
                 length($peptideAccession_peptideSequence{$peptide});
@@ -1885,13 +1886,9 @@ sub readCoords_updateRecords_calcAttributes {
             ## If entire sequence fits between coordinates, the protein has
             ## redundant sequences.  If the sequence doesn't fit between
             ## coordinates, it's exon spanning:
-            if (  ($diff_coords + 1) != ($seq_length * 3) ) {
-
+            if (  $diff_coords > 0 && ($diff_coords + 1) != ($seq_length * 3) ) {
+                $is_exon_spanning[$first_index] = 'Y';
 	        $is_exon_spanning_hash{$protein} = 'Y';
-
-                ## update larger scope variable too:
-                $is_exon_spanning[$i_ind] = 'Y';
-
 	    }
 
 	}
