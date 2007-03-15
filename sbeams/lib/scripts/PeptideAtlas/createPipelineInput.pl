@@ -504,6 +504,7 @@ sub pepXML_end_element {
 
       #### Store the peptide in a master full list to calculate stats
       #unless ($other_search_info || $has_previous_entry) {
+      #if (0 == 1) {
       unless ($has_previous_entry) {
         #print "Added $modified_peptide/$charge\n";
 	push(@{ $self->{peptide_list} },
@@ -829,8 +830,11 @@ sub main {
 	if (! -e $filepath) {
 	  $filepath = $path."/interact.xml";
 	  if (! -e $filepath) {
-	    print "ERROR: Unable to find $filepath\n";
-	    next;
+	    $filepath = $path."/interact-specall.xml";
+	    if (! -e $filepath) {
+	      print "ERROR: Unable to find interact file in $path\n";
+	      next;
+	    }
 	  }
 	}
       }
