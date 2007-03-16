@@ -46,6 +46,10 @@ sub new {
     'monoisotopic' => {
       'C[160]' => 57.021464,    # Carbamidomethyl (UniMod)Cys_CAM
       'C[161]' => 58.005479,    # Search ERROR?? Maybe not, maybe Carboxymethyl?? Latin Square?
+      'C[303]' => 200.0,        # ? ABI cl-ICAT light from Bernd HuBCellRaft data
+      'C[313]' => 209.0,        # ? ABI cl-ICAT heavy from Bernd HuBCellRaft data
+      'C[245]' => 142.0,        # ? light from jwatts HumanTCellJCaM2.5 data
+      'C[251]' => 148.0,        # ? heavy from jwatts HumanTCellJCaM2.5 data
       'C[330]' => 227.126991,   # ABI cl-ICAT light (UniMod)
       'C[339]' => 236.157185,   # ABI cl-ICAT heavy (Unimod)
       'C[517]' => 414.193691,   # Glycopeptide capture ?? (UniMod)
@@ -54,10 +58,17 @@ sub new {
       'K[272]' => 144.10206,    # ABI iTRAQ (UniMod)
       'M[147]' => 15.994915,    # Oxidation (UniMod)
       'N[115]' => 0.984016,     # Glyc-Asn (UniMod)
+      'S[167]' => 79.966331,    # Phosphorylation (UniMod)
+      'T[181]' => 79.966331,    # Phosphorylation (UniMod)
+      'Y[243]' => 79.966331,    # Phosphorylation (UniMod)
     },
     'average' => {
       'C[160]' => 57.0513,    # Cys_CAM (UniMod)
       'C[161]' => 58.0361,    # Search ERROR?? Maybe not, maybe Carboxymethyl?? Latin Square?
+      'C[303]' => 200.0,        # ? ABI cl-ICAT light from Bernd HuBCellRaft data
+      'C[313]' => 209.0,        # ? ABI cl-ICAT heavy from Bernd HuBCellRaft data
+      'C[245]' => 142.0,        # ? light from jwatts HumanTCellJCaM2.5 data
+      'C[251]' => 148.0,        # ? heavy from jwatts HumanTCellJCaM2.5 data
       'C[330]' => 227.2603,   # ABI cl-ICAT light (UniMod)
       'C[339]' => 236.1942,   # ABI cl-ICAT heavy (Unimod)
       'C[517]' => 414.5196,   # Glycopeptide capture ?? (Unimod)
@@ -66,6 +77,9 @@ sub new {
       'K[272]' => 144.1544,   # ABI iTRAQ (UniMod)
       'M[147]' => 15.9848,    # Oxidation (UniMod)
       'N[115]' => 0.9848,     # Glyc-Asn (UniMod)
+      'S[167]' => 79.9799,    # Phosphorylation (UniMod)
+      'T[181]' => 79.9799,    # Phosphorylation (UniMod)
+      'Y[243]' => 79.9799,    # Phosphorylation (UniMod)
     },
   );
 
