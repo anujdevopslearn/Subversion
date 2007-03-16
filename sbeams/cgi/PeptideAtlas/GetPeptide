@@ -451,7 +451,7 @@ sub handle_request {
          P.molecular_weight, P.peptide_isoelectric_point,
          PI.n_samples, PI.n_protein_samples, PI.empirical_proteotypic_score,
          O.full_name, PI.original_protein_name,
-         P.SSRCalc_relative_hydrophobicity
+         P.SSRCalc_relative_hydrophobicity, CAST(biosequence_seq AS VARCHAR)
          FROM $TBAT_PEPTIDE_INSTANCE PI
          INNER JOIN $TBAT_PEPTIDE P
           ON ( PI.peptide_id = P.peptide_id )
@@ -484,6 +484,7 @@ sub handle_request {
     #### If QUERY,  display the data
 if ($apply_action =~ /QUERY/i ) {
 
+#        $log->debug( $sbeams->evalSQL($sql) );
         my @rows = $sbeams->selectSeveralColumns($sql)
         or print "Peptide not found.  Please check selections and try again.<br>";
 
@@ -503,7 +504,7 @@ if ($apply_action =~ /QUERY/i ) {
                 my ($pa, $seq, $prob, $n_obs, $n_g_loc, $n_prot_map, 
                     $chr, $s_chr, $e_chr, $str, $b_name, $mw, $pi, 
                     $ns, $nps, $eps, $org, $orig_name,
-		    $SSRCalc_relative_hydrophobicity ) = @{$row};
+		    $SSRCalc_relative_hydrophobicity, $protein_sequence ) = @{$row};
 
                 $peptide_accession[$i] = $pa;
                 $peptide_sequence[$i] = $seq;
@@ -689,13 +690,15 @@ if ($apply_action =~ /QUERY/i ) {
     }
 
 
-    my $range = makeEntrezLink( start => $tmp_start,
+    my $range = makeGenomeLink( start => $tmp_start,
 				end => $tmp_end,
 				strand => $tmp_strand,
 				chrom => $current_chrom,
 				org => $organism[0] );
 
-    push @rows, [ $current_chrom, $protein_display, $tmp_seq, $range, "<B>$tmp_strand</B>" ] if $tmp_seq;
+    $current_chrom ||= $sbeams->makeInactiveText('n/a');
+    $tmp_strand = ( $tmp_strand =~ /\?/ ) ? $sbeams->makeInactiveText('n/a') : "<B>$tmp_strand</B>";
+    push @rows, [ $current_chrom, $protein_display, $tmp_seq, $range, $tmp_strand ] if $tmp_seq;
 
     $last_chrom = $current_chrom;
     $last_protein = $current_prot;
@@ -954,7 +957,7 @@ sub makeProteinLink {
   return $link;
 }
 
-sub makeEntrezLink {
+sub makeGenomeLink {
   my %args = @_;
 #### EDeutsch commented out to allow peptides with mappings to proteins
 #### without coordinates.  May not be a correct fix
@@ -962,6 +965,9 @@ sub makeEntrezLink {
 #    die "missing parameter $_" unless $args{$_};
 #  }
   # Length specified by range
+ 
+  return $sbeams->makeInactiveText( 'n/a' ) unless $args{chrom};
+  
   my $len = abs( $args{start} - $args{end} );
 
   # want to show some flanking info, minimun 2KB
@@ -972,7 +978,7 @@ sub makeEntrezLink {
   $org =~ s/ /_/g;
   my $chr = $args{chrom};
 
-   # Entrez uses roman numerals for yeast chromosomes...
+   # Ensembl uses roman numerals for yeast chromosomes...
   if ( $org =~ /^Sacch/ ) {
     $chr = $sbeams->getRomanNumeral( number => $chr ) || $chr; # Fallback...
   }
@@ -988,8 +994,19 @@ sub makeEntrezLink {
   }
   $vc_start = 0 if $vc_start < 0;
 
-  my $link = "<A HREF='http://www.ensembl.org/$org/contigview?region=$chr;vc_start=$vc_start;vc_end=$vc_end' TARGET=_ensembl>" .
-         "<DIV Title='Explore range in Ensembl contig viewer'> $args{start} - $args{end} </DIV> </A>";
+  my $link = '';
+  if ( $org =~ /Halo/ ) {
+    # Currently halo has chromosome designations of MAIN, PNRC100 and PNRC200,
+    # but KEGG wants 'c', pNRC100 and pNRC200
+    $chr =~ s/P/p/;
+    $chr = 'c' if $chr =~ /MAIN/;
+
+    $link = "<A HREF='http://www.genome.jp/kegg-bin/show_genomemap?ORG=hal&CHR=$chr&START_POS=$vc_start' TARGET=_ensembl>" .
+            "<DIV Title='Explore range in KEGG contig viewer'> $args{start} - $args{end} </DIV> </A>";
+  } else {
+    $link = "<A HREF='http://www.ensembl.org/$org/contigview?region=$chr;vc_start=$vc_start;vc_end=$vc_end' TARGET=_ensembl>" .
+            "<DIV Title='Explore range in Ensembl contig viewer'> $args{start} - $args{end} </DIV> </A>";
+  }
   return $link;
 
 }
