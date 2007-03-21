@@ -23,6 +23,10 @@ use vars qw(@ISA @EXPORT
             $SBEAMS_PART
             $AFFY_DEFAULT_DIR
             @AFFY_DEFAULT_FILES
+            %CUSTOM_CDF
+            %CDF_DBS
+            $AFFY_NORMALIZATION_PIPELINES
+            %CDF_VERSIONS
             $AFFY_ZIP_REQUEST_DIR
             $AFFY_R_CHP_ANALYSIS_PROTOCOL
             $BIOCONDUCTOR_DELIVERY_PATH
@@ -44,6 +48,7 @@ require Exporter;
 my $affy_file_types = $CONFIG_SETTING{MA_AFFY_DEFAULT_FILES} || '';
 @AFFY_DEFAULT_FILES = split ( /\s/, $affy_file_types);
 
+
 # Convert any relative paths to absolute paths
 for my $k qw(MA_LOG_BASE_DIR MA_AFFY_PROBE_DIR MA_BIOC_DELIVERY_PATH
              MA_ANNOTATION_OUT_PATH MA_AFFY_TMP_DIR MA_AFFY_ZIP_REQUEST_DIR
@@ -64,6 +69,7 @@ $ADD_ANNOTATION_OUT_FOLDER  = $CONFIG_SETTING{MA_ANNOTATION_OUT_PATH} || '';
 $AFFY_TMP_DIR               = $CONFIG_SETTING{MA_AFFY_TMP_DIR} || '';
 $AFFY_ZIP_REQUEST_DIR       = $CONFIG_SETTING{MA_AFFY_ZIP_REQUEST_DIR} || '';
 
+
 #Current protocol that describes the R script to produce the CHP like file
 $AFFY_R_CHP_ANALYSIS_PROTOCOL = $CONFIG_SETTING{MA_AFFY_R_CHP_PROTOCOL} || '';
 
@@ -72,6 +78,36 @@ $AFFY_R_CHP_ANALYSIS_PROTOCOL = $CONFIG_SETTING{MA_AFFY_R_CHP_PROTOCOL} || '';
 $SBEAMS_SUBDIR          = 'Microarray';
 $SBEAMS_PART            = 'Microarray';
 
+#### Process custom CDF options -
+$AFFY_NORMALIZATION_PIPELINES = $CONFIG_SETTING{MA_NORMALIZATION_PIPELINES} || '';
+# Supported CHIP types
+my $custom_cdf_types = $CONFIG_SETTING{MA_CUSTOM_CDF} || '';
+my @cdf_types = split ( /,\s*/, $custom_cdf_types);
+for my $type ( @cdf_types ) {
+  my ( $k, $v ) = split /:/, $type;
+  next unless $k && $v;
+  $CUSTOM_CDF{$k} = $v;
+}
+# installed DB mappings
+my $cdf_dbs = $CONFIG_SETTING{MA_CDF_DBS} || '';
+my @db_order; # convenience, allow order to be preserved
+my @dbs = split ( /,\s*/, $cdf_dbs);
+for my $db ( @dbs ) {
+  my ( $k, $v ) = split /:/, $db;
+  next unless $k && $v;
+  push @db_order, $k;
+  $CDF_DBS{$k} = $v;
+}
+# DB mapping versions
+my @version_order; # convenience, allow order to be preserved
+my $cdf_vers = $CONFIG_SETTING{MA_CDF_VERSIONS} || '';
+my @vers = split ( /,\s*/, $cdf_vers);
+for my $ver ( @vers ) {
+  my ( $k, $v ) = split /:/, $ver;
+  next unless $k && $v;
+  push @version_order, $k;
+  $CDF_VERSIONS{$k} = $v;
+}
 
 ##############################
 ### Methods to access data ###
@@ -259,6 +295,77 @@ sub set_AFFY_DEFAULT_DIR {
 	}
 	
 	return $AFFY_DEFAULT_DIR;
+}
+
+#+
+# return config value for gene pattern URI if any
+#-
+sub get_gp_URI {
+  return $CONFIG_SETTING{MA_GENE_PATTERN_URI} || '';
+}
+
+#+
+# should button for exon array pipeline be shown?
+#-
+sub show_exon_pipeline {
+  my $self = shift;
+  my $uri = $self->get_gp_URI();
+  unless ( $uri ) {
+    # short circuit if URI not defined
+    $log->warn( "Missing GP URI" ) if $AFFY_NORMALIZATION_PIPELINES;
+    return '';
+  }
+  return ( $AFFY_NORMALIZATION_PIPELINES =~ /Exon/i );
+}
+
+#+
+# should button for expression array pipeline be shown?
+#-
+sub show_expression_pipeline {
+  my $self = shift;
+  my $uri = $self->get_gp_URI();
+  unless ( $uri ) {
+    # short circuit if URI not defined
+    $log->warn( "Missing GP URI" ) if $AFFY_NORMALIZATION_PIPELINES;
+    return '';
+  }
+  return ( $AFFY_NORMALIZATION_PIPELINES =~ /Expression/i );
+}
+
+#+
+# return hashref of installed custom CDF files 
+#-
+sub get_custom_cdf_types {
+  return \%CUSTOM_CDF;
+}
+
+#+
+# 
+# return hashref of custom CDF dbs 
+#-
+sub get_cdf_dbs {
+  return \%CDF_DBS;
+}
+
+#+
+# array ref with ordered db keys
+#-
+sub get_cdf_db_order {
+  return \@db_order;
+}
+
+#+
+# return hashref of custom CDF version 
+#-
+sub get_cdf_versions {
+  return \%CDF_VERSIONS;
+}
+
+#+
+# array ref with ordered version keys
+#-
+sub get_cdf_version_order {
+  return \@version_order;
 }
 
 #######################################################

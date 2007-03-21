@@ -189,7 +189,13 @@ CONFIG_SETTING{MA_AFFY_DEFAULT_FILES}   = CHP CEL XML INFO RPT R_CHP JPEG EGRAM_
 # Current protocol that describes the R script to produce the CHP like file
 CONFIG_SETTING{MA_AFFY_R_CHP_PROTOCOL} = R Mas5.0 CHP
 
-# Options for custom CDF processing.  Comma separated list of Affyname:MNBIname
+#### Options for custom CDF processing.  
+# Determines which pipeline launch buttons are shown.  Commented out by default
+# CONFIG_SETTING{MA_NORMALIZATION_PIPELINES} = Exon Expression 
+
+# URI to which to dispatch GP jobs
+CONFIG_SETTING{MA_GENE_PATTERN_URI} = http://deimos:8081/gptrigger/ExonArrayAnalysis
+# Comma separated list of Affyname:MNBIname
 CONFIG_SETTING{MA_CUSTOM_CDF} = Mouse430_2:Mm430_Mm, HG-U133_Plus_2:Hs133P_Hs, HG-U133A:Hs133A_Hs, ATH1-121501:AtH1_At, Rat230_2:Rn230_Rn, Rhesus:N/A, YG_S98:N/A, MoEx-1_0-st-v1:MmEx10stv1_Mm, HuEx-1_0-st-v2:HsEx10stv2_Hs 
 # Define supported CDF mappings
 CONFIG_SETTING{MA_CDF_DBS} =  entrezg:Entrez gene, ense:ENSEMBL, ensg:ENSEMBL gene, enst:ENSEMBL transcript prediction, refseq:RefSeq, ug:UniGene

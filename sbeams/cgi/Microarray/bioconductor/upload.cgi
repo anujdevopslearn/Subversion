@@ -150,7 +150,6 @@ sub main {
   # Second submit botton which leads to gene pattern pipeline pages. 
   if ( !$submit ) {
     $submit = $cgi->param('gpSubmit');
-#   log->debug($submit);
   }
 
 	my $token = $cgi->param('token');
@@ -192,8 +191,7 @@ sub main {
 	    showjob($token);
 	} elsif (defined($submit) && $submit eq "Complete File Grouping") {
      affy($token);
-#	} elsif (defined($submit) && $submit eq "Normalize Exon Arrays") {
-	} elsif (defined($submit) && $submit eq "Exon_Array_Analysis") {
+	} elsif (defined($submit) && $submit =~ /Exon_Array_Analysis|Custom_CDF_Analysis/ ) {
 		$sbeamsMOD->printPageHeader();
     my $content = launch_gp_pipeline($token);
 		handle_request( ref_parameters => \%parameters, content => $content );
@@ -731,8 +729,9 @@ END
             return false;
           }
         } else {
-          alert("Unknown analysis type, quitting" );
-          return false;
+// Modified to allow custom CDF processing
+//          alert("Unknown analysis type, quitting" );
+//          return false;
         }
         return true;
       }
@@ -740,9 +739,13 @@ END
       END
 
       # Show a submit button to the exon array pipeline only if we have qualified arrays.
-      if ( has_exon_arrays( $array_types ) ) {
+      if ( $sbeamsMOD->show_exon_pipeline && has_exon_arrays( $array_types ) ) {
         print <<"        END";
         <INPUT TYPE=SUBMIT NAME=gpSubmit TITLE='Submit job to GenePattern exon array analysis pipeline' VALUE=Exon_Array_Analysis ONCLICK="set_analysis_type('exon_array_pipeline')"> 
+        END
+      } elsif ( $sbeamsMOD->show_expression_pipeline() ) {
+        print <<"        END";
+        <INPUT TYPE=SUBMIT NAME=gpSubmit TITLE='Submit job to GenePattern alternate CDF analysis pipeline' VALUE=Custom_CDF_Analysis ONCLICK="set_analysis_type('custom_cdf_pipeline')"> 
         END
       }
       
@@ -950,7 +953,6 @@ sub showjob {
 # Use checked files with affy
 #####################################################
 sub affy {
-  $log->printStack( 'debug' );
 	#my $parent_analysis_token = shift;
 	my $parent_analysis_id = $cgi->param('analysis_id');
 	unless ($parent_analysis_id =~ /^\d/){
@@ -1062,7 +1064,11 @@ my  $fm = new FileManager;
 
 
 #+
-# launch_gp_pipeline
+# launch_gp_pipeline 
+#
+# Subroutine builds a form to collect info prior to launching off to GP trigger
+# resource.  Initally just for exon arrays, now to be used for alternative CDF
+# normalization of expression arrays as well.
 #-
 sub launch_gp_pipeline {
 
@@ -1080,11 +1086,13 @@ sub launch_gp_pipeline {
 	
 	my @sample_groups = ();
 	my @filenames = $cgi->param('get_all_files');
-#  $log->debug( "files are: " . join(':', @filenames) );
 	
 	my $parent_token = $cgi->param('token');
-#  $log->debug( "Token is $parent_token" );
 	
+  my $analysis_type = $cgi->param('analysis_type');
+  my $array_type = $cgi->param('array_type');
+  my $submit = $cgi->param('gpSubmit');
+
   # Need global $fm...
   $fm = new FileManager;
   $fm->init_with_token($Site::BC_UPLOAD_DIR, $parent_token);
@@ -1108,14 +1116,17 @@ sub launch_gp_pipeline {
   my $analysis_id = 123456;
 	my $error = create_directory($token);
 	error($error) if $error;
-	
+
+  my $desc = ( $analysis_type =~ /exon_array/ ) ? "Exon Array Normalization" :
+	                                                "Custom CDF Normalization";
+  
   # Create analysis record in the database.
 	my $rowdata_ref = {folder_name => $token,
 					   user_id => $user_id,
 					   project_id => $project_id,
 					   parent_analysis_id => $parent_analysis_id,
 					   affy_analysis_type_id => $affy_o->find_analysis_type_id("normalization"),
-					   analysis_description => "Adding New Exon Array Normalization",
+					   analysis_description => $desc,
 					  };
 	
 	my $analysis_id = $affy_o->add_analysis_session(rowdata_ref => $rowdata_ref);
@@ -1167,34 +1178,38 @@ sub launch_gp_pipeline {
   my $cookie = $q->cookie( -name => 'SBEAMSName',
                            -path => $HTML_BASE_DIR,
                           -value => \%cookie );
+
   my $email = $sbeams->getEmailAddress() || $sbeams->getCurrent_username();
   my $db_map_select = get_db_map_select();
+  my $map_version_select = get_map_version_select();
   my $file_input = '';
   for my $file ( @filenames ) {
     $file_input .= "<INPUT TYPE=hidden NAME=get_all_files VALUE=$file>\n";
 #    $file_input .= "<INPUT TYPE=hidden NAME=file_root VALUE=$file_root->{$file}>\n";
     $file_input .= "<INPUT TYPE=hidden NAME=file_info VALUE='$file_root->{$file}::::$file'>\n";
   }
-  my $analysis_type = $cgi->param('analysis_type');
-  my $array_type = $cgi->param('array_type');
-  my $submit = $cgi->param('gpSubmit');
-  my $gp_trigger_URL='http://deimos:8081/gptrigger/ExonArrayAnalysis';
+#  my $gp_trigger_URL='http://deimos:8081/gptrigger/ExonArrayAnalysis';
 #  my $gp_trigger_URL='/devDC/sbeams/cgi/showparams.cgi';
+  my $gp_trigger_URL = $sbeamsMOD->get_gp_URI() || '';
 
   # Calculate server 'root', $q doesn't have exactly what we need...
   my $path = $HTML_BASE_DIR;
   $path = '/' . $path unless $HTML_BASE_DIR =~ /^\//;
   my $url = $q->url( -base => 1 ) . $path;
+
+  my $cdf_types = $sbeamsMOD->get_custom_cdf_types();
+  $array_type = $cdf_types->{$array_type} || $array_type;
   
   # Assemble FORM HTML
   my $gp_pipeline_form =<<"  END_FORM";
   You are submitting a job to the Gene Pattern analysis pipeline, please select a mapping
-  database.  This is the database to which the Exon array probe sequences will be mapped 
+  database.  This is the database to which the array probe sequences will be mapped 
   for this analysis.
   <BR>
   <BR>
   <FORM NAME=gp_exon_array ACTION='$gp_trigger_URL' METHOD=POST>
   <B>Mapping database:</B> $db_map_select
+  <B>Mapping version:</B> $map_version_select
   <BR>
   <BR>
   $file_input
@@ -1220,22 +1235,33 @@ sub launch_gp_pipeline {
 # Returns select list with current Exon array mapping dbs
 #-
 sub get_db_map_select {
-  return <<"  END";
-  <SELECT NAME=db_name>
-  <option value="ense">ENSEMBL</option>
-  <option value="ensg">ENSEMBL gene</option>
-  <option value="enst">ENSEMBL transcript prediction</option>
-  <option value="entrezg" selected>Entrez gene</option>
-  <option value="refseq">RefSeq</option>
-  <option value="ug">UniGene</option>
-  </SELECT>
-  END
-#  <OPTION VALUE='ENSEMBL'>ENSEMB</OPTION>
-#  <OPTION VALUE='ENSEMBL gene'>ENSEMBL gene</OPTION>
-#  <OPTION VALUE='ENSEMBL transcript prediction'>ENSEBML transcript prediction</OPTION>
-#  <OPTION VALUE='Entrez gene'>Entrez gene</OPTION>
-#  <OPTION VALUE='RefSeq'>RefSeq</OPTION>
-#  <OPTION VALUE='UniGene'>UniGene</OPTION>
+  my $dbs = $sbeamsMOD->get_cdf_dbs();
+  my $order = $sbeamsMOD->get_cdf_db_order();
+  my $select =  "<SELECT NAME=db_name>\n";
+  my $selected = 'SELECTED'; # Will select the first
+  for my $k ( @$order ) {
+    $select .= "<option value=$k $selected>$dbs->{$k}</option>\n";
+    $selected = '';
+  }
+  $select .=  "</SELECT>\n";
+  return $select;
+}
+
+#### Subroutine: multtest#################################################
+#+
+# Returns select list with current Exon array mapping dbs
+#-
+sub get_map_version_select {
+  my $dbs = $sbeamsMOD->get_cdf_versions();
+  my $order = $sbeamsMOD->get_cdf_version_order();
+  my $select =  "<SELECT NAME=db_version>\n";
+  my $selected = 'SELECTED'; # Will select the first
+  for my $k ( @$order ) {
+    $select .= "<option value=$k $selected>$dbs->{$k}</option>\n";
+    $selected = '';
+  }
+  $select .=  "</SELECT>\n";
+  return $select;
 }
 
 #### Subroutine: multtest#################################################
@@ -2241,11 +2267,8 @@ sub make_table {
 sub delete_data_setup {
 	my %args = @_;
 	my $ref_parameters = $args{ref_parameters};
-$log->debug("I'm about to delete some data ");
 
 	my $best_permission = $sbeams->get_best_permission();
-$log->debug("BEST PERMISSION '$best_permission'\n");
-# log->debug(Dumper($ref_parameters));
 
 #make sure this user has permission to edit this data
 	if ($best_permission <= SBEAMS::Connection::Permissions::DATA_ADMIN ||
