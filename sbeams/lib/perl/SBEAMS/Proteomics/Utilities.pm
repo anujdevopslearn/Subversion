@@ -502,6 +502,21 @@ sub readParamsFile {
   my ($key,$value,$i,$matches,$tmp);
 
 
+  #### Try to determine what kind of file this is
+  my $filetype;
+  if ($inputfile =~ /sequest.params/) {
+    $filetype = 'SEQUEST';
+  } elsif ($inputfile =~ /comet.def/) {
+    $filetype = 'Comet';
+  } elsif ($inputfile =~ /tandem/) {
+    $filetype = 'XTandem';
+  } else {
+    $filetype = 'unknown';
+  }
+  if ($verbose) {
+    print "filetype = $filetype\n";
+  }
+
   #### Define a hash to hold parameters from the file and also an array
   #### to have an ordered list of keys
   my %parameters;
@@ -523,10 +538,20 @@ sub readParamsFile {
 
       #### Strip linefeeds and carriage returns
       $line =~ s/[\r\n]//g;
+      ($key,$value) = (undef,undef);
 
-      #### Find key = value pattern
-      $line =~ /\s*(\w+)\s*=\s*(.*)/;
-      ($key,$value) = ($1,$2);
+      #### If this is X!Tandem, then parse XML tag
+      if ($filetype eq 'XTandem') {
+	if ($line =~ /label="(.+?)".+>(.+)<\/note>/) {
+	  ($key,$value) = ($1,$2);
+	}
+
+      #### Otherwise, assume SEQUEST/Comet style key = value pattern
+      } else {
+        if ($line =~ /\s*(\w+)\s*=\s*(.*)/) {
+          ($key,$value) = ($1,$2);
+	}
+      }
 
       #### If a suitable key was found then store the key value pair
       if ($key) {
