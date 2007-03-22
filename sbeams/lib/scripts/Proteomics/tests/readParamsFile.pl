@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/local/bin/perl -w
 
 ###############################################################################
 # Program     : readParamsFile.pl
@@ -16,48 +16,117 @@
 #
 ###############################################################################
 
+use strict;
+use Getopt::Long;
+use FindBin;
 
-  use strict;
+use vars qw ($PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
+            );
 
-  #### Set up the SBEAMS - Proteomics module object
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS]
+Options:
+  --verbose n            Set verbosity level.  default is 0
+  --inputlistfile xx     Text file containing parameter files to test read
+  --paramfile xx         Specify paramer file to test read
+
+ e.g.: $PROG_NAME --inputlistfile testParamsFiles.txt
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","inputlistfile:s","paramfile:s",
+    )) {
+
+    print "\n$USAGE";
+    exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+
+main();
+
+
+
+###############################################################################
+# main
+###############################################################################
+sub main {
+
+  #### Set up the SBEAMS - Proteomics module Utilities object
   use lib qw (../perl ../../perl ../../../perl);
   use SBEAMS::Proteomics::Utilities;
   my $sbeamsPR = SBEAMS::Proteomics::Utilities->new();
 
+  my @inputfiles;
 
-  #### Define standard variables
-  my ($i,$element,$key,$value,$line,$result,$sql);
-  my $verbose = 1;
+  #### Pick up a specified parameter to test
+  if ($OPTIONS{paramfile}) {
+    push(@inputfiles,$OPTIONS{paramfile});
+  }
 
-
-  #### Get the input file as the first input parameter or otherwise a default
-  my $inputfile = shift;
-  unless ($inputfile) {
-    if (1 == 1) {
-      $inputfile =
-        "/net/dblocal/data/macrogenics/data/CTCL/CTCL1/human_nci/".
-        "CTCL1_0910_R01_042202/sequest.params";
+  #### Pick up an input file of parameter files
+  if ($OPTIONS{inputlistfile}) {
+    if (open(INFILE,$OPTIONS{inputlistfile})) {
+      while (my $line = <INFILE>) {
+	$line =~ s/[\r\n]//g;
+	push(@inputfiles,$line) if ($line);
+      }
     } else {
-      $inputfile =
-        "/net/db/projects/proteomics/data/priska/ICAT/".
-        "raftapr/raftapr_human/raft0052/sequest.params";
+      die("ERROR: Unable to open file '$OPTIONS{inputlistfile}'");
     }
   }
 
+  #### If there are any unresolved parameters, exit
+  if ($ARGV[0]){
+    print "ERROR: Unresolved command line parameter '$ARGV[0]'.\n";
+    print "$USAGE";
+    exit;
+  }
 
-  #### Read the sequest.params file
-  my $result = $sbeamsPR->readParamsFile(inputfile =>$inputfile,
-    verbose=>$verbose);
-
-
-  print "resulting object is ",$result,"\n";
-  print "key_in_order is a ",$result->{keys_in_order},"\n";
-  print "key,values:\n";
-
-  #### Loop over each row
-  foreach $key (@{$result->{keys_in_order}}) {
-    $value = $result->{parameters}->{$key};
-    print "  $key = $value\n";
+  #### If no parameters, show help
+  unless ($OPTIONS{paramfile} || $OPTIONS{inputlistfile}) {
+    print "$USAGE";
+    exit;
   }
 
 
+  #### Loop over all specified files
+  foreach my $inputfile (@inputfiles) {
+
+    #### Check that file exists
+    print "#### $inputfile\n";
+    if (! -e $inputfile) {
+      print "ERROR: Unable to find file '$inputfile'\n\n";
+      next;
+    }
+
+    #### Read the parameter file
+    my $result = $sbeamsPR->readParamsFile(inputfile =>$inputfile,
+      verbose=>$VERBOSE);
+
+
+    #### Show some information
+    print "Loaded ".scalar(@{$result->{keys_in_order}})." parameters.\n";
+    print "\$result has:\n";
+    foreach my $key (keys(%{$result})) {
+      print "  $key = $result->{$key}\n";
+    }
+
+    #### If verbose, show all parameters
+    if ($VERBOSE) {
+      print "Key Value pairs:\n";
+      foreach my $key (@{$result->{keys_in_order}}) {
+	my $value = $result->{parameters}->{$key};
+	print "  $key = $value\n";
+      }
+    }
+
+    print "\n";
+
+  }
+
+}
