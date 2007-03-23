@@ -710,6 +710,11 @@ configured database type
 -Run the directory building and schema creation scripts for any supported 
 modules specified on the command line (see usage).
 
+Note that you will need to run the script with a -f flag as sbeamscommon
+doesn't exist if you got here after steps 1-5 only.
+Here is an example use of the command:
+    $SBEAMS/lib/scripts/Core/install_sbeams.pl -f -m PeptideAtlas -m Proteomics -c $SBEAMS/lib/conf/Core/sbeams.config
+
 ==============================
 Appendix C: MySQL 
 ==============================
