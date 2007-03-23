@@ -26,6 +26,7 @@ use Getopt::Long;
 use FindBin;
 use DirHandle;
 use Math::Interpolate;
+use Time::HiRes qw( usleep ualarm gettimeofday tv_interval );
 
 use lib "$FindBin::Bin/../../perl";
 use vars qw ($sbeams $sbeamsPROT $q
@@ -33,7 +34,11 @@ use vars qw ($sbeams $sbeamsPROT $q
              $TESTONLY
              $current_contact_id $current_username
              %spectra_written $interact_fname
+	     %timepoints $t0 $t1
             );
+
+#### Store timepoint
+$timepoints{t0} = [gettimeofday()];
 
 
 #### Set up SBEAMS core module
@@ -839,6 +844,9 @@ sub loadProteomicsExperiment {
   }
 
 
+  #### Store timepoint
+  $timepoints{t1} = [gettimeofday()];
+
 
   #### For each @fraction, descend into the directory and start loading
   #### the data therein
@@ -847,6 +855,10 @@ sub loadProteomicsExperiment {
   my $search_hit_id;
   my $msms_spectrum_id;
   my $outfile;
+  my $total_files = 0;
+
+  my $use_batch_transactions = 1;
+
   foreach $element (@fractions) {
 
     #### Die if the fraction does not already exist in database
@@ -858,9 +870,16 @@ sub loadProteomicsExperiment {
 
     #### Get a list of all files in the subdirectory
     my $filecounter = 0;
+    $t0 = [gettimeofday()];
     my @file_list = getDirListing("$source_dir/$element");
+    $t1 = [gettimeofday()];
+    $timepoints{'A #getDirListing'} += tv_interval($t0,$t1);
 
     print "\nProcessing data in $element\n";
+
+    if ($use_batch_transactions && !$TESTONLY) {
+      $sbeams->initiate_transaction();
+    }
 
     #### Loop over each file, INSERTing into database if a .dta file
     foreach $file (@file_list) {
@@ -870,11 +889,14 @@ sub loadProteomicsExperiment {
         #### Insert the contents of the .dta file into the database and
         #### return the autogen PK, or if it already exists (from
         #### another search batch) then just return that PK
+	my $t0local = [gettimeofday()];
         $msms_spectrum_id = addMsmsSpectrumEntry(
           "$source_dir/$element/$file",$fraction_id);
         unless ($msms_spectrum_id) {
           die "ERROR: Did not receive msms_spectrum_id\n";
         }
+	$t1 = [gettimeofday()];
+	$timepoints{'B #addMsmsSpectrumEntry'} += tv_interval($t0local,$t1);
 
 
         #### Set $outfile to the corresponding .out file
@@ -891,10 +913,13 @@ sub loadProteomicsExperiment {
 
 
         #### Load the .out file
+	$t0 = [gettimeofday()];
         my %data = $sbeamsPROT->readOutFile(
           inputfile => "$source_dir/$element/$outfile");
         my $file_root = ${$data{parameters}}{file_root};
         my $mass = ${$data{parameters}}{sample_mass_plus_H};
+	$t1 = [gettimeofday()];
+	$timepoints{'C #readOutFile'} += tv_interval($t0,$t1);
 
         #### if $search_database not yet defined (very first .out file)
         #### then create and entry so we know $search_batch_id
@@ -928,14 +953,20 @@ sub loadProteomicsExperiment {
 
         #### Insert the entry into table "search"
         #print "=====================================================\n";
+        $t0 = [gettimeofday()];
         $search_id = addSearchEntry($data{parameters},
           $search_batch_id,$msms_spectrum_id);
+        $t1 = [gettimeofday()];
+        $timepoints{'D #addSearchEntry'} += tv_interval($t0,$t1);
 
         #### If a valid search_id was returned, insert the hits
         if ($search_id > 0) {
 
           #### Insert the entries into table "search_hit"
+	  $t0 = [gettimeofday()];
           $search_hit_id = addSearchHitEntry($data{matches},$search_id);
+	  $t1 = [gettimeofday()];
+	  $timepoints{'E #addSearchHitEntry'} += tv_interval($t0,$t1);
 
           #print "Successfully loaded $file_root (mass = $mass)\n";
           print ".";
@@ -943,6 +974,12 @@ sub loadProteomicsExperiment {
         }
 
         $filecounter++;
+
+	if ($use_batch_transactions && !$TESTONLY && ($filecounter%10 == 0)) {
+	  print "#";
+	  $sbeams->commit_transaction();
+	  $sbeams->initiate_transaction();
+	}
 
       }
 
@@ -952,14 +989,53 @@ sub loadProteomicsExperiment {
 
     } ## endwhile
 
-    print "\nFound $filecounter .out files to process\n";
+    if ($use_batch_transactions && !$TESTONLY) {
+      print "#";
+      $sbeams->commit_transaction();
+      $sbeams->setAutoCommit(1);
+    }
 
+    print "\nFound $filecounter .out files to process\n";
+    $total_files += $filecounter;
 
   } ## endforeach
 
+  #### Store timepoint
+  $timepoints{t2} = [gettimeofday()];
+  showTimeStatus(total_files=>$total_files);
 
 } # end handleRequest
 
+
+
+###############################################################################
+# showTimeStatus - Show the timing information about the loading
+###############################################################################
+sub showTimeStatus {
+  my %args = @_;
+  my $SUB_NAME = 'showTimeStatus';
+
+  my $total_files = $args{'total_files'}
+   || die "ERROR[$SUB_NAME]:total_files  not passed";
+
+  printf("%10.2fs Startup time\n",tv_interval($timepoints{t0},$timepoints{t1}));
+  printf("%10.2fs Load time\n",tv_interval($timepoints{t1},$timepoints{t2}));
+  my $accum = 0;
+  foreach my $key ( sort(keys(%timepoints)) ) {
+    unless ($key =~ /t\d/) {
+      printf("%10.2fs $key\n",$timepoints{$key});
+      unless ($key =~ / \-\d /) {
+	$accum += $timepoints{$key}
+      }
+    }
+  }
+  printf("%10.2fs other time\n",tv_interval($timepoints{t1},$timepoints{t2}) - $accum);
+  printf("%10.2f hours per 100,000 .outs\n",
+	 tv_interval($timepoints{t0},$timepoints{t2})/$total_files*100000/60/60);
+
+  return;
+
+}
 
 
 ###############################################################################
@@ -1058,22 +1134,36 @@ sub addMsmsSpectrumEntry {
 
 
   #### Read in the specified file
+  $t0 = [gettimeofday()];
   my $result = $sbeamsPROT->readDtaFile(inputfile => "$inputfile");
   unless ($result) {
     die "ERROR: Unable to read dta file '$inputfile'\n";
   }
   my $file_root = ${$result}{parameters}->{file_root};
+  $t1 = [gettimeofday()];
+  $timepoints{'B -1  readDtaFile'} += tv_interval($t0,$t1);
 
 
   #### Try to find if this file_root already exists for this fraction_id
-  my $sql_query;
-  $sql_query = qq~
-      SELECT msms_spectrum_id
+  $t0 = [gettimeofday()];
+  my $msms_spectrum_id;
+  our %msms_spectrum_id_hash;
+  if ($msms_spectrum_id_hash{'====='.$fraction_id}) {
+    if ($msms_spectrum_id_hash{$file_root}) {
+      $msms_spectrum_id = $msms_spectrum_id_hash{$file_root};
+    }
+  } else {
+    my $sql_query;
+    $sql_query = qq~
+      SELECT msms_spectrum_file_root,msms_spectrum_id
         FROM $TBPR_MSMS_SPECTRUM
        WHERE fraction_id = '$fraction_id'
-         AND msms_spectrum_file_root = '$file_root'
-  ~;
-  my ($msms_spectrum_id) = $sbeams->selectOneColumn($sql_query);
+    ~;
+    %msms_spectrum_id_hash = $sbeams->selectTwoColumnHash($sql_query);
+    $msms_spectrum_id_hash{'====='.$fraction_id} = 1;
+  }
+  $t1 = [gettimeofday()];
+  $timepoints{'B -2  SQL find msms_spectrum_id'} += tv_interval($t0,$t1);
 
   #### If it is found, then return the key
   if ($msms_spectrum_id) {
@@ -1087,6 +1177,7 @@ sub addMsmsSpectrumEntry {
     my $end_scan = ${$result}{parameters}->{end_scan};
     my $n_peaks = ${$result}{parameters}->{n_peaks};
 
+    $t0 = [gettimeofday()];
     my %rowdata;
     $rowdata{fraction_id} = $fraction_id;
     $rowdata{msms_spectrum_file_root} = $file_root;
@@ -1107,10 +1198,14 @@ sub addMsmsSpectrumEntry {
     unless ($msms_spectrum_id) {
       die "ERROR: Failed to retreive PK msms_spectrum_id\n";
     }
+    $msms_spectrum_id_hash{$file_root} = $msms_spectrum_id;
+    $t1 = [gettimeofday()];
+    $timepoints{'B -3  INSERT msms_spectrum'} += tv_interval($t0,$t1);
   }
 
 
   #### Now insert all the mass,intensity pairs
+  $t0 = [gettimeofday()];
   my ($i,$mass,$intensity);
 
 
@@ -1163,6 +1258,8 @@ sub addMsmsSpectrumEntry {
   }
 
   close SPECFILE if ($spectrum_destination eq 'FILE');
+  $t1 = [gettimeofday()];
+  $timepoints{'B -4  Store peaks'} += tv_interval($t0,$t1);
 
   return $msms_spectrum_id;
 
@@ -1535,7 +1632,9 @@ sub addParamsEntries {
 
   #### Make a list of guesses for params files
   my @params_files = ( "$directory/sequest.params",
-    "$directory/../sequest.params", "$directory/comet.def" );
+    "$directory/../sequest.params", "$directory/comet.def",
+    "$directory/tandem.params", "$directory/tandem.xml",
+  );
 
   #### Try to find the files in order
   my $found = '??';
