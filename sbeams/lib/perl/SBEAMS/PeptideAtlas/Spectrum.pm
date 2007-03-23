@@ -593,32 +593,59 @@ sub getSpectrumPeaks {
   $buffer .= "data_location = $data_location\n";
 
 
-  #### First try ISB SEQUEST style .tgz file
-  my $tgz_filename = "$data_location/$fraction_tag.tgz";
-  $buffer .= "INFO: Looking for '$data_location/$fraction_tag.tgz'<BR>\n";
-  if ( -e $tgz_filename ) {
-    $buffer .= "INFO: Found '$tgz_filename'<BR>\n";
-    $spectrum_name = "./$spectrum_name";
+  my $filename;
 
-  #### Since we didn't find that, try a Comet style access method
-  } else {
-    $tgz_filename = "$data_location/$fraction_tag.cmt.tar.gz";
 
-    unless ( -e $tgz_filename ) {
-      $buffer .= "WARNING: Unable to find Comet style .cmt.tar.gz<BR>\n";
-      $buffer .= "ERROR: Unable to find spectrum archive to pull from<BR>\n";
-      print $buffer;
-      return;
+  #### First try to fetch the spectrum from an mzXML file
+  my $mzXML_filename = "$data_location/$fraction_tag.mzXML";
+  $buffer .= "INFO: Looking for '$mzXML_filename'<BR>\n";
+  if ( -e $mzXML_filename ) {
+    $buffer .= "INFO: Found '$mzXML_filename'<BR>\n";
+    my $spectrum_number;
+    if ($spectrum_name =~ /(\d+)\.(\d+)\.\d$/) {
+      $spectrum_number = $1;
+      $buffer .= "INFO: Spectrum number is $spectrum_number<BR>\n";
     }
-    $buffer .= "INFO: Found '$tgz_filename'\n";
+
+    #### If we have a spectrum number, try to get the spectrum data
+    if ($spectrum_number) {
+      $filename = "$PHYSICAL_BASE_DIR/lib/c/Proteomics/getSpectrum/".
+        "getSpectrum $spectrum_number $mzXML_filename |";
+    }
+
   }
 
 
-  my $filename = "/bin/tar -xzOf $tgz_filename $spectrum_name.dta|";
+  #### If there's no filename then try ISB SEQUEST style .tgz file
+  unless ($filename) {
+    my $tgz_filename = "$data_location/$fraction_tag.tgz";
+    $buffer .= "INFO: Looking for '$data_location/$fraction_tag.tgz'<BR>\n";
+    if ( -e $tgz_filename ) {
+      $buffer .= "INFO: Found '$tgz_filename'<BR>\n";
+      $spectrum_name = "./$spectrum_name";
 
-  $buffer .= "Pulling from tarfile: $tgz_filename<BR>\n";
-  $buffer .= "Extracting: $filename<BR>\n";
+      #### Since we didn't find that, try a Comet style access method
+    } else {
+      $tgz_filename = "$data_location/$fraction_tag.cmt.tar.gz";
 
+      unless ( -e $tgz_filename ) {
+	$buffer .= "WARNING: Unable to find Comet style .cmt.tar.gz<BR>\n";
+	$buffer .= "ERROR: Unable to find spectrum archive to pull from<BR>\n";
+	print $buffer;
+	return;
+      }
+      $buffer .= "INFO: Found '$tgz_filename'\n";
+    }
+
+
+    $filename = "/bin/tar -xzOf $tgz_filename $spectrum_name.dta|";
+
+    $buffer .= "Pulling from tarfile: $tgz_filename<BR>\n";
+    $buffer .= "Extracting: $filename<BR>\n";
+  }
+
+
+  #### Try to open the spectrum for reading
   unless (open(DTAFILE,$filename)) {
     $buffer .= "ERROR Cannot open '$filename'!!<BR>\n";
     print $buffer;
@@ -626,15 +653,18 @@ sub getSpectrumPeaks {
   }
 
 
-  #### Read in but ignore header line
-  my $headerline = <DTAFILE>;
-
-  unless ($headerline) {
-    $buffer .= "ERROR: No result returned from extraction attempt<BR>\n";
-    print $buffer;
-    return;
+  #### Read in but ignore header line if a dta file
+  if ($filename =~ m#/bin/tar#) {
+    my $headerline = <DTAFILE>;
+    unless ($headerline) {
+      $buffer .= "ERROR: No result returned from extraction attempt<BR>\n";
+      print $buffer;
+      return;
+    }
   }
 
+
+  #### Read the spectrum data
   my @mz_intensities;
   while (my $line = <DTAFILE>) {
     chomp($line);
@@ -642,9 +672,17 @@ sub getSpectrumPeaks {
     push(@mz_intensities,\@values);
   }
   close(DTAFILE);
+
+  #### If there were no values, print diagnostics and return
+  unless (@mz_intensities) {
+    $buffer .= "ERROR: No peaks returned from extraction attempt<BR>\n";
+    print $buffer;
+    return;
+  }
+
+  #### Return result
   print "   ".scalar(@mz_intensities)." mass-inten pairs loaded\n"
     if ($VERBOSE);
-
   return(@mz_intensities);
 
 } # end getSpectrumPeaks
