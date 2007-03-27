@@ -1587,7 +1587,7 @@ sub updateOrInsertRow {
 
       #### If the user asked for the PK to be returned, make a random one up
       if ( $return_PK ) {
-	  return int( rand()*10000 );
+	  return int( rand()*10000 ) + 1;
 	  #### Otherwise, just return a 1
       } else {
 	  return 1;
