@@ -148,6 +148,7 @@ sub getBestPeptides {
     my $n_genome_locations = $resultset_ref->{data_ref}->[$i]->[$cols->{n_genome_locations}];
     my $empirical_observability_score = $resultset_ref->{data_ref}->[$i]->[$cols->{empirical_proteotypic_score}];
     my $preceding_residue = $resultset_ref->{data_ref}->[$i]->[$cols->{preceding_residue}];
+    my $following_residue = $resultset_ref->{data_ref}->[$i]->[$cols->{following_residue}];
     my $peptide_sequence = $resultset_ref->{data_ref}->[$i]->[$cols->{peptide_sequence}];
 
     $best_probability += 0.03 if ($best_probability == 1.000);
@@ -173,7 +174,9 @@ sub getBestPeptides {
       }
     }
 
-    if ($preceding_residue !~ /[KR\-]/ || $peptide_sequence !~ /[KR\-]$/) {
+    if ($preceding_residue =~ /[KR\-]/ && 
+         ( $peptide_sequence =~ /[KR]$/ || $following_residue eq '-') ) {
+    } else {
       $suitability_score *= 0.2;
     }
 
@@ -274,7 +277,7 @@ sub sortBySuitabilityScore {
 ###############################################################################
 sub bySuitabilityScore {
 
-  return $b->[3] <=> $a->[3];
+  return $b->[4] <=> $a->[4];
 
 } # end bySuitabilityScore
 
