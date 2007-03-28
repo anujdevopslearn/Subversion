@@ -22,6 +22,7 @@
 use strict;
 use Getopt::Long;
 use FindBin;
+$|++;
 
 use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
@@ -538,7 +539,9 @@ sub handle_request {
   #### [friendly name used in url_cols,SQL,displayed column title]
   my @column_array = (
     ["peptide_accession","P.peptide_accession","Peptide Accession"],
+    ["preceding_residue","PI.preceding_residue","Pre AA"],
     ["peptide_sequence","P.peptide_sequence","Peptide Sequence"],
+    ["suitability_score","0.0001","Suitability Score"],
     ["best_probability","STR(PI.best_probability,7,3)","Best Prob"],
     ["best_adjusted_probability","STR(PI.best_adjusted_probability,7,3)","Best Adjusted Prob"],
     ["n_observations","PI.n_observations","N Obs"],
@@ -591,7 +594,12 @@ sub handle_request {
 
   #### Define the hypertext links for columns that need them
   %url_cols = (
-    	       'Peptide Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
+    'Peptide Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
+  );
+
+  %hidden_cols = (
+    'Suitability Score' => 1,
+    'Pre AA' => 1,
   );
 
 
@@ -641,6 +649,7 @@ sub handle_request {
     ) . "</TABLE>\n" if $htmlmode;
 
 
+  #############################################################
   ## Display the sequence graphic ##
 
   # Widget to allow show/hide of graphic section
@@ -676,6 +685,8 @@ sub handle_request {
     #  protein_structure => $protein_structure,
     #);
 
+
+  #############################################################
   # Widget to allow show/hide of observed peptides section
   my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_observedlist',
                                                 visible => 1,
@@ -741,6 +752,51 @@ sub handle_request {
     print "</TD></TR></TABLE>" if $htmlmode;
 
 
+    #############################################################
+    #### Display selected peptides - Experimental
+
+    #### Widget to allow show/hide of section
+    my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_bestpeptideslist',
+      visible => 0,
+      tooltip => 'Show/Hide Section',
+      imglink => 1,
+      sticky => 1,
+     );
+
+    #### Display the section header
+    my $bestPeptidesHeader = $sbeamsMOD->encodeSectionHeader(
+      text => 'Best Peptides',
+      link => $link
+    );
+    print qq~ <TABLE width="600">$bestPeptidesHeader</TABLE><TABLE><TR $tr><TD COLSPAN=2>~ if $htmlmode;
+
+    #### Calculate the best peptides to use
+    use SBEAMS::PeptideAtlas::BestPeptideSelector;
+    my $bestPeptideSelector = new SBEAMS::PeptideAtlas::BestPeptideSelector;
+    $bestPeptideSelector->setSBEAMS($sbeams);
+    my $best_peptide_information = $bestPeptideSelector->getBestPeptides(
+      atlas_build_id => $atlas_build_id,
+      biosequence_id => $biosequence_id,
+      query_parameters_ref=>\%parameters,
+      resultset_ref => $resultset_ref,
+      column_titles_ref=>\@column_titles,
+    );
+
+    #### Display the best peptide information
+    my $samples = $bestPeptideSelector->getBestPeptidesDisplay(
+      atlas_build_id => $atlas_build_id,
+      best_peptide_information  => $best_peptide_information,
+      query_parameters_ref=>\%parameters,
+      column_titles_ref=>\@column_titles,
+      link => $link,
+      base_url=>$base_url,
+      tr_info => $tr,
+    );
+    print "<TABLE width='600'>$samples</TABLE>" if $htmlmode;
+    print "</TD></TR></TABLE>" if $htmlmode;
+
+
+    #############################################################
     ## Display the samples list ##
 
     # Widget to allow show/hide of samples section
