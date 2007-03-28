@@ -541,6 +541,7 @@ sub handle_request {
     ["peptide_accession","P.peptide_accession","Peptide Accession"],
     ["preceding_residue","PI.preceding_residue","Pre AA"],
     ["peptide_sequence","P.peptide_sequence","Peptide Sequence"],
+    ["following_residue","PI.following_residue","Fol AA"],
     ["suitability_score","0.0001","Suitability Score"],
     ["best_probability","STR(PI.best_probability,7,3)","Best Prob"],
     ["best_adjusted_probability","STR(PI.best_adjusted_probability,7,3)","Best Adjusted Prob"],
@@ -600,6 +601,7 @@ sub handle_request {
   %hidden_cols = (
     'Suitability Score' => 1,
     'Pre AA' => 1,
+    'Fol AA' => 1,
   );
 
 
