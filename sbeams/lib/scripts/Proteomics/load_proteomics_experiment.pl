@@ -1015,8 +1015,13 @@ sub showTimeStatus {
   my %args = @_;
   my $SUB_NAME = 'showTimeStatus';
 
-  my $total_files = $args{'total_files'}
-   || die "ERROR[$SUB_NAME]:total_files  not passed";
+  my $total_files = $args{'total_files'};
+
+  if (!defined($total_files)) {
+    die "ERROR[$SUB_NAME]:total_files not passed";
+  }
+  $total_files = -1 unless ($total_files);
+
 
   printf("%10.2fs Startup time\n",tv_interval($timepoints{t0},$timepoints{t1}));
   printf("%10.2fs Load time\n",tv_interval($timepoints{t1},$timepoints{t2}));
