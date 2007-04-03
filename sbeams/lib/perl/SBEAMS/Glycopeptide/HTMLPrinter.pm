@@ -301,7 +301,9 @@ sub display_page_header {
       return;
     }
 
-    my $loadscript = "$args{onload};" || '';
+    my $loadscript = "$args{onload};" if $args{onload};
+    $loadscript .= 'sortables_init();' if $args{sort_tables};
+    $log->debug( $loadscript );
 
     #### If the output mode is not html, then we don't want a header here
     if ($sbeams->output_mode() ne 'html') {
@@ -309,7 +311,7 @@ sub display_page_header {
     }
 
     if( $sbeams->isGuestUser() ) {
-      $self->displayUnipepHeader();
+      $self->displayUnipepHeader(@_);
       return();
     }
   
@@ -350,6 +352,7 @@ sub display_page_header {
 
     ~;
 
+    print $sbeams->getSortableHTML() if $args{sort_tables};
     my $prophet_control = $self->get_prophet_control();
 
     if ($navigation_bar eq "YES") {
@@ -363,10 +366,12 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Glyco_prediction.cgi"><nobr>&nbsp;&nbsp;&nbsp;Search Glycopeptides</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/browse_glycopeptides.cgi"><nobr>&nbsp;&nbsp;&nbsp;Identified Proteins</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/showPathways"><nobr>&nbsp;&nbsp;&nbsp;Pathway Search</nobr></a></td></tr>
-<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch"><nobr>&nbsp;&nbsp;&nbsp;Mass Search</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Glyco_prediction.cgi" TITLE="Search by accession, sequence, name"><nobr>&nbsp;&nbsp;&nbsp;Search Glycopeptides</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/browse_glycopeptides.cgi" TITLE="View list of all observed proteins"><nobr>&nbsp;&nbsp;&nbsp;Identified Proteins</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/showPathways" TITLE="View observed peptides in context of KEGG maps"><nobr>&nbsp;&nbsp;&nbsp;Pathway Search</nobr></a></td></tr>
+<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch" TITLE="Search for peptides by mass range"><nobr>&nbsp;&nbsp;&nbsp;Mass Search</nobr></a></td></tr>
+<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/bulkSearch" TITLE="Perform batch search with list of accessions"><nobr>&nbsp;&nbsp;&nbsp;Bulk Search</nobr></a></td></tr>
+<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/getAnnotations" TITLE="Get annotations from list of reference accessions"><nobr>&nbsp;&nbsp;&nbsp;Fetch Annotations</nobr></a></td></tr>
 <tr><td><a href="http://www.unipep.org"><nobr>&nbsp;&nbsp;&nbsp;Unipep home</nobr></a></td></tr>
 
 	<tr><td>&nbsp;</td></tr>
