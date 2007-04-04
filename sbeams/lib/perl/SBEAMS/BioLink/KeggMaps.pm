@@ -274,7 +274,8 @@ sub getKeggPathways {
     exit;
   } elsif ( !$self->validateOrganism() ) {
     $log->error( "Invalid organism" );
-    exit;
+    $sbeams->set_page_message( type => "Error", msg => "No pathways available for $self->{_organism}" );
+    return;
   }
 
   # Check args and set defaults

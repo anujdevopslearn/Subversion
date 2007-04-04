@@ -95,9 +95,16 @@ $|++;
 # Routine to list all available pathways for current organism
 #-
 sub list_pathways {
+  my $params = shift;
   my $url = $q->url( -full=>1 );
   my $page = $sbeams->getGifSpacer(900);
 
+  if ( !$atlas->has_search_key_data( parameters_ref => $params ) ) {
+    $sbeams->set_page_message( type => 'Error', msg => <<"    END" );
+    Current build does not have search index built, KEGG map will show no hits. 
+    Follow PeptideAtlas Home link and choose a default atlas to make this work.
+    END
+  }
   my $t0 = new Benchmark;
   my $pathways = $keggmap->getKeggPathways( organism => $kegg_organism );
   $page .= "<BR><TABLE>\n";
@@ -243,7 +250,7 @@ sub getExpressionValues {
   
   my $gene_string = join( ", ", @{$gene_list} );
 
-  my $search_type = ( grep $kegg_organism qw( hsa mme )  ) ? 'Entrez GeneID' : 'ORF NAME';
+  my $search_type = ( $kegg_organism =~ /hsa|mmu/ ) ? 'Entrez GeneID' : 'ORF NAME';
 
   my $sql =<<"  END";
   select DISTINCT search_key_name, resource_name, search_key_id,

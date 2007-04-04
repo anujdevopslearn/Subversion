@@ -383,6 +383,19 @@ sub clearBuildSettings {
   );
 }
 
+sub getAccessibleBuilds {
+  my $self = shift;
+  my $sbeams = $self->getSBEAMS();
+  my $projects = join( ', ', $sbeams->getAccessibleProjects() );
+  return $sbeams->selectOneColumn( <<"  END" );
+  SELECT atlas_build_id
+    FROM $TBAT_ATLAS_BUILD
+   WHERE project_id IN ( $projects )
+     AND record_status!='D'
+   ORDER BY atlas_build_name
+  END
+}
+
 sub getCurrentAtlasOrganism {
   my $self = shift();
   my %args = @_;
@@ -421,7 +434,7 @@ sub getCurrentAtlasOrganism {
     return  ( $rows[0] =~ /Human/ ) ? 'hsa' :
             ( $rows[0] =~ /Yeast/ ) ? 'sce' :
             ( $rows[0] =~ /Mouse/ ) ? 'mmu' :
-            ( $rows[0] =~ /Drosophila/ ) ? 'dme' : '';
+            ( $rows[0] =~ /Drosophila/ ) ? 'dme' : $rows[0];
   } else {
     return $rows[0];
   }

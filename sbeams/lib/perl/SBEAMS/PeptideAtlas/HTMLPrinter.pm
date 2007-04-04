@@ -185,6 +185,8 @@ sub displayStandardPageHeader {
   my $sbeams = $self->getSBEAMS();
   my $http_header = $sbeams->get_http_header();
 
+  my $message = $sbeams->get_page_message();
+
   print qq~$http_header
 	<HTML><HEAD>
 	<TITLE>$DBTITLE - $SBEAMS_PART</TITLE>
@@ -255,7 +257,7 @@ sub displayStandardPageHeader {
 	<!-------- Main Page ------------------------------------------->
 	<td valign=top>
 	<table border=0 bgcolor="#ffffff" cellpadding=4>
-	<tr><td>
+	<tr><td>$message
 
     ~;
   } else {
