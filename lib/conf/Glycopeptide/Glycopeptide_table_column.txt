@@ -138,7 +138,7 @@ GP_identified_to_glycosite	2	identified_peptide_id	Identified peptide ID	int	4	0
 GP_identified_to_glycosite	3	glycosite_id	Glyco Site ID	int	4	0	N		N	GP_glycosite	glycosite_id	Y				N	N	Y	Identified peptide ID		
 GP_identified_to_glycosite	4	site_start	Site Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of site in peptide		
 GP_identified_to_glycosite	5	site_stop	Site Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of site in peptide		
-GP_observed_peptide	1	observed_peptide_id	Observed Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
+GP_observed_peptide	1	observed_peptide_id	Observed Peptide ID	int	4	0	N		Y							N	N		Primary Key		pkDEFAULT
 GP_observed_peptide	2	ipi_data_id	IPI Data ID	int	4	0	N		N	GP_ipi_data	ipi_data_id	Y	optionlist			N	N		Identified peptide which this peptide maps to	SELECT identified_peptide_id,matching_sequence FROM $TBGP_IDENTIFIED_PEPTIDE WHERE record_status != 'D' 	
 GP_observed_peptide	3	peptide_search_id	Peptide Search ID	int	4	0	N		N	GP_peptide_search	peptide_search_id	Y	optionlist			N	N		Sequence search file from which identification was obtained	SELECT search_file_id, search_file_name FROM $RBGP_SEARCH_FILE WHERE record_status != 'D'	
 GP_observed_peptide	4	observed_peptide_sequence	Observed Peptide Sequence	varchar	900	0	N		N			Y	text	50		Y	Y	N	Peptide Sequence Identified by MS/MS scan		
@@ -156,6 +156,7 @@ GP_observed_peptide	15	charge_state	Charge State	int	4	0	Y		N			Y	text	10		N	N	N
 GP_observed_peptide	16	mass_to_charge	Mass To Charge	real	4	0	Y		N			Y	text	10		N	N	N	Search results file from which observation is taken		
 GP_observed_peptide	17	mh_plus	MH+	real	4	0	Y		N			Y	text	10		N	N	N	MH+ value from search		
 GP_observed_peptide	18	mh_delta	MH Delta	real	4	0	Y		N			Y	text	10		N	N	N	Mass discrepancy from search		
+GP_observed_peptide	19	delta_cn	delta_cn	real	4	0	Y		N			Y	text	10		N	N	N	Peptide Prophet 'Delta Correlation' or dCn - the difference between the first and second hits		
 GP_observed_to_ipi	1	observed_to_ipi_id	Observed to IPI ID	int	4	0	N		Y			Y				N	N	Y			
 GP_observed_to_ipi	2	observed_peptide_id	Observed peptide ID	int	4	0	N		N	GP_observed_peptide	observed_peptide_id	Y				N	N	Y			
 GP_observed_to_ipi	3	ipi_data_id	IPI Data ID	int	4	0	N		N	GP_ipi_data	ipi_data_id	Y				N	N	Y			
@@ -202,13 +203,14 @@ GP_unipep_sample	7	tissue_type_id	Tissue Type ID	int	4	0	N		N	GP_tissue_type	tis
 GP_unipep_sample	8	project_id	Owner Project	int	4	0	Y		N	project	project_id	N	optionlist			Y	Y	N	Project under which this Sample is organized and for which user privileges is controlled	SELECT DISTINCT P.project_id, UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name	
 GP_unipep_sample	9	generation_date	Sample Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	textdate	20		Y	Y	N	Date on which this sample was prepared		
 GP_unipep_sample	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-GP_unipep_sample	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-GP_unipep_sample	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-GP_unipep_sample	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-GP_unipep_sample	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-GP_unipep_sample	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-GP_unipep_sample	16	record_status	Record Status	char	1	0	N	N	N							N	N				
-GP_synthesized_peptide	1	synthesized_peptide_id	Synthesized Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
+GP_unipep_sample	11	organism_id	Organism	int	4	0	N		N	organism	organism_id	N	text	6		Y	N	Y	ID of organism that sample was derived from	SELECT organism_id, organism_name FROM $TB_ORGANISM WHERE record_status != 'D' ORDER BY sort_order,organism_name	
+GP_unipep_sample	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N	text	20		Y	N				
+GP_unipep_sample	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N	text	20		Y	N				
+GP_unipep_sample	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N	text	20		Y	N				
+GP_unipep_sample	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N	text	20		Y	N				
+GP_unipep_sample	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N	text	20		Y	N				
+GP_unipep_sample	17	record_status	Record Status	char	1	0	N	N	N			N	text	20		Y	N				
+GP_synthesized_peptide	1	synthesized_peptide_id	Synthesized Peptide ID	int	4	0	N		Y			N	text	20		Y	N				pkDEFAULT
 GP_synthesized_peptide	2	peptide_name	Peptide Name	varchar	255	0	N		N			Y	text	2		Y	Y	Y	Name of this Sample		
 GP_synthesized_peptide	3	vendor_peptide_name	Vendor Peptide Name	varchar	255	0	Y		N			Y	text	2		Y	Y	Y	Name of this Sample		
 GP_synthesized_peptide	4	predicted_peptide_id	Predicted Peptide ID	int	4	0	Y		N	GP_predicted_peptide	predicted_peptide_id	Y				N	N	Y	ID of predicted peptide this peptide matches		
