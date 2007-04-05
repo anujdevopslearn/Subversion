@@ -1,5 +1,4 @@
 #!/usr/local/bin/perl -w
-
 ###############################################################################
 # Program     : createPipelineInput.pl
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
@@ -128,7 +127,7 @@ if ($source_file) {
 
 
 #### Process parser options
-my $validate = $OPTIONS{validate} || 'auto';
+my $validate = $OPTIONS{validate} || 'never';
 my $namespace = $OPTIONS{namespaces} || 0;
 my $schema = $OPTIONS{schemas} || 0;
 
@@ -247,13 +246,6 @@ sub pepXML_start_element {
   if ($localname eq 'spectrum_query') {
     $self->{pepcache}->{spectrum} = $attrs{spectrum};
     $self->{pepcache}->{charge} = $attrs{assumed_charge};
-#    $self->{pepcache}->{spectrum_and_mass_uniq} = $attrs{spectrum}.
-#      '-'.$attrs{precursor_neutral_mass}.'-'.$attrs{index};
-    $self->{pepcache}->{spectrum_and_mass_uniq} = $attrs{spectrum}.
-      '-'.$attrs{precursor_neutral_mass};
-    #### Fudged for SpectraST problem
-    #$self->{pepcache}->{spectrum_and_mass_uniq} = $attrs{spectrum};
-    #print "$attrs{index}..";
   }
 
   #### If this is the search_hit, then store some attributes
@@ -266,6 +258,7 @@ sub pepXML_start_element {
     $self->{pepcache}->{peptide_prev_aa} = $attrs{peptide_prev_aa};
     $self->{pepcache}->{peptide_next_aa} = $attrs{peptide_next_aa};
     $self->{pepcache}->{protein_name} = $attrs{protein};
+    $self->{pepcache}->{massdiff} = $attrs{massdiff};
   }
 
 
@@ -329,7 +322,7 @@ sub protXML_start_element {
   }
 
 
-  #### If this is a pepetide, then store some attributes
+  #### If this is a peptide, then store some attributes
   if ($localname eq 'peptide') {
     my $peptide_sequence = $attrs{peptide_sequence} || die("No sequence");
     $self->{pepcache}->{peptide} = $attrs{peptide_sequence};
@@ -341,6 +334,13 @@ sub protXML_start_element {
   }
 
 
+  #### If this pepetide has an indistinguishable twin, record it
+  if ($localname eq 'indistinguishable_peptide') {
+    my $peptide_sequence = $attrs{peptide_sequence} || die("No sequence");
+    $self->{pepcache}->{indistinguishable_peptides}->{$peptide_sequence} = 1;
+  }
+
+
   #### Push information about this element onto the stack
   my $tmp;
   $tmp->{name} = $localname;
@@ -348,8 +348,8 @@ sub protXML_start_element {
 
 
   #### Increase the counters and print some progress info
-  $self->{counter}++;
-  print $self->{counter}."..." if ($self->{counter} % 100 == 0);
+  #$self->{counter}++;
+  #print $self->{counter}."..." if ($self->{counter} % 100 == 0);
 
 } # end protXML_start_element
 
@@ -415,118 +415,54 @@ sub pepXML_end_element {
 
       my $charge = $self->{pepcache}->{charge};
 
-      #### Extract the spectrum uniqifier and make sure we haven't
-      #### already seen it
-      my $spectrum = $self->{pepcache}->{spectrum_and_mass_uniq};
-      #$spectrum =~ s/\.\d$//;
-      #print "INFO: Processing spectrum $spectrum\n";
-      my $other_search_info;
-      if (exists($self->{all_spectra}->{$spectrum})) {
-	if ($self->{all_spectra}->{$spectrum} =~ /HASH/) {
-	  $other_search_info = $self->{all_spectra}->{$spectrum};
-          #print "      - other_search_info = $other_search_info\n";
-	} else {
-	  print "WARNING: A spectrum with tag '$spectrum' has already been. ".
-	    "loaded. Maybe this just a naming problem, or maybe two ".
-            "different ".
-	    "search_batches on the same spectra.  I'm not smart enough ".
-	    "to deal with the gracefully yet. More code required.";
-	}
+      my $peptide_accession = &main::getPeptideAccession(
+        sequence => $peptide_sequence,
+      );
 
-      }
+      #### Grab the ProteinProphet information
+      my $adjusted_probability = '';
+      my $n_adjusted_observations = '';
+      my $n_sibling_peptides = '';
+      if ($self->{ProteinProphet_data_list}->{"${charge}-$modified_peptide"}) {
+	my $info = $self->{ProteinProphet_data_list}->{"${charge}-$modified_peptide"};
+	$adjusted_probability = $info->{nsp_adjusted_probability};
+	$n_adjusted_observations = $info->{n_adjusted_observations};
+	$n_sibling_peptides = $info->{n_sibling_peptides};
 
-
-      #### Store the information for this query_spectrum in case we
-      #### need it again when there's a re-search of this spectrum
-      my $query_spectrum_result = 1;
-      if (1) {
-	$query_spectrum_result = $self->{pepcache};
-      }
-      $self->{all_spectra}->{$spectrum} = $query_spectrum_result;
-
-
-      #### If we've already seen this peptide
-      if ($self->{peptides}->{$peptide_sequence}) {
-	my $info = $self->{peptides}->{$peptide_sequence};
-	$info->{best_probability} = $probability
-	  if ($info->{best_probability} < $probability);
-	$info->{n_instances}++ unless ($other_search_info);
-	$info->{search_batch_ids}->{$self->{search_batch_id}}++;
-
-      #### Else this is a new peptide
       } else {
-	my $info;
-	$info->{best_probability} = $probability;
-	$info->{n_instances} = 1;
-	$info->{search_batch_ids}->{$self->{search_batch_id}} = 1;
-	$info->{protein_name} = $self->{pepcache}->{protein_name};
-	$info->{peptide_prev_aa} = $self->{pepcache}->{peptide_prev_aa};
-	$info->{peptide_next_aa} = $self->{pepcache}->{peptide_next_aa};
-
-	my $peptide_accession = &main::getPeptideAccession(
-          sequence => $peptide_sequence,
-        );
-	$info->{peptide_accession} = $peptide_accession;
-
-	$self->{peptides}->{$peptide_sequence} = $info;
+	print "WARNING: Did not find ProteinProphet information for key ".
+	  "'${charge}-$modified_peptide'\n";
       }
 
 
-      #### Store the modification information
-      my $info = $self->{peptides}->{$peptide_sequence};
-      my $modinfo = $info->{modifications}->{$modified_peptide}->{$charge};
-      #print "      - Modified sequence and charge: $modified_peptide/$charge\n";
-
-      if (defined($modinfo) && defined($modinfo->{best_probability})) {
-	if ($modinfo->{best_probability} < $probability) {
-	  $modinfo->{best_probability} = $probability;
-	}
-      } else {
-	$modinfo->{best_probability} = $probability;
-      }
-
-      #### Unless we already had search info on this spectrum, incr counters
-      #$other_search_info = $modinfo->{search_batch_ids}->{$self->{search_batch_id}};
-
-      #### This is no good. It triggers on any previous same peptide!
-      #my $has_previous_entry = $modinfo->{n_instances};
-
-      my $has_previous_entry = undef;
-
-      #print "      - has_previous_entry = $has_previous_entry\n";
-      unless ($other_search_info || $has_previous_entry) {
-	$modinfo->{n_instances}++;
-	$modinfo->{search_batch_ids}->{$self->{search_batch_id}}++;
-      }
-
-      $info->{modifications}->{$modified_peptide}->{$charge} = $modinfo;
-
-
-      #### Store the peptide in a master full list to calculate stats
-      #unless ($other_search_info || $has_previous_entry) {
-      #if (0 == 1) {
-      unless ($has_previous_entry) {
-        #print "Added $modified_peptide/$charge\n";
-	push(@{ $self->{peptide_list} },
+      #### Store the information into an array for caching
+      push(@{ $self->{identification_list} },
           [$self->{search_batch_id},
+	   $self->{pepcache}->{spectrum},
+	   $peptide_accession,
 	   $peptide_sequence,
+	   $self->{pepcache}->{peptide_prev_aa},
 	   $modified_peptide,
+	   $self->{pepcache}->{peptide_next_aa},
 	   $charge,
            $probability,
+           $self->{pepcache}->{massdiff},
            $self->{pepcache}->{protein_name},
-	   $self->{pepcache}->{spectrum},
-           $self->{pepcache}->{scores},
-	  ]);
-      }
+	   $adjusted_probability,
+	   $n_adjusted_observations,
+	   $n_sibling_peptides,
+	  ]
+      );
+
     }
+
 
     #### Clear out the cache
     delete($self->{pepcache});
 
     #### Increase the counters and print some progress info
     $self->{counter}++;
-    #print $self->{counter}."..." if ($self->{counter} % 100 == 0);
-    print "." if ($self->{counter} % 1000 == 0);
+    print "$self->{counter}..." if ($self->{counter} % 1000 == 0);
 
   }
 
@@ -584,101 +520,48 @@ sub protXML_end_element {
 	$modified_peptide = $peptide_sequence;
       }
 
+
       my $charge = $self->{pepcache}->{charge};
 
+      #### Store the information into a hash for access during peptide reading
+      $self->{ProteinProphet_data_list}->{"${charge}-$modified_peptide"} = {
+        search_batch_id => $self->{search_batch_id},
+	charge => $charge,
+        initial_probability => $initial_probability,
+        nsp_adjusted_probability => $self->{pepcache}->{nsp_adjusted_probability},
+        n_sibling_peptides => $self->{pepcache}->{n_sibling_peptides},
+        n_adjusted_observations => $self->{pepcache}->{n_instances},
+        protein_name => $self->{protein_name},
+      };
 
-      #### If we've already seen this peptide
-      if ($self->{ProPro_peptides}->{$peptide_sequence}) {
-	my $info = $self->{ProPro_peptides}->{$peptide_sequence};
-	$info->{best_intitial_probability} = $initial_probability
-	  if ($info->{best_initial_probability} < $initial_probability);
 
-	#### Assume that if we've already seen this search_batch_id for this
-	#### peptide, then this is probably additional search_engine data
-	#### and we shouldn't just add in the results blindly.
-	#### This is isn't really correct, but I don't know what else to do
-	if (exists($info->{search_batch_ids}->{$self->{search_batch_id}})) {
-	  if ($info->{n_instances} < $self->{pepcache}->{n_instances}) {
-	    $info->{n_instances} = $self->{pepcache}->{n_instances};
-	  } else {
-	    $info->{n_instances} += int($self->{pepcache}->{n_instances}/2);
+      #### If there are indistinguishable peptides, modify them, too
+      foreach my $indis_peptide ( keys(%{$self->{pepcache}->{indistinguishable_peptides}}) ) {
+	my $modified_indis_peptide = '';
+	if ($modifications) {
+	  for (my $i=1; $i<=length($indis_peptide); $i++) {
+	    my $aa = substr($indis_peptide,$i-1,1);
+	    if ($modifications->{$i}) {
+	      $aa .= '['.int($modifications->{$i}).']';
+	    }
+	    $modified_indis_peptide .= $aa;
 	  }
-
-	  if ($info->{n_sibling_peptides} < $self->{pepcache}->{n_sibling_peptides}) {
-	    $info->{n_sibling_peptides} = $self->{pepcache}->{n_sibling_peptides};
-	  } else {
-	    $info->{n_sibling_peptides} += int($self->{pepcache}->{n_sibling_peptides}/2);
-	  }
-	  $info->{search_batch_ids}->{$self->{search_batch_id}}++;
-
-	#### Otherwise add in the result
 	} else {
-	  $info->{n_instances} += $self->{pepcache}->{n_instances};
-	  $info->{n_sibling_peptides} += $self->{pepcache}->{n_sibling_peptides};
-	  $info->{search_batch_ids}->{$self->{search_batch_id}}++;
+	  $modified_indis_peptide = $indis_peptide;
 	}
-
-      #### Else this is a new peptide
-      } else {
-	my $info;
-	$info->{best_initial_probability} = $initial_probability;
-	$info->{best_adjusted_probability} = $self->{pepcache}->{nsp_adjusted_probability};
-	$info->{n_instances} = $self->{pepcache}->{n_instances};
-	$info->{n_sibling_peptides} = $self->{pepcache}->{n_sibling_peptides};
-	$info->{search_batch_ids}->{$self->{search_batch_id}} = 1;
-	$info->{protein_name} = $self->{pepcache}->{protein_name};
-
-	$self->{ProPro_peptides}->{$peptide_sequence} = $info;
-      }
-
-      #### Store the modification information
-      my $info = $self->{ProPro_peptides}->{$peptide_sequence};
-      my $modinfo = $info->{modifications}->{$modified_peptide}->{$charge};
-
-      if (defined($modinfo) && defined($modinfo->{best_initial_probability})) {
-	if ($modinfo->{best_initial_probability} < $initial_probability) {
-	  $modinfo->{best_initial_probability} = $initial_probability;
-	}
-      } else {
-	$modinfo->{best_initial_probability} = $initial_probability;
-      }
-
-      if (defined($modinfo) && defined($modinfo->{best_adjusted_probability})) {
-	if ($modinfo->{best_adjusted_probability} < $self->{pepcache}->{nsp_adjusted_probability}) {
-	  $modinfo->{best_adjusted_probability} = $self->{pepcache}->{nsp_adjusted_probability};
-	}
-      } else {
-	$modinfo->{best_adjusted_probability} = $self->{pepcache}->{nsp_adjusted_probability};
+	$self->{ProteinProphet_data_list}->{"${charge}-$modified_indis_peptide"} = {
+          search_batch_id => $self->{search_batch_id},
+	  charge => $charge,
+          initial_probability => $initial_probability,
+          nsp_adjusted_probability => $self->{pepcache}->{nsp_adjusted_probability},
+          n_sibling_peptides => $self->{pepcache}->{n_sibling_peptides},
+          n_adjusted_observations => $self->{pepcache}->{n_instances},
+          protein_name => $self->{protein_name},
+        };
       }
 
 
 
-      #### Assume that if we've already seen this search_batch_id for this
-      #### peptide, then this is probably additional search_engine data
-      #### and we shouldn't just add in the results blindly.
-      #### This is isn't really correct, but I don't know what else to do
-      if (exists($modinfo->{search_batch_ids}->{$self->{search_batch_id}})) {
-	  if ($modinfo->{n_instances} < $self->{pepcache}->{n_instances}) {
-	    $modinfo->{n_instances} = $self->{pepcache}->{n_instances};
-	  } else {
-	    $modinfo->{n_instances} += int($self->{pepcache}->{n_instances}/2);
-	  }
-
-	  if ($modinfo->{n_sibling_peptides} < $self->{pepcache}->{n_sibling_peptides}) {
-	    $modinfo->{n_sibling_peptides} = $self->{pepcache}->{n_sibling_peptides};
-	  } else {
-	    $modinfo->{n_sibling_peptides} += int($self->{pepcache}->{n_sibling_peptides}/2);
-	  }
-	  $modinfo->{search_batch_ids}->{$self->{search_batch_id}}++;
-
-	#### Otherwise add in the result
-	} else {
-	  $modinfo->{n_instances} += $self->{pepcache}->{n_instances};
-	  $modinfo->{search_batch_ids}->{$self->{search_batch_id}}++;
-	  $modinfo->{n_sibling_peptides} += $self->{pepcache}->{n_sibling_peptides};
-	}
-
-      $info->{modifications}->{$modified_peptide}->{$charge} = $modinfo;
 
     }
 
@@ -686,9 +569,8 @@ sub protXML_end_element {
     delete($self->{pepcache});
 
     #### Increase the counters and print some progress info
-    $self->{counter}++;
-    #print $self->{counter}."..." if ($self->{counter} % 100 == 0);
-    print "." if ($self->{counter} % 1000 == 0);
+    $self->{Protcounter}++;
+    print "." if ($self->{Protcounter} % 100 == 0);
 
   }
 
@@ -865,54 +747,176 @@ sub main {
 	}
       }
 
-      if (defined($protXML_document)) {
-	push(@documents,$protXML_document);
-        print "Will read $protXML_document->{filepath}\n";
-      }
-
       push(@search_batch_ids,$search_batch_id);
     }
     $search_batch_ids = join(',',@search_batch_ids);
   }
 
-  #### Loops over all input files
+
+  #### Loop over all input files converting pepXML to identlist format
+  #### unless it has already been done
+  my @identlist_files;
   foreach my $document ( @documents ) {
     my $filepath = $document->{filepath};
     $CONTENT_HANDLER->{search_batch_id} = $document->{search_batch_id};
     $CONTENT_HANDLER->{document_type} = $document->{document_type};
+    $CONTENT_HANDLER->{identification_list} = [];
+    $CONTENT_HANDLER->{ProteinProphet_data_list} = {};
 
-    #### Process the whole document
-    print "INFO: Loading $filepath...\n" unless ($QUIET);
-    $parser->parse (XML::Xerces::LocalFileInputSource->new($filepath));
+    #### Determine the identlist file path and name
+    my $identlist_file = $filepath;
+    $identlist_file =~ s/\.xml$/.PAidentlist/;
+    push(@identlist_files,$identlist_file);
 
-    print "\n";
+    #### If the identlist file already exists, we're done
+    if ( -e $identlist_file && 0) {
+      print "INFO: identlist file already exists: $identlist_file\n";
+
+    #### Otherwise read the pepXML and create the cachefile
+    } else {
+      my $proteinProphet_filepath = $filepath;
+      $proteinProphet_filepath =~ s/\.xml/-prot.xml/;
+
+      unless (-e $proteinProphet_filepath) {
+	#### Hard coded funny business for Novartis
+	if ($proteinProphet_filepath =~ /Novartis/) {
+	  if ($proteinProphet_filepath =~ /interact-prob_\d/) {
+	    $proteinProphet_filepath =~ s/prob_\d/prob_all/;
+	  } else {
+	    $proteinProphet_filepath = undef;
+	  }
+	} else {
+	  print "ERROR: No ProteinProphet file found for\n  $proteinProphet_filepath\n";
+	  $proteinProphet_filepath = undef;
+	}
+      }
+
+      if ($proteinProphet_filepath) {
+	print "INFO: Reading $proteinProphet_filepath...\n" unless ($QUIET);
+	$CONTENT_HANDLER->{document_type} = 'protXML';
+        $parser->parse (XML::Xerces::LocalFileInputSource->new($proteinProphet_filepath));
+        print "\n";
+      }
+
+      print "INFO: Reading $filepath...\n" unless ($QUIET);
+      $CONTENT_HANDLER->{document_type} = $document->{document_type};
+      $parser->parse (XML::Xerces::LocalFileInputSource->new($filepath));
+      print "\n";
+
+      #### Write out all the peptides and probabilities for statistical analysis
+      writeIdentificationListFile(
+        output_file => $identlist_file,
+        identification_list => $CONTENT_HANDLER->{identification_list},
+      );
+    }
+
   }
 
-  #### Write out all the read-in data in a TSV format as written by
-  #### a BrowseAPD query
-  my $output_file = $OPTIONS{output_file} || 'PeptideAtlasInput.tsv';
-  writeAPDFormatFile(
-    output_file => $output_file,
-    peptide_hash => $CONTENT_HANDLER->{peptides},
+
+  #### Create a combined identlist file
+  my $combined_identlist_file = "DATA_FILES/PeptideAtlasInput_concat.PAidentlist";
+  open(OUTFILE,">$combined_identlist_file") ||
+    die("ERROR: Unable to open for write '$combined_identlist_file'");
+  close(OUTFILE);
+
+
+  #### Get the columns headings
+  open(INFILE,$identlist_files[0]) ||
+    die("ERROR: Unable to open for read '$identlist_files[0]'");
+  my $header = <INFILE> ||
+    die("ERROR: Unable to read header from '$identlist_files[0]'");
+  close(INFILE);
+  chomp($header);
+  my @column_names = split("\t",$header);
+
+
+  #### Loop over all cache files and add to combined identlist file
+  foreach my $identlist_file ( @identlist_files ) {
+    print "INFO: Adding to master list: '$identlist_file'\n";
+    system("grep -v '^search_batch_id' $identlist_file >> $combined_identlist_file");
+  }
+
+
+  #### Sort the combined file by peptide
+  my $sorted_identlist_file = "DATA_FILES/PeptideAtlasInput_sorted.PAidentlist";
+  print "INFO: Sorting master list '$combined_identlist_file'\n";
+  system("sort -k 3,3 -k 2,2 $combined_identlist_file >> $sorted_identlist_file");
+
+
+  #### Open APD format TSV file for writing
+  my $output_tsv_file = $OPTIONS{output_file} || 'PeptideAtlasInput.tsv';
+  openAPDFormatFile(
+    output_file => $output_tsv_file,
   );
 
-  #### Write out all the read-in data in a PeptideAtlas XML format
-  my $file_root = $output_file;
-  $file_root =~ s/\.tsv$//i;
-  $output_file = $file_root.'.PAxml';
-  writePAxmlFile(
-    output_file => $output_file,
-    peptide_hash => $CONTENT_HANDLER->{peptides},
-    ProPro_peptide_hash => $CONTENT_HANDLER->{ProPro_peptides},
+
+  #### Open PeptideAtlas XML format file for writing
+  my $output_PAxml_file = $output_tsv_file;
+  $output_PAxml_file =~ s/\.tsv$//i;
+  $output_PAxml_file .= '.PAxml';
+  openPAxmlFile(
+    output_file => $output_PAxml_file,
     P_threshold => $CONTENT_HANDLER->{P_threshold},
   );
 
-  #### Write out all the peptides and probabilities for statistical analysis
-  $output_file = $file_root.'.peplist';
-  writePeptideListFile(
-    output_file => $output_file,
-    peptide_list => $CONTENT_HANDLER->{peptide_list},
-  );
+
+  #### Open the combined, sorted identlist file
+  open(INFILE,$sorted_identlist_file) ||
+    die("ERROR: Unable to open for write '$sorted_identlist_file'");
+
+
+  #### Loop through all rows, grouping by peptide sequence, writing
+  #### out information for each group of peptide sequence
+  my $prev_peptide_sequence = '';
+  my $done = 0;
+  my @rows;
+  while (! $done) {
+    my $line = <INFILE>;
+    my @columns;
+    my $peptide_sequence = 'xxx';
+
+    #### Unless we're at the end of the file
+    if ($line) {
+      chomp($line);
+      @columns = split("\t",$line);
+      $peptide_sequence = $columns[3];
+    }
+
+    #### If we're encountering the new peptide, process and write the previous
+    if ($prev_peptide_sequence && $peptide_sequence ne $prev_peptide_sequence) {
+      my $peptide_summary = coalesceIdentifications(
+        rows => \@rows,
+        column_names => \@column_names,
+      );
+      writeToAPDFormatFile(
+        peptide_summary => $peptide_summary,
+      );
+      writeToPAxmlFile(
+        peptide_summary => $peptide_summary,
+      );
+      $prev_peptide_sequence = $peptide_sequence;
+      @rows = ();
+    }
+
+    #### If there is no peptide sequence, the we're at the end of the file
+    if ($peptide_sequence eq 'xxx') {
+      last;
+    }
+
+    push(@rows,\@columns);
+
+    #### Needed for the very first row
+    unless ($prev_peptide_sequence) {
+      $prev_peptide_sequence = $peptide_sequence;
+    }
+
+  }
+
+
+  #### Close files
+  closeAPDFormatFile();
+  closePAxmlFile();
+
 
   #### Write out information about the objects we've loaded if verbose
   if ($VERBOSE) {
@@ -1132,7 +1136,89 @@ sub getBiosequenceAttributes {
 
 
 ###############################################################################
-# writeAPDFormatFile
+# openAPDFormatFile
+###############################################################################
+sub openAPDFormatFile {
+  my %args = @_;
+  my $output_file = $args{'output_file'} || die("No output file provided");
+
+  print "Opening output file '$output_file'...\n";
+
+  our $TSVOUTFILE;
+  open(TSVOUTFILE,">$output_file")
+    || die("ERROR: Unable to open '$output_file' for write");
+  $TSVOUTFILE = *TSVOUTFILE;
+
+  print TSVOUTFILE "peptide_identifier_str\tbiosequence_gene_name\tbiosequence_accession\treference\tpeptide\tn_peptides\tmaximum_probability\tn_experiments\tobserved_experiment_list\tbiosequence_desc\tsearched_experiment_list\n";
+
+  return 1;
+
+} # end openAPDFormatFile
+
+
+
+###############################################################################
+# writeToAPDFormatFile
+###############################################################################
+sub writeToAPDFormatFile {
+  my %args = @_;
+  my $peptide_summary = $args{'peptide_summary'}
+    || die("No peptide_summary provided");
+
+  our $TSVOUTFILE;
+
+  while (my ($peptide_sequence,$attributes) =
+            each %{$peptide_summary}) {
+
+    my $n_experiments = scalar(keys(%{$attributes->{search_batch_ids}}));
+
+    my $peptide_accession = getPeptideAccession(
+      sequence => $peptide_sequence,
+    );
+    my $protein_name = $attributes->{protein_name};
+
+    my $biosequence_attributes;
+    my ($gene_name,$description) = ('','');
+    if ($biosequence_attributes = getBiosequenceAttributes(
+      biosequence_name => $protein_name,
+							  )
+       ) {
+      $gene_name = $biosequence_attributes->[2];
+      $description = $biosequence_attributes->[4];
+    }
+
+    print $TSVOUTFILE "$peptide_accession\t$gene_name\t$protein_name\t$protein_name\t$peptide_sequence\t".
+      $attributes->{n_instances}."\t  ".
+      $attributes->{best_probability}."\t$n_experiments\t".
+      join(",",keys(%{$attributes->{search_batch_ids}}))."\t".
+      "\"$description\"\t\"$search_batch_ids\"\n";
+
+  }
+
+  return(1);
+
+} # end writeToAPDFormatFile
+
+
+
+###############################################################################
+# closeAPDFormatFile
+###############################################################################
+sub closeAPDFormatFile {
+  my %args = @_;
+
+  our $TSVOUTFILE;
+
+  close($TSVOUTFILE);
+
+  return(1);
+
+} # end closeAPDFormatFile
+
+
+
+###############################################################################
+# writeAPDFormatFile - deprecated
 ###############################################################################
 sub writeAPDFormatFile {
   my %args = @_;
@@ -1179,6 +1265,7 @@ sub writeAPDFormatFile {
   return(1);
 
 } # end writeAPDFormatFile
+
 
 
 ###############################################################################
@@ -1242,7 +1329,243 @@ sub showContentHandlerContents {
 
 
 ###############################################################################
-# writePAxmlFile
+# coalesceIdentifications
+###############################################################################
+sub coalesceIdentifications {
+  my %args = @_;
+  my $rows = $args{'rows'} || die("No rows provided");
+  my $column_names = $args{'column_names'} || die("No column_names provided");
+  use Data::Dumper;
+
+  my $summary;
+
+  #### Make a hash of the column names
+  my $columns;
+  for (my $index=0; $index<scalar(@{$column_names}); $index++) {
+    $columns->{$column_names->[$index]} = $index;
+  }
+  #print Dumper( [$columns] );
+
+  #### Loop over each row, organizing the information
+  foreach my $row ( @{$rows} ) {
+    my $peptide_sequence = $row->[$columns->{peptide_sequence}];
+    $summary->{$peptide_sequence}->{peptide_sequence} = $peptide_sequence;
+    my $info = $summary->{$peptide_sequence};
+    $info->{peptide_accession} = $row->[$columns->{peptide_accession}];
+    $info->{peptide_sequence} = $peptide_sequence;
+    $info->{preceding_residue} = $row->[$columns->{preceding_residue}];
+    $info->{following_residue} = $row->[$columns->{following_residue}];
+    if (!defined($info->{best_probability}) ||
+	$info->{best_probability} < $row->[$columns->{probability}]) {
+      $info->{best_probability} = $row->[$columns->{probability}];
+    }
+    $info->{n_instances}++;
+    $info->{protein_name} = $row->[$columns->{protein_name}];
+
+    #### Record that this peptide was seen in this search_batch
+    my $search_batch_id = $row->[$columns->{search_batch_id}];
+    $info->{search_batch_ids}->{$search_batch_id}++;
+
+    #### Incorporate the ProteinProphet information
+    # later below in modification area
+
+
+    #### Now store information for this modification of the peptide
+    my $modified_sequence = $row->[$columns->{modified_peptide_sequence}];
+    my $charge = $row->[$columns->{charge}];
+    $info->{modifications}->{$modified_sequence}->{$charge}->{n_instances}++;
+    my $modinfo = $info->{modifications}->{$modified_sequence}->{$charge};
+    if (!defined($modinfo->{best_probability}) ||
+	$modinfo->{best_probability} < $row->[$columns->{probability}]) {
+      $modinfo->{best_probability} = $row->[$columns->{probability}];
+    }
+
+    if (exists($modinfo->{search_batch_ids}->{$search_batch_id})) {
+      #### Already counted information for this search batch
+    } else {
+      if (exists($modinfo->{best_adjusted_probability})) {
+	if ($row->[$columns->{adjusted_probability}] > $modinfo->{best_adjusted_probability}) {
+	  $modinfo->{best_adjusted_probability} = $row->[$columns->{adjusted_probability}];
+	}
+      }
+      $modinfo->{n_adjusted_observations} += $row->[$columns->{n_adjusted_observations}];
+      $modinfo->{n_sibling_peptides} += $row->[$columns->{n_sibling_peptides}];
+
+      #### Since this is a new mod instance, update the overall peptide info, too
+      if (exists($info->{best_adjusted_probability})) {
+	if ($row->[$columns->{adjusted_probability}] > $info->{best_adjusted_probability}) {
+	  $info->{best_adjusted_probability} = $row->[$columns->{adjusted_probability}];
+	}
+      }
+      $info->{n_adjusted_observations} += $row->[$columns->{n_adjusted_observations}];
+      #### FIXME This below is not the best way to calculate n_sibling_peptides.
+      #### because if a peptides is seen in two different charge states, the
+      #### n_sibling_peptides will be approximately twice what is fair.
+      #### n_sibling_peptides will often be inflated, but it's not clear how to do this best
+      $info->{n_sibling_peptides} += $row->[$columns->{n_sibling_peptides}];
+    }
+
+    $modinfo->{search_batch_ids}->{$search_batch_id}++;
+
+  }
+
+  #print Dumper( [$summary] );
+  #exit;
+
+  return $summary;
+}
+
+
+###############################################################################
+# openPAxmlFile
+###############################################################################
+sub openPAxmlFile {
+  my %args = @_;
+  my $output_file = $args{'output_file'} || die("No output file provided");
+  my $P_threshold = $args{'P_threshold'}
+    || die("No output P_threshold provided");
+
+
+  print "Opening output file '$output_file'...\n";
+
+
+  #### Open and write header
+  our $PAXMLOUTFILE;
+  open(PAXMLOUTFILE,">$output_file")
+    || die("ERROR: Unable to open '$output_file' for write");
+  print PAXMLOUTFILE qq~<?xml version="1.0" encoding="UTF-8"?>\n~;
+  $PAXMLOUTFILE = *PAXMLOUTFILE;
+
+  #### Write out parent build element
+  print PAXMLOUTFILE encodeXMLEntity(
+    entity_name => 'atlas_build',
+    indent => 0,
+    entity_type => 'open',
+    attributes => {
+      probability_threshold => $P_threshold,
+    },
+  );
+
+  return 1;
+}
+
+
+###############################################################################
+# writeToPAxmlFile
+###############################################################################
+sub writeToPAxmlFile {
+  my %args = @_;
+  my $peptide_summary = $args{'peptide_summary'}
+    || die("No peptide_summary provided");
+
+  our $PAXMLOUTFILE;
+
+
+  #### Loop over all peptides and write out as XML
+  while (my ($peptide_sequence,$attributes) = each %{$peptide_summary}) {
+
+    my $buffer = encodeXMLEntity(
+      entity_name => 'peptide_instance',
+      indent => 4,
+      entity_type => 'open',
+      attributes => {
+        original_protein_name => $attributes->{protein_name},
+        peptide_accession => $attributes->{peptide_accession},
+        peptide_sequence => $peptide_sequence,
+        peptide_prev_aa => $attributes->{preceding_residue},
+        peptide_next_aa => $attributes->{following_residue},
+        best_probability => $attributes->{best_probability},
+        n_observations => $attributes->{n_instances},
+        search_batch_ids => join(",",keys(%{$attributes->{search_batch_ids}})),
+        best_adjusted_probability => $attributes->{best_adjusted_probability},
+        n_adjusted_observations => $attributes->{n_adjusted_observations},
+        n_sibling_peptides => $attributes->{n_sibling_peptides},
+      },
+    );
+    print $PAXMLOUTFILE $buffer;
+
+
+    #### Diagnostic dump
+    #if ($peptide_sequence eq 'SENLVSCVDKNLR') {
+    #  use Data::Dumper;
+    #  print "\n-----\n".Dumper([$ProPro_peptides->{$peptide_sequence}])."\n-----\n";
+    #}
+
+
+    #### Loop over all the observed modifications and write out
+    while (my ($mod_peptide_sequence,$mod_attributes) =
+      each %{$attributes->{modifications}}) {
+
+      while (my ($mod_charge,$charge_attributes) = each %{$mod_attributes}) {
+
+        my $buffer = encodeXMLEntity(
+          entity_name => 'modified_peptide_instance',
+          indent => 8,
+          entity_type => 'openclose',
+          attributes => {
+            peptide_string => $mod_peptide_sequence,
+            charge_state => $mod_charge,
+            best_probability => $charge_attributes->{best_probability},
+            n_observations => $charge_attributes->{n_instances},
+            search_batch_ids =>
+              join(",",keys(%{$charge_attributes->{search_batch_ids}})),
+            best_adjusted_probability => $charge_attributes->{best_adjusted_probability},
+            n_adjusted_observations => $charge_attributes->{n_adjusted_observations},
+            n_sibling_peptides => $charge_attributes->{n_sibling_peptides},
+          },
+        );
+        print $PAXMLOUTFILE $buffer;
+
+      }
+
+    }
+
+
+    #### Close peptide_instance tag
+    my $buffer = encodeXMLEntity(
+      entity_name => 'peptide_instance',
+      indent => 4,
+      entity_type => 'close',
+    );
+    print $PAXMLOUTFILE $buffer;
+
+  }
+
+
+  return(1);
+
+} # end writeToPAxmlFile
+
+
+
+###############################################################################
+# closePAxmlFile
+###############################################################################
+sub closePAxmlFile {
+  my %args = @_;
+
+  #### Open and write header
+  our $PAXMLOUTFILE;
+
+  #### Close parent build element
+  my $buffer = encodeXMLEntity(
+    entity_name => 'atlas_build',
+    indent => 0,
+    entity_type => 'close',
+  );
+  print $PAXMLOUTFILE $buffer;
+
+
+  close($PAXMLOUTFILE);
+
+  return(1);
+
+} # end closePAxmlFile
+
+
+
+###############################################################################
+# writePAxmlFile - deprecated
 ###############################################################################
 sub writePAxmlFile {
   my %args = @_;
@@ -1442,7 +1765,7 @@ sub encodeXMLEntity {
 
 
 ###############################################################################
-# writePeptideListFile
+# writePeptideListFile - deprecated
 ###############################################################################
 sub writePeptideListFile {
   my %args = @_;
@@ -1481,3 +1804,44 @@ sub writePeptideListFile {
   return(1);
 
 } # end writePeptideListFile
+
+
+
+###############################################################################
+# writeIdentificationListFile
+###############################################################################
+sub writeIdentificationListFile {
+  my %args = @_;
+  my $output_file = $args{'output_file'} || die("No output file provided");
+  my $identification_list = $args{'identification_list'}
+    || die("No output identification_list provided");
+
+  print "Writing output cache file '$output_file'...\n";
+
+  #### Open and write header
+  open(OUTFILE,">$output_file")
+    || die("ERROR: Unable to open '$output_file' for write");
+
+  #### Write out the column names
+  my @column_names = qw ( search_batch_id spectrum_query peptide_accession
+    peptide_sequence preceding_residue modified_peptide_sequence
+    following_residue charge probability massdiff protein_name adjusted_probability
+    n_adjusted_observations n_sibling_peptides );
+
+  print OUTFILE join("\t",@column_names)."\n";
+
+  print "  - writing ".scalar(@{$identification_list})." peptides\n";
+
+  my $counter = 0;
+  foreach my $identification ( @{$identification_list} ) {
+    print OUTFILE join("\t",@{$identification})."\n";
+    $counter++;
+    print "$counter... " if ($counter % 1000 == 0);
+  }
+
+  print "\n";
+  close(OUTFILE);
+
+  return(1);
+
+} # end writeIdentificationListFile
