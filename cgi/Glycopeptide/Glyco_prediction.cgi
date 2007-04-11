@@ -62,6 +62,7 @@ my %search_types = ( gene_symbol => 'Gene Symbol',
                      gene_id     => 'GeneID'
                    );
 
+my $motif_type;
 
 main();
 
@@ -76,10 +77,12 @@ sub main
 { 
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate(
-       permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin', 'Glycopeptide_readonly'],
+       permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin', 
+                                   'Glycopeptide_readonly'],
         # connect_read_only=>1,
         allow_anonymous_access=>1,
     ));
+    $motif_type = $sbeamsMOD->get_current_motif_type();
 
     for my $p ( $q->param() ) { $log->info( "$p => " . $q->param( $p ) ); }
 
@@ -94,7 +97,6 @@ sub main
 
     ## get project_id to send to HTMLPrinter display
     my $project_id = $sbeams->getCurrent_project_id();
-
 
     #### Process generic "state" parameters before we start
     $sbeams->processStandardParameters(parameters_ref=>\%parameters);
@@ -111,14 +113,8 @@ sub main
 		
     print $sbeams->getGifSpacer(800);
 		print $sbeams->getPopupDHTML();
-    my $motif_type = $sbeamsMOD->get_current_motif_type();
-    if ( $motif_type eq 'phospho' ) {
-      display_phospho_detail_form( ref_parameters => \%parameters,
-                                      ipi_data_id => $ipi_data_id  );
-    } else {
-      display_detail_form( ref_parameters => \%parameters,
-                              ipi_data_id => $ipi_data_id  );
-    }
+    display_detail_form( ref_parameters => \%parameters,
+                            ipi_data_id => $ipi_data_id  );
 		
 	}elsif($parameters{action} eq 'Show_hits_form'){
 		
@@ -269,6 +265,7 @@ sub handle_request {
 sub display_hits_form {
  	my %args = @_;
 
+
   #### Process the arguments list
   my $params = $args{'ref_parameters'} || die "ref_parameters not passed";
   my $sql_data = find_hits($params);
@@ -288,25 +285,7 @@ sub find_hits{
 	my $results_set = [];
 	
   if ($type eq 'text'){
-
-
     $results_set = $glyco_query_o->keyword_search( %$ref_parameters );	
-
-# ALTERED to use a single subroutine
-#    if ($parameters{search_type} eq 'Gene Symbol'){
-#      @results_set = $glyco_query_o->gene_symbol_query($parameters{search_term});	
-#    }elsif($parameters{search_type} eq 'Gene Name/Alias'){
-#      @results_set = $glyco_query_o->gene_name_query($parameters{search_term});	
-#    }elsif($parameters{search_type} eq 'Swiss Prot Accession Number'){
-#      @results_set = $glyco_query_o->swiss_prot_query($parameters{search_term});	
-#    }elsif($parameters{search_type} eq 'IPI Accession Number'){
-#      @results_set = $glyco_query_o->ipi_accession_query($parameters{search_term});	
-#    }elsif($parameters{search_type} eq 'GeneID'){
-#      @results_set = $glyco_query_o->gene_id_query($parameters{search_term});	
-#    }else{
-#      print_error("Cannot find correct textsearch to run");
-#    }
-
   }elsif($type eq 'sequence_search'){
     $results_set = $glyco_query_o->protein_seq_query( $ref_parameters->{sequence_search} );	
   }else{
@@ -375,7 +354,7 @@ sub print_out_hits_page{
   my @symbols;
 	foreach my $h_ref (@results_set){
 		my $ipi_id = $h_ref->{ipi_data_id};
-		my $num_identified = $h_ref->{num_identified};
+		my $num_identified = $h_ref->{num_observed};
 		my $ipi_acc = $h_ref->{ipi_accession_number};
 		my $protein_name = nice_term_print($h_ref->{protein_name});
 		my $protein_sym = $h_ref->{protein_symbol};
@@ -657,6 +636,11 @@ sub clean_action{
 sub display_detail_form{
 
   my %args = @_;
+
+  if ( $motif_type eq 'phospho' ) {
+      display_phospho_detail_form( %args );
+      return;
+  }
   
   my %parameters = %{$args{ref_parameters}};
   my $ipi_data_id = $args{ipi_data_id}; 
@@ -1251,7 +1235,7 @@ sub print_out_phospho_hits_page{
   my @symbols;
 	foreach my $h_ref (@results_set){
 		my $ipi_id = $h_ref->{ipi_data_id};
-		my $num_identified = $h_ref->{num_identified};
+		my $num_identified = $h_ref->{num_observed};
 		my $ipi_acc = $h_ref->{ipi_accession_number};
 		my $protein_name = nice_term_print($h_ref->{protein_name});
 		my $protein_sym = $h_ref->{protein_symbol};
