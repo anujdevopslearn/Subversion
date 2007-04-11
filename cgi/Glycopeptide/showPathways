@@ -93,7 +93,10 @@ $|++;
 #-
 sub list_pathways {
   my $url = $q->url( -full=>1 );
+  my $cyto_url = $url;
+  $cyto_url =~ s/showPathways/getCytoscapeWebstart/;
   my $page = $sbeams->getGifSpacer(900);
+  my $cyto_png = "$HTML_BASE_DIR/images/cyto_tiny.png";
 
   my $t0 = new Benchmark;
   my $pathways = $keggmap->getKeggPathways( organism => $kegg_organism, 
@@ -106,6 +109,7 @@ sub list_pathways {
      <TD>$path->{definition} </TD>
      <TD>
       <A HREF=$url?apply_action=pathway_details;path_id=$path->{entry_id};path_def=$desc TARGET=_pathdetails>$path->{entry_id}</A>
+      <A HREF=$cyto_url?path_id=$path->{entry_id}; TITLE='$desc'><IMG BORDER=0 SRC=$cyto_png></A>
      </TD>
     </TR>
     END
@@ -185,7 +189,6 @@ sub pathway_details {
                                          fg => $fg,
                                       genes => $gene_list,
                                        );
-  $log->debug( "URL was $url" );
   
   my $t3 = new Benchmark;
   $log->debug( parseTime( $t3, $t2, "seconds to get color pathway" ) );
@@ -212,7 +215,12 @@ sub pathway_details {
       my @genes = map( /$kegg_organism:(.*)/, @{$entry2genes{$en}} );
 #      @genes = map { $glyco_hits->{$_}->[2]  } @genes;
       my $gene = join( '%3B', @genes ); # @{$entry2genes{$en}} );
-      push @links, "Glyco_prediction.cgi?search_type=GeneID;search_term=$gene;action=Show_hits_form";
+      if ( $kegg_organism eq 'dme' ) {
+        push @links, "Glyco_prediction.cgi?search_type=gene_name;search_term=$gene;action=Show_hits_form;autorun=1";
+      } else {
+        push @links, "Glyco_prediction.cgi?search_type=GeneID;search_term=$gene;action=Show_hits_form";
+      }
+
       push @text, "Gene ID(s) " . join( ", ", @genes );
     } else {
       log->warn( "No entry for $en" );
@@ -253,17 +261,34 @@ sub getExpressionValues {
   
   my $gene_string = join( ", ", @{$gene_list} );
 
-  my $sql =<<"  END";
-  SELECT  entrez_id, ipi_accessions, 'nada', 'nada', 1
-  FROM dcampbel.dbo.ipi_xrefs IX JOIN $TBGP_IPI_DATA ID 
-    ON IX.ipi_accessions = ID.ipi_accession_number
-  JOIN $TBGP_IDENTIFIED_TO_IPI ITI 
-    ON ITI.ipi_data_id = ID.ipi_data_id
-  JOIN $TBGP_IDENTIFIED_PEPTIDE IP 
-    ON ITI.identified_peptide_id = IP.identified_peptide_id
-  WHERE entrez_id IN ($gene_string)
-  AND peptide_prophet_score >= $cutoff 
-  END
+  my $sql = '';
+
+  if ( $kegg_organism eq  'dme' ) {
+    $sql =<<"    END";
+    SELECT CASE WHEN ipi_accession_number LIKE 'CG%' THEN ipi_accession_number
+                ELSE synonyms END AS accession, ID.ipi_data_id, 'nada', 'nada', 1
+      FROM $TBGP_IPI_DATA ID 
+      JOIN $TBGP_OBSERVED_TO_IPI ITI 
+        ON ITI.ipi_data_id = ID.ipi_data_id
+      JOIN $TBGP_OBSERVED_PEPTIDE IP 
+        ON ITI.OBSERVED_peptide_id = IP.OBSERVED_peptide_id
+     WHERE ( ipi_accession_number IN ($gene_string)
+             OR synonyms IN ($gene_string) )
+       AND peptide_prophet_score >= $cutoff 
+    END
+  } else {
+    $sql =<<"    END";
+    SELECT entrez_id, ipi_accessions, 'nada', 'nada', 1
+      FROM dcampbel.dbo.ipi_xrefs IX JOIN $TBGP_IPI_DATA ID 
+        ON IX.ipi_accessions = ID.ipi_accession_number
+      JOIN $TBGP_OBSERVED_TO_IPI ITI 
+        ON ITI.ipi_data_id = ID.ipi_data_id
+      JOIN $TBGP_OBSERVED_PEPTIDE IP 
+        ON ITI.observed_peptide_id = IP.observed_peptide_id
+     WHERE entrez_id IN ($gene_string)
+       AND peptide_prophet_score >= $cutoff 
+    END
+  }
 
   # ref to hash keyed by gene_id, points to arrayref of one or more peptides
   my %glyco_hits;
@@ -273,7 +298,6 @@ sub getExpressionValues {
     next if $glyco_hits{$row->[0]}; 
     $glyco_hits{$row->[0]} = $row; 
 #    push @{$glyco_hits{$row->[0]}}, $row;
-    $log->debug( "Got data for $row->[0]" );
   }
 
   # define colors
