@@ -185,24 +185,10 @@ sub printEntryForm {
 
 
     #### Begin the page and form
-    print "<TABLE><TD>\n";
-    $sbeams->printUserContext();
-    print "</TD></TABLE>\n";
-    print qq!
-	<P>
-	<FORM METHOD="post">
-    !;
+    #print "<TABLE><TD>\n";
+    #$sbeams->printUserContext();
+    #print "</TD></TABLE>\n";
 
-
-    #### Set up the table and data column
-    print qq!
-	<TABLE BORDER=0 CELLPADDING=3 WIDTH="675">
-	<TR VALIGN=top>
-	<TD VALIGN=top BGCOLOR="$BKGCOLOR">
-	<PRE>\n!;
-
-
-    #### Display the ions table here
 
     #### If we have a search_batch_id, find the mass modifications
     my %mass_modifications;
@@ -287,8 +273,8 @@ sub printEntryForm {
     #### Reduce length because of PGPLOT 80 char limit??
     my($tmpfile) = "Spec.$$.@{[time]}.gif";
 
-    $parameters{gifwidth} = 640 unless $parameters{gifwidth};
-    $parameters{gifheight} = 480 unless $parameters{gifheight};
+    $parameters{gifwidth} = 800 unless $parameters{gifwidth};
+    $parameters{gifheight} = 500 unless $parameters{gifheight};
 
     if ($apply_action eq "PRINTABLE FORMAT") {
       $parameters{gifwidth} = 480;
@@ -313,8 +299,8 @@ sub printEntryForm {
 
 
     #### Loop over each desired charge
-    my $charge;
-    foreach $charge (@charge) {
+    my $ions_buffer = '';
+    foreach my $charge (@charge) {
       my ($masslist_ref) = CalcIons(Residues=>\@residues, Charge=>$charge,
                                     MassArray=>$AAmasses_ref);
       my ($B_ref,$Y_ref);
@@ -327,19 +313,22 @@ sub printEntryForm {
                                        Window=>$parameters{masstol},
                                        PeakColors=>\@peakcolors);
 
-
       #### Print out the peptide ion information
-      printIons(masslist_ref=>$masslist_ref,color=>1,html=>1,
-        charge=>$charge,length=>$length,
-        theoretical_spectrum_ref=>\@theoretical_spectrum);
-      $t6 = [gettimeofday()];
-
+      $ions_buffer .= printIons(
+        masslist_ref=>$masslist_ref,
+        color=>1,
+        html=>1,
+        charge=>$charge,
+        length=>$length,
+        theoretical_spectrum_ref=>\@theoretical_spectrum,
+      );
 
       #### Label the peaks on the plot
       LabelResidues(Ionmasses=>$masslist_ref, Binten=>$B_ref, Yinten=>$Y_ref,
                     Charge=>$charge, Win=>$win, Length=>$length,
                     Xmin=>$parameters{xmin}, Xmax=>$parameters{xmax},
                     Ymax=>$intenmax, Angle=>$labangle, Fjust=>$fjust);
+      $t6 = [gettimeofday()];
 
     } # end foreach
 
@@ -363,11 +352,23 @@ sub printEntryForm {
     $win->close();
 
 
-    #### Set up the image cell
-    print qq~</PRE>
-	</TD>
-	<TD VALIGN=top>
-	<IMG SRC="$HTML_BASE_DIR/tmp/images/$tmpfile"><BR>
+    #### Set up the table and data column
+    print qq~
+	<FORM METHOD="post">
+	<TABLE BORDER=0 CELLPADDING=3 WIDTH="675">
+	<TR VALIGN=top>
+	<TD VALIGN=top COLSPAN=2>
+	<IMG SRC="$HTML_BASE_DIR/tmp/images/$tmpfile">
+        </TD></TR>
+    ~;
+
+
+    #### Display the ions table
+    print qq~
+	<TR VALIGN=top>
+	<TD VALIGN=top BGCOLOR="$BKGCOLOR">
+	<PRE>$ions_buffer</PRE>
+	</TD><TD>
     ~;
 
 
@@ -1283,8 +1284,10 @@ sub printIons {
   my $length = $args{'length'};
   my $theoretical_spectrum_ref = $args{'theoretical_spectrum_ref'};
 
-  print "SEQ  #     B       Y    +$charge\n";
-  print "--- --  ------  ------  --\n";
+  my $buf = '';
+
+  $buf .= "Residue #     B       Y    +$charge\n";
+  $buf .= "------ --  ------  ------  --\n";
 
   my ($bcolbegin, $bcolend, $ycolbegin, $ycolend);
 
@@ -1345,7 +1348,7 @@ sub printIons {
     }
 
     #### Print out the data
-    printf "%3s %2d $bcolbegin$B_format$bcolend ".
+    $buf .= sprintf "%6s %2d $bcolbegin$B_format$bcolend ".
            "$ycolbegin$Y_format$ycolend %3d\n",
       $masslist_ref->{residues}->[$i], $i+1,
       $B_value, $Y_value, $length-$i;
@@ -1361,8 +1364,9 @@ sub printIons {
 
   } # end for
 
-  print "\n";
+  $buf .= "\n";
 
+  return($buf);
 
 } # end PrintIons
 
