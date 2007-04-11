@@ -1111,7 +1111,9 @@ sub create_atlas_search_batch_parameter_recs
 
     #### Make a list of guesses for params files
     my @params_files = ( "$search_batch_path/sequest.params",
-      "$search_batch_path/../sequest.params", "$search_batch_path/comet.def" );
+      "$search_batch_path/../sequest.params", "$search_batch_path/comet.def",
+      "$search_batch_path/tandem.params", "$search_batch_path/tandem.xml",
+    );
 
     #### Try to find the files in order
     my $found = '??';
@@ -1199,6 +1201,15 @@ sub create_atlas_search_batch_parameter_recs
         {
             $num_enzyme_termini = $rowdata{parameter_value};
         }
+
+	#### If this is Tandem-K data, we don't have any of this
+	if ($key eq 'scoring, algorithm') {
+	  $peptide_mass_tolerance = -1;
+	  $peptide_ion_tolerance = -1;
+	  $enzyme = 1;
+	  $num_enzyme_termini = 1;
+	}
+
 
     }
 
@@ -1509,6 +1520,10 @@ sub insert_spectra_description_set
         ## read experiment's pepXML file to get an mzXML file name
         my @mzXMLFileNames = getMzXMLFileNames( search_batch_dir_path => $search_batch_dir_path);
 
+
+	if (1) {
+	  print "Found ".scalar(@mzXMLFileNames)." mzXMLs in $search_batch_dir_path\n";
+	}
 
         #### read an mzXML file to get needed attributes... could make a sax content handler for this, 
         #### but only need the first dozen or so lines of file, and the mzXML files are huge...
@@ -2438,12 +2453,13 @@ sub getMzXMLFileNames
 
     unless(-e $infile)
     {
-        print "[WARN] could not find $infile\n";
+        #print "[WARN] could not find $infile\n";
 
         $infile = "$search_batch_dir_path/interact.xml";
     }
     unless(-e $infile)
     {
+        print "[WARN] could not find $infile\n";
         die "could not find $infile either. Abort.\n";
     }
 
@@ -2473,7 +2489,11 @@ sub getMzXMLFileNames
 
             push (@mzXMLFileNames, $mzXMLFileName);
 
-        }
+	} elsif ($line =~ /^\<inputfile name=\"(.+)\"/) {
+	    my $tmp = $1;
+            $mzXMLFileName = "$tmp" . ".mzXML";
+            push (@mzXMLFileNames, $mzXMLFileName);
+	}
 
         #### Workaround for problem Qstar experiments, specifically
         #### /sbeams/archive/rossola/HUPO-ISB/b1-CIT_glyco_qstar
@@ -2512,7 +2532,14 @@ sub getMzXMLFileNames
       if ( -e $file ) {
 	$mzXMLFileNames[$i] = $file;
       } else {
-	print "ERROR: Unable to determine location of file '$mzXMLFileNames[$i]'\n";
+	#### Fred Hutch processed files sometimes have fract in there
+	$file =~ s/\.fract\.mzXML/.mzXML/;
+	if ( -e $file ) {
+	  $mzXMLFileNames[$i] = $file;
+	} else {
+	  print "ERROR: Unable to determine location of file '$mzXMLFileNames[$i]'\n";
+	  print "  (also tried: $file)\n";
+	}
       }
     }
 
