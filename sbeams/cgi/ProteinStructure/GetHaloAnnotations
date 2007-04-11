@@ -955,6 +955,8 @@ tooltip=>"Edit Annotation (restricted)");
 	 }
 	 if (count > 0) {
 	   document.SearchForm.search_key.value=key;
+     // Added 2007-04-12 as per N. Baliga - Focus search should be ALL
+	   document.SearchForm.search_scope.value='All';
 //	   alert(document.SearchForm.search_key.value);
 	   document.SearchForm.submit();
 	 }else{
