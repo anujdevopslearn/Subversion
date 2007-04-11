@@ -1140,10 +1140,59 @@ sub addMsmsSpectrumEntry {
 
   #### Read in the specified file
   $t0 = [gettimeofday()];
-  my $result = $sbeamsPROT->readDtaFile(inputfile => "$inputfile");
-  unless ($result) {
-    die "ERROR: Unable to read dta file '$inputfile'\n";
+  my $result;
+  if (-e $inputfile) {
+    $result = $sbeamsPROT->readDtaFile(inputfile => "$inputfile");
+    unless ($result) {
+      die "ERROR: Unable to read dta file '$inputfile'\n";
+    }
+  } else {
+    if ($inputfile =~ m#(.+)/(.+?)/(.+)\.(\d+)\.(\d+)\.(\d)\.dta#) {
+      #print "--$1--$2--$3--$4--$5--$6--\n";
+      my $search_batch_path = $1;
+      my $msrun_name = $2;
+      my $start_scan = $4;
+      my $end_scan = $5;
+      my $charge = $6;
+      my $mzXML_filename = "$search_batch_path/$msrun_name.mzXML";
+      my $buffer = "INFO: Looking for '$mzXML_filename'<BR>\n";
+      if ( -e $mzXML_filename ) {
+	$buffer .= "INFO: Found '$mzXML_filename'<BR>\n";
+	$buffer .= "INFO: Spectrum number is $start_scan<BR>\n";
+	my $filename = "$PHYSICAL_BASE_DIR/lib/c/Proteomics/getSpectrum/".
+        "getSpectrum $start_scan $mzXML_filename |";
+	unless (open(DTAFILE,$filename)) {
+	  $buffer .= "ERROR Cannot open '$filename'!!<BR>\n";
+	  print $buffer;
+	  return;
+	}
+	my @mz_intensities;
+	while (my $line = <DTAFILE>) {
+	  chomp($line);
+	  my @values = split(/\s+/,$line);
+	  push(@mz_intensities,\@values);
+	}
+	close(DTAFILE);
+	$result->{parameters}->{file_root} = "$msrun_name.$start_scan.$end_scan";
+        $result->{parameters}->{start_scan} = $start_scan;
+	$result->{parameters}->{end_scan} = $end_scan;
+	$result->{parameters}->{n_peaks} = scalar(@mz_intensities);
+	$result->{mass_intensities} = \@mz_intensities;
+
+	$buffer .= "file_root=$msrun_name\n";
+	$buffer .= "start_scan=$start_scan, end_scan=$end_scan\n";
+	$buffer .= "n_peaks=".scalar(@mz_intensities)."\n";
+	print $buffer if ($VERBOSE > 1);
+
+      } else {
+	die("ERROR: Unable to find $inputfile or mzXML_filename");
+      }
+    } else {
+      die "ERROR: Unable to read dta file '$inputfile'\n";
+    }
+
   }
+
   my $file_root = ${$result}{parameters}->{file_root};
   $t1 = [gettimeofday()];
   $timepoints{'B -1  readDtaFile'} += tv_interval($t0,$t1);
@@ -1371,6 +1420,40 @@ sub addSearchBatchEntry {
   return $search_batch_id;
 
 }
+
+
+
+###############################################################################
+# getMsrunId: Get the msrun_id == fraction_id is it exists
+###############################################################################
+sub getMsrunId {
+  my %args = @_;
+  my $SUB_NAME = 'getMsrunId';
+
+  #### Decode the argument list
+  my $experiment_id = $args{'experiment_id'}
+   || die "ERROR[$SUB_NAME]: experiment_id not passed";
+  my $fraction_tag = $args{'fraction_tag'}
+   || die "ERROR[$SUB_NAME]: fraction_tag not passed";
+
+  #### Determine how many fractions respond to this name
+  my $sql="SELECT fraction_id\n".
+         "  FROM $TBPR_FRACTION\n".
+         " WHERE experiment_id = $experiment_id\n".
+         "   AND fraction_tag = '$fraction_tag'";
+  my @returned_fraction_ids = $sbeams->selectOneColumn($sql);
+
+  if (! @returned_fraction_ids) {
+    return;
+  } elsif (scalar(@returned_fraction_ids) == 1) {
+    print "Fraction '$fraction_tag' already exists in the database\n";
+    return($returned_fraction_ids[0]);
+  } else {
+    my $tmp = scalar(@returned_fraction_ids);
+    die("ERROR: Found $tmp records for $fraction_tag already!");
+  }
+
+} # end getMsrunId
 
 
 
