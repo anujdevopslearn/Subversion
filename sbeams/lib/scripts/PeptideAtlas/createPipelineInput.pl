@@ -769,7 +769,7 @@ sub main {
     push(@identlist_files,$identlist_file);
 
     #### If the identlist file already exists, we're done
-    if ( -e $identlist_file && 0) {
+    if ( -e $identlist_file) {
       print "INFO: identlist file already exists: $identlist_file\n";
 
     #### Otherwise read the pepXML and create the cachefile
