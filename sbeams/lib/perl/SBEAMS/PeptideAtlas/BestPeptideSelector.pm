@@ -182,7 +182,7 @@ sub getBestPeptides {
 
 
     $resultset_ref->{data_ref}->[$i]->[$cols->{suitability_score}] =
-      $suitability_score;
+      sprintf("%.3f",$suitability_score);
   }
 
 
