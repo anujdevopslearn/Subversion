@@ -150,7 +150,6 @@ sub start_element {
     $self->{current_search_result}->{end_scan} = $attrs{end_scan};
     $self->{current_search_result}->{precursor_neutral_mass} = $attrs{precursor_neutral_mass};
     $self->{current_search_result}->{assumed_charge} = $attrs{assumed_charge};
-    #print "  \nspectrum=$spectrum\n";
   }
 
 
@@ -170,8 +169,9 @@ sub start_element {
 
 
   #### If this is the start of a modification info, store it
-  if ($localname eq 'modification_info') {
-    $self->{current_search_hit}->{modified_peptide} = $attrs{modified_peptide};
+  if ($localname eq 'mod_aminoacid_mass') {
+    $self->{current_search_hit}->{modifications}->{$attrs{position}} = $attrs{mass};
+    #print "**Found mod: pos=$attrs{position}  mass=$attrs{mass}\n";
   }
 
 
@@ -218,6 +218,18 @@ sub end_element {
     } else {
       die("ERROR: Unable to parse msrun name from $self->{current_search_result}");
     }
+
+    #### See if the msrun is there already
+    unless ($self->{msruns}->{$msrun}) {
+      my $result = &main::getMsrunId(
+        experiment_id => $self->{experiment_id},
+        fraction_tag => $msrun,
+      );
+      if ($result) {
+        $self->{msruns}->{$msrun} = $result;
+      }
+    }
+
 
     #### If the msrun hasn't yet been registered, do so
     unless ($self->{msruns}->{$msrun}) {
@@ -293,6 +305,22 @@ sub createDataHash {
   $data{parameters}->{search_host} = 'none';
 
 
+  #### Create the modified peptide string
+  my $peptide_sequence = $self->{current_search_hit}->{peptide};
+  my $modified_peptide = '';
+  my $modifications = $self->{current_search_hit}->{modifications};
+  if ($modifications) {
+    for (my $i=1; $i<=length($peptide_sequence); $i++) {
+      my $aa = substr($peptide_sequence,$i-1,1);
+      if ($modifications->{$i}) {
+	$aa .= '['.int($modifications->{$i}).']';
+      }
+      $modified_peptide .= $aa;
+    }
+  } else {
+    $modified_peptide = $peptide_sequence;
+  }
+
 
   my $hit_index = $self->{current_search_hit}->{hit_rank};
   $data{matches}->[0]->{hit_index} = $self->{current_search_hit}->{hit_rank};
@@ -306,7 +334,7 @@ sub createDataHash {
   $data{matches}->[0]->{peptide} = $self->{current_search_hit}->{peptide};
   $data{matches}->[0]->{peptide_string} =
     $self->{current_search_hit}->{peptide_prev_aa}.'.'.
-    ($self->{current_search_hit}->{modified_peptide}||$self->{current_search_hit}->{peptide}).'.'.
+    $modified_peptide.'.'.
     $self->{current_search_hit}->{peptide_next_aa};
 
   #### SEQUEST Scores
@@ -324,6 +352,14 @@ sub createDataHash {
     $data{matches}->[0]->{cross_corr} = $self->{current_search_hit}->{ionscore};
     $data{matches}->[0]->{norm_corr_delta} = 0;
     $data{matches}->[0]->{prelim_score} = $self->{current_search_hit}->{identityscore};
+
+  #### Tandem-K Scores - fudged
+  } elsif ($self->{current_search_hit}->{expect}) {
+    $data{matches}->[0]->{cross_corr_rank} = 0;
+    $data{matches}->[0]->{prelim_score_rank} = 0;
+    $data{matches}->[0]->{cross_corr} = $self->{current_search_hit}->{expect};
+    $data{matches}->[0]->{norm_corr_delta} = 0;
+    $data{matches}->[0]->{prelim_score} = $self->{current_search_hit}->{hyperscore};
   }
 
   return %data;
