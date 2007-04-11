@@ -1182,6 +1182,7 @@ sub launch_gp_pipeline {
   my $email = $sbeams->getEmailAddress() || $sbeams->getCurrent_username();
   my $db_map_select = get_db_map_select();
   my $map_version_select = get_map_version_select();
+  my $map_norm_method_select = get_norm_method_select();
   my $file_input = '';
   for my $file ( @filenames ) {
     $file_input .= "<INPUT TYPE=hidden NAME=get_all_files VALUE=$file>\n";
@@ -1208,8 +1209,11 @@ sub launch_gp_pipeline {
   <BR>
   <BR>
   <FORM NAME=gp_exon_array ACTION='$gp_trigger_URL' METHOD=POST>
-  <B>Mapping database:</B> $db_map_select
-  <B>Mapping version:</B> $map_version_select
+  <TABLE>
+  <TR><TD ALIGN=right><B>Mapping database:</B></TD><TD ALIGN=left> $db_map_select</TD></TR>
+  <TR><TD ALIGN=right><B>Mapping version:</B></TD><TD ALIGN=left> $map_version_select</TD></TR>
+  <TR><TD ALIGN=right><B>Normalization Method</B></TD><TD ALIGN=left>$map_norm_method_select</TD></TR>
+  </TABLE>
   <BR>
   <BR>
   $file_input
@@ -1229,6 +1233,18 @@ sub launch_gp_pipeline {
  
   # Send it back for rendering
   return $gp_pipeline_form;
+}
+
+#+
+# Returns select list with current Exon array mapping dbs
+#-
+sub get_norm_method_select {
+  my $select =  "<SELECT NAME=normalization_method>\n";
+  for my $k ( qw(RMA GC-RMA PLIER) ) {
+    $select .= "<option value=$k>$k</option>\n";
+  }
+  $select .=  "</SELECT>\n";
+  return $select;
 }
 
 #+
