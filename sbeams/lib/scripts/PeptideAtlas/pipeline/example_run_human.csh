@@ -21,7 +21,7 @@ setenv ORGANISM_ABBREV Hs
 setenv ENSEMBL_DIR "release-39/homo_sapiens_39_36a"
 ### for remote calls to Sanger's database:
 setenv ENSMYSQLDBNAME homo_sapiens_core_39_36a
-setenv ENSMYSQLDBHOST "kaka.sanger.ac.uk"
+setenv ENSMYSQLDBHOST "ensembldb.ensembl.org"
 setenv ENSMYSQLDBUSER "anonymous"
 setenv ENSMYSQLDBPSSWD "youremailaddress@xx.yy"
 #######################################################################
