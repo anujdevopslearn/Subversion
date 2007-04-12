@@ -451,6 +451,7 @@ sub handle_request {
 	  FROM #tmp2
 	 WHERE 1=1
 	   $specific_counts_clause
+           --AND SEQ_Halo200703__peptide != XTK_Halo200703__peptide. It would be nice to implement this generically
 	  ORDER BY 2
 	$limit_clause->{trailing_limit_clause}
 
