@@ -386,7 +386,7 @@ sub handle_request {
       }
     } elsif ($parameters{display_options} =~ /DifferentSequence/) {
       if ($previous_id) {
-	$sequence_sameness_clause .= "  OR $experiment_names{$previous_id}->{cleaned}__peptide != $experiment_names{$id}->{cleaned}__peptide\n";
+	$sequence_sameness_clause .= "  OR ISNULL($experiment_names{$previous_id}->{cleaned}__peptide,'') != ISNULL($experiment_names{$id}->{cleaned}__peptide,'')\n";
       }
     }
 
