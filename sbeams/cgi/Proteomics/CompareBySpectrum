@@ -361,6 +361,10 @@ sub handle_request {
   my @tmp_columns2;
   my @tmp_columns3;
 
+  #### Buffers to store sequence sameness constraint SQL
+  my $sequence_sameness_clause = '';
+  my $previous_id;
+
   foreach my $id (@search_batch_ids) {
     push(@column_array, ["$experiment_names{$id}->{cleaned}",
       "STR($experiment_names{$id}->{cleaned},7,3)",
@@ -375,11 +379,29 @@ sub handle_request {
     $pivot_clause .= "	       SUM(CASE WHEN search_batch_subdir = '$experiment_names{$id}->{original}' THEN NULLIF(probability,0.0) ELSE 0.0 END) AS \"$experiment_names{$id}->{cleaned}\",\n";
     $pivot_clause2 .= "	       MAX(CASE WHEN search_batch_subdir = '$experiment_names{$id}->{original}' THEN peptide ELSE NULL END) AS \"$experiment_names{$id}->{cleaned}__peptide\",\n";
     $pivot_clause3 .= "	       MAX(CASE WHEN search_batch_subdir = '$experiment_names{$id}->{original}' THEN cross_corr ELSE NULL END) AS \"$experiment_names{$id}->{cleaned}__cross_corr\",\n";
+
+    if ($parameters{display_options} =~ /SameSequence/) {
+      if ($previous_id) {
+	$sequence_sameness_clause .= "  AND $experiment_names{$previous_id}->{cleaned}__peptide = $experiment_names{$id}->{cleaned}__peptide\n";
+      }
+    } elsif ($parameters{display_options} =~ /DifferentSequence/) {
+      if ($previous_id) {
+	$sequence_sameness_clause .= "  OR $experiment_names{$previous_id}->{cleaned}__peptide != $experiment_names{$id}->{cleaned}__peptide\n";
+      }
+    }
+
+    $previous_id = $id;
+
   }
   chop($pivot_clause3);
   chop($pivot_clause3);
   $pivot_clause3 .= "\n";
   push(@column_array,@tmp_columns2,@tmp_columns3);
+
+  if ($parameters{display_options} =~ /DifferentSequence/) {
+    $sequence_sameness_clause =~ s/^  OR/  AND \(/;
+    $sequence_sameness_clause .= "  )\n";
+  }
 
 
   #### Limit the width of the Reference column if user selected
@@ -451,7 +473,7 @@ sub handle_request {
 	  FROM #tmp2
 	 WHERE 1=1
 	   $specific_counts_clause
-           --AND SEQ_Halo200703__peptide != XTK_Halo200703__peptide. It would be nice to implement this generically
+           $sequence_sameness_clause
 	  ORDER BY 2
 	$limit_clause->{trailing_limit_clause}
 
