@@ -71,6 +71,10 @@ Usage: [OPTIONS] key=value key=value ...
 Options:
   --test                 test this code, no disk writing
 
+  --test_samples         if would like to run test, using specific samples,
+                         can specify them here separated by commas
+                         (e.g.,  --test_samples "26,34")
+
   --run                  run program
 
   --make_tmp_files       output files are named rep*.tmp to minimize 
@@ -93,11 +97,11 @@ EOU
 ## get arguments:
 GetOptions(\%OPTIONS, "test", "run", "make_tmp_files", "verbose:s",
 "repository_url:s", "public_archive_uri:s", "sbeams_data_path:s",
-"repository_path:s");
+"repository_path:s", "test_samples:s");
 
 
 ## check for required arguments:
-unless ( ($OPTIONS{"test"} || $OPTIONS{"run"} ) && 
+unless ( ($OPTIONS{"test"} || $OPTIONS{"run"} || $OPTIONS{"test_samples"} ) && 
 $OPTIONS{"repository_url"} && $OPTIONS{"public_archive_uri"} &&
 $OPTIONS{"sbeams_data_path"} && $OPTIONS{"repository_path"})
 {
@@ -105,6 +109,19 @@ $OPTIONS{"sbeams_data_path"} && $OPTIONS{"repository_path"})
 
     exit;
 };
+
+## check format of test_samples if it's used
+if ($OPTIONS{"test_samples"})
+{
+    my @t = split(",", $OPTIONS{"test_samples"});
+
+    if (!$#t > 0)
+    {
+        print " Please specify sample ids, seprated by commas.\n"
+            . " For example:  --test_samples '54,92'";
+
+    }
+}
 
 
 ## set some vars based upon arguments:
@@ -121,7 +138,6 @@ $sbeams_data_path = $OPTIONS{"sbeams_data_path"};
 $repository_path = $OPTIONS{"repository_path"};
 
 $timestamp_pattern = "+%Y%m%d%H%M";
-
 
 if ($TEST)
 {
@@ -288,13 +304,14 @@ sub check_samples
 #######################################################################
 # write_public_file -- writes repository_public.xml file.  
 #    While at it, sees if files exist in public archive area, and if
-#    so, sees if they are the most current known.  Tars up the most
+#    so, sees if they are the most current known.  If the files are not
+#    the most current, it makes tar archives of the most
 #    current and copies them to the public archive area, with a timestamp
 #    in their name, and a timestamped properties file containing the
 #    the fundamental properties of the file to check for changes
-#    (for instance, mzXML schema version).
+#    (changes such as mzXML schema version, for example).
 #
-#    NOTE: method essentially stores single sql query for all sample 
+#    NOTE: method essentially stores the results from a query for all sample 
 #    records into a data structure and re-uses the structure.  if
 #    one day find ourselves memory limited, will need to break
 #    get_publication_info(), get_public_sample_info(), and 
@@ -306,8 +323,28 @@ sub write_public_file
 {
     my $sql;
 
-    if ($TEST)
-    {   ## use 2 records for TEST
+    if ($OPTIONS{"test_samples"})
+    {
+        ## get a string of sample id formatted for use in IN clause of
+        ## SQL statement
+        my $test_sample_ids = formatSampleIDs(
+            sample_ids => $OPTIONS{"test_samples"});
+
+        $sql = qq~
+        SELECT distinct S.sample_accession, S.sample_tag, S.sample_id,
+        O.organism_name, S.is_public
+        FROM $TBAT_SAMPLE S
+        JOIN $TBAT_ATLAS_BUILD_SAMPLE ABS ON (ABS.sample_id = S.sample_id)
+        JOIN $TBAT_ATLAS_BUILD AB ON (AB.atlas_build_id = ABS.atlas_build_id)
+        JOIN $TBAT_BIOSEQUENCE_SET BS ON (BS.biosequence_set_id = AB.biosequence_set_id)
+        JOIN $TB_ORGANISM O ON (BS.organism_id = O.organism_id)
+        WHERE S.is_public = 'Y' AND S.record_status != 'D'
+        AND S.sample_id IN ($test_sample_ids)
+        ORDER BY O.organism_name, S.sample_tag
+        ~;
+        
+    } elsif ($TEST)
+    {   ## Use 2 records for TEST
         $sql = qq~
         SELECT distinct top 2 S.sample_accession, S.sample_tag, S.sample_id,
         O.organism_name, S.is_public
@@ -319,6 +356,7 @@ sub write_public_file
         WHERE S.is_public = 'Y' AND S.record_status != 'D'
         ORDER BY O.organism_name, S.sample_tag
         ~;
+
     } else
     {
         $sql = qq~
@@ -967,7 +1005,7 @@ sub error_message
 #######################################################################
 # get_orig_data_type -- given data_dir, gets orig data type
 # @param data_dir - absolute path to data
-# @return data_type (e.g. .dat, .RAW, .raw, etc)
+# @return data_type (e.g. .RAW, .raw, .dat, or dtapack)
 #######################################################################
 sub get_orig_data_type
 {
@@ -978,13 +1016,6 @@ sub get_orig_data_type
 
     my $orig_data_type="";
 
-    ## check for .dat files:
-    my @files = `find $data_dir -name \'*.dat\' -maxdepth 1 -print`;
-
-    if ( $#files > -1)
-    {
-        $orig_data_type = "dat";
-    }
 
     ## check for .RAW files:
     unless ($orig_data_type)
@@ -1018,6 +1049,17 @@ sub get_orig_data_type
         if ( $#files > -1)
         {
             $orig_data_type = "dtapack";
+        }
+    }
+
+    ## check for .dat files:
+    unless ($orig_data_type)
+    {
+        my @files = `find $data_dir -name \'*.dat\' -maxdepth 1 -print`;
+
+        if ( $#files > -1)
+        {
+            $orig_data_type = "dat";
         }
     }
 
@@ -2763,3 +2805,32 @@ sub print_hash
         print "key: $k   value:$h{$k}\n";
     }
 }
+
+
+#######################################################################
+# formatSampleIDs -- format test_samples string to be usable as an
+#  IN clause in an SQL statement
+#
+# @param sample_ids
+#######################################################################
+sub formatSampleIDs
+{
+    my %args = @_;
+
+    my $sample_ids = $args{sample_ids};
+
+    $sample_ids =~ s/"//g; 
+
+    $sample_ids =~ s/'//g; 
+
+    $sample_ids =~ s/\s+//g;
+
+    my @t = split(",",$sample_ids);
+
+    $sample_ids = join("','", @t);
+
+    $sample_ids = "'" . $sample_ids . "'";
+
+    return $sample_ids;
+}
+
