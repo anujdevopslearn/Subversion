@@ -115,11 +115,12 @@ if ($OPTIONS{"test_samples"})
 {
     my @t = split(",", $OPTIONS{"test_samples"});
 
-    if (!$#t > 0)
+    unless ($#t >= 0)
     {
         print " Please specify sample ids, seprated by commas.\n"
             . " For example:  --test_samples '54,92'";
 
+        exit;
     }
 }
 
