@@ -89,6 +89,14 @@ sub parse
     }
     unless(-e $infile)
     {
+        print "[WARN] could not find $infile either\n";
+
+        ## A fudge to obtain an interact.xml file when multiple exist (cases when
+        ## datasets are too large for TPP)
+        $infile = $self->{search_batch_directory} . "/interact-prob01.xml";
+    }
+    unless(-e $infile)
+    {
         die "could not find $infile either\n";
     }
 
