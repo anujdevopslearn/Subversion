@@ -448,7 +448,10 @@ sub write_public_file
         my $mzXML_url = get_mzXML_url(  sample_id => $sample_id,
             sample_accession => $sample_accession, spectra_data_dir => $spectra_data_dir);
 
-        addResourceTag(attr_name => "mzXML_format", attr_value => $mzXML_url);
+        my $fsz = getFileSize( file => $mzXML_url );
+
+        addResourceTag(attr_name => "mzXML_format", 
+            attr_value => $mzXML_url, file_size => $fsz);
 
         push(@file_array_for_README, $mzXML_url);
 
@@ -529,9 +532,11 @@ sub write_public_file
                 search_results_dir => $data_location,
             );
 
+            my $sfsz = getFileSize( file => $mzXML_url );
+
             ## write url to xml file as attribute in a resource element
             addResourceTag(attr_name => "Search_Results", 
-                attr_value => $search_results_url);
+                attr_value => $search_results_url, file_size => $sfsz);
 
             push(@file_array_for_README, $search_results_url);
 
@@ -740,7 +745,6 @@ sub endSampleTag
     $writer->end();
 
     $out->close();
-
 }
 
 #######################################################################
@@ -2227,8 +2231,8 @@ sub updateDatabaseSpectrumProperties
 
 #######################################################################
 # addResourceTag  add a resource element to public xml file, include attribute
-# @attr_name
-# @attr_value
+# @param attr_name
+# @param attr_value
 #######################################################################
 sub addResourceTag
 {
@@ -2238,6 +2242,8 @@ sub addResourceTag
 
     my $attr_value = $args{attr_value} or die "need attr_value with $attr_name";
 
+    my $file_size = $args{file_size} || 0;
+
     ## write opening sample tag information to xml:
     ## open xml file and writer:
     my $out = new IO::File(">>$public_xml_outfile");
@@ -2246,7 +2252,14 @@ sub addResourceTag
 
     ## indent 4 spaces, write tag, write end-of line marker
     $out->print("    ");
-    $writer->startTag("resource", $attr_name => $attr_value );
+    if ($file_size) 
+    {
+        $writer->startTag("resource", $attr_name => $attr_value, 
+            'file_size' => $file_size );
+    } else
+    {
+        $writer->startTag("resource", $attr_name => $attr_value );
+    }
     $writer->endTag("resource");
 #   $out->print("\n");
 
@@ -2835,3 +2848,29 @@ sub formatSampleIDs
     return $sample_ids;
 }
 
+
+#######################################################################
+# getFileSize -- get file size in units of MB
+# 
+# @param file
+#######################################################################
+sub getFileSize
+{
+    my %args = @_;
+
+    my $file = $args{file};
+
+    my $file_path    = convertURLToAbsolutePath( url => $file );
+
+    my $file_size;
+
+    if (!-e $file_path)
+    {
+        error_message( message => "file does not exist: $file_path");
+    } else
+    {
+        $file_size = stat($file_path)->size;
+    }
+
+    return $file_size;
+}
