@@ -369,8 +369,11 @@ sub write_public_file
         JOIN $TBAT_BIOSEQUENCE_SET BS ON (BS.biosequence_set_id = AB.biosequence_set_id)
         JOIN $TB_ORGANISM O ON (BS.organism_id = O.organism_id)
         WHERE S.is_public = 'Y' AND S.record_status != 'D'
+        AND S.sample_id != '198' AND S.sample_id != '292'
         ORDER BY O.organism_name, S.sample_tag
         ~;
+        ## xx temporarily adding ignore MicroProt datasets as their 
+        ## interact file names are too highly specialized...
     }
 
     my @rows = $sbeams->selectSeveralColumns($sql) or 
@@ -448,10 +451,10 @@ sub write_public_file
         my $mzXML_url = get_mzXML_url(  sample_id => $sample_id,
             sample_accession => $sample_accession, spectra_data_dir => $spectra_data_dir);
 
-        my $fsz = getFileSize( file => $mzXML_url );
+        my $mzXML_size = getFileSize( file => $mzXML_url );
 
         addResourceTag(attr_name => "mzXML_format", 
-            attr_value => $mzXML_url, file_size => $fsz);
+            attr_value => $mzXML_url, file_size => $mzXML_size);
 
         push(@file_array_for_README, $mzXML_url);
 
@@ -532,11 +535,12 @@ sub write_public_file
                 search_results_dir => $data_location,
             );
 
-            my $sfsz = getFileSize( file => $mzXML_url );
+            my $search_results_size = getFileSize( file => $search_results_url );
 
             ## write url to xml file as attribute in a resource element
             addResourceTag(attr_name => "Search_Results", 
-                attr_value => $search_results_url, file_size => $sfsz);
+                attr_value => $search_results_url, file_size => $search_results_size,
+                asbid => $atlas_search_batch_id);
 
             push(@file_array_for_README, $search_results_url);
 
@@ -565,7 +569,8 @@ sub write_public_file
                 push(@file_array_for_README, $sequest_params_file_url);
                 ## write url to xml file as attribute in a resource element
                 addResourceTag(attr_name => "sequest_params", 
-                    attr_value => $sequest_params_file_url);
+                    attr_value => $sequest_params_file_url,
+                    asbid => $atlas_search_batch_id);
             }
 
             if (-e $hqus_file_name)
@@ -574,7 +579,8 @@ sub write_public_file
 
                 ## write url to xml file as attribute in a resource element
                 addResourceTag(attr_name => "qualscore_results", 
-                    attr_value => $hqus_file_url);
+                    attr_value => $hqus_file_url,
+                    asbid => $atlas_search_batch_id);
             }
 
 
@@ -588,7 +594,8 @@ sub write_public_file
 
             ## write url to xml file as attribute in a resource element
             addResourceTag(attr_name => "ProteinProphet_file", 
-                attr_value => $protein_prophet_url);
+                attr_value => $protein_prophet_url, 
+                asbid => $atlas_search_batch_id);
 
             push(@file_array_for_README, $protein_prophet_url);
 
@@ -1010,7 +1017,7 @@ sub error_message
 #######################################################################
 # get_orig_data_type -- given data_dir, gets orig data type
 # @param data_dir - absolute path to data
-# @return data_type (e.g. .RAW, .raw, .dat, or dtapack)
+# @return data_type (e.g. .RAW, .raw, or dtapack)
 #######################################################################
 sub get_orig_data_type
 {
@@ -1054,17 +1061,6 @@ sub get_orig_data_type
         if ( $#files > -1)
         {
             $orig_data_type = "dtapack";
-        }
-    }
-
-    ## check for .dat files:
-    unless ($orig_data_type)
-    {
-        my @files = `find $data_dir -name \'*.dat\' -maxdepth 1 -print`;
-
-        if ( $#files > -1)
-        {
-            $orig_data_type = "dat";
         }
     }
 
@@ -1191,7 +1187,9 @@ sub get_notpublic_sample_info
 
         my ($sample_tag, $cell_type, $organism, $data_contributors) = @{$row};
 
-        chomp($data_contributors);
+        $data_contributors =~ s/\r/ /g;
+
+        $data_contributors =~ s/\n/ /g;
 
         $sample_info{$sample_tag}->{cell_type} = $cell_type;
 
@@ -1346,7 +1344,10 @@ sub write_to_notpublic_file
             die "need data_contributors for sample_tag $sample_tag";
     }
 
-    chomp($data_contributors);
+    $data_contributors =~ s/\r/ /g;
+
+    $data_contributors =~ s/\n/ /g;
+
 
     my $cell_type = $args{'cell_type'} || "[]"; ## might not be in record
 
@@ -1877,8 +1878,7 @@ sub deriveFileContentFromName
 
     unless ($content)
     {
-        if ( ($filename =~ /^(.*)(\.dat)(.*)/ ) || 
-        ($filename =~ /^(.*)(\.RAW)(.*)/ ) ||
+        if ( ($filename =~ /^(.*)(\.RAW)(.*)/ ) ||
         ($filename =~ /^(.*)(\.raw)(.*)/ ) ) 
         {
             $content = "spectra in " . $2 . " format";
@@ -2244,6 +2244,8 @@ sub addResourceTag
 
     my $file_size = $args{file_size} || 0;
 
+    my $asbid = $args{asbid} || "";
+
     ## write opening sample tag information to xml:
     ## open xml file and writer:
     my $out = new IO::File(">>$public_xml_outfile");
@@ -2252,10 +2254,17 @@ sub addResourceTag
 
     ## indent 4 spaces, write tag, write end-of line marker
     $out->print("    ");
-    if ($file_size) 
+    if (($file_size) && !($asbid))
     {
         $writer->startTag("resource", $attr_name => $attr_value, 
             'file_size' => $file_size );
+    } elsif (($file_size) && ($asbid))
+    {
+        $writer->startTag("resource", $attr_name => $attr_value, 
+            'file_size' => $file_size, 'asbid' => $asbid );
+    } elsif (!($file_size) && ($asbid))
+    {
+        $writer->startTag("resource", $attr_name => $attr_value, 'asbid' => $asbid );
     } else
     {
         $writer->startTag("resource", $attr_name => $attr_value );
