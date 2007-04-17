@@ -135,4 +135,14 @@ DELETE FROM table_column WHERE table_name = 'PR_BrowseProteinSummary' AND column
 
 ---------------
 
+Apr 16, 2007
+
+Added two more options for CompareBySpectrum
+
+use LocalProteomicsDatabase
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'CBS_display_options','SameSequence','Show same-sequence matches',40 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'CBS_display_options','DifferentSequence','Show different-sequence matches',50 );
+
 
