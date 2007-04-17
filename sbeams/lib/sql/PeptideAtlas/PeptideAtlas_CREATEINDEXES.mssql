@@ -1,30 +1,37 @@
 ALTER TABLE dbo.biosequence ADD CONSTRAINT biosequence_set_name_uk UNIQUE (biosequence_set_id,biosequence_name)
 
 ALTER TABLE dbo.peptide ADD CONSTRAINT peptide_accession_uk UNIQUE (peptide_accession)
-
 ALTER TABLE dbo.peptide ADD CONSTRAINT peptide_sequence_uk UNIQUE (peptide_sequence)
 
 
 CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_mapping ( peptide_instance_id ) --WITH DROP_EXISTING
 CREATE NONCLUSTERED INDEX idx_atlas_build_id ON dbo.peptide_instance ( atlas_build_id ) --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_instance_sample ( peptide_instance_id ) --WITH DROP_EXISTING
 
-CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_instance ( peptide_instance_id ) --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_modified_peptide_instance_id ON dbo.modified_peptide_instance ( modified_peptide_instance_id ) --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_peptide_id ON dbo.peptide ( peptide_id ) --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_atlas_build_id ON dbo.atlas_build ( atlas_build_id ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_peptide_sequence ON dbo.peptide ( peptide_sequence ) --WITH DROP_EXISTING
+
+CREATE NONCLUSTERED INDEX idx_atlas_build_id ON dbo.peptide_instance ( atlas_build_id ) --WITH DROP_EXISTING
 
 CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_instance_sample ( peptide_instance_id ) --WITH DROP_EXISTING
 CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_instance_search_batch ( peptide_instance_id ) --WITH DROP_EXISTING
 
+CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_mapping ( peptide_instance_id ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_peptide_mapping_biosequence_id ON dbo.peptide_mapping ( matched_biosequence_id ) --WITH DROP_EXISTING
+
+CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.modified_peptide_instance ( peptide_instance_id ) --WITH DROP_EXISTING
+
 CREATE NONCLUSTERED INDEX idx_modified_peptide_instance_id ON dbo.modified_peptide_instance_sample ( modified_peptide_instance_id ) --WITH DROP_EXISTING
 CREATE NONCLUSTERED INDEX idx_modified_peptide_instance_id ON dbo.modified_peptide_instance_search_batch ( modified_peptide_instance_id ) --WITH DROP_EXISTING
+
+CREATE NONCLUSTERED INDEX idx_modified_peptide_instance_id ON dbo.spectrum_identification ( modified_peptide_instance_id ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_spectrum_id ON dbo.spectrum_identification ( spectrum_id ) --WITH DROP_EXISTING
+
+CREATE INDEX idx_build_key ON dbo.search_key ( atlas_build_id,search_key_name ) --WITH DROP_EXISTING
 
 
 -- GlycoPeptide INDEXES
 CREATE NONCLUSTERED INDEX idx_pred_pep_sequence ON dbo.predicted_peptide ( predicted_peptide_sequence ) --WITH DROP_EXISTING
-
 CREATE NONCLUSTERED INDEX idx_ipi_accession_number ON dbo.ipi_data ( ipi_accession_number ) --WITH DROP_EXISTING
+
 
 -- NIST non-clustered INDEXES
 CREATE NONCLUSTERED INDEX idx_NIST_library_spectrum_id ON dbo.NIST_library_spectrum_peak ( NIST_library_spectrum_id ) --WITH DROP_EXISTING
