@@ -54,6 +54,9 @@ $|++;
 
   # Process cgi parameters
   my $params = process_params();
+  if ( $params->{unipep_build_id} ) {
+    $glyco->set_current_build( build_id => $params->{unipep_build_id} );
+  }
   
   $kegg_organism = $glyco->getKeggOrganism( );
 
@@ -72,7 +75,7 @@ $|++;
   } elsif ( $params->{apply_action} eq 'pathway_details' ) {
 
     # Until caching is available, will print out as we go.
-    $glyco->printPageHeader( onload => 'hideTimerInfo()' );
+    $glyco->printPageHeader( onload => 'hideTimerInfo();' );
     $content = pathway_details( $params );
     print $content;
     $glyco->printPageFooter( close_tables=>'NO');
@@ -92,6 +95,7 @@ $|++;
 # Routine to list all available pathways for current organism
 #-
 sub list_pathways {
+  my $params = shift;
   my $url = $q->url( -full=>1 );
   my $cyto_url = $url;
   $cyto_url =~ s/showPathways/getCytoscapeWebstart/;
@@ -99,9 +103,18 @@ sub list_pathways {
   my $cyto_png = "$HTML_BASE_DIR/images/cyto_tiny.png";
 
   my $t0 = new Benchmark;
+  my %genes;
+  if ( $params->{ga} ) { # list of accessions passed in
+    my @genes = split ",", $params->{ga};
+    $genes{genes} = \@genes;
+  }
   my $pathways = $keggmap->getKeggPathways( organism => $kegg_organism, 
-                                              source => 'db' );
+                                              source => 'db',
+                                               %genes );
   $page .= "<BR><TABLE>\n";
+  if ( !scalar( @{$pathways} ) ) {
+    $page .= " <TR><TD><I> " . $sbeams->makeInactiveText( "No KEGG pathways found for the selected protein(s)" ) . '</I></TD></TR>';
+  }
   for my $path ( @{$pathways} ) {
     my $desc = $q->escape( $path->{definition} );
     $page .=<<"    END";
@@ -140,13 +153,35 @@ sub pathway_details {
   # draws box around legend
   print <<"  END";
   <SCRIPT LANGUAGE='javascript'>
+  function toggle_stats() {
+    // Grab page elements by their IDs
+    var tgif = document.getElementById( '1234321_gif' );
+    var stats= document.getElementById( '1234321' );
+    var showhide= document.getElementById( '123454321' );
+    if (  stats.className == 'visible' ) {
+      stats.className = 'hidden';
+      showhide.innerHTML = 'Show Stats';
+      tgif.src =  '/devDC/sbeams/images/small_gray_plus.gif'
+    } else {
+      stats.className = 'visible';
+      showhide.innerHTML = 'Hide Stats';
+      tgif.src =  '/devDC/sbeams/images/small_gray_minus.gif'
+    }
+  }
   function hideTimerInfo() {
-    var info = document.getElementById( '1234321' );
-    info.className = 'hidden';
+    var stats= document.getElementById( '1234321' );
+    if ( stats.className == 'visible' ) {
+      toggle_stats();
+    }
   }
   </SCRIPT>
   <STYLE TYPE="text/css" media="screen">
     div.visible {
+    display: inline;
+    white-space: nowrap;         
+    }
+    div.visilink {
+    color: blue;
     display: inline;
     white-space: nowrap;         
     }
@@ -162,7 +197,12 @@ sub pathway_details {
 
 #  Turned off
 #  my $addpath = ( $params->{path_def} =~ /pathway/i ) ? '' : 'Pathway ';
-  print "<DIV ID=1234321 CLASS=visible>\n";
+  print <<"  END";
+  <A ONCLICK="toggle_stats();">
+   <IMG SRC=$HTML_BASE_DIR/images/small_gray_minus.gif TITLE='Show/Hide Stats' ID='1234321_gif'><DIV CLASS=visilink ID=123454321> Hide Stats</DIV></A>
+   <DIV ID=1234321 CLASS=visible>
+   <BR>
+  END
   print "  * Looking up genes in $params->{path_def} ($params->{path_id}) at KEGG <BR>\n";
 
   my $t0 = new Benchmark;
@@ -183,6 +223,34 @@ sub pathway_details {
   $log->debug( parseTime( $t2, $t1, "seconds to get glyco data for $params->{path_def}" ) );
 
   print "* Found glyco data for $cnt of $tot, plotting on KEGG map<BR>\n";
+  my $table = SBEAMS::Connection::DataTable->new( BORDER => 0 );
+  $table->addRow( [ 'Protein', 'Peptides Observed' ] );
+  $table->setHeaderAttr( BOLD => 1 );
+  my $acc_string ='';
+  my $sep = '';
+  for my $gene ( @{$gene_list} ) {
+    my $cnt = 0;
+    if ( $glyco_hits->{$gene} ) {
+      $cnt = scalar( @{$glyco_hits->{$gene}} );
+    }
+    $table->addRow( [ $gene, $cnt ] );
+    $acc_string .= $sep . $gene;
+    $sep ||= ',';
+  }
+  $table->alternateColors( FIRSTROW => 2, PERIOD => 1, BGCOLOR => '#DDDDDD', DEF_BGCOLOR => '#FFFFFF' );
+  $table->setColAttr( ALIGN => 'RIGHT', COLS => [2], ROWS => [2..$table->getRowNum()] );
+  my $cytolink = 'Open <A HREF=getCytoscapeWebstart TARGET=_blank>Cytoscape </A>network with protein list';
+
+  print <<"  END";
+  <BR>
+  $cytolink
+  <BR>
+  <BR>
+  <BR>
+  $table
+  <BR>
+  <HR WIDTH=600 ALIGN=LEFT>
+  END
 
   # Send gene/color info to kegg for a map
   my $url = $keggmap->getColoredPathway( bg => $bg,
@@ -295,9 +363,9 @@ sub getExpressionValues {
   my @rows = $sbeams->selectSeveralColumns( $sql );
   for my $row ( @rows ) {
     # just need to look at the first one
-    next if $glyco_hits{$row->[0]}; 
-    $glyco_hits{$row->[0]} = $row; 
-#    push @{$glyco_hits{$row->[0]}}, $row;
+#    next if $glyco_hits{$row->[0]}; 
+#    $glyco_hits{$row->[0]} = $row; 
+    push @{$glyco_hits{$row->[0]}}, $row;
   }
 
   # define colors
@@ -327,11 +395,15 @@ sub getExpressionLegend {
   <TABLE BORDER=0>
    <TR> 
     <TD BGCOLOR='#7CFC00'> <SPAN> $cell </SPAN> </TD>
-    <TD> Peptides observed </TD>
+    <TD> Unique Observed Peptide(s)</TD>
+   </TR>
+   <TR> 
+    <TD BGCOLOR='Yellow'> <SPAN> $cell </SPAN> </TD>
+    <TD> Observed Peptide(s)</TD>
    </TR>
    <TR> 
     <TD BGCOLOR='#E0FFFF'> <SPAN> $cell </SPAN> </TD>
-    <TD> No peptides observed </TD>
+    <TD> No Peptides Observed </TD>
    </TR>
    <TR> 
     <TD > <SPAN> $cell </SPAN> </TD>

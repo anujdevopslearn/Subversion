@@ -41,6 +41,8 @@ my $atlas = new SBEAMS::PeptideAtlas;
 $atlas->setSBEAMS($sbeams);
 my $glyco = new SBEAMS::Glycopeptide;
 $glyco->setSBEAMS($sbeams);
+my %params;
+my $build_id;
 
 
 ###############################################################################
@@ -58,20 +60,24 @@ main();
 ###############################################################################
 sub main { 
 
-    #### Do the SBEAMS authentication and exit if a username is not returned
-    exit unless ($current_username = $sbeams->Authenticate(
-       permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin']
-          ));
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+  permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin']));
 
-    #### Print the header, do what the program does, and print footer
-    $glyco->printPageHeader();
-    my $intro = get_intro();
-    my $content = get_content();
-    print $sbeams->getGifSpacer(600);
-    print $intro;
+  $sbeams->parse_input_parameters( q=>$q, parameters_ref=>\%params );
+  if ( $params{unipep_build_id} ) {
+    $glyco->set_current_build( build_id => $params{unipep_build_id} );
+  }
+  $build_id = $glyco->get_current_build();
+  #### Print the header, do what the program does, and print footer
+  $glyco->printPageHeader();
+  my $intro = get_intro();
+  my $content = get_content();
+  print $sbeams->getGifSpacer(600);
+  print $intro;
 
-    print $content;
-    $glyco->printPageFooter();
+  print $content;
+  $glyco->printPageFooter();
 
 } # end main
 
@@ -98,7 +104,6 @@ sub get_content {
 #  FROM $TBGP_IDENTIFIED_PEPTIDE
 #
   
-  my $build_id = $glyco->get_current_build();
 
   my $sql = qq~
   SELECT observed_peptide_sequence, MAX(peptide_prophet_score)

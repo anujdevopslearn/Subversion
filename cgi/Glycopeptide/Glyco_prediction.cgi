@@ -26,12 +26,15 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TabMenu;
 
+use SBEAMS::BioLink::KeggMaps;
+
 use SBEAMS::Glycopeptide;
 use SBEAMS::Glycopeptide::Settings;
 use SBEAMS::Glycopeptide::Tables;
 
 use SBEAMS::Glycopeptide::Get_glyco_seqs;
 use SBEAMS::Glycopeptide::Glyco_query;
+
 
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::Glycopeptide;
@@ -40,6 +43,7 @@ $sbeamsMOD->setSBEAMS($sbeams);
 $glyco_query_o = new SBEAMS::Glycopeptide::Glyco_query;
 $glyco_query_o->setSBEAMS($sbeams);
 
+my $keggmap = SBEAMS::BioLink::KeggMaps->new();
 
 ###############################################################################
 # Global Variables
@@ -80,11 +84,11 @@ sub main
        permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin', 
                                    'Glycopeptide_readonly'],
         # connect_read_only=>1,
-        allow_anonymous_access=>1,
+        allow_anonymous_access=>0,
     ));
     $motif_type = $sbeamsMOD->get_current_motif_type();
 
-    for my $p ( $q->param() ) { $log->info( "$p => " . $q->param( $p ) ); }
+#    for my $p ( $q->param() ) { $log->info( "$p => " . $q->param( $p ) ); }
 
     #### Read in the default input parameters
     my %parameters;
@@ -92,8 +96,9 @@ sub main
         q=>$q,
         parameters_ref=>\%parameters
         );
-#    $sbeams->printCGIParams($q);
-
+    if ( $parameters{unipep_build_id} ) {
+      $sbeamsMOD->set_current_build( build_id => $parameters{unipep_build_id} );
+    }
 
     ## get project_id to send to HTMLPrinter display
     my $project_id = $sbeams->getCurrent_project_id();
@@ -151,22 +156,36 @@ sub handle_request {
         || die "ref_parameters not passed";
 
     	my %parameters = %{$ref_parameters};
+      my $motif = $sbeamsMOD->get_current_motif_type();
+      my $title = '';
+      my $intro = '';
+  if ( $motif !~ /phospho/ ) {
+    $title = "ISB N-glycosylation peptide prediction server";
+    $intro =<<"    END";
+    "The ISB N-Glyco prediction server shows all the N-linked glycosylation site contained 
+    within predicted and identified tryptic peptides.  
+    The Glyco score indicates how likely the site is glycosylated and the detection score
+    is an indication on how likely the glycosylated peptide will be detected in a MS/MS run.  This is 
+    useful for quantitating proteins of interest. 
+    <br>
+    Click <a href='http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?cmd=Retrieve&db=pubmed&dopt=Abstract&list_uids=15637048'>here</a>
+    for more information."
+    END
+  } else {
+    $title = "ETH/ISB Phosphosite server";
+    $intro =<<"    END";
+    Database of observed phosphorylation sites
+    END
+  }
 	
 	print 
 	$q->table({class=>'table_setup'},
           $q->Tr({class=>'rev_gray_head'},
-	     $q->td({colspan=>2, class=>'rev_gray_head'}, "ISB N-glycosylation peptide prediction server"),
+	     $q->td({colspan=>2, class=>'rev_gray_head'}, $title ),
 	  	 
 	  ),
 	  $q->Tr(
- 	     $q->td({colspan=>2}, "The ISB N-Glyco prediction server shows all the N-linked glycosylation site contained 
-		    within predicted and identified tryptic peptides.  
-		    The Glyco score indicates how likely the site is glycosylated and the detection score
-		    is an indication on how likely the glycosylated peptide will be detected in a MS/MS run.  This is 
-		   useful for quantitating proteins of interest. 
-		   <br>
-		   Click <a href='http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?cmd=Retrieve&db=pubmed&dopt=Abstract&list_uids=15637048'>here</a>
-		   for more information."
+ 	     $q->td({colspan=>2}, $intro
 	     )
 	 ), 
 	$q->Tr(
@@ -1330,6 +1349,8 @@ sub display_phospho_detail_form{
 									  );
 
   my $pseq = $glyco_o->seq_info()->seq();
+  my $synonym = get_annotation(glyco_o   => $glyco_o, anno_type => 'synonyms' );
+  my $kegglink = getKeggLink( name => $synonym );
   my $scanlink = getScansiteForm( seq => $pseq, name => $glyco_o->ipi_accession() );
 
   my $ipi_acc = $glyco_o->ipi_accession();
@@ -1350,12 +1371,13 @@ sub display_phospho_detail_form{
 
 			
 	## Print out the protein Information
+  my $sp = '&nbsp;' x 2;
   my $prot_info = join( "\n", 
     $q->Tr(
       $q->td({class=>'grey_header', colspan=>2}, "Protein Info"),),
     $q->Tr(
       $q->td({class=>'rev_gray_head'}, "IPI ID"),
-      $q->td("$ipi_url  $scanlink")),
+      $q->td({nowrap=>1}, "$ipi_url $kegglink  $scanlink")),
     $q->Tr(
       $q->td({class=>'rev_gray_head', nowrap=>1}, "Protein Name"),
       $q->td( $protein_name )),
@@ -1508,6 +1530,16 @@ END_DREK
 	print $q->a({id=>'protein_sequence'});
 
 } #end display_phospho
+
+
+sub getKeggLink {
+  my %args = @_;
+  for my $arg ( qw( name ) ) {
+    return "" unless $args{$arg};
+  }
+  my $img = "$HTML_BASE_DIR/images/kegg_sm.gif";
+  return "<A HREF=showPathways?ga=$args{name}><IMG BORDER=0 TITLE='View KEGG pathways for this gene' SRC=$img></A>";
+}
 
 
 sub getScansiteForm {

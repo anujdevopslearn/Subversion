@@ -73,6 +73,9 @@ sub main
         q=>$q,
         parameters_ref=>\%parameters
         );
+    if ( $parameters{unipep_build_id} ) {
+      $sbeamsMOD->set_current_build( build_id => $parameters{unipep_build_id} );
+    }
 
 
     ## get project_id to send to HTMLPrinter display

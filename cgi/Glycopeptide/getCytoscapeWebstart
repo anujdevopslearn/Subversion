@@ -50,14 +50,14 @@ $|++;
   # Process cgi parameters
   $params = process_params();
   
-
-  my $content = 'gi joe';
+  my $spc = $sbeams->getGifSpacer(700);
+  my $content = "<FONT COLOR=green><I>Feature not yet implemented</I></FONT> $spc";
   $params->{apply_action} ||= 'genes_from_pathway';
 
   # Decision block, what type of page are we going to display?
   if ( $params->{apply_action} eq 'genes_from_pathway' ) {
-    $content = make_ws_from_pathway( $params );
-    print $content;
+#    $content = make_ws_from_pathway( $params );
+#    print $content;
   }
   $glyco->printPageHeader();
   print $content;
@@ -83,46 +83,9 @@ sub make_ws_from_pathway {
   $keggmap->setPathway( pathway => $params->{path_id} );
   my $gene_list = $keggmap->getPathwayGenes(); # pathway => $params->{path_id} );
   # Look up in database
-  # Fetches expression info from db, returns arrays of bg/fg colors
-  my ( $bg, $fg, $glyco_hits, $cnt ) = get_observed_peptides($gene_list);
-  # make webstart
-}
+  my $sql = get_observed_peptide_sql( $gene_list );
 
-sub get_observed_peptides {
-
-  my $gene_list = shift;
-  my $cutoff = $glyco->get_current_prophet_cutoff();
-  
-  my $gene_string = join( ", ", @{$gene_list} );
-
-  my $sql = '';
-
-  if ( $kegg_organism eq  'dme' ) {
-    $sql =<<"    END";
-    SELECT CASE WHEN ipi_accession_number LIKE 'CG%' THEN ipi_accession_number
-                ELSE synonyms END AS accession, ID.ipi_data_id, 'nada', 'nada', 1
-      FROM $TBGP_IPI_DATA ID 
-      JOIN $TBGP_OBSERVED_TO_IPI ITI 
-        ON ITI.ipi_data_id = ID.ipi_data_id
-      JOIN $TBGP_OBSERVED_PEPTIDE IP 
-        ON ITI.OBSERVED_peptide_id = IP.OBSERVED_peptide_id
-     WHERE ( ipi_accession_number IN ($gene_string)
-             OR synonyms IN ($gene_string) )
-       AND peptide_prophet_score >= $cutoff 
-    END
-  } else {
-    $sql =<<"    END";
-    SELECT entrez_id, ipi_accessions, 'nada', 'nada', 1
-      FROM dcampbel.dbo.ipi_xrefs IX JOIN $TBGP_IPI_DATA ID 
-        ON IX.ipi_accessions = ID.ipi_accession_number
-      JOIN $TBGP_OBSERVED_TO_IPI ITI 
-        ON ITI.ipi_data_id = ID.ipi_data_id
-      JOIN $TBGP_OBSERVED_PEPTIDE IP 
-        ON ITI.observed_peptide_id = IP.observed_peptide_id
-     WHERE entrez_id IN ($gene_string)
-       AND peptide_prophet_score >= $cutoff 
-    END
-  }
+  # Make resultset 
 
   my $rs_ref = {};
 
@@ -143,7 +106,45 @@ sub get_observed_peptides {
     resultset_params_ref=>\%rs_params,
     query_name=>"$SBEAMS_SUBDIR/getCytoscapeWebstart",
   );
+  # make webstart
+}
 
+sub get_observed_peptide_sql {
+
+  my $gene_list = shift;
+  my $cutoff = $glyco->get_current_prophet_cutoff();
+  
+  my $gene_string = join( ", ", @{$gene_list} );
+
+  my $sql = '';
+
+  if ( $kegg_organism eq  'dme' ) {
+    $sql =<<"    END";
+    SELECT CASE WHEN ipi_accession_number LIKE 'CG%' THEN ipi_accession_number
+                ELSE synonyms END AS accession, ID.ipi_data_id
+      FROM $TBGP_IPI_DATA ID 
+      JOIN $TBGP_OBSERVED_TO_IPI ITI 
+        ON ITI.ipi_data_id = ID.ipi_data_id
+      JOIN $TBGP_OBSERVED_PEPTIDE IP 
+        ON ITI.OBSERVED_peptide_id = IP.OBSERVED_peptide_id
+     WHERE ( ipi_accession_number IN ($gene_string)
+             OR synonyms IN ($gene_string) )
+       AND peptide_prophet_score >= $cutoff 
+    END
+  } else {
+    $sql =<<"    END";
+    SELECT entrez_id, ipi_accessions
+      FROM dcampbel.dbo.ipi_xrefs IX JOIN $TBGP_IPI_DATA ID 
+        ON IX.ipi_accessions = ID.ipi_accession_number
+      JOIN $TBGP_OBSERVED_TO_IPI ITI 
+        ON ITI.ipi_data_id = ID.ipi_data_id
+      JOIN $TBGP_OBSERVED_PEPTIDE IP 
+        ON ITI.observed_peptide_id = IP.observed_peptide_id
+     WHERE entrez_id IN ($gene_string)
+       AND peptide_prophet_score >= $cutoff 
+    END
+  }
+  return ( $sql );
 }
 
 __DATA__
