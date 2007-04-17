@@ -118,9 +118,11 @@ sub keyword_search {
     $err .= ( $err ) ? ", $key" : $key unless $args{$key};  
   }
   die "Missing required params: $err" if $err;
+  $args{autorun} ||= 0;
 
   my $sql = $self->get_query_sql( type => $args{search_type},
-                                  term => $args{search_term} );
+                                  term => $args{search_term},
+                                  auto => $args{autorun} );
 
   if ( !$sql ) {
     $log->error( "No SQL generated from query: $args{search_type}, $args{search_term}" );
@@ -138,6 +140,7 @@ sub gene_name_query{
 	my $method = 'gene_name_query';
 	my $self = shift;
 	my $term = shift;
+  $term =~ s/;/,/g;
 	
 	my $osql = qq~
     SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
@@ -169,10 +172,12 @@ sub all_proteins_query {
      SELECT ID.ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
      COUNT(DISTINCT matching_sequence) AS num_observed
       FROM $TBGP_OBSERVED_TO_IPI ITI
-       JOIN $TBGP_OBSERVED_PEPTIDE OP ON ITI.observed_peptide_id = OP.observed_peptide_id
        JOIN $TBGP_IPI_DATA ID ON ID.ipi_data_id = ITI.ipi_data_id
+       JOIN $TBGP_OBSERVED_PEPTIDE OP ON ITI.observed_peptide_id = OP.observed_peptide_id
+       JOIN $TBGP_PEPTIDE_SEARCH PS ON PS.peptide_search_id = OP.peptide_search_id
+       JOIN $TBGP_BUILD_TO_SEARCH BTS ON BTS.search_id = PS.peptide_search_id
       WHERE peptide_prophet_score >= $cutoff
-      AND ipi_version_id = ( SELECT ipi_version FROM glycopeptide.dbo.unipep_build WHERE unipep_build_id = $build ) 
+      AND BTS.build_id = $build 
       GROUP BY ID.ipi_data_id, ipi_accession_number, protein_name, protein_symbol
       HAVING COUNT(*) > 0
     ) AS temp
@@ -258,8 +263,13 @@ sub get_query_sql {
   for my $k ( keys ( %args ) ) { $log->debug( "querysql: $k => $args{$k}" ); }
 
   my $cutoff = $self->get_current_prophet_cutoff();
+  my $build = $self->get_current_build();
 
   my $subclause = '';
+  if ( $args{auto} || $args{type} eq 'GeneID' ) {
+    $log->debug( "We're trying here\n\n" );
+    $args{term} =~ s/;/,/g;
+  }
 
   if ( $args{type} eq 'swiss_prot' ) {
 	  $subclause = " swiss_prot_acc like 'ID_VALUE'";
@@ -268,10 +278,10 @@ sub get_query_sql {
   } elsif ( $args{type} eq 'gene_symbol' ) {
     $subclause = " protein_symbol like 'ID_VALUE'";
   } elsif ( $args{type} eq 'gene_name' ) {
-    $subclause = " protein_name like 'ID_VALUE'";
+    $subclause = " protein_name like 'ID_VALUE' OR synonyms like 'ID_VALUE' ";
   } elsif ( $args{type} eq 'accession' ) {
     $subclause = " ipi_accession_number like 'ID_VALUE'";
-  } elsif ( $args{type} eq 'gene_id' ) {
+  } elsif ( $args{type} eq 'GeneID' ) {
     $subclause = " ipi_accession_number IN ( SELECT ipi_accessions FROM DCAMPBEL.dbo.ipi_xrefs WHERE entrez_id IN ($args{term}) ) ";
   } else {
     $log->error( "Unknown type" );
@@ -281,23 +291,30 @@ sub get_query_sql {
   my $joiner = ' ';
   my $clause = '';
   for my $term ( @$terms ) {
+    $log->debug( "Term is $term" );
     my $sc = $subclause;
     $sc =~ s/ID_VALUE/$term/g;
     $clause .= $joiner . $sc;
     $joiner = "\n        OR ";
   }
-  $clause = $subclause if $args{type} eq 'gene_id';
+  $log->debug( "clause is $clause" );
+  $clause = $subclause if $args{type} eq 'GeneID';
+  $log->debug( "reclause is $clause" );
 
   my $sql = qq~
   SELECT ID.ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
-    ( SELECT COUNT(*) 
+         COUNT(*) AS num_observed
       FROM $TBGP_OBSERVED_TO_IPI ITI 
-      JOIN $TBGP_OBSERVED_PEPTIDE IP
-        ON IP.observed_peptide_id = ITI.observed_peptide_id
-      WHERE ITI.ipi_data_id = ID.ipi_data_id
-      AND peptide_prophet_score >= $cutoff ) AS num_observed 
-  FROM $TBGP_IPI_DATA ID
-  WHERE(  $clause )
+      JOIN $TBGP_IPI_DATA ID
+        ON ITI.ipi_data_id = ID.ipi_data_id
+      JOIN $TBGP_OBSERVED_PEPTIDE OP
+        ON OP.observed_peptide_id = ITI.observed_peptide_id
+      JOIN $TBGP_PEPTIDE_SEARCH PS ON PS.peptide_search_id = OP.peptide_search_id
+      JOIN $TBGP_BUILD_TO_SEARCH BTS ON BTS.search_id = PS.peptide_search_id
+     WHERE BTS.build_id = $build 
+       AND peptide_prophet_score >= $cutoff
+       AND ( $clause )
+     GROUP BY  ID.ipi_data_id, ipi_accession_number, protein_name, protein_symbol
   ~;
   $log->info( $sbeams->evalSQL( $sql ) );
   return $sql;
@@ -601,25 +618,6 @@ sub get_identified_peptides{
 				WHERE OTI.ipi_data_id = $ipi_data_id
 				~;
 	
-#  	my $sql = qq~
-#  				SELECT 
-#  				id.identified_peptide_id
-#  				identified_peptide_sequence
-#  				peptide_prophet_score,
-#  				peptide_mass,
-#  				tryptic_end,
-#  				gs.glyco_score,
-#  				gs.protein_glycosite_position,
-#  				identified_start,
-#  				identified_stop,
-#  n_obs
-#  				FROM $TBGP_IDENTIFIED_PEPTIDE id
-#  JOIN $TBGP_IDENTIFIED_TO_IPI iti 
-#  ON iti.identified_peptide_id = id.identified_peptide_id
-#  				JOIN $TBGP_GLYCOSITE gs ON (gs.glycosite_id = iti.glycosite_id)
-#  				WHERE iti.ipi_data_id = $ipi_data_id
-#  				~;
-  	
   		return $sbeams->selectHashArray($sql);	
 }	
 

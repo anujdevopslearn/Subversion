@@ -950,12 +950,28 @@ sub selectSeveralColumns {
     $sql = $self->translateSQL(sql=>$sql);
 
     #### FIX ME replace with $dbh->selectall_arrayref ?????
-    my $sth = $dbh->prepare($sql) or confess($dbh->errstr);
-    my $rv  = $sth->execute();
-    unless( $rv ) {
-      $log->error( "Error executing SQL:\n $sql" );
+    my $sth;
+    unless ( $sth = $dbh->prepare($sql) ) {
+      $log->error( "Error preparing SQL:\n $sql\n" . $dbh->errstr );
       $log->printStack( 'error' );
-      confess $dbh->errstr;
+      confess($dbh->errstr);
+    }
+    $log->debug( "heck yeah part deux" );
+
+    my $rv;
+    eval {
+      $rv  = $sth->execute();
+      unless( $rv ) {
+        $log->error( "Error executing SQL:\n $sql" );
+        $log->error( $dbh->errstr() );
+        $log->printStack( 'error' );
+        confess $dbh->errstr;
+      }
+    };
+    if ( $@ ) {
+        $log->error( "Error executing SQL:\n $sql" );
+        $log->printStack( 'error' );
+        confess $dbh->errstr;
     }
 
     while (my @row = $sth->fetchrow_array) {

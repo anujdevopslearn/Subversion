@@ -34,7 +34,7 @@ sub new {
   my $sbeams = $args{sbeams} || SBEAMS::Connection->new();
   my $verbose = $args{verbose} || 0;
   my $debug  = $args{debug};
-  my $test_only = $args{test_only};
+  my $testonly = $args{testonly};
   my $file = $args{file};
   my $release = $args{release} || $args{file};
   
@@ -46,7 +46,7 @@ sub new {
   $self->setSBEAMS($sbeams);
   $self->verbose($verbose);
   $self->debug($debug);
-  $self->testonly($test_only);
+  $self->testonly($testonly);
 	
   return $self;
 }
@@ -124,7 +124,6 @@ sub testonly {
 sub getfile {
 	my $method = 'getfile';
 	my $self = shift;
-	
 	return	$self->{_file};
 }
 
@@ -447,7 +446,7 @@ sub insert_peptides {
   my %args = @_;
 
   my $err;
-  for my $opt ( qw( release peptide_file format ) ) {
+  for my $opt ( qw( build peptide_file format ipi_version_id ) ) {
     $err = ( $err ) ? $err . ', ' . $opt : $opt if !defined $args{$opt};
   }
   die ( "Missing required parameter(s): $err in " . $self->whatsub() ) if $err;
@@ -486,7 +485,7 @@ sub insert_peptide_search {
   my $self = shift;
   my %args = @_;
   my $err;
-  for my $opt ( qw( peptide_file sample_id ipi_version_id ) ) {
+  for my $opt ( qw( peptide_file sample_id ipi_version_id build_id ) ) {
     $err = ( $err ) ? $err . ', ' . $opt : $opt if !defined $args{$opt};
   }
   die ( "Missing required parameter(s): $err in " . $self->whatsub() ) if $err;
@@ -513,7 +512,7 @@ sub insert_peptide_search {
 
   
   # Insert row
-  my $id = $sbeams->updateOrInsertRow( table_name  => $TBGP_PEPTIDE_SEARCH,
+  my $sid = $sbeams->updateOrInsertRow( table_name  => $TBGP_PEPTIDE_SEARCH,
                                        rowdata_ref => $rowdata,
                                        return_PK   => 1,
                                        verbose     => $self->verbose(),
@@ -521,7 +520,18 @@ sub insert_peptide_search {
                                        insert      => 1,
                                        PK          => 'peptide_search_id',
                                      );
-  return $id;
+  
+  my $btsid = $sbeams->updateOrInsertRow( table_name  => $TBGP_BUILD_TO_SEARCH,
+                                       rowdata_ref => {build_id => $args{build_id},
+                                                       search_id => $sid },
+                                       return_PK   => 1,
+                                       verbose     => $self->verbose(),
+                                       testonly    => $self->testonly(),
+                                       insert      => 1,
+                                       PK          => 'peptide_search_id',
+                                     );
+  
+  return $sid;
 }
 
 
@@ -535,11 +545,13 @@ sub insert_observed_peptides {
   die ( "Missing required parameter(s): $err in " . $self->whatsub() ) if $err;
 
   # this call will populate 3 hashes, seq->data_id, data_id => sequence, and ipi_id -> data_id
-  $self->get_ipi_seqs( ipi_version_id => $args{ipi_version_id} );
+  $self->get_ipi_seqs( ipi_version_id => $args{ipi_version_id},
+                             build_id => $args{build_id} );
 
   my $seqs = $self->{_seq_to_id};
   my $accs = $self->{_acc_to_id};
   my $ids = $self->{_id_to_seq};
+  my $pepseqs = $self->{_pepseqs};
 
   my @keys = keys( %{$seqs} );
   print "Found $#keys seqs\n";
@@ -548,12 +560,14 @@ sub insert_observed_peptides {
   my $sbeams = $self->getSBEAMS();
 
   my $cnt;
-  my $insert_cnt;
+  my $insert_cnt = 0;
   my $t0 = time();
   my $pcnt = scalar( @{$args{peptides}} );
   print "Inserting peptides ($pcnt candidates)\n"; 
   for my $obs ( @{$args{peptides}} ) {
     $cnt++;
+    # for my $k ( keys( %$heads ) ) { print "$k => $heads->{$k} => $obs->[$heads->{$k}]\n"; }
+
 
     my $clean_pep = $module->clean_pepseq( $obs->[$heads->{Peptide}] );
     my $clean_prot = $self->trim_space( $obs->[$heads->{Protein}] );
@@ -576,15 +590,22 @@ sub insert_observed_peptides {
     } elsif ( $obs->[$heads->{prob}] < 0.5 ) { # detection probability too low
       print STDERR "Low probability: $obs->[$heads->{prob}]\n";
       next;
+    } elsif ( grep /$clean_pep/,  @$pepseqs ) { # Duplicato
+      # FIXME - should we update here?
+      # FIXME - Case sensitive?
+      print STDERR "Duplicate detected: $clean_pep\n";
+      next;
     }
     $insert_cnt++;
+    # Fight dups in same file
+    push @$pepseqs, $clean_pep;
 
     my $exp_mass = $module->mh_plus_to_mass($obs->[$heads->{'MH+'}]);
     my $calc_mass = $module->calculatePeptideMass( sequence => $clean_pep ); 
     my $out = basename( $obs->[$heads->{file}] );
     my @name = split( /\./, $out );
     unless ( scalar(@name) == 4 && $name[1] == $name[2] ) {
-      warn "Mismatch in out $out: " . join( ", ", @name ) . "\n";
+#      warn "Mismatch in out $out: " . join( ", ", @name ) . "\n";
     }
     my ( $delta ) = $self->extract_delta( $obs->[$heads->{'MH error'}] );
 
@@ -606,7 +627,8 @@ sub insert_observed_peptides {
                             matching_sequence => $clean_pep,
                                   scan_number => $name[2],
                                  charge_state => $name[3],
-                                 peptide_mass => $calc_mass
+                                 peptide_mass => $calc_mass,
+                                     delta_cn => $obs->[$heads->{dCn}],
               };
 
    
@@ -749,7 +771,7 @@ sub get_ipi_seqs {
   my $self = shift;
   my %args = @_;
   my $err;
-  for my $opt ( qw( ipi_version_id ) ) {
+  for my $opt ( qw( ipi_version_id build_id ) ) {
     $err = ( $err ) ? $err . ', ' . $opt : $opt if !defined $args{$opt};
   }
   die ( "Missing required parameter(s): $err in " . $self->whatsub() ) if $err;
@@ -772,6 +794,18 @@ sub get_ipi_seqs {
   $self->{_seq_to_id} = \%seq2id;
   $self->{_acc_to_id} = \%acc2id;
   $self->{_id_to_seq} = \%id2seq;
+
+  $sql =<<"  END";
+  SELECT matching_sequence 
+  FROM $TBGP_OBSERVED_PEPTIDE OP JOIN $TBGP_BUILD_TO_SEARCH BTS
+    ON OP.peptide_search_id = BTS.search_id
+  WHERE build_id = $args{build_id}
+  END
+  my @pepseqs; 
+  while( my $row = $sbeams->selectSeveralColumnsRow( sql => $sql ) ) {
+    push @pepseqs, $row->[0]; 
+  }
+  $self->{_pepseqs} = \@pepseqs;
   return 1;
 }
 

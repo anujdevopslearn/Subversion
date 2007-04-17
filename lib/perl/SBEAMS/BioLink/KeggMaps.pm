@@ -297,7 +297,7 @@ sub getKeggPathways {
 
   } elsif (  $args{source} =~ /db/i ) {
     # Fetch info from the database
-    $result = $self->list_db_pathways( organism => $args{organism} ); 
+    $result = $self->list_db_pathways( %args ); 
   } else {
   }
   # ref to array of hashrefs
@@ -413,6 +413,8 @@ sub fetchPathwayXML {
 
   my $base = $CONFIG_SETTING{KGML_URL} || 
     "ftp://ftp.genome.jp/pub/kegg/xml/KGML_v0.6.1/$org/BASE.xml";
+#    $base = "ftp://ftp.genome.jp/pub/kegg/xml/organisms/$org/BASE.xml";
+#    $log->debug( "kegg earl is $base" );
 
   $base =~ s/BASE/$path/g;
   $base =~ s/__KEGG_ORG__/$org/g;
@@ -441,17 +443,21 @@ sub parsePathwayXML {
   $path =~ s/path://g;
   my $org = $args{organism} || $self->{_organism}; 
   for my $req ( $path, $org ) {
+    $log->debug( "daing fish" );
     die "Missing required parameter" unless $req;
   }
 
   my $parser = SBEAMS::BioLink::KGMLParser->new();
 
   $args{source} ||= 'db';
+    $log->debug( "fetching fish" );
   if ( $args{source} eq 'db' && $self->kegg_tables_exist() ) {
+    $log->debug( "fetching fishes" );
     my ( $kgml ) = $sbeams->selectrow_array( <<"    END" );
     SELECT kgml FROM $TBBL_KEGG_PATHWAY
     WHERE kegg_pathway_name = 'path:$path'
     END
+    $log->debug( "fetched fish" );
     if ( $kgml ) {
       $parser->set_string( xml => $kgml );
     } else {
@@ -537,6 +543,25 @@ sub getColoredPathway {
     $pathway = 'path:' .  $pathway;
   }
 
+  my $cnt = 0;
+  my $all = '';
+  for my $g ( @{$args{genes}} ) {
+    $cnt++;
+    $all .= " $g"; 
+  }
+  $cnt = 0;
+  $all = '';
+  for my $g ( @{$args{fg}} ) {
+    $cnt++;
+    $all .= " $g"; 
+  }
+  $cnt = 0;
+  $all = '';
+  for my $g ( @{$args{bg}} ) {
+    $cnt++;
+    $all .= " $g"; 
+  }
+
   my $genes = SOAP::Data->type( array => $args{genes} );
   my $fg = SOAP::Data->type( array => $args{fg} );
   my $bg = SOAP::Data->type( array => $args{bg} );
@@ -544,10 +569,10 @@ sub getColoredPathway {
   my $service = $self->get_service();
   my $url = $service->color_pathway_by_objects("$pathway", $genes, $fg, $bg ) ;
   return $url if $url;
-  $log->info( "Initial fetch for $pathway failed!" );
+  $log->info( "Initial fetch for $pathway failed!: $!" );
   $url = $service->color_pathway_by_objects("$pathway", $genes, $fg, $bg ) ;
   return $url if $url;
-  print "</DIV>Unable to fetch pathway from KEGG, please try again later.</BODY></HTML>\n";
+  print "</DIV>Unable to fetch pathway from KEGG, please try again later. </BODY></HTML>\n";
   exit;
 
 }
@@ -579,13 +604,41 @@ sub list_db_pathways { # $args{organism} );
     exit;
   }
   my $org_id = $self->getOrganismID( name => $args{organism} );
-
-  my @db_rows = $sbeams->selectSeveralColumns( <<"  END");
-  SELECT kegg_pathway_name, kegg_pathway_description
-  FROM $TBBL_KEGG_PATHWAY
-  WHERE kegg_organism_id = $org_id
-  ORDER BY kegg_pathway_name ASC
-  END
+  my @db_rows;
+  if ( $args{genes} ) {
+    my $in = '';
+    my $sep = '';
+    for my $gene ( @{$args{genes}} ) {
+      $in .= $sep . "'" . $gene . "'";
+    }
+    @db_rows = $sbeams->selectSeveralColumns( <<"    END");
+    SELECT kegg_pathway_name, kegg_pathway_description
+    FROM $TBBL_KEGG_PATHWAY KP JOIN $TBBL_KEGG_PATHWAY_GENES KPG
+      ON KPG.kegg_pathway_id = KP.kegg_pathway_id
+    JOIN $TBBL_KEGG_GENE KG 
+      ON KG.kegg_gene_id = KPG.kegg_gene_id
+    WHERE KP.kegg_organism_id = $org_id
+      AND gene_id IN ( $in )
+    ORDER BY kegg_pathway_name ASC
+    END
+    $log->debug( $sbeams->evalSQL( <<"    END" ) );
+    SELECT kegg_pathway_name, kegg_pathway_description
+    FROM $TBBL_KEGG_PATHWAY KP JOIN $TBBL_KEGG_PATHWAY_GENES KPG
+      ON KPG.kegg_pathway_id = KP.kegg_pathway_id
+    JOIN $TBBL_KEGG_GENE KG 
+      ON KG.kegg_gene_id = KPG.kegg_gene_id
+    WHERE KP.kegg_organism_id = $org_id
+      AND gene_id IN ( $in )
+    ORDER BY kegg_pathway_name ASC
+    END
+  } else {
+    @db_rows = $sbeams->selectSeveralColumns( <<"    END");
+    SELECT kegg_pathway_name, kegg_pathway_description
+    FROM $TBBL_KEGG_PATHWAY
+    WHERE kegg_organism_id = $org_id
+    ORDER BY kegg_pathway_name ASC
+    END
+  }
 
   my @results;
   for my $row ( @db_rows ) {

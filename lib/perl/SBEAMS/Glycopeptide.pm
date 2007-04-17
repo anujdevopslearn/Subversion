@@ -60,6 +60,12 @@ sub getSBEAMS {
 # Stub routine for selecting current unipep organism.
 #-
 sub getKeggOrganism {
+  my $self = shift;
+  my $organism = $self->get_current_organism();
+  return ( !$organism ) ? 'hsa' : ( $organism =~ /Drosophila/i ) ? 'dme' : 
+                                  ( $organism =~ /Saccaromyces/i ) ? 'sce' : 
+                                  ( $organism =~ /Human/i ) ? 'hsa' :
+                                  ( $organism =~ /Mouse/i ) ? 'mmu' : 'hsa';
   return 'hsa';
 }
 

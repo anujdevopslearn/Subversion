@@ -193,12 +193,16 @@ sub get_current_prophet_cutoff {
   } else  {
     $cutoff = $sbeams->getSessionAttribute( key => 'glyco_prophet_cutoff' );
   }
-  $cutoff ||= 0.5; 
+  $cutoff ||= 0.8; 
   return $cutoff;
 }
 
 sub get_current_build_name {
   my $self = shift;
+
+  if ( $self->{_build_name} && $self->{_build_name} ne 'unknown' ) {
+    return $self->{_build_name};
+  }
 
   my $build_id = $self->get_current_build();
 
@@ -208,7 +212,8 @@ sub get_current_build_name {
   SELECT build_name FROM $TBGP_UNIPEP_BUILD 
   WHERE unipep_build_id  = $build_id
   END
-  return $build_name || 'Unknown';
+  $self->{_build_name} = $build_name || 'unknown';
+  return $self->{_build_name};
 
 }
   
@@ -217,26 +222,33 @@ sub get_current_build {
   my $self = shift;
   my %args = @_;
 
+  $log->debug( "pre check" );
   # Check self for value
-  if ( $self->{_build_id} ) {
-    return $self->{_build_id};
-  }
+  return $self->{_build_id} if ( $self->{_build_id} ); 
+  $log->debug( "post check, it wasn't cached" );
+
   my $sbeams = $self->getSBEAMS();
 
+  $log->debug( "Check session" );
   my $build_id = $sbeams->getSessionAttribute( key   => 'unipep_build_id' );
+  $log->debug( "Session says $build_id" );
 
   if ( $build_id ) {
+  $log->debug( "Set it" );
     $self->set_current_build( build_id => $build_id );
     return $build_id 
   }
   
+  $log->debug( "DB" );
   # Get database default?
   ( $build_id ) = $sbeams->selectrow_array( <<"  END" );
   SELECT unipep_build_id FROM $TBGP_UNIPEP_BUILD WHERE is_default  = 1
   END
+  $log->debug( "DB says $build_id" );
 
   # Last option
   $build_id ||= 1;
+  $log->debug( "final soln? $build_id" );
 
   $self->set_current_build( build_id => $build_id );
   return $build_id 
@@ -266,6 +278,33 @@ sub set_current_build {
                                 value => $args{build_id} );
 
   return 1;
+}
+
+sub get_current_organism {
+  my $self = shift;
+  my $build_id = $self->get_current_build();
+
+  my $sbeams = $self->getSBEAMS();
+  my $sql =<<"  END";
+  SELECT organism_name 
+    FROM $TBGP_IPI_VERSION IV 
+    JOIN $TB_ORGANISM O 
+      ON O.organism_id = IV.organism_id
+    JOIN $TBGP_PEPTIDE_SEARCH PS 
+      ON PS.ref_db_id = IV.ipi_version_id
+    JOIN $TBGP_BUILD_TO_SEARCH BTS 
+      ON BTS.search_id = PS.peptide_search_id
+    JOIN $TBGP_UNIPEP_BUILD UB 
+      ON BTS.build_id = UB.unipep_build_id
+  WHERE unipep_build_id = $build_id
+  END
+  my ( $organism ) = $sbeams->selectrow_array( $sql );
+  $log->debug( "Org is $organism" );
+  $log->debug( "SQL is \n" . $sbeams->evalSQL( $sql ) );
+
+  return $organism || 'Human';
+
+  
 }
 
 sub is_valid_build {
@@ -365,6 +404,14 @@ sub clean_pepseq {
   $seq =~ s/M\#/m/g;
   $seq =~ s/d/n/g;
   $seq =~ s/U/n/g;
+  
+  # Phospho
+  $seq =~ s/T\*/t/g;
+  $seq =~ s/S\*/s/g;
+  $seq =~ s/Y\*/y/g;
+  $seq =~ s/T\&/t/g;
+  $seq =~ s/S\&/s/g;
+  $seq =~ s/Y\&/y/g;
 
   # Trim off leading/lagging amino acids
   $seq =~ s/^.\.//g;
@@ -526,9 +573,9 @@ sub calculatePeptideMass {
       unless ( $args{sequence} =~ /$mod/ ) {
         die "how can it not match?";
       }
-      print "mod is >$mod<, orig is >$orig<, seq is $args{sequence}\n";
+#      print "mod is >$mod<, orig is >$orig<, seq is $args{sequence}\n";
       if ( $mod =~ /(\w)\*/ ) {
-        print "Special\n";
+#        print "Special\n";
         $args{sequence} =~ s/$1\*//;
       } else {
         $args{sequence} =~ s/$mod//;
@@ -764,19 +811,26 @@ sub runBulkSearch {
   my $sbeams = $self->getSBEAMS();
   my $ids = join( ',', @ids );
 
+  my $build_id = $self->get_current_build();
+  my $cutoff = $self->get_current_prophet_cutoff();
+
   my $type = ( $args{id_type} eq 'swp' ) ? 'swiss_prot_acc' :
              ( $args{id_type} eq 'sym' ) ? 'protein_symbol' : 'ipi_accession_number';
 
 
   my $sql =<<"  END";
   SELECT DISTINCT ipi_accession_number, swiss_prot_acc, ID.ipi_data_id,
-             identified_peptide_sequence, protein_symbol, protein_name, IP.identified_peptide_id,
-             peptide_prophet_score, peptide_mass
-  FROM $TBGP_IPI_DATA ID join $TBGP_IDENTIFIED_TO_IPI ITI
-  ON ID.ipi_data_id = ITI.ipi_data_id
-  JOIN $TBGP_IDENTIFIED_PEPTIDE IP
-  ON IP.identified_peptide_id = ITI.identified_peptide_id
-  WHERE $type IN ( $ids )
+             observed_peptide_sequence, protein_symbol, protein_name, 
+             OP.observed_peptide_id, peptide_prophet_score, peptide_mass
+  FROM $TBGP_IPI_DATA ID 
+  JOIN $TBGP_OBSERVED_TO_IPI OTI ON ID.ipi_data_id = OTI.ipi_data_id
+  JOIN $TBGP_OBSERVED_PEPTIDE OP ON OP.OBSERVED_peptide_id = OTI.OBSERVED_peptide_id
+  JOIN $TBGP_PEPTIDE_SEARCH PS ON PS.peptide_search_id = OP.peptide_search_id
+  JOIN $TBGP_BUILD_TO_SEARCH BTS ON BTS.search_id = PS.peptide_search_id
+  WHERE peptide_prophet_score >= $cutoff
+   AND BTS.build_id = $build_id 
+   AND $type IN ( $ids )
+   ORDER BY ipi_accession_number, swiss_prot_acc
   END
   $log->debug( $sql );
 

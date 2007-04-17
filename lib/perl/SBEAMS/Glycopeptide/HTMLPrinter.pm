@@ -36,6 +36,64 @@ sub printPageHeader {
   $self->display_page_header(@_);
 }
 
+# displayPhosphopepHeader
+###############################################################################
+sub displayPhosphopepHeader {
+ 	my $self = shift;
+  my %args = @_;
+  my $loadscript = "$args{onload};" || '';
+
+  #### Obtain main SBEAMS object and use its http_header
+  my $sbeams = $self->getSBEAMS();
+  my $http_header = $sbeams->get_http_header();
+
+  my $navigation_bar = $args{'navigation_bar'} || "YES";
+
+  my $LOGIN_URI = "$SERVER_BASE_DIR$ENV{REQUEST_URI}";
+  if ($LOGIN_URI =~ /\?/) {
+    $LOGIN_URI .= "&force_login=yes";
+  } else {
+    $LOGIN_URI .= "?force_login=yes";
+  }
+  my $LOGIN_LINK = qq~<A HREF="$LOGIN_URI" class="leftnavlink">LOGIN</A>~;
+
+
+  use LWP::UserAgent;
+  use HTTP::Request;
+  my $ua = LWP::UserAgent->new();
+#  my $skinLink = 'http://www.phosphopep.org/newlook/';
+  my $skinLink = 'http://www.phosphopep.org';
+  my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index.dbbrowse.php" ) );
+  my @page = split( "\r", $response->content() );
+  my $skin = '';
+  my $cnt = 0;
+#  print STDERR "Original content is " . $response->content() . "\n";
+  for my $line ( @page ) {
+    $cnt++;
+    if ( $line =~ /LOGIN/ ) {
+      $line =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
+    } elsif ( $line =~ /\<BODY / ) {
+      $line =~ s/(\<BODY )/${1} ONLOAD="$loadscript" self.focus/;
+    } elsif ( $line =~ /td\s+\{font/ ) {
+  #    next;
+    } elsif ( $line =~ /body\s+\{font/ ) {
+  #    next;
+    }
+    $skin .= $line;
+    last if $line =~ /--- Main Page Content ---/;
+  }
+  $skin =~ s/\/images\//\/sbeams\/images\//gm;
+ 
+  print "$http_header\n\n";
+  print <<"  END_PAGE";
+  <HTML>
+  $skin
+  END_PAGE
+#  print '<STYLE TYPE=text/css>' . $self->getGlycoStyleSheet() . '</STYLE>';
+#  $self->printStyleSheet();
+
+  $self->printJavascriptFunctions();
+  }
 
 # displayUnipepHeader
 ###############################################################################
@@ -323,10 +381,13 @@ sub display_page_header {
       return;
     }
 
-    if( $sbeams->isGuestUser() ) {
-      $self->displayUnipepHeader();
+    if ( $self->get_current_motif_type() =~ /phospho/ ) {
+#      $self->displayPhosphopepHeader(%args);
+#      return();
+    } elsif( $sbeams->isGuestUser() ) {
+      $self->displayUnipepHeader(%args);
       return();
-    }
+    } 
   
     #### Obtain main SBEAMS object and use its http_header
     $sbeams = $self->getSBEAMS();
@@ -360,7 +421,7 @@ sub display_page_header {
 	<a name="TOP"></a>
 	<tr>
 	  <td bgcolor="$BARCOLOR"><a href="http://db.systemsbiology.net/"><img height=64 width=64 border=0 alt="ISB DB" src="$HTML_BASE_DIR/images/dbsmltblue.gif"></a><a href="https://db.systemsbiology.net/sbeams/cgi/main.cgi"><img height=64 width=64 border=0 alt="SBEAMS" src="$HTML_BASE_DIR/images/sbeamssmltblue.gif"></a></td>
-	  <td align="left" $header_bkg><H1>$DBTITLE - $SBEAMS_PART<BR>$DBVERSION</H1></td>
+	  <td align="left" $header_bkg><H1>$DBTITLE - $DBVERSION</H1></td>
 	</tr>
 
     ~;
@@ -369,6 +430,8 @@ sub display_page_header {
     my $message = $sbeams->get_page_message();
     my $sp = '&nbsp;' x 2;
 
+#  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch" TITLE="Search for peptides by mass range"><nobr>&nbsp;&nbsp;&nbsp;Mass Search</nobr></a></td></tr>
+#  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/getAnnotations" TITLE="Get annotations from list of reference accessions"><nobr>&nbsp;&nbsp;&nbsp;Fetch Annotations</nobr></a></td></tr>
     if ($navigation_bar eq "YES") {
       print qq~
 	<!------- Button Bar -------------------------------------------->
@@ -380,17 +443,17 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
- 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Glyco_prediction.cgi" TITLE="Search by accession, sequence, name"><nobr>&nbsp;&nbsp;&nbsp;Search Glycopeptides</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/browse_glycopeptides.cgi" TITLE="View list of all observed proteins"><nobr>&nbsp;&nbsp;&nbsp;Identified Proteins</nobr></a></td></tr>
+ 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Glyco_prediction.cgi" TITLE="Search by accession, sequence, name"><nobr>&nbsp;&nbsp;&nbsp;Search Observed Peptides</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/browse_glycopeptides.cgi" TITLE="View list of all observed proteins"><nobr>&nbsp;&nbsp;&nbsp;Observed Proteins</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/showPathways" TITLE="View observed peptides in context of KEGG maps"><nobr>&nbsp;&nbsp;&nbsp;Pathway Search</nobr></a></td></tr>
-  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch" TITLE="Search for peptides by mass range"><nobr>&nbsp;&nbsp;&nbsp;Mass Search</nobr></a></td></tr>
   <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/bulkSearch" TITLE="Perform batch search with list of accessions"><nobr>&nbsp;&nbsp;&nbsp;Bulk Search</nobr></a></td></tr>
-  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/getAnnotations" TITLE="Get annotations from list of reference accessions"><nobr>&nbsp;&nbsp;&nbsp;Fetch Annotations</nobr></a></td></tr>
   <tr><td><a href="http://www.unipep.org"><nobr>&nbsp;&nbsp;&nbsp;Unipep home</nobr></a></td></tr>
 
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=GP_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=GP_unipep_build"><nobr>&nbsp;&nbsp;&nbsp; Builds</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=GP_unipep_sample"><nobr>&nbsp;&nbsp;&nbsp; Samples</nobr></a></td></tr>
   <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/settings.cgi">${sp} UniPep Settings</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>$prophet_control</td></tr>
@@ -607,12 +670,15 @@ sub getSpectrastViewer {
 
   return '' unless $args{offset};
 
-  my $url = "http://regis-web/tpp-hlam/cgi-bin/plotspectrast.cgi?LibFile=/data2/search/hlam/ForDaveC/raw_consensus.splib&LibFileOffset=FILE_OFFSET&QueryFile=/data2/search/hlam/ForDaveC/spectrum.none";
+  my $url = "http://www.peptideatlas.org/cgi/spectrast/plotspectrast.cgi?LibFile=/net/dblocal/wwwspecial/sbeams/devDC/sbeams/usr/Glycopeptide/raw_consensus.splib&LibFileOffset=FILE_OFFSET&QueryFile=/net/dblocal/wwwspecial/sbeams/devDC/sbeams/tmp/images/spectrum.none";
+  
+
+# $url = "http://regis-web/tpp-hlam/cgi-bin/plotspectrast.cgi?LibFile=/data2/search/hlam/ForDaveC/raw_consensus.splib&LibFileOffset=FILE_OFFSET&QueryFile=/data2/search/hlam/ForDaveC/spectrum.none";
   $url =~ s/FILE_OFFSET/$args{offset}/;
 
   my $cipher = $self->getSBEAMS()->getAuthCipher;
-  my @auth = split "::", $cipher->decrypt_hex( '645c9938dc49eccc193553a57950ac78e5b0d69106f72331');
-
+#  my @auth = split "::", $cipher->decrypt_hex( '645c9938dc49eccc193553a57950ac78e5b0d69106f72331');
+ my @auth = ( 'none', 'required' );
 # Subclass LWP::UserAgent for Auth
 {
   package SpectrastViewerAgent;
@@ -645,17 +711,37 @@ sub getSpectrastViewer {
   $file_name .= '.png';
   $file_name =~ s/\*/\[167\]/g;
 
+  my $original_img = $PHYSICAL_BASE_DIR . "/tmp/images/spectrum.png";
+  my $named_img = $original_img;
+  $named_img =~ s/spectrum.png/$file_name/g;
+
+  my $result = system( "cp $original_img $named_img" );
+
+  my $web_img  = $HTML_BASE_DIR . "/tmp/images/" . $file_name;
+
+  $content =~ s/\<INPUT TYPE\=\"SUBMIT\" VALUE\=\"GO\"\>//gm;
+  $content =~ s/\/sbeams.*spectrum\.png/$web_img/gm;
+  $content =~ s/ACTION\=\"\//ACTION\=\"http:\/\/www\.peptideatlas\.org\//gm;
+# <FORM ACTION="/cgi/spectrast/plotspectrast.cgi" METHOD="GET">
+  return $content;
+  
+
+
+  
   my $local_img = $HTML_BASE_DIR . "/tmp/images/" . $file_name;
   $content =~ s/\<INPUT TYPE\=\"SUBMIT\" VALUE\=\"GO\"\>//gm;
-  $content =~ s/\/data2.*spectrum\.png/$local_img/gm;
+  $content =~ s/\/sbeams.*spectrum\.png/$local_img/gm;
+  $content =~ s/ACTION\=\"\//ACTION\=\"http:\/\/www\.peptideatlas\.org\//gm;
+# <FORM ACTION="/cgi/spectrast/plotspectrast.cgi" METHOD="GET">
+  return $content;
   
-  my $img_url = "http://regis-web/data2/search/hlam/ForDaveC/spectrum.png";
-  my $tmpdir = $PHYSICAL_BASE_DIR . '/tmp/images/';
-  my $req = HTTP::Request->new(GET=>$img_url);
-  my $response = $ua->request( $req );
+#  my $img_url = "http://regis-web/data2/search/hlam/ForDaveC/spectrum.png";
+#  my $tmpdir = $PHYSICAL_BASE_DIR . '/tmp/images/';
+#  my $req = HTTP::Request->new(GET=>$img_url);
+#  my $response = $ua->request( $req );
 
-  open ( PNG, ">$tmpdir/$file_name" ) || return '';
-  print PNG $response->content();
+#  open ( PNG, ">$tmpdir/$file_name" ) || return '';
+#  print PNG $response->content();
   return $content;
   
 }

@@ -530,8 +530,6 @@ sub get_html_protein_seq {
         
   for my $f (@sorted_features) {
     my $tag = $f->primary_tag;
-    $log->debug( "tag is $tag!");
-			
 			
     #subtract one since we are indexing into a zero based array
     my $start =  $f->start - 1;
