@@ -26,6 +26,12 @@ if ($aa[2] ne "T") {
     print "failed\n";
 }
 
+my $mass = $helper->getMass("C");
+if ( abs($mass - 103.01) > 0.2) {
+     print "failed\n";
+}
+
+
 for (my $i = 0; $i <= $#masses; $i++) {
     print "$masses[$i]\n";
 }
