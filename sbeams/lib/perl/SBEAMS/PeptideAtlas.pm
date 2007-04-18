@@ -23,6 +23,7 @@ use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Permissions;
 use SBEAMS::PeptideAtlas::HTMLTabs;
+use SBEAMS::PeptideAtlas::ModificationHelper;
 
 @ISA = qw(SBEAMS::PeptideAtlas::DBInterface
           SBEAMS::PeptideAtlas::HTMLPrinter
@@ -30,6 +31,7 @@ use SBEAMS::PeptideAtlas::HTMLTabs;
           SBEAMS::PeptideAtlas::Settings
           SBEAMS::PeptideAtlas::Permissions
           SBEAMS::PeptideAtlas::HTMLTabs
+          SBEAMS::PeptideAtlas::ModificationHelper
        );
 
 my $log = SBEAMS::Connection::Log->new();
