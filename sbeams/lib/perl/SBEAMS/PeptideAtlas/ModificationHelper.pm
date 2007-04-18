@@ -200,6 +200,52 @@ sub getMass {
     return $mass;
 }
 
+###############################################################################
+# getModifiedAAs - get array of AAs that includes the bracket modifications
+#
+# @param modified_sequence -- string of amino acid sequences with modications
+#  in TPP and SBEAMS style. For example:  EDALN[115]ETR
+# @return array of mono-isotopic masses that include modifications 
+#
+###############################################################################
+sub getModifiedAAs {
+
+    my ($self, $modified_sequence) = @_;
+
+    croak("missing argument to getModifiedAAs") unless defined $modified_sequence;
+
+    my $tmpMod = "";
+
+    my @mods;
+
+    for (my $i = 0; $i < length($modified_sequence); $i++)
+    {
+        my $a = substr($modified_sequence, $i, 1);
+
+        $tmpMod = $tmpMod . $a;
+
+        if ( $a =~ /\[/) {
+
+            $tmpMod = pop(@mods) . $a;
+
+        } elsif ( $a =~ /\]/) {
+
+            push(@mods, $tmpMod);
+
+            $tmpMod = "";
+
+        } elsif ( $a =~ /[a-zA-Z]/) {
+
+            push(@mods, $tmpMod);
+
+            $tmpMod = "";
+        }
+    }
+
+    return @mods;
+}
+
+
 1;
 __END__
 # Below is stub documentation for your module. You'd better edit it!
@@ -216,7 +262,11 @@ ModificationHelper - Perl extension to help handle modification masses
 
   my @masses = $helper->getMasses("C[330]AT");
 
+  ## get array of C, A, and T
   my @aa = $helper->getUnmodifiedAAs("C[330]AT");
+
+  ## get array of C[330], A, and T
+  my @maa = $helper->getModifiedAAs("C[330]AT");
 
   my $mass = $helper->getMass("C");
 
