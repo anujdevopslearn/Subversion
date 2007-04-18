@@ -19,7 +19,7 @@ use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
 $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
 $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
-@MENU_OPTIONS);
+@MENU_OPTIONS $modification_helper);
 
 use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
@@ -29,6 +29,7 @@ use SBEAMS::Connection::TabMenu;
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::ModificationHelper;
 
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
@@ -74,33 +75,6 @@ if ($DEBUG)
     print "    DEBUG = $DEBUG\n";
 }
 
-
-###############################################################################
-# Set Global Variables and execute main()
-###############################################################################
-my %monoIsoMass = 
-(
-    "G" => "57.02146",
-    "A" => "71.03711",
-    "S" => "87.02303",
-    "P" => "97.05276",
-    "V" => "99.06841",
-    "T" => "101.04768",
-    "C" => "103.00919",
-    "L" => "113.08406",
-    "I" => "113.08406",
-    "N" => "114.04293",
-    "D" => "115.02694",
-    "Q" => "128.05858",
-    "K" => "128.09496",
-    "E" => "129.04259",
-    "M" => "131.04049",
-    "H" => "137.05891",
-    "F" => "147.06841",
-    "R" => "156.10111",
-    "Y" => "163.06333",
-    "W" => "186.07931",
-);
 
 main();
 exit(0);
@@ -405,6 +379,9 @@ sub handle_request
             <br/><br/>
         ~;
 
+        $modification_helper = new ModificationHelper();
+
+
         ## look up PA peptides and nab the NIST spectra with similar peptide sequences
 
         if ($atlas_build_clause ||
@@ -428,6 +405,7 @@ sub handle_request
 
             $sql = qq~
             SELECT distinct NLS.NIST_library_spectrum_id, NLS.sequence,
+            NLS.modified_sequence,
             NLS.protein_name, NLS.mz_exact, NLS.charge, NLS.protein_name_alt,
             PI.best_probability, PI.n_observations, PI.n_samples,
             PI.n_protein_mappings, PI.n_genome_locations
@@ -462,8 +440,8 @@ sub handle_request
 
             foreach my $row (@rows)
             {
-                my ($nlsid, $seq, $prot, $precur_mz, $pep_chg, $alt_name,
-                $prob, $n_obs, $n_samples, $n_prot_map,
+                my ($nlsid, $seq, $mod_seq, $prot, $precur_mz, $pep_chg, 
+                $alt_name, $prob, $n_obs, $n_samples, $n_prot_map,
                 $n_gen_map) = @{$row};
 
                 my $sql2 = qq~
@@ -490,10 +468,19 @@ sub handle_request
                 ~;
 
                 $prob = sprintf("%.2f", $prob);
+
+                my @masses;
+
+                if ($mod_seq) {
+                    @masses = $modification_helper->getMasses($mod_seq);
+                } else {
+                    @masses = $modification_helper->getMasses($seq);
+                }
+
                 my @aa = split(//,$seq);
-                my @b1 = getB1FragMassArray(seqArrayRef => \@aa );
-                my @y1 = getY1FragMassArray(seqArrayRef => \@aa );
-                my @y2 = getY2FragMassArray(y1ArrayRef => \@y1 );
+                my @b1 = getB1FragMassArray(masses_ref => \@masses);
+                my @y1 = getY1FragMassArray(masses_ref => \@masses);
+                my @y2 = getY2FragMassArray( y1_ref => \@y1 );
                 my @b1_nist = initArray( li => $#aa);
                 my @y1_nist = initArray( li => $#aa);
                 my @y2_nist = initArray( li => $#aa);
@@ -521,8 +508,8 @@ sub handle_request
 
                         my $rem = $2;
 
-                        ## ignore ions with -I and -num
-                        unless ($rem =~ /(.*)\-(.*)/)
+                        ## ignore ions with -I and -num or i
+                        unless ( $rem =~ /(.*)[\-i](.*)/ )
                         {
                             if ($frag_chg == 1)
                             {
@@ -540,8 +527,8 @@ sub handle_request
 
                         my $rem = $2;
 
-                        ## ignore ions with -I and -num
-                        unless ($rem =~ /(.*)\-(.*)/)
+                        ## ignore ions with -I and -num or i
+                        unless ($rem =~ /(.*)[\-i](.*)/)
                         {
                             if ($frag_chg == 1)
                             {
@@ -552,6 +539,8 @@ sub handle_request
                     }
                 }
 
+                ## replace @aa with modified sequence array if possible
+                @aa = $modification_helper->getModifiedAAs($mod_seq) if ($mod_seq);
 
                 for (my $i=0; $i <= $#aa; $i++)
                 {
@@ -592,27 +581,27 @@ sub handle_request
     ###################################################################
     # getB1FragMassArray - get array of frag masses for b+
     #
-    # @param seqArrayRef - ref to array of amino acid sequences
+    # @param masses_ref - ref to array of masses that alredy include modifications
     # @return @b1
     ###################################################################
     sub getB1FragMassArray
     {
         my %args = @_;
       
-        my $seqArrayRef = $args{seqArrayRef};
+        my $masses_ref = $args{masses_ref};
 
-        my @aa = @{$seqArrayRef};
+        my @masses = @{$masses_ref};
 
         my @b1; 
 
         ## calc b+ ions:
         my $b1_sum = 1.0078;
 
-        for (my $i=0; $i <= $#aa; $i++)
+        for (my $i=0; $i <= $#masses; $i++)
         {
-            $b1_sum = $b1_sum + $monoIsoMass{$aa[$i]};
+            $b1_sum = $b1_sum + $masses[$i];
 
-            if ($i == $#aa)
+            if ($i == $#masses)
             {
                 push(@b1, "&nbsp;");
             } else
@@ -627,34 +616,34 @@ sub handle_request
     ###################################################################
     # getY1FragMassArray - get array of frag masses for y+
     #
-    # @param seqArrayRef - ref to array of amino acid sequences
+    # @param masses_ref - ref to array of masses that alredy include modifications
     # @return @y1
     ###################################################################
     sub getY1FragMassArray
     {
         my %args = @_;
       
-        my $seqArrayRef = $args{seqArrayRef};
+        my $masses_ref = $args{masses_ref};
 
-        my @aa = @{$seqArrayRef};
+        my @masses = @{$masses_ref};
 
-        my @y1; 
+        my @y1 = @masses; ## initialize y1 to be same size array 
 
         ## calc y+ ions:
         my $y1_sum = 19.0184;
 
-        for (my $i=0; $i <= $#aa; $i++)
+        for (my $i = $#masses; $i >= 0; $i--)
         {
-            my $yn = $#aa - $i ;
+            $y1_sum = $y1_sum + $masses[$i];
 
-            $y1_sum = $y1_sum + $monoIsoMass{$aa[$yn]};
+            my $ind = $#masses - $i;
 
-            if ($i == $#aa)
+            if ($ind == $#masses)
             {
-                push(@y1, "&nbsp;");
+                $y1[$ind] = "&nbsp;";
             } else
             {
-                push(@y1, sprintf("%.4f",$y1_sum));
+                $y1[$ind] = sprintf("%.4f",$y1_sum);
             }
         }
 
@@ -664,28 +653,26 @@ sub handle_request
     ###################################################################
     # getY2FragMassArray - get array of frag masses for y+
     #
-    # @param y1ArrayRef - ref to array of y+ fragment masses
+    # @param y1_ref - ref to array of y1 masses
     # @return @y2
     ###################################################################
     sub getY2FragMassArray
     {
         my %args = @_;
       
-        my $y1ArrayRef = $args{y1ArrayRef};
+        my $y1_ref = $args{y1_ref};
 
-        my @y1 = @{$y1ArrayRef};
+        my @y1 = @{$y1_ref};
 
-        my @y2;
+        my @y2 = @y1; ## initialize y2 to be same size array 
 
         for (my $i=0; $i <= $#y1; $i++)
         {
-            if ($i == $#y1)
-            {
-                push(@y2, "&nbsp;");
-            } else
+            unless ($y1[$i] eq "&nbsp;") 
             {
                 my $t = ($y1[$i] + 1.0078)/2.;
-                push(@y2, sprintf("%.4f",$t));
+
+                $y2[$i] = sprintf("%.4f",$t);
             }
         }
 
