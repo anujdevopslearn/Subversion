@@ -86,6 +86,7 @@ sub main
     $sbeams->processStandardParameters(parameters_ref=>\%parameters);
     #$sbeams->printDebuggingInfo($q);
 
+
     #### Decide what action to take based on information so far
     if ($parameters{action} eq "???") {
 

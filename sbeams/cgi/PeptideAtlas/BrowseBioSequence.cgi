@@ -793,6 +793,3 @@ sub displaySequenceView {
 
 }
 
-
-
-

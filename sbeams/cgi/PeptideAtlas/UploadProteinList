@@ -93,11 +93,34 @@ sub main
         'PeptideAtlas_readonly'], allow_anonymous_access=>1,
     ));
 
-    $sbeamsMOD->display_page_header();
+    #### Read in the default input parameters
+    my %parameters;
 
-    handle_request();
+    my $n_params_found = $sbeams->parse_input_parameters(
+        q=>$q,parameters_ref=>\%parameters);
 
-    $sbeamsMOD->display_page_footer();
+    #$sbeams->printDebuggingInfo($q);
+
+
+    #### Process generic "state" parameters before we start
+    $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+    #### Decide what action to take based on information so far
+    if ($parameters{action} eq "???") 
+    { 
+        # Some action
+    } else 
+    {
+        my $project_id = $sbeamsMOD->getProjectID(
+            atlas_build_id => $parameters{atlas_build_id}
+        );
+
+        $sbeamsMOD->display_page_header(project_id => $project_id);
+  
+        handle_request(ref_parameters=>\%parameters);
+  
+        $sbeamsMOD->display_page_footer();
+    }
 
 } # end main
 
@@ -109,6 +132,11 @@ sub handle_request
 {
     my %args = @_;
 
+    #### Process the arguments list
+    my $ref_parameters = $args{'ref_parameters'}
+        || die "ref_parameters not passed";
+    my %parameters = %{$ref_parameters};
+
     print "<BR>\n";
 
     my $CATEGORY="UploadProteinList";
@@ -117,7 +145,7 @@ sub handle_request
 
     if ($sbeams->output_mode() eq 'html') 
     {
-        print "<p>";
+        print "<table>";
 
         print $q->start_multipart_form(
             -method=>"POST", 
@@ -125,27 +153,39 @@ sub handle_request
             -enctype =>"multipart/form-data"
         );
 
-        print "<b>&nbsp;&nbsp;File of Proteins:</b>&nbsp;&nbsp;&nbsp;";
+        print "<tr><td><b>File of Proteins To Upload:</b>&nbsp;&nbsp;&nbsp;</td>";
+        print"<td><input type='file' name='upload_file'></td>";
+        print "</tr>";
 
-        print"<INPUT TYPE='FILE' NAME='upload_file'>";
+        print "<tr><td><b>Mass (m/z in Da):</b>&nbsp;&nbsp;&nbsp;</td>";
+        print "<td><input type='text' name='mass_constraint'></td>";
+        print "</tr>";
 
-        print "</p>";
+        print "<tr><td><b>Best Probability Constraint:</b>&nbsp;&nbsp;&nbsp;</td>";
+        print "<td><input type='text' name='best_prob_constraint'></td>";
+        print "</tr>";
 
-#       $q->filefield(
-#           -name => 'upload_file',
-#           -size => 30,
-#           -max_length => 120,
-#       );
+        print "<tr><td><b>Number of Observations:</b>&nbsp;&nbsp;&nbsp;</td>";
+        print "<td><input type='text' name='n_obs_constraint'></td>";
+        print "</tr>";
 
+        print "<tr><td><b>Number of Protein Id's w/ a Peptide:</b>&nbsp;&nbsp;&nbsp;</td>";
+        print "<td><input type='text' name='n_prot_constraint'></td>";
+        print "</tr>";
+
+
+        print "<tr><td>&nbsp;</td></tr>";
+
+        print "<tr><td colspan=2><center>";
         print $q->submit(-name => "query", 
                          -value => 'QUERY',
-                         -label => 'POST to GetPeptides');
+                         -label => 'QUERY');
+        print "</center></td></tr>";
 
         print $q->end_multipart_form;
-#       print $q->endform;
 
+        print "</table>";
     } 
-
 
     ## upload the file to a file handler
     my $fh = $q->upload('upload_file');
@@ -155,13 +195,10 @@ sub handle_request
         print $q->header(-status=>$q->cgi_error);
     }
 
-
-    ## size constraint of 10 MB... add more contraints if needed...
-    ## could restrict $count < 6000 too...
+    ## size constraint of 10 MB
+    ## restrict $count < 30000 
     if ( (-T $fh) && (-s $fh < 1000000))
     {
-#       print "looks like text and small enough. uploading...<br/>";
-
         my $count = 0;
 
         my $read_file=0;
@@ -169,13 +206,14 @@ sub handle_request
         ## protein list
         my %protein_hash;
 
-        ## could add a num proteins constraint here
         while (<$fh>)
         {
             my $str=$_;
             chomp($str);
             $protein_hash{$str} = $str;
             $count = $count + 1;
+
+            last if ($count > 30000);
         }
 
         my $n_proteins = keys %protein_hash;
@@ -184,30 +222,29 @@ sub handle_request
         ## join with a semi-colon:
         my $protein_list = join("%3B", %protein_hash);
 
-        ## construct redirect url root using $ENV{HTTP_REFERER}
-        my $http_referer = $ENV{HTTP_REFERER};
-        my $redirect_url;
-
-        my $queryString = "biosequence_name_constraint=$protein_list";
-
-        ## assume it's an sbeams 
-        if ($http_referer =~ /$HOSTNAME/)
-        {
-#           print "looks like valid referer<br/>";
-            ## remove end of URL:
-            $http_referer =~ s/(.*)\/(.*)$/$1/;
-            $redirect_url = "$http_referer/GetPeptides?$queryString";
-        } else
-        {
-            ## this will kick user out of secure connection
-            $redirect_url = "http://$HOSTNAME/$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetPeptides?" .
-                "$queryString";
-        }
-
-        ## redirect to GetPeptides
-        print "<meta http-equiv=\"refresh\" content=\"0;URL=$redirect_url\">";
-
-        exit;
+#       ## construct redirect url root using $ENV{HTTP_REFERER}
+#       my $http_referer = $ENV{HTTP_REFERER};
+#       my $redirect_url;
+#
+#       my $queryString = "biosequence_name_constraint=$protein_list";
+#
+#       ## assume it's an sbeams 
+#       if ($http_referer =~ /$HOSTNAME/)
+#       {
+#           ## remove end of URL:
+#           $http_referer =~ s/(.*)\/(.*)$/$1/;
+#           $redirect_url = "$http_referer/GetPeptides?$queryString";
+#       } else
+#       {
+#           ## this will kick user out of secure connection
+#           $redirect_url = "http://$HOSTNAME/$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetPeptides?" .
+#               "$queryString";
+#       }
+#
+#       ## redirect to GetPeptides
+#       print "<meta http-equiv=\"refresh\" content=\"0;URL=$redirect_url\">";
+#
+#       exit;
 
     } else
     {

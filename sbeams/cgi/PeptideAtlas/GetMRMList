@@ -196,7 +196,6 @@ sub handle_request
         $parameters{input_form_format} = "minimum_detail";
     }
 
-
     ##Input form:  action is set by PROGRAM_FILE_NAME, so sub it w/ display page:
     $sbeams->display_input_form(
         TABLE_NAME=>$TABLE_NAME,

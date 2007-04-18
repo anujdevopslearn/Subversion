@@ -216,8 +216,6 @@ sub processRequest {
     #### Reduce length because of PGPLOT 80 char limit??
     my($tmpfile) = "Spec.$$.@{[time]}.gif";
 
-#   $parameters{gifwidth} = 640 unless $parameters{gifwidth};
-#   $parameters{gifheight} = 480 unless $parameters{gifheight};
     $parameters{gifwidth} = 800 unless $parameters{gifwidth};
     $parameters{gifheight} = 400 unless $parameters{gifheight};
 
@@ -228,7 +226,7 @@ sub processRequest {
 
     #print "Writing GIF to: $PHYSICAL_BASE_DIR/tmp/images/$tmpfile\n";
     my $win = pg_setup(Device=>"$PHYSICAL_BASE_DIR/tmp/images/$tmpfile/gif",
-        title=>"$parameters{peptide}",
+        title=>"$modified_sequence",
         xmin=>$parameters{xmin}, xmax=>$parameters{xmax},
         ymax=>$parameters{ymax}, ydiv=>$ydiv, nyticks=>5,
         gifwidth=>$parameters{gifwidth},
@@ -247,7 +245,8 @@ sub processRequest {
     my $charge;
     foreach $charge (@charge) {
       my ($masslist_ref) = CalcIons(Residues=>\@residues, Charge=>$charge,
-                                    MassArray=>$AAmasses_ref);
+                                    MassArray=>$AAmasses_ref,
+                                    modified_sequence=>$modified_sequence);
       my ($B_ref,$Y_ref);
 
       #### Make the plot
@@ -825,10 +824,11 @@ sub LabelResidues {
         pgptext $mass+$xshift,$labht,$angle,$fjust,"$index"
           if (($labht < $Ymax) && ($mass > $Xmin) && ($mass < $Xmax));
       }
+    }
 
-
+    for ($i = $length; $i > 0; $i--) {
       if (($Yinten[$i] != 0) && ($i != 0)) {
-        my $index = "Y$charge\-$Ionmasses_ref->{rev_indices}->[$i]";
+        my $index = "Y$charge\-$i";
         my $mass = $Ydata->at($i);
         my $matchx = pdl [$mass, $mass];
         my $y = $Yinten[$i];
@@ -839,10 +839,10 @@ sub LabelResidues {
           pgsci $grcol;
           $lineclr = $grcol;
 
-          #### Location of label above tick mark
-          $labht = $y+5*($interval/3.);
+          #### Location of label above tick mark (moved up)
+          $labht = $y+8.5*($interval/3.);
         } else {
-          #### Blue text and line for Y ion match
+          #### Red text and line for B ion match
           pgsci $bluecol;
           $lineclr = $bluecol;
 
@@ -858,6 +858,7 @@ sub LabelResidues {
           if (($labht < $Ymax) && ($mass > $Xmin) && ($mass < $Xmax));
       }
     }
+
     return $win;
 }
 
@@ -887,7 +888,7 @@ sub Fragment {
 }
 
 ###############################################################################
-# CalcIons
+# CalcIons -- calculate theoretical ions (including modified masses)
 ###############################################################################
 sub CalcIons {
     my %args = @_;
@@ -899,6 +900,11 @@ sub CalcIons {
     my $massarray_ref = $args{'MassArray'};
     my %massarray = %$massarray_ref;
     my $length = scalar(@residues);
+   
+    my $modified_sequence = $args{'modified_sequence'};
+
+    my @modifications = getModificationMasses(residues_ref =>\@residues,
+      modified_sequence => $modified_sequence);
 
     my $Nterm = 1.0078;
     my $Bion = 0.;
@@ -910,6 +916,7 @@ sub CalcIons {
     my @masses;
     for ($i=0; $i<$length; $i++) {
       my $mass = $massarray{$residues[$i]};
+      $mass = $modifications[$i] if ($modifications[$i] > 0.1);## use mod if present
       unless ($mass) {
 	if ($residues[$i] =~ /\w\[(\d+)\]/) {
 	  $mass = $1;
@@ -918,19 +925,19 @@ sub CalcIons {
 	}
       }
       $masses[$i] = $mass;
-      $Yion += $mass;
     }
     my %masslist;
     my (@aminoacids, @indices, @rev_indices, @Bions, @Yions);
 
+
     #### Compute the ion masses
     for ($i = 0; $i<$length; $i++) {
       $Bion += $masses[$i];
-      $Yion -= $masses[$i-1] if ($i > 0);
 
       #### B index & Y index
       $indices[$i] = $i;
       $rev_indices[$i] = $length-$i;
+      $Yion += $masses[ $rev_indices[$i] ]  if ($i > 0);
 
       #### B ion mass & Y ion mass
       $Bions[$i] = ($Bion + $charge*$Nterm)/$charge;
@@ -1041,3 +1048,80 @@ sub printIons {
 # print "\n";
 
 } # end printIons
+
+###############################################################################
+# getModificationMasses
+#
+# @param modified_sequence -- string of amino acid sequences with modications
+#  in TPP and SBEAMS style. example:  EDALN[115]ETR
+# @return integer array of modifications to be added to amino acid masses 
+#  (from residues array)
+#
+#  Note, this doesn't have a way to deal with Nterminus and Cterminus
+#  modifications unless they are specified in same way that amino-acid mods
+#  are specified...
+###############################################################################
+sub getModificationMasses {
+
+    my %args = @_;
+
+    my $modified_sequence = $args{'modified_sequence'};
+
+    my $tmpMod = "";
+
+    my $isInBracket = 0; ## false
+    my $isStartBracket = 0; ## false
+    my $isEndBracket = 0; ## false
+
+    my @mods;
+
+    for (my $i = 0; $i < length($modified_sequence); $i++) 
+    {
+        my $a = substr($modified_sequence, $i, 1);
+
+        if ( $a =~ /\[/) {
+            $isStartBracket = 1; ## true, mod will get added to previous $a
+            $isEndBracket = 0;
+            $isInBracket = 0;
+        } elsif ( $a =~ /\]/) {
+            $isEndBracket = 1; ## true
+            $isStartBracket = 0;
+            $isInBracket = 0;
+        } elsif ( $a =~ /\d/) {
+            $isInBracket = 1; ## true
+            $isEndBracket = 0;
+            $isStartBracket = 0;
+        } elsif ( $a =~ /\w/) {
+            $isInBracket = 0;
+            $isEndBracket = 0;
+            $isStartBracket = 0;
+        }
+
+        ## if not in a bracket sequence, it's modification is 0
+        if ( !$isStartBracket && !$isInBracket && !$isEndBracket) {
+
+            push(@mods, 0.);
+        }
+
+        if ($isStartBracket) {
+
+            $tmpMod = "";
+
+            pop(@mods); ## mod gets added to previous $a
+        }
+
+        if ($isEndBracket) {
+
+            push(@mods, $tmpMod);
+    
+            $tmpMod = "";
+        }
+
+        if ($isInBracket) {
+
+            $tmpMod = $tmpMod . $a;
+        }
+    }
+
+    return @mods;
+}
