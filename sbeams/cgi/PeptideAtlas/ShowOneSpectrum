@@ -20,7 +20,7 @@ use FindBin;
 
 use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
-             $current_username );
+             $current_username $modification_helper );
 
 use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
@@ -29,6 +29,7 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::ModificationHelper;
 
 use PGPLOT;
 use PDL;
@@ -159,7 +160,8 @@ sub processRequest {
 
     #### Calculate peptide mass information
     my $masstype = $parameters{masstype} || 0;
-    my ($AAmasses_ref) = InitializeMass($masstype);
+
+    $modification_helper = new ModificationHelper();
 
     my %spectrum = get_library_spectrum(
         NIST_library_spectrum_id=>$parameters{NIST_library_spectrum_id});
@@ -245,7 +247,6 @@ sub processRequest {
     my $charge;
     foreach $charge (@charge) {
       my ($masslist_ref) = CalcIons(Residues=>\@residues, Charge=>$charge,
-                                    MassArray=>$AAmasses_ref,
                                     modified_sequence=>$modified_sequence);
       my ($B_ref,$Y_ref);
 
@@ -422,37 +423,6 @@ sub get_library_spectrum
     return;
   }
 
-}
-
-
-###############################################################################
-# InitializeMass -- returns reference to hash of amino acid mono-isotopic masses
-###############################################################################
-sub InitializeMass {
-    my %AAmasses = (
-    "G" => "57.02146",
-    "A" => "71.03711",
-    "S" => "87.02303",
-    "P" => "97.05276",
-    "V" => "99.06841",
-    "T" => "101.04768",
-    "C" => "103.00919",
-    "L" => "113.08406",
-    "I" => "113.08406",
-    "N" => "114.04293",
-    "D" => "115.02694",
-    "Q" => "128.05858",
-    "K" => "128.09496",
-    "E" => "129.04259",
-    "M" => "131.04049",
-    "H" => "137.05891",
-    "F" => "147.06841",
-    "R" => "156.10111",
-    "Y" => "163.06333",
-    "W" => "186.07931",
-    );
-
-    return (\%AAmasses);
 }
 
 ###############################################################################
@@ -897,14 +867,11 @@ sub CalcIons {
     my $residues_ref = $args{'Residues'};
     my @residues = @$residues_ref;
     my $charge = $args{'Charge'} || 1;
-    my $massarray_ref = $args{'MassArray'};
-    my %massarray = %$massarray_ref;
     my $length = scalar(@residues);
    
     my $modified_sequence = $args{'modified_sequence'};
 
-    my @modifications = getModificationMasses(residues_ref =>\@residues,
-      modified_sequence => $modified_sequence);
+    my @masses = $modification_helper->getMasses($modified_sequence);
 
     my $Nterm = 1.0078;
     my $Bion = 0.;
@@ -913,19 +880,6 @@ sub CalcIons {
     my @Bcolor = (14) x $length;
     my @Ycolor = (14) x $length;
 
-    my @masses;
-    for ($i=0; $i<$length; $i++) {
-      my $mass = $massarray{$residues[$i]};
-      $mass = $modifications[$i] if ($modifications[$i] > 0.1);## use mod if present
-      unless ($mass) {
-	if ($residues[$i] =~ /\w\[(\d+)\]/) {
-	  $mass = $1;
-	} else {
-	  print "WARNING: Unable to find mass for 'residues[$i]'<BR>\n";
-	}
-      }
-      $masses[$i] = $mass;
-    }
     my %masslist;
     my (@aminoacids, @indices, @rev_indices, @Bions, @Yions);
 
@@ -1048,80 +1002,3 @@ sub printIons {
 # print "\n";
 
 } # end printIons
-
-###############################################################################
-# getModificationMasses
-#
-# @param modified_sequence -- string of amino acid sequences with modications
-#  in TPP and SBEAMS style. example:  EDALN[115]ETR
-# @return integer array of modifications to be added to amino acid masses 
-#  (from residues array)
-#
-#  Note, this doesn't have a way to deal with Nterminus and Cterminus
-#  modifications unless they are specified in same way that amino-acid mods
-#  are specified...
-###############################################################################
-sub getModificationMasses {
-
-    my %args = @_;
-
-    my $modified_sequence = $args{'modified_sequence'};
-
-    my $tmpMod = "";
-
-    my $isInBracket = 0; ## false
-    my $isStartBracket = 0; ## false
-    my $isEndBracket = 0; ## false
-
-    my @mods;
-
-    for (my $i = 0; $i < length($modified_sequence); $i++) 
-    {
-        my $a = substr($modified_sequence, $i, 1);
-
-        if ( $a =~ /\[/) {
-            $isStartBracket = 1; ## true, mod will get added to previous $a
-            $isEndBracket = 0;
-            $isInBracket = 0;
-        } elsif ( $a =~ /\]/) {
-            $isEndBracket = 1; ## true
-            $isStartBracket = 0;
-            $isInBracket = 0;
-        } elsif ( $a =~ /\d/) {
-            $isInBracket = 1; ## true
-            $isEndBracket = 0;
-            $isStartBracket = 0;
-        } elsif ( $a =~ /\w/) {
-            $isInBracket = 0;
-            $isEndBracket = 0;
-            $isStartBracket = 0;
-        }
-
-        ## if not in a bracket sequence, it's modification is 0
-        if ( !$isStartBracket && !$isInBracket && !$isEndBracket) {
-
-            push(@mods, 0.);
-        }
-
-        if ($isStartBracket) {
-
-            $tmpMod = "";
-
-            pop(@mods); ## mod gets added to previous $a
-        }
-
-        if ($isEndBracket) {
-
-            push(@mods, $tmpMod);
-    
-            $tmpMod = "";
-        }
-
-        if ($isInBracket) {
-
-            $tmpMod = $tmpMod . $a;
-        }
-    }
-
-    return @mods;
-}
