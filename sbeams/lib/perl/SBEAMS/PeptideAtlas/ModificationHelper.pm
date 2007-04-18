@@ -193,7 +193,11 @@ sub getMass {
 
     croak("missing argument to getMass") unless defined $aa;
 
-    return exists($massHash{$a}) ? exists($massHash{$a}) : 0;
+    my $mass = 0;
+
+    $mass = $massHash{$aa} if exists($massHash{$aa});
+
+    return $mass;
 }
 
 1;
@@ -214,6 +218,7 @@ ModificationHelper - Perl extension to help handle modification masses
 
   my @aa = $helper->getUnmodifiedAAs("C[330]AT");
 
+  my $mass = $helper->getMass("C");
 
 =head1 DESCRIPTION
 
