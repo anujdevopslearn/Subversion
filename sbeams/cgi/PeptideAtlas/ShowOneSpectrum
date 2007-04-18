@@ -157,6 +157,10 @@ sub processRequest {
 
     $parameters{assumed_charge} = $charge;
 
+    ## if no modified_sequence, use unmodified sequence
+    unless ($modified_sequence) {
+        $modified_sequence = $parameters{peptide};
+    }
 
     #### Calculate peptide mass information
     my $masstype = $parameters{masstype} || 0;
