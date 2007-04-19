@@ -70,7 +70,9 @@ sub printPageHeader {
 
   my $navigation_bar = $args{'navigation_bar'} || "YES";
   my $minimal_header = $args{'minimal_header'} || "NO";
-  my $loadscript = ( $args{onload} ) ? $args{onload} : "self.focus()"; 
+  my $loadscript = ( $args{onload} ) ? $args{onload} : 
+                   ( $args{sort_tables} ) ? 'sortables_init()' : 
+                                               "self.focus()"; 
 
   #### If the output mode is interactive text, display text header
   if ($self->output_mode() eq 'interactive') {
@@ -90,15 +92,15 @@ sub printPageHeader {
   ~;
 
 
+  print getSortableHTML() if $args{sort_table};
+  
   #### Only send Javascript functions if the full header desired
   unless ($minimal_header eq "YES") {
     $self->printJavascriptFunctions();
   }
 
-
   #### Send the style sheet
   $self->printStyleSheet();
-
 
   #### Determine the Title bar background decoration
   my $header_bkg = "bgcolor=\"$BGCOLOR\"";
@@ -255,7 +257,8 @@ sub printStyleSheet {
 	.med_gray_bg{ background-color: #CCCCCC; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; Padding:2}
 	.grey_header{ font-family: Helvetica, Arial, sans-serif; color: #000000; font-size: ${FONT_SIZE_HG}pt; background-color: #CCCCCC; font-weight: bold; padding:1 2}
 	.rev_gray{background-color: #555555; font-size: ${FONT_SIZE_MED}pt; font-weight: bold; color:white; line-height: 25px;}
-	.rev_gray_head{background-color: #555555; font-size: ${FONT_SIZE}pt; font-weight: bold; color:white; line-height: 25px;}
+	.rev_gray_head{background-color: #888888; font-size: ${FONT_SIZE}pt; font-weight: bold; color:white; line-height: 25px;}
+	A.sortheader{background-color: #888888; font-size: ${FONT_SIZE}pt; font-weight: bold; color:white; line-height: 25px;}
 	.blue_bg{ font-family: Helvetica, Arial, sans-serif; background-color: #4455cc; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; color: white}
 	.blue_bg_glyco{ font-family: Helvetica, Arial, sans-serif; background-color: #4455cc; font-size: ${FONT_SIZE_MED}pt; font-weight: bold; color: white}
 	.lite_blue_bg{font-family: Helvetica, Arial, sans-serif; background-color: #eeeeff; font-size: ${FONT_SIZE_HG}pt; color: #cc1111; font-weight: bold;border-style: solid; border-width: 1px; border-color: #555555 #cccccc #cccccc #555555;}
@@ -278,6 +281,7 @@ sub printStyleSheet {
 	
 	.pseudo_link    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration:none; color: blue; CURSOR: help;}
 	
+  .popup_help { cursor: Help; color:#444444 }
 	.identified_pep{ 
 	background-color: #882222; 
 	font-size: ${FONT_SIZE_LG}pt; 
@@ -847,7 +851,7 @@ sub printCGIParams {
   my $element;
 
   #### Write out a HTTP header
-  print $self->get_http_header;
+#  print $self->get_http_header;
 
   #### Write out all the supplied parameters
   print "\nCGI parameters:\n";
@@ -1439,7 +1443,7 @@ sub make_table_toggle {
   my %args = @_;
 
   # Initialize some variables
-  my $html = '';      # HTML string to return
+  my $js_css = '';      # javascript/css string if necessary
   my $hidetext = '';  # Text for 'hide content' link
   my $showtext = '';  # Text for 'show content' link
   my $neuttext = '';  # Auxilary text for show/hide
@@ -1486,7 +1490,7 @@ sub make_table_toggle {
   # Add css/javascript iff necessary
   unless ( $self->{_tbl_toggle_section_exists} ) {
     $self->{_tbl_toggle_section_exists}++;
-    $html =<<"    END";
+    $js_css =<<"    END";
     <STYLE TYPE="text/css" media="screen">
     tr.tbl_visible { display: table-row; }
     tr.tbl_hidden { display: none; }
@@ -1539,11 +1543,12 @@ sub make_table_toggle {
 
     # Put this here for expediency.  If it causes trouble we can cat it 
     # together with one of the other returned items.
-    print $html if $self->output_mode() =~ /html/i;
+    # Caused trouble if header hadn't printed.  
+    # print $html if $self->output_mode() =~ /html/i;
   }
 
   # Set up the TR/TD attributes
-  my $tbl_html .= "NAME=$args{name} ID=$args{name} ";
+  my $tbl_html = "NAME='$args{name}' ID='$args{name}' ";
   
   # Image isn't hidden, it is switched in the javascript
   my $imghtml = '';
@@ -1565,20 +1570,37 @@ sub make_table_toggle {
         qq~<A ONCLICK="toggle_tbl('${args{name}}');"><TABLE><TR><TD>$imghtml</TD>$texthtml </TR></TABLE></A> $neuttext~ : 
         qq~<A ONCLICK="toggle_tbl('${args{name}}');">$imghtml</A> ~;
 
+  $linkhtml = $js_css . $linkhtml;
   # Return html as separate content/widget, or as a concatentated thingy
   return wantarray ? ( $tbl_html, $linkhtml ) : $linkhtml . $tbl_html;
 
   
 }
 
-############
-
+#+
+# returns clear gif of specified width, default 120px
+#-
 sub getGifSpacer {
   my $self = shift;
   my $size = shift || 120;  # Default?
   return "<IMG SRC=$HTML_BASE_DIR/images/clear.gif WIDTH=$size HEIGHT=2>";
 }
 
+#+
+# Returns javascript for including sorttable.js in page
+#-
+sub getSortableHTML {
+  return <<"  END";
+  <SCRIPT LANGUAGE=javascript SRC="$HTML_BASE_DIR/usr/javascript/sorttable.js"></SCRIPT>
+  END
+}
+
+#+
+# Given input string and optional length (default 35 characters) will return
+# potentially modified string with original string as 'mouseover' text (in DIV
+# title).  If original string is less than length it is returned intact, else
+# string is truncated at length and appended with ellipses (...).
+#-
 sub truncateStringWithMouseover {
   my $self = shift;
   my %args = @_;
@@ -1586,7 +1608,7 @@ sub truncateStringWithMouseover {
   my $string = $args{string};
   my $len = $args{len} || 35;
   my $shorty = $self->truncateString( %args );
-  return qq~<DIV TITLE="$string">$shorty</DIV>~;
+  return qq~<SPAN CLASS=popup_help TITLE="$string">$shorty</SPAN>~;
 }
 #+
 # Returns array of HTML form buttons
