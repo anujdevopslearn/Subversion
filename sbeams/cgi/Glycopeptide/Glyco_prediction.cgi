@@ -102,7 +102,7 @@ sub main
     #$sbeams->printDebuggingInfo($q);
 
     #### Decide what action to take based on information so far
-    $sbeamsMOD->display_page_header(project_id => $project_id);
+    $sbeamsMOD->display_page_header(project_id => $project_id, sort_tables => 1 );
 #    $sbeams->printStyleSheet();
     if ($parameters{action} eq "Show_detail_form" || $parameters{redraw_protein_sequence} == 1) {
 		
@@ -301,6 +301,7 @@ sub find_hits{
       print_error("Cannot find correct textsearch to run");
     }
   }elsif($type eq 'sequence_search'){
+    $parameters{sequence_search} =~ s/\s//gm;
     @results_set = $glyco_query_o->protein_seq_query($parameters{sequence_search});	
   }else{
     print_error("Cannot find correct search type to run '$type'");
@@ -345,14 +346,14 @@ sub print_out_hits_page{
 		);
 	}
 	
-	$html .= $q->start_table();
+	$html .= $q->start_table({class=>'sortable', id=>'protein_table'});
+#	$html .= $q->start_table();
   $html .= $q->Tr({class=>'rev_gray_head'},
-			  $q->td('IPI ID'),
+			  $q->td('IPI ID '),
 			  $q->td('Protein Name'),
 			  $q->td('Protein Symbol'),
 			  $q->td('Identified Peptides')
 			);
-  $log->info( $html );
 	my $cgi_url = "$base_url?action=Show_detail_form&ipi_data_id";
   my $protcnt = 0;
   my $pepprotcnt = 0;
@@ -407,6 +408,8 @@ sub print_out_hits_page{
   <BR>
   <BR>
   ~;
+
+  $html =~ s/(table.*class.*)sortable/${1}nosorting/gm if $protcnt > 200;
   print "$stats $html";
 }
 
@@ -738,7 +741,8 @@ sub display_detail_form{
 			
 	## Print out the protein Information
   my $prot_info = join( "\n", 
-    $q->Tr(
+#    $q->Tr( {class=>'sortable'},
+    $q->Tr( 
       $q->td({class=>'grey_header', colspan=>2}, "Protein Info"),),
     $q->Tr(
       $q->td({class=>'rev_gray_head'}, "IPI ID"),
