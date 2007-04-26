@@ -525,6 +525,7 @@ Background subtraction and normalization follows. More information can be found 
 	    <SELECT NAME="normSelector">
 	      <OPTION NAME="medNorm" VALUE="Median Normalization" SELECTED>Median Normalization
 	      <OPTION NAME="bumNorm" VALUE="Bumgarner Normalization">Bumgarner Normalization
+	      <OPTION NAME="agiNorm" VALUE="Agilent Two Color Spike Normalization">Agilent Two-Color Spike Normalization
 	    </SELECT>
 	    </TD>
 	  </TR>
