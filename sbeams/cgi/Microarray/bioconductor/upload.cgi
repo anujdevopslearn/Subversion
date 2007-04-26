@@ -705,6 +705,7 @@ END
         filegroup_allowed['HG-Focus'] = true;
         filegroup_allowed['HG_U95A'] = true;
         filegroup_allowed['HG-U133A'] = true;
+        filegroup_allowed['HG-U133B'] = true;
         filegroup_allowed['Hu6800'] = true;
         filegroup_allowed['MG_U74Av2'] = true;
         filegroup_allowed['MG_U74Bv2'] = true;
