@@ -214,7 +214,7 @@ sub step2 {
 	
 	print '</table>',
 		  p("Choose the processing method:"),
-		  p($cgi->radio_group('process', ['RMA','GCRMA'], 'RMA','true')),
+		  p($cgi->radio_group('process', ['RMA','GCRMA','PLIER'], 'RMA','true')),
 		  "---- or ----",
 		  p($cgi->radio_group('process', ['Custom'], '-')),
 		  '<ul><table>',
@@ -641,6 +641,7 @@ library(matchprobes)
 library(splines)
 library(gcrma)
 library(vsn)
+library(plier)
 package.version('affy');
 package.version('Biobase');
 package.version('tools');
@@ -701,7 +702,10 @@ if (process == "GCRMA"){
 exprset <- justGCRMA(filenames = filenames)
 
 }
-
+if (process == "PLIER"){
+exprset <- justPlier(eset=ReadAffy(filenames = filenames),normalize=TRUE)
+exprs(exprset) <- log2( 2^exprs(exprset) + 16 )
+}
 
 if (process == "Custom") {
     bgcorrect.param <- list()
