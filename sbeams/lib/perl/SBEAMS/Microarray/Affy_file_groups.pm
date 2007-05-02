@@ -628,8 +628,10 @@ sub get_affy_geo_info_sql{
 		afs.affy_sample_protocol_ids AS "Sample Protocol Ids",
 		afs.protocol_deviations  AS "Sample Protocol Deviations",
 		afs.sample_preparation_date AS "Sample Prep Date",
-		afs.comment                 AS "Comment"
-		FROM $TBMA_AFFY_ARRAY afa 
+		afs.comment                 AS "Comment",
+    f.file_path            AS "File Path"
+		FROM $TBMA_AFFY_ARRAY afa
+    JOIN $TBMA_FILE_PATH f ON (afa.file_path_id=f.file_path_id)
 		JOIN $TBMA_AFFY_ARRAY_SAMPLE afs ON (afa.affy_array_sample_id = afs.affy_array_sample_id)
 		JOIN $TBMA_SLIDE_TYPE st ON (afa.array_type_id = st.slide_type_id) 
 		JOIN $TB_ORGANISM o ON (afs.organism_id = o.organism_id)

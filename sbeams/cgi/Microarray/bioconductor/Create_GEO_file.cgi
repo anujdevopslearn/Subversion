@@ -235,7 +235,10 @@ sub print_gather_data_page {
 	## Check if there are multiple arrays with the same file_root
 	my %seen_roots;
 	my $duplicate_roots = 0;
+  # tabbed string of CEL files to save for later
+  my $tabbed_CEL_paths = "";
 	foreach my $array (@selected_arrays) {
+    $tabbed_CEL_paths .= ${$array}[23] . "/" . ${$array}[1] . ".CEL\t";
 		if ( $seen_roots{$array} == 1 ) {
 			$duplicate_roots = 1;
 		}
@@ -259,7 +262,7 @@ sub print_gather_data_page {
 		## Generate download URL
 #my $base_url = "$CGI_BASE_DIR/Microarray/bioconductor/Create_GEO_file.cgi";
 #my $excel_url = "$base_url\/geo_sample_info.xls?token=$token?output_mode=excel";
-		my $excel_url = "$base_url?token=$token&output_mode=excel";
+		my $excel_url = "$base_url?token=$token&output_mode=excel"; 
 
 		## Print page
 		print qq~
@@ -303,6 +306,7 @@ sub print_gather_data_page {
     <BR>
     <INPUT TYPE="hidden" NAME="token" VALUE="$token">
     <INPUT TYPE="hidden" NAME="apply_action" VALUE="download_file">
+    <INPUT TYPE="hidden" NAME="cel_files" VALUE="$tabbed_CEL_paths">
     <INPUT TYPE="submit" VALUE="Create GEO SOFTtext">
     </FORM>
     ~;
@@ -384,8 +388,9 @@ sub generate_tabular_sample_info {
 	$tabbed_text .=
 	    "Field Description:\t"
 	  . "Short, Unique Name for Array\t"
-	  . "Briefly identify the biological material and the experimental "
-	  . "variable(s), e.g., vastus lateralis muscle, exercised, 60 min.\t"
+	  . "Provide a unique title that describes this Sample. We suggest that "
+    . "you use the system [biomaterial]-[condition(s)]-[replicate number], "
+    . "e.g., Muscle_exercised_60min_rep2.\t"
 	  . "Briefly identify the biological material and the experimental "
 	  . "variable(s), e.g., vastus lateralis muscle, exercised, 60 min.\t"
 	  . "Identify the organism(s) from which the biological material was derived.\t"
@@ -429,7 +434,8 @@ sub generate_tabular_sample_info {
 	  . "thoroughly describe the processing procedures.\t"
 	  . "Reference the Platform upon which this hybridization was performed. "
 	  . "Reference the Platform accession number (GPLxxx) if the Platform "
-	  . "already exists in GEO\n";
+	  . "already exists in GEO\t"
+    . "Affymetrix CEL file name\n";
 
 	## Header row
 	$tabbed_text .=
@@ -449,7 +455,8 @@ sub generate_tabular_sample_info {
 	  . "\!Sample_scan_protocol\t"
 	  . "\!Sample_description\t"
 	  . "\!Sample_data_processing\t"
-	  . "\!Sample_platform_id\n";
+	  . "\!Sample_platform_id\t"
+    . "\!Sample_supplementary_file\n";
 
 	## Data rows
 	for my $i ( 0 .. $#{$selected_arrays} ) {
@@ -475,7 +482,8 @@ sub generate_tabular_sample_info {
 		  "$scan_protocol\t" .             # Sample_scan_protocol_ch1
 		  "\t" .                           # Sample_description
 		  "$data_protocol\t" .             # Sample_data_processing
-		  "$geo_platform\n";               # Sample_platform_id
+		  "$geo_platform\t" .              # Sample_platform_id
+      "$file_root" . ".CEL\n";         # Sample_supplementary_file
 	}
 
 	return $tabbed_text;
@@ -495,6 +503,10 @@ sub print_download_file_page {
 	~;
 
 	my $original_text = $parameters{'original_sample_data'};
+
+  ## Get CEL file paths
+  my $tabbed_CEL_files = $parameters{'cel_files'};
+  my @cel_files = split /\t/, $tabbed_CEL_files;
 
 	my $edited_text;
 	## Load in Excel file if provided
@@ -589,31 +601,45 @@ sub print_download_file_page {
 			print ".";
 		}
 
+    ## zip .geo file and CEL files
+		my $zip_file = "$BC_UPLOAD_DIR/$token/${token}_geo.zip";
+    my $zip_command = "zip -j $zip_file $geo_file ";
+    foreach my $cel (@cel_files) {
+      $zip_command .= "$cel "
+    }
+    # first remove any previous zip, then generate new one    
+    system("rm $zip_file >/dev/null");
+    system($zip_command . ">/dev/null");
+
 		## Print remainder of page, with a link to the GEO file and instructions
-		my $download_geo_file_url =
+		my $download_zip_file_url =
 		    "$CGI_BASE_DIR/Microarray/View_Affy_files.cgi"
 		  . "?action=download&analysis_folder=$token"
-		  . "&analysis_file=$token&file_ext=geo";
+		  . "&analysis_file=$token" . "_geo&file_ext=zip";
 		print qq~
 		    <H4>Your GEO submission file has been created successfully. It can
-		    be downloaded by <A HREF="$download_geo_file_url">clicking here</A></H4>
+		    be downloaded by <A HREF="$download_zip_file_url">clicking here</A></H4>
 		    <H4>In order to submit your data to GEO, you will need to follow
 		    these steps:</H4>
 		    <OL>
-		    	<LI>Click the download link above, and save the file to your computer.</LI>
+		    	<LI>Click the download link above, and save the zip file to your computer.</LI>
 		    	<LI>Go to the GEO direct deposit page at 
 		    	<A HREF="http://www.ncbi.nlm.nih.gov/projects/geo/submission/depslip.cgi">
 		   		http://www.ncbi.nlm.nih.gov/projects/geo/submission/depslip.cgi</A></LI>
 		   		<LI>Choose <B>SOFTtext</B> as your file format</LI>
-		   		<LI>Browse to find the .geo file you saved to your computer.</LI>
+		   		<LI>Browse to find the zip file you saved to your computer.</LI>
 		   		<LI>Set 'Submission kind' to <B>new</B></LI>
-		   		<LI>Enter a release data, which should be chosen to fall after the
+		   		<LI>Enter a release data, which should be chosen to fall on or after the
 		   		date your publication is released. If you don't know this date, you can
 		   		choose a date up to a year away, and then come back to GEO and update
 		   		the release date when you know when your publication will come out.
 		   		Alternatively, if the data belongs to an existing publication,
 		   		you can choose the box for immediate release.</LI>
 		   		<LI>Click 'Submit'</LI>
+          <LI>After your submission zip file has been uploaded, the GEO site will ask
+          you to identify the master file. Select the first file, which should
+          have a name ending in .geo, and choose the 'Submit' button at the bottom
+          of the page.</LI>
 		   	</OL>
 		~;
 	}
