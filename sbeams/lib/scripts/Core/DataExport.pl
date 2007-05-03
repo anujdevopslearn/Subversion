@@ -313,10 +313,7 @@ sub exportDataRow {
   #### Remove NULL attributes and escape special characters
   while ( ($key,$value) = each %{$row}) {
     if (defined($value) && $value gt '') {
-      $row->{$key} =~ s/\&/&amp;/g;
-      $row->{$key} =~ s/\</&lt;g/;
-      $row->{$key} =~ s/\>/&gt;/g;
-      $row->{$key} =~ s/\>/&quot;/g;
+      $row->{$key} = $sbeams->escapeXML( value => $row->{$key} );
     } else {
       delete($row->{$key});
     }
