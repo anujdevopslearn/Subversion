@@ -143,8 +143,8 @@ BL_relationship	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contac
 BL_relationship	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 BL_relationship	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 BL_evidence	1	evidence_id	Evidence ID	int	4	0	N		Y							N	N				pkDEFAULT
-BL_evidence	2	relationship_id	Relationship ID	int	4	0	N		N	BL_relationship	relationship_id	Y	optionlist			Y	Y	N	Relationship ID this line of evidence presents	"SELECT relationship_id, relationship_name FROM $TB_RELATIONSHIP ORDER BY sort_order,relationship_name"	
-BL_evidence	3	evidence_source_id	Evidence Source ID	int	4	0	N		N	BL_evidence_source	evidence_source_id	Y	optionlist			Y	Y	N	Evidence Source that produced this line of evidence	"SELECT evidence_source_id, evidence_source_name FROM $TB_EVIDENCE_SOURCE ORDER BY sort_order,evidence_source_name"	
+BL_evidence	2	relationship_id	Relationship ID	int	4	0	N		N	BL_relationship	relationship_id	Y	optionlist			Y	Y	N	Relationship ID this line of evidence presents	"SELECT R.relationship_id,B1.biosequence_name || ' ' || relationship_type_name || ' ' || B2.biosequence_name FROM $TBBL_RELATIONSHIP R JOIN $TBBL_BIOSEQUENCE B1 ON (R.biosequence1_id=B1.biosequence_id) JOIN $TBBL_BIOSEQUENCE B2 ON (R.biosequence2_id=B2.biosequence_id) JOIN $TBBL_RELATIONSHIP_TYPE RT ON (R.relationship_type_id=RT.relationship_type_id) ORDER BY B1.biosequence_name,B2.biosequence_name,relationship_type_name"	
+BL_evidence	3	evidence_source_id	Evidence Source ID	int	4	0	N		N	BL_evidence_source	evidence_source_id	Y	optionlist			Y	Y	N	Evidence Source that produced this line of evidence	"SELECT evidence_source_id, evidence_source_name FROM $TBBL_EVIDENCE_SOURCE ORDER BY sort_order,evidence_source_name"	
 BL_evidence	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 BL_evidence	5	date_created	query_option_id	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 BL_evidence	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
@@ -158,38 +158,38 @@ BL_BrowseBioSequence	3	biosequence_gene_name_constraint	Gene Name Constraint				
 BL_BrowseBioSequence	4	molecular_function_constraint	Molecular Function Constraint									N	text	40		Y	Y	N	Constraint for the GO Molecular Function. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
 BL_BrowseBioSequence	5	biological_process_constraint	Biological Process Constraint									N	text	40		Y	Y	N	Constraint for the GO Biological Process. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
 BL_BrowseBioSequence	6	cellular_component_constraint	Cellular Component Constraint									N	text	40		Y	Y	N	Constraint for the GO Cellular Component. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-BL_BrowseBioSequence	7	protein_domain_constraint	Protein Domain Constraint									N	text	40		Y	Y	N	Constraint for the InterPro Protein Domain. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-BL_BrowseBioSequence	8	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	Y	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""		
-BL_BrowseBioSequence	9	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	Y	N	"Constraint for the number of transmembrane regions (based on a 19-residue wide sliding window of hydropathy indexes above 1.58).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
-BL_BrowseBioSequence	10	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-BL_BrowseBioSequence	11	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-BL_BrowseBioSequence	12	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBBL_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"	
-BL_BrowseBioSequence	13	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBBL_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value"	
-BL_BrowseBioSequence	14	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."		
-BL_cbil_genome_coordinates	1	Coordinate_id	Primary key	int	4	0	N		Y			Y									
-BL_cbil_genome_coordinates	2	Probe_Set_Name	Affymetrix probe set name	varchar	255	0	Y		N			N									
-BL_cbil_genome_coordinates	3	Genome_Build	Genome build version number	varchar	255	0	Y		N			N									
-BL_cbil_genome_coordinates	4	Chromosome	Chromosome defined by coordinates	varchar	255	0	Y		N			N									
-BL_cbil_genome_coordinates	5	Gene_start	Transcription start coordinate	int	4	0	Y		N			N									
-BL_cbil_genome_coordinates	6	gene_end	Transcription end coordinate	int	4	0	Y		N			N									
-BL_cbil_genome_coordinates	7	Strand	Coding strand orientation	char	1	0	Y		N			N									
-BL_cbil_genome_coordinates	8	DoTS	DoTS accession	varchar	255	0	Y		N			N									
-BL_cbil_genome_coordinates	9	GenBank	GenBank accession	varchar	255	0	Y		N			N									
-BL_cbil_genome_coordinates	10	Gene_Symbol	Official Gene Symbol	varchar	255	0	Y		N			N									
-BL_cbil_genome_coordinates	11	Gene_Synonyms	Gene Synonyms	varchar	255	0	Y		N			N									
-BL_cbil_genome_coordinates	12	organism_id	Organism identifier	int	4	0	N		N			N									
-BL_MGEDOntologyRelationship	1	MGED_ontology_relationship_id	MGED ontology relationship ID	int	4	0	N		N			Y									
-BL_MGEDOntologyRelationship	2	subject_term_id	Subject Term ID	int	4	0	N		N			Y									
-BL_MGEDOntologyRelationship	3	predicate_term_id	Predicate Term ID	varchar	255	0	Y		N			N									
-BL_MGEDOntologyRelationship	4	object_term_id	Object Term ID	int	4	0	N		N			Y									
-BL_MGEDOntologyRelationship	5	ontology_relationship_type_id	Ontology Relationship ID	int	4	0	N		N			Y									
-BL_MGEDOntologyTerm	1	MGED_ontology_term_id	MGED Ontology Term ID	int	4	0	N		N			Y									
-BL_MGEDOntologyTerm	2	ontology_term_type_id	Ontology Term Type ID	int	4	0	N		N			Y									
-BL_MGEDOntologyTerm	3	name	Ontology Name	varchar	255	0	N		N			Y									
-BL_MGEDOntologyTerm	4	definition	Ontology Definition	text	16	0	N		N			Y									
-BL_MGEDOntologyTerm	5	uri	Ontology uri	varchar	255	0	Y		N			N									
-BL_MGEDOntologyTerm	6	external_database_release_id	external_database_release_id	varchar	255	0	Y		N			N									
-BL_MGEDOntologyTerm	7	source_id	source_id	varchar	255	0	Y		N			N									
+BL_BrowseBioSequence	7	protein_domain_constraint	Protein Domain Constraint									N	text	40		Y	Y	N	Constraint for the InterPro Protein Domain. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+BL_BrowseBioSequence	8	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	Y	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
+BL_BrowseBioSequence	9	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	Y	N	"Constraint for the number of transmembrane regions (based on a 19-residue wide sliding window of hydropathy indexes above 1.58).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
+BL_BrowseBioSequence	10	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+BL_BrowseBioSequence	11	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+BL_BrowseBioSequence	12	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBBL_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"
+BL_BrowseBioSequence	13	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBBL_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value"
+BL_BrowseBioSequence	14	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."	
+BL_cbil_genome_coordinates	1	Coordinate_id	Primary key	int	4	0	N		Y			Y								
+BL_cbil_genome_coordinates	2	Probe_Set_Name	Affymetrix probe set name	varchar	255	0	Y		N			N								
+BL_cbil_genome_coordinates	3	Genome_Build	Genome build version number	varchar	255	0	Y		N			N								
+BL_cbil_genome_coordinates	4	Chromosome	Chromosome defined by coordinates	varchar	255	0	Y		N			N								
+BL_cbil_genome_coordinates	5	Gene_start	Transcription start coordinate	int	4	0	Y		N			N								
+BL_cbil_genome_coordinates	6	gene_end	Transcription end coordinate	int	4	0	Y		N			N								
+BL_cbil_genome_coordinates	7	Strand	Coding strand orientation	char	1	0	Y		N			N								
+BL_cbil_genome_coordinates	8	DoTS	DoTS accession	varchar	255	0	Y		N			N								
+BL_cbil_genome_coordinates	9	GenBank	GenBank accession	varchar	255	0	Y		N			N
+BL_cbil_genome_coordinates	10	Gene_Symbol	Official Gene Symbol	varchar	255	0	Y		N			N
+BL_cbil_genome_coordinates	11	Gene_Synonyms	Gene Synonyms	varchar	255	0	Y		N			N
+BL_cbil_genome_coordinates	12	organism_id	Organism identifier	int	4	0	N		N			N
+BL_MGEDOntologyRelationship	1	MGED_ontology_relationship_id	MGED ontology relationship ID	int	4	0	N		N			Y
+BL_MGEDOntologyRelationship	2	subject_term_id	Subject Term ID	int	4	0	N		N			Y
+BL_MGEDOntologyRelationship	3	predicate_term_id	Predicate Term ID	varchar	255	0	Y		N			N
+BL_MGEDOntologyRelationship	4	object_term_id	Object Term ID	int	4	0	N		N			Y
+BL_MGEDOntologyRelationship	5	ontology_relationship_type_id	Ontology Relationship ID	int	4	0	N		N			Y
+BL_MGEDOntologyTerm	1	MGED_ontology_term_id	MGED Ontology Term ID	int	4	0	N		N			Y
+BL_MGEDOntologyTerm	2	ontology_term_type_id	Ontology Term Type ID	int	4	0	N		N			Y
+BL_MGEDOntologyTerm	3	name	Ontology Name	varchar	255	0	N		N			Y
+BL_MGEDOntologyTerm	4	definition	Ontology Definition	text	16	0	N		N			Y
+BL_MGEDOntologyTerm	5	uri	Ontology uri	varchar	255	0	Y		N			N
+BL_MGEDOntologyTerm	6	external_database_release_id	external_database_release_id	varchar	255	0	Y		N			N
+BL_MGEDOntologyTerm	7	source_id	source_id	varchar	255	0	Y		N			N
 BL_OntologyRelationshipType	1	ontology_relationship_type_id	Ontology Relationship Type ID	int	4	0	Y		N			Y									
 BL_OntologyRelationshipType	2	name	Ontology Relationship Name	varchar	255	0	Y		N			Y									
 BL_OntologyTermType	1	ontology_term_type_id	Ontology Term Type ID	int	4	0	N		N			Y									
@@ -198,10 +198,10 @@ BL_OntologyTermType	3	description	Ontology Term Description	varchar	255	0	Y		N		
 BL_data_object	1	data_object_id	Data Object ID	int	4	0	N		Y			Y				N	N		Primary Key		pkDEFAULT
 BL_data_object	2	object_name	Object Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name for this data object		
 BL_data_object	3	project_id	Owner Project	int	4	0	Y		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $writable_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
-BL_data_object	4	object_data	Object Data	varchar	255	0	Y		N			Y	file	40		Y	Y	N	Stored data object, generally serialized.		
+BL_data_object	4	object_data	Object Data	varchar	255	0	Y		N			Y	file	40		Y	Y	N	"Stored data object, generally serialized."		
 BL_data_object	5	description	Description	varchar	2000	0	Y		N			N	textarea	5		Y	Y	N	Description of stored data object		
-BL_data_object	6	data_object_type_id	Data Object Type ID	int	4	0	Y		N	data_object_type	data_object_type_id	Y	optionlist			Y	Y	N	Data type of this particular data object	SELECT DISTINCT data_object_type_id, data_object_type_name FROM $TBBL_DATA_OBJECT_TYPE	
-BL_data_object	7	hypothesis_id	Hypothesis ID	int	4	0	Y		N	hypothesis	hypothesis_id	Y	optionlist			Y	Y	N	Data type of this particular data object	SELECT DISTINCT hypothesis_id, hypothesis_name FROM $TBBL_HYPOTHESIS WHERE project_id IN ( $writable_project_ids)	
+BL_data_object	6	data_object_type_id	Data Object Type ID	int	4	0	Y		N	data_object_type	data_object_type_id	Y	optionlist			Y	Y	N	Data type of this particular data object	"SELECT DISTINCT data_object_type_id, data_object_type_name FROM $TBBL_DATA_OBJECT_TYPE"	
+BL_data_object	7	hypothesis_id	Hypothesis ID	int	4	0	Y		N	hypothesis	hypothesis_id	Y	optionlist			Y	Y	N	Data type of this particular data object	"SELECT DISTINCT hypothesis_id, hypothesis_name FROM $TBBL_HYPOTHESIS WHERE project_id IN ( $writable_project_ids)"	
 BL_data_object	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 BL_data_object	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
 BL_data_object	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
