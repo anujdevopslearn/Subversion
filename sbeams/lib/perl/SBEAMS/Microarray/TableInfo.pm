@@ -448,6 +448,15 @@ sub returnTableInfo {
      		    ~;
    	}
 ###############################################################################
+   } elsif ( $table_name eq 'MA_dye' ) {
+
+    if ($info_key =~ /Query$/ ) {
+      return( <<"      END_QUERY" ); 
+   	  SELECT *
+      FROM $TBMA_DYE
+      END_QUERY
+    }
+
    } elsif ( $table_name eq 'MA_EXPERIMENT_CONSTANTS' ) {
 
    if ($info_key eq "BASICQuery") {

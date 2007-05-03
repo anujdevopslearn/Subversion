@@ -78,38 +78,38 @@ MA_array_request_slide	9	record_status	Record Status	char	1	0	N	N	N							N	N
 MA_array_request_sample	1	array_request_sample_id	Array Request Sample ID	int	4	0	N		Y			Y				N	N				pkDEFAULT
 MA_array_request_sample	2	array_request_slide_id	Array Request Slide ID	int	4	0	N		N	MA_array_request_MA_slide	array_request_slide_id	Y	fixed			N	Y	Y	Array request slide to which this sample belongs		pkDEFAULT
 MA_array_request_sample	3	sample_index	Sample Index	int	4	0	N		N			Y	fixed			N	Y	Y	"Index of this sample on the slide (1,2,3,4,etc.)"		
-MA_array_request_sample	4	name	Sample Name	varchar	50	0	N		N			Y	text	50		Y	Y	N	Sample Name.  Keep it short.  Do not use any strange characters like /\*&$() (e.g. NP Epi 03-123)	
-MA_array_request_sample	5	full_name	Full Name	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	"Full Sample Name.  A longer, less cryptic name should be placed here.  It should be long enough so that someone else can understand quickly the general idea of the sample. (e.g. Epithelial cells FACS sorted from ""normal"" prostate tissue from specimen 03-123)"	
-MA_array_request_sample	6	labeling_method_id	Labeling Method	int	4	0	N		N	MA_labeling_method	labeling_method_id	Y	fixed			N	N	N	Labeling method requested for this sample.  Not necessarily what was actually done?	
-MA_array_request_sample	7	sample_provider_organization_id	Sample Provider	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	"Provider of this biomaterial (academic department, research lab, vendor, etc.)"	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE O.record_status != 'D' ORDER BY organization"
-MA_array_request_sample	8	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	N	Organism from which the biomaterial was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"
-MA_array_request_sample	9	strain_or_line	Strain or Line	varchar	255	0	Y		N			N	text	50		Y	Y	N	Strain or line of the individual	
-MA_array_request_sample	10	individual	Individual	varchar	255	0	Y		N			N	text	50		Y	Y	N	Identifier or name of the individual organism from which the biomaterial was derived	
-MA_array_request_sample	11	sex_ontology_term_id	Sex	int	4	0	Y		N			N	optionlist			Y	Y	N	Sex of the individual	MANUAL
-MA_array_request_sample	12	age	Age	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Age of the individual at the time of harvest of the biomaterial.  Free form text; include units, developmental stage, and reference point as appropriate (e.g., days since planting, years after birth, minutes after death)"	
-MA_array_request_sample	13	organism_part	Organism Part	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Part of the organism's anatomy from the biomaterial was derived, excludes cells. (e.g., tissue, organ, system, or body location)"	
-MA_array_request_sample	14	cell_line	Cell Line	varchar	255	0	Y		N			N	text	50		Y	Y	N	Identifier for the cell line if one was used as a biomaterial	
-MA_array_request_sample	15	cell_type	Cell Type	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Type of cell used as the biomaterial (e.g., epithelial, glial, etc.)"	
-MA_array_request_sample	16	disease_state	Disease State	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Name of the pathology diagnosed in the organism from which the biomaterial was derived.  The disease state is ""normal"" if no disease state has been diagnosed."	
-MA_array_request_sample	17	protocol_ids	Protocols	varchar	255	0	Y		N	MA_sample_protocol	sample_protocol_id	N	multilink	4		Y	Y	N	Select all protocols that apply to this biomaterial.  Describe sequence of protocols in the Treatment Description below	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE P.record_status != 'D' ORDER BY P.name"
-MA_array_request_sample	18	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	4		Y	Y	N	Describe any deviations from the selected protocols	
-MA_array_request_sample	19	sample_description	Sample Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Describe the biomaterial briefly	
-MA_array_request_sample	20	sample_preparation_date	Sample Preparation Date	datetime	8	0	N		N			N	text	30		Y	Y	Y	Date/time the biomaterial was prepared with the described protocols
-MA_array_request_sample	21	treatment_description	Treatment Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	"Describe the treatment of the biomaterials, including mention of the selected protocols"
-MA_array_request_sample	22	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes
-MA_array_request_sample	23	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y		
-MA_array_request_sample	24	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N		
-MA_array_request_sample	25	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-MA_array_request_sample	26	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N		
-MA_array_request_sample	27	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
-MA_array_request_sample	28	record_status	Record Status	char	1	0	N	N	N							N	N		
-MA_sample_protocol	1	sample_protocol_id	Sample Protocol	int	4	0	N		Y							N	N	N	
-MA_sample_protocol	2	array_request_sample_id	Array Request Sample ID	int	4	0	N		N	MA_array_request_sample	array_request_sample_id	Y				N	N	Y	Array request sample ID
-MA_sample_protocol	3	protocol_id	Protocol ID	int	4	0	N		N	protocol	protocol_id	Y				N	N	Y	Protocol ID
-MA_sample_protocol	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-MA_sample_protocol	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N		
-MA_sample_protocol	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-MA_sample_protocol	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N		
+MA_array_request_sample	4	name	Sample Name	varchar	50	0	N		N			Y	text	50		Y	Y	N	Sample Name.  Keep it short.  Do not use any strange characters like /\*&$() (e.g. NP Epi 03-123)		
+MA_array_request_sample	5	full_name	Full Name	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	"Full Sample Name.  A longer, less cryptic name should be placed here.  It should be long enough so that someone else can understand quickly the general idea of the sample. (e.g. Epithelial cells FACS sorted from ""normal"" prostate tissue from specimen 03-123)"		
+MA_array_request_sample	6	labeling_method_id	Labeling Method	int	4	0	N		N	MA_labeling_method	labeling_method_id	Y	fixed			N	N	N	Labeling method requested for this sample.  Not necessarily what was actually done?		
+MA_array_request_sample	7	sample_provider_organization_id	Sample Provider	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	"Provider of this biomaterial (academic department, research lab, vendor, etc.)"	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE O.record_status != 'D' ORDER BY organization"	
+MA_array_request_sample	8	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	N	Organism from which the biomaterial was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+MA_array_request_sample	9	strain_or_line	Strain or Line	varchar	255	0	Y		N			N	text	50		Y	Y	N	Strain or line of the individual		
+MA_array_request_sample	10	individual	Individual	varchar	255	0	Y		N			N	text	50		Y	Y	N	Identifier or name of the individual organism from which the biomaterial was derived		
+MA_array_request_sample	11	sex_ontology_term_id	Sex	int	4	0	Y		N			N	optionlist			Y	Y	N	Sex of the individual	MANUAL	
+MA_array_request_sample	12	age	Age	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Age of the individual at the time of harvest of the biomaterial.  Free form text; include units, developmental stage, and reference point as appropriate (e.g., days since planting, years after birth, minutes after death)"		
+MA_array_request_sample	13	organism_part	Organism Part	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Part of the organism's anatomy from the biomaterial was derived, excludes cells. (e.g., tissue, organ, system, or body location)"		
+MA_array_request_sample	14	cell_line	Cell Line	varchar	255	0	Y		N			N	text	50		Y	Y	N	Identifier for the cell line if one was used as a biomaterial		
+MA_array_request_sample	15	cell_type	Cell Type	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Type of cell used as the biomaterial (e.g., epithelial, glial, etc.)"		
+MA_array_request_sample	16	disease_state	Disease State	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Name of the pathology diagnosed in the organism from which the biomaterial was derived.  The disease state is ""normal"" if no disease state has been diagnosed."		
+MA_array_request_sample	17	protocol_ids	Protocols	varchar	255	0	Y		N	MA_sample_protocol	sample_protocol_id	N	multilink	4		Y	Y	N	Select all protocols that apply to this biomaterial.  Describe sequence of protocols in the Treatment Description below	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE P.record_status != 'D' ORDER BY P.name"	
+MA_array_request_sample	18	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	4		Y	Y	N	Describe any deviations from the selected protocols		
+MA_array_request_sample	19	sample_description	Sample Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Describe the biomaterial briefly		
+MA_array_request_sample	20	sample_preparation_date	Sample Preparation Date	datetime	8	0	N		N			N	text	30		Y	Y	Y	Date/time the biomaterial was prepared with the described protocols		
+MA_array_request_sample	21	treatment_description	Treatment Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	"Describe the treatment of the biomaterials, including mention of the selected protocols"		
+MA_array_request_sample	22	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
+MA_array_request_sample	23	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y				
+MA_array_request_sample	24	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
+MA_array_request_sample	25	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+MA_array_request_sample	26	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
+MA_array_request_sample	27	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+MA_array_request_sample	28	record_status	Record Status	char	1	0	N	N	N							N	N				
+MA_sample_protocol	1	sample_protocol_id	Sample Protocol	int	4	0	N		Y							N	N	N			
+MA_sample_protocol	2	array_request_sample_id	Array Request Sample ID	int	4	0	N		N	MA_array_request_sample	array_request_sample_id	Y				N	N	Y	Array request sample ID		
+MA_sample_protocol	3	protocol_id	Protocol ID	int	4	0	N		N	protocol	protocol_id	Y				N	N	Y	Protocol ID		
+MA_sample_protocol	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+MA_sample_protocol	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+MA_sample_protocol	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+MA_sample_protocol	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 MA_sample_protocol	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 MA_sample_protocol	9	record_status	Record Status	char	1	0	N	N	N							N	N				
 MA_slide_model	1	slide_model_id	Slide Model ID	int	8	0	N		Y							N	N				pkDEFAULT
@@ -192,6 +192,17 @@ MA_array	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	
 MA_array	12	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
 MA_array	13	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 MA_array	14	record_status	Record Status	char	1	0	N	N	N							N	N				
+MA_dye	1	dye_id	Dye ID	int	8	0	N		Y							N	N				pkDEFAULT
+MA_dye	2	dye_name	Dye Name	varchar	50	0	N		N		 	Y	text	25		Y	Y	Y	Name of Dye	MANUAL	
+MA_dye	3	max_wavelength	Max Wavelength	float	8	0	N		N		 	Y	text	6		Y	Y	N	Maximal emission wavelength		
+MA_dye	4	extinction_coeff_at_max	Extinction Coefficient at Max	float	8	0	Y		N			N	text	6		Y	Y	N	Extinction coefficient for dye at its maximum wavelength		
+MA_dye	5	correction_260	Correction 260	float	8	0	Y		N			N	text	6		Y	Y	N	Absorbance correction at 260 nm		
+MA_dye	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y	N			
+MA_dye	7	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N	Y			
+MA_dye	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+MA_dye	9	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N	Y			
+MA_dye	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
+MA_dye	11	record_status	Record Status	char	1	0	N	N	N							N	N	N			
 MA_labeling	1	labeling_id	Labeling ID	int	8	0	N		Y							N	N				pkDEFAULT
 MA_labeling	2	array_request_sample_id	Array Request Sample ID	int	8	0	N		N		array_request_sample_id	Y	multioptionlist	4		Y	Y	Y	"Sample ID number - Sample name (you may select several samples to enter at once, but note all values will be the same)"	MANUAL	
 MA_labeling	3	protocol_id	Protocol	int	8	0	N		N	protocol	protocol_id	Y	optionlist			Y	Y	N	Protocol used for labeling	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='extract_labeling' OR PT.name='Genicon Labeling' ORDER BY P.name"	
@@ -334,22 +345,22 @@ MA_quantitation_type	1	quantitation_type_id	Quantitation Type ID	int	8	0	N		Y			
 MA_quantitation_type	2	quantitation_type_name	Quantitation Type Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Quantitation Type Name		
 MA_quantitation_type	3	quantitation_type_desc	Quantitation Type Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Quantitation Type Description		
 MA_quantitation_type	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-MA_quantitation_type	5	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N			
-MA_quantitation_type	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-MA_quantitation_type	7	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N			
-MA_quantitation_type	8	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N			
-MA_quantitation_type	9	record_status	Record Status	char	1	0	Y	N	N							N	N			
-MA_GetExpression	1	project_id	Projects									Y	multioptionlist	4	refreshDocument()	Y	Y	N	Constrain conditions to one or more projects.  At least one project must be selected.	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P INNER JOIN $TBMA_COMPARISON_CONDITION C ON ( P.project_id = C.project_id ) LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.project_id IN ( $accessible_project_ids ) AND P.record_status != 'D' ORDER BY UL.username||' - '||P.name,P.project_id"
-MA_GetExpression	2	condition_id	Comparison Conditions									N	multioptionlist	10		Y	Y	N	"Constrain Interactions to selected Projects.  MultipleProjects may be selected.  If no Projects are selected, ALLProjects are searched."	MANUAL
-MA_GetExpression	3	gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the Gene Name as provided in the raw pipeline output. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-MA_GetExpression	4	second_name_constraint	Second Name Constraint									N	text	40		Y	Y	N	Constraint for the Second Name as provided in the raw pipeline output. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-MA_GetExpression	5	biosequence_name_constraint	Biosequence Name Constraint									N	text	40		Y	Y	N	Constraint for the Biosequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-MA_GetExpression	6	common_name_constraint	Common Name Constraint									N	text	40		Y	Y	N	Constraint for the Common Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-MA_GetExpression	7	canonical_name_constraint	Canonical Name Constraint									N	text	40		Y	Y	N	Constraint for the Canonical Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-MA_GetExpression	8	description_constraint	Biosequence Description Constraint									N	text	40		Y	Y	N	Constraint for the Biosequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-MA_GetExpression	9	reporter_name_constraint	Reporter Name Constraint									N	text	40		Y	Y	N	Constraint for the Reporter Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-MA_GetExpression	10	log10_ratio_constraint	log10 Ratio Constraint									N	text	20		Y	Y	N	"Constraint for the log 10 ratio of expression.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
-MA_GetExpression	11	p_value_constraint	P Value Constraint									N	text	20		Y	Y	N	"Constraint for the P value of expression.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
+MA_quantitation_type	5	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+MA_quantitation_type	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+MA_quantitation_type	7	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+MA_quantitation_type	8	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+MA_quantitation_type	9	record_status	Record Status	char	1	0	Y	N	N							N	N				
+MA_GetExpression	1	project_id	Projects									Y	multioptionlist	4	refreshDocument()	Y	Y	N	Constrain conditions to one or more projects.  At least one project must be selected.	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P INNER JOIN $TBMA_COMPARISON_CONDITION C ON ( P.project_id = C.project_id ) LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.project_id IN ( $accessible_project_ids ) AND P.record_status != 'D' ORDER BY UL.username||' - '||P.name,P.project_id"	
+MA_GetExpression	2	condition_id	Comparison Conditions									N	multioptionlist	10		Y	Y	N	"Constrain Interactions to selected Projects.  MultipleProjects may be selected.  If no Projects are selected, ALLProjects are searched."	MANUAL	
+MA_GetExpression	3	gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the Gene Name as provided in the raw pipeline output. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+MA_GetExpression	4	second_name_constraint	Second Name Constraint									N	text	40		Y	Y	N	Constraint for the Second Name as provided in the raw pipeline output. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+MA_GetExpression	5	biosequence_name_constraint	Biosequence Name Constraint									N	text	40		Y	Y	N	Constraint for the Biosequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+MA_GetExpression	6	common_name_constraint	Common Name Constraint									N	text	40		Y	Y	N	Constraint for the Common Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+MA_GetExpression	7	canonical_name_constraint	Canonical Name Constraint									N	text	40		Y	Y	N	Constraint for the Canonical Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+MA_GetExpression	8	description_constraint	Biosequence Description Constraint									N	text	40		Y	Y	N	Constraint for the Biosequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+MA_GetExpression	9	reporter_name_constraint	Reporter Name Constraint									N	text	40		Y	Y	N	Constraint for the Reporter Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+MA_GetExpression	10	log10_ratio_constraint	log10 Ratio Constraint									N	text	20		Y	Y	N	"Constraint for the log 10 ratio of expression.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""		
+MA_GetExpression	11	p_value_constraint	P Value Constraint									N	text	20		Y	Y	N	"Constraint for the P value of expression.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""		
 MA_GetExpression	12	lambda_constraint	Lambda Constraint									N	text	20		Y	Y	N	"Constraint for the lamba value of expression.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""		
 MA_GetExpression	13	mean_intensity_constraint	Mean Level Constraint									N	text	20		Y	Y	N	"Constraint for the Mean Level .  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""		
 MA_GetExpression	14	false_discovery_rate_constraint	False Discovery Constraint									N	text	20		Y	Y	N	"Constraint for the false discovery rate .  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""		
@@ -366,22 +377,22 @@ MA_affy_array_sample	2	project_id	Project	int	4	0	N		N	project	project_id	Y	opti
 MA_affy_array_sample	3	sample_tag	Sample Tag	varchar	50	0	N		N			Y	text	50		Y	Y	N	Sample Name.  Keep it short.  Do not use any strange characters like /\*&$() (e.g. NP Epi 03-123)		
 MA_affy_array_sample	4	full_sample_name	Full Sample Name	varchar	255	0	Y		N			Y	textarea	3		Y	Y	N	"Full Sample Name.  A longer, less cryptic name should be placed here.  It should be long enough so that someone else can understand quickly the general idea of the sample. (e.g. Epithelial cells FACS sorted from ""normal"" prostate tissue from specimen 03-123)"		
 MA_affy_array_sample	5	sample_group_name	Sample Group Name	varchar	50	0	Y		N			Y	text	50		Y	Y	N	Sample Group Name.  Name used to group together biological replicates		
-MA_affy_array_sample	6	sample_provider_organization_id	Sample Provider	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	"Provider of this biomaterial (academic department, research lab, vendor, etc.)"	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE O.record_status != 'D' ORDER BY organization"
-MA_affy_array_sample	7	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	N	Organism from which the biomaterial was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"
-MA_affy_array_sample	8	strain_or_line	Strain or Line	varchar	255	0	Y		N			N	text	50		Y	Y	N	Strain or line of the individual	
-MA_affy_array_sample	9	individual	Individual	varchar	255	0	Y		N			N	text	50		Y	Y	N	Identifier or name of the individual organism from which the biomaterial was derived	
-MA_affy_array_sample	10	sex_ontology_term_id	Sex	int	4	0	Y		N			N	optionlist			Y	Y	N	Sex of the individual	MANUAL
-MA_affy_array_sample	11	age	Age	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Age of the individual at the time of harvest of the biomaterial.  Free form text; include units, developmental stage, and reference point as appropriate (e.g., days since planting, years after birth, minutes after death)"	
-MA_affy_array_sample	12	organism_part	Organism Part	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Part of the organism's anatomy from the biomaterial was derived, excludes cells. (e.g., tissue, organ, system, or body location)"	
-MA_affy_array_sample	13	cell_line	Cell Line	varchar	255	0	Y		N			N	text	50		Y	Y	N	Identifier for the cell line if one was used as a biomaterial	
-MA_affy_array_sample	14	cell_type	Cell Type	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Type of cell used as the biomaterial (e.g., epithelial, glial, etc.)"	
-MA_affy_array_sample	15	disease_state	Disease State	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Name of the pathology diagnosed in the organism from which the biomaterial was derived.  The disease state is ""normal"" if no disease state has been diagnosed."	
-MA_affy_array_sample	16	rna_template_mass	Starting Amount of RNA (ng)	float	8	0	Y		N			N	text	50		Y	Y	N	Amount of RNA used as input into the labeling reaction.  Measured in nanograms	
-MA_affy_array_sample	17	affy_sample_protocol_ids	Affy Array Sample Protocols	varchar	255	0	Y		N	MA_affy_array_sample_protocol	affy_array_sample_protocol_id	N	multilink	4		Y	Y	N	Select all protocols that apply to this biomaterial.  Describe sequence of protocols in the Treatment Description below	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE P.record_status != 'D' ORDER BY P.name"
-MA_affy_array_sample	18	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	4		Y	Y	N	Describe any deviations from the selected protocols	
-MA_affy_array_sample	19	sample_description	Sample Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Describe the biomaterial briefly	
-MA_affy_array_sample	20	sample_preparation_date	Sample Preparation Date	datetime	8	0	N		N			N	text	30		Y	Y	Y	Date/time the biomaterial was prepared with the described protocols	
-MA_affy_array_sample	21	treatment_description	Treatment Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	"Describe the treatment of the biomaterials, including mention of the selected protocols"	
+MA_affy_array_sample	6	sample_provider_organization_id	Sample Provider	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	"Provider of this biomaterial (academic department, research lab, vendor, etc.)"	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE O.record_status != 'D' ORDER BY organization"	
+MA_affy_array_sample	7	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	N	Organism from which the biomaterial was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+MA_affy_array_sample	8	strain_or_line	Strain or Line	varchar	255	0	Y		N			N	text	50		Y	Y	N	Strain or line of the individual		
+MA_affy_array_sample	9	individual	Individual	varchar	255	0	Y		N			N	text	50		Y	Y	N	Identifier or name of the individual organism from which the biomaterial was derived		
+MA_affy_array_sample	10	sex_ontology_term_id	Sex	int	4	0	Y		N			N	optionlist			Y	Y	N	Sex of the individual	MANUAL	
+MA_affy_array_sample	11	age	Age	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Age of the individual at the time of harvest of the biomaterial.  Free form text; include units, developmental stage, and reference point as appropriate (e.g., days since planting, years after birth, minutes after death)"		
+MA_affy_array_sample	12	organism_part	Organism Part	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Part of the organism's anatomy from the biomaterial was derived, excludes cells. (e.g., tissue, organ, system, or body location)"		
+MA_affy_array_sample	13	cell_line	Cell Line	varchar	255	0	Y		N			N	text	50		Y	Y	N	Identifier for the cell line if one was used as a biomaterial		
+MA_affy_array_sample	14	cell_type	Cell Type	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Type of cell used as the biomaterial (e.g., epithelial, glial, etc.)"		
+MA_affy_array_sample	15	disease_state	Disease State	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Name of the pathology diagnosed in the organism from which the biomaterial was derived.  The disease state is ""normal"" if no disease state has been diagnosed."		
+MA_affy_array_sample	16	rna_template_mass	Starting Amount of RNA (ng)	float	8	0	Y		N			N	text	50		Y	Y	N	Amount of RNA used as input into the labeling reaction.  Measured in nanograms		
+MA_affy_array_sample	17	affy_sample_protocol_ids	Affy Array Sample Protocols	varchar	255	0	Y		N	MA_affy_array_sample_protocol	affy_array_sample_protocol_id	N	multilink	4		Y	Y	N	Select all protocols that apply to this biomaterial.  Describe sequence of protocols in the Treatment Description below	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE P.record_status != 'D' ORDER BY P.name"	
+MA_affy_array_sample	18	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	4		Y	Y	N	Describe any deviations from the selected protocols		
+MA_affy_array_sample	19	sample_description	Sample Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Describe the biomaterial briefly		
+MA_affy_array_sample	20	sample_preparation_date	Sample Preparation Date	datetime	8	0	N		N			N	text	30		Y	Y	Y	Date/time the biomaterial was prepared with the described protocols		
+MA_affy_array_sample	21	treatment_description	Treatment Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	"Describe the treatment of the biomaterials, including mention of the selected protocols"		
 MA_affy_array_sample	22	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
 MA_affy_array_sample	23	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y	N			
 MA_affy_array_sample	24	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N	Y			
@@ -430,38 +441,38 @@ MA_affy_gene_intensity	4	signal	Signal	float	8	0	N		N							Y	N	N
 MA_affy_gene_intensity	5	detection_call	Detection Call	char	1	0	N		N							Y	N	N			
 MA_affy_gene_intensity	6	detection_p_value	Detection P Value	float	8	0	N		N							Y	N	N			
 MA_affy_gene_intensity	7	protocol_id	Protocol ID	int	4	0	N		N	protocol	protocol_id					Y	N	N			
-MA_affy_annotation	1	affy_annotation_id	Affy Annotation ID	int	4	0	N		Y							N	N	N	
-MA_affy_annotation	2	affy_annotation_set_id	Annotation Set ID	int	4	0	N		N	MA_affy_annotation_set	affy_annotation_set_id	Y				Y	N	Y	FK to MA_affy_annotation_set
-MA_affy_annotation	3	probe_set_id	Probe Set ID	varchar	50	0	N		N			Y				Y	Y	N	affymetix probe set name example '1007_s_at'
-MA_affy_annotation	4	sequence_type	Sequence Type	varchar	50	0	Y		N							Y	Y	N	"Indicates whether the sequence is an Exemplar, Consensus or Control sequence. An Exemplar is a single nucleotide sequence taken directly from a public database. This sequence could be an mRNA or EST. A Consensus sequence, is a nucleotide sequence assembled by Affymetrix, based on one or more sequence taken from a public database."
-MA_affy_annotation	5	sequence_source	Sequence Source	varchar	50	0	Y		N							Y	Y	N	The database from which the sequence used to design this probe set was taken.
-MA_affy_annotation	6	transcript_id	Transcript ID	varchar	50	0	Y		N							Y	Y	N	"Cluster identification number with a sub-cluster identifier appended. Currently provided only for HG-U133, HG-Focus, and newer arrays."
-MA_affy_annotation	7	target_description_feature	GB Feature	varchar	255	0	Y		N							Y	Y	N	GenBank description associated with the representative public identifier. Blank for some probe sets.
-MA_affy_annotation	8	target_description	GB Description	varchar	255	0	Y		N							Y	Y	N	GenBank description associated with the representative public identifier. Blank for some probe sets.
-MA_affy_annotation	9	target_description_note	GB Note	varchar	255	0	Y		N							Y	Y	N	"Parsed from the Target Description column contains information about what part of the gene the probe set targets, used manily to describe the affy controls on the chip"
-MA_affy_annotation	10	representative_public_id	Representative Public ID	varchar	50	0	Y		N							Y	Y	N	The accession number of a representative sequence.
-MA_affy_annotation	11	archival_unigene_cluster	Archival UniGene Cluster	varchar	50	0	Y		N							Y	Y	N	
-MA_affy_annotation	12	gene_title	Gene Title	varchar	255	0	Y		N							Y	Y	N	
-MA_affy_annotation	13	gene_symbol	Gene Symbol	varchar	50	0	Y		N							Y	Y	N	
-MA_affy_annotation	14	chromosomal_location	Chromosomal Location	varchar	50	0	Y		N							Y	Y	N	Chromosomal Band
-MA_affy_annotation	15	pathway	Patway	varchar	255	0	Y		N							Y	Y	N	References to Gene MicroArray Pathway Profiler and KEGG: Kyoto Encyclopedia of Genes and Genomes.
-MA_affy_annotation	16	qtl	QTL	varchar	100	0	Y		N							Y	Y	N	Quantitative Trait Loci (QTL) are genetic linkage data that provide disease associations for various loci.
-MA_affy_annotation	17	annotation_description	Annotation Description	varchar	255	0	Y		N							Y	Y	N	Affymetrix annotation information.  Description of the method used to annotate the probe set.
-MA_affy_annotation	18	transcript_assignment	Transcript Assignment	varchar	255	1	Y		N							Y	Y	N	Affymetrix annotation information. Contains the mRNA to probe set assignments.
-MA_affy_annotation	19	annotation_transcript_cluster	Annotation Transcript Cluster	varchar	255	2	Y		N							Y	Y	N	Affymetrix annotation information. Contains the IDs of the transcripts used in the transcript to gene annotation mapping.
-MA_affy_annotation	20	annotation_notes	Annotation Notes	varchar	255	3	Y		N							Y	Y	N	Affymetrix annotation information. Contains assignments cross hyb and negative strand alignments.
-MA_affy_db_links	1	affy_db_links_id	Affy DB Links ID	int	4	0	N		Y							N	N	Y	
-MA_affy_db_links	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id	Y				N	N	N	FK to MA_affy_annotaion
-MA_affy_db_links	3	dbxref_id	DBXref ID	int	4	0	N		N			Y				N	N	N	FK to proteomic dbxref table
-MA_affy_db_links	4	db_id	DB ID	varchar	50	0	N		N			Y				Y	N	N	Accession number to foregin database
-MA_affy_annotation_set	1	affy_annotation_set_id	Annotation Set ID	int	4	0	N		Y							N	N	Y	
-MA_affy_annotation_set	2	annotation_date	Affy Annotation Date	varchar	50	1	N		N			Y	text	50		Y	Y	N	Date of the Affy annot.csv file is made by Affymetrix (DATE LEFT IN AFFY FORMAT)
-MA_affy_annotation_set	3	slide_type_id	Array Type	int	4	2	N		N			Y	optionlist	2		N	Y	Y	Slide Type ID
-MA_affy_annotation_set	4	genome_version	Genome Version	varchar	50	3	N		N			Y	text	50		Y	Y	N	Version of the Genome used by Affymetrix to generate data for Alignments column
-MA_affy_annotation_set	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N	
-MA_affy_annotation_set	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y	
-MA_affy_annotation_set	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N	
-MA_affy_annotation_set	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y	
+MA_affy_annotation	1	affy_annotation_id	Affy Annotation ID	int	4	0	N		Y							N	N	N			
+MA_affy_annotation	2	affy_annotation_set_id	Annotation Set ID	int	4	0	N		N	MA_affy_annotation_set	affy_annotation_set_id	Y				Y	N	Y	FK to MA_affy_annotation_set		
+MA_affy_annotation	3	probe_set_id	Probe Set ID	varchar	50	0	N		N			Y				Y	Y	N	affymetix probe set name example '1007_s_at'		
+MA_affy_annotation	4	sequence_type	Sequence Type	varchar	50	0	Y		N							Y	Y	N	"Indicates whether the sequence is an Exemplar, Consensus or Control sequence. An Exemplar is a single nucleotide sequence taken directly from a public database. This sequence could be an mRNA or EST. A Consensus sequence, is a nucleotide sequence assembled by Affymetrix, based on one or more sequence taken from a public database."		
+MA_affy_annotation	5	sequence_source	Sequence Source	varchar	50	0	Y		N							Y	Y	N	The database from which the sequence used to design this probe set was taken.		
+MA_affy_annotation	6	transcript_id	Transcript ID	varchar	50	0	Y		N							Y	Y	N	"Cluster identification number with a sub-cluster identifier appended. Currently provided only for HG-U133, HG-Focus, and newer arrays."		
+MA_affy_annotation	7	target_description_feature	GB Feature	varchar	255	0	Y		N							Y	Y	N	GenBank description associated with the representative public identifier. Blank for some probe sets.		
+MA_affy_annotation	8	target_description	GB Description	varchar	255	0	Y		N							Y	Y	N	GenBank description associated with the representative public identifier. Blank for some probe sets.		
+MA_affy_annotation	9	target_description_note	GB Note	varchar	255	0	Y		N							Y	Y	N	"Parsed from the Target Description column contains information about what part of the gene the probe set targets, used manily to describe the affy controls on the chip"		
+MA_affy_annotation	10	representative_public_id	Representative Public ID	varchar	50	0	Y		N							Y	Y	N	The accession number of a representative sequence.		
+MA_affy_annotation	11	archival_unigene_cluster	Archival UniGene Cluster	varchar	50	0	Y		N							Y	Y	N			
+MA_affy_annotation	12	gene_title	Gene Title	varchar	255	0	Y		N							Y	Y	N			
+MA_affy_annotation	13	gene_symbol	Gene Symbol	varchar	50	0	Y		N							Y	Y	N			
+MA_affy_annotation	14	chromosomal_location	Chromosomal Location	varchar	50	0	Y		N							Y	Y	N	Chromosomal Band		
+MA_affy_annotation	15	pathway	Patway	varchar	255	0	Y		N							Y	Y	N	References to Gene MicroArray Pathway Profiler and KEGG: Kyoto Encyclopedia of Genes and Genomes.		
+MA_affy_annotation	16	qtl	QTL	varchar	100	0	Y		N							Y	Y	N	Quantitative Trait Loci (QTL) are genetic linkage data that provide disease associations for various loci.		
+MA_affy_annotation	17	annotation_description	Annotation Description	varchar	255	0	Y		N							Y	Y	N	Affymetrix annotation information.  Description of the method used to annotate the probe set.		
+MA_affy_annotation	18	transcript_assignment	Transcript Assignment	varchar	255	1	Y		N							Y	Y	N	Affymetrix annotation information. Contains the mRNA to probe set assignments.		
+MA_affy_annotation	19	annotation_transcript_cluster	Annotation Transcript Cluster	varchar	255	2	Y		N							Y	Y	N	Affymetrix annotation information. Contains the IDs of the transcripts used in the transcript to gene annotation mapping.		
+MA_affy_annotation	20	annotation_notes	Annotation Notes	varchar	255	3	Y		N							Y	Y	N	Affymetrix annotation information. Contains assignments cross hyb and negative strand alignments.		
+MA_affy_db_links	1	affy_db_links_id	Affy DB Links ID	int	4	0	N		Y							N	N	Y			
+MA_affy_db_links	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id	Y				N	N	N	FK to MA_affy_annotaion		
+MA_affy_db_links	3	dbxref_id	DBXref ID	int	4	0	N		N			Y				N	N	N	FK to proteomic dbxref table		
+MA_affy_db_links	4	db_id	DB ID	varchar	50	0	N		N			Y				Y	N	N	Accession number to foregin database		
+MA_affy_annotation_set	1	affy_annotation_set_id	Annotation Set ID	int	4	0	N		Y							N	N	Y			
+MA_affy_annotation_set	2	annotation_date	Affy Annotation Date	varchar	50	1	N		N			Y	text	50		Y	Y	N	Date of the Affy annot.csv file is made by Affymetrix (DATE LEFT IN AFFY FORMAT)		
+MA_affy_annotation_set	3	slide_type_id	Array Type	int	4	2	N		N			Y	optionlist	2		N	Y	Y	Slide Type ID		
+MA_affy_annotation_set	4	genome_version	Genome Version	varchar	50	3	N		N			Y	text	50		Y	Y	N	Version of the Genome used by Affymetrix to generate data for Alignments column		
+MA_affy_annotation_set	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+MA_affy_annotation_set	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
+MA_affy_annotation_set	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+MA_affy_annotation_set	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
 MA_affy_annotation_set	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
 MA_affy_annotation_set	10	record_status	Record Status	char	1	0	N	N	N							N	N	N			
 MA_comparison_condition	1	condition_id	Condition ID	int	4	10	N		Y							N	N	Y			pkDEFAULT
@@ -478,118 +489,118 @@ MA_comparison_condition	11	date_created	Date Record Created	datetime	8	0	N	CURRE
 MA_comparison_condition	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
 MA_comparison_condition	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
 MA_comparison_condition	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
-MA_comparison_condition	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y
-MA_comparison_condition	16	record_status	Record Status	char	1	0	N	N	N							N	N	N
-MA_gene_expression	1	gene_expression_id	Gene Expression Id	int	4	10	N		Y							N	N	Y
-MA_gene_expression	2	condition_id	Condition name	int	4	10	N		N	MA_comparison_condition	condition_id					Y	Y	Y
-MA_gene_expression	3	reporter_name	Reporter Name	varchar	255	255	Y		N							Y	Y	N
-MA_gene_expression	4	common_name	Common Name	varchar	255	255	Y		N							Y	Y	N
-MA_gene_expression	5	canonical_name	Canonical Name	varchar	255	255	Y		N							Y	Y	N
-MA_gene_expression	6	full_name	Full Name	varchar	1024	1024	Y		N							Y	Y	N
-MA_gene_expression	7	gene_name	Gene Name	varchar	255	255	Y		N							Y	Y	N
-MA_gene_expression	8	external_identifier	External Identifier	varchar	255	255	Y		N							Y	Y	N
-MA_gene_expression	9	second_name	Second Name	varchar	255	255	Y		N							Y	Y	N
-MA_gene_expression	10	biosequence_id	BioSequence ID	int	4	10	Y		N							Y	Y	N
-MA_gene_expression	11	log10_ratio	log10 Ratio	real	4	7	Y		N							Y	Y	N
-MA_gene_expression	12	log10_uncertainty	log10 Ratio	real	4	7	Y		N							Y	Y	N
-MA_gene_expression	13	log10_std_deviation	log10 Std Deviation	real	4	7	Y		N							Y	Y	N
-MA_gene_expression	14	lambda	Lambda	real	4	7	Y		N							Y	Y	N
-MA_gene_expression	15	mu_x	Mu X	real	4	7	Y		N							Y	Y	N	
-MA_gene_expression	16	mu_y	mu Y	real	4	7	Y		N							Y	Y	N	
-MA_gene_expression	17	p_value	P Value	real	4	7	Y		N							Y	Y	N	
-MA_gene_expression	18	mean_intensity	Mean Intensity	real	4	7	Y		N							Y	Y	N	
-MA_gene_expression	19	mean_intensity_uncertainty	Mean Intensity Uncertainty	real	4	7	Y		N							Y	Y	N	
-MA_gene_expression	20	quality_flag	Quality Flag	varchar	25	25	Y		N							Y	Y	N	
-MA_gene_expression	21	false_discovery_rate	False Discovery Rate	real	4	7	Y		N							Y	Y	N	
-MA_overlapping_transcript	1	overlapping_transcript_id	Overlapping Transcript ID	int	4	0	N		Y			Y							Data parsed from Overlapping Transcripts Column
-MA_overlapping_transcript	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id	Y							
-MA_overlapping_transcript	3	accession_number	Accession Number	varchar	50	0	Y		N										Details of overlapping transcripts found in a chromosomal region that aligns with a target sequence.
-MA_overlapping_transcript	4	title	Title	varchar	255	0	Y		N										Details of overlapping transcripts found in a chromosomal region that aligns with a target sequence.
-MA_overlapping_transcript	5	overlapping_gene_start	Gene Start bp	int	4	0	Y		N										Details of overlapping transcripts found in a chromosomal region that aligns with a target sequence.
-MA_overlapping_transcript	6	overlapping_gene_end	Gene End bp	int	4	0	Y		N										Details of overlapping transcripts found in a chromosomal region that aligns with a target sequence.
-MA_overlapping_transcript	7	overlapping_choromosome	Chromosomal Location	varchar	25	0	Y		N										Details of overlapping transcripts found in a chromosomal region that aligns with a target sequence.
-MA_overlapping_transcript	8	gene_orientation	Gene Orientation	char	1	0	Y		N										Details of overlapping transcripts found in a chromosomal region that aligns with a target sequence.
-MA_gene_ontology	1	gene_ontology_id	Gene Ontology ID	int	4	0	N		Y			Y							
-MA_gene_ontology	2	gene_ontology_type_id	Ontology Type ID	int	4	0	N		N	MA_gene_ontology_type	gene_ontology_type_id	Y							
-MA_gene_ontology	3	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id	Y							
-MA_gene_ontology	4	affy_db_links_id	Affy DB Links ID	int	4	0	N		N	MA_affy_db_links	affy_db_links_id	Y							Will hold the Go Ontology Accession number
-MA_gene_ontology	5	affy_gene_ontology_id	Affy gene ontology id	int	4	0	N		N			Y							"Affy Gene ontology ID, which is not the full ontology ID.  Example 1234 should be GO:001234"
-MA_gene_ontology	6	gene_ontology_description	Ontology Description	varchar	255	0	Y		N										The description corresponds directly to the GO ID. 
-MA_gene_ontology	7	gene_ontology_evidence	Ontology Evidence	varchar	255	0	Y		N										"The evidence can be ""direct"", or ""extended"". Direct evidence: shows the type of evidence provided by the GO Consortium for their curation of a relationship between the LocusLink accession and the GO Ontology term.  Extended evidence: indicates that the Ontology term was curated by Affymetrix Inc. based on similarity with genes that are annotated by the GO Consortium."
-MA_gene_ontology_type	1	gene_ontology_type_id	Gene Ontology Type ID	int	4	0	N		Y			Y							
-MA_gene_ontology_type	2	gene_ontology_name_type	Gene Ontology Name Type	varchar	100	0	N		N			Y							"One of three types of annotation, Biological Process (GO), Cellular Component (GO), Molecular Function (GO) "
-MA_protein_families	1	protein_families_id	Protein Families ID	int	4	0	N		Y			Y							
-MA_protein_families	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id	Y							
-MA_protein_families	3	affy_db_links_id	Affy DB Links ID	int	4	0	N		N	MA_affy_db_links	affy_db_links_id	Y							"References to entries in the various databases, indicated by namespace prefixes.  Examples GPCR, EC, P450, HANKS"
-MA_protein_families	4	description	Protein Families Description	varchar	255	0	Y		N										
-MA_protein_families	5	e_value	E value	float	8	0	Y		N										
-MA_trans_membrane	1	trans_membrane_id	Transmembrane ID	int	4	0	N		Y			Y							
-MA_trans_membrane	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id								
-MA_trans_membrane	3	number_of_domains	Number of Transmembrane Domains	int	4	0	Y		N										number of transmembrane domains
-MA_trans_membrane	4	nin_prob	Probability that the N-terminus is interior	float	8	0	Y		N										the probability that the N-terminus is interior
-MA_trans_membrane	5	type	Transmembrane Type	varchar	50	0	Y		N										"SIGNAL"", ""ANCHOR"" or empty """""
-MA_trans_membrane	6	protein_accession_numb	Protein Accession Number	varchar	25	0	Y		N										Accession number for the protein used in the TM prediction program.  New fields as of 10.25.04
-MA_trans_membrane_domain	1	trans_membrane_domain_id	Transmembrane Type ID	int	4	0	N		Y			Y							
-MA_trans_membrane_domain	2	trans_membrane_id	Transmembrane ID	int	4	0	N		N	MA_trans_membrane	trans_membrane_id	Y							
-MA_trans_membrane_domain	3	tm_protein_start	TM Protein Start	int	4	0	Y		N										Start of the transmembrane prediction
-MA_trans_membrane_domain	4	tm_protein_end	TM Protein End	int	4	0	Y		N										End of the transmembrane prediciton
-MA_trans_membrane_domain	5	tm_e_value	E value	float	8	0	Y		N										
-MA_interpro	1	interpro_id	Interpro_id	int	4	0	N		Y			Y							
-MA_interpro	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id	Y							
-MA_interpro	3	affy_db_links_id	Affy DB Links ID	int	4	0	N		N	MA_affy_db_links	affy_db_links_id	Y							InterPro accession number and description. 
-MA_interpro	4	interpro_description	Interpro Description	varchar	255	0	Y		N										InterPro accession number and description. 
-MA_protein_domain	1	protein_domain_id	Protein Domain ID	int	4	0	N		Y			Y							
-MA_protein_domain	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id	Y							
-MA_protein_domain	3	affy_db_links_id	Affy DB Links ID	int	4	0	N		N	MA_affy_db_links	affy_db_links_id	Y							
-MA_protein_domain	4	protein_domain_description	Protein Domain Description	varchar	255	0	N		N										Pfam or SCOP annotations
-MA_protein_domain	5	protein_domain_e_value	Protein Domain E-value	float	8	0	Y		N										An E-value reveals how well the RefSeq peptide sequence corresponding to our probe set matches to the sequence in question.  Smaller numbers are better..	
-MA_alignment	1	alignment_id	Alignment ID	int	4		N		Y											
-MA_alignment	2	affy_annotation_id	Affy Annotation ID	int	4		N		N	MA_affy_annotation	affy_annotation_id	Y								
-MA_alignment	3	gene_start	Gene Start bp	int	4	0	N		N			Y				Y	Y	N	Position of the alignment of the target sequence on the genome.  Parsed from Alignments Column	
-MA_alignment	4	gene_stop	Gene Stop bp	int	4	0	Y		N							Y	Y	N	Position of the alignment of the target sequence on the genome.  Parsed from Alignments Column	
-MA_alignment	5	percent_identity	Gene Percent Identity	float	8	0	Y		N							Y	Y	N	percentage identity of target sequence on the genome.  Parsed from Alignments Column	
-MA_alignment	6	gene_orientation	Gene Orientation	char	1	0	Y		N							Y	Y	N	Strand of the genomic alignment.  Parsed from Alignments Column	
-MA_alignment	7	match_chromosome	Match Chromosomal	varchar	25	0	Y		N							Y	Y	N	Chromosome gene aligns to	
-MA_GetAffy_GeneIntensity	1	project_id	Projects									Y	multioptionlist	4	refreshDocument()	Y	Y	N	Constrain affy arrays to one or more projects.  At least one project must be selected.	MANUAL
-MA_GetAffy_GeneIntensity	2	affy_array_id	Affy Arrays Constraint									N	multioptionlist	10		Y	Y	N	"Constraint Affy Arrays to selected Projects.  MultipleProjects may be selected.  If no Projects are selected, ALLProjects are searched."	MANUAL
-MA_GetAffy_GeneIntensity	3	annotation_set_constraint	Annotation Set Name									N	multioptionlist	5		Y	1	N	Annotation Set Name.  Choose a previous annotation set. Default to Newest Data set	MANUAL
-MA_GetAffy_GeneIntensity	4	protocol_id_constraint	Array Analysis Protocol									N	optionlist	10	refreshDocument()	Y	2	N	Protocol ID Used to convert the Affy CEL file to a R_CHP file	"SELECT distinct (prot.protocol_id), prot.name  FROM  $TB_PROTOCOL prot WHERE prot.name like 'R %'"
-MA_GetAffy_GeneIntensity	5	probe_set_id_constraint	Affy Probe Set Id									N	text	20		Y	Y	N	Affy Probe Set ID Example '239122_at'<br><br> '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-MA_GetAffy_GeneIntensity	6	gene_symbol_constraint	Gene Symbol Constraint									N	text	20		Y	Y	N	Constraint for the Gene Symbol. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-MA_GetAffy_GeneIntensity	7	gene_title_constraint	Gene Title Constraint									N	text	40		Y	Y	N	Constraint for the Gene Title:  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-MA_GetAffy_GeneIntensity	8	detection_call_constraint	Detection Call									N	text	20		Y	Y	N	R_CHP Detection Call 'P' or  'A' or 'M' <br><br>  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-MA_GetAffy_GeneIntensity	9	detection_p_value_constraint	Detection P Value									N	text	10		Y	Y	N	"R_CHP Detection Call P-value <br><br> Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
-MA_GetAffy_GeneIntensity	10	signal_constraint	Signal									N	text	20		Y	Y	N	"R_CHP Signal Value <br><br> Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
-MA_GetAffy_GeneIntensity	11	go_description_constraint	GO Constraint									N	text	20		Y	1	N	"Go Description constriant.  Search All GO types (Biological Process, Molecular Function, Cellular Component) for a term of interest.  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported."	
-MA_GetAffy_GeneIntensity	12	trans_membrane_constraint	Trans Membrane Constraint									N	text	10		Y	2	N	"Constraint on the number of transmembrane domains<br><br> Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
-MA_GetAffy_GeneIntensity	13	protein_families_constraint	Protein Families Constraint									N	text	20		Y	2	N	Constriant on the protein family.  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-MA_GetAffy_GeneIntensity	14	protein_domain_constraint	Protein Domain Constraint									N	text	20		Y	2	N	Protein Domains constriant.   '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-MA_GetAffy_GeneIntensity	15	display_columns	Data Columns to Display									N	multioptionlist	4		Y	Y	N	Desired data columns to display (or pivot) for the expression measurements	"SELECT option_key,option_value FROM $TBMA_QUERY_OPTION WHERE option_type = 'GI_data_columns' ORDER BY sort_order,option_value"
-MA_GetAffy_GeneIntensity	16	dbxref_tag_constraint	Accession Number Database									N	multioptionlist	5		Y	2	N	Database Name from for which there are accession numbers to: '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	"SELECT dbxref_tag, dbxref_tag FROM $TB_DBXREF"
-MA_GetAffy_GeneIntensity	17	db_id_constraint	Accession Number									N	text	10		Y	1	N	Accession number to a foregin database	
-MA_GetAffy_GeneIntensity	18	genome_coordinates_constraint	Genome Coordinates									N	text	50		Y	Y	N	Specify the probe_set_ids to constraint the query with using genome coordinates in a form like hg16:chr5:123456-123457+ where hg16 is the build and the final character is the orientation + or -<br><br>Current genome builds Human hg16<br> Mouse mm4	
-MA_GetAffy_GeneIntensity	19	display_options	Display Options									N	multioptionlist	5		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBMA_QUERY_OPTION WHERE option_type = 'GI_display_options' ORDER BY sort_order,option_value"
-MA_GetAffy_GeneIntensity	20	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 10000 rows."	
-MA_affy_analysis	1	affy_analysis_id	Affy Analysis ID	int	4	0	N		Y							N	N	Y	Affy Analysis ID	
-MA_affy_analysis	2	user_id	User 	int	4		N					Y	optionlist	5		Y	Y	N	User Name	"SELECT user_login_id, username FROM $TB_USER_LOGIN WHERE record_status != 'D' ORDER BY username"
-MA_affy_analysis	3	project_id	Project	int	4		N					Y	optionlist	5		Y	Y	N	Project Name	"SELECT project_id, username||' - '||name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) WHERE  P.project_id IN ( $accessible_project_ids ) ORDER BY username"
-MA_affy_analysis	4	folder_name	Folder Name	varchar	50		N					Y	text	50		Y	Y	N	"Folder that contains the analysis.  There should be no need to change, but if you have to please make sure you know what you are doing."	
-MA_affy_analysis	5	parent_analysis_id	Parent Analysis ID	int	4		Y					N	text	10		Y	Y	N	Parent analysis ID	
-MA_affy_analysis	6	affy_analysis_type_id	Affy Analysis Type Name	int	4		N			MA_affy_analysis_type	affy_analysis_type_id	Y	optionlist	5		Y	Y	N	Type of analysis	"SELECT aat.affy_analysis_type_id, aat.affy_analysis_name FROM $TBMA_AFFY_ANALYSIS_TYPE aat"
-MA_affy_analysis	7	user_description	User Description	varchar	255		Y					N	textarea	4		Y	Y	N	User Description about about the analysis.  Please describe why this analysis was done.	
-MA_affy_analysis	8	analysis_description	Analysis Description	text	0	0	Y					N	textarea	4		Y	Y	N	Computer generated descripition about what was done	
-MA_affy_analysis	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N		
-MA_affy_analysis	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y		
-MA_affy_analysis	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N		
-MA_affy_analysis	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y		
-MA_affy_analysis	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y		
-MA_affy_analysis	10	record_status	Record Status	char	1	0	N	N	N							N	N	N		
-MA_affy_analysis_type	1	affy_analysis_type_id	Affy Analysis ID	int	4	0	N		Y							N	N	Y	Affy Analysis Type ID	
-MA_affy_analysis_type	2	affy_analysis_name	Affy Analysis Name	varchar	50	0	N		N			Y	text	30		Y	Y	N	Affy Analysis type Name	
-MA_affy_analysis_type	3	affy_analysis_description	Affy Analysis Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Affy analysis description	
-MA_affy_analysis_type	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N		
-MA_affy_analysis_type	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y		
-MA_affy_analysis_type	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N		
+MA_comparison_condition	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
+MA_comparison_condition	16	record_status	Record Status	char	1	0	N	N	N							N	N	N			
+MA_gene_expression	1	gene_expression_id	Gene Expression Id	int	4	10	N		Y							N	N	Y			
+MA_gene_expression	2	condition_id	Condition name	int	4	10	N		N	MA_comparison_condition	condition_id					Y	Y	Y			
+MA_gene_expression	3	reporter_name	Reporter Name	varchar	255	255	Y		N							Y	Y	N			
+MA_gene_expression	4	common_name	Common Name	varchar	255	255	Y		N							Y	Y	N			
+MA_gene_expression	5	canonical_name	Canonical Name	varchar	255	255	Y		N							Y	Y	N			
+MA_gene_expression	6	full_name	Full Name	varchar	1024	1024	Y		N							Y	Y	N			
+MA_gene_expression	7	gene_name	Gene Name	varchar	255	255	Y		N							Y	Y	N			
+MA_gene_expression	8	external_identifier	External Identifier	varchar	255	255	Y		N							Y	Y	N			
+MA_gene_expression	9	second_name	Second Name	varchar	255	255	Y		N							Y	Y	N			
+MA_gene_expression	10	biosequence_id	BioSequence ID	int	4	10	Y		N							Y	Y	N			
+MA_gene_expression	11	log10_ratio	log10 Ratio	real	4	7	Y		N							Y	Y	N			
+MA_gene_expression	12	log10_uncertainty	log10 Ratio	real	4	7	Y		N							Y	Y	N			
+MA_gene_expression	13	log10_std_deviation	log10 Std Deviation	real	4	7	Y		N							Y	Y	N			
+MA_gene_expression	14	lambda	Lambda	real	4	7	Y		N							Y	Y	N			
+MA_gene_expression	15	mu_x	Mu X	real	4	7	Y		N							Y	Y	N			
+MA_gene_expression	16	mu_y	mu Y	real	4	7	Y		N							Y	Y	N			
+MA_gene_expression	17	p_value	P Value	real	4	7	Y		N							Y	Y	N			
+MA_gene_expression	18	mean_intensity	Mean Intensity	real	4	7	Y		N							Y	Y	N			
+MA_gene_expression	19	mean_intensity_uncertainty	Mean Intensity Uncertainty	real	4	7	Y		N							Y	Y	N			
+MA_gene_expression	20	quality_flag	Quality Flag	varchar	25	25	Y		N							Y	Y	N			
+MA_gene_expression	21	false_discovery_rate	False Discovery Rate	real	4	7	Y		N							Y	Y	N			
+MA_overlapping_transcript	1	overlapping_transcript_id	Overlapping Transcript ID	int	4	0	N		Y			Y							Data parsed from Overlapping Transcripts Column		
+MA_overlapping_transcript	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id	Y									
+MA_overlapping_transcript	3	accession_number	Accession Number	varchar	50	0	Y		N										Details of overlapping transcripts found in a chromosomal region that aligns with a target sequence.		
+MA_overlapping_transcript	4	title	Title	varchar	255	0	Y		N										Details of overlapping transcripts found in a chromosomal region that aligns with a target sequence.		
+MA_overlapping_transcript	5	overlapping_gene_start	Gene Start bp	int	4	0	Y		N										Details of overlapping transcripts found in a chromosomal region that aligns with a target sequence.		
+MA_overlapping_transcript	6	overlapping_gene_end	Gene End bp	int	4	0	Y		N										Details of overlapping transcripts found in a chromosomal region that aligns with a target sequence.		
+MA_overlapping_transcript	7	overlapping_choromosome	Chromosomal Location	varchar	25	0	Y		N										Details of overlapping transcripts found in a chromosomal region that aligns with a target sequence.		
+MA_overlapping_transcript	8	gene_orientation	Gene Orientation	char	1	0	Y		N										Details of overlapping transcripts found in a chromosomal region that aligns with a target sequence.		
+MA_gene_ontology	1	gene_ontology_id	Gene Ontology ID	int	4	0	N		Y			Y									
+MA_gene_ontology	2	gene_ontology_type_id	Ontology Type ID	int	4	0	N		N	MA_gene_ontology_type	gene_ontology_type_id	Y									
+MA_gene_ontology	3	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id	Y									
+MA_gene_ontology	4	affy_db_links_id	Affy DB Links ID	int	4	0	N		N	MA_affy_db_links	affy_db_links_id	Y							Will hold the Go Ontology Accession number		
+MA_gene_ontology	5	affy_gene_ontology_id	Affy gene ontology id	int	4	0	N		N			Y							"Affy Gene ontology ID, which is not the full ontology ID.  Example 1234 should be GO:001234"		
+MA_gene_ontology	6	gene_ontology_description	Ontology Description	varchar	255	0	Y		N										The description corresponds directly to the GO ID. 		
+MA_gene_ontology	7	gene_ontology_evidence	Ontology Evidence	varchar	255	0	Y		N										"The evidence can be ""direct"", or ""extended"". Direct evidence: shows the type of evidence provided by the GO Consortium for their curation of a relationship between the LocusLink accession and the GO Ontology term.  Extended evidence: indicates that the Ontology term was curated by Affymetrix Inc. based on similarity with genes that are annotated by the GO Consortium."		
+MA_gene_ontology_type	1	gene_ontology_type_id	Gene Ontology Type ID	int	4	0	N		Y			Y									
+MA_gene_ontology_type	2	gene_ontology_name_type	Gene Ontology Name Type	varchar	100	0	N		N			Y							"One of three types of annotation, Biological Process (GO), Cellular Component (GO), Molecular Function (GO) "		
+MA_protein_families	1	protein_families_id	Protein Families ID	int	4	0	N		Y			Y									
+MA_protein_families	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id	Y									
+MA_protein_families	3	affy_db_links_id	Affy DB Links ID	int	4	0	N		N	MA_affy_db_links	affy_db_links_id	Y							"References to entries in the various databases, indicated by namespace prefixes.  Examples GPCR, EC, P450, HANKS"		
+MA_protein_families	4	description	Protein Families Description	varchar	255	0	Y		N												
+MA_protein_families	5	e_value	E value	float	8	0	Y		N												
+MA_trans_membrane	1	trans_membrane_id	Transmembrane ID	int	4	0	N		Y			Y									
+MA_trans_membrane	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id										
+MA_trans_membrane	3	number_of_domains	Number of Transmembrane Domains	int	4	0	Y		N										number of transmembrane domains		
+MA_trans_membrane	4	nin_prob	Probability that the N-terminus is interior	float	8	0	Y		N										the probability that the N-terminus is interior		
+MA_trans_membrane	5	type	Transmembrane Type	varchar	50	0	Y		N										"SIGNAL"", ""ANCHOR"" or empty """""		
+MA_trans_membrane	6	protein_accession_numb	Protein Accession Number	varchar	25	0	Y		N										Accession number for the protein used in the TM prediction program.  New fields as of 10.25.04		
+MA_trans_membrane_domain	1	trans_membrane_domain_id	Transmembrane Type ID	int	4	0	N		Y			Y									
+MA_trans_membrane_domain	2	trans_membrane_id	Transmembrane ID	int	4	0	N		N	MA_trans_membrane	trans_membrane_id	Y									
+MA_trans_membrane_domain	3	tm_protein_start	TM Protein Start	int	4	0	Y		N										Start of the transmembrane prediction		
+MA_trans_membrane_domain	4	tm_protein_end	TM Protein End	int	4	0	Y		N										End of the transmembrane prediciton		
+MA_trans_membrane_domain	5	tm_e_value	E value	float	8	0	Y		N												
+MA_interpro	1	interpro_id	Interpro_id	int	4	0	N		Y			Y									
+MA_interpro	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id	Y									
+MA_interpro	3	affy_db_links_id	Affy DB Links ID	int	4	0	N		N	MA_affy_db_links	affy_db_links_id	Y							InterPro accession number and description. 		
+MA_interpro	4	interpro_description	Interpro Description	varchar	255	0	Y		N										InterPro accession number and description. 		
+MA_protein_domain	1	protein_domain_id	Protein Domain ID	int	4	0	N		Y			Y									
+MA_protein_domain	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id	Y									
+MA_protein_domain	3	affy_db_links_id	Affy DB Links ID	int	4	0	N		N	MA_affy_db_links	affy_db_links_id	Y									
+MA_protein_domain	4	protein_domain_description	Protein Domain Description	varchar	255	0	N		N										Pfam or SCOP annotations		
+MA_protein_domain	5	protein_domain_e_value	Protein Domain E-value	float	8	0	Y		N										An E-value reveals how well the RefSeq peptide sequence corresponding to our probe set matches to the sequence in question.  Smaller numbers are better..		
+MA_alignment	1	alignment_id	Alignment ID	int	4		N		Y												
+MA_alignment	2	affy_annotation_id	Affy Annotation ID	int	4		N		N	MA_affy_annotation	affy_annotation_id	Y									
+MA_alignment	3	gene_start	Gene Start bp	int	4	0	N		N			Y				Y	Y	N	Position of the alignment of the target sequence on the genome.  Parsed from Alignments Column		
+MA_alignment	4	gene_stop	Gene Stop bp	int	4	0	Y		N							Y	Y	N	Position of the alignment of the target sequence on the genome.  Parsed from Alignments Column		
+MA_alignment	5	percent_identity	Gene Percent Identity	float	8	0	Y		N							Y	Y	N	percentage identity of target sequence on the genome.  Parsed from Alignments Column		
+MA_alignment	6	gene_orientation	Gene Orientation	char	1	0	Y		N							Y	Y	N	Strand of the genomic alignment.  Parsed from Alignments Column		
+MA_alignment	7	match_chromosome	Match Chromosomal	varchar	25	0	Y		N							Y	Y	N	Chromosome gene aligns to		
+MA_GetAffy_GeneIntensity	1	project_id	Projects									Y	multioptionlist	4	refreshDocument()	Y	Y	N	Constrain affy arrays to one or more projects.  At least one project must be selected.	MANUAL	
+MA_GetAffy_GeneIntensity	2	affy_array_id	Affy Arrays Constraint									N	multioptionlist	10		Y	Y	N	"Constraint Affy Arrays to selected Projects.  MultipleProjects may be selected.  If no Projects are selected, ALLProjects are searched."	MANUAL	
+MA_GetAffy_GeneIntensity	3	annotation_set_constraint	Annotation Set Name									N	multioptionlist	5		Y	1	N	Annotation Set Name.  Choose a previous annotation set. Default to Newest Data set	MANUAL	
+MA_GetAffy_GeneIntensity	4	protocol_id_constraint	Array Analysis Protocol									N	optionlist	10	refreshDocument()	Y	2	N	Protocol ID Used to convert the Affy CEL file to a R_CHP file	"SELECT distinct (prot.protocol_id), prot.name  FROM  $TB_PROTOCOL prot WHERE prot.name like 'R %'"	
+MA_GetAffy_GeneIntensity	5	probe_set_id_constraint	Affy Probe Set Id									N	text	20		Y	Y	N	Affy Probe Set ID Example '239122_at'<br><br> '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+MA_GetAffy_GeneIntensity	6	gene_symbol_constraint	Gene Symbol Constraint									N	text	20		Y	Y	N	Constraint for the Gene Symbol. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+MA_GetAffy_GeneIntensity	7	gene_title_constraint	Gene Title Constraint									N	text	40		Y	Y	N	Constraint for the Gene Title:  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+MA_GetAffy_GeneIntensity	8	detection_call_constraint	Detection Call									N	text	20		Y	Y	N	R_CHP Detection Call 'P' or  'A' or 'M' <br><br>  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+MA_GetAffy_GeneIntensity	9	detection_p_value_constraint	Detection P Value									N	text	10		Y	Y	N	"R_CHP Detection Call P-value <br><br> Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""		
+MA_GetAffy_GeneIntensity	10	signal_constraint	Signal									N	text	20		Y	Y	N	"R_CHP Signal Value <br><br> Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""		
+MA_GetAffy_GeneIntensity	11	go_description_constraint	GO Constraint									N	text	20		Y	1	N	"Go Description constriant.  Search All GO types (Biological Process, Molecular Function, Cellular Component) for a term of interest.  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported."		
+MA_GetAffy_GeneIntensity	12	trans_membrane_constraint	Trans Membrane Constraint									N	text	10		Y	2	N	"Constraint on the number of transmembrane domains<br><br> Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""		
+MA_GetAffy_GeneIntensity	13	protein_families_constraint	Protein Families Constraint									N	text	20		Y	2	N	Constriant on the protein family.  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+MA_GetAffy_GeneIntensity	14	protein_domain_constraint	Protein Domain Constraint									N	text	20		Y	2	N	Protein Domains constriant.   '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+MA_GetAffy_GeneIntensity	15	display_columns	Data Columns to Display									N	multioptionlist	4		Y	Y	N	Desired data columns to display (or pivot) for the expression measurements	"SELECT option_key,option_value FROM $TBMA_QUERY_OPTION WHERE option_type = 'GI_data_columns' ORDER BY sort_order,option_value"	
+MA_GetAffy_GeneIntensity	16	dbxref_tag_constraint	Accession Number Database									N	multioptionlist	5		Y	2	N	Database Name from for which there are accession numbers to: '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	"SELECT dbxref_tag, dbxref_tag FROM $TB_DBXREF"	
+MA_GetAffy_GeneIntensity	17	db_id_constraint	Accession Number									N	text	10		Y	1	N	Accession number to a foregin database		
+MA_GetAffy_GeneIntensity	18	genome_coordinates_constraint	Genome Coordinates									N	text	50		Y	Y	N	Specify the probe_set_ids to constraint the query with using genome coordinates in a form like hg16:chr5:123456-123457+ where hg16 is the build and the final character is the orientation + or -<br><br>Current genome builds Human hg16<br> Mouse mm4		
+MA_GetAffy_GeneIntensity	19	display_options	Display Options									N	multioptionlist	5		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBMA_QUERY_OPTION WHERE option_type = 'GI_display_options' ORDER BY sort_order,option_value"	
+MA_GetAffy_GeneIntensity	20	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 10000 rows."		
+MA_affy_analysis	1	affy_analysis_id	Affy Analysis ID	int	4	0	N		Y							N	N	Y	Affy Analysis ID		
+MA_affy_analysis	2	user_id	User 	int	4		N					Y	optionlist	5		Y	Y	N	User Name	"SELECT user_login_id, username FROM $TB_USER_LOGIN WHERE record_status != 'D' ORDER BY username"	
+MA_affy_analysis	3	project_id	Project	int	4		N					Y	optionlist	5		Y	Y	N	Project Name	"SELECT project_id, username||' - '||name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) WHERE  P.project_id IN ( $accessible_project_ids ) ORDER BY username"	
+MA_affy_analysis	4	folder_name	Folder Name	varchar	50		N					Y	text	50		Y	Y	N	"Folder that contains the analysis.  There should be no need to change, but if you have to please make sure you know what you are doing."		
+MA_affy_analysis	5	parent_analysis_id	Parent Analysis ID	int	4		Y					N	text	10		Y	Y	N	Parent analysis ID		
+MA_affy_analysis	6	affy_analysis_type_id	Affy Analysis Type Name	int	4		N			MA_affy_analysis_type	affy_analysis_type_id	Y	optionlist	5		Y	Y	N	Type of analysis	"SELECT aat.affy_analysis_type_id, aat.affy_analysis_name FROM $TBMA_AFFY_ANALYSIS_TYPE aat"	
+MA_affy_analysis	7	user_description	User Description	varchar	255		Y					N	textarea	4		Y	Y	N	User Description about about the analysis.  Please describe why this analysis was done.		
+MA_affy_analysis	8	analysis_description	Analysis Description	text	0	0	Y					N	textarea	4		Y	Y	N	Computer generated descripition about what was done		
+MA_affy_analysis	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+MA_affy_analysis	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
+MA_affy_analysis	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+MA_affy_analysis	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
+MA_affy_analysis	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
+MA_affy_analysis	10	record_status	Record Status	char	1	0	N	N	N							N	N	N			
+MA_affy_analysis_type	1	affy_analysis_type_id	Affy Analysis ID	int	4	0	N		Y							N	N	Y	Affy Analysis Type ID		
+MA_affy_analysis_type	2	affy_analysis_name	Affy Analysis Name	varchar	50	0	N		N			Y	text	30		Y	Y	N	Affy Analysis type Name		
+MA_affy_analysis_type	3	affy_analysis_description	Affy Analysis Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Affy analysis description		
+MA_affy_analysis_type	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+MA_affy_analysis_type	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
+MA_affy_analysis_type	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
 MA_affy_analysis_type	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
 MA_affy_analysis_type	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
 MA_affy_analysis_type	9	record_status	Record Status	char	1	0	N	N	N							N	N	N			

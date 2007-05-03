@@ -13,8 +13,9 @@ MA_printing_batch	Printing Batch	arrays	YES	$TBMA_PRINTING_BATCH	printing_batch_
 MA_slide	Slide	arrays	YES	$TBMA_SLIDE	slide_id	slide_number	ManageTable.cgi?TABLE_NAME=MA_slide	"MA_slide,MA_slide_lot,MA_slide_model"	MA_array
 MA_array_layout	Array Layout	arrays	YES	$TBMA_ARRAY_LAYOUT	layout_id		ManageTable.cgi?TABLE_NAME=MA_array_layout	"MA_printing_batch,MA_array_layout"	MA_printing_batch
 MA_array	Array	process	YES	$TBMA_ARRAY	array_id		ManageTable.cgi?TABLE_NAME=MA_array	MA_array	MA_hybridization
-MA_labeling	Labeling	process	YES	$TBMA_LABELING	labeling_id	array_request_sample_id	ManageTable.cgi?TABLE_NAME=MA_labeling	"MA_labeling,MA_hybridization"	"MA_array,MA_hybridization"
-MA_hybridization	Hybridization	process	YES	$TBMA_HYBRIDIZATION	hybridization_id	array_id	ManageTable.cgi?TABLE_NAME=MA_hybridization	"MA_labeling,MA_hybridization"	MA_array_scan
+MA_dye	Dye	process	YES	$TBMA_DYE	dye_id		ManageTable.cgi?TABLE_NAME=MA_dye	"MA_labeling,MA_hybridization,MA_dye"	"MA_labeling"
+MA_labeling	Labeling	process	YES	$TBMA_LABELING	labeling_id	array_request_sample_id	ManageTable.cgi?TABLE_NAME=MA_labeling	"MA_labeling,MA_hybridization,MA_dye"	"MA_array,MA_hybridization"
+MA_hybridization	Hybridization	process	YES	$TBMA_HYBRIDIZATION	hybridization_id	array_id	ManageTable.cgi?TABLE_NAME=MA_hybridization	"MA_labeling,MA_hybridization,MA_dye"	MA_array_scan
 MA_array_scan	Array Scan	process	YES	$TBMA_ARRAY_SCAN	array_scan_id		ManageTable.cgi?TABLE_NAME=MA_array_scan	"MA_array_scan,MA_array_quantitation"	MA_array_quantitation
 MA_array_quantitation	Array Quantitation	process	YES	$TBMA_ARRAY_QUANTITATION	array_quantitation_id		ManageTable.cgi?TABLE_NAME=MA_array_quantitation	"MA_array_scan,MA_array_quantitation"	
 MA_biosequence_set	BioSequence Set	arrays	YES	$TBMA_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=MA_biosequence_set	MA_biosequence_set	
@@ -30,22 +31,22 @@ MA_affy_array	Affy Array	arrays	YES	$TBMA_AFFY_ARRAY	affy_array_id		ManageTable.
 MA_affy_array_sample_protocol	Affy Array Sample Protocol	arrays	NO	$TBMA_AFFY_ARRAY_SAMPLE_PROTOCOL	affy_array_sample_protocol_id		ManageTable.cgi?TABLE_NAME=MA_affy_array_sample_protocol	MA_affy_array_sample_protocol	
 MA_affy_array_protocol	Affy Array Protocol	arrays	NO	$TBMA_AFFY_ARRAY_PROTOCOL	affy_array_protocol_id		ManageTable.cgi?TABLE_NAME=MA_affy_array_protocol	MA_affy_array_protocol	
 MA_affy_gene_intensity	Affy Gene Intensity	arrays	NO	$TBMA_AFFY_GENE_INTENSITY	affy_gene_intensity_id				
-MA_affy_annotation	Affy Annotaiton	arrays	NO	$TBMA_AFFY_ANNOTATION	affy_annotation_id			
-MA_affy_db_links	Affy DB Links	arrays	NO	$TBMA_AFFY_DB_LINKS	affy_db_link_id			
-MA_affy_annotation_set	Affy Annotaiton Set	arrays	YES	$TBMA_AFFY_ANNOTATION_SET	affy_annotation_set_id		ManageTable.cgi?TABLE_NAME=MA_affy_annotation_set	MA_affy_annotation_set
-MA_comparison_condition	Comparison Condition	arrays	YES	$TBMA_COMPARISON_CONDITION	condition_id		ManageTable.cgi?TABLE_NAME=MA_comparison_condition	MA_comparison_condition
-MA_gene_expression	Gene Expression	arrays	NO	$TBMA_GENE_EXPRESSION	affy_gene_expression_id			
-MA_overlapping_transcript	Affy overlapping Transcript	arrays	NO	$TBMA_OVERLAPPING_TRANSCRIPT	overlapping_transcript_id			
-MA_gene_ontology	Affy Gene Ontology	arrays	NO	$TBMA_GENE_ONTOLOGY	gene_ontology_id			
-MA_gene_ontology_type	Affy Gene Ontology Type	arrays	NO	$TBMA_GENE_ONTOLOGY_TYPE	gene_ontology_type_id			
-MA_protein_families	Affy Protein Families	arrays	NO	$TBMA_PROTEIN_FAMILIES	protein_families_id			
-MA_trans_membrane	Affy trans membrane	arrays	NO	$TBMA_TRANS_MEMBRANE	trans_membrane_id			
-MA_trans_membrane_domain	Affy trans membrane Domain	arrays	NO	$TBMA_TRANS_MEMBRANE_DOMAIN	trans_membrane_domain_id			
-MA_interpro	Affy interpro	arrays	NO	$TBMA_INTERPRO	interpro_id			
-MA_protein_domain	Affy protein domain	arrays	NO	$TBMA_PROTEIN_DOMAIN	protein_domain_id			
-MA_alignment	Affy gene alignment	arrays	NO	$TBMA_ALIGNMENT	alignment_id			
-MA_GetAffy_GeneIntensity	Get Affy Gene Intensity	QUERY	NO				GetAffy_GeneIntensity.cgi	
-MA_affy_analysis	Affy Analysis	arrays	YES	$TBMA_AFFY_ANALYSIS	affy_analysis_id		ManageTable.cgi?TABLE_NAME=MA_affy_analysis	MA_affy_analysis
-MA_affy_analysis_type	Affy Analysis Type	arrays	YES	$TBMA_AFFY_ANALYSIS_TYPE	affy_analysis_type_id		ManageTable.cgi?TABLE_NAME=MA_affy_analysis_type	MA_affy_analysis_type
-MA_experiment_information	Experiment Information	arrays	YES	$TBMA_EXPERIMENT_INFORMATION	experiment_information_id		ManageTable.cgi?TABLE_NAME=MA_experiment_information	MA_experiment_information
-MA_experiment_constants	Experiment Constants	arrays	YES	$TBMA_EXPERIMENT_CONSTANTS	experiment_constants_id		ManageTable.cgi?TABLE_NAME=MA_experiment_constants	MA_experiment_constants
+MA_affy_annotation	Affy Annotaiton	arrays	NO	$TBMA_AFFY_ANNOTATION	affy_annotation_id				
+MA_affy_db_links	Affy DB Links	arrays	NO	$TBMA_AFFY_DB_LINKS	affy_db_link_id				
+MA_affy_annotation_set	Affy Annotaiton Set	arrays	YES	$TBMA_AFFY_ANNOTATION_SET	affy_annotation_set_id		ManageTable.cgi?TABLE_NAME=MA_affy_annotation_set	MA_affy_annotation_set	
+MA_comparison_condition	Comparison Condition	arrays	YES	$TBMA_COMPARISON_CONDITION	condition_id		ManageTable.cgi?TABLE_NAME=MA_comparison_condition	MA_comparison_condition	
+MA_gene_expression	Gene Expression	arrays	NO	$TBMA_GENE_EXPRESSION	affy_gene_expression_id				
+MA_overlapping_transcript	Affy overlapping Transcript	arrays	NO	$TBMA_OVERLAPPING_TRANSCRIPT	overlapping_transcript_id				
+MA_gene_ontology	Affy Gene Ontology	arrays	NO	$TBMA_GENE_ONTOLOGY	gene_ontology_id				
+MA_gene_ontology_type	Affy Gene Ontology Type	arrays	NO	$TBMA_GENE_ONTOLOGY_TYPE	gene_ontology_type_id				
+MA_protein_families	Affy Protein Families	arrays	NO	$TBMA_PROTEIN_FAMILIES	protein_families_id				
+MA_trans_membrane	Affy trans membrane	arrays	NO	$TBMA_TRANS_MEMBRANE	trans_membrane_id				
+MA_trans_membrane_domain	Affy trans membrane Domain	arrays	NO	$TBMA_TRANS_MEMBRANE_DOMAIN	trans_membrane_domain_id				
+MA_interpro	Affy interpro	arrays	NO	$TBMA_INTERPRO	interpro_id				
+MA_protein_domain	Affy protein domain	arrays	NO	$TBMA_PROTEIN_DOMAIN	protein_domain_id				
+MA_alignment	Affy gene alignment	arrays	NO	$TBMA_ALIGNMENT	alignment_id				
+MA_GetAffy_GeneIntensity	Get Affy Gene Intensity	QUERY	NO				GetAffy_GeneIntensity.cgi		
+MA_affy_analysis	Affy Analysis	arrays	YES	$TBMA_AFFY_ANALYSIS	affy_analysis_id		ManageTable.cgi?TABLE_NAME=MA_affy_analysis	MA_affy_analysis	
+MA_affy_analysis_type	Affy Analysis Type	arrays	YES	$TBMA_AFFY_ANALYSIS_TYPE	affy_analysis_type_id		ManageTable.cgi?TABLE_NAME=MA_affy_analysis_type	MA_affy_analysis_type	
+MA_experiment_information	Experiment Information	arrays	YES	$TBMA_EXPERIMENT_INFORMATION	experiment_information_id		ManageTable.cgi?TABLE_NAME=MA_experiment_information	MA_experiment_information	
+MA_experiment_constants	Experiment Constants	arrays	YES	$TBMA_EXPERIMENT_CONSTANTS	experiment_constants_id		ManageTable.cgi?TABLE_NAME=MA_experiment_constants	MA_experiment_constants	
