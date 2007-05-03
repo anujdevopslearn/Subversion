@@ -1,0 +1,84 @@
+## Exporting PeptideAtlas builds ##
+
+  This document describes the process of creating an Atlas build export as an 
+SBEAMS XML document as well as a mysql dump file.  Currently only one build 
+can be exported at a time, and it is not known if multiple builds created in
+this manner can be loaded into the same database.
+
+# Step 1: Create SBEAMS table XML export of atlas build 
+run the export_atlas_build.pl script with the build_id as the lone argument,
+the following example will export build 100:
+
+$SBEAMS/lib/scripts/PeptideAtlas/export_atlas_build.pl -b 100
+
+This will create a file in /tmp named atlas_build_100.xml.  This file is 
+suitable for loading into a blank database schema
+
+# Step 2 (optional): In order to create a mysql dump file, you must first load
+the exported data into a blank mysql database.  The following shows the various
+steps involved, you may skip any that don't apply to your situation (or modify
+based on your knowledge of mysql).   For these steps I've assumed a mysql user
+named sbeams already exists, and that an appropriate sbeams dev instance has 
+been created that points at the mysql instance (see below).
+
+
+  # Example SQL to create database to store schema
+--DROP DATABASE peptide_atlas_test
+  CREATE DATABASE peptide_atlas_test;
+  USE peptide_atlas_test;
+  GRANT ALL ON peptide_atlas_test to 'sbeams'@'%';
+  FLUSH PRIVILEGES;
+  COMMIT WORK;
+
+  # Set configuration file in an appropriate dev instance to point at the newly
+  created mysql database.  Specifically, the following settings should provide 
+  the correct values:
+( assuming dbname is peptide_atlas_test).
+
+DB_DATABASE     = peptide_atlas_test
+DBPREFIX{BioLink}     = peptide_atlas_test.
+DBPREFIX{Core}     = peptide_atlas_test.
+DBPREFIX{PeptideAtlas}     = peptide_atlas_test.
+DBPREFIX{Proteomics}    = peptide_atlas_test.
+DB_DATABASE     = human_all
+DB_DATABASE     = microarray_schema
+DB_DATABASE     = peptide_atlas_test
+DB_DATABASE     = sbeams
+
+DB_DRIVER   = DBI:mysql:$DB_DATABASE:$DB_SERVER
+DB_PASS     = 52616e646f6d4956d624d072686135e105297f9bbee218f1
+DB_SERVER   = dbhost.mydomain.org
+DB_TYPE     = MySQL
+DB_USER     = sbeams
+
+  # You must also edit the Core_POPULATE.sql file to specify the contact and
+  user_login information for the uid the scripts are run as (yours!).  This is
+  necessary because we are using SBEAMS functions and authentication.
+
+  # Build necessary schema elements.  Due to the inclusion of a single foreign
+  key reference, it is necessary to load the proteomics module as well.  In 
+  order to run the script you must first set DBNAME and SBEAMS environent
+  variables, and edit script to 
+
+  $SBEAMS/lib/scripts/Core/peptide_atlas_schema.sh build
+
+  # Load exported xml into new schema with DataImport.pl.  This is generally
+  the longest step by a wide margin, so example runs with nohup, to avoid a
+  premature termination of the process, as well as to capture the output.
+
+  nohup DataImport.pl -n -u 0.7 -s /tmp/atlas_build_100.xml &
+  
+  # Export database as a mysql dump file.  Note that you will be prompted for
+  a password if invoked as written, you can optionally provide the password on
+  the command line.
+
+  mysqldump -uroot -p peptide_atlas_test > /tmp/atlas_build_100.mysql
+  
+  # In order to load the exported mysql dump into a blank database, you simply 
+  redirect it into the mysql program as shown below.  See password note in
+  previous (export) section.
+
+  mysql -u sbeams -p -h dbhost -D peptide_atlas_test_two < atlas_build_100.mysql
+  
+
+
