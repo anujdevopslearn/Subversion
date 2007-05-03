@@ -20,8 +20,7 @@ package SBEAMS::Connection::Utilities;
 use strict;
 use SBEAMS::Connection::Log;
 use SBEAMS::Connection::Settings qw( $DBADMIN $PHYSICAL_BASE_DIR );
-use vars qw(@ERRORS
-           );
+use vars qw(@ERRORS);
 my $log = SBEAMS::Connection::Log->new();
 
 ###############################################################################
@@ -766,21 +765,24 @@ sub get_page_message {
 
   my $sbeams_msg = $this->getSessionAttribute( key => '_SBEAMS_message' );
   return '' unless $sbeams_msg;
-  my ( $mode, $msg ) = $sbeams_msg =~ /^(\w+)::(.+)$/;
+  $sbeams_msg =~ /(\w+)(::)/;
+  my $mode = $1;
+  $sbeams_msg =~ s/$1$2//gm;
+
+  $log->debug( "Mode is $mode from message of $sbeams_msg" );
 
   # In case the format was goofy:
-  $mode ||= 'info';
-  $msg ||= $sbeams_msg;
+  $mode ||= 'Info';
 
   # Clean up
   $this->deleteSessionAttribute( key => '_SBEAMS_message' );
   if ( $args{no_color} ) {
-    return $msg; 
+    return $sbeams_msg; 
   } else {
-    $msg = "<FONT COLOR=$color{$mode}>$msg</FONT>"; 
-    $msg = "<I>$msg</I>" unless $args{no_italics};
+    $sbeams_msg = "<FONT COLOR=$color{$mode}>$sbeams_msg</FONT>"; 
+    $sbeams_msg = "<I>$sbeams_msg</I>" unless $args{no_italics};
   }
-  return $msg;
+  return $sbeams_msg;
 }
 
 sub get_notice {
