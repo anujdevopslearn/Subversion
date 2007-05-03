@@ -1,0 +1,55 @@
+The following changes to the core SBEAMS database should be made when
+upgrading SBEAMS
+
+from version 0.22
+  to 0.23 (development branch)
+     0.24 (next release)
+     or later
+
+---------------
+
+2007-05-02
+
+# Added ability to A/M/D records in the dye table via Manage Table.  If the dye table exists in your site (doubtful, as it was omitted from driver tables), you can update your table with the following (SQL Server-centric) code.  If your site is using MySQL you can request help via the sbeams-discuss list:
+
+https://lists.sourceforge.net/lists/listinfo/sbeams-discuss
+
+CREATE TABLE temp_dye (
+dye_id INT,
+dye_name VARCHAR(50),
+max_wavelength float,
+extinction_coeff_at_max float,
+correction_260 float );
+
+INSERT INTO temp_dye SELECT dye_id, dye_name, max_wavelength, extinction_coeff_at_max, correction_260 FROM dye;
+
+DROP TABLE dye;
+
+CREATE TABLE dbo.dye (
+dye_id INT IDENTITY,
+dye_name VARCHAR(50),
+max_wavelength float,
+extinction_coeff_at_max float,
+correction_260 float,
+date_created datetime,
+created_by_id int,
+date_modified datetime,
+modified_by_id int,
+owner_group_id int,
+record_status char(1)
+);
+
+INSERT INTO dye (  dye_name, max_wavelength, extinction_coeff_at_max, correction_260 ) SELECT dye_name,  max_wavelength, extinction_coeff_at_max, correction_260 FROM temp_dye;
+
+-- Only do this after the previous steps have worked successfully!
+--DROP TABLE temp_dye
+
+
+---------------
+
+
+
+
+
+
+
