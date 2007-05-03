@@ -413,7 +413,7 @@ sub fetchPathwayXML {
   }
 
   my $base = $CONFIG_SETTING{KGML_URL} || 
-    "ftp://ftp.genome.jp/pub/kegg/xml/KGML_v0.6.1/$org/BASE.xml";
+    "ftp://ftp.genome.jp/pub/kegg/xml/organisms/$org/BASE.xml";
 
   $base =~ s/BASE/$path/g;
   $base =~ s/__KEGG_ORG__/$org/g;
@@ -461,7 +461,7 @@ sub parsePathwayXML {
     }
   } else {
     my $base = $CONFIG_SETTING{KGML_URL} || 
-      "ftp://ftp.genome.jp/pub/kegg/xml/KGML_v0.6.1/$org/BASE.xml";
+      "ftp://ftp.genome.jp/pub/kegg/xml/organisms/$org/BASE.xml";
 
     $base =~ s/BASE/$path/g;
     $base =~ s/__KEGG_ORG__/$org/g;
@@ -537,6 +537,17 @@ sub getColoredPathway {
   if ( $pathway !~ /^path:/ ) {
     $pathway = 'path:' .  $pathway;
   }
+
+   $log->debug( "path is $pathway" );
+
+  my $cnt = 0;
+  my $all = '';
+  for my $g ( @{$args{genes}} ) {
+    $cnt++;
+    $all .= " $g"; 
+  }
+  $log->debug( $cnt . ' genes ' . $all );
+
 
   my $genes = SOAP::Data->type( array => $args{genes} );
   my $fg = SOAP::Data->type( array => $args{fg} );
