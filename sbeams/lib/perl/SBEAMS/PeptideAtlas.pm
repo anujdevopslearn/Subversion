@@ -106,6 +106,17 @@ sub getProjectData {
   return ( \%project_data );
 }
 
+sub has_search_key_data {
+  my $self = shift;
+  my %args = @_;
+  my $build_id = $args{build_id} || 
+                 $self->getCurrentAtlasBuildID( parameters_ref => $args{parameters_ref} );
+  my ( $cnt ) = $self->getSBEAMS()->selectrow_array( <<"  END" );
+  SELECT COUNT(*) FROM $TBAT_SEARCH_KEY WHERE atlas_build_id = $build_id
+  END
+  return $cnt;
+}
+
 ###############################################################################
 
 1;
