@@ -183,6 +183,14 @@ sub setRowAttr {
 #+
 # Method to get the number of rows currently defined
 # -
+sub getColNum {
+  my $this = shift;
+  return( $this->{__maxlen} );
+}
+
+#+
+# Method to get the number of rows currently defined
+# -
 sub getRowNum {
   my $this = shift;
   return( scalar(@{$this->{__rowvals}}) );
