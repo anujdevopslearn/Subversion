@@ -3014,7 +3014,9 @@ sub displayResultSet {
     #### If the desired output format is Cytoscape, prepare a temp directory
     #### for the files and return the jnlp xml
 
-    if ($output_mode eq 'cytoscape' && defined($cytoscape)) {
+    if ($output_mode eq 'cytoscape') {
+      #### If the necessary Cytoscape processing information is not passed, then just return
+      return unless (defined($cytoscape));
 
       my $template = $cytoscape->{template} || die("ERROR: Cytoscape template not defined");
       my $identifier = $rs_params_ref->{'set_name'} || 'unknown';
