@@ -394,12 +394,14 @@ MA_affy_array_sample	19	sample_description	Sample Description	text	16	0	Y		N			N
 MA_affy_array_sample	20	sample_preparation_date	Sample Preparation Date	datetime	8	0	N		N			N	text	30		Y	Y	Y	Date/time the biomaterial was prepared with the described protocols		
 MA_affy_array_sample	21	treatment_description	Treatment Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	"Describe the treatment of the biomaterials, including mention of the selected protocols"		
 MA_affy_array_sample	22	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
-MA_affy_array_sample	23	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y	N			
-MA_affy_array_sample	24	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N	Y			
-MA_affy_array_sample	25	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
-MA_affy_array_sample	26	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N	Y			
-MA_affy_array_sample	27	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
-MA_affy_array_sample	28	record_status	Record Status	char	1	0	N	N	N							N	N	N			
+MA_affy_array_sample	23	data_flag	Data Flag	varchar	10	0	Y		N			N	optionlist			Y	Y	N	Array quality assessment, default is OK, set to Bad for problem arrays	"SELECT option_key,option_value FROM $TBMA_MISC_OPTION WHERE option_type='data_flag' ORDER BY sort_order,option_value"	
+MA_affy_array_sample	24	replicate_tag	Replicate Tag	varchar	36	0	Y		N			N	text	5		Y	Y	N	Replicate identifier, typically one of A, B, C, or 1, 2,  3, etc.		
+MA_affy_array_sample	25	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y	N			
+MA_affy_array_sample	26	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N	Y			
+MA_affy_array_sample	27	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+MA_affy_array_sample	28	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N	Y			
+MA_affy_array_sample	29	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
+MA_affy_array_sample	30	record_status	Record Status	char	1	0	N	N	N							N	N	N			
 MA_affy_array	1	affy_array_id	Affy Array ID	int	4	0	N		Y			Y				N	N	Y	Affy Array ID		pkDEFAULT
 MA_affy_array	2	file_root	Root File Name	varchar	100	0	N		N			Y	fixed	50		Y	Y	N	Root Name of the affy data file. No file extensions are needed		
 MA_affy_array	3	file_path_id	File Path	int	4	0	N		N	MA_file_path	file_path_id	Y	optionlist	2		Y	Y	Y	Select the Root file path for the group of files generated from this array.   FK to MA_file_path.file_path_id	"SELECT file_path_id , file_path FROM $TBMA_FILE_PATH WHERE record_status != 'D'"	
@@ -630,3 +632,23 @@ MA_experiment_constants	10	date_modified	Date Record Modified	datetime	4	0	N	CUR
 MA_experiment_constants	11	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
 MA_experiment_constants	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 MA_experiment_constants	13	record_status	Record Status	char	1	0	N	N	N							N	N				
+MA_treatment	1	treatment_id	Treatment ID	int	4	0	N		Y							N	N	Y	Treatment ID		
+MA_treatment	2	treatment_name	Treatment Name	varchar	255		N		N			Y	text	25		Y	Y	N	Name for this treatment		
+MA_treatment	3	time	Time	int	4		Y		N			N	text	5		Y	Y	N	Timepoint at which sample was collected post-treatment		
+MA_treatment	4	time_units	Time Units	varchar	36		Y		N			N	text	25		Y	Y	N	Units of time for treatment timepoint, e.g. hours, minutes, seconds		
+MA_treatment	5	treatment_agent	Treatment Agent	varchar	256		Y		N			N	text	25		Y	Y	N	Chemical or biological agent added to perturb the system, if any.  e.g. PAM, PIC, LPS, etc.		
+MA_treatment	5	concentration	Concentration	float	8		Y		N			N	text	5		Y	Y	N	Concentration of chemical or biological agent, if any, used in treatment		
+MA_treatment	6	conc_units	Concentration Units	varchar	36		Y		N			N	text	25		Y	Y	N	Units of concentration for treatment		
+MA_treatment	7	treatment_type	Treatment Type	varchar	255		Y		N			N	text	25		Y	Y	N	Treatment Type, e.g. chemical, etc.		
+MA_treatment	8	treatment_mode	Treatment Mode	varchar	255		Y		N			N	text	25		Y	Y	N	Treatment Mode, e.g. In Vitro, In Vivo, etc.		
+MA_treatment	9	modifier	Modifier	varchar	255	0	Y		N			N	text	25		Y	Y	N	Non-standard option which applies to treatment		
+MA_treatment	10	sort_order	Sort Order	int	4	10	Y	100	N			N	text	5		Y	Y	N	Sort Order		
+MA_treatment	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N	Date Record Created		
+MA_treatment	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y	Record Created By		
+MA_treatment	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N	Date Record Modified		
+MA_treatment	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y	Record Modified By		
+MA_treatment	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y	Owner Group ID		
+MA_treatment	16	record_status	Record Status	char	1	0	N	N	N							N	N	N	Record Status		
+MA_affy_sample_treatment	1	affy_sample_treatment_id	Affy Sample Treatment ID	int	4	0	N		Y			Y									
+MA_affy_sample_treatment	2	affy_array_sample_id	Affy Array Sample ID	int	4	0	N		N	MA_affy_array_sample	affy_array_sample_id	Y									
+MA_affy_sample_treatment	3	treatment_id	Treatment ID	int	4	0	N		N	MA_treatment	treatment_id	Y									

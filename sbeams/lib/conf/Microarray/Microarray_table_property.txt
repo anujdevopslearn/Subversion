@@ -50,3 +50,5 @@ MA_affy_analysis	Affy Analysis	arrays	YES	$TBMA_AFFY_ANALYSIS	affy_analysis_id		
 MA_affy_analysis_type	Affy Analysis Type	arrays	YES	$TBMA_AFFY_ANALYSIS_TYPE	affy_analysis_type_id		ManageTable.cgi?TABLE_NAME=MA_affy_analysis_type	MA_affy_analysis_type	
 MA_experiment_information	Experiment Information	arrays	YES	$TBMA_EXPERIMENT_INFORMATION	experiment_information_id		ManageTable.cgi?TABLE_NAME=MA_experiment_information	MA_experiment_information	
 MA_experiment_constants	Experiment Constants	arrays	YES	$TBMA_EXPERIMENT_CONSTANTS	experiment_constants_id		ManageTable.cgi?TABLE_NAME=MA_experiment_constants	MA_experiment_constants	
+MA_treatment	Treatment	arrays	YES	$TBMA_TREATMENT	treatment_id		ManageTable.cgi?TABLE_NAME=MA_treatment	MA_treatment	
+MA_affy_sample_treatment	Affy Sample Treatment	arrays	YES	$TBMA_AFFY_SAMPLE_TREATMENT	affy_sample_treatment_id		ManageTable.cgi?TABLE_NAME=MA_affy_sample_treatment	MA_sample_treatment	
