@@ -8,6 +8,46 @@ from version 0.22
 
 ---------------
 
+2007-05-08
+
+  Added new columns and tables to store optional sample treatment information.  The existing affy_array_sample table had 2 new columns added:
+
+  ALTER TABLE my_db_prefix.affy_array_sample ADD data_flag VARCHAR(10);
+  ALTER TABLE my_db_prefix.affy_array_sample ADD replicate_tag VARCHAR(36);
+
+  New table called 'treatment' was added, primarily to record information about a chemical stimulation of cells prior to analysis.  A lookeup table, 'affy_sample_treatment' was added, joining the treatment table with affy_array_sample.
+
+CREATE TABLE my_db_prefix.treatment (
+  treatment_id               int IDENTITY NOT NULL,
+  treatment_name             varchar(255) NOT NULL,
+  time                       int NULL,
+  time_units                 varchar(36) NULL,
+  treatment_agent            varchar(256) NULL,
+  concentration              float NULL,
+  conc_units                 varchar(36) NULL,
+  treatment_type             varchar(255) NULL,
+  treatment_mode             varchar(255) NULL,
+  modifier                   varchar(255) NULL,
+  sort_order                 int NULL DEFAULT '100',
+  date_created               datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_by_id              int NOT NULL DEFAULT '1',
+  date_modified              datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  modified_by_id             int NOT NULL DEFAULT '1',
+  owner_group_id             int NOT NULL DEFAULT '1',
+  record_status              char(1) NOT NULL DEFAULT 'N',
+  PRIMARY KEY (treatment_id)
+);
+
+
+CREATE TABLE my_db_prefix.affy_sample_treatment (
+  affy_sample_treatment_id   int IDENTITY NOT NULL,
+  affy_array_sample_id       int NOT NULL,
+  treatment_id               int NOT NULL,
+  PRIMARY KEY (affy_sample_treatment_id)
+);
+
+Where my_db_prefix is something like microarray.dbo on mssql, or microarray on mysql.
+
 2007-05-02
 
 # Added ability to A/M/D records in the dye table via Manage Table.  If the dye table exists in your site (doubtful, as it was omitted from driver tables), you can update your table with the following (SQL Server-centric) code.  If your site is using MySQL you can request help via the sbeams-discuss list:
