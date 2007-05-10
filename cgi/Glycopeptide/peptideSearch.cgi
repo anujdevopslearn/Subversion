@@ -57,7 +57,7 @@ my $predicted_track_type = "Predicted Peptides";
 my $id_track_type 		 = 'Observed Peptides';
 my $glyco_site_track = "N-Glyco Sites";
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
-my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/Glyco_prediction.cgi";
+my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/peptideSearch.cgi";
 
 my %search_types = ( gene_symbol => 'Gene Symbol',
                      gene_name   => 'Gene Name/Alias',

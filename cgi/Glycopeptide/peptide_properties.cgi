@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 
 ###############################################################################
-# $Id: Glyco_prediction.cgi 4280 2006-01-13 06:02:10Z dcampbel $
+# $Id: peptideSearch.cgi 4280 2006-01-13 06:02:10Z dcampbel $
 #
 # SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)

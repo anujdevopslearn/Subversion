@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 
 ###############################################################################
-# $Id: Glyco_prediction.cgi 4670 2006-04-22 01:54:05Z dcampbel $
+# $Id: peptideSearch.cgi 4670 2006-04-22 01:54:05Z dcampbel $
 #
 # SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
@@ -156,7 +156,7 @@ sub run_search {
     if ( $params->{action} ne 'download' ) {
       $tissues = $sbeams->truncateStringWithMouseover( string => $tissues, len => 20 );
       $protein_name= $sbeams->truncateStringWithMouseover( string => $protein_name, len => 40 );
-      $ipi = "<A HREF='Glyco_prediction.cgi?search_type=IPI Accession Number;action=Show_hits_form;search_term=$ipi' TARGET=prot_details>$ipi</A>";
+      $ipi = "<A HREF='peptideSearch.cgi?search_type=IPI Accession Number;action=Show_hits_form;search_term=$ipi' TARGET=prot_details>$ipi</A>";
     }
     $prophet_score = sprintf( "%0.2f", $prophet_score);
     $peptide_mass = sprintf( "%0.4f", $peptide_mass);

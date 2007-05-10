@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 
 ###############################################################################
-# $Id: Glyco_prediction.cgi 4280 2006-01-13 06:02:10Z dcampbel $
+# $Id: peptideSearch.cgi 4280 2006-01-13 06:02:10Z dcampbel $
 #
 # SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
@@ -128,7 +128,7 @@ sub display_proteins{
            $q->td('Identified Peptides')
            );
 
-	my $cgi_url = "Glyco_prediction.cgi?action=Show_detail_form&ipi_data_id";
+	my $cgi_url = "peptideSearch.cgi?action=Show_detail_form&ipi_data_id";
 
   my $protcnt = 0;
   my $cutoff = $sbeamsMOD->get_current_prophet_cutoff();
