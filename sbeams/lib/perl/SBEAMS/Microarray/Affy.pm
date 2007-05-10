@@ -736,14 +736,14 @@ sub get_afs_full_sample_name {
 sub set_afs_strain_or_line { 
 	my $self = shift;
 	my $name = shift;
-	return $self->{AFA_COMMENT} = $name;
+	return $self->{AFS_STRAIN_OR_LINE} = $name;
 }
 #######################################################
 # get_strain_or_line
 #######################################################	
 sub get_afs_strain_or_line {
 	my $self = shift;
-	return $self->{AFA_COMMENT};
+	return $self->{AFS_STRAIN_OR_LINE};
 }
 
 ##################################################################################################
@@ -800,23 +800,24 @@ sub get_afs_age {
 }
 
 
-##################################################################################################
-#set get pair:afs_organism_part
+#######################################################
+#set/get pair:afs_organism_part
 #######################################################
 # set_afs_organism_part
 #######################################################
 sub set_afs_organism_part { 
-	my $self = shift;
-	my $name = shift;
-	return $self->{AFS_ORGANISM_PART} = $name;
+  my $self = shift;
+  my $name = shift;
+  return $self->{AFS_ORGANISM_PART} = $name;
 }
 #######################################################
 # get_afs_organism_part
 #######################################################	
 sub get_afs_organism_part {
-	my $self = shift;
-	return $self->{AFS_ORGANISM_PART};
+  my $self = shift;
+  return $self->{AFS_ORGANISM_PART};
 }
+
 ##################################################################################################
 #set get pair:afs_cell_line
 #######################################################
@@ -922,7 +923,8 @@ sub get_afs_sample_description {
 	my $self = shift;
 	return $self->{AFS_SAMPLE_DESCRIPTION};
 }
-##################################################################################################
+
+#######################################################
 #set get pair:afs_treatment_description
 #######################################################
 # set_afs_treatment_description
@@ -930,15 +932,89 @@ sub get_afs_sample_description {
 sub set_afs_treatment_description { 
 	my $self = shift;
 	my $name = shift;
-	return $self->{AFS_SAMPLE_TREATMENT_DESCRIPTION} = $name;
+	return $self->{AFS_TREATMENT_DESCRIPTION} = $name;
 }
 #######################################################
 # get_afs_treatment_description
 #######################################################	
 sub get_afs_treatment_description {
 	my $self = shift;
-	return $self->{AFS_SAMPLE_TREATMENT_DESCRIPTION};
+	return $self->{AFS_TREATMENT_DESCRIPTION};
 }
+
+#######################################################
+#set get pair:afs_data_flag
+#######################################################
+# set_afs_data_flag
+#######################################################
+sub set_afs_data_flag { 
+	my $self = shift;
+	my $name = shift || 'OK';
+	return $self->{AFS_DATA_FLAG} = $name;
+}
+#######################################################
+# get_afs_data_flag
+#######################################################	
+sub get_afs_data_flag {
+	my $self = shift;
+	return $self->{AFS_DATA_FLAG};
+}
+
+#######################################################
+#set get pair:treatment_values
+#######################################################
+# set_treatment_values
+#######################################################
+sub set_treatment_values { 
+	my $self = shift;
+	my $values = shift;
+  $self->{TREATMENT} ||= [];
+
+  # Maps the XML fields to the field names
+  my %field_map = ( 'Stimulus 1 Modifier' => 'modifier', 
+                    'Time 1'              => 'time',
+                    'Stimulus 1'          => 'treatment_name', 
+                    'Stimulus 1 Type'     => 'treatment_mode', 
+                    'Stimulus 2 Modifier' => 'modifier', 
+                    'Time 2'              => 'time',
+                    'Stimulus 2'          => 'treatment_name', 
+                    'Stimulus 2 Type'     => 'treatment_mode' 
+                  ); 
+
+  my @stim_num = ( 1,2 );
+  for my $stim_num ( @stim_num ) {
+    my $skip = 1;
+    my %treatment;
+    for my $key_templ ( 'Stimulus NUM Modifier', 'Time NUM', 
+                  'Stimulus NUM', 'Stimulus NUM Type' ) {
+      my $key = $key_templ;
+      $key =~ s/NUM/$stim_num/;
+      $treatment{$field_map{$key}} = $values->{$key};
+      if ( defined $values->{$key} && $values->{$key} ne '' ) {
+        $skip = 0;
+      }
+    }
+    next if $skip; # Don't add record unless at least one of the params is set
+    $treatment{treatment_name} = 'unspecified';
+    $treatment{treatment_agent} = $treatment{treatment_name};
+    # Fixme - add defaults to config file?
+    $treatment{time_units} ||= 'minutes';
+    $treatment{treatment_agent} ||= 'chemical agent';
+    $treatment{sort_order} ||= 200;
+#    for my $t ( keys( %treatment ) ) { print "TREAT SAYS $t => $treatment{$t}\n"; }
+    push @{$self->{TREATMENT}}, \%treatment;
+  }
+#  print  'Total of ' . scalar( @{$self->{TREATMENT}} ) . ' treatments seen' . "\n";
+}
+#######################################################
+# get_treatment_values
+#######################################################	
+sub get_treatment_values {
+	my $self = shift;
+#  print "Returning treatments: " . scalar( @{$self->{TREATMENT}} ) . "\n";
+	return $self->{TREATMENT};
+}
+
 ##################################################################################################
 #set get pair:afs_comment
 #######################################################
