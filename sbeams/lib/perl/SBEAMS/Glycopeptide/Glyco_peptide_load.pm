@@ -916,6 +916,8 @@ sub check_version {
   my $sbeams = $self->getSBEAMS();
 	
 	my $file = $self->getfile();
+
+  return '' unless -e $file;
 	
 	my $st = stat($file);
 	
