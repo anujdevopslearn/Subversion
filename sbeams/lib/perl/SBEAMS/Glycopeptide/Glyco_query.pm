@@ -115,6 +115,7 @@ sub gene_name_query{
 	my $method = 'gene_name_query';
 	my $self = shift;
 	my $term = shift;
+  $term =~ s/\;/\,/g;
 	
 	my $osql = qq~
     SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
@@ -266,9 +267,10 @@ sub gene_id_query {
       ( SELECT ipi_accessions FROM DCAMPBEL.dbo.ipi_xrefs WHERE 
         entrez_id IN ( $term ) )
   ~;
+  $log->info( $sql );
 
   # Newfangled
-#  my $sql = $self->get_query_sql( type => 'swissprot', term => $term );
+#my $sql = $self->get_query_sql( type => 'gene_id', term => $term );
 	return $sbeams->selectHashArray($sql)
 }
 
