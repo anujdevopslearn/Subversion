@@ -367,28 +367,30 @@ sub calculatePeptideMass {
   while ( $args{sequence} !~ /^[a-zA-Z]+$/ ) {
     die "Had to bail\n" if $bail++ > 10;
     if ( $args{sequence} =~ /([a-zA-Z][*#@])/ ) {
-      my $mod = $1;
-      my $orig = $mod;
-      $orig =~ s/[@#*]//;
+      
+      my $mod = $1; # A 2-character token for modified amino acid
+
+      my ( $aa, $sym ) = split "", $mod;
+
       if ( $mod =~ /M/ ) {
         $mass += 15.9949;
-        print "$args{sequence} => Got a mod M\n";
+#        print "$args{sequence} => Got a mod M ($mod)\n";
       } elsif ( $mod =~ /C/ ) {
-        print "$args{sequence} => Got a mod C\n";
+#        print "$args{sequence} => Got a mod C ($mod)\n";
         $mass += 57.0215;
-      } elsif ( $mod =~ /N/ ) {
-        $mass += 0.9848;
-        print "$args{sequence} => Got a mod N\n";
+      } elsif ( $mod =~ /N/ ) { # Does this mean that all N's get counted, even those w/out at #?
+        $mass += ( $args{average} ) ? 0.9848 : 0.98401;
+#        print "$args{sequence} => Got a mod $aa ($mod)\n";
       } else {
         die "Unknown modification $mod!\n";
       }
       unless ( $args{sequence} =~ /$mod/ ) {
         die "how can it not match?";
       }
-      print "mod is >$mod<, orig is >$orig<, seq is $args{sequence}\n";
-      $args{sequence} =~ s/$mod//;
-      $args{sequence} =~ s/N\*//;
-      print "mod is $mod, orig is $orig, seq is $args{sequence}\n";
+#      print "mod is >$mod<, orig is >$orig<, seq is $args{sequence}\n";
+      $args{sequence} =~ s/$sym//;
+#      $args{sequence} =~ s/N\*//;
+#      print "mod is $mod, orig is $orig, seq is $args{sequence}\n";
     }
   }
   
@@ -657,7 +659,7 @@ sub runMassSearch {
     SELECT DISTINCT ipi_accession_number, CAST( predicted_peptide_sequence AS VARCHAR) ,
            experimental_peptide_mass, protein_name, 
            ABS( experimental_peptide_mass - SEARCHMASS ) delta
-    FROM biomarker.dbo.predicted_peptide PP JOIN biomarker.dbo.ipi_data ID
+    FROM $TBGP_PREDICTED_PEPTIDE PP JOIN $TBGP_IPI_DATA ID
     ON ID.ipi_data_id = PP.ipi_data_id
     WHERE ( (experimental_peptide_mass BETWEEN MINMASS AND MAXMASS )  OXCLAUSE )
     AND predicted_peptide_sequence LIKE '%#%'
@@ -668,9 +670,9 @@ sub runMassSearch {
     SELECT DISTINCT ipi_accession_number, identified_peptide_sequence,
            experimental_peptide_mass, protein_name,
            ABS( experimental_peptide_mass - SEARCHMASS ) delta
-    FROM biomarker.dbo.identified_peptide IP JOIN biomarker.dbo.identified_to_ipi ITI
+    FROM $TBGP_IDENTIFIED_PEPTIDE IP JOIN $TBGP_IDENTIFIED_TO_IPI ITI
     ON ITI.identified_peptide_id = IP.identified_peptide_id
-    JOIN biomarker.dbo.ipi_data ID
+    JOIN $TBGP_IPI_DATA ID
     ON ID.ipi_data_id = ITI.ipi_data_id
     WHERE ( (experimental_peptide_mass BETWEEN MINMASS AND MAXMASS )  OXCLAUSE )
     ORDER BY ABS( experimental_peptide_mass - SEARCHMASS ) ASC, experimental_peptide_mass ASC
@@ -680,7 +682,6 @@ sub runMassSearch {
   my $cnt;
   my @all_matches;
   for my $mass ( @{$args{masses}} ) {
-    $log->debug( "MASS IS: $mass" );
     $cnt++;
     chomp $mass;
     my @matches;
@@ -691,9 +692,9 @@ sub runMassSearch {
     my $tolerance;
     if ( $args{mw_units} eq 'ppm' ) {
       my $mppm = $mass/1000000;
-      $tolerance = $args{mass_window}/2*$mppm;
+      $tolerance = $args{mass_window}*$mppm;
     } else {
-      $tolerance = $args{mass_window}/2;
+      $tolerance = $args{mass_window};
     }
     my $minmass = $mass - $tolerance;
     my $maxmass = $mass + $tolerance;
@@ -718,6 +719,7 @@ sub runMassSearch {
     $mass_sql =~ s/OXCLAUSE/$ox_clause/g;
     $mass_sql =~ s/SEARCHMASS/$mass/g;
    $log->debug( $mass_sql );
+#   return [];
 
     my @results = $sbeams->selectSeveralColumns( $mass_sql );
     if ( scalar @results ) {
@@ -736,19 +738,24 @@ sub runMassSearch {
               }
             } elsif ( $result->[2] > $maxmass ) {
               if ( $result->[1] =~ /\..*M.*\./ ) {
-                $log->debug( "$result->[1] matched!" );
+#                $log->debug( "$result->[1] matched!" );
                 $ox_num = 1;
               } else {
-                $log->debug( "skiipy" . $result->[1] );
+#                $log->debug( "skiipy" . $result->[1] );
                 next;
               }
             }
           }
         }
         $ox_num = ( $result->[4] > 1 ) ? 1 : 0;
-        $log->debug( "pushing $result->[1]" );
+#        $log->debug( "pushing $result->[1]" );
         my @row = ( $cnt, $mass, @$result, $ox_num );
         push @matches, \@row;
+        
+        if ( $#matches >= 100 ) {
+          $log->debug( "Too many matches capping at $#matches" );
+          last;
+        }
       }
     } 
     unless ( scalar @matches ) {
