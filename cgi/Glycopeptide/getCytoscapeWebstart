@@ -32,12 +32,12 @@ use SBEAMS::Glycopeptide::Tables;
 my $sbeams = new SBEAMS::Connection;
 my $glyco = new SBEAMS::Glycopeptide;
 $glyco->setSBEAMS($sbeams);
-my $program = basename( $0 );
 
 my $keggmap = SBEAMS::BioLink::KeggMaps->new();
 my $kegg_organism = $glyco->getKeggOrganism( );
-my $verbose = 1;
 my $params;
+my $base_url = $q->url( -absolute => 1 );
+my $program = basename( $0 );
 
 # Don't buffer output
 $|++;
@@ -49,17 +49,27 @@ $|++;
 
   # Process cgi parameters
   $params = process_params();
-  
-  my $spc = $sbeams->getGifSpacer(700);
-  my $content = "<FONT COLOR=green><I>Feature not yet implemented</I></FONT> $spc";
-  $params->{apply_action} ||= 'genes_from_pathway';
-
-  # Decision block, what type of page are we going to display?
-  if ( $params->{apply_action} eq 'genes_from_pathway' ) {
-#    $content = make_ws_from_pathway( $params );
-#    print $content;
-  }
   $glyco->printPageHeader();
+  my $content = '';
+
+  if ( $params->{output_mode} =~ /html/ ) {
+  
+    my $spc = $sbeams->getGifSpacer(700);
+    my $content = "<FONT COLOR=green><I>Feature not yet implemented</I></FONT> $spc";
+
+  } else {
+
+    $params->{apply_action} ||= 'genes_from_pathway';
+
+    # Decision block, what type of page are we going to display?
+    if ( $params->{apply_action} eq 'genes_from_pathway' ) {
+      $content = run_webstart_from_pathway( $params );
+# $sbeams->display$content;
+      exit;
+    }
+
+
+  }
   print $content;
   $glyco->printPageFooter( close_tables=>'NO');
 
@@ -106,6 +116,30 @@ sub make_ws_from_pathway {
     resultset_params_ref=>\%rs_params,
     query_name=>"$SBEAMS_SUBDIR/getCytoscapeWebstart",
   );
+
+
+#  prepareJavaWebStartFiles(
+#    rs_params_ref=>\%rs_params,
+#    resultset_ref=>$resultset_ref,
+#    query_parameters_ref=>\%parameters,
+#    url_cols_ref=>\%url_cols,
+#    column_titles_ref=>\@column_titles,
+#    hidden_cols_ref=>\%hidden_cols,
+#    java_web_start=> { template => 'phosphopeptides' }
+#  );
+#  $rs_params{page_size} = 500;
+
+  #### Display the resultset
+  $sbeams->displayResultSet(
+    resultset_ref        => $rs_ref,
+    query_parameters_ref => $params,
+    rs_params_ref        => \%rs_params,
+    base_url             => $base_url,
+    cytoscape => { template => 'phosphopeptides' }
+  );
+
+  
+#  return $rs_ref;
   # make webstart
 }
 
