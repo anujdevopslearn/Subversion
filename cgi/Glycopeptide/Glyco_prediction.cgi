@@ -62,7 +62,7 @@ my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/Glyco_prediction.cgi";
 my %search_types = ( gene_symbol => 'Gene Symbol',
                      gene_name   => 'Gene Name/Alias',
                      swiss_prot  => 'Swiss Prot Accession Number',
-                     accession   => 'IPI Accession Number',
+                     accession   => 'Accession Number',
                      gene_id     => 'GeneID'
                    );
 
@@ -265,8 +265,8 @@ sub handle_request {
               $q->td($q->a({href=>"$cgi_url=Gene Name/Alias&search_term=CD%"}, "CD%") )
 	   ),
 	   $q->Tr(
-              $q->td({class=>'grey_bg'}, "IPI Accession Number"),
-              $q->td($q->a({href=>"$cgi_url=IPI Accession Number&search_term=IPI00015102"}, "IPI00015102") )
+              $q->td({class=>'grey_bg'}, "Accession Number"),
+              $q->td($q->a({href=>"$cgi_url=Accession%20Number&search_term=IPI00015102"}, "IPI00015102") )
 	   ),
 	   $q->Tr(
               $q->td({class=>'grey_bg'}, "Protein Sequence"),
@@ -359,7 +359,7 @@ sub print_out_hits_page{
 	
 	$html .= $q->start_table();
   $html .= $q->Tr({class=>'rev_gray_head'},
-			  $q->td('IPI ID'),
+			  $q->td('ID'),
 			  $q->td('Protein Name'),
 			  $q->td('Protein Symbol'),
 			  $q->td('Identified Peptides')
@@ -595,11 +595,10 @@ sub check_search_term{
 		unless($clean_term =~ /^\w/){
 			print_error("Swiss Prot Accession Does not look good '$clean_term'");
 		}
-	}elsif($type eq 'IPI Accession Number'){
+	}elsif($type eq 'Accession Number'){
 		
-		unless($clean_term =~ /^IPI\d+/){
-			print_error("IPI Accession Number does not look good '$clean_term'");
-		}
+#		unless($clean_term =~ /^IPI\d+/){ print_error("IPI Accession Number does not look good '$clean_term'"); }
+
 		
 	}
 	return ($type, $clean_term);
@@ -706,7 +705,7 @@ sub display_detail_form{
     $q->Tr(
       $q->td({class=>'grey_header', colspan=>2}, "Protein Info"),),
     $q->Tr(
-      $q->td({class=>'rev_gray_head'}, "IPI ID"),
+      $q->td({class=>'rev_gray_head'}, "ID"),
       $q->td("$ipi_url  [ View in Peptide Atlas: $protein_url ]")),
     $q->Tr(
       $q->td({class=>'rev_gray_head', nowrap=>1}, "Protein Name"),
@@ -1240,7 +1239,7 @@ sub print_out_phospho_hits_page{
 	
 	$html .= $q->start_table();
   $html .= $q->Tr({class=>'rev_gray_head'},
-			  $q->td('IPI ID'),
+			  $q->td('ID'),
 			  $q->td('Protein Name'),
 			  $q->td('Protein Symbol'),
 			  $q->td('Observed Peptides')
@@ -1376,7 +1375,7 @@ sub display_phospho_detail_form{
     $q->Tr(
       $q->td({class=>'grey_header', colspan=>2}, "Protein Info"),),
     $q->Tr(
-      $q->td({class=>'rev_gray_head'}, "IPI ID"),
+      $q->td({class=>'rev_gray_head'}, "ID"),
       $q->td({nowrap=>1}, "$ipi_url $kegglink  $scanlink")),
     $q->Tr(
       $q->td({class=>'rev_gray_head', nowrap=>1}, "Protein Name"),
