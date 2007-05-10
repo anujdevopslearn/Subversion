@@ -1,4 +1,4 @@
 props=jar://cytoscape.props
-species=Saccharomyces cerevisiae
+species=Drosophila Melanogaster
 vprops=jar://vizmap.props
 $ALLFILESHERE
