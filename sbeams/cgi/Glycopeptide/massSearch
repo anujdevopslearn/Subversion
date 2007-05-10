@@ -167,17 +167,17 @@ sub print_form {
   my $input_fields = get_input_fields($params);
 
   # Loop through and add items to the form table
-  for my $key ( qw(mass_list mass_window ox_met alk_cys mass_type search ) ) {
+  for my $key ( qw(mass_list mass_window ox_met alk_cys mass_type search charge ) ) {
     $f_table->addRow(["<B>$input_labels->{$key}</B>", $input_fields->{$key}]); 
   }
 
   my @buttons = $sbeams->getFormButtons( types => [qw(submit reset)] );
   $f_table->addRow( [join(" ", @buttons)] );
 
-  $f_table->setColAttr( COLS => [1], ROWS => [7], COLSPAN => 2 );
+  $f_table->setColAttr( COLS => [1], ROWS => [8], COLSPAN => 2 );
 #  $f_table->setColAttr( COLS => [1], ROWS => [1..6], ALIGN => 'RIGHT' );
-  $f_table->setColAttr( COLS => [1], ROWS => [7], ALIGN => 'CENTER' );
-  $f_table->setColAttr( COLS => [2], ROWS => [1..6], ALIGN => 'LEFT' );
+  $f_table->setColAttr( COLS => [1], ROWS => [8], ALIGN => 'CENTER' );
+  $f_table->setColAttr( COLS => [2], ROWS => [1..7], ALIGN => 'LEFT' );
 
   $content .=<<"  END";
   <FORM NAME=mass_search_form> 
@@ -197,6 +197,7 @@ sub get_input_labels {
              alk_cys     => 'Alkylated Cys (+ 57.0215):',
              mass_type   => 'Type of mass values:',
              search      => 'Search subject:',
+             charge      => 'Peptide charge state:',
              );
   
   return \%in;
@@ -208,7 +209,7 @@ sub get_input_fields {
   my $mass_list = $params->{mass_list} || '';
   $mass_list = "<TEXTAREA ROWS=4 COLS=12 NAME=mass_list>$mass_list</TEXTAREA>";
 
-  my $mass_window = $params->{mass_list} || '';
+  my $mass_window = $params->{mass_window} || '';
   $mass_window = "<INPUT TYPE=text NAME=mass_window SIZE=10 VALUE=$mass_window></INPUT>";
 
   my $mw_amu = ( $params->{mw_units} && $params->{mw_units} eq 'amu' ) ? 'CHECKED' : '';
@@ -216,6 +217,13 @@ sub get_input_fields {
   my $mw_radio =<<"  END";
   PPM <INPUT TYPE=radio NAME=mw_units VALUE=ppm $mw_ppm> 
   AMU <INPUT TYPE=radio NAME=mw_units VALUE=amu $mw_amu> 
+  END
+
+  my $ch_neu = ( $params->{charge} && $params->{charge} eq 'neu' ) ? 'CHECKED' : '';
+  my $ch_one = 'CHECKED' unless $ch_neu;
+  my $ch_radio =<<"  END";
+  Neutral <INPUT TYPE=radio NAME=charge VALUE=neu $ch_neu> 
+  H+ <INPUT TYPE=radio NAME=charge VALUE=one $ch_one> 
   END
 
   my $none = ( !$params->{ox_met} || $params->{ox_met} eq 'none' ) ? 'CHECKED' : '';
@@ -237,9 +245,9 @@ sub get_input_fields {
   my $mono = ( !$params->{mass_type} || $params->{mass_type} eq 'mono' ) ? 'CHECKED' : '';
   my $avg = ( !$mono ) ? 'CHECKED' : '';
   my $mass_type_radio =<<"  END";
-  Mono <INPUT TYPE=radio NAME=mass_type VALUE=mono $yes> 
-  Avg <INPUT TYPE=radio NAME=mass_type VALUE=avg $no> 
+  Monoisotopic <INPUT TYPE=radio NAME=mass_type VALUE=mono $yes> 
   END
+#Avg <INPUT TYPE=radio NAME=mass_type VALUE=avg $no> 
 
   my $iden = ( !$params->{search} || $params->{search} eq 'iden' ) ? 'CHECKED' : '';
   my $pred = ( !$iden ) ? 'CHECKED' : '';
@@ -255,6 +263,7 @@ sub get_input_fields {
     alk_cys     => $alk_cys_radio,
     mass_type   => $mass_type_radio,
     search      => $search_radio,
+    charge      => $ch_radio
     );
   return \%in;
 }

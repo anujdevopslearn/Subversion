@@ -65,7 +65,8 @@ sub main {
           ));
 
     #### Print the header, do what the program does, and print footer
-    $glyco->printPageHeader();
+    $glyco->printPageHeader( onload => 'sorttables_init()' );
+    import_sort_table();
     my $intro = get_intro();
     my $content = get_content();
     print $sbeams->getGifSpacer(600);
@@ -89,6 +90,14 @@ sub get_intro {
   ~;
   return $content;
 }
+
+
+sub import_sort_table {
+  print <<"  END";
+  <SCRIPT LANGUAGE=javascript SRC="$HTML_BASE_DIR/usr/javascript/sorttable.js">
+  END
+}
+
 
 
 sub get_content {
@@ -133,6 +142,11 @@ sub get_content {
                                           width => 400,
                                           align => [qw(right right right)],
                                           rows => \@table );
+  $log->debug($table);
+  $table =~ s/(<TABLE)/$1 ID=stats CLASS=sortable/gi;
+  $log->debug($table);
+
+
   return "<P>$table</P>";
 } # end showMainPage
 
