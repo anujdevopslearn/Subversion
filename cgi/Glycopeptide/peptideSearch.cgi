@@ -887,7 +887,8 @@ sub make_protein_map_graphic {
           Extracellular => 'mediumseagreen',
                Coverage => 'beige',
       $glyco_site_track => '#EE9999',
-  $predicted_track_type => 'goldenrod' );
+  $predicted_track_type => 'goldenrod',
+   ambi_site_track      => 'lightyellow' );
   # Define CSS classes
   my $sp = '&nbsp;' x 4;
   my $style =<<"  END_STYLE";
@@ -902,6 +903,7 @@ sub make_protein_map_graphic {
    .sig_seq { background-color: $colors{'Signal Sequence web'};border-style: solid; border-color:gray; border-width: 1px  }
    .glyco_seq { background-color: $colors{$glyco_site_track};border-style: solid; border-color:gray; border-width: 1px  }
    .phospho { background-color: $colors{$glyco_site_track};border-style: solid; border-color:gray; border-width: 1px  }
+   .ambiphospho { background-color: $colors{ambi_site_track};border-style: solid; border-color:gray; border-width: 1px; color: Black  }
    .pep_cov { background-color: $colors{Coverage};border-style: solid; border-color:gray; border-width: 1px  }
    .outline { border-style: solid; border-color:gray; border-width: 1px }
    .sm_txt {  font-family: Helvetica, Arial, sans-serif; font-size: 8pt}
@@ -1006,6 +1008,22 @@ sub make_protein_map_graphic {
                       );
       delete $sorted_features{'Phosphorylation sites'};
      } 
+     if ($sorted_features{'Ambiguous Phosphorylation Sites'}) {
+       $tracks{ambiphospho}++;
+       $panel->add_track( $sorted_features{'Ambiguous Phosphorylation Sites'},
+              -glyph       => 'segments',
+              -bgcolor     => $colors{ambi_site_track},
+              -fgcolor     => 'black',
+              -font2color  => 'red',
+              -key         => 'Ambiguous Phosphorylation Sites',
+              -bump        => 1,
+              -bump_limit  => 2,
+              -height      => 8,
+				  		-label       => 0, #  sub {my $feature = shift; return $feature->start},
+					  	-description => '',
+                      );
+      delete $sorted_features{'Ambiguous Phosphorylation sites'};
+     }
    } else {
      if ($sorted_features{$glyco_site_track}) {
        $tracks{phospho}++;
@@ -1100,6 +1118,7 @@ sub make_protein_map_graphic {
   push @legend, "<TR> <TD CLASS=pred_pep>$sp</TD> <TD class=sm_txt>Predicted NxS/T motif tryptic peptide</TD> </TR>\n" if $tracks{predicted};
   push @legend, "<TR> <TD CLASS=glyco_seq>$sp</TD> <TD class=sm_txt>NxS/T Concensus glycosylation site</TD> </TR>\n"  if $tracks{glyco};
   push @legend, "<TR> <TD CLASS=phospho>$sp</TD> <TD class=sm_txt>Observed Phosphorylation Sites</TD> </TR>\n"  if $tracks{phospho};
+  push @legend, "<TR> <TD CLASS=ambiphospho>$sp</TD> <TD class=sm_txt>Ambiguous Phosphorylation Sites</TD> </TR>\n"  if $tracks{'ambiphospho'};
   push @legend, "<TR> <TD CLASS=sig_seq>$sp</TD> <TD class=sm_txt>Signal sequence predicted by Signal P</TD> </TR>\n"  if $tracks{'Signal Sequence'};
   push @legend, "<TR> <TD CLASS=anc_seq>$sp</TD> <TD class=sm_txt>Anchor sequence predicted by Signal P</TD> </TR>\n" if $tracks{anchor};
   push @legend, "<TR> <TD CLASS=tm_dom>$sp</TD> <TD class=sm_txt>Transmembrane domain predicted by TMHMM</TD> </TR>\n" if $tracks{Transmembrane};
@@ -1338,7 +1357,7 @@ sub display_phospho_detail_form{
 								  anno_type => 'swiss_prot'
 							     );
 
-  my @prechecked = qw( observed_pep tmhmm phospho );
+  my @prechecked = qw( observed_pep tmhmm phospho ambiphospho );
   my $html_protein_seq = $glyco_o->get_html_protein_seq( ref_parameters => \%parameters,
                                                          prechecked => \@prechecked
                                                        );
@@ -1464,7 +1483,7 @@ END_DREK
 
 ### Display the Amino Acid Sequence ###
   my %chk = ( predicted_pep => '', identified_pep => '', observed_pep => '',
-             sseq => '', tmhmm => '', glyco_site => '', phospho => '' );
+             sseq => '', tmhmm => '', glyco_site => '', phospho => '', ambiphosph => '' );
 
   if ( $parameters{redraw_protein_sequence} ) {
     for my $tag ( keys(%chk) ) {
@@ -1491,6 +1510,7 @@ END_DREK
       $glyco_o->has_signal_sequence() ?  $q->td( {class=>'sig_seq', nowrap => 1 },"$sp Signal Sequence <INPUT TYPE=CHECKBOX NAME=sseq $chk{sseq} ONCHANGE='toggle_state(sseq);'></INPUT>" ) : '',
       $glyco_o->has_transmembrane_seq() ? $q->td( {class=>'tm_dom', nowrap => 1  },"$sp Transmembrane <INPUT TYPE=CHECKBOX NAME=tmhmm $chk{tmhmm} ONCHANGE='toggle_state(tmhmm);'></INPUT>" ) : '',
       $q->td( {class=>'phospho', nowrap => 1 }, "Phosphorylation Site <INPUT TYPE=CHECKBOX NAME=phospho $chk{phospho} ONCHANGE='toggle_state(phospho);'></INPUT>" ),
+      $q->td( {class=>'ambiphospho', nowrap => 1 }, "Ambiguous Phosphorylation <INPUT TYPE=CHECKBOX NAME=ambiphospho $chk{ambiphospho} ONCHANGE='toggle_state(ambiphospho);'></INPUT>" ),
           ),
       $q->hidden(-name=>'ipi_data_id', -value=>$ipi_data_id, -override => 1),
       $q->hidden(-name=>'redraw_protein_sequence', -value=>1),
