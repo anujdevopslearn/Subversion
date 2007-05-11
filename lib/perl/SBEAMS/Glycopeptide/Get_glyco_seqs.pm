@@ -252,7 +252,6 @@ sub add_phospho_site{
 	my $ipi_data_id = $self->get_ipi_data_id;
 	my $seq_obj = $self->seq_info;
   my $sequence = $seq_obj->seq();
-#  $log->debug( "sequence is $sequence" );
 	
   if ( 0 ) {
     my $sites = $glyco->get_site_positions(    pattern => 'S|T|Y',
@@ -271,13 +270,25 @@ sub add_phospho_site{
     my @peptides = $self->get_observed_phosphopeptides($ipi_data_id);
 #    for my $peptide ( @peptides ) { for my $k (keys(%$peptide) ) { $log->debug( "$k => $peptide->{$k}" ); } die; }
     for my $peptide ( @peptides ) { 
-      my $site_in_pep = $glyco->get_site_positions( pattern => '\*',
+
+      # Temporary, will break if we have both a certain and an ambiguous site
+      # in the same peptide
+      my $motif_type;
+      if ( $peptide->{observed_peptide_sequence} =~ /\*/ ) {
+        $motif_type = '\*';
+      } else {
+        $motif_type = '\&';
+      }
+      my $site_in_pep = $glyco->get_site_positions( pattern => $motif_type,
                                                        seq => $peptide->{observed_peptide_sequence} );
+
 #      $log->debug( "for sequence $peptide->{observed_peptide_sequence}, we see " . join( ', ', @$site_in_pep ) );
-      $peptide->{observed_peptide_sequence} =~ s/\*//g;
+      $peptide->{observed_peptide_sequence} =~ s/$motif_type//g;
       my $pep_in_prot =  $glyco->get_site_positions( pattern => $peptide->{observed_peptide_sequence},
                                                          seq => $sequence );
       my $dec = 0;
+      my $tag_type = ( $motif_type =~ /\*/ ) ? 'Phosphorylation Sites' : 'Ambiguous Phosphorylation Sites';
+#      $log->debug( "Tag type is $tag_type for $peptide" );
       foreach my $pip ( @$pep_in_prot ) {
 #        $log->debug( "peptide maps at $pip" );
         foreach my $sip ( @$site_in_pep ) {
@@ -286,7 +297,7 @@ sub add_phospho_site{
 #          $log->debug( "Site at $coord, the amino acid is " . substr( $sequence, $coord, 1 ) );
   		    my $feature = Bio::SeqFeature::Generic->new( -start => $coord,
                                                        -end   => $coord,
-                                                     -primary => "Phosphorylation Sites" );
+                                                     -primary => $tag_type );
   		
       		#add all the feature to the protein Bio::Seq object
           $seq_obj->add_SeqFeature($feature);
@@ -310,7 +321,6 @@ sub add_glyco_site{
 	my $self = shift;
 	my $ipi_data_id = $self->get_ipi_data_id;
 	my @array_hrefs = $self->get_glyco_sites($ipi_data_id);
-#  $log->debug( "Found " . scalar(@array_hrefs) . " sites for $ipi_data_id") ;
 	return 0 unless @array_hrefs;
 	my $seq_obj = $self->seq_info;
 	
@@ -330,7 +340,6 @@ sub add_glyco_site{
 		
 		
 		#add all the feature to the protein Bio::Seq object
-   $log->debug( "Adding $location" );
 		$seq_obj->add_SeqFeature($glyco);
 	}
 	return 1;
@@ -411,7 +420,6 @@ sub add_predicted_peptides {
 	$pep_o->make_peptide_bio_seqs(data => \@array_hrefs,
 								  type => 'Predicted Peptides',	
 								);
-  $log->debug( "Added predicted" );
 	
 
 }
@@ -579,6 +587,7 @@ sub _choose_css_type {
                   'Observed Peptides' => 'observed_pep',
                   'N-Glyco Sites'       => 'glyco_site',
                   'Phosphorylation Sites' => 'phospho',
+                  'Ambiguous Phosphorylation Sites' => 'ambiphospho',
                   'Signal Sequence'     => 'sseq',
                   'Transmembrane'       => 'tmhmm',
                   intracellular         => '',
@@ -1127,7 +1136,9 @@ sub phospho_pep_html{
 									 anno_type => 'number_obs');
 			$observed_seq = $self->get_annotation(seq_obj =>$pep_seq_obj, 
 									 anno_type => 'observed_seq');
-      $spectrum_link = '<A HREF="showSpectrum.cgi?query_peptide_seq=' . $observed_seq . '" >view</A>';
+      my $spectrum_seq = $observed_seq;
+      $spectrum_seq =~ s/\&/\*/g;
+      $spectrum_link = '<A HREF="showSpectrum.cgi?query_peptide_seq=' . $spectrum_seq . '" >view</A>';
       $observed_seq = get_phospho_html( seq => $observed_seq );
 
 
@@ -1158,6 +1169,7 @@ sub get_phospho_html {
   my %args = @_;
   return '' unless $args{seq};
   $args{seq} =~ s/([STY]\*)/\<SPAN class=phospho NAME=phospho ID=phospho\>$1\<\/SPAN\>/g;
+  $args{seq} =~ s/([STY])\&/\<SPAN class=ambiphospho NAME=ambiphospho ID=ambiphospho\>$1\*\<\/SPAN\>/g;
   return $args{seq};
 }
 ###############################################

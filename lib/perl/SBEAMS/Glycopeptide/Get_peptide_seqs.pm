@@ -126,7 +126,7 @@ sub make_peptide_bio_seqs {
 		my $peptide_id = '';
 		my $identified_tissues = '';
 
-    $log->printStack( 'debug' );
+#    $log->printStack( 'debug' );
 
 	#pull out the sequence and id for the different types of peptides 
    if ($pep_type eq 'Identified Peptides'){
@@ -136,6 +136,10 @@ sub make_peptide_bio_seqs {
    } elsif ($pep_type eq 'Observed Peptides'){
 #    $log->debug( "Obs is $href->{observed_peptide_sequence}, match is $href->{matching_sequence}" );
 			$modified_pep_seq = $href->{'observed_peptide_sequence'};
+      
+      # BioPerl doesn't like '&' characters in sequences.  Who knew!
+      $modified_pep_seq =~ s/\&/\?/g;
+      
 			$peptide_id =  $href->{'observed_peptide_id'};
 			$identified_tissues = $self->observed_tissues($href->{matching_sequence});
 		} elsif ($pep_type eq 'Predicted Peptides'){
@@ -168,7 +172,6 @@ sub make_peptide_bio_seqs {
 #add_peptide_annotation
 ####################################################################
 sub add_peptide_annotation{
-	my $mehtod = 'add_peptide_annotation';
 	my $self = shift;
 	my %args = @_;
 #  $log->printStack();
@@ -177,7 +180,6 @@ sub add_peptide_annotation{
 	my $seq  = $args{seq};
 	my $tissue_info = $args{tissue_info};	
 
-	
 #annotation specific for identified peptides
 	my $pep_prophet_score 	= new Bio::Annotation::SimpleValue(-value => sprintf("%01.2f", $href->{'peptide_prophet_score'}));
 	my $peptide_mass 		= new Bio::Annotation::SimpleValue(-value => sprintf("%01.2f",$href->{'peptide_mass'}));
@@ -307,6 +309,21 @@ sub parse_modfied_pep_seq {
 			
 			push @glyco_locations, $glyco;
 			next;
+		}elsif($aa =~ /\?/){	#Ambiguous phospho Site
+#      $log->debug( "in ambiguous loop with $aa" );
+      $multi_offset++;
+			my $new_i = _check_location(location => $cnt, type =>$pep_type);
+			my $glyco = Bio::SeqFeature::Generic->new(
+								-start        => $new_i,
+								-end          => $new_i + 2,
+								-primary 	  => "", 
+								-tag 		  =>{phospho_site => 'phos'
+					 							 },
+					);
+			
+			
+			push @glyco_locations, $glyco;
+			next;
 		}
 		
 		push @clean_seq, $aa;
@@ -382,6 +399,7 @@ sub map_pep_to_protein {
 	#$log->debug( "PEP '" . $pep_obj->seq() . "' " ); #$seq_obj->seq() 
 
 	my $pep_seq = uc($pep_obj->seq());
+#  $log->debug( "got an error with $pep_seq here boss!" );
 	if ( $seq_obj->seq() =~ /$pep_seq/ ) {
 		#add one for the starting position since we want the start of the peptide location
 		

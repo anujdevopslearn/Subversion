@@ -37,9 +37,12 @@ sub new {
   my $testonly = $args{testonly};
   my $file = $args{file};
   my $release = $args{release} || $args{file};
+  my $ambiguous = $args{ambiguous} || '';
   
   my $self = {    _file => $file,
-               _release => $release};
+               _release => $release,
+             _ambiguous => $ambiguous,
+             };
 	
   bless $self, $class;
 	
@@ -567,7 +570,6 @@ sub insert_observed_peptides {
   for my $obs ( @{$args{peptides}} ) {
     $cnt++;
     # for my $k ( keys( %$heads ) ) { print "$k => $heads->{$k} => $obs->[$heads->{$k}]\n"; }
-
 
     my $clean_pep = $module->clean_pepseq( $obs->[$heads->{Peptide}] );
     my $clean_prot = $self->trim_space( $obs->[$heads->{Protein}] );
