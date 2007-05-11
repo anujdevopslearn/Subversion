@@ -222,33 +222,25 @@ sub get_current_build {
   my $self = shift;
   my %args = @_;
 
-  $log->debug( "pre check" );
   # Check self for value
   return $self->{_build_id} if ( $self->{_build_id} ); 
-  $log->debug( "post check, it wasn't cached" );
 
   my $sbeams = $self->getSBEAMS();
 
-  $log->debug( "Check session" );
   my $build_id = $sbeams->getSessionAttribute( key   => 'unipep_build_id' );
-  $log->debug( "Session says $build_id" );
 
   if ( $build_id ) {
-  $log->debug( "Set it" );
     $self->set_current_build( build_id => $build_id );
     return $build_id 
   }
   
-  $log->debug( "DB" );
   # Get database default?
   ( $build_id ) = $sbeams->selectrow_array( <<"  END" );
   SELECT unipep_build_id FROM $TBGP_UNIPEP_BUILD WHERE is_default  = 1
   END
-  $log->debug( "DB says $build_id" );
 
   # Last option
   $build_id ||= 1;
-  $log->debug( "final soln? $build_id" );
 
   $self->set_current_build( build_id => $build_id );
   return $build_id 

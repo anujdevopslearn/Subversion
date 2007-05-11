@@ -128,7 +128,6 @@ sub keyword_search {
     $log->error( "No SQL generated from query: $args{search_type}, $args{search_term}" );
     return undef;
   }
-  $log->debug( $sql );
 	my @results = $sbeams->selectHashArray($sql);
   return \@results;
 }
@@ -184,7 +183,6 @@ sub all_proteins_query {
     $observed
     ORDER BY $order
   ~;
-  $log->debug( $sql );
   
 
 # my $sql = qq~
@@ -260,14 +258,12 @@ sub make_or_search_string {
 sub get_query_sql {
   my $self = shift;
   my %args = @_;
-  for my $k ( keys ( %args ) ) { $log->debug( "querysql: $k => $args{$k}" ); }
 
   my $cutoff = $self->get_current_prophet_cutoff();
   my $build = $self->get_current_build();
 
   my $subclause = '';
   if ( $args{auto} || $args{type} eq 'GeneID' ) {
-    $log->debug( "We're trying here\n\n" );
     $args{term} =~ s/;/,/g;
   }
 
@@ -291,15 +287,12 @@ sub get_query_sql {
   my $joiner = ' ';
   my $clause = '';
   for my $term ( @$terms ) {
-    $log->debug( "Term is $term" );
     my $sc = $subclause;
     $sc =~ s/ID_VALUE/$term/g;
     $clause .= $joiner . $sc;
     $joiner = "\n        OR ";
   }
-  $log->debug( "clause is $clause" );
   $clause = $subclause if $args{type} eq 'GeneID';
-  $log->debug( "reclause is $clause" );
 
   my $sql = qq~
   SELECT ID.ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
@@ -472,7 +465,6 @@ sub get_predicted_peptides{
          ON sp.glycosite_id = pp.glycosite_id
 				WHERE pp.ipi_data_id = $ipi_data_id
 				~;
-#   $log->debug( $sql );
 	
 		return $sbeams->selectHashArray($sql);		
 }			
@@ -487,16 +479,20 @@ sub get_observed_phosphopeptides{
 	my $self = shift;
 	my $ipi_data_id = shift;
 
-  # Fetch all peptides for given protein entry
-	my $sql = qq~
-				SELECT MAX(peptide_prophet_score) as peptide_prophet_score, observed_peptide_sequence, 
-               MAX( peptide_mass ) as peptide_mass, COUNT(*) as n_obs
-				FROM $TBGP_OBSERVED_PEPTIDE OB
-          JOIN $TBGP_OBSERVED_TO_IPI OTI 
-          ON OTI.observed_peptide_id = OB.observed_peptide_id
-				WHERE OTI.ipi_data_id = $ipi_data_id
-        GROUP BY observed_peptide_sequence 
-				~;
+  # Fetch all peptides in this build for given protein entry
+
+  my $build = $self->get_current_build();
+  my $sql = qq~
+    SELECT MAX(peptide_prophet_score) as peptide_prophet_score, observed_peptide_sequence, 
+           MAX( peptide_mass ) as peptide_mass, COUNT(*) as n_obs
+    FROM $TBGP_OBSERVED_PEPTIDE OP
+      JOIN $TBGP_OBSERVED_TO_IPI OTI ON OTI.observed_peptide_id = OP.observed_peptide_id
+      JOIN $TBGP_PEPTIDE_SEARCH PS ON PS.peptide_search_id = OP.peptide_search_id
+      JOIN $TBGP_BUILD_TO_SEARCH BTS ON BTS.search_id = PS.peptide_search_id
+    WHERE OTI.ipi_data_id = $ipi_data_id
+    AND BTS.build_id = $build 
+    GROUP BY observed_peptide_sequence 
+    ~;
 
   my @observed;
   for my $row ( $sbeams->selectHashArray( $sql ) ) {
@@ -563,23 +559,18 @@ sub get_observed_peptides{
     }
 
     if ( %current && $current{matching_sequence} =~ /^$row->{matching_sequence}$/i ) {
-      $log->debug( "cache" );
       $current{n_obs}++;
       $current{peptide_prophet_score} = $row->{peptide_prophet_score} if $row->{peptide_prophet_score} > $current{peptide_prophet_score};
     } else {  
       if ( %current ) {
-        $log->debug( 'save' );
         my %finished = %current;
         push @observed, \%finished;
       } else {
-        $log->debug( 'debut' );
       }
       %current = %{$row};
-      $log->debug( "Pre: $current{observed_peptide_sequence}" );
       $current{observed_peptide_sequence} =~ s/N[\W]/N#/g;
       $current{observed_peptide_sequence} =~ s/[^a-zA-Z\#\.]//g;
       $current{observed_peptide_sequence} =~ s/([^N])\#/$1/g;
-      $log->debug( "Post: $current{observed_peptide_sequence}" );
       $current{n_obs}++;
       $current{tryptic_end} = SBEAMS::Glycopeptide->countTrypticEnds( $row->{observed_peptide_sequence} );
     }
@@ -724,7 +715,6 @@ sub get_identified_tissues{
 	my $method = 'get_identified_tissues';
 	my $self = shift;
 	my $id = shift;
-  $log->printStack('debug');
 	confess(__PACKAGE__ . "::$method ID '$id' is not good  \n") unless $id; 
 	my $sql = qq~
 				SELECT t.tissue_type_name 
@@ -734,7 +724,6 @@ sub get_identified_tissues{
 				WHERE ptp.identified_peptide_id = $id
         ORDER BY t.tissue_type_name
 				~;
-  $log->debug( $sql );
 	
 	my @all_tissues = $sbeams->selectHashArray($sql);	
   my @coalesced_tissues;
