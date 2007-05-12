@@ -996,6 +996,15 @@ sub makeInfoText {
   return( "<I><FONT COLOR=#666666>$text</FONT></I>" );
 }
 
+#+ 
+# Utility method, returns text formatted for INFO messages
+#-
+sub makeErrorText {
+  my $self = shift;
+  my $text = shift;
+  return( "<I><FONT COLOR=#FF0000>$text</FONT></I>" );
+}
+
 #+
 # returns http Content-type based on user-supplied 'mode' 
 #-
