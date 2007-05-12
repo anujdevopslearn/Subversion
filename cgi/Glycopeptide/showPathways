@@ -224,7 +224,7 @@ sub pathway_details {
 
   print "* Found glyco data for $cnt of $tot, plotting on KEGG map<BR>\n";
   my $table = SBEAMS::Connection::DataTable->new( BORDER => 0 );
-  $table->addRow( [ 'Protein', 'Peptides Observed' ] );
+  $table->addRow( [ '&nbsp;', 'Protein', 'Peptides Observed' ] );
   $table->setHeaderAttr( BOLD => 1 );
   my $acc_string ='';
   my $sep = '';
@@ -233,13 +233,15 @@ sub pathway_details {
     if ( $glyco_hits->{$gene} ) {
       $cnt = scalar( @{$glyco_hits->{$gene}} );
     }
-    $table->addRow( [ $gene, $cnt ] );
+    my $chk = ( $cnt ) ? 'checked' : '';
+    my $chk_box = "<INPUT TYPE=checkbox NAME=accession VALUE=$gene $chk></INPUT>"; 
+    $table->addRow( [ $chk_box, $gene, $cnt ] );
     $acc_string .= $sep . $gene;
     $sep ||= ',';
   }
   $table->alternateColors( FIRSTROW => 2, PERIOD => 1, BGCOLOR => '#DDDDDD', DEF_BGCOLOR => '#FFFFFF' );
-  $table->setColAttr( ALIGN => 'RIGHT', COLS => [2], ROWS => [2..$table->getRowNum()] );
-  my $cytolink = 'Open <A HREF=getCytoscapeWebstart TARGET=_blank>Cytoscape </A>network with protein list';
+  $table->setColAttr( ALIGN => 'RIGHT', COLS => [3], ROWS => [2..$table->getRowNum()] );
+  my $cytolink = 'Open <A ONCLICK="submit_cytoscape();"> Cytoscape </A>network with protein list';
 
   print <<"  END";
   <BR>
@@ -247,7 +249,17 @@ sub pathway_details {
   <BR>
   <BR>
   <BR>
+  <SCRIPT LANGUAGE="javascript">
+  function submit_cytoscape() {
+    alert( "Foo Manchu" );
+    document.cytoscape.submit();
+  }
+  </SCRIPT>
+  <FORM NAME=cytoscape METHOD="POST" ACTION="getCytoscapeWebstart">
   $table
+  <INPUT TYPE=HIDDEN NAME=apply_action VALUE='gene_list'></INPUT> 
+  </FORM>
+  
   <BR>
   <HR WIDTH=600 ALIGN=LEFT>
   END

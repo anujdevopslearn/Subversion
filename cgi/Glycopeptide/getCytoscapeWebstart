@@ -34,8 +34,8 @@ my $glyco = new SBEAMS::Glycopeptide;
 $glyco->setSBEAMS($sbeams);
 
 my $keggmap = SBEAMS::BioLink::KeggMaps->new();
-my $kegg_organism = $glyco->getKeggOrganism( );
-my $params;
+my $kegg_organism;
+my $params = {};
 my $base_url = $q->url( -absolute => 1 );
 my $program = basename( $0 );
 
@@ -49,54 +49,117 @@ $|++;
 
   # Process cgi parameters
   $params = process_params();
-  $glyco->printPageHeader();
-  my $content = '';
+  my $spc = $sbeams->getGifSpacer(800);
+  my $content = "$spc<BR>\n";
+  $kegg_organism = $glyco->getKeggOrganism( );
+$log->debug( "Organism is $kegg_organism" );
 
-  if ( $params->{output_mode} =~ /html/ ) {
-  
-    my $spc = $sbeams->getGifSpacer(700);
-    my $content = "<FONT COLOR=green><I>Feature not yet implemented</I></FONT> $spc";
-
-  } else {
-
-    $params->{apply_action} ||= 'genes_from_pathway';
-
-    # Decision block, what type of page are we going to display?
-    if ( $params->{apply_action} eq 'genes_from_pathway' ) {
-      $content = run_webstart_from_pathway( $params );
-# $sbeams->display$content;
-      exit;
-    }
-
-
+  for my $p ( keys( %$params ) ) {
+    $log->debug( "hey, $p => $params->{$p}");
   }
+
+  if ( $sbeams->output_mode() !~ /cytoscape/ ) {
+  
+  $log->debug("JG");
+    my $sql = '';
+
+  $log->debug("JH");
+    if ( $params->{apply_action} eq 'kegg_pathway' ) {
+      # Check for params
+      if ( $params->{pathway_name} ) {
+        $sql = get_pathway_sql();
+      }
+      # create SQL
+    } elsif ( $params->{apply_action} eq 'gene_list' ) {
+  $log->debug("JI");
+      # Check for params
+      if ( $params->{accession} ) {
+        # create SQL
+  $log->debug("JK");
+        $sql = get_genelist_sql( $params->{accession} );
+      }
+    } else {
+      $content .= $sbeams->makeErrorText( "Missing or erroneous action" );
+    }
+    # Cache sql, pass key to link below
+    if ( !$sql ) {
+      $content .= $sbeams->makeErrorText( "Missing joemama required information" );
+    } else {
+      my $key = $sbeams->getRandomString( num_chars => 20 );
+      
+#      $sbeams->getSessionCookie();
+      $sbeams->setSessionAttribute( key => $key,  value => $sql ); 
+
+    
+      $content .=<<"      END" if 1;
+      <SPAN CLASS=infobox><P>Click links below to launch a cytoscape network to explore the proteins you've selected</P></SPAN>
+      <OL>
+        <LI> First, launch the <A HREF='http://gaggle.systemsbiology.org/2005-11/boss/boss.jnlp'> Gaggle Boss </A> (facilitates communication between 'geese').
+        <LI> Second, launch <A HREF='getCytoscapeWebstart?output_mode=cytoscape;key=$key'> Cytoscape </A> with specified list. 
+        <LI> Finally, launch the <A HREF='http://gaggle.systemsbiology.org/projects/fly/2005-11/cy/flybaseGenetic/cy.jnlp'> Interaction </A> Network from Flybase.
+      </OL>
+      END
+    }
+  $log->debug("JJ");
+  
+  } else {
+    # Check for params
+    if ( !$params->{key} ) {
+      $content .= $sbeams->makeErrorText( "Missing required parameter 'key'" );
+      $sbeams->output_mode( 'html' );
+    } else {
+      # fetch SQL
+      my $sql = $sbeams->getSessionAttribute( key => $params->{key} );
+# $sbeams->deleteSessionAttribute( key => $params->{key} );
+
+      if ( $sbeams->isTaintedSQL( $sql ) ) {
+        $content .= $sbeams->makeErrorText( "Missing required parameter 'key'" );
+        $sbeams->output_mode( 'html' );
+      } else {
+        # create & display resultset
+        launch_cytoscape( $sql );
+        exit;
+      }
+    }
+  }
+  $glyco->printPageHeader();
   print $content;
   $glyco->printPageFooter( close_tables=>'NO');
 
 } # end Main
+
+
 sub process_params {
 
   # Standard SBEAMS processing
   $sbeams->parse_input_parameters( parameters_ref => $params, q => $q );
 
-#for ( keys( %$params ) ){ print "$_ = $params->{$_}<BR>" } 
+#  for ( keys( %$params ) ){ print "$_ = $params->{$_}<BR>" } 
 
   # Process "state" parameters
   $sbeams->processStandardParameters( parameters_ref => $params );
+  $log->debug( $q->param() );
 
   return $params;
 }
 
+sub get_pathway_sql {
 
-sub make_ws_from_pathway {
   # Fetch pathway genes
   $keggmap->setPathway( pathway => $params->{path_id} );
   my $gene_list = $keggmap->getPathwayGenes(); # pathway => $params->{path_id} );
   # Look up in database
   my $sql = get_observed_peptide_sql( $gene_list );
+  return $sql;
+}
+
+
+sub launch_cytoscape {
+
+  my $sql = shift;
+  $log->debug( $sql );
 
   # Make resultset 
-
   my $rs_ref = {};
 
   my %rs_params = $sbeams->parseResultSetParams('q' => $q);
@@ -135,21 +198,27 @@ sub make_ws_from_pathway {
     query_parameters_ref => $params,
     rs_params_ref        => \%rs_params,
     base_url             => $base_url,
-    cytoscape => { template => 'phosphopeptides' }
+    cytoscape => { template => 'PhosphoPep' }
   );
 
   
 #  return $rs_ref;
   # make webstart
+  exit;
 }
 
-sub get_observed_peptide_sql {
+sub get_genelist_sql {
 
+  $log->debug( "WhOrganism is $kegg_organism" );
   my $gene_list = shift;
+  my $gene_string = '';
+  my $delim = '';
+  for my $gene ( split ",", $gene_list ) {
+    $gene_string .= $delim . "'" . $gene . "'";
+    $delim = ',';
+  }
   my $cutoff = $glyco->get_current_prophet_cutoff();
   
-  my $gene_string = join( ", ", @{$gene_list} );
-
   my $sql = '';
 
   if ( $kegg_organism eq  'dme' ) {
