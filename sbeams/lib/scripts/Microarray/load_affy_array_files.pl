@@ -990,6 +990,7 @@ sub parse_xml_files {
   
   $sbeams_affy->set_afs_treatment_description( $sample_treatment );
   $sbeams_affy->set_afs_strain_or_line( $values{Strain} );
+  $sbeams_affy->set_afs_sex_ontology_term_id( $values{Sex} );
   $sbeams_affy->set_afs_cell_type( $values{'Cell Type'} );
   $sbeams_affy->set_afs_data_flag( 'OK' );
   $sbeams_affy->set_treatment_values( \%values );

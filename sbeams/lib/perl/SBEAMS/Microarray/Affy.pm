@@ -73,6 +73,7 @@ use strict;
 use vars qw(%REGISTRY $sbeams);
 
 use SBEAMS::Connection::Tables;
+use SBEAMS::Connection qw( $log );
 use SBEAMS::Microarray::Tables;
 use SBEAMS::BioLink::Tables;
 
@@ -772,7 +773,30 @@ sub get_afs_individual {
 sub set_afs_sex_ontology_term_id { 
 	my $self = shift;
 	my $name = shift;
-	return $self->{AFS_SEX} = $name;
+  return undef if !$name;
+  if ( ! $self->{MGED_sex_terms} ) {
+    $self->{MGED_sex_terms} = {};
+    my $sql =<<"    END";
+    SELECT MOT2.MGED_ontology_term_id, MOT2.name
+    FROM $TBBL_MGED_ONTOLOGY_RELATIONSHIP MOR
+    INNER JOIN $TBBL_MGED_ONTOLOGY_TERM MOT2 ON
+          ( MOR.subject_term_id = MOT2.MGED_ontology_term_id )
+    WHERE MOR.object_term_id in
+    ( SELECT MGED_ontology_term_id FROM $TBBL_MGED_ONTOLOGY_TERM
+      WHERE name = 'Sex' )
+    AND MOT2.name IN ('male', 'female')
+    ORDER BY MOT2.name
+    END
+    my @results = $sbeams->selectSeveralColumns( $sql );
+    for my $result ( @results ) {
+      my $sex = ucfirst( $result->[1] );
+      $self->{MGED_sex_terms}->{$sex} = $result->[0];
+    }
+  }
+  $name = ucfirst( $name );
+  my $term_id = $self->{MGED_sex_terms}->{$name};
+	$self->{AFS_SEX} = $term_id;
+  return $term_id;
 }
 #######################################################
 # get_afs_sex_ontology_term_id
