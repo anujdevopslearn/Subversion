@@ -787,7 +787,7 @@ sub parse_affy_data {
   my $sbeams_affy_groups = $args{object};
   
   foreach my $file_name ( $sbeams_affy_groups->sorted_root_names() ) {				
-    print "$file_name\n";
+    print "$file_name\n" if $VERBOSE;
   	
   	#next unless ($file_name =~ /3AJZ/);
   	#print "FILE NAME '$file_name'\n";
