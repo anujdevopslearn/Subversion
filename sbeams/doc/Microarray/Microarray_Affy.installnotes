@@ -683,18 +683,19 @@ CONFIG_SETTING{MA_ANNOTATION_PATH}  =     var/Microarray/Affy_data/annotation
 # packaged cytoscape or Tigr MEV (multi-array-viewer) applications.  Leaving
 # the defaults should result in a working system; if you would like to change
 # the certificate to a local version, you will have to unjar and rejar each of
-# the files under $sbeams/lib/java/SBEAMS/Microarray
+# the files under $sbeams/lib/java/SBEAMS/Microarray (see OPTIONAL section 
+# below)
 
 CONFIG_SETTING{JAVA_PATH} = /usr/java/j2sdk1.4/
 CONFIG_SETTING{JNLP_KEYSTORE} = lib/java/.keystore
 CONFIG_SETTING{KEYSTORE_PASSWD} = sbeams_distro
 CONFIG_SETTING{KEYSTORE_ALIAS} = sbeamsDistro   
 
-In order for these applications to work, you will also need to set up a java
-keystore as described below and resign the jar files as described below:
+### OPTIONAL - create site-specific keystore and re-sign jar files ####
 
-Setup the a keystore for sbeams.  Example below
-keytool -keystore <local_path_on_web_server>/.keystore -genkey -alias sbeamsDev
+# Setup the a keystore for sbeams, for example
+$JAVA_PATH/bin/keytool -keystore $JNLP_KEYSTORE -genkey -alias KEYSTORE_ALIAS
+
 Enter keystore password: sbeamsDevKey
 What is your first and last name?
 [Unknown]: SBEAMS Development Team
@@ -711,34 +712,21 @@ What is the two-letter country code for this unit?
 Is CN=SBEAMS Development Team, OU=SBEAMS Development, O=Institute for Systems Biology, L=Seattle, ST=WA, C=US correct?
 [no]: yes
 
-Enter key password for <sbeamsDev>
+Enter key password for <$KEYSTORE_ALIAS>
 (RETURN if same as keystore password):
 
-###############
-- Re-sign the all the cytoscape jars using the key above
+# Re-sign the all the cytoscape jars using the key above
 cd $SBEAMS/lib/scripts/Core
-## Re-sign all the plugin jars
-./Re_sign_jar_files.pl --dir $SBEAMS/usr/java/share/Cytoscape/plugins_1.0 \
- --keystore <local_path_on_web_server>.keystore \
- --keypass sbeamsDevKey \
- --keyname sbeamsDev
 
-## Re-sign all the cytoscape and gaggle components
-  ./Re_sign_jar_files.pl --dir $SBEAMS/usr/java/share/Cytoscape/cytoscape_ps/jars \
- --keystore <local_path_on_web_server>.keystore \
- --keypass sbeamsDevKey \
- --keyname sbeamsDev
+# Re-sign all the cytoscape and gaggle components
+./Re_sign_jar_files.pl --dir $SBEAMS/usr/java/share/Cytoscape/
+./Re_sign_jar_files.pl --dir $SBEAMS/usr/java/share/Cytoscape/cytoscape_ps/jars 
 
-###############
+# Re-sign all the plugin jars
+./Re_sign_jar_files.pl --dir $SBEAMS/usr/java/share/Cytoscape/plugins_1.0
+./Re_sign_jar_files.pl --dir $SBEAMS/usr/java/share/Cytoscape/plugins_2.0
 
-Update the makefile for signing the data files (that will be used in Cytoscape) with the key produced above
-cd $SBEAMS/lib/cytoscape/Microarray/GetExpression
-vi makefile 
-#change the line below to variables at your site.  
-#<java_path>                                     <keystore_path>                    <password>       <key to use, see above>    
-/tools/java/j2sdk1.4.2/bin/jarsigner -keystore /users/pshannon/.keystore -storepass cytokey data.jar cytoscape
-
-###############
+### END OPTIONAL keystore setup section ###
 
 
 To run the pages
