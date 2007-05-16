@@ -1369,9 +1369,10 @@ sub display_phospho_detail_form{
   my $pseq = $glyco_o->seq_info()->seq();
   my $synonym = get_annotation(glyco_o   => $glyco_o, anno_type => 'synonyms' );
   my $kegglink = getKeggLink( name => $synonym );
-  my $scanlink = getScansiteForm( seq => $pseq, name => $glyco_o->ipi_accession() );
-
   my $ipi_acc = $glyco_o->ipi_accession();
+  my $scanlink = getScansiteForm( seq => $pseq, name => $ipi_acc );
+  my $mrmlink = "<A HREF='ViewMRMList?NIST_library_id=20&action=QUERY;protein_name_constraint=$ipi_acc'>view transitions</A>";
+
     
   my $ipi_url = $glyco_o->make_url(term=> $glyco_o->ipi_accession(),
 				     dbxref_tag => 'EBI_IPI'
@@ -1392,7 +1393,7 @@ sub display_phospho_detail_form{
   my $sp = '&nbsp;' x 2;
   my $prot_info = join( "\n", 
     $q->Tr(
-      $q->td({class=>'grey_header', colspan=>2}, "Protein Info"),),
+      $q->td({class=>'grey_header', colspan=>2}, "Protein Info "),),
     $q->Tr(
       $q->td({class=>'rev_gray_head'}, "ID"),
       $q->td({nowrap=>1}, "$ipi_url $kegglink  $scanlink")),
@@ -1475,7 +1476,7 @@ END_DREK
                                                 sticky => 1 );
   my $identified_info = join( "\n", 
 		$q->Tr(
-				$q->td({class=>'grey_header', colspan=>2 }, "$link Observed Phosphopeptides"),
+				$q->td({class=>'grey_header', colspan=>2 }, "$link Observed Phosphopeptides $mrmlink"),
 			),
 		$q->Tr( "<TD COLSPAN=2 $tr>" .  $glyco_o->display_peptides('Observed Phosphopeptides') . "</TD>" 
 			),
