@@ -447,7 +447,9 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/browse_glycopeptides.cgi" TITLE="View list of all observed proteins"><nobr>&nbsp;&nbsp;&nbsp;Observed Proteins</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/showPathways" TITLE="View observed peptides in context of KEGG maps"><nobr>&nbsp;&nbsp;&nbsp;Pathway Search</nobr></a></td></tr>
   <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/bulkSearch" TITLE="Perform batch search with list of accessions"><nobr>&nbsp;&nbsp;&nbsp;Bulk Search</nobr></a></td></tr>
-  <tr><td><a href="http://www.unipep.org"><nobr>&nbsp;&nbsp;&nbsp;Unipep home</nobr></a></td></tr>
+  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetMRMList" TITLE="Generate list of observed transitions from protein list"><nobr>&nbsp;&nbsp;&nbsp;Get MRM Transitions</nobr></a></td></tr>
+  <tr><td><a href="http://www.phosphopep.org/spectrast/index.php" TITLE="Perform spectral search with SpectraST"><nobr>&nbsp;&nbsp;&nbsp;Search Spectra</nobr></a></td></tr>
+  <tr><td><a href="http://www.phosphopep.org"><nobr>&nbsp;&nbsp;&nbsp;Phosphopep Home</nobr></a></td></tr>
 
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
