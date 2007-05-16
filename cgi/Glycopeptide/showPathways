@@ -117,12 +117,14 @@ sub list_pathways {
   }
   for my $path ( @{$pathways} ) {
     my $desc = $q->escape( $path->{definition} );
+    my $pathway_id = $path->{entry_id};
+#    $pathway_id =~ s/path://;
     $page .=<<"    END";
     <TR>
      <TD>$path->{definition} </TD>
      <TD>
       <A HREF=$url?apply_action=pathway_details;path_id=$path->{entry_id};path_def=$desc TARGET=_pathdetails>$path->{entry_id}</A>
-      <A HREF=$cyto_url?path_id=$path->{entry_id}; TITLE='$desc'><IMG BORDER=0 SRC=$cyto_png></A>
+      <A HREF="$cyto_url?path_id=$pathway_id;apply_action=kegg_pathway"; TITLE='$desc'><IMG BORDER=0 SRC=$cyto_png></A>
      </TD>
     </TR>
     END
@@ -241,7 +243,7 @@ sub pathway_details {
   }
   $table->alternateColors( FIRSTROW => 2, PERIOD => 1, BGCOLOR => '#DDDDDD', DEF_BGCOLOR => '#FFFFFF' );
   $table->setColAttr( ALIGN => 'RIGHT', COLS => [3], ROWS => [2..$table->getRowNum()] );
-  my $cytolink = 'Open <A ONCLICK="submit_cytoscape();"> Cytoscape </A>network with protein list';
+  my $cytolink = 'Open <A ONCLICK="submit_cytoscape();"><DIV CLASS="visilink"> Cytoscape </DIV></A>network with protein list';
 
   print <<"  END";
   <BR>
@@ -251,7 +253,6 @@ sub pathway_details {
   <BR>
   <SCRIPT LANGUAGE="javascript">
   function submit_cytoscape() {
-    alert( "Foo Manchu" );
     document.cytoscape.submit();
   }
   </SCRIPT>

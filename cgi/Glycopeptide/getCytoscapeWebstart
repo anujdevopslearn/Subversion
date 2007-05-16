@@ -60,13 +60,11 @@ $log->debug( "Organism is $kegg_organism" );
 
   if ( $sbeams->output_mode() !~ /cytoscape/ ) {
   
-  $log->debug("JG");
     my $sql = '';
 
-  $log->debug("JH");
     if ( $params->{apply_action} eq 'kegg_pathway' ) {
       # Check for params
-      if ( $params->{pathway_name} ) {
+      if ( $params->{path_id} ) {
         $sql = get_pathway_sql();
       }
       # create SQL
@@ -76,14 +74,14 @@ $log->debug( "Organism is $kegg_organism" );
       if ( $params->{accession} ) {
         # create SQL
   $log->debug("JK");
-        $sql = get_genelist_sql( $params->{accession} );
+        $sql = get_genelist_sql( gene_list => $params->{accession} );
       }
     } else {
       $content .= $sbeams->makeErrorText( "Missing or erroneous action" );
     }
     # Cache sql, pass key to link below
     if ( !$sql ) {
-      $content .= $sbeams->makeErrorText( "Missing joemama required information" );
+      $content .= $sbeams->makeErrorText( "Missing required information" );
     } else {
       my $key = $sbeams->getRandomString( num_chars => 20 );
       
@@ -149,8 +147,8 @@ sub get_pathway_sql {
   $keggmap->setPathway( pathway => $params->{path_id} );
   my $gene_list = $keggmap->getPathwayGenes(); # pathway => $params->{path_id} );
   # Look up in database
-  my $sql = get_observed_peptide_sql( $gene_list );
-  return $sql;
+  my $gene_string = join( ',', @$gene_list );
+  return get_genelist_sql( gene_string => $gene_string );
 }
 
 
@@ -169,6 +167,8 @@ sub launch_cytoscape {
     sql_query=>$sql,
     resultset_ref=>$rs_ref,
   );  
+  use Data::Dumper;
+#  $log->debug( Dumper( $rs_ref ) );
 
   #### Store the resultset and parameters to disk resultset cache
   $rs_params{set_name} = "SETME";
@@ -181,7 +181,7 @@ sub launch_cytoscape {
   );
 
 
-#  prepareJavaWebStartFiles(
+#  prepareJavaWebStartFiles(top 10
 #    rs_params_ref=>\%rs_params,
 #    resultset_ref=>$resultset_ref,
 #    query_parameters_ref=>\%parameters,
@@ -192,13 +192,45 @@ sub launch_cytoscape {
 #  );
 #  $rs_params{page_size} = 500;
 
+
+  my %cytoscape = ( template => 'PhosphoPep' );
+
+  my %webstart_files = ( 'commonName.noa' => 'Synonym',
+                         'deltaCn.noa' => 'dCn',   
+                         'network.sif' => undef,
+                         'm2z.noa' => 'Parent ion m/z',
+                         'sequence.noa' => 'Peptide Sequence',
+                         'prophet.noa' => 'Peptide Prophet Score',
+                        );
+
+  for my $k ( keys ( %webstart_files ) ) {
+    $cytoscape{files}->{$k} = [ $webstart_files{$k} ];
+  }
+#    SELECT ipi_accession_number, synonyms, ID.ipi_data_id, delta_cn,
+#           experimental_mass, peptide_prophet_score, matching_sequence
+
+  my $data = $rs_ref->{data_ref};
+  for my $row ( @$data ) {
+#    my $canon = ( $row->[0] =~ /^CG/ ) ? $row->[0] : $row->[1];
+#    my $common = ( $row->[0] eq $canon ) ? $row->[1] : $row->[0];
+#    $canon =~ s/^Dmel_//g;
+    my $canon = $row->[0] || $row->[1];
+    my $common = $row->[1] || $row->[0];
+    push ( @{$cytoscape{files}->{'network.sif'}}, $canon );
+    push ( @{$cytoscape{files}->{'deltaCn.noa'}}, "$canon = $row->[3]" );
+    push ( @{$cytoscape{files}->{'m2z.noa'}}, "$canon = $row->[4]" );
+    push ( @{$cytoscape{files}->{'prophet.noa'}}, "$canon = $row->[5]" );
+    push ( @{$cytoscape{files}->{'sequence.noa'}}, "$canon = $row->[6]" );
+    push ( @{$cytoscape{files}->{'commonName.noa'}}, "$canon = $common" );
+  }
+
   #### Display the resultset
   $sbeams->displayResultSet(
     resultset_ref        => $rs_ref,
     query_parameters_ref => $params,
     rs_params_ref        => \%rs_params,
     base_url             => $base_url,
-    cytoscape => { template => 'PhosphoPep' }
+    cytoscape            => \%cytoscape 
   );
 
   
@@ -209,30 +241,33 @@ sub launch_cytoscape {
 
 sub get_genelist_sql {
 
-  $log->debug( "WhOrganism is $kegg_organism" );
-  my $gene_list = shift;
-  my $gene_string = '';
+  my %args = @_;
+  my $gene_list = $args{gene_list} || '';
+  my $gene_string = $args{gene_string} || '';
   my $delim = '';
-  for my $gene ( split ",", $gene_list ) {
-    $gene_string .= $delim . "'" . $gene . "'";
-    $delim = ',';
+  unless ( $gene_string ) {
+    for my $gene ( split ",", $gene_list ) {
+      $gene_string .= $delim . "'" . $gene . "'";
+      $delim = ',';
+    }
   }
   my $cutoff = $glyco->get_current_prophet_cutoff();
   
   my $sql = '';
+#      'CG%'
 
   if ( $kegg_organism eq  'dme' ) {
     $sql =<<"    END";
-    SELECT CASE WHEN ipi_accession_number LIKE 'CG%' THEN ipi_accession_number
-                ELSE synonyms END AS accession, ID.ipi_data_id
+    SELECT ipi_accession_number, synonyms, ID.ipi_data_id, delta_cn,
+           experimental_mass, peptide_prophet_score, matching_sequence
       FROM $TBGP_IPI_DATA ID 
       JOIN $TBGP_OBSERVED_TO_IPI ITI 
         ON ITI.ipi_data_id = ID.ipi_data_id
-      JOIN $TBGP_OBSERVED_PEPTIDE IP 
+      LEFT JOIN $TBGP_OBSERVED_PEPTIDE IP 
         ON ITI.OBSERVED_peptide_id = IP.OBSERVED_peptide_id
      WHERE ( ipi_accession_number IN ($gene_string)
              OR synonyms IN ($gene_string) )
-       AND peptide_prophet_score >= $cutoff 
+       AND ( peptide_prophet_score >= $cutoff OR peptide_prophet_score IS NULL )
     END
   } else {
     $sql =<<"    END";
