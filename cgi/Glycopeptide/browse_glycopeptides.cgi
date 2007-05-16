@@ -169,7 +169,7 @@ sub display_proteins{
   
   my $stats = qq~
   <BR><FONT COLOR=GREEN>
-  Found $pepcnt peptides which are derived from maximally $protcnt proteins at a peptide prophet cutoff of $cutoff
+  Found $pepcnt peptides which are derived from maximally $protcnt gene models at a peptide prophet cutoff of $cutoff
   </FONT>
   <BR>
   <BR>
