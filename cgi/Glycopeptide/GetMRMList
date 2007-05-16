@@ -26,12 +26,12 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TabMenu;
 
-use SBEAMS::PeptideAtlas;
-use SBEAMS::PeptideAtlas::Settings;
-use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::Glycopeptide;
+use SBEAMS::Glycopeptide::Settings;
+use SBEAMS::Glycopeptide::Tables;
 
 $sbeams = new SBEAMS::Connection;
-$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD = new SBEAMS::Glycopeptide;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
@@ -105,12 +105,6 @@ sub main
         # Some action
     } else 
     {
-        my $project_id = $sbeamsMOD->getProjectID(
-            atlas_build_id => $parameters{atlas_build_id}
-        );
-
-        $sbeamsMOD->display_page_header(project_id => $project_id);
-
         handle_request(ref_parameters=>\%parameters);
 
         $sbeamsMOD->display_page_footer();
@@ -137,18 +131,12 @@ sub handle_request
 
     my %parameters = %{$ref_parameters};
 
+    $sbeamsMOD->printPageHeader();
+    print $sbeams->getGifSpacer(800);
     #### Show current user context information
     print "<BR>\n" if ($sbeams->output_mode() eq 'html');
 
     #$sbeams->printUserContext();
-
-    #### Get the HTML to display the tabs
-    my $tabMenu = $sbeamsMOD->getTabMenu(
-        parameters_ref => \%parameters,
-        program_name => $PROG_NAME,
-    );
-
-    print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
 
     #### Define some generic variables
     my ($i,$element,$key,$value,$line,$result,$sql);
@@ -166,7 +154,7 @@ sub handle_request
     #### Set some specific settings for this program
     my $CATEGORY="Get MRM List";
 
-    $TABLE_NAME="AT_GetMRMList" unless ($TABLE_NAME);
+    $TABLE_NAME="GP_GetMRMList" unless ($TABLE_NAME);
 
     ($PROGRAM_FILE_NAME) =
         $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
