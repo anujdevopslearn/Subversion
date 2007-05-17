@@ -220,6 +220,33 @@ sub rebuildKeyIndex {
   }
 
 
+  if ($organism_name eq 'Drosophila') {
+
+    my $reference_directory = $args{reference_directory}
+      or die("ERROR[$METHOD]: Parameter reference_directory not passed");
+
+    $self->dropKeyIndex(
+      atlas_build_id => $atlas_build_id,
+      organism_specialized_build => $organism_specialized_build,
+    );
+
+    print "Loading protein keys from SBEAMS and reference files...\n";
+    $self->buildDrosophilaKeyIndex(
+      reference_directory => $reference_directory,
+      atlas_build_id => $atlas_build_id,
+    );
+
+    print "Loading peptides keys...\n";
+    $self->buildPeptideKeyIndex(
+      organism_id=>$organism_id,
+      atlas_build_id=>$atlas_build_id,
+    );
+
+    print "\n";
+
+  }
+
+
   #my $sql = "CREATE NONCLUSTERED INDEX idx_search_key_name ON $TBAT_SEARCH_KEY ( search_key_name )";
   #$sbeams->executeSQL($sql);
 
@@ -378,6 +405,11 @@ sub buildGoaKeyIndex {
       foreach my $item ( @list ) {
         my @tmp = ('IPI',$item,9);
         push(@links,\@tmp);
+      }
+      #### If there was no Ensembl ID, then replace with IPI IDs if any
+      if ($Ensembl_IDS[0] eq 'NO_ENSP') {
+	@Ensembl_IDS = @list;
+	$n_Ensembl_IDS = scalar(@Ensembl_IDS);
       }
     }
 
@@ -577,6 +609,24 @@ sub buildSGDKeyIndex {
     die("ERROR[$METHOD]: '$SGD_directory' is not a directory");
   }
 
+
+  #### Read the contents of the UniProtKB mapping file
+  my $UP_file = "$SGD_directory/UniProtKB_identifiers_from_AlainGateau.txt";
+  my %UniProtAccessions;
+  open(INFILE,$UP_file)
+    or die("ERROR[$METHOD]: Unable to open file '$UP_file'");
+  while (my $line = <INFILE>) {
+    chomp($line);
+    next if ($line =~ /^\s*$/);
+    if ($line =~ /^(\S+)\sDR\s+PeptideAtlas;\s([\w\d\-]+);/) {
+      $UniProtAccessions{$2} = $1;
+    } else {
+      print "ERROR: Unable to parse line '$line'\n";
+    }
+  }
+  close(INFILE);
+
+
   #### Open the provided SGD_features.tab file
   my $SGD_file = "$SGD_directory/SGD_features.tab";
   open(INFILE,$SGD_file)
@@ -668,6 +718,14 @@ sub buildSGDKeyIndex {
     if ($description) {
       my @tmp = ('Description',$description);
       push(@links,\@tmp);
+    }
+
+    if ($UniProtAccessions{$feature_name}) {
+      my @tmp = ('UniProtKB',$UniProtAccessions{$feature_name});
+      push(@links,\@tmp);
+      print "UniProtKB: $feature_name=$UniProtAccessions{$feature_name}\n";
+    } else {
+      print "UniProtKB: $feature_name not found\n";
     }
 
 
@@ -1074,6 +1132,181 @@ sub buildStreptococcusKeyIndex {
   print "\n";
 
 } # end buildStreptococcusKeyIndex
+
+
+###############################################################################
+# buildDrosophilaKeyIndex
+###############################################################################
+sub buildDrosophilaKeyIndex {
+  my $METHOD = 'buildDrosophilaKeyIndex';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  print "INFO[$METHOD]: Building Drosophila key index...\n" if ($VERBOSE);
+
+  my $atlas_build_id = $args{atlas_build_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+
+  my $reference_directory = $args{reference_directory}
+    or die("ERROR[$METHOD]: Parameter reference_directory not passed");
+
+  unless (-d $reference_directory) {
+    die("ERROR[$METHOD]: '$reference_directory' is not a directory");
+  }
+
+  my $organism_id = 8;
+
+  #### Get the list of proteins that have a match
+  my $matched_proteins = $self->getNProteinHits(
+    organism_id=>$organism_id,
+    atlas_build_id=>$atlas_build_id,
+  );
+
+
+  #### Create a link from gene names to protein names
+  my %gene2protein;
+  my $protein_file = "$reference_directory/Drosophila_melanogaster.pep.fa";
+  open(INFILE,$protein_file) || die("ERROR: Unable to open '$protein_file'");
+  while (my $line = <INFILE>) {
+    if ($line =~ /^>([\w\d\-]+)/) {
+      my $protein = $1;
+      my $gene;
+      if ($protein =~ /^(CG\d+)/) {
+	$gene = $1;
+      } else {
+	print "WARNING: Unable to find gene name in '$protein'\n";
+      }
+      $gene2protein{$gene}->{$protein} = 1;
+      #print "Read mapping: $gene -> $protein\n";
+    }
+  }
+  close(INFILE);
+
+
+  #### Open the GOA file
+  my $GOA_file = "$reference_directory/17.D_melanogaster.goa";
+  open(INFILE,$GOA_file)
+    or die("ERROR[$METHOD]: Unable to open file '$GOA_file'");
+
+
+  #### Read all the data
+  my $counter = 0;
+  my $previous_id = 'xx';
+
+  while (my $line=<INFILE>) {
+    chomp($line);
+    my @columns = split(/\t/,$line);
+    my $UniProt_id = $columns[1];
+    my $UniProt_name = $columns[2];
+    next unless ($UniProt_id);
+    next if ($UniProt_id eq $previous_id);
+    $previous_id = $UniProt_id;
+
+    my $description = $columns[9];
+
+    my ($aliases,$full_name) = split(": ",$description);
+    my @aliases = split(", ",$aliases);
+
+
+    #### Build a list of protein links
+    my @links;
+
+    if ($UniProt_id) {
+      my @tmp = ('UniProt ID',$UniProt_id);
+      push(@links,\@tmp);
+    }
+
+    if ($UniProt_name) {
+      my @tmp = ('UniProt Name',$UniProt_name);
+      push(@links,\@tmp);
+    }
+
+    if ($full_name) {
+      my @tmp = ('Full Name',$full_name);
+      push(@links,\@tmp);
+    }
+
+    my $gene_name;
+    if ($aliases) {
+      my @list = splitEntities(list=>$aliases,delimiter=>', ');
+      foreach my $item ( @list ) {
+        my @tmp = ('Alias',$item);
+	if ($item =~ /CG.+/) {
+	  $gene_name = $item;
+	} else {
+	  push(@links,\@tmp);
+	}
+      }
+    }
+
+    if ($gene_name) {
+      my @tmp = ('Gene name',$gene_name);
+      push(@links,\@tmp);
+    }
+
+
+    my @feature_names;
+    if ($gene_name) {
+      if ($gene2protein{$gene_name}) {
+	foreach my $protein ( keys(%{$gene2protein{$gene_name}}) ) {
+	  push(@feature_names,$protein);
+	}
+      }
+    }
+    unless (@feature_names) {
+      push(@feature_names,'UNKNOWN');
+    }
+
+
+    if (0) {
+      print "-------------------------------------------------\n";
+      print "UniProt_id=$UniProt_id\n";
+      print "UniProt_name=$UniProt_name\n";
+      print "description=$description\n";
+      print "full_name=$full_name\n";
+      print "aliases=$aliases\n";
+      print "gene_name=$gene_name\n";
+    }
+
+    #### Loop over all proteins
+    foreach my $feature_name ( @feature_names ) {
+      my @temp_links = @links;
+      my @tmp = ('Protein name',$feature_name);
+      push(@temp_links,\@tmp);
+      foreach my $link (@temp_links) {
+	#print "    ".join("=",@{$link})."\n";
+	my %rowdata = (
+          search_key_name => $link->[1],
+          search_key_type => $link->[0],
+          search_key_dbxref_id => $link->[2],
+          organism_id => $organism_id,
+          atlas_build_id => $atlas_build_id,
+          resource_name => $feature_name,
+          resource_type => 'Drosophila Protein',
+          resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$feature_name&action=QUERY",
+          resource_n_matches => $matched_proteins->{$feature_name},
+        );
+        $sbeams->updateOrInsertRow(
+          insert => 1,
+          table_name => "$TBAT_SEARCH_KEY",
+          rowdata_ref => \%rowdata,
+          verbose=>$VERBOSE,
+          testonly=>$TESTONLY,
+        );
+      }
+    }
+
+
+    $counter++;
+    print "$counter... " if ($counter/100 eq int($counter/100));
+
+    my $xx=<STDIN> if (0);
+
+  } # endfor each row
+
+  print "\n";
+
+} # end buildDrosophilaKeyIndex
 
 
 ###############################################################################
