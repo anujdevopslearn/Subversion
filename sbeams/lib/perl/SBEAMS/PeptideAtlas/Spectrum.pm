@@ -114,39 +114,78 @@ sub loadBuildSpectra {
     or die("ERROR[$METHOD]: Parameter organism_abbrev not passed");
 
 
-  #### Find and open the input peplist file
+  #### We now support two different file types
+  #### First try to find the PAidentlist file
+  my $filetype = 'PAidentlist';
+  my $expected_n_columns = 14;
   my $peplist_file = "$atlas_build_directory/".
-    "APD_${organism_abbrev}_all.peplist";
+    "PeptideAtlasInput_sorted.PAidentlist";
+
+  #### Else try the older peplist file
   unless (-e $peplist_file) {
-    print "ERROR: Unable to find peplist file '$peplist_file'\n";
-    return;
+    print "WARNING: Unable to find PAidentlist file '$peplist_file'\n";
+
+    $peplist_file = "$atlas_build_directory/".
+      "APD_${organism_abbrev}_all.peplist";
+    unless (-e $peplist_file) {
+      print "ERROR: Unable to find peplist file '$peplist_file'\n";
+      return;
+    }
+    #### Found it, so proceed but admonish user
+    print "WARNING: Found older peplist file '$peplist_file'\n";
+    print "         This file type is deprecated, but will load anyway\n";
+    $filetype = 'peplist';
+    $expected_n_columns = 17;
   }
+
+
+  #### Find and open the input peplist file
   unless (open(INFILE,$peplist_file)) {
-    print "ERROR: Unable to open for read peplist file '$peplist_file'\n";
+    print "ERROR: Unable to open for read file '$peplist_file'\n";
     return;
   }
 
 
-  #### Read and verify header
-  my $header = <INFILE>;
-  unless ($header && substr($header,0,10) eq 'search_bat' &&
-	  length($header) == 155) {
-    print "len = ".length($header)."\n";
-    print "ERROR: Unrecognized header in peplist file '$peplist_file'\n";
-    close(INFILE);
-    return;
+  #### Read and verify header if a peplist file
+  if ($filetype eq 'peplist') {
+    my $header = <INFILE>;
+    unless ($header && substr($header,0,10) eq 'search_bat' &&
+	    length($header) == 155) {
+      print "len = ".length($header)."\n";
+      print "ERROR: Unrecognized header in peplist file '$peplist_file'\n";
+      close(INFILE);
+      return;
+    }
   }
 
 
   #### Loop through all spectrum identifications and load
+  my @columns;
   while (my $line = <INFILE>) {
-    my @columns = split(/\t/,$line);
+    @columns = split(/\t/,$line);
     #print "cols = ".scalar(@columns)."\n";
-    unless (scalar(@columns) == 17) {
-      die("ERROR: Unexpected number of columns in\n$line");
+    unless (scalar(@columns) == $expected_n_columns) {
+      die("ERROR: Unexpected number of columns (".
+	  scalar(@columns)."!=$expected_n_columns) in\n$line");
     }
-    my ($search_batch_id,$peptide_sequence,$modified_sequence,$charge,
+
+    my ($search_batch_id,$spectrum_name,$peptide_accession,$peptide_sequence,
+        $preceding_residue,$modified_sequence,$following_residue,$charge,
+        $probability,$massdiff,$protein_name,$proteinProphet_probability,
+        $n_proteinProphet_observations,$n_sibling_peptides);
+    if ($filetype eq 'peplist') {
+      ($search_batch_id,$peptide_sequence,$modified_sequence,$charge,
         $probability,$protein_name,$spectrum_name) = @columns;
+    } elsif ($filetype eq 'PAidentlist') {
+      ($search_batch_id,$spectrum_name,$peptide_accession,$peptide_sequence,
+        $preceding_residue,$modified_sequence,$following_residue,$charge,
+        $probability,$massdiff,$protein_name,$proteinProphet_probability,
+        $n_proteinProphet_observations,$n_sibling_peptides) = @columns;
+      #### Correction for occasional value '+-0.000000'
+      $massdiff =~ s/\+\-//;
+    } else {
+      die("ERROR: Unexpected filetype '$filetype'");
+    }
 
     $self->insertSpectrumIdentification(
        atlas_build_id => $atlas_build_id,
@@ -156,6 +195,7 @@ sub loadBuildSpectra {
        probability => $probability,
        protein_name => $protein_name,
        spectrum_name => $spectrum_name,
+       massdiff => $massdiff,
     );
 
   }
@@ -188,7 +228,9 @@ sub insertSpectrumIdentification {
     or die("ERROR[$METHOD]: Parameter protein_name not passed");
   my $spectrum_name = $args{spectrum_name}
     or die("ERROR[$METHOD]: Parameter spectrum_name not passed");
+  my $massdiff = $args{massdiff};
 
+  our $counter;
 
   #### Get the modified_peptide_instance_id for this peptide
   my $modified_peptide_instance_id = $self->get_modified_peptide_instance_id(
@@ -231,6 +273,7 @@ sub insertSpectrumIdentification {
     modified_peptide_instance_id => $modified_peptide_instance_id,
     spectrum_id => $spectrum_id,
     atlas_search_batch_id => $atlas_search_batch_id,
+    atlas_build_id => $atlas_build_id,
   );
 
 
@@ -241,10 +284,12 @@ sub insertSpectrumIdentification {
       spectrum_id => $spectrum_id,
       atlas_search_batch_id => $atlas_search_batch_id,
       probability => $probability,
+      massdiff => $massdiff,
     );
   }
 
-  print ".";
+  $counter++;
+  print "$counter..." if ($counter/100 == int($counter/100));
 
 } # end insertSpectrumIdentification
 
@@ -704,6 +749,8 @@ sub get_spectrum_identification_id {
     or die("ERROR[$METHOD]: Parameter spectrum_id not passed");
   my $atlas_search_batch_id = $args{atlas_search_batch_id}
     or die("ERROR[$METHOD]: Parameter atlas_search_batch_id not passed");
+  my $atlas_build_id = $args{atlas_build_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
 
   #### If we haven't loaded all spectrum_identification_ids into the
   #### cache yet, do so
@@ -711,8 +758,14 @@ sub get_spectrum_identification_id {
   unless (%spectrum_identification_ids) {
     print "[INFO] Loading all spectrum_identification_ids...\n";
     my $sql = qq~
-      SELECT modified_peptide_instance_id,spectrum_id,atlas_search_batch_id,spectrum_identification_id
-        FROM $TBAT_SPECTRUM_IDENTIFICATION
+      SELECT SI.modified_peptide_instance_id,SI.spectrum_id,
+             SI.atlas_search_batch_id,SI.spectrum_identification_id
+        FROM $TBAT_SPECTRUM_IDENTIFICATION SI
+        JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI
+             ON ( SI.modified_peptide_instance_id = MPI.modified_peptide_instance_id )
+        JOIN $TBAT_PEPTIDE_INSTANCE PEPI
+             ON ( MPI.peptide_instance_id = PEPI.peptide_instance_id )
+       WHERE PEPI.atlas_build_id = '$atlas_build_id'
     ~;
     my @rows = $sbeams->selectSeveralColumns($sql);
 
@@ -760,6 +813,7 @@ sub insertSpectrumIdentificationRecord {
     or die("ERROR[$METHOD]: Parameter atlas_search_batch_id not passed");
   my $probability = $args{probability}
     or die("ERROR[$METHOD]: Parameter probability not passed");
+  my $massdiff = $args{massdiff};
 
 
   #### Define the attributes to insert
@@ -768,6 +822,7 @@ sub insertSpectrumIdentificationRecord {
     spectrum_id => $spectrum_id,
     atlas_search_batch_id => $atlas_search_batch_id,
     probability => $probability,
+    massdiff => $massdiff,
   );
 
 
