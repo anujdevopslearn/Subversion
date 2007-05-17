@@ -1557,7 +1557,7 @@ sub printAttemptedChangeResult {
 
 
       open (MAIL, "|$mailprog $recipient,$cc") || croak "Can't open $mailprog!\n";
-      print MAIL "From: SBEAMS <edeutsch\@systemsbiology.org>\n";
+      print MAIL "From: SBEAMS <edeutsch\@db.systemsbiology.net>\n";
       print MAIL "To: $recipient_name <$recipient>\n";
       print MAIL "Cc: $cc_name <$cc>\n";
       print MAIL "Reply-to: $current_username <${current_username}\@systemsbiology.org>\n";
