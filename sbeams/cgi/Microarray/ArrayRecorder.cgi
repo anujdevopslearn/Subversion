@@ -493,7 +493,7 @@ SELECT P.protocol_id, P.name
 SELECT S.slide_id, slide_number
   FROM $TBMA_SLIDE S 
   LEFT JOIN $TBMA_ARRAY A ON ( S.slide_id=A.slide_id ) 
- WHERE (A.slide_id IS NULL OR A.record_status = 'D')
+ WHERE A.slide_id IS NULL
    AND DATEDIFF(MONTH,S.date_created,GETDATE()) < 12
  ORDER BY slide_number
  ~;
@@ -541,7 +541,7 @@ SELECT S.slide_id, slide_number
 SELECT slide_number, slide_number
   FROM $TBMA_SLIDE S 
   LEFT JOIN $TBMA_ARRAY A ON ( S.slide_id=A.slide_id ) 
- WHERE (A.slide_id IS NULL OR A.record_status = 'D')
+ WHERE A.slide_id IS NULL
    AND DATEDIFF(MONTH,S.date_created,GETDATE()) < 12
    AND S.slide_id IN ( $array_ids )
  ORDER BY slide_number
