@@ -26,6 +26,7 @@ CREATE NONCLUSTERED INDEX idx_modified_peptide_instance_id ON dbo.spectrum_ident
 CREATE NONCLUSTERED INDEX idx_spectrum_id ON dbo.spectrum_identification ( spectrum_id ) --WITH DROP_EXISTING
 
 CREATE INDEX idx_build_key ON dbo.search_key ( atlas_build_id,search_key_name ) --WITH DROP_EXISTING
+CREATE INDEX idx_resource_name ON dbo.search_key ( resource_name ) --WITH DROP_EXISTING
 
 
 -- GlycoPeptide INDEXES
