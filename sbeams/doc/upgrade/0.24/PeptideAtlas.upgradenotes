@@ -538,4 +538,14 @@ Altered server tables:
     ALTER TABLE NIST_library ADD NIST_library_name  varchar(100)
     ALTER TABLE NIST_library_spectrum ADD protein_name_alt  varchar(255)
 
+-----------------------------------------------------------------------
+
+2007-05-20
+
+Add new index:
+
+CREATE INDEX idx_resource_name ON search_key ( resource_name )
+
+
+
 
