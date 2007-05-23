@@ -17,6 +17,13 @@ DELETE FROM table_column WHERE column_name = 'input_form_format'
 
 ---------------
 
+2007-05-23
+
+Added index to table short_url:
+
+CREATE INDEX idx_url_key ON short_url ( url_key );
+
+
 
 
 
