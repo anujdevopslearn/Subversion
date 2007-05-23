@@ -3899,14 +3899,15 @@ sub setShortURL {
   my $self = shift;
   my $url = shift;
   $url = $self->convertSingletoTwoQuotes( $url );
+  my $url_key = '';
 
-  # Does this url already have a short_url?
-  my  ( $url_key ) = $self->selectOneColumn( <<"  END" );
-  SELECT url_key FROM $TB_SHORT_URL
-  WHERE url LIKE '$url'
-  END
+# Does this url already have a short_url?
+#  my  ( $url_key ) = $self->selectOneColumn( <<"  END" );
+#  SELECT url_key FROM $TB_SHORT_URL
+#  WHERE url LIKE '$url'
+#  END
   # return existing key
-  return( $url_key ) if $url_key;
+#  return( $url_key ) if $url_key;
 
   # There should really be no duplicates, but just in case...
   for( my $i = 0; $i < 10; $i++ ) {
