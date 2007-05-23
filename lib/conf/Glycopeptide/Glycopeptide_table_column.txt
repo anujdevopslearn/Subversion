@@ -157,6 +157,7 @@ GP_observed_peptide	16	mass_to_charge	Mass To Charge	real	4	0	Y		N			Y	text	10		
 GP_observed_peptide	17	mh_plus	MH+	real	4	0	Y		N			Y	text	10		N	N	N	MH+ value from search		
 GP_observed_peptide	18	mh_delta	MH Delta	real	4	0	Y		N			Y	text	10		N	N	N	Mass discrepancy from search		
 GP_observed_peptide	19	delta_cn	delta_cn	real	4	0	Y		N			Y	text	10		N	N	N	Peptide Prophet 'Delta Correlation' or dCn - the difference between the first and second hits		
+GP_observed_peptide	20	n_obs	Number of Observations	int	4	0	Y		N			Y	text	10		N	N	N	Number of times peptide was observed, if used as aggregate table		
 GP_observed_to_ipi	1	observed_to_ipi_id	Observed to IPI ID	int	4	0	N		Y			Y				N	N	Y			
 GP_observed_to_ipi	2	observed_peptide_id	Observed peptide ID	int	4	0	N		N	GP_observed_peptide	observed_peptide_id	Y				N	N	Y			
 GP_observed_to_ipi	3	ipi_data_id	IPI Data ID	int	4	0	N		N	GP_ipi_data	ipi_data_id	Y				N	N	Y			
