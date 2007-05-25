@@ -60,11 +60,13 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/peptideSearch.cgi";
 
 my %search_types = ( gene_symbol => 'Gene Symbol',
-                     gene_name   => 'Gene Name/Alias',
-                     swiss_prot  => 'Swiss Prot Accession Number',
-                     accession   => 'Accession Number',
-                     gene_id     => 'GeneID'
+                     gene_name   => 'Protein Name/Alias',
+                     swiss_prot  => 'SwissProt Accession Number',
+                     accession   => 'Accession (ID)',
+                     gene_id     => 'Entrez GeneID'
                    );
+
+my @search_types = qw( accession gene_name swiss_prot gene_symbol gene_id );
 
 my $motif_type;
 
@@ -151,14 +153,15 @@ sub main
 sub handle_request {
  	my %args = @_;
 
-    #### Process the arguments list
-    	my $ref_parameters = $args{'ref_parameters'}
-        || die "ref_parameters not passed";
+  #### Process the arguments list
+ 	my $ref_parameters = $args{'ref_parameters'} || die "ref_parameters not passed";
 
-    	my %parameters = %{$ref_parameters};
-      my $motif = $sbeamsMOD->get_current_motif_type();
-      my $title = '';
-      my $intro = '';
+ 	my %parameters = %{$ref_parameters};
+  my $motif = $sbeamsMOD->get_current_motif_type();
+  my $title = '';
+  my $intro = '';
+  my %example;
+
   if ( $motif !~ /phospho/ ) {
     $title = "ISB N-glycosylation peptide prediction server";
     $intro =<<"    END";
@@ -171,11 +174,22 @@ sub handle_request {
     Click <a href='http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?cmd=Retrieve&db=pubmed&dopt=Abstract&list_uids=15637048'>here</a>
     for more information."
     END
+
+    %example = ( name =>'jaguar',
+                 sym => 'jar',
+                 seq => '%ESNGQVEDSPPVIRNGVNDASPMGPNKLISFSQVVSNIASRYLNKSENVRAQQQALGKQK%',
+                 acc => 'FBgn0011225' );
+
   } else {
     $title = "ETH/ISB Phosphosite server";
     $intro =<<"    END";
     Database of observed phosphorylation sites
     END
+    %example = ( name =>'jaguar',
+                 symbol => 'jar',
+                 seq => '%ESNGQVEDSPPVIRNGVNDASPMGPNKLISFSQVVSNIASRYLNKSENVRAQQQALGKQK%',
+                 esc_seq => '%25ESNGQVEDSPPVIRNGVNDASPMGPNKLISFSQVVSNIASRYLNKSENVRAQQQALGKQK%25',
+                 acc => 'FBgn0011225' );
   }
 	
 	print 
@@ -199,9 +213,9 @@ sub handle_request {
 	   $q->td(
 	      $q->start_form(),
 	      $q->popup_menu( -name=>'search_type',
-                        -values=> [ keys(%search_types) ],
+                        -values=> [ @search_types ],
                         -labels => \%search_types,
-                        -default=>['Gene Symbol'],
+                        -default=>['Accession'],
                         -size=>1,      
 	   			)
 	   )
@@ -250,6 +264,11 @@ sub handle_request {
 
 ### add an Example table
 	my $cgi_url = "$base_url?action=Show_hits_form&search_type";
+	my $seq_url = "$base_url?action=Show_hits_form;sequence_search";
+  my $gene_id_row = '';
+  $gene_id_row = $q->Tr( $q->td({class=>'grey_bg'}, "Gene ID"),
+                         $q->td($q->a({href=>"$cgi_url=GeneID&search_term=214"}, "214") )
+	                      ) if $example{gene_id};
 	print 
 	"<br><br>",
 	$q->table(
@@ -257,25 +276,23 @@ sub handle_request {
 	      $q->td({class=>'rev_gray_head', colspan=>2}, "Examples")
 	   ),
 	   $q->Tr(
-              $q->td({class=>'grey_bg'}, "Gene Name"),
-              $q->td($q->a({href=>"$cgi_url=Gene Symbol&search_term=ALCAM"}, "ALCAM") )
+              $q->td({class=>'grey_bg'}, "Gene Symbol"),
+              $q->td($q->a({href=>"$cgi_url=gene_symbol&search_term=$example{symbol}"}, $example{symbol}) )
 	   ),
 	   $q->Tr(
-              $q->td({class=>'grey_bg'}, "Wild Card Gene Name"),
-              $q->td($q->a({href=>"$cgi_url=Gene Name/Alias&search_term=CD%"}, "CD%") )
+              $q->td({class=>'grey_bg'}, "Protein Name/Alias"),
+              $q->td($q->a({href=>"$cgi_url=gene_name&search_term=$example{name}"}, "$example{name}") )
 	   ),
 	   $q->Tr(
-              $q->td({class=>'grey_bg'}, "Accession Number"),
-              $q->td($q->a({href=>"$cgi_url=Accession%20Number&search_term=IPI00015102"}, "IPI00015102") )
+              $q->td({class=>'grey_bg'}, "Accession (ID)"),
+              $q->td($q->a({href=>"$cgi_url=accession&search_term=$example{acc}"}, "$example{acc}") )
 	   ),
 	   $q->Tr(
               $q->td({class=>'grey_bg'}, "Protein Sequence"),
-              $q->td(">IPI00015102|Partial protein sequence|Cut and paste into sequence search window<br>MESKGASSCRLLFCLLISATVFRPGLGWYTVNSAYGDTIIIPCRLDVPQNLMF") 
+              $q->td($q->a({href=>"$seq_url=$example{esc_seq}"}, "$example{seq}") )
+
 	   ),
-	   $q->Tr(
-              $q->td({class=>'grey_bg'}, "Gene ID"),
-              $q->td($q->a({href=>"$cgi_url=GeneID&search_term=214"}, "214") )
-	   ),
+     $gene_id_row
 	);
 }
 ###############################################################################
@@ -301,33 +318,33 @@ sub find_hits{
 				  
 	#check to see if this is a sequence or text search
 	my $type = check_search_params( $ref_parameters );
-	my $results_set = [];
+	my $resultset = [];
 	
   if ($type eq 'text'){
-    $results_set = $glyco_query_o->keyword_search( %$ref_parameters );	
+    $resultset = $glyco_query_o->keyword_search( %$ref_parameters );	
   }elsif($type eq 'sequence_search'){
-    $results_set = $glyco_query_o->protein_seq_query( $ref_parameters->{sequence_search} );	
+    $resultset = $glyco_query_o->protein_seq_query( $ref_parameters->{sequence_search} );	
   }else{
     print_error("Cannot find correct search type to run '$type'");
   }
 	
 	
 	
-  if ( $results_set ){
+  if ( $resultset ){
     	
-    if ( scalar(@$results_set) == 1 ) {
+    if ( scalar(@$resultset) == 1 ) {
       #pull out the ipi_id and directly display the details page since there is only one hit
-      my $href_results_info = $results_set->[0];
+      my $href_results_info = $resultset->[0];
       my $ipi_data_id = $href_results_info->{'ipi_data_id'};
       display_detail_form( ipi_data_id 	=> $ipi_data_id, 
                          ref_parameters	=> $ref_parameters );
 		} else {
       my $motif_type = $sbeamsMOD->get_current_motif_type();
       if ( $motif_type eq 'phospho' ) {
-        print_out_phospho_hits_page(results_set_aref => $results_set,
+        print_out_phospho_hits_page(results_set_aref => $resultset,
 					                           ref_parameters  => $ref_parameters);
       } else {
-        print_out_hits_page(results_set_aref => $results_set,
+        print_out_hits_page(results_set_aref => $resultset,
 			  		                 ref_parameters  => $ref_parameters);
       }
     }
@@ -1260,31 +1277,41 @@ sub print_out_phospho_hits_page{
   $html .= $q->Tr({class=>'rev_gray_head'},
 			  $q->td('ID'),
 			  $q->td('Protein Name'),
+			  $q->td('Synonyms'),
 			  $q->td('Protein Symbol'),
 			  $q->td('Observed Peptides')
 			);
-  $log->info( $html );
+#  $log->info( $html );
 	my $cgi_url = "$base_url?action=Show_detail_form&ipi_data_id";
   my $protcnt = 0;
   my $pepprotcnt = 0;
   my $cutoff = $sbeamsMOD->get_current_prophet_cutoff();
   my $pepcnt = 0;
   my @symbols;
+  my $current = '';
+  my $color = 'E0E0E0';
 	foreach my $h_ref (@results_set){
 		my $ipi_id = $h_ref->{ipi_data_id};
-		my $num_identified = $h_ref->{num_observed};
 		my $ipi_acc = $h_ref->{ipi_accession_number};
+    $current ||= $ipi_acc;
+    if ( $current ne $ipi_acc ) {
+      $color = ( $color eq 'E0E0E0' ) ? 'F5F5F5' : 'E0E0E0';
+    }
+    $current = $ipi_acc;
+		my $num_identified = $h_ref->{num_observed};
 		my $protein_name = nice_term_print($h_ref->{protein_name});
 		my $protein_sym = $h_ref->{protein_symbol};
+		my $synonyms = $h_ref->{synonyms};
     push @symbols, $protein_sym if $protein_sym;
     $protcnt++;
     $pepprotcnt++ if $num_identified;
     $pepcnt += $num_identified;
-		$html .= join( "\n", $q->Tr(
+		$html .= join( "\n", $q->Tr( {BGCOLOR=>$color},
 			    $q->td(
 			    	$q->a({href=>"$cgi_url=$ipi_id"},$ipi_acc)
 			    ),
 			    $q->td($protein_name),
+			    $q->td($synonyms),
 			    $q->td($protein_sym),
 			    $q->td({ALIGN=>'right'},$num_identified)
           )
@@ -1374,9 +1401,7 @@ sub display_phospho_detail_form{
   my $mrmlink = "<A HREF='ViewMRMList?NIST_library_id=20&action=QUERY;protein_name_constraint=$ipi_acc'>view transitions</A>";
 
     
-  my $ipi_url = $glyco_o->make_url(term=> $glyco_o->ipi_accession(),
-				     dbxref_tag => 'EBI_IPI'
-  );
+  my $ipi_url = getFlybaseLink( name => $ipi_acc );
     
   my $swiss_prot_url = $glyco_o->make_url(term=>$swiss_id, 
                                      dbxref_tag => 'SwissProt'
@@ -1552,13 +1577,24 @@ END_DREK
 } #end display_phospho
 
 
+sub getFlybaseLink {
+  my %args = @_;
+  for my $arg ( qw( name ) ) {
+    return "" unless $args{$arg};
+  }
+  my $base = 'http://flybase.org/cgi-bin/uniq.html?species=Dmel;Submit=Go;db=fbgn;cs=yes;caller=genejump;context=';
+  
+  return "<A HREF=${base}$args{name} TITLE='View gene model info at Flybase'>$args{name}</A>";
+}
+
 sub getKeggLink {
   my %args = @_;
   for my $arg ( qw( name ) ) {
     return "" unless $args{$arg};
   }
+  $args{name} =~ s/(CG\d+)(-P.)*/$1/;
   my $img = "$HTML_BASE_DIR/images/kegg_sm.gif";
-  return "<A HREF=showPathways?ga=$args{name}><IMG BORDER=0 TITLE='View KEGG pathways for this gene' SRC=$img></A>";
+  return "<A HREF=showPathways?ga=Dmel_${args{name}}><IMG BORDER=0 TITLE='View KEGG pathways for this gene' SRC=$img></A>";
 }
 
 
