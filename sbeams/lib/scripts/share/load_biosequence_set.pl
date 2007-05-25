@@ -217,6 +217,10 @@ sub main {
     $DATABASE = $DBPREFIX{$module};
   }
 
+  if ($module eq 'Imaging') {
+    $work_group = "Imaging_admin";
+    $DATABASE = $DBPREFIX{$module};
+  }
 
   #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($current_username = $sbeams->Authenticate(
@@ -893,6 +897,14 @@ sub loadBiosequence {
       0,255);
   }
   my $biosequence_name = $rowdata_ref->{biosequence_name};
+
+  #### If the biosequence_gene_name bloats beyond 255, truncate it
+  if (length($rowdata_ref->{biosequence_gene_name}) > 255) {
+    print "\nWARNING: truncating name for ".
+      $rowdata_ref->{biosequence_gene_name}." to 255 characters\n";
+    $rowdata_ref->{biosequence_gene_name} = substr($rowdata_ref->{biosequence_gene_name},
+      0,255);
+  }
 
   #### If the biosequence_desc bloats beyond 1024, truncate it
   if (length($rowdata_ref->{biosequence_desc}) > 1024) {
