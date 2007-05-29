@@ -12,7 +12,7 @@
   </security>
   <resources>
     <j2se version="1.4+" max-heap-size="1g"/>
-    <jar href="CYTOSCAPE_JARS/cytoscape_1.0_merge.jar"/>
+    <jar href="CYTOSCAPE_JARS/cytoscape.jar"/>
     <jar href="CYTOSCAPE_JARS/plugins_1.0/cytoAux.jar"/>
     <jar href="CYTOSCAPE_JARS/plugins_1.0/cyGagglePlugin.jar"/>
     <jar href="CYTOSCAPE_JARS/plugins_1.0/ouai.jar"/>
