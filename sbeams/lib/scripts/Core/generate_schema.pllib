@@ -493,7 +493,7 @@ sub generateColumnDefinition {
   my $is_auto_inc = $args{'is_auto_inc'} || "";
   my $fk_table = $args{'fk_table'} || "";
   my $fk_column = $args{'fk_column'} || "";
-  my $input_type = $args{'input_type'} | '';
+  my $input_type = $args{'input_type'} || '';
   my $destination_type = $args{'destination_type'}
     || die "destination_type not passed";
   my $table_prefix = $args{'table_prefix'} || "";
