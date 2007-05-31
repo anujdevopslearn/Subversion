@@ -542,11 +542,20 @@ sub get_html_protein_seq {
     #subtract one since we are indexing into a zero based array
     my $start =  $f->start - 1;
     my $end =  $f->end - 1;
+
+    # FIXME FIXME FIXME - cruel hack for the sake of time
+
+    if ( $glyco->get_current_motif_type() =~ /phospho/ && $tag !~ /Phosphor/ ) {
+      $start -= 1;
+      $end += 1; 
+    }
+      
             
     my ($name, $title) = _choose_css_type( tag  => $tag,
                                          params => $ref_parameters,
                                           start => $start );
     next unless $name;
+    $log->debug( "Tag is $tag, starts at " . $f->start() . ", ends at " . $f->end() );
 
     if ( !$title ) {
       $title = $tag;
@@ -1049,7 +1058,7 @@ sub phospho_pep_html{
   $html .= join( "\n", $q->Tr( {class=>'rev_gray_head'},
 			        $q->td(text_class("Identifed Sequence")),
 			     	$q->td($self->linkToColumnText(
-			       				display => "PeptideProphet Score",
+			       				display => "PeptideProphet",
 								title   => "PeptideProphet Score: 1 Best, 0 Worst", 
 								column  => "peptide_prohet_score", 
 								table   => "AT_identified_peptide" 
@@ -1058,10 +1067,9 @@ sub phospho_pep_html{
 			     	),
 			     	$q->td(text_class("Tryptic Ends")),
 			     	$q->td(text_class("Peptide Mass")),
-			     	$q->td(text_class("Tissues")),
+			     	$q->td(text_class("DeltaCN")),
 			     	$q->td(text_class("# Obs")),
-			     	$q->td(text_class("Atlas")),
-			     	$q->td(text_class("Spectrum"))
+			     	$q->td(text_class("Links")),
               ) # End Tr
 			     ); # End join
 				 
@@ -1081,7 +1089,7 @@ sub phospho_pep_html{
 		my $peptide_mass = '1';
 		my $observed_seq = '1';
 		my $num_obs = '1';
-		my $tissues = 'None';
+		my $delta_cn = 0;
 		my $protein_glyco_site = 1;
 		
     my $gb = '';
@@ -1118,9 +1126,8 @@ sub phospho_pep_html{
       # Get link to peptide atlas
       my $aa_value = $html_seq;
       $aa_value =~ s/<[^>]+>//g;
-      $atlas_link = $self->get_atlas_link( seq => $aa_value );
 
-      $atlas_link = $self->get_atlas_link( seq => $aa_value );
+      $atlas_link = $self->get_atlas_link( seq => $aa_value, onmouseover => "Search for peptide in Peptide Atlas" );
 
 			$protein_glyco_site =  $self->get_annotation(seq_obj =>$pep_seq_obj,
                                                                          anno_type => 'protein_glyco_site');
@@ -1130,15 +1137,15 @@ sub phospho_pep_html{
 									 anno_type => 'peptide_prophet_score');
 			$peptide_mass = $self->get_annotation(seq_obj =>$pep_seq_obj, 
 									 anno_type => 'peptide_mass');
-			$tissues = $self->get_annotation(seq_obj =>$pep_seq_obj, 
-									 anno_type => 'tissues');
+			$delta_cn = $self->get_annotation(seq_obj =>$pep_seq_obj, 
+									 anno_type => 'delta_cn');
 			$num_obs = $self->get_annotation(seq_obj =>$pep_seq_obj, 
 									 anno_type => 'number_obs');
 			$observed_seq = $self->get_annotation(seq_obj =>$pep_seq_obj, 
 									 anno_type => 'observed_seq');
       my $spectrum_seq = $observed_seq;
       $spectrum_seq =~ s/\&/\*/g;
-      $spectrum_link = '<A HREF="showSpectrum.cgi?query_peptide_seq=' . $spectrum_seq . '" >view</A>';
+      $spectrum_link = '<A HREF="showSpectrum.cgi?query_peptide_seq=' . $spectrum_seq . '" TITLE="Lookup consensus spectrum" >spectrum</A>';
       $observed_seq = get_phospho_html( seq => $observed_seq );
 
 
@@ -1149,15 +1156,16 @@ sub phospho_pep_html{
 #		            ( $tissues =~ /serum/ ) ? 'serum, other' :
 #		            ( $tissues =~ /\w/ ) ? 'other' : '';
 
+    my $sp = '&nbsp;';
 		 $html .= join( "\n", $q->Tr(
 				$q->td("$gb$first_aa.$observed_seq.$end_aa$ge"),
-				$q->td($gb.$peptide_prophet_score.$ge),
-				$q->td($gb.$tryptic_end.$ge),
-				$q->td($gb.$peptide_mass.$ge),
-				$q->td($gb.$tissues.$ge),
-				$q->td($gb.$num_obs.$ge),
-				$q->td({ALIGN=>'CENTER'},$gb.$atlas_link.$ge),
-				$q->td($gb.$spectrum_link.$ge),
+				$q->td({ALIGN=>'right'},$gb.$peptide_prophet_score.$ge),
+				$q->td({ALIGN=>'right'},$gb.$tryptic_end.$ge),
+				$q->td({ALIGN=>'right'},$gb.$peptide_mass.$ge),
+				$q->td({ALIGN=>'right'},$gb.$delta_cn.$ge),
+				$q->td({ALIGN=>'right'},$gb.$num_obs.$ge),
+#				$q->td({VALIGN=>'CENTER'},$sp.$sp.$atlas_link.$sp.'|'.$sp.$spectrum_link.$sp),
+				$q->td({VALIGN=>'CENTER'},$sp.$sp.$spectrum_link.$sp),
 			     )  # End Tr
          ); # End join
 		}
