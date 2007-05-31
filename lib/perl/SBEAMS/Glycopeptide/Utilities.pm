@@ -813,7 +813,8 @@ sub runBulkSearch {
   my $sql =<<"  END";
   SELECT DISTINCT ipi_accession_number, swiss_prot_acc, ID.ipi_data_id,
              observed_peptide_sequence, protein_symbol, protein_name, 
-             OP.observed_peptide_id, peptide_prophet_score, peptide_mass
+             OP.observed_peptide_id, peptide_prophet_score, peptide_mass, 
+             delta_cn, synonyms
   FROM $TBGP_IPI_DATA ID 
   JOIN $TBGP_OBSERVED_TO_IPI OTI ON ID.ipi_data_id = OTI.ipi_data_id
   JOIN $TBGP_OBSERVED_PEPTIDE OP ON OP.OBSERVED_peptide_id = OTI.OBSERVED_peptide_id
@@ -822,7 +823,7 @@ sub runBulkSearch {
   WHERE peptide_prophet_score >= $cutoff
    AND BTS.build_id = $build_id 
    AND $type IN ( $ids )
-   ORDER BY ipi_accession_number, swiss_prot_acc
+   ORDER BY ipi_accession_number, synonyms, swiss_prot_acc
   END
   $log->debug( $sql );
 
@@ -846,6 +847,7 @@ sub getIPIGlycosites {
   my @rows = $sbeams->selectSeveralColumns( $sql );
   return \@rows;
 }
+
 
 
 #+
