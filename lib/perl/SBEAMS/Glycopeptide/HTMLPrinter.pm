@@ -67,11 +67,15 @@ sub displayPhosphopepHeader {
   my @page = split( "\r", $response->content() );
   my $skin = '';
   my $cnt = 0;
+  my $cutoff_widget = $self->get_prophet_control();
+
 #  print STDERR "Original content is " . $response->content() . "\n";
   for my $line ( @page ) {
     $cnt++;
-    if ( $line =~ /LOGIN/ ) {
+    if ( $line =~ /LOGIN_LINK/ ) {
       $line =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
+    } elsif ( $line =~ /PSCORE_CUTOFF/ ) {
+      $line =~ s/\<\!-- PSCORE_CUTOFF --\>/$cutoff_widget/;
     } elsif ( $line =~ /\<BODY / ) {
       $line =~ s/(\<BODY )/${1} ONLOAD="$loadscript" self.focus/;
     } elsif ( $line =~ /td\s+\{font/ ) {
@@ -94,6 +98,52 @@ sub displayPhosphopepHeader {
 
   $self->printJavascriptFunctions();
   }
+
+sub decorate_phospho_sequence {
+  my $self = shift;
+  my $seq = shift || return '';
+  $seq =~ s/([A-Z]\*)/<SPAN CLASS=phospho>$1<\/SPAN>/g;
+  $seq =~ s/([A-Z])\&/<SPAN CLASS=ambiphospho>$1\*<\/SPAN>/g;
+  return $seq;
+}
+
+sub get_phospho_css {
+  my $self = shift;
+    my %colors = ( 'Signal Sequence' => 'lavender',
+                 'Signal Sequence web' => '#CCCCFF',
+                 Anchor => 'lavender',
+                 Anchor => 'lavender',
+                 Anchor_web => '#CCCCFF',
+          Transmembrane => 'lightgreen',
+          Transmembrane_web => '#CCFFCC',
+          Intracellular => 'coral',
+          id_track_type => 'firebrick',
+          Extracellular => 'mediumseagreen',
+               Coverage => 'beige',
+      glyco_site_track => '#EE9999',
+  predicted_track_type => 'goldenrod',
+   ambi_site_track      => 'lightyellow' );
+  return( <<"  END_STYLE" );
+  <STYLE>
+   .obs_pep { background-color: $colors{id_track_type} ;border-style: solid; border-color:gray; border-width: 1px  }
+   .iden_pep { background-color: $colors{id_track_type} ;border-style: solid; border-color:gray; border-width: 1px  }
+   .pred_pep { background-color: $colors{predicted_track_type} ;border-style: solid; border-color:gray; border-width: 1px  }
+   .tm_dom { background-color: $colors{Transmembrane_web} ;border-style: solid; border-color:gray; border-width: 1px  }
+   .in_dom { background-color: $colors{Intracellular} ;border-style: solid; border-color:gray; border-width: 1px  }
+   .ex_dom { background-color: $colors{Extracellular} ;border-style: solid; border-color:gray; border-width: 1px  }
+   .anc_seq { background-color: $colors{Anchor_web};border-style: solid; border-color:gray; border-width: 1px  }
+   .sig_seq { background-color: $colors{'Signal Sequence web'};border-style: solid; border-color:gray; border-width: 1px  }
+   .glyco_seq { background-color: $colors{glyco_site_track};border-style: solid; border-color:gray; border-width: 1px  }
+   .phospho { background-color: $colors{glyco_site_track};border-style: solid; border-color:gray; border-width: 1px  }
+   .ambiphospho { background-color: $colors{ambi_site_track};border-style: solid; border-color:gray; border-width: 1px; color: Black  }
+   .pep_cov { background-color: $colors{Coverage};border-style: solid; border-color:gray; border-width: 1px  }
+   .outline { border-style: solid; border-color:gray; border-width: 1px }
+   .sm_txt {  font-family: Helvetica, Arial, sans-serif; font-size: 8pt}
+  </STYLE>
+  END_STYLE
+  
+}
+
 
 # displayUnipepHeader
 ###############################################################################
@@ -382,8 +432,8 @@ sub display_page_header {
     }
 
     if ( $self->get_current_motif_type() =~ /phospho/ ) {
-#      $self->displayPhosphopepHeader(%args);
-#      return();
+      $self->displayPhosphopepHeader(%args);
+      return();
     } elsif( $sbeams->isGuestUser() ) {
       $self->displayUnipepHeader(%args);
       return();
@@ -448,15 +498,15 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/showPathways" TITLE="View observed peptides in context of KEGG maps"><nobr>&nbsp;&nbsp;&nbsp;Pathway Search</nobr></a></td></tr>
   <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/bulkSearch" TITLE="Perform batch search with list of accessions"><nobr>&nbsp;&nbsp;&nbsp;Bulk Search</nobr></a></td></tr>
   <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetMRMList" TITLE="Generate list of observed transitions from protein list"><nobr>&nbsp;&nbsp;&nbsp;Get MRM Transitions</nobr></a></td></tr>
-  <tr><td><a href="http://www.phosphopep.org/spectrast/index.php" TITLE="Perform spectral search with SpectraST"><nobr>&nbsp;&nbsp;&nbsp;Search Spectra</nobr></a></td></tr>
+  <tr><td><a href="http://www.phosphopep.org/spectrast/index.php" TITLE="Perform spectral search with SpectraST"><nobr>&nbsp;&nbsp;&nbsp;Spectral Search</nobr></a></td></tr>
   <tr><td><a href="http://www.phosphopep.org"><nobr>&nbsp;&nbsp;&nbsp;Phosphopep Home</nobr></a></td></tr>
 
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=GP_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=GP_unipep_build"><nobr>&nbsp;&nbsp;&nbsp; Builds</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=GP_unipep_sample"><nobr>&nbsp;&nbsp;&nbsp; Samples</nobr></a></td></tr>
-  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/settings.cgi">${sp} UniPep Settings</nobr></a></td></tr>
+<!--	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=GP_unipep_build"><nobr>&nbsp;&nbsp;&nbsp;Builds</nobr></a></td></tr> -->
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=GP_unipep_sample"><nobr>&nbsp;&nbsp;&nbsp;Samples</nobr></a></td></tr>
+  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/settings.cgi">${sp} Build Settings</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>$prophet_control</td></tr>
 
@@ -621,6 +671,10 @@ sub display_page_footer {
   my $self = shift;
   my %args = @_;
 
+  if ( $self->get_current_motif_type() =~ /phospho/ ) {
+    # No-op
+    return;
+  }
 
   #### If the output mode is interactive text, display text header
   my $sbeams = $self->getSBEAMS();
