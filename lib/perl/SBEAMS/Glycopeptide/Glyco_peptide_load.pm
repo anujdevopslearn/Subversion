@@ -192,6 +192,10 @@ sub insert_ipi_db {
     }
 
     my $ipi = $tokens[$heads{'ipi'}];
+    if ( $file_data{$ipi} ) {
+      $ipi = $ipi . '__' . $sbeams->getRandomString(num_chars=>12);
+#      print "duplicate id changed to $ipi\n";
+    }
                                       
     if ( $stats{$ipi} || $self->check_ipi($ipi) ) {
       $stats{$ipi}++;
@@ -260,10 +264,15 @@ sub insert_ipi_db {
                                                site_idx => $file_data{$acc}->{sites}
                                             );
 
+       my $original_acc = $acc;
+       $original_acc =~ s/__.*$//;
+       if ( $acc ne $original_acc ) {
+#         print "Changed $acc back to $original_acc\n";
+       }
        $self->add_predicted_peptides( sequence => $tokens->[$heads{'protein sequences'}],
                                    ipi_data_id => $ipi_id, 
                                       site_idx => $file_data{$acc}->{sites},
-                                           ipi => $acc,
+                                           ipi => $original_acc,
                                       peptides => $file_data{$acc}->{peptides} );
       };
       if ( $@ ) {
@@ -456,16 +465,20 @@ sub insert_peptides {
 
   $self->testonly( $args{testonly} );
 
-  # insert peptide search record
-  my $psid = $self->insert_peptide_search( %args );
+  $self->{_format} = $args{format};
 
   my $observed;
   # check which format was specified, read file
   if ( $args{format} eq 'interact-tsv' ) {
     $observed = $self->read_tsv( %args );
+  } elsif ( $args{format} eq 'phosphogigolo' ) {
+    $observed = $self->read_tsv( %args );
   } else {
     die "Unsupported file format\n";
   }
+
+  # insert peptide search record
+  my $psid = $self->insert_peptide_search( %args );
 
   # insert observed peptide
   $self->insert_observed_peptides( %args, 
@@ -559,7 +572,7 @@ sub insert_observed_peptides {
   my @keys = keys( %{$seqs} );
   print "Found $#keys seqs\n";
   
-  my $heads = get_interact_tsv_headers();
+  my $heads = $self->{_heads} || die("Doh");
   my $sbeams = $self->getSBEAMS();
 
   my $cnt;
@@ -570,6 +583,9 @@ sub insert_observed_peptides {
   for my $obs ( @{$args{peptides}} ) {
     $cnt++;
     # for my $k ( keys( %$heads ) ) { print "$k => $heads->{$k} => $obs->[$heads->{$k}]\n"; }
+
+#    print "peptide from pos $heads->{Peptide} is $obs->[$heads->{Peptide}]\n";
+#    print "prot from pos $heads->{Protein} is $obs->[$heads->{Protein}]\n";
 
     my $clean_pep = $module->clean_pepseq( $obs->[$heads->{Peptide}] );
     my $clean_prot = $self->trim_space( $obs->[$heads->{Protein}] );
@@ -586,32 +602,48 @@ sub insert_observed_peptides {
     # Test for error conditions.
     
     if ( !scalar(@$mapteins) ) { # Can't map peptide to reference db
-      print STDERR "Unable to map sequence: $clean_pep\n";
+      print STDERR "Unable to map sequence: $clean_pep\t$clean_prot\n";
       next;
 
     } elsif ( $obs->[$heads->{prob}] < 0.5 ) { # detection probability too low
       print STDERR "Low probability: $obs->[$heads->{prob}]\n";
       next;
-    } elsif ( grep /$clean_pep/,  @$pepseqs ) { # Duplicato
+    } elsif ( grep /$obs->[$heads->{Peptide}]/,  @$pepseqs ) { # Duplicato
       # FIXME - should we update here?
       # FIXME - Case sensitive?
-      print STDERR "Duplicate detected: $clean_pep\n";
-      next;
+      print STDERR "Duplicate detected: $obs->[$heads->{Peptide}]\n";
+#      next;
     }
     $insert_cnt++;
     # Fight dups in same file
-    push @$pepseqs, $clean_pep;
+    push @$pepseqs, $obs->[$heads->{Peptide}];
 
-    my $exp_mass = $module->mh_plus_to_mass($obs->[$heads->{'MH+'}]);
     my $calc_mass = $module->calculatePeptideMass( sequence => $clean_pep ); 
-    my $out = basename( $obs->[$heads->{file}] );
-    my @name = split( /\./, $out );
-    unless ( scalar(@name) == 4 && $name[1] == $name[2] ) {
-#      warn "Mismatch in out $out: " . join( ", ", @name ) . "\n";
-    }
-    my ( $delta ) = $self->extract_delta( $obs->[$heads->{'MH error'}] );
 
-    my $mass2ch = ( $name[3] ) ? $exp_mass/$name[3] : undef;
+    my ( $delta, $exp_mass, $scan, $charge, $mass2ch, $mh_plus );
+    if ( $self->{_format} eq 'interact-tsv' ) {
+
+      $exp_mass = $module->mh_plus_to_mass($obs->[$heads->{'MH+'}]);
+      my $out = basename( $obs->[$heads->{file}] );
+      my @name = split( /\./, $out );
+      unless ( scalar(@name) == 4 && $name[1] == $name[2] ) {
+#      warn "Mismatch in out $out: " . join( ", ", @name ) . "\n";
+      }
+      $delta = $self->extract_delta( $obs->[$heads->{'MH error'}] );
+
+      $mass2ch = ( $name[3] ) ? $exp_mass/$name[3] : undef;
+      $scan = $name[2];
+      $charge = $name[3] ;
+      $mh_plus = $obs->[$heads->{'MH+'}];
+
+    } elsif  ( $self->{_format} eq 'phosphogigolo' ) {
+      my $mh = $obs->[$heads->{'MH+'}];
+      $charge = $obs->[$heads->{'chg_state'}];
+      $exp_mass = ($mh * $charge) - ( $charge - 1 );
+      $mass2ch = $obs->[$heads->{'MH+'}];
+      $mh_plus = $obs->[$heads->{'MH+'}] + 1.0078;
+      # scan and delta are not defined
+    }
 
     # Set ipi data id to search match if available, else first db match
     my $ipi = $accs->{$obs->[$heads->{Protein}]} || $mapteins->[0];
@@ -624,11 +656,12 @@ sub insert_observed_peptides {
                             experimental_mass => $exp_mass,
                                 spectrum_path => $obs->[$heads->{file}],
                                mass_to_charge => $mass2ch,
-                                      mh_plus => $obs->[$heads->{'MH+'}],
+                                      mh_plus => $mh_plus,
                                      mh_delta => $delta,
                             matching_sequence => $clean_pep,
-                                  scan_number => $name[2],
-                                 charge_state => $name[3],
+                                  scan_number => $scan,
+                                        n_obs => $obs->[$heads->{n_obs}],
+                                 charge_state => $charge,
                                  peptide_mass => $calc_mass,
                                      delta_cn => $obs->[$heads->{dCn}],
               };
@@ -826,13 +859,57 @@ sub get_interact_tsv_headers {
              IonsTot => 10,
              Protein => 11,
           '#DupProt' => 12,
-             Peptide => 13 );
+             Peptide => 13,
+            num_obs  => 99,
+          chg_state  => 99 );
+
   for my $k (keys( %heads ) ) {
     $heads{lc($k)} = $heads{$k};
   }
   return \%heads;
 }
 
+sub get_phosgigolo_headers {
+  my $self = shift;
+# 0 Found in DB           na          -
+# 1 DB-Name AA            na          -
+# 2 AA                    na          -
+# 3 Pos.                  na          -  
+# 4 Search-AC             Protein    11
+# 5 SQ                    Peptide    13
+# 6 Mr                    MH+         3
+# 7 Charge state          na          -
+# 8 Pep.prob              prob        0
+# 9 Xcorr                 Xcorr       5
+# 10 DeltaCN              dCn         6
+# 11 # phosporylations    na          -
+# 12 # in LC/MS detected  n_obs       -
+# 13 LC/MS ID             na          -
+#
+  my %heads = ( prob => 8,
+              ignore => 99,
+                file => 99,
+               'MH+' => 6,
+          'MH error' => 99,
+               XCorr => 9,
+                 dCn => 10,
+                  Sp => 99,
+              SpRank => 99,
+           IonsMatch => 99,
+             IonsTot => 99,
+             Protein => 4,
+          '#DupProt' => 99,
+            Peptide  => 5,
+              n_obs  => 12,
+          chg_state  =>  7 );
+
+  for my $k (keys( %heads ) ) {
+    $heads{lc($k)} = $heads{$k};
+  }
+  return \%heads;
+}
+
+####
 sub read_tsv {
   my $self = shift;
   my %args = @_;
@@ -842,7 +919,7 @@ sub read_tsv {
   my $file = $args{peptide_file};
   open DATA, $file || die "Unable to open file $file $!\n";
 
-  my $heads = get_interact_tsv_headers();
+  $self->{_heads} ||= ( $args{format} eq 'interact-tsv' ) ? get_interact_tsv_headers() : get_phosgigolo_headers();
 	my $count = 0;
   my @peptides;
   print "Processing peptides\n";
@@ -853,9 +930,12 @@ sub read_tsv {
       $t =~ s/^\s*\"*//;
       $t =~ s/\"*\s*$//;
     }
-    if ( $tokens[0] eq 'prob' && $tokens[1] eq 'ignore' && $tokens[2] eq 'file' ) {
+    if ( !scalar( @peptides ) && $self->is_header( \@tokens ) ) {
       # this column has a header row
+      print "$tokens[0] is a header for format type $self->{_format}\n";
       next;
+#    } elsif( !scalar( @peptides ) ) {
+#      print "$tokens[4] and $tokens[9] aren't SQ and DeltaCN?\n";
     }
     $count ++;
     push @peptides, \@tokens;
@@ -870,6 +950,21 @@ sub read_tsv {
   }
   print "\n\n";
   return \@peptides;
+}
+
+sub is_header {
+  my $self = shift;
+  my $tokens = shift;
+  if ( $self->{_format} eq 'interact-tsv' ) {
+    if ( $tokens->[0] eq 'prob' && $tokens->[6] eq 'dCn' ) {
+      return 1;
+    }
+  } elsif (  $self->{_format} eq 'phosphogigolo' ) {
+    if ( $tokens->[5] eq 'SQ' && $tokens->[10] eq 'DeltaCN' ) {
+      return 1;
+    }
+  }
+  return 0;
 }
 
 
