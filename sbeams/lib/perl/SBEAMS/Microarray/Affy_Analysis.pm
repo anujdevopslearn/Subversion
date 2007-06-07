@@ -146,6 +146,16 @@ sub make_R_CHP_file {
 	my  $R_script = <<END;
 .libPaths("$R_library")
 library(affy)
+
+# Make sure R is reasonably modern
+v_minor = R.version\$minor;
+v_major = R.version\$major;
+
+if ( v_major < 2 ) {
+  print( "Must run R version 2.2.0 or above" );
+  quit();
+} 
+
 cel.file.name    <- c("$cel_file")
 output.file.name <- c("$out_R_CHP_file")
 data <- ReadAffy(filenames =  cel.file.name)
@@ -154,18 +164,20 @@ eset <- mas5(data,sc=250)
 PACalls <- mas5calls(data,alpha1=0.05,alpha2=0.065)
 
 Matrix <- exprs(eset)
-output <- cbind(row.names(Matrix),Matrix,exprs(PACalls),se.exprs(PACalls))
 headings <- c("Probesets","MAS5_Signal","MAS5_Detection_calls", "MAS5_Detection_p-value")
-write.table(output,file=output.file.name,sep="\\t",col.names = headings,row.names=FALSE)
 
+if  ( as.integer(v_minor) > 4.0 ) {
+  output <- cbind(row.names(Matrix),Matrix,exprs(PACalls), assayData(PACalls)\$se.exprs )
+  write.table(output, file=output.file.name, sep="\t", col.names=headings, row.names=FALSE)
+} else {
+  output <- cbind(row.names(Matrix),Matrix,exprs(PACalls),se.exprs(PACalls))
+  write.table(output, file=output.file.name, sep="\t", col.names=headings, row.names=FALSE)
+} 
 
 bitmap(file="$out_chip_image",  res=72*4, pointsize = 12 )
 	image( data[,1] )
 dev.off()
 
-#jpeg("$out_chip_image", width=1000, height=1000)
-#image( data[,1] )
-#dev.off()
 END
 
 
