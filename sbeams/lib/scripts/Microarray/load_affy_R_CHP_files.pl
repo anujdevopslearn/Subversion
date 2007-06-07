@@ -185,7 +185,7 @@ $QUIET      = $OPTIONS{quiet};
 $DEBUG      = $OPTIONS{debug};
 $TESTONLY   = $OPTIONS{testonly};
 $RUN_MODE   = $OPTIONS{run_mode};
-$RECOMPUTE_R = $OPTIONS{redo_R};
+$RECOMPUTE_R = $OPTIONS{redo_R} || '';
 $FILES_TO_UPDATE = $OPTIONS{files};
 
 
