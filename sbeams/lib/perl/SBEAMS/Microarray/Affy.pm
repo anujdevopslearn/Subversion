@@ -967,6 +967,24 @@ sub get_afs_treatment_description {
 }
 
 #######################################################
+#set get pair:afs_replicate_tag
+#######################################################
+# set_afs_replicate_tag
+#######################################################
+sub set_afs_replicate_tag { 
+	my $self = shift;
+	my $name = shift || '';
+	return $self->{AFS_REPLICATE_TAG} = $name;
+}
+#######################################################
+# get_afs_replicate_tag
+#######################################################	
+sub get_afs_replicate_tag {
+	my $self = shift;
+	return $self->{AFS_REPLICATE_TAG};
+}
+
+#######################################################
 #set get pair:afs_data_flag
 #######################################################
 # set_afs_data_flag
@@ -1019,8 +1037,8 @@ sub set_treatment_values {
       }
     }
     next if $skip; # Don't add record unless at least one of the params is set
-    $treatment{treatment_name} = 'unspecified';
-    $treatment{treatment_agent} = $treatment{treatment_name};
+    $treatment{treatment_name} ||= 'unspecified';
+    $treatment{treatment_agent} ||= $treatment{treatment_name};
     # Fixme - add defaults to config file?
     $treatment{time_units} ||= 'minutes';
     $treatment{treatment_agent} ||= 'chemical agent';
