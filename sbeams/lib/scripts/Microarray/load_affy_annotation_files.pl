@@ -303,7 +303,7 @@ sub add_affy_annotation {
 				print "$count - $affy_anno_pk\n";
 			}
 			if ( $count && !($count % 100) ){
-				printf "Loaded $count of $total_records records (%.2f\%)\n",  ($count/$total_records)*100 ;
+				print "Loaded $count of $total_records records (" . sprintf( "%0.1f", (($count/$total_records)*100) ) . ")\n";
 			}
 			$count ++;	
 		}
