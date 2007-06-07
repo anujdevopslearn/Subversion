@@ -1062,7 +1062,7 @@ sub truncate_data {
       next unless defined $key;	
 
       $fieldsize{$key} ||= 255;
-      my $orig_len = length( $record_h{$key} );
+      my $orig_len = ( defined $record_h{$key} ) ? length( $record_h{$key} ) : 0;
       if ( $record_h{$key} && $fieldsize{$key} && $orig_len > $fieldsize{$key} ){
         my $trunc = substr($record_h{$key}, 0, $fieldsize{$key} );
         my $trunc_len = length( $trunc );
