@@ -756,12 +756,33 @@ sub main {
   #### Loop over all input files converting pepXML to identlist format
   #### unless it has already been done
   my @identlist_files;
+  my %decoy_corrections;
   foreach my $document ( @documents ) {
     my $filepath = $document->{filepath};
     $CONTENT_HANDLER->{search_batch_id} = $document->{search_batch_id};
     $CONTENT_HANDLER->{document_type} = $document->{document_type};
     $CONTENT_HANDLER->{identification_list} = [];
     $CONTENT_HANDLER->{ProteinProphet_data_list} = {};
+
+    #### Check to see if there's a decoy correction coefficient
+    my $decoy_file = $filepath;
+    $decoy_file =~ s/\.xml$/.decoy.txt/;
+    if ( -e $decoy_file ) {
+      open(DECOYFILE,$decoy_file);
+      while (my $line = <DECOYFILE>) {
+	chomp($line);
+	my @columns = split("\t",$line);
+	if ($columns[0] == 3) {
+	  my $decoy_correction = ( $columns[1] + $columns[2] ) / 2.0;
+	  print "INFO: Decoy correction = $decoy_correction\n";
+	  $decoy_corrections{$document->{search_batch_id}} = $decoy_correction;
+	}
+      }
+      close(DECOY_FILE);
+    } else {
+      print "WARNING: No decoy correction\n";
+    }
+
 
     #### Determine the identlist file path and name
     my $identlist_file = $filepath;
@@ -837,6 +858,18 @@ sub main {
   }
 
 
+  #### If we have decoy corrections, apply them and write out a new file
+  if (%decoy_corrections) {
+    my $output_file = $combined_identlist_file;
+    $output_file =~ s/concat/concor/;
+    apply_decoy_corrections(
+      input_file => $combined_identlist_file,
+      output_file => $output_file,
+      decoy_corrections => \%decoy_corrections,
+    );
+  }
+
+
   #### Sort the combined file by peptide
   my $sorted_identlist_file = "DATA_FILES/PeptideAtlasInput_sorted.PAidentlist";
   print "INFO: Sorting master list '$combined_identlist_file'\n";
@@ -858,6 +891,19 @@ sub main {
     output_file => $output_PAxml_file,
     P_threshold => $CONTENT_HANDLER->{P_threshold},
   );
+
+
+  #### If we have decoy corrections, apply them and write out a new file
+  if (%decoy_corrections) {
+    my $output_file = $sorted_identlist_file;
+    $output_file =~ s/sorted/srtcor/;
+    apply_decoy_corrections(
+      input_file => $sorted_identlist_file,
+      output_file => $output_file,
+      decoy_corrections => \%decoy_corrections,
+    );
+    $sorted_identlist_file = $output_file;
+  }
 
 
   #### Open the combined, sorted identlist file
@@ -1329,12 +1375,51 @@ sub showContentHandlerContents {
 
 
 ###############################################################################
+# apply_decoy_corrections
+###############################################################################
+sub apply_decoy_corrections {
+  my %args = @_;
+  my $input_file = $args{'input_file'} || die("No input_file provided");
+  my $output_file = $args{'output_file'} || die("No output_file provided");
+  my $decoy_corrections = $args{'decoy_corrections'} || die("No decoy_corrections provided");
+
+  #### Open the combined, sorted identlist file
+  open(INFILE,$input_file) ||
+    die("ERROR: Unable to open for read '$input_file'");
+  open(OUTFILE,">$output_file") ||
+    die("ERROR: Unable to open for write '$output_file'");
+
+  while (my $line = <INFILE>) {
+    my @columns;
+    chomp($line);
+    @columns = split("\t",$line);
+    my $search_batch_id = $columns[0];
+    my $probability = $columns[8];
+    my $decoy_correction = $decoy_corrections->{$search_batch_id};
+    if ($decoy_correction) {
+      $probability = 1-((1-$probability)/$decoy_correction);
+      $columns[8] = sprintf("%.4f",$probability);
+    } else {
+      print "WARNING: No decoy correction available for searcb_batch_id '$search_batch_id'\n";
+    }
+    print OUTFILE join("\t",@columns)."\n";
+  }
+
+  close(INFILE);
+  close(OUTFILE);
+
+} # end apply_decoy_corrections
+
+
+
+###############################################################################
 # coalesceIdentifications
 ###############################################################################
 sub coalesceIdentifications {
   my %args = @_;
   my $rows = $args{'rows'} || die("No rows provided");
   my $column_names = $args{'column_names'} || die("No column_names provided");
+  my $decoy_corrections = $args{'decoy_corrections'};
   use Data::Dumper;
 
   my $summary;
