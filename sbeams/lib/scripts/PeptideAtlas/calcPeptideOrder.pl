@@ -120,6 +120,9 @@ sub main {
 
   my %other_peptides;
   my $offset_counter = 1;
+  my $date;
+  $date = `date`; chomp($date);
+  print "$date: Starting calculation...\n";
 
   #### Skip header
   <INFILE>;
@@ -161,12 +164,32 @@ sub main {
 	print "  Processing msrun $msrun...";
 	my @scan_numbers = sort numerically keys(%{$peptides{$msrun}});
 	my $n_spectrum_ids = scalar(@scan_numbers);
-	print "  Found $n_spectrum_ids...\n";
+	print "  Found $n_spectrum_ids...";
+
+	my %peptide_counts;
+	foreach my $scan_number (@scan_numbers) {
+	  my $sequence = $peptides{$msrun}->{$scan_number};
+	  $peptide_counts{$sequence}++;
+	}
+
+	my $peptides_to_skip = 0;
+	foreach my $pep ( keys(%peptide_counts) ) {
+	  $peptides_to_skip++ if ($peptide_counts{$pep}>5);
+	}
+	print " skipping $peptides_to_skip peptides...\n";
 
 	foreach my $scan_number (@scan_numbers) {
 	  my $sequence = $peptides{$msrun}->{$scan_number};
+	  if ($peptide_counts{$sequence} > 5) {
+	    #print "  Skipping $peptide_counts{$sequence} x repeating ".
+	    #  "$sequence\n";
+	    next;
+	  }
 	  foreach my $other_scan_number (@scan_numbers) {
 	    my $other_sequence = $peptides{$msrun}->{$other_scan_number};
+	    if ($peptide_counts{$other_sequence} > 5) {
+	      next;
+	    }
 
 	    my $offset = $other_peptides{$other_sequence};
 	    unless ($offset) {
@@ -179,13 +202,13 @@ sub main {
 
 	    my $difference = abs($scan_number - $other_scan_number);
 	    if ($scan_number < $other_scan_number) {
-	      $matrix{$sequence}->[$offset]->[0]++;
-	      $matrix{$sequence}->[$offset]->[2] += $difference;
+	      #$matrix{$sequence}->[$offset]->[0]++;
+	      $matrix{$sequence}->[$offset]->[0] += $difference;
 	      #$matrix{$sequence}->[0] += $difference;  # produces non-linear
 	      $matrix{$sequence}->[0] += 1;
 	    } elsif ($scan_number > $other_scan_number) {
-	      $matrix{$sequence}->[$offset]->[1]++;
-	      $matrix{$sequence}->[$offset]->[3] += $difference;
+	      #$matrix{$sequence}->[$offset]->[1]++;
+	      $matrix{$sequence}->[$offset]->[1] += $difference;
 	      #$matrix{$sequence}->[0] += $difference;  # produces non-linear
 	      $matrix{$sequence}->[0] += 1;
 	    }
@@ -199,7 +222,7 @@ sub main {
       $this_search_batch_id = $columns[0];
       %peptides = ();
       unless ($this_search_batch_id == -998899) {
-	print "Processing search_batch_id=$this_search_batch_id\n";
+	print "`date`: Processing search_batch_id=$this_search_batch_id\n";
 	$n_experiments++;
       }
 
@@ -222,14 +245,16 @@ sub main {
   }
 
   close(INFILE);
-  print "Done reading.\n";
+  $date = `date`;
+  print "$date: Done reading.\n";
 
   print "Total experiments: $n_experiments\n";
   print "Total peptides: $offset_counter\n";
 
 
   #### Calculate relative order for peptides
-  print "Caculating peptide order...\n";
+  $date = `date`; chomp($date);
+  print "$date: Caculating peptide order...\n";
   my %peptide_scores;
   my @peptides;
   foreach my $peptide (keys(%matrix)) {
@@ -239,8 +264,8 @@ sub main {
     my $confused = 0;
     foreach my $other_peptide (keys(%other_peptides)) {
       my $offset = $other_peptides{$other_peptide};
-      my $before = $matrix{$peptide}->[$offset]->[2] || 0;
-      my $after = $matrix{$peptide}->[$offset]->[3] || 0;
+      my $before = $matrix{$peptide}->[$offset]->[0] || 0;
+      my $after = $matrix{$peptide}->[$offset]->[1] || 0;
       $before_sum += $before;
       $after_sum += $after;
       if ($before && $after) {
@@ -248,31 +273,35 @@ sub main {
       }
     }
     $total = $matrix{$peptide}->[0];
-    print "$before_sum $after_sum $total $confused\n";
+
+    #### Help reduce memory usage
+    delete($matrix{$peptide});
+
+    #print "$before_sum $after_sum $total $confused\n";
     my $score = ($after_sum-$before_sum)/$total;
-    $peptide_scores{$peptide} = $score;
-    my %tmp = (
-      sequence => $peptide,
-      score => $score,
-      confusion => $confused,
-    );
-    push(@peptides,\%tmp);
+    #$peptide_scores{$peptide} = $score;
+    my @tmp = ( $peptide,$score,$confused );
+    push(@peptides,\@tmp);
   }
 
-  my @sorted_peptides = sort byScore @peptides;
+  #my @sorted_peptides = sort byScore @peptides;
 
-  print "Writing file...\n";
+  $date = `date`; chomp($date);
+  print "$date: Writing file...\n";
   open(OUTFILE,">out.peporder");
-  foreach my $peptide (@sorted_peptides) {
-    print OUTFILE "$peptide->{sequence}\t$peptide->{score}\t".
-      "$peptide->{confusion}\n";
+  foreach my $peptide (@peptides) {
+    print OUTFILE "$peptide->[0]\t$peptide->[1]\t".
+      "$peptide->[2]\n";
   }
   close(OUTFILE);
 
 
-  print "Freeing memory...\n";
+  $date = `date`; chomp($date);
+  print "$date: Freeing memory...\n";
   return(1);
 
+  $date = `date`; chomp($date);
+  print "$date: Done.\n";
 }
 
 
