@@ -22,7 +22,7 @@ use FindBin;
 
 use vars qw (
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
-             $peptide_hash
+             $peptide_hash $probcol
             );
 
 
@@ -124,12 +124,17 @@ sub main {
   my @all_search_batch_ids;
   my %all_peptides;
 
-  #### Skip header
-  <INFILE>;
+  ##### Skip header
+  #my $line = <INFILE>;
+  #my @header_columns = split(/\t/,$line);
+  #$probcol = 2;
+  #$probcol = 4 if ($header_columns[4] eq 'probability');
+  my $line;
+  $probcol = 8;
+  my $seqcol = 3;
 
   #### Read in all the peptides for the first experiment
   my @columns;
-  my $line;
   my $not_done = 1;
   while ($not_done) {
 
@@ -137,7 +142,7 @@ sub main {
     if ($line = <INFILE>) {
       chomp($line);
       @columns = split(/\t/,$line);
-      next if ($columns[2] < $P_threshold);
+      next if ($columns[$probcol] < $P_threshold);
       if ($process_search_batch_id) {
 	next unless ($columns[0] == $process_search_batch_id);
       }
@@ -209,12 +214,12 @@ sub main {
   #### Now build a hash out of all peptides and count the distinct ones
   my %distinct_peptides;
   foreach my $peptide (@peptides) {
-    $distinct_peptides{$peptide->[1]}->{count}++;
-    if (! $distinct_peptides{$peptide->[1]}->{best_probability}) {
-      $distinct_peptides{$peptide->[1]}->{best_probability} = $peptide->[2];
-    } elsif ($peptide->[2] >
-               $distinct_peptides{$peptide->[1]}->{best_probability}) {
-      $distinct_peptides{$peptide->[1]}->{best_probability} = $peptide->[2];
+    $distinct_peptides{$peptide->[$seqcol]}->{count}++;
+    if (! $distinct_peptides{$peptide->[$seqcol]}->{best_probability}) {
+      $distinct_peptides{$peptide->[$seqcol]}->{best_probability} = $peptide->[$probcol];
+    } elsif ($peptide->[$probcol] >
+               $distinct_peptides{$peptide->[$seqcol]}->{best_probability}) {
+      $distinct_peptides{$peptide->[$seqcol]}->{best_probability} = $peptide->[$probcol];
     }
   }
 
@@ -254,11 +259,11 @@ sub main {
   }
 
 
-  #### Count how many dupe REV peptides there are
-  my %REVcount;
+  #### Count how many dupe DECOY peptides there are
+  my %DECOYcount;
   foreach my $peptide ( keys(%{$peptide_hash}) ) {
-    if ($peptide_hash->{$peptide}->{REVcount}) {
-      $REVcount{$peptide_hash->{$peptide}->{REVcount}}++;
+    if ($peptide_hash->{$peptide}->{DECOYcount}) {
+      $DECOYcount{$peptide_hash->{$peptide}->{DECOYcount}}++;
     }
   }
 
@@ -272,11 +277,11 @@ sub main {
   my $n_incorrect_distinct_peptides = $n_distinct_peptides -
     $n_correct_distinct_peptides;
 
-  my $assignments_FPR = round($n_incorrect_assignments/$n_assignments,3);
-  my $distinct_peptide_FPR =
+  my $assignments_FDR = round($n_incorrect_assignments/$n_assignments,3);
+  my $distinct_peptide_FDR =
     round($n_incorrect_distinct_peptides/$n_distinct_peptides,3);
 
-  my $most_pessimistic_distinct_peptide_FPR =
+  my $most_pessimistic_distinct_peptide_FDR =
     round($n_incorrect_assignments/$n_distinct_peptides,3);
   my $most_pessimistic_distinct_peptides =
     $n_distinct_peptides*(1-($n_incorrect_assignments/$n_distinct_peptides));
@@ -286,15 +291,12 @@ sub main {
   print "Total assignments above threshold: $n_assignments\n";
   print "Total correct assignments: $n_correct_assignments\n";
   print "Total incorrect assignments: $n_incorrect_assignments\n";
-  print "Peptide FPR: $assignments_FPR\n\n";
+  print "Peptide FDR: $assignments_FDR\n\n";
 
   print "Total distinct peptides: $n_distinct_peptides\n";
   print "Total singleton distinct peptides: $n_singleton_distinct_peptides\n";
   print "Total P=1 singleton distinct peptides: $n_P1_singleton_distinct_peptides\n";
-  print "Naively simulated correct distinct peptides: $n_correct_distinct_peptides\n";
-  print "Naively simulated incorrect distinct peptides: $n_incorrect_distinct_peptides\n";
-  print "Naively simulated distinct peptide FPR: $distinct_peptide_FPR\n";
-  print "Most pessimistic distinct peptide FPR: $most_pessimistic_distinct_peptide_FPR\n";
+  print "Most pessimistic distinct peptide FDR: $most_pessimistic_distinct_peptide_FDR\n";
   print "Most pessimistic distinct peptides: $most_pessimistic_distinct_peptides\n\n";
 
   my $num_incorr_mult_hit_percent = 6;
@@ -308,26 +310,26 @@ sub main {
   print "Non-singleton distinct peptides: $n_nonsingleton_distinct_peptides\n";
   my $n_nonsingleton_incorrect_assignments = int($n_incorrect_assignments*$num_incorr_mult_hit_percent/100);
   print "$num_incorr_mult_hit_percent% of incorrect peptides: $n_nonsingleton_incorrect_assignments\n";
-  my $better_distinct_peptide_FPR = round($n_nonsingleton_incorrect_assignments/
+  my $better_distinct_peptide_FDR = round($n_nonsingleton_incorrect_assignments/
     $n_nonsingleton_distinct_peptides,3);
-  print "Estimated non-singleton distinct peptide FPR: $better_distinct_peptide_FPR\n\n";
+  print "Estimated non-singleton distinct peptide FDR: $better_distinct_peptide_FDR\n\n";
 
 
-  my $totREV = 0;
+  my $totDECOY = 0;
   my $buffer = '';
-  foreach my $count ( sort numerically (keys(%REVcount)) ) {
-    $buffer .= "  $count\t$REVcount{$count}\n";
-    $totREV += $REVcount{$count};
+  foreach my $count ( sort numerically (keys(%DECOYcount)) ) {
+    $buffer .= "  $count\t$DECOYcount{$count}\n";
+    $totDECOY += $DECOYcount{$count};
   }
-  print "\nTotal number of REV hits: $totREV\n";
-  print "Frequency/count of duplicate REV peptides:\n$buffer\n";
+  print "\nTotal number of DECOY hits: $totDECOY\n";
+  print "Frequency/count of duplicate DECOY peptides:\n$buffer\n";
 
 
   #### Print out the table of final stats
-  open(OUTFILE,">PPvsREV.dat");
+  open(OUTFILE,">PPvsDECOY.dat");
   print "\nFinal stats by P bin:\n";
-  print " P_floor P_ceiling  PP_incorr  n_REV  N_assignments\n";
-  print OUTFILE " P_floor P_ceiling  PP_incorr  n_REV  N_assignments\n";
+  print " P_floor P_ceiling  PP_incorr  n_DECOY  N_assignments\n";
+  print OUTFILE " P_floor P_ceiling  PP_incorr  n_DECOY  N_assignments\n";
   foreach my $stat_row ( @stats_table ) {
     printf("%8.2f %8.2f %8d %8d %8d\n",@{$stat_row});
     printf OUTFILE ("%8.2f %8.2f %8d %8d %8d\n",@{$stat_row});
@@ -336,6 +338,7 @@ sub main {
 
 
 
+    #my $outfile2="experiment_contribution_summary_w_singletons.out";
     my $outfile2="experiment_contribution_summary.out";
     open (OUTFILE2, ">", $outfile2) or die "can't open $outfile2 ($!)";
     print OUTFILE2 "          sample_tag sbid ngoodspec      npep n_new_pep cum_nspec cum_n_new is_pub\n";
@@ -361,9 +364,9 @@ sub main {
       my $peptide_list = $all_peptides{$search_batch_id};
       my %batch_distinct_peptides;
       foreach my $peptide ( @{$peptide_list} ) {
-	if ($distinct_peptides{$peptide->[1]}->{count} > 1) {
-	  $total_distinct_peptides{$peptide->[1]}++;
-	  $batch_distinct_peptides{$peptide->[1]}++;
+	if ($distinct_peptides{$peptide->[$seqcol]}->{count} > 1) {
+	  $total_distinct_peptides{$peptide->[$seqcol]}++;
+	  $batch_distinct_peptides{$peptide->[$seqcol]}++;
 	}
       }
       my $n_goodspec = scalar(@{$peptide_list});
@@ -394,7 +397,7 @@ sub main {
 ###############################################################################
 sub by_Probability {
 
-  return $b->[2] <=> $a->[2];
+  return $b->[$probcol] <=> $a->[$probcol];
 
 } # end by_Probability
 
@@ -446,11 +449,11 @@ sub removePeptides {
 
   my @buffer;
   my $remainder = 0.0;
-  my $n_REV = 0;
+  my $n_DECOY = 0;
 
   foreach my $peptide ( @sorted_peptides ) {
-    #print "$peptide->[0]\t$peptide->[1]\t$peptide->[2]\n";
-    my $probability = $peptide->[2];
+    #print "$peptide->[0]\t$peptide->[1]\t$peptide->[$probcol]\n";
+    my $probability = $peptide->[$probcol];
 
     #### If this peptide hits the floor, remove peptides in this window
     unless ($probability >= $floor) {
@@ -463,9 +466,9 @@ sub removePeptides {
       );
 
       push(@filtered_peptides,@{$result->{peptide_list}});
-      push(@stats_table,[$floor,$ceiling,$result->{n_wrong},$n_REV,
+      push(@stats_table,[$floor,$ceiling,$result->{n_wrong},$n_DECOY,
 			 $result->{n_peptides}]);
-      print "    n_REV=$n_REV\n" if ($VERBOSE > 1);
+      print "    n_DECOY=$n_DECOY\n" if ($VERBOSE > 1);
 
       $remainder = $result->{remainder};
 
@@ -473,16 +476,16 @@ sub removePeptides {
       @buffer = ();
       $ceiling = $floor;
       $floor = $ceiling - $increment;
-      $n_REV=0;
+      $n_DECOY=0;
 
     }
 
     #### Save the peptide in the buffer
     push(@buffer,$peptide);
     $peptide_hash->{$peptide->[1]}->{count}++;
-    if (defined($peptide->[3]) && $peptide->[3] =~ /^REV/) {
-      $n_REV++;
-      $peptide_hash->{$peptide->[1]}->{REVcount}++;
+    if (defined($peptide->[10]) && $peptide->[10] =~ /^DECOY/) {
+      $n_DECOY++;
+      $peptide_hash->{$peptide->[1]}->{DECOYcount}++;
     }
 
 
@@ -496,8 +499,8 @@ sub removePeptides {
   );
 
   push(@filtered_peptides,@{$result->{peptide_list}});
-  push(@stats_table,[$floor,$ceiling,$result->{n_wrong},$n_REV,$result->{n_peptides}]);
-  print "    n_REV=$n_REV\n" if ($VERBOSE > 1);
+  push(@stats_table,[$floor,$ceiling,$result->{n_wrong},$n_DECOY,$result->{n_peptides}]);
+  print "    n_DECOY=$n_DECOY\n" if ($VERBOSE > 1);
 
 
 
@@ -541,7 +544,7 @@ sub removePeptidesWithinWindow1 {
   #### Calculate the total number of wrong ones based on the sum of P's
   my $sum = 0;
   foreach my $peptide ( @{$peptide_list} ) {
-    $sum += $peptide->[2];
+    $sum += $peptide->[$probcol];
   }
   my $n_wrong = $n_peptides - $sum;
 
@@ -613,7 +616,7 @@ sub removePeptidesWithinWindow2 {
   #### Iterate through sorted list and throw out whenever we exceed 1
   my $sum = 0;
   foreach my $peptide ( @sorted_peptides ) {
-    $sum += 1 - $peptide->[2];
+    $sum += 1 - $peptide->[$probcol];
     if ($sum >= 1.0) {
       $sum -= 1;
       $n_wrong++;
