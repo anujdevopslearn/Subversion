@@ -49,7 +49,7 @@ sub new {
       'C[174]' => 71.037114,    # Propionamide (Acrylamide adduct) used initially by IPAS (UniMod)
       'C[177]' => 74.055944,    # Propionamide:2H(3) (Acrylamide_heavy) used initially by IPAS (UniMod)
       'C[303]' => 200.0,        # ? ABI cl-ICAT light from Bernd HuBCellRaft data
-      'C[313]' => 209.0,        # ? ABI cl-ICAT heavy from Bernd HuBCellRaft data
+      'C[312]' => 209.0,        # ? ABI cl-ICAT heavy from Bernd HuBCellRaft data
       'C[245]' => 142.0,        # ? light from jwatts HumanTCellJCaM2.5 data
       'C[251]' => 148.0,        # ? heavy from jwatts HumanTCellJCaM2.5 data
       'C[330]' => 227.126991,   # ABI cl-ICAT light (UniMod)
@@ -72,7 +72,7 @@ sub new {
       'C[174]' => 71.0779,      # Propionamide (Acrylamide adduct) used initially by IPAS (UniMod)
       'C[177]' => 74.0964,      # Propionamide:2H(3) (Acrylamide_heavy) used initially by IPAS (UniMod)
       'C[303]' => 200.0,        # ? ABI cl-ICAT light from Bernd HuBCellRaft data
-      'C[313]' => 209.0,        # ? ABI cl-ICAT heavy from Bernd HuBCellRaft data
+      'C[312]' => 209.0,        # ? ABI cl-ICAT heavy from Bernd HuBCellRaft data
       'C[245]' => 142.0,        # ? light from jwatts HumanTCellJCaM2.5 data
       'C[251]' => 148.0,        # ? heavy from jwatts HumanTCellJCaM2.5 data
       'C[330]' => 227.2603,   # ABI cl-ICAT light (UniMod)
