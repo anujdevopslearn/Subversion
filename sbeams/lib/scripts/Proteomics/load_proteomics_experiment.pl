@@ -1718,6 +1718,9 @@ sub addParamsEntries {
     || die "ERROR addSearchBatch: missing parameter 2: directory\n";
 
 
+  print "INFO: Searching for search parameter information...\n";
+  my $result;
+
   #### Make a list of guesses for params files
   my @params_files = ( "$directory/sequest.params",
     "$directory/../sequest.params", "$directory/comet.def",
@@ -1725,16 +1728,56 @@ sub addParamsEntries {
   );
 
   #### Try to find the files in order
-  my $found = '??';
-  my $file;
-  foreach $file ( @params_files ) {
-    print "Looking for $file...";
+  my $found;
+  foreach my $file ( @params_files ) {
+    print "  Looking for $file...";
     if ( -e $file ) {
       print "found!\n";
       $found = $file;
       last;
+    } else {
+      print "no\n";
     }
-    print "\n";
+  }
+
+
+  #### Since there's a move to not have parameter files, try to fake it
+  unless ($found) {
+
+    #### Make a list of guesses for filenames
+    my @pepXML_files = ( "$directory/interact-prob.xml",
+      "$directory/interact.xml",
+    );
+
+    #### Try to find the files in order
+    foreach my $file ( @pepXML_files ) {
+      print "  Looking for $file...";
+      if ( -e $file ) {
+	print "found!\n";
+	$found = $file;
+	last;
+      } else {
+	print "no\n";
+      }
+    }
+
+    if (open(INFILE,$found)) {
+      my $line;
+      my $search_engine;
+      while ($line = <INFILE>) {
+	if ($line =~ /search_engine=\"(\w+)\"/) {
+	  $search_engine = $1;
+	  last;
+	}
+      }
+      if ($search_engine && $search_engine eq 'PHENYX') {
+	my @tmp = ( 'search_engine_name' );
+	$result->{keys_in_order} = \@tmp;
+	$result->{parameters}->{search_engine_name} = $search_engine;
+	print "  Search engine is $search_engine with no parameters available. Unfortunate but proceeding.\n";
+      }
+      close(INFILE);
+    }
   }
 
   unless ($found) {
@@ -1744,8 +1787,12 @@ sub addParamsEntries {
 
 
   #### Read in the search parameters file
-  $file = $found;
-  my $result = $sbeamsPROT->readParamsFile(inputfile => "$file");
+  my $file = $found;
+
+  unless ($result) {
+    $result = $sbeamsPROT->readParamsFile(inputfile => "$file");
+  }
+
   unless ($result) {
     print "ERROR: Unable to read sequest parameter file: '$file'\n";
     return;

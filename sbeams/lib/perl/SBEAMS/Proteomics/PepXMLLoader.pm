@@ -155,29 +155,30 @@ sub start_element {
 
   #### If this is the start of a search_hit, store info
   if ($localname eq 'search_hit') {
-    $self->{current_search_hit}->{hit_rank} = $attrs{hit_rank};
-    $self->{current_search_hit}->{peptide} = $attrs{peptide};
-    $self->{current_search_hit}->{peptide_prev_aa} = $attrs{peptide_prev_aa};
-    $self->{current_search_hit}->{peptide_next_aa} = $attrs{peptide_next_aa};
-    $self->{current_search_hit}->{protein} = $attrs{protein};
-    $self->{current_search_hit}->{num_tot_proteins} = $attrs{num_tot_proteins};
-    $self->{current_search_hit}->{num_matched_ions} = $attrs{num_matched_ions};
-    $self->{current_search_hit}->{tot_num_ions} = $attrs{tot_num_ions};
-    $self->{current_search_hit}->{calc_neutral_pep_mass} = $attrs{calc_neutral_pep_mass};
-    $self->{current_search_hit}->{massdiff} = $attrs{massdiff};
+    $self->{current_hit_rank} = $attrs{hit_rank}-1;
+    $self->{current_search_hit}->{$self->{current_hit_rank}}->{hit_rank} = $attrs{hit_rank};
+    $self->{current_search_hit}->{$self->{current_hit_rank}}->{peptide} = $attrs{peptide};
+    $self->{current_search_hit}->{$self->{current_hit_rank}}->{peptide_prev_aa} = $attrs{peptide_prev_aa};
+    $self->{current_search_hit}->{$self->{current_hit_rank}}->{peptide_next_aa} = $attrs{peptide_next_aa};
+    $self->{current_search_hit}->{$self->{current_hit_rank}}->{protein} = $attrs{protein};
+    $self->{current_search_hit}->{$self->{current_hit_rank}}->{num_tot_proteins} = $attrs{num_tot_proteins};
+    $self->{current_search_hit}->{$self->{current_hit_rank}}->{num_matched_ions} = $attrs{num_matched_ions};
+    $self->{current_search_hit}->{$self->{current_hit_rank}}->{tot_num_ions} = $attrs{tot_num_ions};
+    $self->{current_search_hit}->{$self->{current_hit_rank}}->{calc_neutral_pep_mass} = $attrs{calc_neutral_pep_mass};
+    $self->{current_search_hit}->{$self->{current_hit_rank}}->{massdiff} = $attrs{massdiff};
   }
 
 
   #### If this is the start of a modification info, store it
   if ($localname eq 'mod_aminoacid_mass') {
-    $self->{current_search_hit}->{modifications}->{$attrs{position}} = $attrs{mass};
+    $self->{current_search_hit}->{$self->{current_hit_rank}}->{modifications}->{$attrs{position}} = $attrs{mass};
     #print "**Found mod: pos=$attrs{position}  mass=$attrs{mass}\n";
   }
 
 
   #### If this is a engine-specific parameter, store it
   if ($localname eq 'search_score') {
-    $self->{current_search_hit}->{$attrs{name}} = $attrs{value};
+    $self->{current_search_hit}->{$self->{current_hit_rank}}->{$attrs{name}} = $attrs{value};
   }
 
 
@@ -190,7 +191,7 @@ sub start_element {
     }
     #print "  \nprobability=$probability\n";
 
-    $self->{current_search_hit}->{probability} = $attrs{probability};
+    $self->{current_search_hit}->{$self->{current_hit_rank}}->{probability} = $attrs{probability};
 
     #### Increase the counters and print some progress info
     $self->{counter}++;
@@ -209,7 +210,8 @@ sub end_element {
 
 
   #### If this is the end of a search_hit, store info
-  if ($localname eq 'search_hit') {
+  #if ($localname eq 'search_hit') {
+  if ($localname eq 'spectrum_query') {
 
     #### Determine the msrun
     my $msrun;
@@ -255,24 +257,29 @@ sub end_element {
 
 
     #### Insert the search
-    my $search_id = &main::addSearchEntry($data{parameters},
-      $self->{search_batch_id},$msms_spectrum_id);
+    my $search_id = $self->{current_search_id};
+    unless ($search_id) {
+      $search_id = &main::addSearchEntry($data{parameters},
+        $self->{search_batch_id},$msms_spectrum_id);
+      $self->{current_search_id} = $search_id;
+    }
 
 
     #### Insert the search_hit
-    if ($search_id > 0) {
+    if ($search_id && $search_id > 0) {
       my $search_hit_id = &main::addSearchHitEntry($data{matches},$search_id);
     } else {
       die("ERROR: search_id not returned");
     }
 
     $self->{current_search_hit} = undef;
-  }
+ # }
 
 
   #### If this is the end of a search_result, clear the cache
-  if ($localname eq 'spectrum_query') {
+#  if ($localname eq 'spectrum_query') {
     $self->{current_search_result} = undef;
+    $self->{current_search_id} = undef;
   }
 
 
@@ -305,61 +312,74 @@ sub createDataHash {
   $data{parameters}->{search_host} = 'none';
 
 
-  #### Create the modified peptide string
-  my $peptide_sequence = $self->{current_search_hit}->{peptide};
-  my $modified_peptide = '';
-  my $modifications = $self->{current_search_hit}->{modifications};
-  if ($modifications) {
-    for (my $i=1; $i<=length($peptide_sequence); $i++) {
-      my $aa = substr($peptide_sequence,$i-1,1);
-      if ($modifications->{$i}) {
-	$aa .= '['.int($modifications->{$i}).']';
+  #### Store all of the individual possible hits
+  for (my $i=0;$i<10;$i++) {
+    last unless exists($self->{current_search_hit}->{$i});
+
+    #### Create the modified peptide string
+    my $peptide_sequence = $self->{current_search_hit}->{$i}->{peptide};
+    my $modified_peptide = '';
+    my $modifications = $self->{current_search_hit}->{$i}->{modifications};
+    if ($modifications) {
+      for (my $i=1; $i<=length($peptide_sequence); $i++) {
+        my $aa = substr($peptide_sequence,$i-1,1);
+        if ($modifications->{$i}) {
+  	$aa .= '['.int($modifications->{$i}).']';
+        }
+        $modified_peptide .= $aa;
       }
-      $modified_peptide .= $aa;
+    } else {
+      $modified_peptide = $peptide_sequence;
     }
-  } else {
-    $modified_peptide = $peptide_sequence;
-  }
 
+    my $hit_index = $self->{current_search_hit}->{$i}->{hit_rank};
+    $data{matches}->[$i]->{hit_index} = $self->{current_search_hit}->{$i}->{hit_rank};
+    $data{matches}->[$i]->{hit_mass_plus_H} = $self->{current_search_hit}->{$i}->{calc_neutral_pep_mass};
+    $data{matches}->[$i]->{mass_delta} = $self->{current_search_hit}->{$i}->{massdiff};
+    $data{matches}->[$i]->{mass_delta} =~ s/\+\-//;
+    $data{matches}->[$i]->{identified_ions} = $self->{current_search_hit}->{$i}->{num_matched_ions};
+    $data{matches}->[$i]->{total_ions} = $self->{current_search_hit}->{$i}->{tot_num_ions};
+    $data{matches}->[$i]->{reference} = $self->{current_search_hit}->{$i}->{protein};
+    $data{matches}->[$i]->{additional_proteins} = $self->{current_search_hit}->{$i}->{num_tot_proteins};
+    $data{matches}->[$i]->{peptide} = $self->{current_search_hit}->{$i}->{peptide};
+    $data{matches}->[$i]->{peptide_string} =
+      $self->{current_search_hit}->{$i}->{peptide_prev_aa}.'.'.
+      $modified_peptide.'.'.
+      $self->{current_search_hit}->{$i}->{peptide_next_aa};
 
-  my $hit_index = $self->{current_search_hit}->{hit_rank};
-  $data{matches}->[0]->{hit_index} = $self->{current_search_hit}->{hit_rank};
-  $data{matches}->[0]->{hit_mass_plus_H} = $self->{current_search_hit}->{calc_neutral_pep_mass};
-  $data{matches}->[0]->{mass_delta} = $self->{current_search_hit}->{massdiff};
-  $data{matches}->[0]->{mass_delta} =~ s/\+\-//;
-  $data{matches}->[0]->{identified_ions} = $self->{current_search_hit}->{num_matched_ions};
-  $data{matches}->[0]->{total_ions} = $self->{current_search_hit}->{tot_num_ions};
-  $data{matches}->[0]->{reference} = $self->{current_search_hit}->{protein};
-  $data{matches}->[0]->{additional_proteins} = $self->{current_search_hit}->{num_tot_proteins};
-  $data{matches}->[0]->{peptide} = $self->{current_search_hit}->{peptide};
-  $data{matches}->[0]->{peptide_string} =
-    $self->{current_search_hit}->{peptide_prev_aa}.'.'.
-    $modified_peptide.'.'.
-    $self->{current_search_hit}->{peptide_next_aa};
+    #### SEQUEST Scores
+    if ($self->{current_search_hit}->{$i}->{xcorr}) {
+      $data{matches}->[$i]->{cross_corr_rank} = $self->{current_search_hit}->{$i}->{hit_rank};
+      $data{matches}->[$i]->{prelim_score_rank} = $self->{current_search_hit}->{$i}->{sprank};
+      $data{matches}->[$i]->{cross_corr} = $self->{current_search_hit}->{$i}->{xcorr};
+      $data{matches}->[$i]->{norm_corr_delta} = $self->{current_search_hit}->{$i}->{deltacn};
+      $data{matches}->[$i]->{prelim_score} = $self->{current_search_hit}->{$i}->{spscore};
 
-  #### SEQUEST Scores
-  if ($self->{current_search_hit}->{xcorr}) {
-    $data{matches}->[0]->{cross_corr_rank} = $self->{current_search_hit}->{hit_rank};
-    $data{matches}->[0]->{prelim_score_rank} = $self->{current_search_hit}->{sprank};
-    $data{matches}->[0]->{cross_corr} = $self->{current_search_hit}->{xcorr};
-    $data{matches}->[0]->{norm_corr_delta} = $self->{current_search_hit}->{deltacn};
-    $data{matches}->[0]->{prelim_score} = $self->{current_search_hit}->{spscore};
+    #### MASCOT Scores - fudged
+    } elsif ($self->{current_search_hit}->{$i}->{ionscore}) {
+      $data{matches}->[$i]->{cross_corr_rank} = $self->{current_search_hit}->{$i}->{hit_rank};
+      $data{matches}->[$i]->{prelim_score_rank} = 0;
+      $data{matches}->[$i]->{cross_corr} = $self->{current_search_hit}->{$i}->{ionscore};
+      $data{matches}->[$i]->{norm_corr_delta} = 0;
+      $data{matches}->[$i]->{prelim_score} = $self->{current_search_hit}->{$i}->{identityscore};
 
-  #### MASCOT Scores - fudged
-  } elsif ($self->{current_search_hit}->{ionscore}) {
-    $data{matches}->[0]->{cross_corr_rank} = $self->{current_search_hit}->{hit_rank};
-    $data{matches}->[0]->{prelim_score_rank} = 0;
-    $data{matches}->[0]->{cross_corr} = $self->{current_search_hit}->{ionscore};
-    $data{matches}->[0]->{norm_corr_delta} = 0;
-    $data{matches}->[0]->{prelim_score} = $self->{current_search_hit}->{identityscore};
+    #### Tandem-K Scores - fudged
+    } elsif ($self->{current_search_hit}->{$i}->{expect}) {
+      $data{matches}->[$i]->{cross_corr_rank} = $self->{current_search_hit}->{$i}->{hit_rank};
+      $data{matches}->[$i]->{prelim_score_rank} = 0;
+      $data{matches}->[$i]->{cross_corr} = $self->{current_search_hit}->{$i}->{expect};
+      $data{matches}->[$i]->{norm_corr_delta} = 0;
+      $data{matches}->[$i]->{prelim_score} = $self->{current_search_hit}->{$i}->{hyperscore};
 
-  #### Tandem-K Scores - fudged
-  } elsif ($self->{current_search_hit}->{expect}) {
-    $data{matches}->[0]->{cross_corr_rank} = 0;
-    $data{matches}->[0]->{prelim_score_rank} = 0;
-    $data{matches}->[0]->{cross_corr} = $self->{current_search_hit}->{expect};
-    $data{matches}->[0]->{norm_corr_delta} = 0;
-    $data{matches}->[0]->{prelim_score} = $self->{current_search_hit}->{hyperscore};
+    #### Phenyx Scores - fudged
+    } elsif ($self->{current_search_hit}->{$i}->{zscore}) {
+      $data{matches}->[$i]->{cross_corr_rank} = $self->{current_search_hit}->{$i}->{hit_rank};
+      $data{matches}->[$i]->{prelim_score_rank} = 0;
+      $data{matches}->[$i]->{cross_corr} = $self->{current_search_hit}->{$i}->{zscore};
+      $data{matches}->[$i]->{norm_corr_delta} = 0;
+      $data{matches}->[$i]->{prelim_score} = $self->{current_search_hit}->{$i}->{origScore};
+    }
+
   }
 
   return %data;
