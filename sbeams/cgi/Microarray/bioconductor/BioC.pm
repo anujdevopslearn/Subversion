@@ -294,23 +294,31 @@ sub parse_exprSet {
 	
 	print $wtrfh <<'END';
 parseExprSet <- function(filename) {
+  library(affy);
 	if (!file.exists(filename))
 		stop("File does not exist")
 	name <- load(filename)
 	if (length(name) != 1)
 		stop("Wrong number of objects in file")
 	expr <- get(name)
-	if (class(expr) != "exprSet")
+	if (class(expr) != "exprSet" && class(expr) != "ExpressionSet" )
 		stop("Invalid object class")
 	cat("\nname: ", name, "\n", sep = "")
 
-	samples <- colnames(attributes(expr)$exprs)
+# Changed DSC 06/2007, for new ExpressionSet  
+#	samples <- colnames(attributes(expr)$exprs)
+  samples <- colnames(exprs(expr))
+  
+  eset_obj <- attributes(expr);
 	if (is.null(samples))
-		stop("No sample names")
+    stop("No sample names" )
 	samples <- paste(samples, collapse = "\t")
 	cat("\nsampleNames: ", samples, "\n", sep = "")
 
-	genes <- row.names(attributes(expr)$exprs)
+# Changed DSC 06/2007, for new ExpressionSet  
+#	genes <- row.names(attributes(expr)$exprs)
+	genes <- row.names(exprs(expr))
+
 	if (is.null(genes))
 		stop("No gene names")
 	genes <- paste(genes, collapse = "\t")

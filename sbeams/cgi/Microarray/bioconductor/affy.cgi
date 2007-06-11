@@ -727,17 +727,17 @@ if (process == "Custom") {
                         pmcorrect.method = custom[3],
                         summary.method = custom[4])
 }
-colnames(exprset\@exprs) <- samples
+colnames(exprs(exprset)) <- samples
 log2methods <- c("medianpolish", "mas", "rlm")
 if (log2trans) {
     if (process == "Custom" && !(custom[4] %in% log2methods)) {
-        exprset\@exprs <- log2(exprset\@exprs)
-        exprset\@se.exprs <- log2(exprset\@se.exprs)
+        exprs(exprset) <- log2(exprs(exprset))
+        exprset\$se.exprs <- log2(exprset\$se.exprs)
     }
 } else {
     if (process == "RMA" || process == "Custom" && custom[4] %in% log2methods) {
-        exprset\@exprs <- 2^exprset\@exprs
-        exprset\@se.exprs <- 2^exprset\@se.exprs
+        exprs(exprset) <- 2^exprs(exprset)
+        exprset\$se.exprs <- 2^exprset\$se.exprs
     }
 }
 
