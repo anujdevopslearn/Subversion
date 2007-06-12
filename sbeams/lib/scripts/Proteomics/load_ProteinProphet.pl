@@ -354,6 +354,8 @@ sub start_element {
       'xmlns:xsi' => 1,
       'xsi:schemaLocation' => 1,
       sample_enzyme => 1,
+      num_input_4_spectra => 1,
+      num_input_5_spectra => 1,
     );
     foreach my $attr (keys(%attrs_to_drop)) {
       if (exists($attrs{$attr})) {
