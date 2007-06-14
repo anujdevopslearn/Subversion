@@ -2025,7 +2025,7 @@ sub updateProbabilities {
   my $source_dir = $args{'source_dir'}
    || die "ERROR[$SUB_NAME]: source_dir not passed";
 
-  my $interact_file_path = $args{'full_interact_file_path'} || "";
+  my $interact_file_path = $args{'full_interact_path'} || "";
 
 
   #### Define standard variables
