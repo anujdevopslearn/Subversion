@@ -733,7 +733,6 @@ To run the pages
 #Open the main Microarray Module web page
 - Click on [Microarray]
 - Click on [Data Pipeline] 
-- Click on [Affy Analysis Pipeline]
 - Click on [Start New Analysis Session]
 #Make sure there are no errors displayed, if there are go back and check the settings.
 
