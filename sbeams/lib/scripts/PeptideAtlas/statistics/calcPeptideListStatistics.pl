@@ -482,10 +482,11 @@ sub removePeptides {
 
     #### Save the peptide in the buffer
     push(@buffer,$peptide);
-    $peptide_hash->{$peptide->[1]}->{count}++;
+    $peptide_hash->{$peptide->[3]}->{count}++;
     if (defined($peptide->[10]) && $peptide->[10] =~ /^DECOY/) {
+      #print "  decoy $peptide->[10]  $peptide->[3]\n";
       $n_DECOY++;
-      $peptide_hash->{$peptide->[1]}->{DECOYcount}++;
+      $peptide_hash->{$peptide->[3]}->{DECOYcount}++;
     }
 
 
