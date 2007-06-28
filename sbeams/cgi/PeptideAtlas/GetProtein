@@ -794,7 +794,48 @@ sub handle_request {
       base_url=>$base_url,
       tr_info => $tr,
     );
-    print "<TABLE width='600'>$samples</TABLE>" if $htmlmode;
+    #print "<TABLE width='600'>$samples</TABLE>" if $htmlmode;
+    print "</TD></TR></TABLE>" if $htmlmode;
+
+
+    #############################################################
+    #### Display theoretical highest observability peptides
+
+    #### Widget to allow show/hide of section
+    my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_highlyobservablelist',
+      visible => 0,
+      tooltip => 'Show/Hide Section',
+      imglink => 1,
+      sticky => 1,
+     );
+
+    #### Display the section header
+    my $highlyObservablePeptidesHeader = $sbeamsMOD->encodeSectionHeader(
+      text => 'Predicted Highly Observable Peptides',
+      link => $link
+    );
+    print qq~ <TABLE width="600">$highlyObservablePeptidesHeader</TABLE><TABLE><TR $tr><TD COLSPAN=2>~ if $htmlmode;
+
+    #### Calculate the best peptides to use
+    use SBEAMS::PeptideAtlas::BestPeptideSelector;
+    my $bestPeptideSelector = new SBEAMS::PeptideAtlas::BestPeptideSelector;
+    $bestPeptideSelector->setSBEAMS($sbeams);
+    my $best_peptide_information = $bestPeptideSelector->getHighlyObservablePeptides(
+      atlas_build_id => $atlas_build_id,
+      biosequence_id => $biosequence_id,
+    );
+
+    #### Display the best peptide information
+    my $samples = $bestPeptideSelector->getHighlyObservablePeptidesDisplay(
+      atlas_build_id => $atlas_build_id,
+      best_peptide_information  => $best_peptide_information,
+      query_parameters_ref=>\%parameters,
+      column_titles_ref=>\@column_titles,
+      link => $link,
+      base_url=>$base_url,
+      tr_info => $tr,
+    );
+    #print "<TABLE width='600'>$samples</TABLE>" if $htmlmode;
     print "</TD></TR></TABLE>" if $htmlmode;
 
 
