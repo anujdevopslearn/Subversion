@@ -476,8 +476,30 @@ sub handle_request {
     }
     ## trim off last comma:
     $protein_list =~ s/(.*)(,)$/$1/;
-    $biosequence_names_clause = "   AND BS.biosequence_name IN ( $protein_list )";
-  }
+
+    unless ($protein_list =~ m/%/) {
+	$log->debug(" in unless % ") ;
+	$biosequence_names_clause = "   AND BS.biosequence_name IN ( $protein_list )";
+
+     }
+
+    if ($protein_list =~ m/%/) {
+
+	my @tmp = split("," , $protein_list);
+	$biosequence_names_clause = "   AND ( BS.biosequence_name LIKE  $tmp[0] ";
+
+	for (my $i = 1; $i < scalar(@tmp); $i++ ){
+
+	    if (  $tmp[$i] ){
+
+		$biosequence_names_clause = $biosequence_names_clause . "   OR BS.biosequence_name LIKE $tmp[$i]  ";
+
+	    } 
+	}
+	$biosequence_names_clause = $biosequence_names_clause . " ) --end";
+
+    }
+  } # if upload file
 
 
   #### Build ROWCOUNT constraint
