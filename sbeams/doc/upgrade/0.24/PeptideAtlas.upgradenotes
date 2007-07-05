@@ -546,6 +546,32 @@ Add new index:
 
 CREATE INDEX idx_resource_name ON search_key ( resource_name )
 
+-------------------------------------------------------------------------
 
+2007-06-15
+
+- Added to PeptideAtlas_table_column.txt, new tables:
+
+      proteotypic_peptide
+
+- Updated driver tables
+    setenv SBEAMS fullPathToYourDevArea/sbeams
+    cd $SBEAMS/lib/scripts/Core
+
+     set CONFDIR = "../../conf"
+    ./update_driver_tables.pl $CONFDIR/PeptideAtlas/PeptideAtlas_table_column.txt
+    ./update_driver_tables.pl $CONFDIR/PeptideAtlas/PeptideAtlas_table_property.txt
+
+- Populated the SQL scripts:
+set dbtype="mssql"
+./generate_schema.pl \
+  --table_prop ../../conf/PeptideAtlas/PeptideAtlas_table_property.txt \
+  --table_col ../../conf/PeptideAtlas/PeptideAtlas_table_column.txt \
+  --schema_file ../../sql/PeptideAtlas/PeptideAtlas \
+  --module PeptideAtlas \
+  --destination_type $dbtype
+   
+--The DDL goes to
+$SBEAMS/lib/sql/PeptideAtlas/PeptideAtlas_CREATETABLES.mssql
 
 
