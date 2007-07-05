@@ -36,7 +36,7 @@ AT_sample	7	original_experiment_tag	Original Experiment Tag	varchar	50	0	Y		N			
 AT_sample	8	sample_date	Sample Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	textdate	20		Y	Y	N	Date on which this sample was prepared	
 AT_sample	9	sample_description	Sample Description	text	16	0	Y		N			N	textarea	10		Y	Y	N	Full description of this sample	
 AT_sample	10	instrument_model_id	Instrument Model ID	int	4	0	Y		N	PR_instrument	instrument_id	N	optionlist			Y	Y	N	Instrument (mass spectrometer) manufacturer model name	"SELECT instrument_id,instrument_name FROM $TBPR_INSTRUMENT WHERE record_status != 'D' ORDER BY instrument_name"
-AT_sample	11	search_batch_id	Search Batch ID	int	4	0	N		N				fixed	10		Y	P	N	Search Batch ID	
+AT_sample	11	search_batch_id	Search Batch ID	int	4	0	N		N				text	10		Y	P	N	Search Batch ID	
 AT_sample	12	sample_publication_ids	Sample Publications	varchar	255	0	Y		N	AT_sample_publication	sample_publication_id	N	multilink	4		Y	Y	N	Select all publications that apply to this sample.	"SELECT P.publication_id,P.publication_name FROM $TBAT_PUBLICATION P WHERE P.record_status != 'D' ORDER BY P.publication_name"
 AT_sample	13	data_contributors	Data Contributors	text	16	0	Y		N			Y	textarea	10		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)	
 AT_sample	14	primary_contact_email	Primary Email Contact	text	16	0	Y		N			Y	text	40		Y	P	N	Email address of primary contact for data	
