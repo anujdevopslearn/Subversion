@@ -1,11 +1,12 @@
-#!/tools/bin/perl -w
+#!/usr/local/bin/perl -w
 
 use strict;
 use DBI;
 use Getopt::Long;
 use File::Basename;
 
-use lib( '/net/dblocal/www/html/sbeams/lib/perl' );
+#use lib( '/net/dblocal/www/html/sbeams/lib/perl' );
+
 use SBEAMS::Connection;
 use SBEAMS::Connection::Tables;
 use SBEAMS::PeptideAtlas::Tables;
@@ -65,8 +66,8 @@ sub get_aa_usage {
   print STDERR "Fetching peptides from build $r->[1]\n";
   my $pepsql =<<"  END"; 
   SELECT DISTINCT peptide_accession, peptide_sequence
-   FROM PeptideAtlas.dbo.peptide_instance AB
-   INNER JOIN PeptideAtlas.dbo.peptide P
+   FROM $TBAT_PEPTIDE_INSTANCE AB
+   INNER JOIN $TBAT_PEPTIDE P
           ON ( AB.peptide_id = P.peptide_id )
   $build_where
   $nobs_and
