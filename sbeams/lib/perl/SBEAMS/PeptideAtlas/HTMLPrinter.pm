@@ -468,6 +468,18 @@ sub encodeSectionItem {
 ###############################################################################
 # encodeSectionTable
 ###############################################################################
+#
+#
+# @nparam  rows             Reference to array of row arrayrefs.  Required.
+# @nparam  header           rows includes header info, default 0
+# @nparam  width            Width of table
+# @nparam  nocenter         Overrides centering of header info
+# @nparam  align            Ref to array of positional info for columns -
+#                           right, left, and center
+# @nparam  rows_to_show     Number of rows to show initially, others are loaded
+#                           into page but hidden by CSS and showable view JS.
+# 
+#
 sub encodeSectionTable {
   my $METHOD = 'encodeSectionTable';
   my $self = shift || die ("self not passed");
@@ -481,15 +493,28 @@ sub encodeSectionTable {
     push @table_attrs, 'WIDTH', $args{width};
   }
 
-  my $first = 1;
   my $sbeams = $self->getSBEAMS();
+  my $prefix = $sbeams->getRandomString( num_chars => 8, 
+                                          char_set => ['A'..'Z', 'a'..'z'] );
+  my $first = 1;
   my $tab = SBEAMS::Connection::DataTable->new( @table_attrs );
   for my $row ( @{$args{rows}} ) {
     $tab->addRow( $row );
+    if ( $args{rows_to_show} && $args{rows_to_show} < $tab->getRowNum() - 1 ) {
+      $tab->setRowAttr( ROWS => [$tab->getRowNum()], ID => $prefix . '_toggle', 
+                                                     NAME => $prefix . '_toggle', 
+                                                     CLASS => 'hidden' ); 
+    }
   }
 
   # How many do we have?
   my $tot = $tab->getRowNum();
+  my $closelink;
+  if ( $args{rows_to_show} && $args{rows_to_show} < $tot - 1 ) {
+    $closelink = $self->add_tabletoggle_js(); 
+    $log->debug( "$closelink" );
+    $closelink .= "\n<FONT COLOR=BLUE><A HREF=#null ONCLICK=toggle_em('$prefix');return><SPAN ID='${prefix}_text' NAME='${prefix}_text' >Show more</A></FONT>";
+  }
 
   # No wrapping desired...
   $tab->setRowAttr( ROWS => [1..$tot], NOWRAP => 1 ); 
@@ -508,6 +533,7 @@ sub encodeSectionTable {
 
   my $html =<<"  END";
   <TR><TD NOWRAP COLSPAN=2>$tab</TD></TR>
+  <TR><TD>$closelink</TD></TR>
   END
 
   return $html;
@@ -566,6 +592,50 @@ sub getSampleDisplay {
   return ( wantarray() ) ? ($header, $html) : $header . "\n" . $html;
 } # end getSampleDisplay
 
+sub add_tabletoggle_js {
+  my $self = shift;
+  $log->debug( "B4" );
+  return '' if $self->{_added_ttoggle_js};
+  $log->debug( "FTR" );
+  $self->{_added_ttoggle_js}++;
+  $log->debug( "FTR" );
+  return <<"  END";
+  <STYLE TYPE="text/css" media="screen">
+    tr.visible { display: block-row; }
+    tr.hidden { display: none; }
+    td.visible { display: table-cell; }
+    td.hidden { display: none; }
+  </STYLE>
+  <SCRIPT TYPE="text/javascript">
+    function toggle_em(prefix) {
+      
+      // Grab page elements by their IDs
+      var togglekey = prefix + '_toggle';
+      var textkey = prefix   + '_text';
+
+      var rows = document.getElementsByName(togglekey);
+      var show = document.getElementById(textkey);
+
+      var ttext = show.innerHTML;
+      if ( ttext == 'Show more' ) {
+        show.innerHTML = "Show fewer";
+      } else {
+        show.innerHTML = "Show more";
+      }
+      
+      for (var i=0; i < rows.length; i++) {
+        if ( rows[i].className == 'hidden' ) {
+           rows[i].className = 'visible';
+        } else {
+           rows[i].className = 'hidden';
+        }
+      }
+    }
+    </SCRIPT>
+
+  END
+  
+}
 
 
 1;
