@@ -75,6 +75,8 @@ use vars qw(@ISA @EXPORT
     $TBAT_SPECTRUM
     $TBAT_SPECTRUM_PEAK
 
+    $TBAT_SEARCH_BATCH_STATISTICS
+
     $TBAT_SPECTRUM_ANNOTATION
     $TBAT_SPECTRUM_ANNOTATION_LEVEL
     $TBAT_PEPTIDE_ANNOTATION
@@ -155,6 +157,7 @@ require Exporter;
     $TBAT_SPECTRUM_IDENTIFICATION
     $TBAT_SPECTRUM
     $TBAT_SPECTRUM_PEAK
+    $TBAT_SEARCH_BATCH_STATISTICS
 
     $TBAT_SPECTRUM_ANNOTATION
     $TBAT_SPECTRUM_ANNOTATION_LEVEL
@@ -169,6 +172,7 @@ require Exporter;
 #### Get the appropriate database prefixes for the SBEAMS core and this module
 my $core = $DBPREFIX{Core};
 my $mod = $DBPREFIX{PeptideAtlas};
+my $testmod = 'PeptideAtlas_test.dbo.';
 my $glycomod = $DBPREFIX{GlycoPeptide} || $DBPREFIX{PeptideAtlas};
 my $BioLink = $DBPREFIX{BioLink};
 
@@ -226,6 +230,7 @@ $TBAT_NIST_LIBRARY_SPECTRUM          = "${mod}NIST_library_spectrum";
 $TBAT_NIST_LIBRARY_SPECTRUM_PEAK     = "${mod}NIST_library_spectrum_peak";
 $TBAT_NIST_LIBRARY_SPECTRUM_COMMENT  = "${mod}NIST_library_spectrum_comment";
 $TBAT_NIST_SPECTRUM_TYPE             = "${mod}NIST_spectrum_type";
+$TBAT_SEARCH_BATCH_STATISTICS   = "glycopeptide.dbo.search_batch_statistics";
 
 $TBAT_SPECTRUM_IDENTIFICATION    = "${mod}spectrum_identification";
 $TBAT_SPECTRUM                   = "${mod}spectrum";
@@ -234,8 +239,9 @@ $TBAT_SPECTRUM_PEAK              = "${mod}spectrum_peak";
 $TBAT_SPECTRUM_ANNOTATION           = "${mod}spectrum_annotation";
 $TBAT_SPECTRUM_ANNOTATION_LEVEL     = "${mod}spectrum_annotation_level";
 $TBAT_PEPTIDE_ANNOTATION            = "${mod}peptide_annotation";
-$TBAT_MODIFIED_PEPTIDE_ANNOTATION   = "${mod}modified_peptide_annotation";
-$TBAT_TRANSITION_SUITABILITY_LEVEL  = "${mod}transition_suitability_level";
+
+$TBAT_MODIFIED_PEPTIDE_ANNOTATION   = "${testmod}modified_peptide_annotation";
+$TBAT_TRANSITION_SUITABILITY_LEVEL  = "${testmod}transition_suitability_level";
 
 $TBAT_PROTEOTYPIC_PEPTIDE           = "${mod}proteotypic_peptide";
 
