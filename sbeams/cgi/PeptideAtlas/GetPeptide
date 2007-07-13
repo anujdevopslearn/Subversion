@@ -40,6 +40,7 @@ use SBEAMS::Connection::TabMenu;
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::ConsensusSpectrum;
 
 use SBEAMS::Proteomics::Tables;
 
@@ -774,12 +775,35 @@ if ($apply_action =~ /QUERY/i ) {
 
   my @mod_peps = $sbeams->selectSeveralColumns( $modSQL );
 
+  my $cs_obj = SBEAMS::PeptideAtlas::ConsensusSpectrum->new();
+  $cs_obj->setSBEAMS( $sbeams );
+  my $consensus = $cs_obj->spectrum_search( seq => $peptide_sequence[0] );
+
   #### If a result is returned
   if ( scalar @mod_peps ) {
     $modHTML .= $sbeams->getPopupDHTML();
 
     #### Loops through resultset and do formatting
     for my $pep ( @mod_peps ) {
+      $pep->[7] = '';
+      
+      for my $c_spectrum ( @$consensus ) {
+        if ( $c_spectrum->[2] == $pep->[1] ) {
+
+          if ( $peptide_sequence[0] eq $pep->[0] ) {
+            # No mods except charge
+            next if $c_spectrum->[8] && $c_spectrum->[8] ne $pep->[0];
+          } else {
+            next if $c_spectrum->[8];
+          }
+
+          my $title = "View consensus spectrum for peptide $pep->[0] (+$pep->[1])"; 
+          $pep->[7] = "<A HREF='ShowOneSpectrum?NIST_library_spectrum_id=$c_spectrum->[0]' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
+          last;
+        }
+      }
+
+
       $pep->[2] = sprintf("%0.4f", $pep->[2]);
       $pep->[3] = sprintf("%0.2f", $pep->[3]) unless $pep->[3] == 1;
       $pep->[3] = 1 if $pep->[3] == 1;
@@ -788,18 +812,51 @@ if ($apply_action =~ /QUERY/i ) {
     }
 
     #### Add table column headings
-    unshift @mod_peps, ['Modified Sequence', 'Charge', 'Mono Parent m/z', 'Best Prob', '# Obs', '# Siblings', 'Sample IDs' ];
+    unshift @mod_peps, ['Modified Sequence', 'Charge', 'Mono Parent m/z', 'Best Prob', '# Obs', '# Siblings', 'Sample IDs', 'Consensus Spectrum' ];
 
     #### Format table
     $modHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
                                                  width => '600',
-                                                align  => [qw(left center right right right center center)],
+                                                align  => [qw(left center right right right center center center)],
                                                   rows => \@mod_peps );
     #### Display table
     print "<TABLE WIDTH=600><BR>$modHTML</TABLE>\n";
   }
 
 
+  #############################################################################
+  #### Validated Transitions Section
+
+  my $transitionHTML = $sbeamsMOD->encodeSectionHeader(
+    text => "Validated Transitions",
+    bold => 1
+  );
+
+  my $mrm_transitions = get_mrm_transitions( $peptide_accession[0] );
+
+  #### If a result is returned
+  if ( scalar @$mrm_transitions ) {
+#    $transitionHTML .= $sbeams->getPopupDHTML();
+
+    #### Loops through resultset and do formatting
+    for my $pep ( @$mrm_transitions ) {
+      $pep->[2] = sprintf("%0.2f", $pep->[2]);
+      $pep->[3] = sprintf("%0.2f", $pep->[3]);
+      $pep->[4] = 1 if $pep->[4] == 1;
+    }
+    my @labels = qw( Sequence Charge q1_mz q3_mz q3_ion_label Name Quality);
+
+    #### Add table column headings
+    unshift @$mrm_transitions, \@labels;
+
+    #### Format table
+    $transitionHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
+                                                 width => '600',
+                                                align  => [qw(left center right right center left left)],
+                                                  rows => $mrm_transitions );
+    #### Display table
+    print "<TABLE WIDTH=600><BR>$transitionHTML</TABLE>\n" if $#{$mrm_transitions};
+  }
   #############################################################################
   #### Spectra Section
 
@@ -847,7 +904,8 @@ if ($apply_action =~ /QUERY/i ) {
     for my $pep ( @mod_peps ) {
       $pep->[4] = sprintf("%0.3f", $pep->[4]) unless $pep->[4] == 1;
       $pep->[4] = 1 if $pep->[4] == 1;
-      $pep->[6] = qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowObservedSpectrum?spectrum_identification_id=$pep->[6]&peptide=$pep->[0]&assumed_charge=$pep->[1]">[View]</A>~;
+      my $img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='View spectrum for $pep->[0] (+$pep->[1])'>";
+      $pep->[6] = qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowObservedSpectrum?spectrum_identification_id=$pep->[6]&peptide=$pep->[0]&assumed_charge=$pep->[1]" TARGET=blank>$img</A>~;
     }
 
     #### Add table column headings
@@ -857,7 +915,8 @@ if ($apply_action =~ /QUERY/i ) {
     $modHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
                                                  width => '600',
                                                 align  => [qw(left center right right right center center)],
-                                                  rows => \@mod_peps );
+                                                  rows => \@mod_peps,
+                                          rows_to_show => 10 );
     #### Display table
     print "<TABLE WIDTH=600><BR>$modHTML</TABLE>\n";
   }
@@ -908,6 +967,44 @@ if ($apply_action =~ /QUERY/i ) {
     }
 
 } # end handle_request
+
+sub get_mrm_transitions {
+  my $accession = shift || return [];
+  my $sql =<<"  END";
+  SELECT
+--  modified_peptide_annotation_id,
+  modified_peptide_sequence,
+  peptide_charge, 
+  q1_mz,
+  q3_mz,
+  q3_ion_label,  
+  CASE WHEN contact_id IS NULL 
+    THEN annotater_name 
+    ELSE username 
+    END AS name,
+  level_name
+  FROM $TBAT_MODIFIED_PEPTIDE_ANNOTATION MPA 
+  JOIN $TBAT_PEPTIDE P ON MPA.matching_peptide_sequence = P.peptide_sequence
+  JOIN $TBAT_TRANSITION_SUITABILITY_LEVEL TSL 
+    ON TSL.transition_suitability_level_id = MPA.transition_suitability_level_id
+  LEFT JOIN $TB_USER_LOGIN UL ON UL.contact_id = MPA.annotater_contact_id
+  WHERE peptide_accession = '$accession'
+  END
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  return \@rows;
+}
+
+sub add_transition_link {
+  my $pep = shift;
+  my $mrm_transitions = shift;
+  my $link = '';
+  for my $transition ( @$mrm_transitions ) {
+    if ( $pep->[1] == $transition->[2] ) {
+      return "<A HREF='ViewMRM?sequence=$pep->[2];modified_peptide_annotation_id=$transition->[0]'>$transition->[1]</A>";
+    }
+  }
+  return '&nbsp;';
+}
 
 sub sample_view {
   my $samples = shift;
