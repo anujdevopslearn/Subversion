@@ -543,8 +543,17 @@ if ($apply_action =~ /QUERY/i ) {
 
             ##xxxx PRINT RETURN to HTML HERE... 
 
+  # Widget to allow show/hide of overview section
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getpeptide_overview',
+                                                visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                imglink => 1,
+                                                sticky => 1 );
+
+
   my $summary_header = $sbeamsMOD->encodeSectionHeader(
     text => "$peptide_accession[0]",
+    'link' => $link,
     bold => 1
   );
 
@@ -556,37 +565,47 @@ if ($apply_action =~ /QUERY/i ) {
 
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Peptide Accession',
                                           value => $peptide_accession[0],
+                                          tr_info => $tr,
                                           key_width => '20%'
                                          );
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Peptide Sequence',
+                                          tr_info => $tr,
                                           value => $peptide_sequence[0],
                                          );
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Best Probability',
+                                          tr_info => $tr,
                                           value => $bestp,
                                          );
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Times Observed:',
+                                          tr_info => $tr,
                                           value => $n_observations[0],
                                          );
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Avg Molecular Weight',
+                                          tr_info => $tr,
                                           value => "$mw[0]",
                                          ) if $mw[0];
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'pI (approx)',
+                                          tr_info => $tr,
                                           value => "$pi[0]",
                                          ) if $pi[0];
   if ( defined $SSRCalc_relative_hydrophobicity[0] ) {
     $summ .= $sbeamsMOD->encodeSectionItem( key   => 'SSRCalc relative hydrophobicity',
+                                            tr_info => $tr,
                                             value => sprintf("%.2f",$SSRCalc_relative_hydrophobicity[0]),
                                            );
   }
 
   if ( defined $epscore[0] ) {
     $summ .= $sbeamsMOD->encodeSectionItem( key   => '# Samples',
+                                            tr_info => $tr,
                                             value => "$nsamp[0]",
                                            );
     $summ .= $sbeamsMOD->encodeSectionItem( key   => '# Protein Samples',
+                                            tr_info => $tr,
                                             value => "$nprotsamp[0]",
                                            );
     $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Proteotypic score',
+                                            tr_info => $tr,
                                             value => sprintf( "%0.1f", $epscore[0] ),
                                            );
   }
@@ -594,6 +613,21 @@ if ($apply_action =~ /QUERY/i ) {
   print "<BR>\n";
   print "<TABLE WIDTH=600><BR>$summ</TABLE>\n";
 
+### End first section
+
+  #############################################################################
+  #### Genome mappings section
+    
+  # Widget to allow show/hide of genome mapping section
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'genome_mappings',
+                                                visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                imglink => 1,
+                                                sticky => 1 );
+# Encode section header
+#  'link' => $link,
+# encodeSectionTable(
+#  tr_info => $tr,
 
   my $mapHTML = qq~
   <TR><TD COLSPAN=2>&nbsp;</TD></TR>
@@ -601,6 +635,7 @@ if ($apply_action =~ /QUERY/i ) {
   $n_genome_locations[0] = 0 if $n_genome_locations[0] < 0;
   $mapHTML .= $sbeamsMOD->encodeSectionHeader(
     text => "Genome Mappings: $n_genome_locations[0]",
+    'link' => $link,
     bold => 1
   );
   my $last_chrom = "";
@@ -713,6 +748,7 @@ if ($apply_action =~ /QUERY/i ) {
     unshift @rows, ['Chr', 'Protein', 'Residues on Exon', 'Exon Range', 'Strand'];
     $mapHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
                                                 width => '600',
+                                                tr_info => $tr,
                                                 align  => [qw(center left left center center)],
                                                 rows => \@rows );
 
@@ -741,8 +777,20 @@ if ($apply_action =~ /QUERY/i ) {
   #############################################################################
   #### Modified Peptides Section
 
+  # Widget to allow show/hide of modified peptides section
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprot_mod_peps',
+                                                visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                imglink => 1,
+                                                sticky => 1 );
+# Encode section header
+#  'link' => $link,
+# encodeSectionTable(
+#  tr_info => $tr,
+
   my $modHTML .= $sbeamsMOD->encodeSectionHeader(
     text => "Modified Peptides",
+   'link' => $link,
     bold => 1
   );
   my $modSQL = qq~
@@ -817,6 +865,7 @@ if ($apply_action =~ /QUERY/i ) {
     #### Format table
     $modHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
                                                  width => '600',
+                                               tr_info => $tr,
                                                 align  => [qw(left center right right right center center center)],
                                                   rows => \@mod_peps );
     #### Display table
@@ -827,8 +876,20 @@ if ($apply_action =~ /QUERY/i ) {
   #############################################################################
   #### Validated Transitions Section
 
+  # Widget to allow show/hide of modified peptides section
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprot_valid_trans',
+                                                visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                imglink => 1,
+                                                sticky => 1 );
+# Encode section header
+#  'link' => $link,
+# encodeSectionTable(
+#  tr_info => $tr,
+
   my $transitionHTML = $sbeamsMOD->encodeSectionHeader(
     text => "Validated Transitions",
+   'link' => $link,
     bold => 1
   );
 
@@ -851,6 +912,7 @@ if ($apply_action =~ /QUERY/i ) {
 
     #### Format table
     $transitionHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
+                                                      tr_info => $tr,
                                                  width => '600',
                                                 align  => [qw(left center right right center left left)],
                                                   rows => $mrm_transitions );
@@ -860,8 +922,19 @@ if ($apply_action =~ /QUERY/i ) {
   #############################################################################
   #### Spectra Section
 
+  # Widget to allow show/hide of modified peptides section
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprot_indiv_spec',
+                                                visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                imglink => 1,
+                                                sticky => 1 );
+# Encode section header
+#   'link' => $link,
+# encodeSectionTable(
+#                                               tr_info => $tr,
   my $modHTML .= $sbeamsMOD->encodeSectionHeader(
     text => "Individual Spectra",
+   'link' => $link,
     bold => 1
   );
   my $modSQL = qq~
@@ -914,6 +987,7 @@ if ($apply_action =~ /QUERY/i ) {
     #### Format table
     $modHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
                                                  width => '600',
+                                               tr_info => $tr,
                                                 align  => [qw(left center right right right center center)],
                                                   rows => \@mod_peps,
                                           rows_to_show => 10 );
@@ -943,12 +1017,23 @@ if ($apply_action =~ /QUERY/i ) {
   ~;
 
   my @samples = $sbeams->selectOneColumn( $sampleSQL );
+  # Widget to allow show/hide of modified peptides section
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprot_obs_sample',
+                                                visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                imglink => 1,
+                                                sticky => 1 );
+# Encode section header
+#   'link' => $link,
+# encodeSectionTable(
+#                                               tr_info => $tr,
 
-  my ($sheader, $sHTML) = $sbeamsMOD->getSampleDisplay(sample_ids => \@samples);
-  print "<TABLE WIDTH=600><TR><TD COLSPAN=2>&nbsp;</TD></TR>" . $sheader;
+  my ($sheader, $sHTML) = $sbeamsMOD->getSampleDisplay(sample_ids => \@samples,
+                                                           'link' => $link,
+                                                           tr_info => $tr );
+  print "<TABLE WIDTH=600 ><TR><TD COLSPAN=2>&nbsp;</TD></TR>" . $sheader;
   print "$sHTML";
   print "</TABLE>\n";
-            
         }
 
     #### If QUERY was not selected, then tell the user to enter some parameters
