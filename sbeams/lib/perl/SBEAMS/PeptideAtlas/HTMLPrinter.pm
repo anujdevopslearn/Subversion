@@ -485,7 +485,7 @@ sub encodeSectionTable {
   my $self = shift || die ("self not passed");
   my %args = @_;
 
-  my @table_attrs = ( 'BORDER' => 0 );
+  my @table_attrs = ( 'BORDER' => 0, );
   
   return '' unless $args{rows};
   $args{header} ||= 0;
@@ -497,13 +497,15 @@ sub encodeSectionTable {
   my $prefix = $sbeams->getRandomString( num_chars => 8, 
                                           char_set => ['A'..'Z', 'a'..'z'] );
   my $first = 1;
-  my $tab = SBEAMS::Connection::DataTable->new( @table_attrs );
+  my $tr_info = $args{tr_info} || NOOP => 1;
+  my $tab = SBEAMS::Connection::DataTable->new( @table_attrs, $tr_info );
   for my $row ( @{$args{rows}} ) {
     $tab->addRow( $row );
     if ( $args{rows_to_show} && $args{rows_to_show} < $tab->getRowNum() - 1 ) {
       $tab->setRowAttr( ROWS => [$tab->getRowNum()], ID => $prefix . '_toggle', 
                                                      NAME => $prefix . '_toggle', 
                                                      CLASS => 'hidden' ); 
+    } elsif ( $args{tr_info} ) {
     }
   }
 
@@ -512,7 +514,6 @@ sub encodeSectionTable {
   my $closelink;
   if ( $args{rows_to_show} && $args{rows_to_show} < $tot - 1 ) {
     $closelink = $self->add_tabletoggle_js(); 
-    $log->debug( "$closelink" );
     $closelink .= "\n<FONT COLOR=BLUE><A HREF=#null ONCLICK=toggle_em('$prefix');return><SPAN ID='${prefix}_text' NAME='${prefix}_text' >Show more</A></FONT>";
   }
 
@@ -530,10 +531,10 @@ sub encodeSectionTable {
       $tab->setColAttr( ROWS => [2..$tot], COLS => [$i + 1], ALIGN => $args{align}->[$i] );
     }
   }
+  $tab->addRow( [$closelink] );
 
   my $html =<<"  END";
   <TR><TD NOWRAP COLSPAN=2>$tab</TD></TR>
-  <TR><TD>$closelink</TD></TR>
   END
 
   return $html;
@@ -594,11 +595,8 @@ sub getSampleDisplay {
 
 sub add_tabletoggle_js {
   my $self = shift;
-  $log->debug( "B4" );
   return '' if $self->{_added_ttoggle_js};
-  $log->debug( "FTR" );
   $self->{_added_ttoggle_js}++;
-  $log->debug( "FTR" );
   return <<"  END";
   <STYLE TYPE="text/css" media="screen">
     tr.visible { display: block-row; }
