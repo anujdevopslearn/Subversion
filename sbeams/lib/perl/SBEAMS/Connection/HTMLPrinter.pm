@@ -1492,6 +1492,8 @@ sub make_table_toggle {
     $self->{_tbl_toggle_section_exists}++;
     $js_css =<<"    END";
     <STYLE TYPE="text/css" media="screen">
+    table.tbl_visible { display: table; }
+    table.tbl_hidden { display: none; }
     tr.tbl_visible { display: table-row; }
     tr.tbl_hidden { display: none; }
     td.tbl_visible { display: table-cell; }
@@ -1517,6 +1519,19 @@ sub make_table_toggle {
       // Grab page elements by their IDs
       var gif_file = obj_name + "_gif";
       var tgif = document.getElementById(gif_file);
+
+      if ( tgif ) {
+        var src = tgif.src;
+        if ( src.match(/small_gray_minus/) ) {
+          tgif.src =  '$HTML_BASE_DIR/images/small_gray_plus.gif'
+        } else {
+          tgif.src =  '$HTML_BASE_DIR/images/small_gray_minus.gif'
+        }
+      } else {
+        alert( "It don't exist" );
+      }
+
+
       var tbl_obj = document.getElementsByName( obj_name );
 
       for (var i=0; i < tbl_obj.length; i++) {
@@ -1524,14 +1539,8 @@ sub make_table_toggle {
         var new_state = 'none';
         if ( current_state == 'tbl_hidden' ) {
           new_state = 'tbl_visible';
-          if ( tgif ) {
-            tgif.src =  '$HTML_BASE_DIR/images/small_gray_minus.gif'
-          }
         } else if (  current_state == 'tbl_visible' ) {
           new_state = 'tbl_hidden';
-          if ( tgif ) {
-            tgif.src =  '$HTML_BASE_DIR/images/small_gray_plus.gif'
-          }
         }
         tbl_obj[i].className = new_state;
       }
