@@ -235,7 +235,7 @@ sub handle_request {
       $buffer .= $q->textfield(-name=>"search_key",
                           -default=>$search_key,
 			  -size=>60,
-			  -maxlength=>60,
+			  -maxlength=>2000,
                          );
       $buffer .= "&nbsp;&nbsp;&nbsp;";
       $buffer .= $q->submit(-name => "action",
