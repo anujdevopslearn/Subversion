@@ -122,7 +122,7 @@ sub keyword_search {
 
   my $sql = $self->get_query_sql( type => $args{search_type},
                                   term => $args{search_term},
-                                  auto => $args{autorun} );
+                                  autorun => $args{autorun} );
 
   if ( !$sql ) {
     $log->error( "No SQL generated from query: $args{search_type}, $args{search_term}" );
@@ -154,12 +154,33 @@ sub gene_name_query{
 	return $sbeams->selectHashArray($sql)
 }
 
+# count the non-redundant peptides in current build
+sub get_uniq_peptide_count {
+	my $self = shift;
+  my $cutoff = $self->get_current_prophet_cutoff();
+  my $build = $self->get_current_build();
+	
+	my $sql = qq~
+    SELECT COUNT(DISTINCT observed_peptide_sequence) AS num_observed
+    FROM $TBGP_OBSERVED_PEPTIDE OP 
+    JOIN $TBGP_PEPTIDE_SEARCH PS ON PS.peptide_search_id = OP.peptide_search_id
+    JOIN $TBGP_BUILD_TO_SEARCH BTS ON BTS.search_id = PS.peptide_search_id
+    WHERE peptide_prophet_score >= $cutoff
+    AND BTS.build_id = $build 
+  ~;
+
+  my $sbeams = $self->getSBEAMS();
+#  $log->debug( $sbeams->evalSQL( $sql ) );
+  my @cnt = $sbeams->selectrow_array( $sql );
+  return $cnt[0];
+}
+
 sub all_proteins_query {
 
 	my $self = shift;
 	my $mode = shift;
   my $observed = ( $mode eq 'all' ) ? '' : "WHERE num_observed > 0 ";
-  my $order = ( $mode eq 'all' ) ? 'protein_name ASC' : 'num_observed DESC, protein_name ASC';
+  my $order = ( $mode eq 'all' ) ? 'protein_name ASC' : 'ipi_accession_number, synonyms' , 'protein_name ASC';
 #  my $identified = ( $mode eq 'all' ) ? '' : 
 #                   ( $mode eq 'identified' ) ? "WHERE num_identified > 0 " : "WHERE num_identified > 0 AND transmembrane_info like '%-%'";
 #  my $order = ( $mode eq 'all' ) ? 'protein_name ASC' : 'num_identified DESC, protein_name ASC';
@@ -169,7 +190,7 @@ sub all_proteins_query {
 	my $sql = qq~
     SELECT * FROM (
      SELECT ID.ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
-     COUNT(DISTINCT matching_sequence) AS num_observed
+     COUNT(DISTINCT matching_sequence) AS num_observed, synonyms
       FROM $TBGP_OBSERVED_TO_IPI ITI
        JOIN $TBGP_IPI_DATA ID ON ID.ipi_data_id = ITI.ipi_data_id
        JOIN $TBGP_OBSERVED_PEPTIDE OP ON ITI.observed_peptide_id = OP.observed_peptide_id
@@ -177,7 +198,8 @@ sub all_proteins_query {
        JOIN $TBGP_BUILD_TO_SEARCH BTS ON BTS.search_id = PS.peptide_search_id
       WHERE peptide_prophet_score >= $cutoff
       AND BTS.build_id = $build 
-      GROUP BY ID.ipi_data_id, ipi_accession_number, protein_name, protein_symbol
+      GROUP BY ID.ipi_data_id, ipi_accession_number, protein_name, 
+      protein_symbol, synonyms
       HAVING COUNT(*) > 0
     ) AS temp
     $observed
@@ -263,7 +285,7 @@ sub get_query_sql {
   my $build = $self->get_current_build();
 
   my $subclause = '';
-  if ( $args{auto} || $args{type} eq 'GeneID' ) {
+  if ( $args{autorun} || $args{type} eq 'GeneID' ) {
     $args{term} =~ s/;/,/g;
   }
 
@@ -296,7 +318,7 @@ sub get_query_sql {
 
   my $sql = qq~
   SELECT ID.ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
-         COUNT(*) AS num_observed
+         COUNT(*) AS num_observed, synonyms
       FROM $TBGP_OBSERVED_TO_IPI ITI 
       JOIN $TBGP_IPI_DATA ID
         ON ITI.ipi_data_id = ID.ipi_data_id
@@ -307,7 +329,9 @@ sub get_query_sql {
      WHERE BTS.build_id = $build 
        AND peptide_prophet_score >= $cutoff
        AND ( $clause )
-     GROUP BY  ID.ipi_data_id, ipi_accession_number, protein_name, protein_symbol
+     GROUP BY  ID.ipi_data_id, ipi_accession_number, protein_name, 
+               synonyms, protein_symbol
+     ORDER BY ipi_accession_number ASC, synonyms, COUNT(*)
   ~;
   $log->info( $sbeams->evalSQL( $sql ) );
   return $sql;
@@ -396,9 +420,8 @@ sub protein_seq_query{
   # Newfangled
   chomp $seq;
   my $sql = $self->get_query_sql( type => 'protseq', term => $seq );
-
 	
-	return $sbeams->selectHashArray($sql)
+	return [$sbeams->selectHashArray($sql)];
 }
 
 ################################
@@ -448,7 +471,7 @@ sub get_predicted_peptides{
 				SELECT 
 				pp.predicted_peptide_id,
 				pp.predicted_peptide_sequence,
-				predicted_peptide_mass,
+        predicted_peptide_mass,
 				detection_probability,
 				n_proteins_match_peptide,
 				matching_protein_ids,
@@ -483,22 +506,51 @@ sub get_observed_phosphopeptides{
 
   my $build = $self->get_current_build();
   my $sql = qq~
-    SELECT MAX(peptide_prophet_score) as peptide_prophet_score, observed_peptide_sequence, 
-           MAX( peptide_mass ) as peptide_mass, COUNT(*) as n_obs
+    SELECT OTI.observed_peptide_id, MAX(peptide_prophet_score) as peptide_prophet_score, observed_peptide_sequence, 
+           MAX( experimental_mass ) as peptide_mass, SUM(n_obs) as n_obs, MAX(delta_cn) AS delta_cn
     FROM $TBGP_OBSERVED_PEPTIDE OP
       JOIN $TBGP_OBSERVED_TO_IPI OTI ON OTI.observed_peptide_id = OP.observed_peptide_id
       JOIN $TBGP_PEPTIDE_SEARCH PS ON PS.peptide_search_id = OP.peptide_search_id
       JOIN $TBGP_BUILD_TO_SEARCH BTS ON BTS.search_id = PS.peptide_search_id
     WHERE OTI.ipi_data_id = $ipi_data_id
     AND BTS.build_id = $build 
-    GROUP BY observed_peptide_sequence 
+    GROUP BY observed_peptide_sequence, OTI.observed_peptide_id 
     ~;
 
-  my @observed;
+  my %observed;
   for my $row ( $sbeams->selectHashArray( $sql ) ) {
     $row->{tryptic_end} = SBEAMS::Glycopeptide->countTrypticEnds( $row->{observed_peptide_sequence} ) + 1;
-    push @observed, $row;
+    $observed{$row->{observed_peptide_id}} = $row;
   }
+
+  my $opep_ids = join( ", ", keys( %observed ) );
+  my $num_mapping_sql = qq~
+  SELECT OP.observed_peptide_id, ID.ipi_accession_number, ID.synonyms, count(*) AS cnt
+    FROM $TBGP_OBSERVED_PEPTIDE OP
+    JOIN $TBGP_OBSERVED_TO_IPI OTI ON OTI.observed_peptide_id = OP.observed_peptide_id
+    JOIN $TBGP_IPI_DATA ID ON OTI.ipi_data_id = ID.ipi_data_id
+    JOIN $TBGP_PEPTIDE_SEARCH PS ON PS.peptide_search_id = OP.peptide_search_id
+    JOIN $TBGP_BUILD_TO_SEARCH BTS ON BTS.search_id = PS.peptide_search_id
+    WHERE OTI.observed_peptide_id IN ( $opep_ids )
+    AND BTS.build_id = $build 
+    GROUP BY ID.ipi_accession_number, OP.observed_peptide_id, ID.synonyms
+  ~;
+
+  my %accession;
+  my %gene_model;
+  for my $row ( $sbeams->selectSeveralColumns( $num_mapping_sql ) ) {
+    $accession{$row->[0]}->{$row->[1]}++;
+    $gene_model{$row->[0]}->{$row->[2]}++;
+  }
+
+  my @observed;
+  for my $opep_id ( sort( keys( %observed ) ) ) {
+    $observed{$opep_id}->{acc_mapped} = scalar( keys( %{$accession{$opep_id}} ) ) || -10;
+    $observed{$opep_id}->{gm_mapped} = scalar( keys( %{$gene_model{$opep_id}} ) ) || -10;
+    push @observed, $observed{$opep_id};
+  }
+
+    
   return ( @observed );
 }  # get_observed_phosphopeps	
 

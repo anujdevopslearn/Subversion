@@ -52,8 +52,10 @@ use Bio::Annotation::SimpleValue;
 
 use Data::Dumper;
 use SBEAMS::Glycopeptide::Get_glyco_seqs;
+use SBEAMS::Glycopeptide;
 use base qw(SBEAMS::Glycopeptide::Get_glyco_seqs);		
 
+my $glyco = SBEAMS::Glycopeptide->new();
 
 
 
@@ -150,9 +152,10 @@ sub make_peptide_bio_seqs {
 		#$log->debug(__PACKAGE__ . "::$method MODIFED PEPTIDE SEQ '$modified_pep_seq' PEPID '$peptide_id'");
 		
 	
-		my $pep_bioseq_o = $self->parse_modfied_pep_seq(pep_seq => $modified_pep_seq,
+		my $pep_bioseq_o = $self->parse_modified_pep_seq(pep_seq => $modified_pep_seq,
 													  peptide_id => $peptide_id,
-													  pep_type  => $pep_type
+													  pep_type  => $pep_type,
+                            data => $href 
 													  );
 		$self->add_peptide_annotation(data =>$href,
 									  seq  =>$pep_bioseq_o,
@@ -188,6 +191,11 @@ sub add_peptide_annotation{
 	my $number_tryptic_ends = new Bio::Annotation::SimpleValue(-value => $href->{'tryptic_end'});
 	my $number_obs = new Bio::Annotation::SimpleValue(-value => $href->{'n_obs'});
 
+  my $mappings = "<SPAN TITLE='Maps to $href->{acc_mapped} transcript(s) / $href->{gm_mapped} gene model(s)'>$href->{acc_mapped}/$href->{gm_mapped}</SPAN>";
+	my $num_mappings = new Bio::Annotation::SimpleValue(-value => $mappings);
+	my $gm_mappings = new Bio::Annotation::SimpleValue(-value => $href->{gm_mapped});
+	my $acc_mappings = new Bio::Annotation::SimpleValue(-value => $href->{acc_mapped});
+
 #annotation specific for predicted peptides	
 	my $db_hits 	= new Bio::Annotation::SimpleValue(-value => $href->{'number_proteins_match_peptide'});
 	my $db_hits_ids = Bio::Annotation::Comment->new;
@@ -217,6 +225,9 @@ sub add_peptide_annotation{
 	$coll->add_Annotation('detection_probability', $detection_probability);
 	$coll->add_Annotation('tissues', $tissues);
 	$coll->add_Annotation('number_obs', $number_obs);
+	$coll->add_Annotation('num_mappings', $num_mappings);
+	$coll->add_Annotation('acc_mappings', $acc_mappings);
+	$coll->add_Annotation('gm_mappings', $gm_mappings);
 	$coll->add_Annotation('synthesized_seq', $synthesized_seq);
 	
 	
@@ -237,12 +248,12 @@ sub add_peptide_annotation{
 }
 
 #######################################
-#parse_modfied_pep_seq
-#pull apart the different modification a peptide sequence can have 
+#parse_modified_pep_seq
+#pull apart the different modifications a peptide sequence can have 
 #Make the Bio::Seq Object and add the features
 #
 ##########################
-sub parse_modfied_pep_seq {
+sub parse_modified_pep_seq {
 	my $method = '';
 	my $self = shift;
 	my %args= @_;
@@ -271,6 +282,10 @@ sub parse_modfied_pep_seq {
   # and lagging characters that will later be shorn, as well as internal motifs
   # labeled by characters (#, *) that will also be eliminated.  FIXME!
   my $multi_offset = 0;
+
+  my $go = $self->get_glyco_object();
+  my $seq = $go->seq_info->seq();
+
 	for (my $i = 0; $i<=$#parts; $i ++){
     my $cnt = $i - $multi_offset;
 		
@@ -332,12 +347,35 @@ sub parse_modfied_pep_seq {
 	}
 	my $clean_seq_string = join "", @clean_seq;
 	
+  if ( $glyco->get_current_motif_type =~ /phospho/ ) {
+
+    # This is calculated improperly for phospho motifs
+	  my $clean_aa_seq = $aa_seq;
+    $clean_aa_seq =~ s/\*|\?//g;
+
+    my $posn = $glyco->get_site_positions( pattern => $clean_aa_seq, seq => $seq );
+    my $start_idx = $posn->[0] - 1;
+    my $end_idx = $posn->[0] + length($clean_aa_seq);
+    $start_aa = substr( $seq, $start_idx, 1 );
+    $end_aa = substr( $seq, $end_idx, 1 );
+    my $ntt = 0;
+    if ( !$start_aa || $start_aa =~ /R|K/ ) {
+      $ntt++;
+    } 
+    if ( !$end_aa || $aa_seq =~ /R$/ || $aa_seq =~ /K$/ ) {
+      $ntt++;
+    }
+    $start_aa ||= '-';
+    $end_aa ||= '-';
+    $log->debug( "Data has says $args{data}->{tryptic_end}, but I think " . $start_aa . '.' . $clean_seq_string . '.' . $end_aa . " has $ntt tryptic terminii");
+    $args{data}->{tryptic_end} = $ntt;
+  }
 	#$log->debug(__PACKAGE__ . "::$method CLEAN SEQ PEPTIDE SEQ '$clean_seq_string'");
 	#jam the start and end aa into one feature, but they actually come before and after the start and of the 
 	#clean pep sequence....
 	my $start_end = Bio::SeqFeature::Generic->new(
 	-start        =>1,
-	-end          => length@clean_seq,
+	-end          => length(@clean_seq),
 	-primary 	  => "Start_end_aa", 
 	-tag 		  =>{start_aa => $start_aa,
 					 end_aa   => $end_aa,

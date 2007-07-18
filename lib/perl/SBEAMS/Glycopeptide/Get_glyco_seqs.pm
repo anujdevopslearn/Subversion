@@ -555,7 +555,7 @@ sub get_html_protein_seq {
                                          params => $ref_parameters,
                                           start => $start );
     next unless $name;
-    $log->debug( "Tag is $tag, starts at " . $f->start() . ", ends at " . $f->end() );
+#    $log->debug( "Tag is $tag, starts at " . $f->start() . ", ends at " . $f->end() );
 
     if ( !$title ) {
       $title = $tag;
@@ -867,6 +867,7 @@ sub display_peptides{
   my $method = 'display_peptides';
   my $self = shift;
 	my $type = shift;
+  my $show_all = shift || '';
 	
 	my $html = '';
 	my $seq_obj = $self->seq_info;
@@ -892,7 +893,7 @@ sub display_peptides{
 		
 	}elsif($type eq 'Observed Phosphopeptides'){
 		if (exists $sorted_features{'Observed Peptides'}){
-			$html .= $self->phospho_pep_html($sorted_features{'Observed Peptides'});
+			$html .= $self->phospho_pep_html($sorted_features{'Observed Peptides'}, $show_all );
 		}else{
 			$html .= $self->nothing_found_html($type);
 		}
@@ -1049,15 +1050,24 @@ sub text_class {
 #phospho_pep_html
 ##############################################
 sub phospho_pep_html{
-        my $method = 'phospho_pep_html';
-        my $self = shift;
+  my $method = 'phospho_pep_html';
+  my $self = shift;
 	my $features_aref = shift;
+	my $show_all = shift || 1;
+
+  my $map_heading = ( !$show_all ) ? '' : $q->td({NOWRAP=>1}, $self->linkToColumnText( display => "# Mappings",
+                                                                           title   => "Maps to # transcript(s) / maps to # gene model(s)", 
+                                                                           column  => "none", 
+                                                                           table   => "none" ) );
 	
+  my $gmmap_heading = $q->td(text_class("# Gene Models Mapped")),
+  my $accmap_heading = $q->td(text_class("# Transcripts Mapped")),
+
 	#start the HTML
 	my $html  = "<table>\n";
   $html .= join( "\n", $q->Tr( {class=>'rev_gray_head'},
-			        $q->td(text_class("Identifed Sequence")),
-			     	$q->td($self->linkToColumnText(
+			        $q->td({NOWRAP=>1},text_class("Identifed Sequence")),
+			     	$q->td({NOWRAP=>1},$self->linkToColumnText(
 			       				display => "PeptideProphet",
 								title   => "PeptideProphet Score: 1 Best, 0 Worst", 
 								column  => "peptide_prohet_score", 
@@ -1065,10 +1075,13 @@ sub phospho_pep_html{
 								)
 			     	
 			     	),
-			     	$q->td(text_class("Tryptic Ends")),
-			     	$q->td(text_class("Peptide Mass")),
-			     	$q->td(text_class("DeltaCN")),
-			     	$q->td(text_class("# Obs")),
+			     	$q->td({NOWRAP=>1},text_class("Tryptic Ends")),
+			     	$q->td({NOWRAP=>1},text_class("Peptide Mass")),
+			     	$q->td({NOWRAP=>1},text_class("DeltaCN")),
+			     	$q->td({NOWRAP=>1},text_class("# Obs")),
+#            $accmap_heading,
+#            $gmmap_heading,
+            $map_heading,
 			     	$q->td(text_class("Links")),
               ) # End Tr
 			     ); # End join
@@ -1087,6 +1100,9 @@ sub phospho_pep_html{
 		my $tryptic_end = '-1';
 		my $peptide_prophet_score = '-1';
 		my $peptide_mass = '1';
+		my $num_mappings = '1';
+		my $gm_mappings = '1';
+		my $acc_mappings = '1';
 		my $observed_seq = '1';
 		my $num_obs = '1';
 		my $delta_cn = 0;
@@ -1143,9 +1159,16 @@ sub phospho_pep_html{
 									 anno_type => 'number_obs');
 			$observed_seq = $self->get_annotation(seq_obj =>$pep_seq_obj, 
 									 anno_type => 'observed_seq');
+      $num_mappings = $self->get_annotation( seq_obj   => $pep_seq_obj, 
+                                             anno_type => 'num_mappings');
+      $gm_mappings = $self->get_annotation( seq_obj   => $pep_seq_obj, 
+                                             anno_type => 'gm_mappings');
+      $acc_mappings = $self->get_annotation( seq_obj   => $pep_seq_obj, 
+                                             anno_type => 'acc_mappings');
       my $spectrum_seq = $observed_seq;
+      my $spectrum_img = "<IMG SRC='$HTML_BASE_DIR" . "/images/spectrum.gif' BORDER=0>";
       $spectrum_seq =~ s/\&/\*/g;
-      $spectrum_link = '<A HREF="showSpectrum.cgi?query_peptide_seq=' . $spectrum_seq . '" TITLE="Lookup consensus spectrum" >spectrum</A>';
+      $spectrum_link = '<A HREF="showSpectrum.cgi?query_peptide_seq=' . $spectrum_seq . '" TITLE="Lookup consensus spectrum" >' . "$spectrum_img</A>";
       $observed_seq = get_phospho_html( seq => $observed_seq );
 
 
@@ -1156,6 +1179,9 @@ sub phospho_pep_html{
 #		            ( $tissues =~ /serum/ ) ? 'serum, other' :
 #		            ( $tissues =~ /\w/ ) ? 'other' : '';
 
+    my $map_column = ( $show_all ) ?  $q->td({ALIGN=>'CENTER'},$gb.$num_mappings.$ge) : '';
+    my $accmap_column = ( $show_all ) ?  $q->td({ALIGN=>'right'},$gb.$acc_mappings.$ge) : '';
+    my $gmmap_column = ( $show_all ) ?  $q->td({ALIGN=>'right'},$gb.$gm_mappings.$ge) : '';
     my $sp = '&nbsp;';
 		 $html .= join( "\n", $q->Tr(
 				$q->td("$gb$first_aa.$observed_seq.$end_aa$ge"),
@@ -1164,6 +1190,9 @@ sub phospho_pep_html{
 				$q->td({ALIGN=>'right'},$gb.$peptide_mass.$ge),
 				$q->td({ALIGN=>'right'},$gb.$delta_cn.$ge),
 				$q->td({ALIGN=>'right'},$gb.$num_obs.$ge),
+#        $accmap_column,
+#        $gmmap_column,
+        $map_column,
 #				$q->td({VALIGN=>'CENTER'},$sp.$sp.$atlas_link.$sp.'|'.$sp.$spectrum_link.$sp),
 				$q->td({VALIGN=>'CENTER'},$sp.$sp.$spectrum_link.$sp),
 			     )  # End Tr
@@ -1472,9 +1501,11 @@ sub linkToColumnText {
   
   
   $text = $q->escapeHTML( $text );
-  my $url = "'$HTML_BASE_DIR/cgi/help_popup.cgi?column_name=$col&table_name=$table'";
+  my $url = qq~"$HTML_BASE_DIR/cgi/help_popup.cgi?column_name=$col&table_name=$table"~;
+  print STDERR "Link is $url\n";
+  my $onclick = ( $table eq 'none' ) ? '' : "ONCLICK='popitup($url);'";
   my $link =<<"  END_LINK";
-  <SPAN title="$text" class="white_text" ONCLICK="popitup($url);">$display_name</SPAN>
+  <SPAN title="$text" class="white_text" $onclick>$display_name</SPAN>
 
   END_LINK
   return( $link );
