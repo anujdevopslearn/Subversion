@@ -2,7 +2,7 @@
 # WARNING: any changes you make to this file while Cytoscape is running may be overwritten.
 # Any changes may make these visual mappings unreadable.
 # Please make sure you know what you are doing before modifying this file by hand.
-#Tue May 29 16:00:20 PDT 2007
+#Wed Jul 18 11:00:57 PDT 2007
 
 edgeAppearanceCalculator.Affy_Expression.defaultEdgeColor=0,0,0
 edgeAppearanceCalculator.Affy_Expression.defaultEdgeFont=Dialog,plain,12
@@ -232,17 +232,17 @@ edgeAppearanceCalculator.PeptideAtlas.edgeToolTipCalculator=null
 edgeAppearanceCalculator.Phosphopeptide.defaultEdgeColor=0,0,0
 edgeAppearanceCalculator.Phosphopeptide.defaultEdgeFont=Dialog,plain,12
 edgeAppearanceCalculator.Phosphopeptide.defaultEdgeLabel=
-edgeAppearanceCalculator.Phosphopeptide.defaultEdgeLineType=line1
+edgeAppearanceCalculator.Phosphopeptide.defaultEdgeLineType=line4
 edgeAppearanceCalculator.Phosphopeptide.defaultEdgeSourceArrow=none
-edgeAppearanceCalculator.Phosphopeptide.defaultEdgeTargetArrow=none
+edgeAppearanceCalculator.Phosphopeptide.defaultEdgeTargetArrow=delta
 edgeAppearanceCalculator.Phosphopeptide.defaultEdgeToolTip=
-edgeAppearanceCalculator.Phosphopeptide.edgeColorCalculator=null
+edgeAppearanceCalculator.Phosphopeptide.edgeColorCalculator=edgeType
 edgeAppearanceCalculator.Phosphopeptide.edgeFontFaceCalculator=null
 edgeAppearanceCalculator.Phosphopeptide.edgeFontSizeCalculator=null
 edgeAppearanceCalculator.Phosphopeptide.edgeLabelCalculator=null
-edgeAppearanceCalculator.Phosphopeptide.edgeLineTypeCalculator=null
-edgeAppearanceCalculator.Phosphopeptide.edgeSourceArrowCalculator=null
-edgeAppearanceCalculator.Phosphopeptide.edgeTargetArrowCalculator=null
+edgeAppearanceCalculator.Phosphopeptide.edgeLineTypeCalculator=line type
+edgeAppearanceCalculator.Phosphopeptide.edgeSourceArrowCalculator=edgeType
+edgeAppearanceCalculator.Phosphopeptide.edgeTargetArrowCalculator=edgeType
 edgeAppearanceCalculator.Phosphopeptide.edgeToolTipCalculator=null
 edgeAppearanceCalculator.PreBIND\ demo.defaultEdgeColor=0,0,0
 edgeAppearanceCalculator.PreBIND\ demo.defaultEdgeFont=Dialog,plain,12
@@ -829,6 +829,7 @@ edgeArrowCalculator.cancall.mapping.map.can\ call=delta
 edgeArrowCalculator.cancall.mapping.type=DiscreteMapping
 edgeArrowCalculator.edgeType.class=cytoscape.visual.calculators.GenericEdgeArrowCalculator
 edgeArrowCalculator.edgeType.mapping.controller=interaction
+edgeArrowCalculator.edgeType.mapping.map.contains=none
 edgeArrowCalculator.edgeType.mapping.type=DiscreteMapping
 edgeArrowCalculator.edgeType2.class=cytoscape.visual.calculators.GenericEdgeArrowCalculator
 edgeArrowCalculator.edgeType2.mapping.controller=interaction
@@ -1096,6 +1097,12 @@ edgeColorCalculator.edgeType.mapping.map.Phosphorylates=153,0,153
 edgeColorCalculator.edgeType.mapping.map.Proteolyzes=0,204,153
 edgeColorCalculator.edgeType.mapping.map.Ubiquitinates=255,51,204
 edgeColorCalculator.edgeType.mapping.map.Ubiquitylates=204,204,0
+edgeColorCalculator.edgeType.mapping.map.activation=0,204,0
+edgeColorCalculator.edgeType.mapping.map.binding/association=0,153,204
+edgeColorCalculator.edgeType.mapping.map.contains=153,153,153
+edgeColorCalculator.edgeType.mapping.map.dissociation=0,0,0
+edgeColorCalculator.edgeType.mapping.map.inhibition=255,51,51
+edgeColorCalculator.edgeType.mapping.map.phosphorylation=0,0,255
 edgeColorCalculator.edgeType.mapping.type=DiscreteMapping
 edgeColorCalculator.edgeTypeBiAss.class=cytoscape.visual.calculators.GenericEdgeColorCalculator
 edgeColorCalculator.edgeTypeBiAss.mapping.controller=interaction
@@ -1258,7 +1265,12 @@ edgeColorCalculator.sh3.mapping.map.phylogeneticPattern=255,0,0
 edgeColorCalculator.sh3.mapping.type=DiscreteMapping
 edgeColorCalculator.yeast.class=cytoscape.visual.calculators.GenericEdgeColorCalculator
 edgeColorCalculator.yeast.mapping.controller=interaction
+edgeColorCalculator.yeast.mapping.map.activation=51,153,0
+edgeColorCalculator.yeast.mapping.map.binding/association=0,102,255
+edgeColorCalculator.yeast.mapping.map.dissociation=102,102,0
+edgeColorCalculator.yeast.mapping.map.inhibition=255,0,51
 edgeColorCalculator.yeast.mapping.map.pd=0,0,255
+edgeColorCalculator.yeast.mapping.map.phosphorylation=255,255,0
 edgeColorCalculator.yeast.mapping.map.pm=0,153,51
 edgeColorCalculator.yeast.mapping.map.pp=0,0,0
 edgeColorCalculator.yeast.mapping.type=DiscreteMapping
@@ -1483,6 +1495,7 @@ edgeLineTypeCalculator.inferelator\ edge\ weight.mapping.interpolator=FlatInterp
 edgeLineTypeCalculator.inferelator\ edge\ weight.mapping.type=ContinuousMapping
 edgeLineTypeCalculator.line\ type.class=cytoscape.visual.calculators.GenericEdgeLineTypeCalculator
 edgeLineTypeCalculator.line\ type.mapping.controller=interaction
+edgeLineTypeCalculator.line\ type.mapping.map.contains=line2
 edgeLineTypeCalculator.line\ type.mapping.map.twoHybrid=dashed3
 edgeLineTypeCalculator.line\ type.mapping.type=DiscreteMapping
 edgeLineTypeCalculator.numberInteractionsBiclust.class=cytoscape.visual.calculators.GenericEdgeLineTypeCalculator
