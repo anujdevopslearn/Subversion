@@ -113,7 +113,7 @@ $|++;
             $sp <INPUT TYPE=RADIO NAME=identifier VALUE=CG CHECKED> Locus tag (CGxxxxx)<BR>
             $sp <INPUT TYPE=RADIO NAME=identifier VALUE=flybase> Flybase ID (FBgnxxxxxxx)<BR>
 
-          Show known protein-protein interactions as network edges:<BR>
+          Show known protein-protein interactions as network edges (Locus tag only):<BR>
             $sp <INPUT TYPE=CHECKBOX NAME=network_edges CHECKED>
                 <INPUT TYPE=HIDDEN NAME=path_id VALUE='$params->{path_id}'>
             
@@ -276,10 +276,17 @@ sub launch_cytoscape {
   my %peptides;
   my %edges;
   my $relationships;
-  if ( $params->{network_edges} ) {
+  if ( $params->{network_edges} && $params->{identifier} ne 'flybase' ) {
     $relationships = $keggmap->getPathwayRelationships( pathway => $params->{path_id} );
     for my $r ( @$relationships ) {
-      $log->debug( "Found $r->[0]\n" );
+      my $edge = "$r->[0] $r->[3] $r->[1]";
+      $edge =~ s/dme://g;
+      $edge =~ s/Dmel_//g;
+      $log->debug( $edge );
+      if ( !$edges{$edge} ) {
+        push ( @{$cytoscape{files}->{'network.sif'}}, $edge );
+        $edges{$edge}++;
+      }
     }
   }
     
@@ -288,19 +295,17 @@ sub launch_cytoscape {
 #    my $common = ( $row->[0] eq $canon ) ? $row->[1] : $row->[0];
 #    $canon =~ s/^Dmel_//g;
 
-    # User defines which identified to use
-    my ( $idx_a, $idx_b );
+    # User defines which identified to use, default to accession
+    my $canon = $row->[0];
+    my $common = $row->[1]; 
 
-    if ( $params->{identifier} eq 'flybase' ) {
-      $idx_a = 0;
-      $idx_b = 1;
-    } else { # use CG
-      $idx_a = 1;
-      $idx_b = 0;
+
+    if ( $params->{identifier} ne 'flybase' ) {
+      $canon = $row->[1];
+      $common = $row->[0]; 
+      # Required to use with interactions
+      $canon =~ s/-P[A-Z]$//;
     }
-    
-    my $canon = $row->[$idx_a] || $row->[$idx_b];
-    my $common = $row->[$idx_b] || $row->[$idx_a];
 
     if ( !$proteins{$canon} ) { # Only once per protein
       # New protein
@@ -439,7 +444,7 @@ sub list_pathways {
     <TR>
      <TD>$path->{definition} </TD>
      <TD>
-      <A HREF=$url?apply_action=pathway_details;path_id=$path->{entry_id};path_def=$desc TARGET=_pathdetails>$path->{entry_id}</A>
+      <A HREF=$url?apply_action=pathway_details;path_id=$params->{path_id};path_def=$desc TARGET=_pathdetails>$path->{entry_id}</A>
      </TD>
     </TR>
     END

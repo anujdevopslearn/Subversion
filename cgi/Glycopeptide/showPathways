@@ -268,6 +268,7 @@ sub pathway_details {
   <FORM NAME=cytoscape METHOD="POST" ACTION="getCytoscapeWebstart">
   $table
   <INPUT TYPE=HIDDEN NAME=apply_action VALUE='gene_list'></INPUT> 
+  <INPUT TYPE=HIDDEN NAME=path_id VALUE='$params->{path_id}'></INPUT> 
   </FORM>
   
   <BR>
