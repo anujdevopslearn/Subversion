@@ -252,7 +252,7 @@ sub printStyleSheet {
 	.white_bg{background-color: #FFFFFF }
 	.grey_bg{ background-color: #CCCCCC }
 	.med_gray_bg{ background-color: #CCCCCC; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; Padding:2}
-	.grey_header{ font-family: Helvetica, Arial, sans-serif; color: #000000; font-size: ${FONT_SIZE_HG}pt; background-color: #CCCCCC; font-weight: bold; padding:1 2}
+	.grey_header{ font-family: Helvetica, Arial, sans-serif; color: #000000; font-size: ${FONT_SIZE}pt; background-color: #CCCCCC; font-weight: bold; padding:1 2}
 	.rev_gray{background-color: #555555; font-size: ${FONT_SIZE_MED}pt; font-weight: bold; color:white; line-height: 25px;}
 	.rev_gray_head{background-color: #555555; font-size: ${FONT_SIZE}pt; font-weight: bold; color:white; line-height: 25px;}
 	.blue_bg{ font-family: Helvetica, Arial, sans-serif; background-color: #4455cc; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; color: white}
@@ -272,7 +272,7 @@ sub printStyleSheet {
 	.sequence_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5}	
 	.white_hyper_text{font-family: Helvetica,Arial,sans-serif; color:#000000;}
 
-	.white_text    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: white; CURSOR: help;}
+	.white_text    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: none; color: white; CURSOR: help;}
 	.white_text_head {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: white; CURSOR: help;}
 	
 	.pseudo_link    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration:none; color: blue; CURSOR: help;}
@@ -1221,12 +1221,21 @@ sub make_toggle_section {
                                        : 'small_gray_plus.gif';
 
 
+  $args{extra_style} ||=<<"  END";
+  background: #F0F0F0;
+  border: #000 1px solid;
+  padding: 4px;
+  width: 80%;
+  END
+  $args{extra_style} = "";
+
   # Add css/javascript iff necessary
   unless ( $self->{_toggle_section_exists} ) {
     $self->{_toggle_section_exists}++;
     $html =<<"    END"
     <STYLE TYPE="text/css" media="screen">
     div.visible {
+    $args{extra_style}
     display: inline;
     white-space: nowrap;         
     }
@@ -1466,9 +1475,7 @@ sub make_table_toggle {
   if ( $args{as_hashref} ) {
     $tbl_html =~ s/=/=>/g;
     $tbl_html =~ s/\s+/,/g;
-#    $log->debug( $tbl_html );
     my %ashash = eval("$tbl_html");
-#    for my $k (keys( %ashash)){ $log->debug( "$k -> $ashash{$k}" );}
     return wantarray ? ( \%ashash, $linkhtml ) : $linkhtml . $tbl_html;
   }
   return wantarray ? ( $tbl_html, $linkhtml ) : $linkhtml . $tbl_html;
