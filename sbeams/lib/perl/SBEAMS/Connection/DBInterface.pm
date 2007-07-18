@@ -996,9 +996,16 @@ sub selectSeveralColumns {
     #### Convert the SQL dialect if necessary
     $sql = $self->translateSQL(sql=>$sql);
 
-    #### FIX ME replace with $dbh->selectall_arrayref ?????
-    my $sth = $dbh->prepare($sql) or confess($dbh->errstr);
-    my $rv  = $sth->execute();
+    my ($sth, $rv);
+    eval {
+      $sth = $dbh->prepare($sql) or croak $dbh->errstr;
+      $rv  = $sth->execute or croak $dbh->errstr;
+    };
+    if ( $@ ) {
+      $log->error( "Error running SQL: $sql\n $@" );
+      croak( $@ );
+    }
+
     unless( $rv ) {
       $log->error( "Error executing SQL:\n $sql" );
       $log->printStack( 'error' );
