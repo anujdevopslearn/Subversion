@@ -31,6 +31,10 @@ use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::ModificationHelper;
 
+use SBEAMS::Glycopeptide;
+use SBEAMS::Glycopeptide::Settings;
+use SBEAMS::Glycopeptide::Tables;
+
 use PGPLOT;
 use PDL;
 use PDL::Graphics::PGPLOT;
@@ -40,6 +44,7 @@ use File::Basename;
 #$q = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
+my $glyco = new SBEAMS::Glycopeptide;
 $sbeamsMOD->setSBEAMS($sbeams);
 
 $PROG_NAME="ShowOneSpectrum";
@@ -67,7 +72,7 @@ sub main {
   ));
 
   #### Print the header, figure and do what the user want, and print footer
-  $sbeamsMOD->display_page_header();
+  $glyco->display_page_header();
   processRequest();
   $sbeamsMOD->display_page_footer();
 

@@ -52,11 +52,8 @@ $|++;
   my $spc = $sbeams->getGifSpacer(800);
   my $content = "$spc<BR>\n";
   $kegg_organism = $glyco->getKeggOrganism( );
-$log->debug( "Organism is $kegg_organism" );
 
-  for my $p ( keys( %$params ) ) {
-    $log->debug( "hey, $p => $params->{$p}");
-  }
+#  for my $p ( keys( %$params ) ) { $log->debug( "hey, $p => $params->{$p}"); }
 
   if ( $sbeams->output_mode() !~ /cytoscape/ ) {
   
@@ -73,7 +70,6 @@ $log->debug( "Organism is $kegg_organism" );
       # Check for params
       if ( $params->{accession} ) {
         # create SQL
-  $log->debug("JK");
         $sql = get_genelist_sql( gene_list => $params->{accession} );
       }
     } else {
@@ -88,17 +84,51 @@ $log->debug( "Organism is $kegg_organism" );
 #      $sbeams->getSessionCookie();
       $sbeams->setSessionAttribute( key => $key,  value => $sql ); 
 
+      my $sp = '&nbsp;' x 2;
+      my @buttons = $sbeams->getFormButtons( types => [ 'submit' ], 
+                                             name => 'Launch Cytoscape', 
+                                             value => 'Submit' );
     
-      $content .=<<"      END" if 1;
+      my $info_text = get_info_text();
+
+      $content .=<<"      END";
+      <STYLE type=text/css>
+      div.info {
+        background: #F0F0F0;
+        border: #000 1px solid;
+        padding: 4px;
+        width: 80%;
+      }
+      </STYLE>
       <SPAN CLASS=infobox><P>Click links below to launch a cytoscape network to explore the proteins you've selected</P></SPAN>
-      <OL>
-        <LI> First, launch the <A HREF='http://gaggle.systemsbiology.org/2005-11/boss/boss.jnlp'> Gaggle Boss </A> (facilitates communication between 'geese').
-        <LI> Second, launch <A HREF='getCytoscapeWebstart?output_mode=cytoscape;key=$key'> Cytoscape </A> with specified list. 
-        <LI> Finally, launch the <A HREF='http://gaggle.systemsbiology.org/projects/fly/2005-11/cy/flybaseGenetic/cy.jnlp'> Interaction </A> Network from Flybase.
-      </OL>
+         First, launch the <A HREF='http://gaggle.systemsbiology.org/2005-11/boss/boss.jnlp'> Gaggle Boss </A> (facilitates communication between 'geese').<BR><BR>
+         Second, launch Cytoscape </A> with specified list.
+         <FORM NAME=cyto_opts METHOD=POST>
+         <DIV class=info ID=options> 
+          Include peptides in network:<BR>
+            $sp <INPUT TYPE=CHECKBOX NAME=phospho CHECKED>Phosphopeptides<BR>
+            $sp <INPUT TYPE=CHECKBOX NAME=non_phospho CHECKED>Non-phosphopeptides<BR>
+
+          Primary identifier: <BR>
+            $sp <INPUT TYPE=RADIO NAME=identifier VALUE=CG CHECKED> Locus tag (CGxxxxx)<BR>
+            $sp <INPUT TYPE=RADIO NAME=identifier VALUE=flybase> Flybase ID (FBgnxxxxxxx)<BR>
+
+          Show known protein-protein interactions as network edges:<BR>
+            $sp <INPUT TYPE=CHECKBOX NAME=network_edges CHECKED>
+                <INPUT TYPE=HIDDEN NAME=path_id VALUE='$params->{path_id}'>
+            
+            <INPUT TYPE=HIDDEN NAME=output_mode VALUE='cytoscape'>
+            <INPUT TYPE=HIDDEN NAME=key VALUE='$key'>
+            <BR>
+            <INPUT TYPE=SUBMIT NAME=Submit VALUE='Launch Cytoscape'>
+         </DIV>
+         </FORM><BR>
+         
+         If desired, launch the <A HREF='http://gaggle.systemsbiology.org/projects/fly/2005-11/cy/flybaseGenetic/cy.jnlp'> Interaction </A> Network from Flybase. (works best with FBgn accessions) <BR>
+         <BR><BR>
+         $info_text
       END
     }
-  $log->debug("JJ");
   
   } else {
     # Check for params
@@ -126,6 +156,34 @@ $log->debug( "Organism is $kegg_organism" );
 
 } # end Main
 
+sub get_info_text {
+  my $content =<<"  END";
+  <PRE>
+   <DIV class=info ID=help>
+  This cytoscape view depicts the relationship between the chosen proteins and any 
+peptides that they may have.  Proteins are shown as blue oval-shaped nodes.  Peptides
+are shown as rectangular nodes, and their color is determined by the 'type' of peptide
+they are:
+   - Green for high confidence (dCn) phosphopeptides 
+   - Yellow for lower dCn phosphopeptides 
+   - Red for non-phosphopeptides 
+
+A line (edge) between a protein and a peptide indicates that that peptide is contained
+within the protein.  You can choose whether to display either type of peptide, and
+which protein identifier to use.  To use Flybase interactions goose, it is better to
+use FBgn accessions.  Peptides are identified by their sequences, where & and * are 
+observed phosphorylation sites.
+
+   </DIV>
+  </PRE>
+  END
+  my @toggle = $sbeams->make_toggle_section( textlink => 1,
+                                       hidetext => "Hide Explanation",
+                                       showtext => "Show Explanation", 
+                                       content => $content );
+
+  return "$toggle[1]<BR><BR>$toggle[0]";
+}
 
 sub process_params {
 
@@ -145,17 +203,21 @@ sub get_pathway_sql {
 
   # Fetch pathway genes
   $keggmap->setPathway( pathway => $params->{path_id} );
-  my $gene_list = $keggmap->getPathwayGenes(); # pathway => $params->{path_id} );
   # Look up in database
-  my $gene_string = join( ',', @$gene_list );
-  return get_genelist_sql( gene_string => $gene_string );
+  my $genes = $keggmap->getPathwayGenes(); # pathway => $params->{path_id} );
+  my $gene_list; 
+  my $delim = '';
+  for my $gene (  @$genes ) {
+    $gene_list .= $delim . $gene;
+    $delim = ',';
+  }
+  return get_genelist_sql( gene_list => $gene_list );
 }
 
 
 sub launch_cytoscape {
 
   my $sql = shift;
-  $log->debug( $sql );
 
   # Make resultset 
   my $rs_ref = {};
@@ -167,8 +229,6 @@ sub launch_cytoscape {
     sql_query=>$sql,
     resultset_ref=>$rs_ref,
   );  
-  use Data::Dumper;
-#  $log->debug( Dumper( $rs_ref ) );
 
   #### Store the resultset and parameters to disk resultset cache
   $rs_params{set_name} = "SETME";
@@ -196,6 +256,8 @@ sub launch_cytoscape {
   my %cytoscape = ( template => 'PhosphoPep' );
 
   my %webstart_files = ( 'commonName.noa' => 'Synonym',
+                         'bioseq_type.noa' => 'bioseq_type',   
+                         'phospho_status.noa' => 'phospho_status',   
                          'deltaCn.noa' => 'dCn',   
                          'network.sif' => undef,
                          'm2z.noa' => 'Parent ion m/z',
@@ -210,18 +272,68 @@ sub launch_cytoscape {
 #           experimental_mass, peptide_prophet_score, matching_sequence
 
   my $data = $rs_ref->{data_ref};
+  my %proteins;
+  my %peptides;
+  my %edges;
+  my $relationships;
+  if ( $params->{network_edges} ) {
+    $relationships = $keggmap->getPathwayRelationships( pathway => $params->{path_id} );
+    for my $r ( @$relationships ) {
+      $log->debug( "Found $r->[0]\n" );
+    }
+  }
+    
   for my $row ( @$data ) {
 #    my $canon = ( $row->[0] =~ /^CG/ ) ? $row->[0] : $row->[1];
 #    my $common = ( $row->[0] eq $canon ) ? $row->[1] : $row->[0];
 #    $canon =~ s/^Dmel_//g;
-    my $canon = $row->[0] || $row->[1];
-    my $common = $row->[1] || $row->[0];
-    push ( @{$cytoscape{files}->{'network.sif'}}, $canon );
-    push ( @{$cytoscape{files}->{'deltaCn.noa'}}, "$canon = $row->[3]" );
-    push ( @{$cytoscape{files}->{'m2z.noa'}}, "$canon = $row->[4]" );
-    push ( @{$cytoscape{files}->{'prophet.noa'}}, "$canon = $row->[5]" );
-    push ( @{$cytoscape{files}->{'sequence.noa'}}, "$canon = $row->[6]" );
-    push ( @{$cytoscape{files}->{'commonName.noa'}}, "$canon = $common" );
+
+    # User defines which identified to use
+    my ( $idx_a, $idx_b );
+
+    if ( $params->{identifier} eq 'flybase' ) {
+      $idx_a = 0;
+      $idx_b = 1;
+    } else { # use CG
+      $idx_a = 1;
+      $idx_b = 0;
+    }
+    
+    my $canon = $row->[$idx_a] || $row->[$idx_b];
+    my $common = $row->[$idx_b] || $row->[$idx_a];
+
+    if ( !$proteins{$canon} ) { # Only once per protein
+      # New protein
+      push ( @{$cytoscape{files}->{'network.sif'}}, $canon );
+      push ( @{$cytoscape{files}->{'commonName.noa'}}, "$canon = $common" );
+      push ( @{$cytoscape{files}->{'bioseq_type.noa'}}, "$canon = protein" );
+      push ( @{$cytoscape{files}->{'phospho_status.noa'}}, "$canon = 99" );
+    }
+
+    my $pstatus = ( $row->[6] =~ /\&|\*/ ) ? int($row->[3]*10) : -99;
+
+    if ( $pstatus == -99 && !$params->{non_phospho} ) {
+      next;
+    } elsif  ( $pstatus > -99 && !$params->{phospho} ) {
+      next;
+    }
+    
+    my $edge = "$canon contains $row->[6]";
+    if ( !$edges{$edge} ) {
+      push ( @{$cytoscape{files}->{'network.sif'}}, $edge );
+    }
+    $edges{$edge}++;
+    next if $peptides{$row->[6]};
+    $peptides{$row->[6]}++;
+#my $pname = $sbeams->truncateString( string => $row->[6], 'length' => 12 );
+
+    push ( @{$cytoscape{files}->{'phospho_status.noa'}}, "$row->[6] = $pstatus" );
+    push ( @{$cytoscape{files}->{'network.sif'}}, $row->[6] );
+    push ( @{$cytoscape{files}->{'bioseq_type.noa'}}, "$row->[6] = peptide" );
+    push ( @{$cytoscape{files}->{'deltaCn.noa'}}, "$row->[6] = " . sprintf("%.3f", $row->[3]) );
+    push ( @{$cytoscape{files}->{'m2z.noa'}}, "$row->[6] =  " . sprintf("%.4f", $row->[4]) );
+    push ( @{$cytoscape{files}->{'prophet.noa'}}, "$row->[6] =  " . sprintf("%.2f", $row->[5]) );
+    push ( @{$cytoscape{files}->{'sequence.noa'}}, "$row->[6] = $row->[6]" );
   }
 
   #### Display the resultset
@@ -243,33 +355,55 @@ sub get_genelist_sql {
 
   my %args = @_;
   my $gene_list = $args{gene_list} || '';
-  my $gene_string = $args{gene_string} || '';
-  my $delim = '';
-  unless ( $gene_string ) {
+  my $cutoff = $glyco->get_current_prophet_cutoff();
+  
+  my $sql = '';
+
+  if ( $kegg_organism eq  'dme' ) {
+    my $like_clause = '';
+    my  $in_clause = '';
+
+    if ( $gene_list =~ /FBgn/ ) {
+      my $delim = '';
+      my %redundant;
+      $in_clause = "WHERE ipi_accession_number IN ( ";
+      for my $gene ( split ",", $gene_list ) {
+        next if $redundant{$gene};
+        $redundant{$gene}++;
+        $gene =~ s/\'//g;
+        $in_clause .= $delim . "'$gene'";
+        $delim = ',';
+      }
+      $in_clause .= ' )';
+    } else {
+      my $delim = ' ';
+      for my $gene ( split ",", $gene_list ) {
+        $gene =~ s/Dmel_//g;
+        $gene =~ s/\'//g;
+        $like_clause .= $delim . " synonyms like '$gene%' ";
+        $delim = "\n OR ";
+      }
+      $like_clause = "WHERE ( $like_clause )\n";
+    }
+
+    $sql =<<"    END";
+    SELECT ipi_accession_number, synonyms, ID.ipi_data_id, delta_cn,
+           experimental_mass, peptide_prophet_score, observed_peptide_sequence
+      FROM $TBGP_IPI_DATA ID 
+      LEFT JOIN $TBGP_OBSERVED_TO_IPI ITI 
+        ON ITI.ipi_data_id = ID.ipi_data_id
+      LEFT JOIN $TBGP_OBSERVED_PEPTIDE IP 
+        ON ITI.OBSERVED_peptide_id = IP.OBSERVED_peptide_id
+        $in_clause $like_clause
+       AND ( peptide_prophet_score >= $cutoff OR peptide_prophet_score IS NULL )
+    END
+  } else {
+    my $delim = '';
+    my $gene_string = '';
     for my $gene ( split ",", $gene_list ) {
       $gene_string .= $delim . "'" . $gene . "'";
       $delim = ',';
     }
-  }
-  my $cutoff = $glyco->get_current_prophet_cutoff();
-  
-  my $sql = '';
-#      'CG%'
-
-  if ( $kegg_organism eq  'dme' ) {
-    $sql =<<"    END";
-    SELECT ipi_accession_number, synonyms, ID.ipi_data_id, delta_cn,
-           experimental_mass, peptide_prophet_score, matching_sequence
-      FROM $TBGP_IPI_DATA ID 
-      JOIN $TBGP_OBSERVED_TO_IPI ITI 
-        ON ITI.ipi_data_id = ID.ipi_data_id
-      LEFT JOIN $TBGP_OBSERVED_PEPTIDE IP 
-        ON ITI.OBSERVED_peptide_id = IP.OBSERVED_peptide_id
-     WHERE ( ipi_accession_number IN ($gene_string)
-             OR synonyms IN ($gene_string) )
-       AND ( peptide_prophet_score >= $cutoff OR peptide_prophet_score IS NULL )
-    END
-  } else {
     $sql =<<"    END";
     SELECT entrez_id, ipi_accessions
       FROM dcampbel.dbo.ipi_xrefs IX JOIN $TBGP_IPI_DATA ID 
@@ -378,7 +512,7 @@ sub pathway_details {
   my $t2 = new Benchmark;
   $log->debug( parseTime( $t2, $t1, "seconds to get glyco data for $params->{path_def}" ) );
 
-  print "* Found glyco data for $cnt of $tot, plotting on KEGG map<BR>\n";
+  print "* Found data for $cnt of $tot, plotting on KEGG map<BR>\n";
 
   # Send gene/color info to kegg for a map
   my $url = $keggmap->getColoredPathway( bg => $bg,

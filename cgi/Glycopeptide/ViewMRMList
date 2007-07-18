@@ -363,13 +363,11 @@ sub handle_request
 
                         ## ignore ions with -I and -num or i
                         if ($rem !~ /(.*)[\-i](.*)/) {
-                              $log->debug( "Flipper" );
                             if ($frag_chg == 1) {
                                 $b1_nist[$ind - 1] = $frag_mz;
                                 $b1_nist_inten[$ind - 1] = $inten;
                             }
                         } else {
-                           $log->debug( "Skipper" );
                         }
                     }
                     if ( $fragment_cnt++ >= $n_highest_intensity_fragment_ions ) {

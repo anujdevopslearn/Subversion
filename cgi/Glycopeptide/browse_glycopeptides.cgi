@@ -122,10 +122,11 @@ sub display_proteins{
 
 	$html .= $q->start_table() .
            $q->Tr({class=>'rev_gray_head'},
-           $q->td('IPI ID'),
-           $q->td('Protein Name'),
-           $q->td('Protein Symbol'),
-           $q->td('Identified Peptides')
+           $q->td({class=>'rev_gray_head', nowrap=>1},'Accession'),
+           $q->td({class=>'rev_gray_head', nowrap=>1},'Protein Name'),
+           $q->td({class=>'rev_gray_head', nowrap=>1},'Synonyms'),
+           $q->td({class=>'rev_gray_head', nowrap=>1},'Protein Symbol'),
+           $q->td({class=>'rev_gray_head', nowrap=>1},'Observed Peptides')
            );
 
 	my $cgi_url = "peptideSearch.cgi?action=Show_detail_form&ipi_data_id";
@@ -137,20 +138,32 @@ sub display_proteins{
 
   my (%upep, %uprot);
 
+  my $current = '';
+  my $color = 'E0E0E0';
+  
   my @symbols;
 	foreach my $h_ref (@results_set){
 		my $ipi_id = $h_ref->{ipi_data_id};
 		my $num_identified = $h_ref->{num_observed};
 		my $ipi_acc = $h_ref->{ipi_accession_number};
+
+    $current ||= $ipi_acc;
+    if ( $current ne $ipi_acc ) {
+      $color = ( $color eq 'E0E0E0' ) ? 'F5F5F5' : 'E0E0E0';
+    }
+    $current = $ipi_acc;
+
+    
 		my $protein_name = nice_term_print($h_ref->{protein_name});
 		my $protein_sym = $h_ref->{protein_symbol};
     push @symbols, $protein_sym if $protein_sym;
     $protcnt++;
     $pepcnt += $num_identified;
 		
-		$html .= $q->Tr(
+		$html .= $q->Tr( {BGCOLOR=>$color},
 			        $q->td( $q->a({href=>"$cgi_url=$ipi_id"},$ipi_acc)),
 			        $q->td($protein_name),
+			        $q->td($h_ref->{synonyms}),
 			        $q->td($protein_sym),
 			        $q->td({ALIGN=>'right'},$num_identified)
 			        );
@@ -167,9 +180,11 @@ sub display_proteins{
                                      organism => $organism );
   $html .= "\n$gXML\n";  
   
+  $pepcnt = $glyco_query_o->get_uniq_peptide_count();
+
   my $stats = qq~
   <BR><FONT COLOR=GREEN>
-  Found $pepcnt peptides which are derived from maximally $protcnt gene models at a peptide prophet cutoff of $cutoff
+  Found $pepcnt peptides which are derived from maximally $protcnt proteins at a peptide prophet cutoff of $cutoff
   </FONT>
   <BR>
   <BR>
@@ -410,10 +425,10 @@ sub print_out_hits_page{
 	
 	print $q->start_table(),
 			$q->Tr({class=>'rev_gray_head'},
-			  $q->td('IPI ID'),
-			  $q->td('Protein Name'),
-			  $q->td('Protein Symbol'),
-			  $q->td('Identified Peptides')
+			  $q->td({class=>'rev_gray_head'},'IPI ID'),
+			  $q->td({class=>'rev_gray_head'},'Protein Name'),
+			  $q->td({class=>'rev_gray_head'},'Protein Symbol'),
+			  $q->td({class=>'rev_gray_head'},'Identified Peptides')
 			
 			);
 	my $cgi_url = "$base_url?action=Show_detail_form&ipi_data_id";

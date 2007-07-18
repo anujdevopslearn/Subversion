@@ -52,7 +52,6 @@ my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch";
 
 { # Main 
 
-    $log->debug( "Getting started? " );
     # Authenticate or exit
     exit unless ($current_username = $sbeams->Authenticate(
        permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin', 'Glycopeptide_readonly'],
@@ -72,7 +71,6 @@ my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch";
     my $project_id = $sbeams->getCurrent_project_id();
 
     my $page = $sbeams->getGifSpacer( 800 ) . "<BR>\n";
-    $log->debug( "Getting anywhere? " );
 
     #### Decide what action to take based on information so far
 	  if( $params{action} =~ /^search$/ ) {
@@ -109,7 +107,8 @@ sub get_download_form {
   }
   $form .= "</FORM>";
   my $url = "<A OnClick='document.download_form.submit();'><FONT COLOR=BLUE>Download table</FONT></A>";
-  return $form . "\n" . $url;
+  my $cytolink = '<A ONCLICK="submit_cytoscape();"><DIV CLASS="visilink" TITLE="Open cytoscape with selected proteins"> Cytoscape </DIV></A>';
+  return $form . "\n" . $url . "&nbsp;|&nbsp;" . $cytolink;
 #  return "<A HREF=$url>Download table</A>";
 }
 
@@ -130,13 +129,14 @@ sub run_search {
   my $pep_o = new SBEAMS::Glycopeptide::Get_peptide_seqs(glyco_obj => $sbeamsMOD);
 
   my $results = $sbeamsMOD->runBulkSearch( ids => \@ids, %{$params} );
+  $content .= get_submit_js();
   my $table = SBEAMS::Connection::DataTable->new( BORDER => 0 );
-  $table->addRow( ['IPI', 'SwissProt', 'Symbol', 'Sequence', 'Prophet', 'Mass', 'Tissues', 'Protein Name' ] );
+  $table->addRow( ['Accession', 'SwissProt', 'Symbol','Protein Name', 'Synonyms', 'Sequence', 'Prophet', 'Mass', 'dCn'  ] );
   $table->setRowAttr( ROWS => [1], BGCOLOR => '#C0D0C0' );
   my $current;
   my $prot_cnt = 1;
   my $grp_row = 2;
-  my $bgcolor = '#FFFFFF';
+  my $bgcolor = '#F1F1F1';
   for my $peptide ( @$results ) {
     my ( $ipi, 
          $swiss_id,
@@ -146,32 +146,40 @@ sub run_search {
          $protein_name, 
          $peptide_id,
          $prophet_score,
-         $peptide_mass
+         $peptide_mass,
+         $dcn,
+         $synonyms
          ) = @$peptide;
 
-    my $ipi_base = $ipi;
-    $current = $ipi_base unless $current;
+    my $ipi_base = $ipi . $synonyms;
+#    $current = $ipi_base unless $current;
+#    $current = $ipi_base unless $current;
 
-    my $tissues = $pep_o->observed_tissues( $peptide_id ) || '';
+#    my $tissues = $pep_o->observed_tissues( $peptide_id ) || '';
+    my $chk_box = "<INPUT TYPE=checkbox NAME=accession VALUE=$ipi CHECKED>$ipi</INPUT>";
     if ( $params->{action} ne 'download' ) {
-      $tissues = $sbeams->truncateStringWithMouseover( string => $tissues, len => 20 );
-      $protein_name= $sbeams->truncateStringWithMouseover( string => $protein_name, len => 40 );
+#      $tissues = $sbeams->truncateStringWithMouseover( string => $tissues, len => 20 );
+      $protein_name= $sbeams->truncateStringWithMouseover( string => $protein_name, len => 25 );
       $ipi = "<A HREF='peptideSearch.cgi?search_type=IPI Accession Number;action=Show_hits_form;search_term=$ipi' TARGET=prot_details>$ipi</A>";
+      $seq = $sbeamsMOD->decorate_phospho_sequence( $seq );
     }
     $prophet_score = sprintf( "%0.2f", $prophet_score);
     $peptide_mass = sprintf( "%0.4f", $peptide_mass);
     
-    $table->addRow( [ $ipi, $swiss_id, $symbol, $seq, $prophet_score, $peptide_mass, $tissues, $protein_name] );
-#    $log->debug( "ipi_base is $ipi_base, current is $current" );
-    if ( $ipi_base ne $current ) {
+    $log->debug( "ipi_base is $ipi_base, current is $current" );
+    if ( !$current || $ipi_base ne $current ) {
+      $table->addRow( [ $chk_box, $swiss_id, $symbol, $protein_name, $synonyms, $seq, $prophet_score, $peptide_mass, $dcn ] );
       $prot_cnt++;
-#      $log->debug( "In da not current loop" );
+      $log->debug( "In da not current loop" );
       my $current_row = $table->getRowNum();
-#      $log->info( "group row is $grp_row, current row is $current_row, bgcolor is $bgcolor" );
+      $log->info( "group row is $grp_row, current row is $current_row, bgcolor is $bgcolor" );
       $table->setRowAttr( ROWS => [$grp_row..$current_row - 1], BGCOLOR => $bgcolor );
       $grp_row = $current_row;
-      $bgcolor = ( $bgcolor eq '#E0E0E0' ) ? '#FFFFFF' : '#E0E0E0';
+      $bgcolor = ( $bgcolor eq '#E0E0E0' ) ? '#F1F1F1' : '#E0E0E0';
       $current = $ipi_base;
+    } else {
+      $table->addRow( [  '&nbsp;','&nbsp;','&nbsp;','&nbsp;', '&nbsp;',
+                          $seq, $prophet_score, $peptide_mass, $dcn ] );
     }
     my $current_row = $table->getRowNum();
     $table->setRowAttr( ROWS => [$grp_row..$current_row], BGCOLOR => $bgcolor );
@@ -190,9 +198,43 @@ sub run_search {
     $content .= "<FONT COLOR=GREEN>Search with " . scalar( @ids ) . " accession $num yeilded ";
     $content .= $table->getRowNum() - 1 . " $pep from $prot_cnt $prot </FONT><BR>\n"; 
     $content .= get_download_form($params);
+    $content .=<<"    END";
+    <FORM NAME=cytoscape METHOD=POST ACTION=getCytoscapeWebstart>
+    <INPUT TYPE=HIDDEN NAME=apply_action VALUE=gene_list>
+    END
     $content .= $table->asHTML();
+    $content .= "<FORM>";
   }
-  return $content;
+  return $sbeamsMOD->get_phospho_css() . "\n" . $content;
+}
+
+sub get_submit_js {
+  return( <<"  END" );
+    <SCRIPT LANGUAGE="javascript">
+  function submit_cytoscape() {
+    document.cytoscape.submit();
+  }
+  </SCRIPT>
+     <STYLE TYPE="text/css" media="screen">
+    div.visible {
+    display: inline;
+    white-space: nowrap;         
+    }
+    div.visilink {
+    color: blue;
+    display: inline;
+    white-space: nowrap;         
+    }
+    div.hidden {
+    display: none;
+    }
+    span { 
+     border: solid;
+     border-width: 1px;
+    }
+  </STYLE> 
+
+  END
 }
 
 sub print_form {
@@ -267,7 +309,7 @@ sub get_input_fields {
   }
 
   my $id_type_radio =<<"  END";
-  IPI <INPUT TYPE=radio NAME=id_type VALUE=ipi $id_chk{ipi}> 
+  Accession <INPUT TYPE=radio NAME=id_type VALUE=ipi $id_chk{ipi}> 
   Swiss Prot <INPUT TYPE=radio NAME=id_type VALUE=swp $id_chk{swp} > 
   Gene Symbol <INPUT TYPE=radio NAME=id_type VALUE=sym $id_chk{sym} > 
   END

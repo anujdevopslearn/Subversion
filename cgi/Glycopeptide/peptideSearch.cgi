@@ -551,6 +551,8 @@ sub clean_params{
 			$ref_parameters->{$k} = clean_term($ref_parameters->{$k});
 		}elsif($k eq 'redraw_protein_sequence'){
 			$ref_parameters->{$k} = clean_term($ref_parameters->{$k});
+		}elsif($k eq 'autorun'){
+			$ref_parameters->{$k} = clean_term($ref_parameters->{$k});
 		}else{
 # Doesn't allow std sbeams params through
 #print_error("Unknown Paramater passed in '$k' ")
@@ -1275,11 +1277,11 @@ sub print_out_phospho_hits_page{
 	
 	$html .= $q->start_table();
   $html .= $q->Tr({class=>'rev_gray_head'},
-			  $q->td('ID'),
-			  $q->td('Protein Name'),
-			  $q->td('Synonyms'),
-			  $q->td('Protein Symbol'),
-			  $q->td('Observed Peptides')
+			  $q->td({class=>'rev_gray_head'},'ID'),
+			  $q->td({class=>'rev_gray_head'},'Protein Name'),
+			  $q->td({class=>'rev_gray_head'},'Synonyms'),
+			  $q->td({class=>'rev_gray_head'},'Protein Symbol'),
+			  $q->td({class=>'rev_gray_head'},'Observed Peptides')
 			);
 #  $log->info( $html );
 	my $cgi_url = "$base_url?action=Show_detail_form&ipi_data_id";
@@ -1397,6 +1399,7 @@ sub display_phospho_detail_form{
   my $synonym = get_annotation(glyco_o   => $glyco_o, anno_type => 'synonyms' );
   my $kegglink = getKeggLink( name => $synonym );
   my $ipi_acc = $glyco_o->ipi_accession();
+  my $cytolink = getCytoLink( acc => $ipi_acc );
   my $scanlink = getScansiteForm( seq => $pseq, name => $ipi_acc );
   my $mrmlink = "<A HREF='ViewMRMList?NIST_library_id=20&action=QUERY;protein_name_constraint=$ipi_acc'>view transitions</A>";
 
@@ -1421,7 +1424,7 @@ sub display_phospho_detail_form{
       $q->td({class=>'grey_header', colspan=>2}, "Protein Info "),),
     $q->Tr(
       $q->td({class=>'rev_gray_head'}, "ID"),
-      $q->td({nowrap=>1}, "$ipi_url $kegglink  $scanlink")),
+      $q->td({nowrap=>1}, "$ipi_url $kegglink $cytolink $scanlink")),
     $q->Tr(
       $q->td({class=>'rev_gray_head', nowrap=>1}, "Protein Name"),
       $q->td( $protein_name )),
@@ -1584,7 +1587,18 @@ sub getFlybaseLink {
   }
   my $base = 'http://flybase.org/cgi-bin/uniq.html?species=Dmel;Submit=Go;db=fbgn;cs=yes;caller=genejump;context=';
   
-  return "<A HREF=${base}$args{name} TITLE='View gene model info at Flybase'>$args{name}</A>";
+  return "<A HREF=${base}$args{name} TITLE='View protein info at Flybase'>$args{name}</A>";
+}
+
+sub getCytoLink {
+  my %args = @_;
+  for my $arg ( qw( acc ) ) {
+    return "" unless $args{$arg};
+  }
+  $args{name} =~ s/(CG\d+)(-P.)*/$1/;
+  my $img = "$HTML_BASE_DIR/images/cyto_tiny.png";
+  my $link_base = 'getCytoscapeWebstart?apply_action=gene_list&accession=';
+  return "<A HREF=$link_base$args{acc}><IMG BORDER=0 TITLE='Start Cytoscape network with this gene' SRC=$img></A>";
 }
 
 sub getKeggLink {

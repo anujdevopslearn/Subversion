@@ -39,6 +39,9 @@ my $keggmap = SBEAMS::BioLink::KeggMaps->new();
 
 my $kegg_organism;
 
+# Species 
+my $sprefix;
+
 my $verbose = 1;
 
 # Don't buffer output
@@ -59,6 +62,7 @@ $|++;
   }
   
   $kegg_organism = $glyco->getKeggOrganism( );
+  $sprefix = ( $kegg_organism eq 'dme' ) ? 'Dmel_' : '';
 
   my $content = '';
   $params->{apply_action} ||= 'list_pathways';
@@ -216,7 +220,12 @@ sub pathway_details {
   my $t1 = new Benchmark;
   $log->debug( parseTime( $t1, $t0, "seconds to fetch genes for $params->{path_def}" ) );
 
-  print "* Found $tot genes in pathway, looking up data in Unipep<BR>\n";
+  if ( $tot ) {
+    print "* Found $tot genes in pathway, looking up data in Unipep<BR>\n";
+  } else {
+    print "* Found $tot genes in pathway - quitting \n";
+    return;
+  }
 
   # Fetches expression info from db, returns arrays of bg/fg colors
   my ( $bg, $fg, $glyco_hits, $cnt ) = getExpressionValues($gene_list);
@@ -224,7 +233,7 @@ sub pathway_details {
   my $t2 = new Benchmark;
   $log->debug( parseTime( $t2, $t1, "seconds to get glyco data for $params->{path_def}" ) );
 
-  print "* Found glyco data for $cnt of $tot, plotting on KEGG map<BR>\n";
+  print "* Found data for $cnt of $tot, plotting on KEGG map<BR>\n";
   my $table = SBEAMS::Connection::DataTable->new( BORDER => 0 );
   $table->addRow( [ '&nbsp;', 'Protein', 'Peptides Observed' ] );
   $table->setHeaderAttr( BOLD => 1 );
@@ -295,10 +304,19 @@ sub pathway_details {
     if ( $entry2genes{$en} ) {
       my @genes = map( /$kegg_organism:(.*)/, @{$entry2genes{$en}} );
 #      @genes = map { $glyco_hits->{$_}->[2]  } @genes;
-      my $gene = join( '%3B', @genes ); # @{$entry2genes{$en}} );
       if ( $kegg_organism eq 'dme' ) {
+        my $gene = '';
+        my $delim = '';
+        for my $gn ( @genes ) { # @{$entry2genes{$en}} );
+          $gn =~ s/$sprefix//g;
+          $gn .= '%25';
+          $gene .= $delim . $gn;
+          $delim = '%3B';
+        }
+        
         push @links, "peptideSearch.cgi?search_type=gene_name;search_term=$gene;action=Show_hits_form;autorun=1";
       } else {
+        my $gene = join( '%3B', @genes ); # @{$entry2genes{$en}} );
         push @links, "peptideSearch.cgi?search_type=GeneID;search_term=$gene;action=Show_hits_form";
       }
 
@@ -340,11 +358,19 @@ sub getExpressionValues {
   my $gene_list = shift;
   my $cutoff = $glyco->get_current_prophet_cutoff();
   
-  my $gene_string = join( ", ", @{$gene_list} );
-
   my $sql = '';
 
   if ( $kegg_organism eq  'dme' ) {
+    my $gene_string = '';
+    my $delim = ' ';
+    for my $gene ( @{$gene_list} ) {
+      my $tmp_gene = $gene;
+      $tmp_gene =~ s/Dmel_//;
+      $tmp_gene =~ s/\'//g;
+      $gene_string = $gene_string . $delim . " synonyms like '$tmp_gene%' ";
+      $delim = "\n OR ";
+    }
+
     $sql =<<"    END";
     SELECT CASE WHEN ipi_accession_number LIKE 'CG%' THEN ipi_accession_number
                 ELSE synonyms END AS accession, ID.ipi_data_id, 'nada', 'nada', 1
@@ -353,11 +379,11 @@ sub getExpressionValues {
         ON ITI.ipi_data_id = ID.ipi_data_id
       JOIN $TBGP_OBSERVED_PEPTIDE IP 
         ON ITI.OBSERVED_peptide_id = IP.OBSERVED_peptide_id
-     WHERE ( ipi_accession_number IN ($gene_string)
-             OR synonyms IN ($gene_string) )
+     WHERE ( $gene_string )
        AND peptide_prophet_score >= $cutoff 
     END
   } else {
+    my $gene_string = join( ", ", @{$gene_list} );
     $sql =<<"    END";
     SELECT entrez_id, ipi_accessions, 'nada', 'nada', 1
       FROM dcampbel.dbo.ipi_xrefs IX JOIN $TBGP_IPI_DATA ID 
@@ -378,7 +404,10 @@ sub getExpressionValues {
     # just need to look at the first one
 #    next if $glyco_hits{$row->[0]}; 
 #    $glyco_hits{$row->[0]} = $row; 
-    push @{$glyco_hits{$row->[0]}}, $row;
+    my $acc = $row->[0];
+    $acc =~ s/-P.$//;
+    $acc = $sprefix . $acc;
+    push @{$glyco_hits{$acc}}, $row;
   }
 
   # define colors
