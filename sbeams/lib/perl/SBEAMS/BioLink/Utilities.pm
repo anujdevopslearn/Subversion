@@ -90,6 +90,74 @@ sub get_transmembrane_info {
 }
 
 
+#+
+# Returns hashref of one-letter code => amino acid mass data
+# Defaults to average mass, can specify mass_type => monoisotopic
+#-
+sub get_amino_acid_masses {
+  my $self = shift;
+  my %args = @_;
+  $args{mass_type} ||= 'average';
 
+  #### Define the residue masses
+  my %masses;
+
+  if ( $args{mass_type} =~ /monoisotopic/i ) {
+    %masses = ( G => 57.021464,
+                        D => 115.02694,
+                        A => 71.037114,
+                        Q => 128.05858,
+                        S => 87.032029,
+                        K => 128.09496,
+                        P => 97.052764,
+                        E => 129.04259,
+                        V => 99.068414,
+                        M => 131.04048,
+                        T => 101.04768,
+                        H => 137.05891,
+                        C => 103.00919,
+                        F => 147.06841,
+                        L => 113.08406,
+                        R => 156.10111,
+                        I => 113.08406,
+                        N => 114.04293,
+                        Y => 163.06333,
+                        W => 186.07931 ,
+    
+                        X => 118.8057,   # Unknown, avg of 20 common AA.
+                        B => 114.5349,   # avg N and D
+                        Z => 128.5506,   # avg Q and E
+    );
+  } else {
+    %masses = ( I => 113.1594,   # Isoleucine
+                        V =>  99.1326,   # Valine
+                        L => 113.1594,   # Leucine
+                        F => 147.1766,   # Phenyalanine
+                        C => 103.1388,   # Cysteine
+                        M => 131.1926,   # Methionine
+                        A =>  71.0788,   # Alanine
+                        G =>  57.0519,   # Glycine
+                        T => 101.1051,   # Threonine
+                        W => 186.2132,   # Tryptophan
+                        S =>  87.0782,   # Serine
+                        Y => 163.1760,   # Tyrosine
+                        P =>  97.1167,   # Proline
+                        H => 137.1411,   # Histidine
+                        E => 129.1155,   # Glutamic_Acid (Glutamate)
+                        Q => 128.1307,   # Glutamine
+                        D => 115.0886,   # Aspartic_Acid (Aspartate)
+                        N => 114.1038,   # Asparagine
+                        K => 128.1741,   # Lysine
+                        R => 156.1875,   # Arginine
+
+                        X => 113.1594,   # L or I
+                        B => 114.5962,   # avg N and D
+                        Z => 128.6231,   # avg Q and E
+                        U => 100,        # Selenocysteine!
+
+                      );
+  }
+  return \%masses;
+}
 
 1;
