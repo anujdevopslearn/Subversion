@@ -16,8 +16,10 @@ package SBEAMS::Connection::Utilities;
 #
 ###############################################################################
 
-
 use strict;
+use POSIX;
+
+
 use SBEAMS::Connection::Log;
 use SBEAMS::Connection::Settings qw( $DBADMIN $PHYSICAL_BASE_DIR );
 use vars qw(@ERRORS);
@@ -427,6 +429,24 @@ sub sortNumerically {
 
 }
 
+#+
+# Rounds floats to int, 'randomly'  rounds x.500 up or down 
+#-
+sub roundToInt {
+  my $self = shift;
+  my $float = shift || '';
+  unless ( $float =~ /^[-.eE\d]+$/ ) {
+    print STDERR "Illegal non-numeric input passed: $float\n";
+    return 0;
+  }
+  my $floor = floor($float);
+  my $f_diff = abs( $floor - $float );
+  my $ceil = ceil($float);
+  my $c_diff = abs( $ceil - $float );
+  return ( $c_diff > $f_diff ) ? $floor :  # If closer to floor, return that
+         ( $c_diff < $f_diff ) ? $ceil :   # If closer to ceil, return that
+         ( time() % 2 ) ? $ceil : $floor;  # Else round up/down 
+}
 
 
 ###############################################################################
@@ -906,6 +926,35 @@ sub get_admin_mailto {
   return ( $email ) ? "<A HREF=mailto:$email>$linktext</A>" : '';
 }
 
+sub map_peptide_to_protein {
+	my $self = shift;
+	my %args = @_;
+	my $pep_seq = $args{pepseq};
+	my $protein_seq = $args{protseq};
+	
+	if ( $protein_seq =~ /$pep_seq/ ) {
+		my $start_pos = length($`);    
+		my $stop_pos = length($pep_seq) + $start_pos;  
+		return ($start_pos, $stop_pos);	
+	}else{
+		return;
+	}
+}
+
+sub get_site_positions {
+  my $self = shift;
+  my %args = @_;
+  $args{pattern} = 'N.[S|T]' if !defined $args{pattern};
+  return unless $args{seq};
+
+  my @posn;
+  while ( $args{seq} =~ m/$args{pattern}/g ) {
+    my $posn = length($`);
+    push @posn, $posn;# pos($string); # - length($&) # start position of match
+  }
+#  $log->debug( "Found $posn[0] for NxS/T in $args{seq}\n" );
+  return \@posn;
+}
 
 
 1;
