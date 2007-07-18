@@ -507,7 +507,7 @@ sub getPathwayGenes {
   my @gene_list;
   for my $gene ( @$result ) {
     $gene =~ s/$self->{_organism}://g;
-    if ( $self->{_organism} eq 'hsa' || $args{not_keys}  ) {
+    if ( $args{not_keys}  ) {
       push @gene_list, $gene;
     } else {
       push @gene_list, "'" . $gene . "'";
@@ -794,6 +794,129 @@ sub clip {
   my $self = shift;
   my $string = shift;
   return ( length($string) > 255 ) ? substr( $string, 0, 255 ) : $string;
+}
+
+#+
+# Routine to get relationships between genes in pathway
+#-
+sub getPathwayRelationships {
+  my $self = shift;
+  my %args = @_;
+
+  # Test options and set up SOAP service
+  my $pathway = $args{pathway} || $self->{_pathway};
+  if ( !$pathway ) {
+    $log->error( "Pathway not set" );
+    exit;
+  } elsif ( !$self->{_organism} ) {
+    $pathway =~ /path:(\w{3})(\d*)/;
+    $self->{_organism} = $1;
+    $self->validateOrganism( $self->{_organism} );
+  }
+  my $service = $self->get_service();
+  
+  # Fetch elements and relationships from KEGG
+  my $elements_by_path = $service->get_elements_by_pathway($pathway);
+  my $relations_by_path = $service->get_element_relations_by_pathway($pathway);
+  
+  my %elements; # hash of elements and associated genes/connections
+  my @groups;   # Temp storage for 'groups' of genes
+  my %genes;    # List of gene entities, we return only these 
+
+  # Loop over the elements, store genes and save groups for subsequent analysis.
+  for my $result ( @{$elements_by_path} ) {
+    my $type = $result->{type};
+    my $element_id = $result->{element_id};
+    if ( $type eq 'group' ) {
+      push @groups, $result;
+    } 
+    if ( $type !~ /gene/ ) {
+      next;
+    }
+    my $names = $result->{names};
+    $genes{$element_id}++;
+    $elements{$element_id} ||= {};
+    for my $gene ( @$names ) {
+      $elements{$element_id}->{genes} ||= [];
+      push @{$elements{$element_id}->{genes}}, $gene;
+    }
+  }
+  
+  # Now that we know which elements are genes, we can process the groups
+  for my $group ( @groups ) {
+    my $element_id = $group->{element_id};
+    $elements{$element_id} ||= {};
+    $elements{$element_id}->{genes} ||= [];
+    for my $component ( @{$group->{components}} ) {
+      if( $genes{$component} ) { # only process if component is a gene
+        my $c_genes = $elements{$component}->{genes} || [];
+        for my $gene ( @$c_genes ) {
+          push @{$elements{$element_id}->{genes}}, $gene;
+        }
+      }
+    }
+  }
+  
+  
+  # Loop over reported relationships
+  for my $result ( @{$relations_by_path} ) {
+    my $type = $result->{type};
+
+    # Skip out unless it is a protein-protein relationship
+    next unless $type && $type eq 'PPrel';
+
+    # Each relationship follows a e1 description e2 pattern 
+    my $element1 = $result->{element_id1};
+    next unless $elements{$element1}; # Exit unless we've stored info about this
+      
+    my $element2 = $result->{element_id2};
+    next unless $elements{$element2}; # Exit unless we've stored info about this
+
+    # Record connection, relation, and type ( e.g. 25 inhibition 22 --| ) - 
+    $elements{$element1} ||= {};
+    $elements{$element1}->{connex} ||= [];
+    $elements{$element1}->{relation} ||= [];
+    $elements{$element1}->{relation_type} ||= [];
+    my $rel = '';
+    my $rel_type = '';
+    my $subtypes = $result->{subtypes}->[0];
+    if ( $subtypes ) {
+      $rel = $subtypes->{relation};
+      $rel_type = $subtypes->{type};
+    }
+    # Store relationship info in 3 parallel arrayrefs
+    push @{$elements{$element1}->{connex}}, $element2;
+    push @{$elements{$element1}->{relation}}, $rel;
+    push @{$elements{$element1}->{relation_type}}, $rel_type;
+  }
+  
+  # Array of derived relationships
+  my @relationships;
+
+  # Loop through keys of elements array, cacheing the ones with needed info.
+  for my $e1 ( sort { $a <=> $b } ( keys( %elements ) ) ) {
+
+    # Skip those without connection info
+    next unless $elements{$e1}->{connex}; 
+
+    my @connex =  @{$elements{$e1}->{connex}};
+    for ( my $i = 0; $i <= $#connex; $i++ ) { # For each connection record
+      my $e2 = $connex[$i];
+      my $rel      =  $elements{$e1}->{relation}->[$i];
+      my $rel_type =  $elements{$e1}->{relation_type}->[$i];
+      my $e1_genes = $elements{$e1}->{genes};
+      my $e2_genes = $elements{$e2}->{genes};
+      for my $g1 ( @$e1_genes ) { # For each gene defined by element_id 1
+        for my $g2 ( @$e2_genes ) { # For each gene defined by element_id 2
+          push @relationships, [ $g1, $g2, $rel_type, $rel ];
+        }
+      }
+    }
+  }
+
+  # Return reference to array of relationships
+  $log->debug( 'Found ' . scalar( @relationships ) . " relationships for $pathway" );
+  return( \@relationships );
 }
 
 
