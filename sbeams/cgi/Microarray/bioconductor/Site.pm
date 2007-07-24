@@ -94,9 +94,9 @@ sub site_header {
   my $form =<<"  END";
   <FORM ACTION='upload.cgi' enctype="application/x-www-form-urlencoded">
     <INPUT TYPE=hidden NAME='_tab' VALUE=1>
-		<TABLE BORDER=>0>
+		<TABLE BORDER=0>
     <TR CLASS=grey_bg>
-		      <TD>"Start a New Analysis Session"</TD>
+		      <TD>Start a New Analysis Session</TD>
 	      	<TD><INPUT TYPE="Submit" VALUE="Start Session"></INPUT></TD>
     </TR></TABLE>
   </FORM>
