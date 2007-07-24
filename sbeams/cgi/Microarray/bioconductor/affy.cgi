@@ -315,7 +315,8 @@ sub step3 {
 
 	my (@filenames, $script, $output, $jobsummary, $custom, $error, $args, $job);
 	my @custom = $cgi->param('custom');
-	
+  my $log2trans = $cgi->param('log2trans');	
+
 	for (my $i = 0; $i < $cgi->param('numfiles'); $i++) {
 		my $debug = $fm->path();
 		error("File does not exist.") if !$fm->file_exists($cgi->param("file$i"));
@@ -327,7 +328,7 @@ sub step3 {
 		error("Invalid e-mail address.");
 	}
 	
-	if ($cgi->param('process') eq "Custom" && !expresso_safe(@custom)) {
+	if ($cgi->param('process') eq "Custom" && !expresso_safe($log2trans, @custom)) {
 	    error("Invalid custom processing method combination");
 	}
 	
@@ -677,7 +678,7 @@ if (process == "Custom" || MVAplot || corrMat) {
 # Output a correlation matrix for pre-normalization data if requested.
 if (corrMat) {
   pm <- pm(affybatch)# grab perfect match intensities
-  affybatch.cor <- cor(pm)
+  affybatch.cor <- cor(pm, use="complete.obs")
   gray.colors <- gray(1:100/100) # define a grayscale color set
   numChips <- dim(exprs(affybatch))[2]
 #  bitmap("$RESULT_DIR/$jobname/raw_correlation_matrix.png", height=$corr_dims{height}, width=$corr_dims{width}, res = 72*4, pointsize = 10)
@@ -732,12 +733,20 @@ log2methods <- c("medianpolish", "mas", "rlm")
 if (log2trans) {
     if (process == "Custom" && !(custom[4] %in% log2methods)) {
         exprs(exprset) <- log2(exprs(exprset))
-        exprset\$se.exprs <- log2(exprset\$se.exprs)
+
+        # Don't try to take log of a null se.exprs
+        if (!is.null( exprset\$se.exprs )) {
+          exprset\$se.exprs <- log2(exprset\$se.exprs)
+        }
     }
 } else {
     if (process == "RMA" || process == "Custom" && custom[4] %in% log2methods) {
         exprs(exprset) <- 2^exprs(exprset)
-        exprset\$se.exprs <- 2^exprset\$se.exprs
+
+        # Don't try to un-log a null se.exprs
+        if (!is.null( exprset\$se.exprs )) {        
+          exprset\$se.exprs <- 2^exprset\$se.exprs
+        }
     }
 }
 
@@ -751,7 +760,7 @@ Matrix <- exprs(exprset)
 
 if( corrMat ) {
   # Make correlation matrix of normalized data
-  affybatch.cor <- cor(Matrix)
+  affybatch.cor <- cor(Matrix, use="complete.obs")
   bitmap("$RESULT_DIR/$jobname/normalized_correlation_matrix.png", height=$corr_dims{height}, res = 72*4, pointsize = 10)
   par(mar=c(3,3,3,9))
   image(x=1:numChips,y=1:numChips,affybatch.cor,col=gray.colors,zlim=c(min(affybatch.cor),1))
@@ -796,6 +805,7 @@ return $script;
 # Returns 1 if valid and 0 if not
 ####
 sub expresso_safe {
+  my $log2trans = shift @_;
 	my ($bgcorrect, $normalize, $pmcorrect, $summary) = @_;
 
 	if ($bgcorrect eq "rma" && $pmcorrect ne "pmonly") {
@@ -810,6 +820,11 @@ sub expresso_safe {
 	if ($normalize eq "vsn" && $bgcorrect ne "none") {
 		return 0;
 	}
+
+  # Check for methods incompatible with log2 transformation
+  if ($log2trans && ($pmcorrect eq "subtractmm" || $summary eq "playerout")) {
+    return 0;
+  }
 
 	return 1;
 }
