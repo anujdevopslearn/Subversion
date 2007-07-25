@@ -2370,11 +2370,13 @@ sub buildOptionList {
 sub new_option_list {
   my $self = shift;
   my %args = @_;
-  for my $req ( qw(values names list_name) ) {
+  for my $req ( qw( names list_name) ) {
     next if defined $args{$req};
     $log->error( "Missing required parameter $req" );
     return undef;
   }
+  $args{'values'} ||= $args{names};
+
   unless ( ref $args{'values'} eq 'ARRAY' &&
            ref $args{names} eq 'ARRAY' &&
            $#{$args{values}} == $#{$args{names}} ) {
