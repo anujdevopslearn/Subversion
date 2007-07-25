@@ -157,7 +157,7 @@ sub step2 {
 	
 	print h1('Affymetrix Expression Analysis: affy'),
 	      h2('Step 2:'),
-	      start_form, 
+	      start_form( -onSubmit=>'return expresso_safe()', -name=>'normalization_form' ), 
 	      hidden('files_token', $fm->token),
 	      hidden(-name=>'step', -default=>2, -override=>1),
 	      hidden(-name=>'normalization_token', -value=>$normalization_token),
@@ -211,30 +211,154 @@ sub step2 {
 	}
 
   my $email = $sbeams->getEmailAddress();
-	
+
+  # Add some formatting and minor javascript stuff to help guide the user
+  print <<"  END";
+        <STYLE type=text/css>
+      div.infobox {
+        background: #F0F0F0;
+        border: #DDD 2px solid;
+        padding: 4px;
+        width: 60%;
+      }
+      div.hidebox {
+        visibility: hidden;
+      }
+      </STYLE>
+      <SCRIPT LANGUAGE=javascript>
+
+    // Method returns value of normalization radio group  
+    function get_norm_method() {
+      // keep in sync with process radio group options below
+      var options = [ 'RMA', 'GCRMA', 'PLIER', 'Custom' ];
+      var sel_idx = 0;
+      var process_radio = document.normalization_form.process;
+      for (i=0;i<process_radio.length;i++){
+        if (process_radio[i].checked==true) {
+          sel_idx = i;
+        }
+      }
+      return( options[sel_idx] );
+    }
+
+    // Shows/hides custom options to facilitate proper usage 
+    function process_type() {
+
+      var norm_method = get_norm_method();
+
+      var disabled = true;
+      if ( norm_method == 'Custom' ) {
+        disabled = false; 
+      } else {
+        disabled = true; 
+      } 
+      document.normalization_form.bkgd_select.disabled = disabled;
+      document.normalization_form.norm_select.disabled = disabled;
+      document.normalization_form.pmcorr_select.disabled = disabled;
+      document.normalization_form.summr_select.disabled = disabled;
+    }
+
+    // Implements some of server-side expresso_safe checking
+    function expresso_safe() {
+
+      var norm_method = get_norm_method();
+      if ( norm_method == 'Custom' ) {
+
+        var summr = document.normalization_form.summr_select.value;
+        var pmcorr = document.normalization_form.pmcorr_select.value;
+        var log2 =  document.normalization_form.log2trans.checked;
+
+        if ( !log2 ) {
+          return true;
+        }
+
+        if ( pmcorr == "subtractmm" ) {
+          errstr = 'Log2 transformed results are incompatible with subtractmm PM correction'; 
+          alert( errstr );
+          return false;
+        }
+        if ( summr == "playerout" ) {
+          errstr = 'Log2 transformed results are incompatible with playerout summarization';
+          alert( errstr );
+          return false;
+        }
+      }
+      return true;
+    }
+    </SCRIPT>
+  END
+#  if ($log2trans && ($pmcorrect eq "subtractmm" || $summary eq "playerout")) {
+
+  # Original select lists were all named the same, code relies on the order
+  # in which they come - not good!  Used sbeams list generator to allow
+  # use of ID attribute and setting of onchange handler script.
+  my $bkgd_select = $sbeams->new_option_list( list_name => 'custom', 
+                                                  names => ['none', 'rma', 'rma2', 'mas' ],
+                                                list_id => 'bkgd_select', 
+                                               selected => 'rma',
+                                                  attrs => 'disabled' );
+
+  my $norm_select = $sbeams->new_option_list( list_name => 'custom', 
+                                                  names => ['quantiles', 'quantiles.robust', 'loess', 'contrasts', 'constant', 'invariantset', 'qspline', 'vsn'],
+                                                list_id => 'norm_select',
+                                               selected => 'quantiles',
+                                                 attrs => 'disabled' );
+
+  my $pmcorr_select = $sbeams->new_option_list( list_name => 'custom', 
+                                                    names => ['mas', 'pmonly', 'subtractmm'], 
+                                                  list_id => 'pmcorr_select', 
+                                                 selected => 'pmonly', 
+                                                 attrs => 'disabled' );
+  my $summr_select = $sbeams->new_option_list( list_name => 'custom',
+                                                   names => ['avgdiff', 'liwong', 'mas', 'medianpolish', 'playerout', 'rlm'],
+                                                 list_id => 'summr_select',
+                                                selected => 'medianpolish',
+                                                 attrs => 'disabled' );
+
+
+  # keep in sync with process radio group options above
+  my $process_std =<<"  END";
+  RMA <INPUT TYPE=radio NAME='process' VALUE='RMA' CHECKED ONCHANGE=process_type()><BR>
+  GCRMA <INPUT TYPE=radio NAME='process' VALUE='GCRMA' ONCHANGE=process_type()><BR>
+  PLIER <INPUT TYPE=radio NAME='process' VALUE='PLIER' ONCHANGE=process_type()><BR>
+  END
+
+  my $process_custom =<<"  END";
+  Custom<SUP>&dagger;</SUP> <INPUT TYPE=radio NAME='process' VALUE='custom' ONCHANGE=process_type()><BR>
+  END
+
+  my $info_txt = "<SUP>&dagger;</SUP>Some custom options do not work properly in combination with certain others. See expresso method in the bioconductor <A HREF='http://bioconductor.org/packages/2.0/bioc/html/affy.html'>affy package documentation</A>";
+
+  
 	print '</table>',
 		  p("Choose the processing method:"),
-		  p($cgi->radio_group('process', ['RMA','GCRMA','PLIER'], 'RMA','true')),
+      '<DIV class=infobox>',
+
+		  p($process_std),
 		  "---- or ----",
-		  p($cgi->radio_group('process', ['Custom'], '-')),
+		  p($process_custom),
 		  '<ul><table>',
-		  Tr(td({-style=>"text-align: right"}, "Background Correction:"), 
-		     td(popup_menu('custom', ['none', 'rma', 'rma2', 'mas' ], 'rma'))),
-		  Tr(td({-style=>"text-align: right"}, "Normalization:"),
-		     td(popup_menu('custom', ['quantiles', 'quantiles.robust', 'loess', 'contrasts', 'constant', 'invariantset', 'qspline', 'vsn'], 'quantiles'))),
-		  Tr(td({-style=>"text-align: right"}, "PM Correction:"),
-		     td(popup_menu('custom', ['mas', 'pmonly', 'subtractmm'], 'pmonly'))),
-		  Tr(td({-style=>"text-align: right"}, "Summarization:"),
-		     td(popup_menu('custom', ['avgdiff', 'liwong', 'mas', 'medianpolish', 'playerout', 'rlm'], 'medianpolish'))),
+
+      Tr(td({-style=>"text-align: right"}, "Background Correction:"), 
+         td( $bkgd_select )),
+      Tr(td({-style=>"text-align: right"}, "Normalization:"),
+         td( $norm_select )),
+      Tr(td({-style=>"text-align: right"}, "PM Correction:"),
+         td( $pmcorr_select )),
+      Tr(td({-style=>"text-align: right"}, "Summarization:"),
+         td( $summr_select )),
+      
 		  '</table></ul>',
+      $info_txt,
+	    '</DIV>',
 		  p($cgi->checkbox('log2trans','checked','YES','Log base 2 transform the results (required for multtest)')),
 		  p($cgi->checkbox('MVAplot','checked','YES','Produce MVA scatter plot among members of each sample group?')),
 		  p($cgi->checkbox('corrMat','checked','YES','Produce correlation matrix for this normalization set?')),
 		  p('Enter description for analysis set (optional)<BR>', $cgi->textfield('user_description', '', 40)),
 		  p("E-mail address where you would like your job status sent: (optional)", br(), textfield('email', $email, 40)),
-	      p(submit("Start Normalization")),
-	      end_form;
-	
+
+	    p(submit("Start Normalization")),
+    end_form;	
     print <<'END';
 <h2>Quick Help</h2>
 
