@@ -287,7 +287,6 @@ sub step2 {
     }
     </SCRIPT>
   END
-#  if ($log2trans && ($pmcorrect eq "subtractmm" || $summary eq "playerout")) {
 
   # Original select lists were all named the same, code relies on the order
   # in which they come - not good!  Used sbeams list generator to allow
@@ -324,7 +323,7 @@ sub step2 {
   END
 
   my $process_custom =<<"  END";
-  Custom<SUP>&dagger;</SUP> <INPUT TYPE=radio NAME='process' VALUE='custom' ONCHANGE=process_type()><BR>
+  Custom<SUP>&dagger;</SUP> <INPUT TYPE=radio NAME='process' VALUE='Custom' ONCHANGE=process_type()><BR>
   END
 
   my $info_txt = "<SUP>&dagger;</SUP>Some custom options do not work properly in combination with certain others. See expresso method in the bioconductor <A HREF='http://bioconductor.org/packages/2.0/bioc/html/affy.html'>affy package documentation</A>";
@@ -439,7 +438,7 @@ sub step3 {
 
 	my (@filenames, $script, $output, $jobsummary, $custom, $error, $args, $job);
 	my @custom = $cgi->param('custom');
-  my $log2trans = $cgi->param('log2trans');	
+  my $log2trans = ($cgi->param('log2trans') ) ? "TRUE" : "FALSE";	   
 
 	for (my $i = 0; $i < $cgi->param('numfiles'); $i++) {
 		my $debug = $fm->path();
@@ -471,7 +470,8 @@ END
 	if ($cgi->param('process') eq "GCRMA") {
 	    $args = "";  
 	}
-  my $log2trans = ($cgi->param('log2trans') ) ? "TRUE" : "FALSE";	   
+
+
   my $MVAplot = ($cgi->param('MVAplot') ) ? "TRUE" : "FALSE";	   
   my $corrMat = ($cgi->param('corrMat') ) ? "TRUE" : "FALSE";	   
 	
@@ -946,7 +946,7 @@ sub expresso_safe {
 	}
 
   # Check for methods incompatible with log2 transformation
-  if ($log2trans && ($pmcorrect eq "subtractmm" || $summary eq "playerout")) {
+  if ($log2trans eq 'TRUE' && ($pmcorrect eq "subtractmm" || $summary eq "playerout")) {
     return 0;
   }
 
