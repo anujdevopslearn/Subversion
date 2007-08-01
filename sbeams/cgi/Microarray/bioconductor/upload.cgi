@@ -714,6 +714,7 @@ END
         filegroup_allowed['Rat230_2'] = true;
         filegroup_allowed['Rhesus'] = true;
         filegroup_allowed['ATH1-121501'] = true;
+        filegroup_allowed['Soybean'] = true;
 
         if ( document.all_arrays.analysis_type.value == 'exon_array_pipeline' ) {
           if ( !exon_allowed[type] ) {
