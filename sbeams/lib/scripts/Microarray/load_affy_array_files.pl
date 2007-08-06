@@ -198,7 +198,7 @@ unless (GetOptions(\%OPTIONS,
 
 $VERBOSE    = $OPTIONS{verbose} || 0;
 $QUIET      = $OPTIONS{quiet};
-$DEBUG      = $OPTIONS{debug};
+$DEBUG      = $OPTIONS{debug} || 0;
 $TESTONLY   = $OPTIONS{testonly};
 $RUN_MODE   = $OPTIONS{run_mode};
 
