@@ -171,7 +171,13 @@ sub displayColumnText {
   END
 
   my $row = $text[0];
-  my ( $title, $text ) = @$row;
+  my ( $title, $text );
+  if ( !$row ) {
+    $title = "Unable to find column information";
+    $text = "Unable to find information on reference column";
+  } else {
+    ( $title, $text ) = @$row;
+
 
   if ( $text =~ /(<A HREF *=.*<\/A>?)/i ) {
     # We seem to have a link, save it aside while escaping HTML
@@ -184,6 +190,7 @@ sub displayColumnText {
   }
 
   $title = $q->escapeHTML( $title );
+  }
 
 my $FONT_SIZE=12;
 $FONT_SIZE=10 if ( $HTTP_USER_AGENT =~ /Win/ );
