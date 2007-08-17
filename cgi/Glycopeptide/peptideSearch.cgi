@@ -1064,9 +1064,16 @@ sub make_protein_map_graphic {
 
 	# general case
   my $any = 0;
+  my %lgd = ( Transmembrane => 'Transmembrane Domain',
+              Extracellular => 'Outside membrane', 
+              Intracellular => 'Inside membrane');
+
 	for my $tag ( 'Signal Sequence', qw(Anchor Transmembrane Extracellular Intracellular) ) {
 		#print "SORTED TAG '$tag'\n";
 		 
+    next if $tag =~ /cellular/ && !$sorted_features{Transmembrane};
+ 
+    
 		#feature objects have the score tag built in which is mapped to inbetween the low and high
 		my $features = $sorted_features{$tag} || next;
     $any++;
@@ -1081,12 +1088,12 @@ sub make_protein_map_graphic {
 			-bgcolor     => $colors{$tag},
 			-fgcolor     => 'black',
 			-font2color  => 'red',
-			-key         => "${tag}",
+			-key         => "$lgd{$tag} (predicted)",
 			-bump        => +1,
 			-height      => 8,
 		);
 	}
-  if ( !$any ) { # assume cyto!
+  if ( !$any && 0 ) { # assume cyto!  - removed 2007/08 DSC
 	#add the scale bar
   my $f = Bio::SeqFeature::Generic->new( -start        => 1,
                                           -end          => $seq->length(),
@@ -1132,18 +1139,40 @@ sub make_protein_map_graphic {
 
     # Set up graphic legend
   my @legend; 
+
+  my %title = (
+                sig_seq => "Signal peptide predicted from amino acid sequence",
+                anc_seq => "Anchor sequence predicted from amino acid sequence",
+                tm_dom => "Transmembrane region predicted from amino acid sequence",
+                in_dom => "Predicted orientation inside, (intracellular for cell membrane proteins)",
+                ex_dom =>  "Predicted orientation outside, (extracellular for cell membrane proteins)",
+                pep_cov => "Cumulative sequence coverage",
+              );
+
+
   push @legend, "<TR> <TD CLASS=obs_pep>$sp</TD> <TD class=sm_txt>Observed peptide: (# observations) </TD> </TR>\n" if $tracks{observed};
   push @legend, "<TR> <TD CLASS=obs_pep>$sp</TD> <TD class=sm_txt>Identified peptide: glycosite # (peptide prophet score) </TD> </TR>\n" if $tracks{identified};
   push @legend, "<TR> <TD CLASS=pred_pep>$sp</TD> <TD class=sm_txt>Predicted NxS/T motif tryptic peptide</TD> </TR>\n" if $tracks{predicted};
   push @legend, "<TR> <TD CLASS=glyco_seq>$sp</TD> <TD class=sm_txt>NxS/T Concensus glycosylation site</TD> </TR>\n"  if $tracks{glyco};
   push @legend, "<TR> <TD CLASS=phospho>$sp</TD> <TD class=sm_txt>Observed Phosphorylation Sites</TD> </TR>\n"  if $tracks{phospho};
   push @legend, "<TR> <TD CLASS=ambiphospho>$sp</TD> <TD class=sm_txt>Ambiguous Phosphorylation Sites</TD> </TR>\n"  if $tracks{'ambiphospho'};
-  push @legend, "<TR> <TD CLASS=sig_seq>$sp</TD> <TD class=sm_txt>Signal sequence predicted by Signal P</TD> </TR>\n"  if $tracks{'Signal Sequence'};
-  push @legend, "<TR> <TD CLASS=anc_seq>$sp</TD> <TD class=sm_txt>Anchor sequence predicted by Signal P</TD> </TR>\n" if $tracks{anchor};
-  push @legend, "<TR> <TD CLASS=tm_dom>$sp</TD> <TD class=sm_txt>Transmembrane domain predicted by TMHMM</TD> </TR>\n" if $tracks{Transmembrane};
-  push @legend, "<TR> <TD CLASS=ex_dom>$sp</TD> <TD class=sm_txt>Extracellular domain predicted by TMHMM</TD> </TR>\n" if $tracks{Extracellular};
-  push @legend, "<TR> <TD CLASS=in_dom>$sp</TD> <TD class=sm_txt>Intracellular domain predicted by TMHMM</TD> </TR>\n" if $tracks{Intracellular};
+
+  push @legend, "<TR> <TD CLASS=sig_seq>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{sig_seq}'>Signal sequence predicted by Signal P</SPAN></TD> </TR>\n" if $tracks{'Signal Sequence'}; 
+  push @legend, "<TR> <TD CLASS=anc_seq>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{anc_seq}'>Anchor sequence predicted by Signal P</SPAN></TD> </TR>\n" if $tracks{anchor};
+  push @legend, "<TR> <TD CLASS=tm_dom>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{tm_dom}'>Transmembrane domain predicted by TMHMM</SPAN></TD> </TR>\n" if $tracks{Transmembrane};
+  push @legend, "<TR> <TD CLASS=ex_dom>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{ex_dom}'>Predicted as outside membrane by TMHMM </SPAN></TD> </TR>\n" if $tracks{Extracellular};
+  push @legend, "<TR> <TD CLASS=in_dom>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{in_dom}'>Predicted as inside membrane by TMHMM</SPAN></TD> </TR>\n" if $tracks{Intracellular};
+
+#  push @legend, "<TR> <TD CLASS=sig_seq>$sp</TD> <TD class=sm_txt>Signal sequence predicted by Signal P</TD> </TR>\n"  if $tracks{'Signal Sequence'};
+#  push @legend, "<TR> <TD CLASS=anc_seq>$sp</TD> <TD class=sm_txt>Anchor sequence predicted by Signal P</TD> </TR>\n" if $tracks{anchor};
+#  push @legend, "<TR> <TD CLASS=tm_dom>$sp</TD> <TD class=sm_txt>Transmembrane domain predicted by TMHMM</TD> </TR>\n" if $tracks{Transmembrane};
+#  push @legend, "<TR> <TD CLASS=ex_dom>$sp</TD> <TD class=sm_txt>Extracellular domain predicted by TMHMM</TD> </TR>\n" if $tracks{Extracellular};
+#  push @legend, "<TR> <TD CLASS=in_dom>$sp</TD> <TD class=sm_txt>Intracellular domain predicted by TMHMM</TD> </TR>\n" if $tracks{Intracellular};
+
   push @legend, "<TR> <TD CLASS=pep_cov>$sp</TD> <TD class=sm_txt>Protein coverage by observed peptides</TD> </TR>\n" if $tracks{coverage};
+
+
+  
 
   my $legend = '';
   for my $item ( @legend ) {

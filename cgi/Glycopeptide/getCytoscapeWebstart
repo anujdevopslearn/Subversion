@@ -66,7 +66,6 @@ $|++;
       }
       # create SQL
     } elsif ( $params->{apply_action} eq 'gene_list' ) {
-  $log->debug("JI");
       # Check for params
       if ( $params->{accession} ) {
         # create SQL
@@ -91,6 +90,15 @@ $|++;
     
       my $info_text = get_info_text();
 
+      my $interactions_option = '';
+      if ( $params->{path_id} ) {
+
+        $interactions_option =<<"        END";
+           Show known interactions as network edges (Locus tag only):<BR>
+            $sp <INPUT TYPE=CHECKBOX NAME=network_edges CHECKED>
+        END
+      }
+
       $content .=<<"      END";
       <STYLE type=text/css>
       div.info {
@@ -113,9 +121,9 @@ $|++;
             $sp <INPUT TYPE=RADIO NAME=identifier VALUE=CG CHECKED> Locus tag (CGxxxxx)<BR>
             $sp <INPUT TYPE=RADIO NAME=identifier VALUE=flybase> Flybase ID (FBgnxxxxxxx)<BR>
 
-          Show known protein-protein interactions as network edges (Locus tag only):<BR>
-            $sp <INPUT TYPE=CHECKBOX NAME=network_edges CHECKED>
-                <INPUT TYPE=HIDDEN NAME=path_id VALUE='$params->{path_id}'>
+          $interactions_option
+
+            <INPUT TYPE=HIDDEN NAME=path_id VALUE='$params->{path_id}'>
             
             <INPUT TYPE=HIDDEN NAME=output_mode VALUE='cytoscape'>
             <INPUT TYPE=HIDDEN NAME=key VALUE='$key'>
@@ -136,6 +144,7 @@ $|++;
       $content .= $sbeams->makeErrorText( "Missing required parameter 'key'" );
       $sbeams->output_mode( 'html' );
     } else {
+
       # fetch SQL
       my $sql = $sbeams->getSessionAttribute( key => $params->{key} );
 # $sbeams->deleteSessionAttribute( key => $params->{key} );
@@ -224,6 +233,7 @@ sub launch_cytoscape {
 
   my %rs_params = $sbeams->parseResultSetParams('q' => $q);
 
+  $log->debug( "$sql" );
   #### Fetch the results from the database server
   $sbeams->fetchResultSet(
     sql_query=>$sql,
@@ -276,7 +286,7 @@ sub launch_cytoscape {
   my %peptides;
   my %edges;
   my $relationships;
-  if ( $params->{network_edges} && $params->{identifier} ne 'flybase' ) {
+  if ( $params->{network_edges} && $params->{path_id} && $params->{identifier} ne 'flybase' ) {
     $relationships = $keggmap->getPathwayRelationships( pathway => $params->{path_id} );
     for my $r ( @$relationships ) {
       my $edge = "$r->[0] $r->[3] $r->[1]";

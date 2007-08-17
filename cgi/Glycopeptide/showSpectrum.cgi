@@ -135,8 +135,11 @@ sub get_content {
 
   my $params = shift;
 
+  $params->{prefer_PAC} ||= '';
+
   # If so, fetch offset, else print error
-  my $offset = $glyco->fetchSpectrastOffset( pep_seq => $params->{query_peptide_seq} );
+  my $offset = $glyco->fetchSpectrastOffset( pep_seq => $params->{query_peptide_seq},
+                                            pref_pac => $params->{prefer_PAC} );
 
   if ( !$offset ) {
     return <<"    END_CONTENT";
