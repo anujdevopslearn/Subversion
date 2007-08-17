@@ -863,11 +863,15 @@ if ($apply_action =~ /QUERY/i ) {
     unshift @mod_peps, ['Modified Sequence', 'Charge', 'Mono Parent m/z', 'Best Prob', '# Obs', '# Siblings', 'Sample IDs', 'Consensus Spectrum' ];
 
     #### Format table
+    $log->debug( "Encoding on" );
     $modHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
                                                  width => '600',
                                                tr_info => $tr,
                                                 align  => [qw(left center right right right center center center)],
-                                                  rows => \@mod_peps );
+                                                  rows => \@mod_peps,
+                                          rows_to_show => 10,
+                                                nowrap => [1..7]
+                                                );
     #### Display table
     print "<TABLE WIDTH=600><BR>$modHTML</TABLE>\n";
   }
@@ -913,9 +917,9 @@ if ($apply_action =~ /QUERY/i ) {
     #### Format table
     $transitionHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
                                                       tr_info => $tr,
-                                                 width => '600',
-                                                align  => [qw(left center right right center left left)],
-                                                  rows => $mrm_transitions );
+                                                        width => '600',
+                                                       align  => [qw(left center right right center left left)],
+                                                         rows => $mrm_transitions );
     #### Display table
     print "<TABLE WIDTH=600><BR>$transitionHTML</TABLE>\n" if $#{$mrm_transitions};
   }
@@ -990,7 +994,9 @@ if ($apply_action =~ /QUERY/i ) {
                                                tr_info => $tr,
                                                 align  => [qw(left center right right right center center)],
                                                   rows => \@mod_peps,
-                                          rows_to_show => 10 );
+                                          rows_to_show => 10,
+                                              max_rows => 500
+                                              );
     #### Display table
     print "<TABLE WIDTH=600><BR>$modHTML</TABLE>\n";
   }
