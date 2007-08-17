@@ -160,4 +160,88 @@ sub get_amino_acid_masses {
   return \%masses;
 }
 
+sub do_tryptic_digestion {
+  my $self = shift;
+  my %args = @_;
+
+  # Check for required params
+  my $missing;
+  for my $param ( qw( aa_seq ) ) {
+    $missing = ( $missing ) ? $missing . ',' . $param : $param if !defined $args{$param};
+  }
+  die "Missing required parameter(s) $missing" if $missing;
+  
+  # Set default param values
+  $args{flanking} ||= 0;
+  $args{min_len} ||= 1;
+  $args{max_len} ||= 10e6;
+
+  # Store list to pass back
+  my @peptides;
+  
+  # previous, current, next amino acid
+  my ( $prev, $curr, $next );
+
+  # current peptide and length
+  my ($peptide, $length);
+
+  my @aa = split "", $args{aa_seq};
+
+  for ( my $i = 0; $i <= $#aa; $i++ ) {
+
+    # Set the values for the position stores
+    $prev = ( !$i ) ? '-' : $aa[$i - 1];
+    $curr = $aa[$i];
+    $next = ( $i == $#aa ) ? '-' : $aa[$i + 1];
+#    print STDERR "i:$i, prev:$prev, curr:$curr, next:$next, aa:$#aa, pep:$peptide, len:$length flk:$args{flanking}\n";
+
+    if ( !$peptide ) { # assumes we won't start with a non-aa character
+      $peptide .= ( $args{flanking} ) ? "$prev.$curr" : $curr; 
+      $length++;
+      if ( $curr =~ /[RK]/i ) {
+        if ( $next !~ /P/ ) {
+          $peptide .= ( $args{flanking} ) ? ".$next" : ''; 
+          if ( $length <= $args{max_len} && $length >= $args{min_len} ) {
+            push @peptides, $peptide 
+          }
+          $peptide = '';
+          $length = 0;
+        }
+      }
+    } elsif ( $curr !~ /[a-zA-Z]/ ) { # Probably a modification symbol
+      $peptide .= @curr;
+      $length++;
+    } elsif ( $curr =~ /[RK]/i ) {
+      if ( $next =~ /P/ ) {
+        $peptide .= $curr;
+        $length++;
+      } else { 
+        $length++;
+        $peptide .= ( $args{flanking} ) ? "$curr.$next" : $curr; 
+        if ( $length <= $args{max_len} && $length >= $args{min_len} ) {
+          push @peptides, $peptide 
+        }
+        $peptide = '';
+        $length = 0;
+      }
+    } elsif ( $i == $#aa ) {
+      $length++;
+      $peptide .= ( $args{flanking} ) ? "$curr.$next" : $curr; 
+      if ( $length <= $args{max_len} && $length >= $args{min_len} ) {
+        push @peptides, $peptide 
+      }
+      $peptide = '';
+      $length = 0;
+    } else {
+      $length++;
+      $peptide .= $curr; 
+#      die "What the, i:$i, prev:$prev, curr:$curr, next:$next, aa:$#aa, pep:$peptide, len:$length\n";
+    }
+  }
+  return \@peptides;
+}
+
+
+
+
 1;
