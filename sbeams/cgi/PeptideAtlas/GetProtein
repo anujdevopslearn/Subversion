@@ -40,6 +40,9 @@ use SBEAMS::BioLink;
 my $biolink = SBEAMS::BioLink->new();
 $biolink->setSBEAMS($sbeams);
 
+use SBEAMS::BioLink;
+my $biolink = new SBEAMS::BioLink;
+
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
@@ -51,6 +54,7 @@ use SBEAMS::PeptideAtlas::KeySearch;
 my $keySearch = new SBEAMS::PeptideAtlas::KeySearch;
 $keySearch->setSBEAMS($sbeams);
 
+use constant MIN_OBS_LENGTH => 6;
 
 ###############################################################################
 # Set program name and usage banner for command like use
@@ -662,13 +666,16 @@ sub handle_request {
                                                 sticky => 1 );
 
      
-    my $graphic_section = getSequenceGraphic( build_id => $atlas_build_id,
-                                         protein_data  => $biosequence,
-                                               tr_info => $tr,
+    my $graphic_section = get_sequence_graphic( build_id => $atlas_build_id,
+                                           protein_data  => $biosequence,
+                                                 tr_info => $tr,
                                               );
 
     my $graphic_head = $sbeamsMOD->encodeSectionHeader( text => "Sequence Motifs", link => $link );
     print "<TABLE width=600>$graphic_head </TABLE> $graphic_section" if $htmlmode;
+
+  #############################################################
+  ## Display annotated sequence - this routine makes its own section header ##
 
     #### Display the annotated sequence
     displayAnnotatedSequence(
@@ -868,8 +875,11 @@ sub handle_request {
 
 } # end handle_request
 
-
-sub getSequenceGraphic {
+#+
+# Generates a graphical overview of sequence features using bioperl routines
+# 
+#-
+sub get_sequence_graphic {
 
   ## read passed args, set up variables ##
   my %args = @_;
@@ -914,7 +924,8 @@ sub getSequenceGraphic {
           Extracellular => 'mediumseagreen',
                Coverage => 'beige',
              Translated => 'gainsboro',
-               Observed => 'goldenrod' );
+               Observed => 'goldenrod',
+              Difficult => 'bisque' );
 
   # Define CSS classes
   my $sp = '&nbsp;' x 4;
@@ -929,6 +940,7 @@ sub getSequenceGraphic {
    .sig_seq { background-color: $colors{Signal};border-style: solid; border-color:gray; border-width: 1px  }
    .trans_seq { background-color: $colors{Translated};border-style: solid; border-color:gray; border-width: 1px  }
    .pep_cov { background-color: $colors{Coverage};border-style: solid; border-color:gray; border-width: 1px  }
+   .unlikely_obs { background-color: $colors{Difficult};border-style: solid; border-color:gray; border-width: 1px  }
    .outline { border-style: solid; border-color:gray; border-width: 1px }
    .sm_txt {  font-family: Helvetica, Arial, sans-serif; font-size: 8pt}
   </STYLE>
@@ -997,17 +1009,79 @@ sub getSequenceGraphic {
     $pep_info{$ugly_key} = "$start - $stop, $seq";
   }
 
+
+  ## Generate Signal P related tracks ##
+
+  my @signalp;
+  my $seqtype = '';
+
+  my ( $anchor, $signal );
+  my $signal_peptide_coords = {};
+  if ( $args{protein_data}->{has_signal_peptide} ) {
+
+    if ( $args{protein_data}->{signal_peptide_is_cleaved} =~ /y/i ) {
+      $seqtype = 'Signal';
+      $signal++;
+    } else {
+      $seqtype = 'Anchor';
+      $anchor++;
+    }
+
+    # Cache signal peptide info for possible 'unlikely' designation.
+    if ( $seqtype eq 'Signal' ) {
+      $signal_peptide_coords->{start} = 1;
+      $signal_peptide_coords->{end} = $args{protein_data}->{signal_peptide_length};
+      $signal_peptide_coords->{seq} = substr( $protseq, 0, $args{protein_data}->{signal_peptide_length} );
+      $signal_peptide_coords->{rationale} = 'Predicted signal sequence, cleaved in mature protein';
+    }
+
+    my $f = Bio::SeqFeature::Generic->new( -start => 1,
+                                             -end => 1 + $args{protein_data}->{signal_peptide_length},
+                                    -display_name => $seqtype ,
+                                           -label => 0
+                                         );
+
+    push @signalp, $f;
+
+  }
+
+  ## End Signal P related tracks ##
+
   # Calculate the coverage 'domains' 
   my @coverage;
-  my $cstart = 0;
+  my @uncovered;
+
+  # Keep track of coverage coordinates
+  my $cstart = 1;
   my $cend = 0;
+
+  # Also keep track of non-coverage coordinates
+  my $ncstart = 1;
+  my $ncend = 1;
+
+  # Not in coverage to begin with
   my $in_coverage = 0;
+
+  # What is 1-based index of first observed aa, used for expected coverage.
+  my $min_covered_aa = 0;
+  
+  # %coverage is hash of seq depth keyed by coordinate
+  my $last_key;
   for my $key ( sort{ $a <=> $b } keys( %coverage ) ) {
+
+    # Cache min covered aa if not yet set and index is covered
+    $min_covered_aa = $key if ( !$min_covered_aa && $coverage{$key} );
+
     if ( !$in_coverage ) { # Not in coverage
       if ( $coverage{$key} ) {
         $cstart = $key;
         $cend = $key;
         $in_coverage = 1;
+
+        # Store non-coverage info
+        $ncend = $key - 1;
+        push @uncovered, { start => $ncstart, end => $ncend } if $ncstart && $ncend;
+
       } else {
         $in_coverage = 0;
         # No-op
@@ -1027,9 +1101,18 @@ sub getSequenceGraphic {
         push @coverage, $f;
         $cstart = 0;
         $cend = 0;
+
+        # Dropped out of coverage, cache ncstart 
+        $ncstart = $key;
       }
     }
+    $last_key = $key;
   }
+
+  if ( !$in_coverage ) {
+    push @uncovered, { start => $ncstart, end => $last_key } if $ncstart && $last_key;
+  }
+  
   if ( $cend ) {
     my $f = Bio::SeqFeature::Generic->new( -start   => $cstart,
                                            -end     => $cend,
@@ -1038,6 +1121,64 @@ sub getSequenceGraphic {
     push @coverage, $f;
   }
 
+  
+  # Keep track of how much sequence might be hard to observe
+  my @unlikely_to_observe; # Cache and return to caller for seq annotation
+  my @difficult;           # Use to make 'track' on sequence graphic
+  
+  # Original logic discounted entire signal peptide as 'unlikely' if any of
+  # the sp was actually seen.  To restore this behaviour set 
+  # $penalize_obs_in_signal = 1
+  my $penalize_obs_in_signal = 0;
+  if ( $signal_peptide_coords &&  $signal_peptide_coords->{end}  ) {
+    if ( $min_covered_aa > $signal_peptide_coords->{end} ) {
+      push @unlikely_to_observe, $signal_peptide_coords;
+      my $f = Bio::SeqFeature::Generic->new( -start   => $signal_peptide_coords->{start},
+                                             -end     => $signal_peptide_coords->{end},
+                                             -primary => 'Difficult',
+                                        -display_name => 'Difficult' );
+      push @difficult, $f;
+    } elsif ( $penalize_obs_in_signal ) {
+      # We will not consider the signal peptide to be unlikely
+      $log->info( "Found sequence in a predicted signal sequence for $args{protein_data}->{biosequence_name}, penalizing" );
+    } else {
+      # Signal peptide is still considered unlikely to be observed
+      $log->info( "Allowing obs signal sequence as unlikely for $args{protein_data}->{biosequence_name}" );
+      push @unlikely_to_observe, { start => $signal_peptide_coords->{start}, end => $min_covered_aa};
+      my $f = Bio::SeqFeature::Generic->new( -start   => $signal_peptide_coords->{start},
+                                             -end     => $min_covered_aa,
+                                             -primary => 'Difficult',
+                                        -display_name => 'Difficult' );
+      push @difficult, $f;
+    }
+  }
+  
+  # my $protseq = $args{protein_data}->{biosequence_seq};
+  for my $cpair ( @uncovered ) {
+    my $uncovered_length = $cpair->{end} -  $cpair->{start} + 1;
+    my $seq = substr( $protseq, $cpair->{start} - 1, $uncovered_length );
+    $cpair->{seq} = $seq;
+    my $tryptics = $biolink->do_tryptic_digestion( aa_seq => $seq );
+    my $index = $cpair->{start};
+    for my $tryp ( @$tryptics ) {
+#   anchor
+      if ( length( $tryp ) < MIN_OBS_LENGTH ) {
+        my $peptide_end =  $index + length($tryp) - 1;
+        push @unlikely_to_observe, { start => $index, end => $peptide_end, rationale => 'Short peptide', seq => $tryp };
+        my $f = Bio::SeqFeature::Generic->new( -start   => $index,
+                                               -end     => $peptide_end,
+                                               -primary => 'Difficult',
+                                          -display_name => 'Difficult' );
+        push @difficult, $f if $index && $peptide_end;
+      } else {
+#        $log->debug( "Might see $tryp" );
+      }
+      $index += length( $tryp );
+    }
+  }
+
+  # Cache non-coverage sequence
+  $args{protein_data}->{_non_coverage} = \@unlikely_to_observe;
 
   ## Generate TMHMM-derived tracks ##
 
@@ -1067,32 +1208,13 @@ sub getSequenceGraphic {
       push @tmm, $f;
     }
   }
-
-
-  ## Generate Signal P related tracks ##
-
-  my @signalp;
-  my ( $anchor, $signal );
-  if ( $args{protein_data}->{has_signal_peptide} ) {
-
-    my $seqtype;
-    if ( $args{protein_data}->{signal_peptide_is_cleaved} =~ /y/i ) {
-      $seqtype = 'Signal';
-      $signal++;
-    } else {
-      $seqtype = 'Anchor';
-      $anchor++;
-    }
-
-    my $f = Bio::SeqFeature::Generic->new( -start => 1,
-                                             -end => 1 + $args{protein_data}->{signal_peptide_length},
-                                    -display_name => $seqtype ,
-                                           -label => 0
-                                         );
-
-    push @signalp, $f;
-
+  
+  # Only add intra/extra if @tmm or @signalp 
+  unless ( @tmm ) {
+    @intra = ();
+    @extra = ();
   }
+
 
 
   ## Add all the tracks to the panel ##
@@ -1124,7 +1246,7 @@ sub getSequenceGraphic {
 			-glyph       => 'segments',
 			-bgcolor     => $colors{$sigtype},
 			-fgcolor     => 'black',
-			-key         => $sigtype . ' Sequence',
+			-key         => $sigtype . ' Sequence (predicted)',
 			-bump        => +1,
 			-height      => 8,
       -legend      => 1,
@@ -1139,13 +1261,18 @@ sub getSequenceGraphic {
 
   # Add tmhmm-related tracks
   for my $t ( qw( Transmembrane Intracellular Extracellular ) ) {
+
+      my %legend = ( Transmembrane => 'Transmembrane Domain',
+                     Extracellular => 'Outside membrane', 
+                     Intracellular => 'Inside membrane');
+
       $panel->add_track(
 			$tracs{$t},
 			-glyph       => 'segments',
 			-bgcolor     => $colors{$t},
 			-fgcolor     => 'black',
 			-font2color  => 'red',
-			-key         => "${t} Domain",
+			-key         => "$legend{$t} (predicted)",
 			-bump        => +1,
 			-height      => 8,
       -legend      => 1,
@@ -1165,6 +1292,18 @@ sub getSequenceGraphic {
                       -label       => 0, # sub { my $f = shift; return $f->display_name},
       );
 
+  # Add difficult track
+  $panel->add_track( \@difficult,
+                      -glyph       => 'segments',
+                      -bgcolor     => $colors{Difficult},
+                      -fgcolor     => 'black',
+                      -key         => 'Unlikely (theoretical)',
+                      -connector   => 'solid',
+                      -bump        => 0,
+                      -height      => 8,
+                      -label       => 0, # sub { my $f = shift; return $f->display_name},
+      ) if @difficult;
+
   $panel->add_track( $ruler,
 	                 	-glyph  => 'anchored_arrow',
                     -tick   => 2,
@@ -1180,14 +1319,31 @@ sub getSequenceGraphic {
 
   # Set up graphic legend
   my @legend; 
-  push @legend, "<TR> <TD CLASS=obs_sing>$sp</TD> <TD class=sm_txt>Observed peptide with single genome mapping</TD> </TR>\n" if $single;
-  push @legend, "<TR> <TD CLASS=obs_multi>$sp</TD> <TD class=sm_txt>Observed peptide with ambiguous genome mapping</TD> </TR>\n" if $multi;
-  push @legend, "<TR> <TD CLASS=sig_seq>$sp</TD> <TD class=sm_txt>Signal sequence predicted by Signal P</TD> </TR>\n" if $signal; 
-  push @legend, "<TR> <TD CLASS=anc_seq>$sp</TD> <TD class=sm_txt>Anchor sequence predicted by Signal P</TD> </TR>\n" if $anchor;
-  push @legend, "<TR> <TD CLASS=tm_dom>$sp</TD> <TD class=sm_txt>Transmembrane domain predicted by TMHMM</TD> </TR>\n" if @tmm;
-  push @legend, "<TR> <TD CLASS=in_dom>$sp</TD> <TD class=sm_txt>Intracellular domain predicted by TMHMM</TD> </TR>\n" if @intra;
-  push @legend, "<TR> <TD CLASS=ex_dom>$sp</TD> <TD class=sm_txt>Extracellular domain predicted by TMHMM</TD> </TR>\n" if @extra;
-  push @legend, "<TR> <TD CLASS=pep_cov>$sp</TD> <TD class=sm_txt>Protein coverage by observed peptides</TD> </TR>\n" if @coverage;
+  my %title = ( obs_sing => "Peptides which map to a single genome location",
+                obs_multi =>  "Peptides which match to 2 or more genome locations",
+                sig_seq => "Signal peptide predicted from amino acid sequence",
+                anc_seq => "Anchor sequence predicted from amino acid sequence",
+                tm_dom => "Transmembrane region prediced from amino acid sequence",
+                in_dom => "Predicted orientation inside, (intracellular for cell membrane proteins)",
+                ex_dom =>  "Predicted orientation outside, (extracellular for cell membrane proteins)",
+                pep_cov => "Cumulative sequence coverage",
+                unlikely_obs => "tryptic peptides &le; " . MIN_OBS_LENGTH . " residues or signal peptides" 
+              );
+
+
+
+
+
+
+  push @legend, "<TR> <TD CLASS=obs_sing>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{obs_sing}'>Observed peptide with single genome mapping</SPAN></TD> </TR>\n" if $single;
+  push @legend, "<TR> <TD CLASS=obs_multi>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{obs_multi}'>Observed peptide with ambiguous genome mapping</SPAN></TD> </TR>\n" if $multi;
+  push @legend, "<TR> <TD CLASS=sig_seq>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{sig_seq}'>Signal sequence predicted by Signal P</SPAN></TD> </TR>\n" if $signal; 
+  push @legend, "<TR> <TD CLASS=anc_seq>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{anc_seq}'>Anchor sequence predicted by Signal P</SPAN></TD> </TR>\n" if $anchor;
+  push @legend, "<TR> <TD CLASS=tm_dom>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{tm_dom}'>Transmembrane domain predicted by TMHMM</SPAN></TD> </TR>\n" if @tmm;
+  push @legend, "<TR> <TD CLASS=in_dom>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{in_dom}'>Predicted as inside membrane by TMHMM</SPAN></TD> </TR>\n" if @intra;
+  push @legend, "<TR> <TD CLASS=ex_dom>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{ex_dom}'>Predicted as outside membrane by TMHMM </SPAN></TD> </TR>\n" if @extra;
+  push @legend, "<TR> <TD CLASS=pep_cov>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{pep_cov}'>Protein coverage by observed peptides</SPAN></TD> </TR>\n" if @coverage;
+  push @legend, "<TR> <TD CLASS=unlikely_obs>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{unlikely_obs}'>Peptides unlikely to be observed </SPAN></TD> </TR>\n" if @difficult;
 #  push @legend, "<TR> <TD CLASS=trans_seq>$sp</TD> <TD class=sm_txt>Entire Translated Protein Sequence</TD> </TR>\n";
 
   my $legend = '';
@@ -1310,6 +1466,8 @@ sub displayAnnotatedSequence {
   #### Don't display unless HTML
   return unless ($sbeams->output_mode() eq 'html');
 
+  # @unlikely_to_observe, { start => $index, end => $peptide_end, rationale => 'Short peptide' };
+# _non_coverage
 
   #### Get the hash of indices of the columns
   my %col = %{$resultset_ref->{column_hash_ref}};
@@ -1441,9 +1599,14 @@ sub displayAnnotatedSequence {
     print "</B></font>";
   }
 
+  my $cnt = 0;
+  for my $frag ( @{$biosequence->{_non_coverage}} ) {
+    $cnt += length( $frag->{seq} );
+  }
+  
   print "<BR><BR>";
-  print "Protein Coverage = ",int($observed_residues/$seq_length*1000)/10,
-    "%";
+  print "Protein Coverage = ",int($observed_residues/$seq_length*1000)/10,"%";
+  print ' (' . int(($observed_residues + $cnt)/$seq_length*1000)/10,"% of likely observable sequence)";
 
   print "</TD></TR></TABLE>\n";
   #print "<BR><BR>Notes:<BR>\n$notes_buffer" if ($notes_buffer);
