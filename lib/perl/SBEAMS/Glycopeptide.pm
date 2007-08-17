@@ -69,6 +69,7 @@ sub getKeggOrganism {
   return 'hsa';
 }
 
+
 sub fetchSpectrastOffset {
   my $self = shift;
   my %args = @_;
@@ -82,15 +83,20 @@ sub fetchSpectrastOffset {
 # Hard-code intial version
   open ( LIB, "/net/dblocal/wwwspecial/sbeams/devDC/sbeams/cgi/Glycopeptide/raw_consensus.pepidx" ) || return '';
   my $cnt = 0;
+  $log->debug( time() );
   while ( my $line = <LIB> ) {
     $cnt++;
     push @matches, $line if $line =~ /^$clean_seq\t/;
   }
+  $log->debug( time() );
 
-  return '' unless scalar(@matches);
+  unless ( scalar(@matches) ) {
+    $log->debug( "no possible matches found for $clean_seq" );
+    return ''; 
+  }
 
   # We have at least one match...
-  my $positions = $self->get_site_positions( seq => $args{pep_seq}, pattern => '[S|T]\*' );
+  my $positions = $self->get_site_positions( seq => $args{pep_seq}, pattern => '[S|T|Y]\*' );
   my @seq_bits = split '', $clean_seq;
 
   # Calculate phospho pattern
@@ -99,24 +105,85 @@ sub fetchSpectrastOffset {
   for my $posn ( @$positions ) {
     my $adj_offset = $posn - $p_offset;
     $p_offset++;
-    $spectrast_str .=  '/' . $adj_offset . ',' . $seq_bits[$adj_offset] . ',Phospho';
+    $spectrast_str .=  '\/' . $adj_offset . ',' . $seq_bits[$adj_offset] . ',Phospho' . '.*';
   }
+  $log->debug( "Seq is $clean_seq, SPstr is $spectrast_str\n" );
 
   # Loop over matches, looking for pattern
+  my $first_match;
   for my $match ( @matches ) {
-    if ( $match =~ /$clean_seq\s+.*$spectrast_str\s+/ ) {
+    $log->debug( "Testing $match" );
+    if ( $match =~ /$clean_seq\s+.*$spectrast_str[\s\/]+/ ) {
+      $log->debug( "Matchable is $match" );
+#      next unless $match =~ /Methyl/;
       my @match_attrs = split ( /\t/, $match, -1 );
+      $first_match = $match_attrs[2] if !$first_match;
+      if ( $args{pref_pac} ) {
+        $log->debug( "pref pac in the house" );
+        next unless $match =~ /Methyl/;
+      }
+      $log->debug( "Flag" );
       return $match_attrs[2];
+    } else {
+      $log->debug( "Failed, $clean_seq plus $spectrast_str doesn't match $match" );
     }
   }
-
-
-  
-
+  # Didn't find ideal hit, return first if we have one
+  return $first_match;
   
 }
 
 
-1;
+
+
+sub fetchSpectrastOffsets {
+  my $self = shift;
+  my %args = @_;
+  return '' unless $args{pep_seqs};
+  
+  $log->debug( "Starting lookup of " . scalar(@{$args{pep_seqs}}) . " at " . time() );
+  
+  # Two sycronized arrays, one with the strings to be matched, the other
+  # with coordinates (if any).
+  my @match_seqs;
+  my @match_coordinates;
+  for my $pep_seq ( @{$args{pep_seqs}} ) {
+    my $clean_seq =~ $pep_seq;
+    $clean_seq =~ s/\*//g;
+    # Find coordinates of S/T/Y* residue(s) in peptide.
+    my $positions = $self->get_site_positions( seq => $pep_seq, pattern => '[S|T|Y]\*' );
+    my @seq_bits = split '', $clean_seq;
+    # Calculate phospho pattern
+    my $spectrast_str = '';
+    my $p_offset = 0;
+    for my $posn ( @$positions ) {
+      my $adj_offset = $posn - $p_offset;
+      $p_offset++;
+      $spectrast_str .=  '\/' . $adj_offset . ',' . $seq_bits[$adj_offset] . ',Phospho' . '.*';
+    }
+    $log->debug( "Seq is $clean_seq, SPstr is $spectrast_str\n" );
+    push @match_seqs, $spectrast_str;
+  }
+
+# Hard-code intial version
+  open ( LIB, "/net/dblocal/wwwspecial/sbeams/devDC/sbeams/cgi/Glycopeptide/raw_consensus.pepidx" ) || return '';
+  my $cnt = 0;
+  $log->debug( time() );
+  while ( my $line = <LIB> ) {
+    chomp $line;
+    my $scnt;  # Counter for the sequence array
+    for my $mseq ( @match_seqs ) {
+      if ( $line =~ /$mseq/ ) {
+        if ( !$match_coordinates[$scnt] ) {
+          my @match_attrs = split ( /\t/, $line, -1 );
+          $match_coordinates[$scnt] = $match_attrs[2];
+        }
+      }
+    }
+    $cnt++;
+  }
+  $log->debug( time() );
+  return \@match_coordinates;
+}
 
 __END__

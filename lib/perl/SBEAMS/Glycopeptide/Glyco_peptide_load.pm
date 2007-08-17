@@ -408,6 +408,7 @@ sub checkHeaders {
   my @current_cols = keys(%heads);
 
   for my $curr_col ( @current_cols ) {
+    print "Checking $curr_col\n";
     unless( grep /$curr_col/, @known_columns ) {
       die "Column $curr_col is not known by the parser\n";
     }
@@ -622,6 +623,9 @@ sub insert_observed_peptides {
 
     my ( $delta, $exp_mass, $scan, $charge, $mass2ch, $mh_plus );
     if ( $self->{_format} eq 'interact-tsv' ) {
+
+#      for my $h (keys( %$heads ) ) { print "head is $h, idx is $heads->{$h}, val is $obs->[$heads->{$h}]\n"; }
+#      exit;
 
       $exp_mass = $module->mh_plus_to_mass($obs->[$heads->{'MH+'}]);
       my $out = basename( $obs->[$heads->{file}] );
@@ -844,6 +848,7 @@ sub get_ipi_seqs {
   return 1;
 }
 
+
 sub get_interact_tsv_headers {
   my $self = shift;
   my %heads = ( prob => 0,
@@ -860,6 +865,22 @@ sub get_interact_tsv_headers {
              Protein => 11,
           '#DupProt' => 12,
              Peptide => 13,
+            num_obs  => 99,
+          chg_state  => 99 );
+  %heads = ( 'index' => 0,
+               prob => 1,
+                file => 2,
+               'MH+' => 99,
+          'MH error' => 99,
+               XCorr => 3,
+                 dCn => 4,
+                  Sp => 99,
+              SpRank => 5,
+           IonsMatch => 9,
+             IonsTot => 6,
+             Protein => 8,
+          '#DupProt' => 8,
+             Peptide => 7,
             num_obs  => 99,
           chg_state  => 99 );
 
@@ -1808,6 +1829,8 @@ sub find_cellular_code {
 		$full_name = 'Cytoplasmic';
 	}elsif($code eq 'A_low' ){
 		$full_name = 'Anchor';
+	}elsif( !$code ){ # FIXME
+		$full_name = 'Cytoplasmic';
 	} else {
   	die "Unknown cellular code $code\n";
   }
@@ -1819,8 +1842,10 @@ sub find_cellular_code {
   END
 	
   my ($id) = $sbeams->selectOneColumn($sql);
-  unless ($id) {
-    die "DB lookup failed for cellular code $code ($full_name)\n";
+  if ( $full_name ) {
+    unless ($id) {
+      die "DB lookup failed for cellular code $code ($full_name)\n";
+    }
   }
 	
   $self->cellular_code_id($code, $id);

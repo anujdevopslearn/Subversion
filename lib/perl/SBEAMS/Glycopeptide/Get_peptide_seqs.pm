@@ -367,7 +367,6 @@ sub parse_modified_pep_seq {
     }
     $start_aa ||= '-';
     $end_aa ||= '-';
-    $log->debug( "Data has says $args{data}->{tryptic_end}, but I think " . $start_aa . '.' . $clean_seq_string . '.' . $end_aa . " has $ntt tryptic terminii");
     $args{data}->{tryptic_end} = $ntt;
   }
 	#$log->debug(__PACKAGE__ . "::$method CLEAN SEQ PEPTIDE SEQ '$clean_seq_string'");

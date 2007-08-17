@@ -2617,6 +2617,7 @@ sub fetchResultSet {
     $sth = $dbh->prepare("$sql_query") ||
       croak("Unable to prepare query:\n".$dbh->errstr);
 
+      $log->error( "Execute might fail on SQL:\n $sql_query" );
     my $rv  = $sth->execute;
     unless ( $rv ) {
       $log->error( "Execute failed on SQL:\n $sql_query" );

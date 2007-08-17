@@ -95,7 +95,7 @@ sub asHTML {
   my $sbeams = $this->getSBEAMS() || die "Must supply sbeams object";
   my $sbeamsMOD = $this->getSBEAMSMod();
    
-  my $header = $sbeams->get_http_header();
+  my $header = $this->{header} || $sbeams->get_http_header();
   my $jscript = $this->_getJavascriptFunctions();
   my $style = $this->_getStyleSheet();
   my $navbar = $this->_getNavBar( $sbeams );

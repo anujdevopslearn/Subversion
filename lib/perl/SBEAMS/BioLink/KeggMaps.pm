@@ -645,6 +645,7 @@ sub getPathwayRelationships {
 sub getColoredPathway {
   my $self = shift;
   my %args = @_;
+  $log->debug( 'here' );
   for my $key ( qw( genes bg fg ) ) {
     if ( !$args{$key} ) {
       $log->error( "Missing required parameter $key" );
@@ -652,6 +653,7 @@ sub getColoredPathway {
     } elsif ( ref $args{$key} ne 'ARRAY' ) {
     }
   }
+  $log->debug( 'there' );
   my $pathway = $args{pathway} || $self->{_pathway};
   if ( !$pathway ) {
     $log->error( "Pathway not set" );
@@ -679,6 +681,7 @@ sub getColoredPathway {
     $cnt++;
     $all .= " $g"; 
   }
+  $log->debug( 'everywhere' );
 
   my $genes = SOAP::Data->type( array => $args{genes} );
   my $fg = SOAP::Data->type( array => $args{fg} );
