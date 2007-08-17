@@ -478,6 +478,7 @@ sub encodeSectionItem {
 #                           right, left, and center
 # @nparam  rows_to_show     Number of rows to show initially, others are loaded
 #                           into page but hidden by CSS and showable view JS.
+# @nparam  nowrap           ref to array of col indexes on which to set nowrap
 # 
 #
 sub encodeSectionTable {
@@ -486,39 +487,66 @@ sub encodeSectionTable {
   my %args = @_;
 
   my @table_attrs = ( 'BORDER' => 0, );
-  
+  my $tr_info = $args{tr_info} || 'NOOP=1';
+  my $tab = SBEAMS::Connection::DataTable->new( @table_attrs, __tr_info => $tr_info );
+
   return '' unless $args{rows};
   $args{header} ||= 0;
   if ( $args{width} ) {
     push @table_attrs, 'WIDTH', $args{width};
   }
 
+  $args{max_rows} ||= 0;
   my $sbeams = $self->getSBEAMS();
   my $prefix = $sbeams->getRandomString( num_chars => 8, 
                                           char_set => ['A'..'Z', 'a'..'z'] );
   my $first = 1;
-  my $tr_info = $args{tr_info} || NOOP => 1;
-  my $tab = SBEAMS::Connection::DataTable->new( @table_attrs, $tr_info );
   for my $row ( @{$args{rows}} ) {
     $tab->addRow( $row );
-    if ( $args{rows_to_show} && $args{rows_to_show} < $tab->getRowNum() - 1 ) {
+    my $num_rows = $tab->getRowNum() - 1;
+
+    if ( $args{rows_to_show} && $args{rows_to_show} < $num_rows ) {
       $tab->setRowAttr( ROWS => [$tab->getRowNum()], ID => $prefix . '_toggle', 
                                                      NAME => $prefix . '_toggle', 
                                                      CLASS => 'hidden' ); 
     } elsif ( $args{tr_info} ) {
     }
+    if ( $args{max_rows} && $args{max_rows} <= $num_rows ) {
+      $log->debug( "Max is $args{max_rows} and num is $num_rows" );
+      my $span = scalar( @$row );
+      $tab->addRow( [$sbeams->makeInfoText("<I>Table truncated at $args{max_rows} rows</I>")] );
+      $tab->setColAttr( ROWS => [$tab->getRowNum()], 
+                     COLSPAN => $span, 
+                        COLS => [ 1 ], 
+                       ALIGN => 'CENTER' ); 
+
+      if ( $args{rows_to_show} && $args{rows_to_show} < $num_rows ) {
+        $tab->setRowAttr( ROWS => [$tab->getRowNum()], ID => $prefix . '_toggle', 
+                                                     NAME => $prefix . '_toggle', 
+                                                     CLASS => 'hidden' ); 
+      } 
+      last;
+    }
   }
 
+  my $nowrap = $args{nowrap} || [];
+  if ( scalar( @$nowrap ) ) {
+    $tab->setColAttr( COLS => $nowrap, NOWRAP => 1 ); 
+  }
+  
   # How many do we have?
   my $tot = $tab->getRowNum();
+  $log->debug( "We have $tot total rows");
   my $closelink;
   if ( $args{rows_to_show} && $args{rows_to_show} < $tot - 1 ) {
     $closelink = $self->add_tabletoggle_js(); 
     $closelink .= "\n<FONT COLOR=BLUE><A HREF=#null ONCLICK=toggle_em('$prefix');return><SPAN ID='${prefix}_text' NAME='${prefix}_text' >Show more</A></FONT>";
   }
 
-  # No wrapping desired...
-  $tab->setRowAttr( ROWS => [1..$tot], NOWRAP => 1 ); 
+  # if no wrapping desired...
+  if ( $args{nowrap} ) {
+    $tab->setRowAttr( ROWS => [1..$tot], NOWRAP => 1 ); 
+  }
 
   # Set header attributes
   if ( $args{header} ) {
@@ -532,6 +560,7 @@ sub encodeSectionTable {
     }
   }
   $tab->addRow( [$closelink] );
+
 
   my $html =<<"  END";
   <TR><TD NOWRAP COLSPAN=2>$tab</TD></TR>
