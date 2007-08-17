@@ -1,0 +1,623 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# $Id: $
+#
+# SBEAMS is Copyright (C) 2000-2007 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+###############################################################################
+
+
+###############################################################################
+# Get the script set up with everything it will need
+###############################################################################
+use strict;
+#use vars qw ($sbeams);
+use lib qw (../../lib/perl);
+
+use GD::Graph::bars;
+use GD::Graph::xypoints;
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::DataTable;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+
+###############################################################################
+# Global Variables
+###############################################################################
+my $sbeams = new SBEAMS::Connection;
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+my $atlas = new SBEAMS::PeptideAtlas;
+$atlas->setSBEAMS($sbeams);
+
+# Read input parameters
+my $params = process_params();
+
+
+{ # Main 
+
+    # Authenticate or exit
+    my $username = $sbeams->Authenticate( permitted_work_groups_ref => 
+                                                      ['PeptideAtlas_user',
+                                                      'PeptideAtlas_admin', 
+                                                      'PeptideAtlas_readonly'],
+                                                      # connect_read_only=>1,
+                                                      allow_anonymous_access=>1,
+                                              ) || exit;
+
+    exit if !$params->{atlas_build_id};
+
+    $params->{type} ||= 'bar';
+
+    my $plot;
+    if ( $params->{type} =~ /pie/i ) {
+      $plot = make_pie();
+    } else {
+      $plot = make_bar();
+    }
+    print $sbeams->get_http_header( type => 'png' );
+    print STDERR $sbeams->get_http_header( type => 'png' );
+
+    print $plot;
+    exit;
+}
+
+sub process_params {
+  my $params = {};
+  $sbeams->parse_input_parameters( q => $q, parameters_ref => $params );
+  $sbeams->processStandardParameters( parameters_ref => $params );
+  return( $params );
+}
+
+sub make_pie {
+}
+
+sub make_bar {
+  print STDERR "err is " . $!;
+  my @sample_info = $sbeams->selectSeveralColumns ( <<"  END" );
+  SELECT ASB.atlas_search_batch_id, n_progressive_peptides
+  FROM $TBAT_SEARCH_BATCH_STATISTICS SBS JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB 
+    ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
+  JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( ABSB.atlas_search_batch_id = ASB.atlas_search_batch_id )
+  WHERE ABSB.atlas_build_id = $params->{atlas_build_id}
+  ORDER BY ASB.atlas_search_batch_id ASC
+  END
+  my ( @x, @y );
+  my $total = 0;
+  for my $batch ( @sample_info ) {
+    push @x, $batch->[0];
+    $batch->[1] ||= 0;
+    $total += $batch->[1];
+    push @y, $total; 
+  }
+  my $skip = ( $#x < 20 ) ? 0 :
+             ( $#x < 40 ) ? 1 :
+             ( $#x < 60 ) ? 2 : 
+             ( $#x < 80 ) ? 3 : 
+             ( $#x < 100 ) ? 4 : 5;
+             
+  my $graph = GD::Graph::bars->new(800, 600);
+  $graph->set(   x_label           => "Sample",
+                 y_label           => 'Cumulative Distinct Peptides',
+                 title             => "Progressive Sample Contribution",
+                 x_tick_length     => -4,
+                 axis_space        => 6,
+                 x_label_position  => 0.5,
+                 x_label_skip      => $skip,
+                 y_min_value       => 0,
+                 x_halfstep_shift  => 0,
+                  );  
+
+  print STDERR "X is $#x and Y is $#y\n";
+  binmode STDOUT;
+  my $png = $graph->plot( [ \@x, \@y ] )->png();
+  print STDERR "plot is " . length( $png );
+  return $png;
+}
+
+
+__DATA__
+
+    ## get current settings
+    my $project_id = $sbeams->getCurrent_project_id();
+
+    # We are not forcing the user into the new build - is that correct?
+    my $build_id = $params->{atlas_build_id} || $atlas->getCurrentAtlasBuildID(parameters_ref => $params);
+    if ( !grep /^$build_id$/, $atlas->getAccessibleBuilds() ) {
+      die( "Access to specified build is not allowed" );
+    }
+
+    my $help = get_help_section();
+
+    
+    my $page = $sbeams->getGifSpacer( 700 ) . "<BR>\n";
+    $page .=<<"    END";
+    <P>
+    This shows some information about the currently selected build.  Peptide
+    numbers are for peptides seen more than once, except as denoted by an
+    asterisk (*).  You can view the details of other builds by selecting an 
+    item in the list below.  Although this will change build whose statistics 
+    are to be displayed, it will not change your currently selected build.
+    </P>
+    $help->{build}
+    END
+
+    
+
+    # Add general section 
+#  print STDERR 'build overV ' . time() . "\n";
+    $page .= get_build_overview ( $build_id );
+    $page .= "<BR>$help->{batch}\n";
+#  print STDERR 'sample info ' . time() . "\n";
+    $page .= get_sample_info( $build_id );
+#  print STDERR 'showtime ' . time() . "\n";
+    # Add peptide stats section
+    # Add graphic
+   
+
+    # Display page
+    $atlas->display_page_header(project_id => $project_id, onload => 'sortables_init()', sortable => 1 );
+    print $page;
+		$atlas->display_page_footer();
+
+} # end main
+
+sub get_help_section {
+  my $build_table = "<TABLE>\n";
+  $build_table .= $atlas->encodeSectionItem( key => 'Build Name', value => 'The simple name for this build, usually contains organism, prophet cutoff, and other information. ' ) . "\n";
+  $build_table .= $atlas->encodeSectionItem( key => 'Build Description', value => 'More detailed information about build. ' ) . "\n";
+  $build_table .= $atlas->encodeSectionItem( key => 'Reference Database', value => 'Database to which peptides were mapped, generally different than search database.  This mapping is done by running BLAST, and allows the peptides to be mapped the the organism\'s genomic sequence. ' ) . "\n";
+  $build_table .= $atlas->encodeSectionItem( key => 'Build Date', value => 'Date upon which build was finished. ' ) . "\n";
+  $build_table .= $atlas->encodeSectionItem( key => '# Samples', value => 'The number of individual samples which comprise this build.  Each sample contains one or more LCMS/MS runs, and generally corresponds to a single scientific experiment.' ) . "\n";
+  $build_table .= $atlas->encodeSectionItem( key => 'Distinct Peptides', value => 'This shows the number of distinct peptide sequences that were seen in this build.  Observations of the peptide in different charge states or with different modifications are coalesced.  The first number shows the distinct sequences that were seen more than once, the asterisked number in parenthesis shows a count of all distinct observed peptide sequences  ' ) . "\n";
+  $build_table .= $atlas->encodeSectionItem( key => 'Total Observations ', value => 'The total number of spectra that yeilded identifications above the build threshold, generally 0.9.  Observations of the same base peptide sequences multiple times or in various charge states/modifications, whould each contribute to the total' ) . "\n";
+  $build_table .= "</TABLE>\n";
+
+  my $batch_table = "<TABLE>\n";
+  $batch_table .= $atlas->encodeSectionItem( key => 'Sample Name', value => 'Simple name for this sample/experiment. ' ) . "\n";
+  $batch_table .= $atlas->encodeSectionItem( key => '# Spectra', value => 'The total number of spectra searched for the sample. ' ) . "\n";
+  $batch_table .= $atlas->encodeSectionItem( key => '# Distinct', value => 'The number of distinct peptide sequences, seen more than once (multiobs), in this build that are seen in this sample. ' ) . "\n";
+  $batch_table .= $atlas->encodeSectionItem( key => '# Contrib', value => 'The number of distinct, multiobs peptides that are only seen in this sample (unique contribution).  This discriminates against smaller samples, and is less useful in atlas&quot; with a large number of samples. ' ) . "\n";
+  $batch_table .= $atlas->encodeSectionItem( key => '# Progressive', value => 'Order-dependant unique multiobs peptides contributed by a given sample.  The contribution for each sample is based on the samples that have gone before it, so later samples tend to have a lower progressive contribution. ' ) . "\n";
+  $batch_table .= $atlas->encodeSectionItem( key => 'Model Sens', value => 'The sensitivity of the Protein Prophet model at a probablility of 0.9, the percent of true positives that would be included at that threshold was used as a cutoff. ' ) . "\n";
+  $batch_table .= $atlas->encodeSectionItem( key => 'Model Err', value => 'The error of the Protein Prophet model at a probablility of 0.9, the percent of false positives that would be included at that threshold was used as a cutoff. ' ) . "\n";
+  $batch_table .= "</TABLE>\n";
+
+  my $css =<<"  END";
+  <style type="text/css">
+  .section_heading {  font-family: Helvetica, Arial, sans-serif; font-size: 10pt; font-weight: Bold; }
+  .description { font-family: Helvetica, Arial, sans-serif; color:#333333; font-size: 9pt; font-style: italic;  }
+  .help_key {  font-family: Helvetica, Arial, sans-serif; font-size: 9pt; font-weight: Bold; }
+  .help_val {  font-family: Helvetica, Arial, sans-serif; font-size: 9pt; }
+  </style>
+  END
+
+  my $build_content =<<"  END";
+  <span class=section_heading>Build Overview</span> 
+  <span class=description>These values pertain to the atlas build as a whole</span>
+  $build_table
+  END
+
+  my $batch_content =<<"  END";
+  <span class=section_heading>Sample Overview</span> 
+  <span class=description>These values pertain to individual samples within the atlas</span>
+  $batch_table
+  END
+
+  my $build_tg = $sbeams->make_toggle_section( content => $build_content,
+                                           sticky      => 0,
+                                           visible     => 0,
+                                           imglink     => 0,
+                                           textlink    => 1,
+                                           name        => 'build_help',
+                                           showtext    => 'show help',
+                                           hidetext    => 'hide help',
+                                          );
+  my $batch_tg = $sbeams->make_toggle_section( content => $batch_content,
+                                           sticky      => 0,
+                                           visible     => 0,
+                                           imglink     => 0,
+                                           textlink    => 1,
+                                           name        => 'batch_help',
+                                           showtext    => 'show help',
+                                           hidetext    => 'hide help',
+                                          );
+
+  my %help = ( build => $css . $build_tg, batch => $batch_tg );
+  return \%help;
+}
+
+# General build info, date, name, organism, specialty, default
+sub get_build_overview {
+
+  my $build_id = shift;
+  
+  # Get a list of accessible project_ids
+  my @project_ids = $sbeams->getAccessibleProjects();
+  my $project_ids = join( ",", @project_ids ) || '0';
+
+  my $build_info = $sbeams->selectrow_hashref( <<"  BUILD" );
+  SELECT atlas_build_name, probability_threshold, atlas_build_description, 
+  build_date, set_name
+  FROM $TBAT_ATLAS_BUILD AB JOIN $TBAT_BIOSEQUENCE_SET BS 
+  ON AB.biosequence_set_id = BS.biosequence_set_id
+  WHERE atlas_build_id = $build_id 
+  AND AB.record_status <> 'D'
+  BUILD
+
+#  for my $k ( keys( %$build_info ) ) { print STDERR "$k => $build_info->{$k}\n"; }
+
+  my $pep_count = $sbeams->selectrow_hashref( <<"  PEP" );
+  SELECT COUNT(*) cnt,  SUM(n_observations) obs
+  FROM $TBAT_PEPTIDE_INSTANCE 
+  WHERE atlas_build_id = $build_id 
+  PEP
+
+  my $multi_pep_count = $sbeams->selectrow_hashref( <<"  MPEP" );
+  SELECT COUNT(*) cnt, SUM(n_observations) obs
+  FROM $TBAT_PEPTIDE_INSTANCE  
+  WHERE atlas_build_id = $build_id 
+  AND n_observations > 1 
+  MPEP
+  $log->debug( $sbeams->evalSQL( <<"  END" ) );
+  SELECT COUNT(*) cnt, SUM(n_observations) obs
+  FROM $TBAT_PEPTIDE_INSTANCE  
+  WHERE atlas_build_id = $build_id 
+  AND n_observations > 1 
+  END
+
+  my $smpl_count = $sbeams->selectrow_hashref( <<"  SMPL" );
+  SELECT COUNT(*) cnt FROM $TBAT_ATLAS_BUILD_SAMPLE 
+  WHERE atlas_build_id = $build_id
+  SMPL
+
+  my $table = "<TABLE WIDTH=800>\n";
+
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'build_overview',
+                                                  visible => 1,
+                                                  tooltip => 'Show/Hide Section',
+                                                  imglink => 1,
+                                                  sticky  => 1 );
+
+  $table .= $atlas->encodeSectionHeader(
+      text => 'Build Overview',
+      span => 4,
+      link => $link
+  );
+
+  my $spc = $sbeams->getGifSpacer(500);
+  $build_info->{build_date} =~ s/^([0-9-]+).*$/$1/;
+#  $smpl_count->{cnt} = sprintf( "% 10i", $smpl_count->{cnt} );
+#  $smpl_count->{cnt} =~ s/ /&nbsp;/g;
+#  $multi_pep_count->{cnt} = sprintf( "% 10i", $multi_pep_count->{cnt} );
+#  $multi_pep_count->{cnt} =~ s/ /&nbsp;/g;
+#  $multi_pep_count->{obs} = sprintf( "% 10i", $multi_pep_count->{obs} );
+# $multi_pep_count->{obs} =~ s/ /&nbsp;/g;
+  
+  
+#  my $deltacnt = $multi_pep_count->{cnt} - $pep_count->{cnt};
+#  my $deltaobs = $multi_pep_count->{obs} - $pep_count->{obs};
+#  $table .= $atlas->encodeSectionItem( key   => 'Deltas ', tr_info => $tr,
+#                                          value => "$deltacnt ( $deltaobs )" ) . "\n";
+
+
+  $table .= $atlas->encodeSectionItem( key   => 'Build Name', tr_info => $tr,
+                            value => $build_info->{atlas_build_name} . $spc, vspan => 3 ) . "\n";
+  $table .= $atlas->encodeSectionItem( key   => 'Build Description', tr_info => $tr,
+                            value => $build_info->{atlas_build_description}, vspan => 3 ) . "\n";
+  $table .= $atlas->encodeSectionItem( key   => 'Reference Database', tr_info => $tr,
+                            value => $build_info->{set_name}, vspan => 3 ) . "\n";
+  $table .= $atlas->encodeSectionItem( key   => 'Build Date', tr_info => $tr,
+                            value => $build_info->{build_date} ) . "\n";
+  $table .= $atlas->encodeSectionItem( key   => '# Samples', tr_info => $tr,
+                            value => $smpl_count->{cnt}, align => 'right' ) . "\n";
+  $table .= $atlas->encodeSectionItem( key   => 'Distinct Peptides', tr_info => $tr,
+                                          value => "$multi_pep_count->{cnt} ( $pep_count->{cnt}* )" ) . "\n";
+  $table .= $atlas->encodeSectionItem( key   => 'Total Observations', tr_info => $tr,
+                                          value => "$multi_pep_count->{obs} ( $pep_count->{obs}* )" ) . "\n";
+#  $table .= $atlas->encodeSectionDblItem( key   => ['Build Date', '# Samples'], tr_info => $tr,
+#                            value => [$build_info->{build_date}, $smpl_count->{cnt}] ) . "\n";
+#  $table .= $atlas->encodeSectionDblItem( key   => ['Total Observations', 'Distinct Peptides'], 
+#                                          tr_info => $tr,
+#                                          value => [$pep_count->{obs}, $pep_count->{cnt}] ) . "\n";
+#  $table .= $atlas->encodeSectionDblItem( key   => ['Total Observations n_obs > 1', 'Distinct Peptides n_obs > 1'], 
+#                                          tr_info => $tr,
+#                                          value => [$multi_pep_count->{obs}, $multi_pep_count->{cnt}] ) . "\n";
+
+  $table .= "</TABLE>\n";
+  return $table;
+
+}
+
+# Peptide build stats
+sub get_sample_info {
+
+  my $build_id = shift;
+
+  # Get a list of accessible project_ids
+  my @project_ids = $sbeams->getAccessibleProjects();
+  my $project_ids = join( ",", @project_ids ) || '0';
+
+
+  my $table = "<TABLE WIDTH=600>\n";
+
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'sample_contribution',
+                                                  visible => 1,
+                                                  tooltip => 'Show/Hide Section',
+                                                  imglink => 1,
+                                                  sticky  => 1 );
+
+#  search_batch_statistics_id
+#  atlas_build_search_batch_id
+#  n_observations
+#  n_searched_spectra
+#  n_distinct_peptides
+#  n_distinct_multiobs_peptides
+#  n_uniq_contributed_peptides
+#  n_progressive_peptides
+#  model_90_sensitivity
+#  model_90_error_rate
+# ASB.atlas_search_batch_id, proteomics_search_batch_id
+
+#  my @sample_info;
+#  $log->debug( $sbeams->evalSQL ( <<"  END" ) );
+#  SELECT sample_tag, sample_description, SBS.n_searched_spectra, n_distinct_peptides,
+#         n_uniq_contributed_peptides n_observations, n_searched_spectra,
+#         n_distinct_multiobs_peptides, n_uniq_contributed_peptides,
+#         n_progressive_peptides, model_90_sensitivity, model_90_error_rate
+  my @sample_info = $sbeams->selectSeveralColumns ( <<"  END" );
+  SELECT sample_tag, SBS.n_searched_spectra,
+         n_distinct_multiobs_peptides, n_uniq_contributed_peptides,
+         n_progressive_peptides, model_90_sensitivity, model_90_error_rate
+  FROM $TBAT_SEARCH_BATCH_STATISTICS SBS JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB 
+    ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
+  JOIN $TBAT_SAMPLE S ON s.sample_id = ABSB.sample_id
+  JOIN $TBAT_ATLAS_BUILD_SAMPLE ABS ON ( s.sample_id = ABS.sample_id )
+  WHERE ABS.atlas_build_id = $build_id
+  AND ABSB.atlas_build_id = $build_id
+  END
+
+  # Format loop
+ 
+  my $dag = '<sup>&dagger;</sup>';
+  my @headings = ( 'Sample Name',
+                   '# Spectra', 
+                   '# Distinct', 
+                   '# Contrib', 
+                   '# Progessive',
+                   'Model Sens',
+                   'Model Err'
+      );
+
+  $table .= $atlas->encodeSectionHeader(
+      text => 'Sample Contribution',
+      link => $link
+  );
+
+  my $spc = $sbeams->getGifSpacer(500);
+
+  $table .= $atlas->encodeSectionTable( rows => [ \@headings, @sample_info ], 
+                                        header => 1, 
+                                        nowrap => 1, 
+                                        align => [ qw(left right right right right right right right) ], 
+                                        tr_info => $tr,
+                                        bg_color => '#EAEAEA',
+                                        sortable => 1 );
+  $table .= '</TABLE>';
+  return $table;
+
+}
+
+
+sub process_params {
+  my $params = {};
+  $sbeams->parse_input_parameters( q => $q, parameters_ref => $params );
+  $sbeams->processStandardParameters( parameters_ref => $params );
+  return( $params );
+}
+
+sub get_build_name {
+  my $build_id = shift;
+  return unless $build_id;
+  my ( $build_name ) = $sbeams->selectrow_array( <<"  END" );
+  SELECT atlas_build_name
+  FROM $TBAT_ATLAS_BUILD
+  WHERE atlas_build_id = $build_id
+  END
+  return $build_name;
+}
+
+__DATA__
+
+sub run_search {
+  my $params = shift;
+  my $content;
+  for my $arg ( qw( mass_list mass_window) ) {
+    unless ( $params->{$arg} ) {
+      $content .= "Missing required parameter: $arg <BR>\n";
+      return $content;
+    }
+  }
+#  for my $p ( keys( %$params ) ) { $content .= "$p => " . $params->{$p} . "<BR>\n"; }
+  my $mass_list = $params->{mass_list};
+  $mass_list =~ s/\s+/ /gm;
+  my @masses = split( " ", $mass_list );
+  my $peptides = $sbeamsMOD->runMassSearch( masses => \@masses, %{$params} );
+  my $peptide_table = SBEAMS::Connection::DataTable->new( BORDER => 0 );
+  my $type = ( $params->{search} eq 'iden' ) ? 'Identified' : 'Predicted';
+  $peptide_table->addRow( ['Search Mass', 'IPI', "$type sequence", 'Peptide Mass',
+                           'Mass Delta', '# ox Met', 'Protein Name' ] );
+  $peptide_table->setRowAttr( ROWS => [1], BGCOLOR => '#C0D0C0' );
+  my $current_group;
+  my $grp_row = 2;
+  my $bgcolor = '#FFFFFF';
+  for my $peptide ( @$peptides ) {
+    my ( $grp, 
+         $smass, 
+         $ipi, 
+         $seq, 
+         $dbmass, 
+         $prot, 
+         $delta, 
+         $ox_met ) = @$peptide;
+
+    $current_group = $grp unless $current_group;
+
+    $dbmass = sprintf( "%0.3f", $dbmass );
+    if ( $dbmass =~ /0.000/ ) { $dbmass = 'na'; }
+    $delta =  sprintf( "%0.3f", $delta );
+    if ( $delta =~ /0.000/ ) { $delta = 'na'; }
+
+    $prot = $sbeams->truncateStringWithMouseover( string => $prot, len => 50 );
+    $ipi = "<A HREF='Glyco_prediction.cgi?search_type=IPI Accession Number;action=Show_hits_form;search_term=$ipi' TARGET=prot_details>$ipi</A>";
+    $peptide_table->addRow( [ $smass, $ipi, $seq, $dbmass, $delta, $ox_met, $prot] );
+    unless ( $grp == $current_group ) {
+      my $current_row = $peptide_table->getRowNum();
+#      $log->info( "group row is $grp_row, current row is $current_row, bgcolor is $bgcolor" );
+      $peptide_table->setRowAttr( ROWS => [$grp_row..$current_row - 1], BGCOLOR => $bgcolor );
+      $grp_row = $current_row;
+      $bgcolor = ( $bgcolor eq '#E0E0E0' ) ? '#FFFFFF' : '#E0E0E0';
+      $current_group = $grp;
+    }
+    my $current_row = $peptide_table->getRowNum();
+    $peptide_table->setRowAttr( ROWS => [$grp_row..$current_row], BGCOLOR => $bgcolor );
+
+  }
+  $content .= $peptide_table->asHTML();
+  return $content;
+}
+
+sub print_form {
+  my $params = shift;
+	
+	my $content = <<"  END";
+  <TABLE>
+   <TR CLASS='rev_gray_head'>
+    <TD class=rev_gray_head>Run Mass Search</TD>
+   </TR>
+   <TR>
+    <TD>
+    Enter desired constraints to run a mass-based search versus the identified or theoretical peptides in the database.  Note that your prophet cutoff will impact the number of results returned
+    </TD>
+   </TR>
+  </TABLE>
+  END
+
+  # Table to hold form elements
+  my $f_table = SBEAMS::Connection::DataTable->new( BORDER => 1 );
+
+  # Hashes to hold form labels/fields
+  my $input_labels = get_input_labels($params);
+  my $input_fields = get_input_fields($params);
+
+  # Loop through and add items to the form table
+  for my $key ( qw(mass_list mass_window ox_met alk_cys mass_type search charge ) ) {
+    $f_table->addRow(["<B>$input_labels->{$key}</B>", $input_fields->{$key}]); 
+  }
+
+  my @buttons = $sbeams->getFormButtons( types => [qw(submit reset)] );
+  $f_table->addRow( [join(" ", @buttons)] );
+
+  $f_table->setColAttr( COLS => [1], ROWS => [8], COLSPAN => 2 );
+#  $f_table->setColAttr( COLS => [1], ROWS => [1..6], ALIGN => 'RIGHT' );
+  $f_table->setColAttr( COLS => [1], ROWS => [8], ALIGN => 'CENTER' );
+  $f_table->setColAttr( COLS => [2], ROWS => [1..7], ALIGN => 'LEFT' );
+
+  $content .=<<"  END";
+  <FORM NAME=mass_search_form> 
+  $f_table 
+  <INPUT TYPE=hidden NAME=action VALUE=search></INPUT>
+  </FORM>
+  END
+  return $content;
+}
+
+sub get_input_labels {
+  my $params = shift;
+
+  my %in = ( mass_list   => 'Mass(es) to search, 1 per line:',
+             mass_window => 'Mass search range:',
+             ox_met      => 'Oxidized Methionine (+ 15.9949):',
+             alk_cys     => 'Alkylated Cys (+ 57.0215):',
+             mass_type   => 'Type of mass values:',
+             search      => 'Search subject:',
+             charge      => 'Peptide charge state:',
+             );
+  
+  return \%in;
+}
+
+sub get_input_fields {
+  my $params = shift;
+
+  my $mass_list = $params->{mass_list} || '';
+  $mass_list = "<TEXTAREA ROWS=4 COLS=12 NAME=mass_list>$mass_list</TEXTAREA>";
+
+  my $mass_window = $params->{mass_window} || '';
+  $mass_window = "<INPUT TYPE=text NAME=mass_window SIZE=10 VALUE=$mass_window></INPUT>";
+
+  my $mw_amu = ( $params->{mw_units} && $params->{mw_units} eq 'amu' ) ? 'CHECKED' : '';
+  my $mw_ppm = 'CHECKED' unless $mw_amu;
+  my $mw_radio =<<"  END";
+  PPM <INPUT TYPE=radio NAME=mw_units VALUE=ppm $mw_ppm> 
+  AMU <INPUT TYPE=radio NAME=mw_units VALUE=amu $mw_amu> 
+  END
+
+  my $ch_neu = ( $params->{charge} && $params->{charge} eq 'neu' ) ? 'CHECKED' : '';
+  my $ch_one = 'CHECKED' unless $ch_neu;
+  my $ch_radio =<<"  END";
+  Neutral <INPUT TYPE=radio NAME=charge VALUE=neu $ch_neu> 
+  H+ <INPUT TYPE=radio NAME=charge VALUE=one $ch_one> 
+  END
+
+  my $none = ( !$params->{ox_met} || $params->{ox_met} eq 'none' ) ? 'CHECKED' : '';
+  my $one = ( $params->{ox_met} eq 'one' ) ? 'CHECKED' : '';
+  my $two = ( $none || $one ) ? '' : 'CHECKED';
+  my $ox_met_radio =<<"  END";
+  None <INPUT TYPE=radio NAME=ox_met VALUE=0 $none> 
+  One <INPUT TYPE=radio NAME=ox_met VALUE=1 $one> 
+  Two <INPUT TYPE=radio NAME=ox_met VALUE=2 $two> 
+  END
+
+  my $yes = ( !$params->{alk_cys} || $params->{alk_cys} eq 'yes' ) ? 'CHECKED' : '';
+  my $no = ( !$yes ) ? 'CHECKED' : '';
+  my $alk_cys_radio =<<"  END";
+  Yes <INPUT TYPE=radio NAME=alk_cys VALUE=yes $yes> 
+  No <INPUT TYPE=radio NAME=alk_cys VALUE=no $no> 
+  END
+
+  my $mono = ( !$params->{mass_type} || $params->{mass_type} eq 'mono' ) ? 'CHECKED' : '';
+  my $avg = ( !$mono ) ? 'CHECKED' : '';
+  my $mass_type_radio =<<"  END";
+  Monoisotopic <INPUT TYPE=radio NAME=mass_type VALUE=mono $yes> 
+  END
+#Avg <INPUT TYPE=radio NAME=mass_type VALUE=avg $no> 
+
+  my $iden = ( !$params->{search} || $params->{search} eq 'iden' ) ? 'CHECKED' : '';
+  my $pred = ( !$iden ) ? 'CHECKED' : '';
+  my $search_radio =<<"  END";
+  Identifed <INPUT TYPE=radio NAME=search VALUE=iden $iden> 
+  Predicted <INPUT TYPE=radio NAME=search VALUE=pred $pred> 
+  END
+
+  my %in = ( 
+    mass_list   => $mass_list,
+    mass_window => $mass_window . " " . $mw_radio,
+    ox_met      => $ox_met_radio,
+    alk_cys     => $alk_cys_radio,
+    mass_type   => $mass_type_radio,
+    search      => $search_radio,
+    charge      => $ch_radio
+    );
+  return \%in;
+}
+
