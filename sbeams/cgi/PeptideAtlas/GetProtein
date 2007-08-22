@@ -1144,9 +1144,15 @@ sub get_sequence_graphic {
     } else {
       # Signal peptide is still considered unlikely to be observed
       $log->info( "Allowing obs signal sequence as unlikely for $args{protein_data}->{biosequence_name}" );
-      push @unlikely_to_observe, { start => $signal_peptide_coords->{start}, end => $min_covered_aa};
+
+      # Not strictly correct, but useful to pass this information on
+      $signal_peptide_coords->{end} = $min_covered_aa - 1;
+
+      my $signal_seq = substr( $protseq, 0, ($min_covered_aa - 1) );
+#      $log->debug( "SEQ is $signal_seq, length is " . length($signal_seq) );
+      push @unlikely_to_observe, { start => $signal_peptide_coords->{start}, end => ($min_covered_aa - 1), seq => $signal_seq };
       my $f = Bio::SeqFeature::Generic->new( -start   => $signal_peptide_coords->{start},
-                                             -end     => $min_covered_aa,
+                                             -end     => ($min_covered_aa - 1),
                                              -primary => 'Difficult',
                                         -display_name => 'Difficult' );
       push @difficult, $f;
@@ -1155,6 +1161,10 @@ sub get_sequence_graphic {
   
   # my $protseq = $args{protein_data}->{biosequence_seq};
   for my $cpair ( @uncovered ) {
+    if ( $signal_peptide_coords &&  $signal_peptide_coords->{end}  ) {
+# $log->debug( "Start is $cpair->{start}, End is $cpair->{end}, seq is $cpair->{seq}" );
+      next if $cpair->{end} <= $signal_peptide_coords->{end}; 
+    }
     my $uncovered_length = $cpair->{end} -  $cpair->{start} + 1;
     my $seq = substr( $protseq, $cpair->{start} - 1, $uncovered_length );
     $cpair->{seq} = $seq;
@@ -1323,7 +1333,7 @@ sub get_sequence_graphic {
                 obs_multi =>  "Peptides which match to 2 or more genome locations",
                 sig_seq => "Signal peptide predicted from amino acid sequence",
                 anc_seq => "Anchor sequence predicted from amino acid sequence",
-                tm_dom => "Transmembrane region prediced from amino acid sequence",
+                tm_dom => "Transmembrane region predicted from amino acid sequence",
                 in_dom => "Predicted orientation inside, (intracellular for cell membrane proteins)",
                 ex_dom =>  "Predicted orientation outside, (extracellular for cell membrane proteins)",
                 pep_cov => "Cumulative sequence coverage",
@@ -1606,7 +1616,8 @@ sub displayAnnotatedSequence {
   
   print "<BR><BR>";
   print "Protein Coverage = ",int($observed_residues/$seq_length*1000)/10,"%";
-  print ' (' . int(($observed_residues + $cnt)/$seq_length*1000)/10,"% of likely observable sequence)";
+#  $log->debug( "OBS: $observed_residues, SEQLEN: $seq_length, CNT $cnt" );
+  print ' (' . int(($observed_residues)/($seq_length-$cnt)*1000)/10,"% of likely observable sequence)";
 
   print "</TD></TR></TABLE>\n";
   #print "<BR><BR>Notes:<BR>\n$notes_buffer" if ($notes_buffer);
