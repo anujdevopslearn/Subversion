@@ -38,12 +38,13 @@ my $log = SBEAMS::Connection::Log->new();
 #
 sub new {
   my $class = shift;
-  my $this = { @_,
-               __rowvals => [],
+  my $this = { __rowvals => [],
                __colspecs => [],
                __rowspecs => [],
                __cellspecs => [],
-               __maxlen => 0
+               __maxlen => 0,
+               __maxlen => '',
+               @_
              };
   bless $this, $class;
   return $this;
@@ -119,9 +120,19 @@ sub setColAttr {
       }
     }
   } else { # Otherwise, add to all rows
-# For the number of rows
-# for each specified column
-# push the specified attributes onto the the row->col colspecs array
+    # For the number of rows
+    for ( my $row = 1; $row <= $this->getRowNum(); $row++ ) {
+      $log->debug( "Me row is $row" );
+      # for each specified column
+      foreach my $col ( @cols ) {
+        $log->debug( "Me col is $col" );
+        # push the specified attributes onto the the row->col colspecs array
+        for my $key ( keys %args ) {
+          $log->debug( "pushing $key, $row, $args{$key}, $col" );
+          push @{$this->{__cellspecs}->[$row]->[$col]}, $key, $args{$key};
+        }
+      }
+    }
     
   }
 }
@@ -307,9 +318,9 @@ sub _delimitData {
 #-
 sub _getTable {
   my $this = shift;
-  my $tabdef = '<TABLE ';
+  my $tabdef = "<TABLE $this->{__tr_info}";
   foreach my $att ( keys ( %$this ) ) {
-  next if $att =~ /^__/;
+    next if $att =~ /^__/;
     $tabdef .= "$att='$this->{$att}' ";
   }
   return $tabdef . '>';
