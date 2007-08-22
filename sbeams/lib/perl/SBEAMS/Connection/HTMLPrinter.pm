@@ -1572,7 +1572,7 @@ sub make_table_toggle {
     $texthtml = "<TD $tbl_html CLASS=$hideclass>$hidetext</TD><TD $tbl_html CLASS=$showclass>$showtext</TD>";
   }
   
-  $tbl_html .= "CLASS='$hideclass'";
+  $tbl_html .= "CLASS='$hideclass' ";
 
 
   my $linkhtml = ( $texthtml ) ?  
