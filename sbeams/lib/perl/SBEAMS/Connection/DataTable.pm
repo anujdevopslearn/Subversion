@@ -122,13 +122,10 @@ sub setColAttr {
   } else { # Otherwise, add to all rows
     # For the number of rows
     for ( my $row = 1; $row <= $this->getRowNum(); $row++ ) {
-      $log->debug( "Me row is $row" );
       # for each specified column
       foreach my $col ( @cols ) {
-        $log->debug( "Me col is $col" );
         # push the specified attributes onto the the row->col colspecs array
         for my $key ( keys %args ) {
-          $log->debug( "pushing $key, $row, $args{$key}, $col" );
           push @{$this->{__cellspecs}->[$row]->[$col]}, $key, $args{$key};
         }
       }

@@ -536,7 +536,6 @@ sub encodeSectionTable {
   
   # How many do we have?
   my $tot = $tab->getRowNum();
-  $log->debug( "We have $tot total rows");
   my $closelink;
   if ( $args{rows_to_show} && $args{rows_to_show} < $tot - 1 ) {
     $closelink = $self->add_tabletoggle_js(); 
