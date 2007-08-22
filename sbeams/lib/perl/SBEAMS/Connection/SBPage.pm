@@ -74,7 +74,7 @@ sub getSBEAMSMod {
 sub addContent {
   my $this = shift;
   my $content = shift;
-  $this->{_content} = $content;
+  $this->{_content} .= $content;
 }
 
 sub printPage {
