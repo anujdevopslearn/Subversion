@@ -1032,11 +1032,12 @@ sub get_sequence_graphic {
       $signal_peptide_coords->{start} = 1;
       $signal_peptide_coords->{end} = $args{protein_data}->{signal_peptide_length};
       $signal_peptide_coords->{seq} = substr( $protseq, 0, $args{protein_data}->{signal_peptide_length} );
+#      $log->debug( "sig seq is $args{protein_data}->{signal_peptide_length}" );
       $signal_peptide_coords->{rationale} = 'Predicted signal sequence, cleaved in mature protein';
     }
 
     my $f = Bio::SeqFeature::Generic->new( -start => 1,
-                                             -end => 1 + $args{protein_data}->{signal_peptide_length},
+                                             -end => $args{protein_data}->{signal_peptide_length},
                                     -display_name => $seqtype ,
                                            -label => 0
                                          );
@@ -1133,6 +1134,7 @@ sub get_sequence_graphic {
   if ( $signal_peptide_coords &&  $signal_peptide_coords->{end}  ) {
     if ( $min_covered_aa > $signal_peptide_coords->{end} ) {
       push @unlikely_to_observe, $signal_peptide_coords;
+#      $log->debug( "1 start is $signal_peptide_coords->{start}, end is $signal_peptide_coords->{end}" );
       my $f = Bio::SeqFeature::Generic->new( -start   => $signal_peptide_coords->{start},
                                              -end     => $signal_peptide_coords->{end},
                                              -primary => 'Difficult',
@@ -1141,18 +1143,19 @@ sub get_sequence_graphic {
     } elsif ( $penalize_obs_in_signal ) {
       # We will not consider the signal peptide to be unlikely
       $log->info( "Found sequence in a predicted signal sequence for $args{protein_data}->{biosequence_name}, penalizing" );
-    } else {
+    } elsif ( $min_covered_aa != 1 ) {
       # Signal peptide is still considered unlikely to be observed
       $log->info( "Allowing obs signal sequence as unlikely for $args{protein_data}->{biosequence_name}" );
 
       # Not strictly correct, but useful to pass this information on
-      $signal_peptide_coords->{end} = $min_covered_aa - 1;
+      $signal_peptide_coords->{end} = $min_covered_aa - 1 if $min_covered_aa;
 
-      my $signal_seq = substr( $protseq, 0, ($min_covered_aa - 1) );
-#      $log->debug( "SEQ is $signal_seq, length is " . length($signal_seq) );
-      push @unlikely_to_observe, { start => $signal_peptide_coords->{start}, end => ($min_covered_aa - 1), seq => $signal_seq };
+      my $signal_seq = substr( $protseq, 0, $signal_peptide_coords->{end} );
+      
+#      $log->debug( "2 start is $signal_peptide_coords->{start}, end is $signal_peptide_coords->{end}" );
+      push @unlikely_to_observe, { start => $signal_peptide_coords->{start}, end => $signal_peptide_coords->{end}, seq => $signal_seq };
       my $f = Bio::SeqFeature::Generic->new( -start   => $signal_peptide_coords->{start},
-                                             -end     => ($min_covered_aa - 1),
+                                             -end     =>  $signal_peptide_coords->{end},
                                              -primary => 'Difficult',
                                         -display_name => 'Difficult' );
       push @difficult, $f;
