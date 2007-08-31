@@ -138,39 +138,58 @@ Options:
     --verbose <num>    Set verbosity level.  Default is 0
     --quiet            Set flag to print nothing at all except errors
     --debug n          Set debug flag    
-    --base_directory  <file path> Override the default directory to start searching for files
-    --file_extension <space separated list> Override the default File extensions to search for.
+    --base_directory   <file path> Override the default directory to start
+                       searching for files
+    --file_extension   <space separated list> Override the default File
+                       extensions to search for.
     --testonly         Information in the database is not altered
 
 Run Mode Notes:
  add_new : will only upload new files if the file_root name is unique
  
  update --method \<space separated list\>: 
- 	Update run mode runs just like the add_new mode, parsing and gathering information.  It will upload NEW files
-  if it finds them, but if the root_file name has been previously set this method will update the data pointed to by the method flag
+ 	Update run mode runs just like the add_new mode, parsing and gathering 
+  information.  It will upload NEW files if it finds them, but if the root_file
+  name has been previously set this method will update the data pointed to by
+  the method flag
   
-  Must provide a --method command line flag followed by a comma separated list of method names.
-  Data will be updated only for fields with a valid method name always over riding the data in the database 
-  See Affy.pm for the names of the setters
-   
+  Must provide a --method command line flag followed by a comma separated list
+  of method names.  Data will be updated only for fields with a valid method 
+  name always overriding the data in the database See Affy.pm for the names of
+  the setters
   
-  Will also accept array number(s) to specifically update instead of all the arrays
-  Set the --array_id flag and give some ids comma seperated
+  Will also accept array number(s) to specifically update instead of all the 
+  arrays.  Set the --array_id flag and give some ids comma separated.
  
- delete --array <affy_array_id> OR <root_file_name> Comma separated list
- 	   Delete the array but LEAVES the sample
-  --both <affy_array_id> OR <root_file_name>  Comma separated list
-     Delete the array and sample
+ delete 
+
+  --array <affy_array_id> OR <root_file_name> Delete the array but LEAVES
+    the sample, can be a comma separated list
+  --both <affy_array_id> OR <root_file_name>  Deletes the array and sample, can
+    be a comma separated list
   --delete_all YES
     Removes all the samples and array information
+
 Examples;
-1) ./$PROG_NAME --run_mode add_new 			        # typical mode, adds any new files
-2) ./$PROG_NAME --run_mode update --method set_afs_sample_tag    # will parse the sample tag information and stomp the data in the database 	  
+
+# typical mode, adds any new files
+1) ./$PROG_NAME --run_mode add_new 			        
+
+# will parse the sample tag information and stomp the data in the database 	  
+2) ./$PROG_NAME --run_mode update --method set_afs_sample_tag   
+
 3) ./$PROG_NAME --run_mode update --method set_afs_sample_tag --array_id 507,508
+
 4) ./$PROG_NAME --run_mode update --method show_all_methods
-5) ./$PROG_NAME --run_mode delete --array 20040609_02_LPS1-50	# Delete the array with the file root given but LEAVES the sample
-6) ./$PROG_NAME --run_mode delete --both 20040609_02_LPS1-40 20040609_02_LPS1-50	# removes both the array and sample records for the two root_file names
-7) ./$PROG_NAME --run_mode delete --delete_all YES			#REMOVES ALL ARRAYS AND SAMPLES....Becareful
+
+# Delete the array with the file root given but LEAVES the sample
+5) ./$PROG_NAME --run_mode delete --array 20040609_02_LPS1-50	
+
+# removes both the array and sample records for the two root_file names
+6) ./$PROG_NAME --run_mode delete --both 20040609_02_LPS1-40 20040609_02_LPS1-50	
+
+#REMOVES ALL ARRAYS AND SAMPLES....Becareful
+7) ./$PROG_NAME --run_mode delete --delete_all YES			
 
 EOU
 
@@ -212,12 +231,16 @@ $DELETE_ALL   = $OPTIONS{delete_all};
 
 my $val = grep {$RUN_MODE eq $_} @run_modes;
 
-die "*** RUN_MODE DOES NOT LOOK GOOD '$RUN_MODE' ***\n $USAGE" unless ($val);
+unless ($val) {
+  print "\n*** Invalid or missing run_mode: $RUN_MODE ***\n\n $USAGE"; 
+  exit;
+}
+
 
 if ($RUN_MODE eq 'update' ){		#if update mode check to see if --method <name> is set correctly
   unless ($METHOD =~ /^set/ || $METHOD =~ /^show/ ) {
   	print "\n*** Must provide a --method command line argument when updating data ***$USAGE\n";
-  	die;
+  	exit;
   		
   }
 
