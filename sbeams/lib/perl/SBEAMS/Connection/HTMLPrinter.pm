@@ -887,6 +887,8 @@ sub getMainPageTabMenuObj {
                     helptext => 'View projects I have access to' );
   $tabmenu->addTab( label    => 'Recent Resultsets',
                     helptext => 'View recent SBEAMS resultsets' );
+  $tabmenu->addTab( label    => 'Related Files',
+                    helptext => 'Add/View files of any type associated with this project' );
 
   my $content = ''; # Scalar to hold content.
 
@@ -913,6 +915,10 @@ sub getMainPageTabMenuObj {
   } elsif ( $tabmenu->getActiveTabName() eq 'Recent Resultsets' ){
 
     $content = $self->getRecentResultsets();
+
+  } elsif ( $tabmenu->getActiveTabName() eq 'Related Files' ){
+
+    $content = $self->getProjectFiles();
 
   } else {
 

@@ -62,6 +62,8 @@ use vars qw(@ISA @EXPORT
     $TB_TEST_PROTOCOL
     $TB_TEST_SAMPLE
     $TB_TEST_SAMPLE_PROTOCOL
+
+    $TB_PROJECT_FILE
 );
 
 
@@ -110,6 +112,7 @@ require Exporter;
     $TB_TEST_SAMPLE
     $TB_TEST_SAMPLE_PROTOCOL
 
+    $TB_PROJECT_FILE
 );
 
 
@@ -160,6 +163,7 @@ $TB_TEST_PROTOCOL               = ${core}."test_protocol";
 $TB_TEST_SAMPLE                 = ${core}."test_sample";
 $TB_TEST_SAMPLE_PROTOCOL        = ${core}."test_sample_protocol";
 
+$TB_PROJECT_FILE                = "${core}project_file";
 
 
 ###############################################################################

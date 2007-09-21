@@ -5752,6 +5752,104 @@ sub getRecentResultsets {
 
 } #end printRecentResultsets
 
+
+###############################################################################
+# printProjectFiles - prints HTML TABLE of files related to the project
+###############################################################################
+sub printProjectFiles {
+  my $self = shift || croak("parameter self not passed");
+  my $html = $self->getProjectFiles( @_ );
+  print $html;
+} # end printProjectFiles
+
+
+###############################################################################
+# getProjectFiles - gets HTML TABLE of files related to the project
+###############################################################################
+sub getProjectFiles {
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+  my $SUB_NAME = "getProjectFiles";
+
+  #### Decode the argument list
+  my $verbose = $args{'verbose'} || 0;
+  my $max_rows = $args{'max_rows'} || 5;
+
+  #### Create a header
+  my $html;    # Content Accumulator
+  $html .= qq~
+    <H1>Related Files:</H1>
+    <P>Arbitrary files may be associated with any project. Below is a list of files
+    associated with the current project. You may view or add files of any format.</P>
+  ~;
+
+
+  my $current_project_id = $self->getCurrent_project_id();
+
+  #### Get information about the most recent resultsets
+  my $sql = qq~
+    SELECT project_file_id,project_file_title,project_file,project_file_description,
+           date_created
+      FROM $TB_PROJECT_FILE
+     WHERE project_id = '$current_project_id'
+       AND record_status != 'D'
+     ORDER BY project_file_title
+  ~;
+  my @rows = $self->selectSeveralColumns($sql);
+
+  #### If there are no files
+  unless (@rows) {
+    $html .= qq~
+      There are no files associated with this project yet.
+    ~;
+  }
+
+
+  #### If there's something interesting to show, show a glimpse
+  if (scalar(@rows)) {
+    $html .= qq~
+	<TABLE BORDER=0>
+    ~;
+
+
+    #### Find all the resultsets with names/annotations
+    my $html_buffer = '';
+    my $output_counter = 0;
+    foreach my $row (@rows) {
+      my ($project_file_id,$project_file_title,$project_file,$project_file_description,
+           $date_created) = @{$row};
+      $html_buffer .= qq~
+	  <TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD><TD NOWRAP>-&nbsp;<A HREF="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=project_file&project_file_id=$project_file_id">[View/Edit Entry]</A>&nbsp;&nbsp;&nbsp;&nbsp;<font color="green">$project_file_title</font></TD>
+	  <TD NOWRAP>&nbsp;&nbsp;&nbsp;<A HREF="$CGI_BASE_DIR/ManageTable.cgi/$project_file?TABLE_NAME=project_file&project_file_id=$project_file_id&GetFile=project_file">$project_file</A></TD>
+	  <TD NOWRAP>&nbsp;&nbsp;&nbsp;($date_created)</TD></TR>
+      ~;
+      $output_counter++;
+    }
+
+
+    #### If there were any, print them
+    if ($output_counter) {
+      $html .= qq~
+	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD><TD COLSPAN=4>Files:</TD></TR>
+	$html_buffer
+      ~;
+    }
+
+
+    $html .= qq~
+      <TR><TD></TD></TR>
+      <TR><TD></TD><TD COLSPAN=4><A HREF="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=project_file&ShowEntryForm=1">[Add new file]</A></TD></TR>
+      </TABLE>
+    ~;
+
+  }
+
+  return $html || $self->makeInfoText( '&nbsp;&nbsp; No resultsets available' );
+
+} #end printRecentResultsets
+
+
+
 #+
 # GetDataFromModules
 #
