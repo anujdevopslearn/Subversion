@@ -2473,10 +2473,9 @@ sub getContentType {
 
   #### Get the file extension
   my $file_ext = '';
-  if ($file_name =~ /\.(.+)?$/) {
+  if ($file_name =~ /.+\.(.+)$/) {
     $file_ext = $1;
   }
-
 
   #### If we found a valid extention
   if ($file_ext) {
