@@ -795,6 +795,23 @@ sub getParentProject {
   }
 
 
+  #### If table is project_file
+  if ($table_name eq "project_file") {
+
+    ### If the user wants to INSERT, determine how it fits into project
+    if ($action eq 'INSERT') {
+      $project_id = $parameters_ref->{project_id};
+
+    #### Else for UPDATE, DELETE or SELECT, determine how it fits into project
+    } elsif ( $action =~ /^UPDATE$|^DELETE$|^SELECT$/ ) {
+      #### Should some combination of the previous and possibly new project FIXME
+      $project_id = $parameters_ref->{project_id};
+    }
+
+    return($project_id);
+  }
+
+
   #### If table is xxxx
   if ($table_name eq "xxxx") {
 
