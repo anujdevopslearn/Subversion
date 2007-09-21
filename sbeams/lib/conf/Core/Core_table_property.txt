@@ -30,9 +30,10 @@ software_hardware_protocol	Software Hardware Protocol Linking	admin	NO	$TB_SOFTW
 cached_resultset	Cached Resultset	rowprivate	YES	$TB_CACHED_RESULTSET	cached_resultset_id		ManageTable.cgi?TABLE_NAME=cached_resultset	cached_resultset	
 form_template	Form Template	rowprivate	YES	$TB_FORM_TEMPLATE	form_template_id		ManageTable.cgi?TABLE_NAME=form_template		
 short_url	Short URL	rowprivate	NO	$TB_SHORT_URL	url_id				
-AdHocQuery	Ad Hoc Query	QUERY					AdHocQuery		
-GetDataSource	Get Data Source	QUERY					GetDataSource		
-IntegrateResultsets	Integrate Resultsets	QUERY					IntegrateResultsets		
-test_sample	Test Sample	admin	YES	$TB_TEST_SAMPLE	sample_id		ManageTable.cgi?TABLE_NAME=test_sample	"test_sample,test_protocol,test_sample_protocol"	
-test_protocol	Test Protocol	admin	YES	$TB_TEST_PROTOCOL	protocol_id		ManageTable.cgi?TABLE_NAME=test_protocol	"test_sample,test_protocol,test_sample_protocol"	
-test_sample_protocol	Test Sample Protocol	admin	YES	$TB_TEST_SAMPLE_PROTOCOL	sample_protocol_id		ManageTable.cgi?TABLE_NAME=test_sample_protocol	"test_sample,test_protocol,test_sample_protocol"	
+AdHocQuery	Ad Hoc Query	QUERY					AdHocQuery	
+GetDataSource	Get Data Source	QUERY					GetDataSource	
+IntegrateResultsets	Integrate Resultsets	QUERY					IntegrateResultsets	
+test_sample	Test Sample	admin	YES	$TB_TEST_SAMPLE	sample_id		ManageTable.cgi?TABLE_NAME=test_sample	"test_sample,test_protocol,test_sample_protocol"
+test_protocol	Test Protocol	admin	YES	$TB_TEST_PROTOCOL	protocol_id		ManageTable.cgi?TABLE_NAME=test_protocol	"test_sample,test_protocol,test_sample_protocol"
+test_sample_protocol	Test Sample Protocol	admin	YES	$TB_TEST_SAMPLE_PROTOCOL	sample_protocol_id		ManageTable.cgi?TABLE_NAME=test_sample_protocol	"test_sample,test_protocol,test_sample_protocol"
+project_file	Project File	project	YES	$TB_PROJECT_FILE	project_file_id		ManageTable.cgi?TABLE_NAME=project_file	

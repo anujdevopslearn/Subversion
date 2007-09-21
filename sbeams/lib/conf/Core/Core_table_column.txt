@@ -302,22 +302,22 @@ organism	5	abbreviation	Abbreviation	varchar	10	0	Y		N			Y	text	50		Y	Y	N	"Abbre
 organism	6	ncbi_taxonomy_id	NCBI Taxonomy ID	int	10	0	Y		N			N	text	10		Y	Y	N	Official NCBI Taxonomy ID		
 organism	7	genus	Genus	varchar	100	0	Y		N			N	text	50		Y	Y	N	"NCBI Taxonomy Genus (e.g., Homo)"		
 organism	8	species	Species	varchar	100	0	Y		N			N	text	50		Y	Y	N	"NCBI Taxonomy Species (e.g., Sapiens)"		
-organism	9	uri	URI	varchar	255	0	Y		N			N	text	75		Y	Y	N	"URL for this organism for more information"		
-organism	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
-organism	11	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Number to control the default sort order		
-organism	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-organism	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-organism	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-organism	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-organism	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-organism	17	record_status	Record Status	char	1	0	N	N	N							N	N				
-software_hardware_protocol	1	protocol_id	Protocol	int	4	0	N		N	protocol	protocol_id	Y	optionlist			N	N	Y	Protocol for this association		
-software_hardware_protocol	2	software_id	Software	int	4	0	N		N	software	software_id	Y	optionlist			N	N	Y	Software entity for this association		
-software_hardware_protocol	3	hardware_id	Hardware	int	4	0	N		N	hardware	hardware_id	Y	optionlist			N	N	Y	Hardware entity for this association		
-software_hardware_protocol	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
-software_hardware_protocol	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-software_hardware_protocol	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-software_hardware_protocol	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+organism	9	uri	URI	varchar	255	0	Y		N			N	text	75		Y	Y	N	URL for this organism for more information
+organism	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes
+organism	11	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Number to control the default sort order
+organism	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
+organism	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N		
+organism	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
+organism	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N		
+organism	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
+organism	17	record_status	Record Status	char	1	0	N	N	N							N	N		
+software_hardware_protocol	1	protocol_id	Protocol	int	4	0	N		N	protocol	protocol_id	Y	optionlist			N	N	Y	Protocol for this association
+software_hardware_protocol	2	software_id	Software	int	4	0	N		N	software	software_id	Y	optionlist			N	N	Y	Software entity for this association
+software_hardware_protocol	3	hardware_id	Hardware	int	4	0	N		N	hardware	hardware_id	Y	optionlist			N	N	Y	Hardware entity for this association
+software_hardware_protocol	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes
+software_hardware_protocol	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
+software_hardware_protocol	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N		
+software_hardware_protocol	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
 software_hardware_protocol	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 software_hardware_protocol	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 software_hardware_protocol	11	record_status	Record Status	char	1	0	N	N	N							N	N				
@@ -334,22 +334,22 @@ table_property	10	manage_tables	List of similar tables	varchar	255	0	Y		N			Y	te
 table_property	11	next_step	Next table to manage	varchar	100	0	Y		N			Y	text	50		Y	Y	N	"Possible next table to edit after INSERTing or UPDATing this one (e.g., after adding a contact, user_login might be next, then user_groups, etc.)"		
 table_column	1	table_column_id	Table Column ID	int	4	0	N		Y							N	N				pkDEFAULT
 table_column	2	table_name	Table Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Abstract name of the table (non-Core tables should be prefixed with the module prefix)		
-table_column	3	column_index	Column Index	int	4	0	N		N			Y	text	10		Y	Y	N	Index of the column used to control odering		
-table_column	4	column_name	Column Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Name of the column in the database table		
-table_column	5	column_title	Column Title	varchar	50	0	N		N			Y	text	50		Y	Y	N	Friendly title of the column		
-table_column	6	data_type	Data Type	varchar	50	0	N		N			Y	text	25		Y	Y	N	Standardized SQL datatype of the column		
-table_column	7	data_scale	Data Scale	int	4	0	N		N			Y	text	10		Y	Y	N	First qualifier of length of the datatype (depends on the datatype itself)		
-table_column	8	data_precision	Data Precision	int	4	0	Y		N			Y	text	10		Y	Y	N	"Second qualifier of precision of datatype (used, e.g., for NUMERIC(10,2))"		
-table_column	9	nullable	Is Nullable?	char	1	0	N		N			Y	text	5		Y	Y	N	Is the column NULLable?		
-table_column	10	default_value	Default Value	varchar	50	0	Y		N			N	text	50		Y	Y	N	DEFAULT value for the column if any		
-table_column	11	is_auto_inc	Is Autoincrementing?	char	1	0	N		N			Y	text	5		Y	Y	N	"Is the column an auto incrementing number (i.e. SEQUENCE, SERIAL, IDENTITY)?"		
-table_column	12	fk_table	FK Table Name	varchar	50	0	Y		N			N	text	50		Y	Y	N	"If this column is a foreign key to another table, what is that tables abstract name"		
-table_column	13	fk_column_name	FK Column Name	varchar	50	0	Y		N			N	text	50		Y	Y	N	"If this column is a foreign key to another table, what is that tables column to which this refers (usually the same)"		
-table_column	14	is_required	Is Required?	char	1	0	Y		N			N	text	5		Y	Y	N	Is this column a required field in the data form (shown as red)?		
-table_column	15	input_type	Form Input Type	varchar	50	0	Y		N			N	text	50		Y	Y	N	What is the HTML form input type for this field?		
-table_column	16	input_length	Form Input Length	varchar	25	0	Y		N			N	text	25		Y	Y	N	What is the length of scale or size of the input type (height for textarea)		
-table_column	17	onChange	JavaScript onChange	varchar	255	0	Y		N			N	text	50		Y	Y	N	Javascript that can be triggered with onChange in the HTML form		
-table_column	18	is_data_column	Is Data Column?	char	1	0	Y		N			N	text	5		Y	Y	N	Is this a data column that is potentially editable or is a housekeeping column?		
+table_column	3	column_index	Column Index	int	4	0	N		N			Y	text	10		Y	Y	N	Index of the column used to control odering
+table_column	4	column_name	Column Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Name of the column in the database table
+table_column	5	column_title	Column Title	varchar	50	0	N		N			Y	text	50		Y	Y	N	Friendly title of the column
+table_column	6	data_type	Data Type	varchar	50	0	N		N			Y	text	25		Y	Y	N	Standardized SQL datatype of the column
+table_column	7	data_scale	Data Scale	int	4	0	N		N			Y	text	10		Y	Y	N	First qualifier of length of the datatype (depends on the datatype itself)
+table_column	8	data_precision	Data Precision	int	4	0	Y		N			Y	text	10		Y	Y	N	"Second qualifier of precision of datatype (used, e.g., for NUMERIC(10,2))"
+table_column	9	nullable	Is Nullable?	char	1	0	N		N			Y	text	5		Y	Y	N	Is the column NULLable?
+table_column	10	default_value	Default Value	varchar	50	0	Y		N			N	text	50		Y	Y	N	DEFAULT value for the column if any
+table_column	11	is_auto_inc	Is Autoincrementing?	char	1	0	N		N			Y	text	5		Y	Y	N	"Is the column an auto incrementing number (i.e. SEQUENCE, SERIAL, IDENTITY)?"
+table_column	12	fk_table	FK Table Name	varchar	50	0	Y		N			N	text	50		Y	Y	N	"If this column is a foreign key to another table, what is that tables abstract name"
+table_column	13	fk_column_name	FK Column Name	varchar	50	0	Y		N			N	text	50		Y	Y	N	"If this column is a foreign key to another table, what is that tables column to which this refers (usually the same)"
+table_column	14	is_required	Is Required?	char	1	0	Y		N			N	text	5		Y	Y	N	Is this column a required field in the data form (shown as red)?
+table_column	15	input_type	Form Input Type	varchar	50	0	Y		N			N	text	50		Y	Y	N	What is the HTML form input type for this field?
+table_column	16	input_length	Form Input Length	varchar	25	0	Y		N			N	text	25		Y	Y	N	What is the length of scale or size of the input type (height for textarea)
+table_column	17	onChange	JavaScript onChange	varchar	255	0	Y		N			N	text	50		Y	Y	N	Javascript that can be triggered with onChange in the HTML form
+table_column	18	is_data_column	Is Data Column?	char	1	0	Y		N			N	text	5		Y	Y	N	Is this a data column that is potentially editable or is a housekeeping column?
 table_column	19	is_display_column	Is Display Column?	char	1	0	Y		N			N	text	5		Y	Y	N	Should this column be displayed in a form?		
 table_column	20	is_key_field	Is a Key Field?	char	1	0	Y		N			N	text	5		Y	Y	N	Does this column belong to the (possibly composite) key for this table		
 table_column	21	column_text	Column Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	A friendly description of the meaning of this column (this text here!)		
@@ -396,7 +396,7 @@ test_sample	4	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlis
 test_sample	5	age	Age	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Age of the individual at the time of harvest of the biomaterial.  Free form text; include units, developmental stage, and reference point as appropriate (e.g., days since planting, years after birth, minutes after death)"		
 test_sample	6	sample_protocol_ids	Sample Protocols	varchar	255	0	Y		N	test_sample_protocol	sample_protocol_id	N	multilink	4		Y	Y	N	Select all protocols that apply to this biomaterial.  Describe sequence of protocols in the Treatment Description below	"SELECT protocol_id,P.name FROM $TB_TEST_PROTOCOL P  WHERE P.record_status != 'D' ORDER BY P.name"	
 test_sample	7	sample_description	Sample Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Describe the biomaterial briefly		
-test_sample	8	sample_score	Sample Score	real	4	0	Y		N			N	text	20		Y	Y	N	Score, token real column		
+test_sample	8	sample_score	Sample Score	real	4	0	Y		N			N	text	20		Y	Y	N	"Score, token real column"		
 test_sample	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y	N			
 test_sample	10	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N	Y			
 test_sample	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
@@ -422,3 +422,16 @@ test_sample_protocol	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT
 test_sample_protocol	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 test_sample_protocol	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 test_sample_protocol	9	record_status	Record Status	char	1	0	N	N	N							N	N				
+project_file	1	project_file_id	Project File ID	int	4	0	N		Y							N	N				pkDEFAULT
+project_file	2	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	FK to project.project_id	"SELECT project_id, UL.username || ' - ' || proj.name || ' ( ' || RTRIM(CAST(proj.project_id AS CHAR)) || ' )'   AS name FROM $TB_PROJECT proj JOIN $TB_USER_LOGIN UL ON (proj.PI_contact_id = UL.contact_id)  WHERE proj.project_tag IS NOT NULL AND proj.record_status != 'D' ORDER BY UL.username"	
+project_file	3	project_file	Project File	varchar	255	0	N		N			Y	file	30		Y	Y	N	Click [Browse] and select the file to be uploaded.		
+project_file	4	project_file_title	Project File Title	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Title of the file being uploaded. It may contain spaces or any characters and be more descriptive than the native filename.		
+project_file	5	project_file_description	Project File Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	"A fuller description of the file. Describe how it was generated, what its format is, etc."		
+project_file	6	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments about this file		
+project_file	7	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
+project_file	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+project_file	9	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N
+project_file	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N
+project_file	11	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N
+project_file	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N
+project_file	13	record_status	Record Status	char	1	0	N	N	N							N	N
