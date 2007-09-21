@@ -5837,11 +5837,19 @@ sub getProjectFiles {
 
 
     $html .= qq~
-      <TR><TD></TD></TR>
-      <TR><TD></TD><TD COLSPAN=4><A HREF="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=project_file&ShowEntryForm=1">[Add new file]</A></TD></TR>
       </TABLE>
     ~;
 
+  }
+
+  if ($self->isProjectWritable()) {
+    $html .= qq~
+      <P><A HREF="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=project_file&ShowEntryForm=1">[Add new file]</A></P>
+    ~;
+  } else {
+    $html .= qq~
+      <P>(Insufficient privilege to [Add new file] in this project)</P>
+    ~;
   }
 
   return $html || $self->makeInfoText( '&nbsp;&nbsp; No resultsets available' );
