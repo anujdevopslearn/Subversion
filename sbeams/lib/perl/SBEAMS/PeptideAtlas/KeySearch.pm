@@ -110,6 +110,7 @@ sub rebuildKeyIndex {
 
   my $organism_specialized_build = $args{organism_specialized_build};
 
+
   if ($organism_name =~ /^Human$|^Mouse$/i ) {
 
     my $GOA_directory = $args{GOA_directory}
@@ -218,6 +219,34 @@ sub rebuildKeyIndex {
     print "\n";
 
   }
+
+
+  if ($organism_name eq 'Leptospira interrogans') {
+
+    my $reference_directory = $args{reference_directory}
+      or die("ERROR[$METHOD]: Parameter reference_directory not passed");
+
+    $self->dropKeyIndex(
+      atlas_build_id => $atlas_build_id,
+      organism_specialized_build => $organism_specialized_build,
+    );
+
+    print "Loading protein keys from SBEAMS and reference files...\n";
+    $self->buildLeptospiraKeyIndex(
+      reference_directory => $reference_directory,
+      atlas_build_id => $atlas_build_id,
+    );
+
+    print "Loading peptides keys...\n";
+    $self->buildPeptideKeyIndex(
+      organism_id=>$organism_id,
+      atlas_build_id=>$atlas_build_id,
+    );
+
+    print "\n";
+
+  }
+
 
 
   if ($organism_name eq 'Drosophila') {
@@ -1132,6 +1161,213 @@ sub buildStreptococcusKeyIndex {
   print "\n";
 
 } # end buildStreptococcusKeyIndex
+
+
+###############################################################################
+# buildLeptospiraKeyIndex
+###############################################################################
+sub buildLeptospiraKeyIndex {
+  my $METHOD = 'buildLeptospiraKeyIndex';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  print "INFO[$METHOD]: Building Leptospira key index...\n" if ($VERBOSE);
+
+  my $atlas_build_id = $args{atlas_build_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+
+  my $reference_directory = $args{reference_directory}
+    or die("ERROR[$METHOD]: Parameter reference_directory not passed");
+
+  unless (-d $reference_directory) {
+    die("ERROR[$METHOD]: '$reference_directory' is not a directory");
+  }
+
+  my $organism_id = 27;
+  my %proteins;
+
+
+
+  #### Load information from ptt file
+  my $reference_file = "$reference_directory/NC_005823.ptt";
+
+  #### Open file and skip header
+  my $header;
+  open(INFILE,$reference_file)
+    or die("ERROR[$METHOD]: Unable to open file '$reference_file'");
+  while ($header = <INFILE>) {
+    last if ($header =~ /^Location/);
+  }
+
+  #### Create an array and hash of the columns
+  $header =~ s/[\r\n]//g;
+  my @columns_names = split("\t",$header);
+  my %columns_names;
+  my $index = 0;
+  foreach my $column_name ( @columns_names ) {
+    $columns_names{$column_name} = $index;
+    #print "Column '$column_name'= $index\n";
+    $index++;
+  }
+
+  #### Load data
+  while (my $line = <INFILE>) {
+    $line =~ s/[\r\n]//g;
+    my @columns = split("\t",$line);
+    my $protein_name = "gi|".$columns[$columns_names{PID}];
+    $proteins{$protein_name}->{gi} = $protein_name;
+    $proteins{$protein_name}->{ORF_name} = $columns[$columns_names{'Synonym'}];
+    $proteins{$protein_name}->{gene_name} = $columns[$columns_names{'Gene'}];
+    $proteins{$protein_name}->{COG} = $columns[$columns_names{'COG'}];
+    $proteins{$protein_name}->{full_name} = $columns[$columns_names{'Product'}];
+  }
+  close(INFILE);
+
+
+  #### Load information from gff file
+  my $reference_file = "$reference_directory/NC_005823.gff";
+
+  #### Open file and skip header
+  open(INFILE,$reference_file)
+    or die("ERROR[$METHOD]: Unable to open file '$reference_file'");
+  while (my $line = <INFILE>) {
+    last if ($line =~ /^##Type/);
+  }
+
+  #### Load data
+  while (my $line = <INFILE>) {
+    $line =~ s/[\r\n]//g;
+    my @columns = split("\t",$line);
+    next unless ($columns[2] eq 'CDS');
+
+    my $mish_mash = $columns[8];
+    my @keyvaluepairs = split(";",$mish_mash);
+
+
+    my ($key,$value,$gi,$refseq,$geneID,$note);
+    foreach my $keyvaluepair ( @keyvaluepairs ) {
+
+      if ( $keyvaluepair =~ /(\w+)=(.+)/ ) {
+	$key = $1;
+	$value = $2;
+      } else {
+	print "WARNING: Unable to parse '$keyvaluepair' into key=value\n";
+	next;
+      }
+      #print "keyvaluepair: $key=$value\n";
+
+      if ($key eq 'db_xref') {
+	if ($value =~ /^GI:(\d+)$/) {
+	  $gi = $1;
+	} elsif ($value =~ /^GeneID:(\d+)$/) {
+	  $geneID = $1;
+	} else {
+	  print "WARNING: unable to parse db_ref '$key=$value'\n";
+	}
+      }
+
+      if ($key eq 'protein_id') {
+	$refseq = $value;
+      }
+
+      if ($key eq 'note') {
+	$note = $value;
+	$note =~ s/\%([A-Fa-f0-9]{2})/pack('C', hex($1))/seg;
+      }
+
+    }
+
+    unless ($gi) {
+      print "WARNING: No gi number for line '$line'\n";
+      next;
+    }
+
+    my $protein_name = "gi|$gi";
+
+    if ($refseq) {
+      $proteins{$protein_name}->{RefSeq} = $refseq;
+      $proteins{$protein_name}->{combined} = "$protein_name|ref|$refseq|";
+    }
+
+    if ($geneID) {
+      $proteins{$protein_name}->{'Entrez GeneID'} = $geneID;
+    }
+
+    if ($note) {
+      if (length($note) > 800) {
+	$note = substr($note,0,800)."....";
+      }
+      $proteins{$protein_name}->{'Functional_Note'} = $note;
+    }
+
+  }
+  close(INFILE);
+
+
+  #### Get the list of proteins that have a match
+  my $matched_proteins = $self->getNProteinHits(
+    organism_id=>$organism_id,
+    atlas_build_id=>$atlas_build_id,
+  );
+
+
+  #### Loop over all input rows processing information
+  my $counter = 0;
+  foreach my $biosequence_name (keys(%proteins)) {
+
+    #### Debugging
+    #print "protein=",$biosequence_name,"\n";
+    #print "protein(combined)=",$proteins{$biosequence_name}->{combined},"\n";
+
+
+    #### Build a list of protein links
+    my @links;
+
+    if ($biosequence_name) {
+      my @tmp = ('gi Accession',$biosequence_name);
+      push(@links,\@tmp);
+    }
+
+    foreach my $key ( qw (ORF_name gene_name COG full_name RefSeq combined Functional_Note) ) {
+      if (exists($proteins{$biosequence_name}->{$key})) {
+	my @tmp = ($key,$proteins{$biosequence_name}->{$key});
+	push(@links,\@tmp);
+      }
+    }
+
+    foreach my $link (@links) {
+      #print "    ".join("=",@{$link})."\n";
+      my %rowdata = (
+        search_key_name => $link->[1],
+        search_key_type => $link->[0],
+        search_key_dbxref_id => $link->[2],
+        organism_id => $organism_id,
+        atlas_build_id => $atlas_build_id,
+        resource_name => $proteins{$biosequence_name}->{combined},
+        resource_type => 'L. interrogans accession',
+        resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$proteins{$biosequence_name}->{combined}&action=QUERY",
+        resource_n_matches => $matched_proteins->{$proteins{$biosequence_name}->{combined}},
+      );
+      $sbeams->updateOrInsertRow(
+        insert => 1,
+        table_name => "$TBAT_SEARCH_KEY",
+        rowdata_ref => \%rowdata,
+        verbose=>$VERBOSE,
+        testonly=>$TESTONLY,
+      );
+    }
+
+
+    $counter++;
+    print "$counter... " if ($counter/100 eq int($counter/100));
+
+    #my $xx=<STDIN>;
+
+  } # endfor each biosequence
+
+  print "\n";
+
+} # end buildLeptospiraKeyIndex
 
 
 ###############################################################################
