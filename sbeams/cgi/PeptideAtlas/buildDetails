@@ -58,15 +58,7 @@ my $show_image = 0;
     ## get current settings
     my $project_id = $sbeams->getCurrent_project_id();
 
-    # We are not forcing the user into the new build - is that correct?
-    my $build_id = $params->{atlas_build_id} || $atlas->getCurrentAtlasBuildID(parameters_ref => $params);
-    if ( !grep /^$build_id$/, $atlas->getAccessibleBuilds() ) {
-      die( "Access to specified build is not allowed" );
-    }
-
     my $help = get_help_section();
-
-    
     my $page = $sbeams->getGifSpacer( 700 ) . "<BR>\n";
     $page .=<<"    END";
     <P>
@@ -80,7 +72,17 @@ my $show_image = 0;
     $help->{build}
     END
 
-    
+    # We are not forcing the user into the new build - is that correct?
+    my $build_id = $params->{atlas_build_id} || $atlas->getCurrentAtlasBuildID(parameters_ref => $params);
+    my $valid_build = 1;
+    if ( !grep /^$build_id$/, $atlas->getAccessibleBuilds() ) {
+#      die( "Access to specified build is not allowed" );
+       $atlas->display_page_header();
+       $build_id = $atlas->getCurrentAtlasBuildID(parameters_ref => $params);
+		   $atlas->display_page_footer();
+       exit;
+    }
+
 
     # Add general section 
 #  print STDERR 'build overV ' . time() . "\n";
