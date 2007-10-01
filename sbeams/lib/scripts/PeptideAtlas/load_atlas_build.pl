@@ -1113,6 +1113,7 @@ sub create_atlas_search_batch_parameter_recs
     my @params_files = ( "$search_batch_path/sequest.params",
       "$search_batch_path/../sequest.params", "$search_batch_path/comet.def",
       "$search_batch_path/tandem.params", "$search_batch_path/tandem.xml",
+      "$search_batch_path/spectrast.params",
     );
 
     #### Try to find the files in order
@@ -1144,7 +1145,7 @@ sub create_atlas_search_batch_parameter_recs
 
     unless ($result) 
     {
-        print "ERROR: Unable to read sequest parameter file: '$infile'\n";
+        print "ERROR: Unable to read search parameter file: '$infile'\n";
 
         return;
     }
@@ -1180,9 +1181,12 @@ sub create_atlas_search_batch_parameter_recs
 	#### Not all search engines specify this, and it always seems to
 	#### be 0 anyway. Set a default of 0 in case it is not seen.
 	$peptide_ion_tolerance = 0;
+	$enzyme = -1;
+	$num_enzyme_termini = -1;
 
         ## pick up params needed for ATLAS_SEARCH_BATCH_PARAMETER_SET
-        if ($key eq "peptide_mass_tolerance" or $key eq "MassTol")
+        if ($key eq "peptide_mass_tolerance" or $key eq "MassTol" or
+            $key eq "indexRetrievalMzTolerance")
         {
             $peptide_mass_tolerance = $rowdata{parameter_value};
         }
@@ -2439,28 +2443,38 @@ sub getMzXMLFileNames
     my $search_batch_dir_path = $args{search_batch_dir_path} or die
         " need search_batch_dir_path ($!)";
 
-    my $infile = "$search_batch_dir_path/interact-prob.xml";
-
-    #### Sometimes search_batch_dir_path is actually a file??
-    if ($search_batch_dir_path =~ /\.xml/) {
-      $infile = $search_batch_dir_path;
-    }
-
     ## to handle both older and newer formats:
     my ($msRunPepXMLFileName, $mzXMLFileName);
     my (@msRunPepXMLFileNames, @mzXMLFileNames);
     my $guessed_experiment_dir;
 
-    unless(-e $infile)
-    {
-        #print "[WARN] could not find $infile\n";
+    my $infile;
 
-        $infile = "$search_batch_dir_path/interact.xml";
+    #### Sometimes search_batch_dir_path is actually a file??
+    if ($search_batch_dir_path =~ /\.xml/) {
+      $infile = $search_batch_dir_path;
+
+    #### Otherwise it's directory, try to find the file
+    } else {
+      my @possible_interact_names = ( 'interact-prob.xml', 'interact.xml',
+        'interact-specall.xml', 'interact-spec.xml' );
+      my $found_file = 0;
+      foreach my $possible_name ( @possible_interact_names ) {
+	if ( -e $search_batch_dir_path.'/'.$possible_name ) {
+	  $found_file = 1;
+	  $infile = $search_batch_dir_path.'/'.$possible_name;
+	  last;
+	}
+      }
+
+      #### Die if we couldn't find it
+      unless ( $found_file ) {
+	die("ERROR: Unable to auto-detect an interact file in $search_batch_dir_path");
+      }
     }
-    unless(-e $infile)
-    {
-        print "[WARN] could not find $infile\n";
-        die "could not find $infile either. Abort.\n";
+
+    unless(-e $infile) {
+      die "could not find infile '$infile'.\n";
     }
 
     open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
