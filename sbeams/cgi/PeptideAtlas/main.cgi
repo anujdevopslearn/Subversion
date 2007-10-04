@@ -171,7 +171,7 @@ sub handle_request {
     my $sql = qq~
     SELECT AB.atlas_build_id, atlas_build_name, atlas_build_description,
            default_atlas_build_id, organism_specialized_build, organism_name,
-           ( SELECT SUM(n_distinct_multiobs_peptides) 
+           ( SELECT SUM(n_progressive_peptides) 
              FROM $TBAT_SEARCH_BATCH_STATISTICS SBS JOIN
                   $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB 
                ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
@@ -191,7 +191,7 @@ sub handle_request {
              AB.atlas_build_id DESC
     ~;
     my @atlas_builds = $sbeams->selectSeveralColumns($sql);
-#    $log->debug( $sbeams->evalSQL($sql) );
+    $log->debug( $sbeams->evalSQL($sql) );
 
     my $default_build_name = '';
     foreach my $atlas_build ( @atlas_builds ) {
