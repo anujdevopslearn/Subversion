@@ -22,7 +22,7 @@ use FindBin;
 
 use vars qw (
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
-             $peptide_hash $probcol
+             $peptide_hash $probcol $protcol $seqcol
             );
 
 
@@ -130,11 +130,16 @@ sub main {
   #$probcol = 2;
   #$probcol = 4 if ($header_columns[4] eq 'probability');
   my $line;
-  $probcol = 8;
-  my $seqcol = 3;
+  $seqcol = 0;
+  my $origseqcol = 3;
+  $probcol = 1;
+  my $origprobcol = 8;
+  $protcol = 2;
+  my $origprotcol = 10;
 
   #### Read in all the peptides for the first experiment
   my @columns;
+  my $n_spectra = 0;
   my $not_done = 1;
   while ($not_done) {
 
@@ -142,7 +147,7 @@ sub main {
     if ($line = <INFILE>) {
       chomp($line);
       @columns = split(/\t/,$line);
-      next if ($columns[$probcol] < $P_threshold);
+      next if ($columns[$origprobcol] < $P_threshold);
       if ($process_search_batch_id) {
 	next unless ($columns[0] == $process_search_batch_id);
       }
@@ -154,9 +159,10 @@ sub main {
     }
 
     #### If the this search_batch_id is not, known, learn from first record
+    $n_spectra++;
     unless ($this_search_batch_id) {
       $this_search_batch_id = $columns[0];
-      print "Processing search_batch_id=$this_search_batch_id\n";
+      print "Processing search_batch_id=$this_search_batch_id  ";
       $n_experiments++;
     }
 
@@ -192,16 +198,18 @@ sub main {
       #### Prepare for next search_batch_id
       $this_search_batch_id = $columns[0];
       @search_batch_peptides = ();
+      print "n_spectra=$n_spectra\n";
       unless ($this_search_batch_id == -998899) {
-	print "Processing search_batch_id=$this_search_batch_id\n";
+	print "Processing search_batch_id=$this_search_batch_id  ";
 	$n_experiments++;
       }
 
     }
 
     #### Put this peptide entry to the arrays
+    #### To save memory, only save what we need later
     if ($not_done) {
-      my @tmp = @columns;
+      my @tmp = ($columns[$origseqcol],$columns[$origprobcol],$columns[$origprotcol]);
       push(@search_batch_peptides,\@tmp);
       push(@peptides,\@tmp);
     }
@@ -209,7 +217,6 @@ sub main {
 
   close(INFILE);
   print "Done reading.\n";
-
 
   #### Now build a hash out of all peptides and count the distinct ones
   my %distinct_peptides;
@@ -482,11 +489,11 @@ sub removePeptides {
 
     #### Save the peptide in the buffer
     push(@buffer,$peptide);
-    $peptide_hash->{$peptide->[3]}->{count}++;
-    if (defined($peptide->[10]) && $peptide->[10] =~ /^DECOY/) {
-      #print "  decoy $peptide->[10]  $peptide->[3]\n";
+    $peptide_hash->{$peptide->[$seqcol]}->{count}++;
+    if (defined($peptide->[$protcol]) && $peptide->[$protcol] =~ /^DECOY/) {
+      #print "  decoy $peptide->[$protcol]  $peptide->[$seqcol]\n";
       $n_DECOY++;
-      $peptide_hash->{$peptide->[3]}->{DECOYcount}++;
+      $peptide_hash->{$peptide->[$seqcol]}->{DECOYcount}++;
     }
 
 
