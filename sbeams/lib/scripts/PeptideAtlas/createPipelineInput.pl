@@ -707,19 +707,30 @@ sub main {
       next if ($line =~ /^\s*$/);
       my ($search_batch_id,$path) = split(/\t/,$line);
       my $filepath = $path;
+
       if ($filepath !~ /\.xml/) {
-	$filepath = $path."/interact-prob.xml";
-	if (! -e $filepath) {
-	  $filepath = $path."/interact.xml";
-	  if (! -e $filepath) {
-	    $filepath = $path."/interact-specall.xml";
-	    if (! -e $filepath) {
-	      print "ERROR: Unable to find interact file in $path\n";
-	      next;
-	    }
+	my @possible_interact_names = ( 'interact-prob.xml', 'interact.xml',
+          'interact-specall.xml', 'interact-spec.xml' );
+	my $found_file = 0;
+	foreach my $possible_name ( @possible_interact_names ) {
+	  if ( -e $path.'/'.$possible_name ) {
+	    $found_file = 1;
+	    $filepath = $path.'/'.$possible_name;
+	    last;
 	  }
 	}
+	unless ( $found_file ) {
+	  print "ERROR: Unable to auto-detect an interact file in $path\n";
+	  next;
+	}
       }
+
+      unless ( -e $filepath ) {
+	print "ERROR: Specified interact file '$filepath' does not exist!\n";
+	next;
+      }
+
+
       my ($pepXML_document,$protXML_document);
 
       $pepXML_document->{filepath} = $filepath;
@@ -736,11 +747,13 @@ sub main {
       unless (-e $protXML_document->{filepath}) {
 	#### Hard coded funny business for Novartis
 	if ($filepath =~ /Novartis/) {
+	  if ($filepath =~ /interact-prob_1/) {
+	    $protXML_document->{filepath} =~ s/prob_1/prob_all/;
+	  }
 	  if ($filepath =~ /interact-prob_2/) {
 	    $protXML_document->{filepath} =~ s/prob_2/prob_all/;
-	  } else {
-	    $protXML_document = undef;
 	  }
+
 	} else {
 	  print "ERROR: No ProteinProphet file found for\n  $filepath\n";
 	  $protXML_document = undef;
