@@ -119,6 +119,13 @@ sub start_element {
     my $local_path = $attrs{local_path}
       || die("ERROR: No local_path attribute for this search_database");
 
+    #### If the user specified to force a database, use that
+    if ($main::OPTIONS{force_ref_db}) {
+      print "INFO: Overriding search_database in file '$local_path' with forced ".
+	"database '".$main::OPTIONS{force_ref_db}."\n";
+      $local_path = $main::OPTIONS{force_ref_db};
+    }
+
     if ($self->{search_database_path}) {
       if ($self->{search_database_path} ne $local_path) {
 	die("ERROR: Conflict in database path! ".
@@ -378,6 +385,17 @@ sub createDataHash {
       $data{matches}->[$i]->{cross_corr} = $self->{current_search_hit}->{$i}->{zscore};
       $data{matches}->[$i]->{norm_corr_delta} = 0;
       $data{matches}->[$i]->{prelim_score} = $self->{current_search_hit}->{$i}->{origScore};
+
+    #### SpectraST Scores - fudged
+    } elsif ($self->{current_search_hit}->{$i}->{dot_bias}) {
+      $data{matches}->[$i]->{cross_corr} = $self->{current_search_hit}->{$i}->{dot};
+      $data{matches}->[$i]->{norm_corr_delta} = $self->{current_search_hit}->{$i}->{delta};;
+      $data{matches}->[$i]->{cross_corr_rank} = $self->{current_search_hit}->{$i}->{hit_rank};
+      $data{matches}->[$i]->{prelim_score_rank} = 0;
+      #$data{matches}->[$i]->{prelim_score} = $self->{current_search_hit}->{$i}->{dot_bias};
+      $data{matches}->[$i]->{massdelta} = $self->{current_search_hit}->{$i}->{precursor_mz_diff};
+      $data{matches}->[$i]->{identified_ions} = 0 unless ($data{matches}->[$i]->{identified_ions});
+      $data{matches}->[$i]->{total_ions} = 0 unless ($data{matches}->[$i]->{total_ions});
     }
 
   }
