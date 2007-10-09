@@ -1725,6 +1725,7 @@ sub addParamsEntries {
   my @params_files = ( "$directory/sequest.params",
     "$directory/../sequest.params", "$directory/comet.def",
     "$directory/tandem.params", "$directory/tandem.xml",
+    "$directory/spectrast.params",
   );
 
   #### Try to find the files in order
