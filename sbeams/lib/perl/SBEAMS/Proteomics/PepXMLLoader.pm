@@ -392,7 +392,7 @@ sub createDataHash {
       $data{matches}->[$i]->{norm_corr_delta} = $self->{current_search_hit}->{$i}->{delta};;
       $data{matches}->[$i]->{cross_corr_rank} = $self->{current_search_hit}->{$i}->{hit_rank};
       $data{matches}->[$i]->{prelim_score_rank} = 0;
-      #$data{matches}->[$i]->{prelim_score} = $self->{current_search_hit}->{$i}->{dot_bias};
+      $data{matches}->[$i]->{prelim_score} = 0;
       $data{matches}->[$i]->{massdelta} = $self->{current_search_hit}->{$i}->{precursor_mz_diff};
       $data{matches}->[$i]->{identified_ions} = 0 unless ($data{matches}->[$i]->{identified_ions});
       $data{matches}->[$i]->{total_ions} = 0 unless ($data{matches}->[$i]->{total_ions});
