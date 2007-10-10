@@ -165,8 +165,14 @@ sub loadBuildSpectra {
     @columns = split(/\t/,$line);
     #print "cols = ".scalar(@columns)."\n";
     unless (scalar(@columns) == $expected_n_columns) {
-      die("ERROR: Unexpected number of columns (".
-	  scalar(@columns)."!=$expected_n_columns) in\n$line");
+      if ($expected_n_columns == 14 && scalar(@columns) == 11) {
+	print "WARNING: Unexpected number of columns (".
+	  scalar(@columns)."!=$expected_n_columns) in\n$line\n".
+	  "This is likely missing ProteinProphet information, which is bad, but we will allow it this once.\n";
+      } else {
+	die("ERROR: Unexpected number of columns (".
+	    scalar(@columns)."!=$expected_n_columns) in\n$line");
+      }
     }
 
     my ($search_batch_id,$spectrum_name,$peptide_accession,$peptide_sequence,
