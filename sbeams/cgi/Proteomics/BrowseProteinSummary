@@ -767,6 +767,16 @@ sub handle_request {
     );
 
 
+    #### Create a Gaggle-compatible embedded microformat
+    print $sbeams->createGaggleMicroformat(
+      rs_params_ref=>\%rs_params,
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
+    );
+
+
   #### If QUERY was not selected, then tell the user to enter some parameters
   } else {
     if ($sbeams->invocation_mode() eq 'http') {
