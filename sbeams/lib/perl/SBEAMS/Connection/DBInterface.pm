@@ -3209,6 +3209,86 @@ sub displayResultSet {
 } # end displayResultSet
 
 
+
+###############################################################################
+# createGaggleMicroformat
+#
+# Displays a resultset in memory as an HTML table
+###############################################################################
+sub createGaggleMicroformat {
+  my $self = shift;
+  my %args = @_;
+
+  #### Process the arguments list
+  my $url_cols_ref = $args{'url_cols_ref'};
+  my $hidden_cols_ref = $args{'hidden_cols_ref'};
+  my $row_color_scheme_ref = $args{'row_color_scheme_ref'};
+  my $printable_table = $args{'printable_table'};
+  my $max_widths_ref = $args{'max_widths'};
+  my $table_width = $args{'table_width'} || "";
+  $resultset_ref = $args{'resultset_ref'};
+  $rs_params_ref = $args{'rs_params_ref'};
+  my $column_titles_ref = $args{'column_titles_ref'};
+  my $base_url = $args{'base_url'} || '';
+  my $query_parameters_ref = $args{'query_parameters_ref'};
+  my $cytoscape = $args{'cytoscape'} || undef;
+
+  return unless ($self->output_mode() eq 'html');
+
+  my ($value,$element);
+  my $nrows = scalar(@{$resultset_ref->{data_ref}});
+  return unless ($nrows);
+  my $buffer = '';
+
+  #### Find out some information about the dataset
+  my @firstRow = @{$resultset_ref->{data_ref}->[0]};
+  my $cols = $resultset_ref->{column_hash_ref};
+  my $organismName = 'unknown';
+  $organismName = $firstRow[$cols->{organism}] if (defined($cols->{organism}));
+
+  #### Preamble
+  $buffer .= qq~
+    <STYLE TYPE="text/css" media="screen">
+      div.gaggle-data {
+        display: none;
+      }
+    </STYLE>
+    <div class="gaggle-data">
+     <p>name=<span class="gaggle-name">Data from SBEAMS BrowseProteinSummary</span></p>
+     <p>species=<span class="gaggle-species">$organismName</span></p>
+     <p>(optional)size=<span class="gaggle-size">$nrows</span></p>
+     <div class="gaggle-namelist">
+      <ol>
+   ~;
+
+  #### Dump all the data
+  for (my $irow=0;$irow<$nrows;$irow++) {
+    my @row = @{$resultset_ref->{data_ref}->[$irow]};
+
+    my $proteinName = 'unknown';
+    if (defined($cols->{biosequence_accession})) {
+      $proteinName = $row[$cols->{biosequence_accession}];
+    } elsif (defined($cols->{biosequence_name})) {
+      $proteinName = $row[$cols->{biosequence_name}];
+    }
+
+    $buffer .= "       <li>$proteinName</li>\n";
+
+  }
+
+  #### Ending
+  $buffer .= qq~
+      </ol>
+     </div>
+    </div>
+  ~;
+
+  return $buffer;
+
+} # end createGaggleMicroformat
+
+
+
 ###############################################################################
 # isResultsetColumnNumerical
 #
