@@ -19,7 +19,7 @@ use FindBin;
 
 use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
-             $current_username );
+             $current_username $massCalculator );
 
 use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
@@ -28,6 +28,9 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
+
+use SBEAMS::Proteomics::PeptideMassCalculator;
+$massCalculator = new SBEAMS::Proteomics::PeptideMassCalculator;
 
 use PGPLOT;
 use PDL;
@@ -267,6 +270,7 @@ sub processRequest {
 
     #### Loop over each desired charge
     my $charge;
+    my $buffer = '';
     foreach $charge (@charge) {
       my ($masslist_ref) = CalcIons(Residues=>\@residues, Charge=>$charge,
                                     MassArray=>$AAmasses_ref);
@@ -275,17 +279,17 @@ sub processRequest {
       #### Make the plot
       ($win,$B_ref,$Y_ref) = PlotPeaks(SpecData=>\%spectrum,
                                        Masslist=>$masslist_ref, Charge=>$charge,
-                                       Win=>$win, Length=>$length,
+                                       Win=>$win, Length=>$masslist_ref->{length},
                                        PeakColors=>\@peakcolors);
 
       #### Print out the peptide ion information
-      printIons(masslist_ref=>$masslist_ref,color=>1,html=>1,
-        charge=>$charge,length=>$length,
+      $buffer .= printIons(masslist_ref=>$masslist_ref,color=>1,html=>1,
+        charge=>$charge,length=>$masslist_ref->{length},
         theoretical_spectrum_ref=>\@theoretical_spectrum);
 
       #### Label the peaks on the plot
       LabelResidues(Ionmasses=>$masslist_ref, Binten=>$B_ref, Yinten=>$Y_ref,
-                    Charge=>$charge, Win=>$win, Length=>$length,
+                    Charge=>$charge, Win=>$win, Length=>$masslist_ref->{length},
                     Xmin=>$parameters{xmin}, Xmax=>$parameters{xmax},
                     Ymax=>$parameters{ymax}, Angle=>$labangle, Fjust=>$fjust);
 
@@ -381,6 +385,7 @@ sub processRequest {
 	</TR>
 	</TABLE>
         </FORM>
+        <PRE>$buffer</PRE>
     ~;
 
 } # end printEntryForm
@@ -934,7 +939,6 @@ sub Fragment {
 ###############################################################################
 sub CalcIons {
     my %args = @_;
-    my $i;
 
     my $residues_ref = $args{'Residues'};
     my @residues = @$residues_ref;
@@ -942,32 +946,57 @@ sub CalcIons {
     my $massarray_ref = $args{'MassArray'};
     my %massarray = %$massarray_ref;
     my $length = scalar(@residues);
+    my @modified_residues;
 
     my $Nterm = 1.0078;
+    my $Yterm  = 19.0184;  ## H_2 + O
     my $Bion = 0.;
-    my $Yion  = 19.0184;  ## H_2 + O
+    my $Yion  = $Yterm;
 
     my @Bcolor = (14) x $length;
     my @Ycolor = (14) x $length;
 
+    #### If we start with a custom N-terminal mass
+    my $start = 0;
+    my $i=0;
+    if ($residues[$i] =~ /n\[(\d+)\]/) {
+      $start = 1;
+      my $massTag = $residues[$i];
+      my $integerMass = $1;
+      if ($massCalculator->{supported_modifications}->{average}->{$massTag}) {
+	$Bion += $massCalculator->{supported_modifications}->{average}->{$massTag};
+      } else {
+	$Bion = $integerMass;
+      }
+      $length--;
+    }
+
     my @masses;
     for ($i=0; $i<$length; $i++) {
-      my $mass = $massarray{$residues[$i]};
+      my $massTag = $residues[$i+$start];
+      my $mass = $massarray{$massTag};
       unless ($mass) {
-	if ($residues[$i] =~ /\w\[(\d+)\]/) {
-	  $mass = $1;
+	if ($residues[$i+$start] =~ /\w\[(\d+)\]/) {
+	  my $integerMass = $1;
+	  if ($massCalculator->{supported_modifications}->{average}->{$massTag}) {
+	    $mass = $massarray{substr($massTag,0,1)};
+	    $mass += $massCalculator->{supported_modifications}->{average}->{$massTag};
+	  } else {
+	    $mass = $integerMass;
+	  }
 	} else {
-	  print "WARNING: Unable to find mass for 'residues[$i]'<BR>\n";
+	  print "WARNING: Unable to find mass for residues[$i]<BR>\n";
 	}
       }
       $masses[$i] = $mass;
+      $modified_residues[$i] = $massTag;
       $Yion += $mass;
     }
     my %masslist;
     my (@aminoacids, @indices, @rev_indices, @Bions, @Yions);
 
     #### Compute the ion masses
-    for ($i = 0; $i<$length; $i++) {
+    for ($i=0; $i<$length; $i++) {
       $Bion += $masses[$i];
       $Yion -= $masses[$i-1] if ($i > 0);
 
@@ -977,14 +1006,16 @@ sub CalcIons {
 
       #### B ion mass & Y ion mass
       $Bions[$i] = ($Bion + $charge*$Nterm)/$charge;
-      $Yions[$i] = ($Yion + $charge*$Nterm)/$charge;
+      #$Yions[$i] = ($Yion + $charge*$Nterm)/$charge;
+      $Yions[$i] = ($Yion + $charge*0.0)/$charge;
     }
 
-    $masslist{residues} = \@residues;
+    $masslist{residues} = \@modified_residues;
     $masslist{indices} = \@indices;
     $masslist{Bions} = \@Bions;
     $masslist{Yions} = \@Yions;
     $masslist{rev_indices} = \@rev_indices;
+    $masslist{length} = $length;
 
     #### Return reference to a hash of array references
     return (\%masslist);
@@ -1003,47 +1034,49 @@ sub printIons {
   my $length = $args{'length'};
   my $theoretical_spectrum_ref = $args{'theoretical_spectrum_ref'};
 
-# print "SEQ  #     B       Y    +$charge\n";
-# print "--- --  ------  ------  --\n";
+  my $buffer = '';
 
-# my ($bcolbegin, $bcolend, $ycolbegin, $ycolend);
+  $buffer .= "Residue  ion     B       Y      ion   +$charge\n";
+  $buffer .= "------  -----  ------  ------  -----\n";
 
-# my (%colors);
-# $colors{2} = "#FF0000";
-# $colors{4} = "#0000FF";
-# $colors{3} = "#218D21";
-# $colors{6} = "#F18080";
-# $colors{11} = "#00088";
-# $colors{10} = "#8FBE8F";
+  my ($bcolbegin, $bcolend, $ycolbegin, $ycolend);
+
+  my %colors;
+  $colors{2} = "#FF0000";
+  $colors{4} = "#0000FF";
+  $colors{3} = "#218D21";
+  $colors{6} = "#F18080";
+  $colors{11} = "#00088";
+  $colors{10} = "#8FBE8F";
 
 
-# #### Printing stuff
+  #### Printing stuff
   for (my $i=0; $i < $length; $i++) {
 
-#   #### If the output is in HTML, define the colorizing tags
-#   if ($html) {
+    #### If the output is in HTML, define the colorizing tags
+    if ($html) {
 
-#     #### If a color for this B ion mass, set color tags
-#     if ($masslist_ref->{Bcolor}->[$i] >= 2) {
-#       $bcolbegin = "<FONT COLOR = $colors{$masslist_ref->{Bcolor}->[$i]}>";
-#       $bcolend = "</FONT>";
-#     #### else no color (default black)
-#     } else {
-#       $bcolbegin = "";
-#       $bcolend = "";
-#     }
+      #### If a color for this B ion mass, set color tags
+      if ($masslist_ref->{Bcolor}->[$i] >= 2) {
+        $bcolbegin = "<FONT COLOR = $colors{$masslist_ref->{Bcolor}->[$i]}>";
+        $bcolend = "</FONT>";
+      #### else no color (default black)
+      } else {
+        $bcolbegin = "";
+        $bcolend = "";
+      }
 
-#     #### If a color for this Y ion mass, set color tags
-#     if ($masslist_ref->{Ycolor}->[$i] >= 2) {
-#       $ycolbegin = "<FONT COLOR = $colors{$masslist_ref->{Ycolor}->[$i]}>";
-#       $ycolend = "</FONT>";
-#     #### else no color (default black)
-#     } else {
-#       $ycolbegin = "";
-#       $ycolend = "";
-#     }
+      #### If a color for this Y ion mass, set color tags
+      if ($masslist_ref->{Ycolor}->[$i] >= 2) {
+        $ycolbegin = "<FONT COLOR = $colors{$masslist_ref->{Ycolor}->[$i]}>";
+        $ycolend = "</FONT>";
+      #### else no color (default black)
+      } else {
+        $ycolbegin = "";
+        $ycolend = "";
+      }
 
-#   }
+    }
 
 
     #### Define the m/z columns formats and values
@@ -1064,11 +1097,11 @@ sub printIons {
       $B_value = '--  ';
     }
 
-#   #### Print out the data
-#   printf "%3s %2d $bcolbegin$B_format$bcolend ".
-#          "$ycolbegin$Y_format$ycolend %3d\n",
-#     $masslist_ref->{residues}->[$i], $i+1,
-#     $B_value, $Y_value, $length-$i;
+    #### Print out the data
+    $buffer .= sprintf("%6s  %5s $bcolbegin$B_format$bcolend ".
+      "$ycolbegin$Y_format$ycolend  %5s\n",
+      $masslist_ref->{residues}->[$i], "B$charge-".($i+1),
+      $B_value, $Y_value, "Y$charge-".($length-$i));
 
     #### Fill the theoretical spectrum data in a different format
     #### (Residue,Index,Ion,Charge,m/z)
@@ -1081,7 +1114,9 @@ sub printIons {
 
   } # end for
 
-# print "\n";
+  $buffer .= "\n";
+
+  return $buffer;
 
 } # end printIons
 
