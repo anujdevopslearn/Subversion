@@ -44,6 +44,8 @@ sub new {
   #### Define supported modifications
   %supported_modifications = (
     'monoisotopic' => {
+      'n[145]' => 144.102063,   # ABI iTRAQ (UniMod)
+      'C[148]' => 45.987721,    # Beta-methylthiolation (UniMod)
       'C[160]' => 57.021464,    # Carbamidomethyl (UniMod)Cys_CAM
       'C[161]' => 58.005479,    # Search ERROR?? Maybe not, maybe Carboxymethyl?? Latin Square?
       'C[174]' => 71.037114,    # Propionamide (Acrylamide adduct) used initially by IPAS (UniMod)
@@ -58,7 +60,7 @@ sub new {
       'C[545]' => 442.224991,   # ABI old ICAT light (UniMod)
       'C[553]' => 450.275205,   # ABI old ICAT heavy (UniMod)
       'E[111]' => -18.010565,   # Pyro-glu from E (UniMod)
-      'K[272]' => 144.10206,    # ABI iTRAQ (UniMod)
+      'K[272]' => 144.102063,   # ABI iTRAQ (UniMod)
       'M[147]' => 15.994915,    # Oxidation (UniMod)
       'N[115]' => 0.984016,     # Glyc-Asn (UniMod)
       'Q[111]' => -17.026549,   # Pyro-glu from Q (UniMod)
@@ -67,6 +69,8 @@ sub new {
       'Y[243]' => 79.966331,    # Phosphorylation (UniMod)
     },
     'average' => {
+      'n[145]' => 144.1544,     # ABI iTRAQ (UniMod)
+      'C[148]' => 46.0916,      # Beta-methylthiolation (UniMod)
       'C[160]' => 57.0513,      # Cys_CAM (UniMod)
       'C[161]' => 58.0361,      # Search ERROR?? Maybe not, maybe Carboxymethyl?? Latin Square?
       'C[174]' => 71.0779,      # Propionamide (Acrylamide adduct) used initially by IPAS (UniMod)
@@ -91,7 +95,7 @@ sub new {
     },
   );
 
-
+  $self->{supported_modifications} = \%supported_modifications;
 
 
   return($self);
@@ -125,13 +129,13 @@ sub getPeptideMass {
   #### Handle all the mass modifications
   my $cumulative_mass_diff = 0;
   while ($sequence =~ /\[/) {
-    if ($sequence =~ /([A-Z]\[\d+\])/) {
+    if ($sequence =~ /([A-Znc]\[\d+\])/) {
       my $mod = $1;
       my $aa = substr($mod,0,1);
       my $mass_diff = $supported_modifications{$mass_type}->{$mod};
       if (defined($mass_diff)) {
 	$cumulative_mass_diff += $mass_diff;
-	$sequence =~ s/[A-Z]\[\d+\]/$aa/;
+	$sequence =~ s/[A-Znc]\[\d+\]/$aa/;
       } else {
 	print STDERR "ERROR: Mass modification $mod is not supported yet\n";
 	return(undef);
@@ -142,9 +146,11 @@ sub getPeptideMass {
     }
   }
 
+  #### Remove n-term and c-term notation
+  $sequence =~ s/[nc]//g;
+
   #### Fail if imprecise AA's are present
   return(undef) if ($sequence =~ /[BZX]/);
-
 
   #### Calculate the neutral peptide mass using InSilicoSpectro
   my @modif = ();
