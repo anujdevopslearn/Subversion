@@ -113,7 +113,7 @@ sub handle_request {
 
 sub import_sort_table {
   print <<"  END";
-  <SCRIPT LANGUAGE=javascript SRC="$HTML_BASE_DIR/usr/javascript/sorttable.js">
+  <SCRIPT LANGUAGE=javascript SRC="$HTML_BASE_DIR/usr/javascript/sorttable.js"></SCRIPT>
   END
 }
 
