@@ -201,6 +201,33 @@ sub getMass {
 }
 
 ###############################################################################
+# getPeptideMass
+#
+# @nparam peptide 
+# @return mono-isotopic mass
+###############################################################################
+sub getPeptideMass {
+
+  my $self = shift;
+  my %args = @_;
+
+  croak("missing required argument peptide") unless $args{peptide};
+
+  my @masses = $self->getMasses( $args{peptide} );
+  my $mass = 0;
+  for my $aa_mass ( @masses ) {
+    $mass += $aa_mass;
+  }
+  if ( defined $args{precision} ) {
+    $mass = sprintf( "%0.$args{precision}f", $mass );
+  }
+  return $mass;
+
+}
+
+
+
+###############################################################################
 # getModifiedAAs - get array of AAs that includes the bracket modifications
 #
 # @param modified_sequence -- string of amino acid sequences with modications
