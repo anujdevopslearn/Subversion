@@ -663,6 +663,48 @@ sub add_tabletoggle_js {
   
 }
 
+#+
+# Routine will set up PA tooltip colors and javascript.  
+#
+# @return   JS/CSS to be printed in the page at an appropriate juncture
+#-
+sub init_pa_tooltip {
+  return <<"  END";
+  <SCRIPT src="/sbeams/usr/javascript/TipWidget.js" TYPE="text/javascript"></SCRIPT>
+  <STYLE>
+  div#tooltipID { background-color:#F0F0F0;
+                  border:2px 
+                  solid #FF8C00; 
+                  padding:4px; 
+                  line-height:1.5; 
+                  width:200px; 
+                  font-family: Helvetica, Arial, sans-serif;
+                  font-size:12px; 
+                  font-weight: normal; 
+                  position:absolute; 
+                  visibility:hidden; left:0; top:0;
+                }
+  </STYLE>
+  END
+}
+
+
+#+
+# Routine to generate a 'tooltip' mouseover widget with 
+#-
+sub make_pa_tooltip {
+  my $self = shift;
+  my %args = @_;
+  for my $arg ( qw( tip_text link_text ) ) {
+    if ( !$args{$arg} ) {
+      $log->error( "Missing required argument $arg" );
+      return "";
+    }
+  }
+  my $class = $args{class} || 'pseudo_link';
+  
+  return "<SPAN CLASS=$class onMouseover=\"showTooltip(event, '$args{tip_text}')\" onMouseout=\"hideTooltip()\">$args{link_text}</SPAN>";
+}
 
 1;
 
