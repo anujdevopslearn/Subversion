@@ -21,6 +21,7 @@ use lib "$FindBin::Bin/../../perl/SBEAMS/PeptideAtlas";
 use PAxmlContentHandler;
 use SpectraDescriptionSetParametersParser;
 use SearchResultsParametersParser;
+use Benchmark;
 
 use XML::Parser;
 
@@ -263,16 +264,23 @@ sub handleRequest {
 
   ## handle --load:
   if ($load) {
-
-      loadAtlas( atlas_build_id=>$ATLAS_BUILD_ID,
+     my $t0 = new Benchmark; 
+     # Use explicit commits for performance
+     initiate_transaction();
+     loadAtlas( atlas_build_id=>$ATLAS_BUILD_ID,
           organism_abbrev => $organism_abbrev,
           default_sample_project_id => $default_sample_project_id,
       );
 
-      populateSampleRecordsWithSampleAccession();
+     populateSampleRecordsWithSampleAccession();
+     # reset to standard autocommit mode
+     $sbeams->reset_dbh();
+
+     my $t1 = new Benchmark; 
+     my $td = timestr(timediff( $t1, $t0 ));
+     print "Loaded Atlas records in $td\n";
 
   } ## end --load
-
 
   #### If spectrum loading was requested
   if ($OPTIONS{"spectra"}) {
@@ -2231,16 +2239,17 @@ sub readCoords_updateRecords_calcAttributes {
           );
 	}
 
-        #### If this is the first row for a peptide, then update the previous flag (must be done last)
+  #### If this is the first row for a peptide, then update the previous flag (must be done last)
 	if ($tmp_pep_acc ne $previous_peptide_accession) {
           $previous_peptide_accession = $tmp_pep_acc;
           $mapping_record_count = 0;
 	}
 	$mapping_record_count++;
 
-        if ($row/100 == int($row/100)) {
-	  print "$row...";
-	}
+  if ($row/100 == int($row/100)) {
+    print "$row...";
+    $sbeams->commit_transaction();
+  }
 
     }  ## end  create peptide_mapping records and update peptide_instance records
     print "\n";
@@ -2544,16 +2553,16 @@ sub getMzXMLFileNames
       $barefilename =~ s#.+/##;
       $file = "$search_batch_dir_path/$barefilename";
       if ( -e $file ) {
-	$mzXMLFileNames[$i] = $file;
+        $mzXMLFileNames[$i] = $file;
       } else {
-	#### Fred Hutch processed files sometimes have fract in there
-	$file =~ s/\.fract\.mzXML/.mzXML/;
-	if ( -e $file ) {
-	  $mzXMLFileNames[$i] = $file;
-	} else {
-	  print "ERROR: Unable to determine location of file '$mzXMLFileNames[$i]'\n";
-	  print "  (also tried: $file)\n";
-	}
+        #### Fred Hutch processed files sometimes have fract in there
+        $file =~ s/\.fract\.mzXML/.mzXML/;
+        if ( -e $file ) {
+          $mzXMLFileNames[$i] = $file;
+        } else {
+          print "ERROR: Unable to determine location of file '$mzXMLFileNames[$i]'\n";
+          print "  (also tried: $file)\n";
+        }
       }
     }
 
@@ -2623,6 +2632,15 @@ sub insert_peptide_instance {
 
 } # end insert_peptide_instance
 
+sub commit_transaction {
+  my %args = @_;
+  $sbeams->commit_transaction();
+}
+
+sub initiate_transaction {
+  my %args = @_;
+  $sbeams->initiate_transaction();
+}
 
 
 ###############################################################################

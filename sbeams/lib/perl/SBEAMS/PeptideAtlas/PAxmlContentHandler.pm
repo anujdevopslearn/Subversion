@@ -86,6 +86,7 @@ sub start_element {
   #### If this is the peptide_instance, store it
   if ($localname eq 'peptide_instance') {
 
+    $self->{pi_counter}++;
     #### Create a list of sample_ids, using proteomics sbid
     my @search_batch_ids = split(",",$attrs{search_batch_ids});
 
@@ -107,30 +108,28 @@ sub start_element {
 
     $attrs{atlas_search_batch_ids} = join(",",@atlas_search_batch_ids);
 
-    my %peptide_acc_id_hash = %{$self->{peptide_acc_id_hash}};
-
-    #### If this peptide_id doesn't yet exist in the peptide table, add it
-    if (!exists $peptide_acc_id_hash{$attrs{peptide_accession}}) {
-
-        my %rowdata = (
-            peptide_accession => $attrs{peptide_accession},
-            peptide_sequence => $attrs{peptide_sequence},
-            peptide_length => length($attrs{peptide_sequence}),
-        );
-
-        my $peptide_id = &main::insert_peptide(
-            rowdata_ref=>\%rowdata,
-        );
-
-
-        ## add new peptide_id to hash:
-        $peptide_acc_id_hash{$attrs{peptide_accession}} = $peptide_id;
-
+    # Left in when committing changes 2007-10-19
+    unless ( 1 || $self->{counter} % 1000 ) {
+      print "\n";
+      print "PAIdent hash has " . scalar(keys(%{$self->{peptide_acc_id_hash}})) . " elements\n";
+      print "Been in peptide_instance $self->{pi_counter} times of $self->{counter}\n";
     }
 
-
     #### Get the peptide_id for this peptide
-    my $peptide_id = $peptide_acc_id_hash{$attrs{peptide_accession}};
+    my $peptide_id = $self->{peptide_acc_id_hash}->{$attrs{peptide_accession}};
+
+    #### If this peptide_id doesn't yet exist in the peptide table, add it
+    if ( !$peptide_id ) {
+
+      my %rowdata = ( peptide_accession => $attrs{peptide_accession},
+                       peptide_sequence => $attrs{peptide_sequence},
+                         peptide_length => length($attrs{peptide_sequence}) );
+
+      $peptide_id = &main::insert_peptide( rowdata_ref=>\%rowdata );
+
+        ## add new peptide_id to hash:
+        $self->{peptide_acc_id_hash}->{$attrs{peptide_accession}} = $peptide_id;
+    }
 
     #### Create the peptide_instance record itself
     my %rowdata = (
@@ -243,7 +242,13 @@ sub start_element {
 
   #### Increase the counters and print some progress info
   $self->{counter}++;
-  print $self->{counter}."..." if ($self->{counter} % 100 == 0);
+#  print $self->{counter}."..." if ($self->{counter} % 100 == 0);
+  if ($self->{counter} % 100 == 0) {
+    print $self->{counter}."...";
+    # Assumes we are explicitly committing.
+    &main::commit_transaction();
+  }
+
 
 
   #### Push information about this element onto the stack
