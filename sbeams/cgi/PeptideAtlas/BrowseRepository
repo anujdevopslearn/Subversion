@@ -1,0 +1,344 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : BrowseRepository
+# $Id$
+#
+# Description : Allows the user to get information about experiments
+#               in the PeptideAtlas repository.
+#
+# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::ConsensusSpectrum;
+
+use SBEAMS::Proteomics::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+#$q = new CGI;
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+    #### Do the SBEAMS authentication and exit if a username is not returned
+    exit unless ($current_username = $sbeams->Authenticate(
+        permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+        'PeptideAtlas_readonly'],
+        #connect_read_only=>1,
+        allow_anonymous_access=>1,
+    ));
+
+    #### Read in the default input parameters
+    my %parameters;
+    my $n_params_found = $sbeams->parse_input_parameters(
+        q=>$q,
+        parameters_ref=>\%parameters
+        );
+
+
+    #### Decide what action to take based on information so far
+    if ($parameters{action} eq "???") 
+    {
+      # Some action
+    } else
+    {
+        my $project_id = $sbeamsMOD->getProjectID(
+            atlas_build_id => $parameters{atlas_build_id}
+        );
+
+        $sbeamsMOD->display_page_header(project_id => $project_id);
+
+        handle_request(ref_parameters=>\%parameters);
+
+        $sbeamsMOD->display_page_footer();
+    }
+
+} # end main
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+
+  my %args = @_;
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+
+  my %parameters = %{$ref_parameters};
+
+  #### Show current user context information
+  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+  #$sbeams->printUserContext();
+
+  #### Define some generic variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+  #### Read in the standard form values
+  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams('q' => $q);
+  my $n_params_found = 0;
+  if ($apply_action eq "VIEWRESULTSET") {
+    $sbeams->readResultSet(
+      resultset_file=>$rs_params{set_name},
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      resultset_params_ref=>\%rs_params,
+    );
+    $n_params_found = 99;
+  }
+
+
+
+  #### Set some specific settings for this program
+  my $CATEGORY="BrowseRepository";
+  my $PROGRAM_FILE_NAME = $PROG_NAME;
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+  my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
+
+  my ($atlas_build_name, $atlas_build_id);
+
+  if (defined($atlas_build_id) && $atlas_build_id < 0) 
+    {
+      $parameters{'atlas_build_id'} = $atlas_build_id;
+      return;
+    }
+
+
+  my @accessible_project_ids = $sbeams->getAccessibleProjects();
+  my $project_string = join( ",", @accessible_project_ids ) || '0';
+
+
+  #### Get available organisms
+  my $sql = qq~
+        SELECT organism_id,organism_name
+          FROM $TB_ORGANISM
+         WHERE 1 = 1
+           AND record_status!='D'
+ 	 ORDER BY organism_name
+  ~;
+  my $organismOptionlist = $sbeams->buildOptionList(
+    $sql,$parameters{'organism_id'});
+
+
+  if ($sbeams->output_mode() eq 'html') {
+    print qq~
+        <FORM METHOD="post" NAME="MainForm">
+        Select filter criteria for repository experiment list:<BR>
+        Organism: <SELECT NAME="organism_id">
+          $organismOptionlist</SELECT>
+        <P>
+       <INPUT TYPE=submit NAME=action VALUE=GO>
+       </FORM>
+   ~;
+  }
+
+
+
+
+  #########################################################################
+  #### Process all the constraints
+
+  #### Build ATLAS_BUILD constraint
+  my $organism_id_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"s.organism_id",
+        constraint_type=>"int_list",
+        constraint_name=>"Organism",
+        constraint_value=>$parameters{organism_id} );
+  return if ($organism_id_clause eq '-1');
+
+
+  #### Define the desired columns in the query
+  #### [friendly name used in url_cols,SQL,displayed column title]
+  my @column_array = (
+    ["sample_accession","S.sample_accession","Sample Accession"],
+    ["organism_name","O.organism_name","Organism Name"],
+    ["sample_tag","S.sample_tag","Sample Tag"],
+    ["sample_title","S.sample_title","Sample Title"],
+  );
+
+
+  #### Build the columns part of the SQL statement
+  my %colnameidx = ();
+  my @column_titles = ();
+  my $columns_clause = $sbeams->build_SQL_columns_list(
+    column_array_ref=>\@column_array,
+    colnameidx_ref=>\%colnameidx,
+    column_titles_ref=>\@column_titles
+  );
+
+
+  #### Define the SQL statement
+  $sql = qq~
+         SELECT $columns_clause
+         FROM $TBAT_SAMPLE S
+         LEFT JOIN $TB_ORGANISM O
+          ON ( S.organism_id = O.organism_id )
+         WHERE 1 = 1
+           AND S.is_public = 'Y'
+            $organism_id_clause
+        ORDER BY organism_name,sample_tag
+  ~;
+
+  #### Define the hypertext links for columns that need them
+  %url_cols = (
+  );
+
+  #### Define the hidden columns
+  %hidden_cols = (
+  );
+
+  #########################################################################
+  #### If QUERY or VIEWRESULTSET was selected, display the data
+  if ($apply_action =~ /(QUERY|GO|VIEWRESULTSET)/) {
+
+    #### Show the SQL that will be or was executed
+    $sbeams->display_sql(sql=>$sql) if ($show_sql);
+
+    #### If the action contained QUERY, then fetch the results from
+    #### the database
+    if ($apply_action =~ /(QUERY|GO)/i) {
+
+      #### Fetch the results from the database server
+      $sbeams->fetchResultSet(
+        sql_query=>$sql,
+        resultset_ref=>$resultset_ref,
+      );
+
+      #### Store the resultset and parameters to disk resultset cache
+      $rs_params{set_name} = "SETME";
+      $sbeams->writeResultSet(
+        resultset_file_ref=>\$rs_params{set_name},
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
+        resultset_params_ref=>\%rs_params,
+        query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+      );
+    }
+
+
+    #### Display the resultset
+    $sbeams->displayResultSet(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      url_cols_ref=>\%url_cols,
+      hidden_cols_ref=>\%hidden_cols,
+      max_widths=>\%max_widths,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
+    );
+
+    #### Display the resultset controls
+    $sbeams->displayResultSetControls(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      base_url=>$base_url,
+    );
+
+
+  #### If QUERY was not selected, then tell the user to enter some parameters
+  } else {
+    if ($sbeams->invocation_mode() eq 'http') {
+      print "Click [GO] to execute the search<BR>\n";
+    } else {
+      print "Set action=GO to execute the search\n";
+    }
+  }
+
+
+} # end handle_request
+
+
+
+
+
