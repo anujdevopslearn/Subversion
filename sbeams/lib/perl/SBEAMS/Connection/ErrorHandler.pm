@@ -184,8 +184,8 @@ sub handle_error {
   }
 
   # Are we over-reliant on this?
+
   if ( $ctype && $self->invocation_mode() =~ /https*/ ) {
-#    print $sbeams->get_http_header( mode => $args{out_mode} ); 
     print $sbeams->get_http_header(); 
   }
   print "$content\n";

@@ -948,10 +948,11 @@ sub reportException {
   my $type = $args{'type'} || '';
   my $message = $args{'message'} || 'NO MESSAGE';
   my $HTML_message = $args{'HTML_message'} || '';
+  my $force = $args{force_header} || 0;
 
 
   #### If invocation_mode is HTTP, then printout an HTML message
-  if ($self->invocation_mode() eq 'http') {
+  if ($self->invocation_mode() =~ /https*/ && $self->output_mode() eq 'html') {
     print "<H4>$state: ";
     print "$type<BR>\n" if ($type);
     if ($HTML_message) {
@@ -962,8 +963,9 @@ sub reportException {
     return;
   } else {
     $self->handle_error( state => $args{state}, 
-                   error_type  => lc($args{type}).
-                       message => $args{message} );
+                   error_type  => lc($args{type}),
+                       message => $args{message},
+                  force_header => $force );
   }
 
 
