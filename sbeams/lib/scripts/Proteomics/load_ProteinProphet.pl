@@ -7,7 +7,7 @@
 #
 # Description : This script loads a ProteinProphet XML file into the database
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2007 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -369,6 +369,8 @@ sub start_element {
     #### a translation here to support older formats
     my %attrs_to_rename = (
       n_tryptic_termini => 'n_enzymatic_termini',
+      nsp_lower_bound_excl => 'nsp_lower_bound_incl',
+      nsp_upper_bound_incl => 'nsp_upper_bound_excl',
     );
     foreach my $attr (keys(%attrs_to_rename)) {
       if (exists($attrs{$attr})) {
@@ -527,7 +529,7 @@ sub end_element {
     if ($self->object_stack->[-1]->{name} eq "$localname") {
       pop(@{$self->object_stack});
     } else {
-      die("STACK ERROR: Wanted to pop off an element fo type '$localname'".
+      die("STACK ERROR: Wanted to pop off an element of type '$localname'".
         " but instead we found '".$self->object_stack->[-1]->{name}."'!");
     }
 
