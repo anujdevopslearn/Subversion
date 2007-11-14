@@ -317,6 +317,7 @@ sub start_element {
     #### anyone else, provide a facility to kill some attributes while trying
     #### to load
     my %attrs_to_drop = (
+      exp_tot_instances => 1,
       heavy2light_ratio_mean => 1,
       heavy2light_ratio_standard_dev => 1,
       group_sibling_id => 1,
