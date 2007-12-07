@@ -188,29 +188,43 @@ sub populateRecords
 
     ## can't use prepared statements, so one by one inserts here.
 
+    my $loop_peaks = 0;
+    my %spectrum;
     while (my $line = <INFILE>) 
     {
+
         chomp($line);
+        next if $line =~ /^#/;
         
-        ## line 1 is Name
-        $line =~ /Name:\s(\D+)\/(\d)/;
-        my $sequence = $1;
-        my $charge = $2;
+        if ( $line =~ /^Name:\s(.+)\/(\d)/ ) { ## line 1 is Name
+          $spectrum{sequence} = $1;
+          $spectrum{charge} = $2;
+          $spectrum{modified_sequence} = $spectrum{sequence};
+          $spectrum{sequence} =~ s/\[\d+\]//g;
 
-        ## line 2 is MW:
-        $line = <INFILE>;
-        chomp($line);
-        $line =~ /^MW:\s(.*)$/;
-        my $mw = $1;
+          next;
+        } elsif ( $line =~ /^MW:\s(.*)$/ ) { # line 2 is MW
+          next;
+          $spectrum{mw} = $1;
+          next;
+        } elsif ( $line =~ /^Comment:/ ) { # line 3 is Comment:
+          $spectrum{comment} = parseComment( comment_line => $line);
+          next;
+        } elsif ( $line =~ /^NumPeaks:\s*(\d+)/ ) { # Cache number of peaks
+          $spectrum{num_peaks} = $1;
+          $loop_peaks++;
+          next;
+        } elsif ( !$loop_peaks ) {
+          next;
+        }
+        my %commentHash = %{$spectrum{comment}};
+        my $sequence = $spectrum{sequence};
+        my $mw = $spectrum{mw};
+        my $charge = $spectrum{charge};
+        my $num_peaks = $spectrum{num_peaks};
+        my $modified_sequence = $spectrum{modified_sequence};
 
-        ## line 3 is Comment:, store the ones we need
-        $line = <INFILE>;
-        chomp($line);
-        my %commentHash = parseComment( comment_line => $line);
-
-        my $modified_sequence;
-
-        if (exists $commentHash{Mods})
+        if (exists $commentHash{Mods} && $modified_sequence eq $sequence )
         {
             $modified_sequence = getModSeq( seq => $sequence, 
                 mods => $commentHash{Mods}
@@ -219,6 +233,7 @@ sub populateRecords
 
         my $nist_spectrum_type_id = get_nist_spectrum_type_id(
             nist_spectrum_type_name => $commentHash{'Spec'}
+
         );
 
         my $nist_library_spectrum_id = insert_nist_library_spectrum(
@@ -238,19 +253,15 @@ sub populateRecords
             nist_library_spectrum_id => $nist_library_spectrum_id,
         );
 
-        ## line 4 is Num Peaks:
-        $line = <INFILE>;
-        chomp($line);
-
-        $line =~ /Num peaks:\s(\d+)/;
-        my $num_peaks = $1;
-        
         ## loop over next num_peaks lines to get peaks and ions
-        for (my $ii = 0; $ii < $num_peaks; $ii++)
+        for (my $ii = 1; $ii < $num_peaks; $ii++)
         {
             $line = <INFILE>;
             chomp($line);
-            my ($m, $inten, $annot) = split("\t", $line);
+            my ($m, $inten, $annot) = split("\t", $line, -1);
+
+            # intensity is an int in db
+            $inten = int( $inten );
 
             ## remove enclosing double quotes
             $annot =~ s/\"//g;
@@ -285,6 +296,11 @@ sub populateRecords
                     {
                        $chg = $2;
                        $label = $1;
+                       if ( $chg =~ /\di/ ) {
+                         $chg = 1;
+                         $label = "";
+                         $ignore=1;
+                       }
                     }
                 }
             }
@@ -309,11 +325,9 @@ sub populateRecords
                 testonly=>$TESTONLY,
             );
         }
+        $loop_peaks = 0;
 
         $count++;
-        
-        ## read the extra blank line
-        $line = <INFILE>;
     }
 
     close(INFILE) or die "ERROR: Unable to close $infile";
@@ -729,8 +743,7 @@ sub parseComment
     }
 
     ## make a modified sequence hash
-
-    return %hash;
+    return \%hash;
 }
 
 
