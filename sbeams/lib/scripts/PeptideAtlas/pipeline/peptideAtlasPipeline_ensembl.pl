@@ -4,8 +4,8 @@ use strict;
 use Getopt::Long;
 use FindBin;
 use lib "$FindBin::Bin";
-use lib "/net/db/projects/PeptideAtlas/pipeline/lib/ensembl-39/modules";
-
+#use lib "/net/db/projects/PeptideAtlas/pipeline/lib/ensembl-39/modules";
+use lib "/usr/local/share/perl/5.8.4/Bio";
 
 use PeptideFilesGenerator;
 
@@ -317,7 +317,7 @@ sub getEnsembl
 
     my $pep_file_gz = $pep_file . ".gz";
 
-    system("wget -O $pep_file_gz 'ftp://ftp.ensembl.org/pub/$ensembl_dir/data/fasta/pep/*.pep.all.fa.gz'");
+    system("wget -O $pep_file_gz 'ftp://ftp.ensembl.org/pub/$ensembl_dir/pep/*.pep.all.fa.gz'");
 
     system("gunzip $pep_file_gz");
 
