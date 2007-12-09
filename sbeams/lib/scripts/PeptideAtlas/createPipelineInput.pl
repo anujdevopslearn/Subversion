@@ -65,6 +65,8 @@ Options:
   --search_batch_ids  Comma-separated list of SBEAMS-Proteomics seach_batch_ids
   --P_threshold       Probability threshold to accept (e.g. 0.9)
   --output_file       Filename to which to write the peptides
+  --biosequence_set_id   Database id of the biosequence_set from which to load sequence attributes.
+
 
  e.g.:  $PROG_NAME --verbose 2 --source YeastInputExperiments.tsv
 
@@ -82,6 +84,7 @@ unless ($ARGV[0]){
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
   "validate=s","namespaces","schemas",
   "source_file:s","search_batch_ids:s","P_threshold:f","output_file:s",
+  "biosequence_set_id:s",
   )) {
   print "$USAGE";
   exit;
@@ -105,6 +108,8 @@ if ($DEBUG) {
 my $source_file = $OPTIONS{source_file} || '';
 my $APDTsvFileName = $OPTIONS{output_file} || '';
 my $search_batch_ids = $OPTIONS{search_batch_ids} || '';
+my $bssid = $OPTIONS{biosequence_set_id} || "10" ; ## some ISB default?
+
 
 
 #### Make sure either --source_file or --search_batch_ids was specified
@@ -1174,9 +1179,12 @@ sub getBiosequenceAttributes {
        SELECT biosequence_id,biosequence_name,biosequence_gene_name,
               biosequence_accession,biosequence_desc
          FROM $TBAT_BIOSEQUENCE
-        WHERE biosequence_set_id = 10
+        WHERE biosequence_set_id = $bssid
     ~;
+
+
     print "Fetching all biosequence accessions...\n";
+    print "$sql";
     my @rows = $sbeams->selectSeveralColumns($sql);
     foreach my $row (@rows) {
       $biosequence_attributes{$row->[1]} = $row;
