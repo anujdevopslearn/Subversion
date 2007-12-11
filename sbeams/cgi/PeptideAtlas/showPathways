@@ -174,6 +174,7 @@ sub pathway_details {
 
   $keggmap->setPathway( pathway => $params->{path_id} );
   my $gene_list = $keggmap->getPathwayGenes(); # pathway => $params->{path_id} );
+  my $relationships = $keggmap->getPathwayRelationships();
   
   my $tot = scalar( @{$gene_list} );
   my $t1 = new Benchmark;
