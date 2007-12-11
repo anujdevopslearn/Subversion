@@ -86,7 +86,13 @@ sub get_service {
   my $this = shift;
   my $wsdl = $this->getWSDL() || die "Missing required WSDL";
 
-  $this->{_service} ||= SOAP::Lite->service($wsdl);
+  eval {
+    $this->{_service} ||= SOAP::Lite->service($wsdl);
+  };
+  if ( $@ ) {
+    $log->error( "Unable to connect to KEGG SOAP service" );
+    $log->error( $@ );
+  }
   return $this->{_service};
 }
 
@@ -449,15 +455,17 @@ sub parsePathwayXML {
 
   $args{source} ||= 'db';
   if ( $args{source} eq 'db' && $self->kegg_tables_exist() ) {
-    my ( $kgml ) = $sbeams->selectrow_array( <<"    END" );
+    my $sql = <<"    END"; 
     SELECT kgml FROM $TBBL_KEGG_PATHWAY
     WHERE kegg_pathway_name = 'path:$path'
     END
+    my ( $kgml ) = $sbeams->selectrow_array( $sql );
     if ( $kgml ) {
       $parser->set_string( xml => $kgml );
     } else {
       $log->error( "Failed to retrieve KGML from database" );
-      exit;
+      $log->error( "$sql" );
+      return;
     }
   } else {
     my $base = $CONFIG_SETTING{KGML_URL} || 
