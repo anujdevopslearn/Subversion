@@ -574,4 +574,44 @@ set dbtype="mssql"
 --The DDL goes to
 $SBEAMS/lib/sql/PeptideAtlas/PeptideAtlas_CREATETABLES.mssql
 
+2007-12-10
 
+- Added column project_id to AT_spectrum_annotation:
+
+  project_id                 int NOT NULL,
+
+- Dropped columns annotater_name and annotater_contact_id from AT_peptide_annotation.
+- Added columns annotator_name and annotator_contact_id to AT_peptide_annotation.
+
+  annotator_name             varchar(50) NULL,
+  annotator_contact_id       int NULL,
+
+- Added columns peptide_id and project_id to AT_peptide_annotation
+
+  project_id                 int NOT NULL,
+  peptide_id                 int NOT NULL,
+
+- Dropped columns annotater_name and annotater_contact_id from AT_modified_peptide_annotation.
+- Added columns annotator_name and annotator_contact_id to AT_modified_peptide_annotation.
+
+  annotator_name             varchar(50) NULL,
+  annotator_contact_id       int NULL,
+
+- Added columns peptide_id, project_id, collision_energy, retention_time, instrument, and annotation_set
+to AT_modified_peptide_annotation.
+  
+  project_id                 int NOT NULL,
+  peptide_id                 int NOT NULL,
+
+Since these tables were lightly, if at all, used prior to now, the quickest upgrade path might be dropping and re-creating the tables:
+
+cd $SBEAMS/lib/conf/PeptideAtlas
+svn update
+../../scripts/Core/generate_schema.pl --table_c PeptideAtlas_table_column.txt --table_p PeptideAtlas_table_property.txt --schem ../../sql/PeptideAtlas/PeptideAtlas --module PeptideAtlas --dest mssql
+
+Then get the appropriate create table/key/index stmts from $SBEAMS/lib/sql/PeptideAtlas
+
+
+
+
+  
