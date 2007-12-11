@@ -479,6 +479,15 @@ sub encodeSectionItem {
 # @nparam  rows_to_show     Number of rows to show initially, others are loaded
 #                           into page but hidden by CSS and showable view JS.
 # @nparam  nowrap           ref to array of col indexes on which to set nowrap
+# @nparam  maxrows          Maximum number of rows the table can contain, 
+#                           irrespective of the number displayed.
+# @nparam  chg_bkg_idx      Index of field on which to trigger alternating
+#                           colors.
+# @nparam  set_download     Have table include download link if set to a true
+#                           value.  If text value is used then it will be used
+#                           as text for the link.
+#
+#
 # 
 #
 sub encodeSectionTable {
@@ -489,6 +498,15 @@ sub encodeSectionTable {
   my @table_attrs = ( 'BORDER' => 0, );
   my $tr_info = $args{tr_info} || 'NOOP=1';
   my $tab = SBEAMS::Connection::DataTable->new( @table_attrs, __tr_info => $tr_info );
+  my $num_cols = 0;
+
+  my $rs_link = '';
+  $log->debug("gonna make rs");
+  if ( $args{set_download} ) {
+    my $rs_name = $self->make_resultset( rs_data => $args{rows} );
+    $log->debug("made rs, $rs_name");
+    $rs_link = "<a href='$CGI_BASE_DIR/GetResultSet.cgi/$rs_name.tsv?rs_set_name=$rs_name&format=tsv' TITLE='Download table as tab-delimited text file' CLASS=info_box>Download as TSV</a>",
+  }
 
   return '' unless $args{rows};
   $args{header} ||= 0;
@@ -501,20 +519,37 @@ sub encodeSectionTable {
   my $prefix = $sbeams->getRandomString( num_chars => 8, 
                                           char_set => ['A'..'Z', 'a'..'z'] );
   my $first = 1;
+  my $bgcolor;
+  my $chg_idx;
   for my $row ( @{$args{rows}} ) {
+    $num_cols = scalar( @$row ) unless $num_cols;
     $tab->addRow( $row );
+    if ( $args{chg_bkg_idx} ) {
+      if ( !$chg_idx ) {
+        $chg_idx = $row->[$args{chg_bkg_idx}];
+        $bgcolor = '#C0D0C0';
+      } elsif ( $chg_idx ne $row->[$args{chg_bkg_idx}] ) {
+        $bgcolor = ( $bgcolor eq '#C0D0C0' ) ? '#F5F5F5' : '#C0D0C0';
+        $chg_idx = $row->[$args{chg_bkg_idx}];
+      }
+      $tab->setRowAttr(  ROWS => [$tab->getRowNum()], BGCOLOR => $bgcolor );
+
+    }
     my $num_rows = $tab->getRowNum() - 1;
 
     if ( $args{rows_to_show} && $args{rows_to_show} < $num_rows ) {
       $tab->setRowAttr( ROWS => [$tab->getRowNum()], ID => $prefix . '_toggle', 
                                                      NAME => $prefix . '_toggle', 
                                                      CLASS => 'hidden' ); 
-    } elsif ( $args{tr_info} ) {
     }
     if ( $args{max_rows} && $args{max_rows} <= $num_rows ) {
       $log->debug( "Max is $args{max_rows} and num is $num_rows" );
       my $span = scalar( @$row );
-      $tab->addRow( [$sbeams->makeInfoText("<I>Table truncated at $args{max_rows} rows</I>")] );
+      my $msg = "Table truncated at $args{max_rows} rows";
+      if  ( $args{set_download} ) {
+        $msg .= "(won't affect download, " . scalar( @{$args{rows}} ) . ' total rows)';
+      }
+      $tab->addRow( [$sbeams->makeInfoText("<I>$msg</I>")] );
       $tab->setColAttr( ROWS => [$tab->getRowNum()], 
                      COLSPAN => $span, 
                         COLS => [ 1 ], 
@@ -560,10 +595,9 @@ sub encodeSectionTable {
   }
   $tab->addRow( [$closelink] );
 
-
-  my $html =<<"  END";
-  <TR><TD NOWRAP COLSPAN=2>$tab</TD></TR>
-  END
+  my $html;
+  $html = "<TR><TD NOWRAP COLSPAN=$num_cols ALIGN=right>$rs_link</TD></TR>\n" if $rs_link;
+  $html .= "<TR><TD NOWRAP COLSPAN=2>$tab</TD></TR>";
 
   return $html;
 }
@@ -704,6 +738,14 @@ sub make_pa_tooltip {
   my $class = $args{class} || 'pseudo_link';
   
   return "<SPAN CLASS=$class onMouseover=\"showTooltip(event, '$args{tip_text}')\" onMouseout=\"hideTooltip()\">$args{link_text}</SPAN>";
+}
+
+sub formatMassMods { 
+  my $self = shift;
+  my $sequence = shift || return undef;
+  $sequence =~ s/\[/<SPAN CLASS=aa_mod>\[/gm;
+  $sequence =~ s/\]/\]<\/SPAN>/gm;
+  return $sequence;
 }
 
 1;
