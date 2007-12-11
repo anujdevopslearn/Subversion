@@ -24,6 +24,8 @@ use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Permissions;
 use SBEAMS::PeptideAtlas::HTMLTabs;
 use SBEAMS::PeptideAtlas::ModificationHelper;
+use SBEAMS::PeptideAtlas::Utilities;
+use SBEAMS::PeptideAtlas::Annotations;
 
 @ISA = qw(SBEAMS::PeptideAtlas::DBInterface
           SBEAMS::PeptideAtlas::HTMLPrinter
@@ -32,6 +34,8 @@ use SBEAMS::PeptideAtlas::ModificationHelper;
           SBEAMS::PeptideAtlas::Permissions
           SBEAMS::PeptideAtlas::HTMLTabs
           SBEAMS::PeptideAtlas::ModificationHelper
+          SBEAMS::PeptideAtlas::Utilities
+          SBEAMS::PeptideAtlas::Annotations
        );
 
 my $log = SBEAMS::Connection::Log->new();
@@ -101,6 +105,7 @@ sub getProjectData {
     $project_data{$row->[0]} =<<"    END_LINK";
     <A HREF=${cgi_dir}main.cgi?set_current_project_id=$row->[0]>
     <DIV id=PeptideAtlas_button TITLE='$title'>PeptideAtlas</DIV></A>
+
     END_LINK
   }
   return ( \%project_data );
@@ -115,6 +120,29 @@ sub has_search_key_data {
   SELECT COUNT(*) FROM $TBAT_SEARCH_KEY WHERE atlas_build_id = $build_id
   END
   return $cnt;
+}
+
+sub getBuildMotif {
+  my $self = shift;
+
+  my $build_id = $self->getCurrentAtlasBuildID( parameters_ref => { got => 0 } );
+  if ( grep /^$build_id$/, $self->getGlycoBuilds() ) {
+    return 'glyco';
+  } elsif ( grep /^$build_id$/, $self->getPhosphoBuilds() ) {
+    return 'phospho';
+  } 
+  return '';
+}
+
+sub getGlycoBuilds {
+  $log->debug( "Glycotopia!" );
+  my @glyco_builds = ( 15, 17 );
+  return ( 15,17 );
+}
+
+sub getPhosphoBuilds {
+  $log->debug( "Phosphomania!" );
+  return ( 16 );
 }
 
 ###############################################################################
