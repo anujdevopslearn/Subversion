@@ -1,0 +1,188 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : uploadTransitions
+# $Id: $
+#
+# SBEAMS is Copyright (C) 2000-2008 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+use strict;
+use lib qw (../../lib/perl);
+use File::Basename;
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+
+## Globals ##
+my $sbeams = new SBEAMS::Connection;
+my $pepatlas = new SBEAMS::PeptideAtlas;
+$pepatlas->setSBEAMS($sbeams);
+my $program = basename( $0 );
+
+main();
+
+
+sub main { 
+  my $current_username = $sbeams->Authenticate() || die "Authentication failed";
+
+  my $params = process_params();
+  $params->{apply_action} ||= 'show form';
+
+  if ( $params->{apply_action} eq 'Upload file' ) {
+    upload_transitions( $params );
+  } elsif ( $params->{apply_action} eq 'show form' ) {
+    $pepatlas->printPageHeader();
+    print_upload_form( $params );
+  }
+  $pepatlas->printPageFooter();
+
+} # end main
+
+
+sub upload_transitions {
+  my $params = shift;
+
+  # read file
+  $pepatlas->validate_transition_data( transition_data => $params->{transition_file_data} );
+  # Insert transitions
+  my $ids = $pepatlas->insert_transition_data( set_name => $params->{transition_set} );
+  # print table of transitions
+  if ( $ids ) {
+    $sbeams->set_page_message( msg => 'Saved ' . scalar( @$ids ) . ' transitions', type => 'Info' );
+#    print_results( $ids );
+  } else {
+    $sbeams->set_page_message( msg => 'No transitions saved', type => 'Error' );
+  }
+
+  # exit
+
+  print $q->redirect( $q->self_url() );
+  exit;
+}
+
+
+sub process_params {
+  my $params = {};
+  
+  # Process parameters
+  $sbeams->parse_input_parameters( parameters_ref => $params,
+                                                 q => $q
+                                 );
+  # Process "state" parameters
+  $sbeams->processStandardParameters( parameters_ref => $params );
+
+#  for my $param ( keys( %$params ) ) { $log->debug( "Params say: $param => $params->{$param}" ); }
+
+  $q->delete( 'apply_action' );
+  my $error_text;
+  $params->{transition_set} ||= 'Uploaded_set_' . time();
+  for my $required ( qw(transition_file transition_set ) ) {
+    if ( !defined $required ) {
+      my $sep = ( $error_text ) ? ', ' : '';
+      $error_text ||= 'Missing required parameters: ';
+      $error_text .= $sep . $required;
+    }
+  }
+  show_error( $error_text ) if $error_text;
+  
+  my $uploaded_file = $q->param( 'transition_file' );
+  my @transition_file;
+  while ( my $line = <$uploaded_file> ) {
+    push @transition_file, $line;
+  }
+  $params->{transition_file_data} = \@transition_file;
+  return $params;
+}
+
+sub show_error {
+  print STDERR "Foshizzle\n";
+  exit;
+  $sbeams->set_page_message( msg => 'This functionality is not yet complete', type => 'Error' );
+  print $q->redirect( $q->self_url() );
+}
+
+sub print_upload_form {
+  my $params = shift;
+  $sbeams->printUserContext();
+  
+  my $pad = '&nbsp;' x 5;
+  my $excel = "<A HREF=$HTML_BASE_DIR/doc/PeptideAtlas/transition_template.xls>(template)</A>";
+  my $tsv = "<A HREF=$HTML_BASE_DIR/doc/PeptideAtlas/transition_template.tsv>(template)</A>";
+
+  my @buttons = $sbeams->getFormButtons( name => 'apply_action', 
+                                        value => 'Upload file', 
+                                        types => [ qw(submit reset) ] );
+  my $buttons = join $pad, @buttons;
+  my $info_text = get_info_text();
+#  <TR><TD ALIGN=RIGHT><B>Download template:</B></TD><TD>$template_links</TD></TR>
+
+  print <<"  END";
+  <H1>Upload Transitions</H1>
+  <FORM ENCTYPE="multipart/form-data" METHOD=POST>
+  <TABLE BORDER=0>
+  <TR><TD ALIGN=RIGHT><B>Transition set name:</B></TD><TD><INPUT TYPE=TEXT NAME=transition_set SIZE=30></TD></TR>
+  <TR><TD ALIGN=RIGHT><B>Transitions file:</B></TD><TD><INPUT TYPE=FILE NAME=transition_file SIZE=30></TD></TR>
+  <TR><TD ALIGN=RIGHT><B>Type:</B></TD>
+    <TD>Excel $excel <INPUT TYPE=RADIO NAME=type CHECKED VALUE=xls></INPUT>
+    Tab-delim text $tsv <INPUT TYPE=RADIO NAME=type VALUE=tabtext> </INPUT></TD>
+  </TR>
+  <TR><TD></TD><TD ALIGN=LEFT>$buttons</TD></TR>
+  <TR><TD ALIGN=RIGHT></TD><TD></TD></TR>
+  </TABLE>
+  </FORM>
+	<BR>
+  $info_text 
+  END
+#<TR><TD COLSPAN=2 ALIGN=CENTER>$buttons</TD>
+
+} # end showMainPage
+
+sub get_info_text {
+  my $content =<<"  END";
+  <PRE>
+   <DIV class=info_box ID=help>
+    This form allows you to upload a file of 'validated' transitions, rather than
+    entering them manually one at a time.  You can download a template file in 
+    either Excel or TSV format from the links above, and enter your data in the
+    columns provided, as described in the table below.
+
+
+    <TABLE BORDER=10 BGCOLOR=white>
+     <TR><TD>modified_peptide_sequence</TD><TD>Sequence of the peptide including any modifications in standard notation, e.g. THC[160]AAHR</TD></TR>
+     <TR><TD>peptide_charge</TD><TD>Charge on the precursor ion</TD></TR>
+     <TR><TD>q1_mz</TD><TD>parent mass to charge ratio: q1</TD></TR>
+     <TR><TD>q3_mz</TD><TD>product ion mass to charge ratio: q3</TD></TR>
+     <TR><TD>q3_ion_label</TD><TD>Label for the product ion (e.g. y1-7, b2-6, etc.)</TD></TR>
+     <TR><TD>transition_suitability_level_id</TD><TD>User-specified quality metric.  Permissible values are Best, OK, and No, all others will be stored as 'OK'</TD></TR>
+     <TR><TD>publication_id</TD><TD>Article title of publication related to this entry, if any</TD></TR>
+     <TR><TD>annotator_name</TD><TD>Name of person uploading transitions</TD></TR>
+     <TR><TD>collision_energy</TD><TD>Collision energy setting used during validation run, or best CE setting if multiple runs were performed</TD></TR>
+     <TR><TD>retention_time</TD><TD>Retention time (in minutes) of parent peptide</TD></TR>
+     <TR><TD>instrument</TD><TD>Instrument used for analysis of transition pair</TD></TR>
+     <TR><TD>comment</TD><TD>Any additional comments or information you wish to provide</TD></TR>
+    </TABLE>
+
+    
+   </DIV>
+  </PRE>
+  END
+  my @toggle = $sbeams->make_toggle_section( textlink => 1,
+                                       hidetext => "Hide Explanation",
+                                       showtext => "Show Explanation", 
+                                      box_style => 1,
+                                       content => $content );
+
+  return "$toggle[1]<BR><BR>$toggle[0]";
+}
+
+
