@@ -408,7 +408,7 @@ sub handle_request
             NLS.modified_sequence,
             NLS.protein_name, NLS.mz_exact, NLS.charge, NLS.protein_name_alt,
             PI.best_probability, PI.n_observations, PI.n_samples,
-            PI.n_protein_mappings, PI.n_genome_locations
+            PI.n_protein_mappings, PI.n_genome_locations, SSRCalc_relative_hydrophobicity
             FROM $TBAT_NIST_LIBRARY_SPECTRUM NLS
             LEFT JOIN $TBAT_NIST_LIBRARY NL
             ON (NLS.NIST_library_id = NL.NIST_library_id)
@@ -434,15 +434,22 @@ sub handle_request
             $biosequence_names_clause_pa
             $biosequence_name_clause
             AND NST.NIST_spectrum_type_name='Consensus'
+            ORDER BY protein_name, NLS.sequence
             ~;
 
+            $log->debug( "Going to exec SQL" );
             my @rows = $sbeams->selectSeveralColumns($sql);
+            $log->debug( "SQL done, returned " . scalar(@rows) );
 
+            my @display_rows = ( [qw( Protein Sequence Chg q1_mz q3_mz Intensity Ion SSRCalc n_obs Spectrum ) ] );
+            my $idx = 0;
             foreach my $row (@rows)
             {
+                $idx++;
+                $log->debug( "processed $idx rows" ) unless $idx % 100;
                 my ($nlsid, $seq, $mod_seq, $prot, $precur_mz, $pep_chg, 
                 $alt_name, $prob, $n_obs, $n_samples, $n_prot_map,
-                $n_gen_map) = @{$row};
+                $n_gen_map, $ssrcalc ) = @{$row};
 
                 my $sql2 = qq~
                 SELECT top $n_highest_intensity_fragment_ions NLSP.mz,
@@ -451,117 +458,34 @@ sub handle_request
                 WHERE NIST_library_spectrum_id = '$nlsid'
                 ORDER BY NLSP.relative_intensity DESC
                 ~;
-        
+
                 my @rows2 = $sbeams->selectSeveralColumns($sql2);
+                my $spec = "<a href='$CGI_BASE_DIR/$SBEAMS_SUBDIR/ShowOneSpectrum?NIST_library_spectrum_id=$nlsid' target='_blank'><b>SHOW SPECTRUM</b></a>";
+                my $spec = "<A HREF='ShowOneSpectrum?NIST_library_spectrum_id=$nlsid' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='Show spectrum'></A>";
 
-                print qq~
-                <table border=2>
-                <tr>
-                <th>protein</th> <th>alt name</th>
-                <th>CID precursor m/z</th> <th>CID charge</th> <th>Prob</th> <th>n obs</th>
-                <th>b<sup>+</sup></th> <th>#</th> <th>AA</th> <th>#</th>
-                <th>y<sup>+</sup></th> <th>y<sup>2+</sup></th>
-                <th>b<sup>+</sup> NIST</th><th>b<sup>+</sup> NIST rel. inten</th>
-                <th>y<sup>+</sup> NIST</th><th>y<sup>+</sup> NIST rel. inten</th>
-                <th>y<sup>+2</sup> NIST</th><th>y<sup>+</sup> NIST rel. inten</th>
-                </tr>
-                ~;
-
-                $prob = sprintf("%.2f", $prob);
-
-                my @masses;
-
-                if ($mod_seq) {
-                    @masses = $modification_helper->getMasses($mod_seq);
-                } else {
-                    @masses = $modification_helper->getMasses($seq);
+                my $maxrows = 4;
+                my $idx = 0;
+                for my $nist ( @rows2 ) {
+                  $ssrcalc = sprintf( "%0.2f", $ssrcalc );
+                  $nist->[0] = sprintf( "%0.3f", $nist->[0] );
+                  $precur_mz = sprintf( "%0.3f", $precur_mz );
+                  push @display_rows, [ $prot, $mod_seq, $pep_chg, $precur_mz, $nist->[0], $nist->[1], $nist->[2], $ssrcalc, $n_obs, $spec ] if $nist->[2];
+                  last if $idx >= $maxrows;
+                  $idx++;
                 }
-
-                my @aa = split(//,$seq);
-                my @b1 = getB1FragMassArray(masses_ref => \@masses);
-                my @y1 = getY1FragMassArray(masses_ref => \@masses);
-                my @y2 = getY2FragMassArray( y1_ref => \@y1 );
-                my @b1_nist = initArray( li => $#aa);
-                my @y1_nist = initArray( li => $#aa);
-                my @y2_nist = initArray( li => $#aa);
-                my @b1_nist_inten = initArray( li => $#aa);
-                my @y1_nist_inten = initArray( li => $#aa);
-                my @y2_nist_inten = initArray( li => $#aa);
-               
-                print qq~
-                <tr><td>$prot</td><td>$alt_name</td>
-                <td>$precur_mz</td><td>$pep_chg</td><td>$prob</td><td>$n_obs</td>
-                ~;
-                
-
-                foreach my $row2 (@rows2)
-                {
-                    my ($frag_mz, $inten, $ion_label, $frag_chg)
-                    = @{$row2};
-
-                    ## parse ion label to store in parallel arrays
-                    ## will print these alongside the fragment ion m/z calculated
-                    ## from sequence
-                    if ( $ion_label =~ /y(\d+)(.*)/)
-                    {
-                        my $ind = $1;
-
-                        my $rem = $2;
-
-                        ## ignore ions with -I and -num or i
-                        unless ( $rem =~ /(.*)[\-i](.*)/ )
-                        {
-                            if ($frag_chg == 1)
-                            {
-                                $y1_nist[$#aa - $ind + 1] = $frag_mz;
-                                $y1_nist_inten[$#aa - $ind + 1] = $inten;
-                            } elsif ( $frag_chg == 2)
-                            {
-                                $y2_nist[$#aa - $ind + 1] = $frag_mz;
-                                $y2_nist_inten[$#aa - $ind + 1] = $inten;
-                            }
-                        }
-                    } elsif ( $ion_label =~ /b(\d+)(.*)/)
-                    {
-                        my $ind = $1;
-
-                        my $rem = $2;
-
-                        ## ignore ions with -I and -num or i
-                        unless ($rem =~ /(.*)[\-i](.*)/)
-                        {
-                            if ($frag_chg == 1)
-                            {
-                                $b1_nist[$ind - 1] = $frag_mz;
-                                $b1_nist_inten[$ind - 1] = $inten;
-                            }
-                        }
-                    }
-                }
-
-                ## replace @aa with modified sequence array if possible
-                @aa = $modification_helper->getModifiedAAs($mod_seq) if ($mod_seq);
-
-                for (my $i=0; $i <= $#aa; $i++)
-                {
-                    my $bn = $i + 1;
-                    my $yn = $#aa - $i + 1;
-                    print "<tr> $ed $ed $ed $ed $ed $ed" if ($i > 0);
-                    print qq~
-                    <td>$b1[$i]</td> <td>$bn</td> <td>$aa[$i]</td> <td>$yn</td> <td>$y1[$yn-1]</td> <td>$y2[$yn-1]</td>
-                    <td>$b1_nist[$i]</td> <td>$b1_nist_inten[$i]</td>
-                    <td>$y1_nist[$i]</td> <td>$y1_nist_inten[$i]</td>
-                    <td>$y2_nist[$i]</td> <td>$y2_nist_inten[$i]</td>
-                    </tr>
-                    ~;
-                }
-                print qq~
-                    <tr><td colspan='18' style='text-align:center'>
-                    <a href='$CGI_BASE_DIR/$SBEAMS_SUBDIR/ShowOneSpectrum?NIST_library_spectrum_id=$nlsid' target='_blank'><b>SHOW SPECTRUM</b></a></td></tr>
-                ~;
-                print "</table>";
-                print "<br/>";
             }
+
+            my $html = $sbeamsMOD->encodeSectionTable(  header => 1, 
+                                                 width => '600',
+                                                align  => [qw(left left center right right right center right center center)],
+                                                  rows => \@display_rows,
+                                          rows_to_show => 50,
+                                           chg_bkg_idx => 1,
+                                                nowrap => [1..10],
+                                              max_rows => 500,
+                                          set_download => 1
+                                                );
+            print "<TABLE>$html</TABLE>";
 
         }
 
