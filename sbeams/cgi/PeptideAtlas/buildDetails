@@ -331,7 +331,7 @@ sub get_sample_info {
 #         n_uniq_contributed_peptides n_observations, n_searched_spectra,
 #         n_distinct_multiobs_peptides, n_uniq_contributed_peptides,
 #         n_progressive_peptides, model_90_sensitivity, model_90_error_rate
-  my @sample_info = $sbeams->selectSeveralColumns ( <<"  END" );
+  my $sql =<<"  END";
   SELECT ASB.atlas_search_batch_id, sample_tag, SBS.n_searched_spectra,
          n_distinct_multiobs_peptides, n_uniq_contributed_peptides,
          n_progressive_peptides, model_90_sensitivity, model_90_error_rate
@@ -342,8 +342,10 @@ sub get_sample_info {
   JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id )
   WHERE ABS.atlas_build_id = $build_id
   AND ABSB.atlas_build_id = $build_id
-  ORDER BY ASB.atlas_search_batch_id ASC
+  ORDER BY S.sample_id, ASB.atlas_search_batch_id ASC
   END
+  my @sample_info = $sbeams->selectSeveralColumns ( $sql );
+  $log->debug( $sbeams->evalSQL($sql) );
 
   # Format loop
   my @samples;
