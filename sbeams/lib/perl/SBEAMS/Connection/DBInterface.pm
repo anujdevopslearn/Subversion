@@ -885,6 +885,13 @@ sub commit_transaction {
   $dbh->commit();
 }
 
+sub reset_dbh {
+  my $self = shift || croak("parameter self not passed");
+
+  $self->setAutoCommit( 1 );
+  $self->setRaiseError( 0 );
+}
+
 
 
 #+
