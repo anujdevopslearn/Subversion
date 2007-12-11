@@ -456,15 +456,14 @@ AT_peptide_annotation	4	publication_id	Publication	int	4	0	Y		N	AT_publication	p
 AT_peptide_annotation	5	annotator_name	Annotator Name	varchar	50	0	Y		N			N	text	30		Y	Y	N	Name of the annotator		
 AT_peptide_annotation	6	annotator_contact_id	Annotator Contact	int	4	0	Y		N	contact	contact_id	N	optionlist			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
 AT_peptide_annotation	7	project_id	Project	int	4	0	N		N	project	project_id	N	optionlist			Y	Y	N	Project under which this entity is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
-AT_peptide_annotation	8	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Sequence of the peptide including modification notations		
-AT_peptide_annotation	9	peptide_id	Peptide	int	4	0	N		N	AT_peptide	peptide_id	Y	optionlist			Y	Y	Y	Peptide		
-AT_peptide_annotation	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-AT_peptide_annotation	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_peptide_annotation	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_peptide_annotation	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_peptide_annotation	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_peptide_annotation	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_peptide_annotation	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_peptide_annotation	8	peptide_id	Peptide	int	4	0	N		N	AT_peptide	peptide_id	Y	optionlist			Y	Y	Y	Peptide		
+AT_peptide_annotation	9	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_peptide_annotation	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_peptide_annotation	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_peptide_annotation	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_peptide_annotation	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_peptide_annotation	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_peptide_annotation	15	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_modified_peptide_annotation	1	modified_peptide_annotation_id	Modified Peptide Annotation	int	4	0	N		Y							N	N				pkDEFAULT
 AT_modified_peptide_annotation	2	peptide_sequence	Peptide Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Sequence of the peptide, excluding modifications		
 AT_modified_peptide_annotation	3	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Sequence of the peptide, including modification notation, e.g. THC[160]AAHR		
