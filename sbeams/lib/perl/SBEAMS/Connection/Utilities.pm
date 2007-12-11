@@ -956,6 +956,12 @@ sub get_site_positions {
   return \@posn;
 }
 
+sub rs_has_data {
+  my $self = shift;
+  my %args = @_;
+  my $rs = $args{resultset_ref} || return undef;
+  return scalar( @{$rs->{data_ref}} );
+}
 
 1;
 
