@@ -215,8 +215,8 @@ sub printPageHeader {
 sub printStyleSheet {
     my $self = shift;
 
-    my $FONT_SIZE=9;
     my $FONT_SIZE_SM=8;
+    my $FONT_SIZE=9;
     my $FONT_SIZE_MED=12;
     my $FONT_SIZE_LG=12;
     my $FONT_SIZE_HG=14;
@@ -224,7 +224,7 @@ sub printStyleSheet {
     if ( $HTTP_USER_AGENT =~ /Mozilla\/4.+X11/ ) {
       $FONT_SIZE_SM=11;
       $FONT_SIZE=12;
-      $FONT_SIZE_MED=3;
+      $FONT_SIZE_MED=13;
       $FONT_SIZE_LG=14;
       $FONT_SIZE_HG=19;
     }
@@ -252,81 +252,60 @@ sub printStyleSheet {
 	A:visited.nav {  font-family: Helvetica, Arial, sans-serif; color: #000000}
 	A:hover.nav {  font-family: Helvetica, Arial, sans-serif; color: red;}
 	.nav {  font-family: Helvetica, Arial, sans-serif; color: #000000}
-	.white_bg{background-color: #FFFFFF }
-	.grey_bg{ background-color: #CCCCCC }
-	.med_gray_bg{ background-color: #CCCCCC; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; Padding:2}
-	.grey_header{ font-family: Helvetica, Arial, sans-serif; color: #000000; font-size: ${FONT_SIZE_HG}pt; background-color: #CCCCCC; font-weight: bold; padding:1 2}
-	.rev_gray{background-color: #555555; font-size: ${FONT_SIZE_MED}pt; font-weight: bold; color:white; line-height: 25px;}
-	.rev_gray_head{background-color: #888888; font-size: ${FONT_SIZE}pt; font-weight: bold; color:white; line-height: 25px;}
+
 	A.sortheader{background-color: #888888; font-size: ${FONT_SIZE}pt; font-weight: bold; color:white; line-height: 25px;}
-	.blue_bg{ font-family: Helvetica, Arial, sans-serif; background-color: #4455cc; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; color: white}
-	.blue_bg_glyco{ font-family: Helvetica, Arial, sans-serif; background-color: #4455cc; font-size: ${FONT_SIZE_MED}pt; font-weight: bold; color: white}
-	.lite_blue_bg{font-family: Helvetica, Arial, sans-serif; background-color: #eeeeff; font-size: ${FONT_SIZE_HG}pt; color: #cc1111; font-weight: bold;border-style: solid; border-width: 1px; border-color: #555555 #cccccc #cccccc #555555;}
-	.orange_bg{ background-color: #FFCC66; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
-	.red_bg{ background-color: #882222; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; color:white; Padding:2}
-	.small_cell {font-size: 8; background-color: #CCCCCC; white-space: nowrap  }
-	.med_cell {font-size: 10; background-color: #CCCCCC; white-space: nowrap  }
-	.anno_cell {white-space: nowrap  }
-	.present_cell{border: none}
-	.marginal_cell{border: 1px solid #0033CC}
-	.absent_cell{border: 2px solid #660033}
-	.small_text{font-family: Helvetica,Arial,sans-serif; font-size:x-small; color:#aaaaaa}
-	.table_setup{border: 0px ; border-collapse: collapse;   }
-	.pad_cell{padding:5px;  }
-	.sequence_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5}	
-	.white_hyper_text{font-family: Helvetica,Arial,sans-serif; color:#000000;}
-	
-	.white_text    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: white; CURSOR: help;}
-	.white_text_head {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: white; CURSOR: help;}
-	
-	.pseudo_link    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration:none; color: blue; CURSOR: help;}
-	
   .popup_help { cursor: Help; color:#444444 }
-	.identified_pep{ 
-	background-color: #882222; 
-	font-size: ${FONT_SIZE_LG}pt; 
-	font-weight: bold; 
-  letter-spacing:0.5;	
-	color:white; 
-	Padding:1;
-	border-style: solid;
-	border-left-width: 1px;
-	border-right-width: 1px;
-	border-top-width: 1px;
-	border-left-color: #eeeeee;
-	border-right-color: #eeeeee;
-	border-top-color: #aaaaaa;
-	border-bottom-color:#aaaaaa;
-	}
-	.predicted_pep{ 
-	background-color: #FFCC66; 
-	font-size: ${FONT_SIZE_LG}pt; 
-  font-family:courier;
-	font-weight: bold; 
-  letter-spacing:0.5;	
-	border-style: solid;
-	border-width: 1px;
+  
+  /* Style info below organized by originating module
+  /* Peptide Atlas */
+  .pseudo_link    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration:none; color: blue; CURSOR: help;}
+  .white_bg{background-color: #FFFFFF }
+  .grey_bg{ background-color: #CCCCCC }
+  .med_gray_bg{ background-color: #CCCCCC; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; Padding:2}
+  .grey_header{ font-family: Helvetica, Arial, sans-serif; color: #000000; font-size: ${FONT_SIZE_HG}pt; background-color: #CCCCCC; font-weight: bold; padding:1 2}
+  .rev_gray{background-color: #555555; font-size: ${FONT_SIZE_MED}pt; font-weight: bold; color:white; line-height: 25px;}
+  .rev_gray_head{background-color: #888888; font-size: ${FONT_SIZE}pt; font-weight: bold; color:white; line-height: 25px;}
+  .blue_bg{ font-family: Helvetica, Arial, sans-serif; background-color: #4455cc; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; color: white}
+  .pa_predicted_pep{ background-color: lightcyan; font-size: ${FONT_SIZE}pt; font-family:courier; letter-spacing:0.5;	border-style: solid; border-width: 0.1px; border-color: black }
+  .pa_glycosite{ background-color: #ee9999; border-style: solid; font-size: ${FONT_SIZE}pt; font-family:courier; border-width: 0px; letter-spacing:0.5 }	
+  .spaced_text { line-height: 1.2em; }
+  .spaced_text SUB, .spaced SUP { line-height: 1; }
+  .aa_mod { vertical-align: top; font-size: ${FONT_SIZE}; color: darkslategray }
+  .pa_sequence_font{font-family:courier; font-size: ${FONT_SIZE}pt;  letter-spacing:0.5; font-weight: bold; }	
+  .pa_observed_sequence{font-family:courier; font-size: ${FONT_SIZE}pt; color: red;  letter-spacing:0.5; font-weight: bold;}	
 	
-	border-right-color: blue ;
-	border-left-color:  red ;
-	
-	}
-	
-	.sseq{ background-color: #CCCCFF; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
-	.tmhmm{ background-color: #CCFFCC; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; text-decoration:underline}
+
+  /* Glycopeptide */
+  .blue_bg_glyco{ font-family: Helvetica, Arial, sans-serif; background-color: #4455cc; font-size: ${FONT_SIZE_MED}pt; font-weight: bold; color: white}
+  .identified_pep{ background-color: #882222; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5;	color:white; Padding:1; border-style: solid; border-left-width: 1px; border-right-width: 1px; border-top-width: 1px; border-left-color: #eeeeee; border-right-color: #eeeeee; border-top-color: #aaaaaa; border-bottom-color:#aaaaaa; }
+  .predicted_pep{ background-color: #FFCC66; font-size: ${FONT_SIZE_LG}pt; font-family:courier; font-weight: bold; letter-spacing:0.5;	border-style: solid; border-width: 1px; border-right-color: blue ; border-left-color:  red ; }
+  .sseq{ background-color: #CCCCFF; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
+  .tmhmm{ background-color: #CCFFCC; font-size: ${FONT_SIZE}pt; font-weight: bold; text-decoration:underline}
   .instruction_text{ font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
-	
-	.glyco_site{ background-color: #ee9999; 
-	border-style: solid;
-	font-size: ${FONT_SIZE_LG}pt; 
-	font-weight: bold; 
-  font-family:courier;
-	border-width: 1px;
-  letter-spacing:0.5;	
-	/* top right bottom left */
-	border-color: #444444 #eeeeee #eeeeee #444444; }	
-	
-	
+  .sequence_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5}	
+
+  /* Phosphopep */
+  .invalid_parameter_value  {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_LG}pt; text-decoration: none; color: #FC0; font-style: Oblique; }
+  .missing_required_parameter  {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_LG}pt; text-decoration: none; color: #F03; font-style: Italic; }
+  .section_title  {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_HG}pt; text-decoration: none; color: #090; font-style: Normal; }
+
+  /* Microarray */
+  .lite_blue_bg{font-family: Helvetica, Arial, sans-serif; background-color: #eeeeff; font-size: ${FONT_SIZE_HG}pt; color: #cc1111; font-weight: bold;border-style: solid; border-width: 1px; border-color: #555555 #cccccc #cccccc #555555;}
+  .orange_bg{ background-color: #FFCC66; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
+  .red_bg{ background-color: #882222; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; color:white; Padding:2}
+  .small_cell {font-size: 8; background-color: #CCCCCC; white-space: nowrap  }
+  .med_cell {font-size: 10; background-color: #CCCCCC; white-space: nowrap  }
+  .anno_cell {white-space: nowrap  }
+  .present_cell{border: none}
+  .marginal_cell{border: 1px solid #0033CC}
+  .absent_cell{border: 2px solid #660033}
+  .small_text{font-family: Helvetica,Arial,sans-serif; font-size:x-small; color:#aaaaaa}
+  .table_setup{border: 0px ; border-collapse: collapse;   }
+  .pad_cell{padding:5px;  }
+  .white_hyper_text{font-family: Helvetica,Arial,sans-serif; color:#000000;}
+  .white_text    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: white; CURSOR: help;}
+  .white_text_head {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: white; CURSOR: help;}
+    
 	a.edit_menuButton:link {
 	/* font-size: 12px; */
 	font-family: arial,helvetica,san-serif;
@@ -454,10 +433,14 @@ a.blue_button:active{
 	border-bottom: 1px solid #003366; \
 	border-left:1px solid #B7CFEB; 
 }
+
+  .info_box { background: #F0F0F0; border: #000 1px solid; padding: 4px; width: 80%; }
+
     ~;
 
   my $agent = $q->user_agent();
-  $log->debug( $agent );
+  $log->debug( "User agent is $agent" );
+  # Style for turning text sideways for vertical printing, MSIE only
   if ( $agent =~ /MSIE/ ) {
     print " .med_vert_cell {font-size: 10; background-color: #CCCCCC; white-space: nowrap; writing-mode: tb-rl; filter: flipv fliph;  }\n";
   }
@@ -950,7 +933,6 @@ sub reportException {
   my $HTML_message = $args{'HTML_message'} || '';
   my $force = $args{force_header} || 0;
 
-
   #### If invocation_mode is HTTP, then printout an HTML message
   if ($self->invocation_mode() =~ /https*/ && $self->output_mode() eq 'html') {
     print "<H4>$state: ";
@@ -995,6 +977,16 @@ sub makeInfoText {
   my $text = shift;
   return( "<I><FONT COLOR=#666666>$text</FONT></I>" );
 }
+
+#+ 
+# Utility method, returns text formatted for Error messages
+#-
+sub makeErrorText {
+  my $self = shift;
+  my $text = shift;
+  return( "<I><FONT COLOR=#FF0000>$text</FONT></I>" );
+}
+
 
 #+
 # returns http Content-type based on user-supplied 'mode' 
@@ -1307,6 +1299,7 @@ sub make_toggle_section {
   for my $i ( $hidetext, $showtext ) {
     $i = "<FONT COLOR=blue> $i </FONT>";
   }
+
       
   # Default visiblity is hidden
   $args{visible} = 0 unless defined $args{visible};
