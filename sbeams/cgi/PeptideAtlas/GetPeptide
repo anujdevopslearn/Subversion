@@ -41,6 +41,7 @@ use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::ConsensusSpectrum;
+use SBEAMS::PeptideAtlas::ModificationHelper;
 
 use SBEAMS::Proteomics::Tables;
 
@@ -48,6 +49,7 @@ $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+my $modification_helper = new ModificationHelper();
 
 #$q = new CGI;
 
@@ -342,6 +344,8 @@ sub handle_request {
 
     if ($sbeams->output_mode() eq 'html') {
 
+      print $sbeamsMOD->init_pa_tooltip(); 
+
         print "<p>";
 
         print "<nobr>";
@@ -452,7 +456,9 @@ sub handle_request {
          P.molecular_weight, P.peptide_isoelectric_point,
          PI.n_samples, PI.n_protein_samples, PI.empirical_proteotypic_score,
          O.full_name, PI.original_protein_name,
-         P.SSRCalc_relative_hydrophobicity, CAST(biosequence_seq AS VARCHAR)
+         P.SSRCalc_relative_hydrophobicity, CAST(biosequence_seq AS VARCHAR) biosequence_seq,
+         PA.modified_peptide_sequence, PA.peptide_annotation, PA.peptide_annotation_id, 
+         PA.annotator_name, CAST(PA.comment AS VARCHAR) comment
          FROM $TBAT_PEPTIDE_INSTANCE PI
          INNER JOIN $TBAT_PEPTIDE P
           ON ( PI.peptide_id = P.peptide_id )
@@ -467,12 +473,14 @@ sub handle_request {
          LEFT JOIN $TBAT_BIOSEQUENCE BS
           ON ( PM.matched_biosequence_id = BS.biosequence_id )
          LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
+         LEFT JOIN $TBAT_PEPTIDE_ANNOTATION PA ON ( PA.peptide_id = PI.peptide_id )
          WHERE 1 = 1
             $atlas_build_clause
             $peptide_name_clause
             $peptide_sequence_clause
         ORDER BY PM.chromosome, BS.biosequence_name, PM.start_in_chromosome
     ~;
+    $log->debug( $sql );
     unless ( $peptide_name_clause || $peptide_sequence_clause ) {
       $sbeams->display_sql(sql=>$sql);
       print qq~
@@ -495,7 +503,7 @@ if ($apply_action =~ /QUERY/i ) {
             my (@best_probability, @n_observations, @n_genome_locations, @n_protein_mappings);
             my (@chrom, @start_chrom, @end_chrom, @strand);
             my (@biosequence_name);
-            my ( @mw, @pi, @nsamp, @nprotsamp, @epscore, @organism, @original_name, @SSRCalc_relative_hydrophobicity );
+            my ( @mw, @pi, @nsamp, @nprotsamp, @epscore, @organism, @original_name, @SSRCalc_relative_hydrophobicity, @pep_annot );
 
             my $i=0;  ##index counter
 
@@ -505,7 +513,8 @@ if ($apply_action =~ /QUERY/i ) {
                 my ($pa, $seq, $prob, $n_obs, $n_g_loc, $n_prot_map, 
                     $chr, $s_chr, $e_chr, $str, $b_name, $mw, $pi, 
                     $ns, $nps, $eps, $org, $orig_name,
-		    $SSRCalc_relative_hydrophobicity, $protein_sequence ) = @{$row};
+		    $SSRCalc_relative_hydrophobicity, $protein_sequence, @annot ) = @{$row};
+                @pep_annot = @annot unless @pep_annot;
 
                 $peptide_accession[$i] = $pa;
                 $peptide_sequence[$i] = $seq;
@@ -610,6 +619,12 @@ if ($apply_action =~ /QUERY/i ) {
                                            );
   }
 
+
+  $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Reference peptide',
+                                          tr_info => $tr,
+                                          value => format_refpep( \@pep_annot )
+                                         ) if $pep_annot[0];
+  
   print "<BR>\n";
   print "<TABLE WIDTH=600><BR>$summ</TABLE>\n";
 
@@ -852,11 +867,13 @@ if ($apply_action =~ /QUERY/i ) {
       }
 
 
-      $pep->[2] = sprintf("%0.4f", $pep->[2]);
-      $pep->[3] = sprintf("%0.2f", $pep->[3]) unless $pep->[3] == 1;
-      $pep->[3] = 1 if $pep->[3] == 1;
-      $pep->[5] = sprintf("%0.1f", $pep->[5]) if $pep->[5];
-      $pep->[6] = sample_view( $pep->[6] );
+      # Final formatting for list items
+      $pep->[2] = sprintf("%0.4f", $pep->[2]);  # parent m/z
+      $pep->[3] = sprintf("%0.2f", $pep->[3]) unless $pep->[3] == 1; # probability
+      $pep->[3] = 1 if $pep->[3] == 1; # huh?
+      $pep->[5] = sprintf("%0.1f", $pep->[5]) if $pep->[5]; # number of siblings
+      $pep->[6] = sample_view( $pep->[6] ); # Sample IDs, keep list under control
+      $pep->[0] = $sbeamsMOD->formatMassMods( $pep->[0] );
     }
 
     #### Add table column headings
@@ -886,13 +903,9 @@ if ($apply_action =~ /QUERY/i ) {
                                                 tooltip => 'Show/Hide Section',
                                                 imglink => 1,
                                                 sticky => 1 );
-# Encode section header
-#  'link' => $link,
-# encodeSectionTable(
-#  tr_info => $tr,
 
   my $transitionHTML = $sbeamsMOD->encodeSectionHeader(
-    text => "Validated Transitions",
+    text => "Annotated Transitions",
    'link' => $link,
     bold => 1
   );
@@ -905,11 +918,14 @@ if ($apply_action =~ /QUERY/i ) {
 
     #### Loops through resultset and do formatting
     for my $pep ( @$mrm_transitions ) {
+      $pep->[0] = $sbeamsMOD->formatMassMods( $pep->[0] );
       $pep->[2] = sprintf("%0.2f", $pep->[2]);
       $pep->[3] = sprintf("%0.2f", $pep->[3]);
-      $pep->[4] = 1 if $pep->[4] == 1;
+      for my $idx ( 0..$#{$pep} ) {
+        $pep->[$idx] = $sbeams->makeInactiveText('n/a') if !defined $pep->[$idx];
+      }
     }
-    my @labels = qw( Sequence Charge q1_mz q3_mz q3_ion_label Name Quality);
+    my @labels = ( 'Sequence', 'Charge', 'q1_mz', 'q3_mz', 'Label', 'CE', 'RT', 'Instr', 'Annotator', 'Quality');
 
     #### Add table column headings
     unshift @$mrm_transitions, \@labels;
@@ -918,11 +934,48 @@ if ($apply_action =~ /QUERY/i ) {
     $transitionHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
                                                       tr_info => $tr,
                                                         width => '600',
-                                                       align  => [qw(left center right right center left left)],
+                                                       align  => [qw(left center right right center right right left left left)],
                                                          rows => $mrm_transitions );
     #### Display table
     print "<TABLE WIDTH=600><BR>$transitionHTML</TABLE>\n" if $#{$mrm_transitions};
   }
+
+
+  my $marker_peptides = get_synthesized_peptides( $peptide_accession[0] );
+  my $markerHTML = $sbeamsMOD->encodeSectionHeader(
+    text => "Reference Peptides",
+   'link' => $link,
+    bold => 1
+  );
+
+  #### If a result is returned
+  if ( scalar @$marker_peptides ) {
+#    $transitionHTML .= $sbeams->getPopupDHTML();
+
+    #### Loops through resultset and do formatting
+    for my $pep ( @$marker_peptides ) {
+#      $pep->[2] = sprintf("%0.2f", $pep->[2]);
+#      $pep->[3] = sprintf("%0.2f", $pep->[3]);
+#      $pep->[4] = 1 if $pep->[4] == 1;
+       $pep->[4] = $sbeamsMOD->formatMassMods( $pep->[4] );
+       $pep->[2] = $sbeams->makeInactiveText('n/a') if !$pep->[2];
+    }
+    my @labels = ( 'Peptide Sequence', 'Type', 'Publication', 'Annotator', 'Modified Sequence' );
+
+    #### Add table column headings
+    unshift @$marker_peptides, \@labels;
+
+    #### Format table
+    $markerHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
+                                                      tr_info => $tr,
+                                                        width => '600',
+                                                       align  => [qw(left center left left center)],
+                                                         rows => $marker_peptides );
+    #### Display table
+    print "<TABLE WIDTH=600><BR>$markerHTML</TABLE>\n" if $#{$marker_peptides};
+  }
+
+
   #############################################################################
   #### Spectra Section
 
@@ -983,6 +1036,7 @@ if ($apply_action =~ /QUERY/i ) {
       $pep->[4] = 1 if $pep->[4] == 1;
       my $img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='View spectrum for $pep->[0] (+$pep->[1])'>";
       $pep->[6] = qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowObservedSpectrum?spectrum_identification_id=$pep->[6]&peptide=$pep->[0]&assumed_charge=$pep->[1]" TARGET=blank>$img</A>~;
+      $pep->[0] = $sbeamsMOD->formatMassMods( $pep->[0] );
     }
 
     #### Add table column headings
@@ -1059,6 +1113,27 @@ if ($apply_action =~ /QUERY/i ) {
 
 } # end handle_request
 
+sub format_refpep {
+  my $annot = shift || return '';
+  my $peptide_mass = $modification_helper->getPeptideMass( peptide => $annot->[0],
+                                                           precision => 2 );  
+  my $ptext =<<"  END";
+  <TABLE>
+    <TR><TD NOWRAP=1>Type:</TD><TD NOWRAP=1>$annot->[1]</TD></TR>
+    <TR><TD NOWRAP=1>Sequence:</TD><TD NOWRAP=1>$annot->[0]</TD></TR>
+    <TR><TD NOWRAP=1>Mass:</TD><TD NOWRAP=1>$peptide_mass</TD></TR>
+    <TR><TD NOWRAP=1>Submitted by:</TD><TD NOWRAP=1>$annot->[3]</TD></TR>
+  </TABLE>
+  END
+#  $ptext =~ s/\'/\\\'/gm;
+  $ptext =~ s/\n//gm;
+  return ( $sbeamsMOD->make_pa_tooltip( link_text => $annot->[0],
+                                        tip_text => $ptext,
+                                        link_class => 'pseudo_link' ) );
+
+#  return "<SPAN CLASS=pseudo_link onMouseover=\"showTooltip(event, '$ptext')\" onMouseout=\"hideTooltip()\">$annot->[0]</SPAN>";
+}
+
 sub get_mrm_transitions {
   my $accession = shift || return [];
   my $sql =<<"  END";
@@ -1069,16 +1144,42 @@ sub get_mrm_transitions {
   q1_mz,
   q3_mz,
   q3_ion_label,  
+  collision_energy,
+  retention_time,
+  instrument,
   CASE WHEN contact_id IS NULL 
-    THEN annotater_name 
+    THEN annotator_name 
     ELSE username 
     END AS name,
   level_name
   FROM $TBAT_MODIFIED_PEPTIDE_ANNOTATION MPA 
-  JOIN $TBAT_PEPTIDE P ON MPA.matching_peptide_sequence = P.peptide_sequence
+  JOIN $TBAT_PEPTIDE P ON MPA.peptide_id = P.peptide_id
   JOIN $TBAT_TRANSITION_SUITABILITY_LEVEL TSL 
     ON TSL.transition_suitability_level_id = MPA.transition_suitability_level_id
-  LEFT JOIN $TB_USER_LOGIN UL ON UL.contact_id = MPA.annotater_contact_id
+  LEFT JOIN $TB_USER_LOGIN UL ON UL.contact_id = MPA.annotator_contact_id
+  WHERE peptide_accession = '$accession'
+  END
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  return \@rows;
+}
+
+sub get_synthesized_peptides {
+  my $accession = shift || return [];
+  my $sql =<<"  END";
+  SELECT
+--  peptide_annotation_id, 
+    P.peptide_sequence, peptide_annotation,
+  publication_name,
+--  P.peptide_id,
+  CASE WHEN contact_id IS NULL 
+    THEN annotator_name 
+    ELSE username 
+    END AS name,
+  modified_peptide_sequence
+  FROM $TBAT_PEPTIDE_ANNOTATION PA 
+  JOIN $TBAT_PEPTIDE P ON PA.peptide_id = P.peptide_id
+  LEFT JOIN $TB_USER_LOGIN UL ON UL.contact_id = PA.annotator_contact_id
+  LEFT JOIN $TBAT_PUBLICATION PP ON PP.publication_id = PA.publication_id
   WHERE peptide_accession = '$accession'
   END
   my @rows = $sbeams->selectSeveralColumns($sql);
