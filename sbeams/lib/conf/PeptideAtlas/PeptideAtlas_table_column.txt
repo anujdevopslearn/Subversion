@@ -512,3 +512,12 @@ AT_search_batch_statistics	9	n_uniq_contributed_peptides	Number of unique contri
 AT_search_batch_statistics	10	n_progressive_peptides	Cumulative contributed peptides	int	4	0	Y		N							Y	Y	N	Cumulative number of peptides		
 AT_search_batch_statistics	11	model_90_sensitivity	Peptide Prophet model sensitivity at P = 0.9	float	6	0	Y		N							N	N	N	Peptide Prophet sensitivity at P=0.9		
 AT_search_batch_statistics	12	model_90_error_rate	Peptide Prophet model error rate at P = 0.9	float	6	0	Y		N							N	N	N	Peptide Prophet error rate at P=0.9		
+AT_proteotypic_peptide	1	proteotypic_peptide_id	Proteotypic Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_proteotypic_peptide	2	source_biosequence_id	Source Biosequence ID	int	4	0	N		N	AT_biosequence	biosequence_id								Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
+AT_proteotypic_peptide	3	matched_peptide_id	Matched Peptide ID	int	4	0	Y		N	AT_peptide	peptide_id								Title of this PeptideAtlas build		
+AT_proteotypic_peptide	4	preceding_residue	Preceding Residue	char	1	0	N														
+AT_proteotypic_peptide	5	peptide_sequence	Peptide Sequence	varchar	255	0	N														
+AT_proteotypic_peptide	6	following_residue	Following Residue	char	1	0	N														
+AT_proteotypic_peptide	7	peptidesieve_ESI	PeptideSieve ESI	float	8	0	N														
+AT_proteotypic_peptide	8	peptidesieve_ICAT	PeptideSieve ICAT	float	8	0	N														
+AT_proteotypic_peptide	9	detectabilitypredictor_score	Detectability Predictor Score	float	8	0	N														
