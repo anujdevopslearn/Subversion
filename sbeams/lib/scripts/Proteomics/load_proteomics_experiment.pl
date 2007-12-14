@@ -1085,7 +1085,7 @@ sub loadProteomicsExperimentFromPepXML {
   #### Find the pepXML file to load from
   my $infile;
   if ($OPTIONS{interact_fname}) {
-    $infile = $OPTIONS{interact_fname};
+    $infile = "$source_dir/$OPTIONS{interact_fname}";
     unless ( -f $infile ) {
       die("ERROR: Unable to find specified input file '$infile'");
     }
