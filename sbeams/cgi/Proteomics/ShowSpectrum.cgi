@@ -814,7 +814,16 @@ sub pg_setup {
     #### Set needed PGPLOT environment variables
     $ENV{"PGPLOT_GIF_WIDTH"} = $gifwidth;
     $ENV{"PGPLOT_GIF_HEIGHT"} = $gifheight;
-    $ENV{"PGPLOT_RGB"} = "/usr/X11R6/lib/X11/rgb.txt";
+
+    #### Try to set the proper location of rgb.txt
+    if ($CONFIG_SETTING{PGPLOT_RGBTXT}) {
+      $ENV{"PGPLOT_RGB"} = $CONFIG_SETTING{PGPLOT_RGBTXT};
+    } elsif ( -e "/usr/share/X11/rgb.txt" ) {
+      $ENV{"PGPLOT_RGB"} = "/usr/share/X11/rgb.txt";
+    } else {
+      $ENV{"PGPLOT_RGB"} = "/usr/X11R6/lib/X11/rgb.txt";
+    }
+
     $ENV{"PGPLOT_FONT"} = $CONFIG_SETTING{PGPLOT_FONT} ||
       "/usr/local/lib/grfont.dat";
     $ENV{"PGPLOT_BACKGROUND"} = "white";
