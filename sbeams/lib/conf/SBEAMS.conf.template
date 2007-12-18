@@ -93,6 +93,7 @@ DBPREFIX{Biosap}        = sbeams.dbo.
 DBPREFIX{Cytometry}     = sbeams.dbo.
 DBPREFIX{Genotyping}    = sbeams.dbo.
 DBPREFIX{Glycopeptide}  = sbeams.dbo.
+DBPREFIX{Imaging}       = sbeams.dbo.
 DBPREFIX{Immunostain}   = sbeams.dbo.
 DBPREFIX{Interactions}  = sbeams.dbo.
 DBPREFIX{Inkjet}        = sbeams.dbo.
@@ -129,6 +130,7 @@ CONFIG_SETTING{KGML_URL} = ftp://ftp.genome.jp/pub/kegg/xml/KGML_v0.6.1/__KEGG_O
 CONFIG_SETTING{Proteomics_SPECTRUM_DESTINATION} = TABLE
 CONFIG_SETTING{Proteomics_MAX_TOP_HITS_TO_LOAD} = 10
 CONFIG_SETTING{PGPLOT_FONT} = /usr/local/lib/grfont.dat
+CONFIG_SETTING{PGPLOT_RGBTXT} = /usr/share/X11/rgb.txt
 
 
 #### Define settings for the PeptideAtlas module
