@@ -16,7 +16,7 @@ my $sbeamsMOD = new SBEAMS::Microarray;
 our @ISA    = qw/Exporter/;
 our @EXPORT = qw/site_header site_footer
   $BC_UPLOAD_DIR $RESULT_DIR $RESULT_URL $BIOC_URL $SITE_URL $SAMPLE_GROUP_XML
-  $ADMIN_EMAIL $R_BINARY $R_LIBS $USE_FRAMES $DEBUG $AFFY_ANNO_PATH
+  $ADMIN_EMAIL $R_BINARY $R_LOCAL_BIN $R_LIBS $USE_FRAMES $DEBUG $AFFY_ANNO_PATH
   $JAVA_PATH $JWS_PATH $TOMCAT $KEYSTORE $KEYPASS $KEYALIAS
   $SH_HEADER $BATCH_SYSTEM %BATCH_ENV $BATCH_BIN $BATCH_ARG
   $MEV_JWS_BASE_DIR $MEV_JWS_BASE_HTML $SHARED_JAVA_DIR $SHARED_JAVA_HTML/;
@@ -41,6 +41,7 @@ our $ADMIN_EMAIL = $sbeamsMOD->get_admin_email();
 
 # Location of R binary & R libraries
 our $R_BINARY = $sbeamsMOD->get_R_exe_path();
+our $R_LOCAL_BIN = $sbeamsMOD->get_local_R_exe_path();
 our $R_LIBS = $sbeamsMOD->get_R_lib_path();
 
 # Location of Annotation file from affymetrix for chip you will be using

@@ -19,8 +19,6 @@ our @EXPORT = qw/rand_token check_email jobsummary
 				first_key_val add_upload_expression_button
                  log_job parse_exprSet parse_aafTable create_directory/;
 
-
-
 #### Subroutine: rand_token
 # Generate a random token 8 characters long
 ####
@@ -289,7 +287,7 @@ sub parse_exprSet {
 	my ($pid, $rdrfh, $wtrfh);
 	my $error = "Unexpected error during parse. R not available?";
 	
-	$pid = open3($wtrfh, $rdrfh, 0, $R_BINARY, '--no-save', '--quiet') ||
+	$pid = open3($wtrfh, $rdrfh, 0, $R_LOCAL_BIN, '--no-save', '--quiet') ||
 	    return("Couldn't start R.");
 	
 	print $wtrfh <<'END';
@@ -367,7 +365,7 @@ sub parse_aafTable {
 	my ($pid, $rdrfh, $wtrfh);
 	my $error = "Unexpected error during parse. R not available?";
 	
-	$pid = open3($wtrfh, $rdrfh, 0, $R_BINARY, '--no-save', '--quiet') ||
+	$pid = open3($wtrfh, $rdrfh, 0, $R_LOCAL_BIN, '--no-save', '--quiet') ||
 	    return("Couldn't start R.");
 	
 	print $wtrfh <<'END';

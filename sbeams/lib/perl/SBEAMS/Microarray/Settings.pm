@@ -150,6 +150,24 @@ sub get_R_exe_path {
 }
 
 #+
+# get_local_R_exe_path
+#
+# returns configured path to local R executable.  If not specified, uses
+# global R exe setting (MA_R_EXE_PATH)
+#-
+sub get_local_R_exe_path {
+  my $self = shift;
+
+  my $rpath = $CONFIG_SETTING{MA_LOCAL_R_EXE_PATH} || $self->get_R_exe_path();
+
+  if ( !$rpath ) {
+    $log->warn( 'No path to R specified' );
+  }
+
+  return $rpath;
+}
+
+#+
 # get_R_lib_path
 #
 # returns configured path to R libraries
