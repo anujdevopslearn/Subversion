@@ -457,7 +457,7 @@ sub handle_request {
          PI.n_samples, PI.n_protein_samples, PI.empirical_proteotypic_score,
          O.full_name, PI.original_protein_name,
          P.SSRCalc_relative_hydrophobicity, CAST(biosequence_seq AS VARCHAR) biosequence_seq,
-         PA.modified_peptide_sequence, PA.peptide_annotation, PA.peptide_annotation_id, 
+         PA.peptide_sequence, PA.peptide_annotation, PA.peptide_annotation_id, 
          PA.annotator_name, CAST(PA.comment AS VARCHAR) comment
          FROM $TBAT_PEPTIDE_INSTANCE PI
          INNER JOIN $TBAT_PEPTIDE P
@@ -1175,7 +1175,7 @@ sub get_synthesized_peptides {
     THEN annotator_name 
     ELSE username 
     END AS name,
-  modified_peptide_sequence
+  PA.peptide_sequence
   FROM $TBAT_PEPTIDE_ANNOTATION PA 
   JOIN $TBAT_PEPTIDE P ON PA.peptide_id = P.peptide_id
   LEFT JOIN $TB_USER_LOGIN UL ON UL.contact_id = PA.annotator_contact_id
