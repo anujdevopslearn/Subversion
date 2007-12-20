@@ -1136,6 +1136,12 @@ sub format_refpep {
 
 sub get_mrm_transitions {
   my $accession = shift || return [];
+
+  # Project control
+  my @accessible = $sbeams->getAccessibleProjects();
+  my $projects = join( ",", @accessible );
+  return '' unless $projects;
+
   my $sql =<<"  END";
   SELECT
 --  modified_peptide_annotation_id,
@@ -1158,6 +1164,7 @@ sub get_mrm_transitions {
     ON TSL.transition_suitability_level_id = MPA.transition_suitability_level_id
   LEFT JOIN $TB_USER_LOGIN UL ON UL.contact_id = MPA.annotator_contact_id
   WHERE peptide_accession = '$accession'
+  AND project_id IN ( $projects )
   END
   my @rows = $sbeams->selectSeveralColumns($sql);
   return \@rows;
@@ -1165,6 +1172,12 @@ sub get_mrm_transitions {
 
 sub get_synthesized_peptides {
   my $accession = shift || return [];
+
+  # Project control
+  my @accessible = $sbeams->getAccessibleProjects();
+  my $projects = join( ",", @accessible );
+  return '' unless $projects;
+
   my $sql =<<"  END";
   SELECT
 --  peptide_annotation_id, 
@@ -1181,6 +1194,7 @@ sub get_synthesized_peptides {
   LEFT JOIN $TB_USER_LOGIN UL ON UL.contact_id = PA.annotator_contact_id
   LEFT JOIN $TBAT_PUBLICATION PP ON PP.publication_id = PA.publication_id
   WHERE peptide_accession = '$accession'
+  AND project_id IN ( $projects )
   END
   my @rows = $sbeams->selectSeveralColumns($sql);
   return \@rows;

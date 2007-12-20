@@ -574,19 +574,19 @@ sub handle_request {
   #### [friendly name used in url_cols,SQL,displayed column title]
   my @column_array = (
     ["peptide_accession","P.peptide_accession","<DIV TITLE='PeptideAtlas accession number for this peptide'>Accession</DIV>"],
-    ["preceding_residue","PI.preceding_residue","<DIV TITLE=''>Pre AA</DIV>"],
-    ["peptide_sequence","P.peptide_sequence","<DIV TITLE=''>Peptide Sequence</DIV>"],
-    ["following_residue","PI.following_residue","<DIV TITLE=''>Fol AA</DIV>"],
+    ["preceding_residue","PI.preceding_residue","<DIV TITLE='Preceding (towards the N terminus) amino acid'>Pre AA</DIV>"],
+    ["peptide_sequence","P.peptide_sequence","<DIV TITLE='Amino Acid sequence of this peptide'>Peptide Sequence</DIV>"],
+    ["following_residue","PI.following_residue","<DIV TITLE='Following (towards the C terminus) amino acid'>Fol AA</DIV>"],
     ["suitability_score","0.0001","<DIV TITLE=''>Suitability Score</DIV>"],
-    ["best_probability","STR(PI.best_probability,7,3)","<DIV TITLE=''>Best Prob</DIV>"],
+    ["best_probability","STR(PI.best_probability,7,3)","<DIV TITLE='Highest PeptideProphet probability for this observed sequence'>Best Prob</DIV>"],
     ["best_adjusted_probability","STR(PI.best_adjusted_probability,7,3)","<DIV TITLE=''>Best Adjusted Prob</DIV>"],
-    ["n_observations","PI.n_observations","N Obs</DIV>"],
+    ["n_observations","PI.n_observations","<DIV TITLE='Total number of observations in all modified forms and charge states'>N Obs</DIV>"],
     ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","<DIV TITLE='Empirical Proteotypic Score'>EPS</DIV>"],
     ["SSRCalc_relative_hydrophobicity","STR(P.SSRCalc_relative_hydrophobicity,7,2)","<DIV TITLE='SSRCalc Relative Hydrophobicity score'>RHS</DIV>"],
-    ["n_protein_mappings","PI.n_protein_mappings","<DIV TITLE=''>N Protein Mappings</DIV>"],
-    ["n_genome_locations","PI.n_genome_locations","<DIV TITLE=''>N Genome Locations</DIV>"],
-    ["sample_ids","PI.sample_ids","<DIV TITLE=''>Sample IDs</DIV>"],
-    ["is_subpeptide_of","PI.is_subpeptide_of","<DIV class=info_box TITLE=''>Parent Peptides</DIV>"],
+    ["n_protein_mappings","PI.n_protein_mappings","<DIV TITLE='Number of proteins in the reference database to which this peptide maps'>N Protein Mappings</DIV>"],
+    ["n_genome_locations","PI.n_genome_locations","<DIV TITLE='Number of discrete genome locations which encode this amino acid sequence'>N Genome Locations</DIV>"],
+    ["sample_ids","PI.sample_ids","<DIV TITLE='Samples in which this sequence was seen'>Sample IDs</DIV>"],
+    ["is_subpeptide_of","PI.is_subpeptide_of","<DIV TITLE='Observed peptides of which this peptide is a subsequence'>Parent Peptides</DIV>"],
   );
 
   #### Build the columns part of the SQL statement
@@ -635,6 +635,7 @@ sub handle_request {
 
   %hidden_cols = (
     'Suitability Score' => 1,
+    'Best Adjusted Prob' => 1,
 #    'Pre AA' => 1,
 #    'Fol AA' => 1,
   );
@@ -1020,6 +1021,12 @@ sub handle_request {
 sub get_mrm_transitions {
   my $accessions = shift || return [];
   my $acc_string = "'" . join( "', '", @{$accessions} ) . "'" ;
+
+  # Project control
+  my @accessible = $sbeams->getAccessibleProjects();
+  my $projects = join( ",", @accessible );
+  return '' unless $projects;
+
   my $sql =<<"  END";
   SELECT
   peptide_accession,
@@ -1042,6 +1049,7 @@ sub get_mrm_transitions {
     ON TSL.transition_suitability_level_id = MPA.transition_suitability_level_id
   LEFT JOIN $TB_USER_LOGIN UL ON UL.contact_id = MPA.annotator_contact_id
   WHERE peptide_accession IN ( $acc_string )
+  AND project_id IN ( $projects )
   END
   my @rows = $sbeams->selectSeveralColumns($sql);
   return \@rows;
@@ -1050,6 +1058,11 @@ sub get_mrm_transitions {
 sub get_synthesized_peptides {
   my $accessions = shift || return [];
   my $acc_string = "'" . join( "', '", @{$accessions} ) . "'" ;
+
+  # Project control
+  my @accessible = $sbeams->getAccessibleProjects();
+  my $projects = join( ",", @accessible );
+  return '' unless $projects;
 
   my $sql =<<"  END";
   SELECT
@@ -1066,6 +1079,7 @@ sub get_synthesized_peptides {
   LEFT JOIN $TB_USER_LOGIN UL ON UL.contact_id = PA.annotator_contact_id
   LEFT JOIN $TBAT_PUBLICATION PP ON PP.publication_id = PA.publication_id
   WHERE peptide_accession IN ( $acc_string )
+  AND project_id IN ( $projects );
   END
   my @rows = $sbeams->selectSeveralColumns($sql);
   return \@rows;
