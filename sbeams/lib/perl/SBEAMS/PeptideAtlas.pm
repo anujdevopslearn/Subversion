@@ -126,23 +126,23 @@ sub getBuildMotif {
   my $self = shift;
 
   my $build_id = $self->getCurrentAtlasBuildID( parameters_ref => { got => 0 } );
-  if ( grep /^$build_id$/, $self->getGlycoBuilds() ) {
+  if ( grep /^$build_id$/, @{$self->getGlycoBuilds()} ) {
     return 'glyco';
-  } elsif ( grep /^$build_id$/, $self->getPhosphoBuilds() ) {
+  } elsif ( grep /^$build_id$/, @{$self->getPhosphoBuilds()} ) {
     return 'phospho';
   } 
   return '';
 }
 
+# Stub methods with hard-coded build IDs, replace with db lookup based method
 sub getGlycoBuilds {
-  $log->debug( "Glycotopia!" );
-  my @glyco_builds = ( 15, 17 );
-  return ( 15,17 );
+  my @glyco_builds = ( 115, 120 );
+  return \@glyco_builds;
 }
 
 sub getPhosphoBuilds {
-  $log->debug( "Phosphomania!" );
-  return ( 16 );
+  my @phospho_builds = ( 1 );
+  return \@phospho_builds;
 }
 
 ###############################################################################
