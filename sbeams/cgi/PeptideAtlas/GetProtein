@@ -508,16 +508,46 @@ sub handle_request {
       resource_name => $biosequence->{biosequence_name}
     );
 
+    my %syn_types;
     foreach my $synonym ( @synonyms ) {
-      my $url;
-      $url = "$synonym->[2]$synonym->[0]$synonym->[3]" if ($synonym->[2]);
-      print $sbeamsMOD->encodeSectionItem(
-        key=>$synonym->[1],
-        value=>$synonym->[0],
- tr_info => $tr,
-        url=>$url,
-      );
+# $log->debug( "Syn loop, $synonym->[0], $synonym->[1], $synonym->[2], $synonym->[3]" );
+      $syn_types{$synonym->[1]} ||= [];
+      chomp( $synonym->[0] );
+      if ( $synonym->[2] ) { 
+        $synonym->[0] = "<A HREF=$synonym->[2]$synonym->[0]>$synonym->[0]</A>";
+      }
+      push @{$syn_types{$synonym->[1]}}, $synonym->[0];
     }
+
+#    foreach my $synonym ( @synonyms ) {
+#      my $url;
+#      $url = "$synonym->[2]$synonym->[0]$synonym->[3]" if ($synonym->[2]);
+    for my $key ( sort( keys( %syn_types ) ) ) {
+      my $cnt = 0;
+      my $max = 7;
+      my $syn_string = '';
+      my $delim = '';
+      for my $entry ( @{$syn_types{$key}} ) {
+        $cnt++;
+
+        # Stub section for hiding excess annotations with a hide/show widget.
+#        if ( $cnt == $max + 1 ) {
+#
+#          $syn_string .= "<DIV ID=hide_extra_${key}>";
+#        }
+        $syn_string .= "$delim $entry";
+        $delim = ',';
+      }
+#      if ( $max > $cnt ) {
+#        $syn_string .= "</DIV>";
+#      }
+      print $sbeamsMOD->encodeSectionItem( key => $key,
+                                         value => $syn_string,
+                                       tr_info => $tr );
+    }
+#        url=>$url,
+#      );
+#    }
 
     # If we have annotations
     if ( $biosequence->{annotated_gene_id} ){
@@ -532,7 +562,7 @@ sub handle_request {
                                                  string => $annot->{$key});
 
           print $sbeamsMOD->encodeSectionItem( key   => $fx{$type},
- tr_info => $tr,
+                                             tr_info => $tr,
                                                value => $display );
         }
       }
@@ -543,20 +573,20 @@ sub handle_request {
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
   my @column_array = (
-    ["peptide_accession","P.peptide_accession","<DIV TITLE=''>Accession"],
-    ["preceding_residue","PI.preceding_residue","<DIV TITLE=''>Pre AA"],
-    ["peptide_sequence","P.peptide_sequence","<DIV TITLE=''>Peptide Sequence"],
-    ["following_residue","PI.following_residue","<DIV TITLE=''>Fol AA"],
-    ["suitability_score","0.0001","<DIV TITLE=''>Suitability Score"],
-    ["best_probability","STR(PI.best_probability,7,3)","<DIV TITLE=''>Best Prob"],
-    ["best_adjusted_probability","STR(PI.best_adjusted_probability,7,3)","<DIV TITLE=''>Best Adjusted Prob"],
-    ["n_observations","PI.n_observations","N Obs"],
+    ["peptide_accession","P.peptide_accession","<DIV TITLE='PeptideAtlas accession number for this peptide'>Accession</DIV>"],
+    ["preceding_residue","PI.preceding_residue","<DIV TITLE=''>Pre AA</DIV>"],
+    ["peptide_sequence","P.peptide_sequence","<DIV TITLE=''>Peptide Sequence</DIV>"],
+    ["following_residue","PI.following_residue","<DIV TITLE=''>Fol AA</DIV>"],
+    ["suitability_score","0.0001","<DIV TITLE=''>Suitability Score</DIV>"],
+    ["best_probability","STR(PI.best_probability,7,3)","<DIV TITLE=''>Best Prob</DIV>"],
+    ["best_adjusted_probability","STR(PI.best_adjusted_probability,7,3)","<DIV TITLE=''>Best Adjusted Prob</DIV>"],
+    ["n_observations","PI.n_observations","N Obs</DIV>"],
     ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","<DIV TITLE='Empirical Proteotypic Score'>EPS</DIV>"],
     ["SSRCalc_relative_hydrophobicity","STR(P.SSRCalc_relative_hydrophobicity,7,2)","<DIV TITLE='SSRCalc Relative Hydrophobicity score'>RHS</DIV>"],
-    ["n_protein_mappings","PI.n_protein_mappings","<DIV TITLE=''>N Protein Mappings"],
-    ["n_genome_locations","PI.n_genome_locations","<DIV TITLE=''>N Genome Locations"],
-    ["sample_ids","PI.sample_ids","<DIV TITLE=''>Sample IDs"],
-    ["is_subpeptide_of","PI.is_subpeptide_of","<DIV TITLE=''>Parent Peptides"],
+    ["n_protein_mappings","PI.n_protein_mappings","<DIV TITLE=''>N Protein Mappings</DIV>"],
+    ["n_genome_locations","PI.n_genome_locations","<DIV TITLE=''>N Genome Locations</DIV>"],
+    ["sample_ids","PI.sample_ids","<DIV TITLE=''>Sample IDs</DIV>"],
+    ["is_subpeptide_of","PI.is_subpeptide_of","<DIV class=info_box TITLE=''>Parent Peptides</DIV>"],
   );
 
   #### Build the columns part of the SQL statement
@@ -649,11 +679,11 @@ sub handle_request {
                                             resultset_ref => $resultset_ref );
 
     # Straggler for protein section, doh!
-    print $sbeamsMOD->encodeSectionItem(
- tr_info => $tr,
-      key=>'Total peptides',
-      value=>$obs
-    ) . "</TABLE>\n" if $htmlmode;
+    if ( $htmlmode ) {
+      print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
+                                               key => 'Total peptides',
+                                             value => $obs) . "</TABLE>\n" 
+    }
 
 
   #############################################################
@@ -1030,7 +1060,7 @@ sub get_synthesized_peptides {
     THEN annotator_name 
     ELSE username 
     END AS name,
-    modified_peptide_sequence
+    PA.peptide_sequence
   FROM $TBAT_PEPTIDE_ANNOTATION PA 
   JOIN $TBAT_PEPTIDE P ON PA.peptide_id = P.peptide_id
   LEFT JOIN $TB_USER_LOGIN UL ON UL.contact_id = PA.annotator_contact_id
@@ -2002,8 +2032,10 @@ sub prepareJavaWebStartFiles {
   my @new_peptide_list = keys(%peptide_hash);
   my %interaction_hash;
 
+  my $loop_cnt = 0;
   #### Keep looping until the entire network is fleshed out
   while (1) {
+    $loop_cnt++;
 
     #### Return peptide information for these proteins
     my $peptide_resultset = getPeptideInformationForProteins(
@@ -2035,7 +2067,8 @@ sub prepareJavaWebStartFiles {
       unless ($peptide_hash{$canonical_name}) {
         $peptide_hash{$canonical_name}++;
         push(@new_peptide_list,$canonical_name);
-	$is_new_peptide = 1;
+        $is_new_peptide = 1;
+        $log->debug("Added new peptide $canonical_name at iteration $loop_cnt" );
       }
 
       #### Add connections to proteins
@@ -2079,6 +2112,7 @@ sub prepareJavaWebStartFiles {
     #######################################################
     #### Now get the protein information for these peptides
 
+    $log->debug("Getting new info for " . scalar( @new_peptide_list) . " at iteration $loop_cnt" );
     #### Return protein information for these peptides
     my $protein_resultset = getProteinInformationForPeptides(
       peptide_list_ref => \@new_peptide_list,
@@ -2104,6 +2138,7 @@ sub prepareJavaWebStartFiles {
       my $canonical_name = $row->[$col->{biosequence_name}];
       my $is_new_protein = 0;
       unless ($protein_hash{$canonical_name}) {
+        $log->debug("Added new protein $canonical_name at iteration $loop_cnt" );
         $protein_hash{$canonical_name}++;
         push(@new_protein_list,$canonical_name);
 	$is_new_protein = 1;
@@ -2141,6 +2176,7 @@ sub prepareJavaWebStartFiles {
 
   } # end while 1
 
+  $log->debug( "Done building cytoscape webstart, " . scalar( @{$java_web_start->{files}->{'commonName.noa'}} )  . "proteins in total of $loop_cnt passes through the loop" );
 } # end prepareJavaWebStartFiles
 
 
@@ -2213,8 +2249,9 @@ sub getPeptideInformationForProteins {
           ON ( PM.matched_biosequence_id = BS.biosequence_id )
      LEFT JOIN $TBAT_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
     WHERE 1 = 1
-          AND AB.atlas_build_id IN ( $atlas_build_id )
+    AND AB.atlas_build_id IN ( $atlas_build_id )
 	  AND BS.biosequence_name IN ( $protein_list_str )
+    AND LEN( P.peptide_sequence ) > 4
     ORDER BY BS.biosequence_name,P.peptide_accession
   ~;
 
