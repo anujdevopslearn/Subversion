@@ -217,60 +217,60 @@ sub handle_request {
       $parameters{searchWithinThis} = 'Peptide Name';
     }
 
+    my $validation_error = '';
     ## if have atlas_build_name, but no id, get the id:
-    if ( (exists $parameters{'atlas_build_name'}) && (!exists $parameters{'atlas_build_id'}))
-    {
-        $atlas_build_name = $parameters{'atlas_build_name'};
-
-        if ($atlas_build_name)
-        {
-            my ($tmp) = get_atlas_build_id( atlas_build_name => $parameters{'atlas_build_name'});
-
-            unless ( $tmp ) 
-            {
-                print qq~
-                <BR><BR>
-                <FONT COLOR=red>Unable to use specified Atlas, please select a new one </FONT>
-                <BR><A HREF="main.cgi?_tab=2">Choose new Atlas Build</A>
-                ~;
-                exit; 
-            }
-
-            $parameters{'atlas_build_id'} = $tmp;
-
-            $atlas_build_id = $tmp;
+    if ( (exists $parameters{'atlas_build_name'}) && (!exists $parameters{'atlas_build_id'})) {
+      $atlas_build_name = $parameters{'atlas_build_name'};
+      if ($atlas_build_name) {
+        my ($tmp) = get_atlas_build_id( atlas_build_name => $parameters{'atlas_build_name'});
+        unless ( $tmp ) {
+          $validation_error = "Unable to use specified Atlas, please select a new one ";
         }
+        $parameters{'atlas_build_id'} = $tmp;
+        $atlas_build_id = $tmp;
+      }
     }
 
 
     ## if have atlas_build_id, but no name, get the name
-    if ( (exists $parameters{'atlas_build_id'})  && (!exists $parameters{'atlas_build_name'}) )
-    {
-        $atlas_build_id = $parameters{'atlas_build_id'};
-
-        my ($tmp) = get_atlas_build_name( atlas_build_id => $atlas_build_id);
-
-        unless ( $tmp ) 
-        {
-            print qq~
-                <BR><BR>
-                <FONT COLOR=red>Unable to use specified Atlas, please select a new one </FONT>
-                <BR><A HREF="main.cgi?_tab=2">Choose new Atlas Build</A>
-            ~;
-            exit;
-        }
-
-        $atlas_build_name = $tmp;
-
-        $parameters{'atlas_build_name'} = $atlas_build_name;
+    if ( (exists $parameters{'atlas_build_id'})  && (!exists $parameters{'atlas_build_name'}) ) {
+      $atlas_build_id = $parameters{'atlas_build_id'};
+      my ($tmp) = get_atlas_build_name( atlas_build_id => $atlas_build_id);
+      unless ( $tmp ) {
+        $validation_error = "Unable to use specified Atlas, please select a new one ";
+      }
+      $atlas_build_name = $tmp;
+      $parameters{'atlas_build_name'} = $atlas_build_name;
+    }
+    
+    # Make sure user has access to selected build!
+    my @accessible_project_ids = $sbeams->getAccessibleProjects();
+    
+    if ( !$parameters{atlas_build_id} ) {
+      $validation_error = "No build specified";
+    } 
+    my $valid_atlas = grep( /^$parameters{atlas_build_id}/, @accessible_project_ids );
+    if ( !$valid_atlas ) {
+      $validation_error = "You lack permission to access the specified build";
+    }
+    if ( $validation_error ) {
+      my $error_string = $sbeams->makeErrorText( $validation_error );
+      print qq~
+        <BR><BR>
+        $error_string
+        <BR>
+        <BR>Please <A HREF="main.cgi?_tab=2;reset_id=1">choose</A> a valid Atlas Build
+      ~;
+      exit;
     }
 
+   
 
     ## Get and store list of atlases for use with form:  
     my (@atlas_option_id_array, @atlas_option_name_array);  
 
-    my @accessible_project_ids = $sbeams->getAccessibleProjects();
     my $project_string = join( ",", @accessible_project_ids ) || '0';
+    $log->debug( $project_string );
 
 
     ## get accessible atlases:
@@ -437,6 +437,7 @@ sub handle_request {
         constraint_value=>$parameters{peptide_sequence_constraint} );
     return if ($peptide_sequence_clause eq '-1');
 
+    my $atlas_project_clause = "AND project_id IN ( $project_string )";
 
     ## want to replace LIKE with = , as want a single peptide returned
     $peptide_name_clause =~ s/LIKE/=/gi;
@@ -478,6 +479,7 @@ sub handle_request {
             $atlas_build_clause
             $peptide_name_clause
             $peptide_sequence_clause
+            $atlas_project_clause
         ORDER BY PM.chromosome, BS.biosequence_name, PM.start_in_chromosome
     ~;
     $log->debug( $sql );
