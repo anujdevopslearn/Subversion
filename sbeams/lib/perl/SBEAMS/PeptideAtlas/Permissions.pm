@@ -383,6 +383,15 @@ sub clearBuildSettings {
   );
 }
 
+sub isAccessibleBuild {
+  my $self = shift;
+  my %args = @_;
+  return '' if !$args{build_id};
+
+  my @builds = $self->getAccessibleBuilds();
+  return ( grep /^$args{build_id}$/, @builds );
+}
+  
 sub getAccessibleBuilds {
   my $self = shift;
   my $sbeams = $self->getSBEAMS();

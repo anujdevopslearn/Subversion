@@ -245,12 +245,11 @@ sub handle_request {
     
     # Make sure user has access to selected build!
     my @accessible_project_ids = $sbeams->getAccessibleProjects();
+    my $project_string = join( ",", @accessible_project_ids ) || '0';
     
     if ( !$parameters{atlas_build_id} ) {
       $validation_error = "No build specified";
-    } 
-    my $valid_atlas = grep( /^$parameters{atlas_build_id}/, @accessible_project_ids );
-    if ( !$valid_atlas ) {
+    } elsif ( !$sbeamsMOD->isAccessibleBuild( build_id => $parameters{atlas_build_id} ) ) {
       $validation_error = "You lack permission to access the specified build";
     }
     if ( $validation_error ) {
@@ -268,10 +267,6 @@ sub handle_request {
 
     ## Get and store list of atlases for use with form:  
     my (@atlas_option_id_array, @atlas_option_name_array);  
-
-    my $project_string = join( ",", @accessible_project_ids ) || '0';
-    $log->debug( $project_string );
-
 
     ## get accessible atlases:
     my $sql = qq~
@@ -437,7 +432,7 @@ sub handle_request {
         constraint_value=>$parameters{peptide_sequence_constraint} );
     return if ($peptide_sequence_clause eq '-1');
 
-    my $atlas_project_clause = "AND project_id IN ( $project_string )";
+    my $atlas_project_clause = "AND AB.project_id IN ( $project_string )";
 
     ## want to replace LIKE with = , as want a single peptide returned
     $peptide_name_clause =~ s/LIKE/=/gi;
@@ -482,7 +477,6 @@ sub handle_request {
             $atlas_project_clause
         ORDER BY PM.chromosome, BS.biosequence_name, PM.start_in_chromosome
     ~;
-    $log->debug( $sql );
     unless ( $peptide_name_clause || $peptide_sequence_clause ) {
       $sbeams->display_sql(sql=>$sql);
       print qq~
