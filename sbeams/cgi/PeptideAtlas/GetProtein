@@ -885,7 +885,7 @@ sub handle_request {
       biosequence_id => $biosequence_id,
     );
 
-    if ( $htmlmode && $sbeams->rs_has_data($best_peptide_information->{resultset_ref}) ) {
+    if ( $htmlmode && $sbeams->rs_has_data( resultset_ref => $best_peptide_information->{resultset_ref}) ) {
       print qq~ <TABLE width="600">$highlyObservablePeptidesHeader</TABLE><TABLE><TR $tr><TD COLSPAN=2>~;
 
       #### Display the best peptide information
