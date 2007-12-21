@@ -190,12 +190,17 @@ sub handle_request {
         return;
     }
 
+    # Get list of accessible projects
+    my @accessible_project_ids = $sbeams->getAccessibleProjects();
+    my $project_string = join( ",", @accessible_project_ids ) || '0';
+    return unless $project_string;  # Sanity check
+
     ## If no parameters are defined, set up some defaults to help with browsing
     ## until I get a help menu set-up
     if ( !exists $parameters{'searchWithinThis'}  && !exists $parameters{'searchForThis'}
          && ( !exists $parameters{'atlas_build_name'}  && !exists $parameters{'atlas_build_id'} ) ) {
 
-        my $atlas_build_id = get_default_atlas_build_id();
+        my $atlas_build_id = get_default_atlas_build_id( accessible_projects => $project_string );
 
         $parameters{'atlas_build_id'} = $atlas_build_id;
 
@@ -243,10 +248,6 @@ sub handle_request {
       $parameters{'atlas_build_name'} = $atlas_build_name;
     }
     
-    # Make sure user has access to selected build!
-    my @accessible_project_ids = $sbeams->getAccessibleProjects();
-    my $project_string = join( ",", @accessible_project_ids ) || '0';
-    
     if ( !$parameters{atlas_build_id} ) {
       $validation_error = "No build specified";
     } elsif ( !$sbeamsMOD->isAccessibleBuild( build_id => $parameters{atlas_build_id} ) ) {
@@ -254,16 +255,17 @@ sub handle_request {
     }
     if ( $validation_error ) {
       my $error_string = $sbeams->makeErrorText( $validation_error );
+      my $url = $q->self_url();
+      my $url_delim = ( $url =~ /\?/ ) ? ';' : '?';
       print qq~
         <BR><BR>
         $error_string
         <BR>
-        <BR>Please <A HREF="main.cgi?_tab=2;reset_id=1">choose</A> a valid Atlas Build
+        <BR>Please <A HREF="main.cgi?_tab=2;reset_id=1">choose</A> a valid Atlas Build, 
+        or <A HREF="$url${url_delim}force_login=yes"> login </A> as a different user.
       ~;
       exit;
     }
-
-   
 
     ## Get and store list of atlases for use with form:  
     my (@atlas_option_id_array, @atlas_option_name_array);  
@@ -489,7 +491,6 @@ sub handle_request {
     #### If QUERY,  display the data
 if ($apply_action =~ /QUERY/i ) {
 
-#        $log->debug( $sbeams->evalSQL($sql) );
         my @rows = $sbeams->selectSeveralColumns($sql)
         or print "Peptide not found.  Please check selections and try again.<br>";
 
@@ -876,7 +877,6 @@ if ($apply_action =~ /QUERY/i ) {
     unshift @mod_peps, ['Modified Sequence', 'Charge', 'Mono Parent m/z', 'Best Prob', '# Obs', '# Siblings', 'Sample IDs', 'Consensus Spectrum' ];
 
     #### Format table
-    $log->debug( "Encoding on" );
     $modHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
                                                  width => '600',
                                                tr_info => $tr,
@@ -1365,23 +1365,19 @@ sub get_atlas_build_name
 sub get_default_atlas_build_id
 {
     my %args = @_;
+    return unless $args{accessible_projects};
 
     my $default_atlas_build_id;
 
     my $sql = qq~
-        SELECT atlas_build_id
-        FROM $TBAT_DEFAULT_ATLAS_BUILD
-        where atlas_build_id > 0
-        order by atlas_build_id 
+        SELECT MAX( DAB.atlas_build_id )
+        FROM $TBAT_DEFAULT_ATLAS_BUILD DAB
+        JOIN $TBAT_ATLAS_BUILD AB ON AB.atlas_build_id = DAB.atlas_build_id
+        WHERE project_id IN ( $args{accessible_projects} )
+        AND DAB.record_status = 'N'
     ~;
 
-    my @rows = $sbeams->selectSeveralColumns($sql);
-
-    foreach my $row (@rows)
-    {
-        ($default_atlas_build_id) = @{$row};
-    }
-
-    return $default_atlas_build_id;
+    my @row = $sbeams->selectrow_array($sql);
+    return $row[0];
 }
 
