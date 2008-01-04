@@ -83,10 +83,9 @@ sub main
 { 
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate(
-       permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin', 
-                                   'Glycopeptide_readonly'],
+        #permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin', 'Glycopeptide_readonly'],
         # connect_read_only=>1,
-        allow_anonymous_access=>0,
+        allow_anonymous_access=>1,
     ));
     $motif_type = $sbeamsMOD->get_current_motif_type();
 
@@ -99,7 +98,10 @@ sub main
         parameters_ref=>\%parameters
         );
     if ( $parameters{unipep_build_id} ) {
-      $sbeamsMOD->set_current_build( build_id => $parameters{unipep_build_id} );
+      my $build_id = $sbeamsMOD->get_current_build( build_id => $parameters{unipep_build_id} );
+      if ( $build_id != $parameters{unipep_build_id} ) {
+        $sbeams->set_page_message( type => 'Error', msg => 'You must log in to access specified build' );
+      }
     }
 
     ## get project_id to send to HTMLPrinter display
@@ -1129,7 +1131,13 @@ sub make_protein_map_graphic {
     my $f = $obj->[0];
     my $coords = join( ", ", @$obj[1..4] );
     my $text = $f->start() . '-' . $f->end();
-    $text .= '  ' . $f->seq()->seq() if $f->seq();
+
+    eval {
+      $text .= '  ' . $f->seq()->seq() if $f->seq();
+    }; 
+    if ( $@ ) {
+      $log->error( $@ );
+    }
     $map .= "<AREA SHAPE='RECT' COORDS='$coords' TITLE='$text'>\n";
   }
   $map .= '</MAP>';
@@ -1600,11 +1608,11 @@ END_DREK
            $prot_info,
            $identified_info,
            $prot_seq,
-           $protein_map
 				);#end_table	
 		
-#	print "$protein_map\n";	
-	print $q->a({id=>'protein_sequence'});
+  # This is in its own table to keep if from stretching too much.
+  print "$protein_map\n";	
+  print $q->a({id=>'protein_sequence'});
 
 } #end display_phospho
 

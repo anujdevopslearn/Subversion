@@ -54,9 +54,9 @@ my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch";
 
     # Authenticate or exit
     exit unless ($current_username = $sbeams->Authenticate(
-       permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin', 'Glycopeptide_readonly'],
+       # permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin', 'Glycopeptide_readonly'],
        # connect_read_only=>1,
-       # allow_anonymous_access=>0,
+       allow_anonymous_access=>1,
     ));
 
     #### Read in the default input parameters
@@ -64,7 +64,10 @@ my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch";
     $sbeams->parse_input_parameters( q=>$q, parameters_ref=>\%params );
     $sbeams->processStandardParameters(parameters_ref=>\%params);
     if ( $params{unipep_build_id} ) {
-      $sbeamsMOD->set_current_build( build_id => $params{unipep_build_id} );
+      my $build_id = $sbeamsMOD->get_current_build( build_id => $params{unipep_build_id} );
+      if ( $build_id != $params{unipep_build_id} ) {
+        $sbeams->set_page_message( type => 'Error', msg => 'You must log in to access specified build' );
+      }
     }
 
     ## get project_id to send to HTMLPrinter display
@@ -156,13 +159,18 @@ sub run_search {
 #    $current = $ipi_base unless $current;
 
 #    my $tissues = $pep_o->observed_tissues( $peptide_id ) || '';
-    my $chk_box = "<INPUT TYPE=checkbox NAME=accession VALUE=$ipi CHECKED>$ipi</INPUT>";
+    my $ipi_link = $ipi;
+    my $motif = $sbeamsMOD->get_current_motif_type();
     if ( $params->{action} ne 'download' ) {
 #      $tissues = $sbeams->truncateStringWithMouseover( string => $tissues, len => 20 );
       $protein_name= $sbeams->truncateStringWithMouseover( string => $protein_name, len => 25 );
-      $ipi = "<A HREF='peptideSearch.cgi?search_type=IPI Accession Number;action=Show_hits_form;search_term=$ipi' TARGET=prot_details>$ipi</A>";
+      $ipi_link = get_search_link( name => $ipi, motif => $motif );
+      $log->debug( $motif );
+      $synonyms = get_kegg_link( name => $synonyms ) if $motif =~ /phospho/;
       $seq = $sbeamsMOD->decorate_phospho_sequence( $seq );
     }
+    my $chk_box = "<INPUT TYPE=checkbox NAME=accession VALUE=$ipi CHECKED>$ipi_link</INPUT>";
+    
     $prophet_score = sprintf( "%0.2f", $prophet_score);
     $peptide_mass = sprintf( "%0.4f", $peptide_mass);
     
@@ -172,7 +180,7 @@ sub run_search {
       $prot_cnt++;
       $log->debug( "In da not current loop" );
       my $current_row = $table->getRowNum();
-      $log->info( "group row is $grp_row, current row is $current_row, bgcolor is $bgcolor" );
+#      $log->info( "group row is $grp_row, current row is $current_row, bgcolor is $bgcolor" );
       $table->setRowAttr( ROWS => [$grp_row..$current_row - 1], BGCOLOR => $bgcolor );
       $grp_row = $current_row;
       $bgcolor = ( $bgcolor eq '#E0E0E0' ) ? '#F1F1F1' : '#E0E0E0';
@@ -185,6 +193,9 @@ sub run_search {
     $table->setRowAttr( ROWS => [$grp_row..$current_row], BGCOLOR => $bgcolor );
 
   }
+  my $current_row = $table->getRowNum();
+  $table->setColAttr( COLS => [ 1 ], ROWS => [1..$current_row], NOWRAP => 1 );
+
 
   return "<FONT COLOR=BLUE SIZE=+1>Query returned no results</FONT>" unless @$results;
 
@@ -319,5 +330,30 @@ sub get_input_fields {
     id_type   => $id_type_radio,
     );
   return \%in;
+}
+
+sub get_search_link {
+  my %args = @_;
+  for my $arg ( qw( name motif ) ) {
+    return "" unless $args{$arg};
+  }
+  if ( $args{motif} =~ /phospho/ ) {
+    return "<A HREF=peptideSearch.cgi?search_type=accession&search_term=$args{name}&.submit=Submit+Query&action=Show_hits_form>$args{name}</A>";
+  } elsif ( $args{motif} =~ /glyco/ ) {
+    return "<A HREF='peptideSearch.cgi?search_type=IPI Accession Number;action=Show_hits_form;search_term=$args{name}' TARGET=prot_details>$args{name}</A>";
+  }
+
+}
+
+
+sub get_kegg_link {
+  my %args = @_;
+  for my $arg ( qw( name ) ) {
+    return "" unless $args{$arg};
+  }
+  my $kegg_name = $args{name};
+  $kegg_name =~ s/(CG\d+)(-P.)*/$1/;
+  my $img = "$HTML_BASE_DIR/images/kegg_sm.gif";
+  return "$args{name}&nbsp;<A HREF=showPathways?ga=Dmel_$kegg_name><IMG BORDER=0 TITLE='View KEGG pathways for this gene' SRC=$img></A>";
 }
 

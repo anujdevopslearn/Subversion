@@ -222,12 +222,36 @@ sub get_current_build {
   my $self = shift;
   my %args = @_;
 
+  $log->debug( "getting current build, yo" );
   # Check self for value
   return $self->{_build_id} if ( $self->{_build_id} ); 
+  $log->debug( "didn't have one cached" );
+
+
+  my $sbeams = $self->getSBEAMS();
+  if ( $sbeams->isGuestUser() ) {
+  $log->debug( "getting current build, as guest" );
+
+  # Unset session build
+  $sbeams->setSessionAttribute( key   => 'unipep_build_id',
+                                value => '' );
+  # Get database default?
+    ( $build_id ) = $sbeams->selectrow_array( <<"    END" );
+    SELECT unipep_build_id FROM $TBGP_UNIPEP_BUILD WHERE is_default  = 1
+    END
+
+    # Last option
+    $build_id ||= 1;
+
+    $self->set_current_build( build_id => $build_id );
+    $log->debug( "setting current build to $build_id as guest" );
+    return $build_id 
+  }
 
   my $sbeams = $self->getSBEAMS();
 
   my $build_id = $sbeams->getSessionAttribute( key   => 'unipep_build_id' );
+  $log->debug( "Got current build to $build_id from session" ) if $build_id;
 
   if ( $build_id ) {
     $self->set_current_build( build_id => $build_id );
@@ -238,9 +262,11 @@ sub get_current_build {
   ( $build_id ) = $sbeams->selectrow_array( <<"  END" );
   SELECT unipep_build_id FROM $TBGP_UNIPEP_BUILD WHERE is_default  = 1
   END
+  $log->debug( "Got default build to $build_id " ) if $build_id;
 
   # Last option
   $build_id ||= 1;
+  $log->debug( "Just set build_id to 1: $build_id " ) if $build_id;
 
   $self->set_current_build( build_id => $build_id );
   return $build_id 

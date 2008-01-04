@@ -47,7 +47,7 @@ my %opts;
 
 
 sub load_file {
-  my $glyco_o = SBEAMS::Glycopeptide::Glyco_peptide_load->new( %opts ) || die "No object";
+  my $glyco_o = SBEAMS::Glycopeptide::Glyco_peptide_load->new( %opts ) || die;
 	$glyco_o->insert_peptides( %opts );
 	print $glyco_o->anno_error() . "\n";
 }
@@ -62,10 +62,13 @@ $program is used load ipi db into Unipep/Glycopeptide tables.
 Usage: $program -p peptide_file -r ipi_version [ -f file_format -v ]
 Options:
     -v, --verbose             Print verbose output.
-    -p, --peptide_file path   File path to the file to upload
+    -p, --peptide_file        File path to the file to upload
     -t, --testonly            Information in the database is not altered
-    -r, --release             Version of the IPI database, must match db version exactly
+    -b, --build               Build to which this search will be added
     -s, --sample              Sample from which data is derived.
+    -a, --ambiguous           Apply 'ambiguous' symbol & to specified amino
+                              acids if it occurs in a peptide.  For example, 
+                              the peptide S&FTGR becomes S&FT&GR.
 
 EOU
   print "\n$usage\n";
@@ -74,28 +77,38 @@ EOU
 
 sub process_options {
 
-  unless (GetOptions( \%opts, "verbose", "release:s", "testonly", 
+  unless (GetOptions( \%opts, "verbose", "build:s", "testonly", "amibiguous:s", 
                       "sample=s", "format:s", "peptide_file:s" )) {
     printUsage('Failed to fetch options');
   }
 #  for my $o ( keys ( %opts ) ) { print "opt: $o => $opts{$o}\n"; }
 
   my $err;
-  for my $opt ( qw( peptide_file release sample ) ) {
+  for my $opt ( qw( peptide_file build sample ) ) {
     $err = ( $err ) ? $err . ', ' . $opt : $opt if !defined $opts{$opt};
   }
   print_usage( "Missing required parameter(s): $err " ) if $err;
+  
+  unless ( -e $opts{peptide_file} ) {
+    print_usage( "Invalid peptide file: $opts{peptide_file}");
+  }
 
   # Check ipi provided with values in database.
   my $match = 0;
-  my $msg = "Unknown version specified, valid versions include:\n";
-  my $sql = "SELECT ipi_version_name, ipi_version_id FROM $TBGP_IPI_VERSION order by ipi_version_name ASC";
+  my $msg = "Unknown build specified, valid versions include:\n";
+  my $sql =<<"  END";
+  SELECT build_name, ipi_version, motif_type, ipi_version_name, unipep_build_id 
+    FROM $TBGP_UNIPEP_BUILD UB
+    JOIN  $TBGP_IPI_VERSION IV ON IV.ipi_version_id = UB.ipi_version
+    ORDER BY build_name ASC
+  END
   while ( my $row = $sbeams->selectSeveralColumnsRow( sql => $sql ) ) {
-    if ( $opts{release} eq $row->[0] ) {
+    if ( $opts{build} eq $row->[0] ) {
       $match++;
       $opts{ipi_version_id} = $row->[1];
+      $opts{build_id} = $row->[4];
     }
-    $msg .= "$row->[0]\n";
+    $msg .= "$row->[0]\t$row->[2]\t$row->[3]\n";
   }
   print_usage( $msg ) unless $match;
 

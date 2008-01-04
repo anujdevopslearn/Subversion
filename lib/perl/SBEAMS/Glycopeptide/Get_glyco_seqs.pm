@@ -1056,7 +1056,7 @@ sub phospho_pep_html{
 	my $show_all = shift || 1;
 
   my $map_heading = ( !$show_all ) ? '' : $q->td({NOWRAP=>1}, $self->linkToColumnText( display => "# Mappings",
-                                                                           title   => "Maps to # transcript(s) / maps to # gene model(s)", 
+                                                                           title   => "Maps to # gene model(s) / maps to # transcript(s)", 
                                                                            column  => "none", 
                                                                            table   => "none" ) );
 	
@@ -1361,7 +1361,7 @@ sub get_atlas_link {
   if ( $args{seq} ) {
     my $key = '%' . $args{seq} . '%';
     $key = $q->escape($key);
-    $url = "../PeptideAtlas/Search?organism_name=Human;search_key=$key;action=GO";
+    $url = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/Search?organism_name=any;search_key=$key;action=GO";
   }
   my $link;
   if ( $type eq 'image' ) {

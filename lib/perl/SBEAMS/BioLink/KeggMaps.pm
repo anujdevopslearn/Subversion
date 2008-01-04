@@ -86,7 +86,14 @@ sub get_service {
   my $this = shift;
   my $wsdl = $this->getWSDL() || die "Missing required WSDL";
 
-  $this->{_service} ||= SOAP::Lite->service($wsdl);
+  eval {
+    $this->{_service} ||= SOAP::Lite->service($wsdl);
+  };
+  if ( $@ ) {
+    $log->error( $@ );
+    print( $sbeams->makeErrorText("Temporarily unable to connect to KEGG SOAP service, please try again later") );
+    exit;
+  }
   return $this->{_service};
 }
 

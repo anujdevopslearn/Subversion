@@ -61,9 +61,9 @@ sub main
   my $current_username;
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate(
-        permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin', 'Glycopeptide_readonly'],
+        # permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin', 'Glycopeptide_readonly'],
         #connect_read_only=>1,
-      allow_anonymous_access=>0,
+        allow_anonymous_access=>1,
     ));
 
 
@@ -74,7 +74,10 @@ sub main
         parameters_ref=>\%parameters
         );
     if ( $parameters{unipep_build_id} ) {
-      $sbeamsMOD->set_current_build( build_id => $parameters{unipep_build_id} );
+      my $build_id = $sbeamsMOD->get_current_build( build_id => $parameters{unipep_build_id} );
+      if ( $build_id != $parameters{unipep_build_id} ) {
+        $sbeams->set_page_message( type => 'Error', msg => 'You must log in to access specified build' );
+      }
     }
 
 

@@ -64,6 +64,7 @@ sub getKeggOrganism {
   my $organism = $self->get_current_organism();
   return ( !$organism ) ? 'hsa' : ( $organism =~ /Drosophila/i ) ? 'dme' : 
                                   ( $organism =~ /Saccaromyces/i ) ? 'sce' : 
+                                  ( $organism =~ /Yeast/i ) ? 'sce' : 
                                   ( $organism =~ /Human/i ) ? 'hsa' :
                                   ( $organism =~ /Mouse/i ) ? 'mmu' : 'hsa';
   return 'hsa';

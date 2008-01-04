@@ -86,6 +86,7 @@ sub displayPhosphopepHeader {
     $skin .= $line;
     last if $line =~ /--- Main Page Content ---/;
   }
+  $self->{'_external_footer'} = join( "\n", @page[$cnt..$#page] );
   $skin =~ s/\/images\//\/sbeams\/images\//gm;
  
   print "$http_header\n\n";
@@ -94,8 +95,8 @@ sub displayPhosphopepHeader {
   $skin
   END_PAGE
 #  print '<STYLE TYPE=text/css>' . $self->getGlycoStyleSheet() . '</STYLE>';
-#  $self->printStyleSheet();
 
+  print $sbeams->get_page_message();
   $self->printJavascriptFunctions();
   }
 
@@ -109,6 +110,8 @@ sub decorate_phospho_sequence {
 
 sub get_phospho_css {
   my $self = shift;
+  $log->printStack("debug");
+
     my %colors = ( 'Signal Sequence' => 'lavender',
                  'Signal Sequence web' => '#CCCCFF',
                  Anchor => 'lavender',
@@ -135,7 +138,7 @@ sub get_phospho_css {
    .sig_seq { background-color: $colors{'Signal Sequence web'};border-style: solid; border-color:gray; border-width: 1px  }
    .glyco_seq { background-color: $colors{glyco_site_track};border-style: solid; border-color:gray; border-width: 1px  }
    .phospho { background-color: $colors{glyco_site_track};border-style: solid; border-color:gray; border-width: 1px  }
-   .ambiphospho { background-color: $colors{ambi_site_track};border-style: solid; border-color:gray; border-width: 1px; color: Black  }
+   .ambiphospho { background-color: $colors{ambi_site_track};border-style: solid; border-color:gray; border-width: 1px; color: Blue  }
    .pep_cov { background-color: $colors{Coverage};border-style: solid; border-color:gray; border-width: 1px  }
    .outline { border-style: solid; border-color:gray; border-width: 1px }
    .sm_txt {  font-family: Helvetica, Arial, sans-serif; font-size: 8pt}
@@ -431,11 +434,13 @@ sub display_page_header {
       return;
     }
 
-    if ( $self->get_current_motif_type() =~ /phospho/ ) {
+#    if ( $self->get_current_motif_type() =~ /phospho/ ) {
+#      $self->displayPhosphopepHeader(%args);
+#      return();
+#    } elsif( $sbeams->isGuestUser() ) {
+    if ( $sbeams->isGuestUser() ) {
       $self->displayPhosphopepHeader(%args);
-      return();
-    } elsif( $sbeams->isGuestUser() ) {
-      $self->displayUnipepHeader(%args);
+#      $self->displayUnipepHeader(%args);
       return();
     } 
   
@@ -673,6 +678,7 @@ sub display_page_footer {
 
   if ( $self->get_current_motif_type() =~ /phospho/ ) {
     # No-op
+    print $self->{'_external_footer'} if $self->{'_external_footer'};
     return;
   }
 

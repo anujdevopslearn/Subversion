@@ -53,12 +53,15 @@ $|++;
   my $t0 = new Benchmark;
   
   # Authenticate user.
-  my $current_username = $sbeams->Authenticate() || die "Authentication failed";
+  my $current_username = $sbeams->Authenticate(allow_anonymous_access=>1) || die "Authentication failed";
 
   # Process cgi parameters
   my $params = process_params();
   if ( $params->{unipep_build_id} ) {
-    $glyco->set_current_build( build_id => $params->{unipep_build_id} );
+    my $build_id = $glyco->get_current_build( build_id => $params->{unipep_build_id} );
+    if ( $build_id != $params->{unipep_build_id} ) {
+      $sbeams->set_page_message( type => 'Error', msg => 'You must log in to access specified build' );
+    }
   }
   
   $kegg_organism = $glyco->getKeggOrganism( );

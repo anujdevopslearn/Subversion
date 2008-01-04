@@ -66,7 +66,11 @@ sub main {
 
   $sbeams->parse_input_parameters( q=>$q, parameters_ref=>\%params );
   if ( $params{unipep_build_id} ) {
-    $glyco->set_current_build( build_id => $params{unipep_build_id} );
+    my $build_id = $glyco->get_current_build( build_id => $params{unipep_build_id} );
+    if ( $build_id != $params{unipep_build_id} ) {
+      $sbeams->set_page_message( type => 'Error', msg => 'You must log in to access specified build' );
+    }
+
   }
   $build_id = $glyco->get_current_build();
   #### Print the header, do what the program does, and print footer

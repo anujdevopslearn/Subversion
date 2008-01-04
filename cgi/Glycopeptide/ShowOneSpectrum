@@ -65,10 +65,9 @@ sub main {
 
   #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($current_username = $sbeams->Authenticate(
-    permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin',
-      'Glycopeptide_readonly'],
+    #permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin', 'Glycopeptide_readonly'],
     #connect_read_only=>1,
-    allow_anonymous_access=>0,
+    allow_anonymous_access=>1,
   ));
 
   #### Print the header, figure and do what the user want, and print footer

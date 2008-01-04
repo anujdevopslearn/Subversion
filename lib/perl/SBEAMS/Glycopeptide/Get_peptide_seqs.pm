@@ -191,7 +191,7 @@ sub add_peptide_annotation{
 	my $number_tryptic_ends = new Bio::Annotation::SimpleValue(-value => $href->{'tryptic_end'});
 	my $number_obs = new Bio::Annotation::SimpleValue(-value => $href->{'n_obs'});
 
-  my $mappings = "<SPAN TITLE='Maps to $href->{acc_mapped} transcript(s) / $href->{gm_mapped} gene model(s)'>$href->{acc_mapped}/$href->{gm_mapped}</SPAN>";
+  my $mappings = "<SPAN TITLE='Maps to $href->{acc_mapped} gene model(s) / $href->{gm_mapped} transcript(s)'>$href->{acc_mapped}/$href->{gm_mapped}</SPAN>";
 	my $num_mappings = new Bio::Annotation::SimpleValue(-value => $mappings);
 	my $gm_mappings = new Bio::Annotation::SimpleValue(-value => $href->{gm_mapped});
 	my $acc_mappings = new Bio::Annotation::SimpleValue(-value => $href->{acc_mapped});

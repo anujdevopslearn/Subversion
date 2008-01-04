@@ -519,7 +519,7 @@ sub insert_peptide_search {
   AND ref_db_id = $args{ipi_version_id}
   END
 
-  die "Duplicate input file detected: $fname\n" if $dup;
+#  die "Duplicate input file detected: $fname\n" if $dup;
   
   my $rowdata = { search_file => $fname,
                   sample_id => $args{sample_id},
@@ -1826,7 +1826,7 @@ sub find_cellular_code {
 	}elsif($code eq 'A'){
 		$full_name = 'Anchor';
 	}elsif($code eq '0'){
-		$full_name = 'Cytoplasmic';
+		$full_name = 'Intracellular';
 	}elsif($code eq 'A_low' ){
 		$full_name = 'Anchor';
 	}elsif( !$code ){ # FIXME
@@ -1840,6 +1840,7 @@ sub find_cellular_code {
   FROM $TBGP_CELLULAR_LOCATION
   WHERE cellular_location_name = '$full_name'
   END
+  print $sbeams->evalSQL( $sql );
 	
   my ($id) = $sbeams->selectOneColumn($sql);
   if ( $full_name ) {
