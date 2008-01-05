@@ -104,13 +104,16 @@ sub displayGuestPageHeader
   my $ua = LWP::UserAgent->new();
   my $scgapLink = 'http://scgap.systemsbiology.net';
   my $response = $ua->request( HTTP::Request->new( GET => "$scgapLink/skin.php" ) );
-  my @page = split( "\r", $response->content() );
+  my @page = split( "\n", $response->content() );
   my $skin = '';
+  my $cnt = 0;
   for ( @page ) {
+    $cnt++;
     $_ =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
     last if $_ =~ / End of main content/;
     $skin .= $_;
   }
+  $self->{'_external_footer'} =  join( "\n", @page[$cnt..$#page] );
   $skin =~ s/\/images\//\/sbeams\/images\//gm;
  
   print "$http_header\n\n";
@@ -124,7 +127,12 @@ sub displayGuestPageHeader
 	
 sub  displayGuestPageFooter
 {
-	
+  my $self = shift;
+  if ( $self->{'_external_footer'} ) {
+    print "$self->{'_external_footer'}\n";
+    return;
+  }
+
 print qq~
 </td></tr>
 </table>

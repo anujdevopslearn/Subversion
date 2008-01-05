@@ -96,12 +96,15 @@ sub displaySCGAPPageHeader
   my $ua = LWP::UserAgent->new();
   my $scgapLink = 'http://scgap.systemsbiology.net';
   my $response = $ua->request( HTTP::Request->new( GET => "$scgapLink/skin.php" ) );
-  my @page = split( "\r", $response->content() );
+  my @page = split( "\n", $response->content() );
   my $skin = '';
+  my $cnt = 0;
   for ( @page ) {
+    $cnt++;
     last if $_ =~ / End of main content/;
     $skin .= $_;
   }
+  $self->{'_external_footer'} = join( "\n", @page[$cnt..$#page] );
   $skin =~ s/\/images\//\/sbeams\/images\//gm;
  
 	
@@ -696,6 +699,10 @@ sub printPageFooter {
   my $display_footer = $args{'display_footer'} || 'YES';
   my $separator_bar = $args{'separator_bar'} || 'NO';
 
+  if ( $self->{'_external_footer'} ) {
+    print "$self->{'_external_footer'}\n";
+    return;
+  }
 
   #### If closing the content tables is desired
   if ($close_tables eq 'YES') {
