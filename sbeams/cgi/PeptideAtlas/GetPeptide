@@ -341,7 +341,7 @@ sub handle_request {
 
     if ($sbeams->output_mode() eq 'html') {
 
-      print $sbeamsMOD->init_pa_tooltip(); 
+#      print $sbeamsMOD->init_pa_tooltip(); 
 
         print "<p>";
 
