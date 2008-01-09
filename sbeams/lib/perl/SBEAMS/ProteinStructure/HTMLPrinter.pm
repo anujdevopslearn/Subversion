@@ -205,6 +205,7 @@ sub printStyleSheet {
 sub printJavascriptFunctions {
     my $self = shift;
     my $javascript_includes = shift;
+    print $self->getToolTip() . "\n";
 
     print qq~
 
@@ -246,7 +247,6 @@ sub printPageFooter {
 sub display_page_footer {
   my $self = shift;
   my %args = @_;
-  my $tooltip_footer = $self->getToolTip();
 
   #### If the output mode is interactive text, display text header
   my $sbeams = $self->getSBEAMS();
@@ -306,7 +306,6 @@ sub display_page_footer {
 	  $self->display_ext_halo_footer();
 	  return;
 	}else {
-	  print $tooltip_footer;
 	  $sbeams->display_page_footer(display_footer=>'YES');
 	}
   }
@@ -953,7 +952,6 @@ h4  { color: #004896; font-family: Helvetica, Arial, sans-serif; font-size: 10pt
 sub display_ext_halo_footer {
   my $self = shift;
   my %args = @_;
-  my $tooltip_footer = $self->getToolTip;
 
   my $buf = qq~
 	<!-- End Content-->												
@@ -1001,9 +999,7 @@ sub display_ext_halo_footer {
 
 </tr></table>
 
-$tooltip_footer
-		
-	</body>
+</body>
 </html>
   ~;
 
