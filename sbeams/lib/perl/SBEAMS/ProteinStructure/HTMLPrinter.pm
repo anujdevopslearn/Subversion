@@ -94,6 +94,7 @@ sub display_page_header {
 
     $self->printJavascriptFunctions();
     $self->printStyleSheet();
+    my $tooltip = $self->getToolTip();
 
     my $loadscript = "$args{onload};" || '';
 
@@ -109,6 +110,7 @@ sub display_page_header {
 
 	<!-- Background white, links blue (unvisited), navy (visited), red (active) -->
 	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" TOPMARGIN=0 LEFTMARGIN=0 OnLoad="$loadscript self.focus();">
+  $tooltip
 	<table border=0 width="100%" cellspacing=0 cellpadding=1>
 
 	<!------- Header ------------------------------------------------>
@@ -205,7 +207,6 @@ sub printStyleSheet {
 sub printJavascriptFunctions {
     my $self = shift;
     my $javascript_includes = shift;
-    print $self->getToolTip() . "\n";
 
     print qq~
 
@@ -342,8 +343,10 @@ sub display_ext_halo_template {
   }
 
   my $HALO_HOME = 'http://baliga.systemsbiology.net';
+  my $tooltip = $self->getToolTip();
   my $buf = qq~
 <body OnLoad="$loadscript self.focus()" leftmargin="0" rightmargin="0" marginspace="0" topmargin="3" bottommargin="3" marginheight="3" marginwidth="0">
+  $tooltip
 
 <table bordercolor="#827975" cellpadding="0" cellspacing="0" width="680" border="1" align="center">
 	<tr>
