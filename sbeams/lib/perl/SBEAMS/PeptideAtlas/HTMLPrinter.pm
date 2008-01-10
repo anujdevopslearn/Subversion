@@ -106,12 +106,17 @@ sub displayInternalResearcherPageHeader {
   my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index.dbbrowse.php" ) );
   my @page = split( "\n", $response->content() );
   my $skin = '';
+  my $cnt=0;
   for ( @page ) {
+
+    $cnt++;
     $_ =~ s/\<\!-- LOGIN_LINK --\>/$LOGOUT_LINK/;
     last if $_ =~ /--- Main Page Content ---/;
     $skin .= $_;
   }
+
   $skin =~ s/\/images\//\/sbeams\/images\//gm;
+  $self->{'_external_footer'}=join("\n", @page[$cnt..$#page]);
  
   print "$http_header\n\n";
   print <<"  END_PAGE";
@@ -375,6 +380,11 @@ sub display_page_footer {
   my $close_tables = $args{'close_tables'} || 'YES';
   my $display_footer = $args{'display_footer'} || 'YES';
   my $separator_bar = $args{'separator_bar'} || 'NO';
+
+   if($self->{'_external_footer'}) {
+   	print "$self->{'_external_footer'}\n";
+     	return;
+  }
 
 
   #### If closing the content tables is desired
