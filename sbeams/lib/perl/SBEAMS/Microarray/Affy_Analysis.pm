@@ -83,8 +83,8 @@ use SBEAMS::Microarray::Tables;
 use SBEAMS::Microarray::Analysis_Data;
 use SBEAMS::Microarray::Settings qw( $AFFY_TMP_DIR );
 
-my $R_program = SBEAMS::Microarray::Settings->get_R_exe_path( 'obj_placeholder' );
-my $R_library = SBEAMS::Microarray::Settings->get_R_lib_path( 'obj_placeholder' );
+my $R_program = SBEAMS::Microarray::Settings->get_local_R_exe_path( 'obj_placeholder' );
+my $R_library = SBEAMS::Microarray::Settings->get_local_R_lib_path( 'obj_placeholder' );
 
 #our $PHYSICAL_BASE_DIR;
 

@@ -155,8 +155,9 @@ CONFIG_SETTING{MA_HIDE_TWO_COLOR} = 1
 CONFIG_SETTING{MA_R_EXE_PATH} = /usr/local/bin/R
 CONFIG_SETTING{MA_R_LIB_PATH} = /usr/local/lib/R/library
 
-# If local exe is different from batch version...
+# If local R is different from batch version...
 CONFIG_SETTING{MA_LOCAL_R_EXE_PATH} = /usr/local/bin/R
+CONFIG_SETTING{MA_LOCAL_R_LIB_PATH} = /usr/local/lib/R/library
 
 # Batch method for running bioconductor R jobs.  Valid options include fork,
 # pbs, and sge. pbs and sge will require some source file editing to set up.
