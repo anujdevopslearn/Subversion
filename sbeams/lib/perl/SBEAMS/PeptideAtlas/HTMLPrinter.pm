@@ -166,7 +166,7 @@ sub displayGuestPageHeader {
     $skin .= "$_\n";
   }
   
-  $self->{'_external_footer'} = join{"\n", @page[$cnt..$#page]);
+  $self->{'_external_footer'} = join("\n", @page[$cnt..$#page]);
   $skin =~ s#/images/#/sbeams/images/#gm;
   #$skin =~ s#/images/#/dev2/sbeams/images/#gm;
 
@@ -234,6 +234,7 @@ sub displayStandardPageHeader {
   #print ">>>http_header=$http_header<BR>\n";
 
   if ($navigation_bar eq "YES") {
+
     print qq~
 	<!------- Button Bar -------------------------------------------->
 	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
