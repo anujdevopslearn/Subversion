@@ -158,11 +158,15 @@ sub displayGuestPageHeader {
   my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index.dbbrowse.php" ) );
   my @page = split( "\n", $response->content() );
   my $skin = '';
+  my $cnt=0;
   for ( @page ) {
+    $cnt++;
     $_ =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
     last if $_ =~ /--- Main Page Content ---/;
     $skin .= "$_\n";
   }
+  
+  $self->{'_external_footer'} = join{"\n", @page[$cnt..$#page]);
   $skin =~ s#/images/#/sbeams/images/#gm;
   #$skin =~ s#/images/#/dev2/sbeams/images/#gm;
 
