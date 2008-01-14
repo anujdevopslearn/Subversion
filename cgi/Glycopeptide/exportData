@@ -1,0 +1,914 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : BrowsePossiblePeptides
+# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
+# $Id: BrowsePossiblePeptides 4336 2006-01-26 21:19:59Z edeutsch $
+#
+# Description : This program that allows users to
+#               browse through the list of possible peptides
+#
+# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
+use SBEAMS::Connection qw($q);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+
+use SBEAMS::Proteomics;
+use SBEAMS::Proteomics::Settings;
+use SBEAMS::Proteomics::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::Proteomics;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+
+#use CGI;
+#$q = new CGI;
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value kay=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    permitted_work_groups_ref=>['Proteomics_user','Proteomics_admin',
+      'Proteomics_readonly'],
+    #connect_read_only=>1,
+    #allow_anonymous_access=>1,
+  ));
+
+
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($q);
+
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+
+  #### Decide what action to take based on information so far
+  if ($parameters{action} eq "???") {
+    # Some action
+  } else {
+    $sbeamsMOD->display_page_header();
+    handle_request(ref_parameters=>\%parameters);
+    $sbeamsMOD->display_page_footer();
+  }
+
+
+} # end main
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+
+  #### Define some generic varibles
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+
+  #### Read in the standard form values
+  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+
+  #### Set some specific settings for this program
+  my $CATEGORY="Browse Possible Peptides";
+  $TABLE_NAME="PR_BrowsePossiblePeptides" unless ($TABLE_NAME);
+  ($PROGRAM_FILE_NAME) =
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+
+
+  #### Get the columns and input types for this table/query
+  my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+  my %input_types = 
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+
+
+  #### Read the input parameters for each column
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters,
+    columns_ref=>\@columns,input_types_ref=>\%input_types);
+
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  if ($apply_action eq "VIEWRESULTSET") {
+    $sbeams->readResultSet(resultset_file=>$rs_params{set_name},
+        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters);
+    $n_params_found = 99;
+  }
+
+
+  #### Set some reasonable defaults if no parameters supplied
+  unless ($n_params_found) {
+    $parameters{input_form_format} = "minimum_detail";
+  }
+
+
+  #### Apply any parameter adjustment logic
+  #none
+
+
+  #### Display the user-interaction input form
+  $sbeams->display_input_form(
+    TABLE_NAME=>$TABLE_NAME,CATEGORY=>$CATEGORY,apply_action=>$apply_action,
+    PROGRAM_FILE_NAME=>$PROGRAM_FILE_NAME,
+    parameters_ref=>\%parameters,
+    input_types_ref=>\%input_types,
+    allow_NOT_flags => 1,
+  );
+
+
+  #### Display the form action buttons
+  $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
+
+
+  #### Finish the upper part of the page and go begin the full-width
+  #### data portion of the page
+  $sbeams->display_page_footer(close_tables=>'YES',
+    separator_bar=>'YES',display_footer=>'NO');
+
+
+
+  #########################################################################
+  #### Process all the constraints
+
+  #### Build BIOSEQUENCE_SET constraint
+  my $biosequence_set_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_set_id",
+    constraint_type=>"int_list",
+    constraint_name=>"BioSequence Set",
+    constraint_value=>$parameters{biosequence_set_id} );
+  return if ($biosequence_set_clause eq '-1');
+  unless (defined($parameters{biosequence_set_id}) &&
+          $parameters{biosequence_set_id}) {
+    print "<H4>You must select at least one search batch to browse!</H4>\n\n";
+    return;
+  }
+
+
+  #### Build BIOSEQUENCE_NAME constraint
+  my $biosequence_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_name",
+    constraint_type=>"plain_text",
+    constraint_name=>"BioSequence Name",
+    constraint_value=>$parameters{biosequence_name_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_biosequence_name_constraint"},
+  );
+  return if ($biosequence_name_clause eq '-1');
+
+
+  #### Build BIOSEQUENCE_GENE_NAME constraint
+  my $biosequence_gene_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_gene_name",
+    constraint_type=>"plain_text",
+    constraint_name=>"BioSequence Gene Name",
+    constraint_value=>$parameters{biosequence_gene_name_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_biosequence_gene_name_constraint"},
+  );
+  return if ($biosequence_gene_name_clause eq '-1');
+
+
+  #### Build BIOSEQUENCE ACCESSION constraint
+  my $accession_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_accession",
+    constraint_type=>"plain_text",
+    constraint_name=>"Accession",
+    constraint_value=>$parameters{accession_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_accession_constraint"},
+  );
+  return if ($accession_clause eq '-1');
+
+
+  #### Build BIOSEQUENCE_SEQ constraint
+  my $biosequence_seq_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_seq",
+    constraint_type=>"plain_text",
+    constraint_name=>"BioSequence Sequence",
+    constraint_value=>$parameters{biosequence_seq_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_biosequence_seq_constraint"},
+  );
+  return if ($biosequence_seq_clause eq '-1');
+  $biosequence_seq_clause =~ s/\*/\%/g;
+
+
+  #### Build BIOSEQUENCE_DESC constraint
+  my $biosequence_desc_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_desc",
+    constraint_type=>"plain_text",
+    constraint_name=>"BioSequence Description",
+    constraint_value=>$parameters{biosequence_desc_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_biosequence_desc_constraint"},
+  );
+  return if ($biosequence_desc_clause eq '-1');
+
+
+  #### Build MOLECULAR FUNCTION constraint
+  my $molecular_function_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"MFA.annotation",
+    constraint_type=>"plain_text",
+    constraint_name=>"Molecular Function",
+    constraint_value=>$parameters{molecular_function_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_molecular_function_constraint"},
+  );
+  return if ($molecular_function_clause eq '-1');
+
+
+  #### Build BIOLOGICAL PROCESS constraint
+  my $biological_process_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BPA.annotation",
+    constraint_type=>"plain_text",
+    constraint_name=>"Biological Process",
+    constraint_value=>$parameters{biological_process_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_biological_process_constraint"},
+  );
+  return if ($biological_process_clause eq '-1');
+
+
+  #### Build CELLULAR COMPONENT constraint
+  my $cellular_component_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"CCA.annotation",
+    constraint_type=>"plain_text",
+    constraint_name=>"Cellular Component",
+    constraint_value=>$parameters{cellular_component_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_cellular_component_constraint"},
+  );
+  return if ($cellular_component_clause eq '-1');
+
+
+  #### Build INTERPRO PROTEIN DOMAIN constraint
+  my $protein_domain_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"IPDA.annotation",
+    constraint_type=>"plain_text",
+    constraint_name=>"InterPro Protein Domain",
+    constraint_value=>$parameters{protein_domain_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_protein_domain_constraint"},
+  );
+  return if ($protein_domain_clause eq '-1');
+
+
+  #### Build FAVORED CODON FREQUENCY constraint
+  my $fav_codon_frequency_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BPS.fav_codon_frequency",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Favored Codon Frequency",
+    constraint_value=>$parameters{fav_codon_frequency_constraint} );
+  return if ($fav_codon_frequency_clause eq '-1');
+
+
+  #### Build PROTEIN LENGTH constraint
+  my $protein_length_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"DATALENGTH(BS.biosequence_seq)",
+    constraint_type=>"flexible_int",
+    constraint_name=>"Protein Length",
+    constraint_value=>$parameters{protein_length_constraint} );
+  return if ($protein_length_clause eq '-1');
+
+
+  #### Build TRANSMEMBRANE CLASS constraint
+  my $transmembrane_class_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BPS.transmembrane_class",
+    constraint_type=>"text_list",
+    constraint_name=>"Transmembrane Class",
+    constraint_value=>$parameters{transmembrane_class_constraint} );
+  return if ($transmembrane_class_clause eq '-1');
+
+
+  #### Build NUMBER OF TRANSMEMBRANE REGIONS constraint
+  my $n_transmembrane_regions_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BPS.n_transmembrane_regions",
+    constraint_type=>"flexible_int",
+    constraint_name=>"Number of Transmembrane regions",
+    constraint_value=>$parameters{n_transmembrane_regions_constraint} );
+  return if ($n_transmembrane_regions_clause eq '-1');
+
+
+  #### Build PEPTIDE constraint
+  my $peptide_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PP.peptide_sequence",
+    constraint_type=>"plain_text",
+    constraint_name=>"Peptide Sequence",
+    constraint_value=>$parameters{peptide_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_peptide_constraint"},
+  );
+  return if ($peptide_clause eq '-1');
+
+
+  #### Build PEPTIDE STRING constraint
+  my $peptide_string_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"MP.peptide_string",
+    constraint_type=>"plain_text",
+    constraint_name=>"Peptide String",
+    constraint_value=>$parameters{peptide_string_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_peptide_string_constraint"},
+  );
+  return if ($peptide_string_clause eq '-1');
+
+
+  #### Build MASS constraint
+  my $mass_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PP.mass",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Mass Constraint",
+    constraint_value=>$parameters{mass_constraint} );
+  return if ($mass_clause eq '-1');
+
+
+  #### Build ISOELECTRIC_POINT constraint
+  my $isoelectric_point_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PP.isoelectric_point",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Isoelectric Point",
+    constraint_value=>$parameters{isoelectric_point_constraint} );
+  return if ($isoelectric_point_clause eq '-1');
+
+
+  #### Build N OCCURRENCES constraint
+  my $n_occurrences_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"COUNT(*)",
+    constraint_type=>"flexible_int",
+    constraint_name=>"Number of Occurrences Constraint",
+    constraint_value=>$parameters{n_occurrences} );
+  return if ($n_occurrences_clause eq '-1');
+  if ($n_occurrences_clause) {
+    $n_occurrences_clause =~ s/AND/HAVING/;
+    #$n_occurrences_clause = ''
+    #  unless ($parameters{display_options} =~ /Group/);
+  }
+
+
+
+  #### Build Additional peptide constraints
+  my $second_peptide_clause = "";
+  if ($parameters{peptide_options}) {
+    if ($parameters{peptide_options} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
+      print "<H4>Cannot parse Peptide Options!  Check syntax.</H4>\n\n";
+      return;
+    } else {
+      if ( $parameters{peptide_options} =~ /C_containing/ ) {
+        $second_peptide_clause .= "   AND PP.is_cysteine_containing = 'Y'";
+      }
+
+      if ( $parameters{peptide_options} =~ /C_missing/ ) {
+        $second_peptide_clause .= "   AND PP.is_cysteine_containing = 'N'";
+      }
+
+      if ( $parameters{peptide_options} =~ /DoublyTryptic/ ) {
+        $second_peptide_clause .= "   AND PP.peptide_sequence LIKE '%[RK]'".
+                        "            AND PP.preceding_residue LIKE '[RK]'";
+      }
+
+      if ( $parameters{peptide_options} =~ /SinglyTryptic/ ) {
+        $second_peptide_clause .= "   AND ( PP.peptide_sequence LIKE '%[RK]'".
+                        "                  OR PP.preceding_residue LIKE '[RK]' )";
+      }
+
+      if ( $parameters{peptide_options} =~ /IsUnique/ ) {
+        $second_peptide_clause .= "   AND PP.is_unique = 'Y'";
+      }
+
+      if ( $parameters{peptide_options} =~ /IsNotUnique/ ) {
+        $second_peptide_clause .= "   AND PP.is_unique = 'N'";
+      }
+
+    }
+
+  }
+
+
+  #### Build GENE ANNOTATION LEVEL constraint
+  $parameters{gene_annotation_level_constraint} = 'leaf'
+    unless ($parameters{gene_annotation_level_constraint});
+  my $gene_annotation_level_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"hierarchy_level",
+    constraint_type=>"plain_text",
+    constraint_name=>"Gene Annotation Level Constraint",
+    constraint_value=>$parameters{gene_annotation_level_constraint} );
+  return if ($gene_annotation_level_clause eq '-1');
+
+
+  #### Build SORT ORDER
+  my $order_by_clause = "";
+  if ($parameters{sort_order}) {
+    if ($parameters{sort_order} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
+      print "<H4>Cannot parse Sort Order!  Check syntax.</H4>\n\n";
+      return;
+    } else {
+      $order_by_clause = " ORDER BY $parameters{sort_order}";
+    }
+  }
+
+
+  #### Build ROWCOUNT constraint
+  $parameters{row_limit} = 5000
+    unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
+  my $limit_clause = "TOP $parameters{row_limit}";
+
+
+  #### Define some variables needed to build the query
+  my $group_by_clause = "";
+  my $final_group_by_clause = "";
+  my @column_array;
+  my $peptide_column = "";
+  my $count_column = "";
+  my $into_clause = "";
+
+
+  #### If the user opted to see the GO columns, add them in
+  my @additional_columns = ();
+  if ( $parameters{display_options} =~ /ShowGOColumns/ ||
+       $molecular_function_clause.$biological_process_clause.
+       $cellular_component_clause.$protein_domain_clause ) {
+    @additional_columns = (
+      ["molecular_function","MFA.annotation","Molecular Function"],
+      ["molecular_function_GO","MFA.external_accession","molecular_function_GO"],
+      ["biological_process","BPA.annotation","Biological Process"],
+      ["biological_process_GO","BPA.external_accession","biological_process_GO"],
+      ["cellular_component","CCA.annotation","Cellular Component"],
+      ["cellular_component_GO","CCA.external_accession","cellular_component_GO"],
+      ["interpro_protein_domain","IPDA.annotation","InterPro Protein Domain"],
+      ["interpro_protein_domain_GO","IPDA.external_accession","interpro_protein_domain_GO"],
+    );
+  }
+
+  #### If the user opted to see GO columns or provided some GO constraints,
+  #### then join in the GO tables
+  my $GO_join = "";
+  if ( $parameters{display_options} =~ /ShowGOColumns/ ||
+       $molecular_function_clause.$biological_process_clause.
+       $cellular_component_clause.$protein_domain_clause ) {
+    $GO_join = qq~
+        LEFT JOIN $TBPR_BIOSEQUENCE_ANNOTATED_GENE AG
+             ON ( BS.biosequence_id = AG.biosequence_id )
+        LEFT JOIN $TBBL_GENE_ANNOTATION MFA
+             ON ( AG.annotated_gene_id = MFA.annotated_gene_id
+                   AND MFA.gene_annotation_type_id = 1 AND MFA.idx = 0
+                   AND MFA.hierarchy_level = '$parameters{gene_annotation_level_constraint}' )
+        LEFT JOIN $TBBL_GENE_ANNOTATION BPA
+             ON ( AG.annotated_gene_id = BPA.annotated_gene_id
+                   AND BPA.gene_annotation_type_id = 2 AND BPA.idx = 0
+                   AND BPA.hierarchy_level = '$parameters{gene_annotation_level_constraint}' )
+        LEFT JOIN $TBBL_GENE_ANNOTATION CCA
+             ON ( AG.annotated_gene_id = CCA.annotated_gene_id
+                   AND CCA.gene_annotation_type_id = 3 AND CCA.idx = 0
+                   AND CCA.hierarchy_level = '$parameters{gene_annotation_level_constraint}' )
+        LEFT JOIN $TBBL_GENE_ANNOTATION IPDA
+             ON ( AG.annotated_gene_id = IPDA.annotated_gene_id
+                   AND IPDA.gene_annotation_type_id = 4 AND IPDA.idx = 0
+                   AND IPDA.hierarchy_level = '$parameters{gene_annotation_level_constraint}' )
+    ~;
+  }
+
+
+  #### Add in some extra columns if the user wants to see them
+  if ( $parameters{display_options} =~ /ShowExtraProteinProps/ ||
+       $parameters{display_options} =~ /GroupCount/ ) {
+    @additional_columns = (
+      ["fav_codon_frequency","STR(BPS.fav_codon_frequency,10,3)","Favored Codon Frequency"],
+      ["transmembrane_class","BPS.transmembrane_class","Transmembrane Class"],
+      ["n_transmembrane_regions","BPS.n_transmembrane_regions","Number of Transmembrane Regions"],
+      ["protein_length","DATALENGTH(BS.biosequence_seq)","Protein Length"],
+      @additional_columns,
+    );
+  }
+
+
+  #### Define the desired columns in the query
+  #### [friendly name used in url_cols,SQL,displayed column title]
+
+  #### If grouping by protein
+  if ( $parameters{display_options} =~ /Group/ ) {
+
+    if ( $parameters{display_options} =~ /GroupCount/ ) {
+      $order_by_clause = 'ORDER BY COUNT(*)';
+      $into_clause = 'INTO #tmp';
+      $limit_clause = '';
+    }
+
+    @column_array = (
+      ["biosequence_name","BS.biosequence_name","Protein Name"],
+      ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
+      ["accessor","DBX.accessor","accessor"],
+      ["biosequence_accession","BS.biosequence_accession","Accession"],
+      ["n_peptides","COUNT(*)","Peptide Count"],
+      ["avg_mass","AVG(PP.mass)","Average Peptide Mass"],
+      ["avg_pI","AVG(PP.isoelectric_point)","Average pI"],
+      @additional_columns,
+      ["biosequence_desc","BS.biosequence_desc","Reference Description"],
+    );
+    $group_by_clause = "  GROUP BY BS.biosequence_name,BS.biosequence_gene_name,DBX.accessor,BS.biosequence_accession,BS.biosequence_desc";
+
+    foreach $element (@additional_columns) {
+      $group_by_clause .= ",".$element->[1];
+    }
+
+  #### If no grouping
+  } else {
+    @column_array = (
+      ["biosequence_name","BS.biosequence_name","Protein Name"],
+      ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
+      ["accessor","DBX.accessor","accessor"],
+      ["biosequence_accession","BS.biosequence_accession","Accession"],
+      ["preceding_residue","PP.preceding_residue","LHS"],
+      ["peptide_sequence","PP.peptide_sequence","Peptide Sequence"],
+      ["following_residue","PP.following_residue","RHS"],
+      ["mass","STR(PP.mass,7,2)","Mass"],
+      ["isoelectric_point","STR(PP.isoelectric_point,7,2)","pI"],
+      ["peptide_offset","PP.peptide_offset","Start Pos"],
+      ["n_tryptic_terminii","PP.n_tryptic_terminii","N Tryp Term"],
+      ["is_cysteine_containing","PP.is_cysteine_containing","Cys Cont"],
+      ["is_unique","PP.is_unique","Unique"],
+      ["elution_index","STR(PP.elution_index,7,2)","Elution Index"],
+      @additional_columns,
+      ["biosequence_desc","BS.biosequence_desc","Reference Description"],
+    );
+    $group_by_clause = "";
+
+  }
+
+
+  #### Limit the width of the Reference column if user selected
+  if ( $parameters{display_options} =~ /MaxRefWidth/ ) {
+    $max_widths{'Protein Name'} = 20;
+  }
+  #### Set flag to display SQL statement if user selected
+  if ( $parameters{display_options} =~ /ShowSQL/ ) {
+    $show_sql = 1;
+  }
+
+
+  #### Build the columns part of the SQL statement
+  my %colnameidx = ();
+  my @column_titles = ();
+  my $columns_clause = $sbeams->build_SQL_columns_list(
+    column_array_ref=>\@column_array,
+    colnameidx_ref=>\%colnameidx,
+    column_titles_ref=>\@column_titles
+  );
+
+
+  #### If this is a non-grouped query but n_occurences is specified,
+  #### then a special, two stage query needs to be done
+  if ($n_occurrences_clause &&
+      $parameters{display_options} !~ /Group/ ) {
+    $sql = qq~
+	SELECT BS.biosequence_id
+          INTO #tmp1
+          FROM $TBPR_POSSIBLE_PEPTIDE PP
+	 INNER JOIN $TBPR_BIOSEQUENCE BS
+	       ON ( PP.biosequence_id = BS.biosequence_id )
+          LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
+          LEFT JOIN $TBPR_BIOSEQUENCE_PROPERTY_SET BPS
+               ON ( BS.biosequence_id = BPS.biosequence_id )
+          $GO_join
+	 WHERE 1 = 1
+	$biosequence_set_clause
+	$biosequence_name_clause
+	$biosequence_gene_name_clause
+	$accession_clause
+        $biosequence_desc_clause
+        $biosequence_seq_clause
+
+	$peptide_clause
+	$second_peptide_clause
+	$mass_clause
+	$isoelectric_point_clause
+
+        $molecular_function_clause
+        $biological_process_clause
+        $cellular_component_clause
+	$protein_domain_clause
+        $transmembrane_class_clause
+        $n_transmembrane_regions_clause
+        $fav_codon_frequency_clause
+        $protein_length_clause
+	GROUP BY BS.biosequence_id
+        $n_occurrences_clause
+
+--- Second Part
+
+	SELECT $limit_clause $columns_clause
+          $into_clause
+          FROM #tmp1 tt
+         INNER JOIN $TBPR_POSSIBLE_PEPTIDE PP
+               ON ( tt.biosequence_id = PP.biosequence_id )
+	 INNER JOIN $TBPR_BIOSEQUENCE BS
+	       ON ( PP.biosequence_id = BS.biosequence_id )
+          LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
+          LEFT JOIN $TBPR_BIOSEQUENCE_PROPERTY_SET BPS
+               ON ( BS.biosequence_id = BPS.biosequence_id )
+          $GO_join
+	 WHERE 1 = 1
+	$biosequence_set_clause
+	$biosequence_name_clause
+	$biosequence_gene_name_clause
+	$accession_clause
+        $biosequence_desc_clause
+        $biosequence_seq_clause
+
+	$peptide_clause
+	$second_peptide_clause
+	$mass_clause
+	$isoelectric_point_clause
+
+        $molecular_function_clause
+        $biological_process_clause
+        $cellular_component_clause
+	$protein_domain_clause
+        $transmembrane_class_clause
+        $n_transmembrane_regions_clause
+        $fav_codon_frequency_clause
+        $protein_length_clause
+	$order_by_clause
+    ~;
+
+
+  #### Else define the regular SQL statement
+  } else {
+    $sql = qq~
+	SELECT $limit_clause $columns_clause
+          $into_clause
+          FROM $TBPR_POSSIBLE_PEPTIDE PP
+	 INNER JOIN $TBPR_BIOSEQUENCE BS
+	       ON ( PP.biosequence_id = BS.biosequence_id )
+          LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
+          LEFT JOIN $TBPR_BIOSEQUENCE_PROPERTY_SET BPS
+               ON ( BS.biosequence_id = BPS.biosequence_id )
+          $GO_join
+	 WHERE 1 = 1
+	$biosequence_set_clause
+	$biosequence_name_clause
+	$biosequence_gene_name_clause
+	$accession_clause
+        $biosequence_desc_clause
+        $biosequence_seq_clause
+
+	$peptide_clause
+	$second_peptide_clause
+	$mass_clause
+	$isoelectric_point_clause
+
+        $molecular_function_clause
+        $biological_process_clause
+        $cellular_component_clause
+	$protein_domain_clause
+        $transmembrane_class_clause
+        $n_transmembrane_regions_clause
+        $fav_codon_frequency_clause
+        $protein_length_clause
+	$group_by_clause
+        $n_occurrences_clause
+	$order_by_clause
+
+    ~;
+  }
+
+
+  #### If we're doing a grand summary, tack on the second query to summarize
+  if ( $parameters{display_options} =~ /GroupCount/ ) {
+    $sql .= "
+	SELECT n_peptides,COUNT(*) AS 'protein_count',
+               AVG(protein_length) AS 'avg_protein_length',
+               n_peptides * COUNT(*) AS 'total_peptides'
+          FROM #tmp
+         GROUP BY n_peptides
+         ORDER BY n_peptides
+    ";
+    @column_titles = ( 'Number of Peptides Per Protein','Protein Count','Mean Protein Length','Total Number of Peptides' );
+  }
+
+
+  #### Certain types of actions should be passed to links
+  my $pass_action = "QUERY";
+  $pass_action = $apply_action if ($apply_action =~ /QUERY/i);
+
+
+  #### Pass nearly all of the constraints down to a child query
+  my @parameters_to_pass;
+  my $parameters_list = '';
+  while ( ($key,$value) = each %input_types ) {
+    if ($key ne 'display_options' &&
+        $key ne 'n_occurrences' &&
+        $key ne 'biosequence_name_constraint' &&
+        $key ne 'xx_constraint'
+      ) {
+      if ($parameters{$key}) {
+        push(@parameters_to_pass,"$key=$parameters{$key}");
+      }
+    }
+  }
+  if (@parameters_to_pass) {
+    $parameters_list = join('&',@parameters_to_pass);
+  }
+
+
+  #### Define the hypertext links for columns that need them
+  %url_cols = ('Accession' => "\%$colnameidx{accessor}V\%$colnameidx{biosequence_accession}V",
+    	       'Accession_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein in source database\'; return true"',
+    	       'Protein Count' => "$CGI_BASE_DIR/Proteomics/BrowsePossiblePeptides?QUERY_NAME=PR_BrowsePossiblePeptides&display_options=GroupProtein&n_occurrences=\%0V&$parameters_list&apply_action=$pass_action",
+    	       'Protein Count_ATAG' => 'TARGET="Win1"',
+
+    	       'Peptide Count' => "$CGI_BASE_DIR/Proteomics/BrowsePossiblePeptides?QUERY_NAME=PR_BrowsePossiblePeptides&biosequence_name_constraint=\%$colnameidx{biosequence_name}V&$parameters_list&apply_action=$pass_action",
+    	       'Peptide Count_ATAG' => 'TARGET="Win1"',
+
+    	       'Peptide Sequence' => "$CGI_BASE_DIR/Proteomics/BrowsePossiblePeptides?QUERY_NAME=PR_BrowsePossiblePeptides&biosequence_set_id=$parameters{biosequence_set_id}&peptide_constraint=\%$colnameidx{peptide_sequence}V&apply_action=$pass_action",
+    	       'Peptide Count_ATAG' => 'TARGET="Win1"',
+
+    	       'Protein Name' => "$CGI_BASE_DIR/Proteomics/BrowseBioSequence.cgi?QUERY_NAME=PR_BrowseBioSequence&biosequence_set_id=$parameters{biosequence_set_id}&biosequence_name_constraint=\%$colnameidx{biosequence_name}V&label_peptide=\%$colnameidx{peptide_sequence}V&display_options=SequenceFormat,ShowExtraProteinProps&apply_action=HIDEQUERY",
+    	       'Protein Name_ATAG' => 'TARGET="Win1"',
+
+               'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
+               'Molecular Function_ATAG' => 'TARGET="WinExt"',
+               'Molecular Function_OPTIONS' => {semicolon_separated_list=>1},
+               'Biological Process' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{biological_process_GO}V",
+               'Biological Process_ATAG' => 'TARGET="WinExt"',
+               'Biological Process_OPTIONS' => {semicolon_separated_list=>1},
+               'Cellular Component' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{cellular_component_GO}V",
+               'Cellular Component_ATAG' => 'TARGET="WinExt"',
+               'Cellular Component_OPTIONS' => {semicolon_separated_list=>1},
+               'InterPro Protein Domain' => "http://www.ebi.ac.uk/interpro/IEntry?ac=\%$colnameidx{interpro_protein_domain_GO}V",
+               'InterPro Protein Domain_ATAG' => 'TARGET="WinExt"',
+               'InterPro Protein Domain_OPTIONS' => {semicolon_separated_list=>1},
+  );
+
+
+  #### Define columns that should be hidden in the output table
+  %hidden_cols = ('accessor' => 1,
+                  'molecular_function_GO' => 1,
+                  'biological_process_GO' => 1,
+                  'cellular_component_GO' => 1,
+                  'interpro_protein_domain_GO' => 1,
+  );
+
+
+  #########################################################################
+  #### If QUERY or VIEWRESULTSET was selected, display the data
+  if ($apply_action =~ /QUERY/i || $apply_action eq "VIEWRESULTSET") {
+
+    #### If the action contained QUERY, then fetch the results from
+    #### the database
+    if ($apply_action =~ /QUERY/i) {
+
+      #### Show the SQL that will be or was executed
+      $sbeams->display_sql(sql=>$sql) if ($show_sql);
+
+      #### Fetch the results from the database server
+      $sbeams->fetchResultSet(sql_query=>$sql,
+        resultset_ref=>$resultset_ref);
+
+      #### Store the resultset and parameters to disk resultset cache
+      $rs_params{set_name} = "SETME";
+      $sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
+        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters);
+    }
+
+    #### Display the resultset
+    $sbeams->displayResultSet(rs_params_ref=>\%rs_params,
+        url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
+        max_widths=>\%max_widths,resultset_ref=>$resultset_ref,
+        column_titles_ref=>\@column_titles,
+        base_url=>$base_url,query_parameters_ref=>\%parameters,
+    );
+
+
+    #### Display the resultset controls
+    $sbeams->displayResultSetControls(rs_params_ref=>\%rs_params,
+        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters,
+        base_url=>$base_url);
+
+
+    #### Set some default plotting settings based on type
+    if ($parameters{display_options} =~ /GroupCount/) {
+      $rs_params{rs_plot_type} = 'xypoints' unless ($rs_params{rs_plot_type});
+      $rs_params{rs_columnA} = 0 unless (defined($rs_params{rs_columnA}) && $rs_params{rs_columnA} >= 0);
+      $rs_params{rs_columnB} = 1 unless (defined($rs_params{rs_columnB}) && $rs_params{rs_columnB} >= 0);
+    } elsif ($parameters{display_options} =~ /GroupProtein/) {
+      $rs_params{rs_plot_type} = 'histogram' unless ($rs_params{rs_plot_type});
+      $rs_params{rs_columnA} = 4 unless (defined($rs_params{rs_columnA}) && $rs_params{rs_columnA} >= 0);
+    } else {
+      $rs_params{rs_plot_type} = 'histogram' unless ($rs_params{rs_plot_type});
+      $rs_params{rs_columnA} = 7 unless (defined($rs_params{rs_columnA}) && $rs_params{rs_columnA} >= 0);
+    }
+
+    #### Display a plot of data from the resultset
+    $sbeams->displayResultSetPlot(
+      rs_params_ref=>\%rs_params,
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
+    );
+
+
+  #### If QUERY was not selected, then tell the user to enter some parameters
+  } else {
+    if ($sbeams->invocation_mode() eq 'http') {
+      print "<H4>Select parameters above and press QUERY</H4>\n";
+    } else {
+      print "You need to supply some parameters to contrain the query\n";
+    }
+  }
+
+
+} # end handle_request
+
+
+
+###############################################################################
+# evalSQL
+#
+# Callback for translating Perl variables into their values,
+# especially the global table variables to table names
+###############################################################################
+sub evalSQL {
+  my $sql = shift;
+
+  return eval "\"$sql\"";
+
+} # end evalSQL
+
