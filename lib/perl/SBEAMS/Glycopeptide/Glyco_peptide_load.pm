@@ -502,6 +502,7 @@ sub insert_peptide_search {
   my $self = shift;
   my %args = @_;
   my $err;
+
   for my $opt ( qw( peptide_file sample_id ipi_version_id build_id ) ) {
     $err = ( $err ) ? $err . ', ' . $opt : $opt if !defined $args{$opt};
   }
@@ -609,7 +610,7 @@ sub insert_observed_peptides {
     } elsif ( $obs->[$heads->{prob}] < 0.5 ) { # detection probability too low
       print STDERR "Low probability: $obs->[$heads->{prob}]\n";
       next;
-    } elsif ( grep /$obs->[$heads->{Peptide}]/,  @$pepseqs ) { # Duplicato
+    } elsif ( grep /^$obs->[$heads->{Peptide}]$/,  @$pepseqs ) { # Duplicato
       # FIXME - should we update here?
       # FIXME - Case sensitive?
       print STDERR "Duplicate detected: $obs->[$heads->{Peptide}]\n";
@@ -621,7 +622,7 @@ sub insert_observed_peptides {
 
     my $calc_mass = $module->calculatePeptideMass( sequence => $clean_pep ); 
 
-    my ( $delta, $exp_mass, $scan, $charge, $mass2ch, $mh_plus );
+    my ( $delta, $exp_mass, $scan, $charge, $mass2ch, $mh_plus, $motif_score );
     if ( $self->{_format} eq 'interact-tsv' ) {
 
 #      for my $h (keys( %$heads ) ) { print "head is $h, idx is $heads->{$h}, val is $obs->[$heads->{$h}]\n"; }
@@ -646,6 +647,13 @@ sub insert_observed_peptides {
       $exp_mass = ($mh * $charge) - ( $charge - 1 );
       $mass2ch = $obs->[$heads->{'MH+'}];
       $mh_plus = $obs->[$heads->{'MH+'}] + 1.0078;
+      if ( $args{gygi_ascore} ) {
+        $motif_score = $args{gygi_ascore}->{$obs->[$heads->{Peptide}]};
+        if ( !$motif_score || $motif_score < 10 ) {
+          $obs->[$heads->{Peptide}] =~ s/\*/\&/g;
+        }
+#        print STDERR "Ascore is $motif_score for $obs->[$heads->{Peptide}]\n";
+      }
       # scan and delta are not defined
     }
 
@@ -667,6 +675,7 @@ sub insert_observed_peptides {
                                         n_obs => $obs->[$heads->{n_obs}],
                                  charge_state => $charge,
                                  peptide_mass => $calc_mass,
+                                  motif_score => $motif_score,
                                      delta_cn => $obs->[$heads->{dCn}],
               };
 
@@ -946,6 +955,8 @@ sub read_tsv {
   print "Processing peptides\n";
   while(<DATA>) {
     chomp;
+    next if $_ =~ /^\s*$/;
+
     my @tokens = split( /\t/, $_, -1);
     for my $t ( @tokens ) {
       $t =~ s/^\s*\"*//;

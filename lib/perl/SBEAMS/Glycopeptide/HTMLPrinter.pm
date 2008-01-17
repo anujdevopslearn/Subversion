@@ -61,9 +61,20 @@ sub displayPhosphopepHeader {
   use LWP::UserAgent;
   use HTTP::Request;
   my $ua = LWP::UserAgent->new();
+  my $organism_param = $sbeams->getSessionAttribute( key => 'phosphopep_organism' ) || '';
+  if ( $organism_param ) {
+    $log->debug( "org param is $organism_param" );
+    $organism_param = '?ppep_organism=' . $organism_param;
+  } elsif ( $self->{_build_id} ) {
+    $log->debug( "Halla" );
+  }
+
+
+  $log->debug( "ppep org is $organism_param" );
 #  my $skinLink = 'http://www.phosphopep.org/newlook/';
   my $skinLink = 'http://www.phosphopep.org';
-  my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index.dbbrowse.php" ) );
+  my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index2.dbbrowse.php${organism_param}" ) );
+
   my @page = split( "\r", $response->content() );
   my $skin = '';
   my $cnt = 0;
@@ -76,8 +87,13 @@ sub displayPhosphopepHeader {
       $line =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
     } elsif ( $line =~ /PSCORE_CUTOFF/ ) {
       $line =~ s/\<\!-- PSCORE_CUTOFF --\>/$cutoff_widget/;
-    } elsif ( $line =~ /\<BODY / ) {
-      $line =~ s/(\<BODY )/${1} ONLOAD="$loadscript" self.focus/;
+    } elsif ( $line =~ /\<BODY /i ) {
+      if ( $line =~ /ONLOAD=/ ) {
+#        <BODY  ONLOAD='set_organism("$ppep_organism");'>
+        $line =~ s/(ONLOAD=')/${1}$loadscript;self.focus();/;
+      } else {
+        $line =~ s/(\<BODY )/${1} ONLOAD="$loadscript;self.focus();/;
+      }
     } elsif ( $line =~ /td\s+\{font/ ) {
   #    next;
     } elsif ( $line =~ /body\s+\{font/ ) {
@@ -174,7 +190,7 @@ sub displayUnipepHeader {
   my $ua = LWP::UserAgent->new();
 #  my $skinLink = 'http://www.unipep.org/newlook/';
   my $skinLink = 'http://www.unipep.org';
-  my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index.dbbrowse.php" ) );
+  my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index2.dbbrowse.php" ) );
   my @page = split( "\r", $response->content() );
   my $skin = '';
   my $cnt = 0;
@@ -475,7 +491,7 @@ sub display_page_header {
 	<!------- Header ------------------------------------------------>
 	<a name="TOP"></a>
 	<tr>
-	  <td bgcolor="$BARCOLOR"><a href="http://db.systemsbiology.net/"><img height=64 width=64 border=0 alt="ISB DB" src="$HTML_BASE_DIR/images/dbsmltblue.gif"></a><a href="https://db.systemsbiology.net/sbeams/cgi/main.cgi"><img height=64 width=64 border=0 alt="SBEAMS" src="$HTML_BASE_DIR/images/sbeamssmltblue.gif"></a></td>
+	  <td bgcolor="$BGCOLOR"><a href="http://db.systemsbiology.net/"><img height=64 width=64 border=0 alt="ISB DB" src="$HTML_BASE_DIR/images/dbsmltblue.gif"></a><a href="https://db.systemsbiology.net/sbeams/cgi/main.cgi"><img height=64 width=64 border=0 alt="SBEAMS" src="$HTML_BASE_DIR/images/sbeamssmltblue.gif"></a></td>
 	  <td align="left" $header_bkg><H1>$DBTITLE - $DBVERSION</H1></td>
 	</tr>
 
@@ -490,7 +506,7 @@ sub display_page_header {
     if ($navigation_bar eq "YES") {
       print qq~
 	<!------- Button Bar -------------------------------------------->
-	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
+	<tr><td bgcolor="$BGCOLOR" align="left" valign="top">
 	<table border=0 width="120" cellpadding=2 cellspacing=0>
 
 	<tr><td><a href="$CGI_BASE_DIR/main.cgi">$DBTITLE Home</a></td></tr>

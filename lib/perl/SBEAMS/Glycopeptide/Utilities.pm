@@ -1,6 +1,6 @@
 package SBEAMS::Glycopeptide::Utilities;
 
-use SBEAMS::Connection qw( $log );
+use SBEAMS::Connection qw( $log $q );
 use SBEAMS::Glycopeptide::Tables;
 
 use constant HYDROGEN_MASS => 1.0078;
@@ -217,75 +217,96 @@ sub get_current_build_name {
 
 }
   
-# Stubs
 sub get_current_build {
   my $self = shift;
-  my %args = @_;
 
-  $log->debug( "getting current build, yo" );
   # Check self for value
-  return $self->{_build_id} if ( $self->{_build_id} ); 
-  $log->debug( "didn't have one cached" );
-
+  if ( $self->{_build_id} ) {
+    $log->debug( "Returning cached ID" );
+    return $self->{_build_id} 
+  }
+  $log->printStack('debug');
 
   my $sbeams = $self->getSBEAMS();
+
   if ( $sbeams->isGuestUser() ) {
-  $log->debug( "getting current build, as guest" );
-
-  # Unset session build
-  $sbeams->setSessionAttribute( key   => 'unipep_build_id',
-                                value => '' );
-  # Get database default?
-    ( $build_id ) = $sbeams->selectrow_array( <<"    END" );
-    SELECT unipep_build_id FROM $TBGP_UNIPEP_BUILD WHERE is_default  = 1
-    END
-
-    # Last option
-    $build_id ||= 1;
-
-    $self->set_current_build( build_id => $build_id );
-    $log->debug( "setting current build to $build_id as guest" );
-    return $build_id 
+    $log->debug( "getting current build as guest" );
   }
 
-  my $sbeams = $self->getSBEAMS();
+  my $passed_org = $q->param( 'organism' );
 
-  my $build_id = $sbeams->getSessionAttribute( key   => 'unipep_build_id' );
-  $log->debug( "Got current build to $build_id from session" ) if $build_id;
-
-  if ( $build_id ) {
-    $self->set_current_build( build_id => $build_id );
-    return $build_id 
-  }
+  # New shortcut, implemented so that users couldn't hijack build_id param.
+  if ( $passed_org ) {
+    $build_id = $self->org_to_build( org => $passed_org );
+    $log->debug( "Build is $build_id by organism $passed_org" );
+    $sbeams->setSessionAttribute( key   => 'phosphopep_organism',
+                                  value => $passed_org );
+  } 
   
+  # This order allows passed organism to short-circuit cookie value
+  $build_id ||= $sbeams->getSessionAttribute( key => 'unipep_build_id' );
+
   # Get database default?
-  ( $build_id ) = $sbeams->selectrow_array( <<"  END" );
-  SELECT unipep_build_id FROM $TBGP_UNIPEP_BUILD WHERE is_default  = 1
-  END
-  $log->debug( "Got default build to $build_id " ) if $build_id;
+  $build_id ||= $self->get_default_build();
 
   # Last option
   $build_id ||= 1;
-  $log->debug( "Just set build_id to 1: $build_id " ) if $build_id;
 
-  $self->set_current_build( build_id => $build_id );
-  return $build_id 
+  return $self->set_current_build( build_id => $build_id );
+}
+
+sub get_default_build {
+  my $self = shift;
+  my $sbeams = $self->getSBEAMS();
+
+  # Only look in accessible projects
+  my $pr_string = $self->get_accessible_project_string();
+  return undef unless $pr_string;
+
+  my $build_id;
+  ( $build_id ) = $sbeams->selectrow_array( <<"  END" );
+  SELECT unipep_build_id 
+  FROM $TBGP_UNIPEP_BUILD 
+  WHERE is_default = 1
+  AND project_id IN ( $pr_string );
+  END
+
+  $log->debug( "Returning default build_id $build_id" );
+  return $build_id;
+}
+
+sub org_to_build {
+  my $self = shift;
+  my %args = @_;
+  if ( !$args{org} && !$args{build_id} ) {
+    die "Must pass org or build_id to org_to_build";
+  }
+  my %org2build = ( dme => 1,
+                    sce => 7 );
+  my %build2org = ( 7 => 'sce',
+                    1 => 'dme' );
+
+  if ( $args{org} ) {
+    return $org2build{$args{org}};
+  } else {
+    return $build2org{$args{build_id}};
+  }
 }
 
 sub set_current_build {
   my $self = shift;
   my %args = @_;
 
-  # Nothing to set
-  return unless $args{build_id};
-  # Nothing to set
+  return undef unless $args{build_id};
 
   unless ( $self->is_valid_build( build_id => $args{build_id} ) ) {
     $log->error( "invalid build ID specified" );
-    return '';
+    return undef;
   }
   
-  # Make sure we have an sbeams object
+  $log->debug( "Build $build_id is valid" );
+
+  # Get an sbeams object
   my $sbeams = $self->getSBEAMS();
 
   # Cache in the object
@@ -295,7 +316,7 @@ sub set_current_build {
   $sbeams->setSessionAttribute( key   => 'unipep_build_id',
                                 value => $args{build_id} );
 
-  return 1;
+  return $args{build_id};
 }
 
 sub get_current_organism {
@@ -317,8 +338,6 @@ sub get_current_organism {
   WHERE unipep_build_id = $build_id
   END
   my ( $organism ) = $sbeams->selectrow_array( $sql );
-  $log->debug( "Org is $organism" );
-  $log->debug( "SQL is \n" . $sbeams->evalSQL( $sql ) );
 
   return $organism || 'Human';
 
@@ -329,26 +348,41 @@ sub is_valid_build {
   my $self = shift;
   my %args = @_;
 
+  $log->debug( "build_id passed to is_valid $args{build_id}" );
   # Did we get a reasonable value?
   if ( !$args{build_id} ) {
     $log->error( "Must pass build_id as a named param" );
-    return 0;
+    return undef;
   } elsif ( $args{build_id} !~ /^\d+$/ ) {
     $log->error( "build_id must be a number" );
-    return 0;
+    return undef;
   }
 
-  # Make sure we have an sbeams object
+  # Get an sbeams object
   my $sbeams = $self->getSBEAMS();
 
+  # Only look in accessible projects
+  my $pr_string = $self->get_accessible_project_string();
+  return undef unless $pr_string;
+
   # See if it is in the database
-  ( $build_id ) = $sbeams->selectrow_array( <<"  END" );
+  my $is_valid = 0;
+  ( $is_valid ) = $sbeams->selectrow_array( <<"  END" );
   SELECT COUNT(*) 
   FROM $TBGP_UNIPEP_BUILD 
   WHERE unipep_build_id = $args{build_id} 
+  AND project_id IN ( $pr_string );
   END
 
-  return $build_id;
+  return 1;
+}
+
+sub get_accessible_project_string {
+  my $self = shift;
+  my $sbeams = $self->getSBEAMS();
+  my @projects = $sbeams->getAccessibleProjects();
+  return( join ",", @projects );
+
 }
 
 sub get_current_motif_type {

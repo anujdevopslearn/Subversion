@@ -184,6 +184,11 @@ sub Authenticate {
       } elsif ( $allow_anonymous_access ) {
         $log->info( "allowing guest authentication" );
         $current_username = 'guest';
+
+	      $http_header = $self->createAuthHeader(
+            username => $current_username,
+            session_cookie => $session_cookie,
+	          );
       }
     }
 

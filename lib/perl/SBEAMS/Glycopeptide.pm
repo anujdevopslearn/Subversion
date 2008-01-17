@@ -66,6 +66,7 @@ sub getKeggOrganism {
                                   ( $organism =~ /Saccaromyces/i ) ? 'sce' : 
                                   ( $organism =~ /Yeast/i ) ? 'sce' : 
                                   ( $organism =~ /Human/i ) ? 'hsa' :
+                                  ( $organism =~ /C elegans/i ) ? 'cel' :
                                   ( $organism =~ /Mouse/i ) ? 'mmu' : 'hsa';
   return 'hsa';
 }
