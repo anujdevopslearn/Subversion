@@ -16,21 +16,21 @@ use Getopt::Long;
 use FindBin;
 
 use lib "$FindBin::Bin/../../lib/perl";
-use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id 
 $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
 $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
-@MENU_OPTIONS $modification_helper);
+@MENU_OPTIONS );
 
 use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
-use SBEAMS::Connection::TabMenu;
+use SBEAMS::Connection::DataTable;
 
 use SBEAMS::Glycopeptide;
-use SBEAMS::Glycopeptide::Tables;
 use SBEAMS::Glycopeptide::Settings;
+use SBEAMS::Glycopeptide::Tables;
+
 use SBEAMS::PeptideAtlas::Tables;
-use SBEAMS::PeptideAtlas::ModificationHelper;
 
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::Glycopeptide;
@@ -88,41 +88,22 @@ exit(0);
 ###############################################################################
 sub main 
 {
-    #### Do the SBEAMS authentication and exit if a username is not returned
-    exit unless ($current_username = $sbeams->Authenticate(
-        allow_anonymous_access=>1,
-    ));
-      
+  # Attempt authentication and exit if a username is not returned
+  my $user = $sbeams->Authenticate( allow_anonymous_access => 1 ) || exit;
 
-    #### Read in the default input parameters
-    my %parameters;
+  # Read in the default input parameters
+  my %params;
 
-    $parameters{uploaded_file_not_saved} = 1;
+  $params{uploaded_file_not_saved} = 1;
 
-    $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
+  $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%params);
 
-    $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+  $sbeams->processStandardParameters(parameters_ref=>\%params);
 
-    #$sbeams->printDebuggingInfo($q);
-
-    #### Decide what action to take based on information so far
-    if ($parameters{action} eq "???") 
-    {
-        # Some action
-    } else 
-    {
-          $sbeamsMOD->printPageHeader();
-    print $sbeams->getGifSpacer(800);
-
-        handle_request(ref_parameters=>\%parameters);
-
-        $sbeamsMOD->display_page_footer();
-    }
-
-    #### Finish the upper part of the page and go begin the full-width
-    #### data portion of the page
-    $sbeams->display_page_footer(close_tables=>'YES',
-        separator_bar=>'YES',display_footer=>'NO');
+  my $project_id = $sbeams->getCurrent_project_id();
+  $sbeamsMOD->display_page_header(project_id => $project_id);
+  handle_request(ref_parameters=>\%params);
+  $sbeamsMOD->display_page_footer();
 
 } # end main
 
@@ -133,6 +114,8 @@ sub main
 sub handle_request 
 {
   my %args = @_;
+  my $build_id = $sbeamsMOD->get_current_build();
+  my $cutoff = $sbeamsMOD->get_current_prophet_cutoff();
 
   #### Process the arguments list
   my $ref_parameters = $args{'ref_parameters'} || die "ref_parameters not passed";
@@ -144,11 +127,13 @@ sub handle_request
 
   #$sbeams->printUserContext();
 
+  #### Get the HTML to display the tabs
+
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
 
 
-#### Define some variables for a query and resultset
+  #### Define some variables for a query and resultset
   my %resultset = ();
   my $resultset_ref = \%resultset;
   my (%url_cols,%hidden_cols,%max_widths,$show_sql);
@@ -157,26 +142,23 @@ sub handle_request
   my $apply_action    = $params{'action'} || $params{'apply_action'};
   my $TABLE_NAME = $params{'QUERY_NAME'};
 
-  #### If the apply action was to recall a previous resultset, do it
+  # If the apply action was to recall a previous resultset, do it
   my %rs_params = $sbeams->parseResultSetParams(q=>$q);
 
 
-  #########################################################################
-  #### Process all the constraints
+  # Process all the constraints
 
-  my $build_id = $sbeamsMOD->get_current_build();
-  my $cutoff = $sbeamsMOD->get_current_prophet_cutoff();
+  my $lib_id = $params{NIST_library_id};
 
-  unless ( $params{NIST_library_id} && ( $params{NIST_library_id} =~ /^[\d]+$/) ) {
-      $sbeams->reportException(
-          state => 'ERROR',
-          type => 'INSUFFICIENT CONSTRAINTS',
-          message => 'You must select at least one NIST library',
-      );
+  unless ( $lib_id && $lib_id =~ /^[\d]+$/ ) {
+    $sbeams->reportException( state => 'ERROR', 
+                               type => 'INSUFFICIENT CONSTRAINTS',
+                            message => 'You must select at least one NIST library' );
       return;
   }
 
-  #### Build NIST_library_id constraint
+
+  # Build NIST_library_id constraint
   my $NIST_library_where_clause = $sbeams->parseConstraint2SQL(
       constraint_column=>"NL.NIST_library_id",
       constraint_type=>"int_list",
@@ -213,206 +195,122 @@ sub handle_request
         constraint_value=>$params{protein_name_constraint} );
     return if ($protein_name_clause eq '-1');
 
-  my $n_highest_intensity_fragment_ions = $params{n_highest_intensity_fragment_ions} || 25;
-
-  my @column_array;
 
 
-  #### If QUERY or VIEWRESULTSET was selected, display the data
-  if ($apply_action =~ /QUERY/i ) {
-    my $ed = "<td>&nbsp;</td>";
+    ## handle file upload and clause for sql for $parameters{upload_file}
+    my ($biosequence_names_clause_nist, $biosequence_names_clause_pa,
+    $biosequence_names_mapping_join, $biosequence_name_clause_pa);
 
-    print qq~
-    Note: masses are mono-isotopic;  results are from query to
-    PeptideAtlas followed by peptide sequence query to NIST consensus spectra.
-    <br/><br/>
-    ~;
+    my $n_highest_intensity_fragment_ions;
 
-    $modification_helper = new ModificationHelper();
+    my %protein_hash;
 
-    ## look up peptides and nab the NIST spectra with similar peptide sequences
-    $sql = qq~
-    SELECT distinct NLS.NIST_library_spectrum_id, NLS.sequence,
-    NLS.modified_sequence, NLS.protein_name, NLS.mz_exact, NLS.charge,
-    NLS.protein_name_alt, OP.peptide_prophet_score, 1,
-    OP.observed_peptide_sequence, ID.ipi_data_id 
-    FROM $TBAT_NIST_LIBRARY_SPECTRUM NLS
-    LEFT JOIN $TBAT_NIST_LIBRARY NL
-    ON (NLS.NIST_library_id = NL.NIST_library_id)
-    LEFT JOIN $TBGP_OBSERVED_PEPTIDE OP
-    ON ( OP.matching_sequence = NLS.sequence)
-    LEFT JOIN $TBGP_OBSERVED_TO_IPI OTI
-    ON (OP.observed_peptide_id = OTI.observed_peptide_id)
-    LEFT JOIN $TBGP_IPI_DATA ID
-    ON ( OTI.ipi_data_id = ID.ipi_data_id)
-    JOIN $TBAT_NIST_SPECTRUM_TYPE NST
-    ON (NST.NIST_spectrum_type_id = NLS.NIST_spectrum_type_id)
-    JOIN $TBGP_PEPTIDE_SEARCH PS ON PS.peptide_search_id = OP.peptide_search_id
-    JOIN $TBGP_BUILD_TO_SEARCH BTS ON BTS.search_id = PS.peptide_search_id
-    WHERE peptide_prophet_score >= $cutoff
-    AND BTS.build_id = $build_id
-    $NIST_library_where_clause
-    $peptide_sequence_clause
-    $best_probability_clause
-    $peptide_length_clause
-    $protein_name_clause
-    AND NST.NIST_spectrum_type_name='Consensus'
-    ~;
-
-#           $log->debug( $sql );
-    my @rows = $sbeams->selectSeveralColumns($sql);
-        
-    my $max_cnt = 400;
-    foreach my $row (@rows) {
-    my ($nlsid, $seq, $mod_seq, $prot, $precur_mz, $pep_chg, 
-    $alt_name, $prob, $n_obs, $obs_seq, $ipi_id) = @{$row};
-        
-    $obs_seq = substitute_mods( $obs_seq );
-    unless ( $obs_seq eq $mod_seq ) {
-      $log->debug ( "skipping because obs is $obs_seq, seq is $mod_seq" );
-      next;
-    }
+    my $n_highest_intensity_fragment_ions = $params{n_highest_intensity_fragment_ions} || 25;
+    my @column_array;
 
 
-    my $sql2 = qq~
-    SELECT NLSP.mz,
-    NLSP.relative_intensity, NLSP.ion_label, NLSP.charge
-    FROM $TBAT_NIST_LIBRARY_SPECTRUM_PEAK NLSP
-    WHERE NIST_library_spectrum_id = '$nlsid'
-    AND ( NLSP.ion_label IS NOT NULL 
-    AND NLSP.ion_label <> ''
-    AND NLSP.ion_label NOT LIKE '%-%' ) 
-    ORDER BY NLSP.relative_intensity DESC
-    ~;
-    
-    my @rows2 = $sbeams->selectSeveralColumns($sql2);
-        
-    print qq~
-    <table border=2>
-    <tr>
-    <th>protein</th> <th>alt name</th>
-    <th>CID precursor m/z</th> <th>CID charge</th> <th>Prob</th> <th>n obs</th>
-    <th>b<sup>+</sup></th> <th>#</th> <th>AA</th> <th>#</th>
-    <th>y<sup>+</sup></th> <th>y<sup>2+</sup></th>
-    <th>b<sup>+</sup> NIST</th><th>b<sup>+</sup> NIST rel. inten</th>
-    <th>y<sup>+</sup> NIST</th><th>y<sup>+</sup> NIST rel. inten</th>
-    <th>y<sup>+2</sup> NIST</th><th>y<sup>+</sup> NIST rel. inten</th>
-    </tr>
-    ~;
-        
-    $prob = sprintf("%.2f", $prob);
+    #########################################################################
+    #### If QUERY or VIEWRESULTSET was selected, display the data
+    if ($apply_action =~ /QUERY/i ) 
+    {
+        my $ed = "<td>&nbsp;</td>";
 
-    my @masses;
-        
-    if ($mod_seq) {
-      @masses = $modification_helper->getMasses($mod_seq);
-    } else {
-      @masses = $modification_helper->getMasses($seq);
-    }
+        print qq~
+            Note: masses are mono-isotopic;  results are from query to
+            Glycopeptide followed by peptide sequence query to NIST consensus spectra.
+            <br/><br/>
+        ~;
 
-                my @aa = split(//,$seq);
-                my @b1 = getB1FragMassArray(masses_ref => \@masses);
-                my @y1 = getY1FragMassArray(masses_ref => \@masses);
-                my @y2 = getY2FragMassArray( y1_ref => \@y1 );
-                my @b1_nist = initArray( li => $#aa);
-                my @y1_nist = initArray( li => $#aa);
-                my @y2_nist = initArray( li => $#aa);
-                my @b1_nist_inten = initArray( li => $#aa);
-                my @y1_nist_inten = initArray( li => $#aa);
-                my @y2_nist_inten = initArray( li => $#aa);
-               
-                print qq~
-                <tr><td>$prot</td><td>$alt_name</td>
-                <td>$precur_mz</td><td>$pep_chg</td><td>$prob</td><td>$n_obs</td>
+
+        ## look up PA peptides and nab the NIST spectra with similar peptide sequences
+
+
+            $sql = qq~
+            SELECT distinct NLS.NIST_library_spectrum_id, NLS.sequence,
+            NLS.modified_sequence, NLS.protein_name, NLS.mz_exact, NLS.charge,
+            NLS.protein_name_alt, OP.peptide_prophet_score, 1,
+            OP.observed_peptide_sequence, ID.ipi_data_id 
+            FROM $TBAT_NIST_LIBRARY_SPECTRUM NLS
+            LEFT JOIN $TBAT_NIST_LIBRARY NL
+            ON (NLS.NIST_library_id = NL.NIST_library_id)
+            LEFT JOIN $TBGP_OBSERVED_PEPTIDE OP
+            ON ( OP.matching_sequence = NLS.sequence)
+            LEFT JOIN $TBGP_OBSERVED_TO_IPI OTI
+            ON (OP.observed_peptide_id = OTI.observed_peptide_id)
+            LEFT JOIN $TBGP_IPI_DATA ID
+            ON ( OTI.ipi_data_id = ID.ipi_data_id)
+            JOIN $TBAT_NIST_SPECTRUM_TYPE NST
+            ON (NST.NIST_spectrum_type_id = NLS.NIST_spectrum_type_id)
+            JOIN $TBGP_PEPTIDE_SEARCH PS ON PS.peptide_search_id = OP.peptide_search_id
+            JOIN $TBGP_BUILD_TO_SEARCH BTS ON BTS.search_id = PS.peptide_search_id
+            WHERE peptide_prophet_score >= $cutoff
+            AND BTS.build_id = $build_id
+            $NIST_library_where_clause
+            $peptide_sequence_clause
+            $best_probability_clause
+            $peptide_length_clause
+            $protein_name_clause
+            AND NST.NIST_spectrum_type_name='Consensus'
+            ~;
+
+            $log->debug( "Going to exec SQL" );
+            $log->debug( $sbeams->evalSQL( $sql ) );
+            my @rows = $sbeams->selectSeveralColumns($sql);
+            $log->debug( "SQL done, returned " . scalar(@rows) );
+
+            my @display_rows = ( [qw( Protein Sequence Chg q1_mz q3_mz Intensity Ion SSRCalc n_obs Spectrum ) ] );
+            my $idx = 0;
+            foreach my $row (@rows) {
+                $idx++;
+                $log->debug( "processed $idx rows" ) unless $idx % 10;
+                my ($nlsid, $seq, $mod_seq, $prot, $precur_mz, $pep_chg, 
+                $alt_name, $prob, $n_obs, $n_samples, $n_prot_map,
+                $n_gen_map, $ssrcalc ) = @{$row};
+
+                my $sql2 = qq~
+                SELECT top $n_highest_intensity_fragment_ions NLSP.mz,
+                NLSP.relative_intensity, NLSP.ion_label, NLSP.charge
+                FROM $TBAT_NIST_LIBRARY_SPECTRUM_PEAK NLSP
+                WHERE NIST_library_spectrum_id = '$nlsid'
+                ORDER BY NLSP.relative_intensity DESC
                 ~;
-                
 
-                my $fragment_cnt = 1;
-                foreach my $row2 (@rows2) {
+                my @rows2 = $sbeams->selectSeveralColumns($sql2);
+                my $spec = "<a href='$CGI_BASE_DIR/$SBEAMS_SUBDIR/ShowOneSpectrum?NIST_library_spectrum_id=$nlsid' target='_blank'><b>SHOW SPECTRUM</b></a>";
+                my $spec = "<A HREF='ShowOneSpectrum?NIST_library_spectrum_id=$nlsid' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='Show spectrum'></A>";
 
-                    my ($frag_mz, $inten, $ion_label, $frag_chg)
-                    = @{$row2};
-
-                    ## parse ion label to store in parallel arrays
-                    ## will print these alongside the fragment ion m/z calculated
-                    ## from sequence
-                    if ( $ion_label =~ /y(\d+)(.*)/)
-                    {
-                        my $ind = $1;
-
-                        my $rem = $2;
-
-                        ## ignore ions with -I and -num or i
-                        unless ( $rem =~ /(.*)[\-i](.*)/ )
-                        {
-                            if ($frag_chg == 1)
-                            {
-                                $y1_nist[$#aa - $ind + 1] = $frag_mz;
-                                $y1_nist_inten[$#aa - $ind + 1] = $inten;
-                            } elsif ( $frag_chg == 2)
-                            {
-                                $y2_nist[$#aa - $ind + 1] = $frag_mz;
-                                $y2_nist_inten[$#aa - $ind + 1] = $inten;
-                            }
-                        }
-                    } elsif ( $ion_label =~ /b(\d+)(.*)/)
-                    {
-                        my $ind = $1;
-
-                        my $rem = $2;
-
-                        ## ignore ions with -I and -num or i
-                        if ($rem !~ /(.*)[\-i](.*)/) {
-                            if ($frag_chg == 1) {
-                                $b1_nist[$ind - 1] = $frag_mz;
-                                $b1_nist_inten[$ind - 1] = $inten;
-                            }
-                        } else {
-                        }
-                    }
-                    if ( $fragment_cnt++ >= $n_highest_intensity_fragment_ions ) {
-                      $log->debug( "frag cnt is at $fragment_cnt" );
-                      last;
-                    }
+                my $maxrows = 4;
+                my $idx = 0;
+                for my $nist ( @rows2 ) {
+                  $ssrcalc = sprintf( "%0.2f", $ssrcalc );
+                  $nist->[0] = sprintf( "%0.3f", $nist->[0] );
+                  $precur_mz = sprintf( "%0.3f", $precur_mz );
+                  push @display_rows, [ $prot, $mod_seq, $pep_chg, $precur_mz, $nist->[0], $nist->[1], $nist->[2], $ssrcalc, $n_obs, $spec ] if $nist->[2];
+                  last if $idx >= $maxrows;
+                  $idx++;
                 }
-
-                ## replace @aa with modified sequence array if possible
-                @aa = $modification_helper->getModifiedAAs($mod_seq) if ($mod_seq);
-
-                for (my $i=0; $i <= $#aa; $i++)
-                {
-                    my $bn = $i + 1;
-                    my $yn = $#aa - $i + 1;
-                    print "<tr> $ed $ed $ed $ed $ed $ed" if ($i > 0);
-                    print qq~
-                    <td>$b1[$i]</td> <td>$bn</td> <td>$aa[$i]</td> <td>$yn</td> <td>$y1[$yn-1]</td> <td>$y2[$yn-1]</td>
-                    <td>$b1_nist[$i]</td> <td>$b1_nist_inten[$i]</td>
-                    <td>$y1_nist[$i]</td> <td>$y1_nist_inten[$i]</td>
-                    <td>$y2_nist[$i]</td> <td>$y2_nist_inten[$i]</td>
-                    </tr>
-                    ~;
-                }
-                print qq~
-                    <tr><td colspan='18' style='text-align:center'>
-                    <a href='$CGI_BASE_DIR/$SBEAMS_SUBDIR/ShowOneSpectrum?NIST_library_spectrum_id=$nlsid' target='_blank'><b>SHOW SPECTRUM</b></a></td></tr>
-                ~;
-                print "</table>";
-                print "<br/>";
-                last if !$max_cnt-- ;
             }
 
+#            my $html = $sbeamsMOD->encodeSectionTable(  header => 1, width => '600', align  => [qw(left left center right right right center right center center)], rows => \@display_rows, rows_to_show => 50, chg_bkg_idx => 1, nowrap => [1..10], max_rows => 500, set_download => 1); print "<TABLE>$html</TABLE>";
+            my $table = new SBEAMS::Connection::DataTable( border => 1 );            
+            for my $row ( @display_rows ) {
+              $table->addRow( $row );
+            }
+            print "$table";
+
+        } else {
 
 
     #### If QUERY was not selected, then tell the user to enter some parameters
-    } else {
-        if ($sbeams->invocation_mode() eq 'http') 
-        {
+        if ($sbeams->invocation_mode() eq 'http') {
             print "<H4>Select parameters above and press QUERY</H4>\n";
         } else 
         {
             print "You need to supply some parameters to contrain the query\n";
         }
-    }
+
+      }
+
 
     ###################################################################
     # getB1FragMassArray - get array of frag masses for b+
@@ -537,15 +435,4 @@ sub handle_request
     }
 
 } # end handle_request
-
-sub substitute_mods {
-  my $seq = shift;
-  $seq =~ s/S\*/S\[167\]/g;
-  $seq =~ s/S\&/S\[167\]/g;
-  $seq =~ s/T\*/T\[181\]/g;
-  $seq =~ s/T\&/T\[181\]/g;
-  $seq =~ s/Y\*/Y\[243\]/g;
-  $seq =~ s/Y\&/Y\[243\]/g;
-  return $seq;
-}
 

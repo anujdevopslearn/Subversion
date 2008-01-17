@@ -74,7 +74,7 @@ $|++;
   if ( $params->{apply_action} eq 'list_pathways' ) {
     $content = list_pathways( $params );
     # Print cgi headers
-    $glyco->printPageHeader(); # onload => 'hideTimerInfo()' );
+    $glyco->printPageHeader( onload => 'hideTimerInfo()' );
     #  $sbeams->printUserContext();
     print $content;
     $glyco->printPageFooter( close_tables=>'NO');
@@ -82,7 +82,7 @@ $|++;
   } elsif ( $params->{apply_action} eq 'pathway_details' ) {
 
     # Until caching is available, will print out as we go.
-    $glyco->printPageHeader( onload => 'hideTimerInfo();' );
+    $glyco->printPageHeader( onload => 'hideTimerInfo()' );
     $content = pathway_details( $params );
     print $content;
     $glyco->printPageFooter( close_tables=>'NO');
@@ -224,7 +224,7 @@ sub pathway_details {
   $log->debug( parseTime( $t1, $t0, "seconds to fetch genes for $params->{path_def}" ) );
 
   if ( $tot ) {
-    print "* Found $tot genes in pathway, looking up data in Unipep<BR>\n";
+    print "* Found $tot genes in pathway, looking up peptide data <BR>\n";
   } else {
     print "* Found $tot genes in pathway - quitting \n";
     return;
@@ -319,9 +319,12 @@ sub pathway_details {
         }
         
         push @links, "peptideSearch.cgi?search_type=gene_name;search_term=$gene;action=Show_hits_form;autorun=1";
-      } else {
+      } elsif ( grep /$kegg_organism/, ( qw( hsa mmu ) ) ) {
         my $gene = join( '%3B', @genes ); # @{$entry2genes{$en}} );
         push @links, "peptideSearch.cgi?search_type=GeneID;search_term=$gene;action=Show_hits_form";
+      } else {
+        my $gene = join( '%3B', @genes ); # @{$entry2genes{$en}} );
+        push @links, "peptideSearch.cgi?search_type=accession;search_term=$gene;action=Show_hits_form;autorun=1";
       }
 
       push @text, "Gene ID(s) " . join( ", ", @genes );
@@ -364,8 +367,9 @@ sub getExpressionValues {
   
   my $sql = '';
 
+  my $gene_string = join( ", ", @{$gene_list} );
   if ( $kegg_organism eq  'dme' ) {
-    my $gene_string = '';
+    $gene_string = '';
     my $delim = ' ';
     for my $gene ( @{$gene_list} ) {
       my $tmp_gene = $gene;
@@ -386,8 +390,7 @@ sub getExpressionValues {
      WHERE ( $gene_string )
        AND peptide_prophet_score >= $cutoff 
     END
-  } else {
-    my $gene_string = join( ", ", @{$gene_list} );
+  } elsif ( $kegg_organism eq 'hsa' || $kegg_organism eq 'mmu' ) {
     $sql =<<"    END";
     SELECT entrez_id, ipi_accessions, 'nada', 'nada', 1
       FROM dcampbel.dbo.ipi_xrefs IX JOIN $TBGP_IPI_DATA ID 
@@ -399,7 +402,23 @@ sub getExpressionValues {
      WHERE entrez_id IN ($gene_string)
        AND peptide_prophet_score >= $cutoff 
     END
+  } else {
+    $sql =<<"    END";
+    SELECT ipi_accession_number, synonyms, 'nada', 'nada', 1
+      FROM $TBGP_IPI_DATA ID 
+      JOIN $TBGP_OBSERVED_TO_IPI ITI 
+        ON ITI.ipi_data_id = ID.ipi_data_id
+      JOIN $TBGP_OBSERVED_PEPTIDE IP 
+        ON ITI.observed_peptide_id = IP.observed_peptide_id
+     WHERE ipi_accession_number IN ($gene_string)
+       AND peptide_prophet_score >= $cutoff 
+    END
   }
+  $log->debug( <<"  END" );
+ORG: $kegg_organism
+STR: $gene_string
+SQL: $sql
+  END
 
   # ref to hash keyed by gene_id, points to arrayref of one or more peptides
   my %glyco_hits;
@@ -495,7 +514,8 @@ sub keggOrg2Std {
   return '' unless $korg; 
   my %k2s = ( hsa => 'Human',
               dme => 'Drosophila',
-              sce => 'Yeast',
+      'C elegans' => 'Yeast',
+              cel => 'C elegans',
               mmu => 'Mouse'
             );
   return $k2s{$korg} || '';

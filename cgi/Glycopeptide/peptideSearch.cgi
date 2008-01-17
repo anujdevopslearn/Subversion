@@ -87,7 +87,6 @@ sub main
         # connect_read_only=>1,
         allow_anonymous_access=>1,
     ));
-    $motif_type = $sbeamsMOD->get_current_motif_type();
 
 #    for my $p ( $q->param() ) { $log->info( "$p => " . $q->param( $p ) ); }
 
@@ -103,6 +102,7 @@ sub main
         $sbeams->set_page_message( type => 'Error', msg => 'You must log in to access specified build' );
       }
     }
+    $motif_type = $sbeamsMOD->get_current_motif_type();
 
     ## get project_id to send to HTMLPrinter display
     my $project_id = $sbeams->getCurrent_project_id();
@@ -164,6 +164,8 @@ sub handle_request {
   my $intro = '';
   my %example;
 
+  my $organism = $sbeamsMOD->get_current_organism();
+
   if ( $motif !~ /phospho/ ) {
     $title = "ISB N-glycosylation peptide prediction server";
     $intro =<<"    END";
@@ -187,11 +189,27 @@ sub handle_request {
     $intro =<<"    END";
     Database of observed phosphorylation sites
     END
-    %example = ( name =>'jaguar',
-                 symbol => 'jar',
-                 seq => '%ESNGQVEDSPPVIRNGVNDASPMGPNKLISFSQVVSNIASRYLNKSENVRAQQQALGKQK%',
-                 esc_seq => '%25ESNGQVEDSPPVIRNGVNDASPMGPNKLISFSQVVSNIASRYLNKSENVRAQQQALGKQK%25',
-                 acc => 'FBgn0011225' );
+
+    if ( $organism eq 'Drosophila' ) {
+      %example = ( name =>'jaguar',
+                   symbol => 'jar',
+                   seq => '%ESNGQVEDSPPVIRNGVNDASPMGPNKLISFSQVVSNIASRYLNKSENVRAQQQALGKQK%',
+                   esc_seq => '%25ESNGQVEDSPPVIRNGVNDASPMGPNKLISFSQVVSNIASRYLNKSENVRAQQQALGKQK%25',
+                   acc => 'FBgn0011225' );
+    } elsif (  $organism eq 'Yeast' ) {
+      %example = ( name =>'S000000920',
+                   synonym => 'SHO1',
+                   symbol => 'SHO1',
+                   seq => '%WIDSFSIKGIRPSPLENSLHRAR%',
+                   esc_seq => '%25WIDSFSIKGIRPSPLENSLHRAR%25',
+                   acc => 'YER118C' );
+    } else {
+      %example = ( name =>'flutflut',
+                   symbol => 'flut',
+                   seq => '%ESNGQVEDSPPVIRNGVNDASPMGPNKLISFSQVVSNIASRYLNKSENVRAQQQALGKQK%',
+                   esc_seq => '%25ESNGQVEDSPPVIRNGVNDASPMGPNKLISFSQVVSNIASRYLNKSENVRAQQQALGKQK%25',
+                   acc => 'GOD_1' );
+    }
   }
 	
 	print 
@@ -677,6 +695,7 @@ sub display_detail_form{
   my %args = @_;
 
   if ( $motif_type eq 'phospho' ) {
+    $log->debug( "Phospho express" );
       display_phospho_detail_form( %args );
       return;
   }
@@ -1432,16 +1451,24 @@ sub display_phospho_detail_form{
 									  anno_type => 'protein_name'
 									  );
 
+  my $organism = $sbeamsMOD->get_current_organism();
+
   my $pseq = $glyco_o->seq_info()->seq();
   my $synonym = get_annotation(glyco_o   => $glyco_o, anno_type => 'synonyms' );
-  my $kegglink = getKeggLink( name => $synonym );
   my $ipi_acc = $glyco_o->ipi_accession();
+  my $keggname = ( $organism eq 'Drosophila' ) ? $synonym : $ipi_acc;
+  my $kegglink = getKeggLink( name => $keggname, organism => $organism );
   my $cytolink = getCytoLink( acc => $ipi_acc );
   my $scanlink = getScansiteForm( seq => $pseq, name => $ipi_acc );
   my $mrmlink = "<A HREF='ViewMRMList?NIST_library_id=20&action=QUERY;protein_name_constraint=$ipi_acc'>view transitions</A>";
 
     
-  my $ipi_url = getFlybaseLink( name => $ipi_acc );
+  my $ipi_url = $ipi_acc;
+  if ( $organism eq 'Drosophila' ) {
+    $ipi_url = getFlybaseLink( name => $ipi_acc );
+  } elsif ( $organism eq 'Yeast' ) {
+    $ipi_url = getSGDLink( name => $ipi_acc );
+  }
     
   my $swiss_prot_url = $glyco_o->make_url(term=>$swiss_id, 
                                      dbxref_tag => 'SwissProt'
@@ -1627,6 +1654,17 @@ sub getFlybaseLink {
   return "<A HREF=${base}$args{name} TITLE='View protein info at Flybase'>$args{name}</A>";
 }
 
+sub getSGDLink {
+  my %args = @_;
+  for my $arg ( qw( name ) ) {
+    return "" unless $args{$arg};
+  }
+  my $base = 'http://db.yeastgenome.org/cgi-bin/locus.pl?locus=';
+  
+  return "<A HREF=${base}$args{name} TITLE='View protein info at SGD'>$args{name}</A>";
+
+}
+
 sub getCytoLink {
   my %args = @_;
   for my $arg ( qw( acc ) ) {
@@ -1643,9 +1681,12 @@ sub getKeggLink {
   for my $arg ( qw( name ) ) {
     return "" unless $args{$arg};
   }
-  $args{name} =~ s/(CG\d+)(-P.)*/$1/;
+  if( $args{organism} eq 'Drosophila' ) {
+    $args{name} =~ s/(CG\d+)(-P.)*/$1/;
+    $args{name} = 'Dmel' . $args{name};
+  }
   my $img = "$HTML_BASE_DIR/images/kegg_sm.gif";
-  return "<A HREF=showPathways?ga=Dmel_${args{name}}><IMG BORDER=0 TITLE='View KEGG pathways for this gene' SRC=$img></A>";
+  return "<A HREF=showPathways?ga=${args{name}}><IMG BORDER=0 TITLE='View KEGG pathways for this gene' SRC=$img></A>";
 }
 
 
