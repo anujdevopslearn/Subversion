@@ -293,15 +293,24 @@ sub handle_request {
 
   #### Build BEST_PROBABILITY constraint
   my $best_probability_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"PI.best_probability",
+    constraint_column=>"MAX(PI.best_probability)",
     constraint_type=>"flexible_float",
     constraint_name=>"Best Probability",
     constraint_value=>$parameters{best_probability_constraint} );
   return if ($best_probability_clause eq '-1');
 
   #### Build N_OBSERVATIONS constraint
-  my $n_observations_clause = $sbeams->parseConstraint2SQL(
+  my $n_observations_per_peptide_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"PI.n_observations",
+    constraint_type=>"flexible_int",
+    constraint_name=>"Number of Observations",
+    constraint_value=>$parameters{n_observations_per_peptide_constraint} );
+  return if ($n_observations_per_peptide_clause eq '-1');
+
+
+  #### Build N_OBSERVATIONS constraint
+  my $n_observations_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SUM(PI.n_observations)",
     constraint_type=>"flexible_int",
     constraint_name=>"Number of Observations",
     constraint_value=>$parameters{n_observations_constraint} );
@@ -310,7 +319,7 @@ sub handle_request {
 
   #### Build n_protein_mappings constraint
   my $n_protein_mappings_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"PI.n_protein_mappings",
+    constraint_column=>"MIN(PI.n_protein_mappings)",
     constraint_type=>"flexible_int",
     constraint_name=>"n_protein_mappings",
     constraint_value=>$parameters{n_protein_mappings_constraint} );
@@ -318,7 +327,7 @@ sub handle_request {
 
   #### Build n_genome_locations constraint
   my $n_genome_locations_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"PI.n_genome_locations",
+    constraint_column=>"MIN(PI.n_genome_locations)",
     constraint_type=>"flexible_int",
     constraint_name=>"n_genome_locations",
     constraint_value=>$parameters{n_genome_locations_constraint} );
@@ -528,14 +537,16 @@ sub handle_request {
 	$biosequence_names_clause
 	$biosequence_gene_name_clause
         $biosequence_desc_clause
-        $best_probability_clause
-        $n_observations_clause
-        $n_protein_mappings_clause
-        $n_genome_locations_clause
+        $n_observations_per_peptide_clause
         $mapping_constraints
 
     GROUP BY BS.biosequence_name,
 	DBX.accessor,DBX.accessor_suffix,BS.biosequence_accession,O.full_name
+    HAVING 1 = 1
+        $best_probability_clause
+        $n_observations_clause
+        $n_protein_mappings_clause
+        $n_genome_locations_clause
     ORDER BY BS.biosequence_name
   ~;
 
