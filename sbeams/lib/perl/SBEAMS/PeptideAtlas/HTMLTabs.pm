@@ -103,12 +103,18 @@ sub getTabMenu
     {
        $current_tab=4;
 
+    } elsif ( ($PROG_NAME =~ /^GetProteins/) ||
+    ($PROG_NAME =~ /GetProteins\?(\S+)/ ))
+    {
+       $current_tab=6;
+
     } elsif ( ($PROG_NAME =~ /^GetProtein/) ||
     ($PROG_NAME =~ /GetProtein\?(\S+)/ ))
     {
        $current_tab=5;
 
     }
+
 
 
     ## set up tab structure:
@@ -140,7 +146,7 @@ sub getTabMenu
                     );
 
     $tabmenu->addTab( label => 'Browse Peptides',
-                      helptext => 'Multi-constraint browsing of PeptideAtlas',
+                      helptext => 'Multi-constraint browsing of PeptideAtlas Peptides',
                       URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides"
                     );
 
@@ -152,6 +158,11 @@ sub getTabMenu
     $tabmenu->addTab( label => 'Protein',
                       helptext => 'View information about a protein',
                       URL => "$CGI_BASE_DIR/PeptideAtlas/GetProtein"
+                    );
+
+    $tabmenu->addTab( label => 'Browse Proteins',
+                      helptext => 'Multi-constraint browsing of PeptideAtlas Proteins',
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetProteins"
                     );
 
     $tabmenu->setCurrentTab( currtab => $current_tab );
