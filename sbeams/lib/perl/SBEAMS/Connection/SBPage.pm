@@ -130,7 +130,7 @@ $header
   my $maintab = SBEAMS::Connection::DataTable->new( BORDER => 0, WIDTH => '60%', CELLPADDING => 0, CELLSPACING => 0 );
   my $isblink =<<"  END_LINK";
   <a href="http://db.systemsbiology.net/">
-   <img height=64 width=64 border=0 alt="ISB DB" src="$HTML_BASE_DIR/images/dbsmltblue.gif">
+   <img height=64 width=64 border=0 alt="ISB DB" src="$HTML_BASE_DIR/images/dbsmlclear.gif">
   </a>
   <a href="https://db.systemsbiology.net/sbeams/cgi/main.cgi">
     <img height=64 width=64 border=0 alt="SBEAMS" src="$HTML_BASE_DIR/images/sbeamssmltblue.gif">
