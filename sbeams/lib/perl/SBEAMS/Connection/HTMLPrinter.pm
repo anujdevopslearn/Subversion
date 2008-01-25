@@ -104,7 +104,7 @@ sub printPageHeader {
 
   #### Determine the Title bar background decoration
   my $header_bkg = "bgcolor=\"$BGCOLOR\"";
-  $header_bkg = "background=\"$HTML_BASE_DIR/images/plaintop.jpg\"" if ($DBVERSION =~ /Primary/ || 1);
+  $header_bkg = "background=\"$HTML_BASE_DIR/images/plaintop.jpg\"" if ($DBVERSION =~ /Primary/ );
 
   print qq~
 	<!--META HTTP-EQUIV="Expires" CONTENT="Fri, Jun 12 1981 08:20:00 GMT"-->
