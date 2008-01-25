@@ -464,6 +464,10 @@ sub loadPossiblePeptides {
     ($biosequence_name,$mass,$preceding_residue,$peptide,
       $following_residue,$peptide_offset) = @columns;
     $peptide_offset = 0 unless ($peptide_offset);
+    if ( !$peptide ) {
+      print STDERR "Skipping blank peptide: $line\n";
+      next;
+    }
 
     ### FIXME: do some field validation here?
 
