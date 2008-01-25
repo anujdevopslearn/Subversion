@@ -1365,7 +1365,6 @@ sub addSearchBatchEntry {
       SELECT search_batch_id
         FROM $TBPR_SEARCH_BATCH
        WHERE experiment_id = '$experiment_id'
-         --AND biosequence_set_id = '$biosequence_set_id'
          AND search_batch_subdir = '$search_batch_subdir'
   ~;
   my @search_batch_ids = $sbeams->selectOneColumn($sql_query);
