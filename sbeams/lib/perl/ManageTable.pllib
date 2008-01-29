@@ -920,6 +920,12 @@ sub printEntryForm {
       ~;
       $mask_description = 1;
     }
+    if ($input_type eq "checkbox") {
+      print qq~
+      <TD COLSPAN=2 HEIGHT=32><INPUT TYPE=CHECKBOX NAME="$column_name">$param</INPUT></TD>
+      ~;
+      $mask_description = 1;
+    }
 
     if ($input_type eq "textdate") {
       #if ($parameters{$column_name} eq "") {

@@ -4960,6 +4960,12 @@ sub display_input_form {
           cols=80>$parameters{$column_name}</TEXTAREA></TD>
       ~;
     }
+    if ($input_type eq "checkbox") {
+      my $checked = ( $input_length ) ? 'checked' : '';
+      print qq~
+      <TD COLSPAN=2 HEIGHT=32><INPUT TYPE=CHECKBOX NAME="$column_name" $checked>$parameters{$column_name}</INPUT></TD>
+      ~;
+    }
 
     if ($input_type eq "textdate") {
       if ($parameters{$column_name} eq "") {
