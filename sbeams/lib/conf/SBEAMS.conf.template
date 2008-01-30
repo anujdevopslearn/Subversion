@@ -208,6 +208,9 @@ CONFIG_SETTING{MA_CDF_DBS} =  entrezg:Entrez gene, ense:ENSEMBL, ensg:ENSEMBL ge
 # Define supported CDF mapping versions
 CONFIG_SETTING{MA_CDF_VERSIONS} = 8:Version 8, 7:Version 7 
 
+# Set to 1 to revert to simple filename sorting
+CONFIG_SETTING{MA_NAIVE_SORT} = 0
+
 ### End Microarray Settings ###
 
 

@@ -14,6 +14,7 @@
 {package SBEAMS::Microarray::Affy_file_groups;
 	
 our $VERSION = '1.00';
+use SBEAMS::Connection::Settings;
 
 ####################################################
 =head1 NAME
@@ -697,7 +698,15 @@ sub export_data_array_sample_info{
 ###############################################################################
 sub sorted_root_names {
 	my $self = shift;
-		
+
+  # Conditional allows sites to use simple perl sort to avoid warnings if
+  # filenames don't conform to ISB standard.  No-op if param isn't set in
+  # SBEAMS.conf file.
+  if( $CONFIG_SETTING{MA_NAIVE_SORT} ) {
+    for my $file ( keys( %{$self->{ALL_FILES}} ) ) { 
+      return(sort(keys(%{$self->{ALL_FILES}}))) if $file !~ /\d+_\d+_.*$/;
+    }
+  }
 	
 	my @sorted_root_names =  map { $_->[0]}
 								#element [0] should be the full root_file_name
