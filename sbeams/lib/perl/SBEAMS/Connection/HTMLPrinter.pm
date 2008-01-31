@@ -1341,7 +1341,7 @@ sub make_toggle_section {
   unless ( $self->{_toggle_section_exists} ) {
     $self->{_toggle_section_exists}++;
     $html =<<"    END"
-    <STYLE TYPE="text/css" media="screen">
+    <STYLE TYPE="text/css" media="all">
     div.visible {
     display: inline;
     white-space: nowrap;         
@@ -1503,7 +1503,7 @@ sub make_table_toggle {
   unless ( $self->{_tbl_toggle_section_exists} ) {
     $self->{_tbl_toggle_section_exists}++;
     $js_css =<<"    END";
-    <STYLE TYPE="text/css" media="screen">
+    <STYLE TYPE="text/css" media="all">
     table.tbl_visible { display: table; }
     table.tbl_hidden { display: none; }
     tr.tbl_visible { display: table-row; }
