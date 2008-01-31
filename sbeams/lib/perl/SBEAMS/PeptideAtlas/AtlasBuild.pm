@@ -28,8 +28,10 @@ $VERSION = q[$Id$];
 
 use SBEAMS::Connection;
 use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 
+my $sbeams = SBEAMS::Connection->new();
 
 ###############################################################################
 # Global variables
@@ -45,6 +47,7 @@ sub new {
     my $class = ref($this) || $this;
     my $self = {};
     bless $self, $class;
+    $sbeams = $self->getSBEAMS();
     return($self);
 } # end new
 
@@ -93,6 +96,28 @@ sub listBuilds {
   }
 
 } # end listBuilds
+
+
+sub getAtlasBuildDirectory {
+  my $self = shift;
+  my %args = @_;
+
+  my $atlas_build_id = $args{atlas_build_id} || return;
+
+  my $sql = qq~
+  SELECT data_path
+  FROM $TBAT_ATLAS_BUILD
+  WHERE atlas_build_id = '$atlas_build_id'
+  AND record_status != 'D'
+  ~;
+
+  my @path = $sbeams->selectOneColumn($sql); 
+
+  ## get the global variable PeptideAtlas_PIPELINE_DIRECTORY
+  my $pipeline_dir = $CONFIG_SETTING{PeptideAtlas_PIPELINE_DIRECTORY};
+
+  return "$pipeline_dir/$path[0]";
+}
 
 
 
