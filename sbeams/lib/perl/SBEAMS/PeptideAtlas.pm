@@ -25,6 +25,8 @@ use SBEAMS::PeptideAtlas::Permissions;
 use SBEAMS::PeptideAtlas::HTMLTabs;
 use SBEAMS::PeptideAtlas::ModificationHelper;
 use SBEAMS::PeptideAtlas::Utilities;
+use SBEAMS::PeptideAtlas::AtlasBuild;
+use SBEAMS::PeptideAtlas::Peptide;
 use SBEAMS::PeptideAtlas::Annotations;
 
 @ISA = qw(SBEAMS::PeptideAtlas::DBInterface
@@ -35,6 +37,8 @@ use SBEAMS::PeptideAtlas::Annotations;
           SBEAMS::PeptideAtlas::HTMLTabs
           SBEAMS::PeptideAtlas::ModificationHelper
           SBEAMS::PeptideAtlas::Utilities
+          SBEAMS::PeptideAtlas::AtlasBuild
+          SBEAMS::PeptideAtlas::Peptide
           SBEAMS::PeptideAtlas::Annotations
        );
 
