@@ -273,6 +273,11 @@ sub printStyleSheet {
   .aa_mod { vertical-align: top; font-size: ${FONT_SIZE}; color: darkslategray }
   .pa_sequence_font{font-family:courier; font-size: ${FONT_SIZE}pt;  letter-spacing:0.5; font-weight: bold; }	
   .pa_observed_sequence{font-family:courier; font-size: ${FONT_SIZE}pt; color: red;  letter-spacing:0.5; font-weight: bold;}	
+  .section_heading {  font-family: Helvetica, Arial, sans-serif; font-size: 10pt; font-weight: Bold; }
+  .description { font-family: Helvetica, Arial, sans-serif; color:#333333; font-size: 9pt; font-style: italic;  }
+  .help_key {  font-family: Helvetica, Arial, sans-serif; font-size: 9pt; font-weight: Bold; }
+  .help_val {  font-family: Helvetica, Arial, sans-serif; font-size: 9pt; }
+  .plot_caption {  font-family: Helvetica, Arial, sans-serif; font-size: 12pt; }
 	
 
   /* Glycopeptide */
@@ -1271,6 +1276,8 @@ sub unstickToggleSection {
 # @narg visible  - default visiblity, orignal state of content (default is 0)
 # @narg textlink - 0/1, should show/hide text be shown (default is 0)
 # @narg imglink  - 0/1, should plus/minus widget be shown (default is 1)
+# @narg showimg  - optional image to be shown whilst content is hiding, defaults to minus
+# @narg hideimg  - optional image to be shown whilst content is showing, defaults to plus
 # @narg name     - Name for this toggle thingy
 # @narg sticky   - Remember the state of this toggle in session?  Requires name,
 #                  defaults to 0 (false)
@@ -1285,6 +1292,8 @@ sub make_toggle_section {
   my $hidetext = '';  # Text for 'hide content' link
   my $showtext = '';  # Text for 'show content' link
   my $neuttext = '';  # Auxilary text for show/hide
+  my $hideimg = ( $args{hideimg} ) ? $args{hideimg} : 'small_gray_minus.gif';  # image for 'hide content' link
+  my $showimg = ( $args{showimg} ) ? $args{showimg} : 'small_gray_plus.gif';  # image for 'show content' link
 
   # No content, bail
   return $html unless $args{content};
@@ -1325,8 +1334,7 @@ sub make_toggle_section {
   
   my $hideclass = ( $args{visible} ) ? 'visible' : 'hidden';
   my $showclass = ( $args{visible} ) ? 'hidden'  : 'visible';
-  my $initial_gif = ( $args{visible} ) ? 'small_gray_minus.gif'  
-                                       : 'small_gray_plus.gif';
+  my $initial_gif = ( $args{visible} ) ? $showimg : $hideimg;  
 
 
   # Add css/javascript iff necessary
@@ -1360,8 +1368,8 @@ sub make_toggle_section {
       
       // Grab page elements by their IDs
       var mtable = document.getElementById(div_name);
-      var show = document.getElementById('showtext');
-      var hide = document.getElementById('hidetext');
+      var show = document.getElementById( div_name + 'showtext');
+      var hide = document.getElementById( div_name + 'hidetext');
       var gif_file = div_name + "_gif";
       var tgif = document.getElementById(gif_file);
 
@@ -1383,7 +1391,7 @@ sub make_toggle_section {
           show.className = 'hidden';
         }
         if ( tgif ) {
-          tgif.src =  '$HTML_BASE_DIR/images/small_gray_minus.gif'
+          tgif.src =  '$HTML_BASE_DIR/images/$showimg'
         }
       } else {
         $set_cookie_code;
@@ -1395,7 +1403,7 @@ sub make_toggle_section {
           show.className = 'visible';
         }
         if ( tgif ) {
-          tgif.src =  '$HTML_BASE_DIR/images/small_gray_plus.gif'
+          tgif.src =  '$HTML_BASE_DIR/images/$hideimg'
         }
       }
     }
@@ -1418,8 +1426,8 @@ sub make_toggle_section {
   }
   my $texthtml = '';
   if ( $args{textlink} ) {
-    $texthtml = "<DIV ID=hidetext class='$hideclass'> $hidetext </DIV>";
-    $texthtml .= "<DIV ID=showtext class='$showclass'> $showtext </DIV>";
+    $texthtml = "<DIV ID=$args{name}hidetext class='$hideclass'> $hidetext </DIV>";
+    $texthtml .= "<DIV ID=$args{name}showtext class='$showclass'> $showtext </DIV>";
   }
 
   my $linkhtml = qq~<A ONCLICK="toggle_content('${args{name}}')">$imghtml $texthtml</A> $neuttext~;
@@ -1448,6 +1456,10 @@ sub make_table_toggle {
   my $hidetext = '';  # Text for 'hide content' link
   my $showtext = '';  # Text for 'show content' link
   my $neuttext = '';  # Auxilary text for show/hide
+
+  
+  my $hideimg = ( $args{hideimg} ) ? $args{hideimg} : 'small_gray_minus.gif';  # image for 'hide content' link
+  my $showimg = ( $args{showimg} ) ? $args{showimg} : 'small_gray_plus.gif';  # image for 'show content' link
 
   $args{imglink} = 1 unless defined $args{textlink};
   $args{textlink} = 0 unless defined $args{textlink};
@@ -1484,8 +1496,7 @@ sub make_table_toggle {
   
   my $hideclass = ( $args{visible} ) ? 'tbl_visible' : 'tbl_hidden';
   my $showclass = ( $args{visible} ) ? 'tbl_hidden'  : 'tbl_visible';
-  my $initial_gif = ( $args{visible} ) ? 'small_gray_minus.gif'  
-                                       : 'small_gray_plus.gif';
+  my $initial_gif = ( $args{visible} ) ? $hideimg : $showimg;
 
 
   # Add css/javascript iff necessary
@@ -1523,10 +1534,10 @@ sub make_table_toggle {
 
       if ( tgif ) {
         var src = tgif.src;
-        if ( src.match(/small_gray_minus/) ) {
-          tgif.src =  '$HTML_BASE_DIR/images/small_gray_plus.gif'
+        if ( src.match(/$hideimg/) ) {
+          tgif.src =  '$HTML_BASE_DIR/images/$showimg'
         } else {
-          tgif.src =  '$HTML_BASE_DIR/images/small_gray_minus.gif'
+          tgif.src =  '$HTML_BASE_DIR/images/$hideimg'
         }
       } else {
         alert( "It don't exist" );
@@ -1585,7 +1596,7 @@ sub make_table_toggle {
   return wantarray ? ( $tbl_html, $linkhtml ) : $linkhtml . $tbl_html;
 
   
-}
+} # End make_table_toggle
 
 #+
 # returns clear gif of specified width, default 120px
