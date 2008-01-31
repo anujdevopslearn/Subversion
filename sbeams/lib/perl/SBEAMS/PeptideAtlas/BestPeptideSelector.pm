@@ -26,7 +26,7 @@ require Exporter;
 $VERSION = q[$Id$];
 @EXPORT_OK = qw();
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw( $log );
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::Settings;
 use SBEAMS::PeptideAtlas::Tables;
@@ -188,9 +188,7 @@ sub getBestPeptides {
   }
 
 
-  $self->sortBySuitabilityScore(
-    resultset_ref=>$resultset_ref,
-  );
+  $self->sortBySuitabilityScore( $resultset_ref );
 
   return $resultset_ref;
 
@@ -296,7 +294,7 @@ sub getHighlyObservablePeptides {
      LEFT JOIN $TBAT_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
     WHERE 1 = 1
 	  AND PTP.source_biosequence_id = $biosequence_id
-          AND PTP.detectabilitypredictor_score >= 0.5
+          AND ( PTP.detectabilitypredictor_score >= 0.5 OR peptide_accession IS NOT NULL )
     ORDER BY PTP.detectabilitypredictor_score+(CASE WHEN PTP.peptide_sequence LIKE '\%C\%' THEN PTP.peptidesieve_ICAT ELSE PTP.peptidesieve_ESI END) DESC
   ~;
 
@@ -373,22 +371,18 @@ sub getHighlyObservablePeptidesDisplay {
 sub sortBySuitabilityScore {
   my $METHOD = 'sortBySuitabilityScore';
   my $self = shift || die ("self not passed");
-  my %args = @_;
 
-  #### Process parameters
-  my $resultset_ref = $args{resultset_ref}
-    or die("ERROR[$METHOD]: Parameter resultset_ref not passed");
-
+  # Note we will be modifying the passed RS!
+  my $resultset_ref = shift;
 
   my $n_rows = scalar(@{$resultset_ref->{data_ref}});
-  my $cols = $resultset_ref->{column_hash_ref};
 
+  my $cols = $resultset_ref->{column_hash_ref};
   my @rows = @{$resultset_ref->{data_ref}};
-  my @newrows = sort bySuitabilityScore @rows;
+
+  my @newrows = sort {$b->[$cols->{suitability_score}] <=> $a->[$cols->{suitability_score}] } @rows;
 
   $resultset_ref->{data_ref} = \@newrows;
-
-  return $resultset_ref;
 
 } # end sortBySuitabilityScore
 
