@@ -542,15 +542,15 @@ sub readParamsFile {
 
       #### If this is X!Tandem, then parse XML tag
       if ($filetype eq 'XTandem') {
-	if ($line =~ /label="(.+?)".+>(.+)<\/note>/) {
-	  ($key,$value) = ($1,$2);
-	}
+        if ($line =~ /label="(.+)".*>(.+)<\/note>/) {
+          ($key,$value) = ($1,$2);
+        }
 
       #### Otherwise, assume SEQUEST/Comet style key = value pattern
       } else {
         if ($line =~ /\s*(\w+)\s*=\s*(.*)/) {
           ($key,$value) = ($1,$2);
-	}
+        }
       }
 
       #### If a suitable key was found then store the key value pair
@@ -566,9 +566,7 @@ sub readParamsFile {
         $parameters{$key} = $value;
         push(@keys_in_order,$key);
       }
-
     }
-
   }
 
 
