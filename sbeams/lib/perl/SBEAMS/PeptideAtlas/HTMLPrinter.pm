@@ -516,10 +516,8 @@ sub encodeSectionTable {
   my $num_cols = 0;
 
   my $rs_link = '';
-  $log->debug("gonna make rs");
   if ( $args{set_download} ) {
     my $rs_name = $self->make_resultset( rs_data => $args{rows} );
-    $log->debug("made rs, $rs_name");
     $rs_link = "<a href='$CGI_BASE_DIR/GetResultSet.cgi/$rs_name.tsv?rs_set_name=$rs_name&format=tsv' TITLE='Download table as tab-delimited text file' CLASS=info_box>Download as TSV</a>",
   }
 
@@ -558,7 +556,6 @@ sub encodeSectionTable {
                                                      CLASS => 'hidden' ); 
     }
     if ( $args{max_rows} && $args{max_rows} <= $num_rows ) {
-      $log->debug( "Max is $args{max_rows} and num is $num_rows" );
       my $span = scalar( @$row );
       my $msg = "Table truncated at $args{max_rows} rows";
       if  ( $args{set_download} ) {
@@ -762,6 +759,46 @@ sub formatMassMods {
   $sequence =~ s/\]/\]<\/SPAN>/gm;
   return $sequence;
 }
+
+
+sub get_table_help_section {
+  my $self = shift;
+  my %args = @_;
+  $args{showtext} ||= 'show column descriptions';
+  $args{hidetext} ||= 'hide column descriptions';
+  $args{heading} ||= 'Column information';
+  $args{description} ||= '';
+
+
+  my $index = "<TABLE class=info_box>\n";
+  for my $entry ( @{$args{entries}} ) {
+    $index .= $self->encodeSectionItem( %$entry );
+  }
+  $index .= "</TABLE>\n";
+
+  my $content =<<"  END";
+  <BR>
+  <span class=section_heading>$args{heading}</span> 
+  <span class=description>$args{description}</span>
+  $index
+  END
+
+  $sbeams = $self->getSBEAMS();
+  my $section_toggle = $sbeams->make_toggle_section( content => $content,
+                                                     sticky   => 0,
+                                                     visible  => 0,
+                                                     imglink  => 1,
+                                                     showimg  => "/info_small.gif",
+                                                     hideimg  => "/info_small.gif",
+                                                     textlink => 1,
+                                                     name     => $args{name},
+                                                     showtext => $args{showtext},
+                                                     hidetext => $args{hidetext},
+                                          );
+
+  return $section_toggle;
+}
+
 
 1;
 
