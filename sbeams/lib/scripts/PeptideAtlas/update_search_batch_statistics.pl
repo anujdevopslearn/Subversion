@@ -11,7 +11,7 @@ use FindBin;
 use lib "$FindBin::Bin/../../perl";
 
 #### Set up SBEAMS core module
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -236,6 +236,7 @@ sub get_build_stats {
 sub get_build_contributions {
   my $data_path = shift;
   my %results;
+  $log->debug( "In build contrib" );
 
 #  $data_path =~ s/analysis/DATA_FILES/;
   my $contrib_file = $data_path . '/experiment_contribution_summary.out';
@@ -319,7 +320,7 @@ sub get_peptide_counts {
 
   my $build_id = shift;
 
-  my @all_cnts = $sbeams->selectSeveralColumns( <<"  STATS" );
+  my $sql =<<"  STATS";
   SELECT ASB.atlas_search_batch_id, n_searched_spectra,
   COUNT(n_observations) as total_distinct, SUM(n_observations) as n_obs
   FROM $TBAT_SAMPLE S
@@ -333,6 +334,8 @@ sub get_peptide_counts {
   GROUP BY ASB.atlas_search_batch_id, n_searched_spectra
   ORDER BY ASB.atlas_search_batch_id ASC
   STATS
+  my @all_cnts = $sbeams->selectSeveralColumns( $sql );
+  $log->debug( "Getting peptide counts:\n $sql" );
 
   # Loop and cache 'all' stats
   my %batch_stats;
@@ -340,30 +343,8 @@ sub get_peptide_counts {
     $batch_stats{$build->[0]} = $build;
   }
 
-  if ( 0 ) {
-  print ( $sbeams->evalSQL( <<"  STATS" ) );
-  SELECT ASB.atlas_search_batch_id, n_searched_spectra,
-  COUNT(n_observations) as total_distinct, SUM(n_observations) as total_obs, 
-  data_location, atlas_build_search_batch_id
-  FROM $TBAT_SAMPLE S
-  JOIN $TBAT_ATLAS_SEARCH_BATCH ASB 
-    ON ASB.sample_id = S.sample_id
-  JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB 
-    ON ( ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id 
-         AND ABSB.sample_id = S.sample_id )
-  JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB 
-    ON PISB.atlas_search_batch_id = ASB.atlas_search_batch_id
-  JOIN $TBAT_PEPTIDE_INSTANCE PI 
-    ON ( PISB.peptide_instance_id = PI.peptide_instance_id
-         AND PI.atlas_build_id = ABSB.atlas_build_id )
-  WHERE PI.atlas_build_id = $build_id
-  AND n_observations > 1
-  GROUP BY ASB.atlas_search_batch_id, n_searched_spectra, data_location, 
-           atlas_build_search_batch_id
-  ORDER BY ASB.atlas_search_batch_id ASC
-  STATS
-  }
-  my @mobs_cnts = $sbeams->selectSeveralColumns( <<"  STATS" );
+  
+  $sql =<<"  STATS";
   SELECT ASB.atlas_search_batch_id, n_searched_spectra,
   COUNT(n_observations) as total_distinct, SUM(n_observations) as total_obs, 
   data_location, atlas_build_search_batch_id
@@ -385,6 +366,8 @@ sub get_peptide_counts {
   ORDER BY ASB.atlas_search_batch_id ASC
   STATS
 
+  my @mobs_cnts = $sbeams->selectSeveralColumns( $sql );
+  $log->debug( "Getting multobs peptide counts:\n $sql" );
 
   my @keys = qw( atlas_build_search_batch_id n_observations n_multiobs_observations n_distinct_peptides n_distinct_multiobs_peptides n_searched_spectra, data_location );
 #  print join( "\t", @keys ) . "\n";
@@ -413,28 +396,29 @@ sub get_peptide_counts {
 
 sub get_contributions {
   my $build_id = shift;
-  my @uniq_cnt = $sbeams->selectSeveralColumns( <<"  SMPL" );
+  my $sql =<<"  SMPL";
   SELECT ASB.atlas_search_batch_id, COUNT(*) num_unique, sample_title, 
          ASB.sample_id, ABSB.atlas_build_search_batch_id
   FROM $TBAT_ATLAS_BUILD_SEARCH_BATCH ASB
   JOIN $TBAT_SAMPLE S ON S.sample_id = ASB.sample_id
-  JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON ABSB.atlas_search_batch_id = ASB.atlas_search_batch_id
+  JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON (      ABSB.atlas_search_batch_id = ASB.atlas_search_batch_id 
+                                                AND  ASB.atlas_build_id         = ABSB.atlas_build_id ) 
   JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PIS ON PIS.atlas_search_batch_id = ASB.atlas_search_batch_id
   JOIN $TBAT_PEPTIDE_INSTANCE PI ON ( PIS.peptide_instance_id = PI.peptide_instance_id AND PI.atlas_build_id = ABSB.atlas_build_id )
   WHERE PI.atlas_build_id = $build_id
   AND PI.peptide_instance_id IN
-   ( SELECT peptide_instance_id FROM
-      ( SELECT PI.peptide_instance_id, count(*) tot
-        FROM $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB JOIN $TBAT_PEPTIDE_INSTANCE PI ON PISB.peptide_instance_id = PI.peptide_instance_id
-        WHERE atlas_build_id = $build_id
-        AND n_observations > 1
-        GROUP BY PI.peptide_instance_id
-        HAVING COUNT(*) < 2
-      ) AS tmp_tbl
+    ( SELECT PI.peptide_instance_id
+       FROM $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB JOIN $TBAT_PEPTIDE_INSTANCE PI ON PISB.peptide_instance_id = PI.peptide_instance_id
+       WHERE atlas_build_id = $build_id
+       AND n_observations > 1
+       GROUP BY PI.peptide_instance_id
+       HAVING COUNT(*) = 1
    )
   GROUP BY ASB.sample_id, ABSB.atlas_build_search_batch_id, sample_title, ASB.atlas_search_batch_id
-  ORDER BY COUNT(*) DESC
   SMPL
+  my @uniq_cnt = $sbeams->selectSeveralColumns( $sql );
+  $log->debug( "Getting contributions:\n $sql" );
+
   my %results;
   for my $cnt ( @uniq_cnt ) {
 #    print "$cnt->[2] had $cnt->[1]\n";
@@ -455,7 +439,7 @@ sub insert_stats {
                     n_searched_spectra n_uniq_contributed_peptides 
                     model_90_sensitivity model_90_error_rate 
                     n_distinct_peptides n_distinct_multiobs_peptides 
-                    n_progressive_peptides ) ) {
+                    n_progressive_peptides n_good_spectra ) ) {
       $rowdata{$k} = $build->{$k};
     }
   
