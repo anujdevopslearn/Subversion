@@ -14,6 +14,8 @@
 
 # Fields in peptide_annotations table:
 # modified_peptide_annotation_id     modified_peptide_sequence     peptide_charge     q1_mz     q3_mz     q3_ion_label     transition_suitability_level_id     publication_id     annotater_name     annotater_contact_id     comment     date_created             created_by_id     date_modified            modified_by_id     owner_group_id     record_status    
+
+
 # ---------------------------------  ----------------------------  -----------------  --------  --------  ---------------  ----------------------------------  -----------------  -----------------  -----------------------  ----------  -----------------------  ----------------  -----------------------  -----------------  -----------------  ---------------- 
 # 1                                  DADPDTFFAK                    2                  563.8     825.4     y1-7             2                                   1                  (null)             2                        (null)      2007-06-09 22:19:27.867  2                 2007-06-09 22:19:27.867  2                  40                 N                
 # 2                                  DADPDTFFAK                    2                  563.8     940.4     y1-8             3                                   1                  (null)             2                        (null)      2007-06-09 22:24:20.383  2                 2007-06-09 22:24:20.383  2                  40                 N                
@@ -144,6 +146,8 @@ sub load_transitions {
     $contact_id = $sbeams->getCurrent_contact_id();
   }
 
+  my $project_id = $sbeams->getCurrent_project_id();
+
   my $ph;
   for my $trans ( @$transitions ) {
     
@@ -166,6 +170,7 @@ sub load_transitions {
     print "Mod seq = $modified_seq\n" if $opts{verbose} > 4;
     my $comment = parse_comment( $trans );
     print "$comment\n" if $opts{verbose} > 4;
+    my $peptide_id = get_peptide_id( $trans->{Pep_Seq} );
 
     my %row_data = ( modified_peptide_sequence => $modified_seq,
                      peptide_charge => $trans->{PrecCharge},
@@ -174,9 +179,11 @@ sub load_transitions {
                      q3_ion_label => $trans->{FragSeries} . $trans->{FragCharge} . '-' . $trans->{FragNr},
                      transition_suitability_level_id => $trans->{'MRM-quality'} + 1, # FIX ME!
                      publication_id => '',
-                     annotater_name => $username,
-                     annotater_contact_id => $contact_id,
+                     annotator_name => $username,
+                     annotator_contact_id => $contact_id,
                      comment => $comment,
+                     project_id => $project_id,
+                     peptide_id => $peptide_id,
                      matching_peptide_sequence => $trans->{Pep_Seq},
                    );
   $sbeams->updateOrInsertRow ( insert => 1,
@@ -190,8 +197,18 @@ sub load_transitions {
                              );
 #    for my $k ( keys( %row_data ) ) { print "$k => $row_data{$k}\n"; }
   }
+  return 1;
 }
 
+sub get_peptide_id {
+  my $seq = shift || return;
+  my $peptide = $sbeams->selectrow_arrayref( <<"  END" );
+  SELECT peptide_id, peptide_accession FROM $TBAT_PEPTIDE 
+  WHERE peptide_sequence = '$seq'
+  END
+  print "$seq yeilds $peptide->[0] ($peptide->[1])\n";
+  return $peptide->[0];
+}
 sub parse_comment {
   my $row = shift;
   return unless $row;
