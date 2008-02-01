@@ -536,3 +536,6 @@ AT_proteotypic_peptide	6	following_residue	Following Residue	char	1	0	N
 AT_proteotypic_peptide	7	peptidesieve_ESI	PeptideSieve ESI	float	8	0	N														
 AT_proteotypic_peptide	8	peptidesieve_ICAT	PeptideSieve ICAT	float	8	0	N														
 AT_proteotypic_peptide	9	detectabilitypredictor_score	Detectability Predictor Score	float	8	0	N														
+AT_proteotypic_peptide	10	peptide_isoelectric_point	Isoelectric Point	real	4	0	Y		N			Y	text	10		Y	Y	N	Calculated isoelectric point of the peptide		
+AT_proteotypic_peptide	11	molecular_weight	Molecular Weight	real	4	0	Y		N			Y	text	10		Y	Y	N	Calculated molecular weight of the peptide		
+AT_proteotypic_peptide	12	SSRCalc_relative_hydrophobicity	SSRCalc Relative Hydrophobicity	real	4	0	Y		N			Y	text	10		Y	Y	N	Calculated hydrophobicity of the peptide using SSRCalc algorithm		
