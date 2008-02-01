@@ -539,3 +539,5 @@ AT_proteotypic_peptide	9	detectabilitypredictor_score	Detectability Predictor Sc
 AT_proteotypic_peptide	10	peptide_isoelectric_point	Isoelectric Point	real	4	0	Y		N			Y	text	10		Y	Y	N	Calculated isoelectric point of the peptide		
 AT_proteotypic_peptide	11	molecular_weight	Molecular Weight	real	4	0	Y		N			Y	text	10		Y	Y	N	Calculated molecular weight of the peptide		
 AT_proteotypic_peptide	12	SSRCalc_relative_hydrophobicity	SSRCalc Relative Hydrophobicity	real	4	0	Y		N			Y	text	10		Y	Y	N	Calculated hydrophobicity of the peptide using SSRCalc algorithm		
+AT_proteotypic_peptide	13	n_genome_locations	Number of Genome Locations Mapped to	int	4	0	N		N			Y	text	10		Y	Y	N	Number of Genome locations for this peptide 		
+AT_proteotypic_peptide	14	n_protein_mappings	Number of Proteins for this Peptide 	int	4	0	N		N			Y	text	10		Y	Y	N	Number of distinct accession numbers (proteins) for peptide in Genome		
