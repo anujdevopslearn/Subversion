@@ -224,12 +224,13 @@ sub handle_request {
   #### If the output_mode is HTML, then display the form
   my $buffer = '';
   if ($sbeams->output_mode() eq 'html') {
+      my $spacer = $sbeams->getGifSpacer(800);
 
       $buffer .= $q->start_form(-method=>"POST",
                            -action=>"$base_url",
                           );
       $buffer .= "<BR>".$tabMenu->asHTML();
-      $buffer .= "<BR><BR><P>";
+      $buffer .= "<BR>$spacer<BR><P>";
       $buffer .= qq~<nobr><CENTER><IMG SRC="$HTML_BASE_DIR/images/PeptideAtlas_Logo.png"><BR>~;
       #$buffer .= qq~<img src="$HTML_BASE_DIR/images/space.gif" height=1 width=30>~;
       $buffer .= $q->textfield(-name=>"search_key",
