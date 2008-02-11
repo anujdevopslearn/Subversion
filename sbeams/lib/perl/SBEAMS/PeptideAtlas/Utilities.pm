@@ -605,7 +605,6 @@ sub calculatePeptidePI {
   my $self = shift;
   my %args = @_;
   die "Missing required parameter sequence" unless $args{sequence};
-
   # Get pKa values
   $self->{_rpkav} ||= $self->getResiduePKAvalues();
   my %pka = %{$self->{_rpkav}};
@@ -614,15 +613,16 @@ sub calculatePeptidePI {
   my $seq = uc( $args{sequence} );
   my @seq = split "", $seq;
   my %cnt;
+  for my $aa ( @seq ) { $cnt{$aa}++ };
 
   my $side_total = 0;
+
   for my $aa ( keys(%pka) ) {
     # Only consider amino acids that can carry a charge
     next unless $pka{$aa}->[2];
 
     # Count the occurences of each salient amino acid (C, D, E, H, K, R, Y)
-    $cnt{$aa} = eval "$seq =~ tr/$aa/$aa/";
-    $side_total += $cnt{$aa};
+    $side_total += $cnt{$aa} if $cnt{$aa};
   }
 
   # pKa at C/N termini vary by amino acid
@@ -668,8 +668,11 @@ sub calculatePeptidePI {
     last if abs($ph_max - $ph_min) < $precision;
   }
 
+  # pH midpoint is the average of max and min
+  $ph_mid = ($ph_max + $ph_min)/2; 
+
   # Let lack of return precision reflect the fact that this is an estimate 
-  return sprintf( "%0.1f", ($ph_max + $ph_min)/ 2 );
+  return sprintf( "%0.1f", $ph_mid );
 }
 
 #+
