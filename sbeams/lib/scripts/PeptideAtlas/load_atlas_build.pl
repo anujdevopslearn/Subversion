@@ -26,12 +26,9 @@ use Benchmark;
 use XML::Parser;
 
 use lib "$FindBin::Bin/../../perl";
-use vars qw ($sbeams $sbeamsMOD $q $current_username 
-             $ATLAS_BUILD_ID %spectra
+use vars qw ($sbeams $sbeamsMOD $q $current_username $ATLAS_BUILD_ID %spectra
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
-             $TESTVARS $CHECKTABLES
-             $sbeamsPROT $SSRCalculator $GlycoPeptideModule
-	     $massCalculator
+             $TESTVARS $CHECKTABLES $sbeamsPROT $SSRCalculator $massCalculator
             );
 
 
@@ -55,9 +52,6 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 $sbeamsPROT = new SBEAMS::Proteomics;
 $sbeamsPROT->setSBEAMS($sbeams);
-
-use SBEAMS::Glycopeptide;
-$GlycoPeptideModule = new SBEAMS::Glycopeptide();
 
 #### Create and initialize SSRCalc object with 3.0
 use lib '/net/db/src/SSRCalc/ssrcalc';
@@ -2584,7 +2578,7 @@ sub insert_peptide {
   my $mw =  $massCalculator->getPeptideMass( mass_type => 'monoisotopic',
                                               sequence => $sequence );
   
-  my $pI = $GlycoPeptideModule->calculatePeptidePI( sequence => $sequence );
+  my $pI = $atlas->calculatePeptidePI( sequence => $sequence );
 
   my $hp;
   if ($SSRCalculator->checkSequence($sequence)) {
