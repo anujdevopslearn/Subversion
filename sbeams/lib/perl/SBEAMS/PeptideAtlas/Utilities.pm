@@ -811,6 +811,74 @@ sub make_resultset {
   return $rs_name;
 }
 
+
+#################################################################
+############PeptideCount
+#################################################################
+###This method counts the total number of Public builds in which peptide found along with number of organisms in which peptide found
+
+sub PeptideCount {
+
+my $self = shift;
+my $sbeams = $self->getSBEAMS();
+
+my %args=@_;
+
+my ($atlas_project_clause,$peptide_sequence_clause);
+
+$atlas_project_clause=$args{atlas_project_clause};
+$peptide_sequence_clause=$args{peptide_sequence_clause};
+
+unless($peptide_sequence_clause && $atlas_project_clause) {
+
+    print "The Required clause parameters not found. Unable to generate the count of Builds in which peptide Found";
+    return;
+
+}
+my $sql = qq~
+
+   SELECT  distinct AB.atlas_build_name, OZ.organism_name
+      FROM $TBAT_PEPTIDE_INSTANCE PI
+      INNER JOIN $TBAT_PEPTIDE P
+      ON ( PI.peptide_id = P.peptide_id )
+      INNER JOIN $TBAT_ATLAS_BUILD AB
+      ON (PI.atlas_build_id = AB.atlas_build_id)
+      INNER JOIN $TBAT_BIOSEQUENCE_SET BS
+      ON (AB.biosequence_set_id = BS.biosequence_set_id)
+      INNER JOIN $TB_ORGANISM OZ
+      ON (BS.organism_id= OZ.organism_id)
+      WHERE 1 = 1
+      $atlas_project_clause
+      $peptide_sequence_clause
+      ORDER BY  OZ.organism_name, AB.atlas_build_name
+      
+   ~;
+   
+my @rows = $sbeams->selectSeveralColumns($sql) or print " Error in the SQL query";
+my(@build_names,%seen_organisms);
+
+if (@rows) {
+
+      foreach my $row (@rows) {
+
+	  my ($build_name,$org_name)=@{$row};
+            $seen_organisms{$row->[1]}++;
+
+            push(@build_names, $row->[0]);
+
+      }# End For Loop
+
+} # End if Loop
+
+
+my @distinct_organisms = keys( %seen_organisms );
+
+my $no_distinct_organisms= scalar(@distinct_organisms);
+my $no_builds= scalar(@build_names);
+return ($no_distinct_organisms,$no_builds);
+
+}
+
 1;
 
 __DATA__
