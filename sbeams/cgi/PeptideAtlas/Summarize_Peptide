@@ -1,0 +1,447 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : Summarize_Peptide
+#
+#
+# Description : Prints summary of a given peptide given selection
+#               atlas build, and peptide name or sequence.
+#
+# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+
+use strict;
+use Getopt::Long;
+use FindBin;
+
+use POSIX qw(ceil);
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+##use CGI::Carp qw(fatalsToBrowser croak);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::ConsensusSpectrum;
+use SBEAMS::PeptideAtlas::ModificationHelper;
+
+use SBEAMS::Proteomics::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+my $modification_helper = new ModificationHelper();
+
+#$q = new CGI;
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+    #### Do the SBEAMS authentication and exit if a username is not returned
+    exit unless ($current_username = $sbeams->Authenticate(
+        permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+        'PeptideAtlas_readonly'],
+        #connect_read_only=>1,
+        allow_anonymous_access=>1,
+    ));
+
+    #### Read in the default input parameters
+    my %parameters;
+    my $n_params_found = $sbeams->parse_input_parameters(
+        q=>$q,
+        parameters_ref=>\%parameters
+        );
+
+        $sbeamsMOD->display_page_header();
+
+        handle_request(ref_parameters=>\%parameters);
+
+        $sbeamsMOD->display_page_footer();
+
+
+} # end main
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+
+  my %args = @_;
+
+  #### Process the arguments list
+    my $ref_parameters = $args{'ref_parameters'}
+        || die "ref_parameters not passed";
+
+    my %parameters = %{$ref_parameters};
+
+    #### Show current user context information
+    print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+    #$sbeams->printUserContext();
+
+    #### Get the HTML to display the tabs
+    my $tabMenu = $sbeamsMOD->getTabMenu(
+        parameters_ref => \%parameters,
+        program_name => $PROG_NAME,
+    );
+
+    print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+
+    #### Define some generic variables
+    my ($i,$element,$key,$value,$line,$result,$sql);
+
+    #### Define some variables for a query and resultset
+    my %resultset = ();
+    my $resultset_ref = \%resultset;
+    my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+    #### Read in the standard form values
+    my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+
+    my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+
+    #### Set some specific settings for this program
+    my $CATEGORY="Summarize_Peptide";
+    my $PROGRAM_FILE_NAME = $PROG_NAME;
+    my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+    my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
+    
+    ###### Definfing the constants URL to build dynamic links
+    my $url= "$CGI_BASE_DIR/$SBEAMS_SUBDIR";
+    my $build_link= "/buildDetails?atlas_build_id=";
+    my $pep_link1="/GetPeptide?atlas_build_id=";
+    my $pep_link2="&searchWithinThis=Peptide+Sequence&searchForThis=";
+    my $pep_link3="&action=QUERY";
+
+
+    # Get list of accessible projects
+    my @accessible_project_ids = $sbeams->getAccessibleProjects();
+    my $project_string = join( ",", @accessible_project_ids ) || '0';
+    return unless $project_string;  # Sanity check
+
+     ## If no parameters are defined, set up some defaults to help with browsing
+    ## until I get a help menu set-up
+
+    if (  !exists $parameters{'searchForThis'})
+         {
+                $parameters{'searchForThis'} = "VSFLSALEEYTK";
+            }
+    
+    #### Build search options for textbox:
+    my $peptide_search_constraint = ( "peptide_sequence_constraint" );
+    my $textbox_option_tags = ("Peptide Sequence" );
+
+
+    #### Apply any parameter adjustment logic
+    $parameters{display_options} = 'ShowSQL';
+
+    my ($selected_atlas_build_name, $selected_key, $selected_key_search);
+
+
+    ## Display HTML FORM to select Atlas and Search constraints:
+    my $searchValue = $parameters{searchForThis};
+
+    unless ( $apply_action eq "QUERY" ) { ## if receive from link, don't assign null
+
+        $apply_action = $parameters{"query"};
+
+    }
+
+
+if ($sbeams->output_mode() eq 'html') {
+
+#      print $sbeamsMOD->init_pa_tooltip();
+
+        print "<p>";
+
+        print "<nobr>";
+        print $q->start_form(-method=>"POST",
+                              -action=>"$base_url",
+                             );
+        print "&nbsp;&nbsp;Search&nbsp;";
+        print "&nbsp;for:&nbsp;";
+        print $q->textfield( -name=>"searchForThis",
+                           default=>$searchValue,
+			                     -size=>80,
+			                     -maxlength=>200);
+        print $q->submit(-name => "query",
+                         -value => 'QUERY',
+                         -label => 'QUERY');
+        print $q->endform;
+        print "</nobr>";
+
+        ## xxxx $help_url
+
+        print "</p>";
+
+       }
+### Implicit Assignment of PEPTIDE SEQ to $parameters with the search constraint 'peptide_sequence_constraint'
+   $parameters{$peptide_search_constraint} = $searchValue;
+
+
+
+#########################################################################
+#### Process all the constraints
+
+#### Build PEPTIDE_SEQUENCE constraint
+    my $peptide_sequence_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"P.peptide_sequence",
+        constraint_type=>"plain_text",
+        constraint_name=>"Peptide Sequence",
+        constraint_value=>$parameters{peptide_sequence_constraint} );
+    return if ($peptide_sequence_clause eq '-1');
+
+    my $atlas_project_clause = "AND AB.project_id IN ( $project_string )";
+
+
+    $peptide_sequence_clause =~ s/LIKE/=/gi;
+    
+
+
+    #### Define the SQL statement
+    $sql = qq~
+    
+     SELECT  distinct P.peptide_accession,P.peptide_sequence, P.SSRCalc_relative_hydrophobicity,
+      P.molecular_weight, P.peptide_isoelectric_point, PI.n_observations, PI.atlas_build_id,
+      AB.atlas_build_name, OZ.organism_name
+      FROM $TBAT_PEPTIDE_INSTANCE PI
+      INNER JOIN $TBAT_PEPTIDE P
+      ON ( PI.peptide_id = P.peptide_id )
+      INNER JOIN $TBAT_ATLAS_BUILD AB
+      ON (PI.atlas_build_id = AB.atlas_build_id)
+      INNER JOIN $TBAT_BIOSEQUENCE_SET BS
+      ON (AB.biosequence_set_id = BS.biosequence_set_id)
+      INNER JOIN $TB_ORGANISM OZ
+      ON (BS.organism_id= OZ.organism_id)
+      WHERE 1 = 1
+      $atlas_project_clause
+      $peptide_sequence_clause
+      ORDER BY P.peptide_sequence, OZ.organism_name, PI.n_observations DESC,AB.atlas_build_name
+
+~;
+
+unless ( $peptide_sequence_clause ) {
+      $sbeams->display_sql(sql=>$sql);
+      print qq~
+      <FONT COLR=red>No name or sequence constraint found, unable to proceed</FONT>
+      ~;
+      return;
+
+      }
+
+
+if ($apply_action =~ /QUERY/i ) {
+
+my (@peptide_info,@builds, $dynamic_content, $vocab);
+
+while (my $row = $sbeams->selectSeveralColumnsRow(sql=>$sql)) {
+
+
+  my ($peptide_acc,$peptide_seq,$ssr_calc,$mol_wt,$pi,$n_obs,$build_id,$build_name,$org_name)= @{$row};
+
+
+        @peptide_info = ($peptide_acc,$peptide_seq,$mol_wt,$pi,$ssr_calc);
+
+        ####### Building the link for No of observations
+        my $peptide_url=qq~$url$pep_link1$build_id$pep_link2$peptide_seq$pep_link3~;
+        my $peptide_html_link=qq~<A HREF ="$peptide_url" target="_blank">$n_obs</A>~;
+
+
+        ##### Building the link for the Atlas Builds
+        my $build_url=qq~ $url$build_link$build_id ~;
+        my $build_html_link=qq~<A HREF="$build_url" target="_blank">$build_name</A>~;
+
+        my @temp_array=($org_name,$peptide_html_link,$build_html_link);
+
+        ##### Passing by reference to the @builds array as per the requirement of the EncodesectionTable Method
+        push (@builds, \@temp_array);
+
+} ## END WHILE LOOP
+         
+
+
+   $dynamic_content=DisplayPeptide(view1=>\@peptide_info,
+                                                view2=>\@builds);
+   $vocab=$sbeamsMOD->vocabHTML();
+   
+   print "$dynamic_content.$vocab";
+   
+
+
+   } # END if loop
+         
+
+} ### END Handle Request
+
+
+#################################################################################################################
+##############Display Peptide
+#################################################################################################################
+#### This subroutine will print the first two tables of the HTML page generated by the Summarize_Peptide CGI file.
+#################################################################################################################
+
+
+sub DisplayPeptide {
+
+my %args =@_;
+
+##
+unless( $args{view1} && $args{view2}  ) {
+
+    $log->error( "No information passed to display" );
+    return;
+  }
+
+
+### Defining global symbols and values here
+ my ($table1, $table2 );
+my $view1 = $args{view1};
+my $view2 = $args{view2};
+
+#### $view2 now contains a reference to an array... derefrencing it.
+
+my @view2=  @{$view2};
+my ($pa,$seq,$mw,$pi,$ssr_calc) = @{$view1};
+
+###### Basic Peptide info table being created using the subroutine encodesection
+
+my $peptide_accession = $pa;
+my $peptide_sequence= $seq;
+my $SSR_Calc = sprintf("%0.2f",$ssr_calc);
+my $mol_wt= sprintf( "%0.2f", $mw);
+my $Pi = sprintf( "%0.1f", $pi );
+
+$table1 = "<BR><TABLE WIDTH=600>\n";
+$table1.=$sbeamsMOD->encodeSectionHeader(
+                                        text => "$peptide_accession",
+
+                                                    bold => 1,
+                                                    width => 900
+                                            );
+#Substituting the path generated from encodeSectionHeader to match with peptideatlas.org for displaying oragne header
+###$table1 =~ s/\/devAP\/sbeams//gm;
+
+  $table1 .= $sbeamsMOD->encodeSectionItem( key   => 'Peptide Accession',
+                                          value => $peptide_accession,
+                                          key_width => '20%'
+                                         );
+  $table1.= $sbeamsMOD->encodeSectionItem( key   => 'Peptide Sequence',
+                                          value => $peptide_sequence
+                                         );
+   $table1 .= $sbeamsMOD->encodeSectionItem( key   => 'Avg Molecular Weight',
+                                           value => "$mol_wt"
+                                         ) if $mol_wt;
+  $table1 .= $sbeamsMOD->encodeSectionItem( key   => 'pI (approx)',
+                                           value => "$Pi"
+                                         ) if $Pi;
+ $table1.= $sbeamsMOD->encodeSectionItem( key   => 'SSRCalc Relative Hydrophobicity',
+                                          value => "$SSR_Calc"
+                                         );
+$table1 .= '</TABLE>';
+
+##### Printing the second table with build and no of observation information for each peptide
+
+$table2 = "<BR><TABLE WIDTH=600>";
+
+my @headings = (   'Organism Name',
+                   'No. of Observations',
+                   'Build Names in which Peptide is found',
+                );
+
+$table2 .= $sbeamsMOD->encodeSectionHeader(
+      text => 'Peptide Found in these builds',
+      width => 900
+  );
+
+#Substituting the path generated from encodeSectionHeader to match with peptideatlas.org for displaying oragne header
+##$table2 =~ s/\/devAP\/sbeams//gm;
+
+########### In the row argument of encodeSectionTable we need to pass referenced arrays
+
+$table2 .= $sbeamsMOD->encodeSectionTable(rows => [ \@headings, @view2 ],
+                                        header => 1,
+                                        nowrap => [1..scalar(@headings)],
+                                        align => [ qw(left left left) ],
+                                        bg_color => '#EAEAEA',
+                                        sortable => 1,
+                                        set_download=>0);
+$table2 .= '</TABLE>';
+
+
+
+
+###### Generating a single scalar for each peptide information to be displayed
+my $peptide_info_html = $table1.$table2;
+return($peptide_info_html);
+
+ }  #### End of Display Peptide
+
+
