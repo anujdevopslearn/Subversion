@@ -800,6 +800,66 @@ sub get_table_help_section {
 }
 
 
+
+
+
+###############################################################################
+########### vocabHTML
+######################################################################################
+
+sub vocabHTML {
+
+###### This subroutine displays the Vocab section on the HTML Page
+ 
+my $self=shift;
+my $sbeamsMOD=$self;
+
+my ($table3);
+
+my $pi_desc='Isoelectric point of the peptide';
+my $ssrcalc_desc='Sequence Specific Retention Factor provides a hydrophobicity measure for each peptide using the algorithm of Krohkin et al. Version 3.0';
+my $org_desc='Organism in which this peptide is observed';
+my $n_obs_desc='Number of MS/MS spectra that are identified to this peptide in each build. The hyperlink will take you to the peptide page that will display all the relevant information about this peptide contained in the listed PeptideAtlas build';
+my $build_names_desc='Public build in which this peptide is found. The hyperlink will take you to a build specific page summarizing all the relevant information about the build.';
+
+$table3 ='<BR><BR><BR><BR><BR><BR><BR><BR><BR><BR><TABLE WIDTH=600>';
+
+$table3 .= $sbeamsMOD->encodeSectionHeader( text => 'Vocabulary',
+                                            width => 900
+                                            );
+
+#Substituting the path generated from encodeSectionHeader to match with peptideatlas.org for displaying oragn header
+##$table3 =~ s/\/devAP\/sbeams//gm;
+
+$table3 .= $sbeamsMOD->encodeSectionItem( key   => 'pI',
+                                          value => $pi_desc,
+                                          key_width => '20%'
+                                         );
+$table3.= $sbeamsMOD->encodeSectionItem( key   => 'SSRCalc',
+                                          value =>$ssrcalc_desc
+                                         );
+$table3.= $sbeamsMOD->encodeSectionItem( key   => 'Organism Name',
+                                          value =>$org_desc
+                                         );
+
+$table3.= $sbeamsMOD->encodeSectionItem( key   => 'Number of observations ',
+                                          value =>$n_obs_desc
+                                         );
+
+$table3.= $sbeamsMOD->encodeSectionItem( key   => 'Build Names in which Peptide is found',
+                                          value =>$build_names_desc
+                                         );
+$table3 .= '</TABLE>';
+
+return ($table3);
+
+
+}
+
+
+
+
+
 1;
 
 __END__
