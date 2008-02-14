@@ -42,6 +42,7 @@ use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::ConsensusSpectrum;
 use SBEAMS::PeptideAtlas::ModificationHelper;
+use SBEAMS::PeptideAtlas::Utilities;
 
 use SBEAMS::Proteomics::Tables;
 
@@ -621,6 +622,22 @@ if ($apply_action =~ /QUERY/i ) {
                                           tr_info => $tr,
                                           value => format_refpep( \@pep_annot )
                                          ) if $pep_annot[0];
+                                         
+  my($no_organisms,$no_distinct_builds)=$sbeamsMOD->PeptideCount(atlas_project_clause=>$atlas_project_clause,
+                                                           peptide_sequence_clause=>$peptide_sequence_clause);
+
+
+  my $link="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Summarize_Peptide?searchForThis=$peptide_sequence[0]&apply_action=QUERY";
+  my $build_html_link="<A HREF=$link TARGET=_BLANK color=blue>$no_distinct_builds</A>";
+  my $org_html_link="<A HREF=$link  TARGET=_BLANK >$no_organisms</A>";
+  
+  $summ.=$sbeamsMOD->encodeSectionItem(key => 'Number of builds in which Peptide found',
+                                       tr_info=>$tr,
+                                       value=>$build_html_link);
+                                       
+  $summ.=$sbeamsMOD->encodeSectionItem(key => 'Organisms in which Peptide found',
+                                       tr_info=>$tr,
+                                       value=>$org_html_link);
   
   print "<BR>\n";
   print "<TABLE WIDTH=600><BR>$summ</TABLE>\n";
