@@ -83,130 +83,104 @@ sub getInstrument_model_name
 }
 
 
-sub parse
-{
-    my ($self) = @_;
-    croak("missing mzXML_file, please use setMzXML_file(xx)") 
-        unless defined $self->{mzXML_file};
+sub parse {
+  my ($self) = @_;
+  croak("missing mzXML_file, use setMzXML_file(xx)") if !$self->{mzXML_file};
 
-    my $infile = $self->{mzXML_file};
+  my $infile = $self->{mzXML_file};
+  my ($schema, $model_name, $software_name, $software_version);
 
+  open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
 
-    my ($schema, $model_name, $software_name,
-    $software_version);
+  while (my $line = <INFILE>) {
 
-    open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
+    chomp($line);
 
-    while (my $line = <INFILE>)
-    {
+    ## recent schema:
+#      if ($line =~ /.+schemaLocation=\".+\/(.+)\/schema_revision\/(.+)\/(.+\.xsd)\">/) 
+    if ($line =~ /.+schemaLocation=\".+\/(.+)\/schema[^\\]*\/(.+)\.xsd\"/ ) {
+      $schema = $2;
+    }
+
+    ## former MsXML schema:
+    ## xsi:schemaLocation="http://sashimi.sourceforge.net/schema/ http://sashimi.sourceforge.net/schema/MsXML.xsd
+    if ($line =~ /.+schemaLocation=\".+\/(.+)\/schema\/(.+)\.xsd\"/ ) {
+      $schema = $2;
+    }
+
+#        if ($line =~ /\<msManufacturer\scategory=\".+\"\svalue=\"(.+)\"\/\>/)
+    if ($line =~ /\<msManufacturer\s+category=\".+\"\s+value=\"(.+)\".*\/\>/) {
+      $model_name = ( $model_name ) ? $model_name . " $1" : $1;
+    }
+    if ($line =~ /\<msModel\scategory=\".+\"\svalue=\"(.+)\"\/\>/) {
+      $model_name = ( $model_name ) ? $model_name . " $1" : $1;
+    }
+
+    ## former MsXML schema:
+    if ($line =~ /\<instrument\smanufacturer=\"(.+)\"/ ) {
+      $model_name = $1;
+
+      ## read the next line, and get model name
+      $line = <INFILE>;
+      chomp($line);
+      $line =~ /\<instrument\smanufacturer=\"(.+)\"/;
+      $model_name = $model_name . " $1";
+    }
+
+    if ($line =~ /\<software\stype=\"conversion(.+)/) {
+
+      # why oh why aren't we using an xml parser?
+      my $morecontent = $1;
+      if ($morecontent =~ /name\s*=\s*\"(.*?)\"/) {
+        $software_name = $1;
+      }
+      if ($morecontent =~ /version\s*=\s*\"(.*?)\"/) {
+        $software_version = $1;
+      }
+
+      # Lets not do this unless we have to
+      if ( !$software_name || !$software_version ) {
+        $line = <INFILE>;
         chomp($line);
-
-        ## recent schema:
-        if ($line =~ /.+schemaLocation=\".+\/(.+)\/schema_revision\/(.+)\/(.+\.xsd)\">/)
-        {
-            $schema = $2;
+        if ($line =~ /.+name=\"(.+)\"/) {
+          $software_name = $1;
+        } else {
+          carp "[WARN] please edit parser to pick up software attributes";
         }
 
-        ## former MsXML schema:
-        ## xsi:schemaLocation="http://sashimi.sourceforge.net/schema/ http://sashimi.sourceforge.net/schema/MsXML.xsd
-        if ($line =~ /.+schemaLocation=\".+\/(.+)\/schema\/(.+)\.xsd\"/ )
-        {
-            $schema = $2;
+        $line = <INFILE>;
+        chomp($line);
+        if ($line =~ /.+version=\"(.+)\"/) {
+          $software_version = $1;
         }
-
-        if ($line =~ /\<msManufacturer\scategory=\".+\"\svalue=\"(.+)\"\/\>/)
-        {
-            $model_name = $1;
-        }
-        if ($line =~ /\<msModel\scategory=\".+\"\svalue=\"(.+)\"\/\>/)
-        {
-            $model_name = $model_name . " $1";
-        }
-
-        ## former MsXML schema:
-        if ($line =~ /\<instrument\smanufacturer=\"(.+)\"/ )
-        {
-            $model_name = $1;
-
-            ## read the next line, and get model name
-            $line = <INFILE>;
-            chomp($line);
-            $line =~ /\<instrument\smanufacturer=\"(.+)\"/;
-
-            $model_name = $model_name . " $1";
-
-        }
-
-        if ($line =~ /\<software\stype=\"conversion(.+)/)
-        {
-
-	    #### why oh why aren't we using an xml parser?
-	    my $morecontent = $1;
-	    if ($morecontent =~ /name\s*=\s*\"(.*?)\"/) {
-	      $software_name = $1;
-	    }
-	    if ($morecontent =~ /version\s*=\s*\"(.*?)\"/) {
-	      $software_version = $1;
-	    }
-
-
-            $line = <INFILE>;
-
-            chomp($line);
-
-            if ($line =~ /.+name=\"(.+)\"/)
-            {
-                $software_name = $1;
-            } else
-            {
-                carp "[WARN] please edit parser to pick up software attributes";
-            }
-
-            $line = <INFILE>;
-
-            chomp($line);
-
-            if ($line =~ /.+version=\"(.+)\"/)
-            {
-                $software_version = $1;
-            }
-
-            last; ## done
-        }
-
+        last; ## done
+      }
     }
+  last if $line =~ /msLevel/;
+  }
 
-    close(INFILE) or die "Cannot close $infile";
+  close(INFILE) or die "Cannot close $infile";
 
-    if ($software_version eq "")
-    {
-        carp "[WARN] please edit parser to pick up conversion_software_version for $infile";
-    } 
+  if ($software_version eq "") {
+    carp "[WARN] please edit parser to pick up conversion_software_version for $infile";
+  } 
+  $self->{conversion_software_version} = $software_version;
 
-    $self->{conversion_software_version} = $software_version;
+  if ($software_name eq "") {
+    carp "[WARN] please edit parser to pick up conversion_software_name for $infile";
+  }
+  $self->{conversion_software_name} = $software_name;
 
-    if ($software_name eq "")
-    {
-        carp "[WARN] please edit parser to pick up conversion_software_name for $infile";
-    }
+  if ($schema eq "") {
+    carp "[WARN] please edit parser to pick up schema for $infile";
+  } 
+  $self->{mzXML_schema} = $schema;
 
-    $self->{conversion_software_name} = $software_name;
-
-    if ($schema eq "")
-    {
-        carp "[WARN] please edit parser to pick up $schema for $infile";
-    } 
-
-    $self->{mzXML_schema} = $schema;
-
-    if ($model_name eq "")
-    {
-        carp "[WARN] please edit parser to pick up instrument_model_name for $infile";
-    } 
-
-    $self->{instrument_model_name} = $model_name;
-
-}
+  if ($model_name eq "") {
+    carp "[WARN] please edit parser to pick up instrument_model_name for $infile";
+  } 
+  $self->{instrument_model_name} = $model_name;
+} # End parse method
 
 
 
