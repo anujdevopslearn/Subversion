@@ -85,12 +85,15 @@ sub main
     #### Decide what action to take based on information so far
     if ($parameters{action} eq "show_all") {
 	    $content = display_proteins( 'all' );	
+    } elsif ( $parameters{output_mode} eq 'tsv' ) {
+      $content = display_proteins( 'tsv' );	
+      print $sbeams->get_http_header( filename => 'browse_glycopeptides.tsv' );
+      print $content;
+      exit;
+    } elsif ( $parameters{multi_tmm} ) {
+      $content = display_proteins( 'multi_tmm' );	
     } else {
-      if ( $parameters{multi_tmm} ) {
-	      $content = display_proteins( 'multi_tmm' );	
-      } else {
-	      $content = display_proteins( 'identified' );	
-      }
+      $content = display_proteins( 'identified' );	
     }
 
     $sbeamsMOD->display_page_header(project_id => $project_id,
@@ -119,8 +122,9 @@ sub import_sort_table {
 
 sub display_proteins{
   my $mode = shift;
+  my $query_mode = ( $mode eq 'tsv' ) ? 'identified' : $mode;
 
-	my @results_set = $glyco_query_o->all_proteins_query($mode);	
+	my @results_set = $glyco_query_o->all_proteins_query($query_mode);	
   my $html = '';
   if ( $mode eq 'multi_tmm' ) {
 	  $html .= $q->start_table( {ID => 'hits', CLASS => 'sortable'} ) .
@@ -186,6 +190,16 @@ sub display_proteins{
   <BR>
   <BR>
   ~;
+
+  if ( $mode eq 'tsv' ) {
+    $log->debug( "printing the tsv for $protcnt proteins and $pepcnt peptides" );
+    $html =~ s/\<TD[^\>]*\>/\t/gmi;
+    $html =~ s/\<TR\>/\n/gmi;
+    $html =~ s/\<[^\>]*\>//gmi;
+    $html =~ s/^\s+//gmi;
+    return( $html );
+  }
+
   return "$stats $html";
 }
 	
