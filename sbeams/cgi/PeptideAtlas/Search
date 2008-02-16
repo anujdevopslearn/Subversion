@@ -424,7 +424,7 @@ sub handle_request {
           <A HREF="$base_url?search_key=$cleaned_search_key%25&action=GO">$cleaned_search_key%</A>,
           <A HREF="$base_url?search_key=%25$cleaned_search_key%25&action=GO">%$cleaned_search_key%</A>
           </TD></TR></TABLE><BR>
-    ~;
+    ~ if ($sbeams->output_mode() eq 'html');
 
     #### Display the resultset
     $sbeams->displayResultSet(
