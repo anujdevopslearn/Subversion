@@ -91,6 +91,7 @@ sub parse {
   my ($schema, $model_name, $software_name, $software_version);
 
   open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
+  print "Reading $infile...\n";
 
   while (my $line = <INFILE>) {
 
@@ -101,6 +102,14 @@ sub parse {
     if ($line =~ /.+schemaLocation=\".+\/(.+)\/schema[^\\]*\/(.+)\.xsd\"/ ) {
       $schema = $2;
     }
+
+
+    #### Once we get to an msLevel attribute, we have all the information
+    #### we need, so stop the parsing
+    if ($line =~ /msLevel=/) {
+      last;
+    }
+
 
     ## former MsXML schema:
     ## xsi:schemaLocation="http://sashimi.sourceforge.net/schema/ http://sashimi.sourceforge.net/schema/MsXML.xsd
@@ -160,6 +169,7 @@ sub parse {
   }
 
   close(INFILE) or die "Cannot close $infile";
+  print "Done\n";
 
   if ($software_version eq "") {
     carp "[WARN] please edit parser to pick up conversion_software_version for $infile";
