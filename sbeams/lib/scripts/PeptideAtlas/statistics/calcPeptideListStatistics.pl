@@ -323,10 +323,12 @@ sub main {
 
 
   my $totDECOY = 0;
+  my $totDistinctDECOY = 0;
   my $buffer = '';
   foreach my $count ( sort numerically (keys(%DECOYcount)) ) {
     $buffer .= "  $count\t$DECOYcount{$count}\n";
-    $totDECOY += $DECOYcount{$count};
+    $totDECOY += $DECOYcount{$count} * $count;
+    $totDistinctDECOY += $DECOYcount{$count};
   }
   print "\nTotal number of DECOY hits: $totDECOY\n";
   print "Frequency/count of duplicate DECOY peptides:\n$buffer\n";
@@ -342,6 +344,11 @@ sub main {
     printf OUTFILE ("%8.2f %8.2f %8d %8d %8d\n",@{$stat_row});
   }
   close(OUTFILE);
+
+
+  print "\nFDR rates based on decoy numbers (after discarding decoy hits)\n";
+  printf("Spectrum FDR = %d / %d = %.4f\n",$totDECOY,$n_assignments,$totDECOY/$n_assignments);
+  printf("Peptide FDR = %d / %d = %.4f\n",$totDistinctDECOY,$n_distinct_peptides,$totDistinctDECOY/$n_distinct_peptides);
 
 
 
