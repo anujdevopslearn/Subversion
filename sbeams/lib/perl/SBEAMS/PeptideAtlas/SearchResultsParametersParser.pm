@@ -74,30 +74,34 @@ sub parse
         unless defined $self->{search_batch_directory};
 
     ## get pepXML file
-    my $infile = $self->{search_batch_directory} . "/interact-prob.xml";
+    my $infile;
 
     #### Sometimes search_batch_dir_path is actually a file??
     if ($self->{search_batch_directory} =~ /\.xml/) {
       $infile = $self->{search_batch_directory};
+
+    #### Otherwise it's directory, try to find the file
+    } else {
+      my @possible_interact_names = ( 'interact-prob.xml', 'interact.xml',
+        'interact-specall.xml', 'interact-spec.xml', 'interact-prob.pep.xml',
+        'interact.pep.xml'
+      );
+      my $found_file = 0;
+      foreach my $possible_name ( @possible_interact_names ) {
+	if ( -e $self->{search_batch_directory}.'/'.$possible_name ) {
+	  $found_file = 1;
+	  $infile = $self->{search_batch_directory}.'/'.$possible_name;
+	  last;
+	}
+      }
+      #### Die if we couldn't find it
+      unless ( $found_file ) {
+	die("ERROR: Unable to auto-detect an interact file in $self->{search_batch_directory}");
+      }
     }
 
-    unless(-e $infile)
-    {
-        print "[WARN] could not find $infile\n";
-
-        $infile = $self->{search_batch_directory} . "/interact.xml";
-    }
-    unless(-e $infile)
-    {
-        print "[WARN] could not find $infile either\n";
-
-        ## A fudge to obtain an interact.xml file when multiple exist (cases when
-        ## datasets are too large for TPP)
-        $infile = $self->{search_batch_directory} . "/interact-prob01.xml";
-    }
-    unless(-e $infile)
-    {
-        die "could not find $infile either\n";
+    unless(-e $infile) {
+      die "could not find infile '$infile'.\n";
     }
 
     open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
