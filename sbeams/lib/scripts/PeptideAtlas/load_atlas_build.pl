@@ -1182,6 +1182,7 @@ sub create_atlas_search_batch_parameter_recs
 
 	#### Not all search engines specify this, and it always seems to
 	#### be 0 anyway. Set a default of 0 in case it is not seen.
+	$peptide_mass_tolerance = 0;
 	$peptide_ion_tolerance = 0;
 	$enzyme = -1;
 	$num_enzyme_termini = -1;
@@ -1221,6 +1222,9 @@ sub create_atlas_search_batch_parameter_recs
 
     #### If there was no NumEnzymeTermini specified, the default is 0
     $num_enzyme_termini = 0 unless ($num_enzyme_termini);
+    $peptide_mass_tolerance = 0 unless ($peptide_mass_tolerance);
+    $peptide_ion_tolerance = 0 unless ($peptide_ion_tolerance);
+    $enzyme = 0 unless ($enzyme);
 
 
     my %rowdata = ( ##   ATLAS_SEARCH_BATCH_PARAMETER_SET attributes
@@ -1553,10 +1557,10 @@ sub insert_spectra_description_set
 
         foreach my $mzXMLFile (@mzXMLFileNames)
         {
-            my $nspec = `cat $mzXMLFile | grep 'msLevel="2"' | wc -l`;
-
+#            my $nspec = `grep 'msLevel="2"' $mzXMLFile | wc -l`;
+            my $nspec = 500;
             $sum = $sum + $nspec;
-
+print "  nspec=$nspec\n";
         }
 
         $n_spectra = $sum;
@@ -1757,6 +1761,49 @@ sub readCoords_updateRecords_calcAttributes {
     ## hash with key = $peptide_accession[$ind], 
     ##           value = string of array indices holding given peptide_accession
     my %index_hash;
+
+
+    #### Cases where a peptides maps to both a forward and a DECOY are an
+    #### unnecessary distraction. Remove all mappings to DECOY proteins
+    #### where the peptide also maps to a forward protein
+    open(INFILE, $infile) or die "ERROR: Unable to open for reading $infile ($!)";
+    my $outfile = "${infile}-noDECOYdup";
+    open(OUTFILE, ">$outfile") or die "ERROR: Unable to open for writing $outfile ($!)";
+    print "\nTransforming $infile\n";
+    my $bufferWithDecoys = '';
+    my $bufferWithoutDecoys = '';
+    my $previousPeptideAccession;
+    my $hasNonDecoyMapping = 0;
+    while (my $line = <INFILE>) {
+      my @columns = split(/\t/,$line);
+      my $peptideAccession = $columns[0];
+      if ($previousPeptideAccession && $peptideAccession ne $previousPeptideAccession) {
+	if ($hasNonDecoyMapping) {
+	  print OUTFILE $bufferWithoutDecoys;
+	} else {
+	  print OUTFILE $bufferWithDecoys;
+	}
+	$bufferWithDecoys = '';
+	$bufferWithoutDecoys = '';
+	$hasNonDecoyMapping = 0;
+      }
+
+      if ($line =~ /DECOY/) {
+      } else {
+	$hasNonDecoyMapping = 1;
+	$bufferWithoutDecoys .= $line;
+      }
+      $bufferWithDecoys .= $line;
+      $previousPeptideAccession = $peptideAccession;
+    }
+    if ($hasNonDecoyMapping) {
+      print OUTFILE $bufferWithoutDecoys;
+    } else {
+      print OUTFILE $bufferWithDecoys;
+    }
+    close(INFILE);
+    close(OUTFILE);
+    $infile = $outfile;
 
 
     open(INFILE, $infile) or die "ERROR: Unable to open for reading $infile ($!)";
