@@ -164,8 +164,9 @@ sub parse {
         }
         last; ## done
       }
+
     }
-  last if $line =~ /msLevel/;
+
   }
 
   close(INFILE) or die "Cannot close $infile";
