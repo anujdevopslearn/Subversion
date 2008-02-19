@@ -113,6 +113,11 @@ sub getTabMenu
     {
        $current_tab=5;
 
+    }elsif ( ($PROG_NAME =~ /^Summarize_Peptide/) ||
+    ($PROG_NAME =~ /Summarize_Peptide\?(\S+)/ ))
+    {
+       $current_tab=7;
+
     }
 
 
@@ -163,6 +168,11 @@ sub getTabMenu
     $tabmenu->addTab( label => 'Browse Proteins',
                       helptext => 'Multi-constraint browsing of PeptideAtlas Proteins',
                       URL => "$CGI_BASE_DIR/PeptideAtlas/GetProteins"
+                    );
+   
+     $tabmenu->addTab( label => 'Summarize Peptide',
+                      helptext => 'Browsing the basic information about a peptide',
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/Summarize_Peptide"
                     );
 
     $tabmenu->setCurrentTab( currtab => $current_tab );
