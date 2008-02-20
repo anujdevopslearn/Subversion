@@ -477,6 +477,7 @@ sub handle_request {
 
       ["best_peptide_probability","MAX(STR(PI.best_probability,7,3))","Best Peptide Prob"],
       ["n_observations","SUM(PI.n_observations)","N Obs"],
+#      ["n_samples","COUNT(PIS.peptide_instance_id)","N Samples"],
       ["n_distinct_peptides","COUNT(DISTINCT P.peptide_sequence)","N Distinct Peptides"],
 
       ["min_protein_mappings","MIN(PI.n_protein_mappings)","Min Protein Mappings"],
@@ -518,8 +519,8 @@ sub handle_request {
        FROM PeptideAtlas.dbo.peptide_instance PI
       INNER JOIN PeptideAtlas.dbo.peptide P
             ON ( PI.peptide_id = P.peptide_id )
-      INNER JOIN PeptideAtlas.dbo.peptide_instance_sample PIS
-            ON ( PI.peptide_instance_id = PIS.peptide_instance_id )
+--      INNER JOIN PeptideAtlas.dbo.peptide_instance_sample PIS
+--            ON ( PI.peptide_instance_id = PIS.peptide_instance_id )
       INNER JOIN PeptideAtlas.dbo.atlas_build AB
             ON ( PI.atlas_build_id = AB.atlas_build_id )
        LEFT JOIN PeptideAtlas.dbo.biosequence_set BSS
