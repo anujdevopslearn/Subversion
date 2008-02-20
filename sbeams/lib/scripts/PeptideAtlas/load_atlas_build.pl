@@ -2624,8 +2624,8 @@ sub insert_peptide {
   my $sequence = $rowdata_ref->{peptide_sequence};
   my $mw =  $massCalculator->getPeptideMass( mass_type => 'monoisotopic',
                                               sequence => $sequence );
-  
-  my $pI = $atlas->calculatePeptidePI( sequence => $sequence );
+
+  my $pI = $sbeamsMOD->calculatePeptidePI( sequence => $sequence );
 
   my $hp;
   if ($SSRCalculator->checkSequence($sequence)) {
