@@ -157,7 +157,42 @@ sub handle_request {
     #### Define some generic variables
     my ($i,$element,$key,$value,$line,$result,$sql);
 
-    #### Define some variables for a query and resultset
+
+
+
+    #### Get the search keyword
+     my $peptide_seq = $parameters{'searchForThis'};
+
+
+ ### Getting the last session information for a user, if it exists or setting up a new one
+    #### If a new protein_name was supplied, store it
+     if ($peptide_seq) {
+    $sbeams->setSessionAttribute(
+      key => 'PeptideAtlas_peptide_name',
+      value => $peptide_seq,
+    );
+
+    #### Else see if we had one stored
+  } else {
+    $peptide_seq = $sbeams->getSessionAttribute(
+      key => 'PeptideAtlas_peptide_name',
+    );
+    if ($peptide_seq) {
+      $parameters{'apply_action'} = 'GO';
+    }
+    
+    else {
+    
+    ## Setting the value to some given peptide for those users who visits the page first time
+     $peptide_seq='VSFLSALEEYTK';
+     $parameters{'apply_action'} = 'GO';
+
+     }
+
+
+  }
+  
+   #### Define some variables for a query and resultset
     my %resultset = ();
     my $resultset_ref = \%resultset;
     my (%url_cols,%hidden_cols,%max_widths,$show_sql);
@@ -173,7 +208,7 @@ sub handle_request {
     my $PROGRAM_FILE_NAME = $PROG_NAME;
     my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
     my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
-    
+
     ###### Definfing the constants URL to build dynamic links
     my $url= "$CGI_BASE_DIR/$SBEAMS_SUBDIR";
     my $build_link= "/buildDetails?atlas_build_id=";
@@ -187,14 +222,7 @@ sub handle_request {
     my $project_string = join( ",", @accessible_project_ids ) || '0';
     return unless $project_string;  # Sanity check
 
-     ## If no parameters are defined, set up some defaults to help with browsing
-    ## until I get a help menu set-up
 
-    if (  !exists $parameters{'searchForThis'})
-         {
-                $parameters{'searchForThis'} = "VSFLSALEEYTK";
-            }
-    
     #### Build search options for textbox:
     my $peptide_search_constraint = ( "peptide_sequence_constraint" );
     my $textbox_option_tags = ("Peptide Sequence" );
@@ -209,14 +237,18 @@ sub handle_request {
     ## Display HTML FORM to select Atlas and Search constraints:
     my $searchValue = $parameters{searchForThis};
 
-    unless ( $apply_action eq "QUERY" ) { ## if receive from link, don't assign null
+    unless ( $apply_action eq "QUERY" || $apply_action eq "GO") { ## if receive from link, don't assign null
 
         $apply_action = $parameters{"query"};
+        
+
 
     }
 
 
 if ($sbeams->output_mode() eq 'html') {
+
+
 
 #      print $sbeamsMOD->init_pa_tooltip();
 
@@ -225,13 +257,15 @@ if ($sbeams->output_mode() eq 'html') {
         print "<nobr>";
         print $q->start_form(-method=>"POST",
                               -action=>"$base_url",
+                               -name=>"SearchForm"
+
                              );
         print "&nbsp;&nbsp;Search&nbsp;";
         print "&nbsp;for:&nbsp;";
         print $q->textfield( -name=>"searchForThis",
-                           default=>$searchValue,
-			                     -size=>80,
-			                     -maxlength=>200);
+                            -size=>80,
+			                     -maxlength=>200,
+                            -default=>$peptide_seq);
         print $q->submit(-name => "query",
                          -value => 'QUERY',
                          -label => 'QUERY');
@@ -244,7 +278,7 @@ if ($sbeams->output_mode() eq 'html') {
 
        }
 ### Implicit Assignment of PEPTIDE SEQ to $parameters with the search constraint 'peptide_sequence_constraint'
-   $parameters{$peptide_search_constraint} = $searchValue;
+   $parameters{$peptide_search_constraint} = $peptide_seq;
 
 
 
@@ -256,11 +290,11 @@ if ($sbeams->output_mode() eq 'html') {
         constraint_column=>"P.peptide_sequence",
         constraint_type=>"plain_text",
         constraint_name=>"Peptide Sequence",
-        constraint_value=>$parameters{peptide_sequence_constraint} );
+        constraint_value=>$peptide_seq);
     return if ($peptide_sequence_clause eq '-1');
+    
 
     my $atlas_project_clause = "AND AB.project_id IN ( $project_string )";
-
 
     $peptide_sequence_clause =~ s/LIKE/=/gi;
     
@@ -288,25 +322,25 @@ if ($sbeams->output_mode() eq 'html') {
 
 ~;
 
-unless ( $peptide_sequence_clause ) {
-      $sbeams->display_sql(sql=>$sql);
-      print qq~
-      <FONT COLR=red>No name or sequence constraint found, unable to proceed</FONT>
-      ~;
-      return;
+#unless ( $peptide_sequence_clause ) {
+ #     $sbeams->display_sql(sql=>$sql);
 
-      }
+  #     print qq~
+   #   <FONT COLR=red>No Peptide Found, unable to proceed</FONT>
+    #  ~;
+     # return;
+
+      #}
 
 
-if ($apply_action =~ /QUERY/i ) {
+if ($apply_action =~ /QUERY|GO/i ) {
 
 my (@peptide_info,@builds, $dynamic_content, $vocab);
 
-while (my $row = $sbeams->selectSeveralColumnsRow(sql=>$sql)) {
+while (my $row = $sbeams->selectSeveralColumnsRow(sql=>$sql))
 
-
+{
   my ($peptide_acc,$peptide_seq,$ssr_calc,$mol_wt,$pi,$n_obs,$build_id,$build_name,$org_name)= @{$row};
-
 
         @peptide_info = ($peptide_acc,$peptide_seq,$mol_wt,$pi,$ssr_calc);
 
