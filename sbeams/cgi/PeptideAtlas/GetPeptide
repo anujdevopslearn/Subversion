@@ -117,7 +117,6 @@ sub main {
         parameters_ref=>\%parameters
         );
 
-
     #### Decide what action to take based on information so far
     if ($parameters{action} eq "???") 
     {
@@ -170,54 +169,164 @@ sub handle_request {
     my %resultset = ();
     my $resultset_ref = \%resultset;
     my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+    
+    # Get list of accessible projects
+    my @accessible_project_ids = $sbeams->getAccessibleProjects();
+    my $project_string = join( ",", @accessible_project_ids ) || '0';
+    return unless $project_string;
+    
+
 
     #### Read in the standard form values
     my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
 
     my $TABLE_NAME = $parameters{'QUERY_NAME'};
+        #### Get the search keyword
 
 
-    #### Set some specific settings for this program
+my $searchValue = $parameters{'searchForThis'};
+
+
+############################
+ ### Getting the last session information for a user, if it exists or setting up a new one
+    #### If a new protein_name was supplied, store it
+     if ($searchValue) {
+    $sbeams->setSessionAttribute(
+      key => 'PeptideAtlas_peptide_seq',
+      value => $searchValue,
+    );
+
+    #### Else see if we had one stored
+  } else {
+    $searchValue = $sbeams->getSessionAttribute(
+      key => 'PeptideAtlas_peptide_seq',
+    );
+
+
+if ($searchValue) {
+       $parameters{'searchForThis'}=$searchValue;
+      $parameters{'apply_action'} = 'GO';
+
+    }
+
+    else {
+
+    ## Setting the value to some given peptide for those users who visits the page first time
+      $parameters{'searchForThis'}= 'VSFLSALEEYTK';
+     $searchValue=$parameters{'searchForThis'};
+     $parameters{'apply_action'} = 'GO';
+
+     }
+
+}
+
+print "<BR>";
+
+##########################
+#### Get the Build Name
+
+my $atlas_build_name = $parameters{atlas_build_name};
+my $atlas_build_id;
+
+
+ 
+
+
+ ### Getting the last session information for a user, if it exists or setting up a new one
+    #### If a new protein_name was supplied, store it
+ if ($atlas_build_name) {
+    $sbeams->setSessionAttribute(
+      key => 'PeptideAtlas_build_name',
+      value => $atlas_build_name,
+    );
+
+    #### Else see if we had one stored
+  } else {
+    $atlas_build_name = $sbeams->getSessionAttribute(
+      key => 'PeptideAtlas_build_name',
+    );
+
+
+if ($atlas_build_name) {
+
+      $parameters{'atlas_build_name'}=$atlas_build_name;
+      $parameters{'apply_action'} = 'GO';
+    }
+
+     else {
+
+                 ## Setting the value default build id and build name
+                 $atlas_build_id = get_default_atlas_build_id(accessible_projects => $project_string );
+                 $parameters{'atlas_build_id'} = $atlas_build_id;
+
+               if ( $atlas_build_id )
+               {
+               $parameters{'atlas_build_name'} = get_atlas_build_name(atlas_build_id => 113 );
+               $atlas_build_name = $parameters{'atlas_build_name'};
+                $parameters{'apply_action'} = 'GO';
+
+                 }
+
+          }
+
+
+}
+
+
+
+    
+
+###############################################################
+### Getting the last session information of the Search Key used
+
+my $searchKey=$parameters{'searchWithinThis'};
+
+if ($searchKey) {
+    $sbeams->setSessionAttribute(
+      key => 'PeptideAtlas_search_key',
+      value => $searchKey,
+    );
+
+    #### Else see if we had one stored
+  } else {
+    $searchKey = $sbeams->getSessionAttribute(
+      key => 'PeptideAtlas_search_key'
+    );
+
+
+if ($searchKey) {
+      $parameters{'apply_action'} = 'GO';
+
+      $parameters{'searchWithinThis'}=$searchKey;
+    }
+
+    else {
+
+    ## Setting the value to some given peptide for those users who visits the page first time
+     $parameters{'searchWithinThis'}='Peptide Sequence';
+     $searchKey=$parameters{'searchWithinThis'};
+     $parameters{'apply_action'} = 'GO';
+
+     }
+
+}
+
+
+
+#### Set some specific settings for this program
     my $CATEGORY="Get Peptide";
     my $PROGRAM_FILE_NAME = $PROG_NAME;
     my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
     my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
+    
 
-    my ($atlas_build_name, $atlas_build_id);
-
-    if (defined($atlas_build_id) && $atlas_build_id < 0) 
+   if (defined($atlas_build_id) && $atlas_build_id < 0)
     {
         $parameters{'atlas_build_id'} = $atlas_build_id;
         return;
     }
 
-    # Get list of accessible projects
-    my @accessible_project_ids = $sbeams->getAccessibleProjects();
-    my $project_string = join( ",", @accessible_project_ids ) || '0';
-    return unless $project_string;  # Sanity check
-
-    ## If no parameters are defined, set up some defaults to help with browsing
-    ## until I get a help menu set-up
-    if ( !exists $parameters{'searchWithinThis'}  && !exists $parameters{'searchForThis'}
-         && ( !exists $parameters{'atlas_build_name'}  && !exists $parameters{'atlas_build_id'} ) ) {
-
-        my $atlas_build_id = get_default_atlas_build_id( accessible_projects => $project_string );
-
-        $parameters{'atlas_build_id'} = $atlas_build_id;
-
-        if ( $atlas_build_id )
-        {
-            $parameters{'atlas_build_name'} = get_atlas_build_name(atlas_build_id => $atlas_build_id ); 
-
-            $atlas_build_name = $parameters{'atlas_build_name'};
-
-            $parameters{'searchWithinThis'} = "Peptide Sequence";
-
-            $parameters{'searchForThis'} = "VSFLSALEEYTK";
-        }
-    }
-
-    # Handle search tool links...
+  # Handle search tool links...
     if ($parameters{searchWithinThis} eq 'Peptide+Name') {
       $log->info( "Adjusted Peptide+Name to Peptide Name.");
       $parameters{searchWithinThis} = 'Peptide Name';
@@ -317,14 +426,9 @@ sub handle_request {
     my ($selected_atlas_build_name, $selected_key, $selected_key_search);
 
 
-    ## Display HTML FORM to select Atlas and Search constraints:
-    my $atlas_build_name = $parameters{atlas_build_name};
+$apply_action=$parameters{'apply_action'};
 
-    my $searchKey = $parameters{searchWithinThis};
-
-    my $searchValue = $parameters{searchForThis};
-
-    unless ( $apply_action eq "QUERY" ) { ## if receive from link, don't assign null
+unless ( $apply_action eq "QUERY" || $apply_action eq "GO" ) { ## if receive from link, don't assign null
 
         $apply_action = $parameters{"query"};
 
@@ -395,6 +499,7 @@ sub handle_request {
 
 
 
+
     #########################################################################
     #### Process all the constraints
 
@@ -418,6 +523,8 @@ sub handle_request {
     return if ($atlas_build_clause eq '-1');
 
 
+
+
     #### Build PEPTIDE_NAME constraint
     my $peptide_name_clause = $sbeams->parseConstraint2SQL(
         constraint_column=>"P.peptide_accession",
@@ -425,7 +532,6 @@ sub handle_request {
         constraint_name=>"Peptide Name",
         constraint_value=>$parameters{peptide_name_constraint} );
     return if ($peptide_name_clause eq '-1');
-
 
     #### Build PEPTIDE_SEQUENCE constraint
     my $peptide_sequence_clause = $sbeams->parseConstraint2SQL(
@@ -435,6 +541,8 @@ sub handle_request {
         constraint_value=>$parameters{peptide_sequence_constraint} );
     return if ($peptide_sequence_clause eq '-1');
 
+
+   
     my $atlas_project_clause = "AND AB.project_id IN ( $project_string )";
 
     ## want to replace LIKE with = , as want a single peptide returned
@@ -488,9 +596,10 @@ sub handle_request {
       return;
     }
 
+
     #########################################################################
     #### If QUERY,  display the data
-if ($apply_action =~ /QUERY/i ) {
+if ($apply_action =~ /QUERY|GO/i ) {
 
         my @rows = $sbeams->selectSeveralColumns($sql)
         or print "Peptide not found.  Please check selections and try again.<br>";
@@ -622,9 +731,14 @@ if ($apply_action =~ /QUERY/i ) {
                                           tr_info => $tr,
                                           value => format_refpep( \@pep_annot )
                                          ) if $pep_annot[0];
-                                         
+
+
+ #### Deciding which clause to send to PeptideCount method present in Utilities.pm
+ 
+  my $peptide_clause = ($peptide_name_clause) ? $peptide_name_clause : $peptide_sequence_clause;
+
   my($no_organisms,$no_distinct_builds)=$sbeamsMOD->PeptideCount(atlas_project_clause=>$atlas_project_clause,
-                                                           peptide_sequence_clause=>$peptide_sequence_clause);
+                                                                  peptide_clause=>$peptide_clause );
 
 
   my $link="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Summarize_Peptide?searchForThis=$peptide_sequence[0]&apply_action=QUERY";
@@ -1381,6 +1495,8 @@ sub get_atlas_build_name
 #######################################################################
 sub get_default_atlas_build_id
 {
+
+
     my %args = @_;
     return unless $args{accessible_projects};
 
@@ -1395,6 +1511,9 @@ sub get_default_atlas_build_id
     ~;
 
     my @row = $sbeams->selectrow_array($sql);
+    
+
+
     return $row[0];
 }
 
