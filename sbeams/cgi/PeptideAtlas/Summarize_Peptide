@@ -155,42 +155,39 @@ sub handle_request {
     print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
 
     #### Define some generic variables
-    my ($i,$element,$key,$value,$line,$result,$sql);
+    my ($i,$element,$key,$value,$line,$result,$sql, $peptide, $peptide_acc);
 
 
-
-
-    #### Get the search keyword
-     my $peptide_seq = $parameters{'searchForThis'};
+#### Get the search keyword
+     $peptide = $parameters{'searchForThis'};
 
 
  ### Getting the last session information for a user, if it exists or setting up a new one
     #### If a new protein_name was supplied, store it
-     if ($peptide_seq) {
+     if ($peptide) {
     $sbeams->setSessionAttribute(
       key => 'PeptideAtlas_peptide_name',
-      value => $peptide_seq,
+      value => $peptide,
     );
 
     #### Else see if we had one stored
   } else {
-    $peptide_seq = $sbeams->getSessionAttribute(
+    $peptide = $sbeams->getSessionAttribute(
       key => 'PeptideAtlas_peptide_name',
     );
-    if ($peptide_seq) {
+    if ($peptide) {
       $parameters{'apply_action'} = 'GO';
     }
     
     else {
     
     ## Setting the value to some given peptide for those users who visits the page first time
-     $peptide_seq='VSFLSALEEYTK';
+     $peptide='VSFLSALEEYTK';
      $parameters{'apply_action'} = 'GO';
 
      }
 
-
-  }
+} ## End else
   
    #### Define some variables for a query and resultset
     my %resultset = ();
@@ -265,7 +262,7 @@ if ($sbeams->output_mode() eq 'html') {
         print $q->textfield( -name=>"searchForThis",
                             -size=>80,
 			                     -maxlength=>200,
-                            -default=>$peptide_seq);
+                            -default=>$peptide);
         print $q->submit(-name => "query",
                          -value => 'QUERY',
                          -label => 'QUERY');
@@ -278,7 +275,7 @@ if ($sbeams->output_mode() eq 'html') {
 
        }
 ### Implicit Assignment of PEPTIDE SEQ to $parameters with the search constraint 'peptide_sequence_constraint'
-   $parameters{$peptide_search_constraint} = $peptide_seq;
+   $parameters{$peptide_search_constraint} = $peptide;
 
 
 
@@ -290,7 +287,9 @@ if ($sbeams->output_mode() eq 'html') {
         constraint_column=>"P.peptide_sequence",
         constraint_type=>"plain_text",
         constraint_name=>"Peptide Sequence",
-        constraint_value=>$peptide_seq);
+        constraint_value=>$peptide
+
+      );
     return if ($peptide_sequence_clause eq '-1');
     
 
@@ -323,7 +322,7 @@ if ($sbeams->output_mode() eq 'html') {
 ~;
 
 #unless ( $peptide_sequence_clause ) {
- #     $sbeams->display_sql(sql=>$sql);
+   #$sbeams->display_sql(sql=>$sql);
 
   #     print qq~
    #   <FONT COLR=red>No Peptide Found, unable to proceed</FONT>
@@ -340,9 +339,13 @@ my (@peptide_info,@builds, $dynamic_content, $vocab);
 while (my $row = $sbeams->selectSeveralColumnsRow(sql=>$sql))
 
 {
-  my ($peptide_acc,$peptide_seq,$ssr_calc,$mol_wt,$pi,$n_obs,$build_id,$build_name,$org_name)= @{$row};
 
-        @peptide_info = ($peptide_acc,$peptide_seq,$mol_wt,$pi,$ssr_calc);
+
+        my ($pep_acc,$peptide_seq,$ssr_calc,$mol_wt,$pi,$n_obs,$build_id,$build_name,$org_name)= @{$row};
+
+        ##Copying the value of Peptide Accession to global variable $peptide_acc
+        $peptide_acc=$pep_acc;
+        @peptide_info = ($pep_acc,$peptide_seq,$mol_wt,$pi,$ssr_calc);
 
         ####### Building the link for No of observations
         my $peptide_url=qq~$url$pep_link1$build_id$pep_link2$peptide_seq$pep_link3~;
@@ -362,11 +365,18 @@ while (my $row = $sbeams->selectSeveralColumnsRow(sql=>$sql))
          
 
 
+##### Display on the Page if and only if user entered a peptide which was present in the Peptideatals
+if( defined $peptide_acc) {
    $dynamic_content=DisplayPeptide(view1=>\@peptide_info,
                                                 view2=>\@builds);
    $vocab=$sbeamsMOD->vocabHTML();
    
    print "$dynamic_content.$vocab";
+   
+   }
+
+### if the peptide was not found in the peptide atlas.
+print "The peptide was not found. Please enter again";
    
 
 
