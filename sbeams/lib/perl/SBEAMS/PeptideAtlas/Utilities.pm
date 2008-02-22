@@ -824,12 +824,14 @@ my $sbeams = $self->getSBEAMS();
 
 my %args=@_;
 
-my ($atlas_project_clause,$peptide_sequence_clause);
+my ($atlas_project_clause,$peptide_clause);
 
 $atlas_project_clause=$args{atlas_project_clause};
-$peptide_sequence_clause=$args{peptide_sequence_clause};
 
-unless($peptide_sequence_clause && $atlas_project_clause) {
+$peptide_clause=$args{peptide_clause};
+
+
+unless ($peptide_clause && $atlas_project_clause) {
 
     print "The Required clause parameters not found. Unable to generate the count of Builds in which peptide Found";
     return;
@@ -849,7 +851,7 @@ my $sql = qq~
       ON (BS.organism_id= OZ.organism_id)
       WHERE 1 = 1
       $atlas_project_clause
-      $peptide_sequence_clause
+      $peptide_clause
       ORDER BY  OZ.organism_name, AB.atlas_build_name
       
    ~;
