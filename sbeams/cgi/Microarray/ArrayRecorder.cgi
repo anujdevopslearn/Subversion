@@ -1429,7 +1429,7 @@ sub alert_developers{
   my %parameters = %{$parameters_ref};
   my $mailprog = "/usr/lib/sendmail";
   my $recipient_name = "Microarray_admin Developer Contact";
-  my $recipient = "mjohnson\@systemsbiology.org";
+  my $recipient = "bmarzolf\@systemsbiology.org";
   my $current_username = $sbeams->getCurrent_username();
 
   open (MAIL, "|$mailprog $recipient") || croak "Can't open $mailprog!\n";
