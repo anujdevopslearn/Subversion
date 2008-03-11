@@ -748,7 +748,7 @@ sub main {
       chomp($line);
       next if ($line =~ /^\s*#/);
       next if ($line =~ /^\s*$/);
-      my ($search_batch_id,$path) = split(/\t/,$line);
+      my ($search_batch_id,$path) = split(/\s+/,$line);
       my $filepath = $path;
 
       if ($filepath !~ /\.xml/) {
@@ -792,6 +792,7 @@ sub main {
   #### unless it has already been done
   my @identlist_files;
   my %decoy_corrections;
+  my $spectral_peptides;
   my $first_loop = 1;
   foreach my $document ( @documents ) {
     my $filepath = $document->{filepath};
@@ -816,6 +817,12 @@ sub main {
 	unless (-e $proteinProphet_filepath) {
 	  die("ERROR: Specified master ProteinProphet file not found '$proteinProphet_filepath'\n");
 	}
+
+	#### If it exists, read the SpectraST library
+	$spectral_peptides = readSpectralLibraryPeptides(
+          input_file => "analysis/SpectraST_all_Q2.sptxt",
+        );
+
       }
 
     #### Else we'll read one ProteinProphet file per pepXML file
@@ -852,7 +859,7 @@ sub main {
     #### enabled for testing
     my $decoy_file = $filepath;
     $decoy_file =~ s/\.xml$/.decoy.txt/;
-    if ( -e $decoy_file && 0) {
+    if ( -e $decoy_file && 0) {  #### && 0 means this is disabled!!
       open(DECOYFILE,$decoy_file);
       while (my $line = <DECOYFILE>) {
 	chomp($line);
@@ -897,11 +904,13 @@ sub main {
 
     }
 
+
     #### Write out all the peptides and probabilities including ProteinProphet information
     writeIdentificationListFile(
       output_file => $identlist_file,
       identification_list => $CONTENT_HANDLER->{identification_list},
       ProteinProphet_data => $CONTENT_HANDLER->{ProteinProphet_data_list},
+      spectral_library_data => $spectral_peptides,
       P_threshold => $P_threshold,
     );
 
@@ -2056,6 +2065,7 @@ sub writeIdentificationListFile {
     || die("No output identification_list provided");
   my $ProteinProphet_data = $args{'ProteinProphet_data'}
     || die("No ProteinProphet_data provided");
+  my $spectral_library_data = $args{'spectral_library_data'};
   my $P_threshold = $args{'P_threshold'}
     || die("No P_threshold provided");
 
@@ -2079,6 +2089,7 @@ sub writeIdentificationListFile {
   foreach my $identification ( @{$identification_list} ) {
 
     my $charge = $identification->[7];
+    my $peptide_sequence = $identification->[3];
     my $modified_peptide = $identification->[5];
 
     #### Grab the ProteinProphet information
@@ -2133,6 +2144,18 @@ sub writeIdentificationListFile {
 	#### here can drift slightly over 1.000. Don't allow that.
 	$probability = 1 if ($probability > 1);
 
+	#### If there is spectral library information, look at that
+	if ($spectral_library_data && $peptide_sequence) {
+	  if ($spectral_library_data->{$peptide_sequence}) {
+	    #print "$peptide_sequence\t$probability\t$spectral_library_data->{$peptide_sequence}\n";
+	    $identification->[14] = $spectral_library_data->{$peptide_sequence};
+	  } else {
+	    #print "$peptide_sequence\t$probability\tnot in lib\n";
+	    #### If it's not in the library, kill it
+	    $probability = 0.5;
+	  }
+	}
+
         $identification->[8] = $probability;
 
       } else {
@@ -2156,4 +2179,78 @@ sub writeIdentificationListFile {
   return(1);
 
 } # end writeIdentificationListFile
+
+
+
+###############################################################################
+# readSpectralLibraryPeptides
+###############################################################################
+sub readSpectralLibraryPeptides {
+  my %args = @_;
+  my $input_file = $args{'input_file'} || die("No input file provided");
+
+  #### Return if library not available
+  if ( ! -e $input_file ) {
+    print "WARNING: Spectral library '$input_file' not found!\n";
+    return;
+  }
+
+  print "Reading cache template file '$input_file'...\n";
+
+  #### Open library file
+  open(INFILE,$input_file)
+    || die("ERROR: Unable to open '$input_file'");
+
+
+  #### Verify that the head is as we expect
+  my $line;
+  while ($line = <INFILE>) {
+    if ($line =~ /^\#\#\# ===/) {
+      last;
+    }
+    if ($line !~ /^\#\#\#/) {
+      die("ERROR: Unexpected format reading spectral library '$input_file'");
+    }
+  }
+
+  my $peptides;
+  my $n_peptides;
+  my ($peptide_sequence,$probability);
+  my $counter;
+
+  #### Read file minimally, skimming out the peptide information
+  while ($line = <INFILE>) {
+    chomp($line);
+    if ($line =~ /^Name: ([A-Z]+)\/\d/) {
+      $peptide_sequence = $1;
+    }
+    if ($line =~ /^Comment: .+ Prob=([\d\.]+)/) {
+      $probability = $1;
+    }
+    if ($line =~ /^NumPeaks/) {
+      if ($peptides->{$peptide_sequence}) {
+	if ($probability > $peptides->{$peptide_sequence}) {
+	  $peptides->{$peptide_sequence} = $probability;
+	  #print "$peptide_sequence = $probability\n";
+	}
+      } else {
+	$peptides->{$peptide_sequence} = $probability;
+	#print "$peptide_sequence = $probability\n";
+	$n_peptides++;
+      }
+    }
+
+    #$counter++;
+    #print "$counter... " if ($counter % 1000 == 0);
+
+  }
+
+  close(INFILE);
+
+  print "  - read $n_peptides peptides\n";
+
+  return($peptides);
+
+} # end readSpectralLibraryPeptides
+
 
