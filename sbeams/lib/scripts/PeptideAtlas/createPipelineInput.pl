@@ -820,7 +820,7 @@ sub main {
 
 	#### If it exists, read the SpectraST library
 	$spectral_peptides = readSpectralLibraryPeptides(
-          input_file => "analysis/SpectraST_all_Q2.sptxt",
+          input_file => "analysis/consensus.sptxt",
         );
 
       }
@@ -2086,11 +2086,14 @@ sub writeIdentificationListFile {
   print "  - writing ".scalar(@{$identification_list})." peptides\n";
 
   my $counter = 0;
+  my %consensus_lib = ( found => [], missing => [] );
+
   foreach my $identification ( @{$identification_list} ) {
 
     my $charge = $identification->[7];
     my $peptide_sequence = $identification->[3];
     my $modified_peptide = $identification->[5];
+    my $spectrast_formatted_sequence = $modified_peptide . '/' . $charge;
 
     #### Grab the ProteinProphet information
     my $initial_probability;
@@ -2145,12 +2148,15 @@ sub writeIdentificationListFile {
 	$probability = 1 if ($probability > 1);
 
 	#### If there is spectral library information, look at that
-	if ($spectral_library_data && $peptide_sequence) {
-	  if ($spectral_library_data->{$peptide_sequence}) {
+	if ($spectral_library_data && $spectrast_formatted_sequence) {
+	  if ($spectral_library_data->{$spectrast_formatted_sequence}) {
 	    #print "$peptide_sequence\t$probability\t$spectral_library_data->{$peptide_sequence}\n";
+      # Should this change also?
 	    $identification->[14] = $spectral_library_data->{$peptide_sequence};
+      push @{$consensus_lib{found}}, $spectrast_formatted_sequence;
 	  } else {
-	    #print "$peptide_sequence\t$probability\tnot in lib\n";
+	    # print "$peptide_sequence\t$probability\t($spectrast_formatted_sequence)\t not in lib \n";
+      push @{$consensus_lib{missing}}, $spectrast_formatted_sequence;
 	    #### If it's not in the library, kill it
 	    $probability = 0.5;
 	  }
@@ -2173,6 +2179,10 @@ sub writeIdentificationListFile {
 
   }
 
+  if ( $consensus_lib{found} || $consensus_lib{missing} ) {
+    # Must have used spectrast lib
+    print "Filtered vs. consensus library, found " . scalar( @{$consensus_lib{found}} ) . ',  ' .  scalar( @{$consensus_lib{missing}} ) . " were missing\n";
+  }
   print "\n";
   close(OUTFILE);
 
@@ -2195,7 +2205,7 @@ sub readSpectralLibraryPeptides {
     return;
   }
 
-  print "Reading cache template file '$input_file'...\n";
+  print "Reading consensus spectral library file '$input_file'...\n";
 
   #### Open library file
   open(INFILE,$input_file)
@@ -2221,7 +2231,7 @@ sub readSpectralLibraryPeptides {
   #### Read file minimally, skimming out the peptide information
   while ($line = <INFILE>) {
     chomp($line);
-    if ($line =~ /^Name: ([A-Z]+)\/\d/) {
+    if ($line =~ /^Name: ([^\/]+\/\d)/) {
       $peptide_sequence = $1;
     }
     if ($line =~ /^Comment: .+ Prob=([\d\.]+)/) {
