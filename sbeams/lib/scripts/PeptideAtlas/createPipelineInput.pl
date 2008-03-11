@@ -2151,8 +2151,9 @@ sub writeIdentificationListFile {
 	if ($spectral_library_data && $spectrast_formatted_sequence) {
 	  if ($spectral_library_data->{$spectrast_formatted_sequence}) {
 	    #print "$peptide_sequence\t$probability\t$spectral_library_data->{$peptide_sequence}\n";
-      # Should this change also?
-	    $identification->[14] = $spectral_library_data->{$peptide_sequence};
+
+      # This adds a 15th column, which gums up the works during the load
+#	    $identification->[14] = $spectral_library_data->{$spectrast_formatted_sequence};
       push @{$consensus_lib{found}}, $spectrast_formatted_sequence;
 	  } else {
 	    # print "$peptide_sequence\t$probability\t($spectrast_formatted_sequence)\t not in lib \n";
@@ -2162,7 +2163,7 @@ sub writeIdentificationListFile {
 	  }
 	}
 
-        $identification->[8] = $probability;
+  $identification->[8] = $probability;
 
       } else {
 	print "WARNING: No adjusted probability for $modified_peptide-$charge\n";
