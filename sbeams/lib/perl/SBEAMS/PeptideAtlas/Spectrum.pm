@@ -330,15 +330,17 @@ sub get_modified_peptide_instance_id {
              ON ( MPI.peptide_instance_id = PI.peptide_instance_id )
        WHERE PI.atlas_build_id = $atlas_build_id
     ~;
-    my @rows = $sbeams->selectSeveralColumns($sql);
 
+    my $sth = $sbeams->get_statement_handle( $sql );
     #### Loop through all rows and store in hash
-    foreach my $row (@rows) {
+    my $cnt = 0;
+    while ( my $row = $sth->fetchrow_arrayref() ) {
+      $cnt++;
       my $modified_peptide_instance_id = $row->[0];
       my $key = $row->[1].'/'.$row->[2];
       $modified_peptide_instance_ids{$key} = $modified_peptide_instance_id;
     }
-    print "       ".scalar(@rows)." loaded...\n";
+    print "       $cnt loaded...\n";
   }
 
 
@@ -459,19 +461,18 @@ sub get_spectrum_id {
       SELECT sample_id,spectrum_name,spectrum_id
         FROM $TBAT_SPECTRUM
     ~;
-    my @rows = $sbeams->selectSeveralColumns($sql);
 
-    #### Create a hash out of it
-    foreach my $row (@rows) {
+    my $sth = $sbeams->get_statement_handle( $sql );
+    while ( my $row = $sth->fetchrow_arrayref() ) {
       my $key = "$row->[0] - $row->[1]";
       $spectrum_ids{$key} = $row->[2];
     }
-
-    print "       ".scalar(keys(%spectrum_ids))." loaded...\n";
+    my $num_ids = scalar(keys(%spectrum_ids));
+    print "       $num_ids spectrum IDs loaded...\n";
 
     #### Put a dummy entry in the hash so load won't trigger twice if
     #### table is empty at this point
-    $spectrum_ids{DUMMY} = -1;
+    $spectrum_ids{DUMMY} = -1 unless $num_ids;
 
     #### Print out a few entries
     #my $i=0;
@@ -773,10 +774,11 @@ sub get_spectrum_identification_id {
              ON ( MPI.peptide_instance_id = PEPI.peptide_instance_id )
        WHERE PEPI.atlas_build_id = '$atlas_build_id'
     ~;
-    my @rows = $sbeams->selectSeveralColumns($sql);
+
+    my $sth = $sbeams->get_statement_handle( $sql );
 
     #### Create a hash out of it
-    foreach my $row (@rows) {
+    while ( my $row = $sth->fetchrow_arrayref() ) {
       my $key = "$row->[0] - $row->[1] - $row->[2]";
       $spectrum_identification_ids{$key} = $row->[3];
     }
