@@ -18,6 +18,7 @@ use Benchmark;
 		
 use SBEAMS::Connection qw($log);
 use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::Settings;
 use SBEAMS::Glycopeptide::Tables;
 use SBEAMS::Glycopeptide;
 
@@ -489,13 +490,13 @@ sub insert_peptides {
 
 
   # insert observed_to_ipi record(s) - indicate original
-
-
+  # What the heck is this?
   my $match = $module->clean_pepseq( $args{aa_seq} );
   if ( length($match) > 900 ) {
     print STDERR "Truncating long value for matching sequence\n";
     $match = substr( $match, 0, 900 );
   }
+  print "what the heck?\n";
 }
 
 sub insert_peptide_search {
@@ -571,17 +572,25 @@ sub insert_observed_peptides {
   my $ids = $self->{_id_to_seq};
   my $pepseqs = $self->{_pepseqs};
 
+  my $idx_file = $PHYSICAL_BASE_DIR . "/usr/Glycopeptide/" . $module->getSpectraSTLib( build_id => $args{build_id} ) . ".pepidx";
+  print STDERR "Using library file: $idx_file\n";
+  my $sp_pepidx = $module->readSpectrastPepidxFile( $idx_file );
+  
   my @keys = keys( %{$seqs} );
-  print "Found $#keys seqs\n";
   
   my $heads = $self->{_heads} || die("Doh");
   my $sbeams = $self->getSBEAMS();
+
+  my %no_maps = ( potential => [],
+                  exact => [] );
 
   my $cnt;
   my $insert_cnt = 0;
   my $t0 = time();
   my $pcnt = scalar( @{$args{peptides}} );
   print "Inserting peptides ($pcnt candidates)\n"; 
+
+  # Loop over peptides, insert if they pass muster
   for my $obs ( @{$args{peptides}} ) {
     $cnt++;
     # for my $k ( keys( %$heads ) ) { print "$k => $heads->{$k} => $obs->[$heads->{$k}]\n"; }
@@ -613,7 +622,8 @@ sub insert_observed_peptides {
     } elsif ( grep /^$obs->[$heads->{Peptide}]$/,  @$pepseqs ) { # Duplicato
       # FIXME - should we update here?
       # FIXME - Case sensitive?
-      print STDERR "Duplicate detected: $obs->[$heads->{Peptide}]\n";
+      # FIXME - this picks up dbl charge states 
+#      print STDERR "Duplicate detected: $obs->[$heads->{Peptide}]\n";
 #      next;
     }
     $insert_cnt++;
@@ -623,6 +633,7 @@ sub insert_observed_peptides {
     my $calc_mass = $module->calculatePeptideMass( sequence => $clean_pep ); 
 
     my ( $delta, $exp_mass, $scan, $charge, $mass2ch, $mh_plus, $motif_score );
+#    print "Choans dCn is $args{dCn_cutoff}\n";
     if ( $self->{_format} eq 'interact-tsv' ) {
 
 #      for my $h (keys( %$heads ) ) { print "head is $h, idx is $heads->{$h}, val is $obs->[$heads->{$h}]\n"; }
@@ -642,18 +653,31 @@ sub insert_observed_peptides {
       $mh_plus = $obs->[$heads->{'MH+'}];
 
     } elsif  ( $self->{_format} eq 'phosphogigolo' ) {
+#      print "Pogig in da house\n";
       my $mh = $obs->[$heads->{'MH+'}];
       $charge = $obs->[$heads->{'chg_state'}];
       $exp_mass = ($mh * $charge) - ( $charge - 1 );
       $mass2ch = $obs->[$heads->{'MH+'}];
       $mh_plus = $obs->[$heads->{'MH+'}] + 1.0078;
       if ( $args{gygi_ascore} ) {
+#        print "Getting gygi with it!\n";
         $motif_score = $args{gygi_ascore}->{$obs->[$heads->{Peptide}]};
         if ( !$motif_score || $motif_score < 10 ) {
           $obs->[$heads->{Peptide}] =~ s/\*/\&/g;
         }
 #        print STDERR "Ascore is $motif_score for $obs->[$heads->{Peptide}]\n";
+      } elsif ( $args{dCn_cutoff} > 0 ) {
+#        print "chizzle de dizzle\n";
+        if ( $obs->[$heads->{dCn}] < $args{dCn_cutoff} ) {
+          my $opep = $obs->[$heads->{Peptide}];
+          $obs->[$heads->{Peptide}] =~ s/\*/\&/g;
+#          print "dCn of $obs->[$heads->{dCn}] caused $opep to become $obs->[$heads->{Peptide}]";
+        } else {
+#          print "dCn of $obs->[$heads->{dCn}] caused $obs->[$heads->{Peptide}] to stand pat";
+        }
       }
+#      print STDERR "we be nexting\n";
+#      next;
       # scan and delta are not defined
     }
 
@@ -679,85 +703,134 @@ sub insert_observed_peptides {
                                      delta_cn => $obs->[$heads->{dCn}],
               };
 
-   
-  # Insert row
-  my $obs_id = $sbeams->updateOrInsertRow( table_name  => $TBGP_OBSERVED_PEPTIDE,
-                                           rowdata_ref => $rowdata,
-                                           return_PK   => 1,
-                                           verbose     => $self->verbose(),
-                                           testonly    => $self->testonly(),
-                                           insert      => 1,
-                                           PK          => 'peptide_search_id',
-                                         );
 
-  unless ( $cnt % 25 ){
-    print '*';
-  }
-  unless ( $cnt % 500 ){
-    print "\n";
-  }
+    my $obspep; 
+    my $newpep = uc( $clean_pep ); 
+    my $has_match = 0;
+    if ( $sp_pepidx->{$newpep} ) {
+      my @matches = @{$sp_pepidx->{$newpep}};
+      for my $m ( @matches ) {
+        $newpep = uc( $clean_pep ); 
+        my $obspep =  $obs->[$heads->{Peptide}]; 
+        $obspep =~ s/\&/\*/g;
+        my @mods = split( "/", $m->[1], -1 );
+        my $pcnt = 1;
+        # start loop at 1 to skip first (charge/nmods)
+        for ( my $i = 1; $i <= $#mods; $i++ ) { 
+          $mods[$i] =~ /(\d+),([STY]),(Phospho)/;
+          next unless $2;
+          my $posn = $1 + $pcnt++;
+          substr( $newpep, $posn, 0, '*' );
+        }
+        if ( $newpep eq $obspep ) {
+#          print "Found a match for $newpep\n";
+          $has_match++;
+          last;
+#        } else {
+#          print "Still looking for  $newpep\n";
+        }
+      }
+#    print 'Found ' . scalar( @matches ) . ' potential matches for ' . $clean_pep . ' ( ' . $obs->[$heads->{Peptide}] . " )\n";
+    } else {
+      print STDERR 'No potential matches for ' . $clean_pep . ' ( ' . $obs->[$heads->{Peptide}] . " )\n";
+      push @{$no_maps{potential}}, "$obs->[$heads->{Peptide}] / $clean_pep";
+      next;
+    }
+    if ( !$has_match ) { # If we haven't been seen in the consensus lib, skip
+      print STDERR "No exact match for $obs->[$heads->{Peptide}] ($obspep)\n";
+      push @{$no_maps{exact}}, "$obs->[$heads->{Peptide}] / $clean_pep";
+      next;
+    }
+    
+    # Insert row
+    my $obs_id = $sbeams->updateOrInsertRow( table_name  => $TBGP_OBSERVED_PEPTIDE,
+                                             rowdata_ref => $rowdata,
+                                             return_PK   => 1,
+                                             verbose     => $self->verbose(),
+                                             testonly    => $self->testonly(),
+                                             insert      => 1,
+                                             PK          => 'peptide_search_id',
+                                           );
 
-  my %seen;
-  for my $id ( @$mapteins ) { # For each IPI that this peptide maps to
-    unless ( $seen{$id} ) {
+    unless ( $cnt % 25 ){
+      print '*';
+    }
+    unless ( $cnt % 500 ){
+      print "\n";
+    }
+
+    my %seen;
+    for my $id ( @$mapteins ) { # For each IPI that this peptide maps to
+      next if $seen{$id};
       $seen{$id}++;
       # Insert rows into observed_to_ipi table
       $sbeams->updateOrInsertRow( table_name  => $TBGP_OBSERVED_TO_IPI,
-                                   rowdata_ref => { ipi_data_id => $id, observed_peptide_id => $obs_id },
-                                   return_PK   => 0,
-                                   verbose     => $self->verbose(),
-                                   testonly    => $self->testonly(),
-                                   insert      => 1,
-                                   PK          => 'observed_to_ipi_id',
-                                  );
+                                 rowdata_ref => { ipi_data_id => $id, observed_peptide_id => $obs_id },
+                                 return_PK   => 0,
+                                 verbose     => $self->verbose(),
+                                 testonly    => $self->testonly(),
+                                 insert      => 1,
+                                 PK          => 'observed_to_ipi_id',
+                                );
 
 
-      # Insert row(s) into observed_to_glycosite table
-      my $coords = $module->map_peptide_to_protein( protseq => $ids->{$id},
-                                        multiple_mappings => 1,
-                                                   pepseq => uc($clean_pep)
-                                                 );
+    # Insert row(s) into observed_to_glycosite table
+    my $coords = $module->map_peptide_to_protein( protseq => $ids->{$id},
+                                      multiple_mappings => 1,
+                                                 pepseq => uc($clean_pep)
+                                               );
 
 #      print "Does $clean_pep map to $ids->{$id}\n";
 #      for my $cd ( @$coords ) { print "$cd->[0], $cd->[1]\n"; }
 #      print "Done coords\n";
-      my $gsites = $module->getIPIGlycosites( ipi_data_id => $id );
+    my $gsites = $module->getIPIGlycosites( ipi_data_id => $id );
 #      for my $gs ( @$gsites ) { print "$gs->[0] => $gs->[1]\n"; }
 
-      my $mapped = 0;
-      for my $coord_pair ( @$coords ) {
-        for my $ipi_sites ( @$gsites ) {
-          if ( $coord_pair->[0] <= $ipi_sites->[1] &&  $coord_pair->[1] >= $ipi_sites->[1] ) {
-            $mapped++;
-            # Insert rows into observed_to_glycosite table
-            $sbeams->updateOrInsertRow( table_name  => $TBGP_OBSERVED_TO_GLYCOSITE,
-                                   rowdata_ref => { observed_peptide_id => $obs_id, 
-                                                    glycosite_id => $ipi_sites->[0],
-                                                    site_start => $ipi_sites->[1],
-                                                    site_stop => $ipi_sites->[1] + length($clean_pep),
-                                                  },
-                                   return_PK   => 0,
-                                   verbose     => $self->verbose(),
-                                   testonly    => $self->testonly(),
-                                   insert      => 1,
-                                   PK          => 'observed_to_glycosite_id',
-                                  );
-            }
+    my $mapped = 0;
+    for my $coord_pair ( @$coords ) {
+      for my $ipi_sites ( @$gsites ) {
+        if ( $coord_pair->[0] <= $ipi_sites->[1] &&  $coord_pair->[1] >= $ipi_sites->[1] ) {
+          $mapped++;
+          # Insert rows into observed_to_glycosite table
+          $sbeams->updateOrInsertRow( table_name  => $TBGP_OBSERVED_TO_GLYCOSITE,
+                                 rowdata_ref => { observed_peptide_id => $obs_id, 
+                                                  glycosite_id => $ipi_sites->[0],
+                                                  site_start => $ipi_sites->[1],
+                                                  site_stop => $ipi_sites->[1] + length($clean_pep),
+                                                },
+                                 return_PK   => 0,
+                                 verbose     => $self->verbose(),
+                                 testonly    => $self->testonly(),
+                                 insert      => 1,
+                                 PK          => 'observed_to_glycosite_id',
+                                );
           }
-        # If a peptide spans multiple sites, we'll map them all, but we won't try 
-        # to map a peptide to a protein in multiple places.
-        last if $mapped;  
         }
+      # If a peptide spans multiple sites, we'll map them all, but we won't try 
+      # to map a peptide to a protein in multiple places.
+      last if $mapped;  
       }
-    }
+    } # End of foreach mapped protein
 
 
 
-#  last if $cnt >= 1;
-  }
+#  last if $cnt >= 100;
+  } # End of foreach peptide
+
   my $tdiff = time() - $t0;
   print "\n\n";
   print "Inserted $insert_cnt rows of $cnt in $tdiff seconds\n"; 
+
+  print "No potential matches\n" if $no_maps{potential};
+  for my $pep ( @{$no_maps{potential}} ) {
+    print "$pep\n";
+  }
+
+  print "No exact matches\n" if $no_maps{exact};
+  for my $pep ( @{$no_maps{exact}} ) {
+    print "$pep\n";
+  }
+
 }
 
 sub extract_delta {
