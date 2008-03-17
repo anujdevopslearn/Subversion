@@ -828,8 +828,8 @@ $table3 .= $sbeamsMOD->encodeSectionHeader( text => 'Vocabulary',
                                             width => 900
                                             );
 
-#Substituting the path generated from encodeSectionHeader to match with peptideatlas.org for displaying oragn header
-##$table3 =~ s/\/devAP\/sbeams//gm;
+#Substituting the path generated from encodeSectionHeader to match with peptideatlas.org for displaying orange header
+$table3 =~ s/\/devAP\/sbeams//gm;
 
 $table3 .= $sbeamsMOD->encodeSectionItem( key   => 'pI',
                                           value => $pi_desc,
