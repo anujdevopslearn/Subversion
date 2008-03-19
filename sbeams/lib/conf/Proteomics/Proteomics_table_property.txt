@@ -56,9 +56,8 @@ PR_SummarizePeptides	Summarize Peptides	QUERY	NO				SummarizePeptides
 PR_SummarizeFractions	Summarize Fractions	QUERY	NO				SummarizeFractions	
 PR_BrowsePossiblePeptides	Browse Possible Peptides	QUERY	NO				BrowsePossiblePeptides	
 PR_BrowseProteinSummary	Browse Protein Summary	QUERY	NO				BrowseProteinSummary	
-PR_proteomics_sample	Proteomics Sample	Proteomics_user	YES	$TBPR_PROTEOMICS_SAMPLE	proteomics_sample_id		ManageTable.cgi?TABLE_NAME=PR_proteomics_sample	"PR_proteomics_sample,PR_experiment_sample"
+PR_proteomics_sample	Proteomics Sample	Proteomics_user	YES	$TBPR_PROTEOMICS_SAMPLE	proteomics_sample_id		ManageTable.cgi?TABLE_NAME=PR_proteomics_sample	"PR_proteomics_sample"
 PR_proteomics_sample_protocol	Proteomics Sample Protocol	Proteomics_user	NO	$TBPR_PROTEOMICS_SAMPLE_PROTOCOL	proteomics_sample_protocol_id			
-PR_experiments_samples	Experiments Samples	Proteomics_user	NO	$TBPR_EXPERIMENTS_SAMPLES	experiments_samples_id		ManageTable.cgi?TABLE_NAME=PR_experiments_samples	"PR_experiment_sample,PR_proteomics_sample"
 APD_peptide_summary	Peptide Summary	Proteomics_infrastructure	YES	$TBAPD_PEPTIDE_SUMMARY	peptide_summary_id		ManageTable.cgi?TABLE_NAME=APD_peptide_summary	APD_peptide_summary
 APD_aggregated_peptide	Aggregated Peptide	Proteomics_infrastructure	NO	$TBAPD_PEPTIDE	peptide_id			
 APD_peptide_summary_experiment	Peptide Summary Experiment	Proteomics_infrastructure	NO	$TBAPD_PEPTIDE_SUMMARY_EXPERIMENT				
