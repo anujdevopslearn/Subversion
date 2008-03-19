@@ -460,17 +460,18 @@ sub returnTableInfo {
     @result_array = (
           "Add $CATEGORY",
          	"$CGI_BASE_DIR/$subdir$PROGRAM_FILE_NAME&ShowEntryForm=1"
-                     );
+    ) if $CATEGORY && $PROGRAM_FILE_NAME; # added 2008-03, fixes phantom linx
 
     my $element;
     foreach $element (@table_array) {
       $CATEGORY = $self->returnTableInfo($element,"CATEGORY");
       $PROGRAM_FILE_NAME =
         $self->returnTableInfo($element,"PROGRAM_FILE_NAME");
+      $CATEGORY .= 's' unless $CATEGORY =~ /s$/; # 2008-3, don't add 2nd 's'
       push (@result_array, (
-        "Manage ${CATEGORY}s",
-        "$CGI_BASE_DIR/$subdir$PROGRAM_FILE_NAME"
-      ));
+        "Manage $CATEGORY",
+        "$CGI_BASE_DIR/$subdir$PROGRAM_FILE_NAME") 
+      ) if $CATEGORY && $PROGRAM_FILE_NAME; # added 2008-03, fixes phantom linx
     }
 
     return @result_array;
