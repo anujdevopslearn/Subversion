@@ -133,7 +133,7 @@ sub main {
       my $project_id = $sbeamsMOD->getProjectID(
           atlas_build_id => $parameters{atlas_build_id}
           );
-      $sbeamsMOD->display_page_header(project_id => $project_id);
+      $sbeamsMOD->display_page_header(project_id => $project_id, init_tooltip => 1);
       handle_request(ref_parameters=>\%parameters);
       $sbeamsMOD->display_page_footer();
   }
@@ -680,11 +680,16 @@ sub handle_request {
     my ( $obs, $peptides ) = getPeptideCount( biosequence => $biosequence,
                                             resultset_ref => $resultset_ref );
 
-    # Straggler for protein section, doh!
+    my $peptide_counts = scalar( @$peptides );
+
+    # Stragglers for protein section, doh!
     if ( $htmlmode ) {
       print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
-                                               key => 'Total peptides',
-                                             value => $obs) . "</TABLE>\n" 
+                                               key => 'Distinct Peptides',
+                                             value => "$peptide_counts\n" ); 
+      print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
+                                               key => 'Total Observations',
+                                             value => $obs ) . "</TABLE>\n"; 
     }
 
 
@@ -751,7 +756,7 @@ sub handle_request {
 
 
     my $observed_header = $sbeamsMOD->encodeSectionHeader(
-                           text => 'Observed Peptides',
+                           text => "Distinct Observed Peptides ($peptide_counts)",
                            link => $link );
 
     print qq~ <TABLE width="600">$observed_header</TABLE><TABLE><TR $tr><TD COLSPAN=2>~ if $htmlmode;
@@ -1526,7 +1531,7 @@ sub get_sequence_graphic {
               );
 
   # Add tmhmm-related tracks
-  for my $t ( qw( Transmembrane Intracellular Extracellular ) ) {
+  for my $t ( qw( Intracellular Transmembrane Extracellular ) ) {
 
       my %legend = ( Transmembrane => 'Transmembrane Domain',
                      Extracellular => 'Outside membrane', 
