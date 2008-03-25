@@ -71,7 +71,7 @@ sub display_page_header {
   $sbeams = $self->getSBEAMS();
 
   if( $sbeams->isGuestUser() ) {
-    $self->displayGuestPageHeader();
+    $self->displayGuestPageHeader( @_ );
 # } elsif ( $self->isYeastPA(project_id => $project_id) )
 # {
 #   $self->displayInternalResearcherPageHeader();
@@ -159,9 +159,12 @@ sub displayGuestPageHeader {
   my @page = split( "\n", $response->content() );
   my $skin = '';
   my $cnt=0;
+  my $init = ( $args{init_tooltip} ) ? $self->init_pa_tooltip() : '';
+
   for ( @page ) {
     $cnt++;
     $_ =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
+    $_ =~ s/(\<[^>]*body[^>]*\>)/$1$init/;
     last if $_ =~ /--- Main Page Content ---/;
     $skin .= "$_\n";
   }
@@ -220,6 +223,10 @@ sub displayStandardPageHeader {
 
 	<!-- Background white, links blue (unvisited), navy (visited), red (active) -->
 	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" TOPMARGIN=0 LEFTMARGIN=0 OnLoad="$loadscript self.focus();">
+  ~;
+  print $self->init_pa_tooltip() if $args{init_tooltip};
+
+  print qq~
 	<table border=0 width="100%" cellspacing=0 cellpadding=1>
 
 	<!------- Header ------------------------------------------------>
@@ -632,7 +639,7 @@ sub getSampleDisplay {
   return unless $in;
 
   my $sql = qq~
-    SELECT sample_id,sample_title
+    SELECT sample_id,sample_title, sample_description
       FROM $TBAT_SAMPLE
      WHERE sample_id IN ( $in )
      AND record_status != 'D'
@@ -641,19 +648,22 @@ sub getSampleDisplay {
 
   my @samples = $sbeams->selectSeveralColumns($sql);
 
-  my $header;
+  my $header = '';
+
   if ( $args{link} ) {
-    $header = $self->encodeSectionHeader( text => 'Observed in Samples:',
+    $header .= $self->encodeSectionHeader( text => 'Observed in Samples:',
                                           link => $args{link} );
   } else {
-    $header = $self->encodeSectionHeader( text => 'Observed in Samples:',);
+    $header .= $self->encodeSectionHeader( text => 'Observed in Samples:',);
   }
 
   my $html = '';
   my $trinfo = $args{tr_info} || '';
 
   foreach my $sample (@samples) {
-    my ($sample_id,$sample_title) = @{$sample};
+    my ($sample_id,$sample_title,$sample_description) = @{$sample};
+    $sample_title = $self->make_pa_tooltip( tip_text => $sample_description, link_text => $sample_title );
+
     $html .= $self->encodeSectionItem(
       key=>$sample_id,
       value=>$sample_title,
@@ -715,8 +725,14 @@ sub add_tabletoggle_js {
 # @return   JS/CSS to be printed in the page at an appropriate juncture
 #-
 sub init_pa_tooltip {
+  my $self = shift;
+  
+  # return nothing if tooltip has already been initialized
+  return '' if $self->{_tooltip_init};
+  
+  $self->{_tooltip_init} = 1;
   return <<"  END";
-  <SCRIPT src="/sbeams/usr/javascript/TipWidget.js" TYPE="text/javascript"></SCRIPT>
+  <SCRIPT src="$HTML_BASE_DIR/usr/javascript/TipWidget.js" TYPE="text/javascript"></SCRIPT>
   <STYLE>
   div#tooltipID { background-color:#F0F0F0;
                   border:2px 
@@ -747,7 +763,17 @@ sub make_pa_tooltip {
       return "";
     }
   }
+
+  # Issue warning if tooltip js wasn't printed (well, fetched anyway).
+  $log->warn( "Failed to itialize tooltip!" ) if !$self->{_tooltip_init};
+
   my $class = $args{class} || 'pseudo_link';
+
+  # Sanitize tooltip text
+  $args{tip_text} =~ s/\'/\\\'/g;
+  $args{tip_text} =~ s/\"/\\\'/g;
+  $args{tip_text} =~ s/\r\n/ /g;
+  $args{tip_text} =~ s/\n/ /g;
   
   return "<SPAN CLASS=$class onMouseover=\"showTooltip(event, '$args{tip_text}')\" onMouseout=\"hideTooltip()\">$args{link_text}</SPAN>";
 }
