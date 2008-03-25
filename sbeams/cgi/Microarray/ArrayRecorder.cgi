@@ -1306,7 +1306,7 @@ sub finalize {
 										   add_audit_parameters=>1);
 
 	## Format array_id so that it's a five digit number (e.g. '2886' --> '02886')
-	while ($array_id =~ /\d{5}/){
+	while ($array_id =~ /\A\d{5}\Z/){
 	  $array_id = "0".$array_id;
 	}
 
