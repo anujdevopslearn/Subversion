@@ -711,10 +711,32 @@ unless ($glist_clean) {
 #my $good_sql = "SELECT DISTINCT PI.peptide_id, PI.original_protein_name FROM PeptideAtlas.dbo.peptide_instance PI  INNER JOIN PeptideAtlas.dbo.peptide P ON ( PI.peptide_id = P.peptide_id ) INNER JOIN PeptideAtlas.dbo.atlas_build AB ON ( PI.atlas_build_id = AB.atlas_build_id ) LEFT JOIN PeptideAtlas.dbo.biosequence_set BSS ON ( AB.biosequence_set_id = BSS.biosequence_set_id ) LEFT JOIN sbeams.dbo.organism O ON ( BSS.organism_id = O.organism_id ) LEFT JOIN PeptideAtlas.dbo.peptide_mapping PM ON ( PI.peptide_instance_id = PM.peptide_instance_id ) LEFT JOIN PeptideAtlas.dbo.biosequence BS ON ( PM.matched_biosequence_id = BS.biosequence_id ) WHERE O.organism_name = 'Halobacterium' AND AB.atlas_build_id = '91' AND BS.biosequence_gene_name IN ($glist_clean) ORDER BY PI.original_protein_name";
 # print "SQL is $good_sql<br>";
 
-my $ok_sql = "SELECT DISTINCT PI.original_protein_name, SUM(PI.n_observations) AS 'peptide_hits' FROM PeptideAtlas.dbo.peptide_instance PI INNER JOIN PeptideAtlas.dbo.peptide P ON ( PI.peptide_id = P.peptide_id ) INNER JOIN PeptideAtlas.dbo.atlas_build AB ON ( PI.atlas_build_id = AB.atlas_build_id ) LEFT JOIN PeptideAtlas.dbo.biosequence_set BSS ON ( AB.biosequence_set_id = BSS.biosequence_set_id ) LEFT JOIN sbeams.dbo.organism O ON ( BSS.organism_id = O.organism_id ) LEFT JOIN PeptideAtlas.dbo.peptide_mapping PM ON ( PI.peptide_instance_id = PM.peptide_instance_id ) LEFT JOIN PeptideAtlas.dbo.biosequence BS ON ( PM.matched_biosequence_id = BS.biosequence_id ) WHERE O.organism_name = 'Halobacterium' AND AB.atlas_build_id = '91' AND BS.biosequence_gene_name IN ($glist_clean) GROUP BY  PI.original_protein_name ORDER BY PI.original_protein_name";
-# print "SQL is $ok_sql<br>";
+my $ok_sql =<<"END_SQL";
+SELECT DISTINCT PI.original_protein_name, SUM(PI.n_observations) AS 'peptide_hits',
+       COUNT( DISTINCT peptide_sequence ) AS distinct_peptides
+FROM PeptideAtlas.dbo.peptide_instance PI 
+INNER JOIN PeptideAtlas.dbo.peptide P ON ( PI.peptide_id = P.peptide_id ) 
+INNER JOIN PeptideAtlas.dbo.atlas_build AB ON ( PI.atlas_build_id = AB.atlas_build_id ) 
+  LEFT JOIN PeptideAtlas.dbo.biosequence_set BSS ON ( AB.biosequence_set_id = BSS.biosequence_set_id ) 
+  LEFT JOIN sbeams.dbo.organism O ON ( BSS.organism_id = O.organism_id ) 
+  LEFT JOIN PeptideAtlas.dbo.peptide_mapping PM ON ( PI.peptide_instance_id = PM.peptide_instance_id ) 
+  LEFT JOIN PeptideAtlas.dbo.biosequence BS ON ( PM.matched_biosequence_id = BS.biosequence_id ) 
+  WHERE O.organism_name = 'Halobacterium' 
+--  AND AB.atlas_build_id = '112' 
+  AND AB.atlas_build_id = '91' 
+  AND BS.biosequence_gene_name IN ($glist_clean) 
+GROUP BY  PI.original_protein_name ORDER BY PI.original_protein_name
+END_SQL
+
 #my @atlas_hit = $sbeams->selectSeveralColumns($good_sql);
-my %atlas_hit_h = $sbeams->selectTwoColumnHash($ok_sql);
+#my %atlas_hit_h = $sbeams->selectTwoColumnHash($ok_sql);
+my $sth = $sbeams->get_statement_handle($ok_sql);
+my %atlas_hit_h;
+while ( my @row = $sth->fetchrow_array() ) {
+  $atlas_hit_h{$row[0]} = \@row;
+}
+
+
 
 #while( my ($k, $v) = each %atlas_hit_h ) {
 #        print "key: $k, value: $v.\n";
@@ -808,15 +830,16 @@ my $atlas_data;
 tooltip=>"Edit Annotation (restricted)");
 
 #hard-coded atlas ID, FIX THIS !!!
-	 my $atlas_id = '91'; 
+#my $atlas_id = '112'; 
+  my $atlas_id = '91'; 
 	## if there are hits against the peptideAtlas, say so, otherwise, say none
 	my $peptide_tip = "None";
-	if (%atlas_hit_h->{$biosequence_name} eq ""){} else {
-	$peptide_tip = %atlas_hit_h->{$biosequence_name};
-	}
-	if ($peptide_tip eq "None"){}else{
-	$atlas_data = %atlas_hit_h->{$biosequence_name};
-	}
+	if ( $atlas_hit_h{$biosequence_name} ) {
+    $peptide_tip = "Detected $atlas_hit_h{$biosequence_name}->[2] distinct peptides for $biosequence_name, $atlas_hit_h{$biosequence_name}->[1] total observations (Restricted Access)";
+
+    $atlas_data = $atlas_hit_h{$biosequence_name};
+  }
+
 #	print "atlas_data is $atlas_data<br>";
 	my $atlas_link = getColorizedTD (tag=>'Peptide Atlas', 
 									data=>$atlas_data, 
@@ -824,7 +847,7 @@ tooltip=>"Edit Annotation (restricted)");
 									target=>'atlas', 
 									#link=>"$CGI_BASE_DIR/PeptideAtlas/GetPeptides?atlas_build_id=$atlas_id&biosequence_gene_name_constraint=$biosequence_name&query_name=AT_GetPeptides&action=QUERY&apply_action=QUERY&display_options=ShowMappings", 
 									link=>"$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_id&protein_name=$biosequence_name&action=GO",
-									tooltip=>"$biosequence_name peptides: $peptide_tip (Restricted Access)");
+									tooltip=> "$peptide_tip" );
 	$atlas_data = "";
 	  ## put a space in between redundant ORFs so the tooltip will wrap the text
 	  $duplicate_biosequences =~ s/,/, /g;
