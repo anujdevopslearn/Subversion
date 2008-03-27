@@ -1703,8 +1703,9 @@ sub getPeptideCount {
   my $protein_structure = $args{'protein_structure'};
   my $total_observations = $args{'total_observations'};
 
+  # removed DSC 2008-03 - let caller decide if it should be displayed
   #### Don't display unless HTML
-  return unless ($sbeams->output_mode() eq 'html');
+#  return unless ($sbeams->output_mode() eq 'html');
 
   #### Get the hash of indices of the columns
   my %col = %{$resultset_ref->{column_hash_ref}};
