@@ -817,7 +817,7 @@ sub handle_request {
 
     #### Display a hyperlink for viewing this information in Cytoscape
     if ($sbeams->output_mode() eq 'html') {
-      my $GetProtein_hlink = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id&protein_name=$parameters{protein_name}&output_mode=cytoscape&action=GO";
+      my $GetProtein_hlink = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id&protein_name=$protein_name&output_mode=cytoscape&action=GO";
       print qq~<TABLE><TR><TD><A HREF="$GetProtein_hlink"><IMG BORDER="0" SRC="$HTML_BASE_DIR/images/PAcyto_icon.png"></A></TD><TD valign="center"><A HREF="$GetProtein_hlink">[View peptides and related proteins as a network with Cytoscape]</A></TD></TR></TABLE><BR>~;
     }
 
