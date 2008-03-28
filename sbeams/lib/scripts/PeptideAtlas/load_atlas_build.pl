@@ -2506,8 +2506,14 @@ sub getMzXMLFileNames
 
     #### Otherwise it's directory, try to find the file
     } else {
-      my @possible_interact_names = ( 'interact-prob.xml', 'interact.xml',
-        'interact-specall.xml', 'interact-spec.xml' );
+      my @possible_interact_names = (
+        'interact-prob.pep.xml',
+        'interact-prob.xml',
+        'interact-spec.pep.xml',
+        'interact-spec.xml',
+        'interact.xml',
+        'interact.pep.xml',
+      );
       my $found_file = 0;
       foreach my $possible_name ( @possible_interact_names ) {
 	if ( -e $search_batch_dir_path.'/'.$possible_name ) {
