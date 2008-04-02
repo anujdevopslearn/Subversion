@@ -715,6 +715,8 @@ END
         filegroup_allowed['Rhesus'] = true;
         filegroup_allowed['ATH1-121501'] = true;
         filegroup_allowed['Soybean'] = true;
+	filegroup_allowed['MoGene-1_0-st-v1'] = true;
+	filegroup_allowed['Yeast_2'] = true;
 
         if ( document.all_arrays.analysis_type.value == 'exon_array_pipeline' ) {
           if ( !exon_allowed[type] ) {
