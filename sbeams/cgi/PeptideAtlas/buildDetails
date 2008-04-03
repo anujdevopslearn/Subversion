@@ -58,7 +58,9 @@ my $show_image = 0;
     ## get current settings
     my $project_id = $sbeams->getCurrent_project_id();
 
-    my $help = get_help_section();
+    my $build_help = get_table_help( 'build' );
+    my $batch_help = get_table_help( 'batch' );
+
     my $page = $sbeams->getGifSpacer( 700 ) . "<BR>\n";
     $page .=<<"    END";
     <P>
@@ -69,7 +71,7 @@ my $show_image = 0;
     item in the list below.  Although this will change build whose statistics 
     are to be displayed, it will not change your currently selected build.-->
     </P>
-    $help->{build}
+    $build_help
     END
 
     # We are not forcing the user into the new build - is that correct?
@@ -88,10 +90,10 @@ my $show_image = 0;
 #  print STDERR 'build overV ' . time() . "\n";
     $page .= get_build_overview ( $build_id );
 #  print STDERR 'sample info ' . time() . "\n";
-    $page .= "<BR>$help->{batch}\n";
+    $page .= "<BR>$batch_help\n";
     $page .= get_sample_info( $build_id );
     $page .= "<BR>\n";
-    $page .= get_build_plot ( $build_id ) if $show_image;
+    $page .= get_build_plots ( $build_id ) if $show_image;
 #  print STDERR 'showtime ' . time() . "\n";
     # Add peptide stats section
     # Add graphic
@@ -104,73 +106,61 @@ my $show_image = 0;
 
 } # end main
 
-sub get_help_section {
-  my $build_table = "<TABLE>\n";
-  $build_table .= $atlas->encodeSectionItem( key => 'Build Name', value => 'The simple name for this build, usually contains organism, prophet cutoff, and other information. ' ) . "\n";
-  $build_table .= $atlas->encodeSectionItem( key => 'Build Description', value => 'More detailed information about build. ' ) . "\n";
-  $build_table .= $atlas->encodeSectionItem( key => 'Reference Database', value => 'Database to which peptides were mapped, generally different than search database.  This mapping is done by running BLAST, and allows the peptides to be mapped the the organism\'s genomic sequence. ' ) . "\n";
-  $build_table .= $atlas->encodeSectionItem( key => 'Build Date', value => 'Date upon which build was finished. ' ) . "\n";
-  $build_table .= $atlas->encodeSectionItem( key => '# Samples', value => 'The number of individual samples which comprise this build.  Each sample contains one or more LCMS/MS runs, and generally corresponds to a single scientific experiment.' ) . "\n";
-  $build_table .= $atlas->encodeSectionItem( key => 'Distinct Peptides', value => 'This shows the number of distinct peptide sequences that were seen in this build.  Observations of the peptide in different charge states or with different modifications are coalesced.  The first number shows the distinct sequences that were seen more than once, the asterisked number in parenthesis shows a count of all distinct observed peptide sequences  ' ) . "\n";
-  $build_table .= $atlas->encodeSectionItem( key => 'Total Observations ', value => 'The total number of spectra that yeilded identifications above the build threshold, generally 0.9.  Observations of the same base peptide sequences multiple times or in various charge states/modifications, whould each contribute to the total' ) . "\n";
-  $build_table .= "</TABLE>\n";
+sub get_table_help {
+  my $name = shift;
+  return '' unless $name;
+  my @entries;
+  my $hidetext;
+  my $showtext;
+  my $heading;
+  my $description;
 
-  my $batch_table = "<TABLE>\n";
-  $batch_table .= $atlas->encodeSectionItem( key => 'ID', value => 'Database ID for this sample (search batch) ' ) . "\n";
-  $batch_table .= $atlas->encodeSectionItem( key => 'Sample Name', value => 'Simple name for this sample/experiment. ' ) . "\n";
-  $batch_table .= $atlas->encodeSectionItem( key => '# Spectra', value => 'The total number of spectra searched for the sample. ' ) . "\n";
-  $batch_table .= $atlas->encodeSectionItem( key => '# Distinct', value => 'The number of distinct peptide sequences, seen more than once (multiobs), in this build that are seen in this sample. ' ) . "\n";
-  $batch_table .= $atlas->encodeSectionItem( key => '# Contrib', value => 'The number of distinct, multiobs peptides that are only seen in this sample (unique contribution).  This discriminates against smaller samples, and is less useful in atlas&quot; with a large number of samples. ' ) . "\n";
-  $batch_table .= $atlas->encodeSectionItem( key => '# Progressive', value => 'Order-dependant unique multiobs peptides contributed by a given sample.  The contribution for each sample is based on the samples that have gone before it, so later samples tend to have a lower progressive contribution. ' ) . "\n";
-  $batch_table .= $atlas->encodeSectionItem( key => 'Sens', value => 'The sensitivity of the Peptide Prophet model at a probablility of 0.9, the percent of true positives that would be included at that threshold was used as a cutoff. ' ) . "\n";
-  $batch_table .= $atlas->encodeSectionItem( key => 'Err', value => 'The error of the Peptide Prophet model at a probablility of 0.9, the percent of false positives that would be included at that threshold was used as a cutoff. ' ) . "\n";
-  $batch_table .= "</TABLE>\n";
+  if ( $name eq 'build' ) {  
+    @entries = ( { key => 'Build Name', value => 'The simple name for this build, usually contains organism, prophet cutoff, and other information. ' },
+                 { key => 'Build Description', value => 'More detailed information about build. ' },
+                 { key => 'Reference Database', value => 'Database to which peptides were mapped, generally different than search database.  This mapping is done by running BLAST, and allows the peptides to be mapped the the organism\'s genomic sequence. ' },
+                 { key => 'Build Date', value => 'Date upon which build was finished. ' },
+                 { key => '# Samples', value => 'The number of individual samples which comprise this build.  Each sample contains one or more LCMS/MS runs, and generally corresponds to a single scientific experiment.' } ,
+                 { key => 'Distinct Peptides', value => 'This shows the number of distinct peptide sequences that were seen in this build.  Observations of the peptide in different charge states or with different modifications are coalesced.  The first number shows the distinct sequences that were seen more than once, the asterisked number in parenthesis shows a count of all distinct observed peptide sequences  ' } ,
+                 { key => 'Total Observations ', value => 'The total number of spectra that yeilded identifications above the build threshold, generally 0.9.  Observations of the same base peptide sequences multiple times or in various charge states/modifications, whould each contribute to the total' }
+        );
+                 
+    $showtext = 'show row descriptions';
+    $hidetext = 'hide row descriptions';
+    $heading = 'Build Overview';
+    $description= 'These values pertain to the atlas build as a whole';
 
-  my $css =<<"  END";
-  <style type="text/css">
-  .section_heading {  font-family: Helvetica, Arial, sans-serif; font-size: 10pt; font-weight: Bold; }
-  .description { font-family: Helvetica, Arial, sans-serif; color:#333333; font-size: 9pt; font-style: italic;  }
-  .help_key {  font-family: Helvetica, Arial, sans-serif; font-size: 9pt; font-weight: Bold; }
-  .help_val {  font-family: Helvetica, Arial, sans-serif; font-size: 9pt; }
-  </style>
-  END
 
-  my $build_content =<<"  END";
-  <span class=section_heading>Build Overview</span> 
-  <span class=description>These values pertain to the atlas build as a whole</span>
-  $build_table
-  END
+  } elsif ( $name eq 'batch' ) {
+    @entries = ( { key => 'ID', value => 'Database ID for this sample (search batch) ' },
+                 { key => 'Sample Name', value => 'Simple name for this sample/experiment. ' },
+                 { key => '# Spectra Searched', value => 'The total number of spectra searched in the sample. ' },
+                 { key => "# Spectra ID'd", value => 'The number of spectra identifed with a probability greater than the atlas threshold ' },
+                 { key => '# Distinct', value => 'The number of distinct peptide sequences, seen more than once (multiobs), in this build that are seen in this sample. ' },
+                 { key => '# Unique', value => "The number of distinct, multiobs peptides that are seen only in this sample (unique contribution).  This discriminates against smaller samples, and is less useful in atlas' with a large number of samples. " },
+                 { key => '# Cumulative', value => 'Order-dependant unique multiobs peptides contributed by a given sample.  The contribution for each sample is based on the samples that have gone before it, so later samples tend to have a lower progressive contribution. ' },
+#                 { key => 'Sens', value => 'The sensitivity of the Peptide Prophet model at a probablility of 0.9, the percent of true positives that would be included at that threshold was used as a cutoff. ' },
+                 { key => 'FDR (%)', value => 'The error rate of peptides above the threshold Peptide Prophet model at a probablility of 0.9, the percent of false positives that would be included at the build threshold. ' }
+        );
+    $heading = 'Build Overview';
+    $description= 'These values pertain to the atlas build as a whole';
+    $heading = 'Sample Overview'; 
+    $description = 'These values pertain to individual samples within the atlas';
 
-  my $batch_content =<<"  END";
-  <span class=section_heading>Sample Overview</span> 
-  <span class=description>These values pertain to individual samples within the atlas</span>
-  $batch_table
-  END
+  }
 
-  my $build_tg = $sbeams->make_toggle_section( content => $build_content,
-                                           sticky      => 0,
-                                           visible     => 0,
-                                           imglink     => 0,
-                                           textlink    => 1,
-                                           name        => 'build_help',
-                                           showtext    => 'show help',
-                                           hidetext    => 'hide help',
-                                          );
-  my $batch_tg = $sbeams->make_toggle_section( content => $batch_content,
-                                           sticky      => 0,
-                                           visible     => 0,
-                                           imglink     => 0,
-                                           textlink    => 1,
-                                           name        => 'batch_help',
-                                           showtext    => 'show help',
-                                           hidetext    => 'hide help',
-                                          );
+  return unless @entries;
+  my $help = $atlas->get_table_help_section( name => $name,
+                                             description => $description,
+                                             heading => $heading,
+                                             entries => \@entries,
+                                             showtext => $showtext,
+                                             hidetext => $hidetext  );
+  return $help;
 
-  my %help = ( build => $css . $build_tg, batch => $batch_tg );
-  return \%help;
-}
+} # end get_table_help
 
-sub get_build_plot {
+sub get_build_plots {
   my $build_id = shift;
   my $table = "<TABLE WIDTH=800>\n";
 
@@ -185,9 +175,25 @@ sub get_build_plot {
       span => 4,
       link => $link
   );
+  my $cp_img_path = "$PHYSICAL_BASE_DIR/images/tmp";
+  my $img_path = "$HTML_BASE_DIR/images/tmp";
+  my $build_path = get_build_path( build_id => $build_id );
+  my $build_image_rows =<<"  END";
+  <TR $tr><TD class=plot_caption>Plot showing the cumulative number of multiply observed peptides contributed by each sample.  Height of bar is cumulative number of n_obs > 1 peptides, blue color is number of n_obs > 1 peptides above threshold, width of the bar (x-axis) shows the number of spectra identified above the threshold, for each samle</TD></TR>
+  <TR $tr><TD><IMG WIDTH=800 SRC=$img_path/${build_id}_ncumpep_vs_nspec-multobs.gif></IMG></TD></TR> 
+  END
+  if ( -e "$cp_img_path/${build_id}_ncumpep_vs_nspec-multobs.gif" ) {
+    $table .= $build_image_rows;
+  } elsif ( -e "$build_path/analysis/ncumpep_vs_nspec-multobs.gif" ) {
+    system "cp  $build_path/analysis/ncumpep_vs_nspec-multobs.gif $cp_img_path/${build_id}_ncumpep_vs_nspec-multobs.gif";
+    $table .= $build_image_rows;
+  }
 
-  $table .= "<TR $tr><TD><IMG SRC=buildPlot?atlas_build_id=$build_id></IMG></TD></TR>\n";
-  $table .= "</TABLE>\n";
+  $table .=<<"  END";
+  <TR $tr><TD class=plot_caption>Plot showing the cumulative number of multiply observed peptides contributed by each sample</TD></TR>
+  <TR $tr><TD><IMG SRC=buildPlot?atlas_build_id=$build_id></IMG></TD></TR>
+  </TABLE>
+  END
   return $table;
   
 }
@@ -225,12 +231,6 @@ sub get_build_overview {
   WHERE atlas_build_id = $build_id 
   AND n_observations > 1 
   MPEP
-  $log->debug( $sbeams->evalSQL( <<"  END" ) );
-  SELECT COUNT(*) cnt, SUM(n_observations) obs
-  FROM $TBAT_PEPTIDE_INSTANCE  
-  WHERE atlas_build_id = $build_id 
-  AND n_observations > 1 
-  END
 
   my $smpl_count = $sbeams->selectrow_hashref( <<"  SMPL" );
   SELECT COUNT(*) cnt FROM $TBAT_ATLAS_BUILD_SAMPLE 
@@ -253,7 +253,7 @@ sub get_build_overview {
 
   my $spc = $sbeams->getGifSpacer(500);
   $build_info->{build_date} =~ s/^([0-9-]+).*$/$1/;
-#  $smpl_count->{cnt} = sprintf( "% 10i", $smpl_count->{cnt} );
+#  $/mpl_count->{cnt} = sprintf( "% 10i", $smpl_count->{cnt} );
 #  $smpl_count->{cnt} =~ s/ /&nbsp;/g;
 #  $multi_pep_count->{cnt} = sprintf( "% 10i", $multi_pep_count->{cnt} );
 #  $multi_pep_count->{cnt} =~ s/ /&nbsp;/g;
@@ -333,8 +333,9 @@ sub get_sample_info {
 #         n_progressive_peptides, model_90_sensitivity, model_90_error_rate
   my $sql =<<"  END";
   SELECT ASB.atlas_search_batch_id, sample_tag, SBS.n_searched_spectra,
-         n_distinct_multiobs_peptides, n_uniq_contributed_peptides,
-         n_progressive_peptides, model_90_sensitivity, model_90_error_rate
+         n_good_spectra, n_distinct_multiobs_peptides, 
+         n_uniq_contributed_peptides, n_progressive_peptides, 
+         model_90_error_rate
   FROM $TBAT_SEARCH_BATCH_STATISTICS SBS JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB 
     ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
   JOIN $TBAT_SAMPLE S ON s.sample_id = ABSB.sample_id
@@ -342,17 +343,16 @@ sub get_sample_info {
   JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id )
   WHERE ABS.atlas_build_id = $build_id
   AND ABSB.atlas_build_id = $build_id
-  ORDER BY S.sample_id, ASB.atlas_search_batch_id ASC
+  ORDER BY proteomics_search_batch_id ASC
   END
   my @sample_info = $sbeams->selectSeveralColumns ( $sql );
-  $log->debug( $sbeams->evalSQL($sql) );
 
   # Format loop
   my @samples;
   for my $batch ( @sample_info ) {
     $show_image++;
-#    for my $idx ( 2..7 ) { $batch->[$idx] ||= 0; }
-    for my $idx ( 6..7 ) {
+    for my $idx ( 5,6 ) { $batch->[$idx] ||= 0; }
+    for my $idx ( 7 ) {
       $batch->[$idx] = $sbeams->makeInactiveText('ND') if !defined $batch->[$idx];
       $batch->[$idx] = sprintf( "%0.1f", (100 * $batch->[$idx]))  if $batch->[$idx] !~ /FONT/; 
     }
@@ -363,12 +363,12 @@ sub get_sample_info {
   my $dag = '<sup>&dagger;</sup>';
   my @headings = ( 'ID',
                    'Sample Name',
-                   '# Spectra', 
+                   '# Spectra Searched', 
+                   "# Spectra ID'd", 
                    '# Distinct', 
-                   '# Contrib', 
-                   '# Progressive',
-                   'Sens (%)',
-                   'Err (%)'
+                   '# Unique', 
+                   '# Cumulative',
+                   'FDR (%)'
       );
 
   $table .= $atlas->encodeSectionHeader(
@@ -398,15 +398,12 @@ sub process_params {
   return( $params );
 }
 
-sub get_build_name {
-  my $build_id = shift;
-  return unless $build_id;
-  my ( $build_name ) = $sbeams->selectrow_array( <<"  END" );
-  SELECT atlas_build_name
-  FROM $TBAT_ATLAS_BUILD
-  WHERE atlas_build_id = $build_id
-  END
-  return $build_name;
+sub get_build_path {
+  my %args = @_;
+  return unless $args{build_id};
+  my $path = $atlas->getAtlasBuildDirectory( atlas_build_id => $args{build_id} );
+  $path =~ s/DATA_FILES//;
+  return $path;
 }
 
 __DATA__
