@@ -74,7 +74,7 @@ $|++;
   if ( $params->{apply_action} eq 'list_pathways' ) {
     $content = list_pathways( $params );
     # Print cgi headers
-    $glyco->printPageHeader( onload => 'hideTimerInfo()' );
+    $glyco->printPageHeader();
     #  $sbeams->printUserContext();
     print $content;
     $glyco->printPageFooter( close_tables=>'NO');
@@ -115,6 +115,7 @@ sub list_pathways {
     my @genes = split ",", $params->{ga};
     $genes{genes} = \@genes;
   }
+  $log->debug( "Fetching pathways with $kegg_organism\n" );
   my $pathways = $keggmap->getKeggPathways( organism => $kegg_organism, 
                                               source => 'db',
                                                %genes );

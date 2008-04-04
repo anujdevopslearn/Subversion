@@ -47,6 +47,8 @@ $glyco->setSBEAMS($sbeams);
 # Global Variables
 ###############################################################################
 $PROGRAM_FILE_NAME = 'main.cgi';
+my $unipep_build_id;
+
 main();
 
 
@@ -64,6 +66,8 @@ sub main {
        allow_anonymous_access=>1
 
     ));
+
+    $unipep_build_id = $glyco->get_current_build();
 
     # Introductory text, content;
     my $intro;

@@ -184,6 +184,11 @@ sub handle_request
         $parameters{input_form_format} = "minimum_detail";
     }
 
+    my $consensus = $sbeamsMOD->get_build_consensus_library();
+    my $select = 'SELECT NIST_library_id,NIST_library_name FROM $TBAT_NIST_LIBRARY WHERE NIST_library_id =' . $consensus; 
+    $select = $sbeams->evalSQL( $select );
+    $log->debug( $select );
+
     ##Input form:  action is set by PROGRAM_FILE_NAME, so sub it w/ display page:
     $sbeams->display_input_form(
         TABLE_NAME=>$TABLE_NAME,
@@ -191,6 +196,7 @@ sub handle_request
         apply_action=>$apply_action,
         PROGRAM_FILE_NAME=>"$CGI_BASE_DIR/$SBEAMS_SUBDIR/ViewMRMList",
         parameters_ref=>\%parameters,
+        optionlist_override => { NIST_library_id => $select },
         input_types_ref=>\%input_types,
         mask_user_context=> '1',
     );

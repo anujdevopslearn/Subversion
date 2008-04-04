@@ -90,12 +90,30 @@ $|++;
     
       my $info_text = get_info_text();
 
-      my $interactions_option = '';
-      if ( $params->{path_id} ) {
+      # A few fly-specific options, currently unimplemented for other orgs.
+      my $primary_identifier = '<INPUT TYPE=HIDDEN NAME=identifier VALUE=CG/>';
+      my $interactions_option =<<"        END";
+          Show known interactions as network edges:<BR>
+          $sp <INPUT TYPE=CHECKBOX NAME=network_edges CHECKED>
+        END
+      my $fb_interaction_network = '';
+
+      if ( $params->{path_id} && $kegg_organism eq 'dme' ) {
+
+        $primary_identifier =<<"        END";
+          Primary identifier: <BR>
+            $sp <INPUT TYPE=RADIO NAME=identifier VALUE=CG CHECKED> Locus tag (CGxxxxx)<BR>
+            $sp <INPUT TYPE=RADIO NAME=identifier VALUE=flybase> Flybase ID (FBgnxxxxxxx)<BR>
+        END
 
         $interactions_option =<<"        END";
-           Show known interactions as network edges (Locus tag only):<BR>
-            $sp <INPUT TYPE=CHECKBOX NAME=network_edges CHECKED>
+          Show known interactions as network edges (Locus tag only):<BR>
+          $sp <INPUT TYPE=CHECKBOX NAME=network_edges CHECKED>
+        END
+
+        $fb_interaction_network =<<"        END";
+          If desired, launch the <A HREF='http://gaggle.systemsbiology.org/projects/fly/2005-11/cy/flybaseGenetic/cy.jnlp'>
+          Interaction </A> Network from Flybase. (works best with FBgn accessions) <BR>
         END
       }
 
@@ -117,11 +135,9 @@ $|++;
             $sp <INPUT TYPE=CHECKBOX NAME=phospho CHECKED>Phosphopeptides<BR>
             $sp <INPUT TYPE=CHECKBOX NAME=non_phospho CHECKED>Non-phosphopeptides<BR>
 
-          Primary identifier: <BR>
-            $sp <INPUT TYPE=RADIO NAME=identifier VALUE=CG CHECKED> Locus tag (CGxxxxx)<BR>
-            $sp <INPUT TYPE=RADIO NAME=identifier VALUE=flybase> Flybase ID (FBgnxxxxxxx)<BR>
+            $primary_identifier
 
-          $interactions_option
+            $interactions_option
 
             <INPUT TYPE=HIDDEN NAME=path_id VALUE='$params->{path_id}'>
             
@@ -132,7 +148,7 @@ $|++;
          </DIV>
          </FORM><BR>
          
-         If desired, launch the <A HREF='http://gaggle.systemsbiology.org/projects/fly/2005-11/cy/flybaseGenetic/cy.jnlp'> Interaction </A> Network from Flybase. (works best with FBgn accessions) <BR>
+         $fb_interaction_network
          <BR><BR>
          $info_text
       END
@@ -147,7 +163,7 @@ $|++;
 
       # fetch SQL
       my $sql = $sbeams->getSessionAttribute( key => $params->{key} );
-# $sbeams->deleteSessionAttribute( key => $params->{key} );
+      $sbeams->deleteSessionAttribute( key => $params->{key} );
 
       if ( $sbeams->isTaintedSQL( $sql ) ) {
         $content .= $sbeams->makeErrorText( "Missing required parameter 'key'" );
@@ -374,7 +390,9 @@ sub get_genelist_sql {
   
   my $sql = '';
 
+  $log->debug( "genelist sql" );
   if ( $kegg_organism eq  'dme' ) {
+    $log->debug( "Ain't no DME baby" );
     my $like_clause = '';
     my  $in_clause = '';
 
@@ -412,7 +430,8 @@ sub get_genelist_sql {
         $in_clause $like_clause
        AND ( peptide_prophet_score >= $cutoff OR peptide_prophet_score IS NULL )
     END
-  } else {
+  } elsif ( 0 ) {
+    $log->debug( "No freaking way" );
     my $delim = '';
     my $gene_string = '';
     for my $gene ( split ",", $gene_list ) {
@@ -429,6 +448,30 @@ sub get_genelist_sql {
         ON ITI.observed_peptide_id = IP.observed_peptide_id
      WHERE entrez_id IN ($gene_string)
        AND peptide_prophet_score >= $cutoff 
+    END
+  } else {
+
+    $log->debug( "In the elsewhere" );
+    my $delim = '';
+    my $gene_string = '';
+    for my $gene ( split ",", $gene_list ) {
+      if ( $gene =~ /\'/ ) {
+        $gene_string .= $delim . $gene;
+      } else {
+        $gene_string .= $delim . "'" . $gene . "'";
+      }
+      $delim = ',';
+    }
+    $sql =<<"    END";
+    SELECT ipi_accession_number, synonyms, ID.ipi_data_id, delta_cn,
+           experimental_mass, peptide_prophet_score, observed_peptide_sequence
+      FROM $TBGP_IPI_DATA ID 
+      LEFT JOIN $TBGP_OBSERVED_TO_IPI ITI 
+        ON ITI.ipi_data_id = ID.ipi_data_id
+      LEFT JOIN $TBGP_OBSERVED_PEPTIDE IP 
+        ON ITI.OBSERVED_peptide_id = IP.OBSERVED_peptide_id
+        WHERE ipi_accession_number IN ( $gene_string )
+       AND ( peptide_prophet_score >= $cutoff OR peptide_prophet_score IS NULL )
     END
   }
   return ( $sql );
@@ -621,7 +664,7 @@ sub getExpressionValues {
              OR synonyms IN ($gene_string) )
        AND peptide_prophet_score >= $cutoff 
     END
-  } else {
+  } elsif ( 0 ) {
     $sql =<<"    END";
     SELECT entrez_id, ipi_accessions, 'nada', 'nada', 1
       FROM dcampbel.dbo.ipi_xrefs IX JOIN $TBGP_IPI_DATA ID 
@@ -633,7 +676,20 @@ sub getExpressionValues {
      WHERE entrez_id IN ($gene_string)
        AND peptide_prophet_score >= $cutoff 
     END
+  } else {
+    $sql =<<"    END";
+    SELECT ipi_accession_number accession, ID.ipi_data_id, 'nada', 'nada', 1
+      FROM $TBGP_IPI_DATA ID 
+      JOIN $TBGP_OBSERVED_TO_IPI ITI 
+        ON ITI.ipi_data_id = ID.ipi_data_id
+      JOIN $TBGP_OBSERVED_PEPTIDE IP 
+        ON ITI.OBSERVED_peptide_id = IP.OBSERVED_peptide_id
+     WHERE ( ipi_accession_number IN ($gene_string)
+             OR synonyms IN ($gene_string) )
+       AND peptide_prophet_score >= $cutoff 
+    END
   }
+  $log->debug( "gonna run $sql" );
 
   # ref to hash keyed by gene_id, points to arrayref of one or more peptides
   my %glyco_hits;

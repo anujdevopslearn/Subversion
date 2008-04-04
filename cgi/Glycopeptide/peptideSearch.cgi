@@ -190,6 +190,7 @@ sub handle_request {
     Database of observed phosphorylation sites
     END
 
+    $log->debug( "org is $organism");
     if ( $organism eq 'Drosophila' ) {
       %example = ( name =>'jaguar',
                    symbol => 'jar',
@@ -203,6 +204,20 @@ sub handle_request {
                    seq => '%WIDSFSIKGIRPSPLENSLHRAR%',
                    esc_seq => '%25WIDSFSIKGIRPSPLENSLHRAR%25',
                    acc => 'YER118C' );
+    } elsif (  $organism eq 'C Elegans' ) {
+      %example = ( name =>'Vitellogenin',
+                   synonym => 'AAA98720.1',
+                   symbol => 'CE06950',
+                   seq => '%HQLTEASGSVCK',
+                   esc_seq => '%25HQLTEASGSVCK%25',
+                   acc => 'C42D8.2a' );
+    } elsif (  $organism eq 'Human' ) {
+      %example = ( name =>'Insulin receptor substrate-2',
+                   synonym => 'Insulin receptor substrate-2 (IRS-2).',
+                   symbol => 'IRS2',
+                   seq => '%CSHRSNTPESIAETPPARDG%',
+                   esc_seq =>  '%25CSHRSNTPESIAETPPARDG%25',
+                   acc => 'IPI00000782' );
     } else {
       %example = ( name =>'flutflut',
                    symbol => 'flut',
@@ -1452,6 +1467,7 @@ sub display_phospho_detail_form{
 									  );
 
   my $organism = $sbeamsMOD->get_current_organism();
+  my $consensus = $sbeamsMOD->get_build_consensus_library();
 
   my $pseq = $glyco_o->seq_info()->seq();
   my $synonym = get_annotation(glyco_o   => $glyco_o, anno_type => 'synonyms' );
@@ -1460,8 +1476,10 @@ sub display_phospho_detail_form{
   my $kegglink = getKeggLink( name => $keggname, organism => $organism );
   my $cytolink = getCytoLink( acc => $ipi_acc );
   my $scanlink = getScansiteForm( seq => $pseq, name => $ipi_acc );
-  my $mrmlink = "<A HREF='ViewMRMList?NIST_library_id=20&action=QUERY;protein_name_constraint=$ipi_acc'>view transitions</A>";
+  my $mrmlink = "<A HREF='ViewMRMList?NIST_library_id=$consensus&action=QUERY;protein_name_constraint=$ipi_acc'>view transitions</A>";
 
+  $log->debug( "making the ortho link!" );
+  my $ortholink = getOrthologLink( id => $ipi_data_id );
     
   my $ipi_url = $ipi_acc;
   if ( $organism eq 'Drosophila' ) {
@@ -1488,7 +1506,7 @@ sub display_phospho_detail_form{
       $q->td({class=>'grey_header', colspan=>2}, "Protein Info "),),
     $q->Tr(
       $q->td({class=>'rev_gray_head'}, "ID"),
-      $q->td({nowrap=>1}, "$ipi_url $kegglink $cytolink $scanlink")),
+      $q->td({nowrap=>1}, "$ipi_url $kegglink $cytolink $ortholink $scanlink ")),
     $q->Tr(
       $q->td({class=>'rev_gray_head', nowrap=>1}, "Protein Name"),
       $q->td( $protein_name )),
@@ -1674,6 +1692,24 @@ sub getCytoLink {
   my $img = "$HTML_BASE_DIR/images/cyto_tiny.png";
   my $link_base = 'getCytoscapeWebstart?apply_action=gene_list&accession=';
   return "<A HREF=$link_base$args{acc}><IMG BORDER=0 TITLE='Start Cytoscape network with this gene' SRC=$img></A>";
+}
+
+sub getOrthologLink {
+  my %args = @_;
+  return '' unless $args{id};
+
+  my ($exists) = $sbeams->selectrow_array( <<"  END" );
+  SELECT count(*) FROM $TBGP_ORTHOLOG_TO_IPI
+  WHERE ipi_data_id = $args{id}
+  END
+  $log->debug(  <<"  END" );
+  SELECT count(*) FROM $TBGP_ORTHOLOG_TO_IPI
+  WHERE ipi_data_id = $args{id}
+  END
+
+  return '' unless $exists;
+
+  return qq ~<A HREF="viewOrthologs?ipi_data_id=$args{id}" TITLE="View orthologs/homolog information ($exists groups)"><IMG BORDER=0 SRC="$HTML_BASE_DIR/images/OrthoMCL.jpg"></A>~;
 }
 
 sub getKeggLink {

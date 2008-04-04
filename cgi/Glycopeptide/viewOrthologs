@@ -26,6 +26,9 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::DataTable;
 
+use SBEAMS::BioLink::Tables;
+use SBEAMS::BioLink::KeggMaps;
+
 use SBEAMS::Glycopeptide;
 use SBEAMS::Glycopeptide::Settings;
 use SBEAMS::Glycopeptide::Tables;
@@ -41,6 +44,7 @@ use SBEAMS::Glycopeptide::Glyco_query;
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::Glycopeptide;
 $sbeamsMOD->setSBEAMS($sbeams);
+my $kegg = new SBEAMS::BioLink::KeggMaps; 
 
 
 $glyco_query_o = new SBEAMS::Glycopeptide::Glyco_query;
@@ -74,28 +78,305 @@ my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch";
     my $project_id = $sbeams->getCurrent_project_id();
 
     my $page = $sbeams->getGifSpacer( 800 ) . "<BR>\n";
-
-    #### Decide what action to take based on information so far
-	  if( $params{action} =~ /^search$/ ) {
-      $page .= print_form( \%params );
-      $page .= run_search( \%params ); 
-	  } elsif( $params{action} =~ /^download$/ ) {
-      my $header = $sbeams->get_http_header( mode => 'tsvfull', filename => 'search_results.xls' );
-      print $header;
-      print run_search( \%params ); 
-      exit;
+    if ( $params{ipi_data_id} ) {
+      $page .= get_ortholog_display( %params );
+    } elsif ( $params{list_groups} ) {
+      $page .= get_ortholog_list( %params );
     } else {
-      $page .= print_form( \%params );
+      $page .= $sbeams->makeErrorText( "Missing required parameter ipi_data_id" );
     }
+      
 
     # Display page
     $sbeamsMOD->display_page_header(project_id => $project_id);
 #    $sbeams->printStyleSheet();
     print $page;
-    my $url = $q->self_url();
 		$sbeamsMOD->display_page_footer();
 
 } # end main
+
+sub get_ortholog_display {
+  my %args = @_;
+  my $content;
+  for my $arg ( qw( ipi_data_id ) ) {
+    unless ( $args{$arg} ) {
+      $content .= $sbeams->makeErrorText("Missing required parameter: $arg <BR>");
+      return $content;
+    }
+  }
+
+  # Set up display table
+  my $table = SBEAMS::Connection::DataTable->new( BORDER => 0 );
+  $table->addRow( ['Ortholog group', 'Accession','Protein Name', 'Organism name', '# Peptides' ] );
+  $table->setRowAttr( ROWS => [1], BGCOLOR => '#C0D0C0' );
+  $table->setHeaderAttr(  BOLD => 1 );
+  my $all_builds = $sbeamsMOD->getPhosphopepBuilds( as_string => 1 );
+
+  # SQL to fetch orthologs
+  my $sql =<<"  END_SQL";
+  SELECT ortholog_group, ipi_accession_number, protein_name,
+  organism_name, I.ipi_data_id, COUNT(OTIPI.observed_peptide_id) total, ORG.organism_id
+  FROM $TBBL_ORTHOLOG O
+  JOIN $TBGP_ORTHOLOG_TO_IPI OTI ON O.ortholog_id = OTI.ortholog_id
+  JOIN $TBGP_IPI_DATA I ON I.ipi_data_id = OTI.ipi_data_id
+  LEFT JOIN $TBGP_OBSERVED_TO_IPI OTIPI ON OTIPI.ipi_data_id = OTI.ipi_data_id
+  LEFT JOIN $TBGP_OBSERVED_PEPTIDE OP ON OTIPI.observed_peptide_id = OP.observed_peptide_id
+  LEFT JOIN $TBGP_BUILD_TO_SEARCH BTS ON OP.peptide_search_id = BTS.search_id
+  JOIN $TB_ORGANISM ORG ON O.ortholog_organism_id = ORG.organism_id
+  WHERE ortholog_group IN ( 
+        SELECT DISTINCT ortholog_group 
+        FROM $TBBL_ORTHOLOG O 
+        JOIN $TBGP_ORTHOLOG_TO_IPI OTI ON O.ortholog_id = OTI.ortholog_id
+        WHERE ipi_data_id = $args{ipi_data_id}  )
+  AND ( build_id IN ( $all_builds ) OR build_id IS NULL )
+  GROUP BY ortholog_group, ipi_accession_number, protein_name,
+  organism_name, I.ipi_data_id, ORG.organism_id
+  ORDER BY organism_name, ipi_accession_number
+  END_SQL
+
+  my $org_hash = get_org_hash();
+  for my $k ( keys( %$org_hash ) ) {
+    $log->debug( "$k => $org_hash->{$k}" );
+  }
+
+  my $current;
+  my %subject;
+  my $bgcolor = '#F1F1F1';
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+
+  while ( my @row = $sth->fetchrow_array() ) {
+    if ( $row[5] ) {
+      $row[1] = "<A HREF='peptideSearch.cgi?action=Show_detail_form&ipi_data_id=$row[4]&organism=$org_hash->{$row[6]}'> $row[1] </A>";
+    }
+    $table->addRow( [@row[0..3,5]] );
+    $current ||= $row[3];  
+    $log->debug( $current );
+    if ( $current ne $row[3] ) {  # New organism
+      $bgcolor = ( $bgcolor eq '#E0E0E0' ) ? '#F1F1F1' : '#E0E0E0';
+      $current = $row[3];
+    }
+    if ( $row[4] == $args{ipi_data_id} ) {
+      $subject{name} = $row[2];
+      $subject{acc} = $row[1];
+      $table->setRowAttr( ROWS => [$table->getRowNum()], BGCOLOR => '#FFFACD' );
+    } else {
+      $table->setRowAttr( ROWS => [$table->getRowNum()], BGCOLOR => $bgcolor );
+    }
+  }
+  if ( $table->getRowNum() == 1 ) {
+    return $sbeams->makeInfoText( "Unable to find an OrthoMCL group for this protein" );
+  }
+  return( <<"  END" );
+  <P class=lg_body_text>
+  The table below shows ortholog/homolog information about the target protein, $subject{name} ($subject{acc}), which is highlighted in yellow.  The ortholog groups were computed using <A HREF='http://www.orthomcl.org/cgi-bin/OrthoMclWeb.cgi'>OrthoMCL version 2</A>, based on BLAST homology.
+
+  </P>
+  $table 
+  END
+}
+
+sub get_org_hash {
+  my $name2org = $kegg->getKeggNameToOrganism();
+  my %org2name;
+  @org2name{values(%{$name2org})} = keys( %{$name2org} ); 
+  return \%org2name;
+}
+
+
+
+sub get_ortholog_list {
+  my %args = @_;
+  my $content;
+#  for my $arg ( qw( ipi_data_id ) ) {
+#    unless ( $args{$arg} ) {
+#      $content .= $sbeams->makeErrorText("Missing required parameter: $arg <BR>");
+#      return $content;
+#    }
+#  }
+
+  # Set up display table
+  my $table = SBEAMS::Connection::DataTable->new( BORDER => 0 );
+  $table->addRow( ['Ortholog group', 'Accession','Protein Name', 'Organism name', '# Peptides' ] );
+  $table->setRowAttr( ROWS => [1], BGCOLOR => '#C0D0C0' );
+  $table->setHeaderAttr(  BOLD => 1 );
+  my $all_builds = $sbeamsMOD->getPhosphopepBuilds( as_string => 1 );
+
+  # SQL to fetch orthologs
+  my $sql =<<"  END_SQL";
+  SELECT ortholog_group, ipi_accession_number, protein_name,
+  organism_name, I.ipi_data_id, COUNT(OTIPI.observed_peptide_id) total, ORG.organism_id
+  FROM $TBBL_ORTHOLOG O
+  JOIN $TBGP_ORTHOLOG_TO_IPI OTI ON O.ortholog_id = OTI.ortholog_id
+  JOIN $TBGP_IPI_DATA I ON I.ipi_data_id = OTI.ipi_data_id
+  LEFT JOIN $TBGP_OBSERVED_TO_IPI OTIPI ON OTIPI.ipi_data_id = OTI.ipi_data_id
+  LEFT JOIN $TBGP_OBSERVED_PEPTIDE OP ON OTIPI.observed_peptide_id = OP.observed_peptide_id
+  LEFT JOIN $TBGP_BUILD_TO_SEARCH BTS ON OP.peptide_search_id = BTS.search_id
+  JOIN $TB_ORGANISM ORG ON O.ortholog_organism_id = ORG.organism_id
+  AND ( build_id IN ( $all_builds ) OR build_id IS NULL )
+  GROUP BY ortholog_group, ipi_accession_number, protein_name,
+  organism_name, I.ipi_data_id, ORG.organism_id
+  ORDER BY organism_name, ipi_accession_number
+  END_SQL
+
+  my $org_hash = get_org_hash();
+  for my $k ( keys( %$org_hash ) ) {
+    $log->debug( "$k => $org_hash->{$k}" );
+  }
+
+  my $current;
+  my %subject;
+#  my $bgcolor = '#F1F1F1';
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my %groups;
+  while ( my @row = $sth->fetchrow_array() ) {
+    $groups{$row[0]} ||= {};
+    $groups{$row[0]}->{$row[3]} ||= [];
+    push @{$groups{$row[0]}->{$row[3]}}, \@row;
+  }
+
+  my %stats;
+  for my $grp ( sort( keys( %groups ) ) ) { # Each key is a group name
+    if ( scalar( keys( %{$groups{$grp}} ) ) < 2 ) {
+      $stats{single}++;
+      next;
+    }
+    
+    for my $org ( keys(%$grp) ) { # Each key is a group name
+
+    if ( $row[5] ) {
+      $row[1] = "<A HREF='peptideSearch.cgi?action=Show_detail_form&ipi_data_id=$row[4]&organism=$org_hash->{$row[6]}'> $row[1] </A>";
+    }
+    $table->addRow( [@row[0..3,5]] );
+    $current ||= $row[3];  
+    $log->debug( $current );
+    if ( $current ne $row[3] ) {  # New organism
+      $bgcolor = ( $bgcolor eq '#E0E0E0' ) ? '#F1F1F1' : '#E0E0E0';
+      $current = $row[3];
+    }
+    if ( $row[4] == $args{ipi_data_id} ) {
+      $subject{name} = $row[2];
+      $subject{acc} = $row[1];
+      $table->setRowAttr( ROWS => [$table->getRowNum()], BGCOLOR => '#FFFACD' );
+    } else {
+      $table->setRowAttr( ROWS => [$table->getRowNum()], BGCOLOR => $bgcolor );
+    }
+  }
+  if ( $table->getRowNum() == 1 ) {
+    return $sbeams->makeInfoText( "Unable to find an OrthoMCL group for this protein" );
+  }
+  return( <<"  END" );
+  <P class=lg_body_text>
+  The table below shows ortholog/homolog information about the target protein, $subject{name} ($subject{acc}), which is highlighted in yellow.  The ortholog groups were computed using <A HREF='http://www.orthomcl.org/cgi-bin/OrthoMclWeb.cgi'>OrthoMCL version 2</A>, based on BLAST homology.
+
+  </P>
+  $table 
+  END
+
+}
+
+
+
+
+
+
+
+
+__DATA__
+    my $ipi_base = $ipi . $synonyms;
+#    $current = $ipi_base unless $current;
+#    $current = $ipi_base unless $current;
+
+#    my $tissues = $pep_o->observed_tissues( $peptide_id ) || '';
+    my $ipi_link = $ipi;
+    my $motif = $sbeamsMOD->get_current_motif_type();
+    if ( $params->{action} ne 'download' ) {
+#      $tissues = $sbeams->truncateStringWithMouseover( string => $tissues, len => 20 );
+      $protein_name= $sbeams->truncateStringWithMouseover( string => $protein_name, len => 25 );
+      $ipi_link = get_search_link( name => $ipi, motif => $motif );
+      $log->debug( $motif );
+      $synonyms = get_kegg_link( name => $synonyms ) if $motif =~ /phospho/;
+      $seq = $sbeamsMOD->decorate_phospho_sequence( $seq );
+    }
+    my $chk_box = "<INPUT TYPE=checkbox NAME=accession VALUE=$ipi CHECKED>$ipi_link</INPUT>";
+    
+    $prophet_score = sprintf( "%0.2f", $prophet_score);
+    $peptide_mass = sprintf( "%0.4f", $peptide_mass);
+    
+    $log->debug( "ipi_base is $ipi_base, current is $current" );
+    if ( !$current || $ipi_base ne $current ) {
+      $table->addRow( [ $chk_box, $swiss_id, $symbol, $protein_name, $synonyms, $seq, $prophet_score, $peptide_mass, $dcn ] );
+      $prot_cnt++;
+      $log->debug( "In da not current loop" );
+      my $current_row = $table->getRowNum();
+#      $log->info( "group row is $grp_row, current row is $current_row, bgcolor is $bgcolor" );
+      $table->setRowAttr( ROWS => [$grp_row..$current_row - 1], BGCOLOR => $bgcolor );
+      $grp_row = $current_row;
+      $current = $ipi_base;
+    } else {
+      $table->addRow( [  '&nbsp;','&nbsp;','&nbsp;','&nbsp;', '&nbsp;',
+                          $seq, $prophet_score, $peptide_mass, $dcn ] );
+    }
+    my $current_row = $table->getRowNum();
+    $table->setRowAttr( ROWS => [$grp_row..$current_row], BGCOLOR => $bgcolor );
+
+  }
+  my $current_row = $table->getRowNum();
+  $table->setColAttr( COLS => [ 1 ], ROWS => [1..$current_row], NOWRAP => 1 );
+
+
+  return "<FONT COLOR=BLUE SIZE=+1>Query returned no results</FONT>" unless @$results;
+
+  if ( $params->{action} eq 'download' ) {
+    $content = $table->asTSV();
+    $log->debug( "Content is " . length($content) . " characters long" );
+  } else {
+    my $prot = ( $prot_cnt > 1 ) ? 'proteins' : 'protein';
+    my $num = ( @ids > 1 ) ? 'numbers' : 'number';
+    my $pep = ( $table->getRowNum() > 2 ) ? 'peptides' : 'peptide';
+    $content .= "<FONT COLOR=GREEN>Search with " . scalar( @ids ) . " accession $num yeilded ";
+    $content .= $table->getRowNum() - 1 . " $pep from $prot_cnt $prot </FONT><BR>\n"; 
+    $content .= get_download_form($params);
+    $content .=<<"    END";
+    <FORM NAME=cytoscape METHOD=POST ACTION=getCytoscapeWebstart>
+    <INPUT TYPE=HIDDEN NAME=apply_action VALUE=gene_list>
+    END
+    $content .= $table->asHTML();
+    $content .= "<FORM>";
+  }
+  return $sbeamsMOD->get_phospho_css() . "\n" . $content;
+}
+
+sub get_submit_js {
+  return( <<"  END" );
+    <SCRIPT LANGUAGE="javascript">
+  function submit_cytoscape() {
+    document.cytoscape.submit();
+  }
+  </SCRIPT>
+     <STYLE TYPE="text/css" media="screen">
+    div.visible {
+    display: inline;
+    white-space: nowrap;         
+    }
+    div.visilink {
+    color: blue;
+    display: inline;
+    white-space: nowrap;         
+    }
+    div.hidden {
+    display: none;
+    }
+    span { 
+     border: solid;
+     border-width: 1px;
+    }
+  </STYLE> 
+  END
+}
+
+
 
 sub get_download_form {
   my $params = shift;
