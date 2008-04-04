@@ -748,15 +748,24 @@ sub getSpectrastViewer {
 
   return '' unless $args{offset};
 
-  my $url = "http://www.peptideatlas.org/cgi/spectrast/plotspectrast.cgi?LibFile=/net/dblocal/wwwspecial/sbeams/devDC/sbeams/usr/Glycopeptide/raw_consensus.splib&LibFileOffset=FILE_OFFSET&QueryFile=/net/dblocal/wwwspecial/sbeams/devDC/sbeams/tmp/images/spectrum.none";
+   my $libname = "$PHYSICAL_BASE_DIR/usr/Glycopeptide/" . $self->getSpectraSTLib() . '.splib';
+  unless ( -e $libname ) {
+    $log->error( "Missing SpectraST library: $libname" );
+    return '';
+  }
+  my $url = "http://www.peptideatlas.org/cgi/spectrast/plotspectrast.cgi?LibFile=$libname&LibFileOffset=FILE_OFFSET&QueryFile=$PHYSICAL_BASE_DIR/tmp/images/spectrum.none";
+  $log->debug( $url );
+
+#  my $url = "http://www.peptideatlas.org/cgi/spectrast/plotspectrast.cgi?LibFile=/net/dblocal/wwwspecial/sbeams/devDC/sbeams/usr/Glycopeptide/raw_consensus.splib&LibFileOffset=FILE_OFFSET&QueryFile=/net/dblocal/wwwspecial/sbeams/devDC/sbeams/tmp/images/spectrum.none";
   
 
 # $url = "http://regis-web/tpp-hlam/cgi-bin/plotspectrast.cgi?LibFile=/data2/search/hlam/ForDaveC/raw_consensus.splib&LibFileOffset=FILE_OFFSET&QueryFile=/data2/search/hlam/ForDaveC/spectrum.none";
   $url =~ s/FILE_OFFSET/$args{offset}/;
 
-  my $cipher = $self->getSBEAMS()->getAuthCipher;
+  my $cipher = $self->getSBEAMS()->getAuthCipher();
 #  my @auth = split "::", $cipher->decrypt_hex( '645c9938dc49eccc193553a57950ac78e5b0d69106f72331');
  my @auth = ( 'none', 'required' );
+
 # Subclass LWP::UserAgent for Auth
 {
   package SpectrastViewerAgent;
@@ -787,20 +796,27 @@ sub getSpectrastViewer {
 #    <INPUT TYPE="SUBMIT" VALUE="GO"><BR>
   my $file_name = $args{pep_seq} || $self->getSBEAMS()->getRandomString(num_chars => 24);
   $file_name .= '.png';
-  $file_name =~ s/\*/\[167\]/g;
+  $file_name =~ s/S\*/S\[167\]/g;
+  $file_name =~ s/Y\*/Y\[243\]/g;
+  $file_name =~ s/T\*/T\[180\]/g;
 
   my $original_img = $PHYSICAL_BASE_DIR . "/tmp/images/spectrum.png";
   my $named_img = $original_img;
   $named_img =~ s/spectrum.png/$file_name/g;
 
+  # Is there an existing version of this image?
+  my $existed = 0;
+  if ( -e $named_img ) {
+    $log->info( "replacing spectrum file $named_img" );
+  }
   my $result = system( "cp $original_img $named_img" );
+  $log->error( "Error on cp $original_img to $named_img" ) if $result;
 
   my $web_img  = $HTML_BASE_DIR . "/tmp/images/" . $file_name;
 
   $content =~ s/\<INPUT TYPE\=\"SUBMIT\" VALUE\=\"GO\"\>//gm;
-  $content =~ s/\/sbeams.*spectrum\.png/$web_img/gm;
+  $content =~ s/sbeams.*spectrum\.png/$web_img/gm;
   $content =~ s/ACTION\=\"\//ACTION\=\"http:\/\/www\.peptideatlas\.org\//gm;
-# <FORM ACTION="/cgi/spectrast/plotspectrast.cgi" METHOD="GET">
   return $content;
   
 

@@ -142,6 +142,19 @@ sub getOrganism {
   return $this->{_organism};
 }
 
+
+#+
+# Return hash of kegg name to sbeams organism_id
+#-
+sub getKeggNameToOrganism {
+  my $self = shift;
+  my %name2org = $sbeams->selectTwoColumnHash( <<"  END" );
+  SELECT kegg_organism_name, organism_id
+  FROM $TBBL_KEGG_ORGANISM 
+  END
+  return \%name2org;
+}
+
 #+
 # Get current organism (kegg org name, not db organism_id, e.g. hsa, sce)
 #-
@@ -710,6 +723,7 @@ sub getSupportedOrganisms {
   my @organisms;
   if ( $self->kegg_tables_exist() ) {
     my $sql = "SELECT DISTINCT kegg_organism_name FROM $TBBL_KEGG_ORGANISM";
+    $log->debug( "$sql " );
     @organisms = $sbeams->selectOneColumn( $sql );  
   } else {
     $log->info( "Kegg caching tables not installed, see BioLink.installnotes: $@\n" );

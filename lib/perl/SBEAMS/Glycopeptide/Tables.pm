@@ -45,6 +45,7 @@ use vars qw(@ISA @EXPORT
     $TBGP_PREDICTED_TO_GLYCOSITE
     $TBGP_UNIPEP_BUILD
     $TBGP_BUILD_TO_SEARCH
+    $TBGP_ORTHOLOG_TO_IPI
 );
 
 
@@ -80,6 +81,7 @@ require Exporter;
     $TBGP_PREDICTED_TO_GLYCOSITE
     $TBGP_UNIPEP_BUILD
     $TBGP_BUILD_TO_SEARCH
+    $TBGP_ORTHOLOG_TO_IPI
 );
 
 
@@ -116,5 +118,6 @@ $TBGP_IDENTIFIED_TO_GLYCOSITE = "${mod}identified_to_glycosite";
 $TBGP_PREDICTED_TO_GLYCOSITE = "${mod}predicted_to_glycosite";
 $TBGP_UNIPEP_BUILD = "${mod}unipep_build";
 $TBGP_BUILD_TO_SEARCH = "${mod}build_to_search";
+$TBGP_ORTHOLOG_TO_IPI = "${mod}ortholog_to_ipi";
 
 1;

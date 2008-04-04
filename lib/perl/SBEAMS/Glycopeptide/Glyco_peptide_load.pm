@@ -574,8 +574,9 @@ sub insert_observed_peptides {
 
   my $idx_file = $PHYSICAL_BASE_DIR . "/usr/Glycopeptide/" . $module->getSpectraSTLib( build_id => $args{build_id} ) . ".pepidx";
   print STDERR "Using library file: $idx_file\n";
-  my $sp_pepidx = $module->readSpectrastPepidxFile( $idx_file );
-  
+#  my $sp_pepidx = $module->readSpectrastPepidxFile( $idx_file );
+  my $sp_pepidx = {};
+
   my @keys = keys( %{$seqs} );
   
   my $heads = $self->{_heads} || die("Doh");
@@ -734,7 +735,8 @@ sub insert_observed_peptides {
     } else {
       print STDERR 'No potential matches for ' . $clean_pep . ' ( ' . $obs->[$heads->{Peptide}] . " )\n";
       push @{$no_maps{potential}}, "$obs->[$heads->{Peptide}] / $clean_pep";
-      next;
+#      next;
+      $has_match++;
     }
     if ( !$has_match ) { # If we haven't been seen in the consensus lib, skip
       print STDERR "No exact match for $obs->[$heads->{Peptide}] ($obspep)\n";

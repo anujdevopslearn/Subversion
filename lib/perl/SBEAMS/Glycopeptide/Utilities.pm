@@ -282,15 +282,34 @@ sub org_to_build {
     die "Must pass org or build_id to org_to_build";
   }
   my %org2build = ( dme => 1,
-                    sce => 7 );
+                    sce => 7,
+                    cel => 8,
+                    hsa => 9);
   my %build2org = ( 7 => 'sce',
-                    1 => 'dme' );
+                    1 => 'dme',
+                    8 => 'cel',
+                    9 => 'hsa' );
 
   if ( $args{org} ) {
     return $org2build{$args{org}};
   } else {
     return $build2org{$args{build_id}};
   }
+}
+
+sub get_build_consensus_library {
+  my $self = shift;
+  my $build = $self->get_current_build();
+  if ( $build == 1 ) {
+    return 31;
+  } elsif ( $build == 7 ) {
+    return 30;
+  } elsif ( $build == 8 ) {
+    return 29;
+  } else {
+    return 31;
+  }
+  return 31;
 }
 
 sub set_current_build {
@@ -375,6 +394,14 @@ sub is_valid_build {
   END
 
   return 1;
+}
+
+sub getPhosphopepBuilds {
+  my $self = shift;
+  my %args = @_;
+
+  my @ppep_builds = ( 1,7,8,9 );
+  return ( $args{as_string} ) ? join( ',', @ppep_builds ) : \@ppep_builds;
 }
 
 sub get_accessible_project_string {
@@ -1027,6 +1054,31 @@ sub runMassSearch {
     push @all_matches, @matches;
   }
   return \@all_matches;
+}
+
+# Read pepidx file, cache mods in hash keyed by peptide sequence
+sub readSpectrastPepidxFile {
+  my $self = shift;
+  my $file = shift;
+  unless ( $file ) {
+    $log->error( "Missing required parameter file" );
+    return undef;
+  }
+  open( IDX, "$file" ) || die( "Unable to open file $file" );
+
+  my %peptides;
+  while ( my $line = <IDX> ) {
+    chomp $line;
+    next if $line =~ /^#/;
+    my @line = split( "\t", $line );
+#    print "key is >$line[0]<\n";
+    $peptides{$line[0]} ||= [];
+    push @{$peptides{$line[0]}}, \@line;
+#    print "stored OK\n" if $peptide{$line[0]};
+  }
+  print scalar( keys( %peptides ) ) . " keys here boss \n";
+  return \%peptides;
+  
 }
 
 1;

@@ -15,16 +15,19 @@ use vars qw(@ISA);
 use CGI::Carp qw(fatalsToBrowser croak);
 
 use SBEAMS::Connection qw($log);
+use SBEAMS::Connection::Settings;
 
 use SBEAMS::Glycopeptide::DBInterface;
 use SBEAMS::Glycopeptide::HTMLPrinter;
 use SBEAMS::Glycopeptide::TableInfo;
 use SBEAMS::Glycopeptide::Settings;
+use SBEAMS::Glycopeptide::Tables;
 use SBEAMS::Glycopeptide::Utilities;
 
 @ISA = qw(SBEAMS::Glycopeptide::DBInterface
           SBEAMS::Glycopeptide::HTMLPrinter
           SBEAMS::Glycopeptide::TableInfo
+          SBEAMS::Glycopeptide::Tables
           SBEAMS::Glycopeptide::Utilities
           SBEAMS::Glycopeptide::Settings);
 
@@ -62,6 +65,7 @@ sub getSBEAMS {
 sub getKeggOrganism {
   my $self = shift;
   my $organism = $self->get_current_organism();
+  $log->debug( "Org is $organism" );
   return ( !$organism ) ? 'hsa' : ( $organism =~ /Drosophila/i ) ? 'dme' : 
                                   ( $organism =~ /Saccaromyces/i ) ? 'sce' : 
                                   ( $organism =~ /Yeast/i ) ? 'sce' : 
@@ -71,6 +75,22 @@ sub getKeggOrganism {
   return 'hsa';
 }
 
+sub getSpectraSTLib {
+  my $self = shift;
+  my %args = @_;
+
+  # Use passed build_id (script) else get current (web)
+  my $build_id = $args{build_id} || $self->get_current_build();
+
+  my $sbeams = $self->getSBEAMS();
+  my $sql =<<"  END" ;
+  SELECT consensus_library_basename 
+  FROM $TBGP_UNIPEP_BUILD
+  WHERE unipep_build_id = $build_id
+  END
+  my $row = $sbeams->selectrow_arrayref( $sql );
+  return ( $row->[0] );
+}
 
 sub fetchSpectrastOffset {
   my $self = shift;
@@ -83,14 +103,21 @@ sub fetchSpectrastOffset {
   my @matches;
 
 # Hard-code intial version
-  open ( LIB, "/net/dblocal/wwwspecial/sbeams/devDC/sbeams/cgi/Glycopeptide/raw_consensus.pepidx" ) || return '';
+  my $libname = "$PHYSICAL_BASE_DIR/usr/Glycopeptide/" . $self->getSpectraSTLib() . '.pepidx';
+  unless ( -e $libname ) {
+    $log->error( "Missing SpectraST library: $libname" );
+    return '';
+  }
+
+#  open ( LIB, "/net/dblocal/wwwspecial/sbeams/devDC/sbeams/cgi/Glycopeptide/raw_consensus.pepidx" ) || return '';
+  open ( LIB, "$libname" ) || return '';
   my $cnt = 0;
-  $log->debug( time() );
+  $log->debug( "looking up peptide: " . time() );
   while ( my $line = <LIB> ) {
     $cnt++;
     push @matches, $line if $line =~ /^$clean_seq\t/;
   }
-  $log->debug( time() );
+  $log->debug( "done: " . time() );
 
   unless ( scalar(@matches) ) {
     $log->debug( "no possible matches found for $clean_seq" );
@@ -98,6 +125,8 @@ sub fetchSpectrastOffset {
   }
 
   # We have at least one match...
+  # Get the positions of the S/T/Ys in the sequence.  These will have 
+  # either a * or a & in them, p_offset is used to keep track of them
   my $positions = $self->get_site_positions( seq => $args{pep_seq}, pattern => '[S|T|Y]\*' );
   my @seq_bits = split '', $clean_seq;
 
@@ -109,7 +138,7 @@ sub fetchSpectrastOffset {
     $p_offset++;
     $spectrast_str .=  '\/' . $adj_offset . ',' . $seq_bits[$adj_offset] . ',Phospho' . '.*';
   }
-  $log->debug( "Seq is $clean_seq, SPstr is $spectrast_str\n" );
+  $log->debug( "Seq is $args{pep_seq}, SPstr is $spectrast_str\n" );
 
   # Loop over matches, looking for pattern
   my $first_match;
@@ -139,13 +168,14 @@ sub fetchSpectrastOffset {
 
 
 sub fetchSpectrastOffsets {
+  die( "a fiery death!" );  # Do we ever get here?
   my $self = shift;
   my %args = @_;
   return '' unless $args{pep_seqs};
   
   $log->debug( "Starting lookup of " . scalar(@{$args{pep_seqs}}) . " at " . time() );
   
-  # Two sycronized arrays, one with the strings to be matched, the other
+  # Two syncronized arrays, one with the strings to be matched, the other
   # with coordinates (if any).
   my @match_seqs;
   my @match_coordinates;

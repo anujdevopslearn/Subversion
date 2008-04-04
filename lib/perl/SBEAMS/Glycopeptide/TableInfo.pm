@@ -81,6 +81,10 @@ sub returnTableInfo {
       if ($info_key =~ /Query/ ) {
         return "SELECT * FROM $TBGP_BUILD_TO_SEARCH";
       }
+    } elsif ($table_name eq "GP_unipep_build") {
+      if ($info_key =~ /Query/ ) {
+        return "SELECT * FROM $TBGP_UNIPEP_BUILD";
+      }
     }
 
 

@@ -629,6 +629,54 @@ sub applySQLChange {
     return ($status,$pk, @errors);
 } # End applySQLChange
 
+###
+#+
+# get_statement_handle
+#
+# Given SQL stmt, translate, prepare, execute and return stmt handle.  Caller
+# can then write a loop based on any of several DBI functions, such as:
+#
+# fetchrow_array()
+# fetchrow_arrayref()
+# fetchrow_hash()
+# fetchrow_hashref()
+#
+# Example loop:
+# 
+# my $sth = $sbeams->get_statement_handle( $sql );
+# while ( my $row = $sth->fetchrow_hashref() ) {
+# }
+#-
+sub get_statement_handle {
+  my $self = shift || croak("parameter self not passed");
+  my $sql = shift || croak("parameter sql not passed");
+
+  #### Get the database handle
+  $dbh = $self->getDBHandle();
+
+  #### Convert the SQL dialect if necessary
+  $sql = $self->translateSQL( sql => $sql );
+
+  my $sth;
+
+  eval {
+    $self->setRaiseError(1);
+    $sth = $dbh->prepare( $sql );
+    $sth->execute();
+  };
+  if ( $@ ) {
+    my $msg =<<"    END";
+    Error executing SQL: $@
+    SQL causing error: $sql
+    END
+    $log->error( $msg );
+    die $msg;
+  }
+  # return by value, makes copy but its just a ref anyway...
+  return $sth;
+}
+
+
 
 sub getDbTableName {
   my $self = shift;
@@ -956,7 +1004,6 @@ sub selectSeveralColumns {
       $log->printStack( 'error' );
       confess($dbh->errstr);
     }
-    $log->debug( "heck yeah part deux" );
 
     my $rv;
     eval {
@@ -4565,8 +4612,12 @@ sub display_input_form {
         $is_data_column,$is_display_column,$column_text,
         $optionlist_query,$onChange) = @row;
     if (defined($optionlist_query) && $optionlist_query gt '') {
+      $log->debug( "$column_name has a query!" );
       #print "<font color=\"red\">$column_name</font><BR><PRE>$optionlist_query</PRE><BR>\n";
-      $optionlist_queries{$column_name}=$optionlist_query;
+      if ( $args{optionlist_override} ) {
+        $log->debug( "overriding!" );
+        $optionlist_queries{$column_name} = $args{optionlist_override}->{$column_name} || $optionlist_query;
+      }
     }
     if ($input_type eq "file") {
       $file_upload_flag = "ENCTYPE=\"multipart/form-data\"";
