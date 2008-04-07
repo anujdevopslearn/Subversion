@@ -591,7 +591,9 @@ sub print_download_file_page {
 			print OUT "#ID_REF\n", "#VALUE = normalized log2 signal\n",
 			  "!sample_table_begin\n", "ID_REF\tVALUE\n";
 
-			my @array_data = @{ $expression_data{ $array_sample[2] } };
+			$array_sample[1] =~ /\d{8}_\d{2}_(.*)\Z/;
+			my $file_root = $1;
+			my @array_data = @{ $expression_data{ $file_root } };
 			foreach my $i ( 0 .. $#probeset_list ) {
 				print OUT $probeset_list[$i], "\t", $array_data[$i], "\n";
 			}
