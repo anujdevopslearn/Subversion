@@ -5658,6 +5658,7 @@ sub getModules {
     foreach my $module (@all_modules) {
 #			print STDERR "$module\n";
       if (exists($work_groups{"${module}_user"}) ||
+          exists($work_groups{"${module}_exec"}) ||
           exists($work_groups{"${module}_admin"}) ||
           exists($work_groups{"${module}_readonly"})) {
         push(@modules,$module);
