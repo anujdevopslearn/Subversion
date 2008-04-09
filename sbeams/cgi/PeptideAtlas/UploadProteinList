@@ -90,7 +90,7 @@ sub main
     ##authenticate and exit if unsuccessful
     exit unless ($current_username = $sbeams->Authenticate(
         permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
-        'PeptideAtlas_readonly'], allow_anonymous_access=>1,
+        'PeptideAtlas_readonly', 'PeptideAtlas_exec'], allow_anonymous_access=>1,
     ));
 
     #### Read in the default input parameters

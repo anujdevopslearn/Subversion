@@ -49,7 +49,7 @@ my $show_image = 0;
     my $username = $sbeams->Authenticate( permitted_work_groups_ref => 
                                                       ['PeptideAtlas_user',
                                                       'PeptideAtlas_admin', 
-                                                      'PeptideAtlas_readonly'],
+                                                      'PeptideAtlas_readonly', 'PeptideAtlas_exec'],
                                                       # connect_read_only=>1,
                                                       allow_anonymous_access=>1,
                                               ) || exit;
