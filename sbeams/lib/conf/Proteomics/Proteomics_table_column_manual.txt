@@ -2,7 +2,8 @@
 
 UPDATE table_column
   SET optionlist_query = '
-SELECT DISTINCT search_batch_id,username + '' - '' + experiment_tag + '' -> '' + search_batch_subdir + '' ('' + set_tag + '' )'',username,experiment_tag,set_tag
+SELECT DISTINCT search_batch_id,username || '' - '' || experiment_tag || '' ->
+'' || search_batch_subdir || '' ('' || set_tag || '' )'',username,experiment_tag,set_tag
   FROM $TBPR_PROTEOMICS_EXPERIMENT PE
   INNER JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
   INNER JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
@@ -24,7 +25,8 @@ GO
 
 UPDATE table_column
   SET optionlist_query = '
-SELECT DISTINCT SB.search_batch_id,username + '' - '' + experiment_tag + '' -> '' + search_batch_subdir + '' ('' + set_tag + '' )'',username,experiment_tag,set_tag
+SELECT DISTINCT SB.search_batch_id,username || '' - '' || experiment_tag || ''
+-> '' || search_batch_subdir || '' ('' || set_tag || '' )'',username,experiment_tag,set_tag
   FROM $TBPR_PROTEOMICS_EXPERIMENT PE
   INNER JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
   INNER JOIN $TBPR_SEARCH_BATCH_PROTEIN_SUMMARY SBPS ON ( SB.search_batch_id = SBPS.search_batch_id )
@@ -41,7 +43,8 @@ GO
 
 UPDATE table_column
   SET optionlist_query = '
-	SELECT experiment_id,username + '' - '' + experiment_tag + '' ('' + experiment_name + '')''
+	SELECT experiment_id,username || '' - '' || experiment_tag || '' ('' ||
+  experiment_name || '')''
 	  FROM $TBPR_PROTEOMICS_EXPERIMENT PE
 	  LEFT JOIN $TB_USER_LOGIN UL ON ( PE.contact_id = UL.contact_id )
 	 WHERE PE.record_status != ''D''
@@ -55,7 +58,7 @@ GO
 
 UPDATE table_column
   SET optionlist_query = '
-	SELECT project_id,username + '' - '' + P.name
+	SELECT project_id,username || '' - '' || P.name
 	  FROM $TB_PROJECT P
 	  LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id )
 	  LEFT JOIN $TB_USER_WORK_GROUP UWG
@@ -74,7 +77,8 @@ GO
 
 UPDATE table_column
   SET optionlist_query = '
-SELECT DISTINCT fraction_id,username + '' - '' + experiment_tag + '' -> '' + set_tag + '' -> '' + fraction_tag,username,experiment_tag,set_tag,fraction_tag
+SELECT DISTINCT fraction_id,username || '' - '' || experiment_tag || '' -> ''
+||set_tag || '' -> '' || fraction_tag,username,experiment_tag,set_tag,fraction_tag
   FROM $TBPR_PROTEOMICS_EXPERIMENT PE
   INNER JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
   INNER JOIN $TBPR_FRACTION F ON ( PE.experiment_id = F.experiment_id )
@@ -89,7 +93,8 @@ GO
 
 UPDATE table_column
   SET optionlist_query = '
-	SELECT experiment_id, p.project_tag + '' - '' + experiment_tag + '' ('' + experiment_name + '')''
+	SELECT experiment_id, p.project_tag || '' - '' || experiment_tag || '' (''
+  || experiment_name || '')''
 	  FROM $TBPR_PROTEOMICS_EXPERIMENT PE
 	  LEFT JOIN $TB_PROJECT p ON ( P.project_id = PE.project_id )
 	 WHERE PE.record_status != ''D''
@@ -103,7 +108,8 @@ GO
 
 UPDATE table_column
   SET optionlist_query = '
-	SELECT PS.proteomics_sample_id,p.project_tag + '' - '' + sample_tag + '' ('' + full_sample_name + '')''
+	SELECT PS.proteomics_sample_id,p.project_tag || '' - '' || sample_tag || ''
+  ('' || full_sample_name || '')''
 	  FROM $TBPR_PROTEOMICS_SAMPLE PS
 	  LEFT JOIN $TB_PROJECT P ON ( P.project_id = PS.project_id )
 	 WHERE PS.record_status != ''D''
