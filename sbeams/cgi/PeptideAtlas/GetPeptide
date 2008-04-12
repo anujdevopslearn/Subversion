@@ -1046,8 +1046,16 @@ if ($apply_action =~ /QUERY|GO/i ) {
     #### Loops through resultset and do formatting
     for my $pep ( @$mrm_transitions ) {
       $pep->[0] = $sbeamsMOD->formatMassMods( $pep->[0] );
-      $pep->[2] = sprintf("%0.2f", $pep->[2]);
-      $pep->[3] = sprintf("%0.2f", $pep->[3]);
+      $pep->[2] = sprintf("%0.2f", $pep->[2]); # . '&nbsp;';
+      $pep->[3] = sprintf("%0.2f", $pep->[3]); # . '&nbsp;';
+      $pep->[5] = sprintf("%0.1f", $pep->[5]); # . '&nbsp;';
+#      $pep->[1] .= '&nbsp;';
+#      $pep->[6] .= '&nbsp;';
+#      $pep->[7] .= '&nbsp;';
+
+      # trim off extra peak label stuff, like mass delta and alt annots.
+      ($pep->[4]) = $pep->[4] =~ /^([a-zA-Z]\d+)/;
+      
       for my $idx ( 0..$#{$pep} ) {
         $pep->[$idx] = $sbeams->makeInactiveText('n/a') if !defined $pep->[$idx];
       }
@@ -1161,6 +1169,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
     for my $pep ( @mod_peps ) {
       $pep->[4] = sprintf("%0.3f", $pep->[4]) unless $pep->[4] == 1;
       $pep->[4] = 1 if $pep->[4] == 1;
+      $pep->[3] =~ s/ +/&nbsp;/g;
       my $img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='View spectrum for $pep->[0] (+$pep->[1])'>";
       $pep->[6] = qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowObservedSpectrum?spectrum_identification_id=$pep->[6]&peptide=$pep->[0]&assumed_charge=$pep->[1]" TARGET=blank>$img</A>~;
       $pep->[0] = $sbeamsMOD->formatMassMods( $pep->[0] );
@@ -1173,7 +1182,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
     $modHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
                                                  width => '600',
                                                tr_info => $tr,
-                                                align  => [qw(left center right right right center center)],
+                                                align  => [qw(left center right right left center center)],
                                                   rows => \@mod_peps,
                                           rows_to_show => 10,
                                               max_rows => 500

@@ -935,6 +935,9 @@ sub handle_request {
         $pep->[0] = "<A HREF=$link_base" . $pep->[0] . ">$pep->[0]</A";
         $pep->[3] = sprintf("%0.2f", $pep->[3]);
         $pep->[4] = sprintf("%0.2f", $pep->[4]);
+        $pep->[6] = sprintf("%0.1f", $pep->[6]);
+       ($pep->[5]) = $pep->[5] =~ /^([a-zA-Z]\d+)/;
+
         $pep->[1] = $sbeamsMOD->formatMassMods( $pep->[1] );
         for my $idx ( 0..$#{$pep} ) {
           $pep->[$idx] = $sbeams->makeInactiveText('n/a') if !defined $pep->[$idx];
