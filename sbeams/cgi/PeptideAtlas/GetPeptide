@@ -160,7 +160,8 @@ sub handle_request {
         program_name => $PROG_NAME,
     );
 
-    print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+    print $tabMenu->asHTML() . '<BR>' if ($sbeams->output_mode() eq 'html');
+
 
     #### Define some generic variables
     my ($i,$element,$key,$value,$line,$result,$sql);
@@ -181,212 +182,159 @@ sub handle_request {
     my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
 
     my $TABLE_NAME = $parameters{'QUERY_NAME'};
-        #### Get the search keyword
-
-
-my $searchValue = $parameters{'searchForThis'};
-
-
-############################
- ### Getting the last session information for a user, if it exists or setting up a new one
-    #### If a new protein_name was supplied, store it
-     if ($searchValue) {
-    $sbeams->setSessionAttribute(
-      key => 'PeptideAtlas_peptide_seq',
-      value => $searchValue,
-    );
-
-    #### Else see if we had one stored
-  } else {
-    $searchValue = $sbeams->getSessionAttribute(
-      key => 'PeptideAtlas_peptide_seq',
-    );
-
-
-if ($searchValue) {
-       $parameters{'searchForThis'}=$searchValue;
-      $parameters{'apply_action'} = 'GO';
-
-    }
-
-    else {
-
-    ## Setting the value to some given peptide for those users who visits the page first time
-      $parameters{'searchForThis'}= 'VSFLSALEEYTK';
-     $searchValue=$parameters{'searchForThis'};
-     $parameters{'apply_action'} = 'GO';
-
-     }
-
-}
-
-print "<BR>";
-
-##########################
-#### Get the Build Name
-
-my $atlas_build_name = $parameters{atlas_build_name};
-my $atlas_build_id;
-
-
- 
-
-
- ### Getting the last session information for a user, if it exists or setting up a new one
-    #### If a new protein_name was supplied, store it
- if ($atlas_build_name) {
-    $sbeams->setSessionAttribute(
-      key => 'PeptideAtlas_build_name',
-      value => $atlas_build_name,
-    );
-
-    #### Else see if we had one stored
-  } else {
-    $atlas_build_name = $sbeams->getSessionAttribute(
-      key => 'PeptideAtlas_build_name',
-    );
-
-
-if ($atlas_build_name) {
-
-      $parameters{'atlas_build_name'}=$atlas_build_name;
-      $parameters{'apply_action'} = 'GO';
-    }
-
-     else {
-
-                 ## Setting the value default build id and build name
-                 $atlas_build_id = get_default_atlas_build_id(accessible_projects => $project_string );
-                 $parameters{'atlas_build_id'} = $atlas_build_id;
-
-               if ( $atlas_build_id )
-               {
-               $parameters{'atlas_build_name'} = get_atlas_build_name(atlas_build_id => 113 );
-               $atlas_build_name = $parameters{'atlas_build_name'};
-                $parameters{'apply_action'} = 'GO';
-
-                 }
-
-          }
-
-
-}
-
-
-
     
-
-###############################################################
-### Getting the last session information of the Search Key used
-
-my $searchKey=$parameters{'searchWithinThis'};
-
-if ($searchKey) {
-    $sbeams->setSessionAttribute(
-      key => 'PeptideAtlas_search_key',
-      value => $searchKey,
-    );
-
-    #### Else see if we had one stored
-  } else {
-    $searchKey = $sbeams->getSessionAttribute(
-      key => 'PeptideAtlas_search_key'
-    );
-
-
-if ($searchKey) {
-      $parameters{'apply_action'} = 'GO';
-
-      $parameters{'searchWithinThis'}=$searchKey;
-    }
-
-    else {
-
-    ## Setting the value to some given peptide for those users who visits the page first time
-     $parameters{'searchWithinThis'}='Peptide Sequence';
-     $searchKey=$parameters{'searchWithinThis'};
-     $parameters{'apply_action'} = 'GO';
-
-     }
-
-}
-
-
-
-#### Set some specific settings for this program
+    #### Set some specific settings for this program
     my $CATEGORY="Get Peptide";
     my $PROGRAM_FILE_NAME = $PROG_NAME;
     my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
     my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
-    
 
-   if (defined($atlas_build_id) && $atlas_build_id < 0)
-    {
-        $parameters{'atlas_build_id'} = $atlas_build_id;
-        return;
-    }
+  # Triage of parameter handling, trying to merge 'searchWithinThis' style
+  # params with peptide_name_constraint params, as both may be used in 
+  # calling this page.
+  # Rules: if peptide_name_constraint is set, use it
+  #        else if SWT is Peptide Name, use SFT
+  #        else if cookie vals set, use them
+  #        else use default.
+  #        
+  #        if peptide_sequence_constraint is set, use it
+  #        else if SWT is Peptide Sequence, us SFT
+  #        else if cookie vals set, use them
+  #        else use default
+  #        
+  #        if peptide_name_constraint is set use it,
+  #        else if peptide_seq_constraint is set use it
+  #        
+  #        if atlas_build_id is set, use it
+  #        else if atlas_build_name is set, use it
+  #        else if cookie value is set, use it
+  #        else use default
+  #        
+  # example invocations:       
+  # GetPeptide?atlas_build_id=117&searchWithinThis=Peptide%2bName&searchForThis=PAp00439490&action=QUERY
+  # GetPeptide?atlas_build_name=Yeast_TransitionAtlas_2008-02_P0.9&searchWithinThis=Peptide+Name&searchForThis=PAp00085861&query=QUERY
 
-  # Handle search tool links...
-    if ($parameters{searchWithinThis} eq 'Peptide+Name') {
-      $log->info( "Adjusted Peptide+Name to Peptide Name.");
-      $parameters{searchWithinThis} = 'Peptide Name';
-    }
+  my $searchValue = '';
+  my $searchKey = '';
 
-    my $validation_error = '';
-    ## if have atlas_build_name, but no id, get the id:
-    if ( (exists $parameters{'atlas_build_name'}) && (!exists $parameters{'atlas_build_id'})) {
-      $atlas_build_name = $parameters{'atlas_build_name'};
-      if ($atlas_build_name) {
-        my ($tmp) = get_atlas_build_id( atlas_build_name => $parameters{'atlas_build_name'});
-        unless ( $tmp ) {
-          $validation_error = "Unable to use specified Atlas, please select a new one ";
-        }
-        $parameters{'atlas_build_id'} = $tmp;
-        $atlas_build_id = $tmp;
+  # give me strength...
+  $parameters{searchWithinThis} =~ s/\+/\ /;
+
+  if ( $parameters{peptide_name_constraint} ) {
+    $searchKey = 'Peptide Name'; 
+    $searchValue =  $parameters{peptide_name_constraint};
+  } elsif (  $parameters{peptide_name_constraint} ) {
+    $searchKey = 'Peptide Sequence'; 
+    $searchValue =  $parameters{peptide_sequence_constraint};
+  } else {
+    $searchKey = $parameters{searchWithinThis} || ''; 
+    $searchValue = $parameters{searchForThis} || '';
+  }
+
+  # Check session if necessary
+  unless( $searchValue ) {
+    $searchValue = $sbeams->getSessionAttribute( key => 'PeptideAtlas_search_value' );
+  }
+  unless ($searchKey) {
+    $searchKey = $sbeams->getSessionAttribute( key => 'PeptideAtlas_search_key' );
+  }
+
+  # Set value to some given peptide for first-time visitors 
+  $searchValue ||= 'VSFLSALEEYTK';
+  $searchKey ||= 'Peptide Sequence';
+
+  # Everything is set, not cache within cookie/vars.
+  $parameters{'searchWithinThis'} = $searchKey;
+  $parameters{'searchForThis'}    = $searchValue;
+  $parameters{'apply_action'}     = 'GO';
+
+  if ( $parameters{searchWithinThis} eq 'Peptide Name' ) {
+    $parameters{peptide_name_constraint} ||= $searchValue; 
+  } elsif ( $parameters{searchWithinThis} eq 'Peptide Sequence' ) {
+    $parameters{peptide_sequence_constraint} ||= $searchValue; 
+  } else {
+    $log->warn( "unknown value in searchWithinThis parameter" );
+  }
+
+  $sbeams->setSessionAttribute( value => $searchValue,
+                                  key => 'PeptideAtlas_search_value' );
+
+  $sbeams->setSessionAttribute( value => $searchKey,
+                                  key => 'PeptideAtlas_search_key' );
+
+
+  # Merge possible atlas_build_id and atlas_build_name params
+  my $atlas_build_id = $parameters{atlas_build_id};
+  my $atlas_build_name = $parameters{atlas_build_name};
+
+  # build id has primacy
+  if ( $atlas_build_id ) {
+    $atlas_build_name = get_atlas_build_name( atlas_build_id => $atlas_build_id );
+  } else {
+    if ( $atlas_build_name ) {
+      $atlas_build_id = get_atlas_build_id( atlas_build_name => $atlas_build_name );
+    } else {
+      $atlas_build_name = $sbeams->getSessionAttribute( key => 'PeptideAtlas_build_name' );
+
+      # Did that work?
+      if ( $atlas_build_name ) {
+        $atlas_build_id = get_atlas_build_id( atlas_build_name => $atlas_build_name );
       }
     }
+  }
 
+  # If we're still not set, get default
+  if ( !$atlas_build_id ) {
+    $atlas_build_id = get_default_atlas_build_id( accessible_projects => $project_string );
+  }
+  # Set build_name
+  $atlas_build_name = get_atlas_build_name( atlas_build_id => $atlas_build_id );
 
-    ## if have atlas_build_id, but no name, get the name
-    if ( (exists $parameters{'atlas_build_id'})  && (!exists $parameters{'atlas_build_name'}) ) {
-      $atlas_build_id = $parameters{'atlas_build_id'};
-      my ($tmp) = get_atlas_build_name( atlas_build_id => $atlas_build_id);
-      unless ( $tmp ) {
-        $validation_error = "Unable to use specified Atlas, please select a new one ";
-      }
-      $atlas_build_name = $tmp;
-      $parameters{'atlas_build_name'} = $atlas_build_name;
-    }
+  # Validate selected build
+  my $validation_error = '';
     
-    if ( !$parameters{atlas_build_id} ) {
-      $validation_error = "No build specified";
-    } elsif ( !$sbeamsMOD->isAccessibleBuild( build_id => $parameters{atlas_build_id} ) ) {
-      $validation_error = "You lack permission to access the specified build";
-    }
-    if ( $validation_error ) {
-      my $error_string = $sbeams->makeErrorText( $validation_error );
-      my $url = $q->self_url();
-      my $url_delim = ( $url =~ /\?/ ) ? ';' : '?';
-      print qq~
-        <BR><BR>
-        $error_string
-        <BR>
-        <BR>Please <A HREF="main.cgi?_tab=2;reset_id=1">choose</A> a valid Atlas Build, 
-        or <A HREF="$url${url_delim}force_login=yes"> login </A> as a different user.
-      ~;
-      exit;
-    }
+  if ( !$atlas_build_id ) {
+    $validation_error = "No build specified";
+  } elsif ( $atlas_build_id < 0 ) {
+    $validation_error = "Illegal build ID";
+  } elsif ( !$sbeamsMOD->isAccessibleBuild( build_id => $atlas_build_id ) ) {
+    $validation_error = "You lack permission to access the specified build";
+  }
+  if ( $validation_error ) {
+    my $error_string = $sbeams->makeErrorText( $validation_error );
+    my $url = $q->self_url();
+    my $url_delim = ( $url =~ /\?/ ) ? ';' : '?';
+    print qq~
+      <BR><BR>
+      $error_string
+      <BR>
+      <BR>Please <A HREF="main.cgi?_tab=2;reset_id=1">choose</A> a valid Atlas Build, 
+      or <A HREF="$url${url_delim}force_login=yes"> login </A> as a different user.
+    ~;
+    exit;
+  }
+
+  # Cache values
+  if ($atlas_build_name) {
+    $sbeams->setSessionAttribute( value => $atlas_build_name,
+                                    key => 'PeptideAtlas_build_name' );
+  }
+  $parameters{'atlas_build_id'} = $atlas_build_id;
+  $parameters{'atlas_build_name'} = $atlas_build_name;
+  $parameters{'apply_action'} = 'GO';
+
+  # End parameter handling section
 
     ## Get and store list of atlases for use with form:  
     my (@atlas_option_id_array, @atlas_option_name_array);  
 
     ## get accessible atlases:
     my $sql = qq~
-        SELECT atlas_build_id,atlas_build_name
-        FROM $TBAT_ATLAS_BUILD
-        WHERE project_id IN ( $project_string )
-        AND record_status!='D'
-	ORDER BY atlas_build_name
+      SELECT atlas_build_id,atlas_build_name
+      FROM $TBAT_ATLAS_BUILD
+      WHERE project_id IN ( $project_string )
+      AND record_status!='D'
+      ORDER BY atlas_build_name
     ~;
 
     my @rows = $sbeams->selectSeveralColumns($sql); 

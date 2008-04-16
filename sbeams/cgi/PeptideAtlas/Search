@@ -184,14 +184,14 @@ sub handle_request {
   #### If a new search_key was supplied, store it
   if ($search_key) {
     $sbeams->setSessionAttribute(
-      key => 'PeptideAtlas_search_key',
+      key => 'PeptideAtlas_search_string',
       value => $search_key,
     );
 
   #### Else see if we had one stored
   } else {
     $search_key = $sbeams->getSessionAttribute(
-      key => 'PeptideAtlas_search_key',
+      key => 'PeptideAtlas_search_string',
     );
   }
 
