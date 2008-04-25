@@ -20,3 +20,4 @@ GP_observed_peptide	Observed Peptide	Glycopeptide_infrastructure	NO	$TBGP_OBSERV
 GP_peptide_search	Peptide Search	Glycopeptide_infrastructure	NO	$TBGP_PEPTIDE_SEARCH	peptide_search_id				
 GP_predicted_to_glycosite	Predicted to Glycosite	Glycopeptide_infrastructure	NO	$TBGP_PREDICTED_TO_GLYCOSITE	predicted_to_glycosite_id				
 GP_identified_to_glycosite	Identified to Glycosite	Glycopeptide_infrastructure	NO	$TBGP_IDENTIFIED_TO_GLYCOSITE	identified_to_glycosite_id				
+GP_GetMRMList	Get MRM List	QUERY					GetMRMList		
