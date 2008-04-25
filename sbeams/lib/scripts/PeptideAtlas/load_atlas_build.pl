@@ -461,7 +461,8 @@ sub removeAtlas {
    my $full_table_name = "$database_name$table_name";
 
    my %table_child_relationship = (
-      atlas_build => 'peptide_instance(C),atlas_build_sample(C),atlas_build_search_batch(C),spectra_description_set(C)',
+      atlas_build => 'peptide_instance(C),atlas_build_sample(C),atlas_build_search_batch(C),spectra_description_set(C),search_key(C)',
+      atlas_build_search_batch => 'search_batch_statistics(C)',
       peptide_instance => 'peptide_mapping(C),peptide_instance_sample(C),peptide_instance_search_batch(C),modified_peptide_instance(C)',
       modified_peptide_instance => 'modified_peptide_instance_sample(C),modified_peptide_instance_search_batch(C)',
    );
