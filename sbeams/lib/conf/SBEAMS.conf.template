@@ -141,6 +141,8 @@ CONFIG_SETTING{PeptideAtlas_DAS_USERNAME} = xxxxx
 CONFIG_SETTING{PeptideAtlas_DAS_PASSWORD} = yyyyy
 CONFIG_SETTING{PeptideAtlas_DAS_URL} = http://das.example.org:8080/das
 
+# Comma separated name:::url tuples
+CONFIG_SETTING{PA_USER_SKIN} = ext_mrm::::http://www.mrmatlas.org/.index.dbbrowse.php
 
 #### Microarray Settings ####
 CONFIG_SETTING{MA_AFFY_HELPDOCS_URL} = provide url if needed, see install notes
