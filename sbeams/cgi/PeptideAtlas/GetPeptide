@@ -984,6 +984,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
    'link' => $link,
     bold => 1
   );
+  my $annot_help = get_table_help( 'annotated_transitions' );
 
   my $mrm_transitions = get_mrm_transitions( $peptide_accession[0] );
 
@@ -996,7 +997,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
       $pep->[0] = $sbeamsMOD->formatMassMods( $pep->[0] );
       $pep->[2] = sprintf("%0.2f", $pep->[2]); # . '&nbsp;';
       $pep->[3] = sprintf("%0.2f", $pep->[3]); # . '&nbsp;';
-      $pep->[5] = sprintf("%0.1f", $pep->[5]); # . '&nbsp;';
+      $pep->[5] = sprintf("%0.0f", $pep->[5]); # . '&nbsp;';
 #      $pep->[1] .= '&nbsp;';
 #      $pep->[6] .= '&nbsp;';
 #      $pep->[7] .= '&nbsp;';
@@ -1020,7 +1021,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
                                                        align  => [qw(left center right right center right right left left left)],
                                                          rows => $mrm_transitions );
     #### Display table
-    print "<TABLE WIDTH=600><BR>$transitionHTML</TABLE>\n" if $#{$mrm_transitions};
+    print "<TABLE WIDTH=600><TR><TD COLSPAN=5>$annot_help</TD></TR><BR>$transitionHTML</TABLE>\n" if $#{$mrm_transitions};
   }
 
 
@@ -1253,6 +1254,48 @@ sub get_mrm_transitions {
   my @rows = $sbeams->selectSeveralColumns($sql);
   return \@rows;
 }
+
+
+sub get_table_help {
+  my $name = shift;
+  return '' unless $name;
+  my @entries;
+  my $hidetext;
+  my $showtext;
+  my $heading;
+  my $description;
+  if ( $name eq 'annotated_transitions' ) {  
+    @entries = ( { key => 'Sequence', value => 'Amino acid sequence of detected pepide, including any mass modifications.' },
+                 { key => 'Charge', value => 'Charge on Q1 (precursor) peptide ion.' },
+                 { key => 'q1_mz', value => 'Mass to charge ratio of precursor peptide ion.' },
+                 { key => 'q3_mz', value => 'Mass to charge ratio of fragment ion.' },
+                 { key => 'Label', value => 'Ion-series designation for fragment ion (Q3).' },
+                 { key => 'CE', value => 'the kinetic energy in conferred to the peptide ion and resulting in peptide fragmentation. (eV)' },
+                 { key => 'Instr', value => 'Model of mass spectrometer on which transition pair was validated.' },
+                 { key => 'Annotator', value => 'Person/lab who contributed validated transition.' },
+                 { key => 'Quality', value => 'Crude scale of quality for the observation, currently one of Best, OK, and No. ' },
+        );
+                 
+    $showtext = 'show column descriptions';
+    $hidetext = 'hide column descriptions';
+    $heading = 'Annotated Tranitions';
+    $description= 'Contributed Q1/Q3 transition pairs for SRM experiments';
+
+  }
+
+  return unless @entries;
+  my $help = $sbeamsMOD->get_table_help_section( name => $name,
+                                             description => $description,
+                                             heading => $heading,
+                                             entries => \@entries,
+                                             showtext => $showtext,
+                                             hidetext => $hidetext  );
+  return $help;
+
+} # end get_table_help
+
+
+
 
 sub get_synthesized_peptides {
   my $accession = shift || return [];
