@@ -213,47 +213,26 @@ sub printPageHeader {
 # different browsers might be appropriate.
 ###############################################################################
 sub printStyleSheet {
-    my $self = shift;
+  my $self = shift;
+  my %args = @_;
 
-    my $FONT_SIZE_SM=8;
-    my $FONT_SIZE=9;
-    my $FONT_SIZE_MED=12;
-    my $FONT_SIZE_LG=12;
-    my $FONT_SIZE_HG=14;
+  my $FONT_SIZE_SM=8;
+  my $FONT_SIZE=9;
+  my $FONT_SIZE_MED=12;
+  my $FONT_SIZE_LG=12;
+  my $FONT_SIZE_HG=14;
 
-    if ( $HTTP_USER_AGENT =~ /Mozilla\/4.+X11/ ) {
-      $FONT_SIZE_SM=11;
-      $FONT_SIZE=12;
-      $FONT_SIZE_MED=13;
-      $FONT_SIZE_LG=14;
-      $FONT_SIZE_HG=19;
-    }
-
-
-    print qq~
-	<style type="text/css">
-	body {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt}
-	th   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; font-weight: bold;}
-	td   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt;}
-	form   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt}
-	pre    {  font-family: Courier New, Courier; font-size: ${FONT_SIZE_SM}pt}
-	h1   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_HG}pt; font-weight: bold}
-	h2   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
-	h3   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_LG}pt}
-	h4   {  font-family: AHelvetica, rial, sans-serif; font-size: ${FONT_SIZE_LG}pt}
-	A.h1 {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; text-decoration: none; color: blue}
-	A.h1:link {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; text-decoration: none; color: blue}
-	A.h1:visited {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; text-decoration: none; color: darkblue}
-	A.h1:hover {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; text-decoration: none; color: red}
-	A:link    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: none; color: blue}
-	A:visited {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: none; color: darkblue}
-	A:hover   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: red}
-	A:link.nav {  font-family: Helvetica, Arial, sans-serif; color: #000000}
-	A:visited.nav {  font-family: Helvetica, Arial, sans-serif; color: #000000}
-	A:hover.nav {  font-family: Helvetica, Arial, sans-serif; color: red;}
-	.nav {  font-family: Helvetica, Arial, sans-serif; color: #000000}
-
+  if ( $HTTP_USER_AGENT =~ /Mozilla\/4.+X11/ ) {
+    $FONT_SIZE_SM=11;
+    $FONT_SIZE=12;
+    $FONT_SIZE_MED=13;
+    $FONT_SIZE_LG=14;
+    $FONT_SIZE_HG=19;
+  }
+  
+my $module_styles =<<"  END_STYLE";  
 	A.sortheader{background-color: #888888; font-size: ${FONT_SIZE}pt; font-weight: bold; color:white; line-height: 25px;}
+  .info_box { background: #F0F0F0; border: #000 1px solid; padding: 4px; width: 80%; }
   .popup_help { cursor: Help; color:#444444 }
   
   /* Style info below organized by originating module
@@ -310,7 +289,43 @@ sub printStyleSheet {
   .white_hyper_text{font-family: Helvetica,Arial,sans-serif; color:#000000;}
   .white_text    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: white; CURSOR: help;}
   .white_text_head {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: white; CURSOR: help;}
-    
+  END_STYLE
+
+  if ( $args{module_only} ) {
+    return <<"    END";
+    <style type="text/css">
+    $module_styles
+    </style>
+    END
+  }
+
+  print qq~
+	<style type="text/css">
+	body {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt}
+	th   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; font-weight: bold;}
+	td   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt;}
+	form   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt}
+	pre    {  font-family: Courier New, Courier; font-size: ${FONT_SIZE_SM}pt}
+	h1   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_HG}pt; font-weight: bold}
+	h2   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
+	h3   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_LG}pt}
+	h4   {  font-family: AHelvetica, rial, sans-serif; font-size: ${FONT_SIZE_LG}pt}
+	A.h1 {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; text-decoration: none; color: blue}
+	A.h1:link {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; text-decoration: none; color: blue}
+	A.h1:visited {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; text-decoration: none; color: darkblue}
+	A.h1:hover {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; text-decoration: none; color: red}
+	A:link    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: none; color: blue}
+	A:visited {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: none; color: darkblue}
+	A:hover   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: red}
+	A:link.nav {  font-family: Helvetica, Arial, sans-serif; color: #000000}
+	A:visited.nav {  font-family: Helvetica, Arial, sans-serif; color: #000000}
+	A:hover.nav {  font-family: Helvetica, Arial, sans-serif; color: red;}
+	.nav {  font-family: Helvetica, Arial, sans-serif; color: #000000}
+
+  $module_styles
+
+
+
 	a.edit_menuButton:link {
 	/* font-size: 12px; */
 	font-family: arial,helvetica,san-serif;
@@ -439,7 +454,6 @@ a.blue_button:active{
 	border-left:1px solid #B7CFEB; 
 }
 
-  .info_box { background: #F0F0F0; border: #000 1px solid; padding: 4px; width: 80%; }
 
     ~;
 
@@ -458,6 +472,7 @@ a.blue_button:active{
 
 
 }
+
 
 
 ###############################################################################
