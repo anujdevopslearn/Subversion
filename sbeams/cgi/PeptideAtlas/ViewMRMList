@@ -100,6 +100,9 @@ sub main
     $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
 
     $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+    
+    # Hackage
+    $parameters{NIST_library_id} ||= $parameters{consensus_library_id};
 
     #$sbeams->printDebuggingInfo($q);
 
@@ -142,6 +145,7 @@ sub handle_request
 
     #### Show current user context information
     print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+    
 
     #$sbeams->printUserContext();
 
@@ -173,9 +177,8 @@ sub handle_request
     #########################################################################
     #### Process all the constraints
 
-    #### If no atlas_build_id was selected, stop here
-    unless ( $parameters{NIST_library_id} && 
-    ( $parameters{NIST_library_id} =~ /^[\d]+$/) ) 
+    #### If no NIST library was selected, stop here
+    unless ( $parameters{NIST_library_id} ) 
     {
         $sbeams->reportException(
             state => 'ERROR',
