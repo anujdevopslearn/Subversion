@@ -71,15 +71,26 @@ sub display_page_header {
   $sbeams = $self->getSBEAMS();
 
   if( $sbeams->isGuestUser() ) {
-    $self->displayGuestPageHeader( @_ );
-# } elsif ( $self->isYeastPA(project_id => $project_id) )
-# {
-#   $self->displayInternalResearcherPageHeader();
-  } else
-  {
-    $self->displayStandardPageHeader(@_);
-   }
+      $self->displayGuestPageHeader( @_ );
+      return;
+  } elsif ( $CONFIG_SETTING{PA_USER_SKIN} ) {
+    my $uname = $sbeams->getCurrent_username();
+#    $log->debug( "username is $uname" );
+    for my $skin ( split( ",", $CONFIG_SETTING{PA_USER_SKIN} ) ) {
+#      $log->debug( "skin is $skin" );
+      my ( $name, $value ) = split( /::::/, $skin, -1 );
+#      $log->debug( "name is $name, val is $value" );
+      if ( $name eq $uname ) {
+#        $log->debug( "CUSTOM! $CONFIG_SETTING{PA_USER_SKIN}" );
+        $self->displayGuestPageHeader( @_, uri => $value );
+        return;
+      } else {
+        $log->debug( "$name does not equal $uname" );
+      }
+    }
   }
+  $self->displayStandardPageHeader(@_);
+}
 
 
 ###############################################################################
@@ -153,18 +164,20 @@ sub displayGuestPageHeader {
   use LWP::UserAgent;
   use HTTP::Request;
   my $ua = LWP::UserAgent->new();
-  my $skinLink = 'http://www.peptideatlas.org';
+  my $skinLink = $args{uri} || 'http://www.peptideatlas.org/.index.dbbrowse.php';
+  $log->debug( "skinlink is $skinLink" );
   #my $skinLink = 'http://dbtmp.systemsbiology.net/';
-  my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index.dbbrowse.php" ) );
+  my $response = $ua->request( HTTP::Request->new( GET => "$skinLink" ) );
   my @page = split( "\n", $response->content() );
   my $skin = '';
   my $cnt=0;
   my $init = ( $args{init_tooltip} ) ? $self->init_pa_tooltip() : '';
+  my $css_info = $sbeams->printStyleSheet( module_only => 1 );
 
   for ( @page ) {
     $cnt++;
     $_ =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
-    $_ =~ s/(\<[^>]*body[^>]*\>)/$1$init/;
+    $_ =~ s/(\<[^>]*body[^>]*\>)/$1$init$css_info/;
     last if $_ =~ /--- Main Page Content ---/;
     $skin .= "$_\n";
   }
