@@ -160,6 +160,13 @@ sub handleRequest {
     atlas_build_id => $atlas_build_id,
   );
 
+
+##### Export the build to Proserver, set the ini config file
+####  Restart it to server the new build
+
+  updateProserver(atlas_build_name => $atlas_build_name,
+		  atlas_build_id   => $atlas_build_id); 
+
 } # end handleRequest
 
 
@@ -177,7 +184,7 @@ sub listBuilds {
      WHERE record_status != 'D'
      ORDER BY atlas_build_name
       ~;
-
+  my $dbh = connectToDASDB();
   my @atlas_builds = $sbeams->selectSeveralColumns($sql) or
     die("ERROR[$SUB]: There appear to be no atlas builds in your database");
 
@@ -313,10 +320,8 @@ sub exportBuildToDAS {
     or die("ERROR[$SUB]: Cannot disconnect from database ".
 	   "$DBI::err ($DBI::errstr)");
 
-  #### Update the Dazzle config file
-  updateDazzleConfigFile(
-    atlas_build_id => $atlas_build_id,
-  );
+ 
+
 
 } # end exportBuildToDAS
 
@@ -414,6 +419,9 @@ sub connectToDASDB {
     RaiseError => 0
   );
 
+  print " DSN \t $dsn \n";
+  print" username: \t $username \n";
+  print " $password \t $password \n";
   #### connect to database
   print "INFO[$SUB] Connecting to DAS Database...\n" if ($VERBOSE);
   my $dbh = DBI->connect ($dsn, $username, $password, \%attr )
@@ -561,6 +569,96 @@ sub getAllPeptideMappings {
 
 } # end getAllPeptideMappings
 
+
+
+################################################################################
+###### updateProserver --- Stop the server, update the ini file and restart it
+################################################################################
+
+
+sub updateProserver {
+
+    my $SUB = 'updateProserver';
+    my %args = @_;
+    
+    my $PROSERVER_DIREC   = '/net/dblocal/www/html/devAP/DAS/Bio-Das-ProServer';
+    my $PERL_EXEC         =  '/net/dblocal/www/html/devAP/local_perl/bin/perl';
+    my $INI_FILE          = 'peptideatlas.ini';
+
+
+    my %connection_params = getDASDBConnParams();
+    my $servername = $connection_params{servername};
+    my $databasename = $connection_params{databasename};
+    my $username = $connection_params{username};
+    my $password = $connection_params{password};
+
+    
+    my $atlas_build_name = $args{atlas_build_name} or
+	die {"ERROR[$SUB] : parameter atlas_build_name not provided"};
+    
+    my $nospace_atlas_build_name = $atlas_build_name;
+        $nospace_atlas_build_name =~ s/\s/_/g;
+  
+    my $atlas_build_id = $args{atlas_build_id} or
+	die {"ERROR[$SUB] : parameter atlas_build_id not provided"};
+
+    my $atlas_build_tag = getAtlasBuildTag(
+    atlas_build_id => $atlas_build_id,) or die("ERROR[$SUB]: Unable to get atlas_build_tag");
+
+    print "INFO[$SUB] : Updating the Proserver \n\n ";
+
+    if ( -e "$PROSERVER_DIREC/eg/proserver.mimas.systemsbiology.net.pid") {
+	
+	print "INFO[$SUB] : Stopping the Proserver \n ";
+	system("kill -TERM `cat $PROSERVER_DIREC/eg/proserver.mimas.systemsbiology.net.pid`");
+       
+    }
+
+    else { print "INFO[$SUB] : No instance of Proserver seems to be running ! Will start a fresh one";}
+    
+   ### Editing the peptideatlas.ini file 
+   
+    if ( -e "$PROSERVER_DIREC/eg/$INI_FILE") {
+
+	### making a copy of the ini file in case it corrupted
+	system("cp -p $PROSERVER_DIREC/eg/$INI_FILE  $PROSERVER_DIREC/eg/$INI_FILE.bak");
+	
+	open (FILE , ">>$PROSERVER_DIREC/eg/$INI_FILE");
+	
+	
+    
+	print (FILE "\n");
+	print (FILE "[PeptideAtlasdb_$nospace_atlas_build_name]\n");
+	print (FILE "state       = on\n");
+	print (FILE "adaptor     = PeptideAtlasdb\n");
+	print (FILE "description = Peptides from the PeptideAtlas build $atlas_build_name\n");
+	print (FILE "transport   = dbi\n");
+	print (FILE "dbhost      = $servername\n");
+	print (FILE "dbname      = $databasename\n");
+	print (FILE "dbuser      = $username\n");
+	print (FILE "dbpass      = $password\n");
+	print (FILE "dbtable     = $atlas_build_tag\n");
+	print (FILE "atlas_build_id = $atlas_build_id\n");
+
+
+	close(FILE);
+
+	print " INFO[$SUB]: INI file updated \n";
+    
+        print " INFO[$SUB]: Restarting the Proserver \n";
+      }
+
+
+        
+     ##  Restarting the Proserver with the updated INI file
+
+     system("$PERL_EXEC $PROSERVER_DIREC/eg/proserver -c $PROSERVER_DIREC/eg/$INI_FILE");
+ 
+     print "\n\n INFO[$SUB]: Proserver successfully started\n\n";
+   
+
+	       
+    }  ###### END udpateProserver
 
 
 
