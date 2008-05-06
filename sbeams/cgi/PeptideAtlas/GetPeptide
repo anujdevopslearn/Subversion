@@ -997,7 +997,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
       $pep->[0] = $sbeamsMOD->formatMassMods( $pep->[0] );
       $pep->[2] = sprintf("%0.2f", $pep->[2]); # . '&nbsp;';
       $pep->[3] = sprintf("%0.2f", $pep->[3]); # . '&nbsp;';
-      $pep->[5] = sprintf("%0.0f", $pep->[5]); # . '&nbsp;';
+      $pep->[5] = sprintf("%0.1f", $pep->[5]); # . '&nbsp;';
+      $pep->[6] = sprintf("%0.0f", $pep->[6]); # . '&nbsp;';
 #      $pep->[1] .= '&nbsp;';
 #      $pep->[6] .= '&nbsp;';
 #      $pep->[7] .= '&nbsp;';
@@ -1009,7 +1010,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
         $pep->[$idx] = $sbeams->makeInactiveText('n/a') if !defined $pep->[$idx];
       }
     }
-    my @labels = ( 'Sequence', 'Charge', 'q1_mz', 'q3_mz', 'Label', 'CE', 'RT', 'Instr', 'Annotator', 'Quality');
+    my @labels = ( 'Sequence', 'Charge', 'q1_mz', 'q3_mz', 'Label', 'Intensity', 'CE', 'RT', 'Instr', 'Annotator', 'Quality' );
 
     #### Add table column headings
     unshift @$mrm_transitions, \@labels;
@@ -1235,6 +1236,7 @@ sub get_mrm_transitions {
   q1_mz,
   q3_mz,
   q3_ion_label,  
+  q3_peak_intensity,
   collision_energy,
   retention_time,
   instrument,
@@ -1250,6 +1252,7 @@ sub get_mrm_transitions {
   LEFT JOIN $TB_USER_LOGIN UL ON UL.contact_id = MPA.annotator_contact_id
   WHERE peptide_accession = '$accession'
   AND project_id IN ( $projects )
+  ORDER BY modified_peptide_sequence, peptide_charge DESC, Q3_peak_intensity DESC, q3_mz
   END
   my @rows = $sbeams->selectSeveralColumns($sql);
   return \@rows;
@@ -1274,6 +1277,7 @@ sub get_table_help {
                  { key => 'Instr', value => 'Model of mass spectrometer on which transition pair was validated.' },
                  { key => 'Annotator', value => 'Person/lab who contributed validated transition.' },
                  { key => 'Quality', value => 'Crude scale of quality for the observation, currently one of Best, OK, and No. ' },
+                 { key => 'Intensity', value => 'Intensity of peak in CID spectrum' },
         );
                  
     $showtext = 'show column descriptions';
