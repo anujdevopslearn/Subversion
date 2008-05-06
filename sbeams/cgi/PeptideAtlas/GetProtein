@@ -932,10 +932,12 @@ sub handle_request {
       my $link_base = "GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&action=QUERY&searchForThis=";
       #### Loops through resultset and do formatting
       for my $pep ( @$mrm_transitions ) {
-        $pep->[0] = "<A HREF=$link_base" . $pep->[0] . ">$pep->[0]</A";
+        $pep->[0] = "<A HREF=$link_base" . $pep->[0] . ">$pep->[0]</A>";
         $pep->[3] = sprintf("%0.2f", $pep->[3]);
         $pep->[4] = sprintf("%0.2f", $pep->[4]);
         $pep->[6] = sprintf("%0.1f", $pep->[6]);
+        $pep->[7] = sprintf("%0.1f", $pep->[7]);
+        $pep->[8] = sprintf("%0.1f", $pep->[8]);
        ($pep->[5]) = $pep->[5] =~ /^([a-zA-Z]\d+)/;
 
         $pep->[1] = $sbeamsMOD->formatMassMods( $pep->[1] );
@@ -944,7 +946,7 @@ sub handle_request {
         }
       }
       my @labels = ( 'Accession', 'Sequence', 'Charge', 'q1_mz', 'q3_mz', 
-                 'Label', 'CE', 'RT', 'Instr', 'Annotator', 'Quality');
+                 'Label', 'Intensity', 'CE', 'RT', 'Instr', 'Annotator', 'Quality');
 
       #### Add table column headings
       unshift @$mrm_transitions, \@labels;
@@ -953,6 +955,8 @@ sub handle_request {
       $transitionsHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
                                                         tr_info => $tr,
                                                           width => '600',
+                                                   set_download => 1,
+                                                    chg_bkg_idx => 3,
                                                          align  => [qw(left center center right right center right right left left left)],
                                                            rows => $mrm_transitions );
       #### Display table
@@ -1044,6 +1048,7 @@ sub get_mrm_transitions {
   q1_mz,
   q3_mz,
   q3_ion_label,  
+  q3_peak_intensity,  
   collision_energy,
   retention_time,
   instrument,
@@ -1059,6 +1064,7 @@ sub get_mrm_transitions {
   LEFT JOIN $TB_USER_LOGIN UL ON UL.contact_id = MPA.annotator_contact_id
   WHERE peptide_accession IN ( $acc_string )
   AND project_id IN ( $projects )
+  ORDER BY peptide_accession, q1_mz, peptide_charge, q3_peak_intensity DESC
   END
   my @rows = $sbeams->selectSeveralColumns($sql);
   return \@rows;
