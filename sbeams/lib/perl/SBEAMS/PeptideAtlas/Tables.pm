@@ -174,7 +174,6 @@ require Exporter;
 #### Get the appropriate database prefixes for the SBEAMS core and this module
 my $core = $DBPREFIX{Core};
 my $mod = $DBPREFIX{PeptideAtlas};
-##my $testmod = 'PeptideAtlas_test.dbo.';
 my $glycomod = $DBPREFIX{GlycoPeptide} || $DBPREFIX{PeptideAtlas};
 my $BioLink = $DBPREFIX{BioLink};
 
@@ -249,6 +248,6 @@ $TBAT_PEPTIDE_ANNOTATION            = "${mod}peptide_annotation";
 $TBAT_MODIFIED_PEPTIDE_ANNOTATION   = "${mod}modified_peptide_annotation";
 $TBAT_TRANSITION_SUITABILITY_LEVEL  = "${mod}transition_suitability_level";
 
-$TBAT_PROTEOTYPIC_PEPTIDE           = "${mod}proteotypic_peptide_test";
+$TBAT_PROTEOTYPIC_PEPTIDE           = "${mod}proteotypic_peptide";
 $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING   = "${mod}proteotypic_peptide_mapping";
 
