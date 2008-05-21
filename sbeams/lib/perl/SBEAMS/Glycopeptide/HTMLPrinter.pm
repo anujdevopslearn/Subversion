@@ -81,7 +81,8 @@ sub displayUnipepHeader {
     last if $line =~ /--- Main Page Content ---/;
   }
   $skin =~ s/\/images\//\/sbeams\/images\//gm;
- 
+  
+  $self->{'_external_footer'} =  join( "\n", @page[$cnt..$#page] );
   print "$http_header\n\n";
   print <<"  END_PAGE";
   <HTML>
@@ -547,6 +548,10 @@ sub display_page_footer {
     return;
   }
 
+  if ( $self->{'_external_footer'} ) {
+    print "$self->{'_external_footer'}\n";
+    return;
+  }
 
   #### Process the arguments list
   my $close_tables = $args{'close_tables'} || 'YES';
