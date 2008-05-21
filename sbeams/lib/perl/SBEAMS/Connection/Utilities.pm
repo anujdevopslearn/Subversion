@@ -916,6 +916,62 @@ sub getGaggleXML {
   return $xml;
 }
 
+#+
+# Companion method to getGaggleXML, routine creates gaggle microformat
+# from passed data structure.  Currently supports only namelist data type
+#
+# @narg type      
+# @narg name      
+# @narg organism      
+# @narg object      
+# @narg data      
+#-
+sub getGaggleMicroformat {
+  my $self = shift;
+  my %args = @_;
+
+  # some reasonable defaults
+  $args{type} ||= 'direct';
+  $args{name} ||= 'generic';
+  $args{organism} ||= 'unknown';
+
+  # Sanity check
+  unless ( $args{data} ) {
+    $log->error( "Must provide data object" );
+    return '';
+  }
+  return unless @{$args{data}};
+  my $nrows = scalar(  @{$args{data}} );
+
+  my $microformat = qq~
+    <div class="gaggle-data">
+     <p>name=<span class="gaggle-name">$args{name}</span><br />
+     <p>species=<span class="gaggle-species">$args{organism}</span><br />
+     <p>(optional)size=<span class="gaggle-size">$nrows</span><br />
+     </p>
+     <div class="gaggle-namelist">
+      <ol>
+       <li>
+   ~;
+
+  if ( $args{object} =~ /^namelist$/i ) {
+    $microformat .= join( "</li>\n<li>", @{$args{data}} );
+  } else {
+    $log->error( "Unknown object type, $args{object}" );
+  }
+
+  $microformat .= "</li>";
+  $microformat .= qq~
+      </ol>
+     </div>
+    </div>
+  ~;
+
+  return $microformat;
+
+} # end getGaggleMicroformat
+
+
 
 sub get_admin_mailto {
   my $self = shift;
