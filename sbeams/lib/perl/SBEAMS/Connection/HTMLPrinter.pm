@@ -234,6 +234,7 @@ my $module_styles =<<"  END_STYLE";
 	A.sortheader{background-color: #888888; font-size: ${FONT_SIZE}pt; font-weight: bold; color:white; line-height: 25px;}
   .info_box { background: #F0F0F0; border: #000 1px solid; padding: 4px; width: 80%; }
   .popup_help { cursor: Help; color:#444444 }
+  .gaggle-data { display: none }
   
   /* Style info below organized by originating module
   /* Peptide Atlas */
@@ -257,6 +258,12 @@ my $module_styles =<<"  END_STYLE";
   .help_key {  font-family: Helvetica, Arial, sans-serif; font-size: 9pt; font-weight: Bold; }
   .help_val {  font-family: Helvetica, Arial, sans-serif; font-size: 9pt; }
   .plot_caption {  font-family: Helvetica, Arial, sans-serif; font-size: 12pt; }
+
+  .left_text { text-align: left }
+  .center_text { text-align: center }
+  .right_text { text-align: right }
+  .header_text { color: white; text-align: left }
+  .topbound_text { vertical-align: top }
 	
 
   /* Glycopeptide */
@@ -289,6 +296,10 @@ my $module_styles =<<"  END_STYLE";
   .white_hyper_text{font-family: Helvetica,Arial,sans-serif; color:#000000;}
   .white_text    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: white; CURSOR: help;}
   .white_text_head {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: white; CURSOR: help;}
+  
+  div.visible { display: inline; white-space: nowrap;         }
+  div.visilink { color: blue; display: inline; white-space: nowrap;         }
+  div.hidden { display: none; }
   END_STYLE
 
   if ( $args{module_only} ) {
@@ -985,7 +996,7 @@ sub reportException {
 #-
 sub makeInactiveText {
   my $self = shift;
-  my $text = shift;
+  my $text = shift || 'n/a';
   return( "<FONT COLOR=#AAAAAA>$text</FONT>" );
 }
 
