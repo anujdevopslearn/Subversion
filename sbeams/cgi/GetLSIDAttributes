@@ -647,6 +647,9 @@ sub get_microarray_data {
     $content .= get_project_arrays( $object_id );
     $content .= get_project_analyses( $object_id );
     $content .= get_project_conditions( $object_id );
+
+    # May have 2-color data as well?
+    $content .= get_twocolor_arrays( $object_id );
   }
 
 
@@ -836,7 +839,7 @@ sub get_project_conditions {
     return($content);
 }
 
-get_microarray_objects {
+sub get_microarray_objects {
   my %args = @_;
   for my $key ( qw( class object_id ) ) {
     $sbeams->handle_error(
@@ -849,3 +852,59 @@ get_microarray_objects {
   }
 }
 
+#+
+# Get all arrays for specified project
+#-
+sub get_twocolor_arrays {
+  my $project_id = shift;
+  my $content = '';
+
+  # Get affy array sample info
+  my $sql = qq ~
+  SELECT -- Array table
+         A.array_id,printing_batch_id,array_name,array_request_slide_id,
+         A.comment AS array_comment,
+
+         -- Slide table
+         S.slide_id,slide_lot_id,slide_number,barcode,S.comment AS slide_comment,
+         
+         -- Array scan table
+         ASCN.array_scan_id,ASCN.protocol_id AS array_scan_protocol_id,
+         protocol_deviations,resolution,ASCN.stage_location 
+         AS array_scan_stage_location,ASCN.uri AS array_scan_uri,
+         ASCN.data_flag AS array_scan_data_flag,date_scanned,
+         ASCN.comment AS array_scan_comment,
+         
+         -- Array layout table
+         AL.layout_id,slide_type_id,AL.name AS layout_name,
+         biosequence_set_id,data_file,source_filename,
+         AL.comment AS array_layout_comment,
+         
+         -- Array quantitation table
+         array_quantitation_id,AQ.protocol_id AS array_quantitation_protocol_id,
+         AQ.stage_location AS array_quantitation_stage_location,
+         AQ.uri AS array_quantitation_uri,AQ.data_flag AS array_quantitation_data_flag,
+         date_quantitated,AQ.comment AS array_quantiation_comment
+           
+    FROM $TBMA_ARRAY A
+    JOIN $TBMA_SLIDE S on S.slide_id = A.slide_id
+    JOIN $TBMA_ARRAY_SCAN ASCN ON ASCN.array_id = A.array_id
+    JOIN $TBMA_ARRAY_LAYOUT AL ON AL.layout_id = A.layout_id
+    JOIN $TBMA_ARRAY_QUANTITATION AQ ON ASCN.array_scan_id = AQ.array_scan_id
+    WHERE project_id = $project_id
+    AND A.record_status != 'D'
+    AND S.record_status != 'D'
+    AND ASCN.record_status != 'D'
+    AND AL.record_status != 'D'
+    AND AQ.record_status != 'D'
+  ~;
+  my @rows = $sbeams->selectHashArray($sql);
+  foreach my $row ( @rows ) {
+    $content .= encodeAttributes(
+      class => 'two_color_array',
+      object_id => $row->{array_id},
+      hash => $row,
+    );
+  }
+  return $content;
+}
