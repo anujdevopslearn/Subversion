@@ -128,12 +128,29 @@ sub has_search_key_data {
 
 sub getBuildMotif {
   my $self = shift;
+  my %args = @_;
 
-  my $build_id = $self->getCurrentAtlasBuildID( parameters_ref => { got => 0 } );
+  my $build_id = $args{build_id} || $self->getCurrentAtlasBuildID( parameters_ref => { got => 0 } );
   if ( grep /^$build_id$/, @{$self->getGlycoBuilds()} ) {
     return 'glyco';
   } elsif ( grep /^$build_id$/, @{$self->getPhosphoBuilds()} ) {
     return 'phospho';
+  } elsif ( grep /^$build_id$/, @{$self->getICATBuilds()} ) {
+    return 'icat';
+  } 
+  return '';
+}
+
+sub getBuildConsensusLib {
+  my $self = shift;
+  my %args = @_;
+
+  # getCurrent wants a param ref
+  my $build_id = $args{build_id} || $self->getCurrentAtlasBuildID( parameters_ref => { got => 0 } );
+
+  # FIXME - hard-coded value for MRM Atlas
+  if ( $build_id == 123 ) {
+    return 28;
   } 
   return '';
 }
@@ -145,8 +162,13 @@ sub getGlycoBuilds {
 }
 
 sub getPhosphoBuilds {
-  my @phospho_builds = ( 1 );
+  my @phospho_builds = ( );
   return \@phospho_builds;
+}
+
+sub getICATBuilds {
+  my @icat_builds = ( 83, 110 );
+  return \@icat_builds;
 }
 
 ###############################################################################
