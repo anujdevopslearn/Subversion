@@ -58,6 +58,7 @@ Options:
                          and peptide sequences, suitable to use with Parag
                          Mallick's proteotypic calculator
   --update_observed      If set, empirical proteotypic scores are calculated
+  --proteotypic_file     overrides default proteotypic file names.
 
  e.g.: $PROG_NAME --list
        $PROG_NAME --atlas_build_name \'Human_P0.9_Ens26_NCBI35\'
@@ -66,6 +67,7 @@ EOU
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
         "list","atlas_build_name:s","export_file:s","update_observed",
+        "proteotypic_file:s",
     )) {
 
     die "\n$USAGE";
@@ -176,6 +178,7 @@ sub handleRequest {
   if ($OPTIONS{update_observed}) {
     updateObservedProteotypicScores(
       atlas_build_id => $atlas_build_id,
+      %OPTIONS
     );
   }
 
@@ -419,11 +422,12 @@ sub updateObservedProteotypicScores {
     $predicted_scores->{'N/A'} = 1;
   }
 
-  my $export_file = 'proteotypic_scores.tsv';
-  open(OUTFILE,">$export_file") or
-    die("ERROR[$SUB]: Unable to write to '$export_file'");
-  my $export_file2 = $export_file;
-  $export_file2 =~ s/\.tsv/-simplified.tsv/;
+  $args{proteotypic_file} ||= 'AB_' . $atlas_build_id . '_proteotypic-scores.tsv';
+  open(OUTFILE,">$args{proteotypic_file}") or
+    die("ERROR[$SUB]: Unable to write to '$args{proteotypic_file}'");
+  my $export_file2 = $args{proteotypic_file};
+  $export_file2 =~ s/\.tsv$/-simplified.tsv/;
+  $export_file2 .= '-simplified.tsv' if $export_file2 !~ /simplified/;
   open(OUTFILE2,">$export_file2") or
     die("ERROR[$SUB]: Unable to write to '$export_file2'");
 
