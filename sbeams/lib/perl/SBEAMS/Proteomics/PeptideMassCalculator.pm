@@ -19,6 +19,7 @@ package SBEAMS::Proteomics::PeptideMassCalculator;
 
 
 use strict;
+use SBEAMS::Connection::Settings qw(:default );
 use InSilicoSpectro::InSilico::MassCalculator 'setMassType','getMass';
 
 use vars qw ( $H $O %supported_modifications );
@@ -33,9 +34,11 @@ sub new {
   my $self = {};
   bless $self, $class;
 
-  #### Initialize InsilicoSpectro. This is still a hard-coded location
-  #### Should be changed to be relative to module location.  How?
-  InSilicoSpectro::InSilico::MassCalculator::init('/tools/lib/perl5/site_perl/5.8.0/InSilicoSpectro/config/insilicodef.xml');
+  #### Initialize InsilicoSpectro.
+  my $config_file = $CONFIG_SETTING{INSILICOSPECTRO_CONFIG};
+  $config_file ||= '/tools/lib/perl5/site_perl/5.8.0/InSilicoSpectro/config/insilicodef.xml';
+
+  InSilicoSpectro::InSilico::MassCalculator::init( $config_file );
 
   #### Get some constants
   $H = getMass('el_H');
@@ -221,4 +224,4 @@ Eric Deutsch <edeutsch@systemsbiology.org>
 
 perl(1).
 
-=cut
+=cuz
