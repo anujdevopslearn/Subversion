@@ -204,7 +204,7 @@ sub populateRecords
 
           next;
         } elsif ( $line =~ /^MW:\s(.*)$/ ) { # line 2 is MW
-          next;
+#          next;
           $spectrum{mw} = $1;
           next;
         } elsif ( $line =~ /^Comment:/ ) { # line 3 is Comment:
@@ -236,6 +236,13 @@ sub populateRecords
 
         );
 
+        my $protein = $commentHash{Protein};
+        if ( length($protein) > 254 ) {
+          print STDERR "Trimmed long protein name\n";
+          $protein = substr( $protein, 0, 254 );
+          print STDERR "protein was " . length(  $commentHash{Protein} ) . " but is now " . length( $protein ) . "\n";
+        }
+
         my $nist_library_spectrum_id = insert_nist_library_spectrum(
             nist_library_id => $nist_library_id,
             nist_spectrum_type_id => $nist_spectrum_type_id,
@@ -243,7 +250,7 @@ sub populateRecords
             modified_sequence => $modified_sequence,
             charge => $charge,
             modifications => $commentHash{Mods},
-            protein_identifiers => $commentHash{Protein},
+            protein_identifiers => $protein, # commentHash{Protein},
             mz_exact => $commentHash{Mz_exact},
         );
 
@@ -664,11 +671,17 @@ sub parseComment
 
     ## only storing Mods if not equal to 0
     ## Mods=1/17,C,ICAT_light
-    if ($line =~ /.*(Mods)=(.+?)\s.*/)
-    {
-        my $k = $1;
-        my $v = $2;
-        $hash{$k} = $v if ($v != 0);
+    if ($line =~ /.*(Mods)=(.+?)\s.*/) {
+      my $k = $1;
+      my $v = $2;
+      if ( $v != 0 ) {
+        if ( length($v) > 255 ) {
+          $hash{$k} = substr( $v, 0, 254 );
+          print STDERR "Trimmed a long modstring!\n";
+        } else {
+          $hash{$k} = $v;
+        }
+      }
     }
 
 #   if ($line =~ /.*(Mz_exact)=(.+?)\s.*/)
