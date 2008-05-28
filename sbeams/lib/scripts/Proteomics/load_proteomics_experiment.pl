@@ -124,6 +124,10 @@ Options:
   --pepxml_load       If set, the whole experiment will be loaded from
                       the pepXML file instead of subdirectories with .out files
 
+  --experiment_list_file    Path to the Experiment.list file. If given it will be updated with search id and 
+                             experiment path
+
+
  e.g.:  $PROG_NAME --list_all
         $PROG_NAME --check --experiment_tag=rafapr
         $PROG_NAME --experiment_id '12' --check_status ----testonly
@@ -147,7 +151,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
   "update_timing_info","gradient_program_id:i","column_delay:i",
   "cleanup_archive","delete_search_batch","delete_experiment",
   "delete_fraction:s","force_search_batch","fix_ipi",
-  "interact_fname:s", "experiment_id:s","pepxml_load",
+  "interact_fname:s", "experiment_id:s","pepxml_load","experiment_list_file:s"
   )) {
   print "$USAGE";
   exit;
@@ -225,6 +229,7 @@ sub handleRequest {
   $interact_fname = $OPTIONS{"interact_fname"} || '';
   my $experiment_id = $OPTIONS{"experiment_id"} || '';
   my $pepxml_load = $OPTIONS{"pepxml_load"} || '';
+  my $experiment_list_file =$OPTIONS{"experiment_list_file"};
 
   $TESTONLY = $OPTIONS{'testonly'} || 0;
   $DATABASE = $DBPREFIX{'Proteomics'};
@@ -428,7 +433,8 @@ sub handleRequest {
 	  } else {
   	    $result = loadProteomicsExperiment(
   	      experiment_tag=>$status->{experiment_tag},
-  	      source_dir=>$source_dir
+  	      source_dir=>$source_dir,
+	      experiment_list_file=>$experiment_list_file
             );
 	}
   	  print "\n";
@@ -635,6 +641,8 @@ sub loadProteomicsExperiment {
   my $source_dir = $args{'source_dir'}
    || die "ERROR[$SUB_NAME]: source_file not passed";
 
+  my $experiment_list_file = $args{'experiment_list_file'};
+
 
   #### Define standard variables
   my ($i,$element,$key,$value,$line,$result,$sql,$file);
@@ -656,6 +664,7 @@ sub loadProteomicsExperiment {
            -f "$source_dir/interact.xml" ||
            -f "$source_dir/interact-prob.xml" ||
            -f "$source_dir/sequest.params" ||
+	   -f "$source_dir/interact-prob.pep.xml" ||
            -f "source_dir/interact-prob-data.htm" ) {
     die("ERROR: '$source_dir' just doesn't look like a sequest search ".
         "directory");
@@ -743,6 +752,23 @@ sub loadProteomicsExperiment {
             fraction_directory=>"$source_dir"
         );
 	print "Added search_batch_id $search_batch_id\n";
+	
+	              if ($experiment_list_file) 
+	                {
+			    open(EXP_IN, ">>$experiment_list_file") or exit(0);
+
+                           print (EXP_IN "$search_batch_id\t$source_dir\n");
+    
+                            close(EXP_IN);
+                        }
+                       else 
+                        {
+                        print "[INFO]: Path to Experiment.list not provided ";
+
+                        }
+         
+         
+	
       } else {
 	print "ERROR: Unable to determine search_database from sequest.params\n";
       }
