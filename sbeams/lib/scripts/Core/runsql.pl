@@ -99,18 +99,31 @@ sub printResults {
   my $args = shift;
   my $dbh = shift;
   my $sql = shift;
+
+  # set default filename
+  $args->{outfile} ||= '/tmp/sql_output_file.tsv';
+  open OUTFILE, ">$args->{outfile}" || die "couldn't open $args->{outfile}";
   foreach my $sql ( @$sql ) {
     if ( $sql !~ / UPDATE | DROP | INSERT | DELETE | TRUNCATE /gi ) {
       print "$sql\n";  # Query mode implies a certain amount of verbosity!
       my $sth = $dbh->prepare( $sql );
       $sth->execute();
       my $firstrow = 1;
+      my $cnt = 0;
       while ( my $row = $sth->fetchrow_hashref() ) {
+        
+        $cnt++;
+        my @keys = keys( %{$row} );
+        my @values;
+        for my $k ( @keys ) {
+          my $v = ( defined $row->{$k} ) ? $row->{$k} : '';
+          push @values, $v;
+        }
         if ( $firstrow ) {
-          print join( "\t", keys( %{$row} ) . "\n" );
+          print OUTFILE join( "\t", @keys ) . "\n";
           $firstrow = 0;
         }
-        print join( "\t", values( %{$row} ) . "\n" );
+        print OUTFILE join( "\t", @values ) . "\n";
       }
     } else {
       print "Query mode is read-only, not running $sql";
@@ -156,7 +169,7 @@ sub processArgs {
   unless( GetOptions ( \%args, 'pass=s', 'user=s', 'verbose', 'sfile=s',
                       'delimiter=s', 'ignore_errors', 'manual:s',
                       'no_audit_constraints', 'database=s', 'query_mode', 
-                      'test_mode', 'quiet|q' ) ) {
+                      'test_mode', 'quiet|q', 'outfile=s' ) ) {
   printUsage("Error with options, please check usage:");
   }
 
@@ -210,6 +223,7 @@ sub printUsage {
    -p --pass xxxx     password to authenticate to the db.  Will be prompted
                       if value is ommitted.
    -s --sfile xxxx    SQL file which defines table and columns etc
+   -o --outfile xxxx  File to which to write output in query mode
    -v --verbose       verbose output
    -i --ignore_errs   Ignore SQL errors and continue
       --delimiter xx  Delimter for splitting file, semicolon (default) or GO.
