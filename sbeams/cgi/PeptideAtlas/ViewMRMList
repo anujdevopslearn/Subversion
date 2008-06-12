@@ -19,7 +19,7 @@ use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
 $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
 $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
-@MENU_OPTIONS $modification_helper);
+@MENU_OPTIONS );
 
 use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
@@ -134,109 +134,111 @@ sub main
 ###############################################################################
 # Handle Request
 ###############################################################################
-sub handle_request 
-{
-    my %args = @_;
+sub handle_request {
+  my %args = @_;
 
-    #### Process the arguments list
-    my $ref_parameters = $args{'ref_parameters'} || die "ref_parameters not passed";
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'} || die "ref_parameters not passed";
 
-    my %parameters = %{$ref_parameters};
+  my %parameters = %{$ref_parameters};
 
-    #### Show current user context information
-    print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+  #### Show current user context information
+  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+  
+
+  #$sbeams->printUserContext();
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+      parameters_ref => \%parameters,
+      program_name => $PROG_NAME,
+  );
+
+  print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+
+  #### Define some generic variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+  #### Read in the standard form values
+  my $apply_action    = $parameters{'action'} || $parameters{'apply_action'};
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+
+
+  #########################################################################
+  #### Process all the constraints
+
+  #### Require library and atlas build 
+  for my $param ( qw( NIST_library_id atlas_build_id ) ) {
+    if ( !$parameters{$param} ) {
     
-
-    #$sbeams->printUserContext();
-
-    #### Get the HTML to display the tabs
-    my $tabMenu = $sbeamsMOD->getTabMenu(
-        parameters_ref => \%parameters,
-        program_name => $PROG_NAME,
-    );
-
-    print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
-
-    #### Define some generic variables
-    my ($i,$element,$key,$value,$line,$result,$sql);
-
-
-    #### Define some variables for a query and resultset
-    my %resultset = ();
-    my $resultset_ref = \%resultset;
-    my (%url_cols,%hidden_cols,%max_widths,$show_sql);
-
-    #### Read in the standard form values
-    my $apply_action    = $parameters{'action'} || $parameters{'apply_action'};
-    my $TABLE_NAME = $parameters{'QUERY_NAME'};
-
-    #### If the apply action was to recall a previous resultset, do it
-    my %rs_params = $sbeams->parseResultSetParams(q=>$q);
-
-
-    #########################################################################
-    #### Process all the constraints
-
-    #### If no NIST library was selected, stop here
-    unless ( $parameters{NIST_library_id} ) 
-    {
-        $sbeams->reportException(
-            state => 'ERROR',
-            type => 'INSUFFICIENT CONSTRAINTS',
-            message => 'You must select at least one NIST library',
-        );
-        return;
+      $sbeams->reportException(
+          state => 'ERROR',
+          type => 'INSUFFICIENT CONSTRAINTS',
+          message => 'Missing required parameter $param',
+      );
+      return;
     }
+  }
 
-    #### Build atlas_build_id constraint
-    my $atlas_build_clause = $sbeams->parseConstraint2SQL(
-        constraint_column=>"PI.atlas_build_id",
-        constraint_type=>"int_list",
-        constraint_name=>"Atlas Build",
-        constraint_value=>$parameters{atlas_build_id} );
-    return if ($atlas_build_clause eq '-1');
+  #### Build atlas_build_id constraint
+  my $atlas_build_clause = $sbeams->parseConstraint2SQL(
+      constraint_column=>"PI.atlas_build_id",
+      constraint_type=>"int_list",
+      constraint_name=>"Atlas Build",
+      constraint_value=>$parameters{atlas_build_id} );
+  return if ($atlas_build_clause eq '-1');
 
-    #### Build NIST_library_id constraint
-    my $NIST_library_where_clause = $sbeams->parseConstraint2SQL(
-        constraint_column=>"NL.NIST_library_id",
-        constraint_type=>"int_list",
-        constraint_name=>"NIST Library",
-        constraint_value=>$parameters{NIST_library_id} );
-    return if ($NIST_library_where_clause eq '-1');
-    ##  replace AND with WHERE
-    $NIST_library_where_clause =~ s/(.*)AND(.*)/$1WHERE$2/;
+  ##  replace AND with WHERE
+  $atlas_build_clause =~ s/(.*)AND(.*)/$1WHERE$2/;
 
-    #### Build PEPTIDE_SEQUENCE constraint
-    my $peptide_sequence_clause = $sbeams->parseConstraint2SQL(
-        constraint_column=>"P.peptide_sequence",
-        constraint_type=>"plain_text",
-        constraint_name=>"Peptide Sequence",
-        constraint_value=>$parameters{peptide_sequence_constraint} );
-    return if ($peptide_sequence_clause eq '-1');
+  #### Build NIST_library_id constraint
+  my $NIST_library_clause = $sbeams->parseConstraint2SQL(
+      constraint_column=>"NL.NIST_library_id",
+      constraint_type=>"int_list",
+      constraint_name=>"NIST Library",
+      constraint_value=>$parameters{NIST_library_id} );
+  return if ($NIST_library_clause eq '-1');
 
-    #### Build BEST_PROBABILITY constraint
-    my $best_probability_clause = $sbeams->parseConstraint2SQL(
-        constraint_column=>"PI.best_probability",
-        constraint_type=>"flexible_float",
-        constraint_name=>"Best Probability",
-        constraint_value=>$parameters{best_probability_constraint} );
-    return if ($best_probability_clause eq '-1');
+  #### Build PEPTIDE_SEQUENCE constraint
+  my $peptide_sequence_clause = $sbeams->parseConstraint2SQL(
+      constraint_column=>"P.peptide_sequence",
+      constraint_type=>"plain_text",
+      constraint_name=>"Peptide Sequence",
+      constraint_value=>$parameters{peptide_sequence_constraint} );
+  return if ($peptide_sequence_clause eq '-1');
 
-    #### Build N_OBSERVATIONS constraint
-    my $n_observations_clause = $sbeams->parseConstraint2SQL(
-        constraint_column=>"PI.n_observations",
-        constraint_type=>"flexible_int",
-        constraint_name=>"Number of Observations",
-        constraint_value=>$parameters{n_observations_constraint} );
-    return if ($n_observations_clause eq '-1');
+  #### Build BEST_PROBABILITY constraint
+  my $best_probability_clause = $sbeams->parseConstraint2SQL(
+      constraint_column=>"PI.best_probability",
+      constraint_type=>"flexible_float",
+      constraint_name=>"Best Probability",
+      constraint_value=>$parameters{best_probability_constraint} );
+  return if ($best_probability_clause eq '-1');
 
-    #### Build N_SAMPLES constraint
-    my $n_samples_clause = $sbeams->parseConstraint2SQL(
-        constraint_column=>"PI.n_samples",
-        constraint_type=>"flexible_int",
-        constraint_name=>"Number of Samples",
-        constraint_value=>$parameters{n_samples_constraint} );
-    return if ($n_samples_clause eq '-1');
+  #### Build N_OBSERVATIONS constraint
+  my $n_observations_clause = $sbeams->parseConstraint2SQL(
+      constraint_column=>"PI.n_observations",
+      constraint_type=>"flexible_int",
+      constraint_name=>"Number of Observations",
+      constraint_value=>$parameters{n_observations_constraint} );
+  return if ($n_observations_clause eq '-1');
+
+  #### Build N_SAMPLES constraint
+  my $n_samples_clause = $sbeams->parseConstraint2SQL(
+      constraint_column=>"PI.n_samples",
+      constraint_type=>"flexible_int",
+      constraint_name=>"Number of Samples",
+      constraint_value=>$parameters{n_samples_constraint} );
+  return if ($n_samples_clause eq '-1');
 
 
     #### Build EMPIRICAL_PROTEOTYPIC_SCORE constraint
@@ -245,7 +247,7 @@ sub handle_request
         constraint_type=>"flexible_float",
         constraint_name=>"Empirical Proteotypic Score",
         constraint_value=>$parameters{empirical_proteotypic_constraint} );
-    return if ($empirical_proteotypic_clause eq '-1');
+  return if ($empirical_proteotypic_clause eq '-1');
 
 
     #### Build n_protein_mappings constraint
@@ -254,7 +256,7 @@ sub handle_request
         constraint_type=>"flexible_int",
         constraint_name=>"n_protein_mappings",
         constraint_value=>$parameters{n_protein_mappings_constraint} );
-    return if ($n_protein_mappings_clause eq '-1');
+  return if ($n_protein_mappings_clause eq '-1');
 
     #### Build n_genome_locations constraint
     my $n_genome_locations_clause = $sbeams->parseConstraint2SQL(
@@ -262,7 +264,7 @@ sub handle_request
         constraint_type=>"flexible_int",
         constraint_name=>"n_genome_locations",
         constraint_value=>$parameters{n_genome_locations_constraint} );
-    return if ($n_genome_locations_clause eq '-1');
+  return if ($n_genome_locations_clause eq '-1');
 
     #### Build peptide_length constraint
     my $peptide_length_clause = $sbeams->parseConstraint2SQL(
@@ -270,362 +272,388 @@ sub handle_request
         constraint_type=>"flexible_int",
         constraint_name=>"peptide_length",
         constraint_value=>$parameters{peptide_length} );
-    return if ($peptide_length_clause eq '-1');
+  return if ($peptide_length_clause eq '-1');
 
 
-    #### Build PROTEIN_NAME constraint
-      my $biosequence_name_clause = $sbeams->parseConstraint2SQL(
-          constraint_column=>"BS.biosequence_name",
-          constraint_type=>"plain_text",
-          constraint_name=>"Protein Name",
-          constraint_value=>$parameters{protein_name_constraint} );
-      return if ($biosequence_name_clause eq '-1');
+  #### Build PROTEIN_NAME constraint
+  my $biosequence_name_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"BS.biosequence_name",
+        constraint_type=>"plain_text",
+        constraint_name=>"Protein Name",
+        constraint_value=>$parameters{protein_name_constraint} );
+   return if ($biosequence_name_clause eq '-1');
 
+  my %protein_hash;
 
-    ## handle file upload and clause for sql for $parameters{upload_file}
-    my ($biosequence_names_clause_nist, $biosequence_names_clause_pa,
-    $biosequence_names_mapping_join, $biosequence_name_clause_pa);
+  # protein name field supercedes (obviates) file upload
+  if ( $parameters{upload_file} && !$biosequence_name_clause ) {
 
-    my $n_highest_intensity_fragment_ions;
+    ## upload the file to a file handler
+    my $fh = $q->upload('upload_file');
 
-    my %protein_hash;
-
-    if ( $parameters{upload_file} )
-    {
-         ## upload the file to a file handler
-         my $fh = $q->upload('upload_file');
-
-         if (!$fh && $q->cgi_error)
-         {
-             print $q->header(-status=>$q->cgi_error);
-         }
-         if ( (-T $fh) && (-s $fh < 1000000)) ##size constraint of 10 MB, restrict $count < 30000
-         {
-             my $count = 0;
-             my $read_file=0;
-             ## protein list
-             my $prt;
-             while ($prt=<$fh>)
-             {
-                 chomp($prt);
-                 $prt =~ s/\s+$//;
-                 if ($prt)
-                 {
-                     $protein_hash{$prt} = $prt;
-                     $count = $count + 1;
-                 }
-                 last if ($count > 30000);
-            }
-        }
-        ## join with a commas:
-        my $protein_list = "";
-
-        foreach my $pr (keys %protein_hash)
-        {
-             $protein_list = "'$protein_hash{$pr}',$protein_list"; 
-        }
-
-        ## trim off last comma:
-        $protein_list =~ s/(.*)(,)$/$1/;
-
-        $biosequence_names_clause_pa = 
-            "     AND BS.biosequence_name IN ( $protein_list )";
-
-        $biosequence_names_clause_nist = 
-            "     AND NLS.protein_name IN ( $protein_list )";
-
-        $biosequence_names_mapping_join =
-            "   LEFT JOIN $TBAT_PEPTIDE_MAPPING PM "
-           ."   ON ( PI.peptide_instance_id = PM.peptide_instance_id ) "
-           ."   LEFT JOIN $TBAT_BIOSEQUENCE BS "
-           ."   ON (BS.biosequence_id = PM.matched_biosequence_id) "
-           ."   LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS "
-           ."   ON (BS.biosequence_set_id = BSS.biosequence_set_id)";
-    } elsif ($biosequence_name_clause)
-    {
-        $biosequence_names_mapping_join =
-            "   LEFT JOIN $TBAT_PEPTIDE_MAPPING PM "
-           ."   ON ( PI.peptide_instance_id = PM.peptide_instance_id ) "
-           ."   LEFT JOIN $TBAT_BIOSEQUENCE BS "
-           ."   ON (BS.biosequence_id = PM.matched_biosequence_id) "
-           ."   LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS "
-           ."   ON (BS.biosequence_set_id = BSS.biosequence_set_id)";
+    if (!$fh && $q->cgi_error) {
+      print $q->header(-status=>$q->cgi_error);
     }
 
-    ## if n_highest_intensity_fragment_ions not set, use default of 10
-    if ($parameters{'n_highest_intensity_fragment_ions'})
-    {
-        if ($parameters{'n_highest_intensity_fragment_ions'} =~ /^([\d]+)$/)
-        {
-            $n_highest_intensity_fragment_ions = $1;
-        } else
-        {
-            $n_highest_intensity_fragment_ions = 10;
+    # size constraint of 10 MB, restrict $count < 30000
+    if ( (-T $fh) && (-s $fh < 1000000) ) {
+      my $count = 0;
+      my $read_file=0;
+      ## protein list
+      my $prt;
+      while ($prt=<$fh>) {
+        chomp($prt);
+        $prt =~ s/\s+$//;
+        if ($prt) {
+          $protein_hash{$prt} = $prt;
+          $count = $count + 1;
         }
-    } else
-    {
-        $n_highest_intensity_fragment_ions = 10;
+          last if ($count > 30000);
+      }
+    }
+    ## join with a commas:
+    my $protein_list = "";
+
+    foreach my $pr (keys %protein_hash) {
+      $protein_list = "'$protein_hash{$pr}',$protein_list"; 
     }
 
-    my @column_array;
+    ## trim off last comma:
+    $protein_list =~ s/(.*)(,)$/$1/;
+
+    $biosequence_name_clause = "     AND BS.biosequence_name IN ( $protein_list )" if $protein_list;
+  }
+
+  ## n_fragment_ions defaults to 10
+  my $n_fragment_ions = 10;
+  if ($parameters{'n_highest_intensity_fragment_ions'} =~ /^([\d]+)$/) {
+    $n_fragment_ions = $1;
+  }
+  ## n_peptides_per_protein defaults to 3 
+  my $n_peps_per_prot = 3;
+  if ($parameters{'n_peptides_per_protein'} =~ /^([\d]+)$/) {
+    $n_peps_per_prot = $1;
+  }
 
 
-    #########################################################################
-    #### If QUERY or VIEWRESULTSET was selected, display the data
-    if ($apply_action =~ /QUERY/i ) 
-    {
-        my $ed = "<td>&nbsp;</td>";
+  my @column_array;
 
-        print qq~
-            Note: masses are mono-isotopic;  results are from query to
-            PeptideAtlas followed by peptide sequence query to NIST consensus spectra.
-            <br/><br/>
-        ~;
-
-        $modification_helper = new ModificationHelper();
+  my $peptide_sql;
+  my %prot_peps;
+  my %pep_frags;
+  my %ce;
 
 
-        ## look up PA peptides and nab the NIST spectra with similar peptide sequences
+  #########################################################################
+  #### If QUERY or VIEWRESULTSET was selected, display the data
+  if ($apply_action =~ /QUERY/i ) {
+    my $ed = "<td>&nbsp;</td>";
 
-        if ($atlas_build_clause ||
-        $NIST_library_where_clause || $biosequence_name_clause_pa ||
-        $peptide_sequence_clause || $best_probability_clause ||
-        $n_observations_clause || $n_samples_clause ||
-        $empirical_proteotypic_clause || $n_protein_mappings_clause ||
-        $n_genome_locations_clause || $peptide_length_clause ||
-        $biosequence_names_clause_pa )
-        {
-            unless ($parameters{atlas_build_id} && 
-            ($parameters{atlas_build_id} =~ /^[\d]+$/))
-            {
-                $sbeams->reportException(
-                    state => 'ERROR',
-                    type => 'INSUFFICIENT CONSTRAINTS',
-                    message => 'You must select at least one atlas_build',
-                );
-                return;
-            }
+    print qq~
+    Note: masses are mono-isotopic;  results are from query to
+    PeptideAtlas followed by peptide sequence query to NIST consensus spectra.
+    <br/><br/>
+    ~;
 
-            $sql = qq~
-            SELECT distinct NLS.NIST_library_spectrum_id, NLS.sequence,
-            NLS.modified_sequence,
-            NLS.protein_name, NLS.mz_exact, NLS.charge, NLS.protein_name_alt,
-            PI.best_probability, PI.n_observations, PI.n_samples,
-            PI.n_protein_mappings, PI.n_genome_locations, SSRCalc_relative_hydrophobicity
-            FROM $TBAT_NIST_LIBRARY_SPECTRUM NLS
-            LEFT JOIN $TBAT_NIST_LIBRARY NL
-            ON (NLS.NIST_library_id = NL.NIST_library_id)
-            LEFT JOIN $TBAT_PEPTIDE P
-            ON (P.peptide_sequence = NLS.sequence)
-            LEFT JOIN $TBAT_PEPTIDE_INSTANCE PI
-            ON (PI.peptide_id = P.peptide_id)
-            JOIN $TBAT_NIST_SPECTRUM_TYPE NST
-            ON (NST.NIST_spectrum_type_id = 
-              NLS.NIST_spectrum_type_id)
-            $biosequence_names_mapping_join
-            $NIST_library_where_clause
-            $atlas_build_clause
-            $biosequence_name_clause_pa
-            $peptide_sequence_clause
-            $best_probability_clause
-            $n_observations_clause
-            $n_samples_clause
-            $empirical_proteotypic_clause
-            $n_protein_mappings_clause
-            $n_genome_locations_clause
-            $peptide_length_clause
-            $biosequence_names_clause_pa
-            $biosequence_name_clause
-            AND NST.NIST_spectrum_type_name='Consensus'
-            ORDER BY protein_name, NLS.sequence
-            ~;
+    ## look up PA peptides and nab the NIST spectra with similar peptide sequences
+    if ( $atlas_build_clause || $NIST_library_clause ||
+         $n_samples_clause || $empirical_proteotypic_clause ||
+         $peptide_sequence_clause || $best_probability_clause ||
+         $n_observations_clause || $n_samples_clause ||
+         $empirical_proteotypic_clause || $n_protein_mappings_clause || 
+         $n_genome_locations_clause || $peptide_length_clause ||
+         $biosequence_name_clause ) {
 
-            $log->debug( "Going to exec SQL" );
-            my @rows = $sbeams->selectSeveralColumns($sql);
-            $log->debug( "SQL done, returned " . scalar(@rows) );
+      my $lib_sql = qq~
+      FROM $TBAT_NIST_LIBRARY_SPECTRUM NLS
+      JOIN $TBAT_NIST_LIBRARY NL ON (NLS.NIST_library_id = NL.NIST_library_id)
+      JOIN $TBAT_NIST_LIBRARY_SPECTRUM_PEAK NLSP ON NLSP.NIST_library_spectrum_id = NLS.NIST_library_spectrum_id
+      JOIN $TBAT_NIST_SPECTRUM_TYPE NST ON (NST.NIST_spectrum_type_id = NLS.NIST_spectrum_type_id)
+      ~;
 
-            my @display_rows = ( [qw( Protein Sequence Chg q1_mz q3_mz Intensity Ion SSRCalc n_obs Spectrum ) ] );
-            my $idx = 0;
-            foreach my $row (@rows)
-            {
-                $idx++;
-                $log->debug( "processed $idx rows" ) unless $idx % 100;
-                my ($nlsid, $seq, $mod_seq, $prot, $precur_mz, $pep_chg, 
-                $alt_name, $prob, $n_obs, $n_samples, $n_prot_map,
-                $n_gen_map, $ssrcalc ) = @{$row};
+      $peptide_sql = qq~
+      JOIN $TBAT_PEPTIDE_INSTANCE PI ON (PI.peptide_id = P.peptide_id)
+      JOIN $TBAT_PEPTIDE_MAPPING PM ON PM.peptide_instance_id = PI.peptide_instance_id
+      JOIN $TBAT_BIOSEQUENCE BS ON BS.biosequence_id = PM.matched_biosequence_id
+      $atlas_build_clause
+      $peptide_sequence_clause
+      $best_probability_clause
+      $n_observations_clause
+      $n_samples_clause
+      $empirical_proteotypic_clause
+      $n_protein_mappings_clause
+      $n_genome_locations_clause
+      $peptide_length_clause
+      $biosequence_name_clause
+      ~;
 
-                my $sql2 = qq~
-                SELECT top $n_highest_intensity_fragment_ions NLSP.mz,
-                NLSP.relative_intensity, NLSP.ion_label, NLSP.charge
-                FROM $TBAT_NIST_LIBRARY_SPECTRUM_PEAK NLSP
-                WHERE NIST_library_spectrum_id = '$nlsid'
-                ORDER BY NLSP.relative_intensity DESC
-                ~;
+      if ( $parameters{include_validated_transitions} ) {
+        # This routine is scoped within this routine, so vars are visible
+        get_validated_transitions();
+      }
 
-                my @rows2 = $sbeams->selectSeveralColumns($sql2);
-                my $spec = "<a href='$CGI_BASE_DIR/$SBEAMS_SUBDIR/ShowOneSpectrum?NIST_library_spectrum_id=$nlsid' target='_blank'><b>SHOW SPECTRUM</b></a>";
-                my $spec = "<A HREF='ShowOneSpectrum?NIST_library_spectrum_id=$nlsid' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='Show spectrum'></A>";
 
-                my $maxrows = 4;
-                my $idx = 0;
-                for my $nist ( @rows2 ) {
-                  $ssrcalc = sprintf( "%0.2f", $ssrcalc );
-                  $nist->[0] = sprintf( "%0.3f", $nist->[0] );
-                  $precur_mz = sprintf( "%0.3f", $precur_mz );
-                  push @display_rows, [ $prot, $mod_seq, $pep_chg, $precur_mz, $nist->[0], $nist->[1], $nist->[2], $ssrcalc, $n_obs, $spec ] if $nist->[2];
-                  last if $idx >= $maxrows;
-                  $idx++;
-                }
-            }
+      $sql = qq~
+      SELECT DISTINCT NLS.NIST_library_spectrum_id, NLS.sequence,
+      NLS.modified_sequence, biosequence_name, NLS.mz_exact, NLS.charge,
+      NLS.protein_name_alt, PI.best_probability, PI.n_observations,
+      PI.n_samples, PI.n_protein_mappings, PI.n_genome_locations,
+      SSRCalc_relative_hydrophobicity, NLSP.mz, NLSP.relative_intensity,
+      NLSP.ion_label, NLSP.charge
+      $lib_sql
+      JOIN $TBAT_PEPTIDE P ON (P.peptide_sequence = NLS.sequence)
+      $peptide_sql
+      $NIST_library_clause
+      AND NST.NIST_spectrum_type_name='Consensus'
+      AND ( NLSP.peak_label LIKE 'y%' OR   NLSP.peak_label LIKE 'b%' )
+      ORDER BY biosequence_name, NLS.sequence, NLS.modified_sequence, NLS.charge, NLSP.relative_intensity DESC, PI.best_probability DESC
+      ~;
 
-            my $html = $sbeamsMOD->encodeSectionTable(  header => 1, 
-                                                 width => '600',
-                                                align  => [qw(left left center right right right center right center center)],
-                                                  rows => \@display_rows,
-                                          rows_to_show => 50,
-                                           chg_bkg_idx => 1,
-                                                nowrap => [1..10],
-                                              max_rows => 500,
-                                          set_download => 1
-                                                );
-            print "<TABLE>$html</TABLE>";
+#      $log->debug( $sql );
+      my $sth = $sbeams->get_statement_handle($sql);
 
+# 0      NLS.NIST_library_spectrum_id,
+# 1      NLS.sequence,
+# 2      NLS.modified_sequence,
+# 3      biosequence_name,
+# 4      NLS.mz_exact,
+# 5      NLS.charge,
+# 6      NLS.protein_name_alt,
+# 7      PI.best_probability,
+# 8      PI.n_observations,
+# 9      PI.n_samples,
+# 10      PI.n_protein_mappings,
+# 11      PI.n_genome_locations,
+# 12      SSRCalc_relative_hydrophobicity,
+# 13      NLSP.mz,
+# 14      NLSP.relative_intensity,
+# 15      NLSP.ion_label,
+# 16      NLSP.charge
+# 3, 2, 5, 4, 13, 14, 15, 17*, 12, 8, 18*
+# 17 calc from charge/precursor mz, 18 calc make link from 0.
+# #
+# Doubly charged ions: CE = 0.044 * m/z(precursor) + 5.5
+# Triply charged ions: CE = 0.051 * m/z(precursor) + 0.55
+
+#
+      my @display_rows = ( [qw( Protein Sequence Chg q1_mz q3_mz Intensity Ion CE SSRCalc n_obs Annot Spectrum ) ] );
+      my $na = $sbeams->makeInactiveText('n/a');
+
+      my %spectral_links;
+      my $spec = "<A HREF='ShowOneSpectrum?NIST_library_spectrum_id=NLS_ID_HERE' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='Show spectrum'></A>";
+
+      my $idx = 0;
+      while ( my @row = $sth->fetchrow_array() ) {
+        $idx++;
+
+#        $log->debug( "$idx time through, prot is $row[3] and pep is $row[2]" );
+        $prot_peps{$row[3]} ||= {};
+        $prot_peps{$row[3]}->{$row[2]} ||= [];
+          
+        # Skip if we already have enough peps or frags
+        if ( scalar( keys( %{$prot_peps{$row[3]}} ) ) > $n_peps_per_prot ) {
+          next unless scalar( @{$prot_peps{$row[3]}->{$row[2]}} );
         }
+        next if $pep_frags{$row[2]} >= $n_fragment_ions;
+
+        $pep_frags{$row[2]}++;
+        $row[4] = sprintf( "%0.2f", $row[4] );
+
+        # CE depends on q1_mz and charge
+        my $ce_key = $row[4] . $row[5];
+
+        # spectrum depends on mod sequence and charge
+        my $spec_key = $row[2] . $row[5];
+
+        $ce{$ce_key} = calculateCE( charge => $row[5], mz => $row[4] ) if !$ce{$ce_key};
+
+        push @row, $ce{$ce_key};
+
+        if ( !$spectral_links{$spec_key} ) {
+          my $link = $spec;
+          $link =~ s/NLS_ID_HERE/$row[0]/;
+          $spectral_links{$spec_key} = $link;
+        }
+
+#        push @row, '<INPUT TYPE=checkbox ONCLICK=blur()></INPUT>';
+        push @row, $na;
+#        push @row, '';
+        push @row, $spectral_links{$row[3]};
+
+        $row[13] = sprintf( "%0.2f", $row[13] );
+        $row[12] = sprintf( "%0.2f", $row[12] );
+
+
+        push @{$prot_peps{$row[3]}->{$row[2]}}, [ @row[3,2,5,4,13,14,15,17,12,8,18,19] ]; 
+      }
+
+
+      for my $prot ( sort( keys( %prot_peps ) ) ) {
+        for my $pep ( sort( keys( %{$prot_peps{$prot}} ) ) ) {
+          for my $row ( @{$prot_peps{$prot}->{$pep}} ) {
+            if ( !$row->[11] ) {
+              $row->[11] = $spectral_links{$row->[1].$row->[2]};
+              $row->[11] ||= $na;
+            }
+            $row->[1] = $sbeamsMOD->formatMassMods( $row->[1] );
+            $log->debug( $row->[1] );
+            push @display_rows, $row;
+          }
+        }
+      }
+
+      my $html = $sbeamsMOD->encodeSectionTable(  header => 1, 
+                                                   width => '600',
+                                                  align  => [qw(left left center right right right center right right right center center)],
+                                                    rows => \@display_rows,
+                                            rows_to_show => 50,
+                                             chg_bkg_idx => 1,
+                                                  nowrap => [1..10],
+                                                max_rows => 500,
+                                            set_download => 1
+                                              );
+      print "<TABLE>$html</TABLE>";
+
+   }
 
 
     #### If QUERY was not selected, then tell the user to enter some parameters
-    } else 
-    {
-        if ($sbeams->invocation_mode() eq 'http') 
-        {
-            print "<H4>Select parameters above and press QUERY</H4>\n";
-        } else 
-        {
-            print "You need to supply some parameters to contrain the query\n";
-        }
+  } else {
+    if ($sbeams->invocation_mode() eq 'http') {
+      print "<H4>Select parameters above and press QUERY</H4>\n";
+    } else {
+      print "You need to supply some parameters to contrain the query\n";
     }
+  }
 
-    ###################################################################
-    # getB1FragMassArray - get array of frag masses for b+
-    #
-    # @param masses_ref - ref to array of masses that alredy include modifications
-    # @return @b1
-    ###################################################################
-    sub getB1FragMassArray
-    {
-        my %args = @_;
-      
-        my $masses_ref = $args{masses_ref};
 
-        my @masses = @{$masses_ref};
+  # Internal subroutine
+  sub get_validated_transitions {
+    my %args = @_;
+    
+    my $sql = qq~
+    SELECT DISTINCT biosequence_name, modified_peptide_sequence, peptide_charge,
+    q1_mz ,q3_mz, q3_peak_intensity, q3_ion_label, collision_energy,
+    SSRCalc_relative_hydrophobicity, n_observations, level_name, ''
+    FROM $TBAT_MODIFIED_PEPTIDE_ANNOTATION MPA 
+    JOIN $TBAT_TRANSITION_SUITABILITY_LEVEL TSL 
+    ON TSL.transition_suitability_level_id = MPA.transition_suitability_level_id
+    JOIN $TBAT_PEPTIDE P ON P.peptide_sequence = MPA.peptide_sequence
+    $peptide_sql
+    ORDER BY biosequence_name, modified_peptide_sequence, peptide_charge, 
+    q3_peak_intensity DESC
+    ~;
 
-        my @b1; 
+    my $sth = $sbeams->get_statement_handle($sql);
 
-        ## calc b+ ions:
-        my $b1_sum = 1.0078;
+    while ( my @row = $sth->fetchrow_array() ) {
 
-        for (my $i=0; $i <= $#masses; $i++)
-        {
-            $b1_sum = $b1_sum + $masses[$i];
+      # key by prot name
+      $prot_peps{$row[0]} ||= {};
+      # key by mod pep seq 
+      $prot_peps{$row[0]}->{$row[1]} ||= [];
+          
+      # Skip a few if we already have enough
+#      $log->debug( "pep is $row[1], prot is $row[0].  How many frag ions? Is " . scalar( keys( %{$prot_peps{$row[0]}} ) ) . " really more than $n_peps_per_prot and $pep_frags{$row[1]} really more than $n_fragment_ions" );
+      if ( scalar( keys( %{$prot_peps{$row[0]}} ) ) > $n_peps_per_prot ) {
+        next;
+      }
+      if ( $pep_frags{$row[1]} >= $n_fragment_ions ) {
+        next;
+      }
 
-            if ($i == $#masses)
-            {
-                push(@b1, "&nbsp;");
-            } else
-            {
-                push(@b1, sprintf("%.4f",$b1_sum));
-            }
-        }
+      $row[6] =~ s/^(\w\d+).*/$1/;
+      $row[3] = sprintf( "%0.2f", $row[3] );
+      $row[4] = sprintf( "%0.2f", $row[4] );
+      $row[5] = sprintf( "%0.2f", $row[5] );
+      $row[8] = sprintf( "%0.2f", $row[8] );
 
-        return @b1;
+      my $ce_key = $row[3] . $row[2];
+#      $ce{$ce_key} = ( $row[7] ) ? $row[7] : calculateCE( charge => $row[2], mz => $row[3] ) if !$ce{$ce_key};
+#      $row[7] = $ce{$ce_key};
+       $row[7] ||= calculateCE( charge => $row[2], mz => $row[3] );
+#      $row[7] = $ce{$ce_key};
+
+      $pep_frags{$row[1]}++;
+#      $log->debug( "incremented pep frags for $row[1] to $pep_frags{$row[1]}" );
+      push @{$prot_peps{$row[0]}->{$row[1]}}, \@row; 
     }
+  }
 
-    ###################################################################
-    # getY1FragMassArray - get array of frag masses for y+
-    #
-    # @param masses_ref - ref to array of masses that alredy include modifications
-    # @return @y1
-    ###################################################################
-    sub getY1FragMassArray
-    {
-        my %args = @_;
-      
-        my $masses_ref = $args{masses_ref};
-
-        my @masses = @{$masses_ref};
-
-        my @y1 = @masses; ## initialize y1 to be same size array 
-
-        ## calc y+ ions:
-        my $y1_sum = 19.0184;
-
-        for (my $i = $#masses; $i >= 0; $i--)
-        {
-            $y1_sum = $y1_sum + $masses[$i];
-
-            my $ind = $#masses - $i;
-
-            if ($ind == $#masses)
-            {
-                $y1[$ind] = "&nbsp;";
-            } else
-            {
-                $y1[$ind] = sprintf("%.4f",$y1_sum);
-            }
-        }
-
-        return @y1;
-    }
-
-    ###################################################################
-    # getY2FragMassArray - get array of frag masses for y+
-    #
-    # @param y1_ref - ref to array of y1 masses
-    # @return @y2
-    ###################################################################
-    sub getY2FragMassArray
-    {
-        my %args = @_;
-      
-        my $y1_ref = $args{y1_ref};
-
-        my @y1 = @{$y1_ref};
-
-        my @y2 = @y1; ## initialize y2 to be same size array 
-
-        for (my $i=0; $i <= $#y1; $i++)
-        {
-            unless ($y1[$i] eq "&nbsp;") 
-            {
-                my $t = ($y1[$i] + 1.0078)/2.;
-
-                $y2[$i] = sprintf("%.4f",$t);
-            }
-        }
-
-        return @y2;
-    }
-
-    ###################################################################
-    # initArray - initialize array to size li
-    # @param li - size of array
-    # @return ia - array initialized to hold &nbsp; for each element
-    ###################################################################
-    sub initArray
-    {
-        my %args = @_;
-        
-        my $li = $args{li};
-
-        my @ia;
-
-        for (my $i=0; $i <= $li; $i++)
-        {
-            push(@ia, "&nbsp;"); 
-        }
-
-        return @ia;
-    }
 
 } # end handle_request
 
+sub calculateCE {
+  my %args = @_;
+  for my $attr ( qw( charge mz ) ) {
+    return '' unless $attr;
+  }
+  my $ce = '';
+  if ( $args{charge} == 2 ) {
+    $ce = ( 0.044 * $args{mz} ) + 5.5;
+  } elsif ( $args{charge} == 3 ) {
+    $ce = ( 0.051 * $args{mz} ) + 0.55
+  }
+  return sprintf( "%0.2f", $ce);
+}
+
+
+__DATA__
+  #                               0       1      2   3      4       5      6  7     8      9     10     11 
+  #  my @display_rows = ( [qw( Protein Sequence Chg q1_mz q3_mz Intensity Ion CE SSRCalc n_obs Annot Spectrum ) ] );
+#
+  prots => \%prot_peps,
+  peps  => \%pep_frags,
+  sql   => $peptide_sql
+
+      my $peptide_sql = qq~
+      JOIN $TBAT_PEPTIDE P ON (P.peptide_sequence = NLS.sequence)
+      JOIN $TBAT_PEPTIDE_INSTANCE PI ON (PI.peptide_id = P.peptide_id)
+      JOIN $TBAT_PEPTIDE_MAPPING PM ON PM.peptide_instance_id = PI.peptide_instance_id
+      JOIN $TBAT_BIOSEQUENCE BS ON BS.biosequence_id = PM.matched_biosequence_id
+      $atlas_build_clause
+      $peptide_sequence_clause
+      $best_probability_clause
+      $n_observations_clause
+      $n_samples_clause
+      $empirical_proteotypic_clause
+      $n_protein_mappings_clause
+      $n_genome_locations_clause
+      $peptide_length_clause
+      $biosequence_name_clause
+      ~;
+
+  JOIN $TBAT_TRANSITION_SUITABILITY_LEVEL TSL 
+    ON TSL.transition_suitability_level_id = MPA.transition_suitability_level_id
+SELECT DISTINCT 
+--NLS.NIST_library_spectrum_id, NLS.sequence,NLS.modified_sequence,  NLS.protein_name,  NLS.mz_exact, NLS.charge, NLS.protein_name_alt,
+PI.best_probability, PI.n_observations, PI.n_samples,
+PI.n_protein_mappings, PI.n_genome_locations, 
+SSRCalc_relative_hydrophobicity ,q3_peak_intensity relative_intensity,
+-- NLSP.peak_label,
+BS.biosequence_name,
+MPA.peptide_sequence  ,  peptide_charge    , q1_mz     ,q3_mz 
+,MPA.modified_peptide_sequence, q3_ion_label, transition_suitability_level_id
+
+--FROM peptideatlas.dbo.NIST_library_spectrum NLS
+--JOIN peptideatlas.dbo.NIST_library_spectrum_peak NLSP ON (NLSP.NIST_library_spectrum_id = NLS.NIST_library_spectrum_id)
+--JOIN peptideatlas.dbo.NIST_library NL ON (NLS.NIST_library_id = NL.NIST_library_id)
+FROM peptideatlas.dbo.peptide P -- ON (P.peptide_sequence = NLS.sequence)
+JOIN peptideatlas.dbo.peptide_instance PI ON (PI.peptide_id = P.peptide_id)
+--JOIN peptideatlas.dbo.modified_peptide_annotation MPA ON MPA.peptide_id = p.peptide_id
+JOIN peptideatlas.dbo.modified_peptide_annotation MPA ON MPA.peptide_sequence = p.peptide_sequence
+--JOIN peptideatlas.dbo.NIST_spectrum_type NST ON (NST.NIST_spectrum_type_id = NLS.NIST_spectrum_type_id)
+JOIN peptideatlas.dbo.peptide_mapping PM    ON ( PI.peptide_instance_id = PM.peptide_instance_id )
+JOIN peptideatlas.dbo.biosequence BS    ON (BS.biosequence_id = PM.matched_biosequence_id)  
+--JOIN peptideatlas.dbo.biosequence_set BSS    ON (BS.biosequence_set_id = BSS.biosequence_set_id)
+JOIN peptideatlas.dbo.atlas_build AB ON AB.biosequence_set_id = BS.biosequence_set_id
+--WHERE NL.NIST_library_id IN ( 28 )
+  WHERE PI.atlas_build_id IN ( 123 ) 
+--AND ( NLSP.peak_label LIKE 'y%' OR   NLSP.peak_label LIKE 'b%' )                                         
+-- WHERE 
+   AND
+
+ ( BS.biosequence_name IN ( 'YFL039C','YBR196C' )
+             )
+  --          AND NST.NIST_spectrum_type_name='Consensus'
+  ORDER BY biosequence_name, MPA.peptide_sequence, MPA.modified_peptide_sequence DESC
