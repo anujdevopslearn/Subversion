@@ -174,11 +174,10 @@ unless (GetOptions(\%OPTIONS,
 		   "redo_R:s",
 		   "testonly",
 		   "files:s")) {
-  die $USAGE;
+  print $USAGE;
+  exit;
  
 }
-
-
 
 $VERBOSE    = $OPTIONS{verbose} || 0;
 $QUIET      = $OPTIONS{quiet};
@@ -191,7 +190,8 @@ $FILES_TO_UPDATE = $OPTIONS{files};
 
 unless ( $RUN_MODE && grep /^$RUN_MODE$/, @run_modes ) {
   $RUN_MODE = '' if !defined $RUN_MODE;
-  die "Invalid run_mode: $RUN_MODE\n\n $USAGE";
+  print "Invalid run_mode: $RUN_MODE\n\n $USAGE";
+  exit;
 }
 
 if ($RUN_MODE eq 'update' ){		#if update mode check to see if --method <name> is set correctly
@@ -295,25 +295,26 @@ sub handleRequest {
 	
 		if ($RUN_MODE eq 'update'){
 			unless ($RECOMPUTE_R =~ /YES|NO/i){
-				die "*** update run mode must have --redo_R command argument ***\n$USAGE\n";
+				print "** update mode requires --redo_R argument ***\n$USAGE\n";
+        exit;
 			}
 		}
 		
-		$sbeams_affy_groups->read_dirs();			#Read the affy dirs containing all the data.  Sets global object in Affy_file_groups
+    # Read the affy dirs containing all the data.  Sets global object in Affy_file_groups
+		$sbeams_affy_groups->read_dirs();			
 		
 		find_affy_R_CHP(object => $sbeams_affy_groups);		#find files to make
 	
 		add_R_CHP_data(object => $sbeams_affy);			#add all the data to the database
 	
-	
 		write_error_log(object => $sbeams_affy_groups);
-		
-		
 	
 	}elsif( $RUN_MODE eq 'delete') {
-		die "SORRY RUN MODE NOT YET SUPPORTED\n";
+		print "SORRY RUN MODE delete NOT YET SUPPORTED\n";
+    exit;
 	}else{
-		die "This is not a valid run mode '$RUN_MODE'\n $USAGE";
+		print "This is not a valid run mode '$RUN_MODE'\n $USAGE";
+    exit;
 	}
 }
 
@@ -327,18 +328,23 @@ sub add_R_CHP_data {
 	my %args = @_;
 	
 	my $sbeams_affy = $args{'object'};
-	
+	my $update_flag;
+  $update_flag++ if $RUN_MODE eq 'update';	
+
+  my @files_to_update = split( /,/, $FILES_TO_UPDATE );
 	
 	foreach my $affy_o ($sbeams_affy->registered) {
 		my $id = '';
 		next unless ($id = $affy_o->get_affy_array_id);				#Some Affy objects might not be used to store array data.  This appears bad
+
+		if ( $update_flag && @files_to_update ){
+      next unless (grep /^$id$/, @files_to_update );
+		}	
 	 	
-		my $update_flag = 0;
 		if   ( $affy_o->R_CHP_file_name() && $RUN_MODE ne 'update'){ 	#skip over the R_CHP files that already exists unless we are in update mode
 			print "SKIPPING '" . $affy_o->R_CHP_file_name() . "' NOT IN UPDATE MODE\n" if ($VERBOSE > 0);
 			next;
 		}
-		$update_flag = 1 if $RUN_MODE eq 'update';	
 		
 		#print "ORGANISM '". $affy_o->get_organism. "'\n";
 		
@@ -352,12 +358,6 @@ sub add_R_CHP_data {
 			next;
 		}			
 		
-		if ($update_flag){
-			if ($FILES_TO_UPDATE){									#if there are specific files to update only update these files
-					my @files_to_update_a = split /,/,$FILES_TO_UPDATE;
-					next unless (grep {$id == $_} @files_to_update_a);
-			}
-		}	
 		
 		
 		#next unless (($id >= 12 && $id < 140) );			#testing only to constrain to certain array ids
@@ -419,63 +419,75 @@ sub find_affy_R_CHP {
 	
 	my $sbeams_affy_groups = $args{object};
 	
+  # Fetch info about arrays.  If array_ids not set, will fetch all info.
+  my $sql = $sbeams_affy_groups->get_all_affy_info_sql( affy_array_ids => $OPTIONS{files} );
+  my %array_info;
+  my $sth = $sbeams->get_statement_handle( $sql );
+ 
+  # Cache info in hash
+  while ( my $row = $sth->fetchrow_hashref() ) {
+    $array_info{$row->{'Sample Tag'}} = $row;
+  }
+
 	foreach my $file_name ( $sbeams_affy_groups->sorted_root_names() ) {				
 		
+    # Why is this nexted?  Possibly suffix-based group checking isn't working.
 		#next unless ($sbeams_affy_groups->check_file_group(root_file_name => $file_name) eq 'YES');
 		
-		my $sample_tag	= '';
-		if ($file_name =~ /^\d+_\d+_(.*)/){				#Parse the Sample tag from the root_file name example 20040707_05_PAM2B-80
+		my $sample_tag = $file_name;
+		if ($file_name =~ /^\d+_\d+_(.*)/){ # extract Sample tag from the root_file name
 			$sample_tag = $1;
-			
 		}else{
-			$sbeams_affy_groups->group_error(root_file_name => $file_name,
-								 error => "CANNOT FIND SAMPLE NAME FROM ROOT NAME",
+			$sbeams_affy_groups->group_error(
+                     root_file_name => $file_name,
+                     error => "CANNOT FIND SAMPLE NAME FROM ROOT NAME",
 							);
-			next;
+      # Amended to allow non-conforming file names to pass
+      # next;
 		}
+
+    # Set sample tag if date extraction didn't work or worked too well.
+		$sample_tag ||= $file_name;
+
+
+    # Check required info - we have a file tag.  Is there info about it?
+    if ( !$array_info{$sample_tag} ) {
+      # This will get tripped if arrays were specified, since we're iterating
+      # over all the files in the array dirs
+      next;
+    } else {
+      # Some info is crucial...
+      my $skip_flag = 0;
+      for my $k ( 'Array ID', 'Organism', 'Slide Type' ) {
+        if ( !$array_info{$sample_tag}->{$k} ) {
+          print STDERR "Missing required parameter $k for $sample_tag - skipping\n";
+          $skip_flag++;
+          last;
+        }
+      }
+      next if $skip_flag;
+    }
 		
-		
+    # new object each time through?
 		my $sbeams_affy = new SBEAMS::Microarray::Affy_Analysis;	#make new affy instances
 		
-										#find the array_id. Will assume the array has been uploaded by load_affy_array_files.pl
-		my $affy_array_id = $sbeams_affy_groups->find_affy_array_id(root_file_name => $file_name);
-		print "\nAFFY ARRAY ID '$affy_array_id' FOR FILE '$file_name'\n" if ($VERBOSE);
-		if ($affy_array_id){
-				$sbeams_affy->set_affy_array_id($affy_array_id);			
-			
-		}else{
-				
-			$sbeams_affy_groups->group_error(root_file_name => $file_name,
-							 error => "CANNOT FIND AFFY ARRAY ID",
-							);
-			next;	 						#if the root file name is not in the database move on, somehow it has not been added yet	
-		}
-		
+    # Set object attribute values.
+    $sbeams_affy->set_affy_array_id( $array_info{$sample_tag}->{'Array ID'} );
 		$sbeams_affy->set_afa_file_root($file_name);
-		$sbeams_affy->set_afs_sample_tag($sample_tag);			#set the sample_tag, within a project this should be a unique name
-		
-		my $sql = $sbeams_affy_groups->get_all_affy_info_sql(affy_array_ids => $affy_array_id);
+    # sample_tag should be unique within a project
+		$sbeams_affy->set_afs_sample_tag($sample_tag); 
+		$sbeams_affy->set_organism( $array_info{$sample_tag}->{Organism} );
+		$sbeams_affy->set_array_slide_type( $array_info{$sample_tag}->{'Slide Type'} );
 
-		$sbeams->display_sql(sql=>$sql) if ($VERBOSE > 1);
-		my ($array_info_href) = $sbeams->selectHashArray($sql);		#bit dorkey running huge query just to find the organism name
-		my $organisim_name = $$array_info_href{Organism};
-		my $slide_type = $$array_info_href{'Slide Type'};
-		
-		print "ORGANISIM NAME '$organisim_name'\nSLIDE TYPE '$slide_type'" if ($VERBOSE > 0);
-		
-		$sbeams_affy->set_organism($organisim_name);	#set the organisim name
-		$sbeams_affy->set_array_slide_type($slide_type); 	#set the slide type
-#########################################################################
-### Determine if a R_CHP file exists and set the path to it if it does 
 
-		if (my $R_CHP_file =  $sbeams_affy_groups->get_file_path( root_file_name => $file_name,
-									  file_ext 	 => 'R_CHP', 
-								        )
-		   )
-		{
-		   	print "R CHP FILE EXISTS '$file_name'\n" if ($VERBOSE);	
-			$sbeams_affy->R_CHP_file_name($R_CHP_file);		#set the path to the R_CHP file, this will be the only way to differentiate which ones are to be update 
-			
+    ## Determine if a R_CHP file exists and set the path to it if it does 
+    my $R_CHP_file = $sbeams_affy_groups->get_file_path( root_file_name => $file_name,
+									                                       file_ext 	 => 'R_CHP' );
+
+		if ( $R_CHP_file ) {
+      print "R CHP FILE EXISTS '$file_name'\n" if $VERBOSE;	
+      # cache path to the R_CHP file to flag for update
+      $sbeams_affy->R_CHP_file_name($R_CHP_file);
 		}else{
 			print "NEED TO MAKE R CHP FILE for '$file_name'\n" if ($VERBOSE);
 		}
