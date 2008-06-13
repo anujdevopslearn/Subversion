@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/local/bin/perl 
 
 ###############################################################################
 # Program     : load_theo_proteotypic_scores.pl
@@ -10,21 +10,16 @@
 ###############################################################################
 
 
-###############################################################################
-# Generic SBEAMS setup for all the needed modules and objects
-###############################################################################
+## Import 3rd party modules
 use strict;
 use Getopt::Long;
+use File::Basename;
 use FindBin;
+use lib '/net/db/src/SSRCalc/ssrcalc';
+use SSRCalculator;
 
+#### Set up SBEAMS modules
 use lib "$FindBin::Bin/../../perl";
-use vars qw ($sbeams $sbeamsMOD $q $current_username
-             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
-             $TESTVARS $CHECKTABLES
-            );
-
-
-#### Set up SBEAMS core module
 use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
@@ -32,43 +27,44 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
-use SBEAMS::Proteomics::Tables;
 
+use SBEAMS::Proteomics::PeptideMassCalculator;
+
+use vars qw ($sbeams $atlas $q $current_username $PROG_NAME $USAGE %OPTIONS
+             $QUIET $VERBOSE $DEBUG $TESTONLY $TESTVARS $CHECKTABLES );
+
+# don't buffer output
+$|++;
+
+## Set up environment
+$ENV{SSRCalc} = '/net/db/src/SSRCalc/ssrcalc';
+
+## Globals
 $sbeams = new SBEAMS::Connection;
-$sbeamsMOD = new SBEAMS::PeptideAtlas;
-$sbeamsMOD->setSBEAMS($sbeams);
+$atlas = new SBEAMS::PeptideAtlas;
+$atlas->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+$PROG_NAME = basename( $0 );
 
+my $massCalculator = new SBEAMS::Proteomics::PeptideMassCalculator;
 
-###############################################################################
-# Set program name and usage banner for command like use
-###############################################################################
-$PROG_NAME = $FindBin::Script;
-$USAGE = <<EOU;
-Usage: $PROG_NAME [OPTIONS]
-Options:
-  --verbose n            Set verbosity level.  default is 0
-  --quiet                Set flag to print nothing at all except errors
-  --debug n              Set debug flag
-  --testonly             If set, rows in the database are not changed or added
-  --list                 If set, list the available builds and exit
-  --delete_set           If set, will delete the records of of specific biosequence set in the table
-  --set_tag              Name of the biosequence set tag  
-  --input_file           Name of the file that has Parag and Indiana scores
-  
+my $SSRCalculator = new SSRCalculator;
+$SSRCalculator->initializeGlobals3();
+$SSRCalculator->ReadParmFile3();
 
- e.g.: $PROG_NAME --list
-       $PROG_NAME --set_tag \'YeastCombNR_20070207_ForwDecoy\' --input_file \'proteotypic_peptide.txt\'
-       $PROG_NAME --delete_set \'YeastCombNR_20070207_ForwDecoy\'
-EOU
+# array of biosequence sequences
+my @biosequences;
 
-#### Process options
-unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-		   "list","delete:s","set_tag:s","input_file:s",
-		  )) {
+# hash of peptide_sequence to arrayref of sequences to which it maps
+my %peptide_mappings;
 
-  die "\n$USAGE";
+## Process options
+GetOptions( \%OPTIONS,"verbose:s","quiet","debug:s","testonly",
+		           "list","delete:s","set_tag:s","input_file:s",
+               'help', 'update_peptide_info' ) || usage( "Error processing options" );
 
+for my $arg ( qw( set_tag ) ) {
+  usage( "Missing required parameter $arg" ) unless $OPTIONS{$arg};
 }
 
 $VERBOSE = $OPTIONS{"verbose"} || 0;
@@ -80,7 +76,6 @@ if ($DEBUG) {
   print "Options settings:\n";
   print "  VERBOSE = $VERBOSE\n";
   print "  QUIET = $QUIET\n";
-
 }
 
 
@@ -100,10 +95,7 @@ exit(0);
 sub main {
 
   #### Do the SBEAMS authentication and exit if a username is not returned
-  exit unless (
-    $current_username = $sbeams->Authenticate(
-      work_group=>'PeptideAtlas_admin')
-  );
+  $current_username = $sbeams->Authenticate( work_group=>'PeptideAtlas_admin' ) || exit;
 
   $sbeams->printPageHeader() unless ($QUIET);
   handleRequest();
@@ -121,7 +113,6 @@ sub handleRequest {
   my %args = @_;
 
   ##### PROCESS COMMAND LINE OPTIONS AND RESTRICTIONS #####
-
   #### Set the command-line options
   my $bioseq_set_tag = $OPTIONS{"set_tag"};
   my $delete_set_tag = $OPTIONS{"delete_set"};
@@ -130,54 +121,28 @@ sub handleRequest {
 
   #### If there are any unresolved parameters, exit
   if ($ARGV[0]){
-    print "ERROR: Unresolved command line parameter '$ARGV[0]'.\n";
-    print "$USAGE";
-    exit;
+    usage( "ERROR: Unresolved command line parameter '$ARGV[0]'." );
   }
-
 
   #### If a listing was requested, list and return
   if ($OPTIONS{"list"}) {
-    use SBEAMS::PeptideAtlas::AtlasBuild;
-    my $builds = new SBEAMS::PeptideAtlas::AtlasBuild();
-    $builds->setSBEAMS($sbeams);
-    $builds->listBuilds();
+    $atlas->listBuilds();
     return;
   }
 
 
-  #### Verify that bioseq_seq_tag was supplied
+  print "Get biosequence set\n";
+  #### Verify that bioseq_set_tag was supplied
   my $bioseq_set_id = getBioseqSetID(set_tag => $bioseq_set_tag,);
-  print "bioseq_set_id $bioseq_set_id\n";
   unless ($bioseq_set_id) {
-    print "\nERROR: couldn't find the bioseq set --$bioseq_set_tag\n\n";
-    die "\n$USAGE";
+    usage( "ERROR: couldn't find the bioseq set --$bioseq_set_tag" );
   }
 
 
-  #### Get the atlas_build_id for the name
-  #my $atlas_build_id = getAtlasBuildID(bioseq_set_id => $bioseq_set_id,);
-
-  #unless ($atlas_build_id) {
-  #  die("ERROR: Unable to find the atlas_build_id for corresponding bioseq_set ".
- #	"$bioseq_set_tag.  Use --list to see a listing");
- # }
-
-
+  print "Fill table\n";
   #### If specified, read the file in to fill the table
-  
-  if ($input_file) {
-    fillTable(
-	      bioseq_set_id => $bioseq_set_id,
-	      source_file => $input_file,
-	     );
-  }
-
-  if($delete_set_tag){
-    my $delete_bioseq_set_id = getBioseqSetID(set_tag => $delete_set_tag,);
-    deleteTable(bioseq_set_id => $delete_bioseq_set_id,);
-  }
-
+  fillTable( bioseq_set_id => $bioseq_set_id,
+	             source_file => $input_file ) if $input_file;
 
   return;
 
@@ -201,7 +166,6 @@ sub getBioseqSetID {
   ~;
 
   
-
   my ($bioseq_set_id) = $sbeams->selectOneColumn($sql);
 
   print "bioseq_set_id: $bioseq_set_id\n" if ($VERBOSE);
@@ -246,36 +210,41 @@ sub fillTable{
 
   my $bioseq_set_id = $args{bioseq_set_id};
   
-  my $source_file = $args{source_file} or
-    die("ERROR[$SUB]: parameter source_file not provided");
+  my $source_file = $args{source_file} ||  
+                       usage("ERROR[$SUB]: parameter source_file not provided");
 
   unless ( -e $source_file ) {
-    die("ERROR[$SUB]: Cannot find file '$source_file'");
+    usage("ERROR[$SUB]: Cannot find file '$source_file'");
   }
 
-  #first get bioseq_name and bioseq_id using $bioseq_set_id
-  my $sql = qq~
-     SELECT biosequence_name, biosequence_id
-       FROM $TBAT_BIOSEQUENCE
-      WHERE biosequence_set_id = '$bioseq_set_id'
-  ~;
+  print "get bioseq info\n";
+  # Get biosequence set info
+  my ($acc_to_id, $seq_to_id ) = getBioSeqData( $bioseq_set_id );
+  # This is global, do this once so mapping can run in a sub
+  @biosequences = keys( %$seq_to_id );
 
-  my %bioseq_hash = $sbeams->selectTwoColumnHash($sql);
+  print "get peptide info\n";
+  # then get pepseq and pepid
+  my $pepseq_to_id = getPeptideData();
 
-  #then get pepseq and pepid
-  $sql = qq~
-  SELECT peptide_sequence, peptide_id
-    FROM $TBAT_PEPTIDE
-  ~;
+  print "get proteotypic peptides\n";
+  # Fetch existing paa . seq . faa items, to avoid inserting doubles
+  my $proteopepseq_to_id = getProteotypicPeptideData();
 
-  my %pepseq_hash = $sbeams->selectTwoColumnHash($sql);
+  print "get proteotypic peptide mappings\n";
+  my $proteopep_mapping = getProteotypicPeptideMapData();
+
+  # Cache peptide ssrcalc, mw, nmappings
+  my %ssrcalc;
+  my %mw;
+  my %pI;
+  my %nmap;
+  my %nexmap;
 
   #Then loop over the $source_file
-
   open(INFILE,$source_file) or
     die("ERROR[$SUB]: Cannot open file '$source_file'");
 
-  my $line;
   my $proName;
   my $prevAA;
   my $pepSeq;
@@ -284,9 +253,12 @@ sub fillTable{
   my $paragScoreICAT;
   my $indianaScore;
 
-  while ($line = <INFILE>) {
+  my $cnt = 0;
+  while ( my $line = <INFILE> ) {
+    $cnt++;
+
     chomp($line);
-    my @columns = split("\t",$line);
+    my @columns = split("\t",$line, -1);
     $proName = $columns[0];
     $prevAA = $columns[1];
     $pepSeq = $columns[2];
@@ -295,47 +267,261 @@ sub fillTable{
     $paragScoreICAT = $columns[5];
     $indianaScore = $columns[6];
 
-    #print "proName $proName\n";
-    my $matched_bioseq_id;
+    # Decoys are duds!
+    next if $proName =~ /^DECOY_/;
+    
+    # Does biosequence match a biosequence_id?
+    unless( $acc_to_id->{$proName} ) {
+      print STDERR "$proName failed to match a bioseq_id\n";
+      exit;
+    }
 
-    #get biosequence_id
+#    print "$proName matched_bioseq_id $acc_to_id->{$proName}\n";
+
+    # Is this a new one?
+    if ( ! $proteopepseq_to_id->{$prevAA . $pepSeq . $endAA} ) {
+
+      # now need to get $matched_pep_id
+      my $matched_pep_id;
     
-    $matched_bioseq_id = $bioseq_hash{$proName};
- 
-  
-    #print "matched_bioseq_id $matched_bioseq_id\n";
-    #now need to get $matched_pep_id
-    my $matched_pep_id;
+      $matched_pep_id = $pepseq_to_id->{$pepSeq};
+
+      # calc relative hydrophobicity if necessary
+      if ( !defined $ssrcalc{$pepSeq} ) {
+         
+         $ssrcalc{$pepSeq} = getRelativeHydrophobicity( $pepSeq );
+
+      }
+
+      if ( !$mw{$pepSeq} ) {
+        eval {
+        $mw{$pepSeq} = $massCalculator->getPeptideMass( sequence => $pepSeq,
+                                                         mass_type => 'monoisotopic' ) || '';
+        };
+        if ( $@ ) {
+          print STDERR "Mass Calculator failed: $pepSeq\n";
+          next;
+        }
+      }
+
+      if ( !$pI{$pepSeq} ) {
+        $pI{$pepSeq} = getPeptidePI( $pepSeq ) || '';
+      }
+
+      # Insert row in proteotypic_peptide
+      my %rowdata=( matched_peptide_id => $matched_pep_id,
+                     preceding_residue => $prevAA,
+                      peptide_sequence => $pepSeq,
+                     following_residue => $endAA,
+                      peptidesieve_ESI => $paragScoreESI,
+                     peptidesieve_ICAT => $paragScoreICAT,
+          detectabilitypredictor_score => $indianaScore,
+       ssrcalc_relative_hydrophobicity => $ssrcalc{$pepSeq},
+       molecular_weight                => $mw{$pepSeq}, 
+       peptide_isoelectric_point       => $pI{$pepSeq} 
+                   );
     
-    $matched_pep_id = $pepseq_hash{$pepSeq};
+       my $protpep_id = $sbeams->updateOrInsertRow( insert => 1,
+                                               table_name  => $TBAT_PROTEOTYPIC_PEPTIDE,
+                                               rowdata_ref => \%rowdata,
+                                               verbose     => $VERBOSE,
+                                              return_PK    => 1,
+                                               testonly    => $TESTONLY );
+
+       if ( !$protpep_id ) {
+         print STDERR "Unable to insert proteotypic peptide!\n";
+         exit;
+       }
+       $proteopepseq_to_id->{$prevAA.$pepSeq.$endAA} = $protpep_id;
+
+    } # End if new pp entry
+
+    # By here we should have a biosequence_id and a proteotypic peptide_id
+    # Is it already in the datbase?
+    if ( $proteopep_mapping->{$proteopepseq_to_id->{$prevAA . $pepSeq . $endAA} . $acc_to_id->{$proName}} ) {
+#      print "Skipping, this thing is already in the database!";
+    } else {
+      # Insert row in proteotypic_peptide_mapping
+#      proteotypic_peptide_mapping_id     proteotypic_peptide_id     source_biosequence_id     n_genome_locations     n_protein_mappings     n_exact_protein_mappings    
       
-    
-    my %rowdata=(
-		 source_biosequence_id=>$matched_bioseq_id,
-		 matched_peptide_id=>$matched_pep_id,
-		 preceding_residue=>$prevAA,
-		 peptide_sequence=>$pepSeq,
-		 following_residue=>$endAA,
-		 peptidesieve_ESI=>$paragScoreESI,
-		 peptidesieve_ICAT=>$paragScoreICAT,
-		 detectabilitypredictor_score=>$indianaScore,
-		);
-    
-    $sbeams->updateOrInsertRow(
-			       insert=>1,
-			       table_name=>$TBAT_PROTEOTYPIC_PEPTIDE,
-			       rowdata_ref=>\%rowdata,
-			       verbose=>$VERBOSE,
-			       testonly=>$TESTONLY,
-			      );
-  }
+      # This conditional stops us from mapping the same exact sequence 2x, but 
+      # 1) doesn't cache the results from the initial peptide mapping in the event of different flanking aa's, and
+      # 2) doesn't get the info, if available, from the database.
+      if ( !$nmap{$pepSeq} || !$nexmap{$prevAA.$pepSeq.$endAA} ) {
+        ($nmap{$pepSeq}, $nexmap{$prevAA.$pepSeq.$endAA} ) = mapSeqs( seq => $pepSeq,
+                                                                      paa => $prevAA,
+                                                                      faa => $endAA );
+      }
 
+        
+      my %rowdata=( 
+                 source_biosequence_id => $acc_to_id->{$proName},
+                proteotypic_peptide_id => $proteopepseq_to_id->{$prevAA.$pepSeq.$endAA},
+                    n_genome_locations => 99,
+                    n_protein_mappings => $nmap{$pepSeq},
+              n_exact_protein_mappings => $nexmap{$prevAA.$pepSeq.$endAA} );
+    
+       my $map = $sbeams->updateOrInsertRow( insert => 1,
+                                        table_name  => $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING,
+                                        rowdata_ref => \%rowdata,
+                                        verbose     => $VERBOSE,
+                                       return_PK    => 1,
+                                        testonly    => $TESTONLY );
+
+    } 
+    print '*' unless( $cnt % 100 );
+    print "\n" unless( $cnt % 5000 );
+     
+    
+  } # End file reading loop
   close(INFILE);
-
-
 
 } # end fillTable
 
+sub getRelativeHydrophobicity {
+  my $seq = shift || return '';
+  my $rh = '';
+  if ( $SSRCalculator->checkSequence($seq) ) {
+    $rh = $SSRCalculator->TSUM3($seq);
+  }
+  return $rh;
+}
 
+sub getPeptidePI {
+  my $seq = shift || return '';
+  my $pI = $atlas->calculatePeptidePI( sequence => $seq );
+  return $pI;
+}
+
+sub mapSeqs {
+  my %args = @_;
+  my $seq = $args{seq} || return( '', '' );
+  my $paa = $args{paa} || return( '', '' );
+  my $faa = $args{faa} || return( '', '' );
+
+  my @exmatches;
+  my @matches;
+#  print "Checking mapping with seq = $seq, p = $paa, f = $faa\n";
+
+  if ( $peptide_mappings{$args{seq}} ) {
+#    print "we've seen $args{seq}, using cached values\n";
+    @matches = @{$peptide_mappings{$args{seq}}};
+  } else {
+    @matches = grep( /$seq/, @biosequences );
+  }
+#  print "We have " . scalar( @matches ) . " matches\n";
+
+#  for my $seq ( @matches ) {
+  my $expep = '';
+  if ( $paa eq '-' ) {
+    $expep = $seq . $faa;
+#    print "Trying to match $expep at the beginning, because $paa must eq '-'!\n";
+    @exmatches = grep( /^$expep/, @matches );
+  } elsif ( $faa eq '-' ) {
+    $expep = $paa . $seq;
+#    print "Trying to match $expep at the end\n";
+    @exmatches = grep( /$expep$/, @matches );
+  } else {
+    $expep = $paa . $seq . $faa;
+#    print "Trying to match $expep in the middle\n";
+    @exmatches = grep( /$expep/, @matches );
+  }
+#  print join( "::", @matches ) . "\n";
+#  print "We have " . scalar( @exmatches ) . " matches with $paa$seq$faa\n\n";
+
+#  }
+  return ( scalar( @matches ), scalar( @exmatches ) );
+}
+
+
+sub getProteotypicPeptideMapData {
+  my $sql = qq~
+  SELECT proteotypic_peptide_id, source_biosequence_id 
+    FROM $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING
+  ~;
+  my $sth = $sbeams->get_statement_handle( $sql );
+
+  my %mapping;
+  while( my $row = $sth->fetchrow_arrayref() ) {
+    $mapping{$row->[0] . $row->[1]}++;
+  }
+  return \%mapping;
+}
+
+sub getProteotypicPeptideData {
+  my $sql = qq~
+  SELECT preceding_residue || peptide_sequence || following_residue, 
+         proteotypic_peptide_id
+    FROM $TBAT_PROTEOTYPIC_PEPTIDE
+  ~;
+  my $sth = $sbeams->get_statement_handle( $sql );
+
+  my %seq_to_id;
+  while( my $row = $sth->fetchrow_arrayref() ) {
+    $seq_to_id{$row->[0]} = $row->[1];
+  }
+  return \%seq_to_id;
+}
+
+sub getBioSeqData {
+  my $bioseq_set_id = shift || usage( "missing required param bioseq_set_id" );
+
+  my $sql = qq~
+     SELECT biosequence_name, biosequence_id, biosequence_seq
+       FROM $TBAT_BIOSEQUENCE
+      WHERE biosequence_set_id = '$bioseq_set_id'
+      AND biosequence_name NOT LIKE 'DECOY_%'
+  ~;
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my %seq_to_id;
+  my %acc_to_id;
+  while( my $row = $sth->fetchrow_arrayref() ) {
+    $acc_to_id{$row->[0]} = $row->[1];
+    $seq_to_id{$row->[2]} ||= [];
+    push @{$seq_to_id{$row->[2]}}, $row->[1];
+  }
+  return ( \%acc_to_id, \%seq_to_id );
+}
+
+sub getPeptideData {
+  my $sql = qq~
+  SELECT peptide_sequence, peptide_id
+    FROM $TBAT_PEPTIDE
+  ~;
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my %seq_to_id;
+  while( my $row = $sth->fetchrow_arrayref() ) {
+    $seq_to_id{$row->[0]} = $row->[1];
+  }
+  return \%seq_to_id;
+}
+
+sub usage {
+  my $msg = shift || '';
+  print <<"  EOU";
+  $msg
+
+
+  Usage: $PROG_NAME [OPTIONS]
+  Options:
+    --verbose n            Set verbosity level.  default is 0
+    --quiet                Set flag to print nothing at all except errors
+    --debug n              Set debug flag
+    --testonly             If set, rows in the database are not changed or added
+    --list                 If set, list the available builds and exit
+    --help                 print this usage and exit.
+    --delete_set           If set, will delete the records of of specific biosequence set in the table
+    --set_tag              Name of the biosequence set tag  
+    --update_peptide_info  will update existing information on pI, MW, SSRCalc, protein/genome mappings 
+    --input_file           Name of the file that has Parag and Indiana scores
+
+   e.g.: $PROG_NAME --list
+         $PROG_NAME --set_tag \'YeastCombNR_20070207_ForwDecoy\' --input_file \'proteotypic_peptide.txt\'
+       $PROG_NAME --delete_set \'YeastCombNR_20070207_ForwDecoy\'
+  EOU
+
+  exit;
+}
 
 
