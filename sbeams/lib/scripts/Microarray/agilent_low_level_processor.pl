@@ -451,7 +451,7 @@ sub generate_genespring_files {
         $line = join "\t", @elements;
         print "line 3 is $line" if $VERBOSE >= 3;
       }
-      print OUT $line if $VERBOSE >= 2;
+      print OUT $line;
       $lineNumber += 1;
     }
 
