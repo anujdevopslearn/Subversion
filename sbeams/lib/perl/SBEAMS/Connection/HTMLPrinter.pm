@@ -469,7 +469,6 @@ a.blue_button:active{
     ~;
 
   my $agent = $q->user_agent();
-  $log->debug( "User agent is $agent" );
   # Style for turning text sideways for vertical printing, MSIE only
   if ( $agent =~ /MSIE/ ) {
     print " .med_vert_cell {font-size: 10; background-color: #CCCCCC; white-space: nowrap; writing-mode: tb-rl; filter: flipv fliph;  }\n";
@@ -642,7 +641,6 @@ Current Project: $current_project_name ($current_project_id)
 ###############################################################################
 sub printPageFooter {
   my $self = shift;
-  $log->debug( "We be in the footer yo" );
   $self->display_page_footer(@_);
 }
 
@@ -1318,8 +1316,8 @@ sub make_toggle_section {
   my $hidetext = '';  # Text for 'hide content' link
   my $showtext = '';  # Text for 'show content' link
   my $neuttext = '';  # Auxilary text for show/hide
-  my $hideimg = ( $args{hideimg} ) ? $args{hideimg} : 'small_gray_minus.gif';  # image for 'hide content' link
-  my $showimg = ( $args{showimg} ) ? $args{showimg} : 'small_gray_plus.gif';  # image for 'show content' link
+  my $hideimg = ( $args{hideimg} ) ? $args{hideimg} : 'small_gray_plus.gif';  # image for 'hide content' link
+  my $showimg = ( $args{showimg} ) ? $args{showimg} : 'small_gray_minus.gif';  # image for 'show content' link
 
   # No content, bail
   return $html unless $args{content};
@@ -1370,6 +1368,7 @@ sub make_toggle_section {
     <STYLE TYPE="text/css" media="all">
     div.visible {
     display: inline;
+    color: #FF0000;
     white-space: nowrap;         
     }
     div.hidden {
