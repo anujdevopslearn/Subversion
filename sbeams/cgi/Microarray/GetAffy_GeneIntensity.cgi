@@ -55,10 +55,10 @@ use CGI qw(:standard);
 #$q = new CGI;
 
 # working range 10-10000, 3 logs wide 
-my $max_data_spread = 3; 
+use constant MAX_DATA_SPREAD => 3; 
 
 # Use 250 hex colors, omitting the 6 lightest
-my $conversion_f = 250/$max_data_spread; 
+use constant CONVERSION_F => 250/MAX_DATA_SPREAD; 
 make_color_h();
 
 ###############################################################################
@@ -1149,6 +1149,7 @@ sub print_simple_form {
 		  ## Print the data
 
 		my @array_ids = $affy_o->find_chips_with_R_CHP_data(project_id => $project_id);	#find affy_array_ids in the, could be multipule arrays with differnt protocols usedfor quantification
+    $log->debug( "Found $#array_ids array IDs" );
 		  
 
 		my $constraint_data = join " , ", @array_ids;
@@ -1505,7 +1506,7 @@ sub print_simple_form {
 sub deconvert_numerical_data {
   my @deconverted;
   foreach my $num (@_) {
-    my $trans =  10**(($num/$conversion_f)+1); 
+    my $trans =  10**(($num/CONVERSION_F)+1); 
     my $converted = ( ( $trans - int($trans) ) > 0.5 ) ? int( $trans + 1 ) : int( $trans );
 #    $log->debug( "$num => $converted" );
 #      $converted = 1 if $converted < 1;
@@ -1523,11 +1524,11 @@ sub deconvert_numerical_data {
 sub convert_numerical_data {
   my @converted_data = ();
   foreach my $original (@_) {
-#      my $converted =  int( ( $conversion_f * log10($_) ) );
+#      my $converted =  int( ( CONVERSION_F * log10($_) ) );
     my $num = ( $original < 10 ) ? 10 : 
               ( $original > 10000 ) ? 10000 : $original;
 
-    my $trans = ( $conversion_f * (log10($num) - 1 ) );
+    my $trans = ( CONVERSION_F * (log10($num) - 1 ) );
     my $converted = ( ( $trans - int($trans) ) > 0.5 ) ? int( $trans + 1 ) : int( $trans );
 #    $log->debug( "$num => $trans => $converted" );
 #      $converted = 1 if $converted < 1;
@@ -1570,7 +1571,7 @@ sub print_table_legend {
   my $coalesced = shift;
   my $table_cells = '';
 
-  my $end_space = $max_data_spread + 1;
+  my $end_space = MAX_DATA_SPREAD + 1;
   my @log_space = 2 .. $end_space ;
 
   print qq~ <hr>
@@ -1584,7 +1585,7 @@ sub print_table_legend {
   my $start_range; # = 10;
   my $end_range; #   = 10;
   my $key_count = 0;
-  my @range = 0 .. int($conversion_f);
+  my @range = 0 .. int(CONVERSION_F);
 
   foreach my $log_base (@log_space) {    #loop thru the log space
     my $end_range = convert_number($log_base);
@@ -1639,7 +1640,7 @@ sub print_table_legend {
 
   my $tab = '<TABLE><TR>';
   my $space = '&nbsp;';
-  for ( my $i = 0; $i <= $max_data_spread; $i += .25 ) {
+  for ( my $i = 0; $i <= MAX_DATA_SPREAD; $i += .25 ) {
     $tab .= "<TD bgcolor='$CONVERSION_H{$i}' width=4>$space</TD>";
   }
   $tab .= '</TR></TABLE>';
