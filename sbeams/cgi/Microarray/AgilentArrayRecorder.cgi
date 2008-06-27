@@ -281,6 +281,13 @@ Step 2: Select \# of Arrays<BR>
    <TD><INPUT TYPE="text" NAME="arraysPerSlide" SIZE="3"MAXLENGTH="3"></TD>
   </TR>
   <TR>
+  	<TD>How many channels are there per slide?&nbsp;&nbsp;</TD>
+  	<TD><SELECT NAME="arrayChannels">
+       <OPTION SELECTED VALUE="2">2</OPTION>
+       <OPTION VALUE="1">1</OPTION>
+       </SELECT></TD>
+  </TR>
+  <TR>
    <TD>What type of arrays are these?</TD>
    <TD><SELECT NAME="arrayType">
        <OPTION SELECTED VALUE="-1">--- SELECT SLIDE TYPE ---
@@ -371,6 +378,7 @@ sub print_array_info_screen {
   my @rows;
   my $slide_barcodes = $parameters{'slideBarcodes'};
   my $arrays_per_slide = $parameters{'arraysPerSlide'};
+  my $array_channels = $parameters{'arrayChannels'};
   my $successful = 1;
   my $status_report = "";
 
@@ -536,8 +544,8 @@ SELECT P.protocol_id, P.name
   <INPUT TYPE="hidden" NAME="tab">
   <INPUT TYPE="hidden" NAME="project" VALUE="$parameters{'projectSelector'}">
   <INPUT TYPE="hidden" NAME="arrayCount" VALUE="$array_count">
-  <INPUT TYPE="hidden" NAME="arraysPerSlide" VALUE="$parameters{'arraysPerSlide
-'}">
+  <INPUT TYPE="hidden" NAME="arraysPerSlide" VALUE="$parameters{'arraysPerSlide'}">
+  <INPUT TYPE="hidden" NAME="arrayChannels" VALUE="$parameters{'arrayChannels'}">
   <INPUT TYPE="hidden" NAME="slideType" VALUE="$parameters{'arrayType'}">
   <INPUT TYPE="hidden" NAME="arrayLayout" VALUE="$array_layout_id">
   <INPUT TYPE="hidden" NAME="printingBatch" VALUE="$printing_batch_id">
@@ -559,9 +567,17 @@ Step 3: Array Information<BR>
    <TD><FONT COLOR="white">Sample \#1 Name</FONT></TD>
    <TD><FONT COLOR="white">Sample \#1 Label</FONT></TD>
    <TD><FONT COLOR="white">Dye Lot \#</FONT></TD>
+   ~;
+   
+   if($array_channels == 2) {
+   	print qq~
    <TD><FONT COLOR="white">Sample \#2 Name</FONT></TD>
    <TD><FONT COLOR="white">Sample \#2 Label</FONT></TD>
    <TD><FONT COLOR="white">Dye Lot \#</FONT></TD>
+    ~;
+   }
+   
+   print qq~
    <TD><FONT COLOR="white">Labeling Protocol</FONT></TD>
    <TD><FONT COLOR="white">Date Labeled (YYYY-MM-DD)</FONT></TD>
    <TD><FONT COLOR="white">Hybridization Protocol</FONT></TD>
@@ -585,6 +601,10 @@ Step 3: Array Information<BR>
    $optionlist;
    </SELECT>
    <TD><!-- Sample 1 Dye Lot --></TD>
+      ~;
+   
+   if($array_channels == 2) {
+   	print qq~
    <TD><INPUT TYPE="TEXT" NAME="sample1checked" VALUE="- Set Checked To -"onFocus="blank(this)">
        <INPUT TYPE="button" VALUE="Apply" onClick="Javascript:setChecked(1);"></TD>
    <TD><SELECT NAME="sample1labmeth_all" onChange="Javascript:setAllMethods(1);">
@@ -592,6 +612,10 @@ Step 3: Array Information<BR>
    $optionlist;
    </SELECT></TD>
    <TD><!-- Sample 2 Dye Lot --></TD>
+   ~;
+   }
+   
+   print qq~
    <TD><SELECT NAME="labprot_all" onChange="Javascript:setAllMethods(2);">
    <OPTION VALUE="-1">--- SET ALL LABELING PROTOCOLS TO: ---
    $labeling_optionlist;
@@ -648,6 +672,10 @@ foreach my $barcode (@barcodes) {
        $optionlist
        </SELECT></TD>
      <TD><INPUT TYPE="text" NAME="sample0dye_$m" SIZE="6" MAXLENGTH="20"></TD>
+        ~;
+   
+   if($array_channels == 2) {
+   	print qq~
      <TD><NOBR><INPUT TYPE="checkbox" NAME="sample1check_$m">
                <INPUT TYPE="text" NAME="sample1name_$m" SIZE="25" MAXLENGTH="255"></NOBR></TD>
      <TD><SELECT NAME="sample1labmeth_$m">
@@ -655,6 +683,10 @@ foreach my $barcode (@barcodes) {
        $optionlist
        </SELECT></TD>
      <TD><INPUT TYPE="text" NAME="sample1dye_$m" SIZE="6" MAXLENGTH="20"></TD>
+     ~;
+   }
+   
+     print qq~
      <TD><SELECT NAME="labprot_$m">
          <OPTION VALUE="-1" SELECTED>
        $labeling_optionlist
@@ -994,6 +1026,9 @@ sub finalize {
   ## Determine Number of arrays
   my $array_count = $parameters{'arrayCount'};
 
+  ## Number of channels
+  my $array_channels = $parameters{'arrayChannels'};
+
   ## Print Introductory Header
   print qq~
   <H2><U>Welcome to the Microarray Data Entry Interface</U></H2>\n
@@ -1158,7 +1193,7 @@ sub finalize {
   $rowdata{'cost_scheme_id'} = $cost_scheme_id;
   $rowdata{'slide_type_id'} = $slide_type_id;
   $rowdata{'n_slides'} = $array_count;
-  $rowdata{'n_samples_per_slide'} = 2;
+  $rowdata{'n_samples_per_slide'} = $array_channels;
   $rowdata{'hybridization_request'} = $parameters{'prepType'};
   $rowdata{'scanning_request'}= $analysis_type;
   $rowdata{'request_status'} = "Submitted";
@@ -1201,10 +1236,13 @@ sub finalize {
 	undef %rowdata;
 
 	## INSERT array_request_samplem, labeling record, and hybridization
-	my $sample0_name  = $parameters{'sample0name_'.$m};
-	my $sample1_name  = $parameters{'sample1name_'.$m};
+	my ($sample0_name, $sample1_name);
+	$sample0_name = $parameters{'sample0name_'.$m};
+	if($array_channels == 2) {
+		$sample1_name  = $parameters{'sample1name_'.$m};
+  	}
 
-	for (my $sample_index=0;$sample_index<2;$sample_index++) {
+	for (my $sample_index=0;$sample_index<$array_channels;$sample_index++) {
 
 	  ## INSERT array_request_sample record
 	  $rowdata{'array_request_slide_id'} = $array_request_slide_id;
