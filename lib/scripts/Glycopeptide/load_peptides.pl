@@ -41,7 +41,27 @@ my %opts;
   printUsage('Authentication failed');
 
   process_options();
- 	load_file();
+  
+  # Hack
+  my %ascore;
+  if ( $opts{gygi_ascore} ) {
+    print STDERR "Reading ascore file\n";
+    open ASCORE, $opts{gygi_ascore};
+    my $cnt = 0;
+    while ( my $line = <ASCORE> ) {
+      $cnt++;
+      $line =~ s/\s//g;
+      my @line = split ",", $line;
+      next unless $line[0] && $line[1];
+      $ascore{$line[1]} = ( !$ascore{$line[1]} ) ? $line[0] :
+                          ( $ascore{$line[1]} < $line[0] ) ? $line[0] : $ascore{$line[1]};
+    }
+  }
+  print STDERR "Done\n";
+  $opts{gygi_ascore} = \%ascore if %ascore;
+
+  load_file();
+  
 } # end main
 
 
@@ -62,6 +82,8 @@ $program is used load ipi db into Unipep/Glycopeptide tables.
 Usage: $program -p peptide_file -r ipi_version [ -f file_format -v ]
 Options:
     -v, --verbose             Print verbose output.
+    -g, --gygi_ascore         Has Gygi lab ascore  values
+    -c, --convert_ambiguous   Convert * to & for ambiguous phospho sites
     -p, --peptide_file        File path to the file to upload
     -t, --testonly            Information in the database is not altered
     -b, --build               Build to which this search will be added
@@ -77,9 +99,9 @@ EOU
 
 sub process_options {
 
-  unless (GetOptions( \%opts, "verbose", "build:s", "testonly", "amibiguous:s", 
-                      "sample=s", "format:s", "peptide_file:s" )) {
-    printUsage('Failed to fetch options');
+  unless (GetOptions( \%opts, "verbose", "build:s", "testonly", "amibiguous:s", "dCn_cutoff:s",
+                      "sample=s", "format:s", "peptide_file:s", "gygi_ascore:s", "convert_ambiguous" )) {
+    print_usage('Failed to fetch options');
   }
 #  for my $o ( keys ( %opts ) ) { print "opt: $o => $opts{$o}\n"; }
 
@@ -92,6 +114,8 @@ sub process_options {
   unless ( -e $opts{peptide_file} ) {
     print_usage( "Invalid peptide file: $opts{peptide_file}");
   }
+
+  print "dCn is $opts{dCn_cutoff}\n";
 
   # Check ipi provided with values in database.
   my $match = 0;

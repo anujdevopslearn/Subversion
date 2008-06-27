@@ -297,15 +297,38 @@ sub org_to_build {
   }
 }
 
+
+sub get_atlas_base_link {
+  my $self = shift;
+  my $build = $self->get_current_build();
+
+  if ( $build == 1 ) {  # dme
+#    http://www.mop.uzh.ch/peptideatlas/cgi/PeptideAtlas/Search?search_key=%25&action=GO&build_type_name=Drosophila
+      
+    return "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/Search?action=GO;build_type_name=Drosophila;search_key=";
+  } elsif ( $build == 7 ) { # sce
+    return "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/Search?action=GO;build_type_name=Yeast;search_key=";
+  } elsif ( $build == 8 ) {  # cel
+    return "";
+  } elsif ( $build == 9 ) { # hsa
+    return "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/Search?action=GO;build_type_name=Human;search_key=";
+  } else {
+    return "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/Search?action=GO;build_type_name=Any;search_key=";
+  }
+  return 31;
+}
+
 sub get_build_consensus_library {
   my $self = shift;
   my $build = $self->get_current_build();
   if ( $build == 1 ) {
     return 31;
   } elsif ( $build == 7 ) {
-    return 30;
+    return 34;
   } elsif ( $build == 8 ) {
     return 29;
+  } elsif ( $build == 9 ) {
+    return 33;
   } else {
     return 31;
   }

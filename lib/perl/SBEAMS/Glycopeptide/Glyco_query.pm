@@ -317,23 +317,25 @@ sub get_query_sql {
   $clause = $subclause if $args{type} eq 'GeneID';
 
   my $sql = qq~
-  SELECT ID.ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
-         COUNT(*) AS num_observed, synonyms
-      FROM $TBGP_OBSERVED_TO_IPI ITI 
-      JOIN $TBGP_IPI_DATA ID
+
+  SELECT ID.ipi_data_id, ipi_accession_number, protein_name, protein_symbol,
+         COUNT(OP.observed_peptide_id) AS num_observed, synonyms
+
+      FROM  $TBGP_IPI_DATA ID
+      LEFT JOIN $TBGP_OBSERVED_TO_IPI ITI 
         ON ITI.ipi_data_id = ID.ipi_data_id
-      JOIN $TBGP_OBSERVED_PEPTIDE OP
+      LEFT JOIN $TBGP_OBSERVED_PEPTIDE OP
         ON OP.observed_peptide_id = ITI.observed_peptide_id
-      JOIN $TBGP_PEPTIDE_SEARCH PS ON PS.peptide_search_id = OP.peptide_search_id
-      JOIN $TBGP_BUILD_TO_SEARCH BTS ON BTS.search_id = PS.peptide_search_id
-     WHERE BTS.build_id = $build 
-       AND peptide_prophet_score >= $cutoff
+      LEFT JOIN $TBGP_PEPTIDE_SEARCH PS ON PS.peptide_search_id = OP.peptide_search_id
+      LEFT JOIN $TBGP_BUILD_TO_SEARCH BTS ON BTS.search_id = PS.peptide_search_id
+      WHERE ipi_version_id = ( SELECT ipi_version FROM $TBGP_UNIPEP_BUILD WHERE unipep_build_id = $build )
+       AND ( peptide_prophet_score >= $cutoff OR peptide_prophet_score IS NULL ) 
        AND ( $clause )
-     GROUP BY  ID.ipi_data_id, ipi_accession_number, protein_name, 
+     GROUP BY  ID.ipi_data_id, ipi_accession_number, protein_name,
                synonyms, protein_symbol
      ORDER BY ipi_accession_number ASC, synonyms, COUNT(*)
   ~;
-  $log->info( $sbeams->evalSQL( $sql ) );
+  $log->debug( $sbeams->evalSQL( $sql ) );
   return $sql;
   
 #AND peptide_prophet_score >= $cutoff
@@ -524,6 +526,7 @@ sub get_observed_phosphopeptides{
   }
 
   my $opep_ids = join( ", ", keys( %observed ) );
+  return unless $opep_ids;
   my $num_mapping_sql = qq~
   SELECT OP.observed_peptide_id, ID.ipi_accession_number, ID.synonyms, count(*) AS cnt
     FROM $TBGP_OBSERVED_PEPTIDE OP
