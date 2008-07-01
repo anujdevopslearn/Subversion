@@ -466,6 +466,8 @@ sub handle_request {
   my @rows = $sbeams->selectHashArray($sql);
   my $biosequence = $rows[0];
 
+
+  #############################################################################
   # Widget to allow show/hide of overview section
   my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_overview',
                                                 visible => 1,
@@ -510,9 +512,11 @@ sub handle_request {
 
     my %syn_types;
     foreach my $synonym ( @synonyms ) {
-# $log->debug( "Syn loop, $synonym->[0], $synonym->[1], $synonym->[2], $synonym->[3]" );
+      $log->debug( "Syn loop, $synonym->[0], $synonym->[1], $synonym->[2], $synonym->[3]" );
       $syn_types{$synonym->[1]} ||= [];
       chomp( $synonym->[0] );
+      #### Store the synonym information $biosequence for later use
+      $biosequence->{synonyms}->{$synonym->[1]} = $synonym->[0];
       if ( $synonym->[2] ) { 
         $synonym->[0] = "<A HREF=$synonym->[2]$synonym->[0]>$synonym->[0]</A>";
       }
@@ -569,6 +573,10 @@ sub handle_request {
     }
 
   }
+
+
+  #############################################################################
+  #### Continue with main query
 
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
@@ -691,6 +699,11 @@ sub handle_request {
                                                key => 'Total Observations',
                                              value => $obs ) . "</TABLE>\n"; 
     }
+
+
+  #############################################################################
+  #### Display the External Links section
+  displayExternalLinksSection(biosequence=>$biosequence);
 
 
   #############################################################
@@ -2312,7 +2325,6 @@ sub getPeptideInformationForProteins {
 
 
 
-
 ###############################################################################
 # getProteinInformationForPeptides
 #
@@ -2405,5 +2417,92 @@ sub getProteinInformationForPeptides {
 }
 
 
+
+###############################################################################
+# displayExternalLinksSection
+#
+# Display a section for information about this protein in other resources
+###############################################################################
+sub displayExternalLinksSection {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $biosequence = $args{biosequence} || die("ERROR: No biosequence passed");
+
+  #### Create widget to allow show/hide of overview section
+  my ($tr,$link) = $sbeams->make_table_toggle( name => 'getprotein_ExternalLinks',
+					       visible => 1,
+					       tooltip => 'Show/Hide Section',
+					       imglink => 1,
+					       sticky => 1 );
+
+  #### Display section header
+  if ($sbeams->output_mode() eq 'html') {
+    my $section_header = $sbeamsMOD->encodeSectionHeader(
+      text => 'External Links',
+      link => $link,
+    );
+
+    print qq~
+      <TABLE width="600">
+        $section_header
+    ~;
+  }
+
+
+  #### Debug
+  if ( 0 == 1 ) {
+    use Data::Dumper;
+    my $tmp = Dumper( $biosequence->{synonyms} );
+    if ($sbeams->output_mode() eq 'html') {
+      print $sbeamsMOD->encodeSectionItem(
+        key => 'All synonyms',
+        tr_info => $tr,
+        value => $tmp,
+        url => "",
+      );
+    }
+  }
+
+
+  #### Display a link to Human Protein Atlas (hpr)
+  my $currentOrganism = $sbeamsMOD->getCurrentAtlasOrganism(parameters_ref=>{});
+  my $entrezGeneID = $biosequence->{synonyms}->{'Entrez Gene Symbol'};
+  if ($currentOrganism eq 'Human' && $entrezGeneID) {
+    if ($sbeams->output_mode() eq 'html') {
+      print $sbeamsMOD->encodeSectionItem(
+        key => 'Human Protein Atlas',
+        tr_info => $tr,
+        value => $entrezGeneID,
+        url => "http://www.proteinatlas.org/search_advanced.php?1--search_str=$entrezGeneID",
+      );
+    }
+  }
+
+
+  #### Display a link to the Global Proteome Machine (GPM)
+  my $ensemblProtein = $biosequence->{synonyms}->{'Ensembl Protein'};
+  if ($ensemblProtein) {
+    if ($sbeams->output_mode() eq 'html') {
+      print $sbeamsMOD->encodeSectionItem(
+        key => 'Global Proteome Machine',
+        tr_info => $tr,
+        value => $ensemblProtein,
+        url => "http://gpmdb.rockefeller.edu/thegpm-cgi/dblist_label.pl?label=$ensemblProtein",
+      );
+    }
+  }
+
+
+  #### Close section
+  if ($sbeams->output_mode() eq 'html') {
+    print qq~
+      </TABLE>
+    ~;
+  }
+
+  return 1;
+
+} # end displayExternalLinksSection
 
 
