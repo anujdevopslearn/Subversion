@@ -512,7 +512,7 @@ sub handle_request {
 
     my %syn_types;
     foreach my $synonym ( @synonyms ) {
-      $log->debug( "Syn loop, $synonym->[0], $synonym->[1], $synonym->[2], $synonym->[3]" );
+      #$log->debug( "Syn loop, $synonym->[0], $synonym->[1], $synonym->[2], $synonym->[3]" );
       $syn_types{$synonym->[1]} ||= [];
       chomp( $synonym->[0] );
       #### Store the synonym information $biosequence for later use
