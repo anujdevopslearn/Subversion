@@ -121,7 +121,7 @@
         date_created="2002-11-15 13:58:30"
         uri="http://www.ebi.ac.uk/IPI/IPIhelp.html"
         accessor_suffix="*]"
-        accessor="http://srs.ebi.ac.uk/srs6bin/cgi-bin/wgetz?-e [IPI-acc:"
+        accessor="http://srs.ebi.ac.uk/cgi-bin/wgetz?-e+[IPI-acc:"
         dbxref_tag="EBI_IPI"
         owner_group_id="1"
         modified_by_id="2"

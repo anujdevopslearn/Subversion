@@ -518,7 +518,11 @@ sub handle_request {
       #### Store the synonym information $biosequence for later use
       $biosequence->{synonyms}->{$synonym->[1]} = $synonym->[0];
       if ( $synonym->[2] ) { 
-        $synonym->[0] = "<A HREF=$synonym->[2]$synonym->[0]>$synonym->[0]</A>";
+	  if ( $synonym->[3] ) {
+	      $synonym->[0] = "<A HREF=\"$synonym->[2]$synonym->[0]$synonym->[3]\">$synonym->[0]</A>";
+	  } else {
+	      $synonym->[0] = "<A HREF=\"$synonym->[2]$synonym->[0]\">$synonym->[0]</A>";
+	  }
       }
       push @{$syn_types{$synonym->[1]}}, $synonym->[0];
     }
