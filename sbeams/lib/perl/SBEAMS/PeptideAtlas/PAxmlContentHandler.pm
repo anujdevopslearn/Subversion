@@ -108,6 +108,27 @@ sub start_element {
 
     $attrs{atlas_search_batch_ids} = join(",",@atlas_search_batch_ids);
 
+    my $pr_search_batch_ids = $attrs{search_batch_ids};
+
+    # Hackish attempt to fix data truncation error.  I don't know the side 
+    # effects of changing $attrs{search_batch_ids), so I am using a proxy 
+    # variable.  This may just postpone an issue that will end up in  
+    # mod_pep_instance...  Also unsure why we are storing search_batch_ids (pr)
+    # rather than atlas_search_batch_ids (pa)  DSC 2008-05
+    if ( length($attrs{search_batch_ids}) > 255 ) {
+#      print STDERR "Invoking sb length limit: " . length( $pr_search_batch_ids ) . "\n";
+      my $sep = '';
+      $pr_search_batch_ids = '';
+      for my $sbid ( @search_batch_ids ) {
+        my $tmp = $pr_search_batch_ids;
+        $tmp = $tmp . $sep . $sbid;
+        last if length($tmp) > 255;
+        $sep = ',';
+        $pr_search_batch_ids = $tmp;
+      }
+#      print STDERR "Fixed sb length limit?: " . length( $pr_search_batch_ids ) . "\n";
+    }
+
     # Left in when committing changes 2007-10-19
     unless ( 1 || $self->{counter} % 1000 ) {
       print "\n";
@@ -145,7 +166,7 @@ sub start_element {
       n_samples => $n_samples,
       is_exon_spanning => '?',
       n_protein_mappings => -1,
-      search_batch_ids => $attrs{search_batch_ids},
+      search_batch_ids => $pr_search_batch_ids,
       preceding_residue => $attrs{peptide_prev_aa},
       following_residue => $attrs{peptide_next_aa},
       original_protein_name => $attrs{original_protein_name},
@@ -246,7 +267,7 @@ sub start_element {
   if ($self->{counter} % 100 == 0) {
     print $self->{counter}."...";
     # Assumes we are explicitly committing.
-    &main::commit_transaction();
+#    &main::commit_transaction();
   }
 
 
