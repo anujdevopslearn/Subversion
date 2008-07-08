@@ -102,6 +102,7 @@ sub spectrum_search {
 
   my $charge = ( !$args{charge} ) ? '' : "AND charge = '$args{charge}'";
   my $m_seq = ( !$args{m_seq} ) ? '' : "AND modified_sequence = '$args{m_seq}'";
+  my $lib = ( !$args{lib_id} ) ? '' : "AND NIST_library_id = '$args{lib_id}'";
 
   my $sql =<<"  END";
   SELECT NIST_library_spectrum_id, sequence, charge, modifications, protein_name
@@ -111,6 +112,7 @@ sub spectrum_search {
     WHERE sequence = '$args{seq}'
     $charge
     $m_seq
+    $lib
   END
   my @rows = $sbeams->selectSeveralColumns( $sql );
   return \@rows if @rows;
