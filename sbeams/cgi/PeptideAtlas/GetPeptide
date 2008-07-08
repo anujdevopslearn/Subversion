@@ -735,7 +735,9 @@ if ($apply_action =~ /QUERY|GO/i ) {
   my $n_indices=$#peptide_accession;
 
   my @rows;
+  my @prots;
   for my $key ( keys( %chrom_map ) ) {
+    
     my @map = split( ':::', $key );
 
     my $current_chrom = $map[0];
@@ -746,7 +748,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
     # Defer...    my $current_prot = $map[$i];
     my $current_prot = $chrom_map{$key}->[0]; # For now just use the first
-
+    push @prots, $current_prot;
+      
     # This indicates an unmapped peptide
     next unless $current_prot; 
 
@@ -843,6 +846,21 @@ if ($apply_action =~ /QUERY|GO/i ) {
                                                 align  => [qw(center left left center center)],
                                                 rows => \@rows );
 
+    # display protein names as gaggle microformat
+    if ($sbeams->output_mode() eq 'html') {
+      my $organism = $sbeamsMOD->getCurrentAtlasOrganism( parameters_ref => {} );
+      my $protein_microformat = $sbeams->getGaggleMicroformat( 
+                                          name => "Protein(s) in which peptide is found",
+                                      organism => $organism, 
+                                          data => \@prots,
+                                        object => 'namelist',
+                                          type => 'direct' );
+                                                                       
+      $mapHTML .= qq~
+      $protein_microformat
+      ~;
+    }
+
   #### Otherwise, just confess what the original name was
   } else {
     $mapHTML .= qq~
@@ -914,9 +932,14 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
   my @mod_peps = $sbeams->selectSeveralColumns( $modSQL );
 
+  # Use build-specific library if warranted
+  my $lib_id = $sbeamsMOD->getBuildConsensusLib();
+
+
   my $cs_obj = SBEAMS::PeptideAtlas::ConsensusSpectrum->new();
   $cs_obj->setSBEAMS( $sbeams );
-  my $consensus = $cs_obj->spectrum_search( seq => $peptide_sequence[0] );
+  my $consensus = $cs_obj->spectrum_search( seq => $peptide_sequence[0],
+                                            lib_id => $lib_id );
 
   #### If a result is returned
   if ( scalar @mod_peps ) {
@@ -937,7 +960,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
           }
 
           my $title = "View consensus spectrum for peptide $pep->[0] (+$pep->[1])"; 
-          $pep->[7] = "<A HREF='ShowOneSpectrum?NIST_library_spectrum_id=$c_spectrum->[0]' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
+          $pep->[7] = "<A HREF='ShowOneSpectrum?NIST_library_spectrum_id=$c_spectrum->[0];ymax=11000' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
           last;
         }
       }
@@ -986,7 +1009,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
   );
   my $annot_help = get_table_help( 'annotated_transitions' );
 
-  my $mrm_transitions = get_mrm_transitions( $peptide_accession[0] );
+  my $mrm_transitions = $sbeamsMOD->get_mrm_transitions( accessions => [$peptide_accession[0]] );
 
   #### If a result is returned
   if ( scalar @$mrm_transitions ) {
@@ -994,23 +1017,27 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
     #### Loops through resultset and do formatting
     for my $pep ( @$mrm_transitions ) {
+      my $accession = shift( @$pep );
       $pep->[0] = $sbeamsMOD->formatMassMods( $pep->[0] );
       $pep->[2] = sprintf("%0.2f", $pep->[2]); # . '&nbsp;';
       $pep->[3] = sprintf("%0.2f", $pep->[3]); # . '&nbsp;';
       $pep->[5] = sprintf("%0.1f", $pep->[5]); # . '&nbsp;';
       $pep->[6] = sprintf("%0.0f", $pep->[6]); # . '&nbsp;';
+      $pep->[7] = sprintf("%0.1f", $pep->[7]); # . '&nbsp;';
+      $pep->[8] = sprintf("%0.1f", $pep->[8]); # . '&nbsp;';
 #      $pep->[1] .= '&nbsp;';
 #      $pep->[6] .= '&nbsp;';
 #      $pep->[7] .= '&nbsp;';
 
       # trim off extra peak label stuff, like mass delta and alt annots.
-      ($pep->[4]) = $pep->[4] =~ /^([a-zA-Z]\d+)/;
+#      ($pep->[4]) = $pep->[4] =~ /^([a-zA-Z]\d+)/;
+      ($pep->[4]) = $pep->[4] =~ /^([^\/]+)\/*/;
       
       for my $idx ( 0..$#{$pep} ) {
         $pep->[$idx] = $sbeams->makeInactiveText('n/a') if !defined $pep->[$idx];
       }
     }
-    my @labels = ( 'Sequence', 'Charge', 'q1_mz', 'q3_mz', 'Label', 'Intensity', 'CE', 'RT', 'Instr', 'Annotator', 'Quality' );
+    my @labels = ( 'Sequence', 'Charge', 'q1_mz', 'q3_mz', 'Label', 'Intensity', 'CE', 'RT', 'SSRCalc', 'Instr', 'Annotator', 'Quality' );
 
     #### Add table column headings
     unshift @$mrm_transitions, \@labels;
@@ -1019,7 +1046,9 @@ if ($apply_action =~ /QUERY|GO/i ) {
     $transitionHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
                                                       tr_info => $tr,
                                                         width => '600',
-                                                       align  => [qw(left center right right center right right left left left)],
+                                                 set_download => 1,
+                                                  chg_bkg_idx => 2,
+                                                       align  => [qw(left center right right center right right right right left left left)],
                                                          rows => $mrm_transitions );
     #### Display table
     print "<TABLE WIDTH=600><TR><TD COLSPAN=5>$annot_help</TD></TR><BR>$transitionHTML</TABLE>\n" if $#{$mrm_transitions};
@@ -1252,7 +1281,8 @@ sub get_mrm_transitions {
   LEFT JOIN $TB_USER_LOGIN UL ON UL.contact_id = MPA.annotator_contact_id
   WHERE peptide_accession = '$accession'
   AND project_id IN ( $projects )
-  ORDER BY modified_peptide_sequence, peptide_charge DESC, Q3_peak_intensity DESC, q3_mz
+  AND level_score > 0.8
+  ORDER BY modified_peptide_sequence, peptide_charge DESC, level_score DESC, Q3_peak_intensity DESC, q3_mz
   END
   my @rows = $sbeams->selectSeveralColumns($sql);
   return \@rows;
@@ -1267,17 +1297,21 @@ sub get_table_help {
   my $showtext;
   my $heading;
   my $description;
+## { key => 'Peptide Accession', value => 'Primary key for annotations table.' },
   if ( $name eq 'annotated_transitions' ) {  
-    @entries = ( { key => 'Sequence', value => 'Amino acid sequence of detected pepide, including any mass modifications.' },
+    @entries = ( 
+                 { key => 'Sequence', value => 'Amino acid sequence of detected pepide, including any mass modifications.' },
                  { key => 'Charge', value => 'Charge on Q1 (precursor) peptide ion.' },
                  { key => 'q1_mz', value => 'Mass to charge ratio of precursor peptide ion.' },
                  { key => 'q3_mz', value => 'Mass to charge ratio of fragment ion.' },
                  { key => 'Label', value => 'Ion-series designation for fragment ion (Q3).' },
-                 { key => 'CE', value => 'the kinetic energy in conferred to the peptide ion and resulting in peptide fragmentation. (eV)' },
+                 { key => 'Intensity', value => 'Intensity of peak in CID spectrum' },
+                 { key => 'CE', value => 'Collision energy, the kinetic energy conferred to the peptide ion and resulting in peptide fragmentation. (eV)' },
+                 { key => 'RT', value => 'Peptide retention time( in minutes ) in the LC/MS system.' },
+                 { key => 'SSRCalc', value => "Sequence Specific Retention Factor provides a hydrophobicity measure for each peptide using the algorithm of Krohkin et al. Version 3.0 <A HREF=http://hs2.proteome.ca/SSRCalc/SSRCalc.html target=_blank>[more]</A>" },
                  { key => 'Instr', value => 'Model of mass spectrometer on which transition pair was validated.' },
                  { key => 'Annotator', value => 'Person/lab who contributed validated transition.' },
                  { key => 'Quality', value => 'Crude scale of quality for the observation, currently one of Best, OK, and No. ' },
-                 { key => 'Intensity', value => 'Intensity of peak in CID spectrum' },
         );
                  
     $showtext = 'show column descriptions';
