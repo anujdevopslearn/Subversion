@@ -14,7 +14,7 @@ package SBEAMS::PeptideAtlas::Settings;
 use strict;
 
 #### Begin with the main Settings.pm
-use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Settings( qw(:default ) );
 
 
 #### Set up new variables
@@ -35,3 +35,8 @@ $SBEAMS_PART            = 'PeptideAtlas';
 
 #### Override variables from main Settings.pm
 $SBEAMS_SUBDIR          = 'PeptideAtlas';
+
+sub getSSRCalcDir {
+  my $self = shift;
+  return $CONFIG_SETTING{SSRCALC_ENV} || '/net/db/src/SSRCalc/ssrcalc';
+}
