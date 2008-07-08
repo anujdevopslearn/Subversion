@@ -36,6 +36,9 @@ $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
+# Global placeholder for output_mode info; will populate post-auth
+my $is_html;
+
 use PGPLOT;
 use PDL;
 use PDL::Graphics::PGPLOT;
@@ -91,6 +94,7 @@ sub main
     exit unless ($current_username = $sbeams->Authenticate(
         allow_anonymous_access=>1,
     ));
+    $is_html = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
 
     #### Read in the default input parameters
     my %parameters;
@@ -103,8 +107,6 @@ sub main
     
     # Hackage
     $parameters{NIST_library_id} ||= $parameters{consensus_library_id};
-
-    #$sbeams->printDebuggingInfo($q);
 
     #### Decide what action to take based on information so far
     if ($parameters{action} eq "???") 
@@ -143,7 +145,7 @@ sub handle_request {
   my %parameters = %{$ref_parameters};
 
   #### Show current user context information
-  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+  print "<BR>\n" if $is_html;
   
 
   #$sbeams->printUserContext();
@@ -154,7 +156,7 @@ sub handle_request {
       program_name => $PROG_NAME,
   );
 
-  print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+  print $tabMenu->asHTML() if $is_html;
 
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
@@ -291,7 +293,7 @@ sub handle_request {
     ## upload the file to a file handler
     my $fh = $q->upload('upload_file');
 
-    if (!$fh && $q->cgi_error) {
+    if (!$fh && $q->cgi_error && $is_html) {
       print $q->header(-status=>$q->cgi_error);
     }
 
@@ -353,7 +355,7 @@ sub handle_request {
     Note: masses are mono-isotopic;  results are from query to
     PeptideAtlas followed by peptide sequence query to NIST consensus spectra.
     <br/><br/>
-    ~;
+    ~ if $is_html;
 
     ## look up PA peptides and nab the NIST spectra with similar peptide sequences
     if ( $atlas_build_clause || $NIST_library_clause ||
@@ -510,16 +512,32 @@ sub handle_request {
                                              chg_bkg_idx => 1,
                                                   nowrap => [1..10],
                                                 max_rows => 500,
-                                            set_download => 1
+                                            set_download => 1,
+                                                 is_html => $is_html
                                               );
-      print "<TABLE>$html</TABLE>";
+      
+      if ( $is_html ) {
+        print "<TABLE>$html</TABLE>" 
+      } else {
+        $sbeams->displayResultSet( resultset_ref => $html,
+                             query_parameters_ref=>\%parameters,
+                             rs_params_ref=> {},
+                             url_cols_ref=> [],
+                             hidden_cols_ref=> {},
+                              max_widths=> {},
+                             column_titles_ref=> $html->{column_list_ref},
+                             base_url=> '',
+                                  );
+
+
+      }
 
    }
 
 
     #### If QUERY was not selected, then tell the user to enter some parameters
   } else {
-    if ($sbeams->invocation_mode() eq 'http') {
+    if ($sbeams->invocation_mode() eq 'http' && $is_html ) {
       print "<H4>Select parameters above and press QUERY</H4>\n";
     } else {
       print "You need to supply some parameters to contrain the query\n";
