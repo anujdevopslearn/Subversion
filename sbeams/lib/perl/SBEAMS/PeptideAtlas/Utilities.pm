@@ -790,24 +790,27 @@ sub get_html_seq {
 sub make_resultset {
   my $self = shift;
   my %args = @_;
-  $log->debug( "JH, $args{rs_data}" );
   return undef unless $args{rs_data};
 
   # We can either get explicitly passed headers,
   # or an array which includes headers
   if ( !$args{headers} ) {
-    $args{headers} = $args{rs_data}->[0];
+    $args{headers} = shift @{$args{rs_data}};
   }
   my $rs_name = 'SETME';
   my $rs_ref = { column_list_ref => $args{headers},
-                        data_ref => $args{rs_data} };
+                        data_ref => $args{rs_data},
+             precisions_list_ref => [] };
 
   $self->getSBEAMS()->writeResultSet( resultset_file_ref => \$rs_name,
                                 resultset_ref => $rs_ref,
                                   file_prefix => 'mrm_',
                          query_parameters_ref => \%args  );
 
-  $log->debug( "The run is named $rs_name" );
+
+  $self->{_cached_resultsets} ||= {};
+  $self->{_cached_resultsets}->{$rs_name} = $rs_ref;
+
   return $rs_name;
 }
 
