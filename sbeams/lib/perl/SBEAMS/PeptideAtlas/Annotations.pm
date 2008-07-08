@@ -11,7 +11,8 @@ package SBEAMS::PeptideAtlas::Annotations;
 
 =head2 DESCRIPTION
 
-This is part of SBEAMS::PeptideAtlas which handles peptide annotations and related items.
+This is part of SBEAMS::PeptideAtlas which handles peptide annotations
+and related items.
 
 =cut
 #
@@ -65,13 +66,31 @@ sub insert_transition_data {
   my @inserted_ids;
 
   # start transaction
-  $log->debug( "JH" );
-  
+#  $sbeams->initiate_transaction();
+  $log->debug( "Initiate" );
+
   for my $trns ( @{$self->{mrm_data}} ) {
-  $log->debug( "JH" );
+    
     # modified_peptide_sequence - generate matching sequence
-    $trns->{peptide_sequence} = strip_mods( $trns->{modified_peptide_sequence} );
-    $trns->{peptide_id} = get_peptide_id( $trns->{peptide_sequence} );
+    $trns->{peptide_sequence} = strip_mods($trns->{modified_peptide_sequence});
+    $log->debug( "Trying with $trns->{peptide_sequence}" );
+     
+    # Check for peptide ID, generate one if necessary
+    $trns->{peptide_id} = $self->getPeptideId( seq => $trns->{peptide_sequence} );
+    if ( !$trns->{peptide_id} ) {
+      $self->addNewPeptide( seq => $trns->{peptide_sequence} );
+      $trns->{peptide_id} = $self->getPeptideId( seq => $trns->{peptide_sequence} );
+    }
+
+    if ( !$trns->{peptide_id} ) {
+      # Is it OK to fail?  Not for now!
+      my $insert = "INSERT INTO $TBAT_MODIFIED_PEPTIDE_ANNOTATION ( " . join( ", ". keys( %$trns ) ) . " ) VALUES ( '" . join( "','". values( %$trns ) ) . "');";
+      $log->error( $insert );
+#      $sbeams->rollback_transaction();
+      # Set error
+      # redirect
+#      exit 1;
+    }
   
     # peptide_charge - OK
     # q1_mz 
@@ -98,6 +117,7 @@ sub insert_transition_data {
     # retention_time
     # instrument
     # comment 
+    # q3_peak_intensity
 
     my $mpa_id = $sbeams->updateOrInsertRow ( table_name => $TBAT_MODIFIED_PEPTIDE_ANNOTATION,
                                                   insert => 1,
@@ -111,6 +131,8 @@ sub insert_transition_data {
     $log->debug( "tried insert, got $mpa_id back!" );
     push @inserted_ids, $mpa_id;
   }
+#  $sbeams->rollback_transaction();
+#  $sbeams->commit_transaction();
   return \@inserted_ids;
  
   # commit
@@ -122,6 +144,10 @@ sub strip_mods {
   return $seq;
 }
 
+
+#+
+# 
+#-
 sub get_suitability_level {
   my $self = shift;
   my $level = shift;
@@ -137,15 +163,61 @@ sub get_suitability_level {
   }
 
   for my $key ( keys( %{$self->{suitability_level}} ) ) {
-    $log->debug( "Should we return $self->{suitability_level}->{$key} ( $key eq $level)?"  );
     return $self->{suitability_level}->{$key} if $key eq uc($level);
   }
-  $log->debug( "returning: $self->{suitability_level}->{OK}" );
+  # Default
   return $self->{suitability_level}->{OK};
-
 }
 
+#+ 
+#  These come primarily from the modified_peptide_annotations table
+#- 
+sub get_mrm_transitions {
+  my $self = shift;
+  my %args = @_;
 
+  return unless $args{accessions};
+  my $acc_string =  "'" . join( "', '", @{$args{accessions}} ) . "'";
+
+  my $sbeams = $self->getSBEAMS();
+
+  # Project control
+  my @accessible = $sbeams->getAccessibleProjects();
+  my $projects = join( ",", @accessible );
+  return '' unless $projects;
+
+  my $sql =<<"  END";
+  SELECT
+  peptide_accession,
+  modified_peptide_sequence,
+  peptide_charge, 
+  q1_mz,
+  q3_mz,
+  q3_ion_label,  
+  q3_peak_intensity,
+  collision_energy,
+  retention_time,
+  ssrcalc_relative_hydrophobicity,
+  instrument,
+  CASE WHEN contact_id IS NULL 
+    THEN annotator_name 
+    ELSE username 
+    END AS name,
+  level_name
+  FROM $TBAT_MODIFIED_PEPTIDE_ANNOTATION MPA 
+  JOIN $TBAT_PEPTIDE P ON MPA.peptide_id = P.peptide_id
+  JOIN $TBAT_TRANSITION_SUITABILITY_LEVEL TSL 
+    ON TSL.transition_suitability_level_id = MPA.transition_suitability_level_id
+  LEFT JOIN $TB_USER_LOGIN UL ON UL.contact_id = MPA.annotator_contact_id
+  WHERE peptide_accession IN ( $acc_string )
+  AND project_id IN ( $projects )
+  AND level_score > 0.8
+  ORDER BY peptide_accession, modified_peptide_sequence, peptide_charge DESC, level_score DESC, Q3_peak_intensity DESC, q3_mz
+  END
+  $log->debug( "$sql" );
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  return \@rows;
+}
 
 
 
@@ -153,18 +225,6 @@ sub get_suitability_level {
 sub get_publication {
   return '';
 }
-
-sub get_peptide_id {
-  my $seq = shift || return;
-# Doesn't yet add missing peptides.
-  my $peptide = $sbeams->selectrow_arrayref( <<"  END" );
-  SELECT peptide_id, peptide_accession FROM $TBAT_PEPTIDE 
-  WHERE peptide_sequence = '$seq'
-  END
-  $log->debug(  "$seq yeilds $peptide->[0] ($peptide->[1])" );
-  return $peptide->[0];
-}
-
 
 
 ##
@@ -176,7 +236,9 @@ sub validate_transition_data {
   $sbeams = $self->getSBEAMS();
   my %args = @_;
   my $file = $args{transition_data} || return '';
+  my $cnt = 1;
   for my $line ( @$file ) {
+    $log->debug( "Line " . $cnt++ );
     chomp $line;
     my @line = split("\t", $line, -1);
     if ( !$self->{mrm_headers} ) {
@@ -203,7 +265,7 @@ sub validate_transition_data {
 
 sub get_std_transition_headers {
   my $self = shift;
-  my @std_headers = qw( modified_peptide_sequence peptide_charge q1_mz q3_mz q3_ion_label transition_suitability_level_id publication_id annotator_name collision_energy retention_time instrument comment );
+  my @std_headers = qw( modified_peptide_sequence peptide_charge q1_mz q3_mz q3_ion_label transition_suitability_level_id publication_id annotator_name collision_energy retention_time instrument comment q3_peak_intensity );
   return \@std_headers;
 }
 
