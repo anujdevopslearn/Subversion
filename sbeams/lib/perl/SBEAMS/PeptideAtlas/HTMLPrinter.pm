@@ -165,7 +165,6 @@ sub displayGuestPageHeader {
   use HTTP::Request;
   my $ua = LWP::UserAgent->new();
   my $skinLink = $args{uri} || 'http://www.peptideatlas.org/.index.dbbrowse.php';
-  $log->debug( "skinlink is $skinLink" );
   #my $skinLink = 'http://dbtmp.systemsbiology.net/';
   my $response = $ua->request( HTTP::Request->new( GET => "$skinLink" ) );
   my @page = split( "\n", $response->content() );
@@ -537,8 +536,12 @@ sub encodeSectionTable {
 
   my $rs_link = '';
   if ( $args{set_download} ) {
-    my $rs_name = $self->make_resultset( rs_data => $args{rows} );
+    # Kluge part 1
+    my $rs_headers = shift( @{$args{rows}} );
+    my $rs_name = $self->make_resultset( rs_data => $args{rows}, headers => $rs_headers );
     $rs_link = "<a href='$CGI_BASE_DIR/GetResultSet.cgi/$rs_name.tsv?rs_set_name=$rs_name&format=tsv' TITLE='Download table as tab-delimited text file' CLASS=info_box>Download as TSV</a>",
+    # Kluge part 2
+    unshift( @{$args{rows}}, $rs_headers );
   }
 
   return '' unless $args{rows};
