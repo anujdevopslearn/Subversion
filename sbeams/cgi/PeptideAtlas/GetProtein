@@ -293,8 +293,17 @@ sub handle_request {
 
       #print "&nbsp;&nbsp;&nbsp;";
       print "<BR>";
-
       print "Protein Name: ";
+
+      my $organism = $sbeamsMOD->getCurrentAtlasOrganism( parameters_ref => {} );
+      my $gaggle = $sbeams->getGaggleMicroformat(
+                                          organism => $organism, 
+                                              data => [$protein_name],
+                                            object => 'namelist',
+                                              name => 'Protein name',
+                                              type => 'direct' );
+      print "$gaggle\n";
+
 
       print $q->textfield( "protein_name", $protein_name);
       print $q->hidden( "apply_action", '');
@@ -941,10 +950,13 @@ sub handle_request {
 
     
 
-    my $mrm_transitions = get_mrm_transitions( \@pa_accessions );
+    my $mrm_transitions = $sbeamsMOD->get_mrm_transitions( accessions => \@pa_accessions );
+#    my $mrm_transitions = get_mrm_transitions( accessions => \@pa_accessions );
 
+    $log->debug( "hurry?" );
     #### If a result is returned
     if ( scalar @$mrm_transitions ) {
+      $log->debug( "Hurry baba" );
 
       my $link_base = "GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&action=QUERY&searchForThis=";
       #### Loops through resultset and do formatting
@@ -955,6 +967,7 @@ sub handle_request {
         $pep->[6] = sprintf("%0.1f", $pep->[6]);
         $pep->[7] = sprintf("%0.1f", $pep->[7]);
         $pep->[8] = sprintf("%0.1f", $pep->[8]);
+        $pep->[9] = sprintf("%0.1f", $pep->[9]);
        ($pep->[5]) = $pep->[5] =~ /^([a-zA-Z]\d+)/;
 
         $pep->[1] = $sbeamsMOD->formatMassMods( $pep->[1] );
@@ -963,7 +976,7 @@ sub handle_request {
         }
       }
       my @labels = ( 'Accession', 'Sequence', 'Charge', 'q1_mz', 'q3_mz', 
-                 'Label', 'Intensity', 'CE', 'RT', 'Instr', 'Annotator', 'Quality');
+                 'Label', 'Intensity', 'CE', 'RT', 'SSRCalc', 'Instr', 'Annotator', 'Quality');
 
       #### Add table column headings
       unshift @$mrm_transitions, \@labels;
@@ -974,8 +987,10 @@ sub handle_request {
                                                           width => '600',
                                                    set_download => 1,
                                                     chg_bkg_idx => 3,
-                                                         align  => [qw(left center center right right center right right left left left)],
+                                                         align  => [qw(left center center right right center right right right right left left left)],
                                                            rows => $mrm_transitions );
+      $log->debug( $transitionsHTML );
+      $log->debug( "$transitionsHTML" );
       #### Display table
       print "<TABLE WIDTH=600><BR>$transitionsHTML</TABLE>\n" if $#{$mrm_transitions};
     }
@@ -1049,6 +1064,7 @@ sub handle_request {
 } # end handle_request
 
 sub get_mrm_transitions {
+  shift;
   my $accessions = shift || return [];
   my $acc_string = "'" . join( "', '", @{$accessions} ) . "'" ;
 
@@ -1081,7 +1097,8 @@ sub get_mrm_transitions {
   LEFT JOIN $TB_USER_LOGIN UL ON UL.contact_id = MPA.annotator_contact_id
   WHERE peptide_accession IN ( $acc_string )
   AND project_id IN ( $projects )
-  ORDER BY peptide_accession, q1_mz, peptide_charge, q3_peak_intensity DESC
+  AND level_score > 0.2
+  ORDER BY peptide_accession, q1_mz, peptide_charge, level_score DESC, q3_peak_intensity DESC
   END
   my @rows = $sbeams->selectSeveralColumns($sql);
   return \@rows;
