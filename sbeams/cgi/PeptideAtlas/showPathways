@@ -146,8 +146,24 @@ sub pathway_details {
   print <<"  END";
   <SCRIPT LANGUAGE='javascript'>
   function hideTimerInfo() {
-    var info = document.getElementById( '1234321' );
-    info.className = 'hidden';
+//    var info = document.getElementById( '1234321' );
+//    info.className = 'hidden';
+    toggle_stats();
+  }
+  function toggle_stats() {
+    // Grab page elements by their IDs
+    var tgif = document.getElementById( '1234321_gif' );
+    var stats= document.getElementById( '1234321' );
+    var showhide= document.getElementById( '123454321' );
+    if (  stats.className == 'visible' ) {
+      stats.className = 'hidden';
+      showhide.innerHTML = 'Show Stats';
+      tgif.src =  '/sbeams/images/small_gray_plus.gif'
+    } else {
+      stats.className = 'visible';
+      showhide.innerHTML = 'Hide Stats';
+      tgif.src =  '/sbeams/images/small_gray_minus.gif'
+    }
   }
   </SCRIPT>
   <STYLE TYPE="text/css" media="screen">
@@ -167,7 +183,13 @@ sub pathway_details {
 
 #  Turned off
 #  my $addpath = ( $params->{path_def} =~ /pathway/i ) ? '' : 'Pathway ';
-  print "<DIV ID=1234321 CLASS=visible>\n";
+#  print "<DIV ID=1234321 CLASS=visible>\n";
+  print <<"  END";
+  <A ONCLICK="toggle_stats();">
+   <IMG SRC=$HTML_BASE_DIR/images/small_gray_minus.gif TITLE='Show/Hide Stats' ID='1234321_gif'><DIV CLASS=visilink ID=123454321> Hide Stats</DIV></A>
+   <DIV ID=1234321 CLASS=visible>
+   <BR>
+  END
   print "  * Looking up genes in $params->{path_def} ($params->{path_id}) at KEGG <BR>\n";
 
   my $t0 = new Benchmark;
@@ -189,6 +211,69 @@ sub pathway_details {
   $log->debug( parseTime( $t2, $t1, "seconds to get Atlas data for $params->{path_def}" ) );
 
   print "* Found Atlas data for $cnt of $tot, plotting on KEGG map<BR>\n";
+
+  my $table = SBEAMS::Connection::DataTable->new( BORDER => 0 );
+  $table->addRow( [ '&nbsp;', 'Protein', 'Peptides Observed' ] );
+  $table->setHeaderAttr( BOLD => 1 );
+  my $acc_string ='';
+  my $sep = '';
+  for my $gene ( @{$gene_list} ) {
+    my $cnt = 0;
+    if ( $atlas_hits->{$gene} ) {
+      $cnt = scalar( @{$atlas_hits->{$gene}} );
+    }
+    my $chk = ( $cnt ) ? 'checked' : '';
+    my $chk_box = "<INPUT TYPE=checkbox NAME=accession VALUE=$gene $chk></INPUT>"; 
+    $table->addRow( [ $chk_box, $gene, $cnt ] );
+    $acc_string .= $sep . $gene;
+    $sep ||= ',';
+  }
+  $table->alternateColors( FIRSTROW => 2, PERIOD => 1, BGCOLOR => '#DDDDDD', DEF_BGCOLOR => '#FFFFFF' );
+  $table->setColAttr( ALIGN => 'RIGHT', COLS => [3], ROWS => [2..$table->getRowNum()] );
+  my $cytolink = 'Open <A ONCLICK="submit_cytoscape();"><DIV CLASS="visilink"> Cytoscape </DIV></A>network with protein list';
+
+  my $organism = $atlas->getCurrentAtlasOrganism( parameters_ref => {} );
+  my $gaggle_info = $sbeams->getGaggleMicroformat( 
+                                          name => "Proteins in $params->{path_def}",
+                                      organism => $organism, 
+                                          data => $gene_list,
+                                        object => 'namelist',
+                                          type => 'direct' 
+  );
+
+  print <<"  END";
+  <BR>
+  <!--  $cytolink -->
+  $gaggle_info
+  <BR>
+  <BR>
+  <BR>
+  <SCRIPT LANGUAGE="javascript">
+  function submit_cytoscape() {
+    document.cytoscape.submit();
+  }
+  </SCRIPT>
+  <FORM NAME=cytoscape METHOD="POST" ACTION="getCytoscapeWebstart">
+  $table
+  <INPUT TYPE=HIDDEN NAME=apply_action VALUE='gene_list'></INPUT> 
+  <INPUT TYPE=HIDDEN NAME=path_id VALUE='$params->{path_id}'></INPUT> 
+  </FORM>
+  
+  <BR>
+  <HR WIDTH=600 ALIGN=LEFT>
+  END
+
+
+
+
+
+
+
+
+
+
+
+  
 
   # Send gene/color info to kegg for a map
   my $url = $keggmap->getColoredPathway( bg => $bg,
