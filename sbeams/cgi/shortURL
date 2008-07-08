@@ -48,19 +48,22 @@ use SBEAMS::Connection::Tables;
   my $page;
 
   if ( $url ) {
-    my $form =  getPOSTForm( $url );
 
-    if ( $form !~ /\<FORM/ || $params{get_only} ) {
-      # URL but no params, simple redirect
+    # Should we implement a 'post_only' for URLs that we don't want to expose?
+    
+    if ( $url !~ /\?/ || $params{get_only} || length($url) < 2080 ) {
+      # URL but no params, or manageable url => simple redirect.
       $sbeams->sbeams_redirect( uri => $url );
       exit;  # superfluous?
     }
     
+
     # Otherwise, make an autosubmit form page.
     $page = SBEAMS::Connection::SBPage->new( user_context => 0,
-                                                      sbeams => $sbeams,
-                                                      minimal => 1,
-                                                       onload => "document.shortform.submit()" );
+                                                   sbeams => $sbeams,
+                                                  minimal => 1,
+                                                   onload => "document.shortform.submit()" );
+    my $form =  getPOSTForm( $url );
     $page->addContent( $form );
 
   } else { 
@@ -95,13 +98,15 @@ sub getPOSTForm {
     my @opts = split ";", $arg;
     for my $param ( @opts ) {
       my ($name, $value) = split("=", $param);
-      $name = $q->unescape( $name );
-      $value = $q->unescape( $value );
+      for my $var ( $name, $value ) {
+        $var = $q->unescape( $var );
+        $var =~ s/\ /\+/g;
+      }
+      
       $form .= "<INPUT TYPE=HIDDEN NAME='$name' VALUE='$value'>\n";
     }
   }
   $form .= "<FORM>\n";
-#  $log->debug( $form );
   return $form;
 }
 
