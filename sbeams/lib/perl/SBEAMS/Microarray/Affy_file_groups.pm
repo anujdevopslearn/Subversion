@@ -528,6 +528,8 @@ sub get_affy_arrays_sql{
 # get get_all_affy_info_sql
 #
 # get all the (affy_array_sample, affy_array) info for a group of arrays
+# 
+# return all info if no array ids passed - DSC 2008/06
 ###############################################################################
 sub get_all_affy_info_sql{
 	my $method = 'get_affy_arrays';
@@ -535,11 +537,11 @@ sub get_all_affy_info_sql{
 	my $self = shift;
 	my %args = @_;
 	
-	unless ($args{affy_array_ids} ){
-		confess(__PACKAGE__ . "::$method Need to provide key value pairs 'affy_array_ids' => 'string of csv affy_array_id(s)' ");
-	}
-
- 	my $array_ids =  $args{affy_array_ids}; #pass in a string of comma delimited affy array ids
+  # Modified to allow bulk lookup
+  my $where = '';
+  if ( $args{affy_array_ids} ) {  # optional csv affy array ids
+    $where = "WHERE afa.affy_array_id IN ( $args{affy_array_ids} )";
+  }
 	
 	
 	my $sql = qq~
@@ -557,7 +559,7 @@ sub get_all_affy_info_sql{
 		afs.full_sample_name     AS "Full Name", 
 		afs.sample_group_name    AS "Sample Group Name",
 		o.organism_name          AS "Organism",
-		afs.strain_or_line       AS "Strian or Line", 
+		afs.strain_or_line       AS "Strain or Line", 
 		afs.individual           AS "Individual", 
 		MOT2.name                AS "Sex",
 		afs.age                  AS "Age", 
@@ -579,7 +581,8 @@ sub get_all_affy_info_sql{
 		LEFT JOIN $TB_PROJECT proj ON ( afs.project_id = proj.project_id)
 		JOIN $TB_USER_LOGIN ul ON  (ul.user_login_id = afa.user_id)
 		LEFT JOIN $TBBL_MGED_ONTOLOGY_TERM MOT2 ON ( MOT2.MGED_ontology_term_id = afs.sex_ontology_term_id ) 
-		WHERE afa.affy_array_id IN ($array_ids)
+    $where
+    ORDER BY afa.affy_array_id ASC
 	 ~;
 	 
 	 
@@ -617,7 +620,7 @@ sub get_affy_geo_info_sql{
 		afa.affy_array_protocol_ids AS "Array Protcol Ids",
 		afa.protocol_deviations  AS "Array Protocol Deviations",
 		afs.full_sample_name     AS "Full Name",
-		afs.strain_or_line       AS "Strian or Line",
+		afs.strain_or_line       AS "Strain or Line",
 		afs.individual           AS "Individual",
 		MOT2.name                AS "Sex",
 		afs.age                  AS "Age",
