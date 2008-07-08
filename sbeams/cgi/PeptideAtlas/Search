@@ -42,6 +42,8 @@ $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
+my %search_type_param;
+
 
 
 ###############################################################################
@@ -223,8 +225,10 @@ sub handle_request {
 
   #### If the output_mode is HTML, then display the form
   my $buffer = '';
+  my $search_types_clause = getSearchTypeClause( params => \%parameters );
   if ($sbeams->output_mode() eq 'html') {
       my $spacer = $sbeams->getGifSpacer(800);
+      my $sm_spacer = '&nbsp;' x 20;
 
       $buffer .= $q->start_form(-method=>"POST",
                            -action=>"$base_url",
@@ -233,16 +237,21 @@ sub handle_request {
       $buffer .= "<BR>$spacer<BR><P>";
       $buffer .= qq~<nobr><CENTER><IMG SRC="$HTML_BASE_DIR/images/PeptideAtlas_Logo.png"><BR>~;
       #$buffer .= qq~<img src="$HTML_BASE_DIR/images/space.gif" height=1 width=30>~;
+      my $advanced = getSearchKeyTypeHTML();
+#      $buffer .= "$advanced ";
       $buffer .= $q->textfield(-name=>"search_key",
-                          -default=>$search_key,
-			  -size=>60,
-			  -maxlength=>2000,
-                         );
+                               -default=>$search_key,
+                               -size=>60,
+                               -maxlength=>2000,
+                               );
+
       $buffer .= "&nbsp;&nbsp;&nbsp;";
       $buffer .= $q->submit(-name => "action",
                        -value => 'QUERY',
                        -label => 'GO');
       $buffer .= qq~<BR>
+      Build type: <select name="build_type_name"> $build_type_selection->{HTML_optionlist} </select> &nbsp; &nbsp; $advanced<BR>
+      <BR>
         (e.g.
           <A HREF="$base_url?search_key=ENSP00000222219&action=GO"><SPAN TITLE="Ensembl Protein Identifier" CLASS="popup">ENSP00000222219</SPAN></A>,
           <A HREF="$base_url?search_key=IPI00010348&action=GO">IPI00010348</A>,
@@ -256,12 +265,9 @@ sub handle_request {
           <A HREF="$base_url?search_key=PAp00000097&action=GO">PAp00000097</A>,
           <A HREF="$base_url?search_key=AAVEEGIVLGGGCALLR&action=GO">AAVEEGIVLGGGCALLR</A>
         )<BR>
-        Build type: <select name="build_type_name">
-        $build_type_selection->{HTML_optionlist}
-        </select>
-        </CENTER></nobr>
-        </P>
       ~;
+      
+      $buffer .= '</CENTER></nobr></P>';
       $buffer .= $q->endform;
   }
 
@@ -329,9 +335,11 @@ sub handle_request {
                    AND DAB.organism_id IS NOT NULL )
         WHERE 1 = 1
           $search_key_clause
+          $search_types_clause
           AND SK.atlas_build_id IN ( $build_type_selection->{atlas_build_ids} )
        ORDER BY search_key_name
   ~;
+  $log->debug( $sql );
 
 
   #### Define the hypertext links for columns that need them
@@ -572,3 +580,194 @@ sub getBuildTypeSelection {
   return \%tmp;
 
 } # end getBuildTypeSelection
+
+sub getSearchTypeClause {
+  my %args = @_;
+  for my $param ( keys( %{$args{params}} ) ) {
+    $log->debug( "$param -> $args{params}->{param}" );
+  }
+  my $clause = '';
+  $search_type_param{all_fields} = 'checked';
+
+  # Short circuit if'n all was specified
+  return $clause if $args{params}->{all_fields} eq 'on';
+
+  # conjuntion?
+  my $conj = '';
+  if ( $args{params}->{gene_name} eq 'on'  ) {
+    $search_type_param{gene_name} = 'checked';
+    $clause .= " $conj search_key_type LIKE '%NAME%'\n";
+    $conj = ' OR ';
+  }
+  if ( $args{params}->{gene_id} eq 'on'  ) {
+    $search_type_param{gene_id} = 'checked';
+    $clause .= " $conj search_key_type LIKE '%ID%'\n";
+    $conj = ' OR ';
+  }
+  if ( $args{params}->{sequence} eq 'on'  ) {
+    $search_type_param{sequence} = 'checked';
+    $clause .= " $conj search_key_type = 'peptide sequence'\n";
+    $conj = ' OR ';
+  }
+  if ( $args{params}->{refseq} eq 'on'  ) {
+    $search_type_param{refseq} = 'checked';
+    $clause .= " $conj search_key_type LIKE 'REFSEQ%'\n";
+    $conj = ' OR ';
+  }
+  if ( $args{params}->{accession} eq 'on'  ) {
+    $search_type_param{accession} = 'checked';
+    $clause .= " $conj search_key_type IN ( 'gi Accession', 'HINV', 'IPI',
+     'RefSeq', 'SGD ID', 'TrEMBL', 'UniGene', 'UniProt', 'UniProt ID',
+     'UniProt/TrEMBL', 'UniProtKB', 'VEGA' ) ";
+    $conj = ' OR ';
+  }
+  if ( $args{params}->{pa_accession} eq 'on'  ) {
+    $search_type_param{pa_accession} = 'checked';
+    $clause .= " $conj search_key_type = 'PeptideAtlas'\n";
+    $conj = ' OR ';
+  }
+  if ( $args{params}->{gene_symbol} eq 'on'  ) {
+    $search_type_param{gene_symbol} = 'checked';
+    $clause .= " $conj search_key_type LIKE '%symbol'\n";
+    $conj = ' OR ';
+  }
+  if ( $clause ) {
+    $search_type_param{all_fields} = '';
+    $clause = " AND ( $clause ) ";
+  }
+  return $clause;
+}
+
+# http://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/Search2?search_key=yal%25&action=GO&build_type_name=Any
+# &all_fields=on
+# &gene_name=on
+# &gene_id=on
+# &gene_symbol=on
+# &accession=on
+# &refseq=on
+# &sequence=on
+# &pa_accession=on
+#
+# Alias                  
+# COG                    
+# combined               
+# Common Name            
+# Description            
+# Ensembl Protein        
+# Entrez Gene Symbol     
+# Entrez GeneID          
+# Full Name              
+# full_name              
+# Functional Description 
+# Functional_Note        
+# Gene ID                
+# Gene name              
+# gene_name              
+# gi Accession           
+# HINV                   
+# IPI                    
+# Old ORF Name           
+# ORF Name               
+# ORF qualifier          
+# ORF_name               
+# peptide sequence       
+# PeptideAtlas           
+# Protein name           
+# RefSeq                 
+# REFSEQ_INFERRED        
+# REFSEQ_MODEL           
+# REFSEQ_PREDICTED       
+# REFSEQ_PROVISIONAL     
+# REFSEQ_REVIEWED        
+# REFSEQ_VALIDATED       
+# SGD ID                 
+# TrEMBL                 
+# UniGene                
+# UniProt                
+# UniProt ID             
+# UniProt Name           
+# UniProt Symbol         
+# UniProt/TrEMBL         
+# UniProtKB              
+# VEGA   
+#
+#
+sub getSearchKeyTypeHTML {
+  my $spacer = $sbeams->getGifSpacer(300);
+  my $content = qq~
+  <SCRIPT  TYPE="text/javascript">
+  function toggle_boxes(type) {
+
+    var fields = new Array();
+    if ( type == "specific" ) {
+      fields[0] = "gene_name";
+      fields[1] = "gene_id";
+      fields[2] = "gene_symbol";
+      fields[3] = "accession";
+      fields[4] = "refseq";
+      fields[5] = "sequence";
+      fields[6] = "pa_accession";
+    } else {
+      fields[0] = "all_fields";
+    }
+//    alert( "array fields has " + fields.length + " elements" );
+    for (var i=0; i< fields.length; i++) {
+      var box = document.getElementsByName(fields[i]);
+      box[0].checked = false;
+    }
+  }
+  </SCRIPT>
+
+  <TABLE class=info_box>
+  <TR>
+  <TD ALIGN=RIGHT><INPUT TYPE=checkbox ID="all" $search_type_param{all_fields} NAME=all_fields ONCHANGE=toggle_boxes('specific')></INPUT></TD>
+  <TD>All</TD>
+  </TR>
+
+  <TR>
+  <TD ALIGN=RIGHT><INPUT ID="specific" TYPE=checkbox NAME=gene_name $search_type_param{gene_name} ONCHANGE=toggle_boxes('all')></INPUT></TD>
+  <TD>Protein/Gene Name</TD>
+  </TR>
+
+  <TR>
+  <TD ALIGN=RIGHT><INPUT ID="specific" TYPE=checkbox NAME=gene_id $search_type_param{gene_id} ONCHANGE=toggle_boxes('all')></INPUT></TD>
+  <TD>Protein/Gene ID</TD>
+  </TR>
+
+  <TR>
+  <TD ALIGN=RIGHT><INPUT ID="specific" TYPE=checkbox NAME=gene_symbol $search_type_param{gene_symbol} ONCHANGE=toggle_boxes('all')></INPUT></TD>
+  <TD>Protein/Gene Symbol</TD>
+  </TR>
+
+  <TR>
+  <TD ALIGN=RIGHT><INPUT ID="specific" TYPE=checkbox NAME=accession  $search_type_param{accession} ONCHANGE=toggle_boxes('all')></INPUT></TD>
+  <TD>Accession</TD>
+  </TR>
+
+  <TR>
+  <TD ALIGN=RIGHT><INPUT ID="specific" TYPE=checkbox NAME=refseq $search_type_param{refseq} ONCHANGE=toggle_boxes('all')></INPUT></TD>
+  <TD>Refseq</TD>
+  </TR>
+
+  <TR>
+  <TD ALIGN=RIGHT><INPUT ID="specific" TYPE=checkbox NAME=sequence $search_type_param{sequence} ONCHANGE=toggle_boxes('all')></INPUT></TD>
+  <TD>Sequence</TD>
+  </TR>
+
+  <TR>
+  <TD ALIGN=RIGHT><INPUT ID="specific" TYPE=checkbox $search_type_param{pa_accession} NAME=pa_accession></INPUT></TD>
+  <TD>Peptide Accession</TD>
+  </TR>
+  </TABLE>
+  ~; 
+  my $toggle = $sbeams->make_toggle_section( textlink => 1,
+                                             showtext => "Advanced Search",
+                                             hidetext => "Basic Search", 
+                                               sticky => 1,
+                                               name   => 'PA_search_key_options',
+                                              imglink => 1,
+                                              visible => 0,
+                                              content => $content );
+
+  return "$toggle";
+}
