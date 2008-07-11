@@ -406,12 +406,12 @@ sub handle_request {
       JOIN $TBAT_PEPTIDE P ON (P.peptide_sequence = NLS.sequence)
       $peptide_sql
       $NIST_library_clause
-      AND NST.NIST_spectrum_type_name='Consensus'
+      AND NST.NIST_spectrum_type_name IN ('Consensus','Single')
       AND ( NLSP.peak_label LIKE 'y%' OR   NLSP.peak_label LIKE 'b%' )
       ORDER BY biosequence_name, NLS.sequence, NLS.modified_sequence, NLS.charge, NLSP.relative_intensity DESC, PI.best_probability DESC
       ~;
 
-#      $log->debug( $sql );
+      $log->debug( $sql );
       my $sth = $sbeams->get_statement_handle($sql);
 
 # 0      NLS.NIST_library_spectrum_id,
