@@ -266,8 +266,10 @@ sub handleRequest {
           default_sample_project_id => $default_sample_project_id,
       );
 
+     commit_transaction();
      populateSampleRecordsWithSampleAccession();
-     # reset to standard autocommit mode
+     # last commit, then reset to standard autocommit mode
+     commit_transaction();
      $sbeams->reset_dbh();
 
      my $t1 = new Benchmark; 
@@ -296,7 +298,7 @@ sub handleRequest {
 
   #### If coordinates only was requested
   if ($OPTIONS{"coordinates"}) {
-    print "\n Begin calc coordinates \n";
+    print "\n Begin (manual) calc coordinates \n";
 
     ## set infile to coordinate mapping file
     my $builds_directory = get_atlas_build_directory (atlas_build_id =>
@@ -616,24 +618,24 @@ sub buildAtlas {
     #### Load from .PAxml file
     my $PAxmlfile = $source_dir . "APD_" . $organism_abbrev . "_all.PAxml";
 
-    if (-e $PAxmlfile) 
-    {
+    if (-e $PAxmlfile) {
         loadFromPAxmlFile(
             infile => $PAxmlfile,
             sbid_asbid_sid_hash_ref => \%proteomicsSBID_hash,
             atlas_build_id => $ATLAS_BUILD_ID,
         );
 
-    } else 
-    {
+    } else {
         die("ERROR: Unable to find '$PAxmlfile' to load data from.");
     }
 
+    # Commit final inserts (if any) from PAxml load.
+    commit_transaction();
 
     ## set infile to coordinate mapping file
     my $mapping_file = "$source_dir/coordinate_mapping.txt";
 
-    print "\n Begin calc coordinates \n";
+    print "\n Begin calc coordinates (build_atlas)\n";
 
     #### Update the build data already loaded with genomic coordinates
     readCoords_updateRecords_calcAttributes(
