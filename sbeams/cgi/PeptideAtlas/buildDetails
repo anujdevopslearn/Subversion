@@ -333,8 +333,8 @@ sub get_sample_info {
 #         n_progressive_peptides, model_90_sensitivity, model_90_error_rate
   my $sql =<<"  END";
   SELECT ASB.atlas_search_batch_id, sample_tag, SBS.n_searched_spectra,
-         n_good_spectra, n_distinct_multiobs_peptides, 
-         n_uniq_contributed_peptides, n_progressive_peptides, 
+         n_good_spectra, n_distinct_multiobs_peptides,
+         n_uniq_contributed_peptides, n_progressive_peptides,
          model_90_error_rate
   FROM $TBAT_SEARCH_BATCH_STATISTICS SBS JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB 
     ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
@@ -343,7 +343,7 @@ sub get_sample_info {
   JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id )
   WHERE ABS.atlas_build_id = $build_id
   AND ABSB.atlas_build_id = $build_id
-  ORDER BY proteomics_search_batch_id ASC
+  ORDER BY n_progressive_peptides ASC
   END
   my @sample_info = $sbeams->selectSeveralColumns ( $sql );
 
@@ -357,9 +357,9 @@ sub get_sample_info {
       $batch->[$idx] = sprintf( "%0.1f", (100 * $batch->[$idx]))  if $batch->[$idx] !~ /FONT/; 
     }
     push @samples, $batch;
-    
+
   }
- 
+
   my $dag = '<sup>&dagger;</sup>';
   my @headings = ( 'ID',
                    'Sample Name',
