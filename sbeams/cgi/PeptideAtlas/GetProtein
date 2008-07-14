@@ -2494,8 +2494,8 @@ sub displayExternalLinksSection {
       print $sbeamsMOD->encodeSectionItem(
         key => 'Human Protein Atlas',
         tr_info => $tr,
-        value => $entrezGeneID,
-        url => "http://www.proteinatlas.org/search_advanced.php?1--search_str=$entrezGeneID",
+        value => qq~<div style="display:none"><form name="hpa" method="POST" action="http://www.proteinatlas.org/search_advanced.php" target="_info"><input type="hidden" name="search_str" value="$entrezGeneID"></form></div><a href="javascript:document.hpa.submit()" title="Look up $entrezGeneID in the Human Protein Atlas">$entrezGeneID</a>~,
+        url => "",
       );
     }
   }
