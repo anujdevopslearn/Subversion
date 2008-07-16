@@ -62,7 +62,9 @@ my $show_image = 0;
     my $batch_help = get_table_help( 'batch' );
 
     my $page = $sbeams->getGifSpacer( 700 ) . "<BR>\n";
+#		my $back = $sbeams->getBackForm();
     $page .=<<"    END";
+
     <P>
     This shows some information about the currently selected build.  Peptide
     numbers are for peptides seen more than once, except as denoted by an
@@ -138,7 +140,8 @@ sub get_table_help {
                  { key => "# Spectra ID'd", value => 'The number of spectra identifed with a probability greater than the atlas threshold ' },
                  { key => '# Distinct', value => 'The number of distinct peptide sequences, seen more than once (multiobs), in this build that are seen in this sample. ' },
                  { key => '# Unique', value => "The number of distinct, multiobs peptides that are seen only in this sample (unique contribution).  This discriminates against smaller samples, and is less useful in atlas' with a large number of samples. " },
-                 { key => '# Cumulative', value => 'Order-dependant unique multiobs peptides contributed by a given sample.  The contribution for each sample is based on the samples that have gone before it, so later samples tend to have a lower progressive contribution. ' },
+                 { key => '# Progressive', value => 'Order-dependant unique multiobs peptides contributed by a given sample.  The contribution for each sample is based on the samples that have gone before it, so later samples tend to have a lower progressive contribution. ' },
+                 { key => '# Cumulative', value => 'Order-dependant cumulative number of unique multiobs peptides contributed to build by this and previous samples. ' },
 #                 { key => 'Sens', value => 'The sensitivity of the Peptide Prophet model at a probablility of 0.9, the percent of true positives that would be included at that threshold was used as a cutoff. ' },
                  { key => 'FDR (%)', value => 'The error rate of peptides above the threshold Peptide Prophet model at a probablility of 0.9, the percent of false positives that would be included at the build threshold. ' }
         );
@@ -334,7 +337,7 @@ sub get_sample_info {
   my $sql =<<"  END";
   SELECT ASB.atlas_search_batch_id, sample_tag, SBS.n_searched_spectra,
          n_good_spectra, n_distinct_multiobs_peptides,
-         n_uniq_contributed_peptides, n_progressive_peptides,
+         n_uniq_contributed_peptides, n_progressive_peptides, cumulative_n_peptides,
          model_90_error_rate
   FROM $TBAT_SEARCH_BATCH_STATISTICS SBS JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB 
     ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
@@ -343,7 +346,7 @@ sub get_sample_info {
   JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id )
   WHERE ABS.atlas_build_id = $build_id
   AND ABSB.atlas_build_id = $build_id
-  ORDER BY n_progressive_peptides ASC
+  ORDER BY rownum, cumulative_n_peptides, ABSB.atlas_build_search_batch_id ASC
   END
   my @sample_info = $sbeams->selectSeveralColumns ( $sql );
 
@@ -351,8 +354,8 @@ sub get_sample_info {
   my @samples;
   for my $batch ( @sample_info ) {
     $show_image++;
-    for my $idx ( 5,6 ) { $batch->[$idx] ||= 0; }
-    for my $idx ( 7 ) {
+    for my $idx ( 5,6, 7 ) { $batch->[$idx] ||= 0; }
+    for my $idx ( 8 ) {
       $batch->[$idx] = $sbeams->makeInactiveText('ND') if !defined $batch->[$idx];
       $batch->[$idx] = sprintf( "%0.1f", (100 * $batch->[$idx]))  if $batch->[$idx] !~ /FONT/; 
     }
@@ -367,6 +370,7 @@ sub get_sample_info {
                    "# Spectra ID'd", 
                    '# Distinct', 
                    '# Unique', 
+                   '# Progressive',
                    '# Cumulative',
                    'FDR (%)'
       );
