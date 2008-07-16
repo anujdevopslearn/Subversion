@@ -28,6 +28,8 @@ my $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
+my %debug_info;
+
 ###############################################################################
 # Set program name and usage banner for command like use
 ###############################################################################
@@ -255,16 +257,22 @@ sub get_build_contributions {
     
 # sample_tag sbid ngoodspec      npep n_new_pep cum_nspec cum_n_new is_pub
 
+   my $rownum = 0;
+	 my $n_cum_pep = 0;
    while ( my $line = <CONTRIB> ) { 
      chomp $line; 
      next if $line =~ /^-----|sample_tag\s+sbid/;
+		 $rownum++;
      $line =~ s/^\s+//;
      $line =~ s/\s+/\t/g;
 
      my @vals = split "\t", $line, -1;
+		 $n_cum_pep += $vals[4];
      $results{$vals[1]} = { n_good_spectra => $vals[2],
                             n_peptides => $vals[3],
-                            n_progressive_peptides => $vals[4] };
+                            n_progressive_peptides => $vals[4],
+														cumulative_n_peptides => $n_cum_pep,
+														rownum => $rownum };
 
    }
 
@@ -417,7 +425,7 @@ sub get_contributions {
   GROUP BY ASB.sample_id, ABSB.atlas_build_search_batch_id, sample_title, ASB.atlas_search_batch_id
   SMPL
   my @uniq_cnt = $sbeams->selectSeveralColumns( $sql );
-  $log->debug( "Getting contributions:\n $sql" );
+	$debug_info{get_contrib_sql} = $sql;
 
   my %results;
   for my $cnt ( @uniq_cnt ) {
@@ -439,10 +447,14 @@ sub insert_stats {
                     n_searched_spectra n_uniq_contributed_peptides 
                     model_90_sensitivity model_90_error_rate 
                     n_distinct_peptides n_distinct_multiobs_peptides 
-                    n_progressive_peptides n_good_spectra ) ) {
+                    n_progressive_peptides n_good_spectra rownum cumulative_n_peptides ) ) {
       $rowdata{$k} = $build->{$k};
     }
-  
+    # Assertion!
+		unless ( $rowdata{n_progressive_peptides} >= $rowdata{n_uniq_contributed_peptides} ) {
+			print STDERR "Exception! n_progressive($rowdata{n_progressive_peptides}) less than n_uniq ($rowdata{n_uniq_contributed_peptides} for $rowdata{atlas_build_search_batch_id} !\n";
+			print STDERR "$debug_info{get_contrib_sql}\n";
+		}
     my $stats_id = $sbeams->updateOrInsertRow( 
                                        insert => 1,
                                    table_name => $TBAT_SEARCH_BATCH_STATISTICS,
