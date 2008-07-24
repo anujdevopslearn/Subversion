@@ -4,12 +4,10 @@ ALTER TABLE dbo.peptide ADD CONSTRAINT peptide_accession_uk UNIQUE (peptide_acce
 ALTER TABLE dbo.peptide ADD CONSTRAINT peptide_sequence_uk UNIQUE (peptide_sequence)
 
 
-CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_mapping ( peptide_instance_id ) --WITH DROP_EXISTING
 CREATE NONCLUSTERED INDEX idx_atlas_build_id ON dbo.peptide_instance ( atlas_build_id ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_instance ( peptide_instance_id ) --WITH DROP_EXISTING
 
 CREATE NONCLUSTERED INDEX idx_peptide_sequence ON dbo.peptide ( peptide_sequence ) --WITH DROP_EXISTING
-
-CREATE NONCLUSTERED INDEX idx_atlas_build_id ON dbo.peptide_instance ( atlas_build_id ) --WITH DROP_EXISTING
 
 CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_instance_sample ( peptide_instance_id ) --WITH DROP_EXISTING
 CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_instance_search_batch ( peptide_instance_id ) --WITH DROP_EXISTING
