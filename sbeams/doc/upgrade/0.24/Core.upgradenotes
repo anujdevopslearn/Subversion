@@ -32,7 +32,7 @@ file to reflect current values in production db.  All changes occured in the
 table_columns table.
 column_name went from VARCHAR(50) to VARCHAR(255)
 column_title went from VARCHAR(50) to VARCHAR(255)
-is_display_field went from CHAR(1) to VARCHAR(50)
+is_display_column went from CHAR(1) to VARCHAR(50)
 
 ALTER TABLE table_column DROP COLUMN column_name
 ALTER TABLE table_column ADD column_name VARCHAR(255)
