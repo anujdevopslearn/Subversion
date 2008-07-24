@@ -434,7 +434,7 @@ AT_GetMRMList	11	n_protein_mappings_constraint	Number of Proteins Mapped Constra
 AT_GetMRMList	12	n_genome_locations_constraint	Number of Genome Locations Mapped Constraint									N	text	5		Y	Y	N	Constraint for number of genome locations for this peptide ( >=0 )		
 AT_GetMRMList	13	n_highest_intensity_fragment_ions	Num of highest Inten Frag Ions to Keep									N	text	5		Y	Y	N	Number highest inten frag ions per spec to keep, defaults to 10		
 AT_GetMRMList	14	n_peptides_per_protein	Number of peptides per protein constraint									N	text	5		Y	Y	N	Number of peptides to return per protein, defaults to 5.		
-AT_GetMRMList	15	include_validated_transitions	Include contributed validated transitions if available									N	checkbox	1		Y	Y	N	Include contributed validated transitions.  These will take precedence over transitions derived from the consensus library.		
+AT_GetMRMList	15	include_validated_transitions	Include contributed validated transitions									N	checkbox	1		Y	Y	N	Include contributed validated transitions.  These will take precedence over transitions derived from the consensus library.		
 AT_GetMRMList	16	include_theoretical_peptides	Include theoretical peptide information									N	checkbox	1		Y	Y	N	Include theoretical peptide information.  These will be used if not enough peptides or transitions were observed to fulfill # peptides and # transitions options.		
 AT_spectrum_annotation	1	spectrum_annotation_id	Spectrum Annotation ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_spectrum_annotation	2	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id	Y	text	10		Y	Y	N	Sample/experiment containing this spectrum		
