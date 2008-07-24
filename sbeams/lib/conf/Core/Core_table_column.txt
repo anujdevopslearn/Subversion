@@ -335,8 +335,8 @@ table_property	11	next_step	Next table to manage	varchar	100	0	Y		N			Y	text	50	
 table_column	1	table_column_id	Table Column ID	int	4	0	N		Y							N	N				pkDEFAULT
 table_column	2	table_name	Table Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Abstract name of the table (non-Core tables should be prefixed with the module prefix)		
 table_column	3	column_index	Column Index	int	4	0	N		N			Y	text	10		Y	Y	N	Index of the column used to control odering
-table_column	4	column_name	Column Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Name of the column in the database table
-table_column	5	column_title	Column Title	varchar	50	0	N		N			Y	text	50		Y	Y	N	Friendly title of the column
+table_column	4	column_name	Column Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of the column in the database table
+table_column	5	column_title	Column Title	varchar	255	0	N		N			Y	text	50		Y	Y	N	Friendly title of the column
 table_column	6	data_type	Data Type	varchar	50	0	N		N			Y	text	25		Y	Y	N	Standardized SQL datatype of the column
 table_column	7	data_scale	Data Scale	int	4	0	N		N			Y	text	10		Y	Y	N	First qualifier of length of the datatype (depends on the datatype itself)
 table_column	8	data_precision	Data Precision	int	4	0	Y		N			Y	text	10		Y	Y	N	"Second qualifier of precision of datatype (used, e.g., for NUMERIC(10,2))"
@@ -350,7 +350,7 @@ table_column	15	input_type	Form Input Type	varchar	50	0	Y		N			N	text	50		Y	Y	N	
 table_column	16	input_length	Form Input Length	varchar	25	0	Y		N			N	text	25		Y	Y	N	What is the length of scale or size of the input type (height for textarea)
 table_column	17	onChange	JavaScript onChange	varchar	255	0	Y		N			N	text	50		Y	Y	N	Javascript that can be triggered with onChange in the HTML form
 table_column	18	is_data_column	Is Data Column?	char	1	0	Y		N			N	text	5		Y	Y	N	Is this a data column that is potentially editable or is a housekeeping column?
-table_column	19	is_display_column	Is Display Column?	char	1	0	Y		N			N	text	5		Y	Y	N	Should this column be displayed in a form?		
+table_column	19	is_display_column	Is Display Column?	varchar	50	0	Y		N			N	text	5		Y	Y	N	Should this column be displayed in a form?		
 table_column	20	is_key_field	Is a Key Field?	char	1	0	Y		N			N	text	5		Y	Y	N	Does this column belong to the (possibly composite) key for this table		
 table_column	21	column_text	Column Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	A friendly description of the meaning of this column (this text here!)		
 table_column	22	optionlist_query	Drop down list query	text	16	0	Y		N			N	textarea	6		Y	Y	N	A query which will populate the contents of this field		
