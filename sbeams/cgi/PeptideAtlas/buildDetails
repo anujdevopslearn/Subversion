@@ -23,6 +23,7 @@ use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::DataTable;
+use SBEAMS::Connection::GoogleVisualization;
 
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
@@ -93,16 +94,23 @@ my $show_image = 0;
     $page .= get_build_overview ( $build_id );
 #  print STDERR 'sample info ' . time() . "\n";
     $page .= "<BR>$batch_help\n";
-    $page .= get_sample_info( $build_id );
+		my ( $sample_table, $sample_arrayref ) = get_sample_info( $build_id );
+    $page .= $sample_table;
     $page .= "<BR>\n";
-    $page .= get_build_plots ( $build_id ) if $show_image;
 #  print STDERR 'showtime ' . time() . "\n";
     # Add peptide stats section
     # Add graphic
-   
+
+    my ( $chart_div, $header ) = get_draw_chart_function( $sample_arrayref );
 
     # Display page
-    $atlas->display_page_header(project_id => $project_id, onload => 'sortables_init()', sortable => 1 );
+    $atlas->display_page_header( header_info => $header, project_id => $project_id, onload => 'sortables_init()', sortable => 1 );
+
+
+		$page .= <<"    END_PAGE";
+    END_PAGE
+    $page .= get_build_plots ( $build_id, $chart_div ) if $show_image;
+
     print $page;
 		$atlas->display_page_footer();
 
@@ -165,7 +173,8 @@ sub get_table_help {
 
 sub get_build_plots {
   my $build_id = shift;
-  my $table = "<TABLE WIDTH=800>\n";
+  my $chart_div = shift;
+  my $table = "<TABLE WIDTH=900>\n";
 
   my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'build_plot',
                                                   visible => 1,
@@ -174,10 +183,22 @@ sub get_build_plots {
                                                   sticky  => 1 );
 
   $table .= $atlas->encodeSectionHeader(
-      text => 'Progressive Contribution Plot',
+      text => 'Sample Contribution Plot',
       span => 4,
       link => $link
   );
+
+#		<DIV ALIGN=center><H3>Experiment Contribution Plot</H3></DIV>
+#  <TR $tr><TD><IMG SRC=buildPlot?atlas_build_id=$build_id></IMG></TD></TR>
+#    $chart_div
+  $table .=<<"  END";
+  <TR $tr><TD>&nbsp;</TD></TR>
+  <TR $tr><TD class=plot_caption>Plot showing the number of distinct (n_obs > 1) peptides contributed by each sample, and the cumulative number of distinct (n_obs > 1) peptides for the build as of that sample.</TD></TR>
+  <TR $tr><TD>&nbsp;</TD></TR>
+  <TR $tr><TD>$chart_div</TD></TR>
+  <TR $tr><TD>&nbsp;</TD></TR>
+  END
+   
   my $cp_img_path = "$PHYSICAL_BASE_DIR/images/tmp";
   my $img_path = "$HTML_BASE_DIR/images/tmp";
   my $build_path = get_build_path( build_id => $build_id );
@@ -192,13 +213,9 @@ sub get_build_plots {
     $table .= $build_image_rows;
   }
 
-  $table .=<<"  END";
-  <TR $tr><TD class=plot_caption>Plot showing the cumulative number of multiply observed peptides contributed by each sample</TD></TR>
-  <TR $tr><TD><IMG SRC=buildPlot?atlas_build_id=$build_id></IMG></TD></TR>
-  </TABLE>
-  END
+  $table .= "\n</TABLE>\n";
+	
   return $table;
-  
 }
 
 
@@ -316,24 +333,6 @@ sub get_sample_info {
                                                   imglink => 1,
                                                   sticky  => 1 );
 
-#  search_batch_statistics_id
-#  atlas_build_search_batch_id
-#  n_observations
-#  n_searched_spectra
-#  n_distinct_peptides
-#  n_distinct_multiobs_peptides
-#  n_uniq_contributed_peptides
-#  n_progressive_peptides
-#  model_90_sensitivity
-#  model_90_error_rate
-# ASB.atlas_search_batch_id, proteomics_search_batch_id
-
-#  my @sample_info;
-#  $log->debug( $sbeams->evalSQL ( <<"  END" ) );
-#  SELECT sample_tag, sample_description, SBS.n_searched_spectra, n_distinct_peptides,
-#         n_uniq_contributed_peptides n_observations, n_searched_spectra,
-#         n_distinct_multiobs_peptides, n_uniq_contributed_peptides,
-#         n_progressive_peptides, model_90_sensitivity, model_90_error_rate
   my $sql =<<"  END";
   SELECT ASB.atlas_search_batch_id, sample_tag, SBS.n_searched_spectra,
          n_good_spectra, n_distinct_multiobs_peptides,
@@ -378,7 +377,7 @@ sub get_sample_info {
   $table .= $atlas->encodeSectionHeader(
       text => 'Sample Contribution',
       link => $link,
-      width => 900
+      width => 920
   );
 
 
@@ -390,7 +389,7 @@ sub get_sample_info {
                                         bg_color => '#EAEAEA',
                                         sortable => 1 );
   $table .= '</TABLE>';
-  return $table;
+  return ( $table, \@samples );
 
 }
 
@@ -410,188 +409,22 @@ sub get_build_path {
   return $path;
 }
 
-__DATA__
+sub get_draw_chart_function {
+	my $sample_arrayref = shift || return '';
 
-sub run_search {
-  my $params = shift;
-  my $content;
-  for my $arg ( qw( mass_list mass_window) ) {
-    unless ( $params->{$arg} ) {
-      $content .= "Missing required parameter: $arg <BR>\n";
-      return $content;
-    }
-  }
-#  for my $p ( keys( %$params ) ) { $content .= "$p => " . $params->{$p} . "<BR>\n"; }
-  my $mass_list = $params->{mass_list};
-  $mass_list =~ s/\s+/ /gm;
-  my @masses = split( " ", $mass_list );
-  my $peptides = $sbeamsMOD->runMassSearch( masses => \@masses, %{$params} );
-  my $peptide_table = SBEAMS::Connection::DataTable->new( BORDER => 0 );
-  my $type = ( $params->{search} eq 'iden' ) ? 'Identified' : 'Predicted';
-  $peptide_table->addRow( ['Search Mass', 'IPI', "$type sequence", 'Peptide Mass',
-                           'Mass Delta', '# ox Met', 'Protein Name' ] );
-  $peptide_table->setRowAttr( ROWS => [1], BGCOLOR => '#C0D0C0' );
-  my $current_group;
-  my $grp_row = 2;
-  my $bgcolor = '#FFFFFF';
-  for my $peptide ( @$peptides ) {
-    my ( $grp, 
-         $smass, 
-         $ipi, 
-         $seq, 
-         $dbmass, 
-         $prot, 
-         $delta, 
-         $ox_met ) = @$peptide;
-
-    $current_group = $grp unless $current_group;
-
-    $dbmass = sprintf( "%0.3f", $dbmass );
-    if ( $dbmass =~ /0.000/ ) { $dbmass = 'na'; }
-    $delta =  sprintf( "%0.3f", $delta );
-    if ( $delta =~ /0.000/ ) { $delta = 'na'; }
-
-    $prot = $sbeams->truncateStringWithMouseover( string => $prot, len => 50 );
-    $ipi = "<A HREF='Glyco_prediction.cgi?search_type=IPI Accession Number;action=Show_hits_form;search_term=$ipi' TARGET=prot_details>$ipi</A>";
-    $peptide_table->addRow( [ $smass, $ipi, $seq, $dbmass, $delta, $ox_met, $prot] );
-    unless ( $grp == $current_group ) {
-      my $current_row = $peptide_table->getRowNum();
-#      $log->info( "group row is $grp_row, current row is $current_row, bgcolor is $bgcolor" );
-      $peptide_table->setRowAttr( ROWS => [$grp_row..$current_row - 1], BGCOLOR => $bgcolor );
-      $grp_row = $current_row;
-      $bgcolor = ( $bgcolor eq '#E0E0E0' ) ? '#FFFFFF' : '#E0E0E0';
-      $current_group = $grp;
-    }
-    my $current_row = $peptide_table->getRowNum();
-    $peptide_table->setRowAttr( ROWS => [$grp_row..$current_row], BGCOLOR => $bgcolor );
-
-  }
-  $content .= $peptide_table->asHTML();
-  return $content;
+	my @samples;
+	for my $s ( @{$sample_arrayref} ) {
+		push @samples, [ $s->[1], $s->[4], $s->[7] ];
+	}
+	my $GV = SBEAMS::Connection::GoogleVisualization->new();
+  my ( $chart ) = $GV->setDrawBarChart(  samples => \@samples,
+                                    	data_types => [ 'string', 'number', 'number' ],
+                                      	headings => [ 'Sample', 'Distinct peptides (n_obs > 1)', 'Cumulative peptides (n_obs > 1)' ],
+                                      show_table => 0,
+                                 truncate_labels => 24
+ 	);
+	my $header = $GV->getHeaderInfo();
+  return ( $chart, $header );
 }
 
-sub print_form {
-  my $params = shift;
-	
-	my $content = <<"  END";
-  <TABLE>
-   <TR CLASS='rev_gray_head'>
-    <TD class=rev_gray_head>Run Mass Search</TD>
-   </TR>
-   <TR>
-    <TD>
-    Enter desired constraints to run a mass-based search versus the identified or theoretical peptides in the database.  Note that your prophet cutoff will impact the number of results returned
-    </TD>
-   </TR>
-  </TABLE>
-  END
-
-  # Table to hold form elements
-  my $f_table = SBEAMS::Connection::DataTable->new( BORDER => 1 );
-
-  # Hashes to hold form labels/fields
-  my $input_labels = get_input_labels($params);
-  my $input_fields = get_input_fields($params);
-
-  # Loop through and add items to the form table
-  for my $key ( qw(mass_list mass_window ox_met alk_cys mass_type search charge ) ) {
-    $f_table->addRow(["<B>$input_labels->{$key}</B>", $input_fields->{$key}]); 
-  }
-
-  my @buttons = $sbeams->getFormButtons( types => [qw(submit reset)] );
-  $f_table->addRow( [join(" ", @buttons)] );
-
-  $f_table->setColAttr( COLS => [1], ROWS => [8], COLSPAN => 2 );
-#  $f_table->setColAttr( COLS => [1], ROWS => [1..6], ALIGN => 'RIGHT' );
-  $f_table->setColAttr( COLS => [1], ROWS => [8], ALIGN => 'CENTER' );
-  $f_table->setColAttr( COLS => [2], ROWS => [1..7], ALIGN => 'LEFT' );
-
-  $content .=<<"  END";
-  <FORM NAME=mass_search_form> 
-  $f_table 
-  <INPUT TYPE=hidden NAME=action VALUE=search></INPUT>
-  </FORM>
-  END
-  return $content;
-}
-
-sub get_input_labels {
-  my $params = shift;
-
-  my %in = ( mass_list   => 'Mass(es) to search, 1 per line:',
-             mass_window => 'Mass search range:',
-             ox_met      => 'Oxidized Methionine (+ 15.9949):',
-             alk_cys     => 'Alkylated Cys (+ 57.0215):',
-             mass_type   => 'Type of mass values:',
-             search      => 'Search subject:',
-             charge      => 'Peptide charge state:',
-             );
-  
-  return \%in;
-}
-
-sub get_input_fields {
-  my $params = shift;
-
-  my $mass_list = $params->{mass_list} || '';
-  $mass_list = "<TEXTAREA ROWS=4 COLS=12 NAME=mass_list>$mass_list</TEXTAREA>";
-
-  my $mass_window = $params->{mass_window} || '';
-  $mass_window = "<INPUT TYPE=text NAME=mass_window SIZE=10 VALUE=$mass_window></INPUT>";
-
-  my $mw_amu = ( $params->{mw_units} && $params->{mw_units} eq 'amu' ) ? 'CHECKED' : '';
-  my $mw_ppm = 'CHECKED' unless $mw_amu;
-  my $mw_radio =<<"  END";
-  PPM <INPUT TYPE=radio NAME=mw_units VALUE=ppm $mw_ppm> 
-  AMU <INPUT TYPE=radio NAME=mw_units VALUE=amu $mw_amu> 
-  END
-
-  my $ch_neu = ( $params->{charge} && $params->{charge} eq 'neu' ) ? 'CHECKED' : '';
-  my $ch_one = 'CHECKED' unless $ch_neu;
-  my $ch_radio =<<"  END";
-  Neutral <INPUT TYPE=radio NAME=charge VALUE=neu $ch_neu> 
-  H+ <INPUT TYPE=radio NAME=charge VALUE=one $ch_one> 
-  END
-
-  my $none = ( !$params->{ox_met} || $params->{ox_met} eq 'none' ) ? 'CHECKED' : '';
-  my $one = ( $params->{ox_met} eq 'one' ) ? 'CHECKED' : '';
-  my $two = ( $none || $one ) ? '' : 'CHECKED';
-  my $ox_met_radio =<<"  END";
-  None <INPUT TYPE=radio NAME=ox_met VALUE=0 $none> 
-  One <INPUT TYPE=radio NAME=ox_met VALUE=1 $one> 
-  Two <INPUT TYPE=radio NAME=ox_met VALUE=2 $two> 
-  END
-
-  my $yes = ( !$params->{alk_cys} || $params->{alk_cys} eq 'yes' ) ? 'CHECKED' : '';
-  my $no = ( !$yes ) ? 'CHECKED' : '';
-  my $alk_cys_radio =<<"  END";
-  Yes <INPUT TYPE=radio NAME=alk_cys VALUE=yes $yes> 
-  No <INPUT TYPE=radio NAME=alk_cys VALUE=no $no> 
-  END
-
-  my $mono = ( !$params->{mass_type} || $params->{mass_type} eq 'mono' ) ? 'CHECKED' : '';
-  my $avg = ( !$mono ) ? 'CHECKED' : '';
-  my $mass_type_radio =<<"  END";
-  Monoisotopic <INPUT TYPE=radio NAME=mass_type VALUE=mono $yes> 
-  END
-#Avg <INPUT TYPE=radio NAME=mass_type VALUE=avg $no> 
-
-  my $iden = ( !$params->{search} || $params->{search} eq 'iden' ) ? 'CHECKED' : '';
-  my $pred = ( !$iden ) ? 'CHECKED' : '';
-  my $search_radio =<<"  END";
-  Identifed <INPUT TYPE=radio NAME=search VALUE=iden $iden> 
-  Predicted <INPUT TYPE=radio NAME=search VALUE=pred $pred> 
-  END
-
-  my %in = ( 
-    mass_list   => $mass_list,
-    mass_window => $mass_window . " " . $mw_radio,
-    ox_met      => $ox_met_radio,
-    alk_cys     => $alk_cys_radio,
-    mass_type   => $mass_type_radio,
-    search      => $search_radio,
-    charge      => $ch_radio
-    );
-  return \%in;
-}
 
