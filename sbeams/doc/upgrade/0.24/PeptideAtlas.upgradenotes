@@ -611,7 +611,26 @@ svn update
 
 Then get the appropriate create table/key/index stmts from $SBEAMS/lib/sql/PeptideAtlas
 
+--------------------
+2008-07-24:  Tables that were added since the last release!  Some
+of these are referenced for CREATE above, and are prefaced with a
+'Y' below.  Those prefaced with an 'N' do not have CREATE stmts 
+above, although some have ALTER TABLE.
 
+Y AT_NIST_library
+Y AT_NIST_library_spectrum
+Y AT_NIST_library_spectrum_comment
+Y AT_NIST_library_spectrum_peak
+Y AT_NIST_spectrum_type
+N AT_proteotypic_peptide
+N AT_search_batch_statistics
+Y AT_spectrum
+Y AT_spectrum_identification
+Y AT_spectrum_peak
+N AT_spectrum_annotation
+N AT_spectrum_annotation_level
+N AT_peptide_annotation
+N AT_modified_peptide_annotation
+N AT_transition_suitability_level
 
-
-  
+-----------------
