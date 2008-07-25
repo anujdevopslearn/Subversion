@@ -190,6 +190,7 @@ sub displayGuestPageHeader {
   <HTML>
     $skin
   END_PAGE
+  print "$args{header_info}\n" if $args{header_info};
 
   $self->printJavascriptFunctions();
   }
@@ -222,6 +223,7 @@ sub displayStandardPageHeader {
 
   my $loadscript = "$args{onload};" || '';
 
+  print "$args{header_info}\n" if $args{header_info};
 
   #### Determine the Title bar background decoration
   my $header_bkg = "bgcolor=\"$BGCOLOR\"";
