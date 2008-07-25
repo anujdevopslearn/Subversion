@@ -524,9 +524,12 @@ AT_search_batch_statistics	6	min_n_proteins	Minimum number of proteins	int	4	0	Y
 AT_search_batch_statistics	7	max_n_proteins	Maximum number of proteins	int	4	0	Y		N							Y	Y	N	Maximum number of mapped proteins		
 AT_search_batch_statistics	8	n_distinct_multiobs_peptides	Number of distinct multiply observed peptides	int	4	0	Y		N							Y	Y	N	"Number of distinct, multiply-observed peptides"		
 AT_search_batch_statistics	9	n_uniq_contributed_peptides	Number of unique contributed peptides	int	4	0	Y		N							Y	Y	N	Number of unique peptides contributed to the atlas		
-AT_search_batch_statistics	10	n_progressive_peptides	Cumulative contributed peptides	int	4	0	Y		N							Y	Y	N	Cumulative number of peptides		
+AT_search_batch_statistics	10	n_progressive_peptides	Cumulative contributed peptides	int	4	0	Y		N							Y	Y	N	Cumulative peptides contributed by this sample		
 AT_search_batch_statistics	11	model_90_sensitivity	Peptide Prophet model sensitivity at P = 0.9	float	6	0	Y		N							N	N	N	Peptide Prophet sensitivity at P=0.9		
 AT_search_batch_statistics	12	model_90_error_rate	Peptide Prophet model error rate at P = 0.9	float	6	0	Y		N							N	N	N	Peptide Prophet error rate at P=0.9		
+AT_search_batch_statistics	13	n_good_spectra	Num spectra above threshold	int	4	0	Y		N							Y	Y	N	Number of spectra identified above Peptide Prophet cutoff		
+AT_search_batch_statistics	14	rownum	Line number in source file	int	4	0	Y		N							Y	Y	N	Line number in source Experiments.txt file 		
+AT_search_batch_statistics	15	cumulative_n_peptides	Cumulative number of peptides	int	4	0	Y		N							Y	Y	N	Cumulative number of peptides		
 AT_proteotypic_peptide	1	proteotypic_peptide_id	Proteotypic Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_proteotypic_peptide	2	source_biosequence_id	Source Biosequence ID	int	4	0	N		N	AT_biosequence	biosequence_id								Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
 AT_proteotypic_peptide	3	matched_peptide_id	Matched Peptide ID	int	4	0	Y		N	AT_peptide	peptide_id								Title of this PeptideAtlas build		
