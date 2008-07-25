@@ -1,0 +1,275 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# $Id: peptideSearch.cgi 4670 2006-04-22 01:54:05Z dcampbel $
+#
+# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+###############################################################################
+
+
+###############################################################################
+# Get the script set up with everything it will need
+###############################################################################
+use strict;
+use CGI::Carp qw(fatalsToBrowser croak);
+use Data::Dumper;
+use Bio::SeqIO;
+
+
+use lib qw (../../lib/perl);
+use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
+             $current_contact_id $current_username $glyco_query_o);
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::DataTable;
+
+use SBEAMS::BioLink::Tables;
+use SBEAMS::BioLink::MSF;
+use SBEAMS::BioLink::KeggMaps;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+
+###############################################################################
+# Global Variables
+###############################################################################
+#
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+my $kegg = new SBEAMS::BioLink::KeggMaps; 
+
+
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch";
+
+
+{ # Main 
+
+    # Authenticate or exit
+    exit unless ($current_username = $sbeams->Authenticate(
+       # permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin', 'Glycopeptide_readonly'],
+       # connect_read_only=>1,
+       allow_anonymous_access=>1,
+    ));
+
+    #### Read in the default input parameters
+    my %params;
+    $sbeams->parse_input_parameters( q=>$q, parameters_ref=>\%params );
+    $sbeams->processStandardParameters(parameters_ref=>\%params);
+
+    ## get project_id to send to HTMLPrinter display
+    my $project_id = $sbeams->getCurrent_project_id();
+
+    my $page = $sbeams->getGifSpacer( 800 ) . "<BR>\n";
+    if ( $params{group_id} ) {
+      $page .= get_ortholog_display( %params );
+    } elsif ( $params{list_groups} ) {
+      $page .= get_ortholog_list( %params );
+    } else {
+      $page .= $sbeams->makeErrorText( "Missing required parameter group_id" );
+    }
+      
+
+    # Display page
+    $sbeamsMOD->display_page_header(project_id => $project_id);
+#    $sbeams->printStyleSheet();
+    print $page;
+		$sbeamsMOD->display_page_footer();
+
+} # end main
+
+sub get_ortholog_display {
+  my %args = @_;
+  my $content;
+  for my $arg ( qw( group_id ) ) {
+    unless ( $args{$arg} ) {
+      $content .= $sbeams->makeErrorText("Missing required parameter: $arg <BR>");
+      return $content;
+    }
+  }
+  # Highlight if available.
+	$args{entry_accession} ||= '';
+
+  # Set up display table
+  my $table = SBEAMS::Connection::DataTable->new( BORDER => 0 );
+  $table->addRow( ['Ortholog group', 'Accession', 'Organism name' ] );
+  $table->setRowAttr( ROWS => [1], BGCOLOR => '#C0D0C0' );
+  $table->setHeaderAttr(  BOLD => 1 );
+  my $all_builds = join( ",", $sbeamsMOD->getAccessibleBuilds() );
+
+  # SQL to fetch orthologs
+  my $sql =<<"  END_SQL";
+  SELECT DISTINCT ortholog_group, biosequence_name, organism_name,
+	floor(rand()*100), CAST( biosequence_seq AS VARCHAR(4000) )
+  FROM biolink.dbo.ortholog O
+  JOIN $TBAT_BIOSEQUENCE B ON O.entry_accession = B.biosequence_name
+  JOIN $TB_ORGANISM ORG ON O.ortholog_organism_id = ORG.organism_id
+  WHERE ortholog_group = '$args{group_id}' 
+  ORDER BY organism_name, biosequence_name
+  END_SQL
+
+  my $current;
+  my %subject;
+  my $bgcolor = '#F1F1F1';
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+
+  my $cnt = 0;
+	my %seq2acc;
+	my %acc2seq;
+	my $fasta = '';
+	my %bgcolor;
+  while ( my @row = $sth->fetchrow_array() ) {
+
+		my $seq = $row[4];
+		$seq =~ s/[^a-zA-Z]//g;
+
+    # Hmm, what to accession dups with non-distinct sequences mean!  doh!
+		next if $acc2seq{$row[1]}; 
+		$acc2seq{$row[1]} = $seq;
+
+		$seq2acc{$seq} ||= [];
+		push @{$seq2acc{$seq}}, $row[1];
+
+    # make fasta file in memory
+    $fasta .= ">$row[1]\n";
+    $fasta .= "$seq\n";
+
+		$row[3] = int(rand( 100 ) );
+    if ( $row[5] ) {
+      $row[1] = "<A HREF='peptideSearch.cgi?action=Show_detail_form&ipi_data_id=$row[4]&organism=6> $row[1] </A>";
+    }
+    $table->addRow( [@row[0..2]] );
+    $current ||= $row[2];  
+    $log->debug( $current );
+
+    if ( $row[1] eq $args{entry_accession} ) {
+			$subject{name} = $args{entry_accession};
+      $table->setRowAttr( ROWS => [$table->getRowNum()], BGCOLOR => '#FFFACD' );
+		  $bgcolor{$row[1]} = '#FFFACD';
+			next;
+    } 
+		if ( $current ne $row[2] ) {  # New organism
+      $bgcolor = ( $bgcolor eq '#E0E0E0' ) ? '#F1F1F1' : '#E0E0E0';
+      $current = $row[2];
+    }
+		$bgcolor{$row[1]} = $bgcolor;
+    $table->setRowAttr( ROWS => [$table->getRowNum()], BGCOLOR => $bgcolor );
+		$cnt++;
+  }
+
+  my $MSF = SBEAMS::BioLink::MSF->new();
+
+	my $clustal = $MSF->runClustalW( sequences => $fasta );
+	my $clustal_display = get_clustal_display( alignments => $clustal, bgcolor => \%bgcolor );
+
+  my $alignment_text = get_alignment_text();
+  my $spc = '&nbsp;' x 50;
+
+#	$log->debug( "Clustal output was $clustal!" );
+#  my $clustal_file = $sbeams->writeSBEAMSTempFile( content => $fasta,
+#	                                                  suffix => 'fsa',
+#																										newdir => 1
+#																							   );
+#	my $clustal_exe = $CONFIG_SETTING{CLUSTALW} || return '';
+#	my $out = `$clustal_exe -tree -align -infile=$clustal_file`;
+#	$log->debug( "ran clustal on $clustal_file, output was $out" );
+#	return $out;
+#	$log->debug( "$clustal_file file had $fasta data" );
+	
+
+
+  if ( $table->getRowNum() == 1 ) {
+    return $sbeams->makeInfoText( "Unable to find an OrthoMCL group for this protein" );
+  }
+	$subject{name} ||= 'n/a';
+  return( <<"  END" );
+  <P class=lg_body_text>
+  The table below shows ortholog/homolog information about the target protein, $subject{name}, which is highlighted in yellow.  The ortholog groups were computed using <A HREF='http://www.orthomcl.org/cgi-bin/OrthoMclWeb.cgi'>OrthoMCL version 2</A>, based on BLAST homology.
+
+  </P>
+  $table 
+	<BR>
+  <P><H4>Ortholog Sequence Alignment</H4>
+  $clustal_display
+  </P>
+  $alignment_text
+	<BR>
+  END
+}
+
+
+
+sub get_alignment_text {
+
+  my $content =<<"  END";
+ 	  <P>
+	   <DIV class=info_box ID=help>
+		   <PRE>
+Alignment was created by the clustalw program, which is maintained at the Conway Institute UCD Dublin.  
+The alignment considers physical properties of the amino acids in the protein sequence, and the 
+program was invoked using the following command-line:
+
+clustalw -tree -align -outorder=input -infile=clustal_file`;
+
+The consensus 'sequence' uses symbols to represent the level of conservation of amino acids at any given 
+position.  The text below, adapted from the clustal documentation, describes the various symbols used.
+
+    CONSENSUS SYMBOLS:
+
+       An alignment will display by default the following symbols denoting the degree of conservation observed in each column:
+
+      "*" means that the residues or nucleotides in that column are identical in all sequences in the alignment.
+
+      ":" means that conserved substitutions have been observed
+
+      "." means that semi-conserved substitutions are observed. 
+
+      " " means that substitutions are not conservative. 
+		   </PRE>
+     </DIV>
+    </P>
+  END
+  my @toggle = $sbeams->make_toggle_section( textlink => 1,
+                                             hidetext => "Less Info",
+                                             showtext => "More Info",
+				                                      content => $content
+																					);
+  return "<span class=lg_body_text>Alignment created using <A HREF='http://www.clustal.org' TARGET=_clustal>ClustalW</A> </span> ( $toggle[1] ) <BR> $toggle[0] ";
+
+}
+
+sub get_clustal_display {
+	my %args = @_;
+
+	my $display = qq~
+	<DIV STYLE="width: 1000px; overflow-x: scroll; scrollbar-arrow-color: blue; scrollbar- face-color: #e7e7e7; scrollbar-3dlight-color: #a0a0a0; scrollbar-darkshadow-color: #888888">
+	<TABLE BORDER=0 CELLPADDNG=3>
+	~;
+	for my $seq ( @{$args{alignments}} ) {
+#		$log->debug( "After passing we have $seq->[0] and $seq->[1]!" );
+		my $sequence = $seq->[1];
+		if ( $seq->[0] eq 'consensus'  ) {
+#			$log->debug( "Consensus!@!!!!!" );
+		  $sequence =~ s/ /&nbsp;/g 
+		} else {
+#			$log->debug( "$seq->[0] isn't consensus, commence to highlighting $sequence" );
+#			$sequence = highlight_sites( seq => $sequence, 
+#			                             sites => $args{data}->{$seq->[0]}->{sites},
+#																	 allsites => $args{data}->{allsites});
+#  my $clustal_display = get_clustal_display( alignments => $clustal, data => \%prot_data );
+		}
+		$display .= "<TR><TD ALIGN=right class=sequence_font>$seq->[0]:</TD><TD NOWRAP=1 class=sequence_font BGCOLOR=$args{bgcolor}->{$seq->[0]}>$sequence</TD></TR>\n";
+	}
+	$display .= "</TABLE>\n</DIV>\n";
+	return $display;
+}
+
