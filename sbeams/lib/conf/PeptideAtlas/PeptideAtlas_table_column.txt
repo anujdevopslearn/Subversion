@@ -496,13 +496,14 @@ AT_modified_peptide_annotation	14	instrument	Instrument	varchar	50	0	Y		N			N	te
 AT_modified_peptide_annotation	15	peptide_id	Peptide	int	4	0	Y		N	AT_peptide	peptide_id	Y	optionlist			Y	Y	Y	Peptide ID of  the Atlas entry which matches the amino acid sequence of this entry		
 AT_modified_peptide_annotation	16	annotation_set	Annotation Set	varchar	50	0	Y		N			N	text	30		N	N	N	"Free-text name of the set of annotations to which this one belongs, only for batch inserts"		
 AT_modified_peptide_annotation	17	project_id	Project	int	4	0	N		N	project	project_id	N	optionlist			Y	Y	N	Project under which this entity is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
-AT_modified_peptide_annotation	18	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-AT_modified_peptide_annotation	19	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_modified_peptide_annotation	20	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_modified_peptide_annotation	21	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_modified_peptide_annotation	22	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_modified_peptide_annotation	23	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_modified_peptide_annotation	24	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_modified_peptide_annotation	18	q3_peak_intensity	Q3 Peak Intensity	float	8	0	Y		N			Y	text	10		Y	Y	Y	"Peak intensity, possibly scaled, of Q3 fragment peak"		
+AT_modified_peptide_annotation	19	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_modified_peptide_annotation	20	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_modified_peptide_annotation	21	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_modified_peptide_annotation	22	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_modified_peptide_annotation	23	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_modified_peptide_annotation	24	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_modified_peptide_annotation	25	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_transition_suitability_level	1	transition_suitability_level_id	Transition Suitability Level	int	4	0	N		Y							N	N				pkDEFAULT
 AT_transition_suitability_level	2	level_score	Level Score	real	4	0	N		N			Y	text	20		Y	Y	N	Transition score		
 AT_transition_suitability_level	3	level_name	Level Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	Full name of the level		
