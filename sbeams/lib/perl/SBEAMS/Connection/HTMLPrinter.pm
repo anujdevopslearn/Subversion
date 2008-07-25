@@ -232,7 +232,7 @@ sub printStyleSheet {
   
 my $module_styles =<<"  END_STYLE";  
 	A.sortheader{background-color: #888888; font-size: ${FONT_SIZE}pt; font-weight: bold; color:white; line-height: 25px;}
-  .info_box { background: #F0F0F0; border: #000 1px solid; padding: 4px; width: 80%; }
+  .info_box { background: #F0F0F0; border: #000 1px solid; padding: 4px; width: 80%; color: #444444 }
   .popup_help { cursor: Help; color:#444444 }
   .gaggle-data { display: none }
   
