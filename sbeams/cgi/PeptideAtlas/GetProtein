@@ -585,6 +585,15 @@ sub handle_request {
       }
     }
 
+    # Check to see if there is ortholog information
+    my $orthologs = get_ortholog_information( $biosequence );
+    if ( $orthologs ) {
+      print $sbeamsMOD->encodeSectionItem( key   => 'Ortholog Group',
+                                         tr_info => $tr,
+                                           value => $orthologs );
+    }
+
+
   }
 
 
@@ -1062,6 +1071,23 @@ sub handle_request {
 
 
 } # end handle_request
+
+sub get_ortholog_information {
+  my $biosequence = shift;
+  return unless $biosequence->{biosequence_name};
+  my $sql =<<"  END";
+  SELECT ortholog_group
+  FROM biolink.dbo.ortholog
+  WHERE entry_accession = '$biosequence->{biosequence_name}'
+  END
+  my $link = '';
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    $link .= qq~<A HREF="viewOrthologs?group_id=$row[0];entry_accession=$biosequence->{biosequence_name}" TITLE="View orthologs/homolog information"><IMG BORDER=0 SRC="$HTML_BASE_DIR/images/OrthoMCL.jpg">&nbsp; $row[0]</A>\n~;
+  }
+  return $link;
+}
+
 
 sub get_mrm_transitions {
   shift;
