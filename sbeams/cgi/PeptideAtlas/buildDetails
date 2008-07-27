@@ -24,6 +24,8 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::DataTable;
 use SBEAMS::Connection::GoogleVisualization;
+use SBEAMS::Connection::TabMenu;
+
 
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
@@ -63,8 +65,14 @@ my $show_image = 0;
     my $batch_help = get_table_help( 'batch' );
 
     my $page = $sbeams->getGifSpacer( 700 ) . "<BR>\n";
+  #### Get the HTML to display the tabs
+    my $tabMenu = $atlas->getTabMenu(
+      parameters_ref => $params,
+      program_name => 'buildDetails',
+    );
 #		my $back = $sbeams->getBackForm();
     $page .=<<"    END";
+		$tabMenu
 
     <P>
     This shows some information about the currently selected build.  Peptide
@@ -426,5 +434,4 @@ sub get_draw_chart_function {
 	my $header = $GV->getHeaderInfo();
   return ( $chart, $header );
 }
-
 
