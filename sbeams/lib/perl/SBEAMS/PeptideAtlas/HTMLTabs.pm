@@ -83,7 +83,7 @@ sub getTabMenu
 
     my $current_tab=1;
 
-    if ( ($PROG_NAME =~ /^main.cgi/) ||
+    if ( ($PROG_NAME =~ /^main.cgi|buildDetails/) ||
     ($PROG_NAME =~ /^main.cgi\?(\S+)/ ))
     {
        $current_tab=2;
