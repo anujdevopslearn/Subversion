@@ -1645,6 +1645,13 @@ sub getNSpecFromFlatFiles
         "need search_batch_path ($!)";
 
     my $pepXMLfile = "$search_batch_path/interact-prob.xml";
+    if ( !-e $pepXMLfile ) {
+      $pepXMLfile = "$search_batch_path/interact-prob.pep.xml";
+    }
+    if ( !-e $pepXMLfile ) {
+      print STDERR "Unable to find pep xml file, build stats will not be computed correctly\n";
+    }
+
 
     my $n0;
 

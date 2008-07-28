@@ -446,6 +446,11 @@ sub getNSpecFromFlatFiles
         "need search_batch_path ($!)";
 
     my $pepXMLfile = "$search_batch_path/interact-prob.xml";
+		if ( !-e $pepXMLfile ) {
+      $pepXMLfile = "$search_batch_path/interact-prob.pep.xml";
+			print STDERR "Eureka: $pepXMLfile\n";
+		}
+
 
     my $n0;
     
