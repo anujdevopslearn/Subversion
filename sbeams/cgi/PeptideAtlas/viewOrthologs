@@ -35,6 +35,7 @@ use SBEAMS::BioLink::KeggMaps;
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::Connection::TabMenu;
 
 
 ###############################################################################
@@ -69,6 +70,13 @@ my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch";
     my $project_id = $sbeams->getCurrent_project_id();
 
     my $page = $sbeams->getGifSpacer( 800 ) . "<BR>\n";
+
+    my $tabMenu = $sbeamsMOD->getTabMenu(
+      parameters_ref => \%params,
+      program_name => 'GetProtein',
+    );
+		$page .= "$tabMenu";
+
     if ( $params{group_id} ) {
       $page .= get_ortholog_display( %params );
     } elsif ( $params{list_groups} ) {
@@ -99,21 +107,24 @@ sub get_ortholog_display {
 	$args{entry_accession} ||= '';
 
   # Set up display table
-  my $table = SBEAMS::Connection::DataTable->new( BORDER => 0 );
-  $table->addRow( ['Ortholog group', 'Accession', 'Organism name' ] );
+  my $table = SBEAMS::Connection::DataTable->new( BORDER => 0, HEADER => 1 );
+  $table->addRow( ['Ortholog group', 'Accession', 'Organism name', 'Protein Name/Description' ] );
   $table->setRowAttr( ROWS => [1], BGCOLOR => '#C0D0C0' );
   $table->setHeaderAttr(  BOLD => 1 );
   my $all_builds = join( ",", $sbeamsMOD->getAccessibleBuilds() );
 
   # SQL to fetch orthologs
   my $sql =<<"  END_SQL";
-  SELECT DISTINCT ortholog_group, biosequence_name, organism_name,
-	floor(rand()*100), CAST( biosequence_seq AS VARCHAR(4000) )
+  SELECT DISTINCT ortholog_group, biosequence_name, organism_name
+	, search_key_name
+	, CAST( biosequence_seq AS VARCHAR(4000) ), resource_type
   FROM biolink.dbo.ortholog O
   JOIN $TBAT_BIOSEQUENCE B ON O.entry_accession = B.biosequence_name
   JOIN $TB_ORGANISM ORG ON O.ortholog_organism_id = ORG.organism_id
+  LEFT JOIN $TBAT_SEARCH_KEY SK ON SK.resource_name = B.biosequence_name
   WHERE ortholog_group = '$args{group_id}' 
-  ORDER BY organism_name, biosequence_name
+	AND ( search_key_type = 'Full Name' OR search_key_type LIKE '%symbol' OR search_key_type = 'Description' )
+  ORDER BY organism_name, biosequence_name, search_key_name DESC
   END_SQL
 
   my $current;
@@ -143,13 +154,9 @@ sub get_ortholog_display {
     $fasta .= ">$row[1]\n";
     $fasta .= "$seq\n";
 
-		$row[3] = int(rand( 100 ) );
-    if ( $row[5] ) {
-      $row[1] = "<A HREF='peptideSearch.cgi?action=Show_detail_form&ipi_data_id=$row[4]&organism=6> $row[1] </A>";
-    }
-    $table->addRow( [@row[0..2]] );
+    my $acc_link = "<A HREF='Search?search_key=$row[1];action=GO;build_type_name=$row[2];all_fields=on'>$row[1]</A>";
+    $table->addRow( [$row[0], $acc_link, @row[2,3]] );
     $current ||= $row[2];  
-    $log->debug( $current );
 
     if ( $row[1] eq $args{entry_accession} ) {
 			$subject{name} = $args{entry_accession};
@@ -165,6 +172,7 @@ sub get_ortholog_display {
     $table->setRowAttr( ROWS => [$table->getRowNum()], BGCOLOR => $bgcolor );
 		$cnt++;
   }
+  $table->setRowAttr( ROWS => [1], ALIGN => 'CENTER' );
 
   my $MSF = SBEAMS::BioLink::MSF->new();
 
@@ -174,7 +182,6 @@ sub get_ortholog_display {
   my $alignment_text = get_alignment_text();
   my $spc = '&nbsp;' x 50;
 
-#	$log->debug( "Clustal output was $clustal!" );
 #  my $clustal_file = $sbeams->writeSBEAMSTempFile( content => $fasta,
 #	                                                  suffix => 'fsa',
 #																										newdir => 1
@@ -239,11 +246,12 @@ position.  The text below, adapted from the clustal documentation, describes the
     </P>
   END
   my @toggle = $sbeams->make_toggle_section( textlink => 1,
-                                             hidetext => "Less Info",
-                                             showtext => "More Info",
+                                             hidetext => "Hide Description",
+                                             showtext => "Show Description",
+                                              visible => 1,
 				                                      content => $content
 																					);
-  return "<span class=lg_body_text>Alignment created using <A HREF='http://www.clustal.org' TARGET=_clustal>ClustalW</A> </span> ( $toggle[1] ) <BR> $toggle[0] ";
+  return "<span class=lg_body_text>Alignment created using <A HREF='http://www.clustal.org' TARGET=_clustal>ClustalW</A></span><BR><BR> ( $toggle[1] ) <BR> $toggle[0] ";
 
 }
 
