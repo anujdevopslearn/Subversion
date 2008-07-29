@@ -123,7 +123,12 @@ sub get_ortholog_display {
   JOIN $TB_ORGANISM ORG ON O.ortholog_organism_id = ORG.organism_id
   LEFT JOIN $TBAT_SEARCH_KEY SK ON SK.resource_name = B.biosequence_name
   WHERE ortholog_group = '$args{group_id}' 
-	AND ( search_key_type = 'Full Name' OR search_key_type LIKE '%symbol' OR search_key_type = 'Description' )
+  AND search_key_type = CASE WHEN organism_name = 'human' THEN 'Full Name'
+                             WHEN organism_name = 'Mouse' THEN 'Full Name'
+                             WHEN organism_name = 'Drosophila' THEN 'Full Name'
+                             WHEN organism_name = 'Yeast' THEN 'Description'
+                             ELSE resource_name
+                        END
   ORDER BY organism_name, biosequence_name, search_key_name DESC
   END_SQL
 
@@ -177,7 +182,12 @@ sub get_ortholog_display {
   my $MSF = SBEAMS::BioLink::MSF->new();
 
 	my $clustal = $MSF->runClustalW( sequences => $fasta );
-	my $clustal_display = get_clustal_display( alignments => $clustal, bgcolor => \%bgcolor );
+	my $clustal_display;
+  if ( ref $clustal ne 'ARRAY' ) {
+    $clustal_display = $sbeams->makeErrorText( "Error running Clustal: $clustal" );
+  } else {
+    $clustal_display = get_clustal_display( alignments => $clustal, bgcolor => \%bgcolor );
+  }
 
   my $alignment_text = get_alignment_text();
   my $spc = '&nbsp;' x 50;
