@@ -57,6 +57,7 @@ use vars qw(@ISA @EXPORT
     $TBBL_KEGG_GENE
     $TBBL_KEGG_PATHWAY_GENES
 
+    $TBBL_ORTHOLOG
 );
 
 
@@ -103,6 +104,8 @@ require Exporter;
     $TBBL_KEGG_ORGANISM
     $TBBL_KEGG_GENE
     $TBBL_KEGG_PATHWAY_GENES
+
+    $TBBL_ORTHOLOG
 );
 
 
@@ -150,4 +153,5 @@ $TBBL_KEGG_ORGANISM = "${mod}kegg_organism";
 $TBBL_KEGG_GENE = "${mod}kegg_gene";
 $TBBL_KEGG_PATHWAY_GENES = "${mod}kegg_pathway_genes";
 
+$TBBL_ORTHOLOG  = "${mod}ortholog";
 1;
