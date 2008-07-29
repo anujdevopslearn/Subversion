@@ -42,17 +42,25 @@ sub new {
 sub runClustalW {
   my $self = shift;
 	my %args = @_;
-	return 'no data' unless $args{sequences};
+	return 'no data provided' unless $args{sequences};
 
 	$args{sequences} =~ s/^>\s+/>_spc_/g;
   my $clustal_file = $sbeams->writeSBEAMSTempFile( content => $args{sequences},
                                                     suffix => 'fsa',
 																										newdir => 1
 																								 );
-  my $clustal_exe = $CONFIG_SETTING{CLUSTALW} || return '';
+  my $clustal_exe = $CONFIG_SETTING{CLUSTALW} || return 'Clustal executable not found on this server';
   my $out = `$clustal_exe -tree -align -outorder=input -infile=$clustal_file`;
+
+  if ( $out && $out =~ /No alignment!/gm ) {
+		return "Clustal run failed: $out\n";
+  }
+
 	my $align_file = $clustal_file;
 	$align_file =~ s/fsa$/aln/;
+	if ( !-e $align_file ) {
+		return "Output not produced";
+	}
 	my $alignment = '';
 	my %aligned_seqs;
 	my @aligned_order;
@@ -60,10 +68,9 @@ sub runClustalW {
   {
 		open( ALIGN, $align_file );
 		my $head_line = 0;
-		my $cnt;
+		my $cnt = 0;
 		while ( my $line = <ALIGN>  ) {
 		  $alignment .= $line;
-
 			$cnt++;
 			next if $cnt == 1;
 			next if $line =~ /^\s+$/;
