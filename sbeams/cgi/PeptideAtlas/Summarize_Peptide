@@ -37,6 +37,7 @@ use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TabMenu;
+use SBEAMS::Connection::GoogleVisualization;
 
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
@@ -304,7 +305,12 @@ if ($sbeams->output_mode() eq 'html') {
     
      SELECT  distinct P.peptide_accession,P.peptide_sequence, P.SSRCalc_relative_hydrophobicity,
       P.molecular_weight, P.peptide_isoelectric_point, PI.n_observations, PI.atlas_build_id,
-      AB.atlas_build_name, OZ.organism_name
+      AB.atlas_build_name, OZ.organism_name, 
+			( SELECT SUM (n_searched_spectra) FROM $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
+			JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id
+			WHERE ABSB.atlas_build_id = AB.atlas_build_id
+			) AS total_searched
+
       FROM $TBAT_PEPTIDE_INSTANCE PI
       INNER JOIN $TBAT_PEPTIDE P
       ON ( PI.peptide_id = P.peptide_id )
@@ -320,9 +326,9 @@ if ($sbeams->output_mode() eq 'html') {
       ORDER BY P.peptide_sequence, OZ.organism_name, PI.n_observations DESC,AB.atlas_build_name
 
 ~;
-
+                                                                                                                           
 #unless ( $peptide_sequence_clause ) {
-   #$sbeams->display_sql(sql=>$sql);
+#   $sbeams->display_sql(sql=>$sql);
 
   #     print qq~
    #   <FONT COLR=red>No Peptide Found, unable to proceed</FONT>
@@ -334,14 +340,14 @@ if ($sbeams->output_mode() eq 'html') {
 
 if ($apply_action =~ /QUERY|GO/i ) {
 
-my (@peptide_info,@builds, $dynamic_content, $vocab);
+my (@peptide_info,@builds, $dynamic_content, $vocab, @build_plot);
 
 while (my $row = $sbeams->selectSeveralColumnsRow(sql=>$sql))
 
 {
 
 
-        my ($pep_acc,$peptide_seq,$ssr_calc,$mol_wt,$pi,$n_obs,$build_id,$build_name,$org_name)= @{$row};
+        my ($pep_acc,$peptide_seq,$ssr_calc,$mol_wt,$pi,$n_obs,$build_id,$build_name,$org_name,$n_searched)= @{$row};
 
         ##Copying the value of Peptide Accession to global variable $peptide_acc
         $peptide_acc=$pep_acc;
@@ -360,6 +366,13 @@ while (my $row = $sbeams->selectSeveralColumnsRow(sql=>$sql))
 
         ##### Passing by reference to the @builds array as per the requirement of the EncodesectionTable Method
         push (@builds, \@temp_array);
+				my $hits_per_10K = '1';
+				$log->debug( "n searched is $n_searched" );
+				if ( $n_searched ) {
+				  $hits_per_10K = sprintf( "%0.1f", $n_obs/$n_searched * 1000000);
+				}
+				$build_name =~ s/PeptideAtlas/PA/g;
+				push @build_plot, [ $build_name, $n_obs, $hits_per_10K ];
 
 } ## END WHILE LOOP
          
@@ -368,10 +381,25 @@ while (my $row = $sbeams->selectSeveralColumnsRow(sql=>$sql))
 ##### Display on the Page if and only if user entered a peptide which was present in the Peptideatals
 if( defined $peptide_acc) {
    $dynamic_content=DisplayPeptide(view1=>\@peptide_info,
-                                                view2=>\@builds);
+                                   view2=>\@builds);
    $vocab=$sbeamsMOD->vocabHTML();
+   my $GV = SBEAMS::Connection::GoogleVisualization->new();
+   my $chart = $GV->setDrawBarChart(  samples => \@build_plot,
+			                                 data_types => [ 'string', 'number', 'number' ],
+								                         headings => [ 'Build Name', 'Number of Observations', "Obs per Million Spectra" ],
+															    truncate_labels => 30 
+																	     );
+   my $header = $GV->getHeaderInfo();
+
    
-   print "$dynamic_content.$vocab";
+   print <<"   END";
+	 $header
+	 $dynamic_content
+	 <BR>
+	 <BR>
+	 $chart
+	 $vocab
+   END
    
    }
 
