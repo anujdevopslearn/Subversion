@@ -1,9 +1,9 @@
 #!/usr/local/bin/perl
 
 ###############################################################################
-# $Id: peptideSearch.cgi 4670 2006-04-22 01:54:05Z dcampbel $
+# $Id: $
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2008 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -16,9 +16,6 @@
 ###############################################################################
 use strict;
 use CGI::Carp qw(fatalsToBrowser croak);
-use Data::Dumper;
-use Bio::SeqIO;
-
 
 use lib qw (../../lib/perl);
 use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
@@ -30,7 +27,6 @@ use SBEAMS::Connection::DataTable;
 
 use SBEAMS::BioLink::Tables;
 use SBEAMS::BioLink::MSF;
-use SBEAMS::BioLink::KeggMaps;
 
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
@@ -45,177 +41,460 @@ use SBEAMS::Connection::TabMenu;
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
-my $kegg = new SBEAMS::BioLink::KeggMaps; 
-
 
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
-my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch";
-
 
 { # Main 
 
-    # Authenticate or exit
-    exit unless ($current_username = $sbeams->Authenticate(
-       # permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin', 'Glycopeptide_readonly'],
-       # connect_read_only=>1,
-       allow_anonymous_access=>1,
-    ));
+  # Authenticate or exit
+  $current_username = $sbeams->Authenticate(allow_anonymous_access=>1) || exit;
 
-    #### Read in the default input parameters
-    my %params;
-    $sbeams->parse_input_parameters( q=>$q, parameters_ref=>\%params );
-    $sbeams->processStandardParameters(parameters_ref=>\%params);
+  #### Read in the default input parameters
+  my %params;
+  $sbeams->parse_input_parameters( q=>$q, parameters_ref=>\%params );
+  $sbeams->processStandardParameters(parameters_ref=>\%params);
 
-    ## get project_id to send to HTMLPrinter display
-    my $project_id = $sbeams->getCurrent_project_id();
+  ## get project_id to send to HTMLPrinter display
+  my $project_id = $sbeams->getCurrent_project_id();
 
-    my $page = $sbeams->getGifSpacer( 800 ) . "<BR>\n";
+  my $page = $sbeams->getGifSpacer( 800 ) . "<BR>\n";
 
-    my $tabMenu = $sbeamsMOD->getTabMenu(
-      parameters_ref => \%params,
-      program_name => 'GetProtein',
-    );
-		$page .= "$tabMenu";
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+    parameters_ref => \%params,
+    program_name => 'GetProtein',
+  );
+  $page .= "$tabMenu";
 
-    if ( $params{group_id} ) {
-      $page .= get_ortholog_display( %params );
-    } elsif ( $params{list_groups} ) {
-      $page .= get_ortholog_list( %params );
-    } else {
-      $page .= $sbeams->makeErrorText( "Missing required parameter group_id" );
-    }
-      
+  $log->debug( "Begin page:" .time() );
+  if ( $params{group_id} ) {
+    $page .= get_ortholog_display( %params );
+  } elsif ( $params{list_groups} ) {
+    $page .= get_ortholog_list( %params );
+  } else {
+    $page .= $sbeams->makeErrorText( "Missing required parameter group_id" );
+  }
+  $log->debug( "Page done:" .time() );
+    
 
-    # Display page
-    $sbeamsMOD->display_page_header(project_id => $project_id);
-#    $sbeams->printStyleSheet();
-    print $page;
-		$sbeamsMOD->display_page_footer();
+  # Display page
+  $sbeamsMOD->display_page_header(project_id => $project_id);
+  print $page;
+  $sbeamsMOD->display_page_footer();
 
 } # end main
 
 sub get_ortholog_display {
   my %args = @_;
-  my $content;
+
+  # Content scalar to return
+  my $content = '';
+
+	# check params
   for my $arg ( qw( group_id ) ) {
     unless ( $args{$arg} ) {
       $content .= $sbeams->makeErrorText("Missing required parameter: $arg <BR>");
       return $content;
     }
   }
+
   # Highlight if available.
 	$args{entry_accession} ||= '';
 
-  # Set up display table
-  my $table = SBEAMS::Connection::DataTable->new( BORDER => 0, HEADER => 1 );
-  $table->addRow( ['Ortholog group', 'Accession', 'Organism name', 'Protein Name/Description' ] );
-  $table->setRowAttr( ROWS => [1], BGCOLOR => '#C0D0C0' );
-  $table->setHeaderAttr(  BOLD => 1 );
-  my $all_builds = join( ",", $sbeamsMOD->getAccessibleBuilds() );
+  my $all_projects = join( ",", $sbeams->getAccessibleProjects() );
+  my $curr_bid = $sbeamsMOD->getCurrentAtlasBuildID( parameters_ref => \%args );
 
-  # SQL to fetch orthologs
+  # SQL to fetch ortholog groups and bioseqs in them.
   my $sql =<<"  END_SQL";
-  SELECT DISTINCT ortholog_group, biosequence_name, organism_name
-	, search_key_name
-	, CAST( biosequence_seq AS VARCHAR(4000) ), resource_type
+  SELECT DISTINCT ortholog_group,
+	                biosequence_name,
+									organism_name,
+									search_key_name,
+									CAST( biosequence_seq AS VARCHAR(4000) ),
+									biosequence_id,
+									biosequence_set_id
   FROM biolink.dbo.ortholog O
   JOIN $TBAT_BIOSEQUENCE B ON O.entry_accession = B.biosequence_name
   JOIN $TB_ORGANISM ORG ON O.ortholog_organism_id = ORG.organism_id
   LEFT JOIN $TBAT_SEARCH_KEY SK ON SK.resource_name = B.biosequence_name
-  WHERE ortholog_group = '$args{group_id}' 
-  AND search_key_type = CASE WHEN organism_name = 'human' THEN 'Full Name'
-                             WHEN organism_name = 'Mouse' THEN 'Full Name'
-                             WHEN organism_name = 'Drosophila' THEN 'Full Name'
-                             WHEN organism_name = 'Yeast' THEN 'Description'
-                             ELSE resource_name
-                        END
+  WHERE ortholog_group = '$args{group_id}'
+  AND ( search_key_type = 'Full Name'
+	      OR search_key_type = 'Description'
+				OR search_key_type LIKE '%Symbol' )
+-- Would love to use a structured query like this, but some acc (mouse) fail.
+--  AND search_key_type = CASE WHEN organism_name = 'human' THEN 'Full Name'
+--                             WHEN organism_name = 'Mouse' THEN 'Full Name'
+--														 WHEN organism_name = 'Drosophila' THEN 'Full Name'
+--													   WHEN organism_name = 'Yeast' THEN 'Description'
+--													   ELSE resource_name
+--											  END
   ORDER BY organism_name, biosequence_name, search_key_name DESC
   END_SQL
+
+# 0     ortholog_group,
+# 1     biosequence_name,
+# 2     organism_name,
+# 3     search_key_name,
+# 4     CAST( biosequence_seq AS VARCHAR(4000) ),
+# 5     biosequence_id
+# 6     biosequence_set_id
+	$log->debug( "prepare stmt: " . time() );
+  my $sth = $sbeams->get_statement_handle( $sql );
+	$log->debug( "prepare stmt done: " .time() );
+
+  # array of protein/ortholog info
+	my @all_proteins;
+
+	# hash of biosequence_ids -> seq or name
+	my %bioseq_id2seq;
+	my %bioseq_id2name;
+
+  # hash seq <=> accession
+	my %seq2acc;
+	my %acc2seq;
+
+  # Store (degenerate) acc -> bioseq_id
+	my %acc2bioseq_id;
+
+  # Store organism for each biosequence set
+	my %bss2org;
+
+  # Counter
+	my $cnt = 0;
+
+  while ( my @row = $sth->fetchrow_array() ) {
+    my $seq = $row[4];
+		$seq =~ s/[^a-zA-Z]//g;
+
+		$bss2org{$row[6]} ||= $row[2];
+
+    # Check this out later for dups...
+		$seq2acc{$seq} ||= {};
+		$seq2acc{$seq}->{$row[1]}++;
+
+    $bioseq_id2seq{$row[5]} = $row[4]; 
+    $bioseq_id2name{$row[5]} = $row[1]; 
+
+    $acc2bioseq_id{$row[1]} ||= [];
+		push @{$acc2bioseq_id{$row[1]}}, $row[5]; 
+
+    # Cache first seq for each accession, and push onto display
+		unless ( $acc2seq{$row[1]} ) {
+			 $acc2seq{$row[1]} = $seq;
+       # push row info for display
+       push @all_proteins, \@row;
+		}
+
+    $cnt++;
+	}
+	$log->debug( "Iterated $cnt rows: " .time() );
+
+  # not quite working yet!
+	my %dup_seqs;
+ 	my $dup_char = 'a';
+	for my $seq ( keys( %seq2acc ) ) {
+		next unless scalar(keys(%{$seq2acc{$seq}}));
+
+ 	  for my $acc ( keys ( %{$seq2acc{$seq}} ) ) {
+      $log->debug( "charring up $acc for $seq!!" );
+      $dup_seqs{$acc} = $dup_char;
+    }
+    $dup_char++;
+  }
+
+  # Get stringified version for IN clause.
+	my $bioseq_ids = join( ",", sort{ $a <=> $b } keys( %bioseq_id2name ) );
+
+  # Define SQL to fetch info about builds in which a peptide has been observed
+	my $sql =<<"  ENDSQL";
+	SELECT count(distinct PI.peptide_id),
+	       sum( n_observations ),
+				 PM.matched_biosequence_id,
+         PI.atlas_build_id,
+				 atlas_build_name,
+				 peptide_sequence,
+				 default_atlas_build_id,
+				 biosequence_set_id
+	FROM $TBAT_PEPTIDE_MAPPING PM
+  JOIN $TBAT_PEPTIDE_INSTANCE PI ON PI.peptide_instance_id = PM.peptide_instance_id
+  JOIN $TBAT_PEPTIDE P ON ( PI.peptide_id = P.peptide_id )
+  JOIN $TBAT_ATLAS_BUILD AB ON ( PI.atlas_build_id = AB.atlas_build_id )
+	LEFT JOIN $TBAT_DEFAULT_ATLAS_BUILD DAB ON ( DAB.atlas_build_id = AB.atlas_build_id )
+  WHERE PM.matched_biosequence_id IN ( $bioseq_ids )
+	AND project_id IN ( $all_projects )
+	GROUP BY PI.atlas_build_id, atlas_build_name, PM.matched_biosequence_id,
+	         peptide_sequence, default_atlas_build_id, biosequence_set_id
+  ORDER BY default_atlas_build_id DESC, PI.atlas_build_id DESC
+  ENDSQL
+  $log->debug( "prepare instance stmt: " . time() );
+  my $sth = $sbeams->get_statement_handle( $sql );
+	$log->debug( "prepare instance stmt done: " .time() );
+
+# 0   count(distinct PI.peptide_id),
+# 1   sum( n_observations ),
+# 2   PM.matched_biosequence_id,
+# 3   PI.atlas_build_id,
+# 4   atlas_build_name,
+# 5   peptide_sequence
+# 6   default_atlas_build_id
+# 7   biosequence_set_id
+
+  # hash of info keyed by build_id
+	my %build_seqs;
+
+	# To be passed to checkbox list routine.
+	my %build_info;
+
+	my %view_org2build;
+	my %view_build2org;
+  
+	# Skip non-default builds, this var controls debug stmt
+	my %skippy;
+
+	$cnt = 0;
+	# Loop to calculate coverate, per prot n_obs for each build
+	$log->debug( "Iterate, calc coverage: " .time() );
+  while ( my @row = $sth->fetchrow_array() ) {
+
+		# Effectively eliminate non-default builds
+		if ( !$row[6] ) {
+			$log->debug( "skipping $row[3] 'cause its not default" ) if !$skippy{$row[3]}; 
+			$skippy{$row[3]}++;
+			next;
+		}
+
+    my $org = $bss2org{$row[7]};
+		$build_info{$row[3]} ||= {};
+		$build_info{$row[3]}->{name} = $row[4];
+		$build_info{$row[3]}->{org} = $org;
+		$build_info{$row[3]}->{is_default} = ( $row[6] ) ? 'yes' : 'no';
+		$build_info{$row[3]}->{is_curr} = ( $row[3] == $curr_bid ) ? 1 : 0;
+		$build_info{$row[3]}->{bss} = $row[7];
+
+    # Simplistic initial view mechanism
+		if ( !$view_org2build{$org} || $row[3] == $curr_bid ) {
+		  $build_info{$row[3]}->{visible}++;
+		  $build_info{$row[3]}->{view}++;
+			$view_org2build{$org} = $row[3];
+			$view_build2org{$row[3]} = $org;
+			$log->debug( "View build for $org is $row[3] ( $row[4] )" );
+		}
+
+    # error cases, shouldn't happen?
+		next unless $row[0];
+	  if ( $row[0] > 1 ) {
+			$log->warn( "count peptide_id > 1" );
+			$log->warn( join( ", ", @row ) );
+		}
+
+    $build_seqs{$row[3]} ||= {};
+    $build_seqs{$row[3]}->{$row[2]} ||= {};
+    $build_seqs{$row[3]}->{$row[2]}->{count} += $row[0];
+    $build_seqs{$row[3]}->{$row[2]}->{n_obs} += $row[1];
+
+	  # Calc coverage for this build/protein combination
+    $build_seqs{$row[3]}->{$row[2]}->{coverage} ||= {};
+		my $posn = $sbeamsMOD->get_site_positions( pattern => $row[5],
+		                                               seq => $bioseq_id2seq{$row[2]} );
+		for my $p ( @$posn ) {
+			for ( my $i = 0; $i < length($row[5]); $i++ ){
+				my $covered_posn = $p + $i;
+				$build_seqs{$row[3]}->{$row[2]}->{coverage}->{$covered_posn}++;
+			}
+		}
+	  # Going to cache with accession for ease of use!
+ 		$build_seqs{$row[3]}->{$bioseq_id2name{$row[2]}}->{coverage} = $build_seqs{$row[3]}->{$row[2]}->{coverage};
+
+		$cnt++;
+	}
+	$log->debug( "Iterated $cnt rows: " .time() );
+
+
+	# Fixed order list of builds
+	my @build_ids = sort { $a <=> $b } keys( %build_seqs );
+
+  # Table headings
+	my @headings = ( 'Accession', 'Organism' );
+
+  # Index of build col in display row, 2 already added above
+	my $b_cnt = 2;
+	my %build_posn;
+	
+	$log->debug( "Iterate, prepare display: " .time() );
+	for my $build_id ( @build_ids ) {
+
+		$build_posn{$b_cnt++} = $build_id;
+		my $dag = '';
+		my $display_name = $build_info{$build_id}->{name};
+#		$display_name =~ s/Yeast|Mouse|Human|Drosophila//;
+		$display_name =~ s/Peptide//;
+		$display_name =~ s/Atlas//;
+		$display_name =~ s/P\s*>*0.\d//;
+		$display_name =~ s/^_//;
+		$display_name =~ s/_$//;
+		$build_info{$build_id}->{display_name} = $display_name;
+
+		if ( $view_build2org{$build_id} ) {
+		  $dag = '<SUP><BOLD>&#8224;</BOLD></SUP>';
+		}
+		push @headings, "<span title='$build_info{$build_id}->{name} ($build_id)'>$display_name $dag</span>";
+	}
+	push @headings, 'Protein Name/Description';
+	$log->debug( "Prepare display complete: " .time() );
+
+  # Set up display table
+  my $table = SBEAMS::Connection::DataTable->new( BORDER => 0, HEADER => 1 );
+  $table->addRow( \@headings );
+  $table->setRowAttr( ROWS => [1], BGCOLOR => '#C0D0C0' );
+  $table->setHeaderAttr(  BOLD => 1 );
 
   my $current;
   my %subject;
   my $bgcolor = '#F1F1F1';
 
-  my $sth = $sbeams->get_statement_handle( $sql );
 
   my $cnt = 0;
-	my %seq2acc;
-	my %acc2seq;
 	my $fasta = '';
-	my %bgcolor;
-  while ( my @row = $sth->fetchrow_array() ) {
+	my %bss2color;
+	my %bgcolor = ( 'consensus' => '#FFFFFF' );
+	my %acc_color = ( 'consensus' => '#FFFFFF' );
+	$log->debug( "Iterate, build table: " .time() );
+  for my $row ( @all_proteins ) {
+
+    #Legacy...
+		my @row = @{$row};
 
 		my $seq = $row[4];
-		$seq =~ s/[^a-zA-Z]//g;
-
-    # Hmm, what to accession dups with non-distinct sequences mean!  doh!
-		next if $acc2seq{$row[1]}; 
-		$acc2seq{$row[1]} = $seq;
-
-		$seq2acc{$seq} ||= [];
-		push @{$seq2acc{$seq}}, $row[1];
 
     # make fasta file in memory
     $fasta .= ">$row[1]\n";
     $fasta .= "$seq\n";
 
     my $acc_link = "<A HREF='Search?search_key=$row[1];action=GO;build_type_name=$row[2];all_fields=on'>$row[1]</A>";
-    $table->addRow( [$row[0], $acc_link, @row[2,3]] );
-    $current ||= $row[2];  
+		$row[3] = $sbeams->truncateStringWithMouseover( string => $row[3], len => 50 );
 
-    if ( $row[1] eq $args{entry_accession} ) {
-			$subject{name} = $args{entry_accession};
-      $table->setRowAttr( ROWS => [$table->getRowNum()], BGCOLOR => '#FFFACD' );
-		  $bgcolor{$row[1]} = '#FFFACD';
-			next;
-    } 
+#    if ( $dup_seqs{$row[1]} ) {
+#			$acc_link .= "<SUP><BOLD>$dup_seqs{$row[1]}</BOLD></SUP>";
+#		}
+    
+
+
+#    $build_seqs{$row[3]}->{$row[2]}->{n_obs} += $row[1];
+#    $build_seqs{$row[3]}->{$row[2]}->{count} += $row[0];
+
+    $current ||= $row[2];  
 		if ( $current ne $row[2] ) {  # New organism
       $bgcolor = ( $bgcolor eq '#E0E0E0' ) ? '#F1F1F1' : '#E0E0E0';
       $current = $row[2];
     }
 		$bgcolor{$row[1]} = $bgcolor;
-    $table->setRowAttr( ROWS => [$table->getRowNum()], BGCOLOR => $bgcolor );
+	  $acc_color{$row[1]} = '#FFFFFF';
+
+		my @table_row = ( $acc_link, $row[2] );
+#	  my $b_cnt = 2;
+    for my $build_id ( @build_ids ) {
+		  $build_info{$build_id}->{bgcolor} = $bgcolor;
+#			$log->debug( "build $build_id is getting color $bgcolor!" );
+#			my $build_info = '*';
+			my $build_info = '&nbsp;';
+	  	my $name = $build_info{$build_id}->{name};
+
+			for my $synon_bioseq_id ( @{$acc2bioseq_id{$row[1]}} ) {
+  			if ( $build_seqs{$build_id}->{$synon_bioseq_id} ) {
+          my $cnt = $build_seqs{$build_id}->{$synon_bioseq_id}->{count};
+          my $obs = $build_seqs{$build_id}->{$synon_bioseq_id}->{n_obs};
+					my $link = "<A HREF='GetProtein?atlas_build_id=$build_id;protein_name=$bioseq_id2name{$synon_bioseq_id};action=QUERY' TARGET='_GetProtein'>";
+			    $build_info = "<span title='$cnt distinct peptides and $obs total observations for $row[1] in $name'> $link $obs ($cnt)</A> </span>";
+			  }
+			}
+	  	push @table_row, $build_info;
+	  }
+		push @table_row, $row[3];
+
+    $table->addRow( \@table_row );
+
+
+    $table->setRowAttr( ROWS => [$table->getRowNum()],
+		                 BGCOLOR => $bgcolor,
+							);
+
+    if ( $row[1] eq $args{entry_accession} ) {
+			$subject{name} = $args{entry_accession};
+      $table->setColAttr( ROWS => [$table->getRowNum()], COLS => [1], BGCOLOR => '#FFFACD' );
+		  $acc_color{$row[1]} = '#FFFACD';
+    } 
+
 		$cnt++;
   }
+	$log->debug( "Build table done: " .time() );
   $table->setRowAttr( ROWS => [1], ALIGN => 'CENTER' );
+  $table->setColAttr( ROWS => [1..$table->getRowNum()], COLS => [1..$table->getColNum()], NOWRAP => 1 );
+
+  $table->setColAttr( ROWS => [1..$table->getRowNum()], COLS => [3..$table->getColNum()-1], ALIGN => 'CENTER' );
+#	FIXME
+#		$build_posn{$b_cnt++} = $build_id;
+#			$view_org2build{$org} = $row[3];
+#			$view_build2org{$row[3]} = $org;
+	$log->debug( "Iterate hide cols: " .time() );
+	for my $posn ( sort { $a <=> $b } keys %build_posn ) {
+		if ( $view_build2org{$build_posn{$posn}} ) {
+      $table->setColAttr( ROWS => [1..$table->getRowNum()], COLS => [$posn +  1],
+			                                                      CLASS => 'tbl_visible',
+																														ID => $build_posn{$posn},
+																														NAME => $build_posn{$posn},
+																														);
+		} else {
+      $table->setColAttr( ROWS => [1..$table->getRowNum()], COLS => [$posn + 1],
+			                                                      CLASS => 'tbl_hidden',
+																														ID => $build_posn{$posn},
+																														NAME => $build_posn{$posn},
+																													);
+		}
+
+	}
+	$log->debug( "Hide cols complete: " .time() );
+
+  # finished 
 
   my $MSF = SBEAMS::BioLink::MSF->new();
 
+	$log->debug( "Run alignment: " .time() );
 	my $clustal = $MSF->runClustalW( sequences => $fasta );
 	my $clustal_display;
-  if ( ref $clustal ne 'ARRAY' ) {
-    $clustal_display = $sbeams->makeErrorText( "Error running Clustal: $clustal" );
-  } else {
-    $clustal_display = get_clustal_display( alignments => $clustal, bgcolor => \%bgcolor );
-  }
-
+	if ( ref $clustal ne 'ARRAY' ) {
+	  $clustal_display = "Error running Clustal: $clustal";
+	} else {
+	  $clustal_display = get_clustal_display( alignments => $clustal,
+                                               bgcolor => \%bgcolor,
+                                             acc_color => \%acc_color,
+                                      highlight_builds => \%view_build2org,
+                                            build_seqs => \%build_seqs 
+																				  );
+	}
   my $alignment_text = get_alignment_text();
+	$log->debug( "Run alignment Done: " .time() );
+	$log->debug( "Color build seqs: " .time() );
+  my $add_builds = get_add_builds_section( build_info => \%build_info );
+	$log->debug( "Color build seqs done: " .time() );
+	$log->debug( "Display " .time() );
   my $spc = '&nbsp;' x 50;
-
-#  my $clustal_file = $sbeams->writeSBEAMSTempFile( content => $fasta,
-#	                                                  suffix => 'fsa',
-#																										newdir => 1
-#																							   );
-#	my $clustal_exe = $CONFIG_SETTING{CLUSTALW} || return '';
-#	my $out = `$clustal_exe -tree -align -infile=$clustal_file`;
-#	$log->debug( "ran clustal on $clustal_file, output was $out" );
-#	return $out;
-#	$log->debug( "$clustal_file file had $fasta data" );
-	
-
 
   if ( $table->getRowNum() == 1 ) {
     return $sbeams->makeInfoText( "Unable to find an OrthoMCL group for this protein" );
   }
 	$subject{name} ||= 'n/a';
   return( <<"  END" );
+  <H4>Protein Occurrence by Build</H4>
   <P class=lg_body_text>
-  The table below shows ortholog/homolog information about the target protein, $subject{name}, which is highlighted in yellow.  The ortholog groups were computed using <A HREF='http://www.orthomcl.org/cgi-bin/OrthoMclWeb.cgi'>OrthoMCL version 2</A>, based on BLAST homology.
+  The table below shows ortholog/homolog information for the $args{group_id} ortholog group.  The ortholog groups were computed using <A HREF='http://www.orthomcl.org/cgi-bin/OrthoMclWeb.cgi'>OrthoMCL version 2</A>, and are based on BLAST homology.  The numbers shown in the columns under each build are the total number of observations of peptides that can be mapped to a given protein, and the total number of distinct peptides seen: total obs ( num distinct ).  You can add information about additional builds by clicking the 'Add builds' link below and selecting the desired build(s).  Builds used to highlight the multiple sequence alignment below are shown with a dagger symbol (<SUP><BOLD>&#8224;</BOLD></SUP>).
 
   </P>
   $table 
 	<BR>
+	$add_builds
+	<BR>
   <P><H4>Ortholog Sequence Alignment</H4>
+	  This display shows the protein sequences in the $args{group_id} group aligned using the Clustal algorithm, described below (click the Show Description link if necessary).  Each sequence is highlighted to show which peptide(s) have been observed for that sequence in one of the builds for the corresponding organism.  The builds used to highlight the sequences for a given organism are shown in the table above with a dagger symbol (<SUP><BOLD>&#8224;</BOLD></SUP>) in the heading, and are diplayed in the table by default.</P>
+	
   $clustal_display
   </P>
   $alignment_text
@@ -229,7 +508,7 @@ sub get_alignment_text {
 
   my $content =<<"  END";
  	  <P>
-	   <DIV class=info_box ID=help>
+	   <DIV class=clear_info_box ID=help>
 		   <PRE>
 Alignment was created by the clustalw program, which is maintained at the Conway Institute UCD Dublin.  
 The alignment considers physical properties of the amino acids in the protein sequence, and the 
@@ -256,16 +535,82 @@ position.  The text below, adapted from the clustal documentation, describes the
     </P>
   END
   my @toggle = $sbeams->make_toggle_section( textlink => 1,
+                                              imglink => 1,
                                              hidetext => "Hide Description",
                                              showtext => "Show Description",
                                               visible => 1,
+                                              sticky  => 1,
+                                                name  => 'viewOrthologs_description',
 				                                      content => $content
 																					);
   return "<span class=lg_body_text>Alignment created using <A HREF='http://www.clustal.org' TARGET=_clustal>ClustalW</A></span><BR><BR> ( $toggle[1] ) <BR> $toggle[0] ";
 
 }
 
+
+sub get_add_builds_section {
+  my %args = @_;
+	my $checklist = $sbeamsMOD->get_atlas_checklist( %args, js_call => 'toggle_view' );
+	my $js = qq~
+  <SCRIPT LANGUAGE=javascript>
+	function toggle_view (div_id) {
+		var curr_col = document.getElementsByName(div_id);
+
+    for (var i=0; i < curr_col.length; i++) {
+      var current_appearance = curr_col[i].className;
+
+      var new_appearance = 'tbl_hidden';
+      if ( current_appearance == 'tbl_hidden' ) {
+        new_appearance = 'tbl_visible';
+      }
+
+      // If hidden set visible, and vice versa
+      if ( current_appearance == 'tbl_hidden' ) {
+        curr_col[i].className = 'tbl_visible';
+      } else {
+        curr_col[i].className = 'tbl_hidden';
+      }
+		}
+	}
+	</SCRIPT>
+	~;
+
+  my $content =<<"  END";
+	  $js
+ 	  <P>
+	   <DIV class=clear_info_box ID=addbuilds>
+		   <PRE>
+			 &nbsp;&nbsp;$checklist
+		   </PRE>
+     </DIV>
+    </P>
+  END
+  my @toggle = $sbeams->make_toggle_section( textlink => 1,
+	                                         imglink => 1,
+                                             hidetext => "Hide Builds",
+                                             showtext => "Add Builds",
+                                              visible => 0,
+                                              sticky  => 1,
+                                                name  => 'viewOrthologs_addbuilds',
+				                                      content => $content
+																					);
+  return "$toggle[1] <BR> $toggle[0]";
+
+}
+
+
+
+
 sub get_clustal_display {
+
+# Passed named args
+# alignments => $clustal,            # ref to array of arrayrefs of acc, seq
+# bgcolor => \%bgcolor,              # ref to hash of acc => bgcolor for seq
+# acc_color => \%acc_color,          # ref to hash of acc => bgcolor for acc
+# highlight_builds => $highlight     # ref to hash of build_ids to color with 
+# build_seqs => \%build_seqs         # ref to hash of per build seq attrs 
+
+# $build_seqs{$row[3]}->{$row[2]}->{coverage}->{$covered_posn}++;
 	my %args = @_;
 
 	my $display = qq~
@@ -280,14 +625,104 @@ sub get_clustal_display {
 		  $sequence =~ s/ /&nbsp;/g 
 		} else {
 #			$log->debug( "$seq->[0] isn't consensus, commence to highlighting $sequence" );
-#			$sequence = highlight_sites( seq => $sequence, 
-#			                             sites => $args{data}->{$seq->[0]}->{sites},
-#																	 allsites => $args{data}->{allsites});
-#  my $clustal_display = get_clustal_display( alignments => $clustal, data => \%prot_data );
+			$sequence = highlight_sites( seq => $sequence, 
+                                   acc => $seq->[0], 
+			                             %args
+																 );
 		}
-		$display .= "<TR><TD ALIGN=right class=sequence_font>$seq->[0]:</TD><TD NOWRAP=1 class=sequence_font BGCOLOR=$args{bgcolor}->{$seq->[0]}>$sequence</TD></TR>\n";
+		$display .= "<TR><TD BGCOLOR=$args{acc_color}->{$seq->[0]} ALIGN=right class=sequence_font>$seq->[0]:</TD><TD NOWRAP=1 class=sequence_font BGCOLOR=$args{bgcolor}->{$seq->[0]}>$sequence</TD></TR>\n";
 	}
 	$display .= "</TABLE>\n</DIV>\n";
 	return $display;
 }
+
+sub highlight_sites {
+
+
+
+# highlight_builds => $highlight     # ref to hash of build_ids to color with 
+# build_seqs => \%build_seqs         # ref to hash of per build seq attrs 
+# seq => $sequence                   # sequence to be processed, a la --A--AB-
+# acc => $accession                  # accession of seq to be processed
+
+  my %args = @_;
+
+  my $coverage;
+	for my $build ( keys( %{$args{highlight_builds}} ) ) {
+		if ( $args{build_seqs}->{$build} && $args{build_seqs}->{$build}->{$args{acc}} ) {
+			$coverage =  $args{build_seqs}->{$build}->{$args{acc}}->{coverage};
+			last;
+		}
+	}
+	return $args{seq} unless $coverage;
+
+  my @aa = split( '', $args{seq} );
+  my $return_seq = '';
+  my $cnt = 0;
+	my $in_coverage = 0;
+	my $span_closed = 1;
+  for my $aa ( @aa ) {
+    if ( $aa eq '-' ) {
+			if ( $in_coverage && !$span_closed ) {
+				$return_seq .= "</span>$aa";
+				$span_closed++;
+			} else {
+				$return_seq .= $aa;
+			}
+		} else { # it is an amino acid
+			if ( $coverage->{$cnt} ) {
+				if ( $in_coverage ) { # already in
+					if ( $span_closed ) {  # Must have been jumping a --- gap
+					  $span_closed = 0;
+				    $return_seq .= "<span class=obs_seq_font>$aa";
+					} else {
+				    $return_seq .= $aa;
+					}
+				} else {
+					$in_coverage++;
+					$span_closed = 0;
+				  $return_seq .= "<span class=obs_seq_font>$aa";
+				}
+			} else { # posn not covered!
+				if ( $in_coverage ) { # were in, close now
+				  $return_seq .= "</span>$aa";
+					$in_coverage = 0;
+					$span_closed++;
+				} else {
+				  $return_seq .= $aa;
+				}
+			}
+		  $cnt++;
+		}
+	}
+	if ( $in_coverage && !$span_closed ) {
+		$return_seq .= '</span>';
+	}
+	return $return_seq;
+}
+__DATA__
+
+  for my $aa ( @aa ) {
+#   $log->debug( "Consider $aa" );
+							    if ( $aa =~ /\w/ ) {
+#     $log->debug( " $aa is a letter" );
+										      if ( $args{sites}->{$cnt} ) {
+#       $log->debug( " $aa has a site at $cnt!" );
+														        $return_seq .= "<SPAN CLASS=$args{sites}->{$cnt}>$aa</SPAN>";
+#       $return_seq .= "<FONT COLOR=yellow>$aa</FONT>";
+#     } elsif ( $args{allsites}->{$cnt} ) {
+#       $return_seq .= "<SPAN CLASS=nophospho>$aa</SPAN>";
+																		      } else {
+																						        $return_seq .= $aa;
+																										      }
+																													      # Increment counter on aa, not on -
+#     $log->debug( "count is $cnt, is there no site here?" );
+																																      $cnt++;
+																																			    } else {
+																																						      $return_seq .= $aa;
+																																									    }
+																																											  }
+																																												  return $return_seq;
+}
+
 
