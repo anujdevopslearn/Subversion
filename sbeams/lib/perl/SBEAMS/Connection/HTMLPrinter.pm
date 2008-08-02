@@ -233,6 +233,7 @@ sub printStyleSheet {
 my $module_styles =<<"  END_STYLE";  
 	A.sortheader{background-color: #888888; font-size: ${FONT_SIZE}pt; font-weight: bold; color:white; line-height: 25px;}
   .info_box { background: #F0F0F0; border: #000 1px solid; padding: 4px; width: 80%; color: #444444 }
+  .clear_info_box { border: #000 1px solid; padding: 4px; width: 80%; color: #444444 }
   .popup_help { cursor: Help; color:#444444 }
   .gaggle-data { display: none }
   
@@ -274,6 +275,7 @@ my $module_styles =<<"  END_STYLE";
   .tmhmm{ background-color: #CCFFCC; font-size: ${FONT_SIZE}pt; font-weight: bold; text-decoration:underline}
   .instruction_text{ font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
   .sequence_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5}	
+  .obs_seq_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5; color: red }	
 
   /* Phosphopep */
   .invalid_parameter_value  {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_LG}pt; text-decoration: none; color: #FC0; font-style: Oblique; }
@@ -300,6 +302,12 @@ my $module_styles =<<"  END_STYLE";
   div.visible { display: inline; white-space: nowrap;         }
   div.visilink { color: blue; display: inline; white-space: nowrap;         }
   div.hidden { display: none; }
+  table.tbl_visible { display: table; }
+  table.tbl_hidden { display: none; }
+  tr.tbl_visible { display: table-row; }
+  tr.tbl_hidden { display: none; }
+  td.tbl_visible { display: table-cell; }
+  td.tbl_hidden { display: none; }
   END_STYLE
 
   if ( $args{module_only} ) {
