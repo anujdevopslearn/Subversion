@@ -904,6 +904,49 @@ return ($table3);
 
 
 
+sub get_atlas_checklist {
+  my $self = shift;
+  my %args = @_;
+
+  # check input
+	for my $arg ( qw( build_info js_call ) ) {
+		return "Missing required arguement $arg" unless defined $args{$arg};
+	}
+
+  #### Get a list of accessible builds, use to validate passed list.
+  my @accessible = $self->getAccessibleBuilds();
+	my %build_check;
+	for my $build ( @accessible ) {
+		$build_check{$build}++;
+	}
+
+  # Convenience
+	my %build_info = %{$args{build_info}};
+  my @builds =  sort { $build_info{$a}->{org} cmp $build_info{$b}->{org} ||
+		               $build_info{$b}->{is_curr} <=>  $build_info{$a}->{is_curr} ||
+		            $build_info{$b}->{is_default} <=>  $build_info{$a}->{is_default} ||
+						 		      $build_info{$a}->{name} cmp $build_info{$b}->{name} } keys %build_info;
+
+  my $table = SBEAMS::Connection::DataTable->new(BORDER => 0);
+  $table->addRow( [ 'Add', 'Build Id', 'Display Name', 'Full Name', 'Organism', 'is_def' ] );
+  $table->setRowAttr(  ROWS => [1], BGCOLOR => '#bbbbbb', ALIGN=>'CENTER' );
+  $table->setHeaderAttr( BOLD => 1 );
+
+  for my $build ( @builds ) {
+		my %build = %{$build_info{$build}};
+    my $checked = ( $build{visible} ) ? 'checked' : '';
+
+    my $chkbox =<<"    END";
+    <INPUT $checked TYPE="checkbox" NAME="build_id" VALUE="$build" onchange="$args{js_call}($build);">
+    END
+    $table->addRow( [ $chkbox, $build, @build{qw(display_name name org is_default)} ] );
+#		$log->debug( "Setting row " . $table->getRowNum() . " to $build{bgcolor} for build $build" );
+    $table->setRowAttr( ROWS => [$table->getRowNum()], BGCOLOR => $build{bgcolor} );
+
+	}
+	return "$table";
+}
+
 1;
 
 __END__
@@ -962,3 +1005,5 @@ Eric Deutsch <edeutsch@systemsbiology.org>
 perl(1).
 
 =cut
+
+
