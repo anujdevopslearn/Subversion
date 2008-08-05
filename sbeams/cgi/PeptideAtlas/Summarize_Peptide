@@ -283,20 +283,43 @@ if ($sbeams->output_mode() eq 'html') {
 #########################################################################
 #### Process all the constraints
 
-#### Build PEPTIDE_SEQUENCE constraint
-    my $peptide_sequence_clause = $sbeams->parseConstraint2SQL(
+#### Build Search constraint
+    
+my $peptide_clause; 
+
+  if ($peptide=~/PAp\d+/) {
+
+    
+     
+    $peptide_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"P.peptide_accession",
+        constraint_type=>"plain_text",
+        constraint_name=>"Peptide Accession",
+        constraint_value=>$peptide
+
+      );
+    return if ($peptide_clause eq '-1'); 
+
+    }
+
+    else {
+   
+
+    $peptide_clause = $sbeams->parseConstraint2SQL(
         constraint_column=>"P.peptide_sequence",
         constraint_type=>"plain_text",
         constraint_name=>"Peptide Sequence",
         constraint_value=>$peptide
 
       );
-    return if ($peptide_sequence_clause eq '-1');
-    
+       $peptide_clause =~s/LIKE/=/gi;
+    return if ($peptide_clause eq '-1'); 
 
-    my $atlas_project_clause = "AND AB.project_id IN ( $project_string )";
+  
+   }
 
-    $peptide_sequence_clause =~ s/LIKE/=/gi;
+ 
+my $atlas_project_clause = "AND AB.project_id IN ( $project_string )";
     
 
 
@@ -322,7 +345,7 @@ if ($sbeams->output_mode() eq 'html') {
       ON (BS.organism_id= OZ.organism_id)
       WHERE 1 = 1
       $atlas_project_clause
-      $peptide_sequence_clause
+      $peptide_clause
       ORDER BY P.peptide_sequence, OZ.organism_name, PI.n_observations DESC,AB.atlas_build_name
 
 ~;
@@ -515,5 +538,7 @@ my $peptide_info_html = $table1.$table2;
 return($peptide_info_html);
 
  }  #### End of Display Peptide
+
+
 
 
