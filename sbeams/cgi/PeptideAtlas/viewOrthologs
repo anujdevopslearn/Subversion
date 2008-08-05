@@ -65,6 +65,7 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
   );
   $page .= "$tabMenu";
 
+  $sbeamsMOD->display_page_header(project_id => $project_id);
   $log->debug( "Begin page:" .time() );
   if ( $params{group_id} ) {
     $page .= get_ortholog_display( %params );
@@ -77,7 +78,6 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
     
 
   # Display page
-  $sbeamsMOD->display_page_header(project_id => $project_id);
   print $page;
   $sbeamsMOD->display_page_footer();
 
@@ -458,17 +458,25 @@ sub get_ortholog_display {
   my $MSF = SBEAMS::BioLink::MSF->new();
 
 	$log->debug( "Run alignment: " .time() );
-	my $clustal = $MSF->runClustalW( sequences => $fasta );
 	my $clustal_display;
-	if ( ref $clustal ne 'ARRAY' ) {
-	  $clustal_display = "Error running Clustal: $clustal";
+	my $alignment_overview = qq~
+	This display shows the protein sequences in the $args{group_id} group aligned using the Clustal algorithm, described below (click the Show Description link if necessary).  Each sequence is highlighted to show which peptide(s) have been observed for that sequence in one of the builds for the corresponding organism.  The builds used to highlight the sequences for a given organism are shown in the table above with a dagger symbol (<SUP><BOLD>&#8224;</BOLD></SUP>) in the heading, and are diplayed in the table by default.
+	~;
+  if ( $cnt > 100 ) {
+		$alignment_overview = '';
+		$clustal_display = $sbeams->makeErrorText( "Too many sequences to run alignment, skipping" );
 	} else {
-	  $clustal_display = get_clustal_display( alignments => $clustal,
-                                               bgcolor => \%bgcolor,
-                                             acc_color => \%acc_color,
-                                      highlight_builds => \%view_build2org,
+	  my $clustal = $MSF->runClustalW( sequences => $fasta );
+	  if ( ref $clustal ne 'ARRAY' ) {
+	    $clustal_display = $sbeams->makeErrorText( "Error running Clustal: $clustal" );
+	  } else {
+	    $clustal_display = get_clustal_display( alignments => $clustal,
+                                                 bgcolor => \%bgcolor,
+                                               acc_color => \%acc_color,
+                                        highlight_builds => \%view_build2org,
                                             build_seqs => \%build_seqs 
 																				  );
+	  }
 	}
   my $alignment_text = get_alignment_text();
 	$log->debug( "Run alignment Done: " .time() );
@@ -492,9 +500,10 @@ sub get_ortholog_display {
 	<BR>
 	$add_builds
 	<BR>
-  <P><H4>Ortholog Sequence Alignment</H4>
-	  This display shows the protein sequences in the $args{group_id} group aligned using the Clustal algorithm, described below (click the Show Description link if necessary).  Each sequence is highlighted to show which peptide(s) have been observed for that sequence in one of the builds for the corresponding organism.  The builds used to highlight the sequences for a given organism are shown in the table above with a dagger symbol (<SUP><BOLD>&#8224;</BOLD></SUP>) in the heading, and are diplayed in the table by default.</P>
-	
+  <H4>Ortholog Sequence Alignment</H4>
+  <P>
+  $alignment_overview	
+	</P>
   $clustal_display
   </P>
   $alignment_text
