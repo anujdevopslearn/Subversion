@@ -426,13 +426,19 @@ if( defined $peptide_acc) {
    
    }
 
+
+else {       
 ### if the peptide was not found in the peptide atlas.
 print "The peptide was not found. Please enter again";
    
+}
 
 
    } # END if loop
-         
+  
+
+
+
 
 } ### END Handle Request
 
