@@ -256,7 +256,7 @@ sub get_ortholog_display {
 
 		# Effectively eliminate non-default builds
 		if ( !$row[6] ) {
-			$log->debug( "skipping $row[3] 'cause its not default" ) if !$skippy{$row[3]}; 
+#			$log->debug( "skipping $row[3] 'cause its not default" ) if !$skippy{$row[3]}; 
 			$skippy{$row[3]}++;
 			next;
 		}
@@ -275,7 +275,7 @@ sub get_ortholog_display {
 		  $build_info{$row[3]}->{view}++;
 			$view_org2build{$org} = $row[3];
 			$view_build2org{$row[3]} = $org;
-			$log->debug( "View build for $org is $row[3] ( $row[4] )" );
+#			$log->debug( "View build for $org is $row[3] ( $row[4] )" );
 		}
 
     # error cases, shouldn't happen?
