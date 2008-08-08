@@ -293,9 +293,42 @@ sub writeSBEAMSTempFile {
 }
 
 sub readSBEAMSTempFile {
+  my $self = shift;
+	my %args = @_;
+
+  # If we don't have filename, nothing to do
+	return undef if !$args{filename};
+	$args{dirname} ||= '';
+	my $tmp_path = "$PHYSICAL_BASE_DIR/tmp/" . $args{dirname} . '/' . $args{filename};
+	if ( -e $tmp_path ) {
+		undef local $/;
+	  open( TMPFIL, "$tmp_path" ) || die "unable to open $tmp_path";
+		my $contents = <TMPFIL>;
+	  close TMPFIL;
+		return $contents;
+	} else {
+		$log->warn( "Unable to open temp file $tmp_path" );
+		return undef;
+	}
 }
 
+sub doesSBEAMSTempFileExist {
+  my $self = shift;
+	my %args = @_;
 
+  # If we don't have filename, nothing to do
+	return undef if !defined $args{filename};
+	$args{dirname} ||= '';
+	my $tmp_path = "$PHYSICAL_BASE_DIR/tmp/" . $args{dirname};
+	$tmp_path .= '/' . $args{filename} if $args{filename};
+
+	$log->info( "Checking on $tmp_path" );
+	if ( -e $tmp_path ) {
+		return $tmp_path;
+	} else {
+		return 0;
+	}
+}
 
 
 ###############################################################################
