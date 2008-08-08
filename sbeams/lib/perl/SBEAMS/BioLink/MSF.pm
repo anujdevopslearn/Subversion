@@ -15,6 +15,8 @@ use strict;
 
 use lib "../..";
 
+use Digest::MD5 qw(md5_hex);
+
 use SBEAMS::Connection qw( $log );
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
@@ -36,6 +38,23 @@ sub new {
   # Objectification.
   bless $this, $class;
 
+  my $alignment_dir = $CONFIG_SETTING{ALIGNMENT_SUBDIR} || '';
+	$this->{_alignment_dir} = $alignment_dir;
+	$log->info( "Alignment dir is $alignment_dir" );
+
+  # Make sure it exists 
+	if ( $alignment_dir ) {
+  	my $exists = $sbeams->doesSBEAMSTempFileExist(  dirname => $alignment_dir,
+	                                                  filename => '' );
+		$log->info( "does $exists exist?" );
+  	unless ( $exists ) {
+		$log->info( "No, write it!" );
+      $sbeams->writeSBEAMSTempFile( content => 'Nada Surf',
+		                                dirname => $alignment_dir,
+		                               filename => 'create_me',
+																	 newdir => 1 );
+		}
+	}
   return $this;
 }
 
@@ -45,16 +64,33 @@ sub runClustalW {
 	return 'no data provided' unless $args{sequences};
 
 	$args{sequences} =~ s/^>\s+/>_spc_/g;
-  my $clustal_file = $sbeams->writeSBEAMSTempFile( content => $args{sequences},
-                                                    suffix => 'fsa',
-																										newdir => 1
-																								 );
-  my $clustal_exe = $CONFIG_SETTING{CLUSTALW} || return 'Clustal executable not found on this server';
-  my $out = `$clustal_exe -tree -align -outorder=input -infile=$clustal_file`;
+	my $checksum = md5_hex( $args{sequences} );
+	my $dirname = ( $self->{_alignment_dir} ) ? $self->{_alignment_dir} . '/' : '';
+	$dirname .= $checksum;
 
-  if ( $out && $out =~ /No alignment!/gm ) {
-		return "Clustal run failed: $out\n";
-  }
+	my $clustal_file = "$checksum.fsa";
+	my $exists = $sbeams->doesSBEAMSTempFileExist( filename => "$checksum.aln", 
+		                                              dirname => $dirname );
+
+  if ( !$exists ) {
+		$log->info( "no existing alignment named $checksum!" );
+    $clustal_file = $sbeams->writeSBEAMSTempFile( content => $args{sequences},
+		                                              dirname => $dirname,
+		                                             filename => $checksum,
+                                                   suffix => 'fsa',
+																							  		newdir => 1
+																								 );
+    my $clustal_exe = $CONFIG_SETTING{CLUSTALW} || return 'Clustal executable not found on this server';
+    my $out = `$clustal_exe -tree -align -outorder=input -infile=$clustal_file`;
+
+    if ( $out && $out =~ /No alignment!/gm ) {
+	  	return "Clustal run failed: $out\n";
+    }
+	} else {
+		$clustal_file = $exists;
+		$log->info( "Reading existing alignment $checksum! ($clustal_file)" );
+
+	}
 
 	my $align_file = $clustal_file;
 	$align_file =~ s/fsa$/aln/;
