@@ -195,7 +195,6 @@ sub get_ortholog_display {
 		next unless scalar(keys(%{$seq2acc{$seq}}));
 
  	  for my $acc ( keys ( %{$seq2acc{$seq}} ) ) {
-      $log->debug( "charring up $acc for $seq!!" );
       $dup_seqs{$acc} = $dup_char;
     }
     $dup_char++;
@@ -493,14 +492,14 @@ sub get_ortholog_display {
   return( <<"  END" );
   <H4>Protein Occurrence by Build</H4>
   <P class=lg_body_text>
-  The table below shows ortholog/homolog information for the $args{group_id} ortholog group.  The ortholog groups were computed using <A HREF='http://www.orthomcl.org/cgi-bin/OrthoMclWeb.cgi'>OrthoMCL version 2</A>, and are based on BLAST homology.  The numbers shown in the columns under each build are the total number of observations of peptides that can be mapped to a given protein, and the total number of distinct peptides seen: total obs ( num distinct ).  You can add information about additional builds by clicking the 'Add builds' link below and selecting the desired build(s).  Builds used to highlight the multiple sequence alignment below are shown with a dagger symbol (<SUP><BOLD>&#8224;</BOLD></SUP>).
+  The table below shows information about homologous(ortholog/paralog) proteins in the $args{group_id} ortholog group.  The groups were computed using <A HREF='http://www.orthomcl.org/cgi-bin/OrthoMclWeb.cgi'>OrthoMCL version 2</A>, and are based on BLAST homology.  The numbers shown in the columns under each build are the total number of observations of peptides that can be mapped to a given protein, and the total number of distinct peptides seen: total obs ( num distinct ).  You can add information about additional builds by clicking the 'Add builds' link below and selecting the desired build(s).  Builds used to highlight the multiple sequence alignment below are shown with a dagger symbol (<SUP><BOLD>&#8224;</BOLD></SUP>).
 
   </P>
   $table 
 	<BR>
 	$add_builds
 	<BR>
-  <H4>Ortholog Sequence Alignment</H4>
+  <H4>Homologous Sequence Alignment</H4>
   <P>
   $alignment_overview	
 	</P>
