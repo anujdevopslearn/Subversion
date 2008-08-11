@@ -634,3 +634,20 @@ N AT_modified_peptide_annotation
 N AT_transition_suitability_level
 
 -----------------
+
+2008-08-17
+
+- Added column n_observations to AT_peptide_instance_sample:
+
+  n_observations                 int,
+
+  ALTER TABLE peptide_instance_sample ADD n_observations INT;
+
+- Added column n_observations to AT_modified_peptide_instance_sample:
+
+  n_observations                 int,
+
+  ALTER TABLE modified_peptide_instance_sample ADD n_observations INT;
+
+
+-----------------
