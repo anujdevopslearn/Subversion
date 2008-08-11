@@ -282,12 +282,25 @@ sub get_ortholog_display {
 		$build_info{$row[3]}->{bss} = $row[7];
 
     # Simplistic initial view mechanism
-		if ( !$view_org2build{$org} || $row[3] == $curr_bid ) {
+		if ( !$view_org2build{$org} ) {
 		  $build_info{$row[3]}->{visible}++;
 		  $build_info{$row[3]}->{view}++;
 			$view_org2build{$org} = $row[3];
 			$view_build2org{$row[3]} = $org;
 #			$log->debug( "View build for $org is $row[3] ( $row[4] )" );
+		} elsif ( $row[3] == $curr_bid ) {
+		  $build_info{$row[3]}->{visible}++;
+		  $build_info{$row[3]}->{view}++;
+
+      # Gotta unset the build
+			my $deprecated = $view_org2build{$org};
+			$log->debug( "Replacing info from $build_info{$deprecated}->{name} with info from  $build_info{$row[3]}->{name}, 'cause its current!" );
+
+			$build_info{$deprecated}->{visible} = 0;
+			$build_info{$deprecated}->{view} = 0;
+			delete $view_build2org{$deprecated};
+			$view_org2build{$org} = $row[3];
+			$view_build2org{$row[3]} = $org;
 		}
 
     # error cases, shouldn't happen?
