@@ -190,9 +190,9 @@ sub get_ortholog_display {
 
   # not quite working yet!
 	my %dup_seqs;
- 	my $dup_char = 'a';
+ 	my $dup_char = 'A';
 	for my $seq ( keys( %seq2acc ) ) {
-		next unless scalar(keys(%{$seq2acc{$seq}}));
+		next unless scalar(keys(%{$seq2acc{$seq}})) > 1;
 
  	  for my $acc ( keys ( %{$seq2acc{$seq}} ) ) {
       $dup_seqs{$acc} = $dup_char;
@@ -200,29 +200,34 @@ sub get_ortholog_display {
     $dup_char++;
   }
 
+
   # Get stringified version for IN clause.
 	my $bioseq_ids = join( ",", sort{ $a <=> $b } keys( %bioseq_id2name ) );
 
+	if ( !$bioseq_ids ) {
+		print $sbeams->makeInfoText( "No matching sequences found for this ortholog group" );
+    return;
+	}
+
+	my $is_default_build = get_default_builds();
+
   # Define SQL to fetch info about builds in which a peptide has been observed
 	my $sql =<<"  ENDSQL";
-	SELECT count(distinct PI.peptide_id),
-	       sum( n_observations ),
+	SELECT distinct 
+	       PI.peptide_instance_id,
+	       n_observations,
 				 PM.matched_biosequence_id,
          PI.atlas_build_id,
 				 atlas_build_name,
 				 peptide_sequence,
-				 default_atlas_build_id,
 				 biosequence_set_id
 	FROM $TBAT_PEPTIDE_MAPPING PM
   JOIN $TBAT_PEPTIDE_INSTANCE PI ON PI.peptide_instance_id = PM.peptide_instance_id
   JOIN $TBAT_PEPTIDE P ON ( PI.peptide_id = P.peptide_id )
   JOIN $TBAT_ATLAS_BUILD AB ON ( PI.atlas_build_id = AB.atlas_build_id )
-	LEFT JOIN $TBAT_DEFAULT_ATLAS_BUILD DAB ON ( DAB.atlas_build_id = AB.atlas_build_id )
   WHERE PM.matched_biosequence_id IN ( $bioseq_ids )
 	AND project_id IN ( $all_projects )
-	GROUP BY PI.atlas_build_id, atlas_build_name, PM.matched_biosequence_id,
-	         peptide_sequence, default_atlas_build_id, biosequence_set_id
-  ORDER BY default_atlas_build_id DESC, PI.atlas_build_id DESC
+  ORDER BY PI.atlas_build_id DESC
   ENDSQL
   $log->debug( "prepare instance stmt: " . time() );
   my $sth = $sbeams->get_statement_handle( $sql );
@@ -234,9 +239,16 @@ sub get_ortholog_display {
 # 3   PI.atlas_build_id,
 # 4   atlas_build_name,
 # 5   peptide_sequence
-# 6   default_atlas_build_id
+# 6   fizzle
 # 7   biosequence_set_id
 
+# 0 new	       PI.peptide_instance_id,
+# 1 new	       n_observations,
+# 2 new				 PM.matched_biosequence_id,
+# 3 new         PI.atlas_build_id,
+# 4 new				 atlas_build_name,
+# 5 new				 peptide_sequence,
+# 6 new				 biosequence_set_id,
   # hash of info keyed by build_id
 	my %build_seqs;
 
@@ -255,13 +267,13 @@ sub get_ortholog_display {
   while ( my @row = $sth->fetchrow_array() ) {
 
 		# Effectively eliminate non-default builds
-		if ( !$row[6] ) {
-#			$log->debug( "skipping $row[3] 'cause its not default" ) if !$skippy{$row[3]}; 
+		if ( $is_default_build->{!$row[3]} ) {
+			$log->debug( "skipping $row[3] 'cause its not default" ) if !$skippy{$row[3]}; 
 			$skippy{$row[3]}++;
 			next;
 		}
 
-    my $org = $bss2org{$row[7]};
+    my $org = $bss2org{$row[6]};
 		$build_info{$row[3]} ||= {};
 		$build_info{$row[3]}->{name} = $row[4];
 		$build_info{$row[3]}->{org} = $org;
@@ -280,14 +292,14 @@ sub get_ortholog_display {
 
     # error cases, shouldn't happen?
 		next unless $row[0];
-	  if ( $row[0] > 1 ) {
-			$log->warn( "count peptide_id > 1" );
-			$log->warn( join( ", ", @row ) );
-		}
+#	  if ( $row[0] > 1 ) {
+#			$log->warn( "count peptide_id > 1" );
+#			$log->warn( join( ", ", @row ) );
+#		}
 
     $build_seqs{$row[3]} ||= {};
     $build_seqs{$row[3]}->{$row[2]} ||= {};
-    $build_seqs{$row[3]}->{$row[2]}->{count} += $row[0];
+    $build_seqs{$row[3]}->{$row[2]}->{count}++;
     $build_seqs{$row[3]}->{$row[2]}->{n_obs} += $row[1];
 
 	  # Calc coverage for this build/protein combination
@@ -371,9 +383,9 @@ sub get_ortholog_display {
     my $acc_link = "<A HREF='Search?search_key=$row[1];action=GO;build_type_name=$row[2];all_fields=on'>$row[1]</A>";
 		$row[3] = $sbeams->truncateStringWithMouseover( string => $row[3], len => 50 );
 
-#    if ( $dup_seqs{$row[1]} ) {
-#			$acc_link .= "<SUP><BOLD>$dup_seqs{$row[1]}</BOLD></SUP>";
-#		}
+    if ( $dup_seqs{$row[1]} ) {
+			$acc_link .= "<SUP><BOLD>$dup_seqs{$row[1]}</BOLD></SUP>";
+		}
     
 
 
@@ -461,7 +473,12 @@ sub get_ortholog_display {
 	my $alignment_overview = qq~
 	This display shows the protein sequences in the $args{group_id} group aligned using the Clustal algorithm, described below (click the Show Description link if necessary).  Each sequence is highlighted to show which peptide(s) have been observed for that sequence in one of the builds for the corresponding organism.  The builds used to highlight the sequences for a given organism are shown in the table above with a dagger symbol (<SUP><BOLD>&#8224;</BOLD></SUP>) in the heading, and are diplayed in the table by default.
 	~;
-  if ( $cnt > 100 ) {
+	my $duplicate_text = '';
+	if ( scalar( keys( %dup_seqs ) ) ) {
+		$duplicate_text = "  Any sequence-identical proteins are denoted by a superscript letter.";
+	}
+		
+  if ( $cnt > 1000 ) {
 		$alignment_overview = '';
 		$clustal_display = $sbeams->makeErrorText( "Too many sequences to run alignment, skipping" );
 	} else {
@@ -492,7 +509,7 @@ sub get_ortholog_display {
   return( <<"  END" );
   <H4>Protein Occurrence by Build</H4>
   <P class=lg_body_text>
-  The table below shows information about homologous(ortholog/paralog) proteins in the $args{group_id} ortholog group.  The groups were computed using <A HREF='http://www.orthomcl.org/cgi-bin/OrthoMclWeb.cgi'>OrthoMCL version 2</A>, and are based on BLAST homology.  The numbers shown in the columns under each build are the total number of observations of peptides that can be mapped to a given protein, and the total number of distinct peptides seen: total obs ( num distinct ).  You can add information about additional builds by clicking the 'Add builds' link below and selecting the desired build(s).  Builds used to highlight the multiple sequence alignment below are shown with a dagger symbol (<SUP><BOLD>&#8224;</BOLD></SUP>).
+  The table below shows information about homologous(ortholog/paralog) proteins in the $args{group_id} ortholog group.  The groups were computed using <A HREF='http://www.orthomcl.org/cgi-bin/OrthoMclWeb.cgi'>OrthoMCL version 2</A>, and are based on BLAST homology.  The numbers shown in the columns under each build are the total number of observations of peptides that can be mapped to a given protein, and the total number of distinct peptides seen: total obs ( num distinct ).  You can add information about additional builds by clicking the 'Add builds' link below and selecting the desired build(s).  Builds used to highlight the multiple sequence alignment below are shown with a dagger symbol (<SUP><BOLD>&#8224;</BOLD></SUP>).  $duplicate_text
 
   </P>
   $table 
@@ -510,6 +527,20 @@ sub get_ortholog_display {
   END
 }
 
+sub get_default_builds {
+	my $sql = qq~
+	SELECT atlas_build_id
+	FROM $TBAT_DEFAULT_ATLAS_BUILD 
+	WHERE record_status = 'N';
+	~;
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+	my %mapping;
+	while ( my @row = $sth->fetchrow_array() ) {
+		$mapping{$row[0]}++;
+	}
+	return \%mapping;
+}
 
 
 sub get_alignment_text {
@@ -708,29 +739,5 @@ sub highlight_sites {
 	}
 	return $return_seq;
 }
+
 __DATA__
-
-  for my $aa ( @aa ) {
-#   $log->debug( "Consider $aa" );
-							    if ( $aa =~ /\w/ ) {
-#     $log->debug( " $aa is a letter" );
-										      if ( $args{sites}->{$cnt} ) {
-#       $log->debug( " $aa has a site at $cnt!" );
-														        $return_seq .= "<SPAN CLASS=$args{sites}->{$cnt}>$aa</SPAN>";
-#       $return_seq .= "<FONT COLOR=yellow>$aa</FONT>";
-#     } elsif ( $args{allsites}->{$cnt} ) {
-#       $return_seq .= "<SPAN CLASS=nophospho>$aa</SPAN>";
-																		      } else {
-																						        $return_seq .= $aa;
-																										      }
-																													      # Increment counter on aa, not on -
-#     $log->debug( "count is $cnt, is there no site here?" );
-																																      $cnt++;
-																																			    } else {
-																																						      $return_seq .= $aa;
-																																									    }
-																																											  }
-																																												  return $return_seq;
-}
-
-
