@@ -134,12 +134,13 @@ AT_peptide_instance_sample	9	record_status	Record Status	char	1	0	N	N	N							N	
 AT_peptide_instance_search_batch	1	peptide_instance_search_batch_id	Peptide Instance Search Batch ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_peptide_instance_search_batch	2	peptide_instance_id	Peptide Instance ID	int	4	0	N		N	AT_peptide_instance	peptide_instance_id					N	N		Associated Atlas Build		
 AT_peptide_instance_search_batch	3	atlas_search_batch_id	Atlas Search Batch ID	int	4	0	N		N	AT_atlas_search_batch	atlas_search_batch_id					N	N		Associated Atlas Search Batch		
-AT_peptide_instance_search_batch	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_peptide_instance_search_batch	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_peptide_instance_search_batch	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_peptide_instance_search_batch	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_peptide_instance_search_batch	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_peptide_instance_search_batch	9	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_peptide_instance_search_batch	4	n_observations	Number of Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in the referenced search_batch		
+AT_peptide_instance_search_batch	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_peptide_instance_search_batch	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_peptide_instance_search_batch	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_peptide_instance_search_batch	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_peptide_instance_search_batch	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_peptide_instance_search_batch	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_modified_peptide_instance	1	modified_peptide_instance_id	Modified Peptide Instance ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_modified_peptide_instance	2	peptide_instance_id	Peptide Instance ID	int	4	0	N		N	AT_peptide_instance	peptide_instance_id	Y	text	10		Y	Y	Y	Parent peptide_instance_id		
 AT_modified_peptide_instance	3	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Sequence of the peptide including modification notations		
@@ -167,12 +168,13 @@ AT_modified_peptide_instance_sample	9	record_status	Record Status	char	1	0	N	N	N
 AT_modified_peptide_instance_search_batch	1	modified_peptide_instance_search_batch_id	Modified Peptide Instance Search Batch ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_modified_peptide_instance_search_batch	2	modified_peptide_instance_id	Modified Peptide Instance ID	int	4	0	N		N	AT_modified_peptide_instance	modified_peptide_instance_id					N	N		Associated Atlas Build		
 AT_modified_peptide_instance_search_batch	3	atlas_search_batch_id	Atlas Search Batch ID	int	4	0	N		N	AT_atlas_search_batch	atlas_search_batch_id					N	N		Associated Atlas Search Batch		
-AT_modified_peptide_instance_search_batch	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_modified_peptide_instance_search_batch	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_modified_peptide_instance_search_batch	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_modified_peptide_instance_search_batch	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_modified_peptide_instance_search_batch	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_modified_peptide_instance_search_batch	9	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_modified_peptide_instance_search_batch	4	n_observations	Number of Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in the referenced search_batch		
+AT_modified_peptide_instance_search_batch	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_modified_peptide_instance_search_batch	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_modified_peptide_instance_search_batch	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_modified_peptide_instance_search_batch	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_modified_peptide_instance_search_batch	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_modified_peptide_instance_search_batch	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_peptide_mapping	1	peptide_mapping_id	Peptide Mapping ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_peptide_mapping	2	peptide_instance_id	Peptide Instance	int	4	0	N		N	AT_peptide_instance	peptide_instance_id	Y	optionlist			Y	Y	Y	Peptide Instance that was mapped		
 AT_peptide_mapping	3	matched_biosequence_id	Matched Biosequence	int	4	0	N		N	AT_biosequence	biosequence_id	Y	optionlist			Y	Y	Y	Biosequence to which the peptide was successfully mapped		
