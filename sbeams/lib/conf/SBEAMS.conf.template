@@ -124,6 +124,10 @@ CONFIG_SETTING{KEGG_WSDL} = http://soap.genome.jp/KEGG.wsdl
 CONFIG_SETTING{KEGG_IMAGE_URL} = ftp://ftp.genome.ad.jp/pub/kegg/pathways/__KEGG_ORG__/BASE.gif
 CONFIG_SETTING{KGML_URL} = ftp://ftp.genome.jp/pub/kegg/xml/KGML_v0.6.1/__KEGG_ORG__/BASE.xml
 
+# These are for functions using clustalW alignments.
+CONFIG_SETTING{CLUSTALW} = /usr/local/genome/bin/clustalw
+CONFIG_SETTING{ALIGNMENT_SUBDIR} = Alignments
+
 
 #### Define the place where Proteomics MS/MS spectrum peaks are written
 #### either TABLE, SKIP, or a file path (Default is TABLE)
