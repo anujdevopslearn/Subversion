@@ -127,7 +127,8 @@ sub main {
             atlas_build_id => $parameters{atlas_build_id}
         );
 
-        $sbeamsMOD->display_page_header(project_id => $project_id);
+        $sbeamsMOD->display_page_header(project_id => $project_id,
+				                                init_tooltip => 1);
 
         handle_request(ref_parameters=>\%parameters);
 
@@ -394,7 +395,7 @@ unless ( $apply_action eq "QUERY" || $apply_action eq "GO" ) { ## if receive fro
 
     if ($sbeams->output_mode() eq 'html') {
 
-#      print $sbeamsMOD->init_pa_tooltip(); 
+#        print $sbeamsMOD->init_pa_tooltip(); 
 
         print "<p>";
 
@@ -1090,6 +1091,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
   }
 
 
+
   #############################################################################
   #### Spectra Section
 
@@ -1175,23 +1177,54 @@ if ($apply_action =~ /QUERY|GO/i ) {
   #### Samples Section
 
   my $sampleSQL = qq ~
-     SELECT PS.sample_id
+     SELECT sample_title, PIS.n_observations, PI.n_observations, 
+		 S.sample_id, ASB.n_searched_spectra 
      FROM $TBAT_PEPTIDE_INSTANCE PI
      INNER JOIN $TBAT_PEPTIDE P
       ON ( PI.peptide_id = P.peptide_id )
      INNER JOIN $TBAT_ATLAS_BUILD AB 
       ON ( PI.atlas_build_id = AB.atlas_build_id )
-       INNER JOIN $TBAT_PEPTIDE_INSTANCE_SAMPLE PIS
-       ON ( PI.peptide_instance_id = PIS.peptide_instance_id )
-      INNER JOIN $TBAT_SAMPLE PS
-      ON ( PIS.sample_id = PS.sample_id )
+     INNER JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PIS
+      ON ( PI.peptide_instance_id = PIS.peptide_instance_id )
+     INNER JOIN $TBAT_ATLAS_SEARCH_BATCH ASB
+      ON ( PIS.atlas_search_batch_id = ASB.atlas_search_batch_id )
+     INNER JOIN $TBAT_SAMPLE S
+      ON ( ASB.sample_id = S.sample_id )
+		 JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB 
+			ON ( ABSB.atlas_build_id        = AB.atlas_build_id AND
+		       ABSB.atlas_search_batch_id = ASB.atlas_search_batch_id )
+
      WHERE 1 = 1
      $atlas_build_clause
      $peptide_name_clause
      $peptide_sequence_clause
   ~;
 
-  my @samples = $sbeams->selectOneColumn( $sampleSQL );
+  my @samples = $sbeams->selectSeveralColumns( $sampleSQL );
+	my $n_obs = [];
+	my $obs_per_million = [];
+	my $table_samples = [];
+	my $total = 0;
+	my $inst_obs;
+	for my $sample ( @samples ) {
+		$inst_obs ||= $sample->[2];
+		if ( $sample->[4] ) {
+			$sample->[4] = sprintf( "%0.1f",( $sample->[1]/$sample->[4] ) * 1000000 );
+		} else {
+			$sample->[4] = 'null';
+		}
+		my $title = $sample->[0];
+		$title =~ s/\W//g;
+		push @$n_obs, [ $title, $sample->[1] ];
+		push @$obs_per_million, [ $title, $sample->[4] ];
+		push @$table_samples, $sample->[3];
+    $total += $sample->[1];
+	}
+	unless ( $total == $inst_obs ) {
+		$log->error( "mismatch in sample count!!! $total <> $inst_obs " );
+	}
+#	push @$plot_samples, [ 'Total observations', $total ];
+
   # Widget to allow show/hide of modified peptides section
   my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprot_obs_sample',
                                                 visible => 1,
@@ -1203,12 +1236,27 @@ if ($apply_action =~ /QUERY|GO/i ) {
 # encodeSectionTable(
 #                                               tr_info => $tr,
 
-  my ($sheader, $sHTML) = $sbeamsMOD->getSampleDisplay(sample_ids => \@samples,
+  my ($sheader, $sHTML) = $sbeamsMOD->getSamplePlotDisplay( n_obs => $n_obs,
+                                                  obs_per_million => $obs_per_million,
                                                            'link' => $link,
                                                            tr_info => $tr );
-  print "<TABLE WIDTH=600 ><TR><TD COLSPAN=2>&nbsp;</TD></TR>" . $sheader;
-  print "$sHTML";
-  print "</TABLE>\n";
+
+  my ($theader, $tHTML) = $sbeamsMOD->getSampleDisplay( sample_ids => $table_samples,
+                                                           'link' => $link,
+                                                           'no_header' => 1,
+                                                           tr_info => $tr );
+
+  print qq~
+	<TABLE WIDTH=600><TR><TD COLSPAN=2>&nbsp;</TD></TR>
+  $sheader
+  $sHTML
+  <TR><TD>&nbsp;</TD><TD>&nbsp;</TD></TR>
+  $theader
+  $tHTML
+  <TR><TD>&nbsp;</TD><TD>&nbsp;</TD></TR>
+  <TR><TD>&nbsp;</TD><TD>&nbsp;</TD></TR>
+  </TABLE>
+	~;
         }
 
     #### If QUERY was not selected, then tell the user to enter some parameters
