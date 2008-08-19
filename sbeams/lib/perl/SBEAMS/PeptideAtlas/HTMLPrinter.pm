@@ -24,6 +24,7 @@ use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::TableInfo;
 use SBEAMS::Connection::DataTable;
+use SBEAMS::Connection::GoogleVisualization;
 
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::TableInfo;
@@ -640,6 +641,52 @@ sub encodeSectionTable {
 }
 
 ###############################################################################
+# display sample plot
+###############################################################################
+sub getSamplePlotDisplay {
+  my $self = shift;
+  my $sbeams = $self->getSBEAMS();
+  my %args = @_;
+  my $SUB_NAME = 'getSampleDisplay';
+
+  for my $arg ( qw( n_obs obs_per_million ) ) {
+		unless ( defined ($args{$arg} ) ) {
+      $log->error( "Missing required argument $arg" );
+      return undef;
+		}
+  }
+
+  my $header = '';
+  if ( $args{link} ) {
+    $header .= $self->encodeSectionHeader( text => 'Observed in Samples:',
+                                          link => $args{link} );
+  } else {
+    $header .= $self->encodeSectionHeader( text => 'Observed in Samples:',);
+  }
+
+  my $trinfo = $args{tr_info} || '';
+	my $height = 50  + scalar( @{$args{n_obs}} ) * 12;
+	$log->debug( "Height is $height pre call" );
+
+  my $GV = SBEAMS::Connection::GoogleVisualization->new();
+  my $chart = $GV->setDrawBarChart(  samples => $args{n_obs},
+                                  data_types => [ 'string', 'number' ],
+                                    headings => [ 'Sample Name', 'Number of Observations' ],
+                                  );
+  my $chart_2 = $GV->setDrawBarChart(  samples => $args{obs_per_million},
+                                  data_types => [ 'string', 'number' ],
+                                    headings => [ 'Sample Name', 'Obs per million spectra' ],
+  
+	);
+  $chart .= $chart_2 . ' ' . $GV->getHeaderInfo();
+	$chart = "<TR $trinfo><TD></TD><TD>&nbsp;&nbsp;$chart</TD></TR>";
+
+
+  return ( wantarray() ) ? ($header, $chart) : $header . "\n" . $chart;
+}
+
+
+###############################################################################
 # displaySamples
 ###############################################################################
 sub getSampleDisplay {
@@ -674,6 +721,7 @@ sub getSampleDisplay {
   } else {
     $header .= $self->encodeSectionHeader( text => 'Observed in Samples:',);
   }
+  $header = '' if $args{no_header};
 
   my $html = '';
   my $trinfo = $args{tr_info} || '';
