@@ -119,6 +119,41 @@ sub getAtlasBuildDirectory {
   return "$pipeline_dir/$path[0]";
 }
 
+
+# convenience method to look up hash of proteomics search batch to atlas SB
+sub getProtSB2AtlasSB {
+	my $self = shift;
+	my %args = @_;
+	my $where = '';
+	if ( $args{build_id} ) {
+		if ( ref $args{build_id} ne 'ARRAY' ) {
+			die "build_id must be an array reference, not a " . ref $args{build_id};
+		}
+		$where = "WHERE atlas_build_id IN ( " . join( ',', @{$args{build_id}} ) . ' )';
+	}
+  my $sql = qq~
+    SELECT DISTINCT proteomics_search_batch_id, ASB.atlas_search_batch_id
+    FROM $TBAT_ATLAS_SEARCH_BATCH ASB
+		JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
+	    ON ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id
+	  $where
+  ~;
+#	print "$sql\n";
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  
+  my %mapping;
+  while( my $row = $sth->fetchrow_arrayref() ) {
+    if ( $mapping{$row->[0]} ) {
+      $log->warn( "Doppelganger! more than one Atlas SB for Prot SB $row->[0]\n" );
+    }
+    $mapping{$row->[0]} = $row->[1];
+  }
+  return \%mapping;
+}
+
+#####
+
 # convenience method to look up hash of proteomics search batch to sample
 sub getSearchBatch2Sample {
 	my $self = shift;
@@ -168,12 +203,13 @@ sub getPepInstRecords {
 
   my $sql = qq~
     SELECT peptide_sequence, PI.peptide_instance_id, 
-		peptide_instance_sample_id, sample_id
+		peptide_instance_search_batch_id, atlas_search_batch_id
     FROM $TBAT_PEPTIDE P
 		JOIN $TBAT_PEPTIDE_INSTANCE PI ON P.peptide_id = PI.peptide_id
-		JOIN $TBAT_PEPTIDE_INSTANCE_SAMPLE PIS ON PI.peptide_instance_id = PIS.peptide_instance_id
+		JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PIS ON PI.peptide_instance_id = PIS.peptide_instance_id
 	  WHERE atlas_build_id = $args{build_id}
   ~;
+#	print "$sql\n";
 
   my $sth = $sbeams->get_statement_handle( $sql );
   
@@ -200,13 +236,14 @@ sub getModPepInstRecords {
 
   my $sql = qq~
     SELECT modified_peptide_sequence, peptide_charge, 
-		modified_peptide_instance_sample_id, sample_id
+		modified_peptide_instance_search_batch_id, atlas_search_batch_id
     FROM $TBAT_PEPTIDE P
 		JOIN $TBAT_PEPTIDE_INSTANCE PI ON P.peptide_id = PI.peptide_id
 		JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI ON PI.peptide_instance_id = MPI.peptide_instance_id
-		JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE_SAMPLE MPIS ON MPI.modified_peptide_instance_id = MPIS.modified_peptide_instance_id
+		JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE_SEARCH_BATCH MPIS ON MPI.modified_peptide_instance_id = MPIS.modified_peptide_instance_id
 	  WHERE atlas_build_id = $args{build_id}
   ~;
+#	print "$sql\n";
 
   my $sth = $sbeams->get_statement_handle( $sql );
   
@@ -224,7 +261,7 @@ sub cntObsFromIdentlist {
   my $self = shift;
 	my %args = @_;
 
-	for my $arg ( qw( identlist_file sb2smpl ) ) {
+	for my $arg ( qw( identlist_file psb2asb ) ) {
 		die "Missing required param $arg" unless defined $args{$arg};
 	}
 
@@ -255,27 +292,24 @@ sub cntObsFromIdentlist {
     $cnt++;
     my @line = split( "\t", $line, -1 );
   
-#	  unless ( $args{quiet} ) { print '*' unless $cnt % 5000; print "\n" unless $cnt % 200000; }
-  
-    my $smpl = $args{sb2smpl}->{$line[0]};
-    if ( ! $smpl ) {
-      print STDERR "Missing sample id for $line[0]\n";
-      next;
-    }
-
     my $mpi_key = $line[5] . '::::' . $line[7];
+		my $asb = $args{psb2asb}->{$line[0]};
+		unless ( $asb ) {
+			print STDERR "Unable to find atlas search batch for $line[0], skipping\n";
+			next;
+		}
 
-    # Add on, can key off peptide seq (+ chg) or samples (original)
+    # Add on, can key off peptide seq (+ chg) or search_batches (original)
     if ( $args{key_type} && $args{key_type} eq 'peptide' ) {
       $mappings{$line[3]} ||= {}; 
-      $mappings{$line[3]}->{$smpl}++; 
+      $mappings{$line[3]}->{$asb}++; 
       $mappings{$mpi_key} ||= {}; 
-      $mappings{$mpi_key}->{$smpl}++; 
+      $mappings{$mpi_key}->{$asb}++; 
     
 		} else {
-      $mappings{$smpl} ||= {};
-      $mappings{$smpl}->{$line[3]}++;
-      $mappings{$smpl}->{$mpi_key}++;
+      $mappings{$asb} ||= {};
+      $mappings{$asb}->{$line[3]}++;
+      $mappings{$asb}->{$mpi_key}++;
 		}
   }
   return \%mappings;
