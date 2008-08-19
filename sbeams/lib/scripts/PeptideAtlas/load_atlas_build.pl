@@ -84,6 +84,8 @@ Options:
   --purge                     Delete child records in atlas build (retains parent atlas record).
   --load                      Build an atlas (can be used in conjunction with --purge).
   --spectra                   Loads or updates the individual spectra for a build
+  --instance_sample_obs       Loads or updates the number of observations per 
+                              sample for peptide_instance and modified_pi tables
   --coordinates               Loads or updates the peptide coordinates
 
   --organism_abbrev           Abbreviation of organism like Hs
@@ -102,7 +104,7 @@ EOU
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
         "testvars","delete", "purge", "load", "check_tables",
         "atlas_build_name:s", "organism_abbrev:s", "default_sample_project_id:s",
-        "list","spectra","coordinates",
+        "list","spectra","coordinates","instance_sample_obs"
     )) {
 
     die "\n$USAGE";
@@ -318,6 +320,82 @@ sub handleRequest {
 
   }
 
+  #### If update of inst_sample_obs only was requested, or during load
+  if ($OPTIONS{instance_sample_obs} || $OPTIONS{load} ) {
+    print "\n Begin update instance sample observations \n";
+
+    ## set infile to PAidentlist file
+    my $dir = get_atlas_build_directory (atlas_build_id => $ATLAS_BUILD_ID);
+    my $identlist = "$dir/PeptideAtlasInput_sorted.PAidentlist";
+    $identlist = "$dir/PeptideAtlasInput_concat.PAidentlist" if !-e $identlist;
+    if ( !-e $identlist ) {
+      print STDERR "Unable to find Identlist, inst_sample obs not finished\n";
+		} else {
+			print "Getting search batch to sample mapping\n";
+      my $sb2smpl = $sbeamsMOD->getSearchBatch2Sample(build_id=>[$ATLAS_BUILD_ID]);
+#      for my $k ( sort { $a <=> $b } keys ( %{$sb2smpl} ) ) { print "$k => $sb2smpl->{$k}\n"; }
+			print "Getting counts from ident list\n";
+      my $inst_obs = $sbeamsMOD->cntObsFromIdentlist( identlist_file => $identlist,
+			                                                      key_type => 'peptide',
+			                                                       sb2smpl => $sb2smpl );
+
+			print "Updatings pep instance records\n";
+      my $inst_recs = $sbeamsMOD->getPepInstRecords( build_id => $ATLAS_BUILD_ID );
+      initiate_transaction();
+
+      my $cnt = 0;
+      my $commit_interval = 50;
+			for my $peptide ( keys( %{$inst_recs} ) ) {
+				for my $sample( keys( %{$inst_recs->{$peptide}} ) ) {
+          if ( $inst_obs->{$peptide}->{$sample}  ) {
+            $sbeams->updateOrInsertRow( update => 1,
+                                    table_name => $TBAT_PEPTIDE_INSTANCE_SAMPLE,
+                                   rowdata_ref => {n_observations => $inst_obs->{$peptide}->{$sample} },
+                                            PK => 'peptide_instance_sample_id',
+                                      PK_value => $inst_recs->{$peptide}->{$sample},
+                          add_audit_parameters => 1,
+                                       verbose => $VERBOSE,
+                                      testonly => $TESTONLY,
+                                   );             
+						$cnt++;
+						commit_transaction() unless $commit_interval % $cnt;
+
+#					  my $sql = " UPDATE peptide_instance_sample SET n_observations = $inst_obs->{$peptide}->{$sample} WHERE peptide_instance_sample_id = $inst_recs->{$peptide}->{$sample}";
+					}
+				}
+			}
+ 			commit_transaction() unless $commit_interval % $cnt;
+
+			print "Updatings modified pep instance records\n";
+      my $mod_inst_recs = $sbeamsMOD->getModPepInstRecords( build_id => $ATLAS_BUILD_ID );
+
+	   	$cnt = 0;
+			for my $peptide ( keys( %{$mod_inst_recs} ) ) {
+				for my $sample( keys( %{$mod_inst_recs->{$peptide}} ) ) {
+          if ( $inst_obs->{$peptide}->{$sample}  ) {
+
+            $sbeams->updateOrInsertRow( update => 1,
+                                    table_name => $TBAT_MODIFIED_PEPTIDE_INSTANCE_SAMPLE,
+                                   rowdata_ref => {n_observations => $inst_obs->{$peptide}->{$sample} },
+                                            PK => 'modified_peptide_instance_sample_id',
+                                      PK_value => $mod_inst_recs->{$peptide}->{$sample},
+                          add_audit_parameters => 1,
+                                       verbose => $VERBOSE,
+                                      testonly => $TESTONLY,
+                                   );             
+						$cnt++;
+						commit_transaction() unless $commit_interval % $cnt;
+
+
+#						my $sql = "UPDATE modified_peptide_instance_sample SET n_observations = $inst_obs->{$peptide}->{$sample} WHERE peptide_instance_sample_id = $mod_inst_recs->{$peptide}->{$sample}";
+					}
+				}
+			}
+ 			commit_transaction() unless $commit_interval % $cnt;
+			print "Done!\n";
+      reset_dbh();
+    }
+  }
 
   #### Print out the header
   unless ($QUIET) {
@@ -1648,6 +1726,9 @@ sub getNSpecFromFlatFiles
     if ( !-e $pepXMLfile ) {
       $pepXMLfile = "$search_batch_path/interact-prob.pep.xml";
     }
+    if ( !-e $pepXMLfile ) {  # Always guessing...
+      $pepXMLfile = "$search_batch_path/interact.pep.xml";
+    }
     if ( !-e $pepXMLfile ) {
       print STDERR "Unable to find pep xml file, build stats will not be computed correctly\n";
     }
@@ -2221,9 +2302,21 @@ sub readCoords_updateRecords_calcAttributes {
         $strand[$row] = $tmp;
 
         #### Make sure we can resolve the biosequence_id
-        my $biosequence_id = $biosequence_ids{$biosequence_name[$row]}
-            || die("ERROR: BLAST matched biosequence_name $biosequence_name[$row] ".
-            "does not appear to be in the biosequence table!!");
+        my $biosequence_id = $biosequence_ids{$biosequence_name[$row]};
+				if ( !$biosequence_id ) {
+          # Battle known incrementing error
+					if ( $biosequence_name[$row] =~ /\d+\.\d+$/ ) {
+						# Try the trimmed version
+					  my $name = $biosequence_name[$row];
+						$name =~ s/\.\d+$//;
+						$biosequence_id = $biosequence_ids{$name};
+						if ( !$biosequence_id ) {
+              die("ERROR: BLAST matched biosequence_name $biosequence_name[$row] does not appear to be in the biosequence table!!");
+						}
+						# Cache the incremented version
+					  $biosequence_ids{$biosequence_name[$row]} = $biosequence_id;
+					}
+				}
 
         my $tmp_pep_acc = $peptide_accession[$row];
         my $peptide_id = $peptides{$tmp_pep_acc} ||
@@ -2699,6 +2792,11 @@ sub initiate_transaction {
   $sbeams->initiate_transaction();
 }
 
+sub reset_dbh {
+  my %args = @_;
+  $sbeams->reset_dbh();
+}
+
 
 ###############################################################################
 # insert_modified_peptide_instance
@@ -3159,3 +3257,4 @@ sub print_hash
     }
 
 }
+
