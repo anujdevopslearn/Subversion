@@ -214,7 +214,6 @@ sub get_mrm_transitions {
   AND level_score > 0.8
   ORDER BY peptide_accession, modified_peptide_sequence, peptide_charge DESC, level_score DESC, Q3_peak_intensity DESC, q3_mz
   END
-  $log->debug( "$sql" );
   my @rows = $sbeams->selectSeveralColumns($sql);
   return \@rows;
 }
