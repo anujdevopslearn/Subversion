@@ -84,8 +84,8 @@ Options:
   --purge                     Delete child records in atlas build (retains parent atlas record).
   --load                      Build an atlas (can be used in conjunction with --purge).
   --spectra                   Loads or updates the individual spectra for a build
-  --instance_sample_obs       Loads or updates the number of observations per 
-                              sample for peptide_instance and modified_pi tables
+  --instance_searchbatch_obs           Loads or updates the number of observations per 
+                              search_batch for peptide_instance and modified_pi tables
   --coordinates               Loads or updates the peptide coordinates
 
   --organism_abbrev           Abbreviation of organism like Hs
@@ -104,7 +104,7 @@ EOU
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
         "testvars","delete", "purge", "load", "check_tables",
         "atlas_build_name:s", "organism_abbrev:s", "default_sample_project_id:s",
-        "list","spectra","coordinates","instance_sample_obs"
+        "list","spectra","coordinates","instance_searchbatch_obs"
     )) {
 
     die "\n$USAGE";
@@ -321,38 +321,38 @@ sub handleRequest {
   }
 
   #### If update of inst_sample_obs only was requested, or during load
-  if ($OPTIONS{instance_sample_obs} || $OPTIONS{load} ) {
-    print "\n Begin update instance sample observations \n";
+  if ($OPTIONS{instance_searchbatch_obs} || $OPTIONS{load} ) {
+    print "\n Begin update instance search_batch observations \n";
 
     ## set infile to PAidentlist file
     my $dir = get_atlas_build_directory (atlas_build_id => $ATLAS_BUILD_ID);
     my $identlist = "$dir/PeptideAtlasInput_sorted.PAidentlist";
     $identlist = "$dir/PeptideAtlasInput_concat.PAidentlist" if !-e $identlist;
     if ( !-e $identlist ) {
-      print STDERR "Unable to find Identlist, inst_sample obs not finished\n";
+      print STDERR "Unable to find Identlist, inst_searchbatch_obs not finished\n";
 		} else {
-			print "Getting search batch to sample mapping\n";
-      my $sb2smpl = $sbeamsMOD->getSearchBatch2Sample(build_id=>[$ATLAS_BUILD_ID]);
+#			print "Getting search batch to sample mapping\n";
+      my $psb2asb = $sbeamsMOD->getProtSB2AtlasSB(build_id=>[$ATLAS_BUILD_ID]);
 #      for my $k ( sort { $a <=> $b } keys ( %{$sb2smpl} ) ) { print "$k => $sb2smpl->{$k}\n"; }
 			print "Getting counts from ident list\n";
       my $inst_obs = $sbeamsMOD->cntObsFromIdentlist( identlist_file => $identlist,
 			                                                      key_type => 'peptide',
-			                                                       sb2smpl => $sb2smpl );
+																														psb2asb => $psb2asb );
 
-			print "Updatings pep instance records\n";
+			print "Updating pep instance records\n";
       my $inst_recs = $sbeamsMOD->getPepInstRecords( build_id => $ATLAS_BUILD_ID );
       initiate_transaction();
 
       my $cnt = 0;
       my $commit_interval = 50;
 			for my $peptide ( keys( %{$inst_recs} ) ) {
-				for my $sample( keys( %{$inst_recs->{$peptide}} ) ) {
-          if ( $inst_obs->{$peptide}->{$sample}  ) {
+				for my $sbatch( keys( %{$inst_recs->{$peptide}} ) ) {
+          if ( $inst_obs->{$peptide}->{$sbatch}  ) {
             $sbeams->updateOrInsertRow( update => 1,
-                                    table_name => $TBAT_PEPTIDE_INSTANCE_SAMPLE,
-                                   rowdata_ref => {n_observations => $inst_obs->{$peptide}->{$sample} },
-                                            PK => 'peptide_instance_sample_id',
-                                      PK_value => $inst_recs->{$peptide}->{$sample},
+                                    table_name => $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH,
+                                   rowdata_ref => {n_observations => $inst_obs->{$peptide}->{$sbatch} },
+                                            PK => 'peptide_instance_search_batch_id',
+                                      PK_value => $inst_recs->{$peptide}->{$sbatch},
                           add_audit_parameters => 1,
                                        verbose => $VERBOSE,
                                       testonly => $TESTONLY,
@@ -364,21 +364,21 @@ sub handleRequest {
 					}
 				}
 			}
- 			commit_transaction() unless $commit_interval % $cnt;
+ 			commit_transaction() unless $cnt && $commit_interval % $cnt;
 
-			print "Updatings modified pep instance records\n";
+			print "Updating modified pep instance records\n";
       my $mod_inst_recs = $sbeamsMOD->getModPepInstRecords( build_id => $ATLAS_BUILD_ID );
 
 	   	$cnt = 0;
 			for my $peptide ( keys( %{$mod_inst_recs} ) ) {
-				for my $sample( keys( %{$mod_inst_recs->{$peptide}} ) ) {
-          if ( $inst_obs->{$peptide}->{$sample}  ) {
+				for my $search_batch( keys( %{$mod_inst_recs->{$peptide}} ) ) {
+          if ( $inst_obs->{$peptide}->{$search_batch}  ) {
 
             $sbeams->updateOrInsertRow( update => 1,
-                                    table_name => $TBAT_MODIFIED_PEPTIDE_INSTANCE_SAMPLE,
-                                   rowdata_ref => {n_observations => $inst_obs->{$peptide}->{$sample} },
-                                            PK => 'modified_peptide_instance_sample_id',
-                                      PK_value => $mod_inst_recs->{$peptide}->{$sample},
+                                    table_name => $TBAT_MODIFIED_PEPTIDE_INSTANCE_SEARCH_BATCH,
+                                   rowdata_ref => {n_observations => $inst_obs->{$peptide}->{$search_batch} },
+                                            PK => 'modified_peptide_instance_search_batch_id',
+                                      PK_value => $mod_inst_recs->{$peptide}->{$search_batch},
                           add_audit_parameters => 1,
                                        verbose => $VERBOSE,
                                       testonly => $TESTONLY,
