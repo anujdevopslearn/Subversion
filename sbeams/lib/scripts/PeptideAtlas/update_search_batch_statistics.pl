@@ -330,7 +330,7 @@ sub get_peptide_counts {
 
   my $sql =<<"  STATS";
   SELECT ASB.atlas_search_batch_id, n_searched_spectra,
-  COUNT(n_observations) as total_distinct, SUM(n_observations) as n_obs
+  COUNT(PI.n_observations) as total_distinct, SUM(PI.n_observations) as n_obs
   FROM $TBAT_SAMPLE S
   JOIN $TBAT_ATLAS_SEARCH_BATCH ASB 
     ON ASB.sample_id = S.sample_id
@@ -354,7 +354,7 @@ sub get_peptide_counts {
   
   $sql =<<"  STATS";
   SELECT ASB.atlas_search_batch_id, n_searched_spectra,
-  COUNT(n_observations) as total_distinct, SUM(n_observations) as total_obs, 
+  COUNT(PI.n_observations) as total_distinct, SUM(PI.n_observations) as total_obs, 
   data_location, atlas_build_search_batch_id
   FROM $TBAT_SAMPLE S
   JOIN $TBAT_ATLAS_SEARCH_BATCH ASB 
@@ -368,7 +368,7 @@ sub get_peptide_counts {
     ON ( PISB.peptide_instance_id = PI.peptide_instance_id
          AND PI.atlas_build_id = ABSB.atlas_build_id )
   WHERE PI.atlas_build_id = $build_id
-  AND n_observations > 1
+  AND PI.n_observations > 1
   GROUP BY ASB.atlas_search_batch_id, n_searched_spectra, data_location, 
            atlas_build_search_batch_id
   ORDER BY ASB.atlas_search_batch_id ASC
@@ -418,7 +418,7 @@ sub get_contributions {
     ( SELECT PI.peptide_instance_id
        FROM $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB JOIN $TBAT_PEPTIDE_INSTANCE PI ON PISB.peptide_instance_id = PI.peptide_instance_id
        WHERE atlas_build_id = $build_id
-       AND n_observations > 1
+       AND PI.n_observations > 1
        GROUP BY PI.peptide_instance_id
        HAVING COUNT(*) = 1
    )
