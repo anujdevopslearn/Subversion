@@ -191,10 +191,14 @@ sub get_ortholog_display {
   # not quite working yet!
 	my %dup_seqs;
  	my $dup_char = 'A';
-	for my $seq ( keys( %seq2acc ) ) {
+#	for my $seq ( keys( %seq2acc ) ) {
+	for my $prot ( @all_proteins ) {
+		my $seq = $prot->[4];
+#		$log->debug( "SEQ is $seq" );
 		next unless scalar(keys(%{$seq2acc{$seq}})) > 1;
 
  	  for my $acc ( keys ( %{$seq2acc{$seq}} ) ) {
+		  next if $dup_seqs{$acc};
       $dup_seqs{$acc} = $dup_char;
     }
     $dup_char++;
@@ -294,7 +298,7 @@ sub get_ortholog_display {
 
       # Gotta unset the build
 			my $deprecated = $view_org2build{$org};
-			$log->debug( "Replacing info from $build_info{$deprecated}->{name} with info from  $build_info{$row[3]}->{name}, 'cause its current!" );
+#			$log->debug( "Replacing info from $build_info{$deprecated}->{name} with info from  $build_info{$row[3]}->{name}, 'cause its current!" );
 
 			$build_info{$deprecated}->{visible} = 0;
 			$build_info{$deprecated}->{view} = 0;
