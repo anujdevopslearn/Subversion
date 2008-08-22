@@ -15,6 +15,7 @@ package SBEAMS::Connection::GoogleVisualization;
 use strict;
 
 use SBEAMS::Connection;
+use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Log;
 
 use POSIX;
@@ -116,8 +117,7 @@ sub setDrawBarChart {
 		}
 		$sample_cnt++;
 	}
-	$height = $height || 50 + $n_rows * 16;
-#	, title: 'Experiment Contribution'});
+	$height = $height || 50 + ( $n_rows * ( 8 + ( $#{$args{headings}} * 4 ) ) );
 
   my $table_js = '';
 	if( $args{show_table} ) {
@@ -174,8 +174,12 @@ sub getHeaderInfo {
 		$functions .= "$function\n";
 	}
 
+#  <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+
   my $header_info =<<"  END_SCRIPT";
-  <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+  <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/jsapi"></script>
+  <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/ga.js"></script>
+  <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/defaultbarchart.js"></script>
   <script type="text/javascript">
     google.load("visualization", "1", {packages:[$pkgs]});
 		$callbacks
