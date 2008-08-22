@@ -460,11 +460,17 @@ sub parsePathwayXML {
     WHERE kegg_pathway_name = 'path:$path'
     END
     my ( $kgml ) = $sbeams->selectrow_array( $sql );
+    if ( !$kgml ) {
+      $log->warn( "Failed to fetch KGML db:\n $sql" );
+      $log->warn( "Falling back to direct fetch from KEGG" );
+			my $from_kegg = $self->fetchPathwayXML( %args );
+			$kgml = $from_kegg->{xml};
+		}
+
     if ( $kgml ) {
       $parser->set_string( xml => $kgml );
     } else {
-      $log->error( "Failed to retrieve KGML from database" );
-      $log->error( "$sql" );
+      $log->error( "Unable to retrieve KGML from db or KEGG" );
       return;
     }
   } else {
