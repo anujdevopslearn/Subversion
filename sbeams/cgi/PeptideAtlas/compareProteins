@@ -255,6 +255,7 @@ sub get_alignment_display {
 	  } else {
 	    $clustal_display = get_clustal_display( alignments => $clustal, 
 			                                          dup_seqs => \%dup_seqs,
+			                                            pepseq => $peptide,
 																								coverage => \%coverage,
 																  					acc2bioseq_id => \%acc2bioseq_id );
 	 	}
