@@ -513,6 +513,7 @@ unless ( $apply_action eq "QUERY" || $apply_action eq "GO" ) { ## if receive fro
          PI.n_samples, PI.n_protein_samples, PI.empirical_proteotypic_score,
          O.full_name, PI.original_protein_name,
          P.SSRCalc_relative_hydrophobicity, CAST(biosequence_seq AS VARCHAR) biosequence_seq,
+				 BS.biosequence_id,
          PA.peptide_sequence, PA.peptide_annotation, PA.peptide_annotation_id, 
          PA.annotator_name, CAST(PA.comment AS VARCHAR) comment
          FROM $TBAT_PEPTIDE_INSTANCE PI
@@ -558,7 +559,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
             my (@peptide_accession, @peptide_sequence);
             my (@best_probability, @n_observations, @n_genome_locations, @n_protein_mappings);
             my (@chrom, @start_chrom, @end_chrom, @strand);
-            my (@biosequence_name);
+            my (@biosequence_name, %biosequence_id);
             my ( @mw, @pi, @nsamp, @nprotsamp, @epscore, @organism, @original_name, @SSRCalc_relative_hydrophobicity, @pep_annot );
 
             my $i=0;  ##index counter
@@ -569,7 +570,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
                 my ($pa, $seq, $prob, $n_obs, $n_g_loc, $n_prot_map, 
                     $chr, $s_chr, $e_chr, $str, $b_name, $mw, $pi, 
                     $ns, $nps, $eps, $org, $orig_name,
-		    $SSRCalc_relative_hydrophobicity, $protein_sequence, @annot ) = @{$row};
+		    $SSRCalc_relative_hydrophobicity, $protein_sequence, $bioseq_id, @annot ) = @{$row};
                 @pep_annot = @annot unless @pep_annot;
 
                 $peptide_accession[$i] = $pa;
@@ -592,6 +593,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
                 $original_name[$i] = $orig_name;
                 $SSRCalc_relative_hydrophobicity[$i] = $SSRCalc_relative_hydrophobicity;
                 #print "sql returns: $n_observations[$i] $sample_tag[$i] <br>";
+								$biosequence_id{$bioseq_id}++;
 
                 my $key = join( ':::', $chr, $s_chr, $e_chr, $str, $seq );
 
@@ -879,6 +881,9 @@ if ($apply_action =~ /QUERY|GO/i ) {
   }
 
 
+#                                          value => $peptide_sequence[0],
+  my $bioseqs = join( ',', keys( %biosequence_id ) );
+	$mapHTML .= "<TR><TD COLSPAN=3><A HREF=compareProteins?pepseq=$peptide_sequence[0];bioseq_id=$bioseqs>Compare Proteins</A></TD></TR>\n";
   print "<TABLE WIDTH=600>$mapHTML</TABLE>\n";
 
 ##  End mapping loop
