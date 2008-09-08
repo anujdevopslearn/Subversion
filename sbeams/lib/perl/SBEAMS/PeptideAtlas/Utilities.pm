@@ -294,6 +294,158 @@ sub get_current_prophet_cutoff {
   return $cutoff;
 }
 
+#+
+# Routine returns ref to hash of seq positions where pattern seq matches 
+# subject sequence
+#
+# @narg peptides   ref to array of sequences to use to map to subject sequence
+# @narg seq        Sequence against which pattern is mapped
+#
+# @ret $coverage   ref to hash of seq_posn -> is_covered
+#-
+sub get_coverage_hash {
+  my $self = shift;
+  my %args = @_;
+	my $error = '';
+
+  my $coverage = {};
+
+  # check for required args
+	for my $arg( qw( seq peptides ) ) {
+		next if defined $args{$arg};
+		my $err_arg = ( $error ) ? ", $arg" : $arg;
+    $error ||= 'Missing required param(s): ';
+		$error .= $err_arg
+	}
+	if ( $error ) {
+		$log->error( $error );
+		return;
+	}
+	unless ( ref $args{peptides} eq 'ARRAY' ) {
+		$log->error( $error );
+		return;
+	}
+	$log->debug( "We be sushi" );
+
+  my $seq = $args{seq};
+  $seq =~ s/[^a-zA-Z]//g;
+  for my $peptide ( @{$args{peptides}}  )  {
+
+    my $posn = $self->get_site_positions( pattern => $peptide,
+                                              seq => $seq );
+
+    for my $p ( @$posn ) {
+      for ( my $i = 0; $i < length($peptide); $i++ ){
+        my $covered_posn = $p + $i;
+        $coverage->{$covered_posn}++;
+    	}
+		}
+	}
+	return $coverage;
+}
+
+#+
+# coverage          ref to coverage hash for primary annotation
+# cov_class         CSS class for primary annotation
+# sec_cover         ref to coverage hash for secondary annotation.  Must be a 
+#                   subset of the primary!
+# sec_class         CSS class for primary annotation
+# seq               Sequence to be processed, a la --A--AB-
+#-
+sub highlight_sequence {
+  my $self = shift;
+  my %args = @_;
+
+	my $error = '';
+  
+  # check for required args
+	for my $arg( qw( seq coverage ) ) {
+		next if defined $args{$arg};
+		my $err_arg = ( $error ) ? ", $arg" : $arg;
+    $error ||= 'Missing required param(s): ';
+		$error .= $err_arg
+	}
+	if ( $error ) {
+		$log->error( $error );
+		return $args{seq};
+	}
+
+  # Default value
+	my $class = $args{cov_class} || 'obs_seq_font';
+	$args{sec_cover} ||= {};
+
+	if ( $args{sec_cover} ) {
+		$args{sec_class} ||= $args{cov_class};
+	}
+
+	my $coverage = $args{coverage};
+
+  my @aa = split( '', $args{seq} );
+  my $return_seq = '';
+  my $cnt = 0;
+  my $in_coverage = 0;
+  my $span_closed = 1;
+
+  my %class_value = ( curr => 'pri',
+	                    prev => 'sec' );
+
+
+  for my $aa ( @aa ) {
+
+    $class_value{prev} = $class_value{curr};
+
+    # use secondary color if applicable
+		if ( $args{sec_cover}->{$cnt} ) {
+      $class_value{curr} = 'sec';
+  	  $class = $args{sec_class} 
+		} else {
+      $class_value{curr} = 'pri';
+  	  $class = $args{cov_class} 
+		}
+		my $class_close = ( $class_value{curr} eq  $class_value{prev} ) ? 0 : 1;
+
+    if ( $aa eq '-' ) {
+      if ( $in_coverage && !$span_closed ) {
+        $return_seq .= "</span>$aa";
+        $span_closed++;
+      } else {
+        $return_seq .= $aa;
+      }
+    } else { # it is an amino acid
+      if ( $coverage->{$cnt} ) {
+        if ( $in_coverage ) { # already in
+          if ( $span_closed ) {  # Must have been jumping a --- gap
+            $span_closed = 0;
+            $return_seq .= "<span class=$class>$aa";
+          } else {
+            $return_seq .= $aa;
+          }
+        } else {
+          $in_coverage++;
+          $span_closed = 0;
+          $return_seq .= "<span class=$class>$aa";
+        }
+      } else { # posn not covered!
+        if ( $in_coverage ) { # were in, close now
+          $return_seq .= "</span>$aa";
+          $in_coverage = 0;
+          $span_closed++;
+        } else {
+          $return_seq .= $aa;
+        }
+      }
+      $cnt++;
+    }
+  }
+
+  # Finish up
+  if ( $in_coverage && !$span_closed ) {
+  $return_seq .= '</span>';
+  }
+  return $return_seq;
+}
+  
+  
 
 sub get_transmembrane_info {
   my $self = shift;
@@ -886,4 +1038,3 @@ return ($no_distinct_organisms,$no_builds);
 
 1;
 
-__DATA__
