@@ -100,6 +100,14 @@ sub get_ortholog_display {
   # Highlight if available.
 	$args{entry_accession} ||= '';
 
+  # limit by bioseq_id?
+	my $bioseq_clause = '';
+	if( $args{restore} ) {
+		$args{bioseq_id} = '';
+	} elsif( $args{bioseq_id} ) {
+    $bioseq_clause = "AND B.biosequence_id IN ( $args{bioseq_id} )";
+  }
+
   my $all_projects = join( ",", $sbeams->getAccessibleProjects() );
   my $curr_bid = $sbeamsMOD->getCurrentAtlasBuildID( parameters_ref => \%args );
 
@@ -117,6 +125,7 @@ sub get_ortholog_display {
   JOIN $TB_ORGANISM ORG ON O.ortholog_organism_id = ORG.organism_id
   LEFT JOIN $TBAT_SEARCH_KEY SK ON SK.resource_name = B.biosequence_name
   WHERE ortholog_group = '$args{group_id}'
+	$bioseq_clause
   AND ( search_key_type = 'Full Name'
 	      OR search_key_type = 'Description'
 				OR search_key_type LIKE '%Symbol' )
@@ -332,6 +341,10 @@ sub get_ortholog_display {
 	  # Going to cache with accession for ease of use!
  		$build_seqs{$row[3]}->{$bioseq_id2name{$row[2]}}->{coverage} = $build_seqs{$row[3]}->{$row[2]}->{coverage};
 
+    #           build_id                  bioseq_id
+		                       # accession ----------#
+    $build_seqs{$row[3]}->{$bioseq_id2name{$row[2]}}->{bioseq} = $row[2];
+
 		$cnt++;
 	}
 	$log->debug( "Iterated $cnt rows: " .time() );
@@ -507,10 +520,13 @@ sub get_ortholog_display {
                                                  bgcolor => \%bgcolor,
                                                acc_color => \%acc_color,
                                         highlight_builds => \%view_build2org,
-                                            build_seqs => \%build_seqs 
+                                            build_seqs => \%build_seqs, 
+																						acc2bioseq => \%acc2bioseq_id
 																				  );
 	  }
 	}
+	$log->debug( "ViewOrtho, fasta is " . length( $fasta ) . ", result is " . length( $clustal_display ) );
+
   my $alignment_text = get_alignment_text();
 	$log->debug( "Run alignment Done: " .time() );
 	$log->debug( "Color build seqs: " .time() );
@@ -537,7 +553,15 @@ sub get_ortholog_display {
   <P>
   $alignment_overview	
 	</P>
+  <FORM METHOD=POST NAME=custom_alignment>
   $clustal_display
+  <BR>
+	<INPUT TYPE=HIDDEN NAME=group_id VALUE=$args{group_id}>
+	<INPUT TYPE=HIDDEN NAME=entry_accession VALUE=$args{entry_accession}>
+ 	<INPUT TYPE=SUBMIT VALUE='Align selected sequences'>
+ 	<INPUT TYPE=SUBMIT VALUE='Restore Original' NAME=restore>
+	</FORM>
+
   </P>
   $alignment_text
 	<BR>
@@ -665,6 +689,7 @@ sub get_clustal_display {
 # acc_color => \%acc_color,          # ref to hash of acc => bgcolor for acc
 # highlight_builds => $highlight     # ref to hash of build_ids to color with 
 # build_seqs => \%build_seqs         # ref to hash of per build seq attrs 
+# acc2bioseq => \%build_seqs         # ref to hash of per build seq attrs 
 
 # $build_seqs{$row[3]}->{$row[2]}->{coverage}->{$covered_posn}++;
 	my %args = @_;
@@ -686,8 +711,21 @@ sub get_clustal_display {
 			                             %args
 																 );
 		}
-		$display .= "<TR><TD BGCOLOR=$args{acc_color}->{$seq->[0]} ALIGN=right class=sequence_font>$seq->[0]:</TD><TD NOWRAP=1 class=sequence_font BGCOLOR=$args{bgcolor}->{$seq->[0]}>$sequence</TD></TR>\n";
+		my $checkbox = '';
+    unless ( $seq->[0] eq 'consensus' ) {
+			my $acc_str = join( ',', sort { $a <=> $b } ( @{$args{acc2bioseq}->{$seq->[0]}} ) );
+      $checkbox = "<INPUT ID=bioseq_id TYPE=checkbox CHECKED NAME=bioseq_id VALUE='$acc_str'></INPUT>";
+    }
+#    $build_seqs{$row[3]}->{$bioseq_id2name{$row[2]}}->{bioseq} = $row[2];
+
+
+		$display .= "<TR><TD>$checkbox</TD><TD BGCOLOR=$args{acc_color}->{$seq->[0]} ALIGN=right class=sequence_font>$seq->[0]:</TD><TD NOWRAP=1 class=sequence_font BGCOLOR=$args{bgcolor}->{$seq->[0]}>$sequence</TD></TR>\n";
 	}
+	my $toggle_checkbox = $sbeams->get_checkbox_toggle( controller_name => 'alignment_chk',
+	                                                      checkbox_name => 'bioseq_id' );
+
+  my $toggle_text = $sbeams->makeInfoText( 'Toggle all checkboxes' );
+	$display .= "<TR><TD>$toggle_checkbox</TD><TD ALIGN=left>$toggle_text </TD><TD></TD></TR>\n";
 	$display .= "</TABLE>\n</DIV>\n";
 	return $display;
 }
