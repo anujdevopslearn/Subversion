@@ -660,7 +660,7 @@ sub handle_request {
        FROM $TBAT_PEPTIDE_INSTANCE PI
       INNER JOIN $TBAT_PEPTIDE P
             ON ( PI.peptide_id = P.peptide_id )
-      INNER JOIN $TBAT_PEPTIDE_INSTANCE_SAMPLE PIS
+      INNER JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PIS
             ON ( PI.peptide_instance_id = PIS.peptide_instance_id )
       INNER JOIN $TBAT_ATLAS_BUILD AB
             ON ( PI.atlas_build_id = AB.atlas_build_id )
@@ -668,6 +668,9 @@ sub handle_request {
             ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
        LEFT JOIN $TB_ORGANISM O
             ON ( BSS.organism_id = O.organism_id )
+       JOIN $TBAT_ATLAS_SEARCH_BATCH ASB
+            ON ( ASB.atlas_build_id = PIS.atlas_build_id )
+
      $mapping_join
      WHERE 1 = 1
         $atlas_build_clause
