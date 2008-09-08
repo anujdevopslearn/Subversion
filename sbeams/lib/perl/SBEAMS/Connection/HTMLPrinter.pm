@@ -276,6 +276,7 @@ my $module_styles =<<"  END_STYLE";
   .instruction_text{ font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
   .sequence_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5}	
   .obs_seq_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5; color: red }	
+  .sec_obs_seq_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5; color: yellow }	
 
   /* Phosphopep */
   .invalid_parameter_value  {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_LG}pt; text-decoration: none; color: #FC0; font-style: Oblique; }
@@ -1469,6 +1470,30 @@ sub make_toggle_section {
   return wantarray ? ( $html, $linkhtml ) : $linkhtml . $html;
 }
 
+sub get_checkbox_toggle {
+  my $self = shift;
+  my %args = @_;
+  for my $k ( qw(controller_name checkbox_name ) ) {
+    return unless defined $args{$k};
+  }
+
+	my $script = qq~
+	<INPUT TYPE=checkbox ID=$args{controller_name} ONCHANGE="$args{controller_name}_toggle_checkboxes($args{checkbox_name});return true;">
+  <SCRIPT TYPE="text/javascript">
+  function $args{controller_name}_toggle_checkboxes (checkbox_name) {
+		var controller = document.getElementById( '$args{controller_name}' )
+		controller.checked=false;
+
+		var checkboxes = document.getElementsByName( '$args{checkbox_name}' )
+    for (i = 0; i < checkboxes.length; i++) {
+      checkboxes[i].checked = checkboxes[i].checked? false:true
+		}
+	}
+	</SCRIPT>
+  ~;
+	$log->debug( $script );
+	return $script;
+}
 
 #+
 # Generates CSS, javascript, and HTML to render table row or column 'toggleable'
