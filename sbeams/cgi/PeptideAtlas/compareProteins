@@ -155,27 +155,31 @@ sub get_alignment_display {
 # 3     CAST( biosequence_seq AS VARCHAR(4000) ),
 # 4     biosequence_id
 # 5     biosequence_set_id
+
+
+# 0 SELECT DISTINCT biosequence_name,
+#	1								organism_name,
+#	2								'search_key_name',
+#	3								CAST( biosequence_seq AS VARCHAR(4000) ),
+#	4								biosequence_id
   my %seen;
 	my %coverage;
 	my @seqs;
   while ( my @row = $sth->fetchrow_array() ) {
+		my $acc = $row[0];
     my $seq = $row[3];
 		$seq =~ s/[^a-zA-Z]//g;
 
-    next if $seen{$row[0]};
-    $seen{$row[0]}++;
+    next if $seen{$acc};
+    $seen{$acc}++;
 		push @seqs, $seq;
 
-		my $posn = $sbeamsMOD->get_site_positions( pattern => $peptide,
-	                                                 seq => $seq );
-		$coverage{$row[0]} ||= {};
-		for my $p ( @$posn ) {
-#			$log->debug( "got your coverage here, boss: $p" );
-			for ( my $i = 0; $i < length($peptide); $i++ ){
-				my $covered_posn = $p + $i;
-				$coverage{$row[0]}->{$covered_posn}++;
-			}
-		}
+		my $peptide_list = $sbeamsMOD->get_protein_build_coverage( build_id => $curr_bid,
+		                                                    biosequence_ids => $row[4] );
+
+
+    $coverage{$acc} = $sbeamsMOD->get_coverage_hash(      seq => $seq,         
+                                                     peptides => $peptide_list->{$row[4]} ); 
 
     # Check this out later for dups...
 		$seq2acc{$seq} ||= {};
@@ -257,7 +261,8 @@ sub get_alignment_display {
 			                                          dup_seqs => \%dup_seqs,
 			                                            pepseq => $peptide,
 																								coverage => \%coverage,
-																  					acc2bioseq_id => \%acc2bioseq_id );
+																  					acc2bioseq_id => \%acc2bioseq_id,
+																						         %args );
 	 	}
 	}
 	  $log->debug( "CompProtein, fasta is " . length( $fasta ) . ", result is " . length( $clustal_display ) );
@@ -276,7 +281,8 @@ sub get_clustal_display {
 						 );
 
 	my $display = qq~
-	<BR><BR><BR>
+	<BR><BR>
+
 	<DIV STYLE="width: 1000px; overflow-x: scroll; scrollbar-arrow-color: blue; scrollbar- face-color: #e7e7e7; scrollbar-3dlight-color: #a0a0a0; scrollbar-darkshadow-color: #888888">
 	<FORM METHOD=POST NAME=custom_alignment>
 	<TABLE BORDER=0 CELLPADDNG=3>
@@ -284,6 +290,7 @@ sub get_clustal_display {
 	for my $seq ( @{$args{alignments}} ) {
 #		$log->debug( "After passing we have $seq->[0] and $seq->[1]!" );
 		my $sequence = $seq->[1];
+		$log->debug( "sequence $seq->[0] is " . length($sequence) . " characters long" );
 		if ( $seq->[0] eq 'consensus'  ) {
 #			$log->debug( "Consensus!@!!!!!" );
 		  $sequence =~ s/ /&nbsp;/g 
@@ -293,6 +300,10 @@ sub get_clustal_display {
                                    acc => $seq->[0], 
 			                             coverage => $args{coverage}->{$seq->[0]}
 																 );
+
+			# Poor man's bait coverage!
+ 	    $sequence =~ s/$args{pepseq}/<\/SPAN><SPAN CLASS=sec_obs_seq_font>$args{pepseq}<\/SPAN><SPAN CLASS=obs_seq_font>/g;
+
 		}
 		my $dup = '';
     if ( $args{dup_seqs}->{$seq->[0]} ) {
@@ -311,9 +322,16 @@ sub get_clustal_display {
 		~;
 	}
 	$display .= "</TABLE>\n</DIV>\n";
-	$display .= "<BR><INPUT TYPE=HIDDEN NAME=pepseq VALUE=$args{pepseq}>\n";
+	$display .= "<BR><INPUT TYPE=HIDDEN NAME=group_id VALUE=$args{group_id}>\n";
+	$display .= "<BR><INPUT TYPE=HIDDEN NAME=entry_accession VALUE=$args{entry_accession}>\n";
 	$display .= "<INPUT TYPE=SUBMIT VALUE='Align selected sequences'>\n";
-	$display .= "</FORM>\n";
+	$display .= qq~
+	</FORM>
+	<BR><BR>
+	<H3> Legend </H3>
+  Sequence highlighted with red: <SPAN CLASS=obs_seq_font>ELVIS</SPAN> denotes peptides observed in specified build.<BR>
+  Sequence highlighted with yellow: <SPAN CLASS=sec_obs_seq_font>ELVIS</SPAN> denotes 'bait' peptide for this set of sequences.<BR>
+	~;
 
 	return $display;
 }
