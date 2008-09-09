@@ -233,7 +233,7 @@ sub check_host()
     ## make sure that this is running on atlas for queries
     my $uname = `uname -a`;
 
-    unless ($uname =~ /.*(atlas).*/)
+    unless ($uname =~ /.*(mimas).*/)
     {
         die "you must run this on atlas";
     }
@@ -924,7 +924,7 @@ sub get_data_url
     my $pat = $sample_accession . "*" . $file_pattern . "*" . "gz";
 
     ## files are in $repository_path, but be careful not to include $repository_path/TESTFILES
-    my $cmd = "find $repository_path/ -name \'$pat\' -maxdepth 1 -print > $fileWithFileNames";
+    my $cmd = "find $repository_path/ -maxdepth 1 -name \'$pat\' -print > $fileWithFileNames";
     ## where each file in $fileWithFileNames is given as the absolute path to the file
     print "$cmd\n" if ($VERBOSE);
     system $cmd;
@@ -1032,7 +1032,7 @@ sub get_orig_data_type
     ## check for .RAW files:
     unless ($orig_data_type)
     {
-        my @files = `find $data_dir -name \'*.RAW\' -maxdepth 1 -print`;
+        my @files = `find $data_dir -maxdepth 1 -name \'*.RAW\' -print`;
 
         if ( $#files > -1)
         {
@@ -1044,7 +1044,7 @@ sub get_orig_data_type
     ## check for .raw files:
     unless ($orig_data_type)
     {
-        my @files = `find $data_dir -name \'*.raw\' -maxdepth 1 -print`;
+        my @files = `find $data_dir -maxdepth 1 -name \'*.raw\' -print`;
 
         if ( $#files > -1)
         {
@@ -1056,7 +1056,7 @@ sub get_orig_data_type
     ## check for dta.tar files:
     unless ($orig_data_type)
     {
-        my @files = `find $data_dir -name \'*_dta.tar\' -maxdepth 1 -print`;
+        my @files = `find $data_dir -maxdepth 1 -name \'*_dta.tar\' -print`;
 
         if ( $#files > -1)
         {
@@ -1979,12 +1979,12 @@ sub makeNewArchiveAndProperties
     ## if file_pattern is 'inter* *ASAP* *.tgz *.html sequest.params', we'll
     ## need separate finds
     my @pats = split(" ", $pat);
-    $cmd = "find . -name \'$pats[0]\' -print -maxdepth 1 > $filelist";
+    $cmd = "find . -maxdepth 1 -name \'$pats[0]\' -print > $filelist";
     print "$cmd\n" if ($VERBOSE);
     system $cmd;
     for (my $i=1; $i <= $#pats; $i++)
     {
-        $cmd = "find . -name \'$pats[$i]\' -print -maxdepth 1 >> $filelist";
+        $cmd = "find . -maxdepth 1 -name \'$pats[$i]\' -print >> $filelist";
         print "$cmd\n" if ($VERBOSE);
         system $cmd;
     }
@@ -2341,7 +2341,7 @@ sub get_orig_data_url
     ## does an archive file already exist in the repository?
     my $filelist = "tt.txt";
     my $pat = "*$sample_accession*$orig_data_type*";
-    my $cmd = "find $repository_path/ -name \'$pat\' -maxdepth 1 -print > $filelist";
+    my $cmd = "find $repository_path/ -maxdepth 1 -name \'$pat\' -print > $filelist";
     print "$cmd\n" if ($VERBOSE);
     system $cmd;
 
@@ -2394,7 +2394,7 @@ sub get_orig_data_url
             system $cmd;
             my $pat = "*$orig_data_type";
             $pat = "*_dta.tar" if ($orig_data_type eq "dtapack");
-            $cmd = "find . -name \'$pat\' -print -maxdepth 1 > $filelist";
+            $cmd = "find . -maxdepth 1 -name \'$pat\' -print > $filelist";
             print "$cmd\n" if ($VERBOSE);
             system $cmd;
 
@@ -2474,7 +2474,7 @@ sub get_an_sb_file_url
     ## the archive?  if not, make one:
     my $filelist = "tt.txt";
     my $pat = "$file_name*gz";
-    my $cmd = "find $repository_path/ -name \'$pat\' -maxdepth 1 -print > $filelist";
+    my $cmd = "find $repository_path/ -maxdepth 1 -name \'$pat\' -print > $filelist";
     print "$cmd\n" if ($VERBOSE);
     system $cmd;
     my $file_path;
@@ -2505,7 +2505,7 @@ sub get_an_sb_file_url
         print "$cmd\n" if ($VERBOSE);
         system $cmd;
         my $pat = "$sb_file_name";
-        $cmd = "find . -name \'$pat\' -print -maxdepth 1 > $filelist";
+        $cmd = "find . -maxdepth 1 -name \'$pat\' -print  > $filelist";
         print "$cmd\n" if ($VERBOSE);
         system $cmd;
         ## if filelist is not empty
@@ -2569,7 +2569,7 @@ sub get_search_results_url
     ## the archive?  if not, make one:
     my $filelist = "tt.txt";
     my $pat = "$sample_accession*$suffix*gz";
-    my $cmd = "find $repository_path/ -name \'$pat\' -maxdepth 1 -print > $filelist";
+    my $cmd = "find $repository_path/ -maxdepth 1 -name \'$pat\' -print > $filelist";
     print "$cmd\n" if ($VERBOSE);
     system $cmd;
     my $file_path;
@@ -2643,7 +2643,7 @@ sub get_protein_prophet_url
     ## the archive?  if not, make one:
     my $filelist = "tt.txt";
     my $pat = "$sample_accession*$suffix*gz";
-    my $cmd = "find $repository_path/ -name \'$pat\' -maxdepth 1 -print > $filelist";
+    my $cmd = "find $repository_path/ -maxdepth 1 -name \'$pat\' -print > $filelist";
     print "$cmd\n" if ($VERBOSE);
     system $cmd;
 
