@@ -352,6 +352,31 @@ sub get_protein_build_coverage {
 }
 
 
+sub get_mapped_biosequences {
+  my $self = shift;
+	my %args = @_;
+	for my $arg ( qw( build_id peptide_sequence ) ) {
+		die "Missing required param $arg" unless defined $args{$arg};
+	}
+
+  my $sql =<<"  ENDSQL";
+  SELECT distinct
+  PM.matched_biosequence_id
+  FROM $TBAT_PEPTIDE_MAPPING PM
+  JOIN $TBAT_PEPTIDE_INSTANCE PI ON PI.peptide_instance_id = PM.peptide_instance_id
+  JOIN $TBAT_PEPTIDE P ON ( PI.peptide_id = P.peptide_id )
+  WHERE PI.atlas_build_id = $args{build_id}
+  AND P.peptide_sequence = '$args{peptide_sequence}'
+  ENDSQL
+	$log->debug( $sql );
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+	my @ids;
+  while ( my @row = $sth->fetchrow_array() ) {
+		push @ids, $row[0];
+	}
+  return \@ids;
+}
 
 
 ###############################################################################
