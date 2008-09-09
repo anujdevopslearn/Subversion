@@ -67,7 +67,7 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
   $sbeamsMOD->display_page_header(project_id => $project_id);
   $log->debug( "Begin page:" .time() );
-  if ( $params{bioseq_id} ) {
+  if ( $params{bioseq_id} || $params{restore} ) {
     $page .= get_alignment_display( %params );
   } else {
     $page .= $sbeams->makeErrorText( "Missing required parameter bioseq_id" );
@@ -87,11 +87,19 @@ sub get_alignment_display {
   # Content scalar to return
   my $content = '';
 
-# Highlight if available.
-#	$args{entry_accession} ||= '';
+  my $curr_bid = $sbeamsMOD->getCurrentAtlasBuildID( parameters_ref => \%args );
+  my $bioseq_clause = '';
+	if ( $args{restore} ) {
+		my $ids = $sbeamsMOD->get_mapped_biosequences( build_id => $curr_bid,
+		                                       peptide_sequence => $args{pepseq} );
+
+		$args{bioseq_id} = join( ',', @$ids ) ;
+	}
+  if ( $args{bioseq_id} ) {
+    $bioseq_clause = "AND BS.biosequence_id IN ( $args{bioseq_id} )\n";
+	}
 
   my $all_projects = join( ",", $sbeams->getAccessibleProjects() );
-  my $curr_bid = $sbeamsMOD->getCurrentAtlasBuildID( parameters_ref => \%args );
 
   # SQL to fetch bioseqs in them.
   my $sql =<<"  END_SQL";
@@ -109,7 +117,7 @@ sub get_alignment_display {
 --	      OR search_key_type = 'Description'
 --				OR search_key_type LIKE '%Symbol' )
   WHERE AB.project_id IN ( $all_projects )
-	AND BS.biosequence_id IN ( $args{bioseq_id} )
+	$bioseq_clause
 --  AND search_key_type = CASE WHEN organism_name = 'human' THEN 'Full Name'
 --                             WHEN organism_name = 'Mouse' THEN 'Full Name'
 --														 WHEN organism_name = 'Drosophila' THEN 'Full Name'
@@ -321,11 +329,21 @@ sub get_clustal_display {
 		</TR>
 		~;
 	}
-	$display .= "</TABLE>\n</DIV>\n";
-	$display .= "<BR><INPUT TYPE=HIDDEN NAME=group_id VALUE=$args{group_id}>\n";
-	$display .= "<BR><INPUT TYPE=HIDDEN NAME=entry_accession VALUE=$args{entry_accession}>\n";
-	$display .= "<INPUT TYPE=SUBMIT VALUE='Align selected sequences'>\n";
+
+  my $toggle_checkbox = $sbeams->get_checkbox_toggle( controller_name => 'alignment_chk',
+	                                                        checkbox_name => 'bioseq_id' );
+
+  my $toggle_text = $sbeams->makeInfoText( 'Toggle all checkboxes' );
+
+
+
 	$display .= qq~
+  <TR><TD>$toggle_checkbox</TD><TD ALIGN=left>$toggle_text </TD><TD></TD></TR>
+	</TABLE>\n</DIV>
+	<BR>
+	<INPUT TYPE=HIDDEN NAME=pepseq VALUE=$args{pepseq}>
+	<INPUT TYPE=SUBMIT VALUE='Align selected sequences'>
+	<INPUT TYPE=SUBMIT VALUE='Restore Original' NAME=restore>
 	</FORM>
 	<BR><BR>
 	<H3> Legend </H3>
