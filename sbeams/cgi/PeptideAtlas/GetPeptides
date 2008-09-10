@@ -669,7 +669,7 @@ sub handle_request {
        LEFT JOIN $TB_ORGANISM O
             ON ( BSS.organism_id = O.organism_id )
        JOIN $TBAT_ATLAS_SEARCH_BATCH ASB
-            ON ( ASB.atlas_build_id = PIS.atlas_build_id )
+            ON ( ASB.atlas_search_batch_id = PIS.atlas_search_batch_id )
 
      $mapping_join
      WHERE 1 = 1
