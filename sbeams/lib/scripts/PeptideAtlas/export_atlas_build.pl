@@ -11,7 +11,7 @@ use FindBin qw( $Bin );
 use lib "$Bin/../../perl";
 use SBEAMS::Connection::Settings qw( $DBCONFIG $DBINSTANCE );
 use SBEAMS::Connection;
-#use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
 use strict;
 
 my $sbeams = SBEAMS::Connection->new();
@@ -36,28 +36,32 @@ sub run_data_export {
 
   my $synstr = 'matched_biosequence_id=biosequence_id,lab_id=organization_id,primary_contact_id=contact_id,supervisor_contact_id=contact_id,PI_contact_id=contact_id,parent_organization_id=organization_id,department_id=organization_id,group_id=organization_id';
 
-  my $cmd = "$Bin/../Core/DataExport.pl -c $expfile -o $outfile -r -q -s $synstr -p 0";
+  my $cmd = "$Bin/../Core/DataExport.pl -c $expfile -o $outfile -r -q --synonym $synstr -p 0";
   my @result = system( "$cmd" );
 
   my $pcmd = "perl -pi -e 's/(atlas_build_id=)$args->{build_id}(&amp)/" . '${1}1${2}' . "/' $outfile";
-  print "$pcmd\n";
   @result = system( "$pcmd" );
 }
 
 
 sub write_export_xml {
   undef local $/;
-  my $xml =<DATA>;
-#  my $xml = '<export_command_list><export_data table_name="AT_search_key" qualifiers="atlas_build_id=ATLAS_BUILD_ID"></export_data></export_command_list>';
 
-  for my $table ( qw( TBAT_PEPTIDE_INSTANCE TBAT_ATLAS_BUILD_SEARCH_BATCH 
-                      TBAT_MODIFIED_PEPTIDE_INSTANCE TBAT_ATLAS_BUILD_SAMPLE  ) ) {
-    my $realname = $sbeams->evalSQL( '$' . $table );
-    $xml =~ s/$table/$realname/g;
-  }
-  
+  my $xml = qq~
+  <export_command_list>
+    <export_data table_name="AT_atlas_build_sample" qualifiers="atlas_build_id=ATLAS_BUILD_ID"></export_data>
+    <export_data table_name="AT_default_atlas_build" qualifiers="atlas_build_id=ATLAS_BUILD_ID"></export_data>
+    <export_data table_name="AT_spectra_description_set" qualifiers="atlas_build_id=ATLAS_BUILD_ID"></export_data>
+    <export_data table_name="AT_search_key" qualifiers="atlas_build_id=ATLAS_BUILD_ID"></export_data>
+    <export_data table_name="AT_peptide_instance_search_batch" qualifiers="peptide_instance_id IN ( SELECT DISTINCT peptide_instance_id FROM $TBAT_PEPTIDE_INSTANCE WHERE atlas_build_id=ATLAS_BUILD_ID )"></export_data>
+    <export_data table_name="AT_peptide_mapping" qualifiers="peptide_instance_id IN ( SELECT DISTINCT peptide_instance_id FROM $TBAT_PEPTIDE_INSTANCE WHERE atlas_build_id=ATLAS_BUILD_ID )"></export_data>
+    <export_data table_name="AT_modified_peptide_instance_search_batch" qualifiers="modified_peptide_instance_id IN ( SELECT DISTINCT modified_peptide_instance_id FROM $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI JOIN $TBAT_PEPTIDE_INSTANCE PI ON PI.peptide_instance_id = MPI.peptide_instance_id WHERE atlas_build_id=ATLAS_BUILD_ID  )"></export_data>
+    <export_data table_name="AT_proteotypic_peptide" qualifiers="source_biosequence_id IN ( SELECT DISTINCT biosequence_id FROM $TBAT_BIOSEQUENCE B JOIN $TBAT_ATLAS_BUILD AB ON AB.biosequence_set_id = B.biosequence_set_id WHERE atlas_build_id=ATLAS_BUILD_ID )"></export_data>
+  </export_command_list>
+  ~;
+
   $xml =~ s/ATLAS_BUILD_ID/$args->{build_id}/g;
-  die "TBAT!" if $xml =~ /TBAT/;
+  die "TBAT!\n: $xml" if $xml =~ /TBAT/;
 
   my $file = "/tmp/atlas_exp_$args->{build_id}.exp";
 
@@ -92,26 +96,13 @@ sub processArgs {
   return \%args;
 }
 
+__DATA__
 # Removed from table list; 
 #<export_data table_name="AT_sample_publication" qualifiers="sample_id IN ( SELECT DISTINCT sample_id FROM TBAT_ATLAS_BUILD_SAMPLE WHERE atlas_build_id=ATLAS_BUILD_ID )"></export_data>
-
 #<export_data table_name="AT_atlas_search_batch_parameter" qualifiers="atlas_search_batch_id IN ( SELECT DISTINCT atlas_search_batch_id FROM TBAT_ATLAS_BUILD_SEARCH_BATCH WHERE atlas_build_id=ATLAS_BUILD_ID )"></export_data>
 #  <export_data table_name="AT_atlas_search_batch_parameter_set" qualifiers="atlas_search_batch_id IN ( SELECT DISTINCT atlas_search_batch_id FROM TBAT_ATLAS_BUILD_SEARCH_BATCH WHERE atlas_build_id=ATLAS_BUILD_ID )"></export_data>
+# <export_data table_name="AT_peptide_instance_sample" qualifiers="peptide_instance_id IN ( SELECT DISTINCT peptide_instance_id FROM TBAT_PEPTIDE_INSTANCE WHERE atlas_build_id=ATLAS_BUILD_ID )"></export_data>
 #
+#   <export_data table_name="AT_modified_peptide_instance_sample" qualifiers="modified_peptide_instance_id IN ( select modified_peptide_instance_id FROM TBAT_MODIFIED_PEPTIDE_INSTANCE WHERE peptide_instance_id IN ( SELECT DISTINCT peptide_instance_id FROM TBAT_PEPTIDE_INSTANCE WHERE atlas_build_id=ATLAS_BUILD_ID ) )"></export_data>
+
 __DATA__
-<export_command_list>
-  <export_data table_name="AT_atlas_build_sample" qualifiers="atlas_build_id=ATLAS_BUILD_ID"></export_data>
-  <export_data table_name="AT_default_atlas_build" qualifiers="atlas_build_id=ATLAS_BUILD_ID"></export_data>
-  <export_data table_name="AT_spectra_description_set" qualifiers="atlas_build_id=ATLAS_BUILD_ID"></export_data>
-  <export_data table_name="AT_search_key" qualifiers="atlas_build_id=ATLAS_BUILD_ID"></export_data>
-
-  <export_data table_name="AT_peptide_instance_search_batch" qualifiers="peptide_instance_id IN ( SELECT DISTINCT peptide_instance_id FROM TBAT_PEPTIDE_INSTANCE WHERE atlas_build_id=ATLAS_BUILD_ID )"></export_data>
-<export_data table_name="AT_peptide_instance_sample" qualifiers="peptide_instance_id IN ( SELECT DISTINCT peptide_instance_id FROM TBAT_PEPTIDE_INSTANCE WHERE atlas_build_id=ATLAS_BUILD_ID )"></export_data>
-  <export_data table_name="AT_peptide_mapping" qualifiers="peptide_instance_id IN ( SELECT DISTINCT peptide_instance_id FROM TBAT_PEPTIDE_INSTANCE WHERE atlas_build_id=ATLAS_BUILD_ID )"></export_data>
-
-
-
-  <export_data table_name="AT_modified_peptide_instance_sample" qualifiers="modified_peptide_instance_id IN ( select modified_peptide_instance_id FROM TBAT_MODIFIED_PEPTIDE_INSTANCE WHERE peptide_instance_id IN ( SELECT DISTINCT peptide_instance_id FROM TBAT_PEPTIDE_INSTANCE WHERE atlas_build_id=ATLAS_BUILD_ID ) )"></export_data>
-  <export_data table_name="AT_modified_peptide_instance_search_batch" qualifiers="modified_peptide_instance_id IN ( select modified_peptide_instance_id FROM TBAT_MODIFIED_PEPTIDE_INSTANCE WHERE peptide_instance_id IN ( SELECT DISTINCT peptide_instance_id FROM TBAT_PEPTIDE_INSTANCE WHERE atlas_build_id=ATLAS_BUILD_ID ) )"></export_data>
-
-</export_command_list>
