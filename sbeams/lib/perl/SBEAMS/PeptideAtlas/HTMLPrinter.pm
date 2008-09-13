@@ -272,6 +272,7 @@ sub displayStandardPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetPeptide"><nobr>&nbsp;&nbsp;&nbsp;Get Peptide Summary</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetProtein"><nobr>&nbsp;&nbsp;&nbsp;Get Protein Summary</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/showPathways"><nobr>&nbsp;&nbsp;&nbsp;Pathway Search</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetMRMList"><nobr>&nbsp;&nbsp;&nbsp;MRM Transitions</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/Glycopeptide/Glyco_prediction.cgi"><nobr>&nbsp;&nbsp;&nbsp;Search Glyco-Peptides</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
@@ -542,7 +543,7 @@ sub encodeSectionTable {
     # Kluge part 1
     my $rs_headers = shift( @{$args{rows}} );
     my $rs_name = $self->make_resultset( rs_data => $args{rows}, headers => $rs_headers );
-    $rs_link = "<a href='$CGI_BASE_DIR/GetResultSet.cgi/$rs_name.tsv?rs_set_name=$rs_name&format=tsv' TITLE='Download table as tab-delimited text file' CLASS=info_box>Download as TSV</a>",
+    $rs_link = "<a href='$CGI_BASE_DIR/GetResultSet.cgi/$rs_name.tsv?rs_set_name=$rs_name&format=tsv;remove_markup=1' TITLE='Download table as tab-delimited text file' CLASS=info_box>Download as TSV</a>",
     # Kluge part 2
     unshift( @{$args{rows}}, $rs_headers );
   }
