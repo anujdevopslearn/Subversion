@@ -30,7 +30,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -102,6 +102,7 @@ sub main {
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
   #$sbeams->printDebuggingInfo($q);
+	$log->debug( "remove markup is $parameters{remove_markup}" );
 
 
   #### Process generic "state" parameters before we start
@@ -132,6 +133,7 @@ sub handle_request {
   my $ref_parameters = $args{'ref_parameters'}
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
+	$log->debug( "passed remove markup is $parameters{remove_markup}" );
 
 
   #### Define some general variables
@@ -142,7 +144,7 @@ sub handle_request {
 
 
   #### Define the parameters that can be passed by CGI
-  my @possible_parameters = qw ( rs_set_name format );
+  my @possible_parameters = qw ( rs_set_name format remove_markup );
 
 
   #### Read in all the passed parameters into %parameters hash
@@ -150,7 +152,7 @@ sub handle_request {
     $parameters{$element}=$q->param($element);
   }
   my $apply_action  = $q->param('apply_action');
-
+  my $remove_markup = $parameters{remove_markup};
 
   #### Resolve the keys from the command line if any
   my ($key,$value);
@@ -180,25 +182,29 @@ sub handle_request {
 
   #### Default format is Tab Separated Value
   $parameters{format} = "tsv" unless $parameters{format};
+	my $content_type = ( $parameters{format} =~ /tsv/i ) ? "Content-type: text/tab-separated-values\n\n" :
+                     ( $parameters{format} =~ /excel/i ) ? "Content-type: text/tab-separated-values\n\n" : '';
 
-
-  if (uc($parameters{format}) eq "TSV") {
-
-    print "Content-type: text/tab-separated-values\n\n";
-
+  if ( $content_type )  { # Works now since downloads can be tsv or excel,
+		                      # will need tweaking if we add xml.
+    print $content_type;
     print join("\t",@{$resultset_ref->{column_list_ref}}),"\n";
-    for ($i=0; $i<$nrows; $i++) {
-      print join("\t",@{$resultset_ref->{data_ref}->[$i]}),"\n";
-    }
 
-  } elsif (uc($parameters{format}) eq "EXCEL") {
-
-    print "Content-type: application/excel\n\n";
-
-    print join("\t",@{$resultset_ref->{column_list_ref}}),"\n";
-    for ($i=0; $i<$nrows; $i++) {
-      print join("\t",@{$resultset_ref->{data_ref}->[$i]}),"\n";
-    }
+		if ( $remove_markup ) {
+      for ( $i = 0; $i < $nrows; $i++ ) {
+	  		my @row = @{$resultset_ref->{data_ref}->[$i]};
+		  	my @return_row;
+			  for my $item ( @row ) {
+				  $item =~ s/<[^>]*>//gm;
+    			push @return_row, $item;
+	    	}
+        print join("\t",@return_row),"\n";
+			}
+    } else {
+      for ( $i = 0; $i < $nrows; $i++ ) {
+        print join("\t",@{$resultset_ref->{data_ref}->[$i]}),"\n";
+			}
+		}
 
   } else {
 
