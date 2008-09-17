@@ -276,6 +276,35 @@ sub rebuildKeyIndex {
   }
 
 
+  if ($organism_name eq 'Pig') {
+
+    my $reference_directory = $args{reference_directory}
+      or die("ERROR[$METHOD]: Parameter reference_directory not passed");
+
+    $self->dropKeyIndex(
+      atlas_build_id => $atlas_build_id,
+      organism_specialized_build => $organism_specialized_build,
+    );
+
+    print "Loading protein keys from SBEAMS and reference files...\n";
+    $self->buildPigKeyIndex(
+      reference_directory => $reference_directory,
+      atlas_build_id => $atlas_build_id,
+    );
+
+    print "Loading peptides keys...\n";
+    $self->buildPeptideKeyIndex(
+      organism_id=>$organism_id,
+      atlas_build_id=>$atlas_build_id,
+    );
+
+    print "\n";
+
+  }
+
+
+
+
   #my $sql = "CREATE NONCLUSTERED INDEX idx_search_key_name ON $TBAT_SEARCH_KEY ( search_key_name )";
   #$sbeams->executeSQL($sql);
 
@@ -1543,6 +1572,143 @@ sub buildDrosophilaKeyIndex {
   print "\n";
 
 } # end buildDrosophilaKeyIndex
+
+
+###############################################################################
+# buildPigKeyIndex
+###############################################################################
+sub buildPigKeyIndex {
+  my $METHOD = 'buildPigKeyIndex';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  print "INFO[$METHOD]: Building Pig key index...\n" if ($VERBOSE);
+
+  my $atlas_build_id = $args{atlas_build_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+
+  my $reference_directory = $args{reference_directory}
+    or die("ERROR[$METHOD]: Parameter reference_directory not passed");
+
+  unless (-d $reference_directory) {
+    die("ERROR[$METHOD]: '$reference_directory' is not a directory");
+  }
+
+  my $organism_id = 30;
+  my %proteins;
+
+
+
+  #### Load information from ptt file
+  my $reference_file = "$reference_directory/Pig_combined.fasta";
+  print "Reading $reference_file\n" if ($VERBOSE);
+  open(INFILE,$reference_file)
+    or die("ERROR[$METHOD]: Unable to open file '$reference_file'");
+
+  #### Load data
+  while (my $line = <INFILE>) {
+    $line =~ s/[\r\n]//g;
+    if ($line =~ /^>/) {
+      if ($line =~ /^>(\S+)/) {
+	my $protein_name = $1;
+	if ($line =~ /^>\S+\s+(.+)$/) {
+	  my $description = $1;
+	  if ($description =~ /^(.+) - Sus scrofa \(Pig\)\s*/) {
+	    $proteins{$protein_name}->{full_name} = $1;
+	  } elsif ($description =~ /^(.+) \(PRRSV\)\s*$/) {
+	    $proteins{$protein_name}->{full_name} = $1;
+	  } elsif ($description =~ /^(.+) \([A-Z0-9]+\)\s*$/) {
+	    $proteins{$protein_name}->{full_name} = $1;
+	  } elsif ($description =~ /^(.+) \[Sus scrofa\]\s*$/) {
+	    my $description = $1;
+	    if ($description =~ /\](.+?)$/) {
+	      $proteins{$protein_name}->{full_name} = $1;
+	    }
+	    if ($description =~ /([PQ][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9])/) {
+	      $proteins{$protein_name}->{UniProt} = $1;
+	    }
+	    if ($description =~ /([PQ][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9]_PIG)/) {
+	      $proteins{$protein_name}->{UniProt} = $1;
+	    }
+	    if ($description =~ /(NP_[\d\.])/) {
+	      $proteins{$protein_name}->{RefSeq} = $1;
+	    }
+	  } else {
+	    $proteins{$protein_name}->{full_name} = $description;
+	  }
+	}
+      }
+    }
+  }
+  close(INFILE);
+
+
+  #### Get the list of proteins that have a match
+  my $matched_proteins = $self->getNProteinHits(
+    organism_id=>$organism_id,
+    atlas_build_id=>$atlas_build_id,
+  );
+
+
+  #### Loop over all input rows processing information
+  my $counter = 0;
+  foreach my $biosequence_name (keys(%proteins)) {
+
+    #### Debugging
+    #print "protein=",$biosequence_name,"\n";
+    #print "protein(combined)=",$proteins{$biosequence_name}->{combined},"\n";
+
+
+    #### Build a list of protein links
+    my @links;
+
+    if ($biosequence_name) {
+      my @tmp = ('Accession',$biosequence_name);
+      push(@links,\@tmp);
+    }
+
+    foreach my $key ( qw (full_name UniProt) ) {
+      if (exists($proteins{$biosequence_name}->{$key})) {
+	my @tmp = ($key,$proteins{$biosequence_name}->{$key});
+	push(@links,\@tmp);
+      }
+    }
+
+    foreach my $link (@links) {
+      #print "    ".join("=",@{$link})."\n";
+      my %rowdata = (
+        search_key_name => substr($link->[1],0,255),
+        search_key_type => $link->[0],
+        search_key_dbxref_id => $link->[2],
+        organism_id => $organism_id,
+        atlas_build_id => $atlas_build_id,
+        resource_name => $biosequence_name,
+        resource_type => 'Pig accession',
+        resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$proteins{$biosequence_name}->{combined}&action=QUERY",
+        resource_n_matches => $matched_proteins->{$biosequence_name},
+      );
+      $sbeams->updateOrInsertRow(
+        insert => 1,
+        table_name => "$TBAT_SEARCH_KEY",
+        rowdata_ref => \%rowdata,
+        verbose=>$VERBOSE,
+        testonly=>$TESTONLY,
+      );
+    }
+
+
+    $counter++;
+    print "$counter... " if ($counter/100 eq int($counter/100));
+
+    #my $xx=<STDIN>;
+
+  } # endfor each biosequence
+
+  print "\n";
+
+} # end buildPigKeyIndex
+
+
 
 
 ###############################################################################
