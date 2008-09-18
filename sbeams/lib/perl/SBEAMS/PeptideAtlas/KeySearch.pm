@@ -1684,7 +1684,7 @@ sub buildPigKeyIndex {
         atlas_build_id => $atlas_build_id,
         resource_name => $biosequence_name,
         resource_type => 'Pig accession',
-        resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$proteins{$biosequence_name}->{combined}&action=QUERY",
+        resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$biosequence_name&action=QUERY",
         resource_n_matches => $matched_proteins->{$biosequence_name},
       );
       $sbeams->updateOrInsertRow(
