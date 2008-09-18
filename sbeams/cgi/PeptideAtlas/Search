@@ -253,20 +253,20 @@ sub handle_request {
       Build type: <select name="build_type_name"> $build_type_selection->{HTML_optionlist} </select> &nbsp; &nbsp; $advanced<BR>
       <BR>
         (e.g.
-          <A HREF="$base_url?search_key=ENSP00000222219&action=GO"><SPAN TITLE="Ensembl Protein Identifier" CLASS="popup">ENSP00000222219</SPAN></A>,
-          <A HREF="$base_url?search_key=IPI00010348&action=GO">IPI00010348</A>,
-          <A HREF="$base_url?search_key=NP_001366&action=GO">NP_001366</A>,
-          <A HREF="$base_url?search_key=Hs.167531&action=GO">Hs.167531</A>,
-          <A HREF="$base_url?search_key=%25BAT%25&action=GO">%BAT%</A>,
-          <A HREF="$base_url?search_key=DNASE2&action=GO">DNASE2</A>,<BR>
-          <A HREF="$base_url?search_key=%25helicase%25&action=GO">\%helicase\%</A>,
-          <A HREF="$base_url?search_key=Q9HCC0&action=GO">Q9HCC0</A>,
-          <A HREF="$base_url?search_key=MCCC2_HUMAN&action=GO">MCCC2_HUMAN</A>,
-          <A HREF="$base_url?search_key=PAp00000097&action=GO">PAp00000097</A>,
-          <A HREF="$base_url?search_key=AAVEEGIVLGGGCALLR&action=GO">AAVEEGIVLGGGCALLR</A>
+          <A HREF="$base_url?search_key=ENSP00000374576&build_type_name=Any&action=GO"><SPAN TITLE="Ensembl Protein Identifier" CLASS="popup">ENSP00000222219</SPAN></A>,
+          <A HREF="$base_url?search_key=IPI00807403&build_type_name=Any&action=GO">IPI00010348</A>,
+          <A HREF="$base_url?search_key=NP_001366&build_type_name=Any&action=GO">NP_001366</A>,
+          <A HREF="$base_url?search_key=Hs.232375&build_type_name=Any&action=GO">Hs.167531</A>,
+          <A HREF="$base_url?search_key=RBP%25&build_type_name=Any&action=GO">RBP%</A>,
+          <A HREF="$base_url?search_key=RBP4&build_type_name=Any&action=GO">RBP4</A>,<BR>
+          <A HREF="$base_url?search_key=%25helicase%25&build_type_name=Yeast&action=GO">\%helicase\%</A>,
+          <A HREF="$base_url?search_key=P06634&build_type_name=Yeast&action=GO">Q9HCC0</A>,
+          <A HREF="$base_url?search_key=MCCC2&build_type_name=Human&action=GO">MCCC2</A>,
+          <A HREF="$base_url?search_key=PAp00000097&build_type_name=Any&action=GO">PAp00000097</A>,
+          <A HREF="$base_url?search_key=AAVEEGIVLGGGCALLR&build_type_name=Any&action=GO">AAVEEGIVLGGGCALLR</A>
         )<BR>
       ~;
-      
+
       $buffer .= '</CENTER></nobr></P>';
       $buffer .= $q->endform;
   }
