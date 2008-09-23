@@ -49,15 +49,15 @@ $sbeams = new SBEAMS::Connection;
   $sbeams->parse_input_parameters( q=>$q, parameters_ref => \%parameters);
 
 
-	my %links = ( 'Search' => 'https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/Search', 
-                'Main' => 'https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/main.cgi?_tab=2',
-                'GetPeptide' => 'https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetPeptide?_tab=3',
-								'GetPeptides' => 'https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetPeptides?_tab=4', 
-								'GetProtein' => 'https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetProtein?_tab=5',
-								'GetProteins' => 'https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetProteins?_tab=6',
-								'Summarize' => 'https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/Summarize_Peptide?_tab=7',
-								'MRMList' => 'https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetMRMList',
-								'ShowPathways' => 'https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/showPathways'
+	my %links = ( 'Search' => 'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/Search', 
+                'Main' => 'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/main.cgi?_tab=2',
+                'GetPeptide' => 'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptide?_tab=3',
+								'GetPeptides' => 'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptides?_tab=4', 
+								'GetProtein' => 'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetProtein?_tab=5',
+								'GetProteins' => 'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetProteins?_tab=6',
+								'Summarize' => 'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/Summarize_Peptide?_tab=7',
+								'MRMList' => 'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetMRMList',
+								'ShowPathways' => 'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/showPathways'
 	            );
 
 
