@@ -224,6 +224,11 @@ sub exportTableData {
   $sql .= " WHERE $qualifiers" if ($qualifiers);
   $sql = evalSQL($sql);
 
+	if ( $OPTIONS{sql_only} ) {
+		print "$sql \n\n";
+		return;
+	}
+
 
   #### Fetch the appropriate rows from the database
   #print "$sql\n";
@@ -576,7 +581,8 @@ sub processOptions {
   GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
               "output_file:s","command_file:s","recursive", 'help',
               "user_map_to:i", "pseudo_keys:i", "workgroup_map_to:i", 
-              'synonyms:s', 'map_audit_user_to:i', 'map_audit_group_to:i' );
+              'synonyms:s', 'map_audit_user_to:i', 'map_audit_group_to:i',
+							'sql_only');
 
   $OPTIONS{map_audit_user_to} ||= $OPTIONS{user_map_to}; 
   $OPTIONS{map_audit_group_to} ||= $OPTIONS{workgroup_map_to}; 
