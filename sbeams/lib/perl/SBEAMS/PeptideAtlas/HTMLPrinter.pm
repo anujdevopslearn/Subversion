@@ -182,7 +182,7 @@ sub displayGuestPageHeader {
     $skin .= "$_\n";
   }
   
-  $self->{'_external_footer'} = join("\n", @page[$cnt..$#page]);
+  $self->{'_external_footer'} = join("\n", '<!--SBEAMS_PAGE_OK-->', @page[$cnt..$#page]);
   $skin =~ s#/images/#/sbeams/images/#gm;
   #$skin =~ s#/images/#/dev2/sbeams/images/#gm;
 
@@ -410,6 +410,19 @@ sub display_page_footer {
   my $separator_bar = $args{'separator_bar'} || 'NO';
 
    if($self->{'_external_footer'}) {
+
+
+	  # Have to fish for error file, since we are using Carp (can't pass sbeams
+		# object ).
+	  my $errfile = 'Error-' . getppid();
+ 	  my $is_error = 0;
+ 	  if ( $sbeams->doesSBEAMSTempFileExist( filename => $errfile ) ) {
+			$sbeams->deleteSBEAMSTempFile( filename => $errfile );
+			$is_error++;
+		}
+
+   	$self->{'_external_footer'} =~ s/SBEAMS_PAGE_OK/SBEAMS_PAGE_ERROR/gmi if $is_error;
+
    	print "$self->{'_external_footer'}\n";
      	return;
   }
