@@ -125,6 +125,12 @@ sub handle_error {
 
   $args{type} = $args{error_type};
 
+	$self->{'_ERROR_STATE'}++;
+	my $errfile = $self->writeSBEAMSTempFile( filename => 'Error-' . getppid(), 
+	                                           content => join( ',', @_ )
+													                 );
+	$log->debug( "Error file is $errfile" );
+
   # Use default routine if HTML and sbeams_error
   if ($args{out_mode} eq 'html' && $args{error_type} =~ /unknown|sbeams_err/) {
     die ( $args{message} );
