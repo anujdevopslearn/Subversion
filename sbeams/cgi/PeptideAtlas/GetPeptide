@@ -883,7 +883,12 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
 #                                          value => $peptide_sequence[0],
   my $bioseqs = join( ',', keys( %biosequence_id ) );
-	$mapHTML .= "<TR><TD COLSPAN=3><A HREF=compareProteins?pepseq=$peptide_sequence[0];bioseq_id=$bioseqs>Compare Proteins</A></TD></TR>\n";
+	if ( $bioseqs !~ /,/ ) {
+		my $text = $sbeams->makeInactiveText( 'Compare Proteins' );
+  	$mapHTML .= "<TR><TD COLSPAN=3><DIV TITLE='Cannot run alignment with only one sequence'>$text</DIV></TD></TR>\n";
+	} else  {
+  	$mapHTML .= "<TR><TD COLSPAN=3><A HREF=compareProteins?pepseq=$peptide_sequence[0];bioseq_id=$bioseqs>Compare Proteins</A></TD></TR>\n";
+  }
   print "<TABLE WIDTH=600>$mapHTML</TABLE>\n";
 
 ##  End mapping loop
