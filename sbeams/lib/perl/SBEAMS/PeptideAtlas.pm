@@ -26,6 +26,7 @@ use SBEAMS::PeptideAtlas::HTMLTabs;
 use SBEAMS::PeptideAtlas::ModificationHelper;
 use SBEAMS::PeptideAtlas::Utilities;
 use SBEAMS::PeptideAtlas::AtlasBuild;
+use SBEAMS::PeptideAtlas::SearchBatch;
 use SBEAMS::PeptideAtlas::Peptide;
 use SBEAMS::PeptideAtlas::Annotations;
 
@@ -38,6 +39,7 @@ use SBEAMS::PeptideAtlas::Annotations;
           SBEAMS::PeptideAtlas::ModificationHelper
           SBEAMS::PeptideAtlas::Utilities
           SBEAMS::PeptideAtlas::AtlasBuild
+          SBEAMS::PeptideAtlas::SearchBatch
           SBEAMS::PeptideAtlas::Peptide
           SBEAMS::PeptideAtlas::Annotations
        );
