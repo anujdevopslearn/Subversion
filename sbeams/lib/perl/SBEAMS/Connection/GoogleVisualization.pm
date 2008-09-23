@@ -46,6 +46,13 @@ sub setDrawBarChart {
   # Get passed args
 	my $self = shift;
 	my %args = @_;
+	
+	$log->debug( "in setDraw" );
+	if(	$self->{_hide_svg} ) {
+		my $msg = $sbeams->makeInfoText("Your browser appears to be too old to display these graphics, please come back when you have upgraded");
+		$log->debug( $msg );
+		return $msg;
+	}
 
   # Required!
 	for my $arg ( qw( samples data_types headings ) ) {
@@ -161,6 +168,13 @@ sub getHeaderInfo {
 	my %args = @_;
 	my $pkgs = '';
 	my $sep = '';
+
+	unless( $self->is_supported_browser( ffox_version => '1.5' ) ) {
+		$log->warn( "Browser incompatibility error" );
+		$self->{_hide_svg} = 1;
+		return $sbeams->makeErrorText( "Incompatible browser detected, some content may not be available" );
+	}
+
 	for my $p ( keys( %{$self->{'_packages'}} ) ) {
 		$pkgs .= $sep . '"' . $p . '"'; 
 		$sep = ', ';
@@ -174,21 +188,49 @@ sub getHeaderInfo {
 		$functions .= "$function\n";
 	}
 
-#  <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+  my $header_info = '';
 
-  my $header_info =<<"  END_SCRIPT";
-  <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/jsapi"></script>
-  <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/ga.js"></script>
-  <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/defaultbarchart.js"></script>
-  <script type="text/javascript">
+	if ( $CONFIG_SETTING{USE_LOCAL_GOOGLEVIS} ) {
+		$log->debug( "Using local version" );
+    $header_info =<<"  END_SCRIPT";
+    <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/jsapi"></script>
+    <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/ga.js"></script>
+    <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/defaultbarchart.js"></script>
+    <script type="text/javascript">
     google.load("visualization", "1", {packages:[$pkgs]});
 		$callbacks
 		$functions
-  </script>
+    </script>
   END_SCRIPT
+	} else {
+		$log->debug( "Using google version" );
+    $header_info =<<"  END_SCRIPT";
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+    <script type="text/javascript" src="https://www.google.com/javascript/ga.js"></script>
+    <script type="text/javascript" src="https://www.google.com/defaultbarchart.js"></script>
+    <script type="text/javascript">
+    google.load("visualization", "1", {packages:[$pkgs]});
+		$callbacks
+		$functions
+    </script>
+  END_SCRIPT
+	}
 
   return $header_info;
 }
 
+sub is_supported_browser {
+	my $self = shift;
+	my %args = @_;
+
+	my $ffox_version = $args{ffox_version} || '1.5';
+
+  my $browser = $ENV{HTTP_USER_AGENT};
+	if ( $browser =~ /.*Firefox\/(.*)$/ ) {
+		$log->warn( "Browser: $browser failed version test!" );
+		return 0 if $1 < $ffox_version;
+	}
+	return 1;
+}
 1;
 
