@@ -37,22 +37,36 @@ my $PROG_NAME = $FindBin::Script;
 my $USAGE = <<EOU;
 Usage: $PROG_NAME [OPTIONS]
 Options:
-  --verbose n                 Set verbosity level.  default is 0
-  --debug n                   Set debug flag
-  --testonly                  If set, rows in the database are not changed or added
-  --atlas_build_id            ID of the atlas build (already entered by hand in
-                              the atlas_build table) into which to load the data
-  --reload
+  --verbose n                   Set verbosity level.  default is 0
+  --debug n                     Set debug flag
+  --testonly                    If set, rows in the database are not changed or
+	                              added
+  --build_id                    ID of the atlas build (already entered by hand
+	                              in the atlas_build table) into which to load the
+																data
+  --reload                      Recalculate stats for all the builds.
+  --update_n_searched_spectra   re-run the analysis of the pepXML files for a
+	                              build, load results.
+  --atlas_search_batch_id       Modifies --update_n_searched, only update
+	                              specified search batches.
+  --proteomics_search_batch_id  Modifies --update_n_searched, only update 
+	                              specified search batches.
 
 
 EOU
 
 my %OPTIONS;
-my %args = ( atlas_build_id => [] );
-#
-#### Process options
+my %args = ( build_id => [],
+             atlas_search_batch_id => [],
+             proteomics_search_batch_id => [] );
+
+
+#### Process options, die with usage if it fails.
 unless (GetOptions(\%args,"verbose:s","debug:s","testonly",
-        "atlas_build_id:i", "reload", "nukem") ) { die "\n$USAGE"; }
+        "build_id:i", "reload", "nukem", "update_n_searched_spectra",
+				"atlas_search_batch_id:s","atlas_search_batch_id:s" ) ) {
+	die "\n$USAGE";
+}
 
 if ( $args{nukem} || $args{reload} ) {
   print "Fandango\n";
@@ -115,11 +129,11 @@ sub handleRequest {
 
   ##### PROCESS COMMAND LINE OPTIONS AND RESTRICTIONS #####
 
-  for my $id ( @{$args{atlas_build_id}} ) {
+  for my $id ( @{$args{build_id}} ) {
     die "Illegal build_id" if $id !~ /^\d+$/;
   }
 
-  my $build_id_str = join( ",", @{$args{atlas_build_id}} );
+  my $build_id_str = join( ",", @{$args{build_id}} );
 
   die "must specify build_id(s)" unless $build_id_str || $args{reload} || $args{nukem};
   
@@ -140,7 +154,12 @@ sub handleRequest {
   $sbeams->do( $delsql );
 
   # returns ref to array of build_id/data_path arrayrefs
-  my $build_info = get_build_info( \@{$args{atlas_build_id}} );
+  my $build_info = get_build_info( \@{$args{build_id}} );
+
+	# Optionally update the n_searched_spectra value in atlas_search_batch
+	if ( $args{update_n_searched_spectra} ) {
+		update_n_searched();
+	}
 
   for my $builds ( @$build_info ) {
 
@@ -148,6 +167,40 @@ sub handleRequest {
     insert_stats( $stats );
 
   }
+}
+
+sub update_n_searched {
+	my $build_ids = $args{build_id} || return;
+	for my $build_id ( @$build_ids ) {
+
+		my $batch_clause = '';
+		if ( $args{proteomics_search_batch_id} && scalar(@{$args{proteomics_search_batch_id}}) ) {
+      my $search_batches = join( ",", @{$args{proteomics_search_batch_id}} );
+			$batch_clause .= "AND ASB.proteomics_search_batch_id IN ( $search_batches ) \n";
+    }
+		if ( $args{atlas_search_batch_id} && scalar(@{$args{atlas_search_batch_id}}) ) {
+      my $search_batches = join( ",", @{$args{atlas_search_batch_id}} );
+			$batch_clause .= "AND ASB.atlas_search_batch_id IN ( $search_batches ) \n";
+    }
+
+		my $search_batches = $sbeamsMOD->getBuildSearchBatches( build_id => $build_id,
+		                                                        batch_clause => $batch_clause );
+
+		for my $batch ( @{$search_batches} ) {
+	    my $n_spec = $sbeamsMOD->getNSpecFromFlatFiles( search_batch_path => $batch->{data_location} );
+			print STDERR "n_spec is $n_spec! for id $batch->{atlas_search_batch_id}\n";
+			
+			if ( $n_spec ) {
+			  my $rowdata = { n_searched_spectra => $n_spec };
+        $sbeams->updateOrInsertRow( update => 1,
+                                   table_name => $TBAT_ATLAS_SEARCH_BATCH,
+                                  rowdata_ref => $rowdata,
+                                           PK => 'atlas_search_batch_id',
+                                     PK_value => $batch->{atlas_search_batch_id},
+                                    return_PK => 0 );
+			}
+		}
+	}
 }
 
 sub get_build_info {
