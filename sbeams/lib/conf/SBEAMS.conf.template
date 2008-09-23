@@ -128,6 +128,8 @@ CONFIG_SETTING{KGML_URL} = ftp://ftp.genome.jp/pub/kegg/xml/KGML_v0.6.1/__KEGG_O
 CONFIG_SETTING{CLUSTALW} = /usr/local/genome/bin/clustalw
 CONFIG_SETTING{ALIGNMENT_SUBDIR} = Alignments
 
+# Can use google cached js files, or our own local copies.
+CONFIG_SETTING{USE_LOCAL_GOOGLEVIS} = 1
 
 #### Define the place where Proteomics MS/MS spectrum peaks are written
 #### either TABLE, SKIP, or a file path (Default is TABLE)
