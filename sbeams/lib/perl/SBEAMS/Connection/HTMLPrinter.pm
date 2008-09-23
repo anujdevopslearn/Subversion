@@ -287,6 +287,11 @@ my $module_styles =<<"  END_STYLE";
   .lite_blue_bg{font-family: Helvetica, Arial, sans-serif; background-color: #eeeeff; font-size: ${FONT_SIZE_HG}pt; color: #cc1111; font-weight: bold;border-style: solid; border-width: 1px; border-color: #555555 #cccccc #cccccc #555555;}
   .orange_bg{ background-color: #FFCC66; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
   .red_bg{ background-color: #882222; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; color:white; Padding:2}
+
+  td.grn_bg{ background-color: #00FF00; font-size: ${FONT_SIZE}pt;}
+  td.yel_bg{ background-color: #FFFF00; font-size: ${FONT_SIZE}pt;}
+  td.red_bg{ background-color: #FF0000; font-size: ${FONT_SIZE}pt; }
+
   .small_cell {font-size: 8; background-color: #CCCCCC; white-space: nowrap  }
   .med_cell {font-size: 10; background-color: #CCCCCC; white-space: nowrap  }
   .anno_cell {white-space: nowrap  }
@@ -707,17 +712,29 @@ sub display_page_footer {
     my $module_name = '';
     $module_name = " - $SBEAMS_PART" if (defined($SBEAMS_PART));
 
-    print qq~
+  # Have to fish for error file, since we are using Carp (can't pass sbeams
+  # object ).  
+	my $errfile = 'Error-' . getppid();
+	my $is_error = 0;
+	if ( $self->doesSBEAMSTempFileExist( filename => $errfile ) ) {
+	  $self->deleteSBEAMSTempFile( filename => $errfile );
+		$is_error++;
+	}
+
+	my $error_status = ( $is_error ) ? '<!--SBEAMS_PAGE_ERROR-->' : '<!--SBEAMS_PAGE_OK-->';
+
+  print qq~
 	<BR>
 	<HR SIZE="2" NOSHADE WIDTH="35%" ALIGN="LEFT" color="#FF8700">
 	<TABLE>
 	<TR>
 	  <TD><IMG SRC="$HTML_BASE_DIR/images/sbeamstinywhite.png"></TD>
 	  <TD class='small_text'>SBEAMS$module_name&nbsp;&nbsp;&nbsp;$SBEAMS_VERSION<BR>
-              &copy; 2005 Institute for Systems Biology<TD>
+              &copy; 2000-2008 Institute for Systems Biology<TD>
 	  <TD><IMG SRC="$HTML_BASE_DIR/images/isbtinywhite.png"></TD>
 	</TR>
 	</TABLE>
+	$error_status
 	</BODY></HTML>\n\n
     ~;
   }
