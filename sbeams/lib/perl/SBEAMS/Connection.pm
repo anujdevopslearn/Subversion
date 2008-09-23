@@ -267,6 +267,20 @@ sub fetchSTDOUT {
 
 }
 
+sub deleteSBEAMSTempFile {
+  my $self = shift;
+	my %args = @_;
+
+	return unless $args{filename}; 
+	$args{dirname} ||= '';
+	$args{filename} .= '.' . $args{suffix}  if $args{suffix};
+	my $tmp_path = "$PHYSICAL_BASE_DIR/tmp/";
+
+	my $abs_path = join( '/', $tmp_path, $args{dirname}, $args{filename} );
+	unlink( $abs_path );
+
+}
+
 sub writeSBEAMSTempFile {
   my $self = shift;
 	my %args = @_;
@@ -276,11 +290,11 @@ sub writeSBEAMSTempFile {
 
   # Generate random filename iff necessary 
 	$args{filename} ||= $self->getRandomString( num_chars => 20 );
-	$args{dirname} ||= $args{filename};
+	$args{dirname} ||= '';
 	$args{filename} .= '.' . $args{suffix}  if $args{suffix};
 	my $tmp_path = "$PHYSICAL_BASE_DIR/tmp/";
 
-	if ( $args{newdir} ) {
+	if ( $args{newdir} && $args{dirname} ) {
 		$tmp_path .= $args{dirname} . '/';
 		system( "mkdir $tmp_path");
 	}
