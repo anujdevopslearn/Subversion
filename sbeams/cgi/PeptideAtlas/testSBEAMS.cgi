@@ -48,21 +48,24 @@ $sbeams = new SBEAMS::Connection;
   my %parameters;
   $sbeams->parse_input_parameters( q=>$q, parameters_ref => \%parameters);
 
+  my $base = $q->url( -base => 1 );
 
-	my %links = ( 'Search' => 'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/Search', 
-                'Main' => 'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/main.cgi?_tab=2',
-                'GetPeptide' => 'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptide?_tab=3',
-								'GetPeptides' => 'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptides?_tab=4', 
-								'GetProtein' => 'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetProtein?_tab=5',
-								'GetProteins' => 'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetProteins?_tab=6',
-								'Summarize' => 'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/Summarize_Peptide?_tab=7',
-								'MRMList' => 'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetMRMList',
-								'ShowPathways' => 'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/showPathways'
+  # TODO 
+  # Add in some CGI params to make these more useful!
+
+	my %links = ( "Search" => "$base/$CGI_BASE_DIR/PeptideAtlas/Search", 
+                "Main" => "$base/$CGI_BASE_DIR/PeptideAtlas/main.cgi?_tab=2",
+                "GetPeptide" => "$base/$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3",
+								"GetPeptides" => "$base/$CGI_BASE_DIR/PeptideAtlas/GetPeptides?_tab=4", 
+								"GetProtein" => "$base/$CGI_BASE_DIR/PeptideAtlas/GetProtein?_tab=5",
+								"GetProteins" => "$base/$CGI_BASE_DIR/PeptideAtlas/GetProteins?_tab=6",
+								"Summarize" => "$base/$CGI_BASE_DIR/PeptideAtlas/Summarize_Peptide?_tab=7",
+								"MRMList" => "$base/$CGI_BASE_DIR/PeptideAtlas/GetMRMList",
+								"ShowPathways" => "$base/$CGI_BASE_DIR/PeptideAtlas/showPathways"
 	            );
 
-
-  $sbeams->display_page_header( minimal_header => 'YES',
-	                              navagation_bar => 'NO' );
+  $sbeams->display_page_header( minimal_header => "YES",
+	                              navagation_bar => "NO" );
   print "Testing pages, please be patient...<BR><BR>";
 	print "<A NAME=top></A><TABLE WIDTH=600 BORDER=1>\n";
 
