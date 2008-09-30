@@ -133,7 +133,7 @@ sub main {
       my $project_id = $sbeamsMOD->getProjectID(
           atlas_build_id => $parameters{atlas_build_id}
           );
-      $sbeamsMOD->display_page_header(project_id => $project_id, init_tooltip => 0);
+      $sbeamsMOD->display_page_header(project_id => $project_id, init_tooltip => 1);
       handle_request(ref_parameters=>\%parameters);
       $sbeamsMOD->display_page_footer();
   }
