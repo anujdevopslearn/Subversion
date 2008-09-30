@@ -812,7 +812,7 @@ sub init_pa_tooltip {
   
   $self->{_tooltip_init} = 1;
   return <<"  END";
-  <SCRIPT src="$HTML_BASE_DIR/usr/javascript/TipWidget.js" TYPE="text/javascript"></SCRIPT>
+  <SCRIPT DEFER="defer" src="$HTML_BASE_DIR/usr/javascript/TipWidget.js" TYPE="text/javascript"></SCRIPT>
   <STYLE>
   div#tooltipID { background-color:#F0F0F0;
                   border:2px 
