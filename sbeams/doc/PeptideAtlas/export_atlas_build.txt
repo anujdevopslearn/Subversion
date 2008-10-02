@@ -35,15 +35,11 @@ been created that points at the mysql instance (see below).
   the correct values:
 ( assuming dbname is peptide_atlas_test).
 
-DB_DATABASE     = peptide_atlas_test
-DBPREFIX{BioLink}     = peptide_atlas_test.
-DBPREFIX{Core}     = peptide_atlas_test.
-DBPREFIX{PeptideAtlas}     = peptide_atlas_test.
-DBPREFIX{Proteomics}    = peptide_atlas_test.
-DB_DATABASE     = human_all
-DB_DATABASE     = microarray_schema
-DB_DATABASE     = peptide_atlas_test
-DB_DATABASE     = sbeams
+DBPREFIX{BioLink}     = atlas_build_110.
+DBPREFIX{Core}     = atlas_build_110.
+DBPREFIX{PeptideAtlas}     = atlas_build_110.
+DBPREFIX{Proteomics}    = atlas_build_110.
+DB_DATABASE     = atlas_build_110
 
 DB_DRIVER   = DBI:mysql:$DB_DATABASE:$DB_SERVER
 DB_PASS     = 52616e646f6d4956d624d072686135e105297f9bbee218f1
@@ -57,8 +53,12 @@ DB_USER     = sbeams
 
   # Build necessary schema elements.  Due to the inclusion of a single foreign
   key reference, it is necessary to load the proteomics module as well.  In 
-  order to run the script you must first set DBNAME and SBEAMS environent
-  variables, and edit script to 
+  order to run the script you must first set DBNAME(atlas_build_110 in this
+	example) and SBEAMS environent variables.  You can also set DBUSER and
+	DBPASS env vars, otherwise edit the script to provide these values.  This
+	script will build the Core, Biolink, Peptideatlas, and Proteomics schemata.
+	There will be a few debug messages about redundant table names, this is
+	fine.
 
   $SBEAMS/lib/scripts/Core/peptide_atlas_schema.sh build
 
@@ -66,7 +66,7 @@ DB_USER     = sbeams
   the longest step by a wide margin, so example runs with nohup, to avoid a
   premature termination of the process, as well as to capture the output.
 
-  nohup DataImport.pl -n -u 0.7 -s /tmp/atlas_build_100.xml &
+  nohup DataImport.pl -n -u 0.7 -s /tmp/atlas_build_110.xml &
   
   # Export database as a mysql dump file.  Note that you will be prompted for
   a password if invoked as written, you can optionally provide the password on
