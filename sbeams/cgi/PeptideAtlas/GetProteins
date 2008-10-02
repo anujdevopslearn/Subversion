@@ -369,6 +369,13 @@ sub handle_request {
     constraint_value=>$parameters{strand_constraint} );
   return if ($chromosome_clause eq '-1');
 
+	  #### Build SAMPLE_ID constraint
+  my $samples_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PIS.sample_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Samples ",
+    constraint_value=>$parameters{sample_ids} );
+  return if ($samples_clause eq '-1');
 
   ## get organism_id to pass on to url_cols
   my $tsql = qq~
@@ -464,6 +471,7 @@ sub handle_request {
         $start_in_chromosome_clause
         $end_in_chromosome_clause
         $strand_clause
+        $samples_clause
   ~;
 
   #### Define the desired columns in the query
@@ -519,8 +527,8 @@ sub handle_request {
        FROM $TBAT_PEPTIDE_INSTANCE PI
       INNER JOIN $TBAT_PEPTIDE P
             ON ( PI.peptide_id = P.peptide_id )
---      INNER JOIN $TBAT_PEPTIDE_INSTANCE_SAMPLE PIS
---            ON ( PI.peptide_instance_id = PIS.peptide_instance_id )
+      INNER JOIN $TBAT_PEPTIDE_INSTANCE_SAMPLE PIS
+            ON ( PI.peptide_instance_id = PIS.peptide_instance_id )
       INNER JOIN $TBAT_ATLAS_BUILD AB
             ON ( PI.atlas_build_id = AB.atlas_build_id )
        LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
