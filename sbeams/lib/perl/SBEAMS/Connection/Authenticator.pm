@@ -82,6 +82,12 @@ sub Authenticate {
   my $allow_anonymous_access = $args{'allow_anonymous_access'} || "";
   my $permitted_work_groups_ref = $args{'permitted_work_groups_ref'} || "";
 
+  ## Clean up authentication tokens if requested.
+	if ( $q->param('clear_auth') ) {
+    $q->delete( 'SBEAMSentrycode' );
+    $self->destroyAuthHeader();
+		print STDERR "clear auth in Authenticate   \n";
+	}
 
   #### Always disable the output buffering
   $| = 1;
@@ -289,7 +295,7 @@ sub processLogin {
   my $half_eaten = int( $csecs/2 );
   
   # If user and pass were given in login context, use the info.
-  if ( $user && $pass && $login ) { 
+  if ( ($user && $pass && $login) ) { 
     if ($self->checkLogin($user, $pass)) {
 
       $http_header = $self->createAuthHeader(username => $user);
