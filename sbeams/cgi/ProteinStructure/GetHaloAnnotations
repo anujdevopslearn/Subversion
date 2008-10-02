@@ -774,7 +774,8 @@ my $atlas_data;
 
 #    push @glist, $biosequence_name;
 
-	  $table_html  .= qq~
+
+    $table_html  .= qq~
 
 		<!-------- row $counter ---------->
 		<TR>
@@ -797,8 +798,6 @@ my $atlas_data;
 												  target=>'microbes_onlines',
 												  link=>$microbes_online_url,
 												  tooltip=>"Microbes Online Search for $biosequence_name");
-
-	 
 
 	  push @array_expression_genes,$biosequence_name;
 	  my $array_expression_link = getColorizedTD (tag=>'Gene Expression',
@@ -861,6 +860,19 @@ tooltip=>"Edit Annotation (restricted)");
 											link=>"GetHaloAnnotations?search_scope=All&search_key=$biosequence_name&action=GO&dna_biosequence_set_id=$parameters{dna_biosequence_set_id}&protein_biosequence_set_id=$parameters{protein_biosequence_set_id}&apply_action=QUERY",
 											tooltip=>"Redundant ORFS: $tip");
 	
+	# VNG5000's, A, B and m suffixes not supported, so set data to a false value
+	my $seq_name = $biosequence_name;
+	if ($seq_name =~ /VNG5\d\d\d\w+/ or $seq_name =~ /VNG\d\d\d\d(A|B|\wm|\wM)/ ) {
+	    $seq_name = ""
+	}
+	$tip = "Transcript structure for: $biosequence_name";
+	my $transcript_structure_link = getColorizedTD (tag=>"Transcript Structure",
+	                                        data=>$seq_name,
+	                                        text=>'S',
+	                                        target=>'transcript_structure',
+link=>"http://gaggle.systemsbiology.net/projects/halo/transcript_structure/$biosequence_name.pdf",
+	                                        tooltip=> "$tip");
+
 
 	  $table_html .= qq~
 		$dna_link
@@ -872,6 +884,7 @@ tooltip=>"Edit Annotation (restricted)");
 		$array_expression_link
 		$duplicates_link
 		$atlas_link
+		$transcript_structure_link
 		</TR>
 		</TABLE>
 		</TD>
