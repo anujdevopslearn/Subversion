@@ -845,11 +845,17 @@ sub insert_nist_library_comments
     $rowdata{NIST_library_spectrum_id} = $nist_library_spectrum_id;
 
 #   foreach my $key (qw/ Inst Sample Dotbest Dottheory Probcorr Specqual Unassigned Fullname /)
-    foreach my $key (qw/ Sample Dotfull Dot_cons Dotrev_consens Suspect Look Isgood Unassigned Fullname /)
-    {
+    foreach my $key (qw/ Sample Dotfull Dot_cons Dotrev_consens Suspect Look Isgood Unassigned Fullname /) {
+
         $rowdata{parameter_key} = $key;
 
-        $rowdata{parameter_value} = $hash{$key};
+        if ( length($hash{$key}) > 1023 ) {
+          print STDERR "Trimmed long param_value for param_key: $key\n";
+          $rowdata{parameter_value} = substr( $hash{$key}, 0, 1022 );
+          print STDERR "param_val was " . length(  $hash{$key} ) . " but is now " . length( $rowdata{parameter_value} ) . "\n";
+        } else {
+          $rowdata{parameter_value} = $hash{$key};
+				}
 
         $sbeams->updateOrInsertRow(
             table_name=>$TBAT_NIST_LIBRARY_SPECTRUM_COMMENT,
