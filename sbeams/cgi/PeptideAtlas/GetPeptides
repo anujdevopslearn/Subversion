@@ -317,7 +317,7 @@ sub handle_request {
     constraint_value=>$parameters{best_probability_constraint} );
   return if ($best_probability_clause eq '-1');
 
-  #### Build ATLAS_BUILD constraint
+  #### Build SAMPLE_ID constraint
   my $samples_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"PIS.sample_id",
     constraint_type=>"int_list",
@@ -935,3 +935,4 @@ sub getOrganismFullName
 
     return $full_name;
 }
+
