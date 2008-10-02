@@ -390,7 +390,7 @@ sub handle_request {
       ~;
 
       if ( $parameters{include_validated_transitions} ) {
-        # This routine is scoped within this routine, so vars are visible
+        # The routine below is scoped within the current routine, so vars are visible
         get_validated_transitions();
       }
 
@@ -408,10 +408,9 @@ sub handle_request {
       $NIST_library_clause
       AND NST.NIST_spectrum_type_name IN ('Consensus','Single')
       AND ( NLSP.peak_label LIKE 'y%' OR   NLSP.peak_label LIKE 'b%' )
-      ORDER BY biosequence_name, NLS.sequence, NLS.modified_sequence, NLS.charge, NLSP.relative_intensity DESC, PI.best_probability DESC
+      ORDER BY biosequence_name, PI.n_observations DESC, NLS.sequence, NLS.modified_sequence, NLS.charge, NLSP.relative_intensity DESC, PI.best_probability DESC
       ~;
 
-      $log->debug( $sql );
       my $sth = $sbeams->get_statement_handle($sql);
 
 # 0      NLS.NIST_library_spectrum_id,
@@ -558,10 +557,11 @@ sub handle_request {
     ON TSL.transition_suitability_level_id = MPA.transition_suitability_level_id
     JOIN $TBAT_PEPTIDE P ON P.peptide_sequence = MPA.peptide_sequence
     $peptide_sql
-    ORDER BY biosequence_name, modified_peptide_sequence, peptide_charge, 
+    ORDER BY biosequence_name, n_observations DESC, modified_peptide_sequence, peptide_charge, 
     q3_peak_intensity DESC
     ~;
 
+   
     my $sth = $sbeams->get_statement_handle($sql);
 
     while ( my @row = $sth->fetchrow_array() ) {
