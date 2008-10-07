@@ -644,9 +644,15 @@ $LINESEPARATOR
 	my $condition_ids_clause = join ",", @conditions;
 
 	my $counter = 0;
-  # list to store gaggle data
-  my @glist;
-  my $alias_links ='';
+    # list to store gaggle data
+    my @glist;
+    my $alias_links ='';
+
+    # halo_link_menus is an array of strings where each entry is a javascript
+    # object literal holding data describing a link menu for a single row
+    # in the table.
+    my @halo_link_menus = ();
+
 
 	foreach my $row (@rows) {
 	  my $protein_biosequence_id    = $row->[0];
@@ -752,7 +758,7 @@ my $atlas_data;
 #	$peptide_hit_list = $atlas_hits . " ," . $peptide_hit_list;
 #} 
 #chop ($peptide_hit_list);
-   
+
  foreach my $row (@rows) {
  my $protein_biosequence_id    = $row->[0];
           my $biosequence_annotation_id = $row->[1];
@@ -774,6 +780,9 @@ my $atlas_data;
 
 #    push @glist, $biosequence_name;
 
+    # collect menu item data
+    my @halo_link_menu_items = ();
+    my $url;
 
     $table_html  .= qq~
 
@@ -791,88 +800,148 @@ my $atlas_data;
 		<TR>
 		~;
 
-	  my $microbes_online_url = 'http://www.microbesonline.org/cgi-bin/keywordSearch.cgi?type=0&mapId=MAPID&term=1&locus=0&hit=0&disp=0&homolog=0&format=1&favorites=&taxTyping=halo&taxSelector=64091&taxId=64091&keyword='.$biosequence_name;
-	  my $microbes_online_link =  getColorizedTD (tag=>'Microbes Online',
-												  text=>'O',
-												  data=>$biosequence_name,
-												  target=>'microbes_onlines',
-												  link=>$microbes_online_url,
-												  tooltip=>"Microbes Online Search for $biosequence_name");
+    $url = "BrowseBioSequence.cgi?project_id=$project_list&biosequence_set_id=$parameters{dna_biosequence_set_id}&biosequence_id_constraint=$dna_biosequence_id&action=QUERYHIDE&display_options=SequenceFormat&display_mode=FASTA";
+    my $dna_link = getColorizedTD (tag=>'DNA Sequences',
+    							 data=>$dna_biosequence_id,
+    							 text=>'D',
+    							 target=>'sequence',
+    							 link=>$url,
+    							 tooltip=>"DNA sequence in FASTA format");
 
-	  push @array_expression_genes,$biosequence_name;
-	  my $array_expression_link = getColorizedTD (tag=>'Gene Expression',
-												  text=>'M',
-												  data=>$biosequence_name,
-												  target=>'array_expression',
-												  link=>"$CGI_BASE_DIR/Microarray/GetHaloExpression?canonical_name_constraint=$biosequence_name&condition_id=$condition_ids_clause&row_limit=10000&input_form_format=minimum_detail&QUERY_NAME=MA_GetExpression&action=QUERY&apply_action=QUERY",
-												  tooltip=>"Microarray Data Containing $biosequence_name");
+    if ($dna_biosequence_id) {
+       push(@halo_link_menu_items, getMenuItemJavascript (
+            tag=>'DNA Sequences',
+            target=>'sequence',
+            link=>$url,
+            tooltip=> "DNA sequence in FASTA format"));
+    }
+
+    $url = "BrowseBioSequence.cgi?project_id=$project_list&biosequence_set_id=$parameters{protein_biosequence_set_id}&biosequence_id_constraint=$protein_biosequence_id&action=QUERYHIDE&display_options=SequenceFormat&display_mode=FASTA";
+    my $prot_link = getColorizedTD (tag=>'Protein Sequences',
+    							  data=>$protein_biosequence_id,
+    							  text=>'P',
+    							  target=>'sequence',
+    							  link=>$url,
+    							  tooltip=>"Protein sequence in FASTA format");
+
+    push(@halo_link_menu_items, getMenuItemJavascript (
+         tag=>'Protein Sequences',
+         target=>'sequence',
+         link=>$url,
+         tooltip=> "Protein sequence in FASTA format"));
+
+    $url = "ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation&biosequence_annotation_id=$biosequence_annotation_id&biosequence_id=$protein_biosequence_id&ShowEntryForm=1";
+    my $annot_link = getColorizedTD (tag=>'Annotations',
+                                 data=>$biosequence_annotation_id,
+                                 text=>'A',
+                                 target=>'annotation',
+                                 link=>$url,
+                                 tooltip=>"Edit Annotation (restricted)");
+
+    push(@halo_link_menu_items, getMenuItemJavascript (
+             tag=>'Annotations',
+             target=>'annotation',
+             link=>$url,
+             tooltip=> "Edit Annotation (restricted)"));
+
+    $url = 'http://www.microbesonline.org/cgi-bin/keywordSearch.cgi?type=0&mapId=MAPID&term=1&locus=0&hit=0&disp=0&homolog=0&format=1&favorites=&taxTyping=halo&taxSelector=64091&taxId=64091&keyword='.$biosequence_name;
+    my $microbes_online_link =  getColorizedTD (tag=>'Microbes Online',
+    										  text=>'O',
+    										  data=>$biosequence_name,
+    										  target=>'microbes_onlines',
+    										  link=>$url,
+    										  tooltip=>"Microbes Online Search for $biosequence_name");
+
+    push(@halo_link_menu_items, getMenuItemJavascript (
+          tag=>'Microbes Online',
+          target=>'microbes_onlines',
+          link=>$url,
+          tooltip=> "Microbes Online Search for $biosequence_name"));
+
+    push @array_expression_genes,$biosequence_name;
+    $url = "$CGI_BASE_DIR/Microarray/GetHaloExpression?canonical_name_constraint=$biosequence_name&condition_id=$condition_ids_clause&row_limit=10000&input_form_format=minimum_detail&QUERY_NAME=MA_GetExpression&action=QUERY&apply_action=QUERY";
+    my $array_expression_link = getColorizedTD (tag=>'Gene Expression',
+    										  text=>'M',
+    										  data=>$biosequence_name,
+    										  target=>'array_expression',
+    										  link=>$url,
+    										  tooltip=>"Microarray Data Containing $biosequence_name");
+
+    push(@halo_link_menu_items, getMenuItemJavascript (
+          tag=>'Gene Expression',
+          target=>'array_expression',
+          link=>$url,
+          tooltip=> "Microarray Data Containing $biosequence_name"));
+
+    ## put a space in between redundant ORFs so the tooltip will wrap the text
+    $duplicate_biosequences =~ s/,/, /g;
+    my $tip = "None";
+    if ($duplicate_biosequences) {
+      $tip = $duplicate_biosequences;
+    }
+    $url = "GetHaloAnnotations?search_scope=All&search_key=$biosequence_name&action=GO&dna_biosequence_set_id=$parameters{dna_biosequence_set_id}&protein_biosequence_set_id=$parameters{protein_biosequence_set_id}&apply_action=QUERY";
+    my $duplicates_link =  getColorizedTD (tag=>'Redundant ORFs',
+    									data=>$duplicate_biosequences,
+    									text=>'R',
+    									link=>$url,
+    									tooltip=>"Redundant ORFS: $tip");
+
+    push(@halo_link_menu_items, getMenuItemJavascript (
+        tag=>'Redundant ORFs',
+        link=>$url,
+        tooltip=> "Redundant ORFS: $tip"));
+
+    #hard-coded atlas ID, FIX THIS !!!
+    #my $atlas_id = '112'; 
+    my $atlas_id = '91'; 
+    ## if there are hits against the peptideAtlas, say so, otherwise, say none
+    my $peptide_tip = "None";
+    if ( $atlas_hit_h{$biosequence_name} ) {
+        $peptide_tip = "Detected $atlas_hit_h{$biosequence_name}->[2] distinct peptides for $biosequence_name, $atlas_hit_h{$biosequence_name}->[1] total observations (Restricted Access)";
+
+        $atlas_data = $atlas_hit_h{$biosequence_name};
+    }
+
+    # print "atlas_data is $atlas_data<br>";
+    $url = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_id&protein_name=$biosequence_name&action=GO";
+    my $atlas_link = getColorizedTD (tag=>'Peptide Atlas', 
+    								data=>$atlas_data, 
+    								text=>'T', 
+    								target=>'atlas', 
+    								#link=>"$CGI_BASE_DIR/PeptideAtlas/GetPeptides?atlas_build_id=$atlas_id&biosequence_gene_name_constraint=$biosequence_name&query_name=AT_GetPeptides&action=QUERY&apply_action=QUERY&display_options=ShowMappings", 
+    								link=>$url,
+    								tooltip=> "$peptide_tip" );
+    $atlas_data = "";
+
+    push(@halo_link_menu_items, getMenuItemJavascript (
+            tag=>'Peptide Atlas',
+            target=>'atlas',
+            link=>$url,
+            tooltip=> "$peptide_tip"));
 
 
-	  my $dna_link = getColorizedTD (tag=>'DNA Sequences',
-									 data=>$dna_biosequence_id,
-									 text=>'D',
-									 target=>'sequence',
-									 link=>"BrowseBioSequence.cgi?project_id=$project_list&biosequence_set_id=$parameters{dna_biosequence_set_id}&biosequence_id_constraint=$dna_biosequence_id&action=QUERYHIDE&display_options=SequenceFormat&display_mode=FASTA",
-									 tooltip=>"DNA sequence in FASTA format");
-	  
-	  my $prot_link = getColorizedTD (tag=>'Protein Sequences',
-									  data=>$protein_biosequence_id,
-									  text=>'P',
-									  target=>'sequence',
-									  link=>"BrowseBioSequence.cgi?project_id=$project_list&biosequence_set_id=$parameters{protein_biosequence_set_id}&biosequence_id_constraint=$protein_biosequence_id&action=QUERYHIDE&display_options=SequenceFormat&display_mode=FASTA",
-									  tooltip=>"Protein sequence in FASTA format");
-	  my $annot_link = getColorizedTD (tag=>'Annotations',
-									   data=>$biosequence_annotation_id,
-									   text=>'A',
-									   target=>'annotation',
-									   link=>"ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation&biosequence_annotation_id=$biosequence_annotation_id&biosequence_id=$protein_biosequence_id&ShowEntryForm=1",
-tooltip=>"Edit Annotation (restricted)");
+    # VNG5000's, A, B and m suffixes not supported, so set data to a false value
+    my $seq_name = $biosequence_name;
+    if ($seq_name =~ /VNG5\d\d\d\w+/ or $seq_name =~ /VNG\d\d\d\d(A|B|\wm|\wM)/ ) {
+        $seq_name = ""
+    }
+    $tip = "Transcript structure for: $biosequence_name";
+    $url = "http://gaggle.systemsbiology.net/projects/halo/transcript_structure/$biosequence_name.pdf";
+    my $transcript_structure_link = getColorizedTD (tag=>"Transcript Structure",
+                                            data=>$seq_name,
+                                            text=>'S',
+                                            target=>'transcript_structure',
+                                            link=>$url,
+                                            tooltip=> "$tip");
 
-#hard-coded atlas ID, FIX THIS !!!
-#my $atlas_id = '112'; 
-  my $atlas_id = '91'; 
-	## if there are hits against the peptideAtlas, say so, otherwise, say none
-	my $peptide_tip = "None";
-	if ( $atlas_hit_h{$biosequence_name} ) {
-    $peptide_tip = "Detected $atlas_hit_h{$biosequence_name}->[2] distinct peptides for $biosequence_name, $atlas_hit_h{$biosequence_name}->[1] total observations (Restricted Access)";
+    push(@halo_link_menu_items, getMenuItemJavascript (
+            tag=> "Transcript Structure",
+            link=> $url,
+            target=>'transcript_structure',
+            tooltip=> "$tip"));
 
-    $atlas_data = $atlas_hit_h{$biosequence_name};
-  }
-
-#	print "atlas_data is $atlas_data<br>";
-	my $atlas_link = getColorizedTD (tag=>'Peptide Atlas', 
-									data=>$atlas_data, 
-									text=>'T', 
-									target=>'atlas', 
-									#link=>"$CGI_BASE_DIR/PeptideAtlas/GetPeptides?atlas_build_id=$atlas_id&biosequence_gene_name_constraint=$biosequence_name&query_name=AT_GetPeptides&action=QUERY&apply_action=QUERY&display_options=ShowMappings", 
-									link=>"$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_id&protein_name=$biosequence_name&action=GO",
-									tooltip=> "$peptide_tip" );
-	$atlas_data = "";
-	  ## put a space in between redundant ORFs so the tooltip will wrap the text
-	  $duplicate_biosequences =~ s/,/, /g;
-	  my $tip = "None";
-	  if ($duplicate_biosequences) {
-		$tip = $duplicate_biosequences;
-	  }
-	  my $duplicates_link =  getColorizedTD (tag=>'Redundant ORFs',
-											data=>$duplicate_biosequences,
-											text=>'R',
-											link=>"GetHaloAnnotations?search_scope=All&search_key=$biosequence_name&action=GO&dna_biosequence_set_id=$parameters{dna_biosequence_set_id}&protein_biosequence_set_id=$parameters{protein_biosequence_set_id}&apply_action=QUERY",
-											tooltip=>"Redundant ORFS: $tip");
-	
-	# VNG5000's, A, B and m suffixes not supported, so set data to a false value
-	my $seq_name = $biosequence_name;
-	if ($seq_name =~ /VNG5\d\d\d\w+/ or $seq_name =~ /VNG\d\d\d\d(A|B|\wm|\wM)/ ) {
-	    $seq_name = ""
-	}
-	$tip = "Transcript structure for: $biosequence_name";
-	my $transcript_structure_link = getColorizedTD (tag=>"Transcript Structure",
-	                                        data=>$seq_name,
-	                                        text=>'S',
-	                                        target=>'transcript_structure',
-link=>"http://gaggle.systemsbiology.net/projects/halo/transcript_structure/$biosequence_name.pdf",
-	                                        tooltip=> "$tip");
-
+    # add menu for current row to list of menus for all rows
+    push(@halo_link_menus, getMenuJavascript(@halo_link_menu_items));
 
 	  $table_html .= qq~
 		$dna_link
@@ -885,6 +954,7 @@ link=>"http://gaggle.systemsbiology.net/projects/halo/transcript_structure/$bios
 		$duplicates_link
 		$atlas_link
 		$transcript_structure_link
+		<td><img id="halo_link_menu_$counter" src="$HTML_BASE_DIR/images/menu_button.png" width="14" height="14"/></td>
 		</TR>
 		</TABLE>
 		</TD>
@@ -1008,6 +1078,9 @@ link=>"http://gaggle.systemsbiology.net/projects/halo/transcript_structure/$bios
 	$table_html = qq~
 	  <A HREF="GetHaloAnnotations?search_scope=$parameters{search_scope}&search_key=$parameters{search_key}&action=GO&dna_biosequence_set_id=$parameters{dna_biosequence_set_id}&protein_biosequence_set_id=$parameters{protein_biosequence_set_id}&apply_action=QUERY&output_mode=tsv">-Download Tab-delimited Summary</A><BR>
 	  ~ . $table_html;
+  	$table_html = qq~
+  	  <A HREF="http://gaggle.systemsbiology.net/projects/halo/transcript_structure/">-Legend and index for transcriptome structure plots</A><BR>
+  	  ~ . $table_html;
 	if (@p_ids) {
 	  my $p_list = join ",", @p_ids;
 	  $table_html = qq~
@@ -1030,6 +1103,10 @@ link=>"http://gaggle.systemsbiology.net/projects/halo/transcript_structure/$bios
 
 	#### Print HTML
 	print $table_html;
+
+    # output a <script> tag holding the data for the drop-down menus
+    print "\n\n<!---------- Javascript for link menus -------------->\n";
+    printHaloLinkMenuJavascript(@halo_link_menus);
 
   }elsif ($sbeams->output_mode() =~ /tsv|csv|excel/) {
 	
@@ -1122,7 +1199,7 @@ sub getColorizedTD {
   $html .= " onmouseover=\"showTooltip(event,'$tooltip')\" onmouseout=\"hideTooltip()\"" if ($tooltip);
   $html .= " target=\"$target\"" if ($target);
   $html .= ">";
-  
+
 
   $html .= $text;
 
@@ -1133,6 +1210,51 @@ sub getColorizedTD {
   $html .= "</TD>";
   return $html;
 }
+
+
+###############################################################################
+# returns a string containing a javascript object-literal with fields
+# describing a single menu entry
+###############################################################################
+sub getMenuItemJavascript {
+    my %args = @_;
+    my $tag  = $args{'tag'};
+    my $link = $args{'link'};
+    my $target = $args{'target'};
+    my $tooltip = $args{'tooltip'};
+    my $js;
+
+    $js .= "{text:\"$tag\",\n";
+    $js .= "href:\"$link\",\n";
+    $js .= "hrefTarget:\"$target\",\n";
+    $js .= "tooltip:\"$tooltip\"}";
+
+    return $js;
+}
+
+###############################################################################
+# return a string which defines a javascript array to hold menu data for a
+# single row in the table
+###############################################################################
+sub getMenuJavascript {
+    my @halo_link_menu_items = @_;
+    my $items = join(",\n", @halo_link_menu_items);
+    return "[$items]";
+}
+
+###############################################################################
+# print a script tag which defines a javascript array to hold menu data for
+# all rows in the table
+###############################################################################
+sub printHaloLinkMenuJavascript {
+    my @halo_link_menus = @_;
+    my $menus = join(",\n", @halo_link_menus);
+
+    print "<script type=\"text/javascript\">\n";
+    print "var halo_link_menus = [$menus];\n";
+    print "</script>\n"
+}
+
 
 
 ###############################################################################

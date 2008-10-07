@@ -71,6 +71,7 @@ sub display_page_header {
 	<TITLE>$DBTITLE - $SBEAMS_PART</TITLE>
     ~;
 
+    printExtCssAndJavascript();
 
 	#### Check to see if the PI of the project is Halo User.
 	#### If so, print the halo skin.  NOTE: you also need to adjust the halo_footer
@@ -230,6 +231,52 @@ sub printJavascriptFunctions {
 
     ~;
 
+}
+
+###############################################################################
+# printExtCssAndJavascript
+# adds lines to include CSS and javascript for the Ext library used for menus
+###############################################################################
+sub printExtCssAndJavascript {
+    print qq~
+    
+    <!------------- include Ext library stuff -------------------------------->
+    <link rel="stylesheet" type="text/css" href="$HTML_BASE_DIR/usr/javascript/ext/ext-all.css" />
+    <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/ext/ext-base.js"></script>
+    <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/ext/ext-all.js"></script>
+
+    <script type="text/javascript">
+
+    Ext.BLANK_IMAGE_URL = '$HTML_BASE_DIR/usr/javascript/ext/s.gif';
+
+    Ext.onReady(function() {
+
+        var menu_button_clicked = function(event) {
+            if (event && event.target && halo_link_menus) {
+                var m = event.target.id.match(/halo_link_menu_(\\d+)/);
+                if (m) {
+                    var index = parseInt(m[1]);
+
+                    var menu = new Ext.menu.Menu({
+                        id: 'haloLinkMenu',
+                        items: halo_link_menus[index]
+                    });
+
+                    menu.show(event.target);
+                }
+            }
+            else {
+                if (console)
+                    console.warn("unable to open menu...");
+            }
+        };
+
+        Ext.select('img[id^=halo_link_menu_]').on('click', menu_button_clicked);
+    });
+
+    </script>
+
+    ~;
 }
 
 
