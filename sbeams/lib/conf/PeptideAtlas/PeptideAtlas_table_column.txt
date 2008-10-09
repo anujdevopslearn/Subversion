@@ -357,7 +357,8 @@ AT_GetProteins	8	n_observations_per_peptide_constraint	Number of Observations Pe
 AT_GetProteins	9	n_protein_mappings_constraint	Number of Proteins Mapped Constraint									N	text	5		Y	Y	N	Constraint for number of distinct proteins for this peptide ( >=0 )		
 AT_GetProteins	10	n_genome_locations_constraint	Number of Genome Locations Mapped Constraint									N	text	5		Y	Y	N	Constraint for number of genome locations for this peptide ( >=0 )		
 AT_GetProteins	11	chromosome_constraint	Chromosome Constraint									N	text	10		Y	1	N	Constraint for the Chromosome onto which the peptide was mapped. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
-AT_GetProteins	12	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'GProt_display_options' ORDER BY sort_order,option_value"	
+AT_GetProteins	12	sample_ids	Samples									N	multioptionlist	4		Y	Y	N	Limit query to one or more of the samples used to compile this Atlas build	"SELECT S.sample_id, sample_title FROM $TBAT_SAMPLE S JOIN $TBAT_ATLAS_BUILD_SAMPLE ABS ON S.sample_id = ABS.sample_id   WHERE atlas_build_id = $parameters{atlas_build_id} ORDER BY sample_title ASC"	
+AT_GetProteins	13	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'GProt_display_options' ORDER BY sort_order,option_value"	
 AT_spectra_description_set	1	spectra_description_set_id	Spectra Description Set ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_spectra_description_set	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id					N	N		Associated Atlas Build		
 AT_spectra_description_set	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
@@ -435,9 +436,9 @@ AT_GetMRMList	10	empirical_proteotypic_constraint	Empirical Proteotypic Score Co
 AT_GetMRMList	11	n_protein_mappings_constraint	Number of Proteins Mapped Constraint									N	text	5		Y	Y	N	Constraint for number of distinct proteins for this peptide ( >=0 )		
 AT_GetMRMList	12	n_genome_locations_constraint	Number of Genome Locations Mapped Constraint									N	text	5		Y	Y	N	Constraint for number of genome locations for this peptide ( >=0 )		
 AT_GetMRMList	13	n_highest_intensity_fragment_ions	Num of highest Inten Frag Ions to Keep									N	text	5		Y	Y	N	Number highest inten frag ions per spec to keep, defaults to 10		
-AT_GetMRMList	14	n_peptides_per_protein	Number of peptides per protein constraint									N	text	5		Y	Y	N	Number of peptides to return per protein, defaults to 5.		
+AT_GetMRMList	14	n_peptides_per_protein	Number of peptides per protein constraint									N	text	5		Y	Y	N	Number of peptides to return per protein, defaults to 3.		
 AT_GetMRMList	15	include_validated_transitions	Include contributed validated transitions									N	checkbox	1		Y	Y	N	Include contributed validated transitions.  These will take precedence over transitions derived from the consensus library.		
-AT_GetMRMList	16	include_theoretical_peptides	Include theoretical peptide information									N	checkbox	1		Y	Y	N	Include theoretical peptide information.  These will be used if not enough peptides or transitions were observed to fulfill # peptides and # transitions options.		
+AT_GetMRMList	16	include_theoretical_peptides	Include theoretical peptide information									N	checkbox	1		Y	N	N	Include theoretical peptide information.  These will be used if not enough peptides or transitions were observed to fulfill # peptides and # transitions options.		
 AT_spectrum_annotation	1	spectrum_annotation_id	Spectrum Annotation ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_spectrum_annotation	2	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id	Y	text	10		Y	Y	N	Sample/experiment containing this spectrum		
 AT_spectrum_annotation	3	spectrum_name	Spectrum Name	varchar	255	0	N		N			Y	text	30		Y	Y	N	Spectrum Name		
