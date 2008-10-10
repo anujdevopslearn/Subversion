@@ -319,7 +319,7 @@ sub handle_request {
 
   #### Build SAMPLE_ID constraint
   my $samples_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"PIS.sample_id",
+    constraint_column=>"ASB.sample_id",
     constraint_type=>"int_list",
     constraint_name=>"Samples ",
     constraint_value=>$parameters{sample_ids} );
