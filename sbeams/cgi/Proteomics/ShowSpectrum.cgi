@@ -617,7 +617,7 @@ sub get_msms_spectrum_from_file {
   my $sql = qq~
 	SELECT SB.data_location+'/'+F.fraction_tag AS 'location',
 	       F.fraction_tag+'/'+S.file_root+'.out' AS 'name',
-               S.file_root,SB.data_location,F.fraction_tag
+               S.file_root,SB.data_location,F.fraction_tag,SB.search_batch_id
 	  FROM $TBPR_SEARCH S
 	 INNER JOIN $TBPR_SEARCH_BATCH SB
                ON ( S.search_batch_id = SB.search_batch_id )
@@ -641,6 +641,7 @@ sub get_msms_spectrum_from_file {
   my $file_root = $rows[0]->[2];
   my $data_location = $rows[0]->[3];
   my $fraction_tag = $rows[0]->[4];
+  my $search_batch_id = $rows[0]->[5];
 
   my @mass_intensities;
 
@@ -659,12 +660,34 @@ sub get_msms_spectrum_from_file {
   } else {
     my $prefix = "$RAW_DATA_DIR{Proteomics}/";
     $prefix = '' if ($location =~ /^\//);
-    my $tgz_filename = "$prefix$data_location/$fraction_tag.tgz";
-    if ( -e $tgz_filename ) {
-      $filename = "/bin/tar -xzOf $tgz_filename ./$file_root.dta|";
-      #print "Pulling from tarfile: $tgz_filename<BR>\n";
+    my $mzXML_filename = "$prefix$data_location/$fraction_tag.mzXML";
+    if ( -e $mzXML_filename ) {
+      my $spectrum_number;
+      if ($file_root =~ /(\d+)\.(\d+)\.\d$/) {
+        $spectrum_number = $1;
+        print "INFO: Spectrum number is $spectrum_number<BR>\n";
+      }
+
+      #### If we have a spectrum number, try to get the spectrum data
+      if ($spectrum_number) {
+        $filename = "$PHYSICAL_BASE_DIR/lib/c/Proteomics/getSpectrum/".
+          "getSpectrum $spectrum_number $mzXML_filename |";
+      }
+    }
+
+    unless ($filename) {
+      my $tgz_filename = "$prefix$data_location/$fraction_tag.tgz";
+      if ( -e $tgz_filename ) {
+        $filename = "/bin/tar -xzOf $tgz_filename ./$file_root.dta|";
+        #print "Pulling from tarfile: $tgz_filename<BR>\n";
+      }
     }
   }
+
+
+
+
+
 
   if ( $filename ) {
     my $line;
@@ -673,7 +696,9 @@ sub get_msms_spectrum_from_file {
     }
 
     #### Read in but ignore header line
-    my $headerline = <INFILE>;
+    unless ($filename =~ /getSpectrum/) {
+      my $headerline = <INFILE>;
+    }
 
     while ($line = <INFILE>) {
       chomp $line;
@@ -682,9 +707,8 @@ sub get_msms_spectrum_from_file {
     }
     close(INFILE);
 
-  } else {
-    print "Cannot find filename '$filename'<BR>\n";
   }
+
 
   return @mass_intensities;
 
