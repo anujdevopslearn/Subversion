@@ -128,7 +128,8 @@ sub get_ortholog_display {
 	$bioseq_clause
   AND ( search_key_type = 'Full Name'
 	      OR search_key_type = 'Description'
-				OR search_key_type LIKE '%Symbol' )
+				OR search_key_type LIKE '%Symbol'
+				OR search_key_type = 'ORF Name')
 -- Would love to use a structured query like this, but some acc (mouse) fail.
 --  AND search_key_type = CASE WHEN organism_name = 'human' THEN 'Full Name'
 --                             WHEN organism_name = 'Mouse' THEN 'Full Name'
