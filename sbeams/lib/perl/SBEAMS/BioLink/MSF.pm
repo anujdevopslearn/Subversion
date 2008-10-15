@@ -46,9 +46,7 @@ sub new {
 	if ( $alignment_dir ) {
   	my $exists = $sbeams->doesSBEAMSTempFileExist(  dirname => $alignment_dir,
 	                                                  filename => '' );
-		$log->info( "does $exists exist?" );
   	unless ( $exists ) {
-		$log->info( "No, write it!" );
       $sbeams->writeSBEAMSTempFile( content => 'Nada Surf',
 		                                dirname => $alignment_dir,
 		                               filename => 'create_me',
@@ -101,6 +99,7 @@ sub runClustalW {
 	my %aligned_seqs;
 	my @aligned_order;
 	my $first_char = 0;
+	my $consensus_due = 0;
   {
 		open( ALIGN, $align_file );
 		my $head_line = 0;
@@ -109,12 +108,24 @@ sub runClustalW {
 		  $alignment .= $line;
 			$cnt++;
 			next if $cnt == 1;
-			next if $line =~ /^\s+$/;
+
+      if ( $line =~ /^\s+$/ ) {
+
+			  # Added after the fact to account for alignments where there is no 
+				# consensus string for a particular aligned segment.
+				if ( $consensus_due ) {
+					$consensus_due = 0;
+			    $line = ' ' x (59 + $first_char );
+#					$log->debug( "blanky is " . length( $line ) . ' chars long' );
+				} else {
+				  next;
+				}
+			}
 
 			if ( !$first_char ) {
 				my $cnt;
 				my $name = 1;
-				my @line = split( "", $line );
+				my @line = split( "", $line, -1 );
 				for my $char ( @line ) {
 					$cnt++;
 					$name = 0 if $char =~ /^\s$/;
@@ -132,9 +143,11 @@ sub runClustalW {
 
       # Consensus line!
 			if ( $line =~ /^\s+/ ) {
+				$consensus_due = 0;
 			  $name = 'consensus';
 			  $seq = substr( $line, $first_char - 1 );
 			} else {
+				$consensus_due = 1;
         $line =~ s/\s+/\t/g;
   			my @line = split( "\t", $line, -1 );
 				$name = $line[0];
@@ -151,6 +164,7 @@ sub runClustalW {
 	$alignment = '';
 	my @all_aligned;
   for my $acc ( @aligned_order ) {
+#		$log->debug( "in MSF, $acc is " . length( $aligned_seqs{$acc} ) . " long" );
 		push @all_aligned, [ $acc, $aligned_seqs{$acc} ];
 	}
 
