@@ -276,7 +276,7 @@ my $module_styles =<<"  END_STYLE";
   .instruction_text{ font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
   .sequence_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5}	
   .obs_seq_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5; color: red }	
-  .sec_obs_seq_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5; color: yellow }	
+  .sec_obs_seq_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5; color: green }	
 
   /* Phosphopep */
   .invalid_parameter_value  {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_LG}pt; text-decoration: none; color: #FC0; font-style: Oblique; }
