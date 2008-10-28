@@ -28,14 +28,14 @@ AT_spectra_description_set	Spectra Description Set	PeptideAtlas_infrastructure	N
 AT_BrowseBiosequence	Browse Biosequence	QUERY					BrowseBioSequence.cgi	
 AT_GetPeptides	Get Peptides	QUERY					GetPeptides	
 AT_GetProteins	Get Proteins	QUERY					GetProteins	
-AT_NIST_library	NIST Library	PeptideAtlas_infrastructure	NO	$TBAT_NIST_LIBRARY	NIST_library_id			
-AT_NIST_library_spectrum	NIST Library Spectrum	PeptideAtlas_infrastructure	NO	$TBAT_NIST_LIBRARY_SPECTRUM	NIST_library_spectrum_id			
-AT_NIST_library_spectrum_peak	NIST Library Spectrum Peak	PeptideAtlas_infrastructure	NO	$TBAT_NIST_LIBRARY_SPECTRUM_PEAK	NIST_library_spectrum_peak_id		
-AT_NIST_spectrum_type	NIST Spectrum Type	PeptideAtlas_infrastructure	NO	$TBAT_NIST_SPECTRUM_TYPE	NIST_spectrum_type_id		
+AT_consensus_library	Consensus Library	PeptideAtlas_infrastructure	NO	$TBAT_CONSENSUS_LIBRARY	consensus_library_id			
+AT_consensus_library_spectrum	Consensus Library Spectrum	PeptideAtlas_infrastructure	NO	$TBAT_CONSENSUS_LIBRARY_SPECTRUM	consensus_library_spectrum_id			
+AT_consensus_library_spectrum_peak	Consensus Library Spectrum Peak	PeptideAtlas_infrastructure	NO	$TBAT_CONSENSUS_LIBRARY_SPECTRUM_PEAK	consensus_library_spectrum_peak_id		
+AT_consensus_spectrum_type	Consensus Spectrum Type	PeptideAtlas_infrastructure	NO	$TBAT_CONSENSUS_SPECTRUM_TYPE	consensus_spectrum_type_id		
 AT_spectrum_identification	Spectrum Identification	PeptideAtlas_infrastructure	NO	$TBAT_SPECTRUM_IDENTIFICATION	spectrum_identification_id		
 AT_spectrum	Spectrum	PeptideAtlas_infrastructure	NO	$TBAT_SPECTRUM	spectrum_id		
 AT_spectrum_peak	Spectrum Peak	PeptideAtlas_infrastructure	NO	$TBAT_SPECTRUM_PEAK	spectrum_peak_id		
-AT_NIST_library_spectrum_comment	NIST library spectrum comment	PeptideAtlas_infrastructure	NO	$TBAT_NIST_LIBRARY_SPECTRUM_COMMENT	NIST_library_spectrum_comment_id		
+AT_consensus_library_spectrum_comment	Consensus library spectrum comment	PeptideAtlas_infrastructure	NO	$TBAT_CONSENSUS_LIBRARY_SPECTRUM_COMMENT	consensus_library_spectrum_comment_id		
 AT_GetMRMList	Get MRM List	QUERY					GetMRMList
 AT_spectrum_annotation	Spectrum Annotation	PeptideAtlas_infrastructure	YES	$TBAT_SPECTRUM_ANNOTATION	spectrum_annotation_id		ManageTable.cgi?TABLE_NAME=AT_spectrum_annotation
 AT_spectrum_annotation_level	Spectrum Annotation Level	PeptideAtlas_infrastructure	YES	$TBAT_SPECTRUM_ANNOTATION_LEVEL	spectrum_annotation_level_id		ManageTable.cgi?TABLE_NAME=AT_spectrum_annotation_level
