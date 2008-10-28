@@ -40,6 +40,7 @@ use constant DATA_MODIFIER => 20;
 use constant DATA_ADMIN => 10;
 
 my $log = SBEAMS::Connection::Log->new();
+$log->debug( "Permissions init!" );
 
 ###############################################################################
 # print_permissions_table
@@ -880,6 +881,16 @@ sub isProjectWritable{
   return 0;
 }
 
+sub isDeniedGuestPrivileges {
+  my $self = shift || croak("parameter self not passed");
+	my $username = shift;
+	my $denied = $self->getDeniedGuestUsers();
+	if ( grep /^$username$/, @$denied ) {
+		return 1;
+		$log->debug( "user $username denied guest privileges by policy" );
+	}
+	return 0;
+}
 
 
 ###############################################################################
@@ -896,6 +907,14 @@ sub getAccessibleProjects{
     || $self->getCurrent_contact_id();
   my $module = $args{'module'} || "";
   my $privilege_level = $args{'privilege_level'} || 40;
+
+  my $username =  $self->getCurrent_username();
+
+	my $guest_clause = '';
+	unless ( $self->isDeniedGuestPrivileges( $username )) {
+    my $guest_id = $self->get_guest_contact_id();
+		$guest_clause = ", $guest_id" if $guest_id;
+	}
 
 
   #### Define SQL to get all project to which the current user has access
@@ -914,14 +933,14 @@ sub getAccessibleProjects{
            ON ( C.contact_id = UL.contact_id AND UL.record_status != 'D' )
       LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
            ON ( P.project_id = UPP.project_id AND UPP.record_status != 'D'
-	        AND UPP.contact_id='$current_contact_id' )
+	        AND UPP.contact_id IN ('$current_contact_id' $guest_clause ) )
       LEFT JOIN $TB_GROUP_PROJECT_PERMISSION GPP
            ON ( P.project_id = GPP.project_id AND GPP.record_status != 'D' )
       LEFT JOIN $TB_PRIVILEGE PRIV
            ON ( GPP.privilege_id = PRIV.privilege_id AND PRIV.record_status != 'D' )
       LEFT JOIN $TB_USER_WORK_GROUP UWG
            ON ( GPP.work_group_id = UWG.work_group_id AND UWG.record_status != 'D'
-	        AND UWG.contact_id='$current_contact_id' )
+      	        AND UWG.contact_id IN ('$current_contact_id' $guest_clause ) )
       LEFT JOIN $TB_WORK_GROUP WG
            ON ( UWG.work_group_id = WG.work_group_id AND WG.record_status != 'D' )
      WHERE 1=1
@@ -931,9 +950,9 @@ sub getAccessibleProjects{
 	if ($work_group_name ne "Admin") {
 			$sql .= qq~
       AND ( UPP.privilege_id<=$privilege_level OR GPP.privilege_id<=$privilege_level
-            OR P.PI_contact_id = '$current_contact_id' )
+            OR P.PI_contact_id IN ('$current_contact_id' $guest_clause ) )
       AND ( WG.work_group_name IS NOT NULL OR UPP.privilege_id IS NOT NULL
-            OR P.PI_contact_id = '$current_contact_id' )
+            OR P.PI_contact_id IN ('$current_contact_id' $guest_clause ) )
 			~;
 	}
 
