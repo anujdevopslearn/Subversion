@@ -68,7 +68,7 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
   $sbeamsMOD->display_page_header(project_id => $project_id);
   $log->debug( "Begin page:" .time() );
-  if ( $params{bioseq_id} || $params{restore} ) {
+  if ( $params{bioseq_id} || $params{restore} || $params{protein_list} ) {
     $page .= get_alignment_display( %params );
   } else {
     $page .= $sbeams->makeErrorText( "Missing required parameter bioseq_id" );
@@ -82,13 +82,27 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 } # end main
 
+
 sub get_alignment_display {
   my %args = @_;
 
   # Content scalar to return
-  my $content = '';
-
   my $curr_bid = $sbeamsMOD->getCurrentAtlasBuildID( parameters_ref => \%args );
+
+  $log->debug( "build id is $curr_bid, args says $args{atlas_build_id}" );
+	my @select = $sbeamsMOD->GetBuildSelect( set_onchange => 1,
+	                                                 build_id => $curr_bid,
+								                                  form_name => 'compareProteins' );
+	my $clustal_display = $select[1];
+
+	$clustal_display .= "<BR><P><FORM METHOD=POST NAME=compareProteins>\n";
+	for my $arg ( keys( %args ) ) {
+		next if $arg =~ /atlas_build_id/;
+		$clustal_display .= "<INPUT TYPE=HIDDEN NAME='$arg' VALUE='$args{$arg}'>\n";
+	}
+
+	$clustal_display .= "$select[0] </FORM></P>\n";
+
   my $bioseq_clause = '';
 	if ( $args{restore} ) {
 		my $ids = $sbeamsMOD->get_mapped_biosequences( build_id => $curr_bid,
@@ -100,6 +114,14 @@ sub get_alignment_display {
 			$args{bioseq_id} .= ( $args{bioseq_id} ) ? ',' . $id : $id;
 		}
 	}
+
+  if ( $args{protein_list} ) {
+		$args{protein_list} =~ s/;/,/g;
+		my $list_ids = $sbeamsMOD->getBioseqIDsFromProteinList( protein_list => $args{protein_list}, build_id => $curr_bid );
+		$args{bioseq_id} = ( !$args{bioseq_id} ) ? $list_ids : 
+		                   ( $list_ids ) ? $args{bioseq_id} . ',' . $list_ids : $args{bioseq_id};
+	}
+
   if ( $args{bioseq_id} ) {
     $bioseq_clause = "AND BS.biosequence_id IN ( $args{bioseq_id} )\n";
 	}
@@ -111,7 +133,8 @@ sub get_alignment_display {
 									organism_name,
 									'search_key_name',
 									CAST( biosequence_seq AS VARCHAR(4000) ),
-									biosequence_id
+									biosequence_id,
+									LEN( CAST(biosequence_seq AS VARCHAR(4000) ) )
   FROM $TBAT_ATLAS_BUILD AB 
 	JOIN $TBAT_BIOSEQUENCE_SET BSS ON AB.biosequence_set_id = BSS.biosequence_set_id
 	JOIN $TBAT_BIOSEQUENCE BS ON BSS.biosequence_set_id = BS.biosequence_set_id
@@ -128,11 +151,10 @@ sub get_alignment_display {
 --													   WHEN organism_name = 'Yeast' THEN 'Description'
 --													   ELSE resource_name
 --											  END
-  ORDER BY CAST(biosequence_seq AS VARCHAR(4000)), biosequence_name DESC
+  ORDER BY LEN(CAST(biosequence_seq AS VARCHAR(4000) ) ) DESC, biosequence_name DESC
   END_SQL
 
   my $sth = $sbeams->get_statement_handle( $sql );
-
 
 	# hash of biosequence_ids -> seq or name
 	my %bioseq_id2seq;
@@ -259,8 +281,7 @@ sub get_alignment_display {
   my $MSF = SBEAMS::BioLink::MSF->new();
 
 	$log->debug( "Run alignment: " .time() );
-	my $clustal_display = '';
-		my $acckeys = join( ',', keys( %acc2bioseq_id ) );
+	my $acckeys = join( ',', keys( %acc2bioseq_id ) );
 
   if ( $cnt > 1000 ) {
 		$clustal_display = $sbeams->makeErrorText( "Too many sequences to run alignment, skipping" );
@@ -269,7 +290,7 @@ sub get_alignment_display {
 	  if ( ref $clustal ne 'ARRAY' ) {
 	    $clustal_display = $sbeams->makeErrorText( "Error running Clustal: $clustal" );
 	  } else {
-	    $clustal_display = get_clustal_display( alignments => $clustal, 
+	    $clustal_display .= get_clustal_display( alignments => $clustal, 
 			                                          dup_seqs => \%dup_seqs,
 			                                            pepseq => $peptide,
 																								coverage => \%coverage,
@@ -311,7 +332,8 @@ sub get_clustal_display {
 																 );
 
 			# Poor man's bait coverage!
- 	    $sequence =~ s/$args{pepseq}/<\/SPAN><SPAN CLASS=sec_obs_seq_font>$args{pepseq}<\/SPAN><SPAN CLASS=obs_seq_font>/g;
+ 	    $sequence =~ s/$args{pepseq}/<\/SPAN><SPAN CLASS=sec_obs_seq_bg_font>$args{pepseq}<\/SPAN>/g;
+# 	    $sequence =~ s/$args{pepseq}/<\/SPAN><SPAN CLASS=sec_obs_seq_bg_font>$args{pepseq}<\/SPAN><SPAN CLASS=obs_seq_bg_font>/g;
 
 		}
 		my $dup = '';
@@ -336,11 +358,64 @@ sub get_clustal_display {
 
   my $toggle_text = $sbeams->makeInfoText( 'Toggle all checkboxes' );
 
+  # Add field to allow ad hoc addition of proteins.
+  my $text = qq~
+	  You can add an additional protein or proteins
+	to this assembly by inserting their accession
+	numbers here as a semicolon-separated list.
+	~;
+
+  my $popup = qq~
+	$text
+    The following accession types should work:
+  <BR>
+  <BR>
+	<ALIGN = RIGHT>
+	Human      IPI, ENSP
+  <BR>
+	Mouse      IPI, ENSMUS
+  <BR>
+	Yeast      Yxxxxx
+  <BR>
+	Halo       VNG
+  <BR>
+	celegans   wormbase acc.
+  <BR>
+  <BR>
+	</ALIGN>
+
+	  Please note that using more sequences and/or 
+	sequences that are not very similar will cause 
+	the assembly to be slower.  There is a limit of 
+	100 proteins in the assembly, but the practical
+	limit of aligning dissimilar proteins is much 
+	lower.
+	~;
+
+  my $pHTML .= $sbeams->getPopupDHTML();
+  my $session_key = $sbeams->getRandomString();
+  $sbeams->setSessionAttribute( key => $session_key,  value => $popup );
+
+  my $url = "$CGI_BASE_DIR/help_popup.cgi?title=BuildProteinList;session_key=$session_key;email_link=no";
+
+  my $link =<<"  END_LINK";
+   <SPAN title='$text - click for more...' class="popup">
+   <IMG SRC=$HTML_BASE_DIR/images/greyqmark.gif BORDER=0 ONCLICK="popitup('$url');"></SPAN>
+  END_LINK
 
 
 	$display .= qq~
+	$pHTML
   <TR><TD>$toggle_checkbox</TD><TD ALIGN=left>$toggle_text </TD><TD></TD></TR>
 	</TABLE>\n</DIV>
+	<BR>
+
+	<TABLE><TR>
+	<TD>Add proteins to list</TD>
+	<TD BGCOLOR='#E0E0E0'>$link</TD>
+	<TD><INPUT TYPE=TEXT NAME=protein_list SIZE=40></TD>
+	</TR></TABLE>
+	<BR>
 	<BR>
 	<INPUT TYPE=HIDDEN NAME=pepseq VALUE=$args{pepseq}>
 	<INPUT TYPE=SUBMIT VALUE='Align selected sequences'>
@@ -348,8 +423,8 @@ sub get_clustal_display {
 	</FORM>
 	<BR><BR>
 	<H3> Legend </H3>
-  Sequence highlighted with red: <SPAN CLASS=obs_seq_font>ELVIS</SPAN> denotes peptides observed in specified build.<BR>
-  Sequence highlighted with yellow: <SPAN CLASS=sec_obs_seq_font>ELVIS</SPAN> denotes 'bait' peptide for this set of sequences.<BR>
+  Sequence highlighted with blue: <SPAN CLASS=obs_seq_bg_font>PEPTIDE</SPAN> denotes peptides observed in specified build.<BR>
+  Sequence highlighted with green: <SPAN CLASS=sec_obs_seq_bg_font>PEPTIDE</SPAN> denotes 'bait' peptide for this set of sequences.<BR>
 	~;
 
 	return $display;
@@ -383,14 +458,14 @@ sub highlight_sites {
 				if ( $in_coverage ) { # already in
 					if ( $span_closed ) {  # Must have been jumping a --- gap
 					  $span_closed = 0;
-				    $return_seq .= "<span class=obs_seq_font>$aa";
+				    $return_seq .= "<span class=obs_seq_bg_font>$aa";
 					} else {
 				    $return_seq .= $aa;
 					}
 				} else {
 					$in_coverage++;
 					$span_closed = 0;
-				  $return_seq .= "<span class=obs_seq_font>$aa";
+				  $return_seq .= "<span class=obs_seq_bg_font>$aa";
 				}
 			} else { # posn not covered!
 				if ( $in_coverage ) { # were in, close now
