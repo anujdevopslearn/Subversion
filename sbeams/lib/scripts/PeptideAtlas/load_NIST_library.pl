@@ -1,11 +1,11 @@
 #!/usr/local/bin/perl -w
 
 ###############################################################################
-# Program     : load_NIST_library.pl
+# Program     : load_consensus_library.pl
 # Author      : Nichole King
 #
-# Description : Load the NIST msp library into the NIST spectrum 
-#               tables.
+# Description : Load the consensus library (msp or spectrast) into the consensus 
+#               spectrum tables.
 ###############################################################################
 
 use strict;
@@ -16,6 +16,7 @@ use lib "$FindBin::Bin/../../perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_username 
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
          );
+$|++;
 
 
 #### Set up SBEAMS core module
@@ -46,17 +47,17 @@ Options:
   --debug n              Set debug flag
   --test                 test only, don't write records
   --load                 load the library
-  --delete id            delete the library with NIST_library_id
+  --delete id            delete the library with consensus_library_id
   --library_path path    path to library file
-  --nist_library_name    name to give to NIST library
+  --consensus_library_name    name to give to consensus library
   --organism_name name   organism name (e.g. yeast, Human,...)
 
- e.g.: ./$PROG_NAME --library_path /data/yeast.msp --nist_library_name 'NIST Sc' --organism_name Yeast --load
+ e.g.: ./$PROG_NAME --library_path /data/yeast.msp --consensus_library_name 'NIST Sc' --organism_name Yeast --load
 EOU
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","test",
-"load", "nist_library_name:s", "organism_name:s", "library_path:s", "delete:s")) 
+"load", "consensus_library_name:s", "organism_name:s", "library_path:s", "delete:s")) 
 {
     print "\n$USAGE\n";
     exit;
@@ -79,11 +80,11 @@ unless ( $OPTIONS{'delete'}  || $OPTIONS{'load'} || $OPTIONS{'test'})
 
 if ($OPTIONS{'load'} || $OPTIONS{'test'})
 {
-    unless ($OPTIONS{library_path} && $OPTIONS{nist_library_name}
+    unless ($OPTIONS{library_path} && $OPTIONS{consensus_library_name}
     && $OPTIONS{organism_name})
     {
         print "\n$USAGE\n";
-        print "Need --library_path and --nist_library_name ";
+        print "Need --library_path and --consensus_library_name ";
         print " and --organism_name\n";
         exit(0);
     }
@@ -141,28 +142,28 @@ sub handleRequest
 
         populateRecords(organism_id => $organism_id, 
             file_path => $file_path,
-            nist_library_name => $OPTIONS{nist_library_name});
+            consensus_library_name => $OPTIONS{consensus_library_name});
     }
 
     if ($OPTIONS{delete})
     {
-        my $nist_library_spectrum_id = $OPTIONS{delete};
+        my $consensus_library_spectrum_id = $OPTIONS{delete};
 
-        unless ($nist_library_spectrum_id > 0)
+        unless ($consensus_library_spectrum_id > 0)
         {
             print "\n$USAGE\n";
-            print "need --delete nist_library_spectrum_id \n";
+            print "need --delete consensus_library_spectrum_id \n";
         }
 
-        removeNISTLibrary( nist_library_spectrum_id => 
-            $nist_library_spectrum_id);
+        removeConsensusLibrary( consensus_library_spectrum_id => 
+            $consensus_library_spectrum_id);
     }
 
 } # end handleRequest
 
 
 ###############################################################################
-# populateRecords - populate NIST spectrum records with content of file
+# populateRecords - populate consensus spectrum records with content of file
 # 
 # @param organism_id - organism id
 # @param file_path - absolute path to library .msp file
@@ -175,12 +176,19 @@ sub populateRecords
 
     my $infile = $args{file_path} || die "need file_path";
 
-    my $nist_library_name = $args{nist_library_name} || 
-        die "need nist_library_name";
+    my $consensus_library_name = $args{consensus_library_name} || 
+        die "need consensus_library_name";
 
-    my $nist_library_id = insert_nist_library(
+    my $commit_interval = 25;
+
+#    $consensus_library_name .= '_' . $commit_interval;
+    print "Loading library $consensus_library_name\n";
+
+    my $consensus_library_id = insert_consensus_library(
         organism_id => $organism_id,
-        nist_library_name => $nist_library_name);
+        consensus_library_name => $consensus_library_name);
+
+
 
     open(INFILE, "<$infile") || die "ERROR: Unable to open for reading $infile";
 
@@ -190,11 +198,14 @@ sub populateRecords
 
     my $loop_peaks = 0;
     my %spectrum;
+    $sbeams->initiate_transaction();
+ 		print "Count is $count at " . time() . "\n";
     while (my $line = <INFILE>) 
     {
 
         chomp($line);
         next if $line =~ /^#/;
+        next if $line =~ /^\s*$/;
         
         if ( $line =~ /^Name:\s(.+)\/(\d)/ ) { ## line 1 is Name
           $spectrum{sequence} = $1;
@@ -204,13 +215,12 @@ sub populateRecords
 
           next;
         } elsif ( $line =~ /^MW:\s(.*)$/ ) { # line 2 is MW
-#          next;
           $spectrum{mw} = $1;
           next;
         } elsif ( $line =~ /^Comment:/ ) { # line 3 is Comment:
           $spectrum{comment} = parseComment( comment_line => $line);
           next;
-        } elsif ( $line =~ /^NumPeaks:\s*(\d+)/ ) { # Cache number of peaks
+        } elsif ( $line =~ /^Num peaks:\s*(\d+)/ ||  $line =~ /^NumPeaks:\s*(\d+)/ ) { # Cache number of peaks
           $spectrum{num_peaks} = $1;
           $loop_peaks++;
           next;
@@ -231,8 +241,8 @@ sub populateRecords
             );
         }
 
-        my $nist_spectrum_type_id = get_nist_spectrum_type_id(
-            nist_spectrum_type_name => $commentHash{'Spec'}
+        my $consensus_spectrum_type_id = get_consensus_spectrum_type_id(
+            consensus_spectrum_type_name => $commentHash{'Spec'}
 
         );
 
@@ -243,9 +253,9 @@ sub populateRecords
           print STDERR "protein was " . length(  $commentHash{Protein} ) . " but is now " . length( $protein ) . "\n";
         }
 
-        my $nist_library_spectrum_id = insert_nist_library_spectrum(
-            nist_library_id => $nist_library_id,
-            nist_spectrum_type_id => $nist_spectrum_type_id,
+        my $consensus_library_spectrum_id = insert_consensus_library_spectrum(
+            consensus_library_id => $consensus_library_id,
+            consensus_spectrum_type_id => $consensus_spectrum_type_id,
             sequence => $sequence,
             modified_sequence => $modified_sequence,
             charge => $charge,
@@ -255,14 +265,13 @@ sub populateRecords
         );
 
         ## insert comments
-        insert_nist_library_comments (
+        insert_consensus_library_comments (
             comment_hash_ref => \%commentHash,
-            nist_library_spectrum_id => $nist_library_spectrum_id,
+            consensus_library_spectrum_id => $consensus_library_spectrum_id,
         );
 
         ## loop over next num_peaks lines to get peaks and ions
-        for (my $ii = 1; $ii < $num_peaks; $ii++)
-        {
+        for (my $ii = 1; $ii < $num_peaks; $ii++) {
             $line = <INFILE>;
             chomp($line);
             my ($m, $inten, $annot) = split("\t", $line, -1);
@@ -313,7 +322,7 @@ sub populateRecords
             }
 
             my %rowdata = (
-                NIST_library_spectrum_id => $nist_library_spectrum_id,
+                consensus_library_spectrum_id => $consensus_library_spectrum_id,
                 mz => $m,
                 relative_intensity => $inten,
                 ion_label => $label,
@@ -322,10 +331,10 @@ sub populateRecords
             );
 
             $sbeams->updateOrInsertRow(
-                table_name=>$TBAT_NIST_LIBRARY_SPECTRUM_PEAK,
+                table_name=>$TBAT_CONSENSUS_LIBRARY_SPECTRUM_PEAK,
                 insert=>1,
                 rowdata_ref=>\%rowdata,
-                PK => 'NIST_library_spectrum_peak_id',
+                PK => 'consensus_library_spectrum_peak_id',
                 return_PK=>0,
                 add_audit_parameters => 0,
                 verbose=>$VERBOSE,
@@ -335,11 +344,22 @@ sub populateRecords
         $loop_peaks = 0;
 
         $count++;
+				unless ( $count % 25 ) {
+				  unless ( $count % 1000 ) {
+						print "\n";
+						print "Count is $count at " . time() . "\n";
+					}
+				}
+				unless ( $count % $commit_interval ) {
+					$sbeams->commit_transaction();
+					$sbeams->initiate_transaction();
+				}
     }
-
-    close(INFILE) or die "ERROR: Unable to close $infile";
+    $sbeams->commit_transaction();
 
     print "Read $count entries in library\n";
+    close(INFILE) or die "ERROR: Unable to close $infile";
+
 }
 
 
@@ -368,70 +388,70 @@ sub getOrganismId
 }
 
 #######################################################################
-# insert_nist_library - insert parent record for an nist library
+# insert_consensus_library - insert parent record for an consensus library
 #
 # @param organism_id
-# @return nist_library_id
+# @return consensus_library_id
 #######################################################################
-sub insert_nist_library
+sub insert_consensus_library
 {
     my  %args = @_;
 
-    my $METHOD='insert_nist_library';
+    my $METHOD='insert_consensus_library';
 
     my $organism_id = $args{organism_id} || die "need organsim_id";
 
-    my $nist_library_name = $args{nist_library_name} || 
-        die "need nist_library_name";
+    my $consensus_library_name = $args{consensus_library_name} || 
+        die "need consensus_library_name";
 
     my %rowdata = (
        organism_id => $organism_id,
-       NIST_library_name => $nist_library_name,
+       consensus_library_name => $consensus_library_name,
     );
 
     ## create a sample record:
-    my $nist_library_id = $sbeams->updateOrInsertRow(
-        table_name=>$TBAT_NIST_LIBRARY,
+    my $consensus_library_id = $sbeams->updateOrInsertRow(
+        table_name=>$TBAT_CONSENSUS_LIBRARY,
         insert=>1,
         rowdata_ref=>\%rowdata,
-        PK => 'NIST_library_id',
+        PK => 'consensus_library_id',
         return_PK=>1,
         add_audit_parameters => 1,
         verbose=>$VERBOSE,
         testonly=>$TESTONLY,
     );
 
-    print "INFO[$METHOD]: created NIST_library record $nist_library_id\n";
+    print "INFO[$METHOD]: created consensus_library record $consensus_library_id\n";
 
-    return $nist_library_id;
+    return $consensus_library_id;
 }
 
 #######################################################################
-# insert_nist_library_spectrum - insert a record for library spectrum
+# insert_consensus_library_spectrum - insert a record for library spectrum
 #
-# @param nist_library_id
-# @param nist_spectrum_type_id
+# @param consensus_library_id
+# @param consensus_spectrum_type_id
 # @param sequence 
 # @param modified_sequence - not present if no mods
 # @param charge 
 # @param modifications - not present if no mods
 # @param protein_identifiers
 # @param mz_exact
-# @return nist_library_spectrum_id
+# @return consensus_library_spectrum_id
 #######################################################################
-sub insert_nist_library_spectrum
+sub insert_consensus_library_spectrum
 {
     my  %args = @_;
 
-    my $METHOD='insert_nist_library_spectrum';
+    my $METHOD='insert_consensus_library_spectrum';
 
     my %rowdata;
 
-    $rowdata{NIST_library_id} = $args{nist_library_id} || 
-        die "need nist_library_id";
+    $rowdata{consensus_library_id} = $args{consensus_library_id} || 
+        die "need consensus_library_id";
 
-    $rowdata{NIST_spectrum_type_id} = $args{nist_spectrum_type_id} ||
-        die "need nist_spectrum_type_id";
+    $rowdata{consensus_spectrum_type_id} = $args{consensus_spectrum_type_id} ||
+        die "need consensus_spectrum_type_id";
 
     $rowdata{sequence} = $args{sequence} || die "need sequence";
 
@@ -448,27 +468,27 @@ sub insert_nist_library_spectrum
 
     $rowdata{mz_exact} = $args{mz_exact} || die "need mz_exact";
 
-    my $nist_library_spectrum_id = $sbeams->updateOrInsertRow(
-        table_name=>$TBAT_NIST_LIBRARY_SPECTRUM,
+    my $consensus_library_spectrum_id = $sbeams->updateOrInsertRow(
+        table_name=>$TBAT_CONSENSUS_LIBRARY_SPECTRUM,
         insert=>1,
         rowdata_ref=>\%rowdata,
-        PK => 'NIST_library_spectrum_id',
+        PK => 'consensus_library_spectrum_id',
         return_PK=>1,
         add_audit_parameters => 0,
         verbose=>$VERBOSE,
         testonly=>$TESTONLY,
     );
 
-    return $nist_library_spectrum_id;
+    return $consensus_library_spectrum_id;
 }
 
 
 #######################################################################
 # getModSeq - get a seq with modifcation string used in SBEAMS
-# For example, if NIST modification on C is Carbamidomethyl, we
+# For example, if modification on C is Carbamidomethyl, we
 # replace the location of C with C[160]
 # @param seq - peptide amino acid sequence
-# @param mods - the NIST mods string from the comment field
+# @param mods - the mods string from the comment field
 # @return modSeq
 #######################################################################
 sub getModSeq
@@ -761,59 +781,59 @@ sub parseComment
 
 
 #######################################################################
-# get_nist_spectrum_type_id -- get nist spectrumtype id, given 
+# get_consensus_spectrum_type_id -- get consensus spectrumtype id, given 
 #  name of spectrum type
 #
-# @param nist_spectrum_type_name
-# @return nist_spectrum_type_id
+# @param consensus_spectrum_type_name
+# @return consensus_spectrum_type_id
 #######################################################################
-sub get_nist_spectrum_type_id
+sub get_consensus_spectrum_type_id
 {
     my %args = @_;
 
-    my $nist_spectrum_type_name = $args{nist_spectrum_type_name}
-      || die "need nist_spectrum_type_name";
+    my $consensus_spectrum_type_name = $args{consensus_spectrum_type_name}
+      || die "need consensus_spectrum_type_name";
 
     my $sql = qq~
-        SELECT NIST_spectrum_type_id
-        FROM $TBAT_NIST_SPECTRUM_TYPE
-        WHERE NIST_spectrum_type_name = '$nist_spectrum_type_name'
+        SELECT consensus_spectrum_type_id
+        FROM $TBAT_CONSENSUS_SPECTRUM_TYPE
+        WHERE consensus_spectrum_type_name = '$consensus_spectrum_type_name'
     ~;
 
-    my ($nist_spectrum_type_id) = $sbeams->selectOneColumn($sql) or die
-        "no nist_spectrum_type_id found with sql:\n$sql\n($!)";
+    my ($consensus_spectrum_type_id) = $sbeams->selectOneColumn($sql) or die
+        "no consensus_spectrum_type_id found with sql:\n$sql\n($!)";
 
-    return $nist_spectrum_type_id;
+    return $consensus_spectrum_type_id;
 }
 
 #######################################################################
-# removeNISTLibrary - remove parent record and children
-# @param nist_library_spectrum_id
+# removeConsensusLibrary - remove parent record and children
+# @param consensus_library_spectrum_id
 #######################################################################
-sub removeNISTLibrary
+sub removeConsensusLibrary
 {
     my %args = @_;
 
-    my $nist_library_spectrum_id = $args{nist_library_spectrum_id}
-        || die "need nist_library_spectrum_id";
+    my $consensus_library_spectrum_id = $args{consensus_library_spectrum_id}
+        || die "need consensus_library_spectrum_id";
 
     my $keep_parent_record = 1;
 
     my $database_name = $DBPREFIX{PeptideAtlas};
 
-    my $table_name = "NIST_library";
+    my $table_name = "consensus_library";
 
     my $full_table_name = "$database_name$table_name";
 
     my %table_child_relationship = (
-        NIST_library => 'NIST_library_spectrum(C)',
-        NIST_library_spectrum => 'NIST_library_spectrum_peak(C),NIST_library_spectrum_comment(PKLC)',
+        consensus_library => 'consensus_library_spectrum(C)',
+        consensus_library_spectrum => 'consensus_library_spectrum_peak(C),consensus_library_spectrum_comment(PKLC)',
     );
 
     my $result = $sbeams->deleteRecordsAndChildren(
-         table_name => 'NIST_library',
+         table_name => 'consensus_library',
          table_child_relationship => \%table_child_relationship,
-         delete_PKs => [ $nist_library_spectrum_id ],
+         delete_PKs => [ $consensus_library_spectrum_id ],
          delete_batch => 1000,
          database => $database_name,
          verbose => $VERBOSE,
@@ -823,45 +843,46 @@ sub removeNISTLibrary
 
 
 #######################################################################
-# insert_nist_library_comments
+# insert_consensus_library_comments
 #
-# @param nist_library_spectrum_id
+# @param consensus_library_spectrum_id
 # @param reference to hash with comment key,value pairs
 #######################################################################
-sub insert_nist_library_comments
+sub insert_consensus_library_comments
 {
     my %args = @_;
 
     my $comment_hash_ref = $args{comment_hash_ref} || die 
         "need comment_hash_ref";
 
-    my %hash = %{$comment_hash_ref};
+#    my %hash = %{$comment_hash_ref};
 
-    my $nist_library_spectrum_id = $args{nist_library_spectrum_id} ||
-        die "need nist_library_spectrum_id";
+    my $consensus_library_spectrum_id = $args{consensus_library_spectrum_id} ||
+        die "need consensus_library_spectrum_id";
 
     my %rowdata;
 
-    $rowdata{NIST_library_spectrum_id} = $nist_library_spectrum_id;
+    $rowdata{consensus_library_spectrum_id} = $consensus_library_spectrum_id;
 
 #   foreach my $key (qw/ Inst Sample Dotbest Dottheory Probcorr Specqual Unassigned Fullname /)
     foreach my $key (qw/ Sample Dotfull Dot_cons Dotrev_consens Suspect Look Isgood Unassigned Fullname /) {
 
+        next unless defined $comment_hash_ref->{$key};
         $rowdata{parameter_key} = $key;
 
-        if ( length($hash{$key}) > 1023 ) {
+        if ( length($comment_hash_ref->{$key}) > 1023 ) {
           print STDERR "Trimmed long param_value for param_key: $key\n";
-          $rowdata{parameter_value} = substr( $hash{$key}, 0, 1022 );
-          print STDERR "param_val was " . length(  $hash{$key} ) . " but is now " . length( $rowdata{parameter_value} ) . "\n";
+          $rowdata{parameter_value} = substr( $comment_hash_ref->{$key}, 0, 1023 );
+          print STDERR "param_val was " . length(  $comment_hash_ref->{$key} ) . " but is now " . length( $rowdata{parameter_value} ) . "\n";
         } else {
-          $rowdata{parameter_value} = $hash{$key};
+          $rowdata{parameter_value} = $comment_hash_ref->{$key};
 				}
 
         $sbeams->updateOrInsertRow(
-            table_name=>$TBAT_NIST_LIBRARY_SPECTRUM_COMMENT,
+            table_name=>$TBAT_CONSENSUS_LIBRARY_SPECTRUM_COMMENT,
             insert=>1,
             rowdata_ref=>\%rowdata,
-            PK => 'NIST_library_spectrum_comment_id',
+            PK => 'consensus_library_spectrum_comment_id',
             return_PK=>0,
             add_audit_parameters => 0,
             verbose=>$VERBOSE,
@@ -870,3 +891,14 @@ sub insert_nist_library_comments
     }
 }
 
+__DATA__
+my $sbeams = SBEAMS::Connection->new();
+#$sbeams->output_mode( 'interactive' );
+  $sbeams->Authenticate();
+  my $ac = $sbeams->isAutoCommit();
+  my $re = $sbeams->isRaiseError();
+  $sbeams->initiate_transaction();
+  $sbeams->rollback_transaction();
+  $sbeams->commit_transaction();
+  $sbeams->setAutoCommit( $ac );
+  $sbeams->setRaiseError( $re );
