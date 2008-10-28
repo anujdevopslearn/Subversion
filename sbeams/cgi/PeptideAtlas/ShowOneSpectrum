@@ -3,7 +3,7 @@
 ###############################################################################
 # Program     : ShowOneSpectrum.cgi
 #
-# Description : This CGI program recieves NIST_library_spectrum_id and plots it.
+# Description : This CGI program recieves consensus_library_spectrum_id and plots it.
 #               Has feedback loop for changing plot.
 #
 # Based upon the ShowSpectrum.cgi in the Proteomics module by 
@@ -123,14 +123,14 @@ sub processRequest {
 	<TD VALIGN=top >
 	<PRE>\n!;
 
-    #### If we have a NIST_library_spectrum_id, find the mass modifications
-    if ($parameters{'NIST_library_spectrum_id'}) 
+    #### If we have a consensus_library_spectrum_id, find the mass modifications
+    if ($parameters{'consensus_library_spectrum_id'}) 
     {
         my $sql = qq~
             SELECT sequence,charge,mz_exact,protein_name,
             protein_name_alt,modified_sequence
-            FROM $TBAT_NIST_LIBRARY_SPECTRUM
-            WHERE NIST_library_spectrum_id = '$parameters{NIST_library_spectrum_id}'
+            FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM
+            WHERE consensus_library_spectrum_id = '$parameters{consensus_library_spectrum_id}'
         ~;
 
         my @rows = $sbeams->selectSeveralColumns($sql);
@@ -168,7 +168,7 @@ sub processRequest {
     $modification_helper = new ModificationHelper();
 
     my %spectrum = get_library_spectrum(
-        NIST_library_spectrum_id=>$parameters{NIST_library_spectrum_id});
+        consensus_library_spectrum_id=>$parameters{consensus_library_spectrum_id});
 
     unless (%spectrum) 
     {
@@ -298,7 +298,7 @@ sub processRequest {
     ~;
 
     print qq~
-        <INPUT TYPE="hidden" NAME="NIST_library_spectrum_id" VALUE="$parameters{NIST_library_spectrum_id}">
+        <INPUT TYPE="hidden" NAME="consensus_library_spectrum_id" VALUE="$parameters{consensus_library_spectrum_id}">
     ~;
 
     #### Charge selector
@@ -375,7 +375,7 @@ sub get_library_spectrum
 
   my $inputfile = $args{'inputfile'} || "";
   my $verbose = $args{'verbose'} || "";
-  my $NIST_library_spectrum_id = $args{'NIST_library_spectrum_id'} || "";
+  my $consensus_library_spectrum_id = $args{'consensus_library_spectrum_id'} || "";
 
 
   #### Define some general variables
@@ -389,19 +389,19 @@ sub get_library_spectrum
 
 
   #### If we have a msms_spectrum_id, get the data from the database
-  if ($NIST_library_spectrum_id) {
+  if ($consensus_library_spectrum_id) {
 
     #### Extract the actual mass,intensity pairs from database
     $sql = "SELECT mz, relative_intensity ".
-           "  FROM $TBAT_NIST_LIBRARY_SPECTRUM_PEAK ".
-           " WHERE NIST_library_spectrum_id = '$NIST_library_spectrum_id'";
+           "  FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM_PEAK ".
+           " WHERE consensus_library_spectrum_id = '$consensus_library_spectrum_id'";
     my @mass_intensities = $sbeams->selectSeveralColumns($sql);
 
 
     #### If we still have no spectrum data, then bail out
     unless (@mass_intensities) {
       print "\nERROR: Unable to get m/z,intensity pairs for ".
-	"NIST_library_spectrum_id '$NIST_library_spectrum_id'.\n\n";
+	"consensus_library_spectrum_id '$consensus_library_spectrum_id'.\n\n";
       return;
     }
 
@@ -423,7 +423,7 @@ sub get_library_spectrum
 
   #### Otherwise complain and return
   } else {
-    print "\nERROR: Unable to determine which NIST_library_spectrum_id to load.\n\n";
+    print "\nERROR: Unable to determine which consensus_library_spectrum_id to load.\n\n";
     return;
   }
 
