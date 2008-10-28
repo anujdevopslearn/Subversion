@@ -102,13 +102,13 @@ sub spectrum_search {
 
   my $charge = ( !$args{charge} ) ? '' : "AND charge = '$args{charge}'";
   my $m_seq = ( !$args{m_seq} ) ? '' : "AND modified_sequence = '$args{m_seq}'";
-  my $lib = ( !$args{lib_id} ) ? '' : "AND NIST_library_id = '$args{lib_id}'";
+  my $lib = ( !$args{lib_id} ) ? '' : "AND consensus_library_id = '$args{lib_id}'";
 
   my $sql =<<"  END";
-  SELECT NIST_library_spectrum_id, sequence, charge, modifications, protein_name
-    mz_exact, NIST_spectrum_type_id, NIST_library_id, modified_sequence,
+  SELECT consensus_library_spectrum_id, sequence, charge, modifications, protein_name
+    mz_exact, consensus_spectrum_type_id, consensus_library_id, modified_sequence,
     protein_name_alt
-    FROM $TBAT_NIST_LIBRARY_SPECTRUM
+    FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM
     WHERE sequence = '$args{seq}'
     $charge
     $m_seq

@@ -65,6 +65,12 @@ use vars qw(@ISA @EXPORT
 
     $TBAT_SEARCH_KEY
 
+    $TBAT_CONSENSUS_LIBRARY
+    $TBAT_CONSENSUS_LIBRARY_SPECTRUM
+    $TBAT_CONSENSUS_LIBRARY_SPECTRUM_PEAK
+    $TBAT_CONSENSUS_LIBRARY_SPECTRUM_COMMENT
+    $TBAT_CONSENSUS_SPECTRUM_TYPE
+
     $TBAT_NIST_LIBRARY
     $TBAT_NIST_LIBRARY_SPECTRUM
     $TBAT_NIST_LIBRARY_SPECTRUM_PEAK
@@ -149,6 +155,12 @@ require Exporter;
 
     $TBAT_SEARCH_KEY
 
+    $TBAT_CONSENSUS_LIBRARY
+    $TBAT_CONSENSUS_LIBRARY_SPECTRUM
+    $TBAT_CONSENSUS_LIBRARY_SPECTRUM_PEAK
+    $TBAT_CONSENSUS_LIBRARY_SPECTRUM_COMMENT
+    $TBAT_CONSENSUS_SPECTRUM_TYPE
+
     $TBAT_NIST_LIBRARY
     $TBAT_NIST_LIBRARY_SPECTRUM
     $TBAT_NIST_LIBRARY_SPECTRUM_PEAK
@@ -226,11 +238,18 @@ $TBAT_ATLAS_SEARCH_BATCH_PARAMETER_SET = "${mod}atlas_search_batch_parameter_set
 
 $TBAT_SEARCH_KEY                = "${mod}search_key";
 
-$TBAT_NIST_LIBRARY                   = "${mod}NIST_library";
-$TBAT_NIST_LIBRARY_SPECTRUM          = "${mod}NIST_library_spectrum";
-$TBAT_NIST_LIBRARY_SPECTRUM_PEAK     = "${mod}NIST_library_spectrum_peak";
-$TBAT_NIST_LIBRARY_SPECTRUM_COMMENT  = "${mod}NIST_library_spectrum_comment";
-$TBAT_NIST_SPECTRUM_TYPE             = "${mod}NIST_spectrum_type";
+$TBAT_CONSENSUS_LIBRARY                   = "${mod}consensus_library";
+$TBAT_CONSENSUS_LIBRARY_SPECTRUM          = "${mod}consensus_library_spectrum";
+$TBAT_CONSENSUS_LIBRARY_SPECTRUM_PEAK     = "${mod}consensus_library_spectrum_peak";
+$TBAT_CONSENSUS_LIBRARY_SPECTRUM_COMMENT  = "${mod}consensus_library_spectrum_comment";
+$TBAT_CONSENSUS_SPECTRUM_TYPE             = "${mod}consensus_spectrum_type";
+
+$TBAT_NIST_LIBRARY                   = "${mod}consensus_library";
+$TBAT_NIST_LIBRARY_SPECTRUM          = "${mod}consensus_library_spectrum";
+$TBAT_NIST_LIBRARY_SPECTRUM_PEAK     = "${mod}consensus_library_spectrum_peak";
+$TBAT_NIST_LIBRARY_SPECTRUM_COMMENT  = "${mod}consensus_library_spectrum_comment";
+$TBAT_NIST_SPECTRUM_TYPE             = "${mod}consensus_spectrum_type";
+
 ##$TBAT_SEARCH_BATCH_STATISTICS   = "glycopeptide.dbo.search_batch_statistics";
 $TBAT_SEARCH_BATCH_STATISTICS   = "${mod}search_batch_statistics";
 
