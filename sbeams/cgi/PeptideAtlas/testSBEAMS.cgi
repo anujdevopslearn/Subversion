@@ -50,19 +50,72 @@ $sbeams = new SBEAMS::Connection;
 
   my $base = $q->url( -base => 1 );
 
+#https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/Search?search_key=ENSP00000374576&build_type_name=Any&action=GO
   # TODO 
-  # Add in some CGI params to make these more useful!
+  # Add in some CGI params to /make these more useful!
 
-	my %links = ( "Search" => "$base/$CGI_BASE_DIR/PeptideAtlas/Search", 
-                "Main" => "$base/$CGI_BASE_DIR/PeptideAtlas/main.cgi?_tab=2",
-                "GetPeptide" => "$base/$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3",
-								"GetPeptides" => "$base/$CGI_BASE_DIR/PeptideAtlas/GetPeptides?_tab=4", 
-								"GetProtein" => "$base/$CGI_BASE_DIR/PeptideAtlas/GetProtein?_tab=5",
-								"GetProteins" => "$base/$CGI_BASE_DIR/PeptideAtlas/GetProteins?_tab=6",
-								"Summarize" => "$base/$CGI_BASE_DIR/PeptideAtlas/Summarize_Peptide?_tab=7",
-								"MRMList" => "$base/$CGI_BASE_DIR/PeptideAtlas/GetMRMList",
-								"ShowPathways" => "$base/$CGI_BASE_DIR/PeptideAtlas/showPathways"
-	            );
+	my %links = ( "Search" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/Search", 
+	                            PARAMS => {search_key=>'ENSP00000374576', build_type_name=>'Any', action=>'GO' }, 
+															STRINGS => ['ENSP00000374576', 'Human Plasma' ] },
+                "Main" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/main.cgi",  
+								            PARAMS => { '_tab' => 2 },
+								            STRINGS => [ 'Human Plasma PeptideAtlas 2007-04' ] },
+
+                "buildDetails" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/buildDetails",  
+								            PARAMS => { atlas_build_id => 107, '_tab' => 2 },
+								            STRINGS => [ 'serum_peo_peptides' ] },
+
+
+                "GetPeptide" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetPeptide",  PARAMS => { '_tab' => 3, 
+								                                                                                     atlas_build_id => 110,
+																																																		 searchWithinThis => 'Peptide+Name',
+																																																		 searchForThis => 'PAp00085360',
+																																																		 action => 'query' }, 
+																																												STRINGS => [ qw(NKLPFLYSSQGPQAVR PAp00085360 Genome Observed )] },
+
+								"GetPeptides" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetPeptides",  
+								                   PARAMS => { '_tab' => 4,
+                                               atlas_build_id => 108,
+                                               peptide_sequence_constraint => 'VLHPLEG%25',
+                                               QUERY_NAME=> 'AT_GetPeptides',
+                                               action=> 'QUERY' },
+																	 STRINGS => [ qw(VLHPLEGAVVIIFK Empirical) ] },
+								"GetProtein" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetProtein", 
+								                  PARAMS => { '_tab' => 5, atlas_build_id => 113, protein_name => 'ENSP00000374576', action=> 'QUERY' },
+																	STRINGS => [ qw(CD166_HUMAN ALCAM External Observable ) ]  },
+
+
+								"GetProteins" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetProteins",
+                                   PARAMS => { '_tab' => 6,
+																	             atlas_build_id => 108,
+                                               biosequence_name_constraint => 'ENSP00000222%25',
+                                               QUERY_NAME => 'AT_GetProteins',
+																	             action => 'QUERY' },
+																	STRINGS => [qw( ENSG00000105401 Mapped ) ] },
+#								atlas_build_id=108
+#								biosequence_name_constraint=ENSP00000222%25
+#								QUERY_NAME=AT_GetProteins
+#								action=QUERY
+								"Summarize" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/Summarize_Peptide",  PARAMS => { '_tab' => 7 }, STRINGS => [] },
+								"GetMRMList" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetMRMList", PARAMS => { }, STRINGS => [] },
+								"ViewMRMList" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/ViewMRMList", PARAMS => { atlas_build_id => 83, consensus_library_id => 5,
+					 protein_name_constraint => 'YAL044C', 
+					 QUERY_NAME => 'AT_GetMRMList', action => 'QUERY' 
+					}, STRINGS => [ qw( Sequence LGEGVNVEQVEGLMSLEQYEK spectral YAL044C ) ] },
+# http://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/ViewMRMList
+#								atlas_build_id=83
+#								consensus_library_id=5
+#								protein_name_constraint=YAL044C
+#								QUERY_NAME=AT_GetMRMList
+#								action=QUERY
+
+								"ShowPathways" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/showPathways",
+								                    PARAMS => { apply_action => 'pathway_details',
+                                                     path_id => 'path:hsa02010',
+                                                    path_def => 'ABC transporters - General - Homo sapiens (human)'
+																							},
+																	  STRINGS => [] }
+ 		 );
 
   $sbeams->display_page_header( minimal_header => "YES",
 	                              navagation_bar => "NO" );
@@ -79,23 +132,49 @@ $sbeams = new SBEAMS::Connection;
  	~;
 
 
-	for my $l ( sort( keys( %links ) ) ) {
-		
+	for my $l ( sort ( keys( %links ) ) ) {
+    my $params = '';
+		my $sep = '?';
+		for my $p ( keys( %{$links{$l}->{PARAMS}} ) ) {
+		  $params .= $sep;
+			$params .= $p . '=' . $links{$l}->{PARAMS}->{$p};
+			$sep = ';';
+		}
+    $links{$l}->{URI} .= $params;
+    $links{$l}->{PARAM_STRING} = $params;
+    
 		my $pre = time();
-    my $response = $ua->request( HTTP::Request->new( GET => "$links{$l}" ) );
+    my $response = $ua->request( HTTP::Request->new( GET => "$links{$l}->{URI}" ) );
+
+		# Start out conservative
 		my $style = 'red_bg';
-		$style = 'yel_bg' if $response->is_success();
-		my $status = 'OK' if $response->is_success();
-		$status ||= 'ERR';
+		my $status = 'ERR';
+
+		if ( $response->is_success() ) {
+  		$style = 'yel_bg'; 
+		  $status = 'OK';
+		}
+
     my $section = $response->content();
 		my $post = time();
 		my $time = ( $post - $pre ) || 1;
-		$style = 'grn_bg' if $section =~ /SBEAMS_PAGE_OK/gmi;
+		if ( $section =~ /SBEAMS_PAGE_OK/gmi ) { 
+			$style = 'grn_bg' 
+		}
 
 		my $size = sprintf( "%0.1f", (length( $section )/1000) );
+
+    for my $string ( @{$links{$l}->{STRINGS}} ) {
+			if ( !grep /$string/, $section ) {
+				$style = 'yel_bg' unless $style eq 'red_bg';
+				$status = 'STR';
+				$log->warn( "page $l missing $string!" );
+			}
+		}
+
 		print qq~
 		<TR>
-      <TD ALIGN=LEFT><A HREF='#$l'>$l</A></TD>
+      <TD ALIGN=RIGHT><B>$l [ </B><A HREF='#$l'>jump to</A><B> | </B><A HREF='$links{$l}->{URI}' TARGET=$l>open link </A><B> ]</B></TD>
       <TD ALIGN=CENTER CLASS=$style>$status</TD>
       <TD ALIGN=RIGHT>$size</TD>
       <TD ALIGN=RIGHT>$time</TD>
@@ -108,9 +187,12 @@ $sbeams = new SBEAMS::Connection;
   my $cnt = 0;
 	for my $l ( sort( keys( %links ) ) ) {
 		$cnt++;
+		my $pstring = $links{$l}->{PARAM_STRING} || 'no params';
+		$pstring =~ s/\?//g;
+		$pstring =~ s/;/, /g;
 		print <<"    END";
-		<BR><H3>$l<A NAME='$l'></A></H3><A HREF='#top'>top</A>
-		<IFRAME NAME=$cnt HEIGHT=750 WIDTH=900 frameborder=0 src='$links{$l}'></IFRAME>
+		<BR><H3>$l:</H3> <A HREF=$links{$l}{URI}>$pstring</A> | <A NAME='$l'></A><A HREF='#top'>top</A>
+		<IFRAME NAME=$cnt HEIGHT=750 WIDTH=900 frameborder=0 src='$links{$l}->{URI}'></IFRAME>
 		<BR>
 		<HR>
     END
