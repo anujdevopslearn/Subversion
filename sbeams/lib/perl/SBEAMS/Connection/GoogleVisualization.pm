@@ -227,8 +227,10 @@ sub is_supported_browser {
 
   my $browser = $ENV{HTTP_USER_AGENT};
 	if ( $browser =~ /.*Firefox\/(.*)$/ ) {
-		$log->warn( "Browser: $browser failed version test!" );
-		return 0 if $1 < $ffox_version;
+		if ( $1 < $ffox_version ) {
+		  $log->warn( "Browser: $browser failed version test! ($1 is less than $ffox_version)" );
+		  return 0 
+		}
 	}
 	return 1;
 }
