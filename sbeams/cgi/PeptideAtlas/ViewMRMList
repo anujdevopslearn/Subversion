@@ -106,7 +106,7 @@ sub main
     $sbeams->processStandardParameters(parameters_ref=>\%parameters);
     
     # Hackage
-    $parameters{NIST_library_id} ||= $parameters{consensus_library_id};
+    $parameters{consensus_library_id} ||= $parameters{consensus_library_id};
 
     #### Decide what action to take based on information so far
     if ($parameters{action} eq "???") 
@@ -179,13 +179,13 @@ sub handle_request {
   #### Process all the constraints
 
   #### Require library and atlas build 
-  for my $param ( qw( NIST_library_id atlas_build_id ) ) {
+  for my $param ( qw( consensus_library_id atlas_build_id ) ) {
     if ( !$parameters{$param} ) {
     
       $sbeams->reportException(
           state => 'ERROR',
           type => 'INSUFFICIENT CONSTRAINTS',
-          message => 'Missing required parameter $param',
+          message => "Missing required parameter $param",
       );
       return;
     }
@@ -202,13 +202,13 @@ sub handle_request {
   ##  replace AND with WHERE
   $atlas_build_clause =~ s/(.*)AND(.*)/$1WHERE$2/;
 
-  #### Build NIST_library_id constraint
-  my $NIST_library_clause = $sbeams->parseConstraint2SQL(
-      constraint_column=>"NL.NIST_library_id",
+  #### Build consensus_library_id constraint
+  my $consensus_library_clause = $sbeams->parseConstraint2SQL(
+      constraint_column=>"NL.consensus_library_id",
       constraint_type=>"int_list",
-      constraint_name=>"NIST Library",
-      constraint_value=>$parameters{NIST_library_id} );
-  return if ($NIST_library_clause eq '-1');
+      constraint_name=>"Consensus Library",
+      constraint_value=>$parameters{consensus_library_id} );
+  return if ($consensus_library_clause eq '-1');
 
   #### Build PEPTIDE_SEQUENCE constraint
   my $peptide_sequence_clause = $sbeams->parseConstraint2SQL(
@@ -353,12 +353,12 @@ sub handle_request {
 
     print qq~
     Note: masses are mono-isotopic;  results are from query to
-    PeptideAtlas followed by peptide sequence query to NIST consensus spectra.
+    PeptideAtlas followed by peptide sequence query to consensus spectral library.
     <br/><br/>
     ~ if $is_html;
 
-    ## look up PA peptides and nab the NIST spectra with similar peptide sequences
-    if ( $atlas_build_clause || $NIST_library_clause ||
+    ## look up PA peptides and nab the consensus spectra with similar peptide sequences
+    if ( $atlas_build_clause || $consensus_library_clause ||
          $n_samples_clause || $empirical_proteotypic_clause ||
          $peptide_sequence_clause || $best_probability_clause ||
          $n_observations_clause || $n_samples_clause ||
@@ -367,10 +367,10 @@ sub handle_request {
          $biosequence_name_clause ) {
 
       my $lib_sql = qq~
-      FROM $TBAT_NIST_LIBRARY_SPECTRUM NLS
-      JOIN $TBAT_NIST_LIBRARY NL ON (NLS.NIST_library_id = NL.NIST_library_id)
-      JOIN $TBAT_NIST_LIBRARY_SPECTRUM_PEAK NLSP ON NLSP.NIST_library_spectrum_id = NLS.NIST_library_spectrum_id
-      JOIN $TBAT_NIST_SPECTRUM_TYPE NST ON (NST.NIST_spectrum_type_id = NLS.NIST_spectrum_type_id)
+      FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM NLS
+      JOIN $TBAT_CONSENSUS_LIBRARY NL ON (NLS.consensus_library_id = NL.consensus_library_id)
+      JOIN $TBAT_CONSENSUS_LIBRARY_SPECTRUM_PEAK NLSP ON NLSP.consensus_library_spectrum_id = NLS.consensus_library_spectrum_id
+      JOIN $TBAT_CONSENSUS_SPECTRUM_TYPE NST ON (NST.consensus_spectrum_type_id = NLS.consensus_spectrum_type_id)
       ~;
 
       $peptide_sql = qq~
@@ -396,24 +396,29 @@ sub handle_request {
 
 
       $sql = qq~
-      SELECT DISTINCT NLS.NIST_library_spectrum_id, NLS.sequence,
+      SELECT DISTINCT NLS.consensus_library_spectrum_id, NLS.sequence,
       NLS.modified_sequence, biosequence_name, NLS.mz_exact, NLS.charge,
       NLS.protein_name_alt, PI.best_probability, PI.n_observations,
       PI.n_samples, PI.n_protein_mappings, PI.n_genome_locations,
       SSRCalc_relative_hydrophobicity, NLSP.mz, NLSP.relative_intensity,
-      NLSP.ion_label, NLSP.charge
+      NLSP.ion_label, NLS.charge
       $lib_sql
       JOIN $TBAT_PEPTIDE P ON (P.peptide_sequence = NLS.sequence)
       $peptide_sql
-      $NIST_library_clause
-      AND NST.NIST_spectrum_type_name IN ('Consensus','Single')
+      $consensus_library_clause
+      AND NST.consensus_spectrum_type_name IN ('Consensus','Single')
       AND ( NLSP.peak_label LIKE 'y%' OR   NLSP.peak_label LIKE 'b%' )
       ORDER BY biosequence_name, PI.n_observations DESC, NLS.sequence, NLS.modified_sequence, NLS.charge, NLSP.relative_intensity DESC, PI.best_probability DESC
       ~;
 
+      $log->debug( "SQL for ViewMRMList is:\n $sql" );
+			my $start_time = time();
       my $sth = $sbeams->get_statement_handle($sql);
+			my $end_time = time();
+			my $elapsed_time = $end_time - $start_time;
+			$log->debug( "Fetching ViewMRMList SQL took $elapsed_time seconds" );
 
-# 0      NLS.NIST_library_spectrum_id,
+# 0      NLS.consensus_library_spectrum_id,
 # 1      NLS.sequence,
 # 2      NLS.modified_sequence,
 # 3      biosequence_name,
@@ -441,7 +446,7 @@ sub handle_request {
       my $na = $sbeams->makeInactiveText('n/a');
 
       my %spectral_links;
-      my $spec = "<A HREF='ShowOneSpectrum?NIST_library_spectrum_id=NLS_ID_HERE' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='Show spectrum'></A>";
+      my $spec = "<A HREF='ShowOneSpectrum?consensus_library_spectrum_id=NLS_ID_HERE' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='Show spectrum'></A>";
 
       my $idx = 0;
       while ( my @row = $sth->fetchrow_array() ) {
@@ -487,7 +492,7 @@ sub handle_request {
 
         push @{$prot_peps{$row[3]}->{$row[2]}}, [ @row[3,2,5,4,13,14,15,17,12,8,18,19] ]; 
       }
-
+      $log->debug( "recordset had $idx rows" );
 
       for my $prot ( sort( keys( %prot_peps ) ) ) {
         for my $pep ( sort( keys( %{$prot_peps{$prot}} ) ) ) {
@@ -497,7 +502,6 @@ sub handle_request {
               $row->[11] ||= $na;
             }
             $row->[1] = $sbeamsMOD->formatMassMods( $row->[1] );
-            $log->debug( $row->[1] );
             push @display_rows, $row;
           }
         }
@@ -644,7 +648,7 @@ __DATA__
   JOIN $TBAT_TRANSITION_SUITABILITY_LEVEL TSL 
     ON TSL.transition_suitability_level_id = MPA.transition_suitability_level_id
 SELECT DISTINCT 
---NLS.NIST_library_spectrum_id, NLS.sequence,NLS.modified_sequence,  NLS.protein_name,  NLS.mz_exact, NLS.charge, NLS.protein_name_alt,
+--NLS.consensus_library_spectrum_id, NLS.sequence,NLS.modified_sequence,  NLS.protein_name,  NLS.mz_exact, NLS.charge, NLS.protein_name_alt,
 PI.best_probability, PI.n_observations, PI.n_samples,
 PI.n_protein_mappings, PI.n_genome_locations, 
 SSRCalc_relative_hydrophobicity ,q3_peak_intensity relative_intensity,
@@ -653,19 +657,19 @@ BS.biosequence_name,
 MPA.peptide_sequence  ,  peptide_charge    , q1_mz     ,q3_mz 
 ,MPA.modified_peptide_sequence, q3_ion_label, transition_suitability_level_id
 
---FROM peptideatlas.dbo.NIST_library_spectrum NLS
---JOIN peptideatlas.dbo.NIST_library_spectrum_peak NLSP ON (NLSP.NIST_library_spectrum_id = NLS.NIST_library_spectrum_id)
---JOIN peptideatlas.dbo.NIST_library NL ON (NLS.NIST_library_id = NL.NIST_library_id)
+--FROM peptideatlas.dbo.consensus_library_spectrum NLS
+--JOIN peptideatlas.dbo.consensus_library_spectrum_peak NLSP ON (NLSP.consensus_library_spectrum_id = NLS.consensus_library_spectrum_id)
+--JOIN peptideatlas.dbo.consensus_library NL ON (NLS.consensus_library_id = NL.consensus_library_id)
 FROM peptideatlas.dbo.peptide P -- ON (P.peptide_sequence = NLS.sequence)
 JOIN peptideatlas.dbo.peptide_instance PI ON (PI.peptide_id = P.peptide_id)
 --JOIN peptideatlas.dbo.modified_peptide_annotation MPA ON MPA.peptide_id = p.peptide_id
 JOIN peptideatlas.dbo.modified_peptide_annotation MPA ON MPA.peptide_sequence = p.peptide_sequence
---JOIN peptideatlas.dbo.NIST_spectrum_type NST ON (NST.NIST_spectrum_type_id = NLS.NIST_spectrum_type_id)
+--JOIN peptideatlas.dbo.consensus_spectrum_type NST ON (NST.consensus_spectrum_type_id = NLS.consensus_spectrum_type_id)
 JOIN peptideatlas.dbo.peptide_mapping PM    ON ( PI.peptide_instance_id = PM.peptide_instance_id )
 JOIN peptideatlas.dbo.biosequence BS    ON (BS.biosequence_id = PM.matched_biosequence_id)  
 --JOIN peptideatlas.dbo.biosequence_set BSS    ON (BS.biosequence_set_id = BSS.biosequence_set_id)
 JOIN peptideatlas.dbo.atlas_build AB ON AB.biosequence_set_id = BS.biosequence_set_id
---WHERE NL.NIST_library_id IN ( 28 )
+--WHERE NL.consensus_library_id IN ( 28 )
   WHERE PI.atlas_build_id IN ( 123 ) 
 --AND ( NLSP.peak_label LIKE 'y%' OR   NLSP.peak_label LIKE 'b%' )                                         
 -- WHERE 
@@ -673,5 +677,5 @@ JOIN peptideatlas.dbo.atlas_build AB ON AB.biosequence_set_id = BS.biosequence_s
 
  ( BS.biosequence_name IN ( 'YFL039C','YBR196C' )
              )
-  --          AND NST.NIST_spectrum_type_name='Consensus'
+  --          AND NST.consensus_spectrum_type_name='Consensus'
   ORDER BY biosequence_name, MPA.peptide_sequence, MPA.modified_peptide_sequence DESC
