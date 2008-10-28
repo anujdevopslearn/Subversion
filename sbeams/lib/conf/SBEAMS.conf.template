@@ -112,6 +112,11 @@ DBPREFIX{UESC}          = sbeams.dbo.
 #### Set the raw data directory location as a function of module.
 RAW_DATA_DIR{Proteomics} = /raw/datasets/root/location
 
+# Disable guest-privlege by proxy for listed usernames
+CONFIG_SETTING{DenyGuestPrivileges} = ext_mrm,ext_halo
+
+# Comma separated hostname:::timeout(seconds) tuples for throttling overeager access
+CONFIG_SETTING{DELAYED_RESPONSE_HOST} = badbot.google.com::::5
 
 # Settings for java/jnlp helper applications
 CONFIG_SETTING{JAVA_PATH} = /usr/java/j2sdk1.4/
