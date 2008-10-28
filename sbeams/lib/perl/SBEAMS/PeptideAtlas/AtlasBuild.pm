@@ -97,6 +97,56 @@ sub listBuilds {
 
 } # end listBuilds
 
+sub GetBuildSelect {
+  my $self = shift || die ("self not passed");
+  my %args = ( set_onchange => 1, 
+	                 build_id => '',
+	               build_name => '',
+                  form_name => 'switch_build',
+	            @_ );
+
+	if ( !$args{build_name} && $args{build_id} ) {
+		$args{build_name} = $self->getBuildName( build_id => $args{build_id} );
+	}
+
+	my $project_string = join( ', ', $sbeams->getAccessibleProjects() );
+	return unless $project_string;
+
+	my $onchange_script = '';
+	my $onchange = '';
+  if ($args{set_onchange}) {
+	  $onchange = 'onchange="switchAtlasBuild()"';
+		$onchange_script =  qq~
+		<SCRIPT LANGUAGE=javascript TYPE=text/javascript>
+		function switchAtlasBuild() {
+			document.$args{form_name}.submit();
+		}
+		</SCRIPT>
+		~;
+	}
+
+#  for my $build_id ( keys( %{$atlas_builds} ) ) {
+  my $sql = qq~
+    SELECT atlas_build_id,atlas_build_name
+      FROM $TBAT_ATLAS_BUILD
+		 WHERE project_id IN ( $project_string )
+     AND record_status != 'D'
+     ORDER BY atlas_build_name
+  ~;
+	my $sth = $sbeams->get_statement_handle( $sql );
+	my $select = "<SELECT NAME=atlas_build_id $onchange>\n";
+	while ( my @row = $sth->fetchrow_array() ) {
+		# default to first one
+		$args{build_name} ||= $row[1];
+		my $selected = ( $row[1] =~ /^$args{build_name}$/ ) ? 'SELECTED' : '';
+		$select .= "<OPTION VALUE=$row[0] $selected> $row[1] </OPTION>";
+	}
+	$select .= "</SELECT>\n";
+
+	return ( wantarray() ) ? ($select, $onchange_script) :  $select . $onchange_script; 
+
+} # end GetBuildSelect
+
 
 sub getAtlasBuildDirectory {
   my $self = shift;
@@ -119,6 +169,23 @@ sub getAtlasBuildDirectory {
   return "$pipeline_dir/$path[0]";
 }
 
+sub getBuildName {
+  my $self = shift;
+  my %args = @_;
+
+  my $build_id = $args{build_id} || return;
+
+  my $sql = qq~
+  SELECT atlas_build_name
+  FROM $TBAT_ATLAS_BUILD
+  WHERE atlas_build_id = '$build_id'
+  AND record_status != 'D'
+  ~;
+
+  my @build = $sbeams->selectOneColumn($sql); 
+
+  return $build[0];
+}
 
 # convenience method to look up hash of proteomics search batch to atlas SB
 sub getProtSB2AtlasSB {
@@ -341,7 +408,6 @@ sub get_protein_build_coverage {
   AND PM.matched_biosequence_id IN ( $args{biosequence_ids} )
   ORDER BY matched_biosequence_id
   ENDSQL
-  $log->debug( "prepare instance stmt: " . time() );
   my $sth = $sbeams->get_statement_handle( $sql );
 	my %peps;
   while ( my @row = $sth->fetchrow_array() ) {
@@ -376,6 +442,54 @@ sub get_mapped_biosequences {
 		push @ids, $row[0];
 	}
   return \@ids;
+}
+
+sub getBioseqIDsFromProteinList {
+	my $self = shift;
+	my %args = @_;
+	my $err = '';
+
+	for my $arg ( qw( protein_list build_id ) ) {
+		if ( !$args{$arg} ) {      
+			my $msg = "Missing required param $arg\n";
+			$err .= $msg;
+		}
+	}
+	if ( $err ) {
+		$log->error( $err );
+		return undef;
+	}
+
+	my @names = split( /,/, $args{protein_list} );
+	my $name_str = '';
+	for my $name ( @names ) {
+		$name_str .= ( $name_str ) ? ",'$name'" : "'$name'";
+	}
+
+
+	my $sql = qq~
+	SELECT DISTINCT biosequence_id 
+	FROM $TBAT_BIOSEQUENCE B 
+	JOIN $TBAT_ATLAS_BUILD AB
+	  ON AB.biosequence_set_id = B.biosequence_set_id
+	WHERE biosequence_name IN ( $name_str )
+	  AND atlas_build_id = $args{build_id}
+	~;
+	
+	if ( $sbeams->isTaintedSQL( $sql ) ) {
+		$log->error( "Tainted SQL passed: \n $sql" );
+		$log->error( "protein list is $args{protein_list}" );
+		return '';
+	}
+
+	
+  my $sth = $sbeams->get_statement_handle( $sql );
+	my $id_string;
+	while ( my @row = $sth->fetchrow_array() ) {
+		$id_string .= ( $id_string ) ? ",$row[0]" : $row[0];
+	}
+	return $id_string;
+#	( list => $args{protein_list}, build_id => $curr_bid );
 }
 
 
