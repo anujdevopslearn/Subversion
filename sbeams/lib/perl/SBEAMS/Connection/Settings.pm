@@ -341,6 +341,17 @@ sub getCGIBaseURI {
   return $SERVER_BASE_DIR . $CGI_BASE_DIR;
 }
 
+sub getDeniedGuestUsers {
+  my $sbeams = shift;
+  my $denied_string = $CONFIG_SETTING{DenyGuestPrivileges} if ($CONFIG_SETTING{DenyGuestPrivileges});
+	return [] unless $denied_string;
+
+  $denied_string =~ s/\s//g;
+	my @denied = split( ',', $denied_string, -1 );
+	return \@denied;
+#	CONFIG_SETTING{DenyGuestPrivileges} = ext_mrm,ext_halo
+}
+
 
 ###############################################################################
 # readMainConfFile: Read the contents of the main conf file
