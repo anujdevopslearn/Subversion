@@ -942,6 +942,18 @@ sub get_info_keys {
 }
 
 #+
+# Method to fetch contact_id for guest user
+#-
+sub get_guest_contact_id {
+  my $self = shift;
+  my ( $id ) = $self->selectrow_array( <<"  END" );
+  SELECT contact_id FROM $TB_USER_LOGIN where 
+  username = 'guest'
+  END
+  return $id;
+}
+
+#+
 # Method to fetch organism_id from database from provided name
 #-
 sub get_organism_id {
