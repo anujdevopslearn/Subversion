@@ -190,7 +190,7 @@ sub pathway_details {
    <DIV ID=1234321 CLASS=visible>
    <BR>
   END
-  print "  * Looking up genes in $params->{path_def} ($params->{path_id}) at KEGG <BR>\n";
+  print "4) Looking up genes in $params->{path_def} ($params->{path_id}) at KEGG - ";
 
   my $t0 = new Benchmark;
 
@@ -201,16 +201,18 @@ sub pathway_details {
   my $tot = scalar( @{$gene_list} );
   my $t1 = new Benchmark;
   $log->debug( parseTime( $t1, $t0, "seconds to fetch genes for $params->{path_def}" ) );
+	print parseTime( $t1, $t0, '' ) . " seconds <BR>\n";
 
-  print "* Found $tot genes in pathway, looking up data in Peptide Atlas<BR>\n";
+  print "3) Found $tot genes in pathway, looking up data in Peptide Atlas - ";
 
   # Fetches expression info from db, returns arrays of bg/fg colors
   my ( $bg, $fg, $atlas_hits, $cnt ) = getExpressionValues($gene_list);
 
   my $t2 = new Benchmark;
   $log->debug( parseTime( $t2, $t1, "seconds to get Atlas data for $params->{path_def}" ) );
+	print parseTime( $t2, $t1, '' ) . " seconds <BR>\n";
 
-  print "* Found Atlas data for $cnt of $tot, plotting on KEGG map<BR>\n";
+  print "2) Found Atlas data for $cnt of $tot, fetching KGML - ";
 
   my $table = SBEAMS::Connection::DataTable->new( BORDER => 0 );
   $table->addRow( [ '&nbsp;', 'Protein', 'Peptides Observed' ] );
@@ -241,7 +243,26 @@ sub pathway_details {
                                           type => 'direct' 
   );
 
+  my $t3 = new Benchmark;
+	print parseTime( $t3, $t2, '' ) . " seconds <BR>\n";
+
+
+  print "1) Getting colored map from KEGG - ";
+  # Send gene/color info to kegg for a map
+  my $url = $keggmap->getColoredPathway( bg => $bg,
+                                         fg => $fg,
+                                      genes => $gene_list,
+                                       );
+  
+  my $t4 = new Benchmark;
+  $log->debug( parseTime( $t4, $t3, "seconds to get color pathway" ) );
+	print parseTime( $t4, $t3, '' ) . " seconds <BR>\n";
+
+
+
+
   print <<"  END";
+
   <BR>
   <!--  $cytolink -->
   $gaggle_info
@@ -263,26 +284,6 @@ sub pathway_details {
   <HR WIDTH=600 ALIGN=LEFT>
   END
 
-
-
-
-
-
-
-
-
-
-
-  
-
-  # Send gene/color info to kegg for a map
-  my $url = $keggmap->getColoredPathway( bg => $bg,
-                                         fg => $fg,
-                                      genes => $gene_list,
-                                       );
-  
-  my $t3 = new Benchmark;
-  $log->debug( parseTime( $t3, $t2, "seconds to get color pathway" ) );
 
 
   # Get info from pathway XML
