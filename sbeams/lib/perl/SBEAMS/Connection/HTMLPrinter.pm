@@ -234,7 +234,7 @@ my $module_styles =<<"  END_STYLE";
 	A.sortheader{background-color: #888888; font-size: ${FONT_SIZE}pt; font-weight: bold; color:white; line-height: 25px;}
   .info_box { background: #F0F0F0; border: #000 1px solid; padding: 4px; width: 80%; color: #444444 }
   .clear_info_box { border: #000 1px solid; padding: 4px; width: 80%; color: #444444 }
-  .popup_help { cursor: Help; color:#444444 }
+  .popup_help { cursor: Help; color:#444444; background-color: #E0E0E0 }
   .gaggle-data { display: none }
   
   /* Style info below organized by originating module
@@ -277,6 +277,8 @@ my $module_styles =<<"  END_STYLE";
   .sequence_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5}	
   .obs_seq_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5; color: red }	
   .sec_obs_seq_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5; color: green }	
+  .obs_seq_bg_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5; background-color: lightskyblue }	
+  .sec_obs_seq_bg_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5; background-color: springgreen }	
 
   /* Phosphopep */
   .invalid_parameter_value  {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_LG}pt; text-decoration: none; color: #FC0; font-style: Oblique; }
@@ -1208,6 +1210,26 @@ sub get_http_header {
   $mode =~ s/full//g; # Simplify tsvfull, csvfull modes
 
   my %param_hash;
+
+#	print STDERR "Browser is $HTTP_USER_AGENT\n";
+  $log->debug( "Host is $ENV{REMOTE_HOST}" ) if $ENV{REMOTE_HOST};
+  $log->debug( "Addr is $ENV{REMOTE_ADDR}" ) if $ENV{REMOTE_ADDR};
+	my $host = $ENV{REMOTE_HOST} || $ENV{REMOTE_ADDR};
+
+  my @dhost;
+	my %dhost;
+	for my $hoststring ( split( ",", $CONFIG_SETTING{DELAYED_RESPONSE_HOST} ) ) {
+		my ( $dhost, $dtime ) = split( "::::", $hoststring );
+		push @dhost, $dhost;
+		$dhost{$dhost} = $dtime;
+	}
+
+	if ( !$self->{_delay_imposed} && grep /^$host$/, @dhost ) {
+ 	  $log->warn( "Access delayed by policy for $host, agent $HTTP_USER_AGENT" );
+		sleep $dhost{$host};
+ 	  $log->warn( "Slept $dhost{$host} seconds" );
+		$self->{_delay_imposed}++;
+	}
 
   # explicit content type
   my $type = $args{type} || $self->get_content_type( $mode );
