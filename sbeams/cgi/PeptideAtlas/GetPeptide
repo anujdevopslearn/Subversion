@@ -971,7 +971,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
           }
 
           my $title = "View consensus spectrum for peptide $pep->[0] (+$pep->[1])"; 
-          $pep->[7] = "<A HREF='ShowOneSpectrum?NIST_library_spectrum_id=$c_spectrum->[0];ymax=11000' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
+          $pep->[7] = "<A HREF='ShowOneSpectrum?consensus_library_spectrum_id=$c_spectrum->[0];ymax=11000' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
           last;
         }
       }
