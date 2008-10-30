@@ -143,21 +143,34 @@ sub getBuildMotif {
   return '';
 }
 
+# Stub methods with hard-coded build IDs, replace with db lookup based method
 sub getBuildConsensusLib {
   my $self = shift;
   my %args = @_;
 
   # getCurrent wants a param ref
   my $build_id = $args{build_id} || $self->getCurrentAtlasBuildID( parameters_ref => { got => 0 } );
+	my @human = ( 98, 107, 108, 113, 115, 119, 134 );
+	my @mouse = ( 109, 117, 120, 135 );
+
+	my $lib_id = '';
 
   # FIXME - hard-coded value for MRM Atlas
   if ( $build_id == 123 ) {
-    return 28;
-  } 
-  return '';
+    $lib_id = 6;
+  } elsif ( $build_id == 110 ) {
+		$lib_id = 5;
+	} elsif ( grep /^$build_id$/, @human ) {
+		$lib_id = 9;
+	} elsif ( grep /^$build_id$/, @mouse ) {
+		$lib_id = 7;
+  } elsif ( $build_id == 40 ) {
+		$lib_id = 2;
+	}
+	$log->debug( "Lib ID $lib_id for buildish $build_id" );
+	return $lib_id;
 }
 
-# Stub methods with hard-coded build IDs, replace with db lookup based method
 sub getGlycoBuilds {
   my @glyco_builds = ( 115, 120 );
   return \@glyco_builds;
