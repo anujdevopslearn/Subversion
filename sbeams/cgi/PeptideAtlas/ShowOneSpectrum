@@ -391,7 +391,7 @@ sub get_library_spectrum
   my $consensus_library_spectrum_id = $args{'consensus_library_spectrum_id'} || "";
 	
   # For backwards compatibility with NIST tables (TIQAM). 
-  $consensus_library_spectrum_id ||= $args{'NIST_library_spectrum_id'};
+  $consensus_library_spectrum_id ||= $args{NIST_library_spectrum_id};
 
 
   #### Define some general variables
@@ -414,7 +414,7 @@ sub get_library_spectrum
 
     # For backwards compatibility with NIST tables (TIQAM). 
 		$sql = $sbeams->evalSQL( $sql );			 
-		if ( $NIST_library_spectrum_id ) {
+		if ( $args{NIST_library_spectrum_id} ) {
 			$sql =~ s/consensus/NIST/gm;
  		  $log->info( "Translated to NIST tables: $sql" );
 		}
