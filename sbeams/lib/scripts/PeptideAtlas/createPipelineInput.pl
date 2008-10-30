@@ -298,12 +298,18 @@ sub pepXML_start_element {
     $self->{pepcache}->{scores}->{$attrs{name}} = $attrs{value};
   }
 
-
-  #### If this is the probability score, store some attributes
+  #### If this is the peptideProphet probability score, store some attributes
   if ($localname eq 'peptideprophet_result') {
     $self->{pepcache}->{scores}->{probability} = $attrs{probability};
   }
 
+  ### If this is the iProphet probability score, store the probability
+  ### Since iProphet tag comes after peptideProphet tag, this will
+  ### supercede the peptideProphet probability. But this is kludgy
+  ### and wrong -- shouldn't rely on order of tags.
+  if ($localname eq 'interprophet_result') {
+    $self->{pepcache}->{scores}->{probability} = $attrs{probability};
+  }
 
   #### Push information about this element onto the stack
   my $tmp;
@@ -427,7 +433,11 @@ sub pepXML_end_element {
     }
 
     #### If this peptide passes the threshold, store it
-    if ($probability >= $self->{P_threshold}) {
+    #if ($probability >= $self->{P_threshold}) {
+    # 10/08: iProphet may significantly increase the probability
+    #    we don't want to discard anything that might ultimately be
+    #    > P_threshold, so we are conservative and use 0.50 here.
+    if ($probability >= 0.50) {
 
       #### Create the modified peptide string
       my $modified_peptide = '';
@@ -759,6 +769,8 @@ sub main {
           'interact-spec.xml',
           'interact.xml',
           'interact.pep.xml',
+          'interact_combined.pep.xml',
+          'interact_combined.iproph.pep.xml',
         );
 	my $found_file = 0;
 	foreach my $possible_name ( @possible_interact_names ) {
