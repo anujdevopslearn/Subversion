@@ -88,47 +88,49 @@ exit(0);
 #
 # Call $sbeams->Authenticate() and exit if it fails or continue if it works.
 ###############################################################################
-sub main 
-{
-    #### Do the SBEAMS authentication and exit if a username is not returned
-    exit unless ($current_username = $sbeams->Authenticate(
-        allow_anonymous_access=>1,
-    ));
-    $is_html = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
+sub main {
 
-    #### Read in the default input parameters
-    my %parameters;
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  $current_username = $sbeams->Authenticate(allow_anonymous_access=>1) || exit;
+  $is_html = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
 
-    $parameters{uploaded_file_not_saved} = 1;
+  #### Read in the default input parameters
+  my %parameters;
 
-    $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
+  $parameters{uploaded_file_not_saved} = 1;
 
-    $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+  $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
+
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
     
-    # Hackage
-    $parameters{consensus_library_id} ||= $parameters{consensus_library_id};
+  # Hackage
+  $parameters{consensus_library_id} ||= $parameters{consensus_library_id};
 
-    #### Decide what action to take based on information so far
-    if ($parameters{action} eq "???") 
-    {
-        # Some action
-    } else 
-    {
-        my $project_id = $sbeamsMOD->getProjectID(
+  #### Decide what action to take based on information so far
+  if ($parameters{action} eq "???") {
+    # Some action
+  } else {
+    my $project_id = $sbeamsMOD->getProjectID(
             atlas_build_id => $parameters{atlas_build_id}
-        );
+    );
 
-        $sbeamsMOD->display_page_header(project_id => $project_id);
 
-        handle_request(ref_parameters=>\%parameters);
+    $sbeams->collectSTDOUT();
+    handle_request(ref_parameters=>\%parameters);
 
-        $sbeamsMOD->display_page_footer();
-    }
+    my $page_content = $sbeams->fetchSTDOUT();
 
-    #### Finish the upper part of the page and go begin the full-width
-    #### data portion of the page
-    $sbeams->display_page_footer(close_tables=>'YES',
-        separator_bar=>'YES',display_footer=>'NO');
+    $sbeamsMOD->display_page_header(project_id => $project_id);
+    print $page_content;
+    $sbeamsMOD->display_page_footer();
+  }
+
+  #### Finish the upper part of the page and go begin the full-width
+  #### data portion of the page
+  $sbeams->display_page_footer(  close_tables  => 'YES',
+                                separator_bar  => 'YES',
+                                display_footer => 'NO'
+	);
 
 } # end main
 
@@ -190,6 +192,25 @@ sub handle_request {
       return;
     }
   }
+
+  # Try to limit size of returned resultset.
+  my %ok_param = ( overall => 0 );
+	{ # Check params block
+
+	  # Safe if protein_name is set and has no fully wildcarded terms
+	  if ( $parameters{protein_name_constraint} ) {
+	    if ( $parameters{protein_name_constraint} !~ /;%;|;%$|^%;|^%$/ ) {
+				$ok_param{protein_name_constraint}++;
+				$ok_param{overall}++;
+			}
+		}
+	  if ( $parameters{peptide_sequence_constraint} ) {
+	    if ( $parameters{peptide_sequence_constraint} !~ /^%$/ ) {
+				$ok_param{peptide_sequence_constraint}++;
+				$ok_param{overall}++;
+			}
+		}
+	}
 
   #### Build atlas_build_id constraint
   my $atlas_build_clause = $sbeams->parseConstraint2SQL(
@@ -297,7 +318,8 @@ sub handle_request {
       print $q->header(-status=>$q->cgi_error);
     }
 
-    # size constraint of 10 MB, restrict $count < 30000
+    my $max_cnt = 1000;
+    # size constraint of 1 MB, restrict $count < $max_cnt
     if ( (-T $fh) && (-s $fh < 1000000) ) {
       my $count = 0;
       my $read_file=0;
@@ -307,24 +329,51 @@ sub handle_request {
         chomp($prt);
         $prt =~ s/\s+$//;
         if ($prt) {
-          $protein_hash{$prt} = $prt;
+          $protein_hash{$prt}++;
           $count = $count + 1;
         }
-          last if ($count > 30000);
+        last if ($count >= $max_cnt );
       }
+      # secondary param check block
+  		# Make sure this isn't a null constraint if we are counting on it
+	    if ( $count ) {
+	      $ok_param{protein_file_constraint}++;
+	      $ok_param{overall}++;
+		  }
     }
+
     ## join with a commas:
-    my $protein_list = "";
+    my $protein_list = "'" . join( "','", keys( %protein_hash)) . "'";
 
-    foreach my $pr (keys %protein_hash) {
-      $protein_list = "'$protein_hash{$pr}',$protein_list"; 
-    }
-
-    ## trim off last comma:
-    $protein_list =~ s/(.*)(,)$/$1/;
+#    foreach my $pr (keys %protein_hash) {
+#      $protein_list = "'$protein_hash{$pr}',$protein_list"; 
+#    }
+#    ## trim off last comma:
+#    $protein_list =~ s/(.*)(,)$/$1/;
 
     $biosequence_name_clause = "     AND BS.biosequence_name IN ( $protein_list )" if $protein_list;
   }
+
+  unless ( $ok_param{overall} ) {
+    # Print page message
+    # redirect back to form
+		my $url = $q->self_url();
+		$url =~ s/ViewMRMList/GetMRMList/;
+		$sbeams->set_page_message( type => 'Error', msg => <<"    END" );
+		<BR>
+		You must provide either a protein list (via protein_name form field or uploaded file) or
+		a peptide sequence constraint.  A full wildcard search does not constitute a valid constraint. 
+		<BR>
+    END
+		$log->warn( "Bad contraints, URL is $url" );
+
+		# rassa frassa
+    $sbeams->fetchSTDOUT();
+
+		print $q->redirect( -uri => $url );
+		exit;
+	}
+
 
   ## n_fragment_ions defaults to 10
   my $n_fragment_ions = 10;
@@ -351,11 +400,9 @@ sub handle_request {
   if ($apply_action =~ /QUERY/i ) {
     my $ed = "<td>&nbsp;</td>";
 
-    print qq~
-    Note: masses are mono-isotopic;  results are from query to
-    PeptideAtlas followed by peptide sequence query to consensus spectral library.
-    <br/><br/>
-    ~ if $is_html;
+    my $note = $sbeams->makeInfoText( "Note: masses are mono-isotopic" );
+
+    print "<BR>$note\n"  if $is_html;
 
     ## look up PA peptides and nab the consensus spectra with similar peptide sequences
     if ( $atlas_build_clause || $consensus_library_clause ||
@@ -411,7 +458,6 @@ sub handle_request {
       ORDER BY biosequence_name, PI.n_observations DESC, NLS.sequence, NLS.modified_sequence, NLS.charge, NLSP.relative_intensity DESC, PI.best_probability DESC
       ~;
 
-      $log->debug( "SQL for ViewMRMList is:\n $sql" );
 			my $start_time = time();
       my $sth = $sbeams->get_statement_handle($sql);
 			my $end_time = time();
@@ -506,6 +552,7 @@ sub handle_request {
           }
         }
       }
+      $log->debug( 'Final list had ' . scalar( @display_rows) . ' rows.' );
 
       my $html = $sbeamsMOD->encodeSectionTable(  header => 1, 
                                                    width => '600',
