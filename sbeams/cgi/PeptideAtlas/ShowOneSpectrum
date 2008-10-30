@@ -22,7 +22,7 @@ use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
              $current_username $modification_helper );
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -123,6 +123,9 @@ sub processRequest {
 	<TD VALIGN=top >
 	<PRE>\n!;
 
+    # For backwards compatibility with NIST tables (TIQAM). 
+	  $parameters{consensus_library_spectrum_id} ||= $parameters{NIST_library_spectrum_id};
+
     #### If we have a consensus_library_spectrum_id, find the mass modifications
     if ($parameters{'consensus_library_spectrum_id'}) 
     {
@@ -132,6 +135,14 @@ sub processRequest {
             FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM
             WHERE consensus_library_spectrum_id = '$parameters{consensus_library_spectrum_id}'
         ~;
+
+				$sql = $sbeams->evalSQL( $sql );
+
+        # For backwards compatibility with NIST tables (TIQAM). 
+				if ( $parameters{NIST_library_spectrum_id} ) {
+					$sql =~ s/consensus/NIST/gm;
+ 		      $log->info( "Translated to NIST tables: $sql" );
+				}
 
         my @rows = $sbeams->selectSeveralColumns($sql);
 
@@ -168,7 +179,9 @@ sub processRequest {
     $modification_helper = new ModificationHelper();
 
     my %spectrum = get_library_spectrum(
-        consensus_library_spectrum_id=>$parameters{consensus_library_spectrum_id});
+        consensus_library_spectrum_id=>$parameters{consensus_library_spectrum_id},
+        NIST_library_spectrum_id=>$parameters{NIST_library_spectrum_id}
+		);
 
     unless (%spectrum) 
     {
@@ -376,6 +389,9 @@ sub get_library_spectrum
   my $inputfile = $args{'inputfile'} || "";
   my $verbose = $args{'verbose'} || "";
   my $consensus_library_spectrum_id = $args{'consensus_library_spectrum_id'} || "";
+	
+  # For backwards compatibility with NIST tables (TIQAM). 
+  $consensus_library_spectrum_id ||= $args{'NIST_library_spectrum_id'};
 
 
   #### Define some general variables
@@ -395,6 +411,14 @@ sub get_library_spectrum
     $sql = "SELECT mz, relative_intensity ".
            "  FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM_PEAK ".
            " WHERE consensus_library_spectrum_id = '$consensus_library_spectrum_id'";
+
+    # For backwards compatibility with NIST tables (TIQAM). 
+		$sql = $sbeams->evalSQL( $sql );			 
+		if ( $NIST_library_spectrum_id ) {
+			$sql =~ s/consensus/NIST/gm;
+ 		  $log->info( "Translated to NIST tables: $sql" );
+		}
+
     my @mass_intensities = $sbeams->selectSeveralColumns($sql);
 
 
