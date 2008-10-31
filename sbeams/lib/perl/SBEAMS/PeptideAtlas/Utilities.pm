@@ -966,6 +966,18 @@ sub make_resultset {
   return $rs_name;
 }
 
+sub get_cached_resultset {
+  my $self = shift;
+  my %args = @_;
+  return undef unless $args{rs_name};
+	if ( $self->{_cached_resultsets} ) {
+    return $self->{_cached_resultsets}->{$args{rs_name}};
+	} else {
+		$log->error( "Requested non-existent resultset!" );
+		return undef;
+	}
+}
+
 
 #################################################################
 ############PeptideCount
