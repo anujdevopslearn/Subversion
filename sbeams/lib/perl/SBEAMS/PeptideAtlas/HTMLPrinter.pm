@@ -552,10 +552,11 @@ sub encodeSectionTable {
   my $num_cols = 0;
 
   my $rs_link = '';
+  my $rs_name = '';
   if ( $args{set_download} ) {
     # Kluge part 1
     my $rs_headers = shift( @{$args{rows}} );
-    my $rs_name = $self->make_resultset( rs_data => $args{rows}, headers => $rs_headers );
+    $rs_name = $self->make_resultset( rs_data => $args{rows}, headers => $rs_headers );
     $rs_link = "<a href='$CGI_BASE_DIR/GetResultSet.cgi/$rs_name.tsv?rs_set_name=$rs_name&format=tsv;remove_markup=1' TITLE='Download table as tab-delimited text file' CLASS=info_box>Download as TSV</a>",
     # Kluge part 2
     unshift( @{$args{rows}}, $rs_headers );
@@ -651,7 +652,7 @@ sub encodeSectionTable {
   $html = "<TR><TD NOWRAP COLSPAN=$num_cols ALIGN=right>$rs_link</TD></TR>\n" if $rs_link;
   $html .= "<TR><TD NOWRAP COLSPAN=2>$tab</TD></TR>";
 
-  return $html;
+  return ( wantarray ) ? ($html, $rs_name) : $html;
 }
 
 ###############################################################################
