@@ -115,10 +115,10 @@ sub main {
     );
 
 
-    $sbeams->collectSTDOUT();
-    handle_request(ref_parameters=>\%parameters);
+#    $sbeams->collectSTDOUT();
+    my $page_content = handle_request(ref_parameters=>\%parameters);
 
-    my $page_content = $sbeams->fetchSTDOUT();
+#    my $page_content = $sbeams->fetchSTDOUT();
 
     $sbeamsMOD->display_page_header(project_id => $project_id);
     print $page_content;
@@ -146,8 +146,10 @@ sub handle_request {
 
   my %parameters = %{$ref_parameters};
 
+  my $content = '';
+
   #### Show current user context information
-  print "<BR>\n" if $is_html;
+  $content .=  "<BR>\n" if $is_html;
   
 
   #$sbeams->printUserContext();
@@ -158,7 +160,7 @@ sub handle_request {
       program_name => $PROG_NAME,
   );
 
-  print $tabMenu->asHTML() if $is_html;
+  $content .= $tabMenu->asHTML() if $is_html;
 
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
@@ -316,6 +318,7 @@ sub handle_request {
 
     if (!$fh && $q->cgi_error && $is_html) {
       print $q->header(-status=>$q->cgi_error);
+			exit;
     }
 
     my $max_cnt = 1000;
@@ -402,7 +405,7 @@ sub handle_request {
 
     my $note = $sbeams->makeInfoText( "Note: masses are mono-isotopic" );
 
-    print "<BR>$note\n"  if $is_html;
+    $content .= "<BR>$note\n"  if $is_html;
 
     ## look up PA peptides and nab the consensus spectra with similar peptide sequences
     if ( $atlas_build_clause || $consensus_library_clause ||
@@ -489,10 +492,11 @@ sub handle_request {
 
 #
       my @display_rows = ( [qw( Protein Sequence Chg q1_mz q3_mz Intensity Ion CE SSRCalc n_obs Annot Spectrum ) ] );
-      my $na = $sbeams->makeInactiveText('n/a');
+      my $na = ( $is_html ) ? $sbeams->makeInactiveText('n/a') : 'n/a';
 
       my %spectral_links;
-      my $spec = "<A HREF='ShowOneSpectrum?consensus_library_spectrum_id=NLS_ID_HERE' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='Show spectrum'></A>";
+			my $spec = 'spectrum';
+      $spec = "<A HREF='ShowOneSpectrum?consensus_library_spectrum_id=NLS_ID_HERE' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='Show spectrum'></A>" if $is_html;
 
       my $idx = 0;
       while ( my @row = $sth->fetchrow_array() ) {
@@ -547,14 +551,14 @@ sub handle_request {
               $row->[11] = $spectral_links{$row->[1].$row->[2]};
               $row->[11] ||= $na;
             }
-            $row->[1] = $sbeamsMOD->formatMassMods( $row->[1] );
+            $row->[1] = $sbeamsMOD->formatMassMods( $row->[1] ) if $is_html;
             push @display_rows, $row;
           }
         }
       }
       $log->debug( 'Final list had ' . scalar( @display_rows) . ' rows.' );
 
-      my $html = $sbeamsMOD->encodeSectionTable(  header => 1, 
+      my ( $html, $rs_name) = $sbeamsMOD->encodeSectionTable(  header => 1, 
                                                    width => '600',
                                                   align  => [qw(left left center right right right center right right right center center)],
                                                     rows => \@display_rows,
@@ -567,16 +571,20 @@ sub handle_request {
                                               );
       
       if ( $is_html ) {
-        print "<TABLE>$html</TABLE>" 
+        $content .= "<TABLE>$html</TABLE>" 
       } else {
-        $sbeams->displayResultSet( resultset_ref => $html,
+				my $rs = $sbeamsMOD->get_cached_resultset( rs_name => $rs_name );
+				$log->debug( "RS name is $rs_name, RS is $rs" );
+
+        $sbeams->displayResultSet( resultset_ref => $rs,
                              query_parameters_ref=>\%parameters,
                              rs_params_ref=> {},
                              url_cols_ref=> [],
                              hidden_cols_ref=> {},
                               max_widths=> {},
-                             column_titles_ref=> $html->{column_list_ref},
+                             column_titles_ref=> $rs->{column_list_ref},
                              base_url=> '',
+														 output_mode => $sbeams->output_mode()
                                   );
 
 
@@ -588,9 +596,9 @@ sub handle_request {
     #### If QUERY was not selected, then tell the user to enter some parameters
   } else {
     if ($sbeams->invocation_mode() eq 'http' && $is_html ) {
-      print "<H4>Select parameters above and press QUERY</H4>\n";
+      $content .= "<H4>Select parameters above and press QUERY</H4>\n";
     } else {
-      print "You need to supply some parameters to contrain the query\n";
+      $content .= "You need to supply some parameters to contrain the query\n";
     }
   }
 
@@ -649,6 +657,7 @@ sub handle_request {
     }
   }
 
+  return $content;
 
 } # end handle_request
 
