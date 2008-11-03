@@ -665,7 +665,7 @@ sub handle_request {
   );
 
   %hidden_cols = (
-    'Suitability Score' => 1,
+#    'Suitability Score' => 1,
     'Best Adjusted Prob' => 1,
 #    'Pre AA' => 1,
 #    'Fol AA' => 1,
