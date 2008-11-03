@@ -612,7 +612,7 @@ sub handle_request {
     ["best_probability","STR(PI.best_probability,7,3)","<DIV TITLE='Highest PeptideProphet probability for this observed sequence'>Best Prob</DIV>"],
     ["best_adjusted_probability","STR(PI.best_adjusted_probability,7,3)","<DIV TITLE=''>Best Adjusted Prob</DIV>"],
     ["n_observations","PI.n_observations","<DIV TITLE='Total number of observations in all modified forms and charge states'>N Obs</DIV>"],
-    ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","<DIV TITLE='Empirical Proteotypic Score'>EPS</DIV>"],
+    ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","<DIV TITLE='Empirical Observability Score'>EOS</DIV>"],
     ["SSRCalc_relative_hydrophobicity","STR(P.SSRCalc_relative_hydrophobicity,7,2)","<DIV TITLE='SSRCalc Relative Hydrophobicity score'>RHS</DIV>"],
     ["n_protein_mappings","PI.n_protein_mappings","<DIV TITLE='Number of proteins in the reference database to which this peptide maps'>N Protein Mappings</DIV>"],
     ["n_genome_locations","PI.n_genome_locations","<DIV TITLE='Number of discrete genome locations which encode this amino acid sequence'>N Genome Locations</DIV>"],
