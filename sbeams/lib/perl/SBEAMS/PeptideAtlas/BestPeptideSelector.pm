@@ -153,7 +153,8 @@ sub getBestPeptides {
     my $following_residue = $resultset_ref->{data_ref}->[$i]->[$cols->{following_residue}];
     my $peptide_sequence = $resultset_ref->{data_ref}->[$i]->[$cols->{peptide_sequence}];
 
-    $best_probability += 0.03 if ($best_probability == 1.000);
+    # removed p=1.0 fudge factor 2008-11-04 as per EWD.
+    # $best_probability += 0.03 if ($best_probability == 1.000);
     my $empirical_observability_fraction = 0;
     my $divisor = 3;
 
@@ -176,12 +177,17 @@ sub getBestPeptides {
       }
     }
 
-    if ($preceding_residue =~ /[KR\-]/ && 
-         ( $peptide_sequence =~ /[KR]$/ || $following_residue eq '-') ) {
-    } else {
+    ## Penalty if not fully tryptic
+    unless ($preceding_residue =~ /[KR\-]/ && 
+             ($peptide_sequence =~ /[KR]$/ || $following_residue eq '-') 
+					 ) {
       $suitability_score *= 0.2;
     }
 
+    ## Penalty if missed cleavages
+    if (substr($peptide_sequence,0,length($peptide_sequence)) =~ /([KR][^P])/) {
+      $suitability_score *= 0.5;
+		}
 
     $resultset_ref->{data_ref}->[$i]->[$cols->{suitability_score}] =
       sprintf("%.3f",$suitability_score);
