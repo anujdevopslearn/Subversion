@@ -608,7 +608,7 @@ sub handle_request {
     ["preceding_residue","PI.preceding_residue","<DIV TITLE='Preceding (towards the N terminus) amino acid'>Pre AA</DIV>"],
     ["peptide_sequence","P.peptide_sequence","<DIV TITLE='Amino Acid sequence of this peptide'>Peptide Sequence</DIV>"],
     ["following_residue","PI.following_residue","<DIV TITLE='Following (towards the C terminus) amino acid'>Fol AA</DIV>"],
-    ["suitability_score","0.0001","<DIV TITLE=''>Suitability Score</DIV>"],
+    ["suitability_score","0.0001","<DIV TITLE='Score derived from peptide probability, EOS, and sequence characteristics (NTT, missed cleavages, etc.)'>Suitability Score</DIV>"],
     ["best_probability","STR(PI.best_probability,7,3)","<DIV TITLE='Highest PeptideProphet probability for this observed sequence'>Best Prob</DIV>"],
     ["best_adjusted_probability","STR(PI.best_adjusted_probability,7,3)","<DIV TITLE=''>Best Adjusted Prob</DIV>"],
     ["n_observations","PI.n_observations","<DIV TITLE='Total number of observations in all modified forms and charge states'>N Obs</DIV>"],
