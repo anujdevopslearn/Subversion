@@ -56,7 +56,9 @@ my $glyco_site_track = "N-Glyco Sites";
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/Glyco_prediction.cgi";
 
-my @search_types = ('Gene Symbol',
+my @search_types = (
+          'All Fields',
+          'Gene Symbol',
 					'Gene Name/Alias',
 					'Swiss Prot Accession Number',
 					'IPI Accession Number',
@@ -152,6 +154,38 @@ sub handle_request {
         || die "ref_parameters not passed";
 
     	my %parameters = %{$ref_parameters};
+
+      my $tab = '&nbsp;' x 2;
+
+      my $search_help = qq~
+			<STYLE type="text/css">
+			.info_box { background: #F0F0F0; border: #000 1px solid; padding: 4px; width: 80%; color: #444444 }
+			</STYLE>
+			<DIV CLASS=info_box>
+			* The annotation search looks at various accessions, names and symbols <BR> 
+			  $tab used to designate a protein or proteins.                             <BR>
+		  * The 'all fields' search will search vs. all of these various annotations,<BR>
+			  $tab or you can pick a specific one for a faster search.                      <BR>
+      * The sequence search searches against the protein sequences in the        <BR>
+			  $tab reference database.                                                      <BR>
+      * You can search either annotations or protein sequence, if both are       <BR>
+		    $tab specified the annotation search will supersede the sequence search.      <BR>
+			* The '%' character is a wildcard, and can be used to search protein       <BR>
+			  $tab sequences and all annotations except (entrez) gene_id.                   <BR>
+			* ipi accession, gene_id, protein symbol and swiss_prot_id can be searched <BR>
+			  $tab with a semicolon-delimited string of identifiers.                               <BR>
+			</DIV>
+			~;
+      my @toggle = $sbeams->make_toggle_section( textlink => 1,
+                                                  imglink => 1,
+                                                  hidetext => "Hide Search Help",
+                                                  showtext => "Show Search Help",
+                                                  visible => 0,
+                                                  sticky  => 1,
+                                                  name  => 'search_help',
+                                                  content => $search_help
+                                                  );
+#				  return "<span class=lg_body_text>Alignment created using <A HREF='http://www.clustal.org' TARGET=_clustal>ClustalW</A></span><BR><BR> ( $toggle[1] ) <BR> $toggle[0] ";
 	
 	print 
 	$q->table({class=>'table_setup'},
@@ -163,18 +197,23 @@ sub handle_request {
  	     $q->td({colspan=>2}, "The ISB N-Glyco prediction server shows all the N-linked glycosylation site contained 
 		    within predicted and identified tryptic peptides.  
 		    The Glyco score indicates how likely the site is glycosylated and the detection score
-		    is an indication on how likely the glycosylated peptide will be detected in a MS/MS run.  This is 
-		   useful for quantitating proteins of interest. 
-		   <br>
-		   Click <a href='http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?cmd=Retrieve&db=pubmed&dopt=Abstract&list_uids=15637048'>here</a>
-		   for more information."
+		    is an indication on how likely the glycosylated peptide will be detected in a MS/MS run.  
+		    [ <a href='http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?cmd=Retrieve&db=pubmed&dopt=Abstract&list_uids=15637048'>view publication </a> ]."
 	     )
 	 ), 
-	$q->Tr(
-	   $q->td({colspan=>2},'&nbsp; <br> &nbsp;') 
-	 ),	    
+
+	 $q->Tr(
+ 	   $q->td({colspan=>2}, "&nbsp;")
+	 ),
+	 $q->Tr(
+ 	   $q->td({colspan=>2}, "$toggle[1] <BR> $toggle[0]")
+	 ),
+	 $q->Tr(
+ 	   $q->td({colspan=>2}, "&nbsp;")
+	 ),
+	
 	 $q->Tr({class=>'rev_gray_head'},
-	   $q->td({colspan=>2, class=>'rev_gray_head'}, "Text Search")
+	   $q->td({colspan=>2, class=>'rev_gray_head'}, "Annotation Search")
 	 ),
 	 $q->Tr(
 	   $q->td({class=>'grey_bg'}, "Choose Search option"),
@@ -182,7 +221,7 @@ sub handle_request {
 	      $q->start_form(),
 	      $q->popup_menu(-name=>'search_type',
                                 -values=>\@search_types,
-                                -default=>['Gene Symbol'],
+                                -default=>['All Fields'],
                                 -size=>1,      
 	   			)
 	   )
@@ -196,13 +235,15 @@ sub handle_request {
                            -maxlength=>80)
 	  )  
 	 ),
+#	 $q->Tr(
+# 	   $q->td({class=>'blue_bg_glyco', colspan=>2}, "Wildcard character '%' can be used to broaden the search")
+#	 ),
 	 $q->Tr(
- 	   $q->td({class=>'blue_bg_glyco', colspan=>2}, "Wildcard character '%' can be used to broaden the search")
+ 	   $q->td({colspan=>2}, "&nbsp;")
 	 ),
-	
 	 $q->Tr(
-	   $q->td({colspan=>2}, " <B>-- or --</B> <br>")
-	 ), 
+ 	   $q->td({colspan=>2}, "&nbsp;")
+	 ),
 	 $q->Tr({class=>'rev_gray_head'},
 	   $q->td({colspan=>2, class=>'rev_gray_head'}, "Sequence Search" )
 	 ), 
@@ -215,9 +256,6 @@ sub handle_request {
                           -rows=>8,
                           -columns=>50)
 	    )
-	 ),
-	 $q->Tr(
-	    $q->td({class=>'blue_bg_glyco', colspan=>2}, "Sequence search wildcard is also '%', sequences will be truncated at 500 residues.")
 	 ),
 	
 
@@ -238,7 +276,7 @@ sub handle_request {
 	      $q->td({class=>'rev_gray_head', colspan=>2}, "Examples")
 	   ),
 	   $q->Tr(
-              $q->td({class=>'grey_bg'}, "Gene Name"),
+              $q->td({class=>'grey_bg'}, "Protein Symbol"),
               $q->td($q->a({href=>"$cgi_url=Gene Symbol&search_term=ALCAM"}, "ALCAM") )
 	   ),
 	   $q->Tr(
@@ -287,7 +325,9 @@ sub find_hits{
 	my @results_set = ();
 	
   if ($type eq 'text'){
-    if ($parameters{search_type} eq 'Gene Symbol'){
+    if ($parameters{search_type} eq 'All Fields'){
+      @results_set = $glyco_query_o->all_field_query($parameters{search_term});	
+    }elsif ($parameters{search_type} eq 'Gene Symbol'){
       @results_set = $glyco_query_o->gene_symbol_query($parameters{search_term});	
     }elsif($parameters{search_type} eq 'Gene Name/Alias'){
       @results_set = $glyco_query_o->gene_name_query($parameters{search_term});	
@@ -461,9 +501,10 @@ sub check_search_params{
 	my $ref_parameters = shift;
 	
 	if ($ref_parameters->{search_term} =~ /\w/){
-		if ($ref_parameters->{sequence_search} =~ /\w/ ){
-			print_error("Cannot have a Text Search and Sequence Search in the same query");
-		}
+#		if ($ref_parameters->{sequence_search} =~ /\w/ ){
+#			print_error("Cannot have a Text Search and Sequence Search in the same query");
+#		}
+		$sbeams->set_page_message( type => 'info', msg => "Annotation search supercedes sequence search" ); 
 	}elsif($ref_parameters->{sequence_search} =~ /\w/ ) {
 		return ('sequence_search');
 	}
@@ -889,10 +930,9 @@ sub display_detail_form{
            $predicted_info,
            $identified_info,
            $prot_seq,
-           $protein_map
 				);#end_table	
 		
-#	print "$protein_map\n";	
+	print "$protein_map\n";	
 	print $q->a({id=>'protein_sequence'});
 	
 	
