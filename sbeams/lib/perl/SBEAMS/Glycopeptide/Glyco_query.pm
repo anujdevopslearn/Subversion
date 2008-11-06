@@ -216,19 +216,26 @@ sub get_query_sql {
   my $cutoff = $self->get_current_prophet_cutoff();
   my $clause = '';
   if ( $args{type} eq 'swissprot' ) {
-	  $clause = "WHERE swiss_prot_acc like '$args{term}'";
+	  $clause = " swiss_prot_acc like '$args{term}'";
   } elsif ( $args{type} eq 'protseq' ) {
-    $clause = "WHERE protein_sequence like '$args{term}'";
+    $clause = " protein_sequence like '$args{term}'";
   } elsif ( $args{type} eq 'protsymbol' ) {
-    $clause = "WHERE protein_symbol like '$args{term}'";
+    $clause = " protein_symbol like '$args{term}'";
   } elsif ( $args{type} eq 'protname' ) {
-    $clause = "WHERE protein_name like '$args{term}'";
+    $clause = " protein_name like '$args{term}'";
   } elsif ( $args{type} eq 'ipi' ) {
-    $clause = "WHERE $args{term}";
+    $clause = " $args{term}";
+  } elsif ( $args{type} eq 'gene_id' ) {
+	  $clause = qq~
+		   ipi_accession_number IN 
+      ( SELECT ipi_accessions FROM DCAMPBEL.dbo.ipi_xrefs WHERE 
+        entrez_id IN ( $args{term} ) )
+    ~;
   } else {
     $log->error( "Unknown type" );
     return '';
   }
+	return($clause) if $args{clause_only};
 
   my $sql = qq~
   SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
@@ -239,7 +246,7 @@ sub get_query_sql {
       WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id
       AND peptide_prophet_score >= $cutoff ) AS num_identified 
   FROM $TBGP_IPI_DATA
-  $clause
+  WHERE $clause
   ~;
   $log->info( $sbeams->evalSQL( $sql ) );
   return $sql;
@@ -257,8 +264,20 @@ sub gene_id_query {
 	my $term = shift;
 
   $term =~ s/\;/\,/g;
+	my $termstr = $term;
+	$termstr =~ s/,//g;
+	$termstr =~ s/\s//g;
+	if ( $termstr !~ /^\d+$/ ) {
+		$log->error( "used illegal characters ($term includes non-numerics)" );
+	  my $sql = qq~
+      SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 0
+      FROM $TBGP_IPI_DATA
+      WHERE ipi_accession_number = ''
+    ~;
+	return $sbeams->selectHashArray($sql)
+	}
 	
-	my $sql = qq~
+	my $osql = qq~
     SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
     (SELECT COUNT(*) FROM $TBGP_IDENTIFIED_TO_IPI 
     WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id ) AS num_identified 
@@ -267,10 +286,103 @@ sub gene_id_query {
       ( SELECT ipi_accessions FROM DCAMPBEL.dbo.ipi_xrefs WHERE 
         entrez_id IN ( $term ) )
   ~;
-  $log->info( $sql );
+  $log->info( $osql );
 
   # Newfangled
-#my $sql = $self->get_query_sql( type => 'gene_id', term => $term );
+  my $sql = $self->get_query_sql( type => 'gene_id', term => $term );
+	return $sbeams->selectHashArray($sql)
+}
+
+
+#+
+# All fields query
+#-
+sub all_field_query {
+	my $self = shift;
+	my $term = shift;
+
+	# handle semi-separated lists
+  $term =~ s/\;/\,/g;
+	my $no_space_term = $term;
+	$no_space_term =~ s/\s//g;
+  my @mult_terms = split /,/, $no_space_term;
+	my $mult_term_str = '';
+  for my $tm ( @mult_terms ) {
+    $mult_term_str .= ( $mult_term_str ) ? "OR CURR_COL_NAME = '$tm'\n" : "( CURR_COL_NAME = '$tm'\n";
+	}
+	$mult_term_str .= ')';
+	
+	my $sing_term_str = " CURR_COL_NAME LIKE '$term'\n";
+
+	my $clause = '';
+
+	{ # ipi_accession block
+  	my $search_string = ( scalar(@mult_terms) > 1 ) ? $mult_term_str : $sing_term_str;
+		$search_string =~ s/CURR_COL_NAME/ipi_accession_number/g;
+		$clause = "WHERE ( $search_string ";
+	} # end ipi_accession block
+
+
+	{ # swiss_prot_accession block
+  	my $search_string = ( scalar(@mult_terms) > 1 ) ? $mult_term_str : $sing_term_str;
+		$search_string =~ s/CURR_COL_NAME/swiss_prot_acc/g;
+		$clause .= "OR $search_string ";
+	} # end swiss_prot_accession block
+
+#	{ # prot_seq_accession block
+#  	my $search_string =  $sing_term_str;
+#		$search_string =~ s/CURR_COL_NAME/protein_sequence/g;
+#		$clause .= "OR $search_string ";
+#	} # end prot_seq block
+
+	{ # protname_accession block
+  	my $search_string =  $sing_term_str;
+		$search_string =~ s/CURR_COL_NAME/protein_name/g;
+		$clause .= "OR $search_string ";
+	} # end prot_name block
+
+	{ # prot_symbol block
+  	my $search_string = ( scalar(@mult_terms) > 1 ) ? $mult_term_str : $sing_term_str;
+		$search_string =~ s/CURR_COL_NAME/protein_symbol/g;
+
+		$clause .= "OR $search_string ";
+	} # end prot_symbol block
+
+	{ # gene_id block
+		my $search_string = $term;
+		$search_string =~ s/'//g;
+		my $test_string = $search_string;
+		$test_string =~ s/,//g;
+		$log->debug( "Test string is $test_string.  Is it all digits?");
+    if ( $test_string =~ /^\d+$/ ) {
+	    my $subquery = qq~
+		     ipi_accession_number IN 
+        ( SELECT ipi_accessions FROM DCAMPBEL.dbo.ipi_xrefs WHERE 
+          entrez_id IN ( $search_string ) )
+      ~;
+		  $clause .= "OR $subquery";
+		}
+
+	} # end gene_id block
+
+	$clause .= " )\n";
+
+  my $cutoff = $self->get_current_prophet_cutoff();
+
+  my $sql = qq~
+  SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
+    ( SELECT COUNT(*) 
+      FROM $TBGP_IDENTIFIED_TO_IPI ITI 
+      JOIN $TBGP_IDENTIFIED_PEPTIDE IP
+        ON IP.identified_peptide_id = ITI.identified_peptide_id
+      WHERE ipi_data_id = $TBGP_IPI_DATA.ipi_data_id
+      AND peptide_prophet_score >= $cutoff ) AS num_identified 
+  FROM $TBGP_IPI_DATA
+	$clause
+	~;
+
+	$log->debug( "FrankenSQL is:\n $sql" );
+	
 	return $sbeams->selectHashArray($sql)
 }
 
