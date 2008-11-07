@@ -351,10 +351,16 @@ sub all_field_query {
 	{ # gene_id block
 		my $search_string = $term;
 		$search_string =~ s/'//g;
-		my $test_string = $search_string;
-		$test_string =~ s/,//g;
-		$log->debug( "Test string is $test_string.  Is it all digits?");
-    if ( $test_string =~ /^\d+$/ ) {
+
+		my @submitted_keys = split( /,/, $search_string );
+		my @valid_keys;
+		for my $key ( @submitted_keys ) {
+			$key =~ s/\s//g;
+			next unless $key =~ /^\d+$/;
+			push @valid_keys, $key;
+		}
+		$search_string = join( ',', @valid_keys );
+    if ( $search_string ) {
 	    my $subquery = qq~
 		     ipi_accession_number IN 
         ( SELECT ipi_accessions FROM DCAMPBEL.dbo.ipi_xrefs WHERE 
