@@ -1001,7 +1001,7 @@ sub handle_request {
       $log->debug( $transitionsHTML );
       $log->debug( "$transitionsHTML" );
       #### Display table
-      print "<TABLE WIDTH=600><BR>$transitionsHTML</TABLE>\n" if $#{$mrm_transitions};
+      print "<TABLE WIDTH=600><BR>$transitionsHTML</TABLE>\n" if $#{$mrm_transitions} && $htmlmode;
     }
 
 
