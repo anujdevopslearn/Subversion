@@ -157,7 +157,7 @@ sub getBuildConsensusLib {
 
   # FIXME - hard-coded value for MRM Atlas
   if ( $build_id == 123 ) {
-    $lib_id = 6;
+    $lib_id = 12;
   } elsif ( $build_id == 110 ) {
 		$lib_id = 5;
 	} elsif ( grep /^$build_id$/, @human ) {
