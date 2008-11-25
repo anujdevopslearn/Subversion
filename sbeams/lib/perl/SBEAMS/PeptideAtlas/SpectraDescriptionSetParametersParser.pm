@@ -136,7 +136,8 @@ sub parse {
       $model_name = $model_name . " $1";
     }
 
-    if ($line =~ /\<software\stype=\"conversion(.+)/) {
+    if ($line =~ /\<software\stype=\"conversion(.+)/ ||
+       $line =~ /\<software\stype=\"processing(.+)/ ) {
 
       # why oh why aren't we using an xml parser?
       my $morecontent = $1;
