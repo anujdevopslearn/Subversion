@@ -48,6 +48,7 @@ sub new {
   %supported_modifications = (
     'monoisotopic' => {
       'n[145]' => 144.102063,   # ABI iTRAQ (UniMod)
+      'C[143]' => 39.994915,    # Pyro-carbamidonmethyl (Unimod)
       'C[148]' => 45.987721,    # Beta-methylthiolation (UniMod)
       'C[160]' => 57.021464,    # Carbamidomethyl (UniMod)Cys_CAM
       'C[161]' => 58.005479,    # Search ERROR?? Maybe not, maybe Carboxymethyl?? Latin Square?
@@ -75,6 +76,7 @@ sub new {
     },
     'average' => {
       'n[145]' => 144.1544,     # ABI iTRAQ (UniMod)
+      'C[143]' => 40.0208,      # Pyro-carbamidonmethyl (Unimod)
       'C[148]' => 46.0916,      # Beta-methylthiolation (UniMod)
       'C[160]' => 57.0513,      # Cys_CAM (UniMod)
       'C[161]' => 58.0361,      # Search ERROR?? Maybe not, maybe Carboxymethyl?? Latin Square?
