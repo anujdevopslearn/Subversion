@@ -71,6 +71,7 @@ sub new {
       'R[166]' => 10.008269,    # Silac (UniMod)
       'Q[111]' => -17.026549,   # Pyro-glu from Q (UniMod)
       'S[167]' => 79.966331,    # Phosphorylation (UniMod)
+      'S[166]' => 79.966331,    # Phosphorylation (UniMod)
       'T[181]' => 79.966331,    # Phosphorylation (UniMod)
       'Y[243]' => 79.966331,    # Phosphorylation (UniMod)
     },
@@ -99,6 +100,7 @@ sub new {
       'R[166]' => 9.9296,     # Silac (UniMod)
       'Q[111]' => -17.0305,   # Pyro-glu from Q (UniMod)
       'S[167]' => 79.9799,    # Phosphorylation (UniMod)
+      'S[166]' => 79.9799,    # Phosphorylation (UniMod)
       'T[181]' => 79.9799,    # Phosphorylation (UniMod)
       'Y[243]' => 79.9799,    # Phosphorylation (UniMod)
     },
