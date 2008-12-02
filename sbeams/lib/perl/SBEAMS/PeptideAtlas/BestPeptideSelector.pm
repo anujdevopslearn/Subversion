@@ -186,7 +186,7 @@ sub getBestPeptides {
 
     ## Penalty if missed cleavages
     if (substr($peptide_sequence,0,length($peptide_sequence)) =~ /([KR][^P])/) {
-      $suitability_score *= 0.5;
+      $suitability_score *= 0.67;
 		}
 
     $resultset_ref->{data_ref}->[$i]->[$cols->{suitability_score}] =
