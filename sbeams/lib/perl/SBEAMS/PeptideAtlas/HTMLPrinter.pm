@@ -15,11 +15,11 @@ package SBEAMS::PeptideAtlas::HTMLPrinter;
 
 
 use strict;
-use vars qw($sbeams $current_contact_id $current_username
+use vars qw($sbeams $current_contact_id $current_username $q
              $current_work_group_id $current_work_group_name
              $current_project_id $current_project_name $current_user_context_id);
 use CGI::Carp qw(fatalsToBrowser croak);
-use SBEAMS::Connection qw($log);
+use SBEAMS::Connection qw($log $q);
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::TableInfo;
@@ -75,18 +75,17 @@ sub display_page_header {
       $self->displayGuestPageHeader( @_ );
       return;
   } elsif ( $CONFIG_SETTING{PA_USER_SKIN} ) {
-    my $uname = $sbeams->getCurrent_username();
-#    $log->debug( "username is $uname" );
+    $current_username = $sbeams->getCurrent_username();
     for my $skin ( split( ",", $CONFIG_SETTING{PA_USER_SKIN} ) ) {
 #      $log->debug( "skin is $skin" );
       my ( $name, $value ) = split( /::::/, $skin, -1 );
 #      $log->debug( "name is $name, val is $value" );
-      if ( $name eq $uname ) {
+      if ( $name eq $current_username ) {
 #        $log->debug( "CUSTOM! $CONFIG_SETTING{PA_USER_SKIN}" );
         $self->displayGuestPageHeader( @_, uri => $value );
         return;
       } else {
-        $log->debug( "$name does not equal $uname" );
+        $log->debug( "$name does not equal $current_username" );
       }
     }
   }
@@ -158,6 +157,25 @@ sub displayGuestPageHeader {
   }
   my $LOGIN_LINK = qq~<A HREF="$LOGIN_URI" class="Nav_link">LOGIN</A>~;
 
+	$log->debug( "Does c-widget exist?" );
+
+	my $sbeams = $self->getSBEAMS();
+ 	$current_username ||= $sbeams->getCurrent_username();
+	$log->debug( "SBEAMS is $sbeams in HTML Printer, user is $current_username" );
+
+	my $cswitcher = '';
+	if ( -e "$PHYSICAL_BASE_DIR/lib/perl/SBEAMS/PeptideAtlas/ContextWidget.pm" ) {
+		$log->debug( "it exists, lets use it!" );
+		require SBEAMS::PeptideAtlas::ContextWidget;
+		my $cwidget = SBEAMS::PeptideAtlas::ContextWidget->new();
+		$log->debug( "got a new one" );
+		$cswitcher = $cwidget->getContextSwitcher( username => $current_username,
+		                                           cookie_path => $HTML_BASE_DIR );
+
+	} else {
+		$log->debug(  "$PHYSICAL_BASE_DIR/lib/perl/SBEAMS/PeptideAtlas/ContextWidget.pm doesn't exist" ) 
+	}
+
 
   #### Obtain main SBEAMS object and use its http_header
   my $sbeams = $self->getSBEAMS();
@@ -174,6 +192,7 @@ sub displayGuestPageHeader {
   my $init = ( $args{init_tooltip} ) ? $self->init_pa_tooltip() : '';
   my $css_info = $sbeams->printStyleSheet( module_only => 1 );
 
+  $LOGIN_LINK .= "<BR><BR><BR>\n$cswitcher<BR>\n";
   for ( @page ) {
     $cnt++;
     $_ =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
@@ -700,6 +719,123 @@ sub getSamplePlotDisplay {
   return ( wantarray() ) ? ($header, $chart) : $header . "\n" . $chart;
 }
 
+###############################################################################
+# displaySampleMap
+###############################################################################
+sub getSampleMapDisplay {
+  my $self = shift;
+  my $sbeams = $self->getSBEAMS();
+  my %args = @_;
+
+  my $in = join( ", ", keys( %{$args{instance_ids}} ) );
+#  return unless $in;
+
+  my $header = '';
+  if ( $args{link} ) {
+    $header .= $self->encodeSectionHeader( text => 'Sample peptide map:',
+                                          link => $args{link} );
+  } else {
+    $header .= $self->encodeSectionHeader( text => 'Sample peptide map:',);
+  }
+  $header = '' if $args{no_header};
+
+  my $html = '';
+  my $trinfo = $args{tr_info} || '';
+
+
+  my $sql = qq~     
+  	SELECT DISTINCT SB.atlas_search_batch_id, sample_tag, 
+		-- CASE WHEN PISB.n_observations IS NULL THEN 0 ELSE PISB.n_observations END
+		PISB.n_observations, peptide_accession 
+		FROM $TBAT_ATLAS_SEARCH_BATCH SB 
+	  JOIN $TBAT_SAMPLE S ON s.sample_id = SB.sample_id
+	  JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB ON PISB.atlas_search_batch_id = SB.atlas_search_batch_id
+	  JOIN $TBAT_PEPTIDE_INSTANCE PI ON PI.peptide_instance_id = PISB.peptide_instance_id
+	  JOIN $TBAT_PEPTIDE P ON P.peptide_id = PI.peptide_id
+    WHERE PI.peptide_instance_id IN ( $in )
+    AND S.record_status != 'D'
+    ORDER BY peptide_accession ASC
+  ~;
+
+  my @samples = $sbeams->selectSeveralColumns($sql);
+
+  my $sample_js;
+	my %samples;
+	my %peptides;
+	my $cntr = 0;
+  for my $row ( @samples ) { 
+		$cntr++;
+		my $key = $row->[1] . '::::' . $row->[0];
+		$peptides{$row->[3]}++;
+		$samples{$key} ||= {};
+		$samples{$key}->{$row->[3]} = $row->[2];
+	}
+	my $array_def = qq~
+	<script type="text/javascript">
+    google.setOnLoadCallback(drawHeatMap);
+    function drawHeatMap() {
+    var data = new google.visualization.DataTable();
+    data.addColumn('string', 'Sample Name');
+	~;
+	my @peps;
+  for my $pa ( sort( keys( %peptides ) ) ) {
+    $array_def .= "    data.addColumn('number', '$pa');\n";
+		push @peps, $pa;
+	}
+	$array_def .= "DEFINE_ROWS_HERE\n";
+
+	my $row = 0;
+	my $max = 0;
+	my $min = 50;
+	$cntr = 0;
+	for my $sa ( sort( keys( %samples ) ) ) {
+	  my $col = 0;
+		my ( $name, $id ) = split "::::", $sa;
+    $array_def .= "    data.setValue( $row, $col, '$name' );\n";
+	  $col++;
+    for my $pa ( @peps ) {
+			if ( $samples{$sa}->{$pa} ) {
+        my $pep_cnt = log(1 + $samples{$sa}->{$pa})/log(10);
+			  $max = ( $pep_cnt > $max ) ? $pep_cnt : $max;
+    		$min = ( $pep_cnt < $min ) ? $pep_cnt : $min;
+        $array_def .= "    data.setValue( $row, $col, $pep_cnt );\n";
+		    $cntr++;
+			}
+		  $col++;
+		}
+		$row++;
+	}
+	$array_def =~ s/DEFINE_ROWS_HERE/data.addRows($row);/;
+	my $num_colors = 256;
+	$array_def .= qq~
+	heatmap = new org.systemsbiology.visualization.BioHeatMap(document.getElementById('heatmapContainer'));
+	heatmap.draw(data, {numberOfColors:$num_colors,passThroughBlack:false,startColor:{r:255,g:255,b:255,a:1},endColor:{r:100,g:100,b:100,a:1},emptyDataColor:{r:256,g:256,b:256,a:1}});
+		}
+  </script>
+  ~;
+
+	my $content = qq~
+  <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+  <script type="text/javascript">
+    google.load("visualization", "1", {});
+    google.load("prototype", "1.6");
+  </script>    
+  <script type="text/javascript" src="http://systemsbiology-visualizations.googlecode.com/svn/trunk/src/main/js/load.js"></script>
+  <script type="text/javascript">
+    systemsbiology.load("visualization", "1.0", {packages:["bioheatmap"]});
+  </script>
+
+	$array_def
+
+	<TR><TD> <DIV ID="heatmapContainer"></DIV>  </TD></TR>
+	
+
+	~;
+
+  return ( wantarray() ) ? ($header, $content) : $header . "\n" . $content;
+
+
+} # end getSampleMapDisplay
 
 ###############################################################################
 # displaySamples
@@ -1003,7 +1139,6 @@ sub get_atlas_checklist {
     <INPUT $checked TYPE="checkbox" NAME="build_id" VALUE="$build" onchange="$args{js_call}($build);">
     END
     $table->addRow( [ $chkbox, $build, @build{qw(display_name name org is_default)} ] );
-#		$log->debug( "Setting row " . $table->getRowNum() . " to $build{bgcolor} for build $build" );
     $table->setRowAttr( ROWS => [$table->getRowNum()], BGCOLOR => $build{bgcolor} );
 
 	}
