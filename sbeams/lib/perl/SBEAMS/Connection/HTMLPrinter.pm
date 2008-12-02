@@ -245,6 +245,7 @@ my $module_styles =<<"  END_STYLE";
   .grey_bg{ background-color: #CCCCCC }
   .med_gray_bg{ background-color: #CCCCCC; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; Padding:2}
   .grey_header{ font-family: Helvetica, Arial, sans-serif; color: #000000; font-size: ${FONT_SIZE_HG}pt; background-color: #CCCCCC; font-weight: bold; padding:1 2}
+  .section_description{ font-family: Helvetica, Arial, sans-serif; color: #666666; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; padding:1}
   .rev_gray{background-color: #555555; font-size: ${FONT_SIZE_MED}pt; font-weight: bold; color:white; line-height: 25px;}
   .rev_gray_head{background-color: #888888; font-size: ${FONT_SIZE}pt; font-weight: bold; color:white; line-height: 25px;}
   .blue_bg{ font-family: Helvetica, Arial, sans-serif; background-color: #4455cc; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; color: white}
