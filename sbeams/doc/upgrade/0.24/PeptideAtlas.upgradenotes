@@ -16,7 +16,7 @@ Schema changes (see full definitions in driver tables):
 - Added to table 'peptide' column 'peptide_isoelectric_point'
 
 - Added to table 'peptide_instance' columns 'preceding_residue',
-  'following_residue', 'original_protein_name',CCT11M 'best_adjusted_probability'
+  'following_residue', 'original_protein_name', 'best_adjusted_probability'
 
 - Added to table 'peptide_instance' columns 'n_samples', 'n_protein_samples',
   'empirical_proteotypic_score', 'predicted_proteotypic_score'
@@ -526,7 +526,7 @@ Added GetMRMList cgi fields to PeptideAtlas_table_column.txt
 
 Added NIST_library_name to NIST_library table in PeptideAtlas_table_column.txt
 
-Added otein_name_alt to NIST_library_spectrum table in PeptideAtlas_table_column.txt
+Added potein_name_alt to NIST_library_spectrum table in PeptideAtlas_table_column.txt
 
 Updated drivers:
     cd $SBEAMS/lib/scripts/Core
@@ -651,3 +651,154 @@ N AT_transition_suitability_level
 
 
 -----------------
+
+2008-10-09
+
+ - Ran comparison between PA and PA_test schemata, found the following discrepancies.
+
+ALTER TABLE modified_peptide_annotation 
+ADD  peptide_sequence           varchar(255) NULL
+GO
+ALTER TABLE modified_peptide_annotation 
+ADD q3_peak_intensity          float NULL
+GO
+ALTER TABLE modified_peptide_instance_sample
+ADD n_observations             int  NULL
+GO
+ALTER TABLE peptide_instance_sample
+ADD n_observations             int  NULL
+GO
+ALTER TABLE peptide_annotation DROP COLUMN modified_peptide_sequence
+GO
+ALTER TABLE search_batch_statistics ADD n_good_spectra             int NULL
+GO
+ALTER TABLE search_batch_statistics ADD rownum                     int NULL
+GO
+ALTER TABLE search_batch_statistics ADD cumulative_n_peptides      int NULL
+GO
+
+2008-12-01
+ -- Changed name of NIST_ tables to more neutral consensus_
+
+ -- Recreate tables
+CREATE TABLE PeptideAtlas.dbo.consensus_library (
+  consensus_library_id       int IDENTITY NOT NULL,
+  consensus_library_name     varchar(100) NOT NULL,
+  organism_id                int NULL,
+  comment                    text NULL,
+  date_created               datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_by_id              int NOT NULL DEFAULT '1',
+  date_modified              datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  modified_by_id             int NOT NULL DEFAULT '1',
+  owner_group_id             int NOT NULL DEFAULT '1',
+  record_status              char(1) NOT NULL DEFAULT 'N',
+  PRIMARY KEY (consensus_library_id)
+  )
+GO
+
+CREATE TABLE PeptideAtlas.dbo.consensus_library_spectrum (
+  consensus_library_spectrum_id  int IDENTITY NOT NULL,
+  consensus_library_id       int NOT NULL,
+  sequence                   varchar(255) NOT NULL,
+  modified_sequence          varchar(255) NULL,
+  charge                     int NOT NULL,
+  consensus_spectrum_type_id  int NOT NULL,
+  modifications              varchar(255) NULL,
+  protein_name               varchar(255) NULL,
+  protein_name_alt           varchar(255) NULL,
+  mz_exact                   float NOT NULL,
+  PRIMARY KEY (consensus_library_spectrum_id)
+  )
+GO
+
+CREATE TABLE PeptideAtlas.dbo.consensus_library_spectrum_peak (
+  consensus_library_spectrum_peak_id  int IDENTITY NOT NULL,
+  consensus_library_spectrum_id  int NOT NULL,
+  mz                         float NOT NULL,
+  relative_intensity         int NOT NULL,
+  ion_label                  varchar(255) NULL,
+  peak_label                 varchar(255) NULL,
+  charge                     int NOT NULL,
+  PRIMARY KEY (consensus_library_spectrum_peak_id)
+  )
+GO
+
+CREATE TABLE PeptideAtlas.dbo.consensus_spectrum_type (
+  consensus_spectrum_type_id  int IDENTITY NOT NULL,
+  consensus_spectrum_type_name  varchar(50) NOT NULL,
+  consensus_spectrum_type_description  varchar(1024) NOT NULL,
+  PRIMARY KEY (consensus_spectrum_type_id)
+  )
+GO
+
+CREATE TABLE PeptideAtlas.dbo.consensus_library_spectrum_comment (
+  consensus_library_spectrum_id  int NOT NULL,
+  parameter_key              varchar(100) NOT NULL,
+  parameter_value            varchar(1023) NOT NULL
+  )
+
+-- Optionally drop the old ones - 
+DROP TABLE PeptideAtlas.dbo.NIST_library
+DROP TABLE PeptideAtlas.dbo.NIST_library_spectrum
+DROP TABLE PeptideAtlas.dbo.NIST_library_spectrum_comment
+DROP TABLE PeptideAtlas.dbo.NIST_library_spectrum_peak
+DROP TABLE PeptideAtlas.dbo.NIST_spectrum_type
+
+-- Added new indexs to peptide_instance and related tables
+CREATE NONCLUSTERED INDEX idx_atlas_search_batch_id ON dbo.peptide_instance_search_batch ( atlas_search_batch_id ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_peptide_id ON dbo.peptide_instance ( peptide_id )  --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_biosequence_set_id ON dbo.biosequence ( biosequence_set_id )   --WITH DROP_EXISTING
+
+-- Changed modified_peptide_annotation table name, added set table
+
+CREATE TABLE PeptideAtlas.dbo.srm_transition_set (
+  srm_transition_set_id      int IDENTITY NOT NULL,
+  set_name                   varchar(50) NULL,
+  instrument_id              int NULL,
+  publication_id             int NULL,
+  annotator_name             varchar(50) NULL,
+  annotator_contact_id       int NULL,
+  project_id                 int NOT NULL,
+  q3_peak_intensity          float NULL,
+  comment                    text NULL,
+  date_created               datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_by_id              int NOT NULL DEFAULT '1',
+  date_modified              datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  modified_by_id             int NOT NULL DEFAULT '1',
+  owner_group_id             int NOT NULL DEFAULT '1',
+  record_status              char(1) NOT NULL DEFAULT 'N',
+  PRIMARY KEY (srm_transition_set_id)
+  )
+GO
+
+
+CREATE TABLE PeptideAtlas.dbo.srm_transition (
+  srm_transition_id          int IDENTITY NOT NULL,
+  peptide_sequence           varchar(255) NOT NULL,
+  modified_peptide_sequence  varchar(255) NOT NULL,
+  peptide_charge             int NOT NULL,
+  q1_mz                      float NOT NULL,
+  q3_mz                      float NOT NULL,
+  q3_ion_label               varchar(50) NULL,
+  transition_suitability_level_id  int NOT NULL,
+  collision_energy           float NULL,
+  retention_time             float NULL,
+  peptide_id                 int NULL,
+  srm_transition_set_id      int NOT NULL,
+  q3_peak_intensity          float NULL,
+  comment                    text NULL,
+  date_created               datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_by_id              int NOT NULL DEFAULT '1',
+  date_modified              datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  modified_by_id             int NOT NULL DEFAULT '1',
+  owner_group_id             int NOT NULL DEFAULT '1',
+  record_status              char(1) NOT NULL DEFAULT 'N',
+  PRIMARY KEY (srm_transition_id)
+  )
+GO
+ ---Optionally drop old tables
+
+
+
+
+
