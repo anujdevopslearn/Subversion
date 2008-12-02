@@ -141,11 +141,13 @@ sub getProjectID
             ~;
     }
 
-    if ($sql)
-    {
-        my ($project_id) = $sbeams->selectOneColumn($sql) or
-          die "\nERROR: Unable to find the project_id"
-          . " with $sql\n\n";
+    if ($sql) {
+        my ($project_id) = $sbeams->selectOneColumn($sql) ||
+          $sbeams->reportException( message => "Unable to find the project_id with SQL:\n $sql" ,
+                                      state => 'ERROR',
+                                      type => 'BAD CONSTRAINT',
+					
+					);
 
         ## check that project is accessible:
         if ( $sbeams->isProjectAccessible( project_id => $project_id ) )
@@ -264,7 +266,7 @@ sub getCurrentAtlasBuildID {
     } else {
       $atlas_build_id = $rows[0];
     }
-    print "atlas build ios $atlas_build_id\n";
+    print "atlas build is $atlas_build_id\n";
 
   #### Otherwise try to get it from the session cookie
   } else {
