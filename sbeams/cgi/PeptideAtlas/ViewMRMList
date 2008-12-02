@@ -465,7 +465,7 @@ sub handle_request {
       my $sth = $sbeams->get_statement_handle($sql);
 			my $end_time = time();
 			my $elapsed_time = $end_time - $start_time;
-			$log->debug( "Fetching ViewMRMList SQL took $elapsed_time seconds" );
+			$log->debug( "Fetching ViewMRMList SQL took $elapsed_time seconds: \n $sql" );
 
 # 0      NLS.consensus_library_spectrum_id,
 # 1      NLS.sequence,
