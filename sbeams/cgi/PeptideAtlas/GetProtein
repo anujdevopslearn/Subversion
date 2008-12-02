@@ -772,7 +772,7 @@ sub handle_request {
       biosequence => $biosequence,
       resultset_ref=>$resultset_ref,
       protein_structure => $protein_structure,
-           glyco => $motif_params{glyco}
+           glyco => $motif_params{glyco},
     );
 
     #### Display the annotated sequence
@@ -799,7 +799,7 @@ sub handle_request {
                            text => "Distinct Observed Peptides ($peptide_counts)",
                            link => $link );
 
-    print qq~ <BR><BR>$obs_help<TABLE width="600">$observed_header</TABLE><TABLE><TR $tr><TD COLSPAN=2>~ if $htmlmode;
+    print qq~ $obs_help<TABLE width="600">$observed_header</TABLE><TABLE><TR $tr><TD COLSPAN=2>~ if $htmlmode;
 
     #### Create Cytoscape format files if selected
     my $java_web_start = { template => 'GetProtein' };
@@ -1043,7 +1043,7 @@ sub handle_request {
                                                          align  => [qw(left center center right right center right right right right left left left)],
                                                            rows => $mrm_transitions );
       #### Display table
-      print "<BR>$trans_help<TABLE WIDTH=600><BR>$transitionsHTML</TABLE>\n" if $#{$mrm_transitions} && $htmlmode;
+      print "$trans_help<TABLE WIDTH=600><BR>$transitionsHTML</TABLE>\n" if $#{$mrm_transitions} && $htmlmode;
     }
 
 
@@ -2050,10 +2050,10 @@ sub displayAnnotatedSequence {
 
 
 #  print "</PRE></TD></TR>\n";
-  print "<TR><TD>" . $sbeamsMOD->get_html_seq( $sequence, $tags ) . "</TD></TR></TABLE>\n";
+  print "<TR $tr><TD>" . $sbeamsMOD->get_html_seq( $sequence, $tags ) . "</TD></TR></TABLE>\n";
   print "\n\n";
-  print "Protein Coverage = ",int($observed_residues/$seq_length*1000)/10,"%";
-  print ' (' . int(($observed_residues)/($seq_length-$cnt)*1000)/10,"% of likely observable sequence)";
+  print "<TABLE><TR $tr><TD>Protein Coverage = ",int($observed_residues/$seq_length*1000)/10,"%";
+  print ' (' . int(($observed_residues)/($seq_length-$cnt)*1000)/10,"% of likely observable sequence)</TD></TR></TABLE>";
   #print "<BR><BR>Notes:<BR>\n$notes_buffer" if ($notes_buffer);
 
 
@@ -2606,26 +2606,18 @@ sub displayExternalLinksSection {
 					       imglink => 1,
 					       sticky => 1 );
 
-  #### Display section header
-  if ($sbeams->output_mode() eq 'html') {
-    my $section_header = $sbeamsMOD->encodeSectionHeader(
+  my $external_links = '';
+  my $section_header = $sbeamsMOD->encodeSectionHeader(
       text => 'External Links',
       link => $link,
-    );
-
-    print qq~
-      <TABLE width="600">
-        $section_header
-    ~;
-  }
-
+  );
 
   #### Debug
   if ( 0 == 1 ) {
     use Data::Dumper;
     my $tmp = Dumper( $biosequence->{synonyms} );
     if ($sbeams->output_mode() eq 'html') {
-      print $sbeamsMOD->encodeSectionItem(
+      $external_links .= $sbeamsMOD->encodeSectionItem(
         key => 'All synonyms',
         tr_info => $tr,
         value => $tmp,
@@ -2640,7 +2632,7 @@ sub displayExternalLinksSection {
   my $entrezGeneID = $biosequence->{synonyms}->{'Entrez Gene Symbol'};
   if ($currentOrganism eq 'Human' && $entrezGeneID) {
     if ($sbeams->output_mode() eq 'html') {
-      print $sbeamsMOD->encodeSectionItem(
+      $external_links .= $sbeamsMOD->encodeSectionItem(
         key => 'Human Protein Atlas',
         tr_info => $tr,
         value => qq~<div style="display:none"><form name="hpa" method="POST" action="http://www.proteinatlas.org/search_advanced.php" target="_info"><input type="hidden" name="search_str" value="$entrezGeneID"></form></div><a href="javascript:document.hpa.submit()" title="Look up $entrezGeneID in the Human Protein Atlas">$entrezGeneID</a>~,
@@ -2654,7 +2646,7 @@ sub displayExternalLinksSection {
   my $ensemblProtein = $biosequence->{synonyms}->{'Ensembl Protein'};
   if ($ensemblProtein) {
     if ($sbeams->output_mode() eq 'html') {
-      print $sbeamsMOD->encodeSectionItem(
+      $external_links .= $sbeamsMOD->encodeSectionItem(
         key => 'Global Proteome Machine',
         tr_info => $tr,
         value => $ensemblProtein,
@@ -2665,8 +2657,11 @@ sub displayExternalLinksSection {
 
 
   #### Close section
-  if ($sbeams->output_mode() eq 'html') {
+  if ($sbeams->output_mode() eq 'html' && $external_links ) {
     print qq~
+      <TABLE width="600">
+        $section_header
+				$external_links
       </TABLE>
     ~;
   }
