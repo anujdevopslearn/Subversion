@@ -25,7 +25,7 @@ require Exporter;
 $VERSION = q[$Id$];
 @EXPORT_OK = qw();
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw( $log );
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::Settings;
 use SBEAMS::PeptideAtlas::Tables;
@@ -102,13 +102,14 @@ sub spectrum_search {
 
   my $charge = ( !$args{charge} ) ? '' : "AND charge = '$args{charge}'";
   my $m_seq = ( !$args{m_seq} ) ? '' : "AND modified_sequence = '$args{m_seq}'";
-  my $lib = ( !$args{lib_id} ) ? '' : "AND consensus_library_id = '$args{lib_id}'";
+  my $lib = ( !$args{lib_id} ) ? '' : "AND CLS.consensus_library_id = '$args{lib_id}'";
 
   my $sql =<<"  END";
   SELECT consensus_library_spectrum_id, sequence, charge, modifications, protein_name
-    mz_exact, consensus_spectrum_type_id, consensus_library_id, modified_sequence,
-    protein_name_alt
-    FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM
+    mz_exact, consensus_spectrum_type_id, CLS.consensus_library_id, modified_sequence,
+    protein_name_alt, consensus_library_name
+    FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM CLS
+    JOIN $TBAT_CONSENSUS_LIBRARY CL ON CL.consensus_library_id = CLS.consensus_library_id
     WHERE sequence = '$args{seq}'
     $charge
     $m_seq
