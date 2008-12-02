@@ -608,7 +608,7 @@ sub handle_request {
     ["preceding_residue","PI.preceding_residue","<DIV TITLE='Preceding (towards the N terminus) amino acid'>Pre AA</DIV>"],
     ["peptide_sequence","P.peptide_sequence","<DIV TITLE='Amino Acid sequence of this peptide'>Peptide Sequence</DIV>"],
     ["following_residue","PI.following_residue","<DIV TITLE='Following (towards the C terminus) amino acid'>Fol AA</DIV>"],
-    ["suitability_score","0.0001","<DIV TITLE='Score derived from peptide probability, EOS, and sequence characteristics (NTT, missed cleavages, etc.)'>Suitability Score</DIV>"],
+    ["suitability_score","0.0001","<DIV TITLE='Score derived from peptide probability, EOS, and sequence characteristics such as missed cleavage(MC) or semi-tryptic(ST); these are annotated in red.'>Suitability<BR>Score</DIV>"],
     ["best_probability","STR(PI.best_probability,7,3)","<DIV TITLE='Highest PeptideProphet probability for this observed sequence'>Best Prob</DIV>"],
     ["best_adjusted_probability","STR(PI.best_adjusted_probability,7,3)","<DIV TITLE=''>Best Adjusted Prob</DIV>"],
     ["n_observations","PI.n_observations","<DIV TITLE='Total number of observations in all modified forms and charge states'>N Obs</DIV>"],
@@ -616,8 +616,11 @@ sub handle_request {
     ["SSRCalc_relative_hydrophobicity","STR(P.SSRCalc_relative_hydrophobicity,7,2)","<DIV TITLE='SSRCalc Relative Hydrophobicity score'>RHS</DIV>"],
     ["n_protein_mappings","PI.n_protein_mappings","<DIV TITLE='Number of proteins in the reference database to which this peptide maps'>N Protein Mappings</DIV>"],
     ["n_genome_locations","PI.n_genome_locations","<DIV TITLE='Number of discrete genome locations which encode this amino acid sequence'>N Genome Locations</DIV>"],
-    ["sample_ids","PI.sample_ids","<DIV TITLE='Samples in which this sequence was seen'>Sample IDs</DIV>"],
-    ["is_subpeptide_of","PI.is_subpeptide_of","<DIV TITLE='Observed peptides of which this peptide is a subsequence'>Parent Peptides</DIV>"],
+    ["sample_ids","PI.sample_ids","sample_ids"],
+    #["sample_ids","PI.sample_ids","<DIV TITLE='Samples in which this sequence was seen'>Sample IDs</DIV>"],
+    #["is_subpeptide_of","PI.is_subpeptide_of","<DIV TITLE='Observed peptides of which this peptide is a subsequence'>Parent Peptides</DIV>"],
+    ["is_subpeptide_of","PI.is_subpeptide_of",'is_subpeptide_of'],
+    ["peptide_instance_id","PI.peptide_instance_id","peptide_instance_id"],
   );
 
   #### Build the columns part of the SQL statement
@@ -667,8 +670,9 @@ sub handle_request {
   %hidden_cols = (
 #    'Suitability Score' => 1,
     'Best Adjusted Prob' => 1,
-#    'Pre AA' => 1,
-#    'Fol AA' => 1,
+    'peptide_instance_id' => 1,
+#		'is_subpeptide_of' => 1,
+#		'sample_ids' => 1
   );
 
 
@@ -790,11 +794,12 @@ sub handle_request {
                                                 sticky => 1 );
 
 
+    my $obs_help = get_table_help( 'observed_peptides' );
     my $observed_header = $sbeamsMOD->encodeSectionHeader(
                            text => "Distinct Observed Peptides ($peptide_counts)",
                            link => $link );
 
-    print qq~ <TABLE width="600">$observed_header</TABLE><TABLE><TR $tr><TD COLSPAN=2>~ if $htmlmode;
+    print qq~ <BR><BR>$obs_help<TABLE width="600">$observed_header</TABLE><TABLE><TR $tr><TD COLSPAN=2>~ if $htmlmode;
 
     #### Create Cytoscape format files if selected
     my $java_web_start = { template => 'GetProtein' };
@@ -809,7 +814,6 @@ sub handle_request {
         java_web_start=>$java_web_start,
       );
     }
-
 
     #### Since we don't display the controls, make the default page size
     #### huge, otherwise the user may not see all peptides
@@ -831,6 +835,53 @@ sub handle_request {
 #    $log->debug( Dumper( $best_peptide_information ) );
 #    $log->debug( Dumper( $resultset_ref ) );
 
+    my %instance_ids;
+#		for my $row ( @{$resultset_ref->{data_ref}} ) {
+#			$instance_ids{$row->[14]}++;
+#		}
+
+    my @pa_accessions;
+    for my $row ( @{$resultset_ref->{data_ref}} ) {
+      push @pa_accessions, $row->[0];
+			my $ntt = 0;
+			if ( $row->[1] =~ /[-RK]/ ) {
+				$ntt++;
+			}
+			if ( $row->[2] =~ /[RK]$/ || $row->[3] eq '-' ) {
+				$ntt++;
+			}
+
+			my $mc = 0;
+			if ( $row->[2] =~ /[RK][^P]/ ) {
+				$mc++;
+			}
+
+      my $smspc = '&nbsp;' x 3;
+      my $lgspc = '&nbsp;' x 7;
+
+			my $annot = $lgspc;
+
+			if ( $mc ) {
+				$annot = ( $ntt != 2 ) ? '[mc,st]' : '[mc]' . $smspc;
+			} elsif ( $ntt != 2 ) {
+				$annot = '[st]' . $smspc;
+			} else {
+        $instance_ids{$row->[14]}++;
+			}
+			$row->[4] = sprintf( "%0.2f", $row->[4] ) . "<FONT COLOR=RED><SUP>$annot</SUP></FONT>";
+    my $cnt = 0;
+#    for my $p ( @{$resultset_ref->{precisions_list_ref}} ) {
+#			$log->debug( "$cnt) precisely $p for $row->[$cnt], $resultset_ref->{types_list_ref}->[$cnt] " );
+#			$cnt++;
+#		}
+
+
+    }
+
+    # Must... continue... hacking!!!
+    $resultset_ref->{types_list_ref}->[4] = 'varchar';
+#    $resultset_ref->{precision_list_ref}->[4] = 36;
+
     #### Display the resultset
     $sbeams->displayResultSet(
       resultset_ref=>$resultset_ref,
@@ -845,10 +896,6 @@ sub handle_request {
       no_escape => 1
     );
 
-    my @pa_accessions;
-    for my $row ( @{$resultset_ref->{data_ref}} ) {
-      push @pa_accessions, $row->[0];
-    }
 
     #### Display a hyperlink for viewing this information in Cytoscape
     if ($sbeams->output_mode() eq 'html') {
@@ -958,14 +1005,11 @@ sub handle_request {
     );
 
     
-
+    my $trans_help = get_table_help( 'annotated_transitions' );
     my $mrm_transitions = $sbeamsMOD->get_mrm_transitions( accessions => \@pa_accessions );
-#    my $mrm_transitions = get_mrm_transitions( accessions => \@pa_accessions );
 
-    $log->debug( "hurry?" );
     #### If a result is returned
     if ( scalar @$mrm_transitions ) {
-      $log->debug( "Hurry baba" );
 
       my $link_base = "GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&action=QUERY&searchForThis=";
       #### Loops through resultset and do formatting
@@ -998,10 +1042,8 @@ sub handle_request {
                                                     chg_bkg_idx => 3,
                                                          align  => [qw(left center center right right center right right right right left left left)],
                                                            rows => $mrm_transitions );
-      $log->debug( $transitionsHTML );
-      $log->debug( "$transitionsHTML" );
       #### Display table
-      print "<TABLE WIDTH=600><BR>$transitionsHTML</TABLE>\n" if $#{$mrm_transitions} && $htmlmode;
+      print "<BR>$trans_help<TABLE WIDTH=600><BR>$transitionsHTML</TABLE>\n" if $#{$mrm_transitions} && $htmlmode;
     }
 
 
@@ -1046,7 +1088,7 @@ sub handle_request {
     #############################################################
     ## Display the samples list ##
 
-    # Widget to allow show/hide of samples section
+    # Widget to allow show/hide of sample map section
     my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_samplelist',
                                                   visible => 1,
                                                 tooltip => 'Show/Hide Section',
@@ -1054,11 +1096,27 @@ sub handle_request {
                                                   sticky => 1 );
 
     my $sample_ids = getSampleList( resultset_ref=>$resultset_ref,);
-    my $samples = $sbeamsMOD->getSampleDisplay( sample_ids => $sample_ids,
-                                                      link => $link,
-                                                      tr_info => $tr );
-    print "<TABLE width='600'>$samples</TABLE>" if $htmlmode;
 
+    my $sampleMap = $sbeamsMOD->getSampleMapDisplay( sample_ids => $sample_ids,
+		                                                 instance_ids => \%instance_ids,
+		                                               atlas_build_id => $atlas_build_id,
+                                                      link => $link,
+                                                      tr_info => $tr,
+																					   			header_text => 'Shows per-experiment expression for all fully tryptic peptides'
+																										);
+    print "<A NAME='samplemap'></A><TABLE width='600'>$sampleMap</TABLE>" if $htmlmode;
+
+    # Widget to allow show/hide of sample section
+    ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_samplelist',
+                                                  visible => 1,
+                                                tooltip => 'Show/Hide Section',
+                                                 imglink => 1,
+                                                  sticky => 1 );
+
+    my $sampleDisplay = $sbeamsMOD->getSampleDisplay( sample_ids => $sample_ids,
+				                                                  'link' => $link,
+																												 tr_info => $tr );
+    print "<TABLE width='600'>$sampleDisplay</TABLE>" if $htmlmode;
 
   #### If QUERY was not selected, then tell the user to enter some parameters
   } else {
@@ -2463,6 +2521,71 @@ sub getProteinInformationForPeptides {
 
 }
 
+
+sub get_table_help {
+  my $name = shift;
+  return '' unless $name;
+  my @entries;
+  my $hidetext;
+  my $showtext;
+  my $heading;
+  my $description;
+  if ( $name eq 'observed_peptides' ) {
+    @entries = (
+    { key => "Peptide Accession", value => 'Peptide Atlas accession number, beginning with PAp followed by 9 digits.' },
+    { value => 'Preceding (towards the N terminus) amino acid', key => 'Pre AA' },
+    { value => 'Amino Acid sequence of this peptide', key => 'Peptide Sequence'}, 
+    { value => 'Following (towards the C terminus) amino acid', key => 'Fol AA' },
+    { value => 'Score derived from peptide probability, EOS, and sequence characteristics such as missed cleavage <SUP><FONT COLOR=RED>[MC]</FONT></SUP> or semi-tryptic <SUP><FONT COLOR=RED>[ST]</FONT></SUP>; these are annotated in red.', key => 'Suitability Score' },
+    { value => 'Highest PeptideProphet probability for this observed sequence', key => 'Best Prob' },
+    { value => '', key => 'Best Adjusted Prob'},
+    { value => 'Total number of observations in all modified forms and charge states', key => 'N Obs' },
+    { value => 'Empirical Observability Score', key => 'EOS' },
+    { value => 'SSRCalc Relative Hydrophobicity score', key => 'RHS' },
+    { value => 'Number of proteins in the reference database to which this peptide maps', key => 'N Protein Mappings' },
+    { value => 'Number of discrete genome locations which encode this amino acid sequence', key => 'N Genome Locations' },
+    { value => 'Samples in which this sequence was seen', key => 'Sample IDs' },
+    { value => 'Observed peptides of which this peptide is a subsequence', key => 'Parent Peptides' },
+
+    );
+    
+    $showtext = 'show column descriptions';
+    $hidetext = 'hide column descriptions';
+    $heading = 'Observed Peptides';
+    $description= 'Peptides observed in MS/MS experiments';
+    
+  } elsif ( $name eq 'annotated_transitions' ) {
+    @entries = (
+      { key => 'Sequence', value => 'Amino acid sequence of detected pepide, including any mass modifications.' },
+      { key => 'Charge', value => 'Charge on Q1 (precursor) peptide ion.' },
+      { key => 'q1_mz', value => 'Mass to charge ratio of precursor peptide ion.' },
+      { key => 'q3_mz', value => 'Mass to charge ratio of fragment ion.' },
+      { key => 'Label', value => 'Ion-series designation for fragment ion (Q3).' },
+      { key => 'Intensity', value => 'Intensity of peak in CID spectrum' },
+      { key => 'CE', value => 'Collision energy, the kinetic energy conferred to the peptide ion and resulting in peptide fragmentation. (eV)' },
+      { key => 'RT', value => 'Peptide retention time( in minutes ) in the LC/MS system.' },
+      { key => 'SSRCalc', value => "Sequence Specific Retention Factor provides a hydrophobicity measure for each peptide using the algorithm of Krohkin et al. Version 3.0 <A HREF=http://hs2.proteome.ca/SSRCalc/SSRCalc.html target=_blank>[more]</A>" },
+      { key => 'Instr', value => 'Model of mass spectrometer on which transition pair was validated.' },
+      { key => 'Annotator', value => 'Person/lab who contributed validated transition.' },
+      { key => 'Quality', value => 'Crude scale of quality for the observation, currently one of Best, OK, and No. ' },
+      );
+
+    $showtext = 'show column descriptions';
+    $hidetext = 'hide column descriptions';
+    $heading = 'Annotated Tranitions';
+    $description= 'Contributed Q1/Q3 transition pairs for SRM experiments';
+	}
+
+  return unless @entries;
+  my $help = $sbeamsMOD->get_table_help_section( name => $name,
+  description => $description,
+  heading => $heading,
+  entries => \@entries,
+  showtext => $showtext,
+  hidetext => $hidetext  );
+  return $help;
+    
+} # end get_table_help
 
 
 ###############################################################################
