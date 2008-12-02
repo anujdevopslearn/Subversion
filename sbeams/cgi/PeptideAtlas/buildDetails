@@ -108,6 +108,7 @@ my $show_image = 0;
 #  print STDERR 'showtime ' . time() . "\n";
     # Add peptide stats section
     # Add graphic
+    $page .= getSampleMapDisplay ( build_id => $build_id );
 
     my ( $chart_div, $header ) = get_draw_chart_function( $sample_arrayref );
 
@@ -214,17 +215,181 @@ sub get_build_plots {
   <TR $tr><TD class=plot_caption>Plot showing the cumulative number of multiply observed peptides contributed by each sample.  Height of bar is cumulative number of n_obs > 1 peptides, blue color is number of n_obs > 1 peptides above threshold, width of the bar (x-axis) shows the number of spectra identified above the threshold, for each samle</TD></TR>
   <TR $tr><TD><IMG WIDTH=800 SRC=$img_path/${build_id}_ncumpep_vs_nspec-multobs.gif></IMG></TD></TR> 
   END
+	if ( -e "$build_path/analysis/ncumpep_vs_nspec-multobs.gif" ) {
+    system "cp  $build_path/analysis/ncumpep_vs_nspec-multobs.gif $cp_img_path/${build_id}_ncumpep_vs_nspec-multobs.gif";
+  }
+
   if ( -e "$cp_img_path/${build_id}_ncumpep_vs_nspec-multobs.gif" ) {
     $table .= $build_image_rows;
-  } elsif ( -e "$build_path/analysis/ncumpep_vs_nspec-multobs.gif" ) {
-    system "cp  $build_path/analysis/ncumpep_vs_nspec-multobs.gif $cp_img_path/${build_id}_ncumpep_vs_nspec-multobs.gif";
-    $table .= $build_image_rows;
-  }
+  } 
 
   $table .= "\n</TABLE>\n";
 	
   return $table;
 }
+
+###############################################################################
+# displaySampleMap
+###############################################################################
+sub getSampleMapDisplay {
+#  my $self = shift;
+#  my $sbeams = $self->getSBEAMS();
+  my %args = @_;
+  
+	return unless $args{build_id};
+
+  my $header = '';
+  if ( $args{link} ) {
+  $header .= $atlas->encodeSectionHeader( text => 'Sample Protein Map:',
+  link => $args{link} );
+  } else {
+  $header .= $atlas->encodeSectionHeader( text => 'Sample Protein Map:',);
+  }
+  $header = '' if $args{no_header};
+  
+  my $html = '';
+  my $trinfo = $args{tr_info} || '';
+  
+  my $prot_sql = qq~
+	SELECT TOP 250 matched_biosequence_id, CAST(biosequence_seq AS VARCHAR(2000)) seq, biosequence_name
+  FROM  $TBAT_PEPTIDE_INSTANCE PI 
+  JOIN $TBAT_PEPTIDE_MAPPING PM ON PM.peptide_instance_id = PI.peptide_instance_id
+  JOIN $TBAT_BIOSEQUENCE B ON PM.matched_biosequence_id = B.biosequence_id
+	WHERE PI.atlas_build_id = $args{build_id}
+	GROUP BY matched_biosequence_id,  CAST(biosequence_seq AS VARCHAR(2000)), biosequence_name
+	ORDER BY SUM(PI.n_observations) DESC 
+	~;
+	my $t1 = time;
+  my @prots = $sbeams->selectSeveralColumns($prot_sql);
+	my $t2 = time;
+	my $td = $t2 - $t1;
+	$log->debug( "prots query $td" );
+	my @ordered_prots;
+	my %seen_sequences;
+  my @bioseq_ids;
+	my $cntr;
+	for my $row ( @prots ) {
+		# no dups
+		next if $seen_sequences{$row->[1]};
+		$seen_sequences{$row->[1]}++;
+		$cntr++;
+		push @ordered_prots, $row->[2];
+		push @bioseq_ids, $row->[0];
+		last if scalar( @ordered_prots ) >= 100;
+		$cntr++;
+	}
+#	$log->debug( "looped a while? $cntr" );
+  my $bioseq_ids = join( ',', @bioseq_ids );
+#	$log->debug( "bioseq ids $bioseq_ids?, scalar bio is " . scalar(@bioseq_ids ) . ' scalar ordered is ' . scalar( @ordered_prots) );
+  
+  my $sql = qq~
+	SELECT biosequence_name, SUM(PISB.n_observations) total_cnts,
+	SB.atlas_search_batch_id, sample_tag -- , peptide_accession
+  FROM $TBAT_ATLAS_SEARCH_BATCH SB
+  JOIN $TBAT_SAMPLE S ON s.sample_id = SB.sample_id
+  JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB ON PISB.atlas_search_batch_id = SB.atlas_search_batch_id
+  JOIN $TBAT_PEPTIDE_INSTANCE PI ON PI.peptide_instance_id = PISB.peptide_instance_id
+--  JOIN $TBAT_PEPTIDE P ON P.peptide_id = PI.peptide_id
+  JOIN $TBAT_PEPTIDE_MAPPING PM ON PM.peptide_instance_id = PI.peptide_instance_id
+  JOIN $TBAT_BIOSEQUENCE B ON B.biosequence_id = PM.matched_biosequence_id
+  JOIN $TBAT_ATLAS_BUILD AB ON ( AB.biosequence_set_id = B.biosequence_set_id AND AB.atlas_build_id = PI.atlas_build_id ) 
+  WHERE AB.atlas_Build_id = $args{build_id}
+	AND biosequence_id IN ( $bioseq_ids )
+	GROUP BY biosequence_name, SB.atlas_search_batch_id, sample_tag
+--	ORDER BY biosequence_name, SB.atlas_search_batch_id, sample_tag
+  ~;
+  
+	$log->debug( $sql );
+	my $t1 = time;
+  my @samples = $sbeams->selectSeveralColumns($sql);
+	my $t2 = time;
+	my $td = $t2 - $t1;
+	$log->debug( "prot_expr query $td " );
+  
+  my %samples;
+  my %proteins;
+  for my $row ( @samples ) {
+    my $key = $row->[3] . '::::' . $row->[2];
+		$samples{$key}++;
+    $proteins{$row->[0]} ||= {};
+    $proteins{$row->[0]}->{$key} += $row->[1];
+  }
+
+	my @prot_order;
+
+  my $array_def = qq~
+  <script type="text/javascript">
+  google.setOnLoadCallback(drawHeatMap);
+  function drawHeatMap() {
+  var data = new google.visualization.DataTable();
+  data.addColumn('string', 'Sample Name');
+  ~;
+  my @peps;
+  for my $sa ( sort( keys( %samples ) ) ) {
+    my ( $name, $id ) = split "::::", $sa;
+    $array_def .= "    data.addColumn('number', '$name');\n";
+  }
+  $array_def .= "DEFINE_ROWS_HERE\n";
+  
+  my $row = 0;
+  my $col = 0;
+  my $max = 0;
+	my %output;
+  for my $protein ( @ordered_prots ) {
+    $col = 0;
+    $array_def .= "    data.setValue( $row, $col, '$protein' );\n";
+    $col++;
+   for my $sample ( sort( keys( %samples ) ) ) {
+      my ( $name, $id ) = split "::::", $sample;
+		  if ( $proteins{$protein}->{$sample} ) {
+#        my $cnt = $proteins{$protein}->{$sample};
+        my $cnt = log( 1+ $proteins{$protein}->{$sample} )/log(10);
+        $max = ( $cnt > $max ) ? $cnt : $max;
+        $array_def .= "    data.setValue( $row, $col, $cnt );\n";
+			}
+      $col++;
+    }
+    $row++;
+  }
+	$log->debug( "saw $row proteins and $col samples!" );
+	$log->debug( "saw " . scalar( keys( %proteins ) ) . " proteins and " .  scalar(keys(%samples) ) . "  samples!" );
+  $array_def =~ s/DEFINE_ROWS_HERE/data.addRows($row);/;
+  my $num_colors = ( $max > 64 ) ? 64 : $max;
+  my $num_colors = 256;
+  $log->debug( "Max is $max, numcol is $num_colors" );
+  $array_def .= qq~
+  heatmap = new org.systemsbiology.visualization.BioHeatMap(document.getElementById('heatmapContainer'));
+  heatmap.draw(data, {numberOfColors:$num_colors,passThroughBlack:false,startColor:{r:255,g:255,b:255,a:1},endColor:{r:100,g:100,b:100,a:1},emptyDataColor:{r:256,g:256,b:256,a:1}});
+  }
+  </script>
+  ~;
+  
+  my $content = qq~
+	<BR><BR>
+  <TABLE WIDTH=800>
+	$header
+  <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+  <script type="text/javascript">
+  google.load("visualization", "1", {});
+  google.load("prototype", "1.6");
+  </script>
+  <script type="text/javascript" src="http://systemsbiology-visualizations.googlecode.com/svn/trunk/src/main/js/load.js"></script>
+  <script type="text/javascript">
+  systemsbiology.load("visualization", "1.0", {packages:["bioheatmap"]});
+  </script>
+  
+  $array_def
+  
+  <TR><TD> <DIV ID="heatmapContainer"></DIV>  </TD></TR>
+  
+  </TABLE>
+  ~;
+  
+  return $content;
+  
+} # end getSampleMapDisplay
+  
+  
 
 
 # General build info, date, name, organism, specialty, default
@@ -355,7 +520,11 @@ sub get_sample_info {
   AND ABSB.atlas_build_id = $build_id
   ORDER BY rownum, cumulative_n_peptides, ABSB.atlas_build_search_batch_id ASC
   END
+	my $t1 = time;
   my @sample_info = $sbeams->selectSeveralColumns ( $sql );
+	my $t2 = time;
+	my $td = $t2 - $t1;
+	$log->debug( "SB query $td" );
 
   # Format loop
   my @samples;
