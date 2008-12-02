@@ -27,15 +27,18 @@ CREATE INDEX idx_build_key ON dbo.search_key ( atlas_build_id,search_key_name ) 
 CREATE INDEX idx_resource_name ON dbo.search_key ( resource_name ) --WITH DROP_EXISTING
 
 
--- NIST non-clustered INDEXES
-CREATE NONCLUSTERED INDEX idx_NIST_library_spectrum_id ON dbo.NIST_library_spectrum_peak ( NIST_library_spectrum_id ) --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_sequence ON dbo.NIST_library_spectrum ( sequence ) --WITH DROP_EXISTING
+-- consensus non-clustered INDEXES
+CREATE NONCLUSTERED INDEX idx_consensus_library_spectrum_id ON dbo.consensus_library_spectrum_peak ( consensus_library_spectrum_id ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_sequence ON dbo.consensus_library_spectrum ( sequence ) --WITH DROP_EXISTING
 CREATE NONCLUSTERED INDEX idx_peptide_sequence ON dbo.peptide ( peptide_sequence ) --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_mz_exact ON dbo.NIST_library_spectrum ( mz_exact ) --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_mz ON dbo.NIST_library_spectrum_peak ( mz ) --WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX relative_intensity ON dbo.NIST_library_spectrum_peak (relative_intensity) --WITH DROP_EXISTING 
+CREATE NONCLUSTERED INDEX idx_mz_exact ON dbo.consensus_library_spectrum ( mz_exact ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_mz ON dbo.consensus_library_spectrum_peak ( mz ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX relative_intensity ON dbo.consensus_library_spectrum_peak (relative_intensity) --WITH DROP_EXISTING 
 
 -- Proteotypic Peptide
 CREATE INDEX idx_source_biosequence_id ON dbo.proteotypic_peptide( source_biosequence_id );
 
+CREATE NONCLUSTERED INDEX idx_atlas_search_batch_id ON dbo.peptide_instance_search_batch ( atlas_search_batch_id ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_peptide_id ON dbo.peptide_instance ( peptide_id )  --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_biosequence_set_id ON dbo.biosequence ( biosequence_set_id )   --WITH DROP_EXISTING
 
