@@ -949,15 +949,20 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
   my $cs_obj = SBEAMS::PeptideAtlas::ConsensusSpectrum->new();
   $cs_obj->setSBEAMS( $sbeams );
-  my $consensus = $cs_obj->spectrum_search( seq => $peptide_sequence[0],
-                                            lib_id => $lib_id );
+  my $consensus = $cs_obj->spectrum_search( seq => $peptide_sequence[0] ); # ,
+                                          #  lib_id => $lib_id );
 
   #### If a result is returned
   if ( scalar @mod_peps ) {
     $modHTML .= $sbeams->getPopupDHTML();
 
+
     #### Loops through resultset and do formatting
     for my $pep ( @mod_peps ) {
+
+			# Originally showed only one consensus per peptide ion, now
+			# show as a list, with default in first position.
+			my %all_consensus;
       $pep->[7] = '';
       
       for my $c_spectrum ( @$consensus ) {
@@ -970,12 +975,32 @@ if ($apply_action =~ /QUERY|GO/i ) {
             next if $c_spectrum->[8];
           }
 
-          my $title = "View consensus spectrum for peptide $pep->[0] (+$pep->[1])"; 
-          $pep->[7] = "<A HREF='ShowOneSpectrum?consensus_library_spectrum_id=$c_spectrum->[0];ymax=11000' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
-          last;
+          my $default_txt = ( $lib_id eq $c_spectrum->[6] ) ? '(Build default)' : '';
+          my $title = "View consensus spectrum for peptide $pep->[0] (+$pep->[1]) from the $c_spectrum->[9] library $default_txt"; 
+
+					$all_consensus{$c_spectrum->[6]} = "<A HREF='ShowOneSpectrum?consensus_library_spectrum_id=$c_spectrum->[0];ymax=11000' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
         }
       }
 
+      my $best = '';
+			my $rest = '';
+      for my $l ( sort { $a <=> $b } ( keys( %all_consensus ) ) ) {
+				if ( $lib_id && $l eq $lib_id ) {
+					$best .= $all_consensus{$l};
+				} else {
+					$rest .= ( $rest ) ? '&nbsp;&nbsp;' . $all_consensus{$l} : $all_consensus{$l};
+				}
+			}
+
+      if ( $best ) {
+				$pep->[7] = $best;
+				if ( $rest ) {
+					$pep->[7] .= "&nbsp;&nbsp;$rest";
+				}
+			} elsif ( $rest ) {
+				$pep->[7] = $rest;
+			}
+			
 
       # Final formatting for list items
       $pep->[2] = sprintf("%0.4f", $pep->[2]);  # parent m/z
@@ -987,7 +1012,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
     }
 
     #### Add table column headings
-    unshift @mod_peps, ['Modified Sequence', 'Charge', 'Mono Parent m/z', 'Best Prob', '# Obs', '# Siblings', 'Sample IDs', 'Consensus Spectrum' ];
+    unshift @mod_peps, ['Modified Sequence', 'Charge', 'Mono Parent m/z', 'Best Prob', '# Obs', '# Siblings', 'Sample IDs', 'Consensus Spectra' ];
 
     #### Format table
     $modHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
