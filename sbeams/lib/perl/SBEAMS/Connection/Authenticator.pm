@@ -82,12 +82,12 @@ sub Authenticate {
   my $allow_anonymous_access = $args{'allow_anonymous_access'} || "";
   my $permitted_work_groups_ref = $args{'permitted_work_groups_ref'} || "";
 
-  ## Clean up authentication tokens if requested.
-	if ( $q->param('clear_auth') ) {
-    $q->delete( 'SBEAMSentrycode' );
-    $self->destroyAuthHeader();
-		print STDERR "clear auth in Authenticate   \n";
-	}
+  ## Clean up authentication tokens if requested - NRFPT
+#	if ( $q->param('clear_auth') ) {
+#    $q->delete( 'SBEAMSentrycode' );
+#    $self->destroyAuthHeader();
+#		print STDERR "clear auth in Authenticate   \n";
+#	}
 
   #### Always disable the output buffering
   $| = 1;
@@ -232,7 +232,6 @@ sub Authenticate {
       $current_work_group_id = $self->getCurrent_work_group_id();
   }
 
-
   #### If a permitted list of work_groups was provided or a specific
   #### work_group was provided, verify/switch to that
   if ( $current_username &&
@@ -240,10 +239,13 @@ sub Authenticate {
         $current_work_group_id = $self->setCurrent_work_group(
             set_to_work_group=>$set_to_work_group,
             permitted_work_groups_ref=>$permitted_work_groups_ref,
+            allow_anonymous_access=>$allow_anonymous_access,
         );
         $current_username = '' unless ($current_work_group_id);
   }
 
+	# Global var getting corrupted?
+	$self->{_current_username} = $current_username;
   return $current_username;
 
 } # end Authenticate
@@ -514,7 +516,9 @@ sub getCurrent_contact_id {
 # Return the username of the user currently logged in
 ###############################################################################
 sub getCurrent_username {
-    return $current_username;
+  my $self = shift;
+#  return $current_username || '';
+  return ( $current_username ) ? $current_username : $self->{_current_username};
 }
 
 
@@ -528,12 +532,19 @@ sub setCurrent_work_group {
   my $set_to_work_group = $args{'set_to_work_group'} || "";
   my $permitted_work_groups_ref = $args{'permitted_work_groups_ref'} || "";
   my $permanent = $args{'permanent'} || "";
+  my $allow_anonymous = $args{'allow_anonymous_access'} || "";
 
   #### First see what the current work_group context is
   $current_work_group_id = $self->getCurrent_work_group_id()
     unless ($current_work_group_id);
   $current_work_group_name = $self->getCurrent_work_group_name()
     unless ($current_work_group_name);
+
+  my $guest_clause = '';
+  unless ( $self->isDeniedGuestPrivileges( $current_username )) {
+	    my $guest_id = $self->get_guest_contact_id();
+	    $guest_clause = ", $guest_id" if $guest_id;
+	}
 
 
   #### If a list of permitted work_groups is provided, see which ones
@@ -544,7 +555,7 @@ sub setCurrent_work_group {
          FROM $TB_USER_WORK_GROUP UWG
         INNER JOIN $TB_WORK_GROUP WG
               ON ( UWG.work_group_id = WG.work_group_id )
-        WHERE UWG.contact_id = '$current_contact_id'
+        WHERE UWG.contact_id IN ( '$current_contact_id' $guest_clause )
           AND UWG.record_status != 'D'
           AND WG.record_status != 'D'
       ");
@@ -581,6 +592,10 @@ sub setCurrent_work_group {
 
     #### If this didn't turn up anything, return
     unless ($set_to_work_group) {
+			if ( $allow_anonymous ) {
+				$log->info( "Borrowing lab group id because anonymous access is allowed" );
+        return $current_work_group_id;
+			}
       $self->displayPermissionToPageDenied(
         ["You are not a member of any of the work groups that are ".
         "permitted to access this page"]);
