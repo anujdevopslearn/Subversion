@@ -37,7 +37,7 @@ use PDL::Graphics::PGPLOT;
 
 use File::Basename;
 
-#$q = new CGI;
+my $error_state = 0;
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
@@ -116,12 +116,10 @@ sub processRequest {
 	<FORM METHOD="post" action="$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME">
     !;
 
-    #### Set up the table and data column
-    print qq!
-	<TABLE BORDER=0 CELLPADDING=3 WIDTH="675">
-	<TR VALIGN=top>
-	<TD VALIGN=top >
-	<PRE>\n!;
+  #### Set up the table and data column
+  print qq!
+	<TABLE BORDER=0 CELLPADDING=3 WIDTH="675">\n
+	!;
 
     # For backwards compatibility with NIST tables (TIQAM). 
 	  $parameters{consensus_library_spectrum_id} ||= $parameters{NIST_library_spectrum_id};
@@ -131,8 +129,9 @@ sub processRequest {
     {
         my $sql = qq~
             SELECT sequence,charge,mz_exact,protein_name,
-            protein_name_alt,modified_sequence
-            FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM
+            protein_name_alt,modified_sequence, consensus_library_name
+            FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM CLS
+            JOIN $TBAT_CONSENSUS_LIBRARY CL ON CL.consensus_library_id = CLS.consensus_library_id
             WHERE consensus_library_spectrum_id = '$parameters{consensus_library_spectrum_id}'
         ~;
 
@@ -148,15 +147,21 @@ sub processRequest {
 
         foreach my $row (@rows)
         {
-            my ($seq, $chg, $mz, $pn, $pn_alt, $mod_seq) = @{$row};
+            my ($seq, $chg, $mz, $pn, $pn_alt, $mod_seq, $lib_name) = @{$row};
             $parameters{'peptide'} = $seq;
             $parameters{'charge'} = $chg;
             $parameters{'precursor_mass'} = $mz;
             $parameters{'protein_name'} = $pn;
             $parameters{'protein_name_alt'} = $pn_alt;
             $parameters{'modified_sequence'} = $mod_seq;
+            $parameters{'library_name'} = $lib_name;
         }
     }
+
+    if ( $parameters{peptide} ) {
+    print "<TR><TD COLSPAN=2 CLASS=section_description ALIGN=CENTER>Spectrum for $parameters{modified_sequence} <SUP>+$parameters{charge}</SUP> from consensus library $parameters{library_name}</TD></TR>\n";
+		}
+
     my $peptide = $parameters{peptide};
     $peptide =~ s/^.\.//;
     $peptide =~ s/\..$//;
@@ -185,7 +190,8 @@ sub processRequest {
 
     unless (%spectrum) 
     {
-      print "ERROR: Unable to load spectrum\n";
+      print "</TABLE>ERROR: Unable to load spectrum\n";
+			$error_state++;
       return;
     }
 
@@ -304,7 +310,9 @@ sub processRequest {
 
 
     #### Set up the image cell
-    print qq~</PRE>
+    print qq~
+	<TR VALIGN=top>
+	<TD VALIGN=top >
 	</TD>
 	<TD VALIGN=top>
 	<IMG SRC="$HTML_BASE_DIR/tmp/images/$tmpfile"><BR>
@@ -426,6 +434,7 @@ sub get_library_spectrum
     unless (@mass_intensities) {
       print "\nERROR: Unable to get m/z,intensity pairs for ".
 	"consensus_library_spectrum_id '$consensus_library_spectrum_id'.\n\n";
+      $error_state++;
       return;
     }
 
@@ -448,6 +457,7 @@ sub get_library_spectrum
   #### Otherwise complain and return
   } else {
     print "\nERROR: Unable to determine which consensus_library_spectrum_id to load.\n\n";
+    $error_state++;
     return;
   }
 
