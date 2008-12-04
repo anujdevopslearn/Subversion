@@ -190,7 +190,7 @@ sub getBestPeptides {
 		}
 
     $resultset_ref->{data_ref}->[$i]->[$cols->{suitability_score}] =
-      sprintf("%.3f",$suitability_score);
+      sprintf("%.2f",$suitability_score);
   }
 
 
@@ -386,7 +386,12 @@ sub sortBySuitabilityScore {
   my $cols = $resultset_ref->{column_hash_ref};
   my @rows = @{$resultset_ref->{data_ref}};
 
-  my @newrows = sort {$b->[$cols->{suitability_score}] <=> $a->[$cols->{suitability_score}] } @rows;
+  my @newrows = sort { $b->[$cols->{suitability_score}] <=> $a->[$cols->{suitability_score}]
+	                    || 
+                     $b->[$cols->{empirical_proteotypic_score}] <=> $a->[$cols->{empirical_proteotypic_score}]
+	                    || 
+                     $b->[$cols->{n_observations}] <=> $a->[$cols->{n_observations}]
+											} @rows; 
 
   $resultset_ref->{data_ref} = \@newrows;
 
