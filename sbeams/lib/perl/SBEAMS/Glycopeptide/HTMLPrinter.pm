@@ -55,8 +55,20 @@ sub displayUnipepHeader {
   } else {
     $LOGIN_URI .= "?force_login=yes";
   }
-  my $LOGIN_LINK = qq~<A HREF="$LOGIN_URI" class="leftnavlink">LOGIN</A>~;
 
+  my $cswitcher = '';
+  if ( -e "$PHYSICAL_BASE_DIR/lib/perl/SBEAMS/PeptideAtlas/ContextWidget.pm" ) {
+    $log->debug( "it exists, lets use it!" );
+    require SBEAMS::PeptideAtlas::ContextWidget;
+    my $cwidget = SBEAMS::PeptideAtlas::ContextWidget->new();
+    $log->debug( "got a new one" );
+    $cswitcher = $cwidget->getContextSwitcher( username => $current_username );
+    
+  } else {
+    $log->debug(  "$PHYSICAL_BASE_DIR/lib/perl/SBEAMS/PeptideAtlas/ContextWidget.pm doesn't exist" )
+  }
+
+  my $LOGIN_LINK = qq~<A HREF="$LOGIN_URI" class="leftnavlink">LOGIN</A>~;
 
   use LWP::UserAgent;
   use HTTP::Request;
@@ -72,6 +84,8 @@ sub displayUnipepHeader {
     $cnt++;
     if ( $line =~ /LOGIN/ ) {
        $line =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
+    } elsif ( $line =~ /CSWITCHER/ ) {
+       $line =~ s/\<\!--CSWITCHER--\>/$cswitcher/;
     } elsif ( $line =~ /td\s+\{font/ ) {
   #    next;
     } elsif ( $line =~ /body\s+\{font/ ) {
