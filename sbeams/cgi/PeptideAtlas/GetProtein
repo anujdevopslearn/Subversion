@@ -619,7 +619,7 @@ sub handle_request {
     ["sample_ids","PI.sample_ids","sample_ids"],
     #["sample_ids","PI.sample_ids","<DIV TITLE='Samples in which this sequence was seen'>Sample IDs</DIV>"],
     #["is_subpeptide_of","PI.is_subpeptide_of","<DIV TITLE='Observed peptides of which this peptide is a subsequence'>Parent Peptides</DIV>"],
-    ["is_subpeptide_of","PI.is_subpeptide_of",'is_subpeptide_of'],
+    ["is_subpeptide_of","PI.is_subpeptide_of",'subpeptides'],
     ["peptide_instance_id","PI.peptide_instance_id","peptide_instance_id"],
   );
 
@@ -855,16 +855,24 @@ sub handle_request {
 			if ( $row->[2] =~ /[RK][^P]/ ) {
 				$mc++;
 			}
+			my $mgl = 0;
+			if ( $row->[11] > 1 ) {
+				$mgl++;
+			}
 
-      my $smspc = '&nbsp;' x 3;
-      my $lgspc = '&nbsp;' x 7;
+      #  Oh please please please!  No again, sigh!
+#			for my $rn ( 12, 13 ) {
+#				$row->[$rn] =~ s/\d+/*/g;
+#				$row->[$rn] =~ s/,//g;
+#			}
 
-			my $annot = $lgspc;
-
-			if ( $mc ) {
-				$annot = ( $ntt != 2 ) ? '[mc,st]' : '[mc]' . $smspc;
-			} elsif ( $ntt != 2 ) {
-				$annot = '[st]' . $smspc;
+			my @errs;
+			push @errs, 'mc' if $mc;
+			push @errs, 'ntt' if $ntt < 2;
+			push @errs, 'mgl' if $mgl;
+			my $annot = '';
+			if ( @errs ) {
+				$annot = '[' . join( ',', @errs ) . ']';
 			} else {
         $instance_ids{$row->[14]}++;
 			}
@@ -2536,7 +2544,7 @@ sub get_table_help {
     { value => 'Preceding (towards the N terminus) amino acid', key => 'Pre AA' },
     { value => 'Amino Acid sequence of this peptide', key => 'Peptide Sequence'}, 
     { value => 'Following (towards the C terminus) amino acid', key => 'Fol AA' },
-    { value => 'Score derived from peptide probability, EOS, and sequence characteristics such as missed cleavage <SUP><FONT COLOR=RED>[MC]</FONT></SUP> or semi-tryptic <SUP><FONT COLOR=RED>[ST]</FONT></SUP>; these are annotated in red.', key => 'Suitability Score' },
+    { value => 'Score derived from peptide probability, EOS, and sequence characteristics such as missed cleavage <SUP><FONT COLOR=RED>[MC]</FONT></SUP> or semi-tryptic <SUP><FONT COLOR=RED>[ST]</FONT></SUP>, or <BR> multiple genome locations <SUP><FONT COLOR=RED>[MGL]</FONT></SUP>.  These are annotated in red as shown.', key => 'Suitability Score' },
     { value => 'Highest PeptideProphet probability for this observed sequence', key => 'Best Prob' },
     { value => '', key => 'Best Adjusted Prob'},
     { value => 'Total number of observations in all modified forms and charge states', key => 'N Obs' },
