@@ -371,7 +371,7 @@ sub handle_request {
 		$log->warn( "Bad contraints, URL is $url" );
 
 		# rassa frassa
-    $sbeams->fetchSTDOUT();
+#    my $std = $sbeams->fetchSTDOUT();
 
 		print $q->redirect( -uri => $url );
 		exit;
