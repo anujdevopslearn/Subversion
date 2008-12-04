@@ -619,7 +619,7 @@ sub handle_request {
     ["sample_ids","PI.sample_ids","sample_ids"],
     #["sample_ids","PI.sample_ids","<DIV TITLE='Samples in which this sequence was seen'>Sample IDs</DIV>"],
     #["is_subpeptide_of","PI.is_subpeptide_of","<DIV TITLE='Observed peptides of which this peptide is a subsequence'>Parent Peptides</DIV>"],
-    ["is_subpeptide_of","PI.is_subpeptide_of",'subpeptides'],
+    ["is_subpeptide_of","PI.is_subpeptide_of",'is_subpeptide_of'],
     ["peptide_instance_id","PI.peptide_instance_id","peptide_instance_id"],
   );
 
