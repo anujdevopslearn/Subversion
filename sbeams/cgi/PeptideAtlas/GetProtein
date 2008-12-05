@@ -836,9 +836,9 @@ sub handle_request {
 #    $log->debug( Dumper( $resultset_ref ) );
 
     my %instance_ids;
-#		for my $row ( @{$resultset_ref->{data_ref}} ) {
-#			$instance_ids{$row->[14]}++;
-#		}
+		for my $row ( @{$resultset_ref->{data_ref}} ) {
+			$instance_ids{$row->[14]}++;
+		}
 
     my @pa_accessions;
     for my $row ( @{$resultset_ref->{data_ref}} ) {
