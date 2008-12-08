@@ -105,22 +105,21 @@ my $show_image = 0;
 		my ( $sample_table, $sample_arrayref ) = get_sample_info( $build_id );
     $page .= $sample_table;
     $page .= "<BR>\n";
+
+    # Print what we already have, speed up apparent page loading time.
+    my ( $chart_div, $header ) = get_draw_chart_function( $sample_arrayref );
+    $atlas->display_page_header( header_info => $header, project_id => $project_id, onload => 'sortables_init()', sortable => 1 );
+		print $page;
+
 #  print STDERR 'showtime ' . time() . "\n";
     # Add peptide stats section
     # Add graphic
-    $page .= getSampleMapDisplay ( build_id => $build_id );
 
-    my ( $chart_div, $header ) = get_draw_chart_function( $sample_arrayref );
+    $page = get_build_plots ( $build_id, $chart_div ) if $show_image;
+		print $page;
+    $page = getSampleMapDisplay ( build_id => $build_id );
+		print $page;
 
-    # Display page
-    $atlas->display_page_header( header_info => $header, project_id => $project_id, onload => 'sortables_init()', sortable => 1 );
-
-
-		$page .= <<"    END_PAGE";
-    END_PAGE
-    $page .= get_build_plots ( $build_id, $chart_div ) if $show_image;
-
-    print $page;
 		$atlas->display_page_footer();
 
 } # end main
@@ -237,18 +236,16 @@ sub getSampleMapDisplay {
   my %args = @_;
   
 	return unless $args{build_id};
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'BD_sample_map',
+                                                  visible => 1,
+                                                  tooltip => 'Show/Hide Section',
+                                                  imglink => 1,
+                                                  sticky  => 1 );
 
-  my $header = '';
-  if ( $args{link} ) {
-  $header .= $atlas->encodeSectionHeader( text => 'Sample Protein Map:',
-  link => $args{link} );
-  } else {
-  $header .= $atlas->encodeSectionHeader( text => 'Sample Protein Map:',);
-  }
-  $header = '' if $args{no_header};
+  my $header .= $atlas->encodeSectionHeader( text => 'Sample Protein Map:',
+                                             'link' => $link );
   
   my $html = '';
-  my $trinfo = $args{tr_info} || '';
   
   my $prot_sql = qq~
 	SELECT TOP 250 matched_biosequence_id, CAST(biosequence_seq AS VARCHAR(2000)) seq, biosequence_name
@@ -351,8 +348,6 @@ sub getSampleMapDisplay {
     }
     $row++;
   }
-	$log->debug( "saw $row proteins and $col samples!" );
-	$log->debug( "saw " . scalar( keys( %proteins ) ) . " proteins and " .  scalar(keys(%samples) ) . "  samples!" );
   $array_def =~ s/DEFINE_ROWS_HERE/data.addRows($row);/;
   my $num_colors = ( $max > 64 ) ? 64 : $max;
   my $num_colors = 256;
@@ -380,7 +375,7 @@ sub getSampleMapDisplay {
   
   $array_def
   
-  <TR><TD> <DIV ID="heatmapContainer"></DIV>  </TD></TR>
+  <TR $tr><TD> <DIV ID="heatmapContainer"></DIV>  </TD></TR>
   
   </TABLE>
   ~;
