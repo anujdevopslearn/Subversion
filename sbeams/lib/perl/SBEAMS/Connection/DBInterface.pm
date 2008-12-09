@@ -1231,7 +1231,7 @@ sub translateSQL{
     #  $new_statement =~ s/\+/||/g;
 
   } elsif ($DBType =~ /MS SQL Server/i) {
-    $new_statement = convert_concatenation_mssql( $sql );
+    $new_statement = convert_concatenation_mssql( $sql ) if $sql =~ /\|\|/m;
     
   } elsif ($DBType =~ /mysql/i) {
 
@@ -1271,8 +1271,31 @@ sub translateSQL{
 #-
 sub convert_concatenation_mssql {
   my $sql = shift;
-  $sql =~ s/\|\|/\+/gm;
-  return $sql;
+
+	# Take care to avoid substituting in quoted strings
+	my @sql_parts = split( /\|\|/, $sql, -1 );
+	my $sql_buffer;
+  my $total_cnt = 2;
+	my $row_cnt = 0;
+	for my $part ( @sql_parts ) {
+		
+		# Add this part to the total buffer
+		$sql_buffer .= $part;
+
+    # Don't need to add past the last ||
+		last if $row_cnt == $#sql_parts;
+
+    # Count number of ' in current segment, increment total
+    my ( $part_cnt ) = $part =~ tr/\'/\'/;
+		$total_cnt += $part_cnt;
+
+		# Is this count odd?  If so, we're in a string (we hope)
+		my $odd = ( $total_cnt % 2 );
+
+		$sql_buffer .= ( $odd ) ? '||' : '+';
+		$row_cnt++;
+	}
+  return $sql_buffer;
 }
 
 ###############################################################################
