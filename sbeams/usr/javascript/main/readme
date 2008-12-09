@@ -1,0 +1,6 @@
+These files were downloaded from org.sysbio.google with an svn export command:
+
+ svn export http://systemsbiology-visualizations.googlecode.com/svn/trunk/src/main
+
+Inelegant, but it allowed us to get local copies.
+
