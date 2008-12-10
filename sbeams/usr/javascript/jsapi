@@ -3,13 +3,13 @@ window['google'] = {};
 }
 if (!window['google']['loader']) {
 window['google']['loader'] = {};
-google.loader.ServiceBase = 'https://www.google.com/uds';
+google.loader.ServiceBase = '/sbeams/usr/javascript/uds';
 google.loader.GoogleApisBase = 'http://ajax.googleapis.com/ajax';
 google.loader.ApiKey = 'notsupplied';
 google.loader.KeyVerified = true;
 google.loader.LoadFailure = false;
 google.loader.AdditionalParams = '';
-google.loader.OriginalAppPath = 'https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/Summarize_Peptide';
+google.loader.OriginalAppPath = '/sbeams/cgi/main.cgi';
 (function() { 
 function w(a){if(a in A){return A[a]}return A[a]=navigator.userAgent.toLowerCase().indexOf(a)!=-1}
 var A={};function E(){return w("msie")}
