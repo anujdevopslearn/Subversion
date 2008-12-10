@@ -168,7 +168,9 @@ sub loadBuildSpectra {
       if ($expected_n_columns == 14 && scalar(@columns) == 11) {
 	print "WARNING: Unexpected number of columns (".
 	  scalar(@columns)."!=$expected_n_columns) in\n$line\n".
-	  "This is likely missing ProteinProphet information, which is bad, but we will allow it this once.\n";
+	  "This is likely missing ProteinProphet information, which is bad, but we will allow it until this bug is fixed.\n";
+      } elsif (scalar(@columns) == 15) {
+	#### This is okay for now: experimental SpectraST addition
       } else {
 	die("ERROR: Unexpected number of columns (".
 	    scalar(@columns)."!=$expected_n_columns) in\n$line");
@@ -178,7 +180,8 @@ sub loadBuildSpectra {
     my ($search_batch_id,$spectrum_name,$peptide_accession,$peptide_sequence,
         $preceding_residue,$modified_sequence,$following_residue,$charge,
         $probability,$massdiff,$protein_name,$proteinProphet_probability,
-        $n_proteinProphet_observations,$n_sibling_peptides);
+        $n_proteinProphet_observations,$n_sibling_peptides,
+        $SpectraST_probability);
     if ($filetype eq 'peplist') {
       ($search_batch_id,$peptide_sequence,$modified_sequence,$charge,
         $probability,$protein_name,$spectrum_name) = @columns;
@@ -186,7 +189,8 @@ sub loadBuildSpectra {
       ($search_batch_id,$spectrum_name,$peptide_accession,$peptide_sequence,
         $preceding_residue,$modified_sequence,$following_residue,$charge,
         $probability,$massdiff,$protein_name,$proteinProphet_probability,
-        $n_proteinProphet_observations,$n_sibling_peptides) = @columns;
+        $n_proteinProphet_observations,$n_sibling_peptides,
+        $SpectraST_probability) = @columns;
       #### Correction for occasional value '+-0.000000'
       $massdiff =~ s/\+\-//;
     } else {
