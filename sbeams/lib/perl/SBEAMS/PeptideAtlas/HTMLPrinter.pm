@@ -816,12 +816,12 @@ sub getSampleMapDisplay {
 
 	$args{header_text} = ( $args{header_text} ) ? "<TR $trinfo><TD ALIGN=CENTER CLASS=section_description>$args{header_text}</TD></TR>" : '';
 	my $content = qq~
-  <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+  <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/jsapi"></script>
   <script type="text/javascript">
     google.load("visualization", "1", {});
     google.load("prototype", "1.6");
   </script>    
-  <script type="text/javascript" src="http://systemsbiology-visualizations.googlecode.com/svn/trunk/src/main/js/load.js"></script>
+  <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/main/js/load.js"></script>
   <script type="text/javascript">
     systemsbiology.load("visualization", "1.0", {packages:["bioheatmap"]});
   </script>
