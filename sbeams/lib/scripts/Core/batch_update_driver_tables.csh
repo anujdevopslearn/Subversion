@@ -89,6 +89,9 @@
   ./update_driver_tables.pl $CONFDIR/Imaging/Imaging_table_property.txt
   ./update_driver_tables.pl $CONFDIR/Imaging/Imaging_table_column.txt
 
+  ./update_driver_tables.pl $CONFDIR/SolexaTrans/SolexaTrans_table_property.txt
+  ./update_driver_tables.pl $CONFDIR/SolexaTrans/SolexaTrans_table_column.txt
+
 
 
 

@@ -1,0 +1,7 @@
+table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
+ST_biosequence_set	BioSequence Set	SolexaTrans_infrastructure	YES	$TBST_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=ST_biosequence_set	ST_biosequence_set	
+ST_dbxref	Biosequence Database Cross Reference	SolexaTrans_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=ST_dbxref	ST_biosequence_dbxref	
+ST_biosequence	BioSequence	SolexaTrans_infrastructure	NO	$TBST_BIOSEQUENCE	biosequence_id				
+ST_biosequence_property_set	Biosequence Property Set	SolexaTrans_infrastructure	NO	$TBST_BIOSEQUENCE_PROPERTY_SET	biosequence_property_set_id				
+ST_query_option	Query Option	SolexaTrans_infrastructure	YES	$TBST_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=ST_query_option	ST_query_option	
+ST_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi		

@@ -12,8 +12,11 @@
   </security>
   <resources>
     <j2se version="1.4+" max-heap-size="1g"/>
-    <jar href="CYTOSCAPE_JAR_HOOK"/>
+    <jar href="CYTOSCAPE_JARS/cytoscape_1.0.jar"/>
     <jar href="data.jar"/>
+    <jar href="CYTOSCAPE_JARS/plugins_1.0/getInteractions.jar"/>
+    <jar href="CYTOSCAPE_JARS/plugins_1.0/httpdata.jar"/>
+    <jar href="CYTOSCAPE_JARS/plugins_1.0/sequence.jar"/>
   </resources>
   <application-desc>
     <argument>-p</argument>

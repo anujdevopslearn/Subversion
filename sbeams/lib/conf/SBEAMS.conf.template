@@ -104,6 +104,7 @@ DBPREFIX{PhenoArray}    = sbeams.dbo.
 DBPREFIX{PeptideAtlas}  = sbeams.dbo.
 DBPREFIX{ProteinStructure}    = sbeams.dbo.
 DBPREFIX{Proteomics}    = sbeams.dbo.
+DBPREFIX{SolexaTrans}   = sbeams.dbo.
 DBPREFIX{SNP}           = sbeams.dbo.
 DBPREFIX{SIGID}         = sbeams.dbo.
 DBPREFIX{APD}           = sbeams.dbo.

@@ -2,12 +2,15 @@
 Notes add a new module:
 
 #### Set this to the full name of the new module
-set DEST = Genotyping
+set DEST = SolexaTrans
 
 #### Set this to a unique two-letter code for the new module.
 #### Do not duplicate existing two-letter codes. Code may be
 #### longer than two letters, but not recommended.
-set TAG = GT
+set TAG = ST
+
+#### Set this to the working dev instance creating the module
+setenv SBEAMS /net/dblocal/www/html/dev2/sbeams
 
 --
 
@@ -17,7 +20,7 @@ set TMPLTAG = ModTmpTAG
 
 ---
 
-cd /net/dblocal/www/html/dev2/sbeams/lib/perl/SBEAMS
+cd $SBEAMS/lib/perl/SBEAMS
 #rm -r ${DEST} ${DEST}.pm
 cp -p $TEMPLATE.pm $DEST.pm
 cp -p -r $TEMPLATE $DEST
@@ -25,37 +28,37 @@ replaceall.pl $TEMPLATE $DEST $DEST.pm
 cd $DEST
 replaceall.pl $TEMPLATE $DEST *.pm
 replaceall.pl ${TMPLTAG}_ ${TAG}_ *.pm
-rm -r CVS .svn
+/bin/rm -rf CVS .svn
 
 ---
 
-cd /net/dblocal/www/html/dev2/sbeams/cgi
+cd $SBEAMS/cgi
 #rm -r ${DEST}
 cp -p -r $TEMPLATE $DEST
 cd $DEST
 replaceall.pl $TEMPLATE $DEST *.cgi
 replaceall.pl sbeams$TMPLTAG sbeams$TAG *.cgi
 replaceall.pl ${TMPLTAG}_ ${TAG}_ *.cgi
-rm -r CVS .svn
+/bin/rm -rf CVS .svn
 
 ---
 
-cd /net/dblocal/www/html/dev2/sbeams/lib/conf/Core
+cd $SBEAMS/lib/conf/Core
 ed Modules.conf and/or AvailableModules.conf to include new module
 
-cd /net/dblocal/www/html/dev2/sbeams/lib/perl/SBEAMS/Connection
+cd $SBEAMS/lib/perl/SBEAMS/Connection
 ed TableInfo.pm to add link to new module at top
 
 ---
 
-cd /net/dblocal/www/html/dev2/sbeams/lib/perl/SBEAMS/$DEST
+cd $SBEAMS/lib/perl/SBEAMS/$DEST
 ed TableInfo.pm
 ed Tables.pm
   to add some initial tables
 ed HTMLPrinter.pm
   to add links to manageable tables
 
-cd /net/dblocal/www/html/dev2/sbeams/lib/conf
+cd $SBEAMS/lib/conf
 ed SBEAMS.conf
 ed SBEAMS.conf.template
   to add database location definitions for new module
@@ -66,7 +69,7 @@ DBPREFIX{Genotyping}    = sbeams.dbo.
 This would a be good time to create a new database if the module
 calls for it, given r/w access to the sbeams user and r/o to sbeamsro.
 
-cd /net/dblocal/www/html/dev2/sbeams/lib/conf
+cd $SBEAMS/lib/conf
 #rm -r $DEST
 mkdir $DEST
 cd $DEST
@@ -80,20 +83,29 @@ replaceall.pl $TEMPLATE $DEST *
 
 Create the DDL files and create the tables in the database
 
-cd /net/dblocal/www/html/dev2/sbeams/lib/scripts/Core
+cd $SBEAMS/lib/scripts/Core
 setenv MODULE $DEST
 if ( ! -d "../../sql/$MODULE") mkdir ../../sql/$MODULE
-./generate_schema.pl --table_prop ../../conf/$MODULE/${MODULE}_table_property.txt --table_col ../../conf/$MODULE/${MODULE}_table_column.txt --schema_file ../../sql/$MODULE/$MODULE --destination_type mssql
+./generate_schema.pl \
+  --table_prop ../../conf/$MODULE/${MODULE}_table_property.txt \
+  --table_col ../../conf/$MODULE/${MODULE}_table_column.txt \
+  --schema_file ../../sql/$MODULE/$MODULE \
+  --destination_type mssql \
+  --module $DEST
 
-See section 5 of the sbeams.installnotes for details on how
+See section 8 of the sbeams.installnotes for details on how
 to create the database objects with the resulting files in
 /net/dblocal/www/html/dev2/sbeams/lib/sql/$DEST
+
+$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s $SBEAMS/lib/sql/$MODULE/${MODULE}_CREATETABLES.mssql -delim GO
+$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s $SBEAMS/lib/sql/$MODULE/${MODULE}_CREATECONSTRAINTS.mssql -delim GO --ignore
+
 
 ---
 
 Load those tables into the database if desired
-cd /net/dblocal/www/html/dev2/sbeams/lib/scripts/Core
-ed batch_update_driver_tables.pl
+cd $SBEAMS/lib/scripts/Core
+ed batch_update_driver_tables.csh
   (Add two lines for new driver tables and run the additions)
 set CONFDIR = "../../conf"
 ./update_driver_tables.pl $CONFDIR/${DEST}/${DEST}_table_property.txt
@@ -113,7 +125,7 @@ Create table_group_security entries for new groups for common and rowprivate
 
 Add the scripts directory and add load_biosequence_set support if desired:
 
-cd /net/dblocal/www/html/dev2/sbeams/lib/scripts
+cd $SBEAMS/lib/scripts
 mkdir $DEST
 cd $DEST
 ln -s ../share/load_biosequence_set.pl
@@ -127,7 +139,7 @@ ed UpdateSymLinks.pl
 
 Add query_option data:
 
-cd /net/dblocal/www/html/dev2/sbeams/lib/sql/$DEST
+cd $SBEAMS/lib/sql/$DEST
 cp -p ../ProteinStructure/ProteinStructure_POPULATE.mssql ${DEST}_POPULATE.mssql
 ed ${DEST}_POPULATE.mssql
 execute
@@ -137,33 +149,31 @@ execute
 Test in your dev2 area.  Once all is good, check into CVS or Subversion:
 
 
-cd /net/dblocal/www/html/dev2/sbeams/cgi
+cd $SBEAMS/cgi
 cd $DEST
 pur
 cd ..
-cvs add $DEST
-cvs add $DEST/*
+svn add $DEST
 
-cd /net/dblocal/www/html/dev2/sbeams/lib/perl/SBEAMS
+cd $SBEAMS/lib/perl/SBEAMS
 cd $DEST
 pur
 cd ..
-cvs add $DEST.pm
-cvs add $DEST
-cvs add $DEST/*
+svn add $DEST.pm
+svn add $DEST
 
-#cd /net/dblocal/www/html/dev2/sbeams/images
-#cvs add -kb biosap_logo.png
+#cd $SBEAMS/images
+#svn add biosap_logo.png
 
-cd /net/dblocal/www/html/dev2/sbeams/lib/conf
+cd $SBEAMS/lib/conf
 cd $DEST
 pur
 cd ..
-cvs add $DEST
-cvs add $DEST/*
+svn add $DEST
+svn add $DEST/*
 
-cd /net/dblocal/www/html/dev2/sbeams
-cvs commit
+cd $SBEAMS
+svn commit
 
 
-Added new Genotyping Module
+Added new SolexaTrans Module
