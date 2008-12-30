@@ -1729,6 +1729,15 @@ sub getNSpecFromFlatFiles
     if ( !-e $pepXMLfile ) {  # Always guessing...
       $pepXMLfile = "$search_batch_path/interact.pep.xml";
     }
+    if ( !-e $pepXMLfile ) {  
+      $pepXMLfile = "$search_batch_path/interact-combined.pep.xml";
+    }
+    if ( !-e $pepXMLfile ) {  
+      $pepXMLfile = "$search_batch_path/interact_combined.pep.xml";
+    }
+    if ( !-e $pepXMLfile ) {  
+      $pepXMLfile = "$search_batch_path/interact_combined.iproph.pep.xml";
+    }
     if ( !-e $pepXMLfile ) {
       print STDERR "Unable to find pep xml file, build stats will not be computed correctly\n";
     }
@@ -2616,6 +2625,9 @@ sub getMzXMLFileNames
         'interact-spec.xml',
         'interact.xml',
         'interact.pep.xml',
+        'interact-combined.pep.xml',
+        'interact_combined.pep.xml',
+        'interact_combined.iproph.pep.xml',
       );
       my $found_file = 0;
       foreach my $possible_name ( @possible_interact_names ) {
