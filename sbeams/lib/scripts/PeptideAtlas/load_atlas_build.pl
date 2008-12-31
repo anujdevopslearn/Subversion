@@ -1610,6 +1610,7 @@ sub insert_spectra_description_set
 
         ## read experiment's pepXML file to get an mzXML file name
         my @mzXMLFileNames = getMzXMLFileNames( search_batch_dir_path => $search_batch_dir_path);
+        print `date`;
 
 
 	if (1) {
@@ -1641,7 +1642,8 @@ sub insert_spectra_description_set
 #            my $nspec = `grep 'msLevel="2"' $mzXMLFile | wc -l`;
             my $nspec = 500;
             $sum = $sum + $nspec;
-print "  nspec=$nspec\n";
+            # don't print, since this is broken
+            #print "  nspec=$nspec\n";
         }
 
         $n_spectra = $sum;
@@ -1733,10 +1735,7 @@ sub getNSpecFromFlatFiles
       $pepXMLfile = "$search_batch_path/interact-combined.pep.xml";
     }
     if ( !-e $pepXMLfile ) {  
-      $pepXMLfile = "$search_batch_path/interact_combined.pep.xml";
-    }
-    if ( !-e $pepXMLfile ) {  
-      $pepXMLfile = "$search_batch_path/interact_combined.iproph.pep.xml";
+      $pepXMLfile = "$search_batch_path/interact-combined.iproph.pep.xml";
     }
     if ( !-e $pepXMLfile ) {
       print STDERR "Unable to find pep xml file, build stats will not be computed correctly\n";
@@ -2594,6 +2593,177 @@ sub loadFromPAxmlFile {
 
 
 #######################################################################
+#  getMzXMLFileNamesFromPepXMLFileOld
+#    12/30/08: replaced by tmf with a version that is slower
+#     but simpler and more sure. It uses <msms_run_summary>
+#     instead of <inputfile>.
+#######################################################################
+sub getMzXMLFileNamesFromPepXMLFileOld
+{
+    my %args = @_;
+    my $infile = $args{infile} or die
+        " need pepXML filepath ($!)";
+    my $search_batch_dir_path = $args{search_batch_dir_path} or die
+        " need search_batch_dir_path filepath ($!)";
+    my ($msRunPepXMLFileName, $mzXMLFileName);
+    my (@msRunPepXMLFileNames, @mzXMLFileNames);
+    my $guessed_experiment_dir;
+
+    unless(-e $infile) {
+      print "could not find infile '$infile'.\n";
+      return @mzXMLFileNames;
+    }
+
+    open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
+
+    #### Try to glean a mzXML filename from each <inputfile>
+    while (my $line = <INFILE>)
+    {
+        chomp($line);
+
+        # File is another pepXML file
+        if ($line =~ /^(\<inputfile name=\")(.+)(\/)(.+\.pep\.xml)\"\/\>/)
+        {
+           my $pepxml_dir = $2;
+           my $pepxml_filename = $4;
+           print "Found a nested pepXML file: $pepxml_dir\/$pepxml_filename\n";
+           # Get mzXML filenames from this file
+           push(@mzXMLFileNames,
+            getMzXMLFileNamesFromPepXMLFile(infile => $pepxml_dir."\/".$pepxml_filename,
+                                            search_batch_dir_path => $search_batch_dir_path));
+           next;
+        }
+
+        # Filename includes at least two slashes
+        elsif ($line =~ /^(\<inputfile name=\")(.+)(\/)(.+)(\/)(.+)(\")(\/\>)/)
+        {
+            my $exp_dir = $2;   #portion preceding second-to-last slash
+
+            my $tmp = $6; #filename without path
+
+            # truncate any .xml extension
+            if ($tmp =~ /(.+)\.xml/)
+            {
+                $tmp = $1;
+            }
+
+	    #### Attempted workaround for more crazy Qstar files
+	    if ($tmp =~ /\.(\d+)\.\d$/) {
+	      next;
+	    }
+
+            # Assume mzXML file is of same basename as .xml file,
+            # but one directory higher (in experiment dir)
+            $mzXMLFileName = "$exp_dir/$tmp" . ".mzXML";
+
+            push (@mzXMLFileNames, $mzXMLFileName);
+
+        # Filename does not include at least two slashes
+	} elsif ($line =~ /^\<inputfile name=\"(.+)\"/) {
+            # Assume mzXML file is exactly the same, plus .mzXML
+	    my $tmp = $1;
+            $mzXMLFileName = "$tmp" . ".mzXML";
+            push (@mzXMLFileNames, $mzXMLFileName);
+	}
+
+        #### Workaround for problem Qstar experiments, specifically
+        #### /sbeams/archive/rossola/HUPO-ISB/b1-CIT_glyco_qstar
+	if ($line =~ m~directory="(.+)/.+">~) {
+	  $guessed_experiment_dir = $1;
+	}
+        if ($line =~ m~<inputfile name="(.+)\.xml"/>~) {
+	  $mzXMLFileName = "$guessed_experiment_dir/$1.mzXML";
+	  push (@mzXMLFileNames, $mzXMLFileName);
+	}
+
+
+	#### Finish parsing if we get to <roc> element and we've found something
+        if ($line =~ /(\<roc)(.+)/ && $mzXMLFileName)
+        {
+            last;
+        }
+
+	#### Finish parsing when we reach <spectrum_query> for sure
+        last if ($line =~ /\<spectrum_query/);
+
+    }
+
+    close(INFILE) or die "Cannot close $infile";
+
+
+    #### There are often absolute paths in the pepXML, but if the experiments
+    #### were not searched locally or were moved, these may well be wrong.
+    #### Verify the locations and if inaccessible try the search_batch_dir
+    for (my $i=0; $i< scalar(@mzXMLFileNames); $i++) {
+      my $file = $mzXMLFileNames[$i];
+      next if ( -e $file);
+      my $barefilename = $file;
+      $barefilename =~ s#.+/##;
+      $file = "$search_batch_dir_path/$barefilename";
+      if ( -e $file ) {
+        $mzXMLFileNames[$i] = $file;
+      } else {
+        #### Fred Hutch processed files sometimes have fract in there
+        $file =~ s/\.fract\.mzXML/.mzXML/;
+        if ( -e $file ) {
+          $mzXMLFileNames[$i] = $file;
+        } else {
+          print "ERROR: Unable to determine location of file '$mzXMLFileNames[$i]'\n";
+          print "  (also tried: $file)\n";
+        }
+      }
+    }
+    return @mzXMLFileNames;
+}
+
+
+#######################################################################
+#  getMzXMLFileNamesFromPepXMLFile
+#######################################################################
+sub getMzXMLFileNamesFromPepXMLFile
+{
+    my %args = @_;
+    my $infile = $args{infile} or die
+        " need pepXML filepath ($!)";
+    my $search_batch_dir_path = $args{search_batch_dir_path} or die
+        " need search_batch_dir_path filepath ($!)";
+    my ($msRunPepXMLFileName, $mzXMLFileName);
+    my (@msRunPepXMLFileNames, @mzXMLFileNames);
+    my $guessed_experiment_dir;
+
+    unless(-e $infile) {
+      print "could not find infile '$infile'.\n";
+      return @mzXMLFileNames;
+    }
+
+    open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
+
+    print "getting MzXML filenames from $infile\n";
+
+    #### Try to glean a mzXML filename from each <msms_run_summary> element.
+    while (my $line = <INFILE>)
+    {
+        chomp($line);
+
+        if ($line =~ /^\<msms_run_summary base_name=\"(.+?)\"/)
+        {
+            my $basename = $1;
+	    #### Attempted workaround for more crazy Qstar files
+	    if ($basename =~ /\.(\d+)\.\d$/) {
+	      next;
+	    }
+            $mzXMLFileName = "$basename" . ".mzXML";
+            print "got mzXMLFileName $mzXMLFileName\n";
+            push (@mzXMLFileNames, $mzXMLFileName);
+	}
+    }
+    close(INFILE) or die "Cannot close $infile";
+
+    return @mzXMLFileNames;
+}
+
+
+#######################################################################
 #  getMzXMLFileNames -- get mzXML File Names used in the interact pepXML
 # @param search_batch_dir_path absolute path to search_batch_dir
 # @return mzXMLFileNames
@@ -2626,14 +2796,14 @@ sub getMzXMLFileNames
         'interact.xml',
         'interact.pep.xml',
         'interact-combined.pep.xml',
-        'interact_combined.pep.xml',
-        'interact_combined.iproph.pep.xml',
+        'interact-combined.iproph.pep.xml',
       );
       my $found_file = 0;
       foreach my $possible_name ( @possible_interact_names ) {
 	if ( -e $search_batch_dir_path.'/'.$possible_name ) {
 	  $found_file = 1;
 	  $infile = $search_batch_dir_path.'/'.$possible_name;
+	  print "Found $possible_name in $search_batch_dir_path\n";
 	  last;
 	}
       }
@@ -2644,92 +2814,11 @@ sub getMzXMLFileNames
       }
     }
 
-    unless(-e $infile) {
-      die "could not find infile '$infile'.\n";
-    }
-
-    open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
-
-    while (my $line = <INFILE>)
-    {
-        chomp($line);
-
-        if ($line =~ /^(\<inputfile name=\")(.+)(\/)(.+)(\/)(.+)(\")(\/\>)/)
-        {
-            my $exp_dir = $2;
-
-            my $tmp = $6;
-
-            if ($tmp =~ /(.+)\.xml/)
-            {
-                $tmp = $1;
-            }
-
-	    #### Attempted workaround for more crazy Qstar files
-	    if ($tmp =~ /\.(\d+)\.\d$/) {
-	      next;
-	    }
-
-            $mzXMLFileName = "$exp_dir/$tmp" . ".mzXML";
-
-            push (@mzXMLFileNames, $mzXMLFileName);
-
-	} elsif ($line =~ /^\<inputfile name=\"(.+)\"/) {
-	    my $tmp = $1;
-            $mzXMLFileName = "$tmp" . ".mzXML";
-            push (@mzXMLFileNames, $mzXMLFileName);
-	}
-
-        #### Workaround for problem Qstar experiments, specifically
-        #### /sbeams/archive/rossola/HUPO-ISB/b1-CIT_glyco_qstar
-	if ($line =~ m~directory="(.+)/.+">~) {
-	  $guessed_experiment_dir = $1;
-	}
-        if ($line =~ m~<inputfile name="(.+)\.xml"/>~) {
-	  $mzXMLFileName = "$guessed_experiment_dir/$1.mzXML";
-	  push (@mzXMLFileNames, $mzXMLFileName);
-	}
-
-
-	#### Finish parsing if we get to <roc> element and we've found something
-        if ($line =~ /(\<roc)(.+)/ && $mzXMLFileName)
-        {
-            last;
-        }
-
-	#### Finish parsing that <spectrum_query> for sure
-        last if ($line =~ /\<spectrum_query/);
-
-    }
-
-    close(INFILE) or die "Cannot close $infile";
-
-
-    #### There are often absolute paths in the pepXML, but if the experimnts
-    #### were not searched locally or were move, this may well be wrong.
-    #### Verify the locations and if inaccessible try the search_batch_dir
-    for (my $i=0; $i< scalar(@mzXMLFileNames); $i++) {
-      my $file = $mzXMLFileNames[$i];
-      next if ( -e $file);
-      my $barefilename = $file;
-      $barefilename =~ s#.+/##;
-      $file = "$search_batch_dir_path/$barefilename";
-      if ( -e $file ) {
-        $mzXMLFileNames[$i] = $file;
-      } else {
-        #### Fred Hutch processed files sometimes have fract in there
-        $file =~ s/\.fract\.mzXML/.mzXML/;
-        if ( -e $file ) {
-          $mzXMLFileNames[$i] = $file;
-        } else {
-          print "ERROR: Unable to determine location of file '$mzXMLFileNames[$i]'\n";
-          print "  (also tried: $file)\n";
-        }
-      }
-    }
+    push(@mzXMLFileNames,
+      getMzXMLFileNamesFromPepXMLFile(infile => $infile,
+            search_batch_dir_path => $search_batch_dir_path));
 
     return @mzXMLFileNames;
-
 }
 
 
