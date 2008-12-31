@@ -84,7 +84,8 @@ sub parse
     } else {
       my @possible_interact_names = ( 'interact-prob.xml', 'interact.xml',
         'interact-specall.xml', 'interact-spec.xml', 'interact-prob.pep.xml',
-        'interact.pep.xml'
+        'interact.pep.xml', 'interact-combined.pep.xml',
+        'interact-combined.iproph.pep.xml'
       );
       my $found_file = 0;
       foreach my $possible_name ( @possible_interact_names ) {
