@@ -3110,7 +3110,7 @@ sub cleanupArchive {
 
   #### If no fractions were found, complain
   unless (@fraction_ids) {
-    die("Unable to find any fractions with: $sql");
+    print "WARNING: Unable to find any fractions for experiment. Partially loaded.";
   }
 
 
