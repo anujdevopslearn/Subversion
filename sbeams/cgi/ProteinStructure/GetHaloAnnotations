@@ -350,7 +350,7 @@ $LINESEPARATOR
 	my $temp_orf_name_clause = '';
 	if ($parameters{search_scope} =~ /(ORFName|All)/) {
 	  $temp_orf_name_clause = $sbeams->parseConstraint2SQL(
-        constraint_column=>"BS.biosequence_accession",
+        constraint_column=>"BS.biosequence_name",
         constraint_type=>"plain_text",
         constraint_name=>"ORF Name",
         constraint_value=>$search_key,
