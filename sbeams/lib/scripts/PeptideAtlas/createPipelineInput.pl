@@ -246,6 +246,7 @@ sub start_element {
 sub pepXML_start_element {
   my ($self,$uri,$localname,$qname,$attrs) = @_;
 
+
   #### Make a hash to of the attributes
   my %attrs = $attrs->to_hash();
 
@@ -422,7 +423,6 @@ sub end_element {
 sub pepXML_end_element {
   my ($self,$uri,$localname,$qname) = @_;
 
-
   #### If this is the end of the spectrum_query, store the information if it
   #### passes the threshold
   if ($localname eq 'spectrum_query') {
@@ -437,12 +437,13 @@ sub pepXML_end_element {
       $probability = -1;
     }
 
+
     #### If this peptide passes the threshold, store it
     #if ($probability >= $self->{P_threshold}) {
     # 10/08: iProphet may significantly increase the probability
     #    we don't want to discard anything that might ultimately be
     #    > P_threshold, so we are conservative and use 0.50 here.
-    if ($probability >= 0.50) {
+    if ($probability > 0.50) {
 
       #### Create the modified peptide string
       my $modified_peptide = '';
@@ -474,6 +475,11 @@ sub pepXML_end_element {
       );
 
       #### Store the information into an array for caching
+      # 01/09 tmf: I think the test below is a bug. Just above,
+      #  we test for prob > 0.5 & state why we don't use P_threshold.
+      # However, if we allow all with prob > 0.5 here, we will get
+      # lots of warnings that these peptides are missing from
+      # ProteinProphet_data_list. Need to resolve this.
       if ($probability >= $self->{P_threshold}) {
 	push(@{ $self->{identification_list} },
           [$self->{search_batch_id},
@@ -541,7 +547,14 @@ sub protXML_end_element {
     #### If this peptide passes the threshold, store it
     #### EWD Add -0.05 so compensate for new ProteinProphet by DS which
     #### artificially degrades initial_probabilities by .001
-    if ($initial_probability >= $self->{P_threshold}-.05) {
+    ####  tmf: this means we are storing more peptides than we need
+    ####  in this hash, but that's OK.
+    #### tmf: Add -0.2 instead of -0.05, since init_prob is taken
+    ####   from all-experiment iProphet run whereas we output all
+    ####   peptides whose final adjusted prob is based on
+    ####   per-experiment iProphet runs ... (reasoning not exactly right)
+
+    if ($initial_probability >= $self->{P_threshold}-.2) {
 
       #### Create the modified peptide string
       my $modified_peptide = '';
