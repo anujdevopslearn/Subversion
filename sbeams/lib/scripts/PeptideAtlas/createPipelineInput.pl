@@ -980,6 +980,10 @@ sub main {
 	unless (-e $proteinProphet_filepath) {
 	  die("ERROR: Specified master ProteinProphet file not found '$proteinProphet_filepath'\n");
 	}
+        print "INFO: Reading $proteinProphet_filepath...\n" unless ($QUIET);
+        $CONTENT_HANDLER->{document_type} = 'protXML';
+        $parser->parse (XML::Xerces::LocalFileInputSource->new($proteinProphet_filepath));
+        print "\n";
 
 	#### If it exists, read the SpectraST library
 	$spectral_peptides = readSpectralLibraryPeptides(
@@ -1006,14 +1010,13 @@ sub main {
 	  $proteinProphet_filepath = undef;
 	}
       }
-    }
 
-    #### After all this, if we have a filepath, try to read it
-    if ($proteinProphet_filepath) {
-      print "INFO: Reading $proteinProphet_filepath...\n" unless ($QUIET);
-      $CONTENT_HANDLER->{document_type} = 'protXML';
-      $parser->parse (XML::Xerces::LocalFileInputSource->new($proteinProphet_filepath));
-      print "\n";
+      if ($proteinProphet_filepath) {
+        print "INFO: Reading $proteinProphet_filepath...\n" unless ($QUIET);
+        $CONTENT_HANDLER->{document_type} = 'protXML';
+        $parser->parse (XML::Xerces::LocalFileInputSource->new($proteinProphet_filepath));
+        print "\n";
+      }
     }
 
 
