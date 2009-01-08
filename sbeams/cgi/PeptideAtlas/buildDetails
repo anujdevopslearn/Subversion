@@ -115,8 +115,10 @@ my $show_image = 0;
     # Add peptide stats section
     # Add graphic
 
-    $page = get_build_plots ( $build_id, $chart_div ) if $show_image;
-		print $page;
+		if ( $show_image ) {
+      $page = get_build_plots ( $build_id, $chart_div ); 
+	  	print $page;
+		}
     $page = getSampleMapDisplay ( build_id => $build_id );
 		print $page;
 
@@ -366,6 +368,7 @@ sub getSampleMapDisplay {
 
 
   <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/jsapi"></script>
+  <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/ga.js"></script>
   <script type="text/javascript">
   google.load("visualization", "1", {});
   google.load("prototype", "1.6");
