@@ -31,6 +31,7 @@ use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::DBInterface;
 use SBEAMS::Connection::HTMLPrinter;
 use SBEAMS::Connection::TableInfo;
+use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::ErrorHandler;
 use SBEAMS::Connection::Utilities;
@@ -344,6 +345,91 @@ sub doesSBEAMSTempFileExist {
 	}
 }
 
+#+
+# Method to add contact, user_login, and user_work_group records 
+# in one fell swoop.  Will not create work group if it does not 
+# already exist.
+#
+#-
+sub addUserAndGroups {
+  my $self = shift;
+	my %args = @_;
+
+  my $err;
+  for my $param ( qw( first_name last_name username work_group_name work_group_privilege  ) ) {
+    unless ( $args{$param} ) {
+			$err = ( $err ) ? $err . ', ' . $param : "Missing required param(s) $param";
+		}
+  }
+	$self->handle_error( message => $err, error_type => 'insufficient_constraints' ) if $err;
+
+  my $contact_where = qq~
+	WHERE first_name = '$args{first_name}' AND last_name = '$args{last_name}' 
+	AND record_status <> 'D'
+	~;
+  
+  my $ulogin_where = qq~
+	WHERE username = '$args{username}' 
+	AND record_status <> 'D'
+	~;
+
+  my $wgroup_where = qq~
+	WHERE work_group_name = '$args{work_group_name}' 
+	AND record_status <> 'D'
+	~;
+#	my $wgroup_table = $self->evalSQL( '$TB_WORK_GROUP' );
+#	my $contact_table = $self->evalSQL( '$TB_WORK_GROUP' );
+  
+	# Does work group exist?
+	my $wg_id = $self->recordExists( table => $TB_WORK_GROUP,
+	                                clause => $wgroup_where,
+													         field => 'work_group_id' );
+  unless ( $wg_id ) {
+	  $self->handle_error( message => 'Work group does not exist', error_type => 'sbeams_error' );
+	}
+
+
+  # Does contact exist?
+  my $contact_id = $self->recordExists( table => $TB_CONTACT, 
+	                                     clause => $contact_where,
+																			  field => 'contact_id' );
+
+  if ( $contact_id ) {
+		$log->warn( "contact record exists, not adding" );
+	} else {
+		$contact_id = $self->addContact( first_name => $args{first_name},
+		                                 last_name => $args{last_name} );
+	}
+  unless ( $contact_id ) {
+	  $self->handle_error( message => 'Contact_id doew not exist', error_type => 'sbeams_error' );
+	}
+
+  # Does username (user_login) exist?
+	my $user_login_id;
+  if ( $self->recordExists( table => $TB_USER_LOGIN, clause => $ulogin_where ) ) {
+		$log->warn( "user_login record exists, not adding" );
+	} else {
+		$user_login_id = $self->addUserLogin( username => $args{username},
+		                                      contact_id => $contact_id );
+	}
+
+
+	my $uwgroup_where = qq~
+  WHERE contact_id = $contact_id 
+	AND work_group_id = $wg_id
+	~;
+	my $uwg_id;
+
+	# Does user work group exist?
+  if ( $self->recordExists( table => $TB_USER_WORK_GROUP, clause => $uwgroup_where ) ) {
+		$log->debug( "record exists, skipping" );
+	} else {
+		$uwg_id = $self->addUserWorkGroup( contact_id => $contact_id,
+		                                 privilege_id => $args{work_group_privilege},
+		                                work_group_id => $wg_id ) ;
+	}
+	return 1;
+}
 
 ###############################################################################
 
