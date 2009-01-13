@@ -64,6 +64,8 @@ use Getopt::Long;
 use FindBin;
 use Cwd;
 
+use Benchmark;
+
 use lib "$FindBin::Bin/../../perl";
 use vars qw ($sbeams $q $sbeams_affy $sbeams_affy_groups
   $PROG_NAME $USAGE %OPTIONS
@@ -187,6 +189,8 @@ sub main {
 # Handles the core functionality of this script
 ###############################################################################
 sub handleRequest {
+  my $start = new Benchmark;
+
   my %args     = @_;
   my $SUB_NAME = "handleRequest";
 
@@ -246,11 +250,11 @@ sub handleRequest {
     }
 
     print "preprocess output: $preprocess_output\n"
-      . "postSAM output: $postSAM_output\n\n"
+      . "postSAM output: $postSAM_output\n"
       if $VERBOSE >= 4;
 
     if ( -e $postSAM_output ) {
-      print "$postSAM_output already exists\n" if $VERBOSE >= 4;
+      print "$postSAM_output already exists\n\n" if $VERBOSE >= 4;
     }
     else {
 
@@ -277,8 +281,6 @@ sub handleRequest {
     }
   }
 
-  print "\n";
-
   print "Determining number of arrays per each slide\n";
   my %arrays_per_slide;
   foreach my $array (@project_arrays) {
@@ -297,6 +299,8 @@ sub handleRequest {
   }
 
   print "Making GeneSpring files for each array\n";
+  my @agilent_fe_outputs = glob("$AGILENTFE_OUTPUT_PATH/*.txt");
+
   foreach my $array (@project_arrays) {
     my $id           = $array->[0];
     my $array_name   = $array->[1];
@@ -328,25 +332,31 @@ sub handleRequest {
       }
 
       foreach my $channel ( keys %channels ) {
-        my @agilent_files =
-          glob(
-          "$AGILENTFE_OUTPUT_PATH/$barcode*$channel*$agilent_array_name.txt");
+		my $agilent_file = "";
 
-        print "For channel $channel, found files: @agilent_files\n"
-          if $VERBOSE >= 1;
+		for my $f (@agilent_fe_outputs) {
+			if($f =~ /$barcode\_\d{6}\-$channel.*$agilent_array_name/) {
+				$agilent_file = $f;
+			}
+		}
 
-        if ( $#agilent_files > -1 ) {
+        print "For channel $channel, found file: $agilent_file\n"
+          if $VERBOSE >= 2;
+
+        if ( $agilent_file ne "" ) {
           $channels{$channel} =~ /(.*)(H|L)/;
           my $sample_name = $1;
           my $intensity   = $2;
-          generate_genespring_files( $agilent_files[0], $barcode,
+          generate_genespring_files( $agilent_file, $barcode,
             $agilent_array_name, $sample_name, $intensity );
         }
       }
     }
   }
 
-  print "\n\n";
+  my $end = new Benchmark;
+  my $diff = timediff($end, $start);
+  print "Time in handleRequest was ", timestr($diff, 'all'), " seconds\n" if $VERBOSE >= 1;
 }
 
 sub get_arrays_for_project {
