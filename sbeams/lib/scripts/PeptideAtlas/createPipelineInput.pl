@@ -438,12 +438,13 @@ sub pepXML_end_element {
     }
 
 
-    #### If this peptide passes the threshold, store it
-    #if ($probability >= $self->{P_threshold}) {
-    # 10/08: iProphet may significantly increase the probability
-    #    we don't want to discard anything that might ultimately be
-    #    > P_threshold, so we are conservative and use 0.50 here.
-    if ($probability > 0.50) {
+    #### If this peptide has a probability > threshold-0.4, store it.
+    #  iProphet may significantly increase the probability; we don't
+    #  want to discard anything that might ultimately be >= P_threshold
+    #  Theoretically, a peptide's prob. could be boosted by > 0.4,
+    #  but it is very unlikely -- and if it is, it's unlikely to be correct.
+    # Factor (0.4) must be identical to that used when creating ProtPro hash.
+    if ($probability >= $self->{P_threshold} - 0.4) {
 
       #### Create the modified peptide string
       my $modified_peptide = '';
@@ -467,7 +468,6 @@ sub pepXML_end_element {
 	$modified_peptide = $peptide_sequence;
       }
 
-
       my $charge = $self->{pepcache}->{charge};
 
       my $peptide_accession = &main::getPeptideAccession(
@@ -475,13 +475,7 @@ sub pepXML_end_element {
       );
 
       #### Store the information into an array for caching
-      # 01/09 tmf: I think the test below is a bug. Just above,
-      #  we test for prob > 0.5 & state why we don't use P_threshold.
-      # However, if we allow all with prob > 0.5 here, we will get
-      # lots of warnings that these peptides are missing from
-      # ProteinProphet_data_list. Need to resolve this.
-      if ($probability >= $self->{P_threshold}) {
-	push(@{ $self->{identification_list} },
+      push(@{ $self->{identification_list} },
           [$self->{search_batch_id},
 	   $self->{pepcache}->{spectrum},
 	   $peptide_accession,
@@ -494,8 +488,7 @@ sub pepXML_end_element {
            $self->{pepcache}->{massdiff},
            $self->{pepcache}->{protein_name},
 	  ]
-	);
-      }
+      );
     }
 
 
@@ -543,18 +536,21 @@ sub protXML_end_element {
       || die("ERROR: No peptide sequence in the cache!");
 
     my $initial_probability = $self->{pepcache}->{initial_probability};
+    my $adjusted_probability = $self->{pepcache}->{nsp_adjusted_probability};
 
-    #### If this peptide passes the threshold, store it
-    #### EWD Add -0.05 so compensate for new ProteinProphet by DS which
-    #### artificially degrades initial_probabilities by .001
-    ####  tmf: this means we are storing more peptides than we need
-    ####  in this hash, but that's OK.
-    #### tmf: Add -0.2 instead of -0.05, since init_prob is taken
-    ####   from all-experiment iProphet run whereas we output all
-    ####   peptides whose final adjusted prob is based on
-    ####   per-experiment iProphet runs ... (reasoning not exactly right)
+    # If this peptide has any chance of being in the PAident-template
+    #   file, store its Protein Prophet info so that it's available to
+    #   modify this peptide's PeptideProphet or iProphet probability.
+    # It should work for delta to be same as that used when creating
+    #   PAident-template file (plus .001), but in practice it must be much
+    #   larger, because of some unexplained discrepancies.
+    # TMF: wouldn't it work to just store info for peptides with
+    #  adjusted prob >= threshold? (We would then want to remove the
+    #  WARNING for peptides not found in this hash -- we'd want to
+    #  instead just not use those peptides.)
 
-    if ($initial_probability >= $self->{P_threshold}-.2) {
+    if ($initial_probability >= $self->{P_threshold} - 0.65) {
+    #if ($initial_probability >= $self->{P_threshold} - 0.41) {
 
       #### Create the modified peptide string
       my $modified_peptide = '';
@@ -642,10 +638,6 @@ sub protXML_end_element {
           protein_name => $self->{protein_name},
         };
       }
-
-
-
-
     }
 
     #### Clear out the cache
