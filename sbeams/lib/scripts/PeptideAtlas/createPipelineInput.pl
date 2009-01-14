@@ -541,15 +541,14 @@ sub protXML_end_element {
     # If this peptide has any chance of being in the PAident-template
     #   file, store its Protein Prophet info so that it's available to
     #   modify this peptide's PeptideProphet or iProphet probability.
-    # It should work for delta to be same as that used when creating
-    #   PAident-template file (plus .001), but in practice it must be much
-    #   larger, because of some unexplained discrepancies.
+    # It should work for threshold to be same as that used when creating
+    #   PAident-template file (plus .001), but in practice 
+    #   some unexplained discrepancies mean we have to include all peptides.
     # TMF: wouldn't it work to just store info for peptides with
-    #  adjusted prob >= threshold? (We would then want to remove the
+    #  adjusted prob >= threshold? We would then want to remove the
     #  WARNING for peptides not found in this hash -- we'd want to
-    #  instead just not use those peptides.)
+    #  instead just not use those peptides.
 
-    if ($initial_probability >= $self->{P_threshold} - 0.65) {
     #if ($initial_probability >= $self->{P_threshold} - 0.41) {
 
       #### Create the modified peptide string
@@ -638,7 +637,7 @@ sub protXML_end_element {
           protein_name => $self->{protein_name},
         };
       }
-    }
+    #}
 
     #### Clear out the cache
     delete($self->{pepcache});
