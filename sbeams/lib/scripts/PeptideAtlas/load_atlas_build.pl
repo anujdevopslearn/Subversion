@@ -53,6 +53,7 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 $sbeamsPROT = new SBEAMS::Proteomics;
 $sbeamsPROT->setSBEAMS($sbeams);
 
+
 #### Create and initialize SSRCalc object with 3.0
 use lib '/net/db/src/SSRCalc/ssrcalc';
 $ENV{SSRCalc} = '/net/db/src/SSRCalc/ssrcalc';
@@ -1083,11 +1084,7 @@ sub create_atlas_search_batch
 
     my $atlas_search_batch_id;
 
-
-#   my $nspec = getNSpecFromProteomics( search_batch_id => $sbid );
-
-    my $nspec = getNSpecFromFlatFiles( search_batch_path =>
-        $proteomics_search_batch_path );
+    my $nspec = $sbeamsMOD->getNSpecFromFlatFiles( search_batch_path => $proteomics_search_batch_path );
 
     my $search_batch_subdir =  $proteomics_search_batch_path;
 
@@ -1724,19 +1721,8 @@ sub getNSpecFromFlatFiles
     my $search_batch_path = $args{search_batch_path} or die
         "need search_batch_path ($!)";
 
-    my $pepXMLfile = "$search_batch_path/interact-prob.xml";
-    if ( !-e $pepXMLfile ) {
-      $pepXMLfile = "$search_batch_path/interact-prob.pep.xml";
-    }
-    if ( !-e $pepXMLfile ) {  # Always guessing...
-      $pepXMLfile = "$search_batch_path/interact.pep.xml";
-    }
-    if ( !-e $pepXMLfile ) {  
-      $pepXMLfile = "$search_batch_path/interact-combined.pep.xml";
-    }
-    if ( !-e $pepXMLfile ) {  
-      $pepXMLfile = "$search_batch_path/interact-combined.iproph.pep.xml";
-    }
+    my $pepXMLfile = $sbeamsMOD->findPepXMLFile( search_path => $search_batch_path );
+ 
     if ( !-e $pepXMLfile ) {
       print STDERR "Unable to find pep xml file, build stats will not be computed correctly\n";
     }

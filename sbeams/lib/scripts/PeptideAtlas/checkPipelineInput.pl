@@ -58,8 +58,11 @@ use SBEAMS::Connection::TableInfo;
 
 use SBEAMS::Proteomics::Tables;
 use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas;
 
 $sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS( $sbeams);
 
 
 ###############################################################################
@@ -480,16 +483,17 @@ sub main {
       next if ($line =~ /^\s*$/);
       my ($search_batch_id,$path) = split(/\t/,$line);
       my $filepath = $path;
+
       if ($filepath !~ /\.xml/) {
-	$filepath = $path."/interact-prob.xml";
-	if (! -e $filepath) {
-	  $filepath = $path."/interact.xml";
-	  if (! -e $filepath) {
-	    print "ERROR: Unable to find $filepath\n";
-	    next;
-	  }
-	}
+
+				$filepath = $sbeamsMOD->findPepXMLFile( search_path => $filepath );
+
+        unless ( $filepath ) {
+          print "ERROR: Unable to auto-detect an interact file in $path\n";
+          next;
+        }
       }
+
       my ($pepXML_document,$protXML_document);
 
       $pepXML_document->{filepath} = $filepath;

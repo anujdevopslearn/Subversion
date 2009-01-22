@@ -37,8 +37,11 @@ use SBEAMS::Connection::TableInfo;
 
 use SBEAMS::Proteomics::Tables;
 use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas;
 
 $sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS( $sbeams );
 
 
 ###############################################################################
@@ -845,33 +848,32 @@ sub main {
       my ($search_batch_id,$path) = split(/\s+/,$line);
       my $filepath = $path;
 
+      # Modified to use library method, found in SearchBatch.pm.  New file
+      # names should be added there; the preferred list below is considered
+			# first before default names, allows caller to determine priority.
       if ($filepath !~ /\.xml/) {
-	my @possible_interact_names = (
-          'interact-prob.pep.xml',
-          'interact-prob.xml',
-          'interact-spec.pep.xml',
-          'interact-spec.xml',
-          'interact.xml',
-          'interact.pep.xml',
-          'interact-combined.pep.xml',
-        );
-	my $found_file = 0;
-	foreach my $possible_name ( @possible_interact_names ) {
-	  if ( -e $path.'/'.$possible_name ) {
-	    $found_file = 1;
-	    $filepath = $path.'/'.$possible_name;
-	    last;
-	  }
-	}
-	unless ( $found_file ) {
-	  print "ERROR: Unable to auto-detect an interact file in $path\n";
-	  next;
-	}
+    	  my @preferred = ( 'interact-prob.pep.xml',
+                          'interact-prob.xml',
+                          'interact-spec.pep.xml',
+                          'interact-spec.xml',
+                          'interact.xml',
+                          'interact.pep.xml',
+                          'interact-combined.pep.xml' );
+
+        $filepath = $sbeamsMOD->findPepXMLFile( preferred_names => \@preferred,
+				                                        search_path => $filepath );
+
+	      unless ( $filepath ) {
+          print "ERROR: Unable to auto-detect an interact file in $path\n";
+          next;
+        }
       }
 
+
+
       unless ( -e $filepath ) {
-	print "ERROR: Specified interact file '$filepath' does not exist!\n";
-	next;
+        print "ERROR: Specified interact file '$filepath' does not exist!\n";
+        next;
       }
 
 

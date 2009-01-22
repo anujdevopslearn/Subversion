@@ -71,6 +71,7 @@ Options:
 
 EOU
 
+
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
         "update", "atlas_build_name:s", "update_all"
@@ -291,7 +292,7 @@ sub update_atlas_search_batch_record
     my $path = get_search_batch_directory(
           atlas_search_batch_id=>$atlas_search_batch_id);
 
-    my $nspec = getNSpecFromFlatFiles (search_batch_path => $path);
+    my $nspec = $sbeamsMOD->getNSpecFromFlatFiles (search_batch_path => $path);
 
     ## UPDATE atlas_search_batch record
     my %rowdata = (
@@ -338,20 +339,15 @@ sub update_atlas_search_batch_records
     ~;
 
     my @rows = $sbeams->selectSeveralColumns($sql);
-#       or die "\nERROR: n_seached_spectra not stored?  $sql \n\n";
 
     foreach my $row (@rows)
     {
         my ($n, $atlas_search_batch_id) = @{$row};
 
-#       print "$n for atlas_search_batch_id $atlas_search_batch_id from proteomics sql\n";
-
-#       if ($n == 0)
-#       {
             my $path = get_search_batch_directory(
                 atlas_search_batch_id=>$atlas_search_batch_id);
 
-            my $nspec = getNSpecFromFlatFiles (search_batch_path => $path);
+            my $nspec = $sbeamsMOD->getNSpecFromFlatFiles (search_batch_path => $path);
 
             ## UPDATE atlas_search_batch record
             my %rowdata = (  
@@ -368,8 +364,6 @@ sub update_atlas_search_batch_records
                 testonly=>$TESTONLY,
             );
         
-#           print "    $nspec in interact file\n";
-#       }
     }
 }# end update_atlas_search_batch_records
 
@@ -445,12 +439,8 @@ sub getNSpecFromFlatFiles
     my $search_batch_path = $args{search_batch_path} or die 
         "need search_batch_path ($!)";
 
-    my $pepXMLfile = "$search_batch_path/interact-prob.xml";
-		if ( !-e $pepXMLfile ) {
-      $pepXMLfile = "$search_batch_path/interact-prob.pep.xml";
-			print STDERR "Eureka: $pepXMLfile\n";
-		}
-
+	  my $pepXMLfile = $sbeamsMOD->findPepXMLFile( search_path => $search_batch_path,
+		                                             preferred_names => [qw(interact-prob.xml interact-prob.pep.xml)] );
 
     my $n0;
     
