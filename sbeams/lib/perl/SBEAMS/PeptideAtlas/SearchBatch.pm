@@ -174,29 +174,56 @@ sub getBuildSearchBatches {
 	return \@batches
 }
 
-sub deducePepXMLFile  {
+#+
+#  Routine to find appropriate pepXML file.
+#  @narg search_path       Required, path to search directory
+#  @narg preferred_names   Optional, array_ref to list of file names to search preferentially.
+#
+#-
+sub findPepXMLFile  {
 	my $self = shift;
   my %args = @_;
-  
-  my $pepXMLfile = $args{xml_filename}; 
-  my $search_batch_path = $args{search_batch_path} or die "need search_batch_path";
 
-  $pepXMLfile = $search_batch_path . '/' . $pepXMLfile; 
-	
-  if ( !-f $pepXMLfile ) {
-	  $pepXMLfile = "$search_batch_path/interact-prob.xml";
+  for my $arg ( qw( search_path ) ) {
+	  $sbeams->missing_constraint( constraint => 'search_path' ) unless $args{$arg};
 	}
-  if ( !-f $pepXMLfile ) {
-    $pepXMLfile = "$search_batch_path/interact-prob.pep.xml";
-  }
-  if ( !-f $pepXMLfile ) {  # Always guessing...
-    $pepXMLfile = "$search_batch_path/interact.pep.xml";
-  }
-  if ( !-f $pepXMLfile ) {  # Always guessing...
-    $pepXMLfile = "$search_batch_path/interact-spec.xml";
-  }
-  if ( !-f $pepXMLfile ) {
-    print STDERR "Unable to find pep xml file, build stats will not be computed correctly\n $search_batch_path\n";
+                                                                                                          
+	unless ( $args{search_path} =~ /\/$/ ) {
+	  $args{search_path} .= '/';
+	}
+
+  # First prepend any caller-preferred names
+  my @possible_names;
+	if ( $args{preferred_names} ) {
+		if ( ref( $args{preferred_names} ) eq 'ARRAY' ) {
+			@possible_names = @{$args{preferred_names}};
+		} elsif ( $args{preferred_names} ) {
+			push @possible_names, $args{preferred_names};
+		}
+	}
+
+	push @possible_names, 'interact-prob.pep.xml',
+                        'interact-prob.xml',
+                        'interact.pep.xml',
+                        'interact.xml',
+                        'interact-specall.xml',
+                        'interact-spec.xml',
+                        'interact-spec.pep.xml',
+                        'interact-combined.pep.xml',
+                        'interact-combined.iproph.pep.xml';
+
+  
+	my $pepXMLfile = '';
+
+	for my $name ( @possible_names ) {
+		if ( -e $args{search_path} . $name ) {
+			$pepXMLfile = $args{search_path} . $name;
+			last;
+		}
+	}
+
+  if ( ! $pepXMLfile ) {
+    print STDERR "Unable to find pep xml file: $args{search_path}\n";
 		return;
   }
 	return $pepXMLfile;
@@ -211,8 +238,9 @@ sub deducePepXMLFile  {
 sub getNSpecFromFlatFiles {
 	my $self = shift;
   my %args = @_;
+	$args{search_path} ||= $args{search_batch_path};
 
-  my $pepXMLfile = $self->deducePepXMLFile( %args ) || return '';
+  my $pepXMLfile = $self->findPepXMLFile( %args ) || return '';
   
 	%spectra = ();
   if (-e $pepXMLfile) {
