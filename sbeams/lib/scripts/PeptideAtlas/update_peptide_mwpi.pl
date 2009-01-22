@@ -24,11 +24,9 @@ use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 
-use SBEAMS::Glycopeptide;
-
 my $sbeams = new SBEAMS::Connection;
-my $sbeamsMOD = new SBEAMS::PeptideAtlas;
-$sbeamsMOD->setSBEAMS($sbeams);
+my $atlas = new SBEAMS::PeptideAtlas;
+$atlas->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 #### Create and initialize SSRCalc object with 3.0
@@ -97,8 +95,6 @@ unless ( $opts{mw} || $opts{hp} || $opts{pi} ) {
   ORDER BY peptide_id
   END_SQL
 
-  my $glyco = new SBEAMS::Glycopeptide();
-
   my $dbh = $sbeams->getDBHandle();
   $dbh->{AutoCommit} = 0;
   $dbh->{RaiseError} = 1;
@@ -130,26 +126,18 @@ unless ( $opts{mw} || $opts{hp} || $opts{pi} ) {
     }
     print "\n" unless $cnt % 5000;
     my $sequence = $row->[1];
-    my $mw = $glyco->calculatePeptideMass( sequence => $sequence );
     
     $calc_vals{mw} = $massCalculator->getPeptideMass( sequence => $sequence,
                                                      mass_type => 'monoisotopic'
                                                     );
 
-    $calc_vals{pi} = $glyco->calculatePeptidePI( sequence => $sequence );
+    $calc_vals{pi} = $atlas->calculatePeptidePI( sequence => $sequence );
 
     if ($SSRCalculator->checkSequence($sequence) && $sequence !~ /X/) {
       $calc_vals{hp} = $SSRCalculator->TSUM3($sequence);
     } else {
       print "WARNING: peptide '$sequence' contains residues invalid for SSRCalc\n" if $opts{verbose};
     }
-
-#    my $delta = abs($calc_vals{mw} - $row->[3]);
-#    my $ppm = ( $delta < 0.01 ) ? 'Yes' : 'No';
-#    $calc_vals{mw} = sprintf( "%0.4f", $calc_vals{mw} );
-#    $row->[3] = sprintf( "%0.4f", $row->[3] );
-#    $row->[2] = sprintf( "%0.1f", $row->[2] );
-#    print STDERR join( "\t", $row->[0], $row->[1], "$row->[3]($mw)", $calc_vals{mw}, $delta, $ppm, $row->[2], $calc_vals{pi}, $row->[4], $calc_vals{hp} ) . "\n" if $ppm eq 'No' || !$calc_vals{mw};
 
     my $items = '';
     for ( qw( mw pi hp ) ) {
