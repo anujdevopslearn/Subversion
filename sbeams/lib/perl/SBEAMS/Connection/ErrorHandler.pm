@@ -114,6 +114,19 @@ sub getStackTrace {
 #+
 #
 #-
+sub missing_constraint {
+  my $self = shift;
+  my %args = @_;
+  $args{error_type}   ||= 'insufficient_constraints';
+  $args{constraint}   ||= 'Unknown constraint';
+	$self->handle_error( error_type => $args{error_type},
+	                     message => "Missing required constraint(s): $args{constraint}" );
+}
+
+
+#+
+#
+#-
 sub handle_error {
   my $self = shift;
   my %args = @_;
