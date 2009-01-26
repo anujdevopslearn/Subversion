@@ -83,7 +83,7 @@ Options:
   --list                      If set, list the available builds and exit
   --delete                    Delete an atlas build (does not build an atlas).
   --purge                     Delete child records in atlas build (retains parent atlas record).
-  --load                      Build an atlas (can be used in conjunction with --purge).
+  --load                      Build an atlas (cannot currently be used in conjunction with --purge).
   --spectra                   Loads or updates the individual spectra for a build
   --instance_searchbatch_obs           Loads or updates the number of observations per 
                               search_batch for peptide_instance and modified_pi tables
@@ -220,7 +220,7 @@ sub handleRequest {
   ## --delete with --load will not work
   if ($del && $load) {
       print "ERROR: --delete --load will not work.\n";
-      print "  use: --purge --load instead\n\n";
+      print "  use: --purge, then --load, instead\n\n";
       die "\n$USAGE";
       exit;
   }
@@ -229,6 +229,15 @@ sub handleRequest {
   ## --delete with --purge will not work
   if ($del && $purge) {
       print "ERROR: select --delete or --purge, but not both\n";
+      print "$USAGE";
+      exit;
+  }
+
+  ## --load with --purge should work, but isn't working Dec. 2008.
+  ##  appears to purge & load, but afterward old load shows in web interface
+  if ($load && $purge) {
+      print "ERROR: --purge --load is not currently working.\n";
+      print "  use: --purge, then --load, instead\n\n";
       print "$USAGE";
       exit;
   }
