@@ -665,8 +665,9 @@ sub loadProteomicsExperiment {
            -f "$source_dir/interact-prob.xml" ||
            -f "$source_dir/sequest.params" ||
 	   -f "$source_dir/interact-prob.pep.xml" ||
-           -f "source_dir/interact-prob-data.htm" ) {
-    die("ERROR: '$source_dir' just doesn't look like a sequest search ".
+	   -f "$source_dir/interact-prob-data.htm" ||
+           -f "$source_dir/interact-combined.pep.xml" ) {
+    die("ERROR: '$source_dir' just doesn't look like a search results ".
         "directory");
   }
 
@@ -1907,6 +1908,7 @@ sub updateFromSummaryFiles {
   unless ( -f "$source_dir/interact.htm" ||
            -f "$source_dir/finalInteract/interact.htm" ||
            -f "$source_dir/sequest.params" ||
+           -f "$source_dir/interact-combined.pep.xml" ||
            -f "$source_dir/interact-prob-data.htm"
   ) {
     die("ERROR: '$source_dir' just doesn't look like a sequest search ".
