@@ -470,16 +470,27 @@ sub parsePathwayXML {
 
   $args{source} ||= 'db';
   if ( $args{source} eq 'db' && $self->kegg_tables_exist() ) {
-    my ( $kgml ) = $sbeams->selectrow_array( <<"    END" );
+		my $sql =<<"    END";
     SELECT kgml FROM $TBBL_KEGG_PATHWAY
     WHERE kegg_pathway_name = 'path:$path'
     END
+
+    my ( $kgml ) = $sbeams->selectrow_array( $sql ); 
+
+    if ( !$kgml ) {
+      $log->warn( "Failed to fetch KGML db:\n $sql" );
+      $log->warn( "Falling back to direct fetch from KEGG" );
+      my $from_kegg = $self->fetchPathwayXML( %args );
+      $kgml = $from_kegg->{xml};
+    }
+
     if ( $kgml ) {
       $parser->set_string( xml => $kgml );
     } else {
-      $log->error( "Failed to retrieve KGML from database" );
-      exit;
+      $log->error( "Unable to retrieve KGML from db or KEGG" );
+      return;
     }
+
   } else {
     my $base = $CONFIG_SETTING{KGML_URL} || 
       "ftp://ftp.genome.jp/pub/kegg/xml/KGML_v0.6.1/$org/BASE.xml";

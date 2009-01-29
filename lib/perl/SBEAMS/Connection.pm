@@ -266,6 +266,36 @@ sub fetchSTDOUT {
 
 
 
+sub writeSBEAMSTempFile {
+  my $self = shift;
+  my %args = @_;
+
+  # If we don't have content, nothing to do
+  return undef if !$args{content};
+
+  # Generate random filename iff necessary
+  $args{filename} ||= $self->getRandomString( num_chars => 20 );
+  $args{dirname} ||= $args{filename};
+  $args{filename} .= '.' . $args{suffix}  if $args{suffix};
+  my $tmp_path = "$PHYSICAL_BASE_DIR/tmp/";
+
+  if ( $args{newdir} ) {
+    $tmp_path .= $args{dirname} . '/';
+    system( "mkdir $tmp_path");
+  }
+  my $abs_filename = $tmp_path . $args{filename};
+  
+  open( TMPFIL, ">$abs_filename" ) || die "unable to open $abs_filename";
+  print TMPFIL $args{content};
+  close TMPFIL;
+  return $abs_filename;
+}
+
+sub readSBEAMSTempFile {
+}
+
+
+
 
 
 ###############################################################################

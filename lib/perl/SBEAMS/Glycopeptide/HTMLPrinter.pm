@@ -153,8 +153,13 @@ sub get_phospho_css {
    .anc_seq { background-color: $colors{Anchor_web};border-style: solid; border-color:gray; border-width: 1px  }
    .sig_seq { background-color: $colors{'Signal Sequence web'};border-style: solid; border-color:gray; border-width: 1px  }
    .glyco_seq { background-color: $colors{glyco_site_track};border-style: solid; border-color:gray; border-width: 1px  }
-   .phospho { background-color: $colors{glyco_site_track};border-style: solid; border-color:gray; border-width: 1px  }
-   .ambiphospho { background-color: $colors{ambi_site_track};border-style: solid; border-color:gray; border-width: 1px; color: Blue  }
+   .phospho { background-color: $colors{glyco_site_track};border-style: solid; border-color:gray; border-width: 0.1px  }
+   .nophospho { border-style: solid; border-color:white; border-width: 0.1px  }
+   .ambiphospho { background-color: $colors{ambi_site_track};border-style: solid; border-color:gray; border-width: 0.1px; color: Blue  }
+   .phosnobo { background-color: $colors{glyco_site_track};}
+   .ambinobo { background-color: $colors{ambi_site_track}; color: Blue  }
+   .darkambinobo { background-color: YELLOW; color: Blue  }
+   .info { background: #F0F0F0; border: #000 1px solid; padding: 4px; width: 80%; }
    .pep_cov { background-color: $colors{Coverage};border-style: solid; border-color:gray; border-width: 1px  }
    .outline { border-style: solid; border-color:gray; border-width: 1px }
    .sm_txt {  font-family: Helvetica, Arial, sans-serif; font-size: 8pt}

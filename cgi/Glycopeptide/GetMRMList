@@ -106,7 +106,7 @@ sub main
     } else 
     {
         handle_request(ref_parameters=>\%parameters);
-
+        print "Some libraries may be downloaded from the PeptideAtlas consensus library <A HREF=http://www.peptideatlas.org/speclib>download page</A>.\n";
         $sbeamsMOD->display_page_footer();
     }
 
@@ -190,6 +190,7 @@ sub handle_request
     $log->debug( $select );
 
     ##Input form:  action is set by PROGRAM_FILE_NAME, so sub it w/ display page:
+		$sbeams->collectSTDOUT();
     $sbeams->display_input_form(
         TABLE_NAME=>$TABLE_NAME,
         CATEGORY=>$CATEGORY,
@@ -200,6 +201,10 @@ sub handle_request
         input_types_ref=>\%input_types,
         mask_user_context=> '1',
     );
+		my $out = $sbeams->fetchSTDOUT();
+		$out =~ s/Protein Name Constraint/Gene Identifier Constraint/gm;
+		$log->debug( $out );
+		print $out;
 
     #### Display the form action buttons
     $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);

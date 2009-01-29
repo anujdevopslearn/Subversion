@@ -1476,6 +1476,7 @@ sub display_phospho_detail_form{
   my $kegglink = getKeggLink( name => $keggname, organism => $organism );
   my $cytolink = getCytoLink( acc => $ipi_acc );
   my $scanlink = getScansiteForm( seq => $pseq, name => $ipi_acc );
+  my $stringslink = getStringsLink( seq => $pseq, acc => $swiss_id );
   my $mrmlink = "<A HREF='ViewMRMList?NIST_library_id=$consensus&action=QUERY;protein_name_constraint=$ipi_acc'>view transitions</A>";
 
   $log->debug( "making the ortho link!" );
@@ -1487,6 +1488,7 @@ sub display_phospho_detail_form{
   } elsif ( $organism eq 'Yeast' ) {
     $ipi_url = getSGDLink( name => $ipi_acc );
   }
+  my $atlaslink = getAtlasLink ( name => $ipi_acc );
     
   my $swiss_prot_url = $glyco_o->make_url(term=>$swiss_id, 
                                      dbxref_tag => 'SwissProt'
@@ -1506,7 +1508,7 @@ sub display_phospho_detail_form{
       $q->td({class=>'grey_header', colspan=>2}, "Protein Info "),),
     $q->Tr(
       $q->td({class=>'rev_gray_head'}, "ID"),
-      $q->td({nowrap=>1}, "$ipi_url $kegglink $cytolink $ortholink $scanlink ")),
+      $q->td({nowrap=>1}, "$ipi_url $kegglink $cytolink $ortholink $stringslink $atlaslink $scanlink ")),
     $q->Tr(
       $q->td({class=>'rev_gray_head', nowrap=>1}, "Protein Name"),
       $q->td( $protein_name )),
@@ -1586,7 +1588,7 @@ END_DREK
                                                 sticky => 1 );
   my $identified_info = join( "\n", 
 		$q->Tr(
-				$q->td({class=>'grey_header', colspan=>2 }, "$link Observed Phosphopeptides $mrmlink"),
+				$q->td({class=>'grey_header', colspan=>2 }, "$link Observed (Phospho)peptides $mrmlink"),
 			),
 		$q->Tr( "<TD COLSPAN=2 $tr>" .  $glyco_o->display_peptides('Observed Phosphopeptides') . "</TD>" 
 			),
@@ -1662,6 +1664,17 @@ END_DREK
 } #end display_phospho
 
 
+sub getAtlasLink {
+  my %args = @_;
+  for my $arg ( qw( name ) ) {
+    return "" unless $args{$arg};
+  }
+  my $base = $sbeamsMOD->get_atlas_base_link();
+  
+  my $img = "$HTML_BASE_DIR/images/pa_tiny.png";
+  return "<A HREF='$base$args{name}'><IMG BORDER=0 TITLE='Look up protein information in the Peptide Atlas' SRC=$img></A>";
+}
+
 sub getFlybaseLink {
   my %args = @_;
   for my $arg ( qw( name ) ) {
@@ -1683,6 +1696,34 @@ sub getSGDLink {
 
 }
 
+sub getStringsLink {
+  my %args = @_;
+  for my $arg ( qw( acc ) ) {
+    return "" unless $args{$arg};
+  }
+  $args{name} =~ s/(CG\d+)(-P.)*/$1/;
+  my $img = "$HTML_BASE_DIR/images/strings_tiny.png";
+  my $link_base = 'http://string.embl.de/newstring_cgi/show_network_section.pl?required_score=400;limit=20;have_user_input=1;input_query_species=auto_detect;identifier=';
+  return "<A HREF='$link_base$args{acc}'><IMG BORDER=0 TITLE='Search for protein interaction networks at STRING' SRC=$img></A>";
+}
+
+sub getOrthologLink {
+  my %args = @_;
+  return '' unless $args{id};
+
+  my ($exists) = $sbeams->selectrow_array( <<"  END" );
+  SELECT count(*) FROM $TBGP_ORTHOLOG_TO_IPI
+  WHERE ipi_data_id = $args{id}
+  END
+  $log->debug(  <<"  END" );
+  SELECT count(*) FROM $TBGP_ORTHOLOG_TO_IPI
+  WHERE ipi_data_id = $args{id}
+  END
+
+  return '' unless $exists;
+
+  return qq ~<A HREF="viewOrthologs?ipi_data_id=$args{id}" TITLE="View orthologs/homolog information ($exists groups)"><IMG BORDER=0 SRC="$HTML_BASE_DIR/images/OrthoMCL.jpg"></A>~;
+}
 sub getCytoLink {
   my %args = @_;
   for my $arg ( qw( acc ) ) {

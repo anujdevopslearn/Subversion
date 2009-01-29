@@ -171,11 +171,11 @@ sub pathway_details {
     if (  stats.className == 'visible' ) {
       stats.className = 'hidden';
       showhide.innerHTML = 'Show Stats';
-      tgif.src =  '/devDC/sbeams/images/small_gray_plus.gif'
+      tgif.src =  '/sbeams/images/small_gray_plus.gif'
     } else {
       stats.className = 'visible';
       showhide.innerHTML = 'Hide Stats';
-      tgif.src =  '/devDC/sbeams/images/small_gray_minus.gif'
+      tgif.src =  '/sbeams/images/small_gray_minus.gif'
     }
   }
   function hideTimerInfo() {
