@@ -1,0 +1,486 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# $Id: peptideSearch.cgi 4670 2006-04-22 01:54:05Z dcampbel $
+#
+# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+###############################################################################
+
+
+###############################################################################
+# Get the script set up with everything it will need
+###############################################################################
+use strict;
+use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
+             $current_contact_id $current_username $glyco_query_o);
+use lib qw (../../lib/perl);
+use CGI::Carp qw(fatalsToBrowser croak);
+use Data::Dumper;
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::DataTable;
+
+use SBEAMS::Glycopeptide;
+use SBEAMS::Glycopeptide::Settings;
+use SBEAMS::Glycopeptide::Tables;
+
+use SBEAMS::Glycopeptide::Get_glyco_seqs;
+use SBEAMS::Glycopeptide::Glyco_query;
+
+
+###############################################################################
+# Global Variables
+###############################################################################
+#
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::Glycopeptide;
+$sbeamsMOD->setSBEAMS($sbeams);
+
+
+$glyco_query_o = new SBEAMS::Glycopeptide::Glyco_query;
+$glyco_query_o->setSBEAMS($sbeams);
+
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/massSearch";
+
+
+{ # Main 
+
+    # Authenticate or exit
+    exit unless ($current_username = $sbeams->Authenticate(
+       # permitted_work_groups_ref=>['Glycopeptide_user','Glycopeptide_admin', 'Glycopeptide_readonly'],
+       # connect_read_only=>1,
+       allow_anonymous_access=>1,
+    ));
+
+    #### Read in the default input parameters
+    my %params;
+    $sbeams->parse_input_parameters( q=>$q, parameters_ref=>\%params );
+    $sbeams->processStandardParameters(parameters_ref=>\%params);
+    if ( $params{unipep_build_id} ) {
+      my $build_id = $sbeamsMOD->get_current_build( build_id => $params{unipep_build_id} );
+      if ( $build_id != $params{unipep_build_id} ) {
+        $sbeams->set_page_message( type => 'Error', msg => 'You must log in to access specified build' );
+      }
+    }
+
+    ## get project_id to send to HTMLPrinter display
+    my $project_id = $sbeams->getCurrent_project_id();
+
+    my $page = $sbeams->getGifSpacer( 800 ) . "<BR>\n";
+    if ( $params{ipi_data_id} ) {
+      $page .= get_ortholog_display( \%params );
+    } else {
+      $page .= $sbeams->getErrorText( "Missing required parameter ipi_data_id" );
+    }
+      
+
+    # Display page
+    $sbeamsMOD->display_page_header(project_id => $project_id);
+    $sbeams->printStyleSheet();
+    print $page;
+		$sbeamsMOD->display_page_footer();
+
+} # end main
+
+sub get_ortholog_display {
+  my $params = shift;
+  my $content;
+  for my $arg ( qw( id_list id_type ) ) {
+    unless ( $params->{$arg} ) {
+      $content .= "Missing required parameter: $arg <BR>\n";
+      return $content;
+    }
+  }
+#  for my $p ( keys( %$params ) ) { $content .= "$p => " . $params->{$p} . "<BR>\n"; }
+  my $id_list = $params->{id_list};
+  $id_list =~ s/\s+/ /gm;
+  my @ids = split( " ", $id_list );
+
+  my $pep_o = new SBEAMS::Glycopeptide::Get_peptide_seqs(glyco_obj => $sbeamsMOD);
+
+  my $results = $sbeamsMOD->runBulkSearch( ids => \@ids, %{$params} );
+  $content .= get_submit_js();
+  my $table = SBEAMS::Connection::DataTable->new( BORDER => 0 );
+  $table->addRow( ['Accession', 'SwissProt', 'Symbol','Protein Name', 'Synonyms', 'Sequence', 'Prophet', 'Mass', 'dCn'  ] );
+  $table->setRowAttr( ROWS => [1], BGCOLOR => '#C0D0C0' );
+  my $current;
+  my $prot_cnt = 1;
+  my $grp_row = 2;
+  my $bgcolor = '#F1F1F1';
+  for my $peptide ( @$results ) {
+    my ( $ipi, 
+         $swiss_id,
+         $ipi_data_id,
+         $seq, 
+         $symbol, 
+         $protein_name, 
+         $peptide_id,
+         $prophet_score,
+         $peptide_mass,
+         $dcn,
+         $synonyms
+         ) = @$peptide;
+
+    my $ipi_base = $ipi . $synonyms;
+#    $current = $ipi_base unless $current;
+#    $current = $ipi_base unless $current;
+
+#    my $tissues = $pep_o->observed_tissues( $peptide_id ) || '';
+    my $ipi_link = $ipi;
+    my $motif = $sbeamsMOD->get_current_motif_type();
+    if ( $params->{action} ne 'download' ) {
+#      $tissues = $sbeams->truncateStringWithMouseover( string => $tissues, len => 20 );
+      $protein_name= $sbeams->truncateStringWithMouseover( string => $protein_name, len => 25 );
+      $ipi_link = get_search_link( name => $ipi, motif => $motif );
+      $log->debug( $motif );
+      $synonyms = get_kegg_link( name => $synonyms ) if $motif =~ /phospho/;
+      $seq = $sbeamsMOD->decorate_phospho_sequence( $seq );
+    }
+    my $chk_box = "<INPUT TYPE=checkbox NAME=accession VALUE=$ipi CHECKED>$ipi_link</INPUT>";
+    
+    $prophet_score = sprintf( "%0.2f", $prophet_score);
+    $peptide_mass = sprintf( "%0.4f", $peptide_mass);
+    
+    $log->debug( "ipi_base is $ipi_base, current is $current" );
+    if ( !$current || $ipi_base ne $current ) {
+      $table->addRow( [ $chk_box, $swiss_id, $symbol, $protein_name, $synonyms, $seq, $prophet_score, $peptide_mass, $dcn ] );
+      $prot_cnt++;
+      $log->debug( "In da not current loop" );
+      my $current_row = $table->getRowNum();
+#      $log->info( "group row is $grp_row, current row is $current_row, bgcolor is $bgcolor" );
+      $table->setRowAttr( ROWS => [$grp_row..$current_row - 1], BGCOLOR => $bgcolor );
+      $grp_row = $current_row;
+      $bgcolor = ( $bgcolor eq '#E0E0E0' ) ? '#F1F1F1' : '#E0E0E0';
+      $current = $ipi_base;
+    } else {
+      $table->addRow( [  '&nbsp;','&nbsp;','&nbsp;','&nbsp;', '&nbsp;',
+                          $seq, $prophet_score, $peptide_mass, $dcn ] );
+    }
+    my $current_row = $table->getRowNum();
+    $table->setRowAttr( ROWS => [$grp_row..$current_row], BGCOLOR => $bgcolor );
+
+  }
+  my $current_row = $table->getRowNum();
+  $table->setColAttr( COLS => [ 1 ], ROWS => [1..$current_row], NOWRAP => 1 );
+
+
+  return "<FONT COLOR=BLUE SIZE=+1>Query returned no results</FONT>" unless @$results;
+
+  if ( $params->{action} eq 'download' ) {
+    $content = $table->asTSV();
+    $log->debug( "Content is " . length($content) . " characters long" );
+  } else {
+    my $prot = ( $prot_cnt > 1 ) ? 'proteins' : 'protein';
+    my $num = ( @ids > 1 ) ? 'numbers' : 'number';
+    my $pep = ( $table->getRowNum() > 2 ) ? 'peptides' : 'peptide';
+    $content .= "<FONT COLOR=GREEN>Search with " . scalar( @ids ) . " accession $num yeilded ";
+    $content .= $table->getRowNum() - 1 . " $pep from $prot_cnt $prot </FONT><BR>\n"; 
+    $content .= get_download_form($params);
+    $content .=<<"    END";
+    <FORM NAME=cytoscape METHOD=POST ACTION=getCytoscapeWebstart>
+    <INPUT TYPE=HIDDEN NAME=apply_action VALUE=gene_list>
+    END
+    $content .= $table->asHTML();
+    $content .= "<FORM>";
+  }
+  return $sbeamsMOD->get_phospho_css() . "\n" . $content;
+}
+
+sub get_submit_js {
+  return( <<"  END" );
+    <SCRIPT LANGUAGE="javascript">
+  function submit_cytoscape() {
+    document.cytoscape.submit();
+  }
+  </SCRIPT>
+     <STYLE TYPE="text/css" media="screen">
+    div.visible {
+    display: inline;
+    white-space: nowrap;         
+    }
+    div.visilink {
+    color: blue;
+    display: inline;
+    white-space: nowrap;         
+    }
+    div.hidden {
+    display: none;
+    }
+    span { 
+     border: solid;
+     border-width: 1px;
+    }
+  </STYLE> 
+  END
+}
+
+
+__DATA__
+
+sub get_download_form {
+  my $params = shift;
+  my $url = $q->url( -full => 1 );
+  my $form = "<FORM NAME=download_form METHOD=POST>";
+  for my $p ( keys( %$params ) ) { 
+    my $value = $params->{$p};
+    $value = 'download' if $p eq 'action';
+
+    $form .= "<INPUT TYPE=HIDDEN NAME='$p' VALUE='$value'></INPUT>";
+#    $log->debug( "$p -> $params->{$p}");
+  }
+  $form .= "</FORM>";
+  my $url = "<A OnClick='document.download_form.submit();'><FONT COLOR=BLUE>Download table</FONT></A>";
+  my $cytolink = '<A ONCLICK="submit_cytoscape();"><DIV CLASS="visilink" TITLE="Open cytoscape with selected proteins"> Cytoscape </DIV></A>';
+  return $form . "\n" . $url . "&nbsp;|&nbsp;" . $cytolink;
+#  return "<A HREF=$url>Download table</A>";
+}
+
+sub run_search {
+  my $params = shift;
+  my $content;
+  for my $arg ( qw( id_list id_type ) ) {
+    unless ( $params->{$arg} ) {
+      $content .= "Missing required parameter: $arg <BR>\n";
+      return $content;
+    }
+  }
+#  for my $p ( keys( %$params ) ) { $content .= "$p => " . $params->{$p} . "<BR>\n"; }
+  my $id_list = $params->{id_list};
+  $id_list =~ s/\s+/ /gm;
+  my @ids = split( " ", $id_list );
+
+  my $pep_o = new SBEAMS::Glycopeptide::Get_peptide_seqs(glyco_obj => $sbeamsMOD);
+
+  my $results = $sbeamsMOD->runBulkSearch( ids => \@ids, %{$params} );
+  $content .= get_submit_js();
+  my $table = SBEAMS::Connection::DataTable->new( BORDER => 0 );
+  $table->addRow( ['Accession', 'SwissProt', 'Symbol','Protein Name', 'Synonyms', 'Sequence', 'Prophet', 'Mass', 'dCn'  ] );
+  $table->setRowAttr( ROWS => [1], BGCOLOR => '#C0D0C0' );
+  my $current;
+  my $prot_cnt = 1;
+  my $grp_row = 2;
+  my $bgcolor = '#F1F1F1';
+  for my $peptide ( @$results ) {
+    my ( $ipi, 
+         $swiss_id,
+         $ipi_data_id,
+         $seq, 
+         $symbol, 
+         $protein_name, 
+         $peptide_id,
+         $prophet_score,
+         $peptide_mass,
+         $dcn,
+         $synonyms
+         ) = @$peptide;
+
+    my $ipi_base = $ipi . $synonyms;
+#    $current = $ipi_base unless $current;
+#    $current = $ipi_base unless $current;
+
+#    my $tissues = $pep_o->observed_tissues( $peptide_id ) || '';
+    my $ipi_link = $ipi;
+    my $motif = $sbeamsMOD->get_current_motif_type();
+    if ( $params->{action} ne 'download' ) {
+#      $tissues = $sbeams->truncateStringWithMouseover( string => $tissues, len => 20 );
+      $protein_name= $sbeams->truncateStringWithMouseover( string => $protein_name, len => 25 );
+      $ipi_link = get_search_link( name => $ipi, motif => $motif );
+      $log->debug( $motif );
+      $synonyms = get_kegg_link( name => $synonyms ) if $motif =~ /phospho/;
+      $seq = $sbeamsMOD->decorate_phospho_sequence( $seq );
+    }
+    my $chk_box = "<INPUT TYPE=checkbox NAME=accession VALUE=$ipi CHECKED>$ipi_link</INPUT>";
+    
+    $prophet_score = sprintf( "%0.2f", $prophet_score);
+    $peptide_mass = sprintf( "%0.4f", $peptide_mass);
+    
+    $log->debug( "ipi_base is $ipi_base, current is $current" );
+    if ( !$current || $ipi_base ne $current ) {
+      $table->addRow( [ $chk_box, $swiss_id, $symbol, $protein_name, $synonyms, $seq, $prophet_score, $peptide_mass, $dcn ] );
+      $prot_cnt++;
+      $log->debug( "In da not current loop" );
+      my $current_row = $table->getRowNum();
+#      $log->info( "group row is $grp_row, current row is $current_row, bgcolor is $bgcolor" );
+      $table->setRowAttr( ROWS => [$grp_row..$current_row - 1], BGCOLOR => $bgcolor );
+      $grp_row = $current_row;
+      $bgcolor = ( $bgcolor eq '#E0E0E0' ) ? '#F1F1F1' : '#E0E0E0';
+      $current = $ipi_base;
+    } else {
+      $table->addRow( [  '&nbsp;','&nbsp;','&nbsp;','&nbsp;', '&nbsp;',
+                          $seq, $prophet_score, $peptide_mass, $dcn ] );
+    }
+    my $current_row = $table->getRowNum();
+    $table->setRowAttr( ROWS => [$grp_row..$current_row], BGCOLOR => $bgcolor );
+
+  }
+  my $current_row = $table->getRowNum();
+  $table->setColAttr( COLS => [ 1 ], ROWS => [1..$current_row], NOWRAP => 1 );
+
+
+  return "<FONT COLOR=BLUE SIZE=+1>Query returned no results</FONT>" unless @$results;
+
+  if ( $params->{action} eq 'download' ) {
+    $content = $table->asTSV();
+    $log->debug( "Content is " . length($content) . " characters long" );
+  } else {
+    my $prot = ( $prot_cnt > 1 ) ? 'proteins' : 'protein';
+    my $num = ( @ids > 1 ) ? 'numbers' : 'number';
+    my $pep = ( $table->getRowNum() > 2 ) ? 'peptides' : 'peptide';
+    $content .= "<FONT COLOR=GREEN>Search with " . scalar( @ids ) . " accession $num yeilded ";
+    $content .= $table->getRowNum() - 1 . " $pep from $prot_cnt $prot </FONT><BR>\n"; 
+    $content .= get_download_form($params);
+    $content .=<<"    END";
+    <FORM NAME=cytoscape METHOD=POST ACTION=getCytoscapeWebstart>
+    <INPUT TYPE=HIDDEN NAME=apply_action VALUE=gene_list>
+    END
+    $content .= $table->asHTML();
+    $content .= "<FORM>";
+  }
+  return $sbeamsMOD->get_phospho_css() . "\n" . $content;
+}
+
+sub get_submit_js {
+  return( <<"  END" );
+    <SCRIPT LANGUAGE="javascript">
+  function submit_cytoscape() {
+    document.cytoscape.submit();
+  }
+  </SCRIPT>
+     <STYLE TYPE="text/css" media="screen">
+    div.visible {
+    display: inline;
+    white-space: nowrap;         
+    }
+    div.visilink {
+    color: blue;
+    display: inline;
+    white-space: nowrap;         
+    }
+    div.hidden {
+    display: none;
+    }
+    span { 
+     border: solid;
+     border-width: 1px;
+    }
+  </STYLE> 
+
+  END
+}
+
+sub print_form {
+  my $params = shift;
+	
+	my $content = <<"  END";
+  <TABLE>
+   <TR CLASS='rev_gray_head'>
+    <TD><H1>Search protein list</H1></TD>
+   </TR>
+   <TR>
+    <TD>
+    Enter a list of proteins to be searched.  
+    </TD>
+   </TR>
+  </TABLE>
+  END
+
+  # Table to hold form elements
+  my $f_table = SBEAMS::Connection::DataTable->new( BORDER => 1 );
+
+  # Hashes to hold form labels/fields
+  my $input_labels = get_input_labels($params);
+  my $input_fields = get_input_fields($params);
+
+  # Loop through and add items to the form table
+  for my $key ( qw( id_list id_type ) ) {
+    $f_table->addRow(["<B>$input_labels->{$key}</B>", $input_fields->{$key}]); 
+  }
+
+  my @buttons = $sbeams->getFormButtons( types => [qw(submit reset)] );
+  $f_table->addRow( [join(" ", @buttons)] );
+
+  $f_table->setColAttr( COLS => [1], ROWS => [3], COLSPAN => 2 );
+#  $f_table->setColAttr( COLS => [1], ROWS => [1..6], ALIGN => 'RIGHT' );
+  $f_table->setColAttr( COLS => [1], ROWS => [3], ALIGN => 'CENTER' );
+  $f_table->setColAttr( COLS => [2], ROWS => [1..3], ALIGN => 'LEFT' );
+
+  $content .=<<"  END";
+  <FORM NAME=mass_search_form METHOD=POST action=bulkSearch> 
+  $f_table 
+  <INPUT TYPE=hidden NAME=action VALUE=search></INPUT>
+  </FORM>
+  END
+  return $content;
+}
+
+sub get_input_labels {
+  my $params = shift;
+  my %in = ( id_list => 'Protein List:',
+             id_type   => 'Identifier type:',
+             );
+  
+  return \%in;
+}
+
+sub get_input_fields {
+  my $params = shift;
+
+  my $id_list = $params->{id_list} || '';
+  $id_list = "<TEXTAREA ROWS=4 COLS=30 NAME=id_list>$id_list</TEXTAREA>";
+
+
+  my %id_chk = ( ipi => '', swp => '', sym => '' ); 
+
+  if ( $params->{id_type} ) {
+    for my $id_type ( qw( swp sym ipi ) ) {
+      $id_chk{$id_type} = 'checked' if $params->{id_type} eq $id_type;
+    }
+  } else {
+    $id_chk{ipi} = 'checked';
+  }
+
+  my $id_type_radio =<<"  END";
+  Accession <INPUT TYPE=radio NAME=id_type VALUE=ipi $id_chk{ipi}> 
+  Swiss Prot <INPUT TYPE=radio NAME=id_type VALUE=swp $id_chk{swp} > 
+  Gene Symbol <INPUT TYPE=radio NAME=id_type VALUE=sym $id_chk{sym} > 
+  END
+
+  my %in = ( 
+    id_list   => $id_list,
+    id_type   => $id_type_radio,
+    );
+  return \%in;
+}
+
+sub get_search_link {
+  my %args = @_;
+  for my $arg ( qw( name motif ) ) {
+    return "" unless $args{$arg};
+  }
+  if ( $args{motif} =~ /phospho/ ) {
+    return "<A HREF=peptideSearch.cgi?search_type=accession&search_term=$args{name}&.submit=Submit+Query&action=Show_hits_form>$args{name}</A>";
+  } elsif ( $args{motif} =~ /glyco/ ) {
+    return "<A HREF='peptideSearch.cgi?search_type=IPI Accession Number;action=Show_hits_form;search_term=$args{name}' TARGET=prot_details>$args{name}</A>";
+  }
+
+}
+
+
+sub get_kegg_link {
+  my %args = @_;
+  for my $arg ( qw( name ) ) {
+    return "" unless $args{$arg};
+  }
+  my $kegg_name = $args{name};
+  $kegg_name =~ s/(CG\d+)(-P.)*/$1/;
+  my $img = "$HTML_BASE_DIR/images/kegg_sm.gif";
+  return "$args{name}&nbsp;<A HREF=showPathways?ga=Dmel_$kegg_name><IMG BORDER=0 TITLE='View KEGG pathways for this gene' SRC=$img></A>";
+}
+
