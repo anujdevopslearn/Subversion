@@ -378,6 +378,33 @@ sub handle_request {
     constraint_value=>$parameters{is_exon_spanning_constraint} );
   return if ($is_exon_spanning_clause eq '-1');
 
+  #### Build allow_missed_cleavages constraint
+  my $allow_missed_cleavages_clause = '';
+	if ( $parameters{allow_missed_cleavages} && $parameters{allow_missed_cleavages} =~ /N/ ) {
+    $allow_missed_cleavages_clause = "AND P.peptide_sequence NOT LIKE '%[KR][^P]%'";
+	}
+
+  #### Build allow_low_ntt constraint
+  my $allow_low_ntt_clause = '';
+	if ( $parameters{allow_low_ntt} && $parameters{allow_low_ntt} =~ /N/ ) {
+    $allow_low_ntt_clause = qq~
+		AND PI.preceding_residue like '[-KR]'
+		AND ( following_residue = '-' OR P.peptide_sequence LIKE '%[KR]' )
+		~;
+	}
+	
+	
+	$sbeams->parseConstraint2SQL(
+    constraint_column=>"PI.is_exon_spanning",
+    constraint_type=>"plain_text",
+    constraint_name=>"is_exon_spanning",
+    constraint_value=>$parameters{is_exon_spanning_constraint} );
+  return if ($is_exon_spanning_clause eq '-1');
+
+#        $is_exon_spanning_clause
+#        $is_exon_spanning_clause
+#        $allow_low_ntt_clause
+#        $allow_missed_cleavages_clause
 
   #### Build CHROMOSOME constraint
   my $chromosome_clause = $sbeams->parseConstraint2SQL(
@@ -688,6 +715,8 @@ sub handle_request {
         $n_protein_mappings_clause
         $n_genome_locations_clause
         $is_exon_spanning_clause
+        $allow_low_ntt_clause
+        $allow_missed_cleavages_clause
         $peptide_ids_clause
         $mapping_constraints
 
