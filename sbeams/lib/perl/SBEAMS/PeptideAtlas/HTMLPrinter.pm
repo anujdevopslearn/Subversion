@@ -728,7 +728,7 @@ sub getSampleMapDisplay {
   my %args = @_;
 
   my $in = join( ", ", keys( %{$args{instance_ids}} ) );
-#  return unless $in;
+  return unless $in;
 
   my $header = '';
   if ( $args{link} ) {
