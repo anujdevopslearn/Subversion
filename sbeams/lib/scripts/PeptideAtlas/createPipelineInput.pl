@@ -850,15 +850,18 @@ sub main {
 
       # Modified to use library method, found in SearchBatch.pm.  New file
       # names should be added there; the preferred list below is considered
-			# first before default names, allows caller to determine priority.
+      # first before default names, allows caller to determine priority.
       if ($filepath !~ /\.xml/) {
-    	  my @preferred = ( 'interact-prob.pep.xml',
-                          'interact-prob.xml',
-                          'interact-spec.pep.xml',
-                          'interact-spec.xml',
-                          'interact.xml',
-                          'interact.pep.xml',
-                          'interact-combined.pep.xml' );
+    	  my @preferred = ( 
+                        'interact-combined.pep.xml',   #iProphet output
+                        'interact-ipro.pep.xml',       #iProphet output
+                        'interact-prob.pep.xml',
+                        'interact-prob.xml',
+                        'interact.pep.xml',
+                        'interact.xml',
+                        'interact-specall.xml',
+                        'interact-spec.xml',
+                        'interact-spec.pep.xml' );
 
         $filepath = $sbeamsMOD->findPepXMLFile( preferred_names => \@preferred,
 				                                        search_path => $filepath );
@@ -2274,7 +2277,8 @@ sub writeIdentificationListFile {
       $pep_key = $peptide_sequence;
     } else {
       print "WARNING: Did not find ProtProph info for keys ".
-	"$peptide_sequence or '${charge}-$modified_peptide'\n";
+	"$peptide_sequence or '${charge}-$modified_peptide'".
+        " ($identification->[10], P=$identification->[8])\n";
     }
     if ($pep_key) {
       my $info = $ProteinProphet_data->{$pep_key};

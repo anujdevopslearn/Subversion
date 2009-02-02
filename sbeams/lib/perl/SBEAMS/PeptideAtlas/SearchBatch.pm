@@ -202,15 +202,17 @@ sub findPepXMLFile  {
 		}
 	}
 
-	push @possible_names, 'interact-prob.pep.xml',
+        # prefer iProphet output over PeptideProphet
+	push @possible_names,
+                        'interact-combined.pep.xml',  #iProphet
+                        'interact-ipro.pep.xml',      #iProphet
+                        'interact-prob.pep.xml',
                         'interact-prob.xml',
                         'interact.pep.xml',
                         'interact.xml',
                         'interact-specall.xml',
                         'interact-spec.xml',
-                        'interact-spec.pep.xml',
-                        'interact-combined.pep.xml',
-                        'interact-combined.iproph.pep.xml';
+                        'interact-spec.pep.xml';
 
   
 	my $pepXMLfile = '';
