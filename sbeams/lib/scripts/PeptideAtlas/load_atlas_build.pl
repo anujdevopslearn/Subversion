@@ -1626,7 +1626,6 @@ sub insert_spectra_description_set
         #### read an mzXML file to get needed attributes... could make a sax content handler for this, 
         #### but only need the first dozen or so lines of file, and the mzXML files are huge...
         my $infile = $mzXMLFileNames[0];
-
         my $spectrum_parser = new SpectraDescriptionSetParametersParser();
 
         $spectrum_parser->setMzXML_file($infile);
@@ -1639,7 +1638,7 @@ sub insert_spectra_description_set
 
         $conversion_software_version = $spectrum_parser->getConversion_software_version();
 
-
+        $instrument_model_name = $spectrum_parser->getInstrument_model_name();
         ## count the number of MS/MS in the mzXML files: ##
         my $sum = 0;
 
