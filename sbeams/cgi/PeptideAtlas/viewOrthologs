@@ -110,6 +110,7 @@ sub get_ortholog_display {
 
   my $all_projects = join( ",", $sbeams->getAccessibleProjects() );
   my $curr_bid = $sbeamsMOD->getCurrentAtlasBuildID( parameters_ref => \%args );
+  my $null_clause = ( $args{show_all} ) ? 'OR search_key_type IS NULL' : '';
 
   # SQL to fetch ortholog groups and bioseqs in them.
   my $sql =<<"  END_SQL";
@@ -129,6 +130,7 @@ sub get_ortholog_display {
   AND ( search_key_type = 'Full Name'
 	      OR search_key_type = 'Description'
 				OR search_key_type LIKE '%Symbol'
+        $null_clause
 				OR search_key_type = 'ORF Name')
 -- Would love to use a structured query like this, but some acc (mouse) fail.
 --  AND search_key_type = CASE WHEN organism_name = 'human' THEN 'Full Name'
@@ -536,11 +538,35 @@ sub get_ortholog_display {
 	$log->debug( "Display " .time() );
   my $spc = '&nbsp;' x 50;
 
+  my $search_help = qq~
+	   <DIV class=info_box ID=help>
+    To search OrthoMCL groups by name, enter group name in text box.  Use 'show_all' checkbox to show information for all 
+    group members, regardless of whether they are present in a Peptide Atlas build.
+     </DIV>
+  ~;
+  my @toggle = $sbeams->make_toggle_section( textlink => 1,
+                                              imglink => 1,
+                                             hidetext => "Hide Help",
+                                             showtext => "Show Help",
+                                              visible => 0,
+                                              sticky  => 1,
+                                                name  => 'search_orthologs_help',
+				                                      content => $search_help
+																					);
+
+  my $search_groups = get_group_search_section( %args, help => "($toggle[1])" );
+
+
   if ( $table->getRowNum() == 1 ) {
     return $sbeams->makeInfoText( "Unable to find an OrthoMCL group for this protein" );
   }
 	$subject{name} ||= 'n/a';
   return( <<"  END" );
+  <P>
+  $toggle[0]
+  $search_groups
+  </P>
+  <BR>
   <H4>Protein Occurrence by Build</H4>
   <P class=lg_body_text>
   The table below shows information about homologous(ortholog/paralog) proteins in the $args{group_id} ortholog group.  The groups were computed using <A HREF='http://www.orthomcl.org/cgi-bin/OrthoMclWeb.cgi'>OrthoMCL version 2</A>, and are based on BLAST homology.  The numbers shown in the columns under each build are the total number of observations of peptides that can be mapped to a given protein, and the total number of distinct peptides seen: total obs ( num distinct ).  You can add information about additional builds by clicking the 'Add builds' link below and selecting the desired build(s).  Builds used to highlight the multiple sequence alignment below are shown with a dagger symbol (<SUP><BOLD>&#8224;</BOLD></SUP>).  $duplicate_text
@@ -558,11 +584,11 @@ sub get_ortholog_display {
   $clustal_display
   <BR>
 	<INPUT TYPE=HIDDEN NAME=group_id VALUE=$args{group_id}>
+	<INPUT TYPE=HIDDEN NAME=show_all VALUE=$args{show_all}>
 	<INPUT TYPE=HIDDEN NAME=entry_accession VALUE=$args{entry_accession}>
  	<INPUT TYPE=SUBMIT VALUE='Align selected sequences'>
  	<INPUT TYPE=SUBMIT VALUE='Restore Original' NAME=restore>
 	</FORM>
-
   </P>
   $alignment_text
 	<BR>
@@ -591,7 +617,7 @@ sub get_alignment_text {
  	  <P>
 	   <DIV class=clear_info_box ID=help>
 		   <PRE>
-Alignment was created by the clustalw program, which is maintained at the Conway Institute UCD Dublin.  
+Alignment was created by the <A HREF='http://www.clustal.org' TARGET=_clustal>ClustalW</A> program, which is maintained at the Conway Institute UCD Dublin.  
 The alignment considers physical properties of the amino acids in the protein sequence, and the 
 program was invoked using the following command-line:
 
@@ -618,16 +644,33 @@ position.  The text below, adapted from the clustal documentation, describes the
   my @toggle = $sbeams->make_toggle_section( textlink => 1,
                                               imglink => 1,
                                              hidetext => "Hide Description",
-                                             showtext => "Show Description",
+                                             showtext => "Show ClustalW Description",
                                               visible => 1,
                                               sticky  => 1,
                                                 name  => 'viewOrthologs_description',
 				                                      content => $content
 																					);
-  return "<span class=lg_body_text>Alignment created using <A HREF='http://www.clustal.org' TARGET=_clustal>ClustalW</A></span><BR><BR> ( $toggle[1] ) <BR> $toggle[0] ";
+  return "( $toggle[1] ) <BR> $toggle[0]";
 
 }
 
+sub get_group_search_section {
+  my %args = @_;
+  return '' unless $args{group_id};
+  my $checked = ( $args{show_all} ) ? 'checked' : '';
+  my $help = $args{help} || '';
+  my $group_html = qq~
+  <FORM NAME=group_search METHOD=POST>
+    <TABLE NOBR><TR>
+    <TD>Group Name:</TD><TD><INPUT TYPE=text NAME=group_id VALUE=$args{group_id}></INPUT></TD>
+    <TD>Show All:</TD><TD><INPUT TYPE=checkbox NAME=show_all $checked></INPUT></TD>
+ 	  <TD><INPUT TYPE=SUBMIT VALUE='View Ortholog Group'></TD>
+ 	  <TD>$help</TD>
+    </TR></TABLE NOBR>
+  </FORM>
+  ~;
+  return $group_html;
+}
 
 sub get_add_builds_section {
   my %args = @_;
