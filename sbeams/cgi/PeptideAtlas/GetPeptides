@@ -505,9 +505,7 @@ sub handle_request {
     $protein_list =~ s/(.*)(,)$/$1/;
 
     unless ($protein_list =~ m/%/) {
-	$log->debug(" in unless % ") ;
-	$biosequence_names_clause = "   AND BS.biosequence_name IN ( $protein_list )";
-
+      $biosequence_names_clause = "   AND BS.biosequence_name IN ( $protein_list )";
      }
 
     if ($protein_list =~ m/%/) {
@@ -557,7 +555,7 @@ sub handle_request {
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
 
-  #### If the DASFormat view was selected
+  #### If the DASFormat view was selected (excludes other options)
   if ($parameters{display_options} =~ /DASFormat/) {
     @column_array = (
       ["label","DISTINCT 'Similarity'","Label"],
@@ -573,76 +571,16 @@ sub handle_request {
       ["n_genome_locations","PI.n_genome_locations","N Unique Locations on Genome"],
     );
 
-  #### If the modifications view was selected
-  } elsif ($parameters{display_options} =~ /ShowModifications/) {
+  } else {
+    # Set up base column defs
     @column_array = (
       ["peptide_accession","DISTINCT P.peptide_accession","Peptide Accession"],
-      ["modified_peptide_sequence","MPI.modified_peptide_sequence","Modified Peptide Sequence"],
-      ["peptide_charge","MPI.peptide_charge","Observed Charge"],
+      ["peptide_sequence","P.peptide_sequence","Peptide Sequence"],
 
-      ["best_probability","STR(MPI.best_probability,7,3)","Best Prob"],
-      ["n_observations","MPI.n_observations","N Obs"],
+      ["best_probability","STR(PI.best_probability,7,3)","Best Prob"],
+      ["n_observations","PI.n_observations","N Obs"],
       ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","Empirical Proteotypic Score"],
       ["SSRCalc_relative_hydrophobicity","STR(P.SSRCalc_relative_hydrophobicity,7,2)","SSRCalc Relative Hydrophob"],
-      ["monoisotopic_parent_mz","STR(MPI.monoisotopic_parent_mz,10,4)","Monoisotopic Parent m/z"],
-
-      ["n_protein_mappings","PI.n_protein_mappings","N Protein Mappings"],
-      ["n_genome_locations","PI.n_genome_locations","N Unique Locations on Genome"],
-      ["is_exon_spanning","PI.is_exon_spanning","Spans exons? (Y,N)"],
-
-      ["is_subpeptide_of","PI.is_subpeptide_of","Peptides that include this sequence"],
-
-      ["atlas build name","AB.atlas_build_name","PeptideAtlas Name"],
-
-      ["organism_full_name","O.full_name","Organism"],
-    );
-    $mapping_join .= qq~
-       LEFT JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI
-            ON ( PI.peptide_instance_id = MPI.peptide_instance_id )
-    ~;
-    $mapping_sort = '';
-
-  #### If the chromosomal coordinate mappings view was selected
-  } elsif ($parameters{display_options} =~ /ShowMappings/) {
-    @column_array = (
-      ["peptide_accession","DISTINCT P.peptide_accession","Peptide Accession"],
-      ["peptide_sequence","P.peptide_sequence","Peptide Sequence"],
-
-      ["biosequence_name","BS.biosequence_name","Biosequence Name"],
-      ["biosequence_accessor","DBX.accessor","biosequence_accessor"],
-      ["biosequence_accessor_suffix","DBX.accessor_suffix","biosequence_accessor_suffix"],
-      ["biosequence_accession","BS.biosequence_accession","biosequence_accession"],
-
-      ["best_probability","STR(PI.best_probability,7,3)","Best Prob"],
-      ["n_observations","PI.n_observations","N Obs"],
-      ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","Empirical Proteotypic Score"],
-      ["n_samples","PI.n_samples","N Samples"],
-
-      ["chromosome","PM.chromosome","Chrom"],
-      ["start_in_chromosome","PM.start_in_chromosome","Start Position"],
-      ["end_in_chromosome","PM.end_in_chromosome","End Position"],
-      ["strand","PM.strand","Strand"],
-
-      ["n_protein_mappings","PI.n_protein_mappings","N Protein Mappings"],
-      ["n_genome_locations","PI.n_genome_locations","N Unique Locations on Genome"],
-      ["is_exon_spanning","PI.is_exon_spanning","Spans exons? (Y,N)"],
-
-      ["is_subpeptide_of","PI.is_subpeptide_of","Peptides that include this sequence"],
-
-      ["atlas build name","AB.atlas_build_name","PeptideAtlas Name"],
-
-      ["organism_full_name","O.full_name","Organism"],
-    );
-
-  #### Otherwise just the regular peptide list view
-  } else {
-    @column_array = (
-      ["peptide_accession","DISTINCT P.peptide_accession","Peptide Accession"],
-      ["peptide_sequence","P.peptide_sequence","Peptide Sequence"],
-
-      ["best_probability","STR(PI.best_probability,7,3)","Best Prob"],
-      ["n_observations","PI.n_observations","N Obs"],
-      ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","Empirical Proteotypic Score"],
       ["n_samples","PI.n_samples","N Samples"],
 
       ["n_protein_mappings","PI.n_protein_mappings","N Protein Mappings"],
@@ -650,16 +588,45 @@ sub handle_request {
       ["is_exon_spanning","PI.is_exon_spanning","Spans exons? (Y,N)"],
 
       ["is_subpeptide_of","PI.is_subpeptide_of","Peptides that include this sequence"],
-
       ["atlas build name","AB.atlas_build_name","PeptideAtlas Name"],
-
       ["organism_full_name","O.full_name","Organism"],
     );
-    #$mapping_join = '';
-    #$mapping_constraints = '';
-    $mapping_sort = '';
+
+    ## If the modifications view was selected
+    if ($parameters{display_options} =~ /ShowModifications/) {
+      @column_array = ( @column_array[0], 
+                        ["modified_peptide_sequence","MPI.modified_peptide_sequence","Modified Peptide Sequence"],
+                        @column_array[2..5],
+                        ["monoisotopic_parent_mz","STR(MPI.monoisotopic_parent_mz,10,4)","Monoisotopic Parent m/z"],
+                        @column_array[6..$#column_array],
+                        );
+
+      $mapping_join .= qq~
+         LEFT JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI
+              ON ( PI.peptide_instance_id = MPI.peptide_instance_id )
+      ~;
+    } 
+
+    ## If the chromosomal coordinate mappings view was selected
+    if ($parameters{display_options} =~ /ShowMappings/) {
+      @column_array = ( @column_array[0,1], 
+                        ["biosequence_name","BS.biosequence_name","Biosequence Name"],
+                        ["biosequence_accessor","DBX.accessor","biosequence_accessor"],
+                        ["biosequence_accessor_suffix","DBX.accessor_suffix","biosequence_accessor_suffix"],
+                        ["biosequence_accession","BS.biosequence_accession","biosequence_accession"],
+                        @column_array[2..5],
+                        ["chromosome","PM.chromosome","Chrom"],
+                        ["start_in_chromosome","PM.start_in_chromosome","Start Position"],
+                        ["end_in_chromosome","PM.end_in_chromosome","End Position"],
+                        ["strand","PM.strand","Strand"], 
+                        @column_array[6..$#column_array],
+                        );
+
+    } else {
+      $mapping_sort = '';
+    }
+
   }
-
 
   #### Set flag to display SQL statement if user selected
   if ( $parameters{display_options} =~ /ShowSQL/ ) {
