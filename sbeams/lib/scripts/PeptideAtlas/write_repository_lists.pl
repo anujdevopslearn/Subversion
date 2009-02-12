@@ -21,6 +21,14 @@
 #   in the apache accessible repository area.
 #
 #   Author: Nichole King
+#
+#   $Ning Zhang @09062007 Modified the script
+#   in order to only show the latest search results and newest mzXML.
+#   Before the change, multiple search batches may be existed for one
+#   sample and they are showed in the web page and pa_public_archive.
+#   (1)change in get_data_url() =>get rid of existing mzXML.tar.gz
+#   (2)change in write_public_file =>only get the latest search batch results
+#   (3)change it run on phoebe
 #######################################################################
 use strict;
 use Getopt::Long;
@@ -233,9 +241,9 @@ sub check_host()
     ## make sure that this is running on atlas for queries
     my $uname = `uname -a`;
 
-    unless ($uname =~ /.*(mimas).*/)
+    unless ($uname =~ /.*(helene).*/)
     {
-        die "you must run this on atlas";
+        die "you must run this on helene";
     }
 }
 
@@ -487,6 +495,8 @@ sub write_public_file
         }
 
         ###########  iterate over all search batches for this sample #############
+	#unlike before, we only want to latest search results
+	#in other words, the highest atlas_search_batch_id
 
         my $sql2 = qq~
             SELECT distinct ASB.TPP_version, ASB.atlas_search_batch_id, ASB.data_location,
@@ -497,16 +507,17 @@ sub write_public_file
             JOIN $TBAT_SAMPLE S ON (S.sample_id = SDS.sample_id)
             WHERE S.sample_id = '$sample_id'
             AND S.is_public = 'Y' AND S.record_status != 'D'
-            ORDER BY ASB.atlas_search_batch_id
+            ORDER BY ASB.atlas_search_batch_id DESC
         ~;
 
         my @rows2 = $sbeams->selectSeveralColumns($sql2) or 
         die "Couldn't find ATLAS_SEARCH_BATCH records for sample $sample_id";
 
-        foreach my $row2 (@rows2) 
-        {
+	#Ning changed the following code
+        #foreach my $row2 (@rows2) 
+        #{
             my ($TPP_version, $atlas_search_batch_id, $data_location,
-                $search_batch_subdir) = @{$row2};
+                $search_batch_subdir) = @{$rows2[0]};
             
             $data_location = $data_location . "/" . $search_batch_subdir;
 
@@ -599,7 +610,7 @@ sub write_public_file
 
             push(@file_array_for_README, $protein_prophet_url);
 
-        }
+      #}
 
         ####  handle publication citations  #####
         my $sql3 = qq~
@@ -924,7 +935,7 @@ sub get_data_url
     my $pat = $sample_accession . "*" . $file_pattern . "*" . "gz";
 
     ## files are in $repository_path, but be careful not to include $repository_path/TESTFILES
-    my $cmd = "find $repository_path/ -maxdepth 1 -name \'$pat\' -print > $fileWithFileNames";
+    my $cmd = "find $repository_path/ -maxdepth 1 -name \'$pat\'  -print > $fileWithFileNames";
     ## where each file in $fileWithFileNames is given as the absolute path to the file
     print "$cmd\n" if ($VERBOSE);
     system $cmd;
@@ -959,6 +970,10 @@ sub get_data_url
             ## return absolute path (= $repository_path/file)
             ## for newly created gzipped archive
             ## AND update the database information
+	    ## Ning_added, remove all other versions of mzXML.tar.gz
+	    my $rm_pat = "repository_path/$pat";
+	    system "rm -f $rm_pat";
+
             $latestFile = makeNewArchiveAndProperties(
                 sample_accession => $sample_accession,
                 data_dir => $data_dir,
@@ -1032,7 +1047,7 @@ sub get_orig_data_type
     ## check for .RAW files:
     unless ($orig_data_type)
     {
-        my @files = `find $data_dir -maxdepth 1 -name \'*.RAW\' -print`;
+        my @files = `find $data_dir -maxdepth 1 -name \'*.RAW\'  -print`;
 
         if ( $#files > -1)
         {
@@ -2394,7 +2409,7 @@ sub get_orig_data_url
             system $cmd;
             my $pat = "*$orig_data_type";
             $pat = "*_dta.tar" if ($orig_data_type eq "dtapack");
-            $cmd = "find . -maxdepth 1 -name \'$pat\' -print > $filelist";
+            $cmd = "find . -maxdepth 1 -name \'$pat\' -print  > $filelist";
             print "$cmd\n" if ($VERBOSE);
             system $cmd;
 
