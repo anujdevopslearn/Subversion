@@ -121,9 +121,10 @@ sub parse {
     if ($line =~ /\<msManufacturer\s+category=\".+\"\s+value=\"(.+)\".*\/\>/) {
       $model_name = ( $model_name ) ? $model_name . " $1" : $1;
     }
-    if ($line =~ /\<msModel\scategory=\".+\"\svalue=\"(.+)\"\/\>/) {
+    if ($line =~ /\<msModel\s+category=\".+\"\svalue=\"(.+)\"\s*\/\>/) {
       $model_name = ( $model_name ) ? $model_name . " $1" : $1;
     }
+
 
     ## former MsXML schema:
     if ($line =~ /\<instrument\smanufacturer=\"(.+)\"/ ) {
@@ -135,6 +136,7 @@ sub parse {
       $line =~ /\<instrument\smanufacturer=\"(.+)\"/;
       $model_name = $model_name . " $1";
     }
+
 
     if ($line =~ /\<software\stype=\"conversion(.+)/ ||
        $line =~ /\<software\stype=\"processing(.+)/ ) {
@@ -190,7 +192,8 @@ sub parse {
 
   if ($model_name eq "") {
     carp "[WARN] please edit parser to pick up instrument_model_name for $infile";
-  } 
+  }
+
   $self->{instrument_model_name} = $model_name;
 } # End parse method
 
