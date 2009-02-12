@@ -82,8 +82,8 @@ sub parse
 
     #### Otherwise it's directory, try to find the file
     } else {
-      my @possible_interact_names = ( 'interact-prob.xml', 'interact.xml',
-        'interact-specall.xml', 'interact-spec.xml', 'interact-prob.pep.xml',
+      my @possible_interact_names = ( 'interact-prob.xml','interact-combined.pep.xml',
+        'interact.xml','interact-specall.xml', 'interact-spec.xml', 'interact-prob.pep.xml',
         'interact.pep.xml', 'interact-combined.pep.xml',
         'interact-combined.iproph.pep.xml'
       );
