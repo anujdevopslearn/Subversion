@@ -1,5 +1,8 @@
 #!/tools32/bin/perl
 #!/tools/bin/perl
+BEGIN {
+push @INC, qw( /net/db/src/SSRCalc/ssrcalc .  /tools32/lib/perl5/5.8.0/i386-linux-thread-multi /tools32/lib/perl5/5.8.0 /tools32/lib/perl5/site_perl/5.8.0/i386-linux-thread-multi /tools32/lib/perl5/site_perl/5.8.0 /tools32/lib/perl5/site_perl );
+}
 
 ###############################################################################
 # Program     : ShowSpectrum.cgi
