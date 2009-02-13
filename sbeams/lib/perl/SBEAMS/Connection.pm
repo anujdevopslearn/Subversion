@@ -353,10 +353,9 @@ sub doesSBEAMSTempFileExist {
 #-
 sub addUserAndGroups {
   my $self = shift;
-	my %args = @_;
-
+  my %args = @_;
   my $err;
-  for my $param ( qw( first_name last_name username work_group_name work_group_privilege  ) ) {
+  for my $param ( qw( first_name last_name username lab_id group_id work_groups  ) ) {
     unless ( $args{$param} ) {
 			$err = ( $err ) ? $err . ', ' . $param : "Missing required param(s) $param";
 		}
@@ -373,32 +372,39 @@ sub addUserAndGroups {
 	AND record_status <> 'D'
 	~;
 
-  my $wgroup_where = qq~
-	WHERE work_group_name = '$args{work_group_name}' 
+  my %work_groups = %{$args{"work_groups"}};  # hash of work_group_name = privilege for that work_group
+  my %wg_by_id;  # hash of work_group_id = privilege for that work_group
+  foreach my $work_group_name (keys %work_groups) {
+    
+    my $wgroup_where = qq~
+	WHERE work_group_name = '$work_group_name' 
 	AND record_status <> 'D'
 	~;
-#	my $wgroup_table = $self->evalSQL( '$TB_WORK_GROUP' );
-#	my $contact_table = $self->evalSQL( '$TB_WORK_GROUP' );
   
-	# Does work group exist?
-	my $wg_id = $self->recordExists( table => $TB_WORK_GROUP,
-	                                clause => $wgroup_where,
-													         field => 'work_group_id' );
-  unless ( $wg_id ) {
+    # Does work group exist?
+    my $wg_id = $self->recordExists( table => $TB_WORK_GROUP,
+	                                 clause => $wgroup_where,
+				         field => 'work_group_id' );
+    unless ( $wg_id ) {
 	  $self->handle_error( message => 'Work group does not exist', error_type => 'sbeams_error' );
-	}
+    }
 
+    $wg_by_id{$wg_id} = $work_groups{$work_group_name};
+  }
 
   # Does contact exist?
   my $contact_id = $self->recordExists( table => $TB_CONTACT, 
-	                                     clause => $contact_where,
-																			  field => 'contact_id' );
+	                                clause => $contact_where,
+                                        field => 'contact_id' );
 
   if ( $contact_id ) {
 		$log->warn( "contact record exists, not adding" );
 	} else {
 		$contact_id = $self->addContact( first_name => $args{first_name},
-		                                 last_name => $args{last_name} );
+		                                 last_name => $args{last_name},
+						 lab_id => $args{lab_id},
+						 group_id => $args{group_id}
+                                                );
 	}
   unless ( $contact_id ) {
 	  $self->handle_error( message => 'Contact_id doew not exist', error_type => 'sbeams_error' );
@@ -413,22 +419,25 @@ sub addUserAndGroups {
 		                                      contact_id => $contact_id );
 	}
 
-
-	my $uwgroup_where = qq~
-  WHERE contact_id = $contact_id 
-	AND work_group_id = $wg_id
+  foreach my $work_group_id (keys %wg_by_id) {
+    my $uwgroup_where = qq~
+  	WHERE contact_id = $contact_id 
+	AND work_group_id = $work_group_id
 	~;
 	my $uwg_id;
 
 	# Does user work group exist?
-  if ( $self->recordExists( table => $TB_USER_WORK_GROUP, clause => $uwgroup_where ) ) {
+    if ( $self->recordExists( table => $TB_USER_WORK_GROUP, clause => $uwgroup_where ) ) {
 		$log->debug( "record exists, skipping" );
 	} else {
 		$uwg_id = $self->addUserWorkGroup( contact_id => $contact_id,
-		                                 privilege_id => $args{work_group_privilege},
-		                                work_group_id => $wg_id ) ;
+		                                 privilege_id => $wg_by_id{$work_group_id},
+		                                work_group_id => $work_group_id ) ;
 	}
-	return 1;
+  }
+
+
+  return $contact_id;
 }
 
 ###############################################################################

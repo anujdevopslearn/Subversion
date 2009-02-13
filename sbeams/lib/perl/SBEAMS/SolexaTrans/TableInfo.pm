@@ -43,7 +43,8 @@ sub returnTableInfo {
     my @row;
     my $sql_query;
     my $result;
-
+    my @ids = $self->getSBEAMS()->getAccessibleProjects();
+    my $project_string = join(",", @ids) || 0;
 
 ###############################################################################
 #
@@ -77,8 +78,18 @@ sub returnTableInfo {
         }
 
 
+    } 
+###############################################################################
+    if (uc($table_name) eq 'ST_SOLEXA_SAMPLE') {
+      if ($info_key eq "BASICQuery") {
+        return( <<"	END_QUERY");
+	  SELECT * 
+            FROM $TBST_SOLEXA_SAMPLE
+            WHERE project_id in ( $project_string )
+            AND record_status != 'D'
+	END_QUERY
+       }
     }
-
 
 
 ###############################################################################

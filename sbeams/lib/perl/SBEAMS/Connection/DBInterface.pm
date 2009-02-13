@@ -2852,7 +2852,7 @@ sub displayResultSet {
       $self->writeResultSet(resultset_file_ref=>\$rs_params_ref->{set_name},
         resultset_ref=>$resultset_ref,
         query_parameters_ref=>$query_parameters_ref);
-    }
+    }  # end if rs_resort_column defined
 
 
     #### Make some adjustments to the default column width settings
@@ -3173,7 +3173,6 @@ sub displayResultSet {
 
       return;
     } # end if cytoscape format
-
 
     #### If a printable table was desired, use one format
     if ( $printable_table ) {
@@ -7056,7 +7055,7 @@ sub addContact {
 	             @_ );
 
   my $err;
-  for my $param ( qw( first_name last_name contact_type_id organization_id ) ) {
+  for my $param ( qw( first_name last_name lab_id group_id contact_type_id organization_id ) ) {
     unless ( $args{$param} ) {
       $err = ( $err ) ? $err . ', ' . $param : "Missing required param(s) $param";
     }
@@ -7065,12 +7064,13 @@ sub addContact {
 
 	my $id = $self->updateOrInsertRow( table_name => $TB_CONTACT,
 	                                  rowdata_ref => \%args,
-	                                       insert => 1,
-								           						return_PK => 1,
-                                             PK => 'contact_id',
-#                                       testonly => 1,
-#																 		  print_SQL => 1,
-                           add_audit_parameters => 1 );
+	                                  insert => 1,
+					  return_PK => 1,
+                                          PK => 'contact_id',
+#                                         testonly => 1,
+					  verbose => 1,
+					  print_SQL => 1,
+                           		  add_audit_parameters => 1 );
 
 	return $id;
 
@@ -7093,12 +7093,13 @@ sub addUserLogin {
 
 	my $id = $self->updateOrInsertRow( table_name => $TB_USER_LOGIN,
 	                                  rowdata_ref => \%args,
-	                                       insert => 1,
-								           						return_PK => 1,
-                                             PK => 'contact_id',
-#                                       testonly => 1,
-#																 		 print_SQL => 1,
-                           add_audit_parameters => 1 );
+	                                  insert => 1,
+  					  return_PK => 1,
+                                          PK => 'contact_id',
+#                                         testonly => 1,
+					  verbose => 1,
+		 		          print_SQL => 1,
+                                          add_audit_parameters => 1 );
 
 	return $id;
 
@@ -7119,11 +7120,12 @@ sub addUserWorkGroup {
   $self->handle_error( message => $err, error_type => 'insufficient_constraints' ) if $err;
 
 	my $id = $self->updateOrInsertRow( table_name => $TB_USER_WORK_GROUP,
-	                                  rowdata_ref => \%args,
-	                                       insert => 1,
-#                                       testonly => 1,
-#																 		  print_SQL => 1,
-                           add_audit_parameters => 1 );
+	                                   rowdata_ref => \%args,
+	                                   insert => 1,
+#                                           testonly => 1,
+					   verbose => 1,
+					   print_SQL => 1,
+        	                           add_audit_parameters => 1 );
 
 	return $id;
 

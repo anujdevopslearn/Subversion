@@ -183,20 +183,20 @@ sub update_user_permissions {
 				$rowdata{'record_status'} = 'N';
 				$rowdata_ref= \%rowdata;
 				$self->updateOrInsertRow(table_name=>$TB_USER_PROJECT_PERMISSION,
-																 rowdata_ref=>$rowdata_ref,
-																 update=>1,
-																 PK_name=>'user_project_permission_id',
-																 PK_value=>$rows[0],
-																 add_audit_parameters=>1);
+							 rowdata_ref=>$rowdata_ref,
+							 update=>1,
+							 PK_name=>'user_project_permission_id',
+							 PK_value=>$rows[0],
+							 add_audit_parameters=>1);
 		  }else{
 				$rowdata{'record_status'} = 'D';
 				$rowdata_ref = \%rowdata;
 				$self->updateOrInsertRow(table_name=>$TB_USER_PROJECT_PERMISSION,
-																 rowdata_ref=>$rowdata_ref,
-																 update=>1,
-																 PK_name=>'user_project_permission_id',
-																 PK_value=>$rows[0],
-																 add_audit_parameters=>1);
+							 rowdata_ref=>$rowdata_ref,
+							 update=>1,
+							 PK_name=>'user_project_permission_id',
+							 PK_value=>$rows[0],
+							 add_audit_parameters=>1);
 			}
 	  }else {
 			$rowdata{'contact_id'}   = $user_id;
@@ -204,10 +204,10 @@ sub update_user_permissions {
 			$rowdata{'privilege_id'} = $priv_id;
 			$rowdata_ref = \%rowdata;
 			$self->updateOrInsertRow(table_name=>$TB_USER_PROJECT_PERMISSION,
-															 rowdata_ref=>$rowdata_ref,
-															 insert=>1,
-															 PK_name=>'user_project_permission_id',
-															 add_audit_parameters=>1);
+						 rowdata_ref=>$rowdata_ref,
+						 insert=>1,
+						 PK_name=>'user_project_permission_id',
+						 add_audit_parameters=>1);
 	  }
   }
 }
@@ -230,8 +230,9 @@ sub update_group_permissions {
   my ($counter,$current_project_id,$current_work_group_id);
   my ($priv_chooser,$group_chooser);
 
-  $current_project_id = $self->getCurrent_project_id;
-  $current_work_group_id = $self->getCurrent_work_group_id;
+  $current_project_id = $args{"project_id"} || $self->getCurrent_project_id;
+  #$current_work_group_id = $self->getCurrent_work_group_id;
+
 
   $priv_chooser = "groupPriv";
   $group_chooser = "groupName";
@@ -239,7 +240,7 @@ sub update_group_permissions {
   my $test_string = $priv_chooser.$counter;
 
   while($parameters{$test_string}){
-    my (%rowdata, $rowdata_ref);
+		my (%rowdata, $rowdata_ref);
 		my $temp_group = $group_chooser.$counter;
 		my $temp_priv = $priv_chooser.$counter;
 		my $group_id = $parameters{$temp_group};
@@ -265,32 +266,34 @@ sub update_group_permissions {
 				$rowdata{'record_status'} = 'N';
 				$rowdata_ref= \%rowdata;
 				$self->updateOrInsertRow(table_name=>$TB_GROUP_PROJECT_PERMISSION,
-																 rowdata_ref=>$rowdata_ref,
-																 update=>1,
-																 PK_name=>'group_project_permission_id',
-																 PK_value=>$rows[0],
-																 add_audit_parameters=>1);
-		  }else{
+							 rowdata_ref=>$rowdata_ref,
+							 update=>1,
+							 PK_name=>'group_project_permission_id',
+							 PK_value=>$rows[0],
+							 add_audit_parameters=>1);
+			  }else{
 				$rowdata{'record_status'} = 'D';
 				$rowdata_ref = \%rowdata;
 				$self->updateOrInsertRow(table_name=>$TB_GROUP_PROJECT_PERMISSION,
-																 rowdata_ref=>$rowdata_ref,
-																 update=>1,
-																 PK_name=>'group_project_permission_id',
-																 PK_value=>$rows[0],
-																 add_audit_parameters=>1);
-		  }
-	  }else {
+							 rowdata_ref=>$rowdata_ref,
+							 update=>1,
+							 PK_name=>'group_project_permission_id',
+							 PK_value=>$rows[0],
+							 add_audit_parameters=>1);
+			  }
+		}else { # no entry in group_project_permission, so insert new
 			$rowdata{'work_group_id'}   = $group_id;
 			$rowdata{'project_id'}   = $current_project_id;
 			$rowdata{'privilege_id'} = $priv_id;
 			$rowdata_ref = \%rowdata;
 			$self->updateOrInsertRow(table_name=>$TB_GROUP_PROJECT_PERMISSION,
-															 rowdata_ref=>$rowdata_ref,
-															 insert=>1,
-															 PK_name=>'group_project_permission_id',
-															 add_audit_parameters=>1);
-	  }
+						 rowdata_ref=>$rowdata_ref,
+						 insert=>1,
+						 PK_name=>'group_project_permission_id',
+						 add_audit_parameters=>1,
+						 verbose => 1
+						);
+		}
   }
 }
 

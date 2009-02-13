@@ -1667,6 +1667,26 @@ sub getUsername {
     return $username;
 }
 
+###############################################################################
+# getEmail
+###############################################################################
+sub getEmail {
+    my $self = shift;
+    my $contact_id = shift;
+
+    my $sql_query = qq~
+	SELECT email
+	  FROM $TB_CONTACT
+	 WHERE contact_id = '$contact_id'
+	   AND record_status != 'D'
+    ~;
+
+    my ($email) = $self->selectOneColumn($sql_query);
+
+    return $email;
+}
+
+
 
 ###############################################################################
 # get_work_group_id
