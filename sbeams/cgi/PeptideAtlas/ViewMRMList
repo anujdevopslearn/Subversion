@@ -39,9 +39,6 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 # Global placeholder for output_mode info; will populate post-auth
 my $is_html;
 
-use PGPLOT;
-use PDL;
-use PDL::Graphics::PGPLOT;
 
 $PROG_NAME="ViewMRMList";
 
