@@ -1,5 +1,5 @@
+#!/tools32/bin/perl
 #!/tools/bin/perl
-#!/usr/local/bin/perl
 
 ###############################################################################
 # Program     : ShowSpectrum.cgi
