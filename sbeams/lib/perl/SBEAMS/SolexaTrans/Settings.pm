@@ -32,8 +32,14 @@ use vars qw(@ISA @EXPORT
 	$SOLEXA_ZIP_REQUEST_DIR
 	$SOLEXA_DELIVERY_PATH
 	$ADD_ANNOTATION_OUT_FOLDER
-        $SOLEXA_LIB_PATH
-        $SOLEXA_PROGRAM_PATH
+        $SOLEXA_MYSQL_HOST
+        $SOLEXA_MYSQL_USER
+        $SOLEXA_MYSQL_PASS
+        $SOLEXA_MYSQL_DB
+        $SOLEXA_BABEL_HOST
+        $SOLEXA_BABEL_USER
+        $SOLEXA_BABEL_PASS
+        $SOLEXA_BABEL_DB
 );
 
 my $log = SBEAMS::Connection::Log->new();
@@ -44,6 +50,14 @@ require Exporter;
 @EXPORT = qw (
     $SBEAMS_PART
     $SOLEXA_TMP_DIR
+    $SOLEXA_MYSQL_HOST
+    $SOLEXA_MYSQL_USER
+    $SOLEXA_MYSQL_PASS
+    $SOLEXA_MYSQL_DB
+    $SOLEXA_BABEL_HOST
+    $SOLEXA_BABEL_USER
+    $SOLEXA_BABEL_PASS
+    $SOLEXA_BABEL_DB
 );
 
 my $solexa_file_types = $CONFIG_SETTING{ST_SOLEXA_DEFAULT_FILES} || '';
@@ -70,8 +84,14 @@ $SOLEXA_TMP_DIR            = $CONFIG_SETTING{ST_SOLEXA_TMP_DIR} || '';
 $SOLEXA_ZIP_REQUEST_DIR    = $CONFIG_SETTING{ST_SOLEXA_ZIP_REQUEST_DIR} || '';
 $SOLEXA_DELIVERY_PATH      = $CONFIG_SETTING{ST_SOLEXA_DELIVERY_PATH} || '';
 $ADD_ANNOTATION_OUT_FOLDER = $CONFIG_SETTING{ST_ANNOTATION_OUT_PATH} || '';
-$SOLEXA_LIB_PATH           = $CONFIG_SETTING{ST_SOLEXATRANS_LIB_PATH} || '';
-$SOLEXA_PROGRAM_PATH       = $CONFIG_SETTING{ST_SOLEXATRANS_PROGRAM_PATH} || '';
+$SOLEXA_MYSQL_HOST         = $CONFIG_SETTING{ST_MYSQL_HOST} || '';
+$SOLEXA_MYSQL_USER         = $CONFIG_SETTING{ST_MYSQL_USER} || '';
+$SOLEXA_MYSQL_PASS         = $CONFIG_SETTING{ST_MYSQL_PASS} || '';
+$SOLEXA_MYSQL_DB           = $CONFIG_SETTING{ST_MYSQL_DB} || '';
+$SOLEXA_BABEL_HOST         = $CONFIG_SETTING{ST_BABEL_HOST} || '';
+$SOLEXA_BABEL_USER         = $CONFIG_SETTING{ST_BABEL_USER} || '';
+$SOLEXA_BABEL_PASS         = $CONFIG_SETTING{ST_BABEL_PASS} || '';
+$SOLEXA_BABEL_DB           = $CONFIG_SETTING{ST_BABEL_DB} || '';
 
 
 #### Define new variables
@@ -269,67 +289,100 @@ sub get_ANNOTATION_OUT_FOLDER {
 }
 
 #######################################################
-# get_SOLEXA_LIB_PATH
-# get the default solexatrans lib path (where SolexaTransPipeline.pm is)
+# get_SOLEXA_MYSQL_HOST
+# 
 #######################################################
-sub get_SOLEXA_LIB_PATH {
+sub get_SOLEXA_MYSQL_HOST {
     my $either = shift;
 
     my $class = ref($either) || $either;
-    return $SOLEXA_LIB_PATH;
+    return $SOLEXA_MYSQL_HOST;
 
 }
 
 #######################################################
-# set_SOLEXA_LIB_PATH
-# Set the path to the solexa lib path
-# Return the value set for $SOLEXA_LIB_PATH
+# get_SOLEXA_MYSQL_USER
+# 
 #######################################################
-sub set_SOLEXA_LIB_PATH {
-        my $either = shift;
-        my $file_path = shift;
-
-         my $class = ref($either) || $either;
-
-         if (-e $file_path){
-                $SOLEXA_LIB_PATH = $file_path;
-                print "SET SOLEXA LIB PATH '$SOLEXA_LIB_PATH'\n";
-        }
-
-        return $SOLEXA_LIB_PATH;
-}
-
-#######################################################
-# get_SOLEXA_PROGRAM_PATH
-# get the default solexatrans program path (where runprocesssolexa.pl is)
-#######################################################
-sub get_SOLEXA_PROGRAM_PATH {
+sub get_SOLEXA_MYSQL_USER {
     my $either = shift;
 
     my $class = ref($either) || $either;
-    return $SOLEXA_PROGRAM_PATH;
+    return $SOLEXA_MYSQL_USER;
 
 }
 
 #######################################################
-# set_SOLEXA_PROGRAM_PATH
-# Set the path to the solexa program path
-# Return the value set for $SOLEXA_PROGRAM_PATH
+# get_SOLEXA_MYSQL_PASS
+# 
 #######################################################
-sub set_SOLEXA_PROGRAM_PATH {
-        my $either = shift;
-        my $file_path = shift;
+sub get_SOLEXA_MYSQL_PASS {
+    my $either = shift;
 
-         my $class = ref($either) || $either;
+    my $class = ref($either) || $either;
+    return $SOLEXA_MYSQL_PASS;
 
-         if (-e $file_path){
-                $SOLEXA_PROGRAM_PATH = $file_path;
-                print "SET SOLEXA PROGRAM PATH '$SOLEXA_PROGRAM_PATH'\n";
-        }
-
-        return $SOLEXA_PROGRAM_PATH;
 }
 
+#######################################################
+# get_SOLEXA_MYSQL_DB
+# 
+#######################################################
+sub get_SOLEXA_MYSQL_DB {
+    my $either = shift;
+
+    my $class = ref($either) || $either;
+    return $SOLEXA_MYSQL_DB;
+
+}
+
+#######################################################
+# get_SOLEXA_BABEL_HOST
+# 
+#######################################################
+sub get_SOLEXA_BABEL_HOST {
+    my $either = shift;
+
+    my $class = ref($either) || $either;
+    return $SOLEXA_BABEL_HOST;
+
+}
+
+#######################################################
+# get_SOLEXA_BABEL_USER
+# 
+#######################################################
+sub get_SOLEXA_BABEL_USER {
+    my $either = shift;
+
+    my $class = ref($either) || $either;
+    return $SOLEXA_BABEL_USER;
+
+}
+
+#######################################################
+# get_SOLEXA_BABEL_PASS
+# 
+#######################################################
+sub get_SOLEXA_BABEL_PASS {
+    my $either = shift;
+
+    my $class = ref($either) || $either;
+    return $SOLEXA_BABEL_PASS;
+
+}
+
+#######################################################
+# get_SOLEXA_BABEL_DB
+# 
+#######################################################
+sub get_SOLEXA_BABEL_DB {
+    my $either = shift;
+
+    my $class = ref($either) || $either;
+    return $SOLEXA_BABEL_DB;
+
+}
 
 
 #+
