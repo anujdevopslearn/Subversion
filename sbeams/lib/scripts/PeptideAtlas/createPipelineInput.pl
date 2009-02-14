@@ -74,6 +74,7 @@ Options:
   --biosequence_set_id   Database id of the biosequence_set from which to load sequence attributes.
   --best_probs_from_protxml   Get best initial probs from ProteinProphet file,
                       not from pepXML files. Use when not using iProphet; faster.
+  --old_prot_ids      Fix protein IDs to arbitrary prots, not prots of best prob
 
 
  e.g.:  $PROG_NAME --verbose 2 --source YeastInputExperiments.tsv
@@ -93,7 +94,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
   "validate=s","namespaces","schemas",
   "source_file:s","search_batch_ids:s","P_threshold:f","output_file:s",
   "master_ProteinProphet_file:s","biosequence_set_id:s",
-  "best_probs_from_protxml",
+  "best_probs_from_protxml", "old_prot_ids",
   )) {
   print "$USAGE";
   exit;
@@ -117,7 +118,7 @@ if ($DEBUG) {
 my $source_file = $OPTIONS{source_file} || '';
 my $APDTsvFileName = $OPTIONS{output_file} || '';
 my $search_batch_ids = $OPTIONS{search_batch_ids} || '';
-my $bssid = $OPTIONS{biosequence_set_id} || "10" ; ## some ISB default?
+my $bssid = $OPTIONS{biosequence_set_id} || "10" ; #yeast
 
 
 
@@ -145,6 +146,7 @@ my $validate = $OPTIONS{validate} || 'never';
 my $namespace = $OPTIONS{namespaces} || 0;
 my $schema = $OPTIONS{schemas} || 0;
 my $best_probs_from_protxml = $OPTIONS{best_probs_from_protxml} || 0;
+my $regularize_prot_ids = !$OPTIONS{old_prot_ids} || 0;
 
 
 if (uc($validate) eq 'ALWAYS') {
@@ -344,9 +346,16 @@ sub protXML_start_element {
     $attrs{$aa1} = $attrs{$aa1}->{value};
   }
 
-  #### If this is a protein, then store its name
+  #### If this is a protein group, then store its number and probability
+  if ($localname eq 'protein_group') {
+    $self->{protein_group_number} = $attrs{group_number};
+    $self->{protein_group_probability} = $attrs{probability};
+  }
+
+  #### If this is a protein, then store its name and probability
   if ($localname eq 'protein') {
     $self->{protein_name} = $attrs{protein_name};
+    $self->{protein_probability} = $attrs{probability};
   }
 
 
@@ -380,7 +389,7 @@ sub protXML_start_element {
   }
 
 
-  #### If this pepetide has an indistinguishable twin, record it
+  #### If this peptide has an indistinguishable twin, record it
   if ($localname eq 'indistinguishable_peptide') {
     my $peptide_sequence = $attrs{peptide_sequence} || die("No sequence");
     $self->{pepcache}->{indistinguishable_peptides}->{$peptide_sequence} = 1;
@@ -445,7 +454,7 @@ sub pepXML_end_element {
     #  iProphet may significantly increase the probability; we don't
     #  want to discard anything that might ultimately be >= P_threshold
     #  Theoretically, a peptide's prob. could be boosted by > 0.4,
-    #  but it is very unlikely -- and if it is, it's unlikely to be correct.
+    #  but it is very unlikely.
     # Factor (0.4) must be identical to that used when creating ProtPro hash.
     if ($probability >= $self->{P_threshold} - 0.4) {
 
@@ -509,7 +518,7 @@ sub pepXML_end_element {
   if (scalar @{$self->object_stack()}){
 
     #### If the top object on the stack is the correct one, pop it off
-    #### else die bitterly    my $peptide_sequence = $attrs{peptide_sequence} || die("No sequence");
+    #### else die bitterly
 
     if ($self->object_stack->[-1]->{name} eq "$localname") {
       pop(@{$self->object_stack});
@@ -533,114 +542,24 @@ sub pepXML_end_element {
 sub protXML_end_element {
   my ($self,$uri,$localname,$qname) = @_;
 
-  #### If this is a pepetide, then update the number of peptides
+  #### If this is a peptide, then store its info in a protXML info cache
   if ($localname eq 'peptide') {
     my $peptide_sequence = $self->{pepcache}->{peptide}
       || die("ERROR: No peptide sequence in the cache!");
 
-    my $initial_probability = $self->{pepcache}->{initial_probability};
-    my $adjusted_probability = $self->{pepcache}->{nsp_adjusted_probability};
-
-    # If this peptide has any chance of being in the PAident-template
-    #   file, store its Protein Prophet info so that it's available to
+    # Store this peptide's Protein Prophet info so that it's available to
     #   modify this peptide's PeptideProphet or iProphet probability.
-    # It should work for threshold to be same as that used when creating
-    #   PAident-template file (plus .001), but in practice 
-    #   some unexplained discrepancies mean we have to include all peptides.
-    # TMF: wouldn't it work to just store info for peptides with
-    #  adjusted prob >= threshold? We would then want to remove the
-    #  WARNING for peptides not found in this hash -- we'd want to
-    #  instead just not use those peptides.
 
-    #if ($initial_probability >= $self->{P_threshold} - 0.41) {
+    my $modifications = $self->{pepcache}->{modifications};
+    my $charge = $self->{pepcache}->{charge};
 
-      #### Create the modified peptide string
-      my $modified_peptide = '';
-      my $pep_key = '';
-      my $modifications = $self->{pepcache}->{modifications};
-      if ($modifications) {
-	my $i = 0;
-	if ($modifications->{$i}) {
-	  $modified_peptide .= 'n['.int($modifications->{$i}).']';
-	}
-	for ($i=1; $i<=length($peptide_sequence); $i++) {
-	  my $aa = substr($peptide_sequence,$i-1,1);
-	  if ($modifications->{$i}) {
-	    $aa .= '['.int($modifications->{$i}).']';
-	  }
-	  $modified_peptide .= $aa;
-	}
-	if ($modifications->{$i}) {
-	  $modified_peptide .= 'c['.int($modifications->{$i}).']';
-	}
-      } else {
-	$modified_peptide = $peptide_sequence;
-      }
+    storePepInfo( $self, $peptide_sequence, $modifications, $charge,);
 
-      #### If there is a charge, prepend charge to peptide string
-      #### to create key for storing ProteinProphet info.
-      my $charge = $self->{pepcache}->{charge};
-      if ($charge) {
-        $pep_key = sprintf("%s-%s", $charge, $modified_peptide);
-      } else {
-        $pep_key = $modified_peptide;
-      }
-
-      #### As of 12/18/08, iProphet or ProteinProphet drops mod and
-      #### charge info, so at this point charge is undefined,
-      #### modified peptide has no mods, and pep_key is a stripped peptide.
-
-      #### Store the information into a hash for access during peptide reading
-      $self->{ProteinProphet_data_list}->{$pep_key} = {
-        search_batch_id => $self->{search_batch_id},
-	charge => $charge,
-        initial_probability => $initial_probability,
-        nsp_adjusted_probability => $self->{pepcache}->{nsp_adjusted_probability},
-        n_sibling_peptides => $self->{pepcache}->{n_sibling_peptides},
-        n_adjusted_observations => $self->{pepcache}->{n_instances},
-        protein_name => $self->{protein_name},
-      };
-
-
-      #### If there are indistinguishable peptides, modify them, too
-      foreach my $indis_peptide ( keys(%{$self->{pepcache}->{indistinguishable_peptides}}) ) {
-	my $modified_indis_peptide = '';
-	if ($modifications) {
-	  my $i = 0;
-	  if ($modifications->{$i}) {
-	    $modified_indis_peptide .= 'n['.int($modifications->{$i}).']';
-	  }
-	  for ($i=1; $i<=length($indis_peptide); $i++) {
-	    my $aa = substr($indis_peptide,$i-1,1);
-	    if ($modifications->{$i}) {
-	      $aa .= '['.int($modifications->{$i}).']';
-	    }
-	    $modified_indis_peptide .= $aa;
-	  }
-	  if ($modifications->{$i}) {
-	    $modified_indis_peptide .= 'c['.int($modifications->{$i}).']';
-	  }
-	} else {
-	  $modified_indis_peptide = $indis_peptide;
-	}
-
-        if ($charge) {
-          $pep_key = "${charge}-$modified_indis_peptide";
-        } else {
-          $pep_key = $modified_indis_peptide;
-        }
-
-	$self->{ProteinProphet_data_list}->{$pep_key} = {
-          search_batch_id => $self->{search_batch_id},
-	  charge => $charge,
-          initial_probability => $initial_probability,
-          nsp_adjusted_probability => $self->{pepcache}->{nsp_adjusted_probability},
-          n_sibling_peptides => $self->{pepcache}->{n_sibling_peptides},
-          n_adjusted_observations => $self->{pepcache}->{n_instances},
-          protein_name => $self->{protein_name},
-        };
-      }
-    #}
+    #### If there are indistinguishable peptides, modify them, too
+    foreach my $indis_peptide (
+       keys(%{$self->{pepcache}->{indistinguishable_peptides}}) ) {
+          storePepInfo( $self, $indis_peptide, $modifications, $charge,);
+    }
 
     #### Clear out the cache
     delete($self->{pepcache});
@@ -648,7 +567,6 @@ sub protXML_end_element {
     #### Increase the counters and print some progress info
     $self->{Protcounter}++;
     print "." if ($self->{Protcounter} % 100 == 0);
-
   }
 
 
@@ -670,6 +588,139 @@ sub protXML_end_element {
   }
 
 }
+
+### For a given <peptide> tag in a protXML file, store the
+### ProteinProphet info on the modified peptide (pep_key) in a hash.
+### There may be multiple <peptide> tags per pep_key.
+### So for each pep_key, store the best probability among all <peptide>
+### tags associated with that pep_key, and store the protein ID of highest
+### probability among all <protein> tags containing that pep_key.
+
+sub storePepInfo {
+  my $self = shift;
+  my $peptide_sequence = shift;
+  my $modifications = shift;
+  my $charge = shift;
+
+  my $initial_probability = $self->{pepcache}->{initial_probability};
+  my $adjusted_probability = $self->{pepcache}->{nsp_adjusted_probability};
+
+  # It should work to store only peptides with prob above threshold
+  #   used later when creating PAident-template file (plus .001),
+  #   but in practice some unexplained discrepancies mean we have
+  #   to store all peptides.
+
+  #if ($initial_probability >= $self->{P_threshold} - 0.41) {
+
+  #### Create the modified peptide string
+  my $modified_peptide = '';
+  my $pep_key = '';
+  my $modifications = $self->{pepcache}->{modifications};
+  if ($modifications) {
+    my $i = 0;
+    if ($modifications->{$i}) {
+      $modified_peptide .= 'n['.int($modifications->{$i}).']';
+    }
+    for ($i=1; $i<=length($peptide_sequence); $i++) {
+      my $aa = substr($peptide_sequence,$i-1,1);
+      if ($modifications->{$i}) {
+        $aa .= '['.int($modifications->{$i}).']';
+      }
+      $modified_peptide .= $aa;
+    }
+    if ($modifications->{$i}) {
+      $modified_peptide .= 'c['.int($modifications->{$i}).']';
+    }
+  } else {
+    $modified_peptide = $peptide_sequence;
+  }
+
+  #### If there is a charge, prepend charge to peptide string
+  #### to create key for storing ProteinProphet info.
+  my $charge = $self->{pepcache}->{charge};
+  if ($charge) {
+    $pep_key = sprintf("%s-%s", $charge, $modified_peptide);
+  } else {
+    $pep_key = $modified_peptide;
+  }
+
+  #### INFO: as of 12/18/08, iProphet or ProteinProphet drops mod and
+  #### charge info, so at this point charge is undefined,
+  #### modified peptide has no mods, and pep_key is a stripped peptide.
+
+  #### Store the information into a hash for access during peptide reading
+
+  # create shorthand for this hash ref
+  my $pepProtInfo = $self->{ProteinProphet_data_list}->{$pep_key};
+
+  # create new hash entry if doesn't yet exist
+  if ( !defined $pepProtInfo ) {
+    $pepProtInfo = {
+      search_batch_id => $self->{search_batch_id},
+      charge => $charge,
+      initial_probability => $initial_probability,
+      nsp_adjusted_probability => $adjusted_probability,
+      n_sibling_peptides => $self->{pepcache}->{n_sibling_peptides},
+      n_adjusted_observations => $self->{pepcache}->{n_instances},
+      protein_name => $self->{protein_name},
+    };
+    if ( $regularize_prot_ids ) {
+        $pepProtInfo->{protein_probability} = $self->{protein_probability};
+        $pepProtInfo->{protein_group_probability} =
+                                  $self->{protein_group_probability};
+    }
+    $self->{ProteinProphet_data_list}->{$pep_key} = $pepProtInfo;
+
+  # if it already exists, possibly update some data
+  } else {
+    # store these pep probs if init_prob is best for this pep so far
+    # or if init_prob is same but adjusted_prob is better
+    # TMF 02/09; fixes bug whereby pep probs were stored for all <peptide>
+    # tags encountered, overwriting anything written before.
+    my $store_best_pep_prob_from_protXML = 1;  #turns on bug fix
+    #investigative print statements
+    if ( 0 &&  $store_best_pep_prob_from_protXML &&
+           $initial_probability < $pepProtInfo->{initial_probability}) {
+      print "Improvement due to bug fix: not demoting prob for $pep_key from ",
+        $pepProtInfo->{initial_probability}, " to $initial_probability\n";
+    } 
+    if ( 0 &&  $store_best_pep_prob_from_protXML &&
+           (( $initial_probability == $pepProtInfo->{initial_probability}) &&
+            ( $adjusted_probability < $pepProtInfo->{nsp_adjusted_probability}))
+       ){
+      print "Improvement due to bug fix: not demoting adj_prob for $pep_key from ",
+        $pepProtInfo->{nsp_adjusted_probability}, " to $adjusted_probability\n";
+    } 
+    if ( !$store_best_pep_prob_from_protXML && !$regularize_prot_ids ) {
+      $pepProtInfo->{protein_name} = $self->{protein_name};
+    }
+    if ( !$store_best_pep_prob_from_protXML ||
+         ( $initial_probability > $pepProtInfo->{initial_probability}) ||
+          (( $initial_probability == $pepProtInfo->{initial_probability}) &&
+           ( $adjusted_probability > $pepProtInfo->{nsp_adjusted_probability}))
+       ) {
+      $pepProtInfo->{initial_probability} = $initial_probability;
+      $pepProtInfo->{nsp_adjusted_probability} = $adjusted_probability;
+      $pepProtInfo->{n_sibling_peptides} =
+                               $self->{pepcache}->{n_sibling_peptides};
+      $pepProtInfo->{n_adjusted_observations} =
+                               $self->{pepcache}->{n_instances};
+    }
+
+    # store protein info from current <protein> if this protein prob
+    # is best seen for this pep so far
+    if ( $regularize_prot_ids &&
+           ( $self->{protein_probability} >
+               $pepProtInfo->{protein_probability} )) {
+        $pepProtInfo->{protein_name} = $self->{protein_name};
+        $pepProtInfo->{protein_probability} = $self->{protein_probability};
+        $pepProtInfo->{protein_group_probability} =
+                                        $self->{protein_group_probability};
+    }
+  }
+#}
+}
+
 
 
 
@@ -827,10 +878,10 @@ sub main {
         search_batch_id => $search_batch_id,
       );
       if ($ProteinProphet_file) {
-	#$documents{$ProteinProphet_file}->{search_batch_id} = $search_batch_id;
+        #$documents{$ProteinProphet_file}->{search_batch_id} = $search_batch_id;
       } else {
-	die("ERROR: Unable to determine document for search_batch_id ".
-	    "$search_batch_id");
+        die("ERROR: Unable to determine document for search_batch_id ".
+            "$search_batch_id");
       }
     }
   }
@@ -852,7 +903,7 @@ sub main {
       # names should be added there; the preferred list below is considered
       # first before default names, allows caller to determine priority.
       if ($filepath !~ /\.xml/) {
-    	  my @preferred = ( 
+          my @preferred = ( 
                         'interact-combined.pep.xml',   #iProphet output
                         'interact-ipro.pep.xml',       #iProphet output
                         'interact-prob.pep.xml',
@@ -990,14 +1041,21 @@ sub main {
 	  die("ERROR: Specified master ProteinProphet file not found '$proteinProphet_filepath'\n");
 	}
         print "INFO: Reading $proteinProphet_filepath...\n" unless ($QUIET);
+        if ($regularize_prot_ids && !$QUIET) {
+          print "INFO: Will regularize protein identifications.\n"
+        } elsif (!$QUIET) {
+          print "INFO: Will store arbitrary protein identifications (as before Feb. 2009).\n"
+        }
         $CONTENT_HANDLER->{document_type} = 'protXML';
         $parser->parse (XML::Xerces::LocalFileInputSource->new($proteinProphet_filepath));
         print "\n";
 
 	#### If it exists, read the SpectraST library
-	$spectral_peptides = readSpectralLibraryPeptides(
-          input_file => "analysis/consensus.sptxt",
-        );
+        # 02/09 TMF: below commented out because we currently don't use spectral libraries;
+        #  error msgs about missing library files confusing.
+	#$spectral_peptides = readSpectralLibraryPeptides(
+          #input_file => "analysis/consensus.sptxt",
+        #);
 
       }
 
@@ -2195,6 +2253,7 @@ sub readIdentificationListTemplateFile {
 
   my $counter = 0;
   my $line;
+  $line = <INFILE>; # throw away header line
   while ($line = <INFILE>) {
     chomp($line);
     my @columns = split(/\t/,$line);
@@ -2230,7 +2289,8 @@ sub writeIdentificationListFile {
   my $best_prob_per_pep;
   # if best_probs_from_protxml is set, this arg is undefined
   ($best_prob_per_pep = $args{'best_prob_per_pep'})
-    || print "INFO: no best_prob_per_pep passed to writeIdentificationListFile\n";
+    || print "INFO: writeIdentificationListFile will get best prob ".
+             "per pep from protXML info\n";
 
   print "Writing output combined cache file '$output_file'...\n";
 
@@ -2278,25 +2338,32 @@ sub writeIdentificationListFile {
     } else {
       print "WARNING: Did not find ProtProph info for keys ".
 	"$peptide_sequence or '${charge}-$modified_peptide'".
-        " ($identification->[10], P=$identification->[8])\n";
+        " (prot=$identification->[10], P=$identification->[8])\n";
     }
     if ($pep_key) {
       my $info = $ProteinProphet_data->{$pep_key};
       if ($best_prob_per_pep) {
         # subtract .001 since DS does this in ProteinProphet
         $initial_probability = $best_prob_per_pep->{$pep_key} - .001;
+        # debugging: check whether probs from pepXML match
+        # init_probs from protXML. In a small fraction of cases,
+        # they don't, and I don't know why. TMF 02/09.
         if (0) {
           my $diff = $initial_probability-$info->{initial_probability};
           $diff_is_great = ($diff > .0011 || $diff < -.0011);
           if ($diff_is_great) {  # 12/31/08 tmf debugging
-            printf "Orig init prob: %.5f New init prob: %.5f Diff: %.5f %s\n",
+            printf "init_prob diff %7.5f protXML: %7.5f pepXML: %7.5f %s\n",
+               $diff,
                $info->{initial_probability},
                $initial_probability,
-               $diff, $pep_key;
+               $pep_key;
           }
         }
       } else {
         $initial_probability = $info->{initial_probability};
+      }
+      if ($regularize_prot_ids) {
+        $identification->[10] = $info->{protein_name};
       }
       $adjusted_probability = $info->{nsp_adjusted_probability};
       $n_adjusted_observations = $info->{n_adjusted_observations};
@@ -2369,15 +2436,16 @@ sub writeIdentificationListFile {
       print "$counter... " if ($counter % 1000 == 0);
     } else {
       ### tmf debugging 12/08
-      if ($diff_is_great) { print "REJECTED!!!\n"; }
+      if ($diff_is_great) { print "Final adj prob = $probability: REJECTED!!!\n"; }
     }
   }
 
-  if ( $consensus_lib{found} || $consensus_lib{missing} ) {
+  # 02/09 TMF: below commented out because we currently don't use spectral libraries.
+  #if ( $consensus_lib{found} || $consensus_lib{missing} ) {
     # Must have used spectrast lib
-    print "Filtered vs. consensus library, found " . scalar( @{$consensus_lib{found}} ) . ',  ' .  scalar( @{$consensus_lib{missing}} ) . " were missing\n";
-  }
-  print "\n";
+  #  print "Filtered vs. consensus library, found " . scalar( @{$consensus_lib{found}} ) . ',  ' .  scalar( @{$consensus_lib{missing}} ) . " were missing\n";
+  #}
+  #print "\n";
   close(OUTFILE);
 
   return(1);
