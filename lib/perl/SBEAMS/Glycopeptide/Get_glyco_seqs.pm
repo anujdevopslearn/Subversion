@@ -1472,7 +1472,7 @@ sub get_annotation {
         my @annotations = $ac->get_Annotations($anno_type);
 
         if ($annotations[0]){
-                $info = $annotations[0]->hash_tree;
+                $info = $annotations[0]->hash_tree()->{value};
         }else{
                 $info = "Cannot find Info for '$anno_type'";
         }

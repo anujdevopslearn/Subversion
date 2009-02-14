@@ -222,10 +222,8 @@ sub get_current_build {
 
   # Check self for value
   if ( $self->{_build_id} ) {
-    $log->debug( "Returning cached ID" );
     return $self->{_build_id} 
   }
-  $log->printStack('debug');
 
   my $sbeams = $self->getSBEAMS();
 

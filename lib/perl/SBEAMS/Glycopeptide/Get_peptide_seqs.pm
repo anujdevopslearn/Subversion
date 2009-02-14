@@ -510,7 +510,9 @@ sub add_peptide_to_sequence {
         #retrieves all the Bio::AnnotationI objects for one or more specific key(s).
         my @annotations = $ac->get_Annotations('protein_glyco_site');
 
-        my  $info = $annotations[0]->hash_tree;
+        my  $info = $annotations[0]->hash_tree()->{value};
+#	$log->debug(Dumper($info));
+	$log->debug($info);
 	
 	#$feature->display_name('Pep_id_' . $pep_obj->display_name());
 	$feature->display_name($info);
@@ -571,7 +573,7 @@ sub get_score {
 	my @annotations = $ac->get_Annotations($score_type);
 	
 	if ($annotations[0]){
-		$info = $annotations[0]->hash_tree;
+		$info = $annotations[0]->hash_tree()->{value};
 	}else{
 		$info = 1;
 	}
