@@ -190,7 +190,6 @@ sub handle_request {
     Database of observed phosphorylation sites
     END
 
-    $log->debug( "org is $organism");
     if ( $organism eq 'Drosophila' ) {
       %example = ( name =>'jaguar',
                    symbol => 'jar',
@@ -427,6 +426,8 @@ sub print_out_hits_page{
 		my $ipi_id = $h_ref->{ipi_data_id};
 		my $num_identified = $h_ref->{num_observed};
 		my $ipi_acc = $h_ref->{ipi_accession_number};
+    $log->debug( "Acc is $ipi_acc from $h_ref which has  $h_ref->{ipi_accession_number} " );
+    $log->debug( Dumper( $h_ref) );
 		my $protein_name = nice_term_print($h_ref->{protein_name});
 		my $protein_sym = $h_ref->{protein_symbol};
     push @symbols, $protein_sym if $protein_sym;
@@ -1316,7 +1317,13 @@ sub get_annotation {
 	my @annotations = $ac->get_Annotations($anno_type);
 	
 	if ($annotations[0]){
-		$info = $annotations[0]->hash_tree;
+    $log->debug();
+    $log->debug();
+    $log->debug();
+    $log->debug( Dumper( $annotations[0] ) );
+		$info = $annotations[0]->hash_tree()->{value} || $annotations[0]->{text};
+    $log->debug( Dumper( $info ) );
+    $log->debug( "Almost there,info is $info for $args{anno_type}" );
 	}else{
 		$info = "Cannot find Info for '$anno_type'";
 	}
@@ -1465,6 +1472,7 @@ sub display_phospho_detail_form{
   my $protein_name = get_annotation(glyco_o   => $glyco_o,
 									  anno_type => 'protein_name'
 									  );
+  $log->debug( "Protein name is $protein_name" );
 
   my $organism = $sbeamsMOD->get_current_organism();
   my $consensus = $sbeamsMOD->get_build_consensus_library();
@@ -1479,7 +1487,6 @@ sub display_phospho_detail_form{
   my $stringslink = getStringsLink( seq => $pseq, acc => $swiss_id );
   my $mrmlink = "<A HREF='ViewMRMList?NIST_library_id=$consensus&action=QUERY;protein_name_constraint=$ipi_acc'>view transitions</A>";
 
-  $log->debug( "making the ortho link!" );
   my $ortholink = getOrthologLink( id => $ipi_data_id );
     
   my $ipi_url = $ipi_acc;
