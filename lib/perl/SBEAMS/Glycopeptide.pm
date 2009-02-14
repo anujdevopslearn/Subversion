@@ -218,4 +218,23 @@ sub fetchSpectrastOffsets {
   return \@match_coordinates;
 }
 
+sub has_kinase_data {
+  my $self = shift;
+  my $sbeams = $self->getSBEAMS();
+  my %args = @_;
+  return unless $args{accession};
+  my $sql =<<"  END";
+  SELECT COUNT(*) FROM peptideatlas_test.dbo.kinase_knockout
+  WHERE kinase_name = '$args{accession}' 
+  OR protein_name = '$args{accession}' 
+  END
+  $log->debug( "SQL is $sql");
+  my ($exists) = $sbeams->selectrow_array( $sql );
+
+  return $exists;
+}
+
+1;
+
+
 __END__
