@@ -37,10 +37,6 @@ $sbeamsMOD = new SBEAMS::Glycopeptide;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
-use PGPLOT;
-use PDL;
-use PDL::Graphics::PGPLOT;
-
 $PROG_NAME="ViewMRMList";
 
 ###############################################################################
