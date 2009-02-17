@@ -596,7 +596,9 @@ sub handle_request {
     if ($parameters{display_options} =~ /ShowModifications/) {
       @column_array = ( @column_array[0], 
                         ["modified_peptide_sequence","MPI.modified_peptide_sequence","Modified Peptide Sequence"],
-                        @column_array[2..5],
+                        $column_array[2],
+                        ["n_observations","MPI.n_observations","N Obs"],
+                        @column_array[4..5],
                         ["monoisotopic_parent_mz","STR(MPI.monoisotopic_parent_mz,10,4)","Monoisotopic Parent m/z"],
                         @column_array[6..$#column_array],
                         );
