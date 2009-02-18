@@ -4,21 +4,20 @@ use strict;
 use warnings;
 use Carp;
 use Data::Dumper;
-use lib qw(../../);
 use SBEAMS::SolexaTrans::PatmanClient;
 use SBEAMS::SolexaTrans::Repeats;
 
 use vars qw(@AUTO_ATTRIBUTES @CLASS_ATTRIBUTES %DEFAULTS %SYNONYMS);
 @AUTO_ATTRIBUTES = qw(export_file tags 
 		      n_reads n_repeats n_tags
-		      project_name lane sample_id motif
-		      ref_fasta
+		      project_name lane ss_sample_id motif
+		      genome_id ref_fasta
 		      patman_max_mismatches use_old_patman_output
-		      babel
+		      babel dbh
 		      );
-@CLASS_ATTRIBUTES = qw(repeats repeat_length base_dir base_output_dir);
+@CLASS_ATTRIBUTES = qw(repeats repeat_length output_dir);
 %DEFAULTS = (patman_max_mismatches=>1,
-	     base_output_dir=>'output');
+	     );
 %SYNONYMS = ();
 
 Class::AutoClass::declare(__PACKAGE__);
@@ -77,25 +76,30 @@ sub count_tags {
 #-----------------------------------------------------------------------
 
 # look up tags in the reference db:
-# mark found tags with {locus_link_eid},{source_id},{from_ref_db} (the last is just a flag)
+# mark found tags with {locus_link_eid},{genome_id},{from_ref_db} (the last is just a flag)
 sub lookup_tags {
     my ($self,$ref_tablename)=@_;
     my $tags=$self->tags;
     my $dbh=$self->dbh or confess "no dbh";
 
+#    my $count=$dbh->selectcol_arrayref("SELECT COUNT(*) FROM $ref_tablename")->[0];
+#    return unless $count>0;
+
+    my $n_found=0;
     while (my ($tag,$hash)=each %$tags) {
-	my $sql="SELECT locus_link_eid,source_id FROM $ref_tablename";
-	my $rows=$dbh->selectcol_arrayref($sql)->[0];
-	next unless @$rows==1;
-	my ($ll,$source_id)=@{$rows->[0]};
+	my $sql="SELECT locus_link_eid,genome_id FROM $ref_tablename WHERE tag='$tag'";
+	my $rows=$dbh->selectall_arrayref($sql);
+	next unless $rows && @$rows==1;
+	my ($ll,$genome_id)=@{$rows->[0]};
 	$hash->{locus_link_eid}=$ll;
-	$hash->{source_id}=$source_id;
+	$hash->{genome_id}=$genome_id;
 	$hash->{from_ref_db}=1;
+	$n_found++;
     }
+    warn "lookup_tags: found $n_found tags in ref_db\n";
 }
 
 # insert any tag with a locus_link_eid, but without {from_ref_db} set, into the ref db
-# (this might really be better as a PE.pm method? has to know about {from_ref_db} key...
 sub update_ref_db {
     my ($self,$ref_tablename)=@_;
     my $tags=$self->tags;
@@ -104,20 +108,22 @@ sub update_ref_db {
     my $n_added=0;
     while (my ($tag,$hash)=each %$tags) {
 	next unless $hash->{locus_link_eid} && !$hash->{from_ref_db};
-	my ($ll,$rna_acc,$genome_id)=@$hash->{qw(locus_link_eid rna_acc genome_id)};
+	my ($ll,$rna_accs,$genome_id)=@$hash{qw(locus_link_eid rna_accs genome_id)};
+	my $rna_acc=join(',',@$rna_accs);
 	$stm->execute($tag,$ll,$rna_acc,$genome_id);
 	$n_added++;
+	$hash->{from_ref_db}=1;
     }
-    warn "added $n_added new genes\n";
+    warn "update_ref_db: added $n_added new genes\n";
 }
 #------------------------------------------------------------------------
 
 sub run_patman {
     my ($self,%argHash)=@_;
 
-    my $patman=PatmanClient->new();
+    my $patman=SBEAMS::SolexaTrans::PatmanClient->new();
 
-    # write all tags in fasta format
+    # write all tags in fasta format and run patman program:
     my $fasta_file=$self->tmp_fasta_filename();
     unless ($self->use_old_patman_output && -r "$fasta_file.patman") {
 	my $now=scalar localtime;
@@ -129,10 +135,9 @@ sub run_patman {
 	warn "$now: calling patman...\n";
 	my $options={};
 	$options->{-e}=$self->patman_max_mismatches;
-	warn "run_patman: options are ",Dumper($options);
 	my $rc=$patman->run(query=>$fasta_file, target=>$self->ref_fasta, 
 			    output=>"$fasta_file.patman",options=>$options);
-	warn "patman: rc=$rc\n";
+#	warn "patman: rc=$rc\n";
 #	die "patman error: rc=$rc" if $rc;
     } else {
 	warn "patman: re-using patman results in $fasta_file.patman";
@@ -148,13 +153,18 @@ sub run_patman {
     $now=scalar localtime;
     warn "$now: mapping rna_accs->locus_link_eids...\n";
     my $tags=$self->tags;
+    my $genome_id=$self->genome_id or confess "no genome_id";
+    my $n_added=0;
     while (my ($tag,$list)=each %$matches) {
+
+	# gather rna_accs from patman output:
 	my %rna_accs;
 	foreach my $h (@$list) {
 	    my $rna_acc=$h->{rna_acc};
+	    if ($rna_acc=~/[A-Z][A-Z]_\d+/) { $rna_acc=$& }
 	    $rna_acc=~s/\s.*//;
 	    $rna_accs{$rna_acc}++;
-#	    $tags{$tag}->{rna_accs}->{$h->{rna_acc}}++;
+#	    $tags->{$tag}->{rna_accs}={$h->{rna_acc}}++;	# was commented out; due to size of %tags?
 	}
 
 	# determine if there is a unique locus_link_eid for this tag:
@@ -163,7 +173,9 @@ sub run_patman {
 	# regardless, retain the entire list of ll's
 	my @rna_accs=keys %rna_accs;
 	if (@rna_accs) {
-#	    $tags->{$tag}->{rna_accs}=\@rna_accs;
+	    $tags->{$tag}->{genome_id}=$genome_id;
+	    $n_added++;
+	    $tags->{$tag}->{rna_accs}=\@rna_accs; # was commented out; due to size of %tags?
 	    my $lls=$self->rnas2lls(\@rna_accs);
 	    $tags->{$tag}->{lls}=$lls;
 	    if (@$lls==1) {
@@ -171,6 +183,7 @@ sub run_patman {
 	    }
 	}
     }
+    warn "run_patman: marked $n_added genes from genome_id=$genome_id";
 }
 
 sub is_ambiguous {
@@ -182,15 +195,16 @@ sub is_ambiguous {
 
 sub output_dir {
     my $self=shift;
-    join('/',$self->base_dir,$self->base_output_dir,$self->project_name);
+    join('/',$self->output_dir,$self->project_name);
 }
 
 sub tmp_fasta_filename {
     my $self=shift;
     my $project_name=$self->project_name;
-    my $sample_id=$self->sample_id;
+    my $sample_id=$self->ss_sample_id;
     my $output_dir=$self->output_dir;
-    "$output_dir/$project_name.$sample_id.fa";
+    my $lane=$self->lane;
+    "$output_dir/$project_name.$lane.$sample_id.fa";
 }
 
 sub write_fasta {
@@ -199,20 +213,26 @@ sub write_fasta {
     my $motif=$self->motif;
 
     my $tags=$self->tags;
+    my $n_tags=0;
     while (my ($tag,$hash)=each %$tags) {
-	next if $hash->{locus_link_eid}; # used as a flag; perhaps a status field instead?
-#	my $count=$hash->{count};
+	next if $hash->{genome_id}; # used as a flag; perhaps a status field instead?
 	print FASTA "> $tag\n$motif$tag\n";
-#	print FASTA "> $tag $count\n$motif$tag\n";
+	$n_tags++;
     }
     close FASTA;
-    warn "$filename written\n";
+    warn "$filename written ($n_tags tags)\n";
     $filename;
 }
 
 sub rnas2lls {
     my ($self,$rna_accs)=@_;
-    my $rna2ll=$self->babel->translate(src_ids=>$rna_accs,src_type=>'sequence_acc',dst_type=>'gene_locuslink');
+    my @accs;
+    foreach my $rna_acc (@$rna_accs) {
+	$rna_acc=~/[A-Z][A-Z]_\d+/ or next;
+	push @accs,$&;
+    }
+
+    my $rna2ll=$self->babel->translate(src_ids=>\@accs,src_type=>'sequence_acc',dst_type=>'gene_locuslink');
     # $rna2ll is a hash: k=$rna_acc, v=list of locus_link_eids
     my %lls;
     while (my ($rna_acc,$lls)=each %$rna2ll) {
@@ -220,6 +240,8 @@ sub rnas2lls {
 	    $lls{$ll}=$ll;
 	}
     }
+#    warn "rnas2lls: rna_accs are ",Dumper($rna_accs);
+#    warn "rnas2lls: lls are ",Dumper(\%lls);
     wantarray? keys %lls:[keys %lls];
 }
 

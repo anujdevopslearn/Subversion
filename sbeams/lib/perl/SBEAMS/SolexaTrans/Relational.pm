@@ -251,6 +251,21 @@ sub fetch_where {
     wantarray? @objs:\@objs;
 }
 
+# returns the results of selectall_arrayref as a list[ref]
+sub select {
+    my ($self,%argHash)=@_;
+    my $dbh=$self->dbh or confess "no dbh";
+    my $fields=$argHash{fields} || [];
+    my $fieldnames=join(',',@$fields);
+    my $values=$argHash{values} || {};
+    my $where=join(' AND ',map {"$_=".$dbh->quote($values->{$_})} keys %$values);
+    my $tablename=$self->tablename;
+    my $sql="SELECT $fieldnames FROM $tablename";
+    $sql.=" WHERE $where" if $where;
+    my $rows=$dbh->selectall_arrayref($sql);
+    wantarray? @$rows:$rows;
+}
+
 sub store {
     my $self=shift;
     my (@fields,@values);

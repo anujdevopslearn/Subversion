@@ -40,7 +40,7 @@ sub run {
     warn "$now: patman: $cmd\n";
     my $rc=system($cmd)>>8;
     $now=scalar localtime;
-    warn "$now: patman done\n";
+    warn "$now: patman done (rc=$rc)\n";
 }
 
 sub run_many {
