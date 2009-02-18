@@ -36,7 +36,7 @@ sub new {
 
   #### Initialize InsilicoSpectro.
   my $config_file = $CONFIG_SETTING{INSILICOSPECTRO_CONFIG};
-  $config_file ||= '/tools/lib/perl5/site_perl/5.8.0/InSilicoSpectro/config/insilicodef.xml';
+  $config_file ||= '/tools/lib/perl5/site_perl/5.8.8/InSilicoSpectro/config/insilicodef.xml';
 
   InSilicoSpectro::InSilico::MassCalculator::init( $config_file );
 
