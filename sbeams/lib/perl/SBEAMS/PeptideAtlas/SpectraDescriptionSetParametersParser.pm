@@ -133,7 +133,7 @@ sub parse {
       ## read the next line, and get model name
       $line = <INFILE>;
       chomp($line);
-      $line =~ /\<instrument\smanufacturer=\"(.+)\"/;
+      $line =~ /\s+model=\"(.+)\"/;
       $model_name = $model_name . " $1";
     }
 
