@@ -35,8 +35,14 @@ sub new {
   bless $self, $class;
 
   #### Initialize InsilicoSpectro.
-  my $config_file = $CONFIG_SETTING{INSILICOSPECTRO_CONFIG};
-  $config_file ||= '/tools/lib/perl5/site_perl/5.8.8/InSilicoSpectro/config/insilicodef.xml';
+  my $config_file; 
+	for my $name ( @{$CONFIG_SETTING{INSILICOSPECTRO_CONFIG}} ) {
+		if ( -e $name ) {
+      $config_file = $name;
+			last;
+		}
+	}
+	die ( "Unable to find config file " ) unless $config_file;
 
   InSilicoSpectro::InSilico::MassCalculator::init( $config_file );
 

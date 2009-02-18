@@ -42,3 +42,7 @@ $SBEAMS_PART            = 'Proteomics';
 
 #### Override variables from main Settings.pm
 $SBEAMS_SUBDIR          = 'Proteomics';
+
+my @types = split( /\s+/, $CONFIG_SETTING{INSILICOSPECTRO_CONFIG} );
+$CONFIG_SETTING{INSILICOSPECTRO_CONFIG} = \@types;
+
