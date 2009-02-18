@@ -1,8 +1,7 @@
-package ModificationHelper;
+package  SBEAMS::PeptideAtlas::ModificationHelper;
 
 use 5.008;
 use strict;
-use warnings;
 
 require Exporter;
 
