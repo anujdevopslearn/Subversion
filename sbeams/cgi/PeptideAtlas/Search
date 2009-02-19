@@ -277,7 +277,22 @@ sub handle_request {
   #### Process all the constraints
 
   #### If search_key was not selected, stop here
-  unless ($parameters{search_key}) {
+  my $key_error;
+  my $error_msg;
+  if ( !$parameters{search_key} && $apply_action ) {
+    $key_error++;
+    $error_msg = 'You must provide some text to search',
+  } elsif ( $parameters{search_key} =~ /^[%_; ]+$|^[%_; ]+;|;[%_; ]+$|;[%_; ]+;/  && $apply_action ) {
+    $key_error++;
+    $error_msg = 'Full wildcard searches (%,_ only) are not supported.' 
+  }
+
+  if ( $key_error ) {
+    $sbeams->set_page_message( type => 'Error', msg => <<"    END" );
+		<BR>
+      $error_msg
+		<BR>
+    END
     if ($sbeams->output_mode() eq 'html') {
       $sbeamsMOD->display_page_header(project_id => $project_id);
       print $buffer;
@@ -285,10 +300,10 @@ sub handle_request {
       $sbeams->reportException(
           state => 'ERROR',
           type => 'INSUFFICIENT CONSTRAINTS',
-          message => 'You must provide an search_key',
+          message => $error_msg,
       );
     }
-    return;
+    return '';
   }
 
 
@@ -297,9 +312,9 @@ sub handle_request {
       constraint_column=>"search_key_name",
       constraint_type=>"plain_text",
       constraint_name=>"Search Key",
-      constraint_value=>$parameters{search_key} );
+      constraint_value=>$parameters{search_key},
+      );
   return if ($search_key_clause eq '-1');
-
 
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
@@ -339,8 +354,6 @@ sub handle_request {
           AND SK.atlas_build_id IN ( $build_type_selection->{atlas_build_ids} )
        ORDER BY search_key_name
   ~;
-  $log->debug( $sql );
-
 
   #### Define the hypertext links for columns that need them
   %url_cols = (
@@ -410,6 +423,7 @@ sub handle_request {
     $cleaned_search_key =~ s/^%//;
     $cleaned_search_key =~ s/%$//;
 
+    my $download_link = '';
     #### If 0 results came back, then inform the user
     if ($n_results == 0) {
       print "There were no matches in the index to match your search key '$search_key'<BR>";
@@ -423,16 +437,37 @@ sub handle_request {
         ~;
       }
       return(0);
-    }
+    } elsif ( $build_type_selection->{atlas_build_ids} =~ /^\d+$/ ) {
+			my @identifiers;
+      for my $row ( @{$resultset_ref->{data_ref}} ) {
+				push @identifiers, $row->[3];
+			}
+			my $id_string = join( '%3B', @identifiers );
+
+			$id_string =~ s/\s//g;
+      my $prot_link = qq ~<A HREF="GetProteins?atlas_build_id=$build_type_selection->{atlas_build_ids};biosequence_name_constraint=$id_string;QUERY_NAME=AT_GetProteins;action=QUERY"> link</A> ~;
+			my $pep_link = $prot_link;
+			$pep_link =~ s/GetProteins/GetPeptides/g;
+
+			$download_link = qq~
+			  You can also download more information about the proteins via this $prot_link <BR>
+				or information about all observed peptides for the proteins via this $pep_link
+			~;
+	 	}
 
     print qq~
-          <TABLE BORDER="0" WIDTH="570"><TR><TD>
-      Your search returned $n_results matches.  Please choose one from below.
+      <TABLE BORDER="0" WIDTH="570"><TR><TD>
+      Your search returned $n_results matches.  Please choose one from below.  <BR> $download_link
+    ~ if ($sbeams->output_mode() eq 'html');
+
+    if ($search_key !~ /%/) {
+      print qq~
       Or you can broaden the search by placing wildcards around your search key like this:
           <A HREF="$base_url?search_key=$cleaned_search_key%25&action=GO">$cleaned_search_key%</A>,
           <A HREF="$base_url?search_key=%25$cleaned_search_key%25&action=GO">%$cleaned_search_key%</A>
-          </TD></TR></TABLE><BR>
-    ~ if ($sbeams->output_mode() eq 'html');
+      ~ if ($sbeams->output_mode() eq 'html');
+		}
+    print "</TD></TR></TABLE><BR>\n" if ($sbeams->output_mode() eq 'html');
 
     #### Display the resultset
     $sbeams->displayResultSet(
@@ -584,7 +619,7 @@ sub getBuildTypeSelection {
 sub getSearchTypeClause {
   my %args = @_;
   for my $param ( keys( %{$args{params}} ) ) {
-    $log->debug( "$param -> $args{params}->{param}" );
+    $log->debug( "$param -> $args{params}->{$param}" );
   }
   my $clause = '';
   $search_type_param{all_fields} = 'checked';
