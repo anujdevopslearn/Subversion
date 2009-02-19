@@ -86,8 +86,8 @@ sub run {
     # tabulate any global stats
     $total_reads+=$pe->n_reads;
     $total_tags+=$pe->n_tags;
-
     warn "$total_reads total reads, $total_tags total tags\n";
+    $self->write_stats;
 
     my $now=scalar localtime;
     warn "$now: done\n";
@@ -206,6 +206,41 @@ sub get_output_filename {
     my ($self,$suffix)=@_;
     my ($output_dir,$project_name,$ss_sid,$lane)=$self->get_attrs(qw(output_dir project_name ss_sample_id lane));
     "$output_dir/$project_name.$lane.$ss_sid.$suffix";
+}
+
+# construct the stats filename:
+sub get_stats_filename {
+    my ($self)=@_;
+    $self->get_output_filename('stats');
+}
+
+# write the stats hash out to disk:
+sub write_stats {
+    my ($self)=@_;
+    my $stats=$self->stats;
+    my $fn=$self->get_stats_filename;
+    open (STATS,">$fn") or die "Can't open $fn for writing: $!\n";
+    foreach my $k (sort keys %$stats) {
+	my $v=$stats->{$k};
+	print STATS "$k\t$v\n";
+    }
+    close STATS;
+    warn "$fn written\n";
+}
+
+# return a stats hash read in from the stats file
+sub read_stats {
+    my ($self)=@_;
+    my $fn=$self->get_stats_filename;
+    my $stats;
+    open (STATS,"$fn") or die "Can't open $fn: $!\n";
+    while (<STATS>) {
+	chomp;
+	my ($k,$v)=split(/\t/);
+	$stats->{$k}=$v;
+    }
+    close STATS;
+    $stats;
 }
 
 #-----------------------------------------------------------------------
@@ -330,6 +365,7 @@ genome_id INT NOT NULL
 
 ########################################################################
 
+# returns a hash contains summary stats for the run:
 sub stats {
     my ($self)=@_;
     my $lane=$self->lane;
