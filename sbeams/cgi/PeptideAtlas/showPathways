@@ -61,6 +61,8 @@ $|++;
   #### Get the current atlas_build_id based on parameters or session
   $atlas_build_id = $atlas->getCurrentAtlasBuildID( parameters_ref => $params );
 
+  $log->debug( "Atlas build is $atlas_build_id " );
+
   $kegg_organism = $atlas->getCurrentAtlasOrganism( parameters_ref => $params, 
                                                               type => 'kegg' );
 
@@ -371,7 +373,10 @@ sub getExpressionValues {
 
   # ref to hash keyed by gene_id, points to arrayref of one or more peptides
   my %atlas_hits;
-  my @rows = $sbeams->selectSeveralColumns( $sql );
+  my @rows;
+  if ( $gene_string ) {
+    @rows = $sbeams->selectSeveralColumns( $sql );
+  }
   for my $row ( @rows ) {
     # just need to look at the first one
     next if $atlas_hits{$row->[0]}; 
