@@ -15,7 +15,7 @@ use SBEAMS::SolexaTrans::RestrictionSites;
 use vars qw(@AUTO_ATTRIBUTES @CLASS_ATTRIBUTES %DEFAULTS %SYNONYMS);
 @AUTO_ATTRIBUTES = qw(project_name motif res_enzyme tag_length
 		      output_dir genome_dir 
-		      restriction_enzyme ref_genome ref_org
+		      restriction_enzyme  ref_org
 		      export_file lane ss_sample_id
 		      use_old_patman_output
 		      db_host db_name db_user db_pass 
@@ -97,7 +97,7 @@ sub run {
 
 sub verify_required_opts {
     my ($self)=@_;
-    my @required=qw(ref_genome motif project_name lane ss_sample_id output_dir);
+    my @required=qw(ref_org motif project_name lane ss_sample_id output_dir);
     my @missing=grep {defined $_} map {defined $self->$_? undef:$_} @required;
     warn "self:",Dumper($self) if $ENV{DEBUG};
     die "missing fields (options): ",join(', ',@missing),"\n" if @missing;
