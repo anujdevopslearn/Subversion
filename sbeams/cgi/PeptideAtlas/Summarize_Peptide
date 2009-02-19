@@ -52,7 +52,7 @@ $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
-my $modification_helper = new ModificationHelper();
+my $modification_helper = new SBEAMS::PeptideAtlas::ModificationHelper();
 
 #$q = new CGI;
 
