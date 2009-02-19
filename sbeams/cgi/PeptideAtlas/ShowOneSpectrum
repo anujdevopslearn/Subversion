@@ -2,8 +2,6 @@
 #!/usr/local/bin/perl
 
 BEGIN {
-
-
 push @INC, qw( /net/db/src/SSRCalc/ssrcalc .  /tools32/lib/perl5/5.8.0/i386-linux-thread-multi /tools32/lib/perl5/5.8.0 /tools32/lib/perl5/site_perl/5.8.0/i386-linux-thread-multi /tools32/lib/perl5/site_perl/5.8.0 /tools32/lib/perl5/site_perl );
 }
 
@@ -194,7 +192,7 @@ sub processRequest {
     #### Calculate peptide mass information
     my $masstype = $parameters{masstype} || 0;
 
-    $modification_helper = new ModificationHelper();
+    $modification_helper = new SBEAMS::PeptideAtlas::ModificationHelper();
 
     my %spectrum = get_library_spectrum(
         consensus_library_spectrum_id=>$parameters{consensus_library_spectrum_id},
