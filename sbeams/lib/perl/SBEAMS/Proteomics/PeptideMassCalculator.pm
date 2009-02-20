@@ -20,7 +20,6 @@ package SBEAMS::Proteomics::PeptideMassCalculator;
 
 use strict;
 use SBEAMS::Connection::Settings qw(:default );
-use SBEAMS::Proteomics::Settings;
 use InSilicoSpectro::InSilico::MassCalculator 'setMassType','getMass';
 
 use vars qw ( $H $O %supported_modifications );

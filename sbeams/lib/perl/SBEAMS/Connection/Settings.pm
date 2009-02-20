@@ -152,6 +152,9 @@ unless (defined($DBCONFIG->{$DBINSTANCE})) {
 extractInstanceParams();
 
 
+my @types = split( /\s+/, $CONFIG_SETTING{INSILICOSPECTRO_CONFIG} );
+$CONFIG_SETTING{INSILICOSPECTRO_CONFIG} = \@types;
+
 
 ###############################################################################
 # extractInstanceParams
