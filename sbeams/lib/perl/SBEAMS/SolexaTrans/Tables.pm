@@ -51,6 +51,8 @@ use vars qw(@ISA @EXPORT
     $TBST_SOLEXA_FLOW_CELL_LANE
     $TBST_SOLEXA_FLOW_CELL_LANE_SAMPLES
     $TBST_RESTRICTION_ENZYME
+
+    $TBST_SOLEXA_ANALYSIS
 );
 
 
@@ -93,6 +95,8 @@ require Exporter;
     $TBST_SOLEXA_FLOW_CELL_LANE_SAMPLES
 	
     $TBST_RESTRICTION_ENZYME
+
+    $TBST_SOLEXA_ANALYSIS
 );
 
 
@@ -138,5 +142,6 @@ $TBST_SOLEXA_FLOW_CELL_LANE_SAMPLES	= "${modST}solexa_flow_cell_lane_samples";
 
 $TBST_RESTRICTION_ENZYME		= "${modST}restriction_enzyme";
 
+$TBST_SOLEXA_ANALYSIS                   = "${modST}solexa_analysis";
 
 
