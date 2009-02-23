@@ -7,7 +7,7 @@ use Data::Dumper;
 
 use vars qw(@AUTO_ATTRIBUTES @CLASS_ATTRIBUTES %DEFAULTS %SYNONYMS);
 @AUTO_ATTRIBUTES = qw(genome_id url name org path);
-@CLASS_ATTRIBUTES = qw(table_fields tablename primary_key genomes db_name uniques indexes primary_key);
+@CLASS_ATTRIBUTES = qw(table_fields tablename primary_key genomes db_name uniques indexes);
 %DEFAULTS = (tablename=>'genomes',
 	     table_fields=>{
 		 genome_id=>'INT PRIMARY  KEY AUTO_INCREMENT',
