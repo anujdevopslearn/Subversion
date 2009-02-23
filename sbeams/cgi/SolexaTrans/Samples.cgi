@@ -1517,6 +1517,8 @@ use warnings;
 use lib "$PHYSICAL_BASE_DIR/lib/perl";
 use SBEAMS::SolexaTrans::Solexa_file_groups;
 use SBEAMS::SolexaTrans::SolexaTransPipeline;
+use SBEAMS::SolexaTrans::Tables;
+use SBEAMS::SolexaTrans::SolexaUtilities;
 use SBEAMS::Connection;
 use SBEAMS::Connection::Tables;
 
@@ -1527,6 +1529,7 @@ my \$sbeams = new SBEAMS::Connection;
 my \$utilities = new SBEAMS::SolexaTrans::SolexaUtilities;
 \$utilities->setSBEAMS(\$sbeams);
 
+my \$current_username = \$sbeams->Authenticate();
 
 PEND
 
@@ -1545,13 +1548,13 @@ PEND
 
             # insert the job information before calling STP to process
             my \$rowdata_ref = {
-                                jobname => $jobname,
+                                jobname => '$jobname',
                                 solexa_sample_id => $sample_id,
                                 output_directory_id => \$output_dir_id,
-                                analysis_description => $jobsummary,
+                                analysis_description => '$jobsummary',
                                 project_id => $project_id,
                                 status => 'PROCESSING',
-                                status_time => CURRENT_TIMESTAMP,
+                                status_time => 'CURRENT_TIMESTAMP',
                               };
 
             my \$analysis_id = \$sbeams->updateOrInsertRow(
@@ -1602,16 +1605,16 @@ PEND3
 #            total_tags
 #            total_unique
 
-            \$rowdata_ref{"total_tags"}         = \$statsref->{total_tags};
-            \$rowdata_ref{"total_unique_tags"}  = \$statsref->{total_unique};
-            \$rowdata_ref{"match_tags"}         = \$statsref->{tags_${sample_id}_total};
-            \$rowdata_ref{"match_unique_tags"}  = \$statsref->{tags_${sample_id}_unique};
-            \$rowdata_ref{"ambg_tags"}          = \$statsref->{ambg_${sample_id}_total};
-            \$rowdata_ref{"ambg_unique_tags"}   = \$statsref->{ambg_${sample_id}_unique};
-            \$rowdata_ref{"unkn_tags"}          = \$statsref->{unkn_${sample_id}_total};
-            \$rowdata_ref{"unkn_unique_tags"}   = \$statsref->{unkn_${sample_id}_unique};
-            \$rowdata_ref{"solexa_analysis_id"} = \$analysis_id;
-            \$rowdata_ref{"status"}             = 'COMPLETED';
+            \$rowdata_ref->{"total_tags"}         = \$statsref->{total_tags};
+            \$rowdata_ref->{"total_unique_tags"}  = \$statsref->{total_unique};
+            \$rowdata_ref->{"match_tags"}         = \$statsref->{tags_${sample_id}_total};
+            \$rowdata_ref->{"match_unique_tags"}  = \$statsref->{tags_${sample_id}_unique};
+            \$rowdata_ref->{"ambg_tags"}          = \$statsref->{ambg_${sample_id}_total};
+            \$rowdata_ref->{"ambg_unique_tags"}   = \$statsref->{ambg_${sample_id}_unique};
+            \$rowdata_ref->{"unkn_tags"}          = \$statsref->{unkn_${sample_id}_total};
+            \$rowdata_ref->{"unkn_unique_tags"}   = \$statsref->{unkn_${sample_id}_unique};
+            \$rowdata_ref->{"solexa_analysis_id"} = \$analysis_id;
+            \$rowdata_ref->{"status"}             = 'COMPLETED';
 
             \$sbeams->updateOrInsertRow(
                                          table_name=>\$TBST_SOLEXA_ANALYSIS,
