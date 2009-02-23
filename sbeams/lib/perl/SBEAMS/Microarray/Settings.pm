@@ -22,6 +22,9 @@ use SBEAMS::Connection::Log;
 use vars qw(@ISA @EXPORT 
             $SBEAMS_PART
             $AFFY_DEFAULT_DIR
+            $SLIMARRAY_URI
+            $SLIMARRAY_USER
+            $SLIMARRAY_PASS
             @AFFY_DEFAULT_FILES
             %CUSTOM_CDF
             %CDF_DBS
@@ -64,6 +67,9 @@ for my $k qw(MA_LOG_BASE_DIR MA_AFFY_PROBE_DIR MA_BIOC_DELIVERY_PATH
 #Edit Location to suit installation requirements
 $AFFY_LOG_DIR               = $CONFIG_SETTING{MA_LOG_BASE_DIR} || '';
 $AFFY_DEFAULT_DIR           = $CONFIG_SETTING{MA_AFFY_PROBE_DIR} || '';
+$SLIMARRAY_URI              = $CONFIG_SETTING{MA_SLIMARRAY_URI} || '';
+$SLIMARRAY_USER             = $CONFIG_SETTING{MA_SLIMARRAY_USER} || '';
+$SLIMARRAY_PASS             = $CONFIG_SETTING{MA_SLIMARRAY_PASS} || '';
 $BIOCONDUCTOR_DELIVERY_PATH = $CONFIG_SETTING{MA_BIOC_DELIVERY_PATH} || '';
 $ADD_ANNOTATION_OUT_FOLDER  = $CONFIG_SETTING{MA_ANNOTATION_OUT_PATH} || '';
 $AFFY_TMP_DIR               = $CONFIG_SETTING{MA_AFFY_TMP_DIR} || '';
@@ -331,6 +337,39 @@ sub set_AFFY_DEFAULT_DIR {
 	}
 	
 	return $AFFY_DEFAULT_DIR;
+}
+
+#######################################################
+# get_SLIMARRAY_URI
+# get the SLIMarray URI 
+#######################################################
+sub get_SLIMARRAY_URI {
+    my $either = shift;
+    
+    my $class = ref($either) || $either;
+    return $SLIMARRAY_URI;
+}
+
+#######################################################
+# get_SLIMARRAY_USER
+# get the SLIMarray user 
+#######################################################
+sub get_SLIMARRAY_USER {
+    my $either = shift;
+    
+    my $class = ref($either) || $either;
+    return $SLIMARRAY_USER;
+}
+
+#######################################################
+# get_SLIMARRAY_PASS
+# get the SLIMarray password 
+#######################################################
+sub get_SLIMARRAY_PASS {
+    my $either = shift;
+    
+    my $class = ref($either) || $either;
+    return $SLIMARRAY_PASS;
 }
 
 #+
