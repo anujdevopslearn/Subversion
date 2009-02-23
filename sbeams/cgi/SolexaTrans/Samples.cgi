@@ -1615,12 +1615,12 @@ PEND3
 
             \$sbeams->updateOrInsertRow(
                                          table_name=>\$TBST_SOLEXA_ANALYSIS,
-                                         rowdata_ref => $rowdata_ref,
+                                         rowdata_ref => \$rowdata_ref,
                                          PK=>'project_id',
                                          return_PK=>1,
                                          insert=>1,
-                                         verbose=>$self->verbose,
-                                         testonly=>$self->testonly,
+                                         verbose=>\$verbose,
+                                         testonly=>\$testonly,
                                          add_audit_parameters=>1,
                                         );
 
