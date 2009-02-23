@@ -1518,7 +1518,7 @@ use lib "$PHYSICAL_BASE_DIR/lib/perl";
 use SBEAMS::SolexaTrans::Solexa_file_groups;
 use SBEAMS::SolexaTrans::SolexaTransPipeline;
 use SBEAMS::Connection;
-use SBEAMS::Connection::Tablaes;
+use SBEAMS::Connection::Tables;
 
 my \$verbose = 1;   # these should be 0 for production
 my \$testonly = 1;
