@@ -247,6 +247,17 @@ sub preUpdateDataCheck {
 
     return "An error of some sort $parameters{something} invalid";
 
+#  } elsif ($TABLE_NAME eq 'ST_SOLEXA_SAMPLE') {
+#    return "Solexa Sample ID not specified" if !$parameters{solexa_sample_id};
+#    my $errstr = checkPermission(fkey => 'solexa_sample_id',
+#                                 fval => $parameters{solexa_sample_id},
+#                                 pval => $parameters{solexa_sample_id},
+#                                 action => $parameters{action},
+#                                 tname => $TABLE_NAME
+#                                );
+
+#    return($errstr) if $errstr;
+
   }
 
   #### Otherwise, no special processing, so just return empty string

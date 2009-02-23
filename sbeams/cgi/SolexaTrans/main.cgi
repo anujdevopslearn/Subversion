@@ -1108,13 +1108,13 @@ sub print_data_download_tab {
 		
 			# remove any redundant solexa_flow_cell_ids since one solexa_flow_cell_id 
 			# might have multiple file extensions
-			my @solexa_flow_cell_ids = split /,/, $solexas_id_string;			
+			my @solexa_flow_cell_lane_ids = split /,/, $solexas_id_string;			
 		
-			my %unique_solexa_flow_cell_ids = map {split /__/} @solexa_flow_cell_ids;
+			my %unique_solexa_flow_cell_lane_ids = map {split /__/} @solexa_flow_cell_lane_ids;
 		
-			my $solexas = join ",", sort keys %unique_solexa_flow_cell_ids;
+			my $solexas = join ",", sort keys %unique_solexa_flow_cell_lane_ids;
 		
-			$sql = $sbeams_solexa_groups->get_all_solexa_info_sql(solexa_solexa_flow_cell_ids => $solexas, );
+			$sql = $sbeams_solexa_groups->get_all_solexa_info_sql(solexa_flow_cell_lane_ids => $solexas, );
 			
 			my $tab_results = $sbeams_solexa_groups->export_data_solexa_sample_info(sql =>$sql);
  				
