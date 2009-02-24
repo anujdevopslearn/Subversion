@@ -7,6 +7,8 @@
 # Description : If have used earlier version of load_atlas_build and notice
 #               that atlas build sample records weren't created, can run
 #               this to create the atlas build sample records
+#	        also, you can use this code to update all sample in the build
+#		to be public
 #
 ###############################################################################
 
@@ -53,12 +55,13 @@ Options:
   --debug n              Set debug flag
   --test                 test only, don't write records
   --atlas_build_id       atlas build id
+  --public               y/n
  e.g.: ./$PROG_NAME --atlas_build_id \'73\' 
 EOU
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","test",
-        "atlas_build_id:s"
+        "atlas_build_id:s", "public:s"
     )) {
 
     die "\n$USAGE";
@@ -73,6 +76,7 @@ $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
 
 $TEST = $OPTIONS{"test"} || 0;
+
 
    
 ###############################################################################
@@ -114,7 +118,7 @@ sub handleRequest {
 
 
   my $atlas_build_id = $OPTIONS{"atlas_build_id"} || '';
-
+  my $ispublic = $OPTIONS{"public"} || 'n';
 
   #### Verify required parameters
   unless ($atlas_build_id) {
@@ -128,7 +132,7 @@ sub handleRequest {
   $ATLAS_BUILD_ID = $atlas_build_id;
 
 
-  writeRecords( atlas_build_id=>$ATLAS_BUILD_ID);
+  writeRecords( atlas_build_id=>$ATLAS_BUILD_ID, ispublic=>$ispublic);
 
 
   #### Print out the header
@@ -152,9 +156,10 @@ sub writeRecords
 
     my $atlas_build_id = $args{'atlas_build_id'} or die
         " need atlas_build_id ($!)";
+    my $ispublic = $args{'ispublic'};
 
     ## get array of sample_id's
-    my @samples = get_sample_id_array( atlas_build_id => $atlas_build_id );
+    my %samples_hash = get_sample_id_array( atlas_build_id => $atlas_build_id );
 
     ## get all atlas_build_sample records into a hash:
     my $sql = qq~
@@ -163,7 +168,8 @@ sub writeRecords
         WHERE record_status != 'D'
         AND atlas_build_id='$atlas_build_id'
     ~;
- 
+    my @samples = keys %samples_hash;
+
     my %abs_hash = $sbeams->selectTwoColumnHash($sql);
 
     if ($TEST)
@@ -180,7 +186,7 @@ sub writeRecords
             } else
             {
                 print "found atlas_build_sample $abs_hash{$sample_id} "
-                . " for sample_id $sample_id\n";
+                . " for sample_id $sample_id\t $samples_hash{$sample_id}\n";
             }
 
         }
@@ -198,7 +204,18 @@ sub writeRecords
                     atlas_build_id => $ATLAS_BUILD_ID
                 );
             }
+            if(lc($ispublic) eq 'y')
+            {
+              my $updatesql = qq~
+                UPDATE $TBAT_SAMPLE
+                SET is_public='Y'
+                WHERE sample_id=$sample_id
+              ~;
+              $sbeams->do($updatesql);
+
+            }
         }
+
     }
    
 
@@ -223,7 +240,7 @@ sub get_sample_id_array
     ## having to go around through peptide records, then using hash to
     ## store distinct returned rows
     my $sql = qq~
-        SELECT S.sample_id, S.sample_id
+        SELECT S.sample_id, S.is_public
         FROM $TBAT_SAMPLE S
         JOIN $TBAT_PEPTIDE_INSTANCE_SAMPLE PEPIS
         ON (PEPIS.sample_id = S.sample_id)
@@ -237,12 +254,12 @@ sub get_sample_id_array
     %sample_hash = $sbeams->selectTwoColumnHash($sql) or die
         "unable to execute statement:\n$sql\n($!)";
 
-    foreach my $sample_id (keys %sample_hash)
-    {
-        push(@s, $sample_id);
-    }
+  #  foreach my $sample_id (keys %sample_hash)
+  #  {
+  #     print $sample_hash{$sample_id},"\n";
+  #  }
 
-    return @s;
+    return %sample_hash;
 }
 
 
