@@ -53,15 +53,15 @@ Options:
   --verbose n            Set verbosity level.  default is 0
   --quiet                Set flag to print nothing at all except errors
   --debug n              Set debug flag
-  --test                 test only, don't write records
-  --atlas_build_id       atlas build id
-  --public               y/n
+  --test                 Test only, don't write records
+  --atlas_build_id       Atlas build id
+  --public               Set all atlas samples to be public
  e.g.: ./$PROG_NAME --atlas_build_id \'73\' 
 EOU
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","test",
-        "atlas_build_id:s", "public:s"
+        "atlas_build_id:s", "public"
     )) {
 
     die "\n$USAGE";
@@ -76,6 +76,8 @@ $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
 
 $TEST = $OPTIONS{"test"} || 0;
+
+my $PUBLIC = $OPTIONS{"public"} || 0;
 
 
    
@@ -118,7 +120,6 @@ sub handleRequest {
 
 
   my $atlas_build_id = $OPTIONS{"atlas_build_id"} || '';
-  my $ispublic = $OPTIONS{"public"} || 'n';
 
   #### Verify required parameters
   unless ($atlas_build_id) {
@@ -132,7 +133,7 @@ sub handleRequest {
   $ATLAS_BUILD_ID = $atlas_build_id;
 
 
-  writeRecords( atlas_build_id=>$ATLAS_BUILD_ID, ispublic=>$ispublic);
+  writeRecords( atlas_build_id=>$ATLAS_BUILD_ID);
 
 
   #### Print out the header
@@ -156,7 +157,6 @@ sub writeRecords
 
     my $atlas_build_id = $args{'atlas_build_id'} or die
         " need atlas_build_id ($!)";
-    my $ispublic = $args{'ispublic'};
 
     ## get array of sample_id's
     my %samples_hash = get_sample_id_array( atlas_build_id => $atlas_build_id );
@@ -174,7 +174,6 @@ sub writeRecords
 
     if ($TEST)
     {
-       ## check that there's an atlas_build_sample_record, and if not, create one
         for (my $i=0; $i <= $#samples; $i++)
         {
             my $sample_id = $samples[$i];
@@ -186,9 +185,13 @@ sub writeRecords
             } else
             {
                 print "found atlas_build_sample $abs_hash{$sample_id} "
-                . " for sample_id $sample_id\t $samples_hash{$sample_id}\n";
+                . " for sample_id $sample_id\t $samples_hash{$sample_id}"
+                . " (is_public setting)\n";
             }
-
+        }
+        if( $PUBLIC )
+        {
+            print "\nwould set is_public for all samples above to Y\n\n";
         }
     } else
     {
@@ -204,7 +207,7 @@ sub writeRecords
                     atlas_build_id => $ATLAS_BUILD_ID
                 );
             }
-            if(lc($ispublic) eq 'y')
+            if( $PUBLIC )
             {
               my $updatesql = qq~
                 UPDATE $TBAT_SAMPLE
