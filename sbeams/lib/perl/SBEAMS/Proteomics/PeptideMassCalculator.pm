@@ -22,9 +22,9 @@ use strict;
 use SBEAMS::Connection::Settings qw(:default );
 use InSilicoSpectro::InSilico::MassCalculator 'setMassType','getMass';
 
-use vars qw ( $H $O %supported_modifications );
+use vars qw ( $H $O %supported_modifications @InSilicoConfig );
 
-
+@InSilicoConfig= @{$CONFIG_SETTING{INSILICOSPECTRO_CONFIG}};
 ###############################################################################
 # Constructor
 ###############################################################################
@@ -33,10 +33,10 @@ sub new {
   my $class = ref($this) || $this;
   my $self = {};
   bless $self, $class;
-
   #### Initialize InsilicoSpectro.
-  my $config_file; 
-	for my $name ( @{$CONFIG_SETTING{INSILICOSPECTRO_CONFIG}} ) {
+  my $config_file;
+ 
+	for my $name (@InSilicoConfig){# ( @{$CONFIG_SETTING{INSILICOSPECTRO_CONFIG}} ) {
 		if ( -e $name ) {
       $config_file = $name;
 			last;
