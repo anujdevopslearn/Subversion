@@ -863,10 +863,10 @@ sub main {
     print "Only one of --P_threshold and --FDR_threshold may be specified.\n";
     exit;
   } elsif (!defined($FDR_threshold) && !defined($P_threshold)) {
-    #$FDR_threshold = '0.01';
-    #print "Using default FDR threshold $FDR_threshold.\n";
-    $P_threshold = '0.9';
-    print "Using default P threshold $P_threshold.\n";
+    $FDR_threshold = '0.01';
+    print "Using default FDR threshold $FDR_threshold.\n";
+    #$P_threshold = '0.9';
+    #print "Using default P threshold $P_threshold.\n";
   } else {
     print "P_threshold=$P_threshold  FDR_threshold=$FDR_threshold\n";
   }
