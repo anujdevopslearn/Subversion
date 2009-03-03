@@ -331,13 +331,36 @@ sub rebuildKeyIndex {
   }
 
 
+  if ($organism_name eq 'C Elegans') {
+      my $reference_directory = $args{reference_directory}
+      or die("ERROR[$METHOD]: Parameter reference_directory not passed");
 
+      $self->dropKeyIndex(
+			  atlas_build_id => $atlas_build_id,
+			  organism_specialized_build => $organism_specialized_build,
+			  );
+
+      print "Loading protein keys from SBEAMS and reference files...\n";
+      $self->buildCelegansKeyIndex(
+				   reference_directory => $reference_directory,
+				   atlas_build_id => $atlas_build_id,
+				   );
+
+      print "Loading peptides keys...\n";
+      $self->buildPeptideKeyIndex(
+				  organism_id=>$organism_id,
+				  atlas_build_id=>$atlas_build_id,
+				  );
+
+      print "\n";
+
+  }
 
   #my $sql = "CREATE NONCLUSTERED INDEX idx_search_key_name ON $TBAT_SEARCH_KEY ( search_key_name )";
   #$sbeams->executeSQL($sql);
 
   return(1);
-
+  
 } # end rebuildKeyIndex
 
 
@@ -1080,7 +1103,7 @@ sub buildStreptococcusKeyIndex {
 
 
   #### Load information from gff file
-  my $reference_file = "$reference_directory/NC_002737.gff";
+  $reference_file = "$reference_directory/NC_002737.gff";
 
   #### Open file and skip header
   open(INFILE,$reference_file)
@@ -1282,7 +1305,7 @@ sub buildLeptospiraKeyIndex {
 
 
   #### Load information from gff file
-  my $reference_file = "$reference_directory/NC_005823.gff";
+  $reference_file = "$reference_directory/NC_005823.gff";
 
   #### Open file and skip header
   open(INFILE,$reference_file)
@@ -1771,47 +1794,47 @@ sub buildEcoliKeyIndex {
 
   #### Load data
   while (my $line = <INFILE>) {
-    $line =~ s/[\r\n]//g;
-    if ($line =~ /^>/) {
-      if ($line =~ /^>(\S+)/) {
-	my $protein_name = $1;
-	if ($line =~ /^>\S+\s+(.+)$/) {
-	  my $description = $1;
-
-	  if ($description =~ /^(.+) - Sus scrofa \(Pig\)\s*/) {
-	    $proteins{$protein_name}->{full_name} = $1;
-	  } 
+      $line =~ s/[\r\n]//g;
+      if ($line =~ /^>/) {
+	  if ($line =~ /^>(\S+)/) {
+	      my $protein_name = $1;
+	      if ($line =~ /^>\S+\s+(.+)$/) {
+		  my $description = $1;
+		  
+		  if ($description =~ /^(.+) - Sus scrofa \(Pig\)\s*/) {
+		      $proteins{$protein_name}->{full_name} = $1;
+		  } 
 	  
-	  elsif ($description =~ /^(.+) \(PRRSV\)\s*$/) {
-	    $proteins{$protein_name}->{full_name} = $1;
-	  } 
+		  elsif ($description =~ /^(.+) \(PRRSV\)\s*$/) {
+		      $proteins{$protein_name}->{full_name} = $1;
+		  } 
 
-	  elsif ($description =~ /^(.+) \([A-Z0-9]+\)\s*$/) {
-	    $proteins{$protein_name}->{full_name} = $1;
-	  } 
+		  elsif ($description =~ /^(.+) \([A-Z0-9]+\)\s*$/) {
+		      $proteins{$protein_name}->{full_name} = $1;
+		  } 
 
-	  elsif ($description =~ /^(.+) \[Sus scrofa\]\s*$/) {
-	    my $description = $1;
+		  elsif ($description =~ /^(.+) \[Sus scrofa\]\s*$/) {
+		      my $description = $1;
 	  
 
-          if ($description =~ /\](.+?)$/) {
-	      $proteins{$protein_name}->{full_name} = $1;
-	    }
-	    if ($description =~ /([PQ][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9])/) {
-	      $proteins{$protein_name}->{UniProt} = $1;
-	    }
-	    if ($description =~ /([PQ][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9]_PIG)/) {
-	      $proteins{$protein_name}->{UniProt} = $1;
-	    }
-	    if ($description =~ /(NP_[\d\.])/) {
-	      $proteins{$protein_name}->{RefSeq} = $1;
-	    }
-	  } else {
-	    $proteins{$protein_name}->{full_name} = $description;
+		      if ($description =~ /\](.+?)$/) {
+			  $proteins{$protein_name}->{full_name} = $1;
+		      }
+		      if ($description =~ /([PQ][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9])/) {
+			  $proteins{$protein_name}->{UniProt} = $1;
+		      }
+		      if ($description =~ /([PQ][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9]_PIG)/) {
+			  $proteins{$protein_name}->{UniProt} = $1;
+		      }
+		      if ($description =~ /(NP_[\d\.])/) {
+			  $proteins{$protein_name}->{RefSeq} = $1;
+		      }
+		  } else {
+		      $proteins{$protein_name}->{full_name} = $description;
+		  }
+	      }
 	  }
-	}
       }
-    }
   }
   close(INFILE);
 
@@ -1856,7 +1879,7 @@ sub buildEcoliKeyIndex {
         organism_id => $organism_id,
         atlas_build_id => $atlas_build_id,
         resource_name => $biosequence_name,
-        resource_type => 'Pig accession',
+        resource_type => 'Ecoli accession',
         resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$biosequence_name&action=QUERY",
         resource_n_matches => $matched_proteins->{$biosequence_name},
       );
@@ -1881,6 +1904,179 @@ sub buildEcoliKeyIndex {
 
 } # end buildEcoliKeyIndex
 
+
+
+###############################################################################
+# buildCelegansKeyIndex
+###############################################################################
+sub buildCelegansKeyIndex {
+  my $METHOD = 'buildCelegansKeyIndex';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  print "INFO[$METHOD]: Building Celegans key index...\n" if ($VERBOSE);
+
+  my $atlas_build_id = $args{atlas_build_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+
+  my $reference_directory = $args{reference_directory}
+    or die("ERROR[$METHOD]: Parameter reference_directory not passed");
+
+  unless (-d $reference_directory) {
+    die("ERROR[$METHOD]: '$reference_directory' is not a directory");
+  }
+
+  my $organism_id = 10;
+  my %proteins;
+
+  my %dbxref_ids = (
+		    'WormSeq'  => 43,
+		    'WormProt' => 11,
+		    'WormGene' => 41,
+		    'RefSeq'   => 39,
+		    'SwissProt'=>  1,
+		    'UniProt'  => 35,
+		    'WormLocus'=> 42
+		    );
+
+  #### Load information from fasta file
+  my $reference_file = "$reference_directory/decoy_wormpep170.fa";
+  print "Reading $reference_file\n" if ($VERBOSE);
+  open(INFILE,$reference_file)
+    or die("ERROR[$METHOD]: Unable to open file '$reference_file'");
+
+  #### Load data
+  while (my $line = <INFILE>) {
+      next unless ($line =~ s/^>//);
+      next if ($line =~ /^rev_/);
+
+      $line =~ s/[\r\n]//g;
+
+      if ($line =~ s/^(\S+)//) {  # protein name
+	  my $protein_name = $1;
+
+	  $proteins{$protein_name}->{WormSeq} = $protein_name;
+
+	  if ($line =~ s/(CE\d+)//) {
+	      $proteins{$protein_name}->{WormProt} = $1;
+	  }
+	
+	  if ($line =~ s/(WBGene\d+)//) {
+	      $proteins{$protein_name}->{WormGene} = $1;
+	  }
+
+	  if ($line =~ s/(status:\S+)//) {
+	      $proteins{$protein_name}->{status} = $1;
+	  }
+
+	  if ($line =~ s/protein_id:(\S+)//) {
+	      $proteins{$protein_name}->{RefSeq} = $1;
+	  }
+
+	  if ($line =~ s/SW:(\S+)//) {
+	      $proteins{$protein_name}->{SwissProt} = $1;
+	  }
+
+	  if ($line =~ s/TR:(\S+)//) {
+	      $proteins{$protein_name}->{UniProt} = $1;
+	  }
+
+	  if ($line =~ s/locus:(\S+)//) {
+	      $proteins{$protein_name}->{WormLocus} = $1;
+	  }
+
+	  # kill leading and trailing spaces
+	  $line =~ s/^\s+//;
+	  $line =~ s/\s+$//;
+
+	  if ($line) {  # annotation
+	      if (length($line) > 800) {
+		  $line = substr($line,0,800)."....";
+	      }
+	      $proteins{$protein_name}->{'full_name'} = $line;
+	  }
+
+      } else {
+	  print "WARNING: No protein name found for line '$line'\n";
+      }
+      
+  }
+  close(INFILE);
+
+
+  #### Get the list of proteins that have a match
+  my $matched_proteins = $self->getNProteinHits(
+    organism_id=>$organism_id,
+    atlas_build_id=>$atlas_build_id,
+  );
+
+
+  #### Loop over all input rows processing information
+  my $counter = 0;
+  foreach my $biosequence_name (keys(%proteins)) {
+
+    #### Debugging
+    #print "protein=",$biosequence_name,"\n";
+    #print "protein(combined)=",$proteins{$biosequence_name}->{combined},"\n";
+
+
+    #### Build a list of protein links
+    my @links;
+
+    if ($biosequence_name) {
+      my @tmp = ('Accession',$biosequence_name);
+      push(@links,\@tmp);
+    }
+
+    foreach my $key ( qw (full_name WormSeq WormProt WormGene WormLocus SwissProt UniProt RefSeq status) ) {
+	if (exists($proteins{$biosequence_name}->{$key})) {
+	    my @tmp;
+
+	    if (exists($dbxref_ids{$key})) {
+		@tmp = ($key,$proteins{$biosequence_name}->{$key},$dbxref_ids{$key});
+
+	    } else {
+		@tmp = ($key,$proteins{$biosequence_name}->{$key});
+	    }
+
+	    push(@links,\@tmp);
+	}
+    }
+
+
+    foreach my $link (@links) {
+      #print "    ".join("=",@{$link})."\n";
+      my %rowdata = (
+        search_key_name => substr($link->[1],0,255),
+        search_key_type => $link->[0],
+        search_key_dbxref_id => $link->[2],
+        organism_id => $organism_id,
+        atlas_build_id => $atlas_build_id,
+        resource_name => $biosequence_name,
+        resource_type => 'Celegans accession',
+        resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$biosequence_name&action=QUERY",
+        resource_n_matches => $matched_proteins->{$biosequence_name},
+      );
+      $sbeams->updateOrInsertRow(
+        insert => 1,
+        table_name => "$TBAT_SEARCH_KEY",
+        rowdata_ref => \%rowdata,
+        verbose=>$VERBOSE,
+        testonly=>$TESTONLY,
+      );
+    }
+
+
+    $counter++;
+    print "$counter... " if ($counter/100 eq int($counter/100));
+
+    #my $xx=<STDIN>;
+
+  } # endfor each biosequence
+
+  print "\n";
+
+} # end buildCelegansKeyIndex
 
 
 
@@ -1958,7 +2154,7 @@ sub buildPeptideKeyIndex {
     );
 
     #### Register an entry for the peptide sequence
-    my %rowdata = (
+    %rowdata = (
       search_key_name => $peptide->[1],
       search_key_type => 'peptide sequence',
       organism_id => $organism_id,
