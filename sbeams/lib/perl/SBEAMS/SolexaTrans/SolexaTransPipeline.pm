@@ -21,6 +21,7 @@ use vars qw(@AUTO_ATTRIBUTES @CLASS_ATTRIBUTES %DEFAULTS %SYNONYMS);
 		      db_host db_name db_user db_pass 
 		      babel_db_host babel_db_name babel_db_user babel_db_pass
 		      dbh babel
+		      fuse
 		      );
 @CLASS_ATTRIBUTES = qw(res_sites slimseq_json genomes);
 %DEFAULTS = (
@@ -29,6 +30,7 @@ use vars qw(@AUTO_ATTRIBUTES @CLASS_ATTRIBUTES %DEFAULTS %SYNONYMS);
 	     db_host=>'mysql', db_name=>'solexa_1_0', db_user=>'SolexaTags', db_pass=>'STdv1230',
 	     babel_db_host=>'grits', 
 	     babel_db_name=>'disease_data_3_9',babel_db_user=>'root',babel_db_pass=>'',
+	     fuse=>0,
 	     );
 %SYNONYMS = ();
 
@@ -65,6 +67,7 @@ sub run {
 						   use_old_patman_output=>$self->use_old_patman_output,
 						   patman_max_mismatches=>1,
 						   babel=>$self->babel, dbh=>$self->dbh,
+						   fuse=>$self->fuse,
 						   );
     
     my $tags=$pe->count_tags(); # annnd, why? We don't use $tags anywhere in this sub
@@ -191,7 +194,8 @@ sub store_data {
 
 sub get_tablename { 
     my ($self,$suffix)=@_;
-    my ($project_name,$sss_id,$lane)=$self->get_attrs(qw(project_name ss_sample_id lane));
+    my ($project_name,$sss_id,$lane,$fuse)=$self->get_attrs(qw(project_name ss_sample_id lane fuse));
+    $lane.="_$fuse" if $fuse;
     join('_',$project_name,$sss_id,$lane,$suffix);
 }
 
@@ -204,8 +208,9 @@ sub get_ref_tablename {
 
 sub get_output_filename {
     my ($self,$suffix)=@_;
-    my ($output_dir,$project_name,$ss_sid,$lane)=$self->get_attrs(qw(output_dir project_name ss_sample_id lane));
-    "$output_dir/$project_name.$lane.$ss_sid.$suffix";
+    my ($output_dir,$project_name,$ss_sid,$lane,$fuse)=$self->get_attrs(qw(output_dir project_name ss_sample_id lane fuse));
+    $lane.="_$fuse" if $fuse;
+    "$output_dir/$project_name.$ss_sid.$lane.$suffix";
 }
 
 # construct the stats filename:
@@ -368,21 +373,23 @@ genome_id INT NOT NULL
 # returns a hash contains summary stats for the run:
 sub stats {
     my ($self)=@_;
-    my $lane=$self->lane;
+    my $ss_sid=$self->ss_sample_id;
     my $report={};
     foreach my $suffix (qw(tags ambg unkn)) {
 	my $tablename=$self->get_tablename($suffix);
 	my $sql="SELECT sum(count) FROM $tablename";
 	my $col=$self->dbh->selectcol_arrayref($sql);
 	my $sum=$col->[0]||0;
-	my $key=join('_',$suffix,$lane,'total');
+	my $key=join('_',$suffix,$ss_sid,'total');
 	$report->{$key}=$sum;
 	$report->{total_tags}+=$sum;
 
 	$sql="SELECT count(*) from $tablename";
-	$key=join('_',$suffix,$lane,'unique');
+	$key=join('_',$suffix,$ss_sid,'unique');
 	$col=$self->dbh->selectcol_arrayref($sql);
-	$report->{$key}=$col->[0];
+	$sum=$col->[0]||0;
+	$report->{$key}=$sum;
+	$report->{total_unique}+=$sum;
     }
     $report;
 }

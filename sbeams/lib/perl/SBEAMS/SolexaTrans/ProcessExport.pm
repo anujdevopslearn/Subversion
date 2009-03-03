@@ -14,9 +14,11 @@ use vars qw(@AUTO_ATTRIBUTES @CLASS_ATTRIBUTES %DEFAULTS %SYNONYMS);
 		      genome_id ref_fasta
 		      patman_max_mismatches use_old_patman_output
 		      babel dbh
+		      fuse
 		      );
 @CLASS_ATTRIBUTES = qw(repeats repeat_length output_dir);
 %DEFAULTS = (patman_max_mismatches=>1,
+	     fuse=>0,
 	     );
 %SYNONYMS = ();
 
@@ -49,6 +51,7 @@ sub count_tags {
     my $repeat_length=$self->repeat_length;
     my $n_reads=0;
     my $n_repeats=0;
+    my $fuse=$self->fuse||0;
 
     while (<TAGS>) {
 	chomp;
@@ -64,6 +67,8 @@ sub count_tags {
 	do {$self->repeats->tally_repeat($tag); next} if $self->repeats->is_repeat($tag);
 	$tags->{$tag}->{count}++;
 	$tags->{$tag}->{length}=length $tag;
+
+	last if --$fuse==0;
     }
     my $n_tags=scalar keys %$tags;
     warn "$filename: read $n_reads total tags, $n_tags unique, $n_repeats repeats\n";
