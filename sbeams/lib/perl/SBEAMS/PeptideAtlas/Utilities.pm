@@ -1048,5 +1048,26 @@ return ($no_distinct_organisms,$no_builds);
 
 }
 
+
+sub getAnnotationColumnDefs {
+  my $self = shift;
+  my @entries = (
+      { key => 'Sequence', value => 'Amino acid sequence of detected pepide, including any mass modifications.' },
+      { key => 'Charge', value => 'Charge on Q1 (precursor) peptide ion.' },
+      { key => 'q1_mz', value => 'Mass to charge ratio of precursor peptide ion.' },
+      { key => 'q3_mz', value => 'Mass to charge ratio of fragment ion.' },
+      { key => 'Label', value => 'Ion-series designation for fragment ion (Q3).' },
+      { key => 'Intensity', value => 'Intensity of peak in CID spectrum' },
+      { key => 'CE', value => 'Collision energy, the kinetic energy conferred to the peptide ion and resulting in peptide fragmentation. (eV)' },
+      { key => 'RT', value => 'Peptide retention time( in minutes ) in the LC/MS system.' },
+      { key => 'SSRCalc', value => "Sequence Specific Retention Factor provides a hydrophobicity measure for each peptide using the algorithm of Krohkin et al. Version 3.0 <A HREF=http://hs2.proteome.ca/SSRCalc/SSRCalc.html target=_blank>[more]</A>" },
+      { key => 'Instr', value => 'Model of mass spectrometer on which transition pair was validated.' },
+      { key => 'Annotator', value => 'Person/lab who contributed validated transition.' },
+      { key => 'Quality', value => 'Crude scale of quality for the observation, currently one of Best, OK, and No. ' },
+      );
+  return \@entries;
+
+}
+
 1;
 
