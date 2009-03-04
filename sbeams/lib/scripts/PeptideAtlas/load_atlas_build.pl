@@ -1572,6 +1572,14 @@ sub insert_spectra_description_set
     my $search_batch_dir_path = $args{search_batch_dir_path} or die
         "need search_batch_dir_path ($!)";
 
+    ## get instrunent model id from pr instrument table
+    my $sql = qq~
+        SELECT instrument_id, instrument_name
+        FROM $TBPR_INSTRUMENT
+    ~;
+
+    my %id2instrname = $sbeams->selectTwoColumnHash($sql);
+
     ## There could be [spectra_description_set] records for this
     ## sample_id and atlas_search_batch
     my $sql = qq~
@@ -1585,11 +1593,9 @@ sub insert_spectra_description_set
     ~;
 
     my @rows = $sbeams->selectSeveralColumns($sql);
-
+   
     my ($instrument_model_id, $instrument_model_name, $conversion_software_name,
     $conversion_software_version, $mzXML_schema, $n_spectra);
-
-
     ## If record exists, use attributes to create new record afterwards
     if ($#rows > -1)
     {
@@ -1639,6 +1645,39 @@ sub insert_spectra_description_set
         $conversion_software_version = $spectrum_parser->getConversion_software_version();
 
         $instrument_model_name = $spectrum_parser->getInstrument_model_name();
+
+        $instrument_model_id='';
+        my $maxmatch =0;
+        if($instrument_model_name)
+        {
+          foreach my $instrid (keys %id2instrname)
+          {
+            my $instrname = $id2instrname{$instrid};
+            my @seg = split(/\s+/, $instrname);
+            my $match = 0;
+            foreach my $elm (@seg)
+            {
+              next if($elm eq 'Classic');
+              if($instrument_model_name =~ /$elm/i)
+              {
+                $match++;
+              }
+              if($instrument_model_name !~ /$elm/i)
+              {
+                $match =0;
+                last;
+              }
+            }
+            if ($match > $maxmatch)
+            {
+              $maxmatch =$match;
+              $instrument_model_id=$instrid;
+            }
+          }
+
+        }
+
+
         ## count the number of MS/MS in the mzXML files: ##
         my $sum = 0;
 
@@ -2811,8 +2850,31 @@ sub getMzXMLFileNames
     push(@mzXMLFileNames,
       getMzXMLFileNamesFromPepXMLFile(infile => $infile,
             search_batch_dir_path => $search_batch_dir_path));
+    my @foundmzXMLFiles;
+    #### There are often absolute paths in the pepXML, but if the experimnts
+    #### were not searched locally or were move, this may well be wrong.
+    #### Verify the locations and if inaccessible try the search_batch_dir
+    for (my $i=0; $i< scalar(@mzXMLFileNames); $i++) {
+      my $file = $mzXMLFileNames[$i];
+      if ( -e $file){push (@foundmzXMLFiles, $file);next;}
+      my $barefilename = $file;
+      $barefilename =~ s#.+/##;
+      $file = "$search_batch_dir_path/$barefilename";
+      if ( -e $file || -f $file) {
+        push (@foundmzXMLFiles, $file);
+      }else {
+        #### Fred Hutch processed files sometimes have fract in there
+        $file =~ s/\.fract\.mzXML/.mzXML/;
+        if ( -e $file ) {
+          push (@foundmzXMLFiles, $file);
+        } else {
+          print "ERROR: Unable to determine location of file '$mzXMLFileNames[$i]'\n";
+          print "  (also tried: $file)\n";
+        }
+      }
+    }
+    return @foundmzXMLFiles;
 
-    return @mzXMLFileNames;
 }
 
 
@@ -2980,7 +3042,7 @@ sub insert_peptide_instance_samples {
       PK => 'peptide_instance_sample_id',
       add_audit_parameters => 1,
       verbose=>$VERBOSE,
-      testonly=>$TESTONLY,
+      testonly=>$TESTONLY
     );
 
   }
