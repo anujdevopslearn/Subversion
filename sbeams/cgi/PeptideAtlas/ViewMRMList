@@ -488,7 +488,7 @@ sub handle_request {
 # Triply charged ions: CE = 0.051 * m/z(precursor) + 0.55
 
 #
-      my @display_rows = ( [qw( Protein Sequence Chg q1_mz q3_mz Intensity Ion CE SSRCalc n_obs Annot Spectrum ) ] );
+      my @display_rows = ( [qw( Protein Sequence Chg q1_mz q3_mz Intensity Ion CE SSRCalc RT n_obs Annot Spectrum ) ] );
       my $na = ( $is_html ) ? $sbeams->makeInactiveText('n/a') : 'n/a';
 
       my %spectral_links;
@@ -499,7 +499,6 @@ sub handle_request {
       while ( my @row = $sth->fetchrow_array() ) {
         $idx++;
 
-#        $log->debug( "$idx time through, prot is $row[3] and pep is $row[2]" );
         $prot_peps{$row[3]} ||= {};
         $prot_peps{$row[3]}->{$row[2]} ||= [];
           
@@ -518,9 +517,8 @@ sub handle_request {
         # spectrum depends on mod sequence and charge
         my $spec_key = $row[2] . $row[5];
 
-        $ce{$ce_key} = calculateCE( charge => $row[5], mz => $row[4] ) if !$ce{$ce_key};
-
-        push @row, $ce{$ce_key};
+        $ce{$ce_key} ||= calculateCE( charge => $row[5], mz => $row[4] ); 
+        push @row, sprintf( "%0.1f", $ce{$ce_key});
 
         if ( !$spectral_links{$spec_key} ) {
           my $link = $spec;
@@ -534,19 +532,18 @@ sub handle_request {
         push @row, $spectral_links{$row[3]};
 
         $row[13] = sprintf( "%0.2f", $row[13] );
-        $row[12] = sprintf( "%0.2f", $row[12] );
+        $row[12] = sprintf( "%0.1f", $row[12] );
 
-
-        push @{$prot_peps{$row[3]}->{$row[2]}}, [ @row[3,2,5,4,13,14,15,17,12,8,18,19] ]; 
+        push @{$prot_peps{$row[3]}->{$row[2]}}, [ @row[3,2,5,4,13,14,15,17,12], $na, @row[8,18,19] ]; 
       }
       $log->debug( "recordset had $idx rows" );
 
       for my $prot ( sort( keys( %prot_peps ) ) ) {
         for my $pep ( sort( keys( %{$prot_peps{$prot}} ) ) ) {
           for my $row ( @{$prot_peps{$prot}->{$pep}} ) {
-            if ( !$row->[11] ) {
-              $row->[11] = $spectral_links{$row->[1].$row->[2]};
-              $row->[11] ||= $na;
+            if ( !$row->[12] ) {
+              $row->[12] = $spectral_links{$row->[1].$row->[2]};
+              $row->[12] ||= $na;
             }
             $row->[1] = $sbeamsMOD->formatMassMods( $row->[1] ) if $is_html;
             push @display_rows, $row;
@@ -557,7 +554,7 @@ sub handle_request {
 
       my ( $html, $rs_name) = $sbeamsMOD->encodeSectionTable(  header => 1, 
                                                    width => '600',
-                                                  align  => [qw(left left center right right right center right right right center center)],
+                                                  align  => [qw(left left center right right right center right right right right center center)],
                                                     rows => \@display_rows,
                                             rows_to_show => 50,
                                              chg_bkg_idx => 1,
@@ -567,8 +564,14 @@ sub handle_request {
                                                  is_html => $is_html
                                               );
       
+      my $col_info = $sbeamsMOD->getAnnotationColumnDefs();
+      my $help_text = $sbeamsMOD->get_table_help_section( name => 'Transitions',
+                                                   description => 'Q1/Q3 transition pairs for SRM experiments',
+                                                   heading => 'Column Definitions',
+                                                   entries => $col_info,
+                                                   ); 
       if ( $is_html ) {
-        $content .= "<TABLE>$html</TABLE>" 
+        $content .= "<BR><BR><BR>$help_text<TABLE>$html</TABLE>" 
       } else {
 				my $rs = $sbeamsMOD->get_cached_resultset( rs_name => $rs_name );
 				$log->debug( "RS name is $rs_name, RS is $rs" );
@@ -607,7 +610,7 @@ sub handle_request {
     my $sql = qq~
     SELECT DISTINCT biosequence_name, modified_peptide_sequence, peptide_charge,
     q1_mz ,q3_mz, q3_peak_intensity, q3_ion_label, collision_energy,
-    SSRCalc_relative_hydrophobicity, n_observations, level_name, ''
+    SSRCalc_relative_hydrophobicity, retention_time, n_observations, level_name, ''
     FROM $TBAT_MODIFIED_PEPTIDE_ANNOTATION MPA 
     JOIN $TBAT_TRANSITION_SUITABILITY_LEVEL TSL 
     ON TSL.transition_suitability_level_id = MPA.transition_suitability_level_id
@@ -639,13 +642,15 @@ sub handle_request {
       $row[6] =~ s/^(\w\d+).*/$1/;
       $row[3] = sprintf( "%0.2f", $row[3] );
       $row[4] = sprintf( "%0.2f", $row[4] );
-      $row[5] = sprintf( "%0.2f", $row[5] );
-      $row[8] = sprintf( "%0.2f", $row[8] );
+      $row[5] = sprintf( "%0.0f", $row[5] );
+      $row[8] = sprintf( "%0.1f", $row[8] );
+      $row[9] = sprintf( "%0.1f", $row[9] );
 
       my $ce_key = $row[3] . $row[2];
 #      $ce{$ce_key} = ( $row[7] ) ? $row[7] : calculateCE( charge => $row[2], mz => $row[3] ) if !$ce{$ce_key};
 #      $row[7] = $ce{$ce_key};
        $row[7] ||= calculateCE( charge => $row[2], mz => $row[3] );
+       $row[7] = sprintf( "%0.1f", $row[7]);
 #      $row[7] = $ce{$ce_key};
 
       $pep_frags{$row[1]}++;
@@ -669,7 +674,7 @@ sub calculateCE {
   } elsif ( $args{charge} == 3 ) {
     $ce = ( 0.051 * $args{mz} ) + 0.55
   }
-  return sprintf( "%0.2f", $ce);
+  return sprintf( "%0.1f", $ce);
 }
 
 
