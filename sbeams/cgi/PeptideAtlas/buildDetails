@@ -262,7 +262,6 @@ sub getSampleMapDisplay {
   my @prots = $sbeams->selectSeveralColumns($prot_sql);
 	my $t2 = time;
 	my $td = $t2 - $t1;
-	$log->debug( "prots query $td" );
 	my @ordered_prots;
 	my %seen_sequences;
   my @bioseq_ids;
@@ -277,9 +276,8 @@ sub getSampleMapDisplay {
 		last if scalar( @ordered_prots ) >= 100;
 		$cntr++;
 	}
-#	$log->debug( "looped a while? $cntr" );
   my $bioseq_ids = join( ',', @bioseq_ids );
-#	$log->debug( "bioseq ids $bioseq_ids?, scalar bio is " . scalar(@bioseq_ids ) . ' scalar ordered is ' . scalar( @ordered_prots) );
+  return '' unless $bioseq_ids;
   
   my $sql = qq~
 	SELECT biosequence_name, SUM(PISB.n_observations) total_cnts,
@@ -298,12 +296,10 @@ sub getSampleMapDisplay {
 --	ORDER BY biosequence_name, SB.atlas_search_batch_id, sample_tag
   ~;
   
-	$log->debug( $sql );
 	my $t1 = time;
   my @samples = $sbeams->selectSeveralColumns($sql);
 	my $t2 = time;
 	my $td = $t2 - $t1;
-	$log->debug( "prot_expr query $td " );
   
   my %samples;
   my %proteins;
@@ -353,7 +349,6 @@ sub getSampleMapDisplay {
   $array_def =~ s/DEFINE_ROWS_HERE/data.addRows($row);/;
   my $num_colors = ( $max > 64 ) ? 64 : $max;
   my $num_colors = 256;
-  $log->debug( "Max is $max, numcol is $num_colors" );
   $array_def .= qq~
   heatmap = new org.systemsbiology.visualization.BioHeatMap(document.getElementById('heatmapContainer'));
   heatmap.draw(data, {numberOfColors:$num_colors,passThroughBlack:false,startColor:{r:255,g:255,b:255,a:1},endColor:{r:100,g:100,b:100,a:1},emptyDataColor:{r:256,g:256,b:256,a:1}});
@@ -524,7 +519,6 @@ sub get_sample_info {
   my @sample_info = $sbeams->selectSeveralColumns ( $sql );
 	my $t2 = time;
 	my $td = $t2 - $t1;
-	$log->debug( "SB query $td" );
 
   # Format loop
   my @samples;
