@@ -272,13 +272,11 @@ sub handleRequest {
   if ($load) {
      my $t0 = new Benchmark; 
      # Use explicit commits for performance
-     initiate_transaction();
      loadAtlas( atlas_build_id=>$ATLAS_BUILD_ID,
           organism_abbrev => $organism_abbrev,
           default_sample_project_id => $default_sample_project_id,
       );
 
-     commit_transaction();
      populateSampleRecordsWithSampleAccession();
      # last commit, then reset to standard autocommit mode
      commit_transaction();
@@ -707,12 +705,13 @@ sub buildAtlas {
     my $PAxmlfile = $source_dir . "APD_" . $organism_abbrev . "_all.PAxml";
 
     if (-e $PAxmlfile) {
+        initiate_transaction();
         loadFromPAxmlFile(
             infile => $PAxmlfile,
             sbid_asbid_sid_hash_ref => \%proteomicsSBID_hash,
             atlas_build_id => $ATLAS_BUILD_ID,
         );
-
+        commit_transaction();
     } else {
         die("ERROR: Unable to find '$PAxmlfile' to load data from.");
     }
