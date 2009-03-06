@@ -698,7 +698,7 @@ sub loadBiosequenceSet {
 
       #### Print a warning if malformed
       if ($1) {
-	print "\nWARNING: Header line possibly malformed:\n$information\n".
+        print "\nWARNING: Header line possibly malformed:\n$information\n".
 	  "Ignoring all characters before >\n";
       }
 
@@ -708,10 +708,17 @@ sub loadBiosequenceSet {
       $rowdata{biosequence_seq} = $sequence unless ($skip_sequence);
       $rowdata{organism_id} = $organism_id if ($DATABASE eq 'sbeams.dbo.');
 
+## Deprecated, moved to module for testability.
       #### Do special parsing depending on which genome set is being loaded
-      $result = specialParsing(biosequence_set_name=>$set_name,
-        rowdata_ref=>\%rowdata);
+#      $result = specialParsing(biosequence_set_name=>$set_name,
+#                                        rowdata_ref=>\%rowdata);
 
+      # Module version
+      $fav_codon_frequency ||= {};
+      $sbeams->parseBiosequenceDescriptor( biosequence_set_name => $set_name,
+                                                    rowdata_ref => \%rowdata,
+                                            fav_codon_frequency => $fav_codon_frequency
+                                         );
 
       #### If we're updating, then try to find the appropriate record
       #### The whole program could be sped up quite a bit by doing a single
