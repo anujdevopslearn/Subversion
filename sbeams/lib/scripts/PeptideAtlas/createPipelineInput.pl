@@ -49,6 +49,7 @@ $sbeamsMOD->setSBEAMS( $sbeams );
 ###############################################################################
 my $VERSION = q[$Id$ ];
 $PROG_NAME = $FindBin::Script;
+my $build_version = $ENV{VERSION};
 
 my $USAGE = <<EOU;
 USAGE: $PROG_NAME [OPTIONS] source_file
@@ -71,11 +72,17 @@ Options:
   --P_threshold       Probability threshold (e.g. 0.9) instead of FDR thresh.
   --output_file       Filename to which to write the peptides
   --master_ProteinProphet_file       Filename for a master ProteinProphet
-                      run that should be used instead of individual ones
-  --biosequence_set_id   Database id of the biosequence_set from which to load sequence attributes.
+                      run that should be used instead of individual ones.
+                      *** Currently hard-coded ON!
+  --biosequence_set_id   Database id of the biosequence_set from which to
+                         load sequence attributes.
   --best_probs_from_protxml   Get best initial probs from ProteinProphet file,
-                      not from pepXML files. Use when not using iProphet; faster.
-  --old_prot_ids      Fix protein IDs to arbitrary prots, not prots of best prob
+                      not from pepXML files. Use when not using
+                      --masterProteinProphet_file; correct and faster.
+  --old_prot_ids      Fix prot IDs to arbitrary prots, not prots of best prob.
+                      Not recommended.
+  --splib_filter      Filter out spectra not in spectral library
+                      DATA_FILES/${build_version}_all_Q2.sptxt
 
 
  e.g.:  $PROG_NAME --verbose 2 --source YeastInputExperiments.tsv
@@ -95,7 +102,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
   "validate=s","namespaces","schemas",
   "source_file:s","search_batch_ids:s","P_threshold:f","FDR_threshold:f",
   "output_file:s","master_ProteinProphet_file:s","biosequence_set_id:s",
-  "best_probs_from_protxml", "old_prot_ids",
+  "best_probs_from_protxml", "old_prot_ids", "splib_filter",
   )) {
   print "$USAGE";
   exit;
@@ -150,6 +157,7 @@ my $namespace = $OPTIONS{namespaces} || 0;
 my $schema = $OPTIONS{schemas} || 0;
 my $best_probs_from_protxml = $OPTIONS{best_probs_from_protxml} || 0;
 my $regularize_prot_ids = !$OPTIONS{old_prot_ids} || 0;
+my $splib_filter = $OPTIONS{splib_filter} || 0;
 
 
 if (uc($validate) eq 'ALWAYS') {
@@ -640,12 +648,15 @@ sub protXML_end_element {
 
 }
 
-### For a given <peptide> tag in a protXML file, store the
-### ProteinProphet info on the modified peptide (pep_key) in a hash.
-### There may be multiple <peptide> tags per pep_key.
-### So for each pep_key, store the best probability among all <peptide>
-### tags associated with that pep_key, and store the protein ID of highest
-### probability among all <protein> tags containing that pep_key.
+###############################################################################
+# storePepInfo
+###############################################################################
+# For a given <peptide> tag in a protXML file, store the
+# ProteinProphet info on the modified peptide (pep_key) in a hash.
+# There may be multiple <peptide> tags per pep_key.
+# So for each pep_key, store the best probability among all <peptide>
+# tags associated with that pep_key, and store the protein ID of highest
+# probability among all <protein> tags containing that pep_key.
 
 sub storePepInfo {
   my $self = shift;
@@ -768,6 +779,8 @@ sub storePepInfo {
 
 
 
+
+
 ###############################################################################
 ###############################################################################
 ###############################################################################
@@ -785,65 +798,6 @@ exit unless ($current_username =
 $sbeams->printPageHeader();
 main();
 $sbeams->printPageFooter();
-
-
-
-###############################################################################
-# saveBestProbPerPep
-###############################################################################
-sub saveBestProbPerPep{
-  my %args = @_;
-  my $best_prob_per_pep = $args{'best_prob_per_pep'}
-    || die("No best_prob_per_pep hash provided");
-  my $pep_identification_list = $args{'pep_identification_list'}
-    || die("No pep_identification_list provided");
-  #printf "Size of best_prob_per_pep: %d\n",
-      #scalar(keys(%{$best_prob_per_pep}));
-
-  foreach my $identification ( @{$pep_identification_list} ) {
-    my $prob = $identification->[8];
-    if ($prob eq "probability") {
-      next;
-    }
-    my $stripped_pep = $identification->[3];
-    # concatenate charge, hyphen, and modified peptide to create unstripped
-    my $unstripped_pep = "$identification->[7]-$identification->[5]";
-    # stripped peptide
-    if (exists($best_prob_per_pep->{$stripped_pep})) {
-      if ( $prob > $best_prob_per_pep->{$stripped_pep} ) {
-        $best_prob_per_pep->{$stripped_pep} = $prob;
-      }
-    } else {
-      $best_prob_per_pep->{$stripped_pep} = $prob;
-    }
-    # unstripped peptide
-    if ($unstripped_pep ne $stripped_pep) {
-      if (exists($best_prob_per_pep->{$unstripped_pep})) {
-        if ( $prob > $best_prob_per_pep->{$unstripped_pep} ) {
-          $best_prob_per_pep->{$unstripped_pep} = $prob;
-        }
-      } else {
-        $best_prob_per_pep->{$unstripped_pep} = $prob;
-      }
-    } else {
-    }
-  }
-}
-
-###############################################################################
-# showBestProbPerPep (for development/debugging)
-###############################################################################
-sub showBestProbPerPep{
-  my %args = @_;
-  my $best_prob_per_pep = $args{'best_prob_per_pep'}
-    || die("No best_prob_per_pep hash provided");
-  print"\nBest probability per peptide:\n";
-  #while ((my $pep, my $best_prob) = each ( %{$best_prob_per_pep} )) {
-  foreach my $pep (sort ( keys %{$best_prob_per_pep} )) {
-    my $best_prob = $best_prob_per_pep->{$pep};
-    print "$pep: $best_prob\n";
-  }
-}
 
 ###############################################################################
 # Main part of the script
@@ -1000,6 +954,15 @@ sub main {
     $search_batch_ids = join(',',@search_batch_ids);
   }
 
+  #### If $splib_filter specified, read the SpectraST library
+  my $spectral_peptides;
+
+  if ($splib_filter) {
+    print "Will filter peptides not in ${build_version}_all_Q2.sptxt.\n";
+    $spectral_peptides = readSpectralLibraryPeptides(
+      input_file => "DATA_FILES/${build_version}_all_Q2.sptxt",
+    );
+  }
 
   #### Loop over all input files converting pepXML to identlist format
   #### unless it has already been done
@@ -1011,7 +974,6 @@ sub main {
   }
   my @identlist_files;
   my %decoy_corrections;
-  my $spectral_peptides;
   my $first_loop = 1;
 
   #### First pass: read or create cache files,
@@ -1097,7 +1059,7 @@ sub main {
 	unless (-e $proteinProphet_filepath) {
 	  die("ERROR: Specified master ProteinProphet file not found '$proteinProphet_filepath'\n");
 	}
-        print "INFO: Reading $proteinProphet_filepath...\n" unless ($QUIET);
+        print "INFO: Reading master ProteinProphet file $proteinProphet_filepath...\n" unless ($QUIET);
         if ($regularize_prot_ids && !$QUIET) {
           print "INFO: Will regularize protein identifications.\n"
         } elsif (!$QUIET) {
@@ -1106,13 +1068,6 @@ sub main {
         $CONTENT_HANDLER->{document_type} = 'protXML';
         $parser->parse (XML::Xerces::LocalFileInputSource->new($proteinProphet_filepath));
         print "\n";
-
-	#### If it exists, read the SpectraST library
-        # 02/09 TMF: below commented out because we currently don't use spectral libraries;
-        #  error msgs about missing library files confusing.
-	#$spectral_peptides = readSpectralLibraryPeptides(
-          #input_file => "analysis/consensus.sptxt",
-        #);
 
       }
 
@@ -1341,6 +1296,298 @@ sub main {
 ###############################################################################
 ###############################################################################
 ###############################################################################
+
+###############################################################################
+# readSpectralLibraryPeptides
+###############################################################################
+sub readSpectralLibraryPeptides {
+  my %args = @_;
+  my $input_file = $args{'input_file'} || die("No input file provided");
+
+  #### Return if library not available
+  if ( ! -e $input_file ) {
+    print "WARNING: Spectral library '$input_file' not found!\n";
+    return;
+  }
+
+  print "Reading consensus spectral library file '$input_file'...\n";
+
+  #### Open library file
+  open(INFILE,$input_file)
+    || die("ERROR: Unable to open '$input_file'");
+
+
+  #### Verify that the head is as we expect
+  my $line;
+  while ($line = <INFILE>) {
+    if ($line =~ /^\#\#\# ===/) {
+      last;
+    }
+    if ($line !~ /^\#\#\#/) {
+      die("ERROR: Unexpected format reading spectral library '$input_file'");
+    }
+  }
+
+  my $peptides;
+  my $n_peptides;
+  my ($peptide_sequence,$probability);
+  my $counter;
+
+  #### Read file minimally, skimming out the peptide information
+  while ($line = <INFILE>) {
+    chomp($line);
+    if ($line =~ /^Name: ([^\/]+\/\d)/) {
+      $peptide_sequence = $1;
+    }
+    if ($line =~ /^Comment: .+ Prob=([\d\.]+)/) {
+      $probability = $1;
+    }
+    if ($line =~ /^NumPeaks/) {
+      if ($peptides->{$peptide_sequence}) {
+	if ($probability > $peptides->{$peptide_sequence}) {
+	  $peptides->{$peptide_sequence} = $probability;
+	  #print "$peptide_sequence = $probability\n";
+	}
+      } else {
+	$peptides->{$peptide_sequence} = $probability;
+	#print "$peptide_sequence = $probability\n";
+	$n_peptides++;
+      }
+    }
+
+    if ( $VERBOSE ) {
+      $counter++;
+      print "$counter... " if ($counter % 1000 == 0);
+    }
+
+  }
+
+  close(INFILE);
+
+  print "  - read $n_peptides peptides from spectral library\n";
+
+  return($peptides);
+
+} # end readSpectralLibraryPeptides 
+
+
+
+###############################################################################
+# writeIdentificationListFile
+###############################################################################
+sub writeIdentificationListFile {
+  my %args = @_;
+  my $output_file = $args{'output_file'} || die("No output file provided");
+  my $pep_identification_list = $args{'pep_identification_list'}
+    || die("No output pep_identification_list provided");
+  my $ProteinProphet_data = $args{'ProteinProphet_data'}
+    || die("No ProteinProphet_data provided");
+  my $spectral_library_data = $args{'spectral_library_data'};
+  my $P_threshold = $args{'P_threshold'};
+  my $FDR_threshold = $args{'FDR_threshold'};
+  my $best_prob_per_pep;
+  # if best_probs_from_protxml is set, this arg is undefined
+  ($best_prob_per_pep = $args{'best_prob_per_pep'})
+    || print "INFO: writeIdentificationListFile will get best prob ".
+             "per pep from protXML info\n";
+
+  print "Writing output combined cache file '$output_file'...\n";
+
+  #### Open and write header
+  open(OUTFILE,">$output_file")
+    || die("ERROR: Unable to open '$output_file' for write");
+
+  #### Write out the column names
+  my @column_names = qw ( search_batch_id spectrum_query peptide_accession
+    peptide_sequence preceding_residue modified_peptide_sequence
+    following_residue charge probability massdiff protein_name
+    protXML_nsp_adjusted_probability
+    protXML_n_adjusted_observations protXML_n_sibling_peptides );
+
+  print OUTFILE join("\t",@column_names)."\n";
+
+  print "  - filtering ".scalar(@{$pep_identification_list})." peptides and writing to identification list file\n";
+
+  my %consensus_lib = ( found => [], missing => [] );
+
+  #print "ProteinProphet data:\n";
+  #while ((my $pep, my $info) = each ( %{$ProteinProphet_data} )) {
+    #print "  $pep $info->{nsp_adjusted_probability}\n";
+  #}
+
+  foreach my $identification ( @{$pep_identification_list} ) {
+
+    my $charge = $identification->[7];
+    my $peptide_sequence = $identification->[3];
+    my $modified_peptide = $identification->[5];
+    my $spectrast_formatted_sequence = $modified_peptide . '/' . $charge;
+
+    #### Grab the ProteinProphet information
+    my $initial_probability;
+    my $adjusted_probability = '';
+    my $n_adjusted_observations = '';
+    my $n_sibling_peptides = '';
+    my $probability_adjustment_factor;
+    my $pep_key = '';
+    my $diff_is_great=0;
+    if ($ProteinProphet_data->{"${charge}-$modified_peptide"}) {
+      $pep_key = "${charge}-$modified_peptide";
+    } elsif ($ProteinProphet_data->{$peptide_sequence}) {
+      $pep_key = $peptide_sequence;
+    } else {
+      print "WARNING: Did not find ProtProph info for keys ".
+	"$peptide_sequence or '${charge}-$modified_peptide'".
+        " (prot=$identification->[10], P=$identification->[8])\n";
+    }
+
+    # If ProteinProphet info was found, adjust the probability accordingly.
+    if ($pep_key) {
+      my $info = $ProteinProphet_data->{$pep_key};
+      if ($best_prob_per_pep) {
+        # subtract .001 since DS does this in ProteinProphet
+        $initial_probability = $best_prob_per_pep->{$pep_key} - .001;
+        # debugging: check whether probs from pepXML match
+        # init_probs from protXML. In a small fraction of cases,
+        # they don't, and I don't know why. TMF 02/09.
+        if (0) {
+          my $diff = $initial_probability-$info->{initial_probability};
+          $diff_is_great = ($diff > .0011 || $diff < -.0011);
+          if ($diff_is_great) {  # 12/31/08 tmf debugging
+            printf "init_prob diff %7.5f protXML: %7.5f pepXML: %7.5f %s\n",
+               $diff,
+               $info->{initial_probability},
+               $initial_probability,
+               $pep_key;
+          }
+        }
+      } else {
+        $initial_probability = $info->{initial_probability};
+      }
+      if ($regularize_prot_ids) {
+        $identification->[10] = $info->{protein_name};
+      }
+      $adjusted_probability = $info->{nsp_adjusted_probability};
+      $n_adjusted_observations = $info->{n_adjusted_observations};
+      $n_sibling_peptides = $info->{n_sibling_peptides};
+      push(@{$identification},$adjusted_probability,$n_adjusted_observations,$n_sibling_peptides);
+      if ($initial_probability) {
+	$probability_adjustment_factor = $adjusted_probability / $initial_probability;
+      }
+    }
+
+    #### If there is spectral library information, look at that
+    #print "spectral_library_data = $spectral_library_data\n";
+    #print "spectrast_formatted_sequence = $spectrast_formatted_sequence\n";
+    if ($spectral_library_data && $spectrast_formatted_sequence) {
+      if ($spectral_library_data->{$spectrast_formatted_sequence}) {
+        #print "$peptide_sequence\t$initial_probability\t$spectral_library_data->{$peptide_sequence}\n";
+
+  # This adds a 15th column, which gums up the works during the load
+#	    $identification->[14] = $spectral_library_data->{$spectrast_formatted_sequence};
+  push @{$consensus_lib{found}}, $spectrast_formatted_sequence;
+      } else {
+        # print "$peptide_sequence\t$initial_probability\t($spectrast_formatted_sequence)\t not in lib \n";
+  push @{$consensus_lib{missing}}, $spectrast_formatted_sequence;
+        #### If it's not in the library, kill it
+        #### (tmf: maybe should kill some more sure way)
+        $initial_probability = 0.5;
+      }
+    }
+
+    #### If we are operating with a master_ProteinProphet_file, then
+    #### try a radical thing. Multiply the PepPro and ProPro probability.
+    #### This probably really isn't correct, but maybe it'll be close.
+    if ($OPTIONS{master_ProteinProphet_file}) {
+      my $probability = $identification->[8];
+      my $adjusted_probability = $identification->[11];
+      if ($adjusted_probability && $probability_adjustment_factor) {
+
+	#### Depresses probabilities too much
+	#$probability = $probability * $adjusted_probability;
+
+	#### If the adjusted probability is 1.0, then give probabilities a big boost
+	#if ($adjusted_probability > 0.9999) {
+	#  $probability = 1.0 - ( ( 1.0 - $probability ) / 3.0 );
+	#  #### Although don't let it be less the adjustment to the top one
+	#  if ( $probability < $probability * $probability_adjustment_factor) {
+	#    $probability = $probability * $probability_adjustment_factor;
+	#  }
+	##### Else just apply the adjustment factor given to the top one
+	#} else {
+	#  $probability = $probability * $probability_adjustment_factor;
+	#}
+
+	#### Apply the adjustment factor given to the top one
+	$probability = $probability * $probability_adjustment_factor;
+
+	#### Newer ProteinProphet downgrades initial_probability 1.000 to 0.999
+	#### to help adjustment code. Because of this, sometimes probabilities
+	#### here can drift slightly over 1.000. Don't allow that.
+	$probability = 1 if ($probability > 1);
+
+	        $identification->[8] = $probability;
+
+        ### tmf debugging 12/08
+        if ($diff_is_great)
+           { print "Final adj prob = $probability: REJECTED!!!\n"; }
+
+      } else {
+   print "WARNING: No adjusted probability for $charge-$modified_peptide\n";
+      }
+    }
+  }
+
+  #### Sort identification list by probability.
+  sub by_decreasing_probability { - ( $a->[8] <=> $b->[8] ); }
+  my @sorted_id_list =
+     (sort by_decreasing_probability @{$pep_identification_list});
+
+  #### Truncate by FDR threshold, if desired.
+  if (defined $FDR_threshold) {
+    my $counter = 0;
+    my $prob_sum = 0.0;
+    my $fdr;
+    foreach my $identification ( @sorted_id_list ) {
+      $counter++;
+      my $probability = $identification->[8];
+      $prob_sum += $probability;
+      $fdr = 1 - ($prob_sum / $counter);
+      if ( $fdr > $FDR_threshold) {
+        printf("Identification list truncated just before record #%d, prob %0.5f, ".
+              "protein %s, FDR %0.5f\n", $counter, $probability, $identification->[10], $fdr);
+        # truncate the list before this entry
+        $#sorted_id_list = $counter-1;
+        last;
+      }
+    }
+  }
+
+  $pep_identification_list = \@sorted_id_list;
+
+  #### Print.
+  my $counter = 0;
+  foreach my $identification ( @{$pep_identification_list} ) {
+    my $probability = $identification->[8];
+    if ((defined ($P_threshold) && $probability >= $P_threshold) ||
+        (defined ($FDR_threshold))) {
+      print OUTFILE join("\t",@{$identification})."\n";
+      $counter++;
+      print "$counter... " if ($counter % 1000 == 0);
+    }
+  }
+  print "\n  - wrote $counter peptides to identification list file.\n";
+
+  if ( $splib_filter ) {
+    print "Filtered vs. consensus library, found " . scalar( @{$consensus_lib{found}} ) . ',  ' .  scalar( @{$consensus_lib{missing}} ) . " were missing\n";
+  }
+  print "\n";
+
+  close(OUTFILE);
+
+  return(1);
+
+} # end writeIdentificationListFile
+
 
 
 ###############################################################################
@@ -2326,296 +2573,66 @@ sub readIdentificationListTemplateFile {
   print "\n";
   close(INFILE);
 
-  print "  - read ".scalar(@{$pep_identification_list})." peptides\n";
+  print "  - read ".scalar(@{$pep_identification_list})." peptides
+from identification list template file\n";
 
   return(1);
 
 } # end readIdentificationListTemplateFile
 
 
-
 ###############################################################################
-# writeIdentificationListFile
+# saveBestProbPerPep
 ###############################################################################
-sub writeIdentificationListFile {
+sub saveBestProbPerPep{
   my %args = @_;
-  my $output_file = $args{'output_file'} || die("No output file provided");
+  my $best_prob_per_pep = $args{'best_prob_per_pep'}
+    || die("No best_prob_per_pep hash provided");
   my $pep_identification_list = $args{'pep_identification_list'}
-    || die("No output pep_identification_list provided");
-  my $ProteinProphet_data = $args{'ProteinProphet_data'}
-    || die("No ProteinProphet_data provided");
-  my $spectral_library_data = $args{'spectral_library_data'};
-  my $P_threshold = $args{'P_threshold'};
-  my $FDR_threshold = $args{'FDR_threshold'};
-  my $best_prob_per_pep;
-  # if best_probs_from_protxml is set, this arg is undefined
-  ($best_prob_per_pep = $args{'best_prob_per_pep'})
-    || print "INFO: writeIdentificationListFile will get best prob ".
-             "per pep from protXML info\n";
-
-  print "Writing output combined cache file '$output_file'...\n";
-
-  #### Open and write header
-  open(OUTFILE,">$output_file")
-    || die("ERROR: Unable to open '$output_file' for write");
-
-  #### Write out the column names
-  my @column_names = qw ( search_batch_id spectrum_query peptide_accession
-    peptide_sequence preceding_residue modified_peptide_sequence
-    following_residue charge probability massdiff protein_name
-    protXML_nsp_adjusted_probability
-    protXML_n_adjusted_observations protXML_n_sibling_peptides );
-
-  print OUTFILE join("\t",@column_names)."\n";
-
-  print "  - writing ".scalar(@{$pep_identification_list})." peptides\n";
-
-  my %consensus_lib = ( found => [], missing => [] );
-
-  #print "ProteinProphet data:\n";
-  #while ((my $pep, my $info) = each ( %{$ProteinProphet_data} )) {
-    #print "  $pep $info->{nsp_adjusted_probability}\n";
-  #}
+    || die("No pep_identification_list provided");
+  #printf "Size of best_prob_per_pep: %d\n",
+      #scalar(keys(%{$best_prob_per_pep}));
 
   foreach my $identification ( @{$pep_identification_list} ) {
-
-    my $charge = $identification->[7];
-    my $peptide_sequence = $identification->[3];
-    my $modified_peptide = $identification->[5];
-    my $spectrast_formatted_sequence = $modified_peptide . '/' . $charge;
-
-    #### Grab the ProteinProphet information
-    my $initial_probability;
-    my $adjusted_probability = '';
-    my $n_adjusted_observations = '';
-    my $n_sibling_peptides = '';
-    my $probability_adjustment_factor;
-    my $pep_key = '';
-    my $diff_is_great=0;
-    if ($ProteinProphet_data->{"${charge}-$modified_peptide"}) {
-      $pep_key = "${charge}-$modified_peptide";
-    } elsif ($ProteinProphet_data->{$peptide_sequence}) {
-      $pep_key = $peptide_sequence;
-    } else {
-      print "WARNING: Did not find ProtProph info for keys ".
-	"$peptide_sequence or '${charge}-$modified_peptide'".
-        " (prot=$identification->[10], P=$identification->[8])\n";
+    my $prob = $identification->[8];
+    if ($prob eq "probability") {
+      next;
     }
-    if ($pep_key) {
-      my $info = $ProteinProphet_data->{$pep_key};
-      if ($best_prob_per_pep) {
-        # subtract .001 since DS does this in ProteinProphet
-        $initial_probability = $best_prob_per_pep->{$pep_key} - .001;
-        # debugging: check whether probs from pepXML match
-        # init_probs from protXML. In a small fraction of cases,
-        # they don't, and I don't know why. TMF 02/09.
-        if (0) {
-          my $diff = $initial_probability-$info->{initial_probability};
-          $diff_is_great = ($diff > .0011 || $diff < -.0011);
-          if ($diff_is_great) {  # 12/31/08 tmf debugging
-            printf "init_prob diff %7.5f protXML: %7.5f pepXML: %7.5f %s\n",
-               $diff,
-               $info->{initial_probability},
-               $initial_probability,
-               $pep_key;
-          }
+    my $stripped_pep = $identification->[3];
+    # concatenate charge, hyphen, and modified peptide to create unstripped
+    my $unstripped_pep = "$identification->[7]-$identification->[5]";
+    # stripped peptide
+    if (exists($best_prob_per_pep->{$stripped_pep})) {
+      if ( $prob > $best_prob_per_pep->{$stripped_pep} ) {
+        $best_prob_per_pep->{$stripped_pep} = $prob;
+      }
+    } else {
+      $best_prob_per_pep->{$stripped_pep} = $prob;
+    }
+    # unstripped peptide
+    if ($unstripped_pep ne $stripped_pep) {
+      if (exists($best_prob_per_pep->{$unstripped_pep})) {
+        if ( $prob > $best_prob_per_pep->{$unstripped_pep} ) {
+          $best_prob_per_pep->{$unstripped_pep} = $prob;
         }
       } else {
-        $initial_probability = $info->{initial_probability};
+        $best_prob_per_pep->{$unstripped_pep} = $prob;
       }
-      if ($regularize_prot_ids) {
-        $identification->[10] = $info->{protein_name};
-      }
-      $adjusted_probability = $info->{nsp_adjusted_probability};
-      $n_adjusted_observations = $info->{n_adjusted_observations};
-      $n_sibling_peptides = $info->{n_sibling_peptides};
-      push(@{$identification},$adjusted_probability,$n_adjusted_observations,$n_sibling_peptides);
-      if ($initial_probability) {
-	$probability_adjustment_factor = $adjusted_probability / $initial_probability;
-      }
-    }
-
-    #### If we are operating with a master_ProteinProphet_file, then
-    #### try a radical thing. Multiply the PepPro and ProPro probability.
-    #### This probably really isn't correct, but maybe it'll be close.
-    if ($OPTIONS{master_ProteinProphet_file}) {
-      my $probability = $identification->[8];
-      my $adjusted_probability = $identification->[11];
-      if ($adjusted_probability && $probability_adjustment_factor) {
-
-	#### Depresses probabilities too much
-	#$probability = $probability * $adjusted_probability;
-
-	#### If the adjusted probability is 1.0, then give probabilities a big boost
-	#if ($adjusted_probability > 0.9999) {
-	#  $probability = 1.0 - ( ( 1.0 - $probability ) / 3.0 );
-	#  #### Although don't let it be less the adjustment to the top one
-	#  if ( $probability < $probability * $probability_adjustment_factor) {
-	#    $probability = $probability * $probability_adjustment_factor;
-	#  }
-	##### Else just apply the adjustment factor given to the top one
-	#} else {
-	#  $probability = $probability * $probability_adjustment_factor;
-	#}
-
-	#### Apply the adjustment factor given to the top one
-	$probability = $probability * $probability_adjustment_factor;
-
-	#### Newer ProteinProphet downgrades initial_probability 1.000 to 0.999
-	#### to help adjustment code. Because of this, sometimes probabilities
-	#### here can drift slightly over 1.000. Don't allow that.
-	$probability = 1 if ($probability > 1);
-
-	#### If there is spectral library information, look at that
-	if ($spectral_library_data && $spectrast_formatted_sequence) {
-	  if ($spectral_library_data->{$spectrast_formatted_sequence}) {
-	    #print "$peptide_sequence\t$probability\t$spectral_library_data->{$peptide_sequence}\n";
-
-      # This adds a 15th column, which gums up the works during the load
-#	    $identification->[14] = $spectral_library_data->{$spectrast_formatted_sequence};
-      push @{$consensus_lib{found}}, $spectrast_formatted_sequence;
-	  } else {
-	    # print "$peptide_sequence\t$probability\t($spectrast_formatted_sequence)\t not in lib \n";
-      push @{$consensus_lib{missing}}, $spectrast_formatted_sequence;
-	    #### If it's not in the library, kill it
-	    $probability = 0.5;
-	  }
-	}
-
-        $identification->[8] = $probability;
-
-        ### tmf debugging 12/08
-        if ($diff_is_great)
-           { print "Final adj prob = $probability: REJECTED!!!\n"; }
-
-      } else {
-   print "WARNING: No adjusted probability for $charge-$modified_peptide\n";
-      }
+    } else {
     }
   }
-
-  #### Sort identification list by probability.
-  sub by_decreasing_probability { - ( $a->[8] <=> $b->[8] ); }
-  my @sorted_id_list =
-     (sort by_decreasing_probability @{$pep_identification_list});
-
-  #### Truncate by FDR threshold, if desired.
-  if (defined $FDR_threshold) {
-    my $counter = 0;
-    my $prob_sum = 0.0;
-    my $fdr;
-    foreach my $identification ( @sorted_id_list ) {
-      $counter++;
-      my $probability = $identification->[8];
-      $prob_sum += $probability;
-      $fdr = 1 - ($prob_sum / $counter);
-      if ( $fdr > $FDR_threshold) {
-        printf("Identification list truncated just before record #%d, prob %0.5f, ".
-              "protein %s, FDR %0.5f\n", $counter, $probability, $identification->[10], $fdr);
-        # truncate the list before this entry
-        $#sorted_id_list = $counter-1;
-        last;
-      }
-    }
-  }
-
-  $pep_identification_list = \@sorted_id_list;
-
-  #### Print.
-  my $counter = 0;
-  foreach my $identification ( @{$pep_identification_list} ) {
-    my $probability = $identification->[8];
-    if ((defined ($P_threshold) && $probability >= $P_threshold) ||
-        (defined ($FDR_threshold))) {
-      print OUTFILE join("\t",@{$identification})."\n";
-      $counter++;
-      print "$counter... " if ($counter % 1000 == 0);
-    }
-  }
-
-  # 02/09 TMF: below commented out because we currently
-  # don't use spectral libraries.
-  #if ( $consensus_lib{found} || $consensus_lib{missing} ) {
-    # Must have used spectrast lib
-  #  print "Filtered vs. consensus library, found " . scalar( @{$consensus_lib{found}} ) . ',  ' .  scalar( @{$consensus_lib{missing}} ) . " were missing\n";
-  #}
-  #print "\n";
-
-  close(OUTFILE);
-
-  return(1);
-
-} # end writeIdentificationListFile
-
-
+}
 
 ###############################################################################
-# readSpectralLibraryPeptides
+# showBestProbPerPep (for development/debugging)
 ###############################################################################
-sub readSpectralLibraryPeptides {
+sub showBestProbPerPep{
   my %args = @_;
-  my $input_file = $args{'input_file'} || die("No input file provided");
-
-  #### Return if library not available
-  if ( ! -e $input_file ) {
-    print "WARNING: Spectral library '$input_file' not found!\n";
-    return;
+  my $best_prob_per_pep = $args{'best_prob_per_pep'}
+    || die("No best_prob_per_pep hash provided");
+  print"\nBest probability per peptide:\n";
+  foreach my $pep (sort ( keys %{$best_prob_per_pep} )) {
+    my $best_prob = $best_prob_per_pep->{$pep};
+    print "$pep: $best_prob\n";
   }
-
-  print "Reading consensus spectral library file '$input_file'...\n";
-
-  #### Open library file
-  open(INFILE,$input_file)
-    || die("ERROR: Unable to open '$input_file'");
-
-
-  #### Verify that the head is as we expect
-  my $line;
-  while ($line = <INFILE>) {
-    if ($line =~ /^\#\#\# ===/) {
-      last;
-    }
-    if ($line !~ /^\#\#\#/) {
-      die("ERROR: Unexpected format reading spectral library '$input_file'");
-    }
-  }
-
-  my $peptides;
-  my $n_peptides;
-  my ($peptide_sequence,$probability);
-  my $counter;
-
-  #### Read file minimally, skimming out the peptide information
-  while ($line = <INFILE>) {
-    chomp($line);
-    if ($line =~ /^Name: ([^\/]+\/\d)/) {
-      $peptide_sequence = $1;
-    }
-    if ($line =~ /^Comment: .+ Prob=([\d\.]+)/) {
-      $probability = $1;
-    }
-    if ($line =~ /^NumPeaks/) {
-      if ($peptides->{$peptide_sequence}) {
-	if ($probability > $peptides->{$peptide_sequence}) {
-	  $peptides->{$peptide_sequence} = $probability;
-	  #print "$peptide_sequence = $probability\n";
-	}
-      } else {
-	$peptides->{$peptide_sequence} = $probability;
-	#print "$peptide_sequence = $probability\n";
-	$n_peptides++;
-      }
-    }
-
-    #$counter++;
-    #print "$counter... " if ($counter % 1000 == 0);
-
-  }
-
-  close(INFILE);
-
-  print "  - read $n_peptides peptides\n";
-
-  return($peptides);
-
-} # end readSpectralLibraryPeptides
+}
