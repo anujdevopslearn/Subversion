@@ -125,12 +125,12 @@ sub get_genomes {
 	push @paths,\%h;
     }
     
-    if (my $path=$genomes->select(fields=>['genome_id','path'],
-				  values=>{org=>'e_coli'})->[0]) {
-	my %h;
-	@h{qw(genome_id path)}=@$path;
-	push @paths,\%h;
-    }
+#     if (my $path=$genomes->select(fields=>['genome_id','path'],
+# 				  values=>{org=>'e_coli'})->[0]) {
+# 	my %h;
+# 	@h{qw(genome_id path)}=@$path;
+# 	push @paths,\%h;
+#     }
     wantarray? @paths:\@paths;
 }
 
