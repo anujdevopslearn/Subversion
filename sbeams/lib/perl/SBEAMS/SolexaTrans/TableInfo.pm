@@ -43,8 +43,9 @@ sub returnTableInfo {
     my @row;
     my $sql_query;
     my $result;
-    my @ids = $self->getSBEAMS()->getAccessibleProjects();
-    my $project_string = join(",", @ids) || 0;
+#    my @ids = $self->getSBEAMS()->getAccessibleProjects();
+#    my $project_string = join(",", @ids) || 0;
+    my $project_string = $self->getSBEAMS()->getCurrent_project_id();
 
 ###############################################################################
 #
@@ -80,16 +81,28 @@ sub returnTableInfo {
 
     } 
 ###############################################################################
-    if (uc($table_name) eq 'ST_SOLEXA_SAMPLE') {
-      if ($info_key eq "BASICQuery") {
-        return( <<"	END_QUERY");
-	  SELECT * 
-            FROM $TBST_SOLEXA_SAMPLE
-            WHERE project_id in ( $project_string )
-            AND record_status != 'D'
-	END_QUERY
-       }
-    }
+#    elsif (uc($table_name) eq 'ST_SOLEXA_SAMPLE') {
+#      if ($info_key eq "BASICQuery") {
+#        return( <<"	END_QUERY");
+#	  SELECT * 
+#            FROM $TBST_SOLEXA_SAMPLE
+#            WHERE project_id in ( $project_string )
+#            AND record_status != 'D'
+#	END_QUERY
+#       }
+
+#      if ($info_key eq "projPermSQL") {
+#        my %projSQL;
+#        $projSQL{dbsql} = <<"          END";
+#          SELECT project_id
+#          FROM $TBST_SOLEXA_SAMPLE
+#          WHERE solexa_sample_id IN (KEYVAL)
+#          END
+#        $projSQL{fsql} = '';
+
+#        return \%projSQL;
+#      }
+#    }
 
 
 ###############################################################################
@@ -142,6 +155,15 @@ sub getParentProject {
   );
   return($project_id) if ($project_id);
 
+  # Fetch SQL to retrieve project_id from table_name, if it is available.
+#  my $sqlref = $self->returnTableInfo( $table_name, 'projPermSQL' );
+
+  # If we don't have it
+#  unless ( ref( $sqlref ) && $sqlref->{dbsql} ) {
+#    print STDERR "dbsql not defined for $table_name\n";
+#    return undef;
+#  }
+
 
   #############################################################################
   #### Process actions for individual tables
@@ -158,6 +180,18 @@ sub getParentProject {
     }
 
     return($project_id) if ($project_id);
+#  } elsif ($table_name eq 'ST_SOLEXA_SAMPLE') {
+#    if ($action eq 'INSERT') {
+#      return undef;
+#    }
+
+#    elsif ($action eq 'UPDATE' || $action eq 'DELETE') {
+#      if ($parameters_ref->{solexa_sample_id}) {
+#        $sqlref->{dbsql} =~ s/KEYVAL/$parameters_ref->{solexa_sample_id}/;
+#        ($project_id) = $sbeams->selectOneColumn( $sqlref->{dbsql} );
+#      }
+#    }
+#    return($project_id ? $project_id : undef);
   }
 
 
