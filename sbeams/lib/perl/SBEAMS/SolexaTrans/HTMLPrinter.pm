@@ -90,7 +90,7 @@ sub display_page_header {
 	<!------- Header ------------------------------------------------>
 	<a name="TOP"></a>
 	<tr>
-	  <td bgcolor="$BARCOLOR"><a href="http://db.systemsbiology.net/"><img height=64 width=64 border=0 alt="ISB DB" src="$HTML_BASE_DIR/images/dbsmlclear.gif"></a><a href="https://db.systemsbiology.net/sbeams/cgi/main.cgi"><img height=64 width=64 border=0 alt="SBEAMS" src="$HTML_BASE_DIR/images/sbeamssmlclear.gif"></a></td>
+	  <td bgcolor="$BARCOLOR" width=130><a href="http://db.systemsbiology.net/"><img height=64 width=64 border=0 alt="ISB DB" src="$HTML_BASE_DIR/images/dbsmlclear.gif"></a><a href="https://db.systemsbiology.net/sbeams/cgi/main.cgi"><img height=64 width=64 border=0 alt="SBEAMS" src="$HTML_BASE_DIR/images/sbeamssmlclear.gif"></a></td>
 	  <td align="left" $header_bkg><H1>$DBTITLE - $SBEAMS_PART<BR>$DBVERSION</H1></td>
 	</tr>
 
@@ -111,14 +111,22 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Tag Pipeline:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Samples.cgi"><nobr>&nbsp;&nbsp;&nbsp;Select Samples</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Pipeline.cgi/Status"><nobr>&nbsp;&nbsp;&nbsp;Status</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Samples.cgi"><nobr>&nbsp;&nbsp;&nbsp;Start Pipeline</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Status.cgi"><nobr>&nbsp;&nbsp;&nbsp;Job Status and Controls</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetCounts"><nobr>&nbsp;&nbsp;&nbsp;Get Counts</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/dataDownload.cgi"><nobr>&nbsp;&nbsp;&nbsp;Download Data</nobr></a></td></tr>
+        ~;
+
+
+        print qq~
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=ST_solexa_sample"><nobr>&nbsp;&nbsp;&nbsp;Solexa Samples</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
+        ~ if $sbeams->getCurrent_work_group_name eq 'Developer';
+        print qq~
 	</table>
 	</td>
 
@@ -303,7 +311,7 @@ sub display_page_footer {
 
 
   #### Process the arguments list
-  my $close_tables = $args{'close_tables'} || 'YES';
+  my $close_tables = $args{'close_tables'} || 'NO';
   my $display_footer = $args{'display_footer'} || 'YES';
   my $separator_bar = $args{'separator_bar'} || 'NO';
 
