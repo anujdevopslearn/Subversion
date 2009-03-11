@@ -196,40 +196,40 @@ sub debug {
 #Give file_root name 
 #return the solexa_run_id PK or 0
 ###############################################################################
-sub check_previous_runs {
-	my $method = "check_previous_runs";
-
-	my $self = shift;
-	my %args = @_;
+#sub check_previous_runs {
+#	my $method = "check_previous_runs";
+#
+#	my $self = shift;
+#	my %args = @_;
 	
-	my $root_name = $args{root_name};
+#	my $root_name = $args{root_name};
 	
-	my $sql = qq~ SELECT solexa_run_id
-			FROM $TBST_SOLEXA_RUN
-			WHERE file_root like '$root_name'
-		   ~;
+#	my $sql = qq~ SELECT solexa_run_id
+#			FROM $TBST_SOLEXA_RUN
+#			WHERE file_root like '$root_name'
+#		   ~;
 		 
-	my @rows = $sbeams->selectOneColumn($sql);
+#	my @rows = $sbeams->selectOneColumn($sql);
 	
-	if ($self->verbose() > 0){
-		print "method '$method' SQL '$sql'\n";
-		print "DATA RESULTS '@rows'\n";
-	}
+#	if ($self->verbose() > 0){
+#		print "method '$method' SQL '$sql'\n";
+#		print "DATA RESULTS '@rows'\n";
+#	}
 	
-	if (defined $rows[0] && $rows[0] =~ /^\d/){
-		if ($self->verbose() > 0){
-			print "RETURN RUN IN DB PK'$rows[0]'\n";
-		}
-		return $rows[0];		#return the solexa_run_id if the record is in the database
-	}else{
-		if ($self->verbose() > 0){
-			print "RETURN '0' RUN ROOT NOT IN DB\n";
-		}
+#	if (defined $rows[0] && $rows[0] =~ /^\d/){
+#		if ($self->verbose() > 0){
+#			print "RETURN RUN IN DB PK'$rows[0]'\n";
+#		}
+#		return $rows[0];		#return the solexa_run_id if the record is in the database
+#	}else{
+#		if ($self->verbose() > 0){
+#			print "RETURN '0' RUN ROOT NOT IN DB\n";
+#		}
 	#	return "ADD";
-		return 0;
-	}
+#		return 0;
+#	}
 
-}
+#}
 
 #######################################################
 # find_flow_cell_lane_id
@@ -307,31 +307,31 @@ sub find_flow_cell_id {
 # Provide the key value pair 'root_file_name'
 # return the solexa_run_id or 0 (zero) if no id exists
 #######################################################
-sub find_solexa_run_id { 
-	my $method = 'find_solexa_run_id';
+#sub find_solexa_run_id { 
+#	my $method = 'find_solexa_run_id';
 
-	my $self = shift;
-	my %args = @_;
+#	my $self = shift;
+#	my %args = @_;
 	
-	unless (exists $args{root_file_name} ) {
-		confess(__PACKAGE__ . "::$method need to provide key value pairs 'root_file_name'\n");
-	}
+#	unless (exists $args{root_file_name} ) {
+#		confess(__PACKAGE__ . "::$method need to provide key value pairs 'root_file_name'\n");
+#	}
 	
-	my $sql = qq~ SELECT solexa_run_id
-			FROM $TBST_SOLEXA_RUN
-			WHERE file_root like '$args{root_file_name}'
-			AND record_status != 'D'
-			
-		  ~;
-print "tbst_solexa_run $TBST_SOLEXA_RUN\n";
-	my ($solexa_run_id) = $sbeams->selectOneColumn($sql);
+#	my $sql = qq~ SELECT solexa_run_id
+#			FROM $TBST_SOLEXA_RUN
+#			WHERE file_root like '$args{root_file_name}'
+#			AND record_status != 'D'
+#		  ~;
+#print "tbst_solexa_run $TBST_SOLEXA_RUN\n";
+#	my ($solexa_run_id) = $sbeams->selectOneColumn($sql);
 	
-	if ($solexa_run_id){
-		return $solexa_run_id;
-	}else{
-		return 0;
-	}
-}
+#	if ($solexa_run_id){
+#		return $solexa_run_id;
+#	}else{
+#		return 0;
+#	}
+#}
+
 #######################################################
 # find_solexa_sample_id
 #
@@ -378,32 +378,6 @@ sub find_solexa_sample_id {
 	}
 }
 
-#######################################################
-# get_all_solexa_file_root_names
-#
-# used to get an array of all solexa_file_root names
-#Provide nothing
-#Return an array of Names or 0 (zero) if none exists
-#######################################################
-sub get_all_solexa_file_root_names { 
-	my $method = 'get_all_solexa_file_root_names';
-
-	my $self = shift;
-	
-	my $sql = qq~ SELECT file_root
-			FROM $TBST_SOLEXA_RUN
-			WHERE record_status != 'D'
-		 ~;
-		  
-	my @all_file_names = $sbeams->selectOneColumn($sql);
-	
-	if (@all_file_names){
-		return @all_file_names;
-	}else{
-		return 0;
-	}
-}
-			
 ###############################################################################
 # Set the file path	
 #
@@ -449,6 +423,38 @@ sub get_file_path {
 	}else{
 		return 0;
 	}	
+}
+
+###############################################################################
+# Get the server
+#
+#Provide Key value pairs file_path
+#Return server name
+###############################################################################
+sub get_server {
+	my $method = 'get_server';
+	
+	my $self = shift;
+	my %args = @_;
+	
+	unless (exists $args{file_path}) {
+		confess(__PACKAGE__ . "::$method Need to provide key value pairs 'file_path'\n");
+	}
+
+        my $sql = qq~ SELECT s.server_name
+                      FROM $TBST_SERVER s
+                      LEFT JOIN $TBST_FILE_PATH fp ON
+                        (fp.server_id = s.server_id)
+                      WHERE fp.file_path = '$args{file_path}'
+                  ~;
+
+	my ($server_name) = $sbeams->selectOneColumn($sql);
+        if ($server_name) {
+          return $server_name;
+        } else {
+          return "ERROR: Could not find an entry for file path ".$args{file_path};
+        }
+
 }
 ###############################################################################
 # Get  get_file_path_from_id	
@@ -519,71 +525,107 @@ sub get_file_path_from_id {
 }
 
 ###############################################################################
+# Get  get_file_path_from_jobname	
+#
+#Provide Key value pair 'solexa_sample_id' and 'file_type' 
+#Return a file path for a particular file_type or 0 (zero) if it failed
+###############################################################################
+sub get_file_path_from_jobname {
+	my $method = 'get_file_path_from_jobname';
+	
+	my $self = shift;
+	
+	my %args = @_;
+	unless ( exists $args{jobname}) {
+		confess(__PACKAGE__ . "::$method Need to provide key value pair for 'jobname'\n");
+	}
+
+	my $sql = qq~   
+                       SELECT OPD.file_path as "Output_Directory"
+                       FROM $TBST_SOLEXA_ANALYSIS SA
+                       INNER JOIN $TBST_FILE_PATH OPD ON
+                         SA.OUTPUT_DIRECTORY_ID = OPD.FILE_PATH_ID
+                       WHERE SA.JOBNAME = '$args{jobname}'
+                       AND SA.RECORD_STATUS != 'D'
+                        AND OPD.RECORD_STATUS != 'D'
+		  ~;
+	my ($results) = $sbeams->selectSeveralColumns($sql);
+	
+	if ($results) {
+	    return ($results->[0]);
+	} else{
+		return 0;
+	}
+	
+}
+
+
+###############################################################################
 # check_for_file
 #
 #Give the solexa_run_id, root_name, file_ext 
 #Pull the file base path from the database then do a file exists on the full file path
 #Return the 1 if it exists or 0 if it does not
 ###############################################################################
-sub check_for_file {
-	my $self = shift;
-	my %args = @_;
+#sub check_for_file {
+#	my $self = shift;
+#	my %args = @_;
 
-	my $solexa_run_id  = $args{pk_id};
-	my $root_name = $args{file_root_name};
-	my $file_ext  = $args{file_extension}; #Fix me same query is ran to many times, store the data localy
+#	my $solexa_run_id  = $args{pk_id};
+#	my $root_name = $args{file_root_name};
+#	my $file_ext  = $args{file_extension}; #Fix me same query is ran to many times, store the data localy
 	  
 
-		my $sql = qq~  SELECT fp.file_path 
-		FROM $TBST_SOLEXA_RUN sr, $TBST_FILE_PATH fp 
-		WHERE sr.file_path_id = fp.file_path_id
-		AND sr.solexa_run_id = $solexa_run_id
-	   ~;
-	my ($path) = $sbeams->selectOneColumn($sql);
+#		my $sql = qq~  SELECT fp.file_path 
+#		FROM $TBST_SOLEXA_RUN sr, $TBST_FILE_PATH fp 
+#		WHERE sr.file_path_id = fp.file_path_id
+#		AND sr.solexa_run_id = $solexa_run_id
+#	   ~;
+#	my ($path) = $sbeams->selectOneColumn($sql);
 
-		my $file_path = "$path/$root_name.$file_ext";
+#		my $file_path = "$path/$root_name.$file_ext";
 
-	if ( -e $file_path ) {
-		return 1;
-	}else {
-		#print "MISSING FILE '$file_path'<br/>";
-		return 0;
-	}
-}
+#	if ( -e $file_path ) {
+#		return 1;
+#	}else {
+#		#print "MISSING FILE '$file_path'<br/>";
+#		return 0;
+#	}
+#}
 
 ###############################################################################
 # Get number of groups
 #
 #Return: Number of root_file names seen
 ###############################################################################
-sub get_total_root_file_name_count {
-	my $self = shift;
-		
-	return scalar (keys %{ $self->{ALL_FILES} } );
-	
-}
+#sub get_total_root_file_name_count {
+#	my $self = shift;
+#		
+#	return scalar (keys %{ $self->{ALL_FILES} } );
+#	
+#}
 ###############################################################################
 # Get file group
 #
 #Return: Array of files paths a single root_file_name points to
 ###############################################################################
-sub get_file_group {
-	my $method  = 'get_file_group';
+#sub get_file_group {
+#	my $method  = 'get_file_group';
 	
-	my $self = shift;
-	my %args = @_;
+#	my $self = shift;
+#	my %args = @_;
 	
-	unless (exists $args{'root_file_name'}) {
-		confess(__PACKAGE__. "::$method Need to provide a key value pair for the key 'root_file_name'\n");
-	}
+#	unless (exists $args{'root_file_name'}) {
+#		confess(__PACKAGE__. "::$method Need to provide a key value pair for the key 'root_file_name'\n");
+#	}
 	
 	#get the keys for a single root name, pass them into map which will call the get_file_path method
 	#return an array of file paths
-	return ( map {$self->get_file_path(	root_file_name  => $args{root_file_name},	
-						file_ext	=> $_,
-					   )} keys %{ $self->{ALL_FILES}{$args{'root_file_name'}} } );
+#	return ( map {$self->get_file_path(	root_file_name  => $args{root_file_name},	
+#						file_ext	=> $_,
+#					   )} keys %{ $self->{ALL_FILES}{$args{'root_file_name'}} } );
 	
-}
+#}
 
 ###############################################################################
 # get get_solexa_sample_sql
@@ -644,15 +686,12 @@ sub get_slimseq_sample_sql{
 	
 	my $constraint = $args{constraint};
 
-	my $sql = qq~ SELECT    ss.slimseq_sample_id AS "Sample_ID",
-                                sfcl.flow_cell_id as "Flow_Cell_ID",
+	my $sql = qq~ SELECT    ss.slimseq_sample_id AS "Sample ID",
+                                sfcl.flow_cell_id as "Flow Cell ID",
                                 sfcl.lane_number AS "Lane",
-				ss.sample_tag AS "Sample_Tag",
-				ss.sample_group_name AS "Sample Group Name",
-				ss.full_sample_name AS "Full_Sample_Name",
-				o.organism_name AS "Organism"
+				ss.sample_tag AS "Sample Tag",
+				ss.full_sample_name AS "Full Sample Name"
 				FROM $TBST_SOLEXA_SAMPLE ss 
-				LEFT JOIN $TB_ORGANISM o ON (ss.organism_id = o.organism_id) 
                                 LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE_SAMPLES sfcls ON
                                   (ss.solexa_sample_id = sfcls.solexa_sample_id)
                                 LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE sfcl ON
@@ -870,6 +909,7 @@ sub get_solexa_pipeline_run_info_sql{
 
 	my $sql = qq~ SELECT    
                                 $id,
+                                spr.solexa_pipeline_results_id as "SPR_ID",
                                 efi.file_path as "ELAND_Output_File",
                                 rdp.file_path as "Raw_Data_Path",
                                 ss.alignment_end_position - ss.alignment_start_position+1 as "Tag_Length",
@@ -917,7 +957,7 @@ sub get_solexa_pipeline_run_info_sql{
 
 
 ###############################################################################
-# get get_solexa_sql
+# get get_solexa_run_sql
 #
 #get all the runs for a particular project_id from the database
 ###############################################################################
@@ -954,6 +994,238 @@ sub get_solexa_run_sql{
 	
 	return $sql;
 }
+
+###############################################################################
+# get get_sample_job_status_sql
+#
+#get all the runs for a particular project_id from the database
+###############################################################################
+sub get_sample_job_status_sql{
+	my $method = 'get_sample_job_status';
+	
+	my $self = shift;
+	my %args = @_;
+	
+	unless ($args{project_id} ){
+		confess(__PACKAGE__ . "::$method Need to provide key value pairs 'project_id'");
+	}
+	
+	my $constraint = $args{constraint};
+
+	my $sql = qq~ 
+                                SELECT 
+                                sa.jobname as "Job_Name",
+                                sa.status as "Job_Status",
+                                sa.status_time as "Job_Status_Updated",
+                                ss.slimseq_sample_id as "Sample_ID",
+                                ss.sample_tag as "Sample_Tag",
+                                ss.full_sample_name as "Full_Sample_Name"
+				FROM $TBST_SOLEXA_ANALYSIS sa
+                                LEFT JOIN $TBST_SOLEXA_PIPELINE_RESULTS spr on
+                                  (sa.solexa_pipeline_results_id = spr.solexa_pipeline_results_id)
+                                LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE sfcl on
+                                  (spr.flow_cell_lane_id = sfcl.flow_cell_lane_id)
+                                LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE_SAMPLES sfcls on
+                                  (sfcl.flow_cell_lane_id = sfcls.flow_cell_lane_id)
+				LEFT JOIN $TBST_SOLEXA_SAMPLE ss ON 
+                                  (sfcls.solexa_sample_id = ss.solexa_sample_id)
+				WHERE ss.project_id IN ($args{project_id}) 
+                                AND spr.record_status != 'D'
+                                AND sfcl.record_status != 'D'
+                                AND sfcls.record_status != 'D'
+                                AND ss.record_status != 'D'
+		    ~;
+	
+	if ($constraint){
+		$sql .= $constraint;
+	}
+	
+	
+	return $sql;
+}
+
+###############################################################################
+# get get_detailed_job_status_sql
+#
+#get all the information for a particular jobname from the database
+###############################################################################
+sub get_detailed_job_status_sql{
+	my $method = 'get_detailed_job_status';
+	
+	my $self = shift;
+	my %args = @_;
+	
+	unless ($args{jobname} ){
+		confess(__PACKAGE__ . "::$method Need to provide key value pairs 'jobname'");
+	}
+	
+	my $constraint = $args{constraint};
+
+	my $sql = qq~ 
+                                SELECT 
+                                sa.analysis_description as "Job_Parameters",
+                                sa.jobname as "Job_Name",
+                                sa.status as "Job_Status",
+                                sa.status_time as "Job_Status_Updated",
+                                opd.file_path as "Output_Directory",
+                                sa.total_tags as "Total_Tags",
+                                sa.total_unique_tags as "Total_Unique_Tags",
+                                sa.match_tags as "Match_Tags",
+                                sa.match_unique_tags as "Match_Unique_Tags",
+                                sa.ambg_tags as "Ambiguous_Tags",
+                                sa.ambg_unique_tags as "Ambiguous_Unique_Tags",
+                                sa.unkn_tags as "Unknown_Tags",
+                                sa.unkn_unique_tags as "Unknown_Unique_Tags",
+                                ss.slimseq_sample_id as "Sample_ID",
+                                ss.sample_tag as "Sample_Tag",
+                                ss.full_sample_name as "Full_Sample_Name"
+				FROM $TBST_SOLEXA_ANALYSIS sa
+                                LEFT JOIN $TBST_SOLEXA_PIPELINE_RESULTS spr on
+                                  (sa.solexa_pipeline_results_id = spr.solexa_pipeline_results_id)
+                                LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE sfcl on
+                                  (spr.flow_cell_lane_id = sfcl.flow_cell_lane_id)
+                                LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE_SAMPLES sfcls on
+                                  (sfcl.flow_cell_lane_id = sfcls.flow_cell_lane_id)
+				LEFT JOIN $TBST_SOLEXA_SAMPLE ss ON 
+                                  (sfcls.solexa_sample_id = ss.solexa_sample_id)
+                                LEFT JOIN $TBST_FILE_PATH opd ON
+                                  (sa.output_directory_id = opd.file_path_id)
+				WHERE sa.jobname IN ('$args{jobname}') 
+                                AND spr.record_status != 'D'
+                                AND sfcl.record_status != 'D'
+                                AND sfcls.record_status != 'D'
+                                AND ss.record_status != 'D'
+                                AND opd.record_status != 'D'
+		    ~;
+	
+	if ($constraint){
+		$sql .= $constraint;
+	}
+	
+	
+	return $sql;
+}
+
+###############################################################################
+# get get_sample_results_sql
+#
+#get all the runs for a particular project_id from the database
+###############################################################################
+sub get_sample_results_sql{
+	my $method = 'get_sample_results';
+	
+	my $self = shift;
+	my %args = @_;
+	
+	unless ($args{project_id} ){
+		confess(__PACKAGE__ . "::$method Need to provide key value pairs 'project_id'");
+	}
+	
+	my $constraint = $args{constraint};
+
+	my $sql = qq~ 
+                                SELECT 
+                                ss.slimseq_sample_id as "SS SID",
+                                ss.sample_tag as "Sample Tag",
+                                ss.full_sample_name as "Full Sample Name",
+                                sa.status_time as "Pipeline Run",
+                                sa.total_tags as "Total Tags",
+                                sa.total_unique_tags as "Total Unique Tags",
+                                sa.match_unique_tags as "Match Unique Tags"
+				FROM $TBST_SOLEXA_ANALYSIS sa
+                                LEFT JOIN $TBST_SOLEXA_PIPELINE_RESULTS spr on
+                                  (sa.solexa_pipeline_results_id = spr.solexa_pipeline_results_id)
+                                LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE sfcl on
+                                  (spr.flow_cell_lane_id = sfcl.flow_cell_lane_id)
+                                LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE_SAMPLES sfcls on
+                                  (sfcl.flow_cell_lane_id = sfcls.flow_cell_lane_id)
+				LEFT JOIN $TBST_SOLEXA_SAMPLE ss ON 
+                                  (sfcls.solexa_sample_id = ss.solexa_sample_id)
+				WHERE ss.project_id IN ($args{project_id}) 
+                                AND sa.status = 'COMPLETED'
+                                AND spr.record_status != 'D'
+                                AND sfcl.record_status != 'D'
+                                AND sfcls.record_status != 'D'
+                                AND ss.record_status != 'D'
+		    ~;
+	
+	if ($constraint){
+		$sql .= $constraint;
+	}
+	
+	
+	return $sql;
+}
+
+
+###############################################################################
+# get get_sample_results_sql
+#
+#get all the information for a particular sample from the database
+###############################################################################
+sub get_detailed_sample_results_sql{
+	my $method = 'get_detailed_sample_results';
+	
+	my $self = shift;
+	my %args = @_;
+	
+	unless ($args{slimseq_sample_id} || $args{solexa_sample_id} ){
+		confess(__PACKAGE__ . "::$method Need to provide key value pairs 'slimseq_sample_id' OR 'solexa_sample_id'");
+	}
+	
+        my $id;
+        my $where;
+        if ($args{slimseq_sample_id}) {
+           $id = 'ss.slimseq_sample_id as "Sample_ID",';
+           $where = "WHERE ss.slimseq_sample_id IN ('".$args{slimseq_sample_id}."')";
+        } elsif ($args{solexa_sample_id}) {
+           $id = 'ss.solexa_sample_id as "Solexa_Sample_ID",';
+           $where = "WHERE ss.solexa_sample_id IN ('".$args{solexa_sample_id}."')";
+        }
+
+
+	my $constraint = $args{constraint};
+
+	my $sql = qq~ 
+                                SELECT $id
+                                ss.sample_tag as "Sample_Tag",
+                                ss.full_sample_name as "Full_Sample_Name",
+                                sa.total_tags as "Total_Tags",
+                                sa.total_unique_tags as "Total_Unique_Tags",
+                                sa.match_tags as "Match_Tags",
+                                sa.match_unique_tags as "Match_Unique_Tags",
+                                sa.ambg_tags as "Ambiguous_Tags",
+                                sa.ambg_unique_tags as "Ambiguous_Unique_Tags",
+                                sa.unkn_tags as "Unknown_Tags",
+                                sa.unkn_unique_tags as "Unknown_Unique_Tags"
+				FROM $TBST_SOLEXA_ANALYSIS sa
+                                LEFT JOIN $TBST_SOLEXA_PIPELINE_RESULTS spr on
+                                  (sa.solexa_pipeline_results_id = spr.solexa_pipeline_results_id)
+                                LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE sfcl on
+                                  (spr.flow_cell_lane_id = sfcl.flow_cell_lane_id)
+                                LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE_SAMPLES sfcls on
+                                  (sfcl.flow_cell_lane_id = sfcls.flow_cell_lane_id)
+				LEFT JOIN $TBST_SOLEXA_SAMPLE ss ON 
+                                  (sfcls.solexa_sample_id = ss.solexa_sample_id)
+                                LEFT JOIN $TBST_FILE_PATH opd ON
+                                  (sa.output_directory_id = opd.file_path_id)
+                                $where
+                                AND sa.status = 'COMPLETED'
+                                AND spr.record_status != 'D'
+                                AND sfcl.record_status != 'D'
+                                AND sfcls.record_status != 'D'
+                                AND ss.record_status != 'D'
+                                AND opd.record_status != 'D'
+		    ~;
+	
+	if ($constraint){
+		$sql .= $constraint;
+	}
+	
+	
+	return $sql;
+}
+
 
 
 ###############################################################################
@@ -1006,6 +1278,42 @@ sub get_all_sample_info_sql{
 	return $sql;
 }
 
+###############################################################################
+# get get_download_info_sql
+#
+# takes a slimseq_sample_id or a solexa_sample_id and returns info about that sample
+# 
+# return all info if no solexa ids passed
+###############################################################################
+sub get_download_info_sql{
+	my $method = 'get_download_info';
+	
+	my $self = shift;
+	my %args = @_;
+	
+  # Modified to allow bulk lookup
+  my $where = '';
+  if ( $args{solexa_sample_ids} ) {  # optional csv solexa ids
+    $where = "WHERE ss.solexa_sample_id IN ( $args{solexa_sample_ids} )";
+  } elsif ($args{slimseq_sample_ids}) {
+    $where = "WHERE ss.slimseq_sample_id IN ( $args{slimseq_sample_ids} )";
+  }
+	
+	
+	my $sql = qq~
+                SELECT
+		ss.sample_tag                 AS "Sample Tag",
+		ss.full_sample_name           AS "Full Name", 
+		o.organism_name               AS "Organism"
+		FROM $TBST_SOLEXA_SAMPLE ss 
+		JOIN $TB_ORGANISM o ON (ss.organism_id = o.organism_id)
+		LEFT JOIN $TB_PROJECT proj ON ( ss.project_id = proj.project_id)
+    		$where
+	 	ORDER BY ss.solexa_sample_id
+	 ~;
+	 
+	return $sql;
+}
 ###############################################################################
 # get get_solexa_geo_info_sql
 #
