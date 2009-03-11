@@ -40,6 +40,7 @@ use vars qw(@ISA @EXPORT
         $SOLEXA_BABEL_USER
         $SOLEXA_BABEL_PASS
         $SOLEXA_BABEL_DB
+        $SOLEXA_EXPORT_FILE_FORMAT
 );
 
 my $log = SBEAMS::Connection::Log->new();
@@ -58,6 +59,7 @@ require Exporter;
     $SOLEXA_BABEL_USER
     $SOLEXA_BABEL_PASS
     $SOLEXA_BABEL_DB
+    $SOLEXA_EXPORT_FILE_FORMAT
 );
 
 my $solexa_file_types = $CONFIG_SETTING{ST_SOLEXA_DEFAULT_FILES} || '';
@@ -92,7 +94,6 @@ $SOLEXA_BABEL_HOST         = $CONFIG_SETTING{ST_BABEL_HOST} || '';
 $SOLEXA_BABEL_USER         = $CONFIG_SETTING{ST_BABEL_USER} || '';
 $SOLEXA_BABEL_PASS         = $CONFIG_SETTING{ST_BABEL_PASS} || '';
 $SOLEXA_BABEL_DB           = $CONFIG_SETTING{ST_BABEL_DB} || '';
-
 
 #### Define new variables
 $SBEAMS_PART            = 'SolexaTrans';
