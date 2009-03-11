@@ -744,8 +744,129 @@ sub check_sbeams_pipeline_results {
 	}
 }
 
+###############################################################################
+# check_sbeams_job
+# Requires a jobname
+# Returns SBEAMS solexa analysis ID or 0
+###############################################################################
+sub check_sbeams_job {
+	my $method = 'check_sbeams_job';
+	my $self = shift;
+	my %args = @_;
+	my $jobname = $args{"jobname"};
+
+	unless ($args{"jobname"}) {
+	  confess(__PACKAGE__."::$method needs 'jobname' to look up a job in solexa_analysis in SBEAMS\n");
+	}
+
+        my $sql = qq~
+		SELECT solexa_analysis_id
+		FROM $TBST_SOLEXA_ANALYSIS
+		WHERE jobname = '$jobname'
+		AND RECORD_STATUS != 'D'
+	~;
+
+	my @rows = $sbeams->selectOneColumn($sql);
+
+	if ($rows[0]) {
+	  return $rows[0];
+	} else {
+	  return 0;
+	}
+}
+
+###############################################################################
+# check_sbeams_duplicate_job
+# Requires jobsummary
+# Returns SBEAMS solexa analysis ID or 0
+###############################################################################
+sub check_sbeams_duplicate_job {
+	my $method = 'check_sbeams_duplicate_job';
+	my $self = shift;
+	my %args = @_;
+	my $jobsummary = $args{"jobsummary"};
+
+	unless ($args{"jobsummary"}) {
+	  confess(__PACKAGE__."::$method needs 'jobsummary' to look up a job in solexa_analysis in SBEAMS\n");
+	}
+
+        my $sql = qq~
+		SELECT solexa_analysis_id
+		FROM $TBST_SOLEXA_ANALYSIS
+		WHERE analysis_description like '$jobsummary'
+		AND RECORD_STATUS != 'D'
+	~;
+
+	my @rows = $sbeams->selectOneColumn($sql);
+
+	if ($rows[0]) {
+	  return $rows[0];
+	} else {
+	  return 0;
+	}
+}
+
+###############################################################################
+# check_sbeams_tag
+# Requires tag
+# Returns SBEAMS tag_id or 0
+###############################################################################
+sub check_sbeams_tag {
+	my $method = 'check_sbeams_tag';
+	my $self = shift;
+	my %args = @_;
+	my $tag = $args{"tag"};
+
+	unless ($args{"tag"}) {
+	  confess(__PACKAGE__."::$method needs 'tag' to look up a tag in tag in SBEAMS\n");
+	}
+
+        my $sql = qq~
+		SELECT tag_id
+		FROM $TBST_TAG
+		WHERE tag like '$tag'
+		AND RECORD_STATUS != 'D'
+	~;
+
+	my @rows = $sbeams->selectOneColumn($sql);
+
+	if ($rows[0]) {
+	  return $rows[0];
+	} else {
+	  return 0;
+	}
+}
 
 
+###############################################################################
+# check_sbeams_biosequence
+# Requires biosequence
+# Returns SBEAMS biosequence_id or 0
+###############################################################################
+sub check_sbeams_biosequence {
+	my $method = 'check_sbeams_biosequence';
+	my $self = shift;
+	my %args = @_;
+	my $biosequence_accession = $args{"biosequence_accession"};
+
+	unless ($args{"biosequence_accession"}) {
+	  confess(__PACKAGE__."::$method needs 'biosequence_accession' to look up a biosequence in biosequence in SBEAMS\n");
+	}
+
+        my $sql = qq~
+		SELECT biosequence_id
+		FROM $TBST_BIOSEQUENCE
+		WHERE biosequence_accession like '$biosequence_accession'
+	~;
+
+	my @rows = $sbeams->selectOneColumn($sql);
+
+	if ($rows[0]) {
+	  return $rows[0];
+	} else {
+	  return 0;
+	}
+}
 
 
 ###############################################################################################################
@@ -762,7 +883,7 @@ sub get_sbeams_restriction_enzyme_motif {
 	my $self = shift;
 	my %args = @_;
 	my $enzyme = $args{"enzyme"};
-print "enzyme in get_sbeams_restriction_enzyme_motif $enzyme\n";
+
 	unless ($args{"enzyme"}) {
 	  confess(__PACKAGE__."::$method needs 'enzyme' to look up a restriction_enzyme_motif in SBEAMS\n");
 	}
@@ -771,6 +892,102 @@ print "enzyme in get_sbeams_restriction_enzyme_motif $enzyme\n";
 		SELECT motif
 		FROM $TBST_RESTRICTION_ENZYME
 		WHERE name like '$enzyme'
+		  AND RECORD_STATUS != 'D'
+	~;
+
+	my @rows = $sbeams->selectOneColumn($sql);
+
+	if ($rows[0]) {
+	  return $rows[0];
+	} else {
+	  return undef;
+	}
+}
+
+###############################################################################
+# get_sbeams_output_directory
+# Requires enzyme (name)
+# Returns SBEAMS restriction enzyme motif or undef
+###############################################################################
+sub get_sbeams_job_output_directory {
+	my $method = 'get_sbeams_job_output_directory';
+	my $self = shift;
+	my %args = @_;
+	my $jobname = $args{"jobname"};
+
+	unless ($args{"jobname"}) {
+	  confess(__PACKAGE__."::$method needs 'jobname' to look up an output_directory in SBEAMS\n");
+	}
+
+        my $sql = qq~
+		SELECT opd.file_path
+		FROM $TBST_SOLEXA_ANALYSIS sa
+                JOIN $TBST_FILE_PATH opd on 
+                  (sa.output_directory_id = opd.file_path_id)
+		WHERE sa.jobname like '$jobname'
+		  AND sa.RECORD_STATUS != 'D'
+		  AND opd.RECORD_STATUS != 'D'
+	~;
+
+	my @rows = $sbeams->selectOneColumn($sql);
+
+	if ($rows[0]) {
+	  return $rows[0];
+	} else {
+	  return undef;
+	}
+}
+
+###############################################################################
+# get_sbeams_jobname
+# Requires enzyme (name)
+# Returns SBEAMS restriction enzyme motif or undef
+###############################################################################
+sub get_sbeams_jobname {
+	my $method = 'get_sbeams_jobname';
+	my $self = shift;
+	my %args = @_;
+	my $analysis_id = $args{"solexa_analysis_id"};
+
+	unless ($args{"solexa_analysis_id"}) {
+	  confess(__PACKAGE__."::$method needs 'solexa_analysis_id' to look up a jobname in SBEAMS\n");
+	}
+
+        my $sql = qq~
+		SELECT jobname
+		FROM $TBST_SOLEXA_ANALYSIS 
+		WHERE solexa_analysis_id = '$analysis_id'
+		  AND RECORD_STATUS != 'D'
+	~;
+
+	my @rows = $sbeams->selectOneColumn($sql);
+
+	if ($rows[0]) {
+	  return $rows[0];
+	} else {
+	  return undef;
+	}
+}
+
+###############################################################################
+# get_sbeams_tag_type
+# Requires type
+# Returns SBEAMS restriction enzyme motif or undef
+###############################################################################
+sub get_sbeams_tag_type {
+	my $method = 'get_sbeams_tag_type';
+	my $self = shift;
+	my %args = @_;
+	my $type = $args{"type"};
+
+	unless ($args{"type"}) {
+	  confess(__PACKAGE__."::$method needs 'type' to look up a tag_type in SBEAMS\n");
+	}
+
+        my $sql = qq~
+		SELECT tag_type_id
+		FROM $TBST_TAG_TYPE
+		WHERE type like '$type'
 		  AND RECORD_STATUS != 'D'
 	~;
 
@@ -1342,6 +1559,146 @@ sub insert_pipeline_results {
 
   return $pipeline_results_id;
 }
+
+###############################################################################
+# insert_sbeams_tag
+# Requires slimseq_tag_id, name, date_generated
+# Returns SBEAMS tag ID or error message (string)
+###############################################################################
+sub insert_sbeams_tag {
+  my $method = 'insert_sbeams_tag';
+  my $self = shift;
+  my %args = @_;
+
+  my $tag = $args{"tag"};
+
+  unless ($args{"tag"}) {
+    confess(__PACKAGE__."::$method needs 'tag' to insert a tag in SBEAMS\n");
+  }
+
+  my $rowdata_ref = {
+	tag => $tag,
+  };
+
+  if ($self->debug) {
+        print "SQL DATA FOR TAG INSERT\n";
+        print Dumper($rowdata_ref);
+  }
+
+  my $tag_id = $sbeams->updateOrInsertRow(
+        table_name=>$TBST_TAG,
+        rowdata_ref => $rowdata_ref,
+        PK=>'tag_id',
+        return_PK=>1,
+        insert=>1,
+        verbose=>$self->verbose,
+        testonly=>$self->testonly,
+        add_audit_parameters=>1,
+  );
+
+  unless ($tag_id) {
+        return "ERROR: COULD NOT ENTER TAG DATA for TAG '".$tag."'\n";
+  }
+
+  return $tag_id;
+}
+
+###############################################################################
+# insert_sbeams_tag_analysis
+# Requires tag_id, analysis_id
+# Returns SBEAMS tag ID or error message (string)
+###############################################################################
+sub insert_sbeams_tag_analysis {
+  my $method = 'insert_sbeams_tag_analysis';
+  my $self = shift;
+  my %args = @_;
+
+  my $tag_id = $args{"tag_id"};
+  my $analysis_id = $args{"solexa_analysis_id"};
+  my $count = $args{"count"};
+  my $cpm = $args{"cpm"};
+  my $tag_type_id = $args{"tag_type_id"};
+
+  unless ($args{"tag_id"} && $args{"solexa_analysis_id"} && $args{"count"} && $args{"cpm"} && $args{"tag_type_id"}) {
+    confess(__PACKAGE__."::$method needs 'tag_id', 'solexa_analysis_id', 'count', 'cpm', and 'tag_type_id' to insert into tag_analysis in SBEAMS\n");
+  }
+
+  my $rowdata_ref = {
+        solexa_analysis_id => $analysis_id,
+	tag_id => $tag_id,
+        tag_count => $count,
+        tag_cpm => $cpm,
+        tag_type_id => $tag_type_id,
+  };
+
+  if ($self->debug) {
+        print "SQL DATA FOR TAG_ANALYSIS INSERT\n";
+        print Dumper($rowdata_ref);
+  }
+
+  my $tag_analysis_id = $sbeams->updateOrInsertRow(
+        table_name=>$TBST_TAG_ANALYSIS,
+        rowdata_ref => $rowdata_ref,
+        PK=>'tag_analysis_id',
+        return_PK=>1,
+        insert=>1,
+        verbose=>$self->verbose,
+        testonly=>$self->testonly,
+        add_audit_parameters=>1,
+  );
+
+  unless ($tag_analysis_id) {
+        return "ERROR: COULD NOT ENTER TAG ANALYSIS DATA for TAG '".$tag_id."'\n";
+  }
+
+  return $tag_analysis_id;
+}
+
+###############################################################################
+# insert_sbeams_biosequence_tag
+# Requires tag_id, biosequence_id
+# Returns SBEAMS tag ID or error message (string)
+###############################################################################
+sub insert_sbeams_biosequence_tag {
+  my $method = 'insert_sbeams_biosequence_tag';
+  my $self = shift;
+  my %args = @_;
+
+  my $tag_id = $args{"tag_id"};
+  my $biosequence_id = $args{"biosequence_id"};
+
+  unless ($args{"tag_id"} && $args{"biosequence_id"}) {
+    confess(__PACKAGE__."::$method needs 'tag_id', 'biosequence_id' to insert into biosequence_tag in SBEAMS\n");
+  }
+
+  my $rowdata_ref = {
+        biosequence_id => $biosequence_id,
+	tag_id => $tag_id,
+  };
+
+  if ($self->debug) {
+        print "SQL DATA FOR BIOSEQUENCE TAG INSERT\n";
+        print Dumper($rowdata_ref);
+  }
+
+  my $biosequence_tag_id = $sbeams->updateOrInsertRow(
+        table_name=>$TBST_BIOSEQUENCE_TAG,
+        rowdata_ref => $rowdata_ref,
+        PK=>'biosequence_tag_id',
+        return_PK=>1,
+        insert=>1,
+        verbose=>$self->verbose,
+        testonly=>$self->testonly,
+        add_audit_parameters=>1,
+  );
+
+  unless ($biosequence_tag_id) {
+        return "ERROR: COULD NOT ENTER BIOSEQUENCE TAG DATA for TAG '".$tag_id."'\n";
+  }
+
+  return $biosequence_tag_id;
+}
+
 
 
 
