@@ -19,14 +19,9 @@ use SBEAMS::Connection::Settings;
 use vars qw(@ISA @EXPORT 
     $TB_ORGANISM
 
-    $TBST_BIOSEQUENCE_SET
-    $TBST_DBXREF
     $TBST_BIOSEQUENCE
+    $TBST_BIOSEQUENCE_SET
     $TBST_BIOSEQUENCE_PROPERTY_SET
-
-    $TBST_BIOSEQUENCE_TAG
-    $TBST_BIOSEQUENCE_TAG_COUNT
-    $TBST_BIOSEQUENCE_TAG_AMBIGUOUS
 
     $TBST_MISC_OPTION
     $TBST_QUERY_OPTION
@@ -53,6 +48,10 @@ use vars qw(@ISA @EXPORT
     $TBST_RESTRICTION_ENZYME
 
     $TBST_SOLEXA_ANALYSIS
+    $TBST_TAG
+    $TBST_TAG_ANALYSIS
+    $TBST_BIOSEQUENCE_TAG
+    $TBST_TAG_TYPE
 );
 
 
@@ -62,14 +61,9 @@ require Exporter;
 @EXPORT = qw (
     $TB_ORGANISM
 
-    $TBST_BIOSEQUENCE_SET
-    $TBST_DBXREF
     $TBST_BIOSEQUENCE
+    $TBST_BIOSEQUENCE_SET
     $TBST_BIOSEQUENCE_PROPERTY_SET
-
-    $TBST_BIOSEQUENCE_TAG
-    $TBST_BIOSEQUENCE_TAG_COUNT
-    $TBST_BIOSEQUENCE_TAG_AMBIGUOUS
 
     $TBST_MISC_OPTION
     $TBST_QUERY_OPTION
@@ -97,6 +91,10 @@ require Exporter;
     $TBST_RESTRICTION_ENZYME
 
     $TBST_SOLEXA_ANALYSIS
+    $TBST_TAG
+    $TBST_TAG_ANALYSIS
+    $TBST_BIOSEQUENCE_TAG
+    $TBST_TAG_TYPE
 );
 
 
@@ -108,14 +106,9 @@ my $modST = 'SolexaTrans.dbo.';
 
 $TB_ORGANISM                   	   	= "${core}organism";
 
-$TBST_BIOSEQUENCE_SET       		= "${modST}biosequence_set";
-$TBST_DBXREF                		= "${modST}dbxref";
 $TBST_BIOSEQUENCE           		= "${modST}biosequence";
+$TBST_BIOSEQUENCE_SET       		= "${modST}biosequence_set";
 $TBST_BIOSEQUENCE_PROPERTY_SET 		= "${modST}biosequence_property_set";
-
-$TBST_BIOSEQUENCE_TAG			= "${modST}biosequence_tag";
-$TBST_BIOSEQUENCE_TAG_COUNT		= "${modST}biosequence_tag_count";
-$TBST_BIOSEQUENCE_TAG_AMBIGUOUS		= "${modST}biosequence_tag_ambiguous";
 
 $TBST_MISC_OPTION			= "${modST}misc_option";
 $TBST_QUERY_OPTION        		= "${modST}query_option";
@@ -143,5 +136,8 @@ $TBST_SOLEXA_FLOW_CELL_LANE_SAMPLES	= "${modST}solexa_flow_cell_lane_samples";
 $TBST_RESTRICTION_ENZYME		= "${modST}restriction_enzyme";
 
 $TBST_SOLEXA_ANALYSIS                   = "${modST}solexa_analysis";
-
+$TBST_TAG                               = "${modST}tag";
+$TBST_TAG_ANALYSIS                      = "${modST}tag_analysis";
+$TBST_BIOSEQUENCE_TAG			= "${modST}biosequence_tag";
+$TBST_TAG_TYPE                          = "${modST}tag_type";
 
