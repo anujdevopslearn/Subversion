@@ -55,6 +55,7 @@ Options:
  e.g.: ./$PROG_NAME --library_path /data/yeast.msp --consensus_library_name 'NIST Sc' --organism_name Yeast --load
 EOU
 
+
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","test",
 "load", "consensus_library_name:s", "organism_name:s", "library_path:s", "delete:s")) 
@@ -228,6 +229,9 @@ sub populateRecords
           next;
         }
         my %commentHash = %{$spectrum{comment}};
+
+#    print "In commentHash!\n"; for my $k ( keys ( %commentHash ) ) { print "$k => $commentHash{$k}\n"; }
+
         my $sequence = $spectrum{sequence};
         my $mw = $spectrum{mw};
         my $charge = $spectrum{charge};
@@ -260,8 +264,11 @@ sub populateRecords
             modified_sequence => $modified_sequence,
             charge => $charge,
             modifications => $commentHash{Mods},
-            protein_identifiers => $protein, # commentHash{Protein},
+            protein_name => $protein, # commentHash{Protein},
             mz_exact => $commentHash{Mz_exact},
+            precursor_intensity => $commentHash{PrecursorIntensity},
+            scan_time => $commentHash{RetentionTime},
+            nreps => $commentHash{Nreps}
         );
 
         ## insert comments
@@ -435,7 +442,7 @@ sub insert_consensus_library
 # @param modified_sequence - not present if no mods
 # @param charge 
 # @param modifications - not present if no mods
-# @param protein_identifiers
+# @param protein_name
 # @param mz_exact
 # @return consensus_library_spectrum_id
 #######################################################################
@@ -445,33 +452,39 @@ sub insert_consensus_library_spectrum
 
     my $METHOD='insert_consensus_library_spectrum';
 
-    my %rowdata;
+# WTH?
+#
+#    my %rowdata;
+#
+#    $rowdata{consensus_library_id} = $args{consensus_library_id} || 
+#        die "need consensus_library_id";
+#
+#    $rowdata{consensus_spectrum_type_id} = $args{consensus_spectrum_type_id} ||
+#        die "need consensus_spectrum_type_id";
+#
+#    $rowdata{sequence} = $args{sequence} || die "need sequence";
+#
+#    if ($args{modified_sequence})
+#    {
+#        $rowdata{modified_sequence} = $args{modified_sequence};
+#        $rowdata{modifications} = $args{modifications};
+#    }
+#
+#    $rowdata{charge} = $args{charge} || die "need charge";
+#
+#    $rowdata{protein_name} = $args{protein_identifiers} ||
+#        die "need protein_identifiers";
+#
+#    $rowdata{mz_exact} = $args{mz_exact} || die "need mz_exact";
 
-    $rowdata{consensus_library_id} = $args{consensus_library_id} || 
-        die "need consensus_library_id";
-
-    $rowdata{consensus_spectrum_type_id} = $args{consensus_spectrum_type_id} ||
-        die "need consensus_spectrum_type_id";
-
-    $rowdata{sequence} = $args{sequence} || die "need sequence";
-
-    if ($args{modified_sequence})
-    {
-        $rowdata{modified_sequence} = $args{modified_sequence};
-        $rowdata{modifications} = $args{modifications};
+    for my $arg ( qw( consensus_library_id consensus_spectrum_type_id sequence charge protein_name mz_exact ) ) {
+      die "Missing required parameter $arg" unless $args{$arg};
     }
-
-    $rowdata{charge} = $args{charge} || die "need charge";
-
-    $rowdata{protein_name} = $args{protein_identifiers} ||
-        die "need protein_identifiers";
-
-    $rowdata{mz_exact} = $args{mz_exact} || die "need mz_exact";
 
     my $consensus_library_spectrum_id = $sbeams->updateOrInsertRow(
         table_name=>$TBAT_CONSENSUS_LIBRARY_SPECTRUM,
         insert=>1,
-        rowdata_ref=>\%rowdata,
+        rowdata_ref=>\%args,
         PK => 'consensus_library_spectrum_id',
         return_PK=>1,
         add_audit_parameters => 0,
@@ -774,6 +787,22 @@ sub parseComment
     {
         $hash{$1} = $2;
     }
+
+    # Fetch RT, pIntensity, Nreps
+    if ($line =~ /(PrecursorIntensity)=(\S+)\s/) {
+      $hash{$1} = $2;
+    }
+    if ($line =~ /(RetentionTime)=(\S+)\s/) {
+      my $rt_string = $2;
+      my @rt = split( ",", $rt_string, -1 );
+      $hash{$1} = $rt[0];
+    }
+    if ($line =~ /.*(Nreps)=(\S+)\s.*/) {
+      my $reps = $2;
+      my @reps = split( /\//, $reps, -1 );
+      $hash{$1} = $reps[0];
+    }
+#    for my $k ( keys( %hash ) ) { print "$k => $hash{$k}\n"; }
 
     ## make a modified sequence hash
     return \%hash;
