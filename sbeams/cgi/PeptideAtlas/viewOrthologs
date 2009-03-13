@@ -104,7 +104,7 @@ sub get_ortholog_display {
 	my $bioseq_clause = '';
 	if( $args{restore} ) {
 		$args{bioseq_id} = '';
-	} elsif( $args{bioseq_id} ) {
+	} elsif( $args{bioseq_id} && !$args{search_groups} ) {
     $bioseq_clause = "AND B.biosequence_id IN ( $args{bioseq_id} )";
   }
 
@@ -580,12 +580,9 @@ sub get_ortholog_display {
   <P>
   $alignment_overview	
 	</P>
-  <FORM METHOD=POST NAME=custom_alignment>
   $clustal_display
   <BR>
-	<INPUT TYPE=HIDDEN NAME=group_id VALUE=$args{group_id}>
-	<INPUT TYPE=HIDDEN NAME=show_all VALUE=$args{show_all}>
-	<INPUT TYPE=HIDDEN NAME=entry_accession VALUE=$args{entry_accession}>
+  <INPUT TYPE=HIDDEN NAME=entry_accession VALUE=$args{entry_accession}>
  	<INPUT TYPE=SUBMIT VALUE='Align selected sequences'>
  	<INPUT TYPE=SUBMIT VALUE='Restore Original' NAME=restore>
 	</FORM>
@@ -664,10 +661,9 @@ sub get_group_search_section {
     <TABLE NOBR><TR>
     <TD>Group Name:</TD><TD><INPUT TYPE=text NAME=group_id VALUE=$args{group_id}></INPUT></TD>
     <TD>Show All:</TD><TD><INPUT TYPE=checkbox NAME=show_all $checked></INPUT></TD>
- 	  <TD><INPUT TYPE=SUBMIT VALUE='View Ortholog Group'></TD>
+ 	  <TD><INPUT TYPE=SUBMIT VALUE='View Ortholog Group' NAME=search_groups></TD>
  	  <TD>$help</TD>
     </TR></TABLE NOBR>
-  </FORM>
   ~;
   return $group_html;
 }
