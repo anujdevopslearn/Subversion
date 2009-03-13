@@ -53,7 +53,7 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
   my %params;
   $sbeams->parse_input_parameters( q=>$q, parameters_ref=>\%params );
   $sbeams->processStandardParameters(parameters_ref=>\%params);
-
+  
   ## get project_id to send to HTMLPrinter display
   my $project_id = $sbeams->getCurrent_project_id();
 
@@ -89,7 +89,6 @@ sub get_alignment_display {
   # Content scalar to return
   my $curr_bid = $sbeamsMOD->getCurrentAtlasBuildID( parameters_ref => \%args );
 
-  $log->debug( "build id is $curr_bid, args says $args{atlas_build_id}" );
 	my @select = $sbeamsMOD->GetBuildSelect( set_onchange => 1,
 	                                                 build_id => $curr_bid,
 								                                  form_name => 'compareProteins' );
@@ -104,15 +103,12 @@ sub get_alignment_display {
 	$clustal_display .= "$select[0] </FORM></P>\n";
 
   my $bioseq_clause = '';
-	if ( $args{restore} ) {
-		my $ids = $sbeamsMOD->get_mapped_biosequences( build_id => $curr_bid,
-		                                       peptide_sequence => $args{pepseq} );
 
-		$args{bioseq_id} = '';
-		for my $id ( @$ids ) {
-			next unless $id;
-			$args{bioseq_id} .= ( $args{bioseq_id} ) ? ',' . $id : $id;
-		}
+	if ( $args{restore} ) {
+    # my $ids = $sbeamsMOD->get_mapped_biosequences( build_id => $curr_bid,
+		#                                       peptide_sequence => $args{pepseq} );
+
+		$args{bioseq_id} = $args{orig_bioseq_id};
 	}
 
   if ( $args{protein_list} ) {
@@ -122,10 +118,13 @@ sub get_alignment_display {
 		                   ( $list_ids ) ? $args{bioseq_id} . ',' . $list_ids : $args{bioseq_id};
 	}
 
+
   if ( $args{bioseq_id} ) {
     $bioseq_clause = "AND BS.biosequence_id IN ( $args{bioseq_id} )\n";
 	}
   my $all_projects = join( ",", $sbeams->getAccessibleProjects() );
+
+  return 'Problem with form data: no biosequences found' unless $bioseq_clause;
 
   # SQL to fetch bioseqs in them.
   my $sql =<<"  END_SQL";
@@ -224,7 +223,11 @@ sub get_alignment_display {
 
 		$fasta .= ">$acc\n$row[3]\n";
 
-    $acc2bioseq_id{$acc} = $row[4];
+    $acc2bioseq_id{"$acc"} = $row[4];
+    # Clustal W alignment file can only take 30 chars
+    my $short_acc = substr( $acc, 0, 30 );
+    $acc2bioseq_id{"$short_acc"} = $row[4];
+
 		my $acckeys = join( ',', keys( %acc2bioseq_id ) );
 
     # Cache first seq for each accession, and push onto display
@@ -238,24 +241,24 @@ sub get_alignment_display {
 	}
 	$log->debug( "Iterated $cnt rows: " .time() );
 
-  # not quite working yet!
+  # weed out duplicates - not quite working yet?
 	my %dup_seqs;
  	my $dup_char = 'A';
 	for my $seq ( @seqs ) {
 
-		if ( scalar(keys(%{$seq2acc{$seq}})) > 1 ) {
+		if ( scalar(keys(%{$seq2acc{"$seq"}})) > 1 ) {
 			my $skip = 0;
- 	    for my $acc ( keys ( %{$seq2acc{$seq}} ) ) {
-				if ( $dup_seqs{$acc} ) {
+ 	    for my $acc ( keys ( %{$seq2acc{"$seq"}} ) ) {
+				if ( $dup_seqs{"$acc"} ) {
 					$skip++;
 					next;
 				}
-        $dup_seqs{$acc} = $dup_char;
+        $dup_seqs{"$acc"} = $dup_char;
       }
       $dup_char++ unless $skip;
     } else {
-			my ( $key ) = keys( %{$seq2acc{$seq}} );
-      $dup_seqs{$key} = '&nbsp;';
+			my ( $key ) = keys( %{$seq2acc{"$seq"}} );
+      $dup_seqs{"$key"} = '&nbsp;';
 	  }
   }
 
@@ -298,7 +301,7 @@ sub get_alignment_display {
 																						         %args );
 	 	}
 	}
-	  $log->debug( "CompProtein, fasta is " . length( $fasta ) . ", result is " . length( $clustal_display ) );
+#	  $log->debug( "CompProtein, fasta is " . length( $fasta ) . ", result is " . length( $clustal_display ) );
 	return $clustal_display;
 
 
@@ -322,7 +325,6 @@ sub get_clustal_display {
 	~;
 	for my $seq ( @{$args{alignments}} ) {
 		my $sequence = $seq->[1];
-		$log->debug( "sequence $seq->[0] is " . length($sequence) . " characters long" );
 		if ( $seq->[0] eq 'consensus'  ) {
 		  $sequence =~ s/ /&nbsp;/g 
 		} else {
@@ -342,7 +344,11 @@ sub get_clustal_display {
 		}
 		my $checkbox = '';
 		unless ( $seq->[0] eq 'consensus' ) {
-		  $checkbox = "<INPUT ID=bioseq_id TYPE=checkbox CHECKED NAME=bioseq_id VALUE=$args{acc2bioseq_id}->{$seq->[0]}></INPUT>";
+      if ( !$args{acc2bioseq_id}->{"$seq->[0]"} ) {
+        $log->warn( "$seq->[0] has no bioseq_id, can't re-assemble" );
+      } else {
+		    $checkbox = "<INPUT ID=bioseq_id TYPE=checkbox CHECKED NAME=bioseq_id VALUE=$args{acc2bioseq_id}->{$seq->[0]}></INPUT>";
+      }
 		}
 
 		$display .= qq~
@@ -403,6 +409,13 @@ sub get_clustal_display {
    <IMG SRC=$HTML_BASE_DIR/images/greyqmark.gif BORDER=0 ONCLICK="popitup('$url');"></SPAN>
   END_LINK
 
+  # Cache ids to be able to restore!
+  my $orig_bioseq_field = '';
+  if ( $args{bioseq_id} && !$args{orig_bioseq_id} ) {
+    $orig_bioseq_field = "<INPUT TYPE=HIDDEN NAME=orig_bioseq_id VALUE=$args{bioseq_id}></INPUT>";
+  } else {
+    $orig_bioseq_field = "<INPUT TYPE=HIDDEN NAME=orig_bioseq_id VALUE=$args{orig_bioseq_id}></INPUT>";
+  }
 
 	$display .= qq~
 	$pHTML
@@ -418,6 +431,7 @@ sub get_clustal_display {
 	<BR>
 	<BR>
 	<INPUT TYPE=HIDDEN NAME=pepseq VALUE=$args{pepseq}>
+  $orig_bioseq_field
 	<INPUT TYPE=SUBMIT VALUE='Align selected sequences'>
 	<INPUT TYPE=SUBMIT VALUE='Restore Original' NAME=restore>
 	</FORM>
