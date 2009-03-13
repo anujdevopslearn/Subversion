@@ -275,9 +275,9 @@ sub getHighlyObservablePeptides {
     ["preceding_residue","PTP.preceding_residue","Pre AA"],
     ["peptide_sequence","PTP.peptide_sequence","Peptide Sequence"],
     ["following_residue","PTP.following_residue","Fol AA"],
-    ["suitability_score","(PTP.detectabilitypredictor_score+(CASE WHEN PTP.peptide_sequence LIKE '\%C\%' THEN PTP.peptidesieve_ICAT ELSE PTP.peptidesieve_ESI END))/2","Suitability Score"],
+    ["suitability_score","(PTP.detectabilitypredictor_score+PTP.peptidesieve_ESI)/2","Suitability Score"],
     ["detectabilitypredictor_score","PTP.detectabilitypredictor_score","Detectability Predictor Score"],
-    ["peptidesieve_score","(CASE WHEN PTP.peptide_sequence LIKE '\%C\%' THEN PTP.peptidesieve_ICAT ELSE PTP.peptidesieve_ESI END)","PeptideSieve Score"],
+    ["peptidesieve_score","PTP.peptidesieve_ESI","PeptideSieve Score"],
     #["parag_score_ESI","PTP.parag_score_ESI","PM ESI"],
     #["parag_score_ICAT","PTP.parag_score_ICAT","PM ICAT"],
   );
@@ -293,15 +293,17 @@ sub getHighlyObservablePeptides {
   my $sql = qq~
      SELECT $columns_clause
      FROM $TBAT_PROTEOTYPIC_PEPTIDE PTP
+     LEFT JOIN $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING PTPM
+          ON ( PTP.proteotypic_peptide_id = PTPM.proteotypic_peptide_id )
      LEFT JOIN $TBAT_PEPTIDE P
           ON ( PTP.matched_peptide_id = P.peptide_id )
      LEFT JOIN $TBAT_BIOSEQUENCE BS
           ON ( PTP.source_biosequence_id = BS.biosequence_id )
      LEFT JOIN $TBAT_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
     WHERE 1 = 1
-	  AND PTP.source_biosequence_id = $biosequence_id
+	  AND PTPM.source_biosequence_id = $biosequence_id
           AND ( PTP.detectabilitypredictor_score >= 0.5 OR peptide_accession IS NOT NULL )
-    ORDER BY PTP.detectabilitypredictor_score+(CASE WHEN PTP.peptide_sequence LIKE '\%C\%' THEN PTP.peptidesieve_ICAT ELSE PTP.peptidesieve_ESI END) DESC
+    ORDER BY PTP.detectabilitypredictor_score+PTP.peptidesieve_ESI DESC
   ~;
 
   #### Fetch the results from the database server
