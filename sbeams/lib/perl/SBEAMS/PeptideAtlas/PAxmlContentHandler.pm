@@ -259,18 +259,13 @@ sub start_element {
 
   }
 
-
-
-  #### Increase the counters and print some progress info
+  #### Increase the counters, commit, and print progress info
   $self->{counter}++;
-#  print $self->{counter}."..." if ($self->{counter} % 100 == 0);
   if ($self->{counter} % 100 == 0) {
-    print $self->{counter}."...";
-    # Assumes we are explicitly committing.
-#    &main::commit_transaction();
+    print $self->{counter} . '...';
+    # explicit commit
+    &main::commit_transaction();
   }
-
-
 
   #### Push information about this element onto the stack
   my $tmp;
