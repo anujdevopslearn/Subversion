@@ -317,10 +317,11 @@ sub fillTable{
                      peptidesieve_ICAT => $paragScoreICAT,
           detectabilitypredictor_score => $indianaScore,
        ssrcalc_relative_hydrophobicity => $ssrcalc{$pepSeq},
-       molecular_weight                => $mw{$pepSeq}, 
-       peptide_isoelectric_point       => $pI{$pepSeq} 
+       molecular_weight                => $mw{$pepSeq},
+       peptide_isoelectric_point       => $pI{$pepSeq},
+                 source_biosequence_id => $acc_to_id->{$proName},
                    );
-    
+
        my $protpep_id = $sbeams->updateOrInsertRow( insert => 1,
                                                table_name  => $TBAT_PROTEOTYPIC_PEPTIDE,
                                                rowdata_ref => \%rowdata,
@@ -339,11 +340,11 @@ sub fillTable{
     # By here we should have a biosequence_id and a proteotypic peptide_id
     # Is it already in the datbase?
     if ( $proteopep_mapping->{$proteopepseq_to_id->{$prevAA . $pepSeq . $endAA} . $acc_to_id->{$proName}} ) {
-#      print "Skipping, this thing is already in the database!";
+      #print "Skipping, this thing is already in the database!\n";
     } else {
       # Insert row in proteotypic_peptide_mapping
 #      proteotypic_peptide_mapping_id     proteotypic_peptide_id     source_biosequence_id     n_genome_locations     n_protein_mappings     n_exact_protein_mappings    
-      
+
       # This conditional stops us from mapping the same exact sequence 2x, but 
       # 1) doesn't cache the results from the initial peptide mapping in the event of different flanking aa's, and
       # 2) doesn't get the info, if available, from the database.
@@ -353,14 +354,13 @@ sub fillTable{
                                                                       faa => $endAA );
       }
 
-        
       my %rowdata=( 
                  source_biosequence_id => $acc_to_id->{$proName},
                 proteotypic_peptide_id => $proteopepseq_to_id->{$prevAA.$pepSeq.$endAA},
                     n_genome_locations => 99,
                     n_protein_mappings => $nmap{$pepSeq},
               n_exact_protein_mappings => $nexmap{$prevAA.$pepSeq.$endAA} );
-    
+
        my $map = $sbeams->updateOrInsertRow( insert => 1,
                                         table_name  => $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING,
                                         rowdata_ref => \%rowdata,
