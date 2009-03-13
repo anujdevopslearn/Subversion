@@ -3180,9 +3180,9 @@ sub displayResultSet {
      
       ShowHTMLTable{
         titles=>$column_titles_ref,
-		types=>$types_ref,
-		widths=>\@precisions,
-		row_sub=>\&returnNextRow,
+	types=>$types_ref,
+	widths=>\@precisions,
+	row_sub=>\&returnNextRow,
         table_attrs=>'WIDTH=675 BORDER=1 CELLPADDING=2 CELLSPACING=2',
         title_formats=>['BOLD'],
         url_keys=>$url_cols_ref,
@@ -3210,9 +3210,9 @@ sub displayResultSet {
 		
       ShowHTMLTable{
         titles=>$column_titles_ref,
-		types=>$types_ref,
-		widths=>\@precisions,
-		row_sub=>\&returnNextRow,
+	types=>$types_ref,
+	widths=>\@precisions,
+	row_sub=>\&returnNextRow,
         table_attrs=>"$table_width BORDER=0 CELLPADDING=2 CELLSPACING=2",
         title_formats=>['FONT COLOR=white,BOLD'],
         url_keys=>$url_cols_ref,
@@ -4193,7 +4193,7 @@ sub readResultSet {
     #### eval the dump
     my $VAR1;
     eval $indata;
-    %{$query_parameters_ref} = %{$VAR1};
+    %{$query_parameters_ref} = %{$VAR1} if $VAR1;
 
     #### If columns titles are there, extract them
     if (exists($query_parameters_ref->{'__column_titles'})) {
