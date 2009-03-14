@@ -77,8 +77,8 @@ Options:
   --biosequence_set_id   Database id of the biosequence_set from which to
                          load sequence attributes.
   --best_probs_from_protxml   Get best initial probs from ProteinProphet file,
-                      not from pepXML files. Use when not using
-                      --masterProteinProphet_file; correct and faster.
+                      not from pepXML files. Use when not combining expts.
+                      using iProphet; correct and faster.
   --old_prot_ids      Fix prot IDs to arbitrary prots, not prots of best prob.
                       Not recommended.
   --splib_filter      Filter out spectra not in spectral library
@@ -839,7 +839,7 @@ sub main {
 
   #### Hard code pgm to use master Protein Prophet file
   #### so we don't need to change calling program in PA pipeline.
-  $OPTIONS{master_ProteinProphet_file} = "${check_dir}/../analysis/interact-all-prot.xml";
+  #$OPTIONS{master_ProteinProphet_file} = "${check_dir}/../analysis/interact-all-prot.xml";
 
 
   #### Set up the Xerces parser
@@ -875,6 +875,7 @@ sub main {
   $CONTENT_HANDLER->{P_threshold} = $P_threshold;
   $CONTENT_HANDLER->{FDR_threshold} = $FDR_threshold;
   $CONTENT_HANDLER->{OPTIONS} = \%OPTIONS;
+  $CONTENT_HANDLER->{prob_list} = []; # list of all final probs for all PSMs.
 
   #### Array of documents to process in order
   my @documents;
@@ -974,7 +975,6 @@ sub main {
   }
   my @identlist_files;
   my %decoy_corrections;
-  my $first_loop = 1;
 
   #### First pass: read or create cache files,
   ####  saving best probabilities for each stripped and unstripped
@@ -1037,6 +1037,8 @@ sub main {
   ####  ProteinProphet information
   print "Second pass over caches\n";
 
+  my $first_loop = 1;
+
   foreach my $document ( @documents ) {
     my $filepath = $document->{filepath};
     $CONTENT_HANDLER->{search_batch_id} = $document->{search_batch_id};
@@ -1055,6 +1057,7 @@ sub main {
     #### If a single master ProteinProphet file was specified, prepare that
     if ($OPTIONS{master_ProteinProphet_file}) {
       if ($first_loop) {
+        print "Hello, Terry!\n";
 	$proteinProphet_filepath = $OPTIONS{master_ProteinProphet_file};
 	unless (-e $proteinProphet_filepath) {
 	  die("ERROR: Specified master ProteinProphet file not found '$proteinProphet_filepath'\n");
@@ -1143,7 +1146,11 @@ sub main {
       P_threshold => $P_threshold,
       FDR_threshold => $FDR_threshold,
       best_prob_per_pep => $CONTENT_HANDLER->{best_prob_per_pep},
+      prob_list => $CONTENT_HANDLER->{prob_list},
     );
+
+    printf ("Length of prob list is %d\n",
+            scalar(@{$CONTENT_HANDLER->{prob_list}}));
 
     $first_loop = 0;
   }
@@ -1151,6 +1158,8 @@ sub main {
 
   #### Create a combined identlist file
   my $combined_identlist_file = "DATA_FILES/PeptideAtlasInput_concat.PAidentlist";
+  my $sorted_identlist_file = "DATA_FILES/PeptideAtlasInput_sorted.PAidentlist";
+
   open(OUTFILE,">$combined_identlist_file") ||
     die("ERROR: Unable to open for write '$combined_identlist_file'");
   close(OUTFILE);
@@ -1184,11 +1193,59 @@ sub main {
     );
   }
 
+  #### If using FDR threshold, calculate corresponding prob threshold
+  #### and truncate PAidentlist accordingly.
+  if ( $CONTENT_HANDLER->{FDR_threshold} ) {
 
-  #### Sort the combined file by peptide
-  my $sorted_identlist_file = "DATA_FILES/PeptideAtlasInput_sorted.PAidentlist";
-  print "INFO: Sorting master list '$combined_identlist_file'\n";
-  system("sort -k 3,3 -k 2,2 $combined_identlist_file >> $sorted_identlist_file");
+    #### Figure out the probability corresponding to the FDR_threshold
+    my @prob_list = @{$CONTENT_HANDLER->{prob_list}};
+    sub decreasing { - ( $a <=> $b ); }  #sort by decreasing probability
+    my @sorted_prob_list =  sort decreasing @prob_list;
+    my $prob_tally = 0.0;
+    my $prob_counter = 0;
+    my $prob_thresh;
+    my $fdr_thresh = $CONTENT_HANDLER->{FDR_threshold};
+    my $fdr;
+    foreach my $prob ( @sorted_prob_list ) {
+      $prob_tally += $prob;
+      $prob_counter++;
+      #print "$prob $prob_counter $prob_tally\n";
+      $fdr = 1 - ($prob_tally / $prob_counter);
+      if ( $fdr > $fdr_thresh ) {
+        $prob_thresh = $prob;
+        last;
+      }
+    }
+    print "${prob_counter} prob $prob_thresh corresponds to FDR $fdr_thresh.\n"; 
+
+    #### Sort the combined file, in place, by probability
+    print "INFO: Sorting master list '$combined_identlist_file' by probability\n";
+    my $tmp_filename = "PeptideAtlasInput_concat.PAidentlist.tmp";
+    system("sort -r -k 9,9 $combined_identlist_file > $tmp_filename");
+    #system("/bin/mv $tmp_filename $combined_identlist_file");
+
+    #### Read the file and copy the lines back out until threshold
+    open ( IDENTLIST, $tmp_filename );
+    open ( TRUNCATED_IDENTLIST, ">$combined_identlist_file" );
+    my $i = 0;
+    my $prob;
+    while (my $line = <IDENTLIST>) {
+      if ($i >= $prob_counter) {
+        last;
+      }
+      print TRUNCATED_IDENTLIST $line;
+      $i++;
+      chomp($line);
+      my @fields = split(/\s+/, $line);
+      $prob = $fields[8];
+    }
+    print "Identlist file truncated after probability $prob.\n";
+    
+  }
+
+  #### Create a copy of the combined file sorted by peptide.
+  print "INFO: Creating copy of master list sorted by peptide\n";
+  system("sort -k 3,3 -k 2,2 $combined_identlist_file > $sorted_identlist_file");
 
 
   #### Open APD format TSV file for writing
@@ -1223,7 +1280,7 @@ sub main {
 
   #### Open the combined, sorted identlist file
   open(INFILE,$sorted_identlist_file) ||
-    die("ERROR: Unable to open for write '$sorted_identlist_file'");
+    die("ERROR: Unable to open for reading '$sorted_identlist_file'");
 
 
   #### Loop through all rows, grouping by peptide sequence, writing
@@ -1390,6 +1447,7 @@ sub writeIdentificationListFile {
   ($best_prob_per_pep = $args{'best_prob_per_pep'})
     || print "INFO: writeIdentificationListFile will get best prob ".
              "per pep from protXML info\n";
+  my $prob_list = $args{'prob_list'};
 
   print "Writing output combined cache file '$output_file'...\n";
 
@@ -1543,7 +1601,8 @@ sub writeIdentificationListFile {
      (sort by_decreasing_probability @{$pep_identification_list});
 
   #### Truncate by FDR threshold, if desired.
-  if (defined $FDR_threshold) {
+  #### 03/13/09: superceded. Obsolete.
+  if (defined $FDR_threshold && 0) {
     my $counter = 0;
     my $prob_sum = 0.0;
     my $fdr;
@@ -1569,8 +1628,9 @@ sub writeIdentificationListFile {
   foreach my $identification ( @{$pep_identification_list} ) {
     my $probability = $identification->[8];
     if ((defined ($P_threshold) && $probability >= $P_threshold) ||
-        (defined ($FDR_threshold))) {
+        (defined ($FDR_threshold) && $probability >= 0.4 )) {
       print OUTFILE join("\t",@{$identification})."\n";
+      push (@{$prob_list}, $probability);
       $counter++;
       print "$counter... " if ($counter % 1000 == 0);
     }
@@ -2573,8 +2633,7 @@ sub readIdentificationListTemplateFile {
   print "\n";
   close(INFILE);
 
-  print "  - read ".scalar(@{$pep_identification_list})." peptides
-from identification list template file\n";
+  print "  - read ".scalar(@{$pep_identification_list})." peptides from identification list template file\n";
 
   return(1);
 
