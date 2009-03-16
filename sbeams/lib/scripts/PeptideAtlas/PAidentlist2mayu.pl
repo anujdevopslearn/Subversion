@@ -93,7 +93,7 @@ if ($protXML_file) {
         foreach $peptide (keys %pepProtHash) {
           if ( defined $globalPepProtHash{$peptide}  ) {
             print STDERR "Peptide $peptide of group $groupNumber".
-                  " already seen in prevous protein group.\n";
+                  " already seen in previous protein group.\n" if $verbose;
           } else {
             #print STDERR "Storing $peptide in global hash.\n" if $verbose;
             $globalPepProtHash{$peptide} = $pepProtHash{$peptide};
