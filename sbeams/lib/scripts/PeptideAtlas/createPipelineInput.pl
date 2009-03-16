@@ -839,7 +839,7 @@ sub main {
 
   #### Hard code pgm to use master Protein Prophet file
   #### so we don't need to change calling program in PA pipeline.
-  #$OPTIONS{master_ProteinProphet_file} = "${check_dir}/../analysis/interact-all-prot.xml";
+  $OPTIONS{master_ProteinProphet_file} = "${check_dir}/../analysis/interact-all-prot.xml";
 
 
   #### Set up the Xerces parser
