@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/tools64/bin/perl
 
 use CGI qw/:standard/;
 use CGI::Pretty;
@@ -7,11 +7,35 @@ use Batch;
 use SetupPipeline;
 use Site;
 use strict;
+use lib "../../lib/perl";
+
+use vars qw ($sbeams $sbeamsMOD $utilities $q $cgi $log $verbose $testonly
+             $current_contact_id $current_username
+            );
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::SolexaTrans::Tables;
+
+use SBEAMS::SolexaTrans::Solexa;
+use SBEAMS::SolexaTrans::SolexaUtilities;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::SolexaTrans;
+$utilities = new SBEAMS::SolexaTrans::SolexaUtilities;
+$utilities->setSBEAMS($sbeams);
+
+$sbeamsMOD->setSBEAMS($sbeams);
+
+$cgi = $q;
 
 # Create the global CGI instance
-our $cgi = new CGI;
+#our $cgi = new CGI;
 
-if ($cgi->param('name')) {
+exit unless ($current_username = $sbeams->Authenticate());
+
+if ($cgi->param('jobname')) {
     canceljob();
 } else {
     form();
@@ -21,16 +45,17 @@ if ($cgi->param('name')) {
 # Print the show job results form
 ####
 sub form {
+        $sbeams->output_mode('html'); 
+        $sbeamsMOD->printPageHeader();
 
-    print $cgi->header;    
 	site_header("Cancel Job");
 	
-	print h1("Cancel Job"),
-	      start_form(-method=>'GET'),
-	      p("Enter the job name:"),
-	      p(textfield("name", "", 30)),
-	      submit("submit", "Cancel Job"),
-	      end_form;
+	print h1("Cancel Job");
+        print start_form(-method=>'GET', -name=>'Cancel Job', -action=>'cancel.cgi');
+	print p("Enter the job name:");
+        print p(textfield("jobname", "", 30));
+	print submit("submit", "Cancel Job");
+	print end_form;
 
     print <<'END';
 <h2>Quick Help</h2>
@@ -42,6 +67,7 @@ know the job name to do so.
 END
 	
 	site_footer();
+        $sbeamsMOD->printPageFooter();
 }
 
 #### Subroutine: canceljob
@@ -50,38 +76,60 @@ END
 sub canceljob {
     my ($job, $id);
 
-	my $jobname = $cgi->param('name');
-	$jobname =~ s/^\s|\s$//g;
+    # job is the full path of the job (/solexa/hood/<project name>/SolexaTrans/<job name>/
+    my $jobname = $cgi->param('jobname') || error("No Job supplied");
+    $jobname =~ s/^\s|\s$//g;
+
+    grep(/stp-ssid[0-9]{1,6}-[a-zA-Z0-9]{8}/, $jobname) ||
+	error("Invalid job name");
 	
-	grep(/[a-z]{1,6}-[a-zA-Z0-9]{8}/, $jobname) ||
-		error("Invalid job name");
+    my $analysis_id = $utilities->check_sbeams_job('jobname' => $jobname);
+    error("Could not find a job with that name in SolexaTrans") unless $analysis_id;
+    my $path = $utilities->get_sbeams_job_output_directory('jobname' => $jobname);
+
+    opendir(DIR, "$path") ||
+       error("Cannot find that job name");
+    closedir(DIR);
 	
-	opendir(DIR, "$RESULT_DIR/$jobname") ||
-	    error("The results for that job name no longer exist");
-	closedir(DIR);
-	
-	open(ID, "$RESULT_DIR/$jobname/id") ||
+    open(ID, "$path/$jobname/id") ||
 	    error("That job is no longer running");
-	$job = new Batch;
+    $id = <ID>;
+    close(ID);
+    if (!$id) { error("No PID in job ID"); }
+    $job = new Batch;
     $job->type($BATCH_SYSTEM);
-	$job->name($cgi->param('name'));
-	$job->id(<ID>);
-	close(ID);
-	$job->cancel ||
+    $job->name($jobname);
+    $job->id($id);
+    $job->cancel ||
 	    error("Couldn't cancel job");
-	unlink("$RESULT_DIR/$jobname/id");
-	rename("$RESULT_DIR/$jobname/indexerror.html", "$RESULT_DIR/$jobname/index.html");
-	open(ERR, ">$RESULT_DIR/$jobname/$jobname.err") || error("Couldn't write error file");
-    print ERR "Job canceled by user";
+    unlink("$path/$jobname/id");
+    rename("$path/$jobname/indexerror.html", "$path/$jobname/index.html") || 
+            error("couldn't rename $path/$jobname/indexerror.html to $path/$jobname/index.html");
+    open(ERR, ">>$path/$jobname/$jobname.err") || error("Couldn't write artificial out file $path/$jobname/$jobname.err");
+    print ERR "Job canceled by user\n";
+
+    my $rowdata_ref = {
+                         status => 'CANCELED',
+                         status_time => 'CURRENT_TIMESTAMP',
+                      };
+    print ERR "updating job status in db with\n";
+    $sbeams->updateOrInsertRow(
+                                 table_name => $TBST_SOLEXA_ANALYSIS,
+                                 rowdata_ref => $rowdata_ref,
+                                 PK => 'solexa_analysis_id',
+                                 PK_value => $analysis_id,
+                                 return_PK=>0,
+                                 update=>1,
+                                 add_audit_parameters=>1,
+                               );
     close(ERR);
-	
-	print $cgi->header;    
-	site_header("Cancel Job");
-	
-	print h1("Cancel Job"),
-	      p("Job successfully canceled: <strong>$jobname</strong>");
-	
-	site_footer();
+    $sbeamsMOD->printPageHeader();
+
+    
+    print h1("Cancel Job"),
+    p("Job successfully canceled: <strong>$jobname</strong>");
+    print "<div style=\"width:80%;\">&nbsp;</div>\n";
+    $sbeams->printPageFooter();
 }
 
 #### Subroutine: error
@@ -90,14 +138,14 @@ sub canceljob {
 sub error {
     my ($error) = @_;
 
-	print $cgi->header;    
-	site_header("Cancel Job");
+        $sbeamsMOD->printPageHeader();
 	
-	print h1("Cancel Job"),
-	      h2("Error:"),
-	      p($error);
+	print h1("Cancel Job");
+
+	print h2("Error:");
+	print p($error);
 	
-	site_footer();
+        $sbeamsMOD->printPageFooter();
 	
 	exit(1);
 }

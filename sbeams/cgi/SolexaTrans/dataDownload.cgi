@@ -262,7 +262,6 @@ sub handle_request {
   my $project_tag = 'NONE';
   my $project_status = 'N/A';
   my $pi_contact_id;
-  my (%array_requests, %array_scans, %quantitation_files);
 
   ## Need to add a MainForm in order to facilitate proper movement between projects.  Otherwise some cgi params that we don't want might come through.
   print qq~ <FORM METHOD="post" NAME="MainForm">
@@ -276,305 +275,15 @@ sub handle_request {
   $sbeams->printUserContext();
   $current_contact_id = $sbeams->getCurrent_contact_id();
 
-  print_data_download_tab(ref_parameters=>$ref_parameters); 
+  if ($parameters{slimseq_sample_id}) {
+    print_detailed_download_tab(ref_parameters=>$ref_parameters);
+  } else {
+    print_data_download_tab(ref_parameters=>$ref_parameters); 
+  }
   return;
 
 }# end handle_request
 
-###############################################################################
-# print_project_info
-###############################################################################
-sub print_project_info {
-  my %args = @_;
-  my $SUB_NAME = "print_project_info";
-  
-	my $parameters_ref = $args{'parameters_ref'} || die "ERROR[$SUB_NAME] No parameters passed\n";
-	my %parameters = %{$parameters_ref};
- 
-
-  ## Define standard variables
-  my ($sql, @rows);
-  my $current_contact_id = $sbeams->getCurrent_contact_id();
-  my $project_id = $sbeams->getCurrent_project_id();
-  my ($project_name, $project_tag, $project_status, $project_desc);
-  my ($pi_first_name, $pi_last_name, $pi_contact_id, $username);
-
-  #### Get information about the current project from the database
-  $sql = qq~
-	SELECT P.name,P.project_tag,P.project_status,P.description,C.first_name,C.last_name,C.contact_id,UL.username
-	  FROM $TB_PROJECT P
-	  JOIN $TB_CONTACT C ON ( P.PI_contact_id = C.contact_id )
-	  JOIN $TB_USER_LOGIN UL ON ( UL.contact_id = C.contact_id)
-	WHERE P.project_id = '$project_id'
-  ~;
-  @rows = $sbeams->selectSeveralColumns($sql);
-
-  if (@rows) {
-    ($project_name,$project_tag,$project_status,$project_desc,$pi_first_name,$pi_last_name,$pi_contact_id,$username) = @{$rows[0]};
-  }
-
-  #### Print out some information about this project
-  print qq~
-
-<H1>Summary of $project_name (ID \#$project_id):</H1>
-<B>
-<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">[Edit Project Description]</A>
-</B><BR>
-
-<TABLE WIDTH="100%" BORDER=0>
-<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
-    <TD COLSPAN="2" WIDTH="100%"><B>PI: </B>$pi_first_name $pi_last_name</TD></TR>
-<TR><TD></TD><TD COLSPAN="2" WIDTH="100%"><B>Status:</B> $project_status</TD></TR>
-<TR><TD></TD><TD COLSPAN="2"><B>Project Tag:</B> $project_tag</TD></TR>
-<TR><TD></TD><TD COLSPAN="2"><B>Description:</B>$project_desc</TD></TR>
-  ~;
-
-
-#######################################################################################
-#### Check for any Conditions that match this project ID
- 
- my $n_condition_count = '';
- 
- if ($project_id > 0) {
- 	$sql = qq~
-		SELECT count(condition_id)
-		FROM $TBST_COMPARISON_CONDITION  
-		WHERE project_id = $project_id
-		AND record_status != 'D'
-		~;
-	($n_condition_count) = $sbeams->selectOneColumn($sql);
-}
-
-print qq~
-<TR><TD></TD><TD COLSPAN="2"><B>Number Conditions:  $n_condition_count</B></TD></TR>
-<TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD></TR>
-~;
-########################################################################################
-#### Count the number of solexa runs for this project
-my $n_solexa_runs = 0;
-
-if ($project_id > 0) {
-	$sql = qq~ 	SELECT count(sr.solexa_run_id)
-		   	FROM $TBST_SOLEXA_RUN sr
-		   	JOIN $TBST_SOLEXA_SAMPLE ss ON (sr.solexa_sample_id = ss.solexa_sample_id)
-		   	WHERE ss.project_id = $project_id 
-			AND sr.record_status != 'D'
-			AND ss.record_status != 'D'
-			
-		~;
-	($n_solexa_runs) = $sbeams->selectOneColumn($sql);	
-}  
-
-print qq~
-<TR><TD></TD><TD COLSPAN="2"><B>Number Solexa runs:  $n_solexa_runs</B></TD></TR>
-<TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD></TR>
-~;
-########################################################################################
-#print out the final links and html to complete the inital summary table
-print qq~
-
-<TR><TD></TD><TD COLSPAN="2"><B>Access Privileges:</B><A HREF="$CGI_BASE_DIR/ManageProjectPrivileges">[View/Edit]</A></TD></TR>    
-<TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD></TR>
-</TABLE>
-$LINESEPARATOR 
-<br/>
-
-~;	
-	
- return ($n_condition_count, $n_solexa_runs);
-}
-
-###############################################################################
-# print_summary_tab
-###############################################################################
-sub print_summary_tab {
-  my %args = @_;
-  my $SUB_NAME = "print_summary_tab";
-  
-	my $parameters_ref = $args{'parameters_ref'} || die "ERROR[$SUB_NAME] No parameters passed\n";
-	my %parameters = %{$parameters_ref};
-  my $apply_action=$parameters{'action'} || $parameters{'apply_action'} || 'QUERY';
-
-	## HACK: If set_current_project_id is a parameter, we do a 'QUERY' instead of a 'VIEWRESULTSET'
-	if ($parameters{set_current_project_id}) {$apply_action = 'QUERY';}
-
-  ## Define standard variables
-  my ($sql, @rows);
- # my $current_contact_id = $sbeams->getCurrent_contact_id();
-  #my (%array_requests, %array_scans, %quantitation_files);
-  my $project_id = $sbeams->getCurrent_project_id();
-  my ($project_name, $project_tag, $project_status, $project_desc);
- # my ($pi_first_name, $pi_last_name, $pi_contact_id, $username);
-
-#print out some project info and return the number of hits for the following data types
- my ($n_condition_count, $n_solexa_runs) = print_project_info(parameters_ref =>$parameters_ref);
-########################################################################################
-### Set some of the usful vars
-my %resultset = ();
-my $resultset_ref = \%resultset;
-my %max_widths;
-my %rs_params = $sbeams->parseResultSetParams(q=>$q);
-my $base_url = "$CGI_BASE_DIR/SolexaTrans/dataDownload.cgi";
-my $manage_table_url = "$CGI_BASE_DIR/SolexaTrans/ManageTable.cgi?TABLE_NAME=ST_";
-
-my %url_cols = ();
-my %hidden_cols  =();
-my $limit_clause = '';
-my @column_titles = ();
-
-
-#### If the apply action was to recall a previous resultset, do it
-  if ($apply_action eq "VIEWRESULTSET"  && $apply_action ne 'QUERY') {
-   	
-	$sbeams->readResultSet(
-     	 resultset_file=>$rs_params{set_name},
-     	 resultset_ref=>$resultset_ref,
-     	 query_parameters_ref=>\%parameters,
-    	  resultset_params_ref=>\%rs_params,
-   	 );
-	 
-  }
-
-########################################################################################
-#### Check to see what data should be displayed on the summary section of the page.  
-####If there is more then one source the script will default to the condition summary first
-
-
-my $default_data_type = "CONDITION";
-
-my %count_types = ( CONDITION 	=> { 	COUNT => $n_condition_count,
-		   			POSITION => 0,
-				   },
-		   
-		   SOLEXA_RUN		=> {	COUNT => $n_solexa_runs,
-		   			POSITION => 1,
-		   		   }	
-		   );
-
-
-my @tabs_names = make_tab_names(%count_types);
-
-
-my ($display_type, $selected_tab_numb) = pick_data_to_show (default_data_type   => $default_data_type, 
-							    tab_types_hash 	=> \%count_types,
-							    param_hash		=> \%parameters,
-							   );
-							
-							
-display_sub_tabs(	display_type 	=> $display_type,
-			tab_titles_ref	=> \@tabs_names,
-			page_link	=> "dataDownload.cgi",
-			selected_tab	=> $selected_tab_numb
-	        );
-		
-		
-
-
-#########################################################################################	
-#### Print the SUMMARY DATA OUT
-
-
-
-###############################################################################
-###Print data for the expression condititons
-	
-	if($display_type eq 'CONDITION') {
-		
-		
-		$sql = qq~
-		   		SELECT condition_id, condition_name, comment
-				FROM $TBST_COMPARISON_CONDITION 
-				WHERE project_id = $project_id
-				AND record_status != 'D'
-			~;
-		
-		 %url_cols = (
-		 	 	'condition_id' => "$CGI_BASE_DIR/SolexaTrans/GetExpression?condition_id=\%V",
-			     );
-
-  		 %hidden_cols = ('solexa_run_id' => 1,
-		     		);
-	
-	}elsif($display_type eq 'SOLEXA_RUN') {
-		
-		$sbeams_solexa_groups = new SBEAMS::SolexaTrans::Solexa_file_groups;
-		$sbeams_solexa_groups->setSBEAMS($sbeams);				#set the sbeams object into the solexa_groups_object
-		
-		 $sql = $sbeams_solexa_groups->get_solexa_runs_sql(project_id    => $project_id, );
-		
-		
-		
-		 %url_cols = (
-				'Sample_Tag'	=> "${manage_table_url}solexa_sample&solexa_sample_id=\%3V",
-			     );
-
-  		 
-		 %hidden_cols = (
-				);
-	
-	}else{
-		return undef;
-	}
-
-#########################################################################
-####  Actually print the data 	
-
- 	 
- 	 #### Build ROWCOUNT constraint
-	  $parameters{row_limit} = 5000
-   	 unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
-  	   $limit_clause = $sbeams->buildLimitClause(row_limit=>$parameters{row_limit});
-
-
-	#### If the action contained QUERY, then fetch the results from
-	#### the database
-	if ($apply_action =~ /QUERY/i) {
-		
-    		
-	#### Fetch the results from the database server
-    		$sbeams->fetchResultSet(sql_query=>$sql,
-					resultset_ref=>$resultset_ref,
-					);
-
-	#### Store the resultset and parameters to disk resultset cache
-		$rs_params{set_name} = "SETME";
-		$sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
-					resultset_ref=>$resultset_ref,
-					query_parameters_ref=>\%parameters,
-					resultset_params_ref=>\%rs_params,
-					query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
-					);
- 	}
-	
-	
-	#### Set the column_titles to just the column_names
-	@column_titles = @{$resultset_ref->{column_list_ref}};
-	
-	
-	
-	
-	#### Display the resultset
-	$sbeams->displayResultSet(resultset_ref=>$resultset_ref,
-				  query_parameters_ref=>\%parameters,
-				  rs_params_ref=>\%rs_params,
-				  url_cols_ref=>\%url_cols,
-				  hidden_cols_ref=>\%hidden_cols,
-				  max_widths=>\%max_widths,
-				  column_titles_ref=>\@column_titles,
-				  base_url=>$base_url
-				 );
-
-	#### Display the resultset controls
-	$sbeams->displayResultSetControls(resultset_ref=>$resultset_ref,
-					  query_parameters_ref=>\%parameters,
-					  rs_params_ref=>\%rs_params,
-					  base_url=>$base_url,
-					  );
-	
-
-	
-
-}
 
 ###############################################################################
 # display_sub_tabs  
@@ -756,8 +465,7 @@ sub print_data_download_tab {
 		
 			my $slimseqs = join ",", sort keys %unique_slimseq_sample_ids;
 		
-			$sql = $sbeams_solexa_groups->get_all_sample_info_sql(slimseq_sample_ids => $slimseqs );
-	$log->error("sql for get_all_sample_info $sql");	
+			$sql = $sbeams_solexa_groups->get_download_info_sql(slimseq_sample_ids => $slimseqs );
 			
 			my $tab_results = $sbeams_solexa_groups->export_data_sample_info(sql =>$sql);
 
@@ -800,21 +508,28 @@ sub print_data_download_tab {
     
           my $solexa_info =<<"    END";
 		<BR>
-		<TABLE WIDTH="50%" BORDER=0>
+		<TABLE WIDTH="75%" BORDER=0>
 		  <TR>
 		   <TD>
         <B>
         This page shows the<FONT COLOR=RED> $n_solexa_samples </FONT> Solexa
         samples in this project.  Use the checkboxes underneath the individual
         file types to select one or more files for download, then press the 
-        GET_SOLEXA_FILES button at the bottom of the page.  The checkboxes
+        <span style="white-space: nowrap">"GET SOLEXA FILES"</span> button at the bottom of the page.  The checkboxes
         in the column headings can be used to toggle all the checkboxes for a
         particular file type.  All selected files will be packaged into a zip
-        archive, to make the download easier.
+        archive, to make the download easier.<br><br>
+
+        ELAND files are VERY LARGE.  It is recommended that you use the 'Explore' link to 
+        locate these files on the shared filesystem and manipulate them from that location.<br><br>
 
         Each Flow Cell has a summary file that includes information for all
         of the lanes of that Flow Cell.  Therefore, if samples below have the
-        same Flow Cell, the Summary 'View' link will point to the same file.
+        same Flow Cell, the Summary 'View' link will point to the same file.<br><br>
+
+        The "Explore" link only works in Internet Explorer or if you have an addon for
+        Firefox called "IE Tab" that is available <a href="https://addons.mozilla.org/en-US/firefox/addon/1419">here</a>.
+        If you have that addon, right click on the link and click "Open Link in IE Tab".
         </B> 
        </TD></TR>
        <TR><TD></TD></TR>
@@ -859,9 +574,9 @@ sub print_data_download_tab {
 	 $sbeams_solexa_groups = new SBEAMS::SolexaTrans::Solexa_file_groups;
 
 	 @downloadable_file_types = $sbeamsMOD->get_SOLEXA_FILES;
-	 @default_file_types = qw(ELAND);  #default file type to turn on the checkbox
+	 @default_file_types = qw();  #default file type to turn on the checkbox
 
-	 @display_files = qw(ELAND SUMMARY);
+	 @display_files = qw(RawDataPath SUMMARY ELAND);
 		
          # set the sbeams object into the solexa_groups_object
 	 $sbeams_solexa_groups->setSBEAMS($sbeams);
@@ -997,11 +712,368 @@ sub print_data_download_tab {
 	
 	
     #### Display the resultset controls
-    $sbeams->displayResultSetControls(resultset_ref=>$resultset_ref,
-		    		      query_parameters_ref=>\%parameters,
-				      rs_params_ref=>\%rs_params,
-				      base_url=>$base_url,
-				     );
+#    $sbeams->displayResultSetControls(resultset_ref=>$resultset_ref,
+#		    		      query_parameters_ref=>\%parameters,
+#				      rs_params_ref=>\%rs_params,
+#				      base_url=>$base_url,
+#				     );
+	
+}
+
+###############################################################################
+# print_detailed_download_tab
+###############################################################################
+sub print_detailed_download_tab {
+  	my %args = @_;
+  
+  
+  	my $resultset_ref = '';
+	my @columns = ();
+	my $sql = '';
+	
+	my %resultset = ();
+	my $resultset_ref = \%resultset;
+	my %max_widths;
+	my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+	my $base_url = "$CGI_BASE_DIR/SolexaTrans/dataDownload.cgi";
+	my $manage_table_url = "$CGI_BASE_DIR/SolexaTrans/ManageTable.cgi?TABLE_NAME=ST_";
+
+	my %url_cols      = ();
+	my %hidden_cols   = ();
+	my $limit_clause  = '';
+	my @column_titles = ();
+  	
+	my ($display_type, $selected_tab_numb);
+  	
+	my $solexa_info;	
+	my @downloadable_file_types = ();
+	my @default_file_types      = ();
+	my @display_files  = ();
+  	
+  	#$sbeams->printDebuggingInfo($q);
+	#### Process the arguments list
+ 	my $ref_parameters = $args{'ref_parameters'} || die "ref_parameters not passed";
+	my %parameters = %{$ref_parameters};
+	my $project_id = $sbeams->getCurrent_project_id();
+	
+	my $apply_action=$parameters{'action'} || $parameters{'apply_action'} || 'QUERY';
+
+	## HACK: If set_current_project_id is a parameter, we do a 'QUERY' instead of a 'VIEWRESULTSET'
+	if ($parameters{set_current_project_id}) {
+		$apply_action = 'QUERY';
+	}
+
+  ###############################################################################
+  ##First check to see if the user already has selected some data to download
+	
+        #come here if the user has chosen some files to download
+	if (exists $parameters{Get_Data}){			
+		
+                #value of the button submiting Solexa files to be zipped
+		if ( $parameters{Get_Data} eq 'GET_SOLEXA_FILES') {			
+		
+			$sbeams_solexa_groups = new SBEAMS::SolexaTrans::Solexa_file_groups;
+                        #set the sbeams object into the solexa_groups_object
+			$sbeams_solexa_groups->setSBEAMS($sbeams);			
+		
+                        #Get the date with a command line call Example 2004-07-16
+			my $date = `date +%F`;						
+			$date =~ s/\s//g;						
+		
+                        #make the full file name with the process_id on the end to keep it some what unique 	
+			my $out_file_name    = "${date}_solexa_sample_zip_request_$$.zip";	
+		
+			my @files_to_zip = collect_files(parameters => \%parameters);
+                        $log->error("files to zip after collect ".join(", ",@files_to_zip));
+   
+                        ##########################################################################
+                        ### Print out some nice table showing what is being exported
+		
+			my $slimseqs_id_string =  $parameters{get_all_files};
+		
+                        #remove any redundant sample_ids 
+			my @slimseq_sample_ids = split /,/, $slimseqs_id_string;
+			my %unique_slimseq_sample_ids = map {split /__/} @slimseq_sample_ids;
+			my $slimseqs = join ",", sort keys %unique_slimseq_sample_ids;
+		
+			$sql = $sbeams_solexa_groups->get_download_info_sql(slimseq_sample_ids => $slimseqs );
+			
+			my $tab_results = $sbeams_solexa_groups->export_data_sample_info(sql =>$sql);
+
+                        #collect the files and zip and print to stdout
+			if (@files_to_zip) {						
+				zip_data(files 		=> \@files_to_zip,
+				         zip_file_name	=> $out_file_name,
+					 parameters 	=> \%parameters,
+			                 solexa_groups_obj => $sbeams_solexa_groups,
+					 sample_info	=> $tab_results,
+					 );
+				
+   			}	
+    		
+			exit;
+			
+		}
+	
+        ###############################################################################
+        ##Start looking for data that can be downloaded for this project
+	
+        #if user has not selected data to download come here
+	}else{										
+	  ###Get some summary data for all the data types that can be downloaded	
+	  #### Count the number of solexa runs for this project
+	  my $n_solexa_samples = 0;
+		
+	  if ($project_id > 0) {
+	     my $sql = qq~ 
+		      SELECT count(ss.solexa_sample_id)
+		  	FROM $TBST_SOLEXA_SAMPLE ss 
+		  	WHERE ss.project_id = $project_id 
+      			AND ss.record_status <> 'D'
+			~;
+	    ($n_solexa_samples) = $sbeams->selectOneColumn($sql);	
+ 	  }
+ 
+          my $solexa_info =<<"    END";
+		<BR>
+		<TABLE WIDTH="75%" BORDER=0>
+		  <TR>
+		   <TD>
+        <B>
+        Use the checkboxes underneath the individual
+        file types to select one or more files for download, then press the 
+        <span style="white-space: nowrap">"GET SOLEXA FILES"</span> button at the bottom of the page.  The checkboxes
+        in the column headings can be used to toggle all the checkboxes for a
+        particular file type.  All selected files will be packaged into a zip
+        archive, to make the download easier.<br><br>
+
+        ELAND files are VERY LARGE.  It is recommended that you use the 'Explore' link to 
+        locate these files on the shared filesystem and manipulate them from that location.<br><br>
+
+        Each Flow Cell has a summary file that includes information for all
+        of the lanes of that Flow Cell.  Therefore, if samples below have the
+        same Flow Cell, the Summary 'View' link will point to the same file.<br><br>
+
+        The "Explore" link only works in Internet Explorer or if you have an addon for
+        Firefox called "IE Tab" that is available <a href="https://addons.mozilla.org/en-US/firefox/addon/1419">here</a>.
+        If you have that addon, right click on the link and click "Open Link in IE Tab".
+        </B> 
+       </TD></TR>
+       <TR><TD></TD></TR>
+		</TABLE>
+    END
+
+	
+	#############
+	###Add different types of data to download
+	
+        #################################################################################
+        ##Set up the hash to control what sub tabs we might see
+	
+	my $default_data_type = 'SOLEXA_SAMPLE';
+
+	my %count_types = ( SOLEXA_SAMPLE	=> {	COUNT => $n_solexa_samples,
+		   					POSITION => 0,
+		   		   		}	
+  	  		);
+
+	my @tabs_names = make_tab_names(%count_types);
+
+	($display_type, $selected_tab_numb) =	pick_data_to_show (default_data_type    => $default_data_type, 
+				    		   		   tab_types_hash 	=> \%count_types,
+				    		   		   param_hash		=> \%parameters,
+							   	  );
+
+	display_sub_tabs(	display_type  	=> $display_type,
+	             		tab_titles_ref	=>\@tabs_names,
+	                  	page_link	    => 'dataDownload.cgi',
+	                  	selected_tab	  => $selected_tab_numb,
+                     		parent_tab  	  => $parameters{'tab'},
+                   );
+	
+      #####################################################################################
+      ### Show the data that can be downloaded
+      if ($display_type eq 'SOLEXA_SAMPLE'){
+	 print $solexa_info;
+
+	 $sbeams_solexa_groups = new SBEAMS::SolexaTrans::Solexa_file_groups;
+
+	 @downloadable_file_types = $sbeamsMOD->get_SOLEXA_FILES;
+	 @default_file_types = qw();  #default file type to turn on the checkbox
+
+	 @display_files = qw(RawDataPath SUMMARY ELAND);
+		
+         # set the sbeams object into the solexa_groups_object
+	 $sbeams_solexa_groups->setSBEAMS($sbeams);
+		
+         # return a sql statement to display all the arrays for a particular project
+	 $sql = $sbeams_solexa_groups->get_slimseq_sample_sql(project_id    => $project_id, 
+                                                              constraint => "and ss.slimseq_sample_id = ".$parameters{"slimseq_sample_id"},
+                                                             );
+						     			
+	 %url_cols = ( 'Sample_Tag'	=> "${manage_table_url}solexa_sample&slimseq_sample_id=\%0V",
+				          );
+  		 
+	 %hidden_cols = ( 
+		    	 );
+	
+	
+      }else{
+			print "<h2>Sorry No Data to download for this project</h2>" ;
+			return;
+      } 
+    } # end else parameters{Get_Data}
+	
+    ###################################################################
+    ## Print the data 
+		
+    unless (exists $parameters{Get_Data}) {
+      # start the form to download solexa files
+      print $q->start_form(-name =>'download_filesForm');
+				     			
+      #make sure to include the name of the tab we are on
+      print $q->hidden(-name=>'tab',									
+  	      	       -value=>'parameters{tab}',
+		      );
+      ###################################################################
+      ## Make a small table to show some checkboxes so a user can click once to turn
+      ##  on or off all the files in a particular group	
+      print "<br>";
+    }
+
+    # get field->checkbox HTML for selecting files for download form
+    my $cbox = $sbeamsMOD->get_file_cbox( box_names => \@downloadable_file_types, 
+                                          default_file_types => \@default_file_types );
+
+    ###################################################################
+    #### If the apply action was to recall a previous resultset, do it
+    if ($apply_action eq "VIEWRESULTSET") {
+  	$sbeams->readResultSet(
+    	 	resultset_file=>$rs_params{set_name},
+     	 	resultset_ref=>$resultset_ref,
+     	 	query_parameters_ref=>\%parameters,
+    	  	resultset_params_ref=>\%rs_params,
+   	 	);
+    } else {
+	# Fetch the results from the database server
+        $sbeams->fetchResultSet( sql_query => $sql,
+	                         resultset_ref => $resultset_ref );
+
+#        $sbeams->addResultsetNumbering( rs_ref       => $resultset_ref, 
+#                                        colnames_ref => \@column_titles,
+#                                        list_name => 'Flow Cell Lane Number' );	
+  
+ 
+      ####################################################################
+      ## Need to Append data onto the data returned from fetchResultsSet in order 
+      # to use the writeResultsSet method to display a nice html table
+  	
+      if ($display_type eq 'SOLEXA_SAMPLE' &! exists $parameters{Get_Data}) {
+        append_new_data( resultset_ref => $resultset_ref, 
+                        #append on new values to the data_ref foreach column to add
+		        file_types    => \@downloadable_file_types,
+			default_files => \@default_file_types,
+                        display_files => \@display_files,       #Names for columns which will have urls to pop open files
+                        file_checkbox => $cbox
+		       );
+      }
+  
+      ###################################################################
+
+
+      #### Set the column_titles to just the column_names
+      @column_titles = @{$resultset_ref->{column_list_ref}};
+
+      #data is stored as an array of arrays from the $sth->fetchrow_array
+      # each row is a row from the database holding an aref to all the values
+      # this retrieves one row, so the first row is all we need to retrieve
+      my $aref = $$resultset_ref{data_ref}->[0];
+      my %new_results;
+      my %new_url_cols = ();
+      my %new_hidden_cols = ();
+      my @new_column_titles = ('Parameter', 'Value');
+      my %color_scheme = ();
+
+      $new_results{precisions_list_ref} = [50,50];
+      $new_results{column_list_ref} = \@new_column_titles;
+
+      for (my $i=0; $i < scalar (@$aref); $i++) {
+#      print $column_titles[$i]." val ".$aref->[$i]."<br>";
+        my @info = ($column_titles[$i],$aref->[$i]);
+        push(@{$new_results{data_ref}}, \@info);
+      }
+
+      my @row_color_list = ("#E0E0E0","#C0D0C0");
+      %color_scheme = (
+                        header_background => '#0000A0',
+                        change_n_rows => 1,
+                        color_list => \@row_color_list,
+                      );
+
+  
+      $log->info( "writing" );
+      #### Store the resultset and parameters to disk resultset cache
+      $rs_params{set_name} = "SETME";
+      $sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
+		  	      resultset_ref=>\%new_results,
+			      query_parameters_ref=>\%parameters,
+			      resultset_params_ref=>\%rs_params,
+  			      query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+	  		     );
+
+      $resultset_ref = \%new_results;
+
+    } # End read or fetch resultset block
+		
+
+    # Set the column_titles to just the column_names, reset first.
+    @column_titles = ();
+    #  @column_titles = map "$_<INPUT NAME=foo TYPE=CHECKBOX CHECKED></INPUT>", @column_titles;
+    for my $title ( @{$resultset_ref->{column_list_ref}} ) {
+     if ( $cbox->{$title} ) {
+       push @column_titles, "$title $cbox->{$title}";
+     } else {
+       push @column_titles, $title;
+     }
+   }
+		
+   #### Display the resultset
+   $sbeams->displayResultSet(resultset_ref=>$resultset_ref,
+				query_parameters_ref=>\%parameters,
+				rs_params_ref=>\%rs_params,
+				url_cols_ref=>\%url_cols,
+				hidden_cols_ref=>\%hidden_cols,
+				max_widths=>\%max_widths,
+				column_titles_ref=>\@column_titles,
+				base_url=>$base_url,
+				no_escape=>1,
+				nowrap=>1,
+				show_numbering=>1,
+				);
+					
+	
+    unless ($parameters{Get_Data}) {
+      print "<h3>To start the download click the button below<br>";
+      print "<h3>A single Zip file will be downloaded to a location of your choosing *</h3>";
+		
+		
+      print   $q->br,
+	      $q->submit(-name=>'Get_Data',
+                    	 -value=>'GET_SOLEXA_FILES'); #will need to change value if other data sets need to be downloaded
+	
+		
+      print $q->reset;
+      print $q->endform;
+		
+    }
+	
+	
+    #### Display the resultset controls
+#    $sbeams->displayResultSetControls(resultset_ref=>$resultset_ref,
+#		    		      query_parameters_ref=>\%parameters,
+#				      rs_params_ref=>\%rs_params,
+#				      base_url=>$base_url,
+#				     );
 	
 }
 
@@ -1048,7 +1120,7 @@ sub append_new_data {
 	      my $file_exists = check_for_file(	slimseq_sample_id => $slimseq_sample_id, 
 						file_type =>$display_file,
 					      );
-		
+
               my $link = "<input type='checkbox' name='get_all_files' $checked value='VALUE_TAG' >";
               my $value = $slimseq_sample_id . '__' . $display_file;
               $link =~ s/VALUE_TAG/$value/;
@@ -1059,9 +1131,23 @@ sub append_new_data {
                 $anchor .= "$pad $link" if $display_file;
 		#print STDERR "ITS A JPEG '$display_file'\n";
               } elsif (($display_file eq 'ELAND') && $file_exists) {
-                $anchor = "Download Only";
+                $anchor = "Download";
                 $anchor .= "$pad $link" if $display_file;
-	      }elsif ($file_exists){			#make a url to open this file
+	      } elsif (($display_file eq 'RawDataPath') && $file_exists) {
+		my $raw_path = $sbeams_solexa_groups->get_file_path_from_id(slimseq_sample_id => $slimseq_sample_id,
+                                                                            file_type => 'RAW');
+                my $server = $sbeams_solexa_groups->get_server(file_path => $raw_path);
+                if ($server =~ /ERROR/) { die $server; } 
+                $raw_path =~ s/^\///g;
+                my @dirs = split(/\//, $raw_path);
+                shift(@dirs); # remove /solexa
+                unshift(@dirs, $server);  # add server
+                my $flow_cell = pop(@dirs); # remove last entry and save
+                push(@dirs, 'SolexaTrans');
+                push(@dirs, $flow_cell);
+                my $path = join("\\", @dirs);
+                $anchor = '<a href="file://///'.$path.'">Explore</a>';
+              }elsif ($file_exists){			#make a url to open this file
 		$anchor = ( $display_file eq 'TXT' ) ? '' :
                     "<a href=View_Solexa_files.cgi?action=view_file&slimseq_sample_id=$slimseq_sample_id&file_type=$display_file>View</a>"; 
                 $anchor .= "$pad $link" if $display_file;
@@ -1135,9 +1221,8 @@ sub check_for_file {
 	
 	my $slimseq_sample_id = $args{slimseq_sample_id};
 	my $solexa_sample_id = $args{solexa_sample_id};
-	my $file_type = $args{file_ext};					#Fix me same query is ran to many times, store the data localy
-
-	if ((!$slimseq_sample_id || !$solexa_sample_id) || !$file_type) { return "ERROR: Must supply 'solexa_sample_id' or 'slimseq_sample_id' and 'file_ext'\n"; }
+	my $file_type = $args{file_type};					#Fix me same query is ran to many times, store the data localy
+	if (  (!$slimseq_sample_id || !$solexa_sample_id) && !$file_type) { return "ERROR: Must supply 'solexa_sample_id' or 'slimseq_sample_id' and 'file_ext'\n"; }
 
         my $where;
         if ($slimseq_sample_id && !$solexa_sample_id) {
@@ -1168,7 +1253,7 @@ sub check_for_file {
                         AND eo.record_status != 'D'
 		   ~;
 		($path) = $sbeams->selectOneColumn($sql);
-	} elsif ($file_type eq 'RAW') {
+	} elsif ($file_type eq 'RawDataPath') {
 		 	my $sql = qq~  SELECT rdp.file_path
 			FROM $TBST_SOLEXA_SAMPLE ss
 			LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE_SAMPLES sfcls ON
@@ -1211,18 +1296,18 @@ sub check_for_file {
 #	my $file_path = "$path/$root_name.$file_type";
 	
 #	$log->debug("FILE PATH '$file_path'");
-	$log->debug("FILE PATH '$path'");
-#	if (-e $path){
- #         if ( -r $path ) { 
+	$log->error("FILE PATH '$path'");
+	if (-e $path){
+          if ( -r $path ) { 
 	    return 1;
-  #        } else {
-  #          $log->error( "File: $path exists but is not readable\n" );
-#	    return 0;
- #         }
-#	}else{
- #         $log->error( "File: $path does not exist\n" );
-#	  return 0;
-#	}
+          } else {
+            $log->error( "File: $path exists but is not readable\n" );
+	    return 0;
+          }
+	}else{
+          $log->error( "File: $path does not exist\n" );
+	  return 0;
+	}
 }
 	
 ###############################################################################

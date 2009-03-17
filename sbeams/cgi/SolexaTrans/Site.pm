@@ -15,7 +15,7 @@ my $sbeamsMOD = new SBEAMS::SolexaTrans;
 
 our @ISA    = qw/Exporter/;
 our @EXPORT = qw/site_header site_footer
-  $BC_UPLOAD_DIR $RESULT_URL $BIOC_URL $SITE_URL $SAMPLE_GROUP_XML
+  $BC_UPLOAD_DIR $RESULT_URL $BIOC_URL $CGI_URL $SAMPLE_GROUP_XML
   $ADMIN_EMAIL $R_BINARY $R_LOCAL_BIN $R_LIBS $USE_FRAMES $DEBUG $AFFY_ANNO_PATH
   $JAVA_PATH $JWS_PATH $TOMCAT $KEYSTORE $KEYPASS $KEYALIAS
   $SH_HEADER $BATCH_SYSTEM %BATCH_ENV $BATCH_BIN $BATCH_ARG
@@ -27,6 +27,7 @@ our $SAMPLE_GROUP_XML = 'File_sample_groups.xml';
 
 # Job web accessible URL
 our $RESULT_URL = "$CGI_BASE_DIR/SolexaTrans/View_Solexa_files.cgi";
+our $CGI_URL = "$CGI_BASE_DIR/SolexaTrans";
 
 # cgi-bin URL and site URL
 our $BIOC_URL = "$CGI_BASE_DIR/SolexaTrans/bioconductor";
@@ -117,6 +118,8 @@ sub site_header {
 #<a href="upload.cgi?_tab=3">View Experimental results</a> |
 #</div>
 #END
+
+
 }
 
 #### Subroutine: site_footer

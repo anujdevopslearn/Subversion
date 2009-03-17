@@ -111,10 +111,11 @@ sub main {
   my $solexa_sample_id = $parameters{'solexa_sample_id'};
   my $slimseq_sample_id = $parameters{'slimseq_sample_id'};
   my $file_type = $parameters{'file_type'};
+  my $jobname = $parameters{'jobname'};
 
   my $annotated_file = $parameters{'annotated_file'};
   
- unless ( $solexa_fcl_id || ($analysis_folder && $analysis_file) ||$annotated_file || (($solexa_sample_id||$slimseq_sample_id) && $file_type) ) {
+ unless ( $solexa_fcl_id || ($analysis_folder && $analysis_file) ||$annotated_file || (($solexa_sample_id||$slimseq_sample_id) && $file_type)|| $jobname ) {
  	 die "ERROR: Need to Pass solexa_fcl_id, analysis_folder and analysis_file, annotated_file, solexa_sample_id or slimseq_sample_id and file_type";
  }
 	my $action = $parameters{'action'} || "download";
@@ -154,9 +155,16 @@ sub main {
                 ($file_name, $file_ext) = split(/\./, $file);
 
 	}elsif($analysis_folder){
-		$output_dir = $sbeamsMOD->solexa_delivery_path();
-		$output_dir .= "/$analysis_folder";
+#		$output_dir = $sbeamsMOD->solexa_delivery_path();
+#		$output_dir .= "/$analysis_folder";
+                $output_dir = $analysis_folder;
 		$file_name = $analysis_file;
+        }elsif($jobname) {
+           my $file_path = $sbeams_solexa_groups->get_file_path_from_jobname(jobname => $jobname);
+           $file_path .= "/$jobname";
+           $output_dir = $file_path;
+           $file_name = 'index';
+           $file_ext = 'html';
 	}elsif($annotated_file){
 		$output_dir = $sbeamsMOD->get_ANNOTATION_OUT_FOLDER();
 		$file_name = $annotated_file;
@@ -196,15 +204,14 @@ sub main {
     # will keep us from accreting these files, which are unused anyway.  If this
     # block fails at a remote site it is likely that the permissions on the 
     # job dir are flawed.
-    if ( -e "${output_dir}/pbs_job.out" ) {
-      $log->info( "Removing pbs_job output file" );
-      unlink( "${output_dir}/pbs_job.out" );
-    }
+#    if ( -e "${output_dir}/pbs_job.out" ) {
+#      $log->info( "Removing pbs_job output file" );
+#      unlink( "${output_dir}/pbs_job.out" );
+#    }
 		my $file = "$output_dir/$file_name.$file_ext";
-	   print "Contents of file $file<br>";
 		printFile(file		=>$file,
-				  file_ext 	=>$file_ext);
-	    
+			  file_ext 	=>$file_ext);
+
 	    $sbeamsMOD->printPageFooter();
 	}
 } # end main
@@ -260,9 +267,21 @@ sub printFile {
   my $file_ext = $args{file_ext};
   
   my $error = 0;
-  open(INFILE, "< $file") || sub{ $error++; $log->error("Error in printFile opening file $file"); };
+  open(INFILE, "$file") || $error++;
+#  open(INFILE, "< $file") || sub{ $error++; $log->error("Error in printFile opening file $file"); };
   my $all_data;
-  if ( $error ) {
+
+  # if the file ext is ERR and it's not found then look for OUT instead
+  if ( $error && uc($file_ext) eq 'ERR') {
+    $error = 0;
+    my $newfile = $file;
+    $newfile =~ s/err/out/gi;
+    print "No Error file for this job (*.err) - displaying out file instead (catches errors that happened on the cluster node).<br>";
+    open(INFILE, "$newfile") || $error++;
+    $file = $newfile unless $error;
+  }
+
+  if ($error) {
     my $mailto = $sbeams->get_admin_mailto('administrator');
     print qq~
 	  $file
@@ -272,6 +291,7 @@ sub printFile {
     ~;
 
   } else {
+    print "Contents of file $file<br>";
     print "<PRE>\n" if ($file_ext ne 'html' || $file_ext ne 'htm');
     while(<INFILE>){ 
     # The following line was put in to remove a mysterious '<b>' tag

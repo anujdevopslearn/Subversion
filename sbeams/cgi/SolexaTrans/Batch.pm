@@ -5,7 +5,7 @@ use POSIX 'setsid';
 use Data::Dumper;
 use FindBin;
 
-use lib "$FindBin::Bin/../../../lib/perl";
+use lib "$FindBin::Bin/../../lib/perl";
 use SBEAMS::Connection qw($log $q);
 # Necessary variables in main package:
 # %BATCH_ENV - environment variables necessary for batch submission
@@ -36,6 +36,7 @@ sub initialize {
 	$self->{'error'} = undef;
 	$self->{'cputime'} = undef;
 	$self->{'id'} = undef;
+	$self->{'group'} = undef;
 	
 	return 1;
 }
@@ -103,6 +104,17 @@ sub id {
     return $self->{'id'};
 }
 
+sub group {
+    my $self = shift;
+    if (@_) { $self->{'group'} = shift}
+    return $self->{'group'};
+}
+
+sub queue {
+    my $self = shift;
+    if (@_) { $self->{'queue'} = shift}
+    return $self->{'queue'};
+}
 #### Method: submit
 # Submit job to the batch system, returns undef for failure
 ####
@@ -119,6 +131,25 @@ sub submit {
         return undef;
     }
 }
+
+
+#### Method: check
+# Check to see if a job is running
+####
+sub check {
+  my $self = shift;
+  if ($self->type eq "fork") {
+    return $self->check_fork;
+  } elsif ($self->type eq "sge") {
+    return $self->check_sge;
+  } elsif ($self->type eq "pbs") {
+    return $self->check_pbs;
+  } else {
+    return undef;
+  }
+}
+
+
 
 #### Method: cancel
 # Cancel a job submitted to the batch system, returns undef for failure
@@ -223,7 +254,11 @@ sub submit_pbs {
     my ( $dir ) =  $script =~ /(.*\/)[^\/]+$/;
     my $outfile = ( $self->out() ) ? $self->out() : "$dir/pbs_job.out";
 
-    $command .= " -W umask=0002 -j oe -o " . $outfile;
+    #$command .= " -W umask=002 -W group_list=hoodlab -j oe -o " . $outfile;
+    $command .= " -W umask=002";
+    $command .= " -W group_list=".$self->group if $self->group;
+    $command .= " -q ".$self->queue if $self->queue;
+    $command .= " -j oe -o " . $outfile;
 
     # The above obviates this code, so it is commented out.
 #    if ($self->out) { 
@@ -245,6 +280,65 @@ sub submit_pbs {
     #print "COMMAND LINE <br>$command<br><br>";
     return $self->id;
 }
+
+#### 
+#  Check if a forked job is running
+####
+sub check_fork {
+  my $self = shift;
+  my $id = $self->id;
+  my $check = `ps -ef | grep "$id" | awk '{print $2}"`;
+  if ($check) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+####
+# Check if a PBS job is running
+####
+sub check_pbs {
+  my $self = shift;
+  my $id = $self->id;
+
+  foreach (keys %::BATCH_ENV) {
+    $ENV{$_} = $::BATCH_ENV{$_};
+  }
+
+  my $command = $::BATCH_BIN . "/qstat $id";
+  my $check = `$command`;
+
+  if ($check =~ /Unknown Job Id/) {
+    return 0;
+  } else {
+    return 1;
+  }
+}
+
+####
+# Check if a SGE job is running
+####
+sub check_sge {
+  my $self = shift;
+  my $id = $self->id;
+
+  foreach (keys %::BATCH_ENV) {
+    $ENV{$_} = $::BATCH_ENV{$_};
+  }
+
+  my $command = $::BATCH_BIN . "/qstat -j $id";
+  my $check = `$command`;
+
+  # THIS MAY NOT WORK
+  if ($check =~ /$id/) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+
 
 #### Method: cancel_fork
 # Cancel job run locally as a forked process
@@ -295,7 +389,7 @@ sub cancel_pbs {
     
     $command = $::BATCH_BIN . "/qdel";
     $command .= " " . $self->id;
-    
+    $log->error("CANCEL COMMAND : $command");    
     if ( system($command) ) {
         return undef;
     }

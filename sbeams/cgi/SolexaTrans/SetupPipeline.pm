@@ -129,7 +129,7 @@ sub create_files {
 <body bgcolor="#FFFFFF">
 <h3>Processing...</h3>
 <p><a href="$RESULT_URL?action=view_file&analysis_folder=$dir/$jobname&analysis_file=index&file_ext=html">Click here</a> to manually refresh.</p>
-<p><a href="$RESULT_URL/cancel.cgi?name=$dir/$jobname" target="_parent">Click here</a> to cancel the job.</p>
+<p><a href="$CGI_URL/cancel.cgi?name=$jobname" target="_parent">Click here</a> to cancel the job.</p>
 $jobsummary
 </body>
 </html>
@@ -169,6 +169,7 @@ END
 input and try again. If the problem persists, please contact the
 <a href="mailto:$ADMIN_EMAIL">site administrator</a>.</p>
 <p><a href="$RESULT_URL?action=view_file&analysis_folder=$dir/$jobname&analysis_file=$jobname&file_ext=err">Click here</a> to see the error.</p>
+<p>To re-run or delete this job, go the the <a href="$CGI_URL/status.cgi?jobname=$jobname" target="_parent">Status Page</a>.</p>
 $jobsummary
 </body>
 </html>
@@ -250,10 +251,10 @@ END
   ln -s $jobname/*.unkn .
 else 
   mv $output_dir/$jobname/indexerror.html $output_dir/$jobname/index.html
-  touch $output_dir/$jobname/index.html
+#  touch $output_dir/$jobname/index.html
 #  rm $output_dir/$jobname/indexresult.html
-  chgrp -R hoodlab $output_dir/$jobname
-  chmod g+rw $output_dir/$jobname/*
+#  chgrp -R hoodlab $output_dir/$jobname
+#  chmod g+rw $output_dir/$jobname/*
 END
  
     $sh .= $email ? <<END : "";

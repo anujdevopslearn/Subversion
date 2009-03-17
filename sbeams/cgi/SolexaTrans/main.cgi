@@ -355,7 +355,8 @@ sub handle_request {
 
   #### print_tabs
 #  my @tab_titles = ("Summary","Management","Data Analysis", "Permissions");
-  my @tab_titles = ("Summary","Data Download","Permissions");
+#  my @tab_titles = ("Summary","Data Download","Permissions");
+  my @tab_titles = ("Summary","Permissions");
   my $tab_titles_ref = \@tab_titles;
   my $page_link = 'main.cgi';
 
@@ -372,12 +373,12 @@ sub handle_request {
 #			     selected_tab=>1);
 #      print_management_tab();
 #  }
-  elsif($parameters{'tab'} =~ "data_download") {
-      $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
-			     page_link=>$page_link,
-			     selected_tab=>1);
-      print_data_download_tab(ref_parameters=>$ref_parameters); 
-  }
+#  elsif($parameters{'tab'} =~ "data_download") {
+#      $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
+#			     page_link=>$page_link,
+#			     selected_tab=>1);
+#      print_data_download_tab(ref_parameters=>$ref_parameters); 
+#  }
   elsif($parameters{'tab'} eq "permissions") {
       $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
 			     page_link=>$page_link,
