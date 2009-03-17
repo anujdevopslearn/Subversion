@@ -68,7 +68,7 @@ Options:
 
   --source_file       Input file containing the sample and directory listing
   --search_batch_ids  Comma-separated list of SBEAMS-Proteomics seach_batch_ids
-  --FDR_threshold     FDR threshold to accept. Default 0.01.
+  --FDR_threshold     FDR threshold to accept. Default 0.0001.
   --P_threshold       Probability threshold (e.g. 0.9) instead of FDR thresh.
   --output_file       Filename to which to write the peptides
   --master_ProteinProphet_file       Filename for a master ProteinProphet
@@ -472,7 +472,7 @@ sub pepXML_end_element {
     #### If this PSM has a probability > 0.5, store it.
     #### This should get all or nearly all the PSMs we want
     #### for a ProteinProphet-adjusted probability threshold
-    #### of 0.9 or FDR threshold of 0.01. Bizarrely low prob.
+    #### of 0.9 or FDR threshold of 0.0001. Bizarrely low prob.
     #### thresholds or high FDR thresholds will not get good
     #### results, though.
     if ( $probability >= $PEP_PROB_CUTOFF) {
@@ -817,7 +817,7 @@ sub main {
     print "Only one of --P_threshold and --FDR_threshold may be specified.\n";
     exit;
   } elsif (!defined($FDR_threshold) && !defined($P_threshold)) {
-    $FDR_threshold = '0.01';
+    $FDR_threshold = '0.0001';
     print "Using default FDR threshold $FDR_threshold.\n";
     #$P_threshold = '0.9';
     #print "Using default P threshold $P_threshold.\n";
@@ -839,7 +839,7 @@ sub main {
 
   #### Hard code pgm to use master Protein Prophet file
   #### so we don't need to change calling program in PA pipeline.
-  $OPTIONS{master_ProteinProphet_file} = "${check_dir}/../analysis/interact-all-prot.xml";
+  #$OPTIONS{master_ProteinProphet_file} = "${check_dir}/../analysis/interact-all-prot.xml";
 
 
   #### Set up the Xerces parser
@@ -875,7 +875,8 @@ sub main {
   $CONTENT_HANDLER->{P_threshold} = $P_threshold;
   $CONTENT_HANDLER->{FDR_threshold} = $FDR_threshold;
   $CONTENT_HANDLER->{OPTIONS} = \%OPTIONS;
-  $CONTENT_HANDLER->{prob_list} = []; # list of all final probs for all PSMs.
+  # 3/15/09: FDR thresholding on combined list disabled
+  #$CONTENT_HANDLER->{prob_list} = []; # list of all final probs for all PSMs.
 
   #### Array of documents to process in order
   my @documents;
@@ -1057,7 +1058,6 @@ sub main {
     #### If a single master ProteinProphet file was specified, prepare that
     if ($OPTIONS{master_ProteinProphet_file}) {
       if ($first_loop) {
-        print "Hello, Terry!\n";
 	$proteinProphet_filepath = $OPTIONS{master_ProteinProphet_file};
 	unless (-e $proteinProphet_filepath) {
 	  die("ERROR: Specified master ProteinProphet file not found '$proteinProphet_filepath'\n");
@@ -1146,11 +1146,9 @@ sub main {
       P_threshold => $P_threshold,
       FDR_threshold => $FDR_threshold,
       best_prob_per_pep => $CONTENT_HANDLER->{best_prob_per_pep},
-      prob_list => $CONTENT_HANDLER->{prob_list},
+      # 3/15/09: FDR thresholding on combined list disabled
+      #prob_list => $CONTENT_HANDLER->{prob_list},
     );
-
-    printf ("Length of prob list is %d\n",
-            scalar(@{$CONTENT_HANDLER->{prob_list}}));
 
     $first_loop = 0;
   }
@@ -1158,8 +1156,6 @@ sub main {
 
   #### Create a combined identlist file
   my $combined_identlist_file = "DATA_FILES/PeptideAtlasInput_concat.PAidentlist";
-  my $sorted_identlist_file = "DATA_FILES/PeptideAtlasInput_sorted.PAidentlist";
-
   open(OUTFILE,">$combined_identlist_file") ||
     die("ERROR: Unable to open for write '$combined_identlist_file'");
   close(OUTFILE);
@@ -1195,7 +1191,8 @@ sub main {
 
   #### If using FDR threshold, calculate corresponding prob threshold
   #### and truncate PAidentlist accordingly.
-  if ( $CONTENT_HANDLER->{FDR_threshold} ) {
+  #### 03/15/09: disabled in favor of per-experiment FDR thresholding
+  if ( 0 && $CONTENT_HANDLER->{FDR_threshold} ) {
 
     #### Figure out the probability corresponding to the FDR_threshold
     my @prob_list = @{$CONTENT_HANDLER->{prob_list}};
@@ -1243,7 +1240,9 @@ sub main {
     
   }
 
+
   #### Create a copy of the combined file sorted by peptide.
+  my $sorted_identlist_file = "DATA_FILES/PeptideAtlasInput_sorted.PAidentlist";
   print "INFO: Creating copy of master list sorted by peptide\n";
   system("sort -k 3,3 -k 2,2 $combined_identlist_file > $sorted_identlist_file");
 
@@ -1447,7 +1446,8 @@ sub writeIdentificationListFile {
   ($best_prob_per_pep = $args{'best_prob_per_pep'})
     || print "INFO: writeIdentificationListFile will get best prob ".
              "per pep from protXML info\n";
-  my $prob_list = $args{'prob_list'};
+  # 3/15/09: FDR thresholding on combined list disabled
+  #my $prob_list = $args{'prob_list'};
 
   print "Writing output combined cache file '$output_file'...\n";
 
@@ -1600,9 +1600,8 @@ sub writeIdentificationListFile {
   my @sorted_id_list =
      (sort by_decreasing_probability @{$pep_identification_list});
 
-  #### Truncate by FDR threshold, if desired.
-  #### 03/13/09: superceded. Obsolete.
-  if (defined $FDR_threshold && 0) {
+  #### Truncate per-experiment by FDR threshold, if desired.
+  if (defined $FDR_threshold) {
     my $counter = 0;
     my $prob_sum = 0.0;
     my $fdr;
@@ -1628,9 +1627,12 @@ sub writeIdentificationListFile {
   foreach my $identification ( @{$pep_identification_list} ) {
     my $probability = $identification->[8];
     if ((defined ($P_threshold) && $probability >= $P_threshold) ||
-        (defined ($FDR_threshold) && $probability >= 0.4 )) {
+        (defined ($FDR_threshold))) {
+        # 3/15/09: FDR thresholding on combined list disabled
+        #(defined ($FDR_threshold) && $probability >= 0.4 )) {
       print OUTFILE join("\t",@{$identification})."\n";
-      push (@{$prob_list}, $probability);
+      # 3/15/09: FDR thresholding on combined list disabled
+      #push (@{$prob_list}, $probability);
       $counter++;
       print "$counter... " if ($counter % 1000 == 0);
     }
