@@ -799,6 +799,12 @@ GO
  ---Optionally drop old tables
 
 
+-- Add spectrum header fields
+ALTER TABLE peptideatlas.dbo.spectrum ADD precursor_intensity real;
+ALTER TABLE peptideatlas.dbo.spectrum ADD total_ion_current real;
+ALTER TABLE peptideatlas.dbo.spectrum ADD scan_time real;
+ALTER TABLE peptideatlas.dbo.spectrum ADD normalized_precursor_intensity real;
+ALTER TABLE peptideatlas.dbo.spectrum ADD normalized_scan_time real;
 
 
 
