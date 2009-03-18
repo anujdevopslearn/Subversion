@@ -35,7 +35,7 @@ use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 
 use SBEAMS::Proteomics::PeptideMassCalculator;
-$massCalculator = new SBEAMS::Proteomics::PeptideMassCalculator;
+#$massCalculator = new SBEAMS::Proteomics::PeptideMassCalculator;
 
 use PGPLOT;
 use PDL;
@@ -230,7 +230,7 @@ sub processRequest {
     my $maxval = $intenmax;
     #$intenmax *= 1.3 / ( $parameters{zoom} || 1 );
     my $interval = $parameters{ymax} / 20;
-    my $interval_power = int( log($interval) / log(10) );
+    my $interval_power = ( $interval ) ? int( log($interval) / log(10) ) : 0;
     my $roundval = 10**$interval_power;
     #$intenmax = int($intenmax/$roundval)*$roundval;
     $parameters{ymax} = int( $parameters{ymax} /$roundval)*$roundval;
