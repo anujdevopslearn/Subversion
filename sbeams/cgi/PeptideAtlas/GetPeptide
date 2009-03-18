@@ -1148,7 +1148,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
   my $modSQL = qq~
   SELECT modified_peptide_sequence, MPI.peptide_charge,
          SMP.sample_id,I.instrument_name, SI.probability, S.spectrum_name,
-         SI.spectrum_identification_id
+         SI.spectrum_identification_id, precursor_intensity, scan_time
     FROM $TBAT_PEPTIDE_INSTANCE PI
    INNER JOIN $TBAT_PEPTIDE P
          ON ( PI.peptide_id = P.peptide_id )
@@ -1175,13 +1175,27 @@ if ($apply_action =~ /QUERY|GO/i ) {
   ORDER BY modified_peptide_sequence, MPI.peptide_charge, S.spectrum_name ASC
   ~;
 
-  my @mod_peps = $sbeams->selectSeveralColumns( $modSQL );
+  
+  my @mod_peps;
+  my $sth = $sbeams->get_statement_handle( $modSQL );
+  my $has_header_info = 0;
+
+  my $align = [qw(left center right right left center center)];
+  while ( my @row = $sth->fetchrow_array() ) {
+    # We only want to display PI and RT cols if we have data!
+    if ( !$has_header_info && $row[7] ) {
+      $has_header_info++;
+      $align = [qw(left center right right left center center center right)];
+    }
+    push @mod_peps, \@row;
+  }
 
   #### If a result is returned
   if ( scalar @mod_peps ) {
     $modHTML .= $sbeams->getPopupDHTML();
 
     #### Loops through resultset and do formatting
+    my @display_peps;
     for my $pep ( @mod_peps ) {
       $pep->[4] = sprintf("%0.3f", $pep->[4]) unless $pep->[4] == 1;
       $pep->[4] = 1 if $pep->[4] == 1;
@@ -1189,17 +1203,28 @@ if ($apply_action =~ /QUERY|GO/i ) {
       my $img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='View spectrum for $pep->[0] (+$pep->[1])'>";
       $pep->[6] = qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowObservedSpectrum?spectrum_identification_id=$pep->[6]&peptide=$pep->[0]&assumed_charge=$pep->[1]" TARGET=blank>$img</A>~;
       $pep->[0] = $sbeamsMOD->formatMassMods( $pep->[0] );
+      if ( !$has_header_info ) {
+        delete $pep->[7];
+        delete $pep->[8];
+      } else {
+        $pep->[7] = ( $pep->[7] ) ? $sbeams->formatScientific( number=> $pep->[7], precision=>1, output_mode => $sbeams->get_output_mode() ): $sbeams->makeInactiveText('n/a'); 
+        $pep->[8] = ( $pep->[8] ) ? sprintf( "%0.1f", $pep->[8]/60 ) : $sbeams->makeInactiveText('n/a'); 
+      }
+      push @display_peps, $pep;
+
     }
 
+    my @headings = ( 'Modified Sequence', 'Chg', 'Smpl', 'Instr', 'Prob', 'Spectrum Name', 'Spectrum' );
+    push @headings, ( 'Precursor Intensity', 'RT' ) if $has_header_info;
     #### Add table column headings
-    unshift @mod_peps, ['Modified Sequence', 'Chg', 'Smpl', 'Instr', 'Prob', 'Spectrum Name', 'Spectrum' ];
+    unshift @display_peps, [ @headings ];
 
     #### Format table
     $modHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
                                                  width => '600',
                                                tr_info => $tr,
-                                                align  => [qw(left center right right left center center)],
-                                                  rows => \@mod_peps,
+                                                align  => $align,
+                                                  rows => \@display_peps,
                                           rows_to_show => 10,
                                               max_rows => 500
                                               );
