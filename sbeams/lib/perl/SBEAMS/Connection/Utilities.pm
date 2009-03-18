@@ -448,6 +448,38 @@ sub roundToInt {
          ( time() % 2 ) ? $ceil : $floor;  # Else round up/down 
 }
 
+#+ 
+# Quick n dirty, assume number is > 0, positive 
+# @narg number    Number to be formatted
+# @narg minimum   Minimum number to format, default 10
+#-
+sub formatScientific {
+  my $self = shift;
+  my %args = ( minimum => 10,
+               precision => 2,
+               output_mode => 'text',
+               @_ );
+	# Need something to format
+  return '' unless $args{number};
+
+  # Only format if bigger than minimum.
+  return $args{number} if $args{number} < $args{minimum};
+
+  my $number = int( $args{number} );
+  my $len = length($number) - 1;
+  my $num_val = sprintf( "%0.$args{precision}f", ($number/10**$len) );
+
+  # Text mode 1.3E4
+  my $exp = "E${len}";
+
+	# HTML mode 1.3x10<sup>4</sup>
+  if ( $args{output_mode} eq 'html' ) {
+    $exp = 'x10<SPAN CLASS="small_super_text">' . $len . '</SPAN>';
+  }
+  $number = $num_val . $exp;
+
+  return $number;
+}
 
 ###############################################################################
 # average
