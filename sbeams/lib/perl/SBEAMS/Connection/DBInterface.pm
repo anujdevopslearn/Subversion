@@ -5992,8 +5992,9 @@ sub getDataFromModules {
   my $subdir = $this->getSBEAMS_SUBDIR();
   
   # Prune list of modules to the ones we know support this functionality 
+  # Error code below should obviate the need for this.
   my @supp = qw( Microarray Proteomics ProteinStructure Immunostain 
-                 Cytometry Interactions Inkjet PeptideAtlas Biomarker );
+                 SolexaTrans Cytometry Interactions Inkjet PeptideAtlas Biomarker );
 
   my @valid_mods;
   for my $mod ( @{$args{modules}} ) {
@@ -6033,7 +6034,12 @@ sub getDataFromModules {
   for my $mod ( @valid_mods ) {
     next unless $sbeams{$mod};
     $sbeams{$mod}->setSBEAMS($this) || die "Doh";
+    eval {
     $mod_data{$mod} = $sbeams{$mod}->getProjectData( projects => $args{projects} );
+    };
+    if ( $@ ) {
+      $log->error( "No getProjectData routine found for $mod: $@" );
+    }
 #    my $t1 = new Benchmark;
 #    $log->debug( "Fetch of data (" . scalar( @{$args{projects}} ) . " projects) from $mod took " . timestr(timediff( $t1, $t0 )) );
 #    $t0 = $t1;
