@@ -73,7 +73,8 @@ Options:
   --output_file       Filename to which to write the peptides
   --master_ProteinProphet_file       Filename for a master ProteinProphet
                       run that should be used instead of individual ones.
-                      *** Currently hard-coded ON!
+  --per_expt_pipeline Adjust probabilities according to individual
+                      protXMLs; use master for prot ID regularization only
   --biosequence_set_id   Database id of the biosequence_set from which to
                          load sequence attributes.
   --best_probs_from_protxml   Get best initial probs from ProteinProphet file,
@@ -101,7 +102,8 @@ unless ($ARGV[0]){
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
   "validate=s","namespaces","schemas",
   "source_file:s","search_batch_ids:s","P_threshold:f","FDR_threshold:f",
-  "output_file:s","master_ProteinProphet_file:s","biosequence_set_id:s",
+  "output_file:s","master_ProteinProphet_file:s","per_expt_pipeline",
+  "biosequence_set_id:s",
   "best_probs_from_protxml", "old_prot_ids", "splib_filter",
   )) {
   print "$USAGE";
@@ -156,7 +158,7 @@ my $validate = $OPTIONS{validate} || 'never';
 my $namespace = $OPTIONS{namespaces} || 0;
 my $schema = $OPTIONS{schemas} || 0;
 my $best_probs_from_protxml = $OPTIONS{best_probs_from_protxml} || 0;
-my $regularize_prot_ids = !$OPTIONS{old_prot_ids} || 0;
+my $regularize_prot_ids = !$OPTIONS{old_prot_ids};
 my $splib_filter = $OPTIONS{splib_filter} || 0;
 
 
@@ -719,7 +721,10 @@ sub storePepInfo {
       n_adjusted_observations => $self->{pepcache}->{n_instances},
       protein_name => $self->{protein_name},
     };
-    if ( $regularize_prot_ids ) {
+    # if we have a master protXML, do this only if this is the master
+    if ( $regularize_prot_ids &&
+	 ( $self->{protxml_type} eq 'master' ||
+            !$self->{OPTIONS}->{master_ProteinProphet_file}) ) {
         $pepProtInfo->{protein_probability} = $self->{protein_probability};
         $pepProtInfo->{protein_group_probability} =
                                   $self->{protein_group_probability};
@@ -728,29 +733,10 @@ sub storePepInfo {
 
   # if it already exists, possibly update some data
   } else {
+
     # store these pep probs if init_prob is best for this pep so far
     # or if init_prob is same but adjusted_prob is better
-    # TMF 02/09; fixes bug whereby pep probs were stored for all <peptide>
-    # tags encountered, overwriting anything written before.
-    my $store_best_pep_prob_from_protXML = 1;  #turns on bug fix
-    #investigative print statements
-    if ( 0 &&  $store_best_pep_prob_from_protXML &&
-           $initial_probability < $pepProtInfo->{initial_probability}) {
-      print "Improvement due to bug fix: not demoting prob for $pep_key from ",
-        $pepProtInfo->{initial_probability}, " to $initial_probability\n";
-    } 
-    if ( 0 &&  $store_best_pep_prob_from_protXML &&
-           (( $initial_probability == $pepProtInfo->{initial_probability}) &&
-            ( $adjusted_probability < $pepProtInfo->{nsp_adjusted_probability}))
-       ){
-      print "Improvement due to bug fix: not demoting adj_prob for $pep_key from ",
-        $pepProtInfo->{nsp_adjusted_probability}, " to $adjusted_probability\n";
-    } 
-    if ( !$store_best_pep_prob_from_protXML && !$regularize_prot_ids ) {
-      $pepProtInfo->{protein_name} = $self->{protein_name};
-    }
-    if ( !$store_best_pep_prob_from_protXML ||
-         ( $initial_probability > $pepProtInfo->{initial_probability}) ||
+    if ( ( $initial_probability > $pepProtInfo->{initial_probability}) ||
           (( $initial_probability == $pepProtInfo->{initial_probability}) &&
            ( $adjusted_probability > $pepProtInfo->{nsp_adjusted_probability}))
        ) {
@@ -764,9 +750,13 @@ sub storePepInfo {
 
     # store protein info from current <protein> if this protein prob
     # is best seen for this pep so far
+    # if we have a master protXML, do this only if this is the master
     if ( $regularize_prot_ids &&
-           ( $self->{protein_probability} >
-               $pepProtInfo->{protein_probability} )) {
+	 ( $self->{protxml_type} eq 'master' ||
+            !$self->{OPTIONS}->{master_ProteinProphet_file}) 
+                      &&
+	 ( $self->{protein_probability} >
+	     $pepProtInfo->{protein_probability} )) {
         $pepProtInfo->{protein_name} = $self->{protein_name};
         $pepProtInfo->{protein_probability} = $self->{protein_probability};
         $pepProtInfo->{protein_group_probability} =
@@ -836,10 +826,6 @@ sub main {
     print "ERROR: The output directory ($check_dir) does not exist($!)\n";
     exit;
   }
-
-  #### Hard code pgm to use master Protein Prophet file
-  #### so we don't need to change calling program in PA pipeline.
-  #$OPTIONS{master_ProteinProphet_file} = "${check_dir}/../analysis/interact-all-prot.xml";
 
 
   #### Set up the Xerces parser
@@ -1048,34 +1034,51 @@ sub main {
 
     #### Reset the ProteinProphet data structure unless using a master
     #### (except if the first loop, then do reset)
-    unless ($OPTIONS{master_ProteinProphet_file} && $first_loop == 0) {
+    unless ($OPTIONS{master_ProteinProphet_file} &&
+            !$OPTIONS{per_expt_pipeline}  && $first_loop == 0) {
       $CONTENT_HANDLER->{ProteinProphet_data_list} = {};
     }
 
     #### First get the ProteinProphet information
     my $proteinProphet_filepath;
 
-    #### If a single master ProteinProphet file was specified, prepare that
+    #### If a master ProteinProphet file was specified, prepare that
     if ($OPTIONS{master_ProteinProphet_file}) {
       if ($first_loop) {
 	$proteinProphet_filepath = $OPTIONS{master_ProteinProphet_file};
+
+        # check for existence of file; print informational messages
 	unless (-e $proteinProphet_filepath) {
 	  die("ERROR: Specified master ProteinProphet file not found '$proteinProphet_filepath'\n");
 	}
         print "INFO: Reading master ProteinProphet file $proteinProphet_filepath...\n" unless ($QUIET);
+        if (!$QUIET) {
+          if ($OPTIONS{per_expt_pipeline}) {
+            print "      Will use only to regularize protein ".
+                  "identifications,\n           individual protxml".
+                  " files will be used to adjust probabilities.\n";
+          } else {
+            print "      Will use instead of individual protXML files".
+                  " to update probabilities.\n";
+          }
+        }
         if ($regularize_prot_ids && !$QUIET) {
           print "INFO: Will regularize protein identifications.\n"
         } elsif (!$QUIET) {
           print "INFO: Will store arbitrary protein identifications (as before Feb. 2009).\n"
         }
+
         $CONTENT_HANDLER->{document_type} = 'protXML';
+        $CONTENT_HANDLER->{protxml_type} = 'master';
         $parser->parse (XML::Xerces::LocalFileInputSource->new($proteinProphet_filepath));
         print "\n";
 
       }
+    }
 
-    #### Else we'll read one ProteinProphet file per pepXML file
-    } else {
+    #### If no master, or if per-experiment pipeline,
+    #### we'll read one ProteinProphet file per pepXML file
+    if (!$OPTIONS{master_ProteinProphet_file} || $OPTIONS{per_expt_pipeline}) {
       $proteinProphet_filepath = $filepath;
       $proteinProphet_filepath =~ s/\.pep.xml/.prot.xml/;
 
@@ -1096,6 +1099,7 @@ sub main {
       if ($proteinProphet_filepath) {
         print "INFO: Reading $proteinProphet_filepath...\n" unless ($QUIET);
         $CONTENT_HANDLER->{document_type} = 'protXML';
+        $CONTENT_HANDLER->{protxml_type} = 'individual';
         $parser->parse (XML::Xerces::LocalFileInputSource->new($proteinProphet_filepath));
         print "\n";
       }
@@ -1555,7 +1559,8 @@ sub writeIdentificationListFile {
     #### If we are operating with a master_ProteinProphet_file, then
     #### try a radical thing. Multiply the PepPro and ProPro probability.
     #### This probably really isn't correct, but maybe it'll be close.
-    if ($OPTIONS{master_ProteinProphet_file}) {
+    if ($OPTIONS{master_ProteinProphet_file} &&
+          !$OPTIONS{per_expt_pipeline}) {
       my $probability = $identification->[8];
       my $adjusted_probability = $identification->[11];
       if ($adjusted_probability && $probability_adjustment_factor) {
