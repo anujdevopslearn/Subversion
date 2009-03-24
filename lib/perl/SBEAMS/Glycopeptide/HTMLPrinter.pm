@@ -73,7 +73,7 @@ sub displayPhosphopepHeader {
   $log->debug( "ppep org is $organism_param" );
 #  my $skinLink = 'http://www.phosphopep.org/newlook/';
   my $skinLink = 'http://www.phosphopep.org';
-  my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index2.dbbrowse.php${organism_param}" ) );
+  my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index.dbbrowse.php${organism_param}" ) );
 
   my @page = split( "\r", $response->content() );
   my $skin = '';
@@ -195,7 +195,7 @@ sub displayUnipepHeader {
   my $ua = LWP::UserAgent->new();
 #  my $skinLink = 'http://www.unipep.org/newlook/';
   my $skinLink = 'http://www.unipep.org';
-  my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index2.dbbrowse.php" ) );
+  my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index.dbbrowse.php" ) );
   my @page = split( "\r", $response->content() );
   my $skin = '';
   my $cnt = 0;
