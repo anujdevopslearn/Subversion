@@ -425,11 +425,13 @@ AT_spectrum	3	spectrum_name	Spectrum Name	varchar	50	0	N		N			Y	text	30		Y	Y	N	S
 AT_spectrum	4	start_scan	Start scan number	int	4	0	N		N			N				Y	Y	N	Start scan number of MS/MS spectrum		
 AT_spectrum	5	end_scan	End scan number	int	4	0	N		N			N				Y	Y	N	End scan number of MS/MS spectrum		
 AT_spectrum	6	scan_index	Scan Index	int	4	0	N		N			N				Y	Y	N	Scan index		
-AT_spectrum	7	precursor_intensity	Precursor Intensity	real	4	0	N		N			N		 		Y	Y	N	Precursor ion intensity 		
-AT_spectrum	8	total_ion_current	Total Ion Current	real	4	0	N		N			N				Y	Y	N	Total Ion Current of MS/MS spectrum		
-AT_spectrum	9	scan_time	Scan Time	real	4	0	N		N			N				Y	Y	N	Scan (retention) time in seconds of MS/MS spectrum		
-AT_spectrum	10	normalized_precursor_intensity	Normalized Precursor Intensity	real	4	0	N		N			N				Y	Y	N	Normalized precursor intensity of MS/MS spectra 		
-AT_spectrum	11	normalized_scan_time	Normalized Scan Time	real	4	0	N		N			N				Y	Y	N	Normalized scan time for MS/MS spectra		
+AT_spectrum	7	precursor_intensity	Precursor Intensity	real	4	0	Y		N			N		 		Y	Y	N	Precursor ion intensity 		
+AT_spectrum	8	total_ion_current	Total Ion Current	real	4	0	Y		N			N				Y	Y	N	Total Ion Current of MS/MS spectrum		
+AT_spectrum	9	scan_time	Scan Time	real	4	0	Y		N			N				Y	Y	N	Scan (retention) time in seconds of MS/MS spectrum		
+AT_spectrum	10	normalized_precursor_intensity	Normalized Precursor Intensity	real	4	0	Y		N			N				Y	Y	N	Normalized precursor intensity of MS/MS spectra 		
+AT_spectrum	11	normalized_scan_time	Normalized Scan Time	real	4	0	Y		N			N				Y	Y	N	Normalized scan time for MS/MS spectra		
+AT_spectrum	12	collision_energy	Collision Energy	real	4	0	Y		N			N		 		Y	Y	N	Instrument collision energy 		
+AT_spectrum	13	ionization_energy	Ionization Energy	real	4	0	Y		N			N		 		Y	Y	N	Ionization Energy 		
 AT_spectrum_peak	1	spectrum_peak_id	Spectrum Peak ID	int	4	0	N		Y							N	N				PkDEFAULT
 AT_spectrum_peak	2	spectrum_id	Spectrum ID	int	4	0	N		N	AT_spectrum	spectrum_id	Y	text	10		Y	Y		spectrum_id		
 AT_spectrum_peak	3	mz	M/Z	float	8	0	N		N			Y	text	10		Y	Y	N	Fragment ion M/Z		
