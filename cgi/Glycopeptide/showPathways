@@ -1,11 +1,11 @@
-#!/usr/local/bin/perl -w
+#!/tools32/bin/perl
 
 ###############################################################################
-# Program treatment.cgi    
+# Program showPathways    
 # $Id: $
 #
-# Description : Form and processing logic for applying laboratory 
-# manipulation or treatment to a set of samples.
+# Description : Form and processing logic for showing protein expression 
+# data on a KEGG map.
 #
 # SBEAMS is Copyright (C) 2000-2006 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
@@ -14,6 +14,10 @@
 # LICENSE file distributed with this software.
 #
 ###############################################################################
+
+BEGIN {
+push @INC, qw( /net/db/src/SSRCalc/ssrcalc .  /tools32/lib/perl5/5.8.0/i386-linux-thread-multi /tools32/lib/perl5/5.8.0 /tools32/lib/perl5/site_perl/5.8.0/i386-linux-thread-multi /tools32/lib/perl5/site_perl/5.8.0 /tools32/lib/perl5/site_perl );
+}
 
 use strict;
 use lib qw (../../lib/perl);
