@@ -399,6 +399,11 @@ AT_consensus_library_spectrum	7	modifications	Modifications	varchar	255	0	Y		N		
 AT_consensus_library_spectrum	8	protein_name	Protein Name	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Name of this Protein		
 AT_consensus_library_spectrum	9	protein_name_alt	Alternative protein Name	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Alt name of Protein (pref. name used in PeptideAtlas)		
 AT_consensus_library_spectrum	10	mz_exact	Exact M/Z	float	8	0	N		N			Y	text	10		Y	Y	N	(M+H)+ charged parent ion		
+AT_consensus_library_spectrum	11	precursor_intensity	Precursor Intensity	real	4	0	Y		N			N		 		Y	Y	N	Precursor ion intensity 		
+AT_consensus_library_spectrum	12	nreps	Number of Replicates	int	4	0	Y		N			N				Y	Y	N	Number of replicate spectra used for consensus		
+AT_consensus_library_spectrum	13	scan_time	Scan Time	real	4	0	Y		N			N				Y	Y	N	Scan (retention) time in seconds of MS/MS spectrum		
+AT_consensus_library_spectrum	14	collision_energy	Collision Energy	real	4	0	Y		N			N		 		Y	Y	N	Instrument collision energy 		
+AT_consensus_library_spectrum	15	ionization_energy	Ionization Energy	real	4	0	Y		N			N		 		Y	Y	N	Ionization Energy 		
 AT_consensus_library_spectrum_peak	1	consensus_library_spectrum_peak_id	Consensus Library Spectrum Peak ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_consensus_library_spectrum_peak	2	consensus_library_spectrum_id	Consensus Library Spectrum ID	int	4	0	N		N	AT_consensus_library_spectrum	consensus_library_spectrum_id	Y				Y	Y	N	Consensus Library Spectrum in which this peak exists	SELECT consensus_library_spectrum_id FROM $TBAT_CONSENSUS_library_spectrum ORDER BY sort_order	
 AT_consensus_library_spectrum_peak	3	mz	M/Z	float	8	0	N		N			Y	text	10		Y	Y	N	Fragment ion M/Z		
