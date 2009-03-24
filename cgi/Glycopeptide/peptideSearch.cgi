@@ -426,8 +426,6 @@ sub print_out_hits_page{
 		my $ipi_id = $h_ref->{ipi_data_id};
 		my $num_identified = $h_ref->{num_observed};
 		my $ipi_acc = $h_ref->{ipi_accession_number};
-    $log->debug( "Acc is $ipi_acc from $h_ref which has  $h_ref->{ipi_accession_number} " );
-    $log->debug( Dumper( $h_ref) );
 		my $protein_name = nice_term_print($h_ref->{protein_name});
 		my $protein_sym = $h_ref->{protein_symbol};
     push @symbols, $protein_sym if $protein_sym;
@@ -718,6 +716,7 @@ sub display_detail_form{
   
   my %parameters = %{$args{ref_parameters}};
   my $ipi_data_id = $args{ipi_data_id}; 
+  my $organism = $parameters{organism};
     
   print_error("Must provide a ipi_id to display Glyco Info. '$ipi_data_id' is not valid")unless 
   ($ipi_data_id =~ /^\d+$/);
@@ -749,12 +748,11 @@ sub display_detail_form{
                                      dbxref_tag => 'SwissProt'
                                     );
  
-
   my $spacer = $sbeams->getGifSpacer( 600 );
     my $protein_url = $glyco_o->get_atlas_link( name => $glyco_o->ipi_accession(), 
                                                 type => 'image',
                                               onmouseover => 'View Peptide Atlas information' );
-
+   
 			
 	## Print out the protein Information
   my $prot_info = join( "\n", 
@@ -1317,13 +1315,7 @@ sub get_annotation {
 	my @annotations = $ac->get_Annotations($anno_type);
 	
 	if ($annotations[0]){
-    $log->debug();
-    $log->debug();
-    $log->debug();
-    $log->debug( Dumper( $annotations[0] ) );
-		$info = $annotations[0]->hash_tree()->{value} || $annotations[0]->{text};
-    $log->debug( Dumper( $info ) );
-    $log->debug( "Almost there,info is $info for $args{anno_type}" );
+		$info = $annotations[0]->hash_tree()->{value};
 	}else{
 		$info = "Cannot find Info for '$anno_type'";
 	}
@@ -1472,7 +1464,6 @@ sub display_phospho_detail_form{
   my $protein_name = get_annotation(glyco_o   => $glyco_o,
 									  anno_type => 'protein_name'
 									  );
-  $log->debug( "Protein name is $protein_name" );
 
   my $organism = $sbeamsMOD->get_current_organism();
   my $consensus = $sbeamsMOD->get_build_consensus_library();
@@ -1507,6 +1498,17 @@ sub display_phospho_detail_form{
                                                 type => 'image',
                                               onmouseover => 'View Peptide Atlas information' );
 
+  my $curr_acc = $glyco_o->ipi_accession();
+  my $kinaselink = '';
+  my $kdata =  $sbeamsMOD->has_kinase_data( accession => $curr_acc );
+  if ( $organism eq 'Yeast' ) {
+    if ( $kdata ) {
+      my $img = "$HTML_BASE_DIR/images/src.gif";
+      $kinaselink = "<A HREF=$CGI_BASE_DIR/$SBEAMS_SUBDIR/kinase_details2.cgi?kinase=$curr_acc><IMG BORDER=0 TITLE='View expression data for $curr_acc in kinase/phosphatase knockout experiments' SRC=$img></A>"; 
+    }
+  }
+
+#  $log->debug( "Kinase line is $kinaselink, org is $organism, acc $curr_acc, getKdata is $kdata" );
 			
 	## Print out the protein Information
   my $sp = '&nbsp;' x 2;
@@ -1515,7 +1517,7 @@ sub display_phospho_detail_form{
       $q->td({class=>'grey_header', colspan=>2}, "Protein Info "),),
     $q->Tr(
       $q->td({class=>'rev_gray_head'}, "ID"),
-      $q->td({nowrap=>1}, "$ipi_url $kegglink $cytolink $ortholink $stringslink $atlaslink $scanlink ")),
+      $q->td({nowrap=>1}, "$ipi_url $kegglink $cytolink $ortholink $stringslink $atlaslink $kinaselink $scanlink ")),
     $q->Tr(
       $q->td({class=>'rev_gray_head', nowrap=>1}, "Protein Name"),
       $q->td( $protein_name )),
