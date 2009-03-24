@@ -320,16 +320,16 @@ sub pathway_details {
           $gn =~ s/$sprefix//g;
           $gn .= '%25';
           $gene .= $delim . $gn;
-          $delim = '%3B';
+          $delim = '%2C';
         }
         
-        push @links, "peptideSearch.cgi?search_type=gene_name;search_term=$gene;action=Show_hits_form;autorun=1";
+        push @links, "peptideSearch.cgi?search_type=gene_name;search_term=$gene;action=Show_hits_form;autorun=1;organism=$kegg_organism";
       } elsif ( grep /$kegg_organism/, ( qw( hsa mmu ) ) ) {
-        my $gene = join( '%3B', @genes ); # @{$entry2genes{$en}} );
-        push @links, "peptideSearch.cgi?search_type=GeneID;search_term=$gene;action=Show_hits_form";
+        my $gene = join( '%2C', @genes ); # @{$entry2genes{$en}} );
+        push @links, "peptideSearch.cgi?search_type=GeneID;search_term=$gene;action=Show_hits_form;organism=$kegg_organism";
       } else {
-        my $gene = join( '%3B', @genes ); # @{$entry2genes{$en}} );
-        push @links, "peptideSearch.cgi?search_type=accession;search_term=$gene;action=Show_hits_form;autorun=1";
+        my $gene = join( '%2C', @genes ); # @{$entry2genes{$en}} );
+        push @links, "peptideSearch.cgi?search_type=accession;search_term=$gene;action=Show_hits_form;autorun=1;organism=$kegg_organism";
       }
 
       push @text, "Gene ID(s) " . join( ", ", @genes );
