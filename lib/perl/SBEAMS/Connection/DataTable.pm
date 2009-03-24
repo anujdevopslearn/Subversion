@@ -78,6 +78,13 @@ sub setCellAttr {
   }
 }
 
+sub setColDefs {
+  my $this = shift;
+  my %args = @_;
+  $this->{__column_defs} = $args{widths};
+}
+
+
 #+
 # Method to set attributes one or more columns in the table. 
 # narg COLS required ref to array of col numbers
@@ -304,7 +311,13 @@ sub _getTable {
   next if $att =~ /^__/;
     $tabdef .= "$att='$this->{$att}' ";
   }
-  return $tabdef . '>';
+  $tabdef .= '>';
+  if ( $this->{__column_defs} ) {
+    for my $w ( @{$this->{__column_defs}} ) {
+      $tabdef .= "<col width=$w>\n";
+    }
+  }
+  return $tabdef;
 }
 
 #+

@@ -191,10 +191,9 @@ KEY: $ENC_KEY
     my $error = $DBI::errstr || '';
     if ( !$this_dbh ) {
       my $err =<<"      END_ERR";
-WARNING: Unable to connect to database, please contact $DBADMIN:
-$error
+WARNING: Database server is temporarily offline.  We hope to have this resolved quickly,  please contact $DBADMIN: if you have any questions.
       END_ERR
-    $log->warn( $err );
+    $log->error( $err );
     die ( $err );
     }
 

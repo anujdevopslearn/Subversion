@@ -24,6 +24,9 @@ package SBEAMS::Connection::Encrypt;
 my @ISA = "Exporter";
 my @EXPORT	= qw( encrypt decrypt );
 
+use SBEAMS::Connection::Log;
+my $log = new SBEAMS::Connection::Log();
+
 sub new {
   my $class = shift;
   my $this = { key => undef,
@@ -70,7 +73,18 @@ sub encrypt {
   die ( "No string provided for encryption" ) unless $this->{decrypted};
   die ( "No key provided for encryption" ) unless $this->{key};
 
-  my $cipher = new Crypt::CBC( $this->{key}, 'IDEA');
+  my $cipher;
+  my $version = $Crypt::CBC::VERSION;
+  $log->debug( "Crypt::CBC version is $version" );
+
+  if ( $version <= 2.17 ) {
+    $cipher = new Crypt::CBC( $this->{key}, 'IDEA' );
+  } else {
+    $cipher = new Crypt::CBC( -key => $this->{key},
+                           -cipher => 'IDEA',
+                           -header => 'randomiv' );
+  }
+
   $this->{encrypted} = $cipher->encrypt_hex( $this->{decrypted} );
   return $this->{encrypted}
 }
@@ -94,7 +108,18 @@ sub decrypt {
     return undef;
     }
 
-  my $cipher = new Crypt::CBC( $this->{key}, 'IDEA');
+  my $cipher;
+  my $version = $Crypt::CBC::VERSION;
+  $log->debug( "Crypt::CBC version is $version" );
+
+  if ( $version <= 2.17 ) {
+    $cipher = new Crypt::CBC( $this->{key}, 'IDEA' );
+  } else {
+    $cipher = new Crypt::CBC( -key => $this->{key},
+                           -cipher => 'IDEA',
+                           -header => 'randomiv' );
+  }
+
   $this->{decrypted} = $cipher->decrypt_hex( $this->{encrypted} );
   return $this->{decrypted}
 }
