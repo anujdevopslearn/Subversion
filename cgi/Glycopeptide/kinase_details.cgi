@@ -47,6 +47,7 @@ $glyco_query_o->setSBEAMS($sbeams);
 my $predicted_track_type = "Predicted Peptides";
 my $id_track_type 		 = 'Identified Peptides';
 
+my $longest = 0;
 
 main();
 
@@ -89,19 +90,46 @@ sub main
     $sbeams->processStandardParameters(parameters_ref=>\%parameters);
     #$sbeams->printDebuggingInfo($q);
    
+    my $tabber = '&nbsp;' x 400;
     my $content = qq~
-		<P>
-		  Phosphopeptides seen to be up/down regulated in $parameters{kinase} knockout strain relative to wild type.
-	  </P>
-		<BR>
-		<P>Back to <A HREF=browse_kinases.cgi>kinase home</A></P>
+    <P>
+		$tabber Back to <A HREF=browse_kinases.cgi>kinase home</A>
+    </P>
 		~;
 
     #### Decide what action to take based on information so far
-    $content .= display_kinase( $parameters{kinase} );	
+    my $regulates = display_kinase( acc => $parameters{kinase}, mode => 'regulates' );	
+    if ( $regulates ) {
+      $content .= <<"      END";
+      <SPAN CLASS=info_section_text>
+           This table displays proteins whose expression was more than 2-fold different in the $parameters{kinase} knockout <BR> strain relative to a control strain.  Up-regulation is shown in green, down regulation is shown in red.
+      </SPAN>
+      $regulates
+      <BR>
+      END
+    }
+    my $regulated_by = display_kinase( acc => $parameters{kinase}, mode => 'regulated_by' );	
+    if ( $regulated_by ) {
+      $content .= <<"      END";
+      <BR><BR><BR>
+      <SPAN CLASS=info_section_text>
+        <P>
+           This table displays knockout strains in which the target protein, $parameters{kinase},
+         was more than 2-fold different relative <BR>to a control strain.  Up-regulation is shown in 
+         green, down regulation is shown in red.
+        </P>
+      </SPAN>
+      $regulated_by
+      <BR>
+      END
+    }
 
-    $sbeamsMOD->display_page_header(project_id => $project_id);
+    $sbeamsMOD->display_page_header( project_id => $project_id,
+                                     onload => 'sortables_init()' );
     print $sbeams->getGifSpacer(800);
+    print  <<"  END";
+  <SCRIPT LANGUAGE=javascript SRC="$HTML_BASE_DIR/usr/javascript/sorttable.js"></SCRIPT>
+  END
     print "$content";
 		$sbeamsMOD->display_page_footer();
 
@@ -118,50 +146,76 @@ sub handle_request {
 
 
 sub display_kinase{
-  my $kinase = shift;
+  my %args = @_;
+  my $kinase = $args{acc} || '';
 
 	unless ( $kinase ) {
 		return "Missing required parameter kinase";
 	}
+  my $mode = $args{mode} || 'regulates';
 
   my $t1 = time();
+  my $hook = ( $mode =~ /regulated_by/ ) ? 'protein_name' : 'kinase_name';
   my $sql =<<"  END";
-	SELECT DISTINCT protein_name, modified_peptide_sequence, peptide_mz,
-	                peptide_tr, fold_change, signal_to_noise
+	SELECT DISTINCT kinase_name, protein_name, modified_peptide_sequence, peptide_mz,
+	                peptide_tr, fold_change 
   FROM peptideatlas_test.dbo.kinase_knockout
-	WHERE kinase_name = '$kinase'
-	ORDER BY protein_name ASC, peptide_tr ASC, fold_change DESC
+	WHERE $hook = '$kinase'
+	ORDER BY fold_change DESC, protein_name ASC, peptide_tr ASC
   END
+  $log->debug( "Un sorted SQL $sql" );
 
   my $sth = $sbeams->get_statement_handle( $sql );
 	my %kinases;
 
-  my $table = SBEAMS::Connection::DataTable->new( BORDER => 0 );
-  $table->addRow( ['Protein Name', 'Peptide', 'm/z', 'Retention time', 'Fold change', 'S/N' ] );
+  my $table = SBEAMS::Connection::DataTable->new( BORDER => 0, 
+                                                   WIDTH => 820, 
+                                                   STYLE => 'table-layout:fixed',
+                                                   CLASS => 'sortable',
+                                                   ID => $mode );
+  $table->setColDefs( widths => [ 80, 80, 480, 60, 60, 60] );
+  $table->addRow( ['KO Strain', 'Protein Name', 'Peptide', 'm/z', 'Retention time', 'Fold change' ] );
   $table->setRowAttr( ROWS => [1], BGCOLOR => '#C0D0C0', ALIGN => 'CENTER' );
   $table->setHeaderAttr(  BOLD => 1 );
 
   my $bgcolor = 'E0E0E0';
 	my $current = '';
+  my $cnt = 0;
 	while ( my @row = $sth->fetchrow_array() ) {
-		if ( $current ne $row[0] ) {
+		if ( $current ne $row[1] ) {
       $bgcolor = ( $bgcolor eq '#E0E0E0' ) ? '#F1F1F1' : '#E0E0E0';
 		}
-		$current = $row[0];
+		$current = $row[1];
+    if ( $mode eq 'regulates' ) {
+      $longest = ( $longest > length($row[2]) ) ? $longest : length( $row[2]);
+    }
+    unless ( $cnt++ ) {
+      if ( $mode ne 'regulates' ) {
+        my $sp_len = $longest - length( $row[2]);
+        if ( $sp_len > 1 ) {
+          $row[2] = '&nbsp;' x $sp_len . $row[2];
+        }
+      }
+    }
 
-		my $reg_color = ( $row[4] > 0 ) ? 'green' : 'red';
+		my $reg_color = ( $row[5] > 0 ) ? 'green' : 'red';
 
-		$row[0] = "<A HREF=http://www.sbeams.org/dev1/sbeams/cgi/Glycopeptide//peptideSearch.cgi?search_type=accession&search_term=$row[0]&.submit=Submit+Query&action=Show_hits_form>$row[0]</A>";
-    $row[2] = sprintf("%0.2f", $row[2] );
-    $row[3] = sprintf("%0.1f", $row[3] );
-    $row[4] = "<FONT COLOR=$reg_color>" . sprintf("%0.1f", $row[4] ) . "</FONT>";
-    $row[5] = sprintf("%0.1f", $row[5] );
+		$row[0] = "<A HREF=http://www.sbeams.org/dev1/sbeams/cgi/Glycopeptide//peptideSearch2.cgi?search_type=accession&search_term=$row[0]&.submit=Submit+Query&action=Show_hits_form>$row[0]</A>";
+		$row[1] = "<A HREF=http://www.sbeams.org/dev1/sbeams/cgi/Glycopeptide//peptideSearch2.cgi?search_type=accession&search_term=$row[1]&.submit=Submit+Query&action=Show_hits_form>$row[1]</A>";
+    $row[3] = sprintf("%0.2f", $row[3] );
+    $row[4] = sprintf("%0.1f", $row[4] );
+    $row[5] = "<FONT COLOR=$reg_color>" . sprintf("%0.1f", $row[5] ) . "</FONT>";
+#    $row[6] = sprintf("%0.1f", $row[5] );
 
     $table->addRow( \@row );
     $table->setRowAttr( ROWS => [$table->getRowNum()], BGCOLOR => $bgcolor );
 	}
-	$table->setColAttr( COLS => [1,2], ROWS => [2..$table->getRowNum()], ALIGN => 'LEFT' );
-	$table->setColAttr( COLS => [3..6], ROWS => [2..$table->getRowNum()], ALIGN => 'RIGHT' );
+  return '' unless $cnt;
+
+	$table->setColAttr( COLS => [1..3], ROWS => [2..$table->getRowNum()], ALIGN => 'LEFT' );
+	$table->setColAttr( COLS => [4..6], ROWS => [2..$table->getRowNum()], ALIGN => 'RIGHT' );
+
+
 
   return "$table";
 }
