@@ -10,7 +10,7 @@ use SBEAMS::SolexaTrans::Repeats;
 use vars qw(@AUTO_ATTRIBUTES @CLASS_ATTRIBUTES %DEFAULTS %SYNONYMS);
 @AUTO_ATTRIBUTES = qw(export_file tags 
 		      n_reads n_repeats n_tags
-		      project_name lane ss_sample_id motif
+		      project_name lane ss_sample_id motif truncate
 		      genome_id ref_fasta
 		      patman_max_mismatches use_old_patman_output
 		      babel dbh
@@ -19,6 +19,7 @@ use vars qw(@AUTO_ATTRIBUTES @CLASS_ATTRIBUTES %DEFAULTS %SYNONYMS);
 @CLASS_ATTRIBUTES = qw(repeats repeat_length output_dir);
 %DEFAULTS = (patman_max_mismatches=>1,
 	     fuse=>0,
+	     truncate=>0,
 	     );
 %SYNONYMS = ();
 
@@ -45,19 +46,22 @@ sub count_tags {
     my $filename=$self->export_file;
     my $now=scalar localtime;
     warn "$now: counting tags in $filename...\n";
-    open (TAGS,"$filename") or die "Can't open $filename: $!\n";
+    open (TAGS,"$filename") or die "Can't open $filename: $!";
 
     my $tags=$self->tags;
     my $repeat_length=$self->repeat_length;
     my $n_reads=0;
     my $n_repeats=0;
     my $fuse=$self->fuse||0;
+    my $truncate=$self->truncate;
 
     while (<TAGS>) {
 	chomp;
 	my @fields=split(/\t/);
 	my $tag=lc $fields[8];
+	$tag=substr($tag,0,-$truncate) if $truncate;
 	next unless $tag;
+	next if $tag=~/[^acgt]/;
 	$n_reads++;
 
 #	my $tc_index=rindex($tag,'tc');
@@ -104,6 +108,14 @@ sub lookup_tags {
     warn "lookup_tags: found $n_found tags in ref_db\n";
 }
 
+# if a tag is assigned, remove it from %tags to save space
+sub remove_assigned {
+    my ($self)=@_;
+    my $tags=$self->tags;
+    
+}
+
+
 # insert any tag with a locus_link_eid, but without {from_ref_db} set, into the ref db
 sub update_ref_db {
     my ($self,$ref_tablename)=@_;
@@ -119,10 +131,15 @@ sub update_ref_db {
 	$n_added++;
 	$hash->{from_ref_db}=1;
     }
-    warn "update_ref_db: added $n_added new genes\n";
+    warn "update_ref_db: added $n_added new genes to $ref_tablename\n";
 }
 #------------------------------------------------------------------------
 
+# run patman program on unassigned tags
+# Steps are:
+# - write unassigned tags to a fasta file
+# - call patman on the input file, against some ref_fasta genome
+# - parse the results; 
 sub run_patman {
     my ($self,%argHash)=@_;
 
@@ -163,11 +180,11 @@ sub run_patman {
     while (my ($tag,$list)=each %$matches) {
 
 	# gather rna_accs from patman output:
-	my %rna_accs;
+	my %rna_accs;		# local list of rna_accs (and counts) for this tag
 	foreach my $h (@$list) {
 	    my $rna_acc=$h->{rna_acc};
 	    if ($rna_acc=~/[A-Z][A-Z]_\d+/) { $rna_acc=$& }
-	    $rna_acc=~s/\s.*//;
+	    $rna_acc=~s/\s.*//;	# trim anything after whitespace...?
 	    $rna_accs{$rna_acc}++;
 #	    $tags->{$tag}->{rna_accs}={$h->{rna_acc}}++;	# was commented out; due to size of %tags?
 	}
@@ -209,7 +226,7 @@ sub tmp_fasta_filename {
     my $sample_id=$self->ss_sample_id;
     my $output_dir=$self->output_dir;
     my $lane=$self->lane;
-    "$output_dir/$project_name.$lane.$sample_id.fa";
+    "$output_dir/$project_name.$sample_id.$lane.fa";
 }
 
 sub write_fasta {
