@@ -15,7 +15,7 @@ package SBEAMS::SolexaTrans::Options;
 
 use Getopt::Long;
 use Exporter ();
-our (@EXPORT) = qw(option usage %options);
+our (@EXPORT) = qw(option usage %options dump_options);
 our (@ISA) = qw(Exporter);
 
 our ($optionsHash, %options, @options, @required, %descHash);
@@ -74,7 +74,7 @@ sub usage {
     return $usage;
 }
 
-sub dump {
+sub dump_options {
     foreach my $opt (keys %$optionsHash) {
 	if (ref $optionsHash->{$opt} eq 'ARRAY') {
 	    warn sprintf "options{$opt} is %s\n", join(', ', @{$optionsHash->{$opt}});
@@ -84,12 +84,10 @@ sub dump {
     }
 }
 
-# usage: ?
-# 
 sub useDefaults {
     my %argHash = @_;
     foreach my $opt (keys %argHash) {
-	$optionsHash->{$opt} = $argHash{$opt};
+	$optionsHash->{$opt}=$argHash{$opt} unless defined $optionsHash->{$opt};
     }
 }
 
