@@ -25,7 +25,7 @@ use vars qw( $q $http_header $log @ISA $DBTITLE $SESSION_REAUTH @ERRORS
              $current_user_context_id @EXPORT_OK  );
 
 use vars qw( %session $session_string );
-use Storable;
+use Storable qw( nstore retrieve );
 
 use CGI::Carp qw(croak);
 use CGI qw(-no_debug);
@@ -195,7 +195,6 @@ sub Authenticate {
         return $current_username;
       }
     }
-
   } elsif ( !$q->param('force_login') ) { # Otherwise, try a command-line authentication
     unless ($current_username = $self->checkValidUID()) {
     $log->error( <<"    ERR" );
@@ -1151,7 +1150,6 @@ sub destroyAuthHeader {
                             -value   => '0',
                             -expires => '-25h');
     $http_header = $q->header(-cookie => $cookie);
-    $log->debug( "Destroy auth" );
     $self->{_sbname_cookie} = $cookie;
 
     return $http_header;
@@ -1275,7 +1273,7 @@ sub getSessionAttribute {
   my $key = $args{'key'}
     || die("ERROR: $SUB_NAME: Parameter 'key' not passed");
 
-  unless (%session) {
+  unless ( %session ) {
 
     unless ($session_string) {
       #die("ERROR: $SUB_NAME: No session_string available");
@@ -1287,16 +1285,33 @@ sub getSessionAttribute {
 
     if (-e $session_store_file) {
       my $session_hashref;
-      eval {
-	$session_hashref = retrieve($session_store_file) ||
-	  $log->error("Unable to retrieve session $session_string");
+      eval { $session_hashref = retrieve($session_store_file) ||
+             $log->error("Unable to retrieve session $session_string");
       };
+      if ( $@ ) {
+        # log storable error
+        $log->error( "Storable: $@" );
+        print STDERR "Storable: $@\n";
+
+        # Temporary hack 'cause we're using 2 versions of perl!
+        my $cmd = "$PHYSICAL_BASE_DIR/lib/scripts/Core/readStorable.pl $session_store_file";
+        my $stored = `$cmd`;
+
+        for my $line ( split( /\n/, $stored ) ) {
+          $line =~ /^$key ===> (.*)$/;
+          if ( $1 ) {
+            $session_hashref->{$key} = $1;
+            $log->warn( "brute-forced the session info!" );
+            last;
+          }
+        }
+      }
       if ($session_hashref) {
-	%session = %{$session_hashref};
+        %session = %{$session_hashref};
       }
       unless (%session) {
-	$log->error("ERROR: $SUB_NAME: Unable to open or parse session file ".
-	    "'$session_store_file' (it does exist)");
+        $log->error("ERROR: $SUB_NAME: Unable to open or parse session file ".
+	                   "'$session_store_file' (it does exist)");
       }
 
     } else {
@@ -1334,7 +1349,6 @@ sub setSessionAttribute {
   my $session_store_file = "$PHYSICAL_BASE_DIR/var/sessions/".
     "$session_string.dat";
 
-
   unless (%session) {
 
     if (-e $session_store_file) {
@@ -1359,7 +1373,7 @@ sub setSessionAttribute {
 
   $session{$key} = $value;
 
-  store(\%session,$session_store_file);
+  nstore(\%session,$session_store_file);
 
   return(1);
 
@@ -1410,7 +1424,7 @@ sub deleteSessionAttribute {
 
   delete($session{$key});
 
-  store(\%session,$session_store_file);
+  nstore(\%session,$session_store_file);
 
   return(1);
 
