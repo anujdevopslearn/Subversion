@@ -52,19 +52,26 @@ sub display_page_header {
   my $navigation_bar = $args{'navigation_bar'} || "YES";
 
   my $sbeams = $self->getSBEAMS();
-
   my $project_id = $args{'project_id'} || $sbeams->getCurrent_project_id();
+  my $output_mode = $sbeams->output_mode();
+  my $http_header = $sbeams->get_http_header();
 
   #### If the output mode is interactive text, display text header
-  my $http_header = $sbeams->get_http_header();
-  if ($sbeams->output_mode() eq 'interactive') {
+  if ($output_mode eq 'interactive') {
     $sbeams->printTextHeader();
     return;
   }
 
+  #### If the output mode is not html, then we may not want a header here
+  if ($output_mode ne 'html') {
 
-  #### If the output mode is not html, then we don't want a header here
-  if ($sbeams->output_mode() ne 'html') {
+    # Caller may want header printing to be handled here
+    if ( $args{force_header} ) { 
+
+      # Print http header
+      print $http_header if $sbeams->invocation_mode() eq 'http';
+    }
+
     return;
   }
 
