@@ -251,6 +251,9 @@ sub fetch_where {
     wantarray? @objs:\@objs;
 }
 
+# takes a list of fieldnames and a hash of field/value pairs 
+# list of fieldnames are fields selected
+# field/values hash used to construct WHERE clause
 # returns the results of selectall_arrayref as a list[ref]
 sub select {
     my ($self,%argHash)=@_;
