@@ -276,7 +276,6 @@ sub getCurrentAtlasBuildID {
 
   }
 
-
   #### If we still don't have an atlas_build_id, guess!
   unless ($atlas_build_id) {
     my $organism_name = $sbeams->getSessionAttribute(
@@ -319,7 +318,6 @@ sub getCurrentAtlasBuildID {
     $atlas_build_id = 1;
   }
 
-
   #### Verify that the user is allowed to see this atlas_build_id
   my @accessible_project_ids = $sbeams->getAccessibleProjects();
   my $accessible_project_ids = join( ",", @accessible_project_ids ) || '0';
@@ -358,15 +356,19 @@ sub getCurrentAtlasBuildID {
 
   #### Test if the current session already has this atlas_build_id, and if
   #### not, then set it
-  my $cached_atlas_build_id = $sbeams->getSessionAttribute(
+  if( $args{no_cache} ) {
+    $log->info( "Skipping storage due to no_cache directive" );
+  } else {
+    my $cached_atlas_build_id = $sbeams->getSessionAttribute(
       key => 'PeptideAtlas_atlas_build_id',
     );
 
-  if ($cached_atlas_build_id != $atlas_build_id) {
-    $sbeams->setSessionAttribute(
-      key => 'PeptideAtlas_atlas_build_id',
-      value => $atlas_build_id,
-    );
+    if ($cached_atlas_build_id != $atlas_build_id) {
+      $sbeams->setSessionAttribute(
+        key => 'PeptideAtlas_atlas_build_id',
+        value => $atlas_build_id,
+      );
+    }
   }
 
   return($atlas_build_id);
@@ -379,9 +381,34 @@ sub clearBuildSettings {
   $sbeams->deleteSessionAttribute(
     key => 'PeptideAtlas_atlas_build_id',
   );
+  $sbeams->deleteSessionAttribute(
+    key => 'PeptideAtlas_atlas_name',
+  );
 
   $sbeams->deleteSessionAttribute(
       key => 'PeptideAtlas_organism_name',
+  );
+}
+
+
+sub setBuildSessionAttributes {
+  my $self = shift;
+  my $sbeams = $self->getSBEAMS();
+  my %args = @_;
+  return '' if !$args{build_id};
+  my ( $name ) = $sbeams->selectrow_array( <<"  END" );
+  SELECT atlas_build_name
+    FROM $TBAT_ATLAS_BUILD
+   WHERE atlas_build_id = $args{build_id}
+     AND record_status!='D'
+  END
+  $sbeams->setSessionAttribute(
+    key => 'PeptideAtlas_atlas_build_id',
+    value => $args{build_id},
+  );
+  $sbeams->setSessionAttribute(
+    key => 'PeptideAtlas_atlas_name',
+    value => $name,
   );
 }
 
