@@ -11,71 +11,26 @@ use JSON qw(to_json from_json);
 use base qw(Class::AutoClass);
 
 use vars qw(@AUTO_ATTRIBUTES @CLASS_ATTRIBUTES %DEFAULTS %SYNONYMS $sbeams $sbeams_solexa);
-@AUTO_ATTRIBUTES = qw();
-@CLASS_ATTRIBUTES = qw(ua urls base_url ss_user ss_pass);
+@AUTO_ATTRIBUTES = qw(urls base_url ss_user ss_pass);
+@CLASS_ATTRIBUTES = qw(ua);
 %DEFAULTS = (
-              base_url=>'http://test:test@osiris:3100',
-              ss_user=>'test',
-              ss_pass=>'test'
-     #         base_url=>'',
-     #         ss_user=>'',
-     #         ss_pass=>''
+	     base_url=>'http://db/slimseq',
+	     ss_user=>'slimbot',
+	     ss_pass=>'l7Zh8t8WsO4LAFsFYgaw',
 	     );
 
 %SYNONYMS = ();
 
 use FindBin;
 use lib "$FindBin::Bin/../../";
-#### Set up SBEAMS core module
-use SBEAMS::Connection qw($q);
-use SBEAMS::Connection::Settings;
-use SBEAMS::Connection::Tables;
-
-use SBEAMS::SolexaTrans::Tables;
-
-use SBEAMS::SolexaTrans::Solexa;
-use SBEAMS::SolexaTrans::SolexaUtilities;
-
-$sbeams = new SBEAMS::Connection;
-
-$sbeams_solexa = new SBEAMS::SolexaTrans::Solexa;
-$sbeams_solexa->setSBEAMS($sbeams);
 
 Class::AutoClass::declare(__PACKAGE__);
 
 sub _init_self {
     my ($self, $class, $args) = @_;
     return unless $class eq __PACKAGE__; # to prevent subclasses from re-running this
-}
-
-
-sub _class_init {
-    my $c=shift;
-    my $class = new $c;
-    my $base_url=$class->base_url;
-    my $ss_user=$class->ss_user;
-    my $ss_pass=$class->ss_pass;
-
-    if (!$base_url) {
-        my $SLIMSEQ_URI = $sbeams_solexa->get_SLIMSEQ_URI()
-          ;      #get method in SBEAMS::SolexaTrans::Settings.pm
-        $class->base_url($SLIMSEQ_URI);
-        print "base url is now ".$class->base_url."\n";
-        $base_url = $SLIMSEQ_URI;
-    }
-    if (!$ss_user) {
-         my $SLIMSEQ_USER = $sbeams_solexa->get_SLIMSEQ_USER()
-    ;      #get method in SBEAMS::SolexaTrans::Settings.pm
-       $ss_user = $SLIMSEQ_USER;
-       $class->ss_user($SLIMSEQ_USER);
-    }
-    if (!$ss_pass) {
-        my $SLIMSEQ_PASS = $sbeams_solexa->get_SLIMSEQ_PASS()
-          ;      #get method in SBEAMS::SolexaTrans::Settings.pm
-        $ss_pass = $SLIMSEQ_PASS;
-        $class->ss_pass($SLIMSEQ_PASS);
-    }
-
+    
+    my $base_url=$self->_insert_user($self->base_url);
 
     # set urls:
     my %urls=(
@@ -91,22 +46,33 @@ sub _class_init {
     $urls{lane}=$urls{flow_cell_lane};
     $urls{cell}=$urls{flow_cell};
     $urls{scheme}=$urls{naming_scheme};
-    $class->urls(\%urls);
+    $self->urls(\%urls);
+}
     
+sub _class_init {
+    my $class = shift;
     $class->ua(LWP::UserAgent->new);
+}
+
+# insert username and password into url
+sub _insert_user {
+    my ($self,$url)=@_;
+    my @base_parts=split('//',$url);
+    my $fixed_url=sprintf('%s//%s:%s@%s',$base_parts[0],$self->ss_user,$self->ss_pass,$base_parts[1]);
 }
 
 sub get_uri {
     my ($self,$url)=@_;
+    $url=$self->_insert_user($url) unless $url=~/\@/;
 
     warn "fetching $url...\n" if $ENV{DEBUG};
     my $req=HTTP::Request->new(GET=>$url);
-    $req->authorization_basic($self->ss_user, $self->ss_pass);
+#    $req->authorization_basic($self->ss_user, $self->ss_pass);
     $req->header(Accept=>'application/json');
 
     my $res=$self->ua->request($req);
     unless ($res->is_success) {
-	warn "$url: ",$res->status_line;
+	warn "$url: ",$res->status_line if $ENV{DEBUG};
 	return undef;
     }
 
@@ -116,6 +82,9 @@ sub get_uri {
     $obj;
 }
 
+# build/lookup url and incorporate $type and $id info,
+# then hit slimseq
+# returns hash based on json response, or undef if error;
 sub get_slimseq_json {
     my ($self,$type,$id)=@_;	# id could be undef
     confess "no type" unless $type;
