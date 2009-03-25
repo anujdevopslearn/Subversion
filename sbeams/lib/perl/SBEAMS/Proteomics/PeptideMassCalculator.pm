@@ -53,6 +53,8 @@ sub new {
   #### Define supported modifications
   %supported_modifications = (
     'monoisotopic' => {
+      'n[29]'  => 28.031300,    # di-Methylation  (Unimod)
+      'n[33]'  => 32.056407,    # DiMethyl-CHD2   (Unimod)
       'n[145]' => 144.102063,   # ABI iTRAQ (UniMod)
       'C[143]' => 39.994915,    # Pyro-carbamidonmethyl (Unimod)
       'C[148]' => 45.987721,    # Beta-methylthiolation (UniMod)
@@ -71,6 +73,8 @@ sub new {
       'C[553]' => 450.275205,   # ABI old ICAT heavy (UniMod)
       'E[111]' => -18.010565,   # Pyro-glu from E (UniMod)
       'K[272]' => 144.102063,   # ABI iTRAQ (UniMod)
+      'K[156]' => 28.031300,    # di-Methylation  (Unimod)
+      'K[160]' => 32.056407,    # DiMethyl-CHD2   (Unimod)
       'K[136]' => 8.014199,     # Silac label (UniMod)
       'M[147]' => 15.994915,    # Oxidation (UniMod)
       'N[115]' => 0.984016,     # Glyc-Asn (UniMod)
@@ -82,6 +86,8 @@ sub new {
       'Y[243]' => 79.966331,    # Phosphorylation (UniMod)
     },
     'average' => {
+      'n[29]'  => 28.0532,      # di-Methylation (Unimod)
+      'n[33]'  => 32.0778,      # DiMethyl-CHD2  (Unimod)
       'n[145]' => 144.1544,     # ABI iTRAQ (UniMod)
       'C[143]' => 40.0208,      # Pyro-carbamidonmethyl (Unimod)
       'C[148]' => 46.0916,      # Beta-methylthiolation (UniMod)
@@ -101,6 +107,8 @@ sub new {
       'E[111]' => -18.0153,   # Pyro-glu from E (UniMod)
       'K[272]' => 144.1544,   # ABI iTRAQ (UniMod)
       'K[136]' => 7.9427,     # Silac label (UniMod)
+      'K[156]' => 28.0532,    # di-Methylation (Unimod)
+      'K[160]' => 32.0778,    # DiMethyl-CHD2  (Unimod)
       'M[147]' => 15.9848,    # Oxidation (UniMod)
       'N[115]' => 0.9848,     # Glyc-Asn (UniMod)
       'R[166]' => 9.9296,     # Silac (UniMod)
