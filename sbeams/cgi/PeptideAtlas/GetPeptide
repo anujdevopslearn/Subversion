@@ -144,6 +144,7 @@ sub main {
 sub handle_request {
 
   my %args = @_;
+  $log->debug( "Start page " . time() );
 
   #### Process the arguments list
     my $ref_parameters = $args{'ref_parameters'}
@@ -325,6 +326,8 @@ sub handle_request {
   $parameters{'apply_action'} = 'GO';
 
   # End parameter handling section
+
+  $log->debug( "end param handling " . time() );
 
     ## Get and store list of atlases for use with form:  
     my (@atlas_option_id_array, @atlas_option_name_array);  
@@ -552,7 +555,9 @@ unless ( $apply_action eq "QUERY" || $apply_action eq "GO" ) { ## if receive fro
 if ($apply_action =~ /QUERY|GO/i ) {
 
         my @rows = $sbeams->selectSeveralColumns($sql)
+
         or print "Peptide not found.  Please check selections and try again.<br>";
+  $log->debug( "finished running query " . time() );
 
         if (@rows) {
 
@@ -708,6 +713,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
   print "<TABLE WIDTH=600><BR>$summ</TABLE>\n";
 
 ### End first section
+  $log->debug( "End overview " . time() );
+
 
   #############################################################################
   #### Genome mappings section
@@ -893,6 +900,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
 ##  End mapping loop
 
+  $log->debug( "End genome mapping " . time() );
+
 
   #############################################################################
   #### Modified Peptides Section
@@ -1027,6 +1036,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
     print "<TABLE WIDTH=600><BR>$modHTML</TABLE>\n";
   }
 
+  $log->debug( "End modified peptides " . time() );
+
 
   #############################################################################
   #### Validated Transitions Section
@@ -1126,6 +1137,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
   }
 
 
+  $log->debug( "End validated Trans " . time() );
+
 
   #############################################################################
   #### Spectra Section
@@ -1148,7 +1161,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
   my $modSQL = qq~
   SELECT modified_peptide_sequence, MPI.peptide_charge,
          SMP.sample_id,I.instrument_name, SI.probability, S.spectrum_name,
-         SI.spectrum_identification_id, precursor_intensity, scan_time
+         SI.spectrum_identification_id, precursor_intensity, scan_time,
+         collision_energy
     FROM $TBAT_PEPTIDE_INSTANCE PI
    INNER JOIN $TBAT_PEPTIDE P
          ON ( PI.peptide_id = P.peptide_id )
@@ -1175,6 +1189,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
   ORDER BY modified_peptide_sequence, MPI.peptide_charge, S.spectrum_name ASC
   ~;
 
+  $log->info( "$modSQL" );
   
   my @mod_peps;
   my $sth = $sbeams->get_statement_handle( $modSQL );
@@ -1185,7 +1200,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
     # We only want to display PI and RT cols if we have data!
     if ( !$has_header_info && $row[7] ) {
       $has_header_info++;
-      $align = [qw(left center right right left center center center right)];
+      $align = [qw(left center right right left center center center right right)];
     }
     push @mod_peps, \@row;
   }
@@ -1204,18 +1219,20 @@ if ($apply_action =~ /QUERY|GO/i ) {
       $pep->[6] = qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowObservedSpectrum?spectrum_identification_id=$pep->[6]&peptide=$pep->[0]&assumed_charge=$pep->[1]" TARGET=blank>$img</A>~;
       $pep->[0] = $sbeamsMOD->formatMassMods( $pep->[0] );
       if ( !$has_header_info ) {
-        delete $pep->[7];
+        delete $pep->[9];
         delete $pep->[8];
+        delete $pep->[7];
       } else {
         $pep->[7] = ( $pep->[7] ) ? $sbeams->formatScientific( number=> $pep->[7], precision=>1, output_mode => $sbeams->get_output_mode() ): $sbeams->makeInactiveText('n/a'); 
         $pep->[8] = ( $pep->[8] ) ? sprintf( "%0.1f", $pep->[8]/60 ) : $sbeams->makeInactiveText('n/a'); 
+        $pep->[9] = ( $pep->[9] ) ? sprintf( "%0.1f", $pep->[9] ) : $sbeams->makeInactiveText('n/a'); 
       }
       push @display_peps, $pep;
 
     }
 
     my @headings = ( 'Modified Sequence', 'Chg', 'Smpl', 'Instr', 'Prob', 'Spectrum Name', 'Spectrum' );
-    push @headings, ( 'Precursor Intensity', 'RT' ) if $has_header_info;
+    push @headings, ( 'Precursor Intensity', 'RT', 'CE' ) if $has_header_info;
     #### Add table column headings
     unshift @display_peps, [ @headings ];
 
@@ -1231,6 +1248,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
     #### Display table
     print "<TABLE WIDTH=600><BR>$modHTML</TABLE>\n";
   }
+
+  $log->debug( "End spectra " . time() );
 
 
   #############################################################################
@@ -1333,6 +1352,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
         }
 
     }
+
+  $log->debug( "End samples, handlerequest " . time() );
 
 } # end handle_request
 
