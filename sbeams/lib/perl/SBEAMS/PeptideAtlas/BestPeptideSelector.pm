@@ -298,7 +298,7 @@ sub getHighlyObservablePeptides {
      LEFT JOIN $TBAT_PEPTIDE P
           ON ( PTP.matched_peptide_id = P.peptide_id )
      LEFT JOIN $TBAT_BIOSEQUENCE BS
-          ON ( PTP.source_biosequence_id = BS.biosequence_id )
+          ON ( PTPM.source_biosequence_id = BS.biosequence_id )
      LEFT JOIN $TBAT_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
     WHERE 1 = 1
 	  AND PTPM.source_biosequence_id = $biosequence_id
