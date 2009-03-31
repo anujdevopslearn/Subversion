@@ -280,10 +280,10 @@ sub org_to_build {
     die "Must pass org or build_id to org_to_build";
   }
   my %org2build = ( dme => 1,
-                    sce => 7,
+                    sce => 10,
                     cel => 8,
                     hsa => 9);
-  my %build2org = ( 7 => 'sce',
+  my %build2org = ( 10 => 'sce',
                     1 => 'dme',
                     8 => 'cel',
                     9 => 'hsa' );
