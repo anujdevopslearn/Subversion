@@ -102,7 +102,7 @@ sub main
     if ( $regulates ) {
       $content .= <<"      END";
       <SPAN CLASS=info_section_text>
-           This table displays proteins whose expression was more than 2-fold different in the $parameters{kinase} knockout <BR> strain relative to a control strain.  Up-regulation is shown in green, down regulation is shown in red.
+           This table displays phosphopeptides whose abundance was significantly more than log2-fold changed in the $parameters{kinase} knockout <BR> strain relative to a control strain.  Up-regulation is shown in green, down regulation is shown in red.
       </SPAN>
       $regulates
       <BR>
@@ -159,7 +159,7 @@ sub display_kinase{
   my $sql =<<"  END";
 	SELECT DISTINCT kinase_name, protein_name, modified_peptide_sequence, peptide_mz,
 	                peptide_tr, fold_change 
-  FROM peptideatlas_test.dbo.kinase_knockout
+  FROM glycopeptide.dbo.kinase_knockout
 	WHERE $hook = '$kinase'
 	ORDER BY fold_change DESC, protein_name ASC, peptide_tr ASC
   END

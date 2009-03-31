@@ -224,7 +224,7 @@ sub has_kinase_data {
   my %args = @_;
   return unless $args{accession};
   my $sql =<<"  END";
-  SELECT COUNT(*) FROM peptideatlas_test.dbo.kinase_knockout
+  SELECT COUNT(*) FROM glycopeptide.dbo.kinase_knockout
   WHERE kinase_name = '$args{accession}' 
   OR protein_name = '$args{accession}' 
   END

@@ -132,7 +132,7 @@ sub display_kinases{
   my $sql =<<"  END";
   SELECT DISTINCT kinase_name, kinase_knockout_id, protein_name,
                   modified_peptide_sequence
-  FROM peptideatlas_test.dbo.kinase_knockout
+  FROM glycopeptide.dbo.kinase_knockout
   ORDER BY kinase_name ASC, protein_name ASC, modified_peptide_sequence
   END
 
@@ -157,7 +157,8 @@ sub display_kinases{
   my $html = '';
 
   my $table = SBEAMS::Connection::DataTable->new( BORDER => 0 );
-  $table->addRow( ['Kinase Name', '# regulated proteins', '# peptides', '# phosphosites' ] );
+#  $table->addRow( ['Kinase Name', '# regulated proteins', '# peptides', '# phosphosites' ] );
+  $table->addRow( ['Kinase Name', '# regulated proteins', '# peptides' ] );
   $table->setRowAttr( ROWS => [1], BGCOLOR => '#C0D0C0' );
   $table->setHeaderAttr(  BOLD => 1 );
 
@@ -171,12 +172,13 @@ sub display_kinases{
 		my $n_prots = scalar( keys( %{$kinases{$key}->{proteins}} ) );
 		my $n_peps = $kinases{$key}->{peptides};
 		my $n_sites = $kinases{$key}->{sites};
-    $table->addRow( [$link, $n_prots, $n_peps, $n_sites ] );
+#    $table->addRow( [$link, $n_prots, $n_peps, $n_sites ] );
+    $table->addRow( [$link, $n_prots, $n_peps ] );
     $bgcolor = ( $bgcolor eq '#E0E0E0' ) ? '#F1F1F1' : '#E0E0E0';
     $table->setRowAttr( ROWS => [$table->getRowNum()], BGCOLOR => $bgcolor );
 	}
 	$table->setColAttr( COLS => [1], ROWS => [2..$table->getRowNum()], ALIGN => 'LEFT' );
-	$table->setColAttr( COLS => [2..4], ROWS => [2..$table->getRowNum()], ALIGN => 'RIGHT' );
+	$table->setColAttr( COLS => [2..3], ROWS => [2..$table->getRowNum()], ALIGN => 'RIGHT' );
 
   return "$table";
 }
