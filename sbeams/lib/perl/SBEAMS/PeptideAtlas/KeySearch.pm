@@ -2124,43 +2124,58 @@ sub buildHoneyBeeKeyIndex {
   my %proteins;
   my %dbxref_ids = (
     'RefSeq'       => 39,
-    'RefSeq_Gene'  => 44,
-    'BeeBase'      => 45,
+    'BeeBase_gene' => 45,
+    'NCBIProt'     => 12,
   );
 
 
-
+  my @keylist = ('BeeBase_gene',
+                    'NCBIProt', 
+                    'RefSeq', 
+                    'BeeBase_protein',
+                    'Full Name',
+                    'Prediction ID',
+                    'Prediction Description');
+                    
+        
   #### Load information from ptt file
-  my $reference_file = "$reference_directory/Honeybee_Merge20090316_cRAP_Target.fasta";
+  my $reference_file = "$reference_directory/Honeybee_Merge20090331_Target.aliases";
   print "Reading $reference_file\n" if ($VERBOSE);
   open(INFILE,$reference_file)
     or die("ERROR[$METHOD]: Unable to open file '$reference_file'");
 
   #### Load data
   while (my $line = <INFILE>) {
-    $line =~ s/[\r\n]//g;
-    if ($line =~ /^>/) {
-      if ($line =~ /^>(\S+)/) {
-	my $protein_name = $1;
-	if ($line =~ /^>\S+\s+(.+)$/) {
-	  my $description = $1;
-          if ($description =~ /^(.+) \[Apis mellifera]\s*$/)  {
-	    my $description = $1;
-            if ($description =~ /(XP\_\d+\.\d+)/) {
-	      $proteins{$protein_name}->{RefSeq} = $1;
-	    }
-          }
-          if ($description =~ /Amel\|(.*)]/){
-            my $geneid=$1;
-            $geneid=~ s/\-.*$//;
-            $proteins{$protein_name}->{RefSeq_Gene}= $geneid;
-            $proteins{$protein_name}->{BeeBase}= $geneid;
-          }
-
+    chomp $line;
+    my @elm = split("\t", $line);
+    my $protein_name = $elm[0];
+    foreach (@elm){
+      if(/GB\d+/){
+        if(/GB.*\-PA/){
+          $proteins{$protein_name}->{'BeeBase_protein'}= $_;
+        }
+        else{
+          $proteins{$protein_name}->{'BeeBase_gene'}= $_;
         }
       }
-    }
-  }
+      if(/gi\|\d+/){
+        $proteins{$protein_name}->{'NCBIProt'}= $_;
+      }
+      if(/PREDICTED.*/){
+       $proteins{$protein_name}->{'Full Name'}= $_;
+      }
+      if(/lcl\|/){
+        $proteins{$protein_name}->{'Prediction ID'}= $_;
+      }
+      if(/Gene predicted by Gnomon/){
+        $proteins{$protein_name}->{'Prediction Description'}= $_;
+      }
+      if(/XP\_\d+\.\d+/){
+        $proteins{$protein_name}->{'RefSeq'}= $_;
+      }
+    
+   }        
+ }
   close(INFILE);
 
 
@@ -2183,12 +2198,7 @@ sub buildHoneyBeeKeyIndex {
     #### Build a list of protein links
     my @links;
 
-    if ($biosequence_name) {
-      my @tmp = ('Accession',$biosequence_name);
-      push(@links,\@tmp);
-    }
-    
-    foreach my $key ( qw (RefSeq RefSeq_Gene BeeBase)) {
+    foreach my $key ( @keylist) {
       if (exists($proteins{$biosequence_name}->{$key})) {
         my @tmp;
         if (exists($dbxref_ids{$key})) {
@@ -2200,7 +2210,6 @@ sub buildHoneyBeeKeyIndex {
       }
     }
     foreach my $link (@links) {
-      #print "    ".join("=",@{$link})."\n";
       my %rowdata = (
         search_key_name => $link->[1],
         search_key_type => $link->[0],
