@@ -16,7 +16,7 @@
 #
 ###############################################################################
 BEGIN {
-push @INC, qw( /net/db/src/SSRCalc/ssrcalc .  /tools32/lib/perl5/5.8.0/i386-linux-thread-multi /tools32/lib/perl5/5.8.0 /tools32/lib/perl5/site_perl/5.8.0/i386-linux-thread-multi /tools32/lib/perl5/site_perl/5.8.0 /tools32/lib/perl5/site_perl );
+unshift @INC, qw( /net/db/src/SSRCalc/ssrcalc .  /tools32/lib/perl5/5.8.0/i386-linux-thread-multi /tools32/lib/perl5/5.8.0 /tools32/lib/perl5/site_perl/5.8.0/i386-linux-thread-multi /tools32/lib/perl5/site_perl/5.8.0 /tools32/lib/perl5/site_perl );
 }
 
 
@@ -55,16 +55,23 @@ $|++;
   # Authenticate user.
   my $current_username = $sbeams->Authenticate( allow_anonymous_access => 1 ) || die "Authentication failed";
 
+
   # Process cgi parameters
   my $params = process_params();
   
   #### Get the current atlas_build_id based on parameters or session
-  $atlas_build_id = $atlas->getCurrentAtlasBuildID( parameters_ref => $params );
+  $atlas_build_id = $atlas->getCurrentAtlasBuildID( parameters_ref => $params,
+                                                    no_cache => 1 # no session cache, tools32
+                                                  );
 
-  $log->debug( "Atlas build is $atlas_build_id " );
+  $log->info( "Atlas build is $atlas_build_id in showPathways" );
+  my $paramstr = '';
 
-  $kegg_organism = $atlas->getCurrentAtlasOrganism( parameters_ref => $params, 
-                                                              type => 'kegg' );
+  $kegg_organism = $atlas->getCurrentAtlasOrganism( atlas_build_id => $atlas_build_id,
+                                                    parameters_ref => $params, 
+                                                              type => 'kegg',
+                                                          no_cache => 1 
+                                                  );
 
   my $content = '';
   $params->{apply_action} ||= 'list_pathways';
@@ -363,7 +370,7 @@ sub getExpressionValues {
      LEFT JOIN $TBAT_BIOSEQUENCE BS
           ON ( PM.matched_biosequence_id = BS.biosequence_id )
      LEFT JOIN $TBAT_SEARCH_KEY SK
-          ON ( SK.resource_name = BS.biosequence_name )
+          ON ( SK.resource_name = BS.biosequence_name AND SK.atlas_build_id = AB.atlas_build_id )
     WHERE 1 = 1
     AND search_key_name IN ( $gene_string )
     AND search_key_type = '$search_type'
