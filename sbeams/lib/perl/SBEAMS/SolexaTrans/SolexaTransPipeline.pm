@@ -49,7 +49,6 @@ sub _init_self {
 	$self->output_dir("$output_dir/$project_name");
     }
 
-    $self->verify_required_opts();
 }
 
 sub _class_init {
@@ -60,6 +59,7 @@ sub _class_init {
 
 sub run {
     my ($self)=@_;
+    $self->verify_required_opts();
     $self->status('running');
     $self->get_dbh;
     $self->get_babel;

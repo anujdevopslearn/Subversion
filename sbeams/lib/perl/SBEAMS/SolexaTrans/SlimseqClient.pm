@@ -10,7 +10,7 @@ use JSON qw(to_json from_json);
 
 use base qw(Class::AutoClass);
 
-use vars qw(@AUTO_ATTRIBUTES @CLASS_ATTRIBUTES %DEFAULTS %SYNONYMS $sbeams $sbeams_solexa);
+use vars qw(@AUTO_ATTRIBUTES @CLASS_ATTRIBUTES %DEFAULTS %SYNONYMS);
 @AUTO_ATTRIBUTES = qw(urls base_url ss_user ss_pass);
 @CLASS_ATTRIBUTES = qw(ua);
 %DEFAULTS = (
@@ -20,9 +20,6 @@ use vars qw(@AUTO_ATTRIBUTES @CLASS_ATTRIBUTES %DEFAULTS %SYNONYMS $sbeams $sbea
 	     );
 
 %SYNONYMS = ();
-
-use FindBin;
-use lib "$FindBin::Bin/../../";
 
 Class::AutoClass::declare(__PACKAGE__);
 

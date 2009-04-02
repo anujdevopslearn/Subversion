@@ -59,6 +59,9 @@ sub get_genome {
     $self->genomes->{$org}->{$name}
 }
 
+# select and genome_ids from the db (as listref)
+# select based on k/v pairs in parameters
+# eg $g->fetch_genome_ids(org=>'mouse')
 sub fetch_genome_ids {
     my ($self,%argHash)=@_;
 

@@ -43,7 +43,15 @@ sub _init_self {
 
 sub dbh_info {
     my $self=shift;
-    return PhonyBone::DBHManager->dbh_info($self);
+    return SBEAMS::SolexaTrans::DBHManager->dbh_info($self);
+}
+
+sub connect {
+    my ($self,$host,$engine,$db_name,$user,$pwd)=@_;
+    my $driver_type=lc $engine eq 'mysql'? 'database':'dbname';
+    my $dsn="DBI:$engine:host=$host;$driver_type=$db_name";
+    my $dbh = DBI->connect($dsn, $user, $pwd) or    
+	confess "$DBI::errstr";
 }
 
 sub db_name1 {
