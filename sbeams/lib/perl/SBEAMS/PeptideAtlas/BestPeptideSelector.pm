@@ -409,6 +409,164 @@ sub bySuitabilityScore {
 
 } # end bySuitabilityScore
 
+#+
+# @narg peptides  reference to array of peptides
+# @narg header    Does array have header row, default 0
+# @narg seq_idx   index of sequence column in array, default to 0
+# @narg score_idx index of score column, default is undef
+# @narg pen_defs  reference to hash of scoring penalties, any that exist will
+#                 override defaults - shown below
+#  Code    Penal   Description
+#  M       .3      Exclude/Avoid M
+#  nQ      .1      Exclude N-terminal Q
+#  nE      .4      Avoid N-terminal E
+#  C       .7      Avoid C (dirty peptides don't come alkylated but can be)
+#  W       .2      Exclude W
+#  NG      .3      Avoid dipeptide NG
+#  DP      .3      Avoid dipeptide DP
+#  QG      .3      Avoid dipeptide QG
+#  nxxG    .3      Avoid nxxG
+#  nGPG    .1      Exclude nxyG where x or y is P or G
+#  D       .9      Slightly penalize D or S in general?
+#  S       .9      Slightly penalize D or S in general?
+#
+# Routine will return reference to same array, with score multiplier and 
+# list of matched codes appended to the end of each row.
+#
+# If a score_idx is given, a third column will be appended with that score
+# multiplied by the penalty multiplier.
+#-
+sub pabst_evaluate_peptides {
+  my $self = shift;
+  my %args = ( header => 0,
+               seq_idx => 0,
+               score_idx => undef,
+               @_ );
+
+  return undef unless $args{peptides};
+
+  my %pen_defs =  ( M => .3,
+                   nQ => .1,
+                   nE => .4,
+                   C => .7,
+                   W => .2,
+                   NG => .3,
+                   DP => .3,
+                   QG => .3,
+                   nxxG =>.3,
+                   nGPG =>.1,
+                   D => .9,
+                   S => .9 );
+
+  # Allow user override
+  if ( $args{pen_defs} && ref  $args{pen_defs} eq 'HASH' ) {
+    for my $k ( keys( %pen_defs ) ) {
+      $pen_defs{$k} = $args{pen_defs}->{$k} if $args{pen_defs}->{$k};
+    }
+  }
+
+  # Loop over peptides
+  my $cnt = 0;
+  for my $pep ( @{$args{peptides}} ) {
+
+    # If we have a header column, push new headings
+    if ( $args{header} && !$cnt ) {
+      $cnt++;
+      push @$pep, 'Penalty_score', 'Penalty_codes';
+      if ( defined $args{score_idx} ) {
+        push @$pep, 'Adjusted_score';
+      }
+      next;
+    }
+
+    # Start multiplier at 1
+    my $scr = 1;
+    my $seq = uc($pep->[$args{seq_idx}]);
+    my @pen_codes;
+
+    # Time to run the gauntlet!
+    # Exclude/Avoid M
+    if ( $seq =~ /M/ ) {
+      $scr *= $pen_defs{M};
+      push @pen_codes, 'M';
+    }
+
+    # Exclude N-terminal Q
+    if ( $seq =~ /^Q/ ) {
+      $scr *= $pen_defs{nQ};
+      push @pen_codes, 'nQ';
+    }
+
+    # Avoid N-terminal E
+    if ( $seq =~ /^E/ ) {
+      $scr *= $pen_defs{nE};
+      push @pen_codes, 'nE';
+    }
+
+    # Avoid C 
+    if ( $seq =~ /C/ ) {
+      $scr *= $pen_defs{C};
+      push @pen_codes, 'C';
+    }
+
+    # Avoid W
+    if ( $seq =~ /W/ ) {
+      $scr *= $pen_defs{W};
+      push @pen_codes, 'W';
+    }
+
+    # Avoid dipeptide NG
+    if ( $seq =~ /NG/ ) {
+      $scr *= $pen_defs{NG};
+      push @pen_codes, 'NG';
+    }
+
+    # Avoid dipeptide DP
+    if ( $seq =~ /DP/ ) {
+      $scr *= $pen_defs{DP};
+      push @pen_codes, 'DP';
+    }
+
+    # Avoid dipeptide QG
+    if ( $seq =~ /QG/ ) {
+      $scr *= $pen_defs{QG};
+      push @pen_codes, 'QG';
+    }
+
+    # Avoid nxxG
+    if ( $seq =~ /^..G/ ) {
+      $scr *= $pen_defs{nxxG};
+      push @pen_codes, 'nxxG';
+    }
+
+    # Exclude nxyG where x or y is P or G
+    if ( $seq =~ /^[GP].G/ ||  $seq =~ /^.[GP]G/   ) {
+      $scr *= $pen_defs{nGPG};
+      push @pen_codes, 'nGPG';
+    }
+
+    # Slightly penalize D in general
+    if ( $seq =~ /D/ ) {
+      $scr *= $pen_defs{D};
+      push @pen_codes, 'D';
+    }
+
+    # Slightly penalize S in general
+    if ( $seq =~ /S/ ) {
+      $scr *= $pen_defs{S};
+      push @pen_codes, 'S';
+    }
+    $log->info( "Score is $scr for peptide $seq!" );
+
+    push @$pep, $scr, join( ',', @pen_codes);
+    if ( defined $args{score_idx} ) {
+      push @$pep, $scr * $pep->[$args{score_idx}];
+    }
+  }
+  return $args{peptides};
+
+}
+
 
 
 
