@@ -184,7 +184,8 @@ sub get_headings {
 
   my @headings = qw( biosequence_name preceding_residue peptide_sequence following_residue           
                      suitability_score molecular_weight SSRCalc_relative_hydrophobicity
-                     n_protein_mappings n_genome_locations best_probability n_observations );
+                     n_protein_mappings n_genome_locations best_probability n_observations
+                     synthesis_score synthesis_warnings syntheis_adjusted_score );
   return \@headings;
 }
 
