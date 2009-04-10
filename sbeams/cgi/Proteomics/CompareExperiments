@@ -734,10 +734,10 @@ sub handle_request {
       ["accessor","DBX.accessor","accessor"],
       ["accessor_suffix","DBX.accessor_suffix","accessor_suffix"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
-      ["peptideatlas_protein_link","''","PA Prot"],
+      ["peptideatlas_protein_link","NULL","PA Prot"],
       ["reference","BS.biosequence_name","Reference"],
       ["$colname","$colname","$dispname"],
-      ["peptideatlas_peptide_link","''","PA Pep"],
+      ["peptideatlas_peptide_link","NULL","PA Pep"],
     );
 
     my @search_batch_ids = split(/,/,$parameters{search_batch_id});
@@ -767,7 +767,7 @@ sub handle_request {
       ["accessor","DBX.accessor","accessor"],
       ["accessor_suffix","DBX.accessor_suffix","accessor_suffix"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
-      ["peptideatlas_protein_link","''","PA Prot"],
+      ["peptideatlas_protein_link","NULL","PA Prot"],
       ["reference","BS.biosequence_name","Reference"],
     );
 
@@ -797,10 +797,10 @@ sub handle_request {
       ["accessor","DBX.accessor","accessor"],
       ["accessor_suffix","DBX.accessor_suffix","accessor_suffix"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
-      ["peptideatlas_protein_link","''","PA Prot"],
+      ["peptideatlas_protein_link","NULL","PA Prot"],
       ["reference","BS.biosequence_name","Reference"],
       ["peptide","peptide","Peptide"],
-      ["peptideatlas_peptide_link","''","PA Pep"],
+      ["peptideatlas_peptide_link","NULL","PA Pep"],
     );
 
     my @search_batch_ids = split(/,/,$parameters{search_batch_id});

@@ -501,7 +501,7 @@ sub handle_request {
   if ( $parameters{display_options} =~ /ShowPeptides/ ) {
     @peptide_columns = (
       ["peptide_sequence","PEP.peptide_sequence","Peptide"],
-      ["peptideatlas_peptide_link","''","PA Pep"],
+      ["peptideatlas_peptide_link","NULL","PA Pep"],
       ["charge","PEP.charge","Chg"],
       ["peptide_probability","STR(PEP.nsp_adjusted_probability,7,3)","Peptide Prob"],
       ["peptide_n_instances","PEP.n_instances","Peptide N Instances"],
@@ -526,7 +526,7 @@ sub handle_request {
       ["accessor","DBX.accessor","accessor"],
       ["accessor_suffix","DBX.accessor_suffix","accessor_suffix"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
-      ["peptideatlas_protein_link","''","PA Prot"],
+      ["peptideatlas_protein_link","NULL","PA Prot"],
       ["canonical_name","BSCAN.biosequence_name","Canonical Name"],
       ["protein_probability","STR(PROT.probability,7,3)","Protein Prob"],
       @peptide_columns,
