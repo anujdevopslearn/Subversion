@@ -746,7 +746,6 @@ sub get_mass_modifications {
 	    FROM $TBPR_SEARCH_BATCH_PARAMETER
 	   WHERE search_batch_id = '$search_batch_id'
 	     AND parameter_key LIKE 'add[_]%'
-	     AND CONVERT(real,parameter_value) != 0
     ~;
     #print "<PRE>$sql_query\n\n</PRE>";
 
