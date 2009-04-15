@@ -56,13 +56,15 @@ Options:
   --verbose n         Set verbosity level.  default is 0
   --quiet             Set flag to print nothing at all except errors
   --debug n           Set debug flag
+  --command_line      Format output for command line
 
  e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
 
 EOU
 
 #### Process options
-unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+unless
+(GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","command_line",)) {
   print "$USAGE";
   exit;
 }
@@ -70,12 +72,14 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
 $VERBOSE = $OPTIONS{"verbose"} || 0;
 $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
+my $command_line = $OPTIONS{"command_line"} || 0;
 
 if ($DEBUG) {
   print "Options settings:\n";
   print "  VERBOSE = $VERBOSE\n";
   print "  QUIET = $QUIET\n";
   print "  DEBUG = $DEBUG\n";
+  print "  command_line = $command_line\n";
 }
 
 
@@ -403,7 +407,7 @@ sub handle_request {
     my $n_results = scalar(@{$resultset_ref->{data_ref}});
 
     #### If exactly one result came back, then redirect to the one hit
-    if ($n_results == 1) {
+    if ($n_results == 1 && !$command_line) {
       print "Status: 302 Resource Temporarily Moved\n";
       print "Location: $CGI_BASE_DIR/PeptideAtlas/".
 	$resultset_ref->{data_ref}->[0]->[6]."\n\n";
