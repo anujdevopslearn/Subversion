@@ -756,7 +756,8 @@ sub handle_request {
   }
   my %graphic_params = ( build_id => $atlas_build_id,
                          protein_data  => $biosequence,
-                         tr_info => $tr );
+                         tr_info => $tr,
+												 obs_color => $parameters{obs_color} );
      
   my $graphic_section = get_sequence_graphic( %graphic_params, %motif_params );
 
@@ -1249,7 +1250,8 @@ sub get_sequence_graphic {
            P.peptide_sequence,
            PI.n_genome_locations,
            PM.start_in_biosequence,
-           PM.end_in_biosequence
+           PM.end_in_biosequence,
+           PI.n_observations
     FROM $TBAT_PEPTIDE_INSTANCE PI INNER JOIN $TBAT_PEPTIDE P
       ON ( PI.peptide_id = P.peptide_id )
     LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
@@ -1276,8 +1278,8 @@ sub get_sequence_graphic {
           Extracellular => 'mediumseagreen',
                Coverage => 'beige',
              Translated => 'gainsboro',
-               Observed => 'goldenrod',
-           Glycopeptide => 'firebrick',
+               Observed => $args{obs_color} || 'firebrick' ,
+           Glycopeptide => 'goldenrod',
               Difficult => 'bisque' );
 
   # Define CSS classes
@@ -1329,6 +1331,20 @@ sub get_sequence_graphic {
 
   ## Generate observed peptide tracks ##
 
+  # color peptides based on n_obs
+  my $max = 1;
+  my $threshold = 20;
+  my $lten = log(10);
+  foreach my $row (@rows) {
+    $max = ( $max > $row->[5] ) ? $max : $row->[5];
+    if ( $max > $threshold ) {
+      $max = $threshold;
+      last;
+    }
+  }
+  $max = log($max)/$lten;
+
+
   # Loop over peptides
   my @peptides;
   my %pep_info;
@@ -1336,7 +1352,10 @@ sub get_sequence_graphic {
   foreach my $row (@rows) {
     my $acc  =  $row->[0];
     my $seq  =  $row->[1];
-    my $score = ( $row->[2] > 1 ) ? 0 : 1;
+
+    my $score = ( $row->[2] > 1 ) ? 0 : 
+                ( $row->[5] <= $threshold ) ? (log($row->[5])/$lten) + 0.3 : $max;
+
     my $start =  $row->[3];
     my $stop  =  $row->[4];
     # accession isn't necessarily unique, need compound key...
@@ -1360,7 +1379,7 @@ sub get_sequence_graphic {
       $multi++;
     }
 
-    $pep_info{$ugly_key} = "$start - $stop, $seq";
+    $pep_info{$ugly_key} = "$start - $stop, $seq ($row->[5] obs)";
   }
 
 
@@ -1629,7 +1648,7 @@ sub get_sequence_graphic {
                       -height      => 8,
                       -label       => sub { my $f = shift; my $n = $f->display_name(); $n =~ s/(.*)::::.*/$1/g; return $n },
                       -min_score   => 0,
-                      -max_score   => 1,
+                      -max_score   => $max
                      );
 
   ## Add glyco track (mebbe)
