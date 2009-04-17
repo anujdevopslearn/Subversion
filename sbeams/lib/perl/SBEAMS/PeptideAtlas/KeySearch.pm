@@ -609,7 +609,6 @@ sub buildGoaKeyIndex {
 
     #### Write the links for each Ensembl IP
     foreach my $Ensembl_ID (@Ensembl_IDS) {
-
       #### Strip HAVANA prefix
       $Ensembl_ID =~ s/HAVANA://;
 
@@ -710,7 +709,9 @@ sub readGOAAssociations {
       print "Synonym=$Synonym\n";
       print "DB_Object_Name=$DB_Object_Name\n";
     }
-
+    if($Database eq 'UniProtKB'){
+       $Database = 'UniProt';
+    }
     $associations{"$Database:$Accession"}->{Symbol} = $Symbol;
     $associations{"$Database:$Accession"}->{DB_Object_Name} = $DB_Object_Name;
 
