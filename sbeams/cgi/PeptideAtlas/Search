@@ -430,15 +430,19 @@ sub handle_request {
     my $download_link = '';
     #### If 0 results came back, then inform the user
     if ($n_results == 0) {
-      print "There were no matches in the index to match your search key '$search_key'<BR>";
-      if ($search_key !~ /%/) {
-        print qq~
-          <TABLE BORDER="0" WIDTH="570"><TR><TD>
-          <BR>You can broaden the search by placing wildcards around your search key like this:
-          <A HREF="$base_url?search_key=$cleaned_search_key%25&action=GO">$cleaned_search_key%</A>,
-          <A HREF="$base_url?search_key=%25$cleaned_search_key%25&action=GO">%$cleaned_search_key%</A>
-          </TD></TR></TABLE>
-        ~;
+      if ($sbeams->output_mode() eq 'html') {
+	print "There were no matches in the index to match your search key '$search_key'<BR>";
+	if ($search_key !~ /%/) {
+	  print qq~
+	    <TABLE BORDER="0" WIDTH="570"><TR><TD>
+	    <BR>You can broaden the search by placing wildcards around your search key like this:
+	    <A HREF="$base_url?search_key=$cleaned_search_key%25&action=GO">$cleaned_search_key%</A>,
+	    <A HREF="$base_url?search_key=%25$cleaned_search_key%25&action=GO">%$cleaned_search_key%</A>
+	    </TD></TR></TABLE>
+	  ~;
+	}
+      } else {
+	print "There were no matches in the index to match your search key '$search_key'\n";
       }
       return(0);
     } elsif ( $build_type_selection->{atlas_build_ids} =~ /^\d+$/ ) {
