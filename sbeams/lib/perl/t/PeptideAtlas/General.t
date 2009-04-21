@@ -45,11 +45,30 @@ sub test_bad_peptide {
 #  nGPG    .1      Exclude nxyG where x or y is P or G
 #  D       .9      Slightly penalize D or S in general?
 #  S       .9      Slightly penalize D or S in general?
+#
+#  changed...
+#
+#    my %scores =  (  M => .3,
+#                  nQ => .1,
+#                  nE => .4,
+#                  Xc => .5,
+#                   C => .3,
+#                   W => .1,
+#                   P => .3,
+#                  NG => .5,
+#                  DP => .5,
+#                  QG => .5,
+#                  DG => .5,
+#                nxxG => .3,
+#                nGPG => .1,
+#                   D => 1.0,
+#                   S => 1.0 );
+#
   my $peptide = 'QPGMCWNGDPQGDSR';
 	my @peptides = ( [$peptide, 100000000] );
 	my $results = $pepselector->pabst_evaluate_peptides( peptides => \@peptides, score_idx => 1 );
 	for my $res ( @{$results} ) {
-		if ( int($res->[4]) == 275 ) {
+		if ( int($res->[4]) == 101 ) {
       return 1;
     } else {
       return 0;
@@ -62,6 +81,7 @@ sub test_bad_override_peptide {
                 nQ => 1,
                 C => 1,
                 W => 1,
+                P => 1,
                 NG => 1,
                 DP => 1,
                 QG => 1,
@@ -83,7 +103,7 @@ sub test_bad_override_peptide {
 }
 
 sub test_good_peptide {
-  my $peptide = 'AGNTLLPIIK';
+  my $peptide = 'AGNTLLDIIK';
 	my @peptides = ( [$peptide, 1000] );
 	my $results = $pepselector->pabst_evaluate_peptides( peptides => \@peptides, score_idx => 1 );
 	for my $res ( @{$results} ) {
