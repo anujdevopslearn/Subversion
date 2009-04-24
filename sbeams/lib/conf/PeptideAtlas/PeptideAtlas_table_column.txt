@@ -560,17 +560,20 @@ AT_search_batch_statistics	12	model_90_error_rate	Peptide Prophet model error ra
 AT_search_batch_statistics	13	n_good_spectra	Num spectra above threshold	int	4	0	Y		N							Y	Y	N	Number of spectra identified above Peptide Prophet cutoff		
 AT_search_batch_statistics	14	rownum	Line number in source file	int	4	0	Y		N							Y	Y	N	Line number in source Experiments.txt file 		
 AT_search_batch_statistics	15	cumulative_n_peptides	Cumulative number of peptides	int	4	0	Y		N							Y	Y	N	Cumulative number of peptides		
-AT_proteotypic_peptide	1	proteotypic_peptide_id	Proteotypic Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
-AT_proteotypic_peptide	2	source_biosequence_id	Source Biosequence ID	int	4	0	N		N	AT_biosequence	biosequence_id								Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
-AT_proteotypic_peptide	3	matched_peptide_id	Matched Peptide ID	int	4	0	Y		N	AT_peptide	peptide_id								Title of this PeptideAtlas build		
-AT_proteotypic_peptide	4	preceding_residue	Preceding Residue	char	1	0	N														
-AT_proteotypic_peptide	5	peptide_sequence	Peptide Sequence	varchar	255	0	N														
-AT_proteotypic_peptide	6	following_residue	Following Residue	char	1	0	N														
-AT_proteotypic_peptide	7	peptidesieve_ESI	PeptideSieve ESI	float	8	0	N														
-AT_proteotypic_peptide	8	peptidesieve_ICAT	PeptideSieve ICAT	float	8	0	N														
-AT_proteotypic_peptide	9	detectabilitypredictor_score	Detectability Predictor Score	float	8	0	N														
-AT_proteotypic_peptide	10	peptide_isoelectric_point	Isoelectric Point	real	4	0	Y		N			Y	text	10		Y	Y	N	Calculated isoelectric point of the peptide		
-AT_proteotypic_peptide	11	molecular_weight	Molecular Weight	real	4	0	Y		N			Y	text	10		Y	Y	N	Calculated molecular weight of the peptide		
-AT_proteotypic_peptide	12	SSRCalc_relative_hydrophobicity	SSRCalc Relative Hydrophobicity	real	4	0	Y		N			Y	text	10		Y	Y	N	Calculated hydrophobicity of the peptide using SSRCalc algorithm		
-AT_proteotypic_peptide	13	n_genome_locations	Number of Genome Locations Mapped to	int	4	0	N		N			Y	text	10		Y	Y	N	Number of Genome locations for this peptide 		
-AT_proteotypic_peptide	14	n_protein_mappings	Number of Proteins for this Peptide 	int	4	0	N		N			Y	text	10		Y	Y	N	Number of distinct accession numbers (proteins) for peptide in Genome		
+AT_proteotypic_peptide	1	proteotypic_peptide_id	Proteotypic Peptide ID	int	4	0	N		Y							 	 				pkDEFAULT
+AT_proteotypic_peptide	2	matched_peptide_id	Matched Peptide ID	int	4	0	Y		N	AT_peptide	peptide_id								Peptide ID of  the Atlas entry which matches the amino acid sequence of this entry		
+AT_proteotypic_peptide	3	preceding_residue	Preceding Residue	char	1	0	N		N												
+AT_proteotypic_peptide	4	peptide_sequence	Peptide Sequence	varchar	255	0	N		N												
+AT_proteotypic_peptide	5	following_residue	Following Residue	char	1	0	N		N												
+AT_proteotypic_peptide	6	peptidesieve_ESI	PeptideSieve ESI	float	8	0	Y		N												
+AT_proteotypic_peptide	7	peptidesieve_ICAT	PeptideSieve ICAT	float	8	0	Y		N												
+AT_proteotypic_peptide	8	detectabilitypredictor_score	Detectability Predictor Score	float	8	0	Y		N												
+AT_proteotypic_peptide	9	peptide_isoelectric_point	Isoelectric Point	real	4	0	Y		N										Calculated isoelectric point of the peptide		
+AT_proteotypic_peptide	10	molecular_weight	Molecular Weight	real	4	0	Y		N										Calculated molecular weight of the peptide		
+AT_proteotypic_peptide	11	SSRCalc_relative_hydrophobicity	SSRCalc Relative Hydrophobicity	real	4	0	Y		N										Calculated hydrophobicity of the peptide using SSRCalc algorithm		
+AT_proteotypic_peptide_mapping	1	proteotypic_peptide_mapping_id	Proteotypic Peptide Mapping ID	int	4	0	N		Y												pkDEFAULT
+AT_proteotypic_peptide_mapping	2	proteotypic_peptide_id	Proteotypic Peptide ID	int	4	0	N		N	AT_proteotypic_peptide	proteotypic_peptide_id										pkDEFAULT
+AT_proteotypic_peptide_mapping	3	source_biosequence_id	Source Biosequence ID	int	4	0	N		N	AT_biosequence	biosequence_id								Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
+AT_proteotypic_peptide_mapping	4	n_genome_locations	Number of Genome Locations Mapped to	int	4	0	Y		N										Number of Genome locations for this peptide 		
+AT_proteotypic_peptide_mapping	5	n_protein_mappings	Number of Proteins for this Peptide 	int	4	0	Y		N										Number of distinct accession numbers (proteins) for peptide in Genome		
+AT_proteotypic_peptide_mapping	6	n_exact_protein_mappings	Number of Proteins for this peptide including flanking residues 	int	4	0	Y		N										Number of distinct accession numbers (proteins) for peptide in Genome		
