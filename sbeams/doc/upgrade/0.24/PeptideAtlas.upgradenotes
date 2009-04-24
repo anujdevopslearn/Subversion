@@ -814,3 +814,35 @@ ALTER TABLE peptideatlas.dbo.consensus_library_spectrum ADD nreps INT;
 ALTER TABLE peptideatlas.dbo.consensus_library_spectrum ADD collision_energy real;
 ALTER TABLE peptideatlas.dbo.consensus_library_spectrum ADD ionization_energy real;
 
+
+-- Modifed proteotypic_peptide table to have primary and mapping table.  Best
+-- upgrade route is drop and recreate.
+
+DROP TABLE PeptideAtlas.dbo.proteotypic_peptide; 
+
+CREATE TABLE PeptideAtlas.dbo.proteotypic_peptide (
+  proteotypic_peptide_id     int IDENTITY NOT NULL,
+  matched_peptide_id         int NULL,
+  preceding_residue          char(1) NOT NULL,
+  peptide_sequence           varchar(255) NOT NULL,
+  following_residue          char(1) NOT NULL,
+  peptidesieve_ESI           float NULL,
+  peptidesieve_ICAT          float NULL,
+  detectabilitypredictor_score  float NULL,
+  peptide_isoelectric_point  real NULL,
+  molecular_weight           real NULL,
+  SSRCalc_relative_hydrophobicity  real NULL,
+  PRIMARY KEY (proteotypic_peptide_id);
+  )
+GO
+
+
+CREATE TABLE PeptideAtlas.dbo.proteotypic_peptide_mapping (
+  proteotypic_peptide_mapping_id  int IDENTITY NOT NULL,
+  proteotypic_peptide_id     int NOT NULL,
+  source_biosequence_id      int NOT NULL,
+  n_genome_locations         int NULL,
+  n_protein_mappings         int NULL,
+  n_exact_protein_mappings   int NULL,
+  PRIMARY KEY (proteotypic_peptide_mapping_id)
+  );
