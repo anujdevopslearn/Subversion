@@ -56,7 +56,8 @@ sub write_export_xml {
     <export_data table_name="AT_peptide_instance_search_batch" qualifiers="peptide_instance_id IN ( SELECT DISTINCT peptide_instance_id FROM $TBAT_PEPTIDE_INSTANCE WHERE atlas_build_id=ATLAS_BUILD_ID )"></export_data>
     <export_data table_name="AT_peptide_mapping" qualifiers="peptide_instance_id IN ( SELECT DISTINCT peptide_instance_id FROM $TBAT_PEPTIDE_INSTANCE WHERE atlas_build_id=ATLAS_BUILD_ID )"></export_data>
     <export_data table_name="AT_modified_peptide_instance_search_batch" qualifiers="modified_peptide_instance_id IN ( SELECT DISTINCT modified_peptide_instance_id FROM $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI JOIN $TBAT_PEPTIDE_INSTANCE PI ON PI.peptide_instance_id = MPI.peptide_instance_id WHERE atlas_build_id=ATLAS_BUILD_ID  )"></export_data>
-    <export_data table_name="AT_proteotypic_peptide" qualifiers="source_biosequence_id IN ( SELECT DISTINCT biosequence_id FROM $TBAT_BIOSEQUENCE B JOIN $TBAT_ATLAS_BUILD AB ON AB.biosequence_set_id = B.biosequence_set_id WHERE atlas_build_id=ATLAS_BUILD_ID )"></export_data>
+    <export_data table_name="AT_proteotypic_peptide_mapping" qualifiers="source_biosequence_id IN ( SELECT DISTINCT biosequence_id FROM $TBAT_BIOSEQUENCE B JOIN $TBAT_ATLAS_BUILD AB ON AB.biosequence_set_id = B.biosequence_set_id WHERE atlas_build_id=ATLAS_BUILD_ID )">
+    </export_data>
   </export_command_list>
   ~;
 
