@@ -267,6 +267,6 @@ $TBAT_PEPTIDE_ANNOTATION            = "${mod}peptide_annotation";
 $TBAT_MODIFIED_PEPTIDE_ANNOTATION   = "${mod}modified_peptide_annotation";
 $TBAT_TRANSITION_SUITABILITY_LEVEL  = "${mod}transition_suitability_level";
 
-$TBAT_PROTEOTYPIC_PEPTIDE           = "${mod}proteotypic_peptide_test";
+$TBAT_PROTEOTYPIC_PEPTIDE           = "${mod}proteotypic_peptide";
 $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING   = "${mod}proteotypic_peptide_mapping";
 
