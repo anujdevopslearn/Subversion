@@ -23,6 +23,7 @@ use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TabMenu;
+use SBEAMS::Connection::DataTable;
 
 use SBEAMS::Glycopeptide;
 use SBEAMS::Glycopeptide::Settings;
@@ -85,9 +86,16 @@ sub main
     #### Decide what action to take based on information so far
     if ($parameters{action} eq "show_all") {
 	    $content = display_proteins( 'all' );	
+    } elsif ( $parameters{show_peptides} ) {
+      $content = display_prots_and_peps( $parameters{output_mode} );
+      if ( $parameters{output_mode} eq 'tsv' ) {
+        print $sbeams->get_http_header( filename => 'export_glycopeptides.tsv' );
+        print $content;
+        exit;
+      }
     } elsif ( $parameters{output_mode} eq 'tsv' ) {
       $content = display_proteins( 'tsv' );	
-      print $sbeams->get_http_header( filename => 'browse_glycopeptides.tsv' );
+      print $sbeams->get_http_header( filename => 'export_glycopeptides.tsv' );
       print $content;
       exit;
     } elsif ( $parameters{multi_tmm} ) {
@@ -119,6 +127,76 @@ sub import_sort_table {
   <SCRIPT LANGUAGE=javascript SRC="$HTML_BASE_DIR/usr/javascript/sorttable.js"></SCRIPT>
   END
 }
+
+sub display_prots_and_peps {
+  my $mode = shift || 'html';
+  my $content = '';
+
+  my $results = $sbeamsMOD->runBulkSearch( download_all => 1 );
+  my $table = SBEAMS::Connection::DataTable->new( BORDER => 0 );
+  $table->addRow( ['IPI', 'SwissProt', 'Symbol', 'Sequence', 'Prophet', 'Mass', 'Tissues', 'Protein Name' ] );
+
+  my $pep_o = new SBEAMS::Glycopeptide::Get_peptide_seqs(glyco_obj => $sbeamsMOD);
+
+  $table->setRowAttr( ROWS => [1], BGCOLOR => '#C0D0C0' );
+
+  my $current;
+  my $prot_cnt = 1;
+  my $grp_row = 2;
+  my $bgcolor = '#FFFFFF';
+  for my $peptide ( @$results ) {
+    my ( $ipi, 
+         $swiss_id,
+         $ipi_data_id,
+         $seq, 
+         $symbol, 
+         $protein_name, 
+         $peptide_id,
+         $prophet_score,
+         $peptide_mass
+         ) = @$peptide;
+
+    my $ipi_base = $ipi;
+    $current = $ipi_base unless $current;
+
+    my $tissues = $pep_o->identified_tissues( $peptide_id ) || '';
+    if ( $mode eq 'html' ) {
+      $tissues = $sbeams->truncateStringWithMouseover( string => $tissues, len => 20 );
+      $protein_name= $sbeams->truncateStringWithMouseover( string => $protein_name, len => 40 );
+      $ipi = "<A HREF='Glyco_prediction.cgi?search_type=IPI Accession Number;action=Show_hits_form;search_term=$ipi' TARGET=prot_details>$ipi</A>";
+    }
+    $prophet_score = sprintf( "%0.2f", $prophet_score);
+    $peptide_mass = sprintf( "%0.4f", $peptide_mass);
+    
+    $table->addRow( [ $ipi, $swiss_id, $symbol, $seq, $prophet_score, $peptide_mass, $tissues, $protein_name] );
+#    $log->debug( "ipi_base is $ipi_base, current is $current" );
+    if ( $ipi_base ne $current ) {
+      $prot_cnt++;
+#      $log->debug( "In da not current loop" );
+      my $current_row = $table->getRowNum();
+#      $log->info( "group row is $grp_row, current row is $current_row, bgcolor is $bgcolor" );
+      $table->setRowAttr( ROWS => [$grp_row..$current_row - 1], BGCOLOR => $bgcolor );
+      $grp_row = $current_row;
+      $bgcolor = ( $bgcolor eq '#E0E0E0' ) ? '#FFFFFF' : '#E0E0E0';
+      $current = $ipi_base;
+    }
+    my $current_row = $table->getRowNum();
+    $table->setRowAttr( ROWS => [$grp_row..$current_row], BGCOLOR => $bgcolor );
+
+  }
+
+  return "<FONT COLOR=BLUE SIZE=+1>Query returned no results</FONT>" unless @$results;
+
+  if ( $mode eq 'tsv' ) {
+    $content = $table->asTSV();
+  } else {
+    $content .= $table->asHTML();
+  }
+  return $content;
+
+
+}
+
 
 sub display_proteins{
   my $mode = shift;
