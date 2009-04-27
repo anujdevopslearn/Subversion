@@ -623,6 +623,20 @@ sub runBulkSearch {
   my $type = ( $args{id_type} eq 'swp' ) ? 'swiss_prot_acc' :
              ( $args{id_type} eq 'sym' ) ? 'protein_symbol' : 'ipi_accession_number';
 
+  my $where = '';
+  if ( !$args{download_all} ) {
+    $where = "WHERE $type IN ( $ids )";
+  }
+
+  my $cutoff = $self->get_current_prophet_cutoff();
+  if ( $cutoff ) {
+    if ( $where ) {
+      $where .= " AND peptide_prophet_score >= $cutoff\n";
+    } else {
+      $where = "WHERE peptide_prophet_score >= $cutoff\n";
+    }
+  }
+
 
   my $sql =<<"  END";
   SELECT DISTINCT ipi_accession_number, swiss_prot_acc, ID.ipi_data_id,
@@ -632,7 +646,7 @@ sub runBulkSearch {
   ON ID.ipi_data_id = ITI.ipi_data_id
   JOIN $TBGP_IDENTIFIED_PEPTIDE IP
   ON IP.identified_peptide_id = ITI.identified_peptide_id
-  WHERE $type IN ( $ids )
+  $where;
   END
   $log->debug( $sql );
 
