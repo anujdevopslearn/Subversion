@@ -68,6 +68,11 @@ sub displayUnipepHeader {
     $log->debug(  "$PHYSICAL_BASE_DIR/lib/perl/SBEAMS/PeptideAtlas/ContextWidget.pm doesn't exist" )
   }
 
+  # Not going to show this for now...
+  $cswitcher = '';
+
+  my $cutoff_widget = $self->get_prophet_control();
+
   my $LOGIN_LINK = qq~<A HREF="$LOGIN_URI" class="leftnavlink">LOGIN</A>~;
 
   use LWP::UserAgent;
@@ -86,6 +91,8 @@ sub displayUnipepHeader {
        $line =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
     } elsif ( $line =~ /CSWITCHER/ ) {
        $line =~ s/\<\!--CSWITCHER--\>/$cswitcher/;
+    } elsif ( $line =~ /PSCORE_CUTOFF/ ) {
+       $line =~ s/\<\!--PSCORE_CUTOFF--\>/$cutoff_widget/;
     } elsif ( $line =~ /td\s+\{font/ ) {
   #    next;
     } elsif ( $line =~ /body\s+\{font/ ) {
