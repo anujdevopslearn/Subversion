@@ -43,7 +43,7 @@ sub _class_init {
 
 sub count_tags {
     my ($self)=@_;
-    my $filename=$self->export_file;
+    my $filename=$self->export_file or confess "no export_file???";
     my $now=scalar localtime;
     warn "$now: counting tags in $filename...\n";
     open (TAGS,"$filename") or die "Can't open $filename: $!";
@@ -59,15 +59,15 @@ sub count_tags {
 	chomp;
 	my @fields=split(/\t/);
 	my $tag=lc $fields[8];
-	$tag=substr($tag,0,-$truncate) if $truncate;
-	next unless $tag;
 	next if $tag=~/[^acgt]/;
+	if ($truncate) {
+	    $tag=substr($tag,0,-$truncate);
+	} else {
+	    $tag=~s/t[acgt]?$//;
+	}
+	next unless $tag;
 	$n_reads++;
 
-#	my $tc_index=rindex($tag,'tc');
-#	$tag=substr($tag,0,$tc_index) if ((length $tag)-$tc_index<=2);
-	$tag=~s/t[acgt]?$//;
-	
 	do {$self->repeats->tally_repeat($tag); next} if $self->repeats->is_repeat($tag);
 	$tags->{$tag}->{count}++;
 	$tags->{$tag}->{length}=length $tag;
