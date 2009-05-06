@@ -27,7 +27,7 @@ use Getopt::Long;
 use FindBin;
 
 use lib "$FindBin::Bin/../../lib/perl";
-use vars qw ($sbeams $sbeamsMOD $q $dbh $current_contact_id $current_username
+use vars qw ($sbeams $sbeamsMOD $utilities $q $dbh $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $current_work_group_id $current_work_group_name
              $current_project_id $current_project_name
@@ -36,7 +36,7 @@ use vars qw ($sbeams $sbeamsMOD $q $dbh $current_contact_id $current_username
 use DBI;
 #use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
-
+use Data::Dumper; 
 use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
@@ -48,9 +48,12 @@ use SBEAMS::SolexaTrans;
 use SBEAMS::SolexaTrans::Settings;
 use SBEAMS::SolexaTrans::Tables;
 use SBEAMS::SolexaTrans::TableInfo;
+use SBEAMS::SolexaTrans::SolexaUtilities;
 $sbeamsMOD = new SBEAMS::SolexaTrans;
+$utilities = new SBEAMS::SolexaTrans::SolexaUtilities;
 
 $sbeamsMOD->setSBEAMS($sbeams);
+$utilities->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 require 'ManageTable.pllib';
@@ -124,6 +127,8 @@ sub main {
   #### Process generic "state" parameters before we start
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
+  my $project_id = $current_project_id || $sbeams->getCurrent_project_id();
+
 
   $TABLE_NAME = $parameters{'TABLE_NAME'}
     || croak "TABLE_NAME not specified."; 
@@ -140,12 +145,35 @@ sub main {
     "PK_COLUMN_NAME");
   @MENU_OPTIONS = $sbeamsMOD->returnTableInfo($TABLE_NAME,"MENU_OPTIONS");
 
+  # Limit the table below based on info
+  if ($parameters{where_clause}) {
+    if ($parameters{'where_clause'} !~ /project_id/) {
+      my $val = $parameters{'where_clause'};
+      $val .= "AND project_id = '$project_id'";
+      $q->param(-name=>'where_clause', -value=>$val);
+    }
+  } else {
+    if ($parameters{"$PK_COLUMN_NAME"}) {
+      $q->param(-name=>'where_clause', -value=>"project_id = '$project_id' AND $PK_COLUMN_NAME = '".$parameters{"$PK_COLUMN_NAME"}."'");
+    } else {
+      $q->param(-name=>'where_clause', -value=>"project_id = '$project_id'");
+    }
+  }
+
+  if ($parameters{'slimseq_sample_id'}) {
+#    $q->param(-name=>'where_clause', -value=>"slimseq_sample_id = '".$parameters{slimseq_sample_id}."'");
+    my $solexa_sample_id = $utilities->check_sbeams_sample(slimseq_id => $parameters{slimseq_sample_id});
+    $parameters{solexa_sample_id} = $solexa_sample_id;
+    $q->param(-name=>'solexa_sample_id', -value=>"$solexa_sample_id");
+  }
+
 
   #### Decide what action to take based on information so far
   if ($parameters{"GetFile"} && $parameters{"$PK_COLUMN_NAME"}) {
     getFile(); return;
   }
   $sbeamsMOD->printPageHeader();
+
   if      ($parameters{action} eq 'VIEWRESULTSET') { printOptions();
   } elsif ($parameters{action} eq 'REFRESH') { printEntryForm();
   } elsif ($parameters{action} eq 'SAVE TEMPLATE') { saveTemplate();
@@ -160,7 +188,7 @@ sub main {
   } elsif ($q->param('apply_action_hidden')) { printEntryForm();
   } elsif ($q->param('ShowEntryForm')) { printEntryForm();
   } elsif ($parameters{"$PK_COLUMN_NAME"}) { printEntryForm();
-  } else { printOptions(); }
+  } else { printOptions(parameters_ref=>\%parameters); }
 
   $sbeamsMOD->printPageFooter();
 
