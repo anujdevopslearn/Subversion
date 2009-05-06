@@ -48,10 +48,18 @@ use vars qw(@ISA @EXPORT
     $TBST_RESTRICTION_ENZYME
 
     $TBST_SOLEXA_ANALYSIS
+    $TBST_ANALYSIS_PARAMETERS
+
+    $TBST_GENE_ANALYSIS
+
     $TBST_TAG
     $TBST_TAG_ANALYSIS
     $TBST_BIOSEQUENCE_TAG
     $TBST_TAG_TYPE
+
+    $TBST_BIOSEQUENCE
+    $TBST_BIOSEQUENCE_SET
+    $TBST_BIOSEQUENCE_PROPERTY_SET
 );
 
 
@@ -91,10 +99,18 @@ require Exporter;
     $TBST_RESTRICTION_ENZYME
 
     $TBST_SOLEXA_ANALYSIS
+    $TBST_ANALYSIS_PARAMETERS
+
+    $TBST_GENE_ANALYSIS
+
     $TBST_TAG
     $TBST_TAG_ANALYSIS
     $TBST_BIOSEQUENCE_TAG
     $TBST_TAG_TYPE
+
+    $TBST_BIOSEQUENCE
+    $TBST_BIOSEQUENCE_SET
+    $TBST_BIOSEQUENCE_PROPERTY_SET
 );
 
 
@@ -136,8 +152,15 @@ $TBST_SOLEXA_FLOW_CELL_LANE_SAMPLES	= "${modST}solexa_flow_cell_lane_samples";
 $TBST_RESTRICTION_ENZYME		= "${modST}restriction_enzyme";
 
 $TBST_SOLEXA_ANALYSIS                   = "${modST}solexa_analysis";
+$TBST_ANALYSIS_PARAMETERS               = "${modST}analysis_parameters";
+    
+$TBST_GENE_ANALYSIS                     = "${modST}gene_analysis";
+
 $TBST_TAG                               = "${modST}tag";
 $TBST_TAG_ANALYSIS                      = "${modST}tag_analysis";
 $TBST_BIOSEQUENCE_TAG			= "${modST}biosequence_tag";
 $TBST_TAG_TYPE                          = "${modST}tag_type";
 
+$TBST_BIOSEQUENCE                       = "${modST}biosequence";
+$TBST_BIOSEQUENCE_SET                   = "${modST}biosequence_set";
+$TBST_BIOSEQUENCE_PROPERTY_SET          = "${modST}biosequence_property_set";
