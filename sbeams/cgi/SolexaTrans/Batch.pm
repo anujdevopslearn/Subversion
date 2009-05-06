@@ -115,6 +115,12 @@ sub queue {
     if (@_) { $self->{'queue'} = shift}
     return $self->{'queue'};
 }
+
+sub mem {
+    my $self = shift;
+    if (@_) { $self->{'mem'} = shift}
+    return $self->{'mem'};
+}
 #### Method: submit
 # Submit job to the batch system, returns undef for failure
 ####
@@ -242,7 +248,8 @@ sub submit_pbs {
     }
     
     $command = $::BATCH_BIN . "/qsub";
-    $command .= " -l walltime=12:00:00";
+    $command .= " -l walltime=12:00:00" unless $self->cputime; # default to 12 unless specified
+    $command .= " -l walltime=".$self->cputime if $self->cputime;
     if ($self->name) {
       $command .= " -N " . $self->name;
     }
@@ -254,10 +261,15 @@ sub submit_pbs {
     my ( $dir ) =  $script =~ /(.*\/)[^\/]+$/;
     my $outfile = ( $self->out() ) ? $self->out() : "$dir/pbs_job.out";
 
-    #$command .= " -W umask=002 -W group_list=hoodlab -j oe -o " . $outfile;
     $command .= " -W umask=002";
+
+    # This can cause problems if you have people with multiple groups trying to work on one project
+    # and the solxabot user is not part of all of those groups
     $command .= " -W group_list=".$self->group if $self->group;
+
     $command .= " -q ".$self->queue if $self->queue;
+    $command .= " -l mem=10gb" unless $self->mem; # requires 10 gigs of memory (lol)
+    $command .= " -l mem=".$self->mem if $self->mem;
     $command .= " -j oe -o " . $outfile;
 
     # The above obviates this code, so it is commented out.
@@ -269,7 +281,6 @@ sub submit_pbs {
 #    }
    
     
-    if ($self->cputime) { $command .= " -l walltime=" . $self->cputime; }
     if ($::BATCH_ARG) { $command .= " " . $::BATCH_ARG; }
     $command .= " " . $self->script;
     $log->error("COMMAND LINE '$command'");
