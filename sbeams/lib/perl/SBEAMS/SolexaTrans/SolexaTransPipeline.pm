@@ -6,6 +6,7 @@ use Carp;
 use Data::Dumper;
 use FileHandle;
 use DBI;
+use File::Copy;
 
 use SBEAMS::SolexaTrans::ProcessExport;
 use SBEAMS::SolexaTrans::Data::Babel;
@@ -45,9 +46,9 @@ sub _init_self {
 
     # Insure output_dir ends in project_name:
     my ($output_dir,$project_name)=$self->get_attrs(qw(output_dir project_name));
-    if ($output_dir !~/$project_name/) {
-	$self->output_dir("$output_dir/$project_name");
-    }
+#    if ($output_dir !~/$project_name/) {
+#	$self->output_dir("$output_dir/$project_name");
+#    }
 
 }
 
@@ -385,23 +386,30 @@ sub store_cpm {
     warn "stored $n_genes genes to $cpm_tablename";
 
     my $now=time;
-    my $tmpfile="/tmp/$now.$$";
-    $sql="SELECT * FROM $cpm_tablename INTO OUTFILE '$tmpfile'";
+    my $tmpfile="/solexa/trans/tmp/TMP_CPM_$$.txt";
+    $sql="SELECT LOCUS_LINK_EID, GENOME_ID, TOTAL_COUNT, TOTAL_CPM FROM $cpm_tablename INTO OUTFILE '$tmpfile'";
     $self->dbh->do($sql);
     if (my $err=$DBI::errstr) {
 	warn "$sql: $err";
     } else {
-	my $filename=$self->get_output_filename('cpm');
-#	rename $tmpfile,$filename or die "Can't rename '$tmpfile' to '$filename': $!";
-	my $cmd="cp $tmpfile $filename";
-	my $rc=system($cmd)>>8;
-	if ($rc) {
-	    warn "unable to execute '$cmd': rc=$rc";
-	    warn "will probably have to create $filename manually with\n'$sql;'\n ";
-	} else {
-	    unlink $tmpfile;
-	    warn "$filename written\n";
-	}
+  	my $filename=$self->get_output_filename('cpm');
+        if (! -e $tmpfile) {
+          warn "Unable to create tmp file: $tmpfile.  This means that the CPM file was not generated.".
+               "To get CPM information, the CPM file ($filename) will need to be manually generated with\n$sql\n";
+        } else {
+#	  rename $tmpfile,$filename or die "Can't rename '$tmpfile' to '$filename': $!";
+#	  my $cmd="cp $tmpfile $filename";
+#          print "performing command $cmd\n";
+#	  my $rc=`$cmd`;
+#	  if ($rc) {
+#	    warn "unable to execute '$cmd': rc=$rc";
+#	    warn "To get CPM information, the CPM file ($filename) will need to be manually generated with\n'$sql;'\n ";
+#	  } else {
+	#    unlink $tmpfile;
+#	    warn "$filename written\n";
+#	  }
+          system cp => $tmpfile, $filename || warn "Copy Failed - $! $?";
+        }
     }
 }
 
