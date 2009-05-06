@@ -500,6 +500,7 @@ sub get_file_path_from_id {
                         AND SFCLS.RECORD_STATUS != 'D'
                         AND SFCL.RECORD_STATUS != 'D'
                         AND SS.RECORD_STATUS != 'D'
+                        AND SPR.RECORD_STATUS != 'D'
 		  ~;
 	my ($results) = $sbeams->selectSeveralColumns($sql);
 	
@@ -648,7 +649,6 @@ sub get_solexa_sample_sql{
                                 sfcl.flow_cell_id as "Flow_Cell_ID",
                                 sfcl.lane_number AS "Lane",
 				ss.sample_tag AS "Sample_Tag",
-				ss.sample_group_name AS "Sample Group Name",
 				ss.full_sample_name AS "Full_Sample_Name",
 				o.organism_name AS "Organism"
 				FROM $TBST_SOLEXA_SAMPLE ss 
@@ -729,7 +729,6 @@ sub get_solexa_sample_pipeline_sql{
 
 	my $sql = qq~ SELECT    ss.solexa_sample_id AS "Sample_ID",
 				ss.sample_tag AS "Sample_Tag",
-				ss.sample_group_name AS "Sample Group Name",
 				ss.full_sample_name AS "Full_Sample_Name",
 				o.organism_name AS "Organism"
 				FROM $TBST_SOLEXA_SAMPLE ss 
@@ -770,17 +769,33 @@ sub get_slimseq_sample_pipeline_sql{
 
 	my $sql = qq~ SELECT    ss.slimseq_sample_id AS "Sample_ID",
 				ss.sample_tag AS "Sample_Tag",
-				ss.sample_group_name AS "Sample Group Name",
 				ss.full_sample_name AS "Full_Sample_Name",
-				o.organism_name AS "Organism"
+				o.organism_name AS "Organism",
+                                count(sa.jobname) as "Num_Jobs"
 				FROM $TBST_SOLEXA_SAMPLE ss 
-				LEFT JOIN $TB_ORGANISM o ON (ss.organism_id = o.organism_id) 
-				LEFT JOIN $TBST_SOLEXA_SAMPLE_PREP_KIT sspk
-				  ON (ss.solexa_sample_prep_kit_id = sspk.solexa_sample_prep_kit_id)
+				LEFT JOIN $TB_ORGANISM o ON 
+                                  (ss.organism_id = o.organism_id
+                                    AND o.record_status != 'D') 
+				LEFT JOIN $TBST_SOLEXA_SAMPLE_PREP_KIT sspk ON
+				  (ss.solexa_sample_prep_kit_id = sspk.solexa_sample_prep_kit_id
+                                    AND sspk.record_status != 'D')
+                                LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE_SAMPLES sfcls ON
+                                  (ss.solexa_sample_id = sfcls.solexa_sample_id
+                                    AND sfcls.record_status != 'D')
+                                LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE sfcl ON
+                                  (sfcls.flow_cell_lane_id = sfcl.flow_cell_lane_id
+                                    AND sfcl.record_status != 'D')
+                                LEFT JOIN $TBST_SOLEXA_PIPELINE_RESULTS spr ON
+                                  (sfcl.flow_cell_lane_id = spr.flow_cell_lane_id
+                                    AND spr.record_status != 'D')
+                                LEFT JOIN $TBST_SOLEXA_ANALYSIS sa ON
+                                  (spr.solexa_pipeline_results_id = sa.solexa_pipeline_results_id 
+                                    AND sa.record_status != 'D')
 				WHERE ss.project_id IN ($args{project_id}) 
 				AND sspk.restriction_enzyme is not null
+                                AND spr.slimseq_status is not null
 				AND ss.record_status != 'D'
-				AND sspk.record_status != 'D'
+                                GROUP BY ss.slimseq_sample_id, ss.sample_tag, ss.full_sample_name, o.organism_name
 		    ~;
 	
 	if ($constraint){
@@ -790,6 +805,119 @@ sub get_slimseq_sample_pipeline_sql{
 	
 	return $sql;
 }
+
+###############################################################################
+# get_slimseq_sample_info_sql
+#
+#get all the samples for a particular project_id from the database
+# where those samples can be run by the solexatrans pipeline
+###############################################################################
+sub get_slimseq_sample_info_sql{
+	my $method = 'get_slimseq_sample_info_sql';
+	
+	my $self = shift;
+	my %args = @_;
+	
+	unless ($args{project_id} ){
+		confess(__PACKAGE__ . "::$method Need to provide key value pairs 'project_id'");
+	}
+	
+	my $constraint = $args{constraint} || '';
+
+	my $sql = qq~ SELECT    ss.slimseq_sample_id AS "Sample_ID",
+				ss.sample_tag AS "Sample_Tag",
+				ss.full_sample_name AS "Full_Sample_Name",
+				o.organism_name AS "Organism",
+                                sa.job_tag as "Job_Tag",
+                                sa.total_genes as "Total Genes",
+                                sa.total_tags as "Total Tags",
+                                sa.match_tags as "Total Matched Tags",
+                                sa.unkn_tags as "Total Unknown Tags",
+                                sa.ambg_tags as "Total Ambiguous Tags",
+                                sa.jobname as "Job_Name"
+				FROM $TBST_SOLEXA_SAMPLE ss 
+				LEFT JOIN $TB_ORGANISM o ON (ss.organism_id = o.organism_id) 
+				LEFT JOIN $TBST_SOLEXA_SAMPLE_PREP_KIT sspk
+				  ON (ss.solexa_sample_prep_kit_id = sspk.solexa_sample_prep_kit_id)
+                                LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE_SAMPLES sfcls 
+                                  ON (ss.solexa_sample_id = sfcls.solexa_sample_id)
+                                LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE sfcl
+                                  ON (sfcls.flow_cell_lane_id = sfcl.flow_cell_lane_id)
+                                LEFT JOIN $TBST_SOLEXA_PIPELINE_RESULTS spr 
+                                  ON (sfcl.flow_cell_lane_id = spr.flow_cell_lane_id)
+                                LEFT JOIN $TBST_SOLEXA_ANALYSIS sa 
+                                  ON (spr.solexa_pipeline_results_id = sa.solexa_pipeline_results_id)
+				WHERE ss.project_id IN ($args{project_id}) 
+				AND sspk.restriction_enzyme is not null
+				AND ss.record_status != 'D'
+				AND sspk.record_status != 'D'
+				AND sfcls.record_status != 'D'
+				AND sfcl.record_status != 'D'
+				AND spr.record_status != 'D'
+				AND sa.record_status != 'D'
+                                $constraint
+                                ORDER BY ss.slimseq_sample_id
+		    ~;
+	
+	
+	
+	return $sql;
+}
+
+###############################################################################
+# get_slimseq_sample_qc_sql
+#
+#get all the samples for a particular project_id from the database
+# where those samples can be run by the solexatrans pipeline
+###############################################################################
+sub get_slimseq_sample_qc_sql{
+	my $method = 'get_slimseq_sample_qc_sql';
+	
+	my $self = shift;
+	my %args = @_;
+	
+	unless ($args{project_id} ){
+		confess(__PACKAGE__ . "::$method Need to provide key value pairs 'project_id'");
+	}
+	
+	my $constraint = $args{constraint} || '';
+
+	my $sql = qq~ SELECT    
+                                CONVERT(varchar(8),sfc.date_generated,112) AS "Run Date",
+                                ss.slimseq_sample_id AS "Sample ID",
+				ss.sample_tag AS "Sample Tag",
+				ss.full_sample_name AS "Full Sample Name",
+				o.organism_name AS "Organism",
+                                sfcl.lane_yield_kb as "Lane Yield (KB)",
+                                sfcl.average_clusters as "Average Clusters",
+                                sfcl.percent_pass_filter_clusters AS "\% Clusters Pass Filter",
+                                sfcl.percent_align as "Percent Align",
+                                sfcl.percent_error AS "Percent Error"
+				FROM $TBST_SOLEXA_SAMPLE ss 
+				LEFT JOIN $TB_ORGANISM o ON (ss.organism_id = o.organism_id) 
+				LEFT JOIN $TBST_SOLEXA_SAMPLE_PREP_KIT sspk
+				  ON (ss.solexa_sample_prep_kit_id = sspk.solexa_sample_prep_kit_id)
+                                LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE_SAMPLES sfcls 
+                                  ON (ss.solexa_sample_id = sfcls.solexa_sample_id)
+                                LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE sfcl
+                                  ON (sfcls.flow_cell_lane_id = sfcl.flow_cell_lane_id)
+                                LEFT JOIN $TBST_SOLEXA_FLOW_CELL sfc
+                                  ON (sfcl.flow_cell_id = sfc.flow_cell_id AND sfc.record_status != 'D')
+				WHERE ss.project_id IN ($args{project_id}) 
+				AND sspk.restriction_enzyme is not null
+				AND ss.record_status != 'D'
+				AND sspk.record_status != 'D'
+				AND sfcls.record_status != 'D'
+				AND sfcl.record_status != 'D'
+                                $constraint
+                                ORDER BY ss.slimseq_sample_id
+		    ~;
+	
+	
+	
+	return $sql;
+}
+
 
 ###############################################################################
 # get get_solexa_flow_cell_sql
@@ -811,7 +939,6 @@ sub get_solexa_flow_cell_sql{
 	my $sql = qq~ SELECT    sfc.flow_cell_id AS "Solexa_Flow_Cell_ID", 
 				ss.solexa_sample_id AS "Sample_ID",
 				ss.sample_tag AS "Sample_Tag",
-				ss.sample_group_name AS "Sample Group Name",
 				ss.full_sample_name AS "Full_Sample_Name",
 				o.organism_name AS "Organism"
 				FROM $TBST_SOLEXA_SAMPLE ss 
@@ -857,7 +984,6 @@ sub get_solexa_flow_cell_lane_sql{
 	my $sql = qq~ SELECT    
 				ss.solexa_sample_id AS "Sample_ID",
 				ss.sample_tag AS "Sample_Tag",
-				ss.sample_group_name AS "Sample Group Name",
 				sfcl.flow_cell_lane_id AS "Solexa_Flow_Cell_Lane_ID",
 				sfcl.lane_number as "Solexa Lane Number",
 				o.organism_name AS "Organism"
@@ -880,6 +1006,47 @@ sub get_solexa_flow_cell_lane_sql{
 	
 	return $sql;
 }
+
+###############################################################################
+# get get_solexa_pipeline_form_sql
+#
+#get information for pipeline form
+###############################################################################
+sub get_solexa_pipeline_form_sql{
+	my $method = 'get_solexa_pipeline_form';
+	
+	my $self = shift;
+	my %args = @_;
+	
+	unless ($args{slimseq_sample_id} ){
+		confess(__PACKAGE__ . "::$method Need to provide key value pairs 'slimseq_sample_id'");
+	}
+	
+	my $constraint = $args{constraint};
+
+	my $sql = qq~ 
+                            SELECT O.organism_name,
+                            SS.alignment_end_position - SS.alignment_start_position+1 as "Tag_Length",
+                            SSPK.restriction_enzyme_id,
+                            SS.full_sample_name as 'Full_Sample_Name'
+                            FROM $TBST_SOLEXA_SAMPLE SS
+                            LEFT JOIN $TBST_SOLEXA_SAMPLE_PREP_KIT SSPK ON
+                              (SS.solexa_sample_prep_kit_id = SSPK.solexa_sample_prep_kit_id)
+                            LEFT JOIN $TB_ORGANISM O ON (SS.organism_id = O.organism_id)
+                            WHERE SS.slimseq_sample_id = $args{'slimseq_sample_id'}
+			    AND SS.record_status != 'D'
+			    AND SSPK.record_status != 'D'
+			    AND O.record_status != 'D'
+		    ~;
+	
+	if ($constraint){
+		$sql .= $constraint;
+	}
+	
+	
+	return $sql;
+}
+
 
 ###############################################################################
 # get get_solexa_pipeline_run_info_sql
@@ -912,10 +1079,7 @@ sub get_solexa_pipeline_run_info_sql{
                                 spr.solexa_pipeline_results_id as "SPR_ID",
                                 efi.file_path as "ELAND_Output_File",
                                 rdp.file_path as "Raw_Data_Path",
-                                ss.alignment_end_position - ss.alignment_start_position+1 as "Tag_Length",
-                                srg.name as "Genome",
                                 o.organism_name as "Organism",
-                                sspk.restriction_enzyme_motif as "Motif",
                                 sfcl.lane_number as "Lane"
 				FROM $TBST_SOLEXA_SAMPLE ss
                                 LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE_SAMPLES sfcls on 
@@ -928,12 +1092,8 @@ sub get_solexa_pipeline_run_info_sql{
                                    (spr.eland_output_file_id = efi.file_path_id)
                                 LEFT JOIN $TBST_FILE_PATH rdp on
                                    (spr.raw_data_path_id = rdp.file_path_id)
-                                LEFT JOIN $TBST_SOLEXA_REFERENCE_GENOME srg on 
-                                   (ss.solexa_reference_genome_id = srg.solexa_reference_genome_id)
                                 LEFT JOIN $TB_ORGANISM o on
-                                   (srg.organism_id = o.organism_id)
-                                LEFT JOIN $TBST_SOLEXA_SAMPLE_PREP_KIT sspk on
-                                   (ss.solexa_sample_prep_kit_id = sspk.solexa_sample_prep_kit_id)
+                                    (ss.organism_id = o.organism_id)
                                 WHERE ss.project_id IN ($args{project_id})
                                 $constraint
 				AND ss.record_status != 'D'
@@ -943,7 +1103,6 @@ sub get_solexa_pipeline_run_info_sql{
                                 AND efi.record_status != 'D'
                                 AND rdp.record_status != 'D'
                                 AND o.record_status != 'D'
-                                AND sspk.record_status != 'D'
 		    ~;
 	
 	if ($constraint){
@@ -977,7 +1136,6 @@ sub get_solexa_run_sql{
 				sr.file_root AS "File_Root", 
 				sfs.solexa_sample_id AS "Sample_ID",
 				sfs.sample_tag AS "Sample_Tag",
-				sfs.sample_group_name AS "Sample Group Name",
 				sfs.full_sample_name AS "Full_Sample_Name",
 				o.organism_name AS "Organism"
 				FROM $TBST_SOLEXA_RUN sr 
@@ -995,8 +1153,44 @@ sub get_solexa_run_sql{
 	return $sql;
 }
 
+
 ###############################################################################
-# get get_sample_job_status_sql
+# get_jobs_by_sample_id_sql
+#
+#
+###############################################################################
+sub get_jobs_by_sample_id_sql {
+  my $method = 'get_jobs_by_sample_id_sql';
+  my $self = shift;
+  my %args = @_;
+
+  unless ($args{slimseq_sample_id}) {
+    confess(__PACKAGE__."::$method Need to provide key value pairs 'slimseq_sample_id'");
+  }
+
+  my $constraint = $args{constraint};
+  my $sql = qq~
+                  SELECT
+                  sa.solexa_analysis_id as "Job_ID",
+                  sa.jobname as "Job_Name",
+                  sa.status as "Job_Status",
+                  sa.job_tag as "Job_Tag",
+                  sa.date_created as "Job_Created"
+                  FROM $TBST_SOLEXA_ANALYSIS sa
+                  WHERE sa.slimseq_sample_id = $args{slimseq_sample_id}
+                  AND sa.record_status != 'D'
+                  ORDER BY sa.status_time DESC
+            ~;
+
+  if ($constraint) {
+    $sql .= $constraint;
+  }
+
+  return $sql;
+}
+
+###############################################################################
+# get_sample_job_status_sql
 #
 #get all the runs for a particular project_id from the database
 ###############################################################################
@@ -1014,6 +1208,7 @@ sub get_sample_job_status_sql{
 
 	my $sql = qq~ 
                                 SELECT 
+                                sa.solexa_analysis_id as "Job_ID",
                                 sa.jobname as "Job_Name",
                                 sa.status as "Job_Status",
                                 sa.status_time as "Job_Status_Updated",
@@ -1055,16 +1250,26 @@ sub get_detailed_job_status_sql{
 	my $self = shift;
 	my %args = @_;
 	
-	unless ($args{jobname} ){
-		confess(__PACKAGE__ . "::$method Need to provide key value pairs 'jobname'");
+	unless ($args{jobname} || $args{solexa_analysis_id}){
+		confess(__PACKAGE__ . "::$method Need to provide key value pairs 'jobname' or 'solexa_analysis_id'");
 	}
 	
+        my $where;
+        if ($args{jobname}) {
+          $where = "WHERE sa.jobname IN ('$args{jobname}')";
+        } elsif ($args{solexa_analysis_id}) {
+          $where = "WHERE sa.solexa_analysis_id = '$args{solexa_analysis_id}'";
+        } else {
+          return "ERROR: Incorrect parameters for $method";
+        }
+
 	my $constraint = $args{constraint};
 
 	my $sql = qq~ 
                                 SELECT 
-                                sa.analysis_description as "Job_Parameters",
+                                sa.solexa_analysis_id,
                                 sa.jobname as "Job_Name",
+                                sa.analysis_description as "Job_Description",
                                 sa.status as "Job_Status",
                                 sa.status_time as "Job_Status_Updated",
                                 opd.file_path as "Output_Directory",
@@ -1090,7 +1295,7 @@ sub get_detailed_job_status_sql{
                                   (sfcls.solexa_sample_id = ss.solexa_sample_id)
                                 LEFT JOIN $TBST_FILE_PATH opd ON
                                   (sa.output_directory_id = opd.file_path_id)
-				WHERE sa.jobname IN ('$args{jobname}') 
+                                $where
                                 AND spr.record_status != 'D'
                                 AND sfcl.record_status != 'D'
                                 AND sfcls.record_status != 'D'
@@ -1105,6 +1310,41 @@ sub get_detailed_job_status_sql{
 	
 	return $sql;
 }
+
+###############################################################################
+# get_job_parameters_sql
+#
+# get all the entries in analysis_parameters for a solexa_analysis_id
+###############################################################################
+sub get_job_parameters_sql{
+	my $method = 'get_job_parameters';
+	
+	my $self = shift;
+	my %args = @_;
+	
+	unless ($args{solexa_analysis_id} ){
+		confess(__PACKAGE__ . "::$method Need to provide key value pairs 'solexa_analysis_id'");
+	}
+	
+	my $constraint = $args{constraint};
+
+	my $sql = qq~ 
+                                SELECT 
+                                param_display,
+                                param_value,
+                                param_key
+                                FROM $TBST_ANALYSIS_PARAMETERS
+				WHERE solexa_analysis_id IN ($args{solexa_analysis_id}) 
+                                AND record_status != 'D'
+		    ~;
+	
+	if ($args{constraint}){
+		$sql .= $args{constraint};
+	}
+	
+	return $sql;
+}
+
 
 ###############################################################################
 # get get_sample_results_sql
@@ -1125,30 +1365,34 @@ sub get_sample_results_sql{
 
 	my $sql = qq~ 
                                 SELECT 
-                                ss.slimseq_sample_id as "SS SID",
+                                ss.slimseq_sample_id as "Sample ID",
                                 ss.sample_tag as "Sample Tag",
                                 ss.full_sample_name as "Full Sample Name",
-                                sa.status_time as "Pipeline Run",
-                                sa.total_tags as "Total Tags",
-                                sa.total_unique_tags as "Total Unique Tags",
-                                sa.match_unique_tags as "Match Unique Tags"
-				FROM $TBST_SOLEXA_ANALYSIS sa
-                                LEFT JOIN $TBST_SOLEXA_PIPELINE_RESULTS spr on
-                                  (sa.solexa_pipeline_results_id = spr.solexa_pipeline_results_id)
-                                LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE sfcl on
-                                  (spr.flow_cell_lane_id = sfcl.flow_cell_lane_id)
+                                spr.slimseq_status as "Solexa Status"
+                                FROM $TBST_SOLEXA_SAMPLE ss 
                                 LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE_SAMPLES sfcls on
-                                  (sfcl.flow_cell_lane_id = sfcls.flow_cell_lane_id)
-				LEFT JOIN $TBST_SOLEXA_SAMPLE ss ON 
-                                  (sfcls.solexa_sample_id = ss.solexa_sample_id)
+                                  (sfcls.solexa_sample_id = ss.solexa_sample_id
+                                    AND sfcls.record_status != 'D')
+                                LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE sfcl on
+                                  (sfcl.flow_cell_lane_id = sfcls.flow_cell_lane_id
+                                    AND sfcl.record_status != 'D')
+                                LEFT JOIN $TBST_SOLEXA_PIPELINE_RESULTS spr on
+                                  (spr.flow_cell_lane_id = sfcl.flow_cell_lane_id 
+                                    AND spr.record_status != 'D')
+                                LEFT OUTER JOIN $TBST_SOLEXA_ANALYSIS sa on
+                                  (sa.solexa_pipeline_results_id = spr.solexa_pipeline_results_id
+                                    AND sa.record_status != 'D')
+                                LEFT JOIN $TBST_SOLEXA_SAMPLE_PREP_KIT sspk ON
+                                  (ss.solexa_sample_prep_kit_id = sspk.solexa_sample_prep_kit_id
+                                    AND sspk.record_status != 'D')
 				WHERE ss.project_id IN ($args{project_id}) 
-                                AND sa.status = 'COMPLETED'
-                                AND spr.record_status != 'D'
-                                AND sfcl.record_status != 'D'
-                                AND sfcls.record_status != 'D'
+                                AND sspk.restriction_enzyme is not null
                                 AND ss.record_status != 'D'
+                                GROUP BY ss.slimseq_sample_id, ss.sample_tag, ss.full_sample_name, spr.slimseq_status
+                                ORDER BY ss.slimseq_sample_id
+
 		    ~;
-	
+
 	if ($constraint){
 		$sql .= $constraint;
 	}
@@ -1159,7 +1403,7 @@ sub get_sample_results_sql{
 
 
 ###############################################################################
-# get get_sample_results_sql
+# get get_detailed_sample_results_sql
 #
 #get all the information for a particular sample from the database
 ###############################################################################
@@ -1169,7 +1413,7 @@ sub get_detailed_sample_results_sql{
 	my $self = shift;
 	my %args = @_;
 	
-	unless ($args{slimseq_sample_id} || $args{solexa_sample_id} ){
+	unless (($args{slimseq_sample_id} || $args{solexa_sample_id}) && $args{solexa_analysis_id}){
 		confess(__PACKAGE__ . "::$method Need to provide key value pairs 'slimseq_sample_id' OR 'solexa_sample_id'");
 	}
 	
@@ -1177,19 +1421,24 @@ sub get_detailed_sample_results_sql{
         my $where;
         if ($args{slimseq_sample_id}) {
            $id = 'ss.slimseq_sample_id as "Sample_ID",';
-           $where = "WHERE ss.slimseq_sample_id IN ('".$args{slimseq_sample_id}."')";
+           $where = " ss.slimseq_sample_id IN (".$args{slimseq_sample_id}.")";
         } elsif ($args{solexa_sample_id}) {
            $id = 'ss.solexa_sample_id as "Solexa_Sample_ID",';
-           $where = "WHERE ss.solexa_sample_id IN ('".$args{solexa_sample_id}."')";
+           $where = " ss.solexa_sample_id IN (".$args{solexa_sample_id}.")";
         }
 
 
 	my $constraint = $args{constraint};
 
+                                #convert(varchar,sa.date_created,112) +
+                                #  replace(convert(varchar,sa.date_created,108),':','')
+                                #  as "Job_Timestamp",
 	my $sql = qq~ 
                                 SELECT $id
                                 ss.sample_tag as "Sample_Tag",
                                 ss.full_sample_name as "Full_Sample_Name",
+                                sa.jobname as "Job_Name",
+                                sa.date_created as "Job_Created",
                                 sa.total_tags as "Total_Tags",
                                 sa.total_unique_tags as "Total_Unique_Tags",
                                 sa.match_tags as "Match_Tags",
@@ -1209,13 +1458,31 @@ sub get_detailed_sample_results_sql{
                                   (sfcls.solexa_sample_id = ss.solexa_sample_id)
                                 LEFT JOIN $TBST_FILE_PATH opd ON
                                   (sa.output_directory_id = opd.file_path_id)
-                                $where
+                                WHERE $where
                                 AND sa.status = 'COMPLETED'
+                                AND sa.solexa_analysis_id = $args{solexa_analysis_id}
                                 AND spr.record_status != 'D'
                                 AND sfcl.record_status != 'D'
                                 AND sfcls.record_status != 'D'
                                 AND ss.record_status != 'D'
                                 AND opd.record_status != 'D'
+                                OR $where
+                                AND sa.status = 'UPLOADING'
+                                AND sa.solexa_analysis_id = $args{solexa_analysis_id}
+                                AND spr.record_status != 'D'
+                                AND sfcl.record_status != 'D'
+                                AND sfcls.record_status != 'D'
+                                AND ss.record_status != 'D'
+                                AND opd.record_status != 'D'
+                                OR $where
+                                AND sa.status = 'PROCESSED'
+                                AND sa.solexa_analysis_id = $args{solexa_analysis_id}
+                                AND spr.record_status != 'D'
+                                AND sfcl.record_status != 'D'
+                                AND sfcls.record_status != 'D'
+                                AND ss.record_status != 'D'
+                                AND opd.record_status != 'D'
+
 		    ~;
 	
 	if ($constraint){
@@ -1225,6 +1492,121 @@ sub get_detailed_sample_results_sql{
 	
 	return $sql;
 }
+
+###############################################################################
+# get get_sample_job_output_directory_sql
+#
+# return the file path to the tag file
+###############################################################################
+sub get_sample_job_output_directory_sql{
+	my $method = 'get_sample_job_output_directory';
+	
+	my $self = shift;
+	my %args = @_;
+	
+	unless ($args{solexa_analysis_id} && $args{slimseq_sample_id} ){
+		confess(__PACKAGE__ . "::$method Need to provide key value pairs 'solexa_analysis_id', 'slimseq_sample_id'");
+	}
+	
+	my $constraint = $args{constraint};
+
+	my $sql = qq~ 
+                                SELECT opd.file_path as "Output_Directory"
+                                FROM $TBST_FILE_PATH opd
+                                LEFT JOIN $TBST_SOLEXA_ANALYSIS sa on
+                                  (opd.file_path_id = sa.output_directory_id)
+                                WHERE sa.solexa_analysis_id = $args{solexa_analysis_id}
+                                AND sa.slimseq_sample_id = $args{slimseq_sample_id}
+                                AND opd.record_status != 'D'
+                                AND sa.record_status != 'D'
+		    ~;
+
+	if ($constraint){
+		$sql .= $constraint;
+	}
+	
+	return $sql;
+}
+
+###############################################################################
+# get_uploadable_samples_sql 
+#
+# get the samples that haven't been uploaded - PROCESSED or UPLOADING samples
+###############################################################################
+sub get_uploadable_samples_sql {
+  my $method = 'get_uploadable_samples';
+  my $self = shift;
+  my %args = @_;
+
+  unless ($args{project_id}) {
+    confess(__PACKAGE__."::$method Need to provide key value pairs 'project_id'");
+  }
+
+  my $constraint = $args{constraint};
+
+  my $sql = qq~
+                  SELECT 
+                  sa.slimseq_sample_id as 'Sample_ID',
+                  ss.sample_tag as 'Sample_Tag',
+                  ss.full_sample_name as 'Full_Sample_Name',
+                  sa.solexa_analysis_id as 'Job_ID',
+                  sa.jobname as 'Job_Name',
+                  sa.status as 'Job_Status',
+                  sa.status_time as 'Job_Updated'
+                  FROM $TBST_SOLEXA_ANALYSIS sa
+                  LEFT JOIN $TBST_SOLEXA_SAMPLE ss on
+                    (sa.slimseq_sample_id = ss.slimseq_sample_id)
+                  WHERE sa.project_id = $args{project_id}
+                  AND (status = 'UPLOADING' OR status = 'PROCESSED')
+                  AND sa.record_status != 'D'
+                  AND ss.record_status != 'D'
+  ~;
+
+  if ($constraint) {
+    $sql .= $constraint;
+  }
+
+  return $sql;
+
+}
+
+###############################################################################
+# get_start_upload_sample_info_sql
+#
+# get sample information for samples to start uploading
+###############################################################################
+sub get_start_upload_info_sql {
+  my $method = 'get_start_upload_sample_info';
+  my $self = shift;
+  my %args = @_;
+
+  unless ($args{solexa_analysis_id}) {
+    confess(__PACKAGE__."::$method Need to provide key value pairs 'solexa_analysis_id'");
+  }
+
+  my $constraint = $args{constraint};
+
+  my $sql = qq~
+                  SELECT 
+                  sa.slimseq_sample_id as 'Sample_ID',
+                  sa.jobname as 'Job_Name',
+                  opd.file_path as 'Output_Directory'
+                  FROM $TBST_SOLEXA_ANALYSIS sa
+                  LEFT JOIN $TBST_FILE_PATH opd
+                    ON (sa.output_directory_id = opd.file_path_id)
+                  WHERE sa.solexa_analysis_id = $args{solexa_analysis_id}
+                  AND sa.record_status != 'D'
+                  AND opd.record_status != 'D'
+  ~;
+
+  if ($constraint) {
+    $sql .= $constraint;
+  }
+
+  return $sql;
+
+}
+
 
 
 
@@ -1254,7 +1636,6 @@ sub get_all_sample_info_sql{
                 SELECT
 		ss.sample_tag                 AS "Sample Tag",
 		ss.full_sample_name           AS "Full Name", 
-		ss.sample_group_name          AS "Sample Group Name",
 		ss.sample_description         AS "Sample Description",
 		proj.name                     AS "Project Name",
 		o.organism_name               AS "Organism",
@@ -1372,6 +1753,52 @@ sub get_solexa_geo_info_sql{
 	 
 	return $sql;
 }
+
+###############################################################################
+# get_form_defaults_sql
+###############################################################################
+sub get_form_defaults_sql {
+        my $method = 'get_form_defaults_sql';
+        my $self = shift;
+
+        my $sql = qq~
+                SELECT option_key, option_value
+                FROM $TBST_QUERY_OPTION
+                WHERE option_type = 'JP_form_defaults'
+                  AND RECORD_STATUS != 'D'
+        ~;
+
+
+       return $sql;
+}
+
+###############################################################################
+# get_form_job_data_sql
+###############################################################################
+sub get_form_job_data_sql {
+        my $method = 'get_form_job_data_sql';
+        my $self = shift;
+	my %args = @_;
+	
+	unless ($args{jobname} ){
+		confess(__PACKAGE__ . "::$method Need to provide key value pairs 'jobname' ");
+	}
+
+        my $sql = qq~
+                SELECT AP.param_key, AP.param_value
+                FROM $TBST_ANALYSIS_PARAMETERS AP
+                LEFT JOIN $TBST_SOLEXA_ANALYSIS SA ON
+                  (SA.solexa_analysis_id = AP.solexa_analysis_id)
+                WHERE SA.jobname  = '$args{jobname}'
+                  AND AP.param_key is not null
+                  AND SA.RECORD_STATUS != 'D'
+                  AND AP.RECORD_STATUS != 'D'
+        ~;
+
+       return $sql;
+}
+
+
 
 ###############################################################################
 # export_data_sample_info
