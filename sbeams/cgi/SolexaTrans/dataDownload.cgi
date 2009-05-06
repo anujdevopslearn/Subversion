@@ -10,6 +10,7 @@ use FindBin;
 use Data::Dumper;
 use Archive::Zip qw( :ERROR_CODES :CONSTANTS );
 use File::Basename;
+use Help;
 
 use lib qw (../../lib/perl);
 use vars qw ($sbeams $sbeamsMOD $sbeams_solexa_groups $q $current_contact_id $current_username
@@ -145,7 +146,7 @@ sub print_javascript {
     my $uri = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/";
 
 print qq~
-<SCRIPT LANGUAGE="Javascript">
+<script type="text/javascript">
 <!--
 <!-- $uri -->
 function actionLogFile(action){
@@ -274,6 +275,12 @@ sub handle_request {
   #### Show current user context information
   $sbeams->printUserContext();
   $current_contact_id = $sbeams->getCurrent_contact_id();
+
+   print qq!<div id="help_options" style="float: right;"><a href="javascript://;" onclick="toggle_help('help');">Help</a></div>!;
+    print qq(<div id="help" style="display:none">);
+    print help_gen_tools();
+    print "</div>\n";
+
 
   if ($parameters{slimseq_sample_id}) {
     print_detailed_download_tab(ref_parameters=>$ref_parameters);
@@ -712,11 +719,11 @@ sub print_data_download_tab {
 	
 	
     #### Display the resultset controls
-#    $sbeams->displayResultSetControls(resultset_ref=>$resultset_ref,
-#		    		      query_parameters_ref=>\%parameters,
-#				      rs_params_ref=>\%rs_params,
-#				      base_url=>$base_url,
-#				     );
+    $sbeams->displayResultSetControls(resultset_ref=>$resultset_ref,
+		    		      query_parameters_ref=>\%parameters,
+				      rs_params_ref=>\%rs_params,
+				      base_url=>$base_url,
+				     );
 	
 }
 
@@ -907,10 +914,14 @@ sub print_detailed_download_tab {
 	 $sbeams_solexa_groups->setSBEAMS($sbeams);
 		
          # return a sql statement to display all the arrays for a particular project
-	 $sql = $sbeams_solexa_groups->get_slimseq_sample_sql(project_id    => $project_id, 
-                                                              constraint => "and ss.slimseq_sample_id = ".$parameters{"slimseq_sample_id"},
-                                                             );
-						     			
+#	 $sql = $sbeams_solexa_groups->get_slimseq_sample_sql(project_id    => $project_id, 
+#                                                              constraint => "and ss.slimseq_sample_id = ".$parameters{"slimseq_sample_id"},
+#                                                             );
+
+         $sql = $sbeams_solexa_groups->get_detailed_job_status_sql(jobname => $parameters{"jobname"},
+                                                                   constraint => "and ss.slimseq_sample_id = ".$parameters{"slimseq_sample_id"}
+                                                                  );
+
 	 %url_cols = ( 'Sample_Tag'	=> "${manage_table_url}solexa_sample&slimseq_sample_id=\%0V",
 				          );
   		 
@@ -1126,8 +1137,7 @@ sub append_new_data {
               $link =~ s/VALUE_TAG/$value/;
 
 	      if (($display_file eq 'JPEG') && $file_exists){
-	        $anchor = "<a href=View_Solexa_files.cgi?action=view_image&slimseq_sample_id=".$slimseq_sample_id.
-                          "&file_type=$display_file>View</a>";
+	        $anchor = qq~<a href="View_Solexa_files.cgi?action=view_image&slimseq_sample_id=$slimseq_sample_id&file_type=$display_file" target="_jpg">View</a>~;
                 $anchor .= "$pad $link" if $display_file;
 		#print STDERR "ITS A JPEG '$display_file'\n";
               } elsif (($display_file eq 'ELAND') && $file_exists) {
@@ -1147,6 +1157,8 @@ sub append_new_data {
                 push(@dirs, $flow_cell);
                 my $path = join("\\", @dirs);
                 $anchor = '<a href="file://///'.$path.'">Explore</a>';
+              } elsif ($display_file eq 'SUMMARY') {
+                $anchor = qq~<a href="View_Solexa_files.cgi?action=view_html&slimseq_sample_id=$slimseq_sample_id&file_type=$display_file" target="_summary">View</a>~;
               }elsif ($file_exists){			#make a url to open this file
 		$anchor = ( $display_file eq 'TXT' ) ? '' :
                     "<a href=View_Solexa_files.cgi?action=view_file&slimseq_sample_id=$slimseq_sample_id&file_type=$display_file>View</a>"; 
@@ -1538,7 +1550,9 @@ sub print_output_mode_data {
 
 	my %max_widths = ();
 	my %url_cols = ();
-	my %hidden_cols  =();
+	my %hidden_cols  =(
+                            'ELAND' => 1
+                          );
 	my $limit_clause = '';
 	my @column_titles = ();
 	
