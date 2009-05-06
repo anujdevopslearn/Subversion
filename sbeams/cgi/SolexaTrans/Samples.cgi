@@ -13,16 +13,18 @@ use File::Path qw(mkpath);
 use Site;
 use Batch;
 use SetupPipeline;
+use Help;
+use UploadPipeline;
 
 use lib qw (../../lib/perl);
-use vars qw ($sbeams $sbeamsMOD $sbeams_solexa_groups $utilities $q $cgi
+use vars qw ($sbeams $sbeamsMOD $sbeams_solexa_groups $utilities $q 
              $current_contact_id $current_username $current_email
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS $DISPLAY_SUMMARY);
 use DBI;
 use CGI::Carp qw(fatalsToBrowser croak);
-use POSIX;
+use POSIX qw(strftime);
 
 use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
@@ -40,14 +42,16 @@ use SBEAMS::SolexaTrans::SolexaUtilities;
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::SolexaTrans;
 $utilities = new SBEAMS::SolexaTrans::SolexaUtilities;
+$sbeams_solexa_groups = new SBEAMS::SolexaTrans::Solexa_file_groups;
 
 $sbeamsMOD->setSBEAMS($sbeams);
 $utilities->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+$sbeams_solexa_groups->setSBEAMS($sbeams);		#set the sbeams object into the solexa_groups_object
 
 #use CGI;
 #$q = new CGI;
-$cgi = $q;
+#$cgi = $q;
 
 
 ###############################################################################
@@ -107,6 +111,28 @@ sub main {
     #permitted_work_groups_ref=>['Proteomics_user','Proteomics_admin'],
   ));
 
+# test code commented out for testing the generation of the perl script
+#            my $perl_script = generate_perl(
+#                                              "Sample_ID" => '92',
+#                                              "SPR_ID" => '71',
+#                                              "ELAND_Output_File" => '/solexa/hood/DTRA_lung/081203_HWI-EAS427_FC30JRDAAXX/Data/IPAR_1.01/Bustard1.9.5_10-12-2008_sbsuser/GERALD_10-12-2008_sbsuser/s_6_export.txt',
+#                                              "Raw_Data_Path" => '/solexa/hood/DTRA_lung/081203_HWI-EAS427_FC30JRDAAXX/Data/IPAR_1.01/Bustard1.9.5_10-12-2008_sbsuser/GERALD_10-12-2008_sbsuser/',
+#                                              "Tag_Length" => '18',
+#                                              "Genome" => '1,2,3',
+#                                              "Organism" => 'Human',
+#                                              "Motif" => 'GATC',
+#                                              "Jobname" => 'test',
+#                                              "Lane" => '6',
+#                                              "Truncate" => '2',
+#                                              "Patman_max_mismatches"=>'2',
+#                                              "Fuse"=>100,
+#                                              "Output_Dir" => '/users/dmauldin/core/data_analysis/delivery/test',
+#                                              "Analysis_ID" => '26',
+#                              ); 
+
+#print $perl_script;
+
+#exit;
 
   #### Read in the default input parameters
   my %parameters;
@@ -143,68 +169,17 @@ sub print_javascript {
     my $uri = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/";
 
 print qq~
-<SCRIPT LANGUAGE="Javascript">
+<script type="text/javascript">
 <!--
 <!-- $uri -->
-function actionLogFile(action){
-    var id = document.outputFiles.logChooser.options[document.outputFiles.logChooser.selectedIndex].value;
-    if (action == "get") {
-	getFile(id);
-    } else {
-	viewFile(id);
-    }
-}		
-    
-function actionRepFile(){
-  var id = document.outputFiles.repChooser.options[document.outputFiles.repChooser.selectedIndex].value;
-  getFile(id);
-}
-function actionMergeFile(){
-  var id = document.outputFiles.mergeChooser.options[document.outputFiles.mergeChooser.selectedIndex].value;
-  getFile(id);
-}
-function actionSigFile(){
-  var id = document.outputFiles.sigChooser.options[document.outputFiles.sigChooser.selectedIndex].value;
-  getFile(id);
-}
-function actionCloneFile(){
-  var id = document.outputFiles.cloneChooser.options[document.outputFiles.cloneChooser.selectedIndex].value;
-  getFile(id);
-}
 
-
-function getFile(id){
-    var site = "$uri/ViewFile.cgi?action=download&FILE_NAME="+id;
-    window.location = site;
+function confirmSubmit() {
+  var agree = confirm("This job has been previously run.  Press OK to continue to job submission, or cancel to be redirected to the results page for this job.");
+  if (agree) 
+    return true;
+  else
+    return false;
 }
-		
-function viewFile(id){
-    var site = "$uri/ViewFile.cgi?action=view&FILE_NAME="+id;
-    var newWindow = window.open(site);
-}
-
-function startMev(project_id){
-    document.tavForm.project_id.value=project_id;
-    
-    var tavList = document.tavForm.tavChooser;
-    var tavArray;
-    var isFirst = 1;
-    for (var i=0;i<tavList.length;i++){
-	if (tavList.options[i].selected) {
-	    if (isFirst == 1){
-		isFirst = 0;
-		tavArray = tavList.options[i].value;
-	    }else {
-		tavArray += "," + tavList.options[i].value;
-	    }
-	}
-    }
-    
-    document.tavForm.selectedFiles.value = tavArray;
-    document.tavForm.submit();
-    
-}
-    
 
 function testFunc(){
  alert("clicked");
@@ -278,10 +253,29 @@ sub handle_request {
     $log->error("User $current_username with contact_id $current_contact_id does not have an email in the contact table.");
     die("No email in SBEAMS database.  Please contact an administrator to set your email before using the SolexaTrans Pipeline");
   }
-  if ($parameters{jobname}) {
-    print "Not yet Implemented\n";
+
+  if ($parameters{jobname} && !$parameters{step}) {
+    $parameters{step} = 2;
+  }
+
+  print qq!<div id="help_options" style="float: right;"><a href="javascript://;" onclick="toggle_help('help');">Help</a></div>!;
+    print qq(<div id="help" style="display:none">);
+    print help_gen_jobs();
+    print "</div>\n";
+
+  if (!$parameters{step} || $parameters{step} == 1) {
+    print_sample_selection(ref_parameters=>$ref_parameters);
+  } elsif ($parameters{step} == 2) {
+    if ($parameters{jobname}) {
+      $ref_parameters = get_form_data(ref_parameters=>$ref_parameters);
+    } else {
+      $ref_parameters = get_form_defaults(ref_parameters=>$ref_parameters);
+    }
+    print_pipeline_form(ref_parameters=>$ref_parameters);
+  } elsif ($parameters{step} == 3) {
+    start_pipeline_jobs(ref_parameters=>$ref_parameters); 
   } else {
-    print_run_pipeline_tab(ref_parameters=>$ref_parameters); 
+    error("There was an error with step selection.");
   }
   return;
 
@@ -399,10 +393,11 @@ sub pick_data_to_show {
 	
 }
 
+
 ###############################################################################
-# print_run_pipeline_tab
+# print_sample_selection
 ###############################################################################
-sub print_run_pipeline_tab {
+sub print_sample_selection {
   	my %args = @_;
   
 	my @columns = ();
@@ -430,8 +425,9 @@ sub print_run_pipeline_tab {
 	#### Process the arguments list
  	my $ref_parameters = $args{'ref_parameters'} || die "ref_parameters not passed";
 	my %parameters = %{$ref_parameters};
+
 	my $project_id = $sbeams->getCurrent_project_id();
-        my $group_name = 'hoodlab';  # THIS NEEDS TO BE UPDATED WHEN SOLEXATRANS PROJECTS ARE NOT ONLY FOR HOODLAB
+
 	
 	my $apply_action=$parameters{'action'} || $parameters{'apply_action'} || 'QUERY';
 
@@ -439,73 +435,27 @@ sub print_run_pipeline_tab {
 	if ($parameters{set_current_project_id}) {
 		$apply_action = 'QUERY';
 	}
-  
-  ###############################################################################
-  ##First check to see if the user already has selected some data to run
-	
-	#come here if the user has chosen some files to run the STP on
-	if (exists $parameters{Get_Data}){			
-		#value of the button submitting previous form
-		if ( $parameters{Get_Data} eq 'RUN_PIPELINE') {
-	           if ($parameters{select_samples}) {	
-		##########################################################################
-		### Print out some nice table
-			#example '37__CEL,38__CEL,45__CEL,46__CEL,46__XML'
-			my $samples_id_string =  $parameters{select_samples}; 
-			my @sample_ids = split(/,/, $samples_id_string);
-			my %unique_sample_ids = map {split(/__/, $_) } @sample_ids;
-			my $samples = join(",", sort keys %unique_sample_ids);
+ 
 
-		        $sbeams_solexa_groups = new SBEAMS::SolexaTrans::Solexa_file_groups;
-		        $sbeams_solexa_groups->setSBEAMS($sbeams);		#set the sbeams object into the solexa_groups_object
-
-			$sql = $sbeams_solexa_groups->get_solexa_pipeline_run_info_sql(slimseq_sample_ids => $samples, 
-                                                                                       project_id => $project_id
-                                                                                      );
-
-                        # hide the really long file paths from displaying
-			%hidden_cols = ( 
-                                  "SPR_ID" => 1,
-                                  "Sample_ID" => 1,
-                                  'ELAND_Output_File' => 1,
-                                  'Raw_Data_Path' => 1,
-					            );
-
-                        # need some code to start a qsub job
-
-		  } else {
-      		    $log->error( "User submitted no samples\n" );
-                    $sbeams->handle_error(message => 'No samples selected, please press back and select samples.', 
-                                          error_type => 'SolexaTrans_error');
-                  }
-	
-		}
-	
-  ###############################################################################
-  ##Start looking for data that can be run with the SolexaTrans pipeline
-	
-	#if user has not selected samples to run come here
-	} else {										
-	
-		###Get some summary data for all the samples that can be run
-		#### Count the number of solexa samples for this project
-		my $n_solexa_samples = 0;
+	###Get some summary data for all the samples that can be run
+	#### Count the number of solexa samples for this project
+	my $n_solexa_samples = 0;
 		
-		if ($project_id > 0) {
-			my $sql = qq~ 
-		      SELECT count(ss.solexa_sample_id)
-		  	FROM $TBST_SOLEXA_SAMPLE ss 
-			LEFT JOIN $TBST_SOLEXA_SAMPLE_PREP_KIT sspk
-			  ON (ss.solexa_sample_prep_kit_id = sspk.solexa_sample_prep_kit_id)
-		  	WHERE ss.project_id = $project_id 
-			AND sspk.restriction_enzyme is not null
-			AND sspk.record_status <> 'D'
-      			AND ss.record_status <> 'D'
-			~;
-			($n_solexa_samples) = $sbeams->selectOneColumn($sql);	
- 		}
+	if ($project_id > 0) {
+	  my $sql = qq~ 
+	      SELECT count(ss.solexa_sample_id)
+	  	FROM $TBST_SOLEXA_SAMPLE ss 
+		LEFT JOIN $TBST_SOLEXA_SAMPLE_PREP_KIT sspk
+		  ON (ss.solexa_sample_prep_kit_id = sspk.solexa_sample_prep_kit_id)
+	  	WHERE ss.project_id = $project_id 
+		AND sspk.restriction_enzyme is not null
+		AND sspk.record_status <> 'D'
+      		AND ss.record_status <> 'D'
+		~;
+	  ($n_solexa_samples) = $sbeams->selectOneColumn($sql);	
+ 	}
     
-	 	my $solexa_info =<<"    END";
+	 	$solexa_info =<<"    END";
 		<BR>
 		<TABLE WIDTH="50%" BORDER=0>
 		  <TR>
@@ -525,26 +475,26 @@ sub print_run_pipeline_tab {
   #################################################################################
   ##Set up the hash to control what sub tabs we might see
 	
-		my $default_data_type = 'SOLEXA_SAMPLE';
+	my $default_data_type = 'SOLEXA_SAMPLE';
 
-		my %count_types = ( SOLEXA_SAMPLE	=> {	COUNT => $n_solexa_samples,
-		   						POSITION => 0,
-		   		   			   }	
-		   	   	   );
+	my %count_types = ( SOLEXA_SAMPLE	=> {	COUNT => $n_solexa_samples,
+	   						POSITION => 0,
+	   		   			   }	
+	   	   	   );
 
-		my @tabs_names = make_tab_names(%count_types);
+	my @tabs_names = make_tab_names(%count_types);
 
-		($display_type, $selected_tab_numb) =	pick_data_to_show (default_data_type    => $default_data_type,
-					    		   		   tab_types_hash 	=> \%count_types,
-					    		   		   param_hash		=> \%parameters,
-							   		   );
+	($display_type, $selected_tab_numb) =	pick_data_to_show (default_data_type    => $default_data_type,
+				    		   		   tab_types_hash 	=> \%count_types,
+				    		   		   param_hash		=> \%parameters,
+						   		   );
 
-		display_sub_tabs(	display_type  	=> $display_type,
-		             		tab_titles_ref	=>\@tabs_names,
-		                  	page_link	    => 'Samples.cgi',
-		                  	selected_tab	  => $selected_tab_numb,
-	                     		parent_tab  	  => $parameters{'tab'},
-	                   ) if ( $n_solexa_samples );
+	display_sub_tabs(	display_type  	=> $display_type,
+	             		tab_titles_ref	=>\@tabs_names,
+	                  	page_link	    => 'Samples.cgi',
+	                  	selected_tab	  => $selected_tab_numb,
+                     		parent_tab  	  => $parameters{'tab'},
+                   ) if ( $n_solexa_samples );
 	
   #####################################################################################
   ### Show the sample choices
@@ -553,8 +503,6 @@ sub print_run_pipeline_tab {
 		if ($display_type eq 'SOLEXA_SAMPLE'){
 		  	print $solexa_info; # header info generated earlier
 
-			$sbeams_solexa_groups = new SBEAMS::SolexaTrans::Solexa_file_groups;
-
 			@default_checkboxes = qw(Select_Sample);  #default file type to turn on the checkbox
 			@checkbox_columns = qw(Select_Sample);
 		        # set the sbeams object into the solexa_groups_object
@@ -562,31 +510,24 @@ sub print_run_pipeline_tab {
 		
 		        # return a sql statement to display all the arrays for a particular project
 			$sql = $sbeams_solexa_groups->get_slimseq_sample_pipeline_sql(project_id    => $project_id, );
-						     			
+
 		 	%url_cols = ( 'Sample_Tag'	=> "${manage_table_url}solexa_sample&slimseq_sample_id=\%1V",
 				      'Select_Sample _OPTIONS' => { 'embed_html' => 1 }
 				     );
+                        %hidden_cols = ( 'Sample_ID' => 1);
 
 		}else{
 			print "<h2>Sorry, no samples qualify for the SolexaTrans pipeline in this project</h2>" ;
 			return;
 		} 
-	} # end if parameters{Get_Data} 
 	
   ###################################################################
   ## Print the data 
 		
-	unless (exists $parameters{Get_Data}) {
-    		# start the form to run STP on solexa samples
-		print $q->start_form(-name =>'select_samplesForm');
-				     			
-		#make sure to include the name of the tab we are on
-  		print $q->hidden(-name=>'tab',									
-				 -value=>'parameters{tab}',
-				 );
-	
-		print "<br>";
-        }
+ 	# start the form to run STP on solexa samples
+	print $q->start_form(-name =>'select_samplesForm');
+
+	print "<br>";
 
   ###################################################################
   ## get field->checkbox HTML for selecting samples
@@ -617,179 +558,16 @@ sub print_run_pipeline_tab {
     # to use the writeResultsSet method to display a nice html table
  
    	  if ($display_type eq 'SOLEXA_SAMPLE') {
-            if (!exists $parameters{Get_Data}) {
 		
 		prepend_checkbox( resultset_ref => $resultset_ref,
 				  checkbox_columns => \@checkbox_columns,
 				  default_checked => \@default_checkboxes,
 				  checkbox => $cbox,
 				);
-            }
     	  }  
 
    	} # End read or fetch resultset block
 	
-        # now that we have the results, go through them and start the pipeline jobs
-        if ($parameters{Get_Data}) {
-          my %solexaJobs;
-
-          #data is stored as an array of arrays from the $sth->fetchrow_array 
-          # each row is a row from the database holding an aref to all the values
-          my $aref = $$resultset_ref{data_ref};		
-          
-  	  my $id_idx = $resultset_ref->{column_hash_ref}->{Sample_ID};
-  	  my $spr_id_idx = $resultset_ref->{column_hash_ref}->{SPR_ID}; # solexa_pipeline_results_id
-          my $eland_idx = $resultset_ref->{column_hash_ref}->{ELAND_Output_File};
-          my $raw_data_path_idx = $resultset_ref->{column_hash_ref}->{Raw_Data_Path};
-          my $tag_length_idx = $resultset_ref->{column_hash_ref}->{Tag_Length};
-          my $genome_idx = $resultset_ref->{column_hash_ref}->{Genome};
-          my $organism_idx = $resultset_ref->{column_hash_ref}->{Organism};
-          my $motif_idx = $resultset_ref->{column_hash_ref}->{Motif};
-          my $lane_idx = $resultset_ref->{column_hash_ref}->{Lane};
-          ########################################################################################
-          # this foreach loop goes through each row that was retrieved from teh database
-          # and organizes the files into a file structure that has one entry for each
-          # raw directory path - this is what STP expects to receive. 
-          foreach my $row_aref ( @{$aref} ) {		
-	    my $slimseq_sample_id  = $row_aref->[$id_idx];
-	    my $solexa_pipeline_results_id  = $row_aref->[$spr_id_idx];
-            my $eland_file = $row_aref->[$eland_idx];
-            my $raw_data_path = $row_aref->[$raw_data_path_idx];
-            my $tag_length = $row_aref->[$tag_length_idx];
-            my $genome = $row_aref->[$genome_idx];
-            my $organism = $row_aref->[$organism_idx];
-            my $motif = $row_aref->[$motif_idx];
-            my $lane = $row_aref->[$lane_idx];
-
-#           Since we're taking the existance of the files on the word of the database, it'd be
-#            really good to check to see if the file does exist.
-#           The simple case doesn't work because the web server user doesn't have access to /solexa/*
-#           Ideally this would be some sort of script execution that would run as a user that
-#            would have access to all /solexa files but only be able to check for file existance
-#            die "ELAND file $eland_file does not exist or is not available" unless -e $eland_file;
-
-            my $jobname = 'stp-ssid'.$slimseq_sample_id.'-'.rand_token();
-
-#            my $pipeline_output_directory = $raw_data_path.'/SolexaTransPipeline';
-             my $pipeline_output_directory = $sbeamsMOD->solexa_delivery_path();
-             my @raw_dirs = split(/\//, $raw_data_path);
-             my $flow_cell_dir = pop(@raw_dirs); # remove flow cell
-             my $new_dir = join("/", @raw_dirs);
-             $new_dir .= '/SolexaTrans/'.$flow_cell_dir.'/';
-             print "Writing to directory $new_dir<br>\n";
-            my @job_summary_info = (
-                                    'Sample IDs',$slimseq_sample_id,
-                                    'ELAND File',$eland_file,
-                                    'Tag Length',$tag_length,
-                                    'Genome',$genome,
-                                    'Organism',$organism,
-                                    'Motif',$motif,
-                                    'Lane',$lane,
-                                    'Pipeline Results ID',$solexa_pipeline_results_id,
-                                    'Output Directory',$pipeline_output_directory
-                                    );
-
-            my $jobsummary = jobsummary(@job_summary_info); # method in SetupPipeline.pm
-
-            my $analysis_id = $utilities->check_sbeams_duplicate_job('jobsummary' =>$jobsummary);
-#            if ($analysis_id) {
-#              print "Job already exists for sample $slimseq_sample_id with duplicate parameters.<br>\n";
-#              print "If you want to re-run a job, find the job via the Status page and delete or re-run it.<br>\n";
-#              $jobname = $utilities->get_sbeams_jobname("solexa_analysis_id" => $analysis_id);
-#
-#              $solexaJobs{$slimseq_sample_id} = "$pipeline_output_directory/$jobname";
-
-#              next;
-#            }
-
-            my $partial_url = "$CGI_BASE_DIR/SolexaTrans/View_Solexa_files.cgi?action=view_file&job=$jobname&analysis_file=$jobname";
-
-            # links to view the tag counts etc
-            my $out_links = <<OUTL;
-<h3>Output Files</h3>
-<a href='$partial_url&file_ext=html'>$jobname.html</a><br>
-<a href='$partial_url&file_ext=txt'>$jobname.txt</a><br>
-OUTL
-
-            my $output = <<END;
-<h3>Show Analysis Data:</h3>
-<a href="$CGI_BASE_DIR/SolexaTrans/View_Solexa_files.cgi?_tab=3&token=$jobname&show_analysis_files=1">Show Files</a>
-$out_links
-END
-
-            my $output_dir_id = $utilities->check_sbeams_file_path(file_path => $pipeline_output_directory);
-
-            my $ana_id = $utilities->insert_solexa_analysis(
-                                                     'jobname' => $jobname,
-                                                     'slimseq_sample_id' => $slimseq_sample_id,
-                                                     'output_dir_id' => $output_dir_id,
-                                                     'analysis_description' => $jobsummary,
-                                                     'project_id' => $project_id,
-                                                     'status' => 'QUEUED',
-                                                     'status_time' => 'CURRENT_TIMESTAMP',
-                                                     'SPR_ID' => $solexa_pipeline_results_id,
-                                                    );
-            die $ana_id if $ana_id =~ /ERROR/;
-
-            print "Starting a new SolexaTransPipeline job with Slimseq sample id $slimseq_sample_id<br>\n";
-            my $perl_script = generate_perl(
-                                              "Sample_ID" => $slimseq_sample_id,
-                                              "SPR_ID" => $solexa_pipeline_results_id,
-                                              "ELAND_Output_File" => $eland_file,
-                                              "Raw_Data_Path" => $raw_data_path,
-                                              "Tag_Length" => $tag_length,
-                                              "Genome" => $genome,
-                                              "Organism" => $organism,
-                                              "Motif" => $motif,
-                                              "Jobname" => $jobname,
-                                              "Lane" => $lane,
-                                              "Output_Dir" => $pipeline_output_directory,
-                                              "Jobsummary" => $jobsummary,
-                                              "Analysis_ID" => $ana_id,
-                              ); 
-
-            my $error = create_files( 
-                                        dir => $pipeline_output_directory,
-                                        jobname => $jobname,
-                                        title => $sbeams->getCurrent_project_name,
-                                        jobsummary => $jobsummary,
-                                        output => $output,
-                                        refresh => 20,
-                                        script => $perl_script,
-                                        email => $current_email,
-                                    );
-
-             error($error) if $error;
-
-            my $job = new Batch;
-            $job->cputime('12:00:00'); # default at 12 hours for now
-            $job->type($BATCH_SYSTEM);
-            $job->script("$pipeline_output_directory/$jobname/$jobname.sh");
-            $job->name($jobname);
-            $job->group($group_name);
-            $job->out("$pipeline_output_directory/$jobname/$jobname.out");
-            $job->queue("dev");
-            $job->submit || error("Couldn't start a job for $jobname");
-            open (ID, ">$pipeline_output_directory/$jobname/id") || 
-              error("Couldn't write out an id for $jobname in $pipeline_output_directory/$jobname/id");
-            print ID $job->id;
-            close(ID);
-
-
-print "<br>\n";
-print "<br>\n";
-
-            $solexaJobs{$slimseq_sample_id} = "$pipeline_output_directory/$jobname";
-
-
-          } # end foreach file_path     
-
-          append_job_link( resultset_ref => $resultset_ref,
-			    jobs => \%solexaJobs,
-                          );
-
-        } # end if parameters{Get_Data}
-
 
    	# Set the column_titles to just the column_names, reset first.
    	@column_titles = ();
@@ -830,28 +608,647 @@ print "<br>\n";
 				show_numbering=>1,
 				);
 	
-	unless ($parameters{Get_Data}) {
-		print "<h3>To input parameters for the Pipeline run, click the button below<br>";
-		
+	        print   $q->hidden(-name=>'step',-default=>2,-override=>1);	
 		print   $q->br,
 			$q->submit(-name=>'Get_Data',
 				#will need to change value if other data sets need to be run
-                	       	 -value=>'RUN_PIPELINE');			
+                	       	 -value=>'Set Parameters');
 	
 		
 		print $q->reset;
 		print $q->endform;
 		
-	}
-	
-	
 	#### Display the resultset controls
-#	$sbeams->displayResultSetControls(resultset_ref=>$resultset_ref,
-#					  query_parameters_ref=>\%parameters,
-#					  rs_params_ref=>\%rs_params,
-#					  base_url=>$base_url,
-#					 );
+	$sbeams->displayResultSetControls(resultset_ref=>$resultset_ref,
+					  query_parameters_ref=>\%parameters,
+					  rs_params_ref=>\%rs_params,
+					  base_url=>$base_url,
+					 );
 	
+}
+
+###############################################################################
+# print_pipeline_form
+# step 2 of starting pipeline jobs
+###############################################################################
+sub print_pipeline_form {
+  	my %args = @_;
+  
+	my $sql = '';
+	
+	my %resultset = ();
+	my $resultset_ref = \%resultset;
+	my %max_widths;
+	my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+	my $base_url = "$CGI_BASE_DIR/SolexaTrans/Samples.cgi";
+	my $manage_table_url = "$CGI_BASE_DIR/SolexaTrans/ManageTable.cgi?TABLE_NAME=ST_";
+
+	my %url_cols      = ();
+	my %hidden_cols   = ();
+	my $limit_clause  = '';
+	my @column_titles = ();
+  	
+	my ($display_type, $selected_tab_numb);
+  	
+	my $solexa_info;	
+	my @default_checkboxes      = ();
+	my @checkbox_columns      = ();
+  	
+  	#$sbeams->printDebuggingInfo($q);
+	#### Process the arguments list
+ 	my $ref_parameters = $args{'ref_parameters'} || die "ref_parameters not passed";
+	my %parameters = %{$ref_parameters};
+	my $project_id = $sbeams->getCurrent_project_id();
+	
+	my $apply_action=$parameters{'action'} || $parameters{'apply_action'} || 'QUERY';
+
+	## HACK: If set_current_project_id is a parameter, we do a 'QUERY' instead of a 'VIEWRESULTSET'
+	if ($parameters{set_current_project_id}) {
+		$apply_action = 'QUERY';
+	}
+  
+	
+	$solexa_info =<<"    END";
+		<BR>
+		<TABLE WIDTH="50%" BORDER=0>
+		  <TR>
+		   <TD>
+        <B>
+        Alter default job parameters below and press continue to select samples for this SolexaTrans Pipeline run.
+        </B> 
+       </TD></TR>
+       <TR><TD></TD></TR>
+		</TABLE>
+    END
+	
+
+  #################################################################################
+  ##Set up the hash to control what sub tabs we might see
+	
+	my $default_data_type = 'SOLEXA_SAMPLE';
+
+	my %count_types = ( SOLEXA_SAMPLE	=> {	COUNT => 1,
+	   						POSITION => 0,
+	   		   			   }	
+	   	   	   );
+
+	my @tabs_names = make_tab_names(%count_types);
+
+	($display_type, $selected_tab_numb) =	pick_data_to_show (default_data_type    => $default_data_type,
+				    		   		   tab_types_hash 	=> \%count_types,
+				    		   		   param_hash		=> \%parameters,
+						   		   );
+
+	display_sub_tabs(	display_type  	=> $display_type,
+	             		tab_titles_ref	=>\@tabs_names,
+	                  	page_link	    => 'Samples.cgi',
+	                  	selected_tab	  => $selected_tab_numb,
+                     		parent_tab  	  => $parameters{'tab'},
+                  );
+	
+  #####################################################################################
+  ### Get Table info
+
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+  $TABLE_NAME="ST_JobParameters" unless ($TABLE_NAME);
+  ($PROGRAM_FILE_NAME) =
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+
+  #### Get the columns and input types for this table/query
+  my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+  my %input_types =
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+
+  #### Read the input parameters for each column
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters,
+    columns_ref=>\@columns,input_types_ref=>\%input_types);
+
+  my %unique_sample_ids;
+  if ($parameters{select_samples}) {	
+
+      ##########################################################################
+      ### Print out some nice table
+      #example '37__CEL,38__CEL,45__CEL,46__CEL,46__XML'
+      my $samples_id_string =  $parameters{select_samples}; 
+      my @sample_ids = split(/,/, $samples_id_string);
+      %unique_sample_ids = map {split(/__/, $_) } @sample_ids;
+  } elsif ($parameters{slimseq_sample_id}) {
+    $unique_sample_ids{$parameters{slimseq_sample_id}} = 1;
+  }
+
+  if (scalar keys %unique_sample_ids > 0) {
+    # hash reference to hash{organism_name} = biosequence_set_id (organism_id in SBEAMS system)
+    my $ref_org_biosequence_id = get_biosequence_set_defaults();
+
+    print qq(<table name="OUTER">\n);
+    print "<tr><td>\n";
+    print qq( <FORM METHOD="post" ACTION="$PROGRAM_FILE_NAME" NAME="MainForm">\n);
+    foreach my $sample (sort {$a <=> $b} ( keys %unique_sample_ids)) {
+
+      # get specific information about this sample from the SolexaTrans database
+      my $org_sql = $sbeams_solexa_groups->get_solexa_pipeline_form_sql(slimseq_sample_id => $sample);
+     
+      my @sample_info = $sbeams->selectSeveralColumns($org_sql);
+      my $org_name = $sample_info[0]->[0];
+      my $tag_length = $sample_info[0]->[1];
+      my $enzyme_id = $sample_info[0]->[2];
+      my $sample_name = $sample_info[0]->[3];
+      my $index = $ref_org_biosequence_id->{$org_name};
+
+      # overwrite the default parameters with specific parameters if they exist
+      $parameters{'biosequence_set_ids__$parameters{id}'} = $index if ($index > 0);
+      $parameters{'tag_length__$parameters{id}'} = $tag_length if ($tag_length > 0);
+      $parameters{'restriction_enzyme__$parameters{id}'} = $enzyme_id if ($enzyme_id > 0);
+      $parameters{'motif__$parameters{id}'} = $enzyme_id if ($enzyme_id > 0);
+
+      # if a job was supplied, get information and overwrite defaults
+      my %previous_params;
+      if ($parameters{jobname}) {
+        my $sql = $sbeams_solexa_groups->get_form_job_data_sql(jobname => $parameters{"jobname"});
+        %previous_params = $sbeams->selectTwoColumnHash($sql);
+      }
+
+      my %form_params = (%parameters, %previous_params);
+      # display a table for each sample of the parameters
+      print qq(<table style="border:black 1px solid; border-bottom: 0px; margin: 0px 0px 0px 0px;">\n); 
+      print "<tr><td colspan=3>";
+      print "<h1>Sample Options for $sample_name ($sample)</h1>\n";
+      print "</td>";
+
+ #     my $analysis_id = $utilities->check_sbeams_duplicate_job("jobsummary" => \@job_summary_info);
+
+      print "</tr>";
+      $sbeams->display_input_form(
+        TABLE_NAME=>$TABLE_NAME,CATEGORY=>$CATEGORY,apply_action=>$apply_action,
+        PROGRAM_FILE_NAME=>$PROGRAM_FILE_NAME,
+        parameters_ref=>\%form_params,
+        input_types_ref=>\%input_types,
+        id=>$sample,
+        mask_user_context=>1,
+        mask_query_constraints=>1,
+        mask_form_start=>1,
+      );
+      print "</table>\n";
+    }
+#    print "</td></tr>";
+#    print "<tr><td>";
+  }
+	print   
+                $q->hidden(-name=>'step',-default=>3,-override=>2),
+                '<table style="border-top: 1px solid black; width:100%; margin: 0px; padding: 0px;"><tr><td>',
+		$q->submit(-name=>'Get_Data',
+			#will need to change value if other data sets need to be run
+               	       	 -value=>'Run Pipeline');
+	
+		
+	print $q->reset, "</td></tr></table></table>\n";
+        foreach my $param (keys %parameters) {
+          print $q->hidden(-name=>$param,
+                           -value=>$parameters{$param}
+                          ) unless $param eq 'step' || $input_types{$param} || $param eq 'Get_Data';
+        }
+
+
+
+	print $q->endform;
+		
+
+}
+
+
+
+
+###############################################################################
+# start_pipeline_jobs
+###############################################################################
+sub start_pipeline_jobs {
+  	my %args = @_;
+  
+	my $sql = '';
+	
+	my %resultset = ();
+	my $resultset_ref = \%resultset;
+	my %max_widths;
+	my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+	my $base_url = "$CGI_BASE_DIR/SolexaTrans/Samples.cgi";
+	my $manage_table_url = "$CGI_BASE_DIR/SolexaTrans/ManageTable.cgi?TABLE_NAME=ST_";
+
+	my %url_cols      = ();
+	my %hidden_cols   = ();
+	my $limit_clause  = '';
+	my @column_titles = ();
+  	
+	my ($display_type, $selected_tab_numb);
+  	
+	my $solexa_info;	
+	my @default_checkboxes      = ();
+	my @checkbox_columns      = ();
+  	
+  	#$sbeams->printDebuggingInfo($q);
+	#### Process the arguments list
+ 	my $ref_parameters = $args{'ref_parameters'} || die "ref_parameters not passed";
+	my %parameters = %{$ref_parameters};
+
+	my $project_id = $sbeams->getCurrent_project_id();
+        my ($name, $pass, $uid, $gid, $quota, $comment, $gcos, $dir, $shell, $expire) = getpwnam($current_username);
+
+        # This is crude and only gets the first group in the group list, therefore
+        # if a user has multiple groups and the directory they want to write to is
+        # not the first group, it may cause jobs to fail
+        # Currently this is commented out since it was causing more problems than good
+        # The ISB solexa output directories are set with a sticky group and should set the correct permissions
+#        my ($group_name, $passwd, $grid, $members) = getgrgid($gid);
+	
+	my $apply_action=$parameters{'action'} || $parameters{'apply_action'} || 'QUERY';
+
+	## HACK: If set_current_project_id is a parameter, we do a 'QUERY' instead of a 'VIEWRESULTSET'
+	if ($parameters{set_current_project_id}) {
+		$apply_action = 'QUERY';
+	}
+
+  if ( $parameters{Get_Data} eq 'Run Pipeline') {
+    my %unique_sample_ids;
+    if ($parameters{select_samples}) {	
+
+      ##########################################################################
+      ### Print out some nice table
+      #example '37__CEL,38__CEL,45__CEL,46__CEL,46__XML'
+      my $samples_id_string =  $parameters{select_samples}; 
+      my @sample_ids = split(/,/, $samples_id_string);
+      %unique_sample_ids = map {split(/__/, $_) } @sample_ids;
+
+    } elsif ($parameters{slimseq_sample_id}) {
+      $unique_sample_ids{$parameters{slimseq_sample_id}} = 1;
+    }
+
+    if (scalar keys %unique_sample_ids > 0 ) {
+      my $samples = join(",", sort keys %unique_sample_ids);
+
+      $sql = $sbeams_solexa_groups->get_solexa_pipeline_run_info_sql(slimseq_sample_ids => $samples, 
+                                                                     project_id => $project_id
+                                                                    );
+
+      # hide the really long file paths from displaying
+      %hidden_cols = ( 
+                       "SPR_ID" => 1,
+                       "Sample_ID" => 1,
+                       'ELAND_Output_File' => 1,
+                       'Raw_Data_Path' => 1,
+	              );
+
+
+    } else { # no parameter{select_samples}
+      $log->error( "User submitted no samples\n" );
+      $sbeams->handle_error(message => 'No samples selected, please press back and select samples.', 
+                                          error_type => 'SolexaTrans_error');
+    }
+	
+  } else {
+    $log->error("In Run Pipeline, but Get_Data was not set correctly\n");
+    $sbeams->handle_error(message=>"Incorrect step, please go back to the first step and try again.",
+                          error_type=>"SolexaTrans_error");
+  }
+	
+  # Fetch the results from the database server
+  $sbeams->fetchResultSet( sql_query => $sql,
+                           resultset_ref => $resultset_ref );
+
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+  $TABLE_NAME="ST_JobParameters" unless ($TABLE_NAME);
+  ($PROGRAM_FILE_NAME) =
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+#  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+
+  #### Get the columns and input types for this table/query
+  my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+ 
+  # now that we have the results, go through them and start the pipeline jobs
+  my %solexaJobs;
+
+  # create a display resultset that contains
+  # Sample ID, Jobname, Job Tag, Organism, Lane, Tag Length, Motif
+  my $new_resultset_ref;
+  $new_resultset_ref->{'page_size'} = 100;
+  $new_resultset_ref->{'types_list_ref'} = ['int','varchar','varchar','varchar','int','varchar','varchar'];
+  $new_resultset_ref->{'precisions_list_ref'} = [4,50,2000,2000,4,2000,2000];
+  $new_resultset_ref->{'column_hash_ref'} = { 'Sample ID' => 0,
+                                              'Jobname' => 1,
+                                              'Job_Tag' => 2,
+                                              'Organism' => 3,
+                                              'Lane' => 4,
+                                              'Tag Length' => 5,
+                                              'Motif' => 6
+                                            };
+  $new_resultset_ref->{'row_counter'} = 0;
+  $new_resultset_ref->{'row_pointer'} = 0;
+  $new_resultset_ref->{'column_list_ref'} = ['Sample ID','Jobname','Job Tag','Organism','Lane','Tag Length','Motif'];
+  $new_resultset_ref->{'data_ref'} = [];
+ 
+  #data is stored as an array of arrays from the $sth->fetchrow_array 
+  # each row is a row from the database holding an aref to all the values
+  my $aref = $$resultset_ref{data_ref};		
+          
+  my $id_idx = $resultset_ref->{column_hash_ref}->{Sample_ID};
+  my $spr_id_idx = $resultset_ref->{column_hash_ref}->{SPR_ID}; # solexa_pipeline_results_id
+  my $eland_idx = $resultset_ref->{column_hash_ref}->{ELAND_Output_File};
+  my $raw_data_path_idx = $resultset_ref->{column_hash_ref}->{Raw_Data_Path};
+  my $lane_idx = $resultset_ref->{column_hash_ref}->{Lane};
+  my $organism_idx = $resultset_ref->{column_hash_ref}->{Organism};
+#  my $tag_length_idx = $resultset_ref->{column_hash_ref}->{Tag_Length};
+#  my $genome_idx = $resultset_ref->{column_hash_ref}->{Genome};
+#  my $motif_idx = $resultset_ref->{column_hash_ref}->{Motif};
+
+  ########################################################################################
+  # this foreach loop goes through each row that was retrieved from teh database
+  # and organizes the files into a file structure that has one entry for each
+  # raw directory path - this is what STP expects to receive. 
+  my $new_data_ref;
+  foreach my $row_aref ( @{$aref} ) {
+    my $slimseq_sample_id  = $row_aref->[$id_idx];
+    my $solexa_pipeline_results_id  = $row_aref->[$spr_id_idx];
+    my $eland_file = $row_aref->[$eland_idx];
+    my $raw_data_path = $row_aref->[$raw_data_path_idx];
+    my $lane = $row_aref->[$lane_idx];
+    my $organism = $row_aref->[$organism_idx];
+ 
+#    my $tag_length = $row_aref->[$tag_length_idx];
+#    my $genome = $row_aref->[$genome_idx];
+#    my $motif = $row_aref->[$motif_idx];
+
+    my $tag_length = $parameters{'tag_length__'.$slimseq_sample_id};
+    my @genomes = $parameters{'biosequence_set_ids__'.$slimseq_sample_id};
+    my $truncate = $parameters{'truncate__'.$slimseq_sample_id};
+    my $fuse = $parameters{'fuse__'.$slimseq_sample_id} || 0;
+    my $patman_max_mismatches = $parameters{'patman_max_mismatches__'.$slimseq_sample_id};
+    my $res_enzyme_id = $parameters{'restriction_enzyme__'.$slimseq_sample_id};
+    my $motif = $utilities->get_sbeams_restriction_enzyme_motif("enzyme_id" => $res_enzyme_id);
+    my $upload_tags = $parameters{'upload_tags__'.$slimseq_sample_id};
+    my $job_tag = $parameters{'job_tag__'.$slimseq_sample_id};
+
+#           Since we're taking the existance of the files on the word of the database, it'd be
+#            really good to check to see if the file does exist.
+#           The simple case doesn't work because the web server user doesn't have access to /solexa/*
+#           Ideally this would be some sort of script execution that would run as a user that
+#            would have access to all /solexa files but only be able to check for file existance
+#            die "ELAND file $eland_file does not exist or is not available" unless -e $eland_file;
+
+
+    my $jobname;
+    if ($parameters{jobname} && $parameters{jobname} =~ /^stp-ssid/) {
+      $jobname = $parameters{jobname};
+    } else {
+     $jobname = 'stp-ssid'.$slimseq_sample_id.'-'.rand_token();
+    }
+
+    my @new_line;
+    push(@new_line, $slimseq_sample_id);
+    push(@new_line, $jobname);
+    push(@new_line, $job_tag);
+    push(@new_line, $organism);
+    push(@new_line, $lane);
+    push(@new_line, $tag_length);
+    push(@new_line, $motif);
+    push(@{$new_resultset_ref->{'data_ref'}}, \@new_line);
+
+    my $pipeline_job_directory = $sbeamsMOD->solexa_delivery_path();
+    my @raw_dirs = split(/\//, $raw_data_path);
+    my $flow_cell_dir = pop(@raw_dirs); # remove flow cell
+    my $pipeline_output_directory = join("/", @raw_dirs);
+    $pipeline_output_directory .= '/SolexaTrans/'.$flow_cell_dir.'/';
+
+    # each line is param_display, param_value, param_key
+    # param_key is the programmatic value
+    my @job_summary_info = (
+                             'Sample ID',$slimseq_sample_id,'NULL',
+                             'ELAND File',$eland_file,'NULL',
+                             'Tag Length',$tag_length,'tag_length__'.$slimseq_sample_id,
+                             'Genome',@genomes,'biosequence_set_ids__'.$slimseq_sample_id,
+                             'Organism',$organism,'NULL',
+                             'Motif',$motif,'NULL',
+                             'Restriction Enzyme ID',$res_enzyme_id,'restriction_enzyme__'.$slimseq_sample_id,
+                             'Lane',$lane,'NULL',
+                             'Pipeline Results ID',$solexa_pipeline_results_id,'NULL',
+                             'Job Directory',$pipeline_job_directory,'NULL',
+                             'Sequence Truncate',$truncate,'truncate__'.$slimseq_sample_id,
+                             'Patman Max Mismatches',$patman_max_mismatches,'patman_max_mismatches__'.$slimseq_sample_id,
+                             'File Truncate',$fuse,'fuse__'.$slimseq_sample_id,
+                             'Upload Tags',$upload_tags,'upload_tags__'.$slimseq_sample_id,
+                             'Job Tag',$job_tag,'job_tag__'.$slimseq_sample_id,
+                           );
+
+    my $jobsummary = jobsummary(@job_summary_info); # method in SetupPipeline.pm
+
+#    my $analysis_id = $utilities->check_sbeams_duplicate_job("jobsummary" => \@job_summary_info);
+#            if ($analysis_id =~ /ERROR/) {
+#             error("$analysis_id");
+#            if ($analysis_id) {
+#              print "Job already exists for sample $slimseq_sample_id with duplicate parameters.<br>\n";
+#              print "If you want to re-run a job, find the job via the Status page and delete or re-run it.<br>\n";
+#              $jobname = $utilities->get_sbeams_jobname("solexa_analysis_id" => $analysis_id);
+
+#              $solexaJobs{$slimseq_sample_id} = "$pipeline_output_directory/$jobname";
+
+#              next;
+#            }
+
+    my $partial_url = "$CGI_BASE_DIR/SolexaTrans/View_Solexa_files.cgi?action=view_file&jobname=$jobname&analysis_file=$jobname";
+
+    # links to view the tag counts etc
+    my $out_links = <<OUTL;
+<h3>Output Files</h3>
+<a href='$partial_url&file_ext=html'>$jobname.html</a><br>
+<a href='$partial_url&file_ext=txt'>$jobname.txt</a><br>
+OUTL
+
+    my $anchor='';
+    my $raw_path = $sbeams_solexa_groups->get_file_path_from_id(slimseq_sample_id => $slimseq_sample_id,
+                                                                file_type => 'RAW');
+    my $server = $sbeams_solexa_groups->get_server(file_path => $raw_path);
+    if ($server =~ /ERROR/) { die $server; }
+    $raw_path =~ s/^\///g;
+    my @dirs = split(/\//, $raw_path);
+    shift(@dirs); # remove /solexa
+    unshift(@dirs, $server);  # add server
+    my $flow_cell = pop(@dirs); # remove last entry and save
+    push(@dirs, 'SolexaTrans');
+    push(@dirs, $flow_cell);
+    my $path = join("\\", @dirs);
+
+    $anchor = 'file://///'.$path;
+
+    my $output = <<END;
+<h3>Show Analysis Data:</h3>
+<a href="$anchor">Show Files</a>
+$out_links
+END
+
+    my $output_dir_id = $utilities->check_sbeams_file_path(file_path => $pipeline_output_directory);
+    if (!$output_dir_id) {
+      my $output_server_id = $utilities->check_sbeams_server("server_name" => "RUNE");
+      if ($output_server_id =~ /ERROR/) { error($output_server_id); }
+
+      $output_dir_id = $utilities->insert_file_path(file_path => $pipeline_output_directory,
+                                                    file_path_name => 'Output Directory for SolexaTrans job',
+                                                    file_path_desc => '',
+                                                    server_id => $output_server_id,
+                                                   );
+    }
+
+    my $ana_id = $utilities->insert_or_update_sbeams_solexa_analysis(
+                                                     'jobname' => $jobname,
+                                                     'slimseq_sample_id' => $slimseq_sample_id,
+                                                     'output_dir_id' => $output_dir_id,
+                                                     'analysis_description' => 'SolexaTrans Job',
+                                                     'project_id' => $project_id,
+                                                     'status' => 'QUEUED',
+                                                     'status_time' => 'CURRENT_TIMESTAMP',
+                                                     'SPR_ID' => $solexa_pipeline_results_id,
+                                                     'job_tag' => $job_tag,
+                                                     'params' => \@job_summary_info,
+                                                    );
+    $sbeams->handle_error(message=>$ana_id) if $ana_id =~ /ERROR/;
+
+    my $job_time = $utilities->get_sbeams_job_date_created(solexa_analysis_id => $ana_id);
+    if (!$job_time || $job_time == 0) {
+     $log->warn("Time could not be retrieved for the date_created for job $ana_id");
+     $job_time = strftime "%Y%m%d%H%M%S",localtime; # a timestamp of YearMonthDayHourMinuteSecond
+    }
+
+    $pipeline_output_directory = $pipeline_output_directory.$job_time.'/';
+    print "Writing to directory $pipeline_output_directory<br>\n";
+    $output_dir_id = $utilities->check_sbeams_file_path(file_path => $pipeline_output_directory);
+    if (!$output_dir_id) {
+      my $output_server_id = $utilities->check_sbeams_server("server_name" => "RUNE");
+      if ($output_server_id =~ /ERROR/) { error($output_server_id); }
+
+      $output_dir_id = $utilities->insert_file_path(file_path => $pipeline_output_directory,
+                                                    file_path_name => 'Output Directory for SolexaTrans job '.$jobname,
+                                                    file_path_desc => '',
+                                                    server_id => $output_server_id,
+                                                   );
+    }
+
+    push(@job_summary_info,'Job Directory');
+    push(@job_summary_info,$pipeline_job_directory);
+    push(@job_summary_info,'NULL');
+     
+    $ana_id = $utilities->insert_or_update_sbeams_solexa_analysis(
+                                                     'jobname' => $jobname,
+                                                     'slimseq_sample_id' => $slimseq_sample_id,
+                                                     'output_dir_id' => $output_dir_id,
+                                                     'analysis_description' => 'SolexaTrans Job',
+                                                     'project_id' => $project_id,
+                                                     'status' => 'QUEUED',
+                                                     'status_time' => 'CURRENT_TIMESTAMP',
+                                                     'SPR_ID' => $solexa_pipeline_results_id,
+                                                     'params' => \@job_summary_info,
+                                                    );
+    $sbeams->handle_error(message=>$ana_id) if $ana_id =~ /ERROR/;
+
+    print "Starting a new SolexaTransPipeline job with Slimseq sample id $slimseq_sample_id<br>\n";
+
+    my $perl_script = generate_perl(
+                                              "Sample_ID" => $slimseq_sample_id,
+                                              "SPR_ID" => $solexa_pipeline_results_id,
+                                              "ELAND_Output_File" => $eland_file,
+                                              "Raw_Data_Path" => $raw_data_path,
+                                              "Tag_Length" => $tag_length,
+                                              "Genome" => join(",",@genomes),
+                                              "Organism" => $organism,
+                                              "Motif" => $motif,
+                                              "Jobname" => $jobname,
+                                              "Lane" => $lane,
+                                              "Truncate" =>$truncate,
+                                              "Patman_max_mismatches"=>$patman_max_mismatches,
+                                              "Fuse"=>$fuse,
+                                              "Output_Dir" => $pipeline_output_directory,
+                                              "Job_Dir" => $pipeline_job_directory,
+                                              "Analysis_ID" => $ana_id,
+                                              "Upload_Tags" => $upload_tags,
+                              ); 
+
+
+    my $error = create_files( 
+                                        dir => $pipeline_output_directory,
+                                        job_dir => $pipeline_job_directory,
+                                        jobname => $jobname,
+                                        title => $sbeams->getCurrent_project_name,
+                                        jobsummary => $jobsummary,
+                                        output => $output,
+                                        refresh => 20,
+                                        script => $perl_script,
+                                        email => $current_email
+                                    );
+    error($error) if $error;
+
+    my $job = new Batch;
+    $job->cputime('48:00:00'); # default at 48 hours for now
+    $job->type($BATCH_SYSTEM);
+    $job->script("$pipeline_job_directory/$jobname/$jobname.sh");
+    $job->name($jobname);
+#    $job->group($group_name); # commented out, read note where group_name is set
+    $job->out("$pipeline_job_directory/$jobname/$jobname.out");
+    $job->queue("dev");
+    eval{
+    $job->submit;
+    };
+    if ($@) {
+     error("Couldn't start a job for $jobname - $@");
+    }
+    #$job->submit || error("Couldn't start a job for $jobname - ");
+    open (ID, ">$pipeline_job_directory/$jobname/id") || 
+      error("Couldn't write out an id for $jobname in $pipeline_job_directory/$jobname/id");
+    print ID $job->id;
+    close(ID);
+    chmod(0666,"$pipeline_job_directory/$jobname/id");
+
+    print "<br>\n";
+    print "<br>\n";
+
+    $solexaJobs{$slimseq_sample_id} = "$pipeline_job_directory/$jobname";
+
+
+  } # end foreach row     
+
+  append_job_link( resultset_ref => $new_resultset_ref,
+		   jobs => \%solexaJobs,
+                 );
+
+  # Set the column_titles to just the column_names, reset first.
+  @column_titles = ();
+  for my $title ( @{$new_resultset_ref->{column_list_ref}} ) {
+    push @column_titles, $title;
+  }
+
+  ###################################################################
+  
+  $log->info( "writing" );
+  #### Store the resultset and parameters to disk resultset cache
+  $rs_params{set_name} = "SETME";
+  $sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
+		  	  resultset_ref=>$new_resultset_ref,
+			  query_parameters_ref=>\%parameters,
+			  resultset_params_ref=>\%rs_params,
+  			  query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+	  		 );
+
+
+  #### Display the resultset
+  $sbeams->displayResultSet(resultset_ref=>$new_resultset_ref,
+			    query_parameters_ref=>\%parameters,
+			    rs_params_ref=>\%rs_params,
+			    url_cols_ref=>\%url_cols,
+			    hidden_cols_ref=>\%hidden_cols,
+			    max_widths=>\%max_widths,
+			    column_titles_ref=>\@column_titles,
+			    base_url=>$base_url,
+			    no_escape=>1,
+			    nowrap=>1,
+			    show_numbering=>1,
+			    );
+	
+
 }
 
 sub postProcessResultset {
@@ -1059,13 +1456,14 @@ sub check_for_file {
 
 sub prepend_precision_data {
 	my $resultset_ref = shift;
-	
+
 	my $aref = $$resultset_ref{precisions_list_ref};	
-	
-	push @$aref, '-10';					
-	
+	unshift @$aref, '-10';					
 	$$resultset_ref{precisions_list_ref} = $aref;
-			
+
+        my $bref = $$resultset_ref{types_list_ref};
+        unshift(@$bref, 'int');
+        $$resultset_ref{types_list_ref} = $bref;
 #	print "AREF '$aref'<br>";
 	
 #	foreach my $val (@$aref){
@@ -1230,16 +1628,21 @@ sub print_permissions_tab {
   $sbeams->print_permissions_table(ref_parameters=>$ref_parameters, no_permissions=>1);
 }
 
+###############################################################################
+# generate_perl
+###############################################################################
 sub generate_perl {
     my (%argHash)=@_;
-    my @required_opts=qw(Sample_ID SPR_ID ELAND_Output_File Raw_Data_Path Tag_Length Genome Organism Motif Lane Output_Dir Jobname Jobsummary Analysis_ID);
+    my @required_opts=qw(Sample_ID SPR_ID ELAND_Output_File Raw_Data_Path Tag_Length Genome Organism Motif Lane Truncate Patman_max_mismatches Fuse Output_Dir Job_Dir Jobname Analysis_ID Upload_Tags);
     my @missing=grep {!defined $argHash{$_}} @required_opts;
     die "missing opts: ",join(', ',@missing) if @missing;
 
-    my ($sample_id, $spr_id, $eland_file, $raw_data_path, $tag_length, $genome, $organism, $motif, $lane, $output_dir, $jobname, $jobsummary, $analysis_id)=
-        @argHash{qw(Sample_ID SPR_ID ELAND_Output_File Raw_Data_Path Tag_Length Genome Organism Motif Lane Output_Dir Jobname Jobsummary Analysis_ID)};
+    my ($sample_id, $spr_id, $eland_file, $raw_data_path, $tag_length, $genome, $organism, $motif, $lane, $truncate, $patman_max_mismatches, $fuse, $output_dir, $job_dir, $jobname, $analysis_id, $upload_tags)=
+        @argHash{qw(Sample_ID SPR_ID ELAND_Output_File Raw_Data_Path Tag_Length Genome Organism Motif Lane Truncate Patman_max_mismatches Fuse Output_Dir Job_Dir Jobname Analysis_ID Upload_Tags)};
 
-    my $project_name = $sbeams->getCurrent_project_name;
+    my $project_name = $sbeams->getCurrent_project_tag; # this is project tag because the STP code insists on using
+                                                        # the 'project_name' field as part of the output directory path
+                                                        # and other file names
     my $project_id = $sbeams->getCurrent_project_id;
 
     # base_dir is where the script is called from
@@ -1250,6 +1653,7 @@ sub generate_perl {
     my $pscript=<<"PEND";
 #!/tools64/bin/perl
 
+use Carp;
 use strict;
 use warnings;
 use lib "$PHYSICAL_BASE_DIR/lib/perl";
@@ -1259,6 +1663,8 @@ use SBEAMS::SolexaTrans::Solexa_file_groups;
 use SBEAMS::SolexaTrans::SolexaTransPipeline;
 use SBEAMS::SolexaTrans::Tables;
 use SBEAMS::SolexaTrans::SolexaUtilities;
+use POSIX qw(strftime);
+use File::Path;
 
 my \$verbose = 1;   # these should be 0 for production
 my \$testonly = 0;
@@ -1273,6 +1679,9 @@ my \$sample_id = '$sample_id';
 my \$project_name = '$project_name';
 my \$lane = '$lane';
 my \$analysis_id = '$analysis_id';
+my \@genomes = ( $genome );
+my \$tag_analysis_format_file = '$PHYSICAL_BASE_DIR'.'/lib/conf/SolexaTrans/tag_analysis3.fmt';
+my \$gene_analysis_format_file = '$PHYSICAL_BASE_DIR'.'/lib/conf/SolexaTrans/gene_analysis.fmt';
 
 PEND
 
@@ -1294,9 +1703,8 @@ PEND
                                 jobname => '$jobname',
                                 slimseq_sample_id => \$sample_id,
                                 output_directory_id => \$output_dir_id,
-                                analysis_description => '$jobsummary',
                                 project_id => $project_id,
-                                status => 'PROCESSING',
+                                status => 'RUNNING',
                                 status_time => 'CURRENT_TIMESTAMP',
                                 solexa_pipeline_results_id => '$spr_id',
                               };
@@ -1305,7 +1713,7 @@ PEND
                                                           table_name=>\$TBST_SOLEXA_ANALYSIS,
                                                           rowdata_ref => \$rowdata_ref,
                                                           PK=>'solexa_analysis_id',
-                                                          PK_value=>'\$analysis_id',
+                                                          PK_value=>\$analysis_id,
                                                           return_PK=>1,
                                                           update=>1,
                                                           verbose=>\$verbose,
@@ -1315,15 +1723,20 @@ PEND
 PEND2
 
   $pscript.=<<"PEND3";
+
+            {
+
             # sample id is slimseq sample id
             my \$pipeline = SBEAMS::SolexaTrans::SolexaTransPipeline->new(
                                 project_name=>\$project_name,
-                                output_dir=> '$output_dir/$jobname', # output_dir must include flow cell information
-                                ref_genome=> '$organism|$genome',
+                                output_dir=> '$job_dir/$jobname', # job directory, copy files to output directory later
+                                genome_ids => \\\@genomes,
                                 ref_org=> '$organism',
                                 export_file=>'$eland_file',
                                 tag_length=> '$tag_length',
                                 lane => \$lane,
+                                patman_max_mismatches => $patman_max_mismatches,
+                                fuse => $fuse,
                                 ss_sample_id => \$sample_id,  # slimseq sample id
                                 motif => '$motif',
                                 db_host=>'$SOLEXA_MYSQL_HOST', db_name=>'$SOLEXA_MYSQL_DB',
@@ -1341,160 +1754,26 @@ PEND3
             \$pipeline->run();
 
             my \$statsref = \$pipeline->read_stats;
-#            tags_${sample_id}_total
-#            tags_${sample_id}_unique
-#            ambg_${sample_id}_total
-#            ambg_${sample_id}_unique
-#            unkn_${sample_id}_total
-#            unkn_${sample_id}_unique
-#            total_tags
-#            total_unique
-
             \$rowdata_ref->{"total_tags"}         = \$statsref->{total_tags};
             \$rowdata_ref->{"total_unique_tags"}  = \$statsref->{total_unique};
-            \$rowdata_ref->{"match_tags"}         = \$statsref->{tags_${sample_id}_total};
-            \$rowdata_ref->{"match_unique_tags"}  = \$statsref->{tags_${sample_id}_unique};
-            \$rowdata_ref->{"ambg_tags"}          = \$statsref->{ambg_${sample_id}_total};
-            \$rowdata_ref->{"ambg_unique_tags"}   = \$statsref->{ambg_${sample_id}_unique};
-            \$rowdata_ref->{"unkn_tags"}          = \$statsref->{unkn_${sample_id}_total};
-            \$rowdata_ref->{"unkn_unique_tags"}   = \$statsref->{unkn_${sample_id}_unique};
-#            \$rowdata_ref->{"status"}             = 'UPLOADING';
-            \$rowdata_ref->{"status"}             = 'COMPLETED';
-
-            \$sbeams->updateOrInsertRow(
-                                         table_name=>\$TBST_SOLEXA_ANALYSIS,
-                                         rowdata_ref => \$rowdata_ref,
-                                         PK=>'solexa_analysis_id',
-                                         PK_value => \$analysis_id,
-                                         update=>1,
-                                         verbose=>\$verbose,
-                                         testonly=>\$testonly,
-                                         add_audit_parameters=>1,
-                                        );
+            \$rowdata_ref->{"match_tags"}         = \$statsref->{tags_total};
+            \$rowdata_ref->{"match_unique_tags"}  = \$statsref->{tags_unique};
+            \$rowdata_ref->{"ambg_tags"}          = \$statsref->{ambg_total};
+            \$rowdata_ref->{"ambg_unique_tags"}   = \$statsref->{ambg_unique};
+            \$rowdata_ref->{"unkn_tags"}          = \$statsref->{unkn_total};
+            \$rowdata_ref->{"unkn_unique_tags"}   = \$statsref->{unkn_unique};
+            \$rowdata_ref->{"total_genes"}        = \$statsref->{cpm_unique};
 
 PEND4
-    my $pscript2; # fake
-    $pscript2.=<<"INSERT_TAGS";
 
-            # files are named PROJECT_NAME.lane.sample_id.ext
-            # ext is tags, unkn, or ambg
+    # upload_tags 1 = YES, 2 = NO
+    # PROCESSED = finished running STP but not uploaded to ST database
+    $pscript .= qq(\$rowdata_ref->{"status"}             = 'UPLOADING';) if $upload_tags == 1;
 
-            my \$file_root = \$project_name.'.'.\$lane.'.'.\$sample_id;
-
-
-            my \$count = 0;
-            open TAGERR, ">\$file_root.tags.err" or die "can't open tag error file";
-            open(TAG, "\$file_root.tags") or die "can't open tag file";
-            while (<TAG>) {
-              if (\$count % 100) {
-                 \$sbeams->begin_transaction();
-              }
-              chomp;
-              my (\$gene_id, \$tag, \$count, \$cpm) = split(/\t/, \$_);
-              my \$tag_id = \$utilities->check_sbeams_tag(tag => \$tag);
-              if (!\$tag_id) {
-                 \$tag_id = \$utilities->insert_sbeams_tag(tag => \$tag);
-                 if (\$tag_id =~ /ERROR/) {
-                   print TAGERR "\$gene_id\t\$tag\t\$count\t\$cpm\tTag ID not found and cannot be inserted\n";
-                   next;
-                 }
-                 my \$biosequence_id = \$utilities->check_sbeams_biosequence(biosequence_accession => \$gene_id);
-                 if (\$biosequence_id ==0) {
-                   print TAGERR "\$gene_id\t\$tag\t\$count\t\$cpm\tBiosequence ID not found\n";
-                   next;
-                 }
-                 my \$bs_tag_id = \$utilities->insert_sbeams_biosequence_tag(tag_id => \$tag_id,
-                                                                             biosequence_id => \$biosequence_id
-                                                                            );
-              }
-              my \$tag_type_id = \$utilities->get_sbeams_tag_type(type => "MATCH");
-              if (!\$tag_type_id) {
-                print TAGERR "\$gene_id\t\$tag\t\$count\t\$cpm\tTag Type ID not found\n";
-                next;
-              }
-              my \$tag_ana_id = \$utilities->insert_sbeams_tag_analysis(tag_id => \$tag_id,
-                                                                       count => \$count,
-                                                                       cpm => \$cpm,
-                                                                       solexa_analysis_id => \$analysis_id,
-                                                                       tag_type_id => \$tag_type_id
-                                                                      );
-              if (\$count % 100) {
-                \$sbeams->commit_transaction();
-              }
-            } # end while TAG
-            close TAG;
-            close TAGERR;
-            \$sbeams->reset_dbh();
-
-            open(UNKNERR, ">\$file_root.unkn.err") or die "can't open unknown error file";
-            open(UNKN, "\$file_root.unkn") or die "Can't open unknown file\n";
-            while (<UNKN>) {
-              chomp;
-              my (\$tag, \$count, \$cpm) = split(/\t/, \$_);
-              my \$tag_id = \$utilities->check_sbeams_tag(tag => \$tag);
-              if (!\$tag_id) {
-                 \$tag_id = \$utilities->insert_sbeams_tag(tag => \$tag);
-                 if (\$tag_id =~ /ERROR/) {
-                    print UNKNERR "\$tag\t\$count\t\$cpm\tTag ID not found and cannot be inserted\n";
-                    next;
-                 }
-                 # unknowns don't have a linked entrez gene id
-              }
-              my \$tag_type_id = \$utilities->get_sbeams_tag_type(type => "UNKNOWN");
-              if (!\$tag_type_id) {
-                print UNKNERR "\$tag\t\$count\t\$cpm\tTag Type ID not found\n";
-                next;
-              }
-              my \$tag_ana_id = \$utilities->insert_sbeams_tag_analysis(tag_id => \$tag_id,
-                                                                       count => \$count,
-                                                                       cpm => \$cpm,
-                                                                       solexa_analysis_id => \$analysis_id,
-                                                                       tag_type_id => \$tag_type_id,
-                                                                      );
-            } # end while UNKN
-            close UNKN;
-            close UNKNERR;
-
-            open AMBERR, ">\$file_root.ambg.err" or die "Can't open ambg err file";
-            open(AMB, "\$file_root.ambg") or die "can't open ambg file";
-            while (<AMB>) {
-              chomp;
-              my (\$tag, \$gene_ids, \$n_lls, \$count, \$cpm) = split(/\t/, \$_);
-              my \$tag_id = \$utilities->check_sbeams_tag(tag => \$tag);
-              if (!\$tag_id) {
-                 \$tag_id = \$utilities->insert_sbeams_tag(tag => \$tag);
-                 if (\$tag_id =~ /ERROR/) {
-                   print AMBERR "\$tag\t\$gene_ids\t\$n_lls\t\$count\t\$cpm\tTag ID not found and cannot be inserted\n";
-                   next;
-                 }
-                 my \@genes = split(/,/, \$gene_ids);
-                 foreach my \$gene (\@genes) {
-                   my \$biosequence_id = \$utilities->check_sbeams_biosequence(biosequence_accession => \$gene);
-                   if (\$biosequence_id =~ /ERROR/) {
-                     print AMBERR "\$tag\t\$gene\t\$count\t\$cpm\tBiosequence ID not found\n";
-                     next;
-                   }
-                   my \$bs_tag_id = \$utilities->insert_sbeams_biosequence_tag(tag_id => \$tag_id,
-                                                                               biosequence_id => \$biosequence_id
-                                                                              );
-                 }
-              }
-              my \$tag_type_id = \$utilities->get_sbeams_tag_type(type => "AMBIGUOUS");
-              if (!\$tag_type_id) {
-                print AMBERR "\$tag\t\$gene_ids\t\$n_lls\t\$count\t\$cpm\tTag Type ID not found\n";
-                next;
-              }
-              my \$tag_ana_id = \$utilities->insert_sbeams_tag_analysis(tag_id => \$tag_id,
-                                                                       count => \$count,
-                                                                       cpm => \$cpm,
-                                                                       solexa_analysis_id => \$analysis_id
-                                                                      );
-            } # end while AMB
-            close AMB;
-            close AMBERR;
+    $pscript .= qq(\$rowdata_ref->{"status"}             = 'PROCESSED';) if $upload_tags == 2;
 
 
-            \$rowdata_ref->{"status"}             = 'COMPLETE';
+    $pscript .= <<"PEND5";
 
             \$sbeams->updateOrInsertRow(
                                          table_name=>\$TBST_SOLEXA_ANALYSIS,
@@ -1507,9 +1786,41 @@ PEND4
                                          add_audit_parameters=>1,
                                         );
 
+            \$pipeline = undef;
 
-INSERT_TAGS
+            }
 
+            # make sure the output directory is created - Do this in perl because mkpath
+            # will create a recursive structure whereas a simple mkdir will fail if 
+            # more than one of the directories needs to be created
+            my \@created = mkpath(qw($output_dir),{verbose=>1},);
+            print "Created \$_\n" for \@created;
+PEND5
+
+  # THE METHODS IN THIS SECTION ARE IN UploadPipeline.pm
+
+  # always add the CPM info
+  $pscript .= upload_gene_info();
+  $pscript .= perl_process_genes('cpm', $job_dir.'/'.$jobname);
+
+  # upload the TAG and AMBIGUOUS info if user selected
+  # upload_tags 1 = YES , 2 = NO
+  if ($upload_tags == 1) {
+
+   $pscript .= upload_tag_info();
+
+    my $tag_script = perl_process_tags('MATCH', $job_dir.'/'.$jobname);
+#    my $unkn_script = perl_process_tags('UNKNOWN', $job_dir.'/'.$jobname);
+    my $ambg_script = perl_process_tags('AMBIGUOUS', $job_dir.'/'.$jobname);
+  
+    $pscript .= $tag_script;
+#    $pscript .= $unkn_script;
+    $pscript .= $ambg_script;
+
+
+    $pscript .= alter_db_status('COMPLETED');
+
+  } # end if upload_tags
 
 return $pscript;
 }
@@ -1520,18 +1831,88 @@ return $pscript;
 sub error {
     my ($error) = @_;
 
-        print $cgi->header;
+        print $q->header;
         site_header("SolexaTransPipeline: Samples");
 
-        print $cgi->h1("SolexaTransPipeline: Samples"),
-              $cgi->h2("Error:"),
-              $cgi->p($error);
-                foreach my $key ($cgi->param){
+        print $q->h1("SolexaTransPipeline: Samples"),
+              $q->h2("Error:"),
+              $q->p($error);
+                foreach my $key ($q->param){
 
-                print "$key => " . $cgi->param($key) . "<br>";
+                print "$key => " . $q->param($key) . "<br>";
         }
         site_footer();
 
         exit(1);
+}
+
+###############################################################################
+# get_form_defaults
+###############################################################################
+sub get_form_defaults {
+  my %args = @_;
+  my $ref_parameters = $args{'ref_parameters'} || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+  my $sql = $sbeams_solexa_groups->get_form_defaults_sql();
+  my %defaults = $sbeams->selectTwoColumnHash($sql);
+
+  foreach my $default (keys %defaults) {
+   $parameters{$default} = $defaults{$default};
+  }
+
+  return \%parameters;
+}
+
+
+###############################################################################
+# get_form_data 
+###############################################################################
+sub get_form_data {
+  my %args = @_;
+  my $ref_parameters = $args{'ref_parameters'} || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+  my $job_sql = $sbeams_solexa_groups->get_detailed_job_status_sql(jobname => $parameters{jobname});
+  my @job_info = $sbeams->selectSeveralColumns($job_sql);
+  $parameters{select_samples} = $job_info[0]->[14].'__Select_Sample';
+  $parameters{Get_Data} = 'Set Parameters';
+
+  my $sql = $sbeams_solexa_groups->get_form_job_data_sql(jobname => $parameters{"jobname"});
+  my @rows = $sbeams->selectSeveralColumns($sql);
+
+  #go through parameters
+  foreach my $row (@rows) {
+#    $parameters{$row->[0]} = $row->[1] if ($row->[0]); 
+  }
+
+  return \%parameters;
+}
+
+
+###############################################################################
+# get_biosequence_set_defaults
+# Returns SBEAMS hash ref
+###############################################################################
+sub get_biosequence_set_defaults {
+        my $method = 'get_biosequence_set_defaults';
+        my $self = shift;
+
+        # option_key for JP_biosequence_set_defaults is organism_id
+        # option_value for JP_biosequence_set_defaults is biosequence_set_id
+        my $sql = qq~
+                SELECT option_key, option_value
+                FROM $TBST_QUERY_OPTION
+                WHERE option_type = 'JP_biosequence_set_defaults'
+                  AND RECORD_STATUS != 'D'
+        ~;
+
+        my %defaults = $sbeams->selectTwoColumnHash($sql);
+
+        if ((scalar (keys %defaults)) > 0) {
+          return \%defaults;
+        } else {
+          return undef;
+        }
 }
 
