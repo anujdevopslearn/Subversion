@@ -68,9 +68,31 @@ sub display_page_header {
 	<TITLE>$DBTITLE - $SBEAMS_PART</TITLE>
     ~;
 
-
+    if ($args{"js"}){
+      print $args{"js"};
+    }
     $self->printJavascriptFunctions();
     $self->printStyleSheet();
+
+
+    print qq~
+      <style type="text/css">
+      .draggable {
+                    border: 1px solid black;
+                    margin-bottom: 3px;
+                    cursor: move;
+                }
+      .droppable {
+                border: 2px solid black; 
+                width: 200px;
+
+      }
+      .droppable.hover {
+                    border: 5px dashed;
+                    background: #efefef;
+                  }
+      </style>
+    ~;
 
 
     #### Determine the Title bar background decoration
@@ -84,7 +106,7 @@ sub display_page_header {
 	</HEAD>
 
 	<!-- Background white, links blue (unvisited), navy (visited), red (active) -->
-	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" TOPMARGIN=0 LEFTMARGIN=0 OnLoad="self.focus();">
+	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" style="margin-left: 0px; margin-top: 0px;" OnLoad="self.focus();">
 	<table border=0 width="100%" cellspacing=0 cellpadding=1>
 
 	<!------- Header ------------------------------------------------>
@@ -110,22 +132,38 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/main.cgi">$SBEAMS_PART Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td>Tag Pipeline:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Samples.cgi"><nobr>&nbsp;&nbsp;&nbsp;Start Pipeline</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Status.cgi"><nobr>&nbsp;&nbsp;&nbsp;Job Status and Controls</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetCounts"><nobr>&nbsp;&nbsp;&nbsp;Get Counts</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/dataDownload.cgi"><nobr>&nbsp;&nbsp;&nbsp;Download Data</nobr></a></td></tr>
-        ~;
-
+      ~;
 
         print qq~
+        <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Started.cgi" target="_blank"><nobr>Getting Started</nobr></a></td></tr>
+        <tr><td>&nbsp;</td></tr>
+        <tr><td>
+          <table style="border:black 1px solid; background-color: #00CCFF;">
+  	  <tr><td style="border-bottom: black 1px solid;">Pipeline Controls:</td></tr>
+	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Samples.cgi"><nobr>&nbsp;&nbsp;&nbsp;Start Pipeline</nobr></a></td></tr>
+	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Status.cgi"><nobr>&nbsp;&nbsp;&nbsp;Job Status and Controls</nobr></a></td></tr>
+          </table>
+        </td></tr>
+        <tr><td>&nbsp;</td></tr>
+        <tr><td style="width: 100%">
+          <table style="border: black 1px solid; width: 100%">
+          <tr><td style="border-bottom: black 1px solid;">Retrieve Information:</td></tr>
+  	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SampleTags.cgi"><nobr>&nbsp;&nbsp;&nbsp;Sample Tags by Job</nobr></a></td></tr>
+  	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SampleQC.cgi"><nobr>&nbsp;&nbsp;&nbsp;Sample QC</nobr></a></td></tr>
+	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi"><nobr>&nbsp;&nbsp;&nbsp;Plot Gene Counts</nobr></a></td></tr>
+	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetCounts"><nobr>&nbsp;&nbsp;&nbsp;Get Counts</nobr></a></td></tr>
+	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/dataDownload.cgi"><nobr>&nbsp;&nbsp;&nbsp;Download Data</nobr></a></td></tr>
+          </table>
+        </td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td>Manage Tables:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=ST_solexa_sample"><nobr>&nbsp;&nbsp;&nbsp;Solexa Samples</nobr></a></td></tr>
-	<tr><td>&nbsp;</td></tr>
-	<tr><td>Browse Data:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
-        ~ if $sbeams->getCurrent_work_group_name eq 'Developer';
+        <tr><td style="width: 100%">
+          <table style="border: black 1px solid; width: 100%">
+  	  <tr><td style="border-bottom: black 1px solid;">Browse Data:</td></tr>
+	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
+          </table>
+        </td></tr>
+        ~;
+
         print qq~
 	</table>
 	</td>
@@ -178,7 +216,7 @@ sub printJavascriptFunctions {
 
 
     print qq~
-	<SCRIPT LANGUAGE="JavaScript">
+	<script type="text/javascript">
 	<!--
 
 	function refreshDocument() {
@@ -198,7 +236,7 @@ sub printJavascriptFunctions {
 
 
         // -->
-        </SCRIPT>
+        </script>
     ~;
 
 }
@@ -352,7 +390,7 @@ sub updateCheckBoxButtons_javascript {
 sub getUpdateCheckBoxButtonsJavascript {
 
   return <<"  END_JAVASCRIPT";
-<SCRIPT LANGUAGE="Javascript">
+<script type="text/javascript">
 <!--
 function updateCheckBoxButtons(input_obj){
  var form = input_obj.form;
@@ -431,7 +469,7 @@ sub updateSampleCheckBoxButtons_javascript {
 sub getUpdateSampleCheckBoxButtonsJavascript {
 
   return <<"  END_JAVASCRIPT";
-<SCRIPT LANGUAGE="Javascript">
+<script type="text/javascript">
 <!--
 function updateSampleCheckBoxButtons(input_obj){
  var form = input_obj.form;
