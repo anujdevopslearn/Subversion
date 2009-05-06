@@ -39,7 +39,7 @@ sub jobsummary {
 <table border="0" cellpadding="3" cellspacing="3">	
 END
 	
-	for (my $i = 0; $i < @args; $i += 2) {
+	for (my $i = 0; $i < @args; $i += 3) {
 		$jobsummary .= '<tr><td align="right" valign="top">';
 		$jobsummary .= $args[$i];
 		$jobsummary .= '</td><td bgcolor="#CCCCCC">';
@@ -78,6 +78,7 @@ sub create_directory {
 sub create_files {
     my %args = @_;
     my $dir = $args{dir};
+    my $job_dir = $args{job_dir};
     my $jobname = $args{jobname};
     my $title = $args{title};
     my $jobsummary = $args{jobsummary};
@@ -88,57 +89,63 @@ sub create_files {
     
     # Create job directory
     #print STDERR "JOB DIR2 '$dir/$jobname'\n";
-    unless (-d "$dir/$jobname"){
+    unless (-d "$job_dir/$jobname"){
 #	    umask(0000);					#delete for production
 #		my $umask = umask();			#delete for production
 	    
-	    mkdir("$dir/$jobname", 0775) || 			
-			return("Couldn't create result directory. '$dir/$jobname' ");
-            chmod(0777,"$dir/$jobname");		#delete for production
+	    mkdir("$job_dir/$jobname", 0775) || 			
+			return("Couldn't create result directory. '$job_dir/$jobname' ");
+            chmod(0777,"$job_dir/$jobname");		#delete for production
     }
 
     # Create perl script that runs pipeline
-    my $perl_script_name = $dir.'/'.$jobname.'/'.$jobname.'.pl';
+    my $perl_script_name = $job_dir.'/'.$jobname.'/'.$jobname.'.pl';
     open(SCRIPT, ">$perl_script_name") ||
-       return("Couldn't create perl script file. '$dir/$jobname/$jobname.pl' ");
+       return("Couldn't create perl script file. '$job_dir/$jobname/$jobname.pl' ");
     print SCRIPT $perl_script;
     close SCRIPT;
     chmod(0777,$perl_script_name) ||
       return("Couldn't change the mode of perl script. '$perl_script_name' ");
 
     # Generate Shell script
-    my $sh = generate_sh(output_dir => $dir, jobname => $jobname, email => $email, perl_script => $perl_script_name);
-    open (SH, ">$dir/$jobname/$jobname.sh") ||
-      return("Couldn't create shell script. '$dir/$jobname/$jobname.sh' ");
+    my $sh = generate_sh( output_dir => $dir, 
+                          job_dir => $job_dir, 
+                          jobname => $jobname, 
+                          email => $email, 
+                          perl_script => $perl_script_name
+                          );
+
+    open (SH, ">$job_dir/$jobname/$jobname.sh") ||
+      return("Couldn't create shell script. '$job_dir/$jobname/$jobname.sh' ");
     print SH $sh;
     close (SH);
-    chmod(0777,"$dir/$jobname/$jobname.sh") ||
-      return("Couldnt change the mode of shell script. '$dir/$jobname/$jobname.sh' ");
+    chmod(0777,"$job_dir/$jobname/$jobname.sh") ||
+      return("Couldnt change the mode of shell script. '$job_dir/$jobname/$jobname.sh' ");
 
     # Create processing index file
-	open(INDEX, ">$dir/$jobname/index.html") ||
+	open(INDEX, ">$job_dir/$jobname/index.html") ||
 		return("Couldn't create HTML file.");
 	print INDEX <<END;
 <html>
 <head>
-<title>$title - Processing</title>
+<title>$title - Running</title>
 <meta http-equiv="refresh" content="$refresh">
 <meta http-equiv="pragma" content="no-cache">
 <meta http-equiv="expires" content="-1">
 </head>
 <body bgcolor="#FFFFFF">
-<h3>Processing...</h3>
-<p><a href="$RESULT_URL?action=view_file&analysis_folder=$dir/$jobname&analysis_file=index&file_ext=html">Click here</a> to manually refresh.</p>
-<p><a href="$CGI_URL/cancel.cgi?name=$jobname" target="_parent">Click here</a> to cancel the job.</p>
+<h3>Running...</h3>
+<p><a href="$RESULT_URL?action=view_file&analysis_folder=$job_dir/$jobname&analysis_file=index&file_ext=html">Click here</a> to manually refresh.</p>
+<p><a href="$CGI_URL/cancel.cgi?jobname=$jobname" target="_parent">Click here</a> to cancel the job.</p>
 $jobsummary
 </body>
 </html>
 END
 	close(INDEX);
-	chmod(0666, "$dir/$jobname/index.html");
+	chmod(0666, "$job_dir/$jobname/index.html");
 	
 	# Create results index file
-	open(INDEXRESULT, ">$dir/$jobname/indexresult.html") ||
+	open(INDEXRESULT, ">$job_dir/$jobname/indexresult.html") ||
 		return("Couldn't create HTML file.");
 	print INDEXRESULT <<END;
 <html>
@@ -148,15 +155,16 @@ END
 <body bgcolor="#FFFFFF">
 $output
 <h3>Output Archive:</h3>
-<a href="$RESULT_URL?action=download&analysis_folder=$dir/$jobname&analysis_file=$jobname&file_ext=tar.gz">$jobname.tar.gz</a><br>
+<a href="$RESULT_URL?action=download&analysis_folder=$job_dir/$jobname&analysis_file=$jobname&file_ext=tar.gz">$jobname.tar.gz</a><br>
 $jobsummary
 </body>
 </html>
 END
 	close(INDEXRESULT);
+	chmod(0666, "$job_dir/$jobname/indexresult.html");
 	
 	# Create error index file
-	open(INDEXERROR, ">$dir/$jobname/indexerror.html") ||
+	open(INDEXERROR, ">$job_dir/$jobname/indexerror.html") ||
 		return("Couldn't create HTML file.");
 	print INDEXERROR <<END;
 <html>
@@ -168,13 +176,14 @@ END
 <p>An error occured while processing the job. Please check the
 input and try again. If the problem persists, please contact the
 <a href="mailto:$ADMIN_EMAIL">site administrator</a>.</p>
-<p><a href="$RESULT_URL?action=view_file&analysis_folder=$dir/$jobname&analysis_file=$jobname&file_ext=err">Click here</a> to see the error.</p>
+<p><a href="$RESULT_URL?action=view_file&analysis_folder=$job_dir/$jobname&analysis_file=$jobname&file_ext=err">Click here</a> to see the error.</p>
 <p>To re-run or delete this job, go the the <a href="$CGI_URL/status.cgi?jobname=$jobname" target="_parent">Status Page</a>.</p>
 $jobsummary
 </body>
 </html>
 END
 	close(INDEXERROR);
+	chmod(0666, "$job_dir/$jobname/indexerror.html");
     
 	return undef;
 }
@@ -184,12 +193,12 @@ END
 ####
 sub generate_sh {
    my (%argHash)=@_;
-    my @required_opts=qw(output_dir email jobname perl_script);
+    my @required_opts=qw(output_dir job_dir email jobname perl_script);
     my @missing=grep {!defined $argHash{$_}} @required_opts;
     die "missing opts: ",join(', ',@missing)." from supplied ",join(', ',%argHash) if @missing;
 
-    my ($output_dir,$email,$jobname,$perl_script)=
-        @argHash{qw(output_dir email jobname perl_script)};
+    my ($output_dir,$job_dir,$email,$jobname,$perl_script)=
+        @argHash{qw(output_dir job_dir email jobname perl_script)};
 
     my $sh=<<"SH";
 #!/bin/sh
@@ -197,10 +206,9 @@ sub generate_sh {
 #PBS -M $email
 #PBS -m ea
 #PBS -o $jobname.out
-#PBS -e $output_dir/$jobname/$jobname.err
+#PBS -e $job_dir/$jobname/$jobname.err
 
-id
-touch $output_dir/$jobname/timestamp;
+touch $job_dir/$jobname/timestamp
 
 SH
 
@@ -214,19 +222,18 @@ SH
   $sh .= <<END;
 STATUS=\$?
 if ([[ \$STATUS == 0 ]]) then
-  mv $output_dir/$jobname/indexresult.html $output_dir/$jobname/index.html
-  touch $output_dir/$jobname/index.html
+  mv $job_dir/$jobname/indexresult.html $job_dir/$jobname/index.html
+  touch $job_dir/$jobname/index.html
 END
 
-  $sh .= $DEBUG ? "" : <<END;
-  #rm $output_dir/$jobname/$jobname.sh			#REMEMBER TO TURN BACK ON
+#  $sh .= $DEBUG ? "" : <<END;
+  #rm $job_dir/$jobname/$jobname.sh			#REMEMBER TO TURN BACK ON
   #rm $output_dir/$jobname/$jobname.pl
   #rm $output_dir/$jobname/$jobname.out
   #rm $output_dir/$jobname/$jobname.err
   #rm $output_dir/$jobname/indexerror.html
   #rm $output_dir/$jobname/id
-  chgrp -R hoodlab $output_dir
-END
+#END
 
   # RESULT_URL is a cgi path - ie: "$CGI_BASE_DIR/SolexaTrans/View_Solexa_files.cgi";
 
@@ -237,24 +244,28 @@ Subject: Job Completed: $jobname
 To: $email
 
 Your job has finished processing. See the results here:
-$SERVER_BASE_DIR$RESULT_URL?action=view_file&analysis_folder=$jobname&analysis_file=index&file_ext=html
+$SERVER_BASE_DIR$RESULT_URL?action=view_file&jobname=$jobname&analysis_file=index&file_ext=html
 
 END_EMAIL
 END
 
   $sh .= <<END;
-  tar -czf /tmp/$jobname.tar.gz -C $output_dir $jobname
-  mv /tmp/$jobname.tar.gz $output_dir/$jobname
-  chgrp hoodlab $output_dir/$jobname/$jobname.tar.gz
-  ln -s $jobname/*.tags .
-  ln -s $jobname/*.ambg .
-  ln -s $jobname/*.unkn .
+  tar -czf /tmp/$jobname.tar.gz -C $job_dir $jobname
+  mv /tmp/$jobname.tar.gz $job_dir/$jobname
+END
+
+  $sh .= <<END;
+  cp -r $job_dir/$jobname/*.tags $output_dir
+  cp -r $job_dir/$jobname/*.ambg $output_dir
+  cp -r $job_dir/$jobname/*.unkn $output_dir
+  cp -r $job_dir/$jobname/*.stats $output_dir
+  cp -r $job_dir/$jobname/*.cpm $output_dir
+  chmod 777 $job_dir/$jobname
+  chmod 777 $output_dir
 else 
-  mv $output_dir/$jobname/indexerror.html $output_dir/$jobname/index.html
-#  touch $output_dir/$jobname/index.html
-#  rm $output_dir/$jobname/indexresult.html
-#  chgrp -R hoodlab $output_dir/$jobname
-#  chmod g+rw $output_dir/$jobname/*
+  mv $job_dir/$jobname/indexerror.html $job_dir/$jobname/index.html
+#  touch $job_dir/$jobname/index.html
+#  rm $job_dir/$jobname/indexresult.html
 END
  
     $sh .= $email ? <<END : "";
@@ -264,13 +275,14 @@ Subject: Job Error: $jobname
 To: $email
 
 There was a problem while processing your job. See the error here:
-$SERVER_BASE_DIR$RESULT_URL?action=view_file&analysis_folder=$jobname&analysis_file=index&file_ext=html
+$SERVER_BASE_DIR$RESULT_URL?action=view_file&jobname=$jobname&analysis_file=index&file_ext=html
 
 END_EMAIL
 END
 
     $sh .= <<END;
 fi
+chmod 777 $job_dir/$jobname/*
 exit \$STATUS
 END
 }
