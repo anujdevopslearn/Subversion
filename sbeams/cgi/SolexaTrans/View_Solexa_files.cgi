@@ -6,6 +6,7 @@
 use strict;
 use Getopt::Long;
 use FindBin;
+use Site;
 
 use lib qw (../lib/perl ../../lib/perl);
 
@@ -112,9 +113,9 @@ sub main {
   my $slimseq_sample_id = $parameters{'slimseq_sample_id'};
   my $file_type = $parameters{'file_type'};
   my $jobname = $parameters{'jobname'};
-
   my $annotated_file = $parameters{'annotated_file'};
   
+
  unless ( $solexa_fcl_id || ($analysis_folder && $analysis_file) ||$annotated_file || (($solexa_sample_id||$slimseq_sample_id) && $file_type)|| $jobname ) {
  	 die "ERROR: Need to Pass solexa_fcl_id, analysis_folder and analysis_file, annotated_file, solexa_sample_id or slimseq_sample_id and file_type";
  }
@@ -160,7 +161,7 @@ sub main {
                 $output_dir = $analysis_folder;
 		$file_name = $analysis_file;
         }elsif($jobname) {
-           my $file_path = $sbeams_solexa_groups->get_file_path_from_jobname(jobname => $jobname);
+           my $file_path = $sbeamsMOD->solexa_delivery_path();
            $file_path .= "/$jobname";
            $output_dir = $file_path;
            $file_name = 'index';
@@ -171,7 +172,7 @@ sub main {
 	}
 	
 	#### Verify user has permission to access the file
-	error("You do not have sufficent privillages to view data within this project") 
+	error("You do not have sufficent privileges to view data within this project") 
 	unless ($sbeams->get_best_permission <= $DATA_READER_ID);
 	
 	error("You are not allowed to view ANY data from this project") 
@@ -195,6 +196,12 @@ sub main {
 		if ($subdir){$file = "$output_dir/$subdir/$file_name";}
 		else{$file = "$output_dir/$file_name.$file_ext";}
 		linkImage(file=>$file);
+        } elsif ($action eq 'view_html') {
+           my $file = "$output_dir/$file_name.$file_ext";
+           printHTML(file          =>$file,
+                     file_ext      =>$file_ext,
+                     output_dir => $output_dir
+                     );
 	}else {
 	  #### Start printing the page
 	  $sbeamsMOD->printPageHeader();	
@@ -302,6 +309,61 @@ sub printFile {
   }
 	  
 } # end printFile
+
+###############################################################################
+# printHTML
+#
+# A very simple script.  Throw the contents of the file within <PRE> tags and
+# we're done
+###############################################################################
+sub printHTML {
+  my %args = @_;
+
+  my $file = $args{'file'};
+  my $file_ext = $args{file_ext};
+  my $output_dir = $args{'output_dir'};
+  
+  my $error = 0;
+  open(INFILE, "$file") || $error++;
+#  open(INFILE, "< $file") || sub{ $error++; $log->error("Error in printFile opening file $file"); };
+  my $all_data;
+
+  # if the file ext is ERR and it's not found then look for OUT instead
+  if ( $error && uc($file_ext) eq 'ERR') {
+    $error = 0;
+    my $newfile = $file;
+    $newfile =~ s/err/out/gi;
+    print "No Error file for this job (*.err) - displaying out file instead (catches errors that happened on the cluster node).<br>";
+    open(INFILE, "$newfile") || $error++;
+    $file = $newfile unless $error;
+  }
+
+  if ($error) {
+    my $mailto = $sbeams->get_admin_mailto('administrator');
+    $sbeams->printPageHeader();
+    print qq~
+	  $file
+	  <CENTER><FONT COLOR="red"><h1><B>FILE COULD NOT BE OPENED FOR VIEWING</B></h1>
+	  Please report this to the SBEAMS $mailto.
+	  </FONT></CENTER>
+    ~;
+
+  } else {
+    print $q->header;
+    while(<INFILE>){ 
+    # The following line was put in to remove a mysterious '<b>' tag
+#      $_ =~ s/\<[^>]+?\>//g if $file_ext ne 'html';
+      if ($_ =~ /href=.*\.htm/) {
+        $_ =~ s/href='/href='$RESULT_URL?action=view_html&analysis_folder=$output_dir&analysis_file=/;
+        $_ =~ s/\.htm/&file_ext=htm/;
+
+      }
+      print $_;
+    }
+  }
+	  
+} # end printFile
+
 
 sub error{
 	my $error_info = shift;
