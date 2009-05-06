@@ -101,15 +101,24 @@ my $show_image = 0;
 #  print STDERR 'build overV ' . time() . "\n";
     $page .= get_build_overview ( $build_id );
 #  print STDERR 'sample info ' . time() . "\n";
+
+    my ( $sample_table, $sample_arrayref ) = get_sample_info( $build_id );
+    my ( $chart_div, $header ) = get_draw_chart_function( $sample_arrayref );
+
     $page .= "<BR>$batch_help\n";
-		my ( $sample_table, $sample_arrayref ) = get_sample_info( $build_id );
     $page .= $sample_table;
     $page .= "<BR>\n";
 
     # Print what we already have, speed up apparent page loading time.
-    my ( $chart_div, $header ) = get_draw_chart_function( $sample_arrayref );
     $atlas->display_page_header( header_info => $header, project_id => $project_id, onload => 'sortables_init()', sortable => 1 );
 		print $page;
+
+    my $build_path = get_build_path( build_id => $build_id );
+    my $mayu_data_path = "$build_path/analysis/Mayu_out.csv";
+    if (-e $mayu_data_path) {
+      $page = get_mayu_info( $mayu_data_path );
+      print $page;
+    }
 
 #  print STDERR 'showtime ' . time() . "\n";
     # Add peptide stats section
@@ -181,6 +190,45 @@ sub get_table_help {
 
 } # end get_table_help
 
+sub get_mayu_info {
+  my $mayu_data_path = shift;
+  my $table = "<TABLE WIDTH=600>\n";
+
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'mayu_info',
+                                                  visible => 1,
+                                                  tooltip => 'Show/Hide Section',
+                                                  imglink => 1,
+                                                  sticky  => 1 );
+
+  $table .= $atlas->encodeSectionHeader(
+      text => 'Mayu Decoy-Based FDR Analysis',
+      link => $link,
+      width => 920,
+  );
+  open (MAYU, $mayu_data_path);
+  my $line = <MAYU>;
+  my @headings = split(",",$line);
+  my @records = ();
+  for $line (<MAYU>) {
+    chomp ($line);
+    my @fields = split(",",$line);
+    push @records, \@fields;
+  }
+  $table .= $atlas->encodeSectionTable( rows => [ \@headings, @records ], 
+					header => 1, 
+					nowrap => [1..scalar(@headings)], 
+					align => [ qw(center center left
+right center center right right center center left center left center center
+center left center left center center center center left center center center
+center left) ], 
+					tr_info => $tr,
+					bg_color => '#EAEAEA',
+					sortable => 1 );
+  $table .= "\n</TABLE>\n";
+  return ($table);
+}
+
+# less informative sample contribution plot
 sub get_build_plots {
   my $build_id = shift;
   my $chart_div = shift;
@@ -213,7 +261,7 @@ sub get_build_plots {
   my $img_path = "$HTML_BASE_DIR/images/tmp";
   my $build_path = get_build_path( build_id => $build_id );
   my $build_image_rows =<<"  END";
-  <TR $tr><TD class=plot_caption>Plot showing the cumulative number of multiply observed peptides contributed by each sample.  Height of bar is cumulative number of n_obs > 1 peptides, blue color is number of n_obs > 1 peptides above threshold, width of the bar (x-axis) shows the number of spectra identified above the threshold, for each samle</TD></TR>
+  <TR $tr><TD class=plot_caption>Plot showing the cumulative number of multiply observed peptides contributed by each sample.  Height of bar is cumulative number of n_obs > 1 peptides, blue color is number of n_obs > 1 peptides above threshold, width of the bar (x-axis) shows the number of spectra identified above the threshold, for each sample</TD></TR>
   <TR $tr><TD><IMG WIDTH=800 SRC=$img_path/${build_id}_ncumpep_vs_nspec-multobs.gif></IMG></TD></TR> 
   END
 	if ( -e "$build_path/analysis/ncumpep_vs_nspec-multobs.gif" ) {
