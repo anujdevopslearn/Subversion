@@ -6,6 +6,8 @@ $CGI::Pretty::INDENT = "";
 use Batch;
 use SetupPipeline;
 use Site;
+use Data::Dumper;
+use Time::Local;
 use strict;
 use lib "../../lib/perl";
 
@@ -74,8 +76,6 @@ END
 # Show job results
 ####
 sub canceljob {
-    my ($job, $id);
-
     # job is the full path of the job (/solexa/hood/<project name>/SolexaTrans/<job name>/
     my $jobname = $cgi->param('jobname') || error("No Job supplied");
     $jobname =~ s/^\s|\s$//g;
@@ -85,51 +85,111 @@ sub canceljob {
 	
     my $analysis_id = $utilities->check_sbeams_job('jobname' => $jobname);
     error("Could not find a job with that name in SolexaTrans") unless $analysis_id;
-    my $path = $utilities->get_sbeams_job_output_directory('jobname' => $jobname);
+    my $status_ref = $utilities->check_sbeams_job_status('jobname' => $jobname);
+    my $status = $status_ref->[0];
+    my $status_time = $status_ref->[1];
+    if ($status ne 'QUEUED' && $status ne 'RUNNING') {
+      if ($status eq 'CANCELED' || $status eq 'PROCESSED') {
+        result("Job has already been canceled (Canceled at $status_time).");
+      } else {
+        my $ctime = `date +'%Y-%m-%d'`;
+        my ($cyear, $cmonth, $cday) = split(/-/, $ctime);
+        my ($syear, $smonth, $sday) = split(/-/, $status_time);
+        my $cdate = timelocal(0,0,0,$cday, $cmonth -1, $cyear -1900);
+        my $sdate = timelocal(0,0,0,$sday, $smonth -1, $syear -1900);
+        my $diff = abs(($cdate - $sdate)/86400);
+        if ($diff < 2) {  # if the number of days between the current day and the last status time update is less than 2
+                          # then we want to not cancel the job.
+          result("Job is currently '$status' and cannot be canceled. Status last updated at $status_time.");
+        } else { # cancel the job because the job has likely died 
+          my $path = $utilities->get_sbeams_job_output_directory('jobname' => $jobname);
 
-    opendir(DIR, "$path") ||
-       error("Cannot find that job name");
-    closedir(DIR);
-	
-    open(ID, "$path/$jobname/id") ||
-	    error("That job is no longer running");
-    $id = <ID>;
-    close(ID);
-    if (!$id) { error("No PID in job ID"); }
-    $job = new Batch;
-    $job->type($BATCH_SYSTEM);
-    $job->name($jobname);
-    $job->id($id);
-    $job->cancel ||
-	    error("Couldn't cancel job");
-    unlink("$path/$jobname/id");
-    rename("$path/$jobname/indexerror.html", "$path/$jobname/index.html") || 
-            error("couldn't rename $path/$jobname/indexerror.html to $path/$jobname/index.html");
-    open(ERR, ">>$path/$jobname/$jobname.err") || error("Couldn't write artificial out file $path/$jobname/$jobname.err");
-    print ERR "Job canceled by user\n";
+          unlink("$path/$jobname/id");
+          rename("$path/$jobname/indexerror.html", "$path/$jobname/index.html") || 
+            update_db($analysis_id, "Couldn't rename $path/$jobname/indexerror.html to $path/$jobname/index.html",'PROCESSED');
+          open(ERR, ">>$path/$jobname/$jobname.err") || 
+            update_db($analysis_id, "Couldn't write artificial out file $path/$jobname/$jobname.err",'PROCESSED');
+          print ERR "Job has been in UPLOADING status for more than 2 days.  Upload likely timed out. Job status set to PROCESSED.\n";
+          close(ERR);
 
-    my $rowdata_ref = {
-                         status => 'CANCELED',
-                         status_time => 'CURRENT_TIMESTAMP',
-                      };
-    print ERR "updating job status in db with\n";
-    $sbeams->updateOrInsertRow(
-                                 table_name => $TBST_SOLEXA_ANALYSIS,
-                                 rowdata_ref => $rowdata_ref,
-                                 PK => 'solexa_analysis_id',
-                                 PK_value => $analysis_id,
-                                 return_PK=>0,
-                                 update=>1,
-                                 add_audit_parameters=>1,
-                               );
-    close(ERR);
-    $sbeamsMOD->printPageHeader();
+          update_db($analysis_id, "Job has been in UPLOADING status for more than 2 days. Upload likely timed out.  Job status set to PROCESSED.", $status);
+        }
+      }
+    }  else { # job can be canceled, so start cancel procedure
 
+#      my $path = $utilities->get_sbeams_job_output_directory('jobname' => $jobname);
+
+      # no longer store job directory in 
+      my $path = $sbeamsMOD->solexa_delivery_path();
+
+      opendir(DIR, "$path/$jobname") ||
+       update_db($analysis_id, "Cannot find that job name on disk - $path/$jobname");
+      closedir(DIR);
     
-    print h1("Cancel Job"),
-    p("Job successfully canceled: <strong>$jobname</strong>");
-    print "<div style=\"width:80%;\">&nbsp;</div>\n";
-    $sbeams->printPageFooter();
+      open(ID, "$path/$jobname/id") ||
+	    update_db($analysis_id, "Could not find id for job $jobname - path is incorrect or job is no longer running.");
+      my $id = <ID>;
+      close(ID);
+      if (!$id) { update_db($analysis_id, "No PID in job ID"); }
+      my $job = new Batch;
+      $job->type($BATCH_SYSTEM);
+      $job->name($jobname);
+      $job->id($id);
+      $job->cancel ||
+	    update_db($analysis_id, "That job is not currently running");
+
+      unlink("$path/$jobname/id");
+      rename("$path/$jobname/indexerror.html", "$path/$jobname/index.html") || 
+            update_db($analysis_id, "Job canceled, but couldn't rename $path/$jobname/indexerror.html to $path/$jobname/index.html");
+      open(ERR, ">>$path/$jobname/$jobname.err") || 
+            update_db($analysis_id, "Job canceled, but couldn't write artificial out file $path/$jobname/$jobname.err");
+      print ERR "Job canceled by user\n";
+      close(ERR);
+
+      update_db($analysis_id, "Job successfully canceled: <strong>$jobname</strong>");
+   }
+}
+
+sub update_db {
+  my $analysis_id = shift;
+  my $message = shift;
+  my $status = shift || 'CANCELED';
+
+  my $rowdata_ref = {
+                       status => $status,
+                       status_time => 'CURRENT_TIMESTAMP',
+                    };
+
+  $sbeams->updateOrInsertRow(
+                              table_name => $TBST_SOLEXA_ANALYSIS,
+                              rowdata_ref => $rowdata_ref,
+                              PK => 'solexa_analysis_id',
+                              PK_value => $analysis_id,
+                              return_PK=>0,
+                              update=>1,
+                              add_audit_parameters=>1,
+                            );
+
+  result($message. '. Status is '.$status);
+
+}
+
+#### Subroutine: result
+# Print out an result message and exit
+####
+sub result {
+    my ($result) = @_;
+
+        $sbeamsMOD->printPageHeader();
+	
+	print h1("Cancel Job");
+
+	print h2("Results:");
+	print p($result);
+	
+        $sbeamsMOD->printPageFooter();
+	
+	exit(1);
 }
 
 #### Subroutine: error
