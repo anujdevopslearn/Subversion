@@ -216,13 +216,16 @@ sub main {
     $work_group = "SIGID_admin";
     $DATABASE = $DBPREFIX{$module};
   }
-
   if ($module eq 'Imaging') {
     $work_group = "Imaging_admin";
     $DATABASE = $DBPREFIX{$module};
   }
+  if ($module eq 'SolexaTrans') {
+    $work_group = "SolexaTrans_admin";
+    $DATABASE = $DBPREFIX{$module};
+  }
 
-  #### Do the SBEAMS authentication and exit if a username is not returned
+ #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($current_username = $sbeams->Authenticate(
     work_group=>$work_group,
   ));
@@ -1821,6 +1824,11 @@ sub specialParsing {
      $rowdata_ref->{dbxref_id} = '12';
   }
 
+  #### Conversion rules for RefSeq IDs
+  if ($rowdata_ref->{biosequence_name} =~ /^NM_|NR_/) {
+    $rowdata_ref->{dbxref_id} = '39';
+  }
+
   #### Special Conversion rules for yeast orf names from GB (dreiss)
   if ($rowdata_ref->{biosequence_desc} =~ /\s(\S+)p\s\[Saccharomyces cerevisiae/ ) {
       $rowdata_ref->{biosequence_gene_name} = $1;
@@ -2189,6 +2197,17 @@ sub specialParsing {
     }
   }
 
+  #### Conversion Rules for Entrez Gene:
+  #### Created Fasta file format:
+  #### >Entrez_Gene_ID Hugo_Symbol Description
+  if ($biosequence_set_name =~ "Entrez Gene") {
+    my @info = split(/\s+/, $rowdata_ref->{biosequence_desc});
+    my $gene_name = shift(@info);
+    $rowdata_ref->{biosequence_gene_name} = $gene_name;
+    my $desc = join(" ", @info);
+    $rowdata_ref->{biosequence_desc} = $desc;
+    $rowdata_ref->{dbxref_id} = '37';
+  }
 
   #### If there's favored codon frequency lookup information, set it
   if (defined($fav_codon_frequency)) {
