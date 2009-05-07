@@ -147,7 +147,10 @@ sub update_user_permissions {
   my ($sql,@rows);
   my ($counter,$current_project_id,$priv_chooser,$user_chooser);
 
-  $current_project_id = $self->getCurrent_project_id;
+  my $verbose = $args{"verbose"} || 0;
+  my $testonly = $args{"testonly"} || 0;
+
+  $current_project_id = $args{"project_id"} || $self->getCurrent_project_id;
   $priv_chooser = "userPriv";
   $user_chooser = "userName";
   $counter = 0;
@@ -187,8 +190,11 @@ sub update_user_permissions {
 							 update=>1,
 							 PK_name=>'user_project_permission_id',
 							 PK_value=>$rows[0],
-							 add_audit_parameters=>1);
-		  }else{
+							 add_audit_parameters=>1,
+                                                         verbose => $verbose,
+                                                         testonly => $testonly
+                                                         );
+		        }else{
 				$rowdata{'record_status'} = 'D';
 				$rowdata_ref = \%rowdata;
 				$self->updateOrInsertRow(table_name=>$TB_USER_PROJECT_PERMISSION,
@@ -196,9 +202,12 @@ sub update_user_permissions {
 							 update=>1,
 							 PK_name=>'user_project_permission_id',
 							 PK_value=>$rows[0],
-							 add_audit_parameters=>1);
+							 add_audit_parameters=>1,
+                                                         verbose => $verbose,
+                                                         testonly => $testonly
+                                                         );
 			}
-	  }else {
+	        }else {
 			$rowdata{'contact_id'}   = $user_id;
 			$rowdata{'project_id'}   = $current_project_id;
 			$rowdata{'privilege_id'} = $priv_id;
@@ -207,7 +216,10 @@ sub update_user_permissions {
 						 rowdata_ref=>$rowdata_ref,
 						 insert=>1,
 						 PK_name=>'user_project_permission_id',
-						 add_audit_parameters=>1);
+						 add_audit_parameters=>1,
+                                                 verbose => $verbose,
+                                                 testonly => $testonly
+                                                 );
 	  }
   }
 }
@@ -229,6 +241,9 @@ sub update_group_permissions {
   my ($sql,@rows);
   my ($counter,$current_project_id,$current_work_group_id);
   my ($priv_chooser,$group_chooser);
+
+  my $verbose = $args{"verbose"} || 0;
+  my $testonly = $args{"testonly"} || 0;
 
   $current_project_id = $args{"project_id"} || $self->getCurrent_project_id;
   #$current_work_group_id = $self->getCurrent_work_group_id;
@@ -270,7 +285,10 @@ sub update_group_permissions {
 							 update=>1,
 							 PK_name=>'group_project_permission_id',
 							 PK_value=>$rows[0],
-							 add_audit_parameters=>1);
+							 add_audit_parameters=>1,
+                                                         verbose => $verbose,
+                                                         testonly => $testonly
+                                                         );
 			  }else{
 				$rowdata{'record_status'} = 'D';
 				$rowdata_ref = \%rowdata;
@@ -279,7 +297,10 @@ sub update_group_permissions {
 							 update=>1,
 							 PK_name=>'group_project_permission_id',
 							 PK_value=>$rows[0],
-							 add_audit_parameters=>1);
+							 add_audit_parameters=>1,
+                                                         verbose => $verbose,
+                                                         testonly => $testonly
+                                                         );
 			  }
 		}else { # no entry in group_project_permission, so insert new
 			$rowdata{'work_group_id'}   = $group_id;
@@ -291,7 +312,8 @@ sub update_group_permissions {
 						 insert=>1,
 						 PK_name=>'group_project_permission_id',
 						 add_audit_parameters=>1,
-						 verbose => 1
+                                                 verbose => $verbose,
+                                                 testonly => $testonly
 						);
 		}
   }
