@@ -27,7 +27,8 @@ use XML::Writer;
 use Help;
 
 use lib "$FindBin::Bin/../../lib/perl";
-use vars qw ($sbeams $sbeamsMOD $utilities $analysis $q $current_contact_id $current_username
+use vars qw ($sbeams $sbeamsMOD $utilities $analysis $q 
+             $current_contact_id $current_username $current_project_id
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
@@ -125,6 +126,7 @@ sub main {
   #### Process generic "state" parameters before we start
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
+  $current_project_id = $sbeams->getCurrent_project_id;
 
   #### Decide what action to take based on information so far
   if (defined($parameters{action}) && $parameters{action} eq "???") {
@@ -303,7 +305,13 @@ sub handle_request {
     constraint_value=>$parameters{slimseq_sample_id_constraint} );
   return if ($slimseq_sample_id_clause eq '-1');
 
-
+  #### Build ANALYSIS constraint
+  my $solexa_analysis_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SA.solexa_analysis_id",
+    constraint_type=>"plain_text",
+    constraint_name=>"Job ID",
+    constraint_value=>$parameters{solexa_analysis_id} );
+  return if ($solexa_analysis_clause eq '-1');
 
   #### Build GENE NAME constraint
   my $gene_name_clause = $sbeams->parseConstraint2SQL(
@@ -517,9 +525,7 @@ sub handle_request {
 #    $mu_x_or_mu_y_clause = '';
 #  }
 
-
   #### Define the SQL statement
-
   if ($parameters{query_type} eq 'ST_TAG_ANALYSIS') {
   $sql = qq~
 	SELECT $limit_clause->{top_clause} $columns_clause
@@ -540,6 +546,7 @@ sub handle_request {
 	$biosequence_name_clause
         $description_clause
         $tag_clause
+        $solexa_analysis_clause
 	$group_by_clause
 	$order_by_clause
 	$limit_clause->{trailing_limit_clause}
@@ -558,6 +565,7 @@ sub handle_request {
 	$gene_name_clause
 	$biosequence_name_clause
         $description_clause
+        $solexa_analysis_clause
 	$group_by_clause
 	$order_by_clause
 	$limit_clause->{trailing_limit_clause}
