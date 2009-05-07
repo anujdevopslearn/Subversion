@@ -21,7 +21,7 @@ use strict;
 use vars qw( $q $http_header $log @ISA $DBTITLE $SESSION_REAUTH @ERRORS
              $current_contact_id $current_username $LOGIN_DURATION
              $current_work_group_id $current_work_group_name $LOGGING_LEVEL 
-             $current_project_id $current_project_name $SMBAUTH
+             $current_project_id $current_project_name $current_project_tag $SMBAUTH
              $current_user_context_id @EXPORT_OK  );
 
 use vars qw( %session $session_string );
@@ -922,6 +922,36 @@ sub getCurrent_project_name {
 
     return $current_project_name;
 }
+
+###############################################################################
+# Return the active project_tag of the user currently logged in
+###############################################################################
+sub getCurrent_project_tag {
+    my $self = shift;
+
+    #### If the current_project_tag is already known, return it
+    return $current_project_tag
+      if (defined($current_project_tag) && $current_project_tag gt "");
+    if ($current_project_id < 1) {
+      $current_project_id = $self->getCurrent_project_id();
+    }
+
+    #### If there is no current_project_id, return a name of "none"
+    if ($current_project_id < 1) {
+      $current_project_tag = "[none]";
+    } else {
+      #### Extract the name from the database given the ID
+      ($current_project_tag) = $self->selectOneColumn(
+        "SELECT project_tag
+           FROM $TB_PROJECT
+          WHERE project_id = $current_project_id
+            AND record_status != 'D'
+        ");
+    }
+
+    return $current_project_tag;
+}
+
 
 ###############################################################################
 # 
