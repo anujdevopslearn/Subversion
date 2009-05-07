@@ -2392,7 +2392,6 @@ sub buildOptionList {
     if ($invalid_option_present) {
       $options .= "<!--".join(',',@valid_options)."-->\n";
     }
-
     return $options;
 
 }
@@ -4413,7 +4412,6 @@ sub processTableDisplayControls {
       croak "Syntax error in WHERE clause"; }
     if ( $orderby_clause =~ /delete|insert|update/i ) {
       croak "Syntax error in ORDER BY clause"; }
-
     
     my $full_orderby_clause;
     my $full_where_clause;
@@ -4681,7 +4679,15 @@ sub display_input_form {
   my $mask_user_context = $args{'mask_user_context'};
   my $allow_NOT_flags = $args{'allow_NOT_flags'};
   my $onSubmit = $args{onSubmit} || '';
+  my $mask_query_constraints = $args{'mask_query_constraints'};
+  my $mask_form_start = $args{'mask_form_start'};
+  my $id = $args{"id"};
+  my $form_name = $args{"form_name"} || 'MainForm';
 
+
+  if ($id) {
+    $parameters{id} = $id;
+  }
   # Set a sensible default
   my $detail_level = $parameters{input_form_format} || 'minimum_detail';
 
@@ -4702,7 +4708,34 @@ sub display_input_form {
          AND is_data_column='Y'
        ORDER BY column_index
   ~;
-  my @columns_data = $self->selectSeveralColumns($sql);
+  my @cols_data = $self->selectSeveralColumns($sql);
+  my @columns_data;
+  foreach my $inner (@cols_data) {
+    push(@columns_data, [@$inner]);
+  }
+
+  for (my $i = 0; $i <= $#columns_data; $i++) {
+    my @irow = @{$columns_data[$i]};
+    my $column_name = $irow[0];
+    if ($column_name =~ /\$parameters\{(\w+)\}/) {
+      my $tmp = $parameters{$1};
+      if (defined($tmp) && $tmp gt '') {
+        unless ($tmp =~ /^[\d,]+$/) {
+          my @tmp = split(',', $tmp);
+          $tmp = '';
+          foreach my $tmp_element (@tmp) {
+            $tmp .= "'$tmp_element',";
+          }
+          chop($tmp);
+        }
+      } else {
+        $tmp = "''";
+      }
+      my $new_name = $columns_data[$i]->[0];
+      $new_name =~ s/\$parameters{$1}/$tmp/g;
+      $columns_data[$i]->[0] = $new_name;
+    }
+  }
 
   # First just extract any valid optionlist entries.  This is done
   # first as opposed to within the loop below so that a single DB connection
@@ -4710,20 +4743,22 @@ sub display_input_form {
   # THIS IS LEGACY AND NO LONGER A USEFUL REASON TO DO SEPARATELY
   my %optionlist_queries;
   my $file_upload_flag = "";
-  foreach $row (@columns_data) {
-    my @row = @{$row};
+#  foreach $row (@cols_data) {
+  for (my $i = 0; $i <= $#cols_data; $i++) {
+    my @row = @{$cols_data[$i]};
     my ($column_name,$column_title,$is_required,$input_type,$input_length,
         $is_data_column,$is_display_column,$column_text,
         $optionlist_query,$onChange) = @row;
     if (defined($optionlist_query) && $optionlist_query gt '') {
       #print "<font color=\"red\">$column_name</font><BR><PRE>$optionlist_query</PRE><BR>\n";
       $optionlist_queries{$column_name}=$optionlist_query;
+      $optionlist_queries{$columns_data[$i]->[0]} = $optionlist_query if ($parameters{$columns_data[$i]->[0]});
+      $input_types{$columns_data[$i]->[0]} = $input_types{$column_name} if ($parameters{$columns_data[$i]->[0]});
     }
     if ($input_type eq "file") {
       $file_upload_flag = "ENCTYPE=\"multipart/form-data\"";
     }
   }
-
 
   # There appears to be a Netscape bug in that one cannot [BACK] to a form
   # that had multipart encoding.  So, only include form type multipart if
@@ -4733,16 +4768,15 @@ sub display_input_form {
       <P>
       <H2>$CATEGORY</H2>
       $LINESEPARATOR
-      <FORM METHOD="post" ACTION="$PROGRAM_FILE_NAME" NAME="MainForm" $file_upload_flag $onSubmit>
+      <FORM METHOD="post" ACTION="$PROGRAM_FILE_NAME" NAME="$form_name" $file_upload_flag $onSubmit>
       <TABLE BORDER=0>
-  !;
+  ! unless ($mask_form_start);
 
 
   # ---------------------------
   # Build option lists for each optionlist query provided for this table
   my %optionlists;
   foreach $element (keys %optionlist_queries) {
-
       # If "$contact_id" appears in the SQL optionlist query, then substitute
       # that with either a value of $parameters{contact_id} if it is not
       # empty, or otherwise replace with the $current_contact_id
@@ -4822,45 +4856,55 @@ sub display_input_form {
 
       }
 
-
+      my $method_options = '';
       #### Set the MULTIOPTIONLIST flag if this is a multi-select list
-      my $method_options;
-      $method_options = "MULTIOPTIONLIST"
-        if ($input_types{$element} eq "multioptionlist");
+      if ($input_types{$element} eq "multioptionlist") {
+        $method_options = "MULTIOPTIONLIST";
+      }
 
       # Build the option list
-      #print "<font color=\"red\">$element</font><BR><PRE>$optionlist_queries{$element}</PRE><BR>\n";
+      #print "<font color=\"red\">$element</font><BR><PRE>$optionlist_queries{$element}<BR>$method_options</PRE><BR>\n";
+
       $optionlists{$element}=$self->buildOptionList(
-         $optionlist_queries{$element},$parameters{$element},$method_options);
+            $optionlist_queries{$element},$parameters{$element},$method_options);
 
       #### If the user sent some invalid options, reset the list to the
       #### valid list.  This is a hack because buildOptionList() API is poor
       if ($optionlists{$element} =~ /\<\!\-\-(.*)\-\-\>/) {
-	$parameters_ref->{$element} = $1;
+        $parameters_ref->{$element} = $1;
       }
 
-  }
+  } # end foreach
 
   # Add CSS and javascript for popup column_text info (if configured) and full form fields show/hide toggle button
   print $self->getPopupDHTML();
-  print $self->getFullFormDHTML();
 
-  # ...add said button
-  print qq!
+  unless ($mask_query_constraints) {
+    print $self->getFullFormDHTML();
+
+    # ...add said button
+    print qq!
       <TR>
       <TD><hr color="#ffffff" width="275"></TD>
       <TD colspan="2">
       <input type="button" id="form_detail_control" onClick="toggleFullForm()" value="Show All Query Constraints">
       </TD></TR>
       !;
-
+  }
 
   #### Now loop through again and write the HTML
-  foreach $row (@columns_data) {
-    my @row = @{$row};
+#  foreach $row (@columns_data) {
+   for (my $i = 0; $i <= $#columns_data; $i++) {
+    my @row = @{$columns_data[$i]};
     my ($column_name,$column_title,$is_required,$input_type,$input_length,
         $is_data_column,$is_display_column,$column_text,
         $optionlist_query,$onChange) = @row;
+    my $default_column_name;
+    if ($parameters{$column_name}) {
+      $default_column_name = $column_name;
+    } else {
+      $default_column_name = $cols_data[$i]->[0];
+    }
     $onChange = '' unless (defined($onChange));
 
     #### Set the JavaScript onChange string if supplied
@@ -4883,11 +4927,15 @@ sub display_input_form {
     if ( defined $apply_action && $apply_action =~ /HIDE/i) {
       print qq!
         <TD><INPUT TYPE="hidden" NAME="$column_name"
-         VALUE="$parameters{$column_name}"></TD>
+         VALUE="$parameters{$default_column_name}"></TD>
       !;
       next;
     }
 
+    if ($input_type eq 'hidden') {
+      print qq~<INPUT TYPE="hidden" name="$column_name" value="$parameters{$default_column_name}">~;
+      next;
+    }
 
     #### If some level of detail is chosen, don't show (hide) this constraint if
     #### it doesn't meet the detail requirements
@@ -4912,7 +4960,7 @@ sub display_input_form {
     # Should/could be replaced by a user-configuration option
     use constant LINKHELP => 1; 
     if ( LINKHELP ) {
-      $column_text = linkToColumnText( $column_text, $column_name, $TABLE_NAME );
+      $column_text = linkToColumnText( $column_text, $default_column_name, $TABLE_NAME );
     }
 
 
@@ -4933,14 +4981,14 @@ sub display_input_form {
     if ($input_type eq "text") {
       print qq!
         <TD>$NOT_clause<INPUT TYPE="$input_type" NAME="$column_name"
-         VALUE="$parameters{$column_name}" SIZE=$input_length $onChange></TD>
+         VALUE="$parameters{$default_column_name}" SIZE=$input_length $onChange></TD>
       !;
     }
 
     if ($input_type eq "file") {
       print qq!
         <TD><INPUT TYPE="$input_type" NAME="$column_name"
-         VALUE="$parameters{$column_name}" SIZE=$input_length $onChange>!;
+         VALUE="$parameters{$default_column_name}" SIZE=$input_length $onChange>!;
       if ($parameters{$column_name} && !$parameters{uploaded_file_not_saved}) {
         print qq!<A HREF="$DATA_DIR/$parameters{$column_name}">[view&nbsp;file]</A>
         !;
@@ -4964,7 +5012,7 @@ sub display_input_form {
 
       print qq!
         <TD><INPUT TYPE="$input_type" NAME="$column_name"
-         VALUE="$parameters{$column_name}" SIZE=$input_length></TD>
+         VALUE="$parameters{$default_column_name}" SIZE=$input_length></TD>
       !;
     }
 
@@ -4972,20 +5020,20 @@ sub display_input_form {
     if ($input_type eq "fixed") {
       print qq!
         <TD><INPUT TYPE="hidden" NAME="$column_name"
-         VALUE="$parameters{$column_name}">$parameters{$column_name}</TD>
+         VALUE="$parameters{$default_column_name}">$parameters{$column_name}</TD>
       !;
     }
 
     if ($input_type eq "textarea") {
       print qq~
         <TD COLSPAN=2><TEXTAREA NAME="$column_name" rows=$input_length
-          cols=80>$parameters{$column_name}</TEXTAREA></TD>
+          cols=80>$parameters{$default_column_name}</TEXTAREA></TD>
       ~;
     }
     if ($input_type eq "checkbox") {
       my $checked = ( $input_length ) ? 'checked' : '';
       print qq~
-      <TD COLSPAN=2 HEIGHT=32><INPUT TYPE=CHECKBOX NAME="$column_name" $checked>$parameters{$column_name}</INPUT></TD>
+      <TD COLSPAN=2 HEIGHT=32><INPUT TYPE=CHECKBOX NAME="$column_name" $checked>$parameters{$default_column_name}</INPUT></TD>
       ~;
     }
 
@@ -4997,7 +5045,7 @@ sub display_input_form {
       }
       print qq!
         <TD><INPUT TYPE="text" NAME="$column_name"
-         VALUE="$parameters{$column_name}" SIZE=$input_length>
+         VALUE="$parameters{$default_column_name}" SIZE=$input_length>
         <INPUT TYPE="button" NAME="${column_name}_button"
          VALUE="NOW" onClick="ClickedNowButton($column_name)">
          </TD>
@@ -5007,9 +5055,9 @@ sub display_input_form {
     if ($input_type eq "optionlist") {
       print qq~
         <TD><SELECT NAME="$column_name" $onChange>
-          <!-- $parameters{$column_name} -->
+          <!-- $parameters{$default_column_name} -->
         <OPTION VALUE=""></OPTION>
-        $optionlists{$column_name}</SELECT></TD>
+        $optionlists{$default_column_name}</SELECT></TD>
       ~;
     }
 
@@ -5017,14 +5065,14 @@ sub display_input_form {
       print qq!
         <TD><SELECT NAME="$column_name" SIZE=$input_length $onChange>
         <OPTION VALUE=""></OPTION>
-        $optionlists{$column_name}</SELECT></TD>
+        $optionlists{$default_column_name}</SELECT></TD>
       !;
     }
 
     if ($input_type eq "multioptionlist") {
       print qq!
         <TD>$NOT_clause<SELECT NAME="$column_name" MULTIPLE SIZE=$input_length $onChange>
-        $optionlists{$column_name}
+        $optionlists{$default_column_name}
         <OPTION VALUE=""></OPTION>
         </SELECT></TD>
       !;
@@ -5094,6 +5142,7 @@ sub display_input_form {
             $username=$self->getUsername($parameters{$column_name});
           }
       }
+      # I'm not sure if this needs to be changed to $parameters{default_column_name} or not
       print qq!
         <TD><INPUT TYPE="hidden" NAME="$column_name"
          VALUE="$parameters{$column_name}">$username</TD>
@@ -5705,7 +5754,6 @@ sub readModuleFile {
   my $self = shift || croak("parameter self not passed");
   my %args = @_;
 
-
   #### Define some basic stuff
   my $SUB_NAME = 'readModuleFile';
   my ($i,$line);
@@ -5715,7 +5763,6 @@ sub readModuleFile {
   my $source_file = $args{'source_file'}
     || die "$SUB_NAME: Must provide a source_file";
   my $verbose = $args{'verbose'} || 0;
-
 
   #### Verify the existence of the file
   return unless ($source_file);
@@ -6581,7 +6628,7 @@ sub printUserChooser {
   if ($style eq "HTML") {
     print qq~
 
-<SCRIPT LANGUAGE="Javascript">
+<script type="text/javascript">
 function switchWorkGroup(){
   var chooser = document.userChooser.workGroupChooser;
   var val = chooser.options[chooser.selectedIndex].value;
