@@ -226,15 +226,6 @@ sub printJavascriptFunctions {
 	    document.MainForm.submit();
 	} // end refreshDocument
 
-
-	function showPassed(input_field) {
-            //confirm( "input_field ="+input_field+"=");
-            confirm( "selected option ="+document.forms[0].slide_id.options[document.forms[0].slide_id.selectedIndex].text+"=");
-	    return;
-	} // end showPassed
-
-
-
         // -->
         </script>
     ~;
