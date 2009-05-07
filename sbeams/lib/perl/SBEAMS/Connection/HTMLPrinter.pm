@@ -516,7 +516,7 @@ sub printJavascriptFunctions {
 
 
     print qq~
-	<SCRIPT LANGUAGE="JavaScript">
+	<script language="JavaScript" type="text/javascript">
 	<!--
 
 	function refreshDocument() {
@@ -537,7 +537,7 @@ sub printJavascriptFunctions {
 
 
         // -->
-        </SCRIPT>
+        </script>
     ~;
 
 }
@@ -1301,6 +1301,7 @@ sub getModuleButton {
                  Interactions => '#DDFFFF',
                  PeptideAtlas => '#FFBBEE',
                  ProteinStructure => '#CCCCFF',
+                 SolexaTrans => '#66CCFF',
                  unknown     => '#888888' );
 
   return( <<"  END" );
