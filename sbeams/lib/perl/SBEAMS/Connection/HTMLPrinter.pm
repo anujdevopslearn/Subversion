@@ -229,9 +229,11 @@ sub printStyleSheet {
     $FONT_SIZE_LG=14;
     $FONT_SIZE_HG=19;
   }
+#	A.sortheader{background-color: #888888; font-size: ${FONT_SIZE}pt; font-weight: bold; color:white; line-height: 25px;}
   
 my $module_styles =<<"  END_STYLE";  
-	A.sortheader{background-color: #888888; font-size: ${FONT_SIZE}pt; font-weight: bold; color:white; line-height: 25px;}
+  .sortarrow { font-size: ${FONT_SIZE_LG}pt; font-weight: bold }
+	.sortheader{ font-size: ${FONT_SIZE}pt; font-weight: bold; line-height: 25px; color:white }
   .info_box { background: #F0F0F0; border: #000 1px solid; padding: 4px; width: 80%; color: #444444 }
   .small_super_text { vertical-align: super; font-size: ${FONT_SIZE_SM}pt }
   .clear_info_box { border: #000 1px solid; padding: 4px; width: 80%; color: #444444 }
@@ -240,6 +242,9 @@ my $module_styles =<<"  END_STYLE";
   
   /* Style info below organized by originating module
   /* Peptide Atlas */
+  .small_form_field {    font-family: Verdana, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_SM}pt; color: #000000; background-color: #FFFFCC; padding: 1px; height: 14px; border: 1px solid #7F9DB9 }  
+  .small_form_text {    font-family: Verdana, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_SM}pt; }
+  .small_form_caption {    font-family: Verdana, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_SM}pt; font-weight: bold; }
   .pseudo_link    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration:none; color: blue; CURSOR: help;}
   .white_bg{background-color: #FFFFFF }
   .grey_bg{ background-color: #CCCCCC }
@@ -1003,6 +1008,7 @@ sub reportException {
     }
     return;
   } else {
+		print STDERR "going to handle the error\n";
     $self->handle_error( state => $args{state}, 
                    error_type  => lc($args{type}),
                        message => $args{message},
