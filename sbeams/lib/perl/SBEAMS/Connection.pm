@@ -301,10 +301,19 @@ sub writeSBEAMSTempFile {
 	}
 	my $abs_filename = $tmp_path . $args{filename};
 
-	open( TMPFIL, ">$abs_filename" ) || die "unable to open $abs_filename";
+	open( TMPFIL, ">$abs_filename" ) || $self->my_die("unable to open $abs_filename");
 	print TMPFIL $args{content};
 	close TMPFIL;
 	return $abs_filename;
+}
+
+sub my_die {
+  my $self = shift;
+  # Carp fatals to browser is evil!
+  my $msg = shift || '';
+  print STDERR "$msg\n";
+  # d = 4, i = 9, e = 5, sum is 18
+  exit( 18 );
 }
 
 sub readSBEAMSTempFile {
