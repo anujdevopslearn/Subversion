@@ -52,7 +52,11 @@ BEGIN {
 ###############################################################################
 sub register_sbeams {
   my $METHOD_NAME = "register_sbeams()";
-  $sbeams = shift || die "$METHOD_NAME: sbeams object not passed";
+  $sbeams = shift;
+  if ( !$sbeams ) {
+    print STDERR "$METHOD_NAME: sbeams object not passed\n";
+    exit( 18 );
+  }
   CGI::Carp::set_message(\&error);
 }
 
@@ -129,6 +133,13 @@ sub missing_constraint {
 #-
 sub handle_error {
   my $self = shift;
+
+  # Shouldn't pass here twice...
+  if ( $self->{_error_handled} ) {
+    $sbeams->my_die("Deja-vu");
+  }
+  $self->{_error_handled}++;
+
   my %args = @_;
   $args{error_type}   ||= 'unknown_error';
   $args{out_mode}     ||= $sbeams->get_output_mode();
@@ -142,11 +153,10 @@ sub handle_error {
 	my $errfile = $self->writeSBEAMSTempFile( filename => 'Error-' . getppid(), 
 	                                           content => join( ',', @_ )
 													                 );
-	$log->debug( "Error file is $errfile" );
 
   # Use default routine if HTML and sbeams_error
   if ($args{out_mode} eq 'html' && $args{error_type} =~ /unknown|sbeams_err/) {
-    die ( $args{message} );
+    $sbeams->my_die( "Unknown error: $args{message}\n" );
   }
 
   $args{code} = $self->get_error_code( $args{error_type} );
