@@ -36,7 +36,7 @@ use vars qw ($q $sbeams $PROGRAM_FILE_NAME
 use lib "../lib/perl";
 use Env qw(HTTP_USER_AGENT);
 #use CGI;
-
+use Data::Dumper;
 use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::DataTable;
 use SBEAMS::Connection::Tables;
@@ -89,11 +89,9 @@ if ($help_text_id) {
   exit 0;
 
 }elsif ( $session_key ) { # Text passed via session_id 
-
   # Pick your poison!  One of these is required to make it work
   $sbeams->getSessionCookie();
 #  $sbeams->Authenticate();
-
   $title = $q->param('title');
   $text = $sbeams->getSessionAttribute( key => $session_key );
   print STDERR "got key  $session_key => $text\n";
@@ -111,7 +109,6 @@ my $FONT_SIZE=12;
 $FONT_SIZE=10 if ( $HTTP_USER_AGENT =~ /Win/ );
 
 print $q->header('text/html');
-
 my $email_help = '<BR>';
 if ( $email_link =~ /yes/i ) {
 $email_help =<<"  END";
@@ -182,7 +179,7 @@ sub displayColumnText {
   if ( $text =~ /(<A HREF *=.*<\/A>?)/i ) {
     # We seem to have a link, save it aside while escaping HTML
     my $link = $1;
-    $text =~ s/$link/LINKPLACEHOLDER/;
+    $text =~ s/\Q$link\E/LINKPLACEHOLDER/gm;
     $text = $q->escapeHTML( $text );
     $text =~ s/LINKPLACEHOLDER/$link/;
   } else {
@@ -192,10 +189,10 @@ sub displayColumnText {
   $title = $q->escapeHTML( $title );
   }
 
-my $FONT_SIZE=12;
-$FONT_SIZE=10 if ( $HTTP_USER_AGENT =~ /Win/ );
+  my $FONT_SIZE=12;
+  $FONT_SIZE=10 if ( $HTTP_USER_AGENT =~ /Win/ );
 
-print $q->header( "text/html" );
+  print $q->header( "text/html" );
 
   print <<"  END_PAGE";
 <HTML>
@@ -249,7 +246,7 @@ sub displayGroupInfo {
   my $tgroup = shift;
   my $msg = '';
 
-  my $msg =<<"    END_MSG";
+  $msg =<<"    END_MSG";
     <FONT size=1 face="Tahoma, Arial, Helvetica, sans-serif">
     This shows the permissions you have on the table <I>$table</I>,
     which is in the table group <I>$tgroup</I>
@@ -258,7 +255,7 @@ sub displayGroupInfo {
 
   my %perms = $sbeams->getPrivilegeNames();
               
-  my $table = SBEAMS::Connection::DataTable->new( BORDER => 0, CELLPADDING => 2 );
+  $table = SBEAMS::Connection::DataTable->new( BORDER => 0, CELLPADDING => 2 );
   $table->addRow( [ '<B>Group Name</B>', '<B>Group Id&nbsp;&nbsp;</B>', '<B>Privilege</B>' ] );
   $table->addRow( [ '&nbsp;' ] );
   $table->setColAttr( COLS => [1], ROWS => [2], COLSPAN => 3, style => 'font-size:1pt', bgcolor => '#BBBBBB' );
