@@ -268,16 +268,17 @@ sub writeRecords
          if($pre && $pre eq $InputBuildOrgAbr){
           
            $build_date =~ /(\d{4})(\d{2})/;
+           $build_date = $1.$2;
            next if (defined $builds{$pre}{$build_date});
-           my $str = "\t\t'".$build_date."' => array ('show' => TRUE, 'name' => '".
+           my $str = "               '".$build_date."' => array ('show' => TRUE, 'name' => '".
                      $InputBuildOrg." ".$org_spec."', 'date' => '".$mon{$2}." ".$1.
                      "', 'samples' => ".$smpl_count.", 'fdr' => '', 'peptides' => ".
                      $multi_pep_count_cnt.", 'spectra' => '". 
-                     $multi_pep_count_obs."', 'db' => '".
-                     $db."' , 'special' => '' ),";
+                     $multi_pep_count_obs."', 'db' => '".$db."', 'special' => '' ),\n";
+
            $flag =1;
-           $build_info{$abr} .=$str;
-           $showbuild{$abr}='$'.$abr."['".$build_date."'],\n";
+           $build_info{$pre} =~ s/$pre = array\(\n/$pre = array\(\n$str/;
+           $showbuild{$pre}='$'.$pre."['".$build_date."'],\n";
            $ind=1;
         }
          
@@ -371,6 +372,12 @@ sub writeRecords
    open(OUT, ">test.php");
    print OUT $page;
    close OUT;
+   NewAddition($InputBuildOrgAbr,
+               $InputBuildOrg,
+               $InputBuildOrgFullName,
+               $org_spec,
+               $build_date);
+
 }
 
 ###############################################################
@@ -394,6 +401,8 @@ sub NewAddition {
   $dirname = lc($dirname);
 
   my $str =<<EOM;
+
+<hr width="100%" size="1" color="black" />
        <h4>$org $spec($fullname)</h4>
 
    <p class="text">
@@ -414,7 +423,9 @@ sub NewAddition {
 EOM
   
    my $subdirname;
-   my $build_path = "/net/dblocal/wwwspecial/peptideatlas/builds";
+   my $build_path = $current_build_page;
+   $build_path =~ s/(.*)\/.*/$1/;
+   
    if($spec){
      $dirname = "$dirname/$spec";
      $subdirname = "$buildDate";
@@ -455,7 +466,7 @@ sub undate_individual_page {
     my $dir_path = $args{'dirpath'} or die " dirpath ($!)";
     my $build_id = $args{'subdir'} or die " need subdir ($!)";
     my $build_date = $args{'subdir'} or die " need builddate ($!)";
-    my $spec = $args{'spec'} or die " need spec ($!)";
+    my $spec      = $args{'spec'};
     my $xml_file = $OPTIONS{"xml_file"} || '';
     my $sql_file = $OPTIONS{"sql_file"} || '';
     
