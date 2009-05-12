@@ -837,12 +837,11 @@ sub get_search_batch_and_sample_id_hash
                 $sample_exists = "true";
             }
         }
-
         ## Lastly, if no sample_id, create one from protomics record.  
         ## if this is true, then also will be missing [atlas_search_batch] and 
         ## [atlas_search_batch_parameter] and [atlas_search_batch_parameter_set]
-        if ( ($asb_exists eq "false") || ($sample_exists eq "false") )
-        {
+       if ( ($asb_exists eq "false") || ($sample_exists eq "false") )
+       {
             $sql = qq~
                 SELECT distinct SB.search_batch_id, PE.experiment_name, PE.experiment_tag,
                 SB.data_location
@@ -880,7 +879,6 @@ sub get_search_batch_and_sample_id_hash
 
                 ## create [atlas_search_batch]
                 my $search_batch_path = $loading_sbid_searchdir_hash{$loading_sb_id};
-        
                 $atlas_search_batch_id = create_atlas_search_batch(
                     proteomics_search_batch_id => $loading_sb_id,
                     sample_id => $sample_id,
@@ -1101,10 +1099,12 @@ sub create_atlas_search_batch
 
     my $experiment_path = $proteomics_search_batch_path;
 
-    $experiment_path =~ s/^(.+)\/(.+)\/(.+)\/(.+)\/(.+)/$2\/$3\/$4/gi;
+    $experiment_path =~ /.*\/archive(\/.*)\/.*/;
+    $experiment_path = $1;
+    #$experiment_path =~ s/^(.+)\/(.+)\/(.+)\/(.+)\/(.+)/$2\/$3\/$4/gi;
 
     my $TPP_version = getTPPVersion( directory => $proteomics_search_batch_path);
-
+print "TPP version $TPP_version\n";
     ## attributes for atlas_search_batch_record
     my %rowdata = (             ##  atlas_search_batch
         proteomics_search_batch_id => $sbid,
@@ -1620,13 +1620,12 @@ sub insert_spectra_description_set
     { 
 
         ## read experiment's pepXML file to get an mzXML file name
-        my @mzXMLFileNames = getMzXMLFileNames( search_batch_dir_path => $search_batch_dir_path);
+        my @mzXMLFileNames = getMzXMLFileNames( 
+                             search_batch_dir_path => $search_batch_dir_path);
         print `date`;
-
-
-	if (1) {
-	  print "Found ".scalar(@mzXMLFileNames)." mzXMLs in $search_batch_dir_path\n";
-	}
+	    if (1) {
+	      print "Found ".scalar(@mzXMLFileNames)."mzXMLs in $search_batch_dir_path\n";
+	    } 
 
         #### read an mzXML file to get needed attributes... could make a sax content handler for this, 
         #### but only need the first dozen or so lines of file, and the mzXML files are huge...
@@ -1716,6 +1715,23 @@ sub insert_spectra_description_set
         verbose=>$VERBOSE,
         testonly=>$TESTONLY,
     );
+  
+    %rowdata = (
+        instrument_model_id  => $instrument_model_id,
+    );
+
+    #update [sample] instrument_model_id 
+    my $sucess = $sbeams->updateOrInsertRow(
+        update=>1,
+        table_name=>$TBAT_SAMPLE,
+        rowdata_ref=>\%rowdata,
+        PK => 'sample_id',
+        PK_value => $sample_id,
+        return_PK => 0, 
+        verbose=>$VERBOSE,
+        testonly=>$TESTONLY,
+    );
+
 
 }
 
