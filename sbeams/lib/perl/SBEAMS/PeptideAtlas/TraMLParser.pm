@@ -16,19 +16,8 @@ use strict;
 
 use LWP::UserAgent;
 
-use lib "../..";
-
-use SBEAMS::Connection qw( $log );
-use SBEAMS::Connection::Settings;
-use SBEAMS::Connection::Tables;
-
-use SBEAMS::PeptideAtlas::Tables;
 
 ### Globals ###
-
-my $sbeams = new SBEAMS::Connection;
-my $atlas = new SBEAMS::PeptideAtlas;
-$atlas->setSBEAMS($sbeams);
 
 # Array of valid transitions
 my @trans;
@@ -116,12 +105,8 @@ sub parse {
   $p->parse( $self->{xml} );
 #  for my $c ( keys ( %contacts ) ) { print "Contact $c:\n"; for my $a ( sort( keys( %{$contacts{$c}} ) ) ) { print "$a => $contacts{$c}->{$a}:\n"; } }
 
-  for my $t ( @trans ) { 
-    for my $a ( sort( keys( %$t ) ) ) { 
-      print "$a => $t->{$a}\n";
-    }
-    print "\n";
-  }
+#  for my $t ( @trans ) { for my $a ( sort( keys( %$t ) ) ) { print "$a => $t->{$a}\n"; } print "\n"; }
+
   $self->{_trans} = \@trans;
 }
 
@@ -188,7 +173,7 @@ sub _start {
     $trans = \%attrs;
     $trans->{retentionTime} = $mols{$attrs{peptideRef}}->{retentionTime};
   } elsif ( $element =~ /^prediction$/i ) {
-    $trans->{retentionTime} = $contacts{$attrs{contactRef}}->{'contact name'};
+    $trans->{contactName} = $contacts{$attrs{contactRef}}->{'contact name'};
     $trans->{relativeIntensity} = $attrs{relativeIntensity};
   } elsif ( $element =~ /^configuration$/i ) {
     $trans->{collisionEnergy} = $attrs{collisionEnergy};
