@@ -943,6 +943,7 @@ sub make_resultset {
   my $self = shift;
   my %args = @_;
   return undef unless $args{rs_data};
+  $args{file_prefix} ||= '';
 
   # We can either get explicitly passed headers,
   # or an array which includes headers
@@ -956,7 +957,7 @@ sub make_resultset {
 
   $self->getSBEAMS()->writeResultSet( resultset_file_ref => \$rs_name,
                                 resultset_ref => $rs_ref,
-                                  file_prefix => 'mrm_',
+                                  file_prefix => $args{file_prefix},
                          query_parameters_ref => \%args  );
 
 
