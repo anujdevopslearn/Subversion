@@ -560,9 +560,12 @@ sub encodeSectionItem {
 #                           irrespective of the number displayed.
 # @nparam  chg_bkg_idx      Index of field on which to trigger alternating
 #                           colors.
+# @nparam  bkg_interval     numeric interval on which to alternate colors, 
+#                           superceded by chk_bkg_idx
 # @nparam  set_download     Have table include download link if set to a true
 #                           value.  If text value is used then it will be used
 #                           as text for the link.
+# @nparam  sortable         If true, make data table sortable
 #
 #
 # 
@@ -572,17 +575,39 @@ sub encodeSectionTable {
   my $self = shift || die ("self not passed");
   my %args = @_;
 
+  my $pre_text = '';
+  my $class_def = '';
+  my $id = $args{table_id} || '';
+
+  if ( $args{sortable} ) {
+    if ( !$self->{_included_sortable} ) {
+      $pre_text = qq~
+      <SCRIPT LANGUAGE=javascript SRC="$HTML_BASE_DIR/usr/javascript/sorttable.js"></SCRIPT>
+      ~;
+      $class_def = 'PA_sort_table';
+      $self->{_included_sortable}++;
+    }
+  }
+
   my @table_attrs = ( 'BORDER' => 0, );
-  my $tr_info = $args{tr_info} || 'NOOP=1';
-  my $tab = SBEAMS::Connection::DataTable->new( @table_attrs, __tr_info => $tr_info );
+  my $tr_info = $args{tr_info} || 'NOOP=1 ';
+  my $tab = SBEAMS::Connection::DataTable->new( @table_attrs, 
+                                                __tr_info => $tr_info,
+                                                CLASS => $class_def,
+                                                  ID => $id  );
   my $num_cols = 0;
+
 
   my $rs_link = '';
   my $rs_name = '';
+  my $file_prefix = $args{file_prefix} || 'mrm_';
   if ( $args{set_download} ) {
     # Kluge part 1
     my $rs_headers = shift( @{$args{rows}} );
-    $rs_name = $self->make_resultset( rs_data => $args{rows}, headers => $rs_headers );
+    $rs_name = $self->make_resultset( rs_data => $args{rows}, 
+                                      headers => $rs_headers,
+                                  file_prefix => $file_prefix );
+
     $rs_link = "<a href='$CGI_BASE_DIR/GetResultSet.cgi/$rs_name.tsv?rs_set_name=$rs_name&format=tsv;remove_markup=1' TITLE='Download table as tab-delimited text file' CLASS=info_box>Download as TSV</a>",
     # Kluge part 2
     unshift( @{$args{rows}}, $rs_headers );
@@ -599,22 +624,29 @@ sub encodeSectionTable {
   my $prefix = $sbeams->getRandomString( num_chars => 8, 
                                           char_set => ['A'..'Z', 'a'..'z'] );
   my $first = 1;
-  my $bgcolor;
+  my $bgcolor = '#C0D0C0';
   my $chg_idx;
+  my $rcnt = ( $args{header} ) ? 1 : 0;
   for my $row ( @{$args{rows}} ) {
     $num_cols = scalar( @$row ) unless $num_cols;
     $tab->addRow( $row );
-    if ( $args{chg_bkg_idx} ) {
+    $rcnt++;
+    if ( $args{chg_bkg_idx} ) { # alternate on index
       if ( !$chg_idx ) {
         $chg_idx = $row->[$args{chg_bkg_idx}];
-        $bgcolor = '#C0D0C0';
       } elsif ( $chg_idx ne $row->[$args{chg_bkg_idx}] ) {
         $bgcolor = ( $bgcolor eq '#C0D0C0' ) ? '#F5F5F5' : '#C0D0C0';
         $chg_idx = $row->[$args{chg_bkg_idx}];
       }
-      $tab->setRowAttr(  ROWS => [$tab->getRowNum()], BGCOLOR => $bgcolor );
 
+    } elsif ( $args{bkg_interval} ) { # alternate on n_rows
+      unless ( $rcnt % $args{bkg_interval} ) {
+        $bgcolor = ( $bgcolor eq '#C0D0C0' ) ? '#F5F5F5' : '#C0D0C0';
+      }
+    } elsif ( $args{bg_color} ) { # single solid color
+      $bgcolor = $args{bg_color};
     }
+    $tab->setRowAttr(  ROWS => [$tab->getRowNum()], BGCOLOR => $bgcolor );
     my $num_rows = $tab->getRowNum() - 1;
 
     if ( $args{rows_to_show} && $args{rows_to_show} < $num_rows ) {
@@ -663,7 +695,11 @@ sub encodeSectionTable {
 
   # Set header attributes
   if ( $args{header} ) {
-    $tab->setRowAttr( ROWS => [1], BGCOLOR => '#CCCCCC' ); 
+    if ( $args{sortable} ) {
+      $tab->setRowAttr( ROWS => [1], BGCOLOR => '#0000A0' ); 
+    } else {
+      $tab->setRowAttr( ROWS => [1], BGCOLOR => '#CCCCCC' ); 
+    }
     $tab->setRowAttr( ROWS => [1], ALIGN => 'CENTER' ) unless $args{nocenter};
   }
 
@@ -672,11 +708,24 @@ sub encodeSectionTable {
       $tab->setColAttr( ROWS => [2..$tot], COLS => [$i + 1], ALIGN => $args{align}->[$i] );
     }
   }
-  $tab->addRow( [$closelink] );
+#  $tab->addRow( [$closelink] );
 
-  my $html;
-  $html = "<TR><TD NOWRAP COLSPAN=$num_cols ALIGN=right>$rs_link</TD></TR>\n" if $rs_link;
+  my $html = "$pre_text\n";
+
+  if ( $rs_link || $args{change_form} ) {
+    if ( !$rs_link ) {
+      $html .= "<TR><TD NOWRAP ALIGN=left>$args{change_form}</TD></TR>\n";
+    } elsif ( !$args{change_form} ) {
+      $html .= "<TR><TD NOWRAP COLSPAN=$num_cols ALIGN=right>$rs_link</TD></TR>\n";
+    } else {
+      $html .= "<TR><TD NOWRAP ALIGN=left>$args{change_form}</TD>\n";
+      $html .= "<TD NOWRAP ALIGN=right>$rs_link</TD></TR>\n";
+    }
+  }
+ 
   $html .= "<TR><TD NOWRAP COLSPAN=2>$tab</TD></TR>";
+  $html .= '</TABLE>' if $args{close_table};
+  $html .= $closelink;
 
   return ( wantarray ) ? ($html, $rs_name) : $html;
 }
