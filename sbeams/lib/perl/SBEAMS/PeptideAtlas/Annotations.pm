@@ -73,14 +73,15 @@ sub insert_transition_data {
 
   for my $trns ( @{$self->{mrm_data}} ) {
     
+#    for my $k ( sort( keys( %$trns ) ) ) { $log->info( "$k => $trns->{$k}" ); }
+
     # modified_peptide_sequence - generate matching sequence
     $trns->{peptide_sequence} = strip_mods($trns->{modified_peptide_sequence});
-    $log->info( "Trying with $trns->{modified_peptide_sequence}" );
      
     # Check for peptide ID, generate one if necessary
     $trns->{peptide_id} = $self->getPeptideId( seq => $trns->{peptide_sequence} );
     if ( !$trns->{peptide_id} ) {
-      $log->info( "skippy-poo for $trns->{peptide_sequence}" );
+      $log->warn( "skipping $trns->{peptide_sequence}, no peptide accession" );
       # Skip this for now
       next;
       $self->addNewPeptide( seq => $trns->{peptide_sequence} );
@@ -288,7 +289,7 @@ sub traml_trans_hashref {
   return unless $args{traml_trans};
   my @converted;
   for my $tt ( @{$args{traml_trans}} ) {
-    my $row = { modified_peptide_sequence => $tt->{transitionLabel},
+    my $row = { modified_peptide_sequence => $tt->{modifiedSequence},
                 peptide_charge => $tt->{precursorCharge},
                 q1_mz => $tt->{precursorMz},
                 q3_mz => $tt->{fragmentMz},
