@@ -14,7 +14,7 @@
 # LICENSE file distributed with this software.
 #
 ###############################################################################
-
+#
 # Data structures,  May 1, 2009, TMF
 # 
 # $biosequence_attributes{$biosequence_id}: row from biosequence table
@@ -82,6 +82,7 @@
 # 	->{probability}
 # 	->{confidence}
 # 	->{unique_stripped_peptides}
+# 	->{subsuming_protein_entry}
 # 
 # 
 # Persistant containers
@@ -120,6 +121,7 @@
 # 	  ->{probability}
 # 	  ->{confidence}
 # 	  ->{unique_stripped_peptides}
+#         ->{subsuming_protein_entry}
 # 
 #   ->{ProteinProphet_prot_data}      used to determine prot ident list
 #     ->{group_hash}
@@ -130,6 +132,7 @@
 #       ->{$pepseq}                   pepseq -> array of protein IDs
 # 
 # End $CONTENT_HANDLER description
+###############################################################################
 
 use strict;
 use POSIX;  #for floor()
@@ -198,6 +201,7 @@ Options:
                       using iProphet; correct and faster.
   --min_indep         Minimum fraction pep uniqueness for prot independence
                       Defaults to 0.2
+  --protlist_only    PAidentlist files already exist; just create protlist
   --splib_filter      Filter out spectra not in spectral library
                       DATA_FILES/${build_version}_all_Q2.sptxt
 
@@ -207,7 +211,6 @@ Options:
 EOU
 
 # Removed from usage, because nonfunctional.
-# --search_db         Fasta file searched against (or refreshed to)
 # --search_batch_ids  Comma-separated list of SBEAMS-Proteomics seach_batch_ids
 
 #### If no parameters are given, print usage information
@@ -223,7 +226,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
   "source_file:s","search_batch_ids:s","P_threshold:f","FDR_threshold:f",
   "output_file:s","master_ProteinProphet_file:s","per_expt_pipeline",
   "biosequence_set_id:s", "best_probs_from_protxml", "min_indep:f",
-  "splib_filter",
+  "protlist_only", "splib_filter",
   )) {
   print "$USAGE";
   exit;
@@ -249,120 +252,56 @@ my $PEP_PROB_CUTOFF = 0.5;
 my $source_file = $OPTIONS{source_file} || '';
 my $APDTsvFileName = $OPTIONS{output_file} || '';
 my $search_batch_ids = $OPTIONS{search_batch_ids} || '';
-my $search_db = $OPTIONS{search_db} || '';
 my $bssid = $OPTIONS{biosequence_set_id} || "10" ; #yeast
-
-#### Fetch the biosequence data. 3/31/09: added fetch of biosequence_seq
- # 4/30/09: we don't need biosequence_seq anymore; confirm & remove
-my $sql = qq~
-   SELECT biosequence_id,biosequence_name,biosequence_gene_name,
-	  biosequence_accession,biosequence_desc,biosequence_seq
-     FROM $TBAT_BIOSEQUENCE
-    WHERE biosequence_set_id = $bssid
-~;
-print "Fetching all biosequence data...\n";
-print "$sql";
-my @rows = $sbeams->selectSeveralColumns($sql);
-my $bioseq_hash = {};
-foreach my $row (@rows) {
-  # Hash each biosequence_id to its row
-  $biosequence_attributes{$row->[1]} = $row;
-  my $biosequence_id = $row->[2];
-  my $biosequence_seq = $row->[6];
-  # Hash each biosequence to a list of its biosequence_id(s)
-  # This code will only be useful if we don't refresh our pepXML
-  # files to the biosequence set.
-  if (0 && ! defined $bioseq_hash->{$biosequence_seq} ) {
-    my @seq_id_array = [ $biosequence_id ];
-    $bioseq_hash->{$biosequence_seq} = \@seq_id_array;
-  } else {
-    push ( @{$bioseq_hash->{$biosequence_seq}}, $biosequence_id );
-  }
-}
-print "  Loaded ".scalar(@rows)." biosequences.\n";
-
-#### Just in case the table is empty, put in a bogus hash entry
-#### to prevent triggering a reload attempt
-$biosequence_attributes{' '} = ' ';
-
-#### Read the search database fasta file. For each identifier in
-####  our protXML data, hash it to the biosequence IDs of that
-####  sequence.
-#### This code was never fully functional, and will only be useful
-####  if we don't refresh our pepXML files to the biosequence set.
-if (0) {
-my %search_db_to_bioseq_id_hash = {};
-if ($search_db ne '') {
-  unless (-f $search_db) {
-    die "File '$search_db' does not exist!\n";
-  }
-  open (SEARCHDB, $search_db) || die("ERROR: Unable to open $search_db");
-  print "INFO: Reading search fasta file $search_db...\n" unless ($QUIET);
-  my $seq = "";
-  my $identifier = "";
-  my $counter = 0;
-  while (my $line = <SEARCHDB>) {
-    chomp ($line);
-    if ($line =~ /\>\s*(\S+)/) {
-      if ($seq ne "") {
-        $counter++;
-        if ( defined $bioseq_hash->{$seq} ) {
-          my @bioseq_id_list = @{$bioseq_hash->{$seq}};
-          print "@bioseq_id_list\n";
-          #$search_db_to_bioseq_id_hash{$identifier} = $bioseq_hash->{$seq};
-        } else {
-          #$search_db_to_bioseq_id_hash{$identifier} = [];
-        }
-        if (($counter % 1000) == 0) { print "$counter"; }
-        elsif (($counter % 100) == 0) { print "."; }
-        #print "$identifier = $seq\n\n";
-      }
-      $identifier = $1;
-    } else {
-      $seq = $seq.$line;
-    }
-  }
-  # Development: test reading of fasta file
-  if (0) {
-    print "\nDEBUG: printing fasta file hash\n\n";
-    while ((my $key, my $value) = each %search_db_to_bioseq_id_hash) {
-      print "$key=@{$value}\n";
-    }
-  }
-}
-### April 1: Test this hash by using it to map each seq in the protXML
-###  (need to fetch those seqs by reading the database fasta file!)
-###  to a bioseq id. Fun!
-}
-
-
-
-#### Make sure either --source_file or --search_batch_ids was specified
-unless ($source_file || $search_batch_ids) {
-  print "ERROR: You must specify either --source_file or --search_batch_ids\n";
-  print "$USAGE";
-  exit 0;
-}
-
-
-#### If source_file was specified, verify it
-if ($source_file) {
-
-  #### Check to make sure the file exists
-  unless (-f $source_file) {
-    die "File '$source_file' does not exist!\n";
-  }
-
-}
-
-
-#### Process options
+my $protlist_only = $OPTIONS{protlist_only} || 0;
 my $validate = $OPTIONS{validate} || 'never';
 my $namespace = $OPTIONS{namespaces} || 0;
 my $schema = $OPTIONS{schemas} || 0;
 my $best_probs_from_protxml = $OPTIONS{best_probs_from_protxml} || 0;
 my $splib_filter = $OPTIONS{splib_filter} || 0;
 
+
+#### Fetch the biosequence data for writing into APD file.
+unless ($protlist_only) {
+  my $sql = qq~
+     SELECT biosequence_id,biosequence_name,biosequence_gene_name,
+	    biosequence_accession,biosequence_desc
+       FROM $TBAT_BIOSEQUENCE
+      WHERE biosequence_set_id = $bssid
+  ~;
+  print "Fetching all biosequence data...\n";
+  print "$sql";
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  foreach my $row (@rows) {
+    # Hash each biosequence_id to its row
+    $biosequence_attributes{$row->[1]} = $row;
+    my $biosequence_id = $row->[2];
+  }
+  print "  Loaded ".scalar(@rows)." biosequences.\n";
+
+  #### Just in case the table is empty, put in a bogus hash entry
+  #### to prevent triggering a reload attempt
+  $biosequence_attributes{' '} = ' ';
+
+
+  #### Make sure either --source_file or --search_batch_ids was specified
+  unless ($source_file || $search_batch_ids) {
+    print "ERROR: You must specify either --source_file or --search_batch_ids\n";
+    print "$USAGE";
+    exit 0;
+  }
+
+
+  #### If source_file was specified, verify it
+  if ($source_file) {
+
+    #### Check to make sure the file exists
+    unless (-f $source_file) {
+      die "File '$source_file' does not exist!\n";
+    }
+
+  }
+}
 
 if (uc($validate) eq 'ALWAYS') {
   $validate = $XML::Xerces::SAX2XMLReader::Val_Always;
@@ -490,8 +429,16 @@ sub pepXML_start_element {
     $self->{pepcache}->{peptide} = $attrs{peptide};
     $self->{pepcache}->{peptide_prev_aa} = $attrs{peptide_prev_aa};
     $self->{pepcache}->{peptide_next_aa} = $attrs{peptide_next_aa};
-    $self->{pepcache}->{protein_name} = $attrs{protein};
+    $self->{pepcache}->{protein_name} = [$attrs{protein}];
     $self->{pepcache}->{massdiff} = $attrs{massdiff};
+  }
+
+  #### If this is an alternative protein, push the protein name
+  #### onto the current peptide's list of protein names
+  if ($localname eq 'alternative_protein') {
+    if ($attrs{protein}) {
+      push (@{$self->{pepcache}->{protein_name}}, $attrs{protein});
+    }
   }
 
 
@@ -569,6 +516,9 @@ sub protXML_start_element {
 
   #### If this is a protein, then store its name, probability, and
   ####  peptides, and add it to the list for the current protein_group
+  #### Why do this? Would be more elegant to store in protcache, then copy
+  ####  to group cache in end_element. Also, would beconsistent with what we
+  ####  do with indistinguishables. ****
   if ($localname eq 'protein') {
     my $protein_name = $attrs{protein_name};
     $self->{protein_name} = $protein_name;
@@ -587,6 +537,8 @@ sub protXML_start_element {
              $attrs{probability};
     $self->{groupcache}->{proteins}->{$protein_name}->{confidence} =
              $attrs{confidence};
+    $self->{groupcache}->{proteins}->{$protein_name}->
+          {subsuming_protein_entry} = $attrs{subsuming_protein_entry};
   }
 
   #### If this is an indistinguishable protein, record it in the cache
@@ -705,7 +657,11 @@ sub pepXML_end_element {
         sequence => $peptide_sequence,
       );
 
-      #### Store the information into an array for caching
+      #### Select a protein_name to store.
+      #my $protein_name = pop(@{$self->{pepcache}->{protein_name}});
+      my $protein_name = select_protid($self->{pepcache}->{protein_name});
+
+      #### Store the information for this peptide into an array for caching
       push(@{ $self->{pep_identification_list} },
           [$self->{search_batch_id},
 	   $self->{pepcache}->{spectrum},
@@ -717,7 +673,8 @@ sub pepXML_end_element {
 	   $charge,
            $probability,
            $self->{pepcache}->{massdiff},
-           $self->{pepcache}->{protein_name},
+           #$self->{pepcache}->{protein_name},
+           $protein_name,
 	  ]
       );
     }
@@ -752,6 +709,43 @@ sub pepXML_end_element {
   }
 
 }
+
+#### Return a protein identifer from an array of identifiers
+####  that are mapped to by a single peptide. Select based on
+####  preferences for particular protein databases.
+#### This could certainly be coded more elegantly.
+sub select_protid {
+  my $protid_list_ref = shift;
+  my $protid;
+
+  # prefer a Uniprot (Swiss-Prot) ID
+  for $protid (@{$protid_list_ref}) {
+    if ($protid =~ /^[ABOPQ].....$/) {
+      return $protid;
+    }
+  }
+  # next, a Swiss-Prot varsplice ID
+  for $protid (@{$protid_list_ref}) {
+    if ($protid =~ /^[ABOPQ].....-.*$/) {
+      return $protid;
+    }
+  }
+  # next, an Ensembl ID
+  for $protid (@{$protid_list_ref}) {
+    if ($protid =~ /^ENSP\d\d\d\d\d\d\d\d\d\d\d$/) {
+      return $protid;
+    }
+  }
+  # next, any non-DECOY ID
+  for $protid (@{$protid_list_ref}) {
+    if ($protid !~ /^DECOY_/) {
+      return $protid;
+    }
+  }
+  # otherwise, return the first ID
+  return $protid_list_ref->[0];
+}
+  
 
 
 
@@ -1062,28 +1056,30 @@ sub main {
   #### Process additional input parameters
   my $P_threshold = $OPTIONS{P_threshold};
   my $FDR_threshold = $OPTIONS{FDR_threshold};
-  if (defined($FDR_threshold) && defined($P_threshold)) {
-    print "Only one of --P_threshold and --FDR_threshold may be specified.\n";
-    exit;
-  } elsif (!defined($FDR_threshold) && !defined($P_threshold)) {
-    $FDR_threshold = '0.0001';
-    print "Using default FDR threshold $FDR_threshold.\n";
-    #$P_threshold = '0.9';
-    #print "Using default P threshold $P_threshold.\n";
-  } else {
-    print "P_threshold=$P_threshold  FDR_threshold=$FDR_threshold\n";
-  }
+  unless ($protlist_only) {
+    if (defined($FDR_threshold) && defined($P_threshold)) {
+      print "Only one of --P_threshold and --FDR_threshold may be specified.\n";
+      exit;
+    } elsif (!defined($FDR_threshold) && !defined($P_threshold)) {
+      $FDR_threshold = '0.0001';
+      print "Using default FDR threshold $FDR_threshold.\n";
+      #$P_threshold = '0.9';
+      #print "Using default P threshold $P_threshold.\n";
+    } else {
+      print "P_threshold=$P_threshold  FDR_threshold=$FDR_threshold\n";
+    }
 
-  ## check that --output_file was passed and that the directory of output_file exists
-  my $check_dir = $OPTIONS{output_file} || die "need output file path: --output_file";
-  $check_dir =~ s/(.+)\/(.*)$/$1/gi;
-  if (-d $check_dir)
-  {
-    print "Checked: The output directory ($check_dir) exists\n";
-  } else
-  {
-    print "ERROR: The output directory ($check_dir) does not exist($!)\n";
-    exit;
+    ## check that --output_file was passed and that the directory of output_file exists
+    my $check_dir = $OPTIONS{output_file} || die "need output file path: --output_file";
+    $check_dir =~ s/(.+)\/(.*)$/$1/gi;
+    if (-d $check_dir)
+    {
+      print "Checked: The output directory ($check_dir) exists\n";
+    } else
+    {
+      print "ERROR: The output directory ($check_dir) does not exist($!)\n";
+      exit;
+    }
   }
 
 
@@ -1143,7 +1139,7 @@ sub main {
 
   #### If a source file containing the list of search_batch_ids was provided,
   #### read it and find the corresponding documents
-  if ($source_file) {
+  if ($source_file && !$protlist_only) {
     my @search_batch_ids;
     open(SOURCE_FILE,$source_file)
       || die("ERROR: Unable to open $source_file");
@@ -1202,7 +1198,7 @@ sub main {
   #### If $splib_filter specified, read the SpectraST library
   my $spectral_peptides;
 
-  if ($splib_filter) {
+  if ($splib_filter && !$protlist_only) {
     print "Will filter peptides not in ${build_version}_all_Q2.sptxt.\n";
     $spectral_peptides = readSpectralLibraryPeptides(
       input_file => "DATA_FILES/${build_version}_all_Q2.sptxt",
@@ -1211,62 +1207,67 @@ sub main {
 
   #### Loop over all input files converting pepXML to identlist format
   #### unless it has already been done
-  if ($best_probs_from_protxml) {
-    print "Will get best initial probs from protXML file[s].\n";
-  } else {
-    print "Will get best initial probs from pepXML files.\n";
-    $CONTENT_HANDLER->{best_prob_per_pep} = {};
-  }
   my @identlist_files;
   my %decoy_corrections;
 
   #### First pass: read or create cache files,
-  ####  saving best probabilities for each stripped and unstripped
-  ####  peptide
-  print "First pass over pepXML files/caches: saving best prob for each pep.\n";
-  foreach my $document ( @documents ) {
-    my $filepath = $document->{filepath};
-    $CONTENT_HANDLER->{search_batch_id} = $document->{search_batch_id};
-    $CONTENT_HANDLER->{document_type} = $document->{document_type};
-    $CONTENT_HANDLER->{pep_identification_list} = [];
+  ####  saving best probabilities for each stripped and unstripped peptide
+  if ($protlist_only) {
+    print "Will create protlist file only, using existing PAidentlist files.\n";
+  } else {
 
-    #### Determine the identlist file path and name
-    my $identlist_file = $filepath;
-    $identlist_file =~ s/\.xml$/.PAidentlist/;
-    push(@identlist_files,$identlist_file);
-
-    #### If the identlist template file already exists, read that instead of pepXML
-    if ( -e "${identlist_file}-template") {
-      readIdentificationListTemplateFile(
-        input_file => "${identlist_file}-template",
-        pep_identification_list => $CONTENT_HANDLER->{pep_identification_list},
-      );
-
-    #### Otherwise read the pepXML
+    if ($best_probs_from_protxml) {
+      print "Will get best initial probs from protXML file[s].\n";
     } else {
+      print "Will get best initial probs from pepXML files.\n";
+      $CONTENT_HANDLER->{best_prob_per_pep} = {};
+    }
 
-      print "INFO: Reading $filepath; saving records with prob >= $PEP_PROB_CUTOFF...\n"
-         unless ($QUIET);
+    print "First pass over pepXML files/caches: saving best prob for each pep.\n";
+    foreach my $document ( @documents ) {
+      my $filepath = $document->{filepath};
+      $CONTENT_HANDLER->{search_batch_id} = $document->{search_batch_id};
       $CONTENT_HANDLER->{document_type} = $document->{document_type};
-      $parser->parse (XML::Xerces::LocalFileInputSource->new($filepath));
-      print "\n";
+      $CONTENT_HANDLER->{pep_identification_list} = [];
 
-      #### Write out the template cache file
-      writePepIdentificationListTemplateFile(
-        output_file => "${identlist_file}-template",
-        pep_identification_list => $CONTENT_HANDLER->{pep_identification_list},
-      );
-    }
+      #### Determine the identlist file path and name
+      my $identlist_file = $filepath;
+      $identlist_file =~ s/\.xml$/.PAidentlist/;
+      push(@identlist_files,$identlist_file);
 
-    #### Loop through all search_hits, saving the best probability
-    #### seen for each peptide in a hash.
-    if (!$best_probs_from_protxml) {
-      saveBestProbPerPep(
-          best_prob_per_pep => $CONTENT_HANDLER->{best_prob_per_pep},
-          pep_identification_list => $CONTENT_HANDLER->{pep_identification_list},
-        );
+      #### If the identlist template file already exists, read that instead of pepXML
+      if ( -e "${identlist_file}-template") {
+	readIdentificationListTemplateFile(
+	  input_file => "${identlist_file}-template",
+	  pep_identification_list => $CONTENT_HANDLER->{pep_identification_list},
+	);
+
+      #### Otherwise read the pepXML
+      } else {
+
+	print "INFO: Reading $filepath; saving records with prob >= $PEP_PROB_CUTOFF...\n"
+	   unless ($QUIET);
+	$CONTENT_HANDLER->{document_type} = $document->{document_type};
+	$parser->parse (XML::Xerces::LocalFileInputSource->new($filepath));
+	print "\n";
+
+	#### Write out the template cache file
+	writePepIdentificationListTemplateFile(
+	  output_file => "${identlist_file}-template",
+	  pep_identification_list => $CONTENT_HANDLER->{pep_identification_list},
+	);
+      }
+
+      #### Loop through all search_hits, saving the best probability
+      #### seen for each peptide in a hash.
+      if (!$best_probs_from_protxml) {
+	saveBestProbPerPep(
+	    best_prob_per_pep => $CONTENT_HANDLER->{best_prob_per_pep},
+	    pep_identification_list => $CONTENT_HANDLER->{pep_identification_list},
+	  );
+      }
     }
-  }
+  } # end unless $protlist_only
 
   #### Development/debugging: print the best prob for each pep
   if (!$best_probs_from_protxml && 0) {
@@ -1286,7 +1287,7 @@ sub main {
       die("ERROR: Specified master ProteinProphet file not found '$proteinProphet_filepath'\n");
     }
     print "INFO: Reading master ProteinProphet file $proteinProphet_filepath...\n" unless ($QUIET);
-    if (!$QUIET) {
+    if (!$QUIET && !$protlist_only) {
       if ($OPTIONS{per_expt_pipeline}) {
 	print "      Will use only to assign protein ".
 	      "identifications to peptides;\n           individual protxml".
@@ -1304,189 +1305,210 @@ sub main {
 
   }
 
+  my $sorted_identlist_file = "DATA_FILES/PeptideAtlasInput_sorted.PAidentlist";
+  my @column_names;
+
   #### Second pass: read ProteinProphet file(s), read each cache file again,
   ####  then write out all the peptides and probabilities including
   ####  ProteinProphet information
-  print "Second pass over caches: write final peptide identlist files.\n";
 
-  my $first_loop = 1;
+  unless ($protlist_only) {
 
-  foreach my $document ( @documents ) {
-    my $filepath = $document->{filepath};
-    $CONTENT_HANDLER->{search_batch_id} = $document->{search_batch_id};
-    $CONTENT_HANDLER->{document_type} = $document->{document_type};
-    $CONTENT_HANDLER->{pep_identification_list} = [];
+    print "Second pass over caches: write final peptide identlist files.\n";
 
-    #### If no master, or if per-experiment pipeline,
-    #### we'll read one ProteinProphet file per pepXML file
-    if (!$OPTIONS{master_ProteinProphet_file} || $OPTIONS{per_expt_pipeline}) {
-      $CONTENT_HANDLER->{ProteinProphet_pep_data} = {};
-      $proteinProphet_filepath = $filepath;
-      $proteinProphet_filepath =~ s/\.pep.xml/.prot.xml/;
+    my $first_loop = 1;
 
-      unless (-e $proteinProphet_filepath) {
-	#### Hard coded funny business for Novartis
-	if ($proteinProphet_filepath =~ /Novartis/) {
-	  if ($proteinProphet_filepath =~ /interact-prob_\d/) {
-	    $proteinProphet_filepath =~ s/prob_\d/prob_all/;
+    foreach my $document ( @documents ) {
+      my $filepath = $document->{filepath};
+      $CONTENT_HANDLER->{search_batch_id} = $document->{search_batch_id};
+      $CONTENT_HANDLER->{document_type} = $document->{document_type};
+      $CONTENT_HANDLER->{pep_identification_list} = [];
+
+      #### If no master, or if per-experiment pipeline,
+      #### we'll read one ProteinProphet file per pepXML file
+      if (!$OPTIONS{master_ProteinProphet_file} || $OPTIONS{per_expt_pipeline}) {
+	$CONTENT_HANDLER->{ProteinProphet_pep_data} = {};
+	$proteinProphet_filepath = $filepath;
+	$proteinProphet_filepath =~ s/\.pep.xml/.prot.xml/;
+
+	unless (-e $proteinProphet_filepath) {
+	  #### Hard coded funny business for Novartis
+	  if ($proteinProphet_filepath =~ /Novartis/) {
+	    if ($proteinProphet_filepath =~ /interact-prob_\d/) {
+	      $proteinProphet_filepath =~ s/prob_\d/prob_all/;
+	    } else {
+	      $proteinProphet_filepath = undef;
+	    }
 	  } else {
+	    print "ERROR: No ProteinProphet file found for\n  $proteinProphet_filepath\n";
 	    $proteinProphet_filepath = undef;
 	  }
-	} else {
-	  print "ERROR: No ProteinProphet file found for\n  $proteinProphet_filepath\n";
-	  $proteinProphet_filepath = undef;
+	}
+
+	if ($proteinProphet_filepath) {
+	  print "INFO: Reading $proteinProphet_filepath...\n" unless ($QUIET);
+	  $CONTENT_HANDLER->{document_type} = 'protXML';
+	  $CONTENT_HANDLER->{protxml_type} = 'expt';
+	  $parser->parse (XML::Xerces::LocalFileInputSource->new($proteinProphet_filepath));
+	  print "\n";
 	}
       }
 
-      if ($proteinProphet_filepath) {
-        print "INFO: Reading $proteinProphet_filepath...\n" unless ($QUIET);
-        $CONTENT_HANDLER->{document_type} = 'protXML';
-        $CONTENT_HANDLER->{protxml_type} = 'expt';
-        $parser->parse (XML::Xerces::LocalFileInputSource->new($proteinProphet_filepath));
-        print "\n";
-      }
-    }
-
-    #### Development: see if the protein info got stored.
-    my $prot_group_href = $CONTENT_HANDLER->{ProteinProphet_group_data};
-    my @group_number_list = keys(%{$prot_group_href});
-    foreach my $group_num (@group_number_list) {
-      my $group = $prot_group_href->{$group_num};
-      #print "Protein group $group_num P=$group->{probability}\n";
-      my @protein_list = keys(%{$group->{proteins}});
-      if (0 && @protein_list ) {
-	foreach my $protein (@protein_list) {
-	  my $prot_href = $group->{proteins}->{$protein};
-	  print "   $protein P=$prot_href->{probability} ".
-		"C=$prot_href->{confidence} ".
-                "$prot_href->{presence_level}\n";
-	  my @indis_list = keys(%{$prot_href->{indist_prots}});
-	  if ( @indis_list ) {
-	    print "    indistinguishable:\n";
-	    foreach my $indis_protein (@indis_list) {
-		print "      $indis_protein\n";
+      #### Development: see if the protein info got stored.
+      my $prot_group_href = $CONTENT_HANDLER->{ProteinProphet_group_data};
+      my @group_number_list = keys(%{$prot_group_href});
+      foreach my $group_num (@group_number_list) {
+	my $group = $prot_group_href->{$group_num};
+	#print "Protein group $group_num P=$group->{probability}\n";
+	my @protein_list = keys(%{$group->{proteins}});
+	if (0 && @protein_list ) {
+	  foreach my $protein (@protein_list) {
+	    my $prot_href = $group->{proteins}->{$protein};
+	    print "   $protein P=$prot_href->{probability} ".
+		  "C=$prot_href->{confidence} ".
+		  "$prot_href->{presence_level}\n";
+	    my @indis_list = keys(%{$prot_href->{indist_prots}});
+	    if ( @indis_list ) {
+	      print "    indistinguishable:\n";
+	      foreach my $indis_protein (@indis_list) {
+		  print "      $indis_protein\n";
+	      }
 	    }
 	  }
 	}
       }
-    }
 
-    #### Development: check the hash mapping protein names to group numbers.
-    my $prot_href = $CONTENT_HANDLER->{ProteinProphet_prot_data}->{group_hash};
-    my @protein_list = keys(%{$prot_href});
-    foreach my $prot_name (sort @protein_list) {
-      #print "$prot_name $prot_href->{$prot_name}\n";
-    }
-
-    #### Check to see if there's a decoy correction coefficient
-    #### This is very fudgy. This code should be off in SVN and only
-    #### enabled for testing
-    my $decoy_file = $filepath;
-    $decoy_file =~ s/\.xml$/.decoy.txt/;
-    if ( -e $decoy_file && 0) {  #### && 0 means this is disabled!!
-      open(DECOYFILE,$decoy_file);
-      while (my $line = <DECOYFILE>) {
-	chomp($line);
-	my @columns = split("\t",$line);
-	if ($columns[0] == 3) {
-	  my $decoy_correction = ( $columns[1] + $columns[2] ) / 2.0;
-	  print "INFO: Decoy correction = $decoy_correction\n";
-	  $decoy_corrections{$document->{search_batch_id}} = $decoy_correction;
-	}
+      #### Development: check the hash mapping protein names to group numbers.
+      my $prot_href = $CONTENT_HANDLER->{ProteinProphet_prot_data}->{group_hash};
+      my @protein_list = keys(%{$prot_href});
+      foreach my $prot_name (sort @protein_list) {
+	#print "$prot_name $prot_href->{$prot_name}\n";
       }
-      close(DECOY_FILE);
-    } else {
-      #print "WARNING: No decoy correction\n";
+
+      #### Check to see if there's a decoy correction coefficient
+      #### This is very fudgy. This code should be off in SVN and only
+      #### enabled for testing
+      my $decoy_file = $filepath;
+      $decoy_file =~ s/\.xml$/.decoy.txt/;
+      if ( -e $decoy_file && 0) {  #### && 0 means this is disabled!!
+	open(DECOYFILE,$decoy_file);
+	while (my $line = <DECOYFILE>) {
+	  chomp($line);
+	  my @columns = split("\t",$line);
+	  if ($columns[0] == 3) {
+	    my $decoy_correction = ( $columns[1] + $columns[2] ) / 2.0;
+	    print "INFO: Decoy correction = $decoy_correction\n";
+	    $decoy_corrections{$document->{search_batch_id}} = $decoy_correction;
+	  }
+	}
+	close(DECOY_FILE);
+      } else {
+	#print "WARNING: No decoy correction\n";
+      }
+
+      #### Read the peptide identlist template file,
+      #### then write the final peptide identlist file
+      my $identlist_file = $filepath;
+      $identlist_file =~ s/\.xml$/.PAidentlist/;
+
+      if ( -e "${identlist_file}-template") {
+	readIdentificationListTemplateFile(
+	  input_file => "${identlist_file}-template",
+	  pep_identification_list => $CONTENT_HANDLER->{pep_identification_list},
+	  );
+      } else {
+	die("ERROR: ${identlist_file}-template not found\n");
+      }
+
+      writePepIdentificationListFile(
+	output_file => $identlist_file,
+	pep_identification_list => $CONTENT_HANDLER->{pep_identification_list},
+	ProteinProphet_pep_data => $CONTENT_HANDLER->{ProteinProphet_pep_data},
+	ProteinProphet_pep_protID_data =>
+	     $CONTENT_HANDLER->{ProteinProphet_pep_protID_data},
+	spectral_library_data => $spectral_peptides,
+	P_threshold => $P_threshold,
+	FDR_threshold => $FDR_threshold,
+	best_prob_per_pep => $CONTENT_HANDLER->{best_prob_per_pep},
+      );
+
+
+      $first_loop = 0;
+    } #end second pass over peptide caches
+
+    #### TEST: list hash of peps to proteins
+    if (0) {
+    my @peplist = keys(%{$CONTENT_HANDLER->{ProteinProphet_prot_data}->
+	  {prot_hash}});
+    for my $pep (@peplist) {
+      print "$pep ";
+      my @protid_list = @{$CONTENT_HANDLER->{ProteinProphet_prot_data}->
+	  {prot_hash}->{$pep}};
+      for my $protid ( @protid_list) {
+	print "$protid ";
+      }
+      print "\n";
+    }
+    }
+       
+
+
+    #### Create a combined identlist file
+    my $combined_identlist_file = "DATA_FILES/PeptideAtlasInput_concat.PAidentlist";
+    open(OUTFILE,">$combined_identlist_file") ||
+      die("ERROR: Unable to open for write '$combined_identlist_file'");
+    close(OUTFILE);
+
+    #### Loop over all cache files and add to combined identlist file
+    foreach my $identlist_file ( @identlist_files ) {
+      print "INFO: Adding to master list: '$identlist_file'\n";
+      system("grep -v '^search_batch_id' $identlist_file >> $combined_identlist_file");
     }
 
-    #### Read the peptide identlist template file,
-    #### then write the final peptide identlist file
-    my $identlist_file = $filepath;
-    $identlist_file =~ s/\.xml$/.PAidentlist/;
 
-    if ( -e "${identlist_file}-template") {
-      readIdentificationListTemplateFile(
-        input_file => "${identlist_file}-template",
-        pep_identification_list => $CONTENT_HANDLER->{pep_identification_list},
-        );
-    } else {
-      die("ERROR: ${identlist_file}-template not found\n");
+    #### If we have decoy corrections, apply them and write out a new file
+    if (%decoy_corrections) {
+      my $output_file = $combined_identlist_file;
+      $output_file =~ s/concat/concor/;
+      apply_decoy_corrections(
+	input_file => $combined_identlist_file,
+	output_file => $output_file,
+	decoy_corrections => \%decoy_corrections,
+      );
     }
 
-    writePepIdentificationListFile(
-      output_file => $identlist_file,
-      pep_identification_list => $CONTENT_HANDLER->{pep_identification_list},
-      ProteinProphet_pep_data => $CONTENT_HANDLER->{ProteinProphet_pep_data},
-      ProteinProphet_pep_protID_data =>
-           $CONTENT_HANDLER->{ProteinProphet_pep_protID_data},
-      spectral_library_data => $spectral_peptides,
-      P_threshold => $P_threshold,
-      FDR_threshold => $FDR_threshold,
-      best_prob_per_pep => $CONTENT_HANDLER->{best_prob_per_pep},
-    );
 
+    #### Create a copy of the combined file sorted by peptide.
+    print "INFO: Creating copy of master list sorted by peptide\n";
+    system("sort -k 3,3 -k 2,2 $combined_identlist_file > $sorted_identlist_file");
 
-    $first_loop = 0;
-  } #end second pass over peptide caches
+    #### Get the columns headings
+    open(INFILE,$identlist_files[0]) ||
+      die("ERROR: Unable to open for read '$identlist_files[0]'");
+    my $header = <INFILE> ||
+      die("ERROR: Unable to read header from '$identlist_files[0]'");
+    close(INFILE);
+    chomp($header);
+    @column_names = split("\t",$header);
+
+  } # end unless $protlist_only
 
   #### TEST: list hash of peps to proteins
+  # 5/14/09: about 8600 lines printed here
   if (0) {
-  my @peplist = keys(%{$CONTENT_HANDLER->{ProteinProphet_prot_data}->
-        {prot_hash}});
-  for my $pep (@peplist) {
-    print "$pep ";
-    my @protid_list = @{$CONTENT_HANDLER->{ProteinProphet_prot_data}->
-        {prot_hash}->{$pep}};
-    for my $protid ( @protid_list) {
-      print "$protid ";
+    my @peplist = keys(%{$CONTENT_HANDLER->{ProteinProphet_prot_data}->
+	  {prot_hash}});
+    for my $pep (@peplist) {
+      print "$pep ";
+      my @protid_list = @{$CONTENT_HANDLER->{ProteinProphet_prot_data}->
+	  {prot_hash}->{$pep}};
+      for my $protid ( @protid_list) {
+	print "$protid ";
+      }
+      print "\n";
     }
-    print "\n";
   }
-  }
-     
-
-
-  #### Create a combined identlist file
-  my $combined_identlist_file = "DATA_FILES/PeptideAtlasInput_concat.PAidentlist";
-  open(OUTFILE,">$combined_identlist_file") ||
-    die("ERROR: Unable to open for write '$combined_identlist_file'");
-  close(OUTFILE);
-
-
-  #### Get the columns headings
-  open(INFILE,$identlist_files[0]) ||
-    die("ERROR: Unable to open for read '$identlist_files[0]'");
-  my $header = <INFILE> ||
-    die("ERROR: Unable to read header from '$identlist_files[0]'");
-  close(INFILE);
-  chomp($header);
-  my @column_names = split("\t",$header);
-
-
-  #### Loop over all cache files and add to combined identlist file
-  foreach my $identlist_file ( @identlist_files ) {
-    print "INFO: Adding to master list: '$identlist_file'\n";
-    system("grep -v '^search_batch_id' $identlist_file >> $combined_identlist_file");
-  }
-
-
-  #### If we have decoy corrections, apply them and write out a new file
-  if (%decoy_corrections) {
-    my $output_file = $combined_identlist_file;
-    $output_file =~ s/concat/concor/;
-    apply_decoy_corrections(
-      input_file => $combined_identlist_file,
-      output_file => $output_file,
-      decoy_corrections => \%decoy_corrections,
-    );
-  }
-
-
-  #### Create a copy of the combined file sorted by peptide.
-  my $sorted_identlist_file = "DATA_FILES/PeptideAtlasInput_sorted.PAidentlist";
-  print "INFO: Creating copy of master list sorted by peptide\n";
-  system("sort -k 3,3 -k 2,2 $combined_identlist_file > $sorted_identlist_file");
-
+       
   #### If a master ProteinProphet file was provided, we can print lists
   #### of protein identifications, along with presence_levels, for Atlas.
 
@@ -1500,7 +1522,8 @@ sub main {
     # list of all (non-identical) proteins in the atlas
     $CONTENT_HANDLER->{ProteinProphet_prot_data}->{atlas_prot_list} = {};
     print "INFO: Reading master list into protein->peptide hash.\n";
-    open (IDENTLISTFILE, $sorted_identlist_file);
+    open (IDENTLISTFILE, $sorted_identlist_file) ||
+      die("ERROR: Unable to open for reading '$sorted_identlist_file'");
     my %peps_not_found = ();
     while (my $line = <IDENTLISTFILE>) {
       chomp ($line);
@@ -1531,8 +1554,9 @@ sub main {
 	$peps_not_found{$pepseq} = 1;
       }
 
-      # activate the following to check whether protein ID
-      # assignment worked. If it did, there should be no warnings.
+      # activate the following to check whether each peptide sequence
+      #  was assigned the same protID in each instance.
+      # If it was, there should be no warnings.
       if (0) {
       if ( defined $prothash{$pepseq}) {
 	if ( $prothash{$pepseq} ne $protid ) {
@@ -1546,13 +1570,13 @@ sub main {
 
     my @peps_not_found = keys %peps_not_found;
     if (scalar(@peps_not_found) > 0) {
-      print "\nWARNING: No proteins will be stored in PAprotIdentlist for the ";
+      print "\nWARNING: No proteins will be stored in PAprotlist for the ";
       print "following\ncombined PAidentlist peptides. ";
       print "If few, and all contain L or I,\nthey are probably ";
       print "indistinguishable and the prots are stored\nunder their twins. ";
       print "If many, then you probably didn't\nrefresh your ";
       print "pepXML files to the bioseq set (before running ProtPro)\n";
-      print "and your PAprotIdentlist will not be complete.\n";
+      print "and your PAprotlist will not be complete.\n";
       for my $pep (@peps_not_found) {
 	print "$pep\n";
       }
@@ -1612,10 +1636,11 @@ sub main {
 	}
         }
 
-	# A subset of the group is canonical, defined as such:
+	# A subset of the atlas proteins in a group is canonical,
+        # defined as such:
 	# - subset includes prot of highest prob
 	# - all members of subset are independent of each other
-	# - each non-members of the subset is non-independent of at
+	# - each non-member of the subset is non-independent of at
 	#    least one member of the subset.
 	# Find this subset
 
@@ -1623,8 +1648,8 @@ sub main {
 	foreach my $protein (@protein_list) {
 	  my $prot_href = $proteins_href->{$protein};
 	  #print " $protein ";
-	  # See if this protein is in the list of proteins that
-	  # peptides are identified to
+	  # Just for yucks, see if this protein is in the list of 
+	  # proteins that peptides are identified to in PAidentlist
 	  if (defined $pephash{$protein}) {
 	    $pep_protid_count++;
 	    #print "YES! ";
@@ -1680,18 +1705,37 @@ sub main {
 	}
 
 	# Now, label the non-canonicals.
-	# To be absolutely correct, should check that those
-	# labeled "subsumed" are actually subsumed by a canonical
-	# (they could be subsumed by a protein in the group that is
-	#  excluded from atlas due to not containing any atlas peps).
-	# But we're not going to check this just now.
 	foreach my $protein (@remaining_proteins) {
 	  my $prot_href = $proteins_href->{$protein};
 	  my $this_prob = $prot_href->{probability};
 	  if ($this_prob > 0.0) {
 	    $prot_href->{presence_level} = "possibly_disting";
 	  } else {
-	    $prot_href->{presence_level} = "subsumed";
+            # If P=0, we'll call it subsumed if one protein in its
+            # "subsuming_protein_entry" is in Atlas,
+            # otherwise we'll call it possibly distinguished.
+            # On test data, we were always able to find one protein from
+            #  subsuming_protein_entry among Atlas prots.
+            # For some P=0, there is no subsuming_protein_entry
+            #  attribute -- seems a ProtPro bug.
+            #  We will call these subsumed.
+            my $subsuming_proteins = $prot_href->{subsuming_protein_entry};
+            my @subsuming_proteins = split(/ /,$subsuming_proteins);
+	    my @matches;
+            if ($subsuming_proteins ne "") {
+	      @matches = ();
+              for my $subsuming_prot (@subsuming_proteins) {
+                my @match = grep /^$subsuming_prot$/, @protein_list;
+		splice (@matches, 0, 0, @match);
+              }
+            }
+            my $nmatches = scalar(@matches);
+            my $nsubsuming = scalar(@subsuming_proteins);
+            if ( $nmatches > 0 || !$nsubsuming) {
+	      $prot_href->{presence_level} = "subsumed";
+            } else {
+	      $prot_href->{presence_level} = "possibly_disting";
+            }
 	  }
 	}
       }
@@ -1703,11 +1747,9 @@ sub main {
 
     #### Write the protein identlist and relationship files.
     #### This is info on any protein that any atlas peptide maps to.
-    my $prot_identlist_file = "DATA_FILES/PeptideAtlasInput.PAprotIdentlist";
-    my $relationship_file = "DATA_FILES/PeptideAtlasInput.PAprotRelationships";
+    my $prot_identlist_file = "DATA_FILES/PeptideAtlasInput.PAprotlist";
     writeProtIdentificationListFile(
       output_file => $prot_identlist_file,
-      relationship_file => $relationship_file,
       ProteinProphet_prot_data => $CONTENT_HANDLER->{ProteinProphet_prot_data},
 	# hashes protID to group. Group contains all protein info.
       ProteinProphet_group_data =>
@@ -1715,92 +1757,95 @@ sub main {
     );
   }
 
-  #### Open APD format TSV file for writing
-  my $output_tsv_file = $OPTIONS{output_file} || 'PeptideAtlasInput.tsv';
-  openAPDFormatFile(
-    output_file => $output_tsv_file,
-  );
+  unless ($protlist_only) {
 
-
-  #### Open PeptideAtlas XML format file for writing
-  my $output_PAxml_file = $output_tsv_file;
-  $output_PAxml_file =~ s/\.tsv$//i;
-  $output_PAxml_file .= '.PAxml';
-  openPAxmlFile(
-    output_file => $output_PAxml_file,
-    FDR_threshold => $CONTENT_HANDLER->{FDR_threshold},
-  );
-
-
-  #### If we have decoy corrections, apply them and write out a new file
-  if (%decoy_corrections) {
-    my $output_file = $sorted_identlist_file;
-    $output_file =~ s/sorted/srtcor/;
-    apply_decoy_corrections(
-      input_file => $sorted_identlist_file,
-      output_file => $output_file,
-      decoy_corrections => \%decoy_corrections,
+    #### Open APD format TSV file for writing
+    my $output_tsv_file = $OPTIONS{output_file} || 'PeptideAtlasInput.tsv';
+    openAPDFormatFile(
+      output_file => $output_tsv_file,
     );
-    $sorted_identlist_file = $output_file;
-  }
 
 
-  #### Open the combined, sorted peptide identlist file
-  open(INFILE,$sorted_identlist_file) ||
-    die("ERROR: Unable to open for reading '$sorted_identlist_file'");
+    #### Open PeptideAtlas XML format file for writing
+    my $output_PAxml_file = $output_tsv_file;
+    $output_PAxml_file =~ s/\.tsv$//i;
+    $output_PAxml_file .= '.PAxml';
+    openPAxmlFile(
+      output_file => $output_PAxml_file,
+      FDR_threshold => $CONTENT_HANDLER->{FDR_threshold},
+    );
 
 
-  #### Loop through all rows, grouping by peptide sequence, writing
-  #### out information for each group of peptide sequence
-  my $prev_peptide_sequence = '';
-  my $done = 0;
-  my @rows;
-  while (! $done) {
-    my $line = <INFILE>;
-    my @columns;
-    my $peptide_sequence = 'xxx';
-
-    #### Unless we're at the end of the file
-    if ($line) {
-      chomp($line);
-      @columns = split("\t",$line);
-      $peptide_sequence = $columns[3];
-    }
-
-    #### If we're encountering the new peptide, process and write the previous
-    if ($prev_peptide_sequence && $peptide_sequence ne $prev_peptide_sequence) {
-      my $peptide_summary = coalesceIdentifications(
-        rows => \@rows,
-        column_names => \@column_names,
+    #### If we have decoy corrections, apply them and write out a new file
+    if (%decoy_corrections) {
+      my $output_file = $sorted_identlist_file;
+      $output_file =~ s/sorted/srtcor/;
+      apply_decoy_corrections(
+	input_file => $sorted_identlist_file,
+	output_file => $output_file,
+	decoy_corrections => \%decoy_corrections,
       );
-      writeToAPDFormatFile(
-        peptide_summary => $peptide_summary,
-      );
-      writeToPAxmlFile(
-        peptide_summary => $peptide_summary,
-      );
-      $prev_peptide_sequence = $peptide_sequence;
-      @rows = ();
+      $sorted_identlist_file = $output_file;
     }
 
-    #### If there is no peptide sequence, the we're at the end of the file
-    if ($peptide_sequence eq 'xxx') {
-      last;
+
+    #### Open the combined, sorted peptide identlist file
+    open(INFILE,$sorted_identlist_file) ||
+      die("ERROR: Unable to open for reading '$sorted_identlist_file'");
+
+
+    #### Loop through all rows, grouping by peptide sequence, writing
+    #### out information for each group of peptide sequence
+    my $prev_peptide_sequence = '';
+    my $done = 0;
+    my @rows;
+    while (! $done) {
+      my $line = <INFILE>;
+      my @columns;
+      my $peptide_sequence = 'xxx';
+
+      #### Unless we're at the end of the file
+      if ($line) {
+	chomp($line);
+	@columns = split("\t",$line);
+	$peptide_sequence = $columns[3];
+      }
+
+      #### If we're encountering the new peptide, process and write the previous
+      if ($prev_peptide_sequence && $peptide_sequence ne $prev_peptide_sequence) {
+	my $peptide_summary = coalesceIdentifications(
+	  rows => \@rows,
+	  column_names => \@column_names,
+	);
+	writeToAPDFormatFile(
+	  peptide_summary => $peptide_summary,
+	);
+	writeToPAxmlFile(
+	  peptide_summary => $peptide_summary,
+	);
+	$prev_peptide_sequence = $peptide_sequence;
+	@rows = ();
+      }
+
+      #### If there is no peptide sequence, the we're at the end of the file
+      if ($peptide_sequence eq 'xxx') {
+	last;
+      }
+
+      push(@rows,\@columns);
+
+      #### Needed for the very first row
+      unless ($prev_peptide_sequence) {
+	$prev_peptide_sequence = $peptide_sequence;
+      }
+
     }
 
-    push(@rows,\@columns);
 
-    #### Needed for the very first row
-    unless ($prev_peptide_sequence) {
-      $prev_peptide_sequence = $peptide_sequence;
-    }
-
-  }
-
-
-  #### Close files
-  closeAPDFormatFile();
-  closePAxmlFile();
+    #### Close files
+    closeAPDFormatFile();
+    closePAxmlFile();
+  } # end unless $protlist_only
 
 
   #### Write out information about the objects we've loaded if verbose
@@ -2121,29 +2166,14 @@ sub writePepIdentificationListFile {
 sub writeProtIdentificationListFile {
   my %args = @_;
   my $output_file = $args{'output_file'}
-    || die("No protIdentlist file provided");
-  my $relationship_file = $args{'relationship_file'}
-    || die("No protein relationships file provided");
-  #my $pep_identification_list = $args{'pep_identification_list'}
-    #|| die("No pep_identification_list provided");
+    || die("No protlist file provided");
   my $ProteinProphet_prot_data = $args{'ProteinProphet_prot_data'}
     || die("No ProteinProphet_prot_data provided");
   my $ProteinProphet_group_data = $args{'ProteinProphet_group_data'}
     || die("No ProteinProphet_group_data provided");
 
-  # OBSOLETE 4/26/09
-  # For each identified peptide, record the protein group corresponding
-  # to its protein identification.
-  #foreach my $pep_id (@{$pep_identification_list}) {
-    #my $prot_name = $pep_id->[10];
-    #my $group_num = $ProteinProphet_prot_data->{group_hash}->{$prot_name};
-    #$ProteinProphet_group_data->{$group_num}->{needed} = 1;
-  #}
-
   open (OUTFILE, ">$output_file");
   print "Opening output file $output_file.\n";
-  open (RELFILE, ">$relationship_file");
-  print "Opening output file $relationship_file.\n";
 
   # For each protein in the atlas
   my $group_num;
@@ -2153,13 +2183,16 @@ sub writeProtIdentificationListFile {
     # Then look up its info in ProteinProphet_group_data and print it.
     my $prot_href = $ProteinProphet_group_data->{$group_num}->{proteins}
         ->{$prot_name};
-    print OUTFILE "$group_num,$prot_name,$prot_href->{probability},".
-	 "$prot_href->{confidence},$prot_href->{presence_level}\n";
-    # also, write the indistinguishables to the relationship file
+
+    # print, in one line, info about this protein and its indistinguishables
+    # to the protlist file
+    print OUTFILE "$group_num,$prot_name";
     my @indis_list = keys(%{$prot_href->{indist_prots}});
     foreach my $indis (@indis_list) {
-      print RELFILE "$prot_name,$indis,indistinguishable\n";
+      print OUTFILE " $indis";
     }
+    print OUTFILE ",$prot_href->{probability},".
+	 "$prot_href->{confidence},$prot_href->{presence_level}\n";
   }
 } # end writeProtIdentificationListFile
 
