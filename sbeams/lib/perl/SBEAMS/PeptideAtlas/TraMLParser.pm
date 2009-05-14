@@ -33,14 +33,15 @@ my %pubs;
 my %sw;
 # Hash of proteins
 my %prots;
-# Hash of proteins
-my %prots;
+# Hash of peptides
+my %peps;
 # Hash of instruments
 my %instrs;
 # Hash of molecules
 my %mols;
 
 # current content accumulator
+my $tree = 0;
 my $current = {};
 my %current;
 my @curr_element;
@@ -73,7 +74,6 @@ sub set_file {
   my $self = shift;
   my %args = @_;
   return undef unless $args{file};
-  print STDERR "File is $args{file}\n";
   open( INFIL, "$args{file}" ) || die "Unable to open file $args{file}";
   {
     undef local $/;
@@ -141,12 +141,12 @@ sub fetch_url {
 sub _start {
   my $ex = shift;
   my $element = shift;
+  my $num = get_num(); 
   my %attrs = @_;
-#  print "Elem is $element\n";
-#  print "attrs are :\n";
-#  for my $k ( keys ( %attrs ) ) { print "\t$k => $attrs{$k}\n"; }
+#  print "Elem is $element\n"; print "attrs are :\n"; for my $k ( keys ( %attrs ) ) { print "\t$k => $attrs{$k}\n"; }
 
   if ( $element !~ /^cvParam$/i ) {
+    print ' ' x $num . $element ."\n" if $tree;
     push @curr_element, $element;
 #    print "element hash has " . scalar( @curr_element ) . " elements, the last of which is $curr_element[$#curr_element]\n";
   } else {
@@ -165,6 +165,8 @@ sub _start {
     $mols{$attrs{id}} = {};
     $current{molecule} = 'peptide'; 
     $current{peptide} = $attrs{id}; 
+    $mols{$current{peptide}}->{modifiedSequence} = $attrs{modifiedSequence};
+
   } elsif ( $element =~ /^retentionTime$/i ) {
     if ( $current{molecule} eq 'peptide' ) {
       $mols{$current{peptide}}->{retentionTime} = $attrs{localRetentionTime};
@@ -172,12 +174,23 @@ sub _start {
   } elsif ( $element =~ /^transition$/i ) {
     $trans = \%attrs;
     $trans->{retentionTime} = $mols{$attrs{peptideRef}}->{retentionTime};
+    $trans->{modifiedSequence} = $mols{$attrs{peptideRef}}->{modifiedSequence};
   } elsif ( $element =~ /^prediction$/i ) {
     $trans->{contactName} = $contacts{$attrs{contactRef}}->{'contact name'};
     $trans->{relativeIntensity} = $attrs{relativeIntensity};
+  } elsif ( $element =~ /^precursor$/i ) {
+    $trans->{precursorCharge} = $attrs{charge};
+    $trans->{precursorMz} = $attrs{mz};
+  } elsif ( $element =~ /^product$/i ) {
+    $trans->{fragmentMz} = $attrs{mz};
+    $trans->{fragmentCharge} = $attrs{charge};
   } elsif ( $element =~ /^configuration$/i ) {
     $trans->{collisionEnergy} = $attrs{collisionEnergy};
     $trans->{instrument} = $attrs{instrumentRef};
+  } elsif ( $element =~ /^interpretation$/i ) {
+    if ( $attrs{primary} && $attrs{primary} eq 'true' ) {
+      $trans->{fragmentType} = $attrs{productSeries} . $attrs{productOrdinal};
+    }
   } elsif ( $element =~ /^validation$/i ) {
     $trans->{relativeIntensity} = $attrs{relativeIntensity};
     $trans->{transitionRank} = $attrs{recommendedTransitionRank};
@@ -190,17 +203,31 @@ sub handleCV {
   my $attrs = shift;
 #  print "CV param for $curr_element[$#curr_element]:\n";
 #  for my $k ( keys ( %$attrs ) ) { print "$k => $attrs->{$k}\n"; }
+  my $num = get_num( 1 );
+  print ' ' x $num . '/' . $attrs->{name} . ' => ' . $attrs->{value} ."\n" if $tree;
   if ( $curr_element[$#curr_element] =~ /^contact$/i ) {
     $contacts{$current{contact}}->{$attrs->{name}} = $attrs->{value};
+  } elsif (   $curr_element[$#curr_element] =~ /^configuration$/i ) {
+    if ( $attrs->{name} && $attrs->{name} eq 'collision energy' ) {
+      $mols{$current{peptide}}->{collisionEnergy} = $attrs->{value};
+      $trans->{collisionEnergy} = $attrs->{value};
+    }
   }
 }
 
+sub get_num {
+  my $boost = shift || 0;
+  my $num = scalar( @curr_element );
+  return $num + $boost;
+}
 
 sub _end {
   my $ex = shift;
   my $element = shift;
   if ( $element !~ /^cvParam$/i ) {
     my $top = pop @curr_element; 
+    my $num = get_num( );
+    print ' ' x $num . '/' . $top ."\n" if $tree;
 #    print "$top is done\n";
     $current = {};
   } else {
