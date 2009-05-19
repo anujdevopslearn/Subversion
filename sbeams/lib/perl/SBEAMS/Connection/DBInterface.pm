@@ -7190,7 +7190,7 @@ sub addUserEmail {
                                           PK_value=>$args{contact_id},
 #                                         testonly => 1,
 					  verbose => 0,
-		 		          print_SQL => 1,
+		 		          print_SQL => 0,
                                           add_audit_parameters => 1 );
 
   } else {
