@@ -114,7 +114,7 @@ sub main {
   my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
-  #$sbeams->printDebuggingInfo($q);
+#  $sbeams->printDebuggingInfo($q);
 
 
   #### Process generic "state" parameters before we start
@@ -126,6 +126,20 @@ sub main {
     print_output_mode_data(parameters_ref=>\%parameters);
   }else{
     $sbeamsMOD->printPageHeader();
+    if ($parameters{email}) {
+      $current_contact_id = $sbeams->getCurrent_contact_id();
+      if ($parameters{email} =~ m/(\w[-.\w]+\@\w[-.\w]+\.\w{2,4})/) {
+        my $contact_id = $sbeams->addUserEmail(contact_id => $current_contact_id,
+                                                email => $parameters{email});
+        if ($contact_id ne $current_contact_id) {
+          $sbeams->handle_error(message=>"Error setting email address. Go back incorrect contact id.  Please send a message to the sbeams adminstrator with this message - $contact_id $current_contact_id.", error_type => 'Invalid value');
+        }
+
+      } else {
+       $sbeams->handle_error(message=> "Invalid Email address.  Please go back and enter a valid email address.",
+                                 error_type=>'Invalid Value');
+      }
+    }
     print_javascript();
     # THIS MAY BREAK IN FUTURE IF YOU TRY TO HAVE THE FORM ON THIS PAGE SUBMIT AND STILL USE THE JOB SELECTION BOXES
     create_javascript_hashes() unless $parameters{'Get_Data'};
@@ -349,6 +363,13 @@ sub handle_request {
   $current_contact_id = $sbeams->getCurrent_contact_id();
   $current_email = $sbeams->getEmail($current_contact_id); 
   if (!$current_email) { 
+    print qq~
+      <form method="post" name="SetEmail">
+        <p>Please enter your current email: <input type="text" name="email" /></p>
+        <input type="submit" />
+      </form>
+    ~;
+    exit;
     $log->error("User $current_username with contact_id $current_contact_id does not have an email in the contact table.");
     die("No email in SBEAMS database.  Please contact an administrator to set your email before using the SolexaTrans Pipeline");
   }
