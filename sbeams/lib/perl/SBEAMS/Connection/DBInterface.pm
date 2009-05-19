@@ -4679,11 +4679,13 @@ sub display_input_form {
   my $mask_user_context = $args{'mask_user_context'};
   my $allow_NOT_flags = $args{'allow_NOT_flags'};
   my $onSubmit = $args{onSubmit} || '';
+  # masks (doesn't print) the query constraints button at the top of a form if you don't have minimum_detail settings
   my $mask_query_constraints = $args{'mask_query_constraints'};
+  # masks (doesn't print) the form start tag in display_input_form
   my $mask_form_start = $args{'mask_form_start'};
   my $id = $args{"id"};
+  # allows user to change form name (note that MainForm is the required name for code that uses refreshDocument)
   my $form_name = $args{"form_name"} || 'MainForm';
-
 
   if ($id) {
     $parameters{id} = $id;
@@ -6879,7 +6881,13 @@ sub linkToColumnText {
   my $text = shift;
   my $col = shift;
   my $tab = shift;
+
+  if ($text =~ /<A HREF *=.*>(.*)<\/A>?/i) {
+    my $link = $1;
+    $text =~ s/<A HREF *=.*<\/A>?/$link/i;
+  }
   $text = $q->escapeHTML( $text );
+
   my $url = "'$HTML_BASE_DIR/cgi/help_popup.cgi?column_name=$col&table_name=$tab'";
   my $link =<<"  END_LINK";
   <SPAN title="$text" class="popup">
@@ -7157,6 +7165,42 @@ sub addUserLogin {
 	return $id;
 
 }
+
+sub addUserEmail {
+  my $self = shift;
+  my %args = @_;
+ 
+  my $err;
+  for my $param ( qw( contact_id email  ) ) {
+    unless ( $args{$param} ) {
+      $err = ( $err ) ? $err . ', ' . $param : "Missing required param(s) $param";
+    }
+  }
+  $self->handle_error( message => $err, error_type => 'insufficient_constraints' ) if $err;
+
+  my $id;
+  if ($args{"email"} =~ m/(\w[-.\w]+\@\w[-.\w]+\.\w{2,4})/) {
+
+        my %rowdata = ( email => $args{"email"});
+	$id = $self->updateOrInsertRow( table_name => $TB_CONTACT,
+	                                  rowdata_ref => \%rowdata,
+	                                  update => 1,
+  					  return_PK => 1,
+                                          PK => 'contact_id',
+                                          PK_value=>$args{contact_id},
+#                                         testonly => 1,
+					  verbose => 0,
+		 		          print_SQL => 1,
+                                          add_audit_parameters => 1 );
+
+  } else {
+    $self->handle_error( message => "Invalid Email address.  Please go back and enter a valid email address.",
+                         error_type => 'Invalid Value');
+  }
+
+  return $id;
+
+}                                  
 
 sub addUserWorkGroup {
   my $self = shift;
