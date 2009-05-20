@@ -139,14 +139,14 @@ $PROG_NAME is used to find and load Solexa runs into SBEAMS.
 
 Usage: $PROG_NAME --run_mode <add_new, update, delete>  [OPTIONS]
 Options:
-    --verbose <num>    Set verbosity level.  Default is 0
-    --quiet            Set flag to print nothing at all except errors
-    --debug n          Set debug flag    
-    --base_directory   <file path> Override the default directory to start
-                       searching for files
-    --file_extension   <space separated list> Override the default File
-                       extensions to search for.
-    --testonly         Information in the database is not altered
+    --verbose <num>                           Set verbosity level.  Default is 0
+    --quiet                                   Set flag to print nothing at all except errors
+    --debug n                                 Set debug flag    
+    --base_directory <file path>              Override the default directory to start
+                                                searching for files
+    --file_extension <space separated list>   Override the default File
+                                                extensions to search for.
+    --testonly                                Information in the database is not altered
 
 Run Mode Notes:
  add_new : will only upload new files if the file_root name is unique
@@ -180,20 +180,17 @@ Examples;
 1) ./$PROG_NAME --run_mode add_new 			        
 
 # will parse the sample tag information and stomp the data in the database 	  
-2) ./$PROG_NAME --run_mode update --method set_ss_sample_tag   
-
-3) ./$PROG_NAME --run_mode update --method set_ss_sample_tag --run_id 507,508
-
-4) ./$PROG_NAME --run_mode update --method show_all_methods
+# update will not change project permissions - use update_project_permission.pl or SBEAMS web interface
+2) ./$PROG_NAME --run_mode update
 
 # Delete the run with the file root given but LEAVES the sample
-5) ./$PROG_NAME --run_mode delete --run 20040609_02_LPS1-50	
+3) ./$PROG_NAME --run_mode delete -
 
-# removes both the run and sample records for the two root_file names
-6) ./$PROG_NAME --run_mode delete --both 20040609_02_LPS1-40 20040609_02_LPS1-50	
+# removes both the run and sample records
+4) ./$PROG_NAME --run_mode delete 
 
-#REMOVES ALL RUNS AND SAMPLES....Becareful
-7) ./$PROG_NAME --run_mode delete --delete_all YES			
+#REMOVES ALL RUNS AND SAMPLES....Be careful
+5) ./$PROG_NAME --run_mode delete --delete_all YES			
 
 EOU
 
@@ -203,7 +200,7 @@ unless (
     \%OPTIONS,  "run_mode:s",       "verbose:i",    "quiet",
     "debug:i",  "run:s",          "both:s",       "delete_all:s",
     "method:s", "base_directory:s", "file_types:s", "testonly",
-    "run_id:s"
+    "run_id:s", 
   )
   )
 {
@@ -232,18 +229,15 @@ unless ($val) {
   exit;
 }
 
-if ( $RUN_MODE eq 'update' )
-{    #if update mode check to see if --method <name> is set correctly
-  unless ( $METHOD =~ /^set/ || $METHOD =~ /^show/ ) {
-    print
-"\n*** Must provide a --method command line argument when updating data ***$USAGE\n";
-    exit;
-
-  }
-
-  check_setters($METHOD);
-
-}
+#if ( $RUN_MODE eq 'update' )
+#{    #if update mode check to see if --method <name> is set correctly
+#  unless ( $METHOD =~ /^set/ || $METHOD =~ /^show/ ) {
+#    print
+#"\n*** Must provide a --method command line argument when updating data ***$USAGE\n";
+#    exit;
+#  }
+#  check_setters($METHOD);
+#}
 
 ##############################
 ##Setup a few global variables
@@ -383,7 +377,8 @@ sub add_slimseq_information {
   my @project_summaries = request_summary_json('projects');
 
   foreach my $project_summary (@project_summaries) {
-    $sbeams->initiate_transaction();
+#    print "beginning transaction\n";
+#    $sbeams->initiate_transaction();
     my $ERROR = '';  # error flag.  Used to escape from foreach loops if there's an error in the project.
     my $slimseq_project_id = $project_summary->{"id"};
 
@@ -391,7 +386,11 @@ sub add_slimseq_information {
     my @sample_uris = sort {$a cmp $b} @{$project{"sample_uris"}};
     my $project_tag = $project{"file_folder"};
     my $project_name = $project{"name"};
-    if (!$project_tag) { $project_tag = $project_name; }
+    if (!$project_tag) { 
+      $project_tag = $project_name; 
+      $project_tag =~ s/ /_/g;
+      $project_tag =~ s/!-~//g;
+    }
  
     my $sbeams_project_id = $utilities->check_sbeams_project(tag => $project_tag, name => $project_name);
     my @samples;   # cache samples so we don't have to request the JSON again
@@ -400,9 +399,14 @@ sub add_slimseq_information {
       push(@samples, \%sample);
     }     
 
+    if (scalar(@samples) == 0) {
+      print "No samples for current project, skipping insert\n";
+      next;
+    }
+
     # if there is no project we need to get the first sample from JSON
     # because the project doesn't contain user information in SLIMseq
-    unless ($sbeams_project_id) {
+    if (!$sbeams_project_id) {
 	print "Adding project $project_name $project_tag\n" if $VERBOSE >= 10;
 	my $cscnt = 0;
         my ($first_name, $last_name);
@@ -423,6 +427,7 @@ sub add_slimseq_information {
 	if ($ERROR) {
           print "ERROR WITH PROJECT - $project_name.  Project information not added.\n";
           print $ERROR."\n";
+#          $sbeams->
 	  next;
 	}
 
@@ -548,7 +553,9 @@ sub add_slimseq_information {
 
             $sbeams->update_group_permissions("project_id" => $sbeams_project_id,
 		                              "ref_parameters" => {"groupName0" => $sbeams_wg_id,
-                                              "groupPriv0" => '25'});
+                                              "groupPriv0" => '25'},
+                                              testonly => $TESTONLY
+                                              );
 
             $sbeams_gpp_id = $utilities->check_sbeams_group_project_permission("work_group_id" => $sbeams_wg_id,
                                                                                "project_id" => $sbeams_project_id);
@@ -559,31 +566,32 @@ sub add_slimseq_information {
 
           }
         
-          # check that solexatrans_user is permitted - this may need a flag to enable/disable
-          # or it may need to be commented out based on user desires - allows solexatrans_users
+          # check that solexatrans_admin is permitted - this may need a flag to enable/disable
+          # or it may need to be commented out based on user desires - allows solexatrans_admin
           # to read all solexatrans projects
-#          my $sbeams_stwg_id = $utilities->check_sbeams_work_group("name" => 'solexatrans_user');
-#          if ($sbeams_stwg_id) {
-#            my $sbeams_stgpp_id = $utilities->check_sbeams_group_project_permission("work_group_id" => $sbeams_stwg_id,
-#                                                                                    "project_id" => $sbeams_project_id);
-#            if (!$sbeams_stgpp_id) {
-#              print "Creating link between project $sbeams_project_id and solexatrans_user work_group $sbeams_stwg_id".
-#                    " in the group_project_permissions table\n" if $VERBOSE > 10;
-#
-#              $sbeams->update_group_permissions("project_id" => $sbeams_project_id,
-#                                                "ref_parameters" => {"groupName0" => $sbeams_stwg_id,
-#                                                "groupPriv0" => '40'});
-#
-#              $sbeams_stgpp_id = $utilities->check_sbeams_group_project_permission("work_group_id" => $sbeams_stwg_id,
-#                                                                                   "project_id" => $sbeams_project_id);
-#
-#              if ($TESTONLY) { $sbeams_stgpp_id = int(rand(1000)); }
-#              die "Something went wrong in adding group permission for workgroup $sbeams_stwg_id to ".
-#                  "project $sbeams_project_id in solexatrans\n" unless $sbeams_stgpp_id;
-#
-#            }
- #         }
-#
+          my $sbeams_stwg_id = $utilities->check_sbeams_work_group("name" => 'solexatrans_admin');
+          if ($sbeams_stwg_id) {
+            my $sbeams_stgpp_id = $utilities->check_sbeams_group_project_permission("work_group_id" => $sbeams_stwg_id,
+                                                                                    "project_id" => $sbeams_project_id);
+            if (!$sbeams_stgpp_id) {
+              print "Creating link between project $sbeams_project_id and solexatrans_admin work_group $sbeams_stwg_id".
+                    " in the group_project_permissions table\n" if $VERBOSE > 10;
+
+              $sbeams->update_group_permissions("project_id" => $sbeams_project_id,
+                                                "ref_parameters" => {"groupName0" => $sbeams_stwg_id,
+                                                "groupPriv0" => '40'},
+                                                testonly => $TESTONLY);
+
+              $sbeams_stgpp_id = $utilities->check_sbeams_group_project_permission("work_group_id" => $sbeams_stwg_id,
+                                                                                   "project_id" => $sbeams_project_id);
+
+              if ($TESTONLY) { $sbeams_stgpp_id = int(rand(1000)); }
+              die "Something went wrong in adding group permission for workgroup $sbeams_stwg_id to ".
+                  "project $sbeams_project_id in solexatrans\n" unless $sbeams_stgpp_id;
+
+            }
+         }
+
         } else {  # can't find a sbeams work_group_id
           print "WARNING: Could not find group for $project_lab_name - an admin must add this".
           " group to the work_group table in SBEAMS and then add an entry into the group_project_permission ".
@@ -592,6 +600,21 @@ sub add_slimseq_information {
        } # end if sbeams_wg_id
 
     } # end insert project
+     elsif ($RUN_MODE eq 'update') {
+          print "Updating project ".$project_name."\n" if ($VERBOSE >=20);
+
+          my %project = ( 
+                          'name' => $project_name,
+                          'project_tag' => $project_tag
+                        );
+
+
+          update_database('TABLE_NAME' => 'project',
+                          'ID' => $sbeams_project_id,
+                          'PARAMS' => \%project
+                          );
+    } # end update project
+
 
     # so now we have inserted the project and need to continue down the JSON entry to insert samples
     foreach my $sampleRef (@samples) {
@@ -605,8 +628,8 @@ sub add_slimseq_information {
       next unless $num_flow_cell_lanes > 0;
 
       # CHECK to see if sample is in the database
-      my $sbeams_sample_id = $utilities->check_sbeams_sample("slimseq_id" => $sample{"id"}, 
-							     "desc" => $sample{"sample_description"});
+      my $sbeams_sample_id = $utilities->check_sbeams_sample("slimseq_id" => $sample{"id"});
+
       if (!$sbeams_sample_id) {
 	# COLLECT INFORMATION FOR INSERTING A SAMPLE
 
@@ -634,7 +657,7 @@ sub add_slimseq_information {
          
           $sbeams_spk_id = $utilities->insert_sample_prep_kit("slimseq_spk_id" => $slimseq_spk_id,
 							      "name" => $slimseq_spk{"name"},
-							      "restriction_enzyme" => $slimseq_spk{"restriction_enzyme"}
+							      "restriction_enzyme" => $slimseq_spk{"restriction_enzyme"},
 							     );
           die "Cannot insert a sample_prep_kit into solexatrans with SLIMseq ID $slimseq_spk_id\n" if !$sbeams_spk_id;
           print "Finished inserting Sample Prep Kit with id $sbeams_spk_id\n" if $VERBOSE > 0;
@@ -666,6 +689,25 @@ sub add_slimseq_information {
         print "Finished inserting sample ".$sample{"sample_description"}." in SBEAMS - got sbeams_sample_id ".
               $sbeams_sample_id." from SBEAMS database\n" if $VERBOSE >= 20;
       } # end insert sample
+        elsif ($sbeams_sample_id && $RUN_MODE eq 'update') {
+          print "Updating sample ".$sample{"id"}."\n" if ($VERBOSE >=20);
+
+          # map slimseq keys to sbeams keys
+          # sample_tag = name_on_tube
+          # full_sample_name = sample_description
+          $sample{'sample_tag'} = $sample{'name_on_tube'};
+          $sample{'full_sample_name'} = $sample{'sample_description'};
+          $sample{'slimseq_sample_id'} = $sample{'id'};
+          delete $sample{'id'};
+          delete $sample{'name_on_tube'};
+          delete $sample{'sample_description'};
+          $sample{'comment'} = 'This record was automatically updated based on a SLIMseq record by LoadSolexa.';
+
+          update_database('TABLE_NAME' => "ST_SOLEXA_SAMPLE",
+                          'ID' => $sbeams_sample_id,
+                          'PARAMS' => \%sample
+                          );
+      } # end update sample
 
 
       foreach my $flow_cell_lane_uri (@$flow_cell_lane_uris) {  # go through all flow cells lanes
@@ -688,6 +730,12 @@ sub add_slimseq_information {
           print "Adding a new Flow Cell - ".$flow_cell{"name"}."\n" if ($VERBOSE >=20);
           $sbeams_fc_id = $utilities->insert_flow_cell(%flow_cell);
           die $sbeams_fc_id if $sbeams_fc_id =~ /ERROR/;
+        } elsif ($sbeams_fc_id && $RUN_MODE eq 'update') {
+          print "Updating Flow Cell - ".$flow_cell{"name"}."\n" if ($VERBOSE >= 20);
+          update_database('TABLE_NAME' => "ST_SOLEXA_FLOW_CELL",
+                          'ID' => $flow_cell{"id"},
+                          'PARAMS' => \%flow_cell
+                        );
         }
 
         #check for the instrument
@@ -700,6 +748,12 @@ sub add_slimseq_information {
           print "Adding a new Instrument - ".$instrument{"name"}."\n" if ($VERBOSE >=20);
           $sbeams_instrument_id = $utilities->insert_instrument(%instrument);
           die "$sbeams_instrument_id" if ($sbeams_instrument_id =~ /ERROR/);
+        } elsif ($sbeams_instrument_id && $RUN_MODE eq 'update') {
+          print "Updating Instrument - ".$instrument{"name"}."\n" if ($VERBOSE >= 20);
+          update_database('TABLE_NAME' => "ST_SOLEXA_INSTRUMENT",
+                          'ID' => $instrument{"id"},
+                          'PARAMS' => \%instrument
+                          );
         }
        
         #check for a run that connects the instrument to the flow cell 
@@ -727,11 +781,16 @@ sub add_slimseq_information {
         # insert a flow cell lane if we need to
         if (!$sbeams_fcl_id) { 
           print "Adding a new Solexa Flow Cell Lane entry with id ".$flow_cell_lane{"id"}."\n" if $VERBOSE > 0;
-print "sbeams_fc_id is $sbeams_fc_id flow cell lane is \n";
-print Dumper \%flow_cell_lane;
+          print "sbeams_fc_id is $sbeams_fc_id flow cell lane is \n";
           $sbeams_fcl_id = $utilities->insert_flow_cell_lane(%flow_cell_lane,
                                                              "sbeams_fc_id" => $sbeams_fc_id);
           die "$sbeams_fcl_id" if ($sbeams_fcl_id =~ /ERROR/);
+        } elsif ($sbeams_fcl_id && $RUN_MODE eq 'update') {
+          print "Updating Solexa Flow Cell Lane - ".$flow_cell_lane{"id"}."\n" if $VERBOSE >= 20;
+          update_database('TABLE_NAME' => "ST_SOLEXA_FLOW_CELL_LANE",
+                          'ID' => $sbeams_fcl_id,
+                          'PARAMS' => \%flow_cell_lane
+                        );
         }
 
         print "checking flow cell lane to sample\n" if $VERBOSE > 0;
@@ -740,6 +799,7 @@ print Dumper \%flow_cell_lane;
                 $utilities->check_sbeams_flow_cell_lane_to_sample("sbeams_fcl_id" => $sbeams_fcl_id,
                                                                   "sbeams_sample_id" => $sbeams_sample_id);
 
+        print "Found flow_cell_lane_to_sample entries: $sbeams_fcl_to_sample_sample_id $sbeams_fcl_to_sample_fcl_id\n" if $VERBOSE > 0;
         # insert a linker table entry
         if (!$sbeams_fcl_to_sample_sample_id && !$sbeams_fcl_to_sample_fcl_id) {
            print "Adding a new Flow Cell Lane Samples (Linker table) entry for Flow Cell Lane $sbeams_fcl_id ".
@@ -747,15 +807,21 @@ print Dumper \%flow_cell_lane;
            ($sbeams_fcl_to_sample_sample_id, $sbeams_fcl_to_sample_fcl_id) = 
                 $utilities->insert_flow_cell_lane_to_sample("sbeams_fcl_id" => $sbeams_fcl_id,
                                                             "sbeams_sample_id" => $sbeams_sample_id,
-                                                            "testonly" => $TESTONLY);
+                                                            );
 
            die "$sbeams_fcl_to_sample_sample_id" if ($sbeams_fcl_to_sample_sample_id =~ /ERROR/); 
         }
 
+
+        # GET READY TO INSERT A SPR ENTRY
+
+    #ELAND
         my $eland_output_file_id = $utilities->check_sbeams_file_path("file_path" => $flow_cell_lane{"eland_output_file"});
-        print "Found SBEAMS ELAND output file id $eland_output_file_id for file ".$flow_cell_lane{"eland_output_file"}."\n" if $eland_output_file_id && $VERBOSE > 20;
+        print "Found SBEAMS ELAND output file id $eland_output_file_id for file ".$flow_cell_lane{"eland_output_file"}."\n" 
+            if $eland_output_file_id && $VERBOSE > 20;
+
         if (!$eland_output_file_id) {
-           print "Adding a new ELAND output file entry for Flow Cell Lane $sbeams_fcl_id ".
+          print "Adding a new ELAND output file entry for Flow Cell Lane $sbeams_fcl_id ".
                  " and Sample ID $sbeams_sample_id\n" if $VERBOSE > 0;
           # Server names are entered via the POPULATE SQL file at database creation.
           # RUNE is where /solexa mounts are from as of 02/01/2009.
@@ -772,6 +838,7 @@ print Dumper \%flow_cell_lane;
 
         my $summary_file_id = $utilities->check_sbeams_file_path("file_path" => $flow_cell_lane{"summary_file"});
         print "Found SBEAMS summary file id $summary_file_id for file ".$flow_cell_lane{"summary_file"}."\n" if $summary_file_id && $VERBOSE > 20;
+
         if (!$summary_file_id) {
            print "Adding a new Summary file entry for Flow Cell Lane $sbeams_fcl_id ".
                  " and Sample ID $sbeams_sample_id\n" if $VERBOSE > 0;
@@ -790,6 +857,7 @@ print Dumper \%flow_cell_lane;
 
         my $raw_data_id = $utilities->check_sbeams_file_path("file_path" => $flow_cell_lane{"raw_data_path"});
         print "Found SBEAMS raw data path id $raw_data_id for file ".$flow_cell_lane{"raw_data_path"}."\n" if $raw_data_id && $VERBOSE > 20;
+
         if (!$raw_data_id) {
            print "Adding a new Raw Data path entry for Flow Cell Lane $sbeams_fcl_id ".
                  " and Sample ID $sbeams_sample_id\n" if $VERBOSE > 0;
@@ -812,31 +880,54 @@ print Dumper \%flow_cell_lane;
                                                                      "summary_file_id" => $summary_file_id,
                                                                      "raw_data_path_id" => $raw_data_id
                                                                     );
-        if (!$sbeams_spr_id) {
-           print "Adding a new Pipeline Results entry for Flow Cell Lane $sbeams_fcl_id ".
-                 " and Sample ID $sbeams_sample_id\n" if $VERBOSE > 0;
 
-           # have to remove the time zone component of the datetime 2008/12/18 10:29:40 -0800
-           my $full_updated_at = $flow_cell_lane{"updated_at"};
-           my @date_components = split(/\s+/, $full_updated_at);
-           pop(@date_components);
-           my $slimseq_updated_at = join(" ", @date_components);
-           $sbeams_spr_id = $utilities->insert_pipeline_results("sbeams_fcl_id" => $sbeams_fcl_id,
+        # 'Delete' old SPR entries.  This currently works because the SLIMSeq interface only displays
+        # the most current SPR entry.
+        #THIS SHOULD BE CHANGED IF SLIMSEQ GETS CHANGED TO DISPLAY MORE THAN ONE PIPELINE RESULT
+        # get all SPRs for the current flow cell
+        my $spr_ref = $utilities->get_sbeams_spr_by_flow_cell_lane("sbeams_fcl_id" => $sbeams_fcl_id);
+
+        foreach my $spr_entry (@$spr_ref) {
+          my $spr_id = $spr_entry->[0];
+          if ($sbeams_spr_id) {
+            # if there's a current spr id then make sure not to delete that entry
+            if ($spr_id != $sbeams_spr_id) {
+              print "'Deleting' Solexa Pipeline Results entry with id $spr_id since the current entry is $sbeams_spr_id\n";
+              my $rc = $utilities->delete_sbeams_spr('solexa_pipeline_results_id' => $spr_id);
+              if ($rc =~ /ERROR/) { die $rc; }
+            }
+          } else {
+            print "'Deleting' Solexa Pipeline Results entry with id $spr_id since a new entry has to be created.\n";
+            my $rc = $utilities->delete_sbeams_spr('solexa_pipeline_results_id' => $spr_id);
+            if ($rc =~ /ERROR/) { die $rc; }
+          } 
+        }
+
+        if (!$sbeams_spr_id) {
+          print "Adding a new Pipeline Results entry for Flow Cell Lane $sbeams_fcl_id ".
+                " and Sample ID $sbeams_sample_id\n" if $VERBOSE > 0;
+
+          # have to remove the time zone component of the datetime 2008/12/18 10:29:40 -0800
+          my $full_updated_at = $flow_cell_lane{"updated_at"};
+          my @date_components = split(/\s+/, $full_updated_at);
+          pop(@date_components);
+          my $slimseq_updated_at = join(" ", @date_components);
+          $sbeams_spr_id = $utilities->insert_pipeline_results("sbeams_fcl_id" => $sbeams_fcl_id,
                                                                 "eland_output_file_id" => $eland_output_file_id,
                                                                 "summary_file_id" => $summary_file_id,
                                                                 "raw_data_path_id" => $raw_data_id,
 								"slimseq_updated_at" => $slimseq_updated_at,
                                                                 "slimseq_status" => $flow_cell_lane{"status"}
                                                                 );
-           if ($sbeams_spr_id =~ /ERROR/) { die $sbeams_spr_id; }
+          if ($sbeams_spr_id =~ /ERROR/) { die $sbeams_spr_id; }
         }
 
 
       } # end foreach flow_cell_lane_uri
 
     } # end sample
-
-    $sbeams->commit_transaction();
+#    print "committing transcation\n";
+#    $sbeams->commit_transaction();
   } # end project
 }
 
@@ -1005,10 +1096,89 @@ sub get_organization_id {
 
 
 ###############################################################################
-# 
+#  update_database
+# takes in a TABLE_NAME (prepends ST_ to it), a primary ID of that table to update,
+#   and a list of fields in that table to update
+# returns the primary id that was updated back
 ###############################################################################
 
+sub update_database {
+  my %args = @_;
+
+  my $TABLE_NAME = $args{'TABLE_NAME'};
+  my $id = $args{'ID'};
+  my %params = %{$args{'PARAMS'}};
+
+  #### Get the columns and input types for this table/query
+  my @columns;
+  my $PK_COLUMN_NAME;
+  my $sqltable;
+  if ($TABLE_NAME =~ /^ST_/) {
+    @columns = $sbeams_solexa->returnTableInfo($TABLE_NAME,"ordered_columns");
+    ($PK_COLUMN_NAME) = $sbeams_solexa->returnTableInfo($TABLE_NAME, "PK_COLUMN_NAME");
+    $sqltable = '$TB'.$TABLE_NAME;
+  } else {
+    # the sbeams tables are all lower case and caught in Connection.pm, so they need a special case
+    @columns = $sbeams->returnTableInfo($TABLE_NAME,'ordered_columns');
+    ($PK_COLUMN_NAME) = $sbeams->returnTableInfo($TABLE_NAME, "PK_COLUMN_NAME");
+    $sqltable = '$TB_'.uc($TABLE_NAME);
+  }
+    
+
+  print "Found columns ".Dumper(\@columns)." in table $TABLE_NAME with PK COL $PK_COLUMN_NAME\n" if $VERBOSE >=100;
+
+# The following commented section is useful for retrieving the info from the database
+# if we were planning on only updating stuff that had changed
+
+  #### Define the desired columns in the query
+  #["external_identifier",$extid_column,"External Identifier"],
+#  my @column_array;
+#  foreach my $column (@columns) {
+#    my @iarray = ();
+#    push(@iarray, $column);
+#    push(@iarray, $column);
+#    push(@iarray, $column);
+#    push(@column_array, \@iarray);
+#  }
+
+#  my %colname_idx = ();
+#  my @column_titles = ();
+#  my $columns_clause = $sbeams->build_SQL_columns_list(
+#      column_array_ref => \@column_array,
+#      colnameidx_ref => \%colname_idx,
+#      column_titles_ref => \@column_titles
+#      );
+
+  $sqltable =~ s/(\$\w+)/$1/eeg;
+
+  print "Updating table $sqltable\n" if $VERBOSE >= 100;
+  my $rowdata_ref = ();
+
+  foreach my $column (@columns) {
+    $rowdata_ref->{$column} = $params{$column} if $params{$column};
+  }
+  print "Rowdata ref\n" if $VERBOSE >= 100;
+  print Dumper($rowdata_ref) if $VERBOSE >=100;
+
+  die "Missing data to update database - $TABLE_NAME $id" unless $PK_COLUMN_NAME && scalar @columns > 0;
+  my $new_id = $sbeams->updateOrInsertRow(
+      table_name => $sqltable,
+      rowdata_ref => $rowdata_ref,
+      PK => $PK_COLUMN_NAME,
+      return_PK=>1,
+      update=>1,
+      PK_value=>$id,
+      verbose=>$VERBOSE,
+      testonly=>$TESTONLY,
+      add_audit_parameters=>1
+    );
+
+  unless ($new_id){
+    die "ERROR: Could not update database\n";
+  }
+  
+}
 
 
 
-
+1;
