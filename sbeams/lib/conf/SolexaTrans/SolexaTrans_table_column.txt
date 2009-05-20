@@ -1,147 +1,26 @@
 table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
-ST_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	4	0	N		Y							N	N				pkDEFAULT
-ST_biosequence_set	2	project_id	Owner Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id"	
-ST_biosequence_set	3	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism to which the BioSequences in this database belong	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-ST_biosequence_set	4	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
-ST_biosequence_set	5	set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
-ST_biosequence_set	6	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioSequence database		
-ST_biosequence_set	7	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	N	Version of this BioSequence database		
-ST_biosequence_set	8	polymer_type_id	Polymer Type	int	4	0	N		N	BL_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	"Polymer type (e.g. protein, DNA, RNA) for the BioSequences in this database"	"SELECT polymer_type_id, polymer_type_name FROM $TBBL_POLYMER_TYPE ORDER BY sort_order,polymer_type_name"	
-ST_biosequence_set	9	upload_file	Upload file	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
-ST_biosequence_set	10	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
-ST_biosequence_set	11	source_file_date	Source File Date	datetime	8	0	Y		N			N	text	40		N	N	N	Date of the FASTA file at last update		
-ST_biosequence_set	12	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
-ST_biosequence_set	13	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-ST_biosequence_set	14	sort_order	Sort Order	int	4	0	N	10	N			N	text	20		Y	Y	N	Allows the ordering or ranking of Biosequence Sets which is used to break ties for choosing canonical names.  Lower numbers indicate better rank.		
-ST_biosequence_set	15	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-ST_biosequence_set	16	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-ST_biosequence_set	17	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-ST_biosequence_set	18	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-ST_biosequence_set	19	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-ST_biosequence_set	20	record_status	Record Status	char	1	0	N	N	N							N	N				
-ST_dbxref	1	dbxref_id	dbxref ID	int	4	0	N		Y							N	N				pkDEFAULT
-ST_dbxref	2	dbxref_name	CrossRef Name	varchar	50	0	N		N			Y	text	40		Y	Y	N	Name of this Database Cross Reference		
-ST_dbxref	3	dbxref_tag	CrossRef Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this Database Cross Reference		
-ST_dbxref	4	dbxref_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Database Cross Reference		
-ST_dbxref	5	accessor	Accessor	varchar	255	0	N		N			Y	text	50		Y	Y	N	Part of a URL or URI to which an accession number can be appended to get more information about the entity using this cross reference		
-ST_dbxref	6	accessor_suffix	Accessor Suffix	varchar	255	0	Y		N			N	text	50		Y	Y	N	Part of a URL or URI which comes after the accession number to build the full URL to get more information about the entity using this cross reference		
-ST_dbxref	7	uri	URI	varchar	255	0	N		N			Y	text	50		Y	Y	N	External web page or other URI of the database		SELF
-ST_dbxref	8	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-ST_dbxref	9	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
-ST_dbxref	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-ST_dbxref	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-ST_dbxref	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-ST_dbxref	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-ST_dbxref	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-ST_dbxref	15	record_status	Record Status	char	1	0	N	N	N							N	N				
-ST_biosequence	1	biosequence_id	BioSequence ID	int	4	0	N		Y							N	N				pkDEFAULT
-ST_biosequence	2	biosequence_set_id	BioSequence Set	int	4	0	N		N	ST_biosequence_set	biosequence_set_id					N	N	Y	BioSequence Set to which this BioSequence belongs		pkDEFAULT
-ST_biosequence	3	biosequence_name	BioSequence Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of this BioSequence (generally everything before the first space in a FASTA file header line)		
-ST_biosequence	4	biosequence_gene_name	BioSequence Gene Name	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Gene name of this BioSequence if applicable.  Most common gene name if applicable		
-ST_biosequence	5	dbxref_id	Database Cross Reference	int	4	0	Y		N	ST_dbxref	dbxref_id					Y	Y	N	Database cross reference for which the accession number applies		pkDEFAULT
-ST_biosequence	6	biosequence_accession	BioSequence Accession	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Accession number for this BioSequence in some external database designated above		
-ST_biosequence	7	biosequence_desc	Biosequence Description	varchar	1024	0	N		N			Y	text	40		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
-ST_biosequence	8	biosequence_seq	Sequence	text	16	0	Y		N			N	file	40		Y	Y	N	Actual sequence of the BioSequence if known		
-ST_biosequence_property_set	1	biosequence_property_set_id	BioSequence Property Set ID	int	4	0	N		Y							N	N				pkDEFAULT
-ST_biosequence_property_set	2	biosequence_id	BioSequence ID	int	4	0	N		N	ST_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		pkDEFAULT
-ST_biosequence_property_set	3	n_transmembrane_regions	Number of Transmembrane Regions	int	4	0	Y		N							Y	Y	N	Number of transmembrane regions		pkDEFAULT
-ST_biosequence_property_set	4	transmembrane_class	Transmembrane Region Class	varchar	10	0	Y		N			Y	text	50		Y	Y	N	"Class of the transmembrane region.  May be 0, TM, A, S, TM_xS based on output from TMHMM and signalP"		
-ST_biosequence_property_set	5	transmembrane_topology	Transmembrane Region Topology	varchar	1024	0	Y		N			Y	text	20		Y	Y	N	Coding of which residues belong in the transmembrane regions		
-ST_biosequence_property_set	6	has_signal_peptide	Has a Signal Peptide	char	1	0	Y		N			N	text	50		Y	Y	N	"Does this protein have a signal peptide on the end Y/N? (Note that Y means that there is some non-zero probability that it does, not that is necessarily does)"		
-ST_biosequence_property_set	7	has_signal_peptide_probability	Probability that it has a Signal Peptide	real	4	0	Y		N			N	text	50		Y	Y	N	Probability that there is a signal peptide on the end as calculated by SignalP		
-ST_biosequence_property_set	8	signal_peptide_length	Length of the Signal Peptide	int	4	0	Y		N			N	text	50		Y	Y	N	Length in residues of the signal peptide		
-ST_biosequence_property_set	9	signal_peptide_is_cleaved	Signal Peptide gets Cleaved	char	1	0	Y		N			N	text	50		Y	Y	N	Does the signal peptide get cleaved off Y/N?		
-ST_biosequence_property_set	10	genome_build	Genome Build	varchar	50	0	Y		N			N	text	50		Y	Y	N	Genome build name for which the following mapping parameters are valid		
-ST_biosequence_property_set	11	chromosome	Chromosome	varchar	50	0	Y		N			N	text	50		Y	Y	N	Chromosome in which this mapping occurs		
-ST_biosequence_property_set	12	start_in_chromosome	Start Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	Start position of the biosequence in the chromosome		
-ST_biosequence_property_set	13	end_in_chromosome	End Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	End position of the biosequence in the chromosome		
-ST_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"Strand (+,-) of the biosequence in the chromosome"		
-ST_biosequence_property_set	15	isoelectric_point	Isoelectric Point	real	4	0	Y		N			N	text	10		Y	Y	N	Isoelectric Point (pI) of the protein		
-ST_biosequence_property_set	16	fav_codon_frequency	Favorite Codon Frequency	real	4	0	Y		N			N	text	10		Y	Y	N	Favorite Codon Frequency		
-ST_biosequence_property_set	17	duplicate_biosequences	Duplicate Biosequences	varchar	255	0	Y		N			N	text	50		Y	Y	N	Semicolon delimited list of duplicate sequences within the same set		
-ST_biosequence_property_set	18	category	Category	varchar	255	0	Y		N			N	text	50		Y	Y	N	Biosequence category		
-ST_biosequence_tag	1	biosequence_tag_id	Biosequence Tag ID	int	4	0	N		Y			Y				N	N	Y			pkDEFAULT
-ST_biosequence_tag	2	biosequence_id	BioSequence ID	int	4	0	N		N	ST_biosequence	biosequence_id	Y	text			N	N	Y	BioSequence		
-ST_biosequence_tag	3	tag_sequence	Tag Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	N	Actual sequence of the Tag		
-ST_biosequence_tag	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y	N			
-ST_biosequence_tag	5	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N	Y			
-ST_biosequence_tag	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
-ST_biosequence_tag	7	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N	Y			
-ST_biosequence_tag	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
-ST_biosequence_tag	9	record_status	Record Status	char	1	0	N	N	N							N	N	N			
-ST_biosequence_tag_count	1	biosequence_tag_count_id	Biosequence Tag Count ID	int	4	0	N		Y			Y				N	N	Y	Biosequence Tag Count ID		pkDEFAULT
-ST_biosequence_tag_count	2	biosequence_tag_id	Biosequence Tag ID	int	4	0	N		N	ST_biosequence_tag	biosequence_tag_id	Y				N	N	Y	BioSequence Tag ID		
-ST_biosequence_tag_count	3	solexa_pipeline_results_id	Solexa Pipeline Results ID	int	4	0	N		N	ST_solexa_pipeline_results	solexa_pipeline_results_id	Y				Y	N	Y	FK to ST_solexa_pipeline_results.solexa_pipeline_results_id		
-ST_biosequence_tag_count	4	position	Tag Position	int	4	0	Y		N			N	text	10		Y	Y	N	Position of the tag in the biosequence		
-ST_biosequence_tag_count	5	strand	Tag Strand	int	4	0	Y		N			N	text	10		Y	Y	N	Strand of the tag in the biosequence		
-ST_biosequence_tag_count	6	tag_count	Tag Count	int	4	0	Y		N			N	text	10		Y	Y	N	Count of this tag in associated sequencing run		
-ST_biosequence_tag_count	7	tag_count_per_million	Tag Count Per Million	int	4	0	Y		N			N	text	10		Y	Y	N	Count of this tag in associated sequencing run normalized by million		
-ST_biosequence_tag_count	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y	N			
-ST_biosequence_tag_count	9	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N	Y			
-ST_biosequence_tag_count	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
-ST_biosequence_tag_count	11	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N	Y			
-ST_biosequence_tag_count	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
-ST_biosequence_tag_count	13	record_status	Record Status	char	1	0	N	N	N							N	N	N			
-ST_biosequence_tag_ambiguous	1	biosequence_tag_ambiguous_id	Biosequence Tag Ambiguous ID	int	4	0	N		Y			Y				N	N	Y	Biosequence Tag Ambiguous ID		pkDEFAULT
-ST_biosequence_tag_ambiguous	2	biosequence_tag_id	BioSequence ID	int	4	0	N		N	ST_biosequence_tag	biosequence_tag_id	Y				Y	N	Y	FK to ST_biosequence_tag.biosequence_tag_id		
-ST_biosequence_tag_ambiguous	3	solexa_pipeline_results_id	Solexa Pipeline Results ID	int	4	0	N		N	ST_solexa_pipeline_results	solexa_pipeline_results_id	Y				Y	N	Y	FK to ST_solexa_pipeline_results.solexa_pipeline_results_id		
-ST_biosequence_tag_ambiguous	4	tag_sequence	Tag Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	N	Actual sequence of the Tag		
-ST_biosequence_tag_ambiguous	5	tag_input_count	Number of this Tag found in the Input File	int	4	0	N		N				text	10		Y	Y	N	Number of times this tag appears in the input file		
-ST_biosequence_tag_ambiguous	6	position	Position of this tag in the biosequence	int	4	0	N		N				text	10		Y	Y	N	Position of the tag in the biosequence		
-ST_biosequence_tag_ambiguous	7	strand	Tag Strand	int	4	0	N		N				text	10		Y	Y	N	Strand of the tag in the biosequence		
-ST_biosequence_tag_ambiguous	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y	N			
-ST_biosequence_tag_ambiguous	9	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N	Y			
-ST_biosequence_tag_ambiguous	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
-ST_biosequence_tag_ambiguous	11	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N	Y			
-ST_biosequence_tag_ambiguous	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
-ST_biosequence_tag_ambiguous	13	record_status	Record Status	char	1	0	N	N	N							N	N	N			
-ST_query_option	1	query_option_id	Query Option ID	int	4	0	N		Y							N	N				pkDEFAULT
-ST_query_option	2	option_type	Option Type	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Type or category of this option		
-ST_query_option	3	option_key	Option Key	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Key for this key/value pair option		
-ST_query_option	4	option_value	Option Value	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Value of this key/value pair option		
-ST_query_option	5	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
-ST_query_option	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-ST_query_option	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-ST_query_option	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-ST_query_option	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-ST_query_option	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-ST_query_option	11	record_status	Record Status	char	1	0	N	N	N							N	N				
-ST_BrowseBioSequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBST_BIOSEQUENCE_SET ORDER BY sort_order,set_name"	
-ST_BrowseBioSequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-ST_BrowseBioSequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-ST_BrowseBioSequence	4	molecular_function_constraint	Molecular Function Constraint									N	text	40		Y	Y	N	Constraint for the GO Molecular Function. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-ST_BrowseBioSequence	5	biological_process_constraint	Biological Process Constraint									N	text	40		Y	Y	N	Constraint for the GO Biological Process. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-ST_BrowseBioSequence	6	cellular_component_constraint	Cellular Component Constraint									N	text	40		Y	Y	N	Constraint for the GO Cellular Component. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-ST_BrowseBioSequence	7	protein_domain_constraint	Protein Domain Constraint									N	text	40		Y	Y	N	Constraint for the InterPro Protein Domain. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-ST_BrowseBioSequence	8	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	Y	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
-ST_BrowseBioSequence	9	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	Y	N	"Constraint for the number of transmembrane regions (based on a 19-residue wide sliding window of hydropathy indexes above 1.58).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
-ST_BrowseBioSequence	10	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-ST_BrowseBioSequence	11	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-ST_BrowseBioSequence	12	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBST_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"
-ST_BrowseBioSequence	13	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBST_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value"
-ST_BrowseBioSequence	14	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."	
-ST_restriction_enzyme	1	restriction_enzyme_id	Restriction Enzyme ID	int	4	0	N		Y							N	N	Y		
-ST_restriction_enzyme	2	rebase_id	REBASE ID	varchar	255	0	N									Y	Y	N	REBASE ID	
-ST_restriction_enzyme	3	name	Restriction Enzyme Name	varchar	255	0	N									Y	Y	N		
-ST_restriction_enzyme	4	motif	Restriction Enzyme Motif	varchar	255	0	N									Y	Y	N		
-ST_restriction_enzyme	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N		
-ST_restriction_enzyme	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y		
-ST_restriction_enzyme	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N	
-ST_restriction_enzyme	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y	
-ST_restriction_enzyme	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y	
-ST_restriction_enzyme	10	record_status	Record Status	char	1	0	N	N	N							N	N	N	
-ST_solexa_reference_genome	1	solexa_reference_genome_id	Solexa Reference Genome ID	int	4	0	N		Y							N	N	Y	
-ST_solexa_reference_genome	2	name	Solexa Reference Genome Name	varchar	255	0	N									Y	Y	N	
-ST_solexa_reference_genome	3	organism_id	Organism ID	int	4	0	N			ST_organism	organism_id					Y	N	Y	Organism
-ST_solexa_reference_genome	4	fasta_path	Path to FASTA formatted Reference Genome	varchar	255	0	Y									Y	Y	N	
-ST_solexa_reference_genome	5	description	Reference Genome Description	varchar	255	0	Y									Y	Y	N	
-ST_solexa_reference_genome	6	default_genome	Default Reference Genome for this Organism	char	1	0	N	N	N							Y	Y	N	
-ST_solexa_reference_genome	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N	
-ST_solexa_reference_genome	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y	
-ST_solexa_reference_genome	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N	
-ST_solexa_reference_genome	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y	
-ST_solexa_reference_genome	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y	
-ST_solexa_reference_genome	12	record_status	Record Status	char	1	0	N	N	N							N	N	N	
+ST_restriction_enzyme	1	restriction_enzyme_id	Restriction Enzyme ID	int	4	0	N		Y							N	N	Y			
+ST_restriction_enzyme	2	rebase_id	REBASE ID	varchar	255	0	N									Y	Y	N	REBASE ID		
+ST_restriction_enzyme	3	name	Restriction Enzyme Name	varchar	255	0	N									Y	Y	N			
+ST_restriction_enzyme	4	motif	Restriction Enzyme Motif	varchar	255	0	N									Y	Y	N			
+ST_restriction_enzyme	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+ST_restriction_enzyme	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
+ST_restriction_enzyme	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+ST_restriction_enzyme	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
+ST_restriction_enzyme	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
+ST_restriction_enzyme	10	record_status	Record Status	char	1	0	N	N	N							N	N	N			
+ST_solexa_reference_genome	1	solexa_reference_genome_id	Solexa Reference Genome ID	int	4	0	N		Y							N	N	Y			
+ST_solexa_reference_genome	2	name	Solexa Reference Genome Name	varchar	255	0	N									Y	Y	N			
+ST_solexa_reference_genome	3	organism_id	Organism ID	int	4	0	N			ST_organism	organism_id					Y	N	Y	Organism		
+ST_solexa_reference_genome	4	fasta_path	Path to FASTA formatted Reference Genome	varchar	255	0	Y									Y	Y	N			
+ST_solexa_reference_genome	5	description	Reference Genome Description	varchar	255	0	Y									Y	Y	N			
+ST_solexa_reference_genome	6	default_genome	Default Reference Genome for this Organism	char	1	0	N	N	N							Y	Y	N			
+ST_solexa_reference_genome	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+ST_solexa_reference_genome	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
+ST_solexa_reference_genome	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+ST_solexa_reference_genome	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
+ST_solexa_reference_genome	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
+ST_solexa_reference_genome	12	record_status	Record Status	char	1	0	N	N	N							N	N	N			
 ST_solexa_sample_prep_kit	1	solexa_sample_prep_kit_id	Solexa Sample Preparation Kit	int	4	0	N		Y			N				N	N	Y	Solexa kit used for this run		pkDEFAULT
 ST_solexa_sample_prep_kit	2	slimseq_sample_prep_kit_id	SLIMseq Sample Preparation Kit ID	int	4	0	Y		N			Y	text	3		Y	Y	N	SLIMseq Sample Preparation Kit ID		
 ST_solexa_sample_prep_kit	3	name	Solexa Sample Preparation Kit Name	varchar	255	0	N		N			Y	text	25		Y	Y	N	Name of the Solexa Kit used for this run		
@@ -157,32 +36,32 @@ ST_solexa_sample	1	solexa_sample_id	Solexa Sample ID	int	4	0	N		Y			Y				N	N	Y	S
 ST_solexa_sample	2	slimseq_sample_id	SLIMseq Sample ID	int	4	0	Y		N			N				Y	N	N	SLIMseq Sample ID		
 ST_solexa_sample	3	slimseq_project_id	SLIMseq Project ID	int	4	0	N		N							Y	N	N	SLIMseq  project ID		
 ST_solexa_sample	4	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	FK to project.project_id	"SELECT project_id, UL.username || ' - ' || proj.name || ' ( ' || RTRIM(CAST(proj.project_id AS CHAR)) || ' )'   AS name FROM $TB_PROJECT proj JOIN $TB_USER_LOGIN UL ON (proj.PI_contact_id = UL.contact_id)  WHERE  proj.project_id IN ( $accessible_project_ids ) AND proj.project_tag IS NOT NULL AND proj.record_status != 'D' ORDER BY UL.username"	
-ST_solexa_sample	5	sample_tag	Sample Tag	varchar	50	0	N		N			Y	text	50		Y	Y	N	Sample Name.  Keep it short.  Do not use any strange characters like /\*&$() (e.g. NP Epi 03-123)		
-ST_solexa_sample	6	full_sample_name	Full Sample Name	varchar	255	0	Y		N			Y	textarea	3		Y	Y	N	"Full Sample Name.  A longer, less cryptic name should be placed here.  It should be long enough so that someone else can understand quickly the general idea of the sample. (e.g. Epithelial cells FACS sorted from ""normal"" prostate tissue from specimen 03-123)"	
-ST_solexa_sample	7	sample_group_name	Sample Group Name	varchar	50	0	Y		N			Y	text	50		Y	Y	N	Sample Group Name.  Name used to group together biological replicates	
-ST_solexa_sample	8	sample_provider_organization_id	Sample Provider	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	"Provider of this biomaterial (academic department, research lab, vendor, etc.)"	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE O.record_status != 'D' ORDER BY organization"
-ST_solexa_sample	9	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	N	Organism from which the biomaterial was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"
-ST_solexa_sample	10	strain_or_line	Strain or Line	varchar	255	0	Y		N			N	text	50		Y	Y	N	Strain or line of the individual	
-ST_solexa_sample	11	individual	Individual	varchar	255	0	Y		N			N	text	50		Y	Y	N	Identifier or name of the individual organism from which the biomaterial was derived	
-ST_solexa_sample	12	sex_ontology_term_id	Sex	int	4	0	Y		N			N	optionlist			Y	Y	N	Sex of the individual	MANUAL
-ST_solexa_sample	13	age	Age	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Age of the individual at the time of harvest of the biomaterial.  Free form text; include units, developmental stage, and reference point as appropriate (e.g., days since planting, years after birth, minutes after death)"	
-ST_solexa_sample	14	organism_part	Organism Part	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Part of the organism's anatomy from the biomaterial was derived, excludes cells. (e.g., tissue, organ, system, or body location)"	
+ST_solexa_sample	5	sample_tag	Sample Tag	varchar	50	0	N		N			Y	text	50		N	Y	N	Sample Name.  Keep it short.  Do not use any strange characters like /\*&$() (e.g. NP Epi 03-123)		
+ST_solexa_sample	6	full_sample_name	Full Sample Name	varchar	255	0	Y		N			Y	textarea	3		N	Y	N	"Full Sample Name.  A longer, less cryptic name should be placed here.  It should be long enough so that someone else can understand quickly the general idea of the sample. (e.g. Epithelial cells FACS sorted from ""normal"" prostate tissue from specimen 03-123)"		
+ST_solexa_sample	7	sample_group_name	Sample Group Name	varchar	50	0	Y		N			Y	text	50		N	Y	N	Sample Group Name.  Name used to group together biological replicates		
+ST_solexa_sample	8	sample_provider_organization_id	Sample Provider	int	4	0	Y		N	organization	organization_id	N	optionlist			N	Y	N	"Provider of this biomaterial (academic department, research lab, vendor, etc.)"	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE O.record_status != 'D' ORDER BY organization"	
+ST_solexa_sample	9	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			N	Y	N	Organism from which the biomaterial was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+ST_solexa_sample	10	strain_or_line	Strain or Line	varchar	255	0	Y		N			N	text	50		Y	Y	N	Strain or line of the individual		
+ST_solexa_sample	11	individual	Individual	varchar	255	0	Y		N			N	text	50		Y	Y	N	Identifier or name of the individual organism from which the biomaterial was derived		
+ST_solexa_sample	12	sex_ontology_term_id	Sex	int	4	0	Y		N			N	optionlist			Y	Y	N	Sex of the individual	MANUAL	
+ST_solexa_sample	13	age	Age	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Age of the individual at the time of harvest of the biomaterial.  Free form text; include units, developmental stage, and reference point as appropriate (e.g., days since planting, years after birth, minutes after death)"		
+ST_solexa_sample	14	organism_part	Organism Part	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Part of the organism's anatomy from the biomaterial was derived, excludes cells. (e.g., tissue, organ, system, or body location)"		
 ST_solexa_sample	15	cell_line	Cell Line	varchar	255	0	Y		N			N	text	50		Y	Y	N	Identifier for the cell line if one was used as a biomaterial	
 ST_solexa_sample	16	cell_type	Cell Type	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Type of cell used as the biomaterial (e.g., epithelial, glial, etc.)"	
 ST_solexa_sample	17	disease_state	Disease State	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Name of the pathology diagnosed in the organism from which the biomaterial was derived.  The disease state is ""normal"" if no disease state has been diagnosed."	
-ST_solexa_sample	18	solexa_sample_prep_kit_id	Solexa Sample Preparation Kit	int	4	0	Y		N	ST_solexa_sample_prep_kit	solexa_sample_prep_kit_id	N	optionlist			Y	Y	Y	FK to ST_solexa_sample_prep_kit.solexa_sample_prep_kit_id	"select solexa_sample_prep_kit_id, name FROM $TBST_SOLEXA_SAMPLE_PREP_KIT ORDER BY name"
-ST_solexa_sample	19	solexa_reference_genome_id	Solexa Reference Genome ID	int	4	0	N		N	ST_solexa_reference_genome	solexa_reference_genome_id	N	optionlist			Y	Y	Y	FK to ST_solexa_reference_genome.solexa_reference_genome_id	"select SR.solexa_reference_genome_id, SR.name, O.organism_name from $TBST_SOLEXA_REFERENCE_GENOME SR LEFT JOIN $TB_ORGANISM O on (SR.organism_id = O.organism_id) where SR.record_status != 'D' order by sort_order, O.organism_name, SR.name"
-ST_solexa_sample	20	solexa_sample_protocol_ids	Solexa Sample Protocols	varchar	255	0	Y		N	ST_solexa_sample_protocol	solexa_sample_protocol_id	N	multilink	4		Y	Y	Y	FK to ST_solexa_sample_protocol.solexa_sample_protocol_id	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE P.record_status != 'D' ORDER BY P.name"
-ST_solexa_sample	21	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	4		Y	Y	N	Describe any deviations from the selected protocols	
-ST_solexa_sample	22	sample_description	Sample Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Describe the biomaterial briefly		
-ST_solexa_sample	23	sample_preparation_date	Sample Preparation Date	datetime	8	0	N		N			N	text	30		Y	Y	Y	Date/time the biomaterial was prepared with the described protocols		
-ST_solexa_sample	24	treatment_description	Treatment Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	"Describe the treatment of the biomaterials, including mention of the selected protocols"		
-ST_solexa_sample	25	insert_size	Insert Size	int	4	0	Y		N			N	text	4		Y	Y	N	Insert Size		
-ST_solexa_sample	26	alignment_start_position	Alignment Start Position	int	4	0	Y		N			N	text	4		Y	Y	N	Alignment Start Position		
-ST_solexa_sample	27	alignment_end_position	Alignment End Position	int	4	0	Y		N			N	text	4		Y	Y	N	Alignment End Position		
-ST_solexa_sample	28	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
-ST_solexa_sample	29	data_flag	Data Flag	varchar	10	0	Y		N			N	optionlist			Y	Y	N	"Array quality assessment, default is OK, set to Bad for problem arrays"	"SELECT option_key,option_value FROM $TBST_MISC_OPTION WHERE option_type='data_flag' ORDER BY sort_order,option_value"	
-ST_solexa_sample	30	replicate_tag	Replicate Tag	varchar	36	0	Y		N			N	text	5		Y	Y	N	"Replicate identifier, typically one of A, B, C, or 1, 2,  3, etc."		
+ST_solexa_sample	18	solexa_sample_prep_kit_id	Solexa Sample Preparation Kit	int	4	0	Y		N	ST_solexa_sample_prep_kit	solexa_sample_prep_kit_id	N	optionlist			N	Y	Y	FK to ST_solexa_sample_prep_kit.solexa_sample_prep_kit_id	"select solexa_sample_prep_kit_id, name FROM $TBST_SOLEXA_SAMPLE_PREP_KIT ORDER BY name"
+ST_solexa_sample	19	solexa_reference_genome_id	Solexa Reference Genome ID	int	4	0	N		N	ST_solexa_reference_genome	solexa_reference_genome_id	N	optionlist			N	Y	Y	FK to ST_solexa_reference_genome.solexa_reference_genome_id	"select SR.solexa_reference_genome_id, SR.name, O.organism_name from $TBST_SOLEXA_REFERENCE_GENOME SR LEFT JOIN $TB_ORGANISM O on (SR.organism_id = O.organism_id) where SR.record_status != 'D' order by sort_order, O.organism_name, SR.name"
+ST_solexa_sample	20	solexa_sample_protocol_ids	Solexa Sample Protocols	varchar	255	0	Y		N	ST_solexa_sample_protocol	solexa_sample_protocol_id	N	multilink	4		N	Y	Y	FK to ST_solexa_sample_protocol.solexa_sample_protocol_id	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE P.record_status != 'D' ORDER BY P.name"
+ST_solexa_sample	21	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	4		N	Y	N	Describe any deviations from the selected protocols	
+ST_solexa_sample	22	sample_description	Sample Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Describe the biomaterial briefly	
+ST_solexa_sample	23	sample_preparation_date	Sample Preparation Date	datetime	8	0	N		N			N	text	30		N	Y	Y	Date/time the biomaterial was prepared with the described protocols	
+ST_solexa_sample	24	treatment_description	Treatment Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	"Describe the treatment of the biomaterials, including mention of the selected protocols"	
+ST_solexa_sample	25	insert_size	Insert Size	int	4	0	Y		N			N	text	4		N	Y	N	Insert Size	
+ST_solexa_sample	26	alignment_start_position	Alignment Start Position	int	4	0	Y		N			N	text	4		N	Y	N	Alignment Start Position	
+ST_solexa_sample	27	alignment_end_position	Alignment End Position	int	4	0	Y		N			N	text	4		N	Y	N	Alignment End Position	
+ST_solexa_sample	28	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes	
+ST_solexa_sample	29	data_flag	Data Flag	varchar	10	0	Y		N			N	optionlist			Y	Y	N	"Quality assessment, default is OK, set to Bad for problem lanes"	"SELECT option_key,option_value FROM $TBST_MISC_OPTION WHERE option_type='data_flag' ORDER BY sort_order,option_value"
+ST_solexa_sample	30	replicate_tag	Replicate Tag	varchar	36	0	Y		N			N	text	5		Y	Y	N	"Replicate identifier, typically one of A, B, C, or 1, 2,  3, etc."	
 ST_solexa_sample	31	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y	N			
 ST_solexa_sample	32	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N	Y			
 ST_solexa_sample	33	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
@@ -278,19 +157,24 @@ ST_solexa_flow_cell	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	co
 ST_solexa_flow_cell	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
 ST_solexa_flow_cell	10	record_status	Record Status	char	1	0	N	N	N							N	N	N			
 ST_solexa_flow_cell_lane	1	flow_cell_lane_id	Flow Cell Lane ID	int	4	0	N		Y							N	N	Y			pkDEFAULT
-ST_solexa_flow_cell_lane	2	slimseq_flow_cell_lane_id	SLIMseq Flow Cell Lane ID	int	4	0	Y		N							Y	N	N			
-ST_solexa_flow_cell_lane	3	flow_cell_id	Flow Cell ID	int	4	0	N		N	ST_solexa_flow_cell	flow_cell_id					Y	N	Y	FK to ST_solexa_flow_cell.flow_cell_id		
-ST_solexa_flow_cell_lane	4	lane_number	Flow Cell Lane Number	int	4	0	N		N							Y	Y	N			
-ST_solexa_flow_cell_lane	5	starting_concentration	Starting Concentration	varchar	255	0	N		N							Y	Y	N			
-ST_solexa_flow_cell_lane	6	loaded_concentration	Loaded Concentration	varchar	255	0	N		N							Y	Y	N			
-ST_solexa_flow_cell_lane	7	status	Status	varchar	255	0	N		N							Y	Y	N			
-ST_solexa_flow_cell_lane	8	comment	Comment	varchar	255	0	Y		N							Y	Y	N			
-ST_solexa_flow_cell_lane	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
-ST_solexa_flow_cell_lane	10	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
-ST_solexa_flow_cell_lane	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
-ST_solexa_flow_cell_lane	12	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
-ST_solexa_flow_cell_lane	13	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
-ST_solexa_flow_cell_lane	14	record_status	Record Status	char	1	0	N	N	N							N	N	N			
+ST_solexa_flow_cell_lane	2	slimseq_flow_cell_lane_id	SLIMseq Flow Cell Lane ID	int	4	0	Y		N							N	N	N			
+ST_solexa_flow_cell_lane	3	flow_cell_id	Flow Cell ID	int	4	0	N		N	ST_solexa_flow_cell	flow_cell_id					N	N	Y	FK to ST_solexa_flow_cell.flow_cell_id
+ST_solexa_flow_cell_lane	4	lane_number	Flow Cell Lane Number	int	4	0	N		N							N	Y	N	
+ST_solexa_flow_cell_lane	5	starting_concentration	Starting Concentration	varchar	255	0	N		N							N	Y	N	
+ST_solexa_flow_cell_lane	6	loaded_concentration	Loaded Concentration	varchar	255	0	N		N							N	Y	N	
+ST_solexa_flow_cell_lane	7	lane_yield_kb	Lane Yield (KB)	int	4	0	Y		N							N	Y	N	
+ST_solexa_flow_cell_lane	8	average_clusters	Average Clusters	int	4	0	Y		N							N	Y	N	
+ST_solexa_flow_cell_lane	9	percent_pass_filter_clusters	Percent of Clusters that Passed Filter	decimal	5	2	Y		N							N	Y	N	
+ST_solexa_flow_cell_lane	10	percent_error	Percent Error	decimal	5	2	Y		N							N	Y	N	
+ST_solexa_flow_cell_lane	11	percent_align	Percent Align	decimal	5	2	Y		N							N	Y	N	
+ST_solexa_flow_cell_lane	12	status	Status	varchar	255	0	N		N							N	Y	N	
+ST_solexa_flow_cell_lane	13	comment	Comment	varchar	255	0	Y		N							N	Y	N	
+ST_solexa_flow_cell_lane	14	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N	
+ST_solexa_flow_cell_lane	15	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y	
+ST_solexa_flow_cell_lane	16	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N	
+ST_solexa_flow_cell_lane	17	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y	
+ST_solexa_flow_cell_lane	18	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y	
+ST_solexa_flow_cell_lane	19	record_status	Record Status	char	1	0	N	N	N							N	N	N			
 ST_solexa_pipeline_results	1	solexa_pipeline_results_id	Solexa Pipeline Results ID	int	4	0	N		Y							N	N	Y	Solexa Pipeline Results ID		pkDEFAULT
 ST_solexa_pipeline_results	2	slimseq_pipeline_results_id	SLIMseq Pipeline Results ID	int	4	0	Y	1	N							Y	N	N	SLIMseq Pipeline Results ID		
 ST_solexa_pipeline_results	3	flow_cell_lane_id	Solexa Flow Cell Lane ID	int	4	0	N		N	ST_solexa_flow_cell_lane	flow_cell_lane_id	Y				Y	N	Y	FK to ST_solexa_flow_cell_lane.flow_cell_lane_id		
@@ -302,10 +186,10 @@ ST_solexa_pipeline_results	8	slimseq_status	SLIMseq Status field	varchar	255	0	N
 ST_solexa_pipeline_results	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
 ST_solexa_pipeline_results	10	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
 ST_solexa_pipeline_results	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
-ST_solexa_pipeline_results	12	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y	
-ST_solexa_pipeline_results	13	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y	
-ST_solexa_pipeline_results	14	record_status	Record Status	char	1	0	N	N	N							N	N	N	
-ST_solexa_flow_cell_lane_samples	1	solexa_sample_id	Solexa Sample ID	int	4	0	N		N	ST_solexa_sample	solexa_sample_id					Y	N	Y	FK to ST_solexa_sample.solexa_sample_id
+ST_solexa_pipeline_results	12	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
+ST_solexa_pipeline_results	13	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
+ST_solexa_pipeline_results	14	record_status	Record Status	char	1	0	N	N	N							N	N	N			
+ST_solexa_flow_cell_lane_samples	1	solexa_sample_id	Solexa Sample ID	int	4	0	N		N	ST_solexa_sample	solexa_sample_id					Y	N	Y	FK to ST_solexa_sample.solexa_sample_id		
 ST_solexa_flow_cell_lane_samples	2	flow_cell_lane_id	Solexa Flow Cell Lane ID	int	4	0	N		N	ST_solexa_flow_cell_lane	flow_cell_lane_id					Y	N	Y	FK to ST_solexa_flow_cell_lane.flow_cell_lane_id
 ST_solexa_flow_cell_lane_samples	3	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N	
 ST_solexa_flow_cell_lane_samples	4	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y	
@@ -318,24 +202,207 @@ ST_treatment	2	treatment_name	Treatment Name	varchar	255	0	N		N			Y	text	25		Y	Y
 ST_treatment	3	time	Time	int	4	0	Y		N			N	text	5		Y	Y	N	Timepoint at which sample was collected post-treatment
 ST_treatment	4	time_units	Time Units	varchar	36	0	Y		N			N	text	25		Y	Y	N	"Units of time for treatment timepoint, e.g. hours, minutes, seconds"
 ST_treatment	5	treatment_agent	Treatment Agent	varchar	256	0	Y		N			N	text	25		Y	Y	N	"Chemical or biological agent added to perturb the system, if any.  e.g. PAM, PIC, LPS, etc."
-ST_treatment	5	concentration	Concentration	float	8	0	Y		N			N	text	5		Y	Y	N	"Concentration of chemical or biological agent, if any, used in treatment"
-ST_treatment	6	conc_units	Concentration Units	varchar	36	0	Y		N			N	text	25		Y	Y	N	Units of concentration for treatment
-ST_treatment	7	treatment_type	Treatment Type	varchar	255	0	Y		N			N	text	25		Y	Y	N	"Treatment Type, e.g. chemical, etc."
-ST_treatment	8	treatment_mode	Treatment Mode	varchar	255	0	Y		N			N	text	25		Y	Y	N	"Treatment Mode, e.g. In Vitro, In Vivo, etc."
-ST_treatment	9	modifier	Modifier	varchar	255	0	Y		N			N	text	25		Y	Y	N	Non-standard option which applies to treatment
-ST_treatment	10	sort_order	Sort Order	int	4	0	Y	100	N			N	text	5		Y	Y	N	Sort Order
-ST_treatment	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N	Date Record Created
-ST_treatment	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y	Record Created By
-ST_treatment	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N	Date Record Modified
-ST_treatment	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y	Record Modified By
-ST_treatment	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y	Owner Group ID
-ST_treatment	16	record_status	Record Status	char	1	0	N	N	N							N	N	N	Record Status
+ST_treatment	6	concentration	Concentration	float	8	0	Y		N			N	text	5		Y	Y	N	"Concentration of chemical or biological agent, if any, used in treatment"
+ST_treatment	7	conc_units	Concentration Units	varchar	36	0	Y		N			N	text	25		Y	Y	N	Units of concentration for treatment
+ST_treatment	8	treatment_type	Treatment Type	varchar	255	0	Y		N			N	text	25		Y	Y	N	"Treatment Type, e.g. chemical, etc."
+ST_treatment	9	treatment_mode	Treatment Mode	varchar	255	0	Y		N			N	text	25		Y	Y	N	"Treatment Mode, e.g. In Vitro, In Vivo, etc."
+ST_treatment	10	modifier	Modifier	varchar	255	0	Y		N			N	text	25		Y	Y	N	Non-standard option which applies to treatment
+ST_treatment	11	sort_order	Sort Order	int	4	0	Y	100	N			N	text	5		Y	Y	N	Sort Order
+ST_treatment	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N	Date Record Created
+ST_treatment	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y	Record Created By
+ST_treatment	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N	Date Record Modified
+ST_treatment	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y	Record Modified By
+ST_treatment	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y	Owner Group ID
+ST_treatment	17	record_status	Record Status	char	1	0	N	N	N							N	N	N	Record Status
 ST_solexa_sample_treatment	1	solexa_sample_treatment_id	Solexa Sample Treatment ID	int	4	0	N		Y			Y				N	N	Y	
 ST_solexa_sample_treatment	2	solexa_sample_id	Solexa Sample ID	int	4	0	N		N	ST_solexa_sample	solexa_sample_id	Y				Y	Y	Y	FK to ST_solexa_sample.solexa_sample_id
 ST_solexa_sample_treatment	3	treatment_id	Treatment ID	int	4	0	N		N	ST_treatment	treatment_id	Y				Y	N	Y	FK to ST_treatment.treatment_id
 ST_misc_option	1	misc_option_id	Misc Option ID	int	4	0	N		Y							N	N	Y	
-ST_misc_option	2	option_type	Option Type	varchar	25	0	N		N							Y	Y	N
-ST_misc_option	3	option_key	Option Key	varchar	25	0	N		N							Y	Y	N
-ST_misc_option	4	option_value	Option  Value	varchar	255	0	N		N							Y	Y	N
-ST_misc_option	5	sort_order	Sort Order	int	4	0	N	10	N							Y	Y	N
-ST_misc_option	6	date_created	Date Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							Y	Y	N
+ST_misc_option	2	option_type	Option Type	varchar	25	0	N		N							Y	Y	N	
+ST_misc_option	3	option_key	Option Key	varchar	25	0	N		N							Y	Y	N	
+ST_misc_option	4	option_value	Option  Value	varchar	255	0	N		N							Y	Y	N	
+ST_misc_option	5	sort_order	Sort Order	int	4	0	N	10	N							Y	Y	N	
+ST_misc_option	6	date_created	Date Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							Y	Y	N			
+ST_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	4	0	N		Y							N	N	Y			pkDEFAULT
+ST_biosequence_set	2	project_id	Owner Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id"	
+ST_biosequence_set	3	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism to which the BioSequences in this database belong	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+ST_biosequence_set	4	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
+ST_biosequence_set	5	set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
+ST_biosequence_set	6	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioSequence database		
+ST_biosequence_set	7	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	N	Version of this BioSequence database		
+ST_biosequence_set	8	upload_file	Upload file	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
+ST_biosequence_set	9	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
+ST_biosequence_set	10	source_file_date	Source File Date	datetime	8	0	Y		N			N	text	40		N	N	N	Date of the FASTA file at last update		
+ST_biosequence_set	11	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
+ST_biosequence_set	12	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+ST_biosequence_set	13	sort_order	Sort Order	int	4	0	N	10	N			N	text	20		Y	Y	N	Allows the ordering or ranking of Biosequence Sets which is used to break ties for choosing canonical names.  Lower numbers indicate better rank.		
+ST_biosequence_set	14	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+ST_biosequence_set	15	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	N			
+ST_biosequence_set	16	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+ST_biosequence_set	17	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	N			
+ST_biosequence_set	18	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	N			
+ST_biosequence_set	19	record_status	Record Status	char	1	0	N	N	N							N	N	N			
+ST_biosequence	1	biosequence_id	BioSequence ID	int	4	0	N		Y							N	N	N			pkDEFAULT
+ST_biosequence	2	biosequence_set_id	BioSequence Set	int	4	0	N		N	ST_biosequence_set	biosequence_set_id					N	N	Y	BioSequence Set to which this BioSequence belongs		pkDEFAULT
+ST_biosequence	3	biosequence_name	BioSequence Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of this BioSequence (generally everything before the first space in a FASTA file header line)		
+ST_biosequence	4	biosequence_gene_name	BioSequence Gene Name	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Gene name of this BioSequence if applicable.  Most common gene name if applicable		
+ST_biosequence	5	dbxref_id	Database Cross Reference	int	4	0	Y		N	ST_dbxref	dbxref_id					Y	Y	N	Database cross reference for which the accession number applies		pkDEFAULT
+ST_biosequence	6	biosequence_accession	BioSequence Accession	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Accession number for this BioSequence in some external database designated above		
+ST_biosequence	7	biosequence_desc	Biosequence Description	varchar	1024	0	N		N			Y	text	40		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
+ST_biosequence	8	biosequence_seq	Sequence	text	16	0	Y		N			N	file	40		Y	Y	N	Actual sequence of the BioSequence if known		
+ST_biosequence	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+ST_biosequence	10	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	N			
+ST_biosequence	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+ST_biosequence	12	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	N			
+ST_biosequence	13	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	N			
+ST_biosequence	14	record_status	Record Status	char	1	0	N	N	N							N	N	N			
+ST_biosequence_property_set	1	biosequence_property_set_id	BioSequence Property Set ID	int	4	0	N		Y							N	N	N			pkDEFAULT
+ST_biosequence_property_set	2	biosequence_id	BioSequence ID	int	4	0	N		N	ST_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		pkDEFAULT
+ST_biosequence_property_set	3	n_transmembrane_regions	Number of Transmembrane Regions	int	4	0	Y		N							Y	Y	N	Number of transmembrane regions		pkDEFAULT
+ST_biosequence_property_set	4	transmembrane_class	Transmembrane Region Class	varchar	10	0	Y		N			Y	text	50		Y	Y	N	"Class of the transmembrane region.  May be 0, TM, A, S, TM_xS based on output from TMHMM and signalP"		
+ST_biosequence_property_set	5	transmembrane_topology	Transmembrane Region Topology	varchar	1024	0	Y		N			Y	text	20		Y	Y	N	Coding of which residues belong in the transmembrane regions		
+ST_biosequence_property_set	6	has_signal_peptide	Has a Signal Peptide	char	1	0	Y		N			N	text	50		Y	Y	N	"Does this protein have a signal peptide on the end Y/N? (Note that Y means that there is some non-zero probability that it does, not that is necessarily does)"		
+ST_biosequence_property_set	7	has_signal_peptide_probability	Probability that it has a Signal Peptide	real	4	0	Y		N			N	text	50		Y	Y	N	Probability that there is a signal peptide on the end as calculated by SignalP		
+ST_biosequence_property_set	8	signal_peptide_length	Length of the Signal Peptide	int	4	0	Y		N			N	text	50		Y	Y	N	Length in residues of the signal peptide		
+ST_biosequence_property_set	9	signal_peptide_is_cleaved	Signal Peptide gets Cleaved	char	1	0	Y		N			N	text	50		Y	Y	N	Does the signal peptide get cleaved off Y/N?		
+ST_biosequence_property_set	10	genome_build	Genome Build	varchar	50	0	Y		N			N	text	50		Y	Y	N	Genome build name for which the following mapping parameters are valid		
+ST_biosequence_property_set	11	chromosome	Chromosome	varchar	50	0	Y		N			N	text	50		Y	Y	N	Chromosome in which this mapping occurs		
+ST_biosequence_property_set	12	start_in_chromosome	Start Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	Start position of the biosequence in the chromosome		
+ST_biosequence_property_set	13	end_in_chromosome	End Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	End position of the biosequence in the chromosome		
+ST_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"Strand (+,-) of the biosequence in the chromosome"		
+ST_biosequence_property_set	15	isoelectric_point	Isoelectric Point	real	4	0	Y		N			N	text	10		Y	Y	N	Isoelectric Point (pI) of the protein	
+ST_biosequence_property_set	16	fav_codon_frequency	Favorite Codon Frequency	real	4	0	Y		N			N	text	10		Y	Y	N	Favorite Codon Frequency	
+ST_biosequence_property_set	17	duplicate_biosequences	Duplicate Biosequences	varchar	255	0	Y		N			N	text	50		Y	Y	N	Semicolon delimited list of duplicate sequences within the same set	
+ST_biosequence_property_set	18	category	Category	varchar	255	0	Y		N			N	text	50		Y	Y	N	Biosequence category	
+ST_solexa_analysis	1	solexa_analysis_id	Solexa Analysis ID	int	4	0	N		Y							N	N	Y	Solexa Analysis ID	
+ST_solexa_analysis	2	solexa_pipeline_results_id	Solexa Pipeline Results ID	int	4	0	N		N	ST_solexa_pipeline_results	solexa_pipeline_results_id	Y				N	Y	N	Solexa Pipeline Results ID	
+ST_solexa_analysis	3	jobname	Job Name	varchar	255	0	N		N			Y	text	25		N	Y	N	Job Name	
+ST_solexa_analysis	4	job_tag	Job Tag	varchar	50	0	N		N			Y	text	25		Y	Y	N	Short Tag for this Job	
+ST_solexa_analysis	5	slimseq_sample_id	Slimseq Sample ID	int	4	0	N		N	ST_solexa_sample	slimseq_sample_id					Y	N	Y	FK to ST_solexa_sample.slimseq_sample_id	
+ST_solexa_analysis	6	output_directory_id	Output Directory ID	int	4	0	N		N	ST_file_path	file_path_id					Y	N	Y	FK to ST_file_path.file_path_id for the output_directory for this job	
+ST_solexa_analysis	7	analysis_description	Analysis Description	text	16	0	N		N			Y	textarea	10		Y	Y	N	Analysis Description	
+ST_solexa_analysis	8	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			N	Y	N	FK to project.project_id	"SELECT project_id, UL.username || ' - ' || proj.name || ' ( ' || RTRIM(CAST(proj.project_id AS CHAR)) || ' )'   AS name FROM $TB_PROJECT proj JOIN $TB_USER_LOGIN UL ON (proj.PI_contact_id = UL.contact_id)  WHERE  proj.project_id IN ( $accessible_project_ids ) AND proj.project_tag IS NOT NULL AND proj.record_status != 'D' ORDER BY UL.username"
+ST_solexa_analysis	9	status	Job Status	varchar	255	0	Y	RUNNING	N			N	text	25		N	Y	N	Status of Job	
+ST_solexa_analysis	10	status_time	Time Job Status was last updated at	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	text	5		N	Y	N	Time Job Started	
+ST_solexa_analysis	11	total_tags	Total Tags Identified in this analysis	int	4	0	Y		N			N	text	25		N	Y	N	Total Tags Identified in this analysis (redundant)	
+ST_solexa_analysis	12	total_unique_tags	Total Unique Tags Identified in this analysis	int	4	0	Y		N			N	text	25		N	Y	N	Total Unique Tags Identified in this analysis	
+ST_solexa_analysis	13	match_tags	Number of Tags that had one match in reference database	int	4	0	Y		N			N	text	25		N	Y	N	Number of Tags that matched a gene		
+ST_solexa_analysis	14	match_unique_tags	Number of Unique Tags that had one match in reference database	int	4	0	Y		N			N	text	25		N	Y	N	Number of Unique Tags that matched a gene		
+ST_solexa_analysis	15	ambg_tags	Number of Tags that has multiple matches in reference database	int	4	0	Y		N			N	text	25		N	Y	N	Number of Tags that matched multiple genes		
+ST_solexa_analysis	16	ambg_unique_tags	Number of Unique Tags that had multiple matches in reference database	int	4	0	Y		N			N	text	25		N	Y	N	Number of Unique Tags that matched multiple genes		
+ST_solexa_analysis	17	unkn_tags	Number of Tags that did not have a match in a reference database	int	4	0	Y		N			N	text	25		N	Y	N	Number of Tags that did not match a gene		
+ST_solexa_analysis	18	unkn_unique_tags	Number of Unique Tags that did not have a match in a reference database	int	4	0	Y		N			N	text	25		N	Y	N	Number of Unique Tags that did not match a gene		
+ST_solexa_analysis	19	total_genes	Number of Genes in the CPM File	int	4	0	Y		N			N	text	25		N	Y	N	Number of Genes in the CPM File		
+ST_solexa_analysis	20	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N	Date Record Created		
+ST_solexa_analysis	21	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y	Record Created By		
+ST_solexa_analysis	22	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N	Date Record Modified		
+ST_solexa_analysis	23	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y	Record Modified By		
+ST_solexa_analysis	24	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y	Owner Group ID		
+ST_solexa_analysis	25	record_status	Record Status	char	1	0	N	N	N							N	N	N	Record Status		
+ST_gene_analysis	1	gene_analysis_id	gene Analysis ID	int	4	0	N		Y			Y				N	N	Y			pkDEFAULT
+ST_gene_analysis	2	solexa_analysis_id	Solexa Analysis ID	int	4	0	N		N	ST_solexa_analysis	solexa_analysis_id	Y	text			N	N	Y	Solexa Analysis ID		
+ST_gene_analysis	3	biosequence_id	biosequence ID	int	4	0	N		N	ST_biosequence	biosequence_id	Y	text	50		Y	Y	Y	Biosequence ID		
+ST_gene_analysis	4	gene_count	Raw gene Count in this analysis	int	4	0	N		N				text	10		Y	Y	N	Raw gene Count in this analysis		
+ST_gene_analysis	5	gene_cpm	Normalized gene CPM in this analysis	int	4	0	N		N				text	10		Y	Y	N	Normalized gene CPM in this analysis		
+ST_gene_analysis	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y	N			
+ST_gene_analysis	7	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N	Y			
+ST_gene_analysis	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+ST_gene_analysis	9	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N	Y			
+ST_gene_analysis	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
+ST_gene_analysis	11	record_status	Record Status	char	1	0	N	N	N							N	N	N			
+ST_tag_type	1	tag_type_id	Tag Type ID	int	4	0	N		Y			Y				N	N	Y	Tag Type ID		pkDEFAULT
+ST_tag_type	2	type	Tag Type	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Tag Type		
+ST_tag_type	3	abbrev	Tag Abbreviation	varchar	5	0	N		N			Y	text	5		Y	Y	Y	Tag Abbreviation		
+ST_tag_type	4	description	Tag Description	varchar	1000	0	N		N			Y	textarea	1000		Y	Y	Y	Tag Description		
+ST_tag_type	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y	N			
+ST_tag_type	6	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N	Y			
+ST_tag_type	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+ST_tag_type	8	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N	Y			
+ST_tag_type	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
+ST_tag_type	10	record_status	Record Status	char	1	0	N	N	N							N	N	N			
+ST_tag_analysis	1	tag_analysis_id	Tag Analysis ID	int	4	0	N		Y			Y				N	N	Y			pkDEFAULT
+ST_tag_analysis	2	solexa_analysis_id	Solexa Analysis ID	int	4	0	N		N	ST_solexa_analysis	solexa_analysis_id	Y	text			N	N	Y	Solexa Analysis ID		
+ST_tag_analysis	3	tag_id	Tag ID	int	4	0	N		N	ST_tag	tag_id	Y	text	50		Y	Y	Y	Tag ID		
+ST_tag_analysis	4	tag_type_id	Tag Type ID	int	4	0	N		N	ST_tag_type	tag_type_id	Y	text	50		Y	Y	Y	Tag Type ID		
+ST_tag_analysis	5	tag_count	Raw Tag Count in this analysis	int	4	0	N		N				text	10		Y	Y	N	Raw Tag Count in this analysis		
+ST_tag_analysis	6	tag_cpm	Normalized Tag CPM in this analysis	int	4	0	N		N				text	10		Y	Y	N	Normalized Tag CPM in this analysis		
+ST_tag_analysis	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y	N			
+ST_tag_analysis	8	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N	Y			
+ST_tag_analysis	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+ST_tag_analysis	10	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N	Y			
+ST_tag_analysis	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
+ST_tag_analysis	12	record_status	Record Status	char	1	0	N	N	N							N	N	N			
+ST_tag	1	tag_id	Tag ID	int	4	0	N		Y							N	N	Y			pkDEFAULT
+ST_tag	2	biosequence_set_id	BioSequence Set	int	4	0	N		N	ST_biosequence_set	biosequence_set_id					N	N	Y	BioSequence Set to which this Tag belongs		pkDEFAULT
+ST_tag	3	tag	Tag	varchar	255	0	N		N			N	text	50		Y	Y	Y	Tag Sequence		
+ST_tag	4	tag_desc	Tag Description	varchar	1024	0	N		N			N	text	50		Y	Y	N	Description of this Tag		
+ST_tag	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+ST_tag	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	N			
+ST_tag	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+ST_tag	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	N			
+ST_tag	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	N			
+ST_tag	10	record_status	Record Status	char	1	0	N	N	N							N	N	N			
+ST_biosequence_tag	1	biosequence_tag_id	Biosequence Tag ID	int	4	0	N		Y			Y				N	N	Y			pkDEFAULT
+ST_biosequence_tag	2	biosequence_id	BioSequence ID	int	4	0	N		N	ST_biosequence	biosequence_id	Y	text			N	N	Y	BioSequence ID		
+ST_biosequence_tag	3	tag_id	Tag ID	int	4	0	N		N	ST_tag	tag_id	Y	text	50		Y	Y	Y	Tag ID		
+ST_biosequence_tag	6	position	Position of this tag in the biosequence	int	4	0	N		N				text	10		Y	Y	N	Position of the tag in the biosequence		
+ST_biosequence_tag	7	strand	Tag Strand	int	4	0	N		N				text	10		Y	Y	N	Strand of the tag in the biosequence		
+ST_biosequence_tag	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y	N			
+ST_biosequence_tag	5	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N	Y			
+ST_biosequence_tag	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+ST_biosequence_tag	7	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N	Y			
+ST_biosequence_tag	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
+ST_biosequence_tag	9	record_status	Record Status	char	1	0	N	N	N							N	N	N			
+ST_query_option	1	query_option_id	Query Option ID	int	4	0	N		Y							N	N				pkDEFAULT
+ST_query_option	2	option_type	Option Type	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Type or category of this option		
+ST_query_option	3	option_key	Option Key	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Key for this key/value pair option		
+ST_query_option	4	option_value	Option Value	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Value of this key/value pair option		
+ST_query_option	5	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
+ST_query_option	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+ST_query_option	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+ST_query_option	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+ST_query_option	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+ST_query_option	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+ST_query_option	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+ST_BrowseBioSequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBST_BIOSEQUENCE_SET ORDER BY sort_order,set_name"	
+ST_BrowseBioSequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+ST_BrowseBioSequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+ST_BrowseBioSequence	4	molecular_function_constraint	Molecular Function Constraint									N	text	40		Y	Y	N	Constraint for the GO Molecular Function. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+ST_BrowseBioSequence	5	biological_process_constraint	Biological Process Constraint									N	text	40		Y	Y	N	Constraint for the GO Biological Process. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+ST_BrowseBioSequence	6	cellular_component_constraint	Cellular Component Constraint									N	text	40		Y	Y	N	Constraint for the GO Cellular Component. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+ST_BrowseBioSequence	7	protein_domain_constraint	Protein Domain Constraint									N	text	40		Y	Y	N	Constraint for the InterPro Protein Domain. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+ST_BrowseBioSequence	8	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	Y	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
+ST_BrowseBioSequence	9	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	Y	N	"Constraint for the number of transmembrane regions (based on a 19-residue wide sliding window of hydropathy indexes above 1.58).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
+ST_BrowseBioSequence	10	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+ST_BrowseBioSequence	11	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+ST_BrowseBioSequence	12	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBST_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"
+ST_BrowseBioSequence	13	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBST_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value"
+ST_BrowseBioSequence	14	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."	
+ST_GetCounts	1	query_type	Gene' query or 'Tag' query?		0	0		Gene Query				Y	optionlist	10		Y	Y	N	"Is this a 'Gene' query or a 'Tag' query?  Gene queries can be used once a job reaches the 'PROCESSED' status, while Tag queries can only be used when a job reaches the 'COMPLETED' status."	"SELECT option_key,option_value FROM $TBST_QUERY_OPTION WHERE option_type = 'GC_query_type' ORDER BY sort_order,option_value"
+ST_GetCounts	2	project_id	Projects		0	0						Y	multioptionlist	4	refreshDocument()	Y	Y	N	Constrain samples to one or more projects.  At least one project must be selected.	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P INNER JOIN $TBST_SOLEXA_SAMPLE SS ON ( P.project_id = SS.project_id ) LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.project_id IN ( $accessible_project_ids ) AND P.record_status != 'D' ORDER BY UL.username||' - '||P.name,P.project_id"
+ST_GetCounts	3	solexa_analysis_id	Job Constraint		0	0						N	multioptionlist	8		Y	Y	N	Constrain samples to one or more jobs. Format for this box is - Full Sample Name (Slimseq Sample ID) - Job Creation Date	"SELECT sa.solexa_analysis_id, ss.full_sample_name||' ('||CAST(ss.slimseq_sample_id as varchar)||') - '||CAST(sa.date_created as varchar) FROM $TBST_SOLEXA_ANALYSIS sa LEFT JOIN $TBST_SOLEXA_SAMPLE ss on (ss.slimseq_sample_id = sa.slimseq_sample_id) WHERE sa.project_id IN ( $accessible_project_ids ) AND sa.record_status != 'D' AND ss.record_status != 'D' ORDER BY ss.slimseq_sample_id,ss.full_sample_name, sa.status_time"
+ST_GetCounts	4	slimseq_sample_id_constraint	SlimSeq Sample ID Constraint		0	0						N	text	40		Y	Y	N	Constraint for the Sample ID as provided in the raw pipeline output. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+ST_GetCounts	5	gene_name_constraint	Gene Name Constraint		0	0						N	text	40		Y	Y	N	Constraint for the Gene Name as provided in the raw pipeline output. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+ST_GetCounts	6	biosequence_name_constraint	Biosequence Name Constraint		0	0						N	text	40		Y	Y	N	Constraint for the Biosequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+ST_GetCounts	7	description_constraint	Biosequence Description Constraint		0	0						N	text	40		Y	Y	N	Constraint for the Biosequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+ST_GetCounts	8	tag_constraint	Tag		0	0						N	text	40		Y	Y	N	Constraint for the Tag Sequence	
+ST_GetCounts	9	display_columns	Data Columns to Display		0	0						N	multioptionlist	4		Y	Y	N	Desired data columns to display for the count measurements	"SELECT option_key,option_value FROM $TBST_QUERY_OPTION WHERE option_type = 'GC_data_columns' ORDER BY sort_order,option_value"
+ST_GetCounts	10	sort_order	Sort Order		0	0						N	optionlist			Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBST_QUERY_OPTION WHERE option_type = 'GC_sort_options' ORDER BY sort_order,option_value"
+ST_GetCounts	11	display_options	Display Options		0	0						N	multioptionlist	5		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBST_QUERY_OPTION WHERE option_type = 'GC_display_options' ORDER BY sort_order,option_value"
+ST_GetCounts	12	row_limit	Maximum Rows		0	0						N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 10000 rows."	
+ST_JobParameters	1	job_tag__$parameters{id}	Tag for this Job (Short description)		0	0						N	text	20		Y	Y	N	Input a short description of this job	
+ST_JobParameters	2	tag_length__$parameters{id}	Length of Tags for this SolexaTrans Run		0	0		18				N	text	10		Y	Y	N	Length of the tags in this solexa run	
+ST_JobParameters	3	truncate__$parameters{id}	Truncate the last how many base pairs?		0	0						N	optionlist			Y	Y	N	Options for truncating the solexa tags	"SELECT option_key, option_value FROM $TBST_QUERY_OPTION where option_type = 'JP_truncate_options' ORDER BY sort_order,option_value"
+ST_JobParameters	4	biosequence_set_ids__$parameters{id}	Which genomes to use in this STP run?		0	0						Y	multioptionlist	4		Y	Y	N	Which Biosequence Sets to use for this STP run	"select biosequence_set_id, set_name from $TBST_BIOSEQUENCE_SET"
+ST_JobParameters	5	patman_max_mismatches__$parameters{id}	How many mismatches should Patman accept?		0	0		2				N	text			Y	Y	N	How many mismatches should Patman allow?	
+ST_JobParameters	6	fuse__$parameters{id}	Truncate the file to length?  (Testing purposes)		0	0		0				N	text	10		Y	Y	N	Truncate the file after specified number of tags have been processed.	
+ST_JobParameters	7	restriction_enzyme__$parameters{id}	Restriction Enzyme used for this SolexaTrans Run		0	0						N	optionlist		updateMotif()	Y	Y	N	Which restriction enzyme was used	"select restriction_enzyme_id, name from $TBST_RESTRICTION_ENZYME "
+ST_JobParameters	8	upload_tags__$parameters{id}	Upload the tags for this job to the SolexaTrans Database?		0	0		2				Y	optionlist			Y	Y	N	Should the TAG results of this job be automatically uploaded to the SolexaTrans database?  The GENE results are automatically uploaded.  The TAG results are much larger than the GENE results.  The UPLOADING step takes a long time and consumes cluster resources that can be used to run additional STP jobs.  	"SELECT option_key, option_value from $TBST_QUERY_OPTION where option_type = 'JP_upload_options' ORDER BY sort_order,option_value"
+ST_StatusSearch	1	slimseq_sample_id_constraint	Sample ID		0	0						N	text	40		Y	Y	N	Search on the Sample ID. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+ST_StatusSearch	2	sample_tag_constraint	Sample Tag		0	0						N	text	40		Y	Y	N	Search on the Sample Tag. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+ST_StatusSearch	3	full_sample_name_constraint	Full Sample Name		0	0						N	text	40		Y	Y	N	Search on the Full Sample Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+ST_StatusSearch	4	job_status_constraint	Job Status		0	0						N	optionlist			Y	Y	N	Constrain results by a Job Status.	"SELECT distinct status, status from $TBST_SOLEXA_ANALYSIS"
+ST_StatusSearch	5	job_status_updated_start_constraint	Job Status Updated Start		0	0						N	text	40	"""; onclick=""scwShow(this,event);"	Y	Y	N	Constrain results by a Job Status Date.	
+ST_StatusSearch	6	job_status_updated_end_constraint	Job Status Updated End		0	0						N	text	40	"""; onclick=""scwShow(this,event);"	Y	Y	N	Constrain results by a Job Status Date.	
+ST_StatusSearch	7	display_options	Display Options		0	0						N	multioptionlist	5		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBST_QUERY_OPTION WHERE option_type = 'Ssearch_display_options' ORDER BY sort_order,option_value"
+ST_StatusSearch	8	row_limit	Maximum Rows		0	0						N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 10000 rows."	
