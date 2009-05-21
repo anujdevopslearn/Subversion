@@ -959,7 +959,7 @@ sub merge_pabst_peptides {
     my @pep_keys = ( keys( %{$theo->{$prot}} ), keys( %{$obs->{$prot}} ) );
 #    print STDERR scalar @pep_keys . " peptides \n";
     my %seen;
-    my @pep_keys =  grep !$seen{$_}++, @pep_keys;
+    @pep_keys =  grep !$seen{$_}++, @pep_keys;
 #    print STDERR scalar @pep_keys . " unique peptides \n";
 
 # 0 biosequence_name
@@ -980,7 +980,8 @@ sub merge_pabst_peptides {
 # 15 synthesis_score
 # 16 syntheis_adjusted_score
 
-    my $naa = $sbeams->makeInactiveText( 'n/a' );
+    my $naa = 'na';
+    $naa = $sbeams->makeInactiveText($naa) if $sbeams->output_mode() =~ /html/i;
     # consider each peptide...
     for my $pep( @pep_keys ) {
 
