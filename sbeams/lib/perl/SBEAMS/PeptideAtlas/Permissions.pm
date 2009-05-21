@@ -304,9 +304,7 @@ sub getCurrentAtlasBuildID {
 
     if (scalar(@rows) > 1) {
       die("ERROR: Too may rows returned for $sql");
-    }
-
-    if (defined(@rows)) {
+    } elsif ( @rows ) {
       $atlas_build_id = $rows[0];
     }
 

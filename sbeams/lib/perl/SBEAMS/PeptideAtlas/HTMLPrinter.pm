@@ -184,8 +184,7 @@ sub displayGuestPageHeader {
 	}
 
 
-  #### Obtain main SBEAMS object and use its http_header
-  my $sbeams = $self->getSBEAMS();
+  # Use http_header from main SBEAMS object
   my $http_header = $sbeams->get_http_header();
   use LWP::UserAgent;
   use HTTP::Request;
