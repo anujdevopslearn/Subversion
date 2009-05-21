@@ -20,6 +20,7 @@ ST_solexa_reference_genome	Solexa_Reference_Genome	SolexaTrans_infrastructure	YE
 ST_restriction_enzyme	Restriction Enzymes	SolexaTrans_infrastructure	NO	$TBST_RESTRICTION_ENZYME	restriction_enzyme_id		ManageTable.cgi?TABLE_NAME=ST_restriction_enzyme	ST_restriction_enzyme
 ST_misc_option	Solexa Misc Options	SolexaTrans_infrastructure	YES	$TBST_MISC_OPTION	misc_option_id		ManageTable.cgi?TABLE_NAME=ST_misc_option	ST_misc_option
 ST_solexa_analysis	Solexa Analysis	SolexaTrans_infrastructure	YES	$TBST_SOLEXA_ANALYSIS	solexa_analysis_id		ManageTable.cgi?TABLE_NAME=ST_solexa_analysis	ST_solexa_analysis
+ST_analysis_parameters	Solexa Analysis Parameters	SolexaTrans_infrastructure	YES	$TBST_ANALYSIS_PARAMETERS	analysis_parameter_id		ManageTable.cgi?TABLE_NAME=ST_analysis_parameters	ST_analysis_parameters
 ST_gene_analysis	Gene Analysis	SolexaTrans_infrastructure	NO	$TBST_SOLEXA_GENE_ANALYSIS	gene_analysis_id		ManageTable.cgi?TABLE_NAME=ST_gene_analysis	ST_gene_analysis
 ST_tag_analysis	Tag Analysis	SolexaTrans_infrastructure	NO	$TBST_SOLEXA_TAG_ANALYSIS	tag_analysis_id		ManageTable.cgi?TABLE_NAME=ST_tag_analysis	ST_tag_analysis
 ST_tag	Tag	SolexaTrans_infrastructure	NO	$TBST_TAG	tag_id		GetCounts	ST_tag
@@ -29,4 +30,4 @@ ST_biosequence_property_set	Biosequence Property Set	SolexaTrans_infrastructure	
 ST_biosequence_tag	BioSequence Tag	SolexaTrans_infrastructure	YES	$TBST_BIOSEQUENCE_TAG	biosequence_tag_id		ManageTable.cgi?TABLE_NAME=ST_biosequence_tag	ST_biosequence_tag
 ST_GetCounts	GetCounts	QUERY	NO				GetCounts	
 ST_JobParameters	Job Parameters	QUERY	NO				Samples.cgi	
-ST_StatusSearch	Status Search	QUERY	NO				Status.cgi	
+ST_StatusSearch	Status Search	QUERY	NO				Status.cgi
