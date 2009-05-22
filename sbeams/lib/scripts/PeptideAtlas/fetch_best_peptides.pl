@@ -69,7 +69,6 @@ $dbh->{RaiseError}++;
       $peptide->[7] = sprintf( "%0.2f", $peptide->[7] ) if $peptide->[7] !~ /na/;
       $peptide->[15] = sprintf( "%0.2f", $peptide->[15] ) if $peptide->[15];
       $peptide->[16] = sprintf( "%0.3f", $peptide->[16] );
-      $peptide->[17] = sprintf( "%0.3f", $peptide->[17] );
       if ( $args->{tsv_file} ) {
         print TSV join( "\t", @{$peptide} ) . "\n";
       } else {
