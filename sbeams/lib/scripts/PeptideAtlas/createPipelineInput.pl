@@ -1054,13 +1054,13 @@ sub main {
   }
 
   #### Process additional input parameters
-  my $P_threshold = $OPTIONS{P_threshold};
-  my $FDR_threshold = $OPTIONS{FDR_threshold};
+  my $P_threshold = $OPTIONS{P_threshold} || '';
+  my $FDR_threshold = $OPTIONS{FDR_threshold} || '';
   unless ($protlist_only) {
-    if (defined($FDR_threshold) && defined($P_threshold)) {
+    if ( $FDR_threshold && $P_threshold) {
       print "Only one of --P_threshold and --FDR_threshold may be specified.\n";
       exit;
-    } elsif (!defined($FDR_threshold) && !defined($P_threshold)) {
+    } elsif (!$FDR_threshold && $P_threshold) {
       $FDR_threshold = '0.0001';
       print "Using default FDR threshold $FDR_threshold.\n";
       #$P_threshold = '0.9';
@@ -1719,7 +1719,7 @@ sub main {
             # For some P=0, there is no subsuming_protein_entry
             #  attribute -- seems a ProtPro bug.
             #  We will call these subsumed.
-            my $subsuming_proteins = $prot_href->{subsuming_protein_entry};
+            my $subsuming_proteins = $prot_href->{subsuming_protein_entry} || '';
             my @subsuming_proteins = split(/ /,$subsuming_proteins);
 	    my @matches;
             if ($subsuming_proteins ne "") {
@@ -2643,7 +2643,15 @@ sub coalesceIdentifications {
   #### Make a hash of the column names
   my $columns;
   for (my $index=0; $index<scalar(@{$column_names}); $index++) {
-    $columns->{$column_names->[$index]} = $index;
+    my $curr_name = $column_names->[$index];
+    $columns->{$curr_name} = $index;
+
+    # Hack
+    my $trimmed_name = $curr_name;
+    $trimmed_name =~ s/^protXML_//;
+    if ( $trimmed_name ne $curr_name ) {
+      $columns->{$trimmed_name} = $index;
+    }
   }
   #print Dumper( [$columns] );
 
@@ -2682,18 +2690,23 @@ sub coalesceIdentifications {
       #### Already counted information for this search batch
     } else {
       if (exists($modinfo->{best_adjusted_probability})) {
-	if ($row->[$columns->{adjusted_probability}] > $modinfo->{best_adjusted_probability}) {
-	  $modinfo->{best_adjusted_probability} = $row->[$columns->{adjusted_probability}];
-	}
+        if ($row->[$columns->{adjusted_probability}] > $modinfo->{best_adjusted_probability}) {
+          $modinfo->{best_adjusted_probability} = $row->[$columns->{adjusted_probability}];
+        }
       }
+
+      for my $key ( qw( n_adjusted_observations n_sibling_peptides ) ) {
+        $row->[$columns->{$key}] ||= 0;
+      }
+
       $modinfo->{n_adjusted_observations} += $row->[$columns->{n_adjusted_observations}];
       $modinfo->{n_sibling_peptides} += $row->[$columns->{n_sibling_peptides}];
 
       #### Since this is a new mod instance, update the overall peptide info, too
       if (exists($info->{best_adjusted_probability})) {
-	if ($row->[$columns->{adjusted_probability}] > $info->{best_adjusted_probability}) {
-	  $info->{best_adjusted_probability} = $row->[$columns->{adjusted_probability}];
-	}
+        if ($row->[$columns->{adjusted_probability}] > $info->{best_adjusted_probability}) {
+          $info->{best_adjusted_probability} = $row->[$columns->{adjusted_probability}];
+        }
       }
       $info->{n_adjusted_observations} += $row->[$columns->{n_adjusted_observations}];
       #### FIXME This below is not the best way to calculate n_sibling_peptides.
@@ -2702,7 +2715,6 @@ sub coalesceIdentifications {
       #### n_sibling_peptides will often be inflated, but it's not clear how to do this best
       $info->{n_sibling_peptides} += $row->[$columns->{n_sibling_peptides}];
     }
-
     $modinfo->{search_batch_ids}->{$search_batch_id}++;
 
   }
