@@ -16,6 +16,7 @@ use SBEAMS::PeptideAtlas::Tables;
 $|++; # don't buffer output
 
 my $sbeams = SBEAMS::Connection->new();
+$sbeams->Authenticate();
 my $atlas = SBEAMS::PeptideAtlas->new();
 $atlas->setSBEAMS( $sbeams );
 my $pep_sel = SBEAMS::PeptideAtlas::BestPeptideSelector->new();
@@ -26,20 +27,31 @@ my $args = process_args();
 my $dbh = $sbeams->getDBHandle();
 $dbh->{RaiseError}++;
 
+
+
+
 { # Main 
   if ( $args->{show_builds} ) {
     show_builds();
   } else {
+    print STDERR "Starting: " . time() . "\n" if $args->{verbose};
     print STDERR "Fetching observed peptides\n" if $args->{verbose};
+
     my $observed = get_observed_peptides();
     print STDERR "Fetching theoretical peptides\n" if $args->{verbose};
     my $theoretical = get_theoretical_peptides();
-    print STDERR "Merging peptides\n" if $args->{verbose};
+    print STDERR "Merging peptides ($args->{n_peptides})\n" if $args->{verbose};
     my $merged = $pep_sel->merge_pabst_peptides(  obs => $observed, 
                                                  theo => $theoretical,
                                            n_peptides => $args->{n_peptides},
                                               verbose => $args->{verbose}
                                                );
+
+    print STDERR "Freeing memory\n" if $args->{verbose};
+    # Free up some memory!!!
+    undef $observed;
+    undef $theoretical;
+
     print STDERR "Printing peptides\n" if $args->{verbose};
 
     my $headings = get_headings();
@@ -51,6 +63,13 @@ $dbh->{RaiseError}++;
     }
 
     for my $peptide ( @{$merged} ) {
+      $peptide->[4] = sprintf( "%0.2f", $peptide->[4] ) if $peptide->[4] !~ /na/;
+      $peptide->[5] = sprintf( "%0.2f", $peptide->[5] ) if $peptide->[5] !~ /na/;
+      $peptide->[6] = sprintf( "%0.2f", $peptide->[6] ) if $peptide->[6] !~ /na/;
+      $peptide->[7] = sprintf( "%0.2f", $peptide->[7] ) if $peptide->[7] !~ /na/;
+      $peptide->[15] = sprintf( "%0.2f", $peptide->[15] ) if $peptide->[15];
+      $peptide->[16] = sprintf( "%0.3f", $peptide->[16] );
+      $peptide->[17] = sprintf( "%0.3f", $peptide->[17] );
       if ( $args->{tsv_file} ) {
         print TSV join( "\t", @{$peptide} ) . "\n";
       } else {
@@ -59,6 +78,7 @@ $dbh->{RaiseError}++;
     }
     close TSV if $args->{tsv_file};
 
+    print STDERR "Finishing: " . time() . "\n" if $args->{verbose};
   }
 } # End main
 
@@ -107,7 +127,7 @@ sub process_args {
     }
     print_usage( $err ) if $err;
   }
-  for my $opt ( qw( n_peptides, obs_min atlas_build ) ) {
+  for my $opt ( qw( n_peptides obs_min atlas_build ) ) {
     if ( $args{$opt}  && $args{$opt} !~ /^\d+$/ ) {
       print_usage( "$opt must be an integer" );
     }
@@ -123,7 +143,7 @@ sub process_args {
         $config_vals{$1} = $2;
       }
     }
-    $pep_sel->set_penalty_values( %config_vals );
+    $pep_sel->set_pabst_penalty_values( %config_vals );
   }
 
 
@@ -179,7 +199,8 @@ sub get_observed_peptides {
   return $pep_sel->get_pabst_observed_peptides(       atlas_build => $args->{atlas_build},
                                                 protein_in_clause => $name_in, 
                                                   min_nobs_clause => $nobs_and, 
-                                                        bonus_obs => $args->{bonus_obs}  
+                                                        bonus_obs => $args->{bonus_obs},
+                                                          verbose => $args->{verbose}
                                               );
 }
 
