@@ -469,7 +469,11 @@ sub get_pabst_scoring_defs {
                  nGPG => 'Avoid nxyG where x or y is P or G',
                     D => 'Slightly penalize D or S in general?',
                     S => 'Slightly penalize D or S in general?',  
-                  obs => 'Bonus for observed peptides, usually > 1'
+                  obs => 'Bonus for observed peptides, usually > 1',
+                min_l => 'Minimum length for peptide',
+                min_p => 'Penalty for peptides under min length',
+                max_l => 'Maximum length for peptide',
+                max_p => 'Penalty for peptides over max length',
                );
   return \%defs;
 }
@@ -500,15 +504,20 @@ sub get_default_pabst_scoring {
                 nGPG => .1,
                    D => 1.0,
                  obs => 2.0,
-                   S => 1.0 );
+                   S => 1.0,
+               min_l => 0,
+               min_p => 1,
+               max_l => 0,
+               max_p => 1,
+                );
 
 	if ( !$args{show_defs} ) {
 	  return \%scores;
 	} else {
-		my %defs = $self->get_pabst_scoring_defs();
+		my $defs = $self->get_pabst_scoring_defs();
 		my @score_defs;
 		for my $k ( sort( keys ( %scores ) ) ) {
-      push @score_defs, "$k\t$scores{$k}\t# $defs{$k}\n";
+      push @score_defs, "$k\t$scores{$k}\t# $defs->{$k}";
 		}
 		return ( wantarray() ) ? @score_defs : join( "\n", @score_defs, '' );
 	}
@@ -835,10 +844,22 @@ sub get_pabst_observed_peptides {
 sub get_pabst_headings {
   my $self = shift;
   my %args = @_;
-  my @headings = qw( biosequence_name preceding_residue peptide_sequence following_residue 
-                     empirical_proteotypic_score suitability_score predicted_suitability_score
-                     merged_score molecular_weight SSRCalc_relative_hydrophobicity n_protein_mappings
-                     n_genome_locations best_probability n_observations annotations synthesis_score
+  my @headings = qw( biosequence_name
+                     preceding_residue
+                     peptide_sequence
+                     following_residue 
+                     empirical_proteotypic_score
+                     suitability_score
+                     predicted_suitability_score
+                     merged_score
+                     molecular_weight
+                     SSRCalc_relative_hydrophobicity
+                     n_protein_mappings
+                     n_genome_locations
+                     best_probability
+                     n_observations
+                     annotations
+                     synthesis_score
                      syntheis_adjusted_score );
 
   if ( $args{as_col_hash} ) {
@@ -1014,6 +1035,7 @@ sub merge_pabst_peptides {
       push @peptides, $peptide;
     }
 #    PBR
+#    print STDERR scalar( @{$peptides[0]} ) . " COLS\n";
     my $row = $self->pabst_evaluate_peptides( peptides => \@peptides,
                                                seq_idx => 2, 
                                             follow_idx => 3, 
@@ -1022,11 +1044,15 @@ sub merge_pabst_peptides {
                                             );
     @peptides = @{$row};
 
+#    for my $p ( @peptides ) { print STDERR join( ':', @$p ) . "\n" if $p->[2] eq 'LNLSENYTLSISNAR'; }
+#    print STDERR scalar( @{$peptides[0]} ) . " COLS\n";
     # OK, we have a merged array of peptides with scores.  Sort and return
     @peptides = sort { $b->[16] <=> $a->[16] } @peptides;
 
+#    for my $p ( @peptides ) { print STDERR join( ':', @$p ) . "\n" if $p->[2] eq 'LNLSENYTLSISNAR'; }
+
     # Apply peptide number threshold.  Score threshold too?
-    $args{n_peptides} = 100;
+    $args{n_peptides} ||= 100;
     if ( $args{n_peptides} ) {
       my $cnt = 0;
       for my $pep ( @peptides ) {
@@ -1163,6 +1189,7 @@ sub pabst_evaluate_peptides {
   my $cnt = 0;
   for my $pep ( @{$args{peptides}} ) {
 
+#    print STDERR "COLS: " . scalar( @$pep ) . " before\n";
     # If we have a header column, push new headings - first pass only
     if ( $args{header} && !$cnt ) {
       $cnt++;
@@ -1196,20 +1223,41 @@ sub pabst_evaluate_peptides {
       }
     }
 
-    # May have pre-existing annotations for missed cleavage, etc.
-    if ( defined $args{annot_idx} && @pen_codes ) {
-      if ( $pep->[$args{annot_idx}] ) {
-        $pep->[$args{annot_idx}] .= ',' . join( ',', @pen_codes);
-      } else {
-        $pep->[$args{annot_idx}] = join( ',', @pen_codes);
+    # min/max length and penalties
+    if ( $pen_defs{min_l} ) {
+      if ( length($pep->[$args{seq_idx}]) < $pen_defs{min_l} ) {
+        $scr *= $pen_defs{min_p};
+        push @pen_codes, 'Min';
       }
-    } else {
+    }
+    if ( $pen_defs{max_l} ) {
+      if ( length($pep->[$args{seq_idx}]) > $pen_defs{max_l} ) {
+        $scr *= $pen_defs{max_p};
+        push @pen_codes, 'Max';
+      }
+    }
+
+    # May have pre-existing annotations for missed cleavage, etc.
+    if ( defined $args{annot_idx} ) {
+      if( @pen_codes ) {
+        if ( $pep->[$args{annot_idx}] ) {
+          $pep->[$args{annot_idx}] .= ',' . join( ',', @pen_codes);
+        } else {
+          $pep->[$args{annot_idx}] = join( ',', @pen_codes);
+        }
+      }
+    } elsif ( @pen_codes ) {
       push @$pep, join( ',', @pen_codes);
+    } else {
+      push @$pep, '';
     }
 
     push @$pep, $scr;
+#    print STDERR "SCR is $scr\n";
     if ( defined $args{score_idx} ) {
       push @$pep, $scr * $pep->[$args{score_idx}];
+#      print STDERR "adjusted is is " . $scr * $pep->[$args{score_idx}] . "\n";
+#      print STDERR "COLS: " . scalar( @$pep ) . " after\n";
     }
   }
   return $args{peptides};
