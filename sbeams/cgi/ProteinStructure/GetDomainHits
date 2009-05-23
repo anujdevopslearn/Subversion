@@ -120,7 +120,7 @@ sub main {
     # Some action
   } else {
     $sbeamsMOD->display_page_header( onload => 'hide_processing_info()' );
-    print_hide_script();
+    print_hide_script() if $sbeams->output_mode() eq 'html';
     handle_request(ref_parameters=>\%parameters);
     $sbeamsMOD->display_page_footer();
   }
