@@ -226,10 +226,6 @@ return 1;
 }
 
 sub create_javascript_hashes{
-  print qq~
-<SCRIPT TYPE="TEXT/JAVASCRIPT">
-~;
-
   my %job_results = ();
   my $job_results_ref = \%job_results;
   my $project_id = $sbeams->getCurrent_project_id; 
@@ -237,7 +233,6 @@ sub create_javascript_hashes{
     error("You must set a project using the Project selector to continue");
   }
   my $sql = $sbeams_solexa_groups->get_sample_job_status_sql(project_id => $project_id);
-
   $sbeams->fetchResultSet( sql_query => $sql,
                            resultset_ref => $job_results_ref );
   
@@ -246,6 +241,10 @@ sub create_javascript_hashes{
   my $jobname_idx = $job_results_ref->{column_hash_ref}->{Job_Name};
   my $status_idx  = $job_results_ref->{column_hash_ref}->{Job_Status};
   my $sample_idx  = $job_results_ref->{column_hash_ref}->{Sample_ID};
+
+  print qq~
+<SCRIPT TYPE="TEXT/JAVASCRIPT">
+~;
 
   my %info;
   foreach my $row_aref (@{$aref} ) {
@@ -323,7 +322,6 @@ return 1;
 ###############################################################################
 sub handle_request {
   my %args = @_;
-
 
   #### Process the arguments list
   my $ref_parameters = $args{'ref_parameters'}
@@ -1227,7 +1225,12 @@ sub create_job_select {
             } elsif ($num_jobs == 1) {
               $anchor = qq(<INPUT type="hidden" name="${slimseq_sample_id}__job_select" id="${slimseq_sample_id}__job_select" value=");
               $anchor .= $iref->[0]->[$jobid_idx];
-              $anchor .= '" />'.$iref->[0]->[$jobtime_idx];
+              $anchor .= '" />';
+              my $jobtag = $iref->[0]->[$jobtag_idx];
+              if ($jobtag && $jobtag ne '') {
+                $anchor .= $jobtag.' - ';
+              }
+              $anchor .= $iref->[0]->[$jobtime_idx];
             } else {
               $anchor = "No Jobs for this sample";
             }
