@@ -1153,6 +1153,57 @@ sub get_solexa_run_sql{
 	return $sql;
 }
 
+###############################################################################
+# get get_spr_ids_by_sample_id_sql
+#
+#get all the solexa_pipeline_results_ids for a sample
+###############################################################################
+sub get_spr_ids_by_sample_id_sql {
+  my $method = 'get_spr_ids_by_sample_id';
+  my $self = shift;
+  my %args = @_;
+
+  unless ($args{'solexa_sample_id'} || $args{'slimseq_sample_id'}) {
+    confess(__PACKAGE__ . "::$method Need to provide key value pair for 'solexa_sample_id' or 'slimseq_sample_id'");
+  }
+
+  my $constraint = $args{constraint} if $args{constraint};
+
+  my $where;
+  if ($args{'solexa_sample_id'}) {
+    $where = 'WHERE ss.solexa_sample_id = '.$args{'solexa_sample_id'};
+  } elsif ($args{'slimseq_sample_id'}) {
+    $where = 'WHERE ss.slimseq_sample_id = '.$args{'slimseq_sample_id'};
+  } else {
+    confess(__PACKAGE__."::$method error with arguments provided - could not find slimseq_sample_id or solexa_sample_id");
+  }
+
+  my $sql = qq~
+                                SELECT
+                                spr.solexa_pipeline_results_id as "SPR_ID",
+                                spr.date_modified as "Last_Modified"
+                                FROM $TBST_SOLEXA_SAMPLE ss
+                                LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE_SAMPLES sfcls on
+                                   (ss.solexa_sample_id = sfcls.solexa_sample_id)
+                                LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE sfcl on
+                                   (sfcls.flow_cell_lane_id = sfcl.flow_cell_lane_id)
+                                LEFT JOIN $TBST_SOLEXA_PIPELINE_RESULTS spr on
+                                   (sfcl.flow_cell_lane_id = spr.flow_cell_lane_id)
+                                $where
+                                AND ss.record_status != 'D'
+                                AND sfcls.record_status != 'D'
+                                AND sfcl.record_status != 'D'
+                                AND spr.record_status != 'D'
+                                order by ss.slimseq_sample_id
+  ~;
+
+  if ($constraint) {
+    $sql .= $constraint;
+  }
+
+  return $sql;
+}
+
 
 ###############################################################################
 # get_jobs_by_sample_id_sql
