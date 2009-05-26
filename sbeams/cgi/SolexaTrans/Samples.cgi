@@ -238,7 +238,7 @@ sub handle_request {
   my (%array_requests, %array_scans, %quantitation_files);
 
   ## Need to add a MainForm in order to facilitate proper movement between projects.  Otherwise some cgi params that we don't want might come through.
-  print qq~ <FORM METHOD="post" NAME="MainForm">
+  print qq~ <FORM METHOD="post" NAME="MainForm" id="MainForm">
        <INPUT TYPE="hidden" NAME="apply_action_hidden" VALUE="">
        <INPUT TYPE="hidden" NAME="set_current_work_group" VALUE="">
        <INPUT TYPE="hidden" NAME="set_current_project_id" VALUE="">
@@ -743,7 +743,7 @@ sub print_pipeline_form {
 
     print qq(<table name="OUTER">\n);
     print "<tr><td>\n";
-    print qq( <FORM METHOD="post" ACTION="$PROGRAM_FILE_NAME" NAME="MainForm">\n);
+    print qq( <FORM METHOD="post" ACTION="$PROGRAM_FILE_NAME" NAME="SamplesForm">\n);
     foreach my $sample (sort {$a <=> $b} ( keys %unique_sample_ids)) {
 
       # get specific information about this sample from the SolexaTrans database
@@ -788,7 +788,32 @@ sub print_pipeline_form {
         mask_user_context=>1,
         mask_query_constraints=>1,
         mask_form_start=>1,
+        help_cookie=>1,
       );
+
+      # Need to add the select box to choose the SPR ID to run if there are multiples
+      my $spr_sql = $sbeams_solexa_groups->get_spr_ids_by_sample_id_sql(slimseq_sample_id => $sample);
+      my @spr_info = $sbeams->selectSeveralColumns($spr_sql);
+
+      if (scalar @spr_info > 1) {
+        my $onclick = $q->escapeHTML("The current sample has been run more than one time on the Solexa sequencing machine or through the Solexa Pipeline (provided by Illumina).  This could be due to many different reasons including, but not limited to: quality control, machine failure, new versions of the Solexa Pipeline, or different parameters in the Solexa Pipeline.  The ST module defaults to the most recent version of this sample, but this selection box is present for the user to designate a previous sample run/version.  Finding out information about these runs can be done by looking at the SampleQC entry or through SlimSeq.");
+        print qq~ <TR><TD><P style="font-weight: bold;">Select a Sample Run:</P></TD>
+                      <TD BGCOLOR="E0E0E0">
+                        <SPAN title="Select a Sample Run" class="popup">
+                          <IMG SRC=/devDM/sbeams/images/greyqmark.gif BORDER=0 ONCLICK="popitup('/devDM/sbeams/cgi/help_popup.cgi?title=Select Sample Run&text=$onclick');">
+                        </SPAN>
+                      </TD>
+                      <TD><SELECT NAME="spr_ids__$sample">
+                      <OPTION VALUE="all">Run STP on all versions of this sample with these parameters</OPTION>        
+              ~;
+        for (my $i = 0; $i <= $#spr_info; $i++) {
+          print qq~ <OPTION VALUE="$spr_info[$i][0]" ~;
+          print "SELECTED " if ($i == $#spr_info);
+          print qq~>$spr_info[$i][1]</OPTION>\n~;
+        }
+        print qq~</SELECT></TD></TR>~;
+      }
+
       print "</table>\n";
     }
 #    print "</td></tr>";
@@ -960,7 +985,7 @@ sub start_pipeline_jobs {
 #  my $motif_idx = $resultset_ref->{column_hash_ref}->{Motif};
 
   ########################################################################################
-  # this foreach loop goes through each row that was retrieved from teh database
+  # this foreach loop goes through each row that was retrieved from the database
   # and organizes the files into a file structure that has one entry for each
   # raw directory path - this is what STP expects to receive. 
   my $new_data_ref;
@@ -985,7 +1010,14 @@ sub start_pipeline_jobs {
     my $motif = $utilities->get_sbeams_restriction_enzyme_motif("enzyme_id" => $res_enzyme_id);
     my $upload_tags = $parameters{'upload_tags__'.$slimseq_sample_id};
     my $job_tag = $parameters{'job_tag__'.$slimseq_sample_id};
+    my $spr_id = $parameters{'spr_ids__'.$slimseq_sample_id};  # this may be 'all' or a spr_id
 
+    # if there is a spr_id, it's not 'all' and it doesn't match the current id, then go to the next result
+    if ($spr_id ne 'all' &&  $spr_id != $solexa_pipeline_results_id) {
+      $log->error("Skipped $slimseq_sample_id $solexa_pipeline_results_id because it wasn't selected by user");
+      next;
+    }
+  
 #           Since we're taking the existance of the files on the word of the database, it'd be
 #            really good to check to see if the file does exist.
 #           The simple case doesn't work because the web server user doesn't have access to /solexa/*
@@ -998,7 +1030,7 @@ sub start_pipeline_jobs {
     if ($parameters{jobname} && $parameters{jobname} =~ /^stp-ssid/) {
       $jobname = $parameters{jobname};
     } else {
-     $jobname = 'stp-ssid'.$slimseq_sample_id.'-'.rand_token();
+     $jobname = 'stp-ssid'.$slimseq_sample_id.'-sprid'.$solexa_pipeline_results_id.'-'.rand_token();
     }
 
     my @new_line;
