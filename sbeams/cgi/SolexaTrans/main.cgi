@@ -348,6 +348,16 @@ sub handle_request {
   my $pi_contact_id;
   my (%array_requests, %array_scans, %quantitation_files);
 
+  if ($parameters{'Set_Pipeline_Parameters'}) {
+      print qq~<script type="text/javascript">
+              <!--
+                  window.location="$CGI_BASE_DIR/SolexaTrans/Samples.cgi?step=2&select_samples=$parameters{select_samples}";
+              //-->
+              </script>
+            ~;
+      exit;
+  }
+
   ## Need to add a MainForm in order to facilitate proper movement between projects.  Otherwise some cgi params that we don't want might come through.
   print qq~ <FORM METHOD="post" NAME="MainForm">
        <INPUT TYPE="hidden" NAME="apply_action_hidden" VALUE="">
@@ -708,6 +718,8 @@ sub print_sample_selection {
                                      -label => 'Check to regenerate all selected plots'
                                      ),
                         $q->br,
+                        $q->submit(-name=>'Set_Pipeline_Parameters',
+                                   -value=>'Set Job Parameters'),
 			$q->submit(-name=>'Get_Data',
 				#will need to change value if other data sets need to be run
                 	       	 -value=>'Compare Samples'),
@@ -1095,7 +1107,6 @@ sub print_sample_plots {
                     }
 
                    
-
                     # if the plot doesn't exist, then generate it
                     my $tmp_path = '/solexa/trans/tmp/'.$pngbase.'.png';
                     my $tmp_zoom = '/solexa/trans/tmp/'.$pngbase.'_zoom.png';
