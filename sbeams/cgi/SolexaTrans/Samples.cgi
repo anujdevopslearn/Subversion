@@ -1013,7 +1013,7 @@ sub start_pipeline_jobs {
     my $spr_id = $parameters{'spr_ids__'.$slimseq_sample_id};  # this may be 'all' or a spr_id
 
     # if there is a spr_id, it's not 'all' and it doesn't match the current id, then go to the next result
-    if ($spr_id ne 'all' &&  $spr_id != $solexa_pipeline_results_id) {
+    if ($spr_id && $spr_id ne 'all' &&  $spr_id != $solexa_pipeline_results_id) {
       $log->error("Skipped $slimseq_sample_id $solexa_pipeline_results_id because it wasn't selected by user");
       next;
     }
