@@ -118,7 +118,7 @@ require Exporter;
 my $core = $DBPREFIX{Core};
 my $mod = $DBPREFIX{SolexaTrans};
 
-my $modST = 'SolexaTrans.dbo.';
+my $modST = $mod;
 
 $TB_ORGANISM                   	   	= "${core}organism";
 
