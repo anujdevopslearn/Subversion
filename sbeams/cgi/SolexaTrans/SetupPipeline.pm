@@ -204,6 +204,7 @@ sub generate_sh {
 #!/bin/sh
 #PBS -N $jobname
 #PBS -M $email
+#PBS -M solxabot\@systemsbiology.org
 #PBS -m ea
 #PBS -o $jobname.out
 #PBS -e $job_dir/$jobname/$jobname.err
@@ -238,7 +239,7 @@ END
   # RESULT_URL is a cgi path - ie: "$CGI_BASE_DIR/SolexaTrans/View_Solexa_files.cgi";
 
   $sh .= $email ? <<END : "";
-  sendmail -r $ADMIN_EMAIL $email <<END_EMAIL
+  /usr/sbin/sendmail -r $ADMIN_EMAIL $email <<END_EMAIL
 From: Bioconductor Web Interface <$ADMIN_EMAIL>
 Subject: Job Completed: $jobname
 To: $email
@@ -269,7 +270,7 @@ else
 END
  
     $sh .= $email ? <<END : "";
-  sendmail -r $ADMIN_EMAIL $email <<END_EMAIL
+  /usr/sbin/sendmail -r $ADMIN_EMAIL $email <<END_EMAIL
 From: Bioconductor Web Interface <$ADMIN_EMAIL>
 Subject: Job Error: $jobname
 To: $email
