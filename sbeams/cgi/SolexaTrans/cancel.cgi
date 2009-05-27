@@ -186,7 +186,8 @@ sub result {
 
 	print h2("Results:");
 	print p($result);
-	
+        print p("<a href=\"$CGI_BASE_DIR/SolexaTrans/Samples.cgi?jobname=".$cgi->param('jobname')."\">Restart Job</a>.") if $cgi->param('jobname');
+        print p("<a href=\"$CGI_BASE_DIR/SolexaTrans/Status.cgi?jobname=".$cgi->param('jobname')."\">View Job Parameters</a>") if $cgi->param('jobname');	
         $sbeamsMOD->printPageFooter();
 	
 	exit(1);
