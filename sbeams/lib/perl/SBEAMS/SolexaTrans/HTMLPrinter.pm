@@ -159,7 +159,7 @@ sub display_page_header {
         <tr><td style="width: 100%">
           <table style="border: black 1px solid; width: 100%">
   	  <tr><td style="border-bottom: black 1px solid;">Browse:</td></tr>
-	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?set_current_project_id=1016&TABLE_NAME=ST_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeq Sets</nobr></a></td></tr>
+	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?set_current_project_id=983&TABLE_NAME=ST_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeq Sets</nobr></a></td></tr>
 	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
           </table>
         </td></tr>
