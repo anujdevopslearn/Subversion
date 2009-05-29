@@ -55,6 +55,8 @@ sub new {
     'monoisotopic' => {
       'n[29]'  => 28.031300,    # di-Methylation  (Unimod)
       'n[33]'  => 32.056407,    # DiMethyl-CHD2   (Unimod)
+      'n[37]'  => 36.07567,     # Dimethyl-Heavy  (Unimod)
+      'n[43]'  => 43.005814,    # Carbamylation    (Unimod)
       'n[145]' => 144.102063,   # ABI iTRAQ (UniMod)
       'C[143]' => 39.994915,    # Pyro-carbamidonmethyl (Unimod)
       'C[148]' => 45.987721,    # Beta-methylthiolation (UniMod)
@@ -75,6 +77,7 @@ sub new {
       'K[272]' => 144.102063,   # ABI iTRAQ (UniMod)
       'K[156]' => 28.031300,    # di-Methylation  (Unimod)
       'K[160]' => 32.056407,    # DiMethyl-CHD2   (Unimod)
+      'K[164]' => 36.07567,     # DiMethyl-Heavy   (Unimod)
       'K[136]' => 8.014199,     # Silac label (UniMod)
       'M[147]' => 15.994915,    # Oxidation (UniMod)
       'N[115]' => 0.984016,     # Glyc-Asn (UniMod)
@@ -88,6 +91,8 @@ sub new {
     'average' => {
       'n[29]'  => 28.0532,      # di-Methylation (Unimod)
       'n[33]'  => 32.0778,      # DiMethyl-CHD2  (Unimod)
+      'n[37]'  => 36.0754,      # Dimethyl-Heavy (Unimod)
+      'n[43]'  => 43.0247,      # Carbamylation    (Unimod)
       'n[145]' => 144.1544,     # ABI iTRAQ (UniMod)
       'C[143]' => 40.0208,      # Pyro-carbamidonmethyl (Unimod)
       'C[148]' => 46.0916,      # Beta-methylthiolation (UniMod)
@@ -109,6 +114,7 @@ sub new {
       'K[136]' => 7.9427,     # Silac label (UniMod)
       'K[156]' => 28.0532,    # di-Methylation (Unimod)
       'K[160]' => 32.0778,    # DiMethyl-CHD2  (Unimod)
+      'K[164]' => 36.0754,    # DiMethyl-Heavy  (Unimod)
       'M[147]' => 15.9848,    # Oxidation (UniMod)
       'N[115]' => 0.9848,     # Glyc-Asn (UniMod)
       'R[166]' => 9.9296,     # Silac (UniMod)
