@@ -663,22 +663,22 @@ sub pepXML_end_element {
 
       #### Select a protein_name to store.
       #my $protein_name = pop(@{$self->{pepcache}->{protein_name}});
-      my $protein_name = select_protid($self->{pepcache}->{protein_name});
-
+      my $protein_name ='';
+      $protein_name = select_protid($self->{pepcache}->{protein_name});
       #### Store the information for this peptide into an array for caching
       push(@{ $self->{pep_identification_list} },
           [$self->{search_batch_id},
-	   $self->{pepcache}->{spectrum},
-	   $peptide_accession,
-	   $peptide_sequence,
-	   $self->{pepcache}->{peptide_prev_aa},
-	   $modified_peptide,
-	   $self->{pepcache}->{peptide_next_aa},
-	   $charge,
+	       $self->{pepcache}->{spectrum},
+	       $peptide_accession,
+	       $peptide_sequence,
+	       $self->{pepcache}->{peptide_prev_aa},
+	       $modified_peptide,
+	       $self->{pepcache}->{peptide_next_aa},
+	       $charge,
            $probability,
            $self->{pepcache}->{massdiff},
            #need to store protein_name in case no protXML info
-           $self->{pepcache}->{protein_name},
+           #$self->{pepcache}->{protein_name},
            $protein_name,
 	  ]
       );
@@ -783,9 +783,8 @@ sub protXML_end_element {
     my $modifications = $self->{pepcache}->{modifications};
     my $charge = $self->{pepcache}->{charge};
 
-    my $pep_key =
-      storePepInfo( $self, $peptide_sequence, $modifications, 
-	  $get_best_pep_probs);
+    my $pep_key = storePepInfo( $self, $peptide_sequence, $modifications, 
+	                            $get_best_pep_probs);
     if ( $assign_protids ) {
       assignProteinID($self, $pep_key);
     }
@@ -793,12 +792,12 @@ sub protXML_end_element {
     #### If there are indistinguishable peptides, store their info, too
     foreach my $indis_peptide (
        keys(%{$self->{pepcache}->{indistinguishable_peptides}}) ) {
-      my $pep_key =
-	storePepInfo( $self, $indis_peptide, $modifications, 
-	  $get_best_pep_probs);
-      if ( $assign_protids ) {
-	assignProteinID($self, $pep_key);
-      }
+       my $pep_key =
+	     storePepInfo( $self, $indis_peptide, $modifications, 
+	                 $get_best_pep_probs);
+       if ( $assign_protids ) {
+	     assignProteinID($self, $pep_key);
+       }
     }
 
     #### Add current protein to global list of proteins this pep maps to
@@ -2053,8 +2052,13 @@ sub writePepIdentificationListFile {
       } else {
         $initial_probability = $info->{initial_probability};
       }
-      $identification->[10] = $ProteinProphet_pep_protID_data->
+      if($ProteinProphet_pep_protID_data->{$pep_key}->{protein_name}){
+        $identification->[10] = $ProteinProphet_pep_protID_data->
            {$pep_key}->{protein_name};
+      }
+      else {
+        print "no ProteinProphet_pep_protID_data for peptide $pep_key\n";
+      }
       $adjusted_probability = $info->{nsp_adjusted_probability};
       $n_adjusted_observations = $info->{n_adjusted_observations};
       $n_sibling_peptides = $info->{n_sibling_peptides};
