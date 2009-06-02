@@ -112,7 +112,7 @@ sub perl_process_tags {
 EOS1
 
   if ($tag_type eq 'MATCH') {
-    $script .= "\t\tmy (\$gene_id, \$tag, \$count, \$cpm) = split(/\\t/, \$_);";
+    $script .= "\t\tmy (\$gene_id, \$genome, \$tag, \$count, \$cpm) = split(/\\t/, \$_);";
   } elsif ($tag_type eq 'UNKNOWN') {
     $script .= "\t\tmy (\$tag, \$count, \$cpm) = split(/\\t/, \$_);";
   } elsif ($tag_type eq 'AMBIGUOUS') {
@@ -225,7 +225,7 @@ sub perl_process_genes {
             my \$cnt = 0;
             while (<TAG>) {
               chomp;
-              my (\$gene_id, \$count, \$cpm) = split(/\\t/, \$_);
+              my (\$gene_id, \$genome_id, \$count, \$cpm) = split(/\\t/, \$_);
 
               my \$biosequence_id = \$utilities->check_sbeams_biosequence(biosequence_accession => \$gene_id);
               if (\$biosequence_id == 0) {
