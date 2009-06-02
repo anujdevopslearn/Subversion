@@ -1,0 +1,12 @@
+7.0
+10
+1       SYBCHAR        0       4       "\t"                        2     solexa_analysis_id ""
+2       SYBCHAR        0       4       "\t"                        3     biosequence_id ""
+3       SYBCHAR        0       8       "\t"                        4     gene_count  ""
+4       SYBCHAR        0       13      "\t"                        5     gene_cpm  ""
+5       SYBCHAR        0       8       "\t"                        6     date_created ""
+6       SYBCHAR        0       4       "\t"                        7     created_by_id  ""
+7       SYBCHAR        0       4       "\t"                        8     modified_by_id ""
+8       SYBCHAR        0       8       "\t"                        9     date_modified  ""
+9       SYBCHAR        0       4       "\t"                        10    owner_group_id ""
+10      SYBCHAR        0       1       "\n"                        11    record_status  SQL_Latin1_General_CP1_CI_AS

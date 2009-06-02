@@ -1,0 +1,13 @@
+7.0
+11
+1       SYBCHAR        0       4       "\t"                        2     solexa_analysis_id ""
+2       SYBCHAR        0       4       "\t"                        3     tag_id ""
+3       SYBCHAR        0       4       "\t"                        4     tag_type_id  ""
+4       SYBCHAR        0       4       "\t"                        5     tag_count  ""
+5       SYBCHAR        0       13      "\t"                        6     tag_cpm  ""
+6       SYBCHAR        0       8       "\t"                        7     date_created ""
+7       SYBCHAR        0       4       "\t"                        8     created_by_id  ""
+8       SYBCHAR        0       4       "\t"                        9     modified_by_id ""
+9       SYBCHAR        0       8       "\t"                        10    date_modified  ""
+10      SYBCHAR        0       4       "\t"                        11    owner_group_id ""
+11      SYBCHAR        0       1       "\n"                        12    record_status  SQL_Latin1_General_CP1_CI_AS
