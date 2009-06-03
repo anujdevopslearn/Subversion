@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/local/bin/perl 
 
 ###############################################################################
 # Program     : load_atlas_build.pl
@@ -33,7 +33,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_username $ATLAS_BUILD_ID %spectra
 
 
 #### Set up SBEAMS core module
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -278,9 +278,6 @@ sub handleRequest {
       );
 
      populateSampleRecordsWithSampleAccession();
-     # last commit, then reset to standard autocommit mode
-     commit_transaction();
-     $sbeams->reset_dbh();
 
      my $t1 = new Benchmark; 
      my $td = timestr(timediff( $t1, $t0 ));
@@ -399,9 +396,10 @@ sub handleRequest {
 					}
 				}
 			}
- 			commit_transaction() unless $commit_interval % $cnt;
-			print "Done!\n";
-      reset_dbh();
+
+     # last commit, then reset to standard autocommit mode
+     commit_transaction();
+     reset_dbh();
     }
   }
 
@@ -711,13 +709,12 @@ sub buildAtlas {
             sbid_asbid_sid_hash_ref => \%proteomicsSBID_hash,
             atlas_build_id => $ATLAS_BUILD_ID,
         );
+        # Commit final inserts (if any) from PAxml load.
         commit_transaction();
     } else {
         die("ERROR: Unable to find '$PAxmlfile' to load data from.");
     }
 
-    # Commit final inserts (if any) from PAxml load.
-    commit_transaction();
 
     ## set infile to coordinate mapping file
     my $mapping_file = "$source_dir/coordinate_mapping.txt";
@@ -1581,14 +1578,14 @@ sub insert_spectra_description_set
 
     ## There could be [spectra_description_set] records for this
     ## sample_id and atlas_search_batch
-    my $sql = qq~
-        SELECT distinct sample_id, atlas_search_batch_id, 
-        instrument_model_id, instrument_model_name, conversion_software_name, 
-        conversion_software_version, mzXML_schema, n_spectra
-        FROM $TBAT_SPECTRA_DESCRIPTION_SET
-        WHERE atlas_search_batch_id = '$atlas_search_batch_id'
-        AND sample_id = '$sample_id'
-        AND record_status != 'D'
+    $sql = qq~
+      SELECT distinct sample_id, atlas_search_batch_id, 
+      instrument_model_id, instrument_model_name, conversion_software_name, 
+      conversion_software_version, mzXML_schema, n_spectra
+      FROM $TBAT_SPECTRA_DESCRIPTION_SET
+      WHERE atlas_search_batch_id = '$atlas_search_batch_id'
+      AND sample_id = '$sample_id'
+      AND record_status != 'D'
     ~;
 
     my @rows = $sbeams->selectSeveralColumns($sql);
@@ -2940,6 +2937,11 @@ sub insert_peptide_instance {
 
   my $rowdata_ref = $args{'rowdata_ref'} or die("need rowdata_ref");
 
+  # Some peptides lack sibling peptide, convert nan => 0 to keep db happy
+  if ( $rowdata_ref->{n_sibling_peptides} && $rowdata_ref->{n_sibling_peptides} =~ /nan|inf/ ) {
+    $rowdata_ref->{n_sibling_peptides} = 0; 
+  }
+
   my $peptide_instance_id = $sbeams->updateOrInsertRow(
     insert=>1,
     table_name=>$TBAT_PEPTIDE_INSTANCE,
@@ -2977,6 +2979,11 @@ sub insert_modified_peptide_instance {
   my %args = @_;
 
   my $rowdata_ref = $args{'rowdata_ref'} or die("need rowdata_ref");
+
+  # Some peptides lack sibling peptide, convert nan => 0 to keep db happy
+  if ( $rowdata_ref->{n_sibling_peptides} && $rowdata_ref->{n_sibling_peptides} =~ /nan|inf/ ) {
+    $rowdata_ref->{n_sibling_peptides} = 0; 
+  }
 
 
   #### Calculate some mass values based on the sequence
