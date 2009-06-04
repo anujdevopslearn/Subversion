@@ -848,7 +848,6 @@ sub initiate_transaction {
   if ( $@ ) {
     $log->error( "DBI error: $@\n" );
   }
-    $dbh->commit();
 
   # Turn RaiseError off, because mssql begin_work is AFU
   $dbh->{RaiseError} = 0;
