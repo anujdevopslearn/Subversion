@@ -1097,7 +1097,7 @@ sub create_atlas_search_batch
 
     my $experiment_path = $proteomics_search_batch_path;
 
-    $experiment_path =~ /.*\/archive\/(.*)\/.*/;
+    $experiment_path =~ /.*\/archive(\/.*)\/.*/;
     $experiment_path = $1;
     #$experiment_path =~ s/^(.+)\/(.+)\/(.+)\/(.+)\/(.+)/$2\/$3\/$4/gi;
 
@@ -1999,10 +1999,12 @@ sub readCoords_updateRecords_calcAttributes {
         #    $tmp_chromosome = $tmp_chromosome;
         #}
 
+
         push(@chromosome, $tmp_chromosome);
         push(@strand,$columns[9]);
         push(@start_in_chromosome,$columns[10]);
         push(@end_in_chromosome,$columns[11]);
+
 
         ## hash with
         ## keys =  peptide accession
@@ -2017,6 +2019,8 @@ sub readCoords_updateRecords_calcAttributes {
            $index_hash{$pep_acc} = $ind;
 
         }
+
+
         push(@n_protein_mappings, 1);  ##unless replaced in next section
         push(@n_genome_locations, 1);  ##unless replaced in next section
         push(@is_exon_spanning, 'N');  ##unless replaced in next section
@@ -2024,8 +2028,11 @@ sub readCoords_updateRecords_calcAttributes {
         $ind++;
 
     }   ## END reading coordinate mapping file
+
     close(INFILE) or die "Cannot close $infile ($!)";
     print "\nFinished reading .../coordinate_mapping.txt\n";
+
+
 
     if ($TESTONLY) {
         foreach my $tmp_ind_str (values ( %index_hash ) ) {
@@ -2236,10 +2243,15 @@ sub readCoords_updateRecords_calcAttributes {
 
 
    if ($TESTVARS) {
+
        my $n = ($#peptide_accession) + 1;
+
        print "\nChecking storage of values after calcs.  $n entries\n";
+
        for(my $i =0; $i <= $#peptide_accession; $i++){
+
            my $tmp_pep_acc = $peptide_accession[$i];
+
            my $tmp_strand = $strand[$i] ;
            my $tmp_peptide_id = $peptides{$tmp_pep_acc};
            my $tmp_n_genome_locations = $n_genome_locations[$i];
@@ -2251,30 +2263,54 @@ sub readCoords_updateRecords_calcAttributes {
            my $tmp_start_in_chromosome = $start_in_chromosome[$i];
            my $tmp_end_in_chromosome = $end_in_chromosome[$i];
 
+
            if (!$tmp_pep_acc) {
+         
                print "PROBLEM:  missing \$tmp_pep_acc for index $i\n";
+
            } elsif (!$tmp_strand) {
+
                print "PROBLEM:  missing \$tmp_strand for $tmp_pep_acc \n";
+
            } elsif (!$tmp_n_genome_locations) {
+
                print "PROBLEM:  missing \$tmp_n_genome_locations for $tmp_pep_acc \n";
+
            } elsif (!$tmp_is_exon_spanning) {
+
                print "PROBLEM:  missing \$tmp_is_exon_spanning  for $tmp_pep_acc \n";
+
            } elsif (!$tmp_n_protein_mappings){
+
                print "PROBLEM:  missing \$tmp_n_protein_mappings for $tmp_pep_acc \n";
+
            } elsif (!$tmp_start_in_biosequence) {
+
                print "PROBLEM:  missing \$tmp_start_in_biosequence for $tmp_pep_acc \n";
+
            } elsif (!$tmp_end_in_biosequence ) {
+
                print "PROBLEM:  missing \$tmp_end_in_biosequence for $tmp_pep_acc \n";
+
            } elsif (!$tmp_chromosome ){
+
                print "PROBLEM:  missing \$tmp_chromosome for $tmp_pep_acc \n";
+
            } elsif (!$tmp_start_in_chromosome ) {
+
                print "PROBLEM:  missing \$tmp_start_in_chromosome for $tmp_pep_acc \n";
+
            } elsif (!$tmp_end_in_chromosome ) {
+
                print "PROBLEM:  missing \$tmp_end_in_chromosome  for $tmp_pep_acc \n";
+
            } elsif (!$tmp_strand) {
+
                print "PROBLEM:  missing \$tmp_strand for $tmp_pep_acc \n";
+
            }
        }
+
        print "-->end third stage test of vars\n";
     }
 
@@ -2283,7 +2319,7 @@ sub readCoords_updateRecords_calcAttributes {
     ## Creating peptide_mapping records, and updating peptide_instance records
     ####----------------------------------------------------------------------------
     print "\nCreating peptide_mapping records, and updating peptide_instance records\n";
-    initiate_transaction();
+
 
     ## hash with key = peptide_accession, value = peptide_instance_id
     my %peptideAccession_peptideInstanceID = 
@@ -2312,48 +2348,51 @@ sub readCoords_updateRecords_calcAttributes {
     #### Loop over each row in the input file and insert the records
     my $previous_peptide_accession = 'none';
     my $mapping_record_count = 0;
+
+    # Initiate transaction for this block
+    initiate_transaction();
     for (my $row = 0; $row <= $#peptide_accession; $row++){
 
-        #### Convert varied strand notations to single notation: +,-,?
-        my $tmp = $strand_xlate{$strand[$row]}
+      #### Convert varied strand notations to single notation: +,-,?
+      my $tmp = $strand_xlate{$strand[$row]}
             or die("ERROR: Unable to translate strand $strand[$row]");
-        $strand[$row] = $tmp;
+      $strand[$row] = $tmp;
 
-        #### Make sure we can resolve the biosequence_id
-        my $biosequence_id = $biosequence_ids{$biosequence_name[$row]};
-				if ( !$biosequence_id ) {
-          # Battle known incrementing error
-					if ( $biosequence_name[$row] =~ /\d+\.\d+$/ ) {
-						# Try the trimmed version
-					  my $name = $biosequence_name[$row];
-						$name =~ s/\.\d+$//;
-						$biosequence_id = $biosequence_ids{$name};
-						if ( !$biosequence_id ) {
-              die("ERROR: BLAST matched biosequence_name $biosequence_name[$row] does not appear to be in the biosequence table!!");
-						}
-						# Cache the incremented version
-					  $biosequence_ids{$biosequence_name[$row]} = $biosequence_id;
-					}
-				}
+      #### Make sure we can resolve the biosequence_id
+      my $biosequence_id = $biosequence_ids{$biosequence_name[$row]};
+      if ( !$biosequence_id ) {
+        # Battle known incrementing error
+        if ( $biosequence_name[$row] =~ /\d+\.\d+$/ ) {
+          # Try the trimmed version
+          my $name = $biosequence_name[$row];
+          $name =~ s/\.\d+$//;
+          $biosequence_id = $biosequence_ids{$name};
+          if ( !$biosequence_id ) {
+            die("ERROR: BLAST matched biosequence_name $biosequence_name[$row] does not appear to be in the biosequence table!!");
+          }
+          # Cache the incremented version
+          $biosequence_ids{$biosequence_name[$row]} = $biosequence_id;
+        }
+      }
 
-        my $tmp_pep_acc = $peptide_accession[$row];
-        my $peptide_id = $peptides{$tmp_pep_acc} ||
+      my $tmp_pep_acc = $peptide_accession[$row];
+      my $peptide_id = $peptides{$tmp_pep_acc} ||
             die("ERROR: Wanted to insert data for peptide $peptide_accession[$row] ".
             "which is in the BLAST output summary, but not in the input ".
             "peptide file??");
 
-        my $peptide_instance_id = $peptideAccession_peptideInstanceID{$tmp_pep_acc};
+      my $peptide_instance_id = $peptideAccession_peptideInstanceID{$tmp_pep_acc};
 
 
-        #### If this is the first row for a peptide, then UPDATE peptide_instance record
-	if ($tmp_pep_acc ne $previous_peptide_accession) {
-          my %rowdata = (   ##   peptide_instance    table attributes
+      #### If this is the first row for a peptide, then UPDATE peptide_instance record
+      if ($tmp_pep_acc ne $previous_peptide_accession) {
+        my %rowdata = (   ##   peptide_instance    table attributes
             n_genome_locations => $n_genome_locations[$row],
             is_exon_spanning => $is_exon_spanning[$row],
             n_protein_mappings => $n_protein_mappings[$row],
             is_subpeptide_of => $peptideAccession_subPeptide{$tmp_pep_acc},
           );
-          my $success = $sbeams->updateOrInsertRow(
+        my $success = $sbeams->updateOrInsertRow(
             update=>1,
             table_name=>$TBAT_PEPTIDE_INSTANCE,
             rowdata_ref=>\%rowdata,
@@ -2362,26 +2401,25 @@ sub readCoords_updateRecords_calcAttributes {
             verbose=>$VERBOSE,
             testonly=>$TESTONLY,
           );
-	}
-
-
-	#### If there are already peptide_mapping records
-	if ($existing_mapping_records{$peptide_instance_id}) {
-	  #### If we're finished with the previous peptide, verify the count
-	  if ($tmp_pep_acc ne $previous_peptide_accession &&
-              $previous_peptide_accession ne 'none') {
-	    unless ($mapping_record_count ==
-		    $existing_mapping_records{$peptideAccession_peptideInstanceID{$previous_peptide_accession}}) {
-	      die("ERROR: Peptide $previous_peptide_accession had ".
-		  $existing_mapping_records{$peptideAccession_peptideInstanceID{$previous_peptide_accession}}.
-		  " pre-existing peptide_mapping records, but we would have INSERTed $mapping_record_count. ".
-		  "This is a serious problem and may require a complete reload.");
 	    }
-	  }
+
+      #### If there are already peptide_mapping records
+      if ($existing_mapping_records{$peptide_instance_id}) {
+        #### If we're finished with the previous peptide, verify the count
+        if ($tmp_pep_acc ne $previous_peptide_accession &&
+              $previous_peptide_accession ne 'none') {
+          unless ($mapping_record_count ==
+            $existing_mapping_records{$peptideAccession_peptideInstanceID{$previous_peptide_accession}}) {
+            die("ERROR: Peptide $previous_peptide_accession had ".
+            $existing_mapping_records{$peptideAccession_peptideInstanceID{$previous_peptide_accession}}.
+            " pre-existing peptide_mapping records, but we would have INSERTed $mapping_record_count. ".
+            "This is a serious problem and may require a complete reload.");
+          }
+        }
 
         #### If there weren't already records, CREATE peptide_mapping record
-	} else {
-          my %rowdata = (   ##   peptide_mapping      table attributes
+      } else {
+        my %rowdata = (   ##   peptide_mapping      table attributes
             peptide_instance_id => $peptide_instance_id,
             matched_biosequence_id => $biosequence_id,
             start_in_biosequence => $start_in_biosequence[$row],
@@ -2390,32 +2428,36 @@ sub readCoords_updateRecords_calcAttributes {
             start_in_chromosome => $start_in_chromosome[$row],
             end_in_chromosome => $end_in_chromosome[$row],
             strand => $strand[$row],
-          );
-          $sbeams->updateOrInsertRow(
+        );
+        $sbeams->updateOrInsertRow(
             insert=>1,
             table_name=>$TBAT_PEPTIDE_MAPPING,
             rowdata_ref=>\%rowdata,
             PK => 'peptide_mapping_id',
             verbose=>$VERBOSE,
             testonly=>$TESTONLY,
-          );
-	}
+        );
+      }
 
-  #### If this is the first row for a peptide, then update the previous flag (must be done last)
-	if ($tmp_pep_acc ne $previous_peptide_accession) {
+      #### If this is the first row for a peptide, then update the previous flag (must be done last)
+      if ($tmp_pep_acc ne $previous_peptide_accession) {
           $previous_peptide_accession = $tmp_pep_acc;
           $mapping_record_count = 0;
-	}
-	$mapping_record_count++;
+      }
+      $mapping_record_count++;
 
-  if ($row/100 == int($row/100)) {
-    print "$row...";
-    $sbeams->commit_transaction();
-  }
+      if ($row/100 == int($row/100)) {
+        print "$row...";
+        $sbeams->commit_transaction();
+      }
 
     }  ## end  create peptide_mapping records and update peptide_instance records
     print "\n";
+
+    # last commit, then reset to standard autocommit mode
+    commit_transaction();
     reset_dbh();
+
 
    ## LAST TEST to assert that all peptides of an atlas in
    ## peptide_instance  are associated with a peptide_instance_sample record
@@ -2928,11 +2970,13 @@ sub commit_transaction {
 
 sub initiate_transaction {
   my %args = @_;
+  print "Initiating transaction\n";
   $sbeams->initiate_transaction();
 }
 
 sub reset_dbh {
   my %args = @_;
+  print "Resetting DBH\n";
   $sbeams->reset_dbh();
 }
 
