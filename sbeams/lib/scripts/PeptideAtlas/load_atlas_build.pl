@@ -1097,7 +1097,7 @@ sub create_atlas_search_batch
 
     my $experiment_path = $proteomics_search_batch_path;
 
-    $experiment_path =~ /.*\/archive(\/.*)\/.*/;
+    $experiment_path =~ /.*\/archive\/(.*)\/.*/;
     $experiment_path = $1;
     #$experiment_path =~ s/^(.+)\/(.+)\/(.+)\/(.+)\/(.+)/$2\/$3\/$4/gi;
 
