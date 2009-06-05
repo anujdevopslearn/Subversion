@@ -711,6 +711,7 @@ sub buildAtlas {
         );
         # Commit final inserts (if any) from PAxml load.
         commit_transaction();
+        reset_dbh();
     } else {
         die("ERROR: Unable to find '$PAxmlfile' to load data from.");
     }
@@ -1096,7 +1097,7 @@ sub create_atlas_search_batch
 
     my $experiment_path = $proteomics_search_batch_path;
 
-    $experiment_path =~ /.*\/archive(\/.*)\/.*/;
+    $experiment_path =~ /.*\/archive\/(.*)\/.*/;
     $experiment_path = $1;
     #$experiment_path =~ s/^(.+)\/(.+)\/(.+)\/(.+)\/(.+)/$2\/$3\/$4/gi;
 
@@ -1998,12 +1999,10 @@ sub readCoords_updateRecords_calcAttributes {
         #    $tmp_chromosome = $tmp_chromosome;
         #}
 
-
         push(@chromosome, $tmp_chromosome);
         push(@strand,$columns[9]);
         push(@start_in_chromosome,$columns[10]);
         push(@end_in_chromosome,$columns[11]);
-
 
         ## hash with
         ## keys =  peptide accession
@@ -2018,8 +2017,6 @@ sub readCoords_updateRecords_calcAttributes {
            $index_hash{$pep_acc} = $ind;
 
         }
-
-
         push(@n_protein_mappings, 1);  ##unless replaced in next section
         push(@n_genome_locations, 1);  ##unless replaced in next section
         push(@is_exon_spanning, 'N');  ##unless replaced in next section
@@ -2027,11 +2024,8 @@ sub readCoords_updateRecords_calcAttributes {
         $ind++;
 
     }   ## END reading coordinate mapping file
-
     close(INFILE) or die "Cannot close $infile ($!)";
     print "\nFinished reading .../coordinate_mapping.txt\n";
-
-
 
     if ($TESTONLY) {
         foreach my $tmp_ind_str (values ( %index_hash ) ) {
@@ -2242,15 +2236,10 @@ sub readCoords_updateRecords_calcAttributes {
 
 
    if ($TESTVARS) {
-
        my $n = ($#peptide_accession) + 1;
-
        print "\nChecking storage of values after calcs.  $n entries\n";
-
        for(my $i =0; $i <= $#peptide_accession; $i++){
-
            my $tmp_pep_acc = $peptide_accession[$i];
-
            my $tmp_strand = $strand[$i] ;
            my $tmp_peptide_id = $peptides{$tmp_pep_acc};
            my $tmp_n_genome_locations = $n_genome_locations[$i];
@@ -2262,54 +2251,30 @@ sub readCoords_updateRecords_calcAttributes {
            my $tmp_start_in_chromosome = $start_in_chromosome[$i];
            my $tmp_end_in_chromosome = $end_in_chromosome[$i];
 
-
            if (!$tmp_pep_acc) {
-         
                print "PROBLEM:  missing \$tmp_pep_acc for index $i\n";
-
            } elsif (!$tmp_strand) {
-
                print "PROBLEM:  missing \$tmp_strand for $tmp_pep_acc \n";
-
            } elsif (!$tmp_n_genome_locations) {
-
                print "PROBLEM:  missing \$tmp_n_genome_locations for $tmp_pep_acc \n";
-
            } elsif (!$tmp_is_exon_spanning) {
-
                print "PROBLEM:  missing \$tmp_is_exon_spanning  for $tmp_pep_acc \n";
-
            } elsif (!$tmp_n_protein_mappings){
-
                print "PROBLEM:  missing \$tmp_n_protein_mappings for $tmp_pep_acc \n";
-
            } elsif (!$tmp_start_in_biosequence) {
-
                print "PROBLEM:  missing \$tmp_start_in_biosequence for $tmp_pep_acc \n";
-
            } elsif (!$tmp_end_in_biosequence ) {
-
                print "PROBLEM:  missing \$tmp_end_in_biosequence for $tmp_pep_acc \n";
-
            } elsif (!$tmp_chromosome ){
-
                print "PROBLEM:  missing \$tmp_chromosome for $tmp_pep_acc \n";
-
            } elsif (!$tmp_start_in_chromosome ) {
-
                print "PROBLEM:  missing \$tmp_start_in_chromosome for $tmp_pep_acc \n";
-
            } elsif (!$tmp_end_in_chromosome ) {
-
                print "PROBLEM:  missing \$tmp_end_in_chromosome  for $tmp_pep_acc \n";
-
            } elsif (!$tmp_strand) {
-
                print "PROBLEM:  missing \$tmp_strand for $tmp_pep_acc \n";
-
            }
        }
-
        print "-->end third stage test of vars\n";
     }
 
@@ -2318,7 +2283,7 @@ sub readCoords_updateRecords_calcAttributes {
     ## Creating peptide_mapping records, and updating peptide_instance records
     ####----------------------------------------------------------------------------
     print "\nCreating peptide_mapping records, and updating peptide_instance records\n";
-
+    initiate_transaction();
 
     ## hash with key = peptide_accession, value = peptide_instance_id
     my %peptideAccession_peptideInstanceID = 
@@ -2450,7 +2415,7 @@ sub readCoords_updateRecords_calcAttributes {
 
     }  ## end  create peptide_mapping records and update peptide_instance records
     print "\n";
-
+    reset_dbh();
 
    ## LAST TEST to assert that all peptides of an atlas in
    ## peptide_instance  are associated with a peptide_instance_sample record
