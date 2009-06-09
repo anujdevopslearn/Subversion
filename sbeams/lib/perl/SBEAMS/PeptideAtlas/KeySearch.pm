@@ -1503,28 +1503,71 @@ sub buildDrosophilaKeyIndex {
     organism_id=>$organism_id,
     atlas_build_id=>$atlas_build_id,
   );
-
-
+  my $mapping_file = "$reference_directory/idmapping_from_FBppxml.xls";
   #### Create a link from gene names to protein names
   my %gene2protein;
+  my %genemapping;
+  my $genemapping_file = "$reference_directory/fbgn_annotation_ID_fb_2009_05.tsv";
+  open(MAP, $genemapping_file) ||  die("ERROR: Unable to open '$genemapping_file'");
+  while (my $line = <MAP>) {
+    next if ($line =~ /^#/);
+    next if ($line =~ /^$/);
+    chomp $line;
+    my @tmp = split("\t", $line);
+    my $fbgene = $tmp[1];
+    my $gbgene;
+    if($tmp[4]){
+      $gbgene = $tmp[3].",".$tmp[4]; 
+    }
+    else{
+      $gbgene = $tmp[3];
+    }
+    my @gbgenes =  split(",", $gbgene);
+    foreach my $gb (@gbgenes){
+       $genemapping{$gb} = $fbgene;
+    }
+  }  
+  my %dbxref_ids = (
+    'RefSeq'       => 39,
+    'GeneBank'     => 46,
+    'FlyBase'      => 2,
+    'UniProt'      => 35,
+  );
+  my $xref_file = "$reference_directory/idmapping_protein_FBppxml.xls";
+  open(REF , "<$xref_file") ||  die("ERROR: Unable to open '$xref_file'");
+  my %xref;
+  while (my $line = <REF>) {
+   next if($line =~ /FlyBase/);
+   chomp $line;
+   my @ids = split("\t", $line);
+   my $fbpp = $ids[0];
+   if($ids[2]){
+     $xref{$fbpp}{GeneBank} = $ids[2];
+   }
+   if($ids[3]){
+     $xref{$fbpp}{RefSeq} = $ids[3];
+   }
+  } 
   my $protein_file = "$reference_directory/Drosophila_melanogaster.pep.fa";
   open(INFILE,$protein_file) || die("ERROR: Unable to open '$protein_file'");
   while (my $line = <INFILE>) {
-    if ($line =~ /^>([\w\d\-]+)/) {
+    if ($line =~ /^>/) {
+      $line =~ />(FBpp\d+)\s+pep.*gene:(FBgn.*)\s+transcript.*/;
       my $protein = $1;
-      my $gene;
-      if ($protein =~ /^(CG\d+)/) {
-	$gene = $1;
-      } else {
-	print "WARNING: Unable to find gene name in '$protein'\n";
+      my $gene = $2;
+      if( !$protein || !$gene){
+	     print "WARNING: Unable to find gene name/protein name in '$protein $gene'\n";
       }
-      $gene2protein{$gene}->{$protein} = 1;
-      #print "Read mapping: $gene -> $protein\n";
+      else{
+        $gene2protein{$gene}->{$protein} = 1;
+        $xref{$protein}{FlyBase} = $protein;
+        #print "Read mapping: $gene -> $protein\n";
+      }
     }
   }
   close(INFILE);
-
-
+  close (MAP);
+  close (REF);
   #### Open the GOA file
   my $GOA_file = "$reference_directory/17.D_melanogaster.goa";
   open(INFILE,$GOA_file)
@@ -1537,6 +1580,7 @@ sub buildDrosophilaKeyIndex {
 
   while (my $line=<INFILE>) {
     chomp($line);
+    my @tmp;
     my @columns = split(/\t/,$line);
     my $UniProt_id = $columns[1];
     my $UniProt_name = $columns[2];
@@ -1544,17 +1588,15 @@ sub buildDrosophilaKeyIndex {
     next if ($UniProt_id eq $previous_id);
     $previous_id = $UniProt_id;
 
-    my $description = $columns[9];
-
-    my ($aliases,$full_name) = split(": ",$description);
-    my @aliases = split(", ",$aliases);
+    my $aliases = $columns[10];
+    my $full_name = "$columns[10]: $columns[9]";
+    my @aliases = split("|",$aliases);
 
 
     #### Build a list of protein links
     my @links;
-
     if ($UniProt_id) {
-      my @tmp = ('UniProt ID',$UniProt_id);
+      my @tmp = ('UniProt ID',$UniProt_id, $dbxref_ids{UniProt});
       push(@links,\@tmp);
     }
 
@@ -1562,62 +1604,71 @@ sub buildDrosophilaKeyIndex {
       my @tmp = ('UniProt Name',$UniProt_name);
       push(@links,\@tmp);
     }
-
     if ($full_name) {
       my @tmp = ('Full Name',$full_name);
       push(@links,\@tmp);
     }
-
     my $gene_name;
     if ($aliases) {
-      my @list = splitEntities(list=>$aliases,delimiter=>', ');
+      my @list = splitEntities(list=>$aliases,delimiter=>'\|');
       foreach my $item ( @list ) {
         my @tmp = ('Alias',$item);
-	if ($item =~ /CG.+/) {
-	  $gene_name = $item;
-	} else {
-	  push(@links,\@tmp);
-	}
+	    if ($item =~ /^CG.+/) {
+          if(defined $genemapping{$item}){
+	        $gene_name = $genemapping{$item};
+          }
+          else{
+            print "U\nUNMAPPED $item\n";
+          }
+          push(@links,\@tmp);
+	    }else {
+	      push(@links,\@tmp);
+	    }
       }
     }
-
     if ($gene_name) {
-      my @tmp = ('Gene name',$gene_name);
-      push(@links,\@tmp);
+        my @tmp = ('Gene name',$gene_name);
+        push(@links,\@tmp);
     }
-
-
     my @feature_names;
     if ($gene_name) {
       if ($gene2protein{$gene_name}) {
-	foreach my $protein ( keys(%{$gene2protein{$gene_name}}) ) {
-	  push(@feature_names,$protein);
-	}
+	    foreach my $protein ( keys(%{$gene2protein{$gene_name}}) ) {
+	      push(@feature_names,$protein);
+	    }
       }
     }
     unless (@feature_names) {
       push(@feature_names,'UNKNOWN');
     }
 
-
     if (0) {
       print "-------------------------------------------------\n";
       print "UniProt_id=$UniProt_id\n";
       print "UniProt_name=$UniProt_name\n";
-      print "description=$description\n";
       print "full_name=$full_name\n";
       print "aliases=$aliases\n";
       print "gene_name=$gene_name\n";
     }
 
-    #### Loop over all proteins
+#    for my $link (@links) {
+#      print "    ".join("=",@{$link}) ."\n";
+#    }
+ 
     foreach my $feature_name ( @feature_names ) {
+      next if ($feature_name eq 'UNKNOWN');
       my @temp_links = @links;
-      my @tmp = ('Protein name',$feature_name);
-      push(@temp_links,\@tmp);
+      foreach my $key (qw (FlyBase GeneBank RefSeq)){
+        my @tmp;
+        if (exists($xref{$feature_name}{$key})) {
+           #print "$key\t$xref{$feature_name}{$key}\t$dbxref_ids{$key}\n";
+           @tmp = ($key,$xref{$feature_name}{$key}, $dbxref_ids{$key});
+           push(@temp_links,\@tmp);
+        }
+      }
       foreach my $link (@temp_links) {
-	#print "    ".join("=",@{$link})."\n";
-	my %rowdata = (
+	    #print "    ".join("=",@{$link})."\n";
+	    my %rowdata = (
           search_key_name => $link->[1],
           search_key_type => $link->[0],
           search_key_dbxref_id => $link->[2],
@@ -1697,7 +1748,7 @@ sub buildPigKeyIndex {
 	  } elsif ($description =~ /^(.+) \([A-Z0-9]+\)\s*$/) {
 	    $proteins{$protein_name}->{full_name} = $1;
 	  } elsif ($description =~ /^(.+) \[Sus scrofa\]\s*$/) {
-	    my $description = $1;
+	    $description = $1;
 	    if ($description =~ /\](.+?)$/) {
 	      $proteins{$protein_name}->{full_name} = $1;
 	    }
@@ -1737,7 +1788,7 @@ sub buildPigKeyIndex {
 
 
     #### Build a list of protein links
-    my @links;
+    my (@links, @tmp);
 
     if ($biosequence_name) {
       my @tmp = ('Accession',$biosequence_name);
@@ -1746,8 +1797,8 @@ sub buildPigKeyIndex {
 
     foreach my $key ( qw (full_name UniProt) ) {
       if (exists($proteins{$biosequence_name}->{$key})) {
-	my @tmp = ($key,$proteins{$biosequence_name}->{$key});
-	push(@links,\@tmp);
+  	    my @tmp = ($key,$proteins{$biosequence_name}->{$key});
+	    push(@links,\@tmp);
       }
     }
 
@@ -2203,11 +2254,11 @@ sub buildHoneyBeeKeyIndex {
       if (exists($proteins{$biosequence_name}->{$key})) {
         my @tmp;
         if (exists($dbxref_ids{$key})) {
-	  @tmp = ($key,$proteins{$biosequence_name}->{$key},$dbxref_ids{$key});
-	} else {
+	       @tmp = ($key,$proteins{$biosequence_name}->{$key},$dbxref_ids{$key});
+	    } else {
           @tmp = ($key,$proteins{$biosequence_name}->{$key});
-	}
- 	push(@links,\@tmp);
+	    }
+ 	      push(@links,\@tmp);
       }
     }
     foreach my $link (@links) {
