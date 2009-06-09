@@ -1618,7 +1618,7 @@ sub buildDrosophilaKeyIndex {
 	        $gene_name = $genemapping{$item};
           }
           else{
-            print "U\nUNMAPPED $item\n";
+            print "UNMAPPED $item ";
           }
           push(@links,\@tmp);
 	    }else {
