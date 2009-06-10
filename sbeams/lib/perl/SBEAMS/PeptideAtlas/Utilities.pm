@@ -57,6 +57,7 @@ sub map_peptide_to_protein {
 	}
 }
 
+
 #+
 # @nparam aa_seq
 # @nparam min_len
@@ -145,6 +146,168 @@ sub do_tryptic_digestion {
 }
 
 
+#+
+# @nparam aa_seq
+# @nparam min_len
+# @nparam max_len
+# @nparam flanking
+#-
+sub do_chymotryptic_digestion {
+  my $self = shift;
+  my %args = @_;
+
+  # Check for required params
+  my $missing;
+  for my $param ( qw( aa_seq ) ) {
+    $missing = ( $missing ) ? $missing . ',' . $param : $param if !defined $args{$param};
+  }
+  die "Missing required parameter(s) $missing" if $missing;
+  
+  # Set default param values
+  $args{flanking} ||= 0;
+  $args{min_len} ||= 1;
+  $args{max_len} ||= 10e6;
+
+  # Store list to pass back
+  my @peptides;
+  
+  # previous, current, next amino acid
+  my ( $prev, $curr, $next );
+
+  # current peptide and length
+  my ($peptide, $length);
+
+  my @aa = split "", $args{aa_seq};
+
+  for ( my $i = 0; $i <= $#aa; $i++ ) {
+
+    # Set the values for the position stores
+    $prev = ( !$i ) ? '-' : $aa[$i - 1];
+    $curr = $aa[$i];
+    $next = ( $i == $#aa ) ? '-' : $aa[$i + 1];
+#    print STDERR "i:$i, prev:$prev, curr:$curr, next:$next, aa:$#aa, pep:$peptide, len:$length flk:$args{flanking}\n";
+
+    if ( !$peptide ) { # assumes we won't start with a non-aa character
+      $peptide .= ( $args{flanking} ) ? "$prev.$curr" : $curr; 
+      $length++;
+      if ( $curr =~ /[FWY]/i ) {
+        $peptide .= ( $args{flanking} ) ? ".$next" : ''; 
+        if ( $length <= $args{max_len} && $length >= $args{min_len} ) {
+          push @peptides, $peptide 
+        }
+        $peptide = '';
+        $length = 0;
+      }
+    } elsif ( $curr !~ /[a-zA-Z]/ ) { # Probably a modification symbol
+      $peptide .= $curr;
+      $length++;
+    } elsif ( $curr =~ /[FWY]/i ) {
+      $length++;
+      $peptide .= ( $args{flanking} ) ? "$curr.$next" : $curr; 
+      if ( $length <= $args{max_len} && $length >= $args{min_len} ) {
+        push @peptides, $peptide 
+      }
+      $peptide = '';
+      $length = 0;
+    } elsif ( $i == $#aa ) {
+      $length++;
+      $peptide .= ( $args{flanking} ) ? "$curr.$next" : $curr; 
+      if ( $length <= $args{max_len} && $length >= $args{min_len} ) {
+        push @peptides, $peptide 
+      }
+      $peptide = '';
+      $length = 0;
+    } else {
+      $length++;
+      $peptide .= $curr; 
+#      die "What the, i:$i, prev:$prev, curr:$curr, next:$next, aa:$#aa, pep:$peptide, len:$length\n";
+    }
+  }
+  return \@peptides;
+}
+
+
+#+
+# @nparam aa_seq
+# @nparam min_len
+# @nparam max_len
+# @nparam flanking
+#-
+sub do_gluc_digestion {
+  my $self = shift;
+  my %args = @_;
+
+  # Check for required params
+  my $missing;
+  for my $param ( qw( aa_seq ) ) {
+    $missing = ( $missing ) ? $missing . ',' . $param : $param if !defined $args{$param};
+  }
+  die "Missing required parameter(s) $missing" if $missing;
+  
+  # Set default param values
+  $args{flanking} ||= 0;
+  $args{min_len} ||= 1;
+  $args{max_len} ||= 10e6;
+
+  # Store list to pass back
+  my @peptides;
+  
+  # previous, current, next amino acid
+  my ( $prev, $curr, $next );
+
+  # current peptide and length
+  my ($peptide, $length);
+
+  my @aa = split "", $args{aa_seq};
+
+  for ( my $i = 0; $i <= $#aa; $i++ ) {
+
+    # Set the values for the position stores
+    $prev = ( !$i ) ? '-' : $aa[$i - 1];
+    $curr = $aa[$i];
+    $next = ( $i == $#aa ) ? '-' : $aa[$i + 1];
+#    print STDERR "i:$i, prev:$prev, curr:$curr, next:$next, aa:$#aa, pep:$peptide, len:$length flk:$args{flanking}\n";
+
+    if ( !$peptide ) { # assumes we won't start with a non-aa character
+      $peptide .= ( $args{flanking} ) ? "$prev.$curr" : $curr; 
+      $length++;
+      if ( $curr =~ /[DE]/i ) {
+        $peptide .= ( $args{flanking} ) ? ".$next" : ''; 
+        if ( $length <= $args{max_len} && $length >= $args{min_len} ) {
+          push @peptides, $peptide 
+        }
+        $peptide = '';
+        $length = 0;
+      }
+    } elsif ( $curr !~ /[a-zA-Z]/ ) { # Probably a modification symbol
+      $peptide .= $curr;
+      $length++;
+    } elsif ( $curr =~ /[DE]/i ) {
+      $length++;
+      $peptide .= ( $args{flanking} ) ? "$curr.$next" : $curr; 
+      if ( $length <= $args{max_len} && $length >= $args{min_len} ) {
+        push @peptides, $peptide 
+      }
+      $peptide = '';
+      $length = 0;
+    } elsif ( $i == $#aa ) {
+      $length++;
+      $peptide .= ( $args{flanking} ) ? "$curr.$next" : $curr; 
+      if ( $length <= $args{max_len} && $length >= $args{min_len} ) {
+        push @peptides, $peptide 
+      }
+      $peptide = '';
+      $length = 0;
+    } else {
+      $length++;
+      $peptide .= $curr; 
+#      die "What the, i:$i, prev:$prev, curr:$curr, next:$next, aa:$#aa, pep:$peptide, len:$length\n";
+    }
+  }
+  return \@peptides;
+}
+
+#########################
 #+
 # Routine generates standard 'tryptic' peptide from observed sequence,
 # i.e. -.SHGTLFK.N
@@ -766,6 +929,11 @@ sub calculatePeptidePI {
   my @seq = split "", $seq;
   my %cnt;
   for my $aa ( @seq ) { $cnt{$aa}++ };
+  
+  # Fight warnings
+  for my $aa ( qw(C D E H K R Y) ) {
+    $cnt{$aa} ||= 0;
+  }
 
   my $side_total = 0;
 
@@ -1069,6 +1237,94 @@ sub getAnnotationColumnDefs {
   return \@entries;
 
 }
+
+sub fragment_peptide {
+  my $self = shift;
+      my $peptide = shift;
+    my $length = length($peptide);
+    my @residues = ();
+    my $i;
+
+    for ($i=0; $i<$length; $i++) {
+      if (substr($peptide,$i+1,1) eq '[') {
+        if ( substr( $peptide, $i+5 ) eq ']' ) {
+          push (@residues, substr($peptide,$i,6));
+          $i = $i + 5;
+        } else {
+          push (@residues, substr($peptide,$i,5));
+          $i = $i + 4;
+        }
+      } elsif (substr($peptide,$i+1,1) =~ /\W/) {
+        $log->debug( "what is up with $peptide?" );
+        push (@residues, substr($peptide,$i,2));
+        $i = $i + 1;
+      } else {
+        push (@residues, substr($peptide,$i,1));
+      }
+    }
+
+    #### Return residue array
+    return \@residues;
+}
+
+
+
+###############################################################################
+# CalcIons -- calculate theoretical ions (including modified masses)
+###############################################################################
+sub CalcIons {
+  my $self = shift;
+    my %args = @_;
+    my $i;
+
+    my $modification_helper = new SBEAMS::PeptideAtlas::ModificationHelper();
+
+    my $residues_ref = $args{'Residues'};
+    my @residues = @$residues_ref;
+    my $charge = $args{'Charge'} || 1;
+    my $length = scalar(@residues);
+   
+    my $modified_sequence = $args{'modified_sequence'};
+    print "Mod seq is $modified_sequence\n";
+    print "residues $residues_ref\n";
+    my @masses = $modification_helper->getMasses($modified_sequence);
+
+    my $Nterm = 1.0078;
+    my $Bion = 0.;
+    my $Yion  = 19.0184;  ## H_2 + O
+
+    my @Bcolor = (14) x $length;
+    my @Ycolor = (14) x $length;
+
+    my %masslist;
+    my (@aminoacids, @indices, @rev_indices, @Bions, @Yions);
+
+
+    #### Compute the ion masses
+    for ($i = 0; $i<$length; $i++) {
+      $Bion += $masses[$i];
+
+      #### B index & Y index
+      $indices[$i] = $i;
+      $rev_indices[$i] = $length-$i;
+      $Yion += $masses[ $rev_indices[$i] ]  if ($i > 0);
+
+      #### B ion mass & Y ion mass
+      $Bions[$i] = ($Bion + $charge*$Nterm)/$charge;
+      $Yions[$i] = ($Yion + $charge*$Nterm)/$charge;
+    }
+
+    $masslist{residues} = \@residues;
+    $masslist{indices} = \@indices;
+    $masslist{Bions} = \@Bions;
+    $masslist{Yions} = \@Yions;
+    $masslist{rev_indices} = \@rev_indices;
+
+    #### Return reference to a hash of array references
+    return (\%masslist);
+}
+
+
 
 1;
 
