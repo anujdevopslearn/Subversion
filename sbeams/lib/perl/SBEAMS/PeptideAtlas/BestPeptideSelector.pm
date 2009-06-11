@@ -474,6 +474,7 @@ sub get_pabst_scoring_defs {
                 min_p => 'Penalty for peptides under min length',
                 max_l => 'Maximum length for peptide',
                 max_p => 'Penalty for peptides over max length',
+                ssr_p => 'Penalty for peptides with extreme SSR',
                );
   return \%defs;
 }
@@ -509,6 +510,7 @@ sub get_default_pabst_scoring {
                min_p => 1,
                max_l => 0,
                max_p => 1,
+               ssr_p => 0.5,
                 );
 
 	if ( !$args{show_defs} ) {
@@ -1040,6 +1042,7 @@ sub merge_pabst_peptides {
                                                seq_idx => 2, 
                                             follow_idx => 3, 
                                              score_idx => 7,
+                                               ssr_idx => 9,
                                              annot_idx => 14
                                             );
     @peptides = @{$row};
@@ -1118,6 +1121,7 @@ sub get_pabst_penalty_values {
 # @narg header    Does array have header row, default 0
 # @narg seq_idx   index of sequence column in array, default to 0
 # @narg score_idx index of score column, default is undef
+# @narg ssr_idx   index of SSR score column, default is undef
 # @narg pen_defs  reference to hash of scoring penalties, any that exist will
 #                 override defaults
 #
@@ -1209,9 +1213,17 @@ sub pabst_evaluate_peptides {
     for my $k ( keys( %pen_defs ) ) {
       if ( $k eq 'Xc' ) {
         # Can only analyze Xc peptides if follow_idx is given
-        if ( defined $args{follow_idx} && $pep->[$args{follow_idx}] eq '*' || $pep->[$args{follow_idx}] eq '-' ) {
+        if ( defined $args{follow_idx} && ( $pep->[$args{follow_idx}] eq '*' || $pep->[$args{follow_idx}] eq '-' ) ) {
           $scr *= $pen_defs{Xc};
           push @pen_codes, 'Xc';
+        }
+      } elsif ( $k eq 'ssr_p' ) {
+        if ( defined $args{ssr_idx} ) {
+          my $ssr = int( $pep->[$args{ssr_idx}] );
+          if ( $ssr < 9 || $ssr > 44 ) {
+#            print STDERR "Applying SSR threshold to $ssr!\n";
+            $scr *= $pen_defs{$k};
+          }
         }
       } else {
         for my $rx ( @{$rx{$k}} ) {
