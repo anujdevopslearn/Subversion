@@ -577,3 +577,40 @@ AT_proteotypic_peptide_mapping	3	source_biosequence_id	Source Biosequence ID	int
 AT_proteotypic_peptide_mapping	4	n_genome_locations	Number of Genome Locations Mapped to	int	4	0	Y		N										Number of Genome locations for this peptide 		
 AT_proteotypic_peptide_mapping	5	n_protein_mappings	Number of Proteins for this Peptide 	int	4	0	Y		N										Number of distinct accession numbers (proteins) for peptide in Genome		
 AT_proteotypic_peptide_mapping	6	n_exact_protein_mappings	Number of Proteins for this peptide including flanking residues 	int	4	0	Y		N										Number of distinct accession numbers (proteins) for peptide in Genome		
+AT_protein_presence_level	1	protein_presence_level_id	Protein Presence Level	int	4	0	N		Y							N	N				pkDEFAULT
+AT_protein_presence_level	2	level_name	Level Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Full name of the level		
+AT_protein_presence_level	3	level_phrase	Level Phrase	varchar	255	0	N		N			Y	text	50		Y	Y	N	Natural language phrase to present this level to user		
+AT_protein_presence_level	4	level_description	Level Description	varchar	255	0	N		N			Y	textarea	4		Y	Y	N	Description of the level		
+AT_protein_presence_level	5	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
+AT_protein_presence_level	6	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_protein_presence_level	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_protein_presence_level	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_protein_presence_level	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_protein_presence_level	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_protein_presence_level	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_protein_presence_level	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_biosequence_relationship_type	1	biosequence_relationship_type_id	Biosequence Relationship Type	int	4	0	N		Y							N	N				pkDEFAULT
+AT_biosequence_relationship_type	2	relationship_name	Relationship Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Full name of the relationship		
+AT_biosequence_relationship_type	3	relationship_phrase	Relationship Phrase	varchar	255	0	N		N			Y	text	50		Y	Y	N	Natural language phrase to present this relationship to user		
+AT_biosequence_relationship_type	4	relationship_description	Relationship Description	varchar	255	0	N		N			Y	textarea	4		Y	Y	N	Description of the relationship		
+AT_biosequence_relationship_type	5	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
+AT_biosequence_relationship_type	6	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_biosequence_relationship_type	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_biosequence_relationship_type	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_biosequence_relationship_type	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_biosequence_relationship_type	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_biosequence_relationship_type	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_biosequence_relationship_type	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_protein_identification	1	protein_identification_id	Protein Identification	int	4	0	N		Y												pkDEFAULT
+AT_protein_identification	2	biosequence_id	Biosequence ID	int	4	0	N		N	AT_biosequence	biosequence_id								Biosequence ID for this protein		
+AT_protein_identification	3	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id								Atlas build ID which this protein belongs to		
+AT_protein_identification	4	protein_group_number	Protein Group ID	int	4	0	N		N										Protein group number from ProteinProphet		
+AT_protein_identification	5	presence_level_id	Presence Level ID	int	4	0	N		N	AT_protein_presence_level	protein_presence_level_id								Describes how certain it is that this particular protein is present		
+AT_protein_identification	6	represented_by_biosequence_id	Represented By	int	4	0	N		N	AT_biosequence	biosequence_id								One protein from protein group that best represents the group		
+AT_protein_identification	7	probability	Probability	real	4	0	N		N										ProteinProphet probability		
+AT_protein_identification	8	confidence	Confidence	real	4	0	Y		N										States et al. confidence measure		
+AT_biosequence_relationship	1	biosequence_relationship_id	Biosequence Relationship ID	int	4	0	N		Y												pkDEFAULT
+AT_biosequence_relationship	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id								Atlas build ID which this relationship belongs to		
+AT_biosequence_relationship	3	reference_biosequence_id	Reference Biosequence ID	int	4	0	N		N	AT_biosequence	biosequence_id								Biosequence ID for the protein related to		
+AT_biosequence_relationship	4	related_biosequence_id	Related Biosequence ID	int	4	0	N		N	AT_biosequence	biosequence_id								Biosequence ID for related protein		
+AT_biosequence_relationship	5	relationship_type_id	Relationship Type ID	int	4	0	N		N	AT_biosequence_relationship_type	biosequence_relationship_type_id								Describes relationsihp		
