@@ -15,6 +15,8 @@ function sortables_init() {
     }
 }
 
+
+
 function ts_makeSortable(table) {
     if (table.rows && table.rows.length > 0) {
         var firstRow = table.rows[0];
@@ -29,7 +31,8 @@ function ts_makeSortable(table) {
         'TITLE="Click column heading to sort"' +
         'onclick="ts_resortTable(this, '+i+');return false;">' + 
         txt+'<span class="sortarrow">&nbsp;&nbsp;&nbsp;</span></a>';
-    }
+
+  }
 }
 
 function ts_getInnerText(el) {
@@ -81,11 +84,11 @@ function ts_resortTable(lnk,clid) {
     newRows.sort(sortfn);
 
     if (span.getAttribute("sortdir") == 'down') {
-        ARROW = '&nbsp;&nbsp;&uarr;';
+        ARROW = '&nbsp;&darr;';
         newRows.reverse();
         span.setAttribute('sortdir','up');
     } else {
-        ARROW = '&nbsp;&nbsp;&darr;';
+        ARROW = '&nbsp;&uarr;';
         span.setAttribute('sortdir','down');
     }
     
@@ -100,7 +103,7 @@ function ts_resortTable(lnk,clid) {
     for (var ci=0;ci<allspans.length;ci++) {
         if (allspans[ci].className == 'sortarrow') {
             if (getParent(allspans[ci],"table") == getParent(lnk,"table")) { // in the same table as us?
-                allspans[ci].innerHTML = '&nbsp;&nbsp;&nbsp;';
+                allspans[ci].innerHTML = '&nbsp;';
             }
         }
     }
