@@ -140,6 +140,53 @@ sub getPeptideId {
   return $self->{_pa_id_list}->{$args{seq}} 
 }
 
+#+
+# Routine fetches peptide_id, accession, and instance_id for a passed
+# set of peptide sequences.
+#-
+sub getPeptideList {
+  my $self = shift;
+  my %args = @_;
+
+  return unless $args{sequence_ref};
+  $sbeams = $self->getSBEAMS();
+
+  my @peptides;
+  for my $pep ( @{$args{sequence_ref}} ) {
+    push @peptides, "'" . $pep . "'" if isValidSeq( seq => $pep );
+  }
+
+  my @results;
+  return \@results unless @peptides;
+
+  $log->warn( "Large seq list in getPeptideList: " . scalar( @peptides) );
+
+  my $in_clause = '(' . join( ", ", @peptides ) . ')';
+
+  my $sql;
+  if ( $args{build_id} ) {
+    my $sql =<<"    END";
+      SELECT peptide_id, peptide_accession, peptide_instance_id
+      FROM $TBAT_PEPTIDE P 
+      LEFT JOIN  $TBAT_PEPTIDE_INSTANCE PI ON P.peptide_id = PI.peptide_id 
+      WHERE peptide_sequence IN ( $in_clause )
+      AND atlas_build_id = $args{build_id}
+    END
+  } else {
+    my $sql =<<"    END";
+      SELECT peptide_id, peptide_accession, '' 
+      FROM $TBAT_PEPTIDE P 
+      WHERE peptide_sequence IN ( $in_clause )
+    END
+  }
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while ( my $row = $sth->fetchrow_arrayref() ) {
+    push @results, $row;
+  }
+  return \@results;
+
+}
 
 
 
