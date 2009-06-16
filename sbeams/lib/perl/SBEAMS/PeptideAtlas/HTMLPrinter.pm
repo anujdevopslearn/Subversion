@@ -168,7 +168,6 @@ sub displayGuestPageHeader {
 
 	my $sbeams = $self->getSBEAMS();
  	$current_username ||= $sbeams->getCurrent_username();
-	$log->debug( "SBEAMS is $sbeams in HTML Printer, user is $current_username" );
 
 	my $cswitcher = '';
 	if ( -e "$PHYSICAL_BASE_DIR/lib/perl/SBEAMS/PeptideAtlas/ContextWidget.pm" ) {
@@ -684,7 +683,7 @@ sub encodeSectionTable {
   my $closelink;
   if ( $args{rows_to_show} && $args{rows_to_show} < $tot - 1 ) {
     $closelink = $self->add_tabletoggle_js(); 
-    $closelink .= "\n<FONT COLOR=BLUE><A HREF=#null ONCLICK=toggle_em('$prefix');return><SPAN ID='${prefix}_text' NAME='${prefix}_text' >Show more</A></FONT>";
+    $closelink .= "\n<FONT COLOR=BLUE><A HREF=#null ONCLICK=toggle_em('$prefix');return><SPAN ID='${prefix}_text' NAME='${prefix}_text' >[Show more rows]</A></FONT>";
   }
 
   # if no wrapping desired...
@@ -755,7 +754,6 @@ sub getSamplePlotDisplay {
 
   my $trinfo = $args{tr_info} || '';
 	my $height = 50  + scalar( @{$args{n_obs}} ) * 12;
-	$log->debug( "Height is $height pre call" );
 
   my $GV = SBEAMS::Connection::GoogleVisualization->new();
   my $chart = $GV->setDrawBarChart(  samples => $args{n_obs},
@@ -973,10 +971,10 @@ sub add_tabletoggle_js {
       var show = document.getElementById(textkey);
 
       var ttext = show.innerHTML;
-      if ( ttext == 'Show more' ) {
-        show.innerHTML = "Show fewer";
+      if ( ttext == '[Show more rows]' ) {
+        show.innerHTML = "[Show fewer rows]";
       } else {
-        show.innerHTML = "Show more";
+        show.innerHTML = "[Show more rows]";
       }
       
       for (var i=0; i < rows.length; i++) {
@@ -1096,7 +1094,7 @@ sub get_table_help_section {
                                                      hidetext => $args{hidetext},
                                           );
 
-  return $section_toggle;
+  return "$section_toggle<BR>";
 }
 
 
