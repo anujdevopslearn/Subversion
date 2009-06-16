@@ -61,8 +61,8 @@ my $show_image = 0;
     ## get current settings
     my $project_id = $sbeams->getCurrent_project_id();
 
-    my $build_help = get_table_help( 'build' );
-    my $batch_help = get_table_help( 'batch' );
+    my $build_help = get_table_help( table => 'build' );
+    my $batch_help = get_table_help( table => 'batch' );
 
     my $page = $sbeams->getGifSpacer( 700 ) . "<BR>\n";
   #### Get the HTML to display the tabs
@@ -136,8 +136,10 @@ my $show_image = 0;
 } # end main
 
 sub get_table_help {
-  my $name = shift;
+  my %args = @_;
+  my $name = $args{table};
   return '' unless $name;
+  $args{mode} ||= 'section';
   my @entries;
   my $hidetext;
   my $showtext;
@@ -162,15 +164,15 @@ sub get_table_help {
 
   } elsif ( $name eq 'batch' ) {
     @entries = ( { key => 'ID', value => 'Database ID for this sample (search batch) ' },
-                 { key => 'Sample Name', value => 'Simple name for this sample/experiment. ' },
-                 { key => '# Spectra Searched', value => 'The total number of spectra searched in the sample. ' },
-                 { key => "# Spectra ID'd", value => 'The number of spectra identifed with a probability greater than the atlas threshold ' },
-                 { key => '# Distinct', value => 'The number of distinct peptide sequences, seen more than once (multiobs), in this build that are seen in this sample. ' },
-                 { key => '# Unique', value => "The number of distinct, multiobs peptides that are seen only in this sample (unique contribution).  This discriminates against smaller samples, and is less useful in atlas' with a large number of samples. " },
-                 { key => '# Progressive', value => 'Order-dependant unique multiobs peptides contributed by a given sample.  The contribution for each sample is based on the samples that have gone before it, so later samples tend to have a lower progressive contribution. ' },
-                 { key => '# Cumulative', value => 'Order-dependant cumulative number of unique multiobs peptides contributed to build by this and previous samples. ' },
+                 { key => 'Sample_Name', value => 'Simple name for this sample/experiment. ' },
+                 { key => '#_Spectra_Searched', value => 'The total number of spectra searched in the sample. ' },
+                 { key => "#_Spectra_ID'd", value => 'The number of spectra identifed with a probability greater than the atlas threshold ' },
+                 { key => '#_Distinct', value => 'The number of distinct peptide sequences, seen more than once (multiobs), in this build that are seen in this sample. ' },
+                 { key => '#_Unique', value => "The number of distinct, multiobs peptides that are seen only in this sample (unique contribution).  This discriminates against smaller samples, and is less useful in atlas' with a large number of samples. " },
+                 { key => '#_Progressive', value => 'Order-dependant unique multiobs peptides contributed by a given sample.  The contribution for each sample is based on the samples that have gone before it, so later samples tend to have a lower progressive contribution. ' },
+                 { key => '#_Cumulative', value => 'Order-dependant cumulative number of unique multiobs peptides contributed to build by this and previous samples. ' },
 #                 { key => 'Sens', value => 'The sensitivity of the Peptide Prophet model at a probablility of 0.9, the percent of true positives that would be included at that threshold was used as a cutoff. ' },
-                 { key => 'FDR (%)', value => 'The error rate of peptides above the threshold Peptide Prophet model at a probablility of 0.9, the percent of false positives that would be included at the build threshold. ' }
+                 { key => 'FDR_(%)', value => 'The error rate of peptides above the threshold Peptide Prophet model at a probablility of 0.9, the percent of false positives that would be included at the build threshold. ' }
         );
     $heading = 'Build Overview';
     $description= 'These values pertain to the atlas build as a whole';
@@ -180,6 +182,8 @@ sub get_table_help {
   }
 
   return unless @entries;
+  return \@entries if $args{mode} eq 'entries_only';
+
   my $help = $atlas->get_table_help_section( name => $name,
                                              description => $description,
                                              heading => $heading,
@@ -590,16 +594,32 @@ sub get_sample_info {
   }
 
   my $dag = '<sup>&dagger;</sup>';
-  my @headings = ( 'ID',
-                   'Sample Name',
-                   '# Spectra Searched', 
-                   "# Spectra ID'd", 
-                   '# Distinct', 
-                   '# Unique', 
-                   '# Progressive',
-                   '# Cumulative',
-                   'FDR (%)'
+  
+  my $heading_info = ( 'ID' => 'Search Batch ID',
+                   'Expt_name' =>  'Name of experiment',
+                   'n_Spectra_Searched' => 'Total number of spectra searched', 
+                   "n_Spectra_IDed" => 'Number of spectra with ID above threshold', 
+                   'n_Distinct' => 'Number of distinct peptides seen', 
+                   'n_Unique' => 'Number of peptides unique to this experiment', 
+                   'n_Progressive' => 'Number of distinct peptides contributed by this expt relative to all prior',
+                   'n_Cumulative' => 'Number of distinct peptides from this and all previous experiments',
+                   'FDR (%)' => 'Spectrum-level FDR computed for this experiment'
       );
+
+  my $heading_info = get_table_help( table => 'batch', mode => 'entries_only' );
+  my @headings;
+  for my $row ( @$heading_info ) {
+    push @headings, $row->{key}, $row->{value};
+  }
+
+#  for my $h ( @headings ) {
+#    $log->info( $h );
+#  }
+
+  my $headings_ref = $atlas->make_sort_headings( headings => \@headings, default => '#_Cumulative' );
+  for my $h ( @{$headings_ref} ) {
+    $log->info( $h );
+  }
 
   $table .= $atlas->encodeSectionHeader(
       text => 'Sample Contribution',
@@ -608,7 +628,7 @@ sub get_sample_info {
   );
 
 
-  $table .= $atlas->encodeSectionTable( rows => [ \@headings, @samples ], 
+  $table .= $atlas->encodeSectionTable( rows => [ $headings_ref, @samples ], 
                                         header => 1, 
                                         nowrap => [1..scalar(@headings)], 
                                         align => [ qw(center left right right right right right right right) ], 
