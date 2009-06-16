@@ -837,9 +837,14 @@ sub handle_request {
 #    $log->debug( Dumper( $resultset_ref ) );
 
     my %instance_ids;
-		for my $row ( @{$resultset_ref->{data_ref}} ) {
+    my $max_peptides = 40;
+    my $pep_cnt;
+    for my $row ( sort { $b->[7] <=> $a->[7] } @{$resultset_ref->{data_ref}} ) {
+      $pep_cnt++;
+      last if $pep_cnt >= $max_peptides;
 			$instance_ids{$row->[14]}++;
-		}
+    }
+
 
     my @pa_accessions;
     for my $row ( @{$resultset_ref->{data_ref}} ) {
@@ -874,8 +879,8 @@ sub handle_request {
 			my $annot = '';
 			if ( @errs ) {
 				$annot = '[' . join( ',', @errs ) . ']';
-			} else {
-        $instance_ids{$row->[14]}++;
+#			} else {
+#        $instance_ids{$row->[14]}++;
 			}
 			$row->[4] = sprintf( "%0.2f", $row->[4] ) . "<FONT COLOR=RED><SUP>$annot</SUP></FONT>";
     my $cnt = 0;
@@ -1106,12 +1111,14 @@ sub handle_request {
 
     my $sample_ids = getSampleList( resultset_ref=>$resultset_ref,);
 
+    $log->debug( "UA is $ENV{HTTP_USER_AGENT}" );
+
     my $sampleMap = $sbeamsMOD->getSampleMapDisplay( sample_ids => $sample_ids,
 		                                                 instance_ids => \%instance_ids,
 		                                               atlas_build_id => $atlas_build_id,
                                                       link => $link,
                                                       tr_info => $tr,
-																					   			header_text => 'Shows per-experiment expression for all fully tryptic peptides'
+																					   			header_text => "Shows per-experiment expression for $max_peptides most highly observed peptides"
 																										);
     print "<A NAME='samplemap'></A><TABLE width='600'>$sampleMap</TABLE>" if $htmlmode;
 
