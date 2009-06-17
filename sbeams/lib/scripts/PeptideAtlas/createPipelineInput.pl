@@ -152,10 +152,11 @@ use vars qw (%peptide_accessions %biosequence_attributes);
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
-use SBEAMS::Connection::TableInfo;
+#use SBEAMS::Connection::TableInfo;
 
 use SBEAMS::Proteomics::Tables;
 use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::ProtInfo;
 use SBEAMS::PeptideAtlas;
 
 $sbeams = new SBEAMS::Connection;
@@ -519,31 +520,21 @@ sub protXML_start_element {
   }
 
   #### If this is a protein, then store its name, probability, and
-  ####  peptides, and add it to the list for the current protein_group
-  #### Why do this? Would be more elegant to store in protcache, then copy
-  ####  to group cache in end_element. Also, would beconsistent with what we
-  ####  do with indistinguishables. ****
+  ####  peptides in protcache -- will be copied to group cache in
+  ####  end_element.
   if ($localname eq 'protein') {
     my $protein_name = $attrs{protein_name};
     $self->{protein_name} = $protein_name;
     $self->{protein_probability} = $attrs{probability};
     $self->{protein_confidence} = $attrs{confidence};
     my @peps = split(/\+/, $attrs{unique_stripped_peptides});
-    # The four lines below don't work. Why? Need to better understand
-    #  hash refs. TMF.
-    #my $protein_href = $self->{groupcache}->{proteins}->{$protein_name};
-    #$protein_href->{unique_stripped_peptides} = \@peps;
-    #$protein_href->{probability} = $attrs{probability};
-    #$protein_href->{confidence} = $attrs{confidence};
-    $self->{groupcache}->{proteins}->{$protein_name}->
-       {unique_stripped_peptides} = \@peps;
-    $self->{groupcache}->{proteins}->{$protein_name}->{probability} =
-             $attrs{probability};
-    $self->{groupcache}->{proteins}->{$protein_name}->{confidence} =
-             $attrs{confidence};
-    $self->{groupcache}->{proteins}->{$protein_name}->
-          {subsuming_protein_entry} = $attrs{subsuming_protein_entry};
+    $self->{protcache}->{unique_stripped_peptides} = \@peps;
+    $self->{protcache}->{probability} = $attrs{probability};
+    $self->{protcache}->{confidence} = $attrs{confidence};
+    $self->{protcache}->{subsuming_protein_entry} =
+                $attrs{subsuming_protein_entry};
   }
+
 
   #### If this is an indistinguishable protein, record it in the cache
   #### for the current protein
@@ -570,7 +561,7 @@ sub protXML_start_element {
   }
 
 
-  #### If this is a peptide, then store some attributes
+  #### If this is a peptide, store some peptide attributes
   if ($localname eq 'peptide') {
     my $peptide_sequence = $attrs{peptide_sequence} || die("No sequence");
     $self->{pepcache}->{peptide} = $attrs{peptide_sequence};
@@ -579,6 +570,35 @@ sub protXML_start_element {
     $self->{pepcache}->{nsp_adjusted_probability} = $attrs{nsp_adjusted_probability};
     $self->{pepcache}->{n_sibling_peptides} = $attrs{n_sibling_peptides};
     $self->{pepcache}->{n_instances} = $attrs{n_instances};
+
+    #### At this point we have all the info on the current protein and its
+    #### indistinguishables, so process that if we haven't already.
+    unless (defined $self->{pepcache}->{indistinguishables_processed}) { 
+      # If there are any indistinguishables, see if they include a protID
+      # that is more preferred than $self->{protein_name}.
+      my @indis = keys(%{$self->{protcache}->{indist_prots}});
+      if (scalar @indis) {
+
+        # Add self to list of indistinguishables for complete list
+        # of protein IDs that are indistinguishable from one another
+	push (@indis, $self->{protein_name});
+
+	# Select the preferred protID of all, and if different from
+	# original, do some swapping.
+	my $protein_name = 
+	  SBEAMS::PeptideAtlas::ProtInfo::get_preferred_protid_from_list(
+	    \@indis);
+        if ($protein_name ne $self->{protein_name}) {
+	  delete($self->{protcache}->{indist_prots}->{$self->{protein_name}});
+	  $self->{protcache}->{indist_prots}->{$protein_name} = 1;
+	  $self->{protein_name} = $protein_name;
+        }
+      }
+
+      # Note that we've processed the protein info.
+      $self->{pepcache}->{indistinguishables_processed} = 1;
+    }
+
   }
 
 
@@ -664,7 +684,9 @@ sub pepXML_end_element {
       #### Select a protein_name to store.
       #my $protein_name = pop(@{$self->{pepcache}->{protein_name}});
       my $protein_name ='';
-      $protein_name = select_protid($self->{pepcache}->{protein_name});
+      $protein_name = 
+      SBEAMS::PeptideAtlas::ProtInfo::get_preferred_protid_from_list(
+             $self->{pepcache}->{protein_name});
       #### Store the information for this peptide into an array for caching
       push(@{ $self->{pep_identification_list} },
           [$self->{search_batch_id},
@@ -714,44 +736,6 @@ sub pepXML_end_element {
   }
 
 }
-
-#### Return a protein identifer from an array of identifiers
-####  that are mapped to by a single peptide. Select based on
-####  preferences for particular protein databases.
-#### This could certainly be coded more elegantly.
-sub select_protid {
-  my $protid_list_ref = shift;
-  my $protid;
-
-  # prefer a Uniprot (Swiss-Prot) ID
-  for $protid (@{$protid_list_ref}) {
-    if ($protid =~ /^[ABOPQ].....$/) {
-      return $protid;
-    }
-  }
-  # next, a Swiss-Prot varsplice ID
-  for $protid (@{$protid_list_ref}) {
-    if ($protid =~ /^[ABOPQ].....-.*$/) {
-      return $protid;
-    }
-  }
-  # next, an Ensembl ID
-  for $protid (@{$protid_list_ref}) {
-    if ($protid =~ /^ENSP\d\d\d\d\d\d\d\d\d\d\d$/) {
-      return $protid;
-    }
-  }
-  # next, any non-DECOY ID
-  for $protid (@{$protid_list_ref}) {
-    if ($protid !~ /^DECOY_/) {
-      return $protid;
-    }
-  }
-  # otherwise, return the first ID
-  return $protid_list_ref->[0];
-}
-  
-
 
 
 ###############################################################################
@@ -824,12 +808,25 @@ sub protXML_end_element {
   #### If this is a protein, then store its info in its group
   if ($localname eq 'protein') {
     if ($store_info_for_presence_level) {
-
+ 
       my $protein_name = $self->{protein_name};
 
-      # Store the indistinguishable proteins in the group cache
-      $self->{groupcache}->{proteins}->{$protein_name}->{indist_prots}
-	 = $self->{protcache}->{indist_prots};
+      # Store the (non-preferred) indistinguishable proteins,
+      #  unique stripped peptides, probability, confidence, and
+      #  subsuming protein entry in the group cache, in a hash
+      # keyed by the preferred protein.
+      $self->{groupcache}->{proteins}->{$protein_name}->{indist_prots} =
+             $self->{protcache}->{indist_prots};
+      $self->{groupcache}->{proteins}->{$protein_name}->
+	                                   {unique_stripped_peptides} = 
+             $self->{protcache}-> {unique_stripped_peptides};
+      $self->{groupcache}->{proteins}->{$protein_name}->{probability} =
+             $self->{protcache}->{probability};
+      $self->{groupcache}->{proteins}->{$protein_name}->{confidence} =
+             $self->{protcache}->{confidence};
+      $self->{groupcache}->{proteins}->{$protein_name}->
+	                                   {subsuming_protein_entry} =
+             $self->{protcache}-> {subsuming_protein_entry};
 
       # Store the group number for this protein in a persistent hash.
       $self->{ProteinProphet_prot_data}->{group_hash}->{$protein_name} =
@@ -1322,6 +1319,36 @@ sub main {
 
   }
 
+###############################################################################
+# print_protein_info
+###############################################################################
+  sub print_protein_info {
+
+    my $prot_group_href = $CONTENT_HANDLER->{ProteinProphet_group_data};
+    my @group_number_list = keys(%{$prot_group_href});
+    foreach my $group_num (@group_number_list) {
+      my $group = $prot_group_href->{$group_num};
+      print "Protein group $group_num P=$group->{probability}\n";
+      my @protein_list = keys(%{$group->{proteins}});
+      if (@protein_list ) {
+	foreach my $protein (@protein_list) {
+	  my $prot_href = $group->{proteins}->{$protein};
+	  print "   $protein P=$prot_href->{probability} ".
+		"C=$prot_href->{confidence}\n";
+	  my @indis_list = keys(%{$prot_href->{indist_prots}});
+	  if ( @indis_list ) {
+	    print "    indistinguishable:\n";
+	    foreach my $indis_protein (@indis_list) {
+		print "      $indis_protein\n";
+	    }
+	  }
+	}
+      }
+    }
+  }
+
+  #### Development: see if the protein info got stored.
+  #print_protein_info();
 
   #### Second pass: read ProteinProphet file(s), read each cache file again,
   ####  then write out all the peptides and probabilities including
@@ -1370,28 +1397,7 @@ sub main {
       }
 
       #### Development: see if the protein info got stored.
-      my $prot_group_href = $CONTENT_HANDLER->{ProteinProphet_group_data};
-      my @group_number_list = keys(%{$prot_group_href});
-      foreach my $group_num (@group_number_list) {
-	my $group = $prot_group_href->{$group_num};
-	#print "Protein group $group_num P=$group->{probability}\n";
-	my @protein_list = keys(%{$group->{proteins}});
-	if (0 && @protein_list ) {
-	  foreach my $protein (@protein_list) {
-	    my $prot_href = $group->{proteins}->{$protein};
-	    print "   $protein P=$prot_href->{probability} ".
-		  "C=$prot_href->{confidence} ".
-		  "$prot_href->{presence_level}\n";
-	    my @indis_list = keys(%{$prot_href->{indist_prots}});
-	    if ( @indis_list ) {
-	      print "    indistinguishable:\n";
-	      foreach my $indis_protein (@indis_list) {
-		  print "      $indis_protein\n";
-	      }
-	    }
-	  }
-	}
-      }
+      #print_protein_info();
 
       #### Development: check the hash mapping protein names to group numbers.
       my $prot_href = $CONTENT_HANDLER->{ProteinProphet_prot_data}->{group_hash};
@@ -1717,12 +1723,14 @@ sub main {
 	}
 	for my $prot (@canonical_set) {
 	  $proteins_href->{$prot}->{presence_level} = "canonical";
+	  $proteins_href->{$prot}->{represented_by} = $highest_prob_prot;
 	}
 
 	# Now, label the non-canonicals.
 	foreach my $protein (@remaining_proteins) {
 	  my $prot_href = $proteins_href->{$protein};
 	  my $this_prob = $prot_href->{probability};
+	  $prot_href->{represented_by} = $highest_prob_prot;
 	  if ($this_prob > 0.0) {
 	    $prot_href->{presence_level} = "possibly_disting";
 	  } else {
@@ -2162,6 +2170,8 @@ sub writePepIdentificationListFile {
   my $counter = 0;
   foreach my $identification ( @{$pep_identification_list} ) {
     my $probability = $identification->[8];
+    ### warns that can't compare strings with >= but can't find
+    ###  function to explicitly convert to float
     if ((defined ($P_threshold) && $probability >= $P_threshold) ||
         (defined ($FDR_threshold))) {
       print OUTFILE join("\t",@{$identification})."\n";
@@ -2202,7 +2212,8 @@ sub writeProtIdentificationListFile {
   my $group_num;
   for my $prot_name (keys %{$ProteinProphet_prot_data->{atlas_prot_list}}) {
     # ... look up its group number in ProteinProphet_prot_data.
-    $group_num = $ProteinProphet_prot_data-> {group_hash}->{$prot_name};
+    $group_num = $ProteinProphet_prot_data->{group_hash}->{$prot_name};
+    #print STDERR "$group_num,$prot_name\n";
     # Then look up its info in ProteinProphet_group_data and print it.
     my $prot_href = $ProteinProphet_group_data->{$group_num}->{proteins}
         ->{$prot_name};
@@ -2215,7 +2226,8 @@ sub writeProtIdentificationListFile {
       print OUTFILE " $indis";
     }
     print OUTFILE ",$prot_href->{probability},".
-	 "$prot_href->{confidence},$prot_href->{presence_level}\n";
+	 "$prot_href->{confidence},$prot_href->{presence_level},".
+         "$prot_href->{represented_by}\n";
   }
 } # end writeProtIdentificationListFile
 
