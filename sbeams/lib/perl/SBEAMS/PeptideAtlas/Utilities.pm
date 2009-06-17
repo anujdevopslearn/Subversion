@@ -352,10 +352,10 @@ sub getGlycoPeptides {
   # Arrayref of glycosite locations
   my $sites = $self->get_site_positions( seq => $args{seq},
                                      pattern => 'N[^P][S|T]' );
-  $log->debug( "Sites found at:\n" . join( "\n", @$sites ) );
+#  $log->debug( "Sites found at:\n" . join( "\n", @$sites ) );
 
   my $peptides = $self->do_tryptic_digestion( aa_seq => $args{seq} );
-  $log->debug( "Peptides found at:\n" . join( "\n", @$peptides ) );
+#  $log->debug( "Peptides found at:\n" . join( "\n", @$peptides ) );
 
   # Hash of start => sequence for glcyopeps
   my %glyco_peptides;
@@ -1324,6 +1324,28 @@ sub CalcIons {
     return (\%masslist);
 }
 
+
+sub make_sort_headings {
+  my $self = shift;
+  my %args = @_;
+  return '' unless $args{headings};
+
+  my @marked;
+  my $cnt;
+  while( @{$args{headings}} ) {
+    my $head = shift @{$args{headings}};
+    my $arrow = '';
+    if ( $args{default} && $args{default} eq $head ) {
+      $arrow = '&darr;';
+    }
+    my $title = shift @{$args{headings}};
+    my $link = qq~ <DIV TITLE="$title" ONCLICK="ts_resortTable(this,'$cnt');return false;" class=sortheader>$head<span class=sortarrow>&nbsp;$arrow</span></DIV>~;
+    push @marked, $link;
+    
+    last if $cnt++ > 100; # danger Will Robinson
+  }
+  return \@marked;
+}
 
 
 1;
