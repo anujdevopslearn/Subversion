@@ -29,6 +29,7 @@ use SBEAMS::PeptideAtlas::AtlasBuild;
 use SBEAMS::PeptideAtlas::SearchBatch;
 use SBEAMS::PeptideAtlas::Peptide;
 use SBEAMS::PeptideAtlas::Annotations;
+use SBEAMS::PeptideAtlas::ProtInfo;
 
 @ISA = qw(SBEAMS::PeptideAtlas::DBInterface
           SBEAMS::PeptideAtlas::HTMLPrinter
@@ -42,6 +43,7 @@ use SBEAMS::PeptideAtlas::Annotations;
           SBEAMS::PeptideAtlas::SearchBatch
           SBEAMS::PeptideAtlas::Peptide
           SBEAMS::PeptideAtlas::Annotations
+          SBEAMS::PeptideAtlas::ProtInfo;
        );
 
 my $log = SBEAMS::Connection::Log->new();
