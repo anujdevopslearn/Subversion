@@ -12,23 +12,23 @@ ok( retrieve_hash(), 'Retrieve hash');
 
 sub store_array {
   my @array = ( 'PeptideAtlas_atlas_build_id', 123 );
-  nstore(\@array, 'array.sto') || return 0;
+  nstore(\@array, '/tmp/array.sto') || return 0;
 }
 
 sub store_hash {
   my %hash = ( PeptideAtlas_atlas_build_id => 123 );
-  nstore(\%hash, 'hash.sto') || return 0;
+  nstore(\%hash, '/tmp/hash.sto') || return 0;
 
 }
 
 sub retrieve_array {
-  my $arrayref = retrieve("array.sto") || return 0;
+  my $arrayref = retrieve("/tmp/array.sto") || return 0;
   my $ok = $arrayref->[0];
   return $ok
 }
 
 sub retrieve_hash {
-  my $hashref = retrieve("hash.sto") || return 0;
+  my $hashref = retrieve("/tmp/hash.sto") || return 0;
   my $ok = 0;
   for my $k ( keys( %$hashref ) ) {
     $ok = $k;
