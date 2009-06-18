@@ -43,7 +43,7 @@ use SBEAMS::PeptideAtlas::ProtInfo;
           SBEAMS::PeptideAtlas::SearchBatch
           SBEAMS::PeptideAtlas::Peptide
           SBEAMS::PeptideAtlas::Annotations
-          SBEAMS::PeptideAtlas::ProtInfo;
+          SBEAMS::PeptideAtlas::ProtInfo
        );
 
 my $log = SBEAMS::Connection::Log->new();
