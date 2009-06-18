@@ -27,7 +27,7 @@ use File::Basename;
 use POSIX;
 use Data::Dumper;
 use URI::Escape;
-use Storable;
+use Storable qw(nstore retrieve);
 use Time::HiRes qw( usleep ualarm gettimeofday tv_interval );
 
 use GD::Graph::bars;
@@ -4201,7 +4201,29 @@ sub readResultSet {
 
     #### Read in the resultset
     $infile = "$RESULTSET_DIR/${resultset_file}.resultset";
+	  # This may fail due to older version of storable
+		eval {
     %{$resultset_ref} = %{retrieve($infile)};
+		};
+
+    # only if we have an error...
+		if ( $@ ) {
+		  # Cache value
+		  my $tmp = $Storable::interwork_56_64bit;
+			$Storable::interwork_56_64bit = 1;
+
+		  # Try again.
+			eval {
+        %{$resultset_ref} = %{retrieve($infile)};
+			};
+			if ( $@ ) {
+				die $@;
+			}
+	    # reset value
+		  $Storable::interwork_56_64bit = $tmp;
+		}
+
+
 
 
     #### This also works but is quite slow
@@ -4303,7 +4325,7 @@ sub writeResultSet {
 
     #### Write out the resultset
     $outfile = "$RESULTSET_DIR/${resultset_file}.resultset";
-    store($resultset_ref,$outfile);
+    nstore($resultset_ref,$outfile);
 
 
     #### If this is a new resultset and we were provided a query_name,
