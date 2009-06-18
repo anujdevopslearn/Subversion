@@ -165,7 +165,7 @@ sub testCommit {
 }
 
 sub testBegin {
-#  $dbh->begin_work();
+  $dbh->begin_work();
 }
 
 sub testRollback {
