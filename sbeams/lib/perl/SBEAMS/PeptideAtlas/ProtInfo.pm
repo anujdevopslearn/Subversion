@@ -636,6 +636,10 @@ sub get_preferred_protid_from_list {
   my $protid_list_ref = shift;
   my $protid;
 
+  # first, sort the list so that the order of the identifiers in
+  # the list doesn't affect what is returned from this function.
+  @{$protid_list_ref} = sort(@{$protid_list_ref});
+
   # prefer a Uniprot (Swiss-Prot) ID
   for $protid (@{$protid_list_ref}) {
     if (($protid =~ /^[ABOPQ].....$/) && ($protid !~ /UNMAPPED/)) {

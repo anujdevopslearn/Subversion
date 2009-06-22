@@ -132,7 +132,7 @@
 #       ->{$pepseq}                   pepseq -> array of protein IDs
 # 
 # End $CONTENT_HANDLER description
-###############################################################################
+##############################################################################
 
 use strict;
 use POSIX;  #for floor()
@@ -589,8 +589,8 @@ sub protXML_start_element {
 	  SBEAMS::PeptideAtlas::ProtInfo::get_preferred_protid_from_list(
 	    \@indis);
         if ($protein_name ne $self->{protein_name}) {
-	  delete($self->{protcache}->{indist_prots}->{$self->{protein_name}});
-	  $self->{protcache}->{indist_prots}->{$protein_name} = 1;
+	  delete($self->{protcache}->{indist_prots}->{$protein_name});
+	  $self->{protcache}->{indist_prots}->{$self->{protein_name}} = 1;
 	  $self->{protein_name} = $protein_name;
         }
       }
@@ -598,7 +598,6 @@ sub protXML_start_element {
       # Note that we've processed the protein info.
       $self->{pepcache}->{indistinguishables_processed} = 1;
     }
-
   }
 
 
@@ -785,6 +784,7 @@ sub protXML_end_element {
     }
 
     #### Add current protein to global list of proteins this pep maps to
+    ####  (this list does not include indistinguishables)
     if ( $store_info_for_presence_level) {
       my $this_protein = $self->{protein_name};
       if (! defined $self->{ProteinProphet_prot_data}->{prot_hash}->
@@ -1322,6 +1322,7 @@ sub main {
 ###############################################################################
 # print_protein_info
 ###############################################################################
+  # why doesn't it work for this to be at the end of this file?
   sub print_protein_info {
 
     my $prot_group_href = $CONTENT_HANDLER->{ProteinProphet_group_data};
@@ -2213,7 +2214,6 @@ sub writeProtIdentificationListFile {
   for my $prot_name (keys %{$ProteinProphet_prot_data->{atlas_prot_list}}) {
     # ... look up its group number in ProteinProphet_prot_data.
     $group_num = $ProteinProphet_prot_data->{group_hash}->{$prot_name};
-    #print STDERR "$group_num,$prot_name\n";
     # Then look up its info in ProteinProphet_group_data and print it.
     my $prot_href = $ProteinProphet_group_data->{$group_num}->{proteins}
         ->{$prot_name};
