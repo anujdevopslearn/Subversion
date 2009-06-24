@@ -110,8 +110,8 @@
 #        ----
 #       ->{protein_name}                 determined by [pid]. Used to write
 #                                             peptide identlist!
-#       ->{protein_probability}          [pid], but used only w/in storePepInfo!
-#       ->{protein_group_probability}    [pid], but used only w/in storePepInfo!
+#       ->{protein_probability}          [pid], but used only w/in storePepInfoFromProtXML!
+#       ->{protein_group_probability}    [pid], but used only w/in storePepInfoFromProtXML!
 # 
 # 
 #   ->{ProteinProphet_group_data}     used to determine prot ident list
@@ -565,7 +565,7 @@ sub protXML_start_element {
 
   #### If this is a peptide, store some peptide attributes
   ####  TMF 06/23/09: I don't think the attribute charge ever happens here,
-  ####    althuogh I do see it in indistinguishable peptides.
+  ####    although I do see it in indistinguishable peptides.
   ####    (Talking here about peps, not prots!)
   if ($localname eq 'peptide') {
     my $peptide_sequence = $attrs{peptide_sequence} || die("No sequence");
@@ -607,11 +607,18 @@ sub protXML_start_element {
 
 
   #### If this peptide has an indistinguishable twin, record it
-  ####  TMF 06/23/09: often indistinguishable_peptides have an embedded
-  ####    mod, but no pre-pended charge. Charge may be in an attribute,
-  ####    but we ignore that attribute here.
+  ####  TMF 06/23/09: discovered  that, often, indistinguishable_peptides have an embedded
+  ####    mod with charge stored in an attribute. We were leaving the
+  ####    embedded mod but not pre-pending the charge, giving us a
+  ####    partially stripped peptide. The rest of this program expects
+  ####    either stripped or unstripped peptides, so now we prepend the charge.
+
   if ($localname eq 'indistinguishable_peptide') {
     my $peptide_sequence = $attrs{peptide_sequence} || die("No sequence");
+    # TMF 06/23/09: prepend the charge.
+    if ($attrs{charge}) {
+      $peptide_sequence = $attrs{charge} . "-" . $peptide_sequence;
+    }
     $self->{pepcache}->{indistinguishable_peptides}->{$peptide_sequence} = 1;
   }
 
@@ -679,10 +686,9 @@ sub pepXML_end_element {
 
       #### Create the modified peptide string
       my $prepend_charge = 0;
-      my $modified_peptide = modified_peptide_string($self,
-             $peptide_sequence, $prepend_charge);
-
       my $charge = $self->{pepcache}->{charge};
+      my $modified_peptide = modified_peptide_string($self, $peptide_sequence, $charge,
+          $self->{pepcache}->{modifications}, $prepend_charge);
 
       my $peptide_accession = &main::getPeptideAccession(
         sequence => $peptide_sequence,
@@ -772,15 +778,21 @@ sub protXML_end_element {
     # Protein identification and protein probabilities are here 
     #  stored in ProteinProphet_pep_protID_data.
 
-    my $pep_key = storePepInfo( $self, $peptide_sequence, $get_best_pep_probs);
+    my $charge = $self->{pepcache}->{charge};
+    my $modifications = $self->{pepcache}->{modifications};
+    my $pep_key = storePepInfoFromProtXML( $self, $peptide_sequence,
+         $charge, $modifications, $get_best_pep_probs);
     if ( $assign_protids ) {
       assignProteinID($self, $pep_key);
     }
 
     #### If there are indistinguishable peptides, store their info, too
+    #### Indistinguishable peptides were stored unstripped (with charge & mod),
+    #### so no need to pass charge/mod.
     foreach my $indis_peptide (
        keys(%{$self->{pepcache}->{indistinguishable_peptides}}) ) {
-       my $pep_key = storePepInfo( $self, $indis_peptide, $get_best_pep_probs);
+       my $pep_key = storePepInfoFromProtXML( $self, $indis_peptide, "", {},
+             $get_best_pep_probs);
        if ( $assign_protids ) {
 	     assignProteinID($self, $pep_key);
        }
@@ -877,7 +889,7 @@ sub protXML_end_element {
 
 
 ###############################################################################
-# storePepInfo
+# storePepInfoFromProtXML
 ###############################################################################
 # For a given <peptide> tag in a protXML file, store the
 # ProteinProphet info on the modified peptide (pep_key) in a hash.
@@ -886,23 +898,25 @@ sub protXML_end_element {
 # So, if requested, store the best probability among all <peptide>
 # tags associated with each pep_key.
 
-sub storePepInfo {
+sub storePepInfoFromProtXML {
   my $self = shift;
   my $peptide_sequence = shift;
+  my $charge = shift;
+  my $modifications = shift;
   my $get_best_pep_probs = shift;
 
   my $initial_probability = $self->{pepcache}->{initial_probability};
   my $adjusted_probability = $self->{pepcache}->{nsp_adjusted_probability};
-  my $charge = $self->{pepcache}->{charge};
 
   #### Create the modified peptide string
   my $prepend_charge = 1;
-  my $pep_key =  modified_peptide_string($self, $peptide_sequence, $prepend_charge);
+  my $pep_key =  modified_peptide_string($self, $peptide_sequence, $charge,
+       $modifications, $prepend_charge);
 
   #### INFO: as of 12/18/08, iProphet or ProteinProphet drops mod and
   #### charge info, so at this point $pep_key eq $peptide_sequence.
-  #### 06/23/09: I don't know where I got this idea from. Some indistinguishable
-  #### peptides, at least, have modification info. Should they not???
+  #### 06/23/09: I don't know where I got this idea from. Some, if not all,
+  #### indistinguishable peptides have charge and mod info.
 
   # create shorthand for this hash ref
   my $pepProtInfo = $self->{ProteinProphet_pep_data}->{$pep_key};
@@ -949,11 +963,12 @@ sub storePepInfo {
 sub modified_peptide_string {
   my $self = shift;
   my $peptide_sequence = shift;
+  my $charge = shift;
+  my $modifications = shift;
   my $prepend_charge = shift;
 
   my $modified_peptide = '';
   my $pep_key = '';
-  my $modifications = $self->{pepcache}->{modifications};
   if ($modifications) {
     my $i = 0;
     if ($modifications->{$i}) {
@@ -974,7 +989,6 @@ sub modified_peptide_string {
   }
 
   # If there is a charge, and if desired, prepend charge to peptide string
-  my $charge = $self->{pepcache}->{charge};
   if ($charge && $prepend_charge) {
     $pep_key = sprintf("%s-%s", $charge, $modified_peptide);
   } else {
@@ -1330,6 +1344,7 @@ sub main {
   #  file do we save all this protein info.
   sub print_protein_info {
 
+    # the use of CONTENT_HANDLER below gives a warning.
     my $prot_group_href = $CONTENT_HANDLER->{ProteinProphet_group_data};
     my @group_number_list = keys(%{$prot_group_href});
     foreach my $group_num (@group_number_list) {
@@ -1993,6 +2008,15 @@ sub writePepIdentificationListFile {
     || print "INFO: writePepIdentificationListFile will get best prob ".
              "per pep from protXML info\n";
 
+  my %peps_without_protxml_protid;
+
+  my $protID_protxml;
+  if ($OPTIONS{master_ProteinProphet_file}) {
+    $protID_protxml = "master protXML"
+  } else {
+    $protID_protxml = "individual protXMLs"
+  }
+
   print "Writing output combined cache file '$output_file'...\n";
 
   #### Open and write header
@@ -2032,15 +2056,22 @@ sub writePepIdentificationListFile {
     my $probability_adjustment_factor;
     my $pep_key = '';
     my $diff_is_great=0;
+    my $protinfo_protxml;
+    if ($OPTIONS{master_ProteinProphet_file} && !$OPTIONS{per_expt_pipeline}) {
+      $protinfo_protxml = "master protXML"
+    } else {
+      $protinfo_protxml = "individual protXMLs"
+    }
+
     if ($ProteinProphet_pep_data->{"${charge}-$modified_peptide"}) {
       $pep_key = "${charge}-$modified_peptide";
-    } elsif ($ProteinProphet_pep_data->{$modified_peptide}) {
-      $pep_key = $modified_peptide;
+#    } elsif ($ProteinProphet_pep_data->{$modified_peptide}) {
+#      $pep_key = $modified_peptide;
     } elsif ($ProteinProphet_pep_data->{$peptide_sequence}) {
       $pep_key = $peptide_sequence;
     } else {
-      print "WARNING: Did not find ProtProph info for keys ".
-	"$peptide_sequence, $modified_peptide, or '${charge}-$modified_peptide'".
+      print "WARNING: Did not find info in $protinfo_protxml for keys ".
+	"$peptide_sequence  or '${charge}-$modified_peptide'".
         " (prot=$identification->[10], P=$identification->[8])\n";
     }
 
@@ -2067,12 +2098,14 @@ sub writePepIdentificationListFile {
       } else {
         $initial_probability = $info->{initial_probability};
       }
-      if($ProteinProphet_pep_protID_data->{$pep_key}->{protein_name}){
+      if ($ProteinProphet_pep_protID_data->{$pep_key}->{protein_name}){
         $identification->[10] = $ProteinProphet_pep_protID_data->
            {$pep_key}->{protein_name};
-      }
-      else {
-        print "no ProteinProphet_pep_protID_data for peptide $pep_key\n";
+      } elsif ($ProteinProphet_pep_protID_data->{$peptide_sequence}->{protein_name}){
+        $identification->[10] = $ProteinProphet_pep_protID_data->
+           {$peptide_sequence}->{protein_name};
+      } else {
+        $peps_without_protxml_protid{$pep_key} = 1;
       }
       $adjusted_probability = $info->{nsp_adjusted_probability};
       $n_adjusted_observations = $info->{n_adjusted_observations};
@@ -2187,6 +2220,20 @@ sub writePepIdentificationListFile {
     }
   }
   print "\n  - wrote $counter peptides to identification list file.\n";
+
+  # List those peptides for which the protein ID from the pepXML is printed
+  #  due to that peptide not being found in the protXML for some reason.
+  my @peps_without_protxml_protid = keys %peps_without_protxml_protid;
+  my $npeps = scalar(@peps_without_protxml_protid);
+  if ($npeps) {
+    print "No protID collected from $protID_protxml for the following peptides\n";
+    print "  (both unstripped and stripped versions were checked).\n";
+    print "ProtID from pepXML was used; may result in more unique protIDs\n";
+    print "  and thus underestimated Mayu protein FDR.\n";
+    for my $pep_key (@peps_without_protxml_protid) {
+      print "  $pep_key\n";
+    }
+  }
 
   if ( $splib_filter ) {
     print "Filtered vs. consensus library, found " . scalar( @{$consensus_lib{found}} ) . ',  ' .  scalar( @{$consensus_lib{missing}} ) . " were missing\n";
@@ -2874,7 +2921,7 @@ sub writeToPAxmlFile {
 
 
     #### Close peptide_instance tag
-    my $buffer = encodeXMLEntity(
+    $buffer = encodeXMLEntity(
       entity_name => 'peptide_instance',
       indent => 4,
       entity_type => 'close',
