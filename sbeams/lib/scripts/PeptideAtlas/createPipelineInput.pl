@@ -544,6 +544,7 @@ sub protXML_start_element {
   }
 
   #### If this is the modification info, then store some attributes
+  ####  TMF 06/23/09: I don't think these attributes ever happen.
   if ($localname eq 'modification_info') {
     if ($attrs{mod_nterm_mass}) {
       $self->{pepcache}->{modifications}->{0} = $attrs{mod_nterm_mass};
@@ -556,12 +557,16 @@ sub protXML_start_element {
 
 
   #### If this is the mass mod info, then store some attributes
+  ####  TMF 06/23/09: I don't think this tag ever happens.
   if ($localname eq 'mod_aminoacid_mass') {
     $self->{pepcache}->{modifications}->{$attrs{position}} = $attrs{mass};
   }
 
 
   #### If this is a peptide, store some peptide attributes
+  ####  TMF 06/23/09: I don't think the attribute charge ever happens here,
+  ####    althuogh I do see it in indistinguishable peptides.
+  ####    (Talking here about peps, not prots!)
   if ($localname eq 'peptide') {
     my $peptide_sequence = $attrs{peptide_sequence} || die("No sequence");
     $self->{pepcache}->{peptide} = $attrs{peptide_sequence};
@@ -602,6 +607,9 @@ sub protXML_start_element {
 
 
   #### If this peptide has an indistinguishable twin, record it
+  ####  TMF 06/23/09: often indistinguishable_peptides have an embedded
+  ####    mod, but no pre-pended charge. Charge may be in an attribute,
+  ####    but we ignore that attribute here.
   if ($localname eq 'indistinguishable_peptide') {
     my $peptide_sequence = $attrs{peptide_sequence} || die("No sequence");
     $self->{pepcache}->{indistinguishable_peptides}->{$peptide_sequence} = 1;
@@ -763,11 +771,8 @@ sub protXML_end_element {
     #  have been stored in ProteinProphet_pep_data.
     # Protein identification and protein probabilities are here 
     #  stored in ProteinProphet_pep_protID_data.
-    my $modifications = $self->{pepcache}->{modifications};
-    my $charge = $self->{pepcache}->{charge};
 
-    my $pep_key = storePepInfo( $self, $peptide_sequence, $modifications, 
-	                            $get_best_pep_probs);
+    my $pep_key = storePepInfo( $self, $peptide_sequence, $get_best_pep_probs);
     if ( $assign_protids ) {
       assignProteinID($self, $pep_key);
     }
@@ -775,9 +780,7 @@ sub protXML_end_element {
     #### If there are indistinguishable peptides, store their info, too
     foreach my $indis_peptide (
        keys(%{$self->{pepcache}->{indistinguishable_peptides}}) ) {
-       my $pep_key =
-	     storePepInfo( $self, $indis_peptide, $modifications, 
-	                 $get_best_pep_probs);
+       my $pep_key = storePepInfo( $self, $indis_peptide, $get_best_pep_probs);
        if ( $assign_protids ) {
 	     assignProteinID($self, $pep_key);
        }
@@ -886,7 +889,6 @@ sub protXML_end_element {
 sub storePepInfo {
   my $self = shift;
   my $peptide_sequence = shift;
-  my $modifications = shift;
   my $get_best_pep_probs = shift;
 
   my $initial_probability = $self->{pepcache}->{initial_probability};
@@ -895,11 +897,12 @@ sub storePepInfo {
 
   #### Create the modified peptide string
   my $prepend_charge = 1;
-  my $pep_key =  modified_peptide_string($self, $peptide_sequence,
-                     $prepend_charge);
+  my $pep_key =  modified_peptide_string($self, $peptide_sequence, $prepend_charge);
 
   #### INFO: as of 12/18/08, iProphet or ProteinProphet drops mod and
   #### charge info, so at this point $pep_key eq $peptide_sequence.
+  #### 06/23/09: I don't know where I got this idea from. Some indistinguishable
+  #### peptides, at least, have modification info. Should they not???
 
   # create shorthand for this hash ref
   my $pepProtInfo = $self->{ProteinProphet_pep_data}->{$pep_key};
@@ -1323,6 +1326,8 @@ sub main {
 # print_protein_info
 ###############################################################################
   # why doesn't it work for this to be at the end of this file?
+  # this sub only works for master ProtPro file, bec. only when reading that
+  #  file do we save all this protein info.
   sub print_protein_info {
 
     my $prot_group_href = $CONTENT_HANDLER->{ProteinProphet_group_data};
@@ -1397,10 +1402,9 @@ sub main {
 	}
       }
 
-      #### Development: see if the protein info got stored.
-      #print_protein_info();
 
       #### Development: check the hash mapping protein names to group numbers.
+      ####  Hmm, this may belong after reading the master ProtPro file, not here!
       my $prot_href = $CONTENT_HANDLER->{ProteinProphet_prot_data}->{group_hash};
       my @protein_list = keys(%{$prot_href});
       foreach my $prot_name (sort @protein_list) {
@@ -2030,11 +2034,13 @@ sub writePepIdentificationListFile {
     my $diff_is_great=0;
     if ($ProteinProphet_pep_data->{"${charge}-$modified_peptide"}) {
       $pep_key = "${charge}-$modified_peptide";
+    } elsif ($ProteinProphet_pep_data->{$modified_peptide}) {
+      $pep_key = $modified_peptide;
     } elsif ($ProteinProphet_pep_data->{$peptide_sequence}) {
       $pep_key = $peptide_sequence;
     } else {
       print "WARNING: Did not find ProtProph info for keys ".
-	"$peptide_sequence or '${charge}-$modified_peptide'".
+	"$peptide_sequence, $modified_peptide, or '${charge}-$modified_peptide'".
         " (prot=$identification->[10], P=$identification->[8])\n";
     }
 
@@ -3247,10 +3253,13 @@ sub saveBestProbPerPep{
     if ($prob eq "probability") {
       next;
     }
+    ### save probability under all three versions of the peptide
+    ### since we may see any of them in the protXML.
     my $stripped_pep = $identification->[3];
+    my $modified_pep = $identification->[5];
     # concatenate charge, hyphen, and modified peptide to create unstripped
-    my $unstripped_pep = "$identification->[7]-$identification->[5]";
-    # stripped peptide
+    my $unstripped_pep = "$identification->[7]-$modified_pep";
+    # stripped peptide (no charge, no mods)
     if (exists($best_prob_per_pep->{$stripped_pep})) {
       if ( $prob > $best_prob_per_pep->{$stripped_pep} ) {
         $best_prob_per_pep->{$stripped_pep} = $prob;
@@ -3258,8 +3267,18 @@ sub saveBestProbPerPep{
     } else {
       $best_prob_per_pep->{$stripped_pep} = $prob;
     }
-    # unstripped peptide
-    if ($unstripped_pep ne $stripped_pep) {
+    # modified peptide
+    if ($modified_pep ne $stripped_pep) {
+      if (exists($best_prob_per_pep->{$modified_pep})) {
+        if ( $prob > $best_prob_per_pep->{$modified_pep} ) {
+          $best_prob_per_pep->{$modified_pep} = $prob;
+        }
+      } else {
+        $best_prob_per_pep->{$modified_pep} = $prob;
+      }
+    }
+    # unstripped peptide (with charge and mods)
+    if (($unstripped_pep ne $stripped_pep) && ($unstripped_pep ne $modified_pep)) {
       if (exists($best_prob_per_pep->{$unstripped_pep})) {
         if ( $prob > $best_prob_per_pep->{$unstripped_pep} ) {
           $best_prob_per_pep->{$unstripped_pep} = $prob;
@@ -3267,7 +3286,6 @@ sub saveBestProbPerPep{
       } else {
         $best_prob_per_pep->{$unstripped_pep} = $prob;
       }
-    } else {
     }
   }
 }
