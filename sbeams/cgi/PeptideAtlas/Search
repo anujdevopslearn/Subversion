@@ -28,6 +28,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
 
+#TMF the below means, import $q (a CGI object) and $log
 use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
@@ -56,7 +57,6 @@ Options:
   --verbose n         Set verbosity level.  default is 0
   --quiet             Set flag to print nothing at all except errors
   --debug n           Set debug flag
-  --command_line      Format output for command line
 
  e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
 
@@ -64,7 +64,7 @@ EOU
 
 #### Process options
 unless
-(GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","command_line",)) {
+(GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",)) {
   print "$USAGE";
   exit;
 }
@@ -72,14 +72,12 @@ unless
 $VERBOSE = $OPTIONS{"verbose"} || 0;
 $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
-my $command_line = $OPTIONS{"command_line"} || 0;
 
 if ($DEBUG) {
   print "Options settings:\n";
   print "  VERBOSE = $VERBOSE\n";
   print "  QUIET = $QUIET\n";
   print "  DEBUG = $DEBUG\n";
-  print "  command_line = $command_line\n";
 }
 
 
@@ -111,7 +109,7 @@ sub main {
   #### Read in the default input parameters
   my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
-      q=>$q,
+      q=>$q,            # TMF: CGI object; received into $self
       parameters_ref=>\%parameters);
   #$sbeams->printDebuggingInfo($q);
 
@@ -154,10 +152,13 @@ sub handle_request {
   my %resultset = ();
   my $resultset_ref = \%resultset;
   my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+  ##TMF. Tends to show a blank page in html mode. Anti-useful!
+  #$show_sql = 1;
 
 
   #### Read in the standard form values
   my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+  ##TMF: this is never used, and receives no value from cgi.
   my $TABLE_NAME = $parameters{'QUERY_NAME'};
 
 
@@ -186,6 +187,13 @@ sub handle_request {
   my $search_key = $parameters{"search_key"};
   my $organism_name = $parameters{"organism_name"};
   my $build_type_name = $parameters{"build_type_name"};
+  #TMF added below 
+  my $atlas_build_id = $parameters{"atlas_build_id"};
+  if ($build_type_name && $atlas_build_id && 
+         ($sbeams->output_mode() ne 'html')) {
+    print "Specify only one of build_type_name and atlas_build_id.\n";
+    return(0);
+  }   
 
   #### If a new search_key was supplied, store it
   if ($search_key) {
@@ -208,10 +216,9 @@ sub handle_request {
     build_type_name => $build_type_name,
   );
 
-
   #### This is needed for displaying the page header
   my $project_id = $sbeamsMOD->getProjectID(
-    atlas_build_id => $parameters{atlas_build_id}
+    atlas_build_id => $atlas_build_id
   );
 
 
@@ -320,12 +327,37 @@ sub handle_request {
       );
   return if ($search_key_clause eq '-1');
 
+  my $atlas_build_ids;
+  my $atlas_build_column;
+  my $atlas_build_clause;
+
+  # Command-line specification of a specific atlas build id
+  if ($sbeams->output_mode() ne 'html' && defined $atlas_build_id
+         && !defined $build_type_name ) {
+    $atlas_build_ids = $atlas_build_id;
+    $atlas_build_column =  ["atlas_build","AB.atlas_build_name","Build Name"];
+    $atlas_build_clause = qq~
+         JOIN $TBAT_ATLAS_BUILD AB
+              ON ( SK.atlas_build_id = AB.atlas_build_id)
+    ~;
+
+  #### ... or, typical CGI/command-line specification of an atlas build type
+  } else {
+    $atlas_build_ids = $build_type_selection->{atlas_build_ids};
+    $atlas_build_column =  ["build_type","(CASE WHEN DAB.organism_specialized_build IS NULL THEN O.organism_name ELSE DAB.organism_specialized_build END)","Build Type"],
+    $atlas_build_clause = qq~
+         JOIN $TBAT_DEFAULT_ATLAS_BUILD DAB
+              ON ( SK.atlas_build_id = DAB.atlas_build_id
+                   AND DAB.organism_id IS NOT NULL )
+    ~;
+  }
+
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
   my @column_array = (
     ["search_key_name","SK.search_key_name","Search Key"],
     ["search_key_type","SK.search_key_type","search_key_type"],
-    ["build_type","(CASE WHEN DAB.organism_specialized_build IS NULL THEN O.organism_name ELSE DAB.organism_specialized_build END)","Build Type"],
+    $atlas_build_column,
     ["resource_name","SK.resource_name","Identifier"],
     ["resource_type","SK.resource_type","resource_type"],
     ["resource_n_matches","SK.resource_n_matches","N Peptides"],
@@ -344,18 +376,16 @@ sub handle_request {
   );
 
 
-  #### Define the SQL statement to find the biosequence
+  #### Define the SQL statement to find the biosequence(s)
   $sql = qq~
        SELECT $columns_clause
          FROM $TBAT_SEARCH_KEY SK
          JOIN $TB_ORGANISM O ON (O.organism_id = SK.organism_id)
-         JOIN $TBAT_DEFAULT_ATLAS_BUILD DAB
-              ON ( SK.atlas_build_id = DAB.atlas_build_id
-                   AND DAB.organism_id IS NOT NULL )
+                  $atlas_build_clause
         WHERE 1 = 1
           $search_key_clause
           $search_types_clause
-          AND SK.atlas_build_id IN ( $build_type_selection->{atlas_build_ids} )
+          AND SK.atlas_build_id IN ( $atlas_build_ids )
        ORDER BY search_key_name
   ~;
 
@@ -407,7 +437,7 @@ sub handle_request {
     my $n_results = scalar(@{$resultset_ref->{data_ref}});
 
     #### If exactly one result came back, then redirect to the one hit
-    if ($n_results == 1 && !$command_line) {
+    if ($n_results == 1 && ($sbeams->output_mode() eq 'html')) {
       print "Status: 302 Resource Temporarily Moved\n";
       print "Location: $CGI_BASE_DIR/PeptideAtlas/".
 	$resultset_ref->{data_ref}->[0]->[6]."\n\n";
