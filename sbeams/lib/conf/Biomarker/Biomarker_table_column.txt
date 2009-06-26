@@ -19,7 +19,7 @@ BM_BMRK_biosource	1	biosource_id	Biosource ID	int	4	0	N		Y			N				N	N	N			pkDEFA
 BM_BMRK_biosource	2	biosource_name	Biosource Name	varchar	255	0	N		N			Y	text	36		Y	Y	Y	Name of this Biosource		
 BM_BMRK_biosource	3	age	Age	int	4	0	Y		N			N	text	12		Y	Y	N	Age of organism from which sample was collected		
 BM_BMRK_biosource	4	age_units	Age Units	char	16	0	Y		N			N	optionlist			Y	Y	N	Units for age value	"Select 1, 'years',2, 'months',3, 'weeks',4, 'days',5, 'hours' FROM $TB_CONTACT"	
-BM_BMRK_biosource	5	organism_id	Organism	int	4	0	N		N	BL_organism	organism_id	Y	optionlist			Y	Y	N	genus/species of organism 	"SELECT organism_id, organism_name FROM $TB_ORGANISM WHERE record_status != 'D' ORDER BY sort_order,organism_name"	
+BM_BMRK_biosource	5	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	genus/species of organism 	"SELECT organism_id, organism_name FROM $TB_ORGANISM WHERE record_status != 'D' ORDER BY sort_order,organism_name"	
 BM_BMRK_biosource	6	organization_id	Organization	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	Organization which provided the samples (if any)	"SELECT organization_id, organization FROM $TB_ORGANIZATION WHERE record_status != 'D' ORDER BY sort_order, organization"	
 BM_BMRK_biosource	7	external_id	External ID	varchar	64	0	Y		N			N	text	36		Y	Y	N	sample identifier (if any) from external organization		
 BM_BMRK_biosource	8	gender	Gender	varchar	16	0	Y		N			N	text	12		Y	Y	N	Gender of patient providing sample		
