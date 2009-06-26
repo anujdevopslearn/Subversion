@@ -1159,7 +1159,23 @@ sub get_ortholog_information {
   while ( my @row = $sth->fetchrow_array() ) {
     $link .= qq~<A HREF="viewOrthologs?group_id=$row[0];entry_accession=$biosequence->{biosequence_name}" TITLE="View orthologs/homolog information"><IMG BORDER=0 SRC="$HTML_BASE_DIR/images/OrthoMCL.jpg">&nbsp; $row[0]</A>\n~;
   }
+  return $link if $link;
+
+  
+  $sql =<<"  END";
+  SELECT ortholog_group
+  FROM biolink.dbo.ortholog O
+  JOIN $TBAT_SEARCH_KEY SK ON SK.search_key_name = O.entry_accession
+  JOIN $TBAT_BIOSEQUENCE B ON B.biosequence_name = SK.resource_name
+  WHERE B.biosequence_name = '$biosequence->{biosequence_name}'
+  END
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    $link .= qq~<A HREF="viewOrthologs?group_id=$row[0];entry_accession=$biosequence->{biosequence_name}" TITLE="View orthologs/homolog information"><IMG BORDER=0 SRC="$HTML_BASE_DIR/images/OrthoMCL.jpg">&nbsp; $row[0]</A>\n~;
+  }
   return $link;
+
+
 }
 
 
