@@ -110,7 +110,7 @@ sub get_ortholog_display {
 
   my $all_projects = join( ",", $sbeams->getAccessibleProjects() );
   my $curr_bid = $sbeamsMOD->getCurrentAtlasBuildID( parameters_ref => \%args );
-  my $null_clause = ( $args{show_all} ) ? 'OR search_key_type IS NULL' : '';
+#  my $null_clause = ( $args{show_all} ) ? 'OR search_key_type IS NULL' : '';
 
   # SQL to fetch ortholog groups and bioseqs in them.
   my $sql =<<"  END_SQL";
@@ -130,7 +130,8 @@ sub get_ortholog_display {
   AND ( search_key_type = 'Full Name'
 	      OR search_key_type = 'Description'
 				OR search_key_type LIKE '%Symbol'
-        $null_clause
+				OR search_key_type LIKE 'Annotation ID'
+        OR search_key_type IS NULL
 				OR search_key_type = 'ORF Name')
 -- Would love to use a structured query like this, but some acc (mouse) fail.
 --  AND search_key_type = CASE WHEN organism_name = 'human' THEN 'Full Name'
@@ -149,9 +150,9 @@ sub get_ortholog_display {
 # 4     CAST( biosequence_seq AS VARCHAR(4000) ),
 # 5     biosequence_id
 # 6     biosequence_set_id
-	$log->debug( "prepare stmt: " . time() );
+#	$log->debug( "prepare stmt: $sql " . time() );
   my $sth = $sbeams->get_statement_handle( $sql );
-	$log->debug( "prepare stmt done: " .time() );
+#	$log->debug( "prepare stmt done: " .time() );
 
   # array of protein/ortholog info
 	my @all_proteins;
@@ -245,9 +246,9 @@ sub get_ortholog_display {
 	AND project_id IN ( $all_projects )
   ORDER BY PI.atlas_build_id DESC
   ENDSQL
-  $log->debug( "prepare instance stmt: " . time() );
+#  $log->debug( "prepare instance stmt: " . time() );
   my $sth = $sbeams->get_statement_handle( $sql );
-	$log->debug( "prepare instance stmt done: " .time() );
+#	$log->debug( "prepare instance stmt done: " .time() );
 
 # 0   count(distinct PI.peptide_id),
 # 1   sum( n_observations ),
