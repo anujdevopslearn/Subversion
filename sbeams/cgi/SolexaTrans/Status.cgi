@@ -565,8 +565,14 @@ sub print_detailed_status {
       }
     }
 
-    grep(/stp-ssid[0-9]{1,6}-[a-zA-Z0-9]{8}/, $jobname) ||
+    my $valid =0;
+    if (grep(/stp-ssid[0-9]{1,6}-[a-zA-Z0-9]{8}/, $jobname)) {
+      $valid = 1;
+    } elsif (grep(/stp-ssid[0-9]{1,6}-sprid[0-9]{1,6}-[a-zA-Z0-9]{8}/,$jobname)) {
+      $valid = 1;
+    } else {
               die("Invalid job name - $jobname");
+    }
   }
 
   my $sa_id;
@@ -678,6 +684,11 @@ sub print_detailed_status {
 
     $new_results{precisions_list_ref} = [50,50];
     $new_results{column_list_ref} = \@new_column_titles;
+
+    if (scalar (@$aref) < 1) {
+      $sbeams->handle_error(message => "Error with SQL Query retrieving job information.  Please contact administrator",
+                            error_type => "SolexaTrans_error");
+    }
 
     for (my $i=0; $i < scalar (@$aref); $i++) {
 #    print $column_titles[$i]." val ".$aref->[$i]."<br>";
