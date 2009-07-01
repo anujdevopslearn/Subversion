@@ -685,6 +685,12 @@ sub print_detailed_status {
     $new_results{precisions_list_ref} = [50,50];
     $new_results{column_list_ref} = \@new_column_titles;
 
+      if (!$aref) {
+        $sbeams->handle_error(message => "Error with SQL Query retrieving job information.  Please contact administrator",
+                              error_type => "SolexaTrans_error");
+    }
+
+
     if (scalar (@$aref) < 1) {
       $sbeams->handle_error(message => "Error with SQL Query retrieving job information.  Please contact administrator",
                             error_type => "SolexaTrans_error");
