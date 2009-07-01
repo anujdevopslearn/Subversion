@@ -1337,21 +1337,31 @@ sub get_detailed_job_status_sql{
                                 ss.full_sample_name as "Full_Sample_Name"
 				FROM $TBST_SOLEXA_ANALYSIS sa
                                 LEFT JOIN $TBST_SOLEXA_PIPELINE_RESULTS spr on
-                                  (sa.solexa_pipeline_results_id = spr.solexa_pipeline_results_id)
+                                  ( 
+                                    sa.solexa_pipeline_results_id = spr.solexa_pipeline_results_id
+                                    AND spr.record_status != 'D'
+                                  )
                                 LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE sfcl on
-                                  (spr.flow_cell_lane_id = sfcl.flow_cell_lane_id)
+                                  ( 
+                                    spr.flow_cell_lane_id = sfcl.flow_cell_lane_id
+                                    AND sfcl.record_status != 'D'
+                                  )
                                 LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE_SAMPLES sfcls on
-                                  (sfcl.flow_cell_lane_id = sfcls.flow_cell_lane_id)
+                                  (
+                                    sfcl.flow_cell_lane_id = sfcls.flow_cell_lane_id
+                                    AND sfcls.record_status != 'D'
+                                  )
 				LEFT JOIN $TBST_SOLEXA_SAMPLE ss ON 
-                                  (sfcls.solexa_sample_id = ss.solexa_sample_id)
+                                  (
+                                    sfcls.solexa_sample_id = ss.solexa_sample_id
+                                    AND ss.record_status != 'D'
+                                  )
                                 LEFT JOIN $TBST_FILE_PATH opd ON
-                                  (sa.output_directory_id = opd.file_path_id)
+                                  (
+                                    sa.output_directory_id = opd.file_path_id
+                                    AND opd.record_status != 'D'
+                                  )
                                 $where
-                                AND spr.record_status != 'D'
-                                AND sfcl.record_status != 'D'
-                                AND sfcls.record_status != 'D'
-                                AND ss.record_status != 'D'
-                                AND opd.record_status != 'D'
 		    ~;
 	
 	if ($constraint){
