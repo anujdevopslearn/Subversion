@@ -401,7 +401,6 @@ sub print_data_download_tab {
   	my %args = @_;
   
   
-  	my $resultset_ref = '';
 	my @columns = ();
 	my $sql = '';
 	
@@ -436,10 +435,9 @@ sub print_data_download_tab {
 	if ($parameters{set_current_project_id}) {
 		$apply_action = 'QUERY';
 	}
-  
   ###############################################################################
   ##First check to see if the user already has selected some data to download
-	
+
         #come here if the user has chosen some files to download
 	if (exists $parameters{Get_Data}){			
 		
@@ -462,21 +460,21 @@ sub print_data_download_tab {
    
                         ##########################################################################
                         ### Print out some nice table showing what is being exported
+                        if ($parameters{get_all_files}) {		
+  			  my $slimseqs_id_string =  $parameters{get_all_files};
 		
-			my $slimseqs_id_string =  $parameters{get_all_files};
+                          #remove any redundant fcl_ids since one solexa_flow_cell_lane_id might have multiple file extensions
+			  my @slimseq_sample_ids = split /,/, $slimseqs_id_string;
 		
-                        #remove any redundant fcl_ids since one solexa_flow_cell_lane_id might have multiple file extensions
-			my @slimseq_sample_ids = split /,/, $slimseqs_id_string;
+			  my %unique_slimseq_sample_ids = map {split /__/} @slimseq_sample_ids;
 		
-			my %unique_slimseq_sample_ids = map {split /__/} @slimseq_sample_ids;
+			  my $slimseqs = join ",", sort keys %unique_slimseq_sample_ids;
 		
-			my $slimseqs = join ",", sort keys %unique_slimseq_sample_ids;
-		
-			$sql = $sbeams_solexa_groups->get_download_info_sql(slimseq_sample_ids => $slimseqs );
+			  $sql = $sbeams_solexa_groups->get_download_info_sql(slimseq_sample_ids => $slimseqs );
 			
-			my $tab_results = $sbeams_solexa_groups->export_data_sample_info(sql =>$sql);
+			  my $tab_results = $sbeams_solexa_groups->export_data_sample_info(sql =>$sql);
 
-			if (@files_to_zip) {						#collect the files and zip and print to stdout
+			  if (@files_to_zip) {						#collect the files and zip and print to stdout
 				zip_data(files 		=> \@files_to_zip,
 				         zip_file_name	=> $out_file_name,
 					 parameters 	=> \%parameters,
@@ -484,10 +482,15 @@ sub print_data_download_tab {
 					 sample_info	=> $tab_results,
 					 );
 				
-   			}	
+   			  }	
     		
-    		
-			exit;
+			  exit;
+                        } else {
+                          print $q->header;
+                          $sbeams->handle_error(message=>"No Files selected to download.  Please press back and select at least one file.",
+                                                error_type=>"SolexaTrans_error");
+                          exit;
+                        }
 			
 		}elsif($parameters{Get_Data} eq 'SHOW_TWO_COLOR_DATA'){
 			print STDERR "DO SOMETHING COOL";	
@@ -734,7 +737,6 @@ sub print_detailed_download_tab {
   	my %args = @_;
   
   
-  	my $resultset_ref = '';
 	my @columns = ();
 	my $sql = '';
 	
@@ -919,7 +921,7 @@ sub print_detailed_download_tab {
 #                                                             );
 
          $sql = $sbeams_solexa_groups->get_detailed_job_status_sql(jobname => $parameters{"jobname"},
-                                                                   constraint => "and ss.slimseq_sample_id = ".$parameters{"slimseq_sample_id"}
+                                                                   constraint => "and sa.slimseq_sample_id = ".$parameters{"slimseq_sample_id"}
                                                                   );
 
 	 %url_cols = ( 'Sample_Tag'	=> "${manage_table_url}solexa_sample&slimseq_sample_id=\%0V",
@@ -991,6 +993,13 @@ sub print_detailed_download_tab {
   
       ###################################################################
 
+    my $record_status_idx = $resultset_ref->{column_hash_ref}->{'Record_Status'};
+    my $record_status = $resultset_ref->{data_ref}->[0]->[$record_status_idx];
+    #### PRINT WARNING IF Record_Status is 'D' (This job references an old sample).
+    if ($record_status eq 'D') {
+      print "<span style=\"font-weight: bold\; font-size: 200%\">WARNING: This job references a sample file that has been updated.<br>".
+            "To use the most up to date information, please re-run a STP job for this sample.</span><br>";
+    }
 
       #### Set the column_titles to just the column_names
       @column_titles = @{$resultset_ref->{column_list_ref}};
@@ -1021,6 +1030,7 @@ sub print_detailed_download_tab {
       for (my $i=0; $i < scalar (@$aref); $i++) {
 #      print $column_titles[$i]." val ".$aref->[$i]."<br>";
         my @info = ($column_titles[$i],$aref->[$i]);
+        next if ($info[0] eq 'Record_Status'); # Hack to remove record_status from the list
         push(@{$new_results{data_ref}}, \@info);
       }
 
@@ -1464,7 +1474,7 @@ sub collect_files  {
 #		  $file_path = "$previous_paths{$solexa_sample_id}{$file_type}";
 #		}else{
                   #method in SolexaTrans::Solexa_file_groups.pm
-		  my ($file_path) = $sbeams_solexa_groups->get_file_path_from_id(slimseq_sample_id => $sample_id,
+		  ($file_path) = $sbeams_solexa_groups->get_file_path_from_id(slimseq_sample_id => $sample_id,
                                                                                  file_type => $file_type,
                                                                                 ); 
 			
@@ -1582,7 +1592,7 @@ sub print_output_mode_data {
 	 #### Build ROWCOUNT constraint
 	  $parameters{row_limit} = 5000
    	 unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
-  	   my $limit_clause = $sbeams->buildLimitClause(row_limit=>$parameters{row_limit});
+  	   $limit_clause = $sbeams->buildLimitClause(row_limit=>$parameters{row_limit});
 
 
 		#### Set the column_titles to just the column_names
