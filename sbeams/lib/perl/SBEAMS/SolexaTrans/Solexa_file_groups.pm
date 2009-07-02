@@ -1319,6 +1319,7 @@ sub get_detailed_job_status_sql{
 	my $sql = qq~ 
                                 SELECT 
                                 sa.solexa_analysis_id,
+                                spr.record_status as "Record_Status",
                                 sa.jobname as "Job_Name",
                                 sa.analysis_description as "Job_Description",
                                 sa.status as "Job_Status",
@@ -1339,7 +1340,6 @@ sub get_detailed_job_status_sql{
                                 LEFT JOIN $TBST_SOLEXA_PIPELINE_RESULTS spr on
                                   ( 
                                     sa.solexa_pipeline_results_id = spr.solexa_pipeline_results_id
-                                    AND spr.record_status != 'D'
                                   )
                                 LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE sfcl on
                                   ( 
