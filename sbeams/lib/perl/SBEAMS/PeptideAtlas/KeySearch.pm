@@ -459,13 +459,13 @@ sub buildGoaKeyIndex {
     assocations_file => "$GOA_directory/gene_association.goa_${organism_name}",
   );
 
-  #### Get the list of proteins that have a match
+  #### Get the list of proteins that have a peptide in this atlas build
   my $matched_proteins = $self->getNProteinHits(
     organism_id => $args{organism_id},
     atlas_build_id => $atlas_build_id,
   );
 
-  #### Read all the data
+  #### Read all the GOA xrefs
   my $line;
   my $counter = 0;
 
@@ -493,9 +493,7 @@ sub buildGoaKeyIndex {
       print "UniGene=$UniGene\n";
     }
 
-    #### The database entry itself may be one of the other types in
-    #### which case it's not repeated later, so map the initial
-    #### entries to something else
+    #### Map Ensembl and RefSeqNP accessions to themselves
     if ($Database && $Accession) {
       if ($Database =~ /ENSEMBL/) {
 	$Ensembl = $Accession;
@@ -523,6 +521,9 @@ sub buildGoaKeyIndex {
       $n_Ensembl_IDS = scalar(@Ensembl_IDS);
     }
 
+    #### 07/06/09 TMF: what's with the numbers 40, 9, 35, 39 ... ?!
+    #### It's stored as search_key_dbxref_id, but not sure it's used.
+    #### Sometimes the value is null (for UniGene or Full Name).
 
     #### Build a list of protein links
     my @links;
@@ -551,6 +552,16 @@ sub buildGoaKeyIndex {
       my @list = splitEntities(list=>$UniProtTR);
       foreach my $item ( @list ) {
         my @tmp = ('UniProt/TrEMBL',$item,35);
+        push(@links,\@tmp);
+      }
+    }
+
+    # added UniProtSP 07/06/09 TMF. I am assigning a search_key_dbxref_id
+    # of 36.  I hope this doesn't break anything.
+    if ($UniProtSP) {
+      my @list = splitEntities(list=>$UniProtSP);
+      foreach my $item ( @list ) {
+        my @tmp = ('UniProt/Swiss-Prot',$item,36);
         push(@links,\@tmp);
       }
     }
@@ -607,7 +618,7 @@ sub buildGoaKeyIndex {
     }
 
 
-    #### Write the links for each Ensembl IP
+    #### Write the links for each Ensembl ID
     foreach my $Ensembl_ID (@Ensembl_IDS) {
       #### Strip HAVANA prefix
       $Ensembl_ID =~ s/HAVANA://;
@@ -769,7 +780,7 @@ sub buildSGDKeyIndex {
 
   my $organism_id = 3;
 
-  #### Get the list of proteins that have a match
+  #### Get the list of proteins that have a peptide in this atlas build
   my $matched_proteins = $self->getNProteinHits(
     organism_id=>$organism_id,
     atlas_build_id=>$atlas_build_id,
@@ -938,7 +949,7 @@ sub buildHalobacteriumKeyIndex {
   close(INFILE);
 
 
-  #### Get the list of proteins that have a match
+  #### Get the list of proteins that have a peptide in this atlas build
   my $matched_proteins = $self->getNProteinHits(
     organism_id=>$organism_id,
     atlas_build_id=>$atlas_build_id,
@@ -1208,7 +1219,7 @@ sub buildStreptococcusKeyIndex {
   close(INFILE);
 
 
-  #### Get the list of proteins that have a match
+  #### Get the list of proteins that have a peptide in this atlas build
   my $matched_proteins = $self->getNProteinHits(
     organism_id=>$organism_id,
     atlas_build_id=>$atlas_build_id,
@@ -1410,7 +1421,7 @@ sub buildLeptospiraKeyIndex {
   close(INFILE);
 
 
-  #### Get the list of proteins that have a match
+  #### Get the list of proteins that have a peptide in this atlas build
   my $matched_proteins = $self->getNProteinHits(
     organism_id=>$organism_id,
     atlas_build_id=>$atlas_build_id,
@@ -1498,7 +1509,7 @@ sub buildDrosophilaKeyIndex {
 
   my $organism_id = 8;
 
-  #### Get the list of proteins that have a match
+  #### Get the list of proteins that have a peptide in this atlas build
   my $matched_proteins = $self->getNProteinHits(
     organism_id=>$organism_id,
     atlas_build_id=>$atlas_build_id,
@@ -1791,7 +1802,7 @@ sub buildPigKeyIndex {
   close(INFILE);
 
 
-  #### Get the list of proteins that have a match
+  #### Get the list of proteins that have a peptide in this atlas build
   my $matched_proteins = $self->getNProteinHits(
     organism_id=>$organism_id,
     atlas_build_id=>$atlas_build_id,
@@ -1936,7 +1947,7 @@ sub buildEcoliKeyIndex {
   close(INFILE);
 
 
-  #### Get the list of proteins that have a match
+  #### Get the list of proteins that have a peptide in this atlas build
   my $matched_proteins = $self->getNProteinHits(
     organism_id=>$organism_id,
     atlas_build_id=>$atlas_build_id,
@@ -2101,7 +2112,7 @@ sub buildCelegansKeyIndex {
   close(INFILE);
 
 
-  #### Get the list of proteins that have a match
+  #### Get the list of proteins that have a peptide in this atlas build
   my $matched_proteins = $self->getNProteinHits(
     organism_id=>$organism_id,
     atlas_build_id=>$atlas_build_id,
@@ -2251,7 +2262,7 @@ sub buildHoneyBeeKeyIndex {
   close(INFILE);
 
 
-  #### Get the list of proteins that have a match
+  #### Get the list of proteins that have a peptide in this atlas build
   my $matched_proteins = $self->getNProteinHits(
     organism_id=>$organism_id,
     atlas_build_id=>$atlas_build_id,
