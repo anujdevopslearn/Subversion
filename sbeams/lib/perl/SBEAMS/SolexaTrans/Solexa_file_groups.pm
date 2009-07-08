@@ -1429,7 +1429,8 @@ sub get_sample_results_sql{
                                 ss.slimseq_sample_id as "Sample ID",
                                 ss.sample_tag as "Sample Tag",
                                 ss.full_sample_name as "Full Sample Name",
-                                spr.slimseq_status as "Solexa Status"
+                                spr.slimseq_status as "Solexa Status",
+                                count(spr.solexa_pipeline_results_id) as "Num Runs"
                                 FROM $TBST_SOLEXA_SAMPLE ss 
                                 LEFT JOIN $TBST_SOLEXA_FLOW_CELL_LANE_SAMPLES sfcls on
                                   (sfcls.solexa_sample_id = ss.solexa_sample_id
