@@ -521,10 +521,6 @@ sub buildGoaKeyIndex {
       $n_Ensembl_IDS = scalar(@Ensembl_IDS);
     }
 
-    #### 07/06/09 TMF: what's with the numbers 40, 9, 35, 39 ... ?!
-    #### It's stored as search_key_dbxref_id, but not sure it's used.
-    #### Sometimes the value is null (for UniGene or Full Name).
-
     #### Build a list of protein links
     my @links;
 
@@ -556,12 +552,11 @@ sub buildGoaKeyIndex {
       }
     }
 
-    # added UniProtSP 07/06/09 TMF. I am assigning a search_key_dbxref_id
-    # of 36.  I hope this doesn't break anything.
+    # added UniProtSP 07/06/09 TMF.
     if ($UniProtSP) {
       my @list = splitEntities(list=>$UniProtSP);
       foreach my $item ( @list ) {
-        my @tmp = ('UniProt/Swiss-Prot',$item,36);
+        my @tmp = ('UniProt/Swiss-Prot',$item,1);
         push(@links,\@tmp);
       }
     }
