@@ -474,7 +474,7 @@ sub get_pabst_scoring_defs {
                 min_p => 'Penalty for peptides under min length',
                 max_l => 'Maximum length for peptide',
                 max_p => 'Penalty for peptides over max length',
-                ssr_p => 'Penalty for peptides with extreme SSR',
+                ssr_p => 'Penalty for very high or low hydrophobicity',
                );
   return \%defs;
 }
@@ -494,7 +494,7 @@ sub get_default_pabst_scoring {
                   nQ => .1,
                   nE => .4,
                   Xc => .5,
-                   C => .3,
+                   C => .7,
                    W => .1,
                    P => .5,
                   NG => .5,
@@ -601,19 +601,23 @@ sub get_pabst_peptide_display {
 #
 #
   
+  my $protein_info = $self->get_mapped_proteins( peptide_info => $args{peptides},
+                                               atlas_build_id => $args{atlas_build_id} );
+
   my $change_form = $self->get_change_form();
 
   my @headings = ( pre => 'Previous amino acid',
                    sequence => 'Amino acid sequence of peptide',
                    fol => 'Followin amino acid',
-                   EOS => 'Empirical observability score',
                    ESS => 'Empirical suitability score',
                    PSS => 'Predicted suitability score',
-                   BSS => 'Best suitability score',
+                   MSS => 'Merged suitability score',
+                   hyd_scr => 'Relative hydrophobicity score',
                    n_gen_loc => 'Number of locations on genome to which sequence maps',
                    n_obs => 'Number of times peptide was observed',
                    Annotations => 'Annotation of peptide features such as missed cleavage (MC), etc.',
-                   adj_SS => 'Best suitability score, adjusted based on sequence features' );
+                   adj_SS => 'Best suitability score, adjusted based on sequence features',
+                   map_prots => 'List of proteins to which peptide maps' );
 
 
   my @peptides = ( $self->make_sort_headings( headings => \@headings,
@@ -621,6 +625,9 @@ sub get_pabst_peptide_display {
   
   my $naa = $sbeams->makeInactiveText( 'n/a' );
 
+  my $atlas_build_id = $atlas->getCurrentAtlasBuildID( parameters_ref => {} );
+
+#     my $row = $pep_sel->pabst_evaluate_peptides( peptides => [\@row], seq_idx => 2, follow_idx => 3, score_idx => 4 );
 # 0 pre_aa    1
 # 1 sequence  2
 # 2 fol_aa    3
@@ -630,11 +637,11 @@ sub get_pabst_peptide_display {
 # 5 MSS       7  best suit
 # 6 MW        8   - removed
 # 7 SSR       9   - removed
-# 7 n_gen_loc 11
-# 8 bprob     12   - removed
-# 9 n_obs     13
-# 10 annot    14
-# 11 sa_score 16
+# 8 n_gen_loc 11
+# 9 bprob     12   - removed
+# 10 n_obs    13
+# 11 annot    14
+# 12 sa_score 16
   for my $pep_row ( @{$args{peptides}} ) {
 
     $pep_row->[4] = sprintf( "%0.2f", $pep_row->[4] ) if $pep_row->[4] !~ /n\/a/;
@@ -642,6 +649,7 @@ sub get_pabst_peptide_display {
     $pep_row->[6] = sprintf( "%0.2f", $pep_row->[6] ) if $pep_row->[6] !~ /n\/a/;
     $pep_row->[7] = sprintf( "%0.2f", $pep_row->[7] );
     $pep_row->[16] = sprintf( "%0.2f", $pep_row->[16] );
+    $pep_row->[9] = sprintf( "%0.1f", $pep_row->[9] );
 
     if ( $pep_row->[12] eq 'n/a' ) {
       $pep_row->[12] = 0;
@@ -651,10 +659,17 @@ sub get_pabst_peptide_display {
       $pep_row->[12] = sprintf( "%0.3f", $pep_row->[12] );
     }
 
-    $pep_row->[7] = sprintf( "%0.2f", $pep_row->[7] );
+    
+    my $prots = $protein_info->{$pep_row->[2]} || '';
+    if ( $self->{_cached_acc} && $self->{_cached_acc}->{$pep_row->[2]} ) {
+      my $acc = $self->{_cached_acc}->{$pep_row->[2]};
 
-    push @peptides, [ @{$pep_row}[1..7,11,13,14,16] ];
+      $pep_row->[2] = "<A HREF=GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$acc&action=QUERY TITLE='View peptide $acc details'>$pep_row->[2]</A>";
+    }
+
+    push @peptides, [ @{$pep_row}[1..3,5..7,9,11,13,14,16], $prots ];
   }
+#                   EOS => 'Empirical observability score',
   my $align = [qw(right left right right left center center center right right)];
 
   my $html = $atlas->encodeSectionTable( header => 1, 
@@ -678,6 +693,64 @@ sub get_pabst_peptide_display {
     return "<TABLE WIDTH=600><BR>$html\n";
 
 } # End get_pabst_peptide_display
+
+sub get_mapped_proteins {
+  my $self = shift;
+  my %args = @_;
+  my $in;
+  my $sep = '';
+  for my $row ( @{$args{peptide_info}} ) {
+    $in .= $sep . "'" . $row->[2] . "'";
+    $sep = ',';
+  }
+  my $sql = qq~
+  SELECT DISTINCT peptide_sequence, biosequence_id, CAST(biosequence_seq AS VARCHAR(8000) )
+  FROM $TBAT_BIOSEQUENCE B 
+  JOIN $TBAT_PEPTIDE_MAPPING PM 
+  ON ( PM.matched_biosequence_id = B.biosequence_id )
+  JOIN $TBAT_PEPTIDE_INSTANCE PI
+  ON ( PI.peptide_instance_id = PM.peptide_instance_id )
+  JOIN $TBAT_PEPTIDE P
+  ON ( PI.peptide_id = P.peptide_id )
+  WHERE PI.atlas_build_id = $args{atlas_build_id}
+  AND peptide_sequence IN ( $in )
+  UNION ALL
+  SELECT DISTINCT peptide_sequence, biosequence_id, CAST(biosequence_seq AS VARCHAR(8000) )
+  FROM $TBAT_BIOSEQUENCE B JOIN $TBAT_ATLAS_BUILD AB
+  ON AB.biosequence_set_id = B.biosequence_set_id
+  JOIN $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING PPM 
+  ON ( PPM.source_biosequence_id = B.biosequence_id ) 
+  JOIN $TBAT_PROTEOTYPIC_PEPTIDE PP ON PP.proteotypic_peptide_id = PPM.proteotypic_peptide_id
+  WHERE AB.atlas_build_id = $args{atlas_build_id}
+  AND peptide_sequence IN ( $in );
+  ~;
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my %prots;
+  my $prot_symbol = 'A';
+  my %pep_link;
+  my %pep_matches;
+  while( my @row = $sth->fetchrow_array() ) {
+    $pep_link{$row[0]} ||= {};
+    $pep_matches{$row[0]} ||= {};
+
+    if ( !$prots{$row[2]} ) {
+      $prots{$row[2]} = $prot_symbol;
+      $prot_symbol++;
+    }
+    $pep_link{$row[0]}->{$row[1]}++;
+    $pep_matches{$row[0]}->{$prots{$row[2]}}++;
+  }
+  my %peptides;
+  for my $p ( sort( keys( %pep_matches ) ) ) {
+    my $mstr = join( ',', sort(keys (%{$pep_matches{$p}})) );
+    my $pep_cnt = scalar( keys( %{$pep_matches{$p}}));
+    my $lstr = join( ',', keys (%{$pep_link{$p}}) );
+    $peptides{$p} = "<A HREF=compareProteins?pepseq=$p;bioseq_id=$lstr TARGET=compareProteins TITLE='View alignment of the $pep_cnt distinct proteins to which peptide maps'>$mstr</A>";
+  }
+#  https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/compareProteins?pepseq=SSPSFSSLHYQDAGNYVCETALQEVEGLK;bioseq_id=2363390,2348488,2348487,2424938,2326767,2363391,2424936,2449216,2424937
+  return \%peptides;
+}
+
 
 #+
 # Routine builds small form to with various settings as cgi params.  Assumes
@@ -761,6 +834,8 @@ sub get_pabst_observed_peptides {
   # minimum n_obs to consider as observed
   my $nobs_and = $args{min_nobs_clause} || ''; 
 
+  my $name_like = $args{name_like} || '';
+
   my $pepsql =<<"  END"; 
   SELECT DISTINCT 
                   biosequence_name, 
@@ -779,22 +854,31 @@ sub get_pabst_observed_peptides {
                   PI.n_genome_locations AS "n_genome_locations",
                   STR(PI.best_probability,7,3) AS "best_probability",
                   PI.n_observations AS "n_observations",
-                  '' as annotations
+                  '' as annotations,
+                  P.peptide_accession
   FROM $TBAT_PEPTIDE_INSTANCE PI
   JOIN $TBAT_PEPTIDE P ON ( PI.peptide_id = P.peptide_id )
   JOIN $TBAT_PEPTIDE_MAPPING PM ON ( PI.peptide_instance_id = PM.peptide_instance_id )
   JOIN $TBAT_BIOSEQUENCE BS ON ( PM.matched_biosequence_id = BS.biosequence_id )
   $build_where
   $nobs_and
+  $name_like
   $name_in
   ORDER BY biosequence_name, suitability_score DESC
   END
+
+
+  $self->{_cached_acc} ||= {};
 
   my $sth = $sbeams->get_statement_handle( $pepsql );
   # Big hash of proteins
   my $pep_cnt;
   my %proteins;
   while( my @row = $sth->fetchrow_array() ) {
+
+    # pop off peptide accession and cache
+    my $pa = pop @row;
+    $self->{_cached_acc}->{$row[2]} = $pa;
 
      # Adjust the score with a PBR!
 #     my $row = $pep_sel->pabst_evaluate_peptides( peptides => [\@row], seq_idx => 2, follow_idx => 3, score_idx => 4 );
@@ -1042,8 +1126,8 @@ sub merge_pabst_peptides {
                                                seq_idx => 2, 
                                             follow_idx => 3, 
                                              score_idx => 7,
-                                               ssr_idx => 9,
-                                             annot_idx => 14
+                                             annot_idx => 14,
+                                         hydrophob_idx => 9
                                             );
     @peptides = @{$row};
 
@@ -1121,7 +1205,6 @@ sub get_pabst_penalty_values {
 # @narg header    Does array have header row, default 0
 # @narg seq_idx   index of sequence column in array, default to 0
 # @narg score_idx index of score column, default is undef
-# @narg ssr_idx   index of SSR score column, default is undef
 # @narg pen_defs  reference to hash of scoring penalties, any that exist will
 #                 override defaults
 #
@@ -1217,15 +1300,15 @@ sub pabst_evaluate_peptides {
           $scr *= $pen_defs{Xc};
           push @pen_codes, 'Xc';
         }
-      } elsif ( $k eq 'ssr_p' ) {
-        if ( defined $args{ssr_idx} ) {
-          my $ssr = int( $pep->[$args{ssr_idx}] );
-          if ( $ssr < 9 || $ssr > 44 ) {
-#            print STDERR "Applying SSR threshold to $ssr!\n";
+      } elsif( $k eq 'ssr_p') {
+        if ( defined $args{hydrophob_idx} ) {
+          my $hyd = $pep->[$args{hydrophob_idx}];
+          if ( $hyd < 9 || $hyd > 44 ) {
             $scr *= $pen_defs{$k};
+            push @pen_codes, $k if $is_penalized{$k};
           }
         }
-      } else {
+      } elsif( $rx{$k} ) {
         for my $rx ( @{$rx{$k}} ) {
           if ( $pep->[$args{seq_idx}] =~ /$rx/ ) {
             $scr *= $pen_defs{$k};
