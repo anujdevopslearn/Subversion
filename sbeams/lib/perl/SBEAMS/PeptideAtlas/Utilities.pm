@@ -2,6 +2,7 @@ package SBEAMS::PeptideAtlas::Utilities;
 
 use SBEAMS::Connection qw( $log );
 use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::Proteomics::PeptideMassCalculator;
 
 use constant HYDROGEN_MASS => 1.0078;
 use Bio::Graphics::Panel;
@@ -1247,10 +1248,12 @@ sub fragment_peptide {
 
     for ($i=0; $i<$length; $i++) {
       if (substr($peptide,$i+1,1) eq '[') {
-        if ( substr( $peptide, $i+5 ) eq ']' ) {
+        if ( substr( $peptide, $i+5, 1 ) eq ']' ) {
           push (@residues, substr($peptide,$i,6));
           $i = $i + 5;
         } else {
+          my $x = substr( $peptide, $i+5 );
+          print "X is $x\n";
           push (@residues, substr($peptide,$i,5));
           $i = $i + 4;
         }
@@ -1269,59 +1272,89 @@ sub fragment_peptide {
 
 
 
-###############################################################################
-# CalcIons -- calculate theoretical ions (including modified masses)
-###############################################################################
+#+
+# calculate theoretical ions (including modified masses).  Borrowed 
+# from ShowOneSpectrum cgi.
+# 
+# @narg Residues  ref to array of single AA (with optional mass mod signature)
+# @narg Charge    Ion series to calculate, defaults to 1 
+# @narg modifed_sequence Sequence with mod masses, as string.  Redundant with 
+# Residues array.
+#-
 sub CalcIons {
   my $self = shift;
-    my %args = @_;
-    my $i;
+  my %args = @_;
+  my $i;
 
-    my $modification_helper = new SBEAMS::PeptideAtlas::ModificationHelper();
+  my $modification_helper = new SBEAMS::PeptideAtlas::ModificationHelper();
+  my $massCalculator = new SBEAMS::Proteomics::PeptideMassCalculator();
+  my $mono_mods = $massCalculator->{supported_modifications}->{monoisotopic} || {};
 
-    my $residues_ref = $args{'Residues'};
-    my @residues = @$residues_ref;
-    my $charge = $args{'Charge'} || 1;
-    my $length = scalar(@residues);
-   
-    my $modified_sequence = $args{'modified_sequence'};
-    print "Mod seq is $modified_sequence\n";
-    print "residues $residues_ref\n";
-    my @masses = $modification_helper->getMasses($modified_sequence);
+  my $residues_ref = $args{'Residues'};
+  my @residues = @$residues_ref;
+  my $charge = $args{'Charge'} || 1;
+  my $length = scalar(@residues);
 
-    my $Nterm = 1.0078;
-    my $Bion = 0.;
-    my $Yion  = 19.0184;  ## H_2 + O
+  my $modified_sequence = $args{'modified_sequence'};
 
-    my @Bcolor = (14) x $length;
-    my @Ycolor = (14) x $length;
-
-    my %masslist;
-    my (@aminoacids, @indices, @rev_indices, @Bions, @Yions);
-
-
-    #### Compute the ion masses
-    for ($i = 0; $i<$length; $i++) {
-      $Bion += $masses[$i];
-
-      #### B index & Y index
-      $indices[$i] = $i;
-      $rev_indices[$i] = $length-$i;
-      $Yion += $masses[ $rev_indices[$i] ]  if ($i > 0);
-
-      #### B ion mass & Y ion mass
-      $Bions[$i] = ($Bion + $charge*$Nterm)/$charge;
-      $Yions[$i] = ($Yion + $charge*$Nterm)/$charge;
+  # As before, fetch mass defs from modification helper.  Might want to use ISS
+  my @masses = $modification_helper->getMasses($modified_sequence);
+  my @new_masses;
+  my $cnt = 0;
+  for my $r ( @residues ) {
+    if ( $r =~ /\[/ ) {
+      # For modified AA, try to use InSilicoSpectro mod defs.
+      if ( $mono_mods->{$r} ) {
+        my $stripped_aa = $r;
+        $stripped_aa =~ s/\W//g;
+        $stripped_aa =~ s/\d//g;
+        # Add ISS mod def to monoiso mass from mod_helper.
+        my @mass = $modification_helper->getMasses($stripped_aa);
+        push @new_masses, $mass[0] + $mono_mods->{$r};
+      } else {
+        push @new_masses, $masses[$cnt];
+      }
+    } else {
+      push @new_masses, $masses[$cnt];
     }
+    $cnt++;
+  }
 
-    $masslist{residues} = \@residues;
-    $masslist{indices} = \@indices;
-    $masslist{Bions} = \@Bions;
-    $masslist{Yions} = \@Yions;
-    $masslist{rev_indices} = \@rev_indices;
+  @masses = @new_masses;
 
-    #### Return reference to a hash of array references
-    return (\%masslist);
+  my $Nterm = 1.0078;
+  my $Bion = 0.;
+  my $Yion  = 19.0184;  ## H_2 + O
+
+  my @Bcolor = (14) x $length;
+  my @Ycolor = (14) x $length;
+
+  my %masslist;
+  my (@aminoacids, @indices, @rev_indices, @Bions, @Yions);
+
+
+  #### Compute the ion masses
+  for ($i = 0; $i<$length; $i++) {
+    $Bion += $masses[$i];
+
+    #### B index & Y index
+    $indices[$i] = $i;
+    $rev_indices[$i] = $length-$i;
+    $Yion += $masses[ $rev_indices[$i] ]  if ($i > 0);
+
+    #### B ion mass & Y ion mass
+    $Bions[$i] = ($Bion + $charge*$Nterm)/$charge;
+    $Yions[$i] = ($Yion + $charge*$Nterm)/$charge;
+  }
+
+  $masslist{residues} = \@residues;
+  $masslist{indices} = \@indices;
+  $masslist{Bions} = \@Bions;
+  $masslist{Yions} = \@Yions;
+  $masslist{rev_indices} = \@rev_indices;
+
+  #### Return reference to a hash of array references
+  return (\%masslist);
 }
 
 
