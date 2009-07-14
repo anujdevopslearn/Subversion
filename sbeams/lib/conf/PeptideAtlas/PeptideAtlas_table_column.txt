@@ -611,6 +611,9 @@ AT_protein_identification	7	probability	Probability	real	4	0	N		N										Prote
 AT_protein_identification	8	confidence	Confidence	real	4	0	Y		N										States et al. confidence measure		
 AT_biosequence_relationship	1	biosequence_relationship_id	Biosequence Relationship ID	int	4	0	N		Y												pkDEFAULT
 AT_biosequence_relationship	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id								Atlas build ID which this relationship belongs to		
-AT_biosequence_relationship	3	reference_biosequence_id	Reference Biosequence ID	int	4	0	N		N	AT_biosequence	biosequence_id								Biosequence ID for the protein related to		
-AT_biosequence_relationship	4	related_biosequence_id	Related Biosequence ID	int	4	0	N		N	AT_biosequence	biosequence_id								Biosequence ID for related protein		
-AT_biosequence_relationship	5	relationship_type_id	Relationship Type ID	int	4	0	N		N	AT_biosequence_relationship_type	biosequence_relationship_type_id								Describes relationsihp		
+AT_biosequence_relationship	3	protein_group_number	Protein Group ID	int	4	0	N		N										Protein group number from ProteinProphet		
+AT_biosequence_relationship	4	reference_biosequence_id	Reference Biosequence ID	int	4	0	N		N	AT_biosequence	biosequence_id								Biosequence ID for the protein related to		
+AT_biosequence_relationship	5	related_biosequence_id	Related Biosequence ID	int	4	0	N		N	AT_biosequence	biosequence_id								Biosequence ID for related protein		
+AT_biosequence_relationship	6	relationship_type_id	Relationship Type ID	int	4	0	N		N	AT_biosequence_relationship_type	biosequence_relationship_type_id								Describes relationsihp		
+AT_SearchProteins	1	atlas_build_id	Atlas Build									Y	optionlist	4	refreshDocument()	Y	Y	N	"Select desired Atlas Build to search, required."	"SELECT atlas_build_id,atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY atlas_build_name "	
+AT_SearchProteins	2	upload_file	Upload File Of Proteins	varchar	255	0	Y		N			N	file	40		Y	Y	N	Path to file with list of Protein Names to be searched		
