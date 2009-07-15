@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/local/bin/perl 
 
 use strict;
 use DBI;
@@ -111,8 +111,8 @@ sub process_args {
 
   GetOptions( \%args, 'atlas_build=i', 'show_builds', 'help', 'tsv_file=s', 
               'protein_file=s', 'n_peptides=i', 'config=s', 'default_config', 
-              'bonus_obs=f', 'obs_min=i', 'verbose'
-             );
+              'bonus_obs=f', 'obs_min=i', 'verbose', 'name_prefix=s'
+             ) || print_usage();
 
   print_usage() if $args{help};
   print_default_config() if $args{default_config};
@@ -193,11 +193,13 @@ sub get_observed_peptides {
   my $build_where = "WHERE PI.atlas_build_id = $args->{atlas_build}";
   my $name_in = ( $args->{protein_file} ) ? get_protein_in_clause() : '';
   my $nobs_and = ( $args->{obs_min} ) ? "AND n_observations > $args->{obs_min}" : ''; 
+  my $name_like = ( $args->{name_prefix} ) ? "AND biosequence_name like '$args->{name_prefix}%'" : ''; 
 
   # Short circuit with BestPeptideSelector object method!
   return $pep_sel->get_pabst_observed_peptides(       atlas_build => $args->{atlas_build},
                                                 protein_in_clause => $name_in, 
                                                   min_nobs_clause => $nobs_and, 
+                                                        name_like => $name_like, 
                                                         bonus_obs => $args->{bonus_obs},
                                                           verbose => $args->{verbose}
                                               );
@@ -340,7 +342,7 @@ sub get_theoretical_peptides {
   while( my @row = $sth->fetchrow_array() ) {
 
     # Adjust the score with a PBR!
-    my $row = $pep_sel->pabst_evaluate_peptides( peptides => [\@row], seq_idx => 2, follow_idx => 3, score_idx => 4 );
+    my $row = $pep_sel->pabst_evaluate_peptides( peptides => [\@row], seq_idx => 2, follow_idx => 3, score_idx => 4, ssr_idx => 8 );
     @row = @{$row->[0]};
 
     # Each protein is a hashref
