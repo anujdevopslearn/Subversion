@@ -1594,6 +1594,74 @@ sub parseBiosequenceDescriptor {
 
 }
 
+#+
+# @narg filename     Name of file to read.  Required.
+# @narg acc_regex    Regex to parse out accession.
+# @narg verbose      Print stats about file
+#
+#-
+sub read_fasta_file {
+  my $self = shift;
+  my %args = ( acc_regex => '\>(\S*)',
+               verbose => 0,
+               @_ );
+
+  my $missing;
+  for my $arg ( qw( filename ) ) {
+    $missing = ( $missing ) ? $missing . ',' . $arg : $arg if !defined $args{$arg};
+  }
+  die "Missing required parameter(s) $missing" if $missing;
+
+  open FIL, "$args{filename}" || die "Unable to open file $args{filename}";
+  my %entries;
+  my $acc;
+  my %seq;
+  my $accumulator = '';
+  while ( my $line = <FIL> ) {
+    chomp( $line );
+
+    if ( $line =~ /^>/ ) {
+      # If we've already been through, record entry 
+      if( $accumulator ) {
+        # Print and reset accumulated sequence.
+        $entries{$acc} = $accumulator;
+        $seq{$accumulator}++;
+        $accumulator = '';
+      }
+
+      # Extract accession.
+      $line =~ /$args{acc_regex}/;
+      $acc = $1;
+      if ( !$acc ) {
+        print STDERR "Problem extracting accession from $line with $args{acc_regex}\n";
+        $acc = $line;
+        $acc =~ s/\^>//g;
+      }
+
+      if ( $entries{$acc} ) {
+        print STDERR "doppelganger accession $acc\n";
+      }
+    next;
+    }
+    $line =~ s/\s//g;
+    $accumulator .= $line;
+  }
+  close FIL;
+
+  # Last line
+  $entries{$acc} = $accumulator;
+  $seq{$accumulator}++;
+  $accumulator = '';
+
+  if ( $args{verbose} ) {
+    print "Found " . scalar( keys( %entries ) ) . " distinct accessions\n";
+    print "Found " . scalar( keys( %seq ) ) . " distinct sequences\n";
+
+#    for my $k( keys( %seq ) ) { print STDERR "$k\n"; }
+  }
+  
+  return \%entries;
+}
 
 1;
 
