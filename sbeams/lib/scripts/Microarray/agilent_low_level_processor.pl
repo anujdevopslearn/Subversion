@@ -56,9 +56,9 @@ Bruz Marzolf, E<lt>bmarzolf@localdomainE<gt>
 use strict;
 use File::Basename;
 use Data::Dumper;
-use XML::XPath;
-use XML::Parser;
-use XML::XPath::XMLParser;
+#use XML::XPath;
+#use XML::Parser;
+#use XML::XPath::XMLParser;
 
 use Getopt::Long;
 use FindBin;
