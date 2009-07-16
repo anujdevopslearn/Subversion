@@ -707,7 +707,7 @@ sub parseComment
     if ($line =~ /.*(Mods)=(.+?)\s.*/) {
       my $k = $1;
       my $v = $2;
-      if ( $v != 0 ) {
+      if ( $v ) {
         if ( length($v) > 255 ) {
           $hash{$k} = substr( $v, 0, 254 );
           print STDERR "Trimmed a long modstring!\n";
