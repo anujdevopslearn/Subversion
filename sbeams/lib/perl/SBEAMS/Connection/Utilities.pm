@@ -983,11 +983,10 @@ sub getGaggleMicroformat {
      </p>
      <div class="gaggle-namelist">
       <ol>
-       <li>
    ~;
 
   if ( $args{object} =~ /^namelist$/i ) {
-    $microformat .= join( "</li>\n<li>", @{$args{data}} );
+    $microformat .= '<li>' . join( "</li>\n<li>", @{$args{data}} );
   } else {
     $log->error( "Unknown object type, $args{object}" );
   }
@@ -1602,7 +1601,7 @@ sub parseBiosequenceDescriptor {
 #-
 sub read_fasta_file {
   my $self = shift;
-  my %args = ( acc_regex => '\>(\S*)',
+  my %args = ( acc_regex => ['\>(\S*)'],
                verbose => 0,
                @_ );
 
@@ -1611,6 +1610,10 @@ sub read_fasta_file {
     $missing = ( $missing ) ? $missing . ',' . $arg : $arg if !defined $args{$arg};
   }
   die "Missing required parameter(s) $missing" if $missing;
+
+  if ( ref( $args{acc_regex} ) ne 'ARRAY' ) {
+    die "acc_regex must be ref to array of regexes...";
+  }
 
   open FIL, "$args{filename}" || die "Unable to open file $args{filename}";
   my %entries;
@@ -1630,8 +1633,15 @@ sub read_fasta_file {
       }
 
       # Extract accession.
-      $line =~ /$args{acc_regex}/;
-      $acc = $1;
+      for my $regex ( @{$args{acc_regex}} ) {
+        if ( $line =~ /$regex/ ) {
+          $acc = $1;
+          $acc .= " $2" if $2;
+          $acc .= " $3" if $3;
+        }
+        last if $acc;
+      }
+      print STDERR "acc is $acc\n";
       if ( !$acc ) {
         print STDERR "Problem extracting accession from $line with $args{acc_regex}\n";
         $acc = $line;
@@ -1640,6 +1650,7 @@ sub read_fasta_file {
 
       if ( $entries{$acc} ) {
         print STDERR "doppelganger accession $acc\n";
+        exit;
       }
     next;
     }
