@@ -998,7 +998,7 @@ for (class.numb in unique.classes){
 	
   print ( paste( Sys.time(), "Make expression set" ));
 	X <- exprs(exprset)[,cols]
-	selected <- geneNames(exprset) %in% genenames
+	selected <- featureNames(exprset) %in% genenames
 	if (!sum(selected) && !is.null(genenames))
 	    stop("None of the entered gene names were found in the exprSet.")
 	if (!sum(selected))
@@ -1026,8 +1026,8 @@ for (class.numb in unique.classes){
 	}
 	full.mtdata <- mtdata
 	mtdata <- mtdata[lim,,drop=F]
-	row.names(mtdata) <- geneNames(exprset)[which(selected)[index[lim]]]
-	row.names(full.mtdata) <- geneNames(exprset)
+	row.names(mtdata) <- featureNames(exprset)[which(selected)[index[lim]]]
+	row.names(full.mtdata) <- featureNames(exprset)
 	mtdata <- mtdata[2:4]
 	full.mtdata <- full.mtdata[2:4]
 	
@@ -1361,11 +1361,11 @@ output.df$Probe_set_id <- NULL
 
 ###See if expression data should be outputed too
 	if (exprs) {
-		indexExprs.geneNames <- geneNames(exprset) %in% rownames(output.df)   
-		index.allData <- geneNames(exprset) %in% rownames(allData.output.df)
+		indexExprs.featureNames <- featureNames(exprset) %in% rownames(output.df)   
+		index.allData <- featureNames(exprset) %in% rownames(allData.output.df)
 	##Write a special aaftable that knows about exprssion data.  It will turn the values green in the output
-		exp.aaftable <- aafTableInt(exprset[which(indexExprs.geneNames),cols])
-		#output.df <- cbind(output.df, exprs(exprset)[which(indexExprs.geneNames),cols])
+		exp.aaftable <- aafTableInt(exprset[which(indexExprs.featureNames),cols])
+		#output.df <- cbind(output.df, exprs(exprset)[which(indexExprs.featureNames),cols])
 		#create an aafTable for expression values of all probe sets
 		allData.exprs.aaftable <- aafTableFrame(exprs(exprset)[,cols], signed=FALSE)
 		colnames(allData.exprs.aaftable) <- colnames(exprs(exprset)[,cols])
@@ -1547,7 +1547,8 @@ for (class.numb in unique.classes){
   print ( paste( Sys.time(), "going to run sam and create matrix" ));
 	Matrix <- exprs(exprset)[,cols]
          #sam.output<-sam(Matrix,current.classlabel,rand=123)
-	sam.output<- sam.dstat(Matrix, current.classlabel, var.equal=FALSE, rand=123, med=TRUE)
+	#sam.output<- sam.dstat(Matrix, current.classlabel, var.equal=FALSE, rand=123, med=TRUE)
+	sam.output<- sam(Matrix, current.classlabel, var.equal=FALSE, rand=123, med=TRUE)
   print ( paste( Sys.time(), "sam run complete, make delta list" ));
 
 #make a small matrix to hold the FDR cuttoffs and the ratio data
@@ -1584,7 +1585,7 @@ for (class.numb in unique.classes){
 ##Loop through all the fdr points collecting data fdr, fold change 
   print ( paste( Sys.time(), "Loop over fdr results" ));
 	for(i in 1:numb.loops){
-		sum.sam.output <- try( summary(sam.output,delta.list[i],ll=FALSE))
+		sum.sam.output <- try( summary(sam.output,delta.list[i]))
  
 		if (class(sum.sam.output) == "try-error" || i == numb.loops ||
 			dim(sum.sam.output@mat.sig)[2] == 0){
@@ -1726,11 +1727,11 @@ output.df$Probe_set_id <- NULL
 
 ###See if expression data should be outputed too
 	if (exprs) {
-		indexExprs.geneNames <- geneNames(exprset) %in% rownames(output.df)   
-		index.allData <- geneNames(exprset) %in% rownames(allData.output.df)
+		indexExprs.featureNames <- featureNames(exprset) %in% rownames(output.df)   
+		index.allData <- featureNames(exprset) %in% rownames(allData.output.df)
 	##Write a special aaftable that knows about exprssion data.  It will turn the values green in the output
-		exp.aaftable <- aafTableInt(exprset[which(indexExprs.geneNames),cols])
-		#output.df <- cbind(output.df, exprs(exprset)[which(indexExprs.geneNames),cols])
+		exp.aaftable <- aafTableInt(exprset[which(indexExprs.featureNames),cols])
+		#output.df <- cbind(output.df, exprs(exprset)[which(indexExprs.featureNames),cols])
 		#create an aafTable for expression values of all probe sets
 		allData.exprs.aaftable <- aafTableFrame(exprs(exprset)[,cols], signed=FALSE)
 		colnames(allData.exprs.aaftable) <- colnames(exprs(exprset)[,cols])
@@ -1759,13 +1760,13 @@ delta.graph.xstart <- 1.5
 if(last.delta.cutoff < delta.graph.xstart){
 	delta.graph.xstart <- .2
 }
-bitmap(paste("$RESULT_DIR/$jobname/", outFileRoot, "_delta.png", sep = ""), res = 72*4, pointsize = 12)
-plot(sam.output, seq(delta.graph.xstart,last.delta.cutoff,.1))
-dev.off()	
+#bitmap(paste("$RESULT_DIR/$jobname/", outFileRoot, "_delta.png", sep = ""), res = 72*4, pointsize = 12)
+#plot(sam.output, seq(delta.graph.xstart,last.delta.cutoff,.1))
+#dev.off()	
 
-bitmap(paste("$RESULT_DIR/$jobname/", outFileRoot, "_samplot.png", sep = ""), res = 72*4, pointsize = 12)
-plot(sam.output, last.delta.cutoff)
-dev.off()
+#bitmap(paste("$RESULT_DIR/$jobname/", outFileRoot, "_samplot.png", sep = ""), res = 72*4, pointsize = 12)
+#plot(sam.output, last.delta.cutoff)
+#dev.off()
 }#end of limit loop
 
 }#end of the for loop to loop conditions 
