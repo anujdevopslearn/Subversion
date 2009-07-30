@@ -68,10 +68,11 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
   $sbeamsMOD->display_page_header(project_id => $project_id);
   $log->debug( "Begin page:" .time() );
-  if ( $params{bioseq_id} || $params{restore} || $params{protein_list} ) {
+  if ( $params{bioseq_id} || $params{restore} || $params{protein_list} ||
+       $params{protein_group_number}) {
     $page .= get_alignment_display( %params );
   } else {
-    $page .= $sbeams->makeErrorText( "Missing required parameter bioseq_id" );
+    $page .= $sbeams->makeErrorText( "Missing required parameter bioseq_id or protein_group_number" );
   }
   $log->debug( "Page done:" .time() );
     
@@ -111,6 +112,31 @@ sub get_alignment_display {
 		$args{bioseq_id} = $args{orig_bioseq_id};
 	}
 
+  if ( $args{protein_group_number} ) {
+    my $sql = qq~
+      (
+	SELECT PID.biosequence_id
+	FROM $TBAT_PROTEIN_IDENTIFICATION PID
+	JOIN $TBAT_ATLAS_BUILD AB
+	ON (AB.atlas_build_id = PID.atlas_build_id)
+	where AB.atlas_build_id ='$curr_bid' AND
+	      PID.protein_group_number = '$args{protein_group_number}'
+      ) UNION (
+	SELECT BR.related_biosequence_id
+	FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR
+	JOIN $TBAT_ATLAS_BUILD AB
+	ON (AB.atlas_build_id = BR.atlas_build_id)
+	where AB.atlas_build_id ='$curr_bid' AND
+	      BR.protein_group_number = '$args{protein_group_number}'
+      )
+      ~;
+
+    my @bioseq_ids = $sbeams->selectOneColumn($sql) or
+       die "\nERROR: Unable to find any proteins in protein group".
+       " with $sql\n\n";
+    $args{bioseq_id} = join( ",", @bioseq_ids);
+
+  }
   if ( $args{protein_list} ) {
 		$args{protein_list} =~ s/;/,/g;
 		my $list_ids = $sbeamsMOD->getBioseqIDsFromProteinList( protein_list => $args{protein_list}, build_id => $curr_bid );
