@@ -1051,6 +1051,9 @@ sub rs_has_data {
 }
 
 
+#### Get biosequence_accession, biosequence_gene_name, and dbxref_id
+####  for a biosequence by parsing its descriptor
+
 sub parseBiosequenceDescriptor {
   my $self = shift;
   my %args = @_;
@@ -1069,33 +1072,47 @@ sub parseBiosequenceDescriptor {
   my ($n_other_names,@other_names);
 
 
-  #### Failing anything else, make the accession and gene_name the name
-  $rowdata_ref->{biosequence_gene_name} = $rowdata_ref->{biosequence_name};
+  #### Failing anything else, make the accession the biosequence_name
+  ####  and the gene name undefined. (07/30/09: before today, the
+  ####  gene_name was also set to the biosequence_name by default.)
+  #$rowdata_ref->{biosequence_gene_name} = $rowdata_ref->{biosequence_name};
+  $rowdata_ref->{biosequence_gene_name} = undef;
   $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
 
 
   #### Encoding popular among a bunch of databases
   #### Can be overridden later on a case-by-case basis
+
   if ($rowdata_ref->{biosequence_name} =~ /^SW.{0,1}\:(.+)$/ ) {
-     $rowdata_ref->{biosequence_gene_name} = $1;
+     #$rowdata_ref->{biosequence_gene_name} = $1;
      $rowdata_ref->{biosequence_accession} = $1;
      $rowdata_ref->{dbxref_id} = '1';
   }
 
+  # swiss-prot, from http://www.expasy.ch/sprot/userman.html#AC_line
+  if ($rowdata_ref->{biosequence_name} =~ /([O-Q]\d\w{3}\d)/ ||
+      $rowdata_ref->{biosequence_name} =~ /([A-Z]\d[A-Z]\w\w\d)/) {
+    $rowdata_ref->{biosequence_accession} = $1;
+    if ($rowdata_ref->{biosequence_desc} =~ /GN=(\S+)/ ) {
+      $rowdata_ref->{biosequence_gene_name} = $1;
+    }
+    $rowdata_ref->{dbxref_id} = '1';
+  }
+
   if ($rowdata_ref->{biosequence_name} =~ /^PIR.\:(.+)$/ ) {
-     $rowdata_ref->{biosequence_gene_name} = $1;
+     #$rowdata_ref->{biosequence_gene_name} = $1;
      $rowdata_ref->{biosequence_accession} = $1;
      $rowdata_ref->{dbxref_id} = '6';
   }
 
   if ($rowdata_ref->{biosequence_name} =~ /^GP.{0,1}\:(.+)_\d+$/ ) {
-     $rowdata_ref->{biosequence_gene_name} = $1;
+     #$rowdata_ref->{biosequence_gene_name} = $1;
      $rowdata_ref->{biosequence_accession} = $1;
      $rowdata_ref->{dbxref_id} = '8';
   }
 
   if ($rowdata_ref->{biosequence_name} =~ /^(UPSP|UPTR)\:(.+)$/ ) {
-     $rowdata_ref->{biosequence_gene_name} = $2;
+     #$rowdata_ref->{biosequence_gene_name} = $2;
      $rowdata_ref->{biosequence_accession} = $2;
      $rowdata_ref->{dbxref_id} = '35';
   }
@@ -1148,7 +1165,7 @@ sub parseBiosequenceDescriptor {
   if ($rowdata_ref->{biosequence_name} =~ /^IPI:(IPI[\d\.]+)$/ ) {
      $rowdata_ref->{biosequence_accession} = $1;
      if ($rowdata_ref->{biosequence_name} =~ /^IPI:(IPI[\d]+)\.\d+$/ ) {
-       $rowdata_ref->{biosequence_gene_name} = $1;
+       #$rowdata_ref->{biosequence_gene_name} = $1;
      }
      $rowdata_ref->{dbxref_id} = '9';
   }
@@ -1157,21 +1174,21 @@ sub parseBiosequenceDescriptor {
   #### Conversion rules for the new IPI database
   if ($rowdata_ref->{biosequence_name} =~ /^(IPI[\d\.]+)$/ ) {
      $rowdata_ref->{biosequence_accession} = $1;
-     $rowdata_ref->{biosequence_gene_name} = $1;
+     #$rowdata_ref->{biosequence_gene_name} = $1;
      $rowdata_ref->{dbxref_id} = '9';
   }
 
   #### Conversion rules for the new IPI database 2 (dreiss)
   if ($rowdata_ref->{biosequence_name} =~ /^IPI:(IPI[\d\.]+)\|/ ) {
      $rowdata_ref->{biosequence_accession} = $1;
-     $rowdata_ref->{biosequence_gene_name} = $1;
+     #$rowdata_ref->{biosequence_gene_name} = $1;
      $rowdata_ref->{dbxref_id} = '9';
   }
 
 
   #### Conversion rules for some generic GenBank IDs  
   if ($rowdata_ref->{biosequence_name} =~ /gb\|([A-Z\d\.]+)\|/ ) {
-     $rowdata_ref->{biosequence_gene_name} = $1;
+     #$rowdata_ref->{biosequence_gene_name} = $1;
      $rowdata_ref->{biosequence_accession} = $1;
      $rowdata_ref->{dbxref_id} = '7';
   }
