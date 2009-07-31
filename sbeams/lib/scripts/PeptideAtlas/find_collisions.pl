@@ -43,7 +43,7 @@ my $c_lib = $args->{consensus_lib} || 5;
 
 
 my $outfile = "cspace_Q1_${q1_window}_Q3_${q3_window}_SSR_${ssr_window}_PH_${h_thresh}_CL_${c_lib}";
-$outfile .= '_EI' if $args->{exclude_icat};
+$outfile .= '_EI' if $args->{include_icat};
 $outfile .= '_WO' if $args->{weight_by_nobs};
 $outfile .= '.tsv';
 
@@ -66,9 +66,9 @@ if ( $args->{use_outfile} ) {
   
     if ( $line[0] eq 'PepSeq' ) {
       if ( $args->{use_outfile} ) {
-        print OUT join( "\t", @line, 'total_collisions', 'collision_intensity_sum' ) . "\n";
+        print OUT join( "\t", @line, 'SSR', 'total_collisions', 'collision_intensity_sum' ) . "\n";
       } else {
-        print join( "\t", @line, 'total_collisions', 'collision_intensity_sum' ) . "\n";
+        print join( "\t", @line, 'SSR', 'total_collisions', 'collision_intensity_sum' ) . "\n";
       }
       next;
     }
@@ -82,7 +82,7 @@ if ( $args->{use_outfile} ) {
     my $q3_range = ($line[6] - $q3_delta) . " AND " . ($line[6] + $q3_delta);
     my $sql = qq~
     SELECT mz_exact Q1, mz Q3, modified_sequence, sequence, relative_intensity,
-           peak_label, CLS.consensus_library_spectrum_id
+           peak_label, CLS.consensus_library_spectrum_id, CLS.charge, collision_energy
     FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM CLS 
     JOIN $TBAT_CONSENSUS_LIBRARY_SPECTRUM_PEAK CLSP 
     ON CLS.consensus_library_spectrum_id = CLSP.consensus_library_spectrum_id
@@ -98,8 +98,9 @@ if ( $args->{use_outfile} ) {
   	my $sth = $sbeams->get_statement_handle( $sql );
     my $total = 0;
     my $sum = 0;
+		my @spectra;
   	while( my @row = $sth->fetchrow_array() ) {
-      if ( $args->{exclude_icat} ) {
+      if ( !$args->{include_icat} ) {
         if ( $row[2] =~ /(C\[330|C\[339|C\[545|C\[553|C\[303|C\[312)/ ) {
 #          print STDERR "ICATagory one: $1\n";
           next;
@@ -129,12 +130,58 @@ if ( $args->{use_outfile} ) {
   #      print "Using T ssr is $t_ssr, S ssr is $s_ssr for $line[0] and $row[3]\n";
         $total++;
         $sum += $peak_score;
+#    SELECT
+#    0 mz_exact Q1,
+#    1 mz Q3,
+#    2 modified_sequence,
+#    3 sequence,
+#    4 relative_intensity
+#    5 peak_label,
+#    6 CLS.consensus_library_spectrum_id,
+#    7 CLS.charge
+#
+#    PepSeq  clean
+#    Pepcharg  7
+#    Frag  5
+#    FragCharge ''
+#    IsoType  ''
+#    Q1  0
+#    Q3  1
+#    CE
+#    ModPepSeq 2
+#    Group  'Contaminant'
+#    total_collisions ''
+#    collision_intensity_sum ''
+
+        $row[8] = $row[8] || '-';
+        $row[0] = sprintf( "%0.2f", $row[0] );
+        $row[1] = sprintf( "%0.2f", $row[1] );
+        $t_ssr = sprintf( "%0.2f", $t_ssr );
+#				push @spectra,  [@row[2,0,1,4,5],'','','','','','end'];
+        my @peak_label = split( ",", $row[5] );
+        $row[5] = $peak_label[0];
+				my $clean_seq = $row[2];
+        $clean_seq =~ s/\[[^\]]+]//g;
+				push @spectra,  [$clean_seq, @row[7,5], '-','-', @row[0,1,8,2], 'Contaminant', $t_ssr, '-', $row[4] ];
       }
     }
+    $s_ssr = sprintf( "%0.2f", $s_ssr );
     if ( $args->{use_outfile} ) {
-      print OUT join( "\t", @line, $total, $sum ) . "\n";
+			if ( defined $args->{display_collisions} &&  $sum > $args->{display_collisions} ) {
+        print OUT join( "\t", @line, $s_ssr, $total, $sum ) . "\n";
+#        print OUT join( "\t", qw( pepseq Q1 Q3 rel_intensity peak_label ) ) . "\n";
+        for my $s ( @spectra ) {
+          print OUT join( "\t", @$s ) . "\n";
+        }
+			}
     } else {
-      print join( "\t", @line, $total, $sum ) . "\n";
+			if ( defined $args->{display_collisions} &&  $sum > $args->{display_collisions} ) {
+        print join( "\t", @line, $s_ssr, $total, $sum ) . "\n";
+#        print  join( "\t", qw( pepseq Q1 Q3 rel_intensity peak_label ) ) . "\n";
+        for my $s ( @spectra ) {
+          print  join( "\t", @$s ) . "\n";
+        }
+			}
     }
   
   }
@@ -166,10 +213,12 @@ sub usage {
    -c, --consensus_lib       Consensus library_id used Default 5
    -u, --use_outfile         Use outputfile name based on settings 
    -b, --build_id            Atlas build id (for spectral counting)
-   -e, --exclude_icat        Exclude ICAT spectra, i.e. C330, 339, 545, 553,
+   -e, --include_icat        Exclude ICAT spectra, i.e. C330, 339, 545, 553,
                              303, and 312.
    -w, --weight_by_nobs      Weight peak height by the number of observations,
                              requires atlas_build_id
+   -d, --display_collisions  If set, will display all potential collisions
+                             over threshold value provided.
   END
 
 
@@ -183,7 +232,7 @@ sub process_args {
   GetOptions( \%args, 'transitions=s', 'parent_ion_window=f', 'use_outfile',
               'fragment_ion_window=f', 'ssr_calc_window=f', 'weight_by_nobs',
               'height_threshold=i', 'consensus_lib=i', 'build_id=i',
-              'exclude_icat' ) || usage();
+              'include_icat', 'display_collisions=i' ) || usage();
 
   usage('Missing required param transitions') unless $args{transitions};
   return \%args;
