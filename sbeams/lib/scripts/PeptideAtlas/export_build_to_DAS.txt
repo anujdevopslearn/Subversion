@@ -1,35 +1,22 @@
 
-Notes exporting PeptideAtlas Builds to DAS server:
+Notes exporting PeptideAtlas Builds to DAS server (ProServer):
 
-
-setenv SBEAMS /net/dblocal/www/html/dev2/sbeams
+setenv SBEAMS /net/dblocal/www/html/devZS/sbeams
 setenv PAexport $SBEAMS/lib/scripts/PeptideAtlas/export_build_to_DAS.pl
 
-
-GET 'http://db.systemsbiology.net:8080/das/dsn'
+GET 'http://www.peptideatlas.org/das/dsn'
 
 $PAexport --list
 
+## add
+$PAexport --add --atlas_build_name 'Human PeptideAtlas 2009-06'
 
-$PAexport --atlas_build_name 'Human_P0.9_Ens30_NCBI35'
-$PAexport --atlas_build_name 'Human Plasma PeptideAtlas P>=0.9 (Aug262005)'
-
-
-Make the necessary changes to dazzlecfg.xml
- (not yet automatic; replace/add the xml output by above program runs)
-
-
-To shutdown the das webapp and reload it with updated /WEB-INF/ contents:
-    http://db.systemsbiology.net:8080/manager/reload?path=/das
-
+## delete
+$PAexport --delete --atlas_build_name 'Human PeptideAtlas 2009-06'
 
 Test:
 
-GET 'http://db.systemsbiology.net:8080/das/dsn'
-GET 'http://db.systemsbiology.net:8080/das/Human_Ens30_NCBI35_APD0405_P09/features?segment=1:152920000,152921700'
+GET 'http://www.peptideatlas.org/das/dsn'
+GET 'http://www.peptideatlas.org/das/PeptideAtlasdb_Human_PeptideAtlas_2009-06/features?segment=2:215996318,215996321'
 
-GET 'http://db.systemsbiology.net:8080/das/Human_Ens30_NCBI35_APD0405_P09/features?segment=1:220247000,220249000'
-
-GET 'http://db.systemsbiology.net:8080/das/Human_Ens30_NCBI35_APD0405_P09/features?segment=1:220247000,220249000' | grep -i mult
-
-
+GET 'http://www.peptideatlas.org/das/PeptideAtlasdb_Human_PeptideAtlas_2009-06/features?segment=2:215937925,215937953'
