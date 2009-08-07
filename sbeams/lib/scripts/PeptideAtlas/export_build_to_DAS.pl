@@ -54,6 +54,8 @@ Options:
   --testonly             If set, rows in the database are not changed or added
   --list                 If set, list the available builds and exit
   --atlas_build_name     Name of the atlas build to export
+  --add
+  --delete
 
  e.g.: $PROG_NAME --list
        $PROG_NAME --atlas_build_name \'Human_P0.9_Ens26_NCBI35\'
@@ -61,7 +63,7 @@ EOU
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-        "list","atlas_build_name:s",
+        "list","atlas_build_name:s","add", "delete"
     )) {
 
     die "\n$USAGE";
@@ -246,7 +248,6 @@ sub exportBuildToDAS {
     atlas_build_id => $atlas_build_id,
   );
 
-
   #### Get array ref of all peptide and their mappings
   my $peptide_mappings = getAllPeptideMappings(
     atlas_build_id => $atlas_build_id,
@@ -271,10 +272,12 @@ sub exportBuildToDAS {
 	$best_probability,$peptide_sequence) if ($VERBOSE);
 
     #### Tranlate strand from -/+ to 0/1
-    if ($strand eq '-') {
-      $strand = 0;
-    } else {
-      $strand = 1;
+    if($strand){
+      if ($strand eq '-') {
+        $strand = 0;
+      } else {
+        $strand = 1;
+      }
     }
 
     #### Make a call based on n_genome_locations
@@ -357,46 +360,48 @@ sub clearDASTable {
 	   "$DBI::err ($DBI::errstr)");
   $sth->finish()
     or die("ERROR[$SUB]: Cannot finish query $DBI::err ($DBI::errstr)");
+ 
+  if($OPTIONS{'add'}){
 
-  #### CREATE the table
-  print "INFO[$SUB] Creating DAS table...\n" if ($VERBOSE);
-  my $sql = qq~
-    CREATE TABLE $atlas_build_tag (
-      contig_id    varchar(40) NOT NULL default '',
-      start        int(10) NOT NULL default '0',
-      end          int(10) NOT NULL default '0',
-      strand       int(2) NOT NULL default '0',
-      id           varchar(40) NOT NULL default '',
-      score        double(16,4) NOT NULL default '0.0000',
-      gff_feature  varchar(40) default NULL,
-      gff_source   varchar(40) default NULL,
-      name         varchar(40) default NULL,
-      hstart       int(11) NOT NULL default '0',
-      hend         int(11) NOT NULL default '0',
-      hid          varchar(40) NOT NULL default'',
-      evalue       varchar(40) default NULL,
-      perc_id      int(10) default NULL, 
-      phase        int(11) NOT NULL default '0',
-      end_phase    int(11) NOT NULL default '0',
+		#### CREATE the table
+		print "INFO[$SUB] Creating DAS table...\n" if ($VERBOSE);
+		my $sql = qq~
+		  CREATE TABLE $atlas_build_tag (
+						  contig_id    varchar(40) NOT NULL default '',
+						  start        int(10) NOT NULL default '0',
+						  end          int(10) NOT NULL default '0',
+						  strand       int(2) NOT NULL default '0',
+						  id           varchar(40) NOT NULL default '',
+						  score        double(16,4) NOT NULL default '0.0000',
+						  gff_feature  varchar(40) default NULL,
+						  gff_source   varchar(40) default NULL,
+						  name         varchar(40) default NULL,
+						  hstart       int(11) NOT NULL default '0',
+						  hend         int(11) NOT NULL default '0',
+						  hid          varchar(40) NOT NULL default'',
+						  evalue       varchar(40) default NULL,
+						  perc_id      int(10) default NULL, 
+						  phase        int(11) NOT NULL default '0',
+						  end_phase    int(11) NOT NULL default '0',
 
-      KEY id_contig(contig_id),
-      KEY id_pos(id,start,end)
-    )
-  ~;
+						  KEY id_contig(contig_id),
+						  KEY id_pos(id,start,end)
+						  )
+						  ~;
 
-  print "[SQL]: ",$sql,"\n" if ($VERBOSE);
-  my $sth = $dbh->prepare ($sql)
-    or die("ERROR[$SUB]: Cannot prepare query $DBI::err ($DBI::errstr)");
-  $sth->execute()
-    or die("ERROR[$SUB]: Cannot execute query\n$sql\n".
-	   "$DBI::err ($DBI::errstr)");
-  $sth->finish()
-    or die("ERROR[$SUB]: Cannot finish query $DBI::err ($DBI::errstr)");
+		print "[SQL]: ",$sql,"\n" if ($VERBOSE);
+		my $sth = $dbh->prepare ($sql)
+		  or die("ERROR[$SUB]: Cannot prepare query $DBI::err ($DBI::errstr)");
+		$sth->execute()
+		  or die("ERROR[$SUB]: Cannot execute query\n$sql\n".
+						  "$DBI::err ($DBI::errstr)");
+		$sth->finish()
+		  or die("ERROR[$SUB]: Cannot finish query $DBI::err ($DBI::errstr)");
 
-  $dbh->disconnect()
-    or die("ERROR[$SUB]: Cannot disconnect from database ".
-	   "$DBI::err ($DBI::errstr)");
-
+		$dbh->disconnect()
+		  or die("ERROR[$SUB]: Cannot disconnect from database ".
+						  "$DBI::err ($DBI::errstr)");
+  }
 } # end clearDASTable
 
 
@@ -620,47 +625,62 @@ sub updateProserver {
    
     if ( -e "$PROSERVER_DIREC/eg/$INI_FILE") {
 
-	### making a copy of the ini file in case it corrupted
-	system("cp -p $PROSERVER_DIREC/eg/$INI_FILE  $PROSERVER_DIREC/eg/$INI_FILE.bak");
-	
-	open (FILE , ">>$PROSERVER_DIREC/eg/$INI_FILE");
-	
-	
-    
-	print (FILE "\n");
-	print (FILE "[PeptideAtlasdb_$nospace_atlas_build_name]\n");
-	print (FILE "state       = on\n");
-	print (FILE "adaptor     = PeptideAtlasdb\n");
-	print (FILE "description = Peptides from the PeptideAtlas build $atlas_build_name\n");
-	print (FILE "transport   = dbi\n");
-	print (FILE "dbhost      = $servername\n");
-	print (FILE "dbname      = $databasename\n");
-	print (FILE "dbuser      = $username\n");
-	print (FILE "dbpass      = $password\n");
-	print (FILE "dbtable     = $atlas_build_tag\n");
-	print (FILE "atlas_build_id = $atlas_build_id\n");
+       ### making a copy of the ini file in case it corrupted
+	   system("cp -p $PROSERVER_DIREC/eg/$INI_FILE  $PROSERVER_DIREC/eg/$INI_FILE.bak");
+	   if( $OPTIONS{'delete'}){
+         open (FILE , "<$PROSERVER_DIREC/eg/$INI_FILE");
+         open (INI, ">$PROSERVER_DIREC/eg/tmp.ini");
+
+         my $st =0;
+         foreach (<FILE>){
+           if( $_ !~ /PeptideAtlasdb\_$nospace_atlas_build_name/ && ! $st){
+             print INI "$_";
+           }
+           else {
+             $st=1;
+           }
+           if($st && /atlas_build_id/){
+             $st=0;
+           }
+         }
+         close(FILE);
+         close (INI);
+         system("mv $PROSERVER_DIREC/eg/tmp.ini  $PROSERVER_DIREC/eg/$INI_FILE");
+       }
+       elsif($OPTIONS{'add'}){
+	     open (FILE , ">>$PROSERVER_DIREC/eg/$INI_FILE");
+		 print (FILE "\n");
+		 print (FILE "[PeptideAtlasdb_$nospace_atlas_build_name]\n");
+		 print (FILE "state       = on\n");
+		 print (FILE "adaptor     = PeptideAtlasdb\n");
+		 print (FILE "description = Peptides from the PeptideAtlas build $atlas_build_name\n");
+		 print (FILE "transport   = dbi\n");
+		 print (FILE "dbhost      = $servername\n");
+		 print (FILE "dbname      = $databasename\n");
+		 print (FILE "dbuser      = $username\n");
+		 print (FILE "dbpass      = $password\n");
+		 print (FILE "dbtable     = $atlas_build_tag\n");
+		 print (FILE "atlas_build_id = $atlas_build_id\n");
 
 
-	close(FILE);
-
-	print " INFO[$SUB]: INI file updated \n";
+		 close(FILE);
+      }
+    	print " INFO[$SUB]: INI file updated \n";
     
         print " INFO[$SUB]: Restarting the Proserver \n";
-      }
+    }
 
 
         
      ##  Restarting the Proserver with the updated INI file
 
-     system("$PERL_EXEC $PROSERVER_DIREC/eg/proserver -c $PROSERVER_DIREC/eg/$INI_FILE");
+   system("$PERL_EXEC $PROSERVER_DIREC/eg/proserver -c $PROSERVER_DIREC/eg/$INI_FILE");
  
-     print "\n\n INFO[$SUB]: Proserver successfully started\n\n";
+   print "\n\n INFO[$SUB]: Proserver successfully started\n\n";
    
 
 	       
-    }  ###### END udpateProserver
-
-
+ }  ###### END udpateProserver
 
 ###############################################################################
 # getAllPeptideMappings -- Get all of the peptide mappings for this build
