@@ -54,6 +54,7 @@ Options:
   --testonly             If set, rows in the database are not changed or added
   --list                 If set, list the available builds and exit
   --atlas_build_name     Name of the atlas build to export
+  --das_tag      organism and specificity of the build
   --add
   --delete
 
@@ -63,7 +64,7 @@ EOU
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-        "list","atlas_build_name:s","add", "delete"
+        "list","atlas_build_name:s","add", "delete", "das_tag:s"
     )) {
 
     die "\n$USAGE";
@@ -74,6 +75,9 @@ $VERBOSE = $OPTIONS{"verbose"} || 0;
 $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
 $TESTONLY = $OPTIONS{"testonly"} || 0;
+
+my $DASTAG = $OPTIONS{'das_tag'};
+$DASTAG =~ s/\s+/\_/g;
 
 if ($DEBUG) {
     print "Options settings:\n";
@@ -243,87 +247,88 @@ sub exportBuildToDAS {
     atlas_build_id => $atlas_build_id,
   ) or die("ERROR[$SUB]: Unable to get atlas_build_tag");
 
+
   #### Create or clear the DAS table for this dataset
   clearDASTable(
     atlas_build_id => $atlas_build_id,
   );
 
-  #### Get array ref of all peptide and their mappings
-  my $peptide_mappings = getAllPeptideMappings(
-    atlas_build_id => $atlas_build_id,
-  );
+  if($OPTIONS{'add'}){
+		 #### Get array ref of all peptide and their mappings
+		 my $peptide_mappings = getAllPeptideMappings(
+			atlas_build_id => $atlas_build_id,
+		  );
 
 
-  #### connect to database
-  my $dbh = connectToDASDB()
-    or die("ERROR[$SUB]: Cannot connect to database");
+		  #### connect to database
+		  my $dbh = connectToDASDB() or die("ERROR[$SUB]: Cannot connect to database");
 
 
-  #### Loop over all peptide_mappings, extracting them
-  my $rowctr = 0;
-  foreach my $peptide_mapping (@{$peptide_mappings}) {
-    my ($peptide_accession,$peptide_sequence,$chromosome,
-	$start_in_chromosome,$end_in_chromosome,$strand,
-	$best_probability,$n_genome_locations) = @{$peptide_mapping};
+		  #### Loop over all peptide_mappings, extracting them
+		  my $rowctr = 0;
+		  foreach my $peptide_mapping (@{$peptide_mappings}) {
+			my ($peptide_accession,$peptide_sequence,$chromosome,
+			$start_in_chromosome,$end_in_chromosome,$strand,
+			$best_probability,$n_genome_locations) = @{$peptide_mapping};
 
-    printf("%s %4d %10d %10d %1d %.3f %s\n",
-        $peptide_accession,$chromosome,
-	$start_in_chromosome,$end_in_chromosome,$strand,
-	$best_probability,$peptide_sequence) if ($VERBOSE);
+			printf("%s %4d %10d %10d %1d %.3f %s\n",
+				$peptide_accession,$chromosome,
+			$start_in_chromosome,$end_in_chromosome,$strand,
+			$best_probability,$peptide_sequence) if ($VERBOSE);
 
-    #### Tranlate strand from -/+ to 0/1
-    if($strand){
-      if ($strand eq '-') {
-        $strand = 0;
-      } else {
-        $strand = 1;
-      }
-    }
+			#### Tranlate strand from -/+ to 0/1
+			if($strand){
+			  if ($strand eq '-') {
+				$strand = 0;
+			  } else {
+				$strand = 1;
+			  }
+			}
 
-    #### Make a call based on n_genome_locations
-    my $peptide_degen_class;
-    if ($n_genome_locations == 1) {
-      $peptide_degen_class = 'Uniquely mapped peptide';
-    } else {
-      $peptide_degen_class = 'Multiply mapped peptide';
-    }
+			#### Make a call based on n_genome_locations
+			my $peptide_degen_class;
+			if ($n_genome_locations == 1) {
+			  $peptide_degen_class = 'Uniquely mapped peptide';
+			} else {
+			  $peptide_degen_class = 'Multiply mapped peptide';
+			}
 
 
-    #### Skip peptides with no mapping
-    next unless ($chromosome && $start_in_chromosome &&
-		 $end_in_chromosome && $strand gt '');
+			#### Skip peptides with no mapping
+			next unless ($chromosome && $start_in_chromosome &&
+				 $end_in_chromosome && $strand gt '');
 
-    #### Insert the record into the DAS Table
-    my $sql = qq~
-      INSERT INTO $atlas_build_tag
-        (contig_id,start,end,strand,id,score,gff_feature,gff_source,name)
-        VALUES
-        ('$chromosome',$start_in_chromosome,$end_in_chromosome,$strand,
-         '$peptide_accession',$best_probability,'peptide','$peptide_degen_class',
-         '$peptide_sequence')
-    ~;
+			#### Insert the record into the DAS Table
+			my $sql = qq~
+			  INSERT INTO $atlas_build_tag
+				(contig_id,start,end,strand,id,score,gff_feature,gff_source,name)
+				VALUES
+				('$chromosome',$start_in_chromosome,$end_in_chromosome,$strand,
+				 '$peptide_accession',$best_probability,'peptide','$peptide_degen_class',
+				 '$peptide_sequence')
+			~;
 
-    my $sth = $dbh->prepare ($sql)
-      or die("ERROR[$SUB]: Cannot prepare query $DBI::err ($DBI::errstr)");
-    $sth->execute()
-      or die("ERROR[$SUB]: Cannot execute query\n$sql\n".
-	     "$DBI::err ($DBI::errstr)");
-    $sth->finish()
-      or die("ERROR[$SUB]: Cannot finish query $DBI::err ($DBI::errstr)");
+			my $sth = $dbh->prepare ($sql)
+			  or die("ERROR[$SUB]: Cannot prepare query $DBI::err ($DBI::errstr)");
+			$sth->execute()
+			  or die("ERROR[$SUB]: Cannot execute query\n$sql\n".
+				 "$DBI::err ($DBI::errstr)");
+			$sth->finish()
+			  or die("ERROR[$SUB]: Cannot finish query $DBI::err ($DBI::errstr)");
 
-    $rowctr++;
+			$rowctr++;
 
-    #last if ($peptide_accession gt 'PAp00000099');
+			#last if ($peptide_accession gt 'PAp00000099');
 
-  }
+		  }
 
-  print "INFO[$SUB]: $rowctr rows inserted into DAS table $atlas_build_tag\n";
+		  print "INFO[$SUB]: $rowctr rows inserted into DAS table $atlas_build_tag\n";
 
-  $dbh->disconnect()
-    or die("ERROR[$SUB]: Cannot disconnect from database ".
-	   "$DBI::err ($DBI::errstr)");
+		  $dbh->disconnect()
+			or die("ERROR[$SUB]: Cannot disconnect from database ".
+			   "$DBI::err ($DBI::errstr)");
 
- 
+    }		 
 
 
 } # end exportBuildToDAS
@@ -343,6 +348,7 @@ sub clearDASTable {
   my $atlas_build_tag = getAtlasBuildTag(
     atlas_build_id => $atlas_build_id,
   ) or die("ERROR[$SUB]: Unable to get atlas_build_tag");
+
 
   #### connect to database
   my $dbh = connectToDASDB()
@@ -633,7 +639,7 @@ sub updateProserver {
 
          my $st =0;
          foreach (<FILE>){
-           if( $_ !~ /PeptideAtlasdb\_$nospace_atlas_build_name/ && ! $st){
+           if( $_ !~ /PeptideAtlasdb\_$DASTAG\]/ && ! $st){
              print INI "$_";
            }
            else {
@@ -650,7 +656,7 @@ sub updateProserver {
        elsif($OPTIONS{'add'}){
 	     open (FILE , ">>$PROSERVER_DIREC/eg/$INI_FILE");
 		 print (FILE "\n");
-		 print (FILE "[PeptideAtlasdb_$nospace_atlas_build_name]\n");
+		 print (FILE "[PeptideAtlasdb_$DASTAG]\n");
 		 print (FILE "state       = on\n");
 		 print (FILE "adaptor     = PeptideAtlasdb\n");
 		 print (FILE "description = Peptides from the PeptideAtlas build $atlas_build_name\n");
