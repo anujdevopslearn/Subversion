@@ -67,7 +67,7 @@ $massCalculator = new SBEAMS::Proteomics::PeptideMassCalculator;
 
 
 ###############################################################################
-# Set program name and usage banner for command like use
+# Set program name and usage banner for command line use
 ###############################################################################
 $PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
@@ -85,6 +85,7 @@ Options:
   --purge                     Delete child records in atlas build (retains parent atlas record).
   --load                      Build an atlas (cannot currently be used in conjunction with --purge).
   --spectra                   Loads or updates the individual spectra for a build
+  --prot_info                 Loads or updates protein identifications for a build (with --purge, purges)
   --instance_searchbatch_obs           Loads or updates the number of observations per 
                               search_batch for peptide_instance and modified_pi tables
   --coordinates               Loads or updates the peptide coordinates
@@ -96,7 +97,7 @@ Options:
   --default_sample_project_id default project_id  needed for auto-creation of tables (best to set
                               default to dev/private access and open access later)
 
- e.g.:  ./load_atlas_build.pl --atlas_build_name \'Human_P0.9_Ens26_NCBI35\' --organism_abbrev \'Hs\' --purge --load --default_sample_project_id 476
+ e.g.:  ./load_atlas_build.pl --atlas_build_name \'Human_P0.9_Ens26_NCBI35\' --organism_abbrev \'Hs\' --load --default_sample_project_id 476
 
  e.g.: ./load_atlas_build.pl --atlas_build_name \'TestAtlas\' --delete
 EOU
@@ -105,7 +106,7 @@ EOU
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
         "testvars","delete", "purge", "load", "check_tables",
         "atlas_build_name:s", "organism_abbrev:s", "default_sample_project_id:s",
-        "list","spectra","coordinates","instance_searchbatch_obs"
+        "list","spectra","prot_info","coordinates","instance_searchbatch_obs"
     )) {
 
     die "\n$USAGE";
@@ -256,17 +257,16 @@ sub handleRequest {
 
 
   ## handle --purge:
-  if ($purge) {
+  # (if also --prot_info, handled later -- will purge only prot_info.)
+  if ($purge && ! $OPTIONS{prot_info}) {
 
        print "Removing child records in $atlas_build_name ($ATLAS_BUILD_ID): \n";
 
-       removeAtlas(atlas_build_id => $ATLAS_BUILD_ID,
+      removeAtlas(atlas_build_id => $ATLAS_BUILD_ID,
            keep_parent_record => 1);
 
   }#end --purge
 
-
-  
 
   ## handle --load:
   if ($load) {
@@ -300,6 +300,32 @@ sub handleRequest {
       atlas_build_directory => $atlas_build_directory,
       organism_abbrev => $organism_abbrev,
     );
+  }
+
+  #### If load or purge of protein information was requested
+  if ($OPTIONS{"prot_info"}) {
+    # if --purge, purge prot_info, unless load also requested, in which
+    # case the entire load should have been purged already and we now
+    # want to load prot_info
+    if ($purge && !$load) {
+       print "Purging protein identification info from $atlas_build_name ($ATLAS_BUILD_ID): \n";
+       purgeProteinIdentificationInfo(
+	 atlas_build_id => $ATLAS_BUILD_ID,
+       );
+    } else {
+      use SBEAMS::PeptideAtlas::ProtInfo;
+      my $prot_info = new SBEAMS::PeptideAtlas::ProtInfo;
+      my $atlas_build_directory = get_atlas_build_directory(
+	atlas_build_id => $ATLAS_BUILD_ID,
+      );
+      $prot_info->setSBEAMS($sbeams);
+      $prot_info->setVERBOSE($VERBOSE);
+      $prot_info->setTESTONLY($TESTONLY);
+      $prot_info->loadBuildProtInfo(
+	atlas_build_id => $ATLAS_BUILD_ID,
+	atlas_build_directory => $atlas_build_directory,
+      );
+    }
   }
 
 
@@ -531,7 +557,6 @@ sub get_biosequence_set_id
 
 }
 
-
 ###############################################################################
 # removeAtlas -- removes atlas build records
 #
@@ -556,6 +581,12 @@ sub removeAtlas {
    #my $TESTONLY = "0";
    my $VERBOSE = "1" unless ($VERBOSE);
 
+   # first, delete the protein identification info.
+   purgeProteinIdentificationInfo(
+     atlas_build_id => $atlas_build_id,
+   );
+
+   # then, recursively delete the child records of the atlas build
    if ($keep_parent_record) {
       my $result = $sbeams->deleteRecordsAndChildren(
          table_name => 'atlas_build',
@@ -578,8 +609,40 @@ sub removeAtlas {
          testonly => $TESTONLY,
       );
    }
+
 } # end removeAtlas
 
+
+###############################################################################
+# purgeProteinIdentificationInfo -- delete all records for given build in
+# protein_identification and biosequence_relationship tables 
+###############################################################################
+sub purgeProteinIdentificationInfo {
+    my %args = @_;
+
+    my $atlas_build_id = $args{'atlas_build_id'} or die
+        " need atlas_build_id";
+
+    my $sql = qq~
+	DELETE
+	FROM $TBAT_PROTEIN_IDENTIFICATION
+	WHERE atlas_build_id = '$atlas_build_id'
+	~;
+
+    print "Purging protein_identification table ...\n";
+
+    $sbeams->executeSQL($sql);
+
+    $sql = qq~
+	DELETE
+	FROM $TBAT_BIOSEQUENCE_RELATIONSHIP
+	WHERE atlas_build_id = '$atlas_build_id'
+	~;
+
+    print "Purging biosequence_relationship table ...\n";
+
+    $sbeams->executeSQL($sql);
+}
 
 
 ###############################################################################
@@ -2315,9 +2378,9 @@ sub readCoords_updateRecords_calcAttributes {
     }
 
 
-    ####----------------------------------------------------------------------------
-    ## Creating peptide_mapping records, and updating peptide_instance records
-    ####----------------------------------------------------------------------------
+####----------------------------------------------------------------------------
+## Creating peptide_mapping records, and updating peptide_instance records
+####----------------------------------------------------------------------------
     print "\nCreating peptide_mapping records, and updating peptide_instance records\n";
 
 
@@ -2372,6 +2435,8 @@ sub readCoords_updateRecords_calcAttributes {
           }
           # Cache the incremented version
           $biosequence_ids{$biosequence_name[$row]} = $biosequence_id;
+        } else {
+          die("ERROR: Unable to map biosequence_name $biosequence_name[$row] to a biosequence_id. Atlas build record references biosequence_set $args{biosequence_set_id}; probably you mapped this build against a different biosequence_set.");
         }
       }
 
