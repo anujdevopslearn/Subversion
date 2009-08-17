@@ -128,8 +128,10 @@
 # b)    ->{$protein_name}             prot_name -> group_num
 #     ->{atlas_prot_list}             
 #       ->{$protid}                   set to 1 if protein is in this atlas
-#     ->{prot_hash}
+#     ->{pep_prot_hash}
 #       ->{$pepseq}                   pepseq -> array of protein IDs
+#     ->{preferred_protID_hash}
+#       ->{$protid}                   protXML protID -> preferred protID
 # 
 # End $CONTENT_HANDLER description
 ##############################################################################
@@ -529,6 +531,7 @@ sub protXML_start_element {
     $self->{protein_confidence} = $attrs{confidence};
     my @peps = split(/\+/, $attrs{unique_stripped_peptides});
     $self->{protcache}->{unique_stripped_peptides} = \@peps;
+    $self->{protcache}->{total_number_peptides} = $attrs{total_number_peptides};
     $self->{protcache}->{probability} = $attrs{probability};
     $self->{protcache}->{confidence} = $attrs{confidence};
     $self->{protcache}->{subsuming_protein_entry} =
@@ -578,30 +581,38 @@ sub protXML_start_element {
 
     #### At this point we have all the info on the current protein and its
     #### indistinguishables, so process that if we haven't already.
-    unless (defined $self->{pepcache}->{indistinguishables_processed}) { 
+    unless (defined $self->{protcache}->{indistinguishables_processed}) { 
       # If there are any indistinguishables, see if they include a protID
       # that is more preferred than $self->{protein_name}.
       my @indis = keys(%{$self->{protcache}->{indist_prots}});
-      if (scalar @indis) {
+      my $original_protein_name = $self->{protein_name};
+ 
+      my $preferred_protein_name = $original_protein_name;
+      # Add self to list of indistinguishables for complete list
+      # of protein IDs that are indistinguishable from one another
+      push (@indis, $original_protein_name);
 
-        # Add self to list of indistinguishables for complete list
-        # of protein IDs that are indistinguishable from one another
-	push (@indis, $self->{protein_name});
-
+      if (scalar @indis > 1) {
 	# Select the preferred protID of all, and if different from
 	# original, do some swapping.
-	my $protein_name = 
+	$preferred_protein_name = 
 	  SBEAMS::PeptideAtlas::ProtInfo::get_preferred_protid_from_list(
 	    \@indis);
-        if ($protein_name ne $self->{protein_name}) {
-	  delete($self->{protcache}->{indist_prots}->{$protein_name});
-	  $self->{protcache}->{indist_prots}->{$self->{protein_name}} = 1;
-	  $self->{protein_name} = $protein_name;
+        if ($preferred_protein_name ne $original_protein_name) {
+	  delete($self->{protcache}->{indist_prots}->{$preferred_protein_name});
+	  $self->{protcache}->{indist_prots}->{$original_protein_name} = 1;
+	  $self->{protein_name} = $preferred_protein_name;
         }
+      } 
+
+      # Using a hash, map all protIDs to the preferred one
+      for my $protID (@indis) {
+	$self->{ProteinProphet_prot_data}->{preferred_protID_hash}->
+	  {$protID} = $preferred_protein_name;
       }
 
       # Note that we've processed the protein info.
-      $self->{pepcache}->{indistinguishables_processed} = 1;
+      $self->{protcache}->{indistinguishables_processed} = 1;
     }
   }
 
@@ -802,12 +813,12 @@ sub protXML_end_element {
     ####  (this list does not include indistinguishables)
     if ( $store_info_for_presence_level) {
       my $this_protein = $self->{protein_name};
-      if (! defined $self->{ProteinProphet_prot_data}->{prot_hash}->
+      if (! defined $self->{ProteinProphet_prot_data}->{pep_prot_hash}->
 	       {$peptide_sequence}) {
-	@{$self->{ProteinProphet_prot_data}->{prot_hash}->
+	@{$self->{ProteinProphet_prot_data}->{pep_prot_hash}->
 	       {$peptide_sequence}} = ($this_protein);
       } else {
-	push(@{$self->{ProteinProphet_prot_data}->{prot_hash}->
+	push(@{$self->{ProteinProphet_prot_data}->{pep_prot_hash}->
 	       {$peptide_sequence}}, $this_protein);
       }
     }
@@ -823,7 +834,7 @@ sub protXML_end_element {
   #### If this is a protein, then store its info in its group
   if ($localname eq 'protein') {
     if ($store_info_for_presence_level) {
- 
+
       my $protein_name = $self->{protein_name};
 
       # Store the (non-preferred) indistinguishable proteins,
@@ -839,6 +850,8 @@ sub protXML_end_element {
              $self->{protcache}->{probability};
       $self->{groupcache}->{proteins}->{$protein_name}->{confidence} =
              $self->{protcache}->{confidence};
+      $self->{groupcache}->{proteins}->{$protein_name}->{total_number_peptides}
+             = $self->{protcache}->{total_number_peptides};
       $self->{groupcache}->{proteins}->{$protein_name}->
 	                                   {subsuming_protein_entry} =
              $self->{protcache}-> {subsuming_protein_entry};
@@ -862,6 +875,7 @@ sub protXML_end_element {
       # Store all the collected info on this group in a persistent hash.
       my $group_num = $self->{protein_group_number};
       $self->{ProteinProphet_group_data}->{$group_num} = $self->{groupcache};
+
     }
 
     #### Clear out the protein group cache
@@ -1080,7 +1094,7 @@ sub main {
     if ( $FDR_threshold && $P_threshold) {
       print "Only one of --P_threshold and --FDR_threshold may be specified.\n";
       exit;
-    } elsif (!$FDR_threshold && $P_threshold) {
+    } elsif (!$FDR_threshold && !$P_threshold) {
       $FDR_threshold = '0.0001';
       print "Using default FDR threshold $FDR_threshold.\n";
       #$P_threshold = '0.9';
@@ -1340,11 +1354,14 @@ sub main {
 # print_protein_info
 ###############################################################################
   # why doesn't it work for this to be at the end of this file?
+  # 07/13/09: becaues $CONTENT_HANDLER is defined within scope of
+  #   main()
   # this sub only works for master ProtPro file, bec. only when reading that
   #  file do we save all this protein info.
   sub print_protein_info {
 
-    # the use of CONTENT_HANDLER below gives a warning.
+    # the use of CONTENT_HANDLER below gives a warning: value will not
+    # stay shared. Sounds dangerous.
     my $prot_group_href = $CONTENT_HANDLER->{ProteinProphet_group_data};
     my @group_number_list = keys(%{$prot_group_href});
     foreach my $group_num (@group_number_list) {
@@ -1389,7 +1406,8 @@ sub main {
 
       #### If no master, or if per-experiment pipeline,
       #### we'll read one ProteinProphet file per pepXML file
-      if (!$OPTIONS{master_ProteinProphet_file} || $OPTIONS{per_expt_pipeline}) {
+      if (!$OPTIONS{master_ProteinProphet_file} ||
+           $OPTIONS{per_expt_pipeline}) {
 	$CONTENT_HANDLER->{ProteinProphet_pep_data} = {};
 	$proteinProphet_filepath = $filepath;
 	$proteinProphet_filepath =~ s/\.pep.xml/.prot.xml/;
@@ -1399,13 +1417,21 @@ sub main {
 	  if ($proteinProphet_filepath =~ /Novartis/) {
 	    if ($proteinProphet_filepath =~ /interact-prob_\d/) {
 	      $proteinProphet_filepath =~ s/prob_\d/prob_all/;
-	    } else {
-	      $proteinProphet_filepath = undef;
 	    }
-	  } else {
-	    print "ERROR: No ProteinProphet file found for\n  $proteinProphet_filepath\n";
-	    $proteinProphet_filepath = undef;
 	  }
+        }
+	#### Hard coded correction for filename convention introduced
+	#### early 2009: iProphet output is interact-ipro.prot.xml,
+	#### but ProtPro output is interact-prob.prot.xml.
+	unless (-e $proteinProphet_filepath) {
+          if ($proteinProphet_filepath =~ /ipro.prot.xml/) {
+	    $proteinProphet_filepath =~ s/ipro.prot.xml/prob.prot.xml/;
+          }
+        }
+	unless (-e $proteinProphet_filepath) {
+	  print "ERROR: ProteinProphet file $proteinProphet_filepath ".
+		"not found.\n";
+	  $proteinProphet_filepath = undef;
 	}
 
 	if ($proteinProphet_filepath) {
@@ -1480,11 +1506,11 @@ sub main {
     #### TEST: list hash of peps to proteins
     if (0) {
     my @peplist = keys(%{$CONTENT_HANDLER->{ProteinProphet_prot_data}->
-	  {prot_hash}});
+	  {pep_prot_hash}});
     for my $pep (@peplist) {
       print "$pep ";
       my @protid_list = @{$CONTENT_HANDLER->{ProteinProphet_prot_data}->
-	  {prot_hash}->{$pep}};
+	  {pep_prot_hash}->{$pep}};
       for my $protid ( @protid_list) {
 	print "$protid ";
       }
@@ -1538,11 +1564,11 @@ sub main {
   #### TEST: list hash of peps to proteins
   if (0) {
     my @peplist = keys(%{$CONTENT_HANDLER->{ProteinProphet_prot_data}->
-	  {prot_hash}});
+	  {pep_prot_hash}});
     for my $pep (@peplist) {
       print "$pep ";
       my @protid_list = @{$CONTENT_HANDLER->{ProteinProphet_prot_data}->
-	  {prot_hash}->{$pep}};
+	  {pep_prot_hash}->{$pep}};
       for my $protid ( @protid_list) {
 	print "$protid ";
       }
@@ -1584,12 +1610,12 @@ sub main {
       # The below may be undefined if it's an indistinguishable peptide.
       # No harm -- its prots should be stored under its twin.
       if (defined $CONTENT_HANDLER->{ProteinProphet_prot_data}->
-	 {prot_hash}->{$pepseq} ) {
+	 {pep_prot_hash}->{$pepseq} ) {
 	my @pep_protlist = @{$CONTENT_HANDLER->{ProteinProphet_prot_data}->
-	   {prot_hash}->{$pepseq}};
-	for my $protid (@pep_protlist) {
-	  $CONTENT_HANDLER->{ProteinProphet_prot_data}->{atlas_prot_list}->
-	       {$protid} = 1;
+	   {pep_prot_hash}->{$pepseq}};
+	for my $protid2 (@pep_protlist) {
+            $CONTENT_HANDLER->{ProteinProphet_prot_data}->{atlas_prot_list}->
+	       {$protid2} = 1;
 	}
       } else {
 	$peps_not_found{$pepseq} = 1;
@@ -1631,7 +1657,7 @@ sub main {
     #### Label proteins according to presence level.
     #### Must do this by group. Within each group, find those that
     #### are in this build. Then, select highest prob for canonical.
-    #### Label others possibly_disting or subsumed according to their
+    #### Label others possibly_distinguished or subsumed according to their
     #### prob.
 
     my $pep_protid_count = 0;
@@ -1639,23 +1665,24 @@ sub main {
     #my @protein_list = keys(%pephash);
     my @group_list = keys(%{$CONTENT_HANDLER->{ProteinProphet_group_data}});
     for my $group_num (@group_list) {
+
       my $proteins_href = $CONTENT_HANDLER->{ProteinProphet_group_data}->
 		   {$group_num}->{proteins};
       my @protein_list = ();
 
       # Collect those proteins in this group that are going to be in this
       # atlas build -- those that the atlas peptides map to.
+      # 08/13/09: now we can use all the prots, because protXML
+      # contains only prots that contain atlas peps. Can change this
+      # code.
       for my $group_prot ( keys(%{$proteins_href})) {
-        my $prob = $proteins_href->{$group_prot}->{probability};
 	if (defined $CONTENT_HANDLER->{ProteinProphet_prot_data}->
 	       {atlas_prot_list}->{$group_prot}) {
 	  push (@protein_list, $group_prot);
 	}
       }
 
-
       my $nproteins = scalar(@protein_list);
-      #print "Group $group_num: $nproteins proteins in atlas.\n";
       my $highest_prob = -1.0;
       my $highest_prob_prot;
 
@@ -1712,24 +1739,24 @@ sub main {
  	if (! $found) {
  	  print "BUG: $highest_prob_prot not found in @protein_list\n";
  	}
-# 	my $done = 0;
-# 	my $found_canonical;
-# 	while (! $done ) {
-# 	  $found_canonical = 0;
-# 	  for my $prot (@remaining_proteins) {
-# 	    if (is_independent_from_set($prot, \@canonical_set,
-# 		     $proteins_href)) {
-# 	      push (@canonical_set, $prot);
-# 	      my $found = remove_string_from_array($prot, \@remaining_proteins);
-# 	      if (! $found) {
-# 		print "BUG: $highest_prob_prot not found in @protein_list\n";
-# 	      }
-# 	      $found_canonical = 1;
-# 	      last;
-# 	    }
-# 	  }
-# 	  $done = ! $found_canonical;
-# 	}
+ 	my $done = 0;
+ 	my $found_canonical;
+ 	while (! $done ) {
+ 	  $found_canonical = 0;
+ 	  for my $prot (@remaining_proteins) {
+ 	    if (is_independent_from_set($prot, \@canonical_set,
+ 		     $proteins_href)) {
+ 	      push (@canonical_set, $prot);
+ 	      my $found = remove_string_from_array($prot, \@remaining_proteins);
+ 	      if (! $found) {
+ 		print "BUG: $highest_prob_prot not found in @protein_list\n";
+ 	      }
+ 	      $found_canonical = 1;
+ 	      last;
+ 	    }
+ 	  }
+ 	  $done = ! $found_canonical;
+ 	}
 	my $n_canonicals = scalar(@canonical_set);
 	my $n_others = scalar(@remaining_proteins);
 #	print "Group $group_num: $n_canonicals canonicals, $n_others others,".
@@ -1744,41 +1771,56 @@ sub main {
 	for my $prot (@canonical_set) {
 	  $proteins_href->{$prot}->{presence_level} = "canonical";
 	  $proteins_href->{$prot}->{represented_by} = $highest_prob_prot;
+          $proteins_href->{$prot}->{subsumed_by} = '';
 	}
 
 	# Now, label the non-canonicals.
 	foreach my $protein (@remaining_proteins) {
 	  my $prot_href = $proteins_href->{$protein};
 	  my $this_prob = $prot_href->{probability};
+          my $is_subsumed = defined $prot_href->{subsuming_protein_entry};
 	  $prot_href->{represented_by} = $highest_prob_prot;
-	  if ($this_prob > 0.0) {
-	    $prot_href->{presence_level} = "possibly_disting";
-	  } else {
-            # If P=0, we'll call it subsumed if one protein in its
-            # "subsuming_protein_entry" is in Atlas,
-            # otherwise we'll call it possibly distinguished.
-            # On test data, we were always able to find one protein from
-            #  subsuming_protein_entry among Atlas prots.
-            # For some P=0, there is no subsuming_protein_entry
-            #  attribute -- seems a ProtPro bug.
-            #  We will call these subsumed.
-            my $subsuming_proteins = $prot_href->{subsuming_protein_entry} || '';
+	  if ( $is_subsumed ) {
+	    $prot_href->{presence_level} = "subsumed";
+            my $subsuming_proteins = $prot_href->{subsuming_protein_entry};
             my @subsuming_proteins = split(/ /,$subsuming_proteins);
-	    my @matches;
+	    my %matches = ();
             if ($subsuming_proteins ne "") {
-	      @matches = ();
               for my $subsuming_prot (@subsuming_proteins) {
+                # map to preferred protID
+                my $preferred_protID = $CONTENT_HANDLER->
+                     {ProteinProphet_prot_data}->
+                     {preferred_protID_hash}->{$subsuming_prot};
+                if (defined $preferred_protID) {
+                  $subsuming_prot = $preferred_protID;
+                } else {
+                  print "WARNING: subsuming prot for $protein, ".
+                    "$subsuming_prot, doesn't have preferred protID ".
+                    " stored in hash.\n";
+                }
                 my @match = grep /^$subsuming_prot$/, @protein_list;
-		splice (@matches, 0, 0, @match);
+                if (scalar(@match) > 0) {
+                  $matches{$subsuming_prot} = 1;
+                }
               }
-            }
-            my $nmatches = scalar(@matches);
-            my $nsubsuming = scalar(@subsuming_proteins);
-            if ( $nmatches > 0 || !$nsubsuming) {
-	      $prot_href->{presence_level} = "subsumed";
+	      my $nmatches = scalar(keys %matches);
+	      my $nsubsuming = scalar(@subsuming_proteins);
+	      if ( $nmatches > 0 ) {
+		$prot_href->{subsumed_by} = join(' ',keys %matches);
+	      } else {
+		print "WARNING: $protein has peptides in this build, but ".
+		       "none of its subsuming_protein_entries do: ".
+                       "$subsuming_proteins\n";
+		$prot_href->{subsumed_by} = '';
+	      }
             } else {
-	      $prot_href->{presence_level} = "possibly_disting";
+              print "WARNING: $protein has empty subsuming_protein_entries ".
+                     "attribute.\n";
+              $prot_href->{subsumed_by} = '';
             }
+	  } else {
+	    $prot_href->{presence_level} = "possibly_distinguished";
+	    $prot_href->{subsumed_by} = '';
 	  }
 	}
       }
@@ -2185,7 +2227,7 @@ sub writePepIdentificationListFile {
      (sort by_decreasing_probability @{$pep_identification_list});
 
   #### Truncate per-experiment by FDR threshold, if desired.
-  if (defined $FDR_threshold) {
+  if ($FDR_threshold) {
     my $counter = 0;
     my $prob_sum = 0.0;
     my $fdr;
@@ -2212,8 +2254,8 @@ sub writePepIdentificationListFile {
     my $probability = $identification->[8];
     ### warns that can't compare strings with >= but can't find
     ###  function to explicitly convert to float
-    if ((defined ($P_threshold) && $probability >= $P_threshold) ||
-        (defined ($FDR_threshold))) {
+    if (($P_threshold && $probability >= $P_threshold) ||
+        $FDR_threshold) {
       print OUTFILE join("\t",@{$identification})."\n";
       $counter++;
       print "$counter... " if ($counter % 1000 == 0);
@@ -2262,6 +2304,9 @@ sub writeProtIdentificationListFile {
   open (OUTFILE, ">$output_file");
   print "Opening output file $output_file.\n";
 
+  # Write header line
+    print OUTFILE "protein_group_number,biosequence_names,probability,confidence,n_observations,n_distinct_peptides,level_name,represented_by_biosequence_name,subsumed_by_biosequence_names\n";
+
   # For each protein in the atlas
   my $group_num;
   for my $prot_name (keys %{$ProteinProphet_prot_data->{atlas_prot_list}}) {
@@ -2278,9 +2323,14 @@ sub writeProtIdentificationListFile {
     foreach my $indis (@indis_list) {
       print OUTFILE " $indis";
     }
+    my $n_distinct_peptides = scalar(@{$prot_href->{unique_stripped_peptides}});
     print OUTFILE ",$prot_href->{probability},".
-	 "$prot_href->{confidence},$prot_href->{presence_level},".
-         "$prot_href->{represented_by}\n";
+	 "$prot_href->{confidence},".
+         "$prot_href->{total_number_peptides},".
+         "$n_distinct_peptides,".
+         "$prot_href->{presence_level},".
+         "$prot_href->{represented_by},".
+         "$prot_href->{subsumed_by}\n";
   }
 } # end writeProtIdentificationListFile
 
@@ -2661,7 +2711,7 @@ sub showContentHandlerContents {
       }
 
     } else {
-      if (ref($CONTENT_HANDLER->{$key})) {
+      if (ref($CONTENT_HANDLER->{$key} eq "ARRAY")) {
         foreach $key2 (@{$CONTENT_HANDLER->{$key}}) {
           print "  $key2\n";
         }
@@ -3425,6 +3475,7 @@ sub is_independent {
   if ($pepcount < 3) {return (0);}
   # if overlap below threshold, count how many prot2 peps are in prot1
   if ($hitcount / $pepcount < $threshold) {
+    #print "$protein2 has few ($hitcount) of the same $pepcount peps as $protein1\n";
     $hitcount = 0;
     $pepcount = 0;
     foreach my $pep2 (@peplist2) {
@@ -3439,6 +3490,7 @@ sub is_independent {
     if ($pepcount < 3) {return(0);}
     # if overlap below threshold, the two prots are independent.
     if ($hitcount / $pepcount < $threshold) {
+      #print "$protein1 has few ($hitcount) of the same $pepcount peps as $protein2\n";
       $highly_overlapping = 0;
     }
   }
