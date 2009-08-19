@@ -132,25 +132,29 @@ sub loadBuildProtInfo {
 
   my $unmapped = 0;
   my $unmapped_represented_by = 0;
+  my $unmapped_subsumed_by = 0;
   my $loaded = 0;
   my $already_in_db = 0;
   my $nan_count = 0;
 
   # Input is PA.protIdentlist file
   # Process one line at a time
-  while (my $line = <IDENTFILE>) {
+  my $line = <IDENTFILE>;  #throw away header line
+  while ($line = <IDENTFILE>) {
     chomp ($line);
     my ($protein_group_number,
 	$biosequence_name,
 	$probability,
 	$confidence,
+        $n_observations,
+        $n_distinct_peptides,
 	$level_name,
-	$represented_by_biosequence_name) = split(",", $line);
-
-    # very early atlas builds abbreviated this
-    if ($level_name eq "possibly_disting") {
-      $level_name = "possibly_distinguished";
+	$represented_by_biosequence_name,
+	$subsumed_by_biosequence_name) = split(",", $line);
+    if (! $subsumed_by_biosequence_name) {
+      $subsumed_by_biosequence_name = '';
     }
+
 
     # I don't know what to do with nan. Let's set it to zero.
     if ($probability eq "nan") {
@@ -171,6 +175,10 @@ sub loadBuildProtInfo {
       $unmapped_represented_by++;
       next;
     }
+    if ($subsumed_by_biosequence_name =~ /UNMAPPED/) {
+      $unmapped_subsumed_by++;
+      next;
+    }
 
     my $inserted = $self->insertProteinIdentification(
        atlas_build_id => $atlas_build_id,
@@ -180,6 +188,9 @@ sub loadBuildProtInfo {
        represented_by_biosequence_name => $represented_by_biosequence_name,
        probability => $probability,
        confidence => $confidence,
+       n_observations => $n_observations,
+       n_distinct_peptides => $n_distinct_peptides,
+       subsumed_by_biosequence_name => $subsumed_by_biosequence_name,
     );
 
     if ($inserted) {
@@ -189,11 +200,13 @@ sub loadBuildProtInfo {
     }
   }
 
-  if ($VERBOSE) {
+  if ( 1 || $VERBOSE ) {
     print "$loaded entries loaded into protein_identification table.\n";
     print "$already_in_db protIDs were already in table so not loaded.\n";
     print "$unmapped UNMAPPED entries ignored.\n";
     print "$unmapped_represented_by entries with UNMAPPED represented_by".
+	   " identifiers ignored.\n";
+    print "$unmapped_subsumed_by entries with UNMAPPED subsumed_by".
 	   " identifiers ignored.\n";
     if ($nan_count) {
       print "$nan_count probability/confidence values of nan set to 0.0.\n";
@@ -202,20 +215,31 @@ sub loadBuildProtInfo {
 
   #### Loop through all protein relationships and load
 
+  $unmapped = 0;
+  my $unmapped_reference = 0;
   $loaded = 0;
   $already_in_db = 0;
 
   # Input is PA.protRelationships file
   # Process one line at a time
-  while (my $line = <RELFILE>) {
+  $line = <RELFILE>;  #throw away header line
+  while ($line = <RELFILE>) {
     chomp ($line);
-    my ($reference_biosequence_name,
+    my ($protein_group_number,
+        $reference_biosequence_name,
 	$related_biosequence_name,
 	$relationship_name,
 	) = split(",", $line);
 
+    # skip UNMAPPED proteins.
+    if ($related_biosequence_name =~ /UNMAPPED/) {
+      $unmapped++;
+      next;
+    }
+
     my $inserted = $self->insertBiosequenceRelationship(
        atlas_build_id => $atlas_build_id,
+       protein_group_number => $protein_group_number,
        reference_biosequence_name => $reference_biosequence_name,
        related_biosequence_name => $related_biosequence_name,
        relationship_name => $relationship_name,
@@ -228,9 +252,12 @@ sub loadBuildProtInfo {
     }
   }
 
-  if ($VERBOSE) {
+  if ( 1 || $VERBOSE ) {
     print "$loaded entries loaded into biosequence_relationship table.\n";
     print "$already_in_db relationships were already in table so not loaded.\n";
+    print "$unmapped UNMAPPED entries ignored.\n";
+    print "$unmapped_reference entries with UNMAPPED reference".
+	   " identifiers ignored.\n";
   }
 
 } # end loadBuildProtInfo
@@ -258,10 +285,11 @@ sub insertProteinIdentification {
           $args{represented_by_biosequence_name}
     or die("ERROR[$METHOD]: Parameter represented_by_biosequence_name ".
           "not passed");
-  my $probability = $args{probability}
-    or die("ERROR[$METHOD]: Parameter probability not passed");
-  my $confidence = $args{confidence}
-    or die("ERROR[$METHOD]: Parameter confidence not passed");
+  my $probability = $args{probability};
+  my $confidence = $args{confidence};
+  my $n_observations = $args{n_observations};
+  my $n_distinct_peptides = $args{n_distinct_peptides};
+  my $subsumed_by_biosequence_name = $args{subsumed_by_biosequence_name};
 
   our $counter;
 
@@ -274,13 +302,18 @@ sub insertProteinIdentification {
     biosequence_name => $represented_by_biosequence_name,
     atlas_build_id => $atlas_build_id,
   );
-
+  my $subsumed_by_biosequence_id = '';
+  if ($subsumed_by_biosequence_name) {
+    $subsumed_by_biosequence_id = $self->get_biosequence_id(
+      biosequence_name => $subsumed_by_biosequence_name,
+      atlas_build_id => $atlas_build_id,
+    );
+  }
 
   #### Get the presence_level_id
   my $presence_level_id = $self->get_presence_level_id(
     level_name => $level_name,
   );
-
 
   #### Check to see if this protein_identification is in the database
   my $protein_identification_id = $self->get_protein_identification_id(
@@ -305,6 +338,9 @@ sub insertProteinIdentification {
       represented_by_biosequence_id => $represented_by_biosequence_id,
       probability => $probability,
       confidence => $confidence,
+      n_observations => $n_observations,
+      n_distinct_peptides => $n_distinct_peptides,
+      subsumed_by_biosequence_id => $subsumed_by_biosequence_id,
     );
     return ($protein_identification_id);
   }
@@ -333,11 +369,11 @@ sub insertProteinIdentificationRecord {
     or die("ERROR[$METHOD]:Parameter presence_level_id not passed");
   my $represented_by_biosequence_id = $args{represented_by_biosequence_id}
     or die("ERROR[$METHOD]:Parameter represented_by_biosequence_id not passed");
-  my $probability = $args{probability}
-    or die("ERROR[$METHOD]:Parameter probability not passed");
-  my $confidence = $args{confidence}
-    or die("ERROR[$METHOD]:Parameter confidence not passed");
-
+  my $probability = $args{probability};
+  my $confidence = $args{confidence};
+  my $n_observations = $args{n_observations};
+  my $n_distinct_peptides = $args{n_distinct_peptides};
+  my $subsumed_by_biosequence_id = $args{subsumed_by_biosequence_id};
 
   #### Define the attributes to insert
   my $rowdata = {
@@ -348,6 +384,9 @@ sub insertProteinIdentificationRecord {
      represented_by_biosequence_id => $represented_by_biosequence_id,
      probability => $probability,
      confidence => $confidence,
+     n_observations => $n_observations,
+     n_distinct_peptides => $n_distinct_peptides,
+     subsumed_by_biosequence_id => $subsumed_by_biosequence_id,
   };
 
   #### Insert spectrum identification record
@@ -384,6 +423,8 @@ sub insertBiosequenceRelationship {
   #### Process parameters
   my $atlas_build_id = $args{atlas_build_id}
     or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+  my $protein_group_number = $args{protein_group_number}
+    or die("ERROR[$METHOD]: Parameter protein_group_number not passed");
   my $reference_biosequence_name = $args{reference_biosequence_name}
     or die("ERROR[$METHOD]: Parameter reference_biosequence_name not passed");
   my $related_biosequence_name = $args{related_biosequence_name}
@@ -425,6 +466,7 @@ sub insertBiosequenceRelationship {
   } else {
     $biosequence_relationship_id = $self->insertBiosequenceRelationshipRecord(
       atlas_build_id => $atlas_build_id,
+      protein_group_number => $protein_group_number,
       reference_biosequence_id => $reference_biosequence_id,
       related_biosequence_id => $related_biosequence_id,
       relationship_type_id => $relationship_type_id,
@@ -447,9 +489,11 @@ sub insertBiosequenceRelationshipRecord {
 
   #### Process parameters
   my $atlas_build_id = $args{atlas_build_id}
-    or die("ERROR[$METHOD]:Parameter atlas_build_id not passed");
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+  my $protein_group_number = $args{protein_group_number}
+    or die("ERROR[$METHOD]: Parameter protein_group_number not passed");
   my $reference_biosequence_id = $args{reference_biosequence_id}
-    or die("ERROR[$METHOD]:Parameter reference_biosequence_id not passed");
+    or die("ERROR[$METHOD]: Parameter reference_biosequence_id not passed");
   my $related_biosequence_id = $args{related_biosequence_id}
     or die("ERROR[$METHOD]:Parameter related_biosequence_id not passed");
   my $relationship_type_id = $args{relationship_type_id}
@@ -459,6 +503,7 @@ sub insertBiosequenceRelationshipRecord {
   #### Define the attributes to insert
   my $rowdata = {
      atlas_build_id => $atlas_build_id,
+     protein_group_number => $protein_group_number,
      reference_biosequence_id => $reference_biosequence_id,
      related_biosequence_id => $related_biosequence_id,
      relationship_type_id => $relationship_type_id,
@@ -510,6 +555,52 @@ sub get_biosequence_id {
 
 } # end get_biosequence_id
 
+
+
+###############################################################################
+# get_protein_identification_id --
+###############################################################################
+sub get_protein_identification_id {
+  my $METHOD = 'get_protein_identification_id';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  #### Process parameters
+  my $biosequence_id = $args{biosequence_id};
+  my $biosequence_name;
+  my $query;
+  if (! $biosequence_id ) {
+    $biosequence_name = $args{biosequence_name}
+      or die("ERROR[$METHOD]: Neither parameter biosequence_id nor biosequence_name passed");
+  }
+  my $atlas_build_id = $args{atlas_build_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+
+  #### Lookup and return protein_identification_id
+  if ( $biosequence_id ) {
+    $query = qq~
+	SELECT protein_identification_id
+	FROM $TBAT_PROTEIN_IDENTIFICATION
+	WHERE
+	atlas_build_id = $atlas_build_id AND
+	biosequence_id = '$biosequence_id'
+    ~;
+  } else {
+    $query = qq~
+	SELECT PID.protein_identification_id
+	FROM $TBAT_PROTEIN_IDENTIFICATION PID,
+	     $TBAT_BIOSEQUENCE BS
+	WHERE
+	PID.atlas_build_id = $atlas_build_id AND
+        PID.biosequence_id = BS.biosequence_id AND
+	BS.biosequence_name = '$biosequence_name'
+    ~;
+  }
+  my ($protein_identification_id) = $sbeams->selectOneColumn($query);
+
+  return $protein_identification_id;
+
+} # end get_protein_identification_id
 
 
 ###############################################################################
@@ -567,35 +658,6 @@ sub get_biosequence_relationship_type_id {
 
 
 ###############################################################################
-# get_protein_identification_id --
-###############################################################################
-sub get_protein_identification_id {
-  my $METHOD = 'get_protein_identification_id';
-  my $self = shift || die ("self not passed");
-  my %args = @_;
-
-  #### Process parameters
-  my $biosequence_id = $args{biosequence_id}
-    or die("ERROR[$METHOD]:Parameter biosequence_id not passed");
-  my $atlas_build_id = $args{atlas_build_id}
-    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
-
-  #### Lookup and return protein_identification_id
-  my $query = qq~
-	SELECT protein_identification_id
-	FROM $TBAT_PROTEIN_IDENTIFICATION
-	WHERE
-	atlas_build_id = $atlas_build_id AND
-	biosequence_id = '$biosequence_id'
-  ~;
-  my ($protein_identification_id) = $sbeams->selectOneColumn($query);
-
-  return $protein_identification_id;
-
-} # end get_protein_identification_id
-
-
-###############################################################################
 # get_biosequence_relationship_id  --
 ###############################################################################
 sub get_biosequence_relationship_id {
@@ -607,7 +669,7 @@ sub get_biosequence_relationship_id {
   my $atlas_build_id = $args{atlas_build_id}
     or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
   my $reference_biosequence_id = $args{reference_biosequence_id}
-    or die("ERROR[$METHOD]:Parameter reference_biosequence_id not passed");
+    or die("ERROR[$METHOD]: Parameter reference_biosequence_id not passed");
   my $related_biosequence_id = $args{related_biosequence_id}
     or die("ERROR[$METHOD]:Parameter related_biosequence_id not passed");
 
@@ -616,7 +678,7 @@ sub get_biosequence_relationship_id {
 	SELECT biosequence_relationship_id
 	FROM $TBAT_BIOSEQUENCE_RELATIONSHIP
 	WHERE
-	atlas_build_id = $atlas_build_id AND
+	atlas_build_id = '$atlas_build_id' AND
 	reference_biosequence_id = '$reference_biosequence_id' AND
 	related_biosequence_id = '$related_biosequence_id'
   ~;
@@ -636,37 +698,55 @@ sub get_preferred_protid_from_list {
   my $protid_list_ref = shift;
   my $protid;
 
+  my @preferred_patterns = (
+    '^[ABOPQ].....$',                     # swiss-prot
+    '^[ABOPQ].....-.*$',                  # swiss-prot splice variant
+    '^ENSP\d\d\d\d\d\d\d\d\d\d\d$',       # ENSEMBL
+  );
+
   # first, sort the list so that the order of the identifiers in
   # the list doesn't affect what is returned from this function.
   @{$protid_list_ref} = sort(@{$protid_list_ref});
 
-  # prefer a Uniprot (Swiss-Prot) ID
-  for $protid (@{$protid_list_ref}) {
-    if (($protid =~ /^[ABOPQ].....$/) && ($protid !~ /UNMAPPED/)) {
-      return $protid;
+  # check for protID regex's in order of preference
+  for my $pattern (@preferred_patterns) {
+    for $protid (@{$protid_list_ref}) {
+      if (($protid =~ /$pattern/) && ($protid !~ /UNMAPPED/)) {
+	return $protid;
+      }
     }
   }
-  # next, a Swiss-Prot varsplice ID
-  for $protid (@{$protid_list_ref}) {
-    if (($protid =~ /^[ABOPQ].....-.*$/) && ($protid !~ /UNMAPPED/)) {
-      return $protid;
-    }
-  }
-  # next, an Ensembl ID
-  for $protid (@{$protid_list_ref}) {
-    if (($protid =~ /^ENSP\d\d\d\d\d\d\d\d\d\d\d$/)
-             && ($protid !~ /UNMAPPED/)) {
-      return $protid;
-    }
-  }
-  # next, any non-DECOY, non-UNMAPPED ID
+
+  # if non matched, select, any non-DECOY, non-UNMAPPED ID
   for $protid (@{$protid_list_ref}) {
     if (($protid !~ /^DECOY_/) && ($protid !~ /UNMAPPED/)) {
       return $protid;
     }
   }
+
   # otherwise, return the first ID
   return $protid_list_ref->[0];
+}
+
+###############################################################################
+# get_protein_group_display  --
+###############################################################################
+# Given a protein_group_number and an atlas_build_id,
+# create a hierarchical html display of the member proteins
+sub get_protein_group_display {
+  my %args = @_;
+  my $atlas_build_id = $args{'atlas_build_id'};
+  my $biosequence_id = $args{'biosequence_id'};
+
+  print "<p>Hello from ProtInfo!<p> $atlas_build_id</p>";
+  print "<p>$biosequence_id</p>";
+
+  my $display = "<p>A primitive display!</p>".
+                "<p>Atlas Build = $atlas_build_id</p>".
+                "<p>Biosequence ID = $biosequence_id</p>";
+  print $display;
+
+  return $display;
 }
 
 ###############################################################################
