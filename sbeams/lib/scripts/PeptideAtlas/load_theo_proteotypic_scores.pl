@@ -281,6 +281,13 @@ sub fillTable{
 
     chomp($line);
     my @columns = split("\t",$line, -1);
+
+    # Hard-coded n_columns check, but we are referring to fields by index
+    if ( scalar( @columns ) != 10 ) {
+      $fill_stats{bad_line}++;
+      next;
+    }
+
     $proName = $columns[0];
     $prevAA = $columns[1];
     $pepSeq = $columns[2];
@@ -290,9 +297,9 @@ sub fillTable{
     $indianaScore = $columns[6];
 
     # These are three new cols added by calcNGenomeLocation script
-    $n_prot_mappings = $columns[7];
-    $n_exact_prot_mappings = $columns[8];
-    $n_genome_locations = $columns[9];
+    $n_prot_mappings = $columns[7] || 9999;
+    $n_exact_prot_mappings = $columns[8] || 9999;
+    $n_genome_locations = $columns[9] || 9999;
 
     # Decoys are duds!
     
@@ -315,9 +322,6 @@ sub fillTable{
     }
 #    print "$proName matched_bioseq_id $acc_to_id->{$proName}\n";
   
-#my %updated_peptides;
-#update_peptide_info
-
     # Is this a new one OR are we in update mode?
     my $full_seq_key = $prevAA . $pepSeq . $endAA;
 
@@ -337,11 +341,11 @@ sub fillTable{
         $matched_pep_id = $pepseq_to_id->{$pepSeq};
   
         # calc relative hydrophobicity if necessary
-        if ( !defined $ssrcalc->{$pepSeq} ) {
+        if ( !defined $ssrcalc->{$pepSeq} || $OPTIONS{update_peptide_info} ) {
            $ssrcalc->{$pepSeq} = getRelativeHydrophobicity( $pepSeq );
         }
   
-        if ( !$mw->{$pepSeq} ) {
+        if ( !$mw->{$pepSeq} || $OPTIONS{update_peptide_info} ) {
           eval {
             $mw->{$pepSeq} = $massCalculator->getPeptideMass( sequence => $pepSeq,
                                                              mass_type => 'monoisotopic' ) || '';
@@ -352,7 +356,7 @@ sub fillTable{
           }
         }
   
-        if ( !$pI->{$pepSeq} ) {
+        if ( !$pI->{$pepSeq} || $OPTIONS{update_peptide_info} ) {
           $pI->{$pepSeq} = getPeptidePI( $pepSeq ) || '';
         }
   
