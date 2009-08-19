@@ -2231,18 +2231,34 @@ sub writePepIdentificationListFile {
     my $counter = 0;
     my $prob_sum = 0.0;
     my $fdr;
+    my $prob_cutoff;
+    my $probability;
+    my $last_probability = 1;;
     foreach my $identification ( @sorted_id_list ) {
       $counter++;
-      my $probability = $identification->[8];
-      $prob_sum += $probability;
-      $fdr = 1 - ($prob_sum / $counter);
-      if ( $fdr > $FDR_threshold) {
-        printf("Identification list truncated just before record #%d, prob %0.5f, ".
-              "protein %s, FDR %0.5f\n", $counter, $probability, $identification->[10], $fdr);
-        # truncate the list before this entry
-        $#sorted_id_list = $counter-1;
-        last;
+      $probability = $identification->[8];
+      # If we exceed the FDR threshold, note the probability of the
+      # last PSM. Then let in any additional PSMs with exact same
+      # probability.
+      if ( ! defined $prob_cutoff ) {
+	$prob_sum += $probability;
+	$fdr = 1 - ($prob_sum / $counter);
+        if ( $fdr > $FDR_threshold) {
+	  $prob_cutoff = $last_probability;
+	}
       }
+      # If we've already reached the FDR threshold, then we have a
+      # probability cutoff. See if we've gone past it.
+      if ( defined $prob_cutoff ) {
+        if ( $probability < $prob_cutoff ) {
+	  printf("Identification list truncated just before record #%d, prob %0.5f, ".
+              "protein %s, FDR %0.5f\n", $counter, $probability, $identification->[10], $fdr);
+	  # truncate the list before this entry
+	  $#sorted_id_list = $counter-1;
+	  last;
+        }
+      }
+      $last_probability = $probability;
     }
   }
 
