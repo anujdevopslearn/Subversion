@@ -493,7 +493,7 @@ sub get_default_pabst_scoring {
 
   my %scores =  (  M => .3,
                   nQ => .1,
-                  nE => .4,
+                  nE => .9,
                   Xc => .5,
                    C => .7,
                    W => .1,
