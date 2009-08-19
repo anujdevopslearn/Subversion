@@ -58,9 +58,13 @@ my @biosequences;
 # hash of peptide_sequence to arrayref of sequences to which it maps
 my %peptide_mappings;
 
+# If update is chosen, we will updated info about a given peptide once, but
+# only once.
+my %updated_peptides;
+
 ## Process options
 GetOptions( \%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-		           "list","delete:s","set_tag:s","input_file:s",
+		           "list","purge_mappings","input_file:s", 'set_tag:s',
                'help', 'update_peptide_info' ) || usage( "Error processing options" );
 
 for my $arg ( qw( set_tag ) ) {
@@ -128,21 +132,28 @@ sub handleRequest {
   if ($OPTIONS{"list"}) {
     $atlas->listBuilds();
     return;
-  }
+  } 
 
 
   print "Get biosequence set\n";
   #### Verify that bioseq_set_tag was supplied
   my $bioseq_set_id = getBioseqSetID(set_tag => $bioseq_set_tag,);
   unless ($bioseq_set_id) {
-    usage( "ERROR: couldn't find the bioseq set --$bioseq_set_tag" );
+    usage( "ERROR: couldn't find the bioseq set $bioseq_set_tag" );
   }
 
 
-  print "Fill table\n";
   #### If specified, read the file in to fill the table
-  fillTable( bioseq_set_id => $bioseq_set_id,
-	             source_file => $input_file ) if $input_file;
+  if ( $input_file ) {
+    print "Fill table\n";
+    fillTable( bioseq_set_id => $bioseq_set_id,
+	               source_file => $input_file );
+  } elsif ( $OPTIONS{purge_mappings} ) {
+    print "purge mappings\n";
+    purgeMappings( $bioseq_set_id )
+  }
+
+
 
   return;
 
@@ -164,6 +175,7 @@ sub getBioseqSetID {
       FROM $TBAT_BIOSEQUENCE_SET
      WHERE set_tag = '$bioseq_set_tag'
   ~;
+  print "$sql\n";
 
   
   my ($bioseq_set_id) = $sbeams->selectOneColumn($sql);
@@ -235,9 +247,13 @@ sub fillTable{
   my $proteopep_mapping = getProteotypicPeptideMapData();
 
   # Cache peptide ssrcalc, mw, nmappings
-  my %ssrcalc;
-  my %mw;
-  my %pI;
+  my $ssrcalc = getSSRValues();
+  my $mw = getMWValues();
+  my $pI = getpIValues();
+
+  my %cached;
+  my %uncached;
+
   my %nmap;
   my %nexmap;
 
@@ -252,8 +268,14 @@ sub fillTable{
   my $paragScoreESI;
   my $paragScoreICAT;
   my $indianaScore;
+  my $n_prot_mappings;
+  my $n_exact_prot_mappings;
+  my $n_genome_locations;
 
   my $cnt = 0;
+  my %match_cnt;
+  my $t0 = time();
+  my %fill_stats;
   while ( my $line = <INFILE> ) {
     $cnt++;
 
@@ -267,79 +289,144 @@ sub fillTable{
     $paragScoreICAT = $columns[5];
     $indianaScore = $columns[6];
 
+    # These are three new cols added by calcNGenomeLocation script
+    $n_prot_mappings = $columns[7];
+    $n_exact_prot_mappings = $columns[8];
+    $n_genome_locations = $columns[9];
+
     # Decoys are duds!
-    next if $proName =~ /^DECOY_/;
+    
+    if ( $proName =~ /^DECOY_/ ) {
+      $fill_stats{decoy}++;
+      next; 
+    }
     
     # Does biosequence match a biosequence_id?
     unless( $acc_to_id->{$proName} ) {
       print STDERR "$proName failed to match a bioseq_id\n";
-      exit;
+      if ( $proName =~ /sp\|([^|]*)\|.*$/ ) {
+        $proName = $1;
+      }
+      unless( $acc_to_id->{$proName} ) {
+        print STDERR "WARN: $proName failed to match a bioseq_id, skipping\n";
+        $fill_stats{prot_match}++;
+        next;
+      }
     }
-
 #    print "$proName matched_bioseq_id $acc_to_id->{$proName}\n";
+  
+#my %updated_peptides;
+#update_peptide_info
 
-    # Is this a new one?
-    if ( ! $proteopepseq_to_id->{$prevAA . $pepSeq . $endAA} ) {
+    # Is this a new one OR are we in update mode?
+    my $full_seq_key = $prevAA . $pepSeq . $endAA;
 
-      # now need to get $matched_pep_id
-      my $matched_pep_id;
-    
-      $matched_pep_id = $pepseq_to_id->{$pepSeq};
+    if ( !$proteopepseq_to_id->{$full_seq_key} || $OPTIONS{update_peptide_info} ) {
 
-      # calc relative hydrophobicity if necessary
-      if ( !defined $ssrcalc{$pepSeq} ) {
-         
-         $ssrcalc{$pepSeq} = getRelativeHydrophobicity( $pepSeq );
+      # We've already updated this peptide during this run.
+      if ( $updated_peptides{$full_seq_key} ) {
+        $fill_stats{already_updated}++;
+      } else {
 
-      }
-
-      if ( !$mw{$pepSeq} ) {
-        eval {
-        $mw{$pepSeq} = $massCalculator->getPeptideMass( sequence => $pepSeq,
-                                                         mass_type => 'monoisotopic' ) || '';
-        };
-        if ( $@ ) {
-          print STDERR "Mass Calculator failed: $pepSeq\n";
-          next;
+        # We shall not easily pass this way again
+        $updated_peptides{$full_seq_key}++;
+  
+        # now need to get $matched_pep_id
+        my $matched_pep_id;
+      
+        $matched_pep_id = $pepseq_to_id->{$pepSeq};
+  
+        # calc relative hydrophobicity if necessary
+        if ( !defined $ssrcalc->{$pepSeq} ) {
+           $ssrcalc->{$pepSeq} = getRelativeHydrophobicity( $pepSeq );
         }
-      }
+  
+        if ( !$mw->{$pepSeq} ) {
+          eval {
+            $mw->{$pepSeq} = $massCalculator->getPeptideMass( sequence => $pepSeq,
+                                                             mass_type => 'monoisotopic' ) || '';
+          };
+          if ( $@ ) {
+            $mw->{$pepSeq} ||= ''; 
+            print STDERR "WARN: Mass Calculator failed: $pepSeq\n";
+          }
+        }
+  
+        if ( !$pI->{$pepSeq} ) {
+          $pI->{$pepSeq} = getPeptidePI( $pepSeq ) || '';
+        }
+  
+  
+  # PTP
+  # proteotypic_peptide_id
+  # matched_peptide_id
+  # preceding_residue
+  # peptide_sequence
+  # following_residue
+  # peptidesieve_ESI
+  # peptidesieve_ICAT
+  # detectabilitypredictor_score
+  # peptide_isoelectric_point
+  # molecular_weight
+  # SSRCalc_relative_hydrophobicity    
+   
+  # PTP_MAPPING
+  # proteotypic_peptide_mapping_id
+  # proteotypic_peptide_id
+  # source_biosequence_id
+  # n_genome_locations
+  # n_protein_mappings
+  # n_exact_protein_mappings    
+  
+  
+        # Insert row in proteotypic_peptide
+        my %rowdata=( matched_peptide_id => $matched_pep_id,
+                       preceding_residue => $prevAA,
+                        peptide_sequence => $pepSeq,
+                       following_residue => $endAA,
+                        peptidesieve_ESI => $paragScoreESI,
+                       peptidesieve_ICAT => $paragScoreICAT,
+            detectabilitypredictor_score => $indianaScore,
+         ssrcalc_relative_hydrophobicity => $ssrcalc->{$pepSeq},
+                        molecular_weight => $mw->{$pepSeq},
+               peptide_isoelectric_point => $pI->{$pepSeq},
+                     );
+  
+  
+        # We will either update or insert
+        if ( $proteopepseq_to_id->{$full_seq_key} ) {
+  
+          $fill_stats{update_peptide}++;
+          $sbeams->updateOrInsertRow( update => 1,
+                                 table_name  => $TBAT_PROTEOTYPIC_PEPTIDE,
+                                 rowdata_ref => \%rowdata,
+                                     verbose => $VERBOSE,
+                                          PK => 'proteotypic_peptide_id',
+                                    PK_value => $proteopepseq_to_id->{$full_seq_key},
+                                 testonly    => $TESTONLY );
+  
+        } else {
+          $fill_stats{insert_peptide}++;
+          $proteopepseq_to_id->{$full_seq_key} = $sbeams->updateOrInsertRow(
+                                              insert => 1,
+                                         table_name  => $TBAT_PROTEOTYPIC_PEPTIDE,
+                                         rowdata_ref => \%rowdata,
+                                         verbose     => $VERBOSE,
+                                        return_PK    => 1,
+                                                  PK => 'proteotypic_peptide_id',
+                                         testonly    => $TESTONLY );
 
-      if ( !$pI{$pepSeq} ) {
-        $pI{$pepSeq} = getPeptidePI( $pepSeq ) || '';
-      }
+          die "ERROR: Unable to insert proteotypic peptide!" if !$proteopepseq_to_id->{$full_seq_key};
+        } # End update or insert block
 
-      # Insert row in proteotypic_peptide
-      my %rowdata=( matched_peptide_id => $matched_pep_id,
-                     preceding_residue => $prevAA,
-                      peptide_sequence => $pepSeq,
-                     following_residue => $endAA,
-                      peptidesieve_ESI => $paragScoreESI,
-                     peptidesieve_ICAT => $paragScoreICAT,
-          detectabilitypredictor_score => $indianaScore,
-       ssrcalc_relative_hydrophobicity => $ssrcalc{$pepSeq},
-       molecular_weight                => $mw{$pepSeq},
-       peptide_isoelectric_point       => $pI{$pepSeq},
-                 source_biosequence_id => $acc_to_id->{$proName},
-                   );
+      } # End "was this update done this run" block
 
-       my $protpep_id = $sbeams->updateOrInsertRow( insert => 1,
-                                               table_name  => $TBAT_PROTEOTYPIC_PEPTIDE,
-                                               rowdata_ref => \%rowdata,
-                                               verbose     => $VERBOSE,
-                                              return_PK    => 1,
-                                               testonly    => $TESTONLY );
-
-       if ( !$protpep_id ) {
-         print STDERR "Unable to insert proteotypic peptide!\n";
-         exit;
-       }
-       $proteopepseq_to_id->{$prevAA.$pepSeq.$endAA} = $protpep_id;
-
-    } # End if new pp entry
+    } # End if new pp entry OR update_mode block
 
     # By here we should have a biosequence_id and a proteotypic peptide_id
-    # Is it already in the datbase?
-    if ( $proteopep_mapping->{$proteopepseq_to_id->{$prevAA . $pepSeq . $endAA} . $acc_to_id->{$proName}} ) {
+    # Is it already in the datbase?  FIXME - should this be revisited for 
+    # for update mode? - for now will recommend purge followed by update mode
+    if ( $proteopep_mapping->{$proteopepseq_to_id->{$full_seq_key} . $acc_to_id->{$proName}} ) {
       #print "Skipping, this thing is already in the database!\n";
     } else {
       # Insert row in proteotypic_peptide_mapping
@@ -348,18 +435,30 @@ sub fillTable{
       # This conditional stops us from mapping the same exact sequence 2x, but 
       # 1) doesn't cache the results from the initial peptide mapping in the event of different flanking aa's, and
       # 2) doesn't get the info, if available, from the database.
-      if ( !$nmap{$pepSeq} || !$nexmap{$prevAA.$pepSeq.$endAA} ) {
-        ($nmap{$pepSeq}, $nexmap{$prevAA.$pepSeq.$endAA} ) = mapSeqs( seq => $pepSeq,
-                                                                      paa => $prevAA,
-                                                                      faa => $endAA );
-      }
+#      if ( !$nmap{$pepSeq} || !$nexmap{$prevAA.$pepSeq.$endAA} ) {
 
+
+# This is now done ahead of time, keeps us from doing it during load
+#        ($nmap{$pepSeq}, $nexmap{$prevAA.$pepSeq.$endAA} ) = mapSeqs( seq => $pepSeq,
+#                                                                      paa => $prevAA,
+#                                                                      faa => $endAA );
+#      }
+#      print "new mapping says $nmap{$pepSeq}, original was $n_prot_mappings!\n";
+#      if ( $nmap{$pepSeq} == $n_prot_mappings ) {
+#        $match_cnt{ok}++;
+#      } else {
+#        $match_cnt{ok}++;
+#      }
+
+
+      $fill_stats{insert_mapping}++;
       my %rowdata=( 
                  source_biosequence_id => $acc_to_id->{$proName},
                 proteotypic_peptide_id => $proteopepseq_to_id->{$prevAA.$pepSeq.$endAA},
-                    n_genome_locations => 99,
-                    n_protein_mappings => $nmap{$pepSeq},
-              n_exact_protein_mappings => $nexmap{$prevAA.$pepSeq.$endAA} );
+                 source_biosequence_id => $acc_to_id->{$proName},
+                    n_protein_mappings => $n_prot_mappings,
+                    n_genome_locations => $n_genome_locations,
+              n_exact_protein_mappings => $n_exact_prot_mappings );
 
        my $map = $sbeams->updateOrInsertRow( insert => 1,
                                         table_name  => $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING,
@@ -370,13 +469,65 @@ sub fillTable{
 
     } 
     print '*' unless( $cnt % 100 );
-    print "\n" unless( $cnt % 5000 );
+    unless( $cnt % 5000 ) {
+      my $t1 = time();
+      my $td = $t1 - $t0;
+      print " - $td sec";
+#      print " -  loaded $cnt records in $td seconds, ". sprintf( "%0.1f", $cnt/$td )  . " records per second ";
+      print "\n"; 
+    }
      
     
   } # End file reading loop
   close(INFILE);
+  $fill_stats{total_records} = $cnt;
+  for my $k ( sort( keys( %fill_stats ) ) ) {
+    print "$k => $fill_stats{$k}\n";
+  }
 
 } # end fillTable
+
+sub getSSRValues {
+  print "get SSR Calc values\n";
+  my $sql = qq~
+  SELECT DISTINCT peptide_sequence, SSRCalc_relative_hydrophobicity 
+  FROM $TBAT_PROTEOTYPIC_PEPTIDE
+  ~;
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my %ssr;
+  while( my @row = $sth->fetchrow_array() ) {
+    $ssr{$row[0]} = $row[1];
+  }
+  return \%ssr;
+}
+
+sub getpIValues {
+  print "get pI values\n";
+  my $sql = qq~
+  SELECT DISTINCT peptide_sequence, peptide_isoelectric_point 
+  FROM $TBAT_PROTEOTYPIC_PEPTIDE
+  ~;
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my %pi;
+  while( my @row = $sth->fetchrow_array() ) {
+    $pi{$row[0]} = $row[1];
+  }
+  return \%pi;
+}
+
+sub getMWValues {
+  print "get MW values\n";
+  my $sql = qq~
+  SELECT DISTINCT peptide_sequence, molecular_weight 
+  FROM $TBAT_PROTEOTYPIC_PEPTIDE
+  ~;
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my %mw;
+  while( my @row = $sth->fetchrow_array() ) {
+    $mw{$row[0]} = $row[1];
+  }
+  return \%mw;
+}
 
 sub getRelativeHydrophobicity {
   my $seq = shift || return '';
@@ -433,17 +584,70 @@ sub mapSeqs {
   return ( scalar( @matches ), scalar( @exmatches ) );
 }
 
+sub purgeMappings {
+  my $bioseq_set_id = shift;
+  if ( $OPTIONS{purge_mappings} && $bioseq_set_id ) {
+    print "purging mappings for biosequence set $OPTIONS{set_tag}, press cntl-c to abort\n";
+    sleep 1;
+  } else {
+    die "Must provide bioseq_set";
+  }
+  my $proteopep_mapping = getProteotypicPeptideMapData( $bioseq_set_id );
+  print "Found " . scalar( keys( %{$proteopep_mapping} ) ) . " mappings\n";
+
+  my @ids;
+  my $cnt = 1;
+  for my $id ( keys( %{$proteopep_mapping} ) ) {
+    push @ids, $id;
+    if ( scalar( @ids == 100 ) ) {
+      my $id_list = join( ',', @ids );
+      my $sql = qq~
+      DELETE FROM $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING
+      WHERE proteotypic_peptide_id IN ( $id_list )
+      ~;
+      $sbeams->do( $sql );
+      @ids = ();
+      print '*';
+      print "\n" unless $cnt++ % 50;
+    }
+  }
+  print "\n";
+  my $id_list = join( ',', @ids );
+  my $sql = qq~
+  DELETE FROM $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING
+  WHERE proteotypic_peptide_id IN ( $id_list )
+  ~;
+  $sbeams->do( $sql ) if $id_list;
+}
+
 
 sub getProteotypicPeptideMapData {
+  my $bioseq_set_id = shift;
+
   my $sql = qq~
-  SELECT proteotypic_peptide_id, source_biosequence_id 
+  SELECT DISTINCT proteotypic_peptide_id, source_biosequence_id 
     FROM $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING
   ~;
+  if ( $bioseq_set_id ) {
+    chomp $sql;
+    $sql = qq~
+    $sql PPM
+    JOIN $TBAT_BIOSEQUENCE B 
+    ON B.biosequence_id = PPM.source_biosequence_id
+    WHERE biosequence_set_id = $bioseq_set_id
+    ORDER BY proteotypic_peptide_id ASC
+    ~;
+  }
+
   my $sth = $sbeams->get_statement_handle( $sql );
 
   my %mapping;
   while( my $row = $sth->fetchrow_arrayref() ) {
-    $mapping{$row->[0] . $row->[1]}++;
+    if ( $bioseq_set_id ) { 
+      $mapping{$row->[0]}++;
+    } else {
+      $mapping{$row->[0] . $row->[1]}++;
+    }
   }
   return \%mapping;
 }
@@ -511,10 +715,15 @@ sub usage {
     --testonly             If set, rows in the database are not changed or added
     --list                 If set, list the available builds and exit
     --help                 print this usage and exit.
-    --delete_set           If set, will delete the records of of specific biosequence set in the table
+    --purge_mappings       Delete peptide mappings pertaining to this set
     --set_tag              Name of the biosequence set tag  
-    --update_peptide_info  will update existing information on pI, MW, SSRCalc, protein/genome mappings 
-    --input_file           Name of the file that has Parag and Indiana scores
+    --update_peptide_info  will update info in proteotypic_peptide table, e.g.
+                           pI, mw, SSRCalc, Peptide Sieve.  Does *not* currently
+                           update info in proteotypic_peptide_mapping table, so
+                           one should run purge_mappings first and then update.
+    --input_file           Name of file with PepSeive and Indiana scores, as 
+                           well as n_mapping info.
+                           
 
    e.g.: $PROG_NAME --list
          $PROG_NAME --set_tag \'YeastCombNR_20070207_ForwDecoy\' --input_file \'proteotypic_peptide.txt\'
