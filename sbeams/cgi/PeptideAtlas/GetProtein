@@ -882,7 +882,11 @@ sub handle_request {
 #			} else {
 #        $instance_ids{$row->[14]}++;
 			}
-			$row->[4] = sprintf( "%0.2f", $row->[4] ) . "<FONT COLOR=RED><SUP>$annot</SUP></FONT>";
+
+      if ($sbeams->output_mode() eq 'html') { 
+        $annot = "<FONT COLOR=RED><SUP>$annot</SUP></FONT>";
+      }
+      $row->[4] = sprintf( "%0.2f", $row->[4] ) . " $annot";
     my $cnt = 0;
 #    for my $p ( @{$resultset_ref->{precisions_list_ref}} ) {
 #			$log->debug( "$cnt) precisely $p for $row->[$cnt], $resultset_ref->{types_list_ref}->[$cnt] " );
