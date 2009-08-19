@@ -48,21 +48,22 @@ Options:
   --test                 test only, don't write records
   --load                 load the library
   --delete id            delete the library with consensus_library_id
-  --library_path path    path to library file
-  --consensus_library_name    name to give to consensus library
-  --organism_name name   organism name (e.g. yeast, Human,...)
+  --path                 path to library file
+  --comment              Description of library. 
+  --library_name         Name for consensus library
+  --organism_name        Organism name (e.g. yeast, Human,...)
 
- e.g.: ./$PROG_NAME --library_path /data/yeast.msp --consensus_library_name 'NIST Sc' --organism_name Yeast --load
+ e.g.: ./$PROG_NAME --path /data/yeast.msp --library_name 'NIST Sc' --organism_name Yeast --load
 EOU
 
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","test",
-"load", "consensus_library_name:s", "organism_name:s", "library_path:s", "delete:s")) 
-{
+                   "load", "library_name:s", "organism_name:s",
+                   "path:s", "delete:s", 'comment=s'  ) ) {
     print "\n$USAGE\n";
     exit;
-}
+  }
 
 $VERBOSE = $OPTIONS{"verbose"} || 0;
 
@@ -81,11 +82,11 @@ unless ( $OPTIONS{'delete'}  || $OPTIONS{'load'} || $OPTIONS{'test'})
 
 if ($OPTIONS{'load'} || $OPTIONS{'test'})
 {
-    unless ($OPTIONS{library_path} && $OPTIONS{consensus_library_name}
+    unless ($OPTIONS{path} && $OPTIONS{library_name}
     && $OPTIONS{organism_name})
     {
         print "\n$USAGE\n";
-        print "Need --library_path and --consensus_library_name ";
+        print "Need --path and --library_name ";
         print " and --organism_name\n";
         exit(0);
     }
@@ -133,7 +134,7 @@ sub handleRequest
         );
 
         ## make sure file exists
-        my $file_path = $OPTIONS{library_path};
+        my $file_path = $OPTIONS{path};
 
         unless (-e $file_path)
         {
@@ -142,8 +143,10 @@ sub handleRequest
         }
 
         populateRecords(organism_id => $organism_id, 
-            file_path => $file_path,
-            consensus_library_name => $OPTIONS{consensus_library_name});
+                          file_path => $file_path,
+             consensus_library_name => $OPTIONS{library_name},
+                    library_comment => $OPTIONS{comment}
+                       );
     }
 
     if ($OPTIONS{delete})
@@ -180,6 +183,8 @@ sub populateRecords
     my $consensus_library_name = $args{consensus_library_name} || 
         die "need consensus_library_name";
 
+    my $library_comment = $args{library_comment} || '';
+
     my $commit_interval = 25;
 
 #    $consensus_library_name .= '_' . $commit_interval;
@@ -187,6 +192,7 @@ sub populateRecords
 
     my $consensus_library_id = insert_consensus_library(
         organism_id => $organism_id,
+        library_comment => $library_comment,
         consensus_library_name => $consensus_library_name);
 
 
@@ -411,8 +417,11 @@ sub insert_consensus_library
     my $consensus_library_name = $args{consensus_library_name} || 
         die "need consensus_library_name";
 
+    my $library_comment = $args{library_comment} || '';
+
     my %rowdata = (
        organism_id => $organism_id,
+       comment => $library_comment,
        consensus_library_name => $consensus_library_name,
     );
 
