@@ -32,6 +32,7 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 
 use Data::Dumper;
+use Digest::MD5 qw(md5_hex);
 
 
 ###############################################################################
@@ -561,7 +562,7 @@ sub get_pabst_peptide_display {
   my %args = @_;
   # Check for required opts
   my $err;
-  for my $opt ( qw( peptides link tr_info ) ) {
+  for my $opt ( qw( peptides link tr_info biosequence_id ) ) {
     $err = ( $err ) ? $err . ',' . $opt : $opt if !defined $args{$opt};
   }
   die "Missing required parameter(s) $err" if $err;
@@ -602,7 +603,9 @@ sub get_pabst_peptide_display {
 #
   
   my $protein_info = $self->get_mapped_proteins( peptide_info => $args{peptides},
-                                               atlas_build_id => $args{atlas_build_id} );
+                                               biosequence_id => $args{biosequence_id},
+                                               atlas_build_id => $args{atlas_build_id}
+                                               );
 
   my $change_form = $self->get_change_form();
 
@@ -703,6 +706,7 @@ sub get_mapped_proteins {
     $in .= $sep . "'" . $row->[2] . "'";
     $sep = ',';
   }
+
   my $sql = qq~
   SELECT DISTINCT peptide_sequence, biosequence_id, CAST(biosequence_seq AS VARCHAR(8000) )
   FROM $TBAT_BIOSEQUENCE B 
@@ -726,20 +730,51 @@ sub get_mapped_proteins {
   ~;
   my $sth = $sbeams->get_statement_handle( $sql );
   my %prots;
-  my $prot_symbol = 'A';
+  my $prot_symbol = 'a';
   my %pep_link;
   my %pep_matches;
+  my $ref_group = '';
   while( my @row = $sth->fetchrow_array() ) {
     $pep_link{$row[0]} ||= {};
     $pep_matches{$row[0]} ||= {};
 
     if ( !$prots{$row[2]} ) {
+      if ( $row[1] == $args{biosequence_id} ) {
+        $ref_group = $row[2]; # Set ref_group by sequence...
+      }
       $prots{$row[2]} = $prot_symbol;
       $prot_symbol++;
     }
     $pep_link{$row[0]}->{$row[1]}++;
     $pep_matches{$row[0]}->{$prots{$row[2]}}++;
   }
+
+  # Run pairwise alignments...
+  # hash of checksums keyed by sequence
+  my %seq2chksum;
+  # inverse, hash of sequences keyed by checksum
+  my %chksum2seq;
+  my $ref_sum;
+  my @align_seqs;
+  for my $prot_seq ( keys( %prots ) ) {
+    $seq2chksum{$prot_seq} = md5_hex( $prot_seq );
+    $chksum2seq{$seq2chksum{$prot_seq}} = $prot_seq;
+    if ( $prot_seq eq $ref_group ) {
+      $ref_sum = $seq2chksum{$prot_seq} 
+    } else {
+      push @align_seqs, $prot_seq;
+    }
+  }
+
+  # Run alignment 
+  use SBEAMS::BioLink::MSF;
+  my $MSF = SBEAMS::BioLink::MSF->new();
+  my $alignment_results = $MSF->runAllvsOne( reference => $ref_sum, 
+                                             sequences => \%chksum2seq 
+                                           );
+
+  # parse alignment
+
   my %peptides;
   for my $p ( sort( keys( %pep_matches ) ) ) {
     my $mstr = join( ',', sort(keys (%{$pep_matches{$p}})) );
@@ -1291,6 +1326,13 @@ sub pabst_evaluate_peptides {
     my $scr = 1;
     my $seq = uc($pep->[$args{seq_idx}]);
     my @pen_codes;
+
+    if ( $args{force_mc} ) {
+      if ( $seq =~ /[KR][^P]/ ) {
+        push @pen_codes, 'MC';
+        $scr *= 0.5;
+      }
+    }
 
     # Time to run the gauntlet!
     for my $k ( keys( %pen_defs ) ) {
