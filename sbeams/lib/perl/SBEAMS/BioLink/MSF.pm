@@ -172,6 +172,27 @@ sub runClustalW {
 
 }
 
+sub runAllvsOne {
+  my $self = shift;
+	my %args = @_;
+  return {} unless $args{reference} && $args{sequences};
+
+  for my $name ( keys( %{$args{sequences}} ) ) {
+    next if $name eq $args{reference};
+    my $fasta_content = qq~>$args{reference}
+$args{sequences}->{$args{reference}}
+>$name
+$args{sequences}->{$name}
+~;
+
+    $log->info( $fasta_content );
+    my $results = $self->runClustalW( sequences => $fasta_content );
+	  $log->info( join( "\n", @{$results} ) );
+  }
+}
+
+
+
 sub parse_aln {
   my $self = shift;
 	my %args = @_;
