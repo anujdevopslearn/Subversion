@@ -122,6 +122,7 @@
 # 	  ->{confidence}
 # 	  ->{unique_stripped_peptides}
 #         ->{subsuming_protein_entry}
+#         ->{presence_level}
 # 
 #   ->{ProteinProphet_prot_data}      used to determine prot ident list
 #     ->{group_hash}
@@ -1823,6 +1824,89 @@ sub main {
 	    $prot_href->{subsumed_by} = '';
 	  }
 	}
+
+        # Run through possibly_distinguished proteins and see if any
+        # are NTT-subsumed.
+        
+        # Create hashes of all canonical, possibly_distinguished
+        my %canonical_plus_possibly_dist_hash = ();
+        my %possibly_dist_hash = ();
+        for my $protein (@protein_list) {
+	  my $prot_href = $proteins_href->{$protein};
+          if ($prot_href->{presence_level} eq "canonical") {
+            $canonical_plus_possibly_dist_hash{$protein} = 1;
+          } elsif ($prot_href->{presence_level} eq "possibly_distinguished") {
+            $canonical_plus_possibly_dist_hash{$protein} = 1;
+            $possibly_dist_hash{$protein} = 1;
+          }
+        }
+        # For each possibly_distinguished
+        for my $protein (keys %possibly_dist_hash) {
+          # check that it's still in the poss_dist list
+          if (! defined $possibly_dist_hash{$protein}) {
+            next;
+          }
+          # Gather all canonicals, poss_dist with exact same pep set.
+          my @prots_with_same_peps = ($protein);
+          sub same_pep_set {
+	    my %args = @_;
+            my $protein1 = $args{'protein1'};
+            my $protein2 = $args{'protein2'};
+            # I don't understand why I need to pass this in.
+            my $proteins_href = $args{'proteins_href'};
+	    my $prot_href1 = $proteins_href->{$protein1};
+	    my $prot_href2 = $proteins_href->{$protein2};
+            my $peps1 = join('+', @{$prot_href1->{unique_stripped_peptides}});
+            my $peps2 = join('+', @{$prot_href2->{unique_stripped_peptides}});
+            return ($peps1 eq $peps2);
+          }
+          for my $protein2 (keys %canonical_plus_possibly_dist_hash) {
+            if ($protein eq $protein2) {
+              next;
+            }
+            if (same_pep_set
+                 (proteins_href => $proteins_href,
+                  protein1 => $protein, protein2 => $protein2)) {
+              
+	      my $prot_href = $proteins_href->{$protein};
+	      my $prot_href2 = $proteins_href->{$protein2};
+              #print "$protein ($prot_href->{presence_level}, $prot_href2->{probability}) $protein2 ($prot_href2->{presence_level}, $prot_href2->{probability}) same pep set in group $group_num\n";
+              push (@prots_with_same_peps, $protein2);
+            }
+          }
+          # If any, set aside the one with highest prob.
+          # In the case of a tie, set aside the one labelled canonical.
+          if ( scalar (@prots_with_same_peps) > 1 ) {
+            my $highest_prob = -1;
+            my $highest_prob_prot;
+            for my $protein3 (@prots_with_same_peps) {
+	      my $prot_href3 = $proteins_href->{$protein3};
+              my $this_prob = $prot_href3->{probability};
+              if (($this_prob > $highest_prob) ||
+                  ($this_prob == $highest_prob &&
+                   $prot_href3->{presence_level} eq "canonical"))  {
+                $highest_prob_prot = $protein3;
+                $highest_prob = $this_prob;
+              }
+            }
+            #print "highest prob prot $highest_prob_prot $highest_prob\n";
+            remove_string_from_array($highest_prob_prot,
+                                     \@prots_with_same_peps);
+              
+	    # None of the others should be canonical. If it is, error.
+            # Else, label them ntt-subsumed and remove from
+            # possibly_distinguished hash.
+            for my $protein3 (@prots_with_same_peps) {
+	      my $prot_href = $proteins_href->{$protein3};
+              if ($prot_href->{presence_level} eq "canonical") {
+                print "WARNING: $protein3 is canonical, yet is not the highest prob protein among those with same peps! Probably from a very large protein group with multiple canonicals. It will be marked ntt-subsumed.\n";
+              }
+	      $prot_href->{presence_level} = "ntt-subsumed";
+	      $prot_href->{subsumed_by} = $highest_prob_prot;
+	      undef $possibly_dist_hash{$protein3};
+            }
+          }
+        }
       }
     }
 
