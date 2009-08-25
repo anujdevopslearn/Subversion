@@ -256,8 +256,7 @@ sub print_gather_data_page {
   else {
     ## Generate tabular data for original sample info text box
     my $tabbed_text =
-      generate_tabular_sample_info( \@file_roots, \@selected_arrays,
-      $processing_method );
+      generate_tabular_sample_info( \@selected_arrays, $processing_method );
 
     ## Generate download URL
 #my $base_url = "$CGI_BASE_DIR/Microarray/bioconductor/Create_GEO_file.cgi";
@@ -354,8 +353,7 @@ sub get_sample_info_tabbed_text_from_token {
   my @selected_arrays = $sbeams->selectSeveralColumns($sql);
 
   my $tabbed_text =
-    generate_tabular_sample_info( \@file_roots, \@selected_arrays,
-    $processing_method );
+    generate_tabular_sample_info( \@selected_arrays, $processing_method );
 
   return $tabbed_text;
 }
@@ -364,7 +362,6 @@ sub get_sample_info_tabbed_text_from_token {
 # Generate tabular text string containing sample info
 ###############################################################################
 sub generate_tabular_sample_info {
-  my $file_roots        = shift @_;
   my $selected_arrays   = shift @_;
   my $processing_method = shift @_;
 
@@ -460,7 +457,6 @@ sub generate_tabular_sample_info {
   ## Data rows
   for my $i ( 0 .. $#{$selected_arrays} ) {
     my @array     = @{ @{$selected_arrays}[$i] };
-    my $file_root = @{$file_roots}[$i];
 
     # determine array platform, if stored in the slide_type comment
     $array[6] =~ /.*GEO\:(GPL\d+).*/;
@@ -482,7 +478,7 @@ sub generate_tabular_sample_info {
       "\t" .                           # Sample_description
       "$data_protocol\t" .             # Sample_data_processing
       "$geo_platform\t" .              # Sample_platform_id
-      "$file_root" . ".CEL\n";         # Sample_supplementary_file
+      "$array[1]" . ".CEL\n";         # Sample_supplementary_file
   }
 
   return $tabbed_text;
@@ -587,8 +583,9 @@ sub print_download_file_page {
       print OUT "#ID_REF\n", "#VALUE = normalized log2 signal\n",
         "!sample_table_begin\n", "ID_REF\tVALUE\n";
 
-      $array_sample[1] =~ /\d{8}_\d{2}_(.*)\Z/;
-      my $file_root  = $1;
+      $array_sample[1] =~ /(\d{8}_\d+_.*)\Z/;
+      my $file_root  = $1 . ".CEL";
+print "Looking up $file_root expression data<br>";
       my @array_data = @{ $expression_data{$file_root} };
       foreach my $i ( 0 .. $#probeset_list ) {
         print OUT $probeset_list[$i], "\t", $array_data[$i], "\n";
