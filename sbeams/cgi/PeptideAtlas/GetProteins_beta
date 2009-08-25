@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 
 ###############################################################################
-# Program     : GetProteins
+# Program     : GetProteins_beta
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id: GetPeptides 5436 2007-07-03 23:56:02Z sloeveni $
 #
@@ -181,18 +181,21 @@ sub handle_request {
 
   #### Read in the standard form values
   my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
-  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+  # for some reason, this gets GetProteins instead of GetProteins_beta
+  #my $TABLE_NAME = $parameters{'QUERY_NAME'};
+  #print "<p>$TABLE_NAME</p>\n";
 
   #### Set some specific settings for this program
-  my $CATEGORY="Get Proteins";
-  $TABLE_NAME="AT_GetProteins" unless ($TABLE_NAME);
+  my $CATEGORY="Get Proteins beta";
+  $TABLE_NAME="AT_GetProteins_beta" unless ($TABLE_NAME);
   ($PROGRAM_FILE_NAME) =
     $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
 
   #### Get the columns and input types for this table/query
   ### TMF:
-  ### At this point, $TABLE_NAME is AT_GetProteins
+  ### At this point, $TABLE_NAME is AT_GetProteins_beta,
   ### @columns contains the user-specifiable constraints
   ### and I will need to modify it to constrain the display
 
@@ -719,7 +722,7 @@ sub handle_request {
           'Representative Peptide Sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information for this peptide\'; return true"',
           #'Protein Group' => "$CGI_BASE_DIR/PeptideAtlas/GetProteins?protein_group_number_constraint=\%$colnameidx{protein_group_number}V&apply_action=$pass_action",
           #'Protein Group_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Display all biosequences in this group\'; return true"',
-          'Group Representative' => "$CGI_BASE_DIR/PeptideAtlas/GetProteins?protein_group_number_constraint=\%$colnameidx{protein_group_number}V&apply_action=$pass_action",
+          'Group Representative' => "$CGI_BASE_DIR/PeptideAtlas/GetProteins_beta?protein_group_number_constraint=\%$colnameidx{protein_group_number}V&apply_action=$pass_action",
           'Group Representative_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Display all biosequences in this group\'; return true"',
           'Protein Group Seq Alignmt' => "$CGI_BASE_DIR/PeptideAtlas/compareProteins?protein_group_number=\%$colnameidx{protein_group_number}V&apply_action=$pass_action",
           'Protein Group Seq Alignmt_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Display alignment of all biosequences in this group\'; return true"',
