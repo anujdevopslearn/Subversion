@@ -28,6 +28,7 @@ AT_spectra_description_set	Spectra Description Set	PeptideAtlas_infrastructure	N
 AT_BrowseBiosequence	Browse Biosequence	QUERY					BrowseBioSequence.cgi		
 AT_GetPeptides	Get Peptides	QUERY					GetPeptides		
 AT_GetProteins	Get Proteins	QUERY					GetProteins		
+AT_GetProteins_beta	Get Proteins beta	QUERY					GetProteins_beta		
 AT_consensus_library	Consensus Library	PeptideAtlas_infrastructure	YES	$TBAT_CONSENSUS_LIBRARY	consensus_library_id		ManageTable.cgi?TABLE_NAME=AT_consensus_library		
 AT_consensus_library_spectrum	Consensus Library Spectrum	PeptideAtlas_infrastructure	NO	$TBAT_CONSENSUS_LIBRARY_SPECTRUM	consensus_library_spectrum_id				
 AT_consensus_library_spectrum_peak	Consensus Library Spectrum Peak	PeptideAtlas_infrastructure	NO	$TBAT_CONSENSUS_LIBRARY_SPECTRUM_PEAK	consensus_library_spectrum_peak_id				
@@ -50,3 +51,4 @@ AT_protein_identification	Protein Identification	PeptideAtlas_infrastructure	NO	
 AT_protein_presence_level	Protein Presence Level	PeptideAtlas_infrastructure	YES	$TBAT_PROTEIN_PRESENCE_LEVEL	protein_presence_level_id		ManageTable.cgi?TABLE_NAME=AT_protein_presence_level
 AT_biosequence_relationship	Biosequence Relationship	PeptideAtlas_infrastructure	NO	$TBAT_BIOSEQUENCE_RELATIONSHIP	biosequence_relationship_id		
 AT_biosequence_relationship_type	Biosequence Relationship Type	PeptideAtlas_infrastructure	YES	$TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE	biosequence_relationship_type_id		ManageTable.cgi?TABLE_NAME=AT_biosequence_relationship_type
+AT_SearchProteins	Search Proteins	QUERY					SearchProteins
