@@ -1244,7 +1244,7 @@ sub launch_gp_pipeline {
 #-
 sub get_norm_method_select {
   my $select =  "<SELECT NAME=normalization_method>\n";
-  for my $k ( qw(RMA GC-RMA PLIER) ) {
+  for my $k ( qw(RMA GC-RMA Plier) ) {
     $select .= "<option value=$k>$k</option>\n";
   }
   $select .=  "</SELECT>\n";
