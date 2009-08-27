@@ -669,6 +669,14 @@ sub print_detailed_status {
     append_result_links(resultset_ref => $resultset_ref,
                        );
 
+    my $record_status_idx = $resultset_ref->{column_hash_ref}->{'Record_Status'};
+    my $record_status = $resultset_ref->{data_ref}->[0]->[$record_status_idx];
+    #### PRINT WARNING IF Record_Status is 'D' (This job references an old sample).
+    if ($record_status eq 'D') {
+      print "<span style=\"font-weight: bold\; font-size: 200%\">WARNING: This job references a sample file that has been updated.<br>".
+            "To use the most up to date information, please re-run a STP job for this sample.</span><br>";
+    }
+
     #### Set the column_titles to just the column_names
     @column_titles = @{$resultset_ref->{column_list_ref}};
 
@@ -685,7 +693,8 @@ sub print_detailed_status {
     $new_results{precisions_list_ref} = [50,50];
     $new_results{column_list_ref} = \@new_column_titles;
 
-      if (!$aref) {
+
+    if (!$aref) {
         $sbeams->handle_error(message => "Error with SQL Query retrieving job information.  Please contact administrator",
                               error_type => "SolexaTrans_error");
     }
@@ -699,6 +708,7 @@ sub print_detailed_status {
     for (my $i=0; $i < scalar (@$aref); $i++) {
 #    print $column_titles[$i]." val ".$aref->[$i]."<br>";
       my @info = ($column_titles[$i],$aref->[$i]);
+      next if $info[0] eq 'Record_Status';  # removes record_status from query result
       push(@{$new_results{data_ref}}, \@info);
     }
 
@@ -732,6 +742,7 @@ sub print_detailed_status {
   if (!$jobname) {
     $jobname = $new_results{data_ref}[0]->[1];
   }
+
   #### Display the resultset
   $sbeams->displayResultSet(resultset_ref=>\%new_results,
 			    url_cols_ref=>\%new_url_cols,
