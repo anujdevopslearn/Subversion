@@ -4,8 +4,10 @@ use strict;
 use DBI;
 use Getopt::Long;
 use File::Basename;
+use FindBin;
 
-use lib( '../../perl/' );
+
+use lib "$FindBin::Bin/../../perl";
 
 use SBEAMS::Connection;
 use SBEAMS::Connection::Tables;
@@ -67,8 +69,9 @@ $dbh->{RaiseError}++;
       $peptide->[5] = sprintf( "%0.2f", $peptide->[5] ) if $peptide->[5] !~ /na/;
       $peptide->[6] = sprintf( "%0.2f", $peptide->[6] ) if $peptide->[6] !~ /na/;
       $peptide->[7] = sprintf( "%0.2f", $peptide->[7] ) if $peptide->[7] !~ /na/;
-      $peptide->[15] = sprintf( "%0.2f", $peptide->[15] ) if $peptide->[15];
-      $peptide->[16] = sprintf( "%0.3f", $peptide->[16] );
+      $peptide->[15] ||= 'na';
+      $peptide->[16] = sprintf( "%0.2f", $peptide->[16] ) if $peptide->[16];
+      $peptide->[17] = sprintf( "%0.3f", $peptide->[17] );
       if ( $args->{tsv_file} ) {
         print TSV join( "\t", @{$peptide} ) . "\n";
       } else {
@@ -107,11 +110,12 @@ sub show_builds {
 }
 
 sub process_args {
-  my %args;
 
-  GetOptions( \%args, 'atlas_build=i', 'show_builds', 'help', 'tsv_file=s', 
+  my %args = ( atlas_build => [] );
+
+  GetOptions( \%args, 'atlas_build=s@', 'show_builds', 'help', 'tsv_file=s', 
               'protein_file=s', 'n_peptides=i', 'config=s', 'default_config', 
-              'bonus_obs=f', 'obs_min=i', 'verbose', 'name_prefix=s'
+              'bioseq_set=i', 'obs_min=i', 'verbose', 'name_prefix=s'
              ) || print_usage();
 
   print_usage() if $args{help};
@@ -126,11 +130,35 @@ sub process_args {
     }
     print_usage( $err ) if $err;
   }
-  for my $opt ( qw( n_peptides obs_min atlas_build ) ) {
+  for my $opt ( qw( n_peptides obs_min ) ) {
     if ( $args{$opt}  && $args{$opt} !~ /^\d+$/ ) {
       print_usage( "$opt must be an integer" );
     }
   }
+
+  # Atlas build option changed from single INT to string array - might have 
+  # appended weight in addition to id.
+  my @build_ids;
+  my @build_weights;
+  for my $build ( @{$args{atlas_build}} ) {
+    $build =~ /(\d+)\:*(\d*)/;
+    my $id = $1 || die( "can't parse build_id from $build" );
+    my $weight = $2 || 1;
+    push @build_ids, $id;
+    push @build_weights, $weight;
+  }
+  if ( !scalar( @build_ids ) ) {
+    print_usage( "missing required parameter atlas_build" );
+  }
+
+  $args{atlas_build} = \@build_ids;
+  $args{build_weights} = \@build_weights;
+
+  if ( !$args{bioseq_set} ) {
+    $args{bioseq_set} = $atlas->getBuildBiosequenceSetID( build_id => $build_ids[0] );
+    print "Bioseq set id is $args{bioseq_set} from $build_ids[0]\n";
+  }
+      
   if ( $args{config} ) {
     open CFG, $args{config} || print_usage( "Unable to open config file $args{config}");
     my %config_vals;
@@ -168,7 +196,11 @@ sub print_usage {
 
 usage: $sub -a build_id [ -t outfile -n obs_cutoff -p proteins_file -v -b .3 ]
 
-   -a, --atlas_build    Numeric atlas build ID to query 
+   -a, --atlas_build    one or more atlas builds to be queried for observed 
+                        peptides, will be used in order provided.  Can be 
+                        specified as a numeric id ( -a 123 -a 189 ) or as a composite
+                        id:weight ( -a 123:3 ).  Scores from EPS and ESS will 
+                        be multiplied by given weight, defaults to 1.
    -c, --config         Config file defining penalites for various sequence  
    -d, --default_config prints an example config file with defaults in CWD,
                         named best_peptide.conf, will not overwrite existing
@@ -176,8 +208,9 @@ usage: $sub -a build_id [ -t outfile -n obs_cutoff -p proteins_file -v -b .3 ]
    -p, --protein_file   file of protein names, one per line.  Should match 
                         biosequence.biosequence_name
    -s, --show_builds    Print info about builds in db 
-   -b, --bonus_obs      Value by which observed peptide suitability score is
-                        augmented relative to theoretical score, default 0.5.
+   -b, --bioseq_set     Explictly defined biosequence set.  If not provided, 
+                        the BSS defined by the first atlas_build specified will
+                        be used.
    -t, --tsv_file       print output to specified file rather than stdout
    -n, --n_peptides     number of peptides to return per protein
    -o, --obs_min        Minimum n_obs to consider for observed peptides
@@ -190,17 +223,19 @@ usage: $sub -a build_id [ -t outfile -n obs_cutoff -p proteins_file -v -b .3 ]
 
 sub get_observed_peptides {
   
-  my $build_where = "WHERE PI.atlas_build_id = $args->{atlas_build}";
+  my $builds = join( ',', @{$args->{atlas_build}} );
+
+  my $build_where = "WHERE PI.atlas_build_id IN ( $builds )";
   my $name_in = ( $args->{protein_file} ) ? get_protein_in_clause() : '';
   my $nobs_and = ( $args->{obs_min} ) ? "AND n_observations > $args->{obs_min}" : ''; 
   my $name_like = ( $args->{name_prefix} ) ? "AND biosequence_name like '$args->{name_prefix}%'" : ''; 
 
   # Short circuit with BestPeptideSelector object method!
-  return $pep_sel->get_pabst_observed_peptides(       atlas_build => $args->{atlas_build},
+  return $pep_sel->get_pabst_multibuild_observed_peptides(   atlas_build => $args->{atlas_build},
+                                                build_weights => $args->{build_weights}, 
                                                 protein_in_clause => $name_in, 
                                                   min_nobs_clause => $nobs_and, 
                                                         name_like => $name_like, 
-                                                        bonus_obs => $args->{bonus_obs},
                                                           verbose => $args->{verbose}
                                               );
 }
@@ -235,12 +270,12 @@ sub get_protein_in_clause {
 
 sub get_theoretical_peptides {
   
-  my $build_where = "WHERE AB.atlas_build_id = $args->{atlas_build}";
+  my $build_where = "WHERE B.biosequence_set_id = $args->{bioseq_set}";
   my $name_in = ( $args->{protein_file} ) ? get_protein_in_clause() : '';
 
   # Short circuit with BestPeptideSelector object method!
   return $pep_sel->get_pabst_theoretical_peptides( 
-                                            atlas_build => $args->{atlas_build},
+                                             bioseq_set => $args->{bioseq_set},
                                       protein_in_clause => $name_in, 
                                                 verbose => $args->{verbose}
                                                  );
@@ -366,7 +401,6 @@ sub get_observed_peptides {
   return $pep_sel->get_pabst_observed_peptides(       atlas_build => $args->{atlas_build},
                                                 protein_in_clause => $name_in, 
                                                   min_nobs_clause => $nobs_and, 
-                                                        bonus_obs => $args->{bonus_obs}  
                                               );
   my $obs_adjustment = 1;
 
