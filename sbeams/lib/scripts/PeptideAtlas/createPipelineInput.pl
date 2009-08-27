@@ -1639,12 +1639,12 @@ sub main {
     my @peps_not_found = keys %peps_not_found;
     if (scalar(@peps_not_found) > 0) {
       print "\nWARNING: No proteins will be stored in PAprotlist for the ";
-      print "following\ncombined PAidentlist peptides. ";
+      print "following\ncombined PAidentlist peptides, because they were ";
+      print "not found in the\nmaster protXML file. ";
       print "If few, and all contain L or I,\nthey are probably ";
       print "indistinguishable and the prots are stored\nunder their twins. ";
-      print "If many, then you probably didn't\nrefresh your ";
-      print "pepXML files to the bioseq set (before running ProtPro)\n";
-      print "and your PAprotlist will not be complete.\n";
+      print "Otherwise, there is a serious problem \n";
+      print "and your PAprotlist will be incomplete.\n";
       for my $pep (@peps_not_found) {
 	print "$pep\n";
       }
@@ -2318,6 +2318,7 @@ sub writePepIdentificationListFile {
     my $prob_cutoff;
     my $probability;
     my $last_probability = 1;;
+    my $last_protid = "";
     foreach my $identification ( @sorted_id_list ) {
       $counter++;
       $probability = $identification->[8];
@@ -2335,14 +2336,16 @@ sub writePepIdentificationListFile {
       # probability cutoff. See if we've gone past it.
       if ( defined $prob_cutoff ) {
         if ( $probability < $prob_cutoff ) {
-	  printf("Identification list truncated just before record #%d, prob %0.5f, ".
-              "protein %s, FDR %0.5f\n", $counter, $probability, $identification->[10], $fdr);
-	  # truncate the list before this entry
+	  printf("Identification list truncated just after record #%d,".
+                 " prob %0.10f, protein %s, FDR %0.10f\n",
+              $counter-1, $prob_cutoff, $last_protid, $fdr);
+	  # truncate the list after the previous entry
 	  $#sorted_id_list = $counter-1;
 	  last;
         }
       }
       $last_probability = $probability;
+      $last_protid = $identification->[10];
     }
   }
 
