@@ -150,8 +150,10 @@ sub main {
   if  ($parameters{output_mode} =~ /xml|tsv|excel|csv/){		#print out results sets in different formats
     print_output_mode_data(parameters_ref=>\%parameters);
   }else{
-    $sbeamsMOD->printPageHeader();
+    my $js = header_javascript();
+    $sbeamsMOD->printPageHeader(js => $js);
     print_javascript();
+    print_style();
     $sbeamsMOD->updateSampleCheckBoxButtons_javascript();
     handle_request(ref_parameters=>\%parameters);
     $sbeamsMOD->printPageFooter();
@@ -160,6 +162,19 @@ sub main {
 
 } # end main
 
+sub header_javascript {
+ my $js = qq~
+ <script type="text/javascript" src="http://www.google.com/jsapi"></script>
+ <script type="text/javascript">
+ google.load("prototype","1.6");
+ </script>
+ <script type="text/javascript">
+ google.load("scriptaculous", "1.8.2");
+ </script>
+ ~;
+
+ return $js;
+}
 
 ###############################################################################
 # print_javascript 
@@ -179,6 +194,21 @@ function confirmSubmit() {
     return true;
   else
     return false;
+}
+
+function checkTag(field, alerttext) {
+  with(field) {
+    var entry = field.value;
+    if (!(entry.match(/^[\\w\\.\\-]+\$/))) {
+      alert(alerttext);
+      return false;
+    }
+  }
+  return true;
+}
+
+function submitSampleForm() {
+  \$("SampleForm").submit();
 }
 
 function testFunc(){
@@ -203,9 +233,21 @@ var is_linux = (agt.indexOf("inux")!=-1);
 var is_unix  = ((agt.indexOf("x11")!=-1) || is_linux);
 
 //-->
-</SCRIPT>
+</script>
 ~;
 return 1;
+}
+
+sub print_style {
+  print qq~
+
+<style type="text/css">
+  #container {
+    border-top: 2px solid black;
+    width: 500px;
+  }
+</style>
+  ~;
 }
 
 ###############################################################################
@@ -238,10 +280,10 @@ sub handle_request {
   my (%array_requests, %array_scans, %quantitation_files);
 
   ## Need to add a MainForm in order to facilitate proper movement between projects.  Otherwise some cgi params that we don't want might come through.
-  print qq~ <FORM METHOD="post" NAME="MainForm" id="MainForm">
-       <INPUT TYPE="hidden" NAME="apply_action_hidden" VALUE="">
-       <INPUT TYPE="hidden" NAME="set_current_work_group" VALUE="">
-       <INPUT TYPE="hidden" NAME="set_current_project_id" VALUE="">
+  print qq~ <form method="post" name="MainForm" id="MainForm">
+       <input type="hidden" name="apply_action_hidden" value="">
+       <input type="hidden" name="set_current_work_group" value="">
+       <input type="hidden" name="set_current_project_id" value="">
   </form>
   ~;
 
@@ -461,7 +503,7 @@ sub print_sample_selection {
 		  <TR>
 		   <TD>
         <B>
-        This page shows the<FONT COLOR=RED> $n_solexa_samples </FONT> Solexa
+        This page shows the<font color=red> $n_solexa_samples </font> Solexa
         samples in this project that can be entered into the SolexaTrans Pipeline.
 	Click the checkboxes next to each sample to select that sample for the pipeline.
 	Then click 'RUN_PIPELINE' to go to the next step.
@@ -711,8 +753,8 @@ sub print_pipeline_form {
 
   my $TABLE_NAME = $parameters{'QUERY_NAME'};
   $TABLE_NAME="ST_JobParameters" unless ($TABLE_NAME);
-  ($PROGRAM_FILE_NAME) =
-    $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+  #($PROGRAM_FILE_NAME) =
+  #  $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
 
   #### Get the columns and input types for this table/query
   my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
@@ -743,7 +785,7 @@ sub print_pipeline_form {
 
     print qq(<table name="OUTER">\n);
     print "<tr><td>\n";
-    print qq( <FORM METHOD="post" ACTION="$PROGRAM_FILE_NAME" NAME="SamplesForm">\n);
+    print qq( <FORM METHOD="post" ACTION="$PROGRAM_FILE_NAME" NAME="SampleForm" ID="SampleForm">\n);
     foreach my $sample (sort {$a <=> $b} ( keys %unique_sample_ids)) {
 
       # get specific information about this sample from the SolexaTrans database
@@ -779,7 +821,7 @@ sub print_pipeline_form {
  #     my $analysis_id = $utilities->check_sbeams_duplicate_job("jobsummary" => \@job_summary_info);
 
       print "</tr>";
-      $sbeams->display_input_form(
+      $sbeamsMOD->display_input_form(
         TABLE_NAME=>$TABLE_NAME,CATEGORY=>$CATEGORY,apply_action=>$apply_action,
         PROGRAM_FILE_NAME=>$PROGRAM_FILE_NAME,
         parameters_ref=>\%form_params,
@@ -788,7 +830,7 @@ sub print_pipeline_form {
         mask_user_context=>1,
         mask_query_constraints=>1,
         mask_form_start=>1,
-        help_cookie=>1,
+        form_name => 'SampleForm'
       );
 
       # Need to add the select box to choose the SPR ID to run if there are multiples
@@ -804,7 +846,7 @@ sub print_pipeline_form {
                         </SPAN>
                       </TD>
                       <TD><SELECT NAME="spr_ids__$sample">
-                      <OPTION VALUE="all">Run STP on all versions of this sample with these parameters</OPTION>        
+                      <OPTION VALUE="all">Run STP on all versions of this sample with these parameters</OPTION>
               ~;
         for (my $i = 0; $i <= $#spr_info; $i++) {
           print qq~ <OPTION VALUE="$spr_info[$i][0]" ~;
@@ -821,11 +863,17 @@ sub print_pipeline_form {
   }
 	print   
                 $q->hidden(-name=>'step',-default=>3,-override=>2),
-                '<table style="border-top: 1px solid black; width:100%; margin: 0px; padding: 0px;"><tr><td>',
-		$q->submit(-name=>'Get_Data',
+                '<table style="border-top: 1px solid black; width:100%; margin: 0px; padding: 0px;"><tr><td>';
+
+
+		#$q->submit(-name=>'Get_Data',
 			#will need to change value if other data sets need to be run
-               	       	 -value=>'Run Pipeline');
-	
+               	 #      	 -value=>'Run Pipeline');
+
+        print qq~
+          <input type="submit" name="Get_Data" value="Run Pipeline">
+          ~;
+
 		
 	print $q->reset, "</td></tr></table></table>\n";
         foreach my $param (keys %parameters) {
@@ -838,7 +886,6 @@ sub print_pipeline_form {
 
 	print $q->endform;
 		
-
 }
 
 
@@ -1017,7 +1064,7 @@ sub start_pipeline_jobs {
       $log->error("Skipped $slimseq_sample_id $solexa_pipeline_results_id because it wasn't selected by user");
       next;
     }
-  
+
 #           Since we're taking the existance of the files on the word of the database, it'd be
 #            really good to check to see if the file does exist.
 #           The simple case doesn't work because the web server user doesn't have access to /solexa/*
@@ -1142,12 +1189,22 @@ END
     $sbeams->handle_error(message=>$ana_id) if $ana_id =~ /ERROR/;
 
     my $job_time = $utilities->get_sbeams_job_date_created(solexa_analysis_id => $ana_id);
-    if (!$job_time || $job_time == 0) {
+    if(!$job_time || $job_time == 0) {
      $log->warn("Time could not be retrieved for the date_created for job $ana_id");
      $job_time = strftime "%Y%m%d%H%M%S",localtime; # a timestamp of YearMonthDayHourMinuteSecond
     }
 
-    $pipeline_output_directory = $pipeline_output_directory.$job_time.'/';
+    if ($job_tag) {
+      if ($job_tag =~ /^[\w\.\-\_]+$/) {
+        $pipeline_output_directory = $pipeline_output_directory.$job_tag.'/';
+      } else {
+        print "Job tag not valid for file system name - using job time instead $job_time<br>\n";
+        $pipeline_output_directory = $pipeline_output_directory.$job_time.'/';
+      }
+    } else {
+      $pipeline_output_directory = $pipeline_output_directory.$job_time.'/';
+    }
+
     print "Writing to directory $pipeline_output_directory<br>\n";
     $output_dir_id = $utilities->check_sbeams_file_path(file_path => $pipeline_output_directory);
     if (!$output_dir_id) {
@@ -1212,6 +1269,7 @@ END
                                         script => $perl_script,
                                         email => $current_email
                                     );
+
     error($error) if $error;
 
     my $job = new Batch;
