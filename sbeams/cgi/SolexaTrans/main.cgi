@@ -1295,7 +1295,7 @@ sub create_job_select {
 
           # Create the View Params Link
           my $view_params;
-          if ($solexa_status eq 'completed') {
+          if ($status) {
             $view_params = "<div id=\"".$slimseq_sample_id."__params\"><a href=Status.cgi?jobname=$jobname>View Params</a></div>";
           }
           push @$row_aref, $view_params;
