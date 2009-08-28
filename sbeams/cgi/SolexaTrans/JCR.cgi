@@ -129,7 +129,7 @@ sub print_javascript {
     my $uri = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/";
 
 print qq~
-<SCRIPT LANGUAGE="Javascript">
+<script type="text/javascript">
 <!--
 <!-- $uri -->
 function testFunc(){
