@@ -7,6 +7,7 @@
 #
 # Description : This script reads a peptide list created by
 #               createPipelineInput.pl and calculates false positive rates
+#               and a bunch of other stuff.
 #
 # SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
@@ -43,8 +44,7 @@ Options:
                       but we just go through all the motions.  Use --verbose
                       to see all the SQL statements that would occur
 
-  --source_file       Input 4-column tsv filename with columns:
-                      search_batch_id sequence probability protein_name
+  --source_file       Input PAidentlist tsv file with at least 11 columns.
   --P_threshold       Use this threshold for processing instead of
                       using all peptides in the input file
   --search_batch_id   If set, only process this search_batch_id and
@@ -125,11 +125,10 @@ sub main {
   my %all_peptides;
 
   ##### Skip header
-  #my $line = <INFILE>;
-  #my @header_columns = split(/\t/,$line);
+  my $line = <INFILE>;
+  my @header_columns = split(/\t/,$line);
   #$probcol = 2;
   #$probcol = 4 if ($header_columns[4] eq 'probability');
-  my $line;
   $seqcol = 0;
   my $origseqcol = 3;
   $probcol = 1;
@@ -158,7 +157,7 @@ sub main {
       @columns = (-998899,'xx',-1,'zz');
     }
 
-    #### If the this search_batch_id is not, known, learn from first record
+    #### If the this search_batch_id is not known, learn from first record
     $n_spectra++;
     unless ($this_search_batch_id) {
       $this_search_batch_id = $columns[0];
@@ -359,7 +358,11 @@ sub main {
     print OUTFILE2 "-------------------- ---- --------- --------- --------- --------- --------- ------\n";
 
 
-  #### Calculate the number of distinct peptides as a function of exp
+  #### Calculate the number of distinct peptides as a function of exp.
+  #### 08/28/09 TMF: count total and multiply observed.
+  ####   Display total (before today, displayed multiply observed)
+  ####   consistent with new build pipeline where FDR threshold
+  ####   lets through only trustable, high prob singletons.
   my $niter = 1;
 
   for (my $iter=0; $iter<$niter; $iter++) {
@@ -370,32 +373,41 @@ sub main {
       @shuffled_search_batch_ids = @{$result};
     }
 
-    my %total_distinct_peptides;
-    my $p_cum_n_new = 0;
+    my %total_distinct_peptides_multobs;
+    my %total_distinct_peptides_all;
+    my $p_cum_n_new_multobs = 0;
+    my $p_cum_n_new_all = 0;
     my $cum_nspec = 0;
 
     foreach my $search_batch_id ( @shuffled_search_batch_ids ) {
       my $peptide_list = $all_peptides{$search_batch_id};
-      my %batch_distinct_peptides;
+      my %batch_distinct_peptides_multobs;
+      my %batch_distinct_peptides_all;
       foreach my $peptide ( @{$peptide_list} ) {
+	$batch_distinct_peptides_all{$peptide->[$seqcol]}++;
+	$total_distinct_peptides_all{$peptide->[$seqcol]}++;
 	if ($distinct_peptides{$peptide->[$seqcol]}->{count} > 1) {
-	  $total_distinct_peptides{$peptide->[$seqcol]}++;
-	  $batch_distinct_peptides{$peptide->[$seqcol]}++;
+	  $batch_distinct_peptides_multobs{$peptide->[$seqcol]}++;
+	  $total_distinct_peptides_multobs{$peptide->[$seqcol]}++;
 	}
       }
       my $n_goodspec = scalar(@{$peptide_list});
       $cum_nspec += $n_goodspec;
-      my $n_peptides = scalar(keys(%batch_distinct_peptides));
-      my $cum_n_new = scalar(keys(%total_distinct_peptides));
-      my $n_new_pep = $cum_n_new - $p_cum_n_new;
+      my $n_peptides_multobs = scalar(keys(%batch_distinct_peptides_multobs));
+      my $cum_n_new_multobs = scalar(keys(%total_distinct_peptides_multobs));
+      my $n_new_pep_multobs = $cum_n_new_multobs - $p_cum_n_new_multobs;
+      my $n_peptides_all = scalar(keys(%batch_distinct_peptides_all));
+      my $cum_n_new_all = scalar(keys(%total_distinct_peptides_all));
+      my $n_new_pep_all = $cum_n_new_all - $p_cum_n_new_all;
 
       printf OUTFILE2 "%20s %4.0f %9.0f %9.0f %9.0f %9.0f %9.0f %6s\n",
 	      'xx', $search_batch_id,$n_goodspec ,
-	      $n_peptides, $n_new_pep,
-	      $cum_nspec, $cum_n_new, 'N',
+	      $n_peptides_all, $n_new_pep_all,
+	      $cum_nspec, $cum_n_new_all, 'N',
 	     ;
 
-      $p_cum_n_new = $cum_n_new;
+      $p_cum_n_new_multobs = $cum_n_new_multobs;
+      $p_cum_n_new_all = $cum_n_new_all;
     }
   }
 
