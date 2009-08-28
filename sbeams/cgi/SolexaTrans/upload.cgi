@@ -539,11 +539,16 @@ print Dumper(\%parameters);
       print "script $job_dir/$jobname.sh<br>";
       $job->script("$job_dir/$jobname.sh");
       $job->name($jobname);
-      $job->group($group_name);
+#      $job->group($group_name);
       $job->out("$job_dir/$jobname.out");
       $job->queue("dev");
       $job->mem("10kb");
-      $job->submit || error("Couldn't start a job for $jobname");
+      eval {
+      $job->submit;
+      };
+      if ($@) {
+       error("Couldn't start a job for $jobname - $@");
+      }
       open (ID, ">$job_dir/upload_id") ||
         error("Couldn't write out an id for $jobname in $job_dir/upload_id");
       print ID $job->id;
