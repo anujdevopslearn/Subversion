@@ -80,8 +80,14 @@ sub canceljob {
     my $jobname = $cgi->param('jobname') || error("No Job supplied");
     $jobname =~ s/^\s|\s$//g;
 
-    grep(/stp-ssid[0-9]{1,6}-[a-zA-Z0-9]{8}/, $jobname) ||
-	error("Invalid job name");
+    my $valid =0;
+    if (grep(/stp-ssid[0-9]{1,6}-[a-zA-Z0-9]{8}/, $jobname)) {
+      $valid = 1;
+    } elsif (grep(/stp-ssid[0-9]{1,6}-sprid[0-9]{1,6}-[a-zA-Z0-9]{8}/,$jobname)) {
+      $valid = 1;
+    } else {
+              die("Invalid job name - $jobname");
+    }
 	
     my $analysis_id = $utilities->check_sbeams_job('jobname' => $jobname);
     error("Could not find a job with that name in SolexaTrans") unless $analysis_id;
@@ -89,8 +95,10 @@ sub canceljob {
     my $status = $status_ref->[0];
     my $status_time = $status_ref->[1];
     if ($status ne 'QUEUED' && $status ne 'RUNNING') {
-      if ($status eq 'CANCELED' || $status eq 'PROCESSED') {
+      if ($status eq 'CANCELED') {
         result("Job has already been canceled (Canceled at $status_time).");
+      } elsif ($status eq 'PROCESSED') {
+        result("Job has finished processing (Updated at $status_time).");
       } else {
         my $ctime = `date +'%Y-%m-%d'`;
         my ($cyear, $cmonth, $cday) = split(/-/, $ctime);
