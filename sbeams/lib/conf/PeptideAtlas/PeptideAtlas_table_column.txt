@@ -293,6 +293,7 @@ AT_search_key	7	resource_name	Resource Name	varchar	255	0	N		N
 AT_search_key	8	resource_type	Resource Type	varchar	50	0	N		N												
 AT_search_key	9	resource_url	Resource URL	varchar	255	0	N		N												
 AT_search_key	10	resource_n_matches	Resource N Matches	int	4	0	Y		N												
+AT_search_key	11	protein_alias_master	Protein Alias Master	varchar	255	0	N		N																
 AT_query_option	1	query_option_id	Query Option ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_query_option	2	option_type	Option Type	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Type or category of this option		
 AT_query_option	3	option_key	Option Key	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Key for this key/value pair option		
