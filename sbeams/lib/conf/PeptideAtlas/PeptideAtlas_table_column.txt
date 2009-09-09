@@ -3,7 +3,7 @@ AT_atlas_build	1	atlas_build_id	Atlas Build ID	int	4	0	N		Y							N	N				pkDEFAU
 AT_atlas_build	2	project_id	Owner Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
 AT_atlas_build	3	atlas_build_name	Atlas Build Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Title of this PeptideAtlas build		
 AT_atlas_build	4	biosequence_set_id	Biosequence Set	int	4	0	N		N	AT_biosequence_set	biosequence_set_id	Y	optionlist			Y	Y	N	Biosequence set against which this peptide atlas was built	"SELECT biosequence_set_id,set_name FROM $TBAT_BIOSEQUENCE_SET ORDER BY sort_order,set_name"	
-AT_atlas_build	5	probability_threshold	Probability Threshold	real	4	0	Y		N			Y	text	10		Y	Y	N	Minimum probability threshold used for build		
+AT_atlas_build	5	probability_threshold	Probability Threshold	real	4	0	Y		N			Y	text	10		Y	Y	N	Minimum probability threshold used for build (pre-2009 builds)		
 AT_atlas_build	6	APD_id	APD ID	int	4	0	Y		N			Y	text	10		Y	Y	N	The peptide_summary_id of the APD		
 AT_atlas_build	7	data_path	Data Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	Path to the data relative to base directory		
 AT_atlas_build	8	build_date	Build Date	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y	text	20		Y	Y	N	Date that this PeptideAtlas build was started		
@@ -15,6 +15,7 @@ AT_atlas_build	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIME
 AT_atlas_build	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 AT_atlas_build	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 AT_atlas_build	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_atlas_build	17	protpro_PSM_FDR_per_expt	PSM FDR Cutoff Applied Per Experiment	real	4	0	Y		N			Y	text	10		Y	Y	N	PSM FDR threshold used for build		
 AT_default_atlas_build	1	default_atlas_build_id	Default Atlas Build ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_default_atlas_build	2	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	Y	Organism for which this default applies.  Leave empty for overall default	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 AT_default_atlas_build	3	organism_specialized_build	Organism Specialized Build	varchar	50	0	Y		N			N	text	40		Y	Y	Y	"If not NULL, a specialized build within this organism, e.g. Human Plasma"		
