@@ -456,7 +456,7 @@ sub get_build_overview {
 
   my $build_info = $sbeams->selectrow_hashref( <<"  BUILD" );
   SELECT atlas_build_name, probability_threshold, atlas_build_description, 
-  build_date, set_name
+  build_date, set_name, protpro_PSM_FDR_per_expt
   FROM $TBAT_ATLAS_BUILD AB JOIN $TBAT_BIOSEQUENCE_SET BS 
   ON AB.biosequence_set_id = BS.biosequence_set_id
   WHERE atlas_build_id = $build_id 
@@ -512,6 +512,18 @@ sub get_build_overview {
 #  $table .= $atlas->encodeSectionItem( key   => 'Deltas ', tr_info => $tr,
 #                                          value => "$deltacnt ( $deltaobs )" ) . "\n";
 
+  if ($build_info->{protpro_PSM_FDR_per_expt} == 0) {
+    $build_info->{protpro_PSM_FDR_per_expt} = "N/A";
+  } else {
+    $build_info->{protpro_PSM_FDR_per_expt} = sprintf( "%0.7f", $build_info->{protpro_PSM_FDR_per_expt} );
+    $build_info->{protpro_PSM_FDR_per_expt} =~ s/ /&nbsp;/g;
+  }
+  if ($build_info->{probability_threshold} == 0) {
+    $build_info->{probability_threshold} = "N/A";
+  } else {
+    $build_info->{probability_threshold} = sprintf( "%0.4f", $build_info->{probability_threshold} );
+    $build_info->{probability_threshold} =~ s/ /&nbsp;/g;
+  }
 
   $table .= $atlas->encodeSectionItem( key   => 'Build Name', tr_info => $tr,
                             value => $build_info->{atlas_build_name} . $spc, vspan => 3 ) . "\n";
@@ -523,6 +535,10 @@ sub get_build_overview {
                             value => $build_info->{build_date} ) . "\n";
   $table .= $atlas->encodeSectionItem( key   => '# Samples', tr_info => $tr,
                             value => $smpl_count->{cnt}, align => 'right' ) . "\n";
+  $table .= $atlas->encodeSectionItem( key   => 'PSM FDR threshold<br>(applied to each experiment)', tr_info => $tr,
+                            value => $build_info->{protpro_PSM_FDR_per_expt}, align => 'right' ) . "\n";
+  $table .= $atlas->encodeSectionItem( key   => 'Probability threshold', tr_info => $tr,
+                            value => $build_info->{probability_threshold}, align => 'right' ) . "\n";
   $table .= $atlas->encodeSectionItem( key   => 'Distinct Peptides', tr_info => $tr,
                                           #value => "$multi_pep_count->{cnt} ( $pep_count->{cnt}* )" ) . "\n";
                                           value => "$pep_count->{cnt}" ) . "\n";
