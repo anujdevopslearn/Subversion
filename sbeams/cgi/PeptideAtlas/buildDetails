@@ -248,31 +248,49 @@ sub get_build_plots {
       link => $link
   );
 
+  # Eric Deutsch's GIF experiment contribution plot
+  my $cp_img_path = "$PHYSICAL_BASE_DIR/images/tmp";
+  my $img_path = "$HTML_BASE_DIR/images/tmp";
+  my $build_path = get_build_path( build_id => $build_id );
+  my $gif_filename;
+  my $caption;
+  # See whether we have a plot describing all peptides (Sept. 2009 +)
+  # or a plot describing only multiply observed peptides.
+  if ( -e "$build_path/analysis/ncumpep_vs_nspec.gif" ) {
+    $gif_filename = "ncumpep_vs_nspec.gif";
+    $caption = "Plot showing the cumulative number of observed peptides contributed by each sample.  Height of bar is cumulative number of peptides, blue color is number of peptides above threshold, width of the bar (x-axis) shows the number of spectra identified above the threshold, for each sample.";
+  } elsif ( -e "$build_path/analysis/ncumpep_vs_nspec-multobs.gif" ) {
+    $gif_filename = "ncumpep_vs_nspec-multobs.gif";
+    $caption = "Plot showing the cumulative number of multiply observed peptides contributed by each sample.  Height of bar is cumulative number of n_obs > 1 peptides, blue color is number of n_obs > 1 peptides above threshold, width of the bar (x-axis) shows the number of spectra identified above the threshold, for each sample.";
+  }
+  if ( defined $gif_filename ) {
+
+    my $build_image_rows = "";
+    my $build_image_rows =<<"    END";
+    <TR $tr><TD class=plot_caption>$caption</TD></TR>
+    <TR $tr><TD><IMG WIDTH=800 SRC=$img_path/${build_id}_$gif_filename></IMG></TD></TR> 
+    END
+
+    if ( -e "$build_path/analysis/$gif_filename" ) {
+      system "cp  $build_path/analysis/$gif_filename $cp_img_path/${build_id}_$gif_filename";
+    }
+    if ( -e "$cp_img_path/${build_id}_$gif_filename" ) {
+      $table .= $build_image_rows;
+    } 
+  }
+
+  #Dave Campbell's dynamically drawn experiment contribution plot?
 #		<DIV ALIGN=center><H3>Experiment Contribution Plot</H3></DIV>
 #  <TR $tr><TD><IMG SRC=buildPlot?atlas_build_id=$build_id></IMG></TD></TR>
 #    $chart_div
   $table .=<<"  END";
   <TR $tr><TD>&nbsp;</TD></TR>
-  <TR $tr><TD class=plot_caption>Plot showing the number of distinct (n_obs > 1) peptides contributed by each sample, and the cumulative number of distinct (n_obs > 1) peptides for the build as of that sample.</TD></TR>
+  <TR $tr><TD class=plot_caption>Plot showing the number of distinct <i>multiply observed</i> (n_obs > 1) peptides contributed by each sample, and the cumulative number of distinct multiply-observed peptides for the build as of that sample.</TD></TR>
   <TR $tr><TD>&nbsp;</TD></TR>
   <TR $tr><TD>$chart_div</TD></TR>
   <TR $tr><TD>&nbsp;</TD></TR>
   END
    
-  my $cp_img_path = "$PHYSICAL_BASE_DIR/images/tmp";
-  my $img_path = "$HTML_BASE_DIR/images/tmp";
-  my $build_path = get_build_path( build_id => $build_id );
-  my $build_image_rows =<<"  END";
-  <TR $tr><TD class=plot_caption>Plot showing the cumulative number of multiply observed peptides contributed by each sample.  Height of bar is cumulative number of n_obs > 1 peptides, blue color is number of n_obs > 1 peptides above threshold, width of the bar (x-axis) shows the number of spectra identified above the threshold, for each sample</TD></TR>
-  <TR $tr><TD><IMG WIDTH=800 SRC=$img_path/${build_id}_ncumpep_vs_nspec-multobs.gif></IMG></TD></TR> 
-  END
-	if ( -e "$build_path/analysis/ncumpep_vs_nspec-multobs.gif" ) {
-    system "cp  $build_path/analysis/ncumpep_vs_nspec-multobs.gif $cp_img_path/${build_id}_ncumpep_vs_nspec-multobs.gif";
-  }
-
-  if ( -e "$cp_img_path/${build_id}_ncumpep_vs_nspec-multobs.gif" ) {
-    $table .= $build_image_rows;
-  } 
 
   $table .= "\n</TABLE>\n";
 	
