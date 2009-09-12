@@ -1685,6 +1685,7 @@ sub main {
 
       my $nproteins = scalar(@protein_list);
       my $highest_prob = -1.0;
+      my $highest_nobs = -1;
       my $highest_prob_prot;
 
       # If any proteins in this group will be in atlas ...
@@ -1707,13 +1708,14 @@ sub main {
 
 	# A subset of the atlas proteins in a group is canonical,
         # defined as such:
-	# - subset includes prot of highest prob
+	# - subset includes prot of highest prob. (PSM count is
+	#     tie-breaker.)
 	# - all members of subset are independent of each other
 	# - each non-member of the subset is non-independent of at
 	#    least one member of the subset.
 	# Find this subset
 
-	# first, find the highest prob protein
+	# first, find the highest prob / PSM count protein
 	foreach my $protein (@protein_list) {
 	  my $prot_href = $proteins_href->{$protein};
 	  #print " $protein ";
@@ -1726,9 +1728,13 @@ sub main {
 	    #print "NO. ";
 	  }
 	  my $this_prob = $prot_href->{probability};
-	  if ($this_prob > $highest_prob) {
+	  my $this_nobs = $prot_href->{total_number_peptides};
+	  if (($this_prob > $highest_prob) ||
+              (($this_prob == $highest_prob) &&
+               ($this_nobs > $highest_nobs))) {
 	    $highest_prob_prot = $protein;
 	    $highest_prob = $this_prob;
+            $highest_nobs = $this_nobs;
 	  }
 	}
 	#print "\n";
