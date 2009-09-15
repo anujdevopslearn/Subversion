@@ -696,7 +696,7 @@ sub encodeSectionTable {
     if ( $args{sortable} ) {
       $tab->setRowAttr( ROWS => [1], BGCOLOR => '#0000A0' ); 
     } else {
-      $tab->setRowAttr( ROWS => [1], BGCOLOR => '#FF9CFE');
+      $tab->setRowAttr( ROWS => [1], BGCOLOR => '#7C7C7C');
     }
     $tab->setRowAttr( ROWS => [1], ALIGN => 'CENTER' ,  CLASS => 'sortheader') unless $args{nocenter};
   }
