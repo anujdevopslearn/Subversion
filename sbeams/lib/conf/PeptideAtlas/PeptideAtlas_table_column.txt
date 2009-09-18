@@ -625,6 +625,7 @@ AT_protein_identification	8	confidence	Confidence	real	4	0	Y		N										States 
 AT_protein_identification	9	subsumed_by_biosequence_id	Subsumed By	int	4	0	N		N	AT_biosequence	biosequence_id								One protein that subsumes this biosequence		
 AT_protein_identification	10	n_observations	N Obs	int	4	0	N		N										Number of identified spectra	
 AT_protein_identification	11	n_distinct_peptides	N Distinct Peptides	int	4	0	N		N										Number of sequence-distinct peptides	
+AT_protein_identification	12	estimated_ng_per_ml	Estimated ng/ml	real	4	0	Y		N										Abundance in ng/ml as estimated from number of observations
 AT_biosequence_relationship	1	biosequence_relationship_id	Biosequence Relationship ID	int	4	0	N		Y												pkDEFAULT
 AT_biosequence_relationship	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id								Atlas build ID which this protein belongs to		
 AT_biosequence_relationship	3	protein_group_number	Protein Group ID	int	4	0	N		N										Protein group number from ProteinProphet		
