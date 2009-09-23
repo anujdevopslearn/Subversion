@@ -65,6 +65,9 @@
 #     ->{n_instances}
 #     ->{indistinguishable_peptides}
 #       ->{$peptide_sequence}         set to 1 for each indistinguishable seq
+#     ->{weight}
+#     ->{apportioned_observations}             computed from others
+#     ->{expected_apportioned_observations}   computed from others
 # 
 #   ->{protein_group_number}          info stored permanently in (b)
 #   ->{protein_group_probability}
@@ -79,10 +82,11 @@
 #   ->{groupcache}                    protXML start/end element (group);
 #     ->{proteins}                             info stored permanently in (a)
 #       ->{$protein_name}
-# 	->{probability}
-# 	->{confidence}
-# 	->{unique_stripped_peptides}
-# 	->{subsuming_protein_entry}
+# 	    ->{probability}
+# 	    ->{confidence}
+# 	    ->{unique_stripped_peptides}
+# 	    ->{subsuming_protein_entry}
+#           ->{apportioned_PSM_count}
 # 
 # 
 # Persistant containers
@@ -123,6 +127,7 @@
 # 	  ->{unique_stripped_peptides}
 #         ->{subsuming_protein_entry}
 #         ->{presence_level}
+#         ->{apportioned_PSM_count}
 # 
 #   ->{ProteinProphet_prot_data}      used to determine prot ident list
 #     ->{group_hash}
@@ -196,6 +201,8 @@ Options:
   --output_file       Filename to which to write the peptides
   --master_ProteinProphet_file       Filename for a master ProteinProphet
                       run that should be used instead of individual ones.
+  --slope_for_abundance   Slope for protein abundance calculation
+  --yint_for_abundance    Y-intercept for protein abundance calculation
   --per_expt_pipeline Adjust probabilities according to individual
                       protXMLs; use master for prot ID assignment only
   --biosequence_set_id   Database id of the biosequence_set from which to
@@ -229,7 +236,8 @@ unless ($ARGV[0]){
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
   "validate=s","namespaces","schemas",
   "source_file:s","search_batch_ids:s","P_threshold:f","FDR_threshold:f",
-  "output_file:s","master_ProteinProphet_file:s","per_expt_pipeline",
+  "output_file:s","master_ProteinProphet_file:s",
+  "slope_for_abundance:f","yint_for_abundance:f","per_expt_pipeline",
   "biosequence_set_id:s", "best_probs_from_protxml", "min_indep:f",
   "APD_only", "protlist_only", "splib_filter",
   )) {
@@ -257,7 +265,7 @@ my $PEP_PROB_CUTOFF = 0.5;
 my $source_file = $OPTIONS{source_file} || '';
 my $APDTsvFileName = $OPTIONS{output_file} || '';
 my $search_batch_ids = $OPTIONS{search_batch_ids} || '';
-my $bssid = $OPTIONS{biosequence_set_id} || "10" ; #yeast
+my $bssid = $OPTIONS{biosequence_set_id} || "10" ; #yeast is default
 my $APD_only = $OPTIONS{APD_only} || 0;
 my $protlist_only = $OPTIONS{protlist_only} || 0;
 my $validate = $OPTIONS{validate} || 'never';
@@ -267,11 +275,12 @@ my $best_probs_from_protxml = $OPTIONS{best_probs_from_protxml} || 0;
 my $splib_filter = $OPTIONS{splib_filter} || 0;
 
 
-#### Fetch the biosequence data for writing into APD file.
-unless ($protlist_only) {
+#### Fetch the biosequence data for writing into APD file
+####  and for estimating protein abundances.
+if ( defined $bssid ) {
   my $sql = qq~
      SELECT biosequence_id,biosequence_name,biosequence_gene_name,
-	    biosequence_accession,biosequence_desc
+            biosequence_accession,biosequence_desc,biosequence_seq
        FROM $TBAT_BIOSEQUENCE
       WHERE biosequence_set_id = $bssid
   ~;
@@ -281,13 +290,16 @@ unless ($protlist_only) {
   foreach my $row (@rows) {
     # Hash each biosequence_id to its row
     $biosequence_attributes{$row->[1]} = $row;
-    my $biosequence_id = $row->[2];
+    #print "$row->[1]\n";
   }
   print "  Loaded ".scalar(@rows)." biosequences.\n";
 
   #### Just in case the table is empty, put in a bogus hash entry
   #### to prevent triggering a reload attempt
   $biosequence_attributes{' '} = ' ';
+} else {
+  print "WARNING: no biosequence_set provided; gene info won't be
+written to APD file and protein abundances will not be estimated.\n";
 }
 
 
@@ -537,6 +549,8 @@ sub protXML_start_element {
     $self->{protcache}->{confidence} = $attrs{confidence};
     $self->{protcache}->{subsuming_protein_entry} =
                 $attrs{subsuming_protein_entry};
+    # initialize cumulative count of PSMs from participating peptides
+    $self->{protcache}->{apportioned_PSM_count} = 0;
   }
 
 
@@ -579,9 +593,19 @@ sub protXML_start_element {
     $self->{pepcache}->{nsp_adjusted_probability} = $attrs{nsp_adjusted_probability};
     $self->{pepcache}->{n_sibling_peptides} = $attrs{n_sibling_peptides};
     $self->{pepcache}->{n_instances} = $attrs{n_instances};
+    $self->{pepcache}->{weight} = $attrs{weight};
+
+    ### Compute a couple secondary attributes
+    $self->{pepcache}->{apportioned_observations} =
+          $attrs{weight} * $attrs{n_instances};
+    $self->{pepcache}->{expected_apportioned_observations} =
+          $self->{pepcache}->{apportioned_observations} *
+          $attrs{nsp_adjusted_probability};
+      
 
     #### At this point we have all the info on the current protein and its
     #### indistinguishables, so process that if we haven't already.
+    #### (remind me again why we don't do this in end_element?)
     unless (defined $self->{protcache}->{indistinguishables_processed}) { 
       # If there are any indistinguishables, see if they include a protID
       # that is more preferred than $self->{protein_name}.
@@ -810,9 +834,9 @@ sub protXML_end_element {
        }
     }
 
-    #### Add current protein to global list of proteins this pep maps to
-    ####  (this list does not include indistinguishables)
     if ( $store_info_for_presence_level) {
+      #### add current protein to global list of proteins this pep maps to
+      ####  (this list does not include indistinguishables)
       my $this_protein = $self->{protein_name};
       if (! defined $self->{ProteinProphet_prot_data}->{pep_prot_hash}->
 	       {$peptide_sequence}) {
@@ -822,23 +846,27 @@ sub protXML_end_element {
 	push(@{$self->{ProteinProphet_prot_data}->{pep_prot_hash}->
 	       {$peptide_sequence}}, $this_protein);
       }
+      #### add this peptide's expected_apportioned_observations
+      #### to apportioned_PSM_count for this protein
+      $self->{protcache}->{apportioned_PSM_count}
+          += $self->{pepcache}->{expected_apportioned_observations};
     }
 
-    #### Clear out the peptide cache
+    #### clear out the peptide cache
     delete($self->{pepcache});
 
-    #### Increase the counters and print some progress info
-    $self->{Protcounter}++;
-    print "." if ($self->{Protcounter} % 100 == 0);
+    #### increase the counters and print some progress info
+    $self->{protcounter}++;
+    print "." if ($self->{protcounter} % 100 == 0);
   }
 
-  #### If this is a protein, then store its info in its group
+  #### if this is a protein, then store its info in its group
   if ($localname eq 'protein') {
     if ($store_info_for_presence_level) {
 
       my $protein_name = $self->{protein_name};
 
-      # Store the (non-preferred) indistinguishable proteins,
+      # store the (non-preferred) indistinguishable proteins,
       #  unique stripped peptides, probability, confidence, and
       #  subsuming protein entry in the group cache, in a hash
       # keyed by the preferred protein.
@@ -855,7 +883,10 @@ sub protXML_end_element {
              = $self->{protcache}->{total_number_peptides};
       $self->{groupcache}->{proteins}->{$protein_name}->
 	                                   {subsuming_protein_entry} =
-             $self->{protcache}-> {subsuming_protein_entry};
+             $self->{protcache}->{subsuming_protein_entry};
+      $self->{groupcache}->{proteins}->{$protein_name}->
+                                           {apportioned_PSM_count} =
+             $self->{protcache}->{apportioned_PSM_count};
 
       # Store the group number for this protein in a persistent hash.
       $self->{ProteinProphet_prot_data}->{group_hash}->{$protein_name} =
@@ -1643,7 +1674,8 @@ sub main {
       print "not found in the\nmaster protXML file. ";
       print "If few, and all contain L or I,\nthey are probably ";
       print "indistinguishable and the prots are stored\nunder their twins. ";
-      print "Otherwise, there is a serious problem \n";
+      print "Otherwise, probably your master protXML was created from\n";
+      print "different pepXML files than your PAidentlist was,\n";
       print "and your PAprotlist will be incomplete.\n";
       for my $pep (@peps_not_found) {
 	print "$pep\n";
@@ -1728,7 +1760,8 @@ sub main {
 	    #print "NO. ";
 	  }
 	  my $this_prob = $prot_href->{probability};
-	  my $this_nobs = $prot_href->{total_number_peptides};
+	 # my $this_nobs = $prot_href->{total_number_peptides};
+	  my $this_nobs = $prot_href->{apportioned_PSM_count};
 	  if (($this_prob > $highest_prob) ||
               (($this_prob == $highest_prob) &&
                ($this_nobs > $highest_nobs))) {
@@ -1899,8 +1932,8 @@ sub main {
             remove_string_from_array($highest_prob_prot,
                                      \@prots_with_same_peps);
               
-	    # None of the others should be canonical. If it is, error.
-            # Else, label them ntt-subsumed and remove from
+	    # None of the others should be canonical. (If it is, # warn.)
+            # Label them ntt-subsumed and remove from
             # possibly_distinguished hash.
             for my $protein3 (@prots_with_same_peps) {
 	      my $prot_href = $proteins_href->{$protein3};
@@ -1909,6 +1942,11 @@ sub main {
               }
 	      $prot_href->{presence_level} = "ntt-subsumed";
 	      $prot_href->{subsumed_by} = $highest_prob_prot;
+              # Give the protein counts for the ntt-subsumed protein
+              # to its subsumed_by protein.
+              $proteins_href->{$highest_prob_prot}->{apportioned_PSM_count}
+                += $prot_href->{apportioned_PSM_count};
+              $prot_href->{apportioned_PSM_count} = 0;
 	      undef $possibly_dist_hash{$protein3};
             }
           }
@@ -2414,9 +2452,20 @@ sub writeProtIdentificationListFile {
   print "Opening output file $output_file.\n";
 
   # Write header line
-    print OUTFILE "protein_group_number,biosequence_names,probability,confidence,n_observations,n_distinct_peptides,level_name,represented_by_biosequence_name,subsumed_by_biosequence_names\n";
+    print OUTFILE
+"protein_group_number,biosequence_names,probability,confidence,n_observations,n_distinct_peptides,level_name,represented_by_biosequence_name,subsumed_by_biosequence_names,estimated_ng_per_ml,abundance_uncertainty\n";
 
   # For each protein in the atlas
+
+  my $abundance_conversion_slope = $OPTIONS{slope_for_abundance};
+  my $abundance_conversion_yint = $OPTIONS{yint_for_abundance};
+  my $calculate_abundances = 0;
+  if ( defined $abundance_conversion_slope &&
+       defined $abundance_conversion_yint ) {
+    $calculate_abundances = 1;
+  } else {
+    print "Slope and/or y-intercept for protein abundance calculation not provided; protein abundances will not be calculated.\n";
+  }
   my $group_num;
   for my $prot_name (keys %{$ProteinProphet_prot_data->{atlas_prot_list}}) {
     # ... look up its group number in ProteinProphet_prot_data.
@@ -2433,13 +2482,82 @@ sub writeProtIdentificationListFile {
       print OUTFILE " $indis";
     }
     my $n_distinct_peptides = scalar(@{$prot_href->{unique_stripped_peptides}});
+    my $apportioned_PSM_count = $prot_href->{apportioned_PSM_count};
+    my $formatted_apportioned_PSM_count =
+         sprintf( "%0.1f", $apportioned_PSM_count);
+    my $biosequence_attributes =
+        getBiosequenceAttributes(biosequence_name => $prot_name);
+
+    ### Abundance estimation
+    
+    my $formatted_estimated_abundance;
+    my $abundance_uncertainty;
+    if ( $calculate_abundances ) {
+      my $estimated_abundance;
+      if ( ! defined $biosequence_attributes ) {
+	#print "No biosequence_attributes for $prot_name.\n";
+	$formatted_estimated_abundance = "";
+	$abundance_uncertainty = "";
+      } else {
+	### Small problem: molecular weights of indistinguishables are
+	### sometimes quite different. Not correct to use MW of first prot
+	### in list.
+	my $sequence = $biosequence_attributes->[5];
+	### Schulz/Schirmer in table 1-1 say 108.7 is the weighted mean aa wt.
+	### A bit kludgey, but this whole abundance estimation is kludgey.
+	my $protMW = length($sequence) * 108.7;
+	### If we couldn't get the seq somehow, set protMW to an avg. value
+	if ( $protMW == 0 ) {
+	  $protMW = 30000;
+	  print "WARNING: couldn't find seq for $prot_name; using MW=30,000\n";
+	}
+	### Hard-coded for plasma atlas.
+	#my $abundance_conversion_slope = 1.0807;
+	#my $abundance_conversion_yint = 1.813;
+	### corrCounts = alog10( totalCounts*protMW/1000/1000 ) * 1.09 + 1.84
+	### multiplying by protMW converts from moles (fmol/ml) to grams (fg/ml).
+	### dividing by 1,000,000 converts from fg/ml to ng/ml.
+	if ( $apportioned_PSM_count > 0  ) {
+	  $estimated_abundance =
+	     10 **
+	       ((((log ($apportioned_PSM_count * $protMW)
+			 / log (10)) - 6 ) *
+		     $abundance_conversion_slope ) +
+		   $abundance_conversion_yint);
+          ## TEMPORARY hard-coded stuff for HUPO 2009  tmf
+          if ($estimated_abundance > 2000000) {
+	    $abundance_uncertainty = "4x";
+          } elsif ($estimated_abundance > 100000) {
+	    $abundance_uncertainty = "7x";
+          } elsif ($estimated_abundance > 10000) {
+	    $abundance_uncertainty = "25x";
+          } elsif ($estimated_abundance > 1000) {
+	    $abundance_uncertainty = "12x";
+          } else {
+	    $abundance_uncertainty = "15x";
+          }
+         
+	} else {
+	  $estimated_abundance = 0;
+          $abundance_uncertainty = "";
+	}
+	$formatted_estimated_abundance = sprintf("%.1e", $estimated_abundance);
+      }
+    } else {
+      $formatted_estimated_abundance = "";
+      $abundance_uncertainty = "";
+    }
     print OUTFILE ",$prot_href->{probability},".
 	 "$prot_href->{confidence},".
-         "$prot_href->{total_number_peptides},".
+         ### total_number_peptides is an integer and is calc.  differently
+         #"$prot_href->{total_number_peptides},".
+         "$formatted_apportioned_PSM_count,".
          "$n_distinct_peptides,".
          "$prot_href->{presence_level},".
          "$prot_href->{represented_by},".
-         "$prot_href->{subsumed_by}\n";
+         "$prot_href->{subsumed_by},".
+         "$formatted_estimated_abundance,".
+         "$abundance_uncertainty\n";
   }
 } # end writeProtIdentificationListFile
 
@@ -2618,25 +2736,25 @@ sub getBiosequenceAttributes {
 
   #### If we haven't loaded the biosequence attributes hash yet, do it now
   #### 3/31: moved this to top of script. Delete when well tested.
-  unless (1 && %biosequence_attributes) {
-    my $sql = qq~
-       SELECT biosequence_id,biosequence_name,biosequence_gene_name,
-              biosequence_accession,biosequence_desc,biosequence_seq
-         FROM $TBAT_BIOSEQUENCE
-        WHERE biosequence_set_id = $bssid
-    ~;
-    print "Fetching all biosequence accessions...\n";
-    print "$sql";
-    my @rows = $sbeams->selectSeveralColumns($sql);
-    foreach my $row (@rows) {
-      $biosequence_attributes{$row->[1]} = $row;
-    }
-    print "  Loaded ".scalar(@rows)." biosequences.\n";
-    #### Just in case the table is empty, put in a bogus hash entry
-    #### to prevent triggering a reload attempt
-    $biosequence_attributes{' '} = ' ';
-  }
-
+#   unless (1 && %biosequence_attributes) {
+#     my $sql = qq~
+#        SELECT biosequence_id,biosequence_name,biosequence_gene_name,
+#               biosequence_accession,biosequence_desc,biosequence_seq
+#          FROM $TBAT_BIOSEQUENCE
+#         WHERE biosequence_set_id = $bssid
+#     ~;
+#     print "Fetching all biosequence accessions...\n";
+#     print "$sql";
+#     my @rows = $sbeams->selectSeveralColumns($sql);
+#     foreach my $row (@rows) {
+#       $biosequence_attributes{$row->[1]} = $row;
+#     }
+#     print "  Loaded ".scalar(@rows)." biosequences.\n";
+#     #### Just in case the table is empty, put in a bogus hash entry
+#     #### to prevent triggering a reload attempt
+#     $biosequence_attributes{' '} = ' ';
+#   }
+ 
 
   return $biosequence_attributes{$biosequence_name};
 

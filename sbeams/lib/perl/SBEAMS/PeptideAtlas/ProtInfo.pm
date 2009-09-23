@@ -150,9 +150,17 @@ sub loadBuildProtInfo {
         $n_distinct_peptides,
 	$level_name,
 	$represented_by_biosequence_name,
-	$subsumed_by_biosequence_name) = split(",", $line);
+	$subsumed_by_biosequence_name,
+        $estimated_ng_per_ml,
+        $abundance_uncertainty) = split(",", $line);
     if (! $subsumed_by_biosequence_name) {
       $subsumed_by_biosequence_name = '';
+    }
+    if (! $estimated_ng_per_ml) {
+      $estimated_ng_per_ml = '';
+    }
+    if (! $abundance_uncertainty) {
+      $abundance_uncertainty = '';
     }
 
 
@@ -191,6 +199,8 @@ sub loadBuildProtInfo {
        n_observations => $n_observations,
        n_distinct_peptides => $n_distinct_peptides,
        subsumed_by_biosequence_name => $subsumed_by_biosequence_name,
+       estimated_ng_per_ml => $estimated_ng_per_ml,
+       abundance_uncertainty => $abundance_uncertainty,
     );
 
     if ($inserted) {
@@ -290,6 +300,8 @@ sub insertProteinIdentification {
   my $n_observations = $args{n_observations};
   my $n_distinct_peptides = $args{n_distinct_peptides};
   my $subsumed_by_biosequence_name = $args{subsumed_by_biosequence_name};
+  my $estimated_ng_per_ml = $args{estimated_ng_per_ml};
+  my $abundance_uncertainty = $args{abundance_uncertainty};
 
   our $counter;
 
@@ -341,6 +353,8 @@ sub insertProteinIdentification {
       n_observations => $n_observations,
       n_distinct_peptides => $n_distinct_peptides,
       subsumed_by_biosequence_id => $subsumed_by_biosequence_id,
+      estimated_ng_per_ml => $estimated_ng_per_ml,
+      abundance_uncertainty => $abundance_uncertainty,
     );
     return ($protein_identification_id);
   }
@@ -374,6 +388,8 @@ sub insertProteinIdentificationRecord {
   my $n_observations = $args{n_observations};
   my $n_distinct_peptides = $args{n_distinct_peptides};
   my $subsumed_by_biosequence_id = $args{subsumed_by_biosequence_id};
+  my $estimated_ng_per_ml = $args{estimated_ng_per_ml};
+  my $abundance_uncertainty = $args{abundance_uncertainty};
 
   #### Define the attributes to insert
   my $rowdata = {
@@ -387,6 +403,8 @@ sub insertProteinIdentificationRecord {
      n_observations => $n_observations,
      n_distinct_peptides => $n_distinct_peptides,
      subsumed_by_biosequence_id => $subsumed_by_biosequence_id,
+     estimated_ng_per_ml => $estimated_ng_per_ml,
+     abundance_uncertainty => $abundance_uncertainty,
   };
 
   #### Insert spectrum identification record
@@ -399,13 +417,6 @@ sub insertProteinIdentificationRecord {
     verbose=>$VERBOSE,
     testonly=>$TESTONLY,
   );
-
-  #### Add it to the cache
-  #### (the below lifted from insertSpectrumIdentificationRecord --
-  ####   do we want/need it?)
-#  our %protein_identification_ids;
-#  my $key = "$modified_peptide_instance_id - $spectrum_id - $atlas_search_batch_id";
-#  $spectrum_identification_ids{$key} = $spectrum_identification_id;
 
   return($protein_identification_id);
 
