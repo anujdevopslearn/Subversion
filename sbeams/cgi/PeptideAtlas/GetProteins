@@ -46,7 +46,7 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
 ###############################################################################
-# Set program name and usage banner for command like use
+# Set program name and usage banner for command line use
 ###############################################################################
 $PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
@@ -167,10 +167,21 @@ sub handle_request {
   }
   $parameters{atlas_build_id} = $atlas_build_id;
 
+  #print "<p>Atlas Build ID = $parameters{atlas_build_id}</p>\n";
+  # 09/22/09: temporary kludge
+  if (($parameters{atlas_build_id} eq "174") ||  # plasma glyco
+      ($parameters{atlas_build_id} eq "185") ||  # plasma non-glyco
+      ($parameters{atlas_build_id} eq "186")) {  # plasma combined
+    my $getProteins_call =
+      "\"https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetProteins_beta\?atlas_build_id=$parameters{atlas_build_id}\&input_form_format=minimum_detail\&redundancy_constraint=4\&presence_level_constraint=1,2\"";
+    print "<p><b><a href=$getProteins_call>GetProteins_beta</a>, with protein presence level labeling, available for Human Plasma builds!</b></p>";
+    print "<p><b>(Protein Probability, Protein Group Number, Presence Levels, and Redundancy constraints not functional with Get Proteins &ndash; only with GetProteins_beta.)</b></p>";
+  } else {
+    print "<p><b><font color=red>NOTE: </font>Protein Probability, Protein Group Number, Presence Levels, and Redundancy constraints not yet functional.</b></p>";
+  }
 
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
-
 
   #### Define some variables for a query and resultset
   my %resultset = ();
