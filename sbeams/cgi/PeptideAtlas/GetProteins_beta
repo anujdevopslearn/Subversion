@@ -238,14 +238,6 @@ sub handle_request {
     $parameters{redundancy_constraint} = "4";
   }
 
-#  unless ($n_params_found) {
-#    $parameters{input_form_format} = "minimum_detail";
-#    $parameters{probability_constraint} = '>.7';
-#    $parameters{display_options} = 'GroupReference';
-#    $parameters{n_annotations_constraint} = '>0';
-#    $parameters{sort_order} = 'SUM(tABS.row_count) DESC';
-#  }
-
 
 
 
@@ -335,6 +327,14 @@ sub handle_request {
     constraint_value=>$parameters{n_observations_constraint} );
   return if ($n_observations_clause eq '-1');
 
+  #### Build ESTIMATED_NG_PER_ML constraint
+  my $estimated_ng_per_ml_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PID.estimated_ng_per_ml",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Estimated ng/ml",
+    constraint_value=>$parameters{estimated_ng_per_ml_constraint} );
+  return if ($estimated_ng_per_ml_clause eq '-1');
+
   #### Build N_DISTINCT_PEPTIDES constraint
   my $n_distinct_peptides_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"SUM(PID.n_distinct_peptides)",
@@ -401,7 +401,10 @@ sub handle_request {
      if (!$fh && $q->cgi_error)
      {
        print $q->header(-status=>$q->cgi_error);
-     }
+     } elsif (!$fh) { print "Could not create file handle for $parameters{upload_file}!\n"};
+     if (! (-T $fh)) {print "File handle not a text file!\n";}
+     if (! (-s $fh < 1000000)) {print "File too big!\n";}
+
      if ( (-T $fh) && (-s $fh < 1000000)) ##size constraint of 10 MB, restrict $count < 30000
      {
        my $count = 0;
@@ -477,6 +480,8 @@ sub handle_request {
   my @confidence_sql;
   my @relationship_phrase_sql;
   my @n_observations_sql;
+  my @estimated_ng_per_ml_sql;
+  my @abundance_uncertainty_sql;
   my @n_distinct_peptides_sql;
   my @relationship_sort_order_sql;
   my @reference_biosequence_sql;
@@ -488,6 +493,8 @@ sub handle_request {
   $probability_sql[0] = "STR(PID.probability,7,3)";
   $confidence_sql[0] = "STR(PID.confidence,7,3)";
   $n_observations_sql[0] = "PID.n_observations";
+  $estimated_ng_per_ml_sql[0] = "STR(PID.estimated_ng_per_ml,7,3)";
+  $abundance_uncertainty_sql[0] = "PID.abundance_uncertainty";
   $n_distinct_peptides_sql[0] = "PID.n_distinct_peptides";
   $relationship_phrase_sql[0] = "NULL";
   $relationship_sort_order_sql[0] = "NULL";
@@ -502,6 +509,8 @@ sub handle_request {
   $probability_sql[1] = "NULL";
   $confidence_sql[1] = "NULL";
   $n_observations_sql[1] = "NULL";
+  $estimated_ng_per_ml_sql[1] = "NULL";
+  $abundance_uncertainty_sql[1] = "NULL";
   $n_distinct_peptides_sql[1] = "NULL";
   $relationship_phrase_sql[1] = "BRT.relationship_phrase";
   $relationship_sort_order_sql[1] = "BRT.sort_order";
@@ -516,6 +525,8 @@ sub handle_request {
   $probability_sql[2] = "NULL";
   $confidence_sql[2] = "NULL";
   $n_observations_sql[2] = "NULL";
+  $estimated_ng_per_ml_sql[2] = "NULL";
+  $abundance_uncertainty_sql[2] = "NULL";
   $n_distinct_peptides_sql[2] = "NULL";
   $relationship_phrase_sql[2] = "BRT.relationship_phrase";
   $relationship_sort_order_sql[2] = "BRT.sort_order";
@@ -533,6 +544,8 @@ sub handle_request {
 	["probability",$probability_sql[$i],"Protein Prophet Prob"],
 	["confidence",$confidence_sql[$i],"Mult Hyp Test Prob"],
 	["n_observations",$n_observations_sql[$i],"N Obs"],
+	["estimated_ng_per_ml",$estimated_ng_per_ml_sql[$i],"Estimated ng/ml"],
+	["abundance uncertainty",$abundance_uncertainty_sql[$i],"Uncertainty ng/ml"],
 	["n_distinct_peptides",$n_distinct_peptides_sql[$i],"N Distinct Peptides"],
 	["relationship_phrase",$relationship_phrase_sql[$i],"Redundancy Relationship"],
 	["reference_biosequence",$reference_biosequence_sql[$i], "Redundant With Respect To"],
@@ -652,6 +665,7 @@ sub handle_request {
          $biosequence_gene_name_clause
          $biosequence_desc_clause
          $n_observations_clause
+         $estimated_ng_per_ml_clause
          $mapping_constraints
          $probability_clause
          $protein_group_number_clause
@@ -727,7 +741,8 @@ sub handle_request {
           'Protein Group Seq Alignmt' => "$CGI_BASE_DIR/PeptideAtlas/compareProteins?protein_group_number=\%$colnameidx{protein_group_number}V&apply_action=$pass_action",
           'Protein Group Seq Alignmt_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Display alignment of all biosequences in this group\'; return true"',
           ### REPLACE devTF below when image makes its way into live version!!
-          'Protein Group Seq Alignmt_ISNULL' => '<IMG BORDER="0" SRC="/devTF/sbeams/images/compareProteins.png">',
+          #'Protein Group Seq Alignmt_ISNULL' => '<IMG BORDER="0" SRC="/devTF/sbeams/images/compareProteins.png">',
+          'Protein Group Seq Alignmt_ISNULL' => '<IMG BORDER="0" SRC="/sbeams/images/compareProteins.png">',
           'Protein Group Seq Alignmt_OPTIONS' => {embed_html=>1},
 
           'Related to' => "$CGI_BASE_DIR/PeptideAtlas/GetProtein?=\%$colnameidx{reference_biosequence_name}V&apply_action=$pass_action",
