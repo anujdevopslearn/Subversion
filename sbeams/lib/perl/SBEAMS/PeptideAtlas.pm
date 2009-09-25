@@ -130,6 +130,18 @@ sub has_search_key_data {
   return $cnt;
 }
 
+sub getBuildBiosequenceSetID {
+  my $self = shift;
+  my %args = @_;
+
+  my $build_id = $args{build_id} || return;
+  my ( $id ) = $self->getSBEAMS()->selectrow_array( <<"  END" );
+  SELECT biosequence_set_id FROM $TBAT_ATLAS_BUILD WHERE atlas_build_id = $build_id
+  END
+	
+	return $id;
+}
+
 sub getBuildMotif {
   my $self = shift;
   my %args = @_;
