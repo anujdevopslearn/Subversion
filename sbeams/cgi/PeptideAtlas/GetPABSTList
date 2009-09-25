@@ -1,0 +1,219 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : GetMRMList
+#
+# Description : form to retrieve peptides and MS/MS fragment ions given
+#               constraints and send request to viewer
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+$PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+$TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+@MENU_OPTIONS);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+    --verbose n    Set verbosity level.    default is 0
+    --quiet        Set flag to print nothing at all except errors
+    --debug n      Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) 
+{
+    print "$USAGE";
+    exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+if ($DEBUG) 
+{
+    print "Options settings:\n";
+    print "    VERBOSE = $VERBOSE\n";
+    print "    QUIET = $QUIET\n";
+    print "    DEBUG = $DEBUG\n";
+}
+
+main();
+exit(0);
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main 
+{
+    #### Do the SBEAMS authentication and exit if a username is not returned
+    exit unless ($current_username = $sbeams->Authenticate(
+        allow_anonymous_access=>1,
+    ));
+
+
+    #### Read in the default input parameters
+    my %parameters;
+
+    $parameters{uploaded_file_not_saved} = 1;
+
+    my $n_params_found = $sbeams->parse_input_parameters(
+        q=>$q,parameters_ref=>\%parameters);
+
+    #$sbeams->printDebuggingInfo($q);
+
+    #### Process generic "state" parameters before we start
+    $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+    #### Decide what action to take based on information so far
+    if ($parameters{action} eq "???") 
+    {
+        # Some action
+    } else 
+    {
+        my $project_id = $sbeamsMOD->getProjectID(
+            atlas_build_id => $parameters{atlas_build_id}
+        );
+
+        $sbeamsMOD->display_page_header(project_id => $project_id);
+
+        handle_request(ref_parameters=>\%parameters);
+
+        $sbeamsMOD->display_page_footer();
+    }
+
+    #### Finish the upper part of the page and go begin the full-width
+    #### data portion of the page
+    $sbeams->display_page_footer(close_tables=>'YES',
+        separator_bar=>'YES',display_footer=>'NO');
+
+} # end main
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request 
+{
+    my %args = @_;
+
+    #### Process the arguments list
+    my $ref_parameters = $args{'ref_parameters'}
+        || die "ref_parameters not passed";
+
+    my %parameters = %{$ref_parameters};
+
+    #### Show current user context information
+    print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+
+    #$sbeams->printUserContext();
+
+    #### Get the HTML to display the tabs
+    my $tabMenu = $sbeamsMOD->getTabMenu(
+        parameters_ref => \%parameters,
+        program_name => $PROG_NAME,
+    );
+
+    print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+
+    #### Define some generic variables
+    my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+    #### Define some variables for a query and resultset
+    my %resultset = ();
+    my $resultset_ref = \%resultset;
+    my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+    #### Read in the standard form values
+    my $apply_action    = $parameters{'action'} || $parameters{'apply_action'};
+    my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+    #### Set some specific settings for this program
+    my $CATEGORY="Get MRM List";
+
+    $TABLE_NAME="AT_GetMRMList" unless ($TABLE_NAME);
+
+    ($PROGRAM_FILE_NAME) =
+        $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+
+    my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+
+    #### Get the columns and input types for this table/query
+    my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+
+    my %input_types = 
+        $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+
+
+    #### Read the input parameters for each column
+    my $n_params_found = $sbeams->parse_input_parameters(
+        q=>$q,parameters_ref=>\%parameters,
+        columns_ref=>\@columns,input_types_ref=>\%input_types);
+     #$sbeams->printDebuggingInfo($q);
+
+
+    #### If the apply action was to recall a previous resultset, do it
+    my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+
+    #### Set some reasonable defaults if no parameters supplied
+    unless ($n_params_found) 
+    {
+        $parameters{input_form_format} = "minimum_detail";
+    }
+
+    ##Input form:  action is set by PROGRAM_FILE_NAME, so sub it w/ display page:
+    $sbeams->collectSTDOUT();
+    $sbeams->display_input_form(
+        TABLE_NAME=>$TABLE_NAME,
+        CATEGORY=>$CATEGORY,
+        apply_action=>$apply_action,
+        PROGRAM_FILE_NAME=>"$CGI_BASE_DIR/$SBEAMS_SUBDIR/ViewPABSTList",
+        parameters_ref=>\%parameters,
+        input_types_ref=>\%input_types,
+        mask_user_context=> '1',
+    );
+    my $form = $sbeams->fetchSTDOUT();
+    my $id = 'ID="protein_name_constraint"';
+    $form =~ s/(NAME=\"protein_name_constraint\")/$1 $id/;
+    print $form;
+
+    #### Display the form action buttons
+    $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
+
+} # end handle_request
+
