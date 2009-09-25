@@ -210,13 +210,19 @@ sub get_mayu_info {
   open (MAYU, $mayu_data_path);
   my $line = <MAYU>;
   my @headings = split(",",$line);
+  my @sortable;
+  for my $col ( @headings ) {
+    push @sortable, $col, $col;
+  }
+
+  my $headings_ref = $atlas->make_sort_headings( headings => \@sortable, default => 'mFDR' );
   my @records = ();
   for $line (<MAYU>) {
     chomp ($line);
     my @fields = split(",",$line);
     push @records, \@fields;
   }
-  $table .= $atlas->encodeSectionTable( rows => [ \@headings, @records ], 
+  $table .= $atlas->encodeSectionTable( rows => [ $headings_ref, @records ], 
 					header => 1, 
 					nowrap => [1..scalar(@headings)], 
 					align => [ qw(center center left
@@ -225,6 +231,7 @@ center left center left center center center center left center center center
 center left) ], 
 					tr_info => $tr,
 					bg_color => '#EAEAEA',
+          table_id => 'mayu_data',
 					sortable => 1 );
   $table .= "\n</TABLE>\n";
   return ($table);
@@ -651,9 +658,6 @@ sub get_sample_info {
 #  }
 
   my $headings_ref = $atlas->make_sort_headings( headings => \@headings, default => '#_Cumulative' );
-  for my $h ( @{$headings_ref} ) {
-    $log->info( $h );
-  }
 
   $table .= $atlas->encodeSectionHeader(
       text => 'Sample Contribution',
@@ -665,6 +669,7 @@ sub get_sample_info {
   $table .= $atlas->encodeSectionTable( rows => [ $headings_ref, @samples ], 
                                         header => 1, 
                                         nowrap => [1..scalar(@headings)], 
+                                        table_id => 'sample_contribution',
                                         align => [ qw(center left right right right right right right right) ], 
                                         tr_info => $tr,
                                         bg_color => '#EAEAEA',
