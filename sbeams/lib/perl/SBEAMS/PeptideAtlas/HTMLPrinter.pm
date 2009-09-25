@@ -582,9 +582,9 @@ sub encodeSectionTable {
       $pre_text = qq~
       <SCRIPT LANGUAGE=javascript SRC="$HTML_BASE_DIR/usr/javascript/sorttable.js"></SCRIPT>
       ~;
-      $class_def = 'PA_sort_table';
       $self->{_included_sortable}++;
     }
+    $class_def = 'PA_sort_table';
   }
 
   my @table_attrs = ( 'BORDER' => 0, );
@@ -694,11 +694,11 @@ sub encodeSectionTable {
   # Set header attributes
   if ( $args{header} ) {
     if ( $args{sortable} ) {
-      $tab->setRowAttr( ROWS => [1], BGCOLOR => '#0000A0' ); 
+      $tab->setRowAttr( ROWS => [1], BGCOLOR => '#0000A0', CLASS => 'sortheader' );
     } else {
-      $tab->setRowAttr( ROWS => [1], BGCOLOR => '#7C7C7C');
+      $tab->setRowAttr( ROWS => [1], BGCOLOR => '#CCCCCC');
     }
-    $tab->setRowAttr( ROWS => [1], ALIGN => 'CENTER' ,  CLASS => 'sortheader') unless $args{nocenter};
+    $tab->setRowAttr( ROWS => [1], ALIGN => 'CENTER' ) unless $args{nocenter};
   }
 
   if ( $args{align} ) {
