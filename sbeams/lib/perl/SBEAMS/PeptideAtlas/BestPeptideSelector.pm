@@ -561,6 +561,225 @@ sub get_pabst_peptides {
 } # End get_pabst_peptides
 
 
+sub get_pabst_static_peptide_transitions_display {
+  my $self = shift;
+  my %args = @_;
+  # Check for required opts
+  my $err;
+  for my $opt ( qw( link tr_info biosequence_id peptide_sequence ) ) {
+    $err = ( $err ) ? $err . ',' . $opt : $opt if !defined $args{$opt};
+  }
+  die "Missing required parameter(s) $err" if $err;
+
+#  pabst_peptide_id     pabst_build_id     biosequence_id     preceding_residue     peptide_sequence                         following_residue     empirical_proteotypic_score     suitability_score     merged_score     molecular_weight     SSRCalc_relative_hydrophobicity     n_protein_mappings     n_genome_locations     best_probability     n_observations     synthesis_score     synthesis_warnings     syntheis_adjusted_score    
+# 0 pabst_peptide_id
+# 1 pabst_build_id
+# 2 biosequence_id
+# 3 preceding_residue
+# 4 peptide_sequence
+# 5 following_residue
+# 6 empirical_proteotypic_score
+# 7 suitability_score
+# 8 merged_score
+# 9 molecular_weight
+# 10 SSRCalc_relative_hydrophobicity
+# 11 n_protein_mappings
+# 12 n_genome_locations
+# 13 best_probability
+# 14 n_observations
+# 15 atlas_build_id
+# 16 synthesis_score
+# 17 synthesis_warnings
+# 18 syntheis_adjusted_score
+#
+# 3,4,5,6,7,8,10,11,12,16,15 
+#
+# 0 fragment_ion_id
+# 1 pabst_peptide_id
+# 2 transition_source
+# 3 precursor_ion_mass
+# 4 precursor_ion_charge
+# 5 fragment_ion_mass
+# 6 fragment_ion_charge
+# 7 fragment_ion_label
+# 8 ion_rank
+# 9 relative_intensity
+
+
+# FIXME - can't assume order, duh.
+  my $sql = qq~
+  SELECT DISTINCT preceding_residue,peptide_sequence,following_residue,
+  transition_source,precursor_ion_mass, precursor_ion_charge,fragment_ion_mass,
+  fragment_ion_charge, fragment_ion_label, ion_rank, relative_intensity
+  FROM peptideatlas_test.dbo.pabst_peptide PP 
+  JOIN peptideatlas_test.dbo.pabst_peptide_mapping PM 
+  ON PM.pabst_peptide_id = PP.pabst_peptide_id 
+  JOIN peptideatlas_test.dbo.pabst_transition PT 
+  ON PT.pabst_peptide_id = PM.pabst_peptide_id 
+  JOIN peptideatlas.dbo.biosequence B
+  ON B.biosequence_id = PM.biosequence_id 
+  WHERE PM.biosequence_id = $args{biosequence_id}
+  AND peptide_sequence = '$args{peptide_sequence}'
+  ORDER BY ion_rank ASC 
+  ~;
+  print STDERR "$sql\n";
+  my @headings = ( pre => 'Previous amino acid',
+                   sequence => 'Amino acid sequence of peptide',
+                   fol => 'Followin amino acid',
+                   Src => 'Transition source, one of PATR, QQQ (triple quad), IT (ion trap), IS (In silico/theoretical)',
+                   Q1_mz => 'Precursor ion m/z',
+                   Q1_chg => 'Precursor ion charge',
+                   Q3_mz => 'Fragment ion m/z',
+                   Q3_chg => 'Fragment ion charge',
+                   Label => 'Fragment ion label (series/number)',
+                   Rank => 'PABST transition rank',
+                   RI => 'Fragment peak relative intensity (scaled to 10000 Units)',
+                   );
+
+
+  my @peptides = ( $self->make_sort_headings( headings => \@headings,
+                                              default => 'adj_SS' )  );
+#  my $naa = $sbeams->makeInactiveText( 'n/a' );
+
+  my %src_name = ( T => 'IS', Q => 'QQQ', I => 'IT', 'P' => 'PATR' );
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while( my @row = $sth->fetchrow_array() ) {
+    $row[3] = $src_name{$row[3]};
+    $row[4] = sprintf( "%0.2f", $row[4] );
+    $row[6] = sprintf( "%0.2f", $row[6] );
+    push @peptides, [ @row ];
+  }
+
+  my $align = [qw(right left right center right center right center left right right)];
+
+  my $html = $atlas->encodeSectionTable( header => 1, 
+                                                 width => '600',
+                                               tr_info => $args{tr},
+                                                align  => $align,
+                                                  rows => \@peptides,
+                                          rows_to_show => 20,
+                                              max_rows => 500,
+                                          bkg_interval => 3, 
+                                          set_download => 'Download peptides', 
+                                           file_prefix => 'best_peptides_', 
+                                                header => 1,
+                                              bg_color => '#EAEAEA',
+                                              sortable => 1,
+                                              table_id => 'pabst',
+                                           close_table => 1,
+                                              );
+    #### Display table
+    return "<TABLE WIDTH=600><BR>$html\n";
+
+} # End get_pabst_static_peptide_transitions_display
+
+#########################################################
+#########################################################
+
+sub get_pabst_static_peptide_display {
+  my $self = shift;
+  my %args = @_;
+  # Check for required opts
+  my $err;
+  for my $opt ( qw( link tr_info biosequence_id ) ) {
+    $err = ( $err ) ? $err . ',' . $opt : $opt if !defined $args{$opt};
+  }
+  die "Missing required parameter(s) $err" if $err;
+  my $organism_id = $atlas->getCurrentAtlasOrganism( parameters_ref => {},
+                                                     type => 'organism_id' );
+
+# 0 pabst_peptide_id
+# 1 pabst_build_id
+# 2 biosequence_id
+# 3 preceding_residue
+# 4 peptide_sequence
+# 5 following_residue
+# 6 empirical_proteotypic_score
+# 7 suitability_score
+# 8 merged_score
+# 9 molecular_weight
+# 10 SSRCalc_relative_hydrophobicity
+# 11 n_protein_mappings
+# 12 n_genome_locations
+# 13 best_probability
+# 14 n_observations
+# 15 atlas_build_id
+# 16 synthesis_score
+# 17 synthesis_warnings
+# 18 syntheis_adjusted_score
+#
+# 3, 4,5, 6, 7, 8, 10, 11,12, 16,15 
+
+# FIXME - can't assume order, duh.
+  my $sql = qq~
+  SELECT DISTINCT preceding_residue, peptide_sequence, following_residue,
+  empirical_proteotypic_score, suitability_score, merged_score,
+  SSRCalc_relative_hydrophobicity, n_genome_locations, n_observations,
+  synthesis_warnings, syntheis_adjusted_score
+  FROM peptideatlas_test.dbo.pabst_peptide PP 
+  JOIN peptideatlas_test.dbo.pabst_peptide_mapping PM
+  ON PM.pabst_peptide_id = PP.pabst_peptide_id 
+  JOIN peptideatlas_test.dbo.pabst_build PB 
+  ON PB.pabst_build_id = PP.pabst_build_id 
+  JOIN peptideatlas.dbo.biosequence B
+  ON B.biosequence_id = PM.biosequence_id 
+  WHERE PM.biosequence_id = $args{biosequence_id}
+  AND PB.organism_id = $organism_id
+  ORDER BY syntheis_adjusted_score DESC
+  ~;
+  my @headings = ( pre => 'Previous amino acid',
+                   sequence => 'Amino acid sequence of peptide',
+                   fol => 'Followin amino acid',
+                   ESS => 'Empirical suitability score',
+                   PSS => 'Predicted suitability score',
+                   MSS => 'Merged suitability score',
+                   hyd_scr => 'Relative hydrophobicity score',
+                   n_gen_loc => 'Number of locations on genome to which sequence maps',
+                   n_obs => 'Number of times peptide was observed',
+                   Annotations => 'Annotation of peptide features such as missed cleavage (MC), etc.',
+                   adj_SS => 'Best suitability score, adjusted based on sequence features' );
+
+
+  my @peptides = ( $self->make_sort_headings( headings => \@headings,
+                                              default => 'adj_SS' )  );
+#  my $naa = $sbeams->makeInactiveText( 'n/a' );
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while( my @row = $sth->fetchrow_array() ) {
+    $row[3] = sprintf( "%0.2f", $row[3] );
+    $row[4] = sprintf( "%0.2f", $row[4] );
+    $row[5] = sprintf( "%0.2f", $row[5] );
+    $row[6] = sprintf( "%0.1f", $row[6] );
+    $row[10] = sprintf( "%0.2f", $row[10] );
+    $row[1] = "<A HREF=GetPeptide?_tab=3;atlas_build_id=$args{atlas_build};searchWithinThis=Peptide+Sequence;searchForThis=$row[1];action=QUERY;biosequence_id=$args{biosequence_id} TITLE='View peptide $row[1] details'>$row[1]</A>" if $row[8];
+    push @peptides, [ @row];
+  }
+
+  my $align = [qw(right left right right left center center center right right right)];
+
+  my $html = $atlas->encodeSectionTable( header => 1, 
+                                                 width => '600',
+                                               tr_info => $args{tr},
+                                                align  => $align,
+                                                  rows => \@peptides,
+                                          rows_to_show => 20,
+                                              max_rows => 500,
+                                          bkg_interval => 3, 
+                                          set_download => 'Download peptides', 
+                                           file_prefix => 'best_peptides_', 
+                                                header => 1,
+                                              bg_color => '#EAEAEA',
+                                              sortable => 1,
+                                              table_id => 'pabst',
+                                           close_table => 1,
+                                              );
+    #### Display table
+    return "<TABLE WIDTH=600><BR>$html\n";
+
+} # End get pabst static display
+
+
 
 sub get_pabst_peptide_display {
   my $self = shift;
@@ -587,8 +806,9 @@ sub get_pabst_peptide_display {
 # 12 best_probability
 # 13 n_observations
 # 14 annotations
-# 15 synthesis_score
-# 16 syntheis_adjusted_score
+# 15 atlas_build_id
+# 16 synthesis_score
+# 17 synthesis_adjusted_score
 #
 # 0 pre_aa    1
 # 1 sequence  2
@@ -603,7 +823,7 @@ sub get_pabst_peptide_display {
 # 8 bprob     12   - removed
 # 9 n_obs     13
 # 10 annot    14
-# 11 sa_score 16
+# 11 sa_score 17
 #
 #
   
@@ -649,14 +869,14 @@ sub get_pabst_peptide_display {
 # 9 bprob     12   - removed
 # 10 n_obs    13
 # 11 annot    14
-# 12 sa_score 16
+# 12 sa_score 17
   for my $pep_row ( @{$args{peptides}} ) {
 
     $pep_row->[4] = sprintf( "%0.2f", $pep_row->[4] ) if $pep_row->[4] !~ /n\/a/;
     $pep_row->[5] = sprintf( "%0.2f", $pep_row->[5] ) if $pep_row->[5] !~ /n\/a/;
     $pep_row->[6] = sprintf( "%0.2f", $pep_row->[6] ) if $pep_row->[6] !~ /n\/a/;
     $pep_row->[7] = sprintf( "%0.2f", $pep_row->[7] );
-    $pep_row->[16] = sprintf( "%0.2f", $pep_row->[16] );
+    $pep_row->[17] = sprintf( "%0.2f", $pep_row->[17] );
     $pep_row->[9] = sprintf( "%0.1f", $pep_row->[9] );
 
     if ( $pep_row->[12] eq 'n/a' ) {
@@ -675,7 +895,7 @@ sub get_pabst_peptide_display {
       $pep_row->[2] = "<A HREF=GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$acc&action=QUERY TITLE='View peptide $acc details'>$pep_row->[2]</A>";
     }
 
-    push @peptides, [ @{$pep_row}[1..3,5..7,9,11,13,14,16], $prots ];
+    push @peptides, [ @{$pep_row}[1..3,5..7,9,11,13,14,17], $prots ];
   }
 #                   EOS => 'Empirical observability score',
   my $align = [qw(right left right right left center center center right right)];
@@ -828,6 +1048,11 @@ sub get_change_form {
   $form_table->addRow( [ @buttons, '' ] );
   $form_table->setRowAttr( ROWS => [1..$form_table->getRowNum()], "$tr noop"=>1 );
   $form_table->setColAttr( ROWS => [1..$form_table->getRowNum()], COLS => [1], ALIGN => 'right' );
+
+  if ( $args{form_only} ) {
+    return $form_table;
+  }
+
   my $form = qq~
   $link
   <FORM NAME=reset_scoring METHOD=POST>
