@@ -38,6 +38,7 @@ AT_spectrum	Spectrum	PeptideAtlas_infrastructure	NO	$TBAT_SPECTRUM	spectrum_id
 AT_spectrum_peak	Spectrum Peak	PeptideAtlas_infrastructure	NO	$TBAT_SPECTRUM_PEAK	spectrum_peak_id				
 AT_consensus_library_spectrum_comment	Consensus library spectrum comment	PeptideAtlas_infrastructure	NO	$TBAT_CONSENSUS_LIBRARY_SPECTRUM_COMMENT	consensus_library_spectrum_comment_id				
 AT_GetMRMList	Get MRM List	QUERY					GetMRMList		
+AT_GetPABSTList	Get PABST List	QUERY					GetPABSTList		
 AT_spectrum_annotation	Spectrum Annotation	PeptideAtlas_infrastructure	YES	$TBAT_SPECTRUM_ANNOTATION	spectrum_annotation_id		ManageTable.cgi?TABLE_NAME=AT_spectrum_annotation		
 AT_spectrum_annotation_level	Spectrum Annotation Level	PeptideAtlas_infrastructure	YES	$TBAT_SPECTRUM_ANNOTATION_LEVEL	spectrum_annotation_level_id		ManageTable.cgi?TABLE_NAME=AT_spectrum_annotation_level		
 AT_peptide_annotation	Peptide Annotation	PeptideAtlas_infrastructure	YES	$TBAT_PEPTIDE_ANNOTATION	peptide_annotation_id		ManageTable.cgi?TABLE_NAME=AT_peptide_annotation		
