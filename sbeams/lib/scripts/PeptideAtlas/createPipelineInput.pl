@@ -127,6 +127,7 @@
 # 	  ->{unique_stripped_peptides}
 #         ->{subsuming_protein_entry}
 #         ->{presence_level}
+#         ->{represented_by}   #highest prob prot in group
 #         ->{PSM_count}
 # 
 #   ->{ProteinProphet_prot_data}      used to determine prot ident list
@@ -1951,9 +1952,11 @@ sub main {
 	      $prot_href->{subsumed_by} = $highest_prob_prot;
               # Give the protein counts for the ntt-subsumed protein
               # to its subsumed_by protein.
-              $proteins_href->{$highest_prob_prot}->{PSM_count}
-                += $prot_href->{PSM_count};
-              $prot_href->{PSM_count} = 0;
+              if ($apportion_PSMs) {
+		$proteins_href->{$highest_prob_prot}->{PSM_count}
+		  += $prot_href->{PSM_count};
+		$prot_href->{PSM_count} = 0;
+              }
 	      undef $possibly_dist_hash{$protein3};
             }
           }
@@ -2501,10 +2504,15 @@ sub writeProtIdentificationListFile {
     my $abundance_uncertainty;
 
     ### should normally be zero. Set for HUPO 2009.
-    my $non_glyco = 0;
+    my $non_glyco = 1;
     my $glyco = 0;
+    my $is_highest_prob_prot =
+         ($prot_name eq $prot_href->{represented_by});
 
-    if ( $calculate_abundances ) {
+    ### If we're not apportioning peps to proteins, only estimate
+    ### abundance for highest prob protein in each group.
+    if ( $calculate_abundances && 
+         ($apportion_PSMs || $is_highest_prob_prot ) ) {
       my $estimated_abundance;
       if ( ! defined $biosequence_attributes ) {
 	#print "No biosequence_attributes for $prot_name.\n";
@@ -2523,11 +2531,9 @@ sub writeProtIdentificationListFile {
 	  $protMW = 30000;
 	  print "WARNING: couldn't find seq for $prot_name; using MW=30,000\n";
 	}
-	### Hard-coded for plasma atlas.
-	#my $abundance_conversion_slope = 1.0807;
-	#my $abundance_conversion_yint = 1.813;
+
 	### corrCounts = alog10( totalCounts*protMW/1000/1000 ) * 1.09 + 1.84
-	### multiplying by protMW converts from moles (fmol/ml) to grams (fg/ml).
+	### multiplying by protMW converts from moles (fmol/ml) to grams (fg/ml)
 	### dividing by 1,000,000 converts from fg/ml to ng/ml.
 	if ( $PSM_count > 0  ) {
 	  $estimated_abundance =
