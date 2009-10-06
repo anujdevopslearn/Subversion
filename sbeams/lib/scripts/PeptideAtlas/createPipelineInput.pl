@@ -86,7 +86,7 @@
 # 	    ->{confidence}
 # 	    ->{unique_stripped_peptides}
 # 	    ->{subsuming_protein_entry}
-#           ->{apportioned_PSM_count}
+#           ->{PSM_count}
 # 
 # 
 # Persistant containers
@@ -127,7 +127,7 @@
 # 	  ->{unique_stripped_peptides}
 #         ->{subsuming_protein_entry}
 #         ->{presence_level}
-#         ->{apportioned_PSM_count}
+#         ->{PSM_count}
 # 
 #   ->{ProteinProphet_prot_data}      used to determine prot ident list
 #     ->{group_hash}
@@ -214,6 +214,8 @@ Options:
                       Defaults to 0.2
   --APD_only          PAidentlist files already exist; just create APD files
   --protlist_only     PAidentlist files already exist; just create protlist
+  --apportion_PSMs    apportion PSMs to prots according to ProtPro pep probs.
+                      Default: off (instead, count all PMSs mapping to prot).
   --splib_filter      Filter out spectra not in spectral library
                       DATA_FILES/${build_version}_all_Q2.sptxt
 
@@ -239,7 +241,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
   "output_file:s","master_ProteinProphet_file:s",
   "slope_for_abundance:f","yint_for_abundance:f","per_expt_pipeline",
   "biosequence_set_id:s", "best_probs_from_protxml", "min_indep:f",
-  "APD_only", "protlist_only", "splib_filter",
+  "APD_only", "protlist_only", "apportion_PSMs", "splib_filter",
   )) {
   print "$USAGE";
   exit;
@@ -268,6 +270,7 @@ my $search_batch_ids = $OPTIONS{search_batch_ids} || '';
 my $bssid = $OPTIONS{biosequence_set_id} || "10" ; #yeast is default
 my $APD_only = $OPTIONS{APD_only} || 0;
 my $protlist_only = $OPTIONS{protlist_only} || 0;
+my $apportion_PSMs = $OPTIONS{apportin_PSMs} || 0;
 my $validate = $OPTIONS{validate} || 'never';
 my $namespace = $OPTIONS{namespaces} || 0;
 my $schema = $OPTIONS{schemas} || 0;
@@ -550,7 +553,7 @@ sub protXML_start_element {
     $self->{protcache}->{subsuming_protein_entry} =
                 $attrs{subsuming_protein_entry};
     # initialize cumulative count of PSMs from participating peptides
-    $self->{protcache}->{apportioned_PSM_count} = 0;
+    $self->{protcache}->{PSM_count} = 0;
   }
 
 
@@ -846,10 +849,14 @@ sub protXML_end_element {
 	push(@{$self->{ProteinProphet_prot_data}->{pep_prot_hash}->
 	       {$peptide_sequence}}, $this_protein);
       }
-      #### add this peptide's expected_apportioned_observations
-      #### to apportioned_PSM_count for this protein
-      $self->{protcache}->{apportioned_PSM_count}
-          += $self->{pepcache}->{expected_apportioned_observations};
+      #### add this peptide's observations to PSM_count for this protein
+      my $PSMs;
+      if ($apportion_PSMs) {
+        $PSMs = $self->{pepcache}->{expected_apportioned_observations};
+      } else {
+        $PSMs = $self->{pepcache}->{n_instances};
+      }
+      $self->{protcache}->{PSM_count} += $PSMs;
     }
 
     #### clear out the peptide cache
@@ -885,8 +892,8 @@ sub protXML_end_element {
 	                                   {subsuming_protein_entry} =
              $self->{protcache}->{subsuming_protein_entry};
       $self->{groupcache}->{proteins}->{$protein_name}->
-                                           {apportioned_PSM_count} =
-             $self->{protcache}->{apportioned_PSM_count};
+                                           {PSM_count} =
+             $self->{protcache}->{PSM_count};
 
       # Store the group number for this protein in a persistent hash.
       $self->{ProteinProphet_prot_data}->{group_hash}->{$protein_name} =
@@ -1761,7 +1768,7 @@ sub main {
 	  }
 	  my $this_prob = $prot_href->{probability};
 	 # my $this_nobs = $prot_href->{total_number_peptides};
-	  my $this_nobs = $prot_href->{apportioned_PSM_count};
+	  my $this_nobs = $prot_href->{PSM_count};
 	  if (($this_prob > $highest_prob) ||
               (($this_prob == $highest_prob) &&
                ($this_nobs > $highest_nobs))) {
@@ -1944,9 +1951,9 @@ sub main {
 	      $prot_href->{subsumed_by} = $highest_prob_prot;
               # Give the protein counts for the ntt-subsumed protein
               # to its subsumed_by protein.
-              $proteins_href->{$highest_prob_prot}->{apportioned_PSM_count}
-                += $prot_href->{apportioned_PSM_count};
-              $prot_href->{apportioned_PSM_count} = 0;
+              $proteins_href->{$highest_prob_prot}->{PSM_count}
+                += $prot_href->{PSM_count};
+              $prot_href->{PSM_count} = 0;
 	      undef $possibly_dist_hash{$protein3};
             }
           }
@@ -2482,9 +2489,9 @@ sub writeProtIdentificationListFile {
       print OUTFILE " $indis";
     }
     my $n_distinct_peptides = scalar(@{$prot_href->{unique_stripped_peptides}});
-    my $apportioned_PSM_count = $prot_href->{apportioned_PSM_count};
-    my $formatted_apportioned_PSM_count =
-         sprintf( "%0.1f", $apportioned_PSM_count);
+    my $PSM_count = $prot_href->{PSM_count};
+    my $formatted_PSM_count =
+         sprintf( "%0.1f", $PSM_count);
     my $biosequence_attributes =
         getBiosequenceAttributes(biosequence_name => $prot_name);
 
@@ -2492,6 +2499,11 @@ sub writeProtIdentificationListFile {
     
     my $formatted_estimated_abundance;
     my $abundance_uncertainty;
+
+    ### should normally be zero. Set for HUPO 2009.
+    my $non_glyco = 0;
+    my $glyco = 0;
+
     if ( $calculate_abundances ) {
       my $estimated_abundance;
       if ( ! defined $biosequence_attributes ) {
@@ -2517,26 +2529,37 @@ sub writeProtIdentificationListFile {
 	### corrCounts = alog10( totalCounts*protMW/1000/1000 ) * 1.09 + 1.84
 	### multiplying by protMW converts from moles (fmol/ml) to grams (fg/ml).
 	### dividing by 1,000,000 converts from fg/ml to ng/ml.
-	if ( $apportioned_PSM_count > 0  ) {
+	if ( $PSM_count > 0  ) {
 	  $estimated_abundance =
 	     10 **
-	       ((((log ($apportioned_PSM_count * $protMW)
+	       ((((log ($PSM_count * $protMW)
 			 / log (10)) - 6 ) *
 		     $abundance_conversion_slope ) +
 		   $abundance_conversion_yint);
           ## TEMPORARY hard-coded stuff for HUPO 2009  tmf
-          if ($estimated_abundance > 2000000) {
-	    $abundance_uncertainty = "4x";
-          } elsif ($estimated_abundance > 100000) {
-	    $abundance_uncertainty = "7x";
-          } elsif ($estimated_abundance > 10000) {
-	    $abundance_uncertainty = "25x";
-          } elsif ($estimated_abundance > 1000) {
-	    $abundance_uncertainty = "12x";
-          } else {
-	    $abundance_uncertainty = "15x";
+          if ($non_glyco) {
+	    if ($estimated_abundance > 2000000) {
+	      $abundance_uncertainty = "4x";
+	    } elsif ($estimated_abundance > 100000) {
+	      $abundance_uncertainty = "7x";
+	    } elsif ($estimated_abundance > 10000) {
+	      $abundance_uncertainty = "25x";
+	    } elsif ($estimated_abundance > 1000) {
+	      $abundance_uncertainty = "12x";
+	    } else {
+	      $abundance_uncertainty = "15x";
+	    }
+          } elsif ($glyco) {
+	    if ($estimated_abundance > 200000) {
+	      $abundance_uncertainty = "5x";
+	    } elsif ($estimated_abundance > 60000) {
+	      $abundance_uncertainty = "10x";
+	    } elsif ($estimated_abundance > 6000) {
+	      $abundance_uncertainty = "13x";
+	    } else {
+	      $abundance_uncertainty = "15x";
+	    }
           }
-         
 	} else {
 	  $estimated_abundance = 0;
           $abundance_uncertainty = "";
@@ -2551,7 +2574,7 @@ sub writeProtIdentificationListFile {
 	 "$prot_href->{confidence},".
          ### total_number_peptides is an integer and is calc.  differently
          #"$prot_href->{total_number_peptides},".
-         "$formatted_apportioned_PSM_count,".
+         "$formatted_PSM_count,".
          "$n_distinct_peptides,".
          "$prot_href->{presence_level},".
          "$prot_href->{represented_by},".
