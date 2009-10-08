@@ -611,12 +611,12 @@ sub get_pabst_static_peptide_transitions_display {
   SELECT DISTINCT preceding_residue,peptide_sequence,following_residue,
   transition_source,precursor_ion_mass, precursor_ion_charge,fragment_ion_mass,
   fragment_ion_charge, fragment_ion_label, ion_rank, relative_intensity
-  FROM peptideatlas_test.dbo.pabst_peptide PP 
-  JOIN peptideatlas_test.dbo.pabst_peptide_mapping PM 
+  FROM $TBAT_PABST_PEPTIDE PP 
+  JOIN $TBAT_PABST_PEPTIDE_MAPPING PM 
   ON PM.pabst_peptide_id = PP.pabst_peptide_id 
-  JOIN peptideatlas_test.dbo.pabst_transition PT 
+  JOIN $TBAT_PABST_TRANSITION PT 
   ON PT.pabst_peptide_id = PM.pabst_peptide_id 
-  JOIN peptideatlas.dbo.biosequence B
+  JOIN $TBAT_BIOSEQUENCE B
   ON B.biosequence_id = PM.biosequence_id 
   WHERE PM.biosequence_id = $args{biosequence_id}
   AND peptide_sequence = '$args{peptide_sequence}'
@@ -717,12 +717,12 @@ sub get_pabst_static_peptide_display {
   empirical_proteotypic_score, suitability_score, merged_score,
   SSRCalc_relative_hydrophobicity, n_genome_locations, n_observations,
   synthesis_warnings, syntheis_adjusted_score
-  FROM peptideatlas_test.dbo.pabst_peptide PP 
-  JOIN peptideatlas_test.dbo.pabst_peptide_mapping PM
+  FROM $TBAT_PABST_PEPTIDE PP 
+  JOIN $TBAT_PABST_PEPTIDE_MAPPING PM
   ON PM.pabst_peptide_id = PP.pabst_peptide_id 
-  JOIN peptideatlas_test.dbo.pabst_build PB 
+  JOIN $TBAT_PABST_BUILD PB 
   ON PB.pabst_build_id = PP.pabst_build_id 
-  JOIN peptideatlas.dbo.biosequence B
+  JOIN $TBAT_BIOSEQUENCE B
   ON B.biosequence_id = PM.biosequence_id 
   WHERE PM.biosequence_id = $args{biosequence_id}
   AND PB.organism_id = $organism_id
