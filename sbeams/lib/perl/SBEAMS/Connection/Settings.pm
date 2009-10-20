@@ -42,6 +42,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS
     $LINESEPARATOR
     $MESSAGE_WIDTH
     $PHYSICAL_BASE_DIR
+    $PHYSICAL_CGI_DIR
     $UPLOAD_DIR
     $RESULTSET_DIR
     $SBEAMS_PART
@@ -80,6 +81,7 @@ require Exporter;
     $LINESEPARATOR
     $MESSAGE_WIDTH
     $PHYSICAL_BASE_DIR
+    $PHYSICAL_CGI_DIR
     $UPLOAD_DIR
     $RESULTSET_DIR
     $SBEAMS_SUBDIR
@@ -235,6 +237,7 @@ sub extractInstanceParams {
 #### Set some additional settings which depend on version-specific parameters
     $DATA_DIR       = "$HTML_BASE_DIR/data";
     $CGI_BASE_DIR   = "$HTML_BASE_DIR/cgi";
+    $PHYSICAL_CGI_DIR = "$PHYSICAL_BASE_DIR/cgi";
     $OPTIONARROW    = "<P><IMG SRC=\"$HTML_BASE_DIR/images/yellow-arrow.gif\">&nbsp;";
     $LINESEPARATOR  = "<P><IMG SRC=\"$HTML_BASE_DIR/images/smalline.gif\">&nbsp;";
     $MESSAGE_WIDTH  = '350';

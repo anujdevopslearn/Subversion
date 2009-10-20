@@ -88,6 +88,11 @@ sub getTabMenu
     {
        $current_tab=2;
 
+    } elsif ( ($PROG_NAME =~ /^SearchProteins/) ||
+    ($PROG_NAME =~ /SearchProteins\?(\S+)/ ))
+    {
+       $current_tab=7;
+
     } elsif( ($PROG_NAME =~ /^Search/) ||
     ($PROG_NAME =~ /^Search\?(\S+)/ ))
     {
@@ -116,7 +121,7 @@ sub getTabMenu
     }elsif ( ($PROG_NAME =~ /^Summarize_Peptide/) ||
     ($PROG_NAME =~ /Summarize_Peptide\?(\S+)/ ))
     {
-       $current_tab=7;
+       $current_tab=8;
 
     }
 
@@ -168,6 +173,11 @@ sub getTabMenu
     $tabmenu->addTab( label => 'Browse Proteins',
                       helptext => 'Multi-constraint browsing of PeptideAtlas Proteins',
                       URL => "$CGI_BASE_DIR/PeptideAtlas/GetProteins"
+                    );
+   
+    $tabmenu->addTab( label => 'Search Proteins',
+                      helptext => 'Search for a list of proteins',
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/SearchProteins"
                     );
    
      $tabmenu->addTab( label => 'Summarize Peptide',

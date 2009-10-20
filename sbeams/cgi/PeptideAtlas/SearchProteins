@@ -1,0 +1,621 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : SearchProteins
+#
+# Description : Runs Search and/or GetProteins for a list of protein
+#               identifiers
+#
+# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+$|++; #disable output buffering for STDOUT
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+$sbeams = new SBEAMS::Connection;
+
+use SBEAMS::BioLink;
+my $biolink = SBEAMS::BioLink->new();
+$biolink->setSBEAMS($sbeams);
+
+use SBEAMS::BioLink;
+my $biolink = new SBEAMS::BioLink;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+
+use SBEAMS::PeptideAtlas::KeySearch;
+my $keySearch = new SBEAMS::PeptideAtlas::KeySearch;
+$keySearch->setSBEAMS($sbeams);
+my @coverage;  # Global sequence coverage array, will be populated post-graphic
+
+use constant MIN_OBS_LENGTH => 6;
+
+###############################################################################
+# Set program name and usage banner for command line use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+      permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+      'PeptideAtlas_readonly', 'PeptideAtlas_exec'],
+      #connect_read_only=>1,
+      allow_anonymous_access=>1,
+  ));
+
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+      q=>$q,
+      parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($q);
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+  #### Decide what action to take based on information so far
+  if ($parameters{action} eq "???") {
+      # Some action
+
+  } else {
+      my $project_id = $sbeamsMOD->getProjectID(
+          atlas_build_id => $parameters{atlas_build_id}
+          );
+      $sbeamsMOD->display_page_header(project_id => $project_id, init_tooltip => 1);
+      handle_request(ref_parameters=>\%parameters);
+      $sbeamsMOD->display_page_footer();
+  }
+} # end main
+
+
+###############################################################################
+# Handle Request: following convention, perform search *and* display
+# results
+###############################################################################
+sub handle_request {
+
+  my %args = @_;
+
+  my $spacer = $sbeams->getGifSpacer( 900 );
+  my $htmlmode = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
+  ### TMF: temporary kludge!
+  #my $SBEAMS = "$ENV{'SBEAMS'}" || "/net/dblocal/www/html/devTF/sbeams";
+
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+      || die "ref_parameters not passed";
+
+  my %parameters = %{$ref_parameters};
+
+  # put a spacer so that showing hidden content doesn't mangle the layout
+  print "<BR>$spacer\n" if $htmlmode;
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+    parameters_ref => \%parameters,
+    program_name => $PROG_NAME,
+  );
+  print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+
+  #### Get the current atlas_build_id based on parameters or session
+  my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+    parameters_ref => \%parameters,
+  );
+  if (defined($atlas_build_id) && $atlas_build_id < 0) {
+    return;
+  }
+  $parameters{atlas_build_id} = $atlas_build_id;
+
+
+  #### Define some generic variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+
+  #### Read in the standard form values
+  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+  #### Set some specific settings for this program
+  my $CATEGORY="Search Proteins";
+  $TABLE_NAME="AT_SearchProteins" unless ($TABLE_NAME);
+  ($PROGRAM_FILE_NAME) =
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+
+  #### Get the columns and input types for this table/query
+  ### TMF: At this point, $TABLE_NAME is AT_SearchProteins
+  ### @columns contains the two user-specifiable constraints
+  my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+
+  ### TMF: hash column name => text, optionList, etc.
+  my %input_types = 
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+
+  #### Read the input parameters for each column
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters,
+    columns_ref=>\@columns,input_types_ref=>\%input_types);
+   #$sbeams->printDebuggingInfo($q);
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams('q' => $q);
+  my $n_params_found = 0;
+
+  if ($apply_action eq "VIEWRESULTSET") {
+    $sbeams->readResultSet(
+      resultset_file=>$rs_params{set_name},
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      resultset_params_ref=>\%rs_params,
+    );
+    $n_params_found = 99;
+  }
+
+  #### Set some reasonable defaults if no parameters supplied
+  unless ($n_params_found) {
+    $parameters{input_form_format} = "minimum_detail";
+  }
+
+  #### Apply any parameter adjustment logic
+  # None
+
+  #### Display the user-interaction input form
+  $sbeams->display_input_form(
+    TABLE_NAME=>$TABLE_NAME,
+    CATEGORY=>$CATEGORY,
+    apply_action=>$apply_action,
+    PROGRAM_FILE_NAME=>$PROG_NAME,
+    parameters_ref=>\%parameters,
+    input_types_ref=>\%input_types,
+    mask_user_context=> '1',
+  );
+
+
+  #### Display the form action buttons
+  $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
+
+  my $protein_list;
+
+  if ( $apply_action ne "VIEWRESULTSET" && $parameters{upload_file} ) {
+    my @protein_array = ();
+
+     ## upload the file to a file handler
+     my $fh;
+     if ($sbeams->invocation_mode() eq 'http') {
+       $fh = $q->upload('upload_file');
+     } else {
+       open($fh, $parameters{upload_file});
+     }
+
+     #print "$parameters{upload_file}\n";
+     if (!$fh && $q->cgi_error) 
+     {
+       print $q->header(-status=>$q->cgi_error);
+     } elsif (!$fh) {
+       print "ERROR: Couldn't create file handle for $parameters{upload_file}\n";
+       exit;
+     }
+     # -T: looks like a text file
+     if ( (-T $fh) && (-s $fh < 1000000)) ##size constraint of 10 MB, restrict $count < 30000
+     {
+       my $count = 0;
+       my $read_file=0;
+       my $prt;
+       ## protein list
+       while ($prt=<$fh>)
+       {
+	 chomp($prt);
+	 $prt =~ s/\s+$//;
+	 if ($prt)
+	 {
+             push (@protein_array, $prt);
+	     $count = $count + 1;
+	 }
+	 last if ($count > 30000);
+      }
+    } else {
+      print "ERROR: $parameters{upload_file} not a text file or > 10MB\n";
+      exit;
+    }
+
+    ## join with commas:
+    $protein_list = "";
+    foreach my $pr (@protein_array)
+    {
+       $protein_list = "$protein_list,'$pr'"; 
+    }
+    ## trim off leading comma:
+    $protein_list =~ s/(,)(.*)$/$2/;
+    #print "<p>$protein_list\n</p>";
+  } # if upload file
+
+  elsif ( $parameters{prot_list} ) {
+    $protein_list = $parameters{prot_list};
+  }
+
+  if ( defined $protein_list ) {
+    my @prot_array = split (",", $protein_list);
+    my $prot_array_ref = \@prot_array;
+
+    my $summary_rows = look_up_protids_in_atlas_and_return_array_for_each (
+      prot_array_ref => $prot_array_ref,
+      atlas_build_id => $atlas_build_id, 
+      htmlmode => $htmlmode, 
+      Search_path => "$PHYSICAL_CGI_DIR/$SBEAMS_SUBDIR/Search",
+    );
+
+    #my $column_list_ref = ["prot_id","search_key","hit","n_obs","found_using","equiv_ids"];
+    my $column_list_ref = ["prot_id","hit","n_obs","equiv_ids"];
+    my @type_list = qw(varchar varchar int varchar);
+
+    ##### Prepare to display the matrix as a HTML table resultset
+    ##### lifted from CompareExperiments
+    my %dataset;
+    # ref of array of array refs
+    $dataset{data_ref} = $summary_rows;
+    # column titles
+    $dataset{column_list_ref} = $column_list_ref;
+    ### can also set column_title_ref -- should it be different?
+    $dataset{column_title_ref} = $column_list_ref;
+    # how to draw it
+    #my $n_columns = 6;
+    my $n_columns = 4;
+    $dataset{precisions_list_ref} = [ (50) x ($n_columns) ];
+    $dataset{types_list_ref} = \@type_list;
+
+
+    #### Store the resultset and parameters to disk resultset cache
+    $rs_params{set_name} = "SETME";
+    $sbeams->writeResultSet(
+      resultset_file_ref=>\$rs_params{set_name},
+      resultset_ref=>\%dataset,
+      query_parameters_ref=>\%parameters,
+      resultset_params_ref=>\%rs_params,
+      query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+      column_titles_ref=>$column_list_ref,
+    );
+
+    $resultset_ref = \%dataset;
+
+  } # end if defined $protein_list
+
+  #### if query or viewresultset was selected, get and display results
+  if ($apply_action =~ /(QUERY|GO|VIEWRESULTSET)/) {
+
+    #my $atlas_build_id = $parameters{atlas_build_id}; #set earlier
+    #print "<p>Atlas build id = $atlas_build_id</p>\n";
+
+
+    #### Define the hypertext links for columns that need them
+    my %url_cols = (
+		 'hit' =>
+  "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id&action=QUERY&protein_name=\%V",
+    );
+
+
+
+    #### Display the resultset
+    $sbeams->displayResultSet(
+      #resultset_ref=>\%dataset,
+      resultset_ref=>$resultset_ref,
+      query_paramters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      url_cols_ref=>\%url_cols,
+      #hidden_cols_ref=>\%hidden_cols,
+      #max_widths=>\%max_widths,
+      #column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
+      page_size=>100,
+      page_number=>0,
+    );
+
+
+    #### Display the resultset controls, including export options
+    $sbeams->displayResultSetControls(
+      resultset_file=>$rs_params{set_name},
+      #resultset_ref=>\%dataset,
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      base_url=>$base_url,
+    );
+  }
+
+  #### Finish the upper part of the page and go begin the full-width
+  #### data portion of the page
+  $sbeams->display_page_footer(close_tables=>'YES',
+    separator_bar=>'YES',display_footer=>'NO');
+} # end handle_request
+
+###############################################################################
+# look_up_protids_in_atlas_and_return_array_for_each
+###############################################################################
+sub look_up_protids_in_atlas_and_return_array_for_each {
+
+  my %args = @_;
+
+  my $prot_array_ref = $args{'prot_array_ref'};
+  my @prot_array = @{$prot_array_ref};
+  my $atlas_build_id = $args{'atlas_build_id'};
+  my $htmlmode = $args{'htmlmode'};
+  my $Search_path = $args{'Search_path'};
+  my $summary_rows = [];
+  my $results_counter = 0;
+  my $counter_increment = 5;
+
+  my $n_queries = scalar (@prot_array);
+
+  if ($htmlmode && $n_queries > 20) {
+    my $msg = "Looking up $n_queries queries; printing one dot every ".
+            "$counter_increment queries; dots may print in batches so ".
+            "1-2 minutes may pass with no dots: ";
+    print "<p>$msg";
+  }
+
+  for my $protid_string (@prot_array) {
+    my $output_array_ref = look_up_protid_in_atlas_and_return_array_of_hits (
+      protid_string => $protid_string,
+      atlas_build_id => $atlas_build_id,
+      htmlmode => $htmlmode,
+      Search_path => $Search_path,
+    );
+    push (@{$summary_rows}, $output_array_ref);
+    # show progress reports if user provided lots of queries
+    if ( $htmlmode && $n_queries > 20) {
+      $results_counter++;
+      if ($results_counter % $counter_increment == 0) {
+	print ".";
+	if ($results_counter % ($counter_increment * 10) == 0) {
+	  print "$results_counter";
+	}
+      }
+    }
+  }
+  if ( $htmlmode && ($results_counter >= $counter_increment ) ) {
+    print "</p>";
+    print "\n";
+  }
+  return $summary_rows;  # return reference to array of array refs
+}
+
+###############################################################################
+# look_up_protid_in_atlas_and_return_array_of_hits 
+###############################################################################
+sub look_up_protid_in_atlas_and_return_array_of_hits {
+
+  my %args = @_;
+
+  my $protid_string = $args{'protid_string'};
+  my $atlas_build_id = $args{'atlas_build_id'};
+  my $htmlmode = $args{'htmlmode'};
+  my $Search_path = $args{'Search_path'};
+  my $GetProteins_path = $Search_path;
+  $GetProteins_path =~ s/Search/GetProteins/;
+
+  $protid_string =~ s/\'//g; #remove single quotes
+  my $search_key="";
+  chomp ($protid_string);
+  $protid_string =~ s/\s+$//; #remove trailing spaces
+  my @protids = split(/[;,]/, $protid_string);
+  #for my $p (@protids) { print "$p\n"; }
+  for my $protid (@protids) {
+    # if protid_string is from Swiss-Prot and is not a 2nd, 3rd, etc. splice
+    # variant, match either P12345 or P12345-1.
+    if ($protid =~ /^[ABOPQ].....$/) {
+      $search_key = "$search_key;$protid;$protid-1";
+    } elsif ($protid =~ /(^[ABOPQ].....)-1$/) {
+      $search_key = "$search_key;$1;$protid";
+    # if protid_string is IPI with version extension, look for identifier
+    # without version
+    } elsif ($protid =~ /(IPI........)\.\d+/) {
+      $search_key = "$search_key;$1";
+
+    } else {
+      $search_key = "$search_key;$protid";
+    }
+  }
+  # remove leading semicolon from $search_key
+  $search_key =~ s/^;//;
+
+  my $output_array_ref;
+
+  # First, try Search
+  my $cmd = "$Search_path " .
+	    "action=GO " .
+	    "output_mode=tsv " .
+	    "search_key=\"$search_key\" " .
+	    "atlas_build_id=\"$atlas_build_id\"";
+
+  my @search_output = `$cmd`;
+
+  if ($search_output[0] !~ /There were no matches/) {
+    $output_array_ref =
+	process_search_output(\@search_output, $protid_string,
+					      $search_key);
+    if (scalar @{$output_array_ref} > 0) {
+      return ($output_array_ref);
+    }
+  }
+
+  # Next, try looking in biosequence set using GetProteins
+  # 10/20/09: Let's not do this -- it's slow and I haven't seen it
+  #  give any results lately.
+  if (0) {
+  $cmd =  "$GetProteins_path ".
+	  "action=QUERY " .
+	  "output_mode=tsv " .
+	  "biosequence_name_constraint=\"\%$search_key\%\" " .
+	  "atlas_build_id=\"$atlas_build_id\"";
+  my @get_proteins_output = `$cmd`;
+  # Identification of header lines not robust. FIXME.
+  # in non-command-line mode, GetProteins apparently returns with a 2-line header
+  my $header_line = 2 * $htmlmode;
+  if ($#get_proteins_output > $header_line) {
+    # choose one line from multi-line output
+    my $selected_get_proteins_output =
+       select_get_proteins_output(\@get_proteins_output);
+    my @fields = split("\t",$selected_get_proteins_output);
+    my $protid = $fields[0];
+    my $n_obs = $fields[3];
+    my $equiv_id_string = $fields[7] || "";
+    #$output_array_ref = [$protid_string,$search_key,$protid,$n_obs,"GetProteins",$equiv_id_string];
+    $output_array_ref = [$protid_string,$protid,$n_obs,$equiv_id_string];
+    return ($output_array_ref);
+    next;
+  }
+  }
+
+  # If couldn't find it using Search or looking in bioseq set, print UNKNOWN.
+  #$output_array_ref = [$protid_string,$search_key,"UNKNOWN","","",""];
+  $output_array_ref = [$protid_string,"UNKNOWN","",""];
+  return ($output_array_ref);
+}
+
+sub process_search_output {
+  my $search_output_href = shift;
+  my @search_output = @{$search_output_href};
+  my $query_protid = shift;
+  my $search_key = shift;
+  my $output_array_ref;
+  my %successful_search_keys;  #if query has wildcard may match mult protids.
+  my %equiv_ids;
+
+  %equiv_ids = ();
+  %successful_search_keys = ();
+  my $n_obs = 0;
+  my $default_protid;
+  # each output line corresponds to a biosequence that is equivalent to one of
+  # the input protIDs, including sometimes the input protIDs themselves
+  # Collect all these, and collect also the maximum n_obs of all (they should
+  # be identical but maybe they won't be)
+  #
+  for (my $i = 0; $i <= $#search_output; $i++) {
+    my $line = $search_output[$i];
+    # skip non-data lines. Not very robust, but no better alternative
+    # without re-engineering stuff
+    if ( ( $line =~ /Content_Type/ ) || ( $line =~ /search_key/) ||
+         ( $line =~ /charset/ )  ) {
+      next;
+    }
+    chomp $line;
+    my @fields = split("\t", $line);
+    my $successful_search_key = $fields[0];
+    if ($successful_search_key &&
+        $successful_search_key !~ /^[\s]*$/ ) {
+      $successful_search_keys{$successful_search_key} = 1;
+    }
+    my $equiv_id = $fields[2];
+    if ($equiv_id) {
+    $equiv_ids{$equiv_id} = 1;
+    }
+    if ($#fields < 3 || ! $fields[3]) {  # no peps for this prot observed
+      $fields[3] = 0;
+    }
+    if ($fields[3] > $n_obs) {
+      $n_obs = $fields[3];
+    }
+  }
+  my $equiv_id_string = join(";", keys(%equiv_ids));
+  if ($equiv_id_string eq "") {
+    $equiv_id_string = "-";
+  }
+  my $successful_search_key_string = join(";", keys(%successful_search_keys));
+  if ($successful_search_key_string eq "") {
+    $successful_search_key_string = "-";
+  }
+  #$output_array_ref = [$query_protid,$search_key,$successful_search_key_string,$n_obs,"Search",$equiv_id_string];
+  $output_array_ref = [$query_protid,$successful_search_key_string,$n_obs,$equiv_id_string];
+  return $output_array_ref;
+}
+
+
+sub select_get_proteins_output {
+  my $get_proteins_output_aref = shift;
+  my @get_proteins_output = @{$get_proteins_output_aref};
+  my $i;
+  my $non_decoy_found = 0;
+  for ($i=1; $i<=$#get_proteins_output; $i++) {
+    if ($get_proteins_output[$i] !~ /DECOY_/) {
+      $non_decoy_found = 1;
+      last;
+    }
+  }
+  if (!$non_decoy_found) {
+    $i = 1;
+  }
+  return ($get_proteins_output[$i]);
+}
