@@ -31,6 +31,8 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 
+use SBEAMS::Proteomics::PeptideMassCalculator;
+
 use Data::Dumper;
 use Digest::MD5 qw(md5_hex);
 
@@ -622,7 +624,7 @@ sub get_pabst_static_peptide_transitions_display {
   AND peptide_sequence = '$args{peptide_sequence}'
   ORDER BY ion_rank ASC 
   ~;
-  print STDERR "$sql\n";
+  $log->debug( $sql );
   my @headings = ( pre => 'Previous amino acid',
                    sequence => 'Amino acid sequence of peptide',
                    fol => 'Followin amino acid',
@@ -714,7 +716,7 @@ sub get_pabst_static_peptide_display {
 # FIXME - can't assume order, duh.
   my $sql = qq~
   SELECT DISTINCT preceding_residue, peptide_sequence, following_residue,
-  empirical_proteotypic_score, suitability_score, merged_score,
+  suitability_score, predicted_suitability_score, merged_score,
   SSRCalc_relative_hydrophobicity, n_genome_locations, n_observations,
   synthesis_warnings, syntheis_adjusted_score
   FROM $TBAT_PABST_PEPTIDE PP 
@@ -728,6 +730,9 @@ sub get_pabst_static_peptide_display {
   AND PB.organism_id = $organism_id
   ORDER BY syntheis_adjusted_score DESC
   ~;
+
+  $log->debug( $sql );
+
   my @headings = ( pre => 'Previous amino acid',
                    sequence => 'Amino acid sequence of peptide',
                    fol => 'Followin amino acid',
@@ -743,16 +748,23 @@ sub get_pabst_static_peptide_display {
 
   my @peptides = ( $self->make_sort_headings( headings => \@headings,
                                               default => 'adj_SS' )  );
-#  my $naa = $sbeams->makeInactiveText( 'n/a' );
+  my $naa = 'n/a';
+  $naa = $sbeams->makeInactiveText($naa) if $sbeams->output_mode() =~ /html/i;
 
   my $sth = $sbeams->get_statement_handle( $sql );
   while( my @row = $sth->fetchrow_array() ) {
-    $row[3] = sprintf( "%0.2f", $row[3] );
+    for my $idx ( 3,4,5 ) {
+      if ( defined $row[$idx] && $row[$idx] ne '' ) {
+        $row[$idx] = sprintf( "%0.2f", $row[$idx] );
+      } else {
+        $row[$idx] = $naa; 
+      }
+    }
     $row[4] = sprintf( "%0.2f", $row[4] );
     $row[5] = sprintf( "%0.2f", $row[5] );
     $row[6] = sprintf( "%0.1f", $row[6] );
     $row[10] = sprintf( "%0.2f", $row[10] );
-    $row[1] = "<A HREF=GetPeptide?_tab=3;atlas_build_id=$args{atlas_build};searchWithinThis=Peptide+Sequence;searchForThis=$row[1];action=QUERY;biosequence_id=$args{biosequence_id} TITLE='View peptide $row[1] details'>$row[1]</A>" if $row[8];
+    $row[1] = "<A HREF=GetPeptide?_tab=3;atlas_build_id=$args{atlas_build_id};searchWithinThis=Peptide+Sequence;searchForThis=$row[1];action=QUERY;biosequence_id=$args{biosequence_id} TITLE='View peptide $row[1] details'>$row[1]</A>" if $row[8] || 1;
     push @peptides, [ @row];
   }
 
@@ -2001,7 +2013,195 @@ sub pabst_evaluate_peptides {
   return $args{peptides};
 
 }
+      
+sub calculate_CE {
+ 
+  my $self = shift;
+  my %args = @_;
 
+  for my $req_arg ( qw( mass charge ) ) {
+    unless ( $args{$req_arg} ) {
+      $log->warn( "Missing required argument $req_arg" );
+      return '';
+    }
+  }
+
+  my $ce;
+
+  if    ( $args{charge} == 1 ) { 
+    $ce = 0.058 * $args{mass} + 9; 
+  } elsif ( $args{charge} == 2 ) { 
+    $ce = 0.044 * $args{mass} + 5.5;
+  } elsif ( $args{charge} == 3 ) { 
+    $ce = 0.051 * $args{mass} + 0.5;
+  } elsif ( $args{charge} > 3 )  { 
+    $ce = 0.003 * $args{mass} + 2; 
+  }
+
+  $ce = 75 if ( $ce > 75 ); 
+
+  return $ce;
+}
+
+# Generate theoretical fragments from a peptide sequence
+# @narg peptide_seq  required
+# @narg max_mz  (default 10000)
+# @narg min_mz  (default 0)
+# @narg precursor_excl (default 0)
+sub generate_fragment_ions {
+
+  my $self = shift;
+  my %args = ( max_mz => 10000,
+               min_mz => 0,
+               precursor_excl => 0,
+               add_score => 1,
+               type => 'P',
+              @_ );
+
+  $self->{_mass_calc} ||= new SBEAMS::Proteomics::PeptideMassCalculator;
+
+
+  for my $req_arg ( qw( peptide_seq ) ) {
+    unless ( $args{$req_arg} ) {
+      $log->warn( "Missing required argument $req_arg" );
+      return [];
+    }
+  }
+
+  if ( $args{peptide_seq} =~ /X|U|\*/ ) {
+    $log->warn( "Illegal characters in peptide sequence" );
+    return [];
+  }
+
+  # TODO loop over charge 2 and 3?
+  my $chg = 2;
+  my @frags;
+
+  my $len = length( $args{peptide_seq} );
+
+  if ( !$atlas ) {
+    $atlas = SBEAMS::PeptideAtlas->new();
+  }
+  my $residues = $atlas->fragment_peptide( $args{peptide_seq} );
+
+  my $mass = $self->{_mass_calc}->getPeptideMass( sequence => $args{peptide_seq},
+                                                    mass_type => 'monoisotopic',
+                                                       charge => 1
+                                                   );
+  my $mz = $mass/$chg;
+
+  my $ce = $self->calculate_CE( mass => $mass, charge => $chg );
+
+  $sbeams = $self->getSBEAMS();
+
+#  my $ions = $atlas->CalcIons( Residues => $residues,
+#                       modified_sequence => $args{peptide_seq},
+#                                  Charge => 1 );
+
+  my $ions = $atlas->calc_ions( 
+                       sequence => $args{peptide_seq},
+                                  charge => 1 );
+
+#  use Data::Dumper;
+#  print Dumper( $ions );
+
+
+  # precursor mz norm to 1000 Th
+  my $norm_factor = (1000/$mz);
+
+  my %series = ( Yions => 'Y',
+                 Bions => 'B' );
+
+  # Push first Y and then B ions
+#  print "precursor mz is $mz, norm factor is $norm_factor\n";
+  for my $series_class ( qw( Yions Bions ) ) {
+
+    for ( my $i = 1; $i <= $len; $i++ ) {
+
+      if ( $ions->{$series_class}->[$i] < $args{min_mz} ||  
+           $ions->{$series_class}->[$i] > $args{max_mz} ||
+           abs( $mz - $ions->{$series_class}->[$i] ) < $args{precursor_excl} 
+         ) {
+
+        # user-defined out-of-range
+#        print "$series_class $ions->{indices}->[$i] failed! $ions->{$series_class}->[$i]\n";
+        next;
+      }
+
+      my $scr = sprintf( '%0.1f', $ions->{$series_class}->[$i] * $norm_factor );
+#      print "Score is $scr for $i $series_class ) $ions->{indices}->[$i] is $ions->{$series_class}->[$i] \n";
+#      print "$i) $series{$series_class} $ions->{indices}->[$i] is $ions->{$series_class}->[$i]\n";
+#
+# peptide sequence
+# modified_peptide_sequence
+# q1_mz
+# q1_charge
+# q3_mz
+# q3_charge
+# ion_series
+# ion_number
+# CE
+# Relative intensity 
+# Type (user-defineable)
+# Score  (optional) -  on by default
+#
+      my $fragment =  [ $args{peptide_seq}, 
+                        $args{peptide_seq},
+                        $mz,
+                        $chg,
+                        $ions->{$series_class}->[$i],
+                        1, 
+                        $series{$series_class},
+                        $ions->{indices}->[$i],
+                        $ce, 
+                        '',
+                       ];
+      if ( $args{type} ) {
+        push @{$fragment}, $args{type};
+      }
+      if ( $args{add_score} ) {
+        push @{$fragment}, $scr;
+      }
+      push @frags, $fragment;
+    }
+  }
+  return \@frags;
+
+} # End generate_fragment_ions
+
+# Cheap 'n dirty fragment sorter.
+sub order_fragments {
+  my $self = shift;
+  my $frags = shift;
+  my @frags;
+
+  # First Y
+  my @y_over;
+  my @y_under;
+  for my $frag ( @{$frags} ) {
+    next if $frag->[6] eq 'B';
+    if ( $frag->[11] > 1000 ) {
+      push @y_over, [@{$frag}[0..10]];
+    } else {
+      unshift @y_under, [@{$frag}[0..10]];
+    }
+  }
+
+  # Next B
+  my @b_under;
+  my @b_over;
+  for my $frag ( @{$frags} ) {
+    next if $frag->[6] eq 'B';
+    if ( $frag->[11] > 1000 ) {
+      push @b_over, [@{$frag}[0..10]];
+    } else {
+      unshift @b_under, [@{$frag}[0..10]];
+    }
+  }
+  push @frags, @y_over, @y_under, @b_over, @b_under;
+
+  return \@frags;
+}
 
 
 
