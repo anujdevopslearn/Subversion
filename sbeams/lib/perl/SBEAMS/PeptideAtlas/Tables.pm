@@ -97,6 +97,10 @@ use vars qw(@ISA @EXPORT
     $TBAT_PROTEIN_IDENTIFICATION
     $TBAT_BIOSEQUENCE_RELATIONSHIP
 
+    $TBAT_PABST_PEPTIDE
+    $TBAT_PABST_PEPTIDE_MAPPING
+    $TBAT_PABST_TRANSITION
+    $TBAT_PABST_BUILD
 );
 
 
@@ -191,12 +195,18 @@ require Exporter;
     $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE
     $TBAT_PROTEIN_IDENTIFICATION
     $TBAT_BIOSEQUENCE_RELATIONSHIP
+
+    $TBAT_PABST_PEPTIDE
+    $TBAT_PABST_PEPTIDE_MAPPING
+    $TBAT_PABST_TRANSITION
+    $TBAT_PABST_BUILD
 );
 
 
 #### Get the appropriate database prefixes for the SBEAMS core and this module
 my $core = $DBPREFIX{Core};
 my $mod = $DBPREFIX{PeptideAtlas};
+my $test_mod = $DBPREFIX{PeptideAtlasTest} || $DBPREFIX{PeptideAtlas};
 my $glycomod = $DBPREFIX{GlycoPeptide} || $DBPREFIX{PeptideAtlas};
 my $BioLink = $DBPREFIX{BioLink};
 
@@ -230,8 +240,8 @@ $TBAT_BIOSEQUENCE_ANNOTATION = "${mod}biosequence_annotation";
 $TBAT_SAMPLE                = "${mod}sample";
 $TBAT_SAMPLE_PUBLICATION    = "${mod}sample_publication";
 
-$TBAT_IPI_VERSION	    	= "${glycomod}ipi_version";
-$TBAT_IPI_XREFS	    	= "${glycomod}ipi_xrefs";
+$TBAT_IPI_VERSION	    	= "PeptideAtlas_test.dbo.ipi_version";
+$TBAT_IPI_XREFS	    	= "PeptideAtlas_test.dbo.ipi_xrefs";
 $TBAT_IPI_DATA			= "${glycomod}ipi_data";
 $TBAT_CELLULAR_LOCATION		= "${glycomod}cellular_location";
 $TBAT_GLYCO_SITE		= "${glycomod}glyco_site";
@@ -280,8 +290,15 @@ $TBAT_TRANSITION_SUITABILITY_LEVEL  = "${mod}transition_suitability_level";
 
 $TBAT_PROTEOTYPIC_PEPTIDE           = "${mod}proteotypic_peptide";
 $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING   = "${mod}proteotypic_peptide_mapping";
+#$TBAT_PROTEOTYPIC_PEPTIDE           = "peptideatlas_test.dbo.proteotypic_peptide_test";
+#$TBAT_PROTEOTYPIC_PEPTIDE_MAPPING   = "peptideatlas_test.dbo.proteotypic_peptide_mapping";
 
 $TBAT_PROTEIN_PRESENCE_LEVEL        = "${mod}protein_presence_level";
 $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE = "${mod}biosequence_relationship_type";
 $TBAT_PROTEIN_IDENTIFICATION        = "${mod}protein_identification";
 $TBAT_BIOSEQUENCE_RELATIONSHIP      = "${mod}biosequence_relationship";
+
+$TBAT_PABST_PEPTIDE                 = "${mod}pabst_peptide";
+$TBAT_PABST_PEPTIDE_MAPPING         = "${mod}pabst_peptide_mapping";
+$TBAT_PABST_TRANSITION              = "${mod}pabst_transition";
+$TBAT_PABST_BUILD                   = "${mod}pabst_build";
