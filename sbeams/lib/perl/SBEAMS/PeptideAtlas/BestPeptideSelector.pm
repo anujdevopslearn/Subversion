@@ -26,6 +26,7 @@ require Exporter;
 $VERSION = q[$Id$];
 @EXPORT_OK = qw();
 
+use SBEAMS::BioLink::MSF;
 use SBEAMS::Connection qw( $log );
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::Settings;
@@ -643,6 +644,8 @@ sub get_pabst_static_peptide_transitions_display {
                                               default => 'adj_SS' )  );
 #  my $naa = $sbeams->makeInactiveText( 'n/a' );
 
+  my $naa = 'n/a';
+  $naa = $sbeams->makeInactiveText($naa) if $sbeams->output_mode() =~ /html/i;
   my %src_name = ( T => 'IS', Q => 'QQQ', I => 'IT', 'P' => 'PATR' );
 
   my $sth = $sbeams->get_statement_handle( $sql );
@@ -650,6 +653,11 @@ sub get_pabst_static_peptide_transitions_display {
     $row[3] = $src_name{$row[3]};
     $row[4] = sprintf( "%0.2f", $row[4] );
     $row[6] = sprintf( "%0.2f", $row[6] );
+    if ( $row[10] ) {
+      $row[10] = sprintf( "%2d", $row[10] );
+    } else {
+      $row[10] = $naa;
+    }
     push @peptides, [ @row ];
   }
 
@@ -1004,7 +1012,6 @@ sub get_mapped_proteins {
   }
 
   # Run alignment 
-  use SBEAMS::BioLink::MSF;
   my $MSF = SBEAMS::BioLink::MSF->new();
   my $alignment_results = $MSF->runAllvsOne( reference => $ref_sum, 
                                              sequences => \%chksum2seq 
@@ -2088,6 +2095,11 @@ sub generate_fragment_ions {
                                                     mass_type => 'monoisotopic',
                                                        charge => 1
                                                    );
+  if ( !$mass ) {
+    $log->warn( "Mass calulation yeilds 0 for $args{peptide_seq}" );
+    return [];
+  }
+
   my $mz = $mass/$chg;
 
   my $ce = $self->calculate_CE( mass => $mass, charge => $chg );
