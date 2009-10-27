@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 
 ###############################################################################
-# Program     : GetMRMList
+# Program     : GetPABSTList
 #
 # Description : form to retrieve peptides and MS/MS fragment ions given
 #               constraints and send request to viewer
@@ -29,11 +29,15 @@ use SBEAMS::Connection::TabMenu;
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::BestPeptideSelector;
 
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
-$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+$sbeams->setSBEAMS_SUBDIR( 'PeptideAtlas' );
+my $best_peptide = new SBEAMS::PeptideAtlas::BestPeptideSelector;
+$best_peptide->setAtlas( $sbeamsMOD );
+$best_peptide->setSBEAMS( $sbeams );
 
 
 ###############################################################################
@@ -164,9 +168,9 @@ sub handle_request
     my $TABLE_NAME = $parameters{'QUERY_NAME'};
 
     #### Set some specific settings for this program
-    my $CATEGORY="Get MRM List";
+    my $CATEGORY="Get PABST List";
 
-    $TABLE_NAME="AT_GetMRMList" unless ($TABLE_NAME);
+    $TABLE_NAME="AT_GetPABSTList" unless ($TABLE_NAME);
 
     ($PROGRAM_FILE_NAME) =
         $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
@@ -210,7 +214,20 @@ sub handle_request
     my $form = $sbeams->fetchSTDOUT();
     my $id = 'ID="protein_name_constraint"';
     $form =~ s/(NAME=\"protein_name_constraint\")/$1 $id/;
-    print $form;
+
+
+
+    my $sub_form = $best_peptide->get_change_form( form_only => 1 );
+    $sub_form =~ s/tbl_hidden/tbl_visible/gm;
+   
+#    $form =~ s/(\<INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="AT_GetPABSTList"\>)/$1<BR>$sub_form/gm;
+#    $form =~ s/\<\/TABLE\>/<TR><TD COLSPAN=3>$sub_form<\/TD><\/TR><\/TABLE>/i;
+#    $form .= "<TR><TD COLSPAN=3>$sub_form</TD></TR>\n";
+
+    print qq~
+    $form
+    ~;
+#    <TR><TD COLSPAN=3>$sub_form</TD></TR>
 
     #### Display the form action buttons
     $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
