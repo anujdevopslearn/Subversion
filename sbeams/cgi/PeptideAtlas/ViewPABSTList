@@ -379,12 +379,11 @@ sub handle_request {
 	}
 
 
-  ## n_fragment_ions defaults to 10
-  my $n_fragment_ions = 10;
+  ## n_fragment_ions defaults to 3
+  my $n_fragment_ions = 3;
   if ($parameters{'n_highest_intensity_fragment_ions'} =~ /^(\d+)$/) {
     $n_fragment_ions = $1;
   }
-  $log->debug( "n frag is $n_fragment_ions!!" );
 
   ## n_peptides_per_protein defaults to 3 
   my $n_peps_per_prot = 3;
