@@ -642,8 +642,8 @@ AT_GetPABSTList	4	peptide_length	Peptide Length									N	text	15		Y	Y	N	"Constr
 AT_GetPABSTList	5	empirical_proteotypic_constraint	Empirical Proteotypic Score 									N	text	10		Y	Y	N	"Constraint for the empirical proteotypic score for a peptide.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""		
 AT_GetPABSTList	6	n_protein_mappings_constraint	Number of Proteins Mapped 									N	text	5		Y	Y	N	Constraint for number of distinct proteins for this peptide ( >=0 )		
 AT_GetPABSTList	7	n_genome_locations_constraint	Number of Genome Locations Mapped 									N	text	5		Y	Y	N	Constraint for number of genome locations for this peptide ( >=0 )		
-AT_GetPABSTList	9	n_highest_intensity_fragment_ions	Num of highest Inten Frag Ions to Keep									N	text	5		Y	Y	N	Number highest inten frag ions per spec to keep, default 10, max 10.		
-AT_GetPABSTList	10	n_peptides_per_protein	Number of peptides per protein constraint									N	text	5		Y	Y	N	Number of peptides to return per protein, default 3, max 20.		
+AT_GetPABSTList	9	n_highest_intensity_fragment_ions	Num of highest Inten Frag Ions to Keep									N	text	5		Y	Y	N	Number highest inten frag ions per spec to keep, default 3, max 10.		
+AT_GetPABSTList	10	n_peptides_per_protein	Number of peptides per protein constraint									N	text	5		Y	Y	N	Number of peptides to return per protein, default 3, max 10.		
 AT_GetPABSTList	11	pabst_build_id	PABST Build									Y	optionlist	4		Y	Y	N	"Select desired PABST Build to search, required."	"SELECT pabst_build_id, build_name FROM peptideatlas_test.dbo.pabst_build "	
 AT_pabst_build	1	pabst_build_id	PABST Build Id	int	4	0	N		Y			N						Y			
 AT_pabst_build	2	build_name	Build Name	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
@@ -671,14 +671,15 @@ AT_pabst_peptide	7	n_protein_mappings	N Protein Mappings	int	4	0	Y		N			N						N
 AT_pabst_peptide	8	n_genome_locations	N Genome Locations	int	4	0	Y		N			N						N			
 AT_pabst_peptide	9	SSRCalc_relative_hydrophobicity	SSRCalc Relative Hydrophobicity	float	8	0	Y		N			N						N			
 AT_pabst_peptide	10	best_probability	Best Probability	float	8	0	Y		N			N						N			
-AT_pabst_peptide	11	n_observations	N Observations	int	4	0	Y		N			N						N			
-AT_pabst_peptide	12	source_build	Source Build	int	4	0	Y		N			N						N			
-AT_pabst_peptide	13	empirical_proteotypic_score	Empirical Proteotypic Score	float	8	0	Y		N			N						N			
-AT_pabst_peptide	14	suitability_score	Suitability Score	float	8	0	Y		N			N						N			
-AT_pabst_peptide	15	merged_score	Merged Score	float	8	0	Y		N			N						N			
-AT_pabst_peptide	16	synthesis_score	Synthesis Score	float	8	0	Y		N			N						N			
-AT_pabst_peptide	17	synthesis_warnings	Synthesis Warnings	varchar	255	0	Y		N			N						N			
-AT_pabst_peptide	18	syntheis_adjusted_score	Syntheis Adjusted Score	float	8	0	Y		N			N						N			
+AT_pabst_peptide	11	retention_time	Retention Time	float	8	0	Y		N			N						N			
+AT_pabst_peptide	12	n_observations	N Observations	int	4	0	Y		N			N						N			
+AT_pabst_peptide	13	source_build	Source Build	int	4	0	Y		N			N						N			
+AT_pabst_peptide	14	empirical_proteotypic_score	Empirical Proteotypic Score	float	8	0	Y		N			N						N			
+AT_pabst_peptide	15	suitability_score	Suitability Score	float	8	0	Y		N			N						N			
+AT_pabst_peptide	16	merged_score	Merged Score	float	8	0	Y		N			N						N			
+AT_pabst_peptide	17	synthesis_score	Synthesis Score	float	8	0	Y		N			N						N			
+AT_pabst_peptide	18	synthesis_warnings	Synthesis Warnings	varchar	255	0	Y		N			N						N			
+AT_pabst_peptide	19	syntheis_adjusted_score	Syntheis Adjusted Score	float	8	0	Y		N			N						N			
 AT_pabst_transition	1	pabst_transition_id	PABST Transition Id	int	4	0	N		Y			N						Y			
 AT_pabst_transition	2	pabst_peptide_id	PABST Peptide Id	int	4	0	Y		N	AT_pabst_peptide	pabst_peptide_id	N						N			
 AT_pabst_transition	3	transition_source	Transition Source	char	1	0	Y		N			N						N			
