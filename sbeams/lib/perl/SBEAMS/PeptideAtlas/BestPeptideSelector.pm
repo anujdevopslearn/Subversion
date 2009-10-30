@@ -510,15 +510,15 @@ sub get_default_pabst_scoring {
                   DP => .5,
                   QG => .5,
                   DG => .5,
-                nxxG => .3,
-                nGPG => .1,
+                nxxG => .8,
+                nGPG => .5,
                    D => 1.0,
                  obs => 2.0,
                    S => 1.0,
-               min_l => 0,
-               min_p => 1,
-               max_l => 0,
-               max_p => 1,
+               min_l => 7,
+               min_p => 0.5,
+               max_l => 25,
+               max_p => 0.2,
                ssr_p => 0.5,
                 );
 
@@ -1386,7 +1386,10 @@ sub get_pabst_multibuild_observed_peptides {
   $nobs_and
   $name_like
   $name_in
-  ORDER BY biosequence_name ASC, preceding_residue || peptide_sequence || following_residue, atlas_build_id ASC
+  ORDER BY preceding_residue || peptide_sequence || following_residue,
+  n_observations DESC, 
+  empirical_proteotypic_score DESC,
+  atlas_build_id DESC
  
   END
 
@@ -1404,7 +1407,53 @@ sub get_pabst_multibuild_observed_peptides {
   # we have a new one ( prev + seq + follow ), then pick the best and move on.
   my %peptides;
 
+  my %peptide_values;
+
   while( my @row = $sth->fetchrow_array() ) {
+
+# 0 biosequence_name, 
+# 1 preceding_residue,
+# 2 peptide_sequence,
+# 3 following_residue,           
+# 4 empirical_proteotypic_score,
+# 5 suitability_score,
+# 6 predicted_suitability_score,
+# 7 merged_score,
+# 8 Molecular_weight,
+# 9 "SSRCalc_relative_hydrophobicity",
+# 10 "n_protein_mappings",
+# 11 "n_genome_locations",
+# 12 "best_probability",
+# 13 "n_observations",
+# 14 '' as annotations,
+# 15 PI.atlas_build_id,
+# 16 preceding_residue || peptide_sequence || following_residue,
+# 17 P.peptide_accession
+
+#print "ahoy, rin tin tin\n" if $row[2] eq 'SYIEGTAVSQADVTVFK';
+#print "ahoy, ran tan tan\n" if $row[2] eq 'LQINCVVEDDK';
+
+#    KSYIEGTAVSQADVTVFKA
+    # Row 17 is the peptide key (flanked sequence)
+    if ( $peptide_values{$row[16]} ) {
+#      print "Back attack with $row[16]\n";
+      # seen before, use first value for n_obs and EPS
+#      print "using $row[4] and $row[13] from $peptide_values{$row[16]}->[0] for $row[16] in $row[0]\n" if $row[2] eq 'LQINCVVEDDK';
+#      print "using $row[4] and $row[13] from $peptide_values{$row[16]}->[0] for $row[16] in $row[0]\n" if $row[2] eq 'SYIEGTAVSQADVTVFK';
+#      print "curr vals are $row[4] and $row[13] for $row[16] from $row[0] in build $row[15]\n";  
+      for my $idx ( 4, 13 ) {
+        $row[$idx] = $peptide_values{$row[16]}->[$idx]; 
+      }
+#      print "new vals are $row[4] and $row[13] for $row[16] from $peptide_values{$row[16]}->[0] in build $peptide_values{$row[16]}->[15]\n" if $row[2] eq 'LQINCVVEDDK';  
+#      print "new vals are $row[4] and $row[13] for $row[16] from $peptide_values{$row[16]}->[0] in build $peptide_values{$row[16]}->[15]\n" if $row[2] eq 'SYIEGTAVSQADVTVFK';  
+#      print "Holy bagels batman, what is up with $row[2] and $row[16]?\n" if $row[16] eq 'KLQINCVVEDDKV' && $row[2] ne 'LQINCVVEDDK';
+    } else {
+#      print "first time, using what god gave us! $row[4] and $row[13] from $row[16] in $row[0]\n" if $row[2] eq 'LQINCVVEDDK';
+#      print "first time, using what god gave us! $row[4] and $row[13] from $row[16] in $row[0]\n" if $row[2] eq 'SYIEGTAVSQADVTVFK';
+      $peptide_values{$row[16]} = \@row;
+    }
+
+
 
     # Each protein is an arrayref
     my $curr_prot = $row[0];
@@ -1690,11 +1739,34 @@ sub get_pabst_theoretical_peptides {
 #-
 sub merge_pabst_peptides {
   my $self = shift;
-  my %args = @_;
+  my %args = ( nobs_normalization => 1,
+               @_ );
 
   my $obs = $args{obs};
   my $theo = $args{theo};
   my @final_protein_list;
+
+  # We want a consistent n_obs and eps score for all peptides - even if not 
+  # mapped in a particular build  
+  my %seen_peptides;
+  if ( $args{nobs_normalization} ) {
+    for my $prot ( sort( keys( %$obs ) ) ) {
+      for my $key ( keys( %{$obs->{$prot}} ) ) {
+        my $pep_row = $obs->{$prot}->{$key};
+        # Seen peptides are keyed by sequence with flanking AAs.
+        my $pep_key =  join( '', @{$pep_row}[1..3] );
+        if ( $seen_peptides{$pep_key} ) {
+          # Should we look for and use the highest value here?  The
+          # really should all be the same.
+        } else {
+#          print "seeing $pep_row->[2] for the first time, nobs is $pep_row->[13]\n";
+          $seen_peptides{$pep_key} = { n_obs => $pep_row->[13],
+                                            eps => $pep_row->[4],
+                                            ess => $pep_row->[5] };
+        }
+      }
+    }
+  }
 
   my $headings = $self->get_pabst_headings( as_col_hash => 1 );
 
@@ -1751,10 +1823,20 @@ sub merge_pabst_peptides {
         $peptide->[6] = $naa;
       } elsif ( !$obs->{$prot}->{$pep} ) { # only theo, must not be a flyer :(
         $peptide = $theo->{$prot}->{$pep};
-        $peptide->[7] = $peptide->[6];
-        $peptide->[4] = $naa;
-        $peptide->[5] = $naa;
-      } else { # It exists in both, pick use best suitablity?
+
+        # This protein may be unmapped, but we have info from a mapped protein
+        if ( $seen_peptides{$pep} ) {
+          $peptide->[4] = $seen_peptides{$pep}->{eps};
+          $peptide->[5] = $seen_peptides{$pep}->{ess};
+          $peptide->[13] = $seen_peptides{$pep}->{n_obs};
+          $peptide->[7] = $peptide->[5];
+        } else {
+          $peptide->[7] = $peptide->[6];
+          $peptide->[4] = $naa;
+          $peptide->[5] = $naa;
+        }
+
+      } else { # It exists in both, pick use best suitablity? - no, use OBS if avail!
         $peptide = $obs->{$prot}->{$pep};
         $peptide->[6] = $theo->{$prot}->{$pep}->[6];
 #        $peptide->[7] = ( $obs->{$prot}->{$pep}->[5] > $theo->{$prot}->{$pep}->[6] ) ?
