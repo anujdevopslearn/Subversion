@@ -82,6 +82,7 @@ sub getTabMenu
     my $PROG_NAME = $args{program_name};
 
     my $current_tab=1;
+    my $current_subtab=1;
 
     if ( ($PROG_NAME =~ /^main.cgi|buildDetails/) ||
     ($PROG_NAME =~ /^main.cgi\?(\S+)/ ))
@@ -91,7 +92,8 @@ sub getTabMenu
     } elsif ( ($PROG_NAME =~ /^SearchProteins/) ||
     ($PROG_NAME =~ /SearchProteins\?(\S+)/ ))
     {
-       $current_tab=7;
+       $current_tab=4;
+       $current_subtab=3;
 
     } elsif( ($PROG_NAME =~ /^Search/) ||
     ($PROG_NAME =~ /^Search\?(\S+)/ ))
@@ -101,40 +103,53 @@ sub getTabMenu
     } elsif( ($PROG_NAME =~ /^GetPeptides/) ||
     ($PROG_NAME =~ /^GetPeptides\?(\S+)/ ))
     {
-       $current_tab=3;
+       $current_tab=4;
 
     } elsif( ($PROG_NAME =~ /^GetPeptide/) ||
     ($PROG_NAME =~ /^GetPeptide\?(\S+)/ ))
     {
-       $current_tab=4;
+       $current_tab=3;
 
     } elsif ( ($PROG_NAME =~ /^GetProteins/) ||
     ($PROG_NAME =~ /GetProteins\?(\S+)/ ))
     {
-       $current_tab=6;
+       $current_tab=4;
+       $current_subtab=2;
+
+    } elsif ( ($PROG_NAME =~ /^showPathways/) ||
+    ($PROG_NAME =~ /showPathways\?(\S+)/ ))
+    {
+       $current_tab=4;
+       $current_subtab=4;
+
+    } elsif ( ($PROG_NAME =~ /^GetMRMList/) ||
+    ($PROG_NAME =~ /ViewMRMList\?(\S+)/ ))
+    {
+       $current_tab=4;
+       $current_subtab=5;
 
     } elsif ( ($PROG_NAME =~ /^GetProtein/) ||
     ($PROG_NAME =~ /GetProtein\?(\S+)/ ))
     {
-       $current_tab=5;
+       $current_tab=3;
+       $current_subtab=2;
 
     }elsif ( ($PROG_NAME =~ /^Summarize_Peptide/) ||
     ($PROG_NAME =~ /Summarize_Peptide\?(\S+)/ ))
     {
-       $current_tab=8;
-
+       $current_tab=2;
+       $current_subtab=2;
     }
-
-
 
     ## set up tab structure:
     my $tabmenu = SBEAMS::Connection::TabMenu->
         new( cgi => $q,
-             activeColor => 'ffcc99',
-             inactiveColor   => 'cccccc',
-             hoverColor => 'ffff99',
+             activeColor => 'f3f1e4',
+             inactiveColor   => 'c6c1b8',
+             hoverColor => 'f3f1e4',
              atextColor => '000000', # black
-             itextColor => 'ff0000', # black
+             itextColor => 'ff0000', # red
+             isDropDown => '1',
              # paramName => 'mytabname', # uses this as cgi param
              # maSkin => 1,   # If true, use MA look/feel
              # isSticky => 0, # If true, pass thru cgi params
@@ -150,47 +165,73 @@ sub getTabMenu
                       URL => "$CGI_BASE_DIR/PeptideAtlas/Search"
                     );
 
-    $tabmenu->addTab( label => 'Select Build',
-                      helptext => 'Select a preferred PeptideAtlas build',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/main.cgi"
-                    );
 
-    $tabmenu->addTab( label => 'Browse Peptides',
-                      helptext => 'Multi-constraint browsing of PeptideAtlas Peptides',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides"
-                    );
+    $tabmenu->addTab( label => 'All Builds' );
 
-    $tabmenu->addTab( label => 'Peptide',
-                      helptext => 'View information about a peptide',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide"
-                    );
+    $tabmenu->addMenuItem( tablabel => 'All Builds',
+			   label => 'Select Build',
+			   helptext => 'Select a preferred PeptideAtlas build',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/main.cgi"
+			   );
 
-    $tabmenu->addTab( label => 'Protein',
-                      helptext => 'View information about a protein',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetProtein"
-                    );
+    $tabmenu->addMenuItem( tablabel => 'All Builds',
+			   label => 'Summarize Peptide',
+			   helptext => 'Browsing the basic information about a peptide',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/Summarize_Peptide"
+			   );
 
-    $tabmenu->addTab( label => 'Browse Proteins',
-                      helptext => 'Multi-constraint browsing of PeptideAtlas Proteins',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetProteins"
-                    );
-   
-    $tabmenu->addTab( label => 'Search Proteins',
-                      helptext => 'Search for a list of proteins',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/SearchProteins"
-                    );
-   
-     $tabmenu->addTab( label => 'Summarize Peptide',
-                      helptext => 'Browsing the basic information about a peptide',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/Summarize_Peptide"
-                    );
 
-    $tabmenu->setCurrentTab( currtab => $current_tab );
+    $tabmenu->addTab( label => 'Current Build' );
 
-    $tabmenu->addHRule();
+    $tabmenu->addMenuItem( tablabel => 'Current Build',
+			   label => 'Peptide',
+			   helptext => 'View information about a peptide',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide"
+			   );
+
+    $tabmenu->addMenuItem( tablabel => 'Current Build',
+			   label => 'Protein',
+			   helptext => 'View information about a protein',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/GetProtein"
+			   );
+
+
+    $tabmenu->addTab( label => 'Queries' );
+
+    $tabmenu->addMenuItem( tablabel => 'Queries',
+			   label => 'Browse Peptides',
+			   helptext => 'Multi-constraint browsing of PeptideAtlas Peptides',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides"
+			   );
+
+    $tabmenu->addMenuItem( tablabel => 'Queries',
+			   label => 'Browse Proteins',
+			   helptext => 'Multi-constraint browsing of PeptideAtlas Proteins',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/GetProteins"
+			   );
+
+    $tabmenu->addMenuItem( tablabel => 'Queries',
+			   label => 'Search Proteins',
+			   helptext => 'Search for a list of proteins',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/SearchProteins"
+			   );
+
+    $tabmenu->addMenuItem( tablabel => 'Queries',
+			   label => 'Pathways',
+			   helptext => 'Show PeptideAtlas coverage for a KEGG pathway',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/showPathways"
+			   );
+
+    $tabmenu->addMenuItem( tablabel => 'Queries',
+			   label => 'MRM Transitions',
+			   helptext => 'Query for MRM Transitions',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/GetMRMList"
+			   );
+
+
+    $tabmenu->setCurrentTab( currtab => $current_tab, currsubtab => $current_subtab );
 
     return($tabmenu);
-
 }
 
 
