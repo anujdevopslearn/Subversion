@@ -1241,35 +1241,69 @@ sub getAnnotationColumnDefs {
 
 sub fragment_peptide {
   my $self = shift;
-      my $peptide = shift;
-    my $length = length($peptide);
-    my @residues = ();
-    my $i;
+  my $peptide = shift || return [];
 
-    for ($i=0; $i<$length; $i++) {
-      if (substr($peptide,$i+1,1) eq '[') {
-        if ( substr( $peptide, $i+5, 1 ) eq ']' ) {
-          push (@residues, substr($peptide,$i,6));
-          $i = $i + 5;
-        } else {
-          my $x = substr( $peptide, $i+5 );
-          print "X is $x\n";
-          push (@residues, substr($peptide,$i,5));
-          $i = $i + 4;
-        }
-      } elsif (substr($peptide,$i+1,1) =~ /\W/) {
-        $log->debug( "what is up with $peptide?" );
-        push (@residues, substr($peptide,$i,2));
-        $i = $i + 1;
-      } else {
-        push (@residues, substr($peptide,$i,1));
-      }
+  my @chars = split( '', $peptide );
+  my @residues;
+  my $aa;
+  for my $c ( @chars ) {
+    if ( $c =~ /[a-zA-Z]/ ) {
+      push @residues, $aa if $aa;
+      $aa = $c;
+    } else {
+      $aa .= $c;
     }
-
-    #### Return residue array
-    return \@residues;
+  }
+  push @residues, $aa if $aa;
+  return \@residues;
 }
 
+
+
+sub calc_ions {
+
+  my $self = shift;
+    my %args = @_;
+
+    my $masses = $self->getMonoResidueMasses();
+
+    my $charge = $args{charge};
+    my $length = length($args{sequence});
+    my @residues = split( '', $args{sequence} );
+
+    my $Nterm = 1.0078;
+    my $Bion = 0.0;
+    my $Yion  = 19.0184;  ## H_2 + O
+
+    my %masslist;
+    my (@aminoacids, @indices, @rev_indices, @Bions, @Yions);
+
+
+    #### Compute the ion masses
+    for ( my $i = 0; $i<=$length; $i++) {
+
+      #### B index & Y index
+      $indices[$i] = $i;
+      $rev_indices[$i] = $length-$i;
+
+#      $Bion += $masses[$i];
+      $Bion += $masses->{$residues[$i]};
+      $Yion += $masses->{$residues[$rev_indices[$i]]} if $i > 0;
+#      $Yion += $masses[ $rev_indices[$i] ]  if ($i > 0);
+
+      #### B ion mass & Y ion mass
+      $Bions[$i+1] = ($Bion + $charge*$Nterm)/$charge;
+      $Yions[$i] = ($Yion + $charge*$Nterm)/$charge - $Nterm;
+    }
+
+    $masslist{indices} = \@indices;
+    $masslist{Bions} = \@Bions;
+    $masslist{Yions} = \@Yions;
+    $masslist{rev_indices} = \@rev_indices;
+
+    #### Return reference to a hash of array references
+    return (\%masslist);
+}
 
 
 #+
