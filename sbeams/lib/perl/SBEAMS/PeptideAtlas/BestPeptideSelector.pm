@@ -33,6 +33,7 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 
 use SBEAMS::Proteomics::PeptideMassCalculator;
+use SBEAMS::PeptideAtlas;
 
 use Data::Dumper;
 use Digest::MD5 qw(md5_hex);
@@ -685,8 +686,103 @@ sub get_pabst_static_peptide_transitions_display {
 } # End get_pabst_static_peptide_transitions_display
 
 #########################################################
-#########################################################
 
+
+
+
+
+
+sub get_dirty_peptide_display {
+  my $self = shift;
+  my %args = @_;
+  # Check for required opts
+  my $err;
+  for my $opt ( qw( link tr_info biosequence_id ) ) {
+    $err = ( $err ) ? $err . ',' . $opt : $opt if !defined $args{$opt};
+  }
+  die "Missing required parameter(s) $err" if $err;
+  my $organism_id = $atlas->getCurrentAtlasOrganism( parameters_ref => {},
+                                                     type => 'organism_id' );
+
+  my $sql = qq~
+  SELECT DISTINCT Sequence, Plate, ESPPred, EmpSuit, PredSuit, SSR_Calc,
+         Annot, PABST, N_obs_ident, N_obs_templ, N_obs_Orbi, N_mapped,
+         CASE WHEN Status = 'A' THEN 'Analyzed' 
+              WHEN Status = 'R' THEN 'Rejected'    
+              WHEN Status = 'O' THEN 'Ordered'    
+              ELSE 'Unknown' END as Status
+  FROM $TBAT_BIOSEQUENCE B
+  JOIN peptideatlas.dbo.dirty_peptides DP 
+  ON B.biosequence_name = DP.P_mapped
+  WHERE B.biosequence_id = $args{biosequence_id}
+  ORDER BY N_obs_ident DESC, N_obs_Orbi DESC
+  ~;
+
+  my @headings = ( Sequence => 'Amino acid sequence of peptide',
+                   Plate => 'Synthesis plate',
+                   ESPP => 'Carr ESP predictor score',
+                   ESS => 'Empirical suitability score',
+                   PSS => 'Predicted suitability score',
+                   hyd_scr => 'SSRCalc Relative hydrophobicity score',
+                   Annotations => 'Annotation of peptide features such as missed cleavage (MC), etc.',
+                   adj_SS => 'Best suitability score, adjusted based on sequence features',
+                   'n_obs_P0.9' => 'Number of times peptide was observed w/ P > 0.9',
+                   'n_obs_P0.5' => 'Number of times peptide was observed w/ P > 0.5 ',
+                   n_obs_Orbi => 'Number of times peptide was observed in Orbitrap',
+                   n_prots => 'Number of  proteins to which peptide maps' ,
+                   Status => 'Status of peptide' );
+
+
+  my @peptides = ( $self->make_sort_headings( headings => \@headings,
+                                              default => 'adj_SS' )  );
+  my $naa = 'n/a';
+  $naa = $sbeams->makeInactiveText($naa) if $sbeams->output_mode() =~ /html/i;
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while( my @row = $sth->fetchrow_array() ) {
+    for my $idx ( 2..5,7 ) {
+      if ( defined $row[$idx] && $row[$idx] ne '' ) {
+        $row[$idx] = sprintf( "%0.2f", $row[$idx] );
+      } else {
+        $row[$idx] = $naa; 
+      }
+    }
+    for my $idx ( 8..10 ) {
+      if ( $row[12] ne 'Analyzed' ) {
+        $row[$idx] = $naa unless $row[$idx]
+      }
+    }
+    push @peptides, [ @row];
+  }
+
+  my $align = [qw(left left right right right right center right right right right right left )];
+
+  my $html = $atlas->encodeSectionTable( header => 1, 
+                                                 width => '600',
+                                               tr_info => $args{tr},
+                                                align  => $align,
+                                                  rows => \@peptides,
+                                          rows_to_show => 20,
+                                              max_rows => 500,
+                                          bkg_interval => 3, 
+#     set_download => 'Download peptides', 
+#                                           file_prefix => 'best_peptides_', 
+                                                header => 1,
+                                              bg_color => '#EAEAEA',
+                                              sortable => 1,
+                                              table_id => 'dirty_peps',
+                                           close_table => 1,
+                                              );
+    #### Display table
+    return "<TABLE WIDTH=600><BR>$html\n";
+
+} # End dirty_peptide display
+
+
+
+#+ 
+#  Routine builds pabst peptide table from db.
+#- 
 sub get_pabst_static_peptide_display {
   my $self = shift;
   my %args = @_;
@@ -698,6 +794,29 @@ sub get_pabst_static_peptide_display {
   die "Missing required parameter(s) $err" if $err;
   my $organism_id = $atlas->getCurrentAtlasOrganism( parameters_ref => {},
                                                      type => 'organism_id' );
+
+
+  my $dp_sql = qq~
+  SELECT DISTINCT Sequence, ESPPred, N_obs_ident, N_obs_templ, N_obs_Orbi,
+         N_mapped,
+         CASE WHEN Status = 'A' THEN 'Analyzed' 
+              WHEN Status = 'R' THEN 'Rejected'    
+              WHEN Status = 'O' THEN 'Ordered'    
+              ELSE 'Unknown' END as Status
+  FROM $TBAT_BIOSEQUENCE B
+  JOIN peptideatlas.dbo.dirty_peptides DP 
+  ON B.biosequence_name = DP.P_mapped
+  WHERE B.biosequence_id = $args{biosequence_id}
+  ~;
+
+  my %dirty_peptides;
+  my $dp_data = 0;
+  my $dp_sth = $sbeams->get_statement_handle( $dp_sql );
+  while( my @row = $dp_sth->fetchrow_array() ) {
+    $dp_data++;
+    $dirty_peptides{$row[0]} = \@row;
+  }
+
 
 # 0 pabst_peptide_id
 # 1 pabst_build_id
@@ -739,8 +858,6 @@ sub get_pabst_static_peptide_display {
   ORDER BY syntheis_adjusted_score DESC
   ~;
 
-  $log->debug( $sql );
-
   my @headings = ( pre => 'Previous amino acid',
                    sequence => 'Amino acid sequence of peptide',
                    fol => 'Followin amino acid',
@@ -753,6 +870,13 @@ sub get_pabst_static_peptide_display {
                    Annotations => 'Annotation of peptide features such as missed cleavage (MC), etc.',
                    adj_SS => 'Best suitability score, adjusted based on sequence features' );
 
+  if ( $dp_data ) {
+    push @headings, ( ESPP => 'Carr ESP predictor score',
+                     Detected => 'Peptide observations',
+                     n_prots => 'Number of  proteins to which peptide maps' ,
+                      Status => 'Status of peptide' );
+
+  } 
 
   my @peptides = ( $self->make_sort_headings( headings => \@headings,
                                               default => 'adj_SS' )  );
@@ -768,11 +892,44 @@ sub get_pabst_static_peptide_display {
         $row[$idx] = $naa; 
       }
     }
+
+    if ( $dp_data ) {
+#  SELECT DISTINCT Sequence, ESPPred, N_obs_ident, N_obs_templ, N_obs_Orbi,
+#         N_mapped,
+#         CASE WHEN Status = 'A' THEN 'Anlyzed' 
+      if ( $dirty_peptides{$row[1]} ) {
+        my @dp =  @{$dirty_peptides{$row[1]}};
+        
+        my $det = '';
+        if ( $dp[2] ) {
+          $det = 'QQQ';
+        } elsif  ( $dp[3] ) {
+          $det = 'qqq';
+        } 
+        
+        $dp[1] = sprintf( "%0.2f", $dp[1] );
+        if ( $dp[4] ) {
+          $det = ( $det ) ? "$det,Orbi" : 'Orbi';
+        }
+
+
+
+        push @row, ( $dp[1], $det, $dp[5], $dp[6] ); 
+      } else {
+        push @row,$naa,$naa,$naa,$naa;
+      }
+    } 
+
     $row[4] = sprintf( "%0.2f", $row[4] );
     $row[5] = sprintf( "%0.2f", $row[5] );
     $row[6] = sprintf( "%0.1f", $row[6] );
     $row[10] = sprintf( "%0.2f", $row[10] );
     $row[1] = "<A HREF=GetPeptide?_tab=3;atlas_build_id=$args{atlas_build_id};searchWithinThis=Peptide+Sequence;searchForThis=$row[1];action=QUERY;biosequence_id=$args{biosequence_id} TITLE='View peptide $row[1] details'>$row[1]</A>" if $row[8] || 1;
+
+
+
+
+
     push @peptides, [ @row];
   }
 
@@ -907,6 +1064,10 @@ sub get_pabst_peptide_display {
       $pep_row->[12] = sprintf( "%0.3f", $pep_row->[12] );
     }
 
+    if ( $pep_row->[5] eq '0.00' ) {
+      $pep_row->[5] = $naa;
+    }
+    $pep_row->[13] ||= $naa; 
     
     my $prots = $protein_info->{$pep_row->[2]} || '';
     if ( $self->{_cached_acc} && $self->{_cached_acc}->{$pep_row->[2]} ) {
@@ -925,7 +1086,7 @@ sub get_pabst_peptide_display {
                                                tr_info => $args{tr},
                                                 align  => $align,
                                                   rows => \@peptides,
-                                          rows_to_show => 20,
+                                          rows_to_show => 12,
                                               max_rows => 500,
                                           bkg_interval => 3, 
                                           set_download => 'Download peptides', 
