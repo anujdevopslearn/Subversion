@@ -40,10 +40,13 @@ my $ssr_window = $args->{ssr_calc_window} || 5;
 my $h_thresh = $args->{height_threshold} || 250;
 my $c_lib = $args->{consensus_lib} || 5;
 
-
+my %inclusion_list;
+my %seq2acc;
+my %peptide2acc;
+my @sequences;
 
 my $outfile = "cspace_Q1_${q1_window}_Q3_${q3_window}_SSR_${ssr_window}_PH_${h_thresh}_CL_${c_lib}";
-$outfile .= '_EI' if $args->{include_icat};
+$outfile .= '_iCAT' if $args->{include_icat};
 $outfile .= '_WO' if $args->{weight_by_nobs};
 $outfile .= '.tsv';
 
@@ -57,6 +60,11 @@ if ( $args->{use_outfile} ) {
 { #Main
 
   my $cnts = fetch_peptide_counts();
+
+  if ( $args->{inclusion_list} && $args->{reference_db} ) {
+    get_fasta();
+    get_inclusion();
+  }
 
   open ( TRANS, $args->{transitions} ) || usage( "Unable to open $args->{transitions}" );
   my %cnt_stats;
@@ -100,10 +108,13 @@ if ( $args->{use_outfile} ) {
     my $sum = 0;
 		my @spectra;
   	while( my @row = $sth->fetchrow_array() ) {
-      if ( !$args->{include_icat} ) {
+      unless ( $args->{include_icat} ) {
         if ( $row[2] =~ /(C\[330|C\[339|C\[545|C\[553|C\[303|C\[312)/ ) {
 #          print STDERR "ICATagory one: $1\n";
           next;
+          $cnt_stats{icat}++;
+        } else {
+          $cnt_stats{nonicat}++;
         }
       }
 
@@ -126,8 +137,38 @@ if ( $args->{use_outfile} ) {
       my $t_ssr = calc_ssr( $row[3] );
       if ( abs( $t_ssr - $s_ssr ) > $ssr_window ) {
   #      print "Kicking T ssr is $t_ssr, S ssr is $s_ssr for $line[0] and $row[3]\n";
+        $cnt_stats{ssr_fail}++;
       } else {
+        $cnt_stats{ssr_pass}++;
   #      print "Using T ssr is $t_ssr, S ssr is $s_ssr for $line[0] and $row[3]\n";
+
+				my $clean_seq = $row[2];
+        $clean_seq =~ s/\[[^\]]+]//g;
+         
+        # Will now apply inclusion list logic, if applicatable
+        if ( $args->{inclusion_list} && $args->{reference_db} ) {
+          if ( !$peptide2acc{$clean_seq} ) {
+            #$peptide2acc{$peptide}->{$acc}++;
+            map_peptide( $clean_seq );
+          }
+          my $is_match = 0;
+          for my $acc ( keys( %{$peptide2acc{$clean_seq}} ) ) {
+            if ( $inclusion_list{$acc} ) {
+#              print "Freaking $acc is included!\n";
+              $cnt_stats{list_match}++;
+              $is_match++;
+              last;
+            } else {
+              $cnt_stats{list_mismatch}++;
+#              print "Ain't got no $acc!\n";
+            }
+          }
+          next unless $is_match;
+        }
+         
+
+
+
         $total++;
         $sum += $peak_score;
 #    SELECT
@@ -160,22 +201,31 @@ if ( $args->{use_outfile} ) {
 #				push @spectra,  [@row[2,0,1,4,5],'','','','','','end'];
         my @peak_label = split( ",", $row[5] );
         $row[5] = $peak_label[0];
-				my $clean_seq = $row[2];
-        $clean_seq =~ s/\[[^\]]+]//g;
 				push @spectra,  [$clean_seq, @row[7,5], '-','-', @row[0,1,8,2], 'Contaminant', $t_ssr, '-', $row[4] ];
       }
     }
     $s_ssr = sprintf( "%0.2f", $s_ssr );
     if ( $args->{use_outfile} ) {
-			if ( defined $args->{display_collisions} &&  $sum > $args->{display_collisions} ) {
+
+      # Original, no threshold mode
+			if ( !defined $args->{display_collisions} ) {
+        print OUT join( "\t", @line, $s_ssr, $total, $sum ) . "\n";
+      # Newer, show spectra if over threshold mode
+      } elsif ( $sum > $args->{display_collisions} ) {
         print OUT join( "\t", @line, $s_ssr, $total, $sum ) . "\n";
 #        print OUT join( "\t", qw( pepseq Q1 Q3 rel_intensity peak_label ) ) . "\n";
         for my $s ( @spectra ) {
           print OUT join( "\t", @$s ) . "\n";
         }
 			}
+
     } else {
-			if ( defined $args->{display_collisions} &&  $sum > $args->{display_collisions} ) {
+
+      # Original, no threshold mode
+			if ( !defined $args->{display_collisions} ) {
+        print join( "\t", @line, $s_ssr, $total, $sum ) . "\n";
+      # Newer, show spectra if over threshold mode
+      } elsif ( $sum > $args->{display_collisions} ) {
         print join( "\t", @line, $s_ssr, $total, $sum ) . "\n";
 #        print  join( "\t", qw( pepseq Q1 Q3 rel_intensity peak_label ) ) . "\n";
         for my $s ( @spectra ) {
@@ -189,6 +239,65 @@ if ( $args->{use_outfile} ) {
   close OUT if $args->{use_outfile};
 
 } # End main
+
+sub map_peptide {
+
+  my $peptide = shift || return '';
+  $peptide2acc{$peptide} ||= {};
+  my @matches = grep( /$peptide/, @sequences );
+#  print "$peptide matches " . scalar( @matches ) . " sequences\n";
+  for my $seq ( @matches ) {
+    for my $acc ( @{$seq2acc{$seq}} ) {
+      $peptide2acc{$peptide}->{$acc}++;
+#      print "ACC is $acc\n";
+    }
+  }
+}
+
+sub get_fasta {
+#my $acc2peptide;
+  return unless $args->{reference_db};
+  open FSA, $args->{reference_db} || die "Unable to open file $args->{reference_db}";
+  my $acc;
+  my $seq;
+
+  while ( my $line = <FSA> ) {
+    chomp $line;
+    if ( $line =~ /^>/ ) {
+      if ( $seq ) {
+        $seq =~ s/\s//gm;
+        $seq = uc($seq);
+        $seq2acc{$seq} ||= [];
+        push @{$seq2acc{$seq}}, $acc;
+        $seq = '';
+      }
+      $acc = $line;
+      $acc =~ s/^>//g;
+    } else {
+      $seq .= $line;
+    }
+  }
+  # Last line
+  $seq =~ s/\s//gm;
+  $seq = uc($seq);
+  push @{$seq2acc{$seq}}, $acc;
+  $seq = '';
+  
+  @sequences = keys(%seq2acc);
+
+}
+
+sub get_inclusion {
+  return unless $args->{inclusion_list};
+  open INCL, $args->{inclusion_list} || die "Unable to open file $args->{inclusion_list}";
+  while ( my $line = <INCL> ) {
+    chomp $line;
+    $inclusion_list{$line}++;
+  }
+}
+
+sub get_matches {
+}
 
 sub calc_ssr {
   my $pep = shift || die;
@@ -213,12 +322,15 @@ sub usage {
    -c, --consensus_lib       Consensus library_id used Default 5
    -u, --use_outfile         Use outputfile name based on settings 
    -b, --build_id            Atlas build id (for spectral counting)
-   -e, --include_icat        Exclude ICAT spectra, i.e. C330, 339, 545, 553,
+   --include_icat            Exclude ICAT spectra, i.e. C330, 339, 545, 553,
                              303, and 312.
    -w, --weight_by_nobs      Weight peak height by the number of observations,
                              requires atlas_build_id
    -d, --display_collisions  If set, will display all potential collisions
                              over threshold value provided.
+   -r, --reference_db        Fasta file of reference seqs against which to map
+   --inclusion_list          List of proteins to be included in search
+
   END
 
 
@@ -232,7 +344,8 @@ sub process_args {
   GetOptions( \%args, 'transitions=s', 'parent_ion_window=f', 'use_outfile',
               'fragment_ion_window=f', 'ssr_calc_window=f', 'weight_by_nobs',
               'height_threshold=i', 'consensus_lib=i', 'build_id=i',
-              'include_icat', 'display_collisions=i' ) || usage();
+              'include_icat', 'display_collisions=i', 'reference_db:s',
+              'inclusion_list:s' ) || usage();
 
   usage('Missing required param transitions') unless $args{transitions};
   return \%args;
