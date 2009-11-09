@@ -35,258 +35,287 @@ my $paranoid = 0;
 
 { # Main 
 
-# Fetch the various datasets to merge
-my $patr = {};
-
-print "read qqq\n";
-my $qqq = readSpectrastSRMFile( 'qqq' );
-print "done\n";
-
-print "read qtof\n";
-my $qtof = readSpectrastSRMFile( 'qtof' );
-print "done\n";
-
-print "read ion_trap\n";
-my $it = readSpectrastSRMFile( 'ion_trap' );
-print "done\n";
-
-
-#print "read theoretical\n";
-#my $theo = readTIQAMSRMFile( $args->{theoretical} );
-## Flag for uber-verbose logging.
-#print "done\n";
-
-my $name2id = getBioseqInfo( $args->{biosequence_set_id} );
-
-open PEP, $args->{peptides} || die "Unable to open peptide file $args->{peptides}";
-
-my $transition_limit = 10;
-
-my $cnt;
-my %stats;
-my $build_id;
-my %seq2id;
-
-# Will populate as needed.
-my $theoretical;
-
-print "reading peptide file\n";
-while ( my $line = <PEP> ) {
-  next unless $cnt++;
-  chomp $line;
-  my @line = split( "\t", $line, -1 );
-#  for my $l ( @line ) { print "$l\n"; }
-
-  # Looks like we have a build to load - insert build record
-  if ( !$build_id ) {
-    my $rowdata = {  build_name => $args->{name},
-                  build_comment => $args->{description},
-                  ion_trap_file => $args->{ion_trap},
-                       qqq_file => $args->{qqq},
-                    organism_id => $args->{organism},
-               theoretical_file => '',
-               parameter_string => $args->{parameters},
-                 parameter_file => $args->{conf}, 
-                     project_id => $args->{project_id} 
-                  };
-
-    $build_id = $sbeams->updateOrInsertRow( insert => 1,
-                                       table_name  => $TBAT_PABST_BUILD,
-                                       rowdata_ref => $rowdata,
-                                       verbose     => $args->{verbose},
-                                      return_PK    => 1,
-                                                PK => 'pabst_build_id',
-                                       testonly    => $args->{testonly} );
-  }
-
-
-  # Fill up transition list for this peptide entry
-  my @trans;
-  print "INIT: Trans has " . scalar( @trans ) . "\n" if $paranoid;
-  my $pep = $line[2];
-  $pep =~ s/\'//g;
-  if ( $pep =~ /X/ ) {
-    $stats{bad_aa}++;
-    next;
-  }
-
-  populate( $qqq, $pep, \@trans, 'spectrast' );
-  $stats{qqq_look}++;
-  print "Trans has " . scalar( @trans ) . " post QQQ\n" if $paranoid; # if scalar( @trans ) ;
-
-  if ( scalar( @trans ) < $transition_limit ) {
-    populate( $qtof, $pep, \@trans, 'spectrast' );
-    $stats{qtrap_look}++;
-    print "Trans has " . scalar( @trans ) . " post Qtrap\n" if $paranoid; # if scalar( @trans );
-  }
-
-  if ( scalar( @trans ) < $transition_limit ) {
-    populate( $it, $pep, \@trans, 'spectrast' );
-    $stats{it_look}++;
-    print "Trans has " . scalar( @trans ) . " post IT\n" if $paranoid; # if scalar( @trans );
-  }
-
-  if ( scalar( @trans ) < $transition_limit ) {
-    if ( !$theoretical->{$pep} ) {
-      # Reset...
-      $theoretical = {};
-      $theoretical->{$pep} = generate_theoretical( $pep );
-    }
-    populate_theoretical( $pep, $theoretical->{$pep}, \@trans );
-    $stats{theo_look}++;
-    print "Trans has " . scalar( @trans ) . " post THEO\n" if $paranoid; # if scalar( @trans );
-  }
-
+  # Fetch the various datasets to merge
+  my $patr = {};
   
-  if ( !scalar( @trans ) ) {
-    $stats{unfound}++;
-#    print "peptide $pep not found ( $line[1], $line[3], $line[14] )\n";
-  } elsif ( scalar( @trans ) < $transition_limit ) {
-    $stats{shorted}++;
-  } else {
-    $stats{fulfilled}++;
-  }
+  print "read qqq\n";
+  my $qqq = readSpectrastSRMFile( 'qqq' );
+  print "done\n";
+  
+  print "read qtof\n";
+  my $qtof = readSpectrastSRMFile( 'qtof' );
+  print "done\n";
+  
+  print "read ion_trap\n";
+  my $it = readSpectrastSRMFile( 'ion_trap' );
+  print "done\n";
+  
+  
+  #print "read theoretical\n";
+  #my $theo = readTIQAMSRMFile( $args->{theoretical} );
+  ## Flag for uber-verbose logging.
+  #print "done\n";
+  
+  my $name2id = getBioseqInfo( $args->{biosequence_set_id} );
+  
+  open PEP, $args->{peptides} || die "Unable to open peptide file $args->{peptides}";
+  
+  my $transition_limit = 10;
+  
+  my $cnt;
+  my %stats;
+  my $build_id;
 
-  if ( $qqq->{$pep} ) {
-    $stats{qqq_yes}++;
-  } else {
-    $stats{qqq_no}++;
-  }
-  if ( $it->{$pep} ) {
-    $stats{ion_trap_yes}++;
-  } else {
-    $stats{ion_trap_no}++;
-  }
-  if ( $theoretical->{$pep} ) {
-    $stats{theoretical_yes}++;
-  } else {
-    $stats{theoretical_no}++;
-  }
 
-  # Insert peptide record
-  # Fields in the PABST peptides file
-# 00 biosequence_name
-# 01 preceding_residue
-# 02 peptide_sequence
-# 03 following_residue
-# 04 empirical_proteotypic_score
-# 05 suitability_score
-# 06 predicted_suitability_score
-# 07 merged_score
-# 08 molecular_weight
-# 09 SSRCalc_relative_hydrophobicity
-# 10 n_protein_mappings
-# 11 n_genome_locations
-# 12 est_probability
-# 13 n_observations
-# 14 annotations
-# 15 atlas_build
-# 16 synthesis_score
-# 17 syntheis_adjusted_score
+  my $seq2id = getPABSTPeptideData();
+  
+  # Will populate as needed.
+  my $theoretical;
+  
+  print "reading peptide file\n";
+  while ( my $line = <PEP> ) {
+    next unless $cnt++;
+    chomp $line;
+    my @line = split( "\t", $line, -1 );
+  #  for my $l ( @line ) { print "$l\n"; }
+  
+    # Looks like we have a build to load - insert build record
+    if ( !$build_id ) {
+      my $rowdata = {  build_name => $args->{name},
+                    build_comment => $args->{description},
+                    ion_trap_file => $args->{ion_trap},
+                         qqq_file => $args->{qqq},
+                      organism_id => $args->{organism},
+                 theoretical_file => '',
+                 parameter_string => $args->{parameters},
+                   parameter_file => $args->{conf}, 
+                       project_id => $args->{project_id} 
+                    };
+  
+      $build_id = $sbeams->updateOrInsertRow( insert => 1,
+                                         table_name  => $TBAT_PABST_BUILD,
+                                         rowdata_ref => $rowdata,
+                                         verbose     => $args->{verbose},
+                                        return_PK    => 1,
+                                                  PK => 'pabst_build_id',
+                                         testonly    => $args->{testonly} );
+    }
+  
+    my $pep_key = $line[1] . $line[2] . $line[3];
+  
+    # Only insert if we need to?
+    if ( !$seq2id->{$pep_key} ) {
+  
+      $stats{insert_new_yes}++;
 
-  # A little massaging?
-  my $suit = ( $line[5] && $line[5] !~ /n/ ) ? $line[5] : $line[6];
-  $line[13] = 0 unless $line[13] =~ /^\d+$/;
-
-  for my $col ( 12, 4, 5, 15, 6 ) {
-    $line[$col] = undef if ( $line[$col] =~ /^n/ );
-  }
-  for my $col ( 12, 9 ) {
-    $line[$col] =~ s/\s//g if ( $line[$col] ); 
-  }
-
-  my $peprow = {  pabst_build_id => $build_id,
-                  preceding_residue => $line[1],
-                  peptide_sequence => $line[2],
-                  following_residue => $line[3],
-                  empirical_proteotypic_score => $line[4],
-                  suitability_score => $line[5],
-                  predicted_suitability_score => $line[6],
-                  merged_score => $line[7],
-                  molecular_weight => $line[8],
-                  SSRCalc_relative_hydrophobicity => $line[9],
-                  n_protein_mappings => $line[10],
-                  n_genome_locations => $line[11],
-                  best_probability => $line[12],
-                  n_observations => $line[13],
-                  synthesis_score => $line[16],
-                  synthesis_warnings => $line[14],
-                  syntheis_adjusted_score => $line[17],
-                  source_build => $line[15] 
-  };
-
-#  for my $k ( keys( %$peprow ) ) { print "$k => $peprow->{$k}\n"; }
-
-  my $pep_key = $line[1] . $line[2] . $line[3];
-
-  if ( !$seq2id{$pep_key} ) {
-    my $pep_id = $sbeams->updateOrInsertRow( insert => 1,
-                                        table_name  => $TBAT_PABST_PEPTIDE,
-                                        rowdata_ref => $peprow,
+      # Fill up transition list for this peptide entry
+      my @trans;
+      print "INIT: Trans has " . scalar( @trans ) . "\n" if $paranoid;
+      my $pep = $line[2];
+      $pep =~ s/\'//g;
+      if ( $pep =~ /X/ ) {
+        $stats{bad_aa}++;
+        next;
+      }
+    
+      populate( $qqq, $pep, \@trans, 'spectrast' );
+      $stats{qqq_look}++;
+      print "Trans has " . scalar( @trans ) . " post QQQ\n" if $paranoid; # if scalar( @trans ) ;
+    
+      if ( scalar( @trans ) < $transition_limit ) {
+        populate( $qtof, $pep, \@trans, 'spectrast' );
+        $stats{qtrap_look}++;
+        print "Trans has " . scalar( @trans ) . " post Qtrap\n" if $paranoid; # if scalar( @trans );
+      }
+    
+      if ( scalar( @trans ) < $transition_limit ) {
+        populate( $it, $pep, \@trans, 'spectrast' );
+        $stats{it_look}++;
+        print "Trans has " . scalar( @trans ) . " post IT\n" if $paranoid; # if scalar( @trans );
+      }
+    
+      if ( scalar( @trans ) < $transition_limit ) {
+        if ( !$theoretical->{$pep} ) {
+          # Reset...
+          $theoretical = {};
+          $theoretical->{$pep} = generate_theoretical( $pep );
+        }
+        populate_theoretical( $pep, $theoretical->{$pep}, \@trans );
+        $stats{theo_look}++;
+        print "Trans has " . scalar( @trans ) . " post THEO\n" if $paranoid; # if scalar( @trans );
+      }
+    
+      
+      if ( !scalar( @trans ) ) {
+        $stats{unfound}++;
+    #    print "peptide $pep not found ( $line[1], $line[3], $line[14] )\n";
+      } elsif ( scalar( @trans ) < $transition_limit ) {
+        $stats{shorted}++;
+      } else {
+        $stats{fulfilled}++;
+      }
+    
+      if ( $qqq->{$pep} ) {
+        $stats{qqq_yes}++;
+      } else {
+        $stats{qqq_no}++;
+      }
+      if ( $it->{$pep} ) {
+        $stats{ion_trap_yes}++;
+      } else {
+        $stats{ion_trap_no}++;
+      }
+      if ( $theoretical->{$pep} ) {
+        $stats{theoretical_yes}++;
+      } else {
+        $stats{theoretical_no}++;
+      }
+    
+      # Insert peptide record
+      # Fields in the PABST peptides file
+    # 00 biosequence_name
+    # 01 preceding_residue
+    # 02 peptide_sequence
+    # 03 following_residue
+    # 04 empirical_proteotypic_score
+    # 05 suitability_score
+    # 06 predicted_suitability_score
+    # 07 merged_score
+    # 08 molecular_weight
+    # 09 SSRCalc_relative_hydrophobicity
+    # 10 n_protein_mappings
+    # 11 n_genome_locations
+    # 12 est_probability
+    # 13 n_observations
+    # 14 annotations
+    # 15 atlas_build
+    # 16 synthesis_score
+    # 17 syntheis_adjusted_score
+    
+      # A little massaging?
+      my $suit = ( $line[5] && $line[5] !~ /n/ ) ? $line[5] : $line[6];
+      $line[13] = 0 unless $line[13] =~ /^\d+$/;
+    
+      for my $col ( 12, 4, 5, 15, 6 ) {
+        $line[$col] = undef if ( $line[$col] =~ /^n/ );
+      }
+      for my $col ( 12, 9 ) {
+        $line[$col] =~ s/\s//g if ( $line[$col] ); 
+      }
+    
+      my $peprow = {  pabst_build_id => $build_id,
+                      preceding_residue => $line[1],
+                      peptide_sequence => $line[2],
+                      following_residue => $line[3],
+                      empirical_proteotypic_score => $line[4],
+                      suitability_score => $line[5],
+                      predicted_suitability_score => $line[6],
+                      merged_score => $line[7],
+                      molecular_weight => $line[8],
+                      SSRCalc_relative_hydrophobicity => $line[9],
+                      n_protein_mappings => $line[10],
+                      n_genome_locations => $line[11],
+                      best_probability => $line[12],
+                      n_observations => $line[13],
+                      synthesis_score => $line[16],
+                      synthesis_warnings => $line[14],
+                      syntheis_adjusted_score => $line[17],
+                      source_build => $line[15] 
+      };
+    
+    #  for my $k ( keys( %$peprow ) ) { print "$k => $peprow->{$k}\n"; }
+    
+    
+      my $pep_id = $sbeams->updateOrInsertRow( insert => 1,
+                                          table_name  => $TBAT_PABST_PEPTIDE,
+                                          rowdata_ref => $peprow,
+                                          verbose     => $args->{verbose},
+                                         return_PK    => 1,
+                                                   PK => 'pabst_peptide_id',
+                                          testonly    => $args->{testonly} );
+    
+      # Cache this to avoid double insert.
+      $seq2id->{$pep_key} = $pep_id;
+    
+    
+    
+    # 0 pep seq
+    # 1 pep seq
+    # 2 q1_mz
+    # 3 q1_charge
+    # 4 q3_mz
+    # 5 q3_charge
+    # 6 ion_series
+    # 7 ion_number
+    # 8 CE
+    # 9 relative intensity
+    # 10 lib_type
+    #
+    #
+      my $tcnt = 1;
+      for my $t ( @trans ) {
+        my $tranrow = { pabst_peptide_id => $seq2id->{$pep_key},
+                        transition_source => $t->[10],
+                        precursor_ion_mass => $t->[2],
+                        precursor_ion_charge => $t->[3],
+                        fragment_ion_mass => $t->[4],
+                        fragment_ion_charge => $t->[5],
+                        fragment_ion_label => $t->[6] . $t->[7],
+                        ion_rank => $tcnt++,
+                        relative_intensity => $t->[9],
+        };
+    #    print "Tranrow is $tranrow\n"; for my $k ( keys ( %$tranrow ) ) { print "$k => $tranrow->{$k}\n"; } 
+    
+    
+      my $trans_id = $sbeams->updateOrInsertRow( insert => 1,
+                                            table_name  => $TBAT_PABST_TRANSITION,
+                                            rowdata_ref => $tranrow,
+                                            verbose     => $args->{verbose},
+                                           return_PK    => 1,
+                                                     PK => 'fragment_ion_id',
+                                            testonly    => $args->{testonly} );
+    
+      }
+    
+    } else {
+      $stats{insert_new_no}++;
+    }
+    
+    my $maprow = {  pabst_peptide_id => $seq2id->{$pep_key},
+                    biosequence_id => $name2id->{$line[0]} };
+  
+    my $map_id = $sbeams->updateOrInsertRow( insert => 1,
+                                        table_name  => $TBAT_PABST_PEPTIDE_MAPPING,
+                                        rowdata_ref => $maprow,
                                         verbose     => $args->{verbose},
                                        return_PK    => 1,
                                                  PK => 'pabst_peptide_id',
                                         testonly    => $args->{testonly} );
-    $seq2id{$pep_key} = $pep_id;
+  
+
+  } # End read peptide loop
+
+  print "Saw $cnt total peptides\n";
+  for my $s ( sort( keys( %stats ) ) ) {
+    print "$s => $stats{$s}\n";
   }
-
-  my $maprow = {  pabst_peptide_id => $seq2id{$pep_key},
-                  biosequence_id => $name2id->{$line[0]} };
-
-  my $map_id = $sbeams->updateOrInsertRow( insert => 1,
-                                      table_name  => $TBAT_PABST_PEPTIDE_MAPPING,
-                                      rowdata_ref => $maprow,
-                                      verbose     => $args->{verbose},
-                                     return_PK    => 1,
-                                               PK => 'pabst_peptide_id',
-                                      testonly    => $args->{testonly} );
-
-
-# 0 pep seq
-# 1 pep seq
-# 2 q1_mz
-# 3 q1_charge
-# 4 q3_mz
-# 5 q3_charge
-# 6 ion_series
-# 7 ion_number
-# 8 CE
-# 9 relative intensity
-# 10 lib_type
-#
-#
-  my $tcnt = 1;
-  for my $t ( @trans ) {
-    my $tranrow = { pabst_peptide_id => $seq2id{$pep_key},
-                    transition_source => $t->[10],
-                    precursor_ion_mass => $t->[2],
-                    precursor_ion_charge => $t->[3],
-                    fragment_ion_mass => $t->[4],
-                    fragment_ion_charge => $t->[5],
-                    fragment_ion_label => $t->[6] . $t->[7],
-                    ion_rank => $tcnt++,
-                    relative_intensity => $t->[9],
-    };
-#    print "Tranrow is $tranrow\n"; for my $k ( keys ( %$tranrow ) ) { print "$k => $tranrow->{$k}\n"; } 
-
-
-  my $trans_id = $sbeams->updateOrInsertRow( insert => 1,
-                                        table_name  => $TBAT_PABST_TRANSITION,
-                                        rowdata_ref => $tranrow,
-                                        verbose     => $args->{verbose},
-                                       return_PK    => 1,
-                                                 PK => 'fragment_ion_id',
-                                        testonly    => $args->{testonly} );
-
-  }
-
-}
-print "Saw $cnt total peptides\n";
-for my $s ( sort( keys( %stats ) ) ) {
-  print "$s => $stats{$s}\n";
-}
 
 } # End Main
+
+sub getPABSTPeptideData {
+  my $sql = qq~
+  SELECT preceding_residue || peptide_sequence || following_residue, 
+         pabst_peptide_id
+    FROM $TBAT_PABST_PEPTIDE
+  ~;
+  my $sth = $sbeams->get_statement_handle( $sql );
+
+  my %seq_to_id;
+  while( my $row = $sth->fetchrow_arrayref() ) {
+    $seq_to_id{$row->[0]} = $row->[1];
+  }
+  return \%seq_to_id;
+}
 
 sub populate {
   my $trans_lib = shift;
