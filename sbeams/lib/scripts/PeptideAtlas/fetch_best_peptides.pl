@@ -33,63 +33,73 @@ $dbh->{RaiseError}++;
 
 
 { # Main 
-  if ( $args->{show_builds} ) {
-    show_builds();
+
+
+  print STDERR "Starting: " . time() . "\n" if $args->{verbose};
+  print STDERR "Fetching observed peptides\n" if $args->{verbose};
+
+  my $observed = get_observed_peptides();
+  print STDERR "Fetching theoretical peptides\n" if $args->{verbose};
+  my $theoretical = get_theoretical_peptides();
+  print STDERR "Merging peptides ($args->{n_peptides})\n" if $args->{verbose};
+  my $merged = $pep_sel->merge_pabst_peptides(  obs => $observed, 
+                                               theo => $theoretical,
+                                         n_peptides => $args->{n_peptides},
+                                            verbose => $args->{verbose}
+                                             );
+
+  print STDERR "Freeing memory\n" if $args->{verbose};
+  # Free up some memory!!!
+  undef $observed;
+  undef $theoretical;
+
+  print STDERR "Printing peptides\n" if $args->{verbose};
+
+  my $headings = get_headings();
+  if ( $args->{tsv_file} ) {
+    open( TSV, ">$args->{tsv_file}" ) || print_usage( "Unable to open file $args->{tsv_file}" );
+    print TSV join( "\t", @$headings ) . "\n";
   } else {
-    print STDERR "Starting: " . time() . "\n" if $args->{verbose};
-    print STDERR "Fetching observed peptides\n" if $args->{verbose};
+    print join( "\t", @$headings ) . "\n";
+  }
 
-    my $observed = get_observed_peptides();
-    print STDERR "Fetching theoretical peptides\n" if $args->{verbose};
-    my $theoretical = get_theoretical_peptides();
-    print STDERR "Merging peptides ($args->{n_peptides})\n" if $args->{verbose};
-    my $merged = $pep_sel->merge_pabst_peptides(  obs => $observed, 
-                                                 theo => $theoretical,
-                                           n_peptides => $args->{n_peptides},
-                                              verbose => $args->{verbose}
-                                               );
-
-    print STDERR "Freeing memory\n" if $args->{verbose};
-    # Free up some memory!!!
-    undef $observed;
-    undef $theoretical;
-
-    print STDERR "Printing peptides\n" if $args->{verbose};
-
-    my $headings = get_headings();
+  for my $peptide ( @{$merged} ) {
+    $peptide->[4] = sprintf( "%0.2f", $peptide->[4] ) if $peptide->[4] !~ /na/;
+    $peptide->[5] = sprintf( "%0.2f", $peptide->[5] ) if $peptide->[5] !~ /na/;
+    $peptide->[6] = sprintf( "%0.2f", $peptide->[6] ) if $peptide->[6] !~ /na/;
+    $peptide->[7] = sprintf( "%0.2f", $peptide->[7] ) if $peptide->[7] !~ /na/;
+    $peptide->[15] ||= 'na';
+    $peptide->[16] = sprintf( "%0.2f", $peptide->[16] ) if $peptide->[16];
+    $peptide->[17] = sprintf( "%0.3f", $peptide->[17] );
     if ( $args->{tsv_file} ) {
-      open( TSV, ">$args->{tsv_file}" ) || print_usage( "Unable to open file $args->{tsv_file}" );
-      print TSV join( "\t", @$headings ) . "\n";
+      print TSV join( "\t", @{$peptide} ) . "\n";
     } else {
-      print join( "\t", @$headings ) . "\n";
-    }
-
-    for my $peptide ( @{$merged} ) {
-      $peptide->[4] = sprintf( "%0.2f", $peptide->[4] ) if $peptide->[4] !~ /na/;
-      $peptide->[5] = sprintf( "%0.2f", $peptide->[5] ) if $peptide->[5] !~ /na/;
-      $peptide->[6] = sprintf( "%0.2f", $peptide->[6] ) if $peptide->[6] !~ /na/;
-      $peptide->[7] = sprintf( "%0.2f", $peptide->[7] ) if $peptide->[7] !~ /na/;
-      $peptide->[15] ||= 'na';
-      $peptide->[16] = sprintf( "%0.2f", $peptide->[16] ) if $peptide->[16];
-      $peptide->[17] = sprintf( "%0.3f", $peptide->[17] );
-      if ( $args->{tsv_file} ) {
-        print TSV join( "\t", @{$peptide} ) . "\n";
-      } else {
         print join( "\t", @{$peptide} ) . "\n";
       }
     }
     close TSV if $args->{tsv_file};
 
     print STDERR "Finishing: " . time() . "\n" if $args->{verbose};
-  }
+
+
+
+
 } # End main
 
 sub show_builds {
+
+  my $regex = shift;
+  my $name_like = '';
+  if ( $regex ) {
+    $name_like = "WHERE atlas_build_name LIKE '%$regex%'";
+  }
+
   my $sql = qq~
          SELECT AB.atlas_build_id, atlas_build_name, organism_name, BS.biosequence_set_id, set_name
          FROM $TBAT_ATLAS_BUILD AB
          JOIN $TBAT_BIOSEQUENCE_SET BS ON BS.biosequence_set_id = AB.biosequence_set_id
          JOIN $TB_ORGANISM O ON BS.organism_id = O.organism_id
+         $name_like
          ORDER BY AB.atlas_build_id
   ~;
 
@@ -107,6 +117,8 @@ sub show_builds {
       print join( "\t", @{$row} ) . "\n";
     }
   }
+  # Terminal request.
+  exit;
 }
 
 sub process_args {
@@ -115,21 +127,21 @@ sub process_args {
 
   GetOptions( \%args, 'atlas_build=s@', 'show_builds', 'help', 'tsv_file=s', 
               'protein_file=s', 'n_peptides=i', 'config=s', 'default_config', 
-              'bioseq_set=i', 'obs_min=i', 'verbose', 'name_prefix=s'
+              'bioseq_set=i', 'obs_min=i', 'verbose', 'name_prefix=s',
+              'build_name=s'
              ) || print_usage();
 
+  # Short-circuit if we just want help/documention
   print_usage() if $args{help};
   print_default_config() if $args{default_config};
+  show_builds( $args{build_name} ) if $args{show_builds};
 
-  if ( $args{show_builds} ) {
-    $args{show_builds} = 'def' unless $args{show_builds} eq 'all';  
-  } else {
-    my $err;
-    for my $k ( qw( atlas_build ) ) {
-      $err .= ( $err ) ? ", $err" : "Missing required parameter(s) $k" if !defined $args{$k};
-    }
-    print_usage( $err ) if $err;
+  my $err;
+  for my $k ( qw( atlas_build ) ) {
+    $err .= ( $err ) ? ", $err" : "Missing required parameter(s) $k" if !defined $args{$k};
   }
+  print_usage( $err ) if $err;
+
   for my $opt ( qw( n_peptides obs_min ) ) {
     if ( $args{$opt}  && $args{$opt} !~ /^\d+$/ ) {
       print_usage( "$opt must be an integer" );
@@ -196,7 +208,7 @@ sub print_usage {
 
 usage: $sub -a build_id [ -t outfile -n obs_cutoff -p proteins_file -v -b .3 ]
 
-   -a, --atlas_build    one or more atlas builds to be queried for observed 
+   -a, --atlas_build    one or more atlas build ids to be queried for observed 
                         peptides, will be used in order provided.  Can be 
                         specified as a numeric id ( -a 123 -a 189 ) or as a composite
                         id:weight ( -a 123:3 ).  Scores from EPS and ESS will 
@@ -208,11 +220,16 @@ usage: $sub -a build_id [ -t outfile -n obs_cutoff -p proteins_file -v -b .3 ]
    -p, --protein_file   file of protein names, one per line.  Should match 
                         biosequence.biosequence_name
    -s, --show_builds    Print info about builds in db 
+       --build_regex     Regular expression to limit return values from 
+                        show builds, will be used in LIKE clause, with wildcard
+                        characters added automatically.
    -b, --bioseq_set     Explictly defined biosequence set.  If not provided, 
                         the BSS defined by the first atlas_build specified will
                         be used.
    -t, --tsv_file       print output to specified file rather than stdout
-   -n, --n_peptides     number of peptides to return per protein
+       --n_peptides     number of peptides to return per protein
+       --name_prefix    prefix constraint on biosequences, allows subset of 
+                        of bioseqs to be selected.
    -o, --obs_min        Minimum n_obs to consider for observed peptides
    -h, --help           Print usage
    -v, --verbose        Verbose output, prints progress 
