@@ -443,7 +443,7 @@ sub getCurrentAtlasOrganism {
                  $self->getCurrentAtlasBuildID(%args);
   
   my $sql = qq~
-  SELECT organism_name
+  SELECT organism_name, O.organism_id
   FROM $TBAT_BIOSEQUENCE_SET BSS
   LEFT JOIN $TB_ORGANISM O
     ON ( BSS.organism_id = O.organism_id )
@@ -461,16 +461,16 @@ sub getCurrentAtlasOrganism {
   AND BSS.record_status != 'D'  
   ~;
 
-  my @rows = $sbeams->selectOneColumn($sql);
+  my @rows = $sbeams->selectrow_array($sql);
   die "Couldn't find specified organism: $sql" if !scalar(@rows);
-  die "Too many rows from query: $sql" if scalar(@rows) > 1;
-  print STDERR "Basal organism is $rows[0]\n";
 
   if ( $args{type} && $args{type} eq 'kegg' ) {
     return  ( $rows[0] =~ /Human/ ) ? 'hsa' :
             ( $rows[0] =~ /Yeast/ ) ? 'sce' :
             ( $rows[0] =~ /Mouse/ ) ? 'mmu' :
             ( $rows[0] =~ /Drosophila/ ) ? 'dme' : $rows[0];
+  } elsif  ( $args{type} && $args{type} eq 'organism_id' ) {
+    return $rows[1];
   } else {
     return $rows[0];
   }
