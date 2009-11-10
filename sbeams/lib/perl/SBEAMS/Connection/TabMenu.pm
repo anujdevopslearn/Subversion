@@ -383,7 +383,7 @@ sub asMenuCSSHTML {
 
   # Table for rendering stuff...
   my $table = "<table cellpadding='0' cellspacing='0' border='0'>\n<tr>\n";
-  $table .= "<tr><td style='width:50;border-bottom:1px solid #bb0000;'>$spc</td>\n";
+  $table .= "<tr><td style='width:50;border-bottom:1px solid #bb0000;'><IMG SRC='$HTML_BASE_DIR/images/transparent.gif' HEIGHT='1' WIDTH='49' BORDER='0'></td>\n";
 
   my @tabs = @{$this->{_tabs}};
   my $dtab ||= $this->getActiveTab();
@@ -397,7 +397,7 @@ sub asMenuCSSHTML {
 	my @items = @{$this->{_items}->{$tabs[$i]->{label}}};
 
 	if ($dtab == $i) {
-	    $table .= "<td class=menuset align='right'><A $class HREF='#' $htext> $tabs[$i]->{label} </A></td>\n";
+	    $table .= "<td class=tabmenuset align='right'><A $class HREF='#' $htext> $tabs[$i]->{label} </A></td>\n";
 
 	    $tabmenu = SBEAMS::Connection::TabMenu->
 		new( cgi => $this->{cgi},
@@ -421,7 +421,7 @@ sub asMenuCSSHTML {
 
 	} else {
 
-	    $table .= "<td onmouseover=\"showmenu('ddmenu$i')\" onmouseout=\"hidemenu('ddmenu$i')\" class=menuset><a $class HREF='#' $htext> $tabs[$i]->{label} </A><br/>\n";
+	    $table .= "<td onmouseover=\"showmenu('ddmenu$i')\" onmouseout=\"hidemenu('ddmenu$i')\" class=tabmenuset><a $class HREF='#' $htext> $tabs[$i]->{label} </A><br/>\n";
 	    $table .= "<table class=ddmenu id=ddmenu$i cellspacing=0>\n";
 
 	    for my $item (@items) {
@@ -432,32 +432,31 @@ sub asMenuCSSHTML {
 	}
 
     } else {
-	$table .= "<td class=menuset align='right'><A $class HREF='$tabs[$i]->{url}' $htext> $tabs[$i]->{label} </A></td>\n";
+	$table .= "<td class=tabmenuset align='right'><A $class HREF='$tabs[$i]->{url}' $htext> $tabs[$i]->{label} </A></td>\n";
     }
 
   }
-  $table .= "<td style='width:500;border-bottom:1px solid #bb0000;'>$spc</td>\n</tr>\n";
+  $table .= "<td style='width:500;border-bottom:1px solid #bb0000;'><IMG SRC='$HTML_BASE_DIR/images/transparent.gif' HEIGHT='1' WIDTH='499' BORDER='0'></td>\n</tr>\n";
 
   if ($tabmenu) {
       $tabmenu->setCurrentTab( currtab => $this->{_currentSubTab} );
       $table .= "<tr><td class=ddmenu>$spc</td><td class=ddmenu colspan=99>".$tabmenu->asHTML()."</td></tr>\n";
   }
 
-  $table .= "</table><br>\n";
+  $table .= "</table>\n";
 
   return ( <<"  END" );
   <!-- Begin TabDDMenu --> 
     <!-- CSS definitions -->
     <style type="text/css">
-    .menuset {
-	         font-size:14px;
+    .tabmenuset {
 		 padding:0 0 0 0;
 		 margin: 0px;
 	         list-style:none;
 		 white-space: nowrap;
 	       }
 
-    .menuset A {
+    .tabmenuset A {
                 padding:0;
 		float:left;
 		display:block;
@@ -472,16 +471,16 @@ sub asMenuCSSHTML {
 		border-right:1px solid #827975;
                 }
 
-    .menuset A:hover {
+    .tabmenuset A:hover {
                border-bottom:1px solid #bb0000;
 	       border-top:1px solid #bb0000;
 	       background:#$this->{hoverColor};
 	       color:#$this->{htextColor};
 	   }
 
-    .menuset A:active,
-    .menuset A.atab:link,
-    .menuset A.atab:visited {
+    .tabmenuset A:active,
+    .tabmenuset A.atab:link,
+    .tabmenuset A.atab:visited {
               background:#$this->{activeColor};
               color:#333333;
 	      border-top:1px solid #bb0000;
@@ -490,13 +489,14 @@ sub asMenuCSSHTML {
 	      border-bottom:0;
 	  }
 
-    .menuset A.atab:hover {
+    .tabmenuset A.atab:hover {
               background:#$this->{hoverColor};
               color:#$this->{htextColor};
     }
 
     td.ddmenu, a.ddmenu{
               background:#$this->{activeColor};
+	      white-space: nowrap;
 	      border-style: none;
 	      font-weight:bold;
 	      padding-right:20;
@@ -505,7 +505,7 @@ sub asMenuCSSHTML {
 	  }
 
     table.ddmenu {
-        padding: 2;
+        width:170px;
 	background:#$this->{activeColor};
 	border-color: #c6c1b8;
 	border-width: 1px 1px 1px 1px;
@@ -513,8 +513,7 @@ sub asMenuCSSHTML {
 	border-collapse: collapse;
 	visibility:hidden;
 	position:absolute;
-	margin-top:9px;
-	z-index:10;
+	z-index:2;
       }
 
     </style>
@@ -586,7 +585,7 @@ sub asCSSHTML {
 	           padding:0 0 0 0;
 	           margin: 0px;
 	           list-style:none;
-	           line-height:1.75em;  
+	           line-height:1.75em;
              }
    
     #menuset LI {
