@@ -144,6 +144,7 @@ sub handle_request {
 
   #### Process the arguments list
   my $ref_parameters = $args{'ref_parameters'}
+
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
 
@@ -343,13 +344,21 @@ sub handle_request {
     constraint_value=>$parameters{n_distinct_peptides_constraint} );
   return if ($n_distinct_peptides_clause eq '-1');
 
-  #### Build PROTEIN_GROUP_NUMBER constraint
-  my $protein_group_number_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"PID.protein_group_number",
-    constraint_type=>"flexible_int",
-    constraint_name=>"Protein Group Number",
-    constraint_value=>$parameters{protein_group_number_constraint} );
-  return if ($protein_group_number_clause eq '-1');
+#  #### Build GROUP_NUMBER constraint
+#  my $group_number_clause = $sbeams->parseConstraint2SQL(
+#    constraint_column=>"PID.protein_group_number",
+#    constraint_type=>"flexible_int",
+#    constraint_name=>"Group Number",
+#    constraint_value=>$parameters{protein_group_number_constraint} );
+#  return if ($group_number_clause eq '-1');
+
+  #### Build PROTEIN_GROUP constraint
+  my $protein_group_representative_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS_REP.biosequence_name",
+    constraint_type=>"plain_text",
+    constraint_name=>"Protein Group",
+    constraint_value=>$parameters{protein_group_representative_constraint} );
+  return if ($protein_group_representative_clause eq '-1');
 
   #### Build PRESENCE_LEVEL constraint
   my $presence_level_clause = $sbeams->parseConstraint2SQL(
@@ -535,22 +544,28 @@ sub handle_request {
         "CAST(BS_INDIS.biosequence_desc AS varchar(255))";
 
 
-  #### If the DASFormat view was selected
-  if (1) {
   for (my $i=0; $i<3; $i++) {
+    my @abundance_columns;
+    if ( $parameters{display_options} =~ /ShowAbundances/ ) {
+      @abundance_columns = (
+	["estimated_ng_per_ml",$estimated_ng_per_ml_sql[$i],"Estimated ng/ml"],
+	["abundance uncertainty",$abundance_uncertainty_sql[$i],"Uncertainty ng/ml"],
+      );
+    } else {
+      @abundance_columns = ();
+    }
     my @column_array = (
         ["biosequence_name",$biosequence_name_sql[$i],"Biosequence Name"],
 	["presence_level",$presence_level_sql[$i],"Presence Level"],
 	["probability",$probability_sql[$i],"Protein Prophet Prob"],
 	["confidence",$confidence_sql[$i],"Mult Hyp Test Prob"],
 	["n_observations",$n_observations_sql[$i],"N Obs"],
-	["estimated_ng_per_ml",$estimated_ng_per_ml_sql[$i],"Estimated ng/ml"],
-	["abundance uncertainty",$abundance_uncertainty_sql[$i],"Uncertainty ng/ml"],
 	["n_distinct_peptides",$n_distinct_peptides_sql[$i],"N Distinct Peptides"],
+        @abundance_columns,
 	["relationship_phrase",$relationship_phrase_sql[$i],"Redundancy Relationship"],
 	["reference_biosequence",$reference_biosequence_sql[$i], "Redundant With Respect To"],
-	["protein_group_number","PID.protein_group_number","Protein Group"],
-	["represented_by_biosequence_id", "BS_REP.biosequence_name", "Group Representative"],
+	["represented_by_biosequence_id", "BS_REP.biosequence_name", "Protein Group"],
+	["group_number","PID.protein_group_number","Group Number"],
         ["protein_group_seq_align_link","NULL","Protein Group Seq Alignmt"],
 	["biosequence_description",$biosequence_description_sql[$i],"Protein Description"],
 	["biosequence_accessor","DBX.accessor","biosequence_accessor"],
@@ -561,7 +576,6 @@ sub handle_request {
 	["brt_sort_order",$relationship_sort_order_sql[$i],"brt_sort_order"],
       );
     $column_array_refs[$i] = \@column_array;
-  }
   }
 
   #### Set flag to display SQL statement if user selected
@@ -579,11 +593,12 @@ sub handle_request {
   ## and value = 3rd element, and (3) fills @column_titles_ref
   ## array with the 3rd element
   for (my $i=0; $i<3; $i++) {
-    $columns_clause[$i] = $sbeams->build_SQL_columns_list(
-      column_array_ref=>$column_array_refs[$i],
-      colnameidx_ref=>\%colnameidx,
-      column_titles_ref=>\@column_titles
-    );
+    $columns_clause[$i] =
+      $sbeams->build_SQL_columns_list(
+	column_array_ref=>$column_array_refs[$i],
+	colnameidx_ref=>\%colnameidx,
+	column_titles_ref=>\@column_titles
+      );
   }
 
   my @pre_joins;
@@ -668,7 +683,7 @@ sub handle_request {
          $estimated_ng_per_ml_clause
          $mapping_constraints
          $probability_clause
-         $protein_group_number_clause
+         $protein_group_representative_clause
          $presence_level_clause
          $special_clauses[$i]
        )
@@ -684,7 +699,7 @@ sub handle_request {
        UNION
     $select_clause[2]
    ORDER BY
-      protein_group_number,
+      group_number,
       ppl_sort_order,
       reference_biosequence,
       brt_sort_order,
@@ -734,17 +749,13 @@ sub handle_request {
           'Biosequence Name_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein\'; return true"',
           'Representative Peptide Sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$parameters{atlas_build_id}&searchWithinThis=Peptide+Sequence&searchForThis=\%$colnameidx{peptide_sequence}V&action=QUERY",
           'Representative Peptide Sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information for this peptide\'; return true"',
-          #'Protein Group' => "$CGI_BASE_DIR/PeptideAtlas/GetProteins?protein_group_number_constraint=\%$colnameidx{protein_group_number}V&apply_action=$pass_action",
-          #'Protein Group_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Display all biosequences in this group\'; return true"',
-          'Group Representative' => "$CGI_BASE_DIR/PeptideAtlas/GetProteins_beta?protein_group_number_constraint=\%$colnameidx{protein_group_number}V&apply_action=$pass_action",
-          'Group Representative_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Display all biosequences in this group\'; return true"',
+          #'Group Representative' => "$CGI_BASE_DIR/PeptideAtlas/GetProteins_beta?protein_group_number_constraint=\%$colnameidx{protein_group_number}V&apply_action=$pass_action",
+          'Protein Group' => "$CGI_BASE_DIR/PeptideAtlas/GetProteins_beta?protein_group_representative_constraint=\%$colnameidx{protein_group_representative}V&apply_action=$pass_action",
+          'Protein Group_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Display all biosequences in this group\'; return true"',
           'Protein Group Seq Alignmt' => "$CGI_BASE_DIR/PeptideAtlas/compareProteins?protein_group_number=\%$colnameidx{protein_group_number}V&apply_action=$pass_action",
           'Protein Group Seq Alignmt_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Display alignment of all biosequences in this group\'; return true"',
-          ### REPLACE devTF below when image makes its way into live version!!
-          #'Protein Group Seq Alignmt_ISNULL' => '<IMG BORDER="0" SRC="/devTF/sbeams/images/compareProteins.png">',
           'Protein Group Seq Alignmt_ISNULL' => '<IMG BORDER="0" SRC="/sbeams/images/compareProteins.png">',
           'Protein Group Seq Alignmt_OPTIONS' => {embed_html=>1},
-
           'Related to' => "$CGI_BASE_DIR/PeptideAtlas/GetProtein?=\%$colnameidx{reference_biosequence_name}V&apply_action=$pass_action",
           'Related to_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein\'; return true"',
 
@@ -756,10 +767,10 @@ sub handle_request {
   # biosequence_accessor_suffix is suffix for same
 
   %hidden_cols = (
+                  'Group Number' => 1,
 		  'biosequence_accession' => 1,
 		  'biosequence_accessor' => 1,
 		  'biosequence_accessor_suffix' => 1,
-                  'PeptideAtlas Name' => 1,
 	          'ppl_sort_order' => 1,
                   'brt_sort_order' => 1,
                   'Organism' => 1,
@@ -791,7 +802,6 @@ sub handle_request {
         resultset_ref=>$resultset_ref,
         query_parameters_ref=>\%parameters,
         column_titles_ref=>\@column_titles,
-      #) if ($parameters{display_options} =~ /DASFormat/i);
       );
 
       #### Store the resultset and parameters to disk resultset cache
@@ -943,3 +953,5 @@ sub getOrganismFullName
 
     return $full_name;
 }
+
+
