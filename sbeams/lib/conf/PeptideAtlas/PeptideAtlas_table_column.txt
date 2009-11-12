@@ -627,6 +627,7 @@ AT_protein_identification	10	n_observations	N Obs	int	4	0	N		N										Number o
 AT_protein_identification	11	n_distinct_peptides	N Distinct Peptides	int	4	0	N		N										Number of sequence-distinct peptides		
 AT_protein_identification	12	estimated_ng_per_ml	Estimated ng/ml	real	4	0	Y		N										Abundance in ng/ml as estimated from number of observations		
 AT_protein_identification	13	abundance_uncertainty	Uncertainty ng/ml	varchar	100	0	Y		N										Uncertainty factor for estimated abundance		
+AT_protein_identification	14	seq_unique_prots_in_group	Sequence Unique Proteins in Gruop	int	4	0	N		N										Number of sequence-unique proteins in this protein group		
 AT_biosequence_relationship	1	biosequence_relationship_id	Biosequence Relationship ID	int	4	0	N		Y												pkDEFAULT
 AT_biosequence_relationship	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id								Atlas build ID which this protein belongs to		
 AT_biosequence_relationship	3	protein_group_number	Protein Group ID	int	4	0	N		N										Protein group number from ProteinProphet		
