@@ -26,6 +26,7 @@ $pep_sel->setSBEAMS( $sbeams );
 my $dbh = $sbeams->getDBHandle();
 $dbh->{RaiseError}++;
 
+print "Begin at " . time() . "\n";
 print "process args\n";
 my $args = process_args();
 print "done\n";
@@ -89,6 +90,7 @@ my $paranoid = 0;
                  theoretical_file => '',
                  parameter_string => $args->{parameters},
                    parameter_file => $args->{conf}, 
+               biosequence_set_id => $args->{biosequence_set_id}, 
                        project_id => $args->{project_id} 
                     };
   
@@ -302,18 +304,36 @@ my $paranoid = 0;
 
 } # End Main
 
+print "Finished at " . time() . "\n";
+
 sub getPABSTPeptideData {
+
+  my $build_where = '';
+  if ( $args->{mapping_build} ) {
+    $build_where = "WHERE pabst_build_id = $args->{mapping_build}";
+  }
+
+  # Now require explicit mapping build, else return empty hashref
+  my %seq_to_id;
+  return \%seq_to_id unless $build_where;
+
   my $sql = qq~
   SELECT preceding_residue || peptide_sequence || following_residue, 
          pabst_peptide_id
     FROM $TBAT_PABST_PEPTIDE
+    $build_where
   ~;
+  print "Mapping to existing build $args->{mapping_build}\n";
+
   my $sth = $sbeams->get_statement_handle( $sql );
 
-  my %seq_to_id;
+  my $cnt = 0;
   while( my $row = $sth->fetchrow_arrayref() ) {
+    $cnt++;
     $seq_to_id{$row->[0]} = $row->[1];
   }
+  print STDERR "saw $cnt total peptides\n";
+
   return \%seq_to_id;
 }
 
@@ -386,7 +406,8 @@ sub process_args {
   GetOptions( \%args, 'qqq:s', 'ion_trap:s', 'qtof:s', 'help',
               'peptides:s', 'conf=s', 'parameters=s', 'description=s',
               'verbose', 'testonly', 'biosequence_set_id=i', 'name=s',
-              'load', 'output_file=s', 'project_id=i', 'organism=i' );
+              'load', 'output_file=s', 'project_id=i', 'organism=i',
+              'mapping_build:i' );
 
   my $missing;
   for my $opt ( qw( qqq ion_trap qtof peptides conf parameters 
@@ -394,6 +415,7 @@ sub process_args {
     $missing = ( $missing ) ? $missing . ", $opt" : "Missing required arg(s) $opt" if !$args{$opt};
   }
 
+  $args{mapping_build} ||= 0;
 
   if ( !$args{load} && !$args{output_file} ) {
     $missing .= "\n" . "      Must provide either --load for loading_mode or --output_file for generate mode";
@@ -565,16 +587,18 @@ sub print_usage {
 
 usage: $exe -q qtrap_file -i ion_trap_file -t theoretical_file
 
-   -i, --ion_trap     Ion Trap consensus library location 
-   -q, --qqq          QQQ consensus library location
-       --peptides     List of 'best' peptides
-   -t, --theoretical  Theoretical transition information in TIQAM format 
-   -h, --help         print this usage and exit
-   -c, --conf         PABST config file used for build
-       --parameters   parameter string for best peptide run
-   -n, --name         Name for pabst_build 
-   -o, --organism     Organism for pabst_build  
-   -d, --description  description of pabst_build
+   -i, --ion_trap       Ion Trap consensus library location 
+   -q, --qqq            QQQ consensus library location
+       --peptides       List of 'best' peptides
+   -t, --theoretical    Theoretical transition information in TIQAM format 
+   -h, --help           print this usage and exit
+   -c, --conf           PABST config file used for build
+       --parameters     parameter string for best peptide run
+   -n, --name           Name for pabst_build 
+   -m, --mapping_build  existing PABST build id to use for mapping, default 0
+                        which will insert all de-novo.
+   -o, --organism       Organism for pabst_build  
+   -d, --description    Description of pabst_build
   END
 
   exit;
