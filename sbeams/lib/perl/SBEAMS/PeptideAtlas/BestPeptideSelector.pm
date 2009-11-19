@@ -467,10 +467,13 @@ sub get_pabst_scoring_defs {
   my %defs =  (    M => 'Avoid M',
                    nQ => 'Avoid N-terminal Q',
                    nE => 'Avoid N-terminal E',
+                   nM => 'Avoid N-terminal M',
                    Xc => 'Avoid any C-terminal peptide',
+                   nX => 'Avoid any N-terminal peptide',
                     C => 'Avoid C ',
                     W => 'Avoid W',
                     P => 'Avoid P',
+                 '4H' => 'Avoid 4 straight hydrophobic residues',
                    NG => 'Avoid dipeptide NG',
                    DP => 'Avoid dipeptide DP',
                    DG => 'Avoid dipeptide DG',
@@ -500,24 +503,27 @@ sub get_default_pabst_scoring {
 	my %args = @_;
 	$args{show_defs} ||= 0;
 
-  my %scores =  (  M => .3,
-                  nQ => .1,
-                  nE => .9,
-                  Xc => .5,
-                   C => .7,
-                   W => .1,
-                   P => .5,
-                  NG => .5,
-                  DP => .5,
-                  QG => .5,
-                  DG => .5,
-                nxxG => .8,
-                nGPG => .5,
-                   D => 1.0,
+  my %scores =  (  M => .95,
+                  nQ => 1,
+                  nE => 1,
+                  nM => 1,
+                  Xc => 1,
+                  nX => 1,
+                   C => .95,
+                   W => 1,
+                   P => .95,
+                '4H' => 1.0,
+                  NG => 1,
+                  DP => 1,
+                  QG => 1,
+                  DG => 1,
+                nxxG => 1,
+                nGPG => 1,
+                   D => 1,
                  obs => 2.0,
-                   S => 1.0,
+                   S => 1,
                min_l => 7,
-               min_p => 0.5,
+               min_p => 0.2,
                max_l => 25,
                max_p => 0.2,
                ssr_p => 0.5,
@@ -795,6 +801,7 @@ sub get_pabst_static_peptide_display {
   my $organism_id = $atlas->getCurrentAtlasOrganism( parameters_ref => {},
                                                      type => 'organism_id' );
 
+  my $pabst_build_id = $self->get_pabst_build();
 
   my $dp_sql = qq~
   SELECT DISTINCT Sequence, ESPPred, N_obs_ident, N_obs_templ, N_obs_Orbi,
@@ -808,6 +815,8 @@ sub get_pabst_static_peptide_display {
   ON B.biosequence_name = DP.P_mapped
   WHERE B.biosequence_id = $args{biosequence_id}
   ~;
+
+  $log->debug( $dp_sql );
 
   my %dirty_peptides;
   my $dp_data = 0;
@@ -855,8 +864,10 @@ sub get_pabst_static_peptide_display {
   ON B.biosequence_id = PM.biosequence_id 
   WHERE PM.biosequence_id = $args{biosequence_id}
   AND PB.organism_id = $organism_id
+  AND PB.pabst_build_id = $pabst_build_id
   ORDER BY syntheis_adjusted_score DESC
   ~;
+  $log->debug( $sql );
 
   my @headings = ( pre => 'Previous amino acid',
                    sequence => 'Amino acid sequence of peptide',
@@ -957,6 +968,29 @@ sub get_pabst_static_peptide_display {
 } # End get pabst static display
 
 
+sub get_pabst_build {
+  my $self = shift;
+
+  my @accessible = $sbeams->getAccessibleProjects();
+  my $acc_str = join( ',', @accessible );
+
+  my $atlas_build_id = $atlas->getCurrentAtlasBuildID( parameters_ref => {} );
+  my $sql = qq~
+  SELECT pabst_build_id
+  FROM $TBAT_PABST_BUILD PB 
+  JOIN $TBAT_ATLAS_BUILD AB
+    ON AB.biosequence_set_id = PB.biosequence_set_id
+  WHERE atlas_build_id = $atlas_build_id
+  AND PB.project_id IN ( $acc_str )
+  ORDER BY pabst_build_id DESC
+  ~;
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    return $row[0];
+  }
+  return undef;
+}
 
 sub get_pabst_peptide_display {
   my $self = shift;
@@ -2018,6 +2052,7 @@ sub merge_pabst_peptides {
 #    PBR
 #    print STDERR scalar( @{$peptides[0]} ) . " COLS\n";
     my $row = $self->pabst_evaluate_peptides( peptides => \@peptides,
+                                          previous_idx => 1, 
                                                seq_idx => 2, 
                                             follow_idx => 3, 
                                              score_idx => 7,
@@ -2158,12 +2193,14 @@ sub pabst_evaluate_peptides {
   my %rx =  (  M => ['M'],
               nQ => ['^Q'],
               nE => ['^E'],
+              nE => ['^M'],
                C => ['C'],
                W => ['W'],
                P => ['P'],
               NG => ['NG'],
               DP => ['DP'],
               QG => ['QG'],
+            '4H' => ['[CFILVWY]{4,}'],
               DG => ['DG'],
             nxxG => ['^..G'],
             nGPG => ['^[GP].G', '^.[GP]G'],
@@ -2205,10 +2242,16 @@ sub pabst_evaluate_peptides {
           $scr *= $pen_defs{Xc};
           push @pen_codes, 'Xc';
         }
+      } elsif ( $k eq 'nX' ) {
+        # Can only analyze nX peptides if previous_idx is given
+        if ( defined $args{previous_idx} && ( $pep->[$args{previous_idx}] eq '*' || $pep->[$args{previous_idx}] eq '-' ) ) {
+          $scr *= $pen_defs{nX};
+          push @pen_codes, 'nX';
+        }
       } elsif( $k eq 'ssr_p') {
         if ( defined $args{hydrophob_idx} ) {
           my $hyd = $pep->[$args{hydrophob_idx}];
-          if ( $hyd < 9 || $hyd > 44 ) {
+          if ( $hyd < 10 || $hyd > 46 ) {
             $scr *= $pen_defs{$k};
             push @pen_codes, $k if $is_penalized{$k};
           }
