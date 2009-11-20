@@ -99,6 +99,7 @@ sub main {
 
   #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($current_username = $sbeams->Authenticate(
+#      permitted_work_groups_ref=>[],
       permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
       'PeptideAtlas_readonly', 'PeptideAtlas_exec'],
       #connect_read_only=>1,
@@ -356,7 +357,7 @@ sub handle_request {
   #### [friendly name used in url_cols,SQL,displayed column title]
   my @column_array = (
     ["search_key_name","SK.search_key_name","Search Key"],
-    ["search_key_type","SK.search_key_type","search_key_type"],
+#    ["search_key_type","SK.search_key_type","search_key_type"],
     $atlas_build_column,
     ["resource_name","SK.resource_name","Identifier"],
     ["resource_type","SK.resource_type","resource_type"],
@@ -378,7 +379,7 @@ sub handle_request {
 
   #### Define the SQL statement to find the biosequence(s)
   $sql = qq~
-       SELECT $columns_clause
+       SELECT DISTINCT $columns_clause
          FROM $TBAT_SEARCH_KEY SK
          JOIN $TB_ORGANISM O ON (O.organism_id = SK.organism_id)
                   $atlas_build_clause
@@ -398,10 +399,11 @@ sub handle_request {
   #### Define the hidden columns
   %hidden_cols = (
     	       'search_key_type' => 1,
-    	       'resource_type' => 1,
+#    	       'resource_type' => 1,
     	       'resource_url' => 1,
     	       'organism_id' => 1,
   );
+  my $spacer = '&nbsp;' x 3;
 
 
   #########################################################################
@@ -467,7 +469,7 @@ sub handle_request {
 	    <TABLE BORDER="0" WIDTH="570"><TR><TD>
 	    <BR>You can broaden the search by placing wildcards around your search key like this:
 	    <A HREF="$base_url?search_key=$cleaned_search_key%25&action=GO">$cleaned_search_key%</A>,
-	    <A HREF="$base_url?search_key=%25$cleaned_search_key%25&action=GO">%$cleaned_search_key%</A>
+	    <A HREF="$base_url?search_key=%25$cleaned_search_key%25&action=GO">%$cleaned_search_key%</A>.
 	    </TD></TR></TABLE>
 	  ~;
 	}
@@ -478,7 +480,8 @@ sub handle_request {
     } elsif ( $build_type_selection->{atlas_build_ids} =~ /^\d+$/ ) {
 			my @identifiers;
       for my $row ( @{$resultset_ref->{data_ref}} ) {
-				push @identifiers, $row->[3];
+#				push @identifiers, $row->[3];
+				push @identifiers, $row->[$colnameidx{resource_name}];
 			}
 			my $id_string = join( '%3B', @identifiers );
 
@@ -488,21 +491,19 @@ sub handle_request {
 			$pep_link =~ s/GetProteins/GetPeptides/g;
 
 			$download_link = qq~
-			  You can also download more information about the proteins via this $prot_link <BR>
-				or information about all observed peptides for the proteins via this $pep_link
+			  $spacer You can download more information about the proteins via this $prot_link. <BR>
+				$spacer Or information about all observed peptides for the proteins via this $pep_link.
 			~;
 	 	}
 
     print qq~
       <TABLE BORDER="0" WIDTH="570"><TR><TD>
-      Your search returned $n_results matches.  Please choose one from below.  <BR> $download_link
+      Your search returned $n_results matches.  Please choose from the table below.  <BR> $download_link <BR>
     ~ if ($sbeams->output_mode() eq 'html');
 
     if ($search_key !~ /%/) {
       print qq~
-      Or you can broaden the search by placing wildcards around your search key like this:
-          <A HREF="$base_url?search_key=$cleaned_search_key%25&action=GO">$cleaned_search_key%</A>,
-          <A HREF="$base_url?search_key=%25$cleaned_search_key%25&action=GO">%$cleaned_search_key%</A>
+      $spacer You can also broaden the search by using wildcards: <A HREF="$base_url?search_key=$cleaned_search_key%25&action=GO">$cleaned_search_key%</A>, <A HREF="$base_url?search_key=%25$cleaned_search_key%25&action=GO">%$cleaned_search_key%</A>.
       ~ if ($sbeams->output_mode() eq 'html');
 		}
     print "</TD></TR></TABLE><BR>\n" if ($sbeams->output_mode() eq 'html');
