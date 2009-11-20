@@ -361,7 +361,7 @@ sub handle_request {
     $atlas_build_column,
     ["resource_name","SK.resource_name","Identifier"],
     ["resource_type","SK.resource_type","resource_type"],
-    ["resource_n_matches","SK.resource_n_matches","N Peptides"],
+    ["resource_n_matches","SK.resource_n_matches","N Peptide obs"],
     ["resource_url","SK.resource_url","resource_url"],
     ["organism_id","O.organism_id","organism_id"],
   );
@@ -442,7 +442,9 @@ sub handle_request {
     if ($n_results == 1 && ($sbeams->output_mode() eq 'html')) {
       print "Status: 302 Resource Temporarily Moved\n";
       print "Location: $CGI_BASE_DIR/PeptideAtlas/".
-	$resultset_ref->{data_ref}->[0]->[6]."\n\n";
+      # Using the explict index makes things brittle...
+#    	$resultset_ref->{data_ref}->[0]->[6]."\n\n";
+    	$resultset_ref->{data_ref}->[0]->[$colnameidx{resource_url}]."\n\n";
       exit;
     }
 
