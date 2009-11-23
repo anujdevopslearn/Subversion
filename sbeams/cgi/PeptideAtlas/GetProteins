@@ -170,7 +170,9 @@ sub handle_request {
   #print "<p>Atlas Build ID = $parameters{atlas_build_id}</p>\n";
   # 09/22/09: temporary kludge
   if (($parameters{atlas_build_id} eq "174") ||  # plasma glyco
+      ($parameters{atlas_build_id} eq "199") ||  # plasma glyco
       ($parameters{atlas_build_id} eq "185") ||  # plasma non-glyco
+      ($parameters{atlas_build_id} eq "204") ||  # plasma combined
       ($parameters{atlas_build_id} eq "186")) {  # plasma combined
     my $getProteins_call =
       "\"https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetProteins_beta\?atlas_build_id=$parameters{atlas_build_id}\&input_form_format=minimum_detail\&redundancy_constraint=4\&presence_level_constraint=1,2\"";
