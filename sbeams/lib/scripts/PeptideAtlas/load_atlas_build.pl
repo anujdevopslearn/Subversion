@@ -332,7 +332,6 @@ sub handleRequest {
   #### If coordinates only was requested
   if ($OPTIONS{"coordinates"}) {
     print "\n Begin (manual) calc coordinates \n";
-
     ## set infile to coordinate mapping file
     my $builds_directory = get_atlas_build_directory (atlas_build_id =>
         $ATLAS_BUILD_ID);
@@ -348,7 +347,6 @@ sub handleRequest {
         organism_abbrev => $organism_abbrev,
         source_dir => $builds_directory,
     );
-
   }
 
   #### If update of inst_sample_obs only was requested, or during load
@@ -367,8 +365,8 @@ sub handleRequest {
 #      for my $k ( sort { $a <=> $b } keys ( %{$sb2smpl} ) ) { print "$k => $sb2smpl->{$k}\n"; }
 			print "Getting counts from ident list\n";
       my $inst_obs = $sbeamsMOD->cntObsFromIdentlist( identlist_file => $identlist,
-			                                                      key_type => 'peptide',
-																														psb2asb => $psb2asb );
+			                                          key_type => 'peptide',
+													  psb2asb => $psb2asb );
 
 			print "Updating pep instance records\n";
       my $inst_recs = $sbeamsMOD->getPepInstRecords( build_id => $ATLAS_BUILD_ID );
@@ -1940,7 +1938,6 @@ sub readCoords_updateRecords_calcAttributes {
     my %biosequence_ids = get_biosequence_name_id_hash(
         biosequence_set_id => $biosequence_set_id);
 
-
     #### Load the duplicate mapping file if available
     my %duplicate_proteins;
     if ( -e "$source_dir/duplicate_groups.txt" ) {
@@ -2039,8 +2036,7 @@ sub readCoords_updateRecords_calcAttributes {
         push(@start_in_biosequence, $columns[5]);
         push(@end_in_biosequence, $columns[6]);
 
-        my $tmp_chromosome = $columns[8];
-
+        my $tmp_chromosome = $columns[8]; 
         ## parsing for chromosome:   this is set for Ens 21 and 22 notation...
         if ($tmp_chromosome =~ /^(chromosome:)(NCBI.+:)(.+)(:.+:.+:.+)/ ) {
             $tmp_chromosome = $3;
@@ -2160,36 +2156,42 @@ sub readCoords_updateRecords_calcAttributes {
 	      $first_index = $i_ind;
 	    }
 
-            $protein = $biosequence_name[$i_ind];
+		  $protein = $biosequence_name[$i_ind];
 
-            my $chrom = $chromosome[$i_ind];
-            my $start = $start_in_chromosome[$i_ind];
-            my $end = $end_in_chromosome[$i_ind];
-            my $coord_str = "$chrom:$start:$end";
+		  my $chrom = $chromosome[$i_ind];
+		  my $start = $start_in_chromosome[$i_ind];
+		  my $end = $end_in_chromosome[$i_ind];
+		  my $coord_str = "$chrom:$start:$end";
 
-            my $diff_coords = abs($start - $end);
+		  my $diff_coords = abs($start - $end);
 
-            my $seq_length = 
-                length($peptideAccession_peptideSequence{$peptide});
+		  my $seq_length = 
+			  length($peptideAccession_peptideSequence{$peptide});
 
-            ## If entire sequence fits between coordinates, the protein has
-            ## redundant sequences.  If the sequence doesn't fit between
-            ## coordinates, it's exon spanning:
-            if ( $diff_coords > 0 ) {
+		  ## If entire sequence fits between coordinates, the protein has
+		  ## redundant sequences.  If the sequence doesn't fit between
+		  ## coordinates, it's exon spanning:
+		  if ( $diff_coords > 0 ) {
 	      if ( ($diff_coords + 1) != ($seq_length * 3) ) {
                 $is_exon_spanning[$first_index] = 'Y';
 	      }
 
-	      #### Only count a chromosomal mapping the first time it is seen for a protein
+	      #### Only count a chromosomal mapping the first time it is seen
+          #### with different start/end coords for a protein
 	      #### FIXME: Note if a peptide legitimately maps to two different places
 	      #### in a protein, then this logic fails. Always has and continues to...
-	      unless ($protein_mappings_hash{$protein}) {
-		$chromosomal_mappings_hash{$coord_str} = $protein;
-	      }
 
-	    }
+          #### 
+          my @prev_coords = split(":", $protein_mappings_hash{$protein});
+	      if ( ! $protein_mappings_hash{$protein} ||
+               ($prev_coords[1] eq $prev_coords[2] )) {  # this means mapping wasn't stored last time
+		    $chromosomal_mappings_hash{$coord_str} = $protein;
+	      } 
+	    } 
 
+        if (! defined $protein_mappings_hash{$protein} || $coord_str ne "0:0:0") {
             $protein_mappings_hash{$protein} = $coord_str;
+        }
 
 	    #### If this protein is really a duplicate of another, then reset the
 	    #### protein name to the primary refernce for counting purposes
@@ -2197,13 +2199,17 @@ sub readCoords_updateRecords_calcAttributes {
 	      $protein = $duplicate_proteins{$protein};
 	    }
 
+        if (! defined $distinct_proteins_hash{$protein} || $coord_str ne "0:0:0") {
             $distinct_proteins_hash{$protein} = $coord_str;
-	}
+        }
+	  }
 
 
         ## Count the number of chromosomal mappings and protein_mappings
         my $pep_n_genome_locations = keys( %chromosomal_mappings_hash);
         my $pep_n_protein_mappings = keys( %distinct_proteins_hash );
+        my @different_coords = values( %chromosomal_mappings_hash);
+
 
         ## Assign values to all array members:
         foreach my $tmpind (@tmp_ind_array) {
@@ -2212,6 +2218,7 @@ sub readCoords_updateRecords_calcAttributes {
         }
 
     } ## end calculate n_genome_locations, n_protein_mappings and is_exon_spanning loop
+
 
 
    ### ABOVE modeled following rules:
@@ -2513,7 +2520,7 @@ sub readCoords_updateRecords_calcAttributes {
 
       if ($row/100 == int($row/100)) {
         print "$row...";
-        $sbeams->commit_transaction();
+       # $sbeams->commit_transaction();
       }
 
     }  ## end  create peptide_mapping records and update peptide_instance records
@@ -2907,6 +2914,7 @@ sub getMzXMLFileNames
     } else {
       my @possible_interact_names = (
         'interact-prob.pep.xml',
+        'interact-ipro.pep.xml',
         'interact-prob.xml',
         'interact-spec.pep.xml',
         'interact-spec.xml',
