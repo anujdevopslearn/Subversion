@@ -442,8 +442,7 @@ sub printEntryForm {
     my (@row_result,$isample);
     my $n_slides=$parameters{"n_slides"};
     my $n_samples=$parameters{"n_samples_per_slide"};
-    if ($n_slides > 50) { $n_slides=50; }
-    $n_slides=0 unless ($n_slides >= 1 && $n_slides <=50);
+    $n_slides=0 unless ($n_slides >= 1);
     $n_samples=2 unless ($n_samples >= 1 && $n_samples <=3);
 
     my %table_parameters;
@@ -945,8 +944,7 @@ sub processEntryForm {
     my (@row_result,$isample);
     my $n_slides=$parameters{"n_slides"};
     my $n_samples=$parameters{"n_samples_per_slide"};
-    if ($n_slides > 50) { $n_slides=50; }
-    $n_slides=0 unless ($n_slides >= 1 && $n_slides <=50);
+    $n_slides=0 unless ($n_slides >= 1);
     $n_samples=2 unless ($n_samples >= 1 && $n_samples <=3);
 
     my %table_parameters;
@@ -1785,8 +1783,7 @@ sub printCompletedEntry {
     my (@row_result,$isample);
     my $n_slides=$parameters{"n_slides"};
     my $n_samples=$parameters{"n_samples_per_slide"};
-    if ($n_slides > 50) { $n_slides=50; }
-    $n_slides=0 unless ($n_slides >= 1 && $n_slides <=50);
+    $n_slides=0 unless ($n_slides >= 1);
     $n_samples=2 unless ($n_samples >= 1 && $n_samples <=3);
 
     my %table_parameters;
