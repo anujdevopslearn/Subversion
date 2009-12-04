@@ -1,0 +1,502 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : buildInfo
+# Author      : Terry Farrah and Zhi Sun (tfarrah@systemsbiology.org)
+# $Id: main.cgi 5994 2009-03-06 08:01:38Z dcampbel $
+#
+# Description : This script displays details about all Atlas builds
+#
+# SBEAMS is Copyright (C) 2000-2009 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Get the script set up with everything it will need
+###############################################################################
+use strict;
+use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
+             $current_contact_id $current_username);
+use lib qw (../../lib/perl);
+use CGI::Carp qw(fatalsToBrowser croak);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::DataTable;
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+
+
+###############################################################################
+# Global Variables
+###############################################################################
+$PROG_NAME = 'buildInfo';
+main();
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authentication and stop immediately if authentication
+# fails else continue.
+###############################################################################
+sub main
+{
+    #### Do the SBEAMS authentication and exit if a username is not returned
+    exit unless ($current_username = $sbeams->Authenticate(
+        permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+        'PeptideAtlas_readonly', 'PeptideAtlas_exec'],
+        #connect_read_only=>1,
+        allow_anonymous_access=>1,
+    ));
+
+
+    #### Read in the default input parameters
+    my %parameters;
+    my $n_params_found = $sbeams->parse_input_parameters(
+        q=>$q,
+        parameters_ref=>\%parameters
+        );
+
+    if ( $parameters{reset_id} && $parameters{reset_id} eq 'true' ) {
+      $sbeamsMOD->clearBuildSettings();
+    }
+
+    ## get project_id to send to HTMLPrinter display
+    my $project_id = $sbeamsMOD->getProjectID(
+        atlas_build_name => $parameters{atlas_build_name},
+        atlas_build_id => $parameters{atlas_build_id}
+        );
+
+
+    #### Process generic "state" parameters before we start
+    $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+#    $sbeams->printCGIParams($q);
+
+
+    #### Decide what action to take based on information so far
+    if ($parameters{action} eq "???") {
+
+        # Some action
+ 
+    } else {
+
+        $sbeamsMOD->display_page_header(project_id => $project_id);
+
+        handle_request(ref_parameters=>\%parameters);
+
+        $sbeamsMOD->display_page_footer();
+
+    }
+
+
+
+
+} # end main
+
+
+###############################################################################
+# Show the main welcome page
+###############################################################################
+sub handle_request {
+
+    my %args = @_;
+
+    #### Process the arguments list
+    my $ref_parameters = $args{'ref_parameters'}
+        || die "ref_parameters not passed";
+
+    my %parameters = %{$ref_parameters};
+
+
+  #### Get the current atlas_build_id based on parameters or session
+  my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+    parameters_ref => \%parameters,
+  );
+  if (defined($atlas_build_id) && $atlas_build_id < 0) {
+    #### Don't return. Let the user pick from a valid one.
+    #return;
+  }
+
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+    parameters_ref => \%parameters,
+    program_name => $PROG_NAME,
+  );
+  if ($sbeams->output_mode() eq 'html') {
+    print "<BR>\n";
+    print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+    print "<BR>\n";
+  }
+
+
+    #### Read in the standard form values
+    my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+    my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+
+    #### Set some specific settings for this program
+    my $PROGRAM_FILE_NAME = $PROG_NAME;
+    my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+    my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
+
+
+    #### Get a list of accessible project_ids
+    my @accessible_project_ids = $sbeams->getAccessibleProjects();
+    my $accessible_project_ids = join( ",", @accessible_project_ids ) || '0';
+
+    my $sql = qq~
+    SELECT AB.atlas_build_id, atlas_build_name, atlas_build_description,
+           default_atlas_build_id, organism_specialized_build, organism_name,
+           ( SELECT SUM(n_progressive_peptides) 
+             FROM $TBAT_SEARCH_BATCH_STATISTICS SBS JOIN
+                  $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB 
+               ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
+             WHERE atlas_build_id = AB.atlas_build_id ) AS n_distinct
+    FROM $TBAT_ATLAS_BUILD AB JOIN $TBAT_BIOSEQUENCE_SET BS
+      ON AB.biosequence_set_id = BS.biosequence_set_id
+    JOIN $TB_ORGANISM O ON BS.organism_id = O.organism_id
+    LEFT JOIN $TBAT_DEFAULT_ATLAS_BUILD DAB 
+      ON DAB.atlas_build_id = AB.atlas_build_id
+    WHERE AB.project_id IN ( $accessible_project_ids )
+		AND AB.atlas_build_id IN ( SELECT DISTINCT atlas_build_id FROM $TBAT_PEPTIDE_INSTANCE )
+    AND ( DAB.record_status IS NULL OR DAB.record_status != 'D' )
+    AND AB.record_status != 'D'
+    AND BS.record_status != 'D'
+    AND NOT ( DAB.organism_id IS NULL 
+              AND default_atlas_build_id IS NOT NULL ) -- keep global default from showing up 2x
+    ORDER BY BS.organism_id DESC, organism_specialized_build, 
+             AB.atlas_build_id DESC
+    ~;
+    my @atlas_builds = $sbeams->selectSeveralColumns($sql);
+    $log->debug( $sbeams->evalSQL($sql) );
+
+    my $atlas_build_id_idx = 0;
+    my $atlas_build_name_idx = 1;
+    my $atlas_build_descr_idx = 2;
+    my $def_build_id_idx = 3;
+    my $org_spec_build_idx = 4;
+    my $org_name_idx = 5;
+    my $dist_peps_idx = 6;
+
+    my $default_build_name = '';
+    foreach my $atlas_build ( @atlas_builds ) {
+      if ($atlas_build->[$atlas_build_id_idx] == $atlas_build_id) {
+	$default_build_name = $atlas_build->[$atlas_build_name_idx];
+      }
+    }
+
+    #### If the output_mode is HTML, then display the form
+    if ($sbeams->output_mode() eq 'html') {
+
+        print qq~
+        <script LANGUAGE="Javascript">
+          function switchAtlasBuild() {
+            document.AtlasBuildList.apply_action.value = "GO";
+            document.AtlasBuildList.submit();
+          }
+        </script>
+        ~;
+
+        print $q->start_form(-method=>"POST",
+                             -action=>"$base_url",
+			     -name=>"AtlasBuildList",
+                            );
+
+	unless ($default_build_name) {
+	  $default_build_name = qq~<FONT COLOR="red"> - NONE - </FONT>~;
+	}
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'atlas_build_select',
+                                                  visible => 0,
+                                                  tooltip => 'Show/Hide Section',
+                                                  imglink => 1,
+                                                  textlink => 1,
+                                                  tr_asref => 1,
+                                                  hidetext => 'View default builds',
+                                                  showtext => 'View all builds',
+                                                  sticky  => 1 );
+  print $link;
+
+#  print qq~
+#  <P>Below is a listing of the PeptideAtlas builds.</P>
+#  <P>Your current build is: <font color="red">$default_build_name</font></P>
+#  $link
+#  ~;
+
+  my $table = SBEAMS::Connection::DataTable->new();
+
+  my $this_row = $table->getRowNum();
+
+  #my $radio_button_idx = 0;
+  #my $is_def_idx = 5;
+  my $build_name_idx = 0;
+  my $org_idx = 1;
+  my $smpl_count_idx = 2;
+  my $spectra_searched_idx = 3;
+  my $psm_count_idx = 4;
+  my $distinct_peps_idx = 5;
+  my $n_canonicals_idx = 6;
+  my $n_canon_dist_idx = 7;
+  my $n_seq_unique_prots_idx = 8;
+  my $descr_idx = 9;
+  my $ncols = 10;
+
+  my @headers;
+  #$headers[$radio_button_idx] = '';
+  #$headers[$is_def_idx] = 'is_def';
+  $headers[$build_name_idx] = 'Build Name';
+  $headers[$distinct_peps_idx] = '# distinct peptides';
+  $headers[$smpl_count_idx] = '# samples';
+  $headers[$org_idx] = 'Organism';
+  $headers[$descr_idx] = 'Description';
+  $headers[$psm_count_idx] = '# observations';
+  $headers[$spectra_searched_idx] = '# spectra searched';
+  $headers[$n_canonicals_idx] = '# canonical proteins';
+  $headers[$n_canon_dist_idx] = '# canonical + possibly distinguished proteins';
+  $headers[$n_seq_unique_prots_idx] = '# sequence unique proteins';
+
+  # Define header row
+  $table ->addRow( \@headers );
+  $table->setRowAttr(  COLS => [1..$ncols], ROWS => [1], BGCOLOR => '#bbbbbb', ALIGN=>'CENTER' );
+  $table->setHeaderAttr( BOLD => 1 );
+
+  foreach my $atlas_build ( @atlas_builds ) {
+    my @row;
+    my @trinfo;
+    my $selected = '';
+    my $bgcolor = '#dddddd';
+
+    #### Get the info we want to display
+    my $samples_href = get_sample_info (
+      build_id => $atlas_build->[$atlas_build_id_idx],
+    );
+
+    my $spectra_searched_href = get_spectra_searched (
+      build_id => $atlas_build->[$atlas_build_id_idx],
+    );
+
+    # get 6 different protein counts. could be faster.
+    my $prot_count_href;
+    $prot_count_href = get_protein_identification_count (
+      build_id => $atlas_build->[$atlas_build_id_idx],
+      presence_level => 'canonical',
+    );
+    my $canonical_count = $prot_count_href->{nprots};
+    $prot_count_href = get_protein_identification_count (
+      build_id => $atlas_build->[$atlas_build_id_idx],
+      presence_level => 'possibly_distinguished',
+    );
+    my $poss_dist_count = $prot_count_href->{nprots};
+    $prot_count_href = get_protein_identification_count (
+      build_id => $atlas_build->[$atlas_build_id_idx],
+      presence_level => 'subsumed',
+    );
+    my $subsumed_count = $prot_count_href->{nprots};
+    $prot_count_href = get_protein_identification_count (
+      build_id => $atlas_build->[$atlas_build_id_idx],
+      presence_level => 'ntt-subsumed',
+    );
+    my $ntt_subsumed_count = $prot_count_href->{nprots};
+    $prot_count_href = get_protein_relationship_count (
+      build_id => $atlas_build->[$atlas_build_id_idx],
+      relationship_name => 'indistinguishable',
+    );
+    my $indistinguishable_count = $prot_count_href->{nprots};
+
+    my $canon_dist_count = $canonical_count + $poss_dist_count || "";
+
+    my $sequence_unique_prot_count = 
+	 $canonical_count +
+	 $poss_dist_count +
+	 $subsumed_count +
+	 $ntt_subsumed_count +
+	 $indistinguishable_count || "";
+
+
+    if ($atlas_build->[$atlas_build_id_idx] == $atlas_build_id) {
+      $selected = 'CHECKED ';
+    }
+    if ( !$atlas_build->[$def_build_id_idx] ) {
+      if ( $selected ne 'CHECKED ' ) { # We will show the current build regardless
+	$log->debug( "checking is $atlas_build->[$atlas_build_id_idx]" );
+	@trinfo = ( $tr =~ /(NAME)=('[^']+')\s+(ID)=('[^']+')\s+(CLASS)=('[^']+')/ );
+      }
+      $bgcolor = '#eeeeee';
+    } 
+
+    $row[$build_name_idx] =<<"    END";
+    <A HREF=buildDetails?atlas_build_id=$atlas_build->[$atlas_build_id_idx] TITLE="View details of Atlas Build $atlas_build->[$atlas_build_name_idx]">
+    $atlas_build->[$atlas_build_name_idx]</A>
+    END
+
+#      $row[$radio_button_idx] =<<"      END";
+#      <INPUT $selected TYPE="radio" NAME="atlas_build_id" VALUE="$atlas_build->[$atlas_build_id_idx]" onchange="switchAtlasBuild()">
+#      END
+
+    $row[$distinct_peps_idx] = $atlas_build->[$dist_peps_idx];
+    $row[$org_idx] = $atlas_build->[$org_name_idx];
+    $row[$smpl_count_idx] = $samples_href->{smpl_count};
+    $row[$psm_count_idx] = $samples_href->{psm_count};
+    $row[$spectra_searched_idx] = $spectra_searched_href->{nspec};
+    $row[$n_canonicals_idx] = $canonical_count;
+    $row[$n_canon_dist_idx] = $canon_dist_count;
+    $row[$n_seq_unique_prots_idx] = $sequence_unique_prot_count;
+    $row[$descr_idx] = $sbeams->truncateStringWithMouseover( string => $atlas_build->[$atlas_build_descr_idx], len => 50 );
+#      $row[$is_def_idx] = $atlas_build->[$org_spec_build_idx] || '';
+#      $row[$is_def_idx] = ( !$atlas_build->[$def_build_id_idx] ) ? 'N' : ( $row[$is_def_idx] ) ?
+#                "<SPAN CLASS=popup_help TITLE='$atlas_build->[$org_spec_build_idx]'>Y</SPAN>" : 'Y';
+
+    $table->addRow( \@row );
+    my $this_row = $table->getRowNum();
+    $table->setRowAttr(  COLS => [1..6], ROWS => [$this_row], BGCOLOR => $bgcolor, @trinfo );
+  }
+
+  my $nrows = $this_row;
+  $table->setColAttr(  COLS => [$build_name_idx+1], ROWS => [2..$nrows], NOWRAP => 1 );
+  $table->setColAttr(  COLS => [$descr_idx+1], ROWS => [2..$nrows], NOWRAP => 1 );
+  $table->setColAttr(  COLS => [1,$smpl_count_idx], ROWS => [1..$nrows], ALIGN => 'LEFT' );
+  $table->setColAttr(  COLS => [$smpl_count_idx+1,$ncols], ROWS => [1..$nrows], ALIGN => 'CENTER' );
+#    $table->setColAttr(  COLS => [3], ROWS => [1..$nrows], BGCOLOR => '#eeeeee' );
+  print "$table";
+  print $q->hidden( "apply_action", '');
+  print $q->endform;
+
+  }
+
+
+} # end showMainPage
+
+#########################################################################
+#
+# Subroutines to fetch the data we want to display.
+#
+#########################################################################
+
+sub get_sample_info
+{
+  my %args = @_;
+
+  #### Process the arguments list
+  my $build_id = $args{'build_id'}
+      || die "atlas_build_id not passed";
+
+  my %result_hash = ();
+
+  my $pep_count = $sbeams->selectrow_hashref( <<"  PEP" );  
+  SELECT COUNT(*) cnt,  SUM(n_observations) obs
+  FROM $TBAT_PEPTIDE_INSTANCE
+  WHERE atlas_build_id = $build_id
+  PEP
+
+  my $multi_pep_count = $sbeams->selectrow_hashref( <<"  MPEP" );
+  SELECT COUNT(*) cnt, SUM(n_observations) obs
+  FROM $TBAT_PEPTIDE_INSTANCE
+  WHERE atlas_build_id = $build_id
+  AND n_observations > 1
+  MPEP
+
+  my $smpl_count = $sbeams->selectrow_hashref( <<"  SMPL" );
+  SELECT COUNT(*) cnt FROM $TBAT_ATLAS_BUILD_SAMPLE
+  WHERE atlas_build_id = $build_id
+  SMPL
+
+
+  %result_hash = (
+    pep_count => $pep_count->{cnt},
+    multi_pep_count => $multi_pep_count->{cnt},
+    smpl_count => $smpl_count->{cnt},
+    psm_count => $pep_count->{obs},
+  );
+
+  return \%result_hash;
+
+}
+
+sub get_spectra_searched
+{
+  my %args = @_;
+
+  my $build_id = $args{'build_id'}
+      || die "atlas_build_id not passed";
+
+  my $sql =<<"  END";
+  SELECT ABS.atlas_build_id ab, SUM(SBS.n_searched_spectra) nspec ,
+         SUM(n_good_spectra) ngoodspec
+  FROM $TBAT_SEARCH_BATCH_STATISTICS SBS JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
+    ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
+  JOIN $TBAT_SAMPLE S ON s.sample_id = ABSB.sample_id
+  JOIN $TBAT_ATLAS_BUILD_SAMPLE ABS ON ( s.sample_id = ABS.sample_id )
+  JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id )
+  WHERE ABS.atlas_build_id = $build_id
+  AND ABSB.atlas_build_id = $build_id
+  GROUP BY ABS.atlas_build_id
+  END
+
+  my $result_hash = $sbeams->selectrow_hashref( $sql );
+ 
+  return $result_hash;
+  
+}
+
+sub get_protein_identification_count
+{
+  my %args = @_;
+
+  my $build_id = $args{'build_id'}
+      || die "atlas_build_id not passed";
+  my $presence_level = $args{'presence_level'}
+      || die "presence_level not passed";
+
+  my $sql =<<"  END";
+  SELECT PI.atlas_build_id ab, COUNT(PI.biosequence_id) nprots
+  FROM $TBAT_PROTEIN_IDENTIFICATION PI  JOIN
+    $TBAT_PROTEIN_PRESENCE_LEVEL PPL ON
+     PPL.protein_presence_level_id = PI.presence_level_id
+  WHERE PI.atlas_build_id = $build_id
+  AND PPL.level_name = \'$presence_level\'
+  GROUP BY PI.atlas_build_id
+  END
+
+  my $result_hash = $sbeams->selectrow_hashref( $sql );
+ 
+  return $result_hash;
+}
+
+  
+sub get_protein_relationship_count
+{
+  my %args = @_;
+
+  my $build_id = $args{'build_id'}
+      || die "atlas_build_id not passed";
+  my $relationship_name = $args{'relationship_name'}
+      || die "relationship_name not passed";
+
+  my $sql =<<"  END";
+  SELECT BR.atlas_build_id ab, COUNT(BR.related_biosequence_id) nprots
+  FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR  JOIN
+    $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT ON
+     BRT.biosequence_relationship_type_id = BR.relationship_type_id
+  WHERE BR.atlas_build_id = $build_id
+  AND BRT.relationship_name = \'$relationship_name\'
+  GROUP BY BR.atlas_build_id
+  END
+
+  my $result_hash = $sbeams->selectrow_hashref( $sql );
+ 
+  return $result_hash;
+}
