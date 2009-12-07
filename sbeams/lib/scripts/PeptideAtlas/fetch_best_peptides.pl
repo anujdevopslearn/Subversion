@@ -220,7 +220,7 @@ usage: $sub -a build_id [ -t outfile -n obs_cutoff -p proteins_file -v -b .3 ]
    -p, --protein_file   file of protein names, one per line.  Should match 
                         biosequence.biosequence_name
    -s, --show_builds    Print info about builds in db 
-       --build_regex     Regular expression to limit return values from 
+       --build_name     Regular expression to limit return values from 
                         show builds, will be used in LIKE clause, with wildcard
                         characters added automatically.
    -b, --bioseq_set     Explictly defined biosequence set.  If not provided, 
