@@ -468,6 +468,7 @@ sub get_pabst_scoring_defs {
                    nQ => 'Avoid N-terminal Q',
                    nE => 'Avoid N-terminal E',
                    nM => 'Avoid N-terminal M',
+                 NxST => 'Require NxST motif',
                    Xc => 'Avoid any C-terminal peptide',
                    nX => 'Avoid any N-terminal peptide',
                     C => 'Avoid C ',
@@ -505,6 +506,7 @@ sub get_default_pabst_scoring {
 
   my %scores =  (  M => .95,
                   nQ => 1,
+                NxST => 0,
                   nE => 1,
                   nM => 1,
                   Xc => 1,
@@ -1259,12 +1261,12 @@ sub get_change_form {
   my @buttons = $sbeams->getFormButtons( name => 'recalculate',
                                          value => 'recalc',
                                          types => [ 'submit', 'reset' ] );
-  $form_table->addRow( [ @buttons, '' ] );
+  $form_table->addRow( [ @buttons, '' ] ) unless $args{hide_buttons};
   $form_table->setRowAttr( ROWS => [1..$form_table->getRowNum()], "$tr noop"=>1 );
   $form_table->setColAttr( ROWS => [1..$form_table->getRowNum()], COLS => [1], ALIGN => 'right' );
 
   if ( $args{form_only} ) {
-    return $form_table;
+    return "$form_table";
   }
 
   my $form = qq~
@@ -2241,6 +2243,19 @@ sub pabst_evaluate_peptides {
         if ( defined $args{follow_idx} && ( $pep->[$args{follow_idx}] eq '*' || $pep->[$args{follow_idx}] eq '-' ) ) {
           $scr *= $pen_defs{Xc};
           push @pen_codes, 'Xc';
+        }
+      } elsif ( $k eq 'NxST' ) {  # Implemented as a penalty for non-matching sequences.
+        # Can only fully analyze NxST peptides if follow_idx is given
+        my $nxst = 0;
+        if ( $pep->[$args{seq_idx}] =~ /N.[ST]/ ) {
+          $nxst++;
+        } elsif ( $args{follow_idx} && ( $pep->[$args{seq_idx}] =~ /N.$/ && $pep->[$args{follow_idx}] =~ /[ST]/ ) ) {
+          $nxst++;
+        }
+        
+        if ( !$nxst ) {
+          $scr *= $pen_defs{NxST};
+          push @pen_codes, '!NxST';
         }
       } elsif ( $k eq 'nX' ) {
         # Can only analyze nX peptides if previous_idx is given
