@@ -178,7 +178,7 @@ sub process_args {
       chomp $line;
       $line =~ s/\#.*$//;
       $line =~ /^(\S+)\s+(\S+)/;
-      if ( $1 && $2 ) {
+      if ( $1 && defined $2 ) {
         $config_vals{$1} = $2;
       }
     }
