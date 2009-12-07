@@ -506,7 +506,7 @@ sub get_default_pabst_scoring {
 
   my %scores =  (  M => .95,
                   nQ => 1,
-                NxST => 0,
+                NxST => 1,
                   nE => 1,
                   nM => 1,
                   Xc => 1,
