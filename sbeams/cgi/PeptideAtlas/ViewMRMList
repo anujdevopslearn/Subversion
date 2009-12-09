@@ -297,6 +297,12 @@ sub handle_request {
   return if ($peptide_length_clause eq '-1');
 
 
+  # provisional, try to handle newline delimited lists.
+  $parameters{protein_name_constraint} =~ s/\r\n/;/g;
+  $parameters{protein_name_constraint} =~ s/\n/;/g;
+  $parameters{protein_name_constraint} =~ s/\s+/;/g;
+
+
   #### Build PROTEIN_NAME constraint
   my $biosequence_name_clause = $sbeams->parseConstraint2SQL(
         constraint_column=>"BS.biosequence_name",
@@ -496,12 +502,23 @@ sub handle_request {
       $spec = "<A HREF='ShowOneSpectrum?consensus_library_spectrum_id=NLS_ID_HERE' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='Show spectrum'></A>" if $is_html;
 
       my $idx = 0;
+      my %peptide_order;
+      # Why do I need this?  Grrr.
+      my %prot_pep_seen; 
       while ( my @row = $sth->fetchrow_array() ) {
         $idx++;
 
         $prot_peps{$row[3]} ||= {};
         $prot_peps{$row[3]}->{$row[2]} ||= [];
+
+        my $prot_pep_key = $row[3] . $row[2];
+        unless ( $prot_pep_seen{$prot_pep_key} ) {
+          $prot_pep_seen{$prot_pep_key}++;
+          $peptide_order{$row[3]} ||= [];
+          push ( @{$peptide_order{$row[3]}}, $row[2] );
+        } 
           
+
         # Skip if we already have enough peps or frags
         if ( scalar( keys( %{$prot_peps{$row[3]}} ) ) > $n_peps_per_prot ) {
           next unless scalar( @{$prot_peps{$row[3]}->{$row[2]}} );
@@ -539,7 +556,7 @@ sub handle_request {
       $log->debug( "recordset had $idx rows" );
 
       for my $prot ( sort( keys( %prot_peps ) ) ) {
-        for my $pep ( sort( keys( %{$prot_peps{$prot}} ) ) ) {
+        for my $pep ( @{$peptide_order{$prot}} ) {
           for my $row ( @{$prot_peps{$prot}->{$pep}} ) {
             if ( !$row->[12] ) {
               $row->[12] = $spectral_links{$row->[1].$row->[2]};
