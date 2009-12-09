@@ -197,6 +197,7 @@ sub handle_request
     }
 
     ##Input form:  action is set by PROGRAM_FILE_NAME, so sub it w/ display page:
+    $sbeams->collectSTDOUT();
     $sbeams->display_input_form(
         TABLE_NAME=>$TABLE_NAME,
         CATEGORY=>$CATEGORY,
@@ -206,6 +207,23 @@ sub handle_request
         input_types_ref=>\%input_types,
         mask_user_context=> '1',
     );
+    my $form = $sbeams->fetchSTDOUT();
+
+    # Hackery. Should replace with code that doesn't allow ext_xxx users to 
+    # inherit guest user projects.
+    # This will break if we change consensus library ids or whatnot!
+    my $username = $sbeams->getCurrent_username();
+    if ( $username eq 'ext_mrm' ) {
+      my $mrm_select = qq~
+      <SELECT NAME="consensus_library_id" >
+      <OPTION VALUE="12">Sc_QQQ_MRMAtlas_SP</OPTION>
+      </SELECT>
+      ~;
+      $form =~ s/<SELECT NAME="consensus_library_id".*\/SELECT>/$mrm_select/msg;
+    }
+    my $id = 'ID="protein_name_constraint"';
+    $form =~ s/(NAME=\"protein_name_constraint\")/$1 $id/;
+    print $form;
 
     #### Display the form action buttons
     $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
