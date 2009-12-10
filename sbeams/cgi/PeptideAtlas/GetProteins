@@ -170,11 +170,6 @@ sub handle_request {
   }
   $parameters{atlas_build_id} = $atlas_build_id;
 
-  my $getProteinsByPep_call =
-      "\"https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetProteinsByPep\?atlas_build_id=$parameters{atlas_build_id}\&input_form_format=minimum_detail\"";
-  print "<p><b><a href=$getProteinsByPep_call>Pre-2010 version</a> provides Best Peptide Probability, N Protein Mappings, N Genome Locations, Chromosome, and Sample  constraints.</b><br>";
-  print "<b>For older builds, some constraints below don't work (Protein Probability, Protein Group Representative, Presence Levels, Redundancy).</b></p>";
-
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
 
@@ -197,6 +192,17 @@ sub handle_request {
   ($PROGRAM_FILE_NAME) =
     $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+
+  #### Print link to old GetProteins cgi
+  my $BYPEP_TABLE_NAME="AT_GetProteinsByPep";
+  my ($BYPEP_PROGRAM_FILE_NAME) =
+    $sbeamsMOD->returnTableInfo($BYPEP_TABLE_NAME,"PROGRAM_FILE_NAME");
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$BYPEP_PROGRAM_FILE_NAME";
+  my $getProteinsByPep_call = 
+      "\"$base_url\?atlas_build_id=$parameters{atlas_build_id}\&input_form_format=minimum_detail\"";
+  print "<p><b>New GetProteins (formerly GetProteins_beta) rolled out 10-Dec-2009.</b> For our default builds, provides protein presence level information.<br>";
+  #print "For older builds, some constraints don't work (Protein Probability, Protein Group Representative, Presence Levels, Redundancy).</p>";
+  print "<p><b><a href=$getProteinsByPep_call>Pre-2010 version</a></b> provides Best Peptide Probability, N Protein Mappings, N Genome Locations, Chromosome, and Sample  constraints.</p>";
 
   #### Get the columns and input types for this table/query
   ### TMF:

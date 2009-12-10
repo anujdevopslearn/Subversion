@@ -475,11 +475,9 @@ sub handle_request {
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
 
-  #### If the DASFormat view was selected
-  if (1) {
     @column_array = (
       ["biosequence_name","BS.biosequence_name","Biosequence Name"],
-      ["representative_peptide_sequence","MIN(P.peptide_sequence)","Representative Peptide Sequence"],
+#      ["representative_peptide_sequence","MIN(P.peptide_sequence)","Representative Peptide Sequence"],
 
       ["best_peptide_probability","MAX(STR(PI.best_probability,7,3))","Best Peptide Prob"],
       ["n_observations","SUM(PI.n_observations)","N Obs"],
@@ -496,8 +494,6 @@ sub handle_request {
       ["biosequence_accession","BS.biosequence_accession","biosequence_accession"],
       ["organism_full_name","O.full_name","Organism"],
     );
-
-  }
 
   #### Set flag to display SQL statement if user selected
   if ( $parameters{display_options} =~ /ShowSQL/ ) {
