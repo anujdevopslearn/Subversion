@@ -485,7 +485,7 @@ sub handle_request {
   my %prots;
   my %peps;
 
-  my @namelist;
+  my @namelist = ( join( '::', qw(protein  sequence q1_mz q3_mz RT rank q1_chg q3_chg peak_intensity ion_label collision SSR) ) );
 
   # placeholder, we don't have a source for retention time.
   my $rt = '';
