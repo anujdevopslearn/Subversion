@@ -52,7 +52,8 @@ AT_protein_identification	Protein Identification	PeptideAtlas_infrastructure	NO	
 AT_protein_presence_level	Protein Presence Level	PeptideAtlas_infrastructure	YES	$TBAT_PROTEIN_PRESENCE_LEVEL	protein_presence_level_id		ManageTable.cgi?TABLE_NAME=AT_protein_presence_level		
 AT_biosequence_relationship	Biosequence Relationship	PeptideAtlas_infrastructure	NO	$TBAT_BIOSEQUENCE_RELATIONSHIP	biosequence_relationship_id				
 AT_biosequence_relationship_type	Biosequence Relationship Type	PeptideAtlas_infrastructure	YES	$TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE	biosequence_relationship_type_id		ManageTable.cgi?TABLE_NAME=AT_biosequence_relationship_type		
-AT_SearchProteins	Search Proteins	QUERY							
+AT_GetPABSTList	Get PABST List	QUERY					GetPABSTList		
+AT_SearchProteins	Search Proteins	QUERY					SearchProteins		
 AT_pabst_build	PABST Build	PeptideAtlas_infrastructure	YES	$TBAT_PABST_BUILD	pabst_build_id		ManageTable.cgi?TABLE_NAME=AT_PABST_build		
 AT_pabst_peptide	PABST Peptide	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE	pabst_peptide_id				
 AT_pabst_peptide_mapping	PABST Peptide Mapping	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE_MAPPING	pabst_peptide_id, biosequence_id				
