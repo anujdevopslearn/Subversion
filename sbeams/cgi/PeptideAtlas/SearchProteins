@@ -563,30 +563,50 @@ sub process_search_output {
   # Collect all these, and collect also the maximum n_obs of all (they should
   # be identical but maybe they won't be)
   #
-  for (my $i = 0; $i <= $#search_output; $i++) {
+  
+  my ($search_key_name_idx, $resource_name_idx, $resource_n_matches_idx);
+
+  for (my $i = 1; $i <= $#search_output; $i++) {
     my $line = $search_output[$i];
     # skip non-data lines. Not very robust, but no better alternative
     # without re-engineering stuff
-    if ( ( $line =~ /Content_Type/ ) || ( $line =~ /search_key/) ||
+    if ( ( $line =~ /Content_Type/ ) ||
          ( $line =~ /charset/ )  ) {
       next;
     }
     chomp $line;
     my @fields = split("\t", $line);
-    my $successful_search_key = $fields[0];
+    my $n_fields = scalar @fields;
+    # process header line
+    if ( $line =~ /search_key/ ) {
+      for (my $i = 0; $i < $n_fields; $i++) {
+        if ( $fields[$i] =~ /search_key_name/ ) {
+          $search_key_name_idx = $i;
+        } elsif ( $fields[$i] =~ /resource_name/ ) {
+          $resource_name_idx = $i;
+        } elsif ( $fields[$i] =~ /resource_n_matches/ ) {
+          $resource_n_matches_idx = $i;
+        }
+      }
+      next;
+    }
+ 
+    my $successful_search_key = $fields[$search_key_name_idx];
     if ($successful_search_key &&
         $successful_search_key !~ /^[\s]*$/ ) {
       $successful_search_keys{$successful_search_key} = 1;
     }
-    my $equiv_id = $fields[2];
-    if ($equiv_id) {
-    $equiv_ids{$equiv_id} = 1;
+    my $equiv_id = $fields[$resource_name_idx];
+    if ($equiv_id && 
+        $equiv_id !~ /^[\s]*$/ ) {
+      $equiv_ids{$equiv_id} = 1;
     }
-    if ($#fields < 3 || ! $fields[3]) {  # no peps for this prot observed
-      $fields[3] = 0;
+    if ($#fields < $resource_n_matches_idx ||
+       ! $fields[$resource_n_matches_idx]) {  # no peps for this prot observed
+      $fields[$resource_n_matches_idx] = 0;
     }
-    if ($fields[3] > $n_obs) {
-      $n_obs = $fields[3];
+    if ($fields[$resource_n_matches_idx] > $n_obs) {
+      $n_obs = $fields[$resource_n_matches_idx];
     }
   }
   my $equiv_id_string = join(";", keys(%equiv_ids));
@@ -597,7 +617,6 @@ sub process_search_output {
   if ($successful_search_key_string eq "") {
     $successful_search_key_string = "-";
   }
-  #$output_array_ref = [$query_protid,$search_key,$successful_search_key_string,$n_obs,"Search",$equiv_id_string];
   $output_array_ref = [$query_protid,$successful_search_key_string,$n_obs,$equiv_id_string];
   return $output_array_ref;
 }
