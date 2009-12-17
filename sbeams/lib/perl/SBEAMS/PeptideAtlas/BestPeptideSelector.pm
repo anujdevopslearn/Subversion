@@ -718,6 +718,7 @@ sub get_dirty_peptide_display {
          CASE WHEN Status = 'A' THEN 'Analyzed' 
               WHEN Status = 'R' THEN 'Rejected'    
               WHEN Status = 'O' THEN 'Ordered'    
+              WHEN Status = 'S' THEN 'Re-pooled'    
               ELSE 'Unknown' END as Status
   FROM $TBAT_BIOSEQUENCE B
   JOIN peptideatlas.dbo.dirty_peptides DP 
@@ -811,6 +812,7 @@ sub get_pabst_static_peptide_display {
          CASE WHEN Status = 'A' THEN 'Analyzed' 
               WHEN Status = 'R' THEN 'Rejected'    
               WHEN Status = 'O' THEN 'Ordered'    
+              WHEN Status = 'S' THEN 'Re-pooled'    
               ELSE 'Unknown' END as Status
   FROM $TBAT_BIOSEQUENCE B
   JOIN peptideatlas.dbo.dirty_peptides DP 
@@ -2253,7 +2255,7 @@ sub pabst_evaluate_peptides {
           $nxst++;
         }
         
-        if ( !$nxst ) {
+        if ( !$nxst && $pen_defs{NxST} != 1 ) {
           $scr *= $pen_defs{NxST};
           push @pen_codes, '!NxST';
         }
