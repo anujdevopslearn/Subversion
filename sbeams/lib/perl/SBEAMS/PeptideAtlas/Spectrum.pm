@@ -631,16 +631,28 @@ sub getSpectrumPeaks {
     or die("ERROR[$METHOD]: Parameter fraction_tag not passed");
 
 
+  #### Infomational/problem message buffer, only printed if get fails
+  my $buffer = '';
+
   #### Get the data_location of the spectrum
   my $data_location = $self->get_data_location(
     proteomics_search_batch_id => $proteomics_search_batch_id,
   );
+
+  # For absolute paths, leading slash is not being stored in
+  # data_location field of atlas_search_batch table. Until that is
+  # fixed, we have this nice kludge.
+  if ($data_location =~ /^regis/) {
+    $data_location = "/$data_location";
+  }
+  $buffer .= "data_location = $data_location\n";
+
+  # If location does not begin with slash, prepend default dir.
+  $buffer .= "data_location = $data_location\n";
   unless ($data_location =~ /^\//) {
     $data_location = $RAW_DATA_DIR{Proteomics}."/$data_location";
   }
-
-  #### Infomational/problem message buffer, only printed if get fails
-  my $buffer = '';
+  $buffer .= "data_location = $data_location\n";
 
   #### Sometimes a data_location will be a specific xml file
   if ($data_location =~ /^(.+)\/interac.+xml$/i) {
