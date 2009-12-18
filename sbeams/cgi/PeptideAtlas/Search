@@ -196,6 +196,29 @@ sub handle_request {
     return(0);
   }   
 
+  #### Check to see whether specified atlas build is accessible
+  if ($atlas_build_id) {
+    #get project ID
+    my $sql = qq~
+	 SELECT project_id
+	   FROM $TBAT_ATLAS_BUILD 
+	  WHERE atlas_build_id = $atlas_build_id
+    ~;
+    my ($project_id) = $sbeams->selectOneColumn($sql);
+    my @accessible_project_ids = $sbeams->getAccessibleProjects();
+    my $ok_project = 0;
+    for my $id (@accessible_project_ids) {
+      if ($project_id == $id) {
+        $ok_project = 1;
+        last;
+      }
+    }
+    if ( ! $ok_project ) {
+      print "Atlas build $atlas_build_id does not exist, or you do not have access permission.\n";
+      return(0);
+    }
+  }
+
   #### If a new search_key was supplied, store it
   if ($search_key) {
     $sbeams->setSessionAttribute(
@@ -332,7 +355,7 @@ sub handle_request {
   my $atlas_build_column;
   my $atlas_build_clause;
 
-  # Command-line specification of a specific atlas build id
+  #### Command-line specification of a specific atlas build id
   if ($sbeams->output_mode() ne 'html' && defined $atlas_build_id
          && !defined $build_type_name ) {
     $atlas_build_ids = $atlas_build_id;
