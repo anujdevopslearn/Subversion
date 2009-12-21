@@ -420,10 +420,11 @@ sub handle_request {
      if (!$fh && $q->cgi_error)
      {
        print $q->header(-status=>$q->cgi_error);
-     } elsif (!$fh) { print "Could not create file handle for $parameters{upload_file}!\n"};
-     if (! (-T $fh)) {print "File handle not a text file!\n";}
-     if (! (-s $fh < 1000000)) {print "File too big!\n";}
+     } elsif (!$fh) {
+       print "Could not create file handle for $parameters{upload_file}!\n"
+     }
 
+     # if file is a text file and is not too big, upload
      if ( (-T $fh) && (-s $fh < 1000000)) ##size constraint of 10 MB, restrict $count < 30000
      {
        my $count = 0;
