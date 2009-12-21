@@ -197,9 +197,9 @@ sub handle_request {
   my $BYPEP_TABLE_NAME="AT_GetProteinsByPep";
   my ($BYPEP_PROGRAM_FILE_NAME) =
     $sbeamsMOD->returnTableInfo($BYPEP_TABLE_NAME,"PROGRAM_FILE_NAME");
-  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$BYPEP_PROGRAM_FILE_NAME";
+  my $alt_base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$BYPEP_PROGRAM_FILE_NAME";
   my $getProteinsByPep_call = 
-      "\"$base_url\?atlas_build_id=$parameters{atlas_build_id}\&input_form_format=minimum_detail\"";
+      "\"$alt_base_url\?atlas_build_id=$parameters{atlas_build_id}\&input_form_format=minimum_detail\"";
   print "<p><b>New GetProteins (formerly GetProteins_beta) rolled out 10-Dec-2009.</b> For our default builds, provides protein presence level information.<br>";
   #print "For older builds, some constraints don't work (Protein Probability, Protein Group Representative, Presence Levels, Redundancy).</p>";
   print "<p><b><a href=$getProteinsByPep_call>Pre-2010 version</a></b> provides Best Peptide Probability, N Protein Mappings, N Genome Locations, Chromosome, and Sample  constraints.</p>";
@@ -421,7 +421,9 @@ sub handle_request {
      {
        print $q->header(-status=>$q->cgi_error);
      } elsif (!$fh) {
-       print "Could not create file handle for $parameters{upload_file}!\n"
+       # We get here when, after successfully uploading, we sort by
+       # column.
+       #print "Could not create file handle for $parameters{upload_file}!\n"
      }
 
      # if file is a text file and is not too big, upload
