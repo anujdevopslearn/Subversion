@@ -55,6 +55,12 @@ my $keySearch = new SBEAMS::PeptideAtlas::KeySearch;
 $keySearch->setSBEAMS($sbeams);
 my @coverage;  # Global sequence coverage array, will be populated post-graphic
 
+use SBEAMS::PeptideAtlas::BestPeptideSelector;
+my $bestPeptideSelector = new SBEAMS::PeptideAtlas::BestPeptideSelector;
+$bestPeptideSelector->setSBEAMS($sbeams);
+$bestPeptideSelector->setAtlas($sbeamsMOD);
+
+
 use constant MIN_OBS_LENGTH => 6;
 
 ###############################################################################
@@ -821,9 +827,6 @@ sub handle_request {
     $rs_params{page_size} = 500;
 
     #### Calculate the best peptides to use
-    use SBEAMS::PeptideAtlas::BestPeptideSelector;
-    my $bestPeptideSelector = new SBEAMS::PeptideAtlas::BestPeptideSelector;
-    $bestPeptideSelector->setSBEAMS($sbeams);
     my $best_peptide_information = $bestPeptideSelector->getBestPeptides(
       atlas_build_id => $atlas_build_id,
       biosequence_id => $biosequence_id,
@@ -983,9 +986,6 @@ sub handle_request {
     );
 
     #### Calculate the best peptides to use
-    use SBEAMS::PeptideAtlas::BestPeptideSelector;
-#    my $bestPeptideSelector = new SBEAMS::PeptideAtlas::BestPeptideSelector;
-#    $bestPeptideSelector->setSBEAMS($sbeams);
     my $best_peptide_information = $bestPeptideSelector->getHighlyObservablePeptides(
       atlas_build_id => $atlas_build_id,
       biosequence_id => $biosequence_id,
