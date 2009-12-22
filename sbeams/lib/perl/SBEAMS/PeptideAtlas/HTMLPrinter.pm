@@ -164,9 +164,9 @@ sub displayGuestPageHeader {
   }
   my $LOGIN_LINK = qq~<A HREF="$LOGIN_URI" class="Nav_link">LOGIN</A>~;
 
-	$log->debug( "Does c-widget exist?" );
 
 	my $sbeams = $self->getSBEAMS();
+  my $message = $sbeams->get_page_message();
  	$current_username ||= $sbeams->getCurrent_username();
 
 	my $cswitcher = '';
@@ -218,6 +218,7 @@ sub displayGuestPageHeader {
   print "$args{header_info}\n" if $args{header_info};
 
   $self->printJavascriptFunctions();
+  print $message;
   }
 
 
