@@ -35,12 +35,11 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TabMenu;
 $sbeams = new SBEAMS::Connection;
 
-use SBEAMS::BioLink;
-my $biolink = SBEAMS::BioLink->new();
-$biolink->setSBEAMS($sbeams);
-
-use SBEAMS::BioLink;
-my $biolink = new SBEAMS::BioLink;
+# I don't think the below are used.
+#use SBEAMS::BioLink;
+#my $biolink = SBEAMS::BioLink->new();
+#$biolink->setSBEAMS($sbeams);
+#my $biolink = new SBEAMS::BioLink;
 
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
@@ -50,12 +49,12 @@ $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
-use SBEAMS::PeptideAtlas::KeySearch;
-my $keySearch = new SBEAMS::PeptideAtlas::KeySearch;
-$keySearch->setSBEAMS($sbeams);
-my @coverage;  # Global sequence coverage array, will be populated post-graphic
-
-use constant MIN_OBS_LENGTH => 6;
+# I don't think the below are used.
+#use SBEAMS::PeptideAtlas::KeySearch;
+#my $keySearch = new SBEAMS::PeptideAtlas::KeySearch;
+#$keySearch->setSBEAMS($sbeams);
+#my @coverage;  # Global sequence coverage array, will be populated post-graphic
+#use constant MIN_OBS_LENGTH => 6;
 
 ###############################################################################
 # Set program name and usage banner for command line use
@@ -473,17 +472,10 @@ sub look_up_protid_in_atlas_and_return_array_of_hits {
   my @protids = split(/[;,]/, $protid_string);
   #for my $p (@protids) { print "$p\n"; }
   for my $protid (@protids) {
-    # if protid_string is from Swiss-Prot and is not a 2nd, 3rd, etc. splice
-    # variant, match either P12345 or P12345-1.
-    if ($protid =~ /^[ABOPQ].....$/) {
-      $search_key = "$search_key;$protid;$protid-1";
-    } elsif ($protid =~ /(^[ABOPQ].....)-1$/) {
-      $search_key = "$search_key;$1;$protid";
     # if protid_string is IPI with version extension, look for identifier
     # without version
-    } elsif ($protid =~ /(IPI........)\.\d+/) {
+    if ($protid =~ /(IPI........)\.\d+/) {
       $search_key = "$search_key;$1";
-
     } else {
       $search_key = "$search_key;$protid";
     }
@@ -546,8 +538,8 @@ sub look_up_protid_in_atlas_and_return_array_of_hits {
 }
 
 sub process_search_output {
-  my $search_output_href = shift;
-  my @search_output = @{$search_output_href};
+  my $search_output_aref = shift;
+  my @search_output = @{$search_output_aref};
   my $query_protid = shift;
   my $search_key = shift;
   my $output_array_ref;
