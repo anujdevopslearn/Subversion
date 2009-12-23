@@ -236,11 +236,7 @@ sub handle_request {
     my $searchValue = $parameters{searchForThis};
 
     unless ( $apply_action eq "QUERY" || $apply_action eq "GO") { ## if receive from link, don't assign null
-
-        $apply_action = $parameters{"query"};
-        
-
-
+      $apply_action = $parameters{"query"};
     }
 
 
@@ -319,7 +315,8 @@ my $peptide_clause;
    }
 
  
-my $atlas_project_clause = "AND AB.project_id IN ( $project_string )";
+# Will do project checking after grabbing the peptide info
+# my $atlas_project_clause = "AND AB.project_id IN ( $project_string )";
     
 
 
@@ -329,11 +326,11 @@ my $atlas_project_clause = "AND AB.project_id IN ( $project_string )";
      SELECT  distinct P.peptide_accession,P.peptide_sequence, P.SSRCalc_relative_hydrophobicity,
       P.molecular_weight, P.peptide_isoelectric_point, PI.n_observations, PI.atlas_build_id,
       AB.atlas_build_name, OZ.organism_name, 
-			( SELECT SUM (n_searched_spectra) FROM $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
+			( SELECT SUM (n_searched_spectra) 
+      FROM $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
 			JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id
 			WHERE ABSB.atlas_build_id = AB.atlas_build_id
-			) AS total_searched
-
+			) AS total_searched , AB.project_id
       FROM $TBAT_PEPTIDE_INSTANCE PI
       INNER JOIN $TBAT_PEPTIDE P
       ON ( PI.peptide_id = P.peptide_id )
@@ -344,15 +341,14 @@ my $atlas_project_clause = "AND AB.project_id IN ( $project_string )";
       INNER JOIN $TB_ORGANISM OZ
       ON (BS.organism_id= OZ.organism_id)
       WHERE 1 = 1
-      $atlas_project_clause
       $peptide_clause
       ORDER BY P.peptide_sequence, OZ.organism_name, PI.n_observations DESC,AB.atlas_build_name
 
 ~;
+#      $atlas_project_clause
                                                                                                                            
 #unless ( $peptide_sequence_clause ) {
 #   $sbeams->display_sql(sql=>$sql);
-
   #     print qq~
    #   <FONT COLR=red>No Peptide Found, unable to proceed</FONT>
     #  ~;
@@ -370,11 +366,13 @@ while (my $row = $sbeams->selectSeveralColumnsRow(sql=>$sql))
 {
 
 
-        my ($pep_acc,$peptide_seq,$ssr_calc,$mol_wt,$pi,$n_obs,$build_id,$build_name,$org_name,$n_searched)= @{$row};
+        my ($pep_acc,$peptide_seq,$ssr_calc,$mol_wt,$pi,$n_obs,$build_id,$build_name,$org_name,$n_searched,$project_id)= @{$row};
 
         ##Copying the value of Peptide Accession to global variable $peptide_acc
         $peptide_acc=$pep_acc;
         @peptide_info = ($pep_acc,$peptide_seq,$mol_wt,$pi,$ssr_calc);
+
+        next unless ( grep /^$project_id$/, @accessible_project_ids );
 
         ####### Building the link for No of observations
         my $peptide_url=qq~$url$pep_link1$build_id$pep_link2$peptide_seq$pep_link3~;
@@ -406,13 +404,21 @@ if( defined $peptide_acc) {
    $dynamic_content=DisplayPeptide(view1=>\@peptide_info,
                                    view2=>\@builds);
    $vocab=$sbeamsMOD->vocabHTML();
-   my $GV = SBEAMS::Connection::GoogleVisualization->new();
-   my $chart = $GV->setDrawBarChart(  samples => \@build_plot,
+
+   my $header = '';
+   my $build_results = '';
+   if ( @build_plot ) {
+     my $GV = SBEAMS::Connection::GoogleVisualization->new();
+     my $chart = $GV->setDrawBarChart(  samples => \@build_plot,
 			                                 data_types => [ 'string', 'number', 'number' ],
 								                         headings => [ 'Build Name', 'Number of Observations', "Obs per Million Spectra" ],
 															    truncate_labels => 30 
 																	     );
-   my $header = $GV->getHeaderInfo();
+     $header = $GV->getHeaderInfo();
+     $build_results = "$chart\n$vocab\n";
+   } else {
+     $build_results = "Although the peptide $peptide_info[1] was given a Peptide Atlas accession ($peptide_info[0]), it was not found in any builds to which you currently have access, which can happen for a couple of reasons.  First of all, some older builds have been deprecated, the peptide might have appeared in one of these (which typically had a somewhat higher false discovery rate [FDR] than more recent builds).  Secondly, the Peptide Atlas contains many 'private' builds which often contain pre-publication data.  These builds are generally made public once the results are published.";
+   }
 
    
    print <<"   END";
@@ -420,8 +426,7 @@ if( defined $peptide_acc) {
 	 $dynamic_content
 	 <BR>
 	 <BR>
-	 $chart
-	 $vocab
+	 $build_results
    END
    
    }
@@ -532,7 +537,6 @@ $table2 .= $sbeamsMOD->encodeSectionTable(rows => [ \@headings, @view2 ],
                                         nowrap => [1..scalar(@headings)],
                                         align => [ qw(left left left) ],
                                         bg_color => '#EAEAEA',
-                                        sortable => 1,
                                         set_download=>0);
 $table2 .= '</TABLE>';
 
