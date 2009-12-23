@@ -1090,6 +1090,7 @@ sub ShowHTMLTable {
 		my $embed_html = '';
       		$embed_html = 1 if ($url_keys->{$cell_option_string}->{embed_html});
 
+
 		#### In HTML mode, all CHAR, TEXT, SYMBOL, or STRING data should
 		#### be escaped to protect HTML syntax "<", ">", "\", and "&"
 		#### and also aligned LEFT instead of RIGHT
@@ -1131,6 +1132,13 @@ sub ShowHTMLTable {
 		    last;
 		}
 
+    my $leave_it = 0;
+    if ( defined $url_keys->{$cell_option_string}->{link_iff_column_value} ) {
+      if ( !defined $values[$url_keys->{$cell_option_string}->{link_iff_column_value}] ) {
+        $href = '%V';
+        $leave_it++;
+      }
+    }
 
       		#### Find out if there are any options set
 		my $semicolon_separated_list_flag = '';
@@ -1230,7 +1238,9 @@ sub ShowHTMLTable {
   		      }
 
   		      #### Write out the HREF
-  		      $out .= sprintf("<A $Atag HREF=\"%s\">",$href);
+            if ( !$leave_it ) {
+  		        $out .= sprintf("<A $Atag HREF=\"%s\">",$href);
+            }
   		      #print "1:$href<BR>\n";
   		      #printf("2:XA $Atag HREF=\"%s\"X<BR><BR>\n",$href);
 
@@ -1298,12 +1308,12 @@ sub ShowHTMLTable {
 		    $out .= " " . $TDformats->[$c > $x ? $x : $c];
 		}
 		$out .= ">&nbsp;";
-	    }
+	    } # End if defined value else
 
 	    #### Write out the cell unless it is a hidden one
 	    $out .= "</TD>";
 	    out $out unless $hidden;;
-	}
+	} # End loop over columns
 
 	#### Finish the row
 	out "</TR>";
