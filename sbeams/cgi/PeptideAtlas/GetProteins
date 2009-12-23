@@ -182,9 +182,9 @@ sub handle_request {
   #### Read in the standard form values
   my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
 
-  # for some reason, this gets GetProteins instead of GetProteins_beta
-  #my $TABLE_NAME = $parameters{'QUERY_NAME'};
-  #print "<p>$TABLE_NAME</p>\n";
+  # for some reason, this returns nothing.
+  # Used to return GetProteins instead of GetProteins_beta
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
 
   #### Set some specific settings for this program
   my $CATEGORY="Get Proteins";
@@ -194,15 +194,16 @@ sub handle_request {
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
 
   #### Print link to old GetProteins cgi
-  my $BYPEP_TABLE_NAME="AT_GetProteinsByPep";
-  my ($BYPEP_PROGRAM_FILE_NAME) =
-    $sbeamsMOD->returnTableInfo($BYPEP_TABLE_NAME,"PROGRAM_FILE_NAME");
-  my $alt_base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$BYPEP_PROGRAM_FILE_NAME";
-  my $getProteinsByPep_call = 
-      "\"$alt_base_url\?atlas_build_id=$parameters{atlas_build_id}\&input_form_format=minimum_detail\"";
-  print "<p><b>New GetProteins (formerly GetProteins_beta) rolled out 10-Dec-2009.</b> For our default builds, provides protein presence level information.<br>";
-  #print "For older builds, some constraints don't work (Protein Probability, Protein Group Representative, Presence Levels, Redundancy).</p>";
-  print "<p><b><a href=$getProteinsByPep_call>Pre-2010 version</a></b> provides Best Peptide Probability, N Protein Mappings, N Genome Locations, Chromosome, and Sample  constraints.</p>";
+  if ($sbeams->output_mode() eq 'html') {
+    my $BYPEP_TABLE_NAME="AT_GetProteinsByPep";
+    my ($BYPEP_PROGRAM_FILE_NAME) =
+      $sbeamsMOD->returnTableInfo($BYPEP_TABLE_NAME,"PROGRAM_FILE_NAME");
+    my $alt_base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$BYPEP_PROGRAM_FILE_NAME";
+    my $getProteinsByPep_call = 
+	"\"$alt_base_url\?atlas_build_id=$parameters{atlas_build_id}\&input_form_format=minimum_detail\"";
+    print "<p><b>New GetProteins (formerly GetProteins_beta) rolled out 10-Dec-2009.</b> For our default builds, provides protein presence level information.<br>";
+    print "<b><a href=$getProteinsByPep_call>Pre-2010 version</a></b> provides Best Peptide Probability, N Protein Mappings, N Genome Locations, Chromosome, and Sample  constraints.</p>";
+  }
 
   #### Get the columns and input types for this table/query
   ### TMF:
