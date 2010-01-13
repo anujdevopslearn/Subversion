@@ -3627,7 +3627,7 @@ sub displayResultSetControls {
     #### Finish the form
     print qq~
       </FORM>
-      </TR></TD></TABLE>
+      </TD></TR></TABLE>
     ~;
 
 
