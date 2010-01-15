@@ -638,16 +638,16 @@ AT_biosequence_relationship	5	related_biosequence_id	Related Biosequence ID	int	
 AT_biosequence_relationship	6	relationship_type_id	Relationship Type ID	int	4	0	N		N	AT_biosequence_relationship_type	biosequence_relationship_type_id								Describes relationsihp		
 AT_SearchProteins	1	atlas_build_id	Atlas Build									Y	optionlist	4	refreshDocument()	Y	Y	N	"Select desired Atlas Build to search, required."	"SELECT atlas_build_id,atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY atlas_build_name "	
 AT_SearchProteins	2	upload_file	Upload File Of Proteins	varchar	255	0	Y		N			N	file	40		Y	Y	N	Path to file with list of Protein Names to be searched		
-AT_GetPABSTList	1	protein_name_constraint	Protein Name 									N	text	40		Y	Y	N	Constraint for the Protein Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
-AT_GetPABSTList	2	upload_file	Upload File Of Proteins	varchar	255	0	Y		N			N	file	40		Y	Y	N	"Path to file with list of Protein Names to be uploaded via the web interface (NOTE: if proteins are not found, search defaults to printing all proteins of the selected Atlas build)"		
-AT_GetPABSTList	3	peptide_sequence_constraint	Peptide Sequence 									N	text	40		Y	Y	N	Constraint for the Peptide Sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
-AT_GetPABSTList	4	peptide_length	Peptide Length									N	text	15		Y	Y	N	"Constraint for the num amino acids in seq Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"" "		
-AT_GetPABSTList	5	empirical_proteotypic_constraint	Empirical Proteotypic Score 									N	text	10		Y	Y	N	"Constraint for the empirical proteotypic score for a peptide.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""		
-AT_GetPABSTList	6	n_protein_mappings_constraint	Number of Proteins Mapped 									N	text	5		Y	Y	N	Constraint for number of distinct proteins for this peptide ( >=0 )		
-AT_GetPABSTList	7	n_genome_locations_constraint	Number of Genome Locations Mapped 									N	text	5		Y	Y	N	Constraint for number of genome locations for this peptide ( >=0 )		
+AT_GetPABSTList	1	pabst_build_id	PABST Build									Y	optionlist	4		Y	Y	N	"Select desired PABST Build to search, required."	"SELECT pabst_build_id, build_name FROM $TBAT_PABST_BUILD PB JOIN $TB_ORGANISM O ON O.organism_id = PB.organism_id WHERE is_default = 'T' AND project_id IN ( $accessible_project_ids ) order by build_name "	
+AT_GetPABSTList	2	protein_name_constraint	Protein Name 									N	text	40		Y	Y	N	Constraint for the Protein Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
+AT_GetPABSTList	3	upload_file	Upload File Of Proteins	varchar	255	0	Y		N			N	file	40		Y	Y	N	"Path to file with list of Protein Names to be uploaded via the web interface (NOTE: if proteins are not found, search defaults to printing all proteins of the selected Atlas build)"		
+AT_GetPABSTList	4	peptide_sequence_constraint	Peptide Sequence 									N	text	40		Y	Y	N	Constraint for the Peptide Sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
+AT_GetPABSTList	5	peptide_length	Peptide Length									N	text	15		Y	Y	N	"Constraint for the num amino acids in seq Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"" "		
+AT_GetPABSTList	6	empirical_proteotypic_constraint	Empirical Proteotypic Score 									N	text	10		Y	Y	N	"Constraint for the empirical proteotypic score for a peptide.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""		
+AT_GetPABSTList	7	n_protein_mappings_constraint	Number of Proteins Mapped 									N	text	5		Y	Y	N	Constraint for number of distinct proteins for this peptide ( >=0 )		
+AT_GetPABSTList	8	n_genome_locations_constraint	Number of Genome Locations Mapped 									N	text	5		Y	Y	N	Constraint for number of genome locations for this peptide ( >=0 )		
 AT_GetPABSTList	9	n_highest_intensity_fragment_ions	Num of highest Inten Frag Ions to Keep									N	text	5		Y	Y	N	Number highest inten frag ions per spec to keep, default 3, max 10.		
 AT_GetPABSTList	10	n_peptides_per_protein	Number of peptides per protein constraint									N	text	5		Y	Y	N	Number of peptides to return per protein, default 3, max 10.		
-AT_GetPABSTList	11	pabst_build_id	PABST Build									Y	optionlist	4		Y	Y	N	"Select desired PABST Build to search, required."	"SELECT pabst_build_id, build_name FROM peptideatlas_test.dbo.pabst_build "	
 AT_pabst_build	1	pabst_build_id	PABST Build Id	int	4	0	N		Y			N						Y			
 AT_pabst_build	2	build_name	Build Name	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
 AT_pabst_build	3	build_comment	Build Comment	varchar	2000	0	Y		N			Y	text	24		Y	Y	N			
@@ -661,6 +661,7 @@ AT_pabst_build	10	parameter_file	Parameter File	text	16	0	Y		N			Y	text	24		Y	Y	
 AT_pabst_build	11	project_id	Project Id	int	4	0	Y		N	project	project_id	Y	optionlist			Y	Y	N			
 AT_pabst_build	12	build_date	Build Date	datetime	8	0	Y		N			N						N			
 AT_pabst_build	13	biosequence_set_id	Biosequence Set Id	int	4	0	Y		N			N						N			
+AT_pabst_build	14	is_default	Is Default	char	1	0	Y		N			N						N			
 AT_pabst_peptide_mapping	1	pabst_peptide_mapping_id	PABST Peptide Mapping Id	int	4	0	N		Y			N						Y			
 AT_pabst_peptide_mapping	2	biosequence_id	Biosequence Id	int	4	0	Y		N	AT_biosequence	biosequence_id	N						N			
 AT_pabst_peptide_mapping	3	pabst_peptide_id	PABST Peptide Id	int	4	0	Y		N	AT_pabst_peptide	pabst_peptide_id	N						N			
