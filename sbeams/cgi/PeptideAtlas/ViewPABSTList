@@ -418,6 +418,22 @@ sub handle_request {
 
   my %row2chg;
 
+  my $is_changed = 0;
+  my $default_params = $pabst->get_default_pabst_scoring();
+
+  for my $pparam ( keys ( %{$default_params} ) ) {
+    if ( defined $parameters{$pparam} ) {
+      if ( $parameters{$pparam} ne $default_params->{$pparam} ) {
+        $log->info( "$pparam is different, $parameters{$pparam} ne $default_params->{$pparam} " );
+        $is_changed++;
+      }
+    }
+  }
+
+  if ( $is_changed ) {
+    $pabst->set_pabst_penalty_values( %parameters );
+  }
+
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
   if ($apply_action =~ /QUERY/i ) {
@@ -433,7 +449,8 @@ sub handle_request {
     syntheis_adjusted_score, transition_source, precursor_ion_mass, 
     precursor_ion_charge, fragment_ion_mass, fragment_ion_charge,
     fragment_ion_label, ion_rank, relative_intensity, 
-    SSRCalc_relative_hydrophobicity, biosequence_name
+    SSRCalc_relative_hydrophobicity, biosequence_name,
+    merged_score
     FROM $TBAT_PABST_PEPTIDE PP 
     JOIN $TBAT_PABST_PEPTIDE_MAPPING PM 
     ON PM.pabst_peptide_id = PP.pabst_peptide_id
@@ -490,52 +507,135 @@ sub handle_request {
   # placeholder, we don't have a source for retention time.
   my $rt = '';
 
-  while( my @row = $sth->fetchrow_array() ) {
-    my $prot = pop @row;
+  if ( $is_changed ) {
+     $log->info( "Collect db values: " . time() );
 
-    $prots{$prot} ||= {};
-    $prots{$prot}->{$row[1]}++;
-    if ( scalar( keys( %{$prots{$prot}} ) ) > $n_peps_per_prot ) {
-#      $log->debug( "Skipping peptide $row[1]!" );
-      next; 
-#    } else {
-#      $log->debug( "adding peptide $row[1]!" );
+    # Collect cached peptides/values from db handle
+    my @short_list;
+    my %peptide_fragments;
+    my $cnt;
+    while( my @row = $sth->fetchrow_array() ) {
+      $cnt++;
+#      $log->info( "going in, prot $row[13] pep $row[1] has " . scalar( @row ) . " items " );
+
+      # Add each unique prev.seq.foll.prot peptide
+      my $peptide_key = join( ':', @row[0,1,2,13] );
+      if ( !$peptide_fragments{$peptide_key} ) {
+        $peptide_fragments{$peptide_key} ||= []; 
+        push @short_list, [@row];
+      }
+      push @{$peptide_fragments{$peptide_key}}, [@row];
     }
+    $log->info( "Whole array has $cnt items " );
+    $log->info( "Short array has " . scalar( @short_list ) . " items " );
 
-    my $pep_key = $prot . $row[1];
-    $peps{$pep_key}++;
-    next if $peps{$pep_key} > $n_fragment_ions;
-    $row[10] = $peps{$pep_key};
+     $log->info( "Run PABST scoring " . time() );
+    # Run pabst scoring - will clobber input array
+    $pabst->pabst_evaluate_peptides( peptides => \@short_list,
+                                 previous_idx => 0, 
+                                      seq_idx => 1, 
+                                   follow_idx => 2, 
+                                hydrophob_idx => 12,
+                                    score_idx => 14,
+                                                       );
 
-#    $peps{$row[1]} ||= {};
-#    $peps{$row[1]}->{$row[5]}++;
-#    $log->debug( "got a limit of $n_fragment_ions with $row[1] and $row[5]? " );
-#    if ( scalar( keys( %{$peps{$row[1]}} ) ) > $n_fragment_ions ) {
-#      $log->debug( "got a limit of $n_fragment_ions with $row[1] and $row[5]? " );
-#      next; 
-#    } else {
-#      $log->debug( "Adding fragment!" );
-#    }
+    # Sort - might be time hog
+    $log->info( "Sorting " . time() );
+    @short_list = sort { $a->[13] cmp $b->[13] ||
+                           $b->[17] <=> $a->[17] } @short_list;
+    $log->info( "Done! " . time() );
 
-    $row[5] = sprintf( "%0.2f", $row[5] );
-    $row[4] = $src_name{$row[4]};
-    $row[7] = sprintf( "%0.2f", $row[7] );
-    $row[3] = sprintf( "%0.2f", $row[3] );
-    $row[12] = sprintf( "%0.1f", $row[12] );
-    if ( $row[11] ) {
-      $row[11] = int( $row[11] );
-    } elsif ( $is_html ) {
-      $row[11] = $naa; 
-    } else {
-      $row[11] = ''; 
-    }
+    # debug
+#    for my $row ( @initial_list ){ #      $log->info( "coming out, ($row->[1]) row has " . scalar( @{$row} ) . " items " ); }
 
-    my $ce = calculateCE( mz => $row[5], chg => $row[6] );
-    push @peptides, [ $prot, @row ];
-# future:  protein, sequence, q1_mz, q3_mz, RT, rank, q1_chg, q3_chg, peak_intensity, ion_label, collision, SSR
-    push @namelist, join( '::', $prot, @row[1,5,7],'',@row[10,6,8,11,9],$ce, $row[12] );
-#    $log->debug( join( '::', $prot, @row[1,5,7], $rt ,@row[10,6,8,11,9],$ce, $row[12] ) );
+    # Should now be sorted, just have to apply n_pep/prot and n_frag/pep logic,
+    # and format output.
+    for my $peptide ( @short_list ) { 
+
+      my @row = @{$peptide};
+      my $prot = $row[13];
+
+      $log->info( "prot $prot, pep $row[1], score $row[14] " );
+
+
+      $prots{$prot} ||= {};
+      $prots{$prot}->{$row[1]}++;
+      if ( scalar( keys( %{$prots{$prot}} ) ) > $n_peps_per_prot ) {
+        next; 
+      }
+
+      my $pep_key = $prot . $row[1];
+      my $frag_key = join( ':', @row[0,1,2,13] );
+
+      # Use frag for 4-11;
+      for my $frag ( @{$peptide_fragments{$frag_key}} ) {
+        $peps{$pep_key}++;
+        last if $peps{$pep_key} > $n_fragment_ions;
+        $row[10] = $peps{$pep_key};
+  
+        $row[5] = sprintf( "%0.2f", $frag->[5] );
+        $row[4] = $src_name{$frag->[4]};
+        $row[7] = sprintf( "%0.2f", $frag->[7] );
+        $row[3] = sprintf( "%0.2f", $row[17] );
+        $row[12] = sprintf( "%0.1f", $row[12] ) if $peps{$pep_key} == 1;
+        if ( $frag->[11] ) {
+          $row[11] = int( $frag->[11] );
+        } elsif ( $is_html ) {
+          $row[11] = $naa; 
+        } else {
+          $row[11] = ''; 
+        }
+    
+        my $ce = calculateCE( mz => $frag->[5], chg => $frag->[6] );
+        push @peptides, [ $prot, @row[0..12] ];
+        # future:  protein, sequence, q1_mz, q3_mz, RT, rank, q1_chg, q3_chg, peak_intensity, ion_label, collision, SSR
+        push @namelist, join( '::', $prot, @row[1,5,7],'',@row[10,6,8,11,9],$ce, $row[12] );
+      }
+
+    } # End loop sorted list
+
+
+
+
+  } else {
+
+    while( my @row = $sth->fetchrow_array() ) {
+      my $prot = $row[13];
+
+      $prots{$prot} ||= {};
+      $prots{$prot}->{$row[1]}++;
+      if ( scalar( keys( %{$prots{$prot}} ) ) > $n_peps_per_prot ) {
+        next; 
+      }
+
+      my $pep_key = $prot . $row[1];
+      $peps{$pep_key}++;
+      next if $peps{$pep_key} > $n_fragment_ions;
+      $row[10] = $peps{$pep_key};
+  
+      $row[5] = sprintf( "%0.2f", $row[5] );
+      $row[4] = $src_name{$row[4]};
+      $row[7] = sprintf( "%0.2f", $row[7] );
+      $row[3] = sprintf( "%0.2f", $row[3] );
+      $row[12] = sprintf( "%0.1f", $row[12] );
+      if ( $row[11] ) {
+        $row[11] = int( $row[11] );
+      } elsif ( $is_html ) {
+        $row[11] = $naa; 
+      } else {
+        $row[11] = ''; 
+      }
+  
+      my $ce = calculateCE( mz => $row[5], chg => $row[6] );
+      push @peptides, [ $prot, @row[0..12] ];
+      # future:  protein, sequence, q1_mz, q3_mz, RT, rank, q1_chg, q3_chg, peak_intensity, ion_label, collision, SSR
+      push @namelist, join( '::', $prot, @row[1,5,7],'',@row[10,6,8,11,9],$ce, $row[12] );
+
+    } # End loop over resultset
+
   }
+
+
 # prot Protein => 'Protein Name/Accession',
 # 0 Pre => 'Previous amino acid',
 # 1 Sequence => 'Amino acid sequence of peptide',
@@ -550,7 +650,8 @@ sub handle_request {
 # 10 Rank => 'PABST transition rank',
 # 11 RI => 'Fragment peak relative intensity (scaled to 10000 Units)',
 # 12 SSR => 'SSRCalc',
-
+# 13 Protein name => 
+# 13 Merged score =>  
 
   my $align = [qw(center center left center center right right right center right left right right)];
 
