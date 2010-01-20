@@ -217,12 +217,13 @@ sub handle_request
 
 
 
-    my $sub_form = $best_peptide->get_change_form( form_only => 1 );
+    my $sub_form = $best_peptide->get_change_form( form_only => 1, hide_buttons => 1 );
     $sub_form =~ s/tbl_hidden/tbl_visible/gm;
    
-#    $form =~ s/(\<INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="AT_GetPABSTList"\>)/$1<BR>$sub_form/gm;
-#    $form =~ s/\<\/TABLE\>/<TR><TD COLSPAN=3>$sub_form<\/TD><\/TR><\/TABLE>/i;
+    $form =~ s/(\<INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="AT_GetPABSTList"\>)/$1<BR>$sub_form/gm;
+    $form =~ s/\<\/TABLE\>/<TR><TD COLSPAN=3>$sub_form<\/TD><\/TR><\/TABLE>/i;
 #    $form .= "<TR><TD COLSPAN=3>$sub_form</TD></TR>\n";
+    $form .= "<TR><TD VALIGN=TOP><B>Adjust penalties:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$sub_form</TD></TR>\n";
 
     print qq~
     $form
