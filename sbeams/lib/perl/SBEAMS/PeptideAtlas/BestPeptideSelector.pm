@@ -269,6 +269,7 @@ sub getBestPeptidesDisplay {
   #### Define the hypertext links for columns that need them
   my %url_cols = (
     	       'Peptide Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
+             'Peptide Accession_ATAG' => "TITLE='View information for this peptide in the current build'",
   );
 
   my %hidden_cols;
@@ -298,6 +299,8 @@ sub getHighlyObservablePeptides {
   my $self = shift || die ("self not passed");
   my %args = @_;
 
+  $args{build_accessions} ||= {};
+
   #### Process parameters
   my $atlas_build_id = $args{atlas_build_id}
     or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
@@ -305,6 +308,7 @@ sub getHighlyObservablePeptides {
   my $biosequence_id = $args{biosequence_id}
     or die("ERROR[$METHOD]: Parameter biosequence_id not passed");
 
+  my $build_string = join( ',', $atlas->getAccessibleBuilds() );
 
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
@@ -316,6 +320,7 @@ sub getHighlyObservablePeptides {
     ["suitability_score","(PTP.detectabilitypredictor_score+PTP.peptidesieve_ESI)/2","Suitability Score"],
     ["detectabilitypredictor_score","PTP.detectabilitypredictor_score","Detectability Predictor Score"],
     ["peptidesieve_score","PTP.peptidesieve_ESI","PeptideSieve Score"],
+    ["build_placeholder",1,"build_placeholder"],
     #["parag_score_ESI","PTP.parag_score_ESI","PM ESI"],
     #["parag_score_ICAT","PTP.parag_score_ICAT","PM ICAT"],
   );
@@ -329,7 +334,8 @@ sub getHighlyObservablePeptides {
 
   #### Define a query to return peptides for this protein
   my $sql = qq~
-     SELECT $columns_clause
+     SELECT DISTINCT
+     $columns_clause
      FROM $TBAT_PROTEOTYPIC_PEPTIDE PTP
      LEFT JOIN $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING PTPM
           ON ( PTP.proteotypic_peptide_id = PTPM.proteotypic_peptide_id )
@@ -340,8 +346,8 @@ sub getHighlyObservablePeptides {
      LEFT JOIN $TBAT_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
     WHERE 1 = 1
 	  AND PTPM.source_biosequence_id = $biosequence_id
-          AND ( (PTP.detectabilitypredictor_score+peptidesieve_ESI) >= 1 OR peptide_accession IS NOT NULL )
-    ORDER BY PTP.detectabilitypredictor_score+PTP.peptidesieve_ESI DESC
+    AND ( (PTP.detectabilitypredictor_score+peptidesieve_ESI) >= 1 OR peptide_accession IS NOT NULL )
+    ORDER BY (PTP.detectabilitypredictor_score+PTP.peptidesieve_ESI)/2 DESC
   ~;
 
   #### Fetch the results from the database server
@@ -352,6 +358,9 @@ sub getHighlyObservablePeptides {
     resultset_ref=>$resultset_ref,
   );
 
+  for my $row ( @{$resultset{data_ref}} ) {
+    $row->[7] = $args{build_accessions}->{$row->[0]};
+  }
 
   my $result;
   $result->{resultset_ref} = $resultset_ref;
@@ -360,6 +369,7 @@ sub getHighlyObservablePeptides {
   return $result;
 
 } # end getHighlyObservablePeptides
+
 
 
 ###############################################################################
@@ -389,10 +399,15 @@ sub getHighlyObservablePeptidesDisplay {
 
   #### Define the hypertext links for columns that need them
   my %url_cols = (
-    	       'Peptide Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
+             'Peptide Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
+             'Peptide Accession_ATAG' => "TITLE='View information for this peptide in the current build'",
+             'Peptide Accession_OPTIONS' => {link_iff_column_value => 7},
+             'Peptide Sequence' => "$CGI_BASE_DIR/PeptideAtlas/Summarize_Peptide?searchForThis=%V&query=QUERY",
+             'Peptide Sequence_ATAG' => "TITLE='View information for this peptide across all builds' ",
+             'Peptide Sequence_OPTIONS' => {link_iff_column_value => 0}
   );
 
-  my %hidden_cols;
+  my %hidden_cols = ( build_placeholder => 1 );
 
   $sbeams->displayResultSet(
       resultset_ref=>$resultset_ref,
@@ -468,7 +483,7 @@ sub get_pabst_scoring_defs {
                    nQ => 'Avoid N-terminal Q',
                    nE => 'Avoid N-terminal E',
                    nM => 'Avoid N-terminal M',
-                 NxST => 'Require NxST motif',
+                 NxST => 'Penalize peptides without NxST motif',
                    Xc => 'Avoid any C-terminal peptide',
                    nX => 'Avoid any N-terminal peptide',
                     C => 'Avoid C ',
@@ -2254,7 +2269,7 @@ sub pabst_evaluate_peptides {
         } elsif ( $args{follow_idx} && ( $pep->[$args{seq_idx}] =~ /N.$/ && $pep->[$args{follow_idx}] =~ /[ST]/ ) ) {
           $nxst++;
         }
-        
+
         if ( !$nxst && $pen_defs{NxST} != 1 ) {
           $scr *= $pen_defs{NxST};
           push @pen_codes, '!NxST';
