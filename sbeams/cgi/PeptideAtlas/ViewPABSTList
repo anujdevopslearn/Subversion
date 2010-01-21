@@ -575,7 +575,7 @@ sub handle_request {
   
         $row[6] = $frag->[6];
         $row[8] = $frag->[8];
-        $row[9] = $frag->[9];
+        $row[9] = lcfirst($frag->[9]);
         $row[10] = $frag->[10];
 
         $row[5] = sprintf( "%0.2f", $frag->[5] );
@@ -617,6 +617,7 @@ sub handle_request {
       $peps{$pep_key}++;
       next if $peps{$pep_key} > $n_fragment_ions;
       $row[10] = $peps{$pep_key};
+      $row[9] = lcfirst($row[9]);
   
       $row[5] = sprintf( "%0.2f", $row[5] );
       $row[4] = $src_name{$row[4]};
