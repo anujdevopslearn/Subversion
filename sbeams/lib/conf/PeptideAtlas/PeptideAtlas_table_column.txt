@@ -533,21 +533,22 @@ AT_srm_transition	17	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_T
 AT_srm_transition	18	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 AT_srm_transition	19	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 AT_srm_transition	20	record_status	Record Status	char	1	0	N	N	N							N	N				
-AT_srm_transition_set	1	srm_transition_set_id	SRM Transition Set	int	4	0	N		Y							N	N				pkDEFAULT
-AT_srm_transition_set	2	set_name	Set Name	varchar	50	0	Y		N			N	text	30		Y	Y	N	Name of this set of transitions		
-AT_srm_transition_set	3	instrument_id	Instrument	int	4	0	Y		N	PR_instrument	instrument_id	N	optionlist			Y	Y	N	Instrument (mass spectrometer) manufacturer model name	"SELECT instrument_id,instrument_name FROM $TBPR_INSTRUMENT WHERE record_status != 'D' ORDER BY instrument_name"	
-AT_srm_transition_set	4	publication_id	Publication	int	4	0	Y		N	AT_publication	publication_id	Y	optionlist	5		Y	Y	Y	"Publication ID of publication related to this entry, if any"	"SELECT P.publication_id,P.publication_name FROM $TBAT_PUBLICATION P WHERE P.record_status != 'D' ORDER BY P.publication_name"	
-AT_srm_transition_set	5	annotator_name	Annotator Name	varchar	50	0	Y		N			N	text	30		Y	Y	N	Name of the annotator		
-AT_srm_transition_set	6	annotator_contact_id	Annotator Contact	int	4	0	Y		N	contact	contact_id	N	optionlist			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
-AT_srm_transition_set	7	project_id	Project	int	4	0	N		N	project	project_id	N	optionlist			Y	Y	N	Project under which this entity is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
-AT_srm_transition_set	8	q3_peak_intensity	Q3 Peak Intensity	float	8	0	Y		N			Y	text	10		Y	Y	Y	"Peak intensity, possibly scaled, of Q3 fragment peak"		
-AT_srm_transition_set	9	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-AT_srm_transition_set	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_srm_transition_set	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_srm_transition_set	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_srm_transition_set	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_srm_transition_set	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_srm_transition_set	15	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_srm_transition_set	1	srm_transition_set_id	SRM Transition Set ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_srm_transition_set	2	set_tag	Set Tag	varchar	50	0	N		N			Y	text	30		Y	Y	Y	"Short tag (mnenomic) for this transition set"		
+AT_srm_transition_set	3	set_title	Set Title	varchar	255	0	N		N			Y	textarea	2		Y	Y	Y	Title of this Transition Set		
+AT_srm_transition_set	4	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	Y	Organism for which this transition set applies.	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+AT_srm_transition_set	5	pubmed_ID	PubMed ID	varchar	50	0	Y		N			N	text	30	refreshDocument()	Y	Y	N	"PubMed ID for publication."		
+AT_srm_transition_set	6	publication_name	Publication Name	varchar	255	0	Y		N			N	text	50		Y	Y	Y	"Friendly name of the citation, e.g. Dewey, Cheetham & Howe (1998)"		
+AT_srm_transition_set	7	golive_date	Go Live Date	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y	text	20		Y	Y	N	Date when this Transition Set will be made public		
+AT_srm_transition_set	8	upload_file	Upload file	varchar	255	0	N		N			Y	file	40		Y	Y	N	File path of this Transition Set uploaded via the web interface		
+AT_srm_transition_set	9	is_public	Is the transition set publicly available?	char	1	0	N		N			Y	optionlist			Y	Y	N	Indicates whether the dataset is public	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+AT_srm_transition_set	10	access_key	Access Key	varchar	10	0	Y		N			N				N	N		"Access Key for non-public transition sets"		
+AT_srm_transition_set	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_srm_transition_set	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_srm_transition_set	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_srm_transition_set	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_srm_transition_set	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_srm_transition_set	16	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_transition_suitability_level	1	transition_suitability_level_id	Transition Suitability Level	int	4	0	N		Y							N	N				pkDEFAULT
 AT_transition_suitability_level	2	level_score	Level Score	real	4	0	N		N			Y	text	20		Y	Y	N	Transition score		
 AT_transition_suitability_level	3	level_name	Level Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	Full name of the level		
