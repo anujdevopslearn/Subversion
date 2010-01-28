@@ -450,7 +450,7 @@ sub handle_request {
     precursor_ion_charge, fragment_ion_mass, fragment_ion_charge,
     fragment_ion_label, ion_rank, relative_intensity, 
     SSRCalc_relative_hydrophobicity, biosequence_name,
-    merged_score
+    merged_score, n_observations
     FROM $TBAT_PABST_PEPTIDE PP 
     JOIN $TBAT_PABST_PEPTIDE_MAPPING PM 
     ON PM.pabst_peptide_id = PP.pabst_peptide_id
@@ -479,7 +479,7 @@ sub handle_request {
                 Sequence => 'Amino acid sequence of peptide',
                      Fol => 'Followin amino acid',
              'Score' => 'Adjusted proteotypic score',
-                     Src => 'Transition source, one of PATR, QTof, QQQ (triple quad), IT (ion trap), Pred (In silico/theoretical)',
+                     Src => 'Transition source, one of PA, QT, Q3 (triple quad), IT (ion trap), PR (In silico/theoretical)',
                    Q1_mz => 'Precursor ion m/z',
                   Q1_chg => 'Precursor ion charge',
                    Q3_mz => 'Fragment ion m/z',
@@ -495,7 +495,7 @@ sub handle_request {
                                               default => 'adj_SS' )  );
   my $naa = $sbeams->makeInactiveText( 'n/a' );
 
-  my %src_name = ( P => 'Pred', Q => 'QQQ', T => 'QTOF', I => 'IT', 'R' => 'PATR' );
+  my %src_name = ( P => 'PR', Q => 'Q3', T => 'QT', I => 'IT', 'R' => 'PA' );
 
   my $sth = $sbeams->get_statement_handle( $lib_sql );
 
@@ -518,8 +518,9 @@ sub handle_request {
       $cnt++;
 #      $log->info( "going in, prot $row[13] pep $row[1] has " . scalar( @row ) . " items " );
 
-      # Add each unique prev.seq.foll.prot peptide
-      my $peptide_key = join( ':', @row[0,1,2,13] );
+      # Add each unique prot peptide
+      my $peptide_key = join( '', @row[13,1] );
+#      $log->info( "caching for pepkey $peptide_key" );
       if ( !$peptide_fragments{$peptide_key} ) {
         $peptide_fragments{$peptide_key} ||= []; 
         push @short_list, [@row];
@@ -538,11 +539,12 @@ sub handle_request {
                                 hydrophob_idx => 12,
                                     score_idx => 14,
                                                        );
-
+ 
     # Sort - might be time hog
     $log->info( "Sorting " . time() );
-    @short_list = sort { $a->[13] cmp $b->[13] ||
-                           $b->[17] <=> $a->[17] } @short_list;
+    # Sort first by protein, next by adjusted score!
+    @short_list = sort { $a->[13] cmp $b->[13] ||                    
+                           $b->[18] <=> $a->[18] } @short_list;
     $log->info( "Done! " . time() );
 
     # debug
@@ -555,22 +557,53 @@ sub handle_request {
       my @row = @{$peptide};
       my $prot = $row[13];
 
-      $log->info( "prot $prot, pep $row[1], score $row[14] " );
-
-
       $prots{$prot} ||= {};
       $prots{$prot}->{$row[1]}++;
       if ( scalar( keys( %{$prots{$prot}} ) ) > $n_peps_per_prot ) {
+#        $log->info( "2 many peps for $prot -  $row[1], $row[16],  $row[18]" );
         next; 
       }
-
+#      $log->info( "Got past peps for $prot - $row[1], $row[16],  $row[18]" );
       my $pep_key = $prot . $row[1];
-      my $frag_key = join( ':', @row[0,1,2,13] );
+#      $log->info( "Pep key is $pep_key" );
 
       # Use frag for 4-11;
-      for my $frag ( @{$peptide_fragments{$frag_key}} ) {
+      # Hide redundant frags!
+      my %frag_seen;
+      for my $frag ( @{$peptide_fragments{$pep_key}} ) {
+
+# 0 preceding_residue
+# 1 peptide_sequence
+# 2 following_residue
+# 3 syntheis_adjusted_score
+# 4 transition_source
+# 5 precursor_ion_mass
+# 6 precursor_ion_charge
+# 7 fragment_ion_mass
+# 8 fragment_ion_charge
+# 9 fragment_ion_label
+# 10 ion_rank
+# 11 relative_intensity
+# 12 SSRCalc_relative_hydrophobicity
+# 13 biosequence_name
+# 14 merged_score
+# 15 n_observations
+        # Problem cases 
+        # 1) duplicate ions
+        my $frag_key = join( ':', @{$frag}[1,6,8,9] );
+        if ( $frag_seen{$frag_key}++ ) {
+          $log->info( "rejected $frag_key for duplicity" );
+          next;
+        }
+
+        # 2) fragment ion too big
+        if ( abs( $frag->[5] * $frag->[6] - $frag->[7] * $frag->[8] ) < 5 ) {
+          $log->info( "rejected $row[1] frag for too bigosity" );
+          next;
+        }
         $peps{$pep_key}++;
         last if $peps{$pep_key} > $n_fragment_ions;
+
         $row[10] = $peps{$pep_key};
   
         $row[6] = $frag->[6];
@@ -581,7 +614,7 @@ sub handle_request {
         $row[5] = sprintf( "%0.2f", $frag->[5] );
         $row[4] = $src_name{$frag->[4]};
         $row[7] = sprintf( "%0.2f", $frag->[7] );
-        $row[3] = sprintf( "%0.2f", $row[17] );
+        $row[3] = sprintf( "%0.2f", $row[18] );
         $row[12] = sprintf( "%0.1f", $row[12] ) if $peps{$pep_key} == 1;
         if ( $frag->[11] ) {
           $row[11] = int( $frag->[11] );
@@ -593,7 +626,8 @@ sub handle_request {
     
         my $ce = calculateCE( mz => $frag->[5], chg => $frag->[6] );
         push @peptides, [ $prot, @row[0..12] ];
-        # future:  protein, sequence, q1_mz, q3_mz, RT, rank, q1_chg, q3_chg, peak_intensity, ion_label, collision, SSR
+
+        # protein  sequence q1_mz q3_mz RT rank q1_chg q3_chg peak_intensity ion_label collision SSR
         push @namelist, join( '::', $prot, @row[1,5,7],'',@row[10,6,8,11,9],$ce, $row[12] );
       }
 
@@ -603,7 +637,9 @@ sub handle_request {
 
 
   } else {
+     $log->info( "Using static values: " . time() );
 
+    my %frag_seen;
     while( my @row = $sth->fetchrow_array() ) {
       my $prot = $row[13];
 
@@ -614,8 +650,40 @@ sub handle_request {
       }
 
       my $pep_key = $prot . $row[1];
+
+# 0 preceding_residue
+# 1 peptide_sequence
+# 2 following_residue
+# 3 syntheis_adjusted_score
+# 4 transition_source
+# 5 precursor_ion_mass
+# 6 precursor_ion_charge
+# 7 fragment_ion_mass
+# 8 fragment_ion_charge
+# 9 fragment_ion_label
+# 10 ion_rank
+# 11 relative_intensity
+# 12 SSRCalc_relative_hydrophobicity
+# 13 biosequence_name
+# 14 merged_score
+# 15 n_observations
+      # Problem cases 
+      # 1) duplicate ions
+      my $frag_key = join( ':', @row[1,6,8,9] );
+      if ( $frag_seen{$frag_key}++ ) {
+        $log->info( "rejected $frag_key for duplicity" );
+        next;
+      }
+
+      # 2) fragment ion too big
+      if ( abs( $row[5] * $row[6] - $row[7] * $row[8] ) < 5 ) {
+        $log->info( "rejected $row[1] frag $row[9] for too bigosity" );
+        next;
+      }
+
       $peps{$pep_key}++;
       next if $peps{$pep_key} > $n_fragment_ions;
+
       $row[10] = $peps{$pep_key};
       $row[9] = lcfirst($row[9]);
   
@@ -634,7 +702,8 @@ sub handle_request {
   
       my $ce = calculateCE( mz => $row[5], chg => $row[6] );
       push @peptides, [ $prot, @row[0..12] ];
-      # future:  protein, sequence, q1_mz, q3_mz, RT, rank, q1_chg, q3_chg, peak_intensity, ion_label, collision, SSR
+
+      # protein  sequence q1_mz q3_mz RT rank q1_chg q3_chg peak_intensity ion_label collision SSR
       push @namelist, join( '::', $prot, @row[1,5,7],'',@row[10,6,8,11,9],$ce, $row[12] );
 
     } # End loop over resultset
