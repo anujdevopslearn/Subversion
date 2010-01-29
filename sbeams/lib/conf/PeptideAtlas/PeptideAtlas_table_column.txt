@@ -471,21 +471,16 @@ AT_GetMRMList	14	n_peptides_per_protein	Number of peptides per protein constrain
 AT_GetMRMList	15	include_validated_transitions	Include contributed validated transitions									N	checkbox	1		Y	Y	N	Include contributed validated transitions.  These will take precedence over transitions derived from the consensus library.		
 AT_GetMRMList	16	include_theoretical_peptides	Include theoretical peptide information									N	checkbox	1		Y	N	N	Include theoretical peptide information.  These will be used if not enough peptides or transitions were observed to fulfill # peptides and # transitions options.		
 AT_spectrum_annotation	1	spectrum_annotation_id	Spectrum Annotation ID	int	4	0	N		Y							N	N				pkDEFAULT
-AT_spectrum_annotation	2	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id	Y	text	10		Y	Y	N	Sample/experiment containing this spectrum		
-AT_spectrum_annotation	3	spectrum_name	Spectrum Name	varchar	255	0	N		N			Y	text	30		Y	Y	N	Spectrum Name		
-AT_spectrum_annotation	4	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	N	Sequence of the peptide including modification notations		
-AT_spectrum_annotation	5	peptide_charge	Peptide Charge	int	4	0	N		N			Y	text	10		Y	Y	N	Charge on the precursor ion		
-AT_spectrum_annotation	6	spectrum_annotation_level_id	Spectrum Annotation Level	int	4	0	N		N	AT_spectrum_annotation_level	spectrum_annotation_level_id	Y	optionlist	5		Y	Y	N	User annotation	"SELECT spectrum_annotation_level_id, level_name FROM $TB_SPECTRUM_ANNOTATION_LEVEL ORDER BY sort_order,level_name"	
-AT_spectrum_annotation	7	annotator_name	Annotator Name	varchar	50	0	Y		N			N	text	30		Y	Y	N	Name of the annotator		
-AT_spectrum_annotation	8	annotator_contact_id	Annotator Contact	int	4	0	Y		N	contact	contact_id	N	optionlist			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
-AT_spectrum_annotation	9	project_id	Project	int	4	0	N		N	project	project_id	N	optionlist			Y	Y	N	Project under which this entity is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
-AT_spectrum_annotation	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-AT_spectrum_annotation	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_spectrum_annotation	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_spectrum_annotation	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_spectrum_annotation	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_spectrum_annotation	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_spectrum_annotation	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_spectrum_annotation	2	spectrum_identification_id	Spectrum Identification ID	int	4	0	N		N	AT_spectrum_identification	spectrum_identification_id					Y	Y	Y	Spectrum Identification ID		
+AT_spectrum_annotation	3	spectrum_annotation_level_id	Spectrum Annotation Level	int	4	0	N		N	AT_spectrum_annotation_level	spectrum_annotation_level_id	Y	optionlist	5		Y	Y	N	User annotation	"SELECT spectrum_annotation_level_id, level_name FROM $TB_SPECTRUM_ANNOTATION_LEVEL ORDER BY sort_order,level_name"	
+AT_spectrum_annotation	4	annotator_contact_id	Annotator Contact	int	4	0	N		N	contact	contact_id	N	optionlist			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+AT_spectrum_annotation	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_spectrum_annotation	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_spectrum_annotation	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_spectrum_annotation	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_spectrum_annotation	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_spectrum_annotation	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_spectrum_annotation	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_spectrum_annotation_level	1	spectrum_annotation_level_id	Spectrum Annotation Level ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_spectrum_annotation_level	2	level_probability	Level Probability	real	4	0	N		N			Y	text	20		Y	Y	Y	User estimated probability		
 AT_spectrum_annotation_level	3	level_name	Level Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	Formal name of the annotation level		
