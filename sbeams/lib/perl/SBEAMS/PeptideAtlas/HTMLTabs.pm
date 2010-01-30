@@ -125,8 +125,8 @@ sub getTabMenu
     } elsif ( ($PROG_NAME =~ /^GetMRMList/) ||
     ($PROG_NAME =~ /ViewMRMList\?(\S+)/ ))
     {
-       $current_tab=4;
-       $current_subtab=5;
+       $current_tab=5;
+       $current_subtab=1;
 
     } elsif ( ($PROG_NAME =~ /^GetProtein/) ||
     ($PROG_NAME =~ /GetProtein\?(\S+)/ ))
@@ -139,7 +139,16 @@ sub getTabMenu
     {
        $current_tab=2;
        $current_subtab=2;
+
+    }elsif ( ($PROG_NAME =~ /^GetTransitionLists/) ||
+    ($PROG_NAME =~ /GetTransitionLists\?(\S+)/ ))
+    {
+       $current_tab=5;
+       $current_subtab=2;
     }
+
+
+
 
     ## set up tab structure:
     my $tabmenu = SBEAMS::Connection::TabMenu->
@@ -179,7 +188,6 @@ sub getTabMenu
 			   helptext => 'Browsing the basic information about a peptide',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/Summarize_Peptide"
 			   );
-
 
     $tabmenu->addTab( label => 'Current Build' );
 
@@ -222,10 +230,18 @@ sub getTabMenu
 			   url => "$CGI_BASE_DIR/PeptideAtlas/showPathways"
 			   );
 
-    $tabmenu->addMenuItem( tablabel => 'Queries',
-			   label => 'MRM Transitions',
+    $tabmenu->addTab( label => 'MRM Atlas' );
+
+    $tabmenu->addMenuItem( tablabel => 'MRM Atlas',
+			   label => 'Query Transitions',
 			   helptext => 'Query for MRM Transitions',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/GetMRMList"
+			   );
+
+    $tabmenu->addMenuItem( tablabel => 'MRM Atlas',
+			   label => 'Transition Lists',
+			   helptext => 'Download and upload validated MRM transition lists',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/GetTransitionLists"
 			   );
 
 
