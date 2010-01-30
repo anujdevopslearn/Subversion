@@ -1,0 +1,333 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : GetTransitionLists
+# $Id$
+#
+# Description : Returns transitions lists info in PeptideAtlas
+#
+# SBEAMS is Copyright (C) 2000-2009 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+$|++;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+$sbeams = new SBEAMS::Connection;
+
+use SBEAMS::BioLink;
+my $biolink = SBEAMS::BioLink->new();
+$biolink->setSBEAMS($sbeams);
+
+use SBEAMS::BioLink;
+my $biolink = new SBEAMS::BioLink;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+use SBEAMS::PeptideAtlas::KeySearch;
+my $keySearch = new SBEAMS::PeptideAtlas::KeySearch;
+$keySearch->setSBEAMS($sbeams);
+my @coverage;  # Global sequence coverage array, will be populated post-graphic
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+      permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+      'PeptideAtlas_readonly', 'PeptideAtlas_exec'],
+      #connect_read_only=>1,
+      allow_anonymous_access=>1,
+  ));
+
+
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+      q=>$q,
+      parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($q);
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+  #### Decide what action to take based on information so far
+  if ($parameters{action} eq "???") {
+      # Some action
+
+  } else {
+      my $project_id = $sbeamsMOD->getProjectID(
+          atlas_build_id => $parameters{atlas_build_id}
+          );
+      $sbeamsMOD->display_page_header(project_id => $project_id, init_tooltip => 1);
+      handle_request(ref_parameters=>\%parameters);
+      $sbeamsMOD->display_page_footer();
+  }
+
+
+} # end main
+
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+  my %args = @_;
+
+  my $spacer = $sbeams->getGifSpacer( 900 );
+  my $htmlmode = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
+
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+      || die "ref_parameters not passed";
+
+  my %parameters = %{$ref_parameters};
+
+
+  # put a spacer so that showing hidden content doesn't mangle the layout
+  print "<BR>$spacer\n" if $htmlmode;
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+    parameters_ref => \%parameters,
+    program_name => $PROG_NAME,
+  );
+  print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+
+
+  #### SHOW ALL LISTS
+  ##
+  my $transitionsHTML = &display_transitions_lists('all');
+  print "<TABLE><BR>$transitionsHTML</TABLE>\n" if ($htmlmode);
+
+
+  #### SHOW USER-UPLOADED LISTS
+  ##
+  if ( $sbeams->isGuestUser() ) {
+
+      if ($htmlmode) {
+	  my $login_link = "$SERVER_BASE_DIR$ENV{REQUEST_URI}";
+	  if ($login_link =~ /\?/) {
+	      $login_link .= "&force_login=yes";
+	  } else {
+	      $login_link .= "?force_login=yes";
+	  }
+
+	  print "<HR NOSHADE /><B>Please <A HREF=$login_link>log in to PeptideAtlas</A> in order to Upload your Transitions Lists</B>\n<BR/>(Please contact us if you need an account to PeptideAtlas)";
+
+      }
+  } else {
+
+      $transitionsHTML = &display_transitions_lists('user');
+      print "<TABLE><BR>$transitionsHTML</TABLE>\n" if ($htmlmode);
+
+      if ($htmlmode) {
+	  my $upload_link = "ManageTable.cgi?TABLE_NAME=AT_srm_transition_set&ShowEntryForm=1";
+	  print "<HR NOSHADE /><B><A HREF=$upload_link>Upload your Transitions List to PeptideAtlas</A></B>\n";
+      }
+  }
+
+
+#  if ($sbeams->output_mode() eq 'xml' ) {
+#      $transitionsXML .= "</transition_lists>\n\n";
+#      print $transitionsXML;
+#  }
+
+
+} # end handle_request
+
+
+
+# Helper sub to avoid copy/paste proliferation
+sub display_transitions_lists {
+    my $context = shift || 'all';  # 'user' or 'all'
+
+    #### SHOW UPLOADED LISTS
+    ##
+    ##
+    #### Widget to allow show/hide of section
+    my ( $tr, $link ) = $sbeams->make_table_toggle( name => "gettransitions_lists_$context",
+						    visible => 1,
+						    tooltip => 'Show/Hide Section',
+						    imglink => 1,
+						    sticky => 1,
+						    );
+
+    #### Display the section header
+    # $transitionsXML = '<?xml version="1.0" encoding="ISO-8859-1"?><transition_lists><base_download_url>http://www.peptideatlas.org/cgi/fileDownloader.pl/</base_download_url>';
+    my $transitionsHTML =  ($context eq 'user') ?
+	"<H2>View and Download SRM Transition Lists Uploaded by <font color=red>$current_username</font></H2>\n" :
+	"<H2>Download Public SRM Transition Lists from PeptideAtlas</H2>\n";
+
+    $transitionsHTML .= $sbeamsMOD->encodeSectionHeader(
+							text => 'Uploaded Transitions Lists',
+							link => $link
+							);
+
+#  my $trans_help = get_table_help( 'annotated_transitions' );
+#  my $transitions_lists = $sbeamsMOD->get_transitions_lists();
+    my $transitions_lists = get_transitions_lists($context);
+
+    #### If a result is returned
+    if ( scalar @$transitions_lists ) {
+    
+	### Download and Manage links here!
+	my $link_pre = "ManageTable.cgi/";
+	my $link_post= "?TABLE_NAME=AT_srm_transition_set&GetFile=upload_file&srm_transition_set_id=";
+
+	my $link_manage = "?TABLE_NAME=AT_srm_transition_set&srm_transition_set_id=";
+
+	my $link_pubmed = "http://www.ncbi.nlm.nih.gov/pubmed/";
+
+	#### Loops through resultset and do formatting
+	for my $list ( @$transitions_lists ) {
+	    $list->[6] = "<A HREF=$link_pre" . $list->[6] . "$link_post". $list->[0] . ">$list->[6]</A>";
+
+	    my $patrId = sprintf("PATR%05d", $list->[0]);
+
+	    if ($context eq 'user') {
+		$list->[0] = "<A HREF=$link_pre$link_manage". $list->[0] . ">$patrId</A>";
+	    } else {
+		$list->[0] = $patrId;
+	    }
+
+	    if ($list->[4] && $list->[5]) {
+		$list->[4] = "<A TARGET='_blank' HREF=$link_pubmed" . $list->[5] . ">$list->[4]</A>";
+	    }
+
+	    if ($sbeams->output_mode() eq 'xml' ) {
+		#$transitionsXML .= "<element>$list->[0]</element>\n";
+	    }
+
+	    # remove PMID
+	    splice(@{$list},5,1);
+
+	}
+	my @labels = ( 'Accession','Set Tag', 'Title', 'Organism', 'Publication', 'Download File');
+	push @labels, ('Is Public?','Go Live Date') if ($context eq 'user');
+
+	#### Add table column headings
+	unshift @$transitions_lists, \@labels;
+
+	#### Format table
+	$transitionsHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
+							    tr_info => $tr,
+							    set_download => 0,
+							    chg_bkg_idx => 1,
+							    align  => [qw(left left left center left left left center)],
+							    rows => $transitions_lists );
+    }
+
+    return $transitionsHTML;
+}
+
+
+sub get_transitions_lists {
+  my $context = shift;
+
+  my $ispub  = ($context eq 'user') ? ', TS.is_public' : '';
+  my $golive = ($context eq 'user') ? ', TS.golive_date' : '';
+
+  my $ispub2 = ($context ne 'user') ? "AND TS.is_public = 'Y'" : '';
+  my $isuser = ($context eq 'user') ? 'AND TS.created_by_id = '. $sbeams->getCurrent_contact_id() : '';
+
+  my $sql =<<"  END";
+  SELECT
+      TS.srm_transition_set_id,
+      TS.set_tag,
+      TS.set_title,
+      O.organism_name,
+      TS.publication_name,
+      TS.pubmed_ID,
+      TS.upload_file
+      $ispub
+      $golive
+   FROM $TBAT_SRM_TRANSITION_SET TS
+   LEFT JOIN $TB_ORGANISM O
+        ON ( O.organism_id = TS.organism_id )
+   WHERE
+      TS.record_status = 'N'
+      $ispub2
+      $isuser
+   ORDER BY
+      TS.date_created, TS.srm_transition_set_id DESC
+  END
+
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  return \@rows;
+}
+
