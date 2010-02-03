@@ -288,6 +288,7 @@ sub getCurrentAtlasBuildID {
       constraint_value=>'NULL' );
     return if ($organism_specialized_build_clause eq '-1');
 
+    #### this is kludgey, but the above doesn't work.
     my $organism_specialized_build_clause = 
       'AND organism_specialized_build IS NULL ';
 
@@ -300,12 +301,10 @@ sub getCurrentAtlasBuildID {
          $organism_specialized_build_clause
          AND record_status != 'D'
     ~;
-    print ($sql);
     my @rows = $sbeams->selectOneColumn($sql);
 
 
     #### Check that we got exactly one result or squawk
-    #### If we got multiple results, use the first one.
     if (scalar(@rows) == 0) {
       print "ERROR[$METHOD_NAME]: No non-specialized default atlas builds found for organism ID ".
 	"'$organism_id'<BR>\n";
@@ -318,7 +317,6 @@ sub getCurrentAtlasBuildID {
     } else {
       $atlas_build_id = $rows[0];
     }
-    print "atlas build is $atlas_build_id\n";
 
   #### Otherwise try to get it from the session cookie
   } else {
