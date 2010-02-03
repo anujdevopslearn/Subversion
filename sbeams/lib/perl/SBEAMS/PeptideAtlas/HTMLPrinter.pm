@@ -202,6 +202,8 @@ sub displayGuestPageHeader {
     $cnt++;
     $_ =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
     $_ =~ s/(\<[^>]*body[^>]*\>)/$1$init$css_info/;
+    $_ =~ s/width="680"/width="100%"/;  # resultsets are often wide...
+    $_ =~ s/width="550"//;              # and IE has trouble rendering these tables
     last if $_ =~ /--- Main Page Content ---/;
     $skin .= "$_\n";
   }
