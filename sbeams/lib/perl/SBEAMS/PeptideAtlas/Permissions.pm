@@ -224,6 +224,7 @@ sub getCurrentAtlasBuildID {
   #### Extract what was specified as a parameter
   my $atlas_build_id = $parameters{'atlas_build_id'};
   my $atlas_build_name = $parameters{'atlas_build_name'};
+  my $organism_id = $parameters{'organism_id'};
 
 
   #### If atlas_build_id was supplied
@@ -261,6 +262,57 @@ sub getCurrentAtlasBuildID {
     } elsif (scalar(@rows) > 1) {
       print "ERROR[$METHOD_NAME]: Too many atlas_build_id's found for ".
 	"'$atlas_build_name'<BR>\n";
+      return(-1);
+
+    } else {
+      $atlas_build_id = $rows[0];
+    }
+    print "atlas build is $atlas_build_id\n";
+
+  #### Else if organism_id was supplied
+  } elsif ($organism_id) {
+
+    #### Build organism_id constraint
+    my $organism_id_clause = $sbeams->parseConstraint2SQL(
+      constraint_column=>"organism_id",
+      constraint_type=>"int",
+      constraint_name=>"Organism ID",
+      constraint_value=>$parameters{organism_id} );
+    return if ($organism_id_clause eq '-1');
+
+    #### Build organism_specialized_build constraint
+    my $organism_specialized_build_clause = $sbeams->parseConstraint2SQL(
+      constraint_column=>"organism_specialized_build",
+      constraint_type=>"plain_text",
+      constraint_name=>"Organism Specialized Build",
+      constraint_value=>'NULL' );
+    return if ($organism_specialized_build_clause eq '-1');
+
+    my $organism_specialized_build_clause = 
+      'AND organism_specialized_build IS NULL ';
+
+    #### Fetch the id based on the name
+    my $sql = qq~
+      SELECT atlas_build_id
+        FROM $TBAT_DEFAULT_ATLAS_BUILD
+       WHERE 1=1
+         $organism_id_clause
+         $organism_specialized_build_clause
+         AND record_status != 'D'
+    ~;
+    print ($sql);
+    my @rows = $sbeams->selectOneColumn($sql);
+
+
+    #### Check that we got exactly one result or squawk
+    #### If we got multiple results, use the first one.
+    if (scalar(@rows) == 0) {
+      print "ERROR[$METHOD_NAME]: No non-specialized default atlas builds found for organism ID ".
+	"'$organism_id'<BR>\n";
+      return(-1);
+    } elsif (scalar(@rows) > 1) {
+      print "ERROR[$METHOD_NAME]: Multiple non-specialized default atlas builds found for organism ID ".
+	"'$organism_id'<BR>\n";
       return(-1);
 
     } else {
