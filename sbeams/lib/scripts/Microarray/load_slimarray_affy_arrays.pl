@@ -398,6 +398,13 @@ sub parse_slimarray_arrays {
 
     my %sample = request_sample_json( $summary->{"uri"} );
 
+    # skip if this is not an Affymetrix array
+    unless ( $sample{"raw_data_type"} eq "Affymetrix CEL" ) {
+      print "NOT AN AFFYMETRIX FILE: ", $sample{"raw_data_path"}, "\n"
+        if $VERBOSE > 0;
+      next;
+    }
+    
     # skip if the raw data doesn't exist on the file system
     unless ( $sample{"raw_data_path"} ne "" && -e $sample{"raw_data_path"} ) {
       print "FILE DOES NOT EXIST: ", $sample{"raw_data_path"}, "\n"
