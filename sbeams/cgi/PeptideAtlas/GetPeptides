@@ -599,6 +599,7 @@ sub handle_request {
                         $column_array[2],
                         ["n_observations","MPI.n_observations","N Obs"],
                         @column_array[4..5],
+                        ["peptide_charge","MPI.peptide_charge","Peptide Charge"],
                         ["monoisotopic_parent_mz","STR(MPI.monoisotopic_parent_mz,10,4)","Monoisotopic Parent m/z"],
                         @column_array[6..$#column_array],
                         );
