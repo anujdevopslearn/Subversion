@@ -387,7 +387,8 @@ sub updateObservedProteotypicScores {
     my $peptide_instance_id = $peptide->[0];
     $search_batch_ids = $peptide->[3];
     my $n_protein_samples = scalar(keys(%{$proteins{$protein}}));
-    my $n_peptide_samples = scalar(split(",",$search_batch_ids));
+    my @peptide_samples = split(",",$search_batch_ids);
+    my $n_peptide_samples = scalar(@peptide_samples);
     my $proteotypic_score = $n_peptide_samples / $n_protein_samples;
 
     if ($peptide_scores{$peptide_instance_id}) {
