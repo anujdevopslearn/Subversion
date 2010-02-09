@@ -64,7 +64,7 @@ my %args = ( build_id => [],
 #### Process options, die with usage if it fails.
 unless (GetOptions(\%args,"verbose:s","debug:s","testonly",
         "build_id:i", "reload", "nukem", "update_n_searched_spectra",
-				"atlas_search_batch_id:s","atlas_search_batch_id:s" ) ) {
+				"atlas_search_batch_id:s" ) ) {
 	die "\n$USAGE";
 }
 
@@ -437,7 +437,7 @@ sub get_peptide_counts {
   my @mobs_cnts = $sbeams->selectSeveralColumns( $sql );
   $log->debug( "Getting multobs peptide counts:\n $sql" );
 
-  my @keys = qw( atlas_build_search_batch_id n_observations n_multiobs_observations n_distinct_peptides n_distinct_multiobs_peptides n_searched_spectra, data_location );
+  my @keys = qw( atlas_build_search_batch_id n_observations n_multiobs_observations n_distinct_peptides n_distinct_multiobs_peptides n_searched_spectra data_location );
 #  print join( "\t", @keys ) . "\n";
 
   # hash of search batch stats, keyed by batch_id
