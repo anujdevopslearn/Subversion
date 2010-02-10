@@ -269,10 +269,11 @@ sub getCurrentAtlasBuildID {
     }
     print "atlas build is $atlas_build_id\n";
 
-  #### Else if organism_id was supplied
+  #### Else if organism_id was supplied, retrieve from the
+  #### default build table the non-specialized build for this
+  #### organism.
   } elsif ($organism_id) {
 
-    #### Build organism_id constraint
     my $organism_id_clause = $sbeams->parseConstraint2SQL(
       constraint_column=>"organism_id",
       constraint_type=>"int",
@@ -280,19 +281,9 @@ sub getCurrentAtlasBuildID {
       constraint_value=>$parameters{organism_id} );
     return if ($organism_id_clause eq '-1');
 
-    #### Build organism_specialized_build constraint
-    my $organism_specialized_build_clause = $sbeams->parseConstraint2SQL(
-      constraint_column=>"organism_specialized_build",
-      constraint_type=>"plain_text",
-      constraint_name=>"Organism Specialized Build",
-      constraint_value=>'NULL' );
-    return if ($organism_specialized_build_clause eq '-1');
-
-    #### this is kludgey, but the above doesn't work.
     my $organism_specialized_build_clause = 
-      'AND organism_specialized_build IS NULL ';
+      "  AND organism_specialized_build IS NULL\n";
 
-    #### Fetch the id based on the name
     my $sql = qq~
       SELECT atlas_build_id
         FROM $TBAT_DEFAULT_ATLAS_BUILD

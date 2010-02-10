@@ -2,10 +2,9 @@
 # PAidentlist2mayu.pl
 # Convert PAidentlist file to Mayu input format,
 #  using adjusted probabilities (not initial probabilities),
-#  and grabbing protein identifications from ProteinProphet.
-# Protein identifications in PAidentlist file are somewhat
-#  arbitrary; using ProteinProphet gives us a close-to-minimal
-#  protein set.
+#  and, if desired, grabbing protein identifications from ProteinProphet.
+# If PAidentlist was created with "regularized" protein IDs, then
+#  grabbing protein IDs from ProtPro here is redundant, tho harmless.
 # Terry Farrah, Institute for Systems Biology   January, 2009
 
 use strict;
@@ -16,19 +15,6 @@ GetOptions( \%options, 'identlist_file=s', 'output_file=s',
                        'help|?', 'protXML_file=s', 'verbose|s',
           );
 printUsage() if $options{help};
-
-
-### Read protXML file.
-### Assumptions: Each <protein_group> tag incudes multiple
-### <protein> tags, in descending order of probability (except that
-### proteins of probability zero are mixed in).
-### Each <protein> tag includes multiple <peptide>
-###  tags, and peptide sets for proteins within the same
-###  <protein_group> are overlapping.
-### Each peptide belongs to proteins in only one protein_group.
-### Assign each peptide to the highest probability protein
-###  among those including that peptide.
-### Store protein for each peptide in a hash.
 
 my $verbose = $options{verbose};
 
@@ -56,9 +42,22 @@ if ($protXML_file) {
   die("ProtXML file $protXML_file does not exist or can't be opened for reading.");
 } else {
   print STDERR
-    "WARNING: ProtXML file not provided; using protein IDs from PAidentlist!\n"
+    "INFO: ProtXML file not provided; using protein IDs from PAidentlist.\n"
     if $verbose;
 }
+
+### Read protXML file.
+### Assumptions: Each <protein_group> tag incudes multiple
+### <protein> tags, in descending order of probability (except that
+### proteins of probability zero are mixed in).
+### Each <protein> tag includes multiple <peptide>
+###  tags, and peptide sets for proteins within the same
+###  <protein_group> are overlapping.
+### Each peptide belongs to proteins in only one protein_group.
+### Assign each peptide to the highest probability protein
+###  among those including that peptide.
+### Store protein for each peptide in a hash.
+
 
 my %pepProtHash = (); #stores best protein for peptide seen so far
 my %pepProtProbHash = (); #stores prob for that protein
@@ -204,7 +203,9 @@ print STDERR
 my $nlines = 0;
 while (my $line = <$identlist_filehandle>) {
   $nlines++;
-  if ($verbose &&  (($nlines % 100) == 0)) {
+  if ($verbose &&  (($nlines % 1000) == 0)) {
+    print STDERR "$nlines";
+  } elsif ($verbose &&  (($nlines % 100) == 0)) {
     print STDERR ".";
   }
   chomp($line);
@@ -275,13 +276,16 @@ if ($verbose && @peps_with_changed_ids) {
 sub printUsage {
   print( <<"  END" );
 
-Usage:  $0 [ -f -d ]
+Usage:  $0 
 
   -h, --help             Print this usage information and exit
   -i, --identlist_file   PAidentlist file to convert (default: STDIN)
   -o, --output_file      Mayu input format file (default: STDOUT)
   -p, --protXML_file     protXML file corresponding to the PAidentlist file.
-  -v, --verbose          Print details about scrambling to STDERR
+                         Used to regularize protein IDs so that protein
+                         count is not inflated.
+                         (default: use IDs in PAidentlist file)
+  -v, --verbose          Print details about execution.
  
   END
   exit;
