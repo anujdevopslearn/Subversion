@@ -7,15 +7,19 @@
 # protlist consists of lines like this:
 # 328,ENSP00000352019 IPI00552590,0.0000,0.1417,subsumed,ENSP000000009
 # prot_group_id, list indisting protIDs, prob., conf., presence_level,
-#   highest scoring canonical for prot_group
+#   highest scoring canonical for prot_group, subsumed_by, est_ng_per_ml,
+#   abundance_uncertainty
+#
+# Terry Farrah 2009 ISB
+
+# 11/11/09: added protein group size to protIdentlist
+#  Counts everything except identicals.
+
 
 use strict;
 use Getopt::Long;
-#use XML::Xerces;
-#use Data::Dumper;
 use FindBin;
 use lib "$FindBin::Bin/../../perl";
-#use lib "/regis/sbeams/lib";
 
 use vars qw ($sbeams $sbeamsMOD $q
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
@@ -32,25 +36,26 @@ $| = 1; #disable output buffering
 my $USAGE = <<EOU;
 USAGE: $0 [OPTIONS]
 Takes as input a protlist file produced by createPipelineInput
- and generates two files,
- PeptideAtlasInput.PAprot{Identlist,Relationships},
- gathering additional identicals and optionally
- choosing a preferred protID for each identification.
-Or, refreshes a PAidentlist file to preferred protIDs.
+ and generates two files, PeptideAtlasInput.PAprot{Identlist,Relationships},
+ gathering additional identicals.
 Options:
   --infile       default: PeptideAtlasInput.PAprotlist
   --dupfile      default: duplicate_groups.txt
+  --organism_id  Integer. For choosing preferred protIDs. Default: 2 (human)
+  --help         print this usage guide
+Deprecated options. Use with caution; not maintained, AND, only protIDs for
+sequence-identical proteins are considered, when one really wants to
+consider all indistinguishable proteins:
   --preferred_protIDs  choose preferred protIDs for PeptideAtlasInput.PAprot*
        Generally not needed; createPipelineInput already selects preferred.
   --PAidentlist   optional PAidentlist file to process.
                  Changes protIDs to preferred ones.
-  --help         print this usage guide
 EOU
 
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"infile:s", "dupfile:s", "help",
-         "preferred_protIDs", "PAidentlist:s",
+         "preferred_protIDs", "PAidentlist:s", "organism_id:i"
   )) {   print "$USAGE";
   exit;
 }
@@ -61,6 +66,23 @@ if ($OPTIONS{help}) {
 
 my $infile = $OPTIONS{infile} || "PeptideAtlasInput.PAprotlist";
 my $dupfile = $OPTIONS{dupfile} || "duplicate_groups.txt";
+my $preferred_patterns_aref = [];
+my $organism_id = $OPTIONS{organism_id} || 0;
+if (! $organism_id ) {
+  print STDERR "WARNING: no organism_id given. Rules for human DB will be used when choosing which, among identical seqs, to label indistinguishable.\n";
+  $organism_id = 2;
+}
+$preferred_patterns_aref =
+  SBEAMS::PeptideAtlas::ProtInfo::read_protid_preferences(
+    organism_id=>$organism_id,
+);
+my $n_patterns = scalar @{$preferred_patterns_aref};
+if ( $n_patterns == 0 ) {
+print "WARNING: No protein identifier patterns found ".
+      "for organism $organism_id! ".
+      "No sequence database will be preferred over another.\n";
+}
+
 my $PAidentlist = $OPTIONS{PAidentlist};
 my $preferred_protIDs = $OPTIONS{preferred_protIDs};
 
@@ -85,7 +107,11 @@ if ($PAidentlist) {
     my @fields = split(" ", $line);
     my $protID = $fields[10];
     #  Possibly get a preferred protID
-    my $primary_protID = find_preferred_protid($protID, $dupfile);
+    my $primary_protID = find_preferred_protid(
+      protid=>$protID,
+      dupfile=>$dupfile,
+      organism_id=>$organism_id
+    );
     #  Substitute into line
     $fields[10] = $primary_protID;
     $line = join("\t",@fields);
@@ -96,26 +122,59 @@ if ($PAidentlist) {
 }
 
 #### Standard vanilla usage starts here.
-#### Open files
+#### Open files and write header lines to them.
 open (INFILE, $infile) || die "Cannot open $infile for reading.\n";
 my $identlistfile =  "PeptideAtlasInput.PAprotIdentlist";
 open (IDENTFILE, ">$identlistfile") ||
    die "Cannot open $identlistfile for writing.\n";
 print IDENTFILE
-"protein_group_number,biosequence_name,probability,confidence,n_observations,n_distinct_peptides,level_name,represented_by_biosequence_name,subsumed_by_biosequence_name,estimated_ng_per_ml,abundance_uncertainty\n";
+"protein_group_number,biosequence_name,probability,confidence,n_observations,n_distinct_peptides,level_name,represented_by_biosequence_name,subsumed_by_biosequence_name,estimated_ng_per_ml,abundance_uncertainty,is_covering,group_size\n";
 
 my $relationshipfile =  "PeptideAtlasInput.PAprotRelationships";
 open (RELFILE, ">$relationshipfile") ||
    die "Cannot open $relationshipfile for writing.\n";
 print RELFILE "protein_group_number,reference_biosequence_name,related_biosequence_name,relationship_name\n";
 
-#### For each protein in this file, including indistinguishables,
+####  PAprotlist line format:
+# 0 $protein_group_number,
+# 1 $biosequence_names (space separated),
+# 2 $probability,
+# 3 $confidence,        
+# 4 $n_observations,
+# 5 $n_distinct_peptides,
+# 6 $level_name,
+# 7 $represented_by_biosequence_name,
+# 8 $subsumed_by_biosequence_name_list (space separated),
+# 9 $estimated_ng_per_ml
+# 10 $abundance_uncertainty
+# 11 $is_covering
+# 12 (in ouput, not in input) -- group size
+
+my $protein_group_number_idx = 0;
+my $biosequence_names_idx = 1;
+my $probability_idx = 2;
+my $confidence_idx = 3;
+my $n_observations_idx = 4;
+my $n_distinct_peptides_idx = 5;
+my $level_name_idx = 6;
+my $represented_by_biosequence_name_idx = 7;
+my $subsumed_by_biosequence_name_list_idx = 8;
+my $estimated_ng_per_ml_idx = 9;
+my $abundance_uncertainty_idx = 10;
+my $is_covering_idx = 11;
+my $group_size_idx = 12;
+
+my $n_input_fields = 12;
+
+#### For each protein in PAprotlist file, including indistinguishables
+#### (and, at this stage, indistinguishables INCLUDE identicals),
 ####  hash to all identicals.
 my $duphash = {};
 my $line = <INFILE>;  #throw away header line
 for $line (<INFILE>) {
   chomp ($line);
-  my @fields = split(",", $line);
+  # need third arg for split, otherwise trailing null fields discarded
+  my @fields = split(",", $line, $n_input_fields);
   my @protIDs = split(" ", $fields[1]);
   my @dupIDs;
   for my $protID (@protIDs) {
@@ -147,62 +206,63 @@ for my $protID (@protkeys) {
 }
 
 open (INFILE, $infile) || die "Cannot open $infile for reading.\n";
-####  For each line in file (format is as follows:)
-# 0 $protein_group_number,
-# 1 $biosequence_names (space separated),
-# 2 $probability,
-# 3 $confidence,        
-# 4 $n_observations,
-# 5 $n_distinct_peptides,
-# 6 $level_name,
-# 7 $represented_by_biosequence_name,
-# 8 $subsumed_by_biosequence_name_list (space separated),
-# 9 $estimated_ng_per_ml
-# 10 $abundance_uncertainty
-my $maxfields = 11;
+
+my @prot_idents = ();
+my %group_size = ();
 
 my $firstline = 1;
 for my $line (<INFILE>) {
   chomp ($line);
-  my @fields = split(",", $line);
+  my @fields = split(",", $line, $n_input_fields);
+  my @all_fields = split(",", $line);
+  if ((scalar @all_fields) > $n_input_fields) {
+    print "WARNING: more than $n_input_fields fields in input line\n";
+  }
   if ($firstline) {
-    if ($fields[0] =~ /protein_group/) {
+    if ($fields[$protein_group_number_idx] =~ /protein_group/) {
       next;  #skip header line if any
     }
     $firstline = 0;
   }
-  my $nfields = scalar (@fields);
-  my $protein_group = $fields[0];
-  my @protIDs = split(" ", $fields[1]);
-  my $presence_level = $fields[4];
+  my $protein_group = $fields[$protein_group_number_idx];
+  my @protIDs = split(" ", $fields[$biosequence_names_idx]);
+  my $presence_level = $fields[$probability_idx];
   my @subsumed_by_list = ();
   my $subsumed_by_protID;
-  if ($nfields >= 9) {
-    @subsumed_by_list = split(' ',$fields[8]);
-    # arbitrarily select the first subsumed_by protID to store
-    if (scalar @subsumed_by_list > 0 ) {
-      $subsumed_by_protID = $subsumed_by_list[0];
-    } else {
-      $subsumed_by_protID = "";
-    }
+  @subsumed_by_list = split(' ',
+       $fields[$subsumed_by_biosequence_name_list_idx]);
+  # arbitrarily select the first subsumed_by protID to store
+  if (scalar @subsumed_by_list > 0 ) {
+    $subsumed_by_protID = $subsumed_by_list[0];
+  } else {
+    $subsumed_by_protID = "";
   }
   # n_obs field expects an int. but these days we're sometimes using
-  # float. Force it to int. 09/18/09.
-  $fields[4] = int $fields[4];
-  if ($nfields > $maxfields) {
-    print "WARNING: more than $maxfields fields in input line\n";
-  }
+  # float (if apportioning PSMs to prots). Force it to int. 09/18/09.
+  $fields[$n_observations_idx] = int $fields[$n_observations_idx];
 
   #### Choose preferred protID for primary and represented_by
   my $primary_protID;
-  if ($preferred_protIDs) {
-    $primary_protID = get_preferred_protid_from_list(\@protIDs);
-    if ($nfields >=8 ) {
-      $fields[7] = find_preferred_protid($fields[7], $dupfile);
+  if ( $preferred_protIDs ) {
+    $primary_protID = get_preferred_protid_from_list(
+      protid_list_ref=>\@protIDs,
+      preferred_patterns_aref => $preferred_patterns_aref,
+     );
+    if ( $fields[$represented_by_biosequence_name_idx] ne "") {
+      $fields[$represented_by_biosequence_name_idx] =
+        find_preferred_protid(
+	  protid=>$fields[$represented_by_biosequence_name_idx],
+	  dupfile=>$dupfile,
+	  organism_id=>$organism_id,
+	)
     }
-    if ( ( $nfields >= 9 ) && ( $subsumed_by_protID ne "" )) {
+    if ( $subsumed_by_protID ne "" ) {
       $subsumed_by_protID =
-	 find_preferred_protid($subsumed_by_protID, $dupfile);
+	find_preferred_protid(
+	  protid=>$subsumed_by_protID,
+	  dupfile=>$dupfile,
+	  organism_id=>$organism_id,
+	)
     }
   } else {
     $primary_protID = $protIDs[0];
@@ -213,13 +273,26 @@ for my $line (<INFILE>) {
 #    print "$protID "; #  }
 #  print "==> $primary_protID\n";
 
-  ####  Write to new protIdentlist file
-  $fields[1] = $primary_protID;
-  if ($nfields >= 9) {
-    $fields[8] = $subsumed_by_protID;
+  ####  a little test Oh wait, this isn't supposed to be true all the
+  #### time, not when we have multiple canonicals.
+#  if ( $fields[$level_name_idx] eq "canonical" ) {
+#    ok ($fields[$biosequence_names_idx] eq
+#        $fields[$represented_by_biosequence_name_idx],
+#        "For canonical, biosequence_name == represented_by_bioseq_name");
+#  }
+
+  #### Store reference to fields in an array.
+  $fields[$biosequence_names_idx] = $primary_protID;
+  $fields[$subsumed_by_biosequence_name_list_idx] = $subsumed_by_protID;
+  my $prot_ident_ref = \@fields;
+  push (@prot_idents, $prot_ident_ref);
+
+  #### Count the primary protID in the tally for the group size
+  if (! defined $group_size{$protein_group} ) {
+    $group_size{$protein_group} = 1;
+  } else {
+    $group_size{$protein_group}++;
   }
-  $line = join(",",@fields);
-  print IDENTFILE "$line\n";
 
   #### For each remaining protID, assign as indistinguishable or identical
   my %processed_protIDs;
@@ -243,9 +316,13 @@ for my $line (<INFILE>) {
       push (@identical_protIDs, $protID);
       # If this one is not the primary protID ...
       # Find preferred protID among all identicals, including self
-      $preferred_protID = get_preferred_protid_from_list(\@identical_protIDs);
+      $preferred_protID = get_preferred_protid_from_list(
+        protid_list_ref=>\@identical_protIDs,
+	preferred_patterns_aref => $preferred_patterns_aref,
+       );
       # Store preferred one as indistinguishable from primary
       print RELFILE "$protein_group,$primary_protID,$preferred_protID,indistinguishable\n";
+      # Note that we've processed the protIDs for the preferred one
       $processed_protIDs{$preferred_protID} = 1;
       # Store others as identical to preferred
       for my $protID2 (@identical_protIDs) {
@@ -254,10 +331,24 @@ for my $line (<INFILE>) {
 	  $processed_protIDs{$protID2} = 1;
 	}
       }
+      # Count this indistinguishable in the tally for the group
+      $group_size{$protein_group}++;
     }
   }
 }
+
+
+### Write protein identifications to protIdentlist.
+for my $prot_ident (@prot_idents) {
+  my @fields = @{$prot_ident};
+  # get protein group size and add it as another field
+  my $protein_group = $fields[$protein_group_number_idx];
+  $fields[$group_size_idx] = $group_size{$protein_group};
+  my $line = join(",",@fields);
+  print IDENTFILE "$line\n";
+}
 close (IDENTFILE);
+
 
 sub get_dupIDs {
   ### given a protID and a duplicate_entries file,
@@ -293,8 +384,10 @@ sub get_dupIDs {
 # We really want to consider all indistinguishable protIDs, not
 # just the sequence-identical ones.
 sub find_preferred_protid {
-  my $protID = shift;
-  my $dupfile = shift;
+  my %args = @_;
+  my $protID = $args{protID};
+  my $dupfile = $args{dupfile};
+  my $organism_id = $args{organism_id} || 0;
 
   #  Get all duplicate IDs
   my $dupIDs_aref = get_dupIDs($protID, $dupfile);
@@ -302,7 +395,10 @@ sub find_preferred_protid {
   #  Choose preferred one.
   my $primary_protID = $protID;
   if (scalar(@dupIDs) > 0) {
-    $primary_protID = get_preferred_protid_from_list($dupIDs_aref);
+    $primary_protID = get_preferred_protid_from_list(
+      protid_list_ref=>$dupIDs_aref,
+      preferred_patterns_aref => $preferred_patterns_aref,
+     );
   }
   return ($primary_protID);
 }

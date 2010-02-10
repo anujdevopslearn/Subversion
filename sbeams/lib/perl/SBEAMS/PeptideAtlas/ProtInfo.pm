@@ -30,13 +30,17 @@ use SBEAMS::Connection;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::Settings;
 use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::AtlasBuild;
 
 
 ###############################################################################
 # Global variables
 ###############################################################################
 use vars qw($VERBOSE $TESTONLY $sbeams);
-our @EXPORT = qw(get_preferred_protid_from_list);
+our @EXPORT = qw(
+ get_preferred_protid_from_list
+ read_protid_preferences
+);
 
 
 ###############################################################################
@@ -139,6 +143,7 @@ sub loadBuildProtInfo {
 
   # Input is PA.protIdentlist file
   # Process one line at a time
+  my $nfields = 13;
   my $line = <IDENTFILE>;  #throw away header line
   while ($line = <IDENTFILE>) {
     chomp ($line);
@@ -152,16 +157,18 @@ sub loadBuildProtInfo {
 	$represented_by_biosequence_name,
 	$subsumed_by_biosequence_name,
         $estimated_ng_per_ml,
-        $abundance_uncertainty) = split(",", $line);
-    if (! $subsumed_by_biosequence_name) {
-      $subsumed_by_biosequence_name = '';
+        $abundance_uncertainty,
+        $is_covering,
+        $seq_unique_prots_in_group) = split(",", $line, $nfields);
+#    if (! $subsumed_by_biosequence_name) {
+#      $subsumed_by_biosequence_name = '';
+#    }
+    if ($estimated_ng_per_ml eq '') {
+      $estimated_ng_per_ml = 'NULL';
     }
-    if (! $estimated_ng_per_ml) {
-      $estimated_ng_per_ml = '';
-    }
-    if (! $abundance_uncertainty) {
-      $abundance_uncertainty = '';
-    }
+#    if (! $abundance_uncertainty) {
+#      $abundance_uncertainty = '';
+#    }
 
 
     # I don't know what to do with nan. Let's set it to zero.
@@ -201,6 +208,8 @@ sub loadBuildProtInfo {
        subsumed_by_biosequence_name => $subsumed_by_biosequence_name,
        estimated_ng_per_ml => $estimated_ng_per_ml,
        abundance_uncertainty => $abundance_uncertainty,
+       is_covering => $is_covering,
+       seq_unique_prots_in_group => $seq_unique_prots_in_group,
     );
 
     if ($inserted) {
@@ -255,6 +264,7 @@ sub loadBuildProtInfo {
        relationship_name => $relationship_name,
     );
 
+
     if ($inserted) {
       $loaded++;
     } else {
@@ -302,6 +312,8 @@ sub insertProteinIdentification {
   my $subsumed_by_biosequence_name = $args{subsumed_by_biosequence_name};
   my $estimated_ng_per_ml = $args{estimated_ng_per_ml};
   my $abundance_uncertainty = $args{abundance_uncertainty};
+  my $is_covering = $args{is_covering};
+  my $seq_unique_prots_in_group = $args{seq_unique_prots_in_group};
 
   our $counter;
 
@@ -355,6 +367,8 @@ sub insertProteinIdentification {
       subsumed_by_biosequence_id => $subsumed_by_biosequence_id,
       estimated_ng_per_ml => $estimated_ng_per_ml,
       abundance_uncertainty => $abundance_uncertainty,
+      is_covering => $is_covering,
+      seq_unique_prots_in_group => $seq_unique_prots_in_group,
     );
     return ($protein_identification_id);
   }
@@ -390,6 +404,8 @@ sub insertProteinIdentificationRecord {
   my $subsumed_by_biosequence_id = $args{subsumed_by_biosequence_id};
   my $estimated_ng_per_ml = $args{estimated_ng_per_ml};
   my $abundance_uncertainty = $args{abundance_uncertainty};
+  my $is_covering = $args{is_covering};
+  my $seq_unique_prots_in_group = $args{seq_unique_prots_in_group};
 
   #### Define the attributes to insert
   my $rowdata = {
@@ -405,9 +421,11 @@ sub insertProteinIdentificationRecord {
      subsumed_by_biosequence_id => $subsumed_by_biosequence_id,
      estimated_ng_per_ml => $estimated_ng_per_ml,
      abundance_uncertainty => $abundance_uncertainty,
+     is_covering => $is_covering,
+     seq_unique_prots_in_group => $seq_unique_prots_in_group,
   };
 
-  #### Insert spectrum identification record
+  #### Insert protein identification record
   my $protein_identification_id = $sbeams->updateOrInsertRow(
     insert => 1,
     table_name => $TBAT_PROTEIN_IDENTIFICATION,
@@ -704,39 +722,119 @@ sub get_biosequence_relationship_id {
 # get_preferred_protid_from_list  --
 ###############################################################################
 # Given a list of protein identifiers, return our most preferred one.
-# This could certainly be done faster and more elegantly.
+
 sub get_preferred_protid_from_list {
-  my $protid_list_ref = shift;
+
+  my %args = @_;
+  my $protid_list_ref = $args{'protid_list_ref'};
+  my $preferred_patterns_aref = $args{'preferred_patterns_aref'};
+  my $debug = 0;
+
+  # if no list of preferred patterns given, just return the first protID
+  # calling program should warn user.
+  if ( ( ! defined $preferred_patterns_aref ) || ! $preferred_patterns_aref ) {
+    print "WARNING! just returning first protid\n";
+    return $protid_list_ref->[0];
+  }
+  print "preferred_patterns_aref is defined.\n" if ($debug);
+
+  my @preferred_patterns = @{$preferred_patterns_aref};
   my $protid;
 
-  my @preferred_patterns = (
-    '^[ABOPQ].....$',                     # swiss-prot
-    '^[ABOPQ].....-.*$',                  # swiss-prot splice variant
-    '^ENSP\d\d\d\d\d\d\d\d\d\d\d$',       # ENSEMBL
-  );
-
-  # first, sort the list so that the order of the identifiers in
+  # first, sort the protid list so that the order of the identifiers in
   # the list doesn't affect what is returned from this function.
-  @{$protid_list_ref} = sort(@{$protid_list_ref});
+  my @protid_list = sort(@{$protid_list_ref});
+  my $n_protids = scalar @protid_list;
+  print "$n_protids protids\n" if ($debug);
 
   # check for protID regex's in order of preference
   for my $pattern (@preferred_patterns) {
-    for $protid (@{$protid_list_ref}) {
+    print "Checking pattern: $pattern\n" if ($debug);
+    # skip empty patterns (some priority slots may be empty)
+    if (! $pattern ) {
+      next;
+    }
+    for $protid (@protid_list) {
+      print "  Checking $protid vs. $pattern\n" if ($debug);
       if (($protid =~ /$pattern/) && ($protid !~ /UNMAPPED/)) {
 	return $protid;
       }
     }
   }
 
-  # if non matched, select, any non-DECOY, non-UNMAPPED ID
-  for $protid (@{$protid_list_ref}) {
+  # if non matched, select any non-DECOY, non-UNMAPPED ID
+  #print "Now, just selecting any non-DECOY, non-UNMAPPED ID\n";
+  for $protid (@protid_list) {
     if (($protid !~ /^DECOY_/) && ($protid !~ /UNMAPPED/)) {
       return $protid;
     }
   }
 
   # otherwise, return the first ID
-  return $protid_list_ref->[0];
+  return $protid_list[0];
+}
+
+###############################################################################
+# read_protid_preferences --
+###############################################################################
+# Read from a flat file the priorities and regexes for each type of
+# protein identifier for a given organism.
+
+sub read_protid_preferences {
+
+  my $SUBROUTINE = 'loadBuildProtInfo';
+  my %args = @_;
+
+  my $organism_id = $args{'organism_id'}
+    or die("ERROR[$SUBROUTINE]: Parameter organism_id not passed");
+  
+  my $pipeline_dir = $CONFIG_SETTING{PeptideAtlas_PIPELINE_DIRECTORY};
+  my $preference_filepath = "$pipeline_dir/../etc/protid_priorities.csv";
+  open (PREF, $preference_filepath) or
+    die("ERROR[$SUBROUTINE]: preference_filepath can't be opened for reading");
+
+  my $org_idx = 0;
+  my $db_idx = 1;
+  my $priority_idx = 2;
+  my $regex_idx = 3;
+  my $n_fields = 4;
+
+  # read header and check to see if it's what we expect
+  my $line = <PREF>;
+  chomp $line;
+  my @field_names = split (",", $line);
+  my $n_field_names = scalar @field_names;
+
+  if ( ($n_field_names != $n_fields) or
+       ($field_names[$org_idx] ne "organism_id") or
+       ($field_names[$db_idx] ne "database_type") or
+       ($field_names[$priority_idx] ne "priority") or
+       ($field_names[$regex_idx] ne "regex") ) {
+    print "WARNING: mismatch between $preference_filepath header line and $SUBROUTINE\n";
+  }
+
+  my @preferred_patterns = ();
+
+  while ($line = <PREF>) {
+    if ($line !~ /^#/) {
+      chomp $line;
+      # need third arg to split so commas in regex aren't
+      # seen as field separators
+      my @fields = split (",", $line, $n_fields);
+      if ( $fields[$org_idx] != $organism_id ) {
+        next;
+      }
+      #print "$fields[$db_idx] $fields[$priority_idx] $fields[$regex_idx]\n";
+      my $priority = $fields[$priority_idx];
+      my $regex = $fields[$regex_idx];
+      if ( defined $preferred_patterns[$priority] ) {
+      print "WARNING[$SUBROUTINE]: more than one regex at priority $priority\n";
+      }
+      $preferred_patterns[$priority] = $regex;
+    }
+  }
+ 
+  return \@preferred_patterns;
 }
 
 ###############################################################################
