@@ -1,9 +1,9 @@
-#!/usr/local/bin/perl -w
+#!/usr/local/bin/perl 
 
 #$Id:  $
 
 use DBI;
-use Test::More tests => 12;
+use Test::More tests => 15;
 use Test::Harness;
 use strict;
 use FindBin qw ( $Bin );
@@ -30,6 +30,9 @@ ok( get_best_pep_selector(), 'Instantiate selector' );
 ok( test_bad_peptide(), 'Check bad peptide scoring' );
 ok( test_good_peptide(), 'Check good peptide scoring' );
 ok( test_bad_override_peptide(), 'Check bad with override peptide scoring' );
+ok( test_fragmentation(), 'Check peptide fragmentation' );
+ok( get_SSR_calculator(), 'Get SSRCalc calculator' );
+ok( calculate_SSR(), 'Calculate SSR' );
 
 sub test_bad_peptide {
 # A very bad peptide, should hit the following penalties!
@@ -66,9 +69,16 @@ sub test_bad_peptide {
 #
   my $peptide = 'QPGMCWNGDPQGDSR';
 	my @peptides = ( [$peptide, 100000000] );
+
+  # Score will vary with the default params
+  my $score = 85737500;
+
 	my $results = $pepselector->pabst_evaluate_peptides( peptides => \@peptides, score_idx => 1 );
 	for my $res ( @{$results} ) {
-		if ( int($res->[4]) == 101 ) {
+
+    # approx...
+    $res->[4] = int($res->[4] + 0.5);
+		if ( $res->[4] == $score ) {
       return 1;
     } else {
       return 0;
@@ -153,6 +163,38 @@ sub authenticate {
   return $sbeams->Authenticate();
 }
 
+sub test_fragmentation {
+#  my $pep = 'AFQSAYPEFSR';
+  my $pep = 'AAASGAEGGK';
+
+    my $frags = $pepselector->generate_fragment_ions( peptide_seq => $pep,
+                                                     max_mz => 2500,
+                                                     min_mz => 400,
+                                                       type => 'P',
+                                             precursor_excl => 5, 
+                                                     charge => 2,
+                                             omit_precursor => 1
+                                          );
+  for my $frag ( @$frags ) {
+#    print STDERR join ( ",", @{$frag} ) . "\n";
+  }
+  my $frag_list = $pepselector->order_fragments( $frags );
+  for my $frag ( @$frag_list ) {
+    print STDERR join ( ",", @{$frag} ) . "\n";
+  }
+  return 1;
+}
+
+sub get_SSR_calculator {
+  $atlas->{_ssrCalc} = $atlas->getSSRCalculator();
+}
+
+sub calculate_SSR {
+  my $pep_seq = 'DVQIILDSNITK';
+  my $ssr = $atlas->calc_SSR( seq => $pep_seq );
+  print STDERR "SSR is $ssr\n";
+  return sprintf( "%0.2f", $ssr ) == 31.69;
+}
 
 sub breakdown {
  # Put clean-up code here
