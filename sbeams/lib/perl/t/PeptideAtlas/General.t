@@ -3,7 +3,7 @@
 #$Id:  $
 
 use DBI;
-use Test::More tests => 15;
+use Test::More tests => 16;
 use Test::Harness;
 use strict;
 use FindBin qw ( $Bin );
@@ -33,6 +33,8 @@ ok( test_bad_override_peptide(), 'Check bad with override peptide scoring' );
 ok( test_fragmentation(), 'Check peptide fragmentation' );
 ok( get_SSR_calculator(), 'Get SSRCalc calculator' );
 ok( calculate_SSR(), 'Calculate SSR' );
+ok( test_hydrophobic_peptide(), 'Check hydrophobic peptide scoring and annotation' );
+ok( test_ECS_calculator(), 'Test ECS hydrophobicity calculator' );
 
 sub test_bad_peptide {
 # A very bad peptide, should hit the following penalties!
@@ -112,6 +114,31 @@ sub test_bad_override_peptide {
 	}
 }
 
+sub test_hydrophobic_peptide {
+
+  my %scores = ( 
+                'M' => 1,
+                'C' => 1,
+                '4H' => 0.5,
+                'Hper' => 0.5,
+                '5H' => 0.5,
+               );
+
+  my $peptide = 'MMYCLVAFWMILALLWM';
+# C,F,I,L,V,W,Y',
+# F,I,L,V,W,M',
+	my @peptides = ( [$peptide, 1000] );
+	my $results = $pepselector->pabst_evaluate_peptides( peptides => \@peptides, score_idx => 1, pen_defs => \%scores );
+	for my $res ( @{$results} ) {
+#    print STDERR join( ", ", @{$res} ) . "\n";
+    if ( int($res->[4]) == 125 && $res->[2] =~ /4H/ && $res->[2] =~ /Hper/ && $res->[2] =~ /5H/ ) {
+      return 1;
+    } else {
+      return 0;
+    }
+  }
+}
+
 sub test_good_peptide {
   my $peptide = 'AGNTLLDIIK';
 	my @peptides = ( [$peptide, 1000] );
@@ -167,20 +194,30 @@ sub test_fragmentation {
 #  my $pep = 'AFQSAYPEFSR';
   my $pep = 'AAASGAEGGK';
 
-    my $frags = $pepselector->generate_fragment_ions( peptide_seq => $pep,
-                                                     max_mz => 2500,
-                                                     min_mz => 400,
-                                                       type => 'P',
-                                             precursor_excl => 5, 
-                                                     charge => 2,
-                                             omit_precursor => 1
-                                          );
+  my $frags = $pepselector->generate_fragment_ions( peptide_seq => $pep,
+                                                         max_mz => 2500,
+                                                         min_mz => 400,
+                                                           type => 'P',
+                                                 precursor_excl => 5, 
+                                                         charge => 2,
+                                                 omit_precursor => 1
+                                                  );
+
+  my $ok = 0;
   for my $frag ( @$frags ) {
-#    print STDERR join ( ",", @{$frag} ) . "\n";
+    if ( $frag->[0] eq 'AAASGAEGGK' && sprintf( "%0.3f", $frag->[2] ) == 409.704 && $frag->[6] eq 'y' && $frag->[7] == 5 ) {
+      $ok++;      
+#    } else {
+#      print STDERR "$frag->[0], $frag->[6], $frag->[7], $frag->[2], " . sprintf( "%0.3f", $frag->[2] ) . "\n";
+    }
   }
+  return $ok;
+
+  # TBD
   my $frag_list = $pepselector->order_fragments( $frags );
   for my $frag ( @$frag_list ) {
-    print STDERR join ( ",", @{$frag} ) . "\n";
+#    AAASGAEGGK,AAASGAEGGK,409.7043075,2,461.235992,1,y,5,41.46529046,,P
+#    print STDERR join ( ",", @{$frag} ) . "\n";
   }
   return 1;
 }
@@ -192,9 +229,16 @@ sub get_SSR_calculator {
 sub calculate_SSR {
   my $pep_seq = 'DVQIILDSNITK';
   my $ssr = $atlas->calc_SSR( seq => $pep_seq );
-  print STDERR "SSR is $ssr\n";
+#  print STDERR "SSR is $ssr\n";
   return sprintf( "%0.2f", $ssr ) == 31.69;
 }
+
+sub test_ECS_calculator {
+  my $peptide = 'ARVLSQ';
+  my $esc = $atlas->calc_ECS( seq => $peptide );
+  return sprintf( "%0.4f", $esc) == -0.1183;
+}
+
 
 sub breakdown {
  # Put clean-up code here
