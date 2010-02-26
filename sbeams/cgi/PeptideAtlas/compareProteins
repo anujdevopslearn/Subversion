@@ -69,7 +69,7 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
   $sbeamsMOD->display_page_header(project_id => $project_id);
   $log->debug( "Begin page:" .time() );
   if ( $params{bioseq_id} || $params{restore} || $params{protein_list} ||
-       $params{protein_group_number}) {
+       $params{protein_group_number} || $params{protein_list_id} ) {
     $page .= get_alignment_display( %params );
   } else {
     $page .= $sbeams->makeErrorText( "Missing required parameter bioseq_id or protein_group_number" );
@@ -136,6 +136,26 @@ sub get_alignment_display {
        " with $sql\n\n";
     $args{bioseq_id} = join( ",", @bioseq_ids);
 
+  } elsif ( $args{protein_list_id} && $args{key_accession} ) {
+    my $sql = qq~
+    SELECT DISTINCT biosequence_id
+      FROM $TBAT_ATLAS_BUILD AB
+      JOIN $TBAT_BIOSEQUENCE B 
+        ON B.biosequence_set_id = AB.biosequence_set_id
+      JOIN peptideatlas.dbo.protein_list_protein PLP
+        ON B.biosequence_name = PLP.protein_name
+      JOIN peptideatlas.dbo.protein_list PL
+        ON PL.protein_list_id = PLP.protein_list_id
+      WHERE atlas_build_id = $curr_bid
+      AND PL.protein_list_id = 1
+      AND key_accession = '$args{key_accession}'
+    ~;
+    my $sth = $sbeams->get_statement_handle( $sql );
+    my @bioseq_ids;
+    while ( my @row = $sth->fetchrow_array() ) {
+      push @bioseq_ids, $row[0];
+    }
+    $args{bioseq_id} = join( ",", @bioseq_ids);
   }
   if ( $args{protein_list} ) {
 		$args{protein_list} =~ s/;/,/g;
