@@ -517,6 +517,32 @@ sub getCurrentAtlasOrganism {
   }
 }
 
+sub getDefaultProteinListID {
+  my $self = shift();
+  my %args = @_;
+
+  my $build_id = $args{build_id} || return undef;
+  my $sbeams = $self->getSBEAMS();
+
+  my $projects = join( ', ', $sbeams->getAccessibleProjects() );
+
+# 0 protein_list_id
+# 1 protein_list_name
+# 2 contributor_name
+# 3 contributor_contact_id
+# 4 protein_list_description
+# 5 project_id
+
+  my $sql = qq~
+  SELECT protein_list_id, protein_list_name, contributor_name protein_list_description, project_id
+  FROM peptideatlas.dbo.protein_list
+  WHERE project_id IN ( $projects )
+  ORDER BY protein_list_id DESC
+  ~;
+
+  my @rows = $sbeams->selectrow_array($sql);
+  return $rows[0];
+}
 
 ###############################################################################
 1;
