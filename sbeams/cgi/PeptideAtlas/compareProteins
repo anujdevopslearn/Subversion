@@ -131,9 +131,12 @@ sub get_alignment_display {
       )
       ~;
 
-    my @bioseq_ids = $sbeams->selectOneColumn($sql) or
-       die "\nERROR: Unable to find any proteins in protein group".
-       " with $sql\n\n";
+    my @bioseq_ids = $sbeams->selectOneColumn($sql);
+
+    if ( !@bioseq_ids ) {
+      my $errstr = $sbeams->makeErrorText( "No proteins found in current build in protein group $args{protein_group_number}");
+      return ( "$errstr <BR><BR>  $clustal_display" );
+    }
     $args{bioseq_id} = join( ",", @bioseq_ids);
 
   } elsif ( $args{protein_list_id} && $args{key_accession} ) {
