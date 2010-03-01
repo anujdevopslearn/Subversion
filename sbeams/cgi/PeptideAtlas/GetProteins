@@ -248,6 +248,7 @@ sub handle_request {
     $parameters{input_form_format} = "minimum_detail";
     $parameters{presence_level_constraint} = "1,2";
     $parameters{redundancy_constraint} = "4";
+    $parameters{covering_constraint} = "0";
   }
 
 
@@ -355,14 +356,6 @@ sub handle_request {
     constraint_value=>$parameters{n_distinct_peptides_constraint} );
   return if ($n_distinct_peptides_clause eq '-1');
 
-#  #### Build GROUP_NUMBER constraint
-#  my $group_number_clause = $sbeams->parseConstraint2SQL(
-#    constraint_column=>"PID.protein_group_number",
-#    constraint_type=>"flexible_int",
-#    constraint_name=>"Group Number",
-#    constraint_value=>$parameters{protein_group_number_constraint} );
-#  return if ($group_number_clause eq '-1');
-
   #### Build PROTEIN_GROUP constraint
   my $protein_group_representative_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"BS_REP.biosequence_name",
@@ -387,13 +380,14 @@ sub handle_request {
     constraint_value=>$parameters{redundancy_constraint} );
   return if ($redundancy_clause eq '-1');
 
-  #### Build SAMPLE_ID constraint
-  my $samples_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"PIS.sample_id",
-    constraint_type=>"int_list",
-    constraint_name=>"Samples ",
-    constraint_value=>$parameters{sample_ids} );
-  return if ($samples_clause eq '-1');
+  #### Build IS_COVERING constraint
+  my $is_covering_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PID.is_covering",
+    constraint_type=>"plain_text",
+    constraint_name=>"Is Covering",
+    constraint_value=>$parameters{covering_constraint} );
+  return if ($is_covering_clause eq '-1');
+  $is_covering_clause =~ s/LIKE 'on'/= 1/;
 
   ## get organism_id to pass on to url_cols
   my $tsql = qq~
@@ -422,8 +416,7 @@ sub handle_request {
      {
        print $q->header(-status=>$q->cgi_error);
      } elsif (!$fh) {
-       # We get here when, after successfully uploading, we sort by
-       # column.
+       # We get here when, after successfully uploading, we sort by column.
        #print "Could not create file handle for $parameters{upload_file}!\n"
      }
 
@@ -490,14 +483,11 @@ sub handle_request {
 
   #### Define some variables needed to build the query
   my @column_array_refs;
-  #my $mapping_constraints = qq~
-        #$samples_clause
-  #~;
-  my $mapping_constraints = ""; #can't do any mapping anymore; no pep info
 
   #### This query is a union of 3 clauses. Define stuff specific
   #### to each clause.
   my @biosequence_name_sql;
+  my @is_covering_sql;
   my @presence_level_sql;
   my @probability_sql;
   my @confidence_sql;
@@ -512,6 +502,7 @@ sub handle_request {
 
   # Define SQL specific for displaying protein identifications
   $biosequence_name_sql[0] = "BS_REF.biosequence_name";
+  $is_covering_sql[0] = "(CASE WHEN PID.is_covering=1 THEN 'C' ELSE '' END)";
   $presence_level_sql[0] = "PPL.level_phrase";
   $probability_sql[0] = "STR(PID.probability,7,3)";
   $confidence_sql[0] = "STR(PID.confidence,7,3)";
@@ -528,6 +519,7 @@ sub handle_request {
   # Define SQL specific for displaying indistinguishables, identicals
   # relative to protein identifications
   $biosequence_name_sql[1] = "BS_REL.biosequence_name";
+  $is_covering_sql[1] = "NULL";
   $presence_level_sql[1] = "NULL";
   $probability_sql[1] = "NULL";
   $confidence_sql[1] = "NULL";
@@ -544,6 +536,7 @@ sub handle_request {
   # Define SQL specific for displaying biosequences identical to
   # indistinguishables
   $biosequence_name_sql[2] = "BS_INDIS.biosequence_name";
+  $is_covering_sql[2] = "NULL";
   $presence_level_sql[2] = "NULL";
   $probability_sql[2] = "NULL";
   $confidence_sql[2] = "NULL";
@@ -570,6 +563,7 @@ sub handle_request {
     }
     my @column_array = (
         ["biosequence_name",$biosequence_name_sql[$i],"Biosequence Name"],
+        ["is_covering",$is_covering_sql[$i],"Cover ing Set"],
 	["presence_level",$presence_level_sql[$i],"Presence Level"],
 	["probability",$probability_sql[$i],"Protein Prophet Prob"],
 	["confidence",$confidence_sql[$i],"Mult Hyp Test Prob"],
@@ -664,7 +658,7 @@ sub handle_request {
   ~;
 
   my @special_clauses;
-  $special_clauses[0] = '';
+  $special_clauses[0] = $is_covering_clause;
   $special_clauses[1] = $redundancy_clause;
   $special_clauses[2] = $redundancy_clause;
 
@@ -696,7 +690,6 @@ sub handle_request {
          $biosequence_desc_clause
          $n_observations_clause
          $estimated_ng_per_ml_clause
-         $mapping_constraints
          $probability_clause
          $protein_group_representative_clause
          $presence_level_clause
