@@ -79,8 +79,9 @@ $preferred_patterns_aref =
 my $n_patterns = scalar @{$preferred_patterns_aref};
 if ( $n_patterns == 0 ) {
 print "WARNING: No protein identifier patterns found ".
-      "for organism $organism_id! ".
-      "No sequence database will be preferred over another.\n";
+      "for organism $organism_id!\n".
+      "Protein identifiers will be chosen for indistinguishables\n".
+      " according to rules for human.\n";
 }
 
 my $PAidentlist = $OPTIONS{PAidentlist};
