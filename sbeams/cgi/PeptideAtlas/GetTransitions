@@ -1,0 +1,886 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : GetTransitions
+#
+# Description : page retrieve peptides and MS/MS fragment ions from PABST
+#               tables 
+###############################################################################
+
+
+## Setup objects and globals 
+use strict;
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ( $q $current_contact_id $current_username
+$PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+$TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+@MENU_OPTIONS);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::BestPeptideSelector;
+
+my $sbeams = new SBEAMS::Connection;
+my $atlas = new SBEAMS::PeptideAtlas;
+$atlas->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR( 'PeptideAtlas' );
+my $best_peptide = new SBEAMS::PeptideAtlas::BestPeptideSelector;
+$best_peptide->setAtlas( $atlas );
+$best_peptide->setSBEAMS( $sbeams );
+
+
+## Set program name and usage banner for command like use
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+    --verbose n    Set verbosity level.    default is 0
+    --quiet        Set flag to print nothing at all except errors
+    --debug n      Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+
+## Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) 
+{
+    print "$USAGE";
+    exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+if ($DEBUG) 
+{
+    print "Options settings:\n";
+    print "    VERBOSE = $VERBOSE\n";
+    print "    QUIET = $QUIET\n";
+    print "    DEBUG = $DEBUG\n";
+}
+
+main();
+exit(0);
+
+
+# Main Program
+sub main 
+{
+  # Authenticate and exit if a username is not returned
+  my $current_username = $sbeams->Authenticate( allow_anonymous_access => 1 );
+  exit unless $current_username;
+
+
+  #### Read in the default input parameters
+  my %parameters;
+
+  $parameters{uploaded_file_not_saved} = 1;
+
+  my $n_params_found = $sbeams->parse_input_parameters(
+      q=>$q,parameters_ref=>\%parameters);
+
+  #$sbeams->printDebuggingInfo($q);
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+  #### Decide what action to take based on information so far
+  if ( !$parameters{action} ) {
+    print_form ( %parameters );  
+  } else {
+    fetch_transitions( %parameters );  
+  }
+
+
+} # end main
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub print_form {
+
+  my %args = @_;
+
+  # Historical, don't ask.
+  my %parameters = %args;
+
+  my $project_id = $atlas->getProjectID(
+    atlas_build_id => $parameters{atlas_build_id}
+  );
+
+  $atlas->display_page_header(project_id => $project_id);
+
+  #### Show current user context information
+  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+
+  #$sbeams->printUserContext();
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $atlas->getTabMenu(
+      parameters_ref => \%parameters,
+      program_name => $PROG_NAME,
+  );
+
+  print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+
+  #### Define some generic variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+  #### Read in the standard form values
+  my $apply_action    = $parameters{'action'} || $parameters{'apply_action'};
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+  # Historical, don't ask.
+
+    #### Set some specific settings for this program
+    my $CATEGORY="Get PABST List";
+
+    $TABLE_NAME="AT_GetPABSTList" unless ($TABLE_NAME);
+
+    ($PROGRAM_FILE_NAME) =
+        $atlas->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+
+    my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+
+    #### Get the columns and input types for this table/query
+    my @columns = $atlas->returnTableInfo($TABLE_NAME,"ordered_columns");
+
+    my %input_types = 
+        $atlas->returnTableInfo($TABLE_NAME,"input_types");
+
+
+    #### Read the input parameters for each column
+    my $n_params_found = $sbeams->parse_input_parameters(
+        q=>$q,parameters_ref=>\%parameters,
+        columns_ref=>\@columns,input_types_ref=>\%input_types);
+     #$sbeams->printDebuggingInfo($q);
+
+
+    #### If the apply action was to recall a previous resultset, do it
+    my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+
+    #### Set some reasonable defaults if no parameters supplied
+    unless ($n_params_found) 
+    {
+        $parameters{input_form_format} = "minimum_detail";
+    }
+
+    ##Input form:  action is set by PROGRAM_FILE_NAME, so sub it w/ display page:
+    $sbeams->collectSTDOUT();
+    $sbeams->display_input_form(
+        TABLE_NAME=>$TABLE_NAME,
+        CATEGORY=>$CATEGORY,
+        apply_action=>$apply_action,
+        parameters_ref=>\%parameters,
+        input_types_ref=>\%input_types,
+        mask_user_context=> '1',
+    );
+    my $form = $sbeams->fetchSTDOUT();
+    my $id = 'ID="protein_name_constraint"';
+    $form =~ s/(NAME=\"protein_name_constraint\")/$1 $id/;
+
+
+
+    my $sub_form = $best_peptide->get_change_form( form_only => 1, hide_buttons => 1 );
+    $sub_form =~ s/tbl_hidden/tbl_visible/gm;
+   
+    $form =~ s/(\<INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="AT_GetPABSTList"\>)/$1<BR>$sub_form/gm;
+    $form =~ s/\<\/TABLE\>/<TR><TD COLSPAN=3>$sub_form<\/TD><\/TR><\/TABLE>/i;
+#    $form .= "<TR><TD COLSPAN=3>$sub_form</TD></TR>\n";
+    $form .= "<TR><TD VALIGN=TOP><B>Adjust penalties:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$sub_form</TD></TR>\n";
+
+    print qq~
+    $form
+    ~;
+#    <TR><TD COLSPAN=3>$sub_form</TD></TR>
+
+    #### Display the form action buttons
+    $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
+
+  $atlas->display_page_footer();
+
+
+} # end handle_request
+
+
+sub fetch_transitions {
+  my %args = @_;
+
+  # Historical, don't ask.
+  my %parameters = %args;
+
+  # Hackage
+  $parameters{consensus_library_id} ||= $parameters{consensus_library_id};
+  my $is_html = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
+  my $project_id = $atlas->getProjectID(
+    atlas_build_id => $parameters{atlas_build_id}
+  );
+
+  my $content = '';
+
+  #### Show current user context information
+  $content .=  "<BR>\n" if $is_html;
+  
+  $atlas->display_page_header(project_id => $project_id);
+
+  #$sbeams->printUserContext();
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $atlas->getTabMenu(
+      parameters_ref => \%parameters,
+      program_name => $PROG_NAME,
+  );
+
+  $content .= $tabMenu->asHTML() if $is_html;
+
+  #### Define some generic variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+  #### Read in the standard form values
+  my $apply_action    = $parameters{'action'} || $parameters{'apply_action'};
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+
+
+  #########################################################################
+  #### Process all the constraints
+
+  # Try to limit size of returned resultset.
+  my %ok_param = ( overall => 0 );
+	{ # Check params block
+
+	  # Safe if protein_name is set and has no fully wildcarded terms
+	  if ( $parameters{protein_name_constraint} ) {
+	    if ( $parameters{protein_name_constraint} !~ /;%;|;%$|^%;|^%$/ ) {
+				$ok_param{protein_name_constraint}++;
+				$ok_param{overall}++;
+			}
+		}
+	  if ( $parameters{peptide_sequence_constraint} ) {
+	    if ( $parameters{peptide_sequence_constraint} !~ /^%$/ ) {
+				$ok_param{peptide_sequence_constraint}++;
+				$ok_param{overall}++;
+			}
+		}
+	}
+
+  #### Build atlas_build_id constraint
+  my $atlas_build_clause = $sbeams->parseConstraint2SQL(
+      constraint_column=>"PI.atlas_build_id",
+      constraint_type=>"int_list",
+      constraint_name=>"Atlas Build",
+      constraint_value=>$parameters{atlas_build_id} );
+  return if ($atlas_build_clause eq '-1');
+  ##  replace AND with WHERE
+  $atlas_build_clause =~ s/(.*)AND(.*)/$1WHERE$2/;
+
+  my $pabst_build_clause = $sbeams->parseConstraint2SQL(
+      constraint_column=>"PP.pabst_build_id",
+      constraint_type=>"int_list",
+      constraint_name=>"PABST Build",
+      constraint_value=>$parameters{pabst_build_id} );
+  return if ($pabst_build_clause eq '-1');
+
+  #### Build consensus_library_id constraint
+  my $consensus_library_clause = $sbeams->parseConstraint2SQL(
+      constraint_column=>"NL.consensus_library_id",
+      constraint_type=>"int_list",
+      constraint_name=>"Consensus Library",
+      constraint_value=>$parameters{consensus_library_id} );
+  return if ($consensus_library_clause eq '-1');
+
+  #### Build PEPTIDE_SEQUENCE constraint
+  my $peptide_sequence_clause = $sbeams->parseConstraint2SQL(
+      constraint_column=>"PP.peptide_sequence",
+      constraint_type=>"plain_text",
+      constraint_name=>"Peptide Sequence",
+      constraint_value=>$parameters{peptide_sequence_constraint} );
+  return if ($peptide_sequence_clause eq '-1');
+
+  #### Build BEST_PROBABILITY constraint
+  my $best_probability_clause = $sbeams->parseConstraint2SQL(
+      constraint_column=>"PI.best_probability",
+      constraint_type=>"flexible_float",
+      constraint_name=>"Best Probability",
+      constraint_value=>$parameters{best_probability_constraint} );
+  return if ($best_probability_clause eq '-1');
+
+  #### Build N_OBSERVATIONS constraint
+  my $n_observations_clause = $sbeams->parseConstraint2SQL(
+      constraint_column=>"PI.n_observations",
+      constraint_type=>"flexible_int",
+      constraint_name=>"Number of Observations",
+      constraint_value=>$parameters{n_observations_constraint} );
+  return if ($n_observations_clause eq '-1');
+
+  #### Build N_SAMPLES constraint
+  my $n_samples_clause = $sbeams->parseConstraint2SQL(
+      constraint_column=>"PI.n_samples",
+      constraint_type=>"flexible_int",
+      constraint_name=>"Number of Samples",
+      constraint_value=>$parameters{n_samples_constraint} );
+  return if ($n_samples_clause eq '-1');
+
+
+    #### Build EMPIRICAL_PROTEOTYPIC_SCORE constraint
+    my $empirical_proteotypic_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"PI.empirical_proteotypic_score",
+        constraint_type=>"flexible_float",
+        constraint_name=>"Empirical Proteotypic Score",
+        constraint_value=>$parameters{empirical_proteotypic_constraint} );
+  return if ($empirical_proteotypic_clause eq '-1');
+
+
+    #### Build n_protein_mappings constraint
+    my $n_protein_mappings_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"PI.n_protein_mappings",
+        constraint_type=>"flexible_int",
+        constraint_name=>"n_protein_mappings",
+        constraint_value=>$parameters{n_protein_mappings_constraint} );
+  return if ($n_protein_mappings_clause eq '-1');
+
+    #### Build n_genome_locations constraint
+    my $n_genome_locations_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"PI.n_genome_locations",
+        constraint_type=>"flexible_int",
+        constraint_name=>"n_genome_locations",
+        constraint_value=>$parameters{n_genome_locations_constraint} );
+  return if ($n_genome_locations_clause eq '-1');
+
+    #### Build peptide_length constraint
+    my $peptide_length_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"peptide_length",
+        constraint_type=>"flexible_int",
+        constraint_name=>"peptide_length",
+        constraint_value=>$parameters{peptide_length} );
+  return if ($peptide_length_clause eq '-1');
+  $peptide_length_clause =~ s/peptide_length/LEN\(peptide_sequence\)/;
+
+
+  # provisional, try to handle newline delimited lists.
+  $parameters{protein_name_constraint} =~ s/\r\n/;/g;
+  $parameters{protein_name_constraint} =~ s/\n/;/g;
+  $parameters{protein_name_constraint} =~ s/\s+/;/g;
+
+
+  #### Build PROTEIN_NAME constraint
+  my $biosequence_name_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"BS.biosequence_name",
+        constraint_type=>"plain_text",
+        constraint_name=>"Protein Name",
+        constraint_value=>$parameters{protein_name_constraint} );
+   return if ($biosequence_name_clause eq '-1');
+
+  $log->debug( "Protein name constraint is >$biosequence_name_clause<" );
+
+  my %protein_hash;
+
+  # protein name field supercedes (obviates) file upload
+  if ( $parameters{upload_file} && !$biosequence_name_clause ) {
+
+    ## upload the file to a file handler
+    my $fh = $q->upload('upload_file');
+
+    if (!$fh && $q->cgi_error && $is_html) {
+      print $q->header(-status=>$q->cgi_error);
+			exit;
+    }
+
+    my $max_cnt = 1000;
+    # size constraint of 1 MB, restrict $count < $max_cnt
+    if ( (-T $fh) && (-s $fh < 1000000) ) {
+      my $count = 0;
+      my $read_file=0;
+      ## protein list
+      my $prt;
+      while ($prt=<$fh>) {
+        chomp($prt);
+        $prt =~ s/\s+$//;
+        if ($prt) {
+          $protein_hash{$prt}++;
+          $count = $count + 1;
+        }
+        last if ($count >= $max_cnt );
+      }
+      # secondary param check block
+  		# Make sure this isn't a null constraint if we are counting on it
+	    if ( $count ) {
+	      $ok_param{protein_file_constraint}++;
+	      $ok_param{overall}++;
+		  }
+    }
+
+    ## join with a commas:
+    my $protein_list = "'" . join( "','", keys( %protein_hash)) . "'";
+
+#    foreach my $pr (keys %protein_hash) {
+#      $protein_list = "'$protein_hash{$pr}',$protein_list"; 
+#    }
+#    ## trim off last comma:
+#    $protein_list =~ s/(.*)(,)$/$1/;
+
+    $biosequence_name_clause = "     AND BS.biosequence_name IN ( $protein_list )" if $protein_list;
+  }
+
+  unless ( 1 || $ok_param{overall} ) {
+    # Print page message
+    # redirect back to form
+		my $url = $q->self_url();
+		$url =~ s/ViewPABSTList/GetPABSTList/;
+		$sbeams->set_page_message( type => 'Error', msg => <<"    END" );
+		<BR>
+		You must provide either a protein list (via protein_name form field or uploaded file) or
+		a peptide sequence constraint.  A full wildcard search does not constitute a valid constraint. 
+		<BR>
+    END
+		$log->warn( "Bad constraints, URL is $url" );
+
+		# rassa frassa
+#    my $std = $sbeams->fetchSTDOUT();
+
+		print $q->redirect( -uri => $url );
+		exit;
+	}
+
+
+  ## n_fragment_ions defaults to 3
+  my $n_fragment_ions = 3;
+  if ($parameters{'n_highest_intensity_fragment_ions'} =~ /^(\d+)$/) {
+    $n_fragment_ions = $1;
+  }
+
+  ## n_peptides_per_protein defaults to 3 
+  my $n_peps_per_prot = 3;
+  if ($parameters{'n_peptides_per_protein'} =~ /^([\d]+)$/) {
+    $n_peps_per_prot = $1;
+  }
+
+
+  my @column_array;
+
+  my $peptide_sql;
+  my %prot_peps;
+  my %pep_frags;
+  my %ce;
+  my @display_rows = ( [qw( Protein Sequence Chg q1_mz q3_mz Intensity Ion CE SSRCalc RT n_obs Annot Source ) ] );
+
+  my %row2chg;
+
+  my $is_changed = 0;
+  my $default_params = $best_peptide->get_default_pabst_scoring();
+
+  for my $pparam ( keys ( %{$default_params} ) ) {
+    if ( defined $parameters{$pparam} ) {
+      if ( $parameters{$pparam} ne $default_params->{$pparam} ) {
+        $log->info( "$pparam is different, $parameters{$pparam} ne $default_params->{$pparam} " );
+        $is_changed++;
+      }
+    }
+  }
+
+  if ( $is_changed ) {
+    $best_peptide->set_pabst_penalty_values( %parameters );
+  }
+
+  #########################################################################
+  #### If QUERY or VIEWRESULTSET was selected, display the data
+  if ($apply_action =~ /QUERY/i ) {
+    my $ed = "<td>&nbsp;</td>";
+
+    my $note = $sbeams->makeInfoText( "Note: masses are mono-isotopic" );
+
+    $content .= "<BR>$note\n"  if $is_html;
+
+
+    my $lib_sql = qq~
+    SELECT DISTINCT preceding_residue, peptide_sequence, following_residue,
+    syntheis_adjusted_score, transition_source, precursor_ion_mass, 
+    precursor_ion_charge, fragment_ion_mass, fragment_ion_charge,
+    fragment_ion_label, ion_rank, relative_intensity, 
+    SSRCalc_relative_hydrophobicity, biosequence_name,
+    merged_score, n_observations
+    FROM $TBAT_PABST_PEPTIDE PP 
+    JOIN $TBAT_PABST_PEPTIDE_MAPPING PM 
+    ON PM.pabst_peptide_id = PP.pabst_peptide_id
+    JOIN $TBAT_PABST_TRANSITION PT 
+    ON PT.pabst_peptide_id = PP.pabst_peptide_id 
+    JOIN $TBAT_BIOSEQUENCE BS
+    ON BS.biosequence_id = PM.biosequence_id 
+    WHERE pabst_build_id = $parameters{pabst_build_id}
+      $pabst_build_clause
+      $atlas_build_clause
+      $peptide_sequence_clause
+      $best_probability_clause
+--      $n_observations_clause
+--      $empirical_proteotypic_clause
+--      $n_protein_mappings_clause
+--      $n_genome_locations_clause
+      $peptide_length_clause
+      $biosequence_name_clause
+    ORDER BY biosequence_name, 
+    syntheis_adjusted_score DESC, precursor_ion_charge ASC,
+    ion_rank ASC, relative_intensity DESC  
+    ~;
+
+    my @headings = ( Protein => 'Protein Name/Accession',
+                     Pre => 'Previous amino acid',
+                Sequence => 'Amino acid sequence of peptide',
+                     Fol => 'Followin amino acid',
+             'Score' => 'Adjusted proteotypic score',
+                     Src => 'Transition source, one of PA, QT, Q3 (triple quad), IT (ion trap), PR (In silico/theoretical)',
+                   Q1_mz => 'Precursor ion m/z',
+                  Q1_chg => 'Precursor ion charge',
+                   Q3_mz => 'Fragment ion m/z',
+                  Q3_chg => 'Fragment ion charge',
+                   Label => 'Fragment ion label (series/number)',
+                    Rank => 'PABST transition rank',
+                      RI => 'Fragment peak relative intensity (scaled to 10000 Units)',
+                     SSR => 'SSR Calc relative hydrophobicity',
+                   );
+
+
+  my @peptides = ( $best_peptide->make_sort_headings( headings => \@headings,
+                                              default => 'adj_SS' )  );
+  my $naa = $sbeams->makeInactiveText( 'n/a' );
+
+  my %src_name = ( P => 'PR', Q => 'Q3', T => 'QT', I => 'IT', 'R' => 'PA' );
+
+  my $sth = $sbeams->get_statement_handle( $lib_sql );
+
+  my %prots;
+  my %peps;
+
+  my @namelist = ( join( '::', qw(protein  sequence q1_mz q3_mz RT rank q1_chg q3_chg peak_intensity ion_label collision SSR) ) );
+
+  # placeholder, we don't have a source for retention time.
+  my $rt = '';
+
+  if ( $is_changed ) {
+     $log->info( "Collect db values: " . time() );
+
+    # Collect cached peptides/values from db handle
+    my @short_list;
+    my %peptide_fragments;
+    my $cnt;
+    while( my @row = $sth->fetchrow_array() ) {
+      $cnt++;
+#      $log->info( "going in, prot $row[13] pep $row[1] has " . scalar( @row ) . " items " );
+
+      # Add each unique prot peptide
+      my $peptide_key = join( '', @row[13,1] );
+#      $log->info( "caching for pepkey $peptide_key" );
+      if ( !$peptide_fragments{$peptide_key} ) {
+        $peptide_fragments{$peptide_key} ||= []; 
+        push @short_list, [@row];
+      }
+      push @{$peptide_fragments{$peptide_key}}, [@row];
+    }
+    $log->info( "Whole array has $cnt items " );
+    $log->info( "Short array has " . scalar( @short_list ) . " items " );
+
+     $log->info( "Run PABST scoring " . time() );
+    # Run pabst scoring - will clobber input array
+    $best_peptide->pabst_evaluate_peptides( peptides => \@short_list,
+                                 previous_idx => 0, 
+                                      seq_idx => 1, 
+                                   follow_idx => 2, 
+                                hydrophob_idx => 12,
+                                    score_idx => 14,
+                                                       );
+ 
+    # Sort - might be time hog
+    $log->info( "Sorting " . time() );
+    # Sort first by protein, next by adjusted score!
+    @short_list = sort { $a->[13] cmp $b->[13] ||                    
+                           $b->[18] <=> $a->[18] } @short_list;
+    $log->info( "Done! " . time() );
+
+    # debug
+#    for my $row ( @initial_list ){ #      $log->info( "coming out, ($row->[1]) row has " . scalar( @{$row} ) . " items " ); }
+
+    # Should now be sorted, just have to apply n_pep/prot and n_frag/pep logic,
+    # and format output.
+    for my $peptide ( @short_list ) { 
+
+      my @row = @{$peptide};
+      my $prot = $row[13];
+
+      $prots{$prot} ||= {};
+      $prots{$prot}->{$row[1]}++;
+      if ( scalar( keys( %{$prots{$prot}} ) ) > $n_peps_per_prot ) {
+#        $log->info( "2 many peps for $prot -  $row[1], $row[16],  $row[18]" );
+        next; 
+      }
+#      $log->info( "Got past peps for $prot - $row[1], $row[16],  $row[18]" );
+      my $pep_key = $prot . $row[1];
+#      $log->info( "Pep key is $pep_key" );
+
+      # Use frag for 4-11;
+      # Hide redundant frags!
+      my %frag_seen;
+      for my $frag ( @{$peptide_fragments{$pep_key}} ) {
+
+# 0 preceding_residue
+# 1 peptide_sequence
+# 2 following_residue
+# 3 syntheis_adjusted_score
+# 4 transition_source
+# 5 precursor_ion_mass
+# 6 precursor_ion_charge
+# 7 fragment_ion_mass
+# 8 fragment_ion_charge
+# 9 fragment_ion_label
+# 10 ion_rank
+# 11 relative_intensity
+# 12 SSRCalc_relative_hydrophobicity
+# 13 biosequence_name
+# 14 merged_score
+# 15 n_observations
+        # Problem cases 
+        # 1) duplicate ions
+        my $frag_key = join( ':', @{$frag}[1,6,8,9] );
+        if ( $frag_seen{$frag_key}++ ) {
+          $log->info( "rejected $frag_key for duplicity" );
+          next;
+        }
+
+        # 2) fragment ion too big
+        if ( abs( $frag->[5] * $frag->[6] - $frag->[7] * $frag->[8] ) < 5 ) {
+          $log->info( "rejected $row[1] frag for too bigosity" );
+          next;
+        }
+        $peps{$pep_key}++;
+        last if $peps{$pep_key} > $n_fragment_ions;
+
+        $row[10] = $peps{$pep_key};
+  
+        $row[6] = $frag->[6];
+        $row[8] = $frag->[8];
+        $row[9] = lcfirst($frag->[9]);
+        $row[10] = $frag->[10];
+
+        $row[5] = sprintf( "%0.2f", $frag->[5] );
+        $row[4] = $src_name{$frag->[4]};
+        $row[7] = sprintf( "%0.2f", $frag->[7] );
+        $row[3] = sprintf( "%0.2f", $row[18] );
+        $row[12] = sprintf( "%0.1f", $row[12] ) if $peps{$pep_key} == 1;
+        if ( $frag->[11] ) {
+          $row[11] = int( $frag->[11] );
+        } elsif ( $is_html ) {
+          $row[11] = $naa; 
+        } else {
+          $row[11] = ''; 
+        }
+    
+        my $ce = calculateCE( mz => $frag->[5], chg => $frag->[6] );
+        push @peptides, [ $prot, @row[0..12] ];
+
+        # protein  sequence q1_mz q3_mz RT rank q1_chg q3_chg peak_intensity ion_label collision SSR
+        push @namelist, join( '::', $prot, @row[1,5,7],'',@row[10,6,8,11,9],$ce, $row[12] );
+      }
+
+    } # End loop sorted list
+
+
+
+
+  } else {
+     $log->info( "Using static values: " . time() );
+
+    my %frag_seen;
+    while( my @row = $sth->fetchrow_array() ) {
+      my $prot = $row[13];
+
+      $prots{$prot} ||= {};
+      $prots{$prot}->{$row[1]}++;
+      if ( scalar( keys( %{$prots{$prot}} ) ) > $n_peps_per_prot ) {
+        next; 
+      }
+
+      my $pep_key = $prot . $row[1];
+
+# 0 preceding_residue
+# 1 peptide_sequence
+# 2 following_residue
+# 3 syntheis_adjusted_score
+# 4 transition_source
+# 5 precursor_ion_mass
+# 6 precursor_ion_charge
+# 7 fragment_ion_mass
+# 8 fragment_ion_charge
+# 9 fragment_ion_label
+# 10 ion_rank
+# 11 relative_intensity
+# 12 SSRCalc_relative_hydrophobicity
+# 13 biosequence_name
+# 14 merged_score
+# 15 n_observations
+      # Problem cases 
+      # 1) duplicate ions
+      my $frag_key = join( ':', @row[1,6,8,9] );
+      if ( $frag_seen{$frag_key}++ ) {
+        $log->info( "rejected $frag_key for duplicity" );
+        next;
+      }
+
+      # 2) fragment ion too big
+      if ( abs( $row[5] * $row[6] - $row[7] * $row[8] ) < 5 ) {
+        $log->info( "rejected $row[1] frag $row[9] for too bigosity" );
+        next;
+      }
+
+      $peps{$pep_key}++;
+      next if $peps{$pep_key} > $n_fragment_ions;
+
+      $row[10] = $peps{$pep_key};
+      $row[9] = lcfirst($row[9]);
+  
+      $row[5] = sprintf( "%0.2f", $row[5] );
+      $row[4] = $src_name{$row[4]};
+      $row[7] = sprintf( "%0.2f", $row[7] );
+      $row[3] = sprintf( "%0.2f", $row[3] );
+      $row[12] = sprintf( "%0.1f", $row[12] );
+      if ( $row[11] ) {
+        $row[11] = int( $row[11] );
+      } elsif ( $is_html ) {
+        $row[11] = $naa; 
+      } else {
+        $row[11] = ''; 
+      }
+  
+      my $ce = calculateCE( mz => $row[5], chg => $row[6] );
+      push @peptides, [ $prot, @row[0..12] ];
+
+      # protein  sequence q1_mz q3_mz RT rank q1_chg q3_chg peak_intensity ion_label collision SSR
+      push @namelist, join( '::', $prot, @row[1,5,7],'',@row[10,6,8,11,9],$ce, $row[12] );
+
+    } # End loop over resultset
+
+  }
+
+
+# prot Protein => 'Protein Name/Accession',
+# 0 Pre => 'Previous amino acid',
+# 1 Sequence => 'Amino acid sequence of peptide',
+# 2 Fol => 'Followin amino acid',
+# 3 'Score' => 'Adjusted proteotypic score',
+# 4 Src => 'Transition source, one of PATR, QQQ (triple quad), IT (ion trap), IS (In silico/theoretical)',
+# 5 Q1_mz => 'Precursor ion m/z',
+# 6 Q1_chg => 'Precursor ion charge',
+# 7 Q3_mz => 'Fragment ion m/z',
+# 8 Q3_chg => 'Fragment ion charge',
+# 9 Label => 'Fragment ion label (series/number)',
+# 10 Rank => 'PABST transition rank',
+# 11 RI => 'Fragment peak relative intensity (scaled to 10000 Units)',
+# 12 SSR => 'SSRCalc',
+# 13 Protein name => 
+# 13 Merged score =>  
+
+  my $align = [qw(center center left center center right right right center right left right right)];
+
+  my ( $html, $rs_name ) = $atlas->encodeSectionTable( header => 1, 
+                                                        width => '600',
+                                                      tr_info => $args{tr},
+                                                       align  => $align,
+                                                         rows => \@peptides,
+                                                 rows_to_show => 20,
+                                                     max_rows => 500,
+                                                 bkg_interval => 3, 
+                                                 set_download => 'Download peptides', 
+                                                  file_prefix => 'best_peptides_', 
+                                                       header => 1,
+                                                     bg_color => '#EAEAEA',
+                                                     sortable => 1,
+                                                     table_id => 'pabst',
+                                                  close_table => 1,
+                                                     );
+
+  my $gMF =  $sbeams->getGaggleMicroformat( data => \@namelist,
+                                        organism => 'Yeast', 
+                                          object => 'namelist', 
+                                           start => 1, 
+                                            name => 'SRM_transitions', 
+                                            type => 'direct' );
+
+
+      
+      my $col_info = $atlas->getAnnotationColumnDefs();
+      my $help_text = $atlas->get_table_help_section( name => 'Transitions',
+                                                   description => 'Q1/Q3 transition pairs for SRM experiments',
+                                                   heading => 'Column Definitions',
+                                                   entries => $col_info,
+                                                   ); 
+      if ( $is_html ) {
+        $content .= "<BR><BR><BR>$help_text<TABLE>$html</TABLE> $gMF" 
+      } else {
+				my $rs = $atlas->get_cached_resultset( rs_name => $rs_name );
+
+        $sbeams->displayResultSet( resultset_ref => $rs,
+                             query_parameters_ref=>\%parameters,
+                             rs_params_ref=> {},
+                             url_cols_ref=> [],
+                             hidden_cols_ref=> {},
+                              max_widths=> {},
+                             column_titles_ref=> $rs->{column_list_ref},
+                             base_url=> '',
+														 output_mode => $sbeams->output_mode()
+                                  );
+
+
+      }
+
+
+    #### If QUERY was not selected, then tell the user to enter some parameters
+  } else {
+    if ($sbeams->invocation_mode() eq 'http' && $is_html ) {
+      $content .= "<H4>Select parameters above and press QUERY</H4>\n";
+    } else {
+      $content .= "You must supply some parameters to contrain the query\n";
+    }
+  }
+
+  print $content;
+  $atlas->display_page_footer();
+
+} # end handle_request
+
+
+sub calculateCE {
+  my %args = @_;
+  for my $attr ( qw( charge mz ) ) {
+    return '' unless $attr;
+  }
+  my $ce = '';
+  if ( $args{charge} == 2 ) {
+    $ce = ( 0.044 * $args{mz} ) + 5.5;
+  } elsif ( $args{charge} == 3 ) {
+    $ce = ( 0.051 * $args{mz} ) + 0.55
+  }
+  return sprintf( "%0.1f", $ce);
+}
+
+
