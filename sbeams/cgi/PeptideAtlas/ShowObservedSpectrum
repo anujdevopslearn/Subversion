@@ -76,7 +76,9 @@ sub main {
     allow_anonymous_access=>1,
   ));
 
-  #### Print the header, figure and do what the user want, and print footer
+
+  #### Process certain actions, then print the header, figure and do what the user wants, and print footer
+  processDatabaseActions();
   $sbeamsMOD->display_page_header();
   processRequest();
   $sbeamsMOD->display_page_footer();
@@ -85,6 +87,90 @@ sub main {
     separator_bar=>'YES',display_footer=>'NO');
 
 } # end main
+
+
+###############################################################################
+# Process insert/update/delete, if any, then redirect
+###############################################################################
+sub processDatabaseActions {
+    my $redirect = 0;
+    my %parameters;
+
+    $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
+    $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+    my $apply_action  = $q->param('apply_action');
+
+    if ($apply_action eq "UPDATE ANNOTATION") {
+	my %rowdata = (
+		       spectrum_annotation_level_id => $parameters{user_spectrum_annotation},
+		       comment => $parameters{user_spectrum_commment}
+		       );
+
+	my $PK = $sbeams->updateOrInsertRow(
+					    update => 1,
+					    table_name => $TBAT_SPECTRUM_ANNOTATION,
+					    rowdata_ref => \%rowdata,
+					    PK => 'spectrum_annotation_id',
+					    PK_value => $parameters{spectrum_annotation_id},
+					    return_PK => 1,
+					    add_audit_parameters => 1
+					    );
+
+	if ($PK) { $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been updated." ); }
+	else     { $sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem updating your annotation record." ); }
+
+	$redirect++;
+
+    } elsif ($apply_action eq "ADD ANNOTATION") {
+	my %rowdata = (
+		       annotator_contact_id => $sbeams->getCurrent_contact_id(),
+		       spectrum_identification_id => $parameters{spectrum_identification_id},
+		       spectrum_annotation_level_id => $parameters{user_spectrum_annotation},
+		       comment => $parameters{user_spectrum_commment}
+		       );
+
+	my $PK = $sbeams->updateOrInsertRow(
+				   insert => 1,
+				   table_name => $TBAT_SPECTRUM_ANNOTATION,
+				   rowdata_ref => \%rowdata,
+				   return_PK => 1,
+				   add_audit_parameters => 1
+				   );
+
+	if ($PK) { $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been added." ); }
+	else     { $sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem inserting your annotation record." ); }
+
+	$redirect++;
+
+    } elsif ($apply_action eq "DELETE ANNOTATION") {
+	my %rowdata = (
+		       record_status => 'D'
+		       );
+
+	my $PK = $sbeams->updateOrInsertRow(
+					    update => 1,
+					    table_name => $TBAT_SPECTRUM_ANNOTATION,
+					    rowdata_ref => \%rowdata,
+					    PK => 'spectrum_annotation_id',
+					    PK_value => $parameters{spectrum_annotation_id},
+					    return_PK => 1,
+					    add_audit_parameters => 1
+					    );
+
+	if ($PK) { $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been deleted." ); }
+	else     { $sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem deleting your annotation record." ); }
+
+	$redirect++;
+    }
+
+    if ($redirect) {
+	$q->delete( 'apply_action' );
+	print $q->redirect( $q->self_url() );
+	exit;
+    }
+
+}
 
 
 ###############################################################################
@@ -173,6 +259,12 @@ sub processRequest {
             $parameters{'spectrum_id'} = $spectrum_id;
         }
     }
+
+    if ( $parameters{peptide} ) {
+	print "<TR><TD COLSPAN=2 CLASS=section_description ALIGN=CENTER>Spectrum for $parameters{modified_sequence} <SUP>+$parameters{assumed_charge}</SUP></TD></TR>\n";
+	print '<TR ID="annotations_head" style="display:none"><TD ID="annotations_summary" COLSPAN="2">-- No annotations here --</TD></TR>';
+    }
+
     my $peptide = $parameters{peptide};
     $peptide =~ s/^.\.//;
     $peptide =~ s/\..$//;
@@ -324,11 +416,14 @@ sub processRequest {
 	<IMG SRC="$HTML_BASE_DIR/tmp/images/$tmpfile"><BR>
     ~;
 
-    print qq~
+
+    my $hidden_form_fields = qq~
         <INPUT TYPE="hidden" NAME="spectrum_identification_id" VALUE="$parameters{spectrum_identification_id}">
         <INPUT TYPE="hidden" NAME="assumed_charge" VALUE="$parameters{assumed_charge}">
         <INPUT TYPE="hidden" NAME="peptide" VALUE="$parameters{peptide}">
-    ~;
+	~;
+
+    print $hidden_form_fields;
 
     #### Charge selector
     my $onChange = "";
@@ -392,6 +487,11 @@ sub processRequest {
         </FORM>
         <PRE>$buffer</PRE>
     ~;
+
+    print &printUserAnnotations(
+				spectrum_identification_id => $parameters{'spectrum_identification_id'},
+				form_fields => $hidden_form_fields
+				) if ($parameters{'spectrum_identification_id'});
 
 } # end printEntryForm
 
@@ -1135,3 +1235,222 @@ sub printIons {
 } # end printIons
 
 
+###############################################################################
+# printUserAnnotations
+# get and display user annotations, if any
+###############################################################################
+sub printUserAnnotations {
+    my %args = @_;
+
+    my $buffer;
+    my $show_form = 1;
+    my $line_sep = "<tr><td colspan='2'><hr size='1' noshade></td></tr>";
+
+    my $sql = qq~
+	SELECT SA.spectrum_annotation_id, SA.comment, SA.date_modified,
+	       SL.spectrum_annotation_level_id, SL.level_name,
+	       C.first_name, C.last_name,
+	       UL.username
+	  FROM $TBAT_SPECTRUM_ANNOTATION SA
+    INNER JOIN $TBAT_SPECTRUM_ANNOTATION_LEVEL SL
+            ON ( SA.spectrum_annotation_level_id = SL.spectrum_annotation_level_id )
+    INNER JOIN $TB_CONTACT C
+            ON ( annotator_contact_id = C.contact_id )
+    INNER JOIN $TB_USER_LOGIN UL
+            ON ( UL.contact_id = annotator_contact_id )
+	 WHERE spectrum_identification_id = '$args{spectrum_identification_id}'
+	   AND SA.record_status = 'N'
+      ORDER BY SA.date_modified DESC
+        ~;
+
+    my @rows = $sbeams->selectSeveralColumns($sql);
+
+    $buffer = qq~
+	<table width="100%" class="table_setup">
+	<tr class="orange_bg"><th>User annotations</th><td><a name="user_annotations">&nbsp;</a></td></tr>
+	~;
+
+    if (@rows) {
+	foreach my $row (@rows)
+	{
+	    my ($annot_id, $comment, $date, $level_id, $level, $first, $last, $uname) = @{$row};
+
+	    $buffer .= "<tr id='${uname}_annot_tr'><th valign='top'>$level</th><td>$first $last ($date)<br />\n";
+
+	    my $disp_comment = $comment;
+	    $disp_comment =~ s|\n|<BR />\n|g; # display carriage returns
+	    $buffer .= "$disp_comment\n";
+
+	    if ($uname eq $current_username) {
+		$show_form = 0;
+
+		$buffer .= qq~
+		    <br /><div align='right'><a href='javascript:showEditForm();'>Edit my annotation</a> | <a href='javascript:confirm_delete();'>Delete</a>
+		    <FORM NAME="delete_annotation" METHOD="post" action="$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME">
+		    $args{form_fields}
+		    <INPUT TYPE='hidden' NAME='spectrum_annotation_id' VALUE='$annot_id'>
+   		    <INPUT TYPE='hidden' NAME='apply_action' VALUE='DELETE ANNOTATION'></FORM>
+		    </div>
+		    ~;
+
+		$buffer .= "</td></tr>\n";
+
+		$buffer .= &printUserAnnotationsForm(
+						     form_type => 'update',
+						     uname => $uname,
+						     default_level_id => $level_id,
+						     default_comment => $comment,
+						     annot_id => $annot_id,
+						     extra_form_fields => $args{form_fields}
+						     );
+	    }
+
+	    $buffer .= "</td></tr>\n$line_sep\n";
+	}
+
+    } else {
+	$buffer .= qq~
+	    <tr><td>&nbsp;</td>
+	    <td class='section_heading'>There are no user annotations for this spectrum<br /></td></tr>
+	    $line_sep
+	    ~;
+    }
+
+
+    if ($current_username eq 'guest') {
+	my $url = $q->self_url();
+	$url .= '&force_login=yes';
+
+	$buffer .= qq~
+	    <tr><td>&nbsp;</td>
+	    <td><a href='$url'>Log into PeptideAtlas</a> to add an annotation for this spectrum<br /></td></tr>
+	    $line_sep
+	    ~;
+
+    } elsif ($show_form) {
+	$buffer .= "<tr id='${current_username}_annot_tr'><th valign='top'><a href='javascript:showEditForm();'>Add annotation</a></th><td>&nbsp;</td></tr>\n";
+
+	$buffer .= &printUserAnnotationsForm(
+					     form_type => 'add',
+					     uname => $current_username,
+					     extra_form_fields => $args{form_fields}
+					     );
+
+	$buffer .= "</td></tr>\n$line_sep\n";
+    }
+
+    $buffer .= "</table>\n";
+
+    # get average
+    $sql = qq~
+ 	SELECT ROUND(AVG(SL.level_probability)*100,0) AS avg_prob_pct,
+	       COUNT(*)
+	  FROM $TBAT_SPECTRUM_ANNOTATION_LEVEL SL
+    INNER JOIN $TBAT_SPECTRUM_ANNOTATION SA
+            ON ( SA.spectrum_annotation_level_id = SL.spectrum_annotation_level_id )
+	 WHERE SA.spectrum_identification_id = '$args{spectrum_identification_id}'
+	   AND SA.record_status = 'N'
+        ~;
+
+    @rows = $sbeams->selectSeveralColumns($sql);
+
+    my ($avg, $num) = @{$rows[0]};
+    my $innerHTML;
+
+    if ($num == 1) {
+	$innerHTML = "There is <a href=\"#user_annotations\">one user annotation</a> for this spectrum, with a score of <b>$avg%</b>";
+    } elsif ($num > 1) {
+	$innerHTML = "There are <a href=\"#user_annotations\">$num user annotations</a> for this spectrum, with an average score of <b>$avg%</b>";
+    }
+
+    $buffer .=<< "EOJS" if $innerHTML;
+<SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript">
+    document.getElementById("annotations_summary").innerHTML = '$innerHTML';
+    document.getElementById("annotations_head").style.display = 'table-row';
+</SCRIPT>
+EOJS
+
+    return $buffer;
+}
+
+
+###############################################################################
+# printUserAnnotationsForm
+# get and display user annotations, if any
+###############################################################################
+sub printUserAnnotationsForm {
+    my %args = @_;
+
+    $args{form_type} ||= 'add';
+    $args{uname} ||= 'user_anon';
+    $args{default_level_id} ||= 0;
+    $args{default_comment} ||= '';
+    $args{annot_id} ||= 0;
+    $args{extra_form_fields} ||= '';
+
+    my $spacer = "&nbsp;"x5;
+
+    my $buffer = qq~
+	<SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript">
+	<!--
+	function showEditForm() {
+	    document.getElementById('$args{uname}_annot_tr').style.display = 'none';
+	    document.getElementById('$args{uname}_form_tr').style.display = 'table-row';
+	}
+        function hideEditForm() {
+	    document.getElementById('$args{uname}_annot_tr').style.display = 'table-row';
+	    document.getElementById('$args{uname}_form_tr').style.display = 'none';
+	}
+
+        function confirm_delete() {
+	    var del = confirm("Are you sure you want to delete your comment?");
+	    if (del==true) {
+		document.delete_annotation.submit();
+	    }
+	}
+        // -->
+	</SCRIPT>
+	~;
+
+    # add a hidden <tr> for edit form
+    my $sql = qq~
+	SELECT spectrum_annotation_level_id, level_probability, level_name, level_description
+	FROM $TBAT_SPECTRUM_ANNOTATION_LEVEL
+	WHERE record_status = 'N'
+	ORDER BY sort_order
+	~;
+
+    my @levels = $sbeams->selectSeveralColumns($sql);
+
+    my $select = "<SELECT NAME='user_spectrum_annotation'>\n";
+    foreach my $levrow (@levels)
+    {
+	my ($lev_id, $lev_prob, $lev_name, $lev_desc) = @{$levrow};
+
+	my $sel = ( "$args{default_level_id}" eq "$lev_id" ) ? 'SELECTED' : '';
+	my $desc = $sbeams->escapeXML(value => $lev_desc);
+
+	$select .= "<OPTION TITLE='$desc' VALUE='$lev_id' $sel>$lev_name</OPTION>\n";
+    }
+    $select .= "</SELECT>";
+
+    my $form_action = "ADD";
+    if ($args{form_type} eq 'update') {
+	$form_action = "UPDATE";
+	$args{extra_form_fields} .= "<INPUT TYPE='hidden' NAME='spectrum_annotation_id' VALUE='$args{annot_id}'>";
+    }
+
+    $buffer .= qq~
+	<tr style='display:none' id='$args{uname}_form_tr'>
+	<th valign='top'>
+	<FORM METHOD="post" action="$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME">
+	$args{extra_form_fields}
+	$select</th>
+	<td><TEXTAREA ROWS='6' COLS='80' NAME='user_spectrum_commment'>$args{default_comment}</TEXTAREA><br />
+	<div align='right'><INPUT TYPE='submit' NAME='apply_action' VALUE='$form_action ANNOTATION'>$spacer<a class='small_form_field' href='javascript:hideEditForm();'>CANCEL</a></div>
+	~;
+
+    # caller will close the td and tr
+    return $buffer;
+
+}
