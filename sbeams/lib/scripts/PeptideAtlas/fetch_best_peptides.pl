@@ -31,17 +31,30 @@ $dbh->{RaiseError}++;
 
 
 
+sub print_process {
+  my @procs = `ps aux`;
+  my $cnt = 0;
+  for my $p ( @procs ) {
+    $p =~ s/\s+/\t/g;
+    my @fields = split( "\t", $p );
+    if ( !$cnt++ || ( $p =~ /fetch_best/ && $p =~ /perl/ ) ) {
+      print join( "\t", @fields[2,3] ) . "\n";
+    }
+  }
+}
 
 { # Main 
 
 
   print STDERR "Starting: " . time() . "\n" if $args->{verbose};
   print STDERR "Fetching observed peptides\n" if $args->{verbose};
-
+  print_process() if $args->{verbose};
   my $observed = get_observed_peptides();
   print STDERR "Fetching theoretical peptides\n" if $args->{verbose};
+  print_process() if $args->{verbose};
   my $theoretical = get_theoretical_peptides();
   print STDERR "Merging peptides ($args->{n_peptides})\n" if $args->{verbose};
+  print_process() if $args->{verbose};
   my $merged = $pep_sel->merge_pabst_peptides(  obs => $observed, 
                                                theo => $theoretical,
                                          n_peptides => $args->{n_peptides},
@@ -49,11 +62,13 @@ $dbh->{RaiseError}++;
                                              );
 
   print STDERR "Freeing memory\n" if $args->{verbose};
+  print_process() if $args->{verbose};
   # Free up some memory!!!
   undef $observed;
   undef $theoretical;
 
   print STDERR "Printing peptides\n" if $args->{verbose};
+  print_process() if $args->{verbose};
 
   my $headings = get_headings();
   if ( $args->{tsv_file} ) {
@@ -64,6 +79,11 @@ $dbh->{RaiseError}++;
   }
 
   for my $peptide ( @{$merged} ) {
+    if ( defined $args->{min_score} ) {
+#      print "min score is defined\n";
+      next if $peptide->[17] <= $args->{min_score};
+#      print "$peptide->[17] is greater than $args->{min_score}\n";
+    }
     $peptide->[4] = sprintf( "%0.2f", $peptide->[4] ) if $peptide->[4] !~ /na/;
     $peptide->[5] = sprintf( "%0.2f", $peptide->[5] ) if $peptide->[5] !~ /na/;
     $peptide->[6] = sprintf( "%0.2f", $peptide->[6] ) if $peptide->[6] !~ /na/;
@@ -128,7 +148,7 @@ sub process_args {
   GetOptions( \%args, 'atlas_build=s@', 'show_builds', 'help', 'tsv_file=s', 
               'protein_file=s', 'n_peptides=i', 'config=s', 'default_config', 
               'bioseq_set=i', 'obs_min=i', 'verbose', 'name_prefix=s',
-              'build_name=s'
+              'build_name=s', 'min_score=i'
              ) || print_usage();
 
   # Short-circuit if we just want help/documention
@@ -231,6 +251,7 @@ usage: $sub -a build_id [ -t outfile -n obs_cutoff -p proteins_file -v -b .3 ]
        --name_prefix    prefix constraint on biosequences, allows subset of 
                         of bioseqs to be selected.
    -o, --obs_min        Minimum n_obs to consider for observed peptides
+   -m, --min_score      Only print out peptides above min score threshold
    -h, --help           Print usage
    -v, --verbose        Verbose output, prints progress 
   END
