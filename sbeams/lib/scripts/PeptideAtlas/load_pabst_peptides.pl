@@ -8,6 +8,7 @@ use FindBin;
 use lib "$FindBin::Bin/../../perl";
 
 use SBEAMS::Connection;
+use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::BestPeptideSelector;
@@ -36,6 +37,11 @@ my $paranoid = 0;
 
 { # Main 
 
+  if ( $args->{delete} ) {
+    delete_pabst_build();
+    exit;
+  }
+
   # Fetch the various datasets to merge
   my $patr = {};
   
@@ -61,12 +67,15 @@ my $paranoid = 0;
   
   open PEP, $args->{peptides} || die "Unable to open peptide file $args->{peptides}";
   
-  my $transition_limit = 10;
+  my $transition_limit = 16;
   
   my $cnt;
   my %stats;
   my $build_id;
 
+  if ( $args->{output_file} ) {
+#    $build_id = 'output_file';
+  }
 
   my $seq2id = getPABSTPeptideData();
   
@@ -81,7 +90,7 @@ my $paranoid = 0;
   #  for my $l ( @line ) { print "$l\n"; }
   
     # Looks like we have a build to load - insert build record
-    if ( !$build_id ) {
+    if ( $args->{load} && !$build_id ) {
       my $rowdata = {  build_name => $args->{name},
                     build_comment => $args->{description},
                     ion_trap_file => $args->{ion_trap},
@@ -91,7 +100,8 @@ my $paranoid = 0;
                  parameter_string => $args->{parameters},
                    parameter_file => $args->{conf}, 
                biosequence_set_id => $args->{biosequence_set_id}, 
-                       project_id => $args->{project_id} 
+                       project_id => $args->{project_id}, 
+                       is_default => 'T'
                     };
   
       $build_id = $sbeams->updateOrInsertRow( insert => 1,
@@ -228,13 +238,19 @@ my $paranoid = 0;
     #  for my $k ( keys( %$peprow ) ) { print "$k => $peprow->{$k}\n"; }
     
     
-      my $pep_id = $sbeams->updateOrInsertRow( insert => 1,
+      my $pep_id;
+
+      if ( $args->{output_file} ) {
+        #Print out transition data
+      } else {
+       $pep_id = $sbeams->updateOrInsertRow( insert => 1,
                                           table_name  => $TBAT_PABST_PEPTIDE,
                                           rowdata_ref => $peprow,
                                           verbose     => $args->{verbose},
                                          return_PK    => 1,
                                                    PK => 'pabst_peptide_id',
                                           testonly    => $args->{testonly} );
+      }
     
       # Cache this to avoid double insert.
       $seq2id->{$pep_key} = $pep_id;
@@ -285,6 +301,10 @@ my $paranoid = 0;
     
     my $maprow = {  pabst_peptide_id => $seq2id->{$pep_key},
                     biosequence_id => $name2id->{$line[0]} };
+
+    if ( !$name2id->{$line[0]} ) {
+      print STDERR "something is wrong with the mapping for $line[0]!\n";
+    }
   
     my $map_id = $sbeams->updateOrInsertRow( insert => 1,
                                         table_name  => $TBAT_PABST_PEPTIDE_MAPPING,
@@ -342,7 +362,7 @@ sub populate {
   my $pep = shift;
   my $global_trans = shift;
   my $type = shift;
-  my $limit = shift || 10;
+  my $limit = shift || 16;
 
   print "Trans is $global_trans\n" if $paranoid;
 
@@ -376,11 +396,60 @@ sub populate {
 #  exit if $paranoid;
 }
 
+sub check_build {
+  my $build_id = shift || die "Must supply build id for delete";
+  my $sql = qq~
+  SELECT COUNT(*) FROM $TBAT_PABST_BUILD 
+  WHERE pabst_build_id = $args->{build_id}
+  ~;
+
+  my ( $cnt ) = $sbeams->selectrow_array( $sql );
+  if ( $cnt ) {
+    print STDERR "Pabst build found, will delete in 10 seconds unless cntl-c is pressed\n";
+    sleep 10;
+  } else {
+    print STDERR "No Pabst build found with ID $build_id, exiting\n";
+    exit;
+  }
+  return;
+}
+
+sub delete_pabst_build {
+
+  check_build( $args->{'build_id'} );
+
+  my $database_name = $DBPREFIX{PeptideAtlas};
+  my $table_name = "pabst_build";
+
+  my $full_table_name = "$database_name$table_name";
+
+   my %table_child_relationship = (
+      pabst_build => 'pabst_peptide(C)',
+      pabst_peptide => 'pabst_transition(C),pabst_peptide_mapping(C)'
+   );
+
+#      pabst_peptide => 'pabst_peptide_mapping(C)'
+#      pabst_peptide => 'pabst_transition(C)','pabst_peptide_mapping(C)'
+
+  # recursively delete the child records of the atlas build
+  my $result = $sbeams->deleteRecordsAndChildren(
+         table_name => 'pabst_build',
+         table_child_relationship => \%table_child_relationship,
+         delete_PKs => [ $args->{build_id} ],
+         delete_batch => 1000,
+         database => $database_name,
+         verbose => $args->{verbose},
+         testonly => $args->{testonly},
+      );
+
+}
+
+
 sub populate_theoretical {
   my $pep = shift;
   my $lib = shift;
   my $global_trans = shift;
-  my $limit = shift || 10;
+  my $limit = shift || 16;
 
   for my $trans ( @{$lib} ) {
     push @{$global_trans}, $trans;
@@ -395,6 +464,8 @@ sub generate_theoretical {
                                                      max_mz => 2500,
                                                      min_mz => 400,
                                                        type => 'P',
+                                                     charge => 2,
+                                             omit_precursor => 1,
                                              precursor_excl => 5 
                                           );
   return $pep_sel->order_fragments( $frags );
@@ -407,18 +478,27 @@ sub process_args {
               'peptides:s', 'conf=s', 'parameters=s', 'description=s',
               'verbose', 'testonly', 'biosequence_set_id=i', 'name=s',
               'load', 'output_file=s', 'project_id=i', 'organism=i',
-              'mapping_build:i' );
+              'mapping_build:i', 'delete', 'build_id=i' );
 
   my $missing;
-  for my $opt ( qw( qqq ion_trap qtof peptides conf parameters 
-                    biosequence_set_id project_id ) ) {
-    $missing = ( $missing ) ? $missing . ", $opt" : "Missing required arg(s) $opt" if !$args{$opt};
-  }
 
   $args{mapping_build} ||= 0;
 
-  if ( !$args{load} && !$args{output_file} ) {
-    $missing .= "\n" . "      Must provide either --load for loading_mode or --output_file for generate mode";
+  print_usage() if $args{help};
+
+  if ( !$args{load} && !$args{output_file} && !$args{delete} ) {
+    $missing .= "\n" . "      Must provide either --load, --delete, or  --output_file mode";
+  }
+
+  if ( $args{delete} && !$args{build_id} ) {
+    $missing .= "\n" . "      Must provide --build_id with --delete option";
+  }
+
+  if ( $args{load} || $args{output_file} ) {
+    for my $opt ( qw( qqq ion_trap qtof peptides conf parameters 
+                      biosequence_set_id project_id ) ) {
+      $missing = ( $missing ) ? $missing . ", $opt" : "Missing required arg(s) $opt" if !$args{$opt};
+    }
   }
 
   if ( $args{conf} ) {
@@ -490,6 +570,11 @@ sub readSpectrastSRMFile {
     }
 #    print "q3 series is $q3_series\n" if $show;
 #    print "q3 peak is $q3_peak\n" if $show;
+
+    # Skip delta masses?
+    if ( $q3_delta ) {
+      $q3_peak .= $q3_delta;
+    }
 
     $srm{$line[1]} ||= {};
     $srm{$line[1]}->{$line[2]} ||= [];
@@ -582,23 +667,35 @@ sub readTIQAMSRMFile {
 sub print_usage {
   my $msg = shift || '';
   my $exe = basename( $0 );
+
+#  GetOptions( \%args, 'qqq:s', 'ion_trap:s', 'qtof:s', 'help',
+#              'peptides:s', 'conf=s', 'parameters=s', 'description=s',
+#              'verbose', 'testonly', 'biosequence_set_id=i', 'name=s',
+#              'load', 'output_file=s', 'project_id=i', 'organism=i',
+#              'mapping_build:i', 'delete' );
+
   print <<"  END";
       $msg
 
-usage: $exe -q qtrap_file -i ion_trap_file -t theoretical_file
+usage: $exe -q qtrap_file -i ion_trap_file -t theoretical_file --pep peptide_file --load
 
-   -i, --ion_trap       Ion Trap consensus library location 
-   -q, --qqq            QQQ consensus library location
-       --peptides       List of 'best' peptides
-   -t, --theoretical    Theoretical transition information in TIQAM format 
-   -h, --help           print this usage and exit
+   -b, --build_id       PABST build ID, required with --delete mode
+       --delete         Delete specified build
    -c, --conf           PABST config file used for build
-       --parameters     parameter string for best peptide run
-   -n, --name           Name for pabst_build 
+       --description    Description of pabst_build
+   -h, --help           print this usage and exit
+   -i, --ion_trap       Ion Trap consensus library location 
+   -l, --load           Load pabst build
    -m, --mapping_build  existing PABST build id to use for mapping, default 0
                         which will insert all de-novo.
+   -n, --name           Name for pabst_build 
    -o, --organism       Organism for pabst_build  
-   -d, --description    Description of pabst_build
+       --peptides       List of 'best' peptides
+       --project_id     Project with which build is associated
+       --parameters     parameter string for best peptide run
+   -q, --qqq            QQQ consensus library location
+       --theoretical    DEPRECATED Theoretical transition information in TIQAM format 
+   -t, --testonly       Run delete in testonly mode
   END
 
   exit;
