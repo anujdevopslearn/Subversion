@@ -24,10 +24,11 @@ $pep_sel->setSBEAMS( $sbeams );
 my $opts = process_opts();
 
 
+#IPI:IPI00000001.2
 { # Main
   print "fasta file is $opts->{fasta_file}\n" if $opts->{verbose};
   my $fsa = $sbeams->read_fasta_file( filename => $opts->{fasta_file},
-                                     acc_regex => [ '>(\S+).*?(isoform\s\d+)', '>(\S+)' ],
+                                     acc_regex => [ '>(\S+).*?(isoform\s\d+)', '^>IPI:(IPI\d+)\.*', '>(\S+)' ],
                                        verbose => $opts->{verbose} ); 
 
   my $seq2acc = invert_fasta( $fsa );
@@ -38,10 +39,24 @@ my $opts = process_opts();
     map_peptides( sequences => $seq2acc, peptides => $peptides );
   }
 
-  $pep_sel->pabst_evaluate_peptides( peptides => $peptides,
-                                     force_mc => 1,
-                                      seq_idx => $opts->{idx_peptide} - 1 
-                                     );
+  if ( $opts->{evaluted_file} ) {
+
+  }
+
+  my @opts = ( 'peptides', $peptides, 'force_mc', 1, 'seq_idx', $opts->{idx_peptide} - 1 );
+
+  push @opts, ( 'hydrophob_idx', $opts->{'_num_tabs'} - 1 ) if $opts->{calc_ssr};
+
+  push @opts, ( 'score_idx', $opts->{'score_idx'} - 1 ) if ( $opts->{score_idx} );
+
+  if ( 0 ) {
+    $pep_sel->pabst_evaluate_peptides( peptides => $peptides,
+                                       force_mc => 1,
+                                  hydrophob_idx => $opts->{'_num_tabs'}- 1,
+                                        seq_idx => $opts->{idx_peptide} - 1 
+                                       );
+  }
+  $pep_sel->pabst_evaluate_peptides( @opts );
 
   open ( OUT, ">$opts->{output_file}" ) || die "Unable to open $opts->{output_file}";
     my $cnt = 0;
@@ -102,9 +117,15 @@ sub read_pepfile {
   open ( PEP, $opts->{peptide_file} || print_usage( "Unable to open pepfile $opts->{peptide_file}" ) );
   my @peptides;
   my $cnt++;
+  my %ssr;
+  if ( $opts->{calc_ssr} ) {
+    $atlas->{_ssrCalc} = $atlas->getSSRCalculator();
+  }
+
   while ( my $line = <PEP> ) {
     chomp $line;
     my @line = split( "\t", $line, -1 );
+    my $seq = $line[$opts->{idx_peptide} - 1];
     if ( $opts->{wspace_skip_idx} ) {
       if ( $line[$opts->{wspace_skip_idx} - 1] eq '' ) {
         $opts->{skipped_lines}->{$cnt}++;
@@ -112,15 +133,23 @@ sub read_pepfile {
         next;
       }
     } else {
-      if ( !$line[$opts->{idx_peptide} - 1] ) {
+      if ( !$seq ) {
         print STDERR "Peptide field is blank - index is 1-based - skipping\n";
         next;
       }
     }
     $opts->{_num_tabs} ||= scalar( @line );
+    if ( $opts->{calc_ssr} ) {
+      if ( ! defined $ssr{$seq} ) {
+        $ssr{$seq} = $atlas->calc_SSR( seq => $seq );
+      }
+      push @line, $ssr{$seq};
+    }
+
     push @peptides, \@line;
     $cnt++;
   }
+  $opts->{_num_tabs}++ if $opts->{calc_ssr};
   print "Read " . scalar( @peptides ) . " peptides from $opts->{peptide_file}\n" if $opts->{verbose};
   return \@peptides;
 
@@ -131,7 +160,28 @@ sub process_opts {
   my %opts;
   GetOptions( \%opts, 'atlas_build=i', 'config=s', 'help', 'tsv_file=s', 
               'peptide_file=s', 'idx_peptide=i',  'fasta_file=s', 'remap_proteins',  
-              'verbose', 'wspace_skip_idx=i', 'show_prot_names', 'output_file:s' ) || print_usage();
+              'verbose', 'wspace_skip_idx=i', 'show_prot_names', 'output_file:s',
+              'evaluated_file=s', 'broad_predictor=s', 'calc_ssr', 'score_idx:i' ) || print_usage();
+
+# Add 9, 13, 14, 17
+
+# 1 biosequence_name
+# 2 preceding_residue
+# 3 peptide_sequence
+# 4 following_residue
+# 5 empirical_proteotypic_score
+# 6 suitability_score
+# 7 predicted_suitability_scoremerged_score
+# 8 molecular_weight
+# 9 SSRCalc_relative_hydrophobicity
+# 10 n_protein_mappings
+# 11 n_genome_locations
+# 12 best_probability
+# 13 n_observations
+# 14 annotations
+# 15 atlas_build
+# 16 synthesis_score
+# 17 syntheis_adjusted_score
 
   my $err = '';
   for my $req_arg ( qw ( fasta_file idx_peptide peptide_file output_file ) ) {
@@ -167,7 +217,7 @@ sub print_usage {
 usage: $sub -a build_id [ -t outfile -n obs_cutoff -p proteins_file -v -b .3 ]
 
    -a, --atlas_build      Numeric atlas build ID to query 
-   -c, --config           Config file defining penalites for various sequence  
+   --config           Config file defining penalites for various sequence  
    -f, --fasta_file       reference fasta file of proteins, supercedes atlas_build
                           specified biosequence_set
    -p, --peptide_file     file of peptides, may have other info
@@ -179,6 +229,7 @@ usage: $sub -a build_id [ -t outfile -n obs_cutoff -p proteins_file -v -b .3 ]
    -t, --tsv_file         print output to specified file rather than stdout
    -h, --help             Print usage
    -v, --verbose          Verbose output, prints progress 
+   --calc_ssr             Calculate ssr, append as new column 
    -w, --wspace_skip_idx  Skip rows where column x, 1-based idx, is blank
   END
 # End of the line
@@ -314,7 +365,7 @@ sub process_args {
 
   GetOptions( \%args, 'atlas_build=i', 'show_builds', 'help', 'tsv_file=s', 
               'protein_file=s', 'n_peptides=i', 'config=s', 'default_config', 
-              'bonus_obs=f', 'obs_min=i', 'verbose', 'name_prefix=s'
+              'bonus_obs=f', 'obs_min=i', 'verbose', 'name_prefix=s', 'calc_ssr'
              ) || print_usage();
 
   print_usage() if $args{help};
