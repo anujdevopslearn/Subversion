@@ -1733,9 +1733,17 @@ sub truncateStringWithMouseover {
   my %args = @_;
   return undef unless $args{string};
   my $string = $args{string};
+  $string =~ s/^\s+//;
+  $string =~ s/\s+$//;
   my $len = $args{len} || 35;
   my $shorty = $self->truncateString( %args );
-  return qq~<SPAN CLASS=popup_help TITLE="$string">$shorty</SPAN>~;
+  my $shlen = length( $shorty );
+  my $stlen = length( $string );
+  if ( $shlen < $stlen ) {
+    $shorty .= '...' if $args{add_elipses};
+  }
+  my $class = ( $args{suppress_class} ) ? '' : 'CLASS=popup_help';
+  return qq~<SPAN $class TITLE="$string">$shorty</SPAN>~;
 }
 #+
 # Returns array of HTML form buttons
