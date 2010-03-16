@@ -1637,7 +1637,9 @@ sub read_fasta_file {
   my $acc;
   my %seq;
   my $accumulator = '';
+  my $line_cnt = 0;
   while ( my $line = <FIL> ) {
+    $line_cnt++;
     chomp( $line );
 
     if ( $line =~ /^>/ ) {
@@ -1647,6 +1649,7 @@ sub read_fasta_file {
         $entries{$acc} = $accumulator;
         $seq{$accumulator}++;
         $accumulator = '';
+        $acc = '';
       }
 
       # Extract accession.
@@ -1658,7 +1661,6 @@ sub read_fasta_file {
         }
         last if $acc;
       }
-      print STDERR "acc is $acc\n";
       if ( !$acc ) {
         print STDERR "Problem extracting accession from $line with $args{acc_regex}\n";
         $acc = $line;
