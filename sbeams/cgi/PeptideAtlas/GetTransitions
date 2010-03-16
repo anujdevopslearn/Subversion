@@ -149,7 +149,7 @@ sub print_form {
   # Historical, don't ask.
 
     #### Set some specific settings for this program
-    my $CATEGORY="Get PABST List";
+    my $CATEGORY="Get MRM List";
 
     $TABLE_NAME="AT_GetPABSTList" unless ($TABLE_NAME);
 
