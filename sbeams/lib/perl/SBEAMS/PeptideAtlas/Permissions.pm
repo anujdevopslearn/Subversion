@@ -113,59 +113,49 @@ sub isYeastPA
 sub getProjectID
 {
 
-    my $self = shift ;
-
-    my $sbeams = $self->getSBEAMS();
+  my %args = @_;
+  my $self = shift ;
+  my $sbeams = $self->getSBEAMS();
  
-    my %args = @_;
+  my $atlas_build_name = $args{'atlas_build_name'} || '';
+  my $atlas_build_id = $args{'atlas_build_id'} || '';
+  my $sql='';
 
-    my $atlas_build_name = $args{'atlas_build_name'} || '';
+  if ($atlas_build_name) {
+    $sql = qq~
+    SELECT project_id
+    FROM $TBAT_ATLAS_BUILD
+    WHERE atlas_build_name = '$atlas_build_name'
+    ~;
+  } elsif ( $atlas_build_id ) {
+    $sql = qq~
+    SELECT project_id
+    FROM $TBAT_ATLAS_BUILD
+    WHERE atlas_build_id = '$atlas_build_id'
+    ~;
+  }
 
-    my $atlas_build_id = $args{'atlas_build_id'} || '';
+  if ($sql) {
+    my ($project_id) = $sbeams->selectOneColumn($sql);
 
-    my $sql='';
-
-    if ($atlas_build_name)
-    {
-        $sql = qq~
-            SELECT project_id
-            FROM $TBAT_ATLAS_BUILD
-            WHERE atlas_build_name = '$atlas_build_name'
-            ~;
-    } elsif ( $atlas_build_id )
-    {
-        $sql = qq~
-            SELECT project_id
-            FROM $TBAT_ATLAS_BUILD
-            WHERE atlas_build_id = '$atlas_build_id'
-            ~;
+    if ( !$project_id ) {
+     $sbeams->reportException( message => "Unable to find the project_id with SQL:\n $sql" ,
+                                 state => 'ERROR',
+                                  type => 'BAD CONSTRAINT',
+                             );
+      return 0;
     }
 
-    if ($sql) {
-        my ($project_id) = $sbeams->selectOneColumn($sql) ||
-          $sbeams->reportException( message => "Unable to find the project_id with SQL:\n $sql" ,
-                                      state => 'ERROR',
-                                      type => 'BAD CONSTRAINT',
-					
-					);
-
-        ## check that project is accessible:
-        if ( $sbeams->isProjectAccessible( project_id => $project_id ) )
-        {
-
-            return $project_id;
-
-        } else
-        {
-
-            return 0;
-
-        }
-
-    } else
-    {
-        return 0;
+    ## check that project is accessible:
+    if ( $sbeams->isProjectAccessible( project_id => $project_id ) ) {
+      return $project_id;
+    } else {
+      return 0;
     }
+
+  } else {
+    return 0;
+  }
 
 }
 
