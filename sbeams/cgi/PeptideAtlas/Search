@@ -569,6 +569,30 @@ sub handle_request {
 } # end handle_request
 
 
+sub throw_error {
+  my %args = @_;
+
+  for my $arg ( qw(project error) ) {
+    die ( "must provide $arg" ) unless $args{$arg};
+  }
+  $args{buffer} ||= '';
+
+
+  if ($sbeams->output_mode() eq 'html') {
+    $sbeams->set_page_message( type => 'Error', msg => $args{error} );
+    $sbeamsMOD->display_page_header(project_id => $args{project});
+    print $args{buffer};
+    $sbeamsMOD->display_page_footer();
+  } else {
+    $sbeams->reportException( state => 'ERROR',
+          type => 'INSUFFICIENT CONSTRAINTS',
+          message => $args{error},
+      );
+  }
+  exit;
+}
+
+###############################################################################
 
 ###############################################################################
 # getBuildTypeSelection
