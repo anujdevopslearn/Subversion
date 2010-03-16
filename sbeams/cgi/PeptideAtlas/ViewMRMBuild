@@ -1,0 +1,275 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# $Id: $
+#
+# Description : This script authenticates the user, and then
+#               displays the opening access page.
+#
+# SBEAMS is Copyright (C) 2000-2010 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Get the script set up with everything it will need
+###############################################################################
+use strict;
+use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
+             $current_contact_id $current_username);
+use lib qw (../../lib/perl);
+use CGI::Carp qw(fatalsToBrowser croak);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::DataTable;
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+
+use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::BestPeptideSelector;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas;
+
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+my $peptide_selector = new SBEAMS::PeptideAtlas::BestPeptideSelector;
+$peptide_selector->setAtlas( $sbeamsMOD );
+$peptide_selector->setSBEAMS( $sbeams );
+
+
+###############################################################################
+# Global Variables
+###############################################################################
+$PROG_NAME = 'ViewMRMBuild';
+main();
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authentication and stop immediately if authentication
+# fails else continue.
+###############################################################################
+sub main
+{
+    # Do the SBEAMS authentication and exit if a username is not returned
+    exit unless ($current_username = $sbeams->Authenticate(
+        permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+        'PeptideAtlas_readonly', 'PeptideAtlas_exec'],
+        #connect_read_only=>1,
+        allow_anonymous_access=>1,
+    ));
+
+
+    # Read in the default input parameters
+    my %parameters;
+    my $n_params_found = $sbeams->parse_input_parameters(
+        q=>$q,
+        parameters_ref=>\%parameters
+        );
+    # Process generic "state" parameters before we start
+    $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+
+    # get project_id
+    my $project_id = $sbeamsMOD->getProjectID(
+        atlas_build_name => $parameters{atlas_build_name},
+        atlas_build_id => $parameters{atlas_build_id}
+        );
+
+    $sbeamsMOD->display_page_header(project_id => $project_id);
+
+  my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+    parameters_ref => \%parameters,
+  );
+	$parameters{atlas_build_id} = $atlas_build_id;
+
+  # Will use passed build_id if any, then cached (cookie) id, then default
+  # If user passed bogus value it should get sorted out here.
+	my $pabst_build_id = $peptide_selector->get_pabst_build( %parameters );
+	$parameters{pabst_build_id} = $pabst_build_id;
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+    parameters_ref => \%parameters,
+    program_name => $PROG_NAME,
+  );
+  if ($sbeams->output_mode() eq 'html') {
+    print "<BR>\n";
+    print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+    print "<BR>\n";
+  }
+
+
+    my $content = '';
+		$content .= get_build_list(%parameters);
+    $content .= "<BR><BR>\n";
+		$content .= get_build_details(%parameters);
+
+    print "$content";
+
+    $sbeamsMOD->display_page_footer();
+
+
+} # end main
+
+
+###############################################################################
+# Show the main welcome page
+###############################################################################
+sub get_build_details {
+  my %parameters = @_;
+
+  my @fields = qw( build_name build_comment parameter_string build_date reference_DB
+                   organism n_peptides n_transitions n_qtrap n_iontrap n_qtof
+                   n_predicted pabst_build_id );
+  my $field_string = join( ',', @fields );
+  $field_string =~ s/organism/full_name AS organism/;
+  $field_string =~ s/reference_DB/set_name AS reference_DB/;
+
+  my $sql = qq~
+  SELECT $field_string
+  FROM $TBAT_PABST_BUILD PB 
+  JOIN $TBAT_BIOSEQUENCE_SET BSS 
+    ON PB.biosequence_set_id = BSS.biosequence_set_id
+  JOIN $TB_ORGANISM O 
+    ON PB.organism_id = O.organism_id
+  WHERE pabst_build_id = $parameters{pabst_build_id}
+  ~;
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my $items;
+  my $build_name = '';
+  my $field_string = '';
+  while ( my $row = $sth-> fetchrow_hashref() ) {
+    for my $key ( @fields ) {
+      if ( $key eq 'build_name' ) {
+        $build_name = $row->{$key};
+      }
+      $items .= $sbeamsMOD->encodeSectionItem( key => $key,
+                                               value => $row->{$key} );
+    }
+  }
+
+  my $section_header = $sbeamsMOD->encodeSectionHeader(
+    text => "MRM Atlas Build:  $build_name",
+  );
+
+  my $content = qq~
+  <TABLE width="600">
+  $section_header
+  $items
+  </TABLE>
+  ~;
+
+  return "$content";
+}
+
+
+sub get_build_list {
+  my %parameters = @_;
+  my $content = '';
+
+  my $atlas_build_id = $parameters{atlas_build_id};
+
+  #### Read in the standard form values
+  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+
+  #### Set some specific settings for this program
+  my $PROGRAM_FILE_NAME = $PROG_NAME;
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+  my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
+
+
+  #### Get a list of accessible project_ids
+  my @accessible_project_ids = $sbeams->getAccessibleProjects();
+  my $accessible_project_ids = join( ",", @accessible_project_ids ) || '0';
+
+    my $sql = qq~
+		SELECT
+		 PB.pabst_build_id, build_name,
+		 n_peptides, n_transitions, n_qtrap, n_iontrap,
+		 n_qtof,
+     n_predicted,
+     build_comment
+		FROM $TBAT_PABST_BUILD PB
+    WHERE PB.project_id IN ( $accessible_project_ids )
+    ~;
+
+    my @atlas_builds = $sbeams->selectSeveralColumns($sql);
+
+    #### If the output_mode is HTML, then display the form
+    if ($sbeams->output_mode() eq 'html') {
+
+    $content .= qq~
+      <script LANGUAGE="Javascript">
+        function switchBuild() {
+          document.BuildList.apply_action.value = "GO";
+          document.BuildList.submit();
+        }
+      </script>
+      ~;
+
+    $content .= $q->start_form(-method=>"POST",
+                           -action=>"$base_url",
+		                         -name=>"BuildList",
+                          );
+
+    $content .= qq~
+      <P>Below is a listing of the MRM Atlas builds available to
+      you.  
+      ~;
+    }
+
+
+    my $table = SBEAMS::Connection::DataTable->new();
+
+
+#		 PB.pabst_build_id, build_name,
+#		 n_peptides, n_transitions, n_qtrap, n_iontrap, n_predicted,
+#		 n_qtof, build_comment
+    $table->addRow( [ '', 'Build Name', '# Peptides', '# Transitions', '% QTrap', '% IonTrap', '% QTOF', '% Predicted', 'Comment' ] );
+    $table->setRowAttr(  COLS => [1..6], ROWS => [1], BGCOLOR => '#bbbbbb', ALIGN=>'CENTER' );
+    $table->setHeaderAttr( BOLD => 1 );
+    foreach my $build ( @atlas_builds ) {
+      my $selected = '';
+      my $bgcolor = '#dddddd';
+      if ($build->[0] == $parameters{pabst_build_id} ) {
+        $selected = 'CHECKED ';
+      }
+      $build->[0] =<<"      END";
+      <INPUT $selected TYPE="radio" NAME="pabst_build_id" VALUE="$build->[0]" onchange="switchBuild()">
+      END
+
+      $build->[8] = $sbeams->truncateStringWithMouseover( len => 40, 
+                                                       string => $build->[8],
+                                                  add_elipses => 1,
+                                               suppress_class => 1 );
+
+      for my $idx ( 4..7 ) {
+        $build->[$idx] = sprintf( "%0.1f", ($build->[$idx]/$build->[3])*100 );
+      }
+
+      $table->addRow( \@{$build} );
+    }
+#    $table->setColAttr(  COLS => [1..6], ROWS => [1..$rows], NOWRAP => 1 );
+    $table->setColAttr(  COLS => [3..8], ROWS => [1..$table->getRowNum()], ALIGN => 'RIGHT' );
+#    $table->setColAttr(  COLS => [4,5], ROWS => [1..$rows], ALIGN => 'CENTER' );
+#    $table->setColAttr(  COLS => [3], ROWS => [1..$rows], BGCOLOR => '#eeeeee' );
+
+  $content .= "$table";
+  $content .= $q->hidden( "apply_action", '');
+  $content .= $q->endform;
+
+  return $content;
+} # get_build_list 
+
