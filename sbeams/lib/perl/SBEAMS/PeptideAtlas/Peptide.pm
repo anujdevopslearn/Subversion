@@ -316,6 +316,17 @@ sub addNewPeptide {
   
 }
 
+sub calc_SSR {
+  my $self = shift;
+  my %args = @_;
+  return unless $args{seq};
+  my $ssr;
+  if ($self->{_ssrCalc}->checkSequence($args{seq})) {
+    $ssr = $self->{_ssrCalc}->TSUM3($args{seq});
+  }
+  return $ssr;
+}
+
 sub getSSRCalculator {
   my $self = shift;
   
@@ -332,6 +343,63 @@ sub getSSRCalculator {
   $calculator->ReadParmFile3();
   return $calculator;
 }
+
+# Routine to calculate average ECS (Eisenberg consensus scale) hydrophobicity 
+sub calc_ECS {
+  my $self = shift;
+  my %args = @_;
+  return unless $args{seq};
+
+  $self->{ecs} ||= getECSVals();
+
+
+  my @aa = split( '', $args{seq} );
+  my $cnt = 0;
+  my $sum = 0;
+  for my $aa ( @aa ) {
+    next unless $aa =~ /[A-Z]/;
+
+    $cnt++;
+    my $aa_hyd = $self->{ecs}->{$aa};
+
+    if ( !defined $aa_hyd ) {
+      $log->warn( "Undefined value for $aa in ECS index" );
+      next;
+    }
+    $sum += $aa_hyd;
+  }
+  if ( !$cnt ) {
+    return 0;
+  } else {
+    return sprintf( "%0.2f", $sum/$cnt);
+  }
+}
+
+
+sub getECSVals {
+  my %ecs = ( F => 1.19,
+              S => -0.18,
+              T => -0.05,
+              N => -0.78,
+              K => -1.5,
+              Y => 0.26,
+              E => -0.74,
+              V => 1.08,
+              Q => -0.85,
+              M => 0.64,
+              C => 0.29,
+              L => 1.06,
+              A => 0.62,
+              W => 0.81,
+              P => 0.12,
+              H => -0.4,
+              D => -0.9,
+              I => 1.38,
+              R => -2.53,
+              G => 0.48 );
+  return \%ecs;
+}
+             
 
 sub addAPDIdentity {
   my $self = shift;
