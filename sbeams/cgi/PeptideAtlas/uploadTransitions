@@ -22,6 +22,7 @@ use SBEAMS::Connection::Settings;
 
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::TraMLParser;
 
 ## Globals ##
 my $sbeams = new SBEAMS::Connection;
@@ -33,16 +34,20 @@ main();
 
 
 sub main { 
-  my $current_username = $sbeams->Authenticate() || die "Authentication failed";
+  my $current_username = $sbeams->Authenticate( allow_anonymous_access => 1) || die "Authentication failed";
 
   my $params = process_params();
   $params->{apply_action} ||= 'show form';
 
+  for my $param ( keys( %$params ) ) { $log->info("Params say: $param => $params->{$param}"); }
+
   if ( $params->{apply_action} eq 'Upload file' ) {
     upload_transitions( $params );
+    print $q->redirect( $q->self_url() );
   } elsif ( $params->{apply_action} eq 'show form' ) {
-    $pepatlas->printPageHeader();
+    $pepatlas->printPageHeader( force_header => 1 );
     print_upload_form( $params );
+
   }
   $pepatlas->printPageFooter();
 
@@ -53,9 +58,10 @@ sub upload_transitions {
   my $params = shift;
 
   # read file
-  $pepatlas->validate_transition_data( transition_data => $params->{transition_file_data} );
+  $pepatlas->validate_transition_data( %$params );
   # Insert transitions
   my $ids = $pepatlas->insert_transition_data( set_name => $params->{transition_set} );
+#  my $ids = [1,2,3,4];
   # print table of transitions
   if ( $ids ) {
     $sbeams->set_page_message( msg => 'Saved ' . scalar( @$ids ) . ' transitions', type => 'Info' );
@@ -65,8 +71,13 @@ sub upload_transitions {
   }
 
   # exit
-
-  print $q->redirect( $q->self_url() );
+  if ( $params->{output_mode} eq 'tsv' ) {
+    $pepatlas->printPageHeader( force_header => 1 );
+    print "Success\t".scalar(@$ids)." transitions uploaded\n";
+    exit;
+  } else {
+    return;
+  }
   exit;
 }
 
@@ -86,6 +97,7 @@ sub process_params {
   $q->delete( 'apply_action' );
   my $error_text;
   $params->{transition_set} ||= 'Uploaded_set_' . time();
+  $params->{type} ||= 'tabtext';
   for my $required ( qw(transition_file transition_set ) ) {
     if ( !defined $required ) {
       my $sep = ( $error_text ) ? ', ' : '';
@@ -100,7 +112,10 @@ sub process_params {
   while ( my $line = <$uploaded_file> ) {
     push @transition_file, $line;
   }
+  $log->info( "file has $#transition_file elements" );
   $params->{transition_file_data} = \@transition_file;
+#  for my $p ( keys (%$params ) ) { $log->debug( "$p => $params->{$p}" ); }
+
   return $params;
 }
 
@@ -118,6 +133,7 @@ sub print_upload_form {
   my $pad = '&nbsp;' x 5;
   my $excel = "<A HREF=$HTML_BASE_DIR/doc/PeptideAtlas/transition_template.xls>(template)</A>";
   my $tsv = "<A HREF=$HTML_BASE_DIR/doc/PeptideAtlas/transition_template.tsv>(template)</A>";
+  my $traml = "<A HREF=http://psidev.info/index.php?q=node/405i>(information)</A>";
 
   my @buttons = $sbeams->getFormButtons( name => 'apply_action', 
                                         value => 'Upload file', 
@@ -127,14 +143,15 @@ sub print_upload_form {
 #  <TR><TD ALIGN=RIGHT><B>Download template:</B></TD><TD>$template_links</TD></TR>
 
   print <<"  END";
-  <H1>Upload Transitions</H1>
+  <H1>Upload The Transitions</H1>
   <FORM ENCTYPE="multipart/form-data" METHOD=POST>
   <TABLE BORDER=0>
   <TR><TD ALIGN=RIGHT><B>Transition set name:</B></TD><TD><INPUT TYPE=TEXT NAME=transition_set SIZE=30></TD></TR>
   <TR><TD ALIGN=RIGHT><B>Transitions file:</B></TD><TD><INPUT TYPE=FILE NAME=transition_file SIZE=30></TD></TR>
   <TR><TD ALIGN=RIGHT><B>Type:</B></TD>
-    <TD>Excel $excel <INPUT TYPE=RADIO NAME=type CHECKED VALUE=xls></INPUT>
-    Tab-delim text $tsv <INPUT TYPE=RADIO NAME=type VALUE=tabtext> </INPUT></TD>
+    <TD><INPUT TYPE=RADIO NAME=type CHECKED VALUE=xls></INPUT> Excel $excel |
+     <INPUT TYPE=RADIO NAME=type VALUE=tabtext> </INPUT> TSV $tsv |
+     <INPUT TYPE=RADIO NAME=type VALUE=traml> </INPUT> TraML $traml  </TD>
   </TR>
   <TR><TD></TD><TD ALIGN=LEFT>$buttons</TD></TR>
   <TR><TD ALIGN=RIGHT></TD><TD></TD></TR>
@@ -153,7 +170,7 @@ sub get_info_text {
    <DIV class=info_box ID=help>
     This form allows you to upload a file of 'validated' transitions, rather than
     entering them manually one at a time.  You can download a template file in 
-    either Excel or TSV format from the links above, and enter your data in the
+    Excel, TSV, or TraML format from the links above, and enter your data in the
     columns provided, as described in the table below.
 
 
