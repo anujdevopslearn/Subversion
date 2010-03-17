@@ -487,9 +487,13 @@ sub get_pabst_scoring_defs {
                    Xc => 'Avoid any C-terminal peptide',
                    nX => 'Avoid any N-terminal peptide',
                     C => 'Avoid C ',
+                    R => 'Avoid R ',
                     W => 'Avoid W',
                     P => 'Avoid P',
-                 '4H' => 'Avoid 4 straight hydrophobic residues',
+                 '4H' => 'Avoid 4 consecutive hydrophobic residues: C,F,I,L,V,W,Y',
+                 '5H' => 'Avoid 5 straight hydrophobic residues: F,I,L,V,W,M',
+               'Hper' => 'Hydrophobic residues (F,I,L,V,W,M) not to exceed 75%',
+                   BA => 'Penalize high basic (protonatable) sites: H, K, R, n-term',
                    NG => 'Avoid dipeptide NG',
                    DP => 'Avoid dipeptide DP',
                    DG => 'Avoid dipeptide DG',
@@ -529,7 +533,10 @@ sub get_default_pabst_scoring {
                    C => .95,
                    W => 1,
                    P => .95,
-                '4H' => 1.0,
+                  BA => 1,
+                '4H' => 1,
+                '5H' => 1,
+              'Hper' => 1,
                   NG => 1,
                   DP => 1,
                   QG => 1,
@@ -537,6 +544,7 @@ sub get_default_pabst_scoring {
                 nxxG => 1,
                 nGPG => 1,
                    D => 1,
+                   R => 1,
                  obs => 2.0,
                    S => 1,
                min_l => 7,
@@ -987,28 +995,50 @@ sub get_pabst_static_peptide_display {
 } # End get pabst static display
 
 
+#+
+# Returns best legal pabst build id based on 
+#  1) passed param
+#  2) cached session value
+#  3) default
+#-
 sub get_pabst_build {
   my $self = shift;
+  my %params = @_;
+
+  my $build_id = $params{pabst_build_id} || 
+                 $sbeams->getSessionAttribute( key => 'pabst_build_id' ) || 
+                 '';
 
   my @accessible = $sbeams->getAccessibleProjects();
   my $acc_str = join( ',', @accessible );
 
   my $atlas_build_id = $atlas->getCurrentAtlasBuildID( parameters_ref => {} );
+
   my $sql = qq~
   SELECT pabst_build_id
   FROM $TBAT_PABST_BUILD PB 
-  JOIN $TBAT_ATLAS_BUILD AB
-    ON AB.biosequence_set_id = PB.biosequence_set_id
-  WHERE atlas_build_id = $atlas_build_id
-  AND PB.project_id IN ( $acc_str )
+  WHERE PB.project_id IN ( $acc_str )
   ORDER BY pabst_build_id DESC
   ~;
 
   my $sth = $sbeams->get_statement_handle( $sql );
+  my $validated_build_id = '';
   while ( my @row = $sth->fetchrow_array() ) {
-    return $row[0];
+    
+    # Use preset value from cgi param or cookie if possible
+    if ( $build_id && $build_id == $row[0] ) {
+      $validated_build_id = $row[0];
+      last;
+
+    # Else use first default - omit last to allow atlas_build-based selection
+    } else {
+      $validated_build_id = $row[0] unless $validated_build_id;
+    }
   }
-  return undef;
+  if ( $validated_build_id ) {
+    $sbeams->setSessionAttribute( key => 'pabst_build_id', value => $validated_build_id ); 
+  }
+  return $validated_build_id;
 }
 
 sub get_pabst_peptide_display {
@@ -2205,7 +2235,7 @@ sub pabst_evaluate_peptides {
 
   my %is_penalized;
   for my $k ( keys( %pen_defs ) ) {
-    $is_penalized{$k}++ if $pen_defs{$k} < 1.0;
+    $is_penalized{$k}++ if $pen_defs{$k} < 1;
   }
 
   # Regular expressions for each score key.
@@ -2214,12 +2244,14 @@ sub pabst_evaluate_peptides {
               nE => ['^E'],
               nE => ['^M'],
                C => ['C'],
+               R => ['R'],
                W => ['W'],
                P => ['P'],
               NG => ['NG'],
               DP => ['DP'],
               QG => ['QG'],
             '4H' => ['[CFILVWY]{4,}'],
+            '5H' => ['[FILVWM]{5,}'],
               DG => ['DG'],
             nxxG => ['^..G'],
             nGPG => ['^[GP].G', '^.[GP]G'],
@@ -2288,6 +2320,27 @@ sub pabst_evaluate_peptides {
             push @pen_codes, $k if $is_penalized{$k};
           }
         }
+
+      } elsif( $k eq 'BA' && $is_penalized{$k} ) {
+         
+         my $lys = $seq =~ tr/K/K/;
+         my $arg = $seq =~ tr/R/R/;
+         my $his = $seq =~ tr/H/H/;
+
+         my $bnum = 1 + $lys + $arg + $his;
+
+         if ( $bnum > 4 || (length($seq)*115/$bnum < 300) ) {
+           $scr *= $pen_defs{$k};
+           push @pen_codes, $k;
+         }
+
+      } elsif( $k eq 'Hper' && $is_penalized{$k} ) {
+         my $safe_seq = $seq;
+         my $cnt = $safe_seq =~ tr/FILVWM/FILVWM/;
+         if ( $cnt && $cnt/length($seq) > 0.75 ) {
+           $scr *= $pen_defs{$k};
+           push @pen_codes, $k;
+         }
       } elsif( $rx{$k} ) {
         for my $rx ( @{$rx{$k}} ) {
           if ( $pep->[$args{seq_idx}] =~ /$rx/ ) {
@@ -2381,6 +2434,7 @@ sub generate_fragment_ions {
                precursor_excl => 0,
                add_score => 1,
                type => 'P',
+               charge => 2,
               @_ );
 
   $self->{_mass_calc} ||= new SBEAMS::Proteomics::PeptideMassCalculator;
@@ -2399,7 +2453,6 @@ sub generate_fragment_ions {
   }
 
   # TODO loop over charge 2 and 3?
-  my $chg = 2;
   my @frags;
 
   my $len = length( $args{peptide_seq} );
@@ -2410,17 +2463,21 @@ sub generate_fragment_ions {
   my $residues = $atlas->fragment_peptide( $args{peptide_seq} );
 
   my $mass = $self->{_mass_calc}->getPeptideMass( sequence => $args{peptide_seq},
-                                                    mass_type => 'monoisotopic',
-                                                       charge => 1
-                                                   );
+                                                         mass_type => 'monoisotopic',
+                                                            charge => 0 );
+
+  my $hydrogen_mass = 1.007825;
+  my $mz = ($mass + $args{charge} * $hydrogen_mass)/$args{charge};
+
+#  print "mz is $mz and mass is $mass for peptide $args{peptide_seq}\n and charge $args{charge}\n";
+
   if ( !$mass ) {
     $log->warn( "Mass calulation yeilds 0 for $args{peptide_seq}" );
     return [];
   }
 
-  my $mz = $mass/$chg;
 
-  my $ce = $self->calculate_CE( mass => $mass, charge => $chg );
+  my $ce = $self->calculate_CE( mass => $mass, charge => $args{charge} );
 
   $sbeams = $self->getSBEAMS();
 
@@ -2428,9 +2485,10 @@ sub generate_fragment_ions {
 #                       modified_sequence => $args{peptide_seq},
 #                                  Charge => 1 );
 
+
   my $ions = $atlas->calc_ions( 
                        sequence => $args{peptide_seq},
-                                  charge => 1 );
+                         charge => 1 );
 
 #  use Data::Dumper;
 #  print Dumper( $ions );
@@ -2439,14 +2497,14 @@ sub generate_fragment_ions {
   # precursor mz norm to 1000 Th
   my $norm_factor = (1000/$mz);
 
-  my %series = ( Yions => 'Y',
-                 Bions => 'B' );
+  my %series = ( Yions => 'y',
+                 Bions => 'b' );
 
   # Push first Y and then B ions
 #  print "precursor mz is $mz, norm factor is $norm_factor\n";
   for my $series_class ( qw( Yions Bions ) ) {
 
-    for ( my $i = 1; $i <= $len; $i++ ) {
+    for ( my $i = 1; $i < $len; $i++ ) {
 
       if ( $ions->{$series_class}->[$i] < $args{min_mz} ||  
            $ions->{$series_class}->[$i] > $args{max_mz} ||
@@ -2455,6 +2513,11 @@ sub generate_fragment_ions {
 
         # user-defined out-of-range
 #        print "$series_class $ions->{indices}->[$i] failed! $ions->{$series_class}->[$i]\n";
+        next;
+      }
+
+      if ( abs( $ions->{$series_class}->[$i] - $mass ) < 2 ) {
+        print STDERR "Skipping $series_class $i ( $ions->{$series_class}->[$i] as intact precursor\n";
         next;
       }
 
@@ -2478,7 +2541,7 @@ sub generate_fragment_ions {
       my $fragment =  [ $args{peptide_seq}, 
                         $args{peptide_seq},
                         $mz,
-                        $chg,
+                        $args{charge},
                         $ions->{$series_class}->[$i],
                         1, 
                         $series{$series_class},
@@ -2500,6 +2563,10 @@ sub generate_fragment_ions {
 } # End generate_fragment_ions
 
 # Cheap 'n dirty fragment sorter.
+# Y over
+# B over
+# Y under
+# B under
 sub order_fragments {
   my $self = shift;
   my $frags = shift;
@@ -2521,14 +2588,14 @@ sub order_fragments {
   my @b_under;
   my @b_over;
   for my $frag ( @{$frags} ) {
-    next if $frag->[6] eq 'B';
+    next if $frag->[6] eq 'Y';
     if ( $frag->[11] > 1000 ) {
       push @b_over, [@{$frag}[0..10]];
     } else {
       unshift @b_under, [@{$frag}[0..10]];
     }
   }
-  push @frags, @y_over, @y_under, @b_over, @b_under;
+  push @frags, @y_over, @b_over, @y_under, @b_under;
 
   return \@frags;
 }
