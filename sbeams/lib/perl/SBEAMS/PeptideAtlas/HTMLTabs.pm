@@ -122,7 +122,7 @@ sub getTabMenu
        $current_tab=4;
        $current_subtab=4;
 
-    } elsif ( ($PROG_NAME =~ /^GetMRMList/) ||
+    } elsif ( ($PROG_NAME =~ /^GetTransitions/) ||
     ($PROG_NAME =~ /ViewMRMList\?(\S+)/ ))
     {
        $current_tab=5;
@@ -145,6 +145,11 @@ sub getTabMenu
     {
        $current_tab=5;
        $current_subtab=2;
+    }elsif ( ($PROG_NAME =~ /^ViewMRMBuild/) ||
+    ($PROG_NAME =~ /ViewMRMBuild\?(\S+)/ ))
+    {
+       $current_tab=5;
+       $current_subtab=3;
     }
 
 
@@ -235,13 +240,19 @@ sub getTabMenu
     $tabmenu->addMenuItem( tablabel => 'MRM Atlas',
 			   label => 'Query Transitions',
 			   helptext => 'Query for MRM Transitions',
-			   url => "$CGI_BASE_DIR/PeptideAtlas/GetMRMList"
+			   url => "$CGI_BASE_DIR/PeptideAtlas/GetTransitions"
 			   );
 
     $tabmenu->addMenuItem( tablabel => 'MRM Atlas',
 			   label => 'Transition Lists',
 			   helptext => 'Download and upload validated MRM transition lists',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/GetTransitionLists"
+			   );
+
+    $tabmenu->addMenuItem( tablabel => 'MRM Atlas',
+			   label => 'MRM Atlas Builds',
+			   helptext => 'View statistics on available MRM Atlas builds',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/ViewMRMBuild"
 			   );
 
 
