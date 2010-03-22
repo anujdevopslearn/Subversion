@@ -247,7 +247,7 @@ sub get_build_list {
         $selected = 'CHECKED ';
       }
       $build->[0] =<<"      END";
-      <INPUT $selected TYPE="radio" NAME="pabst_build_id" VALUE="$build->[0]" onchange="switchBuild()">
+      <INPUT $selected TYPE="radio" NAME="pabst_build_id" VALUE="$build->[0]" onClick=blur() onChange="switchBuild()">
       END
 
       $build->[8] = $sbeams->truncateStringWithMouseover( len => 40, 

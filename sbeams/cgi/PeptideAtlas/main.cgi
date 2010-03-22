@@ -259,7 +259,7 @@ sub handle_request {
       }
 
       $atlas_build->[0] =<<"      END";
-      <INPUT $selected TYPE="radio" NAME="atlas_build_id" VALUE="$atlas_build->[0]" onchange="switchAtlasBuild()">
+      <INPUT $selected TYPE="radio" NAME="atlas_build_id" VALUE="$atlas_build->[0]" onclick=blur() onchange="switchAtlasBuild()">
       END
 
       $table->addRow( [@{$atlas_build}[0..2]] );
