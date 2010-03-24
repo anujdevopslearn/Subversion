@@ -252,10 +252,11 @@ sub handle_request {
   my $distinct_peps_idx = 5;
   my $n_canonicals_idx = 6;
   my $n_canon_dist_idx = 7;
-  my $n_seq_unique_prots_idx = 8;
-  my $n_covering_idx = 9;
-  my $descr_idx = 10;
-  my $ncols = 11;
+  my $n_disting_prots_idx = 8;
+  my $n_seq_unique_prots_idx = 9;
+  my $n_covering_idx = 10;
+  my $descr_idx = 11;
+  my $ncols = 12;
 
   my @headers;
   #$headers[$radio_button_idx] = '';
@@ -269,6 +270,7 @@ sub handle_request {
   $headers[$spectra_searched_idx] = '# spectra searched';
   $headers[$n_canonicals_idx] = '# canonical proteins';
   $headers[$n_canon_dist_idx] = '# canonical + possibly distinguished proteins';
+  $headers[$n_disting_prots_idx] = '# distinguishable proteins';
   $headers[$n_seq_unique_prots_idx] = '# sequence unique proteins';
   $headers[$n_covering_idx] = 'size covering set';
 
@@ -326,6 +328,12 @@ sub handle_request {
 
     my $canon_dist_count = $canonical_count + $poss_dist_count || "";
 
+    my $distinguishable_prot_count = 
+	 $canonical_count +
+	 $poss_dist_count +
+	 $subsumed_count +
+	 $ntt_subsumed_count || "";
+
     my $sequence_unique_prot_count = 
 	 $canonical_count +
 	 $poss_dist_count +
@@ -362,6 +370,7 @@ sub handle_request {
     $row[$n_canonicals_idx] = $canonical_count;
     $row[$n_covering_idx] = $covering_count;
     $row[$n_canon_dist_idx] = $canon_dist_count;
+    $row[$n_disting_prots_idx] = $distinguishable_prot_count;
     $row[$n_seq_unique_prots_idx] = $sequence_unique_prot_count;
     $row[$descr_idx] = $sbeams->truncateStringWithMouseover( string => $atlas_build->[$atlas_build_descr_idx], len => 50 );
 #      $row[$is_def_idx] = $atlas_build->[$org_spec_build_idx] || '';
@@ -544,6 +553,8 @@ sub get_protein_relationship_count
   FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR  JOIN
     $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT ON
      BRT.biosequence_relationship_type_id = BR.relationship_type_id
+    JOIN $TBAT_BIOSEQUENCE BS ON 
+     BS.biosequence_id = BR.related_biosequence_id
   WHERE BR.atlas_build_id = $build_id
   AND BRT.relationship_name = \'$relationship_name\'
   $decoy_clause
