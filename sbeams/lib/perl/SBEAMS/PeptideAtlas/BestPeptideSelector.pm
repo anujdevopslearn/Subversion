@@ -1005,19 +1005,29 @@ sub get_pabst_build {
   my $self = shift;
   my %params = @_;
 
-  my $build_id = $params{pabst_build_id} || 
-                 $sbeams->getSessionAttribute( key => 'pabst_build_id' ) || 
-                 '';
+  my $build_id = $params{pabst_build_id};
+
+  my $cookie_build_id = $sbeams->getSessionAttribute( key => 'pabst_build_id' );
 
   my @accessible = $sbeams->getAccessibleProjects();
   my $acc_str = join( ',', @accessible );
 
   my $atlas_build_id = $atlas->getCurrentAtlasBuildID( parameters_ref => {} );
 
+  my $organism_table = '';
+  my $organism_and = '';
+
+  if ( $params{organism} ) {
+    $organism_table = "JOIN $TB_ORGANISM O ON O.organism_id = PB.organism_id\n";
+    $organism_and = "AND organism_name = '$params{organism}'\n";
+  }
+
   my $sql = qq~
   SELECT pabst_build_id
   FROM $TBAT_PABST_BUILD PB 
+  $organism_table
   WHERE PB.project_id IN ( $acc_str )
+  $organism_and
   ORDER BY pabst_build_id DESC
   ~;
 
@@ -1025,14 +1035,24 @@ sub get_pabst_build {
   my $validated_build_id = '';
   while ( my @row = $sth->fetchrow_array() ) {
     
-    # Use preset value from cgi param or cookie if possible
+    # Use preset value from cgi param if possible
     if ( $build_id && $build_id == $row[0] ) {
       $validated_build_id = $row[0];
       last;
 
-    # Else use first default - omit last to allow atlas_build-based selection
+    # Else use organism-based
+    } elsif ( $params{organism} ) {
+      $validated_build_id = $row[0];
+      last;
+
+    } elsif ( $cookie_build_id && $cookie_build_id == $row[0] ) {
+      $validated_build_id = $row[0];
+      last;
+
+    # Else use first default 
     } else {
-      $validated_build_id = $row[0] unless $validated_build_id;
+      $validated_build_id = $row[0];
+      last;
     }
   }
   if ( $validated_build_id ) {
@@ -2419,6 +2439,22 @@ sub calculate_CE {
   $ce = 75 if ( $ce > 75 ); 
 
   return $ce;
+}
+
+sub get_peptide_mass {
+  my $self = shift;
+  my %args = @_;
+
+  return unless ( $args{peptide_seq} && $args{charge} );
+
+  $self->{_mass_calc} ||= new SBEAMS::Proteomics::PeptideMassCalculator;
+
+  my $mass = $self->{_mass_calc}->getPeptideMass( sequence => $args{peptide_seq},
+                                                 mass_type => 'monoisotopic',
+                                                    charge => $args{charge} );
+
+  return $mass;
+
 }
 
 # Generate theoretical fragments from a peptide sequence
