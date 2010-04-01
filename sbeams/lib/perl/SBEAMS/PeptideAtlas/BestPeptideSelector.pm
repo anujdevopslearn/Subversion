@@ -2607,16 +2607,19 @@ sub order_fragments {
   my $self = shift;
   my $frags = shift;
   my @frags;
+  my $f = scalar( @$frags );
 
   # First Y
   my @y_over;
   my @y_under;
   for my $frag ( @{$frags} ) {
-    next if $frag->[6] eq 'B';
+    next if $frag->[6] =~ /b/i;
     if ( $frag->[11] > 1000 ) {
-      push @y_over, [@{$frag}[0..10]];
+# Was just pushing 0..10 - why?
+#      push @y_over, [@{$frag}[0..10]];
+      push @y_over, [@$frag];
     } else {
-      unshift @y_under, [@{$frag}[0..10]];
+      unshift @y_under, [@$frag];
     }
   }
 
@@ -2624,13 +2627,14 @@ sub order_fragments {
   my @b_under;
   my @b_over;
   for my $frag ( @{$frags} ) {
-    next if $frag->[6] eq 'Y';
+    next if $frag->[6] =~ /y/i;
     if ( $frag->[11] > 1000 ) {
-      push @b_over, [@{$frag}[0..10]];
+      push @b_over, [@$frag];
     } else {
-      unshift @b_under, [@{$frag}[0..10]];
+      unshift @b_under, [@$frag];
     }
   }
+
   push @frags, @y_over, @b_over, @y_under, @b_under;
 
   return \@frags;
