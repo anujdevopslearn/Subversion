@@ -3,7 +3,7 @@
 #$Id:  $
 
 use DBI;
-use Test::More tests => 16;
+use Test::More tests => 18;
 use Test::Harness;
 use strict;
 use FindBin qw ( $Bin );
@@ -31,6 +31,7 @@ ok( test_bad_peptide(), 'Check bad peptide scoring' );
 ok( test_good_peptide(), 'Check good peptide scoring' );
 ok( test_bad_override_peptide(), 'Check bad with override peptide scoring' );
 ok( test_fragmentation(), 'Check peptide fragmentation' );
+ok( test_fragment_order(), 'Check fragment ordering' );
 ok( get_SSR_calculator(), 'Get SSRCalc calculator' );
 ok( calculate_SSR(), 'Calculate SSR' );
 ok( test_hydrophobic_peptide(), 'Check hydrophobic peptide scoring and annotation' );
@@ -212,13 +213,38 @@ sub test_fragmentation {
     }
   }
   return $ok;
+}
+
+sub test_fragment_order {
+
+#  my $pep = 'AFQSAYPEFSR';
+  my $pep = 'AAASGAEGGK';
+
+  my $frags = $pepselector->generate_fragment_ions( peptide_seq => $pep,
+                                                         max_mz => 2500,
+                                                         min_mz => 100,
+                                                           type => 'P',
+                                                 precursor_excl => 5, 
+                                                         charge => 2,
+                                                 omit_precursor => 1
+                                                  );
 
   # TBD
+  for my $frag ( @$frags ) {
+#      print STDERR join( ', ', @$frag ) . "\n";
+  }
+
+
   my $frag_list = $pepselector->order_fragments( $frags );
   for my $frag ( @$frag_list ) {
-#    AAASGAEGGK,AAASGAEGGK,409.7043075,2,461.235992,1,y,5,41.46529046,,P
-#    print STDERR join ( ",", @{$frag} ) . "\n";
+#      print STDERR join( ', ', @$frag ) . "\n";
   }
+
+
+	my $ok;
+	if ( scalar( @{$frags} ) == scalar( @{$frag_list} ) ) {
+		$ok++;
+	}
   return 1;
 }
 
@@ -235,8 +261,9 @@ sub calculate_SSR {
 
 sub test_ECS_calculator {
   my $peptide = 'ARVLSQ';
-  my $esc = $atlas->calc_ECS( seq => $peptide );
-  return sprintf( "%0.4f", $esc) == -0.1183;
+  my $ecs = $atlas->calc_ECS( seq => $peptide );
+#	print STDERR "$ecs\n";
+  return $ecs == -0.13; 
 }
 
 
