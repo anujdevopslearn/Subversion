@@ -25,9 +25,10 @@ use vars qw ($sbeams $sbeamsMOD $q
 	     $TESTONLY $module
              $current_contact_id $current_username
 	     $fav_codon_frequency $n_transmembrane_regions
+             $chrom_coords
 	     $rosetta_lookup $pfam_search_results $ginzu_search_results
              $mamSum_search_results $InterProScan_search_results
-	     $COG_search_results $pI_results
+	     $COG_search_results $pI_results $swissprot_db
              %domain_match_types %domain_match_sources
             );
 
@@ -45,7 +46,7 @@ $sbeams = SBEAMS::Connection->new();
 
 
 ###############################################################################
-# Set program name and usage banner for command like use
+# Set program name and usage banner for command line use
 ###############################################################################
 $PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
@@ -62,7 +63,7 @@ Options:
                        the biosequence_set record
   --purge              Delete existing biosequences for this set and 
                        biosequence_set record
-  --update_existing    Update xisting biosequences for given set_tag
+  --update_existing    Update existing biosequences for given set_tag
   --skip_sequence      If set, only the names, descs, etc. are loaded;
                        the actual sequence (often not really necessary)
                        is not written
@@ -76,8 +77,8 @@ Options:
                        favored codon frequency values
   --n_transmembrane_regions_file   Full path name of a file from which to load
                        number of transmembrane regions values
-  --calc_n_transmembrane_regions
-                       Set flag to add in n_transmembrane_regions calculations
+  --chrom_coords_file  Full path name of a file from which to load
+                       chromosomal coordinates and genetic loci.
   --rosetta_lookup_file   Full path name of a file which containts
                        lookup information for converting rosetta names
                        to biosequence_names
@@ -93,6 +94,9 @@ Options:
                        from which to load the COG search results
   --pI_summary_file    Full path name of a file
                        from which to load pI information
+  --swissprot_file     Full path name of Swiss-Prot fasta file; when possible
+                       use Swiss-Prot names as biosequence descriptions.
+                       Not yet fully implemented.
 
  e.g.:  $PROG_NAME --check_status
 
@@ -103,11 +107,12 @@ EOU
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
     "load","load_all","delete","purge","skip_sequence","update_existing",
     "set_tag:s","file_prefix:s","check_status","fav_codon_frequency_file:s",
-    "calc_n_transmembrane_regions","n_transmembrane_regions_file:s",
+    "chrom_coords_file:s","n_transmembrane_regions_file:s",
     "rosetta_lookup_file:s","pfam_search_results_summary_file:s",
     "ginzu_search_results_dir:s","mamSum_search_results_summary_file:s",
     "InterProScan_search_results_summary_file:s",
     "COG_search_results_summary_file:s","pI_summary_file:s",
+    "swissprot_file:s",
   )) {
   print "$USAGE";
   exit;
@@ -264,6 +269,8 @@ sub handleRequest {
   my $fav_codon_frequency_file = $OPTIONS{"fav_codon_frequency_file"} || '';
   my $n_transmembrane_regions_file =
     $OPTIONS{"n_transmembrane_regions_file"} || '';
+  my $chrom_coords_file =
+    $OPTIONS{"chrom_coords_file"} || '';
   my $rosetta_lookup_file =
     $OPTIONS{"rosetta_lookup_file"} || '';
   my $pfam_search_results_summary_file =
@@ -277,6 +284,7 @@ sub handleRequest {
   my $COG_search_results_summary_file =
     $OPTIONS{"COG_search_results_summary_file"} || '';
   my $pI_summary_file = $OPTIONS{"pI_summary_file"} || '';
+  my $swissprot_file = $OPTIONS{"swissprot_file"} || '';
 
 
   #### Get the file_prefix if it was specified, and otherwise guess
@@ -417,11 +425,20 @@ sub handleRequest {
   }
 
 
-  #### If a COG_search_results_summary_file was specified,
+  #### If a pI_summary_file was specified,
   #### load it for later processing
   if ($pI_summary_file) {
     $pI_results = readpIFile(
       source_file => $pI_summary_file,
+    );
+  }
+
+
+  #### If a swissprot_file was specified,
+  #### load it for later processing
+  if ($swissprot_file) {
+    $swissprot_db = readSPFile(
+      source_file => $swissprot_file,
     );
   }
 
@@ -433,6 +450,14 @@ sub handleRequest {
     readNTransmembraneRegionsFile(
       source_file => $n_transmembrane_regions_file,
       n_transmembrane_regions => $n_transmembrane_regions);
+  }
+
+  #### If a chrom_coords_file was specified,
+  #### load it for later processing
+  if ($chrom_coords_file) {
+    readChromCoordsFile(
+      source_file => $chrom_coords_file,
+    );
   }
 
 
@@ -711,13 +736,8 @@ sub loadBiosequenceSet {
       $rowdata{biosequence_seq} = $sequence unless ($skip_sequence);
       $rowdata{organism_id} = $organism_id if ($DATABASE eq 'sbeams.dbo.');
 
-## Deprecated, moved to module for testability.
-      #### Do special parsing depending on which genome set is being loaded
-#      $result = specialParsing(biosequence_set_name=>$set_name,
-#                                        rowdata_ref=>\%rowdata);
-
-      # Module version
       $fav_codon_frequency ||= {};
+      # Get gene name and accession from descriptor
       $sbeams->parseBiosequenceDescriptor( biosequence_set_name => $set_name,
                                                     rowdata_ref => \%rowdata,
                                             fav_codon_frequency => $fav_codon_frequency
@@ -863,6 +883,8 @@ sub updateSourceFileDate {
 ###############################################################################
 # loadBiosequence
 ###############################################################################
+# Passed in via rowdata: name, desc, seq, org, biosequence_set.
+# 
 sub loadBiosequence {
   my %args = @_;
   my $SUB_NAME = "loadBiosequence";
@@ -909,7 +931,9 @@ sub loadBiosequence {
   my $biosequence_name = $rowdata_ref->{biosequence_name};
 
   #### If the biosequence_gene_name bloats beyond 255, truncate it
-  if (length($rowdata_ref->{biosequence_gene_name}) > 255) {
+  # TMF 07/30/09: I don't think biosequence_gene_name is defined yet, here.
+  if (defined $rowdata_ref->{biosequence_gene_name} &&
+      length($rowdata_ref->{biosequence_gene_name}) > 255) {
     print "\nWARNING: truncating name for ".
       $rowdata_ref->{biosequence_gene_name}." to 255 characters\n";
     $rowdata_ref->{biosequence_gene_name} = substr($rowdata_ref->{biosequence_gene_name},
@@ -1051,7 +1075,6 @@ sub loadBiosequence {
     }
   }
 
-
   #### See if we have TMR data to add
   my $have_tmr_data = 0;
   if (defined($n_transmembrane_regions) && $biosequence_id) {
@@ -1117,6 +1140,87 @@ sub loadBiosequence {
         $rowdata{signal_peptide_is_cleaved} = $n_transmembrane_regions->
           {$rowdata_ref->{biosequence_name}}->{signal_peptide_is_cleaved};
       }
+    }
+
+
+    #### Insert or update the row
+    my $result = $sbeams->insert_update_row(
+      insert=>$insert,
+      update=>$update,
+      table_name=>"${DATABASE}biosequence_property_set",
+      rowdata_ref=>\%rowdata,
+      PK=>"biosequence_property_set_id",
+      PK_value => $biosequence_property_set_id,
+      verbose=>$VERBOSE,
+      testonly=>$TESTONLY,
+    );
+
+  }
+
+  #### See if we have CC data to add
+  my $have_cc_data = 0;
+  if (defined($chrom_coords) && $biosequence_id) {
+    if (defined($chrom_coords->
+	      {$rowdata_ref->{biosequence_name}}->{chromosome})) {
+      $have_cc_data = 1;
+      #print "Found CC data for $rowdata_ref->{biosequence_name}.\n";
+    }
+  }
+
+  #### If we have CC data, INSERT or UPDATE extra biosequence properties
+  if ($have_cc_data || %property_set) {
+
+    #### See if there's already a record there
+    my $sql =
+      "SELECT biosequence_property_set_id
+         FROM ${DATABASE}biosequence_property_set
+        WHERE biosequence_id = '$biosequence_id'
+      ";
+    my @biosequence_property_set_ids = $sbeams->selectOneColumn($sql);
+
+    #### Determine INSERT or UPDATE based on the result
+    $insert = 0;
+    $update = 0;
+    $insert = 1 if (scalar(@biosequence_property_set_ids) eq 0);
+    $update = 1 if (scalar(@biosequence_property_set_ids) eq 1);
+    if (scalar(@biosequence_property_set_ids) > 1) {
+      die("ERROR: Unexpected result from query:\n$sql\n");
+    }
+    my $biosequence_property_set_id = $biosequence_property_set_ids[0] || 0;
+
+    #### Fill the row data hash with information we have
+    my %rowdata = %property_set;
+    $rowdata{biosequence_id} = $biosequence_id;
+
+    #### If there's CC data
+    if ($have_cc_data) {
+      "Storing rowdata for $rowdata_ref->{biosequence_name}.\n";
+
+      $rowdata{start_in_chromosome} = $chrom_coords->
+        {$rowdata_ref->{biosequence_name}}->{start_in_chromosome}
+        if (defined($chrom_coords->
+          {$rowdata_ref->{biosequence_name}}->{start_in_chromosome}));
+
+      $rowdata{end_in_chromosome} = $chrom_coords->
+        {$rowdata_ref->{biosequence_name}}->{end_in_chromosome}
+        if (defined($chrom_coords->
+          {$rowdata_ref->{biosequence_name}}->{end_in_chromosome}));
+
+      $rowdata{chromosome} = $chrom_coords->
+        {$rowdata_ref->{biosequence_name}}->{chromosome}
+        if (defined($chrom_coords->
+          {$rowdata_ref->{biosequence_name}}->{chromosome}));
+
+      $rowdata{strand} = $chrom_coords->
+        {$rowdata_ref->{biosequence_name}}->{strand}
+        if (defined($chrom_coords->
+          {$rowdata_ref->{biosequence_name}}->{strand}));
+
+      $rowdata{genetic_locus} = $chrom_coords->
+        {$rowdata_ref->{biosequence_name}}->{genetic_locus}
+        if (defined($chrom_coords->
+          {$rowdata_ref->{biosequence_name}}->{genetic_locus}));
+
     }
 
 
@@ -2350,6 +2454,54 @@ sub readFavCodonFrequencyFile {
 
 
 ###############################################################################
+# readChromCoordsFile -- store chromosomal info in a hash by protein ID
+###############################################################################
+sub readChromCoordsFile {
+  my %args = @_;
+  my $SUB_NAME = "readChromCoordsFile";
+
+
+  #### Decode the argument list
+  my $source_file = $args{'source_file'}
+   || die "ERROR[$SUB_NAME]: source_file not passed";
+
+  unless ( -f $source_file ) {
+    $chrom_coords->{return_status} = 'FAIL';
+    die("Unable to find chrom_coords file '$source_file'");
+  }
+
+  open(CCFILE,"$source_file") ||
+    die("Unable to open chrom_coords file '$source_file'");
+
+  my $line;
+
+  #### Read in all the data and putting it into the hash
+  print "  Parsing data...\n";
+  while ($line = <CCFILE>) {
+    next if ($line =~ /^\#/);
+    $line =~ s/[\r\n]//g;
+    my ($biosequence_name, $start_in_chromosome, $end_in_chromosome,
+        $strand, $chromosome, $genetic_locus) = split(/\t/,$line);
+
+    my %properties;
+    $properties{start_in_chromosome} = $start_in_chromosome;
+    $properties{end_in_chromosome} = $end_in_chromosome;
+    $properties{strand} = $strand;
+    $properties{chromosome} = $chromosome;
+    $properties{genetic_locus} = $genetic_locus;
+
+    #print "  $biosequence_name in chromosome $properties{chromosome}\n";
+    $chrom_coords->{$biosequence_name} = \%properties;
+  }
+
+  close(CCFILE);
+
+  $chrom_coords->{return_status} = 'SUCCESS';
+  return;
+
+}
+
+###############################################################################
 # readNTransmembraneRegionsFile
 ###############################################################################
 sub readNTransmembraneRegionsFile {
@@ -3262,5 +3414,60 @@ sub readpIFile {
 
 
 
+
+###############################################################################
+# readSPFile -- get protein names from Swiss-Prot fasta file
+# (copied 10/15/08 from readpIFile; needs to be modified)
+###############################################################################
+sub readSPFile {
+  #my $self = shift;
+  my %args = @_;
+
+
+  #### Decode the argument list
+  my $source_file = $args{'source_file'} ||
+    die ("ERROR: Must supply source_file");
+  my $verbose = $args{'verbose'} || '';
+
+  #### Define a hash to hold the contents of the file
+  my %data;
+  $data{SUCCESS} = 0;
+
+  #### Open the specified file
+  unless ( open(INFILE, "$source_file") ) {
+    die("Cannot open input file $source_file\n");
+  }
+
+  #### Read every other line, starting with the first.
+  my $line = <INFILE>;
+  while (!eof(INFILE)) {
+    #### Parse out the accession number (id1), the Swiss-Prot
+    #### identifier (id2), and the name for this entry
+    my @tokens = split(/\|/,$line);
+    my $id1 = $tokens[1];
+    my $remainder = $tokens[2];
+    my $i = index($remainder,' '); # first space
+    my $id2 = substr($remainder, 0, $i);
+    my $j = index($remainder,' OS=');
+    my $name = substr($remainder, $i+1, $j-$i-1);
+    #print $id2, ": ", $name, "\n";
+    #### Store the name in a hash twice, indexed by both identifiers
+    $data{$id1} = $name;
+    $data{$id2} = $name;
+    #### Read and discard the sequence line
+    $line = <INFILE>;
+    while ((!eof(INFILE)) && !($line =~ />/)) {
+      $line = <INFILE>;
+    }
+  }
+  close(INFILE);
+  #### Done
+
+
+  #### Set SUCCESS flag and return
+  $data{SUCCESS} = 1;
+  return \%data;
+
+} # end readSPFile
 
 
