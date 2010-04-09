@@ -19,6 +19,7 @@ use vars qw($sbeams $current_contact_id $current_username
              $current_work_group_id $current_work_group_name
              $current_project_id $current_project_name $current_user_context_id);
 use CGI::Carp qw(fatalsToBrowser croak);
+use SBEAMS::Connection qw( $log );
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::TableInfo;
@@ -661,7 +662,8 @@ sub display_ext_halo_template {
   $buf =~ s/=\"\/images/=\"$HALO_HOME\/images/g;
   #$buf =~ s/href=\"\//href=\"$HTML_BASE_DIR\//g;
   $buf =~ s/href=\"\//href=\"http:\/\/halo.systemsbiology.net\//g;
-  print $buf;
+#  print $buf;
+  print "$tooltip\n";
   return;
 
 }
@@ -674,6 +676,25 @@ sub display_ext_halo_template {
 sub display_ext_halo_style_sheet {
   my $self = shift;
   my %args = @_;
+
+  use LWP::UserAgent;
+  use HTTP::Request;
+  my $ua = LWP::UserAgent->new();
+  my $cssLink = 'http://baliga.systemsbiology.net/drupal/static_css/pixture_reloaded.css';
+  my $response = $ua->request( HTTP::Request->new( GET => "$cssLink" ) );
+  my $style = $response->content();
+#  print qq~
+#	<STYLE TYPE="text/css"> 
+#    $style
+#  </STYLE>
+#  ~;
+
+  print qq~
+  <LINK REL=StyleSheet HREF="$cssLink" TYPE="text/css" MEDIA="screen, print">
+  ~;
+
+  return;
+
 
   my $FONT_SIZE=9;
   my $FONT_SIZE_SM=8;
@@ -1002,6 +1023,7 @@ h4  { color: #004896; font-family: Helvetica, Arial, sans-serif; font-size: 10pt
 sub display_ext_halo_footer {
   my $self = shift;
   my %args = @_;
+  return;
 
   my $buf = qq~
 	<!-- End Content-->												
