@@ -8,7 +8,7 @@
 # Description : This CGI program that allows users to
 #               browse through annotated proteins very simply
 #
-# SBEAMS is Copyright (C) 2000-2003 by Eric Deutsch
+# SBEAMS is Copyright (C) 2000-2010 Eric Deutsch
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -223,7 +223,7 @@ sub handle_request {
       $optionlist .= "<OPTION VALUE=\"$key\" $flag>$options{$key}</OPTION>\n";
     };
 	
-
+unless( $parameters{table_only} ) {
     print qq~
 <P><FORM NAME="SearchForm" ACTION="$base_url" METHOD="POST">
 Search
@@ -238,6 +238,7 @@ $optionlist
  
 $LINESEPARATOR
 ~;
+}
   }
 
   #########################################################################
@@ -729,7 +730,7 @@ INNER JOIN PeptideAtlas.dbo.atlas_build AB ON ( PI.atlas_build_id = AB.atlas_bui
   LEFT JOIN PeptideAtlas.dbo.biosequence BS ON ( PM.matched_biosequence_id = BS.biosequence_id ) 
   WHERE O.organism_name = 'Halobacterium' 
 --  AND AB.atlas_build_id = '112' 
-  AND AB.atlas_build_id = '91' 
+  AND AB.atlas_build_id = '130' 
   AND BS.biosequence_gene_name IN ($glist_clean) 
 GROUP BY  PI.original_protein_name ORDER BY PI.original_protein_name
 END_SQL
@@ -893,7 +894,7 @@ my $atlas_data;
 
     #hard-coded atlas ID, FIX THIS !!!
     #my $atlas_id = '112'; 
-    my $atlas_id = '91'; 
+    my $atlas_id = '130'; 
     ## if there are hits against the peptideAtlas, say so, otherwise, say none
     my $peptide_tip = "None";
     if ( $atlas_hit_h{$biosequence_name} ) {
