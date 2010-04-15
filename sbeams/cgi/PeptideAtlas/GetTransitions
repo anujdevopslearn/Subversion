@@ -36,6 +36,7 @@ $sbeams->setSBEAMS_SUBDIR( 'PeptideAtlas' );
 my $best_peptide = new SBEAMS::PeptideAtlas::BestPeptideSelector;
 $best_peptide->setAtlas( $atlas );
 $best_peptide->setSBEAMS( $sbeams );
+my $pabst_build_id;
 
 
 ## Set program name and usage banner for command like use
@@ -90,10 +91,21 @@ sub main
   my $n_params_found = $sbeams->parse_input_parameters(
       q=>$q,parameters_ref=>\%parameters);
 
-  #$sbeams->printDebuggingInfo($q);
+#  $sbeams->printCGIParams($q);
 
   #### Process generic "state" parameters before we start
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+  # Fetch pabst_build_id based on params. 
+  # 1 - passed pabst_build_id param
+  # 2 - passed organism
+  # 3 - cached pabst_build_id cookie
+  # 4 - global default
+  $pabst_build_id = $best_peptide->get_pabst_build( %parameters );
+
+  # This might have gotten overridden due to permissions.
+  $parameters{pabst_build_id} = $pabst_build_id;
+
 
   #### Decide what action to take based on information so far
   if ( !$parameters{action} ) {
@@ -149,7 +161,7 @@ sub print_form {
   # Historical, don't ask.
 
     #### Set some specific settings for this program
-    my $CATEGORY="Get MRM List";
+    my $CATEGORY="Query Transitions";
 
     $TABLE_NAME="AT_GetPABSTList" unless ($TABLE_NAME);
 
@@ -178,8 +190,21 @@ sub print_form {
     #### Set some reasonable defaults if no parameters supplied
     unless ($n_params_found) 
     {
-        $parameters{input_form_format} = "minimum_detail";
+      $parameters{input_form_format} = "minimum_detail";
     }
+    $parameters{n_peptides_per_protein} ||= 3;
+    $parameters{n_highest_intensity_fragment_ions} ||= 3;
+    $parameters{pabst_build_id} = $pabst_build_id;
+
+#    pabst_build_id=7
+#    protein_name_constraint=Foo
+#    upload_file=
+#    peptide_sequence_constraint=
+#    peptide_length=
+#    empirical_proteotypic_constraint=
+#    n_protein_mappings_constraint=
+#    n_genome_locations_constraint=
+#    n_highest_intensity_fragment_ions=3
 
     ##Input form:  action is set by PROGRAM_FILE_NAME, so sub it w/ display page:
     $sbeams->collectSTDOUT();
@@ -190,6 +215,7 @@ sub print_form {
         parameters_ref=>\%parameters,
         input_types_ref=>\%input_types,
         mask_user_context=> '1',
+        mask_query_constraints => 1,
     );
     my $form = $sbeams->fetchSTDOUT();
     my $id = 'ID="protein_name_constraint"';
@@ -226,7 +252,7 @@ sub fetch_transitions {
   my %parameters = %args;
 
   # Hackage
-  $parameters{consensus_library_id} ||= $parameters{consensus_library_id};
+#  $parameters{consensus_library_id} ||= $parameters{consensus_library_id};
   my $is_html = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
   my $project_id = $atlas->getProjectID(
     atlas_build_id => $parameters{atlas_build_id}
@@ -486,7 +512,7 @@ sub fetch_transitions {
   my %prot_peps;
   my %pep_frags;
   my %ce;
-  my @display_rows = ( [qw( Protein Sequence Chg q1_mz q3_mz Intensity Ion CE SSRCalc RT n_obs Annot Source ) ] );
+#  my @display_rows = ( [qw( Protein Sequence Chg q1_mz q3_mz Intensity Ion CE SSRCalc RT n_obs Annot Source ) ] );
 
   my %row2chg;
 
@@ -550,7 +576,7 @@ sub fetch_transitions {
                      Pre => 'Previous amino acid',
                 Sequence => 'Amino acid sequence of peptide',
                      Fol => 'Followin amino acid',
-             'Score' => 'Adjusted proteotypic score',
+                 'Score' => 'Adjusted proteotypic score',
                      Src => 'Transition source, one of PA, QT, Q3 (triple quad), IT (ion trap), PR (In silico/theoretical)',
                    Q1_mz => 'Precursor ion m/z',
                   Q1_chg => 'Precursor ion charge',
@@ -562,9 +588,19 @@ sub fetch_transitions {
                      SSR => 'SSR Calc relative hydrophobicity',
                    );
 
+  my @heading_keys;
+  my $push = 1;
+  for my $item ( @headings ) {
+    push @heading_keys, $item if $push;
+    $push = ( $push ) ? 0 : 1;
+  }
+    
+  my $headings_ref = ( $sbeams->output_mode() =~ /html/i ) ? 
+           $best_peptide->make_sort_headings( headings => \@headings, default => 'adj_SS' ) :
+           \@heading_keys;
+           
+  my @peptides = ( $headings_ref );
 
-  my @peptides = ( $best_peptide->make_sort_headings( headings => \@headings,
-                                              default => 'adj_SS' )  );
   my $naa = $sbeams->makeInactiveText( 'n/a' );
 
   my %src_name = ( P => 'PR', Q => 'Q3', T => 'QT', I => 'IT', 'R' => 'PA' );
@@ -599,9 +635,6 @@ sub fetch_transitions {
       }
       push @{$peptide_fragments{$peptide_key}}, [@row];
     }
-    $log->info( "Whole array has $cnt items " );
-    $log->info( "Short array has " . scalar( @short_list ) . " items " );
-
      $log->info( "Run PABST scoring " . time() );
     # Run pabst scoring - will clobber input array
     $best_peptide->pabst_evaluate_peptides( peptides => \@short_list,
@@ -812,7 +845,6 @@ sub fetch_transitions {
                                                  bkg_interval => 3, 
                                                  set_download => 'Download peptides', 
                                                   file_prefix => 'best_peptides_', 
-                                                       header => 1,
                                                      bg_color => '#EAEAEA',
                                                      sortable => 1,
                                                      table_id => 'pabst',
@@ -844,7 +876,7 @@ sub fetch_transitions {
                              rs_params_ref=> {},
                              url_cols_ref=> [],
                              hidden_cols_ref=> {},
-                              max_widths=> {},
+                             max_widths=> {},
                              column_titles_ref=> $rs->{column_list_ref},
                              base_url=> '',
 														 output_mode => $sbeams->output_mode()
