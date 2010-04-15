@@ -997,7 +997,8 @@ sub get_pabst_static_peptide_display {
 
 #+
 # Returns best legal pabst build id based on 
-#  1) passed param
+#  1) passed pabst_build_id param
+#  1.5) passed organism param
 #  2) cached session value
 #  3) default
 #-
@@ -1005,58 +1006,69 @@ sub get_pabst_build {
   my $self = shift;
   my %params = @_;
 
+# Not used for now
+#  my $atlas_build_id = $atlas->getCurrentAtlasBuildID( parameters_ref => {} );
+
   my $build_id = $params{pabst_build_id};
 
   my $cookie_build_id = $sbeams->getSessionAttribute( key => 'pabst_build_id' );
 
+  my $organism = $params{organism_name} || '';
+
   my @accessible = $sbeams->getAccessibleProjects();
   my $acc_str = join( ',', @accessible );
-
-  my $atlas_build_id = $atlas->getCurrentAtlasBuildID( parameters_ref => {} );
-
-  my $organism_table = '';
-  my $organism_and = '';
-
-  if ( $params{organism} ) {
-    $organism_table = "JOIN $TB_ORGANISM O ON O.organism_id = PB.organism_id\n";
-    $organism_and = "AND organism_name = '$params{organism}'\n";
-  }
-
   my $sql = qq~
-  SELECT pabst_build_id
+  SELECT pabst_build_id, organism_name
   FROM $TBAT_PABST_BUILD PB 
-  $organism_table
+  JOIN $TB_ORGANISM O ON O.organism_id = PB.organism_id
   WHERE PB.project_id IN ( $acc_str )
-  $organism_and
   ORDER BY pabst_build_id DESC
   ~;
 
-  my $sth = $sbeams->get_statement_handle( $sql );
+  my %builds;
   my $validated_build_id = '';
+  my $sth = $sbeams->get_statement_handle( $sql );
   while ( my @row = $sth->fetchrow_array() ) {
-    
-    # Use preset value from cgi param if possible
-    if ( $build_id && $build_id == $row[0] ) {
-      $validated_build_id = $row[0];
-      last;
+    $builds{$row[0]} = $row[1];
 
-    # Else use organism-based
-    } elsif ( $params{organism} ) {
-      $validated_build_id = $row[0];
-      last;
-
-    } elsif ( $cookie_build_id && $cookie_build_id == $row[0] ) {
-      $validated_build_id = $row[0];
-      last;
-
-    # Else use first default 
-    } else {
-      $validated_build_id = $row[0];
-      last;
-    }
+    # Set this to the default, might well get reset based on priority
+    $validated_build_id ||= $row[0];
   }
+
+  my $found = 0;
+    
+  # Use preset value from cgi param if possible
+  if ( $build_id && $builds{$build_id} ) {
+    $validated_build_id = $build_id;
+    $log->info( "Returning $validated_build_id based on pabst_build_id" );
+    $found++;
+  }
+
+  if ( !$found && $organism ) {
+    for my $build_id ( sort { $b <=> $a } ( keys( %builds ) ) ) {
+      if ( lc( $builds{$build_id} ) eq lc( $organism ) ) {
+        $validated_build_id = $build_id;
+        $log->info( "Returning $validated_build_id based on organism" );
+        $found++;
+      }
+    }
+    $log->info( "No suitable builds found for organism $organism!" ) if !$found;
+  }
+
+  if ( !$found && $cookie_build_id && $builds{$cookie_build_id} ) {
+    $validated_build_id = $cookie_build_id;
+    $log->info( "Returning $validated_build_id based on cookie" );
+    $found++;
+  }
+
+  if ( !$found ) {
+    $log->info( "Returning $validated_build_id based on global default" );
+  }
+
   if ( $validated_build_id ) {
     $sbeams->setSessionAttribute( key => 'pabst_build_id', value => $validated_build_id ); 
+  } else {
+    $log->info( "No valid build ids found" ); 
   }
   return $validated_build_id;
 }
