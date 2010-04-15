@@ -602,16 +602,16 @@ sub encodeSectionTable {
   my $rs_link = '';
   my $rs_name = '';
   my $file_prefix = $args{file_prefix} || 'mrm_';
+
+  my @rs_data =  @{$args{rows}};
+
   if ( $args{set_download} ) {
-    # Kluge part 1
-    my $rs_headers = shift( @{$args{rows}} );
-    $rs_name = $self->make_resultset( rs_data => $args{rows}, 
+    my $rs_headers = shift( @rs_data );
+    $rs_name = $self->make_resultset( rs_data => \@rs_data, 
                                       headers => $rs_headers,
                                   file_prefix => $file_prefix );
 
     $rs_link = "<a href='$CGI_BASE_DIR/GetResultSet.cgi/$rs_name.tsv?rs_set_name=$rs_name&format=tsv;remove_markup=1' TITLE='Download table as tab-delimited text file' CLASS=info_box>Download as TSV</a>",
-    # Kluge part 2
-    unshift( @{$args{rows}}, $rs_headers );
   }
 
   return '' unless $args{rows};
