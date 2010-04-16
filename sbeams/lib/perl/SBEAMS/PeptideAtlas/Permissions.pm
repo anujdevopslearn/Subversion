@@ -341,15 +341,32 @@ sub getCurrentAtlasBuildID {
 
   }
 
+  my @accessible_project_ids = $sbeams->getAccessibleProjects();
+  my $accessible_project_ids = join( ",", @accessible_project_ids ) || '0';
 
   #### If we still don't have an atlas_build_id, just assume id 1!
   unless ($atlas_build_id) {
-    $atlas_build_id = 1;
+    
+  my $sql = qq~
+      SELECT AB.atlas_build_id
+        FROM $TBAT_DEFAULT_ATLAS_BUILD DAB
+        JOIN $TBAT_ATLAS_BUILD AB
+          ON DAB.atlas_build_id = AB.atlas_build_id 
+       WHERE AB.project_id IN ( $accessible_project_ids )
+         AND DAB.record_status != 'D'
+         AND AB.record_status != 'D'
+       ORDER BY organism_specialized_build ASC, AB.atlas_build_id DESC
+    ~;
+
+    my $sth = $sbeams->get_statement_handle($sql);
+    while ( my @row = $sth->fetchrow_array() ) {
+      $atlas_build_id = $row[0];
+      last;
+    }
+    $atlas_build_id ||= 1;
   }
 
   #### Verify that the user is allowed to see this atlas_build_id
-  my @accessible_project_ids = $sbeams->getAccessibleProjects();
-  my $accessible_project_ids = join( ",", @accessible_project_ids ) || '0';
   my $sql = qq~
       SELECT atlas_build_id
         FROM $TBAT_ATLAS_BUILD AB
