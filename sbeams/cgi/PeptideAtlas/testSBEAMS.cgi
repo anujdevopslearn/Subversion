@@ -75,30 +75,30 @@ $sbeams = new SBEAMS::Connection;
 
 								"GetPeptides" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetPeptides",  
 								                   PARAMS => { '_tab' => 4,
-                                               atlas_build_id => 182,
+                                               atlas_build_id => 213,
                                                peptide_sequence_constraint => 'VLHPLEG%25',
                                                QUERY_NAME=> 'AT_GetPeptides',
                                                action=> 'QUERY' },
 																	 STRINGS => [ qw(VLHPLEGAVVIIFK Empirical) ] },
 								"GetProtein" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetProtein", 
-								                  PARAMS => { '_tab' => 5, atlas_build_id => 113, protein_name => 'ENSP00000374576', action=> 'QUERY' },
+								                  PARAMS => { '_tab' => 5, atlas_build_id => 204, protein_name => 'ENSP00000374576', action=> 'QUERY' },
 																	STRINGS => [ qw(CD166_HUMAN ALCAM External observable ) ]  },
 
 
 								"GetProteins" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetProteins",
                                    PARAMS => { '_tab' => 6,
-																	             atlas_build_id => 182,
+																	             atlas_build_id => 213,
                                                biosequence_name_constraint => 'ENSP00000222%25',
                                                QUERY_NAME => 'AT_GetProteins',
 																	             action => 'QUERY' },
 																	STRINGS => [qw( ENSG00000105401 Mappings ) ] },
-#								atlas_build_id=182
+#								atlas_build_id=213
 #								biosequence_name_constraint=ENSP00000222%25
 #								QUERY_NAME=AT_GetProteins
 #								action=QUERY
 								"Summarize" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/Summarize_Peptide",  PARAMS => { '_tab' => 7 }, STRINGS => [] },
 								"GetMRMList" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetMRMList", PARAMS => { }, STRINGS => [] },
-								"ViewMRMList" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/ViewMRMList", PARAMS => { atlas_build_id => 83, consensus_library_id => 5,
+								"ViewMRMList" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/ViewMRMList", PARAMS => { atlas_build_id => 180, consensus_library_id => 5,
 					 protein_name_constraint => 'YAL044C', 
 					 QUERY_NAME => 'AT_GetMRMList', action => 'QUERY' 
 					}, STRINGS => [ qw( Sequence LGEGVNVEQVEGLMSLEQYEK Spectrum YAL044C ) ] },
