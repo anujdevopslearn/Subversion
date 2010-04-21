@@ -684,10 +684,11 @@ AT_pabst_peptide	12	n_observations	N Observations	int	4	0	Y		N			N						N
 AT_pabst_peptide	13	source_build	Source Build	int	4	0	Y		N			N						N			
 AT_pabst_peptide	14	empirical_proteotypic_score	Empirical Proteotypic Score	float	8	0	Y		N			N						N			
 AT_pabst_peptide	15	suitability_score	Suitability Score	float	8	0	Y		N			N						N			
-AT_pabst_peptide	16	merged_score	Merged Score	float	8	0	Y		N			N						N			
-AT_pabst_peptide	17	synthesis_score	Synthesis Score	float	8	0	Y		N			N						N			
-AT_pabst_peptide	18	synthesis_warnings	Synthesis Warnings	varchar	255	0	Y		N			N						N			
-AT_pabst_peptide	19	syntheis_adjusted_score	Syntheis Adjusted Score	float	8	0	Y		N			N						N			
+AT_pabst_peptide	16	predicted_suitability_score	Predicted Suitability Score	float	8	0	Y		N			N						N			
+AT_pabst_peptide	17	merged_score	Merged Score	float	8	0	Y		N			N						N			
+AT_pabst_peptide	18	synthesis_score	Synthesis Score	float	8	0	Y		N			N						N			
+AT_pabst_peptide	19	synthesis_warnings	Synthesis Warnings	varchar	255	0	Y		N			N						N			
+AT_pabst_peptide	20	syntheis_adjusted_score	Syntheis Adjusted Score	float	8	0	Y		N			N						N			
 AT_pabst_transition	1	pabst_transition_id	PABST Transition Id	int	4	0	N		Y			N						Y			
 AT_pabst_transition	2	pabst_peptide_id	PABST Peptide Id	int	4	0	Y		N	AT_pabst_peptide	pabst_peptide_id	N						N			
 AT_pabst_transition	3	transition_source	Transition Source	char	1	0	Y		N			N						N			
