@@ -105,7 +105,7 @@ sub spectrum_search {
   my $lib = ( !$args{lib_id} ) ? '' : "AND CLS.consensus_library_id = '$args{lib_id}'";
 
   my $sql =<<"  END";
-  SELECT consensus_library_spectrum_id, sequence, charge, modifications, protein_name
+  SELECT consensus_library_spectrum_id, sequence, charge, modifications, protein_name,
     mz_exact, consensus_spectrum_type_id, CLS.consensus_library_id, modified_sequence,
     protein_name_alt, consensus_library_name
     FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM CLS
@@ -116,8 +116,7 @@ sub spectrum_search {
     $lib
   END
   my @rows = $sbeams->selectSeveralColumns( $sql );
-  return \@rows if @rows;
-  return []; 
+  return \@rows || [];
 }
 
 1;
