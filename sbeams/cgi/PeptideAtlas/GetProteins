@@ -783,7 +783,7 @@ sub handle_request {
 	 INNER JOIN $TBAT_BIOSEQUENCE BS_REP
 	      ON ( BS_REP.biosequence_id = PID.represented_by_biosequence_id )
               AND ( BS_REP.biosequence_set_id = BSS.biosequence_set_id)
-	 INNER JOIN $TB_DBXREF DBX ON ( DBX.dbxref_id = BS_REF.dbxref_id )
+	  LEFT JOIN $TB_DBXREF DBX ON ( DBX.dbxref_id = BS_REF.dbxref_id )
 	 INNER JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL
 	      ON ( PPL.protein_presence_level_id = PID.presence_level_id )
          $post_joins[$i]
