@@ -42,3 +42,10 @@ CREATE NONCLUSTERED INDEX idx_atlas_search_batch_id ON dbo.peptide_instance_sear
 CREATE NONCLUSTERED INDEX idx_peptide_id ON dbo.peptide_instance ( peptide_id )  --WITH DROP_EXISTING
 CREATE NONCLUSTERED INDEX idx_biosequence_set_id ON dbo.biosequence ( biosequence_set_id )   --WITH DROP_EXISTING
 
+CREATE NONCLUSTERED INDEX idx_biosequence_id ON dbo.pabst_peptide_mapping ( biosequence_id )   --WITH DROP_EXISTING
+
+CREATE NONCLUSTERED INDEX idx_reference_biosequence_id ON dbo.biosequence_relationship ( reference_biosequence_id )   --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_related_biosequence_id ON dbo.biosequence_relationship ( related_biosequence_id )   --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_biosequence_id ON dbo.protein_identification ( biosequence_id )   --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_represented_by_biosequence_id ON dbo.protein_identification ( represented_by_biosequence_id )   --WITH DROP_EXISTING
+
