@@ -478,10 +478,16 @@ sub get_protein_identification_count
   my $presence_level = $args{'presence_level'}
       || die "presence_level not passed";
   my $count_decoys = $args{'count_decoys'} || 0;
+  my $count_crap = $args{'count_crap'} || 0;
 
   my $decoy_clause = " ";
   if (! $count_decoys) {
     $decoy_clause = "AND NOT BS.biosequence_name LIKE \'DECOY%\'";
+  }
+
+  my $crap_clause = " ";
+  if (! $count_crap) {
+    $crap_clause = "AND NOT BS.biosequence_desc LIKE \'%common contaminant%\'";
   }
 
   my $sql =<<"  END";
@@ -494,6 +500,7 @@ sub get_protein_identification_count
   WHERE PI.atlas_build_id = $build_id
   AND PPL.level_name = \'$presence_level\'
   $decoy_clause
+  $crap_clause
   GROUP BY PI.atlas_build_id
   END
 
@@ -510,10 +517,16 @@ sub get_covering_set_count
   my $build_id = $args{'build_id'}
       || die "atlas_build_id not passed";
   my $count_decoys = $args{'count_decoys'} || 0;
+  my $count_crap = $args{'count_crap'} || 0;
 
   my $decoy_clause = " ";
   if (! $count_decoys) {
     $decoy_clause = "AND NOT BS.biosequence_name LIKE \'DECOY%\'";
+  }
+
+  my $crap_clause = " ";
+  if (! $count_crap) {
+    $crap_clause = "AND NOT BS.biosequence_desc LIKE \'%common contaminant%\'";
   }
 
   my $sql =<<"  END";
@@ -524,6 +537,7 @@ sub get_covering_set_count
   WHERE PI.atlas_build_id = $build_id
   AND PI.is_covering = 1
   $decoy_clause
+  $crap_clause
   GROUP BY PI.atlas_build_id
   END
 
@@ -542,10 +556,16 @@ sub get_protein_relationship_count
   my $relationship_name = $args{'relationship_name'}
       || die "relationship_name not passed";
   my $count_decoys = $args{'count_decoys'} || 0;
+  my $count_crap = $args{'count_crap'} || 0;
 
   my $decoy_clause = " ";
   if (! $count_decoys) {
     $decoy_clause = "AND NOT BS.biosequence_name LIKE \'DECOY%\'";
+  }
+
+  my $crap_clause = " ";
+  if (! $count_crap) {
+    $crap_clause = "AND NOT BS.biosequence_desc LIKE \'%common contaminant%\'";
   }
 
   my $sql =<<"  END";
@@ -558,6 +578,7 @@ sub get_protein_relationship_count
   WHERE BR.atlas_build_id = $build_id
   AND BRT.relationship_name = \'$relationship_name\'
   $decoy_clause
+  $crap_clause
   GROUP BY BR.atlas_build_id
   END
 
