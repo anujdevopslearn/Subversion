@@ -132,7 +132,7 @@ if ($DEBUG) {
 
 
 ## die unless main methods are selected:
-unless ( $OPTIONS{"load"} || $OPTIONS{"load_all"} || 
+unless ( $OPTIONS{"load"} || $OPTIONS{"load_all"} || $OPTIONS{"purge"} || 
 $OPTIONS{"check_status"} || $OPTIONS{"delete"} || $OPTIONS{"update_existing"})
 {
     print "\n$USAGE";
@@ -1194,7 +1194,7 @@ sub loadBiosequence {
 
     #### If there's CC data
     if ($have_cc_data) {
-      "Storing rowdata for $rowdata_ref->{biosequence_name}.\n";
+      # print "Storing rowdata for $rowdata_ref->{biosequence_name}.\n";
 
       $rowdata{start_in_chromosome} = $chrom_coords->
         {$rowdata_ref->{biosequence_name}}->{start_in_chromosome}
