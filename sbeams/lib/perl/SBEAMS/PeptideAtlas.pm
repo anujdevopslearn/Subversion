@@ -186,7 +186,7 @@ sub getBuildConsensusLib {
 }
 
 sub getGlycoBuilds {
-  my @glyco_builds = ( 115, 120, 149, 156, 175, 177 );
+  my @glyco_builds = ( 115, 120, 149, 156, 175, 177, 231 );
   return \@glyco_builds;
 }
 
