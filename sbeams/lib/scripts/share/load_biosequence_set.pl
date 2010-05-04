@@ -919,7 +919,9 @@ sub loadBiosequence {
       delete ($rowdata_ref->{biosequence_accession});
       delete ($rowdata_ref->{dbxref_id});
   }
-
+  for my $key ( qw( biosequence_name biosequence_gene_name biosequence_desc ) ) {
+		$rowdata_ref->{$key} = '' if !defined $rowdata_ref->{$key};
+	}
 
   #### If the biosequence_name bloats beyond 255, truncate it
   if (length($rowdata_ref->{biosequence_name}) > 255) {
