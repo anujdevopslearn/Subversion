@@ -810,13 +810,14 @@ my $atlas_data;
     							 link=>$url,
     							 tooltip=>"DNA sequence in FASTA format");
 
-    if ($dna_biosequence_id) {
+#    if ($dna_biosequence_id) {
        push(@halo_link_menu_items, getMenuItemJavascript (
             tag=>'DNA Sequences',
             target=>'sequence',
+            data=>$dna_biosequence_id,
             link=>$url,
             tooltip=> "DNA sequence in FASTA format"));
-    }
+#    }
 
     $url = "BrowseBioSequence.cgi?project_id=$project_list&biosequence_set_id=$parameters{protein_biosequence_set_id}&biosequence_id_constraint=$protein_biosequence_id&action=QUERYHIDE&display_options=SequenceFormat&display_mode=FASTA";
     my $prot_link = getColorizedTD (tag=>'Protein Sequences',
@@ -830,6 +831,7 @@ my $atlas_data;
          tag=>'Protein Sequences',
          target=>'sequence',
          link=>$url,
+         data=>$protein_biosequence_id,
          tooltip=> "Protein sequence in FASTA format"));
 
     $url = "ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation&biosequence_annotation_id=$biosequence_annotation_id&biosequence_id=$protein_biosequence_id&ShowEntryForm=1";
@@ -844,6 +846,7 @@ my $atlas_data;
              tag=>'Annotations',
              target=>'annotation',
              link=>$url,
+             data=>$biosequence_annotation_id,
              tooltip=> "Edit Annotation (restricted)"));
 
     $url = 'http://www.microbesonline.org/cgi-bin/keywordSearch.cgi?type=0&mapId=MAPID&term=1&locus=0&hit=0&disp=0&homolog=0&format=1&favorites=&taxTyping=halo&taxSelector=64091&taxId=64091&keyword='.$biosequence_name;
@@ -858,6 +861,7 @@ my $atlas_data;
           tag=>'Microbes Online',
           target=>'microbes_onlines',
           link=>$url,
+          data=>$biosequence_name,
           tooltip=> "Microbes Online Search for $biosequence_name"));
 
     push @array_expression_genes,$biosequence_name;
@@ -872,6 +876,7 @@ my $atlas_data;
     push(@halo_link_menu_items, getMenuItemJavascript (
           tag=>'Gene Expression',
           target=>'array_expression',
+          data=>$biosequence_name,
           link=>$url,
           tooltip=> "Microarray Data Containing $biosequence_name"));
 
@@ -891,6 +896,7 @@ my $atlas_data;
     push(@halo_link_menu_items, getMenuItemJavascript (
         tag=>'Redundant ORFs',
         link=>$url,
+        data=>$duplicate_biosequences,
         tooltip=> "Redundant ORFS: $tip"));
 
     #hard-coded atlas ID, FIX THIS !!!
@@ -898,8 +904,10 @@ my $atlas_data;
     my $atlas_id = '130'; 
     ## if there are hits against the peptideAtlas, say so, otherwise, say none
     my $peptide_tip = "None";
+    my $peptide_link = "Peptide Atlas";
     if ( $atlas_hit_h{$biosequence_name} ) {
         $peptide_tip = "Detected $atlas_hit_h{$biosequence_name}->[2] distinct peptides for $biosequence_name, $atlas_hit_h{$biosequence_name}->[1] total observations (Restricted Access)";
+	$peptide_link .= " (detected $atlas_hit_h{$biosequence_name}->[2] distinct peptides for $biosequence_name, $atlas_hit_h{$biosequence_name}->[1] total observations)";
 
         $atlas_data = $atlas_hit_h{$biosequence_name};
     }
@@ -914,9 +922,11 @@ my $atlas_data;
     								link=>$url,
     								tooltip=> "$peptide_tip" );
     $atlas_data = "";
-
+    my $has_data = "ok";
+    $has_data = "" if $peptide_link == "Peptide Atlas";
     push(@halo_link_menu_items, getMenuItemJavascript (
-            tag=>'Peptide Atlas',
+            tag=>$peptide_link,
+            data=>$has_data,
             target=>'atlas',
             link=>$url,
             tooltip=> "$peptide_tip"));
@@ -924,10 +934,13 @@ my $atlas_data;
 
     # VNG5000's, A, B and m suffixes not supported, so set data to a false value
     my $seq_name = $biosequence_name;
+    my $data = "ok";
     if ($seq_name =~ /VNG5\d\d\d\w+/ or $seq_name =~ /VNG\d\d\d\d(A|B|\wm|\wM)/ ) {
-        $seq_name = ""
+        $seq_name = "";
+        $data = "";
     }
     $tip = "Transcript structure for: $biosequence_name";
+    my $svg_url = "http://gaggle.systemsbiology.net/projects/halo/transcript_structure_svgz/$biosequence_name.svgz";
     $url = "http://gaggle.systemsbiology.net/projects/halo/transcript_structure/$biosequence_name.pdf";
     my $transcript_structure_link = getColorizedTD (tag=>"Transcript Structure",
                                             data=>$seq_name,
@@ -937,25 +950,34 @@ my $atlas_data;
                                             tooltip=> "$tip");
 
     push(@halo_link_menu_items, getMenuItemJavascript (
-            tag=> "Transcript Structure",
+            tag=> "Transcript Structure (PDF)",
             link=> $url,
-            target=>'transcript_structure',
+            target=>'transcript_structure_pdf',
+            data=>$data,
             tooltip=> "$tip"));
+
+    push(@halo_link_menu_items, getMenuItemJavascript (      
+            tag=> "Transcript Structure (SVG)",                    
+            link=> $svg_url,                                     
+            target=>'transcript_structure_svg',                  
+            data=> $data, 
+            tooltip=> "$tip")); 
 
     # add menu for current row to list of menus for all rows
     push(@halo_link_menus, getMenuJavascript(@halo_link_menu_items));
 
-	  $table_html .= qq~
-		$dna_link
-		~if ($dna_biosequence_id);
-	  $table_html .= qq~
-		$prot_link
-		$annot_link
-		$microbes_online_link
-		$array_expression_link
-		$duplicates_link
-		$atlas_link
-		$transcript_structure_link
+#	  $table_html .= qq~
+	#	$dna_link
+	#	~if ($dna_biosequence_id);
+	#  $table_html .= qq~
+	#	$prot_link
+	#	$annot_link
+	#	$microbes_online_link
+	#	$array_expression_link
+	#	$duplicates_link
+	#	$atlas_link
+	#	$transcript_structure_link
+	$table_html .= qq~
 		<td><img id="halo_link_menu_$counter" src="$HTML_BASE_DIR/images/menu_button.png" width="14" height="14"/></td>
 		</TR>
 		</TABLE>
@@ -1224,10 +1246,19 @@ sub getMenuItemJavascript {
     my $link = $args{'link'};
     my $target = $args{'target'};
     my $tooltip = $args{'tooltip'};
+    #my $data = "ok";
+    my $data = $args{'data'};# if $args{'data'};
     my $js;
+     
 
-    $js .= "{text:\"$tag\",\n";
-    $js .= "href:\"$link\",\n";
+    unless ($data  && $link) {
+      $js .= "{text:\"<strike>$tag</strike>\",\n";
+      $js .= "href:\"\",n";
+    } else {
+      $js .= "{text:\"$tag\",\n";
+      $js .= "href:\"$link\",\n";
+    }
+
     $js .= "hrefTarget:\"$target\",\n";
     $js .= "tooltip:\"$tooltip\"}";
 
