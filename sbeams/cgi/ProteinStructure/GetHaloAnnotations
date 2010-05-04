@@ -923,7 +923,7 @@ my $atlas_data;
     								tooltip=> "$peptide_tip" );
     $atlas_data = "";
     my $has_data = "ok";
-    $has_data = "" if $peptide_link == "Peptide Atlas";
+    $has_data = "" if $peptide_link eq "Peptide Atlas";
     push(@halo_link_menu_items, getMenuItemJavascript (
             tag=>$peptide_link,
             data=>$has_data,
