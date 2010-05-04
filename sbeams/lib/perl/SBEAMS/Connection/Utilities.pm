@@ -1090,8 +1090,11 @@ sub parseBiosequenceDescriptor {
   }
 
   # swiss-prot, from http://www.expasy.ch/sprot/userman.html#AC_line
-  if ($rowdata_ref->{biosequence_name} =~ /([O-Q]\d\w{3}\d)/ ||
-      $rowdata_ref->{biosequence_name} =~ /([A-Z]\d[A-Z]\w\w\d)/) {
+  # includes varsplic accessions (e.g. P12345-2)
+  if ($rowdata_ref->{biosequence_name} =~ /(^[O-Q]\d\w{3}\d$)/ ||
+      $rowdata_ref->{biosequence_name} =~ /(^[O-Q]\d\w{3}\d-\d+$)/ ||
+      $rowdata_ref->{biosequence_name} =~ /(^[A-Z]\d[A-Z]\w\w\d$)/ ||
+      $rowdata_ref->{biosequence_name} =~ /(^[A-Z]\d[A-Z]\w\w\d-\d+$)/) {
     $rowdata_ref->{biosequence_accession} = $1;
     if ($rowdata_ref->{biosequence_desc} =~ /GN=(\S+)/ ) {
       $rowdata_ref->{biosequence_gene_name} = $1;
