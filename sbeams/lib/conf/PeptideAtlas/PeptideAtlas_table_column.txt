@@ -590,14 +590,16 @@ AT_proteotypic_peptide	2	matched_peptide_id	Matched Peptide ID	int	4	0	Y		N	AT_p
 AT_proteotypic_peptide	3	preceding_residue	Preceding Residue	char	1	0	N		N												
 AT_proteotypic_peptide	4	peptide_sequence	Peptide Sequence	varchar	255	0	N		N												
 AT_proteotypic_peptide	5	following_residue	Following Residue	char	1	0	N		N												
-AT_proteotypic_peptide	6	peptidesieve_score	PeptideSieve Score	float	8	0	Y		N										Peptide score from Peptide Sieve predictor, Mallick et. Al		
-AT_proteotypic_peptide	7	espp_score	ESPP Score	float	8	0	Y		N										Peptide score from ESPP predictor, Carr et. Al		
-AT_proteotypic_peptide	7	apex_score	APEX Score	float	8	0	Y		N										Peptide score from APEX predictor, Vogel and Marcotte  		
-AT_proteotypic_peptide	8	detectabilitypredictor_score	Detectability Predictor Score	float	8	0	Y		N										Peptide score from Detectability Predictor, Tang et. al		
-AT_proteotypic_peptide	8	merged_predictor_score	Merged Predictor Score	float	8	0	Y		N										Merged peptide score from all predictors		
-AT_proteotypic_peptide	9	peptide_isoelectric_point	Isoelectric Point	real	4	0	Y		N										Calculated isoelectric point of the peptide		
-AT_proteotypic_peptide	10	molecular_weight	Molecular Weight	real	4	0	Y		N										Calculated molecular weight of the peptide		
-AT_proteotypic_peptide	11	SSRCalc_relative_hydrophobicity	SSRCalc Relative Hydrophobicity	real	4	0	Y		N										Calculated hydrophobicity of the peptide using SSRCalc algorithm		
+AT_proteotypic_peptide	6	peptidesieve_ESI	PeptideSieve ESI	float	8	0	Y		N										Peptide score from Peptide Sieve predictor, Mallick et. Al, legacy ESI 		
+AT_proteotypic_peptide	7	peptidesieve_ICAT	PeptideSieve ICAT	float	8	0	Y		N										Peptide score from Peptide Sieve predictor, Mallick et. Al, legacy ICAT		
+AT_proteotypic_peptide	8	peptidesieve_score	PeptideSieve Score	float	8	0	Y		N										Peptide score from Peptide Sieve predictor, Mallick et. Al, retrained by Sun et al.		
+AT_proteotypic_peptide	9	espp_score	ESPP Score	float	8	0	Y		N										Peptide score from ESPP predictor, Carr et. Al		
+AT_proteotypic_peptide	10	apex_score	APEX Score	float	8	0	Y		N										Peptide score from APEX predictor, Vogel and Marcotte  		
+AT_proteotypic_peptide	11	detectabilitypredictor_score	Detectability Predictor Score	float	8	0	Y		N										Peptide score from Detectability Predictor, Tang et. al		
+AT_proteotypic_peptide	12	merged_predictor_score	Merged Predictor Score	float	8	0	Y		N										Merged peptide score from all predictors		
+AT_proteotypic_peptide	13	peptide_isoelectric_point	Isoelectric Point	real	4	0	Y		N										Calculated isoelectric point of the peptide		
+AT_proteotypic_peptide	14	molecular_weight	Molecular Weight	real	4	0	Y		N										Calculated molecular weight of the peptide		
+AT_proteotypic_peptide	15	SSRCalc_relative_hydrophobicity	SSRCalc Relative Hydrophobicity	real	4	0	Y		N										Calculated hydrophobicity of the peptide using SSRCalc algorithm		
 AT_proteotypic_peptide_mapping	1	proteotypic_peptide_mapping_id	Proteotypic Peptide Mapping ID	int	4	0	N		Y												pkDEFAULT
 AT_proteotypic_peptide_mapping	2	proteotypic_peptide_id	Proteotypic Peptide ID	int	4	0	N		N	AT_proteotypic_peptide	proteotypic_peptide_id										pkDEFAULT
 AT_proteotypic_peptide_mapping	3	source_biosequence_id	Source Biosequence ID	int	4	0	N		N	AT_biosequence	biosequence_id								Project under which this Biosequence Set is organized and for which user privileges is controlled	SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id	
