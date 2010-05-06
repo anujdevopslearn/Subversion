@@ -209,6 +209,8 @@ Options:
   --schemas           Enable schema processing. Defaults to off.
 
   --source_file       Input file containing the sample and directory listing
+  --build_dir         Name of build directory; used to name output files
+                         (not yet implemented)
   --FDR_threshold     FDR threshold to accept. Default 0.0001.
   --P_threshold       Probability threshold (e.g. 0.9) instead of FDR thresh.
   --output_file       Filename to which to write the peptides
@@ -216,6 +218,7 @@ Options:
                       run that should be used instead of individual ones.
   --slope_for_abundance   Slope for protein abundance calculation
   --yint_for_abundance    Y-intercept for protein abundance calculation
+  --glyco_atlas       All expts are glycocapture. For abundance estimation.
   --per_expt_pipeline Adjust probabilities according to individual
                       protXMLs; use master for prot ID assignment only
   --biosequence_set_id   Database id of the biosequence_set from which to
@@ -249,11 +252,12 @@ unless ($ARGV[0]){
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-  "validate=s","namespaces","schemas",
-  "source_file:s","search_batch_ids:s","P_threshold:f","FDR_threshold:f",
-  "output_file:s","master_ProteinProphet_file:s",
-  "slope_for_abundance:f","yint_for_abundance:f","per_expt_pipeline",
-  "biosequence_set_id:s", "best_probs_from_protxml", "min_indep:f",
+  "validate=s","namespaces","schemas","build_dir:s",
+  "source_file=s","search_batch_ids:s","P_threshold=f","FDR_threshold=f",
+  "output_file=s","master_ProteinProphet_file=s",
+  "slope_for_abundance=f","yint_for_abundance=f","per_expt_pipeline",
+  "glyco_atlas",
+  "biosequence_set_id=s", "best_probs_from_protxml", "min_indep=f",
   "APD_only", "protlist_only", "apportion_PSMs", "splib_filter",
   )) {
   print "$USAGE";
@@ -276,6 +280,7 @@ if ($DEBUG) {
 my $PEP_PROB_CUTOFF = 0.5;
 
 my $source_file = $OPTIONS{source_file} || '';
+my $build_dir = $OPTIONS{build_dir} || '';
 my $APDTsvFileName = $OPTIONS{output_file} || '';
 my $search_batch_ids = $OPTIONS{search_batch_ids} || '';
 my $bssid = $OPTIONS{biosequence_set_id};
@@ -287,6 +292,12 @@ my $namespace = $OPTIONS{namespaces} || 0;
 my $schema = $OPTIONS{schemas} || 0;
 my $best_probs_from_protxml = $OPTIONS{best_probs_from_protxml} || 0;
 my $splib_filter = $OPTIONS{splib_filter} || 0;
+
+my ($second, $minute, $hour, $dayOfMonth, $month, $yearOffset,
+  $dayOfWeek, $dayOfYear, $daylightSavings) = localtime();
+my @months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
+my $year = -100 + $yearOffset;
+my $date_string = sprintf("%02d%s%02d", $dayOfMonth, $months[$month], $year);
 
 my $organism_id;
 
@@ -361,6 +372,18 @@ unless ($protlist_only || $APD_only) {
     }
 
   }
+
+#  unless ($build_dir) {
+#    print "ERROR: You must specify --build_dir\n";
+#    print "$USAGE";
+#    exit 0;
+#  }
+#  #### If a path was given, just take the last element
+#  if ($build_dir =~ /.*\/(.+)/ ) {
+#    $build_dir = $1;
+#  }
+#
+#  print "Will use $build_dir and $date_string in output filenames.\n";
 }
 
 if (uc($validate) eq 'ALWAYS') {
@@ -864,11 +887,17 @@ sub protXML_end_element {
     #  stored in ProteinProphet_pep_protID_data.
     # Peptide, including charge and modifications, stored in $pep_key.
 
+  my $debug = 0;
+
     my $charge = $self->{pepcache}->{charge};
     my $modifications = $self->{pepcache}->{modifications};
     # store info on this pep in $self->{ProteinProphet_pep_data}->{$pep_key}
     my $pep_key = storePepInfoFromProtXML( $self, $peptide_sequence,
          $charge, $modifications, $get_best_pep_probs);
+  #$debug = 1 if ($pep_key eq "YALLPHLYTLFHQAHVAGETVARPLFLEFPK");
+    if ($debug) {
+      print "looking at $pep_key, a pep presumably in the <protein> record for $self->{protein_name}\n";
+    }
     if ( $assign_protids ) {
       assignProteinID($self, $pep_key);
     }
@@ -1120,6 +1149,8 @@ sub modified_peptide_string {
 sub assignProteinID {
   my $self = shift;
   my $pep_key = shift;
+  my $debug = 0;
+  #$debug = 1 if ($pep_key eq "YALLPHLYTLFHQAHVAGETVARPLFLEFPK");
 
   # Other data (peptide string, charge, prob) should already be stored.
   if ( !defined $self->{ProteinProphet_pep_data}->{$pep_key} ) {
@@ -1159,10 +1190,14 @@ sub assignProteinID {
   # first time we've tried to assign a protein to this peptide
   if (!defined $pepProtInfo->{protein_name} ) {
     $make_new_prot_best_so_far_sub->();
+    print "Assigning $pepProtInfo->{protein_name} P=$pepProtInfo->{protein_probability} as best prot for $pep_key\n" if ($debug);
   # we've already made an assignment to this pep. Is this one better?
   } else {
     if ( $new_prot_is_better_than_best_so_far_sub->() ) {
+      print "Replacing $pepProtInfo->{protein_name} P=$pepProtInfo->{protein_probability} with $self->{protein_name} P=$self->{protein_probability} as best prot for $pep_key\n" if ($debug);
       $make_new_prot_best_so_far_sub->();
+    } else {
+      print "Not replacing $pepProtInfo->{protein_name} P=$pepProtInfo->{protein_probability} with $self->{protein_name} P=$self->{protein_probability} as best prot for $pep_key\n" if ($debug);
     }
   }
 }
@@ -1555,9 +1590,12 @@ sub main {
 
 	#### Read the peptide identlist template file,
 	#### then write the final peptide identlist file
+        #### TMF add $version, $date to filename
 	my $identlist_file = $filepath;
 	$identlist_file =~ s/\.xml$/.PAidentlist/;
 
+        #### TMF allow date at end of filename; get file with most
+        ####  recent date.
 	if ( -e "${identlist_file}-template") {
 	  readIdentificationListTemplateFile(
 	    input_file => "${identlist_file}-template",
@@ -1605,6 +1643,9 @@ sub main {
 	die("ERROR: Unable to open for write '$combined_identlist_file'");
       close(OUTFILE);
 
+      #### TMF Write header to combined identlist file
+      ####  Date, $VERSION, 
+
       #### Loop over all cache files and add to combined identlist file
       foreach my $identlist_file ( @identlist_files ) {
 	print "INFO: Adding to master list: '$identlist_file'\n";
@@ -1627,6 +1668,8 @@ sub main {
       #### Create a copy of the combined file sorted by peptide.
       print "INFO: Creating copy of master list sorted by peptide\n";
       system("sort -k 3,3 -k 2,2 $combined_identlist_file > $sorted_identlist_file");
+      #print "Created!\n";
+      #exit;
 
       #### Get the columns headings
       open(INFILE,$identlist_files[0]) ||
@@ -1683,12 +1726,16 @@ sub main {
 	       {$protid} = 1;
 	  }
 	} else {
+          #03/18/10: we should never get here anymore, because we are
+          # getting the peps from the protXML directly.
 	  $peps_not_found{$pepseq} = 1;
 	}
       }
 
       my @peps_not_found = keys %peps_not_found;
       if (scalar(@peps_not_found) > 0) {
+	#03/18/10: we should never get here anymore, because we are
+	# getting the peps from the protXML directly.
 	print "\nWARNING: No proteins will be stored in PAprotlist for the ";
 	print "following\ncombined PAidentlist peptides, because they were ";
 	print "not found in the\nmaster protXML file. ";
@@ -2144,65 +2191,95 @@ sub main {
       #### Re-write PAidentlist files using only covering list
       #### proteins.
       my $temp_file = "temp.PAidentlist";
+      my %PAidentlist_prots;
+      my $n_PSMs;
       # for each of the two files
       for my $file ( $combined_identlist_file, $sorted_identlist_file ) {
-	open (IDENTLISTFILE, $file) ||
-	  die("ERROR: Unable to open for reading '$sorted_identlist_file'");
-        open (OUTFILE, ">$temp_file") ||
-	  die("ERROR: Unable to open for writing '$temp_file'");
-        print "Writing new protids for $file\n";
-        # copy header line
-        my $line = <IDENTLISTFILE>;
-        print OUTFILE $line;
-	while ($line = <IDENTLISTFILE>) {
-	  chomp ($line);
-	  my @fields = split(" ", $line);
-	  my $pepseq = $fields[3];
-	  my $identlist_protid = $fields[10];
-          # Replace field 11 (index 10) if this peptide (or one
-          # indistinguishable from it) is in our hash.
-	  my $pep_protlist_aref = $CONTENT_HANDLER->{ProteinProphet_prot_data}->
-	     {pep_prot_hash}->{$pepseq};
-          if (! defined $pep_protlist_aref ) {
-            my @indis = get_leu_ile_indistinguishables($pepseq);
-            for my $indis (@indis) {
-	      $pep_protlist_aref = $CONTENT_HANDLER->
-		 {ProteinProphet_prot_data}->{pep_prot_hash}->{$indis};
-              if ( defined $pep_protlist_aref ) {
-                last;
-              }
-            }
-          }
-          if ( defined $pep_protlist_aref ) {
-	    my @pep_protlist = @{$pep_protlist_aref};
-	    my $covering_prot = $pep_protlist[0];
-	    if ($identlist_protid ne $covering_prot) {
-	      $fields[10] = $covering_prot;
+	if ( -e $file ) {
+	  open (IDENTLISTFILE, $file) ||
+	    die("ERROR: Unable to open for reading '$file'");
+	  open (OUTFILE, ">$temp_file") ||
+	    die("ERROR: Unable to open for writing '$temp_file'");
+	  print "Writing new protids for $file\n";
+	  $n_PSMs = 0;
+	  # copy header line
+	  my $line = <IDENTLISTFILE>;
+	  print OUTFILE $line;
+	  while ($line = <IDENTLISTFILE>) {
+	    chomp ($line);
+	    my @fields = split(" ", $line);
+	    my $pepseq = $fields[3];
+	    my $identlist_protid = $fields[10];
+	    # Replace field 11 (index 10) if this peptide (or one
+	    # indistinguishable from it) is in our hash.
+	    my $pep_protlist_aref = $CONTENT_HANDLER->{ProteinProphet_prot_data}->
+	       {pep_prot_hash}->{$pepseq};
+	    if (! defined $pep_protlist_aref ) {
+	      my @indis = get_leu_ile_indistinguishables($pepseq);
+	      for my $indis (@indis) {
+		$pep_protlist_aref = $CONTENT_HANDLER->
+		   {ProteinProphet_prot_data}->{pep_prot_hash}->{$indis};
+		if ( defined $pep_protlist_aref ) {
+		  last;
+		}
+	      }
 	    }
-          } else {
-	    $peps_not_found{$pepseq} = 1;
+	    if ( defined $pep_protlist_aref ) {
+	      my @pep_protlist = @{$pep_protlist_aref};
+	      my $covering_prot = $pep_protlist[0];
+	      $PAidentlist_prots{$covering_prot} = 1;
+	      if ($identlist_protid ne $covering_prot) {
+		$fields[10] = $covering_prot;
+	      }
+	    } else {
+	      $peps_not_found{$pepseq} = 1;
+	    }
+	    # re-write line into temp file
+	    print OUTFILE join("\t",@fields)."\n";
+	    $n_PSMs++;
 	  }
-	  # re-write line into temp file
-	  print OUTFILE join("\t",@fields)."\n";
+	  # copy new file into old name
+	  system ("mv $temp_file $file");
+	} else {
+          print "WARNING: $file doesn't exist; can't update its protids.\n";
         }
-	# copy new file into old name
-        system ("mv $temp_file $file");
-      }
 
-      my @peps_not_found_list = keys %peps_not_found;
-      if (scalar(@peps_not_found_list) > 0) {
-	print "\nWARNING: No proteins will be stored in PAprotlist for the ";
-	print "following\ncombined PAidentlist peptides, because they were ";
-	print "somehow not found in the\nmaster protXML file. ";
-        print "Their protIDs in the PAidentlist file will be assigned\n";
-        print "according to the individual protXMLs. Either there is a\n";
-	print "bug somewhere or your master protXML was created from\n";
-	print "different pepXML files than your PAidentlist was.\n";
-	for my $pep (@peps_not_found_list) {
-	  print "$pep\n";
+	my @peps_not_found_list = keys %peps_not_found;
+	if (scalar(@peps_not_found_list) > 0) {
+	  print "\nWARNING: No proteins will be stored in PAprotlist for the ";
+	  print "following\ncombined PAidentlist peptides, because they were ";
+	  print "somehow not found in the\nmaster protXML file. ";
+	  print "Their protIDs in the PAidentlist file will be assigned\n";
+	  print "according to the individual protXMLs. Either there is a\n";
+	  print "bug somewhere, or your master protXML was created from\n";
+	  print "different pepXML files than your PAidentlist was.\n";
+	  for my $pep (@peps_not_found_list) {
+	    print "$pep\n";
+	  }
 	}
+
+	# Check to see that covering list proteins, gleaned from
+	# protXML, are all or mostly assigned to peps in PAidentlist.
+	my %covering_prots_not_assigned_to_peps_in_PAidentlist;
+	for my $prot (keys %{$covering_set_href}) {
+	  unless (defined $PAidentlist_prots{$prot}) {
+	    $covering_prots_not_assigned_to_peps_in_PAidentlist{$prot} = 1;
+	  }
+	}
+	my $n_prots_not_assigned =
+	  scalar keys %covering_prots_not_assigned_to_peps_in_PAidentlist;
+	my $n_prots_assigned =
+	  scalar keys %PAidentlist_prots;
+	print "$n_prots_assigned covering proteins assigned to peps in PAidentlist ($n_PSMs lines).\n";
+	print "$n_prots_not_assigned covering proteins not assigned to peps in PAidentlist, listed below.\n";
+	print " (If many, you probably didn't use filtered pepXMLs when creating your master protXML.)\n";
+	for my $prot (keys %covering_prots_not_assigned_to_peps_in_PAidentlist) {
+	  print "$prot ";
+	}
+	print "\n";
       }
     }
+
   } # end unless $APD_only
 
   unless ($protlist_only) {
@@ -2686,9 +2763,8 @@ sub writeProtIdentificationListFile {
   my $ProteinProphet_group_data = $args{'ProteinProphet_group_data'}
     || die("No ProteinProphet_group_data provided");
 
-  ### temporary kludgey solution for 2009 plasma atlas
-  my $non_glyco = 1;
-  my $glyco = 0;
+  my $glyco_atlas = $OPTIONS{"glyco_atlas"};
+  my $non_glyco_atlas = ! $glyco_atlas;
 
   open (OUTFILE, ">$output_file");
   print "Opening output file $output_file.\n";
@@ -2697,12 +2773,13 @@ sub writeProtIdentificationListFile {
     print OUTFILE
 "protein_group_number,biosequence_names,probability,confidence,n_observations,n_distinct_peptides,level_name,represented_by_biosequence_name,subsumed_by_biosequence_names,estimated_ng_per_ml,abundance_uncertainty,covering\n";
 
-  my $abundance_conversion_slope = $OPTIONS{slope_for_abundance};
-  my $abundance_conversion_yint = $OPTIONS{yint_for_abundance};
+  my $abundance_conversion_slope = $OPTIONS{"slope_for_abundance"};
+  my $abundance_conversion_yint = $OPTIONS{"yint_for_abundance"};
   my $calculate_abundances = 0;
   if ( defined $abundance_conversion_slope &&
        defined $abundance_conversion_yint ) {
     $calculate_abundances = 1;
+    print "Protein abundances will be estimated using y-intercept $abundance_conversion_yint and slope $abundance_conversion_slope.\n";
   } else {
     print "Slope and/or y-intercept for protein abundance calculation not provided; protein abundances will not be calculated.\n";
   }
@@ -2711,6 +2788,7 @@ sub writeProtIdentificationListFile {
 
   # For each protein in the atlas
   for my $prot_name (@prot_name_list) {
+
     # ... look up its group number in ProteinProphet_prot_data.
     $group_num = $ProteinProphet_prot_data->{group_hash}->{$prot_name};
     # Then look up its info in ProteinProphet_group_data and print it.
@@ -2731,120 +2809,24 @@ sub writeProtIdentificationListFile {
     my $biosequence_attributes =
         getBiosequenceAttributes(biosequence_name => $prot_name);
 
-    ### Abundance estimation
+    ### Estimate abundance, if requested
 
-    my $formatted_estimated_ng_per_ml;
-    my $abundance_uncertainty;
+    my ($formatted_estimated_ng_per_ml, $abundance_uncertainty) = ("", "");
 
-    my $is_prot_group_rep =
-         ($prot_name eq $prot_href->{represented_by});
+    my $is_prot_group_rep = ($prot_name eq $prot_href->{represented_by});
 
-    ### If we're not apportioning peps to proteins, only estimate
-    ### abundance for highest prob protein in each group.
-    if ( $calculate_abundances && 
-         ($apportion_PSMs || $is_prot_group_rep ) ) {
-      my $estimated_ng_per_ml;
-      if ( ! defined $biosequence_attributes ) {
-	#print "No biosequence_attributes for $prot_name.\n";
-	$formatted_estimated_ng_per_ml = "";
-	$abundance_uncertainty = "";
-      } else {
-
-        ### Estimate protein molecular weight to get from fmol to ng
-	### Small incorrectness: molecular weights of indistinguishables are
-	### sometimes quite different. Not correct to use MW of first prot
-	### in list.
-	my $sequence = $biosequence_attributes->[5];
-	### Schulz/Schirmer in table 1-1 say 108.7 is the weighted mean aa wt.
-	### A bit kludgey, but this whole abundance estimation is kludgey.
-	my $protMW = length($sequence) * 108.7;
-	### If we couldn't get the seq somehow, set protMW to an avg. value
-	if ( $protMW == 0 ) {
-	  $protMW = 30000;
-	  print "WARNING: couldn't find seq for $prot_name; using MW=30,000\n";
-	}
-
-	if ( $PSM_count > 0  ) {
-
-          ### create a log-scale adjustment factor based on # of
-          ### observable peptides. Constants used in these formulae
-          ### must match those used in calibration!
-          my $n_observable_peps = countPepsInProt(
-            seq=>$sequence,
-            glyco_only=>0,
-          );
-          my $PSM_adjustment_factor;
-          my $avg_peps_per_prot = 25;
-          my $avg_glycopeps_per_prot = 1;
-          if ($n_observable_peps > 0) {
-            ### about half the PSMs in the human plasma glyco atlas
-            ### are glycopeptides, so the adjustment factor considers
-            ### both all-peptide and glycopeptide counts.
-	    if ($glyco) {
-	      my $n_observable_glycopeps = countPepsInProt(
-		seq=>$sequence,
-		glyco_only=>1,
+    if ($calculate_abundances &&
+         ( defined $biosequence_attributes ) &&
+         ( $apportion_PSMs || $is_prot_group_rep )) {
+	    ($formatted_estimated_ng_per_ml, $abundance_uncertainty) =
+	      get_estimated_abundance (
+		prot_name=>$prot_name,
+		sequence=>$biosequence_attributes->[5],
+		PSM_count=>$PSM_count,
+		abundance_conversion_slope=>$abundance_conversion_slope,
+		abundance_conversion_yint=>$abundance_conversion_yint,
+		glyco_atlas=>$glyco_atlas,
 	      );
-	      $PSM_adjustment_factor =
-                (  ( $n_observable_glycopeps/$avg_glycopeps_per_prot ) +
-		   ( $n_observable_peps/$avg_peps_per_prot ) ) / 2;
-	    } else {
-	      $PSM_adjustment_factor =
-		$n_observable_peps/$avg_peps_per_prot;
-	    }
-          ### if there are no theoretical tryptic peptides, but
-          ### some (non-tryptic) pep is observed anyway, set as though
-          ### there is one observable pep
-          } else {
-	    $PSM_adjustment_factor = 1/$avg_peps_per_prot;
-          }
-
-          my $adjusted_PSM_count = $PSM_count / $PSM_adjustment_factor;
-
-          my $log_adjusted_PSM_count = log($adjusted_PSM_count) / log(10);
-          my $log_estimated_fmol_per_ml =
-                ( $log_adjusted_PSM_count * $abundance_conversion_slope )
-                    + $abundance_conversion_yint;
-          my $estimated_fmol_per_ml = 10 ** $log_estimated_fmol_per_ml;
-          my $estimated_fg_per_ml = $estimated_fmol_per_ml * $protMW;
-          $estimated_ng_per_ml = $estimated_fg_per_ml / 1.0e+06;
-
-          #print "prot:$prot_name MW:$protMW npeps:$n_observable_peps factor:$PSM_adjustment_factor adj count:$adjusted_PSM_count log adj count:$log_adjusted_PSM_count log fmol/ml:$log_estimated_fmol_per_ml fmol/ml:$estimated_fmol_per_ml fg/ml:$estimated_fg_per_ml ng/ml:$estimated_ng_per_ml\n";
-
-          ## Kludgey hard-coded stuff for 2009 plasma atlas
-          if ($non_glyco) {
-	    if ($estimated_ng_per_ml > 1e+05) {
-	      $abundance_uncertainty = "4x";
-	    } elsif ($estimated_ng_per_ml > 1e+04) {
-	      $abundance_uncertainty = "23x";
-	    } elsif ($estimated_ng_per_ml > 1e+03) {
-	      $abundance_uncertainty = "14x";
-	    } else {
-	      $abundance_uncertainty = "10x";
-	    }
-          } elsif ($glyco) {
-	    if ($estimated_ng_per_ml > 6e+04) {
-	      $abundance_uncertainty = "4x";
-	    } elsif ($estimated_ng_per_ml > 6e+03) {
-	      $abundance_uncertainty = "7x";
-	    } elsif ($estimated_ng_per_ml > 6e+02) {
-	      $abundance_uncertainty = "30x";
-	    } else {
-	      $abundance_uncertainty = "30x";
-	    }
-          }
-
-	} else {
-	  $estimated_ng_per_ml = 0;
-          $abundance_uncertainty = "";
-	}
-
-	$formatted_estimated_ng_per_ml = sprintf("%.1e", $estimated_ng_per_ml);
-      }
-
-    } else {
-      $formatted_estimated_ng_per_ml = "";
-      $abundance_uncertainty = "";
     }
 
     my $covering;
@@ -4037,7 +4019,7 @@ sub countPepsInProt
     # if position is K/R and not followed by P, cleave and possibly
     # count
     if ($this_is_last_aa_to_process ||
-        ($aa eq 'K' || $aa eq 'R' ) && $first_aa_in_next_pep ne 'P') {
+        (($aa eq 'K' || $aa eq 'R' ) && $first_aa_in_next_pep ne 'P')) {
       $this_is_last_aa_to_process = 0;
       if (length($pepseq) < $min_len) {
         $pepseq = $aa;
@@ -4069,11 +4051,11 @@ sub hasGlycoSite
   my %args = @_;
   my $seq = $args{'seq'};
   my $next_aa = $args{'next_aa'};
-  my $has_site = 0;
+  my $has_site;
 
   $seq .= $next_aa;
   $seq = uc($seq);
-  $has_site = ($seq =~ m/N[^P][XT]/);
+  $has_site = (($seq =~ m/N[^P][ST]/ ) == 1);
 
   return $has_site;
 }
@@ -4252,4 +4234,207 @@ sub print_protein_info {
       }
     }
   }
+}
+
+
+###############################################################################
+# get_PAidentlist_template_file
+###############################################################################
+# return the latest PAidentlist template file
+sub get_PAidentlist_template_file {
+
+  my %args = @_;
+  my $basename = $args{basename};
+
+  my @files = glob("$basename*");
+  my $latest_file = $files[0];
+  my $latest_date_string = "";
+  for my $file (@files) {
+    $file =~ /$basename-(.*)/;
+    my $date_string = $1;
+    if ( later_date( $date_string, $latest_date_string ) ) {
+      $latest_file = $file;
+      $latest_date_string = $date_string;
+    }
+  }
+  return ($latest_file);
+}
+
+sub later_date {
+  $a = shift;
+  $b = shift;
+
+  if ( !$b ) {
+    return 1;
+  } elsif ( !$a ) {
+    return 0;
+  }
+    
+  if ($a eq $b) {
+    return 0;
+  }
+
+  my ($a_date, $a_month, $a_year) = $a =~ /(..)(...)(..)/;
+  my ($b_date, $b_month, $b_year) = $b =~ /(..)(...)(..)/;
+
+
+  if ($a_year > $b_year) {
+    return 1;
+  } elsif ($b_year > $a_year) {
+    return 0;
+  }
+
+  my %months = ("Jan", 1, "Feb", 2, "Mar", 3, "Apr", 4, "May", 5,
+                "Jun", 6, "Jul", 7, "Aug", 8, "Sep", 9, "Oct", 10,
+                "Nov", 11, "Dec", 12); 
+  if (! defined $months{$a_month} ) {
+    return 0;
+  } elsif (! defined $months{$b_month} ) {
+    return 1;
+  }
+
+  if ($months{$a_month} > $months{$b_month}) {
+    return 1;
+  } elsif ($months{$b_month} > $months{$a_month}) {
+    return 0;
+  }
+
+  if ($a_date > $b_date) {
+    return 1;
+  } elsif ($b_date > $a_date) {
+    return 0;
+  }
+}
+
+###############################################################################
+# get_estimated_abundance 
+###############################################################################
+
+sub get_estimated_abundance {
+
+  my %args = @_;
+  my $prot_name = $args{prot_name};
+  my $PSM_count = $args{PSM_count};
+  my $sequence = $args{sequence};
+  my $glyco_atlas = $args{glyco_atlas};
+  my $non_glyco_atlas = !$glyco_atlas;
+  my $abundance_conversion_slope = $args{abundance_conversion_slope};
+  my $abundance_conversion_yint = $args{abundance_conversion_yint};
+
+  my $n_observable_peps = countPepsInProt(
+    seq=>$sequence,
+    glyco_only=>0,
+  );
+  my $n_observable_glycopeps = countPepsInProt(
+    seq=>$sequence,
+    glyco_only=>1,
+  );
+  #print "$prot_name: $n_observable_peps peps, $n_observable_glycopeps glycopeps\n";
+  my $is_glycoprotein = ( $n_observable_glycopeps > 0 );
+
+  my $formatted_estimated_ng_per_ml = "";
+  my $abundance_uncertainty = "";
+
+  ### If we're not apportioning peps to proteins, only estimate
+  ### abundance for highest prob protein in each group.
+  ### And if this is a glyco atlas, only estimate abundance for
+  ### glycoproteins.
+  #print "$prot_name CA:$calculate_abundances PGR:$is_prot_group_rep NGA:$non_glyco_atlas IGP:$is_glycoprotein\n" if ($debug);
+  if ( $non_glyco_atlas || $is_glycoprotein ) {
+
+    my $estimated_ng_per_ml;
+
+    ### Estimate protein molecular weight to get from fmol to ng
+    ### Small incorrectness: molecular weights of indistinguishables are
+    ### sometimes quite different. Not correct to use MW of first prot
+    ### in list.
+
+    ### Schulz/Schirmer in table 1-1 say 108.7 is the weighted mean aa wt.
+    ### A bit kludgey, but this whole abundance estimation is kludgey.
+    my $protMW = length($sequence) * 108.7;
+    ### If we couldn't get the seq somehow, set protMW to an avg. value
+    if ( $protMW == 0 ) {
+      $protMW = 30000;
+      print "WARNING: couldn't find seq for $prot_name; using MW=30,000\n";
+    }
+
+    if ( $PSM_count > 0  ) {
+
+      ### create a log-scale adjustment factor based on # of
+      ### observable peptides. Constants used in these formulae
+      ### must match those used in calibration!
+      my $PSM_adjustment_factor;
+      my $avg_peps_per_prot = 25;
+      my $avg_glycopeps_per_prot = 1;
+      if ($n_observable_peps > 0) {
+	### only about half the PSMs in the human plasma glyco atlas
+	### are glycopeptides, so the adjustment factor considers
+	### both all-peptide and glycopeptide counts.
+	if ($glyco_atlas) {
+	  $PSM_adjustment_factor =
+	    (  ( $n_observable_glycopeps/$avg_glycopeps_per_prot ) +
+	       ( $n_observable_peps/$avg_peps_per_prot ) ) / 2;
+	} else {
+	  $PSM_adjustment_factor =
+	    $n_observable_peps/$avg_peps_per_prot;
+	}
+      ### if there are no theoretical tryptic peptides, but
+      ### some (non-tryptic) pep is observed anyway, set as though
+      ### there is one observable pep
+      } else {
+	$PSM_adjustment_factor = 1/$avg_peps_per_prot;
+      }
+
+      my $adjusted_PSM_count = $PSM_count / $PSM_adjustment_factor;
+
+      my $log_adjusted_PSM_count = log($adjusted_PSM_count) / log(10);
+      my $log_estimated_fmol_per_ml =
+	    ( $log_adjusted_PSM_count * $abundance_conversion_slope )
+		+ $abundance_conversion_yint;
+      my $estimated_fmol_per_ml = 10 ** $log_estimated_fmol_per_ml;
+      my $estimated_fg_per_ml = $estimated_fmol_per_ml * $protMW;
+      $estimated_ng_per_ml = $estimated_fg_per_ml / 1.0e+06;
+
+      #print "prot:$prot_name MW:$protMW npeps:$n_observable_peps factor:$PSM_adjustment_factor adj count:$adjusted_PSM_count log adj count:$log_adjusted_PSM_count log fmol/ml:$log_estimated_fmol_per_ml fmol/ml:$estimated_fmol_per_ml fg/ml:$estimated_fg_per_ml ng/ml:$estimated_ng_per_ml\n";
+
+      ### Kludgey hard-coded stuff for 2009/10 plasma atlas
+      ### Someday we will calibrate and calculate y-intercept,
+      ### slope, and abundance uncertainties within this routine.
+      ### using an input file of experimentally determined accession,
+      ### abundance pairs.
+      if ($non_glyco_atlas) {
+	if ($estimated_ng_per_ml > 1e+05) {
+	  $abundance_uncertainty = "3x";
+	} elsif ($estimated_ng_per_ml > 1e+04) {
+	  $abundance_uncertainty = "7x";
+	} elsif ($estimated_ng_per_ml > 1e+03) {
+	  $abundance_uncertainty = "23x";
+	} elsif ($estimated_ng_per_ml > 1e+02) {
+	  $abundance_uncertainty = "29x";
+	} else {
+	  $abundance_uncertainty = "24x";
+	}
+      } elsif ($glyco_atlas) {
+	if ($estimated_ng_per_ml > 2e+05) {
+	  $abundance_uncertainty = "3x";
+	} elsif ($estimated_ng_per_ml > 2e+04) {
+	  $abundance_uncertainty = "3x";
+	} elsif ($estimated_ng_per_ml > 2e+03) {
+	  $abundance_uncertainty = "8x";
+	} elsif ($estimated_ng_per_ml > 2e+02) {
+	  $abundance_uncertainty = "20x";
+	} else {
+	  $abundance_uncertainty = "20x";
+	}
+      }
+
+    } else {
+      $estimated_ng_per_ml = 0;
+      $abundance_uncertainty = "";
+    }
+
+    $formatted_estimated_ng_per_ml = sprintf("%.1e", $estimated_ng_per_ml);
+
+  }
+  return ($formatted_estimated_ng_per_ml, $abundance_uncertainty);
 }
