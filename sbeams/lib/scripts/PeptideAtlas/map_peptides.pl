@@ -8,6 +8,7 @@ use FindBin;
 use Getopt::Long;
 
 use lib "$FindBin::Bin/../../perl/";
+use lib "/net/dblocal/www/html/devDC/sbeams/lib/perl/";
 use SBEAMS::Connection qw($q);
 use SBEAMS::PeptideAtlas;
 
@@ -28,7 +29,7 @@ my %stats;
 
 # read in protein file
 print STDERR "reading fasta file..." if $opts->{verbose};
-my ( $seq2acc, $acc2seq, $tryptic ) = read_fasta();
+my ( $seq2acc, $acc2seq, $allpeptides ) = read_fasta();
 print STDERR "Done\n" if $opts->{verbose};
 my @seqs = keys( %{$seq2acc} );
 my @accs = keys( %{$acc2seq} );
@@ -82,8 +83,8 @@ while( my $line = <PEPS> ) {
   }
   $stats{total}++;
 
-  print '*' unless $stats{total} % 100;
-  print "\n" unless $stats{total} % 5000;
+  print STDERR '*' unless $stats{total} % 100;
+  print STDERR "\n" unless $stats{total} % 5000;
 
   unless ( $tested{$pepseq} ) {
 
@@ -134,7 +135,7 @@ while( my $line = <PEPS> ) {
       $stats{peptide_map_ok}++;
     } else {
       $stats{peptide_map_no}++;
-      print "NOMAP: $pepseq\n" if $opts->{verbose};
+      print "NOMAP: $pepseq\n" if $opts->{show_mia};
       $matching_seq = 'na';
     }
     $tested{$pepseq}++;
@@ -144,7 +145,7 @@ while( my $line = <PEPS> ) {
   my $prot_cnt = 0;
   if ( $peps{$pepseq} ) {
     $prot_str = $peps{$pepseq};
-    $prot_cnt = $prot_str =~ tr/,/,/;
+    $prot_cnt = $prot_str =~ tr/,/./;
     $prot_cnt += 1;
   }
 
@@ -153,18 +154,49 @@ while( my $line = <PEPS> ) {
   }
 
 }
-
 close OUT;
 
+print "\n";
 for my $acc ( keys( %{$acc2seq} ) ) {
   next unless $acc;
   my $n_peps = 0;
   if ( $prots{$acc} ) {
-    $n_peps = scalar( keys( %{$prots{$acc}} ) );
+    if ( $opts->{nocount_degen} ) {
+      for my $mapped_pep (  keys( %{$prots{$acc}} ) ) {
+        if ( !$allpeptides->{$mapped_pep} ) { # Should have a mapping
+          print STDERR "DANGER, mapped pep doesn't map, D'oh!\n";
+          exit;
+        } elsif ( scalar( keys( %{$allpeptides->{$mapped_pep}} ) ) > 1 ) { # Degenerate
+          print "REGEN: >$mapped_pep $allpeptides->{mapped_pep}<\n" if $opts->{show_regen}; #not an option
+        } else { # Gerenate
+          $n_peps++;
+          print "SIGEN: >$mapped_pep<\n" if $opts->{show_proteo}; #not an option
+        }
+      }
+    } elsif ( $opts->{show_all_pep} ) {
+      for my $mapped_pep (  keys( %{$prots{$acc}} ) ) {
+        $n_peps++;
+#        print "PEPTIDE: >$mapped_pep<\n";
+        if ( scalar( keys( %{$allpeptides->{$mapped_pep}} ) ) > 1 ) { # Degenerate
+          print "DEGEN: >$mapped_pep $allpeptides->{mapped_pep}<\n";
+        } else { # Gerenate
+          print "PROTEO: >$mapped_pep<\n";
+        }
+      }
+    } else {
+      # Normal mode
+      $n_peps = scalar( keys( %{$prots{$acc}} ) );
+    }
+
+
+
   }
   $stats{prot_cnt_any}++ if $n_peps;
   if ( $opts->{bin_max} ) {
     $n_peps = $opts->{bin_max} if $n_peps > $opts->{bin_max};
+  }
+  if ( !$n_peps && $opts->{show_nomap} ) {
+    print "NOMAP: $acc\n";
   }
   my $key_num = ( $n_peps > 9 ) ? $n_peps : '0' . $n_peps;
   my $bin_key = 'prot_cnt_' . $key_num;
@@ -197,13 +229,13 @@ print STDERR "Finished run in $delta seconds: $hour:$min:$sec\n";
 
 sub map_peptide {
 
-  my $pepseq = shift || die "goodbye cruel world";
+  my $pepseq = shift || die "No peptide supplied to map_peptide";
   my $skip_stats = 0;
   my $brute = shift || 0;
 
   # global things...
   # Read only:
-  # %tryptic
+  # %allpeptides
   # %seq2acc 
   # @seq
 
@@ -234,15 +266,19 @@ sub map_peptide {
         for my $acc ( sort( @{$seq2acc->{$seq}} ) ) {
           $prots{$acc} ||= {};
           $prots{$acc}->{$pepseq}++;
+
+          # Even though this is not tryptic, cache peptide for later degeneracy test.
+          $allpeptides->{$pepseq}->{$acc} ||= 1;
+
           $match_str .= $sep . $acc;
           $sep = ',';
         }
       }
     }
   } else {  # Try hash approach
-    if ( $tryptic->{$pepseq} ) {
+    if ( $allpeptides->{$pepseq} ) {
       my $sep = '';
-      for my $acc ( sort( keys( %{$tryptic->{$pepseq}} ) ) ) {
+      for my $acc ( sort( keys( %{$allpeptides->{$pepseq}} ) ) ) {
         next unless $acc;
         $match_str .= $sep . $acc;
         $prots{$acc} ||= {};
@@ -264,7 +300,7 @@ sub map_peptide {
       $stats{pep_map_proteo}++;
     } else {
       $stats{pep_map_degen}++;
-      print "DEGEN: >$pepseq<\n" if $opts->{verbose};
+      print "DEGEN: >$pepseq<\n" if $opts->{show_degen};
     }
   }
   return $prot_cnt;
@@ -332,6 +368,9 @@ sub read_fasta {
         $stats{swiss_acc_no}++;
       }
 
+    } elsif ( $opts->{pipe_acc} ) {
+      $def =~ /^\w+\|(\w+)\|/;
+      $def = $1 if $1;
     }
 
     my $seq = uc( $entry->seq() );
@@ -349,7 +388,7 @@ sub read_fasta {
 
     if ( defined $acc2seq{$def} ) {
 
-      die "Duplicate accessions!";
+#      die "Duplicate accessions: $def";
     } 
 #    print "$def\n";
     $acc2seq{$def} = $seq;
@@ -406,9 +445,11 @@ sub read_peptides {
 sub get_options {
   my %opts;
   GetOptions(\%opts, "verbose", "fasta_file=s", 'help', 'seq_idx=i',
-             'peptide_file=s', 'n_convert', 'duplicates', 'trim_acc',
+             'peptide_file=s', 'n_convert', 'duplicates', 'pipe_acc',
              'mapping_out', 'trim_acc', 'output_file=s', 'column_labels:i',
-             'acc_swiss', 'ZtoC', 'bin_max=i', 'grep_only', 'init_mapping=i' );
+             'acc_swiss', 'ZtoC', 'bin_max=i', 'grep_only', 'init_mapping=i',
+             'show_degen', 'show_mia', 'nocount_degen', 'show_nomap',
+             'show_proteo', 'show_all_pep' );
 
   print_usage() if $opts{help};
 
@@ -445,23 +486,35 @@ sub print_usage {
   print qq~
   $msg
 
+#  GetOptions(\%opts, "verbose", "fasta_file=s", 'help', 'seq_idx=i',
+#             'peptide_file=s', 'n_convert', 'duplicates', 'pipe_acc',
+#             'mapping_out', 'trim_acc', 'output_file=s', 'column_labels:i',
+#             'acc_swiss', 'ZtoC', 'bin_max=i', 'grep_only', 'init_mapping=i',
+#             'show_degen', 'show_mia', 'nocount_degen' );
+
   Usage: $exe -f fasta_file -p peptide_file
 
   -v, --verbose        Verbose reporting
   -h, --help           Print usage and exit
   -f, --fasta_file     Fasta db file, required
-  -d, --duplicates     Allow sequence duplicates in fasta db
+      --duplicates     Allow sequence duplicates in fasta db
   -t, --trim_acc       Trim fasta descriptor line to first space-delimited value
   -p, --peptide_file   File of peptides
   -s, --seq_idx        1-based Index of peptide sequence in file, defaults to 1
   -n, --n_convert      Convert DxST to NxST if necessary to get matches
   -m, --mapping_out    Print mapping results, appended to peptide line
-  -o, --output_file    File to which to print results, else STDOUT
+      --output_file    File to which to print results, else STDOUT
   -c, --column_labels  Peptide file has column labels (headings) to skip.
   -a, --acc_swiss      Pull swiss prot acc from Uniprot fasta heading.
   -b, --bin_max        Max size of reported prot_count.
   -g, --grep_only      For small peptide lists, forgo the fasta digestion
   -Z, --ZtoC           Convert Z to C in peptide sequences
+      --show_degen     List degenerate peptides
+      --show_proteo    List proteotypic peptides
+      --show_all_pep   List all peptides
+      --show_mia       List missing peptides
+      --show_nomap     List proteins for which there are no peptides
+      --nocount_degen  Omit degenerate peptides in counting protein bins
   ~;
   print "\n";
   exit;
