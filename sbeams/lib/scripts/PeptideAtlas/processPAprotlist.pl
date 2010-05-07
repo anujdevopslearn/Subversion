@@ -172,6 +172,8 @@ my $n_input_fields = 12;
 ####  hash to all identicals.
 my $duphash = {};
 my $line = <INFILE>;  #throw away header line
+print "Hashing each protein in PAprotlist file to its identicals.\n";
+my $count = 0;
 for $line (<INFILE>) {
   chomp ($line);
   # need third arg for split, otherwise trailing null fields discarded
@@ -190,7 +192,14 @@ for $line (<INFILE>) {
       }
     }
   }
+  $count++;
+  if ($count % 100 == 0) {
+    print $count;
+  } elsif ($count % 10 == 0) {
+    print ".";
+  }
 }
+print "\n";
 close (INFILE);
 
 
@@ -211,7 +220,9 @@ open (INFILE, $infile) || die "Cannot open $infile for reading.\n";
 my @prot_idents = ();
 my %group_size = ();
 
+print "Processing $infile and writing identical/indistinguishable relationships to $relationshipfile...\n";
 my $firstline = 1;
+$count = 0;
 for my $line (<INFILE>) {
   chomp ($line);
   my @fields = split(",", $line, $n_input_fields);
@@ -336,10 +347,18 @@ for my $line (<INFILE>) {
       $group_size{$protein_group}++;
     }
   }
+  $count++;
+  if ($count % 100 == 0) {
+    print $count;
+  } elsif ($count % 10 == 0) {
+    print ".";
+  }
 }
+print "\n";
 
 
 ### Write protein identifications to protIdentlist.
+print "Writing protein identifications to $identlistfile ...\n";
 for my $prot_ident (@prot_idents) {
   my @fields = @{$prot_ident};
   # get protein group size and add it as another field
