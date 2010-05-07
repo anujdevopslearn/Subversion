@@ -82,7 +82,7 @@ sub returnTableInfo {
       return( <<"      END_QUERY" ); 
      	SELECT sample_id,sample_tag, sample_title, search_batch_id,
         anatomical_site_term, developmental_stage_term, pathology_term, 
-        cell_type_term, data_contributors, is_public
+        cell_type_term, data_contributors, is_public, peptide_source_type
       FROM $TBAT_SAMPLE 
       WHERE project_id IN ( $project_string )
       AND record_status!='D'
