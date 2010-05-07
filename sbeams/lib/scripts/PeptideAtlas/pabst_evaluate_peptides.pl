@@ -57,8 +57,32 @@ my $opts = process_opts();
                                        );
   }
   $pep_sel->pabst_evaluate_peptides( @opts );
-
   open ( OUT, ">$opts->{output_file}" ) || die "Unable to open $opts->{output_file}";
+
+  if ( $opts->{sort_within_prots} ) {
+    my $n_peptides = $opts->{n_peptides} || 10000;
+    my $sort_idx = 0;
+    my %prots;
+    for my $p ( @$peptides ) {
+      if ( !$sort_idx ) {
+        $sort_idx = scalar( @{$p} ) - 1;
+      }
+      my $prot = $p->[$opts->{sort_within_prots}-1] || die "missing required prot!";
+      $prots{$prot} ||= [];
+      push @{$prots{$prot}}, $p;
+    }
+
+    for my $prot ( sort( keys( %prots ) ) ) {
+      my @peps = @{$prots{$prot}};
+      @peps = sort { $b->[$sort_idx] <=> $a->[$sort_idx] } ( @peps );
+      my $cnt = 0;
+      for my $pep ( @peps ) {
+        print OUT join( "\t",  @$pep ) . "\n";
+        last if ++$cnt >= $n_peptides;
+      }
+    }
+  } else {
+
     my $cnt = 0;
     $opts->{_num_tabs} ||= 0;
     for my $p ( @$peptides ) {
@@ -68,7 +92,8 @@ my $opts = process_opts();
       } 
       print OUT join( "\t",  @$p ) . "\n";
       $cnt++;
-   }
+    }
+  }
 
 
 }
@@ -130,6 +155,7 @@ sub read_pepfile {
       if ( $line[$opts->{wspace_skip_idx} - 1] eq '' ) {
         $opts->{skipped_lines}->{$cnt}++;
         $cnt++;
+        print "$line\n";
         next;
       }
     } else {
@@ -161,7 +187,8 @@ sub process_opts {
   GetOptions( \%opts, 'atlas_build=i', 'config=s', 'help', 'tsv_file=s', 
               'peptide_file=s', 'idx_peptide=i',  'fasta_file=s', 'remap_proteins',  
               'verbose', 'wspace_skip_idx=i', 'show_prot_names', 'output_file:s',
-              'evaluated_file=s', 'broad_predictor=s', 'calc_ssr', 'score_idx:i' ) || print_usage();
+              'evaluated_file=s', 'broad_predictor=s', 'calc_ssr', 'score_idx:i',
+              'sort_within_prots=i', 'n_peptides=i' ) || print_usage();
 
 # Add 9, 13, 14, 17
 
