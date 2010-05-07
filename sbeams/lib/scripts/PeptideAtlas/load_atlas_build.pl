@@ -357,6 +357,7 @@ sub handleRequest {
     my $dir = get_atlas_build_directory (atlas_build_id => $ATLAS_BUILD_ID);
     my $identlist = "$dir/PeptideAtlasInput_sorted.PAidentlist";
     $identlist = "$dir/PeptideAtlasInput_concat.PAidentlist" if !-e $identlist;
+
     if ( !-e $identlist ) {
       print STDERR "Unable to find Identlist, inst_searchbatch_obs not finished\n";
 		} else {
@@ -364,6 +365,14 @@ sub handleRequest {
       my $psb2asb = $sbeamsMOD->getProtSB2AtlasSB(build_id=>[$ATLAS_BUILD_ID]);
 #      for my $k ( sort { $a <=> $b } keys ( %{$sb2smpl} ) ) { print "$k => $sb2smpl->{$k}\n"; }
 			print "Getting counts from ident list\n";
+
+
+    # Get search_batch to peptide_source_type mapping
+    my $asb2pst = $sbeamsMOD->getAtlasSB2PeptideSrcType();
+
+
+
+
       my $inst_obs = $sbeamsMOD->cntObsFromIdentlist( identlist_file => $identlist,
 			                                          key_type => 'peptide',
 													  psb2asb => $psb2asb );
@@ -929,6 +938,7 @@ sub get_search_batch_and_sample_id_hash
                         sample_title => $exp_name,
                         sample_description => $exp_name,
                         is_public => 'N',
+              peptide_source_type => 'Natural',
                         project_id => $default_sample_project_id,
                     );
 
