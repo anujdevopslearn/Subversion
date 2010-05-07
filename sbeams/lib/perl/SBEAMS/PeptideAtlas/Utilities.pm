@@ -1493,6 +1493,26 @@ sub make_sort_headings {
   return \@marked;
 }
 
+sub listBiosequenceSets {
+
+  my $self = shift || die ("Must call as object method");
+  my %args = @_;
+
+  my $sql = qq~
+    SELECT biosequence_set_id, set_tag
+      FROM $TBAT_BIOSEQUENCE_SET
+     WHERE record_status != 'D'
+     ORDER BY biosequence_set_id ASC
+  ~;
+
+  my $sbeams = $self->getSBEAMS();
+  my $sth = $sbeams->get_statement_handle( $sql );
+
+  while ( my @row = $sth->fetchrow_array() ) {
+    print "$row[0]\t$row[1]\n";
+  }
+
+}
 
 1;
 
