@@ -906,7 +906,8 @@ sub get_pabst_static_peptide_display {
                    n_gen_loc => 'Number of locations on genome to which sequence maps',
                    n_obs => 'Number of times peptide was observed',
                    Annotations => 'Annotation of peptide features such as missed cleavage (MC), etc.',
-                   adj_SS => 'Best suitability score, adjusted based on sequence features' );
+                   adj_SS => 'Best suitability score, adjusted based on sequence features',
+                   Organisms => 'Organism(s) in which peptide was seen' );
 
   if ( $dp_data ) {
     push @headings, ( ESPP => 'Carr ESP predictor score',
@@ -922,7 +923,11 @@ sub get_pabst_static_peptide_display {
   $naa = $sbeams->makeInactiveText($naa) if $sbeams->output_mode() =~ /html/i;
 
   my $sth = $sbeams->get_statement_handle( $sql );
+
+  my %uniq_peps;
+
   while( my @row = $sth->fetchrow_array() ) {
+    $uniq_peps{$row[1]}++;
     for my $idx ( 3,4,5 ) {
       if ( defined $row[$idx] && $row[$idx] ne '' ) {
         $row[$idx] = sprintf( "%0.2f", $row[$idx] );
@@ -962,6 +967,7 @@ sub get_pabst_static_peptide_display {
     $row[5] = sprintf( "%0.2f", $row[5] );
     $row[6] = sprintf( "%0.1f", $row[6] );
     $row[10] = sprintf( "%0.2f", $row[10] );
+    $row[11] = $row[1];
     $row[1] = "<A HREF=GetPeptide?_tab=3;atlas_build_id=$args{atlas_build_id};searchWithinThis=Peptide+Sequence;searchForThis=$row[1];action=QUERY;biosequence_id=$args{biosequence_id} TITLE='View peptide $row[1] details'>$row[1]</A>" if $row[8] || 1;
 
 
@@ -971,13 +977,43 @@ sub get_pabst_static_peptide_display {
     push @peptides, [ @row];
   }
 
+  my $uniq_peps = "'" . join( "','", keys( %uniq_peps ) ) . "'"; 
+  my $uniq_sql = qq~
+  SELECT DISTINCT peptide_sequence, organism_id 
+  FROM 
+  $TBAT_PABST_BUILD PB  
+  JOIN $TBAT_PABST_PEPTIDE PP ON PB.pabst_build_id = PP.pabst_build_id
+  WHERE peptide_sequence IN ( $uniq_peps )
+  ~;
+
+  my $sth = $sbeams->get_statement_handle( $uniq_sql );
+  my %pep2org;
+  while ( my @row = $sth->fetchrow_array() ) {
+    $pep2org{$row[0]} ||= [];
+    push @{$pep2org{$row[0]}}, $row[1];
+  }
+
+  my @mod_peptides;
+  my %orgMap = ( 2 => 'H', 6 => 'M' );
+  for my $pep ( @peptides ) {
+    if ( $pep2org{$pep->[11]} ) {
+      my $newrow;
+      for my $org( @{$pep2org{$pep->[11]}} ) {
+        my $sym = $orgMap{$org} || 'MIA';
+        $newrow .= "$sym&nbsp;";
+      }
+      $pep->[11] = $newrow;
+    }
+    push @mod_peptides, $pep;
+  }
+
   my $align = [qw(right left right right left center center center right right right)];
 
   my $html = $atlas->encodeSectionTable( header => 1, 
                                                  width => '600',
                                                tr_info => $args{tr},
                                                 align  => $align,
-                                                  rows => \@peptides,
+                                                  rows => \@mod_peptides,
                                           rows_to_show => 20,
                                               max_rows => 500,
                                           bkg_interval => 3, 
@@ -1976,6 +2012,8 @@ sub get_pabst_theoretical_peptides {
   ORDER BY biosequence_name, suitability_score DESC
   END
 
+
+  $log->warn( $pepsql );
 
 
   my $sth = $sbeams->get_statement_handle( $pepsql );
