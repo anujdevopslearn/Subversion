@@ -74,7 +74,6 @@ sub getSBEAMS {
     return $sbeams || SBEAMS::Connection->new();
 } # end getSBEAMS
 
-
 # convenience method to look up hash of proteomics search batch to atlas SB
 sub getProtSB2AtlasSB {
 	my $self = shift;
@@ -106,7 +105,37 @@ sub getProtSB2AtlasSB {
   return \%mapping;
 }
 
-#####
+
+#+
+# method to look up hash atlas SB to peptide_source_type
+#-
+sub getAtlasSB2PeptideSrcType {
+	my $self = shift;
+	my %args = @_;
+	my $where = '';
+	if ( $args{build_id} ) {
+		if ( ref $args{build_id} ne 'ARRAY' ) {
+			die "build_id must be an array reference, not a " . ref $args{build_id};
+		}
+		$where = "WHERE atlas_build_id IN ( " . join( ',', @{$args{build_id}} ) . ' )';
+	}
+  my $sql = qq~
+    SELECT DISTINCT ASB.atlas_search_batch_id, S.peptide_source_type
+    FROM $TBAT_ATLAS_SEARCH_BATCH ASB
+		JOIN $TBAT_SAMPLE S
+	    ON ASB.sample_id = S.sample_id
+	  $where
+  ~;
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  
+  my %mapping;
+  while( my $row = $sth->fetchrow_arrayref() ) {
+    $mapping{$row->[0]} = $row->[1];
+  }
+  return \%mapping;
+}
+
 
 # convenience method to look up hash of proteomics search batch to sample
 sub getSearchBatch2Sample {
