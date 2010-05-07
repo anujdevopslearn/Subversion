@@ -30,7 +30,7 @@ use SBEAMS::PeptideAtlas::Tables;
 
 use SBEAMS::Proteomics::PeptideMassCalculator;
 
-use vars qw ($sbeams $atlas $q $current_username $PROG_NAME $USAGE %OPTIONS
+use vars qw ($sbeams $atlas $q $current_username $PROG_NAME $USAGE %opts
              $QUIET $VERBOSE $DEBUG $TESTONLY $TESTVARS $CHECKTABLES );
 
 # don't buffer output
@@ -63,18 +63,26 @@ my %peptide_mappings;
 my %updated_peptides;
 
 ## Process options
-GetOptions( \%OPTIONS,"verbose:s","quiet","debug:s","testonly",
+GetOptions( \%opts,"verbose:s","quiet","debug:s","testonly",
 		           "list","purge_mappings","input_file:s", 'set_tag:s',
                'help', 'update_peptide_info' ) || usage( "Error processing options" );
 
-for my $arg ( qw( set_tag ) ) {
-  usage( "Missing required parameter $arg" ) unless $OPTIONS{$arg};
+# build list requested 
+if ($opts{list}) {
+  $atlas->listBiosequenceSets();
+  exit;
+} elsif ( $opts{help} ) {
+  usage();
 }
 
-$VERBOSE = $OPTIONS{"verbose"} || 0;
-$QUIET = $OPTIONS{"quiet"} || 0;
-$DEBUG = $OPTIONS{"debug"} || 0;
-$TESTONLY = $OPTIONS{"testonly"} || 0;
+for my $arg ( qw( set_tag ) ) {
+  usage( "Missing required parameter $arg" ) unless $opts{$arg};
+}
+
+$VERBOSE = $opts{"verbose"} || 0;
+$QUIET = $opts{"quiet"} || 0;
+$DEBUG = $opts{"debug"} || 0;
+$TESTONLY = $opts{"testonly"} || 0;
 
 if ($DEBUG) {
   print "Options settings:\n";
@@ -116,41 +124,22 @@ sub handleRequest {
 
   my %args = @_;
 
-  ##### PROCESS COMMAND LINE OPTIONS AND RESTRICTIONS #####
+  ##### PROCESS COMMAND LINE opts AND RESTRICTIONS #####
   #### Set the command-line options
-  my $bioseq_set_tag = $OPTIONS{"set_tag"};
-  my $delete_set_tag = $OPTIONS{"delete_set"};
-  my $input_file = $OPTIONS{"input_file"};
+  my $bioseq_set_tag = $opts{"set_tag"};
+  my $delete_set_tag = $opts{"delete_set"};
+  my $input_file = $opts{"input_file"};
 
-
-  #### If there are any unresolved parameters, exit
-  if ($ARGV[0]){
-    usage( "ERROR: Unresolved command line parameter '$ARGV[0]'." );
-  }
-
-  #### If a listing was requested, list and return
-  if ($OPTIONS{"list"}) {
-    $atlas->listBuilds();
-    return;
-  } 
-
-
-  print "Get biosequence set\n";
-  #### Verify that bioseq_set_tag was supplied
-  my $bioseq_set_id = getBioseqSetID(set_tag => $bioseq_set_tag,);
-  unless ($bioseq_set_id) {
-    usage( "ERROR: couldn't find the bioseq set $bioseq_set_tag" );
-  }
-
+  my $set_id = getBioseqSetID( %opts );
 
   #### If specified, read the file in to fill the table
   if ( $input_file ) {
     print "Fill table\n";
-    fillTable( bioseq_set_id => $bioseq_set_id,
+    fillTable( bioseq_set_id => $set_id,
 	               source_file => $input_file );
-  } elsif ( $OPTIONS{purge_mappings} ) {
+  } elsif ( $opts{purge_mappings} ) {
     print "purge mappings\n";
-    purgeMappings( $bioseq_set_id )
+    purgeMappings( $set_id )
   }
 
 
@@ -175,8 +164,6 @@ sub getBioseqSetID {
       FROM $TBAT_BIOSEQUENCE_SET
      WHERE set_tag = '$bioseq_set_tag'
   ~;
-  print "$sql\n";
-
   
   my ($bioseq_set_id) = $sbeams->selectOneColumn($sql);
 
@@ -261,45 +248,69 @@ sub fillTable{
   open(INFILE,$source_file) or
     die("ERROR[$SUB]: Cannot open file '$source_file'");
 
-  my $proName;
-  my $prevAA;
-  my $pepSeq;
-  my $endAA;
-  my $paragScoreESI;
-  my $paragScoreICAT;
-  my $indianaScore;
-  my $n_prot_mappings;
-  my $n_exact_prot_mappings;
-  my $n_genome_locations;
-
   my $cnt = 0;
   my %match_cnt;
   my $t0 = time();
   my %fill_stats;
   while ( my $line = <INFILE> ) {
-    $cnt++;
+    
+    # Skip header line
+    next unless $cnt++;
 
     chomp($line);
     my @columns = split("\t",$line, -1);
 
-    # Hard-coded n_columns check, but we are referring to fields by index
-    if ( scalar( @columns ) != 10 ) {
+    
+# proteotypic_peptide_id
+# matched_peptide_id
+# preceding_residue
+# peptide_sequence
+# following_residue
+# peptidesieve_ICAT
+# detectabilitypredictor_score
+# peptide_isoelectric_point
+# molecular_weight
+# SSRCalc_relative_hydrophobicity
+# peptidesieve_score
+# espp_score
+# apex_score
+# combined_predictor_score
+
+# 0 Protein
+# 1 Pre
+# 2 Peptide
+# 3 Fol
+# 4 apex
+# 5 espp
+# 6 detectability_predictor
+# 7 peptide_sieve
+# 8 Combined_Score
+# 9 n_prot_map
+# 10 n_exact_map
+# 11 n_gen_loc
+
+    # Hard-coded n_columns check
+    if ( scalar( @columns ) != 12 ) {
       $fill_stats{bad_line}++;
       next;
     }
 
-    $proName = $columns[0];
-    $prevAA = $columns[1];
-    $pepSeq = $columns[2];
-    $endAA = $columns[3];
-    $paragScoreESI = $columns[4];
-    $paragScoreICAT = $columns[5];
-    $indianaScore = $columns[6];
+    my $proName = $columns[0];
+    my $prevAA = $columns[1];
+    my $pepSeq = $columns[2];
+    my $endAA = $columns[3];
+
+    my $apex = $columns[4];
+    my $espp = $columns[5];
+    my $detect = $columns[6];
+    my $pepsieve = $columns[7];
+    my $combined = $columns[8];
+
 
     # These are three new cols added by calcNGenomeLocation script
-    $n_prot_mappings = $columns[7] || 9999;
-    $n_exact_prot_mappings = $columns[8] || 9999;
-    $n_genome_locations = $columns[9] || 9999;
+    my $n_prot_mappings = $columns[9] || 0;
+    my $n_exact_prot_mappings = $columns[10] || 0;
+    my $n_genome_locations = $columns[11] || 0;
 
     # Decoys are duds!
     
@@ -325,7 +336,7 @@ sub fillTable{
     # Is this a new one OR are we in update mode?
     my $full_seq_key = $prevAA . $pepSeq . $endAA;
 
-    if ( !$proteopepseq_to_id->{$full_seq_key} || $OPTIONS{update_peptide_info} ) {
+    if ( !$proteopepseq_to_id->{$full_seq_key} || $opts{update_peptide_info} ) {
 
       # We've already updated this peptide during this run.
       if ( $updated_peptides{$full_seq_key} ) {
@@ -341,11 +352,11 @@ sub fillTable{
         $matched_pep_id = $pepseq_to_id->{$pepSeq};
   
         # calc relative hydrophobicity if necessary
-        if ( !defined $ssrcalc->{$pepSeq} || $OPTIONS{update_peptide_info} ) {
+        if ( !defined $ssrcalc->{$pepSeq} || $opts{update_peptide_info} ) {
            $ssrcalc->{$pepSeq} = getRelativeHydrophobicity( $pepSeq );
         }
   
-        if ( !$mw->{$pepSeq} || $OPTIONS{update_peptide_info} ) {
+        if ( !$mw->{$pepSeq} || $opts{update_peptide_info} ) {
           eval {
             $mw->{$pepSeq} = $massCalculator->getPeptideMass( sequence => $pepSeq,
                                                              mass_type => 'monoisotopic' ) || '';
@@ -356,7 +367,7 @@ sub fillTable{
           }
         }
   
-        if ( !$pI->{$pepSeq} || $OPTIONS{update_peptide_info} ) {
+        if ( !$pI->{$pepSeq} || $opts{update_peptide_info} ) {
           $pI->{$pepSeq} = getPeptidePI( $pepSeq ) || '';
         }
   
@@ -388,9 +399,11 @@ sub fillTable{
                        preceding_residue => $prevAA,
                         peptide_sequence => $pepSeq,
                        following_residue => $endAA,
-                        peptidesieve_ESI => $paragScoreESI,
-                       peptidesieve_ICAT => $paragScoreICAT,
-            detectabilitypredictor_score => $indianaScore,
+                      peptidesieve_score => $pepsieve,
+                              apex_score => $apex,
+                              espp_score => $espp,
+            detectabilitypredictor_score => $detect,
+                combined_predictor_score => $combined,
          ssrcalc_relative_hydrophobicity => $ssrcalc->{$pepSeq},
                         molecular_weight => $mw->{$pepSeq},
                peptide_isoelectric_point => $pI->{$pepSeq},
@@ -590,8 +603,8 @@ sub mapSeqs {
 
 sub purgeMappings {
   my $bioseq_set_id = shift;
-  if ( $OPTIONS{purge_mappings} && $bioseq_set_id ) {
-    print "purging mappings for biosequence set $OPTIONS{set_tag}, press cntl-c to abort\n";
+  if ( $opts{purge_mappings} && $bioseq_set_id ) {
+    print "purging mappings for biosequence set $opts{set_tag}, press cntl-c to abort\n";
     sleep 1;
   } else {
     die "Must provide bioseq_set";
@@ -711,7 +724,7 @@ sub usage {
   $msg
 
 
-  Usage: $PROG_NAME [OPTIONS]
+  Usage: $PROG_NAME [opts]
   Options:
     --verbose n            Set verbosity level.  default is 0
     --quiet                Set flag to print nothing at all except errors
@@ -737,4 +750,6 @@ sub usage {
   exit;
 }
 
-
+__DATA__
+Protein	Pre	Peptide	Fol	apex	espp	detectability_predictor	peptide_sieve	Combined_Score	n_prot_map	n_exact_map	n_gen_loc
+A0A183	K	EEECEGD	-	0	0.14118	0.692383	0.00242656	0.0556295938627146585	1	1	0
