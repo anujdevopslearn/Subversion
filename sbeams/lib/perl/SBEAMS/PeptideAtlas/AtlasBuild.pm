@@ -147,6 +147,27 @@ sub GetBuildSelect {
 
 } # end GetBuildSelect
 
+sub getBuildPeptideSourceTypes {
+  my $self = shift;
+  my %args = @_;
+
+  my $atlas_build_id = $args{atlas_build_id} || return;
+
+  my $sql = qq~
+  SELECT DISTINCT peptide_source_type, ASB.atlas_search_batch_id
+  FROM $TBAT_ATLAS_SEARCH_BATCH ASB
+  JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id
+  JOIN $TBAT_SAMPLE S ON ASB.sample_id = S.sample_id
+  WHERE atlas_build_id = '$atlas_build_id'
+  ~;
+
+  my %sourceTypes = 0;
+  my $sth = $sbeams->get_statement_handle($sql); 
+  while ( my @row = $sth->fetchrow_array() ) {
+    $sourceTypes{$row[0]}++;
+  }
+  return \%sourceTypes;
+}
 
 sub getAtlasBuildDirectory {
   my $self = shift;
