@@ -3,7 +3,7 @@
 #$Id:  $
 
 use DBI;
-use Test::More tests => 18;
+use Test::More tests => 19;
 use Test::Harness;
 use strict;
 use FindBin qw ( $Bin );
@@ -36,6 +36,8 @@ ok( get_SSR_calculator(), 'Get SSRCalc calculator' );
 ok( calculate_SSR(), 'Calculate SSR' );
 ok( test_hydrophobic_peptide(), 'Check hydrophobic peptide scoring and annotation' );
 ok( test_ECS_calculator(), 'Test ECS hydrophobicity calculator' );
+ok( test_peptide_list_scoring() , 'Test peptide list scoring' );
+
 
 sub test_bad_peptide {
 # A very bad peptide, should hit the following penalties!
@@ -153,6 +155,51 @@ sub test_good_peptide {
 	}
 	return 1;
 }
+
+
+sub test_peptide_list_scoring {
+  my $p1 = 'AGNTLLDIIK';
+  my $p2 = 'DAGNTLLDIIK';
+
+  my %pephash = ( 'AAAAAAAAAAAA' => 1,
+                  'DAGNTLLDIIK' => 1 );
+
+	my @peptides = ( [$p1, 1000], [$p2, 1000] );
+	my $results = $pepselector->pabst_evaluate_peptides( peptides => \@peptides, 
+                                                      score_idx => 1,
+                                               chk_peptide_hash => \%pephash,
+                                               peptide_hash_scr => 2,
+                                                      );
+# 0 PEP
+# 1 IN_SCR
+# 2 ANNOT
+# 3 SYN_SCR
+# 4 MERG_SCR  
+  my $result = 1;
+	for my $res ( @{$results} ) {
+#    print STDERR join( ":", @{$res} ) . "\n";
+
+		if ( $res->[0] eq 'AGNTLLDIIK' ) {
+      if ( $res->[2] && $res->[2] =~ /PepL/ ) {
+        $result = 0;
+      } 
+      if ( $res->[4] != 1000 ) {
+        $result = 0;
+      }
+    }
+		if ( $res->[0] eq 'DAGNTLLDIIK' ) {
+      if ( !$res->[2] || $res->[2] !~ /PepL/ ) {
+        $result = 0;
+      } 
+      if ( $res->[4] != 2000 ) {
+        $result = 0;
+      }
+    }
+	}
+	return $result;
+}
+
+
 
 sub get_file {
 	my %args = @_;
