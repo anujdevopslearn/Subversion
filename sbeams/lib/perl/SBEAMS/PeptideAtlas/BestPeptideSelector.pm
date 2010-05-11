@@ -2345,8 +2345,20 @@ sub pabst_evaluate_peptides {
 
     # Start multiplier at 1
     my $scr = 1;
-    my $seq = uc($pep->[$args{seq_idx}]);
+
+    # Array of annotations
     my @pen_codes;
+
+    # peptide sequence to consider
+    my $seq = uc($pep->[$args{seq_idx}]);
+
+    # New-ish addition.  Inclusion on a particular list might be good or bad.
+    if ( $args{chk_peptide_hash} && defined $args{peptide_hash_scr} ) {
+      if ( $args{chk_peptide_hash}->{$seq} ) {
+        $scr *= $args{peptide_hash_scr};
+        push @pen_codes, 'PepL';
+      }
+    }
 
     if ( $args{force_mc} ) {
       if ( $seq =~ /[KR][^P]/ ) {
