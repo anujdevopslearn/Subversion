@@ -11,7 +11,7 @@ use strict;
 use Getopt::Long;
 
 my %options;
-GetOptions( \%options, 'identlist_file=s', 'output_file=s',
+GetOptions( \%options, 'identlist_file=s', 'output_file=s', 'unmapped_preserve',
                        'help|?', 'protXML_file=s', 'verbose|s',
           );
 printUsage() if $options{help};
@@ -201,6 +201,7 @@ print STDERR
        if $verbose;
 
 my $nlines = 0;
+my $n_unmapped = 0;
 while (my $line = <$identlist_filehandle>) {
   $nlines++;
   if ($verbose &&  (($nlines % 1000) == 0)) {
@@ -244,6 +245,16 @@ while (my $line = <$identlist_filehandle>) {
       }
     }
   }
+
+  # skip PSMs mapped to protIDs that are UNMAPPED. These were hits to the
+  # search database, but do not map to anything in the database that the pepXML
+  # was refreshed to. They are probably bogus hits.
+  if ( ( ! $options{unmapped_preserve}) &&
+       ( $proteinID !~ /DECOY_/ ) && ( $proteinID =~ /UNMAPPED/) ) {
+    $n_unmapped++;
+    next;
+  }
+
   # construct Mayu modification field from modified peptide string
   #  (all other fields are direct copies from input)
   my $mods = getmods(modseq => $modseq);
@@ -252,6 +263,10 @@ while (my $line = <$identlist_filehandle>) {
     printf($output_filehandle "%s,%s,%s,%s,%s\n",
          $scan, $peptide, $proteinID, $mods, $probability);
   }
+}
+
+if ($verbose && $n_unmapped) {
+  print STDERR "$n_unmapped UNMAPPED PSMs ignored.\n";
 }
 
 #Print list of peptides in PAidentlist that were not found in protXML
@@ -281,6 +296,7 @@ Usage:  $0
   -h, --help             Print this usage information and exit
   -i, --identlist_file   PAidentlist file to convert (default: STDIN)
   -o, --output_file      Mayu input format file (default: STDOUT)
+  -u, --unmapped_preserve  Count PSMs that map to a protID =~ /UNMAPPED/
   -p, --protXML_file     protXML file corresponding to the PAidentlist file.
                          Used to regularize protein IDs so that protein
                          count is not inflated.
