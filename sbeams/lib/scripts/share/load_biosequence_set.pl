@@ -37,6 +37,11 @@ use vars qw ($sbeams $sbeamsMOD $q
 use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+use SBEAMS::BioLink::Tables;
 
 use SBEAMS::Proteomics::Utilities;
 $sbeams = SBEAMS::Connection->new();
@@ -97,6 +102,7 @@ Options:
   --swissprot_file     Full path name of Swiss-Prot fasta file; when possible
                        use Swiss-Prot names as biosequence descriptions.
                        Not yet fully implemented.
+  --gene_annotation    load gene ontology information for the set
 
  e.g.:  $PROG_NAME --check_status
 
@@ -112,7 +118,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
     "ginzu_search_results_dir:s","mamSum_search_results_summary_file:s",
     "InterProScan_search_results_summary_file:s",
     "COG_search_results_summary_file:s","pI_summary_file:s",
-    "swissprot_file:s",
+    "swissprot_file:s","gene_annotation",
   )) {
   print "$USAGE";
   exit;
@@ -133,7 +139,8 @@ if ($DEBUG) {
 
 ## die unless main methods are selected:
 unless ( $OPTIONS{"load"} || $OPTIONS{"load_all"} || $OPTIONS{"purge"} || 
-$OPTIONS{"check_status"} || $OPTIONS{"delete"} || $OPTIONS{"update_existing"})
+$OPTIONS{"check_status"} || $OPTIONS{"delete"} || $OPTIONS{"update_existing"} ||
+$OPTIONS{"gene_annotation"})
 {
     print "\n$USAGE";
     exit;
@@ -141,7 +148,8 @@ $OPTIONS{"check_status"} || $OPTIONS{"delete"} || $OPTIONS{"update_existing"})
 
 
 ## die if selected these without a set_tag:
-if ($OPTIONS{"delete"} || $OPTIONS{"load"} || $OPTIONS{"purge"} || $OPTIONS{"update_existing"})
+if ($OPTIONS{"delete"} || $OPTIONS{"load"} || $OPTIONS{"purge"} || 
+    $OPTIONS{"update_existing"} || $OPTIONS{"gene_annotation"})
 {
     unless ( $OPTIONS{"set_tag"} )
     {
@@ -285,7 +293,7 @@ sub handleRequest {
     $OPTIONS{"COG_search_results_summary_file"} || '';
   my $pI_summary_file = $OPTIONS{"pI_summary_file"} || '';
   my $swissprot_file = $OPTIONS{"swissprot_file"} || '';
-
+  my $gene_annotation = $OPTIONS{"gene_annotation"} || '';
 
   #### Get the file_prefix if it was specified, and otherwise guess
   unless ($file_prefix) {
@@ -322,7 +330,6 @@ sub handleRequest {
     die "Too many biosequence_sets found with set_tag = '$set_tag'"
       if ($n_biosequence_sets > 1);
   }
-
 
   #### scan for all available  set_tags
   if ( ($check_status && !$set_tag) || $load_all )
@@ -502,6 +509,15 @@ sub handleRequest {
       }
   }
 
+  if( $gene_annotation 
+      and $biosequence_set_ids[0] 
+      and !$load_all 
+      and !$update_existing
+      and !$load ){
+
+    print "biosequence_set_id $biosequence_set_ids[0]\n" if $VERBOSE;
+    update_biosequence_annotated_gene(biosequence_set_id => $biosequence_set_ids[0]);
+  }
 
   if ( ($check_status || $load_all || $load || $update_existing ) )
   {
@@ -772,7 +788,7 @@ sub loadBiosequenceSet {
           rowdata_ref=>\%rowdata,PK=>"biosequence_id",
           PK_value => $biosequence_id,
           verbose=>$VERBOSE,
-	  testonly=>$TESTONLY,
+       	  testonly=>$TESTONLY,
           );
 
         $counter++;
@@ -805,15 +821,79 @@ sub loadBiosequenceSet {
 
   }
 
-
   close(INFILE);
   print "\n$counter rows INSERT/UPDATed\n";
-
+  update_biosequence_annotated_gene(biosequence_set_id => $biosequence_set_id);
 
   updateSourceFileDate(
     biosequence_set_id => $biosequence_set_id,
     source_file => $source_file,
   );
+
+}
+
+###############################################################################
+# update biosequence_gene_annotation
+###############################################################################
+sub update_biosequence_annotated_gene{
+  my %args = @_;
+  my $SUB_NAME = "update_biosequence_annotated_gene";
+
+
+  #### Decode the argument list
+  my $biosequence_set_id = $args{'biosequence_set_id'}
+   || die "ERROR[$SUB_NAME]: biosequence_set_id not passed";
+
+  print "deleting old biosequence_annotation mapping for set $biosequence_set_id\n";
+
+  my $sql;
+  $sql = qq~
+      DELETE FROM $TBAT_BIOSEQUENCE_ANNOTATED_GENE
+      WHERE biosequence_id IN
+      ( SELECT BS.biosequence_id
+        FROM $TBAT_BIOSEQUENCE BS, $TBAT_BIOSEQUENCE_ANNOTATED_GENE BAG
+        WHERE BAG.biosequence_id = BS.biosequence_id
+        AND BS.biosequence_set_id = $biosequence_set_id
+      )
+  ~;
+  $sbeams->do($sql);
+
+  my $sql = qq~
+    SELECT BS.biosequence_id, AG.annotated_gene_id
+    FROM $TBAT_BIOSEQUENCE BS,  $TBBL_ANNOTATED_GENE AG
+    WHERE (BS.biosequence_accession = AG.gene_accession OR
+            'gi|'+BS.biosequence_accession = AG.gene_accession)
+           -- BS.biosequence_gene_name = AG.gene_name OR
+           -- BS.biosequence_gene_name = AG.gene_accession OR
+           -- BS.biosequence_accession = AG.gene_name)
+      AND BS.biosequence_set_id = $biosequence_set_id
+      AND BS.biosequence_name not like 'DECOY%'
+      ORDER by BS.biosequence_id
+    ~;
+  my @rows = $sbeams->selectSeveralColumns($sql);
+
+  print "insertting new mapping\n";
+  my $counter = 0;
+  my $pre_biosequence_id = '';
+  foreach my $row (@rows){
+    my ($biosequence_id, $annotated_gene_id) = @{$row};
+    next if($biosequence_id eq $pre_biosequence_id);
+    my %rowdata=();
+    $rowdata{biosequence_id} = $biosequence_id;
+    $rowdata{annotated_gene_id} = $annotated_gene_id;
+    my $result = $sbeams->updateOrInsertRow(
+        insert=>1,
+        table_name=>$TBAT_BIOSEQUENCE_ANNOTATED_GENE,
+        rowdata_ref=>\%rowdata,
+        PK=>'biosequence_id',
+        return_PK=>1,
+        verbose=>$VERBOSE,
+        testonly=>$TESTONLY,
+    );
+    $pre_biosequence_id = $biosequence_id;
+    $counter++;
+  }
+  print "\n$counter rows INSERT/UPDATed\n";
 
 }
 
@@ -1882,6 +1962,21 @@ sub specialParsing {
      $rowdata_ref->{dbxref_id} = '25';
   }
 
+  ### Conversion rules for the Honeybee Protein database
+  if ($rowdata_ref->{biosequence_name} =~ /^(GB\d+)\-\w+$/){
+     $rowdata_ref->{biosequence_gene_name} = $1;
+     $rowdata_ref->{biosequence_accession} = $1;
+  }
+  if ($rowdata_ref->{biosequence_name} =~ /^gnl\|Amel\|(GB\d+)\-\w+$/ ) {
+     $rowdata_ref->{biosequence_gene_name} = $1;
+     $rowdata_ref->{biosequence_accession} = $1;
+  }
+  ### Conversion rules for Drosophila Flybase  database
+  if ($rowdata_ref->{biosequence_desc} =~ /.*gene\:(FBgn\d+)\s+.*/ ) {
+     $rowdata_ref->{biosequence_gene_name} = $1;
+     $rowdata_ref->{biosequence_accession} = $1;
+  }
+
   #### Conversion rules for the SGD yeast orf fasta
   ## >YAL003W EFB1 SGDID:S0000003, Chr I from 142176-142255,142622-143162, Verified ORF
   if ($rowdata_ref->{biosequence_desc} =~ /^(\S+)\s(SGDID:.*)$/ ) {
@@ -1925,7 +2020,7 @@ sub specialParsing {
 
 
   #### Conversion rules for some generic GenBank IDs
-  if ($rowdata_ref->{biosequence_name} =~ /gi\|(\d+)\|/ ) {
+  if ($rowdata_ref->{biosequence_name} =~ /gi\|(\d+)/ ) {
      $rowdata_ref->{biosequence_accession} = $1;
      $rowdata_ref->{dbxref_id} = '12';
   }
