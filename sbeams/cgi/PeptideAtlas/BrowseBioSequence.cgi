@@ -367,7 +367,8 @@ sub handle_request {
   my @additional_columns = ();
   if ( $parameters{display_options} =~ /ShowGOColumns/ ||
        $molecular_function_clause.$biological_process_clause.
-       $cellular_component_clause.$protein_domain_clause ) {
+       #$cellular_component_clause.$protein_domain_clause ) {
+        $cellular_component_clause  ) {
     @additional_columns = (
       ["molecular_function","MFA.annotation","Molecular Function"],
       ["molecular_function_GO","MFA.external_accession","molecular_function_GO"],
@@ -375,8 +376,8 @@ sub handle_request {
       ["biological_process_GO","BPA.external_accession","biological_process_GO"],
       ["cellular_component","CCA.annotation","Cellular Component"],
       ["cellular_component_GO","CCA.external_accession","cellular_component_GO"],
-      ["interpro_protein_domain","IPDA.annotation","InterPro Protein Domain"],
-      ["interpro_protein_domain_GO","IPDA.external_accession","interpro_protein_domain_GO"],
+      #["interpro_protein_domain","IPDA.annotation","InterPro Protein Domain"],
+      #["interpro_protein_domain_GO","IPDA.external_accession","interpro_protein_domain_GO"],
     );
   }
 
@@ -385,7 +386,8 @@ sub handle_request {
   my $GO_join = "";
   if ( $parameters{display_options} =~ /ShowGOColumns/ ||
        $molecular_function_clause.$biological_process_clause.
-       $cellular_component_clause.$protein_domain_clause ) {
+       #$cellular_component_clause.$protein_domain_clause ) {
+       $cellular_component_clause  ) {
     $GO_join = qq~
         LEFT JOIN $TBAT_BIOSEQUENCE_ANNOTATED_GENE AG
              ON ( BS.biosequence_id = AG.biosequence_id )
