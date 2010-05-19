@@ -38,6 +38,7 @@ use SBEAMS::Connection::TabMenu;
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::BioLink::Tables;
 
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
@@ -640,42 +641,58 @@ sub handle_request {
 
 
   for (my $i=0; $i<$n_sub_queries; $i++) {
-    my @abundance_columns;
+    my (@abundance_columns, @GO_columns);
     if ( $parameters{display_options} =~ /ShowAbundances/ ) {
       @abundance_columns = (
-	["estimated_ng_per_ml",$estimated_ng_per_ml_sql[$i],"Estimated ng/ml"],
-	["abundance uncertainty",$abundance_uncertainty_sql[$i],"Uncertainty ng/ml"],
+			["estimated_ng_per_ml",$estimated_ng_per_ml_sql[$i],"Estimated ng/ml"],
+			["abundance uncertainty",$abundance_uncertainty_sql[$i],"Uncertainty ng/ml"],
       );
     } else {
       @abundance_columns = ();
     }
+    if ( $parameters{display_options} =~ /ShowGOColumns/ ){
+      @GO_columns = (
+      ["molecular_function","MFA.annotation","Molecular Function"],
+      #["molecular_function_GO","MFA.external_accession","molecular_function_GO"],
+      ["biological_process","BPA.annotation","Biological Process"],
+      #["biological_process_GO","BPA.external_accession","biological_process_GO"],
+      ["cellular_component","CCA.annotation","Cellular Component"],
+      #["cellular_component_GO","CCA.external_accession","cellular_component_GO"],
+      #["interpro_protein_domain","IPDA.annotation","InterPro Protein Domain"],
+      #["interpro_protein_domain_GO","IPDA.external_accession","interpro_protein_domain_GO"],
+      )
+    } else{
+       @GO_columns =();
+    }
+
     my @column_array = (
         ["biosequence_name",$biosequence_name_sql[$i],"Biosequence Name"],
         ["is_covering",$is_covering_sql[$i],"Cover ing Set"],
-	["presence_level",$presence_level_sql[$i],"Presence Level"],
-	["probability",$probability_sql[$i],"Protein Prophet Prob"],
-	["confidence",$confidence_sql[$i],"Mult Hyp Test Prob"],
-	["n_observations",$n_observations_sql[$i],"N Obs"],
-	["n_distinct_peptides",$n_distinct_peptides_sql[$i],"N Distinct Peptides"],
+				["presence_level",$presence_level_sql[$i],"Presence Level"],
+				["probability",$probability_sql[$i],"Protein Prophet Prob"],
+				["confidence",$confidence_sql[$i],"Mult Hyp Test Prob"],
+				["n_observations",$n_observations_sql[$i],"N Obs"],
+				["n_distinct_peptides",$n_distinct_peptides_sql[$i],"N Distinct Peptides"],
         ["chromosome","BPS.chromosome", "Chromosome"],
         ["genetic_locus","BPS.genetic_locus", "Genetic Locus"],
         ["start_in_chromosome","BPS.start_in_chromosome","Start in Chrom"],
         ["end_in_chromosome","BPS.end_in_chromosome","End in Chrom"],
         ["strand","BPS.strand","Strand"],
         @abundance_columns,
-	["relationship_phrase",$relationship_phrase_sql[$i],"Redundancy Relationship"],
-	["reference_biosequence",$reference_biosequence_sql[$i], "Redundant With Respect To"],
-	["represented_by_biosequence_id", "$represented_by_biosequence_sql[$i]", "Protein Group"],
-	["group_number","$group_number_sql[$i]","Group Number"],
+				["relationship_phrase",$relationship_phrase_sql[$i],"Redundancy Relationship"],
+				["reference_biosequence",$reference_biosequence_sql[$i], "Redundant With Respect To"],
+				["represented_by_biosequence_id", "$represented_by_biosequence_sql[$i]", "Protein Group"],
+				["group_number","$group_number_sql[$i]","Group Number"],
         ["seq_unique_prots_in_group","$seq_unique_prots_sql[$i]", "Seq Uniq Prots in Grp"],
+        @GO_columns,
         ["protein_group_seq_align_link","NULL","Protein Group Seq Alignmt"],
-	["biosequence_description",$biosequence_description_sql[$i],"Protein Description"],
-	["biosequence_accessor","DBX.accessor","biosequence_accessor"],
-	["biosequence_accessor_suffix","DBX.accessor_suffix","biosequence_accessor_suffix"],
-	["biosequence_accession","BS_REF.biosequence_accession","biosequence_accession"],
-	["organism_full_name","O.full_name","Organism"],
-	["ppl_sort_order",$presence_level_sort_order_sql[$i], "ppl_sort_order"],
-	["brt_sort_order",$relationship_sort_order_sql[$i],"brt_sort_order"],
+				["biosequence_description",$biosequence_description_sql[$i],"Protein Description"],
+				["biosequence_accessor","DBX.accessor","biosequence_accessor"],
+				["biosequence_accessor_suffix","DBX.accessor_suffix","biosequence_accessor_suffix"],
+				["biosequence_accession","BS_REF.biosequence_accession","biosequence_accession"],
+				["organism_full_name","O.full_name","Organism"],
+				["ppl_sort_order",$presence_level_sort_order_sql[$i], "ppl_sort_order"],
+				["brt_sort_order",$relationship_sort_order_sql[$i],"brt_sort_order"],
       );
     $column_array_refs[$i] = \@column_array;
   }
@@ -697,15 +714,45 @@ sub handle_request {
   for (my $i=0; $i<$n_sub_queries; $i++) {
     $columns_clause[$i] =
       $sbeams->build_SQL_columns_list(
-	column_array_ref=>$column_array_refs[$i],
-	colnameidx_ref=>\%colnameidx,
-	column_titles_ref=>\@column_titles
+			column_array_ref=>$column_array_refs[$i],
+			colnameidx_ref=>\%colnameidx,
+			column_titles_ref=>\@column_titles
       );
   }
 
   my @pre_joins;
   my @post_joins;
 
+  my $GO_join = "";
+  $parameters{gene_annotation_level_constraint} = 'leaf' ## zhi might need to change
+  unless ($parameters{gene_annotation_level_constraint});
+  my $gene_annotation_level_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"hierarchy_level",
+    constraint_type=>"plain_text",
+    constraint_name=>"Gene Annotation Level Constraint",
+    constraint_value=>$parameters{gene_annotation_level_constraint} );
+  return if ($gene_annotation_level_clause eq '-1');
+ 
+  if ( $parameters{display_options} =~ /ShowGOColumns/ ){
+    $GO_join = qq~
+        LEFT JOIN $TBAT_BIOSEQUENCE_ANNOTATED_GENE AG
+             ON ( BS_REF.biosequence_id = AG.biosequence_id )
+        LEFT JOIN $TBBL_GENE_ANNOTATION MFA
+             ON ( AG.annotated_gene_id = MFA.annotated_gene_id
+                   AND MFA.gene_annotation_type_id = 1 AND MFA.idx = 0
+                   AND MFA.hierarchy_level = '$parameters{gene_annotation_level_constraint}' )
+        LEFT JOIN $TBBL_GENE_ANNOTATION BPA
+             ON ( AG.annotated_gene_id = BPA.annotated_gene_id
+                   AND BPA.gene_annotation_type_id = 2 AND BPA.idx = 0
+                   AND BPA.hierarchy_level = '$parameters{gene_annotation_level_constraint}' )
+        LEFT JOIN $TBBL_GENE_ANNOTATION CCA
+             ON ( AG.annotated_gene_id = CCA.annotated_gene_id
+                   AND CCA.gene_annotation_type_id = 3 AND CCA.idx = 0
+                   AND CCA.hierarchy_level = '$parameters{gene_annotation_level_constraint}' )
+    ~;
+  }
+
+ 
   # Define joins specific for protein identifications
   $pre_joins[0] = qq~
   ~;
@@ -783,10 +830,11 @@ sub handle_request {
 	 INNER JOIN $TBAT_BIOSEQUENCE BS_REP
 	      ON ( BS_REP.biosequence_id = PID.represented_by_biosequence_id )
               AND ( BS_REP.biosequence_set_id = BSS.biosequence_set_id)
-	  LEFT JOIN $TB_DBXREF DBX ON ( DBX.dbxref_id = BS_REF.dbxref_id )
+	 INNER JOIN $TB_DBXREF DBX ON ( DBX.dbxref_id = BS_REF.dbxref_id )
 	 INNER JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL
 	      ON ( PPL.protein_presence_level_id = PID.presence_level_id )
          $post_joins[$i]
+         $GO_join
        WHERE 1 = 1
          $atlas_build_clause
          $biosequence_name_clauses[$i]
@@ -876,6 +924,20 @@ sub handle_request {
           'Protein Group Seq Alignmt_OPTIONS' => {embed_html=>1},
           'Related to' => "$CGI_BASE_DIR/PeptideAtlas/GetProtein?=\%$colnameidx{reference_biosequence_name}V&apply_action=$pass_action",
           'Related to_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein\'; return true"',
+         
+         'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
+				 'Molecular Function_ATAG' => 'TARGET="WinExt"',
+				 'Molecular Function_OPTIONS' => {semicolon_separated_list=>1},
+				 'Biological Process' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{biological_process_GO}V",
+				 'Biological Process_ATAG' => 'TARGET="WinExt"',
+				 'Biological Process_OPTIONS' => {semicolon_separated_list=>1},
+				 'Cellular Component' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{cellular_component_GO}V",
+				 'Cellular Component_ATAG' => 'TARGET="WinExt"',
+				 'Cellular Component_OPTIONS' => {semicolon_separated_list=>1},
+				 'InterPro Protein Domain' => "http://www.ebi.ac.uk/interpro/IEntry?ac=\%$colnameidx{interpro_protein_domain_GO}V",
+				 'InterPro Protein Domain_ATAG' => 'TARGET="WinExt"',
+				 'InterPro Protein Domain_OPTIONS' => {semicolon_separated_list=>1},
+
 
       );
 
@@ -1072,5 +1134,6 @@ sub getOrganismFullName
 
     return $full_name;
 }
+
 
 
