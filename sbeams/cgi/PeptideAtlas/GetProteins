@@ -830,7 +830,7 @@ sub handle_request {
 	 INNER JOIN $TBAT_BIOSEQUENCE BS_REP
 	      ON ( BS_REP.biosequence_id = PID.represented_by_biosequence_id )
               AND ( BS_REP.biosequence_set_id = BSS.biosequence_set_id)
-	 INNER JOIN $TB_DBXREF DBX ON ( DBX.dbxref_id = BS_REF.dbxref_id )
+	 LEFT JOIN $TB_DBXREF DBX ON ( DBX.dbxref_id = BS_REF.dbxref_id )
 	 INNER JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL
 	      ON ( PPL.protein_presence_level_id = PID.presence_level_id )
          $post_joins[$i]
@@ -934,11 +934,6 @@ sub handle_request {
 				 'Cellular Component' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{cellular_component_GO}V",
 				 'Cellular Component_ATAG' => 'TARGET="WinExt"',
 				 'Cellular Component_OPTIONS' => {semicolon_separated_list=>1},
-				 'InterPro Protein Domain' => "http://www.ebi.ac.uk/interpro/IEntry?ac=\%$colnameidx{interpro_protein_domain_GO}V",
-				 'InterPro Protein Domain_ATAG' => 'TARGET="WinExt"',
-				 'InterPro Protein Domain_OPTIONS' => {semicolon_separated_list=>1},
-
-
       );
 
 
