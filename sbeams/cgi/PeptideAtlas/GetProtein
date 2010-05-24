@@ -53,12 +53,18 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 use SBEAMS::PeptideAtlas::KeySearch;
 my $keySearch = new SBEAMS::PeptideAtlas::KeySearch;
 $keySearch->setSBEAMS($sbeams);
-my @coverage;  # Global sequence coverage array, will be populated post-graphic
 
 use SBEAMS::PeptideAtlas::BestPeptideSelector;
 my $bestPeptideSelector = new SBEAMS::PeptideAtlas::BestPeptideSelector;
 $bestPeptideSelector->setSBEAMS($sbeams);
 $bestPeptideSelector->setAtlas($sbeamsMOD);
+
+# Global sequence coverage array, will be populated post-graphic
+my @coverage;  
+
+# Swiss Prot annotations
+my @sp_rows;
+my $sp_rationale;
 
 
 use constant MIN_OBS_LENGTH => 6;
@@ -480,6 +486,21 @@ sub handle_request {
   ~;
   my @rows = $sbeams->selectHashArray($sql);
   my $biosequence = $rows[0];
+
+  # Supercede with SwissProt info
+  my $sp_sql = qq~
+       SELECT BS.biosequence_id, signal_end, signal_start
+       FROM $TBAT_BIOSEQUENCE BS
+       JOIN peptideatlas.dbo.swiss_prot_annotation SPA
+         ON BS.biosequence_accession = SPA.accession
+       WHERE BS.biosequence_id = $biosequence_id
+  ~;
+  my $sth = $sbeams->get_statement_handle($sp_sql);
+  while ( my @db_row = $sth->fetchrow_array() ) {
+    @sp_rows = @db_row;
+    last;
+  }
+
 
   #############################################################################
   # Widget to allow show/hide of overview section
@@ -1456,14 +1477,16 @@ sub get_sequence_graphic {
 
   ## Generate Signal P related tracks ##
 
+
   my @signalp;
   my $seqtype = '';
 
   my ( $anchor, $signal );
   my $signal_peptide_coords = {};
-  if ( $args{protein_data}->{has_signal_peptide} ) {
+  my $sp_info = scalar( @sp_rows );
+  if ( $args{protein_data}->{has_signal_peptide} || $sp_info ) {
 
-    if ( $args{protein_data}->{signal_peptide_is_cleaved} =~ /y/i ) {
+    if ( $args{protein_data}->{signal_peptide_is_cleaved} =~ /y/i || $sp_info ) {
       $seqtype = 'Signal';
       $signal++;
     } else {
@@ -1471,16 +1494,22 @@ sub get_sequence_graphic {
       $anchor++;
     }
 
+    $log->info( join("::", @sp_rows ) );
+#  my @sp_rows = $sbeams->selectHashArray($sql);
+#       SELECT BS.biosequence_id, signal_end, signal_start
+    my $end = ( $sp_info ) ? $sp_rows[1] : $args{protein_data}->{signal_peptide_length};
+    $sp_rationale = ( $sp_info ) ? 'Signal peptide annoted in SwissProt' : 'Signal sequence predicted by Signal P, cleaved in mature protein';
+
     # Cache signal peptide info for possible 'unlikely' designation.
     if ( $seqtype eq 'Signal' ) {
       $signal_peptide_coords->{start} = 1;
-      $signal_peptide_coords->{end} = $args{protein_data}->{signal_peptide_length};
-      $signal_peptide_coords->{seq} = substr( $protseq, 0, $args{protein_data}->{signal_peptide_length} );
-      $signal_peptide_coords->{rationale} = 'Predicted signal sequence, cleaved in mature protein';
+      $signal_peptide_coords->{end} = $end;
+      $signal_peptide_coords->{seq} = substr( $protseq, 0, $end );
+      $signal_peptide_coords->{rationale} = $sp_rationale;
     }
 
     my $f = Bio::SeqFeature::Generic->new( -start => 1,
-                                             -end => $args{protein_data}->{signal_peptide_length},
+                                             -end => $end,
                                     -display_name => $seqtype ,
                                            -label => 0
                                          );
@@ -1488,6 +1517,7 @@ sub get_sequence_graphic {
     push @signalp, $f;
 
   }
+ 
 
   ## End Signal P related tracks ##
 
