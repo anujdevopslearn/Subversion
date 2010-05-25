@@ -1494,9 +1494,6 @@ sub get_sequence_graphic {
       $anchor++;
     }
 
-    $log->info( join("::", @sp_rows ) );
-#  my @sp_rows = $sbeams->selectHashArray($sql);
-#       SELECT BS.biosequence_id, signal_end, signal_start
     my $end = ( $sp_info ) ? $sp_rows[1] : $args{protein_data}->{signal_peptide_length};
     $sp_rationale = ( $sp_info ) ? 'Signal peptide annoted in SwissProt' : 'Signal sequence predicted by Signal P, cleaved in mature protein';
 
@@ -1767,12 +1764,13 @@ sub get_sequence_graphic {
 
   # Add signalP track
   my $sigtype = ( $anchor ) ? 'Anchor' : 'Signal';
+  my $qualifier = ( $sp_info ) ? '' : '(predicted)';
   $panel->add_track(
 			\@signalp,
 			-glyph       => 'segments',
 			-bgcolor     => $colors{$sigtype},
 			-fgcolor     => 'black',
-			-key         => $sigtype . ' Sequence (predicted)',
+			-key         => $sigtype . ' Sequence ' . $qualifier,
 			-bump        => +1,
 			-height      => 8,
       -legend      => 1,
@@ -1791,6 +1789,7 @@ sub get_sequence_graphic {
       my %legend = ( Transmembrane => 'Transmembrane Domain',
                      Extracellular => 'Outside membrane', 
                      Intracellular => 'Inside membrane');
+
 
       $panel->add_track(
 			$tracs{$t},
@@ -1845,6 +1844,8 @@ sub get_sequence_graphic {
 
   # Set up graphic legend
   my @legend; 
+  my $sig_title = ( $sp_info ) ? 'Annotated signal peptide from direct observation or prediction' :
+                                 'Signal peptide predicted from amino acid sequence';
   my %title = ( obs_sing => "Peptides which map to a single genome location",
                 obs_multi =>  "Peptides which match to 2 or more genome locations",
                 sig_seq => "Signal peptide predicted from amino acid sequence",
@@ -1863,7 +1864,7 @@ sub get_sequence_graphic {
 
   push @legend, "<TR> <TD CLASS=lgnd_obs_sing>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{obs_sing}'>Observed peptide with single genome mapping</SPAN></TD> </TR>\n" if $single;
   push @legend, "<TR> <TD CLASS=lgnd_obs_multi>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{obs_multi}'>Observed peptide with ambiguous genome mapping</SPAN></TD> </TR>\n" if $multi;
-  push @legend, "<TR> <TD CLASS=lgnd_sig_seq>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{sig_seq}'>Signal sequence predicted by Signal P</SPAN></TD> </TR>\n" if $signal; 
+  push @legend, "<TR> <TD CLASS=lgnd_sig_seq>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{sig_seq}'>$sp_rationale</SPAN></TD> </TR>\n" if $signal; 
   push @legend, "<TR> <TD CLASS=lgnd_anc_seq>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{anc_seq}'>Anchor sequence predicted by Signal P</SPAN></TD> </TR>\n" if $anchor;
   push @legend, "<TR> <TD CLASS=lgnd_tm_dom>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{tm_dom}'>Transmembrane domain predicted by TMHMM</SPAN></TD> </TR>\n" if @tmm;
   push @legend, "<TR> <TD CLASS=lgnd_in_dom>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{in_dom}'>Predicted as inside membrane by TMHMM</SPAN></TD> </TR>\n" if @intra;
