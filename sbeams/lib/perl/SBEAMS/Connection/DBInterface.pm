@@ -3458,6 +3458,10 @@ sub displayResultSetControls {
     print "<BR>Result Page \n";
     $i=0;
     my $nrowsminus = $nrows - 1 if ($nrows > 0);
+
+    # Sensible default, avoid div by zero
+		$rs_params{page_size} ||= 50;
+
     my $npages = int($nrowsminus / $rs_params{page_size}) + 1;
     for ($i=0; $i<$npages; $i++) {
       my $pg = $i+1;
