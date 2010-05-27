@@ -795,6 +795,7 @@ sub handle_request {
 
     #### Display the annotated sequence
     displayAnnotatedSequence(
+           %parameters,
          peptides => $peptides,
       biosequence => $biosequence,
       resultset_ref=>$resultset_ref,
@@ -1854,6 +1855,7 @@ sub get_sequence_graphic {
                 in_dom => "Predicted orientation inside, (intracellular for cell membrane proteins)",
                 ex_dom =>  "Predicted orientation outside, (extracellular for cell membrane proteins)",
                 pep_cov => "Cumulative sequence coverage",
+                glyco => "Potential Glycosylation Site",
                 unlikely_obs => "tryptic peptides &le; " . MIN_OBS_LENGTH . " residues or signal peptides" 
               );
 
@@ -1871,6 +1873,7 @@ sub get_sequence_graphic {
   push @legend, "<TR> <TD CLASS=lgnd_ex_dom>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{ex_dom}'>Predicted as outside membrane by TMHMM </SPAN></TD> </TR>\n" if @extra;
   push @legend, "<TR> <TD CLASS=lgnd_pep_cov>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{pep_cov}'>Protein coverage by observed peptides</SPAN></TD> </TR>\n" if @coverage;
   push @legend, "<TR> <TD CLASS=lgnd_unlikely_obs>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{unlikely_obs}'>Peptides unlikely to be observed </SPAN></TD> </TR>\n" if @difficult;
+  push @legend, "<TR> <TD CLASS=lgnd_glyco>$sp</TD> <TD class=sm_txt><SPAN TITLE='$title{glyco}'>Potential N-glycosylated peptide </SPAN></TD> </TR>\n" if @glyco;
 #  push @legend, "<TR> <TD CLASS=trans_seq>$sp</TD> <TD class=sm_txt>Entire Translated Protein Sequence</TD> </TR>\n";
 
   my $legend = '';
@@ -2185,6 +2188,57 @@ sub displayAnnotatedSequence {
   print ' (' . int(($observed_residues)/($seq_length-$cnt)*1000)/10,"% of likely observable sequence)</TD></TR></TABLE>";
   #print "<BR><BR>Notes:<BR>\n$notes_buffer" if ($notes_buffer);
 
+
+  if ( $args{show_aa_content} ) {
+    my $tot = length( $sequence );
+    my @aa = split( '', $sequence );
+    my %aa;
+    for my $aa ( @aa ) {
+      $aa{$aa}++;
+    }
+    
+    my %colors = ( 10 => '#555566',
+                    9 => '#666677',
+                    8 => '#777788',
+                    7 => '#888899',
+                    6 => '#9999aa',
+                    5 => '#aaaabb',
+                    4 => '#bbbbcc',
+                    3 => '#ccccdd',
+                    2 => '#ddddee',
+                    1 => '#eeeeff',
+                    0 => '#ffffff' );
+
+    my $name = '<TR><TD Align=right><B>AA:</B></TD>';
+    my $count = '<TR><TD Align=right><B>Cnt:</B></TD>';
+    my $perc = '<TR><TD Align=right><B>Perc:</B></TD>';
+    for my $aa ( sort( keys( %aa ) ) ) {
+      my $pct = sprintf( "%0.1f", 100*($aa{$aa}/$tot) );
+      my $color_key = int( $pct );
+      my $font_color = ( $color_key > 6 ) ? 'white' : 'black';
+      $color_key = 10 if $color_key > 10;
+
+#      $name .= "<TD Align=Center BGCOLOR='$colors{$color_key}'><FONT COLOR=$font_color>$aa</FONT></TD>"; 
+      $name .= "<TD Align=Center>$aa</TD>"; 
+      $count .= "<TD Align=right>$aa{$aa}</TD>"; 
+      $perc .= "<TD Align=Right BGCOLOR='$colors{$color_key}'><FONT COLOR=$font_color>$pct</FONT></TD>"; 
+    }
+    $name .= '</TR>';
+    $count .= '</TR>';
+    $perc .= '</TR>';
+
+    my $slith = 'slith';
+    $slith =<<"    END";
+    <BR>
+      <TABLE BORDER=1>
+        $name
+        $count
+        $perc
+       </TABLE>
+    <BR>
+    END
+    print $slith;
+  }
 
 } # end displayAnnotatedSequence
 
