@@ -310,6 +310,34 @@ sub getHighlyObservablePeptides {
 
   my $build_string = join( ',', $atlas->getAccessibleBuilds() );
 
+  my $sql = qq~
+     SELECT DISTINCT AB.BIOSEQUENCE_SET_ID 
+     FROM $TBAT_ATLAS_BUILD AB
+     WHERE AB.ATLAS_BUILD_ID = $atlas_build_id
+     AND AB.BIOSEQUENCE_SET_ID IN (
+			 SELECT BS.BIOSEQUENCE_SET_ID 
+			 FROM $TBAT_PROTEOTYPIC_PEPTIDE PP, $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING PPM, 
+            $TBAT_BIOSEQUENCE BS
+			 WHERE PP.PROTEOTYPIC_PEPTIDE_ID = PPM.PROTEOTYPIC_PEPTIDE_ID 
+			 AND PPM.SOURCE_BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID
+			 AND BS.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
+			 GROUP BY BS.BIOSEQUENCE_SET_ID
+			 HAVING (COUNT (PP.COMBINED_PREDICTOR_SCORE)*100/COUNT(BS.BIOSEQUENCE_ID))>= 90
+     )
+  ~;
+  
+  my @biosequece_set_ids = $sbeams->selectOneColumn($sql); 
+
+  #print "<H4>@biosequece_set_ids $atlas_build_id $biosequence_id</H4>\n";
+  if( @biosequece_set_ids == 0 ){
+    my $result = $self -> getHighlyObservablePeptides_old(
+      atlas_build_id => $atlas_build_id,
+      biosequence_id => $biosequence_id,
+    );
+    return $result;
+  }
+ 
+ 
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
   my @column_array = (
@@ -317,15 +345,20 @@ sub getHighlyObservablePeptides {
     ["preceding_residue","PTP.preceding_residue","Pre AA"],
     ["peptide_sequence","PTP.peptide_sequence","Peptide Sequence"],
     ["following_residue","PTP.following_residue","Fol AA"],
-    ["suitability_score","(PTP.detectabilitypredictor_score+PTP.peptidesieve_ESI)/2","Suitability Score"],
-    ["detectabilitypredictor_score","PTP.detectabilitypredictor_score","Detectability Predictor Score"],
-    ["peptidesieve_score","PTP.peptidesieve_ESI","PeptideSieve Score"],
+    ["combined_predictor_score","PTP.combined_predictor_score","Combined Predictor Score"],
+    ["peptidesieve_score","PTP.peptidesieve_score","PeptideSieve Score"],
+    ["espp_score", "PTP.espp_score","ESPP Score"],
     ["build_placeholder",1,"build_placeholder"],
+    ["detectabilitypredictor_score","PTP.detectabilitypredictor_score","Detectability Predictor Score"],
+    ["apex_score", "PTP.apex_score", "APEX Score"],
     #["parag_score_ESI","PTP.parag_score_ESI","PM ESI"],
     #["parag_score_ICAT","PTP.parag_score_ICAT","PM ICAT"],
   );
+
+  
   my %colnameidx = ();
   my @column_titles = ();
+
   my $columns_clause = $sbeams->build_SQL_columns_list(
     column_array_ref=>\@column_array,
     colnameidx_ref=>\%colnameidx,
@@ -346,8 +379,8 @@ sub getHighlyObservablePeptides {
      LEFT JOIN $TBAT_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
     WHERE 1 = 1
 	  AND PTPM.source_biosequence_id = $biosequence_id
-    AND ( (PTP.detectabilitypredictor_score+peptidesieve_ESI) >= 1 OR peptide_accession IS NOT NULL )
-    ORDER BY (PTP.detectabilitypredictor_score+PTP.peptidesieve_ESI)/2 DESC
+    AND ( PTP.combined_predictor_score is not null OR peptide_accession IS NOT NULL )
+    ORDER BY PTP.combined_predictor_score DESC
   ~;
 
   #### Fetch the results from the database server
@@ -370,6 +403,77 @@ sub getHighlyObservablePeptides {
 
 } # end getHighlyObservablePeptides
 
+sub getHighlyObservablePeptides_old {
+  my $METHOD = 'getHighlyObservablePeptides_old';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  $args{build_accessions} ||= {};
+  #### Process parameters
+  my $atlas_build_id = $args{atlas_build_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+
+  my $biosequence_id = $args{biosequence_id}
+    or die("ERROR[$METHOD]: Parameter biosequence_id not passed");
+
+  my $build_string = join( ',', $atlas->getAccessibleBuilds() );
+
+  my @column_array = (
+    ["peptide_accession","P.peptide_accession","Peptide Accession"],
+    ["preceding_residue","PTP.preceding_residue","Pre AA"],
+    ["peptide_sequence","PTP.peptide_sequence","Peptide Sequence"],
+    ["following_residue","PTP.following_residue","Fol AA"],
+    ["suitability_score","(PTP.detectabilitypredictor_score+PTP.peptidesieve_ESI)/2","Suitability Score"],
+    ["detectabilitypredictor_score","PTP.detectabilitypredictor_score","Detectability Predictor Score"],
+    ["peptidesieve_score","PTP.peptidesieve_ESI","PeptideSieve Score"],
+    ["build_placeholder",1,"build_placeholder"],
+  );
+  
+  my %colnameidx = ();
+  my @column_titles = ();
+  my $columns_clause = $sbeams->build_SQL_columns_list(
+    column_array_ref=>\@column_array,
+    colnameidx_ref=>\%colnameidx,
+    column_titles_ref=>\@column_titles
+  );
+
+  #### Define a query to return peptides for this protein
+  my $sql = qq~
+     SELECT DISTINCT
+     $columns_clause
+     FROM $TBAT_PROTEOTYPIC_PEPTIDE PTP
+     LEFT JOIN $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING PTPM
+          ON ( PTP.proteotypic_peptide_id = PTPM.proteotypic_peptide_id )
+     LEFT JOIN $TBAT_PEPTIDE P
+          ON ( PTP.matched_peptide_id = P.peptide_id )
+     LEFT JOIN $TBAT_BIOSEQUENCE BS
+          ON ( PTPM.source_biosequence_id = BS.biosequence_id )
+     LEFT JOIN $TBAT_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
+    WHERE 1 = 1
+	  AND PTPM.source_biosequence_id = $biosequence_id
+        AND ( (PTP.detectabilitypredictor_score+peptidesieve_ESI) >= 1 OR peptide_accession IS NOT NULL )
+        ORDER BY (PTP.detectabilitypredictor_score+PTP.peptidesieve_ESI)/2 DESC
+  ~;
+
+  #### Fetch the results from the database server
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  $sbeams->fetchResultSet(
+    sql_query=>$sql,
+    resultset_ref=>$resultset_ref,
+  );
+
+  for my $row ( @{$resultset{data_ref}} ) {
+    $row->[7] = $args{build_accessions}->{$row->[0]};
+  }
+
+  my $result;
+  $result->{resultset_ref} = $resultset_ref;
+  $result->{column_titles_ref} = \@column_titles;
+
+  return $result;
+
+} # end getHighlyObservablePeptides
 
 
 ###############################################################################
