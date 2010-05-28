@@ -103,6 +103,9 @@ use vars qw(@ISA @EXPORT
     $TBAT_PABST_PEPTIDE_MAPPING
     $TBAT_PABST_TRANSITION
     $TBAT_PABST_BUILD
+
+    $TBAT_PROTEIN_LIST
+    $TBAT_PROTEIN_LIST_PROTEIN
 );
 
 
@@ -204,6 +207,9 @@ require Exporter;
     $TBAT_PABST_PEPTIDE_MAPPING
     $TBAT_PABST_TRANSITION
     $TBAT_PABST_BUILD
+
+    $TBAT_PROTEIN_LIST
+    $TBAT_PROTEIN_LIST_PROTEIN
 );
 
 
@@ -308,3 +314,6 @@ $TBAT_PABST_PEPTIDE                 = "${mod}pabst_peptide";
 $TBAT_PABST_PEPTIDE_MAPPING         = "${mod}pabst_peptide_mapping";
 $TBAT_PABST_TRANSITION              = "${mod}pabst_transition";
 $TBAT_PABST_BUILD                   = "${mod}pabst_build";
+
+$TBAT_PROTEIN_LIST                  = "${mod}protein_list";
+$TBAT_PROTEIN_LIST_PROTEIN          = "${mod}protein_list_protein";
