@@ -1,0 +1,363 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# $Id: $
+#
+# SBEAMS is Copyright (C) 2000-2007 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+###############################################################################
+
+
+###############################################################################
+# Get the script set up with everything it will need
+###############################################################################
+use strict;
+#use vars qw ($sbeams);
+use lib qw (../../lib/perl);
+#use CGI::Carp qw(fatalsToBrowser croak);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::DataTable;
+use SBEAMS::Connection::GoogleVisualization;
+use SBEAMS::Connection::TabMenu;
+
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+
+###############################################################################
+# Global Variables
+###############################################################################
+my $sbeams = new SBEAMS::Connection;
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+my $atlas = new SBEAMS::PeptideAtlas;
+$atlas->setSBEAMS($sbeams);
+
+# Read input parameters
+my $params = process_params();
+my $rs_params = { %$params };
+
+
+my $atlas_build_id = '';
+my $out_mode;
+
+{ # Main 
+
+    # Authenticate or exit
+    my $username = $sbeams->Authenticate( permitted_work_groups_ref => 
+                                                      ['PeptideAtlas_user',
+                                                      'PeptideAtlas_admin', 
+                                                      'PeptideAtlas_readonly', 'PeptideAtlas_exec'],
+                                                      # connect_read_only=>1,
+                                              ) || exit;
+
+    $out_mode = $sbeams->output_mode();
+
+    ## get current settings
+    my $project_id = $sbeams->getCurrent_project_id();
+
+
+    my $page = '';
+
+    $page .= $sbeams->getGifSpacer( 700 ) . "<BR>\n" if $out_mode eq 'html';
+
+  #### Get the HTML to display the tabs
+    my $tabMenu = $atlas->getTabMenu(
+      parameters_ref => $params,
+      program_name => 'proteinListDetails',
+    );
+#
+    $atlas_build_id = $params->{build_id} || $atlas->getCurrentAtlasBuildID(parameters_ref => $params);
+    my $list_id = $params->{list_id};
+    $list_id ||= $atlas->getDefaultProteinListID( build_id => $atlas_build_id);
+
+    
+  # Add general section 
+  if ( $out_mode eq 'html' ) {
+    $page .= get_list_overview ( $list_id );
+    $page .= "<BR>\n";
+  }
+
+  $page .= get_list_entries ( list_id => $list_id );
+
+#    my ( $sample_table, $sample_arrayref ) = get_sample_info( $build_id );
+#    my ( $chart_div, $header ) = get_draw_chart_function( $sample_arrayref );
+
+#    $page .= "<BR>$batch_help\n";
+#    $page .= $sample_table;
+  if ( $out_mode eq 'html' ) {
+    $page .= "<BR>\n";
+  }
+
+    # Print what we already have, speed up apparent page loading time.
+
+    $atlas->display_page_header(  project_id => $project_id, onload => 'sortables_init()', sortable => 1 );
+
+		print $page;
+
+#    my $build_path = get_build_path( build_id => $build_id );
+
+		$atlas->display_page_footer();
+
+} # end main
+
+  
+  
+sub get_list_entries {
+  my %args = @_; 
+
+  my $content = '';
+
+  if ( $out_mode eq 'html' ) {
+    $content .= $atlas->encodeSectionHeader(
+      text => 'Proteins',
+      span => 4,
+    );
+  }
+
+  my @column_array = (
+    ["protein_name","PLP.protein_name","Accession"],
+    ["Description","substring( PLP.protein_description, 1, 80 )","Description"],
+    ["num_peps"," COUNT( distinct peptide_id )", "Num Peps"],
+    ["num_obs","SUM(n_observations) ", "Num Obs"],
+    ["key_accession","PLP.key_accession ", "Related"],
+  );
+
+  # Defalut to query mode
+  $params->{apply_action} ||= 'QUERY';
+
+  if ( $params->{apply_action} =~ /(QUERY|GO)/) {
+    if ( $params->{show_nxst} ) {
+      push @column_array, ["NxST","CASE WHEN CAST( Biosequence_seq AS VARCHAR(2000) ) LIKE '%N[^P][ST]%' THEN 'Yes' ELSE 'No' END ", "NxST"];
+    }
+    if ( $params->{show_cys} ) {
+      push @column_array, ["Cys","CASE WHEN CAST( Biosequence_seq AS VARCHAR(2000) ) LIKE '%C%' THEN 'Yes' ELSE 'No' END ", "Cys"];
+    }
+  } else {
+    push @column_array, ["NxST","CASE WHEN CAST( Biosequence_seq AS VARCHAR(2000) ) LIKE '%N[^P][ST]%' THEN 'Yes' ELSE 'No' END ", "NxST"];
+    push @column_array, ["Cys","CASE WHEN CAST( Biosequence_seq AS VARCHAR(2000) ) LIKE '%C%' THEN 'Yes' ELSE 'No' END ", "Cys"];
+  }
+
+  #### Build the columns part of the SQL statement
+  ## Sends @column_array_ref to build_SQL_columns_list, which
+  ## (1) appends the 2nd element in array to $columns_clause
+  ## (2) fills %colnameidx_ref as a hash with key = 1st element
+  ## and value = 3rd element, and (3) fills @column_titles_ref
+  ## array with the 3rd element
+
+  my %colnameidx;
+  my @column_titles;
+  my $columns_clause = $sbeams->build_SQL_columns_list(
+    column_array_ref=>\@column_array,
+    colnameidx_ref=>\%colnameidx,
+    column_titles_ref=>\@column_titles
+  );
+
+#  protein_name, protein_description, COUNT( distinct peptide_id ) num_peptides, key_accession SUM( n_observations ) num_obs,
+
+  my $sql = qq~
+  SELECT DISTINCT $columns_clause
+  FROM $TBAT_PROTEIN_LIST_PROTEIN PLP
+  JOIN $TBAT_BIOSEQUENCE B 
+    ON PLP.protein_name = B.biosequence_name
+  LEFT JOIN $TBAT_PEPTIDE_MAPPING PM 
+    ON B.biosequence_id = PM.matched_biosequence_id 
+  LEFT JOIN $TBAT_PEPTIDE_INSTANCE PI 
+  ON PI.peptide_instance_id = PM.peptide_instance_id 
+  WHERE atlas_build_id = 217
+  AND protein_list_id = $args{list_id}
+  AND protein_name = key_accession  -- For now, limit to 'primary' accession
+  GROUP BY protein_name, protein_description, key_accession, CAST( biosequence_seq AS VARCHAR(2000) )
+  ORDER BY key_accession ASC 
+  ~;
+
+
+  my $resultset_ref = {};
+
+  my $hidden_cols = { biosequence_seq => 1 };
+#  my $trim_width_ref = { Description => 40 };
+
+  my $url_cols = { 'Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id;protein_name=%V&action=GO;show_aa_content=1",
+                   'Related' => "$CGI_BASE_DIR/PeptideAtlas/compareProteins?build_id=$atlas_build_id;protein_list_id=$args{list_id};key_accession=%V&action=QUERY" };
+
+  my $query_name = "$SBEAMS_SUBDIR/proteinListDetails";
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/proteinListDetails";
+
+  if ( $params->{apply_action} =~ /(QUERY|GO)/) {
+
+    #### Fetch the results from the database server
+    $sbeams->fetchResultSet(
+      sql_query=>$sql,
+      resultset_ref=>$resultset_ref,
+    );
+
+    #### Store the resultset and parameters to disk resultset cache
+    $rs_params->{set_name} = "SETME";
+    $sbeams->writeResultSet(
+        resultset_file_ref => \$rs_params->{set_name},
+             resultset_ref => $resultset_ref,
+      query_parameters_ref => $params,
+      resultset_params_ref => $rs_params,
+      query_name=> $query_name
+    );
+
+
+  } elsif ( $params->{apply_action} eq "VIEWRESULTSET") {
+
+    $sbeams->readResultSet(
+      resultset_file       => $params->{set_name},
+      resultset_ref        => $resultset_ref,
+      query_parameters_ref => $params,
+      resultset_params_ref => $rs_params,
+    );
+  }
+
+
+
+  $log->info( "Base URL is $base_url" );
+
+  $sbeams->collectSTDOUT();
+  
+  $rs_params->{page_size} ||= 50;
+
+  # Display the resultset
+  $sbeams->displayResultSet(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>$params,
+      rs_params_ref=>$rs_params,
+      url_cols_ref=>$url_cols,
+      hidden_cols_ref=>$hidden_cols,
+#      trim_width_ref=> $trim_width_ref,
+      column_titles_ref=>\@column_titles,
+      base_url=> $base_url,
+#      cytoscape=>$java_web_start,
+      no_escape => 1
+    );
+
+    # Display the resultset controls
+  if ( $out_mode eq 'html' ) {
+    $sbeams->displayResultSetControls(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=> $params,
+      rs_params_ref=> $rs_params,
+      base_url=> $base_url,
+    );
+  }
+  $content .= $sbeams->fetchSTDOUT();
+  return $content;
+
+}
+
+
+# General build info, date, name, organism, specialty, default
+#
+
+sub get_list_overview {
+
+  my $list_id = shift;
+# 0 protein_list_id
+# 1 protein_list_name
+# 2 contributor_name
+# 3 contributor_contact_id
+# 4 protein_list_description
+# 5 project_id    
+
+  # Get a list of accessible project_ids
+  my @project_ids = $sbeams->getAccessibleProjects();
+  my $project_ids = join( ",", @project_ids ) || '0';
+
+  my $list_sql = qq~
+  SELECT protein_list_id, protein_list_name, contributor_name, protein_list_description, project_id 
+  FROM peptideatlas.dbo.protein_list 
+  WHERE protein_list_id = $list_id
+  AND project_id IN ( $project_ids )
+  ORDER BY protein_list_id DESC
+  ~;
+
+  my $list_info = $sbeams->selectrow_hashref( $list_sql );
+      
+  my $prot_count = $sbeams->selectrow_hashref( <<"  PEP" );
+  SELECT COUNT(*) cnt, COUNT(DISTINCT key_accession) dist
+  FROM   peptideatlas.dbo.protein_list_protein
+  WHERE protein_list_id = $list_id
+  PEP
+
+  my $table = "<TABLE WIDTH=800>\n";
+
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'list_overview',
+                                                  visible => 1,
+                                                  tooltip => 'Show/Hide Section',
+                                                  imglink => 1,
+                                                  sticky  => 1 );
+
+  $table .= $atlas->encodeSectionHeader(
+      text => 'List Overview',
+      span => 4,
+      link => $link
+  );
+
+  my $spc = $sbeams->getGifSpacer(500);
+
+  $table .= $atlas->encodeSectionItem( key   => 'List Name', tr_info => $tr,
+                            value => $list_info->{protein_list_name} . $spc, vspan => 3 ) . "\n";
+  $table .= $atlas->encodeSectionItem( key   => 'List Description', tr_info => $tr,
+                            value => $list_info->{protein_list_description}, vspan => 3 ) . "\n";
+  $table .= $atlas->encodeSectionItem( key   => 'Contributor', tr_info => $tr,
+                            value => $list_info->{contributor_name} ) . "\n";
+  $table .= $atlas->encodeSectionItem( key   => '# List Entries', tr_info => $tr,
+                            value => $prot_count->{dist}, align => 'right' ) . "\n";
+  $table .= $atlas->encodeSectionItem( key   => '# Mapped Proteins', tr_info => $tr,
+                            value => $prot_count->{cnt}, align => 'right' ) . "\n";
+
+  $table .= "</TABLE>\n";
+  return $table;
+
+}
+
+
+
+sub process_params {
+  my $params = {};
+  $sbeams->parse_input_parameters( q => $q, parameters_ref => $params );
+  $sbeams->processStandardParameters( parameters_ref => $params );
+  $sbeams->processStandardParameters( parameters_ref => $params );
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  for my $key ( keys %rs_params ) {
+    $params->{$key} = $rs_params{$key};
+  }
+  return( $params );
+}
+
+sub get_build_path {
+  my %args = @_;
+  return unless $args{build_id};
+  my $path = $atlas->getAtlasBuildDirectory( atlas_build_id => $args{build_id} );
+  $path =~ s/DATA_FILES//;
+  return $path;
+}
+
+sub get_draw_chart_function {
+	my $sample_arrayref = shift || return '';
+
+	my @samples;
+	for my $s ( @{$sample_arrayref} ) {
+		push @samples, [ $s->[1], $s->[4], $s->[7] ];
+	}
+	my $GV = SBEAMS::Connection::GoogleVisualization->new();
+  my ( $chart ) = $GV->setDrawBarChart(  samples => \@samples,
+                                    	data_types => [ 'string', 'number', 'number' ],
+                                      	headings => [ 'Sample', 'Distinct peptides (n_obs > 1)', 'Cumulative peptides (n_obs > 1)' ],
+                                      show_table => 0,
+                                 truncate_labels => 24
+ 	);
+	my $header = $GV->getHeaderInfo();
+  return ( $chart, $header );
+}
+
