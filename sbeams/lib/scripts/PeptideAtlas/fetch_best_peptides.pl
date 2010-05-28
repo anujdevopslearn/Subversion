@@ -55,10 +55,18 @@ sub print_process {
   my $theoretical = get_theoretical_peptides();
   print STDERR "Merging peptides ($args->{n_peptides})\n" if $args->{verbose};
   print_process() if $args->{verbose};
+
+  my %chk_args;
+  if ( $args->{chk_file} && defined $args->{chk_scr} ) {
+    $chk_args{chk_peptide_hash} = get_chk_hash();
+    $chk_args{peptide_hash_scr} = $args->{chk_scr};
+  }
+
   my $merged = $pep_sel->merge_pabst_peptides(  obs => $observed, 
                                                theo => $theoretical,
                                          n_peptides => $args->{n_peptides},
-                                            verbose => $args->{verbose}
+                                            verbose => $args->{verbose},
+                                            %chk_args
                                              );
 
   print STDERR "Freeing memory\n" if $args->{verbose};
@@ -148,7 +156,7 @@ sub process_args {
   GetOptions( \%args, 'atlas_build=s@', 'show_builds', 'help', 'tsv_file=s', 
               'protein_file=s', 'n_peptides=i', 'config=s', 'default_config', 
               'bioseq_set=i', 'obs_min=i', 'verbose', 'name_prefix=s',
-              'build_name=s', 'min_score=i'
+              'build_name=s', 'min_score=i', 'chk_file=s', 'chk_scr=f'
              ) || print_usage();
 
   # Short-circuit if we just want help/documention
@@ -226,6 +234,11 @@ sub print_usage {
   print <<"  END";
       $msg
 
+#  GetOptions( \%args, 'atlas_build=s@', 'show_builds', 'help', 'tsv_file=s', 
+#              'protein_file=s', 'n_peptides=i', 'config=s', 'default_config', 
+#              'bioseq_set=i', 'obs_min=i', 'verbose', 'name_prefix=s',
+#              'build_name=s', 'min_score=i', 'chk_file=s', 'chk_scr=s'
+
 usage: $sub -a build_id [ -t outfile -n obs_cutoff -p proteins_file -v -b .3 ]
 
    -a, --atlas_build    one or more atlas build ids to be queried for observed 
@@ -233,7 +246,11 @@ usage: $sub -a build_id [ -t outfile -n obs_cutoff -p proteins_file -v -b .3 ]
                         specified as a numeric id ( -a 123 -a 189 ) or as a composite
                         id:weight ( -a 123:3 ).  Scores from EPS and ESS will 
                         be multiplied by given weight, defaults to 1.
-   -c, --config         Config file defining penalites for various sequence  
+       --config         Config file defining penalites for various sequence  
+       --chk_file       File of peptide accessions for which to modify score.  
+                        Primary purpose is to boost proteins on a particular 
+                        list, e.g.
+       --chk_scr        Score to apply for items in chk_file above.
    -d, --default_config prints an example config file with defaults in CWD,
                         named best_peptide.conf, will not overwrite existing
                         file.  Exits after printing.
@@ -290,6 +307,21 @@ sub get_headings {
   return \@headings;
 }
 
+sub get_chk_hash {
+  # args is global : (
+  return {} unless ( $args->{chk_file} && defined $args->{chk_scr} );
+
+  my %chk_hash;
+  open CHK, $args->{chk_file} || die "Unable to open chk_file $args->{chk_file}";
+
+  while ( my $chk_line = <CHK> ) {
+    chomp $chk_line;
+    $chk_hash{$chk_line}++;
+  }
+  close CHK;
+  return \%chk_hash;
+}
+
 sub get_protein_in_clause {
   # protein list in a file
   open PROT, $args->{protein_file} || 
@@ -319,177 +351,3 @@ sub get_theoretical_peptides {
                                                  );
 }
 
-__DATA__
-sub merge_peptides {
-  my $obs = shift;
-  my $theo = shift;
-  my @final_protein_list;
-
-  # loop over keys of theoretical list - all proteins are represented
-  for my $prot ( sort( keys( %$theo ) ) ) {
-
-    # List of peptides for this protein
-    my @peptides; 
-
-    # consider each theoretical peptide...
-    for my $pep( sort( keys( %{$theo->{$prot}} ) ) ) {
-      # Set to theo value by default
-      my $peptide = $theo->{$prot}->{$pep};
-
-      # If this pep is also observed, use the one with the higher score
-      if ( $obs->{$prot} && $obs->{$prot}->{$pep} ) { 
-        if( $obs->{$prot}->{$pep}->[13] >  $theo->{$prot}->{$pep}->[13] ) {
-          $peptide = $obs->{$prot}->{$pep}
-        }
-      }
-
-      push @peptides, $peptide;
-    }
-
-    # If this protein is also observed, check for non-tryptic keys
-    if ( $obs->{$prot} ) {
-
-      # consider each peptide...
-      for my $pep ( sort( keys(  %{$obs->{$prot}}  ) ) ) {
-
-        # skip it if we've already seen it 
-        next if $theo->{$prot}->{$pep};
-
-        # Hopefully its non-tryptic nature will beat it down!  
-        push @peptides, $obs->{$prot}->{$pep}
-      }
-    }
-
-    # OK, we have a merged array of peptides with scores.  Sort and return
-    @peptides = sort { $b->[13] <=> $a->[13] } @peptides;
-
-    # FIXME - apply peptide number or score threshold here?
-    push @final_protein_list, @peptides;
-
-  }
-  return \@final_protein_list;
-}
-
-
-
-sub get_theoretical_peptides {
-  
-  my $build_where = "WHERE AB.atlas_build_id = $args->{atlas_build}";
-  my $name_in = ( $args->{protein_file} ) ? get_protein_in_clause() : '';
-
-  # Short circuit with BestPeptideSelector object method!
-  return $pep_sel->get_pabst_theoretical_peptides( atlas_build => $args->{atlas_build},
-                                                   protein_in_clause => $name_in );
-
-
-  my $pepsql =<<"  END"; 
-  SELECT DISTINCT biosequence_name, 
-                  preceding_residue,
-                  peptide_sequence,
-                  following_residue,           
-                  CASE WHEN  peptidesieve_ESI > peptidesieve_ICAT THEN  (peptidesieve_ESI +  detectabilitypredictor_score )/2  
-                       ELSE  (peptidesieve_ICAT +  detectabilitypredictor_score )/2  
-                  END AS suitability_score,
-                  STR(molecular_weight, 7, 4) Molecular_weight,
-                  STR(SSRCalc_relative_hydrophobicity,7,2) AS "SSRCalc_relative_hydrophobicity",
-                  n_protein_mappings AS "n_protein_mappings",
-                  n_genome_locations AS "n_genome_locations",
-                  'n/a',
-                  'n/a'
-  FROM $TBAT_PROTEOTYPIC_PEPTIDE PP
-  JOIN $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING PM ON ( PP.proteotypic_peptide_id = PM.proteotypic_peptide_id )
-  JOIN $TBAT_BIOSEQUENCE BS ON ( PM.source_biosequence_id = BS.biosequence_id )
-  JOIN $TBAT_ATLAS_BUILD AB ON ( AB.biosequence_set_id = BS.biosequence_set_id ) 
-  $build_where
-  $name_in
-  ORDER BY biosequence_name, suitability_score DESC
-  END
-
-#  print STDERR $pepsql; exit;
-
-
-  my $sth = $sbeams->get_statement_handle( $pepsql );
-  # Big hash of proteins
-  my $pep_cnt;
-  my %proteins;
-  while( my @row = $sth->fetchrow_array() ) {
-
-    # Adjust the score with a PBR!
-    my $row = $pep_sel->pabst_evaluate_peptides( peptides => [\@row], seq_idx => 2, follow_idx => 3, score_idx => 4, ssr_idx => 8 );
-    @row = @{$row->[0]};
-
-    # Each protein is a hashref
-    $proteins{$row[0]} ||= {};
-    m # That hashref points to the row
-    $proteins{$row[0]}->{$row[1].$row[2].$row[3]} = \@row;
-    $pep_cnt++;
-  }
-  print STDERR "Saw " . scalar( keys( %proteins ) ) . "  total proteins and $pep_cnt peptides\n";
-#  my $cnt = 0; for my $k ( keys ( %proteins ) ) { print "$k\n"; last if $cnt++ >= 10; }
-  return \%proteins;
-}
-
-sub get_observed_peptides {
-  
-  my $build_where = "WHERE PI.atlas_build_id = $args->{atlas_build}";
-  my $name_in = ( $args->{protein_file} ) ? get_protein_in_clause() : '';
-  my $nobs_and = ( $args->{obs_min} ) ? "AND n_observations > $args->{obs_min}" : ''; 
-
-  # Short circuit with BestPeptideSelector object method!
-  return $pep_sel->get_pabst_observed_peptides(       atlas_build => $args->{atlas_build},
-                                                protein_in_clause => $name_in, 
-                                                  min_nobs_clause => $nobs_and, 
-                                              );
-  my $obs_adjustment = 1;
-
-
-  my $pepsql =<<"  END"; 
-  SELECT DISTINCT 
-                  biosequence_name, 
-                  preceding_residue,
-                  peptide_sequence,
-                  following_residue,           
-                  CASE WHEN empirical_proteotypic_score IS NULL THEN .5 + $obs_adjustment 
-                       ELSE  empirical_proteotypic_score + $obs_adjustment
-                  END AS suitability_score,
-                  STR(molecular_weight, 7, 4) Molecular_weight,
-                  STR(P.SSRCalc_relative_hydrophobicity,7,2) AS "SSRCalc_relative_hydrophobicity",
-                  PI.n_protein_mappings AS "n_protein_mappings",
-                  PI.n_genome_locations AS "n_genome_locations",
-                  STR(PI.best_probability,7,3) AS "best_probability",
-                  PI.n_observations AS "n_observations"
-  FROM $TBAT_PEPTIDE_INSTANCE PI
-  JOIN $TBAT_PEPTIDE P ON ( PI.peptide_id = P.peptide_id )
-  JOIN $TBAT_PEPTIDE_MAPPING PM ON ( PI.peptide_instance_id = PM.peptide_instance_id )
-  JOIN $TBAT_BIOSEQUENCE BS ON ( PM.matched_biosequence_id = BS.biosequence_id )
-  $build_where
-  $nobs_and
-  $name_in
-  ORDER BY biosequence_name, suitability_score DESC
-  END
-
-#  print STDERR $pepsql; exit;
-
-
-  my $sth = $sbeams->get_statement_handle( $pepsql );
-  # Big hash of proteins
-  my $pep_cnt;
-  my %proteins;
-  while( my @row = $sth->fetchrow_array() ) {
-
-     # Adjust the score with a PBR!
-     my $row = $pep_sel->pabst_evaluate_peptides( peptides => [\@row], seq_idx => 2, follow_idx => 3, score_idx => 4 );
-     @row = @{$row->[0]};
-
-    # Each protein is a hashref
-    $proteins{$row[0]} ||= {};
-    # That hashref points to the row, keyed by sequence w/ flanking AA
-    $proteins{$row[0]}->{$row[1].$row[2].$row[3]} = \@row;
-    $pep_cnt++;
-  }
-  print STDERR "Saw " . scalar( keys( %proteins ) ) . "  total proteins and $pep_cnt peptides\n";
-#  my $cnt = 0; for my $k ( keys ( %proteins ) ) { print "$k\n"; last if $cnt++ >= 10; }
-
-  return \%proteins;
-
-}
