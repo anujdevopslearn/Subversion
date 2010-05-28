@@ -21,7 +21,8 @@ $|++; # don't buffer output
 my $sbeams = SBEAMS::Connection->new();
 my $dbh = $sbeams->getDBHandle();
 
-my @dbs = qw( sbeams sbeams_test );
+my @dbs = ( 'SBEAMS', 'SBEAMS_test' );
+#my @dbs = ( 'Microarray3', 'Microarray_test' );
 #my @dbs = qw( peptideatlas peptideatlas_test );
 #my @dbs = qw( proteomics proteomicsLM );
 my %tab;
@@ -45,7 +46,13 @@ for my $schema ( @dbs ) {
     my $csql = 'SELECT TOP 1 * FROM ' . $schema . '.dbo.' . $table;
 #  	print "$csql\n";
     my $csth = $dbh->prepare( $csql ) || die 'cannot prepare';
-    $csth->execute() || die 'cannot execute ';
+		eval {
+    $csth->execute() || die "cannot execute $csql";
+		};
+		if ( $@ ) {
+			print "Error: $@\n";
+			next;
+		}
 
 	 	$tables{$schema}->{$table} = {};
 	 	$tables{union}->{$table} ||= {};
