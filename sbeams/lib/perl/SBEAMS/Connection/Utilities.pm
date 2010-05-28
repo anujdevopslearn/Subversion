@@ -1696,6 +1696,62 @@ sub read_fasta_file {
   return \%entries;
 }
 
+#+
+# @narg    file       Req'd, formatted file to open
+# @narg    delimier   Delimiter on which to split input lines, defaults to "\t";
+# @narg    acc_idx    Req'd, 0-based index of accession column.  Data returned as reference
+#                     to hash keyed by index, each entry is a ref to an array of row arrayrefs
+# @narg    val_idx    Ref to array of col indexes, will return just those in row arrayrefs (not all)
+# @narg    lookup     Indicates file is a one-to-one lookup with [0] -> [1].  If there are duplicated
+#                     accessions (column 0) the routine will die().
+# @narg    key_limit  Array ref, will cache only accession which are represented.
+#-
+sub read_file {
+  my $self = shift;
+  my %args = ( delimiter => "\t", @_ );
+  for my $arg ( qw( file acc_idx ) ) {
+    die "missing required argument $arg\n" unless defined $args{$arg};
+  }
+
+  open FIL, $args{file} || die;
+  my %contents;
+  my $cnt = 0;
+  while ( my $line = <FIL> ) {
+    chomp $line;
+    next if !$cnt++ && $args{header};
+    next if $line =~ /^\s*$/; # skip blanks
+
+    my @line = split( $args{delimiter}, $line, -1);
+
+    # Should be one to one, short circuit
+    if ( $args{lookup} ) {
+      die "bad lookup!" if $contents{$line[0]};
+      $contents{$line[0]} = $line[1];
+      next;
+    }
+
+    my $acc = $line[$args{acc_idx}];
+
+    if ( $args{key_limit} ) {
+      next unless $args{key_limit}->{$acc};
+    }
+
+    $contents{$acc} ||= [];
+    if ( defined $args{val_idx} ) {
+      push @{$contents{$acc}}, [@line[@{$args{val_idx}}]];
+    } else {
+      push @{$contents{$acc}}, \@line;
+    }
+
+
+  }
+  my $contents_cnt = scalar( keys( %contents ) );
+  print STDERR "read $cnt entries, hashed $contents_cnt unique keys\n" if $args{verbose};
+  close FIL;
+  return \%contents;
+} # end read_file
+
+
 1;
 
 
