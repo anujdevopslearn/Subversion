@@ -128,7 +128,7 @@ my $show_image = 0;
       $page = get_build_plots ( $build_id, $chart_div ); 
 	  	print $page;
 		}
-    $page = getSampleMapDisplay ( build_id => $build_id );
+    $page = getSampleMapDisplay ( %{$params}, build_id => $build_id );
 		print $page;
 
 		$atlas->display_page_footer();
@@ -369,8 +369,9 @@ sub getSampleMapDisplay {
   
   my $html = '';
   
+	my $top = ( $args{show_all_prots} ) ? 20000 : 250;
   my $prot_sql = qq~
-	SELECT TOP 250 matched_biosequence_id, CAST(biosequence_seq AS VARCHAR(2000)) seq, biosequence_name
+	SELECT TOP $top matched_biosequence_id, CAST(biosequence_seq AS VARCHAR(2000)) seq, biosequence_name
   FROM  $TBAT_PEPTIDE_INSTANCE PI 
   JOIN $TBAT_PEPTIDE_MAPPING PM ON PM.peptide_instance_id = PI.peptide_instance_id
   JOIN $TBAT_BIOSEQUENCE B ON PM.matched_biosequence_id = B.biosequence_id
@@ -393,7 +394,7 @@ sub getSampleMapDisplay {
 		$cntr++;
 		push @ordered_prots, $row->[2];
 		push @bioseq_ids, $row->[0];
-		last if scalar( @ordered_prots ) >= 100;
+		last if scalar( @ordered_prots ) >= 100 && !$args{show_all_prots};
 		$cntr++;
 	}
   my $bioseq_ids = join( ',', @bioseq_ids );
@@ -445,35 +446,65 @@ sub getSampleMapDisplay {
 
   my @peps;
   my $cnt = 0;
+	my @sample_names = ( 'Protein_Accession' );
   for my $sa ( sort( keys( %samples ) ) ) {
     my ( $name, $id ) = split "::::", $sa;
+		push @sample_names, $name;
     $array_def .= "    data.addColumn('number', '$name');\n";
     last if $ie && $cnt++ >= $ie_max;
   }
   $array_def .= "DEFINE_ROWS_HERE\n";
   
+  my $content = join( "\t", @sample_names ) . "\n";
   my $row = 0;
   my $col = 0;
   my $max = 0;
 	my %output;
-  for my $protein ( @ordered_prots ) {
-    $col = 0;
-    $array_def .= "    data.setValue( $row, $col, '$protein' );\n";
-    $col++;
-   my $colcnt = 0;
-   for my $sample ( sort( keys( %samples ) ) ) {
-      my ( $name, $id ) = split "::::", $sample;
-      last if $ie && $colcnt++ > $ie_max;
-		  if ( $proteins{$protein}->{$sample} ) {
-#        my $cnt = $proteins{$protein}->{$sample};
-        my $cnt = log( 1+ $proteins{$protein}->{$sample} )/log(10);
-        $max = ( $cnt > $max ) ? $cnt : $max;
-        $array_def .= "    data.setValue( $row, $col, $cnt );\n";
-			}
-      $col++;
+	if ( $args{show_all_prots} ) {
+    for my $protein ( @ordered_prots ) {
+     $col = 0;
+     $array_def .= "    data.setValue( $row, $col, '$protein' );\n";
+     $col++;
+     my $colcnt = 0;
+		 my @row = ($protein);
+     for my $sample ( sort( keys( %samples ) ) ) {
+        my ( $name, $id ) = split "::::", $sample;
+#        last if $ie && $colcnt++ > $ie_max;
+				my $cnt = 0;
+  		  if ( $proteins{$protein}->{$sample} ) {
+  #        my $cnt = $proteins{$protein}->{$sample};
+          $cnt = log( 1+ $proteins{$protein}->{$sample} )/log(10);
+          $max = ( $cnt > $max ) ? $cnt : $max;
+#          $array_def .= "    data.setValue( $row, $col, $cnt );\n";
+  			}
+				push @row, $cnt;
+        $col++;
+      }
+			$content .= join( "\t", @row ) . "\n";
+      $row++;
     }
-    $row++;
-  }
+		my $filename = $sbeams->writeSBEAMSTempFile( content => $content );
+    $log->error( "TSVFILE is $filename!" );
+	} else {
+    for my $protein ( @ordered_prots ) {
+      $col = 0;
+      $array_def .= "    data.setValue( $row, $col, '$protein' );\n";
+      $col++;
+     my $colcnt = 0;
+     for my $sample ( sort( keys( %samples ) ) ) {
+        my ( $name, $id ) = split "::::", $sample;
+        last if $ie && $colcnt++ > $ie_max;
+  		  if ( $proteins{$protein}->{$sample} ) {
+  #        my $cnt = $proteins{$protein}->{$sample};
+          my $cnt = log( 1+ $proteins{$protein}->{$sample} )/log(10);
+          $max = ( $cnt > $max ) ? $cnt : $max;
+          $array_def .= "    data.setValue( $row, $col, $cnt );\n";
+  			}
+        $col++;
+      }
+      $row++;
+    }
+	}
   $array_def =~ s/DEFINE_ROWS_HERE/data.addRows($row);/;
   my $num_colors = ( $max > 64 ) ? 64 : $max;
   my $num_colors = 256;
