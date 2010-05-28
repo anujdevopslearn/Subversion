@@ -306,6 +306,9 @@ sub fillTable{
     my $pepsieve = $columns[7];
     my $combined = $columns[8];
 
+    for my $score ( $apex, $espp, $detect, $pepsieve, $combined ) {
+      $score = -1 if $score =~ /NA/i;
+    }
 
     # These are three new cols added by calcNGenomeLocation script
     my $n_prot_mappings = $columns[9] || 0;
