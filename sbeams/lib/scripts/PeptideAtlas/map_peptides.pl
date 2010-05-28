@@ -126,7 +126,7 @@ while( my $line = <PEPS> ) {
         if ( $matched ) {
           $stats{peptide_map_ok_brute}++;
         } else {
-          print "FAILED: >$pepseq<\n" if $opts->{verbose};
+          print "NOMAP: >$pepseq<\n" if $opts->{show_mia};
         }
       }
     } # End if n_convert else 
@@ -179,6 +179,10 @@ for my $acc ( keys( %{$acc2seq} ) ) {
 #        print "PEPTIDE: >$mapped_pep<\n";
         if ( scalar( keys( %{$allpeptides->{$mapped_pep}} ) ) > 1 ) { # Degenerate
           print "DEGEN: >$mapped_pep $allpeptides->{mapped_pep}<\n";
+          for my $k ( keys( %{$allpeptides->{$mapped_pep}} ) ) {
+            print "$k\n";
+          }
+          exit;
         } else { # Gerenate
           print "PROTEO: >$mapped_pep<\n";
         }
@@ -203,9 +207,19 @@ for my $acc ( keys( %{$acc2seq} ) ) {
   $stats{$bin_key}++;
 }
 
+my @cnt_bins;
+my @cnt_vals;
 for my $k ( sort( keys ( %stats ) ) ) {
   print STDERR "$k => $stats{$k}\n";
+  if ( $k =~ /prot_cnt/ ) {
+    push @cnt_bins, $k;
+    push @cnt_vals, $stats{$k};
+  }
 }
+
+print "TAB_CNTS\n";
+print join( "\t", @cnt_bins ) . "\n";
+print join( "\t", @cnt_vals ) . "\n";
 
 my $etime = time();
 my $delta = $etime - $time;
@@ -300,7 +314,7 @@ sub map_peptide {
       $stats{pep_map_proteo}++;
     } else {
       $stats{pep_map_degen}++;
-      print "DEGEN: >$pepseq<\n" if $opts->{show_degen};
+      print "DEGEN: $pepseq is in $match_str\n" if $opts->{show_degen};
     }
   }
   return $prot_cnt;
