@@ -970,6 +970,15 @@ sub getAccessibleProjects{
            ON ( UWG.work_group_id = WG.work_group_id AND WG.record_status != 'D' )
      WHERE 1=1
        AND P.record_status != 'D'
+       AND P.project_id not in (
+           SELECT CASE WHEN UPP2.project_id IS NULL THEN NULL
+                  ELSE UPP2.project_id
+                  END as id
+           FROM $TB_USER_PROJECT_PERMISSION UPP2
+           WHERE UPP2.project_id= 773
+           AND UPP2.contact_id IN ('$current_contact_id' $guest_clause ) 
+           AND UPP2.privilege_id = 50
+          ) 
   ~;
 
 	if ($work_group_name ne "Admin") {
