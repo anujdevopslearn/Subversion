@@ -150,7 +150,7 @@ sub get_alignment_display {
       JOIN peptideatlas.dbo.protein_list PL
         ON PL.protein_list_id = PLP.protein_list_id
       WHERE atlas_build_id = $curr_bid
-      AND PL.protein_list_id = 1
+      AND PL.protein_list_id = $args{protein_list_id}
       AND key_accession = '$args{key_accession}'
     ~;
     my $sth = $sbeams->get_statement_handle( $sql );
