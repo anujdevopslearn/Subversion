@@ -847,6 +847,9 @@ sub get_dirty_peptide_display {
               WHEN Status = 'R' THEN 'Rejected'    
               WHEN Status = 'O' THEN 'Ordered'    
               WHEN Status = 'S' THEN 'Re-pooled'    
+              WHEN Status = 'Z' THEN 'Zh_proteome_order'    
+              WHEN Status = 'D' THEN 'Observed_order'    
+              WHEN Status = 'P' THEN 'Predicted_order_2010-05'    
               ELSE 'Unknown' END as Status
   FROM $TBAT_BIOSEQUENCE B
   JOIN peptideatlas.dbo.dirty_peptides DP 
@@ -2097,9 +2100,17 @@ sub get_pabst_theoretical_peptides {
                   following_residue,           
                   '' AS empirical_proteotypic_score,
                   '' AS suitability_score,
-                  CASE WHEN  peptidesieve_ESI > peptidesieve_ICAT THEN  (peptidesieve_ESI +  detectabilitypredictor_score )/2  
-                       ELSE  (peptidesieve_ICAT +  detectabilitypredictor_score )/2  
-                  END AS predicted_suitability_score,
+
+--                  CASE WHEN  peptidesieve_ESI > peptidesieve_ICAT THEN  (peptidesieve_ESI +  detectabilitypredictor_score )/2  
+--                       ELSE  (peptidesieve_ICAT +  detectabilitypredictor_score )/2  
+--                  END AS predicted_suitability_score,
+--                  combined_predictor_score,
+--  Replacing average of psieve and detect with combined score - but isn't fully populated yet
+                  CASE WHEN combined_predictor_score IS NOT NULL THEN combined_predictor_score
+                       WHEN peptidesieve_ESI < 0 THEN ( peptidesieve_ESI + 1 +  detectabilitypredictor_score )/2  
+                       ELSE (peptidesieve_ESI +  detectabilitypredictor_score )/2  
+                       END AS combined_predictor_score,
+
                   '' AS merged_score,
                   STR(molecular_weight, 7, 4) Molecular_weight,
                   STR(SSRCalc_relative_hydrophobicity,7,2) AS "SSRCalc_relative_hydrophobicity",
@@ -2117,10 +2128,6 @@ sub get_pabst_theoretical_peptides {
   ORDER BY biosequence_name, suitability_score DESC
   END
 
-
-  $log->warn( $pepsql );
-
-
   my $sth = $sbeams->get_statement_handle( $pepsql );
   # Big hash of proteins
   my $pep_cnt;
@@ -2132,12 +2139,13 @@ sub get_pabst_theoretical_peptides {
 #    @row = @{$row->[0]};
 
     # Replicate the EOS penalty for MGL
-    if ( $row[10] && $row[10] > 1 ) {
-      if ( $row[11] && $row[11] != 99 && $row[11] > 1 ) {
-        $row[6] *= 0.1; 
-        $row[14] = 'MGL';
-      }
-    }
+#    if ( $row[10] && $row[10] > 1 ) {
+#      if ( $row[11] && $row[11] != 99 && $row[11] > 1 ) {
+      # Not sure this is computed correctly
+#        $row[6] *= 0.1; 
+#        $row[14] = 'MGL';
+#      }
+#    }
 
     # Each protein is a hashref, to be keyed by sequence w/ flanking AAs
     $proteins{$row[0]} ||= {};
@@ -2275,7 +2283,8 @@ sub merge_pabst_peptides {
     }
 #    PBR
 #    print STDERR scalar( @{$peptides[0]} ) . " COLS\n";
-    my $row = $self->pabst_evaluate_peptides( peptides => \@peptides,
+    my $row = $self->pabst_evaluate_peptides( %args,
+                                              peptides => \@peptides,
                                           previous_idx => 1, 
                                                seq_idx => 2, 
                                             follow_idx => 3, 
@@ -2378,6 +2387,8 @@ sub pabst_evaluate_peptides {
                score_idx => undef,
                @_ );
 
+#  for my $a ( sort( keys( %args ) ) ) { print STDERR "$a => $args{$a}\n"; } exit;
+
   return undef unless $args{peptides};
 
   # Moved defs to standalone routine
@@ -2411,6 +2422,7 @@ sub pabst_evaluate_peptides {
   my %is_penalized;
   for my $k ( keys( %pen_defs ) ) {
     $is_penalized{$k}++ if $pen_defs{$k} < 1;
+#    print STDERR "$k => $pen_defs{$k}\n";
   }
 
   # Regular expressions for each score key.
@@ -2432,6 +2444,8 @@ sub pabst_evaluate_peptides {
             nGPG => ['^[GP].G', '^.[GP]G'],
                D => ['D'],
                S => ['S'] );
+
+#  print STDERR "scr is $args{peptide_hash_scr}\n" if $args{peptide_hash_scr};
 
   # Loop over peptides
   my $cnt = 0;
