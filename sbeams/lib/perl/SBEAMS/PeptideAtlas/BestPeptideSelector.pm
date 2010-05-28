@@ -311,25 +311,26 @@ sub getHighlyObservablePeptides {
   my $build_string = join( ',', $atlas->getAccessibleBuilds() );
 
   my $sql = qq~
-     SELECT DISTINCT AB.BIOSEQUENCE_SET_ID 
-     FROM $TBAT_ATLAS_BUILD AB
-     WHERE AB.ATLAS_BUILD_ID = $atlas_build_id
-     AND AB.BIOSEQUENCE_SET_ID IN (
-			 SELECT BS.BIOSEQUENCE_SET_ID 
-			 FROM $TBAT_PROTEOTYPIC_PEPTIDE PP, $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING PPM, 
-            $TBAT_BIOSEQUENCE BS
-			 WHERE PP.PROTEOTYPIC_PEPTIDE_ID = PPM.PROTEOTYPIC_PEPTIDE_ID 
-			 AND PPM.SOURCE_BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID
-			 AND BS.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
-			 GROUP BY BS.BIOSEQUENCE_SET_ID
-			 HAVING (COUNT (PP.COMBINED_PREDICTOR_SCORE)*100/COUNT(BS.BIOSEQUENCE_ID))>= 90
-     )
+     SELECT DISTINCT BS2.BIOSEQUENCE_ID
+     FROM $TBAT_BIOSEQUENCE BS2
+     WHERE BS2.BIOSEQUENCE_ID in (
+       SELECT BS.BIOSEQUENCE_ID
+       FROM  $TBAT_PROTEOTYPIC_PEPTIDE PP,  $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING PPM,
+             $TBAT_BIOSEQUENCE BS,  $TBAT_ATLAS_BUILD AB
+       WHERE PP.PROTEOTYPIC_PEPTIDE_ID = PPM.PROTEOTYPIC_PEPTIDE_ID
+       AND PPM.SOURCE_BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID
+       AND BS.BIOSEQUENCE_SET_ID = AB.BIOSEQUENCE_SET_ID 
+       AND AB.ATLAS_BUILD_ID = $atlas_build_id
+       AND BS.BIOSEQUENCE_ID =  $biosequence_id
+       GROUP BY BS.BIOSEQUENCE_ID
+       HAVING (COUNT (PP.COMBINED_PREDICTOR_SCORE)*100/COUNT(BS.BIOSEQUENCE_ID))>= 90
+    )
   ~;
   
-  my @biosequece_set_ids = $sbeams->selectOneColumn($sql); 
+  my @biosequece_ids = $sbeams->selectOneColumn($sql); 
 
-  #print "<H4>@biosequece_set_ids $atlas_build_id $biosequence_id</H4>\n";
-  if( @biosequece_set_ids == 0 ){
+  #print "<H4>@biosequece_ids $atlas_build_id $biosequence_id</H4>\n";
+  if( @biosequece_ids == 0 ){
     my $result = $self -> getHighlyObservablePeptides_old(
       atlas_build_id => $atlas_build_id,
       biosequence_id => $biosequence_id,
