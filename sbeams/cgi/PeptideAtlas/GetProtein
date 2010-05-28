@@ -2193,6 +2193,12 @@ sub displayAnnotatedSequence {
     my $tot = length( $sequence );
     my @aa = split( '', $sequence );
     my %aa;
+
+    # Make sure we get the common AA
+    for my $aa ( qw( A C D E F G H I K L M N P Q R S T V W Y ) ) {
+      $aa{$aa} = 0; 
+    }
+
     for my $aa ( @aa ) {
       $aa{$aa}++;
     }
