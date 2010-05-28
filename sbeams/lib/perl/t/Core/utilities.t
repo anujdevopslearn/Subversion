@@ -56,7 +56,7 @@ AOSJDFOASJDFMOASMDFAOSDFMOASMDFOASMDFOASMFDOASMDFOASMDFOAMSDOFM
 print FAS $fasta;
 close FAS;
 my $fsa = $sbeams->read_fasta_file( filename => $file,
-                                    acc_regex => '^>(IPI\d+)',
+                                    acc_regex => ['^>(IPI\d+)'],
                                     verbose => 0 );
 #print STDERR join( "\t", keys( %$fsa ) ) . "\n";
 
