@@ -1,7 +1,7 @@
 table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
-AT_atlas_build	Atlas Build	PeptideAtlas_infrastructure	YES	$TBAT_ATLAS_BUILD	atlas_build_id		ManageTable.cgi?TABLE_NAME=AT_atlas_build	"AT_atlas_build,AT_default_atlas_build,AT_sample"	
-AT_default_atlas_build	Default Atlas Build	PeptideAtlas_infrastructure	YES	$TBAT_DEFAULT_ATLAS_BUILD	default_atlas_build_id		ManageTable.cgi?TABLE_NAME=AT_default_atlas_build	"AT_atlas_build,AT_default_atlas_build,AT_sample"	
-AT_sample	Sample	PeptideAtlas_user	YES	$TBAT_SAMPLE	sample_id		ManageTable.cgi?TABLE_NAME=AT_sample	"AT_atlas_build,AT_default_atlas_build,AT_sample"	
+AT_atlas_build	Atlas Build	PeptideAtlas_infrastructure	YES	$TBAT_ATLAS_BUILD	atlas_build_id		ManageTable.cgi?TABLE_NAME=AT_atlas_build	AT_atlas_build,AT_default_atlas_build,AT_sample	
+AT_default_atlas_build	Default Atlas Build	PeptideAtlas_infrastructure	YES	$TBAT_DEFAULT_ATLAS_BUILD	default_atlas_build_id		ManageTable.cgi?TABLE_NAME=AT_default_atlas_build	AT_atlas_build,AT_default_atlas_build,AT_sample	
+AT_sample	Sample	PeptideAtlas_user	YES	$TBAT_SAMPLE	sample_id		ManageTable.cgi?TABLE_NAME=AT_sample	AT_atlas_build,AT_default_atlas_build,AT_sample	
 AT_atlas_build_sample	Atlas Build Sample Link	PeptideAtlas_infrastructure	NO	$TBAT_ATLAS_BUILD_SAMPLE	atlas_build_sample_id				
 AT_atlas_build_search_batch	Atlas Build Search Batch Link	PeptideAtlas_infrastructure	NO	$TBAT_ATLAS_BUILD_SEARCH_BATCH	atlas_build_search_batch_id				
 AT_atlas_search_batch	Atlas Search Batch	PeptideAtlas_infrastructure	YES	$TBAT_ATLAS_SEARCH_BATCH	atlas_search_batch_id		ManageTable.cgi?TABLE_NAME=AT_atlas_search_batch	AT_atlas_search_batch	
@@ -58,3 +58,5 @@ AT_pabst_build	PABST Build	PeptideAtlas_infrastructure	YES	$TBAT_PABST_BUILD	pab
 AT_pabst_peptide	PABST Peptide	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE	pabst_peptide_id				
 AT_pabst_peptide_mapping	PABST Peptide Mapping	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE_MAPPING	pabst_peptide_id, biosequence_id				
 AT_pabst_transition	PABST Transition	PeptideAtlas_infrastructure	NO	$TBAT_PABST_TRANSITION	pabst_transition_id				
+AT_protein_list	Protein List	PeptideAtlas_infrastructure	YES	$TBAT_PROTEIN_LIST	protein_list_id		ManageTable.cgi?TABLE_NAME=AT_Protein_list		
+AT_protein_list_protein	Protein List Protein	PeptideAtlas_infrastructure	NO	$TBAT_PROTEIN_LIST_PROTEIN	protein_list_protein_id				

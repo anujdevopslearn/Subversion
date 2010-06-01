@@ -710,3 +710,20 @@ AT_pabst_transition	7	fragment_ion_charge	Fragment Ion Charge	int	4	0	Y		N			N		
 AT_pabst_transition	8	fragment_ion_label	Fragment Ion Label	varchar	36	0	Y		N			N						N			
 AT_pabst_transition	9	ion_rank	Ion Rank	int	4	0	Y		N			N						N			
 AT_pabst_transition	10	relative_intensity	Relative Intensity	float	8	0	Y		N			N						N			
+AT_protein_list	1	protein_list_id	Protein List ID	int	4	0	N		Y			N						Y	Primary Key		
+AT_protein_list	2	protein_list_name	Protein List Name	varchar	255	0	Y		N			Y	text	24		Y	Y	N	Name for Protein List		
+AT_protein_list	3	contributor_name	Contributor Name	varchar	255	0	Y		N			Y	text	24		Y	Y	N	Name of list contributor		
+AT_protein_list	4	contributor_contact_id	Contributor Contact ID	int	4	0	Y		N	contact	contact_id	N	optionlist			Y	Y	N	Contact_id of list contributor	SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization	
+AT_protein_list	5	protein_list_description	Protein List Description	varchar	2000	0	Y		N			Y	text	24		Y	Y	N	List Description		
+AT_protein_list	6	project_id	Project Id	int	4	0	Y		N	project	project_id	Y	optionlist			Y	Y	N	project_id	SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id	
+AT_protein_list	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_protein_list	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_protein_list	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_protein_list	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_protein_list	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_protein_list	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_protein_list_protein	1	protein_list_protein_id	Protein List Protein ID	int	4	0	N		Y			N						Y	Primary Key		
+AT_protein_list_protein	2	protein_list_id	Protein List ID	int	4	0	N		N	AT_protein_list	AT_protein_list_id	Y	optionlist			Y	Y	N	Foreign key to protein list table	SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id	
+AT_protein_list_protein	3	protein_name	Protein Name	varchar	255	0	N		N			Y	text	24		Y	Y	N	Protein Name		
+AT_protein_list_protein	4	key_accession	Key Accession	varchar	255	0	N		N			Y	text	24		Y	Y	N	Key Accession, accession that unites related proteins in list		
+AT_protein_list_protein	5	protein_list_description	Protein List Description	varchar	2000	0	Y		N			Y	text	24		Y	Y	N	Protein Description		
