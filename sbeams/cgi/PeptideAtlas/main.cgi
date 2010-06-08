@@ -188,8 +188,8 @@ sub handle_request {
     AND BS.record_status != 'D'
     AND NOT ( DAB.organism_id IS NULL 
               AND default_atlas_build_id IS NOT NULL ) -- keep global default from showing up 2x
-    ORDER BY BS.organism_id DESC, organism_specialized_build, 
-             AB.atlas_build_id DESC
+    ORDER BY BS.organism_id DESC, 
+              atlas_build_name DESC,AB.atlas_build_id DESC
     ~;
     my @atlas_builds = $sbeams->selectSeveralColumns($sql);
     $log->debug( $sbeams->evalSQL($sql) );
@@ -197,7 +197,7 @@ sub handle_request {
     my $default_build_name = '';
     foreach my $atlas_build ( @atlas_builds ) {
       if ($atlas_build->[0] == $atlas_build_id) {
-	$default_build_name = $atlas_build->[1];
+      	$default_build_name = $atlas_build->[1];
       }
     }
 
