@@ -38,8 +38,8 @@ sub new
     my $class = shift;
     my %args = @_;
     my $self = {};
-    $self->{mzXML_file} = undef;
-    $self->{mzXML_schema} = undef;
+    $self->{spectrumXML_file} = undef;
+    $self->{spectrumXML_schema} = undef;
     $self->{conversion_software_name} = undef;
     $self->{conversion_software_version} = undef;
     $self->{instrument_model_name} = undef;
@@ -48,17 +48,17 @@ sub new
 }
 
 
-sub setMzXML_file
+sub setSpectrumXML_file
 {
     my ($self, $file) = @_;
-    croak("missing argument to setMzXML_file") unless defined $file;
-    $self->{mzXML_file} = $file;
+    croak("missing argument to setSpectrumXML_file") unless defined $file;
+    $self->{spectrumXML_file} = $file;
 }
 
-sub getMzXML_schema 
+sub getSpectrumXML_schema 
 {
     my ($self) = @_;
-    return $self->{mzXML_schema};
+    return $self->{spectrumXML_schema};
 }
 
 
@@ -82,18 +82,120 @@ sub getInstrument_model_name
     return $self->{instrument_model_name};
 }
 
-
 sub parse {
   my ($self) = @_;
-  croak("missing mzXML_file, use setMzXML_file(xx)") if !$self->{mzXML_file};
+  croak("missing spectrumXML_file, use setSpectrumXML_file(xx)") if
+      !$self->{spectrumXML_file};
+  my $infile = $self->{spectrumXML_file};
+  #print "infile = $infile\n";
 
-  my $infile = $self->{mzXML_file};
+  open(INFILE, "$infile") or die "cannot open $infile for reading ($!)";
+  print "Reading $infile...\n";
+
+  my $n_lines = 0;
+  while (defined(my $line = <INFILE>) && ($n_lines < 10)) {
+    if ($line =~ /<mzML/) {
+      close(INFILE) or die "Cannot close $infile";
+      $self->parse_mzML();
+      return;
+    } elsif ($line =~ /<mzXML/) {
+      close(INFILE) or die "Cannot close $infile";
+      $self->parse_mzXML();
+      return;
+    }
+    $n_lines++;
+  }
+  croak("$infile is neither mzML nor mzXML.\n");
+}
+
+
+sub parse_mzML {
+  my ($self) = @_;
+#  croak("missing mzML file, use setSpectrumXML_file(xx)")
+#     if !$self->{spectrumXML_file};
+
+  my $infile = $self->{spectrumXML_file};
+  my $schema = "";
+  my $model_name = "";
+  my $software_name = "";
+  my $software_version = "unknown";  #mzML doesn't seem to provide.
+
+  open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
+
+  while ( defined(my $line = <INFILE>)) {
+
+    chomp($line);
+
+    #### Once we get to a run tag, we have all the information
+    #### we need, so stop the parsing
+    if ($line =~ /<run/) {
+      last;
+    }
+
+    ## 2010 mzML schema:
+    ## xsi:schemaLocation="http://psi.hupo.org/ms/mzml http://psidev.info/files/ms/mzML/xsd/mzML1.1.0.xsd"
+    if (($line =~ /<mzML/) &&
+        ($line =~ /.+schemaLocation=\".+\/(.+)\/xsd\/(.+)\.xsd\"/ )) {
+      $schema = $2;
+    }
+
+    if ($line =~ /\<dataProcessing id=\"(\S+)\">/ ) {
+      $software_name = $1;
+    }
+    $software_version = "unknown";
+
+    if ($line =~ /\<instrumentConfiguration id=/ ) {
+      ## read the next line, and get model name
+      $line = <INFILE>;
+      chomp($line);
+      $line =~ /<cvParam .* name=\"(.+?)\"/;
+      $model_name = $1;
+    }
+  }
+
+  close(INFILE) or die "Cannot close $infile";
+  print "Done\n";
+
+  if ($software_version eq "") {
+    carp "[WARN] please edit parser to pick up conversion_software_version for $infile";
+  } 
+  $self->{conversion_software_version} = $software_version;
+
+  if ($software_name eq "") {
+    carp "[WARN] please edit parser to pick up conversion_software_name for $infile";
+  }
+  $self->{conversion_software_name} = $software_name;
+
+  if ($schema eq "") {
+    carp "[WARN] please edit parser to pick up schema for $infile";
+  } 
+  $self->{mzXML_schema} = $schema;
+
+  if ($model_name eq "") {
+    carp "[WARN] please edit parser to pick up instrument_model_name for $infile";
+  }
+  $self->{instrument_model_name} = $model_name;
+
+  print "schema = $schema\n";
+  print "model_name = $model_name\n";
+  print "software_name = $software_name\n";
+  print "software_version = $software_version\n";
+
+} # End parse method
+
+
+
+sub parse_mzXML {
+  my ($self) = @_;
+  croak("missing mzML file, use setSpectrumXML_file(xx)")
+     if !$self->{spectrumXML_file};
+  my $infile = $self->{spectrumXML_file};
+
   my ($schema, $model_name, $software_name, $software_version);
 
   open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
-  print "Reading $infile...\n";
 
-  while (my $line = <INFILE>) {
+  while ( defined(my $line = <INFILE>)) {
 
     chomp($line);
 

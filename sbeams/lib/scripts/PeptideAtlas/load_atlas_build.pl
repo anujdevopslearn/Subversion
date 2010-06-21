@@ -1689,11 +1689,11 @@ sub insert_spectra_description_set
     { 
 
         ## read experiment's pepXML file to get an mzXML file name
-        my @mzXMLFileNames = getMzXMLFileNames( 
+        my @mzXMLFileNames = getSpectrumXMLFileNames( 
                              search_batch_dir_path => $search_batch_dir_path);
         print `date`;
 	    if (1) {
-	      print "Found ".scalar(@mzXMLFileNames)."mzXMLs in $search_batch_dir_path\n";
+	      print "Found ".scalar(@mzXMLFileNames)." spectrum XML files in $search_batch_dir_path\n";
 	    } 
 
         #### read an mzXML file to get needed attributes... could make a sax content handler for this, 
@@ -1701,15 +1701,17 @@ sub insert_spectra_description_set
         my $infile = $mzXMLFileNames[0];
         my $spectrum_parser = new SpectraDescriptionSetParametersParser();
 
-        $spectrum_parser->setMzXML_file($infile);
+        $spectrum_parser->setSpectrumXML_file($infile);
 
         $spectrum_parser->parse();
 
-        $mzXML_schema = $spectrum_parser->getMzXML_schema();
+        $mzXML_schema = $spectrum_parser->getSpectrumXML_schema();
 
-        $conversion_software_name = $spectrum_parser->getConversion_software_name();
+        $conversion_software_name =
+            $spectrum_parser->getConversion_software_name();
 
-        $conversion_software_version = $spectrum_parser->getConversion_software_version();
+        $conversion_software_version =
+            $spectrum_parser->getConversion_software_version();
 
         $instrument_model_name = $spectrum_parser->getInstrument_model_name();
 
@@ -2852,57 +2854,59 @@ sub getMzXMLFileNamesFromPepXMLFileOld
 
 
 #######################################################################
-#  getMzXMLFileNamesFromPepXMLFile
+#  getSpectrumXMLFileNamesFromPepXMLFile
 #######################################################################
-sub getMzXMLFileNamesFromPepXMLFile
+sub getSpectrumXMLFileNamesFromPepXMLFile
 {
     my %args = @_;
     my $infile = $args{infile} or die
         " need pepXML filepath ($!)";
     my $search_batch_dir_path = $args{search_batch_dir_path} or die
         " need search_batch_dir_path filepath ($!)";
-    my ($msRunPepXMLFileName, $mzXMLFileName);
-    my (@msRunPepXMLFileNames, @mzXMLFileNames);
+    my ($msRunPepXMLFileName, $spectrumXMLFileName);
+    my (@msRunPepXMLFileNames, @spectrumXMLFileNames);
     my $guessed_experiment_dir;
 
     unless(-e $infile) {
       print "could not find infile '$infile'.\n";
-      return @mzXMLFileNames;
+      return @spectrumXMLFileNames;
     }
 
     open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
 
-    print "getting MzXML filenames from $infile\n";
+    print "getting spectrum XML filenames from $infile\n";
 
-    #### Try to glean a mzXML filename from each <msms_run_summary> element.
+    #### Try to glean an mzML or mzXML filename from each
+    #### <msms_run_summary> element.
     while (my $line = <INFILE>)
     {
         chomp($line);
 
-        if ($line =~ /^\<msms_run_summary base_name=\"(.+?)\"/)
+        if ($line =~ /^\<msms_run_summary base_name=\"(.+?)\".*raw_data="(.+?)"/)
         {
             my $basename = $1;
+            my $extension = $2;
 	    #### Attempted workaround for more crazy Qstar files
 	    if ($basename =~ /\.(\d+)\.\d$/) {
 	      next;
 	    }
-            $mzXMLFileName = "$basename" . ".mzXML";
-            print "got mzXMLFileName $mzXMLFileName\n";
-            push (@mzXMLFileNames, $mzXMLFileName);
+            $spectrumXMLFileName = "$basename$extension";
+            print "got spectrumXMLFileName $spectrumXMLFileName\n";
+            push (@spectrumXMLFileNames, $spectrumXMLFileName);
 	}
     }
     close(INFILE) or die "Cannot close $infile";
 
-    return @mzXMLFileNames;
+    return @spectrumXMLFileNames;
 }
 
 
 #######################################################################
-#  getMzXMLFileNames -- get mzXML File Names used in the interact pepXML
+# getSpectrumXMLFileNames -- get spectrum File Names used in the pepXML
 # @param search_batch_dir_path absolute path to search_batch_dir
 # @return mzXMLFileNames
 #######################################################################
-sub getMzXMLFileNames
+sub getSpectrumXMLFileNames
 {
     my %args = @_;
 
@@ -2914,7 +2918,7 @@ sub getMzXMLFileNames
     my (@msRunPepXMLFileNames, @mzXMLFileNames);
     my $guessed_experiment_dir;
 
-    my $infile;
+    my $infile="";
 
     #### Sometimes search_batch_dir_path is actually a file??
     if ($search_batch_dir_path =~ /\.xml/) {
@@ -2922,35 +2926,16 @@ sub getMzXMLFileNames
 
     #### Otherwise it's directory, try to find the file
     } else {
-      my @possible_interact_names = (
-        'interact-prob.pep.xml',
-        'interact-ipro.pep.xml',
-        'interact-prob.xml',
-        'interact-spec.pep.xml',
-        'interact-spec.xml',
-        'interact.xml',
-        'interact.pep.xml',
-        'interact-combined.pep.xml',
-        'interact-combined.iproph.pep.xml',
+      $infile = $sbeamsMOD->findPepXMLFile(
+        search_path => $search_batch_dir_path
       );
-      my $found_file = 0;
-      foreach my $possible_name ( @possible_interact_names ) {
-	if ( -e $search_batch_dir_path.'/'.$possible_name ) {
-	  $found_file = 1;
-	  $infile = $search_batch_dir_path.'/'.$possible_name;
-	  print "Found $possible_name in $search_batch_dir_path\n";
-	  last;
-	}
-      }
-
-      #### Die if we couldn't find it
-      unless ( $found_file ) {
+      if ( $infile eq "" ) {
 	die("ERROR: Unable to auto-detect an interact file in $search_batch_dir_path");
       }
     }
 
     push(@mzXMLFileNames,
-      getMzXMLFileNamesFromPepXMLFile(infile => $infile,
+      getSpectrumXMLFileNamesFromPepXMLFile(infile => $infile,
             search_batch_dir_path => $search_batch_dir_path));
     my @foundmzXMLFiles;
     #### There are often absolute paths in the pepXML, but if the experimnts

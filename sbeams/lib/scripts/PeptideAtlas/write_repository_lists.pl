@@ -2017,7 +2017,7 @@ sub makeNewArchiveAndProperties
     {
         my %properties_hash;
 
-        ## if this is an mzXML file, get it's properties
+        ## if this is an mzXML file, get its properties
         if ( $file_suffix eq "mzXML" )
         {
             ## write a properties file with the mzXML characteristics
@@ -2025,11 +2025,11 @@ sub makeNewArchiveAndProperties
 
             my $spectrum_parser = new SpectraDescriptionSetParametersParser();
 
-            $spectrum_parser->setMzXML_file($mzXMLFile);
+            $spectrum_parser->setSpectrumXML_file($mzXMLFile);
 
             $spectrum_parser->parse();
 
-            my $mzXML_schema = $spectrum_parser->getMzXML_schema();
+            my $mzXML_schema = $spectrum_parser->getSpectrumXML_schema();
         
             my $conversion_software_name = $spectrum_parser->getConversion_software_name();
 
