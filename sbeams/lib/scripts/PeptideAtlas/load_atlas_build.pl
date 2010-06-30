@@ -2320,7 +2320,14 @@ sub readCoords_updateRecords_calcAttributes {
             }
 
         }
+			 if(length($peptideAccession_subPeptide{$sub_pep_acc}) > 1023){
+				 print "truncate super_pep from $peptideAccession_subPeptide{$sub_pep_acc}\n";
+				 my $str = substr ($peptideAccession_subPeptide{$sub_pep_acc} , 0, 1015);
+				 $str =~ s/\,\w+$//;
+				 $peptideAccession_subPeptide{$sub_pep_acc} = $str. ",...";
+				 print "to $peptideAccession_subPeptide{$sub_pep_acc}\n";
 
+			 }
     }
 
 
