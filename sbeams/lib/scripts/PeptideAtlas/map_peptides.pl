@@ -3,12 +3,12 @@
 
 use strict;
 use lib( '/regis/sbeams/lib' );
+use lib "/net/dblocal/www/html/devDC/sbeams/lib/perl/";
 use FAlite;
 use FindBin;
 use Getopt::Long;
 
 use lib "$FindBin::Bin/../../perl/";
-use lib "/net/dblocal/www/html/devDC/sbeams/lib/perl/";
 use SBEAMS::Connection qw($q);
 use SBEAMS::PeptideAtlas;
 
@@ -65,7 +65,13 @@ while( my $line = <PEPS> ) {
 
   if ( $opts->{column_labels} && ($opts->{column_labels} >= $stats{line_count}) ) { 
     if ( $opts->{column_labels} == $stats{line_count} ) {  # Only print on last
-      print OUT join( "\t", @line, ('matching_seq', 'protein_cnt', 'protein_string') ) . "\n" if $opts->{mapping_out};
+      if ( $opts->{mapping_out} ) {
+        if ( $opts->{omit_match_seq} ) {
+          print OUT join( "\t", @line, ( 'protein_cnt', 'protein_string') ) . "\n" 
+        } else {
+          print OUT join( "\t", @line, ('matching_seq', 'protein_cnt', 'protein_string') ) . "\n" 
+        }
+      }
     } else {
       print OUT join( "\t", @line ) . "\n";
     }
@@ -122,7 +128,7 @@ while( my $line = <PEPS> ) {
     } else { # End if n_convert
       if ( !$matched ) {
         # Force mapping
-        $matched = map_peptide( $pepseq, 1 );
+        $matched = map_peptide( $pepseq, 1 ) unless $opts->{supress_brute};
         if ( $matched ) {
           $stats{peptide_map_ok_brute}++;
         } else {
@@ -150,7 +156,11 @@ while( my $line = <PEPS> ) {
   }
 
   if ( $opts->{mapping_out} ) {
-    print OUT join( "\t", $line, $matching_seq, $prot_cnt, $prot_str ) . "\n";
+    if ( $opts->{omit_match_seq} ) {
+      print OUT join( "\t", $line, $prot_cnt, $prot_str ) . "\n";
+    } else {
+      print OUT join( "\t", $line, $matching_seq, $prot_cnt, $prot_str ) . "\n";
+    }
   }
 
 }
@@ -266,7 +276,7 @@ sub map_peptide {
     $brute++;
     $stats{short_peptide}++ unless $skip_stats;
   }
-  if ( length( $pepseq ) > 25 ) {
+  if ( length( $pepseq ) > 30 ) {
     $brute++;
     $stats{long_peptide}++ unless $skip_stats;
   }
@@ -387,6 +397,10 @@ sub read_fasta {
       $def = $1 if $1;
     }
 
+    if ( $def =~ /,/ ) {
+      die "Comma in def will break counting, use trim option: $def";
+    }
+
     my $seq = uc( $entry->seq() );
     chomp $seq;
     $seq =~ s/\s//gm;
@@ -410,7 +424,7 @@ sub read_fasta {
     unless( $opts->{grep_only} ) {
       my $tryptic = $atlas->do_tryptic_digestion( aa_seq => $seq,
                                                  min_len => 6,
-                                                 max_len => 25 );
+                                                 max_len => 30 );
 
       for my $tp ( @{$tryptic} ) {
         $tryptic{$tp} ||= {};
@@ -463,7 +477,7 @@ sub get_options {
              'mapping_out', 'trim_acc', 'output_file=s', 'column_labels:i',
              'acc_swiss', 'ZtoC', 'bin_max=i', 'grep_only', 'init_mapping=i',
              'show_degen', 'show_mia', 'nocount_degen', 'show_nomap',
-             'show_proteo', 'show_all_pep' );
+             'show_proteo', 'show_all_pep', 'omit_match_seq', 'supress_brute' );
 
   print_usage() if $opts{help};
 
@@ -526,6 +540,7 @@ sub print_usage {
       --show_degen     List degenerate peptides
       --show_proteo    List proteotypic peptides
       --show_all_pep   List all peptides
+      --omit_match_seq List all peptides
       --show_mia       List missing peptides
       --show_nomap     List proteins for which there are no peptides
       --nocount_degen  Omit degenerate peptides in counting protein bins
