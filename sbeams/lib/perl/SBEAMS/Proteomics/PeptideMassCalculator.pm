@@ -74,11 +74,13 @@ sub new {
       'C[545]' => 442.224991,   # ABI old ICAT light (UniMod)
       'C[553]' => 450.275205,   # ABI old ICAT heavy (UniMod)
       'E[111]' => -18.010565,   # Pyro-glu from E (UniMod)
+      'I[119]' => 6.004961,     # C-13 labeled Isoleucine
       'K[272]' => 144.102063,   # ABI iTRAQ (UniMod)
       'K[156]' => 28.031300,    # di-Methylation  (Unimod)
       'K[160]' => 32.056407,    # DiMethyl-CHD2   (Unimod)
       'K[164]' => 36.07567,     # DiMethyl-Heavy   (Unimod)
       'K[136]' => 8.014199,     # Silac label (UniMod)
+      'L[119]' => 6.004961,     # C-13 labeled Leucine
       'M[147]' => 15.994915,    # Oxidation (UniMod)
       'N[115]' => 0.984016,     # Glyc-Asn (UniMod)
       'R[166]' => 10.008269,    # Silac (UniMod)
@@ -86,6 +88,7 @@ sub new {
       'S[167]' => 79.966331,    # Phosphorylation (UniMod)
       'S[166]' => 79.966331,    # Phosphorylation (UniMod)
       'T[181]' => 79.966331,    # Phosphorylation (UniMod)
+      'V[104]' => 5.004134,     # C-13 labeled Valine
       'Y[243]' => 79.966331,    # Phosphorylation (UniMod)
     },
     'average' => {
@@ -109,9 +112,11 @@ sub new {
       'C[517]' => 414.5196,   # Glycopeptide capture ?? (Unimod)
       'C[545]' => 442.5728,   # ABI old ICAT light (UniMod)
       'C[553]' => 450.6221,   # ABI old ICAT heavy (UniMod)
+      'I[119]' => 5.95776,     # C-13 labeled Isoleucine
       'E[111]' => -18.0153,   # Pyro-glu from E (UniMod)
       'K[272]' => 144.1544,   # ABI iTRAQ (UniMod)
       'K[136]' => 7.9427,     # Silac label (UniMod)
+      'L[119]' => 5.95776,     # C-13 labeled Leucine
       'K[156]' => 28.0532,    # di-Methylation (Unimod)
       'K[160]' => 32.0778,    # DiMethyl-CHD2  (Unimod)
       'K[164]' => 36.0754,    # DiMethyl-Heavy  (Unimod)
@@ -122,6 +127,7 @@ sub new {
       'S[167]' => 79.9799,    # Phosphorylation (UniMod)
       'S[166]' => 79.9799,    # Phosphorylation (UniMod)
       'T[181]' => 79.9799,    # Phosphorylation (UniMod)
+      'V[104]' => 4.9648,     # C-13 labeled Valine
       'Y[243]' => 79.9799,    # Phosphorylation (UniMod)
     },
   );
