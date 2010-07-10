@@ -217,6 +217,10 @@ for my $acc ( keys( %{$acc2seq} ) ) {
   $stats{$bin_key}++;
 }
 
+if ( $opts->{key_calc} ) {
+  run_key_calc();
+}
+
 my @cnt_bins;
 my @cnt_vals;
 for my $k ( sort( keys ( %stats ) ) ) {
@@ -227,7 +231,6 @@ for my $k ( sort( keys ( %stats ) ) ) {
   }
 }
 
-print "TAB_CNTS\n";
 print join( "\t", @cnt_bins ) . "\n";
 print join( "\t", @cnt_vals ) . "\n";
 
@@ -251,6 +254,29 @@ print STDERR "Finished run in $delta seconds: $hour:$min:$sec\n";
 #
 #
 
+sub run_key_calc {
+
+  my %keys;
+
+# Prots is ref to hash of acc => hashref of seqs. 
+  for my $acc ( keys( %prots ) ) {
+    my $seq_key;
+    for my $seq ( sort( keys( %{$prots{$acc}} ) ) ) {
+      $seq_key .= $seq;
+    }
+    $keys{$seq_key} ||= [];
+    push @{$keys{$seq_key}}, $acc;
+  }
+
+  for my $key ( keys( %keys ) ) {
+    if ( scalar( @{$keys{$key}} ) > 1 ) {
+      $stats{key_dopple}++;
+      $stats{key_dopple_cnt} += scalar( @{$keys{$key}} );
+    } else {
+      $stats{key_unique}++;
+    }
+  }
+}
 sub map_peptide {
 
   my $pepseq = shift || die "No peptide supplied to map_peptide";
@@ -477,7 +503,8 @@ sub get_options {
              'mapping_out', 'trim_acc', 'output_file=s', 'column_labels:i',
              'acc_swiss', 'ZtoC', 'bin_max=i', 'grep_only', 'init_mapping=i',
              'show_degen', 'show_mia', 'nocount_degen', 'show_nomap',
-             'show_proteo', 'show_all_pep', 'omit_match_seq', 'supress_brute' );
+             'show_proteo', 'show_all_pep', 'omit_match_seq', 'supress_brute',
+             'key_calc' );
 
   print_usage() if $opts{help};
 
@@ -528,7 +555,8 @@ sub print_usage {
       --duplicates     Allow sequence duplicates in fasta db
   -t, --trim_acc       Trim fasta descriptor line to first space-delimited value
   -p, --peptide_file   File of peptides
-  -s, --seq_idx        1-based Index of peptide sequence in file, defaults to 1
+      --seq_idx        1-based Index of peptide sequence in file, defaults to 1
+      --supress_brute  Do not use brute-force mapping (IDs non-tryptic)
   -n, --n_convert      Convert DxST to NxST if necessary to get matches
   -m, --mapping_out    Print mapping results, appended to peptide line
       --output_file    File to which to print results, else STDOUT
@@ -536,6 +564,8 @@ sub print_usage {
   -a, --acc_swiss      Pull swiss prot acc from Uniprot fasta heading.
   -b, --bin_max        Max size of reported prot_count.
   -g, --grep_only      For small peptide lists, forgo the fasta digestion
+  -k, --key_calc       Run code to determine which prot seqs are unambiguously
+                       defined by peptide set.
   -Z, --ZtoC           Convert Z to C in peptide sequences
       --show_degen     List degenerate peptides
       --show_proteo    List proteotypic peptides
