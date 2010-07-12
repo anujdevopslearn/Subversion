@@ -201,10 +201,30 @@ sub getBestPeptides {
       }
     }
 
-    ## Penalty if not fully tryptic
-    unless ($preceding_residue =~ /[KR\-]/ && 
-             ($peptide_sequence =~ /[KR]$/ || $following_residue eq '-') 
-					 ) {
+    ## Penalty if not fully tryptic 
+    # Fixed? 2010-06-21
+#    unless ($preceding_residue =~ /[KR\-]/ && 
+#             ($peptide_sequence =~ /[KR]$/ || $following_residue eq '-') ) {
+#      $suitability_score *= 0.2;
+#      push @annot, 'ST';
+#    }
+#
+    my $ntt = 0;
+    # N Terminal side
+    if ( $preceding_residue =~ /[RK]/ && $peptide_sequence !~ /^P/ ) {
+      $ntt++;
+    } elsif ( $preceding_residue =~ /-/ ) {
+      $ntt++;
+    }
+
+      # CTerminal side
+    if ( $following_residue eq '-' ) {
+      $ntt++;
+    } elsif ( $peptide_sequence =~ /[RK]$/ && $following_residue ne 'P' ) {
+      $ntt++;
+    }
+
+    unless ( $ntt == 2 ) {
       $suitability_score *= 0.2;
       push @annot, 'ST';
     }
