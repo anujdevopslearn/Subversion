@@ -1494,7 +1494,7 @@ sub get_change_form {
 
 
   my $form_table = SBEAMS::Connection::DataTable->new( BORDER => 1 );
-  $form_table->addRow( [ "Parameter", 'Value', 'Description' ] );
+  $form_table->addRow( [ "Parameter", 'Weight', 'Description' ] );
   $form_table->setHeaderAttr( BOLD=>1, ALIGN=>'center' );
   for my $k ( sort( keys( %{$penalties} ) ) ) {
 
