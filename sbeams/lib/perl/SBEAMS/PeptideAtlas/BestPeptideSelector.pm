@@ -604,36 +604,48 @@ sub calc_suitability_score {
 sub get_pabst_scoring_defs {
 	my $self = shift;
 	my %args = @_;
-  my %defs =  (    M => ' Met-containing peptides',
-                   nQ => ' N-terminal Q',
-                   nE => ' N-terminal E',
-                   nM => ' N-terminal M',
-                 NxST => ' Peptides without NxST motif',
-                   Xc => ' Any C-terminal peptide',
-                   nX => ' Any N-terminal peptide',
-                    C => ' Cys-containing peptides ',
-                    R => ' Arg-containing peptides ',
-                    W => ' Try-containing peptides',
-                    P => ' Pro-containing peptides',
+  my @defs =  (    
                  '4H' => ' 4 consecutive hydrophobic residues: C,F,I,L,V,W,Y',
                  '5H' => ' 5 straight hydrophobic residues: F,I,L,V,W,M',
                'Hper' => ' More than 75% hydrophobic residues (F,I,L,V,W,M)',
-                   BA => ' More than 5 basic (protonatable) sites: H, K, R, n-term',
+                ssr_p => ' Peptides with SSR hydrophobicity < 10 or > 46',
+
+                    C => ' Cysteine-containing peptides ',
+                    D => ' Asparagine-containing peptides',
+                    M => ' Methionine-containing peptides',
+                    P => ' Proline-containing peptides',
+                    R => ' Arginine-containing peptides ',
+                    S => ' Serine-containing peptides',  
+                    W => ' Tryptophan-containing peptides',
+
                    NG => ' Dipeptide NG',
                    DP => ' Dipeptide DP',
                    DG => ' Dipeptide DG',
                    QG => ' Dipeptide QG',
                  nxxG => ' Peptides with nxxG motif',
                  nGPG => ' Peptides with nxyG motif, x or y is P or G',
-                    D => ' Asp-containing peptides',
-                    S => ' Ser-containing peptides',  
+                 NxST => ' Peptides without NxST motif',
+
+                   nQ => ' N-terminal Glutamine',
+                   nE => ' N-terminal Glutamic Acid',
+                   nM => ' N-terminal Methionine',
+                   Xc => ' Any C-terminal peptide',
+                   nX => ' Any N-terminal peptide',
+
+                   BA => ' More than 5 basic (protonatable) sites: H, K, R, n-term',
+
                   obs => ' Peptides observed in Peptide Atlas',
+                 PATR => ' Peptide exists in PA transition resource',
+
                 min_l => ' Minimum length for peptide',
                 min_p => ' Peptides under min length',
                 max_l => ' Maximum length for peptide',
                 max_p => ' Peptides over max length',
-                ssr_p => ' Peptides with SSR hydrophobicity < 10 or > 46',
                );
+  if ( wantarray ) {
+    return @defs;
+  }
+  my %defs = @defs;
   return \%defs;
 }
 
@@ -671,6 +683,7 @@ sub get_default_pabst_scoring {
                    D => 1,
                    R => 1,
                  obs => 2.0,
+                PATR => 2.0,
                    S => 1,
                min_l => 7,
                min_p => 0.2,
@@ -1480,7 +1493,16 @@ sub get_change_form {
   my %args = @_;
 
 	my $penalties = $self->get_pabst_penalty_values();
-	my $pen_defs = $self->get_pabst_scoring_defs();
+	my @pen_defs = $self->get_pabst_scoring_defs();
+
+  my $pen_defs = {};
+  my @pen_names;
+  while ( @pen_defs ) {
+    my $key = shift @pen_defs;
+    my $val = shift @pen_defs;
+    $pen_defs->{$key} = $val;
+    push @pen_names, $key;
+  }
 
   my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'pabst_penalty_form',
                                                 visible => 1,
@@ -1496,7 +1518,7 @@ sub get_change_form {
   my $form_table = SBEAMS::Connection::DataTable->new( BORDER => 1 );
   $form_table->addRow( [ "Parameter", 'Weight', 'Description' ] );
   $form_table->setHeaderAttr( BOLD=>1, ALIGN=>'center' );
-  for my $k ( sort( keys( %{$penalties} ) ) ) {
+  for my $k ( @pen_names ) {
 
     my $input = "<INPUT TYPE=text SIZE=8 CLASS=small_form_field NAME=$k VALUE='$penalties->{$k}'></INPUT>";
     $form_table->addRow( [ "<DIV CLASS=small_form_caption>$k:</CLASS>", $input, "<DIV CLASS=small_form_text>$pen_defs->{$k}</DIV>" ] );
@@ -1506,10 +1528,31 @@ sub get_change_form {
                                          types => [ 'submit', 'reset' ] );
   $form_table->addRow( [ @buttons, '' ] ) unless $args{hide_buttons};
   $form_table->setRowAttr( ROWS => [1..$form_table->getRowNum()], "$tr noop"=>1 );
-  $form_table->setColAttr( ROWS => [1..$form_table->getRowNum()], COLS => [1], ALIGN => 'right' );
+  $form_table->setColAttr( ROWS => [2..$form_table->getRowNum()], COLS => [1], ALIGN => 'right' );
+  $form_table->setColAttr( ROWS => [1], COLS => [1..3], ALIGN => 'center' );
+
+  if ( $args{shade_defs} ) {
+    my %colors = ( B => '#EEEEEE',
+                   A => '#C0D0C0',
+                   C => '#CCCCCC' );
+    my $row = 0;
+    my $curr = 'C';
+    my $first = 'head';
+    for my $key ( $first, @pen_names ) {
+      $row++;
+      $key =~ s/\://g;
+#      print "key is $key, color is $colors{$curr} for $curr!\n";
+      if ( grep /$key/, ( qw( 4H C NG nQ BA min_l ) ) ) {
+        $curr = ( $curr eq 'A' ) ? 'B' : 'A';
+      }
+      $form_table->setColAttr( ROWS => [$row], COLS => [1..3], BGCOLOR => $colors{$curr} );
+    }
+  }
 
   if ( $args{form_only} ) {
     return "$form_table";
+  } elsif ( $args{hideable_form} ) {
+    return $link, "$form_table";
   }
 
   my $form = qq~
@@ -1518,6 +1561,7 @@ sub get_change_form {
   $form_table
   </FORM>
   ~;
+  return $form;
 
 
 }
