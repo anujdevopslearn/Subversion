@@ -223,11 +223,11 @@ sub print_form {
 
 
 
-    my $sub_form = $best_peptide->get_change_form( form_only => 1, hide_buttons => 1 );
+    my ( $sub_form ) = $best_peptide->get_change_form( form_only => 1, hide_buttons => 1, shade_defs => 1 );
     $sub_form =~ s/tbl_hidden/tbl_visible/gm;
    
     $form =~ s/(\<INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="AT_GetPABSTList"\>)/$1<BR>$sub_form/gm;
-    $form =~ s/\<\/TABLE\>/<TR><TD COLSPAN=3>$sub_form<\/TD><\/TR><\/TABLE>/i;
+    $form =~ s/\<\/TABLE\>/<TR><TD COLSPAN=3> $sub_form<\/TD><\/TR><\/TABLE>/i;
 #    $form .= "<TR><TD COLSPAN=3>$sub_form</TD></TR>\n";
     $form .= "<TR><TD VALIGN=TOP><B>Adjust penalties:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$sub_form</TD></TR>\n";
 
@@ -608,13 +608,13 @@ sub fetch_transitions {
   my $sth = $sbeams->get_statement_handle( $lib_sql );
 
   my %prots;
-  my %peps;
 
   my @namelist = ( join( '::', qw(protein  sequence q1_mz q3_mz RT rank q1_chg q3_chg peak_intensity ion_label collision SSR) ) );
 
   # placeholder, we don't have a source for retention time.
   my $rt = '';
 
+  my %peps;
   if ( $is_changed ) {
      $log->info( "Collect db values: " . time() );
 
@@ -807,12 +807,24 @@ sub fetch_transitions {
   
       my $ce = calculateCE( mz => $row[5], chg => $row[6] );
       push @peptides, [ $prot, @row[0..12] ];
+      $peps{$row[1]}++;
 
       # protein  sequence q1_mz q3_mz RT rank q1_chg q3_chg peak_intensity ion_label collision SSR
       push @namelist, join( '::', $prot, @row[1,5,7],'',@row[10,6,8,11,9],$ce, $row[12] );
 
     } # End loop over resultset
 
+  }
+
+  my @peps = keys( %peps );
+  my $patr = get_PATR_transitions( peptides => \@peps );
+
+
+  for ( my $i = 0; $i <= $#peptides; $i++ ) {
+    my $pep = $peptides[$i];
+    if ( $patr->{$pep->[2]} ) {
+#      $peptides[$i] = $patr->{$pep->[2]};
+    }
   }
 
 
@@ -900,6 +912,40 @@ sub fetch_transitions {
 
 } # end handle_request
 
+sub get_PATR_transitions {
+  my %args = @_;
+  return unless $args{peptides};
+
+  my $peptide_clause = " WHERE P.peptide_sequence IN ( ";
+  my $sep = '';
+  for my $pep ( @{$args{peptides}} ) {
+    next if $pep =~ /amino acid/i;
+    $peptide_clause .= $sep . "'" . $pep . "'";
+    $sep = ',';
+  }
+  $peptide_clause .= ")\n";
+
+  my $sql = qq~
+  SELECT DISTINCT P.peptide_sequence, modified_peptide_sequence, peptide_charge,
+  q1_mz ,q3_mz, q3_peak_intensity, q3_ion_label, collision_energy,
+  SSRCalc_relative_hydrophobicity, retention_time, 'na', level_name, ''
+  FROM $TBAT_MODIFIED_PEPTIDE_ANNOTATION MPA 
+  JOIN $TBAT_TRANSITION_SUITABILITY_LEVEL TSL 
+  ON TSL.transition_suitability_level_id = MPA.transition_suitability_level_id
+  JOIN $TBAT_PEPTIDE P ON P.peptide_sequence = MPA.peptide_sequence
+  $peptide_clause
+  ORDER BY modified_peptide_sequence, peptide_charge, 
+  q3_peak_intensity DESC
+  ~;
+
+  my $sth = $sbeams->get_statement_handle($sql);
+
+  my %pep_rows;
+  while ( my @row = $sth->fetchrow_array() ) {
+    $pep_rows{$row[0]} = \@row;
+  }
+  return \%pep_rows;
+}
 
 sub calculateCE {
   my %args = @_;
