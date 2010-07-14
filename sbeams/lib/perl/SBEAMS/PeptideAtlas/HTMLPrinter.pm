@@ -1203,6 +1203,32 @@ sub get_atlas_checklist {
 	return "$table";
 }
 
+sub get_atlas_select {
+
+  my $self = shift;
+  my %args = @_;
+  my $select_name = $args{select_name} || 'build_id';
+
+  #### Get a list of accessible builds, use to validate passed list.
+  my @accessible = $self->getAccessibleBuilds();
+  my $build_string = join( ",", @accessible );
+  return '' unless $build_string;
+
+  my $sql = qq~
+  SELECT atlas_build_id, build_tag 
+  FROM $TBAT_ATLAS_BUILD
+  WHERE atlas_build_id IN ( $build_string )
+  ~;
+
+  my $select = "<INPUT TYPE=SELECT NAME=$select_name>\n";
+  my $sth = $sbeams->get_statement_handle->( $sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    $select .= "<OPTION VALUE=$row[0]>$row[1]\n";
+  }
+  $select .= "</INPUT>\n";
+  return $select;
+}
+
 1;
 
 __END__
