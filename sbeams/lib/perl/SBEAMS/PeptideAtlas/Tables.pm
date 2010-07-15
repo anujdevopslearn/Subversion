@@ -64,6 +64,8 @@ use vars qw(@ISA @EXPORT
     $TBAT_ATLAS_SEARCH_BATCH_PARAMETER_SET
 
     $TBAT_SEARCH_KEY
+    $TBAT_SEARCH_KEY_LINK
+    $TBAT_SEARCH_KEY_ENTITY
 
     $TBAT_CONSENSUS_LIBRARY
     $TBAT_CONSENSUS_LIBRARY_SPECTRUM
@@ -169,6 +171,8 @@ require Exporter;
     $TBAT_ATLAS_SEARCH_BATCH_PARAMETER_SET
 
     $TBAT_SEARCH_KEY
+    $TBAT_SEARCH_KEY_LINK
+    $TBAT_SEARCH_KEY_ENTITY
 
     $TBAT_CONSENSUS_LIBRARY
     $TBAT_CONSENSUS_LIBRARY_SPECTRUM
@@ -268,6 +272,8 @@ $TBAT_ATLAS_SEARCH_BATCH_PARAMETER = "${mod}atlas_search_batch_parameter";
 $TBAT_ATLAS_SEARCH_BATCH_PARAMETER_SET = "${mod}atlas_search_batch_parameter_set";
 
 $TBAT_SEARCH_KEY                = "${mod}search_key";
+$TBAT_SEARCH_KEY_LINK           = "${mod}search_key_link";
+$TBAT_SEARCH_KEY_ENTITY         = "${mod}search_key_entity";
 
 $TBAT_CONSENSUS_LIBRARY                   = "${mod}consensus_library";
 $TBAT_CONSENSUS_LIBRARY_SPECTRUM          = "${mod}consensus_library_spectrum";
