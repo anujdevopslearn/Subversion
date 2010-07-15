@@ -531,13 +531,13 @@ sub handle_request {
 
     print $sbeamsMOD->encodeSectionItem(
       key=>'Gene Name',
- tr_info => $tr,
+      tr_info => $tr,
       value=>$biosequence->{biosequence_gene_name},
     );
 
     print $sbeamsMOD->encodeSectionItem(
       key=>'Description',
- tr_info => $tr,
+      tr_info => $tr,
       value=>$biosequence->{biosequence_desc},
     );
 
@@ -553,11 +553,15 @@ sub handle_request {
       #### Store the synonym information $biosequence for later use
       $biosequence->{synonyms}->{$synonym->[1]} = $synonym->[0];
       if ( $synonym->[2] ) { 
-	  if ( $synonym->[3] ) {
-	      $synonym->[0] = "<A HREF=\"$synonym->[2]$synonym->[0]$synonym->[3]\">$synonym->[0]</A>";
-	  } else {
-	      $synonym->[0] = "<A HREF=\"$synonym->[2]$synonym->[0]\">$synonym->[0]</A>";
-	  }
+        my $str =  $synonym->[0];
+        if($synonym->[2] =~ /DisplayGoTerm/){
+          $str =~ s/GO:(\d+).*/GO:$1/;
+        }
+    	  if ( $synonym->[3] ) {
+	        $synonym->[0] = "<A HREF=\"$synonym->[2]$str$synonym->[3]\">$synonym->[0]</A>";
+	      } else {
+	        $synonym->[0] = "<A HREF=\"$synonym->[2]$str\">$synonym->[0]</A>";
+	      }
       }
       push @{$syn_types{$synonym->[1]}}, $synonym->[0];
     }
@@ -593,23 +597,23 @@ sub handle_request {
 #    }
 
     # If we have annotations
-    if ( $biosequence->{annotated_gene_id} ){
-      my $annot = $biolink->get_leaf_annotations( annotated_gene_id => $biosequence->{annotated_gene_id} );
-      my %fx = ( C => 'Cellular Location',
-                 F => 'Molecular Function',
-                 P => 'Biological Process' );
-      for my $type ( qw(F P C) ) {
-        my $key = $type . 'pri';
-        if ( $annot->{$key} ) {
-          my $display = $sbeams->truncateStringWithMouseover( len => 80,
-                                                 string => $annot->{$key});
-
-          print $sbeamsMOD->encodeSectionItem( key   => $fx{$type},
-                                             tr_info => $tr,
-                                               value => $display );
-        }
-      }
-    }
+    #if ( $biosequence->{annotated_gene_id} ){
+    #  my $annot = $biolink->get_leaf_annotations( annotated_gene_id => $biosequence->{annotated_gene_id} );
+    #  my %fx = ( C => 'Cellular Location',
+    #             F => 'Molecular Function',
+    #             P => 'Biological Process' );
+    #  for my $type ( qw(F P C) ) {
+    #    my $key = $type . 'pri';
+    #    if ( $annot->{$key} ) {
+    #      my $display = $sbeams->truncateStringWithMouseover( len => 80,
+    #                                             string => $annot->{$key});
+    #
+    #      print $sbeamsMOD->encodeSectionItem( key   => $fx{$type},
+    #                                         tr_info => $tr,
+    #                                           value => $display );
+    #    }
+    #  }
+    #}
 
     # Check to see if there is ortholog information
     my $orthologs = get_ortholog_information( $biosequence );
@@ -700,8 +704,6 @@ sub handle_request {
 #		'is_subpeptide_of' => 1,
 #		'sample_ids' => 1
   );
-
-
 
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
