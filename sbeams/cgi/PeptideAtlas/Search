@@ -362,7 +362,7 @@ sub handle_request {
     $atlas_build_column =  ["atlas_build","AB.atlas_build_name","Build Name"];
     $atlas_build_clause = qq~
          JOIN $TBAT_ATLAS_BUILD AB
-              ON ( SK.atlas_build_id = AB.atlas_build_id)
+              ON ( RES.atlas_build_id = AB.atlas_build_id)
     ~;
 
   #### ... or, typical CGI/command-line specification of an atlas build type
@@ -371,7 +371,7 @@ sub handle_request {
     $atlas_build_column =  ["build_type","(CASE WHEN DAB.organism_specialized_build IS NULL THEN O.organism_name ELSE DAB.organism_specialized_build END)","Build Type"],
     $atlas_build_clause = qq~
          JOIN $TBAT_DEFAULT_ATLAS_BUILD DAB
-              ON ( SK.atlas_build_id = DAB.atlas_build_id
+              ON ( SKL.atlas_build_id = DAB.atlas_build_id
                    AND DAB.organism_id IS NOT NULL )
     ~;
   }
@@ -379,13 +379,13 @@ sub handle_request {
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
   my @column_array = (
-    ["search_key_name","SK.search_key_name","Search Key"],
+    ["search_key_name","SKE.search_key_name","Search Key"],
 #    ["search_key_type","SK.search_key_type","search_key_type"],
     $atlas_build_column,
-    ["resource_name","SK.resource_name","Identifier"],
-    ["resource_type","SK.resource_type","resource_type"],
-    ["resource_n_matches","SK.resource_n_matches","N Peptide obs"],
-    ["resource_url","SK.resource_url","resource_url"],
+    ["resource_name","SKL.resource_name","Identifier"],
+    ["resource_type","SKE.resource_type","resource_type"],
+    ["resource_n_matches","SKL.resource_n_matches","N Peptide obs"],
+    ["resource_url","SKL.resource_url","resource_url"],
     ["organism_id","O.organism_id","organism_id"],
   );
 
@@ -403,13 +403,15 @@ sub handle_request {
   #### Define the SQL statement to find the biosequence(s)
   $sql = qq~
        SELECT DISTINCT $columns_clause
-         FROM $TBAT_SEARCH_KEY SK
-         JOIN $TB_ORGANISM O ON (O.organism_id = SK.organism_id)
+         FROM $TBAT_SEARCH_KEY_LINK SKL
+         LEFT JOIN  $TBAT_SEARCH_KEY_ENTITY SKE 
+              ON (SKL.RESOURCE_NAME = SKE.RESOURCE_NAME) 
+         JOIN $TB_ORGANISM O ON (O.ORGANISM_ID = SKL.ORGANISM_ID)
                   $atlas_build_clause
         WHERE 1 = 1
           $search_key_clause
           $search_types_clause
-          AND SK.atlas_build_id IN ( $atlas_build_ids )
+          AND SKL.atlas_build_id IN ( $atlas_build_ids )
        ORDER BY search_key_name
   ~;
 
@@ -428,14 +430,18 @@ sub handle_request {
   );
   my $spacer = '&nbsp;' x 3;
 
-
+  #use Time::HiRes;
+  #my $elapsed;
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
   if ($apply_action =~ /(QUERY|GO|VIEWRESULTSET)/) {
 
     #### Show the SQL that will be or was executed
-    $sbeams->display_sql(sql=>$sql) if ($show_sql);
+    my $start = [ Time::HiRes::gettimeofday( ) ];
 
+# script code goes here
+    $sbeams->display_sql(sql=>$sql) if ($show_sql);
+    # print "$sql\n";
     #### If the action contained QUERY, then fetch the results from
     #### the database
     if ($apply_action =~ /(QUERY|GO)/i) {
@@ -445,7 +451,7 @@ sub handle_request {
         sql_query=>$sql,
         resultset_ref=>$resultset_ref,
       );
-
+      #$elapsed = Time::HiRes::tv_interval( $start );
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
       $sbeams->writeResultSet(
@@ -523,7 +529,7 @@ sub handle_request {
 
     print qq~
       <TABLE BORDER="0" WIDTH="570"><TR><TD>
-      Your search returned $n_results matches.  Please choose from the table below.  <BR> $download_link <BR>
+      Your search returned $n_results matches. Please choose from the table below.  <BR> $download_link <BR>
     ~ if ($sbeams->output_mode() eq 'html');
 
     if ($search_key !~ /%/) {
