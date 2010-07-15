@@ -523,18 +523,18 @@ AT_peptide_annotation	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact
 AT_peptide_annotation	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 AT_peptide_annotation	15	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_srm_transition	1	srm_transition_id	SRM Transition	int	4	0	N		Y							N	N				pkDEFAULT
-AT_srm_transition	2	peptide_sequence	Peptide Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Sequence of the peptide, excluding modifications		
-AT_srm_transition	3	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Sequence of the peptide, including modification notation, e.g. THC[160]AAHR		
-AT_srm_transition	4	peptide_charge	Peptide Charge	int	4	0	N		N			Y	text	10		Y	Y	Y	Charge on the precursor ion		
-AT_srm_transition	5	q1_mz	q1 mz value	float	8	0	N		N			Y	text	10		Y	Y	Y	parent mass to charge ratio: q1		
-AT_srm_transition	6	q3_mz	q3 mz value	float	8	0	N		N			Y	text	10		Y	Y	Y	product ion mass to charge ratio: q3		
-AT_srm_transition	7	q3_ion_label	q3 Ion Label	varchar	50	0	Y		N			N	text	30		Y	Y	N	Label for the product ion (e.g. y1-7, b2-6, etc.)		
-AT_srm_transition	8	transition_suitability_level_id	Transition Suitability Level	int	4	0	N		N	AT_transition_suitability_level	transition_suitability_level_id	Y	optionlist	5		Y	Y	N	User-defined quality metric	SELECT transition_suitability_level_id, level_name FROM $TBAT_TRANSITION_SUITABILITY_LEVEL ORDER BY sort_order,level_name	
-AT_srm_transition	9	collision_energy	Collision Energy	float	8	0	Y		N			Y	text	10		Y	Y	Y	Collision energy setting used during validation run, or best CE setting if multiple runs were performed		
-AT_srm_transition	10	retention_time	Retention Time	float	8	0	Y		N			Y	text	10		Y	Y	Y	Retention time in minutes of parent peptide		
-AT_srm_transition	11	peptide_id	Peptide	int	4	0	Y		N	AT_peptide	peptide_id	Y	optionlist			Y	Y	Y	Peptide ID of  the Atlas entry which matches the amino acid sequence of this entry		
-AT_srm_transition	12	srm_transition_set_id	SRM Transition Set	int	4	0	N		N	AT_srm_transition_set	srm_transition_set_id	Y	optionlist	5		Y	Y	N	Transition set to which this entry belongs.	SELECT srm_transition_set_id, set_name  FROM $TBAT_TRANSITION_SET ORDER BY sort_order, set_name	
-AT_srm_transition	13	q3_peak_intensity	Q3 Peak Intensity	float	8	0	Y		N			Y	text	10		Y	Y	Y	Peak intensity, possibly scaled, of Q3 fragment peak		
+AT_srm_transition	2	srm_transition_set_id	SRM Transition Set ID	int	4	0	N		N	AT_srm_transition_set	srm_transition_set_id	Y	optionlist	5		Y	Y	N	Transition set to which this entry belongs.	SELECT srm_transition_set_id, set_name  FROM $TBAT_TRANSITION_SET ORDER BY sort_order, set_name	
+AT_srm_transition	3	stripped_peptide_sequence	Peptide Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Sequence of the peptide, excluding modifications		
+AT_srm_transition	4	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Sequence of the peptide, including modification notation, e.g. THC[160]AAHR		
+AT_srm_transition	5	monoisotopic_peptide_mass	Monoisotopic Neutral Peptide Mass	float	8	0	Y		N			N	text	10		Y	Y	N	Neutral peptide monoisotopic mass		
+AT_srm_transition	6	peptide_charge	Peptide Charge	int	4	0	Y		N			N	text	10		Y	Y	Y	Charge on the precursor ion		
+AT_srm_transition	7	q1_mz	q1 mz value	float	8	0	N		N			Y	text	10		Y	Y	Y	parent mass to charge ratio: q1		
+AT_srm_transition	8	q3_mz	q3 mz value	float	8	0	N		N			Y	text	10		Y	Y	Y	product ion mass to charge ratio: q3		
+AT_srm_transition	9	q3_ion_label	q3 Ion Label	varchar	50	0	Y		N			N	text	30		Y	Y	N	Label for the product ion (e.g. y1-7, b2-6, etc.)		
+AT_srm_transition	10	transition_suitability_level_id	Transition Suitability Level	int	4	0	N		N	AT_transition_suitability_level	transition_suitability_level_id	Y	optionlist	5		Y	Y	N	User-defined quality metric	SELECT transition_suitability_level_id, level_name FROM $TBAT_TRANSITION_SUITABILITY_LEVEL ORDER BY sort_order,level_name	
+AT_srm_transition	11	collision_energy	Collision Energy	float	8	0	Y		N			N	text	10		Y	Y	Y	Collision energy setting used during validation run, or best CE setting if multiple runs were performed		
+AT_srm_transition	12	retention_time	Retention Time	float	8	0	Y		N			N	text	10		Y	Y	Y	Retention time in minutes of parent peptide		
+AT_srm_transition	13	protein_name	Protein Name	varchar	255	0	Y		N			N	text	24		Y	Y	N	Protein Name		
 AT_srm_transition	14	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 AT_srm_transition	15	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 AT_srm_transition	16	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
