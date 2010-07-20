@@ -103,6 +103,7 @@ Options:
                        use Swiss-Prot names as biosequence descriptions.
                        Not yet fully implemented.
   --gene_annotation    load gene ontology information for the set
+  --gene_annotation_searchkey
 
  e.g.:  $PROG_NAME --check_status
 
@@ -118,7 +119,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
     "ginzu_search_results_dir:s","mamSum_search_results_summary_file:s",
     "InterProScan_search_results_summary_file:s",
     "COG_search_results_summary_file:s","pI_summary_file:s",
-    "swissprot_file:s","gene_annotation",
+    "swissprot_file:s","gene_annotation","gene_annotation_searchkey",
   )) {
   print "$USAGE";
   exit;
@@ -293,8 +294,7 @@ sub handleRequest {
     $OPTIONS{"COG_search_results_summary_file"} || '';
   my $pI_summary_file = $OPTIONS{"pI_summary_file"} || '';
   my $swissprot_file = $OPTIONS{"swissprot_file"} || '';
-  my $gene_annotation = $OPTIONS{"gene_annotation"} || '';
-
+  my $gene_annotation = $OPTIONS{"gene_annotation"} || 0;
   #### Get the file_prefix if it was specified, and otherwise guess
   unless ($file_prefix) {
     $module = $sbeams->getSBEAMS_SUBDIR();
@@ -839,7 +839,6 @@ sub update_biosequence_annotated_gene{
   my %args = @_;
   my $SUB_NAME = "update_biosequence_annotated_gene";
 
-
   #### Decode the argument list
   my $biosequence_set_id = $args{'biosequence_set_id'}
    || die "ERROR[$SUB_NAME]: biosequence_set_id not passed";
@@ -848,36 +847,85 @@ sub update_biosequence_annotated_gene{
 
   my $sql;
   $sql = qq~
-      DELETE FROM $TBAT_BIOSEQUENCE_ANNOTATED_GENE
+      WHILE EXISTS (
+        SELECT * FROM  $TBAT_BIOSEQUENCE_ANNOTATED_GENE
+        WHERE biosequence_id IN
+        ( SELECT BS.biosequence_id
+          FROM $TBAT_BIOSEQUENCE BS, $TBAT_BIOSEQUENCE_ANNOTATED_GENE BAG
+          WHERE BAG.biosequence_id = BS.biosequence_id
+          AND BS.biosequence_set_id = $biosequence_set_id
+        )
+      )
+      BEGIN
+      DELETE TOP (10000)  FROM $TBAT_BIOSEQUENCE_ANNOTATED_GENE
       WHERE biosequence_id IN
       ( SELECT BS.biosequence_id
         FROM $TBAT_BIOSEQUENCE BS, $TBAT_BIOSEQUENCE_ANNOTATED_GENE BAG
         WHERE BAG.biosequence_id = BS.biosequence_id
         AND BS.biosequence_set_id = $biosequence_set_id
       )
+      END
   ~;
-  $sbeams->do($sql);
 
+  $sbeams->do($sql);
+  
+  ### delete gene annotation in search key table for this biosequence set
+
+  print "Getting gene annotation from Biolink\n";
+#  my $sql = qq~
+#   ( SELECT BS.biosequence_id, AG.annotated_gene_id
+#    FROM $TBAT_BIOSEQUENCE BS
+#    INNER JOIN $TBBL_ANNOTATED_GENE AG ON (BS.biosequence_gene_name = AG.gene_name)
+#    WHERE BS.biosequence_set_id = $biosequence_set_id
+#      AND BS.biosequence_name not like 'DECOY%'
+#   )
+#   UNION
+#   (
+#    SELECT BS2.biosequence_id, AG2.annotated_gene_id as id
+#    FROM  $TBAT_BIOSEQUENCE BS2
+#    INNER JOIN  $TBBL_ANNOTATED_GENE AG2 ON (BS2.biosequence_gene_name = AG2.gene_accession)
+#    WHERE BS2.biosequence_set_id = $biosequence_set_id
+#      AND BS2.biosequence_name not like 'DECOY%'
+#   )
+#  -- UNION
+#  -- (
+#  --  SELECT BS3.biosequence_id, AG3.annotated_gene_id as id
+#  --  FROM  $TBAT_BIOSEQUENCE BS3
+#  --  LEFT JOIN  $TBBL_ANNOTATED_GENE AG3 ON ('gi|'+BS3.biosequence_accession = AG3.gene_accession)
+#  --  WHERE BS3.biosequence_set_id = $biosequence_set_id
+#  --  AND BS3.biosequence_name not like 'DECOY%'
+#  -- )
+#  ~;
   my $sql = qq~
-    SELECT BS.biosequence_id, AG.annotated_gene_id
-    FROM $TBAT_BIOSEQUENCE BS,  $TBBL_ANNOTATED_GENE AG
-    WHERE (BS.biosequence_accession = AG.gene_accession OR
-            'gi|'+BS.biosequence_accession = AG.gene_accession)
-           -- BS.biosequence_gene_name = AG.gene_name OR
-           -- BS.biosequence_gene_name = AG.gene_accession OR
-           -- BS.biosequence_accession = AG.gene_name)
-      AND BS.biosequence_set_id = $biosequence_set_id
-      AND BS.biosequence_name not like 'DECOY%'
-      ORDER by BS.biosequence_id
-    ~;
+		  (SELECT BS.BIOSEQUENCE_ID AS ID, AG.ANNOTATED_GENE_ID AS GID
+			 FROM $TBAT_BIOSEQUENCE BS
+				INNER JOIN $TBBL_ANNOTATED_GENE AG ON (BS.BIOSEQUENCE_GENE_NAME = AG.GENE_NAME)
+				LEFT JOIN $TBBL_GENE_ANNOTATION BAG ON (AG.ANNOTATED_GENE_ID = BAG.ANNOTATED_GENE_ID)
+				WHERE BS.BIOSEQUENCE_SET_ID = $biosequence_set_id 
+             AND BAG.HIERARCHY_LEVEL = 'LEAF'
+						 AND BAG.IS_SUMMARY = 'N'
+			 )
+			 UNION
+			 (SELECT BS2.BIOSEQUENCE_ID AS ID, AG2.ANNOTATED_GENE_ID AS GID
+				FROM  $TBAT_BIOSEQUENCE BS2
+				INNER JOIN  $TBBL_ANNOTATED_GENE AG2 ON (BS2.BIOSEQUENCE_GENE_NAME = AG2.GENE_ACCESSION)
+				LEFT JOIN $TBBL_GENE_ANNOTATION BAG2 ON (AG2.ANNOTATED_GENE_ID = BAG2.ANNOTATED_GENE_ID)
+				WHERE BS2.BIOSEQUENCE_SET_ID = $biosequence_set_id 
+             AND BAG2.HIERARCHY_LEVEL = 'LEAF'
+						 AND BAG2.IS_SUMMARY = 'N'
+			 )
+		~;
+
   my @rows = $sbeams->selectSeveralColumns($sql);
 
-  print "insertting new mapping\n";
+  print "Insertting ", scalar @rows ," new mapping\n";
   my $counter = 0;
-  my $pre_biosequence_id = '';
+  #my %updated_id =();
   foreach my $row (@rows){
     my ($biosequence_id, $annotated_gene_id) = @{$row};
-    next if($biosequence_id eq $pre_biosequence_id);
+    #next if($updated_id{$biosequence_id});
+    next if (! $annotated_gene_id);
+    #$updated_id{$biosequence_id} = 1;
     my %rowdata=();
     $rowdata{biosequence_id} = $biosequence_id;
     $rowdata{annotated_gene_id} = $annotated_gene_id;
@@ -890,10 +938,86 @@ sub update_biosequence_annotated_gene{
         verbose=>$VERBOSE,
         testonly=>$TESTONLY,
     );
-    $pre_biosequence_id = $biosequence_id;
     $counter++;
+    print ".$counter" if($counter % 100 == 0);
   }
   print "\n$counter rows INSERT/UPDATed\n";
+
+  return if(! $OPTIONS{"gene_annotation_searchkey"});
+
+  $sql = qq~
+     SELECT biosequence_name
+     FROM $TBAT_BIOSEQUENCE
+     where biosequence_set_id = $biosequence_set_id
+     and biosequence_name not like 'DECOY%'
+  ~;
+
+  my @biosequence_names = $sbeams->selectOneColumn($sql);
+  print "Inserting new gene annotation to search_key_entity table for proteins not in the table already\n";
+
+  $counter  = 0;
+  foreach my $name (@biosequence_names){
+    my $sql =  qq~ 
+      SELECT RESOURCE_NAME 
+      FROM $TBAT_SEARCH_KEY 
+      WHERE RESOURCE_NAME = '$name'
+      AND (search_key_type = 'biological_process' or 
+           search_key_type = 'molecular_function' or 
+          search_key_type = 'cellular_component') 
+   ~;
+   my @res = $sbeams->selectOneColumn($sql);
+   if(! @res){
+		 my $sql = qq~
+			 SELECT DISTINCT B.BIOSEQUENCE_NAME,
+							B.BIOSEQUENCE_GENE_NAME,
+							GA.EXTERNAL_ACCESSION,
+							GA.ANNOTATION,
+							NAME.ORGANISM_NAMESPACE_TAG,
+							GAT.GENE_ANNOTATION_TYPE_TAG
+			 FROM $TBAT_BIOSEQUENCE B
+			 LEFT JOIN $TBAT_BIOSEQUENCE_ANNOTATED_GENE BAG ON (B.BIOSEQUENCE_ID = BAG.BIOSEQUENCE_ID)
+			 LEFT JOIN $TBBL_ANNOTATED_GENE AG ON (BAG.ANNOTATED_GENE_ID = AG.ANNOTATED_GENE_ID)
+			 LEFT JOIN $TBBL_GENE_ANNOTATION GA ON (AG.ANNOTATED_GENE_ID = GA.ANNOTATED_GENE_ID)
+			 LEFT JOIN $TBBL_GENE_ANNOTATION_TYPE GAT ON (GA.GENE_ANNOTATION_TYPE_ID = GAT.GENE_ANNOTATION_TYPE_ID)
+			 LEFT JOIN $TBAT_ATLAS_BUILD A ON (B.BIOSEQUENCE_SET_ID= A.BIOSEQUENCE_SET_ID)
+			 LEFT JOIN $TBBL_ORGANISM_NAMESPACE NAME ON(AG.ORGANISM_NAMESPACE_ID = NAME.ORGANISM_NAMESPACE_ID)
+			 WHERE GA.HIERARCHY_LEVEL  = 'LEAF'
+					AND GA.IS_SUMMARY = 'N'
+					AND B.BIOSEQUENCE_NAME = '$name'
+		 ~;
+		 my @rows = $sbeams->selectSeveralColumns($sql);
+		 foreach my $row (@rows){
+			my($biosequence_name,
+				 $gene_name,
+				 $external_accession,
+				 $annotation,
+				 $organism_namespace,
+				 $gene_annotation_type_tag,
+        ) =@{$row};
+			if($organism_namespace =~ /blast2go/i){
+				$gene_annotation_type_tag .= "/Blast2GO";
+			}
+			#print "$gene_name,Gene Ontology/$organism_namespace,$external_accession:$annotation\n";
+			my %rowdata = (
+				search_key_name => "$external_accession:$annotation",
+				search_key_type =>  $gene_annotation_type_tag,
+				search_key_dbxref_id => 26,
+				resource_name   => $biosequence_name,
+				resource_type   => $organism_namespace,
+			 );
+			 $sbeams->updateOrInsertRow(
+				insert => 1,
+				table_name => "$TBAT_SEARCH_KEY_ENTITY",
+				rowdata_ref => \%rowdata,
+				verbose=>$VERBOSE,
+				testonly=>$TESTONLY,
+			 );
+		 }
+     $counter++;
+   }
+   print ".$counter" if($counter % 100 == 0);
+  }
+  print "$counter new annotation inserted\n";
 
 }
 
@@ -1938,8 +2062,8 @@ sub specialParsing {
      $rowdata_ref->{dbxref_id} = '20';
   }
 
-  #### Conversion rules for the  ENSEMBL Human Protein database v 22 - 28
-  if ($rowdata_ref->{biosequence_desc} =~ /^.*(ENSG\d+)\s.*$/) {
+  #### Conversion rules for the  ENSEMBL Human and Mouse Protein database v 22 - 28
+  if ($rowdata_ref->{biosequence_desc} =~ /^.*(ENS\w+\d+)\s.*$/) {
      $rowdata_ref->{biosequence_gene_name} = $1;
      $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
      $rowdata_ref->{dbxref_id} = '20';
@@ -1985,6 +2109,13 @@ sub specialParsing {
      $rowdata_ref->{dbxref_id} = '5';
   }
 
+  ### Conversion rules for WB 
+  print "$rowdata_ref->{biosequence_desc}\n";
+  if($rowdata_ref->{biosequence_desc} =~ /(WBGene\d+)/){
+     $rowdata_ref->{biosequence_accession} = $1;
+     $rowdata_ref->{dbxref_id} = '41'; 
+     print "$1\n";
+  }
 
   #### Conversion rules for the IPI database
   if ($rowdata_ref->{biosequence_name} =~ /^IPI:(IPI[\d\.]+)$/ ) {
@@ -2009,7 +2140,13 @@ sub specialParsing {
      $rowdata_ref->{biosequence_gene_name} = $1;
      $rowdata_ref->{dbxref_id} = '9';
   }
-
+  #### Conversion rules for the new IPI database 3  
+  if($rowdata_ref->{biosequence_desc} =~ /^IPI:Gene_Symbol=(\S+)/){
+    $rowdata_ref->{biosequence_gene_name} = $1;
+    $rowdata_ref->{biosequence_accession} = $1;
+    $rowdata_ref->{dbxref_id} = '9';
+  }
+  
 
   #### Conversion rules for some generic GenBank IDs  
   if ($rowdata_ref->{biosequence_name} =~ /gb\|([A-Z\d\.]+)\|/ ) {
@@ -2331,7 +2468,14 @@ sub specialParsing {
 	$rowdata_ref->{dbxref_id} = '5';
     }
   }
-
+  ####
+  ####[YCL052C;UPSP:PBN1_YEAST;GENSCAN00000000189;gi|6319797|ref|NP_009878.1|]PBN1 SGDID:S000000557,
+  if ($rowdata_ref->{biosequence_desc} =~ /.*](\S+)\s+SGDID\:([\w-]+), .+/ ) {
+    $rowdata_ref->{biosequence_gene_name} = $1;
+    $rowdata_ref->{biosequence_accession} = $2;
+    $rowdata_ref->{dbxref_id} = '5';
+  }
+  
   #### Special conversion rules for DQA, DBQ, DRB exons, e.g.:
   #### >DQB1_0612_exon1
   if ($biosequence_set_name =~ /Allelic exons/) {
