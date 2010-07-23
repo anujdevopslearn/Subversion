@@ -49,6 +49,8 @@ my $opts = process_opts();
 
   push @opts, ( 'score_idx', $opts->{'score_idx'} - 1 ) if ( $opts->{score_idx} );
 
+  push @opts, ( 'header', 1 ) if $opts->{column_headings};
+
 #    $pep_sel->pabst_evaluate_peptides( peptides => $peptides,
 #                                       force_mc => 1,
 #                                  hydrophob_idx => $opts->{'_num_tabs'}- 1,
@@ -66,6 +68,10 @@ my $opts = process_opts();
   $pep_sel->pabst_evaluate_peptides( @opts, %chk_args );
 
   open ( OUT, ">$opts->{output_file}" ) || die "Unable to open $opts->{output_file}";
+  if ( $opts->{column_headings} ) {
+    my $line = shift @{$peptides};
+    print OUT join( "\t", @$line ) . "\n";
+  }
 
   if ( $opts->{sort_within_prots} ) {
     my $n_peptides = $opts->{n_peptides} || 10000;
@@ -154,30 +160,35 @@ sub read_pepfile {
   if ( $opts->{calc_ssr} ) {
     $atlas->{_ssrCalc} = $atlas->getSSRCalculator();
   }
-
+  my $cnt = 0;
   while ( my $line = <PEP> ) {
     chomp $line;
     my @line = split( "\t", $line, -1 );
-    my $seq = $line[$opts->{idx_peptide} - 1];
-    if ( $opts->{wspace_skip_idx} ) {
-      if ( $line[$opts->{wspace_skip_idx} - 1] eq '' ) {
-        $opts->{skipped_lines}->{$cnt}++;
-        $cnt++;
-        print "$line\n";
-        next;
-      }
+    if ( !$cnt++ && $opts->{column_headings} ) {
+      push @line, 'SSR' if $opts->{calc_ssr};
+      push @line, 'Annotations';
     } else {
-      if ( !$seq ) {
-        print STDERR "Peptide field is blank - index is 1-based - skipping\n";
-        next;
+      my $seq = $line[$opts->{idx_peptide} - 1];
+      if ( $opts->{wspace_skip_idx} ) {
+        if ( $line[$opts->{wspace_skip_idx} - 1] eq '' ) {
+          $opts->{skipped_lines}->{$cnt}++;
+          $cnt++;
+          print "$line\n";
+          next;
+        }
+        } else {
+        if ( !$seq ) {
+          print STDERR "Peptide field is blank - index is 1-based - skipping\n";
+          next;
+        }
       }
-    }
-    $opts->{_num_tabs} ||= scalar( @line );
-    if ( $opts->{calc_ssr} ) {
-      if ( ! defined $ssr{$seq} ) {
-        $ssr{$seq} = $atlas->calc_SSR( seq => $seq );
+      $opts->{_num_tabs} ||= scalar( @line );
+      if ( $opts->{calc_ssr} ) {
+        if ( ! defined $ssr{$seq} ) {
+          $ssr{$seq} = $atlas->calc_SSR( seq => $seq );
+        }
+        push @line, $ssr{$seq};
       }
-      push @line, $ssr{$seq};
     }
 
     push @peptides, \@line;
@@ -196,7 +207,8 @@ sub process_opts {
               'peptide_file=s', 'idx_peptide=i',  'fasta_file=s', 'remap_proteins',  
               'verbose', 'wspace_skip_idx=i', 'show_prot_names', 'output_file:s',
               'evaluated_file=s', 'broad_predictor=s', 'calc_ssr', 'score_idx:i',
-              'sort_within_prots=i', 'n_peptides=i', 'chk_file=s', 'chk_scr=f'
+              'sort_within_prots=i', 'n_peptides=i', 'chk_file=s', 'chk_scr=f',
+              'column_headings'
              ) || print_usage();
 
 # Add 9, 13, 14, 17
@@ -273,6 +285,7 @@ usage: $sub -a build_id [ -t outfile -n obs_cutoff -p proteins_file -v -b .3 ]
                           Primary purpose is to boost proteins on a particular 
                           list, e.g.
    --chk_scr              Score to apply for items in chk_file above.
+   --column_headings      File has col headings, paste new ones and don't score.
    -w, --wspace_skip_idx  Skip rows where column x, 1-based idx, is blank
   END
 # End of the line
