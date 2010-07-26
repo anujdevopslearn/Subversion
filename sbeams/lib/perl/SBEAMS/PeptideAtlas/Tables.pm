@@ -92,6 +92,7 @@ use vars qw(@ISA @EXPORT
     $TBAT_TRANSITION_SUITABILITY_LEVEL
 
     $TBAT_SRM_TRANSITION_SET
+    $TBAT_SRM_TRANSITION
 
     $TBAT_PROTEOTYPIC_PEPTIDE
     $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING
@@ -198,6 +199,7 @@ require Exporter;
     $TBAT_TRANSITION_SUITABILITY_LEVEL
 
     $TBAT_SRM_TRANSITION_SET
+    $TBAT_SRM_TRANSITION
 
     $TBAT_PROTEOTYPIC_PEPTIDE
     $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING
@@ -305,6 +307,7 @@ $TBAT_MODIFIED_PEPTIDE_ANNOTATION   = "${mod}modified_peptide_annotation";
 $TBAT_TRANSITION_SUITABILITY_LEVEL  = "${mod}transition_suitability_level";
 
 $TBAT_SRM_TRANSITION_SET            = "${mod}srm_transition_set";
+$TBAT_SRM_TRANSITION            = "${mod}srm_transition";
 
 $TBAT_PROTEOTYPIC_PEPTIDE           = "${mod}proteotypic_peptide";
 $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING   = "${mod}proteotypic_peptide_mapping";
