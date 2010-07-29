@@ -43,16 +43,13 @@ sub new {
 # This MyContentHandler package defines all the content handling callback
 # subroutines used the SAX parser
 ###############################################################################
-#package PepXMLContentHandler;
-use lib "$FindBin::Bin/../../perl/SBEAMS/PeptideAtlas";
-use PAxmlContentHandler;
+package PepXMLContentHandler;
 use strict;
 use Date::Manip;
 use vars qw(@ISA $VERBOSE);
 @ISA = qw(XML::Xerces::PerlContentHandler);
 $VERBOSE = 0;
 
-my $CONTENT_HANDLER;
 
 ###############################################################################
 # new
@@ -116,10 +113,12 @@ sub start_element {
     $attrs{$aa1} = $attrs{$aa1}->{value};
   }
 
+
   #### If we find the database name, store it
   if ($localname eq 'search_database') {
     my $local_path = $attrs{local_path}
       || die("ERROR: No local_path attribute for this search_database");
+
     #### If the user specified to force a database, use that
     if ($main::OPTIONS{force_ref_db}) {
       print "INFO: Overriding search_database in file '$local_path' with forced ".
@@ -147,11 +146,12 @@ sub start_element {
     }
 
   }
+
+
   #### If this is the start of a search_result, remember the name
   if ($localname eq 'spectrum_query') {
     my $spectrum = $attrs{spectrum}
       || die("ERROR: No spectrum attribute for this spectrum_query");
-    print "$spectrum\n"; #zhi
     $self->{current_search_result}->{spectrum} = $attrs{spectrum};
     $self->{current_search_result}->{start_scan} = $attrs{start_scan};
     $self->{current_search_result}->{end_scan} = $attrs{end_scan};
@@ -216,7 +216,6 @@ sub end_element {
   my ($self,$uri,$localname,$qname) = @_;
 
 
-  print "$localname,$qname\n";
   #### If this is the end of a search_hit, store info
   #if ($localname eq 'search_hit') {
   if ($localname eq 'spectrum_query') {
@@ -448,8 +447,7 @@ sub loadExperimentFromPepXMLFile {
 
 
   #### Set up the Xerces parser
-
- my $parser = XML::Xerces::XMLReaderFactory::createXMLReader();
+  my $parser = XML::Xerces::XMLReaderFactory::createXMLReader();
 
   $parser->setFeature("http://xml.org/sax/features/namespaces", $namespace);
 
@@ -465,6 +463,7 @@ sub loadExperimentFromPepXMLFile {
     $parser->setFeature("http://apache.org/xml/features/validation/dynamic",0);
   }
 
+
   $parser->setFeature("http://apache.org/xml/features/validation/schema",
     $schema);
 
@@ -473,13 +472,8 @@ sub loadExperimentFromPepXMLFile {
   my $error_handler = XML::Xerces::PerlErrorHandler->new();
   $parser->setErrorHandler($error_handler);
 
-  $CONTENT_HANDLER = MyContentHandler->new();
+  my $CONTENT_HANDLER = PepXMLContentHandler->new();
   $parser->setContentHandler($CONTENT_HANDLER);
-
-  #### Create the error handler and content handler
-  my $error_handler = XML::Xerces::PerlErrorHandler->new();
-  $parser->setErrorHandler($error_handler);
-  # my $CONTENT_HANDLER = PepXMLContentHandler->new();
 
   $CONTENT_HANDLER->setVerbosity($VERBOSE);
   $CONTENT_HANDLER->{counter} = 0;
