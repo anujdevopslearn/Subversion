@@ -689,10 +689,10 @@ sub encodeSectionTable {
     $closelink .= "\n<FONT COLOR=BLUE><A HREF=#null ONCLICK=toggle_em('$prefix');return><SPAN ID='${prefix}_text' NAME='${prefix}_text' >[Show more rows]</A></FONT>";
   }
 
-  # if no wrapping desired...
-  if ( $args{nowrap} ) {
-    $tab->setRowAttr( ROWS => [1..$tot], NOWRAP => 1 ); 
-  }
+#  # if no wrapping desired...
+#  if ( $args{nowrap} ) {
+#    $tab->setRowAttr( ROWS => [1..$tot], NOWRAP => 1 ); 
+#  }
 
   # Set header attributes
   if ( $args{header} ) {
