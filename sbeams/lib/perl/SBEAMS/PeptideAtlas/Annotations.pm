@@ -180,7 +180,7 @@ sub get_suitability_level {
 #+ 
 #  These come primarily from the modified_peptide_annotations table
 #- 
-sub get_mrm_transitions {
+sub get_mrm_transitions_old {
   my $self = shift;
   my %args = @_;
 
@@ -226,6 +226,60 @@ sub get_mrm_transitions {
   return \@rows;
 }
 
+sub get_mrm_transitions {
+  my $self = shift;
+  my %args = @_;
+
+  
+
+  return unless $args{peptides};
+  my %peps;
+  my $pep_str;
+  my $sep = '';
+  for my $pep ( @{$args{peptides}} ) {
+    next if $peps{$pep};
+    $pep_str .= $sep . "'" . $pep . "'";
+    $sep = ',';
+  }
+
+  my $sbeams = $self->getSBEAMS();
+
+  # Project control
+  my @accessible = $sbeams->getAccessibleProjects();
+  my $projects = join( ",", @accessible );
+  return '' unless $projects;
+
+  my $sql =<<"  END";
+  SELECT
+  peptide_accession,
+  stripped_peptide_sequence,
+  peptide_charge, 
+  q1_mz,
+  q3_mz,
+  q3_ion_label,  
+  collision_energy,
+  retention_time,
+  ssrcalc_relative_hydrophobicity,
+  set_tag,
+  level_name
+  FROM $TBAT_SRM_TRANSITION ST 
+  JOIN $TBAT_SRM_TRANSITION_SET STS 
+    ON ST.srm_transition_set_id = STS.srm_transition_set_id
+  LEFT JOIN $TBAT_PEPTIDE P
+    ON ST.stripped_peptide_sequence = P.peptide_sequence
+  JOIN $TBAT_TRANSITION_SUITABILITY_LEVEL TSL 
+    ON TSL.transition_suitability_level_id = ST.transition_suitability_level_id
+  WHERE stripped_peptide_sequence IN ( $pep_str )
+  AND IS_PUBLIC = 'Y'
+--  AND project_id IN ( $projects )
+--  AND level_score > 0.8
+  ORDER BY peptide_accession, peptide_sequence, q1_mz, level_score DESC, q3_mz
+  END
+  $log->info( "SQL coming\n $sql " );
+
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  return \@rows;
+}
 
 
 # STUB
