@@ -746,7 +746,7 @@ sub get_pabst_scoring_defs {
                    Xc => ' Any C-terminal peptide',
                    nX => ' Any N-terminal peptide',
 
-                   BA => ' More than 5 basic (protonatable) sites: H, K, R, n-term',
+                   BA => ' More than 4 basic (protonatable) sites: H, K, R, n-term',
 
                   obs => ' Peptides observed in Peptide Atlas',
                  PATR => ' Peptide exists in PA transition resource',
@@ -797,7 +797,7 @@ sub get_default_pabst_scoring {
                    D => 1,
                    R => 1,
                  obs => 2.0,
-                PATR => 2.0,
+                PATR => 5.0,
                    S => 1,
                min_l => 7,
                min_p => 0.2,
@@ -1020,8 +1020,7 @@ sub get_dirty_peptide_display {
                    Status => 'Status of peptide' );
 
 
-  my @peptides = ( $self->make_sort_headings( headings => \@headings,
-                                              default => 'adj_SS' )  );
+  my @peptides;
   my $naa = 'n/a';
   $naa = $sbeams->makeInactiveText($naa) if $sbeams->output_mode() =~ /html/i;
 
@@ -1041,6 +1040,10 @@ sub get_dirty_peptide_display {
     }
     push @peptides, [ @row];
   }
+
+  # Short circuit if there are no peptides
+  return '' unless scalar( @peptides );
+  unshift @peptides, $self->make_sort_headings(headings => \@headings, default => 'adj_SS');
 
   my $align = [qw(left left right right right right center right right right right right left )];
 
@@ -1075,12 +1078,14 @@ sub get_pabst_static_peptide_display {
   my %args = @_;
   # Check for required opts
   my $err;
-  for my $opt ( qw( link tr_info biosequence_id ) ) {
+  for my $opt ( qw( link tr_info biosequence_name ) ) {
     $err = ( $err ) ? $err . ',' . $opt : $opt if !defined $args{$opt};
   }
   die "Missing required parameter(s) $err" if $err;
   my $organism_id = $atlas->getCurrentAtlasOrganism( parameters_ref => {},
                                                      type => 'organism_id' );
+
+  $args{patr_peptides} ||= {};
 
   my $pabst_build_id = $self->get_pabst_build();
 
@@ -1108,6 +1113,10 @@ sub get_pabst_static_peptide_display {
     $dirty_peptides{$row[0]} = \@row;
   }
 
+  my $mapped_id = $self->get_pabst_mapped_id( $args{biosequence_name} );
+
+  # No id, no query
+  return '' unless $mapped_id;
 
 # 0 pabst_peptide_id
 # 1 pabst_build_id
@@ -1136,7 +1145,8 @@ sub get_pabst_static_peptide_display {
   SELECT DISTINCT preceding_residue, peptide_sequence, following_residue,
   suitability_score, predicted_suitability_score, merged_score,
   SSRCalc_relative_hydrophobicity, n_genome_locations, n_observations,
-  synthesis_warnings, syntheis_adjusted_score
+  synthesis_warnings, syntheis_adjusted_score, 
+  CASE WHEN stripped_peptide_sequence IS NULL then 'No' ELSE 'Yes' END AS PATR
   FROM $TBAT_PABST_PEPTIDE PP 
   JOIN $TBAT_PABST_PEPTIDE_MAPPING PM
   ON PM.pabst_peptide_id = PP.pabst_peptide_id 
@@ -1144,12 +1154,14 @@ sub get_pabst_static_peptide_display {
   ON PB.pabst_build_id = PP.pabst_build_id 
   JOIN $TBAT_BIOSEQUENCE B
   ON B.biosequence_id = PM.biosequence_id 
-  WHERE PM.biosequence_id = $args{biosequence_id}
+  LEFT OUTER JOIN $TBAT_SRM_TRANSITION STR
+  ON STR.stripped_peptide_sequence = PP.peptide_sequence
+  WHERE PM.biosequence_id = $mapped_id
   AND PB.organism_id = $organism_id
   AND PB.pabst_build_id = $pabst_build_id
-  ORDER BY syntheis_adjusted_score DESC
+  ORDER BY PATR DESC, syntheis_adjusted_score DESC
   ~;
-  $log->debug( $sql );
+  $log->info( $sql );
 
   my @headings = ( pre => 'Previous amino acid',
                    sequence => 'Amino acid sequence of peptide',
@@ -1162,9 +1174,12 @@ sub get_pabst_static_peptide_display {
                    n_obs => 'Number of times peptide was observed',
                    Annotations => 'Annotation of peptide features such as missed cleavage (MC), etc.',
                    adj_SS => 'Best suitability score, adjusted based on sequence features',
-                   Organisms => 'Organism(s) in which peptide was seen' );
+                   Organisms => 'Organism(s) in which peptide was seen',
+                   PATR => 'Peptide assay defined in transition resource'
+                  );
 
-  if ( $dp_data ) {
+  # Defer for now...
+  if ( 0 && $dp_data ) {
     push @headings, ( ESPP => 'Carr ESP predictor score',
                      Detected => 'Peptide observations',
                      n_prots => 'Number of  proteins to which peptide maps' ,
@@ -1222,7 +1237,15 @@ sub get_pabst_static_peptide_display {
     $row[5] = sprintf( "%0.2f", $row[5] );
     $row[6] = sprintf( "%0.1f", $row[6] );
     $row[10] = sprintf( "%0.2f", $row[10] );
+    if ( $row[11] eq 'Yes' ) {
+      $row[12] = $row[11];
+      $row[10] *= 5;
+    } else {
+      $row[12] = $sbeams->makeInactiveText( $row[11] );
+    }
     $row[11] = $row[1];
+#    $row[12] = ( $args{patr_peptides}->{$row[1]} ) ? 'Yes' : $sbeams->makeInactiveText( 'No' );
+
     $row[1] = "<A HREF=GetPeptide?_tab=3;atlas_build_id=$args{atlas_build_id};searchWithinThis=Peptide+Sequence;searchForThis=$row[1];action=QUERY;biosequence_id=$args{biosequence_id} TITLE='View peptide $row[1] details'>$row[1]</A>" if $row[8] || 1;
 
 
@@ -1284,6 +1307,30 @@ sub get_pabst_static_peptide_display {
     return "<TABLE WIDTH=600><BR>$html\n";
 
 } # End get pabst static display
+
+
+sub get_pabst_mapped_id {
+  my $self = shift;
+  $log->info( "never had a chance!\n" );
+  my $name = shift || return '';
+
+  my $sql = qq~
+  SELECT MAX( PM.biosequence_id )
+  FROM $TBAT_PABST_PEPTIDE PP 
+  JOIN $TBAT_PABST_PEPTIDE_MAPPING PM
+  ON PM.pabst_peptide_id = PP.pabst_peptide_id 
+  JOIN $TBAT_BIOSEQUENCE B
+  ON B.biosequence_id = PM.biosequence_id 
+  WHERE biosequence_name = '$name'
+  ~;
+
+  $log->info( $sql );
+  
+  my @ids = $sbeams->selectrow_array( $sql );
+  return $ids[0] || '';
+
+}
+
 
 
 #+
