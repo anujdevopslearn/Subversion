@@ -126,6 +126,9 @@ sub processDatabaseActions {
 	my %rowdata = (
 		       annotator_contact_id => $sbeams->getCurrent_contact_id(),
 		       spectrum_identification_id => $parameters{spectrum_identification_id},
+		       spectrum_id => $parameters{spectrum_id},
+		       identified_peptide_sequence => $parameters{peptide},
+		       identified_peptide_charge => $parameters{assumed_charge},
 		       spectrum_annotation_level_id => $parameters{user_spectrum_annotation},
 		       comment => $parameters{user_spectrum_commment}
 		       );
@@ -265,6 +268,7 @@ sub processRequest {
 	print '<TR ID="annotations_head" style="display:none"><TD ID="annotations_summary" COLSPAN="2">-- No annotations here --</TD></TR>';
     }
 
+    # lots of lint here...
     my $peptide = $parameters{peptide};
     $peptide =~ s/^.\.//;
     $peptide =~ s/\..$//;
@@ -489,6 +493,9 @@ sub processRequest {
     ~;
 
     print &printUserAnnotations(
+				spectrum_id => $parameters{'spectrum_id'},
+				modified_sequence => $parameters{'modified_sequence'},
+				charge => $parameters{'assumed_charge'},
 				spectrum_identification_id => $parameters{'spectrum_identification_id'},
 				form_fields => $hidden_form_fields
 				) if ($parameters{'spectrum_identification_id'});
@@ -1243,11 +1250,13 @@ sub printUserAnnotations {
     my %args = @_;
 
     my $buffer;
+    my $total = 0; # this starts as a counter, then becomes a string
     my $show_form = 1;
     my $line_sep = "<tr><td colspan='2'><hr size='1' noshade></td></tr>";
 
     my $sql = qq~
 	SELECT SA.spectrum_annotation_id, SA.comment, SA.date_modified,
+	       SA.spectrum_identification_id, SA.identified_peptide_sequence, SA.identified_peptide_charge,
 	       SL.spectrum_annotation_level_id, SL.level_name,
 	       C.first_name, C.last_name,
 	       UL.username
@@ -1258,7 +1267,7 @@ sub printUserAnnotations {
             ON ( annotator_contact_id = C.contact_id )
     INNER JOIN $TB_USER_LOGIN UL
             ON ( UL.contact_id = annotator_contact_id )
-	 WHERE spectrum_identification_id = '$args{spectrum_identification_id}'
+	 WHERE spectrum_id = '$args{spectrum_id}'
 	   AND SA.record_status = 'N'
       ORDER BY SA.date_modified DESC
         ~;
@@ -1273,15 +1282,25 @@ sub printUserAnnotations {
     if (@rows) {
 	foreach my $row (@rows)
 	{
-	    my ($annot_id, $comment, $date, $level_id, $level, $first, $last, $uname) = @{$row};
+	    my ($annot_id, $comment, $date, $ident_id, $sequence, $charge, $level_id, $level, $first, $last, $uname) = @{$row};
+	    $total++;
 
-	    $buffer .= "<tr id='${uname}_annot_tr'><th valign='top'>$level</th><td>$first $last ($date)<br />\n";
+	    if ($args{modified_sequence}.$args{charge} eq $sequence.$charge) {
+		$buffer .= "<tr id='${uname}${annot_id}_annot_tr'><th valign='top'>$level</th><td>$first $last ($date)<br />\n";
+	    } else {
+		my $link = $q->self_url();
+		$link =~ s/\?.*//;  # clear querystring
+		$link .= "?spectrum_identification_id=$ident_id;peptide=$sequence;assumed_charge=$charge";
+
+		$buffer .= "<tr bgcolor='#dddddd' id='${uname}${annot_id}_annot_tr'><th valign='top'>$level<br /><a href='$link' style='color:red'>$sequence +$charge</a></th><td>$first $last ($date)<br />\n";
+	    }
 
 	    my $disp_comment = $comment;
 	    $disp_comment =~ s|\n|<BR />\n|g; # display carriage returns
 	    $buffer .= "$disp_comment\n";
 
-	    if ($uname eq $current_username) {
+	    if ( ($uname eq $current_username) &&
+		 ($args{modified_sequence}.$args{charge} eq $sequence.$charge) ) {
 		$show_form = 0;
 
 		$buffer .= qq~
@@ -1328,11 +1347,12 @@ sub printUserAnnotations {
 	    ~;
 
     } elsif ($show_form) {
-	$buffer .= "<tr id='${current_username}_annot_tr'><th valign='top'><a href='javascript:showEditForm();'>Add annotation</a></th><td>&nbsp;</td></tr>\n";
+	$buffer .= "<tr id='${current_username}add_annot_tr'><th valign='top'><a href='javascript:showEditForm();'>Add annotation</a></th><td>&nbsp;</td></tr>\n";
 
 	$buffer .= &printUserAnnotationsForm(
 					     form_type => 'add',
 					     uname => $current_username,
+					     spectrum_id => $args{spectrum_id},
 					     extra_form_fields => $args{form_fields}
 					     );
 
@@ -1348,19 +1368,27 @@ sub printUserAnnotations {
 	  FROM $TBAT_SPECTRUM_ANNOTATION_LEVEL SL
     INNER JOIN $TBAT_SPECTRUM_ANNOTATION SA
             ON ( SA.spectrum_annotation_level_id = SL.spectrum_annotation_level_id )
-	 WHERE SA.spectrum_identification_id = '$args{spectrum_identification_id}'
+	 WHERE spectrum_id = '$args{spectrum_id}'
+	   AND identified_peptide_sequence = '$args{modified_sequence}'
+	   AND identified_peptide_charge = '$args{charge}'
 	   AND SA.record_status = 'N'
         ~;
 
     @rows = $sbeams->selectSeveralColumns($sql);
 
     my ($avg, $num) = @{$rows[0]};
+    if ($total != $num) {
+	$total = "($total total)";
+    } else {
+	$total = '';
+    }
+
     my $innerHTML;
 
     if ($num == 1) {
-	$innerHTML = "There is <a href=\"#user_annotations\">one user annotation</a> for this spectrum, with a score of <b>$avg%</b>";
+	$innerHTML = "There is <a href=\"#user_annotations\">one user annotation</a> $total for this spectrum, with a score of <b>$avg%</b>";
     } elsif ($num > 1) {
-	$innerHTML = "There are <a href=\"#user_annotations\">$num user annotations</a> for this spectrum, with an average score of <b>$avg%</b>";
+	$innerHTML = "There are <a href=\"#user_annotations\">$num user annotations</a> $total for this spectrum, with an average score of <b>$avg%</b>";
     }
 
     $buffer .=<< "EOJS" if $innerHTML;
@@ -1390,16 +1418,19 @@ sub printUserAnnotationsForm {
 
     my $spacer = "&nbsp;"x5;
 
+    my $trname = $args{uname};
+    $trname .= ($args{form_type} eq 'add') ? 'add' : $args{annot_id};
+
     my $buffer = qq~
 	<SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript">
 	<!--
 	function showEditForm() {
-	    document.getElementById('$args{uname}_annot_tr').style.display = 'none';
-	    document.getElementById('$args{uname}_form_tr').style.display = 'table-row';
+	    document.getElementById('${trname}_annot_tr').style.display = 'none';
+	    document.getElementById('${trname}_form_tr').style.display = 'table-row';
 	}
         function hideEditForm() {
-	    document.getElementById('$args{uname}_annot_tr').style.display = 'table-row';
-	    document.getElementById('$args{uname}_form_tr').style.display = 'none';
+	    document.getElementById('${trname}_annot_tr').style.display = 'table-row';
+	    document.getElementById('${trname}_form_tr').style.display = 'none';
 	}
 
         function confirm_delete() {
@@ -1438,10 +1469,13 @@ sub printUserAnnotationsForm {
     if ($args{form_type} eq 'update') {
 	$form_action = "UPDATE";
 	$args{extra_form_fields} .= "<INPUT TYPE='hidden' NAME='spectrum_annotation_id' VALUE='$args{annot_id}'>";
+
+    } else {
+	$args{extra_form_fields} .= "<INPUT TYPE='hidden' NAME='spectrum_id' VALUE='$args{spectrum_id}'>";
     }
 
     $buffer .= qq~
-	<tr style='display:none' id='$args{uname}_form_tr'>
+	<tr style='display:none' id='${trname}_form_tr'>
 	<th valign='top'>
 	<FORM METHOD="post" action="$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME">
 	$args{extra_form_fields}
