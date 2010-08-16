@@ -88,10 +88,15 @@ sub print_process {
 
   for my $peptide ( @{$merged} ) {
     if ( defined $args->{min_score} ) {
-#      print "min score is defined\n";
       next if $peptide->[17] <= $args->{min_score};
-#      print "$peptide->[17] is greater than $args->{min_score}\n";
     }
+    if ( defined $args->{no_mc} ) {
+      next if ( $peptide->[14] && $peptide->[14] =~ /MC/ );
+    }
+    if ( defined $args->{no_st} ) {
+      next if ( $peptide->[14] && $peptide->[14] =~ /ST/ );
+    }
+
     $peptide->[4] = sprintf( "%0.2f", $peptide->[4] ) if $peptide->[4] !~ /na/;
     $peptide->[5] = sprintf( "%0.2f", $peptide->[5] ) if $peptide->[5] !~ /na/;
     $peptide->[6] = sprintf( "%0.2f", $peptide->[6] ) if $peptide->[6] !~ /na/;
@@ -156,7 +161,8 @@ sub process_args {
   GetOptions( \%args, 'atlas_build=s@', 'show_builds', 'help', 'tsv_file=s', 
               'protein_file=s', 'n_peptides=i', 'config=s', 'default_config', 
               'bioseq_set=i', 'obs_min=i', 'verbose', 'name_prefix=s',
-              'build_name=s', 'min_score=i', 'chk_file=s', 'chk_scr=f'
+              'build_name=s', 'min_score=i', 'chk_file=s', 'chk_scr=f',
+              'no_mc', 'no_st'
              ) || print_usage();
 
   # Short-circuit if we just want help/documention
@@ -299,12 +305,6 @@ sub get_headings {
 
   return $pep_sel->get_pabst_headings();
 
-  my @headings = qw( biosequence_name preceding_residue peptide_sequence following_residue 
-                     empirical_proteotypic_score suitability_score molecular_weight 
-                     SSRCalc_relative_hydrophobicity n_protein_mappings n_genome_locations
-                     best_probability n_observations synthesis_score synthesis_warnings
-                     syntheis_adjusted_score );
-  return \@headings;
 }
 
 sub get_chk_hash {
