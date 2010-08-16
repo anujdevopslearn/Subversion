@@ -131,8 +131,6 @@ while( my $line = <PEPS> ) {
         $matched = map_peptide( $pepseq, 1 ) unless $opts->{supress_brute};
         if ( $matched ) {
           $stats{peptide_map_ok_brute}++;
-        } else {
-          print "NOMAP: >$pepseq<\n" if $opts->{show_mia};
         }
       }
     } # End if n_convert else 
@@ -141,13 +139,13 @@ while( my $line = <PEPS> ) {
       $stats{peptide_map_ok}++;
     } else {
       $stats{peptide_map_no}++;
-      print "NOMAP: $pepseq\n" if $opts->{show_mia};
+      print "MIA: $pepseq\n" if $opts->{show_mia};
       $matching_seq = 'na';
     }
     $tested{$pepseq}++;
   }
 
-  my $prot_str = 'na';
+  my $prot_str = 'no_mapping';
   my $prot_cnt = 0;
   if ( $peps{$pepseq} ) {
     $prot_str = $peps{$pepseq};
@@ -209,7 +207,10 @@ for my $acc ( keys( %{$acc2seq} ) ) {
   if ( $opts->{bin_max} ) {
     $n_peps = $opts->{bin_max} if $n_peps > $opts->{bin_max};
   }
-  if ( !$n_peps && $opts->{show_nomap} ) {
+
+#  if ( $opts->{show_nomap} && ( !$n_peps || ($n_peps < 5 ))) {
+#  TODO add in threshold for n_peps as option.
+  if ( $opts->{show_nomap} && !$n_peps ) {
     print "NOMAP: $acc\n";
   }
   my $key_num = ( $n_peps > 9 ) ? $n_peps : '0' . $n_peps;
