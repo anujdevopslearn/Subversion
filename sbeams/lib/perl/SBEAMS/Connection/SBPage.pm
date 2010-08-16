@@ -116,6 +116,7 @@ $header
 
   
   my $jscript = $this->_getJavascriptFunctions();
+  my $sort_js = ( $this->{sortable} ) ? $sbeams->getSortableHTML() : ''; 
   my $style = $this->_getStyleSheet();
   my $navbar = $this->_getNavBar( $sbeams );
   my $footer = $this->_getFooter();
@@ -182,6 +183,7 @@ $header
 
   <!------- Javascript functions --------------------------------------------->
   $jscript
+  $sort_js
 
   <!------- Stylesheet ------------------------------------------------------->
   $style
