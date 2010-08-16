@@ -128,21 +128,23 @@ sub get_list_entries {
     ["num_peps"," COUNT( distinct peptide_id )", "Num Peps"],
     ["num_obs","SUM(n_observations) ", "Num Obs"],
     ["key_accession","PLP.key_accession ", "Related"],
+    ["length","len( CAST( B.biosequence_seq AS VARCHAR(2000) ) ) ", "Length"],
+    ["Status","CASE WHEN order_status = 'D' THEN 'Delivered' ELSE 'Unknown' END", "Status"],
   );
 
   # Defalut to query mode
   $params->{apply_action} ||= 'QUERY';
 
   if ( $params->{apply_action} =~ /(QUERY|GO)/) {
-    if ( $params->{show_nxst} ) {
-      push @column_array, ["NxST","CASE WHEN CAST( Biosequence_seq AS VARCHAR(2000) ) LIKE '%N[^P][ST]%' THEN 'Yes' ELSE 'No' END ", "NxST"];
+    if ( 1 || $params->{show_nxst} ) {
+      push @column_array, ["NxST","CASE WHEN CAST( Biosequence_seq AS VARCHAR(2000) ) LIKE '%N[^P][ST]%' THEN 'Yes' WHEN CAST( Biosequence_seq AS VARCHAR(2000) ) IS NULL THEN 'n/a' ELSE 'No' END ", "NxST"];
     }
-    if ( $params->{show_cys} ) {
-      push @column_array, ["Cys","CASE WHEN CAST( Biosequence_seq AS VARCHAR(2000) ) LIKE '%C%' THEN 'Yes' ELSE 'No' END ", "Cys"];
+    if ( 1 || $params->{show_cys} ) {
+      push @column_array, ["Cys","CASE WHEN CAST( Biosequence_seq AS VARCHAR(2000) ) LIKE '%C%' THEN 'Yes' WHEN CAST( Biosequence_seq AS VARCHAR(2000) ) IS NULL THEN 'n/a' ELSE 'No' END ", "Cys"];
     }
   } else {
-    push @column_array, ["NxST","CASE WHEN CAST( Biosequence_seq AS VARCHAR(2000) ) LIKE '%N[^P][ST]%' THEN 'Yes' ELSE 'No' END ", "NxST"];
-    push @column_array, ["Cys","CASE WHEN CAST( Biosequence_seq AS VARCHAR(2000) ) LIKE '%C%' THEN 'Yes' ELSE 'No' END ", "Cys"];
+    push @column_array, ["NxST","CASE WHEN CAST( Biosequence_seq AS VARCHAR(2000) ) LIKE '%N[^P][ST]%' THEN 'Yes' WHEN biosequence_seq = '' THEN 'n/a' ELSE 'No' END ", "NxST"];
+    push @column_array, ["Cys","CASE WHEN CAST( Biosequence_seq AS VARCHAR(2000) ) LIKE '%C%' THEN 'Yes' WHEN biosequence_seq = '' THEN 'n/a' ELSE 'No' END ", "Cys"];
   }
 
   #### Build the columns part of the SQL statement
@@ -165,26 +167,27 @@ sub get_list_entries {
   my $sql = qq~
   SELECT DISTINCT $columns_clause
   FROM $TBAT_PROTEIN_LIST_PROTEIN PLP
-  JOIN $TBAT_BIOSEQUENCE B 
-    ON PLP.protein_name = B.biosequence_name
+  LEFT JOIN $TBAT_BIOSEQUENCE B 
+    ON ( PLP.protein_name = B.biosequence_name OR B.biosequence_name IS NULL )
   LEFT JOIN $TBAT_PEPTIDE_MAPPING PM 
-    ON B.biosequence_id = PM.matched_biosequence_id 
+    ON B.biosequence_id = PM.matched_biosequence_id
   LEFT JOIN $TBAT_PEPTIDE_INSTANCE PI 
   ON PI.peptide_instance_id = PM.peptide_instance_id 
-  WHERE atlas_build_id = 217
+  WHERE ( atlas_build_id = 217 OR atlas_build_id IS NULL )
+
   AND protein_list_id = $args{list_id}
   AND protein_name = key_accession  -- For now, limit to 'primary' accession
-  GROUP BY protein_name, protein_description, key_accession, CAST( biosequence_seq AS VARCHAR(2000) )
+  AND protein_name NOT LIKE '%-1'
+  GROUP BY protein_name, protein_description, key_accession, CAST( biosequence_seq AS VARCHAR(2000) ), order_status 
   ORDER BY key_accession ASC 
   ~;
-
-
+ 
   my $resultset_ref = {};
 
   my $hidden_cols = { biosequence_seq => 1 };
 #  my $trim_width_ref = { Description => 40 };
 
-  my $url_cols = { 'Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id;protein_name=%V&action=GO;show_aa_content=1",
+  my $url_cols = { 'Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetProtein?show_synthpep_track=1;atlas_build_id=$atlas_build_id;protein_name=%V&action=GO;show_aa_content=1",
                    'Related' => "$CGI_BASE_DIR/PeptideAtlas/compareProteins?build_id=$atlas_build_id;protein_list_id=$args{list_id};key_accession=%V&action=QUERY" };
 
   my $query_name = "$SBEAMS_SUBDIR/proteinListDetails";
