@@ -40,6 +40,15 @@ use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::BioLink::Tables;
 
+use lib "$FindBin::Bin";
+use lib "/net/db/projects/PeptideAtlas/pipeline/lib/ensembl-57/modules";
+use lib "/net/db/projects/PeptideAtlas/pipeline/bin";
+use DBI;
+
+use Bio::Graphics::Panel;
+use Bio::SeqFeature::Generic;
+use Bio::EnsEMBL::Registry;
+
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
@@ -134,6 +143,7 @@ sub main {
   }
 
 
+
 } # end main
 
 
@@ -149,6 +159,8 @@ sub handle_request {
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
 
+  #### Declare some variables
+  my ($pid, $map);
 
   #### Show current user context information
   print "<BR>\n" if ($sbeams->output_mode() eq 'html');
@@ -249,6 +261,7 @@ sub handle_request {
     $parameters{input_form_format} = "minimum_detail";
     $parameters{presence_level_constraint} = "1,2";
     $parameters{redundancy_constraint} = "4";
+    $parameters{protein_properties_constraint} = "2";
     $parameters{covering_constraint} = "0";
   }
 
@@ -404,7 +417,8 @@ sub handle_request {
 
   #### Build N_DISTINCT_PEPTIDES constraint
   my $n_distinct_peptides_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"SUM(PID.n_distinct_peptides)",
+    constraint_column=>"PID.n_distinct_peptides",
+    #constraint_column=>"SUM(PID.n_distinct_peptides)",
     constraint_type=>"flexible_int",
     constraint_name=>"Number of Distinct Peptides",
     constraint_value=>$parameters{n_distinct_peptides_constraint} );
@@ -443,6 +457,15 @@ sub handle_request {
   return if ($is_covering_clause eq '-1');
   $is_covering_clause =~ s/LIKE 'on'/= 1/;
 
+  #### Build PROTEIN_PROPERTIES constraint
+  my $protein_properties_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"QO.protein_property",
+    constraint_type=>"plain_text",
+    constraint_name=>"Protein Properties",
+    constraint_value=>$parameters{protein_properties_constraint} );
+  return if ($protein_properties_clause eq '-1');
+
+
   ## get organism_id to pass on to url_cols
   my $tsql = qq~
       SELECT BS.organism_id
@@ -457,6 +480,23 @@ sub handle_request {
        " with $tsql\n\n";
 
   $parameters{organism_id} = $organism_id;
+
+  ## get list of protein property column names from query_options table
+  my $tsql = qq~
+      SELECT option_key
+      FROM $TBAT_QUERY_OPTION
+      WHERE option_type = 'protein_property'
+      ~;
+ 
+  my @protein_properties_available = $sbeams->selectOneColumn($tsql) or
+      die "\nERROR: Unable to find any protein properties" .
+      " with $tsql\n\n";
+
+  $protein_properties_clause = "JOIN ";
+  for my $prop (@protein_properties_available) {
+  }
+
+  #exit;
 
   ## handle file upload and clause for sql for $parameters{upload_file}
   my $biosequence_names_clause;
@@ -552,6 +592,8 @@ sub handle_request {
   my @represented_by_biosequence_sql;
   my @group_number_sql;
   my @seq_unique_prots_sql;
+  my @is_keratin_sql;
+  my @is_immunoglobulin_sql;
   my @biosequence_description_sql;
 
   # Define SQL specific for displaying protein identifications
@@ -571,6 +613,8 @@ sub handle_request {
   $represented_by_biosequence_sql[0] = "BS_REP.biosequence_name";
   $group_number_sql[0] = "PID.protein_group_number";
   $seq_unique_prots_sql[0] = "PID.seq_unique_prots_in_group";
+  $is_keratin_sql[0]="(CASE WHEN BPS.is_keratin=1 THEN 'ker' ELSE '' END)";
+  $is_immunoglobulin_sql[0]="(CASE WHEN BPS.is_immunoglobulin=1 THEN 'Ig' ELSE '' END)";
   $biosequence_description_sql[0] =
         "CAST(BS_REF.biosequence_desc AS varchar(255))";
 
@@ -592,6 +636,8 @@ sub handle_request {
   $represented_by_biosequence_sql[1] = "BS_REP.biosequence_name";
   $group_number_sql[1] = "PID.protein_group_number";
   $seq_unique_prots_sql[1] = "PID.seq_unique_prots_in_group";
+  $is_keratin_sql[1]="(CASE WHEN BPS.is_keratin=1 THEN 'ker' ELSE '' END)";
+  $is_immunoglobulin_sql[1]="(CASE WHEN BPS.is_immunoglobulin=1 THEN 'Ig' ELSE '' END)";
   $biosequence_description_sql[1] =
         "CAST(BS_REL.biosequence_desc AS varchar(255))";
 
@@ -613,31 +659,10 @@ sub handle_request {
   $represented_by_biosequence_sql[2] = "BS_REP.biosequence_name";
   $group_number_sql[2] = "PID.protein_group_number";
   $seq_unique_prots_sql[2] = "PID.seq_unique_prots_in_group";
+  $is_keratin_sql[2]="(CASE WHEN BPS.is_keratin=1 THEN 'ker' ELSE '' END)";
+  $is_immunoglobulin_sql[2]="(CASE WHEN BPS.is_immunoglobulin=1 THEN 'Ig' ELSE '' END)";
   $biosequence_description_sql[2] =
         "CAST(BS_INDIS.biosequence_desc AS varchar(255))";
-
-  # Define SQL specific for displaying biosequences stored in
-  # biosequence_relationship that match the constraints.
-  # 04/08/10: I don't think we need these anymore but wait b4
-  # deleting.
-  $biosequence_name_sql[3] = "BS_REL.biosequence_name";
-  $is_covering_sql[3] = "NULL";
-  $presence_level_sql[3] = "NULL";
-  $probability_sql[3] = "NULL";
-  $confidence_sql[3] = "NULL";
-  $n_observations_sql[3] = "NULL";
-  $estimated_ng_per_ml_sql[3] = "NULL";
-  $abundance_uncertainty_sql[3] = "NULL";
-  $n_distinct_peptides_sql[3] = "NULL";
-  $relationship_phrase_sql[3] = "BRT.relationship_phrase";
-  $relationship_sort_order_sql[3] = "NULL";
-  $presence_level_sort_order_sql[3] = "NULL";
-  $reference_biosequence_sql[3] = "BS_REL.biosequence_name";
-  $represented_by_biosequence_sql[3] = "BS_REP.biosequence_name";
-  $group_number_sql[3] = "PID.protein_group_number";
-  $seq_unique_prots_sql[3] = "PID.seq_unique_prots_in_group";
-  $biosequence_description_sql[3] =
-        "CAST(BS_REL.biosequence_desc AS varchar(255))";
 
 
   for (my $i=0; $i<$n_sub_queries; $i++) {
@@ -686,6 +711,8 @@ sub handle_request {
         ["seq_unique_prots_in_group","$seq_unique_prots_sql[$i]", "Seq Uniq Prots in Grp"],
         @GO_columns,
         ["protein_group_seq_align_link","NULL","Protein Group Seq Alignmt"],
+				["is_keratin",$is_keratin_sql[$i],"Ker atin"],
+				["is_immunoglobulin",$is_immunoglobulin_sql[$i],"Ig"],
 				["biosequence_description",$biosequence_description_sql[$i],"Protein Description"],
 				["biosequence_accessor","DBX.accessor","biosequence_accessor"],
 				["biosequence_accessor_suffix","DBX.accessor_suffix","biosequence_accessor_suffix"],
@@ -830,6 +857,8 @@ sub handle_request {
 	 INNER JOIN $TBAT_BIOSEQUENCE BS_REP
 	      ON ( BS_REP.biosequence_id = PID.represented_by_biosequence_id )
               AND ( BS_REP.biosequence_set_id = BSS.biosequence_set_id)
+         LEFT JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPP
+              ON ( BPP.biosequence_id = PID.biosequence_id )
 	 LEFT JOIN $TB_DBXREF DBX ON ( DBX.dbxref_id = BS_REF.dbxref_id )
 	 INNER JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL
 	      ON ( PPL.protein_presence_level_id = PID.presence_level_id )
@@ -842,6 +871,7 @@ sub handle_request {
          $biosequence_gene_name_clauses[$i]
          $biosequence_desc_clauses[$i]
          $n_observations_clause
+         $n_distinct_peptides_clause
          $chromosome_clause
          $genetic_locus_clause
          $start_in_chromosome_clause
@@ -980,6 +1010,450 @@ sub handle_request {
         column_titles_ref=>\@column_titles,
       );
 
+
+  ##########################################################################
+	#### Draw the protein and gene location graph
+
+if ($organism_id == 2) {
+    ## Do everything invovled with drawing the graph
+    #### Connect to Ensembl database
+    my $host = 'mysql';
+    my $user = 'guest';
+    my $password = 'guest';
+
+    my $registry = 'Bio::EnsEMBL::Registry';
+    $registry->load_registry_from_db(
+      -host => $host,
+      -user => $user,
+      -pass => $password,
+      );
+
+    ####read passed args, set up variables
+    my %args = @_;
+
+    #### Get input from PeptideAtlas
+    my @acclist;
+    my @coord1_list;
+    my @coord2_list;
+    my @strand_list;
+    my $chrom_num;
+    my $header = (<>);
+    my $row;
+
+    for my $row ( 0 .. scalar @{$resultset_ref->{data_ref}} - 1) {
+      {my $data_item = $resultset_ref->{data_ref}->[$row]->[0];
+      push @acclist, $data_item;
+      }
+      {my $data_item = $resultset_ref->{data_ref}->[$row]->[9];
+      push @coord1_list, $data_item;
+      }
+      {my $data_item = $resultset_ref->{data_ref}->[$row]->[10];
+      push @coord2_list, $data_item;
+      }
+      {my $data_item = $resultset_ref->{data_ref}->[$row]->[11];
+      push @strand_list, $data_item;
+      }
+    }
+
+    #### Match Swiss-Prot proteins to Ensembl identical matches
+    my $tsql = qq~
+    SELECT
+    BS_SWISSIPI.biosequence_name as 'Swiss-Prot or IPI',
+    BS_ENS.biosequence_name as 'Ensembl',
+    BPS.start_in_chromosome as 'Start',
+    BPS.end_in_chromosome as 'End',
+    BPS.strand as 'Strand'
+
+    FROM $TBAT_ATLAS_BUILD AB
+    JOIN $TBAT_BIOSEQUENCE_SET BSS
+      ON ( BSS.biosequence_set_id = AB.biosequence_set_id )
+    JOIN $TBAT_BIOSEQUENCE BS_SWISSIPI
+      ON ( BS_SWISSIPI.biosequence_set_id = BSS.biosequence_set_id )
+    JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BR
+      ON ( BR.reference_biosequence_id = BS_SWISSIPI.biosequence_id )
+      AND ( BR.atlas_build_id = AB.atlas_build_id )
+    JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT
+      ON ( BRT.biosequence_relationship_type_id = BR.relationship_type_id )
+    JOIN $TBAT_BIOSEQUENCE BS_ENS
+      ON ( BS_ENS.biosequence_set_id = BSS.biosequence_set_id )
+      AND ( BS_ENS.biosequence_id = BR.related_biosequence_id )
+    JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPS
+      ON ( BPS.biosequence_id = BS_ENS.biosequence_id )
+
+    WHERE BRT.relationship_name = 'identical'
+      AND AB.atlas_build_id = $atlas_build_id 
+      AND (BS_SWISSIPI.biosequence_name like 'A%' OR 
+	BS_SWISSIPI.biosequence_name like 'B%' OR 
+	BS_SWISSIPI.biosequence_name like 'C%' OR 
+	BS_SWISSIPI.biosequence_name like 'O%' OR 
+	BS_SWISSIPI.biosequence_name like 'P%' OR 
+	BS_SWISSIPI.biosequence_name like 'Q%' OR
+	BS_SWISSIPI.biosequence_name like 'IPI%' )
+      AND BS_ENS.biosequence_name like 'ENSP%'
+    ~;
+
+    my @swiss_to_ens = $sbeams->selectSeveralColumns($tsql);
+
+    my %swiss2ens_hash;
+    my $swiss2ens = \%swiss2ens_hash;
+
+    for (my $i = 0; $i < scalar(@swiss_to_ens); $i++) {
+      my $swiss_id = $swiss_to_ens[$i][0];
+      my $ens_id = $swiss_to_ens[$i][1];
+      my $put_start = $swiss_to_ens[$i][2];
+      my $put_end = $swiss_to_ens[$i][3];
+      my $strand = $swiss_to_ens[$i][4];
+      $swiss2ens->{$swiss_id}->{start} = $put_start;
+      $swiss2ens->{$swiss_id}->{end} = $put_end;
+      $swiss2ens->{$swiss_id}->{strand} = $strand;
+      }
+ 
+    #### Initiate variables, read start/end user input values
+    my @gene_list;
+    my @matchgene_list;
+    my $chrom;
+    my $chunk_name;
+    my $chromlen;
+  
+    my $stend_option;
+    my $start_bp;
+    my $st_modifier;
+    my $end_bp;
+    my $end_modifier;
+
+    my $start_chunk = $parameters{start_in_chromosome};
+    my $end_chunk = $parameters{end_in_chromosome};
+    my $chrom_num = $parameters{chromosome};
+
+    if ($start_chunk eq '') {
+      $start_bp = '';
+      $st_modifier = '';
+    } else {
+      $start_chunk =~ /(\D*)(\d+)/;
+      $st_modifier = $1;
+      $start_bp = $2;
+    }
+
+    if ($end_chunk eq '') {
+      $end_bp = '';
+      $end_modifier = '';
+    } else {
+      $end_chunk =~ /(\D*)(\d+)/;
+      $end_modifier = $1;
+      $end_bp = $2;
+    }
+
+    if (($start_bp eq '') and ($end_bp eq '')) {
+      $stend_option = 'aaa';
+    } elsif (($start_bp ne '') and ($st_modifier eq '>') and ($end_bp eq '')) {
+      $stend_option = 'bbb';
+    } elsif (($start_bp eq '') and ($end_bp ne '') and ($end_modifier eq '<')) {
+      $stend_option = 'ccc';
+    } elsif (($start_bp ne '') and ($st_modifier eq '>') and ($end_bp ne '') and ($end_modifier eq '<')) {
+      $stend_option = 'ddd';
+    }
+
+    #### Initialize gene data from Ensembl database
+    my $slice_adaptor = $registry->get_adaptor( 'Human', 'Core', 'Slice' );
+    my $gene_adaptor = $registry->get_adaptor('Human', 'Core', 'Gene' );
+
+    if ($stend_option eq 'aaa') {
+      $chrom = $slice_adaptor->fetch_by_region( 'chromosome', $chrom_num);
+      $chunk_name = "Entire";
+    } elsif ($stend_option eq 'bbb') {
+      $chrom = $slice_adaptor->fetch_by_region('chromosome', $chrom_num, $start_bp + 1); 
+      $chunk_name = "$start_bp bp to End";
+    } elsif ($stend_option eq 'ccc') {
+      $chrom = $slice_adaptor->fetch_by_region( 'chromosome', $chrom_num, 0, $end_bp + 1);
+      $chunk_name = "Start to $end_bp bp";
+    } elsif ($stend_option eq 'ddd') {
+      $chrom = $slice_adaptor->fetch_by_region('chromosome', $chrom_num, $start_bp + 1, $end_bp + 1); 
+      $chunk_name = "$start_bp bp to $end_bp bp";
+    } else {
+      $chrom = $slice_adaptor->fetch_by_region( 'chromosome', $chrom_num);
+      $chunk_name = "Entire";
+      print "<p>Unable to draw standard image within these constraints</p>\n";
+    }
+
+    #### Read PeptideAtlas protein information
+    sub create_peptideatlas_feature($$$);
+
+    my $p;
+    my $protein_acc;
+    my $protein_start;
+    my $protein_stop;
+    my $protein_score;
+    my $protein_strand;
+    my $protein_strand_num;
+    my $num_protein;
+    my $acclist = scalar @acclist;
+    my $no_coord_count = 0;
+    my @protein_list;
+
+
+    LINE: for $num_protein (0 .. ($acclist - 1)) {
+      $protein_acc  =  $acclist[$num_protein];
+      if ($protein_acc =~ /^(A|B|C|O|P|Q)(.{5})/) {
+        $protein_start = $swiss2ens->{$protein_acc}->{start};
+        $protein_stop = $swiss2ens->{$protein_acc}->{end};
+        if ($protein_start eq '') {
+          $no_coord_count ++;
+          next LINE;
+        }
+      } else {
+        $protein_start = $coord1_list[$num_protein];
+        $protein_stop =  $coord2_list[$num_protein];
+      }
+
+      if (($stend_option eq 'bbb') or ($stend_option eq 'ddd')) {
+        $protein_start -= $start_bp;
+        $protein_stop -= $start_bp;
+      }
+
+      $p = create_peptideatlas_feature($protein_start, $protein_stop, $protein_score);
+      push @protein_list, $p;
+    }
+
+    print "<p>No coordinates available for $no_coord_count proteins</p>\n";
+
+    #### Grab gene data from Ensembl
+    my $genes = $gene_adaptor->fetch_all_by_Slice($chrom);
+
+    GENE: while ( my $gene = shift @{$genes} ) {
+      my $gene_start     = $gene->start();
+      my $gene_end       = $gene->end();
+      my $gene_strand    = $gene->strand();
+      my $gene_type      = $gene->biotype();
+      my $gene_name      = $gene->stable_id();
+
+      if ($gene_type eq 'protein_coding') {
+        my $g = Bio::SeqFeature::Generic->new(
+		-start => $gene_start,
+		-end   => $gene_end,
+		-score => 1000,
+		-display_name => $gene_name );
+        push @gene_list, $g;
+
+        PROT: for $num_protein (0 .. ($acclist - 1)) {
+          $protein_acc  =  $acclist[$num_protein];
+          if ($protein_acc =~ /^(A|B|C|O|P|Q)(.{5})/) {
+            $protein_start = $swiss2ens->{$protein_acc}->{start};
+            $protein_stop = $swiss2ens->{$protein_acc}->{end};
+ 	    $protein_strand = $swiss2ens->{$protein_acc}->{strand};
+            if ($protein_start eq '') {
+              next PROT;
+	    }
+          } else {
+            $protein_start = $coord1_list[$num_protein];
+            $protein_stop =  $coord2_list[$num_protein];
+	    $protein_strand = $strand_list[$num_protein];
+          }
+
+          if (($stend_option eq 'bbb') or ($stend_option eq 'ddd')) {
+            $protein_start -= $start_bp;
+	    $protein_stop -= $start_bp;
+          }
+
+          if ($protein_strand eq '+') {
+	    $protein_strand_num = 1;
+	  } else {
+	    $protein_strand_num = -1;
+	  }
+
+          if (($protein_start >= $gene_start) and ($protein_stop <= $gene_end)) {
+
+	    if ($gene_strand == $protein_strand_num) {
+#print "prot st:$protein_start end:$protein_stop  ";
+#print "gene st:$gene_start end:$gene_end  ";
+
+	      my $match_gene = Bio::SeqFeature::Generic->new(
+			-start => $gene_start,
+			-end   => $gene_end,
+			-score => 1000 ),
+			-display_name => $gene_name;
+	      push @matchgene_list, $match_gene;
+	      next GENE;
+	    } else {
+	      next PROT;
+	    }
+          }
+        }
+      }
+    }
+
+
+    #### Grab karyotype band data from Ensembl database
+    my @kary_list;
+    my $kary_end;
+    my @kary_end_list;
+    my $kary_adaptor = $registry->get_adaptor('Human', 'Core', 'KaryotypeBand' );
+    my $karyotypes = $kary_adaptor->fetch_all_by_Slice($chrom);
+    while ( my $kary = shift @{$karyotypes} ) {
+      my $kary_start  = $kary->start();
+         $kary_end    = $kary->end();
+      my $kary_name   = $kary->name();
+      my $kary_stain  = $kary->stain();
+      my $k;
+
+      if ($kary_stain =~ /gneg/ ) {
+        $k = Bio::SeqFeature::Generic->new(
+		-start => $kary_start,
+		-end   => $kary_end,
+		-display_name => $kary_name,
+		-score => 400 );
+      } elsif ($kary_stain =~ /gpos../ ) {
+        $k = Bio::SeqFeature::Generic->new(
+		-start => $kary_start,
+		-end   => $kary_end,
+		-display_name => $kary_name,
+		-score => 800 );
+      } elsif ($kary_stain =~ /acen/ ) {
+        $k = Bio::SeqFeature::Generic->new(
+		-start => $kary_start,
+		-end   => $kary_end,
+		-display_name => $kary_name,
+		-score => 1000 );
+      } else {
+        $k = Bio::SeqFeature::Generic->new(
+		-start => $kary_start,
+		-end   => $kary_end,
+		-display_name => $kary_name,
+		-score => 200 );
+      }
+
+
+      push @kary_end_list, $kary_end;
+      push @kary_list, $k;
+    }
+
+    my @sorted_kary_end = sort {$a <=> $b} @kary_end_list;
+
+    if ($stend_option eq 'ccc') {
+      $chromlen = $end_bp;
+    } elsif ($stend_option eq 'ddd') {
+      $chromlen = $end_bp - $start_bp;
+    } else {
+      $chromlen = @sorted_kary_end[(scalar @kary_end_list) - 1];
+    }
+#chrom.length()?
+
+    #### Initialize main panel, track sequence, and track ruler
+    my $panel = Bio::Graphics::Panel->new( -'length'    => $chromlen,
+		-key_style => 'between',
+                -width     => 1600,
+                -empty_tracks => 'suppress',
+                -pad_top   => 10,
+                -pad_bottom => 10,
+                -pad_left  => 40,
+                -pad_right => 20 );
+
+
+    my $ruler = Bio::SeqFeature::Generic->new( -end => $chromlen,
+                -start => 2,
+                -display_name => 'Sequence Position');
+
+    my $sequence = Bio::SeqFeature::Generic->new( -end => $chromlen,
+                -start => 1,
+                -display_name => 'Sequence Position');
+
+    #### Add all the tracks to the panel
+    ## Add chromosome track
+    $panel->add_track( $sequence,
+                -glyph  => 'segments',
+      		-bgcolor => 'black',
+		-key  => "Chromosome $chrom_num -- $chunk_name",
+		-tick   => 2,
+		-min_score => 0,
+		-max_score => 1000
+		);
+
+    ## Add observed protein track
+    $panel->add_track( \@protein_list,
+                -glyph     => 'graded_segments',
+                -bgcolor   => 'firebrick',
+                -key       => 'Protein Location',
+                -bump      => 1,
+                -height    => 8,
+                );
+
+    ## Add ruler track
+    $panel->add_track( $ruler,
+	        -glyph  => 'anchored_arrow',
+                -tick   => 2,
+                -height => 8,
+                -key  => 'Chromosome Length (relative to requested section)'
+		);
+
+    ## Add karyotype banding track
+    $panel->add_track( \@kary_list,
+                -glyph     => 'graded_segments',
+                -bgcolor   => 'black',
+		-font      => 'gdTinyFont',
+                -key       => 'Karyotypic Banding',
+		-bump      => 0,
+                -height    => 6,
+		-label     => 1,
+		-min_score => 0,
+		-max_score => 1000,
+                );
+
+    ## Add yes_genes track
+    $panel->add_track( \@matchgene_list,
+                -glyph     => 'graded_segments',
+                -bgcolor   => '#BA55D3',
+                -key       => 'Location of genes covered by PeptideAtlas',
+                -bump      => 1,
+                -height    => 8,
+		-label     => 0,
+                ); 
+
+    ## Add genes track
+    $panel->add_track( \@gene_list,
+                -glyph     => 'graded_segments',
+                -bgcolor   => 'cornflowerblue',
+                -key       => 'Gene Location',
+                -bump      => 1,
+                -height    => 8,
+		-label     => 0,
+                ); 
+
+ $pid = $$;
+ $map = "<MAP NAME='$pid'>\n";
+my @objects = $panel->boxes();
+for my $obj (@objects) {
+  my $key_name = $obj->[0]->display_name();
+  my $coords = join( ", ", @$obj[1..4] );
+  $map .= "<AREA SHAPE='RECT' COORDS='$coords' TITLE='$key_name'>\n";
+  }
+$map .= '</MAP>';
+
+    #### Create image file
+    my $file_name = "/net/dblocal/www/html/sbeams/images/GetProteinsChromosome.png";
+# my $file_name = "get_proteins_chromosome_17.png";
+      open( OUT, ">$file_name" ) || die "$!: $file_name";
+      binmode(OUT);
+      print OUT $panel->png;
+      $panel->finished;
+      close OUT;
+
+    #### sub routine for making Peptide protein feature
+    sub create_peptideatlas_feature($$$) {
+
+      my ($protein_start, $protein_stop, $protein_score, $protein_acc) = (shift, shift, shift, shift);
+      my $p = Bio::SeqFeature::Generic->new(
+                -start => $protein_start, 
+                -end => $protein_stop,
+                -score => $protein_score,
+		-display_name => $protein_acc );
+    }
+
+
+
+    } else {
+    print "Unable to graphically depict non-human builds";
+    }
+  }
+
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
       $sbeams->writeResultSet(
@@ -990,7 +1464,6 @@ sub handle_request {
         query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
         column_titles_ref=>\@column_titles,
       );
-    }
 
 
     #### Display the resultset
@@ -1004,6 +1477,17 @@ sub handle_request {
       column_titles_ref=>\@column_titles,
       base_url=>$base_url,
     );
+
+    #### Display Graphic
+
+  if ($organism_id == 2) {
+    my $imgsrcbuffer = "<IMG SRC=\"/sbeams/images/GetProteinsChromosome.png\" ISMAP USEMAP='#$pid' ALT=\"Graphical Depiction of Proteins and Genes for Selected Chromosome\">";
+
+    if ($sbeams->output_mode() eq 'html') {
+      print "<p>$imgsrcbuffer $map</p>";
+	}
+  }
+
 
 
     #### Display the resultset controls
