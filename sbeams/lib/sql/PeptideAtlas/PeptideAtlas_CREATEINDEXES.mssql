@@ -57,4 +57,6 @@ CREATE NONCLUSTERED INDEX idx_represented_by_biosequence_id ON dbo.protein_ident
 CREATE INDEX idx_protein_name ON dbo.protein_list_protein ( protein_name ) --WITH DROP_EXISTING
 CREATE INDEX idx_protein_list_id ON dbo.protein_list_protein ( protein_list_id ) --WITH DROP_EXISTING
 
+-- srm_transition
+CREATE NONCLUSTERED INDEX idx_stripped_peptide_sequence ON dbo.srm_transition ( stripped_peptide_sequence ) --WITH DROP_EXISTING
 
