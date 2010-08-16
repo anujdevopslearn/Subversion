@@ -242,7 +242,7 @@ my $module_styles =<<"  END_STYLE";
   
   /* Style info below organized by originating module
   /* Peptide Atlas */
-  .small_form_field {    font-family: Verdana, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_SM}pt; color: #000000; background-color: #FFFFCC; padding: 1px; height: 14px; border: 1px solid #7F9DB9 }  
+  .small_form_field {    font-family: Verdana, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_SM}pt; color: #000000; background-color: #FFFFCC; padding: 1px; height: 16px; border: 1px solid #7F9DB9 }  
   .small_form_text {    font-family: Verdana, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_SM}pt; }
   .small_form_caption {    font-family: Verdana, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_SM}pt; font-weight: bold; }
   .pseudo_link    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration:none; color: blue; CURSOR: help;}
