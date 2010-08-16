@@ -22,6 +22,10 @@
     ./update_driver_tables.pl --delete_existing
   endif
 
+  The following will do the same without the need to maintain, DSC 2006-07-12
+  find $CONFDIR -name '*_table_*.txt' -exec ./update_driver_tables.pl {} \;  
+  exit;
+
 
   ./update_driver_tables.pl $CONFDIR/Core/Core_table_property.txt
   ./update_driver_tables.pl $CONFDIR/Core/Core_table_column.txt
