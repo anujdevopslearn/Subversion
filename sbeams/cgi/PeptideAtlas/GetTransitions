@@ -927,15 +927,13 @@ sub get_PATR_transitions {
 
   my $sql = qq~
   SELECT DISTINCT P.peptide_sequence, modified_peptide_sequence, peptide_charge,
-  q1_mz ,q3_mz, q3_peak_intensity, q3_ion_label, collision_energy,
-  SSRCalc_relative_hydrophobicity, retention_time, 'na', level_name, ''
-  FROM $TBAT_MODIFIED_PEPTIDE_ANNOTATION MPA 
-  JOIN $TBAT_TRANSITION_SUITABILITY_LEVEL TSL 
-  ON TSL.transition_suitability_level_id = MPA.transition_suitability_level_id
-  JOIN $TBAT_PEPTIDE P ON P.peptide_sequence = MPA.peptide_sequence
+  q1_mz ,q3_mz, q3_ion_label, collision_energy,
+  SSRCalc_relative_hydrophobicity, retention_time, 'na', ''
+  FROM $TBAT_SRM_TRANSITION SMT 
+  JOIN $TBAT_PEPTIDE P ON P.peptide_sequence = SMT.stripped_peptide_sequence
   $peptide_clause
-  ORDER BY modified_peptide_sequence, peptide_charge, 
-  q3_peak_intensity DESC
+  ORDER BY modified_peptide_sequence, peptide_charge 
+ 
   ~;
 
   my $sth = $sbeams->get_statement_handle($sql);
