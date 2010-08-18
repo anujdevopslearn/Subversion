@@ -1014,490 +1014,481 @@ sub handle_request {
   ##########################################################################
 	#### Draw the protein and gene location graph
 
-if ($organism_id == 2) {
-  $protein_group = $parameters{protein_group_representative_constraint};
-  $genetic_locus = $parameters{genetic_locus};
-  if ($protein_group eq '') {
-    ## Do everything invovled with drawing the graph
-    #### Connect to Ensembl database
-    my $host = 'mysql';
-    my $user = 'guest';
-    my $password = 'guest';
-
-    my $registry = 'Bio::EnsEMBL::Registry';
-    $registry->load_registry_from_db(
-      -host => $host,
-      -user => $user,
-      -pass => $password,
-      );
-
-    ####read passed args, set up variables
-    my %args = @_;
-
-    #### Get input from PeptideAtlas
-    my @acclist;
-    my @coord1_list;
-    my @coord2_list;
-    my @strand_list;
-    my $chrom_num;
-    my $header = (<>);
-    my $row;
-
-    for my $row ( 0 .. scalar @{$resultset_ref->{data_ref}} - 1) {
-      {my $data_item = $resultset_ref->{data_ref}->[$row]->[0];
-      push @acclist, $data_item;
-      }
-      {my $data_item = $resultset_ref->{data_ref}->[$row]->[9];
-      push @coord1_list, $data_item;
-      }
-      {my $data_item = $resultset_ref->{data_ref}->[$row]->[10];
-      push @coord2_list, $data_item;
-      }
-      {my $data_item = $resultset_ref->{data_ref}->[$row]->[11];
-      push @strand_list, $data_item;
-      }
-    }
-
-    #### Match Swiss-Prot proteins to Ensembl identical matches
-    my $tsql = qq~
-    SELECT
-    BS_SWISSIPI.biosequence_name as 'Swiss-Prot or IPI',
-    BS_ENS.biosequence_name as 'Ensembl',
-    BPS.start_in_chromosome as 'Start',
-    BPS.end_in_chromosome as 'End',
-    BPS.strand as 'Strand'
-
-    FROM $TBAT_ATLAS_BUILD AB
-    JOIN $TBAT_BIOSEQUENCE_SET BSS
-      ON ( BSS.biosequence_set_id = AB.biosequence_set_id )
-    JOIN $TBAT_BIOSEQUENCE BS_SWISSIPI
-      ON ( BS_SWISSIPI.biosequence_set_id = BSS.biosequence_set_id )
-    JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BR
-      ON ( BR.reference_biosequence_id = BS_SWISSIPI.biosequence_id )
-      AND ( BR.atlas_build_id = AB.atlas_build_id )
-    JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT
-      ON ( BRT.biosequence_relationship_type_id = BR.relationship_type_id )
-    JOIN $TBAT_BIOSEQUENCE BS_ENS
-      ON ( BS_ENS.biosequence_set_id = BSS.biosequence_set_id )
-      AND ( BS_ENS.biosequence_id = BR.related_biosequence_id )
-    JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPS
-      ON ( BPS.biosequence_id = BS_ENS.biosequence_id )
-
-    WHERE BRT.relationship_name = 'identical'
-      AND AB.atlas_build_id = $atlas_build_id 
-      AND (BS_SWISSIPI.biosequence_name like 'A%' OR 
-	BS_SWISSIPI.biosequence_name like 'B%' OR 
-	BS_SWISSIPI.biosequence_name like 'C%' OR 
-	BS_SWISSIPI.biosequence_name like 'O%' OR 
-	BS_SWISSIPI.biosequence_name like 'P%' OR 
-	BS_SWISSIPI.biosequence_name like 'Q%' OR
-	BS_SWISSIPI.biosequence_name like 'IPI%' )
-      AND BS_ENS.biosequence_name like 'ENSP%'
-    ~;
-
-    my @swiss_to_ens = $sbeams->selectSeveralColumns($tsql);
-
-    my %swiss2ens_hash;
-    my $swiss2ens = \%swiss2ens_hash;
-
-    for (my $i = 0; $i < scalar(@swiss_to_ens); $i++) {
-      my $swiss_id = $swiss_to_ens[$i][0];
-      my $ens_id = $swiss_to_ens[$i][1];
-      my $put_start = $swiss_to_ens[$i][2];
-      my $put_end = $swiss_to_ens[$i][3];
-      my $strand = $swiss_to_ens[$i][4];
-      $swiss2ens->{$swiss_id}->{start} = $put_start;
-      $swiss2ens->{$swiss_id}->{end} = $put_end;
-      $swiss2ens->{$swiss_id}->{strand} = $strand;
-      }
- 
-    #### Initiate variables, read start/end user input values
-    my @gene_list;
-    my @matchgene_list;
-    my $chrom;
-    my $chunk_name;
-    my $chromlen;
-    my $strand;
-  
-    my $start_bp;
-    my $st_modifier;
-    my $end_bp;
-    my $end_modifier;
-
-    my $kband_st;
-    my $kband_end;
- 
-    my $chrom_num = $parameters{chromosome};
-    my $start_chunk = $parameters{start_in_chromosome};
-    my $end_chunk = $parameters{end_in_chromosome};
-    my $input_genetic_locus = $parameters{genetic_locus};
-    my $input_strand = $parameters{strand};
-
-    if ($start_chunk eq '') {
-      $start_bp = '';
-      $st_modifier = '';
-    } else {
-      $start_chunk =~ /(\D*)(\d+)/;
-      $st_modifier = $1;
-      $start_bp = $2;
-    }
-
-    if ($end_chunk eq '') {
-      $end_bp = '';
-      $end_modifier = '';
-    } else {
-      $end_chunk =~ /(\D*)(\d+)/;
-      $end_modifier = $1;
-      $end_bp = $2;
-    }
-
-    if ($input_genetic_locus ne '') {
-      $input_genetic_locus =~ /(\d{1,2})(p|q)(.*)/;
-      my $genetic_locus = "$2$3";
-    }
-
-    if (($start_bp eq '') and ($end_bp eq '') and ($genetic_locus eq '')) {
-      $stend_option = 'aaa';
-    } elsif (($start_bp ne '') and ($st_modifier eq '>') and ($end_bp eq '') and ($genetic_locus eq '')) {
-      $stend_option = 'bbb';
-    } elsif (($start_bp eq '') and ($end_bp ne '') and ($end_modifier eq '<') and ($genetic_locus eq '')) {
-      $stend_option = 'ccc';
-    } elsif (($start_bp ne '') and ($st_modifier eq '>') and ($end_bp ne '') and ($end_modifier eq '<') and ($genetic_locus eq '')) {
-      $stend_option = 'ddd';
-    } elsif ($genetic_locus ne '') {
-      $stend_option = 'eee';
-    }
-
-    my $slice_adaptor = $registry->get_adaptor( 'Human', 'Core', 'Slice' );
-    my $gene_adaptor = $registry->get_adaptor('Human', 'Core', 'Gene' );
-    my $kary_adaptor = $registry->get_adaptor('Human', 'Core', 'KaryotypeBand' );
-
-    #### If zooming by karyotype band, read band start and end coordinates
-    if ($input_genetic_locus ne '') {
-      my $chr = $slice_adaptor->fetch_by_region('chromosome', $chrom_num);
-      my $kary_data = $kary_adaptor->fetch_all_by_Slice($chr);
-      while ( my $kary_datum = shift @{$kary_data} ) {
-        my $kary_datum_name = $kary_datum->name();
-        if ($genetic_locus eq $kary_datum_name) {
-          $kband_st = $kary_datum->start();
-          $kband_end = $kary_datum->end();
+    if ($organism_id == 2) {
+      $protein_group = $parameters{protein_group_representative_constraint};
+      if ($protein_group eq '') {
+        ## Do everything invovled with drawing the graph
+        #### Connect to Ensembl database
+        my $host = 'mysql';
+        my $user = 'guest';
+        my $password = 'guest';
+    
+        my $registry = 'Bio::EnsEMBL::Registry';
+        $registry->load_registry_from_db(
+          -host => $host,
+          -user => $user,
+          -pass => $password,
+          );
+    
+        ####read passed args, set up variables
+        my %args = @_;
+    
+        #### Get input from PeptideAtlas
+        my @acclist;
+        my @coord1_list;
+        my @coord2_list;
+        my @strand_list;
+        my $chrom_num;
+        my $header = (<>);
+        my $row;
+    
+        for my $row ( 0 .. scalar @{$resultset_ref->{data_ref}} - 1) {
+          {my $data_item = $resultset_ref->{data_ref}->[$row]->[0];
+          push @acclist, $data_item;
+          }
+          {my $data_item = $resultset_ref->{data_ref}->[$row]->[9];
+          push @coord1_list, $data_item;
+          }
+          {my $data_item = $resultset_ref->{data_ref}->[$row]->[10];
+          push @coord2_list, $data_item;
+          }
+          {my $data_item = $resultset_ref->{data_ref}->[$row]->[11];
+          push @strand_list, $data_item;
+          }
         }
-      }
-    }
-
-    #### Initialize gene data from Ensembl database
-    if ($stend_option eq 'aaa') {
-      $chrom = $slice_adaptor->fetch_by_region( 'chromosome', $chrom_num);
-      $chunk_name = "Entire";
-    } elsif ($stend_option eq 'bbb') {
-      $chrom = $slice_adaptor->fetch_by_region('chromosome', $chrom_num, $start_bp + 1); 
-      $chunk_name = "$start_bp bp to End";
-    } elsif ($stend_option eq 'ccc') {
-      $chrom = $slice_adaptor->fetch_by_region( 'chromosome', $chrom_num, 1, $end_bp + 1);
-      $chunk_name = "Start to $end_bp bp";
-    } elsif ($stend_option eq 'ddd') {
-      $chrom = $slice_adaptor->fetch_by_region('chromosome', $chrom_num, $start_bp + 1, $end_bp + 1); 
-      $chunk_name = "$start_bp bp to $end_bp bp";
-    } elsif ($stend_option eq 'eee') {
-      $chrom = $slice_adaptor->fetch_by_region('chromosome', $chrom_num, $kband_st, $kband_end);
-      $chunk_name = "Genetic Locus $genetic_locus ($kband_st bp to $kband_end bp)"
-     } else {
-      $chrom = $slice_adaptor->fetch_by_region( 'chromosome', $chrom_num);
-      $chunk_name = "Entire";
-      print "<p>Unable to draw standard image within these constraints</p>\n";
-    }
-
-    #### Read PeptideAtlas protein information
-    sub create_peptideatlas_feature($$$$);
-
-    my $p;
-    my $protein_acc;
-    my $protein_start;
-    my $protein_stop;
-    my $protein_strand;
-    my $protein_strand_num;
-    my $num_protein;
-    my $acclist = scalar @acclist;
-       $no_coord_count = 0;
-    my @protein_list;
-
-
-    LINE: for $num_protein (0 .. ($acclist - 1)) {
-      $protein_acc  =  $acclist[$num_protein];
-      if ($protein_acc =~ /^(A|B|C|O|P|Q)(.{5})/) {
-        $protein_start = $swiss2ens->{$protein_acc}->{start};
-        $protein_stop = $swiss2ens->{$protein_acc}->{end};
-        if ($protein_start eq '') {
-          $no_coord_count ++;
-          next LINE;
+    
+        #### Match Swiss-Prot proteins to Ensembl identical matches
+        my $tsql = qq~
+        SELECT
+        BS_SWISSIPI.biosequence_name as 'Swiss-Prot or IPI',
+        BS_ENS.biosequence_name as 'Ensembl',
+        BPS.start_in_chromosome as 'Start',
+        BPS.end_in_chromosome as 'End',
+        BPS.strand as 'Strand'
+    
+        FROM $TBAT_ATLAS_BUILD AB
+        JOIN $TBAT_BIOSEQUENCE_SET BSS
+          ON ( BSS.biosequence_set_id = AB.biosequence_set_id )
+        JOIN $TBAT_BIOSEQUENCE BS_SWISSIPI
+          ON ( BS_SWISSIPI.biosequence_set_id = BSS.biosequence_set_id )
+        JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BR
+          ON ( BR.reference_biosequence_id = BS_SWISSIPI.biosequence_id )
+          AND ( BR.atlas_build_id = AB.atlas_build_id )
+        JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT
+          ON ( BRT.biosequence_relationship_type_id = BR.relationship_type_id )
+        JOIN $TBAT_BIOSEQUENCE BS_ENS
+          ON ( BS_ENS.biosequence_set_id = BSS.biosequence_set_id )
+          AND ( BS_ENS.biosequence_id = BR.related_biosequence_id )
+        JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPS
+          ON ( BPS.biosequence_id = BS_ENS.biosequence_id )
+    
+        WHERE BRT.relationship_name = 'identical'
+          AND AB.atlas_build_id = $atlas_build_id 
+          AND (BS_SWISSIPI.biosequence_name like 'A%' OR 
+    	BS_SWISSIPI.biosequence_name like 'B%' OR 
+    	BS_SWISSIPI.biosequence_name like 'C%' OR 
+    	BS_SWISSIPI.biosequence_name like 'O%' OR 
+    	BS_SWISSIPI.biosequence_name like 'P%' OR 
+    	BS_SWISSIPI.biosequence_name like 'Q%' OR
+    	BS_SWISSIPI.biosequence_name like 'IPI%' )
+          AND BS_ENS.biosequence_name like 'ENSP%'
+        ~;
+    
+        my @swiss_to_ens = $sbeams->selectSeveralColumns($tsql);
+    
+        my %swiss2ens_hash;
+        my $swiss2ens = \%swiss2ens_hash;
+    
+        for (my $i = 0; $i < scalar(@swiss_to_ens); $i++) {
+          my $swiss_id = $swiss_to_ens[$i][0];
+          my $ens_id = $swiss_to_ens[$i][1];
+          my $put_start = $swiss_to_ens[$i][2];
+          my $put_end = $swiss_to_ens[$i][3];
+          my $strand = $swiss_to_ens[$i][4];
+          $swiss2ens->{$swiss_id}->{start} = $put_start;
+          $swiss2ens->{$swiss_id}->{end} = $put_end;
+          $swiss2ens->{$swiss_id}->{strand} = $strand;
+          }
+     
+        #### Initiate variables, read start/end user input values
+        my @gene_list;
+        my @matchgene_list;
+        my $chrom;
+        my $chunk_name;
+        my $chromlen;
+        my $strand;
+      
+        my $start_bp;
+        my $st_modifier;
+        my $end_bp;
+        my $end_modifier;
+    
+        my $kband_st;
+        my $kband_end;
+     
+        my $chrom_num = $parameters{chromosome};
+        my $start_chunk = $parameters{start_in_chromosome};
+        my $end_chunk = $parameters{end_in_chromosome};
+        my $input_genetic_locus = $parameters{genetic_locus};
+        my $input_strand = $parameters{strand};
+    
+        if ($start_chunk eq '') {
+          $start_bp = '';
+          $st_modifier = '';
+        } else {
+          $start_chunk =~ /(\D*)(\d+)/;
+          $st_modifier = $1;
+          $start_bp = $2;
         }
-      } else {
-        $protein_start = $coord1_list[$num_protein];
-        $protein_stop =  $coord2_list[$num_protein];
-      }
-
-      if (($stend_option eq 'bbb') or ($stend_option eq 'ddd')) {
-        $protein_start -= $start_bp;
-        $protein_stop -= $start_bp;
-      } elsif ($stend_option eq 'eee') {
-        $protein_start -= $kband_st;
-        $protein_stop -= $kband_st;
-      }
-
-      my $p = Bio::SeqFeature::Generic->new(
-                -start => $protein_start, 
-                -end => $protein_stop,
-                -score => 1000,
-		-display_name => $protein_acc );
-      push @protein_list, $p;
-    }
-
-    #### Grab gene data from Ensembl
-    my $genes = $gene_adaptor->fetch_all_by_Slice($chrom);
-
-    GENE: while ( my $gene = shift @{$genes} ) {
-      my $gene_start     = $gene->start();
-      my $gene_end       = $gene->end();
-      my $gene_strand    = $gene->strand();
-      my $gene_type      = $gene->biotype();
-      my $gene_name      = $gene->stable_id();
-
-      if (($input_strand eq '+') and ($gene_strand == -1)) {
-        next GENE;
-      } elsif (($input_strand eq '-') and ($gene_strand == 1)) {
-        next GENE;
-      }
-
-      if ($gene_type eq 'protein_coding') {
-        my $g = Bio::SeqFeature::Generic->new(
-		-start => $gene_start,
-		-end   => $gene_end,
-		-score => 1000,
-		-display_name => $gene_name );
-        push @gene_list, $g;
-
-        PROT: for $num_protein (0 .. ($acclist - 1)) {
+    
+        if ($end_chunk eq '') {
+          $end_bp = '';
+          $end_modifier = '';
+        } else {
+          $end_chunk =~ /(\D*)(\d+)/;
+          $end_modifier = $1;
+          $end_bp = $2;
+        }
+    
+        if ($input_genetic_locus ne '') {
+          $input_genetic_locus =~ /(\d{1,2})(p|q)(.*)/;
+          my $genetic_locus = "$2$3";
+        }
+    
+        if (($start_bp eq '') and ($end_bp eq '') and ($genetic_locus eq '')) {
+          $stend_option = 'aaa';
+        } elsif (($start_bp ne '') and ($st_modifier eq '>') and ($end_bp eq '') and ($genetic_locus eq '')) {
+          $stend_option = 'bbb';
+        } elsif (($start_bp eq '') and ($end_bp ne '') and ($end_modifier eq '<') and ($genetic_locus eq '')) {
+          $stend_option = 'ccc';
+        } elsif (($start_bp ne '') and ($st_modifier eq '>') and ($end_bp ne '') and ($end_modifier eq '<') and ($genetic_locus eq '')) {
+          $stend_option = 'ddd';
+        } elsif ($genetic_locus ne '') {
+          $stend_option = 'eee';
+        }
+    
+        my $slice_adaptor = $registry->get_adaptor( 'Human', 'Core', 'Slice' );
+        my $gene_adaptor = $registry->get_adaptor('Human', 'Core', 'Gene' );
+        my $kary_adaptor = $registry->get_adaptor('Human', 'Core', 'KaryotypeBand' );
+    
+        #### If zooming by karyotype band, read band start and end coordinates
+        if ($input_genetic_locus ne '') {
+          my $chr = $slice_adaptor->fetch_by_region('chromosome', $chrom_num);
+          my $kary_data = $kary_adaptor->fetch_all_by_Slice($chr);
+          while ( my $kary_datum = shift @{$kary_data} ) {
+            my $kary_datum_name = $kary_datum->name();
+            if ($genetic_locus eq $kary_datum_name) {
+              $kband_st = $kary_datum->start();
+              $kband_end = $kary_datum->end();
+            }
+          }
+        }
+    
+        #### Initialize gene data from Ensembl database
+        if ($stend_option eq 'aaa') {
+          $chrom = $slice_adaptor->fetch_by_region( 'chromosome', $chrom_num);
+          $chunk_name = "Entire";
+        } elsif ($stend_option eq 'bbb') {
+          $chrom = $slice_adaptor->fetch_by_region('chromosome', $chrom_num, $start_bp + 1); 
+          $chunk_name = "$start_bp bp to End";
+        } elsif ($stend_option eq 'ccc') {
+          $chrom = $slice_adaptor->fetch_by_region( 'chromosome', $chrom_num, 1, $end_bp + 1);
+          $chunk_name = "Start to $end_bp bp";
+        } elsif ($stend_option eq 'ddd') {
+          $chrom = $slice_adaptor->fetch_by_region('chromosome', $chrom_num, $start_bp + 1, $end_bp + 1); 
+          $chunk_name = "$start_bp bp to $end_bp bp";
+        } elsif ($stend_option eq 'eee') {
+          $chrom = $slice_adaptor->fetch_by_region('chromosome', $chrom_num, $kband_st, $kband_end);
+          $chunk_name = "Genetic Locus $genetic_locus ($kband_st bp to $kband_end bp)"
+         } else {
+          $chrom = $slice_adaptor->fetch_by_region( 'chromosome', $chrom_num);
+          $chunk_name = "Entire";
+          print "<p>Unable to draw standard image within these constraints</p>\n";
+        }
+    
+        #### Read PeptideAtlas protein information
+        sub create_peptideatlas_feature($$$$);
+    
+        my $p;
+        my $protein_acc;
+        my $protein_start;
+        my $protein_stop;
+        my $protein_strand;
+        my $protein_strand_num;
+        my $num_protein;
+        my $acclist = scalar @acclist;
+           $no_coord_count = 0;
+        my @protein_list;
+    
+    
+        LINE: for $num_protein (0 .. ($acclist - 1)) {
           $protein_acc  =  $acclist[$num_protein];
           if ($protein_acc =~ /^(A|B|C|O|P|Q)(.{5})/) {
             $protein_start = $swiss2ens->{$protein_acc}->{start};
             $protein_stop = $swiss2ens->{$protein_acc}->{end};
- 	    $protein_strand = $swiss2ens->{$protein_acc}->{strand};
             if ($protein_start eq '') {
-              next PROT;
-	    }
+              $no_coord_count ++;
+              next LINE;
+            }
           } else {
             $protein_start = $coord1_list[$num_protein];
             $protein_stop =  $coord2_list[$num_protein];
-	    $protein_strand = $strand_list[$num_protein];
           }
-
+    
           if (($stend_option eq 'bbb') or ($stend_option eq 'ddd')) {
             $protein_start -= $start_bp;
-	    $protein_stop -= $start_bp;
+            $protein_stop -= $start_bp;
+          } elsif ($stend_option eq 'eee') {
+            $protein_start -= $kband_st;
+            $protein_stop -= $kband_st;
           }
-
-          if ($protein_strand eq '+') {
-	    $protein_strand_num = 1;
-	  } else {
-	    $protein_strand_num = -1;
-	  }
-
-          if (($protein_start >= $gene_start) and ($protein_stop <= $gene_end)) {
-
-	    if ($gene_strand == $protein_strand_num) {
-
-	      my $match_gene = Bio::SeqFeature::Generic->new(
-			-start => $gene_start,
-			-end   => $gene_end,
-			-score => 1000 ,
-			-display_name => $gene_name);
-	      push @matchgene_list, $match_gene;
-	      next GENE;
-	    } else {
-	      next PROT;
-	    }
+    
+          my $p = Bio::SeqFeature::Generic->new(
+			-start => $protein_start, 
+			-end => $protein_stop,
+			-score => 1000,
+			-display_name => $protein_acc );
+          push @protein_list, $p;
+        }
+    
+        #### Grab gene data from Ensembl
+        my $genes = $gene_adaptor->fetch_all_by_Slice($chrom);
+    
+        GENE: while ( my $gene = shift @{$genes} ) {
+          my $gene_start     = $gene->start();
+          my $gene_end       = $gene->end();
+          my $gene_strand    = $gene->strand();
+          my $gene_type      = $gene->biotype();
+          my $gene_name      = $gene->stable_id();
+    
+          if (($input_strand eq '+') and ($gene_strand == -1)) {
+            next GENE;
+          } elsif (($input_strand eq '-') and ($gene_strand == 1)) {
+            next GENE;
+          }
+    
+          if ($gene_type eq 'protein_coding') {
+            my $g = Bio::SeqFeature::Generic->new(
+    			-start => $gene_start,
+    			-end   => $gene_end,
+    			-score => 1000,
+    			-display_name => $gene_name );
+            push @gene_list, $g;
+    
+            PROT: for $num_protein (0 .. ($acclist - 1)) {
+              $protein_acc  =  $acclist[$num_protein];
+              if ($protein_acc =~ /^(A|B|C|O|P|Q)(.{5})/) {
+                $protein_start = $swiss2ens->{$protein_acc}->{start};
+                $protein_stop = $swiss2ens->{$protein_acc}->{end};
+     	    $protein_strand = $swiss2ens->{$protein_acc}->{strand};
+                if ($protein_start eq '') {
+                  next PROT;
+    	        }
+              } else {
+                $protein_start = $coord1_list[$num_protein];
+                $protein_stop =  $coord2_list[$num_protein];
+    	        $protein_strand = $strand_list[$num_protein];
+              }
+    
+              if (($stend_option eq 'bbb') or ($stend_option eq 'ddd')) {
+                $protein_start -= $start_bp;
+    	        $protein_stop -= $start_bp;
+              }
+    
+              if ($protein_strand eq '+') {
+    	        $protein_strand_num = 1;
+    	      } else {
+    	        $protein_strand_num = -1;
+    	      }
+    
+              if (($protein_start >= $gene_start) and ($protein_stop <= $gene_end)) {
+    	        if ($gene_strand == $protein_strand_num) {
+    
+    	          my $match_gene = Bio::SeqFeature::Generic->new(
+    			-start => $gene_start,
+    			-end   => $gene_end,
+    			-score => 1000 ,
+    			-display_name => $gene_name);
+    	          push @matchgene_list, $match_gene;
+    	          next GENE;
+    	        } else {
+    	          next PROT;
+    	        }
+              }
+            }
           }
         }
-      }
-    }
+    
+        #### Grab karyotype band data from Ensembl database
+        my @kary_list;
+        my $kary_end;
+        my @kary_end_list;
+        my $karyotypes = $kary_adaptor->fetch_all_by_Slice($chrom);
+        while ( my $kary = shift @{$karyotypes} ) {
+          my $kary_start  = $kary->start();
+             $kary_end    = $kary->end();
+          my $kary_name   = $kary->name();
+          my $kary_stain  = $kary->stain();
+          my $k;
 
-
-    #### Grab karyotype band data from Ensembl database
-    my @kary_list;
-    my $kary_end;
-    my @kary_end_list;
-    my $karyotypes = $kary_adaptor->fetch_all_by_Slice($chrom);
-    while ( my $kary = shift @{$karyotypes} ) {
-      my $kary_start  = $kary->start();
-         $kary_end    = $kary->end();
-      my $kary_name   = $kary->name();
-      my $kary_stain  = $kary->stain();
-      my $k;
-
-      if ($kary_stain =~ /gneg/ ) {
-        $k = Bio::SeqFeature::Generic->new(
-		-start => $kary_start,
-		-end   => $kary_end,
-		-display_name => $kary_name,
-		-score => 400 );
-      } elsif ($kary_stain =~ /gpos../ ) {
-        $k = Bio::SeqFeature::Generic->new(
-		-start => $kary_start,
-		-end   => $kary_end,
-		-display_name => $kary_name,
-		-score => 800 );
-      } elsif ($kary_stain =~ /acen/ ) {
-        $k = Bio::SeqFeature::Generic->new(
-		-start => $kary_start,
-		-end   => $kary_end,
-		-display_name => $kary_name,
-		-score => 1000 );
+          if ($kary_stain =~ /gneg/ ) {
+            $k = Bio::SeqFeature::Generic->new(
+			-start => $kary_start,
+    			-end   => $kary_end,
+    			-display_name => $kary_name,
+    			-score => 400 );
+          } elsif ($kary_stain =~ /gpos../ ) {
+            $k = Bio::SeqFeature::Generic->new(
+    			-start => $kary_start,
+    			-end   => $kary_end,
+    			-display_name => $kary_name,
+    			-score => 800 );
+          } elsif ($kary_stain =~ /acen/ ) {
+            $k = Bio::SeqFeature::Generic->new(
+    			-start => $kary_start,
+    			-end   => $kary_end,
+    			-display_name => $kary_name,
+    			-score => 1000 );
+          } else {
+            $k = Bio::SeqFeature::Generic->new(
+    			-start => $kary_start,
+    			-end   => $kary_end,
+    			-display_name => $kary_name,
+    			-score => 200 );
+          }
+    
+          push @kary_end_list, $kary_end;
+          push @kary_list, $k;
+        }
+    
+        my @sorted_kary_end = sort {$a <=> $b} @kary_end_list;
+    
+        if ($stend_option eq 'ccc') {
+          $chromlen = $end_bp;
+        } elsif ($stend_option eq 'ddd') {
+          $chromlen = $end_bp - $start_bp;
+        } elsif ($stend_option eq 'eee') {
+          $chromlen = $kband_end - $kband_st;
+        } else {
+          $chromlen = @sorted_kary_end[(scalar @kary_end_list) - 1];
+        }
+    
+        #### Initialize main panel, track sequence, and track ruler
+        my $panel = Bio::Graphics::Panel->new( 
+			-'length'    => $chromlen,
+    			-key_style => 'between',
+			-width     => 1600,
+			-empty_tracks => 'suppress',
+			-pad_top   => 10,
+			-pad_bottom => 10,
+			-pad_left  => 40,
+			-pad_right => 20 );
+    
+        my $ruler = Bio::SeqFeature::Generic->new( 
+			-end => $chromlen,
+			-start => 2);
+    
+        my $sequence = Bio::SeqFeature::Generic->new( 
+			-end => $chromlen,
+			-start => 1);
+    
+        #### Add all the tracks to the panel
+        ## Add chromosome track
+        $panel->add_track( $sequence,
+			-glyph  => 'segments',
+			-bgcolor => 'black',
+    			-key  => "Chromosome $chrom_num -- $chunk_name",
+    			-tick   => 2,
+    			-min_score => 0,
+    			-max_score => 1000 );
+    
+        ## Add observed protein track
+        $panel->add_track( \@protein_list,
+			-glyph     => 'graded_segments',
+			-bgcolor   => 'firebrick',
+			-key       => 'Protein Location',
+			-bump      => 1,
+			-height    => 8 );
+    
+        ## Add ruler track
+        $panel->add_track( $ruler,
+		    	-glyph  => 'anchored_arrow',
+			-tick   => 2,
+			-height => 8,
+			-key  => 'Chromosome Length (relative to requested section)');
+    
+        ## Add karyotype banding track
+        $panel->add_track( \@kary_list,
+			-glyph     => 'graded_segments',
+			-bgcolor   => 'black',
+			-font      => 'gdTinyFont',
+			-key       => 'Karyotypic Banding',
+	    		-bump      => 0,
+			-height    => 6,
+    			-label     => 1,
+    			-min_score => 0,
+    			-max_score => 1000 );
+    
+        ## Add yes_genes track
+        $panel->add_track( \@matchgene_list,
+			-glyph     => 'graded_segments',
+			-bgcolor   => '#BA55D3',
+			-key     => 'Location of genes covered by PeptideAtlas',
+			-bump      => 1,
+			-height    => 8,
+			-label     => 0 ); 
+    
+        ## Add genes track
+        $panel->add_track( \@gene_list,
+			-glyph     => 'graded_segments',
+			-bgcolor   => 'cornflowerblue',
+			-key       => 'Gene Location',
+			-bump      => 1,
+			-height    => 8,
+	    		-label     => 0 ); 
+    
+        #### Create mouseovers and links for protein and gene bars
+        $pid = $$;
+        $map = "<MAP NAME='$pid'>\n";
+        my $link;
+        my @objects = $panel->boxes();
+    
+        for my $obj (@objects) {
+          my $key_name = $obj->[0]->display_name();
+          my $coords = join( ", ", @$obj[1..4] );
+          if ($key_name =~ /^A|B|C|O|P|Q|ENSP|IPI/) { 
+            $link = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetProtein?protein_name=$key_name&apply_action=QUERY";
+            $map .= "<AREA SHAPE='RECT' COORDS='$coords' TITLE='$key_name' HREF='$link'>\n";
+          } elsif ($key_name =~ /^ENSG/) {
+            $link = "http://uswest.ensembl.org/Homo_sapiens/Gene/Summary?g=$key_name";
+            $map .= "<AREA SHAPE='RECT' COORDS='$coords' TITLE='$key_name' HREF='$link'>\n";
+          }
+        }
+        $map .= '</MAP>';
+    
+        #### Create image file
+        my $file_name = "/net/dblocal/www/html/sbeams/images/GetProteinsChromosome.png";
+        open( OUT, ">$file_name" ) || die "$!: $file_name";
+        binmode(OUT);
+        print OUT $panel->png;
+        $panel->finished;
+        close OUT;
+        }
       } else {
-        $k = Bio::SeqFeature::Generic->new(
-		-start => $kary_start,
-		-end   => $kary_end,
-		-display_name => $kary_name,
-		-score => 200 );
+        print "<p>Unable to graphically depict non-human builds</p>\n";
       }
+    } 
 
-
-      push @kary_end_list, $kary_end;
-      push @kary_list, $k;
-    }
-
-    my @sorted_kary_end = sort {$a <=> $b} @kary_end_list;
-
-    if ($stend_option eq 'ccc') {
-      $chromlen = $end_bp;
-    } elsif ($stend_option eq 'ddd') {
-      $chromlen = $end_bp - $start_bp;
-    } elsif ($stend_option eq 'eee') {
-      $chromlen = $kband_end - $kband_st;
-    } else {
-      $chromlen = @sorted_kary_end[(scalar @kary_end_list) - 1];
-    }
-
-    #### Initialize main panel, track sequence, and track ruler
-    my $panel = Bio::Graphics::Panel->new( -'length'    => $chromlen,
-		-key_style => 'between',
-                -width     => 1600,
-                -empty_tracks => 'suppress',
-                -pad_top   => 10,
-                -pad_bottom => 10,
-                -pad_left  => 40,
-                -pad_right => 20 );
-
-
-    my $ruler = Bio::SeqFeature::Generic->new( -end => $chromlen,
-                -start => 2);
-
-    my $sequence = Bio::SeqFeature::Generic->new( -end => $chromlen,
-                -start => 1);
-
-    #### Add all the tracks to the panel
-    ## Add chromosome track
-    $panel->add_track( $sequence,
-                -glyph  => 'segments',
-      		-bgcolor => 'black',
-		-key  => "Chromosome $chrom_num -- $chunk_name",
-		-tick   => 2,
-		-min_score => 0,
-		-max_score => 1000
-		);
-
-    ## Add observed protein track
-    $panel->add_track( \@protein_list,
-                -glyph     => 'graded_segments',
-                -bgcolor   => 'firebrick',
-                -key       => 'Protein Location',
-                -bump      => 1,
-                -height    => 8,
-                );
-
-    ## Add ruler track
-    $panel->add_track( $ruler,
-	        -glyph  => 'anchored_arrow',
-                -tick   => 2,
-                -height => 8,
-                -key  => 'Chromosome Length (relative to requested section)'
-		);
-
-    ## Add karyotype banding track
-    $panel->add_track( \@kary_list,
-                -glyph     => 'graded_segments',
-                -bgcolor   => 'black',
-		-font      => 'gdTinyFont',
-                -key       => 'Karyotypic Banding',
-		-bump      => 0,
-                -height    => 6,
-		-label     => 1,
-		-min_score => 0,
-		-max_score => 1000,
-                );
-
-    ## Add yes_genes track
-    $panel->add_track( \@matchgene_list,
-                -glyph     => 'graded_segments',
-                -bgcolor   => '#BA55D3',
-                -key       => 'Location of genes covered by PeptideAtlas',
-                -bump      => 1,
-                -height    => 8,
-		-label     => 0,
-                ); 
-
-    ## Add genes track
-    $panel->add_track( \@gene_list,
-                -glyph     => 'graded_segments',
-                -bgcolor   => 'cornflowerblue',
-                -key       => 'Gene Location',
-                -bump      => 1,
-                -height    => 8,
-		-label     => 0,
-                ); 
-
-    #### Create mouseovers and links for protein and gene bars
-    $pid = $$;
-    $map = "<MAP NAME='$pid'>\n";
-    my $link;
-    my @objects = $panel->boxes();
-
-    for my $obj (@objects) {
-      my $key_name = $obj->[0]->display_name();
-      my $coords = join( ", ", @$obj[1..4] );
-      if ($key_name =~ /^A|B|C|O|P|Q|ENSP|IPI/) { 
-        $link = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetProtein?protein_name=$key_name&apply_action=QUERY";
-        $map .= "<AREA SHAPE='RECT' COORDS='$coords' TITLE='$key_name' HREF='$link'>\n";
-      } elsif ($key_name =~ /^ENSG/) {
-        $link = "http://uswest.ensembl.org/Homo_sapiens/Gene/Summary?g=$key_name";
-        $map .= "<AREA SHAPE='RECT' COORDS='$coords' TITLE='$key_name' HREF='$link'>\n";
-      }
-    }
-    $map .= '</MAP>';
-
-    #### Create image file
-    my $file_name = "/net/dblocal/www/html/sbeams/images/GetProteinsChromosome.png";
-# my $file_name = "get_proteins_chromosome_17.png";
-      open( OUT, ">$file_name" ) || die "$!: $file_name";
-      binmode(OUT);
-      print OUT $panel->png;
-      $panel->finished;
-      close OUT;
-    }
-  } else {
-  print "<p>Unable to graphically depict non-human builds</p>\n";
-  }
-} 
-
-      #### Store the resultset and parameters to disk resultset cache
-      $rs_params{set_name} = "SETME";
-      $sbeams->writeResultSet(
-        resultset_file_ref=>\$rs_params{set_name},
-        resultset_ref=>$resultset_ref,
-        query_parameters_ref=>\%parameters,
-        resultset_params_ref=>\%rs_params,
-        query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
-        column_titles_ref=>\@column_titles,
-      );
+    #### Store the resultset and parameters to disk resultset cache
+    $rs_params{set_name} = "SETME";
+    $sbeams->writeResultSet(
+      resultset_file_ref=>\$rs_params{set_name},
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      resultset_params_ref=>\%rs_params,
+      query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+      column_titles_ref=>\@column_titles,
+    );
 
 
     #### Display the resultset
@@ -1514,14 +1505,13 @@ if ($organism_id == 2) {
 
     #### Display Graphic
 
-  if ($protein_group ne '') {
-    print "<p>Unable to display graphical depiction under these constraints</p>";}
+    if ($protein_group ne '') {
+      print "<p>Unable to display graphical depiction under these constraints</p>";}
 
-  if (($organism_id == 2) and ($protein_group eq '')) {
-    print "<p>No coordinates available for $no_coord_count proteins</p>\n";
-    if (($stend_option eq 'aaa') and ($genetic_locus ne '')) {
-      print "<p>Unable to draw standard image within these constraints</p>\n";
+    if (($organism_id == 2) and ($protein_group eq '')) {
+      print "<p>No coordinates available for $no_coord_count proteins</p>\n";
     }
+    
     my $imgsrcbuffer = "<IMG SRC=\"/sbeams/images/GetProteinsChromosome.png\" ISMAP USEMAP='#$pid' ALT=\"Graphical Depiction of Proteins and Genes for Selected Chromosome\">";
 
     if ($sbeams->output_mode() eq 'html') {
