@@ -1125,6 +1125,7 @@ sub handle_request {
     
         my $kband_st;
         my $kband_end;
+        my $genetic_locus;
      
         my $chrom_num = $parameters{chromosome};
         my $start_chunk = $parameters{start_in_chromosome};
@@ -1149,12 +1150,12 @@ sub handle_request {
           $end_modifier = $1;
           $end_bp = $2;
         }
-    
+
         if ($input_genetic_locus ne '') {
-          $input_genetic_locus =~ /(\d{1,2})(p|q)(.*)/;
-          my $genetic_locus = "$2$3";
+          $input_genetic_locus =~ /(\d+)(p|q)(.*)/;
+          $genetic_locus = "$2$3";
         }
-    
+
         if (($start_bp eq '') and ($end_bp eq '') and ($genetic_locus eq '')) {
           $stend_option = 'aaa';
         } elsif (($start_bp ne '') and ($st_modifier eq '>') and ($end_bp eq '') and ($genetic_locus eq '')) {
@@ -1517,8 +1518,6 @@ sub handle_request {
     if ($sbeams->output_mode() eq 'html') {
       print "<p>$imgsrcbuffer $map</p>";
 	}
-  }
-
 
 
     #### Display the resultset controls
