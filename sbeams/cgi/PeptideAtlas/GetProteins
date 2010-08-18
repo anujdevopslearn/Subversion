@@ -160,7 +160,7 @@ sub handle_request {
   my %parameters = %{$ref_parameters};
 
   #### Declare some variables
-  my ($pid, $map);
+  my ($protein_group, $genetic_locus, $stend_option, $no_coord_count, $pid, $map);
 
   #### Show current user context information
   print "<BR>\n" if ($sbeams->output_mode() eq 'html');
@@ -1015,6 +1015,9 @@ sub handle_request {
 	#### Draw the protein and gene location graph
 
 if ($organism_id == 2) {
+  $protein_group = $parameters{protein_group_representative_constraint};
+  $genetic_locus = $parameters{genetic_locus};
+  if ($protein_group eq '') {
     ## Do everything invovled with drawing the graph
     #### Connect to Ensembl database
     my $host = 'mysql';
@@ -1114,16 +1117,21 @@ if ($organism_id == 2) {
     my $chrom;
     my $chunk_name;
     my $chromlen;
+    my $strand;
   
-    my $stend_option;
     my $start_bp;
     my $st_modifier;
     my $end_bp;
     my $end_modifier;
 
+    my $kband_st;
+    my $kband_end;
+ 
+    my $chrom_num = $parameters{chromosome};
     my $start_chunk = $parameters{start_in_chromosome};
     my $end_chunk = $parameters{end_in_chromosome};
-    my $chrom_num = $parameters{chromosome};
+    my $input_genetic_locus = $parameters{genetic_locus};
+    my $input_strand = $parameters{strand};
 
     if ($start_chunk eq '') {
       $start_bp = '';
@@ -1143,20 +1151,41 @@ if ($organism_id == 2) {
       $end_bp = $2;
     }
 
-    if (($start_bp eq '') and ($end_bp eq '')) {
+    if ($input_genetic_locus ne '') {
+      $input_genetic_locus =~ /(\d{1,2})(p|q)(.*)/;
+      my $genetic_locus = "$2$3";
+    }
+
+    if (($start_bp eq '') and ($end_bp eq '') and ($genetic_locus eq '')) {
       $stend_option = 'aaa';
-    } elsif (($start_bp ne '') and ($st_modifier eq '>') and ($end_bp eq '')) {
+    } elsif (($start_bp ne '') and ($st_modifier eq '>') and ($end_bp eq '') and ($genetic_locus eq '')) {
       $stend_option = 'bbb';
-    } elsif (($start_bp eq '') and ($end_bp ne '') and ($end_modifier eq '<')) {
+    } elsif (($start_bp eq '') and ($end_bp ne '') and ($end_modifier eq '<') and ($genetic_locus eq '')) {
       $stend_option = 'ccc';
-    } elsif (($start_bp ne '') and ($st_modifier eq '>') and ($end_bp ne '') and ($end_modifier eq '<')) {
+    } elsif (($start_bp ne '') and ($st_modifier eq '>') and ($end_bp ne '') and ($end_modifier eq '<') and ($genetic_locus eq '')) {
       $stend_option = 'ddd';
+    } elsif ($genetic_locus ne '') {
+      $stend_option = 'eee';
+    }
+
+    my $slice_adaptor = $registry->get_adaptor( 'Human', 'Core', 'Slice' );
+    my $gene_adaptor = $registry->get_adaptor('Human', 'Core', 'Gene' );
+    my $kary_adaptor = $registry->get_adaptor('Human', 'Core', 'KaryotypeBand' );
+
+    #### If zooming by karyotype band, read band start and end coordinates
+    if ($input_genetic_locus ne '') {
+      my $chr = $slice_adaptor->fetch_by_region('chromosome', $chrom_num);
+      my $kary_data = $kary_adaptor->fetch_all_by_Slice($chr);
+      while ( my $kary_datum = shift @{$kary_data} ) {
+        my $kary_datum_name = $kary_datum->name();
+        if ($genetic_locus eq $kary_datum_name) {
+          $kband_st = $kary_datum->start();
+          $kband_end = $kary_datum->end();
+        }
+      }
     }
 
     #### Initialize gene data from Ensembl database
-    my $slice_adaptor = $registry->get_adaptor( 'Human', 'Core', 'Slice' );
-    my $gene_adaptor = $registry->get_adaptor('Human', 'Core', 'Gene' );
-
     if ($stend_option eq 'aaa') {
       $chrom = $slice_adaptor->fetch_by_region( 'chromosome', $chrom_num);
       $chunk_name = "Entire";
@@ -1164,30 +1193,32 @@ if ($organism_id == 2) {
       $chrom = $slice_adaptor->fetch_by_region('chromosome', $chrom_num, $start_bp + 1); 
       $chunk_name = "$start_bp bp to End";
     } elsif ($stend_option eq 'ccc') {
-      $chrom = $slice_adaptor->fetch_by_region( 'chromosome', $chrom_num, 0, $end_bp + 1);
+      $chrom = $slice_adaptor->fetch_by_region( 'chromosome', $chrom_num, 1, $end_bp + 1);
       $chunk_name = "Start to $end_bp bp";
     } elsif ($stend_option eq 'ddd') {
       $chrom = $slice_adaptor->fetch_by_region('chromosome', $chrom_num, $start_bp + 1, $end_bp + 1); 
       $chunk_name = "$start_bp bp to $end_bp bp";
-    } else {
+    } elsif ($stend_option eq 'eee') {
+      $chrom = $slice_adaptor->fetch_by_region('chromosome', $chrom_num, $kband_st, $kband_end);
+      $chunk_name = "Genetic Locus $genetic_locus ($kband_st bp to $kband_end bp)"
+     } else {
       $chrom = $slice_adaptor->fetch_by_region( 'chromosome', $chrom_num);
       $chunk_name = "Entire";
       print "<p>Unable to draw standard image within these constraints</p>\n";
     }
 
     #### Read PeptideAtlas protein information
-    sub create_peptideatlas_feature($$$);
+    sub create_peptideatlas_feature($$$$);
 
     my $p;
     my $protein_acc;
     my $protein_start;
     my $protein_stop;
-    my $protein_score;
     my $protein_strand;
     my $protein_strand_num;
     my $num_protein;
     my $acclist = scalar @acclist;
-    my $no_coord_count = 0;
+       $no_coord_count = 0;
     my @protein_list;
 
 
@@ -1208,13 +1239,18 @@ if ($organism_id == 2) {
       if (($stend_option eq 'bbb') or ($stend_option eq 'ddd')) {
         $protein_start -= $start_bp;
         $protein_stop -= $start_bp;
+      } elsif ($stend_option eq 'eee') {
+        $protein_start -= $kband_st;
+        $protein_stop -= $kband_st;
       }
 
-      $p = create_peptideatlas_feature($protein_start, $protein_stop, $protein_score);
+      my $p = Bio::SeqFeature::Generic->new(
+                -start => $protein_start, 
+                -end => $protein_stop,
+                -score => 1000,
+		-display_name => $protein_acc );
       push @protein_list, $p;
     }
-
-    print "<p>No coordinates available for $no_coord_count proteins</p>\n";
 
     #### Grab gene data from Ensembl
     my $genes = $gene_adaptor->fetch_all_by_Slice($chrom);
@@ -1225,6 +1261,12 @@ if ($organism_id == 2) {
       my $gene_strand    = $gene->strand();
       my $gene_type      = $gene->biotype();
       my $gene_name      = $gene->stable_id();
+
+      if (($input_strand eq '+') and ($gene_strand == -1)) {
+        next GENE;
+      } elsif (($input_strand eq '-') and ($gene_strand == 1)) {
+        next GENE;
+      }
 
       if ($gene_type eq 'protein_coding') {
         my $g = Bio::SeqFeature::Generic->new(
@@ -1263,14 +1305,12 @@ if ($organism_id == 2) {
           if (($protein_start >= $gene_start) and ($protein_stop <= $gene_end)) {
 
 	    if ($gene_strand == $protein_strand_num) {
-#print "prot st:$protein_start end:$protein_stop  ";
-#print "gene st:$gene_start end:$gene_end  ";
 
 	      my $match_gene = Bio::SeqFeature::Generic->new(
 			-start => $gene_start,
 			-end   => $gene_end,
-			-score => 1000 ),
-			-display_name => $gene_name;
+			-score => 1000 ,
+			-display_name => $gene_name);
 	      push @matchgene_list, $match_gene;
 	      next GENE;
 	    } else {
@@ -1286,7 +1326,6 @@ if ($organism_id == 2) {
     my @kary_list;
     my $kary_end;
     my @kary_end_list;
-    my $kary_adaptor = $registry->get_adaptor('Human', 'Core', 'KaryotypeBand' );
     my $karyotypes = $kary_adaptor->fetch_all_by_Slice($chrom);
     while ( my $kary = shift @{$karyotypes} ) {
       my $kary_start  = $kary->start();
@@ -1332,10 +1371,11 @@ if ($organism_id == 2) {
       $chromlen = $end_bp;
     } elsif ($stend_option eq 'ddd') {
       $chromlen = $end_bp - $start_bp;
+    } elsif ($stend_option eq 'eee') {
+      $chromlen = $kband_end - $kband_st;
     } else {
       $chromlen = @sorted_kary_end[(scalar @kary_end_list) - 1];
     }
-#chrom.length()?
 
     #### Initialize main panel, track sequence, and track ruler
     my $panel = Bio::Graphics::Panel->new( -'length'    => $chromlen,
@@ -1349,12 +1389,10 @@ if ($organism_id == 2) {
 
 
     my $ruler = Bio::SeqFeature::Generic->new( -end => $chromlen,
-                -start => 2,
-                -display_name => 'Sequence Position');
+                -start => 2);
 
     my $sequence = Bio::SeqFeature::Generic->new( -end => $chromlen,
-                -start => 1,
-                -display_name => 'Sequence Position');
+                -start => 1);
 
     #### Add all the tracks to the panel
     ## Add chromosome track
@@ -1417,15 +1455,24 @@ if ($organism_id == 2) {
 		-label     => 0,
                 ); 
 
- $pid = $$;
- $map = "<MAP NAME='$pid'>\n";
-my @objects = $panel->boxes();
-for my $obj (@objects) {
-  my $key_name = $obj->[0]->display_name();
-  my $coords = join( ", ", @$obj[1..4] );
-  $map .= "<AREA SHAPE='RECT' COORDS='$coords' TITLE='$key_name'>\n";
-  }
-$map .= '</MAP>';
+    #### Create mouseovers and links for protein and gene bars
+    $pid = $$;
+    $map = "<MAP NAME='$pid'>\n";
+    my $link;
+    my @objects = $panel->boxes();
+
+    for my $obj (@objects) {
+      my $key_name = $obj->[0]->display_name();
+      my $coords = join( ", ", @$obj[1..4] );
+      if ($key_name =~ /^A|B|C|O|P|Q|ENSP|IPI/) { 
+        $link = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetProtein?protein_name=$key_name&apply_action=QUERY";
+        $map .= "<AREA SHAPE='RECT' COORDS='$coords' TITLE='$key_name' HREF='$link'>\n";
+      } elsif ($key_name =~ /^ENSG/) {
+        $link = "http://uswest.ensembl.org/Homo_sapiens/Gene/Summary?g=$key_name";
+        $map .= "<AREA SHAPE='RECT' COORDS='$coords' TITLE='$key_name' HREF='$link'>\n";
+      }
+    }
+    $map .= '</MAP>';
 
     #### Create image file
     my $file_name = "/net/dblocal/www/html/sbeams/images/GetProteinsChromosome.png";
@@ -1435,24 +1482,11 @@ $map .= '</MAP>';
       print OUT $panel->png;
       $panel->finished;
       close OUT;
-
-    #### sub routine for making Peptide protein feature
-    sub create_peptideatlas_feature($$$) {
-
-      my ($protein_start, $protein_stop, $protein_score, $protein_acc) = (shift, shift, shift, shift);
-      my $p = Bio::SeqFeature::Generic->new(
-                -start => $protein_start, 
-                -end => $protein_stop,
-                -score => $protein_score,
-		-display_name => $protein_acc );
     }
-
-
-
-    } else {
-    print "Unable to graphically depict non-human builds";
-    }
+  } else {
+  print "<p>Unable to graphically depict non-human builds</p>\n";
   }
+} 
 
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
@@ -1480,7 +1514,14 @@ $map .= '</MAP>';
 
     #### Display Graphic
 
-  if ($organism_id == 2) {
+  if ($protein_group ne '') {
+    print "<p>Unable to display graphical depiction under these constraints</p>";}
+
+  if (($organism_id == 2) and ($protein_group eq '')) {
+    print "<p>No coordinates available for $no_coord_count proteins</p>\n";
+    if (($stend_option eq 'aaa') and ($genetic_locus ne '')) {
+      print "<p>Unable to draw standard image within these constraints</p>\n";
+    }
     my $imgsrcbuffer = "<IMG SRC=\"/sbeams/images/GetProteinsChromosome.png\" ISMAP USEMAP='#$pid' ALT=\"Graphical Depiction of Proteins and Genes for Selected Chromosome\">";
 
     if ($sbeams->output_mode() eq 'html') {
