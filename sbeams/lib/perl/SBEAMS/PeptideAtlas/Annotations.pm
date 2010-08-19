@@ -180,7 +180,7 @@ sub get_suitability_level {
 #+ 
 #  These come primarily from the modified_peptide_annotations table
 #- 
-sub get_mrm_transitions_old {
+sub get_mrm_transitions_acc_list {
   my $self = shift;
   my %args = @_;
 
@@ -230,9 +230,10 @@ sub get_mrm_transitions {
   my $self = shift;
   my %args = @_;
 
-  
+  if ( !$args{peptides} && $args{accessions} ) {
+    return $self->get_mrm_transitions_acc_list( %args );
+  }
 
-  return unless $args{peptides};
   my %peps;
   my $pep_str;
   my $sep = '';
