@@ -1097,7 +1097,7 @@ sub handle_request {
       }
 
       if ($input_genetic_locus ne '') {
-        $input_genetic_locus =~ /(\d+)(p|q)(.*)/;
+        $input_genetic_locus =~ /(\w+)(p|q)(.*)/;
         $genetic_locus = "$2$3";
       }
 
@@ -1146,7 +1146,7 @@ sub handle_request {
         $chrom = $slice_adaptor->fetch_by_region('chromosome', $chrom_num, $start_bp + 1, $end_bp + 1); 
         $chunk_name = "$start_bp bp to $end_bp bp";
       } elsif ($stend_option eq 'eee') {
-        $chrom = $slice_adaptor->fetch_by_region('chromosome', $chrom_num, $kband_st, $kband_end);
+        $chrom = $slice_adaptor->fetch_by_region('chromosome', $chrom_num, $kband_st + 1, $kband_end + 1);
         $chunk_name = "Genetic Locus $genetic_locus ($kband_st bp to $kband_end bp)"
       } elsif ($stend_option eq 'fff') {
         $chrom = $slice_adaptor->fetch_by_region( 'chromosome', $chrom_num);
@@ -1229,7 +1229,11 @@ sub handle_request {
             if (($stend_option eq 'bbb') or ($stend_option eq 'ddd')) {
               $protein_start -= $start_bp;
               $protein_stop -= $start_bp;
+            } elsif ($stend_option eq 'eee') {
+              $protein_start -= $kband_st;
+              $protein_stop -= $kband_st;
             }
+            
   
             if ($protein_strand eq '+') {
   	      $protein_strand_num = 1;
@@ -1453,7 +1457,7 @@ sub handle_request {
     
     my $imgsrcbuffer = "<IMG SRC=\"$HTML_BASE_DIR/$tmp_img_path/$file_name\" ISMAP USEMAP='#$pid' ALT=\"Graphical Depiction of Proteins and Genes for Selected Chromosome\">";
 
-    if (($organism_id == 2) and ($sbeams->output_mode() eq 'html')) {
+    if (($organism_id == 2) and ($chrom_num ne '') and ($sbeams->output_mode() eq 'html')) {
       print "<p>$imgsrcbuffer $map</p>";
 	}
 
