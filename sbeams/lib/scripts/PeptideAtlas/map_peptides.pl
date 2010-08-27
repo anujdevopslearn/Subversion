@@ -128,9 +128,11 @@ while( my $line = <PEPS> ) {
     } else { # End if n_convert
       if ( !$matched ) {
         # Force mapping
-        $matched = map_peptide( $pepseq, 1 ) unless $opts->{supress_brute};
+        $matched = map_peptide( $pepseq, 1 ) unless $opts->{suppress_brute};
         if ( $matched ) {
           $stats{peptide_map_ok_brute}++;
+        } else {
+          print "MIA: >$pepseq<\n" if $opts->{show_mia};
         }
       }
     } # End if n_convert else 
@@ -145,7 +147,7 @@ while( my $line = <PEPS> ) {
     $tested{$pepseq}++;
   }
 
-  my $prot_str = 'no_mapping';
+  my $prot_str = 'na';
   my $prot_cnt = 0;
   if ( $peps{$pepseq} ) {
     $prot_str = $peps{$pepseq};
@@ -186,11 +188,10 @@ for my $acc ( keys( %{$acc2seq} ) ) {
         $n_peps++;
 #        print "PEPTIDE: >$mapped_pep<\n";
         if ( scalar( keys( %{$allpeptides->{$mapped_pep}} ) ) > 1 ) { # Degenerate
-          print "DEGEN: >$mapped_pep $allpeptides->{mapped_pep}<\n";
+          print "DEGEN: >$mapped_pep<\n";
           for my $k ( keys( %{$allpeptides->{$mapped_pep}} ) ) {
             print "$k\n";
           }
-          exit;
         } else { # Gerenate
           print "PROTEO: >$mapped_pep<\n";
         }
@@ -207,10 +208,8 @@ for my $acc ( keys( %{$acc2seq} ) ) {
   if ( $opts->{bin_max} ) {
     $n_peps = $opts->{bin_max} if $n_peps > $opts->{bin_max};
   }
-
-#  if ( $opts->{show_nomap} && ( !$n_peps || ($n_peps < 5 ))) {
-#  TODO add in threshold for n_peps as option.
-  if ( $opts->{show_nomap} && !$n_peps ) {
+  if ( $opts->{show_nomap} && ( !$n_peps || ($n_peps < 5 ))) {
+#  if ( $opts->{show_nomap} && !$n_peps ) {
     print "NOMAP: $acc\n";
   }
   my $key_num = ( $n_peps > 9 ) ? $n_peps : '0' . $n_peps;
@@ -283,6 +282,7 @@ sub map_peptide {
   my $pepseq = shift || die "No peptide supplied to map_peptide";
   my $skip_stats = 0;
   my $brute = shift || 0;
+#  print STDERR "pepseq is $pepseq, brute is $brute\n";
 
   # global things...
   # Read only:
@@ -294,8 +294,9 @@ sub map_peptide {
   # %peps -  peptides keys => accession string
   # %prots - protein keys => peptide keyed hashref
 
-  # if pep is non-tryptic or too long/short, do brute force mapping
-  if ( $pepseq =~ /[KR][^P]/ ) {
+  # if pep is non-tryptic or too long/short, do brute force mapping - 
+  # unless we are suppressing it!
+  if ( $pepseq =~ /[KR][^P]/ && !$opts->{suppress_brute} ) {
     $brute++;
     $stats{tryp_missed}++ unless $skip_stats;
   }
@@ -310,6 +311,7 @@ sub map_peptide {
 
   my $match_str = '';
   if ( $brute ) {
+    my $peplen = length( $pepseq );
     my @maps = grep(/$pepseq/, @seqs );
     if ( @maps ) {
       my $sep = '';
@@ -317,6 +319,17 @@ sub map_peptide {
         for my $acc ( sort( @{$seq2acc->{$seq}} ) ) {
           $prots{$acc} ||= {};
           $prots{$acc}->{$pepseq}++;
+
+          if ( $opts->{show_all_flanking} ) {
+            my $posn = $atlas->get_site_positions( pattern => $pepseq, 
+                                                       seq => $seq );
+            my $pre = ( !$posn->[0] ) ? '-' : substr( $seq, $posn->[0] - 1, 1 );
+            my $pseq = substr( $seq, $posn->[0], $peplen );
+            my $fol = ( $posn->[0] + $peplen == length( $seq ) ) ? '-' : substr( $seq, $posn->[0] + $peplen, 1 );
+#            print "$pepseq yeilds $pre, $pseq, $fol from $posn->[0], $posn->[1], $seq\n";
+            print join( "\t", $acc, $pre, $pseq, $fol ) . "\n";
+
+          }
 
           # Even though this is not tryptic, cache peptide for later degeneracy test.
           $allpeptides->{$pepseq}->{$acc} ||= 1;
@@ -454,6 +467,7 @@ sub read_fasta {
                                                  max_len => 30 );
 
       for my $tp ( @{$tryptic} ) {
+#        print STDERR "Adding $tp\n";
         $tryptic{$tp} ||= {};
         $tryptic{$tp}->{$def}++;
       }
@@ -504,8 +518,8 @@ sub get_options {
              'mapping_out', 'trim_acc', 'output_file=s', 'column_labels:i',
              'acc_swiss', 'ZtoC', 'bin_max=i', 'grep_only', 'init_mapping=i',
              'show_degen', 'show_mia', 'nocount_degen', 'show_nomap',
-             'show_proteo', 'show_all_pep', 'omit_match_seq', 'supress_brute',
-             'key_calc' );
+             'show_proteo', 'show_all_pep', 'omit_match_seq', 'suppress_brute',
+             'key_calc', 'show_all_flanking' );
 
   print_usage() if $opts{help};
 
@@ -557,7 +571,7 @@ sub print_usage {
   -t, --trim_acc       Trim fasta descriptor line to first space-delimited value
   -p, --peptide_file   File of peptides
       --seq_idx        1-based Index of peptide sequence in file, defaults to 1
-      --supress_brute  Do not use brute-force mapping (IDs non-tryptic)
+      --suppress_brute  Do not use brute-force mapping (IDs non-tryptic)
   -n, --n_convert      Convert DxST to NxST if necessary to get matches
   -m, --mapping_out    Print mapping results, appended to peptide line
       --output_file    File to which to print results, else STDOUT
