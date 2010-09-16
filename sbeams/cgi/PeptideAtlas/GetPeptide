@@ -981,7 +981,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
             # No mods except charge
             next if $c_spectrum->[8] && $c_spectrum->[8] ne $pep->[0];
           } else {
-            next if $c_spectrum->[8];
+            next if !$c_spectrum->[8] || $c_spectrum->[8] ne $pep->[0];
           }
 
           my $default_txt = ( $lib_id eq $c_spectrum->[6] ) ? '(Build default)' : '';
