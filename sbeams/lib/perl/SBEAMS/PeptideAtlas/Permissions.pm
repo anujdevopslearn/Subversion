@@ -215,6 +215,7 @@ sub getCurrentAtlasBuildID {
   my $atlas_build_id = $parameters{'atlas_build_id'};
   my $atlas_build_name = $parameters{'atlas_build_name'};
   my $organism_id = $parameters{'organism_id'};
+  my $organism_name = $parameters{'organism_name'};
 
 
   #### If atlas_build_id was supplied
@@ -257,18 +258,98 @@ sub getCurrentAtlasBuildID {
     } else {
       $atlas_build_id = $rows[0];
     }
-    print "atlas build is $atlas_build_id\n";
+    #print "atlas build is $atlas_build_id\n";
 
-  #### Else if organism_id was supplied, retrieve from the
-  #### default build table the non-specialized build for this
-  #### organism.
-  } elsif ($organism_id) {
+
+  #### If an organism name or the organism_id was supplied,
+  #### get the default build for that organism.
+  } elsif ( $organism_name || $organism_id ) {
+
+    if ($organism_name && $organism_id) {
+      print "ERROR[$METHOD_NAME]: Can't supply both organism_name and organism_id<BR>\n";
+      return(-1);
+
+    }
+
+    #### If organism_name was supplied, retrieve from the
+    #### organism table the organism_id for this organism.
+    #### Allow matches to common_name, full_name, or abbreviation as well.
+    if ($organism_name) {
+
+      my $organism_name_clause = $sbeams->parseConstraint2SQL(
+	constraint_column=>"organism_name",
+	constraint_type=>"plain_text",
+	constraint_name=>"Organism Name",
+	constraint_value=>$parameters{organism_name} );
+      return if ($organism_name_clause eq '-1');
+
+      my $common_name_clause = $sbeams->parseConstraint2SQL(
+	constraint_column=>"common_name",
+	constraint_type=>"plain_text",
+	constraint_name=>"Common Name",
+	constraint_value=>$parameters{organism_name} );
+      return if ($common_name_clause eq '-1');
+
+      my $full_name_clause = $sbeams->parseConstraint2SQL(
+	constraint_column=>"full_name",
+	constraint_type=>"plain_text",
+	constraint_name=>"Full Name",
+	constraint_value=>$parameters{organism_name} );
+      return if ($full_name_clause eq '-1');
+
+      my $abbreviation_clause = $sbeams->parseConstraint2SQL(
+	constraint_column=>"abbreviation",
+	constraint_type=>"plain_text",
+	constraint_name=>"Abbreviation",
+	constraint_value=>$parameters{organism_name} );
+      return if ($abbreviation_clause eq '-1');
+
+      ### We want to connect these clauses with OR, not AND.
+      $organism_name_clause =~ s/AND //;
+      $common_name_clause =~ s/AND //;
+      $full_name_clause =~ s/AND //;
+      $abbreviation_clause =~ s/AND //;
+      my $combined_organism_name_clause = qq~
+	($organism_name_clause OR
+	 $common_name_clause OR
+	 $full_name_clause OR
+	 $abbreviation_clause)
+      ~;
+
+      my $sql = qq~
+	SELECT organism_id
+	  FROM $TB_ORGANISM
+	 WHERE 1=1
+	   AND $combined_organism_name_clause
+	   AND record_status != 'D'
+      ~;
+      my @rows = $sbeams->selectOneColumn($sql);
+
+
+      #### Check that we got exactly one result or squawk
+      if (scalar(@rows) == 0) {
+	print "ERROR[$METHOD_NAME]: No organism record found for organism name ".
+	  "'$organism_name'<BR>\n";
+	return(-1);
+      } elsif (scalar(@rows) > 1) {
+	print "ERROR[$METHOD_NAME]: Multiple records found for organism name".
+	  "'$organism_name'<BR>\n";
+	return(-1);
+
+      } else {
+	$organism_id = $rows[0];
+      }
+
+    }
+
+    #### Retrieve from the default build table the non-specialized
+    #### build for this organism.
 
     my $organism_id_clause = $sbeams->parseConstraint2SQL(
       constraint_column=>"organism_id",
       constraint_type=>"int",
       constraint_name=>"Organism ID",
-      constraint_value=>$parameters{organism_id} );
+      constraint_value=>$organism_id );
     return if ($organism_id_clause eq '-1');
 
     my $organism_specialized_build_clause = 
@@ -276,14 +357,13 @@ sub getCurrentAtlasBuildID {
 
     my $sql = qq~
       SELECT atlas_build_id
-        FROM $TBAT_DEFAULT_ATLAS_BUILD
+	FROM $TBAT_DEFAULT_ATLAS_BUILD
        WHERE 1=1
-         $organism_id_clause
-         $organism_specialized_build_clause
-         AND record_status != 'D'
+	 $organism_id_clause
+	 $organism_specialized_build_clause
+	 AND record_status != 'D'
     ~;
     my @rows = $sbeams->selectOneColumn($sql);
-
 
     #### Check that we got exactly one result or squawk
     if (scalar(@rows) == 0) {

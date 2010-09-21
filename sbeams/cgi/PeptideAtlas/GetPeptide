@@ -225,7 +225,7 @@ sub handle_request {
   if ( $parameters{peptide_name_constraint} ) {
     $searchKey = 'Peptide Name'; 
     $searchValue =  $parameters{peptide_name_constraint};
-  } elsif (  $parameters{peptide_name_constraint} ) {
+  } elsif (  $parameters{peptide_sequence_constraint} ) {
     $searchKey = 'Peptide Sequence'; 
     $searchValue =  $parameters{peptide_sequence_constraint};
   } else {
