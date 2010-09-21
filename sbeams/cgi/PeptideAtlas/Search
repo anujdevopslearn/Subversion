@@ -451,6 +451,23 @@ sub handle_request {
         sql_query=>$sql,
         resultset_ref=>$resultset_ref,
       );
+
+       #### Filter result set: only keeep one combination of build_type, rescource_name and rescource_type
+      my @filtered_result = ();
+      my %BuildType_RescourceName = ();
+      for my $row ( @{$resultset_ref->{data_ref}} ) {
+        #intensity score
+         my $build_type = $row->[1];
+         my $rescource_name = $row->[2];
+         my $rescource_type = $row->[3];
+         if(not defined $BuildType_RescourceName{$build_type}{$rescource_name}){
+            push @filtered_result, $row;
+         }
+         $BuildType_RescourceName{$build_type}{$rescource_name} = 1;
+       }
+       $resultset_ref->{data_ref} = \@filtered_result;
+
+
       #$elapsed = Time::HiRes::tv_interval( $start );
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
