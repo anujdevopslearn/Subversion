@@ -185,37 +185,41 @@ sub displayGuestPageHeader {
 
   # Use http_header from main SBEAMS object
   my $http_header = $sbeams->get_http_header();
+
+  my $js =  "<SCRIPT LANGUAGE=javascript SRC=\"/devZS/sbeams/usr/javascript/sorttable.js\"></SCRIPT>";
+
+
   use LWP::UserAgent;
   use HTTP::Request;
   my $ua = LWP::UserAgent->new();
-
   my $skinLink = $args{uri} || 'http://www.peptideatlas.org/.index.dbbrowse.php';
-  
-  my $resource = $sbeams->getSessionAttribute( key => 'PA_resource' ) || ''; 
+  my $resource = $sbeams->getSessionAttribute( key => 'PA_resource' ) || '';
   if ( $resource eq 'SRMAtlas' ) {
     $skinLink = 'http://www.srmatlas.org/.index.dbbrowse-srm.php';
   }
-
-
-  #my $skinLink = 'http://dbtmp.systemsbiology.net/';
   my $response = $ua->request( HTTP::Request->new( GET => "$skinLink" ) );
   my @page = split( "\n", $response->content() );
   my $skin = '';
   my $cnt=0;
   my $init = ( $args{init_tooltip} ) ? $self->init_pa_tooltip() : '';
   my $css_info = $sbeams->printStyleSheet( module_only => 1 );
+  my $loadscript = "$args{onload};" if $args{onload};
+  $loadscript .= 'sortables_init();' if $args{sort_tables};
 
   $LOGIN_LINK .= "<BR><BR><BR>\n$cswitcher<BR>\n";
   for ( @page ) {
     $cnt++;
     $_ =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
     $_ =~ s/(\<[^>]*body[^>]*\>)/$1$init$css_info/;
+    if($loadscript){
+      $_ =~ s/<body/$js\n<body OnLoad="$loadscript self.focus();"/;
+    }
     $_ =~ s/width="680"/width="100%"/;  # resultsets are often wide...
     $_ =~ s/width="550"//;              # and IE has trouble rendering these tables
     last if $_ =~ /--- Main Page Content ---/;
     $skin .= "$_\n";
   }
-  
+ 
   $self->{'_external_footer'} = join("\n", '<!--SBEAMS_PAGE_OK-->', @page[$cnt..$#page]);
   $skin =~ s#/images/#/sbeams/images/#gm;
   #$skin =~ s#/images/#/dev2/sbeams/images/#gm;
@@ -258,7 +262,8 @@ sub displayStandardPageHeader {
   $self->printStyleSheet();
 
   my $loadscript = "$args{onload};" || '';
-
+  $loadscript .= 'sortables_init();' if $args{sort_tables};
+  my $js =  "<SCRIPT LANGUAGE=javascript SRC=\"/devZS/sbeams/usr/javascript/sorttable.js\"></SCRIPT>";
   print "$args{header_info}\n" if $args{header_info};
 
   #### Determine the Title bar background decoration
@@ -272,8 +277,18 @@ sub displayStandardPageHeader {
 	</HEAD>
 
 	<!-- Background white, links blue (unvisited), navy (visited), red (active) -->
-	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" TOPMARGIN=0 LEFTMARGIN=0 OnLoad="$loadscript self.focus();">
   ~;
+  if($loadscript){
+     print qq~
+       $js
+	     <BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" TOPMARGIN=0 LEFTMARGIN=0 OnLoad="$loadscript self.focus();">
+     ~;
+  }
+  else{
+      print qq~
+              <BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" TOPMARGIN=0 LEFTMARGIN=0 OnLoad="self.focus();">
+     ~;
+  }
   print $self->init_pa_tooltip() if $args{init_tooltip};
 
   print qq~
@@ -534,7 +549,6 @@ sub encodeSectionItem {
   my $tr = $args{tr_info} || ''; 
 
   $url =~ s/ /+/g;
-
   my $astart = '';
   my $aend = '';
   if ($url) {
