@@ -1594,7 +1594,6 @@ sub updateOrInsertRow {
   my $full_table_name = "$database_name$table_name";
   $full_table_name = '"'.$full_table_name.'"' if ($quoted_identifiers);
 
-
   #### Build the SQL statement
   #### Could also imagine allowing parameter binding as an option
   #### for database engines that support it instead of sending
@@ -2807,7 +2806,7 @@ sub displayResultSet {
   
     $column_titles_ref = $resultset_ref->{column_list_ref}
       unless ($column_titles_ref);
- 
+
     #### If the command to re-sort was passed, do it now
     if (defined($rs_params_ref->{rs_resort_column}) &&
 	$rs_params_ref->{rs_resort_column} gt '') {
@@ -2847,14 +2846,16 @@ sub displayResultSet {
 
       #### Write the resultset back out to the same file.  Need to do
       #### this so that the user can page through the re-sorted resultset
-      $self->writeResultSet(resultset_file_ref=>\$rs_params_ref->{set_name},
-        resultset_ref=>$resultset_ref,
-        query_parameters_ref=>$query_parameters_ref);
+      $self->writeResultSet(
+           resultset_file_ref=>\$rs_params_ref->{set_name},
+           resultset_ref=>$resultset_ref,
+           query_parameters_ref=>$query_parameters_ref);
     }  # end if rs_resort_column defined
 
 
     #### Make some adjustments to the default column width settings
     my @precisions = @{$resultset_ref->{precisions_list_ref}};
+    #my @precisions  =  @$column_titles_ref;
     my $i;
     for ($i = 0; $i <= $#precisions; $i++) {
       #### Set the width to negative (variable)
@@ -2868,10 +2869,9 @@ sub displayResultSet {
       $precisions[$i] = 20 if ($types_ref->[$i] =~ /date/i);
 
       #### Print for debugging
-    #  print $column_titles_ref->[$i],"(",$types_ref->[$i],"): ",
-    #    $precisions[$i],"<BR>\n";
+      #print $column_titles_ref->[$i],"(",$types_ref->[$i],"): ",
+      #  $precisions[$i],"<BR>\n";
     }
-
 
     my $output_mode = $self->output_mode();
     my $header = $self->get_http_header( mode => $output_mode );
@@ -3134,9 +3134,9 @@ sub displayResultSet {
 
       ##Redirect to the gaggle version of cytoscape if we need to
       if(defined $cytoscape->{cytoscape_type} && $cytoscape->{cytoscape_type} eq 'cytoscape_ps'){
-	my $url = "$tmp_html_base_dir/index.html";
-	print $q->redirect("$url");
-	return;
+      	my $url = "$tmp_html_base_dir/index.html";
+      	print $q->redirect("$url");
+      	return;
       }
 
 
@@ -3172,16 +3172,18 @@ sub displayResultSet {
       return;
     } # end if cytoscape format
 
+    my $table_class;
+    if($args{sortable} and $base_url eq ''){$table_class = 'CLASS="sortable"' ;}
+
     #### If a printable table was desired, use one format
     if ( $printable_table ) {
-
      
       ShowHTMLTable{
         titles=>$column_titles_ref,
-	types=>$types_ref,
-	widths=>\@precisions,
-	row_sub=>\&returnNextRow,
-        table_attrs=>'WIDTH=675 BORDER=1 CELLPADDING=2 CELLSPACING=2',
+	      types=>$types_ref,
+       	widths=>\@precisions,
+       	row_sub=>\&returnNextRow,
+        table_attrs=>'ID="TBL" $table_class WIDTH=675 BORDER=1 CELLPADDING=2 CELLSPACING=2',
         title_formats=>['BOLD'],
         url_keys=>$url_cols_ref,
         hidden_cols=>$hidden_cols_ref,
@@ -3205,13 +3207,12 @@ sub displayResultSet {
       } else {
         @TDformats=('NOWRAP');
       }
-		
       ShowHTMLTable{
         titles=>$column_titles_ref,
-	types=>$types_ref,
-	widths=>\@precisions,
-	row_sub=>\&returnNextRow,
-        table_attrs=>"$table_width BORDER=0 CELLPADDING=2 CELLSPACING=2",
+      	types=>$types_ref,
+      	widths=>\@precisions,
+      	row_sub=>\&returnNextRow,
+        table_attrs=>"$table_width $table_class BORDER=0 CELLPADDING=2 CELLSPACING=2",
         title_formats=>['FONT COLOR=white,BOLD'],
         url_keys=>$url_cols_ref,
         hidden_cols=>$hidden_cols_ref,
@@ -4331,7 +4332,6 @@ sub writeResultSet {
     $outfile = "$RESULTSET_DIR/${resultset_file}.resultset";
     nstore($resultset_ref,$outfile);
 
-
     #### If this is a new resultset and we were provided a query_name,
     #### write a record for it in cached_resultset
     if ($is_new_resultset && $query_name) {
@@ -4538,7 +4538,7 @@ sub parse_input_parameters {
     if ( ($key,$value) = split("=",$element) ) {
       my $tmp = $value;
       $tmp = '' unless (defined($tmp));
-      #print "$key = '$tmp'<BR>\n";
+      print "$key = '$tmp'<BR>\n";
       $cmdln_parameters{$key} = $value;
       $ref_parameters->{$key} = $value;
       $n_cmdln_params_found++;
@@ -4547,7 +4547,6 @@ sub parse_input_parameters {
       return;
     }
   }
-
 
   #### Resolve all the parameters from the CGI interface if any
   my %CGI_parameters;
@@ -4822,9 +4821,15 @@ sub display_input_form {
       # If "$accessible_project_ids" appears in the SQL optionlist query,
       # then substitute it with a call to that function
       if ( $optionlist_queries{$element} =~ /\$accessible_project_ids/ ) {
-	my @accessible_project_ids = $self->getAccessibleProjects();
-	my $accessible_project_id_list = join(',',@accessible_project_ids);
-	$accessible_project_id_list = '-1'
+       	my @accessible_project_ids = $self->getAccessibleProjects();
+       	my $accessible_project_id_list = join(',',@accessible_project_ids);
+        #my $accessible_project_id_list ='';
+        #foreach my $id (@accessible_project_ids){
+        #  next if ($id == 773);
+        #  $accessible_project_id_list .= ",$id";
+        #}
+        #$accessible_project_id_list =~ s/^,//;
+      	$accessible_project_id_list = '-1'
           unless ($accessible_project_id_list gt '');
         $optionlist_queries{$element} =~
           s/\$accessible_project_ids/$accessible_project_id_list/g;
@@ -4849,19 +4854,20 @@ sub display_input_form {
       # If "$parameters{xxx}" appears in the SQL optionlist query,
       # then substitute that with either a value of $parameters{xxx}
       while ( $optionlist_queries{$element} =~ /\$parameters\{(\w+)\}/ ) {
+
         my $tmp = $parameters{$1};
         if (defined($tmp) && $tmp gt '') {
-	  unless ($tmp =~ /^[\d,]+$/) {
-	    my @tmp = split(',',$tmp);
-	    $tmp = '';
-	    foreach my $tmp_element (@tmp) {
-	      $tmp .= "'$tmp_element',";
-	    }
-	    chop($tmp);
-	  }
-	} else {
+      	  unless ($tmp =~ /^[\d,]+$/) {
+	        my @tmp = split(',',$tmp);
+	        $tmp = '';
+						foreach my $tmp_element (@tmp) {
+							$tmp .= "'$tmp_element',";
+	          }
+	          chop($tmp);
+	        }
+      	} else {
           $tmp = "''";
-	}
+    	}
 
         $optionlist_queries{$element} =~
           s/\$parameters{$1}/$tmp/g;
@@ -4875,11 +4881,11 @@ sub display_input_form {
         #### If there are any double quotes, need to escape them first
         $tmp =~ s/\"/\\\"/g;
          $optionlist_queries{$element} = $self->evalSQL($tmp);
-	unless ($optionlist_queries{$element}) {
-	  print "<font color=\"red\">ERROR: SQL for field '$element' fails to resolve embedded \$TB table name variable(s)</font><BR><PRE>$tmp</PRE><BR>\n";
+        	unless ($optionlist_queries{$element}) {
+	        print "<font color=\"red\">ERROR: SQL for field '$element' fails to resolve embedded \$TB table name variable(s)</font><BR><PRE>$tmp</PRE><BR>\n";
       
       
-	}
+      	}
 
       }
 
@@ -5391,15 +5397,17 @@ sub transferTable {
   my $row;
   
   my $line_br = '';
-  if ($self->output_mode() eq 'html') {
-  	$line_br = '<br>';
-  }else{
-  	$line_br = "\n";
-  } 
+  #if (defined $self->output_mode() and $self->output_mode() eq 'html') {
+  #	$line_br = '<br>';
+  # }else{
+    	$line_br = "\n";
+  # } 
   
   my $total_row_count = scalar @rows;		#setup counter to watch the inserts or updates proceed
   my $number_inserts_per_dot = int($total_row_count/100);
-  my $load_info = "v-- 0 %".  (" " x 23) . "Number of inserts per dot = " . (sprintf("% 4d", $number_inserts_per_dot)) . (" " x 24) . "100 % done --v $line_br";
+  my $load_info = "v-- 0 %".  (" " x 23) . "Number of inserts per dot = " .
+                  (sprintf("% 4d", $number_inserts_per_dot)) . (" " x 24) .
+                  "100 % done --v $line_br";
   my $load_gauge = "|" . ("." x 98) . "|$line_br";
   my $row_count = 0;
     
@@ -5414,10 +5422,10 @@ sub transferTable {
       my @refs_for_one_column;
       my $ref_type = ref($value);
       if ($ref_type eq "ARRAY") {
-	@refs_for_one_column = @{$value};
+      	@refs_for_one_column = @{$value};
       }else {
-	#### treat as scalar by default
-	push @refs_for_one_column, $value;
+       	#### treat as scalar by default
+      	push @refs_for_one_column, $value;
       }
       
       #### Loop over all fields mapped to this column
@@ -5425,149 +5433,151 @@ sub transferTable {
       
         if (defined($row->[$key]) || defined($transform_map_ref->{$key})) {
 
-	  #### If there's a mapping for this column
-	  if (defined($transform_map_ref->{$key})) {
-	    my $current_value = $row->[$key];
+	      #### If there's a mapping for this column
+	      if (defined($transform_map_ref->{$key})) {
+	        my $current_value = $row->[$key];
 
-	    #### Only in a special case, If the value is empty, then ignore it
-	    #### FIXME
-	    if (0) {
-	      next unless ($current_value gt '');
-	    }
+	         #### Only in a special case, If the value is empty, then ignore it
+	         #### FIXME
+	         if (0) {
+	           next unless ($current_value gt '');
+	          }
 
-	    #### Determine if we need to remap this column and if so, do it
-	    my $map_ref = $transform_map_ref->{$key};
-	    my $mapped_value;
-	    #### If the mapping is a simple hash
-	    if ($map_ref =~ /HASH/) {
-	      $mapped_value = $map_ref->{$current_value};
-	    } elsif ($map_ref =~ /CODE/) {
-	      $mapped_value = &$map_ref($current_value);
-	    } else {
-	      print "Unknown mapping type ",$map_ref,"\n";
-	    }
+	         #### Determine if we need to remap this column and if so, do it
+      	    my $map_ref = $transform_map_ref->{$key};
+						my $mapped_value;
+						#### If the mapping is a simple hash
+						if ($map_ref =~ /HASH/) {
+							$mapped_value = $map_ref->{$current_value};
+						} elsif ($map_ref =~ /CODE/) {
+							$mapped_value = &$map_ref($current_value);
+						} else {
+							print "Unknown mapping type ",$map_ref,"\n";
+						}
 
-	    #### If the mapping produced a result
-	    if (defined($mapped_value)) {
-	      $rowdata{$value} = $mapped_value;
-	      $row->[$key] = $mapped_value;
+						#### If the mapping produced a result
+						if (defined($mapped_value)) {
+							$rowdata{$value} = $mapped_value;
+							$row->[$key] = $mapped_value;
+					
+							#### Else complain and leave as NULL
+						} else {
+							print "\nWARNING: Unable to transform column ".$key.
+		        				" having value '".$current_value."'\n";
+						}
+
+						#### Otherwise use as is
+						} else {
+						   $rowdata{$value} = $row->[$key];
+						}
+					} else {
+						    #print "WARNING: Column $key undefined!\n";
+				  }
+				}
+			}
+
+
+			#### If there's no data, squawk and move on
+			unless (%rowdata) {
+				print "\nWARNING: row contains no data.   Nothing to do.\n";
+				next;
+			}
+
+
+			#### Logic to control whether we want returned PKs or not
+			my $return_PK = 0;
+			$return_PK = 1 if ($dest_PK_name);
+
+
+			#### If the update flag is set, then try to find out which record to update
+			my $did_update = 0;
+			if ($update) {
+				my @constraints;
+				my $constraints_str;
+				while ( ($key,$value) = each %{$update_keys_ref} ) {
+					my $contraint_value = $self->convertSingletoTwoQuotes($row->[$value]);
+					#### If the constraint value is empty, allow either NULL or empty
+					if ($contraint_value gt '') {
+						push(@constraints,"$key = '$contraint_value'");
+					} else {
+						push(@constraints,"($key = '' OR $key IS NULL)");
+		}
+				}
+
+				if (@constraints) {
+					$constraints_str = join(" AND ",@constraints);
+					$sql = qq~
+						SELECT $dest_PK_name
+							FROM $table_name
+						 WHERE $constraints_str
+					~;
+
+					#print $sql;
+					if ($verbose > 1) {
+						print "Finding PK with: $sql";
+					}
+					my @results = $self->selectOneColumn($sql);
 		
-	      #### Else complain and leave as NULL
-	    } else {
-	      print "\nWARNING: Unable to transform column ".$key.
-		  " having value '".$current_value."'\n";
-	    }
+					#### If there is one matching record
+					if (scalar(@results) == 1) {
+						$result = $dest_conn->updateOrInsertRow(
+              update=>1,
+							table_name=>$table_name,
+							rowdata_ref=>\%rowdata,
+							PK=>$dest_PK_name,
+              PK_value=>$results[0],
+							return_PK=>$return_PK,
+							verbose=>$verbose,
+							testonly=>$testonly,
+							add_audit_parameters=>$add_audit_parameters,
+						);
+						$did_update = 1;
 
-	    #### Otherwise use as is
-  	  } else {
-	    $rowdata{$value} = $row->[$key];
-  	  }
+					#### If there's more than one, then complain and exit
+					} elsif (scalar(@results) > 1) {
+						print "ERROR: Found more than one record matching $constraints_str";
+						return;
 
-        } else {
-	    #print "WARNING: Column $key undefined!\n";
-	}
-      }
-    }
-
-
-    #### If there's no data, squawk and move on
-    unless (%rowdata) {
-      print "\nWARNING: row contains no data.   Nothing to do.\n";
-      next;
-    }
-
-
-    #### Logic to control whether we want returned PKs or not
-    my $return_PK = 0;
-    $return_PK = 1 if ($dest_PK_name);
+					#### If there are none, then assume we will INSERT
+					} else {
+						$did_update = 0;
+		}
+				}
+			}
 
 
-    #### If the update flag is set, then try to find out which record to update
-    my $did_update = 0;
-    if ($update) {
-      my @constraints;
-      my $constraints_str;
-      while ( ($key,$value) = each %{$update_keys_ref} ) {
-        my $contraint_value = $self->convertSingletoTwoQuotes($row->[$value]);
-        #### If the constraint value is empty, allow either NULL or empty
-        if ($contraint_value gt '') {
-          push(@constraints,"$key = '$contraint_value'");
-        } else {
-          push(@constraints,"($key = '' OR $key IS NULL)");
-	}
-      }
+			#### If we didn't do an update operation, do an INSERT
+			if ($did_update == 0) {
+				$result = $dest_conn->updateOrInsertRow(
+          insert=>1,
+					table_name=>$table_name,
+					rowdata_ref=>\%rowdata,
+					PK=>$dest_PK_name,
+          return_PK=>$return_PK,
+					verbose=>$verbose,
+					testonly=>$testonly,
+					add_audit_parameters=>$add_audit_parameters,
+				);
+			}
 
-      if (@constraints) {
-        $constraints_str = join(" AND ",@constraints);
-        $sql = qq~
-          SELECT $dest_PK_name
-            FROM $table_name
-           WHERE $constraints_str
-        ~;
+			if ( $row_count == $number_inserts_per_dot){			
+        #change the print style of the dots.  Should print out 100 dots for the whole run
+				print "." ;
+				 $row_count = 0;
+			}elsif ($total_row_count < 100){
+				print ".";
+			}
+			
+			$row_count ++;
 
-        #print $sql;
-        if ($verbose > 1) {
-          print "Finding PK with: $sql";
-        }
-        my @results = $self->selectOneColumn($sql);
-	
-        #### If there is one matching record
-        if (scalar(@results) == 1) {
+			if ($dest_PK_name && $result) {
+				$newkey_map_ref->{$row->[$src_PK_column]} = $result;
+				#print $row->[$src_PK_column],"=",$result," ";
+			}
 
-          $result = $dest_conn->updateOrInsertRow(update=>1,
-            table_name=>$table_name,
-            rowdata_ref=>\%rowdata,
-            PK=>$dest_PK_name,PK_value=>$results[0],
-            return_PK=>$return_PK,
-            verbose=>$verbose,
-            testonly=>$testonly,
-            add_audit_parameters=>$add_audit_parameters,
-          );
-          $did_update = 1;
+		}
 
-        #### If there's more than one, then complain and exit
-        } elsif (scalar(@results) > 1) {
-          print "ERROR: Found more than one record matching $constraints_str";
-          return;
-
-        #### If there are none, then assume we will INSERT
-        } else {
-          $did_update = 0;
-	}
-      }
-    }
-
-
-    #### If we didn't do an update operation, do an INSERT
-    if ($did_update == 0) {
-
-      $result = $dest_conn->updateOrInsertRow(insert=>1,
-  	table_name=>$table_name,
-  	rowdata_ref=>\%rowdata,
-  	PK=>$dest_PK_name,return_PK=>$return_PK,
-        verbose=>$verbose,
-        testonly=>$testonly,
-        add_audit_parameters=>$add_audit_parameters,
-      );
-    }
-
-    if ( $row_count == $number_inserts_per_dot){			#change the print style of the dots.  Should print out 100 dots for the whole run
-    	print "." ;
-       $row_count = 0;
-    }elsif ($total_row_count < 100){
-    	print ".";
-    }
-    
-    $row_count ++;
-
-    if ($dest_PK_name && $result) {
-      $newkey_map_ref->{$row->[$src_PK_column]} = $result;
-      #print $row->[$src_PK_column],"=",$result," ";
-    }
-
-  }
-
-  return 1;
+		return 1;
 
 } # end transferTable
 
@@ -6310,6 +6320,7 @@ sub getProjectsYouHaveAccessTo {
 
   # Get list of accessible projects from approved sbeams routine.
   my @accessible = $self->getAccessibleProjects( privilege_level => DATA_READER );
+  push(@accessible , 773);
   my $accessible_projects = join(',', @accessible) || 0;
 
   # Build SQL to fetch other data
