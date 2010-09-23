@@ -221,6 +221,9 @@ sub do_tryptic_digestion {
       $peptide .= $curr; 
 #      die "What the, i:$i, prev:$prev, curr:$curr, next:$next, aa:$#aa, pep:$peptide, len:$length\n";
     }
+    if ( $i == $#aa && $peptide eq $aa[$i] ) {
+      push @peptides, $aa[$i];
+    }
   }
   return \@peptides;
 }
@@ -485,7 +488,7 @@ sub getGlycoPeptides {
       if ( $args{annot} ) {
         my $cnt = $peptide =~ tr/_/_/;
         my $site_in_peptide = $site - $curr_start + $cnt;
-#        $log->debug( "Pre peptide is $peptide (has $cnt sites" );
+#        $log->dezug( "Pre peptide is $peptide (has $cnt sites" );
 #        $log->debug( "Site in peptide is $site_in_peptide, which is an " . substr( $peptide, $site_in_peptide, 1 ) );
         substr( $peptide, $site_in_peptide, 1, "N$symbol" );
 #        $log->debug( "Aft peptide is $peptide" );
