@@ -96,6 +96,9 @@ sub main
   #### Process generic "state" parameters before we start
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
+  # This will look for mod-specific params and do the right thing
+  $atlas->processModuleParameters(parameters_ref=>\%parameters);
+
   # Fetch pabst_build_id based on params. 
   # 1 - passed pabst_build_id param
   # 2 - passed organism
@@ -145,7 +148,9 @@ sub print_form {
       program_name => $PROG_NAME,
   );
 
-  print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+  unless ( $atlas->is_srm_mode() ) {
+    print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+  }
 
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
@@ -571,6 +576,7 @@ sub fetch_transitions {
     syntheis_adjusted_score DESC, precursor_ion_charge ASC,
     ion_rank ASC, relative_intensity DESC  
     ~;
+#		$log->info( $lib_sql );
 
     my @headings = ( Protein => 'Protein Name/Accession',
                      Pre => 'Previous amino acid',
@@ -697,13 +703,13 @@ sub fetch_transitions {
         # 1) duplicate ions
         my $frag_key = join( ':', @{$frag}[1,6,8,9] );
         if ( $frag_seen{$frag_key}++ ) {
-          $log->info( "rejected $frag_key for duplicity" );
+#          $log->info( "rejected $frag_key for duplicity" );
           next;
         }
 
         # 2) fragment ion too big
         if ( abs( $frag->[5] * $frag->[6] - $frag->[7] * $frag->[8] ) < 5 ) {
-          $log->info( "rejected $row[1] frag for too bigosity" );
+#          $log->info( "rejected $row[1] frag for too bigosity" );
           next;
         }
         $peps{$pep_key}++;
