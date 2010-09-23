@@ -130,6 +130,28 @@ sub has_search_key_data {
   return $cnt;
 }
 
+sub processModuleParameters {
+  my $self = shift;
+  my %args = @_;
+  die unless $args{parameters_ref};
+
+  if ( $args{parameters_ref}->{PA_resource} ) {
+    $sbeams->setSessionAttribute(
+      key => 'PA_resource',
+      value => $args{parameters_ref}->{PA_resource}
+    );
+  }
+}
+
+sub is_srm_mode {
+  my $self = shift;
+  my $mode = $sbeams->getSessionAttribute( key => 'PA_resource' );
+  if ( $mode && $mode eq 'SRMAtlas' ) {
+    return 1;
+  }
+  return 0;
+}
+
 sub getBuildBiosequenceSetID {
   my $self = shift;
   my %args = @_;
@@ -186,7 +208,7 @@ sub getBuildConsensusLib {
 }
 
 sub getGlycoBuilds {
-  my @glyco_builds = ( 115, 120, 149, 156, 175, 177, 231 );
+  my @glyco_builds = ( 115, 120, 149, 156, 175, 177, 231, 217, 242 );
   return \@glyco_builds;
 }
 
