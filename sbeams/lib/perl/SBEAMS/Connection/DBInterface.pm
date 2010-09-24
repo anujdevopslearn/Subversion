@@ -3424,9 +3424,16 @@ sub displayResultSetControls {
     #### Display the row statistics and warn the user
     #### if they're not seeing all the data
     my $start_row = $rs_params{page_size} * $rs_params{page_number} + 1;
-    my $nrows = scalar(@{$resultset_ref->{data_ref}});
+    my $nrows; 
+    if($args{search_page}){
+       $nrows = $args{row_count};
+    }else{
+      $nrows = scalar(@{$resultset_ref->{data_ref}});
+    }
+
     print "Displayed rows $start_row - $resultset_ref->{row_pointer} of ".
       "$nrows\n\n";
+
 
     my $row_limit = $parameters{row_limit} || 1000000;
     if ( $row_limit == scalar(@{$resultset_ref->{data_ref}}) ) {
@@ -3526,7 +3533,11 @@ sub displayResultSetControls {
       $url_prefix =~ s/\?/\/$rs_params{set_name}\.$output_mode_ext\?/;
       print ",\n" unless ($first_flag);
       $first_flag = 0;
-      print "<A HREF=\"${url_prefix}apply_action=VIEWRESULTSET&rs_set_name=$rs_params{set_name}&rs_page_size=1000000&output_mode=$output_mode\">$output_mode_name</A>";
+      if($args{search_page}){
+         print "<A HREF=\"${url_prefix}apply_action=DOWNLOAD&rs_set_name=$rs_params{set_name}&rs_page_size=1000000&output_mode=$output_mode\">$output_mode_name</A>";
+      }else{
+         print "<A HREF=\"${url_prefix}apply_action=VIEWRESULTSET&rs_set_name=$rs_params{set_name}&rs_page_size=1000000&output_mode=$output_mode\">$output_mode_name</A>";
+      }
     }
 
 
@@ -4325,8 +4336,6 @@ sub writeResultSet {
     open(OUTFILE,">$outfile") || die "Cannot open $outfile\n";
     printf OUTFILE Data::Dumper->Dump( [$temp_hash_ref] );
     close(OUTFILE);
-
-
 
     #### Write out the resultset
     $outfile = "$RESULTSET_DIR/${resultset_file}.resultset";
