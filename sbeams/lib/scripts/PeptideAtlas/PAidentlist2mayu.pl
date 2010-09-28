@@ -197,16 +197,16 @@ my @peps_with_changed_ids = ();
 my @peps_with_low_prob_protein_ids = ();
 
 print STDERR
-   "PAidentlist being processed: one dot per 100 lines.\n"
+   "PAidentlist being processed: one dot per 10,000 lines.\n"
        if $verbose;
 
 my $nlines = 0;
 my $n_unmapped = 0;
 while (my $line = <$identlist_filehandle>) {
   $nlines++;
-  if ($verbose &&  (($nlines % 1000) == 0)) {
+  if ($verbose &&  (($nlines % 100000) == 0)) {
     print STDERR "$nlines";
-  } elsif ($verbose &&  (($nlines % 100) == 0)) {
+  } elsif ($verbose &&  (($nlines % 10000) == 0)) {
     print STDERR ".";
   }
   chomp($line);
@@ -259,14 +259,14 @@ while (my $line = <$identlist_filehandle>) {
   #  (all other fields are direct copies from input)
   my $mods = getmods(modseq => $modseq);
   # output line
-  if (defined $adj_prob) {
+  #if (defined $adj_prob) {
     printf($output_filehandle "%s,%s,%s,%s,%s\n",
          $scan, $peptide, $proteinID, $mods, $probability);
-  }
+  #}
 }
 
 if ($verbose && $n_unmapped) {
-  print STDERR "$n_unmapped UNMAPPED PSMs ignored.\n";
+  print STDERR "\n$n_unmapped UNMAPPED PSMs ignored.\n";
 }
 
 #Print list of peptides in PAidentlist that were not found in protXML
