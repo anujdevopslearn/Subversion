@@ -183,7 +183,7 @@ sub get_table_help {
 		{ key => 'nr_files', value => 'Always 1 '},
   
 		{ key => 'mFDR', value => 'Data in current row applies to all data meting this PSM (spectrum) FDR threshold. '},
-		{ key => 'target_PSM', value => 'Number of non-decoy PSMs at this mFDR '},
+		{ key => 'target_PSM', value => 'Number of non-decoy PSMs at this mFDR (counts peptides mappable to protein reference set only)'},
   
 		{ key => 'decoy_PSM', value => 'Number of decoy PSMs at this mFDR '},
   
@@ -191,7 +191,7 @@ sub get_table_help {
   
 		{ key => 'TP_PSM', value => 'target_PSM - FP_PSM '},
   
-		{ key => 'target_pepID', value => 'Number of non-decoy unique peptides at this mFDR '},
+		{ key => 'target_pepID', value => 'Number of non-decoy unique peptides at this mFDR (counts peptides mappable to protein reference set only) '},
   
 		{ key => 'decoy_pepID', value => 'Number of decoy unique peptides at this mFDR '},
   
