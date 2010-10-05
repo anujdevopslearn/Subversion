@@ -18,8 +18,28 @@
 ###############################################################################
 
 use strict;
+$| = 1;  #disable output buffering
 use Getopt::Long;
 use FindBin;
+
+#### Set up SBEAMS modules
+use lib "/net/dblocal/www/html/devTF/sbeams/lib/perl";
+use SBEAMS::Connection qw($q);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+use SBEAMS::Proteomics;
+use SBEAMS::Proteomics::Settings;
+use SBEAMS::Proteomics::Tables;
+
+## Globals
+my $sbeams = new SBEAMS::Connection;
+my $atlas = new SBEAMS::PeptideAtlas;
+$atlas->setSBEAMS($sbeams);
 
 use vars qw (
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
@@ -45,6 +65,8 @@ Options:
                       to see all the SQL statements that would occur
 
   --source_file       Input PAidentlist tsv file with at least 11 columns.
+  --prot_file         Input PAprotIdentlist tsv file; needed for prot plot
+  --atlas_data_dir    e.g. HumanPlasma_2010-05/DATA_FILES; needed for prot plot
   --P_threshold       Use this threshold for processing instead of
                       using all peptides in the input file
   --search_batch_id   If set, only process this search_batch_id and
@@ -64,7 +86,8 @@ unless ($ARGV[0]){
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-  "source_file:s","P_threshold:f","search_batch_id:i",
+  "source_file:s","prot_file:s","P_threshold:f","search_batch_id:i",
+  "atlas_data_dir:s",
   )) {
   print "$USAGE";
   exit;
@@ -108,6 +131,12 @@ sub main {
     return(0);
   }
 
+  my $prot_file = $OPTIONS{prot_file};
+  my $atlas_data_dir = $OPTIONS{atlas_data_dir};
+  unless ($prot_file && open(PROTFILE, $prot_file) && $atlas_data_dir) {
+    print "WARNING: --prot_file or --atlas_data_dir missing, or prot_file unopenable; protein stats won't be compiled and cumulative protein plot won't be drawn.\n\n";
+    undef $prot_file;
+  }
 
   my $P_threshold = $OPTIONS{P_threshold} || 0;
   my $process_search_batch_id = $OPTIONS{search_batch_id} || 0;
@@ -120,9 +149,15 @@ sub main {
   my @search_batch_peptides;
   my @stats_table;
 
+
   #### Array of search_batch_ids and a hash of all peptides by search_batch_id
   my @all_search_batch_ids;
   my %all_peptides;
+
+  #### Hashes containing canonical protein info
+  my %n_canonical_prots;
+  my %n_cumulative_canonical_prots;
+  my %sample_tags;
 
   ##### Skip header
   my $line = <INFILE>;
@@ -136,9 +171,11 @@ sub main {
   $protcol = 2;
   my $origprotcol = 10;
 
-  #### Read in all the peptides for the first experiment
+  #### Read in all the peptides for the first experiment and get the
+  #### prot info
   my @columns;
   my $n_spectra = 0;
+  my %canonical_protids;
   my $not_done = 1;
   while ($not_done) {
 
@@ -180,6 +217,41 @@ sub main {
       );
       push(@correct_peptides,@{$result->{peptide_list}});
 
+      #### Get the canonical proteins it maps to
+      my $sql =<<"      SMPL";
+	SELECT BS.biosequence_name, S.sample_tag
+	FROM $TBAT_ATLAS_SEARCH_BATCH ASB
+	JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON ( ABSB.atlas_search_batch_id = ASB.atlas_search_batch_id )
+        JOIN $TBPR_SEARCH_BATCH PSB ON
+               PSB.search_batch_id = ASB.proteomics_search_batch_id
+	JOIN $TBAT_SAMPLE S ON S.sample_id = ABSB.sample_id
+	JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PIS ON PIS.atlas_search_batch_id = ASB.atlas_search_batch_id
+	JOIN $TBAT_PEPTIDE_INSTANCE PI ON ( PIS.peptide_instance_id = PI.peptide_instance_id AND PI.atlas_build_id = ABSB.atlas_build_id )
+	JOIN $TBAT_PEPTIDE_MAPPING PM ON PI.peptide_instance_id = PM.peptide_instance_id
+	JOIN $TBAT_BIOSEQUENCE BS ON PM.matched_biosequence_id = BS.biosequence_id
+	JOIN $TBAT_PROTEIN_IDENTIFICATION PID on (BS.biosequence_id = PID.biosequence_id AND PID.atlas_build_id = ABSB.atlas_build_id)
+	JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL ON PID.presence_level_id = PPL.protein_presence_level_id
+        JOIN $TBAT_ATLAS_BUILD AB ON AB.atlas_build_id = PI.atlas_build_id
+	WHERE AB.data_path = '$atlas_data_dir'
+	AND PPL.level_name = 'canonical'
+	AND BS.biosequence_name NOT LIKE 'DECOY%'
+	AND PSB.search_batch_id = $this_search_batch_id
+        GROUP BY BS.biosequence_name, S.sample_tag
+      SMPL
+
+      ;print $sql;
+
+      my @rows = $sbeams->selectSeveralColumns($sql);
+      my $sample_tag = $rows[0]->[1];
+      my $n_canonical_proteins_batch = scalar @rows;
+      for (my $i=0;  $i < $n_canonical_proteins_batch; $i++) {
+        $canonical_protids{$rows[$i]->[0]} = 1;
+      }
+      my $n_cum_canonicals_batch = scalar keys %canonical_protids;
+      $n_canonical_prots{$this_search_batch_id} = $n_canonical_proteins_batch;
+      $n_cumulative_canonical_prots{$this_search_batch_id} = $n_cum_canonicals_batch;
+      $sample_tags{$this_search_batch_id} = $sample_tag;
+
       #### Update the summary table of incorrect values with data from
       #### this search_batch
       my $irow = 0;
@@ -198,6 +270,7 @@ sub main {
       $this_search_batch_id = $columns[0];
       @search_batch_peptides = ();
       print "n_spectra=$n_spectra\n";
+      #print "$sample_tag n_spectra=$n_spectra n_prots = $n_canonical_proteins_batch ($n_cum_canonicals_batch cumul.)\n";
       unless ($this_search_batch_id == -998899) {
 	print "Processing search_batch_id=$this_search_batch_id  ";
 	$n_experiments++;
@@ -354,8 +427,8 @@ sub main {
     #my $outfile2="experiment_contribution_summary_w_singletons.out";
     my $outfile2="experiment_contribution_summary.out";
     open (OUTFILE2, ">", $outfile2) or die "can't open $outfile2 ($!)";
-    print OUTFILE2 "          sample_tag sbid ngoodspec      npep n_new_pep cum_nspec cum_n_new is_pub\n";
-    print OUTFILE2 "-------------------- ---- --------- --------- --------- --------- --------- ------\n";
+    print OUTFILE2 "          sample_tag sbid ngoodspec      npep n_new_pep cum_nspec cum_n_new is_pub nprot cum_nprot\n";
+    print OUTFILE2 "-------------------- ---- --------- --------- --------- --------- --------- ------ ----- ---------\n";
 
 
   #### Calculate the number of distinct peptides as a function of exp.
@@ -399,17 +472,22 @@ sub main {
       my $n_peptides_all = scalar(keys(%batch_distinct_peptides_all));
       my $cum_n_new_all = scalar(keys(%total_distinct_peptides_all));
       my $n_new_pep_all = $cum_n_new_all - $p_cum_n_new_all;
+      my $n_prots = $n_canonical_prots{$search_batch_id};
+      my $n_cum_prots = $n_cumulative_canonical_prots{$search_batch_id};
+      my $sample_tag = $sample_tags{$search_batch_id};
 
-      printf OUTFILE2 "%20s %4.0f %9.0f %9.0f %9.0f %9.0f %9.0f %6s\n",
-	      'xx', $search_batch_id,$n_goodspec ,
+      printf OUTFILE2 "%20.20s %4.0f %9.0f %9.0f %9.0f %9.0f %9.0f %6s %5d %5d\n",
+	      $sample_tag, $search_batch_id,$n_goodspec ,
 	      $n_peptides_all, $n_new_pep_all,
 	      $cum_nspec, $cum_n_new_all, 'N',
+              $n_prots, $n_cum_prots
 	     ;
 
       $p_cum_n_new_multobs = $cum_n_new_multobs;
       $p_cum_n_new_all = $cum_n_new_all;
     }
   }
+  print "$outfile2 written.\n" if $VERBOSE;
 
 
   return(1);
@@ -710,4 +788,38 @@ sub shuffleArray {
 
 }
 
+__DATA__
 
+  ### First, read prot info if provided
+  ### OH! I don't think I need to read this file after all!!!
+  my %protid_hash;
+  if ($prot_file) {
+    # read header and get index of biosequence_name from it
+#protein_group_number,biosequence_name,probability,confidence,n_observations,n_distinct_peptides,level_name,represented_by_biosequence_name,subsumed_by_biosequence_name,estimated_ng_per_ml,abundance_uncertainty,is_covering,group_size
+    my $line = <PROTFILE>;
+    chomp $line;
+    my @fields = split(",", $line);
+    my $search_for = 'biosequence_name';
+    my ( $biosequence_name_idx ) =
+        grep { $fields[$_] eq $search_for } 0..$#fields;
+    if (! defined $biosequence_name_idx) {
+      print STDERR "ERROR in $0: $search_for not found in header of $prot_file\n";
+      return(0);
+    }
+    $search_for = 'level_name';
+    my ( $level_name_idx ) =
+        grep { $fields[$_] eq $search_for } 0..$#fields;
+    if (! defined $level_name_idx) {
+      print STDERR "ERROR in $0: $search_for not found in header of $prot_file\n";
+      return(0);
+    }
+    while ($line = <PROTFILE>) {
+      chomp $line;
+      @fields = split(",", $line);
+      if ($fields[$level_name_idx] eq 'canonical') {
+	$protid_hash{$fields[$biosequence_name_idx]} = 1;
+      }
+    }
+    my $n_canonicals = scalar keys %protid_hash;
+    #print "$n_canonicals total distinct canonical protein identifiers found\n";
+  }
