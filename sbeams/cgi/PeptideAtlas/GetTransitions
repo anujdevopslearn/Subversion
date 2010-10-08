@@ -7,6 +7,7 @@
 #               tables 
 ###############################################################################
 
+$|++;
 
 ## Setup objects and globals 
 use strict;
@@ -29,6 +30,7 @@ use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::BestPeptideSelector;
 
+# Set up Atlas objects
 my $sbeams = new SBEAMS::Connection;
 my $atlas = new SBEAMS::PeptideAtlas;
 $atlas->setSBEAMS($sbeams);
@@ -71,8 +73,11 @@ if ($DEBUG)
     print "    DEBUG = $DEBUG\n";
 }
 
+my $is_html;
+
 main();
 exit(0);
+
 
 
 # Main Program
@@ -82,6 +87,8 @@ sub main
   my $current_username = $sbeams->Authenticate( allow_anonymous_access => 1 );
   exit unless $current_username;
 
+  $is_html = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
+  $log->debug( "HTML mode iS $is_html" );
 
   #### Read in the default input parameters
   my %parameters;
@@ -109,6 +116,16 @@ sub main
   # This might have gotten overridden due to permissions.
   $parameters{pabst_build_id} = $pabst_build_id;
 
+  if ( !$parameters{action} && !$is_html ) {
+    $log->debug( "in the auto-setting mode, command-line only!" );
+    $parameters{n_highest_intensity_fragment_ions} = 3;
+    $parameters{n_peptides_per_protein} = 3;
+    $parameters{protein_name_constraint} = 'YAL003W%';
+    $parameters{QUERY_NAME} = 'AT_GetPABSTList';
+    $parameters{action} = 'QUERY';
+    $parameters{pabst_build_id} = 12;
+#    $parameters{protein_name_constraint} = 'YAL003W;YGR276';
+  }
 
   #### Decide what action to take based on information so far
   if ( !$parameters{action} ) {
@@ -258,7 +275,6 @@ sub fetch_transitions {
 
   # Hackage
 #  $parameters{consensus_library_id} ||= $parameters{consensus_library_id};
-  my $is_html = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
   my $project_id = $atlas->getProjectID(
     atlas_build_id => $parameters{atlas_build_id}
   );
@@ -278,7 +294,11 @@ sub fetch_transitions {
       program_name => $PROG_NAME,
   );
 
-  $content .= $tabMenu->asHTML() if $is_html;
+  unless ( $atlas->is_srm_mode() ) {
+#    print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+    $content .= $tabMenu->asHTML() if $is_html;
+  }
+
 
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
@@ -527,7 +547,7 @@ sub fetch_transitions {
   for my $pparam ( keys ( %{$default_params} ) ) {
     if ( defined $parameters{$pparam} ) {
       if ( $parameters{$pparam} ne $default_params->{$pparam} ) {
-        $log->info( "$pparam is different, $parameters{$pparam} ne $default_params->{$pparam} " );
+        $log->debug( "$pparam is different, $parameters{$pparam} ne $default_params->{$pparam} " );
         $is_changed++;
       }
     }
@@ -576,7 +596,7 @@ sub fetch_transitions {
     syntheis_adjusted_score DESC, precursor_ion_charge ASC,
     ion_rank ASC, relative_intensity DESC  
     ~;
-#		$log->info( $lib_sql );
+#		$log->debug( $lib_sql );
 
     my @headings = ( Protein => 'Protein Name/Accession',
                      Pre => 'Previous amino acid',
@@ -611,7 +631,9 @@ sub fetch_transitions {
 
   my %src_name = ( P => 'PR', Q => 'Q3', T => 'QT', I => 'IT', 'R' => 'PA' );
 
+  $log->debug( "Exec SQL: " . time() );
   my $sth = $sbeams->get_statement_handle( $lib_sql );
+  $log->debug( "Done : " . time() );
 
   my %prots;
 
@@ -621,8 +643,11 @@ sub fetch_transitions {
   my $rt = '';
 
   my %peps;
+  my %patr_peps;
+
+  # If the user has modified any of the weights we have to do this from scratch...
   if ( $is_changed ) {
-     $log->info( "Collect db values: " . time() );
+     $log->debug( "PABST arameters have changed.  Collect db values: " . time() );
 
     # Collect cached peptides/values from db handle
     my @short_list;
@@ -630,18 +655,18 @@ sub fetch_transitions {
     my $cnt;
     while( my @row = $sth->fetchrow_array() ) {
       $cnt++;
-#      $log->info( "going in, prot $row[13] pep $row[1] has " . scalar( @row ) . " items " );
+#      $log->debug( "going in, prot $row[13] pep $row[1] has " . scalar( @row ) . " items " );
 
       # Add each unique prot peptide
       my $peptide_key = join( '', @row[13,1] );
-#      $log->info( "caching for pepkey $peptide_key" );
+#      $log->debug( "caching for pepkey $peptide_key" );
       if ( !$peptide_fragments{$peptide_key} ) {
         $peptide_fragments{$peptide_key} ||= []; 
         push @short_list, [@row];
       }
       push @{$peptide_fragments{$peptide_key}}, [@row];
     }
-     $log->info( "Run PABST scoring " . time() );
+     $log->debug( "Run PABST scoring " . time() );
     # Run pabst scoring - will clobber input array
     $best_peptide->pabst_evaluate_peptides( peptides => \@short_list,
                                  previous_idx => 0, 
@@ -652,17 +677,18 @@ sub fetch_transitions {
                                                        );
  
     # Sort - might be time hog
-    $log->info( "Sorting " . time() );
+    $log->debug( "Sorting " . time() );
     # Sort first by protein, next by adjusted score!
     @short_list = sort { $a->[13] cmp $b->[13] ||                    
                            $b->[18] <=> $a->[18] } @short_list;
-    $log->info( "Done! " . time() );
+    $log->debug( "Done! " . time() );
 
     # debug
-#    for my $row ( @initial_list ){ #      $log->info( "coming out, ($row->[1]) row has " . scalar( @{$row} ) . " items " ); }
+#    for my $row ( @initial_list ){ #      $log->debug( "coming out, ($row->[1]) row has " . scalar( @{$row} ) . " items " ); }
 
     # Should now be sorted, just have to apply n_pep/prot and n_frag/pep logic,
     # and format output.
+    $log->debug( "filling in transitions! " . time() );
     for my $peptide ( @short_list ) { 
 
       my @row = @{$peptide};
@@ -671,12 +697,12 @@ sub fetch_transitions {
       $prots{$prot} ||= {};
       $prots{$prot}->{$row[1]}++;
       if ( scalar( keys( %{$prots{$prot}} ) ) > $n_peps_per_prot ) {
-#        $log->info( "2 many peps for $prot -  $row[1], $row[16],  $row[18]" );
+#        $log->debug( "2 many peps for $prot -  $row[1], $row[16],  $row[18]" );
         next; 
       }
-#      $log->info( "Got past peps for $prot - $row[1], $row[16],  $row[18]" );
+#      $log->debug( "Got past peps for $prot - $row[1], $row[16],  $row[18]" );
       my $pep_key = $prot . $row[1];
-#      $log->info( "Pep key is $pep_key" );
+#      $log->debug( "Pep key is $pep_key" );
 
       # Use frag for 4-11;
       # Hide redundant frags!
@@ -703,13 +729,13 @@ sub fetch_transitions {
         # 1) duplicate ions
         my $frag_key = join( ':', @{$frag}[1,6,8,9] );
         if ( $frag_seen{$frag_key}++ ) {
-#          $log->info( "rejected $frag_key for duplicity" );
+#          $log->debug( "rejected $frag_key for duplicity" );
           next;
         }
 
         # 2) fragment ion too big
         if ( abs( $frag->[5] * $frag->[6] - $frag->[7] * $frag->[8] ) < 5 ) {
-#          $log->info( "rejected $row[1] frag for too bigosity" );
+#          $log->debug( "rejected $row[1] frag for too bigosity" );
           next;
         }
         $peps{$pep_key}++;
@@ -746,9 +772,9 @@ sub fetch_transitions {
 
 
 
-
+  # If no params were changed, use static values
   } else {
-     $log->info( "Using static values: " . time() );
+     $log->debug( "Iterating over results " . time() );
 
     my %frag_seen;
     while( my @row = $sth->fetchrow_array() ) {
@@ -756,11 +782,17 @@ sub fetch_transitions {
 
       $prots{$prot} ||= {};
       $prots{$prot}->{$row[1]}++;
+
+      # Do we have enough peptides already?
       if ( scalar( keys( %{$prots{$prot}} ) ) > $n_peps_per_prot ) {
         next; 
       }
 
       my $pep_key = $prot . $row[1];
+      $peps{$pep_key} ||= 0; 
+
+      # Do we have enough fragments already?
+      next if $peps{$pep_key} >= $n_fragment_ions;
 
 # 0 preceding_residue
 # 1 peptide_sequence
@@ -780,20 +812,20 @@ sub fetch_transitions {
 # 15 n_observations
       # Problem cases 
       # 1) duplicate ions
+
       my $frag_key = join( ':', @row[1,6,8,9] );
       if ( $frag_seen{$frag_key}++ ) {
-        $log->info( "rejected $frag_key for duplicity" );
+#        $log->debug( "rejected $frag_key for duplicity" );
         next;
       }
 
       # 2) fragment ion too big
       if ( abs( $row[5] * $row[6] - $row[7] * $row[8] ) < 5 ) {
-        $log->info( "rejected $row[1] frag $row[9] for too bigosity" );
+#        $log->debug( "rejected $row[1] frag $row[9] for too bigosity" );
         next;
       }
 
       $peps{$pep_key}++;
-      next if $peps{$pep_key} > $n_fragment_ions;
 
       $row[10] = $peps{$pep_key};
       $row[9] = lcfirst($row[9]);
@@ -813,7 +845,7 @@ sub fetch_transitions {
   
       my $ce = calculateCE( mz => $row[5], chg => $row[6] );
       push @peptides, [ $prot, @row[0..12] ];
-      $peps{$row[1]}++;
+      $patr_peps{$row[1]}++;
 
       # protein  sequence q1_mz q3_mz RT rank q1_chg q3_chg peak_intensity ion_label collision SSR
       push @namelist, join( '::', $prot, @row[1,5,7],'',@row[10,6,8,11,9],$ce, $row[12] );
@@ -822,16 +854,46 @@ sub fetch_transitions {
 
   }
 
-  my @peps = keys( %peps );
+  $log->debug( "Done! " . time() );
+  $log->debug( "processed " . scalar( @namelist )  . " transitions " );
+
+  $log->debug( "fetching from PATR ! " . time() );
+
+# 0 preceding_residue
+# 1 peptide_sequence
+# 2 following_residue
+# 3 syntheis_adjusted_score
+# 4 transition_source
+# 5 precursor_ion_mass
+# 6 precursor_ion_charge
+# 7 fragment_ion_mass
+# 8 fragment_ion_charge
+# 9 fragment_ion_label
+# 10 ion_rank
+# 11 relative_intensity
+# 12 SSRCalc_relative_hydrophobicity
+# 13 biosequence_name
+# 14 merged_score
+# 15 n_observations
+
+  my @peps = keys( %patr_peps );
   my $patr = get_PATR_transitions( peptides => \@peps );
 
+#  SELECT DISTINCT P.peptide_sequence, modified_peptide_sequence, peptide_charge,
+#  q1_mz ,q3_mz, q3_ion_label, collision_energy,
+#  SSRCalc_relative_hydrophobicity, retention_time, 'na', ''
+#  0 => protein
+#  1 => pre
+#  2 => seq
+#  3 => post
 
   for ( my $i = 0; $i <= $#peptides; $i++ ) {
     my $pep = $peptides[$i];
     if ( $patr->{$pep->[2]} ) {
-#      $peptides[$i] = $patr->{$pep->[2]};
+      $peptides[$i] = $patr->{$pep->[2]};
     }
   }
+  $log->debug( "Done ! " . time() );
 
 
 # prot Protein => 'Protein Name/Accession',
@@ -919,17 +981,19 @@ sub fetch_transitions {
 } # end handle_request
 
 sub get_PATR_transitions {
+  return {};
   my %args = @_;
-  return unless $args{peptides};
 
-  my $peptide_clause = " WHERE P.peptide_sequence IN ( ";
-  my $sep = '';
-  for my $pep ( @{$args{peptides}} ) {
-    next if $pep =~ /amino acid/i;
-    $peptide_clause .= $sep . "'" . $pep . "'";
-    $sep = ',';
-  }
-  $peptide_clause .= ")\n";
+  # Superfluous
+#  return unless $args{peptides};
+#  my $peptide_clause = " WHERE P.peptide_sequence IN ( ";
+#  my $sep = '';
+#  for my $pep ( @{$args{peptides}} ) {
+#    next if $pep =~ /amino acid/i;
+#    $peptide_clause .= $sep . "'" . $pep . "'";
+#    $sep = ',';
+#  }
+#  $peptide_clause .= ")\n";
 
   my $sql = qq~
   SELECT DISTINCT P.peptide_sequence, modified_peptide_sequence, peptide_charge,
@@ -937,10 +1001,11 @@ sub get_PATR_transitions {
   SSRCalc_relative_hydrophobicity, retention_time, 'na', ''
   FROM $TBAT_SRM_TRANSITION SMT 
   JOIN $TBAT_PEPTIDE P ON P.peptide_sequence = SMT.stripped_peptide_sequence
-  $peptide_clause
-  ORDER BY modified_peptide_sequence, peptide_charge 
+  ORDER BY modified_peptide_sequence, peptide_charge, transition_suitablity_level,
+  q1_mz, q3_mz
  
   ~;
+#  $log->debug( $sql );
 
   my $sth = $sbeams->get_statement_handle($sql);
 
