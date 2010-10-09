@@ -596,6 +596,32 @@ sub handle_request {
   my @is_immunoglobulin_sql;
   my @biosequence_description_sql;
 
+  # Define subqueries for protein properties; they are the same for
+  # all clauses of the union.
+  my $is_keratin_sql_all=qq~
+	      ( CASE WHEN ( SELECT SUM (
+		      CAST (BPS_SIBLING.is_keratin AS INTEGER)) FROM
+		  $TBAT_PROTEIN_IDENTIFICATION  PID_SIBLING
+		  LEFT JOIN  $TBAT_BIOSEQUENCE_PROPERTY_SET BPS_SIBLING
+		  ON ( BPS_SIBLING.biosequence_id =
+		    PID_SIBLING.biosequence_id )
+		  WHERE ( PID_SIBLING.represented_by_biosequence_id =
+		    PID.represented_by_biosequence_id )
+		  AND BPS_SIBLING.is_keratin = '1'
+		)  > 0 THEN 'ker' ELSE '' END)
+    ~;
+  my $is_immunoglobulin_sql_all=qq~
+	      ( CASE WHEN ( SELECT SUM (
+		      CAST (BPS_SIBLING.is_immunoglobulin AS INTEGER)) FROM
+		  $TBAT_PROTEIN_IDENTIFICATION  PID_SIBLING
+		  LEFT JOIN  $TBAT_BIOSEQUENCE_PROPERTY_SET BPS_SIBLING
+		  ON ( BPS_SIBLING.biosequence_id =
+		    PID_SIBLING.biosequence_id )
+		  WHERE ( PID_SIBLING.represented_by_biosequence_id =
+		    PID.represented_by_biosequence_id )
+		  AND BPS_SIBLING.is_immunoglobulin = '1'
+		)  > 0 THEN 'Ig' ELSE '' END)
+    ~;
   # Define SQL specific for displaying protein identifications
   $biosequence_name_sql[0] = "BS_REF.biosequence_name";
   $is_covering_sql[0] = "(CASE WHEN PID.is_covering=1 THEN 'C' ELSE '' END)";
@@ -613,8 +639,8 @@ sub handle_request {
   $represented_by_biosequence_sql[0] = "BS_REP.biosequence_name";
   $group_number_sql[0] = "PID.protein_group_number";
   $seq_unique_prots_sql[0] = "PID.seq_unique_prots_in_group";
-  $is_keratin_sql[0]="(CASE WHEN BPS.is_keratin=1 THEN 'ker' ELSE '' END)";
-  $is_immunoglobulin_sql[0]="(CASE WHEN BPS.is_immunoglobulin=1 THEN 'Ig' ELSE '' END)";
+  $is_keratin_sql[0]=$is_keratin_sql_all;
+  $is_immunoglobulin_sql[0]=$is_immunoglobulin_sql_all;
   $biosequence_description_sql[0] =
         "CAST(BS_REF.biosequence_desc AS varchar(255))";
 
@@ -636,8 +662,8 @@ sub handle_request {
   $represented_by_biosequence_sql[1] = "BS_REP.biosequence_name";
   $group_number_sql[1] = "PID.protein_group_number";
   $seq_unique_prots_sql[1] = "PID.seq_unique_prots_in_group";
-  $is_keratin_sql[1]="(CASE WHEN BPS.is_keratin=1 THEN 'ker' ELSE '' END)";
-  $is_immunoglobulin_sql[1]="(CASE WHEN BPS.is_immunoglobulin=1 THEN 'Ig' ELSE '' END)";
+  $is_keratin_sql[1]=$is_keratin_sql_all;
+  $is_immunoglobulin_sql[1]=$is_immunoglobulin_sql_all;
   $biosequence_description_sql[1] =
         "CAST(BS_REL.biosequence_desc AS varchar(255))";
 
@@ -659,8 +685,8 @@ sub handle_request {
   $represented_by_biosequence_sql[2] = "BS_REP.biosequence_name";
   $group_number_sql[2] = "PID.protein_group_number";
   $seq_unique_prots_sql[2] = "PID.seq_unique_prots_in_group";
-  $is_keratin_sql[2]="(CASE WHEN BPS.is_keratin=1 THEN 'ker' ELSE '' END)";
-  $is_immunoglobulin_sql[2]="(CASE WHEN BPS.is_immunoglobulin=1 THEN 'Ig' ELSE '' END)";
+  $is_keratin_sql[2]=$is_keratin_sql_all;
+  $is_immunoglobulin_sql[2]=$is_immunoglobulin_sql_all;
   $biosequence_description_sql[2] =
         "CAST(BS_INDIS.biosequence_desc AS varchar(255))";
 
@@ -693,33 +719,33 @@ sub handle_request {
     my @column_array = (
         ["biosequence_name",$biosequence_name_sql[$i],"Biosequence Name"],
         ["is_covering",$is_covering_sql[$i],"Cover ing Set"],
-				["presence_level",$presence_level_sql[$i],"Presence Level"],
-				["probability",$probability_sql[$i],"Protein Prophet Prob"],
-				["confidence",$confidence_sql[$i],"Mult Hyp Test Prob"],
-				["n_observations",$n_observations_sql[$i],"N Obs"],
-				["n_distinct_peptides",$n_distinct_peptides_sql[$i],"N Distinct Peptides"],
+	["presence_level",$presence_level_sql[$i],"Presence Level"],
+	["probability",$probability_sql[$i],"Protein Prophet Prob"],
+	["confidence",$confidence_sql[$i],"Mult Hyp Test Prob"],
+	["n_observations",$n_observations_sql[$i],"N Obs"],
+	["n_distinct_peptides",$n_distinct_peptides_sql[$i],"N Distinct Peptides"],
         ["chromosome","BPS.chromosome", "Chromosome"],
         ["genetic_locus","BPS.genetic_locus", "Genetic Locus"],
         ["start_in_chromosome","BPS.start_in_chromosome","Start in Chrom"],
         ["end_in_chromosome","BPS.end_in_chromosome","End in Chrom"],
         ["strand","BPS.strand","Strand"],
         @abundance_columns,
-				["relationship_phrase",$relationship_phrase_sql[$i],"Redundancy Relationship"],
-				["reference_biosequence",$reference_biosequence_sql[$i], "Redundant With Respect To"],
-				["represented_by_biosequence_id", "$represented_by_biosequence_sql[$i]", "Protein Group"],
-				["group_number","$group_number_sql[$i]","Group Number"],
+	["relationship_phrase",$relationship_phrase_sql[$i],"Redundancy Relationship"],
+	["reference_biosequence",$reference_biosequence_sql[$i], "Redundant With Respect To"],
+	["represented_by_biosequence_id", "$represented_by_biosequence_sql[$i]", "Protein Group"],
+	["group_number","$group_number_sql[$i]","Group Number"],
         ["seq_unique_prots_in_group","$seq_unique_prots_sql[$i]", "Seq Uniq Prots in Grp"],
         @GO_columns,
         ["protein_group_seq_align_link","NULL","Protein Group Seq Alignmt"],
-				["is_keratin",$is_keratin_sql[$i],"Ker atin"],
-				["is_immunoglobulin",$is_immunoglobulin_sql[$i],"Ig"],
-				["biosequence_description",$biosequence_description_sql[$i],"Protein Description"],
-				["biosequence_accessor","DBX.accessor","biosequence_accessor"],
-				["biosequence_accessor_suffix","DBX.accessor_suffix","biosequence_accessor_suffix"],
-				["biosequence_accession","BS_REF.biosequence_accession","biosequence_accession"],
-				["organism_full_name","O.full_name","Organism"],
-				["ppl_sort_order",$presence_level_sort_order_sql[$i], "ppl_sort_order"],
-				["brt_sort_order",$relationship_sort_order_sql[$i],"brt_sort_order"],
+	["is_keratin",$is_keratin_sql[$i],"Ker atin"],
+	["is_immunoglobulin",$is_immunoglobulin_sql[$i],"Ig"],
+	["biosequence_description",$biosequence_description_sql[$i],"Protein Description"],
+	["biosequence_accessor","DBX.accessor","biosequence_accessor"],
+	["biosequence_accessor_suffix","DBX.accessor_suffix","biosequence_accessor_suffix"],
+	["biosequence_accession","BS_REF.biosequence_accession","biosequence_accession"],
+	["organism_full_name","O.full_name","Organism"],
+	["ppl_sort_order",$presence_level_sort_order_sql[$i], "ppl_sort_order"],
+	["brt_sort_order",$relationship_sort_order_sql[$i],"brt_sort_order"],
       );
     $column_array_refs[$i] = \@column_array;
   }
@@ -787,8 +813,8 @@ sub handle_request {
        LEFT JOIN $TBAT_BIOSEQUENCE BS_SUBSUMED_BY
           ON ( BS_SUBSUMED_BY.biosequence_id = PID.subsumed_by_biosequence_id )
          AND ( BS_SUBSUMED_BY.biosequence_set_id = BSS.biosequence_set_id)
-	 LEFT JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPS
-	      ON ( BPS.biosequence_id = PID.biosequence_id )
+       LEFT JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPS
+	    ON ( BPS.biosequence_id = PID.biosequence_id )
   ~;
 
   # Define joins specific for indistinguishables, identicals
