@@ -161,7 +161,8 @@ sub loadBuildSpectra {
 
   #### Loop through all spectrum identifications and load
   my @columns;
-  while (my $line = <INFILE>) {
+  while ( my $line = <INFILE>) {
+    chomp $line;
     @columns = split(/\t/,$line);
     #print "cols = ".scalar(@columns)."\n";
     unless (scalar(@columns) == $expected_n_columns) {
@@ -196,7 +197,6 @@ sub loadBuildSpectra {
     } else {
       die("ERROR: Unexpected filetype '$filetype'");
     }
-
     $self->insertSpectrumIdentification(
        atlas_build_id => $atlas_build_id,
        search_batch_id => $search_batch_id,
@@ -526,7 +526,13 @@ sub insertSpectrumRecord {
     $fraction_tag = $1;
     $start_scan = $2;
     $end_scan = $3;
-  } else {
+  }
+  elsif($spectrum_name  =~ /^(.+)\..*\s+(\d+).*\d\)$/) {
+    $fraction_tag = $1;
+    $start_scan = $2;
+    $end_scan = $2;
+  }
+  else {
     die("ERROR: Unable to parse fraction name from '$spectrum_name'");
   }
 
@@ -665,7 +671,13 @@ sub getSpectrumPeaks {
 
 
   #### First try to fetch the spectrum from an mzXML file
-  my $mzXML_filename = "$data_location/$fraction_tag.mzXML";
+  my $mzXML_filename ;
+  if($fraction_tag =~ /.mzML/){
+    $mzXML_filename = "$data_location/$fraction_tag.mzML";
+  }else{
+    $mzXML_filename = "$data_location/$fraction_tag.mzXML";
+  }
+  
   $buffer .= "INFO: Looking for '$mzXML_filename'<BR>\n";
   if ( -e $mzXML_filename ) {
     $buffer .= "INFO: Found '$mzXML_filename'<BR>\n";
@@ -682,6 +694,7 @@ sub getSpectrumPeaks {
     }
 
   }
+
 
 
   #### If there's no filename then try ISB SEQUEST style .tgz file
