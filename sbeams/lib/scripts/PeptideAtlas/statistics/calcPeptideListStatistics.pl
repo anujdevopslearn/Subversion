@@ -250,6 +250,7 @@ sub main {
       my $n_cum_canonicals_batch = scalar keys %canonical_protids;
       $n_canonical_prots{$this_search_batch_id} = $n_canonical_proteins_batch;
       $n_cumulative_canonical_prots{$this_search_batch_id} = $n_cum_canonicals_batch;
+      $sample_tag = 'xx' if (! $sample_tag );
       $sample_tags{$this_search_batch_id} = $sample_tag;
 
       #### Update the summary table of incorrect values with data from
