@@ -288,6 +288,29 @@ sub get_publication {
   return '';
 }
 
+#+
+#
+#-
+sub get_PATR_peptides {
+  my $self = shift;
+  my $sbeams = $self->getSBEAMS();
+
+# No project id in PATR
+#  my @accessible = $sbeams->getAccessibleProjects();
+#  my $projects = join( ",", @accessible );
+#  return '' unless $projects;
+
+  my $sql = qq~
+  SELECT DISTINCT stripped_peptide_sequence
+  FROM $TBAT_SRM_TRANSITION
+  ~;
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my %peptides;
+  while ( my @row = $sth->fetchrow_array() ) {
+    $peptides{$row[0]}++;
+  }
+  return \%peptides;
+}
 
 ##
 #+
