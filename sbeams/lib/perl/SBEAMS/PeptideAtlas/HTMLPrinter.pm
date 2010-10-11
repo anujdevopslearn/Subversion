@@ -186,7 +186,7 @@ sub displayGuestPageHeader {
   # Use http_header from main SBEAMS object
   my $http_header = $sbeams->get_http_header();
 
-  my $js =  "<SCRIPT LANGUAGE=javascript SRC=\"/devZS/sbeams/usr/javascript/sorttable.js\"></SCRIPT>";
+  my $js =  "<SCRIPT LANGUAGE=javascript SRC=\"/sbeams/usr/javascript/sorttable.js\"></SCRIPT>";
 
 
   use LWP::UserAgent;
@@ -209,7 +209,11 @@ sub displayGuestPageHeader {
   $LOGIN_LINK .= "<BR><BR><BR>\n$cswitcher<BR>\n";
   for ( @page ) {
     $cnt++;
-    $_ =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
+
+    # This link was moved to PA source php file, which might prove harder to
+    # keep updated, but it makes this one superfluous.
+#    $_ =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
+
     $_ =~ s/(\<[^>]*body[^>]*\>)/$1$init$css_info/;
     if($loadscript){
       $_ =~ s/<body/$js\n<body OnLoad="$loadscript self.focus();"/;
@@ -263,7 +267,7 @@ sub displayStandardPageHeader {
 
   my $loadscript = "$args{onload};" || '';
   $loadscript .= 'sortables_init();' if $args{sort_tables};
-  my $js =  "<SCRIPT LANGUAGE=javascript SRC=\"/devZS/sbeams/usr/javascript/sorttable.js\"></SCRIPT>";
+  my $js =  "<SCRIPT LANGUAGE=javascript SRC=\"/sbeams/usr/javascript/sorttable.js\"></SCRIPT>";
   print "$args{header_info}\n" if $args{header_info};
 
   #### Determine the Title bar background decoration
