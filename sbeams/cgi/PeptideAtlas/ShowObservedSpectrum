@@ -362,7 +362,8 @@ sub processRequest {
     );
 
     pgsch 0.9;
-    pgmtext 'T',0.7,.01,0,"Peak value = $maxval";
+    my $prec = sprintf ("%0.1f", $precursor_mass);
+    pgmtext 'T',0.7,.01,0,"Peak value = $maxval  Precursor m/z = $prec";
 #   pgmtext 'RV',-2,1.02,1,"Assumed charge = $parameters{assumed_charge}";
     pgmtext 'RV',-2,1.02,1,"Charge = $parameters{assumed_charge}";
 
@@ -377,7 +378,7 @@ sub processRequest {
                                     MassArray=>$AAmasses_ref);
       my ($B_ref,$Y_ref);
 
-      #### Make the plot
+      #### Make the plot and figure out what the labels should be
       ($win,$B_ref,$Y_ref) = PlotPeaks(SpecData=>\%spectrum,
                                        Masslist=>$masslist_ref, Charge=>$charge,
                                        Win=>$win, Length=>$masslist_ref->{length},
@@ -395,6 +396,20 @@ sub processRequest {
                     Ymax=>$parameters{ymax}, Angle=>$labangle, Fjust=>$fjust);
 
     } # end foreach
+
+    #### Label tall unidentified peaks with their m/z values, if requested
+    #### Isn't working for re-display (i.e. zoom).
+    if ( $parameters{mzlabels}) {
+      my $mz_label_threshold = $parameters{mzlabels} || 0.05;
+      if (($mz_label_threshold < 0 ) || ( $mz_label_threshold > 1.0 ) ||
+            ($mz_label_threshold * 1 ne $mz_label_threshold)) {
+	die("ERROR: mzlabels parameter must be number between 0.0 and 1.0");
+      }
+      LabelUnidentifiedPeaks( SpecData=>\%spectrum, Win=>$win, 
+                  MZ_threshold=>$mz_label_threshold,
+		  Xmin=>$parameters{xmin}, Xmax=>$parameters{xmax},
+		  Ymax=>$parameters{ymax}, Angle=>$labangle, Fjust=>$fjust);
+    }
 
 
     #### Draw Precursor mass symbol
@@ -720,6 +735,7 @@ sub pg_setup {
 
 ###############################################################################
 # PlotPeaks
+#  called once for each possible charge
 ###############################################################################
 sub PlotPeaks {
     my %args = @_;
@@ -739,19 +755,24 @@ sub PlotPeaks {
     #### Peak Colors
     my $peakcolors_ref = $args{'PeakColors'};
 
-    #### Peak finding window
+    #### Peak finding window. An arg isn't currently passed, so
+    ####  default value 2 is used.
     my $window = $args{'Window'} || 2;
 
+    #### Number of residues in matched peptide
     my $length = $args{'Length'};
+    #### Intensity of tallest peak (if any) close to each ion's m/z.
     my @Bmaxinten = (0) x $length;
     my @Ymaxinten = (0) x $length;
     my @BYmaxinten = (0) x $length;
 
+    # Lists of peak masses. Each peak belongs to one list.
     my @Bmass;
     my @Ymass;
     my @BYmass;
     my @Rmass;
 
+    # Lists of peak intensities. Each peak belongs to one list.
     my @Binten;
     my @Yinten;
     my @BYinten;
@@ -790,7 +811,9 @@ sub PlotPeaks {
     }
 
 
-    #### Convert to piddle for easy sub-selecting
+    #### Convert lists of m/z values to piddle for easy sub-selecting
+    #### These are lists of length $length of expected m/z values for
+    ####  each predicted ion.
     my $bdata = pdl $masslist_ref->{Bions};
     my $ydata = pdl $masslist_ref->{Yions};
 
@@ -799,63 +822,76 @@ sub PlotPeaks {
     my $lineclr;
     my ($mass, $intensity);
 
+    # For each actual peak in the spectrum ...
     for ($i=0; $i<$specdata->{n_peaks}; $i++) {
+
+      ### Get the mass and intensity for this peak
       $mass = $specdata->{masses}->[$i];
       $intensity = $specdata->{intensities}->[$i];
 
       #### Set default line color to Black
       $lineclr = $peakcolors_ref->[$i] || 14;
 
-      my $mainx = pdl [$mass, $mass];
-      my $mainy = pdl [0, $intensity];
-
-
-      #### This kludge lets me not colorize the last B and/or
-      #### first Y peaks found
-## problem i'ere
-#      set $bdata, ($length-1),-9999;
-#      set $ydata, 0, -9999;
-
+      ### Bind and Yind each contain the index into $bdata/$ydata
+      ###  for any value within a small window around the current peak,
+      ###  else 'Empty' if no value in that window.
       my $Bind = which($bdata >= ($mass-$window) & $bdata <= ($mass+$window));
       my $Yind = which($ydata >= ($mass-$window) & $ydata <= ($mass+$window));
 
-      #### If there are just B fragments with mass near enough this peak
-      if (($Bind !~ 'Empty') && ($Yind =~ 'Empty')) {
+      my $b = $Bind->at(0) if ($Bind !~ 'Empty');
+      my $y = $Yind->at(0) if ($Yind !~ 'Empty');
+
+      #### Figure out how to label this peak, if at all.
+
+      #### If there are just B fragments with m/z near enough this peak ...
+      ####   Don't label/colorize peaks corresponding to "fragments"
+      ####   corresponding to entire peptide ($b = $length-1 or $y=0)
+      if (($Bind !~ 'Empty') && ($b != $length-1) &&
+         (($Yind =~ 'Empty') || ($y == 0))) {
         $lineclr = $redcol;
+        # store the mass and intensity of this peak on a list for B-ions
         push(@Binten,$intensity);
         push(@Bmass,$mass);
-        if ($Bmaxinten[$Bind->at(0)] < $intensity) {
-          $Bmaxinten[$Bind->at(0)] = $intensity;
-          $masslist_ref->{Bcolor}->[$Bind->at(0)] = $lineclr
-            unless ($masslist_ref->{Bcolor}->[$Bind->at(0)]);
+        # Record that this peak has been identified
+        $specdata->{identified}->[$i] = 1;
+        # If there is more than one peak close to this
+        # m/z, be sure to print the label above the tallest one
+        if ($Bmaxinten[$b] < $intensity) {
+          $Bmaxinten[$b] = $intensity;
+          $masslist_ref->{Bcolor}->[$b] = $lineclr
+            unless ($masslist_ref->{Bcolor}->[$b]);
         }
 
-      #### Else if there are just Y fragments with mass near enough this peak
-      } elsif (($Yind !~ 'Empty') && ($Bind =~ 'Empty')) {
+      #### Else if there are just Y fragments with m/z near enough this peak
+      } elsif (($Yind !~ 'Empty') && ($y != 0) &&
+	      (($Bind =~ 'Empty') || ($b == $length-1))) {
         $lineclr = $bluecol;
         push(@Yinten,$intensity);
         push(@Ymass,$mass);
-        if ($Ymaxinten[$Yind->at(0)] < $intensity) {
-          $Ymaxinten[$Yind->at(0)] = $intensity;
-          $masslist_ref->{Ycolor}->[$Yind->at(0)] = $lineclr;
+        $specdata->{identified}->[$i] = 1;
+        if ($Ymaxinten[$y] < $intensity) {
+          $Ymaxinten[$y] = $intensity;
+          $masslist_ref->{Ycolor}->[$y] = $lineclr;
         }
 
-      #### Else if both B and Y fragments with mass near enough this peak
+      #### Else if both B and Y fragments with m/z near enough this peak
       } elsif (($Bind !~ 'Empty') && ($Yind !~ 'Empty')) {
         $lineclr = $grcol;
         push(@BYinten,$intensity);
         push(@BYmass,$mass);
-        if ($Ymaxinten[$Yind->at(0)] < $intensity) {
-          $Ymaxinten[$Yind->at(0)] = $intensity;
-          $masslist_ref->{Ycolor}->[$Yind->at(0)] = $lineclr;
+        $specdata->{identified}->[$i] = 1;
+        if ($Ymaxinten[$y] < $intensity) {
+          $Ymaxinten[$y] = $intensity;
+          $masslist_ref->{Ycolor}->[$y] = $lineclr;
         }
-        if ($Bmaxinten[$Bind->at(0)] < $intensity) {
-          $Bmaxinten[$Bind->at(0)] = $intensity;
-          $masslist_ref->{Bcolor}->[$Bind->at(0)] = $lineclr;
+        if ($Bmaxinten[$b] < $intensity) {
+          $Bmaxinten[$b] = $intensity;
+          $masslist_ref->{Bcolor}->[$b] = $lineclr;
         }
 
       #### else if there are no fragments with mass near enough this peak
       } else {
+        # what is this for?
         if (($peakcolors_ref->[$i] != 2) & ($peakcolors_ref->[$i] != 3) &
             ($peakcolors_ref->[$i] != 4) & ($peakcolors_ref->[$i] != 6) &
             ($peakcolors_ref->[$i] != 10) & ($peakcolors_ref->[$i] != 11)) {
@@ -961,7 +997,9 @@ sub LabelResidues {
       $grcol = 10;
     }
 
+    # For each residue in the peptide ...
     for ($i=0; $i < $length; $i++) {
+      # If there is a peak here that is identified as a B-ion ...
       if (($Binten[$i] != 0) && ($i != ($length-1))) {
         my $val = $Ionmasses_ref->{indices}->[$i];
         ++$val;
@@ -996,6 +1034,7 @@ sub LabelResidues {
       }
 
 
+      # If there is a peak here that is identified as a Y-ion ...
       if (($Yinten[$i] != 0) && ($i != 0)) {
         my $index = "Y$charge\-$Ionmasses_ref->{rev_indices}->[$i]";
         my $mass = $Ydata->at($i);
@@ -1024,6 +1063,68 @@ sub LabelResidues {
 
         #### Add ion label
         pgptext $mass+$xshift,$labht,$angle,$fjust,"$index"
+          if (($labht < $Ymax) && ($mass > $Xmin) && ($mass < $Xmax));
+      }
+    }
+
+    return $win;
+}
+
+###############################################################################
+# LabelUnidentifiedPeaks
+###############################################################################
+sub LabelUnidentifiedPeaks {
+    my %args = @_;
+
+    my $win = $args{'Win'};
+    my $specdata = $args{'SpecData'};
+    my $mz_threshold_factor = $args{'MZ_threshold'} || 0.1;
+
+    my $labht;
+    my $angle = $args{'Angle'} || 0;
+    my $fjust = $args{'Fjust'};
+    my $i;
+    my $lineclr;
+    my $Ymax = $args{'Ymax'};
+    my $Xmin = $args{'Xmin'};
+    my $Xmax = $args{'Xmax'};
+    my $interval = $Ymax / 50.0;
+    my $xshift = ($Xmax - $Xmin) / 200.0;
+
+    my $mz_intens_threshold = $Ymax*$mz_threshold_factor;
+
+    # For each unidentified peak above threshold intensity ...
+    # (or far from any other peak)
+    for (my $i = 0; $i < $specdata->{n_peaks}; $i ++) {
+      # is this peak close to any other peaks?
+      my $mass = $specdata->{masses}->[$i];
+      my $prev_mz = $Xmin;
+      my $next_mz = $Xmax;
+      my $too_close;
+      $prev_mz = $specdata->{masses}->[$i-1] if ($i > 0);
+      $next_mz = $specdata->{masses}->[$i+1]
+                      if ($i < $specdata->{n_peaks}-1);
+      my $breathing_room = $xshift * 6.0;
+      $too_close = (($mass - $prev_mz < $breathing_room) ||
+                    ($next_mz - $mass < $breathing_room));
+
+      my $y = $specdata->{intensities}->[$i];
+      if (((! defined $specdata->{identified}->[$i]) ||
+          ($specdata->{identified}->[$i] != 1 )) &&
+          (($y > $mz_intens_threshold) || ! $too_close )) {
+        my $label = sprintf ("%0.1f", $mass);
+        my $matchx = pdl [$mass, $mass];
+        my $y = $specdata->{intensities}->[$i];
+        my $matchy = pdl [$y+($interval/3.), $y+4*($interval/3.)];
+	pgsci 14;  #black
+	$lineclr = 14;
+	#### Location of label above tick mark
+	$labht = $y+5*($interval/3.);
+        #### Plot marker line
+        $win -> line($matchx, $matchy, {Color=>$lineclr});
+        $win -> hold;
+        #### Add m/z label
+        pgptext $mass+$xshift,$labht,$angle,$fjust,"$label"
           if (($labht < $Ymax) && ($mass > $Xmin) && ($mass < $Xmax));
       }
     }
@@ -1057,6 +1158,7 @@ sub Fragment {
 
 ###############################################################################
 # CalcIons
+#  given a charge and a peptide, compute the predicted B and Y ion masses
 ###############################################################################
 sub CalcIons {
     my %args = @_;
@@ -1077,23 +1179,32 @@ sub CalcIons {
     my @Bcolor = (14) x $length;
     my @Ycolor = (14) x $length;
 
-    #### If we start with a custom N-terminal mass
     my $start = 0;
-    my $i=0;
-    if ($residues[$i] =~ /n\[(\d+)\]/) {
-      $start = 1;
-      my $massTag = $residues[$i];
+    my $i;
+
+    #### If we start with a custom N-terminal mass, such as n[43]A
+    ####  Bug fixed here TMF 10/12/10
+    if ($residues[0] =~ /n\[(\d+)\](\w)/) {
+      #$start = 1;
+      my $massTag = $residues[0];
       my $integerMass = $1;
+      # initialze $Bion to this N-terminal mass
       if ($massCalculator->{supported_modifications}->{average}->{$massTag}) {
 	$Bion += $massCalculator->{supported_modifications}->{average}->{$massTag};
       } else {
 	$Bion = $integerMass;
       }
-      $length--;
+      #$length--;
+      # Strip the n[xx] from the string for this residue
+      $residues[0] = $2;
     }
 
     my @masses;
+
+    ### For each amino acid residue ...
     for ($i=0; $i<$length; $i++) {
+
+      ### get the mass
       my $massTag = $residues[$i+$start];
       my $mass = $massarray{$massTag};
       unless ($mass) {
@@ -1109,15 +1220,23 @@ sub CalcIons {
 	  print "WARNING: Unable to find mass for residues[$i]<BR>\n";
 	}
       }
+
+      ### ... and store it in an array
       $masses[$i] = $mass;
       $modified_residues[$i] = $massTag;
       $Yion += $mass;
     }
+
+    ### Now, $Yion is the sum of all the masses, plus water, and $Bion
+    ### is zero (or mass of N-terminal modification).
     my %masslist;
     my (@aminoacids, @indices, @rev_indices, @Bions, @Yions);
 
-    #### Compute the ion masses
+    #### Compute the ion masses. March down the peptide and get the B
+    #### and Y ion masses.
     for ($i=0; $i<$length; $i++) {
+
+      #### Get the Bion and Yion masses by adjusting the previous values
       $Bion += $masses[$i];
       $Yion -= $masses[$i-1] if ($i > 0);
 
@@ -1125,18 +1244,19 @@ sub CalcIons {
       $indices[$i] = $i;
       $rev_indices[$i] = $length-$i;
 
-      #### B ion mass & Y ion mass
+      #### Store the B ion mass & Y ion m/z (NOT mass) in an array
       $Bions[$i] = ($Bion + $charge*$Nterm)/$charge;
       #$Yions[$i] = ($Yion + $charge*$Nterm)/$charge;
       $Yions[$i] = ($Yion + $charge*0.0)/$charge;
     }
 
-    $masslist{residues} = \@modified_residues;
-    $masslist{indices} = \@indices;
-    $masslist{Bions} = \@Bions;
-    $masslist{Yions} = \@Yions;
-    $masslist{rev_indices} = \@rev_indices;
-    $masslist{length} = $length;
+    $masslist{residues} = \@modified_residues; #array of one-letter
+        #amino acid code plus a mass mod in brackets (?)
+    $masslist{indices} = \@indices;  # simply 1 through length
+    $masslist{Bions} = \@Bions;  #m/z values
+    $masslist{Yions} = \@Yions;  #m/z values
+    $masslist{rev_indices} = \@rev_indices;  #simply the reverse of indices
+    $masslist{length} = $length; #peptide length
 
     #### Return reference to a hash of array references
     return (\%masslist);
