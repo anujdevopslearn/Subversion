@@ -230,17 +230,22 @@ sub get_mrm_transitions {
   my $self = shift;
   my %args = @_;
 
+  my $where = '';
   if ( !$args{peptides} && $args{accessions} ) {
-    return $self->get_mrm_transitions_acc_list( %args );
-  }
+#   return $self->get_mrm_transitions_acc_list( %args );
+    my $acc_string =  "'" . join( "', '", @{$args{accessions}} ) . "'";
+    $where = " WHERE peptide_accession IN ( $acc_string ) ";
+  } else {
 
-  my %peps;
-  my $pep_str;
-  my $sep = '';
-  for my $pep ( @{$args{peptides}} ) {
-    next if $peps{$pep};
-    $pep_str .= $sep . "'" . $pep . "'";
-    $sep = ',';
+    my %peps;
+    my $pep_str;
+    my $sep = '';
+    for my $pep ( @{$args{peptides}} ) {
+      next if $peps{$pep};
+      $pep_str .= $sep . "'" . $pep . "'";
+      $sep = ',';
+    }
+    $where = " WHERE stripped_peptide_sequence IN ( $pep_str ) ";
   }
 
   my $sbeams = $self->getSBEAMS();
@@ -258,9 +263,11 @@ sub get_mrm_transitions {
   q1_mz,
   q3_mz,
   q3_ion_label,  
+  '' AS intensity,
   collision_energy,
   retention_time,
   ssrcalc_relative_hydrophobicity,
+  '' AS instrument,
   set_tag,
   level_name
   FROM $TBAT_SRM_TRANSITION ST 
@@ -270,13 +277,13 @@ sub get_mrm_transitions {
     ON ST.stripped_peptide_sequence = P.peptide_sequence
   JOIN $TBAT_TRANSITION_SUITABILITY_LEVEL TSL 
     ON TSL.transition_suitability_level_id = ST.transition_suitability_level_id
-  WHERE stripped_peptide_sequence IN ( $pep_str )
+  $where
   AND IS_PUBLIC = 'Y'
 --  AND project_id IN ( $projects )
 --  AND level_score > 0.8
   ORDER BY peptide_accession, peptide_sequence, q1_mz, level_score DESC, q3_mz
   END
-  $log->info( "SQL coming\n $sql " );
+  $log->debug( $sql );
 
   my @rows = $sbeams->selectSeveralColumns($sql);
   return \@rows;
