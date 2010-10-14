@@ -1082,12 +1082,20 @@ sub get_pabst_static_peptide_display {
     $err = ( $err ) ? $err . ',' . $opt : $opt if !defined $args{$opt};
   }
   die "Missing required parameter(s) $err" if $err;
-  my $organism_id = $atlas->getCurrentAtlasOrganism( parameters_ref => {},
-                                                     type => 'organism_id' );
+  my $organism = $atlas->getCurrentAtlasOrganism( parameters_ref => {} );
+  $log->debug( "Org is $organism" );
+
+  # If atlas build ID is passed, use organism to set pabst_build_id
+  my $pabst_build_id;
+  if ( defined $args{atlas_build_id} ) {
+    $pabst_build_id = $self->get_pabst_build( organism_name => $organism );
+  } else {
+    $pabst_build_id = $self->get_pabst_build();
+  }
+  $log->debug( "build is $pabst_build_id!" );
 
   $args{patr_peptides} ||= {};
 
-  my $pabst_build_id = $self->get_pabst_build();
 
   my $dp_sql = qq~
   SELECT DISTINCT Sequence, ESPPred, N_obs_ident, N_obs_templ, N_obs_Orbi,
@@ -1103,7 +1111,7 @@ sub get_pabst_static_peptide_display {
   WHERE B.biosequence_id = $args{biosequence_id}
   ~;
 
-  $log->debug( $dp_sql );
+#  $log->debug( $dp_sql );
 
   my %dirty_peptides;
   my $dp_data = 0;
@@ -1113,7 +1121,7 @@ sub get_pabst_static_peptide_display {
     $dirty_peptides{$row[0]} = \@row;
   }
 
-  my $mapped_id = $self->get_pabst_mapped_id( $args{biosequence_name} );
+  my $mapped_id = $self->get_pabst_mapped_id( $args{biosequence_name}, $pabst_build_id );
 
   # No id, no query
   return '' unless $mapped_id;
@@ -1140,12 +1148,13 @@ sub get_pabst_static_peptide_display {
 #
 # 3, 4,5, 6, 7, 8, 10, 11,12, 16,15 
 
+  $log->debug( $sbeams->showSessionHash() );
 # FIXME - can't assume order, duh.
   my $sql = qq~
   SELECT DISTINCT preceding_residue, peptide_sequence, following_residue,
-  suitability_score, predicted_suitability_score, merged_score,
+  synthesis_adjusted_score, suitability_score, predicted_suitability_score,
   SSRCalc_relative_hydrophobicity, n_genome_locations, n_observations,
-  synthesis_warnings, syntheis_adjusted_score, 
+  synthesis_warnings, peptide_sequence AS Organism,
   CASE WHEN stripped_peptide_sequence IS NULL then 'No' ELSE 'Yes' END AS PATR
   FROM $TBAT_PABST_PEPTIDE PP 
   JOIN $TBAT_PABST_PEPTIDE_MAPPING PM
@@ -1157,26 +1166,21 @@ sub get_pabst_static_peptide_display {
   LEFT OUTER JOIN $TBAT_SRM_TRANSITION STR
   ON STR.stripped_peptide_sequence = PP.peptide_sequence
   WHERE PM.biosequence_id = $mapped_id
-  AND PB.organism_id = $organism_id
   AND PB.pabst_build_id = $pabst_build_id
-  ORDER BY PATR DESC, syntheis_adjusted_score DESC
+  ORDER BY PATR DESC, synthesis_adjusted_score DESC
   ~;
-  $log->info( $sql );
+  $log->debug( $sql );
 
-  my @headings = ( pre => 'Previous amino acid',
-                   sequence => 'Amino acid sequence of peptide',
-                   fol => 'Followin amino acid',
-                   ESS => 'Empirical suitability score',
-                   PSS => 'Predicted suitability score',
-                   MSS => 'Merged suitability score',
-                   hyd_scr => 'Relative hydrophobicity score',
-                   n_gen_loc => 'Number of locations on genome to which sequence maps',
-                   n_obs => 'Number of times peptide was observed',
-                   Annotations => 'Annotation of peptide features such as missed cleavage (MC), etc.',
-                   adj_SS => 'Best suitability score, adjusted based on sequence features',
-                   Organisms => 'Organism(s) in which peptide was seen',
-                   PATR => 'Peptide assay defined in transition resource'
-                  );
+  my @columns = ( 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'ESS', 'PSS', 
+                   'SSRT', 'N Gen Loc', 'N Obs', 'Annot', 'Org', 'PATR' );
+  my $coldefs = $atlas->get_column_defs( labels => \@columns );
+  my @headings;
+  for my $def ( @{$coldefs} ) {
+    push @headings, $def->{key}, $def->{value};
+  }
+  my $table_help = $atlas->make_table_help( entries => $coldefs,
+                                           description => "Possible peptides ranked by PABST score" );
+
 
   # Defer for now...
   if ( 0 && $dp_data ) {
@@ -1188,7 +1192,7 @@ sub get_pabst_static_peptide_display {
   } 
 
   my @peptides = ( $self->make_sort_headings( headings => \@headings,
-                                              default => 'adj_SS' )  );
+                                              default => 'Adj SS' )  );
   my $naa = 'n/a';
   $naa = $sbeams->makeInactiveText($naa) if $sbeams->output_mode() =~ /html/i;
 
@@ -1206,7 +1210,7 @@ sub get_pabst_static_peptide_display {
       }
     }
 
-    if ( $dp_data ) {
+    if ( 0 && $dp_data ) {
 #  SELECT DISTINCT Sequence, ESPPred, N_obs_ident, N_obs_templ, N_obs_Orbi,
 #         N_mapped,
 #         CASE WHEN Status = 'A' THEN 'Anlyzed' 
@@ -1236,21 +1240,13 @@ sub get_pabst_static_peptide_display {
     $row[4] = sprintf( "%0.2f", $row[4] );
     $row[5] = sprintf( "%0.2f", $row[5] );
     $row[6] = sprintf( "%0.1f", $row[6] );
-    $row[10] = sprintf( "%0.2f", $row[10] );
+#    $row[10] = sprintf( "%0.2f", $row[10] );
+
     if ( $row[11] eq 'Yes' ) {
-      $row[12] = $row[11];
-      $row[10] *= 5;
-    } else {
-      $row[12] = $sbeams->makeInactiveText( $row[11] );
+      $row[3] *= 5;
     }
-    $row[11] = $row[1];
-#    $row[12] = ( $args{patr_peptides}->{$row[1]} ) ? 'Yes' : $sbeams->makeInactiveText( 'No' );
 
     $row[1] = "<A HREF=GetPeptide?_tab=3;atlas_build_id=$args{atlas_build_id};searchWithinThis=Peptide+Sequence;searchForThis=$row[1];action=QUERY;biosequence_id=$args{biosequence_id} TITLE='View peptide $row[1] details'>$row[1]</A>" if $row[8] || 1;
-
-
-
-
 
     push @peptides, [ @row];
   }
@@ -1272,20 +1268,27 @@ sub get_pabst_static_peptide_display {
   }
 
   my @mod_peptides;
-  my %orgMap = ( 2 => 'H', 6 => 'M' );
+  my %orgMap = ( 2 => 'H', 6 => 'M', '3' => 'Y' );
+  my $cnt = 0;
   for my $pep ( @peptides ) {
-    if ( $pep2org{$pep->[11]} ) {
+    if ( !$cnt++ ) {
+      push @mod_peptides, $pep;
+      next;
+    }
+    if ( $pep2org{$pep->[10]} ) {
       my $newrow;
-      for my $org( @{$pep2org{$pep->[11]}} ) {
+      for my $org( @{$pep2org{$pep->[10]}} ) {
         my $sym = $orgMap{$org} || 'MIA';
         $newrow .= "$sym&nbsp;";
       }
-      $pep->[11] = $newrow;
+      $pep->[10] = $newrow;
+    } else {
+      $pep->[10] = '';
     }
     push @mod_peptides, $pep;
   }
 
-  my $align = [qw(right left right right left center center center right right right)];
+  my $align = [qw(right left left right right right right right right left left left)];
 
   my $html = $atlas->encodeSectionTable( header => 1, 
                                                  width => '600',
@@ -1293,11 +1296,13 @@ sub get_pabst_static_peptide_display {
                                                 align  => $align,
                                                   rows => \@mod_peptides,
                                           rows_to_show => 20,
+                                                nowrap => [1..12],
                                               max_rows => 500,
                                           bkg_interval => 3, 
                                           set_download => 'Download peptides', 
                                            file_prefix => 'best_peptides_', 
                                                 header => 1,
+                                             help_text => $table_help,
                                               bg_color => '#EAEAEA',
                                               sortable => 1,
                                               table_id => 'pabst',
@@ -1311,8 +1316,13 @@ sub get_pabst_static_peptide_display {
 
 sub get_pabst_mapped_id {
   my $self = shift;
-  $log->info( "never had a chance!\n" );
   my $name = shift || return '';
+  my $build = shift || '';
+
+  my $and = '';
+  if ( $build ) {
+    $and = "AND pabst_build_id = $build";
+  }
 
   my $sql = qq~
   SELECT MAX( PM.biosequence_id )
@@ -1322,9 +1332,10 @@ sub get_pabst_mapped_id {
   JOIN $TBAT_BIOSEQUENCE B
   ON B.biosequence_id = PM.biosequence_id 
   WHERE biosequence_name = '$name'
+  $and
   ~;
 
-  $log->info( $sql );
+  $log->debug( $sql );
   
   my @ids = $sbeams->selectrow_array( $sql );
   return $ids[0] || '';
@@ -1336,6 +1347,7 @@ sub get_pabst_mapped_id {
 #+
 # Returns best legal pabst build id based on 
 #  1) passed pabst_build_id param
+#  1.3) passed atlas_build_id param
 #  1.5) passed organism param
 #  2) cached session value
 #  3) default
@@ -1363,6 +1375,8 @@ sub get_pabst_build {
   ORDER BY pabst_build_id DESC
   ~;
 
+  $log->debug( "organism is $organism!!!" );
+
   my %builds;
   my $validated_build_id = '';
   my $sth = $sbeams->get_statement_handle( $sql );
@@ -1378,7 +1392,7 @@ sub get_pabst_build {
   # Use preset value from cgi param if possible
   if ( $build_id && $builds{$build_id} ) {
     $validated_build_id = $build_id;
-    $log->info( "Returning $validated_build_id based on pabst_build_id" );
+    $log->debug( "Returning $validated_build_id based on pabst_build_id" );
     $found++;
   }
 
@@ -1386,7 +1400,7 @@ sub get_pabst_build {
     for my $build_id ( sort { $b <=> $a } ( keys( %builds ) ) ) {
       if ( lc( $builds{$build_id} ) eq lc( $organism ) ) {
         $validated_build_id = $build_id;
-        $log->info( "Returning $validated_build_id based on organism" );
+        $log->debug( "Returning $validated_build_id based on organism" );
         $found++;
       }
     }
@@ -1395,12 +1409,12 @@ sub get_pabst_build {
 
   if ( !$found && $cookie_build_id && $builds{$cookie_build_id} ) {
     $validated_build_id = $cookie_build_id;
-    $log->info( "Returning $validated_build_id based on cookie" );
+    $log->debug( "Returning $validated_build_id based on cookie" );
     $found++;
   }
 
   if ( !$found ) {
-    $log->info( "Returning $validated_build_id based on global default" );
+    $log->debug( "Returning $validated_build_id based on global default" );
   }
 
   if ( $validated_build_id ) {
@@ -2672,6 +2686,12 @@ sub pabst_evaluate_peptides {
 
 #  print STDERR "scr is $args{peptide_hash_scr}\n" if $args{peptide_hash_scr};
 
+  if ( !$atlas ) {
+    $atlas = SBEAMS::PeptideAtlas->new();
+  }
+  my $patr_peps = $atlas->get_PATR_peptides();
+#  print "found " . scalar( keys( %{$patr_peps} ) ) . " PATR peptides!\n";
+
   # Loop over peptides
   my $cnt = 0;
   for my $pep ( @{$args{peptides}} ) {
@@ -2695,6 +2715,12 @@ sub pabst_evaluate_peptides {
 
     # peptide sequence to consider
     my $seq = uc($pep->[$args{seq_idx}]);
+
+    # PATR peptides get a boost.
+    if ( $patr_peps->{$seq} ) {
+      $scr *= $pen_defs{PATR};
+      push @pen_codes, 'PATR';
+    }
 
     # New-ish addition.  Inclusion on a particular list might be good or bad.
     if ( $args{chk_peptide_hash} && defined $args{peptide_hash_scr} ) {
