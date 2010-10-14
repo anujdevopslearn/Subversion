@@ -1562,6 +1562,8 @@ sub make_table_toggle {
   my $hidetext = '';  # Text for 'hide content' link
   my $showtext = '';  # Text for 'show content' link
   my $neuttext = '';  # Auxilary text for show/hide
+  
+  $args{plaintext} ||= 0;  # Don't have text in a table 
 
   
   my $hideimg = ( $args{hideimg} ) ? $args{hideimg} : 'small_gray_minus.gif';  # image for 'hide content' link
@@ -1646,7 +1648,8 @@ sub make_table_toggle {
           tgif.src =  '$HTML_BASE_DIR/images/$hideimg'
         }
       } else {
-        alert( "It don't exist" );
+//         This pops up if there is text but no image, not good.
+//        alert( "It don't exist" );
       }
 
 
@@ -1687,15 +1690,26 @@ sub make_table_toggle {
   # The show/hide text is in two opposite toggling sections 
   my $texthtml = '';
   if ( $args{textlink} ) {
-    $texthtml = "<TD $tbl_html CLASS=$hideclass>$hidetext</TD><TD $tbl_html CLASS=$showclass>$showtext</TD>";
+    if ( $args{plaintext} ) {
+      $texthtml = "<DIV ID=${hideclass}hidetext CLASS=$hideclass>$hidetext</SPAN><SPAN CLASS=$showclass ID=${showclass}showtext>$showtext</SPAN>";
+    } else {
+      $texthtml = "<TD $tbl_html CLASS=$hideclass>$hidetext</TD><TD $tbl_html CLASS=$showclass>$showtext</TD>";
+    }
   }
   
   $tbl_html .= "CLASS='$hideclass' ";
 
 
-  my $linkhtml = ( $texthtml ) ?  
-        qq~<A ONCLICK="toggle_tbl('${args{name}}');"><TABLE><TR><TD>$imghtml</TD>$texthtml </TR></TABLE></A> $neuttext~ : 
-        qq~<A ONCLICK="toggle_tbl('${args{name}}');">$imghtml</A> ~;
+  my $linkhtml = '';
+  if ( $texthtml ) {
+    if ( !$args{plaintext} ) {
+       $linkhtml = qq~<A ONCLICK="toggle_tbl('${args{name}}');"><TABLE><TR><TD>$imghtml</TD>$texthtml </TR></TABLE></A> $neuttext~; 
+    } else {
+       $linkhtml = qq~<A ONCLICK="toggle_tbl('${args{name}}');">$texthtml</A> $neuttext~;
+    }
+  } else {
+    $linkhtml = qq~<A ONCLICK="toggle_tbl('${args{name}}');">$imghtml</A> ~;
+  }
 
   $linkhtml = $js_css . $linkhtml;
   # Return html as separate content/widget, or as a concatentated thingy
