@@ -403,6 +403,90 @@ sub get_std_transition_headers {
   return \@std_headers;
 }
 
+#+
+# Unified source for column definitions 
+#-
+sub get_column_defs {
+  my $self = shift;
+  my %args = @_;
+
+  my %coldefs = ( 
+    'Accession' => 'Peptide Atlas accession number, beginning with PAp followed by 9 digits.',
+    'Pre AA' => 'Preceding (towards the N terminus) amino acid',
+    'Sequence' => 'Amino Acid sequence of this peptide', 
+    'Fol AA' =>'Following (towards the C terminus) amino acid', 
+    'ESS' => 'Empirical suitability score, derived from peptide probability, EOS, and sequence characteristics such as missed cleavage <SUP><FONT COLOR=RED>[MC]</FONT></SUP> or semi-tryptic <SUP><FONT COLOR=RED>[ST]</FONT></SUP>, or <BR> multiple genome locations <SUP><FONT COLOR=RED>[MGL]</FONT></SUP>.', 
+    'PSS' => 'Predicted suitability score, derived from combining publicly available algorithms (Peptide Sieve, STEPP, ESPP, APEX, Detectability Predictor)', 
+    'Adj SS' => 'Final suitablity score, the greater of ESS and PSS, adjusted by PABST weightings.', 
+    'Best Prob' => 'Highest PeptideProphet probability for this observed sequence', 
+    'Best Adj Prob' => 'Highest iProphet-adjusted probablity for this observed sequence', 
+    'N Obs' => 'Total number of observations in all modified forms and charge states', 
+    'EOS' => 'Empirical Observability Score', 
+    'N Prot Map' => 'Number of proteins in the reference database to which this peptide maps', 
+    'N Gen Loc' => 'Number of discrete genome locations which encode this amino acid sequence', 
+    'Sample IDs' => 'Samples in which this sequence was seen', 
+    'Parent Peptides' => 'Observed peptides of which this peptide is a subsequence', 
+    'Sequence' => 'Amino acid sequence of detected pepide, including any mass modifications.',
+    'Charge' => 'Charge on Q1 (precursor) peptide ion.',
+    'q1_mz' => 'Mass to charge ratio of precursor peptide ion.',
+    'q3_mz' => 'Mass to charge ratio of fragment ion.',
+    'Label' => 'Ion-series designation for fragment ion (Q3).',
+    'Intensity' => 'Intensity of peak in CID spectrum',
+    'CE' => 'Collision energy, the kinetic energy conferred to the peptide ion and resulting in peptide fragmentation. (eV)',
+    'RT' => 'Peptide retention time( in minutes ) in the LC/MS system.',
+    'SSRT' => "Sequence Specific Retention time provides a hydrophobicity measure for each peptide using the algorithm of Krohkin et al. Version 3.0 <A HREF=http://hs2.proteome.ca/SSRCalc/SSRCalc.html target=_blank>[more]</A>",
+    'Instr' => 'Model of mass spectrometer.',
+    'Annotator' => 'Person/lab who contributed validated transition.',
+    'Quality' => 'Crude scale of quality for the observation, currently one of Best, OK, and No. ',
+    'Annotation Set' => 'Set of transitions with which subject transition was uploaded.', 
+    'MSS' => 'Merged suitability score, greater of ESS and PSS',
+    'Org' => 'Organism(s) in which peptide was seen',
+    'Annot' => 'Annotation of peptide features such as missed cleavage (MC), etc.',
+    'PATR' => 'Peptide assay defined in transition resource'
+
+
+    );
+  if ( $args{labels} ) {
+    my @entries;
+    for my $label ( @{$args{labels}} ) {
+      if ( $coldefs{$label} ) {
+        push @entries, { key => $label, value => $coldefs{$label} };
+      } else {
+        push @entries, { key => $label, value => 'Not Defined' };
+      }
+    }
+    return \@entries;
+  }
+  return \%coldefs;
+}
+
+#+
+# Make toggle-able table of column defs for display 
+#-
+sub make_table_help {
+  my $self = shift;
+  my %args = @_;
+  return '' unless $args{entries};
+
+  my $description = $args{description} || '';
+  my $heading = $args{heading} || '';
+
+  my $showtext = 'show column descriptions';
+  my $hidetext = 'hide column descriptions';
+
+  my $help = $self->get_table_help_section( description => $description,
+                                                   name => $heading,
+                                                heading => $heading,
+                                                entries => $args{entries},
+                                               showtext => $showtext,
+                                               hidetext => $hidetext
+                                          );
+
+  return $help;
+  
+}
+
+
 sub transitions_as_hashref {
   my $self = shift;
   my $data = shift;
