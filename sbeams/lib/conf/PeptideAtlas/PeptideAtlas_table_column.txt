@@ -672,7 +672,6 @@ AT_GetPABSTList	8	n_genome_locations_constraint	Number of Genome Locations Mappe
 AT_GetPABSTList	9	n_highest_intensity_fragment_ions	Num of highest Inten Frag Ions to Keep									N	text	5		Y	Y	N	Number highest inten frag ions per spec to keep, default 3, max 10.		
 AT_GetPABSTList	10	n_peptides_per_protein	Number of peptides per protein constraint									N	text	5		Y	Y	N	Number of peptides to return per protein, default 3, max 10.		
 AT_GetPABSTList	11	transition_source	Transition Source									N	multioptionlist	25		Y	Y	N	Desired source(s) for picking transitions.  Can Ctrl-select multiple options, no selection allows all.	SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'GetTransitions_Transition_Source' AND record_status != 'D' ORDER BY sort_order,option_value;	
-AT_GetPABSTList	12	allowed_modifications	Allowed Modifications									N	multioptionlist	12		Y	Y	N	Allowable amino acid modification(s) for query.  Can Ctrl-select multiple options, no selection allows all.	SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'GetTransitions_Modifications' AND record_status != 'D' ORDER BY sort_order,option_value;	
 AT_pabst_build	1	pabst_build_id	PABST Build Id	int	4	0	N		Y			N						Y			
 AT_pabst_build	2	build_name	Build Name	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
 AT_pabst_build	3	build_comment	Build Comment	varchar	2000	0	Y		N			Y	text	24		Y	Y	N			
