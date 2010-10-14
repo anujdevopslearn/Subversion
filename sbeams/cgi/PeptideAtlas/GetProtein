@@ -643,7 +643,7 @@ sub handle_request {
     ["best_adjusted_probability","STR(PI.best_adjusted_probability,7,3)","<DIV TITLE=''>Best Adjusted Prob</DIV>"],
     ["n_observations","PI.n_observations","<DIV TITLE='Total number of observations in all modified forms and charge states'>N Obs</DIV>"],
     ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","<DIV TITLE='Empirical Observability Score'>EOS</DIV>"],
-    ["SSRCalc_relative_hydrophobicity","STR(P.SSRCalc_relative_hydrophobicity,7,2)","<DIV TITLE='SSRCalc Relative Hydrophobicity score'>RHS</DIV>"],
+    ["SSRCalc_relative_hydrophobicity","STR(P.SSRCalc_relative_hydrophobicity,7,2)","<DIV TITLE='SSRCalc Relative Hydrophobicity score'>SSRT</DIV>"],
     ["n_protein_mappings","PI.n_protein_mappings","<DIV TITLE='Number of proteins in the reference database to which this peptide maps'>N Protein Mappings</DIV>"],
     ["n_genome_locations","PI.n_genome_locations","<DIV TITLE='Number of discrete genome locations which encode this amino acid sequence'>N Genome Locations</DIV>"],
     ["sample_ids","PI.sample_ids","sample_ids"],
@@ -829,7 +829,8 @@ sub handle_request {
                            text => "Distinct Observed Peptides ($peptide_counts)",
                            link => $link );
 
-    print qq~ $obs_help<TABLE width="600">$observed_header</TABLE><TABLE><TR $tr><TD COLSPAN=2>~ if $htmlmode;
+#    print qq~ $obs_help<TABLE width="600">$observed_header</TABLE><TABLE><TR $tr><TD COLSPAN=2>~ if $htmlmode;
+    print qq~ <TABLE width="600">$observed_header</TABLE><TABLE><TR $tr><TD ALIGN=left>$obs_help</TD><TR $tr><TD COLSPAN=2>~ if $htmlmode;
 
     #### Create Cytoscape format files if selected
     my $java_web_start = { template => 'GetProtein' };
@@ -893,10 +894,12 @@ sub handle_request {
 			}
 
       #  Oh please please please!  No again, sigh!
-#			for my $rn ( 12, 13 ) {
-#				$row->[$rn] =~ s/\d+/*/g;
-#				$row->[$rn] =~ s/,//g;
-#			}
+      if ($sbeams->output_mode() eq 'html') { 
+#  			for my $rn ( 12 ) {
+#    			$row->[$rn] =~ s/\d+/*/g;
+#		  		$row->[$rn] =~ s/,//g;
+#		  	}
+      }
 
 			my @errs;
 			push @errs, 'mc' if $mc;
@@ -944,7 +947,7 @@ sub handle_request {
     #### Display a hyperlink for viewing this information in Cytoscape
     if ($sbeams->output_mode() eq 'html') {
       my $GetProtein_hlink = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$atlas_build_id&protein_name=$protein_name&output_mode=cytoscape&action=GO";
-      print qq~<TABLE><TR><TD><A HREF="$GetProtein_hlink"><IMG BORDER="0" SRC="$HTML_BASE_DIR/images/PAcyto_icon.png"></A></TD><TD valign="center"><A HREF="$GetProtein_hlink">[View peptides and related proteins as a network with Cytoscape]</A></TD></TR></TABLE><BR>~;
+      print qq~<TABLE><TR><TD><A HREF="$GetProtein_hlink"><IMG BORDER="0" SRC="$HTML_BASE_DIR/images/PAcyto_icon.png"></A></TD><TD valign="center"><A HREF="$GetProtein_hlink">[View peptides and related proteins as a network with Cytoscape]</A>   </TD></TR></TABLE><BR>~;
     }
 
 
@@ -1072,6 +1075,48 @@ sub handle_request {
       }
     }
 
+    #############################################################
+    # Display precomputd PABST peptides
+
+    #### Widget to allow show/hide of section
+    my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_pabst_static',
+      visible => 0,
+      tooltip => 'Show/Hide Section',
+      imglink => 1,
+      sticky => 1,
+     );
+
+    #### Display the section header
+    my $PabstHeader = $sbeamsMOD->encodeSectionHeader(
+      text => 'PABST Peptide Ranking ',
+      link => $link
+    );
+
+    #### Display the best peptide information
+    my $pabst_display = $bestPeptideSelector->get_pabst_static_peptide_display(
+       'link' => $link,
+       base_url=>$base_url,
+       atlas_build_id => $atlas_build_id,
+       biosequence_name => $biosequence->{biosequence_name},
+       biosequence_id => $biosequence_id,
+       tr_info => $tr,
+     );
+
+    if ( $htmlmode && $pabst_display ) {
+      print qq~ 
+ <TABLE width="600">
+  $PabstHeader
+ </TABLE>
+ <TABLE>
+   <TR $tr>
+     <TD COLSPAN=2> $pabst_display 
+     </TD>
+   </TR>
+ </TABLE>
+    ~;
+
+    }
+
 
     #############################################################
     #### Display annotated transitions
@@ -1091,7 +1136,6 @@ sub handle_request {
     );
 
     
-    my $trans_help = get_table_help( 'annotated_transitions' );
     my $mrm_transitions = $sbeamsMOD->get_mrm_transitions( accessions => \@pa_accessions );
 
     #### If a result is returned
@@ -1103,8 +1147,16 @@ sub handle_request {
         $pep->[0] = "<A HREF=$link_base" . $pep->[0] . ">$pep->[0]</A>";
         $pep->[3] = sprintf("%0.2f", $pep->[3]);
         $pep->[4] = sprintf("%0.2f", $pep->[4]);
-        $pep->[6] = sprintf("%0.1f", $pep->[6]);
-        $pep->[7] = sprintf("%0.1f", $pep->[7]);
+        if ( $pep->[6] ) {
+          $pep->[6] = sprintf("%0.1f", $pep->[6]);
+        } else {
+          $pep->[6] = $sbeams->makeInactiveText('n/a');
+        }
+        if ( $pep->[7] ) {
+          $pep->[7] = sprintf("%0.1f", $pep->[7]);
+        } else {
+          $pep->[7] = $sbeams->makeInactiveText('n/a');
+        }
         $pep->[8] = sprintf("%0.1f", $pep->[8]);
         $pep->[9] = sprintf("%0.1f", $pep->[9]);
        ($pep->[5]) = $pep->[5] =~ /^([a-zA-Z]\d+)/;
@@ -1115,7 +1167,11 @@ sub handle_request {
         }
       }
       my @labels = ( 'Accession', 'Sequence', 'Charge', 'q1_mz', 'q3_mz', 
-                 'Label', 'Intensity', 'CE', 'RT', 'SSRCalc', 'Instr', 'Annotator', 'Quality');
+                 'Label', 'Intensity', 'CE', 'RT', 'SSRT', 'Instr', 'Annotation Set', 'Quality');
+      my $col_defs = $sbeamsMOD->get_column_defs( labels => \@labels );
+#      my $trans_help = get_table_help( 'annotated_transitions' );
+      my $trans_help = $sbeamsMOD->make_table_help( entries => $col_defs,
+                                                    description => 'Contributed Q1/Q3 transition pairs for SRM experiments' );
 
       #### Add table column headings
       unshift @$mrm_transitions, \@labels;
@@ -1125,11 +1181,14 @@ sub handle_request {
                                                         tr_info => $tr,
                                                           width => '600',
                                                    set_download => 1,
+                                                   help_text => $trans_help,
+                                                           nowrap => [12,13],
                                                     chg_bkg_idx => 3,
                                                          align  => [qw(left center center right right center right right right right left left left)],
                                                            rows => $mrm_transitions );
       #### Display table
-      print "$trans_help<TABLE WIDTH=600><BR>$transitionsHTML</TABLE>\n" if $#{$mrm_transitions} && $htmlmode;
+#      print "$trans_help<TABLE WIDTH=600><BR>$transitionsHTML</TABLE>\n" if $#{$mrm_transitions} && $htmlmode;
+      print "<TABLE WIDTH=600><BR>$transitionsHTML</TABLE>\n" if $#{$mrm_transitions} && $htmlmode;
     }
 
 
@@ -1175,7 +1234,7 @@ sub handle_request {
     ## Display the samples list ##
 
     # Widget to allow show/hide of sample map section
-    my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_samplelist',
+    my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_samplemap',
                                                   visible => 1,
                                                 tooltip => 'Show/Hide Section',
                                                  imglink => 1,
