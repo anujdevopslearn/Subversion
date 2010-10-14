@@ -546,6 +546,9 @@ sub encodeSectionItem {
 
   my $key = $args{key} || '';
   my $value = $args{value} || '';
+
+  my $desc_nowrap = ( $args{nowrap_description} ) ? 'NOWRAP' : '';
+
   my $url = $args{url} || '';
   my $kwid = ( $args{key_width} ) ? "WIDTH='$args{key_width}'" : '';
   my $vwid = ( $args{val_width} ) ? "WIDTH='$args{val_width}'" : '';
@@ -561,7 +564,7 @@ sub encodeSectionItem {
   }
 
   my $buffer = qq~
-        <TR $tr><TD NOWRAP bgcolor="cccccc" $kwid>$key</TD><TD $vwid>$astart$value$aend</TD></TR>
+        <TR $tr><TD NOWRAP bgcolor="cccccc" $kwid>$key</TD><TD $desc_nowrap $vwid>$astart$value$aend</TD></TR>
 ~;
 
   return $buffer;
@@ -738,8 +741,14 @@ sub encodeSectionTable {
 #  $tab->addRow( [$closelink] );
 
   my $html = "$pre_text\n";
+  my $help = $args{help_text} || '';
 
-  if ( $rs_link || $args{change_form} ) {
+  if ( $html || $help ) {
+    $html .= "<TR $tr_info><TD NOWRAP ALIGN=left>$help</TD><TD NOWRAP ALIGN=right>$rs_link</TD></TR>\n";
+  }
+
+  if ( 0 && ( $rs_link || $args{change_form} ) ) {
+    
     if ( !$rs_link ) {
       $html .= "<TR><TD NOWRAP ALIGN=left>$args{change_form}</TD></TR>\n";
     } elsif ( !$args{change_form} ) {
@@ -1093,13 +1102,15 @@ sub get_table_help_section {
   my %args = @_;
   $args{showtext} ||= 'show column descriptions';
   $args{hidetext} ||= 'hide column descriptions';
-  $args{heading} ||= 'Column information';
+  $args{heading} ||= '';
   $args{description} ||= '';
 
 
+  my $ecnt = 0;
   my $index = "<TABLE class=info_box>\n";
   for my $entry ( @{$args{entries}} ) {
-    $index .= $self->encodeSectionItem( %$entry );
+    $ecnt++;
+    $index .= $self->encodeSectionItem( %$entry, nowrap_description => 1 );
   }
   $index .= "</TABLE>\n";
 
