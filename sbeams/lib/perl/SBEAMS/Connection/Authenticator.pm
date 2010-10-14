@@ -1351,10 +1351,28 @@ sub getSessionAttribute {
   }
 
   if (defined %session) {
+    if ( $key eq 'returnEntireSessionHash' ) {
+      return \%session;
+    }
     return($session{$key});
   }
 
 } # end getSessionAttribute
+
+sub showSessionHash {
+  my $self = shift;
+  my $hash = $self->getSessionAttribute( 'key' => 'returnEntireSessionHash' );
+  if ( !defined $hash ) {
+    $log->warn( "session file doesn't yet exist " );
+    $hash = {};
+  }
+  my $scalar = '';
+  for my $k ( sort( keys( %$hash ) ) ) {
+    $scalar .= "$k => $hash->{$k}\n";
+  }
+  return $scalar;
+
+}
 
 
 ###############################################################################
