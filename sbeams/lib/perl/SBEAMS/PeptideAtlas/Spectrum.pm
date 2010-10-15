@@ -689,12 +689,13 @@ sub getSpectrumPeaks {
 
     #### If we have a spectrum number, try to get the spectrum data
     if ($spectrum_number) {
-      $filename = "$PHYSICAL_BASE_DIR/lib/c/Proteomics/getSpectrum/".
-        "getSpectrum $spectrum_number $mzXML_filename |";
+      #$filename = "$PHYSICAL_BASE_DIR/lib/c/Proteomics/getSpectrum/".
+      #  "getSpectrum $spectrum_number $mzXML_filename |";
+      $filename = "/proteomics/sw/tpp/bin/readmzXML -s ".
+                  "$mzXML_filename $spectrum_number |"
     }
 
   }
-
 
 
   #### If there's no filename then try ISB SEQUEST style .tgz file
@@ -733,7 +734,6 @@ sub getSpectrumPeaks {
     return;
   }
 
-
   #### Read in but ignore header line if a dta file
   if ($filename =~ m#/bin/tar#) {
     my $headerline = <DTAFILE>;
@@ -744,13 +744,14 @@ sub getSpectrumPeaks {
     }
   }
 
-
   #### Read the spectrum data
   my @mz_intensities;
   while (my $line = <DTAFILE>) {
     chomp($line);
-    my @values = split(/\s+/,$line);
-    push(@mz_intensities,\@values);
+    next if($line !~ /mass.*inten/);
+    #my @values = split(/\s+/,$line);
+    $line =~ /mass\s+(\S+)\s+inten\s+(\S+)/;
+    push(@mz_intensities,[($1,$2)]);
   }
   close(DTAFILE);
 
