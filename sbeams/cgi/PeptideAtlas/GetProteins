@@ -583,6 +583,8 @@ sub handle_request {
   my @confidence_sql;
   my @relationship_phrase_sql;
   my @n_observations_sql;
+  my @published_ng_per_ml_sql;
+  my @pub_ng_ml_source_sql;
   my @estimated_ng_per_ml_sql;
   my @abundance_uncertainty_sql;
   my @n_distinct_peptides_sql;
@@ -629,7 +631,9 @@ sub handle_request {
   $probability_sql[0] = "STR(PID.probability,7,3)";
   $confidence_sql[0] = "STR(PID.confidence,7,3)";
   $n_observations_sql[0] = "PID.n_observations";
-  $estimated_ng_per_ml_sql[0] = "STR(PID.estimated_ng_per_ml,7,3)";
+  $estimated_ng_per_ml_sql[0] = "CONVERT(CHAR,PID.estimated_ng_per_ml,0)";
+  $published_ng_per_ml_sql[0] = "CONVERT(CHAR,BPS.published_ng_per_ml,0)";
+  $pub_ng_ml_source_sql[0] = "BPS.pub_ng_ml_source";
   $abundance_uncertainty_sql[0] = "PID.abundance_uncertainty";
   $n_distinct_peptides_sql[0] = "PID.n_distinct_peptides";
   $relationship_phrase_sql[0] = "NULL";
@@ -653,6 +657,8 @@ sub handle_request {
   $confidence_sql[1] = "NULL";
   $n_observations_sql[1] = "NULL";
   $estimated_ng_per_ml_sql[1] = "NULL";
+  $published_ng_per_ml_sql[1] = "NULL";
+  $pub_ng_ml_source_sql[1] = "NULL";
   $abundance_uncertainty_sql[1] = "NULL";
   $n_distinct_peptides_sql[1] = "NULL";
   $relationship_phrase_sql[1] = "BRT.relationship_phrase";
@@ -676,6 +682,8 @@ sub handle_request {
   $confidence_sql[2] = "NULL";
   $n_observations_sql[2] = "NULL";
   $estimated_ng_per_ml_sql[2] = "NULL";
+  $published_ng_per_ml_sql[2] = "NULL";
+  $pub_ng_ml_source_sql[2] = "NULL";
   $abundance_uncertainty_sql[2] = "NULL";
   $n_distinct_peptides_sql[2] = "NULL";
   $relationship_phrase_sql[2] = "BRT.relationship_phrase";
@@ -695,6 +703,8 @@ sub handle_request {
     my (@abundance_columns, @GO_columns);
     if ( $parameters{display_options} =~ /ShowAbundances/ ) {
       @abundance_columns = (
+			["published_ng_per_ml",$published_ng_per_ml_sql[$i],"Published ng/ml"],
+			["pub_ng_ml_source",$pub_ng_ml_source_sql[$i],"Source"],
 			["estimated_ng_per_ml",$estimated_ng_per_ml_sql[$i],"Estimated ng/ml"],
 			["abundance uncertainty",$abundance_uncertainty_sql[$i],"Uncertainty ng/ml"],
       );

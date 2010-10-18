@@ -252,7 +252,8 @@ AT_biosequence_property_set	18	category	Category	varchar	255	0	Y		N			N	text	50	
 AT_biosequence_property_set	19	genetic_locus	Genetic Locus	varchar	50	0	Y		N			N	text	50		Y	Y	N	Chromosomal band in which this mapping occurs		
 AT_biosequence_property_set	20	is_immunoglobulin	Is an Immunoglobulin	char	1	0	Y		N			N	text	50		Y	Y	N	Is this protein annotated to be an immunoglobulin?		
 AT_biosequence_property_set	21	is_keratin	Is a Keratin	char	1	0	Y		N			N	text	50		Y	Y	N	Is this protein annotated to be a keratin?		
-AT_biosequence_property_set	22	published_ng_per_ml	Published plasma concentration	real	4	0	Y		N			N	text	50		Y	Y	N	Plasma concentration as noted in Polanski & Anderson 2006		
+AT_biosequence_property_set	22	published_ng_per_ml	Published plasma concentration	real	4	0	Y		N			N	text	50		Y	Y	N	Measured plasma concentration as noted in literature
+AT_biosequence_property_set	23	pub_ng_ml_source	Source of published plasma concentration	varchar	20	0	Y		N			N	text	50		Y	Y	N	Literature source of published concentration: Haab et al. 2005, Polanski & Anderson 2006, or Hortin et al. 2008.		
 AT_biosequence_annotated_gene	1	biosequence_id	BioSequence ID	int	4	0	N		N	AT_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		
 AT_biosequence_annotated_gene	2	annotated_gene_id	Annotated Gene ID	int	4	0	N		N	BL_annotated_gene	annotated_gene_id					N	N	Y	Gene ID associated with Biosequence ID		
 AT_biosequence_annotation	1	biosequence_annotation_id	Domain Match Type	int	4	0	N		Y							N	N				pkDEFAULT
@@ -384,7 +385,7 @@ AT_GetProteins	4	biosequence_gene_name_constraint	Gene Name Constraint									N
 AT_GetProteins	5	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the Protein description (description string from input FASTA file). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
 AT_GetProteins	6	n_observations_constraint	Number of Observations Constraint									N	text	10		Y	Y	N	Constraint for the number of observations for each protein.  Allowed syntax: "n", "> n", "< n", "between n and n", "n +- n"		
 AT_GetProteins	7	n_distinct_peptides_constraint	Number of Distinct Peptides Constraint									N	text	10		Y	Y	N	Constraint for the number of sequence-distinct peptides for each protein.  Allowed syntax: "n", "> n", "< n", "between n and n", "n +- n"		
-AT_GetProteins	8	chromosome	Chromosome	varchar	50	0	N		N			N	text	50		Y	Y	N	Constrain to proteins mapping to a particular chromosome, and display a graphical depiction of chromosome coverage.		
+AT_GetProteins	8	chromosome	Chromosome	varchar	50	0	N		N			N	text	50		Y	Y	N	Constrain to proteins mapping to a particular chromosome, and, in human, display a graphical depiction of chromosome coverage.		
 AT_GetProteins	9	genetic_locus	Genetic Locus	varchar	50	0	N		N			N	text	50		Y	Y	N	Constrain to proteins mapping to a particular genetic locus (e.g. 5q35.1)		
 AT_GetProteins	10	start_in_chromosome	Start Position in Chromosome	int	4	0	N		N			N	text	20		Y	Y	N	Constrain to proteins whose genes start at a particular region of the chromosome. Allowed syntax: ">n" or "<n"		
 AT_GetProteins	11	end_in_chromosome	End Position in Chromosome	int	4	0	N		N			N	text	20		Y	Y	N	Constrain to proteins whose genes end at a particular region of the chromosome. Allowed syntax:  ">n" or "<n"		
