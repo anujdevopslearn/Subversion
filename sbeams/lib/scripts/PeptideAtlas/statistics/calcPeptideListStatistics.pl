@@ -66,7 +66,7 @@ Options:
 
   --source_file       Input PAidentlist tsv file with at least 11 columns.
   --prot_file         Input PAprotIdentlist tsv file; needed for prot plot
-  --atlas_data_dir    e.g. HumanPlasma_2010-05/DATA_FILES; needed for prot plot
+  --pepmap_file       Input peptide_mapping.tsv file; needed for prot plot
   --P_threshold       Use this threshold for processing instead of
                       using all peptides in the input file
   --search_batch_id   If set, only process this search_batch_id and
@@ -86,8 +86,8 @@ unless ($ARGV[0]){
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-  "source_file:s","prot_file:s","P_threshold:f","search_batch_id:i",
-  "atlas_data_dir:s",
+  "source_file:s","prot_file:s","pepmap_file:s",
+  "P_threshold:f","search_batch_id:i",
   )) {
   print "$USAGE";
   exit;
@@ -132,9 +132,10 @@ sub main {
   }
 
   my $prot_file = $OPTIONS{prot_file};
-  my $atlas_data_dir = $OPTIONS{atlas_data_dir};
-  unless ($prot_file && open(PROTFILE, $prot_file) && $atlas_data_dir) {
-    print "WARNING: --prot_file or --atlas_data_dir missing, or prot_file unopenable; protein stats won't be compiled and cumulative protein plot won't be drawn.\n\n";
+  my $pepmap_file = $OPTIONS{pepmap_file};
+  unless (($prot_file && open(PROTFILE, $prot_file)) &&
+          ($pepmap_file && open(PEPMAPFILE, $pepmap_file)))
+    print "WARNING: --prot_file or --pepmap_file missing or unopenable; protein stats won't be compiled and cumulative protein plot won't be drawn.\n\n";
     undef $prot_file;
   }
 
@@ -145,6 +146,7 @@ sub main {
   my $n_experiments = 0;
 
   my @peptides;
+  my @search_batch_pepseqs;
   my @correct_peptides;
   my @search_batch_peptides;
   my @stats_table;
@@ -153,11 +155,68 @@ sub main {
   #### Array of search_batch_ids and a hash of all peptides by search_batch_id
   my @all_search_batch_ids;
   my %all_peptides;
+  my %sample_tags;
 
   #### Hashes containing canonical protein info
+  my %canonical_hash;
+  my %pepmap_hash;
   my %n_canonical_prots;
   my %n_cumulative_canonical_prots;
-  my %sample_tags;
+
+  ### First, read prot info if provided
+  if ($prot_file) {
+    # read header and get index of biosequence_name from it
+#protein_group_number,biosequence_name,probability,confidence,n_observations,n_distinct_peptides,level_name,represented_by_biosequence_name,subsumed_by_biosequence_name,estimated_ng_per_ml,abundance_uncertainty,is_covering,group_size
+    my $line = <PROTFILE>;
+    chomp $line;
+    my @fields = split(",", $line);
+    my $search_for = 'biosequence_name';
+    my ( $biosequence_name_idx ) =
+        grep { $fields[$_] eq $search_for } 0..$#fields;
+    if (! defined $biosequence_name_idx) {
+      print STDERR "ERROR in $0: $search_for not found in header of $prot_file\n";
+      return(0);
+    }
+    $search_for = 'level_name';
+    my ( $level_name_idx ) =
+        grep { $fields[$_] eq $search_for } 0..$#fields;
+    if (! defined $level_name_idx) {
+      print STDERR "ERROR in $0: $search_for not found in header of $prot_file\n";
+      return(0);
+    }
+    while ($line = <PROTFILE>) {
+      chomp $line;
+      @fields = split(",", $line);
+      if ($fields[$level_name_idx] eq 'canonical') {
+	$canonical_hash{$fields[$biosequence_name_idx]} = 1;
+      }
+    }
+    my $n_canonicals = scalar keys %canonical_hash;
+    print "$n_canonicals total distinct canonical protein identifiers found\n";
+
+    #### Make a hash of peptide -> canonical proteins
+    my $n_pep_mappings = 0;
+    # for line in peptide_mapping.tsv (lacks header)
+    while ($line = <PEPMAPFILE>) {
+      chomp $line;
+      # get peptide, protein
+      my ($pep_acc, $unmod_pep_seq, $prot_acc) = split("\t", $line);
+      # if protein is canonical
+      if (defined $canonical_hash{$prot_acc}) {
+	# add protein to list hashed to by peptide
+        if (! defined $pepmap_hash{$unmod_pep_seq}) {
+          my @a = ( $prot_acc );
+          $pepmap_hash{$unmod_pep_seq} = \@a;
+        } else {
+          push (@{$pepmap_hash{$unmod_pep_seq}}, $prot_acc);
+        }
+        $n_pep_mappings++;
+      }
+    }
+    print "$n_pep_mappings total peptide->canonical mappings\n";
+    my $n_mapped_peps = keys %pepmap_hash;
+    print "$n_mapped_peps distinct unmodified peptides mapped\n";
+  }
 
   ##### Skip header
   my $line = <INFILE>;
@@ -165,11 +224,11 @@ sub main {
   #$probcol = 2;
   #$probcol = 4 if ($header_columns[4] eq 'probability');
   $seqcol = 0;
-  my $origseqcol = 3;
+  my $origseqcol = 3;   #unmodified peptide sequence
   $probcol = 1;
-  my $origprobcol = 8;
+  my $origprobcol = 8;   #PeptideProphet peptide probability
   $protcol = 2;
-  my $origprotcol = 10;
+  my $origprotcol = 10;  #accession of a protein mapped to
 
   #### Read in all the peptides for the first experiment and get the
   #### prot info
@@ -217,41 +276,21 @@ sub main {
       );
       push(@correct_peptides,@{$result->{peptide_list}});
 
-      #### Get the canonical proteins it maps to
-      my $sql =<<"      SMPL";
-	SELECT BS.biosequence_name, S.sample_tag
-	FROM $TBAT_ATLAS_SEARCH_BATCH ASB
-	JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON ( ABSB.atlas_search_batch_id = ASB.atlas_search_batch_id )
-        JOIN $TBPR_SEARCH_BATCH PSB ON
-               PSB.search_batch_id = ASB.proteomics_search_batch_id
-	JOIN $TBAT_SAMPLE S ON S.sample_id = ABSB.sample_id
-	JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PIS ON PIS.atlas_search_batch_id = ASB.atlas_search_batch_id
-	JOIN $TBAT_PEPTIDE_INSTANCE PI ON ( PIS.peptide_instance_id = PI.peptide_instance_id AND PI.atlas_build_id = ABSB.atlas_build_id )
-	JOIN $TBAT_PEPTIDE_MAPPING PM ON PI.peptide_instance_id = PM.peptide_instance_id
-	JOIN $TBAT_BIOSEQUENCE BS ON PM.matched_biosequence_id = BS.biosequence_id
-	JOIN $TBAT_PROTEIN_IDENTIFICATION PID on (BS.biosequence_id = PID.biosequence_id AND PID.atlas_build_id = ABSB.atlas_build_id)
-	JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL ON PID.presence_level_id = PPL.protein_presence_level_id
-        JOIN $TBAT_ATLAS_BUILD AB ON AB.atlas_build_id = PI.atlas_build_id
-	WHERE AB.data_path = '$atlas_data_dir'
-	AND PPL.level_name = 'canonical'
-	AND BS.biosequence_name NOT LIKE 'DECOY%'
-	AND PSB.search_batch_id = $this_search_batch_id
-        GROUP BY BS.biosequence_name, S.sample_tag
-      SMPL
-
-      ;print $sql;
-
-      my @rows = $sbeams->selectSeveralColumns($sql);
-      my $sample_tag = $rows[0]->[1];
-      my $n_canonical_proteins_batch = scalar @rows;
-      for (my $i=0;  $i < $n_canonical_proteins_batch; $i++) {
-        $canonical_protids{$rows[$i]->[0]} = 1;
+      #### Get the canonical proteins mapped to by all peptides in this
+      #### search batch.
+      my %canonical_protids_batch = ();
+      for my $pep (@search_batch_pepseqs) {
+        for my $canonical_protid (@{$pepmap_hash{$pep}}) {
+          $canonical_protids_batch{$canonical_protid} = 1;
+          $canonical_protids{$canonical_protid} = 1;
+        }
       }
-      my $n_cum_canonicals_batch = scalar keys %canonical_protids;
-      $n_canonical_prots{$this_search_batch_id} = $n_canonical_proteins_batch;
-      $n_cumulative_canonical_prots{$this_search_batch_id} = $n_cum_canonicals_batch;
-      $sample_tag = 'xx' if (! $sample_tag );
-      $sample_tags{$this_search_batch_id} = $sample_tag;
+
+      $n_canonical_prots{$this_search_batch_id} =
+            scalar keys %canonical_protids_batch;
+      $n_cumulative_canonical_prots{$this_search_batch_id} =
+	    scalar keys %canonical_protids;
+      $sample_tags{$this_search_batch_id} = 'xx';
 
       #### Update the summary table of incorrect values with data from
       #### this search_batch
@@ -270,6 +309,7 @@ sub main {
       #### Prepare for next search_batch_id
       $this_search_batch_id = $columns[0];
       @search_batch_peptides = ();
+      @search_batch_pepseqs = ();
       print "n_spectra=$n_spectra\n";
       #print "$sample_tag n_spectra=$n_spectra n_prots = $n_canonical_proteins_batch ($n_cum_canonicals_batch cumul.)\n";
       unless ($this_search_batch_id == -998899) {
@@ -282,9 +322,13 @@ sub main {
     #### Put this peptide entry to the arrays
     #### To save memory, only save what we need later
     if ($not_done) {
-      my @tmp = ($columns[$origseqcol],$columns[$origprobcol],$columns[$origprotcol]);
+      my $unmodified_pepseq = $columns[$origseqcol];
+      my $prob = $columns[$origprobcol];
+      my $one_mapped_protid = $columns[$origprotcol];
+      my @tmp = ($unmodified_pepseq, $prob, $one_mapped_protid);
       push(@search_batch_peptides,\@tmp);
       push(@peptides,\@tmp);
+      push(@search_batch_pepseqs,$unmodified_pepseq);
     }
   }
 
@@ -791,36 +835,39 @@ sub shuffleArray {
 
 __DATA__
 
-  ### First, read prot info if provided
-  ### OH! I don't think I need to read this file after all!!!
-  my %protid_hash;
-  if ($prot_file) {
-    # read header and get index of biosequence_name from it
-#protein_group_number,biosequence_name,probability,confidence,n_observations,n_distinct_peptides,level_name,represented_by_biosequence_name,subsumed_by_biosequence_name,estimated_ng_per_ml,abundance_uncertainty,is_covering,group_size
-    my $line = <PROTFILE>;
-    chomp $line;
-    my @fields = split(",", $line);
-    my $search_for = 'biosequence_name';
-    my ( $biosequence_name_idx ) =
-        grep { $fields[$_] eq $search_for } 0..$#fields;
-    if (! defined $biosequence_name_idx) {
-      print STDERR "ERROR in $0: $search_for not found in header of $prot_file\n";
-      return(0);
-    }
-    $search_for = 'level_name';
-    my ( $level_name_idx ) =
-        grep { $fields[$_] eq $search_for } 0..$#fields;
-    if (! defined $level_name_idx) {
-      print STDERR "ERROR in $0: $search_for not found in header of $prot_file\n";
-      return(0);
-    }
-    while ($line = <PROTFILE>) {
-      chomp $line;
-      @fields = split(",", $line);
-      if ($fields[$level_name_idx] eq 'canonical') {
-	$protid_hash{$fields[$biosequence_name_idx]} = 1;
+      #### Get the canonical proteins mapped to by all peptides in this
+      #### search batch.
+      my $sql =<<"      SMPL";
+	SELECT BS.biosequence_name, S.sample_tag
+	FROM $TBAT_ATLAS_SEARCH_BATCH ASB
+	JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON ( ABSB.atlas_search_batch_id = ASB.atlas_search_batch_id )
+        JOIN $TBPR_SEARCH_BATCH PSB ON
+               PSB.search_batch_id = ASB.proteomics_search_batch_id
+	JOIN $TBAT_SAMPLE S ON S.sample_id = ABSB.sample_id
+	JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PIS ON PIS.atlas_search_batch_id = ASB.atlas_search_batch_id
+	JOIN $TBAT_PEPTIDE_INSTANCE PI ON ( PIS.peptide_instance_id = PI.peptide_instance_id AND PI.atlas_build_id = ABSB.atlas_build_id )
+	JOIN $TBAT_PEPTIDE_MAPPING PM ON PI.peptide_instance_id = PM.peptide_instance_id
+	JOIN $TBAT_BIOSEQUENCE BS ON PM.matched_biosequence_id = BS.biosequence_id
+	JOIN $TBAT_PROTEIN_IDENTIFICATION PID on (BS.biosequence_id = PID.biosequence_id AND PID.atlas_build_id = ABSB.atlas_build_id)
+	JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL ON PID.presence_level_id = PPL.protein_presence_level_id
+        JOIN $TBAT_ATLAS_BUILD AB ON AB.atlas_build_id = PI.atlas_build_id
+	WHERE AB.data_path = '$atlas_data_dir'
+	AND PPL.level_name = 'canonical'
+	AND BS.biosequence_name NOT LIKE 'DECOY%'
+	AND PSB.search_batch_id = $this_search_batch_id
+        GROUP BY BS.biosequence_name, S.sample_tag
+      SMPL
+
+      my @rows = $sbeams->selectSeveralColumns($sql);
+      my $sample_tag = $rows[0]->[1];
+      my $n_canonical_proteins_batch = scalar @rows;
+      for (my $i=0;  $i < $n_canonical_proteins_batch; $i++) {
+        # use of uninitialized value in hash element
+        $canonical_protids{$rows[$i]->[0]} = 1;
       }
-    }
-    my $n_canonicals = scalar keys %protid_hash;
-    #print "$n_canonicals total distinct canonical protein identifiers found\n";
-  }
+      my $n_cum_canonicals_batch = scalar keys %canonical_protids;
+      $n_canonical_prots{$this_search_batch_id} = $n_canonical_proteins_batch;
+      $n_cumulative_canonical_prots{$this_search_batch_id} = $n_cum_canonicals_batch;
+      $sample_tag = 'xx' if (! $sample_tag );
+      $sample_tags{$this_search_batch_id} = $sample_tag;
+
