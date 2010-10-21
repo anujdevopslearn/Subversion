@@ -4,7 +4,7 @@
 # Program     : GetTransitions
 #
 # Description : page retrieve peptides and MS/MS fragment ions from PABST
-#               tables 
+#               and PATR tables 
 ###############################################################################
 
 $|++;
@@ -40,45 +40,10 @@ $best_peptide->setAtlas( $atlas );
 $best_peptide->setSBEAMS( $sbeams );
 my $pabst_build_id;
 
-
-## Set program name and usage banner for command like use
-$PROG_NAME = $FindBin::Script;
-$USAGE = <<EOU;
-Usage: $PROG_NAME [OPTIONS] key=value key=value ...
-Options:
-    --verbose n    Set verbosity level.    default is 0
-    --quiet        Set flag to print nothing at all except errors
-    --debug n      Set debug flag
-
- e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
-
-EOU
-
-
-## Process options
-unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) 
-{
-    print "$USAGE";
-    exit;
-}
-
-$VERBOSE = $OPTIONS{"verbose"} || 0;
-$QUIET = $OPTIONS{"quiet"} || 0;
-$DEBUG = $OPTIONS{"debug"} || 0;
-if ($DEBUG) 
-{
-    print "Options settings:\n";
-    print "    VERBOSE = $VERBOSE\n";
-    print "    QUIET = $QUIET\n";
-    print "    DEBUG = $DEBUG\n";
-}
-
-my $is_html;
+my $is_html = 0;
 
 main();
 exit(0);
-
-
 
 # Main Program
 sub main 
@@ -88,7 +53,6 @@ sub main
   exit unless $current_username;
 
   $is_html = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
-  $log->debug( "HTML mode iS $is_html" );
 
   #### Read in the default input parameters
   my %parameters;
@@ -98,9 +62,9 @@ sub main
   my $n_params_found = $sbeams->parse_input_parameters(
       q=>$q,parameters_ref=>\%parameters);
 
-#  $sbeams->printCGIParams($q);
+  # $sbeams->printCGIParams($q);
 
-  #### Process generic "state" parameters before we start
+  # Process generic "state" parameters before we start
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
   # This will look for mod-specific params and do the right thing
@@ -116,6 +80,7 @@ sub main
   # This might have gotten overridden due to permissions.
   $parameters{pabst_build_id} = $pabst_build_id;
 
+  # set up some defaults, only in command-line mode, to time queries/operations
   if ( !$parameters{action} && !$is_html ) {
     $log->debug( "in the auto-setting mode, command-line only!" );
     $parameters{n_highest_intensity_fragment_ions} = 3;
@@ -124,16 +89,13 @@ sub main
     $parameters{QUERY_NAME} = 'AT_GetPABSTList';
     $parameters{action} = 'QUERY';
     $parameters{pabst_build_id} = 12;
-#    $parameters{protein_name_constraint} = 'YAL003W;YGR276';
   }
 
-  #### Decide what action to take based on information so far
-  if ( !$parameters{action} ) {
-    print_form ( %parameters );  
-  } else {
+  # Decide what action to take based on information so far
+  print_form ( %parameters );  
+  if ( $parameters{action} eq 'QUERY' ) {
     fetch_transitions( %parameters );  
   }
-
 
 } # end main
 
@@ -230,6 +192,34 @@ sub print_form {
 
     ##Input form:  action is set by PROGRAM_FILE_NAME, so sub it w/ display page:
     $sbeams->collectSTDOUT();
+
+    my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'pabst_penalty_form',
+                                                 visible => 0,
+                                                 tooltip => 'Show/Hide penalty form',
+                                                  sticky => 0,
+                                                 imglink => 0,
+                                                textlink => 1,
+                                               plaintext => 0,
+                                                hidetext => 'Hide form',
+                                                showtext => 'Show form' );
+
+
+#    my ( $thtml, $tlink ) = $sbeams->make_toggle_section( name => 'pabst_penalty_form',
+#                                                 visible => 1,
+#                                                 tooltip => 'Show/Hide penalty form',
+#                                                  sticky => 1,
+#                                                 imglink => 0,
+#                                                 content => '&nbsp;',
+#                                                textlink => 1,
+#                                                hidetext => 'Hide form',
+#                                                showtext => 'Show form',
+#                                               );
+    my @link = split "\n", $link;
+    my $script_css = join( "\n", @link[0..$#link-1] );
+
+    $log->debug( $script_css );
+    print $script_css;
+
     $sbeams->display_input_form(
         TABLE_NAME=>$TABLE_NAME,
         CATEGORY=>$CATEGORY,
@@ -243,15 +233,17 @@ sub print_form {
     my $id = 'ID="protein_name_constraint"';
     $form =~ s/(NAME=\"protein_name_constraint\")/$1 $id/;
 
-
-
     my ( $sub_form ) = $best_peptide->get_change_form( form_only => 1, hide_buttons => 1, shade_defs => 1 );
-    $sub_form =~ s/tbl_hidden/tbl_visible/gm;
+    $sub_form =~ s/tbl_visible/tbl_hidden/gm;
    
-    $form =~ s/(\<INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="AT_GetPABSTList"\>)/$1<BR>$sub_form/gm;
-    $form =~ s/\<\/TABLE\>/<TR><TD COLSPAN=3> $sub_form<\/TD><\/TR><\/TABLE>/i;
+#    $form =~ s/(\<INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="AT_GetPABSTList"\>)/$1<BR>$sub_form/gm;
+#    $form =~ s/\<\/TABLE\>/<TR><TD COLSPAN=3> $sub_form<\/TD><\/TR><\/TABLE>/i;
 #    $form .= "<TR><TD COLSPAN=3>$sub_form</TD></TR>\n";
-    $form .= "<TR><TD VALIGN=TOP><B>Adjust penalties:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$sub_form</TD></TR>\n";
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Adjust penalties:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$link$sub_form</TD></TR> ~;
+
+    my $select_lists = get_multi_selects();
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Transition Sources:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$select_lists->[0]</TD></TR> ~;
+#    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Allowable Modifications:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$select_lists->[1]</TD></TR> ~;
 
     print qq~
     $form
@@ -266,6 +258,35 @@ sub print_form {
 
 } # end handle_request
 
+sub get_multi_selects {
+  my $sql = qq~
+  SELECT option_key,option_value FROM $TBAT_QUERY_OPTION 
+  WHERE option_type = 'GetTransitions_Transition_Source' 
+  AND record_status != 'D' 
+  ORDER BY sort_order,option_value;
+  ~;
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my $src_select = "<SELECT MULTIPLE SIZE=4 NAME=transition_source>\n";
+  while ( my @row = $sth->fetchrow_array() ) {
+    $src_select .= qq~<OPTION VALUE="$row[0]" SELECTED>$row[1]</OPTION>\n~;
+  }
+  $src_select .= "</SELECT>\n";
+
+  $sql = qq~
+  SELECT option_key,option_value FROM $TBAT_QUERY_OPTION 
+  WHERE option_type = 'GetTransitions_Modifications' 
+  AND record_status != 'D' 
+  ORDER BY sort_order,option_value;
+  ~;
+  $sth = $sbeams->get_statement_handle( $sql );
+  my $mod_select = "<SELECT MULTIPLE SIZE=3 NAME=transition_mods>\n";
+  $mod_select .= "<OPTION VALUE='none' SELECTED>none</OPTION>\n";
+  while ( my @row = $sth->fetchrow_array() ) {
+    $mod_select .= "<OPTION VALUE=$row[0]>$row[1]</OPTION>\n";
+  }
+  $mod_select .= "</SELECT>\n";
+  return [$src_select, $mod_select];
+}
 
 sub fetch_transitions {
   my %args = @_;
@@ -274,31 +295,13 @@ sub fetch_transitions {
   my %parameters = %args;
 
   # Hackage
-#  $parameters{consensus_library_id} ||= $parameters{consensus_library_id};
   my $project_id = $atlas->getProjectID(
     atlas_build_id => $parameters{atlas_build_id}
   );
 
   my $content = '';
 
-  #### Show current user context information
-  $content .=  "<BR>\n" if $is_html;
-  
-  $atlas->display_page_header(project_id => $project_id);
-
   #$sbeams->printUserContext();
-
-  #### Get the HTML to display the tabs
-  my $tabMenu = $atlas->getTabMenu(
-      parameters_ref => \%parameters,
-      program_name => $PROG_NAME,
-  );
-
-  unless ( $atlas->is_srm_mode() ) {
-#    print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
-    $content .= $tabMenu->asHTML() if $is_html;
-  }
-
 
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
