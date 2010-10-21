@@ -661,7 +661,7 @@ sub encodeSectionTable {
     $num_cols = scalar( @$row ) unless $num_cols;
     $tab->addRow( $row );
     $rcnt++;
-    if ( $args{chg_bkg_idx} ) { # alternate on index
+    if ( defined $args{chg_bkg_idx} ) { # alternate on index
       if ( !$chg_idx ) {
         $chg_idx = $row->[$args{chg_bkg_idx}];
       } elsif ( $chg_idx ne $row->[$args{chg_bkg_idx}] ) {
