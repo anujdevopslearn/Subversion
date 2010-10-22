@@ -1479,23 +1479,18 @@ sub handle_request {
     );
 
     #### Display Graphic and/or various error messages if unable to draw full graphic
-    if ($organism_id != 2) {
-      print "<p>Unable to graphically depict non-human builds</p>\n";
-    }
-
-    if ($stend_option eq 'fff') {
-      print "<p>Unable to draw standard image within these constraints</p>\n";
-    }
-
-    if (($organism_id == 2) and ($no_coord_count != 0)) {
-      print "<p>No coordinates available for $no_coord_count proteins</p>\n";
-    }
-    
-    my $imgsrcbuffer = "<IMG SRC=\"$HTML_BASE_DIR/$tmp_img_path/$file_name\" ISMAP USEMAP='#$pid' ALT=\"Graphical Depiction of Proteins and Genes for Selected Chromosome\">";
-
-    if (($organism_id == 2) and ($chrom_num ne '') and ($sbeams->output_mode() eq 'html')) {
-      print "<p>$imgsrcbuffer $map</p>";
+    if ($sbeams->output_mode() eq 'html') {
+      if ($organism_id != 2) {
+	print "<p>Unable to draw chromosome map for non-human builds</p>\n";
+      } else {
+	print "<p>Unable to draw standard chromosome map within these constraints</p>\n" if ($stend_option eq 'fff') ;
+	if ($chrom_num ne '' ) {
+	  print "<p>No coordinates available for $no_coord_count proteins</p>\n" if ($no_coord_count != 0);
+	  my $imgsrcbuffer = "<IMG SRC=\"$HTML_BASE_DIR/$tmp_img_path/$file_name\" ISMAP USEMAP='#$pid' ALT=\"Graphical Depiction of Proteins and Genes for Selected Chromosome\">";
+	  print "<p>$imgsrcbuffer $map</p>";
 	}
+      }
+    }
 
     #### Display the resultset controls
     $sbeams->displayResultSetControls(
