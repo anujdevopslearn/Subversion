@@ -207,8 +207,8 @@ sub handle_request {
   #        if peptide_name_constraint is set use it,
   #        else if peptide_seq_constraint is set use it
   #        
-  #        if atlas_build_id is set, use it
-  #        else if atlas_build_name is set, use it
+  #        if atlas_build_id or atlas_build_name is set, use it
+  #        else if organism_id or organism_name is set, use it
   #        else if cookie value is set, use it
   #        else use default
   #        
@@ -265,32 +265,17 @@ sub handle_request {
                                   key => 'PeptideAtlas_search_key' );
 
 
-  # Merge possible atlas_build_id and atlas_build_name params
-  my $atlas_build_id = $parameters{atlas_build_id};
-  my $atlas_build_name = $parameters{atlas_build_name};
-
-  # build id has primacy
-  if ( $atlas_build_id ) {
-    $atlas_build_name = get_atlas_build_name( atlas_build_id => $atlas_build_id );
-  } else {
-    if ( $atlas_build_name ) {
-      $atlas_build_id = get_atlas_build_id( atlas_build_name => $atlas_build_name );
-    } else {
-      $atlas_build_name = $sbeams->getSessionAttribute( key => 'PeptideAtlas_build_name' );
-
-      # Did that work?
-      if ( $atlas_build_name ) {
-        $atlas_build_id = get_atlas_build_id( atlas_build_name => $atlas_build_name );
-      }
-    }
+  #### Get the current atlas_build_id based on parameters or session
+  my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+    parameters_ref => \%parameters,
+  );
+  if (defined($atlas_build_id) && $atlas_build_id < 0) {
+    return;
   }
+  $parameters{atlas_build_id} = $atlas_build_id;
 
-  # If we're still not set, get default
-  if ( !$atlas_build_id ) {
-    $atlas_build_id = get_default_atlas_build_id( accessible_projects => $project_string );
-  }
   # Set build_name
-  $atlas_build_name = get_atlas_build_name( atlas_build_id => $atlas_build_id );
+  my $atlas_build_name = get_atlas_build_name( atlas_build_id => $atlas_build_id );
 
   # Validate selected build
   my $validation_error = '';
@@ -456,7 +441,7 @@ unless ( $apply_action eq "QUERY" || $apply_action eq "GO" ) { ## if receive fro
     #### Process all the constraints
 
     #### If atlas_build_id was not selected, stop here
-    unless ($parameters{atlas_build_name}) {
+    unless ($parameters{atlas_build_id}) {
         $sbeams->reportException(
             state => 'ERROR',
             type => 'INSUFFICIENT CONSTRAINTS',
@@ -1610,28 +1595,6 @@ sub makeGenomeLink {
 }
 
 
-#######################################################################
-# get_atlas_build_id -- get atlas_build_id, given name
-# @param atlas_build_name
-# @return atlas_build_id
-#######################################################################
-sub get_atlas_build_id
-{
-    my %args = @_;
-
-    my $atlas_build_name = $args{atlas_build_name}
-      || die "need atlas_build_name";
-
-    my $sql = qq~
-        SELECT atlas_build_id
-        FROM $TBAT_ATLAS_BUILD
-        WHERE atlas_build_name = '$atlas_build_name'
-    ~;
-
-    my ($atlas_build_id) = $sbeams->selectOneColumn($sql);
-
-    return $atlas_build_id;
-}
 
 #######################################################################
 # get_atlas_build_name -- get atlas_build_name, given id
@@ -1655,32 +1618,3 @@ sub get_atlas_build_name
 
     return $atlas_build_name;
 }
-
-#######################################################################
-# get_default_atlas_build_id
-# @return default_atlas_build_id if there is one
-#######################################################################
-sub get_default_atlas_build_id
-{
-
-
-    my %args = @_;
-    return unless $args{accessible_projects};
-
-    my $default_atlas_build_id;
-
-    my $sql = qq~
-        SELECT MAX( DAB.atlas_build_id )
-        FROM $TBAT_DEFAULT_ATLAS_BUILD DAB
-        JOIN $TBAT_ATLAS_BUILD AB ON AB.atlas_build_id = DAB.atlas_build_id
-        WHERE project_id IN ( $args{accessible_projects} )
-        AND DAB.record_status = 'N'
-    ~;
-
-    my @row = $sbeams->selectrow_array($sql);
-    
-
-
-    return $row[0];
-}
-
