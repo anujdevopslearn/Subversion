@@ -459,7 +459,7 @@ sub handle_request {
   #### Extract the one biosequence_id
   my ($biosequence_id) = keys(%biosequences);
 
-
+  
   #### Return some information about this biosequence
   $sql = qq~
        SELECT BS.biosequence_id, BS.biosequence_name,BS.biosequence_gene_name,
@@ -553,15 +553,18 @@ sub handle_request {
       #### Store the synonym information $biosequence for later use
       $biosequence->{synonyms}->{$synonym->[1]} = $synonym->[0];
       if ( $synonym->[2] ) { 
-        my $str =  $synonym->[0];
-        if($synonym->[2] =~ /DisplayGoTerm/){
-          $str =~ s/GO:(\d+).*/GO:$1/;
-        }
-    	  if ( $synonym->[3] ) {
+        my $str;
+        if($synonym->[2] =~ /DisplayGoTerm/ and $synonym->[0] =~ /GO:\d+:/){
+          $synonym->[0]  =~ /GO:(\d+):(.*)/;
+          $str = "GO:$1";
 	        $synonym->[0] = "<A HREF=\"$synonym->[2]$str$synonym->[3]\">$synonym->[0]</A>";
 	      } else {
-	        $synonym->[0] = "<A HREF=\"$synonym->[2]$str\">$synonym->[0]</A>";
-	      }
+          if ( $synonym->[3] ) {
+            $synonym->[0] = "<A HREF=\"$synonym->[2]$synonym->[3]$synonym->[0]\">$synonym->[0]</A>";
+          } else {
+            $synonym->[0] = "<A HREF=\"$synonym->[2]$synonym->[0]\">$synonym->[0]</A>";
+          }
+       }
       }
       push @{$syn_types{$synonym->[1]}}, $synonym->[0];
     }
@@ -691,7 +694,6 @@ sub handle_request {
     ORDER BY P.peptide_accession
   ~;
 
-
   #### Define the hypertext links for columns that need them
   %url_cols = (
     'Peptide Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
@@ -738,7 +740,6 @@ sub handle_request {
     my $protein_structure = getProteinStructure(
       biosequence_id => $biosequence_id,
     );
-
     my ( $obs, $peptides ) = getPeptideCount( biosequence => $biosequence,
                                             resultset_ref => $resultset_ref );
 
