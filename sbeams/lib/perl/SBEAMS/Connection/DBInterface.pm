@@ -2787,7 +2787,6 @@ sub displayResultSet {
     $resultset_ref->{row_counter} = 0;
     $resultset_ref->{page_size} = $page_size;
 
-
     #### If a row_color_scheme was not passed, create one:
     unless ($row_color_scheme_ref) {
       my %row_color_scheme;
@@ -2802,8 +2801,6 @@ sub displayResultSet {
 
 
     my $types_ref = $resultset_ref->{types_list_ref};
-    
-  
     $column_titles_ref = $resultset_ref->{column_list_ref}
       unless ($column_titles_ref);
 
@@ -2856,6 +2853,7 @@ sub displayResultSet {
     #### Make some adjustments to the default column width settings
     my @precisions = @{$resultset_ref->{precisions_list_ref}};
     #my @precisions  =  @$column_titles_ref;
+
     my $i;
     for ($i = 0; $i <= $#precisions; $i++) {
       #### Set the width to negative (variable)
@@ -2899,7 +2897,6 @@ sub displayResultSet {
       ####    NOTE: only the first column is used for thiS!
       my @no_print_columns;
       my @all_columns = @{$resultset_ref->{column_list_ref}};
-
 #         my @first_data_col = @{@{$resultset_ref->{data_ref}}[0]};
 	  #### Look at FIRST data column to identify potential links
 #	  for (my $column = 0; $column < $#first_data_col; $column++) {
@@ -3427,13 +3424,17 @@ sub displayResultSetControls {
     my $nrows; 
     if($args{search_page}){
        $nrows = $args{row_count};
+       my $page_end = $nrows;
+       $page_end = $rs_params{page_size} * ($rs_params{page_number} +1) if($nrows > $rs_params{page_size});
+       $page_end = $nrows if($page_end > $nrows);
+       print "Displayed rows $start_row - $page_end of ".
+      "$nrows\n\n";
     }else{
       $nrows = scalar(@{$resultset_ref->{data_ref}});
-    }
-
-    print "Displayed rows $start_row - $resultset_ref->{row_pointer} of ".
+       print "Displayed rows $start_row - $resultset_ref->{row_pointer} of ".
       "$nrows\n\n";
 
+    }
 
     my $row_limit = $parameters{row_limit} || 1000000;
     if ( $row_limit == scalar(@{$resultset_ref->{data_ref}}) ) {
@@ -4195,7 +4196,6 @@ sub readResultSet {
     #### Update timing info
     $timing_info->{begin_resultset} = [gettimeofday()];
 
-
     #### Read in the query parameters
     my $infile = "$RESULTSET_DIR/${resultset_file}.params";
     open(INFILE,"$infile") || die "Cannot open $infile\n";
@@ -4213,7 +4213,6 @@ sub readResultSet {
     if (exists($query_parameters_ref->{'__column_titles'})) {
       @{$column_titles_ref} = @{$query_parameters_ref->{'__column_titles'}};
     }
-
 
     #### Read in the resultset
     $infile = "$RESULTSET_DIR/${resultset_file}.resultset";
@@ -4238,8 +4237,6 @@ sub readResultSet {
 	    # reset value
 		  $Storable::interwork_56_64bit = $tmp;
 		}
-
-
 
 
     #### This also works but is quite slow
@@ -4881,7 +4878,6 @@ sub display_input_form {
         $optionlist_queries{$element} =~
           s/\$parameters{$1}/$tmp/g;
       }
-
 
       #### Evaluate the $TBxxxxx table name variables if in the query
       if ( $optionlist_queries{$element} =~ /\$TB/ ) {
