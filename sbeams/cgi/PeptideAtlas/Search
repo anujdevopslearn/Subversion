@@ -336,9 +336,9 @@ sub handle_request {
           <A HREF="$base_url?search_key=IPI00807403&build_type_name=Any&action=GO"><SPAN TITLE="IPI protein identifier" CLASS="popup">IPI00807403</SPAN></A>,
           <A HREF="$base_url?search_key=NP_001366&build_type_name=Any&action=GO"><SPAN TITLE="Refseq protein identifier" CLASS="popup">NP_001366</SPAN></A>,
           <A HREF="$base_url?search_key=Hs.232375&build_type_name=Any&action=GO"><SPAN TITLE="UniGene identifier" CLASS="popup">Hs.232375</SPAN></A>,
-          <A HREF="$base_url?search_key=RBP%25&build_type_name=Any&action=GO"><SPAN TITLE="Gene name wildcard search" CLASS="popup">RBP%</SPAN></A>,
+          <A HREF="$base_url?search_key=RBP&build_type_name=Any&action=GO"><SPAN TITLE="Gene name wildcard search" CLASS="popup">RBP</SPAN></A>,
           <A HREF="$base_url?search_key=RBP4&build_type_name=Any&action=GO"><SPAN TITLE="Gene name" CLASS="popup">RBP4</SPAN></A>,<BR>
-          <A HREF="$base_url?search_key=%25helicase%25&build_type_name=Yeast&action=GO"><SPAN TITLE="Gene description wildcard search in yeast" CLASS="popup">\%helicase\%</SPAN></A>,
+          <A HREF="$base_url?search_key=helicase&build_type_name=Yeast&action=GO"><SPAN TITLE="Gene description wildcard search in yeast" CLASS="popup">helicase</SPAN></A>,
           <A HREF="$base_url?search_key=P06634&build_type_name=Yeast&action=GO"><SPAN TITLE="UniProt Identifier" CLASS="popup">P06634</SPAN></A>,
           <A HREF="$base_url?search_key=MCCC2&build_type_name=Human&action=GO"><SPAN TITLE="Gene name" CLASS="popup">MCCC2</SPAN></A>,
           <A HREF="$base_url?search_key=PAp00000097&build_type_name=Any&action=GO"><SPAN TITLE="Peptide accession" CLASS="popup">PAp00000097</SPAN></A>,
