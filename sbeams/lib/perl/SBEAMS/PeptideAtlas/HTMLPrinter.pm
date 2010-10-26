@@ -133,7 +133,8 @@ sub displayInternalResearcherPageHeader {
     $skin .= $_;
   }
 
-  $skin =~ s/\/images\//\/sbeams\/images\//gm;
+  $skin =~ s/images\//sbeams\/images\//gm;
+#  $skin =~ s/\/images\//\/sbeams\/images\//gm;
   $self->{'_external_footer'}=join("\n", @page[$cnt..$#page]);
  
   print "$http_header\n\n";
@@ -212,7 +213,8 @@ sub displayGuestPageHeader {
 
     # This link was moved to PA source php file, which might prove harder to
     # keep updated, but it makes this one superfluous.
-#    $_ =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
+    next if ( $_ =~ /force_login=yes/ );
+    $_ =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
 
     $_ =~ s/(\<[^>]*body[^>]*\>)/$1$init$css_info/;
     if($loadscript){
