@@ -296,7 +296,10 @@ sub handle_request {
       $buffer .= qq~<nobr><CENTER><IMG SRC="$HTML_BASE_DIR/images/PeptideAtlas_Logo.png"><BR>~;
       #$buffer .= qq~<img src="$HTML_BASE_DIR/images/space.gif" height=1 width=30>~;
       my $advanced = getSearchKeyTypeHTML();
+      #$advanced =~ s/<TABLE\s+class=info_box>/<TR COLSPAN=2><TD><TABLE class=info_box>/;
+      #$advanced =~ s/<\/TABLE>/<\/TD><\/TR><\/TABLE>/;
 #      $buffer .= "$advanced ";
+      
       $buffer .= $q->textfield(-name=>"search_key",
                                -default=>$search_key,
                                -size=>60,
@@ -308,13 +311,13 @@ sub handle_request {
                        -value => 'QUERY',
                        -label => 'GO');
       $buffer .= qq~<BR>
-      <TABLE BORDER=0 CELLPADDING=0>
-      <TR VALIGN=CENTER>
-      <TD>
+      <TABLE WIDTH=50% ALIGN=CENTER BORDER=0 CELLPADDING=0>
+      <TR VALIGN=CENTER >
+      <TD WIDTH=40% ALIGN=RIGHT>
       <DT>
       Build type: <select name="build_type_name"> $build_type_selection->{HTML_optionlist} </select> 
       </TD>
-      <TD WIDTH=35%>
+      <TD WIDTH=10% ALIGN=LEFT>
       <DT>
       <INPUT ID="exact_match" TYPE=radio $search_type_param{exact_match} NAME="exact_match"
           ONCLICK=toggle_radiobutton(this)>
@@ -324,7 +327,7 @@ sub handle_request {
           Tabular Results 
       </TD>
       <TR VALIGN=LEFT ><TD>&nbsp;&nbsp;
-      </TD><TD>
+      </TD><TD WIDTH=30%>
       &nbsp;$advanced
       </TD></TR></TABLE>
       <BR>
@@ -540,12 +543,11 @@ sub handle_request {
 					exit;
 			}
 			####  display the page header to show the match results
-			$sbeamsMOD->display_page_header(project_id =>$project_id,init_tooltip =>0,onload=>'sortables_init()');
 			if ($sbeams->output_mode() eq 'html') {
+        $sbeamsMOD->display_page_header(project_id =>$project_id,init_tooltip =>0,onload=>'sortables_init()');
 				print $buffer;
 				print "<BR>";
-			}
-      if( ! $search_type_param{single_table} ){
+        if( ! $search_type_param{single_table} ){
 					print "Exact search results: <BR>" if($n_exact_results > 1 && $rs_params{page_number} == 0);
 					displayTable(
 							column_array_ref=>\@column_array,
@@ -561,6 +563,7 @@ sub handle_request {
 							search_key => $exact_search_key,
 							base_url  => $base_url
 					);
+       }
       }
 			if ($apply_action =~ /(QUERY|GO)/i){
 				if(! $parameters{exact_match}) {
@@ -624,13 +627,14 @@ sub handle_request {
 				exit;
 			}
 
-			 if ($n_exact_results == 0 && $n_fuzzy_results == 0) {
-						if ($sbeams->output_mode() eq 'html') {
-							print "There were no matches in the index to match your search key '$search_key'<BR>";
-						}
-						return(0);
+			if ($n_exact_results == 0 && $n_fuzzy_results == 0) {
+				 if ($sbeams->output_mode() eq 'html') {
+					 print "There were no matches in the index to match your search key '$search_key'<BR>";
+				 }
+				 return(0);
 			 }
-       if($search_type_param{single_table}){
+      if($sbeams->output_mode() eq 'html'){
+       if($search_type_param{single_table}){ 
 					$sbeams->displayResultSet(
 							resultset_ref=>$resultset_ref,
 							query_parameters_ref=>\%parameters,
@@ -657,7 +661,6 @@ sub handle_request {
 							rs_params_ref=>\%rs_params,
 							base_url=>$base_url,
 				  );
-
 			 }else{
            if($n_fuzzy_results > 1){
             print "<BR>Wild card search results: <BR>" ;
@@ -693,7 +696,21 @@ sub handle_request {
 						search_page => 1,
 				);
      }
+   }elsif($sbeams->output_mode() eq 'xml' || $sbeams->output_mode() eq 'tsv'){
+
+        $sbeams->displayResultSet(
+              resultset_ref=>$resultset_ref,
+              query_parameters_ref=>\%parameters,
+              rs_params_ref=>\%rs_params,
+              url_cols_ref=>\%url_cols,
+              hidden_cols_ref=>\%hidden_cols,
+              max_widths=>\%max_widths,
+              column_titles_ref=>\@column_titles,
+              base_url=>$base_url,
+          );
    }
+
+  }
 		#### If QUERY was not selected, then tell the user to enter some parameters
   } else {
     if ($sbeams->invocation_mode() eq 'http') {
@@ -774,7 +791,7 @@ sub displayTable{
 					my $download_link = '';
 					my $str = '';
 					my $str_build = '';
-          my $ini_search_key = $search_key;
+          my $search_key_org = $search_key;
 					next if($n_builds == 0);
 					if($n_builds > 1){
 					 $str_build = 's';
@@ -826,7 +843,6 @@ sub displayTable{
 							 $pattern = $firstKey;
 						 }
 						 
-								
 						 $search_key =~ /(.*)($pattern)(.*)/i;
 						 $search_key_str = $2;
 
@@ -853,8 +869,8 @@ sub displayTable{
 						 }
 						 else{
 							 $search_key =~ /(.*)$search_key_str(.*)/i;
-							 if($1){ $str1 = qq~<font style="BACKGROUND-COLOR: FFFF99">$1</font>~;}
-							 if($2){ $str2 = qq~<font style="BACKGROUND-COLOR: FFFF99">$2</font>~;}
+							 if($1 ne ''){ $str1 = qq~<font style="BACKGROUND-COLOR: FFFF99">$1</font>~;}
+							 if($2 ne ''){ $str2 = qq~<font style="BACKGROUND-COLOR: FFFF99">$2</font>~;}
 						 }
 
 						 foreach (@searchKeys){
@@ -870,10 +886,10 @@ sub displayTable{
 						 }
 
 						 my $text = qq~$organism_name: $search_key_str - find <B>$n_resource_name</B> identifier$str in <B>$n_builds</B> build$str_build ~;
-						 if( defined  $max_n_matches{$resource_type}{$ini_search_key}{$organism_name} ){
-								$text .= qq~with >= <B>$max_n_matches{$resource_type}{$ini_search_key}{$organism_name}</B> detection ~;
+						 if( defined  $max_n_matches{$resource_type}{$search_key_org}{$organism_name} ){
+								$text .= qq~, observed >= <B>$max_n_matches{$resource_type}{$search_key_org}{$organism_name}</B> times ~;
 						 }else{
-								$text .=  qq~with <B>0</B> detection~;
+								$text .=  qq~, observed <B>0</B> times~;
 						 }
 						 my $buffer = qq~<TR><TD colspan="2" width="1000">$link $text</TD></TR>~;
 					
