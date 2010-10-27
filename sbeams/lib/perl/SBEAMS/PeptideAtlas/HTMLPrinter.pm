@@ -638,6 +638,8 @@ sub encodeSectionTable {
 
   if ( $args{set_download} ) {
     my $rs_headers = shift( @rs_data );
+    $rs_headers = $args{rs_headings} if $args{rs_headings};
+    
     $rs_name = $self->make_resultset( rs_data => \@rs_data, 
                                       headers => $rs_headers,
                                   file_prefix => $file_prefix );
