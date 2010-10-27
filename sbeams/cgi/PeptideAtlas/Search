@@ -832,7 +832,7 @@ sub displayTable{
 																									visible => 0,
 																									tooltip => 'Show/Hide Section',
 																									imglink => 0,
-																									sticky => 1 );
+																									sticky => 0 );
 						 my $pre_str='';
 						 my $aft_str='';
 						 my $str1 = '';
