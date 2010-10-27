@@ -134,7 +134,7 @@ sub main {
   my $prot_file = $OPTIONS{prot_file};
   my $pepmap_file = $OPTIONS{pepmap_file};
   unless (($prot_file && open(PROTFILE, $prot_file)) &&
-          ($pepmap_file && open(PEPMAPFILE, $pepmap_file)))
+          ($pepmap_file && open(PEPMAPFILE, $pepmap_file))) {
     print "WARNING: --prot_file or --pepmap_file missing or unopenable; protein stats won't be compiled and cumulative protein plot won't be drawn.\n\n";
     undef $prot_file;
   }
@@ -164,7 +164,7 @@ sub main {
   my %n_cumulative_canonical_prots;
 
   ### First, read prot info if provided
-  if ($prot_file) {
+  if (defined $prot_file) {
     # read header and get index of biosequence_name from it
 #protein_group_number,biosequence_name,probability,confidence,n_observations,n_distinct_peptides,level_name,represented_by_biosequence_name,subsumed_by_biosequence_name,estimated_ng_per_ml,abundance_uncertainty,is_covering,group_size
     my $line = <PROTFILE>;
