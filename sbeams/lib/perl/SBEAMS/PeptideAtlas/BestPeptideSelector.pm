@@ -245,7 +245,6 @@ sub getBestPeptides {
       sprintf("%.2f",$suitability_score);
 
     if ( $args{annotate} ) {
-#      print STDERR "joining annotations to " . join( ',', @annot ) . "\n";
 #      $log->debug( "joining annotations to " . join( ',', @annot ) );
       $resultset_ref->{data_ref}->[$i]->[$cols->{annotations}] .= join( ',', @annot );
     }
@@ -619,48 +618,87 @@ sub getHighlyObservablePeptidesDisplay {
   my $self = shift || die ("self not passed");
   my %args = @_;
 
-  #### Process parameters
-  my $atlas_build_id = $args{atlas_build_id}
-    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
 
   my $best_peptide_information = $args{best_peptide_information}
     or die("ERROR[$METHOD]: Parameter best_peptide_information not passed");
-
-  my $query_parameters_ref = $args{query_parameters_ref}
-    or die("ERROR[$METHOD]: Parameter query_parameters_ref not passed");
 
   my $base_url = $args{base_url}
     or die("ERROR[$METHOD]: Parameter base_url not passed");
 
 
   my $resultset_ref = $best_peptide_information->{resultset_ref};
-  my $column_titles_ref = $best_peptide_information->{column_titles_ref};
+  my @data;
+  for my $row ( @{$resultset_ref->{data_ref}} ) {
+    # Define the hypertext links for columns that need them
+    if ( $sbeams->output_mode() =~ /html/i ) {
+      $row->[0] = "<A HREF='$CGI_BASE_DIR/PeptideAtlas/Summarize_Peptide?searchForThis=$row->[0]&query=QUERY'>$row->[0]</A>";
+      $row->[2] = "<A HREF='$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$args{atlas_build_id}&searchWithinThis=Peptide+Name&searchForThis=$row->[2]&action=QUERY'>$row->[2]</A>" if $row->[7];
+    }
+    for my $idx ( 4..10 ) {
+      $row->[$idx] = sprintf( "%0.2f", $row->[$idx] );
+    }
+    push @data, [@{$row}[0..6,8..10]];
+  }
 
-  #### Define the hypertext links for columns that need them
-  my %url_cols = (
-             'Peptide Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
-             'Peptide Accession_ATAG' => "TITLE='View information for this peptide in the current build'",
-             'Peptide Accession_OPTIONS' => {link_iff_column_value => 7},
-             'Peptide Sequence' => "$CGI_BASE_DIR/PeptideAtlas/Summarize_Peptide?searchForThis=%V&query=QUERY",
-             'Peptide Sequence_ATAG' => "TITLE='View information for this peptide across all builds' ",
-             'Peptide Sequence_OPTIONS' => {link_iff_column_value => 0}
-  );
+  my %cols;
+  for my $col ( keys( %{$resultset_ref->{column_hash_ref}} ) ) {
+#    $log->debug( "Col is $col, ColHR is $resultset_ref->{column_hash_ref}->{$col}" );
+    $cols{$resultset_ref->{column_hash_ref}->{$col}} = $col;
+  }
 
-  my %hidden_cols = ( build_placeholder => 1 );
+  my %translate = ( 'detectabilitypredictor_score' => 'DPred',
+                               'preceding_residue' => 'Pre AA',
+                              'peptidesieve_score' => 'PSieve',
+                               'peptide_accession' => 'Accession',
+                        'combined_predictor_score' => 'PSS',
+                                'peptide_sequence' => 'Sequence',
+                                      'apex_score' => 'APEX',
+                                      'espp_score' => 'ESPP',
+                                     'stepp_score' => 'STEPP',
+                               'following_residue' => 'Fol AA',
+                      ); 
 
-  $sbeams->displayResultSet(
-      resultset_ref=>$resultset_ref,
-      query_parameters_ref=>$query_parameters_ref,
-      #rs_params_ref=>\%rs_params,
-      url_cols_ref=>\%url_cols,
-      hidden_cols_ref=>\%hidden_cols,
-      #max_widths=>\%max_widths,
-      column_titles_ref=>$column_titles_ref,
-      base_url=>$base_url,
-  );
+  my @headings;
+  for my $col ( sort { $a <=> $b } ( keys( %cols ) ) ) {
+    next if $cols{$col} =~ /build_placeholder/;
+    push @headings, $translate{$cols{$col}};
+  }
+  my $headings = $atlas->get_column_defs( labels => \@headings, plain_hash => 1 );
+  
 
-  return 1;
+  my $peptides = ( $self->make_sort_headings( headings => $headings,
+                                              default => 'PSS' )  );
+  unshift @data, $peptides;
 
+
+  my $coldefs = $atlas->get_column_defs( labels => \@headings );
+  my $table_help = $atlas->make_table_help( entries => $coldefs,
+                                           description => "Theoretical tryptic peptides ranked by combined predictor score (PSS)" );
+
+
+  my $align = [qw(center right left left right right right right right right)];
+
+  my $html = $atlas->encodeSectionTable( header => 1, 
+                                                 width => '600',
+                                               tr_info => $args{tr},
+                                                align  => $align,
+                                                  rows => \@data,
+                                          rows_to_show => 20,
+                                             help_text => $table_help,
+                                              max_rows => 500,
+                                                nowrap => [1..11],
+                                          bkg_interval => 3, 
+                                          set_download => 'Download peptides', 
+                                           rs_headings => \@headings,
+                                           file_prefix => 'highly_observable', 
+                                                header => 1,
+                                              bg_color => '#EAEAEA',
+                                              sortable => 1,
+                                              table_id => 'highly_observable',
+                                           close_table => 1,
+                                              );
+  
+  return "<TABLE WIDTH=600>$html\n";
 } # end getHighlyObservablePeptidesDisplay
 
 
@@ -909,7 +947,7 @@ sub get_pabst_static_peptide_transitions_display {
   AND peptide_sequence = '$args{peptide_sequence}'
   ORDER BY ion_rank ASC 
   ~;
-  $log->debug( $sql );
+#  $log->debug( $sql );
   my @headings = ( pre => 'Previous amino acid',
                    sequence => 'Amino acid sequence of peptide',
                    fol => 'Followin amino acid',
@@ -1148,7 +1186,7 @@ sub get_pabst_static_peptide_display {
 #
 # 3, 4,5, 6, 7, 8, 10, 11,12, 16,15 
 
-  $log->debug( $sbeams->showSessionHash() );
+#  $log->debug( $sbeams->showSessionHash() );
 # FIXME - can't assume order, duh.
   my $sql = qq~
   SELECT DISTINCT preceding_residue, peptide_sequence, following_residue,
@@ -1169,17 +1207,20 @@ sub get_pabst_static_peptide_display {
   AND PB.pabst_build_id = $pabst_build_id
   ORDER BY PATR DESC, synthesis_adjusted_score DESC
   ~;
-  $log->debug( $sql );
+#  $log->debug( $sql );
 
   my @columns = ( 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'ESS', 'PSS', 
                    'SSRT', 'N Gen Loc', 'N Obs', 'Annot', 'Org', 'PATR' );
   my $coldefs = $atlas->get_column_defs( labels => \@columns );
   my @headings;
+  my @rs_headings;
   for my $def ( @{$coldefs} ) {
     push @headings, $def->{key}, $def->{value};
+    push @rs_headings, $def->{key};
   }
   my $table_help = $atlas->make_table_help( entries => $coldefs,
                                            description => "Possible peptides ranked by PABST score" );
+#                                             help_text => $table_help,
 
 
   # Defer for now...
@@ -1268,7 +1309,7 @@ sub get_pabst_static_peptide_display {
   }
 
   my @mod_peptides;
-  my %orgMap = ( 2 => 'H', 6 => 'M', '3' => 'Y' );
+  my %orgMap = ( 2 => 'Hs', 6 => 'Mm', '3' => 'Sc' );
   my $cnt = 0;
   for my $pep ( @peptides ) {
     if ( !$cnt++ ) {
@@ -1276,12 +1317,12 @@ sub get_pabst_static_peptide_display {
       next;
     }
     if ( $pep2org{$pep->[10]} ) {
-      my $newrow;
+      my @orgs;
       for my $org( @{$pep2org{$pep->[10]}} ) {
         my $sym = $orgMap{$org} || 'MIA';
-        $newrow .= "$sym&nbsp;";
+        push @orgs, $sym;
       }
-      $pep->[10] = $newrow;
+      $pep->[10] = join( ', ', @orgs);
     } else {
       $pep->[10] = '';
     }
@@ -1300,6 +1341,7 @@ sub get_pabst_static_peptide_display {
                                               max_rows => 500,
                                           bkg_interval => 3, 
                                           set_download => 'Download peptides', 
+                                           rs_headings => \@rs_headings, 
                                            file_prefix => 'best_peptides_', 
                                                 header => 1,
                                              help_text => $table_help,
@@ -1335,7 +1377,7 @@ sub get_pabst_mapped_id {
   $and
   ~;
 
-  $log->debug( $sql );
+#  $log->debug( $sql );
   
   my @ids = $sbeams->selectrow_array( $sql );
   return $ids[0] || '';
@@ -1949,7 +1991,6 @@ sub get_pabst_multibuild_observed_peptides_depr {
 #  push @{$proteins{$curr_prot}}, $sorted[0];
 
   
-#  print STDERR "Saw a respectable " . scalar( keys( %proteins ) ) . "  total proteins and $pep_cnt peptides\n";
   print STDERR "Observed " . scalar( keys( %proteins ) ) . "  total proteins and $pep_cnt peptides\n" if $args{verbose};
 #  my $cnt = 0; for my $k ( keys ( %proteins ) ) { print "$k\n"; last if $cnt++ >= 10; }
   
