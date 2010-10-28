@@ -529,8 +529,10 @@ sub encodeSectionHeader {
 
   my $link = $args{link} || '';
 
+  my $anchor = ( $args{anchor} ) ? "<A NAME='$args{anchor}'></A>" : '';
+
   my $buffer = qq~
-        <TR><TD colspan="2" background="$HTML_BASE_DIR/images/fade_orange_header_2.png" width="600">$link<font color="white">$text</font></TD></TR>
+        <TR><TD colspan="2" background="$HTML_BASE_DIR/images/fade_orange_header_2.png" width="600">$link<font color="white">$anchor$text</font></TD></TR>
 ~;
 
   return $buffer;
@@ -789,9 +791,13 @@ sub getSamplePlotDisplay {
   my $header = '';
   if ( $args{link} ) {
     $header .= $self->encodeSectionHeader( text => 'Observed in Samples:',
-                                          link => $args{link} );
+                                          anchor => 'samples',
+                                          link => $args{link},
+                                         );
   } else {
-    $header .= $self->encodeSectionHeader( text => 'Observed in Samples:',);
+    $header .= $self->encodeSectionHeader( text => 'Observed in Samples:',
+                                          anchor => 'samples'
+                                         );
   }
 
   my $trinfo = $args{tr_info} || '';
@@ -828,9 +834,13 @@ sub getSampleMapDisplay {
   my $header = '';
   if ( $args{link} ) {
     $header .= $self->encodeSectionHeader( text => 'Sample peptide map:',
-                                          link => $args{link} );
+                                          link => $args{link},
+                                          anchor => 'samples'
+                                          );
   } else {
-    $header .= $self->encodeSectionHeader( text => 'Sample peptide map:',);
+    $header .= $self->encodeSectionHeader( text => 'Sample peptide map:',
+                                          anchor => 'samples'
+                                         );
   }
   $header = '' if $args{no_header};
 
@@ -967,7 +977,8 @@ sub getSampleDisplay {
     $header .= $self->encodeSectionHeader( text => 'Observed in Samples:',
                                           link => $args{link} );
   } else {
-    $header .= $self->encodeSectionHeader( text => 'Observed in Samples:',);
+    $header .= $self->encodeSectionHeader( text => 'Observed in Samples:',
+                                         );
   }
   $header = '' if $args{no_header};
 
