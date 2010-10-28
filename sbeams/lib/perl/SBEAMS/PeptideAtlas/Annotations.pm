@@ -417,15 +417,24 @@ sub get_column_defs {
     'Fol AA' =>'Following (towards the C terminus) amino acid', 
     'ESS' => 'Empirical suitability score, derived from peptide probability, EOS, and sequence characteristics such as missed cleavage <SUP><FONT COLOR=RED>[MC]</FONT></SUP> or semi-tryptic <SUP><FONT COLOR=RED>[ST]</FONT></SUP>, or <BR> multiple genome locations <SUP><FONT COLOR=RED>[MGL]</FONT></SUP>.', 
     'PSS' => 'Predicted suitability score, derived from combining publicly available algorithms (Peptide Sieve, STEPP, ESPP, APEX, Detectability Predictor)', 
+
+    'STEPP' => 'Predicted peptide score calculated by STEPP algorithm',
+    'PSieve' => 'Predicted peptide score calculated by Peptide Sieve algorithm',
+    'ESPP' => 'Predicted peptide score calculated by ESPP algorithm',
+    'APEX' => 'Predicted peptide score calculated by APEX algorithm',
+    'DPred' => 'Predicted peptide score calculated by Detectability Predictor algorithm',
+
     'Adj SS' => 'Final suitablity score, the greater of ESS and PSS, adjusted by PABST weightings.', 
     'Best Prob' => 'Highest PeptideProphet probability for this observed sequence', 
     'Best Adj Prob' => 'Highest iProphet-adjusted probablity for this observed sequence', 
     'N Obs' => 'Total number of observations in all modified forms and charge states', 
-    'EOS' => 'Empirical Observability Score', 
+    'EOS' => 'Empirical Observability Score, a measure of how often a particular peptide is seen in samples relative to other peptides from the same protein', 
     'N Prot Map' => 'Number of proteins in the reference database to which this peptide maps', 
     'N Gen Loc' => 'Number of discrete genome locations which encode this amino acid sequence', 
-    'Sample IDs' => 'Samples in which this sequence was seen', 
+    'Samples' => 'Samples in which this sequence was seen', 
+    'N Samples' => 'The number of samples in which this sequence was seen', 
     'Parent Peptides' => 'Observed peptides of which this peptide is a subsequence', 
+    'Subpep of' => 'Number of observed peptides of which this peptide is a subsequence', 
     'Sequence' => 'Amino acid sequence of detected pepide, including any mass modifications.',
     'Charge' => 'Charge on Q1 (precursor) peptide ion.',
     'q1_mz' => 'Mass to charge ratio of precursor peptide ion.',
@@ -449,10 +458,18 @@ sub get_column_defs {
   if ( $args{labels} ) {
     my @entries;
     for my $label ( @{$args{labels}} ) {
-      if ( $coldefs{$label} ) {
-        push @entries, { key => $label, value => $coldefs{$label} };
+      if ( $args{plain_hash} ) {
+        if ( $coldefs{$label} ) {
+          push @entries, $label => $coldefs{$label};
+        } else {
+          push @entries, $label => 'Not Defined';
+        }
       } else {
-        push @entries, { key => $label, value => 'Not Defined' };
+        if ( $coldefs{$label} ) {
+          push @entries, { key => $label, value => $coldefs{$label} };
+        } else {
+          push @entries, { key => $label, value => 'Not Defined' };
+        }
       }
     }
     return \@entries;
