@@ -1,0 +1,512 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : GetTransitions
+#
+# Description : page retrieve peptides and MS/MS fragment ions from PABST
+#               and PATR tables 
+###############################################################################
+
+$|++;
+
+## Setup objects and globals 
+use strict;
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ( $q $current_contact_id $current_username
+$PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+$TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+@MENU_OPTIONS);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::BestPeptideSelector;
+
+# Set up Atlas objects
+my $sbeams = new SBEAMS::Connection;
+my $atlas = new SBEAMS::PeptideAtlas;
+$atlas->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR( 'PeptideAtlas' );
+my $best_peptide = new SBEAMS::PeptideAtlas::BestPeptideSelector;
+$best_peptide->setAtlas( $atlas );
+$best_peptide->setSBEAMS( $sbeams );
+my $pabst_build_id;
+
+my $is_html = 0;
+
+main();
+exit(0);
+
+# Main Program
+sub main 
+{
+  # Authenticate and exit if a username is not returned
+  my $current_username = $sbeams->Authenticate( allow_anonymous_access => 1 );
+  exit unless $current_username;
+
+  $is_html = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
+
+  #### Read in the default input parameters
+  my %parameters;
+
+  $parameters{uploaded_file_not_saved} = 1;
+
+  my $n_params_found = $sbeams->parse_input_parameters(
+      q=>$q,parameters_ref=>\%parameters);
+
+  # $sbeams->printCGIParams($q);
+
+  # Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+  # This will look for mod-specific params and do the right thing
+  $atlas->processModuleParameters(parameters_ref=>\%parameters);
+
+  # Fetch pabst_build_id based on params. 
+  # 1 - passed pabst_build_id param
+  # 2 - passed organism
+  # 3 - cached pabst_build_id cookie
+  # 4 - global default
+  $pabst_build_id = $best_peptide->get_pabst_build( %parameters );
+
+  # This might have gotten overridden due to permissions.
+  $parameters{pabst_build_id} = $pabst_build_id;
+
+  if ( !$parameters{action} && !$is_html ) {
+    $log->debug( "in the auto-setting mode, command-line only!" );
+    $parameters{n_highest_intensity_fragment_ions} = 3;
+    $parameters{n_peptides_per_protein} = 3;
+    $parameters{protein_name_constraint} = 'YAL003W%';
+    $parameters{QUERY_NAME} = 'AT_GetPABSTList';
+    $parameters{action} = 'QUERY';
+    $parameters{pabst_build_id} = 12;
+  }
+
+
+
+  for my $p ( keys ( %parameters ) ) {
+    $log->debug( "$p => $parameters{$p}" );
+  }
+
+
+
+  # Decide what action to take based on information so far
+  if ( !$parameters{download_only} ) {
+    print_form ( %parameters );  
+  }
+  if ( $parameters{action} eq 'QUERY' ) {
+    fetch_peptides( %parameters );  
+  }
+  $atlas->display_page_footer();
+
+} # end main
+
+
+sub print_form {
+
+  my %args = @_;
+
+  # Historical, don't ask.
+  my %parameters = %args;
+
+  my $project_id = $atlas->getProjectID(
+    atlas_build_id => $parameters{atlas_build_id}
+  );
+
+  $atlas->display_page_header(project_id => $project_id);
+
+  #### Show current user context information
+
+  #$sbeams->printUserContext();
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $atlas->getTabMenu(
+      parameters_ref => \%parameters,
+      program_name => $PROG_NAME,
+  );
+
+  unless ( $atlas->is_srm_mode() ) {
+    print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+  }
+
+  #### Define some generic variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+  #### Read in the standard form values
+  my $apply_action    = $parameters{'action'} || $parameters{'apply_action'};
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+  # Historical, don't ask.
+
+    #### Set some specific settings for this program
+    my $CATEGORY="Query Transitions";
+
+    $TABLE_NAME="AT_GetPABSTList" unless ($TABLE_NAME);
+
+    ($PROGRAM_FILE_NAME) =
+        $atlas->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+
+    my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+
+    #### Get the columns and input types for this table/query
+    my @columns = $atlas->returnTableInfo($TABLE_NAME,"ordered_columns");
+
+    my %input_types = 
+        $atlas->returnTableInfo($TABLE_NAME,"input_types");
+
+
+    #### Read the input parameters for each column
+    my $n_params_found = $sbeams->parse_input_parameters(
+        q=>$q,parameters_ref=>\%parameters,
+        columns_ref=>\@columns,input_types_ref=>\%input_types);
+     #$sbeams->printDebuggingInfo($q);
+
+
+    #### If the apply action was to recall a previous resultset, do it
+    my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+
+    #### Set some reasonable defaults if no parameters supplied
+    unless ($n_params_found) 
+    {
+      $parameters{input_form_format} = "minimum_detail";
+    }
+    $parameters{n_peptides_per_protein} ||= 3;
+    $parameters{n_highest_intensity_fragment_ions} ||= 3;
+    $parameters{pabst_build_id} = $pabst_build_id;
+
+#    pabst_build_id=7
+#    protein_name_constraint=Foo
+#    upload_file=
+#    peptide_sequence_constraint=
+#    peptide_length=
+#    empirical_proteotypic_constraint=
+#    n_protein_mappings_constraint=
+#    n_genome_locations_constraint=
+#    n_highest_intensity_fragment_ions=3
+
+    ##Input form:  action is set by PROGRAM_FILE_NAME, so sub it w/ display page:
+    $sbeams->collectSTDOUT();
+
+    my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'pabst_penalty_form',
+                                                 visible => 0,
+                                                 tooltip => 'Show/Hide penalty form',
+                                                  sticky => 0,
+                                                 imglink => 0,
+                                                textlink => 1,
+                                               plaintext => 0,
+                                                hidetext => 'Hide form',
+                                                showtext => 'Show form' );
+
+
+#    my ( $thtml, $tlink ) = $sbeams->make_toggle_section( name => 'pabst_penalty_form',
+#                                                 visible => 1,
+#                                                 tooltip => 'Show/Hide penalty form',
+#                                                  sticky => 1,
+#                                                 imglink => 0,
+#                                                 content => '&nbsp;',
+#                                                textlink => 1,
+#                                                hidetext => 'Hide form',
+#                                                showtext => 'Show form',
+#                                               );
+    my @link = split "\n", $link;
+    my $script_css = join( "\n", @link[0..$#link-1] );
+
+#    $log->debug( $script_css );
+
+    $sbeams->display_input_form(
+        TABLE_NAME=>$TABLE_NAME,
+        CATEGORY=>$CATEGORY,
+        apply_action=>$apply_action,
+        parameters_ref=>\%parameters,
+        input_types_ref=>\%input_types,
+        mask_user_context=> '1',
+        mask_query_constraints => 1,
+    );
+    my $form = $sbeams->fetchSTDOUT();
+#    $log->debug( $script_css );
+
+    my $subform = '';
+    my @form = split( "\n", $form, -1 );
+    my $accum = 0;
+    my $ending = 0;
+    for my $fline ( @form ) {
+#      $log->debug( "Next line" );
+      if ( $fline =~ /Protein Accession/ ) {
+        $accum++;
+#      $log->debug( "Acc line" );
+      }
+      next unless $accum;
+      $subform .= "$fline\n";
+      if ( $fline =~ /upload_file/ ) {
+        $ending++;
+#        $log->debug( "the end is near" );
+#        $log->debug( $fline );
+      }
+      if ( $ending && $fline =~ /\<\/TR\>/ ) {
+#        $log->debug( "the end is here" );
+        last;
+      }
+    }
+
+    my @buttons = $sbeams->getFormButtons( types => [ 'Submit','Back', 'Reset' ] );
+    my $buttons = join( "&nbsp;", @buttons );
+
+    print qq~
+    <BR>
+    <BR>
+    <BR>
+    <FORM METHOD="POST" NAME="MainForm" ENCTYPE="multipart/form-data" >
+    <TABLE BORDER=0 >
+    <TR>
+    $subform
+    <TR><TD>Peptide File</TD><TD></TD><TD><INPUT TYPE=FILE NAME=peptide_file></TD></TR>
+    <TR><TD>Download Only</TD><TD></TD><TD><INPUT TYPE=checkbox NAME=download_only></TD></TR>
+    <TR><TD COLSPAN=3 ALIGN=CENTER>$buttons</TD></TR>
+    <TR><TD><INPUT TYPE=HIDDEN NAME=action VALUE=QUERY></TD></TR>
+
+    </TABLE>
+    </FORM>
+    ~;
+#    <TR><TD COLSPAN=3>$sub_form</TD></TR>
+
+
+
+
+} # end handle_request
+
+sub fetch_peptides {
+
+  my %parameters = @_;
+  my %protein_hash;
+
+  # provisional, try to handle newline delimited lists.
+  $parameters{protein_name_constraint} =~ s/\r\n/;/g;
+  $parameters{protein_name_constraint} =~ s/\n/;/g;
+  $parameters{protein_name_constraint} =~ s/\s+/;/g;
+  my @proteins = split( /;/, $parameters{protein_name_constraint} );
+  for my $protein ( @proteins ) {
+    $protein_hash{$protein}++;
+  }
+
+  if ( $parameters{upload_file} ) {
+
+    ## upload the file to a file handler
+    my $fh = $q->upload('upload_file');
+
+    if (!$fh && $q->cgi_error && $is_html) {
+      print $q->header(-status=>$q->cgi_error);
+    }
+
+    my $max_cnt = 100000;
+    my $cnt = 0;
+    while ( my $prt = <$fh> ) {
+      chomp($prt);
+      $prt =~ s/\s+$//;
+      if ($prt) {
+        $protein_hash{$prt}++;
+      }
+      last if ($cnt++ >= $max_cnt );
+    }
+
+  }
+
+# Will maintain list as is.
+  my %peptides;
+  if ( $parameters{peptide_file} ) {
+
+    ## upload the file to a file handler
+    my $fh = $q->upload('peptide_file');
+
+    if (!$fh && $q->cgi_error && $is_html) {
+      print $q->header(-status=>$q->cgi_error);
+    }
+
+    while ( my $line = <$fh> ) {
+      chomp $line;
+      $line =~ s/\s//g;
+      $peptides{$line}++;
+    }
+  }
+
+  # Hard Code
+  $parameters{pabst_build_id} = 13;
+
+  my $protein_and = '';
+  if ( scalar( keys( %protein_hash ) ) < 500 ) {
+    $protein_and = "AND biosequence_name IN ( '" . join( "','", keys( %protein_hash ) ) . "' )";
+  }
+  $log->debug( "Hash had " . scalar( keys( %protein_hash ) ) . "  proteins!!!"   );
+
+  my $pabst_sql = qq~
+  SELECT DISTINCT biosequence_name, peptide_sequence,
+  synthesis_adjusted_score, n_observations, synthesis_warnings
+  FROM $TBAT_PABST_PEPTIDE PP 
+  JOIN $TBAT_PABST_PEPTIDE_MAPPING PM 
+  ON PM.pabst_peptide_id = PP.pabst_peptide_id
+  JOIN $TBAT_BIOSEQUENCE BS
+  ON BS.biosequence_id = PM.biosequence_id 
+  WHERE pabst_build_id = $parameters{pabst_build_id}
+  $protein_and
+  ORDER BY biosequence_name ASC, synthesis_adjusted_score DESC
+  ~;
+  $log->debug( $pabst_sql );
+
+  my $dp_sql = qq~
+  SELECT distinct sequence, plate, status 
+  FROM peptideatlas.dbo.dirty_peptides
+  ~;
+  my $dp_sth = $sbeams->get_statement_handle( $dp_sql );
+
+  my %dpeps;
+  my %status = ( O => "Ordered", D => "Delivered", A => "Analyzed", M => "Missing", S => "Seen" );
+  while ( my @row = $dp_sth->fetchrow_array() ) {
+
+    $dpeps{$row[0]} ||= {};
+    if ( $dpeps{$row[0]}->{plates} ) {
+       $dpeps{$row[0]}->{plates} .= ", $row[1]";
+    } else {
+       $dpeps{$row[0]}->{plates} = $row[1];
+       $dpeps{$row[0]}->{status} = ucfirst( lc($row[2]) );
+    }
+  }
+
+  if ( $parameters{download_only} ) {
+    my $header = $sbeams->get_http_header( mode => 'tsv', filename => $parameters{upload_file}  );
+    print $header;
+  }
+
+  my @results;
+  if ( scalar( keys( %peptides ) ) ) {
+    for my $pep ( keys( %peptides ) ) {
+      push @results, [ 'na', $pep, 'na', 'na', 'na', $dpeps{$pep}->{plates},  $dpeps{$pep}->{status} ] ;
+    }
+  } else {
+    my $sth = $sbeams->get_statement_handle( $pabst_sql );
+
+    while ( my @row = $sth->fetchrow_array() ) {
+      next unless $protein_hash{$row[0]};
+      if ( $dpeps{$row[1]} ) {
+        $row[2] = sprintf( "%0.2f", $row[2] );
+        if ( $parameters{download_only} ) {
+          print join( "\t", @row, $dpeps{$row[1]}->{plates}, $dpeps{$row[1]}->{status} ) . "\n";
+        } else {
+          push @results, [ @row, $dpeps{$row[1]}->{plates}, $dpeps{$row[1]}->{status}];
+        }
+      }
+    }
+  }
+
+  if ( $parameters{download_only} ) {
+    exit;
+  }
+      #### Display the section header
+    my $header = $atlas->encodeSectionHeader(
+      text => 'Dirty Peptides',
+    );
+    
+  $log->debug( $header );
+
+    my @labels = ( 'Protein Name', 'Sequence', 'Adj SS', 'N Obs', 'Annot', 'Plate', 'Pep Status' );
+    unshift @results, \@labels;
+
+    my $col_defs = $atlas->get_column_defs( labels => \@labels );
+    my $help = $atlas->make_table_help( entries => $col_defs,
+                                        description => 'Dirty peptides designed for SRM experiments' );
+
+
+      #### Format table
+    my ( $html, $runset ) = $atlas->encodeSectionTable(
+                                                width => '600',
+                                         set_download => 1,
+                                             max_rows => 100,
+                                         rows_to_show => 20,
+                                         sortable => 0,
+                                         header => 1,
+                                          set_download => 'Download peptides', 
+                                           file_prefix => 'best_peptides_', 
+                                              table_id => 'pabst',
+  help_text => $help,
+                                               nowrap => [1..7],
+                                          chg_bkg_idx => 0,
+                                               align  => [qw(left center center right right center right right right right left left left)],
+                                                 rows => \@results );
+
+    $log->debug( "BEFORE" );
+    $log->debug( "HTML is $html" );
+    $log->debug( "AFTER" );
+#    $log->debug( "Runset is $runset" );
+#    $log->debug( "Header is $header" );
+
+      #### Display table
+      print "<TABLE WIDTH=600>$header<BR>$html</TABLE>\n";
+  
+#
+  return;
+
+} # end fetch_peptides;
+
+__DATA__
+
+sub get_PATR_transitions {
+  return {};
+  my %args = @_;
+
+  # Superfluous
+#  return unless $args{peptides};
+#  my $peptide_clause = " WHERE P.peptide_sequence IN ( ";
+#  my $sep = '';
+#  for my $pep ( @{$args{peptides}} ) {
+#    next if $pep =~ /amino acid/i;
+#    $peptide_clause .= $sep . "'" . $pep . "'";
+#    $sep = ',';
+#  }
+#  $peptide_clause .= ")\n";
+
+  my $sql = qq~
+  SELECT DISTINCT P.peptide_sequence, modified_peptide_sequence, peptide_charge,
+  q1_mz ,q3_mz, q3_ion_label, collision_energy,
+  SSRCalc_relative_hydrophobicity, retention_time, 'na', ''
+  FROM $TBAT_SRM_TRANSITION SMT 
+  JOIN $TBAT_PEPTIDE P ON P.peptide_sequence = SMT.stripped_peptide_sequence
+  ORDER BY modified_peptide_sequence, peptide_charge, transition_suitablity_level,
+  q1_mz, q3_mz
+ 
+  ~;
+#  $log->debug( $sql );
+
+  my $sth = $sbeams->get_statement_handle($sql);
+
+  my %pep_rows;
+  while ( my @row = $sth->fetchrow_array() ) {
+    $pep_rows{$row[0]} = \@row;
+  }
+  return \%pep_rows;
+}
+
+sub calculateCE {
+  my %args = @_;
+  for my $attr ( qw( charge mz ) ) {
+    return '' unless $attr;
+  }
+  my $ce = '';
+  if ( $args{charge} == 2 ) {
+    $ce = ( 0.044 * $args{mz} ) + 5.5;
+  } elsif ( $args{charge} == 3 ) {
+    $ce = ( 0.051 * $args{mz} ) + 0.55
+  }
+  return sprintf( "%0.1f", $ce);
+}
+
+
