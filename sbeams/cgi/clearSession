@@ -1,0 +1,80 @@
+#!/usr/local/bin/perl -w
+
+###############################################################################
+# Program clear_session    
+# $Id: $
+#
+# Description : Clear information from session hash 
+#
+# SBEAMS is Copyright (C) 2000-2011 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+use strict;
+use lib qw (../lib/perl);
+use File::Basename;
+use Benchmark;
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+
+## Globals ##
+my $sbeams = new SBEAMS::Connection;
+
+# Don't buffer output
+$|++;
+
+{ # Main 
+
+  # Authenticate user.
+  my $current_username = $sbeams->Authenticate( allow_anonymous_access => 1 ) || die "Authentication failed";
+
+  # Print cgi headers
+  $sbeams->printPageHeader( onload => 'clear_cookie()' );
+
+  print qq~
+    <SCRIPT LANGUAGE=Javascript>
+      function clear_cookie( ) {
+        var cookie = document.cookie;
+//        alert( cookie );
+        var new_dough = "SBEAMSui= ";
+//        var new_dough = "";
+      // alert( new_dough );
+        document.cookie = new_dough;
+        var new_cookie = document.cookie;
+//        alert( new_cookie );
+        }
+    </SCRIPT>
+   ~;
+    
+
+  my $content = $sbeams->showSessionHash() || $sbeams->makeInactiveText( "N/A" );
+
+  my $hash = $sbeams->getSessionAttribute( 'key' => 'returnEntireSessionHash' );
+  if ( ! $hash ) {
+    $log->warn( "session file doesn't yet exist " );
+    $hash = {};
+  } else {
+    for my $k ( sort( keys( %$hash ) ) ) {
+      $sbeams->deleteSessionAttribute( key => $k );
+    }
+  }
+
+  $hash = $sbeams->getSessionAttribute( 'key' => 'returnEntireSessionHash' );
+  if ( !defined $hash ) {
+    $log->warn( "session file doesn't yet exist " );
+    $hash = {};
+  }
+
+  print "Existing Settings: <BR><PRE>$content \n\n All session cookies cleared!\n</PRE>";
+  my $new_content = $sbeams->showSessionHash() || $sbeams->makeInactiveText( "N/A" );
+  print "New Settings: <BR><PRE>$new_content</PRE><BR><BR> \n";
+  $sbeams->printPageFooter( close_tables=>'NO');
+
+} # end Main
+
