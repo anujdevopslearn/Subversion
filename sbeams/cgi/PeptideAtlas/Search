@@ -119,6 +119,10 @@ sub main {
   
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
+	# This will look for mod-specific params and do the right thing
+	$sbeamsMOD->processModuleParameters(parameters_ref=>\%parameters);
+
+
  #   foreach (keys %parameters){
  #   print "$_ \t $parameters{$_} <BR>";
  # }
