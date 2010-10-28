@@ -7,7 +7,7 @@
 # Description : Prints summary of a given protein given selection
 #               atlas build and protein name.
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2011 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -636,23 +636,27 @@ sub handle_request {
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
 #    ["peptide_accession","P.peptide_accession","<DIV TITLE='PeptideAtlas accession number for this peptide'>Accession</DIV>"],
+#
+#
+  my @labels = ( 'Accession', 'Pre AA', 'Sequence', 'Fol AA', 'ESS','Best Prob', 'Best Adj Prob', 'N Obs', 'EOS', 'SSRT', 'N Prot Map', 'N Gen Loc', 'N Samples', 'Subpep of' );
+
   my @column_array = (
-    ["peptide_accession","P.peptide_accession","Peptide Accession"],
+    ["peptide_accession","P.peptide_accession","Accession"],
     ["preceding_residue","PI.preceding_residue","<DIV TITLE='Preceding (towards the N terminus) amino acid'>Pre AA</DIV>"],
-    ["peptide_sequence","P.peptide_sequence","<DIV TITLE='Amino Acid sequence of this peptide'>Peptide Sequence</DIV>"],
+    ["peptide_sequence","P.peptide_sequence","<DIV TITLE='Amino Acid sequence of this peptide'>Sequence</DIV>"],
     ["following_residue","PI.following_residue","<DIV TITLE='Following (towards the C terminus) amino acid'>Fol AA</DIV>"],
-    ["suitability_score","0.0001","<DIV TITLE='Score derived from peptide probability, EOS, and sequence characteristics such as missed cleavage(MC) or semi-tryptic(ST); these are annotated in red.'>Suitability<BR>Score</DIV>"],
+    ["suitability_score","0.0001","<DIV TITLE='Score derived from peptide probability, EOS, and sequence characteristics such as missed cleavage(MC) or semi-tryptic(ST); these are annotated in red.'>ESS</DIV>"],
     ["best_probability","STR(PI.best_probability,7,3)","<DIV TITLE='Highest PeptideProphet probability for this observed sequence'>Best Prob</DIV>"],
-    ["best_adjusted_probability","STR(PI.best_adjusted_probability,7,3)","<DIV TITLE=''>Best Adjusted Prob</DIV>"],
+    ["best_adjusted_probability","STR(PI.best_adjusted_probability,7,3)","<DIV TITLE=''>Best Adj Prob</DIV>"],
     ["n_observations","PI.n_observations","<DIV TITLE='Total number of observations in all modified forms and charge states'>N Obs</DIV>"],
     ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","<DIV TITLE='Empirical Observability Score'>EOS</DIV>"],
     ["SSRCalc_relative_hydrophobicity","STR(P.SSRCalc_relative_hydrophobicity,7,2)","<DIV TITLE='SSRCalc Relative Hydrophobicity score'>SSRT</DIV>"],
-    ["n_protein_mappings","PI.n_protein_mappings","<DIV TITLE='Number of proteins in the reference database to which this peptide maps'>N Protein Mappings</DIV>"],
-    ["n_genome_locations","PI.n_genome_locations","<DIV TITLE='Number of discrete genome locations which encode this amino acid sequence'>N Genome Locations</DIV>"],
-    ["sample_ids","PI.sample_ids","sample_ids"],
+    ["n_protein_mappings","PI.n_protein_mappings","<DIV TITLE='Number of proteins in the reference database to which this peptide maps'>N Prot Map</DIV>"],
+    ["n_genome_locations","PI.n_genome_locations","<DIV TITLE='Number of discrete genome locations which encode this amino acid sequence'>N Gen Loc</DIV>"],
+    ["sample_ids","PI.sample_ids","N Samples"],
     #["sample_ids","PI.sample_ids","<DIV TITLE='Samples in which this sequence was seen'>Sample IDs</DIV>"],
     #["is_subpeptide_of","PI.is_subpeptide_of","<DIV TITLE='Observed peptides of which this peptide is a subsequence'>Parent Peptides</DIV>"],
-    ["is_subpeptide_of","PI.is_subpeptide_of",'is_subpeptide_of'],
+    ["is_subpeptide_of","PI.is_subpeptide_of",'Subpep of'],
     ["peptide_instance_id","PI.peptide_instance_id","peptide_instance_id"],
   );
 
@@ -696,8 +700,10 @@ sub handle_request {
 
   #### Define the hypertext links for columns that need them
   %url_cols = (
-    'Peptide Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
+    'Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
+    'N Samples' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=\%$colnameidx{peptide_accession}V&action=QUERY#samples",
   );
+#  \%$colnameidx{biosequence_gene_name}V&
 
   %hidden_cols = (
 #    'Suitability Score' => 1,
@@ -825,7 +831,15 @@ sub handle_request {
                                                 sticky => 1 );
 
 
-    my $obs_help = get_table_help( 'observed_peptides' );
+
+
+  my $col_defs = $sbeamsMOD->get_column_defs( labels => \@labels );
+  my $obs_help = $sbeamsMOD->make_table_help( entries => $col_defs,
+                                            description => 'Observed peptides mapping to subject protein' );
+
+
+
+
     my $observed_header = $sbeamsMOD->encodeSectionHeader(
                            text => "Distinct Observed Peptides ($peptide_counts)",
                            link => $link );
@@ -875,6 +889,7 @@ sub handle_request {
 
 
     my @pa_accessions;
+    my @sample_list;
     for my $row ( @{$resultset_ref->{data_ref}} ) {
       push @pa_accessions, $row->[0];
 			my $ntt = 0;
@@ -895,12 +910,14 @@ sub handle_request {
 			}
 
       #  Oh please please please!  No again, sigh!
-      if ($sbeams->output_mode() eq 'html') { 
-#  			for my $rn ( 12 ) {
-#    			$row->[$rn] =~ s/\d+/*/g;
-#		  		$row->[$rn] =~ s/,//g;
-#		  	}
-      }
+#      if ($sbeams->output_mode() eq 'html') { 
+        push @sample_list, [ $row->[0], $row->[12] ];
+        for my $idx ( 12, 13 ) {
+          $row->[$idx] =~ s/\s//g;
+          my @samples = split( /,/, $row->[$idx] );
+          $row->[$idx] = scalar( @samples );
+        }
+#      }
 
 			my @errs;
 			push @errs, 'mc' if $mc;
@@ -996,52 +1013,13 @@ sub handle_request {
 
 
     #############################################################
-    #### Display theoretical highest observability peptides
-
-    #### Widget to allow show/hide of section
-    my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_highlyobservablelist',
-      visible => 0,
-      tooltip => 'Show/Hide Section',
-      imglink => 1,
-      sticky => 1,
-     );
-
-    #### Display the section header
-    my $highlyObservablePeptidesHeader = $sbeamsMOD->encodeSectionHeader(
-      text => 'Predicted Highly Observable Peptides',
-      link => $link
-    );
-
-    #### Calculate the best peptides to use
-    my $best_peptide_information = $bestPeptideSelector->getHighlyObservablePeptides(
-      atlas_build_id => $atlas_build_id,
-      biosequence_id => $biosequence_id,
-    );
-
-    if ( $htmlmode && $sbeams->rs_has_data( resultset_ref => $best_peptide_information->{resultset_ref}) ) {
-      print qq~ <TABLE width="600">$highlyObservablePeptidesHeader</TABLE><TABLE><TR $tr><TD COLSPAN=2>~;
-
-      #### Display the best peptide information
-      my $samples = $bestPeptideSelector->getHighlyObservablePeptidesDisplay(
-        atlas_build_id => $atlas_build_id,
-        best_peptide_information  => $best_peptide_information,
-        query_parameters_ref=>\%parameters,
-        column_titles_ref=>\@column_titles,
-        link => $link,
-        base_url=>$base_url,
-        tr_info => $tr,
-      );
-      print "</TD></TR></TABLE>";
-    }
-
-    #############################################################
     #### Display synthetic peptide info
   
     unless ( $sbeams->isGuestUser() ) {
 
       # Widget to allow show/hide of section
       my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_dirty_peptide',
-        visible => 0,
+        visible => 1,
         tooltip => 'Show/Hide Section',
         imglink => 1,
         sticky => 1,
@@ -1077,11 +1055,11 @@ sub handle_request {
     }
 
     #############################################################
-    # Display precomputd PABST peptides
+    # Display precomputed PABST peptides
 
     #### Widget to allow show/hide of section
     my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_pabst_static',
-      visible => 0,
+      visible => 1,
       tooltip => 'Show/Hide Section',
       imglink => 1,
       sticky => 1,
@@ -1111,6 +1089,57 @@ sub handle_request {
  <TABLE>
    <TR $tr>
      <TD COLSPAN=2> $pabst_display 
+     </TD>
+   </TR>
+ </TABLE>
+    ~;
+
+    }
+
+    #############################################################
+    #### Display theoretical highest observability peptides
+
+    #### Widget to allow show/hide of section
+    my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_highlyobservablelist',
+      visible => 1,
+      tooltip => 'Show/Hide Section',
+      imglink => 1,
+      sticky => 1,
+     );
+
+    #### Display the section header
+    my $highlyObservablePeptidesHeader = $sbeamsMOD->encodeSectionHeader(
+      text => 'Predicted Highly Observable Peptides',
+      link => $link
+    );
+
+    #### Calculate the best peptides to use
+    my $best_peptide_information = $bestPeptideSelector->getHighlyObservablePeptides(
+      atlas_build_id => $atlas_build_id,
+      biosequence_id => $biosequence_id,
+    );
+
+    if ( $htmlmode && $sbeams->rs_has_data( resultset_ref => $best_peptide_information->{resultset_ref}) ) {
+
+      #### Display the best peptide information
+      my $samples = $bestPeptideSelector->getHighlyObservablePeptidesDisplay(
+        atlas_build_id => $atlas_build_id,
+        best_peptide_information  => $best_peptide_information,
+        query_parameters_ref=>\%parameters,
+        column_titles_ref=>\@column_titles,
+        link => $link,
+        base_url=>$base_url,
+        tr_info => $tr,
+      );
+      $log->debug( $samples );
+
+      print qq~ 
+ <TABLE width="600">
+  $highlyObservablePeptidesHeader
+ </TABLE>
+ <TABLE>
+   <TR $tr>
+     <TD COLSPAN=2> $samples 
      </TD>
    </TR>
  </TABLE>
@@ -1189,7 +1218,7 @@ sub handle_request {
                                                            rows => $mrm_transitions );
       #### Display table
 #      print "$trans_help<TABLE WIDTH=600><BR>$transitionsHTML</TABLE>\n" if $#{$mrm_transitions} && $htmlmode;
-      print "<TABLE WIDTH=600><BR>$transitionsHTML</TABLE>\n" if $#{$mrm_transitions} && $htmlmode;
+      print "<TABLE WIDTH=600>$transitionsHTML</TABLE>\n" if $#{$mrm_transitions} && $htmlmode;
     }
 
 
@@ -1241,7 +1270,7 @@ sub handle_request {
                                                  imglink => 1,
                                                   sticky => 1 );
 
-    my $sample_ids = getSampleList( resultset_ref=>$resultset_ref,);
+    my $sample_ids = getSampleList( sample_list => \@sample_list );
 
     $log->debug( "UA is $ENV{HTTP_USER_AGENT}" );
 
@@ -2334,20 +2363,15 @@ sub getSamples {
 
 sub getSampleList {
   my %args = @_;
-  my $SUB_NAME = 'getSampleList';
 
   #### Decode the argument list
-  my $resultset_ref = $args{'resultset_ref'}
-   || die "ERROR[$SUB_NAME]: resultset_ref not passed";
+  return [] unless $args{sample_list};
 
-  #### Get the hash of indices of the columns
-  my %col = %{$resultset_ref->{column_hash_ref}};
+#  each row has an accession, sample_string pair.
 
-  #### Loop over all the peptides
-  my $data_ref = $resultset_ref->{data_ref};
   my %observed_samples;
-  foreach my $row (@{$data_ref}) {
-    my $observed_sample_list = $row->[$col{sample_ids}];
+  foreach my $row (@{$args{sample_list}}) {
+    my $observed_sample_list = $row->[1];
     my @all = split(/[,;]/,$observed_sample_list);
     foreach my $element ( @all ) {
       $observed_samples{$element}++;
