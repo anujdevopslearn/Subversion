@@ -1367,8 +1367,10 @@ sub showSessionHash {
     $hash = {};
   }
   my $scalar = '';
-  for my $k ( sort( keys( %$hash ) ) ) {
-    $scalar .= "$k => $hash->{$k}\n";
+  if ( $hash ) {
+    for my $k ( sort( keys( %$hash ) ) ) {
+      $scalar .= "$k => $hash->{$k}\n";
+    }
   }
   return $scalar;
 
