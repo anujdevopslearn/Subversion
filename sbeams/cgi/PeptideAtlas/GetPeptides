@@ -317,6 +317,15 @@ sub handle_request {
     constraint_value=>$parameters{best_probability_constraint} );
   return if ($best_probability_clause eq '-1');
 
+  #### Build modified_peptide_sequence_constraint  
+  my $modified_peptide_sequence_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"MPI.modified_peptide_sequence",
+    constraint_type=>"plain_text",
+    constraint_name=>"Modified Sequence",
+    constraint_value=>$parameters{modified_peptide_sequence_constraint} );
+  return if ($modified_peptide_sequence_clause eq '-1');
+
+
   #### Build SAMPLE_ID constraint
   my $samples_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"ASB.sample_id",
@@ -689,9 +698,15 @@ sub handle_request {
         $allow_missed_cleavages_clause
         $peptide_ids_clause
         $mapping_constraints
-
-    ORDER BY P.peptide_accession$mapping_sort
-  ~;
+   ~;
+  if ($parameters{display_options} =~ /ShowModifications/) {
+    if($modified_peptide_sequence_clause ne ''){
+     $modified_peptide_sequence_clause =~ s/\)$//;
+     $sql .= $modified_peptide_sequence_clause ."ESCAPE '\\')";
+    }
+  }
+  
+  $sql .="ORDER BY P.peptide_accession$mapping_sort";
 
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
