@@ -123,7 +123,7 @@ sub getTabMenu
        $current_subtab=4;
 
     } elsif ( ($PROG_NAME =~ /^GetTransitions/) ||
-    ($PROG_NAME =~ /ViewMRMList\?(\S+)/ ))
+    ($PROG_NAME =~ /ViewSRMList\?(\S+)/ ))
     {
        $current_tab=5;
        $current_subtab=1;
@@ -145,8 +145,8 @@ sub getTabMenu
     {
        $current_tab=5;
        $current_subtab=2;
-    }elsif ( ($PROG_NAME =~ /^ViewMRMBuild/) ||
-    ($PROG_NAME =~ /ViewMRMBuild\?(\S+)/ ))
+    }elsif ( ($PROG_NAME =~ /^ViewSRMBuild/) ||
+    ($PROG_NAME =~ /ViewSRMBuild\?(\S+)/ ))
     {
        $current_tab=5;
        $current_subtab=3;
@@ -235,24 +235,24 @@ sub getTabMenu
 			   url => "$CGI_BASE_DIR/PeptideAtlas/showPathways"
 			   );
 
-    $tabmenu->addTab( label => 'MRM Atlas' );
+    $tabmenu->addTab( label => 'SRM Atlas' );
 
-    $tabmenu->addMenuItem( tablabel => 'MRM Atlas',
+    $tabmenu->addMenuItem( tablabel => 'SRM Atlas',
 			   label => 'Query Transitions',
-			   helptext => 'Query for MRM Transitions',
+			   helptext => 'Query for SRM Transitions',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/GetTransitions"
 			   );
 
-    $tabmenu->addMenuItem( tablabel => 'MRM Atlas',
+    $tabmenu->addMenuItem( tablabel => 'SRM Atlas',
 			   label => 'Transition Lists',
-			   helptext => 'Download and upload validated MRM transition lists',
+			   helptext => 'Download and upload validated SRM transition lists',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/GetTransitionLists"
 			   );
 
-    $tabmenu->addMenuItem( tablabel => 'MRM Atlas',
-			   label => 'MRM Atlas Builds',
-			   helptext => 'View statistics on available MRM Atlas builds',
-			   url => "$CGI_BASE_DIR/PeptideAtlas/ViewMRMBuild"
+    $tabmenu->addMenuItem( tablabel => 'SRM Atlas',
+			   label => 'SRM Atlas Builds',
+			   helptext => 'View statistics on available SRM Atlas builds',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/ViewSRMBuild"
 			   );
 
 
