@@ -117,12 +117,10 @@ sub main {
  
   #### Process generic "state" parameters before we start
   
-  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
-
-	# This will look for mod-specific params and do the right thing
-	$sbeamsMOD->processModuleParameters(parameters_ref=>\%parameters);
-
-
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters); 
+  # This will look for mod-specific params and do the right thing
+  $sbeamsMOD->processModuleParameters(parameters_ref=>\%parameters);
+  
  #   foreach (keys %parameters){
  #   print "$_ \t $parameters{$_} <BR>";
  # }
@@ -182,7 +180,6 @@ sub handle_request {
   #### If the apply action was to recall a previous resultset, do it
   my %rs_params = $sbeams->parseResultSetParams('q' => $q);
   my $n_params_found = 0;
-
   if ($apply_action =~ /(DOWNLOAD|VIEWRESULTSET)/) {
     $sbeams->readResultSet(
       resultset_file=>$rs_params{set_name},
@@ -192,8 +189,8 @@ sub handle_request {
     );
     $n_params_found = 99;
     #separate the result into exact_resultset and fuzzy_result
-
     if($apply_action =~ /VIEWRESULT/ and ! $search_type_param{single_table}){
+
 			for my $row ( @{$resultset_ref->{data_ref}} ) {
 				 my $match_string = $row->[8];
 				 if($match_string =~ /exact/){
@@ -548,7 +545,12 @@ sub handle_request {
 			}
 			####  display the page header to show the match results
 			if ($sbeams->output_mode() eq 'html') {
-        $sbeamsMOD->display_page_header(project_id =>$project_id,init_tooltip =>0,onload=>'sortables_init()');
+        if( ! $search_type_param{single_table} ){
+          $sbeamsMOD->display_page_header(project_id =>$project_id,init_tooltip =>0,onload=>'sortables_init()');
+        }else{
+          $sbeamsMOD->display_page_header(project_id => $project_id);
+        } 
+ 
 				print $buffer;
 				print "<BR>";
         if( ! $search_type_param{single_table} ){
@@ -637,7 +639,19 @@ sub handle_request {
 				 }
 				 return(0);
 			 }
-      if($sbeams->output_mode() eq 'html'){
+      if ($apply_action =~ /(QUERY|GO)/i) {
+        $rs_params{set_name} = "SETME";
+        #### Store the resultset and parameters to disk resultset cache
+        $sbeams->writeResultSet(
+             resultset_file_ref=>\$rs_params{set_name},
+             resultset_ref=>$resultset_ref,
+             query_parameters_ref=>\%parameters,
+             resultset_params_ref=>\%rs_params,
+             query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+        );
+      }
+
+     if($sbeams->output_mode() eq 'html'){
        if($search_type_param{single_table}){ 
 					$sbeams->displayResultSet(
 							resultset_ref=>$resultset_ref,
@@ -649,24 +663,15 @@ sub handle_request {
 							column_titles_ref=>\@column_titles,
 							base_url=>$base_url,
 					);
-					#### Store the resultset and parameters to disk resultset cache
-					 $rs_params{set_name} = "SETME";
-					 $sbeams->writeResultSet(
-						 resultset_file_ref=>\$rs_params{set_name},
-						 resultset_ref=>$resultset_ref,
-						 query_parameters_ref=>\%parameters,
-						 resultset_params_ref=>\%rs_params,
-						 query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
-					 );
+          $sbeams-> displayResultSetControls(
+              resultset_ref=> $resultset_ref,
+              query_parameters_ref=>\%parameters,
+              rs_params_ref=>\%rs_params,
+              base_url=>$base_url,
+          );
 
-					 $sbeams-> displayResultSetControls(
-							resultset_ref=> $resultset_ref,
-							query_parameters_ref=>\%parameters,
-							rs_params_ref=>\%rs_params,
-							base_url=>$base_url,
-				  );
 			 }else{
-           if($n_fuzzy_results > 1){
+          if($n_fuzzy_results > 1){
             print "<BR>Wild card search results: <BR>" ;
 						displayTable(
 								column_array_ref=>\@column_array,
@@ -683,26 +688,19 @@ sub handle_request {
 								base_url  => $base_url
 						);
 					}
-          $rs_params{set_name} = "SETME";
-          $sbeams->writeResultSet(
-             resultset_file_ref=>\$rs_params{set_name},
-             resultset_ref=>$resultset_ref,
-             query_parameters_ref=>\%parameters,
-             resultset_params_ref=>\%rs_params,
-             query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
-          );
-				 $sbeams-> displayResultSetControls(
-						resultset_ref=> $resultset_ref,
-						query_parameters_ref=>\%parameters,
-						rs_params_ref=>\%rs_params,
-						base_url=>$base_url,
-						row_count => $ROW_COUNT,
-						search_page => 1,
-				);
-     }
-   }elsif($sbeams->output_mode() eq 'xml' || $sbeams->output_mode() eq 'tsv'){
+          $sbeams-> displayResultSetControls(
+            resultset_ref=> $resultset_ref,
+            query_parameters_ref=>\%parameters,
+            rs_params_ref=>\%rs_params,
+            base_url=>$base_url,
+            row_count => $ROW_COUNT,
+            search_page => 1,
+         );
+       }
+   }elsif($sbeams->output_mode() eq 'xml' || $sbeams->output_mode() eq 'tsv'  || 
+          $sbeams->output_mode() eq 'excel'  || $sbeams->output_mode() eq 'csv' ){
 
-        $sbeams->displayResultSet(
+      $sbeams->displayResultSet(
               resultset_ref=>$resultset_ref,
               query_parameters_ref=>\%parameters,
               rs_params_ref=>\%rs_params,
@@ -711,7 +709,7 @@ sub handle_request {
               max_widths=>\%max_widths,
               column_titles_ref=>\@column_titles,
               base_url=>$base_url,
-          );
+      );
    }
 
   }
