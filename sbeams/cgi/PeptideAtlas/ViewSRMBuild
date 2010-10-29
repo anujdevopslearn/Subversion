@@ -47,7 +47,7 @@ $peptide_selector->setSBEAMS( $sbeams );
 ###############################################################################
 # Global Variables
 ###############################################################################
-$PROG_NAME = 'ViewMRMBuild';
+$PROG_NAME = 'ViewSRMBuild';
 main();
 
 
@@ -163,7 +163,7 @@ sub get_build_details {
   }
 
   my $section_header = $sbeamsMOD->encodeSectionHeader(
-    text => "MRM Atlas Build:  $build_name",
+    text => "SRM Atlas Build:  $build_name",
   );
 
   my $content = qq~
@@ -229,7 +229,7 @@ sub get_build_list {
                           );
 
     $content .= qq~
-      <P>Below is a listing of the MRM Atlas builds available to
+      <P>Below is a listing of the SRM Atlas builds available to
       you.  
       ~;
     }
