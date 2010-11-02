@@ -314,9 +314,9 @@ sub handle_request {
       $buffer .= qq~<BR>
       <TABLE WIDTH=50% ALIGN=CENTER BORDER=0 CELLPADDING=0>
       <TR VALIGN=CENTER >
-      <TD WIDTH=40% ALIGN=RIGHT>
-      <DT>
-      Build type: <select name="build_type_name"> $build_type_selection->{HTML_optionlist} </select> 
+      <TD ALIGN=RIGHT>
+      <label for='btype' style="float:left margin-right:3px;";>Build type: </label> 
+      <select name="build_type_name" id='btype'> $build_type_selection->{HTML_optionlist} </select> 
       </TD>
       <TD WIDTH=10% ALIGN=LEFT>
       <DT>
