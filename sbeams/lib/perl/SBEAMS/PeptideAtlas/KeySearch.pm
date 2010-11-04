@@ -66,16 +66,11 @@ sub getSBEAMS {
 } # end getSBEAMS
 
 
-
-###############################################################################
-# rebuildKeyIndex
-###############################################################################
 sub rebuildKeyIndex {
   my $METHOD = 'rebuildKeyIndex';
   my $self = shift || die ("self not passed");
   my %args = @_;
 
-  #### Set verbosity level if provided or not yet set
   my $verbose = $args{verbose};
   if ($verbose) {
     $VERBOSE = $verbose;
@@ -93,8 +88,6 @@ sub rebuildKeyIndex {
     $TESTONLY = 0;
   }
 
-  print "INFO[$METHOD]: Rebuilding key index..." if ($VERBOSE);
-
   #### Retreive parameters
   my $atlas_build_id = $args{atlas_build_id}
     or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
@@ -105,309 +98,209 @@ sub rebuildKeyIndex {
   my $organism_id = $sbeams->get_organism_id( organism => $organism_name )
     or die( "ERROR[$METHOD] Unable to find organism ID for $organism_name" );
 
-  my $organism_specialized_build = $args{organism_specialized_build};
-
-
-  if ($organism_name =~ /^Human$|^Mouse$/i ) {
-
-    my $GOA_directory = $args{GOA_directory}
-      or die("ERROR[$METHOD]: Parameter GOA_directory not passed");
-
-    $self->dropKeyIndex(
+  $self->dropKeyIndex(
       atlas_build_id => $atlas_build_id,
-      organism_specialized_build => $organism_specialized_build,
+  );
+
+  #### Get the list of proteins that have a peptide in this atlas build
+  my $matched_proteins = $self->getNProteinHits(
+    organism_id => $organism_id,
+    atlas_build_id => $atlas_build_id,
+  );
+
+
+  my $counter = 0;
+
+  print "Inserting SearchKeyLink ...\n";
+  foreach my $protein (keys %{$matched_proteins}){
+    my $resource_n_matches = $matched_proteins->{$protein};
+    my %rowdata =(
+            organism_id => $organism_id,
+         atlas_build_id => $atlas_build_id,
+          resource_name => $protein,
+     resource_n_matches => $resource_n_matches, 
+           resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$protein&action=QUERY",
+    );
+    $sbeams->updateOrInsertRow(
+      insert => 1,
+      table_name => "$TBAT_SEARCH_KEY_LINK",
+      rowdata_ref => \%rowdata,
+      verbose=>$VERBOSE,
+      testonly=>$TESTONLY,
     );
 
-    print "Loading protein keys from GOA...\n";
-    $self->buildGoaKeyIndex(
-      GOA_directory => $GOA_directory,
-      organism_name => lc($organism_name), 
-      organism_id => $organism_id, 
-      atlas_build_id => $atlas_build_id,
-    );
-
-    print "Loading peptides keys...\n";
-    $self->buildPeptideKeyIndex(
-      organism_id => $organism_id,
-      atlas_build_id => $atlas_build_id,
-    );
-
-    print "\n";
+    $counter++;
+    print "$counter... " if ($counter/100 eq int($counter/100));
 
   }
 
-
-  if ($organism_name eq 'Yeast') {
-
-    my $SGD_directory = $args{SGD_directory}
-      or die("ERROR[$METHOD]: Parameter SGD_directory not passed");
-
-    $self->dropKeyIndex(
-      atlas_build_id => $atlas_build_id,
-      organism_specialized_build => $organism_specialized_build,
-    );
-
-    print "Loading protein keys from SGD_features.tab...\n";
-    $self->buildSGDKeyIndex(
-      SGD_directory => $SGD_directory,
-      atlas_build_id => $atlas_build_id,
-    );
-
-    print "Loading peptides keys...\n";
-    $self->buildPeptideKeyIndex(
+  print "Loading peptides keys...\n";
+  $self->buildPeptideKeyIndex(
       organism_id=>$organism_id,
       atlas_build_id=>$atlas_build_id,
-    );
+  );
+    
+}
 
-    print "\n";
 
+###############################################################################
+# rebuildKeyIndex
+###############################################################################
+sub InsertSearchKeyEntity {
+  my $METHOD = 'InsertSearchKeyEntity';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+  my $verbose = $args{verbose};
+  if ($verbose) {
+    $VERBOSE = $verbose;
+  } elsif ($VERBOSE) {
+  } else {
+    $VERBOSE = 0;
+  }
+
+  #### Set testonly flag if provided or not yet set
+  my $testonly = $args{testonly};
+  if ($testonly) {
+    $TESTONLY = $testonly;
+  } elsif ($TESTONLY) {
+  } else {
+    $TESTONLY = 0;
   }
 
 
-  if ($organism_name eq 'Halobacterium') {
+  #### Set verbosity level if provided or not yet set
+  print "INFO[$METHOD]: Rebuilding key index..." if ($VERBOSE);
 
+  #### Retreive parameters
+  my $biosequence_set_id = $args{biosequence_set_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+
+  my $organism_name = $self->get_organism_name( biosequence_set_id => $biosequence_set_id )
+    or die( "ERROR[$METHOD] Unable to find organism ID for $biosequence_set_id" );
+
+  my $reference_directory;
+
+  if ($organism_name =~ /^Human$|^Mouse$/i ) {
+    #my $GOA_directory = $args{GOA_directory}
+    my $uc_organism_name = uc($organism_name);
+    my $GOA_directory = `ls -dlrt /net/db/src/GOA/* | grep '^d' | tail -1`;
+    chomp $GOA_directory;
+    $GOA_directory  =~ s/.*\/net/\/net/;
+
+    #  or die("ERROR[$METHOD]: Parameter GOA_directory not passed");
+    print "Loading protein keys from GOA...\n";
+    $self->buildGoaKeyIndex(
+      GOA_directory =>  $GOA_directory,
+      organism_name => lc($organism_name), 
+      biosequence_set_id => $biosequence_set_id,
+    );
+  }else{
+    $reference_directory = $args{reference_directory} 
+      or die("ERROR[$METHOD]: Parameter reference_directory  not passed");
+  }
+
+  if ($organism_name eq 'Yeast') {
     my $reference_directory = $args{reference_directory}
       or die("ERROR[$METHOD]: Parameter reference_directory not passed");
-
-    $self->dropKeyIndex(
-      atlas_build_id => $atlas_build_id,
-      organism_specialized_build => $organism_specialized_build,
+    print "Loading protein keys from SGD_features.tab...\n";
+    $self->buildSGDKeyIndex(
+      reference_directory => $reference_directory,
+      biosequence_set_id => $biosequence_set_id,
     );
+  }
 
+  if ($organism_name eq 'Halobacterium') {
+    my $reference_directory = $args{reference_directory}
+      or die("ERROR[$METHOD]: Parameter reference_directory not passed");
     print "Loading protein keys from SBEAMS and reference files...\n";
     $self->buildHalobacteriumKeyIndex(
       reference_directory => $reference_directory,
-      atlas_build_id => $atlas_build_id,
+      biosequence_set_id => $biosequence_set_id,
     );
-
-    print "Loading peptides keys...\n";
-    $self->buildPeptideKeyIndex(
-      organism_id=>$organism_id,
-      atlas_build_id=>$atlas_build_id,
-    );
-
-    print "\n";
-
   }
 
-
   if ($organism_name eq 'Streptococcus') {
-
     my $reference_directory = $args{reference_directory}
       or die("ERROR[$METHOD]: Parameter reference_directory not passed");
-
-    $self->dropKeyIndex(
-      atlas_build_id => $atlas_build_id,
-      organism_specialized_build => $organism_specialized_build,
-    );
-
     print "Loading protein keys from SBEAMS and reference files...\n";
     $self->buildStreptococcusKeyIndex(
       reference_directory => $reference_directory,
-      atlas_build_id => $atlas_build_id,
+      biosequence_set_id => $biosequence_set_id,
     );
-
-    print "Loading peptides keys...\n";
-    $self->buildPeptideKeyIndex(
-      organism_id=>$organism_id,
-      atlas_build_id=>$atlas_build_id,
-    );
-
-    print "\n";
-
   }
 
-
   if ($organism_name eq 'Leptospira interrogans') {
-
     my $reference_directory = $args{reference_directory}
       or die("ERROR[$METHOD]: Parameter reference_directory not passed");
-
-    $self->dropKeyIndex(
-      atlas_build_id => $atlas_build_id,
-      organism_specialized_build => $organism_specialized_build,
-    );
-
     print "Loading protein keys from SBEAMS and reference files...\n";
     $self->buildLeptospiraKeyIndex(
       reference_directory => $reference_directory,
-      atlas_build_id => $atlas_build_id,
+      biosequence_set_id => $biosequence_set_id,
     );
-
-    print "Loading peptides keys...\n";
-    $self->buildPeptideKeyIndex(
-      organism_id=>$organism_id,
-      atlas_build_id=>$atlas_build_id,
-    );
-
-    print "\n";
-
   }
 
-
-
   if ($organism_name eq 'Drosophila') {
-
     my $reference_directory = $args{reference_directory}
       or die("ERROR[$METHOD]: Parameter reference_directory not passed");
-
-    $self->dropKeyIndex(
-      atlas_build_id => $atlas_build_id,
-      organism_specialized_build => $organism_specialized_build,
-    );
-
     print "Loading protein keys from SBEAMS and reference files...\n";
+    
     $self->buildDrosophilaKeyIndex(
       reference_directory => $reference_directory,
-      atlas_build_id => $atlas_build_id,
+      biosequence_set_id => $biosequence_set_id,
     );
-
-    print "Loading peptides keys...\n";
-    $self->buildPeptideKeyIndex(
-      organism_id=>$organism_id,
-      atlas_build_id=>$atlas_build_id,
-    );
-
-    print "\n";
-
   }
 
   if ($organism_name eq 'Mtuberculosis') {
-
     my $reference_directory = $args{reference_directory}
       or die("ERROR[$METHOD]: Parameter reference_directory not passed");
-
-    $self->dropKeyIndex(
-      atlas_build_id => $atlas_build_id,
-      organism_specialized_build => $organism_specialized_build,
-    );
-
     print "Loading protein keys from SBEAMS and reference files...\n";
     $self->buildMTBKeyIndex(
       reference_directory => $reference_directory,
-      atlas_build_id => $atlas_build_id,
+      biosequence_set_id => $biosequence_set_id,
     );
-
-    print "Loading peptides keys...\n";
-    $self->buildPeptideKeyIndex(
-      organism_id=>$organism_id,
-      atlas_build_id=>$atlas_build_id,
-    );
-
-    print "\n";
-
   }
 
   if ($organism_name eq 'Pig') {
-
     my $reference_directory = $args{reference_directory}
       or die("ERROR[$METHOD]: Parameter reference_directory not passed");
-
-    $self->dropKeyIndex(
-      atlas_build_id => $atlas_build_id,
-      organism_specialized_build => $organism_specialized_build,
-    );
-
     print "Loading protein keys from SBEAMS and reference files...\n";
     $self->buildPigKeyIndex(
       reference_directory => $reference_directory,
-      atlas_build_id => $atlas_build_id,
+      biosequence_set_id => $biosequence_set_id,
     );
-
-    print "Loading peptides keys...\n";
-    $self->buildPeptideKeyIndex(
-      organism_id=>$organism_id,
-      atlas_build_id=>$atlas_build_id,
-    );
-
-    print "\n";
-
   }
 
  if ($organism_name eq 'Honeybee') {
-
     my $reference_directory = $args{reference_directory}
       or die("ERROR[$METHOD]: Parameter reference_directory not passed");
-
-    $self->dropKeyIndex(
-      atlas_build_id => $atlas_build_id,
-      organism_specialized_build => $organism_specialized_build,
-    );
-
     print "Loading protein keys from SBEAMS and reference files...\n";
     $self->buildHoneyBeeKeyIndex(
       reference_directory => $reference_directory,
-      atlas_build_id => $atlas_build_id,
+      biosequence_set_id => $biosequence_set_id,
     );
-
-    print "Loading peptides keys...\n";
-    $self->buildPeptideKeyIndex(
-      organism_id=>$organism_id,
-      atlas_build_id=>$atlas_build_id,
-    );
-
-    print "\n";
-
   }
 
-
  if ($organism_name eq 'Ecoli') {
-
     my $reference_directory = $args{reference_directory}
       or die("ERROR[$METHOD]: Parameter reference_directory not passed");
-
-    $self->dropKeyIndex(
-      atlas_build_id => $atlas_build_id,
-      organism_specialized_build => $organism_specialized_build,
-    );
-
     print "Loading protein keys from SBEAMS and reference files...\n";
     $self->buildEcoliKeyIndex(
       reference_directory => $reference_directory,
-      atlas_build_id => $atlas_build_id,
+      biosequence_set_id => $biosequence_set_id,
     );
-
-    print "Loading peptides keys...\n";
-    $self->buildPeptideKeyIndex(
-      organism_id=>$organism_id,
-      atlas_build_id=>$atlas_build_id,
-    );
-
-    print "\n";
-
   }
-
 
   if ($organism_name eq 'C Elegans') {
       my $reference_directory = $args{reference_directory}
       or die("ERROR[$METHOD]: Parameter reference_directory not passed");
-
-      $self->dropKeyIndex(
-			  atlas_build_id => $atlas_build_id,
-			  organism_specialized_build => $organism_specialized_build,
-			  );
-
       print "Loading protein keys from SBEAMS and reference files...\n";
       $self->buildCelegansKeyIndex(
 				   reference_directory => $reference_directory,
-				   atlas_build_id => $atlas_build_id,
+           biosequence_set_id => $biosequence_set_id,
 				   );
-
-      print "Loading peptides keys...\n";
-      $self->buildPeptideKeyIndex(
-				  organism_id=>$organism_id,
-				  atlas_build_id=>$atlas_build_id,
-				  );
-
-      print "\n";
-
   }
 
-  #my $sql = "CREATE NONCLUSTERED INDEX idx_search_key_name ON $TBAT_SEARCH_KEY ( search_key_name )";
-  #$sbeams->executeSQL($sql);
-
   return(1);
-  
 } # end rebuildKeyIndex
 
 
@@ -419,8 +312,6 @@ sub dropKeyIndex {
   my $METHOD = 'dropKeyIndex';
   my $self = shift || die ("self not passed");
   my %args = @_;
-
-
   my $atlas_build_id = $args{atlas_build_id}
     or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
 
@@ -430,18 +321,15 @@ sub dropKeyIndex {
   unless ($sbeams) {
     die("ERROR[$METHOD]: sbeams object is not defined. Use setSBEAMS() method");
   }
-
   #my $sql = "DROP INDEX $TBAT_SEARCH_KEY.idx_search_key_name";
   #$sbeams->executeSQL($sql);
 
   my $sql = "DELETE FROM $TBAT_SEARCH_KEY_LINK WHERE atlas_build_id = '$atlas_build_id'";
-print "$sql\n";
   $sbeams->executeSQL($sql);
 
   return(1);
 
 } # end dropKeyIndex
-
 
 
 ###############################################################################
@@ -461,20 +349,16 @@ sub buildGoaKeyIndex {
     die("ERROR[$METHOD]: '$GOA_directory' is not a directory");
   }
 
-  my $atlas_build_id = $args{atlas_build_id}
-    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+  my $biosequence_set_id = $args{biosequence_set_id}
+    or die("ERROR[$METHOD]: Parameter biosequence_set_id not passed");
 
   my $organism_name = $args{organism_name}
     or die("ERROR[$METHOD]: Parameter organism_name not passed");
 
-  # Use passed organism ID if available, else use lookup.
-  my $organism_id = $args{organism_id} || 
-                    $sbeams->get_organism_id( organism => $args{organism_name} ) ||
-    die("ERROR[$METHOD]: Unable to determine organism_id for $args{organism_name}");
-
   #### Open the provided GOA xrefs file
   #my $GOA_file = "$GOA_directory/${organism_name}.xrefs";
   my $GOA_file = "$GOA_directory/ipi.".uc($organism_name).".xrefs";
+  
   open(INFILE,$GOA_file)
     or die("ERROR[$METHOD]: Unable to open file '$GOA_file'");
 
@@ -483,17 +367,11 @@ sub buildGoaKeyIndex {
     assocations_file => "$GOA_directory/gene_association.goa_${organism_name}",
   );
 
-  #### Get the list of proteins that have a peptide in this atlas build
-  my $matched_proteins = $self->getNProteinHits(
-    organism_id => $args{organism_id},
-    atlas_build_id => $atlas_build_id,
-  );
-
   my $proteinList =  $self->getProteinList(
-    atlas_build_id => $atlas_build_id,
+    biosequence_set_id => $biosequence_set_id,
   );
     
- 
+
   #### Read all the GOA xrefs
   my $line;
   my $counter = 0;
@@ -502,9 +380,10 @@ sub buildGoaKeyIndex {
     chomp($line);
     my ($Database,$Accession,$IPI,$UniProtSP,$UniProtTR,$Ensembl,$RefSeqNP,
         $RefSeqXP,$Hinv,$proteins,$HGNCgenew,$EntrezGene,$UNIPARC,
-	$UniGene) = split(/\t/,$line);
+      	$UniGene) = split(/\t/,$line);
     my $UniProtKB;
-
+    my $protein_alias_master;
+    my $protein_alias_master_source; 
     if (0) {
       print "-------------------------------------------------\n";
       print "Database=$Database\n";
@@ -542,18 +421,6 @@ sub buildGoaKeyIndex {
       $Ensembl = '';
     }
 
-    #### Split the Ensembl ID's
-    my @Ensembl_IDS = splitEntities(list=>$Ensembl,delimiter=>';');
-
-    my $n_Ensembl_IDS = scalar(@Ensembl_IDS);
-
-    if ($n_Ensembl_IDS == 0) {
-      #print "WARNING[$METHOD]: No valid ENSP for $Database:$Accession. Ignoring..\n" if ($VERBOSE > 1);
-      #next;
-      @Ensembl_IDS = ( 'NO_ENSP' );
-      $n_Ensembl_IDS = scalar(@Ensembl_IDS);
-    }
-
     #### Build a list of protein links
     my @links;
 
@@ -564,48 +431,59 @@ sub buildGoaKeyIndex {
       push(@links,\@tmp) unless ($Database =~ /ENSEMBL/);
     }
 
-    my @IPI_IDS;
-    if ($IPI) {
-      my @list = splitEntities(list=>$IPI,delimiter=>';');
-      @IPI_IDS = @list;
-      foreach my $item ( @list ) {
-        my @tmp = ('IPI',$item,9);
-        push(@links,\@tmp);
-      }
-      #### If there was no Ensembl ID, then replace with IPI IDs if any
-      if ($Ensembl_IDS[0] eq 'NO_ENSP') {
-	    @Ensembl_IDS = @list;
-	    $n_Ensembl_IDS = scalar(@Ensembl_IDS);
-      }
-    }
-
-    my @UniProt_IDS =();
-    if ($UniProtKB) {
-      my @list = splitEntities(list=>$UniProtKB);
-      @UniProt_IDS = @list;
-    }
-
-    if ($UniProtTR) {
-      my @list = splitEntities(list=>$UniProtTR);
-      push (@UniProt_IDS, @list);
-      foreach my $item ( @list ) {
-        my @tmp = ('UniProt/TrEMBL',$item,35);
-        push(@links,\@tmp);
-      }
-    }
-
     # added UniProtSP 07/06/09 TMF.
     if ($UniProtSP) {
       my @list = splitEntities(list=>$UniProtSP);
-      push (@UniProt_IDS, @list);
+      $protein_alias_master = $list[0];
+      $protein_alias_master_source = 'UniProt/Swiss-Prot';
       foreach my $item ( @list ) {
         my @tmp = ('UniProt/Swiss-Prot',$item,1);
         push(@links,\@tmp);
       }
     }
 
+    if ($UniProtKB) {
+      my @list = splitEntities(list=>$UniProtKB);
+    }
+
+    #### Split the Ensembl ID's
+    my @Ensembl_IDS = splitEntities(list=>$Ensembl,delimiter=>';');
+
+    if(! $protein_alias_master and @Ensembl_IDS > 0 ){
+      $Ensembl_IDS[0] =~ s/HAVANA://;
+      $protein_alias_master = $Ensembl_IDS[0];
+      $protein_alias_master_source = 'Ensembl Protein';
+    }
+     
+    if ($IPI) {
+      my @list = splitEntities(list=>$IPI,delimiter=>';');
+      if(! $protein_alias_master ){
+        $protein_alias_master = $list[0];
+        $protein_alias_master_source = 'IPI';
+      }
+
+      foreach my $item ( @list ) {
+        my @tmp = ('IPI',$item,9);
+        push(@links,\@tmp);
+      }
+    }
+
+
+    if ($UniProtTR) {
+      my @list = splitEntities(list=>$UniProtTR);
+      foreach my $item ( @list ) {
+        my @tmp = ('UniProt/TrEMBL',$item,35);
+        push(@links,\@tmp);
+      }
+    }
+
+
     if ($RefSeqNP) {
       my @list = splitEntities(list=>$RefSeqNP,delimiter=>';');
+      if(! $protein_alias_master ){
+        $protein_alias_master = $list[0];
+        $protein_alias_master_source = 'RefSeq';
+      }
       foreach my $item ( @list ) {
     	$item =~ s/^\w+://;
         my @tmp = ('RefSeq',$item,39);
@@ -659,65 +537,44 @@ sub buildGoaKeyIndex {
     #### Write the links for each Ensembl ID
     ### find protein_alias_master (go through the Ensembl, IPI and UniProt combined 
     ### list and find the first one that is in the biosequence set
-  
-    my $protein_alias_master= '';
-    my $foundMaster = 0;
-    LOOP: foreach my $p (@Ensembl_IDS, @IPI_IDS, @UniProt_IDS){
-      $p =~ s/HAVANA://;
-      if(defined $proteinList->{$p}){
-        $protein_alias_master = $p;
-        $foundMaster = 1;
-        last LOOP;
-      }
-    }
-    #if(! $foundMaster){print "$Ensembl_IDS[0]\n";}
 
-    next if (! $foundMaster);
-    
     foreach my $Ensembl_ID (@Ensembl_IDS) {
       #### Strip HAVANA prefix
       $Ensembl_ID =~ s/HAVANA://;
+      if(defined $proteinList->{$Ensembl_ID}){
+        $proteinList->{$Ensembl_ID} = 1;
+      }
 
       #### Insert an entry for the Ensembl ID itself
       my %rowdata = (
         search_key_name => $Ensembl_ID,
         search_key_type => 'Ensembl Protein',
         search_key_dbxref_id => 20,
-        organism_id => $organism_id,
-        atlas_build_id => $atlas_build_id,
         resource_name => $Ensembl_ID,
         resource_type => 'Ensembl Protein',
-        resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$Ensembl_ID&action=QUERY",
-        resource_n_matches => $matched_proteins->{$Ensembl_ID},
         protein_alias_master => $protein_alias_master,
       );
 
-      $self -> insertSearchKey( rowdata => \%rowdata);
+      $self->insertSearchKeyEntity( rowdata => \%rowdata);
     }  
     foreach my $link (@links) {
-      #print "    ".join("=",@{$link})."\n";
       my $resource_name = $link->[1];
       my $resource_type = $link->[0];
-      if(not defined $proteinList->{$resource_name}){
+      if(defined $proteinList->{$link->[1]}){
+        $proteinList->{$link->[1]} = 1;
+      }else {
         $resource_name = $protein_alias_master;
-        $resource_type = 'Ensembl Protein';
-      #  if($link->[1] =~ /IPI00868927/){
-      #  print "$link->[1]\n";
-      #  exit;}
+        $resource_type = $protein_alias_master_source;
       }
       my %rowdata = (
           search_key_name => $link->[1],
-    	  search_key_type => $link->[0],
-    	  search_key_dbxref_id => $link->[2],
-          organism_id => $organism_id,
-          atlas_build_id => $atlas_build_id,
-	      resource_name => $resource_name,
-    	  resource_type => $resource_type,
-    	  resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$resource_name&action=QUERY",
-          resource_n_matches => $matched_proteins->{$protein_alias_master},
+    	    search_key_type => $link->[0],
+    	    search_key_dbxref_id => $link->[2],
+	        resource_name => $resource_name,
+    	    resource_type => $resource_type,
           protein_alias_master => $protein_alias_master,
         );
-        $self -> insertSearchKey( rowdata => \%rowdata);
+      $self->insertSearchKeyEntity( rowdata => \%rowdata);
     }
 
     $counter++;
@@ -726,12 +583,88 @@ sub buildGoaKeyIndex {
     #my $xx=<STDIN>;
 
   } # endwhile ($line=<INFILE>)
-
-   close(INFILE);
+  close(INFILE);
+  # check if there is any protein in the proteinList have not been entered into the entity table
+  $self -> checkCompleteness(proteinList=> $proteinList,
+                             count      => $counter); 
 
 } # end buildGoaKeyIndex
+sub checkCompleteness{
+  my $SUB =  'checkCompleteness';
+  my $self = shift;
 
+  my %args = @_;
+  my $proteinList = $args{proteinList} ;
+  my $counter = $args{count};
 
+  foreach my $prot (keys %{$proteinList}){
+    if(! $proteinList->{$prot}){
+
+     my %rowdata = (
+        search_key_name => $prot,
+        search_key_type => 'Protein Accession',
+        resource_name => $prot,
+        resource_type => 'Protein Accession',
+        protein_alias_master => $prot,
+     );
+     $self->insertSearchKeyEntity( rowdata => \%rowdata);
+     $counter++;
+     print "$counter... " if ($counter/100 eq int($counter/100));
+    }
+
+  }
+
+}
+
+sub insertSearchKeyEntity {
+
+  my $SUB = 'insertSearchKeyEntity';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+  my $rowdata = $args{rowdata};
+
+  my $search_key_name = $rowdata->{search_key_name};
+  my $search_key_type = $rowdata->{search_key_type};
+  my $search_key_dbxref_id = $rowdata->{search_key_dbxref_id};
+  my $resource_name = $rowdata->{resource_name};
+  my $resource_type = $rowdata->{resource_type};
+  my $protein_alias_master = $rowdata->{protein_alias_master} || $resource_name;
+  my $sbeams = $self->getSBEAMS();
+
+  $search_key_name =~ s/'/''/g;
+ 
+  
+  my $sql = qq~
+     SELECT SEARCH_KEY_ID
+     FROM $TBAT_SEARCH_KEY_ENTITY
+     WHERE RESOURCE_NAME = '$resource_name'
+       AND SEARCH_KEY_NAME = '$search_key_name'
+  ~;
+  #print "$sql\n";
+  my @rows = $sbeams->selectOneColumn($sql);
+  my %rowdata=();
+
+  if(! @rows){
+      %rowdata = (
+      search_key_name => $search_key_name,
+      search_key_type => $search_key_type,
+      search_key_dbxref_id => $search_key_dbxref_id,
+      resource_name => $resource_name,
+      resource_type => $resource_type,
+      protein_alias_master => $protein_alias_master,
+    );
+    print "insert: $search_key_name $search_key_type $resource_name\n" if $VERBOSE;
+    $sbeams->updateOrInsertRow(
+      insert => 1,
+      table_name => "$TBAT_SEARCH_KEY_ENTITY",
+      rowdata_ref => \%rowdata,
+      verbose=>$VERBOSE,
+      testonly=>$TESTONLY,
+    );
+  }else{
+    print "already in table: $search_key_name $resource_name\n" if $VERBOSE;
+  }
+}
 
 ###############################################################################
 # readGOAAssociations
@@ -799,19 +732,19 @@ sub buildSGDKeyIndex {
 
   print "INFO[$METHOD]: Building SGD key index...\n" if ($VERBOSE);
 
-  my $atlas_build_id = $args{atlas_build_id}
+  my $biosequence_set_id = $args{biosequence_set_id}
     or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
 
-  my $SGD_directory = $args{SGD_directory}
-    or die("ERROR[$METHOD]: Parameter SGD_directory not passed");
+  my $reference_directory = $args{reference_directory}
+    or die("ERROR[$METHOD]: Parameter reference_directory not passed");
 
-  unless (-d $SGD_directory) {
-    die("ERROR[$METHOD]: '$SGD_directory' is not a directory");
+  unless (-d $reference_directory) {
+    die("ERROR[$METHOD]: '$reference_directory' is not a directory");
   }
 
 
   #### Read the contents of the UniProtKB mapping file
-  my $UP_file = "$SGD_directory/UniProtKB_identifiers_from_AlainGateau.txt";
+  my $UP_file = "$reference_directory/UniProtKB_identifiers_from_AlainGateau.txt";
   my %UniProtAccessions;
   open(INFILE,$UP_file)
     or die("ERROR[$METHOD]: Unable to open file '$UP_file'");
@@ -826,20 +759,15 @@ sub buildSGDKeyIndex {
   }
   close(INFILE);
 
-
-  #### Open the provided SGD_features.tab file
-  my $SGD_file = "$SGD_directory/SGD_features.tab";
-  open(INFILE,$SGD_file)
-    or die("ERROR[$METHOD]: Unable to open file '$SGD_file'");
-
-  my $organism_id = 3;
-
-  #### Get the list of proteins that have a peptide in this atlas build
-  my $matched_proteins = $self->getNProteinHits(
-    organism_id=>$organism_id,
-    atlas_build_id=>$atlas_build_id,
+  my $proteinList =  $self->getProteinList(
+    biosequence_set_id => $biosequence_set_id,
   );
 
+
+  #### Open the provided SGD_features.tab file
+  my $SGD_file = "$reference_directory/SGD_features.tab";
+  open(INFILE,$SGD_file)
+    or die("ERROR[$METHOD]: Unable to open file '$SGD_file'");
 
   #### Read all the data
   my $line;
@@ -849,11 +777,12 @@ sub buildSGDKeyIndex {
     chomp($line);
     my ($SGDID,$feature_type,$feature_qualifier,$feature_name,$gene_name,
         $aliases,$chromosome_string,$chr_junk,$chromosome,
-	$chr_start,$chr_end,$strand,
+      	$chr_start,$chr_end,$strand,
         $gene_pos,$seq_version,$unknown_version,$description,
        ) = split(/\t/,$line);
 
     #### Skip if this isn't an ORF
+    my @protein_synonyms = ();
     unless ($feature_type eq 'ORF') {
       next;
     }
@@ -909,6 +838,7 @@ sub buildSGDKeyIndex {
 
     if ($aliases) {
       my @list = splitEntities(list=>$aliases,delimiter=>'\|');
+      push @protein_synonyms,@list;
       foreach my $item ( @list ) {
         my @tmp = ('Alias',$item);
         push(@links,\@tmp);
@@ -928,21 +858,21 @@ sub buildSGDKeyIndex {
       print "UniProtKB: $feature_name not found\n";
     }
 
-
+    my $protein_alias_master = $protein_synonyms[0];
     foreach my $link (@links) {
       #print "    ".join("=",@{$link})."\n";
+      if(defined $proteinList->{$link->[1]}){
+        $proteinList->{$link->[1]} = 1;
+      }
+
       my %rowdata = (
         search_key_name => $link->[1],
         search_key_type => $link->[0],
         search_key_dbxref_id => $link->[2],
-        organism_id => $organism_id,
-        atlas_build_id => $atlas_build_id,
         resource_name => $feature_name,
         resource_type => 'Yeast ORF Name',
-        resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$feature_name&action=QUERY",
-        resource_n_matches => $matched_proteins->{$feature_name},
       );
-       $self -> insertSearchKey( rowdata => \%rowdata);
+       $self -> insertSearchKeyEntity( rowdata => \%rowdata);
     }
 
 
@@ -955,6 +885,10 @@ sub buildSGDKeyIndex {
 
   print "\n";
   close(INFILE);
+
+  $self -> checkCompleteness(proteinList=> $proteinList,
+                             count      => $counter);
+
 
 } # end buildGoaKeyIndex
 
@@ -970,7 +904,7 @@ sub buildHalobacteriumKeyIndex {
 
   print "INFO[$METHOD]: Building Halobacterium key index...\n" if ($VERBOSE);
 
-  my $atlas_build_id = $args{atlas_build_id}
+  my $biosequence_set_id = $args{biosequence_set_id}
     or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
 
   my $reference_directory = $args{reference_directory}
@@ -980,7 +914,6 @@ sub buildHalobacteriumKeyIndex {
     die("ERROR[$METHOD]: '$reference_directory' is not a directory");
   }
 
-  my $organism_id = 4;
 
   #### Load the ancient ORF names and create a lookup table
   my $reference_file = "$reference_directory/ORFmatches-edited.txt";
@@ -996,21 +929,13 @@ sub buildHalobacteriumKeyIndex {
   }
   close(INFILE);
 
-
-  #### Get the list of proteins that have a peptide in this atlas build
-  my $matched_proteins = $self->getNProteinHits(
-    organism_id=>$organism_id,
-    atlas_build_id=>$atlas_build_id,
-  );
-
-
   #### Fetch the latest data from SBEAMS
   use SBEAMS::Client;
   my $remote_sbeams = new SBEAMS::Client;
   my $server_uri = "https://db.systemsbiology.net/sbeams";
 
 
-  #### Define the desired command and parameters
+  ##### Define the desired command and parameters
   my $server_command = "ProteinStructure/BrowseBioSequence.cgi";
   my $command_parameters = {
     biosequence_set_id => 5,
@@ -1097,20 +1022,13 @@ sub buildHalobacteriumKeyIndex {
         search_key_name => $link->[1],
         search_key_type => $link->[0],
         search_key_dbxref_id => $link->[2],
-        organism_id => $organism_id,
-        atlas_build_id => $atlas_build_id,
         resource_name => $biosequence_name,
         resource_type => 'Halobacterium ORF Name',
-        resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$biosequence_name&action=QUERY",
-        resource_n_matches => $matched_proteins->{$biosequence_name},
       );
-       $self -> insertSearchKey( rowdata => \%rowdata);
+       $self -> insertSearchKeyEntity( rowdata => \%rowdata);
     }
-
-
     $counter++;
     print "$counter... " if ($counter/100 eq int($counter/100));
-
     my $xx=<STDIN> if (0);
 
   } # endfor each row
@@ -1130,7 +1048,7 @@ sub buildStreptococcusKeyIndex {
 
   print "INFO[$METHOD]: Building Streptococcus key index...\n" if ($VERBOSE);
 
-  my $atlas_build_id = $args{atlas_build_id}
+  my $biosequence_set_id  = $args{biosequence_set_id }
     or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
 
   my $reference_directory = $args{reference_directory}
@@ -1187,12 +1105,12 @@ sub buildStreptococcusKeyIndex {
   #### Open file and skip header
   open(INFILE,$reference_file)
     or die("ERROR[$METHOD]: Unable to open file '$reference_file'");
-  while (my $line = <INFILE>) {
-    last if ($line =~ /^##Type/);
-  }
+    while (my $line = <INFILE>) {
+      last if ($line =~ /^##Type/);
+    }
 
-  #### Load data
-  while (my $line = <INFILE>) {
+    #### Load data
+    while (my $line = <INFILE>) {
     $line =~ s/[\r\n]//g;
     my @columns = split("\t",$line);
     next unless ($columns[2] eq 'CDS');
@@ -1205,31 +1123,31 @@ sub buildStreptococcusKeyIndex {
     foreach my $keyvaluepair ( @keyvaluepairs ) {
 
       if ( $keyvaluepair =~ /(\w+)=(.+)/ ) {
-	$key = $1;
-	$value = $2;
+       	$key = $1;
+	      $value = $2;
       } else {
-	print "WARNING: Unable to parse '$keyvaluepair' into key=value\n";
-	next;
+       	print "WARNING: Unable to parse '$keyvaluepair' into key=value\n";
+       	next;
       }
       #print "keyvaluepair: $key=$value\n";
 
       if ($key eq 'db_xref') {
-	if ($value =~ /^GI:(\d+)$/) {
-	  $gi = $1;
-	} elsif ($value =~ /^GeneID:(\d+)$/) {
-	  $geneID = $1;
-	} else {
-	  print "WARNING: unable to parse db_ref '$key=$value'\n";
-	}
+			if ($value =~ /^GI:(\d+)$/) {
+				$gi = $1;
+			} elsif ($value =~ /^GeneID:(\d+)$/) {
+				$geneID = $1;
+			} else {
+				print "WARNING: unable to parse db_ref '$key=$value'\n";
+			}
       }
 
       if ($key eq 'protein_id') {
-	$refseq = $value;
-      }
+				$refseq = $value;
+			}
 
       if ($key eq 'note') {
-	$note = $value;
-	$note =~ s/\%([A-Fa-f0-9]{2})/pack('C', hex($1))/seg;
+				$note = $value;
+				$note =~ s/\%([A-Fa-f0-9]{2})/pack('C', hex($1))/seg;
       }
 
     }
@@ -1260,14 +1178,9 @@ sub buildStreptococcusKeyIndex {
   }
   close(INFILE);
 
-
-  #### Get the list of proteins that have a peptide in this atlas build
-  my $matched_proteins = $self->getNProteinHits(
-    organism_id=>$organism_id,
-    atlas_build_id=>$atlas_build_id,
+  my $proteinList =  $self->getProteinList(
+    biosequence_set_id => $biosequence_set_id,
   );
-
-
   #### Loop over all input rows processing information
   my $counter = 0;
   foreach my $biosequence_name (keys(%proteins)) {
@@ -1282,25 +1195,25 @@ sub buildStreptococcusKeyIndex {
 
     foreach my $key ( qw (ORF_name gene_name COG full_name RefSeq combined Functional_Note) ) {
       if (exists($proteins{$biosequence_name}->{$key})) {
-	my @tmp = ($key,$proteins{$biosequence_name}->{$key});
-	push(@links,\@tmp);
+    	  my @tmp = ($key,$proteins{$biosequence_name}->{$key});
+      	push(@links,\@tmp);
       }
     }
 
     foreach my $link (@links) {
+      if(defined $proteinList->{$link->[1]}){
+        $proteinList->{$link->[1]} = 1;
+      }
+
       #print "    ".join("=",@{$link})."\n";
       my %rowdata = (
         search_key_name => $link->[1],
         search_key_type => $link->[0],
         search_key_dbxref_id => $link->[2],
-        organism_id => $organism_id,
-        atlas_build_id => $atlas_build_id,
         resource_name => $biosequence_name,
         resource_type => 'S. pyogenes accession',
-        resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$biosequence_name&action=QUERY",
-        resource_n_matches => $matched_proteins->{$biosequence_name},
       );
-      $self->insertSearchKey( rowdata => \%rowdata);
+      $self->insertSearchKeyEntity( rowdata => \%rowdata);
     }
 
 
@@ -1310,8 +1223,10 @@ sub buildStreptococcusKeyIndex {
     #my $xx=<STDIN>;
 
   } # endfor each biosequence
+  # check if there is any protein in the proteinList have not been entered into the entity table
+  $self -> checkCompleteness(proteinList=> $proteinList,
+                             count      => $counter);
 
-  print "\n";
 
 } # end buildStreptococcusKeyIndex
 
@@ -1326,7 +1241,7 @@ sub buildLeptospiraKeyIndex {
 
   print "INFO[$METHOD]: Building Leptospira key index...\n" if ($VERBOSE);
 
-  my $atlas_build_id = $args{atlas_build_id}
+  my $biosequence_set_id  = $args{biosequence_set_id}
     or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
 
   my $reference_directory = $args{reference_directory}
@@ -1456,13 +1371,9 @@ sub buildLeptospiraKeyIndex {
   }
   close(INFILE);
 
-
-  #### Get the list of proteins that have a peptide in this atlas build
-  my $matched_proteins = $self->getNProteinHits(
-    organism_id=>$organism_id,
-    atlas_build_id=>$atlas_build_id,
+  my $proteinList =  $self->getProteinList(
+    biosequence_set_id => $biosequence_set_id,
   );
-
 
   #### Loop over all input rows processing information
   my $counter = 0;
@@ -1489,19 +1400,18 @@ sub buildLeptospiraKeyIndex {
     }
 
     foreach my $link (@links) {
+      if(defined $proteinList->{$link->[1]}){
+        $proteinList->{$link->[1]} = 1;
+      }
       #print "    ".join("=",@{$link})."\n";
       my %rowdata = (
         search_key_name => $link->[1],
         search_key_type => $link->[0],
         search_key_dbxref_id => $link->[2],
-        organism_id => $organism_id,
-        atlas_build_id => $atlas_build_id,
         resource_name => $proteins{$biosequence_name}->{combined},
         resource_type => 'L. interrogans accession',
-        resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$proteins{$biosequence_name}->{combined}&action=QUERY",
-        resource_n_matches => $matched_proteins->{$proteins{$biosequence_name}->{combined}},
       );
-      $self->insertSearchKey( rowdata => \%rowdata);
+      $self->insertSearchKeyEntity( rowdata => \%rowdata);
     }
 
 
@@ -1511,6 +1421,9 @@ sub buildLeptospiraKeyIndex {
     #my $xx=<STDIN>;
 
   } # endfor each biosequence
+
+  $self->checkCompleteness(proteinList=> $proteinList,
+                             count      => $counter);
 
   print "\n";
 
@@ -1526,7 +1439,7 @@ sub buildMTBKeyIndex {
 
   print "INFO[$METHOD]: Building MTB key index...\n" if ($VERBOSE);
 
-  my $atlas_build_id = $args{atlas_build_id}
+  my $biosequence_set_id  = $args{biosequence_set_id}
     or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
 
   my $reference_directory = $args{reference_directory}
@@ -1538,18 +1451,6 @@ sub buildMTBKeyIndex {
 
   my $organism_id = 40;
 
-  #### Get the list of proteins that have a peptide in this atlas build
-  my $matched_proteins = $self->getNProteinHits(
-    organism_id=>$organism_id,
-    atlas_build_id=>$atlas_build_id,
-  );
-
-  #my %dbxref_ids = (
-  #  'RefSeq'       => 39,
-  #  'GeneBank'     => 46,
-  #  'UniProt'      => 35,
-  #  'Gene Ontology'=> 26,
-  #);
   
   my %proteins = ();
   my $protein_file = "$reference_directory/Mtb-H37RvH37Ra_Mb-BCG_All_2010-06.fasta";
@@ -1578,14 +1479,18 @@ sub buildMTBKeyIndex {
   }
   close(INFILE);
   #### Open the GOA file
-  my $GOA_file = "$reference_directory/M_tuberculosis_ATCC_Oshkosh.goa";
+  #my $GOA_file = "$reference_directory/M_tuberculosis_ATCC_Oshkosh.goa";
 
-  my $associations = $self->readGOAAssociations(
-    assocations_file => "$GOA_file",
-  );
+  #my $associations = $self->readGOAAssociations(
+  #  assocations_file => "$GOA_file",
+  #);
 
 
   my $counter =0;
+  my $proteinList =  $self->getProteinList(
+    biosequence_set_id => $biosequence_set_id,
+  );
+
   foreach my $uniprotKB (keys %proteins) {
     my $Database = 'UniProt' ;
     my $Accession = $uniprotKB;
@@ -1601,13 +1506,13 @@ sub buildMTBKeyIndex {
     my @tmp = ('UniProt',$uniprotKB,35);
     push(@links,\@tmp);
 
-    my @tmp = ('Gene Symbol',$gene);
+    @tmp = ('Gene Symbol',$gene);
     push(@links,\@tmp);
 
-    my @tmp = ('Full Name',$proteinName);
+    @tmp = ('Full Name',$proteinName);
     push(@links,\@tmp);
 
-    my $handle = "$Database:$Accession";
+    #my $handle = "$Database:$Accession";
     #if ($associations->{$handle}) {
     #  if ($associations->{$handle}->{Symbol} &&
     #    $associations->{$handle}->{Symbol} ne $Accession) {
@@ -1619,28 +1524,28 @@ sub buildMTBKeyIndex {
 
     foreach my $link (@links) {
       #print "    ".join("=",@{$link})."\n";
+      if(defined $proteinList->{$link->[1]}){
+        $proteinList->{$link->[1]} = 1;
+      }
+
       my $resource_name = $link->[1];
       my $resource_type = $link->[0];
       my %rowdata = (
           search_key_name => $link->[1],
     	  search_key_type => $link->[0],
     	  search_key_dbxref_id => $link->[2],
-          organism_id => $organism_id,
-          atlas_build_id => $atlas_build_id,
 	      resource_name => $proteinName,
     	  resource_type => 'MTB accession',
-    	  resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$proteinName&action=QUERY",
-          resource_n_matches => $matched_proteins->{$proteinName},
-          protein_alias_master => $proteinName,
         );
-        $self -> insertSearchKey( rowdata => \%rowdata);
+        $self -> insertSearchKeyEntity( rowdata => \%rowdata);
     }
 
     $counter++;
     print "$counter... " if ($counter/100 eq int($counter/100));
     my $xx=<STDIN> if (0);
  }
-
+  $self -> checkCompleteness(proteinList=> $proteinList,
+                             count      => $counter);
 
 }
 
@@ -1654,7 +1559,7 @@ sub buildDrosophilaKeyIndex {
 
   print "INFO[$METHOD]: Building Drosophila key index...\n" if ($VERBOSE);
 
-  my $atlas_build_id = $args{atlas_build_id}
+  my $biosequence_set_id = $args{biosequence_set_id }
     or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
 
   my $reference_directory = $args{reference_directory}
@@ -1664,13 +1569,10 @@ sub buildDrosophilaKeyIndex {
     die("ERROR[$METHOD]: '$reference_directory' is not a directory");
   }
 
-  my $organism_id = 8;
-
-  #### Get the list of proteins that have a peptide in this atlas build
-  my $matched_proteins = $self->getNProteinHits(
-    organism_id=>$organism_id,
-    atlas_build_id=>$atlas_build_id,
+  my $proteinList =  $self->getProteinList(
+    biosequence_set_id => $biosequence_set_id,
   );
+
   #### Create a link from gene names to protein names
   my %gene2protein;
   my %genemapping;
@@ -1860,20 +1762,19 @@ sub buildDrosophilaKeyIndex {
           }
         }
         foreach my $link (@temp_links) {
-	    #print "    ".join("=",@{$link})."\n";
-	      my %rowdata = (
-          search_key_name => $link->[1],
-          search_key_type => $link->[0],
-          search_key_dbxref_id => $link->[2],
-          organism_id => $organism_id,
-          atlas_build_id => $atlas_build_id,
-          resource_name => $feature_name,
-          resource_type => 'Drosophila Protein',
-          resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$feature_name&action=QUERY",
-          resource_n_matches => $matched_proteins->{$feature_name},
-          protein_alias_master => $protein_alias_master,
-          );
-          $self->insertSearchKey( rowdata => \%rowdata);
+          if(defined $proteinList->{$link->[1]}){
+            $proteinList->{$link->[1]} = 1;
+          }
+				#print "    ".join("=",@{$link})."\n";
+					my %rowdata = (
+						search_key_name => $link->[1],
+						search_key_type => $link->[0],
+						search_key_dbxref_id => $link->[2],
+						resource_name => $feature_name,
+						resource_type => 'Drosophila Protein',
+						protein_alias_master => $protein_alias_master,
+						);
+						$self->insertSearchKeyEntity( rowdata => \%rowdata);
         }
         $full_name = '';
     }
@@ -1886,6 +1787,8 @@ sub buildDrosophilaKeyIndex {
 
   } # endfor each row
 
+  $self -> checkCompleteness(proteinList=> $proteinList,
+                             count      => $counter);
 
 } # end buildDrosophilaKeyIndex
 
@@ -1900,7 +1803,7 @@ sub buildPigKeyIndex {
 
   print "INFO[$METHOD]: Building Pig key index...\n" if ($VERBOSE);
 
-  my $atlas_build_id = $args{atlas_build_id}
+  my $biosequence_set_id  = $args{biosequence_set_id }
     or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
 
   my $reference_directory = $args{reference_directory}
@@ -1910,9 +1813,11 @@ sub buildPigKeyIndex {
     die("ERROR[$METHOD]: '$reference_directory' is not a directory");
   }
 
-  my $organism_id = 30;
   my %proteins;
 
+  my $proteinList =  $self->getProteinList(
+    biosequence_set_id => $biosequence_set_id,
+  );
 
 
   #### Load information from ptt file
@@ -1959,13 +1864,6 @@ sub buildPigKeyIndex {
   close(INFILE);
 
 
-  #### Get the list of proteins that have a peptide in this atlas build
-  my $matched_proteins = $self->getNProteinHits(
-    organism_id=>$organism_id,
-    atlas_build_id=>$atlas_build_id,
-  );
-
-
   #### Loop over all input rows processing information
   my $counter = 0;
   foreach my $biosequence_name (keys(%proteins)) {
@@ -1991,19 +1889,20 @@ sub buildPigKeyIndex {
     }
 
     foreach my $link (@links) {
+
+      if(defined $proteinList->{$link->[1]}){
+        $proteinList->{$link->[1]} = 1;
+      }
+
       #print "    ".join("=",@{$link})."\n";
       my %rowdata = (
         search_key_name => substr($link->[1],0,255),
         search_key_type => $link->[0],
         search_key_dbxref_id => $link->[2],
-        organism_id => $organism_id,
-        atlas_build_id => $atlas_build_id,
         resource_name => $biosequence_name,
         resource_type => 'Pig accession',
-        resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$biosequence_name&action=QUERY",
-        resource_n_matches => $matched_proteins->{$biosequence_name},
       );
-      $self->insertSearchKey( rowdata => \%rowdata);
+      $self-> insertSearchKeyEntity( rowdata => \%rowdata);
     }
 
 
@@ -2013,7 +1912,8 @@ sub buildPigKeyIndex {
     #my $xx=<STDIN>;
 
   } # endfor each biosequence
-
+  $self -> checkCompleteness(proteinList=> $proteinList,
+                             count      => $counter);
   print "\n";
 
 } # end buildPigKeyIndex
@@ -2030,7 +1930,7 @@ sub buildEcoliKeyIndex {
 
   print "INFO[$METHOD]: Building Pig key index...\n" if ($VERBOSE);
 
-  my $atlas_build_id = $args{atlas_build_id}
+  my $biosequence_set_id  = $args{biosequence_set_id }
     or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
 
   my $reference_directory = $args{reference_directory}
@@ -2040,10 +1940,13 @@ sub buildEcoliKeyIndex {
     die("ERROR[$METHOD]: '$reference_directory' is not a directory");
   }
 
-  my $organism_id = 30;
+
+  my $proteinList =  $self->getProteinList(
+    biosequence_set_id => $biosequence_set_id,
+  );
+
+
   my %proteins;
-
-
 
   #### Load information from ptt file
   my $reference_file = "$reference_directory/Ecoli_Combined_NODECOY.fasta";
@@ -2097,14 +2000,6 @@ sub buildEcoliKeyIndex {
   }
   close(INFILE);
 
-
-  #### Get the list of proteins that have a peptide in this atlas build
-  my $matched_proteins = $self->getNProteinHits(
-    organism_id=>$organism_id,
-    atlas_build_id=>$atlas_build_id,
-  );
-
-
   #### Loop over all input rows processing information
   my $counter = 0;
   foreach my $biosequence_name (keys(%proteins)) {
@@ -2130,19 +2025,19 @@ sub buildEcoliKeyIndex {
     }
 
     foreach my $link (@links) {
+
+      if(defined $proteinList->{$link->[1]}){
+        $proteinList->{$link->[1]} = 1;
+      }
       #print "    ".join("=",@{$link})."\n";
       my %rowdata = (
         search_key_name => substr($link->[1],0,255),
         search_key_type => $link->[0],
         search_key_dbxref_id => $link->[2],
-        organism_id => $organism_id,
-        atlas_build_id => $atlas_build_id,
         resource_name => $biosequence_name,
         resource_type => 'Ecoli accession',
-        resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$biosequence_name&action=QUERY",
-        resource_n_matches => $matched_proteins->{$biosequence_name},
       );
-      $self->insertSearchKey( rowdata => \%rowdata);
+      $self-> insertSearchKeyEntity( rowdata => \%rowdata);
     }
 
 
@@ -2152,6 +2047,9 @@ sub buildEcoliKeyIndex {
     #my $xx=<STDIN>;
 
   } # endfor each biosequence
+
+  $self -> checkCompleteness(proteinList=> $proteinList,
+                             count      => $counter);
 
   print "\n";
 
@@ -2169,7 +2067,7 @@ sub buildCelegansKeyIndex {
 
   print "INFO[$METHOD]: Building Celegans key index...\n" if ($VERBOSE);
 
-  my $atlas_build_id = $args{atlas_build_id}
+  my $biosequence_set_id = $args{biosequence_set_id }
     or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
 
   my $reference_directory = $args{reference_directory}
@@ -2179,8 +2077,10 @@ sub buildCelegansKeyIndex {
     die("ERROR[$METHOD]: '$reference_directory' is not a directory");
   }
 
-  my $organism_id = 10;
   my %proteins;
+  my $proteinList =  $self->getProteinList(
+    biosequence_set_id => $biosequence_set_id,
+  );
 
   my %dbxref_ids = (
 		    'WormSeq'  => 43,
@@ -2257,13 +2157,6 @@ sub buildCelegansKeyIndex {
   close(INFILE);
 
 
-  #### Get the list of proteins that have a peptide in this atlas build
-  my $matched_proteins = $self->getNProteinHits(
-    organism_id=>$organism_id,
-    atlas_build_id=>$atlas_build_id,
-  );
-
-
   #### Loop over all input rows processing information
   my $counter = 0;
   foreach my $biosequence_name (keys(%proteins)) {
@@ -2299,18 +2192,17 @@ sub buildCelegansKeyIndex {
 
     foreach my $link (@links) {
       #print "    ".join("=",@{$link})."\n";
+      if(defined $proteinList->{$link->[1]}){
+        $proteinList->{$link->[1]} = 1;
+      }
       my %rowdata = (
         search_key_name => substr($link->[1],0,255),
         search_key_type => $link->[0],
         search_key_dbxref_id => $link->[2],
-        organism_id => $organism_id,
-        atlas_build_id => $atlas_build_id,
         resource_name => $biosequence_name,
         resource_type => 'Celegans accession',
-        resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$biosequence_name&action=QUERY",
-        resource_n_matches => $matched_proteins->{$biosequence_name},
       );
-      $self->insertSearchKey( rowdata => \%rowdata);
+      $self->insertSearchKeyEntity( rowdata => \%rowdata);
     }
 
 
@@ -2320,6 +2212,8 @@ sub buildCelegansKeyIndex {
     #my $xx=<STDIN>;
 
   } # endfor each biosequence
+  $self -> checkCompleteness(proteinList=> $proteinList,
+                             count      => $counter);
 
   print "\n";
 
@@ -2332,7 +2226,7 @@ sub buildHoneyBeeKeyIndex {
 
   print "INFO[$METHOD]: Building HoneyBee key index...\n" if ($VERBOSE);
 
-  my $atlas_build_id = $args{atlas_build_id}
+  my $biosequence_set_id = $args{biosequence_set_id }
     or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
 
   my $reference_directory = $args{reference_directory}
@@ -2342,7 +2236,10 @@ sub buildHoneyBeeKeyIndex {
     die("ERROR[$METHOD]: '$reference_directory' is not a directory");
   }
 
-  my $organism_id = 32;
+  my $proteinList =  $self->getProteinList(
+    biosequence_set_id => $biosequence_set_id,
+  );
+
   my %proteins;
   my %dbxref_ids = (
     'RefSeq'       => 39,
@@ -2433,14 +2330,6 @@ sub buildHoneyBeeKeyIndex {
  }
   close(INFILE);
 
-
-  #### Get the list of proteins that have a peptide in this atlas build
-  my $matched_proteins = $self->getNProteinHits(
-    organism_id=>$organism_id,
-    atlas_build_id=>$atlas_build_id,
-  );
-
-
   #### Loop over all input rows processing information
   my $counter = 0;
   my $cc =0;
@@ -2478,31 +2367,32 @@ sub buildHoneyBeeKeyIndex {
       }
     }  
     foreach my $link (@links) {
+
+      if(defined $proteinList->{$link->[1]}){
+        $proteinList->{$link->[1]} = 1;
+      }
       my %rowdata = (
         search_key_name => $link->[1],
         search_key_type => $link->[0],
         search_key_dbxref_id => $link->[2],
-        organism_id => $organism_id,
-        atlas_build_id => $atlas_build_id,
         resource_name => $biosequence_name,
         resource_type => 'HoneyBee accession',
-        resource_url => "GetProtein?atlas_build_id=$atlas_build_id&protein_name=$biosequence_name&action=QUERY",
-        resource_n_matches => $matched_proteins->{$biosequence_name},
       );
-      $self->insertSearchKey( rowdata => \%rowdata);
+      $self->insertSearchKeyEntity( rowdata => \%rowdata);
     }
-
-
     $counter++;
     print "$counter... " if ($counter/100 eq int($counter/100));
 
   } # endfor each biosequence
 
+  $self -> checkCompleteness(proteinList=> $proteinList,
+                             count      => $counter);
+
+
 } # end buildHoneyBeeKeyIndex
+sub insertPeptideSearchKey {
 
-sub insertSearchKey {
-
-  my $SUB = 'insertSearchKey';
+  my $SUB = 'insertPeptideSearchKey';
   my $self = shift || die ("self not passed");
   my %args = @_;
   my $rowdata = $args{rowdata};
@@ -2516,7 +2406,7 @@ sub insertSearchKey {
 	my $resource_type = $rowdata->{resource_type};
 	my $resource_url = $rowdata->{resource_url};
 	my $resource_n_matches = $rowdata->{resource_n_matches};
-	my $protein_alias_master = $rowdata->{protein_alias_master} || '';
+	my $protein_alias_master = $rowdata->{protein_alias_master} || $resource_name;
 
 
   $search_key_name =~ s/'/''/g; 
@@ -2575,7 +2465,6 @@ sub insertSearchKey {
 		);
   }
 }
-
 
 ###############################################################################
 # splitEntities: Split a semi-colon separated list of items into an array
@@ -2642,7 +2531,7 @@ sub buildPeptideKeyIndex {
       resource_url => "GetPeptide?atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$peptide->[0]&action=QUERY",
       resource_n_matches => $peptide->[2],
     );
-    $self->insertSearchKey( rowdata => \%rowdata);
+    $self->insertPeptideSearchKey( rowdata => \%rowdata);
 
     #### Register an entry for the peptide sequence
     %rowdata = (
@@ -2655,7 +2544,7 @@ sub buildPeptideKeyIndex {
       resource_url => "GetPeptide?atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$peptide->[0]&action=QUERY",
       resource_n_matches => $peptide->[2],
     );
-    $self->insertSearchKey( rowdata => \%rowdata);
+    $self->insertPeptideSearchKey ( rowdata => \%rowdata);
     $counter++;
     print "$counter... " if ($counter/100 eq int($counter/100));
 
@@ -2707,21 +2596,23 @@ sub getProteinList {
   my $METHOD = 'getProteinList';
   my $self = shift || die ("self not passed");
   my %args = @_;
+  my $sbeams = $self->getSBEAMS();
 
-  my $atlas_build_id = $args{atlas_build_id}
+  my $biosequence_set_id = $args{biosequence_set_id}
     or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
 
   #### Get all the protein in the biosequence set
   my $sql = qq~
          SELECT B.biosequence_name
-         FROM $TBAT_BIOSEQUENCE B, $TBAT_ATLAS_BUILD A 
-         WHERE B.biosequence_set_id= A.biosequence_set_id
-               and  A.atlas_build_id = '$atlas_build_id'
+         FROM $TBAT_BIOSEQUENCE B
+         WHERE B.biosequence_set_id= $biosequence_set_id
   ~;
+
   my @proteins = $sbeams->selectOneColumn($sql);
   my %proteins = ();
   foreach (@proteins){
-   $proteins{$_} = 1;
+   next if($_ =~ /DECOY/);
+   $proteins{$_} = 0;
   }
   return(\%proteins);
 
@@ -2742,19 +2633,19 @@ sub getProteinSynonyms {
 			( SELECT SEARCH_KEY_NAME,SEARCH_KEY_TYPE,ACCESSOR,ACCESSOR_SUFFIX
 				 FROM $TBAT_SEARCH_KEY_ENTITY SKE
 				 LEFT JOIN $TBBL_DBXREF D ON ( SKE.SEARCH_KEY_DBXREF_ID = D.DBXREF_ID )
-				 WHERE PROTEIN_ALIAS_MASTER = (
-				   SELECT TOP 1 PROTEIN_ALIAS_MASTER
+				 WHERE PROTEIN_ALIAS_MASTER in (
+				   SELECT TOP 1 SKE2.PROTEIN_ALIAS_MASTER
 				   FROM $TBAT_SEARCH_KEY_ENTITY SKE2
 				   WHERE SKE2.RESOURCE_NAME = '$resource_name'
-           AND SKE2.PROTEIN_ALIAS_MASTER IS NOT NULL
-			   )
+           AND SKE2.PROTEIN_ALIAS_MASTER != '$resource_name'
+			   ) and PROTEIN_ALIAS_MASTER != '' 
 			) 
 		  UNION 
 		  (	SELECT SKE3.SEARCH_KEY_NAME,SKE3.SEARCH_KEY_TYPE,ACCESSOR,ACCESSOR_SUFFIX
 				FROM $TBAT_SEARCH_KEY_ENTITY SKE3
 				LEFT JOIN $TBBL_DBXREF D ON ( SKE3.SEARCH_KEY_DBXREF_ID = D.DBXREF_ID )
 			  WHERE SKE3.RESOURCE_NAME = '$resource_name' 
-        AND SKE3.PROTEIN_ALIAS_MASTER is null
+        AND SKE3.PROTEIN_ALIAS_MASTER = '$resource_name'
 		 )
  ~;
   my @synonyms = $sbeams->selectSeveralColumns($sql);
@@ -2779,6 +2670,25 @@ sub checkAtlasBuild {
   return $cnt;
 }
 
+sub get_organism_name{
+
+  my $self = shift;
+  my %args = @_;
+  die "Missing required argument biosequence_set_id" if !$args{biosequence_set_id};
+  my $biosequence_set_id = $args{biosequence_set_id};
+  my $sbeams = $self->getSBEAMS();
+
+  my $sql = qq~
+    SELECT O.ORGANISM_NAME
+    FROM $TBAT_BIOSEQUENCE_SET BS, $TB_ORGANISM O
+    WHERE BS.ORGANISM_ID= O.ORGANISM_ID
+    AND BS.BIOSEQUENCE_SET_ID = $biosequence_set_id
+  ~;
+
+  my ( $name ) = $sbeams->selectrow_array($sql);
+  return $name;
+
+}
 
 
 
