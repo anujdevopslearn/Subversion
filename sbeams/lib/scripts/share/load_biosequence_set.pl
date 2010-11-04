@@ -40,14 +40,12 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
-
+use SBEAMS::PeptideAtlas::KeySearch;
 use SBEAMS::BioLink::Tables;
 
 use SBEAMS::Proteomics::Utilities;
 $sbeams = SBEAMS::Connection->new();
-
-#use CGI;
-#$q = CGI->new();
+my $keySearch = SBEAMS::PeptideAtlas::KeySearch->new();
 
 
 ###############################################################################
@@ -103,8 +101,21 @@ Options:
                        use Swiss-Prot names as biosequence descriptions.
                        Not yet fully implemented.
   --gene_annotation    load gene ontology information for the set
-  --gene_annotation_searchkey
-
+  --gene_annotation_searchkey insert gene ontology information into the searchkeyentity table
+  --biosequence_searchkey  insert biosequence name and it is xref info into the searchkeyentity table
+  --reference_directory    need to provide --reference_directory unless organism is Human/Mouse
+                       Directroies currently in use:
+                       /net/db/projects/PeptideAtlas/species/Cow
+                       /net/db/projects/PeptideAtlas/species/Drosophila
+                       /net/db/projects/PeptideAtlas/species/Ecoli
+                       /net/db/projects/PeptideAtlas/species/Halobacterium
+                       /net/db/projects/PeptideAtlas/species/Honeybee
+                       /net/db/projects/PeptideAtlas/species/Leptospira_interrogans/NCBI
+                       /net/db/projects/PeptideAtlas/species/Pig
+                       /net/db/projects/PeptideAtlas/species/StrepPyogenes/NCBI
+                       /regis/sbeams3/nobackup/Celegans/db
+                       /net/db/projects/PeptideAtlas/doc/PaperDrafts/Yeast/create_NR_FASTA/annotations 
+                        
  e.g.:  $PROG_NAME --check_status
 
 EOU
@@ -120,6 +131,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
     "InterProScan_search_results_summary_file:s",
     "COG_search_results_summary_file:s","pI_summary_file:s",
     "swissprot_file:s","gene_annotation","gene_annotation_searchkey",
+    "biosequence_searchkey","reference_directory:s",
   )) {
   print "$USAGE";
   exit;
@@ -141,7 +153,7 @@ if ($DEBUG) {
 ## die unless main methods are selected:
 unless ( $OPTIONS{"load"} || $OPTIONS{"load_all"} || $OPTIONS{"purge"} || 
 $OPTIONS{"check_status"} || $OPTIONS{"delete"} || $OPTIONS{"update_existing"} ||
-$OPTIONS{"gene_annotation"})
+$OPTIONS{"gene_annotation"}|| $OPTIONS{"biosequence_searchkey"})
 {
     print "\n$USAGE";
     exit;
@@ -238,7 +250,7 @@ sub main {
     $work_group = "SolexaTrans_admin";
     $DATABASE = $DBPREFIX{$module};
   }
-
+print "$DATABASE\n"; #zhi
  #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($current_username = $sbeams->Authenticate(
     work_group=>$work_group,
@@ -295,6 +307,9 @@ sub handleRequest {
   my $pI_summary_file = $OPTIONS{"pI_summary_file"} || '';
   my $swissprot_file = $OPTIONS{"swissprot_file"} || '';
   my $gene_annotation = $OPTIONS{"gene_annotation"} || 0;
+  my $biosequence_searchkey =  $OPTIONS{"biosequence_searchkey"} || 0;
+
+
   #### Get the file_prefix if it was specified, and otherwise guess
   unless ($file_prefix) {
     $module = $sbeams->getSBEAMS_SUBDIR();
@@ -476,7 +491,13 @@ sub handleRequest {
 
           my %table_child_relationship;
 
-          if ( $module eq 'Proteomics' || $module eq 'PeptideAtlas' || 
+          if ( $module eq 'PeptideAtlas'){
+
+              %table_child_relationship = (
+                  biosequence_set => 'biosequence(C)',
+                  biosequence =>'biosequence_property_set(C),biosequence_annotation(C),biosequence_annotated_gene(C)',
+              );
+          } elsif ( $module eq 'Proteomics' ||
           $module eq 'ProteinStructure' || $module eq 'BioLink')
           {
               %table_child_relationship = (
@@ -495,8 +516,8 @@ sub handleRequest {
           {
               $keepParent = 0;
           }
-    
-          my $result = $sbeams->deleteRecordsAndChildren(
+        
+          $result = $sbeams->deleteRecordsAndChildren(
               table_name => 'biosequence_set',
               table_child_relationship => \%table_child_relationship,
               delete_PKs => [ $biosequence_set_id ],
@@ -519,6 +540,18 @@ sub handleRequest {
     update_biosequence_annotated_gene(biosequence_set_id => $biosequence_set_ids[0]);
   }
 
+  if( $biosequence_searchkey 
+      and $biosequence_set_ids[0]
+      and !$load_all
+      and !$update_existing
+      and !$load ){
+      print "Insert SearchKey to SearchKeyEntity table for the Biosequence set\n";
+      $keySearch->InsertSearchKeyEntity( biosequence_set_id => $biosequence_set_ids[0],
+                                         reference_directory => $OPTIONS{reference_directory},
+                                        verbose => $VERBOSE,
+                                       testonly => $TESTONLY,);
+                            
+  } 
   if ( ($check_status || $load_all || $load || $update_existing ) )
   {
       ## checking status of all biosequence sets.  will load empty sets
@@ -825,6 +858,12 @@ sub loadBiosequenceSet {
   print "\n$counter rows INSERT/UPDATed\n";
   update_biosequence_annotated_gene(biosequence_set_id => $biosequence_set_id);
 
+  print "Insert SearchKey to SearchKeyEntity table for the Biosequence set\n";
+  $keySearch->InsertSearchKeyEntity( 
+             biosequence_set_id => $biosequence_set_id,
+                        verbose => $VERBOSE,
+                       testonly => $TESTONLY,);
+
   updateSourceFileDate(
     biosequence_set_id => $biosequence_set_id,
     source_file => $source_file,
@@ -872,30 +911,6 @@ sub update_biosequence_annotated_gene{
   ### delete gene annotation in search key table for this biosequence set
 
   print "Getting gene annotation from Biolink\n";
-#  my $sql = qq~
-#   ( SELECT BS.biosequence_id, AG.annotated_gene_id
-#    FROM $TBAT_BIOSEQUENCE BS
-#    INNER JOIN $TBBL_ANNOTATED_GENE AG ON (BS.biosequence_gene_name = AG.gene_name)
-#    WHERE BS.biosequence_set_id = $biosequence_set_id
-#      AND BS.biosequence_name not like 'DECOY%'
-#   )
-#   UNION
-#   (
-#    SELECT BS2.biosequence_id, AG2.annotated_gene_id as id
-#    FROM  $TBAT_BIOSEQUENCE BS2
-#    INNER JOIN  $TBBL_ANNOTATED_GENE AG2 ON (BS2.biosequence_gene_name = AG2.gene_accession)
-#    WHERE BS2.biosequence_set_id = $biosequence_set_id
-#      AND BS2.biosequence_name not like 'DECOY%'
-#   )
-#  -- UNION
-#  -- (
-#  --  SELECT BS3.biosequence_id, AG3.annotated_gene_id as id
-#  --  FROM  $TBAT_BIOSEQUENCE BS3
-#  --  LEFT JOIN  $TBBL_ANNOTATED_GENE AG3 ON ('gi|'+BS3.biosequence_accession = AG3.gene_accession)
-#  --  WHERE BS3.biosequence_set_id = $biosequence_set_id
-#  --  AND BS3.biosequence_name not like 'DECOY%'
-#  -- )
-#  ~;
   my $sql = qq~
 		  (SELECT BS.BIOSEQUENCE_ID AS ID, AG.ANNOTATED_GENE_ID AS GID
 			 FROM $TBAT_BIOSEQUENCE BS
@@ -914,7 +929,7 @@ sub update_biosequence_annotated_gene{
              AND BAG2.HIERARCHY_LEVEL = 'LEAF'
 						 AND BAG2.IS_SUMMARY = 'N'
 			 )
-		~;
+		 ~;
 
   my @rows = $sbeams->selectSeveralColumns($sql);
 
@@ -957,6 +972,7 @@ sub update_biosequence_annotated_gene{
 
   $counter  = 0;
   foreach my $name (@biosequence_names){
+    #print "$name\n";
     my $sql =  qq~ 
       SELECT RESOURCE_NAME 
       FROM $TBAT_SEARCH_KEY 
