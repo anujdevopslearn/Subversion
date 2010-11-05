@@ -495,7 +495,7 @@ SELECT S.slide_id, slide_number
   FROM $TBMA_SLIDE S 
   LEFT JOIN $TBMA_ARRAY A ON ( S.slide_id=A.slide_id ) 
  WHERE A.slide_id IS NULL
-   AND DATEDIFF(MONTH,S.date_created,GETDATE()) < 120
+   AND DATEDIFF(MONTH,S.date_created,GETDATE()) < 24
  ORDER BY slide_number
  ~;
   @rows = $sbeams->selectSeveralColumns($sql);
@@ -543,7 +543,7 @@ SELECT slide_number, slide_number
   FROM $TBMA_SLIDE S 
   LEFT JOIN $TBMA_ARRAY A ON ( S.slide_id=A.slide_id ) 
  WHERE A.slide_id IS NULL
-   AND DATEDIFF(MONTH,S.date_created,GETDATE()) < 120
+   AND DATEDIFF(MONTH,S.date_created,GETDATE()) < 24
    AND S.slide_id IN ( $array_ids )
  ORDER BY slide_number
  ~;
