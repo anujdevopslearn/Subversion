@@ -233,6 +233,7 @@ sub print_array_request_screen {
 	SELECT slide_type_id, name+' (\$'+CONVERT(varchar(50),price)+')'
 	  FROM $TBMA_SLIDE_TYPE
 	 WHERE record_status != 'D'
+	 ORDER BY name
 	 ~;
   my $slide_optionlist = $sbeams->buildOptionList($sql);
 
@@ -494,7 +495,7 @@ SELECT S.slide_id, slide_number
   FROM $TBMA_SLIDE S 
   LEFT JOIN $TBMA_ARRAY A ON ( S.slide_id=A.slide_id ) 
  WHERE A.slide_id IS NULL
-   AND DATEDIFF(MONTH,S.date_created,GETDATE()) < 12
+   AND DATEDIFF(MONTH,S.date_created,GETDATE()) < 120
  ORDER BY slide_number
  ~;
   @rows = $sbeams->selectSeveralColumns($sql);
@@ -542,7 +543,7 @@ SELECT slide_number, slide_number
   FROM $TBMA_SLIDE S 
   LEFT JOIN $TBMA_ARRAY A ON ( S.slide_id=A.slide_id ) 
  WHERE A.slide_id IS NULL
-   AND DATEDIFF(MONTH,S.date_created,GETDATE()) < 12
+   AND DATEDIFF(MONTH,S.date_created,GETDATE()) < 120
    AND S.slide_id IN ( $array_ids )
  ORDER BY slide_number
  ~;
@@ -1247,16 +1248,20 @@ sub finalize {
 	$array_info{$array,'array_request_slide_id'} = $array_request_slide_id;
 	undef %rowdata;
 
-	## INSERT array_request_samplem, labeling record, and hybridization
-	my $sample0_name  = $parameters{'sample0name_'.$m};
-	my $sample1_name  = $parameters{'sample1name_'.$m};
+	## INSERT array_request_sample, labeling record, and hybridization
+	my $sample0_name  = substr( $parameters{'sample0name_'.$m}, 0, 46)."..";
+	my $sample1_name  = substr( $parameters{'sample1name_'.$m}, 0, 46)."..";
 
 	for (my $sample_index=0;$sample_index<2;$sample_index++) {
 
 	  ## INSERT array_request_sample record
 	  $rowdata{'array_request_slide_id'} = $array_request_slide_id;
 	  $rowdata{'sample_index'} = $sample_index;
-	  $rowdata{'name'} = $parameters{'sample'.$sample_index.'name_'.$m};
+
+	  my $full_name = $parameters{'sample'.$sample_index.'name_'.$m};
+	  $rowdata{'full_name'} = $full_name;
+	  $rowdata{'name'} = substr($full_name, 0, 46)."..";
+
 	  $rowdata{'labeling_method_id'} = $parameters{'sample'.$sample_index.'labmeth_'.$m};
 	  $rowdata_ref = \%rowdata;
 

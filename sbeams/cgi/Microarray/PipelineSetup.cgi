@@ -277,8 +277,8 @@ Instructions:<BR>
   if ($current_project > 0) {
     $sql = qq~
 SELECT	A.array_id,A.array_name,
-	ARSM1.name AS 'Sample1Name',D1.dye_name AS 'sample1_dye',
-	ARSM2.name AS 'Sample2Name',D2.dye_name AS 'sample2_dye',
+	ARSM1.full_name AS 'Sample1Name',D1.dye_name AS 'sample1_dye',
+	ARSM2.full_name AS 'Sample2Name',D2.dye_name AS 'sample2_dye',
 	AQ.stage_location
   FROM $TBMA_ARRAY_REQUEST AR
   LEFT JOIN $TBMA_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )
@@ -342,8 +342,8 @@ SELECT	A.array_id,A.array_name,
   if ($selectedFiles) {
 	$sql = qq~
 SELECT	A.array_id,A.array_name,
-	ARSM1.name AS 'Sample1Name',D1.dye_name AS 'sample1_dye',
-	ARSM2.name AS 'Sample2Name',D2.dye_name AS 'sample2_dye',
+	ARSM1.full_name AS 'Sample1Name',D1.dye_name AS 'sample1_dye',
+	ARSM2.full_name AS 'Sample2Name',D2.dye_name AS 'sample2_dye',
 	AQ.stage_location
   FROM $TBMA_ARRAY_REQUEST AR
   LEFT JOIN $TBMA_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )
@@ -1038,7 +1038,7 @@ sub print_mergeconds_screen {
 
   ## Get Conditions associated with the arrays
   $sql = qq~
-SELECT ARSM1.name,ARSM2.name
+SELECT ARSM1.full_name,ARSM2.full_name
   FROM $TBMA_ARRAY_REQUEST AR
   LEFT JOIN $TBMA_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )
   LEFT JOIN $TBMA_ARRAY_REQUEST_SAMPLE ARSM1 ON ( ARSL.array_request_slide_id = ARSM1.array_request_slide_id AND ARSM1.sample_index=0)
@@ -1467,8 +1467,8 @@ Editing this file is not recommended unless you are familiar with how to manipul
 	# Get Slide Information
 	my $sql_query = qq~
 SELECT	A.array_name,
-	ARSM1.name AS 'Sample1Name',D1.dye_name AS 'sample1_dye',
-	ARSM2.name AS 'Sample2Name',D2.dye_name AS 'sample2_dye',
+	ARSM1.full_name AS 'Sample1Name',D1.dye_name AS 'sample1_dye',
+	ARSM2.full_name AS 'Sample2Name',D2.dye_name AS 'sample2_dye',
 	AQ.array_quantitation_id,AQ.data_flag AS 'quan_flag',
 	AQ.stage_location,AL.source_filename AS 'key_file'
   FROM $TBMA_ARRAY_REQUEST AR
