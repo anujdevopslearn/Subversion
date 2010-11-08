@@ -96,6 +96,7 @@ sub main
   if ( $parameters{action} eq 'QUERY' ) {
     fetch_transitions( %parameters );  
   }
+  $atlas->display_page_footer( close_tables => 0 );
 
 } # end main
 
@@ -242,7 +243,7 @@ sub print_form {
     $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Adjust penalties:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$link$sub_form</TD></TR> ~;
 
     my $select_lists = get_multi_selects();
-    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Transition Sources:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$select_lists->[0]</TD></TR> ~;
+#    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Transition Sources:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$select_lists->[0]</TD></TR> ~;
 #    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Allowable Modifications:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$select_lists->[1]</TD></TR> ~;
 
     print qq~
@@ -253,10 +254,7 @@ sub print_form {
     #### Display the form action buttons
     $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
 
-  $atlas->display_page_footer();
-
-
-} # end handle_request
+} # end print_form
 
 sub get_multi_selects {
   my $sql = qq~
@@ -434,6 +432,13 @@ sub fetch_transitions {
   return if ($peptide_length_clause eq '-1');
   $peptide_length_clause =~ s/peptide_length/LEN\(peptide_sequence\)/;
 
+    #### Build transition_source constraint
+    my $transition_source_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"transition_source",
+        constraint_type=>"text_list",
+        constraint_name=>"transition_source",
+        constraint_value=>$parameters{transition_source} );
+  return if ($transition_source_clause eq '-1');
 
   # provisional, try to handle newline delimited lists.
   $parameters{protein_name_constraint} =~ s/\r\n/;/g;
@@ -565,10 +570,8 @@ sub fetch_transitions {
   if ($apply_action =~ /QUERY/i ) {
     my $ed = "<td>&nbsp;</td>";
 
-    my $note = $sbeams->makeInfoText( "Note: masses are mono-isotopic" );
-
-    $content .= "<BR>$note\n"  if $is_html;
-
+#    my $note = $sbeams->makeInfoText( "Note: masses are mono-isotopic" );
+#    $content .= "<BR>$note\n"  if $is_html;
 
     my $lib_sql = qq~
     SELECT DISTINCT preceding_residue, peptide_sequence, following_residue,
@@ -589,7 +592,7 @@ sub fetch_transitions {
       $atlas_build_clause
       $peptide_sequence_clause
       $best_probability_clause
---      $n_observations_clause
+      $transition_source_clause
 --      $empirical_proteotypic_clause
 --      $n_protein_mappings_clause
 --      $n_genome_locations_clause
@@ -599,40 +602,20 @@ sub fetch_transitions {
     syntheis_adjusted_score DESC, precursor_ion_charge ASC,
     ion_rank ASC, relative_intensity DESC  
     ~;
-#		$log->debug( $lib_sql );
+	$log->debug( $lib_sql );
 
-    my @headings = ( Protein => 'Protein Name/Accession',
-                     Pre => 'Previous amino acid',
-                Sequence => 'Amino acid sequence of peptide',
-                     Fol => 'Followin amino acid',
-                 'Score' => 'Adjusted proteotypic score',
-                     Src => 'Transition source, one of PA, QT, Q3 (triple quad), IT (ion trap), PR (In silico/theoretical)',
-                   Q1_mz => 'Precursor ion m/z',
-                  Q1_chg => 'Precursor ion charge',
-                   Q3_mz => 'Fragment ion m/z',
-                  Q3_chg => 'Fragment ion charge',
-                   Label => 'Fragment ion label (series/number)',
-                    Rank => 'PABST transition rank',
-                      RI => 'Fragment peak relative intensity (scaled to 10000 Units)',
-                     SSR => 'SSR Calc relative hydrophobicity',
-                   );
+  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT' );
+  my $headings = $atlas->get_column_defs( labels => \@headings, plain_hash => 1 );
 
-  my @heading_keys;
-  my $push = 1;
-  for my $item ( @headings ) {
-    push @heading_keys, $item if $push;
-    $push = ( $push ) ? 0 : 1;
-  }
-    
   my $headings_ref = ( $sbeams->output_mode() =~ /html/i ) ? 
-           $best_peptide->make_sort_headings( headings => \@headings, default => 'adj_SS' ) :
-           \@heading_keys;
+           $best_peptide->make_sort_headings( headings => $headings, default => 'adj_SS' ) :
+           \@headings;
            
   my @peptides = ( $headings_ref );
 
   my $naa = $sbeams->makeInactiveText( 'n/a' );
 
-  my %src_name = ( P => 'PR', Q => 'Q3', T => 'QT', I => 'IT', 'R' => 'PA' );
+  my %src_name = ( P => 'Predicted', Q => 'QQQ-observed', T => 'QTOF-observed', I => 'IT-observed', 'R' => 'PATR-validated' );
 
   $log->debug( "Exec SQL: " . time() );
   my $sth = $sbeams->get_statement_handle( $lib_sql );
@@ -979,9 +962,8 @@ sub fetch_transitions {
   }
 
   print $content;
-  $atlas->display_page_footer();
 
-} # end handle_request
+} # end fetch_transitions
 
 sub get_PATR_transitions {
   return {};
