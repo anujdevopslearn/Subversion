@@ -353,10 +353,10 @@ sub handle_request {
 
   #### Build PROBABILITY constraint
   my $probability_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"PID.probability)",
+    constraint_column=>"PID.probability",
     constraint_type=>"flexible_float",
     constraint_name=>"Protein Probability",
-    constraint_value=>$parameters{probability_constraint} );
+    constraint_value=>$parameters{protein_probability_constraint} );
   return if ($probability_clause eq '-1');
 
   #### Build N_OBSERVATIONS constraint
@@ -1465,6 +1465,11 @@ sub handle_request {
       column_titles_ref=>\@column_titles,
     );
 
+    #### Display table help
+    my $obs_help = get_table_help( 'proteins' );
+    my $tr = "";
+    print qq~ <TABLE><TR $tr><TD ALIGN=left>$obs_help</TD></TR></TABLE>
+      ~ if ( $sbeams->output_mode() eq 'html' );
 
     #### Display the resultset
     $sbeams->displayResultSet(
@@ -1616,4 +1621,56 @@ sub getOrganismFullName
 }
 
 
+#######################################################################
+sub get_table_help {
+  my $name = shift;
+  return '' unless $name;
+  my @entries;
+  my $hidetext;
+  my $showtext;
+  my $heading;
+  my $description;
+  if ( $name eq 'proteins' ) {
+    @entries = (
+      { key => 'Biosequence Name', value => 'Sequence database accession' },
+      { key => 'Covering Set', value => 'Whether this sequence is part of a minimal set explaining all observed peptides' },
+      { key => 'Presence Level', value => 'canonical=member of minimally redundant set<br>possibly distinguished=at least one pep diff from all canonicals<br>subsumed=all peps contained in a canon. or poss. dist.<br>ntt-subsumed=subsumed and >=1 pep lacks tryptic terminus' },
+      { key => 'Protein Prophet Prob', value => 'Probability this protein exists in sample, according to Protein Prophet.<br>May be underestimate for large datasets.' },
+      { key => 'Mult Hyp Test Prob', value => 'Probability this protein exists in sample, according to States, et al., Nat Biotechnol, 2006' },
+      { key => 'N Obs', value => 'ProteinProphet adjusted PSM (peptide-spectrum match) count, usually lower than actual PSM count' },
+      { key => 'N Distinct Peptides', value => 'Number of sequence-distinct peptides' },
+      { key => 'Genetic Locus', value => 'Provided when available' },
+      { key => 'Start in Chrom', value => 'Starting base number in chromosome' },
+      { key => 'End in Chrom', value => 'Ending base number in chromosome' },
+      { key => 'Strand', value => 'Which strand of chromosome' },
+      { key => 'Published ng/ml', value => 'Physiological concentration (certain samples, such as human plasma, only)' },
+      { key => 'Source', value => 'Literature source for published ng/ml.<br>&nbsp;&nbsp;&nbsp;Hortin, et al., Clin Chem, 2008<br> &nbsp;&nbsp;&nbsp;Polanski & Anderson, Biomarker Insights, 2006<br>&nbsp;&nbsp;&nbsp;Haab, et al., Proteomics, 2005' },
+      { key => 'Estimated ng/ml', value => 'Estimated physiological concentration, by spectral counting (certain samples, such as human plasma, only)' },
+      { key => 'Uncertainty ng/ml', value => 'About 2/3 of estimated concentrations are within +/- this multiplicative factor' },
+      { key => 'Redundancy Relationship', value => 'This protein sequence has exactly the same peptides as a sequence with a Presence Level. "identical" if sequence-identical, else "indistinguishable"' },
+      { key => 'Redundant With Respect To', value => 'Sequence that this entry is indistinguishable from or identical to' },
+      { key => 'Protein Group', value => 'Sequence belongs to protein group of this name. Click here to see all group members.' },
+      { key => 'Seq Uniq Prots in Grp', value => 'Number of sequence-unique protein sequences in this group' },
+      { key => 'Protein Group Seq Alignmt', value => 'Click to see a sequence alignment for this protein group' },
+      { key => 'Keratin', value => 'Is keratin according to description, or is in same group as a keratin' },
+      { key => 'Ig', value => 'Is immunoglobulin according to description, or is in same group as an immunoglobulin' },
+      { key => 'Protein Description', value => 'Description as taken from sequence database fasta file' },
+    );
+    
+    $showtext = 'show column descriptions';
+    $hidetext = 'hide column descriptions';
+    $heading = 'Identified Proteins';
+    $description= 'Protein sequences mapped to by identified peptides';
+    
+  }
 
+  return unless @entries;
+  my $help = $sbeamsMOD->get_table_help_section( name => $name,
+  description => $description,
+  heading => $heading,
+  entries => \@entries,
+  showtext => $showtext,
+  hidetext => $hidetext  );
+  return $help;
+    
+} # end get_table_help
