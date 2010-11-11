@@ -38,6 +38,7 @@ $sbeams->setSBEAMS_SUBDIR( 'PeptideAtlas' );
 my $best_peptide = new SBEAMS::PeptideAtlas::BestPeptideSelector;
 $best_peptide->setAtlas( $atlas );
 $best_peptide->setSBEAMS( $sbeams );
+$PROG_NAME = 'GetTransitions';
 my $pabst_build_id;
 
 my $is_html = 0;
