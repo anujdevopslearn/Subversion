@@ -330,22 +330,21 @@ sub getHighlyObservablePeptides {
   my $build_string = join( ',', $atlas->getAccessibleBuilds() );
 
   my $sql = qq~
-     SELECT DISTINCT BS2.BIOSEQUENCE_ID
-     FROM $TBAT_BIOSEQUENCE BS2
-     WHERE BS2.BIOSEQUENCE_ID in (
-       SELECT BS.BIOSEQUENCE_ID
-       FROM  $TBAT_PROTEOTYPIC_PEPTIDE PP,  $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING PPM,
-             $TBAT_BIOSEQUENCE BS,  $TBAT_ATLAS_BUILD AB
+       SELECT DISTINCT BS.BIOSEQUENCE_ID
+       FROM  $TBAT_PROTEOTYPIC_PEPTIDE PP,$TBAT_PROTEOTYPIC_PEPTIDE_MAPPING PPM,
+             $TBAT_BIOSEQUENCE BS
        WHERE PP.PROTEOTYPIC_PEPTIDE_ID = PPM.PROTEOTYPIC_PEPTIDE_ID
        AND PPM.SOURCE_BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID
-       AND BS.BIOSEQUENCE_SET_ID = AB.BIOSEQUENCE_SET_ID 
-       AND AB.ATLAS_BUILD_ID = $atlas_build_id
-       AND BS.BIOSEQUENCE_ID =  $biosequence_id
+       AND BS.BIOSEQUENCE_NAME = (
+          SELECT BS3.BIOSEQUENCE_NAME 
+          FROM $TBAT_BIOSEQUENCE BS3
+          WHERE BS3.BIOSEQUENCE_ID = $biosequence_id
+       )
        GROUP BY BS.BIOSEQUENCE_ID
        HAVING (COUNT (PP.COMBINED_PREDICTOR_SCORE)*100/COUNT(BS.BIOSEQUENCE_ID))>= 90
-    )
+       ORDER BY BS.BIOSEQUENCE_ID DESC
   ~;
-  
+ 
   my @biosequece_ids = $sbeams->selectOneColumn($sql); 
 
   #print "<H4>@biosequece_ids $atlas_build_id $biosequence_id</H4>\n";
@@ -399,7 +398,7 @@ sub getHighlyObservablePeptides {
           ON ( PTPM.source_biosequence_id = BS.biosequence_id )
      LEFT JOIN $TBAT_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
     WHERE 1 = 1
-	  AND PTPM.source_biosequence_id = $biosequence_id
+	  AND PTPM.source_biosequence_id = $biosequece_ids[0]
     AND ( PTP.combined_predictor_score is not null OR peptide_accession IS NOT NULL )
     ORDER BY PTP.combined_predictor_score DESC
   ~;
@@ -512,7 +511,7 @@ sub getHighlyObservablePeptides_PTP {
           ON ( PTPM.source_biosequence_id = BS.biosequence_id )
      LEFT JOIN $TBAT_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
     WHERE 1 = 1
-	  AND PTPM.source_biosequence_id = $biosequence_id
+	  AND PTPM.source_biosequence_id = $biosequece_ids[0]
     AND PTP.combined_predictor_score is not null
     ORDER BY PTP.combined_predictor_score DESC
   ~;
