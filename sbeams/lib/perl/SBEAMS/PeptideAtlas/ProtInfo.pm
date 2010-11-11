@@ -837,26 +837,6 @@ sub read_protid_preferences {
   return \@preferred_patterns;
 }
 
-###############################################################################
-# get_protein_group_display  --
-###############################################################################
-# Given a protein_group_number and an atlas_build_id,
-# create a hierarchical html display of the member proteins
-sub get_protein_group_display {
-  my %args = @_;
-  my $atlas_build_id = $args{'atlas_build_id'};
-  my $biosequence_id = $args{'biosequence_id'};
-
-  print "<p>Hello from ProtInfo!<p> $atlas_build_id</p>";
-  print "<p>$biosequence_id</p>";
-
-  my $display = "<p>A primitive display!</p>".
-                "<p>Atlas Build = $atlas_build_id</p>".
-                "<p>Biosequence ID = $biosequence_id</p>";
-  print $display;
-
-  return $display;
-}
 
 ###############################################################################
 =head1 BUGS

@@ -46,6 +46,7 @@ my $biolink = new SBEAMS::BioLink;
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::ProtInfo;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
@@ -461,6 +462,12 @@ sub handle_request {
 
   
   #### Return some information about this biosequence
+  #### In order to get complete protein identification information
+  #### for all biosequences, even those that are identical to an
+  #### indistinguishable, we have to do two/three layers of joins to
+  #### biosequence_relationship and protein_identification. See
+  #### comment below (search for term ref_ref_group_rep).
+
   $sql = qq~
        SELECT BS.biosequence_id, BS.biosequence_name,BS.biosequence_gene_name,
               BS.biosequence_accession, BS.biosequence_desc,
@@ -472,7 +479,18 @@ sub handle_request {
               BPS.has_signal_peptide,
               BPS.has_signal_peptide_probability,
               BPS.signal_peptide_length,
-              BPS.signal_peptide_is_cleaved
+              BPS.signal_peptide_is_cleaved,
+              BPS.published_ng_per_ml,
+              BPS.pub_ng_ml_source,
+              PID.estimated_ng_per_ml, PID.abundance_uncertainty,
+              PID.probability, PID.confidence,
+              PID.n_observations,
+              PPL.level_name,
+              BSRT.relationship_name,
+              BS_REP.biosequence_name as "group_rep",
+              BS_REF.biosequence_name as "reference_biosequence_name",
+              BS_REF_REP.biosequence_name as "ref_group_rep",
+              BS_REF_REF_REP.biosequence_name as "ref_ref_group_rep"
          FROM $TBAT_BIOSEQUENCE_SET BSS
         INNER JOIN $TBAT_BIOSEQUENCE BS
               ON ( BSS.biosequence_set_id = BS.biosequence_set_id )
@@ -482,9 +500,43 @@ sub handle_request {
               ON ( BAG.biosequence_id = BS.biosequence_id )
          LEFT JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPS
               ON ( BS.biosequence_id = BPS.biosequence_id )
+         LEFT JOIN $TBAT_PROTEIN_IDENTIFICATION PID
+              ON ( PID.biosequence_id = BS.biosequence_id )
+	      AND ( PID.atlas_build_id = $atlas_build_id )
+         LEFT JOIN $TBAT_BIOSEQUENCE BS_REP
+              ON ( BS_REP.biosequence_id = PID.represented_by_biosequence_id )
+         LEFT JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL
+              ON ( PPL.protein_presence_level_id = PID.presence_level_id )
+         LEFT JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BSR
+              ON ( BSR.related_biosequence_id = BS.biosequence_id )
+         LEFT JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BSRT
+              ON ( BSRT.biosequence_relationship_type_id =
+		    BSR.relationship_type_id )
+         LEFT JOIN $TBAT_BIOSEQUENCE BS_REF
+              ON ( BS_REF.biosequence_id = BSR.reference_biosequence_id )
+         LEFT JOIN $TBAT_PROTEIN_IDENTIFICATION PID_REF
+              ON ( PID_REF.biosequence_id = BS_REF.biosequence_id )
+	      AND ( PID_REF.atlas_build_id = $atlas_build_id )
+         LEFT JOIN $TBAT_BIOSEQUENCE BS_REF_REP
+              ON ( BS_REF_REP.biosequence_id =
+                    PID_REF.represented_by_biosequence_id )
+         LEFT JOIN $TBAT_BIOSEQUENCE_RELATIONSHIP BSR_REF
+              ON ( BSR_REF.related_biosequence_id = BS_REF.biosequence_id )
+         LEFT JOIN $TBAT_BIOSEQUENCE BS_REF_REF
+              ON ( BS_REF_REF.biosequence_id =
+                     BSR_REF.reference_biosequence_id )
+         LEFT JOIN $TBAT_PROTEIN_IDENTIFICATION PID_REF_REF
+              ON ( PID_REF_REF.biosequence_id = BS_REF_REF.biosequence_id )
+	      AND ( PID_REF_REF.atlas_build_id = $atlas_build_id )
+         LEFT JOIN $TBAT_BIOSEQUENCE BS_REF_REF_REP
+              ON ( BS_REF_REF_REP.biosequence_id =
+                    PID_REF_REF.represented_by_biosequence_id )
        WHERE BS.biosequence_id = $biosequence_id
   ~;
   my @rows = $sbeams->selectHashArray($sql);
+  my $n_rows = scalar @rows;
+
+  # assume first row contains all the info we want
   my $biosequence = $rows[0];
 
   # Supercede with SwissProt info
@@ -540,6 +592,91 @@ sub handle_request {
       tr_info => $tr,
       value=>$biosequence->{biosequence_desc},
     );
+
+    my $presence_level = $biosequence->{level_name};
+    my $redundancy_rel = $biosequence->{relationship_name};
+    my $identification_status;
+    if (defined $presence_level) {
+      $identification_status = $presence_level;
+      if ($presence_level =~ 'subsumed') {
+        $identification_status .=
+            " by $biosequence->{reference_biosequence_name}";
+      }
+    } elsif (defined $redundancy_rel) {
+      $identification_status = $redundancy_rel;
+      if ($redundancy_rel eq 'identical') {
+        $identification_status .=
+             " to $biosequence->{reference_biosequence_name}";
+      } elsif ($redundancy_rel eq 'indistinguishable') {
+        $identification_status .=
+             " from $biosequence->{reference_biosequence_name}";
+      }
+    }
+
+    my $presence_level_string = "";
+    print $sbeamsMOD->encodeSectionItem(
+      key=>'Identification Status',
+      tr_info => $tr,
+      value=>$identification_status,
+    );
+
+    my $group_rep = '';
+    # if this bioseq has a presence_level ...
+    if (defined $biosequence->{group_rep}) {
+      $group_rep = $biosequence->{group_rep};
+    # if this bioseq is ident/indist from a bioseq with a presence level ...
+    } elsif ( defined $biosequence->{ref_group_rep}) {
+      $group_rep = $biosequence->{ref_group_rep};
+    # if this bioseq is ident/indist from an indist bioseq ...
+    } elsif ( defined $biosequence->{ref_ref_group_rep}) {
+      $group_rep = $biosequence->{ref_ref_group_rep};
+    }
+    my $group_string=qq~
+<a href="$CGI_BASE_DIR/PeptideAtlas/GetProteins?protein_group_representative_constraint=$group_rep&apply_action=QUERY">$group_rep</a>
+    ~;
+    print $sbeamsMOD->encodeSectionItem(
+      key=>'Protein Group',
+      tr_info => $tr,
+      value=>$group_string,
+    );
+
+    my $prob_string = sprintf("%0.5f", $biosequence->{probability});
+    print $sbeamsMOD->encodeSectionItem(
+      key=>'ProteinProphet Probability',
+      tr_info => $tr,
+      value=>$prob_string,
+    );
+
+    $prob_string = sprintf("%0.5f", $biosequence->{confidence});
+    print $sbeamsMOD->encodeSectionItem(
+      key=>'Mult Hyp Testing  Probability',
+      tr_info => $tr,
+      value=>$prob_string,
+    );
+
+    if ( defined $biosequence->{estimated_ng_per_ml}) {
+      my $conc_string =
+	sprintf("%0.1f ng/ml (%s uncertainty)",
+		 $biosequence->{estimated_ng_per_ml},
+		 $biosequence->{abundance_uncertainty});
+      print $sbeamsMOD->encodeSectionItem(
+	key=>'Estimated concentration',
+	tr_info => $tr,
+	value=>$conc_string,
+      );
+    }
+
+    if ( defined $biosequence->{published_ng_per_ml}) {
+      my $conc_string =
+	sprintf("%0.1f ng/ml (%s)",
+		 $biosequence->{published_ng_per_ml},
+		 $biosequence->{pub_ng_ml_source});
+      print $sbeamsMOD->encodeSectionItem(
+	key=>'Published concentration',
+	tr_info => $tr,
+	value=>$conc_string,
+      );
+    }
 
     my @synonyms = $keySearch->getProteinSynonyms(
       resource_name => $biosequence->{biosequence_name}
@@ -758,7 +895,12 @@ sub handle_request {
                                              value => "$peptide_counts\n" ); 
       print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
                                                key => 'Total Observations',
-                                             value => $obs ) . "</TABLE>\n"; 
+                                             value => $obs );
+      print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
+                              key => 'ProteinProphet-adjusted N Obs',
+                              value => $biosequence->{n_observations} )
+            if defined $biosequence->{n_observations};
+      print "</TABLE>\n"; 
     }
 
 
@@ -799,10 +941,13 @@ sub handle_request {
   my $graphic_head = $sbeamsMOD->encodeSectionHeader( text => "Sequence Motifs", link => $link );
   print "<TABLE width=600>$graphic_head </TABLE> $graphic_section" if $htmlmode;
 
+
   #############################################################
   ## Display annotated sequence - this routine makes its own section header ##
 
     #### Display the annotated sequence
+    # TMF: added for special need
+    print STDERR "$protein_name\t";
     displayAnnotatedSequence(
            %parameters,
          peptides => $peptides,
@@ -2008,10 +2153,11 @@ sub get_sequence_graphic {
   my $tmp_img_path = "images/tmp";
   my $img_file     = "$PHYSICAL_BASE_DIR/$tmp_img_path/$file_name";
 
- 	open( OUT, ">$img_file" ) || die "$!: $img_file";
-	binmode(OUT);
-	print OUT $panel->png;
-	close OUT;
+        # TMF: this is breaking for me in csv mode
+ 	#open( OUT, ">$img_file" ) || die "$!: $img_file";
+	#binmode(OUT);
+	#print OUT $panel->png;
+	#close OUT;
 
   my $tr = $args{tr_info} || '';
 #  my $tr_link =  "<TR><TD>$link</TD></TR>";
@@ -2092,7 +2238,8 @@ sub displayAnnotatedSequence {
 
 
   #### Don't display unless HTML
-  return unless ($sbeams->output_mode() eq 'html');
+  # TMF: comment out for special need
+  #return unless ($sbeams->output_mode() eq 'html');
 
   # @unlikely_to_observe, { start => $index, end => $peptide_end, rationale => 'Short peptide' };
 # _non_coverage
@@ -2230,6 +2377,8 @@ sub displayAnnotatedSequence {
     $cnt += length( $frag->{seq} );
   }
   
+ # TMF: added this statement for special need
+ print STDERR int($observed_residues/$seq_length*1000)/1000,"\t",int(($observed_residues)/($seq_length-$cnt)*1000)/1000,"\n"; 
 #  print "\n\n";
 #  print "Protein Coverage = ",int($observed_residues/$seq_length*1000)/10,"%";
 #  $log->debug( "OBS: $observed_residues, SEQLEN: $seq_length, CNT $cnt" );
@@ -2944,5 +3093,3 @@ sub displayExternalLinksSection {
   return 1;
 
 } # end displayExternalLinksSection
-
-
