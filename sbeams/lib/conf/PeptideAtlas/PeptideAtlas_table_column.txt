@@ -594,6 +594,7 @@ AT_search_batch_statistics	13	n_good_spectra	Num spectra above threshold	int	4	0
 AT_search_batch_statistics	14	rownum	Line number in source file	int	4	0	Y		N							Y	Y	N	Line number in source Experiments.txt file 		
 AT_search_batch_statistics	15	cumulative_n_peptides	Cumulative number of peptides	int	4	0	Y		N							Y	Y	N	Cumulative number of peptides		
 AT_search_batch_statistics	16	n_canonical_proteins	Number of canonical (highly nonredundant) proteins mapped to	int	4	0	Y		N							Y	Y	N	Number of canonical (highly nonredundant) proteins mapped to		
+AT_search_batch_statistics	17	cumulative_n_proteins	Cumulative number of canonical proteins	int	4	0	Y		N							Y	Y	N	Cumulative number of peptides		
 AT_proteotypic_peptide	1	proteotypic_peptide_id	Proteotypic Peptide ID	int	4	0	N		Y							 	 				pkDEFAULT
 AT_proteotypic_peptide	2	matched_peptide_id	Matched Peptide ID	int	4	0	Y		N	AT_peptide	peptide_id								Peptide ID of  the Atlas entry which matches the amino acid sequence of this entry		
 AT_proteotypic_peptide	3	preceding_residue	Preceding Residue	char	1	0	N		N												

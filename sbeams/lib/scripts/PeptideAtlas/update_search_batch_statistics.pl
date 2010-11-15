@@ -316,7 +316,8 @@ sub get_build_contributions {
     }
   } 
     
-# sample_tag sbid ngoodspec      npep n_new_pep cum_nspec cum_n_new is_pub
+# sample_tag sbid ngoodspec      npep n_new_pep cum_nspec cum_n_new is_pub nprot cum_nprot
+
 
    my $rownum = 0;
 	 my $n_cum_pep = 0;
@@ -332,13 +333,14 @@ sub get_build_contributions {
      $results{$vals[1]} = { n_good_spectra => $vals[2],
                             n_peptides => $vals[3],
                             n_progressive_peptides => $vals[4],
-														cumulative_n_peptides => $n_cum_pep,
-														rownum => $rownum };
-
+			    cumulative_n_peptides => $n_cum_pep,
+			    n_canonical_proteins => $vals[8],
+			    cumulative_n_proteins => $vals[9],
+                            rownum => $rownum };
    }
 
   # return hash keyed by sbid, value is arrayref of ngood, npep, nnew, 
-  # cum_ngood, cum_nnew
+  # cum_ngood, cum_nnew, n_prots, cum_n_prots
   return \%results;
 }
 
@@ -467,13 +469,21 @@ sub get_contributions {
   my $identlist = shift || {};
   my $sql =<<"  SMPL";
   SELECT ASB.atlas_search_batch_id, COUNT(*) num_unique, sample_title, 
-         ABSB.sample_id, ABSB.atlas_build_search_batch_id
+         ABSB.sample_id, ABSB.atlas_build_search_batch_id,
+         COUNT(distinct BS.biosequence_id) as n_canonical_proteins_2
   FROM $TBAT_ATLAS_SEARCH_BATCH ASB
   JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON ( ABSB.atlas_search_batch_id = ASB.atlas_search_batch_id )
   JOIN $TBAT_SAMPLE S ON S.sample_id = ABSB.sample_id
   JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PIS ON PIS.atlas_search_batch_id = ASB.atlas_search_batch_id
   JOIN $TBAT_PEPTIDE_INSTANCE PI ON ( PIS.peptide_instance_id = PI.peptide_instance_id AND PI.atlas_build_id = ABSB.atlas_build_id )
+  JOIN $TBAT_PEPTIDE P ON PI.peptide_id = P.peptide_id
+  JOIN $TBAT_PEPTIDE_MAPPING PM ON PI.peptide_instance_id = PM.peptide_instance_id
+  JOIN $TBAT_BIOSEQUENCE BS ON PM.matched_biosequence_id = BS.biosequence_id
+  JOIN $TBAT_PROTEIN_IDENTIFICATION PID on (BS.biosequence_id = PID.biosequence_id AND PID.atlas_build_id = ABSB.atlas_build_id)
+  JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL ON PID.presence_level_id = PPL.protein_presence_level_id
   WHERE PI.atlas_build_id = $build_id
+  AND PPL.level_name = 'canonical'
+  AND BS.biosequence_name NOT LIKE 'DECOY%'
   AND PI.peptide_instance_id IN
     ( SELECT PI.peptide_instance_id
        FROM $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB JOIN $TBAT_PEPTIDE_INSTANCE PI ON PISB.peptide_instance_id = PI.peptide_instance_id
@@ -502,10 +512,14 @@ sub get_contributions {
 			}
 		}
 
+   print "$cnt->[5] canonical prots for $cnt->[4]\n";
+
     $results{$cnt->[0]} = { n_uniq_contributed_peptides => $cnt->[1],
                             sample_title => $cnt->[2],
                             sample_id => $cnt->[3],
-                            atlas_build_search_batch_id => $cnt->[4] };
+                            atlas_build_search_batch_id => $cnt->[4],
+                            n_canonical_proteins_2 => $cnt->[5],
+                           };
   }
 		print "Done loop\n";
 	return \%results;
@@ -560,7 +574,9 @@ sub insert_stats {
                     n_searched_spectra n_uniq_contributed_peptides 
                     model_90_sensitivity model_90_error_rate 
                     n_distinct_peptides n_distinct_multiobs_peptides 
-                    n_progressive_peptides n_good_spectra rownum cumulative_n_peptides ) ) {
+                    n_progressive_peptides n_good_spectra rownum
+                    cumulative_n_peptides n_canonical_proteins 
+                    cumulative_n_proteins ) ) {
       $rowdata{$k} = $build->{$k};
     }
     # Assertion!

@@ -187,7 +187,10 @@ sub main {
     while ($line = <PROTFILE>) {
       chomp $line;
       @fields = split(",", $line);
-      if ($fields[$level_name_idx] eq 'canonical') {
+      if ( ($fields[$level_name_idx] eq 'canonical') &&
+           ($fields[$biosequence_name_idx] !~ /UNMAPPED/) &&
+           ($fields[$biosequence_name_idx] !~ /^DECOY_/)
+        ) {
 	$canonical_hash{$fields[$biosequence_name_idx]} = 1;
       }
     }
