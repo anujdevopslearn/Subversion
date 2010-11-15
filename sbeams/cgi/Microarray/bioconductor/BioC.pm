@@ -195,17 +195,23 @@ sub generate_sh {
 	$sh = <<END;
 #!/bin/sh
 $SH_HEADER
+
 R_LIBS=$R_LIBS
 export R_LIBS
+
+# explicitly tell R where to find gs
+R_GSCMD=/usr/bin/gs
+export R_GSCMD
+
 $R_BINARY --no-save < $RESULT_DIR/$jobname/$jobname.R 2> $RESULT_DIR/$jobname/$jobname.err
 STATUS=\$?
 if ([[ \$STATUS == 0 ]]) then
-  if ([[ -n `find $RESULT_DIR/$jobname -name '*.png'` ]]) then
-    for i in $RESULT_DIR/$jobname/*.png; do
-      pngtopnm \$i | pnmscale -r $resize | pnmtopng > \$i.tmp
-      mv \$i.tmp \$i
-    done
-  fi
+  #if ([[ -n `find $RESULT_DIR/$jobname -name '*.png'` ]]) then
+  #  for i in $RESULT_DIR/$jobname/*.png; do
+  #    pngtopnm \$i | pnmscale -r $resize | pnmtopng > \$i.tmp
+  #    mv \$i.tmp \$i
+  #  done
+  #fi
   mv $RESULT_DIR/$jobname/indexresult.html $RESULT_DIR/$jobname/index.html
   touch $RESULT_DIR/$jobname/index.html
 END
