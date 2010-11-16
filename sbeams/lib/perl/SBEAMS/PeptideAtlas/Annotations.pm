@@ -456,7 +456,8 @@ sub get_column_defs {
     'Org' => 'Organism(s) in which peptide was seen',
     'Annot' => 'Annotation of peptide features such as missed cleavage (MC), etc.',
     'PATR' => 'Peptide assay defined in transition resource',
-    'Rank' => 'PABST Transition rank'
+    'Rank' => 'PABST Transition rank',
+    'RI' => 'Relative Intensity of peak in CID spectrum',
 
 
     );
