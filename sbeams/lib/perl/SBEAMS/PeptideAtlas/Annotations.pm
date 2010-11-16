@@ -411,9 +411,11 @@ sub get_column_defs {
   my %args = @_;
 
   my %coldefs = ( 
+    'Protein' => 'Protein Name/Accession.',
     'Accession' => 'Peptide Atlas accession number, beginning with PAp followed by 9 digits.',
     'Pre AA' => 'Preceding (towards the N terminus) amino acid',
     'Sequence' => 'Amino Acid sequence of this peptide', 
+    'Source' => 'Source from which transitions were obtained', 
     'Fol AA' =>'Following (towards the C terminus) amino acid', 
     'ESS' => 'Empirical suitability score, derived from peptide probability, EOS, and sequence characteristics such as missed cleavage <SUP><FONT COLOR=RED>[MC]</FONT></SUP> or semi-tryptic <SUP><FONT COLOR=RED>[ST]</FONT></SUP>, or <BR> multiple genome locations <SUP><FONT COLOR=RED>[MGL]</FONT></SUP>.', 
     'PSS' => 'Predicted suitability score, derived from combining publicly available algorithms (Peptide Sieve, STEPP, ESPP, APEX, Detectability Predictor)', 
@@ -437,10 +439,12 @@ sub get_column_defs {
     'Subpep of' => 'Number of observed peptides of which this peptide is a subsequence', 
     'Sequence' => 'Amino acid sequence of detected pepide, including any mass modifications.',
     'Charge' => 'Charge on Q1 (precursor) peptide ion.',
+    'q1_chg' => 'Charge on Q1 (precursor) peptide ion.',
     'q1_mz' => 'Mass to charge ratio of precursor peptide ion.',
     'q3_mz' => 'Mass to charge ratio of fragment ion.',
+    'q3_chg' => 'Charge on Q3 (fragment) ion.',
     'Label' => 'Ion-series designation for fragment ion (Q3).',
-    'Intensity' => 'Intensity of peak in CID spectrum',
+    'Intensity' => 'Relative intensity of peak in CID spectrum, scaled to 10000 units',
     'CE' => 'Collision energy, the kinetic energy conferred to the peptide ion and resulting in peptide fragmentation. (eV)',
     'RT' => 'Peptide retention time( in minutes ) in the LC/MS system.',
     'SSRT' => "Sequence Specific Retention time provides a hydrophobicity measure for each peptide using the algorithm of Krohkin et al. Version 3.0 <A HREF=http://hs2.proteome.ca/SSRCalc/SSRCalc.html target=_blank>[more]</A>",
@@ -451,7 +455,8 @@ sub get_column_defs {
     'MSS' => 'Merged suitability score, greater of ESS and PSS',
     'Org' => 'Organism(s) in which peptide was seen',
     'Annot' => 'Annotation of peptide features such as missed cleavage (MC), etc.',
-    'PATR' => 'Peptide assay defined in transition resource'
+    'PATR' => 'Peptide assay defined in transition resource',
+    'Rank' => 'PABST Transition rank'
 
 
     );
