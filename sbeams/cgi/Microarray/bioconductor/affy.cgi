@@ -522,7 +522,7 @@ END
     # Add links to image page
     $img_table->addRow( [ "<A HREF=$raw_url target=_images ><IMG SRC='$raw_url' BORDER=0 WIDTH=600></A>" ] ); 
     $img_table->addRow( [ "<H2>Raw Correlation Matrix</H2>" ] );
-    $img_table->addRow( [ "<A HREF=$raw_url target=_images ><IMG SRC='$norm_url' BORDER=0 WIDTH=600></A>" ] ); 
+    $img_table->addRow( [ "<A HREF=$norm_url target=_images ><IMG SRC='$norm_url' BORDER=0 WIDTH=600></A>" ] ); 
     $img_table->addRow( [ "<H2>Normalized Correlation Matrix</H2>" ] );
   }
 
