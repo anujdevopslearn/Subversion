@@ -946,11 +946,11 @@ sub get_pabst_static_peptide_transitions_display {
   AND peptide_sequence = '$args{peptide_sequence}'
   ORDER BY ion_rank ASC 
   ~;
-#  $log->debug( $sql );
+
   my @headings = ( pre => 'Previous amino acid',
                    sequence => 'Amino acid sequence of peptide',
                    fol => 'Followin amino acid',
-                   Src => 'Transition source, one of PATR, QQQ (triple quad), IT (ion trap), IS (In silico/theoretical)',
+                   Source => 'Transition source, one of PATR, QQQ-observed (triple quad), IT-observed (ion trap), Predicted (In silico/theoretical)',
                    Q1_mz => 'Precursor ion m/z',
                    Q1_chg => 'Precursor ion charge',
                    Q3_mz => 'Fragment ion m/z',
@@ -967,7 +967,7 @@ sub get_pabst_static_peptide_transitions_display {
 
   my $naa = 'n/a';
   $naa = $sbeams->makeInactiveText($naa) if $sbeams->output_mode() =~ /html/i;
-  my %src_name = ( T => 'IS', Q => 'QQQ', I => 'IT', 'P' => 'PATR' );
+  my %src_name = ( T => 'Predicted', Q => 'QQQ-observed', I => 'IT-observed', 'P' => 'PATR-validated' );
 
   my $sth = $sbeams->get_statement_handle( $sql );
   while( my @row = $sth->fetchrow_array() ) {
@@ -1120,7 +1120,7 @@ sub get_pabst_static_peptide_display {
   }
   die "Missing required parameter(s) $err" if $err;
   my $organism = $atlas->getCurrentAtlasOrganism( parameters_ref => {} );
-  $log->debug( "Org is $organism" );
+#  $log->debug( "Org is $organism" );
 
   # If atlas build ID is passed, use organism to set pabst_build_id
   my $pabst_build_id;
@@ -1129,7 +1129,7 @@ sub get_pabst_static_peptide_display {
   } else {
     $pabst_build_id = $self->get_pabst_build();
   }
-  $log->debug( "build is $pabst_build_id!" );
+#  $log->debug( "build is $pabst_build_id!" );
 
   $args{patr_peptides} ||= {};
 
@@ -1416,7 +1416,7 @@ sub get_pabst_build {
   ORDER BY pabst_build_id DESC
   ~;
 
-  $log->debug( "organism is $organism!!!" );
+#  $log->debug( "organism is $organism!!!" );
 
   my %builds;
   my $validated_build_id = '';
