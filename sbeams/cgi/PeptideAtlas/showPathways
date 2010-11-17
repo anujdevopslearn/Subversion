@@ -2,13 +2,12 @@
 #!/usr/local/bin/perl -w
 
 ###############################################################################
-# Program treatment.cgi    
+# Program showPathways    
 # $Id: $
 #
-# Description : Form and processing logic for applying laboratory 
-# manipulation or treatment to a set of samples.
+# Description :  Show protein information overlayed on KEGG pathway maps.
 #
-# SBEAMS is Copyright (C) 2000-2006 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2011 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -27,6 +26,7 @@ use Benchmark;
 
 use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::TabMenu;
 
 use SBEAMS::BioLink::KeggMaps;
 
@@ -46,6 +46,7 @@ my $atlas_build_id;
 my $kegg_organism;
 
 my $verbose = 1;
+my $script_name = basename( $0 );
 
 # Don't buffer output
 $|++;
@@ -55,13 +56,12 @@ $|++;
   # Authenticate user.
   my $current_username = $sbeams->Authenticate( allow_anonymous_access => 1 ) || die "Authentication failed";
 
-
   # Process cgi parameters
   my $params = process_params();
   
   #### Get the current atlas_build_id based on parameters or session
   $atlas_build_id = $atlas->getCurrentAtlasBuildID( parameters_ref => $params,
-                                                    no_cache => 1 # no session cache, tools32
+#      no_cache => 0 # no session cache, tools32
                                                   );
 
   $log->info( "Atlas build is $atlas_build_id in showPathways" );
@@ -70,27 +70,35 @@ $|++;
   $kegg_organism = $atlas->getCurrentAtlasOrganism( atlas_build_id => $atlas_build_id,
                                                     parameters_ref => $params, 
                                                               type => 'kegg',
-                                                          no_cache => 1 
+#                                                          no_cache => 1 
                                                   );
+  $log->info( "Kegg organism is  $kegg_organism in showPathways" );
 
-  my $content = '';
   $params->{apply_action} ||= 'list_pathways';
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $atlas->getTabMenu(
+    parameters_ref => $params,
+    program_name => $script_name,
+  );
+  my $content = '';
+  $content = $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
 
   # Decision block, what type of page are we going to display?
   if ( $params->{apply_action} eq 'list_pathways' ) {
-    $content = list_pathways( $params );
+    $content .= list_pathways( $params );
 
   } elsif ( $params->{apply_action} eq 'pathway_details' ) {
 
     # Until caching is available, will print out as we go.
     $atlas->printPageHeader( onload => 'hideTimerInfo()' );
-    $content = pathway_details( $params );
+    $content .= pathway_details( $params );
     print $content;
     $atlas->printPageFooter( close_tables=>'NO');
     exit;
 
   } else {
-    $content = list_pathways( $params );
+    $content .= list_pathways( $params );
 
   }
 
