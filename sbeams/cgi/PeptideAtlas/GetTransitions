@@ -603,9 +603,10 @@ sub fetch_transitions {
     syntheis_adjusted_score DESC, precursor_ion_charge ASC,
     ion_rank ASC, relative_intensity DESC  
     ~;
-	$log->debug( $lib_sql );
+#	$log->debug( $lib_sql );
 
   my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT' );
+	$log->debug( "first: " . join( "\:", @headings ) ); 
   my $headings = $atlas->get_column_defs( labels => \@headings, plain_hash => 1 );
 
   my $headings_ref = ( $sbeams->output_mode() =~ /html/i ) ? 
@@ -902,6 +903,16 @@ sub fetch_transitions {
 
   my $align = [qw(center center left center center right right right center right left right right)];
 
+#  unshift @headings, 'PSieve';
+#	$log->debug( "later: " . join( "\:", @headings ) ); 
+  my $col_info = $atlas->get_column_defs( labels => \@headings );
+#      my $headings = $atlas->get_column_defs( labels => \@headings, plain_hash => 1 );
+  my $help_text = $atlas->make_table_help( description => 'Q1/Q3 transition pairs for SRM experiments',
+                                                   entries => $col_info,
+                                                   ); 
+
+  $log->debug( $help_text );
+
   my ( $html, $rs_name ) = $atlas->encodeSectionTable( header => 1, 
                                                         width => '600',
                                                       tr_info => $args{tr},
@@ -909,6 +920,7 @@ sub fetch_transitions {
                                                          rows => \@peptides,
                                                  rows_to_show => 20,
                                                      max_rows => 500,
+                                                     help_text => $help_text,
                                                  bkg_interval => 3, 
                                                  set_download => 'Download peptides', 
                                                   file_prefix => 'best_peptides_', 
@@ -927,14 +939,8 @@ sub fetch_transitions {
 
 
       
-      my $col_info = $atlas->getAnnotationColumnDefs();
-      my $help_text = $atlas->get_table_help_section( name => 'Transitions',
-                                                   description => 'Q1/Q3 transition pairs for SRM experiments',
-                                                   heading => 'Column Definitions',
-                                                   entries => $col_info,
-                                                   ); 
       if ( $is_html ) {
-        $content .= "<BR><BR><BR>$help_text<TABLE>$html</TABLE> $gMF" 
+        $content .= "<BR><BR><TABLE>$html</TABLE> $gMF" 
       } else {
 				my $rs = $atlas->get_cached_resultset( rs_name => $rs_name );
 
