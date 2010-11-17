@@ -49,7 +49,7 @@ exit(0);
 sub main 
 {
   # Authenticate and exit if a username is not returned
-  my $current_username = $sbeams->Authenticate( allow_anonymous_access => 1 );
+  my $current_username = $sbeams->Authenticate( allow_anonymous_access => 0 );
   exit unless $current_username;
 
   $is_html = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
@@ -364,7 +364,9 @@ sub fetch_peptides {
   $log->debug( $pabst_sql );
 
   my $dp_sql = qq~
-  SELECT distinct sequence, plate, status 
+  SELECT distinct sequence, plate, status , 
+         CASE WHEN QQQ_data = 1 THEN 'Yes' ELSE 'No' END QQQ,
+         CASE WHEN QTOF_data = 1 THEN 'Yes' ELSE 'No' END QTOF
   FROM peptideatlas.dbo.dirty_peptides
   ~;
   my $dp_sth = $sbeams->get_statement_handle( $dp_sql );
@@ -379,6 +381,8 @@ sub fetch_peptides {
     } else {
        $dpeps{$row[0]}->{plates} = $row[1];
        $dpeps{$row[0]}->{status} = ucfirst( lc($row[2]) );
+       $dpeps{$row[0]}->{QQQ} = $row[3];
+       $dpeps{$row[0]}->{QTOF} = $row[4];
     }
   }
 
@@ -390,7 +394,7 @@ sub fetch_peptides {
   my @results;
   if ( scalar( keys( %peptides ) ) ) {
     for my $pep ( keys( %peptides ) ) {
-      push @results, [ 'na', $pep, 'na', 'na', 'na', $dpeps{$pep}->{plates},  $dpeps{$pep}->{status} ] ;
+      push @results, [ 'na', $pep, 'na', 'na', 'na', $dpeps{$pep}->{plates},  $dpeps{$pep}->{status}, $dpeps{$pep}->{QQQ},  $dpeps{$pep}->{QTOF},  ] ;
     }
   } else {
     my $sth = $sbeams->get_statement_handle( $pabst_sql );
@@ -400,9 +404,9 @@ sub fetch_peptides {
       if ( $dpeps{$row[1]} ) {
         $row[2] = sprintf( "%0.2f", $row[2] );
         if ( $parameters{download_only} ) {
-          print join( "\t", @row, $dpeps{$row[1]}->{plates}, $dpeps{$row[1]}->{status} ) . "\n";
+          print join( "\t", @row, $dpeps{$row[1]}->{plates}, $dpeps{$row[1]}->{status}, $dpeps{$row[1]}->{QQQ},  $dpeps{$row[1]}->{QTOF} ) . "\n";
         } else {
-          push @results, [ @row, $dpeps{$row[1]}->{plates}, $dpeps{$row[1]}->{status}];
+          push @results, [ @row, $dpeps{$row[1]}->{plates}, $dpeps{$row[1]}->{status}, $dpeps{$row[1]}->{QQQ},  $dpeps{$row[1]}->{QTOF}];
         }
       }
     }
@@ -418,7 +422,7 @@ sub fetch_peptides {
     
   $log->debug( $header );
 
-    my @labels = ( 'Protein Name', 'Sequence', 'Adj SS', 'N Obs', 'Annot', 'Plate', 'Pep Status' );
+    my @labels = ( 'Protein Name', 'Sequence', 'Adj SS', 'N Obs', 'Annot', 'Plate', 'Pep Status', 'QQQ_data', 'QTOF_data' );
     unshift @results, \@labels;
 
     my $col_defs = $atlas->get_column_defs( labels => \@labels );
