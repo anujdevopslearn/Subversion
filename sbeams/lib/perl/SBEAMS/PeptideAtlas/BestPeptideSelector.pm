@@ -1130,6 +1130,7 @@ sub get_pabst_static_peptide_display {
     $pabst_build_id = $self->get_pabst_build();
   }
 #  $log->debug( "build is $pabst_build_id!" );
+  
 
   $args{patr_peptides} ||= {};
 
@@ -1286,7 +1287,7 @@ sub get_pabst_static_peptide_display {
       $row[3] *= 5;
     }
 
-    $row[1] = "<A HREF=GetPeptide?_tab=3;atlas_build_id=$args{atlas_build_id};searchWithinThis=Peptide+Sequence;searchForThis=$row[1];action=QUERY;biosequence_id=$args{biosequence_id} TITLE='View peptide $row[1] details'>$row[1]</A>" if $row[8] || 1;
+    $row[1] = "<A HREF=GetPeptide?_tab=3;atlas_build_id=$args{atlas_build_id};searchWithinThis=Peptide+Sequence;searchForThis=$row[1];action=QUERY;biosequence_id=$args{biosequence_id} TITLE='View peptide $row[1] details'>$row[1]</A>" if $row[8];
 
     push @peptides, [ @row];
   }
@@ -1294,8 +1295,7 @@ sub get_pabst_static_peptide_display {
   my $uniq_peps = "'" . join( "','", keys( %uniq_peps ) ) . "'"; 
   my $uniq_sql = qq~
   SELECT DISTINCT peptide_sequence, organism_id 
-  FROM 
-  $TBAT_PABST_BUILD PB  
+  FROM $TBAT_PABST_BUILD PB  
   JOIN $TBAT_PABST_PEPTIDE PP ON PB.pabst_build_id = PP.pabst_build_id
   WHERE peptide_sequence IN ( $uniq_peps )
   ~;
@@ -1306,6 +1306,19 @@ sub get_pabst_static_peptide_display {
     $pep2org{$row[0]} ||= [];
     push @{$pep2org{$row[0]}}, $row[1];
   }
+
+  my $seen_sql = qq~
+  SELECT DISTINCT peptide_sequence 
+  FROM $TBAT_PEPTIDE 
+  WHERE peptide_sequence IN ( $uniq_peps )
+  ~;
+
+  $sth = $sbeams->get_statement_handle( $seen_sql );
+  my %pep2acc;
+  while ( my @row = $sth->fetchrow_array() ) {
+    $pep2acc{$row[0]}++;
+  }
+  $log->debug( $seen_sql );
 
   my @mod_peptides;
   my %orgMap = ( 2 => 'Hs', 6 => 'Mm', '3' => 'Sc' );
@@ -1325,6 +1338,7 @@ sub get_pabst_static_peptide_display {
     } else {
       $pep->[10] = '';
     }
+    $pep->[1] = "<A HREF='$CGI_BASE_DIR/PeptideAtlas/Summarize_Peptide?searchForThis=$pep->[1]&query=QUERY'>$pep->[1]</A>" if $pep2acc{$pep->[1]};
     push @mod_peptides, $pep;
   }
 
