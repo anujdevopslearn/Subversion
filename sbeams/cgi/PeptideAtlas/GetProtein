@@ -838,7 +838,6 @@ sub handle_request {
   #### Define the hypertext links for columns that need them
   %url_cols = (
     'Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
-    'N Samples' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=\%$colnameidx{peptide_accession}V&action=QUERY#samples",
   );
 #  \%$colnameidx{biosequence_gene_name}V&
 
@@ -1060,10 +1059,16 @@ sub handle_request {
         for my $idx ( 12, 13 ) {
           $row->[$idx] =~ s/\s//g;
           my @samples = split( /,/, $row->[$idx] );
-          $row->[$idx] = scalar( @samples );
+          if ( $idx == 12 ) {
+            my $cnt = scalar( @samples );
+            $row->[$idx] = "<A HREF='$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$row->[0]&action=QUERY#samples' TITLE='$row->[$idx]'> $cnt </A>";
+          } else {
+            $row->[$idx] = scalar( @samples );
+          }
         }
 #      }
 
+      my %sample_list = @sample_list;
 			my @errs;
 			push @errs, 'mc' if $mc;
 			push @errs, 'ntt' if $ntt < 2;
@@ -1276,7 +1281,6 @@ sub handle_request {
         base_url=>$base_url,
         tr_info => $tr,
       );
-      $log->debug( $samples );
 
       print qq~ 
  <TABLE width="600">
