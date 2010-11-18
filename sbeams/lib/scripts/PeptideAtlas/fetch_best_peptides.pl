@@ -161,7 +161,7 @@ sub process_args {
   GetOptions( \%args, 'atlas_build=s@', 'show_builds', 'help', 'tsv_file=s', 
               'protein_file=s', 'n_peptides=i', 'config=s', 'default_config', 
               'bioseq_set=i', 'obs_min=i', 'verbose', 'name_prefix=s',
-              'build_name=s', 'min_score=i', 'chk_file=s', 'chk_scr=f',
+              'build_name=s', 'min_score=f', 'chk_file=s', 'chk_scr=f',
               'no_mc', 'no_st'
              ) || print_usage();
 
@@ -240,12 +240,7 @@ sub print_usage {
   print <<"  END";
       $msg
 
-#  GetOptions( \%args, 'atlas_build=s@', 'show_builds', 'help', 'tsv_file=s', 
-#              'protein_file=s', 'n_peptides=i', 'config=s', 'default_config', 
-#              'bioseq_set=i', 'obs_min=i', 'verbose', 'name_prefix=s',
-#              'build_name=s', 'min_score=i', 'chk_file=s', 'chk_scr=s'
-
-usage: $sub -a build_id [ -t outfile -n obs_cutoff -p proteins_file -v -b .3 ]
+usage: $sub -a build_id [ -t outfile -o 3 -p proteins_file -v --conf my_config_file  ]
 
    -a, --atlas_build    one or more atlas build ids to be queried for observed 
                         peptides, will be used in order provided.  Can be 
