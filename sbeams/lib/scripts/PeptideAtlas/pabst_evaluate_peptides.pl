@@ -265,28 +265,28 @@ sub print_usage {
 
 usage: $sub -a build_id [ -t outfile -n obs_cutoff -p proteins_file -v -b .3 ]
 
-   -a, --atlas_build      Numeric atlas build ID to query 
-   --config           Config file defining penalites for various sequence  
-   -f, --fasta_file       reference fasta file of proteins, supercedes atlas_build
-                          specified biosequence_set
-   -p, --peptide_file     file of peptides, may have other info
-   -o, --output_file      file to print annotated peptides to.
-   -i, --idx_peptide      1-based index of peptide info in peptide_file
-   -r, --remap_proteins   remap peptides to target db
-   --show_prot_names  print column with proteins that mapped to peptide X.
-                          Requires --remap_proteins.
-   --score_idx            Index of column to be used as score base.
-   --sort_within_prots    Sort within proteins, arg value is index of prot col
-   -t, --tsv_file         print output to specified file rather than stdout
-   -h, --help             Print usage
-   -v, --verbose          Verbose output, prints progress 
-   --calc_ssr             Calculate ssr, append as new column 
-   --chk_file             File of peptide accessions for which to modify score.  
-                          Primary purpose is to boost proteins on a particular 
-                          list, e.g.
-   --chk_scr              Score to apply for items in chk_file above.
-   --column_headings      File has col headings, paste new ones and don't score.
-   -w, --wspace_skip_idx  Skip rows where column x, 1-based idx, is blank
+   -a, --atlas_build        Numeric atlas build ID to query 
+       --config             Config file defining penalites for various sequence  
+   -f, --fasta_file         Reference fasta file of proteins, supercedes atlas_build
+                            Specified biosequence_set
+   -p, --peptide_file       File of peptides, may have other info
+   -o, --output_file        File to print annotated peptides to.
+   -i, --idx_peptide        1-based index of peptide info in peptide_file
+   -r, --remap_proteins     Remap peptides to target db
+       --show_prot_names    Print column with proteins that mapped to peptide X.
+                            Requires --remap_proteins.
+       --score_idx          Index of column to be used as score base.
+       --sort_within_prots  Sort within proteins, arg value is index of prot col
+   -t, --tsv_file           Print output to specified file rather than stdout
+   -h, --help               Print usage
+   -v, --verbose            Verbose output, prints progress 
+       --calc_ssr           Calculate ssr, append as new column 
+       --chk_file           File of peptide accessions for which to modify score.  
+                            Primary purpose is to boost proteins on a particular 
+                            list, e.g.
+   --chk_scr                Score to apply for items in chk_file above.
+   --column_headings        File has col headings, paste new ones and don't score.
+   -w, --wspace_skip_idx    Skip rows where column x, 1-based idx, is blank
   END
 # End of the line
   exit;
