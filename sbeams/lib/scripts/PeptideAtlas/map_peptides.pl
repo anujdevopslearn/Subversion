@@ -178,7 +178,7 @@ for my $acc ( keys( %{$acc2seq} ) ) {
           exit;
         } elsif ( scalar( keys( %{$allpeptides->{$mapped_pep}} ) ) > 1 ) { # Degenerate
           print "REGEN: >$mapped_pep $allpeptides->{mapped_pep}<\n" if $opts->{show_regen}; #not an option
-        } else { # Gerenate
+        } else { # Gerenate - as opposed to de-generate!
           $n_peps++;
           print "SIGEN: >$mapped_pep<\n" if $opts->{show_proteo}; #not an option
         }
@@ -192,7 +192,7 @@ for my $acc ( keys( %{$acc2seq} ) ) {
           for my $k ( keys( %{$allpeptides->{$mapped_pep}} ) ) {
             print "$k\n";
           }
-        } else { # Gerenate
+        } else { # Gerenate - as opposed to de-generate!
           print "PROTEO: >$mapped_pep<\n";
         }
       }
