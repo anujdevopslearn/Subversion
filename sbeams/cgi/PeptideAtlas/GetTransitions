@@ -180,6 +180,9 @@ sub print_form {
     }
     $parameters{n_peptides_per_protein} ||= 3;
     $parameters{n_highest_intensity_fragment_ions} ||= 3;
+    if ( $parameters{peptides_only} ) {
+      $parameters{n_highest_intensity_fragment_ions} = 1;
+    }
     $parameters{pabst_build_id} = $pabst_build_id;
 
 #    pabst_build_id=7
@@ -238,12 +241,15 @@ sub print_form {
     my ( $sub_form ) = $best_peptide->get_change_form( form_only => 1, hide_buttons => 1, shade_defs => 1 );
     $sub_form =~ s/tbl_visible/tbl_hidden/gm;
    
+    my $peptide_chk = "<INPUT TYPE=checkbox NAME=peptides_only></INPUT>";
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Get Peptides Only:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$peptide_chk</TD></TR> ~;
+
 #    $form =~ s/(\<INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="AT_GetPABSTList"\>)/$1<BR>$sub_form/gm;
 #    $form =~ s/\<\/TABLE\>/<TR><TD COLSPAN=3> $sub_form<\/TD><\/TR><\/TABLE>/i;
 #    $form .= "<TR><TD COLSPAN=3>$sub_form</TD></TR>\n";
     $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Adjust penalties:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$link$sub_form</TD></TR> ~;
 
-    my $select_lists = get_multi_selects();
+#    my $select_lists = get_multi_selects();
 #    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Transition Sources:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$select_lists->[0]</TD></TR> ~;
 #    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Allowable Modifications:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$select_lists->[1]</TD></TR> ~;
 
@@ -532,6 +538,9 @@ sub fetch_transitions {
   if ($parameters{'n_highest_intensity_fragment_ions'} =~ /^(\d+)$/) {
     $n_fragment_ions = $1;
   }
+  if ( $parameters{peptides_only} ) {
+    $n_fragment_ions = 1;
+  }
 
   ## n_peptides_per_protein defaults to 3 
   my $n_peps_per_prot = 3;
@@ -607,6 +616,12 @@ sub fetch_transitions {
 
   my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT' );
 	$log->debug( "first: " . join( "\:", @headings ) ); 
+
+#  peptides_only
+  if ( $parameters{peptides_only} ) {
+    splice( @headings, 5, 8 );
+  }
+
   my $headings = $atlas->get_column_defs( labels => \@headings, plain_hash => 1 );
 
   my $headings_ref = ( $sbeams->output_mode() =~ /html/i ) ? 
@@ -832,6 +847,7 @@ sub fetch_transitions {
       }
   
       my $ce = calculateCE( mz => $row[5], chg => $row[6] );
+
       push @peptides, [ $prot, @row[0..12] ];
       $patr_peps{$row[1]}++;
 
@@ -879,6 +895,9 @@ sub fetch_transitions {
     my $pep = $peptides[$i];
     if ( $patr->{$pep->[2]} ) {
       $peptides[$i] = $patr->{$pep->[2]};
+    }
+    if ( $parameters{peptides_only} ) {
+      splice( @{$pep}, 5, 8 ) if $i;
     }
   }
   $log->debug( "Done ! " . time() );
