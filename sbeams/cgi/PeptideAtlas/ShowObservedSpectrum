@@ -335,7 +335,7 @@ sub processRequest {
     my @spectrum_array;
 
     for ($i=0; $i<$spectrum{n_peaks}; $i++) {
-      $mass = $spectrum{masses}->[$i];
+      $mass = $spectrum{mz}->[$i];
       $intensity = $spectrum{intensities}->[$i];
       push(@spectrum_array,[$mass,$intensity]);
       $massmin = $mass if ($i == 0);
@@ -349,6 +349,10 @@ sub processRequest {
     $parameters{frag_mz_tol} = 1.0 unless $parameters{frag_mz_tol};
     $parameters{ymin_nl} = $intenmax * 0.1
 			unless $parameters{ymin_nl};
+    $parameters{ymin_mz} = $intenmax * 0.1
+			unless $parameters{ymin_mz};
+    $parameters{mz_label_precision} = 1
+			unless $parameters{mz_label_precision};
 
     unless (exists $parameters{ymax})
     {
@@ -402,9 +406,8 @@ sub processRequest {
 
     pgsch 1.0;
     my $prec = sprintf ("%0.1f", $precursor_mass);
-    pgmtext 'T',0.7,.01,0,"Peak value = $maxval  Precursor m/z = $prec";
-#   pgmtext 'RV',-2,1.02,1,"Assumed charge = $parameters{assumed_charge}";
-    pgmtext 'RV',-2,1.02,1,"Charge = $parameters{assumed_charge}";
+    pgmtext 'T',0.7,.01,0,"Peak value = $maxval";
+    pgmtext 'RV',-2,1.02,1,"Calc. precursor m/z = $prec  Charge = $parameters{assumed_charge}";
 
     defineColors();
 
@@ -427,6 +430,8 @@ sub processRequest {
     # peak for identification
     my $frag_mz_tol = $parameters{frag_mz_tol} || 2; 
     my $ymin_nl = $parameters{ymin_nl} || 0;
+    my $ymin_mz = $parameters{ymin_mz} || 0;
+    my $mz_label_precision = $parameters{mz_label_precision} || 0.1;
 
     # Filter the fragments to get only those close to an actual peak
     my $matched_fragments_aref = getMatchedFragments(
@@ -445,15 +450,6 @@ sub processRequest {
 		  Xmin=>$parameters{xmin}, Xmax=>$parameters{xmax},
 		  Ymax=>$parameters{ymax}, Angle=>$labangle, Fjust=>$fjust);
 
-    # Add labels to unidentified peaks, if requested
-    # Whoa, this is all wrong! The info we need is not in
-    # $fragments_aref, and it is not to be stored there, either!!!
-#    if ( 1 || $parameters{mzlabels}) {
-#      LabelUnidentifiedPeaks(
-#	      Fragments=>$matched_fragments_aref,
-#              YminNL=>$ymin_nl,
-#      );
-#    }
 
     #### Plot the peaks, colorizing according to nearest label
     PlotPeaks(
@@ -474,40 +470,17 @@ sub processRequest {
     my $charge;
     my $buffer = '';
     foreach $charge (@displayCharges) {
-      #my ($mzlist_ref) = CalcIonsOld(Residues=>\@residues, Charge=>$charge,
-#      CalcIonsOld(Residues=>\@residues, Charge=>$charge,
-#                                    mzlist_ref=>$mzlist_ref,
-#                                    Fragments=>$matched_fragments_aref,
-#                                    AAmasses=>$AAmasses_ref);
-
-      #### Make the plot and figure out what the labels should be
-#      $win = PlotPeaksOld(SpecData=>\%spectrum,
-#		       MZlist=>$mzlist_ref, Charge=>$charge,
-#		       Win=>$win, Length=>$mzlist_ref->{length},
-#		       PeakColors=>\@peakcolors);
-
-      #### Print out the peptide ion information
       $buffer .= printIonTable(mzlist_ref=>$mzlist_ref,color=>1,html=>1,
         charge=>$charge,length=>$length,
         theoretical_spectrum_ref=>\@theoretical_spectrum);
 
     } # end foreach
 
-    #### Label tall unidentified peaks with their m/z values, if requested
-    #### Isn't working for re-display (i.e. zoom).
-    if ( 0 && $parameters{mzlabels}) {
-      my $mz_label_threshold = $parameters{mzlabels} || 0.05;
-      if (($mz_label_threshold < 0 ) || ( $mz_label_threshold > 1.0 ) ||
-            ($mz_label_threshold * 1 ne $mz_label_threshold)) {
-	die("ERROR: mzlabels parameter must be number between 0.0 and 1.0");
-      }
-      LabelUnidentifiedPeaksOld( SpecData=>\%spectrum, Win=>$win, 
-                  MZ_threshold=>$mz_label_threshold,
-		  Xmin=>$parameters{xmin}, Xmax=>$parameters{xmax},
-		  Ymax=>$parameters{ymax}, Angle=>$labangle, Fjust=>$fjust);
-    }
-
-
+    #### Label unidentified peaks with their m/z values, if requested
+    LabelUnidentifiedPeaks( SpecData=>\%spectrum, Win=>$win, 
+		MZ_threshold=>$ymin_mz, MZ_precision=>$mz_label_precision,
+		Xmin=>$parameters{xmin}, Xmax=>$parameters{xmax},
+		Ymax=>$parameters{ymax}, Angle=>$labangle, Fjust=>$fjust);
 
     #### Draw Precursor mass symbol
     if ($parameters{precursor_mass}) {
@@ -587,6 +560,24 @@ sub processRequest {
 	 $optionlist</SELECT>
      ~;
 
+     print qq~
+        <nobr>
+	Ymin m/z label: <INPUT NAME="ymin_mz" VALUE="$parameters{ymin_mz}" SIZE="4" $onChange>
+        </nobr>
+     ~;
+
+    my %precision_options =
+      ( 0, "1", 1, "0.1", 2, "0.01", 3, "0.001", 4, "0.0001" );
+    for (my $i = 0, $optionlist = ''; $i <= 4; $i++) {
+      my $selected = ($i == $mz_label_precision) ? 'SELECTED ' : '';
+      $optionlist .= "<OPTION ${selected}VALUE=\"$i\"> " .
+         $precision_options{$i} . "</OPTION>\n"
+    }
+
+    print qq~
+      m/z label precision: <SELECT NAME="mz_label_precision" $onChange>
+      $optionlist</SELECT>
+    ~;
 
 
     #### Store the observed spectrum data as a recallable resultset
@@ -712,7 +703,7 @@ sub get_spectrum
 
 
   #### Put data into hash and return
-  $spectrum{masses} = \@masses;
+  $spectrum{mz} = \@masses;
   $spectrum{intensities} = \@intensities;
 
   return %spectrum;
@@ -927,7 +918,7 @@ sub PlotPeaksOld {
     for ($i=0; $i<$specdata->{n_peaks}; $i++) {
 
       ### Get the mass and intensity for this peak
-      $mass = $specdata->{masses}->[$i];
+      $mass = $specdata->{mz}->[$i];
       $intensity = $specdata->{intensities}->[$i];
 
       #### Set default color for drawing peak to any color that's already
@@ -1017,7 +1008,7 @@ sub PlotPeaksOld {
     }
 
     my ($mass2, $intensity2);
-    $mass2 = $specdata->{masses};
+    $mass2 = $specdata->{mz};
     $intensity2 = $specdata->{intensities};
 
     #### Now we resort to plotting all peaks by "never lifting the pen"
@@ -1175,14 +1166,15 @@ sub LabelResiduesOld {
 }
 
 ###############################################################################
-# LabelUnidentifiedPeaksOld
+# LabelUnidentifiedPeaks
 ###############################################################################
-sub LabelUnidentifiedPeaksOld {
+sub LabelUnidentifiedPeaks {
     my %args = @_;
 
     my $win = $args{'Win'};
     my $specdata = $args{'SpecData'};
-    my $mz_threshold_factor = $args{'MZ_threshold'} || 0.1;
+    my $mz_intens_threshold = $args{'MZ_threshold'} || 0.1;
+    my $mz_label_precision = $args{'MZ_precision'} || 1;
 
     my $labht;
     my $angle = $args{'Angle'} || 0;
@@ -1195,65 +1187,49 @@ sub LabelUnidentifiedPeaksOld {
     my $interval = $Ymax / 50.0;
     my $xshift = ($Xmax - $Xmin) / 200.0;
 
-    my $mz_intens_threshold = $Ymax*$mz_threshold_factor;
-
-    # For each unidentified peak above threshold intensity ...
-    # (or far from any other peak)
+    # For each peak in the spectrum ...
     for (my $i = 0; $i < $specdata->{n_peaks}; $i ++) {
       # is this peak close to any other peaks?
-      my $mass = $specdata->{masses}->[$i];
+      my $mz = $specdata->{mz}->[$i];
       my $prev_mz = $Xmin;
       my $next_mz = $Xmax;
       my $too_close;
-      $prev_mz = $specdata->{masses}->[$i-1] if ($i > 0);
-      $next_mz = $specdata->{masses}->[$i+1]
+      $prev_mz = $specdata->{mz}->[$i-1] if ($i > 0);
+      $next_mz = $specdata->{mz}->[$i+1]
                       if ($i < $specdata->{n_peaks}-1);
       my $breathing_room = $xshift * 6.0;
-      $too_close = (($mass - $prev_mz < $breathing_room) ||
-                    ($next_mz - $mass < $breathing_room));
+      $too_close = (($mz - $prev_mz < $breathing_room) ||
+                    ($next_mz - $mz < $breathing_room));
 
       my $y = $specdata->{intensities}->[$i];
       if (((! defined $specdata->{identified}->[$i]) ||
           ($specdata->{identified}->[$i] != 1 )) &&
+# alternative if want to label all peaks with m/z
+#      if (
           (($y > $mz_intens_threshold) || ! $too_close )) {
-        my $label = sprintf ("%0.1f", $mass);
-        my $matchx = pdl [$mass, $mass];
+        my $format = sprintf ("0.%d", $mz_label_precision);
+        my $format = "%".$format."f";
+        my $label = sprintf ($format, $mz);
+        my $matchx = pdl [$mz, $mz];
         my $y = $specdata->{intensities}->[$i];
         my $matchy = pdl [$y+($interval/3.), $y+4*($interval/3.)];
 	pgsci $black;
 	$lineclr = $black;
 	#### Location of label above tick mark
 	$labht = $y+5*($interval/3.);
+# alternative if want to label all peaks with m/z
+#	$labht = $y+12*($interval/3.);
         #### Plot marker line
         $win -> line($matchx, $matchy, {Color=>$lineclr});
         $win -> hold;
         #### Add m/z label
-        pgptext $mass+$xshift,$labht,$angle,$fjust,"$label"
-          if (($labht < $Ymax) && ($mass > $Xmin) && ($mass < $Xmax));
+        pgptext $mz+$xshift,$labht,$angle,$fjust,"$label"
+          if (($labht < $Ymax) && ($mz > $Xmin) && ($mz < $Xmax));
       }
     }
     return $win;
 }
 
-###############################################################################
-# LabelUnidentifiedPeaks
-###############################################################################
-sub LabelUnidentifiedPeaks {
-  my %args = @_;
-
-  my $fragments_aref = $args{'Fragments'};
-  my @fragments = @$fragments_aref;
-  my $ymin_nl = $args{'YminNL'};
-
-  for my $fragment_href (@fragments) {
-    if ( ($fragment_href->{label_text} eq '') &&
-         ($fragment_href->{intensity} >= $ymin_nl)) {
-      my $mz = sprintf ("%0.1f", $fragment_href->{mz});
-      print "mz = $mz<br>";
-      $fragment_href->{label_text} = $mz;
-    }
-  }
-}
 
 ###############################################################################
 # Fragment
@@ -1402,8 +1378,8 @@ sub printIons {
 
   my $buffer = '';
 
-  $buffer .= "Residue  ion     B       Y      ion   +$charge\n";
-  $buffer .= "------  -----  ------  ------  -----\n";
+  $buffer .= "Residue  ion       B         Y      ion   +$charge\n";
+  $buffer .= "------  -----  --------  --------  -----\n";
 
   my ($bcolbegin, $bcolend, $ycolbegin, $ycolend);
 
@@ -1943,10 +1919,10 @@ sub  getMatchedFragments {
   for my $fragment (@fragments) {
     my $frag_mz = $fragment->{mz};
     my $spec_mz;
-    $spec_mz = $spectrum_href->{masses}->[$s];
+    $spec_mz = $spectrum_href->{mz}->[$s];
     while (($spec_mz < $frag_mz-$frag_mz_tol) && $s < $n_peaks) {
       $s++;
-      $spec_mz = $spectrum_href->{masses}->[$s];
+      $spec_mz = $spectrum_href->{mz}->[$s];
     }
     my $spec_intens = $spectrum_href->{intensities}->[$s];
     # if the peak is within tolerance, and above threshold intensity
@@ -2164,7 +2140,7 @@ sub PlotPeaks {
   for ($i=0; $i<$specdata->{n_peaks}; $i++) {
 
     ### Get the mz and intensity for this peak
-    $mz = $specdata->{masses}->[$i];
+    $mz = $specdata->{mz}->[$i];
     $intensity = $specdata->{intensities}->[$i];
 
     ### See if it is within frag_mz_tol of either the previous
@@ -2215,15 +2191,10 @@ sub PlotPeaks {
     # push peak info onto lists for its color
     push(@{$inten_by_color_href->{$peak_color}}, $intensity);
     push(@{$mz_by_color_href->{$peak_color}}, $mz);
-
-    #print "$frag_idx $prev_frag->{mz} $mz<br>\n";
-   
-    # We may not need this anymore?
-    $peakcolors_ref->[$i] = $peak_color;
   }
 
   my ($mass2, $intensity2);
-  $mass2 = $specdata->{masses};
+  $mass2 = $specdata->{mz};
   $intensity2 = $specdata->{intensities};
 
   #### Now we plot all peaks by "never lifting the pen" and drawing it
@@ -2297,8 +2268,8 @@ sub printIonTable {
 
   my $buffer = '';
 
-  $buffer .= "Residue  ion     B       Y      ion   +$charge\n";
-  $buffer .= "------  -----  ------  ------  -----\n";
+  $buffer .= "Residue  ion       B         Y      ion   +$charge\n";
+  $buffer .= "------  -----  --------  --------  -----\n";
 #  $buffer .= "Residue B-ion  B-pred  B-spec  B-inten    Y-ion  Y-pred Y-spec  Y-inten   +$charge\n";
 #  $buffer .= "------  -----  ------  ------  -------    -----  ------ ------  -------\n";
 
@@ -2354,21 +2325,21 @@ sub printIonTable {
 
 
     #### Define the m/z columns formats and values
-    my $B_format = '%7.1f';
-    my $Y_format = '%7.1f';
+    my $B_format = '%9.3f';
+    my $Y_format = '%9.3f';
     my $B_value = $mzlist_ref->{Bions}->[$i]->[$charge];
     my $Y_value = $mzlist_ref->{Yions}->[$i]->[$charge];
 
 
     #### Special case --'s for first row
     if ($i == 0) {
-      $Y_format = '%7s';
+      $Y_format = '%9s';
       $Y_value = '--  ';
 
-    #### Special case --'s for last row
+    #### Special case ---'s for last row
     } elsif ($i == ($length-1)) {
-      $B_format = '%7s';
-      $B_value = '--  ';
+      $B_format = '%9s';
+      $B_value = '---  ';
     }
 
     #### Print out the data
