@@ -36,6 +36,7 @@ my %options;
 GetOptions( \%options, "verbose:s",
                        "fasta:s",
 		                   "show_dxst",
+		                   "no_length_limit",
 											 ) || usage( "Error processing options" );
 
 for my $arg ( qw( fasta ) ) {
@@ -61,7 +62,6 @@ while( my $entry = $fasta->nextEntry() ) {
   my $annot = ( $options{show_dxst} ) ? 1 : 0;
 #  my $peps = $atlas->getGlycoPeptides( seq   => $seq );
 
-
   my $peps = $atlas->getGlycoPeptides( seq   => $seq,
                                       annot => $annot );
 
@@ -72,11 +72,15 @@ while( my $entry = $fasta->nextEntry() ) {
       my $dpep = $peps->{$pep};
       $dpep =~ s/N\*/D/g;
       my $len = length( $dpep );
-      next if ( $len > 30 || $len < 7 );
-      print "$def\t$npep\t$dpep\n";
+      unless ( $options{no_length_limit} ) {
+        next if ( $len > 30 || $len < 7 );
+      }
+      print "$def\t$npep\t$dpep\t$peps->{$pep}\n";
     } else {
       my $len = length( $peps->{$pep} );
-      next if ( $len > 30 || $len < 7 );
+      unless ( $options{no_length_limit} ) {
+        next if ( $len > 30 || $len < 7 );
+      }
       print "$def\t$peps->{$pep}\n";
     }
   }
@@ -87,6 +91,23 @@ while( my $entry = $fasta->nextEntry() ) {
 my %peptide_mappings;
 
 exit(0);
+
+sub usage {
+  my $msg = shift || '';
+  print <<"  EOU";
+  $msg
+
+  Usage: $prog_name [options]
+  Options:
+    -v, --verbose          More verbose output.
+    -f, --fasta            Fasta file to process, required 
+    -s, --show_dxst        Return NxST and DxST peptide versions
+    -n, --no_length_limit  Override default 7-30 AA peptide limit
+
+  EOU
+
+  exit;
+}
 
 __DATA__
 main();
@@ -178,23 +199,6 @@ sub getSampleType {
   return \%mapping;
 }
 
-
-sub usage {
-  my $msg = shift || '';
-  print <<"  EOU";
-  $msg
-
-  Usage: $prog_name [options]
-  Options:
-    --verbose n            Set verbosity level.  default is 0
-    --testonly             If set, rows in the database are not changed or added
-    --help                 print this usage and exit.
-    --build_id                 Atlas build id
-
-  EOU
-
-  exit;
-}
 
 
 ###############################################################################
