@@ -1261,9 +1261,34 @@ sub translateSQL{
     } 
   }
 
+  $self->{cached_sql_stmts} ||= [];
+  push @{$self->{cached_sql_stmts}}, $new_statement;
   return $new_statement;
 
 } # endtranslateSQL
+
+sub profile_sql {
+  my $self = shift;
+  my %args = @_;
+  
+  my $n_query = scalar( @{$self->{cached_sql_stmts}} );
+  my %sql;
+  for my $stmt ( @{$self->{cached_sql_stmts}} ) {
+    $sql{$stmt}++;
+  }
+  my $scnt = scalar( keys( %sql ) );
+  $log->debug( "Ran $n_query SQL statements, $scnt were distinct" );
+
+  return unless $args{list};
+
+  for my $dstmt ( keys( %sql ) ) {
+    if ( $sql{$dstmt} > 1 ) {
+      $log->debug( "$sql{$dstmt}: $dstmt" );
+    }
+  }
+
+
+}
 
 #+
 #  Convert || symbol to + for MS SQL Server
