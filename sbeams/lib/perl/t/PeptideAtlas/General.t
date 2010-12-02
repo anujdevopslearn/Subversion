@@ -3,7 +3,7 @@
 #$Id:  $
 
 use DBI;
-use Test::More tests => 19;
+use Test::More tests => 23;
 use Test::Harness;
 use strict;
 use FindBin qw ( $Bin );
@@ -37,6 +37,10 @@ ok( calculate_SSR(), 'Calculate SSR' );
 ok( test_hydrophobic_peptide(), 'Check hydrophobic peptide scoring and annotation' );
 ok( test_ECS_calculator(), 'Test ECS hydrophobicity calculator' );
 ok( test_peptide_list_scoring() , 'Test peptide list scoring' );
+ok( test_aspn_digest() , 'Test AspN Digestion' );
+ok( test_gluc_digest() , 'Test GluC Digestion' );
+ok( test_lysc_digest() , 'Test LysC Digestion' );
+ok( test_orig_lysc_digest() , 'Test Original LysC Digestion' );
 
 
 sub test_bad_peptide {
@@ -225,6 +229,7 @@ sub get_sbeams {
 
 sub get_atlas {
   $atlas = new SBEAMS::PeptideAtlas;
+  $atlas->setSBEAMS( $sbeams );
   return $atlas;
 }
 
@@ -305,6 +310,126 @@ sub calculate_SSR {
 #  print STDERR "SSR is $ssr\n";
   return sprintf( "%0.2f", $ssr ) == 31.69;
 }
+
+
+sub test_aspn_digest {
+  my %protein = ( 'DAAAAADBBBBBBBDCCCCCCCCCCDEEEEE' => [ qw( DAAAAA DBBBBBBB DCCCCCCCCCC DEEEEE ) ],
+                  'DAAAAADBBBBBBBDCCCCCCCCCCDEEEEED' => [ qw( DAAAAA DBBBBBBB DCCCCCCCCCC DEEEEE D ) ],
+                  'AAAAADBBBBBBBDCCCCCCCCCCDEEEEE' => [ qw( AAAAA DBBBBBBB DCCCCCCCCCC DEEEEE ) ],
+                  'AAAAADBBBBBBBDCCCCCCCCCCDEEEEED' => [ qw( AAAAA DBBBBBBB DCCCCCCCCCC DEEEEE D ) ],
+      );
+  my $err = 0;
+  for my $protein ( keys( %protein ) ) {
+    my @peps = @{$protein{$protein}};
+    my $digest = $atlas->do_simple_digestion( enzyme => 'AspN', aa_seq => $protein );
+#    print STDERR $protein ." => " . join( '__', @{$digest} ) . "\n";
+    if ( scalar @{$digest} != scalar @peps ) {
+#      print STDERR "scalar is wrong:" . scalar( @{$digest} ) . "\n";
+      $err++;
+    }
+    for my $pep ( @{$digest} ) {
+      unless ( grep /^$pep$/, @peps ) {
+        $err++;
+      }
+    }
+    for my $pep ( @peps ) {
+      unless ( grep /^$pep$/, @{$digest} ) {
+        $err++;
+      }
+    }
+  }
+  return ( $err ) ? 0 : 1;
+}
+
+
+sub test_gluc_digest {
+  my %protein = ( 'EAAAAAEBBBBBBBECCCCCCCCCCEDD' => [ qw( E AAAAAE BBBBBBBE CCCCCCCCCCE DD ) ],
+                  'EAAAAAEBBBBBBBECCCCCCCCCCEDDE' => [ qw( E AAAAAE BBBBBBBE CCCCCCCCCCE DDE ) ],
+                  'AAAAAEBBBBBBBECCCCCCCCCCEDDE' => [ qw( AAAAAE BBBBBBBE CCCCCCCCCCE DDE ) ],
+                  'AAAAAEBBBBBBBECCCCCCCCCCEDD' => [ qw( AAAAAE BBBBBBBE CCCCCCCCCCE DD ) ],
+      );
+  my $err = 0;
+  for my $protein ( keys( %protein ) ) {
+    my @peps = @{$protein{$protein}};
+    my $digest = $atlas->do_simple_digestion( enzyme => 'gluc', aa_seq => $protein );
+#    print STDERR $protein ." => " . join( '__', @{$digest} ) . "\n";
+    if ( scalar @{$digest} != scalar @peps ) {
+#      print STDERR "scalar is wrong:" . scalar( @{$digest} ) . "\n";
+      $err++;
+    }
+    for my $pep ( @{$digest} ) {
+      unless ( grep /^$pep$/, @peps ) {
+        $err++;
+      }
+    }
+    for my $pep ( @peps ) {
+      unless ( grep /^$pep$/, @{$digest} ) {
+        $err++;
+      }
+    }
+  }
+  return ( $err ) ? 0 : 1;
+}
+
+sub test_lysc_digest {
+  my %protein = ( 'KAAAAAKBBBBBBBKCCCCCCCCCCKDD' => [ qw( K AAAAAK BBBBBBBK CCCCCCCCCCK DD ) ],
+                  'KAAAAAKBBBBBBBKCCCCCCCCCCKDDK' => [ qw( K AAAAAK BBBBBBBK CCCCCCCCCCK DDK ) ],
+                  'AAAAAKBBBBBBBKCCCCCCCCCCKDDK' => [ qw( AAAAAK BBBBBBBK CCCCCCCCCCK DDK ) ],
+                  'AAAAAKBBBBBBBKCCCCCCCCCCKDD' => [ qw( AAAAAK BBBBBBBK CCCCCCCCCCK DD ) ],
+      );
+  my $err = 0;
+  for my $protein ( keys( %protein ) ) {
+    my @peps = @{$protein{$protein}};
+    my $digest = $atlas->do_simple_digestion( enzyme => 'lysc', aa_seq => $protein );
+#    print STDERR $protein ." => " . join( '__', @{$digest} ) . "\n";
+    if ( scalar @{$digest} != scalar @peps ) {
+#      print STDERR "scalar is wrong:" . scalar( @{$digest} ) . "\n";
+      $err++;
+    }
+    for my $pep ( @{$digest} ) {
+      unless ( grep /^$pep$/, @peps ) {
+        $err++;
+      }
+    }
+    for my $pep ( @peps ) {
+      unless ( grep /^$pep$/, @{$digest} ) {
+        $err++;
+      }
+    }
+  }
+  return ( $err ) ? 0 : 1;
+}
+
+sub test_orig_lysc_digest {
+  my %protein = ( 'KAAAAAKBBBBBBBKCCCCCCCCCCKDD' => [ qw( K AAAAAK BBBBBBBK CCCCCCCCCCK DD ) ],
+                  'KAAAAAKBBBBBBBKCCCCCCCCCCKDDK' => [ qw( K AAAAAK BBBBBBBK CCCCCCCCCCK DDK ) ],
+                  'AAAAAKBBBBBBBKCCCCCCCCCCKDDK' => [ qw( AAAAAK BBBBBBBK CCCCCCCCCCK DDK ) ],
+                  'AAAAAKBBBBBBBKCCCCCCCCCCKDD' => [ qw( AAAAAK BBBBBBBK CCCCCCCCCCK DD ) ],
+      );
+  my $err = 0;
+  for my $protein ( keys( %protein ) ) {
+    my @peps = @{$protein{$protein}};
+    my $digest = $atlas->do_LysC_digestion( enzyme => 'lysc', aa_seq => $protein );
+#    print STDERR $protein ." => " . join( '__', @{$digest} ) . "\n";
+    if ( scalar @{$digest} != scalar @peps ) {
+#      print STDERR "scalar is wrong:" . scalar( @{$digest} ) . "\n";
+      $err++;
+    }
+    for my $pep ( @{$digest} ) {
+      unless ( grep /^$pep$/, @peps ) {
+        $err++;
+      }
+    }
+    for my $pep ( @peps ) {
+      unless ( grep /^$pep$/, @{$digest} ) {
+        $err++;
+      }
+    }
+  }
+  return ( $err ) ? 0 : 1;
+}
+
+
 
 sub test_ECS_calculator {
   my $peptide = 'ARVLSQ';
