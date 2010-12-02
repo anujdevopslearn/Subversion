@@ -60,6 +60,69 @@ sub map_peptide_to_protein {
 
 #+
 # @nparam aa_seq
+# @nparam enzyme
+#-
+sub do_simple_digestion {
+  my $self = shift;
+  my %args = @_;
+
+  # Check for required params
+  my $missing;
+  for my $param ( qw( aa_seq enzyme ) ) {
+    $missing = ( $missing ) ? $missing . ',' . $param : $param if !defined $args{$param};
+  }
+  die "Missing required parameter(s) $missing" if $missing;
+
+  my $enz = lc( $args{enzyme} );
+
+  if ( !grep /$enz/, qw( gluc trypsin lysc cnbr aspn ) ) {
+    $log->debug( "Unknown enzyme $enz" );
+    return;
+  }
+
+  # trypsin, GluC, LysC, and CNBr clip Cterminally
+  my $term = 'C';
+
+  # AspN is the outlier
+  $term = 'N' if $enz eq 'aspn';
+
+  my %regex = ( aspn => 'D',
+                gluc => 'E',
+                lysc => 'K',
+                cnbr => 'M',
+              );
+
+  my @peps = split( /$regex{$enz}/, $args{aa_seq} );
+
+  my @fullpeps;
+  my $cnt = 0;
+  for my $pep ( @peps ) {
+    if ( $term eq 'N' ) {
+      # Don't add pivot AA to first peptide
+      if ( $cnt++ ) {
+        $pep = $regex{$enz} . $pep;
+#      } elsif ( $args{aa_seq} =~ /^$regex{$enz}/ ) {
+#        $pep = $regex{$enz} . $pep;
+      }
+    } else {
+      if ( $cnt++ < $#peps ) {
+        $pep .= $regex{$enz};
+      } elsif ( $args{aa_seq} =~ /$regex{$enz}$/ ) {
+        $pep .= $regex{$enz};
+      }
+    }
+    push @fullpeps, $pep if $pep;
+  }
+  if ( $term eq 'N' && $args{aa_seq} =~ /$regex{$enz}$/ ) {
+    push @fullpeps, $regex{$enz};
+  }
+  return \@fullpeps;
+  
+}
+
+
+#+
+# @nparam aa_seq
 # @nparam min_len
 # @nparam max_len
 # @nparam flanking
