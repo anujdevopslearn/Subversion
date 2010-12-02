@@ -61,6 +61,8 @@ sub map_peptide_to_protein {
 #+
 # @nparam aa_seq
 # @nparam enzyme
+# @nparam min_len
+# @nparam max_len
 #-
 sub do_simple_digestion {
   my $self = shift;
@@ -111,9 +113,14 @@ sub do_simple_digestion {
         $pep .= $regex{$enz};
       }
     }
-    push @fullpeps, $pep if $pep;
+    if ( $pep ) {
+      next if ( $args{min_len} && length( $pep ) < $args{min_len} ); 
+      next if ( $args{max_len} && length( $pep ) > $args{max_len} ); 
+      push @fullpeps, $pep;
+    }
   }
   if ( $term eq 'N' && $args{aa_seq} =~ /$regex{$enz}$/ ) {
+    next if ( $args{min_len} && 1 < $args{min_len} ); 
     push @fullpeps, $regex{$enz};
   }
   return \@fullpeps;
@@ -285,7 +292,7 @@ sub do_tryptic_digestion {
 #      die "What the, i:$i, prev:$prev, curr:$curr, next:$next, aa:$#aa, pep:$peptide, len:$length\n";
     }
     if ( $i == $#aa && $peptide eq $aa[$i] ) {
-      push @peptides, $aa[$i];
+      push @peptides, $aa[$i] if $args{min_len} < 2;
     }
   }
   return \@peptides;
