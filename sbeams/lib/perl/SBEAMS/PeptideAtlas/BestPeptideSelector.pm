@@ -1005,11 +1005,21 @@ sub get_pabst_static_peptide_transitions_display {
 
 } # End get_pabst_static_peptide_transitions_display
 
-#########################################################
+sub GetPABSTOrgansim {
+  my $self = shift;
+  my %args = @_;
+  return '' unless $args{pabst_build_id};
+  my $sql = qq~
+  SELECT organism_id
+  FROM $TBAT_PABST_BUILD
+  WHERE pabst_build_id = $args{pabst_build_id}
+  ~;
 
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while( my @row = $sth->fetchrow_array() ) {
+  }
 
-
-
+}
 
 
 sub get_dirty_peptide_display {
