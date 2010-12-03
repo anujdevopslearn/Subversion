@@ -134,6 +134,7 @@ sub main {
 
         $sbeamsMOD->display_page_footer();
     }
+    $sbeams->profile_sql( list => 0 );
 
 } # end main
 
@@ -264,10 +265,17 @@ sub handle_request {
   $sbeams->setSessionAttribute( value => $searchKey,
                                   key => 'PeptideAtlas_search_key' );
 
+  my $alt_link = '';
+  if ( $parameters{searchForThis} ) {
+    $alt_link = "<A HREF='Summarize_Peptide?searchForThis=$parameters{searchForThis};query=QUERY'>View a summary </A> for this peptide across all accessible builds";
+  }
+  $log->debug($alt_link );
 
   #### Get the current atlas_build_id based on parameters or session
   my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
     parameters_ref => \%parameters,
+    alt_link => $alt_link
+
   );
   if (defined($atlas_build_id) && $atlas_build_id < 0) {
     return;
