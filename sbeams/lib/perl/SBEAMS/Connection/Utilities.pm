@@ -931,14 +931,30 @@ sub getGaggleXML {
     END
   }
 
+#    <dataMatrix type="indirect"
+#                name="Microarray experiments"
+#                species="Halobacterium sp. NRC-1"
+#                url="http://www.mydomain.com/myapp/myprojects/123456789.tsv"/>
+
+
   if ( $args{object} =~ /^namelist$/i ) {
-    return unless @{$args{data}};
-    my $items = join( "\t", @{$args{data}} );
-    $xml .=<<"    END";
-    <namelist type='$args{type}' name='$args{name}' species='$args{organism}'>  
-    $items
-    </namelist>
-    END
+    my $items = '';
+    my $url = '';
+    if ( $args{type} eq 'indirect' ) {
+      $url = "url=$args{data}";
+    } else {
+      return unless @{$args{data}};
+      $items = join( "\t", @{$args{data}} );
+    }
+      $xml .=<<"      END";
+      <namelist type='$args{type}'
+                name='$args{name}' 
+             species='$args{organism}'
+             $url
+      >  
+      $items
+      </namelist>
+      END
   } else {
     $log->error( "Unknown object type" );
   }
