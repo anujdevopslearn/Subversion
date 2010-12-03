@@ -44,6 +44,7 @@ my $pabst_build_id;
 my $is_html = 0;
 
 main();
+$sbeams->profile_sql( list => 1 );
 exit(0);
 
 # Main Program
@@ -222,7 +223,6 @@ sub print_form {
     my @link = split "\n", $link;
     my $script_css = join( "\n", @link[0..$#link-1] );
 
-    $log->debug( $script_css );
     print $script_css;
 
     $sbeams->display_input_form(
@@ -461,8 +461,6 @@ sub fetch_transitions {
         constraint_value=>$parameters{protein_name_constraint} );
    return if ($biosequence_name_clause eq '-1');
 
-  $log->debug( "Protein name constraint is >$biosequence_name_clause<" );
-
   my %protein_hash;
 
   # protein name field supercedes (obviates) file upload
@@ -589,7 +587,7 @@ sub fetch_transitions {
     precursor_ion_charge, fragment_ion_mass, fragment_ion_charge,
     fragment_ion_label, ion_rank, relative_intensity, 
     SSRCalc_relative_hydrophobicity, biosequence_name,
-    merged_score, n_observations
+    merged_score, n_observations, source_build
     FROM $TBAT_PABST_PEPTIDE PP 
     JOIN $TBAT_PABST_PEPTIDE_MAPPING PM 
     ON PM.pabst_peptide_id = PP.pabst_peptide_id
@@ -612,12 +610,10 @@ sub fetch_transitions {
     syntheis_adjusted_score DESC, precursor_ion_charge ASC,
     ion_rank ASC, relative_intensity DESC  
     ~;
-#	$log->debug( $lib_sql );
 
-  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT' );
-	$log->debug( "first: " . join( "\:", @headings ) ); 
+  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs' );
 
-#  peptides_only
+  #  peptides_only
   if ( $parameters{peptides_only} ) {
     splice( @headings, 5, 8 );
   }
@@ -647,6 +643,8 @@ sub fetch_transitions {
 
   my %peps;
   my %patr_peps;
+
+  my $organism = $atlas->getCurrentAtlasOrganism( parameters_ref => \%parameters );
 
   # If the user has modified any of the weights we have to do this from scratch...
   if ( $is_changed ) {
@@ -683,7 +681,7 @@ sub fetch_transitions {
     $log->debug( "Sorting " . time() );
     # Sort first by protein, next by adjusted score!
     @short_list = sort { $a->[13] cmp $b->[13] ||                    
-                           $b->[18] <=> $a->[18] } @short_list;
+                           $b->[19] <=> $a->[19] } @short_list;
     $log->debug( "Done! " . time() );
 
     # debug
@@ -756,19 +754,29 @@ sub fetch_transitions {
         $row[7] = sprintf( "%0.2f", $frag->[7] );
         $row[3] = sprintf( "%0.2f", $row[18] );
         $row[12] = sprintf( "%0.1f", $row[12] ) if $peps{$pep_key} == 1;
+
+        my $ce = calculateCE( mz => $frag->[5], chg => $frag->[6] );
+
         if ( $frag->[11] ) {
           $row[11] = int( $frag->[11] );
-        } elsif ( $is_html ) {
-          $row[11] = $naa; 
         } else {
           $row[11] = ''; 
         }
-    
-        my $ce = calculateCE( mz => $frag->[5], chg => $frag->[6] );
-        push @peptides, [ $prot, @row[0..12] ];
 
+        # Cache for xfer to ATAQs
         # protein  sequence q1_mz q3_mz RT rank q1_chg q3_chg peak_intensity ion_label collision SSR
         push @namelist, join( '::', $prot, @row[1,5,7],'',@row[10,6,8,11,9],$ce, $row[12] );
+
+        if ( $row[15] && $is_html ) {
+          $row[15] = "<A HREF='GetPeptide?atlas_build_id=$row[16];searchWithinThis=Peptide+Sequence&searchForThis=$row[1];action=QUERY'>$row[15]</A>";
+        }
+
+        if ( $is_html ) {
+          $row[11] ||= $naa; 
+        }
+    
+        push @peptides, [ $prot, @row[0..12,15] ];
+
       }
 
     } # End loop sorted list
@@ -848,11 +856,22 @@ sub fetch_transitions {
   
       my $ce = calculateCE( mz => $row[5], chg => $row[6] );
 
-      push @peptides, [ $prot, @row[0..12] ];
+
       $patr_peps{$row[1]}++;
 
+      # Cache for xfer to ATAQs
       # protein  sequence q1_mz q3_mz RT rank q1_chg q3_chg peak_intensity ion_label collision SSR
       push @namelist, join( '::', $prot, @row[1,5,7],'',@row[10,6,8,11,9],$ce, $row[12] );
+
+      if ( $row[15] && $is_html ) {
+        $row[15] = "<A HREF='GetPeptide?atlas_build_id=$row[16];searchWithinThis=Peptide+Sequence&searchForThis=$row[1];action=QUERY'>$row[15]</A>";
+      }
+
+      if ( $is_html ) {
+        $row[11] ||= $naa; 
+      }
+    
+      push @peptides, [ $prot, @row[0..12,15] ];
 
     } # End loop over resultset
 
@@ -930,8 +949,6 @@ sub fetch_transitions {
                                                    entries => $col_info,
                                                    ); 
 
-  $log->debug( $help_text );
-
   my ( $html, $rs_name ) = $atlas->encodeSectionTable( header => 1, 
                                                         width => '600',
                                                       tr_info => $args{tr},
@@ -949,17 +966,25 @@ sub fetch_transitions {
                                                   close_table => 1,
                                                      );
 
-  my $gMF =  $sbeams->getGaggleMicroformat( data => \@namelist,
-                                        organism => 'Yeast', 
-                                          object => 'namelist', 
-                                           start => 1, 
-                                            name => 'SRM_transitions', 
-                                            type => 'direct' );
+  # "Publish" data as indirect resource for firegoose.  
+  my $namelist = join( "\n", @namelist );
+  my $tempfile = $sbeams->writeSBEAMSTempFile( content => $namelist );
+  my @name = split "/", $tempfile;
+  my $base = $q->url( -base => 1 );
+  my $tmpfile_url = "$base/$HTML_BASE_DIR/tmp/$name[$#name]";
+
+  my $gXML =  $sbeams->getGaggleXML( data => $tmpfile_url,
+                                organism => $organism, 
+                                  object => 'namelist', 
+                                   start => 1, 
+                                    name => 'SRM_transitions', 
+                                    type => 'indirect' );
+
 
 
       
       if ( $is_html ) {
-        $content .= "<BR><BR><TABLE>$html</TABLE> $gMF" 
+        $content .= "<BR><BR><TABLE>$html</TABLE> $gXML" 
       } else {
 				my $rs = $atlas->get_cached_resultset( rs_name => $rs_name );
 
