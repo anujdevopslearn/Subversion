@@ -469,12 +469,14 @@ sub getCurrentAtlasBuildID {
       $LOGIN_URI .= "?force_login=yes";
     }
 
+    my $alt_link = $args{alt_link} || '';
     print qq~
       <BR>Sorry, you are not permitted to access atlas_build_id
       '$atlas_build_id' with your current credentials as
       user '$current_username'.<BR><BR>
       - <A HREF="$LOGIN_URI">LOGIN</A> as a different user.<BR><BR>
-      - <A HREF="$reset_link">SELECT</A> a different atlas build to explore<BR>
+      - <A HREF="$reset_link">SELECT</A> a different atlas build to explore<BR><BR>
+      -$alt_link
     ~;
     return(-1);
   }
