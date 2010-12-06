@@ -2157,11 +2157,12 @@ sub get_sequence_graphic {
   my $tmp_img_path = "images/tmp";
   my $img_file     = "$PHYSICAL_BASE_DIR/$tmp_img_path/$file_name";
 
-        # TMF: this is breaking for me in csv mode
- 	#open( OUT, ">$img_file" ) || die "$!: $img_file";
-	#binmode(OUT);
-	#print OUT $panel->png;
-	#close OUT;
+  # TMF: this is breaking for me in csv mode
+  # D'oh!
+ 	open( OUT, ">$img_file" ) || die "$!: $img_file";
+	binmode(OUT);
+	print OUT $panel->png;
+	close OUT;
 
   my $tr = $args{tr_info} || '';
 #  my $tr_link =  "<TR><TD>$link</TD></TR>";
