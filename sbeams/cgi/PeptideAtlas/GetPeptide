@@ -269,7 +269,6 @@ sub handle_request {
   if ( $parameters{searchForThis} ) {
     $alt_link = "<A HREF='Summarize_Peptide?searchForThis=$parameters{searchForThis};query=QUERY'>View a summary </A> for this peptide across all accessible builds";
   }
-  $log->debug($alt_link );
 
   #### Get the current atlas_build_id based on parameters or session
   my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
@@ -557,7 +556,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
             my (@peptide_accession, @peptide_sequence);
             my (@best_probability, @n_observations, @n_genome_locations, @n_protein_mappings);
             my (@chrom, @start_chrom, @end_chrom, @strand);
-            my (@biosequence_name, %biosequence_id);
+            my (%biosequence_name, @biosequence_name, %biosequence_id);
             my ( @mw, @pi, @nsamp, @nprotsamp, @epscore, @organism, @original_name, @SSRCalc_relative_hydrophobicity, @pep_annot );
 
             my $i=0;  ##index counter
@@ -582,6 +581,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
                 $end_chrom[$i] = $e_chr;
                 $strand[$i] = $str;
                 $biosequence_name[$i] = $b_name;
+                $biosequence_name{$b_name}++;
                 $mw[$i] = sprintf( "%0.2f", $mw);
                 $pi[$i] = sprintf( "%0.1f", $pi );
                 $nsamp[$i] = $ns;
@@ -852,10 +852,11 @@ if ($apply_action =~ /QUERY|GO/i ) {
     # display protein names as gaggle microformat
     if ($sbeams->output_mode() eq 'html') {
       my $organism = $sbeamsMOD->getCurrentAtlasOrganism( parameters_ref => {} );
+      my @proteins = keys( %biosequence_name );
       my $protein_microformat = $sbeams->getGaggleMicroformat( 
                                           name => "Protein(s) in which peptide is found",
                                       organism => $organism, 
-                                          data => \@prots,
+                                          data => \@proteins,
                                         object => 'namelist',
                                           type => 'direct' );
                                                                        
