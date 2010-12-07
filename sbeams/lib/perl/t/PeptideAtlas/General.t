@@ -380,7 +380,7 @@ sub test_lysc_digest {
   my $err = 0;
   for my $protein ( keys( %protein ) ) {
     my @peps = @{$protein{$protein}};
-    my $digest = $atlas->do_simple_digestion( enzyme => 'lysc', aa_seq => $protein );
+    my $digest = $atlas->do_simple_digestion( enzyme => 'lysc', aa_seq => $protein, min_len => 0, max_len => 70 );
 #    print STDERR $protein ." => " . join( '__', @{$digest} ) . "\n";
     if ( scalar @{$digest} != scalar @peps ) {
 #      print STDERR "scalar is wrong:" . scalar( @{$digest} ) . "\n";
