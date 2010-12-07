@@ -35,6 +35,7 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TabMenu;
 $sbeams = new SBEAMS::Connection;
+my $htmlmode;
 
 use SBEAMS::BioLink;
 my $biolink = SBEAMS::BioLink->new();
@@ -138,6 +139,9 @@ sub main {
   #### Process generic "state" parameters before we start
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
+  # Cache current output mode
+  $htmlmode = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
+
   #### Decide what action to take based on information so far
   if ($parameters{action} eq "???") {
       # Some action
@@ -164,8 +168,6 @@ sub handle_request {
   my %args = @_;
 
   my $spacer = $sbeams->getGifSpacer( 900 );
-  my $htmlmode = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
-
 
   #### Process the arguments list
   my $ref_parameters = $args{'ref_parameters'}
@@ -945,8 +947,10 @@ sub handle_request {
   ## Display annotated sequence - this routine makes its own section header ##
 
     #### Display the annotated sequence
+
     # TMF: added for special need
-    print STDERR "$protein_name\t";
+#    print STDERR "$protein_name\t";
+
     displayAnnotatedSequence(
            %parameters,
          peptides => $peptides,
@@ -1061,7 +1065,7 @@ sub handle_request {
           my @samples = split( /,/, $row->[$idx] );
           if ( $idx == 12 ) {
             my $cnt = scalar( @samples );
-            $row->[$idx] = "<A HREF='$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$row->[0]&action=QUERY#samples' TITLE='$row->[$idx]'> $cnt </A>";
+            $row->[$idx] = ( $htmlmode ) ? "<A HREF='$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$row->[0]&action=QUERY#samples' TITLE='$row->[$idx]'> $cnt </A>" : $cnt;
           } else {
             $row->[$idx] = scalar( @samples );
           }
@@ -1390,9 +1394,6 @@ sub handle_request {
        $pep->[0] = "<A HREF=$link_base" . $pep->[0] . ">$pep->[0]</A";
      }
      my @labels = ( 'Accession', 'Peptide Sequence', 'Type', 'Publication', 'Annotator', 'Modified Sequence'  );
-
-
-
 
     #### Add table column headings
     unshift @$marker_peptides, \@labels;
@@ -2159,10 +2160,12 @@ sub get_sequence_graphic {
 
   # TMF: this is breaking for me in csv mode
   # D'oh!
- 	open( OUT, ">$img_file" ) || die "$!: $img_file";
-	binmode(OUT);
-	print OUT $panel->png;
-	close OUT;
+	if ( $htmlmode ) {
+   	open( OUT, ">$img_file" ) || die "$!: $img_file";
+  	binmode(OUT);
+	  print OUT $panel->png;
+    close OUT;
+	}
 
   my $tr = $args{tr_info} || '';
 #  my $tr_link =  "<TR><TD>$link</TD></TR>";
@@ -2229,7 +2232,6 @@ sub displayAnnotatedSequence {
   my %args = @_;
   my $SUB_NAME = 'displayAnnotatedSequence';
 
-
   #### Decode the argument list
   my $resultset_ref = $args{'resultset_ref'}
    || die "ERROR[$SUB_NAME]: resultset_ref not passed";
@@ -2243,8 +2245,7 @@ sub displayAnnotatedSequence {
 
 
   #### Don't display unless HTML
-  # TMF: comment out for special need
-  #return unless ($sbeams->output_mode() eq 'html');
+  return unless ($sbeams->output_mode() eq 'html');
 
   # @unlikely_to_observe, { start => $index, end => $peptide_end, rationale => 'Short peptide' };
 # _non_coverage
@@ -2268,7 +2269,7 @@ sub displayAnnotatedSequence {
     text=>'Sequence',
     link =>$link,
   );
-  print qq~ <TABLE width="600"> $section_header <TR $tr><TD> ~;
+  print qq~ <TABLE width="600"> $section_header <TR $tr><TD> ~ if $htmlmode;
 
 
   my $sequence = $biosequence->{biosequence_seq};
@@ -2382,8 +2383,8 @@ sub displayAnnotatedSequence {
     $cnt += length( $frag->{seq} );
   }
   
- # TMF: added this statement for special need
- print STDERR int($observed_residues/$seq_length*1000)/1000,"\t",int(($observed_residues)/($seq_length-$cnt)*1000)/1000,"\n"; 
+# TMF: added this statement for special need
+# print STDERR int($observed_residues/$seq_length*1000)/1000,"\t",int(($observed_residues)/($seq_length-$cnt)*1000)/1000,"\n"; 
 #  print "\n\n";
 #  print "Protein Coverage = ",int($observed_residues/$seq_length*1000)/10,"%";
 #  $log->debug( "OBS: $observed_residues, SEQLEN: $seq_length, CNT $cnt" );
