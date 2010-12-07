@@ -864,7 +864,7 @@ sub fetch_transitions {
       push @namelist, join( '::', $prot, @row[1,5,7],'',@row[10,6,8,11,9],$ce, $row[12] );
 
       if ( $row[15] && $is_html ) {
-        $row[15] = "<A HREF='GetPeptide?atlas_build_id=$row[16];searchWithinThis=Peptide+Sequence&searchForThis=$row[1];action=QUERY'>$row[15]</A>";
+        $row[15] = "<A HREF='Summarize_Peptide?searchWithinThis=Peptide+Sequence&searchForThis=$row[1];action=QUERY'>$row[15]</A>";
       }
 
       if ( $is_html ) {
