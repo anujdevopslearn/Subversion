@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/local/bin/perl -w
 
 ###############################################################################
 # Program	: PeptideMassCalculator.t
@@ -91,24 +91,24 @@ ok ( sprintf("%.4f",$mass) == 511.7530,
 ####
 
 $mass = $calculator->getPeptideMass(
-				    sequence => 'QC[147]TIPADFK',
+				    sequence => 'QC[160]TIPADFK',
 				    mass_type => 'monoisotopic',
 				    charge => 2,
 				   );
 #print "$mass\n";
 ok ( sprintf("%.4f",$mass) == 540.2637,
-     "+2 monoisotopic mass of QC[147]TIPADFK = 540.2637" );
+     "+2 monoisotopic mass of QC[160]TIPADFK = 540.2637" );
 
 ####
 
 $mass = $calculator->getPeptideMass(
-				    sequence => 'QC[147]TIPADFK',
+				    sequence => 'QC[160]TIPADFK',
 				    mass_type => 'monoisotopic',
 				    charge => 0,
 				   );
 #print "$mass\n";
 ok ( sprintf("%.4f",$mass) == 1078.5117,
-     "Neutral monoisotopic mass of QC[147]TIPADFK = 1078.5117" );
+     "Neutral monoisotopic mass of QC[160]TIPADFK = 1078.5117" );
 
 ####
 
