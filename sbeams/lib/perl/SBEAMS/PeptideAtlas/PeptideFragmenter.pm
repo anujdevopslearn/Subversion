@@ -1,17 +1,17 @@
-package PeptideFragmenter;
+package SBEAMS::PeptideAtlas::PeptideFragmenter;
 
 use strict;
-use warnings;
 
 my $DEBUG = 0;
 
-use lib "/net/dblocal/www/html/dev2/sbeams/lib/perl";
+#use lib "/net/dblocal/www/html/devDC/sbeams/lib/perl";
 use SBEAMS::Proteomics::AminoAcidModifications;
 my $AAmodifications = new SBEAMS::Proteomics::AminoAcidModifications;
 
 my %AAmasses = %{InitializeMass(1)};
 
 use vars qw( $mzMinimum $mzMaximum );
+print "Foobar\n";
 
 
 ###############################################################################
@@ -260,3 +260,5 @@ sub InitializeMass {
     #### Return references to AAmasses
     return (\%AAmassestmp);
 }
+
+1;
