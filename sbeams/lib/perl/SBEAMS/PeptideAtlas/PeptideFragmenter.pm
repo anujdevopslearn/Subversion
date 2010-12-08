@@ -20,10 +20,15 @@ print "Foobar\n";
 sub new {
     my $this = shift;
     my $class = ref($this) || $this;
-    my $self = {};
+    my $self = { @_ };
     bless $self, $class;
-    $self->setMzMinimum(0);
-    $self->setMzMaximum(99000);
+
+    # Allow these to be set in the constructor
+    my $mzMin = $self->{MzMinimum} || 0;
+    my $mzMax = $self->{MzMaximum} || 99000 ;
+
+    $self->setMzMinimum( $mzMin );
+    $self->setMzMaximum( $mzMax );
     return($self);
 }
 
@@ -72,10 +77,30 @@ sub setMzMaximum {
   return;
 }
 
+###############################################################################
+# getMzMinimum
+###############################################################################
+sub getMzMinimum {
+  my $self = shift;
+  return $mzMinimum;
+}
+
+###############################################################################
+# getMzMaximum
+###############################################################################
+sub getMzMaximum {
+  my $self = shift;
+  return $mzMaximum;
+}
 
 
 ###############################################################################
 # getExpectedFragments
+# @narg   modifiedSequence (required) - peptide sequence to fragment
+# @narg   charge (required) - desired precursor charge
+# @narg   precursor_excl - m/z range around precursor 
+# @narg   omit_precursor - Omit ions within precursor_excl of precursor mass
+# @narg   fragment_charge - return only specified series
 ###############################################################################
 sub getExpectedFragments {
   my $METHOD = 'getExpectedFragments';
@@ -121,16 +146,19 @@ sub getExpectedFragments {
   my (@Bions,@Yions,@indices,@rev_indices,@productIons);
   my (@Bbonds, @Ybonds);
 
-  my %tmp = (
+  my %precursor = (
     mz => ( ( 2 * $H + $AAmasses{"o"} + $totalMass ) + $charge * $H ) / $charge,
     series => 'precursor',
     charge => $charge,
     label => "precursor",
   );
-  push(@productIons,\%tmp);
+  push(@productIons,\%precursor);
 
 
   for (my $iCharge=1; $iCharge<=$charge; $iCharge++) {
+
+    # Caller can request only certain fragment charges
+    next if $args{fragment_charge} && $iCharge != $args{fragment_charge};
 
     my $Bion = 0;
     my $Yion = 2 * $H + $AAmasses{"o"} + $totalMass;
@@ -160,7 +188,14 @@ sub getExpectedFragments {
         label => "b".$indices[$i].substr($pluses,0,$iCharge),
         bond => $Bbonds[$i],
       );
-      push(@productIons,\%tmp);
+
+      if ( $args{precursor_excl} && $args{omit_precursor} ) {
+        unless ( ( $precursor{mz} + $args{precursor_excl} ) > $Bions[$i] &&  ( $precursor{mz} - $args{precursor_excl} ) < $Bions[$i] ) {
+          push(@productIons,\%tmp);
+        }
+      } else {
+        push(@productIons,\%tmp);
+      }
 
       my %tmp2 = (
         mz => $Yions[$i],
@@ -170,7 +205,13 @@ sub getExpectedFragments {
         label => "y".$rev_indices[$i].substr($pluses,0,$iCharge),
         bond => $Ybonds[$i],
       );
-      push(@productIons,\%tmp2);
+      if ( $args{precursor_excl} && $args{omit_precursor} ) {
+        unless ( ( $precursor{mz} + $args{precursor_excl} ) > $Yions[$i] &&  ( $precursor{mz} - $args{precursor_excl} ) < $Yions[$i] ) {
+          push(@productIons,\%tmp2);
+        }
+      } else {
+        push(@productIons,\%tmp2);
+      }
 
       #printf("%i  %10.3f  %2i  %6s  %2i  %10.3f\n",$iCharge,$Bions[$i],$indices[$i],$residues[$i],$rev_indices[$i],$Yions[$i]);
     }
