@@ -3,7 +3,7 @@
 #$Id:  $
 
 use DBI;
-use Test::More tests => 23;
+use Test::More tests => 26;
 use Test::Harness;
 use strict;
 use FindBin qw ( $Bin );
@@ -13,10 +13,12 @@ use lib( "$Bin/../.." );
 my $sbeams;
 my $atlas;
 my $pepselector;
+my $pepfragmentor;
 
 use_ok( 'SBEAMS::Connection' );
 use_ok( 'SBEAMS::PeptideAtlas' );
 use_ok( 'SBEAMS::PeptideAtlas::BestPeptideSelector' );
+use_ok( 'SBEAMS::PeptideAtlas::PeptideFragmenter' );
 ok( get_sbeams(), 'Instantiate sbeams object' );
 ok( get_atlas(), 'Instantiate peptide atlas object' );
 ok( authenticate(), 'Authenticate login' );
@@ -27,10 +29,12 @@ like( get_file( touch => 1, file => 'interact-combined.iproph.pep.xml', preferre
              'Fetch filename with preferred' );
 
 ok( get_best_pep_selector(), 'Instantiate selector' );
+ok( get_peptide_fragmentor(), 'Instantiate fragmentor' );
 ok( test_bad_peptide(), 'Check bad peptide scoring' );
 ok( test_good_peptide(), 'Check good peptide scoring' );
 ok( test_bad_override_peptide(), 'Check bad with override peptide scoring' );
 ok( test_fragmentation(), 'Check peptide fragmentation' );
+ok( test_new_fragmentation(), 'Check peptide fragmentation' );
 ok( test_fragment_order(), 'Check fragment ordering' );
 ok( get_SSR_calculator(), 'Get SSRCalc calculator' );
 ok( calculate_SSR(), 'Calculate SSR' );
@@ -238,22 +242,29 @@ sub get_best_pep_selector {
 	return $pepselector;
 }
 
+sub get_peptide_fragmentor {
+  $pepfragmentor = new SBEAMS::PeptideAtlas::PeptideFragmenter( MzMaximum => 2500, MzMinimum => 400 );
+  return $pepfragmentor;
+}
+
+
 
 sub authenticate {
   return $sbeams->Authenticate();
 }
+
 
 sub test_fragmentation {
 #  my $pep = 'AFQSAYPEFSR';
   my $pep = 'AAASGAEGGK';
 
   my $frags = $pepselector->generate_fragment_ions( peptide_seq => $pep,
-                                                         max_mz => 2500,
-                                                         min_mz => 400,
-                                                           type => 'P',
-                                                 precursor_excl => 5, 
-                                                         charge => 2,
-                                                 omit_precursor => 1
+                                                           max_mz => 2500,
+                                                           min_mz => 400,
+                                                             type => 'P',
+                                                   precursor_excl => 5, 
+                                                           charge => 2,
+                                                   omit_precursor => 1
                                                   );
 
   my $ok = 0;
@@ -262,6 +273,48 @@ sub test_fragmentation {
       $ok++;      
 #    } else {
 #      print STDERR "$frag->[0], $frag->[6], $frag->[7], $frag->[2], " . sprintf( "%0.3f", $frag->[2] ) . "\n";
+    }
+  }
+  return $ok;
+}
+
+sub test_new_fragmentation {
+
+  my $pep = 'AAASC[160]GAEGGK';
+
+  my %valid_frags = (
+            'b5+' => 461.1818,
+            'y5+' => 461.2360,
+            'precursor' => 489.7196,
+            'b6+' => 518.2033,
+            'y6+' => 518.2574,
+            'b7+' => 589.2404,
+            'y7+' => 678.2881,
+            'b8+' => 718.2830,
+            'y8+' => 765.3201,
+            'b9+' => 775.3045,
+            'b10+' => 832.3259,
+            'y9+' => 836.3572,
+            'y10+' => 907.3944,
+            'b11+' => 960.4209,
+            'y11+' => 978.4315,
+                    );
+
+  my $frags = $pepfragmentor->getExpectedFragments( modifiedSequence => $pep,
+                                                              charge => 2,
+                                                      omit_precursor => 1,
+                                                      precursor_excl => 5,
+                                                     fragment_charge => 1,
+                                                   );
+
+
+  my $ok = 1;
+#  print STDERR "Min is " . $pepfragmentor->getMzMinimum() . "\n";
+  for my $frag ( @$frags ) {
+    my $mz = sprintf( "%0.4f", $frag->{mz} );
+    unless ( $valid_frags{$frag->{label}} &&  $valid_frags{$frag->{label}} == $mz ) {
+      $ok = 0;
+      last;
     }
   }
   return $ok;
