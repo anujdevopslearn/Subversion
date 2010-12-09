@@ -11,7 +11,6 @@ my $AAmodifications = new SBEAMS::Proteomics::AminoAcidModifications;
 my %AAmasses = %{InitializeMass(1)};
 
 use vars qw( $mzMinimum $mzMaximum );
-print "Foobar\n";
 
 
 ###############################################################################
@@ -191,10 +190,14 @@ sub getExpectedFragments {
 
       if ( $args{precursor_excl} && $args{omit_precursor} ) {
         unless ( ( $precursor{mz} + $args{precursor_excl} ) > $Bions[$i] &&  ( $precursor{mz} - $args{precursor_excl} ) < $Bions[$i] ) {
-          push(@productIons,\%tmp);
+					if ( $Bions[$i] >= $mzMinimum && $Bions[$i] <= $mzMaximum ) {
+            push(@productIons,\%tmp);
+					}
         }
       } else {
-        push(@productIons,\%tmp);
+				if ( $Bions[$i] >= $mzMinimum && $Bions[$i] <= $mzMaximum ) {
+          push(@productIons,\%tmp);
+				}
       }
 
       my %tmp2 = (
@@ -207,10 +210,14 @@ sub getExpectedFragments {
       );
       if ( $args{precursor_excl} && $args{omit_precursor} ) {
         unless ( ( $precursor{mz} + $args{precursor_excl} ) > $Yions[$i] &&  ( $precursor{mz} - $args{precursor_excl} ) < $Yions[$i] ) {
-          push(@productIons,\%tmp2);
+				  if ( $Yions[$i] >= $mzMinimum && $Yions[$i] <= $mzMaximum ) {
+            push(@productIons,\%tmp2);
+				  }
         }
       } else {
-        push(@productIons,\%tmp2);
+				if ( $Yions[$i] >= $mzMinimum && $Yions[$i] <= $mzMaximum ) {
+          push(@productIons,\%tmp2);
+				}
       }
 
       #printf("%i  %10.3f  %2i  %6s  %2i  %10.3f\n",$iCharge,$Bions[$i],$indices[$i],$residues[$i],$rev_indices[$i],$Yions[$i]);
