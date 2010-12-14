@@ -29,6 +29,7 @@ AT_BrowseBiosequence	Browse Biosequence	QUERY					BrowseBioSequence.cgi
 AT_GetPeptides	Get Peptides	QUERY					GetPeptides		
 AT_GetProteins	Get Proteins	QUERY					GetProteins		
 AT_GetProteinsByPep	Get Proteins By Pep	QUERY					GetProteinsByPep		
+AT_CompareBuildsProteins	Compare Builds Proteins	QUERY					CompareBuildsProteins		
 AT_consensus_library	Consensus Library	PeptideAtlas_infrastructure	YES	$TBAT_CONSENSUS_LIBRARY	consensus_library_id		ManageTable.cgi?TABLE_NAME=AT_consensus_library		
 AT_consensus_library_spectrum	Consensus Library Spectrum	PeptideAtlas_infrastructure	NO	$TBAT_CONSENSUS_LIBRARY_SPECTRUM	consensus_library_spectrum_id				
 AT_consensus_library_spectrum_peak	Consensus Library Spectrum Peak	PeptideAtlas_infrastructure	NO	$TBAT_CONSENSUS_LIBRARY_SPECTRUM_PEAK	consensus_library_spectrum_peak_id				
