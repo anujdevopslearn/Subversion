@@ -43,7 +43,7 @@ my $paranoid = 0;
   }
 
   # Fetch the various datasets to merge
-  my $patr = {};
+  my $patr = getPATRPeptides();
   
   print "read qqq\n";
   my $qqq = readSpectrastSRMFile( 'qqq' );
@@ -57,11 +57,9 @@ my $paranoid = 0;
   my $it = readSpectrastSRMFile( 'ion_trap' );
   print "done\n";
   
-  
+  # This is done on the fly due to memory constraints. 
   #print "read theoretical\n";
   #my $theo = readTIQAMSRMFile( $args->{theoretical} );
-  ## Flag for uber-verbose logging.
-  #print "done\n";
   
   my $name2id = getBioseqInfo( $args->{biosequence_set_id} );
   
@@ -83,6 +81,9 @@ my $paranoid = 0;
   my $theoretical;
   
   print "reading peptide file\n";
+  if ( $args->{output_file} ) {
+    open( OUT, ">$args->{output_file}" );
+  }
   while ( my $line = <PEP> ) {
     next unless $cnt++;
     chomp $line;
@@ -116,7 +117,7 @@ my $paranoid = 0;
     my $pep_key = $line[1] . $line[2] . $line[3];
   
     # Only insert if we need to?
-    if ( !$seq2id->{$pep_key} ) {
+    if ( !$seq2id->{$pep_key} || $args->{output_file} ) {
   
       $stats{insert_new_yes}++;
 
@@ -241,7 +242,12 @@ my $paranoid = 0;
       my $pep_id;
 
       if ( $args->{output_file} ) {
+
         #Print out transition data
+        print OUT join( "\t", $build_id, $line[1], $line[2], $line[3], $line[4], $line[5], $line[6],
+                              $line[7], $line[8], $line[9], $line[10], $line[11], $line[12], $line[13],
+                              $line[16], $line[14], $line[17], $line[15] ) . "\n";
+
       } else {
        $pep_id = $sbeams->updateOrInsertRow( insert => 1,
                                           table_name  => $TBAT_PABST_PEPTIDE,
@@ -316,6 +322,7 @@ my $paranoid = 0;
   
 
   } # End read peptide loop
+  close OUT;
 
   print "Saw $cnt total peptides\n";
   for my $s ( sort( keys( %stats ) ) ) {
@@ -718,9 +725,56 @@ sub getBioseqInfo {
   return \%name2id;
 }
 
+
+sub getPATRPeptides {
+
+  # fetch peptides
+  # fill in any missing info
+  # hash results
+  # return hashref
+
+  my $sql = qq~
+  SELECT stripped_peptide_sequence, modified_peptide_sequence, monoisotopic_peptide_mass, peptide_charge, q1_mz, q3_mz, q3_ion_label, transition_suitability_level_id, collision_energy, retention_time
+  FROM $TBAT_SRM_TRANSITION
+  ~;
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+
+  my $cnt = 0;
+  while( my $row = $sth->fetchrow_arrayref() ) {
+    $cnt++;
+#    last if $cnt > 100;
+  }
+  print STDERR "saw $cnt total peptides\n";
+
+#  exit;
+}
+
+
+
 __DATA__
 
-
+srm_transition_id
+srm_transition_set_id
+stripped_peptide_sequence
+modified_peptide_sequence
+monoisotopic_peptide_mass
+peptide_charge
+q1_mz
+q3_mz
+q3_ion_label
+transition_suitability_level_id
+collision_energy
+retention_time
+protein_name
+comment
+date_created
+created_by_id
+date_modified
+modified_by_id
+owner_group_id
+record_status    
+ 
 
 
 CREATE TABLE peptideatlas_test.dbo.pabst_build (
