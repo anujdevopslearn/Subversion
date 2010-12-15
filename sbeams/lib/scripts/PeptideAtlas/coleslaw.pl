@@ -211,6 +211,7 @@ sub process_transition_data {
 						PK_value => $data->{srm_transition_id},
 						verbose=>$opts{verbose},
 						testonly=>$opts{testonly},
+						add_audit_parameters => 1,
 						);
 
 	print "[ERROR] Unable to update database record for $entry_txt\n" unless $result;
