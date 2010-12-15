@@ -1235,19 +1235,22 @@ sub finalize {
 	$array_info{$array,'array_request_slide_id'} = $array_request_slide_id;
 	undef %rowdata;
 
-	## INSERT array_request_samplem, labeling record, and hybridization
+  ## INSERT array_request_sample, labeling record, and hybridization
 	my ($sample0_name, $sample1_name);
-	$sample0_name = $parameters{'sample0name_'.$m};
+	$sample0_name = substr( $parameters{'sample0name_'.$m}, 0, 46)."..";
 	if($array_channels == 2) {
-		$sample1_name  = $parameters{'sample1name_'.$m};
-  	}
-
+		$sample1_name  = substr( $parameters{'sample1name_'.$m}, 0, 46)."..";
+  }
+ 
 	for (my $sample_index=0;$sample_index<$array_channels;$sample_index++) {
-
 	  ## INSERT array_request_sample record
 	  $rowdata{'array_request_slide_id'} = $array_request_slide_id;
 	  $rowdata{'sample_index'} = $sample_index;
-	  $rowdata{'name'} = $parameters{'sample'.$sample_index.'name_'.$m};
+
+    my $full_name = $parameters{'sample'.$sample_index.'name_'.$m};
+    $rowdata{'full_name'} = $full_name;
+    $rowdata{'name'} = substr($full_name, 0, 46)."..";
+                 
 	  $rowdata{'labeling_method_id'} = $parameters{'sample'.$sample_index.'labmeth_'.$m};
 	  $rowdata_ref = \%rowdata;
 
