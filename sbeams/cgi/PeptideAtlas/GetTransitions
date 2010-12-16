@@ -628,7 +628,7 @@ sub fetch_transitions {
 
   my $naa = $sbeams->makeInactiveText( 'n/a' );
 
-  my %src_name = ( P => 'Predicted', Q => 'QQQ-observed', T => 'QTOF-observed', I => 'IT-observed', 'R' => 'PATR-validated' );
+  my %src_name = ( P => 'Predicted', Q => 'QQQ-observed', T => 'Predicted', I => 'IT-observed', 'R' => 'PATR-validated' );
 
   $log->debug( "Exec SQL: " . time() );
   my $sth = $sbeams->get_statement_handle( $lib_sql );
