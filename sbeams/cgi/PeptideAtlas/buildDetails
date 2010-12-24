@@ -216,6 +216,7 @@ sub get_table_help {
 		{ key => 'TP_protID', value => 'target_protID - FP_protID '},
   
 		{ key => 'protFDR', value => 'Protein FDR. The largest value in this column is the protein FDR for the entire build. '},
+		{ key => 'lFDR1, lFDR5, lFDR10,2 lFDR5', value => 'Local protein FDR, computed over the previous step (i.e. between the previous row in the table and the current row), the previous 5 steps, the previous 10 steps, and the previous 25 steps.<br>Often there are fewer than 25 rows in the table, in which case column lFDR25 is uninformative. '},
   
 		{ key => 'target_protIDs, decoy_protIDs, etc.', value => 'Same as above, except for singleton proteins (those identified by only one PSM) only. '},
 		{ key => 'target_protIDns, decoy_protIDns, etc.', value => 'Same as above, except for multiply-observed proteins only. '},
