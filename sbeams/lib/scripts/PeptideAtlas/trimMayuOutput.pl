@@ -24,43 +24,48 @@ my $outfile = $options{outfile};
 open (OUTFILE, ">".$outfile) || die "Can't open $outfile for writing";
 
 
-
-my $nlines = 0;
-my $n_unmapped = 0;
 my @lines = <INFILE>;
-$nlines = scalar @lines;
-print "$nlines input lines\n";
+my $nlines = scalar @lines;
+printf ("%d input data lines, ", $nlines-1);
 
-#print header
+#echo header
 print OUTFILE $lines[0];
-#read and store first line
-my @fields = split(",", $lines[1]);
-my $last_target_psm = int($fields[3]);
-my $last_line = $lines[1];
 
-#read successive lines
-for (my $i=2; $i < $nlines; $i++) {
-  my @fields = split(",", $lines[$i]);
-  my $target_psm = int($fields[3]);
-  my $fp_psm = int($fields[5]);
-  # if this line has the same (non-zero) PSM count as the previous line ...
-  if ($target_psm && ($target_psm == $last_target_psm)) {
-    # compute exact final FDR
-    my $fdr = sprintf("%0.7f", $fp_psm / $target_psm);
-    # splice it into the previous line
-    @fields = split(",", $last_line);
-    $fields[2]=$fdr;
-    $last_line = join(",", @fields);
-    # output the (altered) previous line & quit
-    print OUTFILE $last_line;
-    last;
+my $last_line_to_echo;
+my $last_line = "";
+my $n_output_lines;
+my (@fields_2, $target_psm_2, $fp_psm_2);
+for (my $i=$nlines-1; $i>0; $i--) {
+  if ($i>1) {
+    @fields_2 = split(",", $lines[$i]);
+    $target_psm_2 = int($fields_2[3]);
+    $fp_psm_2 = int($fields_2[5]);
+    my @fields_1 = split(",", $lines[$i-1]);
+    my $target_psm_1 = int($fields_1[3]);
+    my $fp_psm_1 = int($fields_1[5]);
+    next if (($target_psm_1 == $target_psm_2) && ($fp_psm_1 == $fp_psm_2));
   }
-  # otherwise, print the previous line, and store this line & its PSM
-  # count
-  print OUTFILE $last_line;
-  $last_line = $lines[$i];
-  $last_target_psm = $target_psm;
+  # if we get here, we're at the last output line.
+  # compute exact final FDR
+  my $fdr;
+  if ($target_psm_2 == 0) {
+    $fdr = 0;
+  } else {
+    $fdr = sprintf("%0.7f", $fp_psm_2 / $target_psm_2);
+  }
+  # splice it into the previous line
+  $fields_2[2]=$fdr;
+  $last_line = join(",", @fields_2);
+  $n_output_lines=$i;
+  last;
 }
+
+for (my $i=1; $i<$n_output_lines; $i++) {
+  print OUTFILE $lines[$i];
+}
+print OUTFILE $last_line;
+print "$n_output_lines output data lines.\n";
+
 
 sub printUsage {
   print( <<"  END" );
