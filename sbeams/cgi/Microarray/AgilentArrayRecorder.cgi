@@ -1237,8 +1237,10 @@ sub finalize {
 
   ## INSERT array_request_sample, labeling record, and hybridization
 	my ($sample0_name, $sample1_name);
-	$sample0_name = substr( $parameters{'sample0name_'.$m}, 0, 46)."..";
-	if($array_channels == 2) {
+  if( length($parameters{'sample0name_'.$m}) > 48 ) {
+    $sample0_name = substr( $parameters{'sample0name_'.$m}, 0, 46)."..";
+  }
+	if( $array_channels == 2 && length($parameters{'sample1name_'.$m}) > 48 ) {
 		$sample1_name  = substr( $parameters{'sample1name_'.$m}, 0, 46)."..";
   }
  
