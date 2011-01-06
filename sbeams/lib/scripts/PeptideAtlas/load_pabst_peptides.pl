@@ -19,6 +19,9 @@ use lib '/net/db/projects/spectraComparison';
 use FragmentationComparator;
 my $fc = new FragmentationComparator;
 $fc->loadFragmentationModel( filename => '/net/db/projects/spectraComparison/FragModel_4000QTRAP.fragmod' );   
+$fc->setUseBondInfo(1);
+$fc->setNormalizationMethod(1);
+
 
 $|++; # don't buffer output
 
@@ -32,7 +35,7 @@ $pep_sel->setSBEAMS( $sbeams );
 
 my $dbh = $sbeams->getDBHandle();
 $dbh->{RaiseError}++;
-my $transition_limit = 40;
+my $transition_limit = 16;
 
 print "Begin at " . time() . "\n";
 print "process args\n";
@@ -103,6 +106,14 @@ use Data::Dumper;
 #    next unless $cnt++;
     chomp $line;
     my @line = split( "\t", $line, -1 );
+
+    # Cys must be alkylated
+    if ( $line[2] =~ /^\w+$/ && $line[2] =~ /C/ ) {
+      print "Line was $line[2]\n";
+      $line[2] =~ s/C/C\[160\]/g;
+      print "Line s $line[2]\n";
+    }
+
   #  for my $l ( @line ) { print "$l\n"; }
   
     # Looks like we have a build to load - insert build record
@@ -179,7 +190,7 @@ use Data::Dumper;
           $theoretical = {};
           $theoretical->{$pep} = generate_theoretical( $pep );
         }
-        populate_theoretical( $pep, $theoretical->{$pep}, \@trans );
+        populate_theoretical( $pep, $theoretical->{$pep}, \@trans, \%used_trans );
         $stats{theo_look}++;
         print "Trans has " . scalar( @trans ) . " post THEO\n" if $paranoid; # if scalar( @trans );
       }
@@ -419,7 +430,7 @@ sub populate {
 #
 
       for my $t ( @{$trans_lib->{$pep}->{$chg}} ) {
-        my $seen_key = join( ',', $chg, @{$t}[3,5,6,7] );
+        my $seen_key = join( ',', @{$t}[3,5,6,7] );
         next if $used_transitions->{$seen_key};
         push @{$global_trans}, $t;
         $used_transitions->{$seen_key}++;
@@ -485,17 +496,36 @@ sub populate_theoretical {
   my $pep = shift;
   my $lib = shift;
   my $global_trans = shift;
-  my $limit = shift || 40;
+
+  my $used_transitions = shift || die "need used transitions hash!";
 
   for my $trans ( @{$lib} ) {
+    my $seen_key = join( ',', @{$trans}[3,5,6,7] );
+    next if $used_transitions->{$seen_key};
     push @{$global_trans}, $trans;
-    last if scalar( @{$global_trans} ) >= $limit;
+    $used_transitions->{$seen_key}++;
+    last if scalar( @{$global_trans} ) >= $transition_limit;
   }
 }
 
 sub generate_theoretical {
-  my $pep = shift;
 
+  my $pep = shift;
+  my %theo;
+  for my $chg ( 2, 3 ) {
+
+    my $spec = $fc->synthesizeIon( "$pep/$chg");
+    if ($spec) {
+      $fc->normalizeSpectrum($spec);
+    }
+#    print Dumper( $spec );
+#    exit;
+    print "Saw " . scalar( @{$spec->{mzIntArray}} ) . " fragments from $pep/$chg\n";
+  }
+
+#  return %theo;
+
+  # Old Skool
   my $frags = $pep_sel->generate_fragment_ions( peptide_seq => $pep,
                                                      max_mz => 2500,
                                                      min_mz => 400,
@@ -789,7 +819,8 @@ sub getPATRPeptides {
                 ELSE 3 END AS charge_priority,
            transition_suitability_level_id,
            srm_transition_id
-  FROM $TBAT_SRM_TRANSITION ) AS subquery
+  FROM $TBAT_SRM_TRANSITION
+  WHERE record_status = 'N' ) AS subquery
   ORDER BY stripped_peptide_sequence, transition_suitability_level_id,
            charge_priority ASC, peptide_charge ASC, srm_transition_id ASC, 
            q3_mz
