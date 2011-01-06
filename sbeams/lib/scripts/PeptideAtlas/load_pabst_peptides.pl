@@ -14,6 +14,12 @@ use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::BestPeptideSelector;
 use SBEAMS::PeptideAtlas::Tables;
 
+# Load spectrum comparer code
+use lib '/net/db/projects/spectraComparison';
+use FragmentationComparator;
+my $fc = new FragmentationComparator;
+$fc->loadFragmentationModel( filename => '/net/db/projects/spectraComparison/FragModel_4000QTRAP.fragmod' );   
+
 $|++; # don't buffer output
 
 my $sbeams = SBEAMS::Connection->new();
@@ -26,6 +32,7 @@ $pep_sel->setSBEAMS( $sbeams );
 
 my $dbh = $sbeams->getDBHandle();
 $dbh->{RaiseError}++;
+my $transition_limit = 40;
 
 print "Begin at " . time() . "\n";
 print "process args\n";
@@ -33,7 +40,9 @@ my $args = process_args();
 print "done\n";
 
 # Flag for uber-verbose logging.
-my $paranoid = 0;
+my $paranoid = 1;
+
+use Data::Dumper;
 
 { # Main 
 
@@ -48,6 +57,12 @@ my $paranoid = 0;
   print "read qqq\n";
   my $qqq = readSpectrastSRMFile( 'qqq' );
   print "done\n";
+#  print Dumper( $qqq );
+  for my $q ( keys( %{$qqq} ) ) {
+#    print "$q => " . join( ', ', @{$qqq->{$q}} ) . "\n";
+#    print "$q => $qqq->{$q}\n";
+  }
+#  exit;
   
   print "read qtof\n";
   my $qtof = readSpectrastSRMFile( 'qtof' );
@@ -65,7 +80,6 @@ my $paranoid = 0;
   
   open PEP, $args->{peptides} || die "Unable to open peptide file $args->{peptides}";
   
-  my $transition_limit = 16;
   
   my $cnt;
   my %stats;
@@ -82,10 +96,11 @@ my $paranoid = 0;
   
   print "reading peptide file\n";
   if ( $args->{output_file} ) {
+
     open( OUT, ">$args->{output_file}" );
   }
   while ( my $line = <PEP> ) {
-    next unless $cnt++;
+#    next unless $cnt++;
     chomp $line;
     my @line = split( "\t", $line, -1 );
   #  for my $l ( @line ) { print "$l\n"; }
@@ -123,26 +138,37 @@ my $paranoid = 0;
 
       # Fill up transition list for this peptide entry
       my @trans;
-      print "INIT: Trans has " . scalar( @trans ) . "\n" if $paranoid;
+      my %used_trans;
+
       my $pep = $line[2];
+      print "INIT: $pep has " . scalar( @trans ) . " trans\n" if $paranoid;
       $pep =~ s/\'//g;
       if ( $pep =~ /X/ ) {
         $stats{bad_aa}++;
         next;
       }
-    
-      populate( $qqq, $pep, \@trans, 'spectrast' );
-      $stats{qqq_look}++;
-      print "Trans has " . scalar( @trans ) . " post QQQ\n" if $paranoid; # if scalar( @trans ) ;
+
+      # Go through and populate in order of priority
+      if ( scalar( @trans ) < $transition_limit ) {
+        populate( $patr, $pep, \@trans, 'patr', \%used_trans );
+        $stats{qqq_look}++;
+        print "Trans has " . scalar( @trans ) . " post PATR\n" if $paranoid; # if scalar( @trans ) ;
+      }
     
       if ( scalar( @trans ) < $transition_limit ) {
-        populate( $qtof, $pep, \@trans, 'spectrast' );
+        populate( $qqq, $pep, \@trans, 'qqq', \%used_trans );
+        $stats{qqq_look}++;
+        print "Trans has " . scalar( @trans ) . " post QQQ\n" if $paranoid; # if scalar( @trans ) ;
+      }
+    
+      if ( scalar( @trans ) < $transition_limit ) {
+        populate( $qtof, $pep, \@trans, 'qtof' , \%used_trans);
         $stats{qtrap_look}++;
         print "Trans has " . scalar( @trans ) . " post Qtrap\n" if $paranoid; # if scalar( @trans );
       }
     
       if ( scalar( @trans ) < $transition_limit ) {
-        populate( $it, $pep, \@trans, 'spectrast' );
+        populate( $it, $pep, \@trans, 'it' , \%used_trans);
         $stats{it_look}++;
         print "Trans has " . scalar( @trans ) . " post IT\n" if $paranoid; # if scalar( @trans );
       }
@@ -244,9 +270,9 @@ my $paranoid = 0;
       if ( $args->{output_file} ) {
 
         #Print out transition data
-        print OUT join( "\t", $build_id, $line[1], $line[2], $line[3], $line[4], $line[5], $line[6],
-                              $line[7], $line[8], $line[9], $line[10], $line[11], $line[12], $line[13],
-                              $line[16], $line[14], $line[17], $line[15] ) . "\n";
+#        print OUT join( "\t", $build_id, $line[1], $line[2], $line[3], $line[4], $line[5], $line[6],
+#                              $line[7], $line[8], $line[9], $line[10], $line[11], $line[12], $line[13],
+#                              $line[16], $line[14], $line[17], $line[15] ) . "\n";
 
       } else {
        $pep_id = $sbeams->updateOrInsertRow( insert => 1,
@@ -289,16 +315,22 @@ my $paranoid = 0;
                         relative_intensity => $t->[9],
         };
     #    print "Tranrow is $tranrow\n"; for my $k ( keys ( %$tranrow ) ) { print "$k => $tranrow->{$k}\n"; } 
+        if ( $args->{output_file} ) {
+           print OUT join( "\t", $line[2], values( %$tranrow) ) . "\n" ;
+
+
     
+        } else {
     
-      my $trans_id = $sbeams->updateOrInsertRow( insert => 1,
-                                            table_name  => $TBAT_PABST_TRANSITION,
-                                            rowdata_ref => $tranrow,
-                                            verbose     => $args->{verbose},
-                                           return_PK    => 1,
-                                                     PK => 'fragment_ion_id',
-                                            testonly    => $args->{testonly} );
+        my $trans_id = $sbeams->updateOrInsertRow( insert => 1,
+                                              table_name  => $TBAT_PABST_TRANSITION,
+                                              rowdata_ref => $tranrow,
+                                              verbose     => $args->{verbose},
+                                             return_PK    => 1,
+                                                       PK => 'fragment_ion_id',
+                                              testonly    => $args->{testonly} );
     
+        }
       }
     
     } else {
@@ -363,41 +395,38 @@ sub getPABSTPeptideData {
 
   return \%seq_to_id;
 }
-
+#MARK
 sub populate {
   my $trans_lib = shift;
   my $pep = shift;
   my $global_trans = shift;
   my $type = shift;
-  my $limit = shift || 16;
 
-  print "Trans is $global_trans\n" if $paranoid;
+  my $used_transitions = shift || die "need used transitions hash!";
+
+#  print "Trans is $global_trans\n" if $paranoid;
 
   return unless $trans_lib->{$pep};
-  print "Found peptide $pep in $type\n" if $paranoid;
+#  print "Found peptide $pep in $type\n" if $paranoid;
 
   for my $chg ( 2, 3, 1 ) {
     if ( $trans_lib->{$pep}->{$chg} ) {
-      print "looks like we have $pep with charge $chg in $type - " . scalar(  @{$trans_lib->{$pep}->{$chg}}   ) . "\n" if $paranoid;
+#      print "looks like we have $pep with charge $chg in $type - " . scalar(  @{$trans_lib->{$pep}->{$chg}}   ) . "\n" if $paranoid;
       my @trans;
-      if ( $type eq 'spectrast' ) {
-        my $cnt = 1;
-#        for my $i (  @{$trans_lib->{$pep}->{$chg}} ) { print "$cnt > $i\n" if $paranoid; $cnt++; }
-        @trans = sort { $a->[9] <=> $b->[9] } @{$trans_lib->{$pep}->{$chg}};
 
-        print "In the iffy, trans has " . scalar( @trans ) . " but tlib has " . scalar( @{$trans_lib->{$pep}->{$chg}} )  . "\n" if $paranoid;
-      } else {
-        print "In the elsy\n" if $paranoid;
-        @trans = @{$trans_lib->{$pep}->{$chg}}
-      }
-      for my $t ( @trans ) {
-        print "$t\n" if $paranoid;
-#        for my $e ( @$t ) { print "$e\t" if $paranoid; }
-        unshift @{$global_trans}, $t;
-        last if scalar( @{$global_trans} >= $limit );
+#        for my $i (  @{$trans_lib->{$pep}->{$chg}} ) { print "$cnt > $i\n" if $paranoid; $cnt++; }
+#        @trans = sort { $a->[9] <=> $b->[9] } @{$trans_lib->{$pep}->{$chg}};
+#
+
+      for my $t ( @{$trans_lib->{$pep}->{$chg}} ) {
+        my $seen_key = join( ',', $chg, @{$t}[3,5,6,7] );
+        next if $used_transitions->{$seen_key};
+        push @{$global_trans}, $t;
+        $used_transitions->{$seen_key}++;
+        last if scalar( @{$global_trans} >= $transition_limit );
       }
     }
-    last if scalar( @{$global_trans} >= $limit );
+    last if scalar( @{$global_trans} >= $transition_limit );
   }
 #  print "\nTrans has " . scalar( @$global_trans ) . " transitions!\n" if $paranoid;
 #  exit if $paranoid;
@@ -412,8 +441,8 @@ sub check_build {
 
   my ( $cnt ) = $sbeams->selectrow_array( $sql );
   if ( $cnt ) {
-    print STDERR "Pabst build found, will delete in 10 seconds unless cntl-c is pressed\n";
-    sleep 10;
+    print STDERR "Pabst build found, will delete in 3 seconds unless cntl-c is pressed\n";
+    sleep 0;
   } else {
     print STDERR "No Pabst build found with ID $build_id, exiting\n";
     exit;
@@ -456,7 +485,7 @@ sub populate_theoretical {
   my $pep = shift;
   my $lib = shift;
   my $global_trans = shift;
-  my $limit = shift || 16;
+  my $limit = shift || 40;
 
   for my $trans ( @{$lib} ) {
     push @{$global_trans}, $trans;
@@ -518,6 +547,7 @@ sub process_args {
   return \%args;
 }
 
+#MARK
 sub readSpectrastSRMFile {
   my $lib_type = shift || die;
 
@@ -525,6 +555,7 @@ sub readSpectrastSRMFile {
                qqq => 'Q',
                ion_trap => 'I' );
                
+#  print "Library type is $type{$lib_type} from $lib_type\n" if $paranoid;
 
   my $srm_file = $args->{$lib_type};
 
@@ -540,9 +571,10 @@ sub readSpectrastSRMFile {
     my @labels = split( "/", $line[7], -1 );
     my $primary_label = $labels[0];
 
-    next if $primary_label =~ /^p/;
-    next if $primary_label =~ /^\?/;
-    next if $primary_label =~ /^IWA/;
+    next if $primary_label !~ /^[yb]/;
+#    next if $primary_label =~ /^p/;
+#    next if $primary_label =~ /^\?/;
+#    next if $primary_label =~ /^IWA/;
 
 #    my $show = 0;
 
@@ -583,8 +615,8 @@ sub readSpectrastSRMFile {
       $q3_peak .= $q3_delta;
     }
 
-    $srm{$line[1]} ||= {};
-    $srm{$line[1]}->{$line[2]} ||= [];
+    $srm{$seq} ||= {};
+    $srm{$seq}->{$chg} ||= [];
 # Reads in specified file, returns ordered MRM list with fields as follows.
 # peptide sequence
 # modified_peptide_sequence
@@ -598,7 +630,10 @@ sub readSpectrastSRMFile {
 # Relative intensity 
 # Type 
     # srm{peptide_sequence}->{charge} == pep seq, pep seq, q1 mz, q1 charge, q3 mz, q3 charge, ion series, ion number, CE, intensity, lib_type
+
     push @{$srm{$seq}->{$chg}}, [ $seq, $seq, $line[3], $chg, @line[5], $q3_chg, $q3_series, $q3_peak, $line[10], $line[6], $type{$lib_type} ];
+
+#    print "For $seq and $chg, pushed $line[6], top is $srm{$seq}->{$chg}->[0]->[9]\n" unless $lib_type =~ /ion_trap/;
 #    push @{$srm{$line[1]}->{$line[2]}}, [ ];
 #    print "pushed $seq, srM has " . scalar(@{$srm{$seq}->{$chg}}) . "\n" if $paranoid;
   }
@@ -733,19 +768,62 @@ sub getPATRPeptides {
   # hash results
   # return hashref
 
+    # srm{peptide_sequence}->{charge} == pep seq, pep seq, q1 mz, q1 charge, q3 mz, q3 charge, ion series, ion number, CE, intensity, lib_type
   my $sql = qq~
-  SELECT stripped_peptide_sequence, modified_peptide_sequence, monoisotopic_peptide_mass, peptide_charge, q1_mz, q3_mz, q3_ion_label, transition_suitability_level_id, collision_energy, retention_time
-  FROM $TBAT_SRM_TRANSITION
+  SELECT * FROM ( 
+    SELECT stripped_peptide_sequence,
+           modified_peptide_sequence,
+           q1_mz,
+           peptide_charge,
+           q3_mz,
+           CASE WHEN q3_ion_label LIKE '%^2%' THEN 2
+                WHEN q3_ion_label LIKE '%^3%' THEN 3
+                ELSE 1 END AS q3_charge,
+           q3_ion_label AS series,
+           q3_ion_label AS number,
+           collision_energy,
+           12000 AS intensity,
+           'R' AS lib_type,
+           CASE WHEN peptide_charge = 2 THEN 1
+                WHEN peptide_charge = 3 THEN 2
+                ELSE 3 END AS charge_priority,
+           transition_suitability_level_id,
+           srm_transition_id
+  FROM $TBAT_SRM_TRANSITION ) AS subquery
+  ORDER BY stripped_peptide_sequence, transition_suitability_level_id,
+           charge_priority ASC, peptide_charge ASC, srm_transition_id ASC, 
+           q3_mz
   ~;
+# Should also sort by intensity!!!
 
   my $sth = $sbeams->get_statement_handle( $sql );
 
+  # split series and number
+  # drop charge priority
+
+  my %patr;
   my $cnt = 0;
   while( my $row = $sth->fetchrow_arrayref() ) {
     $cnt++;
+    $patr{$row->[1]} ||= {};
+    $patr{$row->[1]}->{$row->[3]} ||= [];
+
+    my @mod_row = @{$row}[0..10];
+    $row->[6] =~ /^(\w)(\d+)/;
+    my $series = $1;
+    my $number = $2;
+    next unless $series && $number && $series =~ /[yb]/i;
+#    print "Series is $series and number is $number and q3 charge is $mod_row[5] for $mod_row[6]\n";
+    $mod_row[6] = $series;
+    $mod_row[7] = $number;
+    $mod_row[2] = sprintf( "%0.3f", $mod_row[2]);
+    $mod_row[4] = sprintf( "%0.3f", $mod_row[4]);
+
+    push @{$patr{$row->[1]}->{$row->[3]}}, \@mod_row;
 #    last if $cnt > 100;
   }
   print STDERR "saw $cnt total peptides\n";
+  return \%patr;
 
 #  exit;
 }
