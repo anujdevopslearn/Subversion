@@ -14,11 +14,14 @@ use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::BestPeptideSelector;
 use SBEAMS::PeptideAtlas::Tables;
 
+use SBEAMS::Proteomics::PeptideMassCalculator;
+my $massCalculator = new SBEAMS::Proteomics::PeptideMassCalculator;
+
 # Load spectrum comparer code
 use lib '/net/db/projects/spectraComparison';
 use FragmentationComparator;
 my $fc = new FragmentationComparator;
-$fc->loadFragmentationModel( filename => '/net/db/projects/spectraComparison/FragModel_4000QTRAP.fragmod' );   
+$fc->loadFragmentationModel( filename => '/net/db/projects/spectraComparison/FragModel_AgilentQTOF.fragmod' );   
 $fc->setUseBondInfo(1);
 $fc->setNormalizationMethod(1);
 
@@ -27,10 +30,17 @@ $|++; # don't buffer output
 
 my $sbeams = SBEAMS::Connection->new();
 $sbeams->Authenticate();
+
 my $atlas = SBEAMS::PeptideAtlas->new();
 $atlas->setSBEAMS( $sbeams );
+
 my $pep_sel = SBEAMS::PeptideAtlas::BestPeptideSelector->new();
 $pep_sel->setSBEAMS( $sbeams );
+my $instrument_map = $pep_sel->getInstrumentMap();
+
+# Will be populated in process_args
+my @mrm_libs;
+my %mrm_libs;
 
 
 my $dbh = $sbeams->getDBHandle();
@@ -57,24 +67,28 @@ use Data::Dumper;
   # Fetch the various datasets to merge
   my $patr = getPATRPeptides();
   
-  print "read qqq\n";
-  my $qqq = readSpectrastSRMFile( 'qqq' );
-  print "done\n";
+  my %lib_data;
+  for my $mrm ( @mrm_libs ) {
+    print "Reading $mrm file data\n";
+    $lib_data{$mrm} = readSpectrastSRMFile( file => $mrm, type => $mrm_libs{$mrm} );
+    print "Done\n";
+  }
+
+
+#  my $qqq = readSpectrastSRMFile( 'qqq' );
+#  print "done\n";
 #  print Dumper( $qqq );
-  for my $q ( keys( %{$qqq} ) ) {
+#  for my $q ( keys( %{$qqq} ) ) {
 #    print "$q => " . join( ', ', @{$qqq->{$q}} ) . "\n";
 #    print "$q => $qqq->{$q}\n";
-  }
+#  }
 #  exit;
-  
-  print "read qtof\n";
-  my $qtof = readSpectrastSRMFile( 'qtof' );
-  print "done\n";
-  
-  print "read ion_trap\n";
-  my $it = readSpectrastSRMFile( 'ion_trap' );
-  print "done\n";
-  
+#  print "read qtof\n";
+#  my $qtof = readSpectrastSRMFile( 'qtof' );
+#  print "done\n";
+#  print "read ion_trap\n";
+#  my $it = readSpectrastSRMFile( 'ion_trap' );
+#  print "done\n";
   # This is done on the fly due to memory constraints. 
   #print "read theoretical\n";
   #my $theo = readTIQAMSRMFile( $args->{theoretical} );
@@ -99,7 +113,6 @@ use Data::Dumper;
   
   print "reading peptide file\n";
   if ( $args->{output_file} ) {
-
     open( OUT, ">$args->{output_file}" );
   }
   while ( my $line = <PEP> ) {
@@ -114,8 +127,6 @@ use Data::Dumper;
       print "Line s $line[2]\n";
     }
 
-  #  for my $l ( @line ) { print "$l\n"; }
-  
     # Looks like we have a build to load - insert build record
     if ( $args->{load} && !$build_id ) {
       my $rowdata = {  build_name => $args->{name},
@@ -152,7 +163,6 @@ use Data::Dumper;
       my %used_trans;
 
       my $pep = $line[2];
-      print "INIT: $pep has " . scalar( @trans ) . " trans\n" if $paranoid;
       $pep =~ s/\'//g;
       if ( $pep =~ /X/ ) {
         $stats{bad_aa}++;
@@ -160,31 +170,21 @@ use Data::Dumper;
       }
 
       # Go through and populate in order of priority
+      populate( $patr, $pep, \@trans, 'patr', \%used_trans );
+      print "Trans has " . scalar( @trans ) . " post PATR\n" if $paranoid; # if scalar( @trans ) ;
+    
       if ( scalar( @trans ) < $transition_limit ) {
-        populate( $patr, $pep, \@trans, 'patr', \%used_trans );
-        $stats{qqq_look}++;
-        print "Trans has " . scalar( @trans ) . " post PATR\n" if $paranoid; # if scalar( @trans ) ;
+        for my $src ( @mrm_libs ) {
+          print "Adding from $src\n";
+          populate( $lib_data{$src}, $pep, \@trans, $mrm_libs{$src}, \%used_trans );
+          $stats{$src}++;
+          print "Trans has " . scalar( @trans ) . " post $src\n" if $paranoid; # if scalar( @trans ) ;
+          last if scalar( @trans ) >= $transition_limit;
+        }
       }
     
       if ( scalar( @trans ) < $transition_limit ) {
-        populate( $qqq, $pep, \@trans, 'qqq', \%used_trans );
-        $stats{qqq_look}++;
-        print "Trans has " . scalar( @trans ) . " post QQQ\n" if $paranoid; # if scalar( @trans ) ;
-      }
-    
-      if ( scalar( @trans ) < $transition_limit ) {
-        populate( $qtof, $pep, \@trans, 'qtof' , \%used_trans);
-        $stats{qtrap_look}++;
-        print "Trans has " . scalar( @trans ) . " post Qtrap\n" if $paranoid; # if scalar( @trans );
-      }
-    
-      if ( scalar( @trans ) < $transition_limit ) {
-        populate( $it, $pep, \@trans, 'it' , \%used_trans);
-        $stats{it_look}++;
-        print "Trans has " . scalar( @trans ) . " post IT\n" if $paranoid; # if scalar( @trans );
-      }
-    
-      if ( scalar( @trans ) < $transition_limit ) {
+        print "Adding from Theoretical\n";
         if ( !$theoretical->{$pep} ) {
           # Reset...
           $theoretical = {};
@@ -194,7 +194,6 @@ use Data::Dumper;
         $stats{theo_look}++;
         print "Trans has " . scalar( @trans ) . " post THEO\n" if $paranoid; # if scalar( @trans );
       }
-    
       
       if ( !scalar( @trans ) ) {
         $stats{unfound}++;
@@ -203,22 +202,6 @@ use Data::Dumper;
         $stats{shorted}++;
       } else {
         $stats{fulfilled}++;
-      }
-    
-      if ( $qqq->{$pep} ) {
-        $stats{qqq_yes}++;
-      } else {
-        $stats{qqq_no}++;
-      }
-      if ( $it->{$pep} ) {
-        $stats{ion_trap_yes}++;
-      } else {
-        $stats{ion_trap_no}++;
-      }
-      if ( $theoretical->{$pep} ) {
-        $stats{theoretical_yes}++;
-      } else {
-        $stats{theoretical_no}++;
       }
     
       # Insert peptide record
@@ -408,6 +391,7 @@ sub getPABSTPeptideData {
 }
 #MARK
 sub populate {
+  #  populate( $lib_data{$mrm}, $pep, \@trans, $mrm_libs{$mrm}, \%used_trans );
   my $trans_lib = shift;
   my $pep = shift;
   my $global_trans = shift;
@@ -511,19 +495,51 @@ sub populate_theoretical {
 sub generate_theoretical {
 
   my $pep = shift;
-  my %theo;
+  my @predicted;
+  
+  # Consider first +2 and then +3 parent ion charge if necessary
   for my $chg ( 2, 3 ) {
 
+    # Precursor m/z
+    my $parent_mz = $massCalculator->getPeptideMass( sequence => $pep,   
+                                             mass_type => 'monoisotopic',
+                                                charge => $chg,
+                                            );
+
+    # Use Eric's fragmentation model
     my $spec = $fc->synthesizeIon( "$pep/$chg");
     if ($spec) {
       $fc->normalizeSpectrum($spec);
+    } else {
+      print STDERR "NOSPEC: No spectrum from $pep/$chg\n";
+      next;
     }
-#    print Dumper( $spec );
-#    exit;
-    print "Saw " . scalar( @{$spec->{mzIntArray}} ) . " fragments from $pep/$chg\n";
-  }
 
-#  return %theo;
+    # Sort by fragment intensity
+    my @unsorted = @{$spec->{mzIntArray}};
+    print " Unsorted has " . scalar @unsorted . " entries\n";
+    my @sorted_frags = sort { $b->[1] <=> $a->[1] } @{$spec->{mzIntArray}};
+
+    for my $frag ( @sorted_frags ) {
+      last unless $frag->[1] > 0;
+      $frag->[1] = sprintf( "%0.1f", $frag->[1] * 2500 );
+
+      # mz                              '82.5394891',
+      # inten                           '0',
+      # series                             'b',
+      # number                             1,
+      # charge                             2
+      push @predicted, [ $pep, $pep, $parent_mz, $chg, $frag->[0], $frag->[4],
+                         $frag->[2], $frag->[3], '', $frag->[1], 'P' ];
+    }
+  }
+    
+  if ( scalar( @predicted ) ) {
+    return \@predicted;
+  } else {
+    # FIXME generate predicted the original way
+    return [];
+  }
 
   # Old Skool
   my $frags = $pep_sel->generate_fragment_ions( peptide_seq => $pep,
@@ -534,13 +550,16 @@ sub generate_theoretical {
                                              omit_precursor => 1,
                                              precursor_excl => 5 
                                           );
-  return $pep_sel->order_fragments( $frags );
+  my $ofrags = $pep_sel->order_fragments( $frags );
+#  die Dumper ( $ofrags ) if $pep =~ /160/;
+  return $ofrags;
+ 
 }
 
 sub process_args {
 
   my %args;
-  GetOptions( \%args, 'qqq:s', 'ion_trap:s', 'qtof:s', 'help',
+  GetOptions( \%args, 'mrm_file=s@', 'help',
               'peptides:s', 'conf=s', 'parameters=s', 'description=s',
               'verbose', 'testonly', 'biosequence_set_id=i', 'name=s',
               'load', 'output_file=s', 'project_id=i', 'organism=i',
@@ -561,11 +580,11 @@ sub process_args {
   }
 
   if ( $args{load} || $args{output_file} ) {
-    for my $opt ( qw( qqq ion_trap qtof peptides conf parameters 
-                      biosequence_set_id project_id ) ) {
+    for my $opt ( qw( mrm_file peptides conf parameters biosequence_set_id project_id ) ) {
       $missing = ( $missing ) ? $missing . ", $opt" : "Missing required arg(s) $opt" if !$args{$opt};
     }
   }
+  print_usage( $missing ) if $missing;
 
   if ( $args{conf} ) {
     undef local $/;
@@ -573,23 +592,24 @@ sub process_args {
     $args{conf} = <CONF>;
   }
 
-  print_usage( $missing ) if $missing;
+  for my $consensus ( @{$args{mrm_file}} ) {
+    my @lib_attr = split "\:", $consensus;
+    print_usage ( "MRM lib files must specify instrument" ) unless scalar( @lib_attr ) > 1;
+    print_usage ( "MRM lib files cannot contain : characters" ) if scalar( @lib_attr ) > 2;
+    print_usage ( "unknown lib type $lib_attr[1]" ) unless $instrument_map->{$lib_attr[1]};
+    push @mrm_libs, $lib_attr[0];
+    $mrm_libs{$lib_attr[0]} = $instrument_map->{$lib_attr[1]};
+  }
+
   return \%args;
 }
 
 #MARK
 sub readSpectrastSRMFile {
-  my $lib_type = shift || die;
+  my %args = @_;
+  print "Library file is $args{file}, type is $args{type}\n";
 
-  my %type = ( qtof => 'T',
-               qqq => 'Q',
-               ion_trap => 'I' );
-               
-#  print "Library type is $type{$lib_type} from $lib_type\n" if $paranoid;
-
-  my $srm_file = $args->{$lib_type};
-
-  open SRM, $srm_file || die "Unable to open SRM file $srm_file";
+  open SRM, $args{file} || die "Unable to open SRM file $args{file}";
 
   my %srm;
   while ( my $line = <SRM> ) {
@@ -661,7 +681,7 @@ sub readSpectrastSRMFile {
 # Type 
     # srm{peptide_sequence}->{charge} == pep seq, pep seq, q1 mz, q1 charge, q3 mz, q3 charge, ion series, ion number, CE, intensity, lib_type
 
-    push @{$srm{$seq}->{$chg}}, [ $seq, $seq, $line[3], $chg, @line[5], $q3_chg, $q3_series, $q3_peak, $line[10], $line[6], $type{$lib_type} ];
+    push @{$srm{$seq}->{$chg}}, [ $seq, $seq, $line[3], $chg, @line[5], $q3_chg, $q3_series, $q3_peak, $line[10], $line[6], $args{type} ];
 
 #    print "For $seq and $chg, pushed $line[6], top is $srm{$seq}->{$chg}->[0]->[9]\n" unless $lib_type =~ /ion_trap/;
 #    push @{$srm{$line[1]}->{$line[2]}}, [ ];
