@@ -208,8 +208,8 @@ for my $acc ( keys( %{$acc2seq} ) ) {
   if ( $opts->{bin_max} ) {
     $n_peps = $opts->{bin_max} if $n_peps > $opts->{bin_max};
   }
-  if ( $opts->{show_nomap} && ( !$n_peps || ($n_peps < 5 ))) {
-#  if ( $opts->{show_nomap} && !$n_peps ) {
+#  if ( $opts->{show_nomap} && ( !$n_peps || ($n_peps < 5 ))) {
+  if ( $opts->{show_nomap} && !$n_peps ) {
     print "NOMAP: $acc\n";
   }
   my $key_num = ( $n_peps > 9 ) ? $n_peps : '0' . $n_peps;
