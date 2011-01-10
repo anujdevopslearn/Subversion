@@ -144,6 +144,7 @@ sub handleRequest
 
         populateRecords(organism_id => $organism_id, 
                           file_path => $file_path,
+													verbose => $OPTIONS{verbose},
              consensus_library_name => $OPTIONS{library_name},
                     library_comment => $OPTIONS{comment}
                        );
@@ -207,6 +208,7 @@ sub populateRecords
     my %spectrum;
     $sbeams->initiate_transaction();
  		print "Count is $count at " . time() . "\n";
+    my $verbose = $args{verbose} || 0;
     while (my $line = <INFILE>) 
     {
 
@@ -219,6 +221,7 @@ sub populateRecords
           $spectrum{charge} = $2;
           $spectrum{modified_sequence} = $spectrum{sequence};
           $spectrum{sequence} =~ s/\[\d+\]//g;
+          print STDERR "peptide $spectrum{sequence}\n" if $verbose;
 
           next;
         } elsif ( $line =~ /^MW:\s(.*)$/ ) { # line 2 is MW
@@ -263,6 +266,7 @@ sub populateRecords
           print STDERR "protein was " . length(  $commentHash{Protein} ) . " but is now " . length( $protein ) . "\n";
         }
 
+          print STDERR "Inserting peptide $spectrum{sequence}\n" if $verbose;
         my $consensus_library_spectrum_id = insert_consensus_library_spectrum(
             consensus_library_id => $consensus_library_id,
             consensus_spectrum_type_id => $consensus_spectrum_type_id,
@@ -299,12 +303,10 @@ sub populateRecords
             my $chg = 1; ## unless overridden below
 
             ## xxxxxxx note this is only surface parsing of first ion labeled
-            my @sannot = split("/", $annot);
-            if (@sannot)
-            {
-                my $ignore = 0;
-                if ( $sannot[0] =~ /^(y|b|a)(.*)/ )
-                {
+            my @sannot = split( /\//, $annot, -1);
+            my $ignore = 0;
+            if (@sannot) {
+                if ( $sannot[0] =~ /^(y|b|a)(.*)/ ) {
                     $label  = $1 . $2;
                     
                     ## won't use multiply charged ions eg: y^2^3
@@ -331,8 +333,14 @@ sub populateRecords
                          $ignore=1;
                        }
                     }
+                } else {
+                  $ignore++;
                 }
             }
+            next if $ignore;
+              if ( length($annot) > 255 ) {
+                $annot = substr( $annot, 0, 254 );
+              }
 
             my %rowdata = (
                 consensus_library_spectrum_id => $consensus_library_spectrum_id,
