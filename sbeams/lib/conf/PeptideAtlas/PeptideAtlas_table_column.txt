@@ -397,9 +397,10 @@ AT_GetProteins	16	presence_level_constraint	Presence Levels									N	multioptio
 AT_GetProteins	17	redundancy_constraint	Redundancy									N	multioptionlist	3		Y	Y	N	Constraint for which redundant proteins to display. Indistinguishable=sequence-unique but exact same peptide set as a canonical, possibly distinguished, or subsumed protein. Identical=sequence-identical to a canonical, possibly distingusihed, subsumed, or indistinguishable. Can Ctrl-select multiple options.	SELECT biosequence_relationship_type_id, relationship_phrase FROM $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE WHERE record_status != 'D' ORDER BY sort_order, biosequence_relationship_type_id	
 AT_GetProteins	18	covering_constraint	Display only proteins in covering set									N	checkbox	0		Y	Y	N	Display only proteins in covering set (smallest set needed to explain all peptides).		
 AT_GetProteins	19	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE record_status != 'D' AND option_type = 'GProt_display_options' ORDER BY sort_order,option_value	
-AT_CompareBuildsProteins	1	atlas_build_id	Atlas Build									Y	optionlist	4		Y	Y	N	Select desired Atlas Build to compare with, required.	SELECT atlas_build_id,atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY atlas_build_name 	
+AT_CompareBuildsProteins	1	atlas_build_id	Atlas Build									Y	optionlist	4		Y	N	Y	Select desired Atlas Build to compare with, required.	SELECT atlas_build_id,atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY atlas_build_name 	
 AT_CompareBuildsProteins	2	atlas_build_id_2	Atlas Build 2									Y	optionlist	4		Y	Y	N	Select desired Atlas Build to compare against, required.	SELECT atlas_build_id,atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY atlas_build_name 	
-AT_CompareBuildsProteins	3	comparison_type_constraint	Comparison Type									Y	optionlist			Y	Y	N	Type of comparison desired.	SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'CBP_comparison_types' AND record_status != 'D' ORDER BY sort_order,option_value;	
+AT_CompareBuildsProteins	3	comparison_type_constraint	Comparison Type					intersection				Y	optionlist			Y	Y	N	Type of comparison desired.	SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'CBP_comparison_types' AND record_status != 'D' ORDER BY sort_order,option_value;	
+AT_CompareBuildsProteins	4	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE record_status != 'D' AND option_type = 'CBP_display_options' ORDER BY sort_order,option_value	
 AT_spectra_description_set	1	spectra_description_set_id	Spectra Description Set ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_spectra_description_set	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id					N	N		Associated Atlas Build		
 AT_spectra_description_set	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
@@ -652,12 +653,13 @@ AT_protein_identification	6	represented_by_biosequence_id	Represented By	int	4	0
 AT_protein_identification	7	probability	Probability	real	4	0	N		N										ProteinProphet probability		
 AT_protein_identification	8	confidence	Confidence	real	4	0	Y		N										States et al. confidence measure		
 AT_protein_identification	9	subsumed_by_biosequence_id	Subsumed By	int	4	0	N		N	AT_biosequence	biosequence_id								One protein that subsumes this biosequence		
-AT_protein_identification	10	n_observations	N Obs	int	4	0	N		N										Number of identified spectra		
+AT_protein_identification	10	n_observations	N Obs	int	4	0	N		N										PSM count (number of spectra identified to this protein), ProteinProphet-adjusted		
 AT_protein_identification	11	n_distinct_peptides	N Distinct Peptides	int	4	0	N		N										Number of sequence-distinct peptides		
 AT_protein_identification	12	estimated_ng_per_ml	Estimated ng/ml	real	4	0	Y		N										Abundance in ng/ml as estimated from number of observations		
 AT_protein_identification	13	abundance_uncertainty	Uncertainty ng/ml	varchar	100	0	Y		N										Uncertainty factor for estimated abundance		
 AT_protein_identification	14	seq_unique_prots_in_group	Sequence Unique Proteins in Group	int	4	0	N		N										Number of sequence-unique proteins in this protein group		
 AT_protein_identification	15	is_covering	Is in Covering Set	int	4	0	N	0	N	N									Belongs to covering set for atlas build		
+AT_protein_identification	16	norm_PSMs_per_100K	Normalized PSMs per 100K total	real	4	0	Y		N										ProteinProphet adjusted PSM count (n_observations), normalized to total observable peps in this protein, per 100K total PSMs in this atlas build		
 AT_biosequence_relationship	1	biosequence_relationship_id	Biosequence Relationship ID	int	4	0	N		Y												pkDEFAULT
 AT_biosequence_relationship	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id								Atlas build ID which this protein belongs to		
 AT_biosequence_relationship	3	protein_group_number	Protein Group ID	int	4	0	N		N										Protein group number from ProteinProphet		
