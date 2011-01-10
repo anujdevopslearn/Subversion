@@ -728,6 +728,16 @@ sub sortBySuitabilityScore {
 
 } # end sortBySuitabilityScore
 
+sub getInstrumentMap {
+  my $self = shift;
+	my %instr = ( QTrap4000 => 'Q',
+	              QTrap5500 => 'S',
+								Predicted => 'P',
+								IonTrap => 'I',
+								PATR => 'R',
+								QTOF => 'T' );
+  return \%instr;
+} 
 
 ###############################################################################
 # bySuitabilityScore
