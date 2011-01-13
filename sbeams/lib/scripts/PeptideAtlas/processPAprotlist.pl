@@ -14,6 +14,7 @@
 
 # 11/11/09: added protein group size to protIdentlist
 #  Counts everything except identicals.
+# 01/10/11: added norm_PSMs_per_100K
 
 
 use strict;
@@ -129,7 +130,7 @@ my $identlistfile =  "PeptideAtlasInput.PAprotIdentlist";
 open (IDENTFILE, ">$identlistfile") ||
    die "Cannot open $identlistfile for writing.\n";
 print IDENTFILE
-"protein_group_number,biosequence_name,probability,confidence,n_observations,n_distinct_peptides,level_name,represented_by_biosequence_name,subsumed_by_biosequence_name,estimated_ng_per_ml,abundance_uncertainty,is_covering,group_size\n";
+"protein_group_number,biosequence_name,probability,confidence,n_observations,n_distinct_peptides,level_name,represented_by_biosequence_name,subsumed_by_biosequence_name,estimated_ng_per_ml,abundance_uncertainty,is_covering,group_size,norm_PSMs_per_100K\n";
 
 my $relationshipfile =  "PeptideAtlasInput.PAprotRelationships";
 open (RELFILE, ">$relationshipfile") ||
@@ -150,6 +151,7 @@ print RELFILE "protein_group_number,reference_biosequence_name,related_biosequen
 # 10 $abundance_uncertainty
 # 11 $is_covering
 # 12 (in ouput, not in input) -- group size
+# 13 (12 in input) $norm_PSMs_per_100K
 
 my $protein_group_number_idx = 0;
 my $biosequence_names_idx = 1;
@@ -164,8 +166,10 @@ my $estimated_ng_per_ml_idx = 9;
 my $abundance_uncertainty_idx = 10;
 my $is_covering_idx = 11;
 my $group_size_idx = 12;
+my $norm_PSMs_per_100K_input_idx = 12;
+my $norm_PSMs_per_100K_output_idx = 13;
 
-my $n_input_fields = 12;
+my $n_input_fields = 13;
 
 #### For each protein in PAprotlist file, including indistinguishables
 #### (and, at this stage, indistinguishables INCLUDE identicals),
@@ -296,6 +300,8 @@ for my $line (<INFILE>) {
   #### Store reference to fields in an array.
   $fields[$biosequence_names_idx] = $primary_protID;
   $fields[$subsumed_by_biosequence_name_list_idx] = $subsumed_by_protID;
+  my $norm_PSMs_per_100K = $fields[$norm_PSMs_per_100K_input_idx];
+  $fields[$norm_PSMs_per_100K_output_idx] = $norm_PSMs_per_100K;
   my $prot_ident_ref = \@fields;
   push (@prot_idents, $prot_ident_ref);
 

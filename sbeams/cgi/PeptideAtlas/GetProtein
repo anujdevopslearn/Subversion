@@ -487,6 +487,7 @@ sub handle_request {
               PID.estimated_ng_per_ml, PID.abundance_uncertainty,
               PID.probability, PID.confidence,
               PID.n_observations,
+              PID.norm_PSMs_per_100K,
               PPL.level_name,
               BSRT.relationship_name,
               BS_REP.biosequence_name as "group_rep",
@@ -901,6 +902,10 @@ sub handle_request {
                               key => 'ProteinProphet-adjusted N Obs',
                               value => $biosequence->{n_observations} )
             if defined $biosequence->{n_observations};
+      print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
+                              key => 'Normalized PSMs per 100K',
+                              value => sprintf("%0.3f", $biosequence->{norm_PSMs_per_100K}) )
+            if defined $biosequence->{norm_PSMs_per_100K};
       print "</TABLE>\n"; 
     }
 

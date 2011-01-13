@@ -178,6 +178,7 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::Proteomics::Tables;
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::ProtInfo;
+use SBEAMS::PeptideAtlas::SpectralCounting;
 use SBEAMS::PeptideAtlas;
 
 $sbeams = new SBEAMS::Connection;
@@ -216,8 +217,6 @@ Options:
   --output_file       Filename to which to write the peptides
   --master_ProteinProphet_file       Filename for a master ProteinProphet
                       run that should be used instead of individual ones.
-  --slope_for_abundance   Slope for protein abundance calculation
-  --yint_for_abundance    Y-intercept for protein abundance calculation
   --glyco_atlas       All expts are glycocapture. For abundance estimation.
   --per_expt_pipeline Adjust probabilities according to individual
                       protXMLs; use master for prot ID assignment only
@@ -242,6 +241,8 @@ EOU
 
 # Removed from usage, because nonfunctional.
 # --search_batch_ids  Comma-separated list of SBEAMS-Proteomics seach_batch_ids
+#  --slope_for_abundance   Slope for protein abundance calculation
+#  --yint_for_abundance    Y-intercept for protein abundance calculation
 
 #### If no parameters are given, print usage information
 unless ($ARGV[0]){
@@ -255,7 +256,8 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
   "validate=s","namespaces","schemas","build_dir:s",
   "source_file=s","search_batch_ids:s","P_threshold=f","FDR_threshold=f",
   "output_file=s","master_ProteinProphet_file=s",
-  "slope_for_abundance=f","yint_for_abundance=f","per_expt_pipeline",
+#  "slope_for_abundance=f","yint_for_abundance=f",
+  "per_expt_pipeline",
   "glyco_atlas",
   "biosequence_set_id=s", "best_probs_from_protxml", "min_indep=f",
   "APD_only", "protlist_only", "apportion_PSMs", "splib_filter",
@@ -1166,7 +1168,8 @@ sub assignProteinID {
   # define a couple of anonymous subroutines
   my $new_prot_is_better_than_best_so_far_sub = sub {
     return ( 
-      main::more_likely_protein_identification (
+      SBEAMS::PeptideAtlas::ProtInfo::more_likely_protein_identification (
+        preferred_patterns_aref=>$preferred_patterns_aref,
 	protid1=>$pepProtInfo->{protein_name},
 	protid2=>$self->{protein_name},
 	prob1=>$pepProtInfo->{protein_probability},
@@ -1784,7 +1787,9 @@ sub main {
             # Make this protein the newest $prot_group_rep
             # if it has a higher prob, or same prob but more PSMs,
             # or same prob/PSMs but more enz termini.
-	    my $most_likely =  more_likely_protein_identification (
+	    my $most_likely = 
+	    SBEAMS::PeptideAtlas::ProtInfo::more_likely_protein_identification(
+	      preferred_patterns_aref=>$preferred_patterns_aref,
 	      protid1=>$prot_group_rep,
 	      protid2=>$protein,
 	      prob1=>$highest_prob,
@@ -1899,7 +1904,8 @@ sub main {
                   my $protinfo1 = get_protinfo_href ($prot1);
                   my $protinfo2 = get_protinfo_href ($prot2);
 		  return
-		    ( main::more_likely_protein_identification (
+      ( SBEAMS::PeptideAtlas::ProtInfo::more_likely_protein_identification(
+			preferred_patterns_aref=>$preferred_patterns_aref,
 			protid1=>$prot1,
 			protid2=>$prot2,
 			prob1=>$protinfo1->{probability},
@@ -2039,7 +2045,9 @@ sub main {
 	      for my $protein3 (@prots_with_same_peps) {
                 my $prot_href3 = get_protinfo_href($protein3);
                 my $most_likely__href = get_protinfo_href($most_likely__prot);
-		my $most_likely = more_likely_protein_identification (
+		my $most_likely = 
+	  SBEAMS::PeptideAtlas::ProtInfo::more_likely_protein_identification(
+		  preferred_patterns_aref=>$preferred_patterns_aref,
 		  protid1=>$protein3,
 		  protid2=>$most_likely__prot,
 		  prob1=>$prot_href3->{probability},
@@ -2137,7 +2145,9 @@ sub main {
 	    for my $protid (@pep_protlist) {
 	      my $most_likely_id_info = get_protinfo_href ( $most_likely_id );
 	      my $protid_info = get_protinfo_href ( $protid );
-              $most_likely_id = more_likely_protein_identification (
+              $most_likely_id =
+	SBEAMS::PeptideAtlas::ProtInfo::more_likely_protein_identification(
+		preferred_patterns_aref=>$preferred_patterns_aref,
 		protid1=>$most_likely_id,
 		protid2=>$protid,
 		prob1=>$most_likely_id_info->{probability},
@@ -2243,41 +2253,41 @@ sub main {
 	} else {
           print "WARNING: $file doesn't exist; can't update its protids.\n";
         }
-
-	my @peps_not_found_list = keys %peps_not_found;
-	if (scalar(@peps_not_found_list) > 0) {
-	  print "\nWARNING: No proteins will be stored in PAprotlist for the ";
-	  print "following\ncombined PAidentlist peptides, because they were ";
-	  print "somehow not found in the\nmaster protXML file. ";
-	  print "Their protIDs in the PAidentlist file will be assigned\n";
-	  print "according to the individual protXMLs. Either there is a\n";
-	  print "bug somewhere, or your master protXML was created from\n";
-	  print "different pepXML files than your PAidentlist was.\n";
-	  for my $pep (@peps_not_found_list) {
-	    print "$pep\n";
-	  }
-	}
-
-	# Check to see that covering list proteins, gleaned from
-	# protXML, are all or mostly assigned to peps in PAidentlist.
-	my %covering_prots_not_assigned_to_peps_in_PAidentlist;
-	for my $prot (keys %{$covering_set_href}) {
-	  unless (defined $PAidentlist_prots{$prot}) {
-	    $covering_prots_not_assigned_to_peps_in_PAidentlist{$prot} = 1;
-	  }
-	}
-	my $n_prots_not_assigned =
-	  scalar keys %covering_prots_not_assigned_to_peps_in_PAidentlist;
-	my $n_prots_assigned =
-	  scalar keys %PAidentlist_prots;
-	print "$n_prots_assigned covering proteins assigned to peps in PAidentlist ($n_PSMs lines).\n";
-	print "$n_prots_not_assigned covering proteins not assigned to peps in PAidentlist, listed below.\n";
-	print " (If many, you probably didn't use filtered pepXMLs when creating your master protXML.)\n";
-	for my $prot (keys %covering_prots_not_assigned_to_peps_in_PAidentlist) {
-	  print "$prot ";
-	}
-	print "\n";
       }
+
+      my @peps_not_found_list = keys %peps_not_found;
+      if (scalar(@peps_not_found_list) > 0) {
+	print "\nWARNING: No proteins will be stored in PAprotlist for the ";
+	print "following\ncombined PAidentlist peptides, because they were ";
+	print "somehow not found in the\nmaster protXML file. ";
+	print "Their protIDs in the PAidentlist file will be assigned\n";
+	print "according to the individual protXMLs. Either there is a\n";
+	print "bug somewhere, or your master protXML was created from\n";
+	print "different pepXML files than your PAidentlist was.\n";
+	for my $pep (@peps_not_found_list) {
+	  print "$pep\n";
+	}
+      }
+
+      # Check to see that covering list proteins, gleaned from
+      # protXML, are all or mostly assigned to peps in PAidentlist.
+      my %covering_prots_not_assigned_to_peps_in_PAidentlist;
+      for my $prot (keys %{$covering_set_href}) {
+	unless (defined $PAidentlist_prots{$prot}) {
+	  $covering_prots_not_assigned_to_peps_in_PAidentlist{$prot} = 1;
+	}
+      }
+      my $n_prots_not_assigned =
+	scalar keys %covering_prots_not_assigned_to_peps_in_PAidentlist;
+      my $n_prots_assigned =
+	scalar keys %PAidentlist_prots;
+      print "$n_prots_assigned covering proteins assigned to peps in PAidentlist ($n_PSMs lines).\n";
+      print "$n_prots_not_assigned covering proteins not assigned to peps in PAidentlist, listed below.\n";
+      print " (If many, you probably didn't use filtered pepXMLs when creating your master protXML.)\n";
+      for my $prot (keys %covering_prots_not_assigned_to_peps_in_PAidentlist) {
+	print "$prot ";
+      }
+      print "\n";
     }
 
   } # end unless $APD_only
@@ -2773,8 +2783,10 @@ sub writeProtIdentificationListFile {
     print OUTFILE
 "protein_group_number,biosequence_names,probability,confidence,n_observations,n_distinct_peptides,level_name,represented_by_biosequence_name,subsumed_by_biosequence_names,estimated_ng_per_ml,abundance_uncertainty,covering\n";
 
-  my $abundance_conversion_slope = $OPTIONS{"slope_for_abundance"};
-  my $abundance_conversion_yint = $OPTIONS{"yint_for_abundance"};
+#  my $abundance_conversion_slope = $OPTIONS{"slope_for_abundance"};
+#  my $abundance_conversion_yint = $OPTIONS{"yint_for_abundance"};
+  my $abundance_conversion_slope;
+  my $abundance_conversion_yint;
   my $calculate_abundances = 0;
   if ( defined $abundance_conversion_slope &&
        defined $abundance_conversion_yint ) {
@@ -2810,16 +2822,18 @@ sub writeProtIdentificationListFile {
         getBiosequenceAttributes(biosequence_name => $prot_name);
 
     ### Estimate abundance, if requested
+    ### 12/30/10: disabled; moved to estimate_abundances.pl
+    ### This code can be removed in March 2011.
 
     my ($formatted_estimated_ng_per_ml, $abundance_uncertainty) = ("", "");
 
     my $is_prot_group_rep = ($prot_name eq $prot_href->{represented_by});
 
-    if ($calculate_abundances &&
+    if ( $calculate_abundances &&
          ( defined $biosequence_attributes ) &&
          ( $apportion_PSMs || $is_prot_group_rep )) {
 	    ($formatted_estimated_ng_per_ml, $abundance_uncertainty) =
-	      get_estimated_abundance (
+	      SBEAMS::PeptideAtlas::SpectralCounting::get_estimated_abundance(
 		prot_name=>$prot_name,
 		sequence=>$biosequence_attributes->[5],
 		PSM_count=>$PSM_count,
@@ -3956,6 +3970,9 @@ sub is_independent {
   my $highly_overlapping = 1;
   my $hitcount = 0;
   my $pepcount = 0;
+  my $hitcount2 = 0;
+  my $pepcount2 = 0;
+  my ( $fraction, $fraction2 );
 
   # get the list of peptides for each protein from the protXML data
   my @peplist1 = @{$proteins_href->{$protein1}->{unique_stripped_peptides}};
@@ -3972,93 +3989,43 @@ sub is_independent {
     } 
   }
   # if either protein has only 1 or 2 peps, call them not independent.
+  # 08/13/10 tmf: I don't get this.
   if ($pepcount < 3) {return (0);}
-  # if overlap below threshold, count how many prot2 peps are in prot1
-  if ($hitcount / $pepcount < $threshold) {
+  $fraction = $hitcount / $pepcount;
+  if ($fraction < $threshold) {
     #print "$protein2 has few ($hitcount) of the same $pepcount peps as $protein1\n";
-    $hitcount = 0;
-    $pepcount = 0;
-    foreach my $pep2 (@peplist2) {
-      $pepcount++;
-      for my $pep1 (@peplist1) {
-	if ($pep2 eq $pep1) {
-	  $hitcount++;
-	  next;
-	}
+  }
+  # count how many prot2 peps are in prot1
+  foreach my $pep2 (@peplist2) {
+    $pepcount2++;
+    for my $pep1 (@peplist1) {
+      if ($pep2 eq $pep1) {
+	$hitcount2++;
+	next;
       }
     }
-    if ($pepcount < 3) {return(0);}
-    # if overlap below threshold, the two prots are independent.
-    if ($hitcount / $pepcount < $threshold) {
-      #print "$protein1 has few ($hitcount) of the same $pepcount peps as $protein2\n";
-      $highly_overlapping = 0;
-    }
+  }
+  if ($pepcount2 < 3) {return(0);}
+  # if overlap below threshold, the two prots are independent.
+  $fraction2 = $hitcount2 / $pepcount2 ;
+  if (( $fraction < $threshold ) && ( $fraction2 < $threshold)) {
+    #print "$protein1 has few ($hitcount) of the same $pepcount peps as $protein2\n";
+    $highly_overlapping = 0;
+  }
+  if ( $highly_overlapping ) {    # if we found a possibly_distinguished
+    my $a = int(100*(1-$fraction));
+    my $diff_a = $pepcount - $hitcount;
+    my $b = int(100*(1-$fraction2));
+    my $diff_b = $pepcount2 - $hitcount2;
+#    if ( ($a >= 1) && ($a <= 20) && ($diff_a > 2) &&
+#         ($b >= 1) && ($b <= 20) && ($diff_b > 2) ) {
+#      print "$protein1: $hitcount / $pepcount   $a\%\n";
+#      print "$protein2: $hitcount2 / $pepcount2   $b\%\n\n";
+#    }
   }
   return (! $highly_overlapping);
 }
 
-###############################################################################
-# countPepsInProt
-###############################################################################
-sub countPepsInProt
-{
-  my %args = @_;
-  my $seq = $args{'seq'};
-  my $glyco_only = $args{'glyco_only'} || 0;
-  my $min_len = $args{'min_len'} || 7;
-  my $npeps = 0;
-
-  my $pepseq = "";
-  my $first_aa_in_next_pep = "";
-  my $aa = "";
-  my $this_is_last_aa_to_process = 0;
-
-  # process sequence from C-term to N-term (backwards)
-  while ($seq || $this_is_last_aa_to_process) {
-    $aa = uc(chop($seq));
-    # if position is K/R and not followed by P, cleave and possibly
-    # count
-    if ($this_is_last_aa_to_process ||
-        (($aa eq 'K' || $aa eq 'R' ) && $first_aa_in_next_pep ne 'P')) {
-      $this_is_last_aa_to_process = 0;
-      if (length($pepseq) < $min_len) {
-        $pepseq = $aa;
-        next;
-      }
-      if (!$glyco_only ||
-          hasGlycoSite(seq=>$pepseq, next_aa=>$first_aa_in_next_pep)) {
-        $npeps++;
-      }
-      $pepseq = $aa;
-      $first_aa_in_next_pep = $aa;
-    } else {
-      $pepseq = $aa . $pepseq;
-      $first_aa_in_next_pep = $aa;
-    }
-    if (length($seq) == 1) {
-      $this_is_last_aa_to_process = 1;
-    }
-  }
-
-  return $npeps;
-} 
-
-###############################################################################
-# hasGlycoSite
-###############################################################################
-sub hasGlycoSite
-{
-  my %args = @_;
-  my $seq = $args{'seq'};
-  my $next_aa = $args{'next_aa'};
-  my $has_site;
-
-  $seq .= $next_aa;
-  $seq = uc($seq);
-  $has_site = (($seq =~ m/N[^P][ST]/ ) == 1);
-
-  return $has_site;
-}
 
 ###############################################################################
 # in_covering_set
@@ -4069,77 +4036,6 @@ sub in_covering_set {
   return (defined $CONTENT_HANDLER->{covering_proteins}->{$prot});
 }
 
-###############################################################################
-# more_likely_protein_identification
-###############################################################################
-# Given info on two protein identifications, return the one with the
-# properties making it more likely to actually have been observed:
-# higher prob, or if equal, more
-# observations. Or, if equal, more distinct peptides. Or, if equal,
-# more total enzymatic termini. Or, if equal, return the one that is
-# in the covering set. If all is equal, return protID with the more
-# preferred name.
-sub more_likely_protein_identification {
-  my %args = @_;
-  my $protid1 = $args{'protid1'};
-  my $protid2 = $args{'protid2'};
-  return $protid1 if ($protid1 eq $protid2);
-
-  my $prob1 = $args{'prob1'} || 0;
-  my $prob2 = $args{'prob2'} || 0;
-  my $nobs1 = $args{'nobs1'} || 0;
-  my $nobs2 = $args{'nobs2'} || 0;
-  my $npeps1 = $args{'npeps1'} || 0;
-  my $npeps2 = $args{'npeps2'} || 0;
-  my $enz_termini1 = $args{'enz_termini1'} || 0;
-  my $enz_termini2 = $args{'enz_termini2'} || 0;
-  my $presence_level1 = $args{'presence_level1'} || 'none';
-  my $presence_level2 = $args{'presence_level2'} || 'none';
-
-  return $protid1 if ($prob1 > $prob2);
-  return $protid2 if ($prob1 < $prob2);
-  return $protid1 if ($nobs1 > $nobs2);
-  return $protid2 if ($nobs1 < $nobs2);
-  return $protid1 if ($npeps1 > $npeps2);
-  return $protid2 if ($npeps1 < $npeps2);
-  return $protid1 if ($enz_termini1 > $enz_termini2);
-  return $protid2 if ($enz_termini1 < $enz_termini2);
-  return $protid1 if
-     (stronger_presence_level($presence_level1, $presence_level2));
-  return $protid2 if
-     (stronger_presence_level($presence_level2, $presence_level1));
-
-  my @protid_list = ($protid1, $protid2);
-  my $preferred_protein_name = 
-    SBEAMS::PeptideAtlas::ProtInfo::get_preferred_protid_from_list(
-      protid_list_ref=>\@protid_list,
-      preferred_patterns_aref => $preferred_patterns_aref,
-  );
-  return $preferred_protein_name;
-}
-  
-###############################################################################
-# stronger_presence_level
-###############################################################################
-sub stronger_presence_level {
-  my $level1 = shift;
-  my $level2 = shift;
-
-  if ($level1 eq 'none') {
-    return ( 0 );
-  } elsif ($level1 eq 'canonical') {
-    return ($level2 ne 'canonical');
-  } elsif ($level1 eq 'possibly_distinguished') {
-    return (($level2 ne 'canonical') && ($level2 ne 'possibly_distinguished'));
-  } elsif ($level1 eq 'ntt-subsumed') {
-    return ($level2 eq 'subsumed');
-  } elsif ($level1 eq 'subsumed' ) {
-    return ( 0 );
-  } else {
-    print "ERROR: unknown presence level $level1\n";
-    return ( 0 );
-  }
-}
 
 ###############################################################################
 # get_protinfo_href
@@ -4306,135 +4202,3 @@ sub later_date {
   }
 }
 
-###############################################################################
-# get_estimated_abundance 
-###############################################################################
-
-sub get_estimated_abundance {
-
-  my %args = @_;
-  my $prot_name = $args{prot_name};
-  my $PSM_count = $args{PSM_count};
-  my $sequence = $args{sequence};
-  my $glyco_atlas = $args{glyco_atlas};
-  my $non_glyco_atlas = !$glyco_atlas;
-  my $abundance_conversion_slope = $args{abundance_conversion_slope};
-  my $abundance_conversion_yint = $args{abundance_conversion_yint};
-
-  my $n_observable_peps = countPepsInProt(
-    seq=>$sequence,
-    glyco_only=>0,
-  );
-  my $n_observable_glycopeps = countPepsInProt(
-    seq=>$sequence,
-    glyco_only=>1,
-  );
-  #print "$prot_name: $n_observable_peps peps, $n_observable_glycopeps glycopeps\n";
-  my $is_glycoprotein = ( $n_observable_glycopeps > 0 );
-
-  my $formatted_estimated_ng_per_ml = "";
-  my $abundance_uncertainty = "";
-
-  ### If we're not apportioning peps to proteins, only estimate
-  ### abundance for highest prob protein in each group.
-  ### And if this is a glyco atlas, only estimate abundance for
-  ### glycoproteins.
-  #print "$prot_name CA:$calculate_abundances PGR:$is_prot_group_rep NGA:$non_glyco_atlas IGP:$is_glycoprotein\n" if ($debug);
-  if ( $non_glyco_atlas || $is_glycoprotein ) {
-
-    my $estimated_ng_per_ml;
-
-    ### Estimate protein molecular weight to get from fmol to ng
-    ### Small incorrectness: molecular weights of indistinguishables are
-    ### sometimes quite different. Not correct to use MW of first prot
-    ### in list.
-
-    ### Schulz/Schirmer in table 1-1 say 108.7 is the weighted mean aa wt.
-    ### A bit kludgey, but this whole abundance estimation is kludgey.
-    my $protMW = length($sequence) * 108.7;
-    ### If we couldn't get the seq somehow, set protMW to an avg. value
-    if ( $protMW == 0 ) {
-      $protMW = 30000;
-      print "WARNING: couldn't find seq for $prot_name; using MW=30,000\n";
-    }
-
-    if ( $PSM_count > 0  ) {
-
-      ### create a log-scale adjustment factor based on # of
-      ### observable peptides. Constants used in these formulae
-      ### must match those used in calibration!
-      my $PSM_adjustment_factor;
-      my $avg_peps_per_prot = 25;
-      my $avg_glycopeps_per_prot = 1;
-      if ($n_observable_peps > 0) {
-	### only about half the PSMs in the human plasma glyco atlas
-	### are glycopeptides, so the adjustment factor considers
-	### both all-peptide and glycopeptide counts.
-	if ($glyco_atlas) {
-	  $PSM_adjustment_factor =
-	    (  ( $n_observable_glycopeps/$avg_glycopeps_per_prot ) +
-	       ( $n_observable_peps/$avg_peps_per_prot ) ) / 2;
-	} else {
-	  $PSM_adjustment_factor =
-	    $n_observable_peps/$avg_peps_per_prot;
-	}
-      ### if there are no theoretical tryptic peptides, but
-      ### some (non-tryptic) pep is observed anyway, set as though
-      ### there is one observable pep
-      } else {
-	$PSM_adjustment_factor = 1/$avg_peps_per_prot;
-      }
-
-      my $adjusted_PSM_count = $PSM_count / $PSM_adjustment_factor;
-
-      my $log_adjusted_PSM_count = log($adjusted_PSM_count) / log(10);
-      my $log_estimated_fmol_per_ml =
-	    ( $log_adjusted_PSM_count * $abundance_conversion_slope )
-		+ $abundance_conversion_yint;
-      my $estimated_fmol_per_ml = 10 ** $log_estimated_fmol_per_ml;
-      my $estimated_fg_per_ml = $estimated_fmol_per_ml * $protMW;
-      $estimated_ng_per_ml = $estimated_fg_per_ml / 1.0e+06;
-
-      #print "prot:$prot_name MW:$protMW npeps:$n_observable_peps factor:$PSM_adjustment_factor adj count:$adjusted_PSM_count log adj count:$log_adjusted_PSM_count log fmol/ml:$log_estimated_fmol_per_ml fmol/ml:$estimated_fmol_per_ml fg/ml:$estimated_fg_per_ml ng/ml:$estimated_ng_per_ml\n";
-
-      ### Kludgey hard-coded stuff for 2009/10 plasma atlas
-      ### Someday we will calibrate and calculate y-intercept,
-      ### slope, and abundance uncertainties within this routine.
-      ### using an input file of experimentally determined accession,
-      ### abundance pairs.
-      if ($non_glyco_atlas) {
-	if ($estimated_ng_per_ml > 1e+05) {
-	  $abundance_uncertainty = "3x";
-	} elsif ($estimated_ng_per_ml > 1e+04) {
-	  $abundance_uncertainty = "7x";
-	} elsif ($estimated_ng_per_ml > 1e+03) {
-	  $abundance_uncertainty = "23x";
-	} elsif ($estimated_ng_per_ml > 1e+02) {
-	  $abundance_uncertainty = "29x";
-	} else {
-	  $abundance_uncertainty = "24x";
-	}
-      } elsif ($glyco_atlas) {
-	if ($estimated_ng_per_ml > 2e+05) {
-	  $abundance_uncertainty = "3x";
-	} elsif ($estimated_ng_per_ml > 2e+04) {
-	  $abundance_uncertainty = "3x";
-	} elsif ($estimated_ng_per_ml > 2e+03) {
-	  $abundance_uncertainty = "8x";
-	} elsif ($estimated_ng_per_ml > 2e+02) {
-	  $abundance_uncertainty = "20x";
-	} else {
-	  $abundance_uncertainty = "20x";
-	}
-      }
-
-    } else {
-      $estimated_ng_per_ml = 0;
-      $abundance_uncertainty = "";
-    }
-
-    $formatted_estimated_ng_per_ml = sprintf("%.1e", $estimated_ng_per_ml);
-
-  }
-  return ($formatted_estimated_ng_per_ml, $abundance_uncertainty);
-}

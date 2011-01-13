@@ -40,6 +40,8 @@ use vars qw($VERBOSE $TESTONLY $sbeams);
 our @EXPORT = qw(
  get_preferred_protid_from_list
  read_protid_preferences
+ more_likely_protein_identification
+ stronger_presence_level
 );
 
 
@@ -143,7 +145,7 @@ sub loadBuildProtInfo {
 
   # Input is PA.protIdentlist file
   # Process one line at a time
-  my $nfields = 13;
+  my $nfields = 14;
   my $line = <IDENTFILE>;  #throw away header line
   while ($line = <IDENTFILE>) {
     chomp ($line);
@@ -159,7 +161,9 @@ sub loadBuildProtInfo {
         $estimated_ng_per_ml,
         $abundance_uncertainty,
         $is_covering,
-        $seq_unique_prots_in_group) = split(",", $line, $nfields);
+        $seq_unique_prots_in_group,
+        $norm_PSMs_per_100K,
+	  ) = split(",", $line, $nfields);
 #    if (! $subsumed_by_biosequence_name) {
 #      $subsumed_by_biosequence_name = '';
 #    }
@@ -209,6 +213,7 @@ sub loadBuildProtInfo {
        estimated_ng_per_ml => $estimated_ng_per_ml,
        abundance_uncertainty => $abundance_uncertainty,
        is_covering => $is_covering,
+       norm_PSMs_per_100K => $norm_PSMs_per_100K,
        seq_unique_prots_in_group => $seq_unique_prots_in_group,
     );
 
@@ -314,6 +319,7 @@ sub insertProteinIdentification {
   my $abundance_uncertainty = $args{abundance_uncertainty};
   my $is_covering = $args{is_covering};
   my $seq_unique_prots_in_group = $args{seq_unique_prots_in_group};
+  my $norm_PSMs_per_100K = $args{norm_PSMs_per_100K};
 
   our $counter;
 
@@ -369,6 +375,7 @@ sub insertProteinIdentification {
       abundance_uncertainty => $abundance_uncertainty,
       is_covering => $is_covering,
       seq_unique_prots_in_group => $seq_unique_prots_in_group,
+      norm_PSMs_per_100K => $norm_PSMs_per_100K,
     );
     return ($protein_identification_id);
   }
@@ -406,6 +413,7 @@ sub insertProteinIdentificationRecord {
   my $abundance_uncertainty = $args{abundance_uncertainty};
   my $is_covering = $args{is_covering};
   my $seq_unique_prots_in_group = $args{seq_unique_prots_in_group};
+  my $norm_PSMs_per_100K = $args{norm_PSMs_per_100K};
 
   #### Define the attributes to insert
   my $rowdata = {
@@ -423,6 +431,7 @@ sub insertProteinIdentificationRecord {
      abundance_uncertainty => $abundance_uncertainty,
      is_covering => $is_covering,
      seq_unique_prots_in_group => $seq_unique_prots_in_group,
+     norm_PSMs_per_100K => $norm_PSMs_per_100K,
   };
 
   #### Insert protein identification record
@@ -816,7 +825,7 @@ sub read_protid_preferences {
   my @preferred_patterns = ();
 
   while ($line = <PREF>) {
-    if ($line !~ /^#/) {
+    if ( ( $line !~ /^#/ ) && ( $line !~ /^\s*$/ ) ) {
       chomp $line;
       # need third arg to split so commas in regex aren't
       # seen as field separators
@@ -835,6 +844,80 @@ sub read_protid_preferences {
   }
  
   return \@preferred_patterns;
+}
+
+
+###############################################################################
+# more_likely_protein_identification
+###############################################################################
+# Given info on two protein identifications, return the one with the
+# properties making it more likely to actually have been observed:
+# higher prob, or if equal, more
+# observations. Or, if equal, more distinct peptides. Or, if equal,
+# more total enzymatic termini. Or, if equal, return the one that is
+# in the covering set. If all is equal, return protID with the more
+# preferred name.
+sub more_likely_protein_identification {
+  my %args = @_;
+  my $preferred_patterns_aref = $args{'preferred_patterns_aref'};
+  my $protid1 = $args{'protid1'};
+  my $protid2 = $args{'protid2'};
+  return $protid1 if ($protid1 eq $protid2);
+
+  my $prob1 = $args{'prob1'} || 0;
+  my $prob2 = $args{'prob2'} || 0;
+  my $nobs1 = $args{'nobs1'} || 0;
+  my $nobs2 = $args{'nobs2'} || 0;
+  my $npeps1 = $args{'npeps1'} || 0;
+  my $npeps2 = $args{'npeps2'} || 0;
+  my $enz_termini1 = $args{'enz_termini1'} || 0;
+  my $enz_termini2 = $args{'enz_termini2'} || 0;
+  my $presence_level1 = $args{'presence_level1'} || 'none';
+  my $presence_level2 = $args{'presence_level2'} || 'none';
+
+  return $protid1 if ($prob1 > $prob2);
+  return $protid2 if ($prob1 < $prob2);
+  return $protid1 if ($nobs1 > $nobs2);
+  return $protid2 if ($nobs1 < $nobs2);
+  return $protid1 if ($npeps1 > $npeps2);
+  return $protid2 if ($npeps1 < $npeps2);
+  return $protid1 if ($enz_termini1 > $enz_termini2);
+  return $protid2 if ($enz_termini1 < $enz_termini2);
+  return $protid1 if
+     (stronger_presence_level($presence_level1, $presence_level2));
+  return $protid2 if
+     (stronger_presence_level($presence_level2, $presence_level1));
+
+  my @protid_list = ($protid1, $protid2);
+  my $preferred_protein_name = 
+    SBEAMS::PeptideAtlas::ProtInfo::get_preferred_protid_from_list(
+      protid_list_ref=>\@protid_list,
+      preferred_patterns_aref => $preferred_patterns_aref,
+  );
+  return $preferred_protein_name;
+}
+  
+###############################################################################
+# stronger_presence_level
+###############################################################################
+sub stronger_presence_level {
+  my $level1 = shift;
+  my $level2 = shift;
+
+  if ($level1 eq 'none') {
+    return ( 0 );
+  } elsif ($level1 eq 'canonical') {
+    return ($level2 ne 'canonical');
+  } elsif ($level1 eq 'possibly_distinguished') {
+    return (($level2 ne 'canonical') && ($level2 ne 'possibly_distinguished'));
+  } elsif ($level1 eq 'ntt-subsumed') {
+    return ($level2 eq 'subsumed');
+  } elsif ($level1 eq 'subsumed' ) {
+    return ( 0 );
+  } else {
+    print "ERROR: unknown presence level $level1\n";
+    return ( 0 );
+  }
 }
 
 
