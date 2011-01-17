@@ -85,8 +85,8 @@ sub main
   # set up some defaults, only in command-line mode, to time queries/operations
   if ( !$parameters{action} && !$is_html ) {
     $log->debug( "in the auto-setting mode, command-line only!" );
-    $parameters{n_highest_intensity_fragment_ions} = 3;
-    $parameters{n_peptides_per_protein} = 3;
+    $parameters{n_highest_intensity_fragment_ions} = 4;
+    $parameters{n_peptides_per_protein} = 5;
     $parameters{protein_name_constraint} = 'YAL003W%';
     $parameters{QUERY_NAME} = 'AT_GetPABSTList';
     $parameters{action} = 'QUERY';
@@ -179,8 +179,8 @@ sub print_form {
     {
       $parameters{input_form_format} = "minimum_detail";
     }
-    $parameters{n_peptides_per_protein} ||= 3;
-    $parameters{n_highest_intensity_fragment_ions} ||= 3;
+    $parameters{n_peptides_per_protein} ||= 5;
+    $parameters{n_highest_intensity_fragment_ions} ||= 4;
     if ( $parameters{peptides_only} ) {
       $parameters{n_highest_intensity_fragment_ions} = 1;
     }
@@ -249,6 +249,9 @@ sub print_form {
 #    $form .= "<TR><TD COLSPAN=3>$sub_form</TD></TR>\n";
     $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Adjust penalties:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$link$sub_form</TD></TR> ~;
 
+    my $select_list = get_cmod_select();
+#    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Heavy label:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$select_list</TD></TR> ~;
+
 #    my $select_lists = get_multi_selects();
 #    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Transition Sources:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$select_lists->[0]</TD></TR> ~;
 #    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Allowable Modifications:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$select_lists->[1]</TD></TR> ~;
@@ -262,6 +265,20 @@ sub print_form {
     $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
 
 } # end print_form
+
+sub get_cmod_select {
+
+  my $cmod_sel = qq~
+    <SELECT SIZE=4 MULTIPLE NAME=cmod_mass>
+      <OPTION VALUE='' ></OPTION>
+      <OPTION VALUE=K8 >Lysine + 8</OPTION>
+      <OPTION VALUE=R10 >Arginine + 10</OPTION>
+      <OPTION VALUE=K6 >Lysine + 6</OPTION>
+      <OPTION VALUE=R6 >Arginine + 6</OPTION>
+    </SELECT>
+  ~;
+  return $cmod_sel;
+}
 
 sub get_multi_selects {
   my $sql = qq~
@@ -447,6 +464,7 @@ sub fetch_transitions {
         constraint_value=>$parameters{transition_source} );
   return if ($transition_source_clause eq '-1');
 
+
   # provisional, try to handle newline delimited lists.
   $parameters{protein_name_constraint} =~ s/\r\n/;/g;
   $parameters{protein_name_constraint} =~ s/\n/;/g;
@@ -607,9 +625,13 @@ sub fetch_transitions {
       $peptide_length_clause
       $biosequence_name_clause
     ORDER BY biosequence_name, 
-    syntheis_adjusted_score DESC, precursor_ion_charge ASC,
-    ion_rank ASC, relative_intensity DESC  
+    syntheis_adjusted_score DESC, peptide_sequence,
+    ion_rank ASC, relative_intensity DESC,  
+    precursor_ion_charge ASC
     ~;
+
+#      $log->debug( $sql );
+#      die " $transition_source_clause";
 
   my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs' );
 
@@ -628,7 +650,22 @@ sub fetch_transitions {
 
   my $naa = $sbeams->makeInactiveText( 'n/a' );
 
-  my %src_name = ( P => 'Predicted', Q => 'QQQ-observed', T => 'Predicted', I => 'IT-observed', 'R' => 'PATR-validated' );
+#  my %src_name = ( P => 'Predicted', Q => 'QQQ-observed', T => 'Predicted', I => 'IT-observed', 'R' => 'PATR-validated' );
+#  my %src_name = ( P => 'Predicted', Q => 'QQQ-observed', T => 'QTOF-observed', I => 'IT-observed', 'R' => 'PATR-validated' );
+  my $instr2code = $best_peptide->getInstrumentMap();
+  my %src_name;
+  for my $src ( keys( %{$instr2code} ) ) {
+    my $code = $instr2code->{$src};
+    if ( $src =~ /PATR/ ) {
+      $src_name{$code} = $src . '-validated';
+    } elsif ( $src =~ /Predicted/ ) {
+      $src_name{$code} = $src;
+    } else {
+      $src_name{$code} = $src . '-observed';
+    }
+  }
+
+
 
   $log->debug( "Exec SQL: " . time() );
   my $sth = $sbeams->get_statement_handle( $lib_sql );
@@ -871,7 +908,57 @@ sub fetch_transitions {
         $row[11] ||= $naa; 
       }
     
+# 0 prot
+# 2 peptide_sequence
+# 6 precursor_ion_mass
+# 7 precursor_ion_charge
+# 8 fragment_ion_mass
+# 9 fragment_ion_charge
+# 10 fragment_ion_label
       push @peptides, [ $prot, @row[0..12,15] ];
+
+      # Manually build Lys/Arg SILAC code
+      if ( $parameters{cmod_mass} ) {
+
+        my ( $aa, $mass ) = $parameters{cmod_mass} =~ /^(\w)(\d+)$/;
+
+        if ( $aa && $mass ) {
+          $log->debug( "$parameters{cmod_mass} is actionable" );
+
+          my $annot = '';
+          if ( $aa =~ /R/i ) {
+            my $mod_aa = $mass + 174;
+            $annot = "R[$mod_aa]";
+          } else {
+            my $mod_aa = $mass + 146;
+            $annot = "K[$mod_aa]";
+          }
+
+          my @mod_row = ( $prot, @row[0..12,15] );
+          # Omit double labels for now
+          next if $mod_row[2] =~ /[RK].*K$/;
+          next unless $mod_row[10] =~ /^y/i;
+
+
+          if ( $mod_row[2] =~ /$aa$/ ) {
+            $log->debug( "seq is $mod_row[2] and annot is $annot before" );
+              $mod_row[2] =~ s/$aa$/$annot/;
+            $log->debug( "seq is $mod_row[2] and annot is $annot after" );
+              $mod_row[6] += $mass/$mod_row[7];
+              $mod_row[8] += $mass/$mod_row[9];
+              push @peptides, \@mod_row;
+          }
+        } else {
+          $log->debug( "$parameters{cmod_mass} is nothing!" );
+        }
+      }
+#      <OPTION VALUE=K8 >Lysine + 8</OPTION>
+#      <OPTION VALUE=R10 >Arginine + 10</OPTION>
+# 1 sequence
+# 2 q1_mz
+# 3 q3_mz
+# 6 q1_chg
+# 7 q3_chg
 
     } # End loop over resultset
 
@@ -949,6 +1036,11 @@ sub fetch_transitions {
                                                    entries => $col_info,
                                                    ); 
 
+  my $change_on = 0;
+  if ( $args{cmod_mass} ) {
+    $change_on = 10;
+  }
+
   my ( $html, $rs_name ) = $atlas->encodeSectionTable( header => 1, 
                                                         width => '600',
                                                       tr_info => $args{tr},
@@ -956,8 +1048,8 @@ sub fetch_transitions {
                                                          rows => \@peptides,
                                                  rows_to_show => 20,
                                                      max_rows => 500,
-                                                     help_text => $help_text,
-                                                 bkg_interval => 3, 
+                                                    help_text => $help_text,
+                                                  chg_bkg_idx => $change_on, 
                                                  set_download => 'Download peptides', 
                                                   file_prefix => 'best_peptides_', 
                                                      bg_color => '#EAEAEA',
