@@ -1036,7 +1036,7 @@ sub fetch_transitions {
                                                    entries => $col_info,
                                                    ); 
 
-  my $change_on = 0;
+  my $change_on = 2;
   if ( $args{cmod_mass} ) {
     $change_on = 10;
   }
