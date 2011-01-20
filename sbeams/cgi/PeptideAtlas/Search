@@ -454,7 +454,7 @@ sub handle_request {
 
   #### Define the SQL statement to find the biosequence(s)
   $sql = qq~
-       SELECT DISTINCT $columns_clause
+       SELECT DISTINCT TOP 5000 $columns_clause
          FROM $TBAT_SEARCH_KEY_LINK SKL
          LEFT JOIN  $TBAT_SEARCH_KEY_ENTITY SKE 
               ON (SKL.RESOURCE_NAME = SKE.RESOURCE_NAME) 
@@ -678,6 +678,10 @@ sub handle_request {
 							column_titles_ref=>\@column_titles,
 							base_url=>$base_url,
 					);
+          if(scalar(@{$resultset_ref->{data_ref}}) >= 5000){
+           print "<BR><font color=\"red\"><b>There were too many matching results, please refine the search keys.</b></font><BR><BR>\n";
+         }
+
           $sbeams-> displayResultSetControls(
               resultset_ref=> $resultset_ref,
               query_parameters_ref=>\%parameters,
@@ -703,6 +707,9 @@ sub handle_request {
 								base_url  => $base_url
 						);
 					}
+         if(($n_fuzzy_results+ $n_exact_results) >= 5000){
+           print "<BR><font color=\"red\"><b>There were too many matching results, please refine the search keys.</b></font><BR><BR>\n";
+         }
           $sbeams-> displayResultSetControls(
             resultset_ref=> $resultset_ref,
             query_parameters_ref=>\%parameters,
