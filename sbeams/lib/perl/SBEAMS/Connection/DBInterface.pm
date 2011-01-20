@@ -4729,6 +4729,10 @@ sub display_input_form {
   my $apply_action = $args{'apply_action'};
   my $parameters_ref = $args{'parameters_ref'};
   my %parameters = %{$parameters_ref};
+
+  my $hidden_parameter_ref = $args{'hidden_parameter_ref'} || {};
+  my %hidden_parameters = %{$hidden_parameter_ref};
+
   my $input_types_ref = $args{'input_types_ref'};
   my %input_types = %{$input_types_ref};
   my $mask_user_context = $args{'mask_user_context'};
@@ -4755,6 +4759,25 @@ sub display_input_form {
   my ($row);
 
 
+  my $hidden_parameter_clause ='';
+  my $n_hid = scalar keys %hidden_parameters;
+  my @extra_input_display = ();
+  if($n_hid > 0){
+    my $hidden_par_str='';
+    foreach my $str (keys %hidden_parameters){
+      $hidden_par_str .= "'$str',";
+    }
+    $hidden_par_str =~ s/,$//;
+    $hidden_parameter_clause = "AND column_name not in ($hidden_par_str)";
+  }
+  if(defined $parameters{plate_contrain} ){
+    push @extra_input_display, "plate_contraint";
+    push @extra_input_display, "Plate Constraint";
+    push @extra_input_display ,qw(N text 40 Y Y);
+    push @extra_input_display , "contraint for plate or origene id. don't use wildcard character %.";
+    push @extra_input_display;
+  }
+  
   #### Query to obtain column information about this table or query
   $sql = qq~
       SELECT column_name,column_title,is_required,input_type,input_length,
@@ -4763,14 +4786,20 @@ sub display_input_form {
         FROM $TB_TABLE_COLUMN
        WHERE table_name='$TABLE_NAME'
          AND is_data_column='Y'
+         $hidden_parameter_clause
        ORDER BY column_index
   ~;
   my @cols_data = $self->selectSeveralColumns($sql);
   my @columns_data;
+  #my $cnt = 0;
   foreach my $inner (@cols_data) {
     push(@columns_data, [@$inner]);
+    #if(! $cnt and @extra_input_display >=1){
+    #  push (@columns_data, [@extra_input_display]);
+    #}
+    #$cnt++;
   }
-
+  push(@columns_data, [@extra_input_display]);
   for (my $i = 0; $i <= $#columns_data; $i++) {
     my @irow = @{$columns_data[$i]};
     my $column_name = $irow[0];
