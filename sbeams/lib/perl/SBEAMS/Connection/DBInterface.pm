@@ -4775,7 +4775,6 @@ sub display_input_form {
     push @extra_input_display, "Plate Constraint";
     push @extra_input_display ,qw(N text 40 Y Y);
     push @extra_input_display , "contraint for plate or origene id. don't use wildcard character %.";
-    push @extra_input_display;
   }
   
   #### Query to obtain column information about this table or query
@@ -4799,7 +4798,9 @@ sub display_input_form {
     #}
     #$cnt++;
   }
-  push(@columns_data, [@extra_input_display]);
+  if(scalar @extra_input_display > 1){
+    push(@columns_data, [@extra_input_display]);
+  }
   for (my $i = 0; $i <= $#columns_data; $i++) {
     my @irow = @{$columns_data[$i]};
     my $column_name = $irow[0];
