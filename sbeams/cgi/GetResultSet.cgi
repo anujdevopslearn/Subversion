@@ -102,8 +102,6 @@ sub main {
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
   #$sbeams->printDebuggingInfo($q);
-	$log->debug( "remove markup is $parameters{remove_markup}" );
-
 
   #### Process generic "state" parameters before we start
   #$sbeams->processStandardParameters(parameters_ref=>\%parameters);
@@ -133,8 +131,6 @@ sub handle_request {
   my $ref_parameters = $args{'ref_parameters'}
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
-	$log->debug( "passed remove markup is $parameters{remove_markup}" );
-
 
   #### Define some general variables
   my ($i,$element,$key,$value,$line,$result,$sql);
@@ -196,6 +192,7 @@ sub handle_request {
 		  	my @return_row;
 			  for my $item ( @row ) {
 				  $item =~ s/<[^>]*>//gm;
+				  $item =~ s/\&nbsp\;//gm;
     			push @return_row, $item;
 	    	}
         print join("\t",@return_row),"\n";
