@@ -182,6 +182,7 @@ sub handle_request {
 
   #### Declare some variables
   my ($chrom_num, $genetic_locus, $stend_option, $no_coord_count, $pid, $map, $file_name, $tmp_img_path);
+  my $get_coverage_density_only = 0;
 
   #### Show current user context information
   print "<BR>\n" if ($sbeams->output_mode() eq 'html');
@@ -642,6 +643,7 @@ sub handle_request {
   my @pub_ng_ml_source_sql;
   my @estimated_ng_per_ml_sql;
   my @abundance_uncertainty_sql;
+  my @norm_PSMs_per_100K_sql;
   my @n_distinct_peptides_sql;
   my @relationship_sort_order_sql;
   my @presence_level_sort_order_sql;
@@ -690,6 +692,7 @@ sub handle_request {
   $published_ng_per_ml_sql[0] = "CONVERT(CHAR,BPS.published_ng_per_ml,0)";
   $pub_ng_ml_source_sql[0] = "BPS.pub_ng_ml_source";
   $abundance_uncertainty_sql[0] = "PID.abundance_uncertainty";
+  $norm_PSMs_per_100K_sql[0] = "STR(PID.norm_PSMs_per_100K,7,3)";
   $n_distinct_peptides_sql[0] = "PID.n_distinct_peptides";
   $relationship_phrase_sql[0] = "NULL";
   $relationship_sort_order_sql[0] = "NULL";
@@ -715,6 +718,7 @@ sub handle_request {
   $published_ng_per_ml_sql[1] = "NULL";
   $pub_ng_ml_source_sql[1] = "NULL";
   $abundance_uncertainty_sql[1] = "NULL";
+  $norm_PSMs_per_100K_sql[1] = "NULL";
   $n_distinct_peptides_sql[1] = "NULL";
   $relationship_phrase_sql[1] = "BRT.relationship_phrase";
   $relationship_sort_order_sql[1] = "BRT.sort_order";
@@ -740,6 +744,7 @@ sub handle_request {
   $published_ng_per_ml_sql[2] = "NULL";
   $pub_ng_ml_source_sql[2] = "NULL";
   $abundance_uncertainty_sql[2] = "NULL";
+  $norm_PSMs_per_100K_sql[2] = "NULL";
   $n_distinct_peptides_sql[2] = "NULL";
   $relationship_phrase_sql[2] = "BRT.relationship_phrase";
   $relationship_sort_order_sql[2] = "BRT.sort_order";
@@ -778,7 +783,7 @@ sub handle_request {
     my (@abundance_columns, @GO_columns);
     if ( $parameters{display_options} =~ /ShowAbundances/ ) {
       @abundance_columns = (
-			["published_ng_per_ml",$published_ng_per_ml_sql[$i],"Published ng/ml"],
+			["published_ng_per_ml",$published_ng_per_ml_sql[$i],"Published plasma ng/ml"],
 			["pub_ng_ml_source",$pub_ng_ml_source_sql[$i],"Source"],
 			["estimated_ng_per_ml",$estimated_ng_per_ml_sql[$i],"Estimated ng/ml"],
 			["abundance uncertainty",$abundance_uncertainty_sql[$i],"Uncertainty ng/ml"],
@@ -808,6 +813,7 @@ sub handle_request {
         ["probability",$probability_sql[$i],"Protein Prophet Prob"],
         ["confidence",$confidence_sql[$i],"Mult Hyp Test Prob"],
         ["n_observations",$n_observations_sql[$i],"N Obs"],
+        ["norm_PSMs_per_100K",$norm_PSMs_per_100K_sql[$i],"Norm Obs per 100K"],
         ["n_distinct_peptides",$n_distinct_peptides_sql[$i],"N Distinct Peptides"],
         ["chromosome","BPS.chromosome", "Chromosome"],
         ["genetic_locus","BPS.genetic_locus", "Genetic Locus"],
@@ -1249,7 +1255,7 @@ sub handle_request {
       my @coord1_list;
       my @coord2_list;
       my @strand_list;
-      my $header = (<>);
+      #my $header = (<>);  gives benign errors in csv/tsv mode.
       my $row;
   
       for my $row ( 0 .. scalar @{$resultset_ref->{data_ref}} - 1) {
@@ -1379,7 +1385,11 @@ sub handle_request {
          $no_coord_count = 0;
       my @protein_list;
   
-  
+      #### Variables for computing coverage densities
+      my @obs_prots_per_megabase;
+      my @genes_per_megabase;
+
+ 
       LINE: for $num_protein (0 .. ($acclist - 1)) {
         $protein_acc  =  $acclist[$num_protein];
         $protein_start = $coord1_list[$num_protein];
@@ -1388,6 +1398,12 @@ sub handle_request {
           $no_coord_count ++;
           next LINE;
           }
+        # add to coverage density tally
+        if ($get_coverage_density_only) {
+          my $mb = int($protein_start/1000000);
+          $obs_prots_per_megabase[$mb]++;
+          print "$mb: $protein_acc\n";
+        }
   
         if (($stend_option eq 'bbb') or ($stend_option eq 'ddd')) {
           $protein_start -= $start_bp;
@@ -1428,7 +1444,12 @@ sub handle_request {
   			-score => 1000,
   			-display_name => $gene_name );
           push @gene_list, $g;
-  
+ 
+          # store start location for computing coverage densities
+          if ($get_coverage_density_only) {
+            $genes_per_megabase[int($gene_start/1000000)]++;
+          }
+ 
           PROT: for $num_protein (0 .. ($acclist - 1)) {
             $protein_acc  =  $acclist[$num_protein];
             $protein_start = $coord1_list[$num_protein];
@@ -1524,7 +1545,50 @@ sub handle_request {
       } else {
         $chromlen = @sorted_kary_end[(scalar @kary_end_list) - 1];
       }
-  
+ 
+      # compute and print coverage densities
+      if ($get_coverage_density_only &&
+      ( ( $sbeams->output_mode() eq 'csv' ) ||
+       ( $sbeams->output_mode() eq 'tsv' ) ) ) {
+
+        ### TMF: hand calculated for build 242; see work notes
+        my $meanDensity = 0.341;
+
+        #print "chrom $chrom_num:  $chromlen bp\n";
+        printf " %-4.4s %-4.4s  %-6.6s  %-6.6s  %-5.5s  %-5.5s  %s\n",
+            'Chr', 'Mb', 'Nswiss', 'Ngenes', 'densit', 'error', 'sig';
+
+        for (my $i=0; $i < int($chromlen/1000000); $i++) {
+          my $density = -1;
+          my $error=1.0;
+          my $significance=0;
+          my $n_obs_prots =  $obs_prots_per_megabase[$i];
+          my $n_genes = $genes_per_megabase[$i];
+
+
+          my $n_obs_prots_for_error = $n_obs_prots;
+          $n_obs_prots_for_error = 1 if ($n_obs_prots == 0);
+
+          if ($n_genes > 0) {
+            $density = $n_obs_prots / $n_genes;
+            $error = sqrt($n_obs_prots_for_error) / $n_genes;
+          }
+
+          my $diff_from_mean = $density-$meanDensity;
+          if ($n_genes > 0) {
+            if ($diff_from_mean > 0) {
+              $significance = 1 if ($diff_from_mean-$error > 0);
+            } elsif ($diff_from_mean < 0) {
+              $significance = -1 if ($diff_from_mean+$error < 0);
+            }
+          }
+
+            printf " %4.4s %4d  %6d  %6d  %5.2f  %5.2f  %2d\n",
+              $chrom_num, $i, $obs_prots_per_megabase[$i],
+              $genes_per_megabase[$i], $density, $error, $significance;
+          }
+        }
+ 
       #### Initialize main panel, track sequence, and track ruler
       my $panel = Bio::Graphics::Panel->new( 
 			-'length'    => $chromlen,
@@ -1649,6 +1713,7 @@ sub handle_request {
       ~ if ( $sbeams->output_mode() eq 'html' );
 
     #### Display the resultset
+    if (! $get_coverage_density_only) {
     $sbeams->displayResultSet(
       resultset_ref=>$resultset_ref,
       query_parameters_ref=>\%parameters,
@@ -1659,7 +1724,7 @@ sub handle_request {
       column_titles_ref=>\@column_titles,
       base_url=>$base_url,
     );
-
+    }
     #### Display Graphic and/or various error messages if unable to draw full graphic
     if ($sbeams->output_mode() eq 'html') {
       if ($organism_id != 2) {
@@ -1990,6 +2055,9 @@ sub get_table_help {
       { key => 'Covering Set', value => 'Whether this sequence is part of a minimal set explaining all observed peptides' },
       { key => 'Presence Level', value => 'canonical=member of minimally redundant set<br>possibly distinguished=at least one pep diff from all canonicals<br>subsumed=all peps contained in a canon. or poss. dist.<br>ntt-subsumed=subsumed and >=1 pep lacks tryptic terminus' },
       { key => 'Protein Prophet Prob', value => 'Probability this protein exists in sample, according to Protein Prophet.<br>May be underestimate for large datasets.' },
+      { key => 'Norm Obs per 100K', value => 'N Obs, normalized to number of observable peptides in protein, expressed per 100K total observations' },
+      { key => 'Published plasma ng/ml', value => 'Physiological concentration in human plasma' },
+
       { key => 'Mult Hyp Test Prob', value => 'Probability this protein exists in sample, according to States, et al., Nat Biotechnol, 2006' },
       { key => 'N Obs', value => 'ProteinProphet adjusted PSM (peptide-spectrum match) count, usually lower than actual PSM count' },
       { key => 'N Distinct Peptides', value => 'Number of sequence-distinct peptides' },
@@ -1997,9 +2065,8 @@ sub get_table_help {
       { key => 'Start in Chrom', value => 'Starting base number in chromosome' },
       { key => 'End in Chrom', value => 'Ending base number in chromosome' },
       { key => 'Strand', value => 'Which strand of chromosome' },
-      { key => 'Published ng/ml', value => 'Physiological concentration (certain samples, such as human plasma, only)' },
       { key => 'Source', value => 'Literature source for published ng/ml.<br>&nbsp;&nbsp;&nbsp;Hortin, et al., Clin Chem, 2008<br> &nbsp;&nbsp;&nbsp;Polanski & Anderson, Biomarker Insights, 2006<br>&nbsp;&nbsp;&nbsp;Haab, et al., Proteomics, 2005' },
-      { key => 'Estimated ng/ml', value => 'Estimated physiological concentration, by spectral counting (certain samples, such as human plasma, only)' },
+      { key => 'Estimated ng/ml', value => 'Estimated physiological concentration, by spectral counting (only available for some builds)' },
       { key => 'Uncertainty ng/ml', value => 'About 2/3 of estimated concentrations are within +/- this multiplicative factor' },
       { key => 'Redundancy Relationship', value => 'This protein sequence has exactly the same peptides as a sequence with a Presence Level. "identical" if sequence-identical, else "indistinguishable"' },
       { key => 'Redundant With Respect To', value => 'Sequence that this entry is indistinguishable from or identical to' },
