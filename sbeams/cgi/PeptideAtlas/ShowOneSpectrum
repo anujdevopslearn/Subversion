@@ -223,14 +223,9 @@ sub processRequest {
     $parameters{xmin} = int($massmin/100)*100 unless $parameters{xmin};
     $parameters{xmax} = int($massmax/100)*100+100 unless $parameters{xmax};
 
-    unless (exists $parameters{ymax})
-    {
-        $parameters{ymax} = $intenmax;
-    }
+    $parameters{ymax} ||= $intenmax + 600;
 
-    if ($q->param("reset") eq "ZOOM OUT")
-    {
-      $parameters{ymax} = $intenmax;
+    if ($q->param("reset") eq "ZOOM OUT") {
       $parameters{xmin} = int($massmin/100)*100;
       $parameters{xmax} = int($massmax/100)*100+100;
     }
