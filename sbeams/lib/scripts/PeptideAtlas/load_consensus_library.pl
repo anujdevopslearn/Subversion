@@ -11,6 +11,7 @@
 use strict;
 use Getopt::Long;
 use FindBin;
+use Cwd qw( abs_path );
 
 use lib "$FindBin::Bin/../../perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_username 
@@ -134,7 +135,7 @@ sub handleRequest
         );
 
         ## make sure file exists
-        my $file_path = $OPTIONS{path};
+        my $file_path = abs_path( $OPTIONS{path} );
 
         unless (-e $file_path)
         {
@@ -181,6 +182,8 @@ sub populateRecords
 
     my $infile = $args{file_path} || die "need file_path";
 
+    my $md5sum = system( "md5sum $args{file_path}" );
+
     my $consensus_library_name = $args{consensus_library_name} || 
         die "need consensus_library_name";
 
@@ -191,14 +194,16 @@ sub populateRecords
 #    $consensus_library_name .= '_' . $commit_interval;
     print "Loading library $consensus_library_name\n";
 
+    # Test file open *before* inserting library record
+    open(INFILE, "<$infile") || die "ERROR: Unable to open for reading $infile";
+
+
     my $consensus_library_id = insert_consensus_library(
         organism_id => $organism_id,
         library_comment => $library_comment,
-        consensus_library_name => $consensus_library_name);
-
-
-
-    open(INFILE, "<$infile") || die "ERROR: Unable to open for reading $infile";
+        consensus_library_name => $consensus_library_name,
+        md5sum => $md5sum,
+        file_path => $args{file_path}  );
 
     my $count = 0;
 
@@ -209,14 +214,15 @@ sub populateRecords
     $sbeams->initiate_transaction();
  		print "Count is $count at " . time() . "\n";
     my $verbose = $args{verbose} || 0;
-    while (my $line = <INFILE>) 
-    {
-
+    my $idx = 0;
+    while (my $line = <INFILE>) {
         chomp($line);
         next if $line =~ /^#/;
         next if $line =~ /^\s*$/;
         
         if ( $line =~ /^Name:\s(.+)\/(\d)/ ) { ## line 1 is Name
+          # Now is the time to cache the idx
+          $spectrum{entry_idx} = $idx;
           $spectrum{sequence} = $1;
           $spectrum{charge} = $2;
           $spectrum{modified_sequence} = $spectrum{sequence};
@@ -278,7 +284,8 @@ sub populateRecords
             mz_exact => $commentHash{Mz_exact},
             precursor_intensity => $commentHash{PrecursorIntensity},
             scan_time => $commentHash{RetentionTime},
-            nreps => $commentHash{Nreps}
+            nreps => $commentHash{Nreps},
+            entry_idx => $spectrum{entry_idx}
         );
 
         ## insert comments
@@ -290,6 +297,10 @@ sub populateRecords
         ## loop over next num_peaks lines to get peaks and ions
         for (my $ii = 1; $ii < $num_peaks; $ii++) {
             $line = <INFILE>;
+
+            # Not gonna store these peaks no mo!
+            next;
+
             chomp($line);
             my ($m, $inten, $annot) = split("\t", $line, -1);
 
@@ -375,6 +386,7 @@ sub populateRecords
 					$sbeams->commit_transaction();
 					$sbeams->initiate_transaction();
 				}
+      $idx = tell( INFILE );
     }
     $sbeams->commit_transaction();
 
@@ -431,9 +443,10 @@ sub insert_consensus_library
        organism_id => $organism_id,
        comment => $library_comment,
        consensus_library_name => $consensus_library_name,
+       md5sum => $args{'md5sum'},
     );
 
-    ## create a sample record:
+    ## create a consensus_library record:
     my $consensus_library_id = $sbeams->updateOrInsertRow(
         table_name=>$TBAT_CONSENSUS_LIBRARY,
         insert=>1,
