@@ -235,23 +235,23 @@ sub getTabMenu
 			   url => "$CGI_BASE_DIR/PeptideAtlas/showPathways"
 			   );
 
-    $tabmenu->addTab( label => 'SRM Atlas' );
+    $tabmenu->addTab( label => 'SRMAtlas' );
 
-    $tabmenu->addMenuItem( tablabel => 'SRM Atlas',
+    $tabmenu->addMenuItem( tablabel => 'SRMAtlas',
 			   label => 'Query Transitions',
 			   helptext => 'Query for SRM Transitions',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/GetTransitions"
 			   );
 
-    $tabmenu->addMenuItem( tablabel => 'SRM Atlas',
+    $tabmenu->addMenuItem( tablabel => 'SRMAtlas',
 			   label => 'Transition Lists',
 			   helptext => 'Download and upload validated SRM transition lists',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/GetTransitionLists"
 			   );
 
-    $tabmenu->addMenuItem( tablabel => 'SRM Atlas',
-			   label => 'SRM Atlas Builds',
-			   helptext => 'View statistics on available SRM Atlas builds',
+    $tabmenu->addMenuItem( tablabel => 'SRMAtlas',
+			   label => 'SRMAtlas Builds',
+			   helptext => 'View statistics on available SRMAtlas builds',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/ViewSRMBuild"
 			   );
 
