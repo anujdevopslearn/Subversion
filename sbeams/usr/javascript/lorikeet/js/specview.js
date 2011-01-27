@@ -181,7 +181,6 @@
          var me = parseFloat(container.find("#massError").val());
       if(me != massError) {
          massError = me;
-	options.sequence = 'LLLGGGHHH'; // test
          massErrorChanged = true;
       }
       else {
@@ -389,9 +388,6 @@
       container.find("#update").click(function() {
          zoomRange = null; // zoom out fully
          setMassError();
-//TEST	
-
-//TEST	
          createPlot(getDatasets());
          makeIonTable();
          });
