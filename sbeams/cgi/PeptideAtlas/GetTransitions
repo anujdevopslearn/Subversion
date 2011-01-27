@@ -94,6 +94,7 @@ sub main
   }
 
   # Decide what action to take based on information so far
+
   print_form ( %parameters );  
   if ( $parameters{action} eq 'QUERY' ) {
     fetch_transitions( %parameters );  
@@ -238,7 +239,8 @@ sub print_form {
     my $id = 'ID="protein_name_constraint"';
     $form =~ s/(NAME=\"protein_name_constraint\")/$1 $id/;
 
-    my ( $sub_form ) = $best_peptide->get_change_form( form_only => 1, hide_buttons => 1, shade_defs => 1 );
+    # FINDME
+    my ( $sub_form ) = $best_peptide->get_change_form( form_only => 1, hide_buttons => 1, shade_defs => 1, set_params => \%parameters );
     $sub_form =~ s/tbl_visible/tbl_hidden/gm;
    
     my $peptide_chk = "<INPUT TYPE=checkbox NAME=peptides_only></INPUT>";
@@ -249,11 +251,12 @@ sub print_form {
 #    $form .= "<TR><TD COLSPAN=3>$sub_form</TD></TR>\n";
     $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Adjust penalties:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$link$sub_form</TD></TR> ~;
 
-    my $select_list = get_cmod_select();
-#    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Heavy label:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$select_list</TD></TR> ~;
+    my $select_list = get_cmod_select( $parameters{cmod_mass} );
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Heavy label:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$select_list</TD></TR> ~;
 
-#    my $select_lists = get_multi_selects();
-#    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Transition Sources:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$select_lists->[0]</TD></TR> ~;
+    # Min/Max mz values
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Minimum m/z:</B></TD><TD BGCOLOR=E0E0E0></TD><TD><INPUT TYPE=TEXT NAME=min_mz SIZE=10 VALUE=$parameters{min_mz}></INPUT></TD></TR> ~;
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Maximum m/z:</B></TD><TD BGCOLOR=E0E0E0></TD><TD><INPUT TYPE=TEXT NAME=max_mz SIZE=10 VALUE=$parameters{max_mz}></INPUT></TD></TR> ~;
 #    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Allowable Modifications:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$select_lists->[1]</TD></TR> ~;
 
     print qq~
@@ -267,18 +270,28 @@ sub print_form {
 } # end print_form
 
 sub get_cmod_select {
+  my $curr_val = shift || '';
+
+  my %sel = ( K8 => '', R10 => '', K6 => '', R6 => '' );
+  my %seen;
+  for my $curr ( split( ',', $curr_val ) ) {
+    $curr =~ /(\w)\d+/;
+    next if $seen{$1}++;
+    $sel{$curr} = 'SELECTED';
+  }
 
   my $cmod_sel = qq~
     <SELECT SIZE=4 MULTIPLE NAME=cmod_mass>
       <OPTION VALUE='' ></OPTION>
-      <OPTION VALUE=K8 >Lysine + 8</OPTION>
-      <OPTION VALUE=R10 >Arginine + 10</OPTION>
-      <OPTION VALUE=K6 >Lysine + 6</OPTION>
-      <OPTION VALUE=R6 >Arginine + 6</OPTION>
+      <OPTION VALUE=K8 $sel{K8}>Lysine + 8</OPTION>
+      <OPTION VALUE=R10 $sel{R10}>Arginine + 10</OPTION>
+      <OPTION VALUE=K6 $sel{K6}>Lysine + 6</OPTION>
+      <OPTION VALUE=R6 $sel{R6}>Arginine + 6</OPTION>
     </SELECT>
   ~;
   return $cmod_sel;
 }
+
 
 sub get_multi_selects {
   my $sql = qq~
@@ -776,6 +789,18 @@ sub fetch_transitions {
 #          $log->debug( "rejected $row[1] frag for too bigosity" );
           next;
         }
+
+#        if ( $parameters{min_mz} && $parameters{min_mz} =~ /\d+/ ) {
+#        if ( $parameters{min_mz} ) {
+#          next if $parameters{min_mz} > $frag->[5] ||  $parameters{min_mz} > $frag->[7];
+#        }
+      if ( $parameters{min_mz} ) {
+        next if $parameters{min_mz} > $frag->[5] ||  $parameters{min_mz} > $frag->[7];
+      }
+      if ( $parameters{max_mz} ) {
+        next if $parameters{max_mz} < $frag->[5] ||  $parameters{max_mz} < $frag->[7];
+      }
+
         $peps{$pep_key}++;
         last if $peps{$pep_key} > $n_fragment_ions;
 
@@ -873,6 +898,14 @@ sub fetch_transitions {
         next;
       }
 
+#      if ( $parameters{min_mz} && $parameters{min_mz} =~ /\d+/ ) {
+      if ( $parameters{min_mz} ) {
+        next if $parameters{min_mz} > $row[5] ||  $parameters{min_mz} > $row[7];
+      }
+      if ( $parameters{max_mz} ) {
+        next if $parameters{max_mz} < $row[5] ||  $parameters{max_mz} < $row[7];
+      }
+
       $peps{$pep_key}++;
 
       $row[10] = $peps{$pep_key};
@@ -920,36 +953,44 @@ sub fetch_transitions {
       # Manually build Lys/Arg SILAC code
       if ( $parameters{cmod_mass} ) {
 
-        my ( $aa, $mass ) = $parameters{cmod_mass} =~ /^(\w)(\d+)$/;
+        my %seen;
+        for my $mod ( split( ',', $parameters{cmod_mass} ) ) {
 
-        if ( $aa && $mass ) {
-          $log->debug( "$parameters{cmod_mass} is actionable" );
+          my ( $aa, $mass ) = $mod =~ /^(\w)(\d+)$/;
+  
+          if ( $aa && $mass ) {
+            $log->debug( "$mod is actionable" );
 
-          my $annot = '';
-          if ( $aa =~ /R/i ) {
-            my $mod_aa = $mass + 174;
-            $annot = "R[$mod_aa]";
+            # Only consider the first instance of any AA
+            next if $seen{$aa}++;
+  
+            my $annot = '';
+            if ( $aa =~ /R/i ) {
+              my $mod_aa = $mass + 174;
+              $annot = "R[$mod_aa]";
+            } else {
+              my $mod_aa = $mass + 146;
+              $annot = "K[$mod_aa]";
+            }
+
+            my @mod_row = ( $prot, @row[0..12,15] );
+            # Omit double labels for now
+            next if $mod_row[2] =~ /[RK].*K$/;
+            next unless $mod_row[10] =~ /^y/i;
+
+
+            if ( $mod_row[2] =~ /$aa$/ ) {
+              $log->debug( "seq is $mod_row[2] and annot is $annot before" );
+                $mod_row[2] =~ s/$aa$/$annot/;
+              $log->debug( "seq is $mod_row[2] and annot is $annot after" );
+                $mod_row[6] = sprintf( "%0.2f", $mod_row[6] + $mass/$mod_row[7] );
+                $mod_row[8] = sprintf( "%0.2f", $mod_row[8] + $mass/$mod_row[9] );
+#                $mod_row[8] += $mass/$mod_row[9];
+                push @peptides, \@mod_row;
+            }
           } else {
-            my $mod_aa = $mass + 146;
-            $annot = "K[$mod_aa]";
+            $log->debug( "$parameters{cmod_mass} is nothing!" );
           }
-
-          my @mod_row = ( $prot, @row[0..12,15] );
-          # Omit double labels for now
-          next if $mod_row[2] =~ /[RK].*K$/;
-          next unless $mod_row[10] =~ /^y/i;
-
-
-          if ( $mod_row[2] =~ /$aa$/ ) {
-            $log->debug( "seq is $mod_row[2] and annot is $annot before" );
-              $mod_row[2] =~ s/$aa$/$annot/;
-            $log->debug( "seq is $mod_row[2] and annot is $annot after" );
-              $mod_row[6] += $mass/$mod_row[7];
-              $mod_row[8] += $mass/$mod_row[9];
-              push @peptides, \@mod_row;
-          }
-        } else {
-          $log->debug( "$parameters{cmod_mass} is nothing!" );
         }
       }
 #      <OPTION VALUE=K8 >Lysine + 8</OPTION>
