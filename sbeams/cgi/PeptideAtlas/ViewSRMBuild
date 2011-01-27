@@ -35,6 +35,8 @@ use SBEAMS::PeptideAtlas::BestPeptideSelector;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas;
 
+$SBEAMS_SUBDIR = 'PeptideAtlas';
+
 
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
@@ -254,7 +256,7 @@ sub get_build_list {
       <INPUT $selected TYPE="radio" NAME="pabst_build_id" VALUE="$build->[0]" onClick=blur() onChange="switchBuild()">
       END
 
-      $build->[8] = $sbeams->truncateStringWithMouseover( len => 40, 
+      $build->[8] = $sbeams->truncateStringWithMouseover( len => 80, 
                                                        string => $build->[8],
                                                   add_elipses => 1,
                                                suppress_class => 1 );
