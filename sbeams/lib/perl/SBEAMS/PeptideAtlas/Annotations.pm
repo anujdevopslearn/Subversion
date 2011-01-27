@@ -459,6 +459,10 @@ sub get_column_defs {
     'Rank' => 'PABST Transition rank',
     'RI' => 'Relative Intensity of peak in CID spectrum',
 
+    'QTOF' => 'Consensus spectrum from QTOF instrument(s)',
+    'QTrap' => 'Consensus spectrum from QTrap instrument(s)',
+    'IT' => 'Consensus spectrum from Ion Trap instrument(s)',
+    'Pred' => 'Predicted spectrum',
 
     );
   if ( $args{labels} ) {
