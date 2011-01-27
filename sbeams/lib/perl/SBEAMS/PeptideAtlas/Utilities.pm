@@ -1410,6 +1410,40 @@ sub fragment_peptide {
   return \@residues;
 }
 
+sub get_Agilent_ce {
+
+	my $self = shift;
+  my %args = @_;
+
+  my %ce = ( low => '', mlow => '', medium => '', mhigh => '', high => '' );
+	if ( $args{charge} && $args{mz} ) {
+
+    if ( $args{charge} == 2 ) {
+      $ce{medium} = ( (2.93*$args{mz})/100 ) + 6.72;
+    } else {
+      $ce{medium} = ( (3.6* $args{mz} )/100 ) -4.8;
+    }
+
+    my $delta = 0;
+    if ( $args{charge} == 2 ) {
+      $delta = 5;
+    } elsif ( $args{charge} == 3 ) {
+      $delta = 3.5;
+    } else { 
+      $delta = 2.5;
+    }
+  
+    $ce{low} = sprintf ( "%0.1f", $ce{medium} - ( 2 * $delta ) );
+    $ce{mlow} = sprintf ( "%0.1f", $ce{medium} - $delta );
+    $ce{mhigh} = sprintf ( "%0.1f", $ce{medium} + $delta );
+    $ce{high} = sprintf ( "%0.1f", $ce{medium} + ( 2 * $delta ) );
+    $ce{medium} = sprintf ( "%0.1f", $ce{medium} );
+	} 
+	return \%ce;
+
+
+}
+
 
 
 sub calc_ions {
@@ -1561,7 +1595,7 @@ sub make_sort_headings {
     my $link = qq~ <DIV TITLE="$title" ONCLICK="ts_resortTable(this,'$cnt');return false;" class=sortheader>$head<span class=sortarrow>&nbsp;$arrow</span></DIV>~;
     push @marked, $link;
     
-    last if $cnt++ > 100; # danger Will Robinson
+    last if $cnt++ > 5000; # danger Will Robinson
   }
   return \@marked;
 }
