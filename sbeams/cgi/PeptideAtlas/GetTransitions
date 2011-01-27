@@ -956,7 +956,7 @@ sub fetch_transitions {
       push @peptides, [ $prot, @row[0..12,15] ];
 
       # Manually build Lys/Arg SILAC code
-      if ( $parameters{cmod_mass} ) {
+      if ( $parameters{cmod_mass} && !$parameters{peptides_only} ) {
 
         my %seen;
         for my $mod ( split( ',', $parameters{cmod_mass} ) ) {
@@ -1084,7 +1084,7 @@ sub fetch_transitions {
                                                    ); 
 
   my $change_on = 2;
-  if ( $args{cmod_mass} ) {
+  if ( $args{cmod_mass} && !$args{peptides_only}  ) {
     $change_on = 10;
   }
 
