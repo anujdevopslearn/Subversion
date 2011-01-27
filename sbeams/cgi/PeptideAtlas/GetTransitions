@@ -244,19 +244,24 @@ sub print_form {
     $sub_form =~ s/tbl_visible/tbl_hidden/gm;
    
     my $peptide_chk = "<INPUT TYPE=checkbox NAME=peptides_only></INPUT>";
-    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Get Peptides Only:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$peptide_chk</TD></TR> ~;
+    my $peptides_only_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Return peptide list only (no Q3 values)'</TD>";
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Get Peptides Only:</B></TD>$peptides_only_help<TD>$peptide_chk</TD></TR> ~;
 
 #    $form =~ s/(\<INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="AT_GetPABSTList"\>)/$1<BR>$sub_form/gm;
 #    $form =~ s/\<\/TABLE\>/<TR><TD COLSPAN=3> $sub_form<\/TD><\/TR><\/TABLE>/i;
 #    $form .= "<TR><TD COLSPAN=3>$sub_form</TD></TR>\n";
-    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Adjust penalties:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$link$sub_form</TD></TR> ~;
+    my $change_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Adjust PABST peptide parameters to fine-tune peptide list (advanced)'</TD>";
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Adjust weights:</B></TD>$change_help<TD>$link$sub_form</TD></TR> ~;
 
     my $select_list = get_cmod_select( $parameters{cmod_mass} );
-    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Heavy label:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$select_list</TD></TR> ~;
+    my $cmod_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Also fetch heavy-labeled versions of selected peptides'</TD>";
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Heavy label:</B></TD>$cmod_help<TD>$select_list</TD></TR> ~;
 
     # Min/Max mz values
-    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Minimum m/z:</B></TD><TD BGCOLOR=E0E0E0></TD><TD><INPUT TYPE=TEXT NAME=min_mz SIZE=10 VALUE=$parameters{min_mz}></INPUT></TD></TR> ~;
-    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Maximum m/z:</B></TD><TD BGCOLOR=E0E0E0></TD><TD><INPUT TYPE=TEXT NAME=max_mz SIZE=10 VALUE=$parameters{max_mz}></INPUT></TD></TR> ~;
+    my $min_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Set minimum m/z threshold for transitions, applies to both precursor (Q1) and fragment ion (Q3) m/z'</TD>";
+    my $max_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Set maximum m/z threshold for transitions, applies to both precursor (Q1) and fragment ion (Q3) m/z'</TD>";
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Minimum m/z:</B></TD>$min_help<TD><INPUT TYPE=TEXT NAME=min_mz SIZE=10 VALUE=$parameters{min_mz}></INPUT></TD></TR> ~;
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Maximum m/z:</B></TD>$max_help<TD><INPUT TYPE=TEXT NAME=max_mz SIZE=10 VALUE=$parameters{max_mz}></INPUT></TD></TR> ~;
 #    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Allowable Modifications:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$select_lists->[1]</TD></TR> ~;
 
     print qq~
