@@ -119,5 +119,53 @@ sub spectrum_search {
   return \@rows || [];
 }
 
+sub get_spectrum_peaks {
+	my $self = shift;
+	my %args = @_;
+
+  for my $arg ( qw( file_path entry_idx ) ) {
+    die $arg unless defined $args{$arg};
+  }
+
+#  print "Looking in file $args{file_path} for index $args{entry_idx}\n";
+
+  open FIL, $args{file_path} || die "Dang, yo";
+  seek ( FIL, $args{entry_idx}, 0 );
+  my $collect_peaks;
+  my %spectrum = ( n_peaks => 0,
+                   masses => [],
+                   intensities => [] );
+
+  my $cnt = 0;
+  my $peak_cnt;
+  while ( my $line = <FIL> ) {
+    $cnt++;
+    chomp $line;
+    if ( $line =~ /^NumPeaks:\s+(\d+)\s*$/ ) {
+      $spectrum{n_peaks} = $1;
+      $collect_peaks++;
+      next;
+    } elsif ( $line =~ /^NumPeaks/ ) {
+      die "Why didn't $line trip it!";
+    }
+    next unless $collect_peaks;
+    last if $line =~ /^\s*$/;
+    $line =~ /(\S+)\s+(\S+).*$/;
+    push @{$spectrum{masses}}, $1;
+    push @{$spectrum{intensities}}, $2;
+#    print STDERR "pushing $1 and $2 to the m/i arrays\n";
+    $peak_cnt++;
+    if ( $peak_cnt > $spectrum{n_peaks} ) {
+      print STDERR "Past our due date with $line\n";
+      last;
+    }
+  }
+#  print " saw $cnt total rows for $args{file_path} entry $args{entry_idx}!\n";
+#  print STDERR " masses: " . scalar( @{$spectrum{masses}} ) . " entries";
+#  print STDERR " intensities: " . scalar( @{$spectrum{intensities}} ) . " entries";
+
+  return \%spectrum;
+}
+
 1;
 
