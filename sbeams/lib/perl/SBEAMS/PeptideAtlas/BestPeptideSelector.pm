@@ -26,7 +26,6 @@ require Exporter;
 $VERSION = q[$Id$];
 @EXPORT_OK = qw();
 
-use SBEAMS::BioLink::MSF;
 use SBEAMS::Connection qw( $log );
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::Settings;
@@ -34,6 +33,7 @@ use SBEAMS::PeptideAtlas::Tables;
 
 use SBEAMS::Proteomics::PeptideMassCalculator;
 use SBEAMS::PeptideAtlas;
+use SBEAMS::BioLink::MSF;
 
 use Data::Dumper;
 use Digest::MD5 qw(md5_hex);
@@ -732,6 +732,7 @@ sub getInstrumentMap {
   my $self = shift;
 	my %instr = ( QTrap4000 => 'Q',
 	              QTrap5500 => 'S',
+	              Orbitrap => 'B',
 								Predicted => 'P',
 								IonTrap => 'I',
 								PATR => 'R',
@@ -765,6 +766,16 @@ sub calc_suitability_score {
 sub get_pabst_scoring_defs {
 	my $self = shift;
 	my %args = @_;
+
+# Deprecated
+#                   NG => ' Dipeptide NG',
+#                   DP => ' Dipeptide DP',
+#                   DG => ' Dipeptide DG',
+#                   QG => ' Dipeptide QG',
+#                 nxxG => ' Peptides with nxxG motif',
+#                 nGPG => ' Peptides with nxyG motif, x or y is P or G',
+#                 
+
   my @defs =  (    
                  '4H' => ' 4 consecutive hydrophobic residues: C,F,I,L,V,W,Y',
                  '5H' => ' 5 straight hydrophobic residues: F,I,L,V,W,M',
@@ -779,15 +790,8 @@ sub get_pabst_scoring_defs {
                     S => ' Serine-containing peptides',  
                     W => ' Tryptophan-containing peptides',
 
-                   NG => ' Dipeptide NG',
-                   DP => ' Dipeptide DP',
-                   DG => ' Dipeptide DG',
-                   QG => ' Dipeptide QG',
-                 nxxG => ' Peptides with nxxG motif',
-                 nGPG => ' Peptides with nxyG motif, x or y is P or G',
-                 NxST => ' Peptides without NxST motif',
-
                    nQ => ' N-terminal Glutamine',
+                 NxST => ' Peptides without NxST motif',
                    nE => ' N-terminal Glutamic Acid',
                    nM => ' N-terminal Methionine',
                    Xc => ' Any C-terminal peptide',
@@ -821,6 +825,15 @@ sub get_default_pabst_scoring {
 	my %args = @_;
 	$args{show_defs} ||= 0;
 
+# Deprecated
+#                  NG => 1,
+#                  DP => 1,
+#                  QG => 1,
+#                  DG => 1,
+#                nxxG => 1,
+#                nGPG => 1,
+#
+
   my %scores =  (  M => .95,
                   nQ => 1,
                 NxST => 1,
@@ -835,12 +848,6 @@ sub get_default_pabst_scoring {
                 '4H' => 1,
                 '5H' => 1,
               'Hper' => 1,
-                  NG => 1,
-                  DP => 1,
-                  QG => 1,
-                  DG => 1,
-                nxxG => 1,
-                nGPG => 1,
                    D => 1,
                    R => 1,
                  obs => 2.0,
@@ -1752,6 +1759,13 @@ sub get_change_form {
     my $val = shift @pen_defs;
     $pen_defs->{$key} = $val;
     push @pen_names, $key;
+  }
+
+  if ( defined $args{set_params} ) {
+    for my $key ( keys( %{$penalties} ) ) {
+      $log->debug( "$key goes from $pen_defs->{$key} to $args{set_params}->{$key}" );
+      $penalties->{$key} = $args{set_params}->{$key} if defined $args{set_params}->{$key};
+    }
   }
 
   my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'pabst_penalty_form',
@@ -2768,6 +2782,7 @@ sub pabst_evaluate_peptides {
 
   # Loop over peptides
   my $cnt = 0;
+  my @result_peptides;
   for my $pep ( @{$args{peptides}} ) {
 
 #    print STDERR "COLS: " . scalar( @$pep ) . " before\n";
@@ -2798,6 +2813,12 @@ sub pabst_evaluate_peptides {
 
     # New-ish addition.  Inclusion on a particular list might be good or bad.
     if ( $args{chk_peptide_hash} && defined $args{peptide_hash_scr} ) {
+
+      # Disallow any peptides not on check list of chk_only is set
+      if ( $args{chk_only} && !$args{chk_peptide_hash}->{$seq} ) {
+        next;
+      }
+
       if ( $args{chk_peptide_hash}->{$seq} ) {
         $scr *= $args{peptide_hash_scr};
         push @pen_codes, 'PepL';
@@ -2913,9 +2934,9 @@ sub pabst_evaluate_peptides {
 #      print STDERR "adjusted is is " . $scr * $pep->[$args{score_idx}] . "\n";
 #      print STDERR "COLS: " . scalar( @$pep ) . " after\n";
     }
+    push @result_peptides, $pep;
   }
-  return $args{peptides};
-
+  return \@result_peptides;
 }
       
 sub calculate_CE {
