@@ -24,6 +24,12 @@
 					width: 750, 	// width of the ms/ms plot
 					height: 450, 	// height of the ms/ms plot
 					massError: 0.5, // mass tolerance for labeling peaks
+			                showA: [0,0,0], // controls plotting of +1,+2,+3 A-ions
+			                showB: [1,0,0],
+			                showC: [0,0,0],
+			                showX: [0,0,0],
+			                showY: [1,0,0],
+			                showZ: [0,0,0],
 					extraPeakSeries:[]
 			};
 		
@@ -1320,6 +1326,26 @@
 	// OPTIONS TABLE
 	//---------------------------------------------------------
 	function makeOptionsTable() {
+
+	        var checked = ' checked="checked"';
+	        var a1check = (options.showA[0]) ? checked : '';
+	        var a2check = (options.showA[1]) ? checked : '';
+	        var a3check = (options.showA[2]) ? checked : '';
+	        var b1check = (options.showB[0]) ? checked : '';
+	        var b2check = (options.showB[1]) ? checked : '';
+	        var b3check = (options.showB[2]) ? checked : '';
+	        var c1check = (options.showC[0]) ? checked : '';
+	        var c2check = (options.showC[1]) ? checked : '';
+	        var c3check = (options.showC[2]) ? checked : '';
+	        var x1check = (options.showX[0]) ? checked : '';
+	        var x2check = (options.showX[1]) ? checked : '';
+	        var x3check = (options.showX[2]) ? checked : '';
+	        var y1check = (options.showY[0]) ? checked : '';
+	        var y2check = (options.showY[1]) ? checked : '';
+	        var y3check = (options.showY[2]) ? checked : '';
+	        var z1check = (options.showZ[0]) ? checked : '';
+	        var z2check = (options.showZ[1]) ? checked : '';
+	        var z3check = (options.showZ[2]) ? checked : '';
 		
 		var myTable = '';
 		myTable += '<table cellpadding="2" cellspacing="2"> ';
@@ -1333,49 +1359,49 @@
 		myTable += '<!-- a ions --> ';
 		myTable += '<nobr> ';
 		myTable += '<b>a</b> ';
-		myTable += '<input type="checkbox" value="1" id="a_1"/>1<sup>+</sup> ';
-		myTable += '<input type="checkbox" value="2" id="a_2"/>2<sup>+</sup> ';
-		myTable += '<input type="checkbox" value="3" id="a_3"/>3<sup>+</sup> ';
+		myTable += '<input type="checkbox" value="1" id="a_1"' + a1check + '/>1<sup>+</sup> ';
+		myTable += '<input type="checkbox" value="2" id="a_2"' + a2check + '/>2<sup>+</sup> ';
+		myTable += '<input type="checkbox" value="3" id="a_3"' + a3check + '/>3<sup>+</sup> ';
 		myTable += '</nobr> ';
 		myTable += '<br/> ';
 		myTable += '<!-- b ions --> ';
 		myTable += '<nobr> ';
 		myTable += '<b>b</b> ';
-		myTable += '<input type="checkbox" value="1" id="b_1" checked="checked"/>1<sup>+</sup> ';
-		myTable += '<input type="checkbox" value="2" id="b_2"/>2<sup>+</sup> ';
-		myTable += '<input type="checkbox" value="3" id="b_3"/>3<sup>+</sup> ';
+		myTable += '<input type="checkbox" value="1" id="b_1"' + b1check + '/>1<sup>+</sup> ';
+		myTable += '<input type="checkbox" value="2" id="b_2"' + b2check + '/>2<sup>+</sup> ';
+		myTable += '<input type="checkbox" value="3" id="b_3"' + b3check + '/>3<sup>+</sup> ';
 		myTable += '</nobr> ';
 		myTable += '<br/> ';
 		myTable += '<!-- c ions --> ';
 		myTable += '<nobr> ';
 		myTable += '<b>c</b> ';
-		myTable += '<input type="checkbox" value="1" id="c_1"/>1<sup>+</sup> ';
-		myTable += '<input type="checkbox" value="2" id="c_2"/>2<sup>+</sup> ';
-		myTable += '<input type="checkbox" value="3" id="c_3"/>3<sup>+</sup> ';
+		myTable += '<input type="checkbox" value="1" id="c_1"' + c1check + '/>1<sup>+</sup> ';
+		myTable += '<input type="checkbox" value="2" id="c_2"' + c2check + '/>2<sup>+</sup> ';
+		myTable += '<input type="checkbox" value="3" id="c_3"' + c3check + '/>3<sup>+</sup> ';
 		myTable += '</nobr> ';
 		myTable += '<br/> ';
 		myTable += '<!-- x ions --> ';
 		myTable += '<nobr> ';
 		myTable += '<b>x</b> ';
-		myTable += '<input type="checkbox" value="1" id="x_1"/>1<sup>+</sup> ';
-		myTable += '<input type="checkbox" value="2" id="x_2"/>2<sup>+</sup> ';
-		myTable += '<input type="checkbox" value="3" id="x_3"/>3<sup>+</sup> ';
+		myTable += '<input type="checkbox" value="1" id="x_1"' + x1check + '/>1<sup>+</sup> ';
+		myTable += '<input type="checkbox" value="2" id="x_2"' + x2check + '/>2<sup>+</sup> ';
+		myTable += '<input type="checkbox" value="3" id="x_3"' + x3check + '/>3<sup>+</sup> ';
 		myTable += '</nobr> ';
 		myTable += '<br/> ';
 		myTable += '<!-- y ions --> ';
 		myTable += '<nobr> ';
 		myTable += '<b>y</b> ';
-		myTable += '<input type="checkbox" value="1" id="y_1" checked="checked"/>1<sup>+</sup> ';
-		myTable += '<input type="checkbox" value="2" id="y_2"/>2<sup>+</sup> ';
-		myTable += '<input type="checkbox" value="3" id="y_3"/>3<sup>+</sup> ';
+		myTable += '<input type="checkbox" value="1" id="y_1"' + y1check + '/>1<sup>+</sup> ';
+		myTable += '<input type="checkbox" value="2" id="y_2"' + y2check + '/>2<sup>+</sup> ';
+		myTable += '<input type="checkbox" value="3" id="y_3"' + y3check + '/>3<sup>+</sup> ';
 		myTable += '</nobr> ';
 		myTable += '<br/> ';
 		myTable += '<!-- z ions --> ';
 		myTable += '<nobr> ';
 		myTable += '<b>z</b> ';
-		myTable += '<input type="checkbox" value="1" id="z_1"/>1<sup>+</sup> ';
-		myTable += '<input type="checkbox" value="2" id="z_2"/>2<sup>+</sup> ';
-		myTable += '<input type="checkbox" value="3" id="z_3"/>3<sup>+</sup> ';
+		myTable += '<input type="checkbox" value="1" id="z_1"' + z1check + '/>1<sup>+</sup> ';
+		myTable += '<input type="checkbox" value="2" id="z_2"' + z2check + '/>2<sup>+</sup> ';
+		myTable += '<input type="checkbox" value="3" id="z_3"' + z3check + '/>3<sup>+</sup> ';
 		myTable += '</nobr> ';
 		myTable += '<br/> ';
 		myTable += '<span id="deselectIonsLink" style="font-size:8pt;text-decoration: underline; color:sienna;cursor:pointer;">[Deselect All]</span> ';
