@@ -345,7 +345,7 @@ sub processRequest {
     print qq~
 	<FORM METHOD="post" action="$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME">
 	$hidden_form_fields
-        <INPUT TYPE="text" NAME="alt_sequence" SIZE="40" ONCLICK="this.value='';" ONFOCUS="this.select();" VALUE="(enter alternate sequence)"></INPUT>
+        <INPUT TYPE="text" NAME="alt_sequence" SIZE="40" ONCLICK="this.value=(this.value=='(enter alternate sequence)')?'':this.value;" ONFOCUS="this.select();" VALUE="(enter alternate sequence)"></INPUT>
 	<SELECT NAME="alt_charge"><OPTION VALUE="1">+1</OPTION><OPTION VALUE="2">+2</OPTION><OPTION VALUE="3">+3</OPTION></SELECT>
 	<INPUT TYPE='submit' VALUE='GO!'>
 	</FORM>
