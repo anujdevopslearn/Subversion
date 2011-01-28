@@ -77,6 +77,8 @@ sub convertMods {
 	}
     }
 
+    ## ToDo!  Deal with terminal mods, Lorikeet-style!
+
     #### Remove n-term and c-term notation
     $sequence =~ s/[nc]//g;
     
@@ -97,6 +99,7 @@ sub generateSpectrum {
     my $self = shift;
     my %args = @_;
 
+    my $html_id  = $args{'htmlID'} || 'lorikeet';
     my $charge   = $args{'charge'};
     my $showA    = $args{'a_ions'} || '[0,0,0]';
     my $showB    = $args{'b_ions'} || '[1,1,0]';
@@ -128,38 +131,29 @@ sub generateSpectrum {
 	<script type="text/javascript" src="$lorikeet_resources/js/ion.js"></script>
 	<link REL="stylesheet" TYPE="text/css" HREF="$lorikeet_resources/css/lorikeet.css">
 
-	<div id="lorikeet"></div>
+	<div id="$html_id"></div>
 
 	<script type="text/javascript">
 	\$(document).ready(function () {
 
-	    \$("#lorikeet").specview({"sequence":sequence,
-				      "scanNum":scanNum,
-				      "charge":charge,
-				      "precursorMz":precursorMz,
-				      "fileName":fileName,
-				      "showA":showA,
-				      "showB":showB,
-				      "showC":showC,
-				      "showX":showX,
-				      "showY":showY,
-				      "showZ":showZ,
-				      "variableMods":variableMods,
+	    \$("#$html_id").specview({"sequence":"$sequence",
+				      "scanNum":$scanNum,
+				      "charge":$charge,
+				      "precursorMz":$precursorMz,
+				      "fileName":"$fileName",
+				      "width": 650,
+				      "height":400,
+				      "showA":$showA,
+				      "showB":$showB,
+				      "showC":$showC,
+				      "showX":$showX,
+				      "showY":$showY,
+				      "showZ":$showZ,
+				      "variableMods":$mods,
+				      // ToDo: "ntermMod":0,
+				      // ToDo: "ctermMod":0,
 				      "peaks":ms2peaks});
 	});
-
-    var showA = $showA;
-    var showB = $showB;
-    var showC = $showC;
-    var showX = $showX;
-    var showY = $showY;
-    var showZ = $showZ;
-    var charge = $charge;
-    var scanNum = $scanNum;
-    var fileName = "$fileName";
-    var sequence = "$sequence";
-    var precursorMz = $precursorMz;
-    var variableMods = $mods;
     %;
 
     $lorikeet_html .= "var ms2peaks = [";
