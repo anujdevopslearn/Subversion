@@ -386,7 +386,7 @@ sub getHighlyObservablePeptides {
   );
 
   #### Define a query to return peptides for this protein
-  my $sql = qq~
+  my $pepsql = qq~
      SELECT DISTINCT
      $columns_clause
      FROM $TBAT_PROTEOTYPIC_PEPTIDE PTP
@@ -407,7 +407,7 @@ sub getHighlyObservablePeptides {
   my %resultset = ();
   my $resultset_ref = \%resultset;
   $sbeams->fetchResultSet(
-    sql_query=>$sql,
+    sql_query=>$pepsql,
     resultset_ref=>$resultset_ref,
   );
 
@@ -499,7 +499,7 @@ sub getHighlyObservablePeptides_PTP {
   );
 
   #### Define a query to return peptides for this protein
-  my $sql = qq~
+  my $pepsql = qq~
      SELECT DISTINCT
      $columns_clause
      FROM $TBAT_PROTEOTYPIC_PEPTIDE PTP
@@ -520,7 +520,7 @@ sub getHighlyObservablePeptides_PTP {
   my %resultset = ();
   my $resultset_ref = \%resultset;
   $sbeams->fetchResultSet(
-    sql_query=>$sql,
+    sql_query=>$pepsql,
     resultset_ref=>$resultset_ref,
   );
 
@@ -730,6 +730,7 @@ sub sortBySuitabilityScore {
 
 sub getInstrumentMap {
   my $self = shift;
+	my %args = @_;
 	my %instr = ( QTrap4000 => 'Q',
 	              QTrap5500 => 'S',
 	              Orbitrap => 'B',
@@ -737,6 +738,10 @@ sub getInstrumentMap {
 								IonTrap => 'I',
 								PATR => 'R',
 								QTOF => 'T' );
+	if ( $args{invert} ) {
+		my %code2instr = reverse( %instr );
+		return \%code2instr;
+	}
   return \%instr;
 } 
 
@@ -1327,12 +1332,13 @@ sub get_pabst_static_peptide_display {
   WHERE peptide_sequence IN ( $uniq_peps )
   ~;
 
-  my $sth = $sbeams->get_statement_handle( $uniq_sql );
+  my $uniq_sth = $sbeams->get_statement_handle( $uniq_sql );
   my %pep2org;
-  while ( my @row = $sth->fetchrow_array() ) {
+  while ( my @row = $uniq_sth->fetchrow_array() ) {
     $pep2org{$row[0]} ||= [];
     push @{$pep2org{$row[0]}}, $row[1];
   }
+	$uniq_sth->finish();
 
   my $seen_sql = qq~
   SELECT DISTINCT peptide_sequence 
@@ -2020,7 +2026,7 @@ sub get_pabst_multibuild_observed_peptides_depr {
   # Each protein is an arrayref
   $proteins{$curr_prot} ||= [];
   my $skip = 0;
-  for my $build ( @{args{atlas_build}} ) {
+  for my $build ( @{$args{atlas_build}} ) {
     for my $buildpep ( @{$peptides{$prev_pep}} ) {
       if ( $buildpep->[15] == $build ) {
         print "build $build is the winner for $buildpep->[2]\n";
