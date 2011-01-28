@@ -318,8 +318,8 @@
 
                     // lables;
                     if(d[i].labels) {
-                       s.labels = d[i].labels;
-                       delete d[i].labels;
+                    	s.labels = d[i].labels;
+                    	delete d[i].labels;
                     }
                     
                     $.extend(true, s, d[i]);
@@ -1047,7 +1047,7 @@
             
             // add extra space for labels to axis.max if this is the y-axis.
             if(axis.direction == "y" && options.series.peaks.show) {
-               axis.max = axis.max + ((axis.max - axis.min) / canvasHeight ) * 20;
+            	axis.max = axis.max + ((axis.max - axis.min) / canvasHeight ) * 20;
             }
         }
 
@@ -1656,7 +1656,7 @@
             if (series.lines.show)
                 drawSeriesLines(series);
             if(series.peaks.show)
-               drawSeriesPeaks(series);
+            	drawSeriesPeaks(series);
             if (series.bars.show)
                 drawSeriesBars(series);
             if (series.points.show)
@@ -1664,32 +1664,34 @@
         }
         
         function drawSeriesPeaks(series) {
-           
-           function plotPeaks(datapoints, xoffset, yoffset, axisx, axisy) {
-              
+        	
+        	function plotPeaks(datapoints, xoffset, yoffset, axisx, axisy) {
+        		
                 var points = datapoints.points,
                     ps = datapoints.pointsize;
                 
                 ctx.fillStyle = series.color;
                 ctx.textAlign = "center";
-              ctx.font = '11px Arial';
-              if(series.labelType == 'mz')
-                 ctx.font = '10px Arial';
-              
+        		ctx.font = '14px Arial';
+        		if(series.labelType == 'mz')
+        			ctx.font = '12px Arial';
+        		
                 var incr = ps;
                 
-                var l = -1;
+                var l = -1; // peak label index
                 
                 var lastx_coord, lasty1_coord, lasty2_coord, lasty;
                 
                 for (var i = 0; i < points.length; i += ps) {
-                   
+                	
                     var x = points[i], y1 = 0,
                     y2 = points[i+1], orig_y = points[i+1];
                     
                     if (x == null)
                         continue;
 
+                    l += 1; // peak label index
+                    
                     // clip with xmin
                     if (x < axisx.min) {
                         continue;
@@ -1704,9 +1706,9 @@
                     var myx = axisx.p2c(x) + xoffset
                     var tempx = Math.round(myx);
                     if(tempx > myx)
-                       myx = tempx - 0.5;
+                    	myx = tempx - 0.5;
                     else
-                       myx = tempx + 0.5;
+                    	myx = tempx + 0.5;
                     
                     
                     // clip with ymin ; assume y1 always < y2
@@ -1730,93 +1732,90 @@
                     // If we have a label associated with the peaks we will draw them all
                     // otherwise we will draw the most intense peak at every pixel to reduce drawing time
                     if(series.labelType != 'none') {
-                       l += 1;
-                      drawPeak(myx, myy1, myy2);
-                      drawLabel(myx, myy2, x, y2, axisx, axisy, l);
+	                	drawPeak(myx, myy1, myy2);
+	                	drawLabel(myx, myy2, x, y2, axisx, axisy, l);
                     }
                     else {
-                       if(lastx_coord && lastx_coord < myx) {
-                          l += 1;
-                          // draw the most intense peak at the last coordinate
-                          drawPeak(lastx_coord, lasty1_coord, lasty2_coord);
-                          lasty = -1;
-                       }
-                       if(!lastx_coord || orig_y > lasty) {
-                          lastx_coord = myx;
-                          lasty1_coord = myy1;
-                          lasty2_coord = myy2;
-                          lasty = orig_y;
-                       }
+                    	if(lastx_coord && lastx_coord < myx) {
+	                    	// draw the most intense peak at the last coordinate
+	                    	drawPeak(lastx_coord, lasty1_coord, lasty2_coord);
+	                    	lasty = -1;
+	                    }
+                    	if(!lastx_coord || orig_y > lasty) {
+                    		lastx_coord = myx;
+                    		lasty1_coord = myy1;
+                    		lasty2_coord = myy2;
+                    		lasty = orig_y;
+                    	}
                     }
                 }
                 
                 // draw the last peak if we are only drawing most intense peaks at each pixel
                 if(series.labelType == 'none') {
-                   if(lastx_coord) {
-                      l += 1;
-                       // draw the most intense peak at the last coordinate
-                       drawPeak(lastx_coord, lasty1_coord, lasty2_coord);
+                	if(lastx_coord) {
+                    	// draw the most intense peak at the last coordinate
+                    	drawPeak(lastx_coord, lasty1_coord, lasty2_coord);
                     }
                 }
                 //console.log("# peaks drawn: "+l);
             }
-           
-           function drawPeak(x_coord, y1_coord, y2_coord) {
-              ctx.beginPath();
-              ctx.moveTo(x_coord, y1_coord);
+        	
+        	function drawPeak(x_coord, y1_coord, y2_coord) {
+        		ctx.beginPath();
+        		ctx.moveTo(x_coord, y1_coord);
                 ctx.lineTo(x_coord, y2_coord);
-               ctx.stroke();
-           }
-           
-           function drawLabel(myx, myy2, x, y2, axisx, axisy, l) {
-              
-              if(series.labelType != 'none') {
-                  
-                  var drawLabel = true;
-                  
-                  if(y2 == axisy.max)
-                     drawLabel = false;;
-                  
-                  if(drawLabel) {
-                      var label = '';
-                      if(series.labelType == 'ion') {
-                         if(series.labels) {
-                            //alert(myx1+", "+myx2);
-                            label = series.labels[l];
-                         }
-                      }
-                      else if(series.labelType == 'mz') {
-                         var label = x.toFixed(2);
-                      }
-                      
-                      if(series.peaks.print) {
-                         // appending a div is too slow
-                         o = plot.getPlotOffset();
-                         placeholder.append('<div style="position:absolute;left:' +(myx+o.left-2) + 'px;top:' +(myy2 - o.top - 2)  + 'px;color:'+series.color+'">'+label+'</div>');
-                      }
-                      else {
-                         var metrics = ctx.measureText(label);
-                         ctx.save();
-                         ctx.translate(myx, myy2)
-                         ctx.rotate(-90 * Math.PI/180);
-                         ctx.fillText(label, (metrics.width / 2)+4, 4);
-                         ctx.restore();
-                      }
-                  }
-               }
-              
-           }
-           
-           ctx.save();
-           ctx.translate(plotOffset.left, plotOffset.top);
-           ctx.lineJoin = "round";
+            	ctx.stroke();
+        	}
+        	
+        	function drawLabel(myx, myy2, x, y2, axisx, axisy, l) {
+        		
+        		if(series.labelType != 'none') {
+            		
+            		var drawLabel = true;
+            		
+            		if(y2 == axisy.max)
+            			drawLabel = false;;
+            		
+            		if(drawLabel) {
+                		var label = '';
+                		
+                		if(series.labelType == 'mz') {
+                			var label = x.toFixed(2);
+                		}
+                		else  {
+		                	if(series.labels) {
+		                		//alert(myx1+", "+myx2);
+		                		label = series.labels[l];
+		                	}
+                		}
+                		if(series.peaks.print) {
+                			// appending a div is too slow
+                			o = plot.getPlotOffset();
+	                		placeholder.append('<div style="position:absolute;left:' +(myx+o.left-2) + 'px;top:' +(myy2 - o.top - 2)  + 'px;color:'+series.color+'">'+label+'</div>');
+                		}
+                		else {
+	                		var metrics = ctx.measureText(label);
+	                		ctx.save();
+	                		ctx.translate(myx, myy2)
+	                		ctx.rotate(-90 * Math.PI/180);
+	                		ctx.fillText(label, (metrics.width / 2)+1 ,3);
+	                		ctx.restore();
+                		}
+            		}
+            	}
+        		
+        	}
+        	
+        	ctx.save();
+            ctx.translate(plotOffset.left, plotOffset.top);
+            ctx.lineJoin = "round";
 
-           var lw = series.peaks.lineWidth;
-           ctx.lineWidth = lw;
-           ctx.strokeStyle = series.color;
-           if (lw > 0)
-              plotPeaks(series.datapoints, 0, 0, series.xaxis, series.yaxis);
-           ctx.restore();
+            var lw = series.peaks.lineWidth;
+            ctx.lineWidth = lw;
+            ctx.strokeStyle = series.color;
+            if (lw > 0)
+                plotPeaks(series.datapoints, 0, 0, series.xaxis, series.yaxis);
+            ctx.restore();
         }
         
         function drawSeriesLines(series) {
@@ -2485,7 +2484,7 @@
         }
 
         function drawOverlay() {
-           
+        	
             redrawTimeout = null;
 
             // draw highlights
