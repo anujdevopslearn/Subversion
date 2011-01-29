@@ -1,9 +1,4 @@
-#!/tools32/bin/perl
 #!/usr/local/bin/perl
-
-BEGIN {
-push @INC, qw( /net/db/src/SSRCalc/ssrcalc .  /tools32/lib/perl5/5.8.0/i386-linux-thread-multi /tools32/lib/perl5/5.8.0 /tools32/lib/perl5/site_perl/5.8.0/i386-linux-thread-multi /tools32/lib/perl5/site_perl/5.8.0 /tools32/lib/perl5/site_perl );
-}
 
 ###############################################################################
 # Program     : ShowObservedSpectrum
@@ -303,7 +298,6 @@ sub processRequest {
     }
 
     my $prec = sprintf ("%0.1f", $precursor_mass);
-#    pgmtext 'RV',-2,1.02,1,"Calc. precursor m/z = $prec  Charge = $parameters{assumed_charge}";
 
     my $seq = $parameters{'alt_sequence'} ? $parameters{'alt_sequence'} : $parameters{'modified_sequence'};
     my $chg = $parameters{'alt_charge'}   ? $parameters{'alt_charge'}   : $parameters{'assumed_charge'};
