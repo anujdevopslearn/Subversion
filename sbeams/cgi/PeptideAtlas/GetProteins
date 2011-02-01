@@ -1082,9 +1082,12 @@ sub handle_request {
 				 'Cellular Component' => "http://www.ebi.ac.uk/ego/GSearch?q=\%$colnameidx{cellular_component_GO}V",
 				 'Cellular Component_ATAG' => 'TARGET="WinExt"',
 				 'Cellular Component_OPTIONS' => {semicolon_separated_list=>1},
-      );
+      ); 
 
-
+  
+  if($atlas_build_name =~/Origene/i){
+    $url_cols{'Biosequence Name'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?protein_name=\%$colnameidx{biosequence_name}V&origene_plate=\%$colnameidx{plate}V&apply_action=$pass_action";
+  }
   #### Define columns that should be hidden in the output table
   # biosequence_accessor is prefix to compose URL
   # biosequence_accessor_suffix is suffix for same
