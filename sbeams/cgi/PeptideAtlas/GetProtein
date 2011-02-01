@@ -199,6 +199,7 @@ sub handle_request {
 
   #### Get the search keyword
   my $protein_name = $parameters{"protein_name"};
+  my $plate =  $parameters{"origene_plate"};
 
   #### If a new protein_name was supplied, store it
   if ($protein_name) {
@@ -217,6 +218,22 @@ sub handle_request {
     }
   }
 
+  #### do the same for plate name
+  if ($plate ne '') {
+    $sbeams->setSessionAttribute(
+      key => 'PeptideAtlas_origene_plate',
+      value => $parameters{"origene_plate"},
+    );
+
+  #### Else see if we had one stored
+  } else {
+    $plate = $sbeams->getSessionAttribute(
+      key => 'PeptideAtlas_origene_plate',
+    );
+    if ($plate and $protein_name) {
+      $parameters{'apply_action'} = 'GO';
+    }
+  }
 
   #### Define some variables for a query and resultset
   my %resultset = ();
@@ -265,6 +282,23 @@ sub handle_request {
   my %atlas_build_names = $sbeams->selectTwoColumnHash($sql);
 
 
+  my $plate_pattern = '';
+  my $plate_pattern2 = '';
+  my $origene_accession = '';
+  if($plate ne '' and $atlas_build_names{$atlas_build_id} =~ /Origene/i){
+    $plate =~ /(TP\d+).*(ISBHOT\d+)\-(\w)(\d+)/;
+    $origene_accession = $1;
+    #$plate = "$2-$3$4";
+    if($4 <= 10 and $4 !~ /^0/){
+      $plate_pattern = '%'.$2.'%'.$3.$4.'%';
+      $plate_pattern2 = '%'.$2.'%'.$3.'0'.$4.'%';
+    }else{
+      $plate_pattern = '%'.$2.'%'.$3.$4.'%';
+    }
+  }else{
+   $plate = '';
+  }
+
   #### Get a list of id's sorted by name
   my $sql = qq~
       SELECT atlas_build_id,atlas_build_name
@@ -274,7 +308,6 @@ sub handle_request {
       ORDER BY atlas_build_name
   ~;
   my @ordered_atlas_build_ids = $sbeams->selectOneColumn($sql);
-
 
   #### If the output_mode is HTML, then display the form
   if ($sbeams->output_mode() eq 'html') {
@@ -321,6 +354,13 @@ sub handle_request {
 
 
       print $q->textfield( "protein_name", $protein_name);
+      if( $atlas_build_names{$atlas_build_id} =~ /Origene/i){
+        print "&nbsp;&nbsp;&nbsp;";
+        print "Origene Plate: ";
+        print $q->textfield( -name => "origene_plate",
+                             -value => $plate,
+                             -size => 25);
+      }
       print $q->hidden( "apply_action", '');
 
       print "&nbsp;&nbsp;&nbsp;";
@@ -436,7 +476,7 @@ sub handle_request {
   if ($n_biosequences > 1) {
     if ($sbeams->output_mode() eq 'html') {
       print qq~
-        Several ($n_biosequences) entries were returned from your request
+        SeveraL ($n_biosequences) entries were returned from your request
         for '$protein_name' in the
         atlas build '$atlas_build_names{$atlas_build_id}'. Please select
         the appropriate one:<BR><BR>
@@ -596,6 +636,14 @@ sub handle_request {
       value=>$biosequence->{biosequence_desc},
     );
 
+    if($origene_accession){
+      print $sbeamsMOD->encodeSectionItem(
+        key=>'Origene SKU',
+        tr_info => $tr,
+        value=>$origene_accession,
+        url => "http://www.origene.com/protein/$origene_accession/GOT1.aspx"
+      );
+    }
     my $presence_level = $biosequence->{level_name};
     my $redundancy_rel = $biosequence->{relationship_name};
     my $identification_status;
@@ -788,7 +836,13 @@ sub handle_request {
     ["suitability_score","0.0001","<DIV TITLE='Score derived from peptide probability, EOS, and sequence characteristics such as missed cleavage(MC) or semi-tryptic(ST); these are annotated in red.'>ESS</DIV>"],
     ["best_probability","STR(PI.best_probability,7,3)","<DIV TITLE='Highest PeptideProphet probability for this observed sequence'>Best Prob</DIV>"],
     ["best_adjusted_probability","STR(PI.best_adjusted_probability,7,3)","<DIV TITLE=''>Best Adj Prob</DIV>"],
-    ["n_observations","PI.n_observations","<DIV TITLE='Total number of observations in all modified forms and charge states'>N Obs</DIV>"],
+  );
+  if($plate_pattern){
+    push @column_array, (["n_observations","PI2.n_observations","<DIV TITLE='Total number of observations in all modified forms and charge states'>N Obs</DIV>"]);
+  }else{
+    push @column_array, (["n_observations","PI.n_observations","<DIV TITLE='Total number of observations in all modified forms and charge states'>N Obs</DIV>"]);
+  }
+  push @column_array, (
     ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","<DIV TITLE='Empirical Observability Score'>EOS</DIV>"],
     ["SSRCalc_relative_hydrophobicity","STR(P.SSRCalc_relative_hydrophobicity,7,2)","<DIV TITLE='SSRCalc Relative Hydrophobicity score'>SSRT</DIV>"],
     ["n_protein_mappings","PI.n_protein_mappings","<DIV TITLE='Number of proteins in the reference database to which this peptide maps'>N Prot Map</DIV>"],
@@ -814,6 +868,21 @@ sub handle_request {
     column_titles_ref=>\@column_titles
   );
 
+  my $peptide_instance_clause='';
+  if($plate_pattern){
+    $peptide_instance_clause = qq~
+     INNER JOIN (
+       SELECT MPI.PEPTIDE_INSTANCE_ID, count(S.spectrum_id) as n_observations
+             FROM  $TBAT_SPECTRUM S
+       INNER JOIN  $TBAT_SPECTRUM_IDENTIFICATION SI
+             ON (SI.SPECTRUM_ID = S.SPECTRUM_ID )
+       INNER JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI 
+             ON ( MPI.MODIFIED_PEPTIDE_INSTANCE_ID = SI.MODIFIED_PEPTIDE_INSTANCE_ID)
+       WHERE S.SPECTRUM_NAME LIKE '$plate_pattern' or S.SPECTRUM_NAME LIKE '$plate_pattern2'
+       GROUP BY MPI.PEPTIDE_INSTANCE_ID
+       ) AS PI2  on (PI2.peptide_instance_id = PI.peptide_instance_id)
+     ~;
+  }
 
   #### Define a query to return peptides for this protein
   $sql = qq~
@@ -823,6 +892,7 @@ sub handle_request {
           ON ( PI.peptide_id = P.peptide_id )
      LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
           ON ( PI.peptide_instance_id = PM.peptide_instance_id )
+    $peptide_instance_clause
     INNER JOIN $TBAT_ATLAS_BUILD AB
           ON ( PI.atlas_build_id = AB.atlas_build_id )
      LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
@@ -837,7 +907,6 @@ sub handle_request {
 	  AND BS.biosequence_id = $biosequence_id
     ORDER BY P.peptide_accession
   ~;
-
   #### Define the hypertext links for columns that need them
   %url_cols = (
     'Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
@@ -901,7 +970,7 @@ sub handle_request {
       print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
                               key => 'ProteinProphet-adjusted N Obs',
                               value => $biosequence->{n_observations} )
-            if defined $biosequence->{n_observations};
+            if (defined $biosequence->{n_observations} and ! $plate);
       print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
                               key => 'Normalized PSMs per 100K',
                               value => sprintf("%0.3f", $biosequence->{norm_PSMs_per_100K}) )
@@ -942,7 +1011,7 @@ sub handle_request {
                          tr_info => $tr,
 												 obs_color => $parameters{obs_color} );
      
-  my $graphic_section = get_sequence_graphic( %graphic_params, %motif_params );
+  my $graphic_section = get_sequence_graphic(%graphic_params, %motif_params, peptide_instance_constraint => $peptide_instance_clause );
 
   my $graphic_head = $sbeamsMOD->encodeSectionHeader( text => "Sequence Motifs", link => $link );
   print "<TABLE width=600>$graphic_head </TABLE> $graphic_section" if $htmlmode;
@@ -1574,13 +1643,17 @@ sub get_synthesized_peptides {
 sub get_sequence_graphic {
 
   ## read passed args, set up variables ##
-  my %args = @_;
+  my %args = @_;;
 
   my $tmhmm = $args{protein_data}->{transmembrane_topology};
   my $id =  $args{protein_data}->{biosequence_id};
   my $protseq = $args{protein_data}->{biosequence_seq};
   my $protlen = length( $protseq );
-
+  my $peptide_instance_constraint = $args{peptide_instance_constraint} || '';
+  my $n_observation_clause ='PI.n_observations';
+  if($peptide_instance_constraint){
+      $n_observation_clause  = 'PI2.n_observations';
+  }
   # Had initially used the peptide query above, but the start/end coordinates 
   # were problematic.  Thus we need to do it again.
   my $sql = qq~
@@ -1590,11 +1663,12 @@ sub get_sequence_graphic {
            PI.n_genome_locations,
            PM.start_in_biosequence,
            PM.end_in_biosequence,
-           PI.n_observations
+           $n_observation_clause
     FROM $TBAT_PEPTIDE_INSTANCE PI INNER JOIN $TBAT_PEPTIDE P
       ON ( PI.peptide_id = P.peptide_id )
     LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
       ON ( PI.peptide_instance_id = PM.peptide_instance_id )
+    $peptide_instance_constraint
     INNER JOIN $TBAT_ATLAS_BUILD AB
       ON ( PI.atlas_build_id = AB.atlas_build_id )
     LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
