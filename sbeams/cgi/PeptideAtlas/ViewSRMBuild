@@ -261,6 +261,7 @@ sub get_build_list {
 #    $table->addRow( [ '', 'Build Name', '# Peptides', '# Transitions', '% QTrap', '% IonTrap', '% QTOF', '% Predicted', 'Comment' ] );
     my @builds = ( $headings );
     foreach my $build ( @atlas_builds ) {
+			next unless $build->[9];
       my $selected = '';
       my $bgcolor = '#dddddd';
       if ($build->[0] == $parameters{pabst_build_id} ) {
