@@ -1119,6 +1119,7 @@ sub get_table_help_section {
   $args{hidetext} ||= 'hide column descriptions';
   $args{heading} ||= '';
   $args{description} ||= '';
+  $args{footnote} ||= '';
 
 
   my $ecnt = 0;
@@ -1134,6 +1135,7 @@ sub get_table_help_section {
   <span class=section_heading>$args{heading}</span> 
   <span class=description>$args{description}</span>
   $index
+  <span class=description>$args{footnote}</span>
   END
 
   $sbeams = $self->getSBEAMS();
