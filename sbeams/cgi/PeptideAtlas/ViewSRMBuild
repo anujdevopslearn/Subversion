@@ -237,7 +237,7 @@ sub get_build_list {
 
     my $table = SBEAMS::Connection::DataTable->new();
 
-    my $headings = [ '', 'Build Name', '# Peptides', '# Transitions', '% QTrap', '% IonTrap', '% QTOF', '% Pred', 'Comment' ];
+    my $headings = [ '', 'Build Name', '# Peptides', '# Transitions', '% QTrap', '% QTOF', '% IonTrap', '% Pred', 'Comment' ];
     my $heading_defs = { '' => 'Build Selector', 'Build Name' => 'Name of SRMAtlas build',
                 '# Peptides' => 'Number of peptides in SRMAtlas build',
              '# Transitions' => 'Number of transitions in SRMAtlas build',
@@ -279,6 +279,7 @@ sub get_build_list {
         $build->[$idx] = sprintf( "%0.1f", ($build->[$idx]/$build->[9])*100 );
       }
 
+      # Truncate for display
       $#$build = 8;
 
       push @builds, $build;
