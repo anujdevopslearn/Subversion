@@ -19,7 +19,7 @@
 # Get the script set up with everything it will need
 ###############################################################################
 use strict;
-use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
+use vars qw ($q $sbeams $atlas $PROG_NAME
              $current_contact_id $current_username);
 use lib qw (../../lib/perl);
 use CGI::Carp qw(fatalsToBrowser croak);
@@ -39,10 +39,10 @@ $SBEAMS_SUBDIR = 'PeptideAtlas';
 
 
 $sbeams = new SBEAMS::Connection;
-$sbeamsMOD = new SBEAMS::PeptideAtlas;
-$sbeamsMOD->setSBEAMS($sbeams);
+$atlas = new SBEAMS::PeptideAtlas;
+$atlas->setSBEAMS($sbeams);
 my $peptide_selector = new SBEAMS::PeptideAtlas::BestPeptideSelector;
-$peptide_selector->setAtlas( $sbeamsMOD );
+$peptide_selector->setAtlas( $atlas );
 $peptide_selector->setSBEAMS( $sbeams );
 
 
@@ -80,17 +80,17 @@ sub main
     $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
     # This will look for mod-specific params and do the right thing
-    $sbeamsMOD->processModuleParameters(parameters_ref=>\%parameters);
+    $atlas->processModuleParameters(parameters_ref=>\%parameters);
 
     # get project_id
-    my $project_id = $sbeamsMOD->getProjectID(
+    my $project_id = $atlas->getProjectID(
         atlas_build_name => $parameters{atlas_build_name},
         atlas_build_id => $parameters{atlas_build_id}
         );
 
-    $sbeamsMOD->display_page_header(project_id => $project_id);
+    $atlas->display_page_header(project_id => $project_id);
 
-  my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+  my $atlas_build_id = $atlas->getCurrentAtlasBuildID(
     parameters_ref => \%parameters,
   );
 	$parameters{atlas_build_id} = $atlas_build_id;
@@ -101,13 +101,13 @@ sub main
 	$parameters{pabst_build_id} = $pabst_build_id;
 
   #### Get the HTML to display the tabs
-  my $tabMenu = $sbeamsMOD->getTabMenu(
+  my $tabMenu = $atlas->getTabMenu(
     parameters_ref => \%parameters,
     program_name => $PROG_NAME,
   );
   if ($sbeams->output_mode() eq 'html') {
     print "<BR>\n";
-    unless ( $sbeamsMOD->is_srm_mode() ) {
+    unless ( $atlas->is_srm_mode() ) {
       print $tabMenu->asHTML();
     }
     print "<BR>\n";
@@ -121,7 +121,7 @@ sub main
 
     print "$content";
 
-    $sbeamsMOD->display_page_footer();
+    $atlas->display_page_footer();
 
 
 } # end main
@@ -135,7 +135,7 @@ sub get_build_details {
 
   my @fields = qw( build_name build_comment parameter_string build_date reference_DB
                    organism n_peptides n_transitions n_qtrap n_iontrap n_qtof
-                   n_predicted pabst_build_id );
+                   n_predicted pabst_build_id n_proteins );
   my $field_string = join( ',', @fields );
   $field_string =~ s/organism/full_name AS organism/;
   $field_string =~ s/reference_DB/set_name AS reference_DB/;
@@ -159,12 +159,12 @@ sub get_build_details {
       if ( $key eq 'build_name' ) {
         $build_name = $row->{$key};
       }
-      $items .= $sbeamsMOD->encodeSectionItem( key => $key,
+      $items .= $atlas->encodeSectionItem( key => $key,
                                                value => $row->{$key} );
     }
   }
 
-  my $section_header = $sbeamsMOD->encodeSectionHeader(
+  my $section_header = $atlas->encodeSectionHeader(
     text => "SRMAtlas Build:  $build_name",
   );
 
@@ -203,12 +203,14 @@ sub get_build_list {
     my $sql = qq~
 		SELECT
 		 PB.pabst_build_id, build_name,
-		 n_peptides, n_transitions, n_qtrap, n_iontrap,
+		 n_peptides, n_transitions, n_qtrap,
 		 n_qtof,
+     n_iontrap,
      n_predicted,
-     build_comment
+     build_comment, n_proteins
 		FROM $TBAT_PABST_BUILD PB
     WHERE PB.project_id IN ( $accessible_project_ids )
+    ORDER BY build_name ASC
     ~;
 
     my @atlas_builds = $sbeams->selectSeveralColumns($sql);
@@ -230,23 +232,34 @@ sub get_build_list {
 		                         -name=>"BuildList",
                           );
 
-    $content .= qq~
-      <P>Below is a listing of the SRMAtlas builds available to
-      you.  
-      ~;
     }
 
 
     my $table = SBEAMS::Connection::DataTable->new();
 
+    my $headings = [ '', 'Build Name', '# Peptides', '# Transitions', '% QTrap', '% IonTrap', '% QTOF', '% Pred', 'Comment' ];
+    my $heading_defs = { '' => 'Build Selector', 'Build Name' => 'Name of SRMAtlas build',
+                '# Peptides' => 'Number of peptides in SRMAtlas build',
+             '# Transitions' => 'Number of transitions in SRMAtlas build',
+                   '% QTrap' => 'Number of proteins in reference set with at least some QTrap data<SUP>&dagger;</SUP>',
+                    '% QTOF' => 'Number of proteins in reference set with at least some QTOF data<SUP>&dagger;</SUP>',
+                 '% IonTrap' => 'Number of proteins in reference set with at least some IonTrap data<SUP>&dagger;</SUP>',
+                    '% Pred' => 'Number of proteins in reference set with at least some Predicted data<SUP>&dagger;</SUP>', ,
+                   'Comment' => 'Description of SRMAtlas build' };
+    my $full_headings = $atlas->make_annotation_text( label_hash => $heading_defs, label_order => $headings );
+    my $cover_def = $sbeams->makeInfoText( "<SUP>&dagger;</SUP>Instrument coverages are based on the following.  Instruments are considered in order of precedence (usually QTrap > QTOF > IonTrap > Predicted, but some have QTOF and QTrap reversed). <BR> Percentage of first category is calculated, then the percentage of the next highest is calculated from the remaining proteins (i.e. only the ones that were not covered by the first category), and so on." );
+
+      my $help_text = $atlas->make_table_help( 
+                                               entries => $full_headings,
+                                               footnote => $cover_def
+                                          );
+      print $help_text;
 
 #		 PB.pabst_build_id, build_name,
 #		 n_peptides, n_transitions, n_qtrap, n_iontrap, n_predicted,
 #		 n_qtof, build_comment
 #    $table->addRow( [ '', 'Build Name', '# Peptides', '# Transitions', '% QTrap', '% IonTrap', '% QTOF', '% Predicted', 'Comment' ] );
-    $table->addRow( [ '', 'Build Name', '# Peptides', '# Transitions', '# QTrap prot', '# IonTrap prot', '# QTOF prot', '# Predicted prot', 'Comment' ] );
-    $table->setRowAttr(  COLS => [1..6], ROWS => [1], BGCOLOR => '#bbbbbb', ALIGN=>'CENTER' );
-    $table->setHeaderAttr( BOLD => 1 );
+    my @builds = ( $headings );
     foreach my $build ( @atlas_builds ) {
       my $selected = '';
       my $bgcolor = '#dddddd';
@@ -257,23 +270,41 @@ sub get_build_list {
       <INPUT $selected TYPE="radio" NAME="pabst_build_id" VALUE="$build->[0]" onClick=blur() onChange="switchBuild()">
       END
 
-      $build->[8] = $sbeams->truncateStringWithMouseover( len => 80, 
+      $build->[8] = $sbeams->truncateStringWithMouseover( len => 60, 
                                                        string => $build->[8],
                                                   add_elipses => 1,
                                                suppress_class => 1 );
 
-#      for my $idx ( 4..7 ) {
-#        $build->[$idx] = sprintf( "%0.1f", ($build->[$idx]/$build->[2])*100 );
-#      }
+      for my $idx ( 4..7 ) {
+        $build->[$idx] = sprintf( "%0.1f", ($build->[$idx]/$build->[9])*100 );
+      }
 
-      $table->addRow( \@{$build} );
+      $#$build = 8;
+
+      push @builds, $build;
     }
+
+    my ( $html, $rs_name ) = $atlas->encodeSectionTable( header => 1,
+                                                        width => '600',
+                                                         rows => \@builds,
+                                                 rows_to_show => 5000,
+                                                     max_rows => 5000,
+                                                    help_text => '',
+                                                 set_download => 'SRMAtlas_builds',
+                                                  file_prefix => 'SRMAtlas_builds',
+                                                     bg_color => '#EAEAEA',
+                                                     sortable => 0,
+                                                     table_id => 'SRMAtlas',
+                                                     );
+
 #    $table->setColAttr(  COLS => [1..6], ROWS => [1..$rows], NOWRAP => 1 );
     $table->setColAttr(  COLS => [3..8], ROWS => [1..$table->getRowNum()], ALIGN => 'RIGHT' );
 #    $table->setColAttr(  COLS => [4,5], ROWS => [1..$rows], ALIGN => 'CENTER' );
 #    $table->setColAttr(  COLS => [3], ROWS => [1..$rows], BGCOLOR => '#eeeeee' );
 
-  $content .= "$table";
+
+  $content .= "<TABLE>$html</TABLE>";
+#  $content .= "$table";
   $content .= $q->hidden( "apply_action", '');
   $content .= $q->endform;
 
