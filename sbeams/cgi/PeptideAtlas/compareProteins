@@ -262,7 +262,6 @@ sub get_alignment_display {
 
     $coverage{$acc} = $sbeamsMOD->get_coverage_hash(      seq => $seq,         
                                                      peptides => $peptide_list->{$row[4]} ); 
-
     # Check this out later for dups...
 		$seq2acc{$seq} ||= {};
 		$seq2acc{$seq}->{$acc}++;
@@ -276,6 +275,8 @@ sub get_alignment_display {
     # Clustal W alignment file can only take 30 chars
     my $short_acc = substr( $acc, 0, 30 );
     $acc2bioseq_id{"$short_acc"} = $row[4];
+    $coverage{"$short_acc"} = $coverage{$acc};
+    $seq2acc{$seq}->{"$short_acc"}++;
 
 		my $acckeys = join( ',', keys( %acc2bioseq_id ) );
 
