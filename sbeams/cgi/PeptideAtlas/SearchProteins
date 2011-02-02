@@ -558,10 +558,13 @@ sub process_search_output {
   
   my ($search_key_name_idx, $resource_name_idx, $resource_n_matches_idx);
 
+  my $header_found = 0;
+
+  # for each line of output from Search
   for (my $i = 1; $i <= $#search_output; $i++) {
     my $line = $search_output[$i];
-    # skip non-data lines. Not very robust, but no better alternative
-    # without re-engineering stuff
+    # skip these funky non-data lines. Not very robust, but no better
+    # alternative without re-engineering stuff
     if ( ( $line =~ /Content_Type/ ) ||
          ( $line =~ /charset/ )  ) {
       next;
@@ -569,8 +572,9 @@ sub process_search_output {
     chomp $line;
     my @fields = split("\t", $line);
     my $n_fields = scalar @fields;
-    # process header line
-    if ( $line =~ /search_key/ ) {
+
+    # if this is the header line, process it.
+    if ( $line =~ /search_key_name/ ) {
       for (my $i = 0; $i < $n_fields; $i++) {
         if ( $fields[$i] =~ /search_key_name/ ) {
           $search_key_name_idx = $i;
@@ -580,35 +584,57 @@ sub process_search_output {
           $resource_n_matches_idx = $i;
         }
       }
+      $header_found = 1;
       next;
     }
+
+    # if we haven't seen a header line yet, skip.
+    next unless $header_found;
  
+    # We have a search result line.
+
+    # process the search_key_name field
+    # store each non-empty search_key_name as a "successful search key"
     my $successful_search_key = $fields[$search_key_name_idx];
     if ($successful_search_key &&
         $successful_search_key !~ /^[\s]*$/ ) {
       $successful_search_keys{$successful_search_key} = 1;
     }
+
+    # process the resource_name field
+    # store each non-empty resource_name as an "equivalent ID"
     my $equiv_id = $fields[$resource_name_idx];
     if ($equiv_id && 
         $equiv_id !~ /^[\s]*$/ ) {
       $equiv_ids{$equiv_id} = 1;
     }
+
+    # process the resource_n_matches field
     if ($#fields < $resource_n_matches_idx ||
        ! $fields[$resource_n_matches_idx]) {  # no peps for this prot observed
       $fields[$resource_n_matches_idx] = 0;
     }
+    # store the max
     if ($fields[$resource_n_matches_idx] > $n_obs) {
       $n_obs = $fields[$resource_n_matches_idx];
     }
   }
-  my $equiv_id_string = join(";", keys(%equiv_ids));
-  if ($equiv_id_string eq "") {
-    $equiv_id_string = "-";
-  }
+
+  # We are done reading the results for this $query_protid
+  
+  # If there was more than one successful search key, join them into a string
   my $successful_search_key_string = join(";", keys(%successful_search_keys));
   if ($successful_search_key_string eq "") {
     $successful_search_key_string = "-";
   }
+
+  # If there was more than one equivalent ID, join them into a string
+  my $equiv_id_string = join(";", keys(%equiv_ids));
+  if ($equiv_id_string eq "") {
+    $equiv_id_string = "-";
+  }
+
+  # Return the results
   $output_array_ref = [$query_protid,$successful_search_key_string,$n_obs,$equiv_id_string];
   return $output_array_ref;
 }

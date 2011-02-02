@@ -412,7 +412,7 @@ sub handle_request {
     $atlas_build_column =  ["atlas_build","AB.atlas_build_name","Build Name"];
     $atlas_build_clause = qq~
          JOIN $TBAT_ATLAS_BUILD AB
-              ON ( RES.atlas_build_id = AB.atlas_build_id)
+              ON ( SKL.atlas_build_id = AB.atlas_build_id)
     ~;
 
   #### ... or, typical CGI/command-line specification of an atlas build type
@@ -464,7 +464,7 @@ sub handle_request {
           $search_key_clause
           $search_types_clause
           AND SKL.atlas_build_id IN ( $atlas_build_ids )
-       ORDER BY search_key_name,build_type
+       ORDER BY search_key_name
   ~;
 
   #### Define the hypertext links for columns that need them
@@ -570,6 +570,10 @@ sub handle_request {
          }
        } 
       }
+
+      # TMF Feb 2 2011: removed ORDER BY build_type, since this was
+      # causing SearchProteins to break. However, it also causes the
+      # Search cgi results to be sorted differently. Hope this is OK.
 			if ($apply_action =~ /(QUERY|GO)/i){
 				if(! $parameters{exact_match}) {
 					my $search_key_clause = '%'.$exact_search_key.'%';
@@ -594,7 +598,7 @@ sub handle_request {
 								AND SKE.search_key_name like '$search_key_clause'
 								AND SKE.search_key_name != '$parameters{search_key}'
 								AND SKL.atlas_build_id IN ( $atlas_build_ids )
-							ORDER BY search_key_name,build_type
+							ORDER BY search_key_name
 					 ~;
 					$sbeams->fetchResultSet(
 							 sql_query=>$sql,
