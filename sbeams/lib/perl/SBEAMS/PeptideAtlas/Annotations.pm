@@ -487,6 +487,25 @@ sub get_column_defs {
   return \%coldefs;
 }
 
+sub make_annotation_text {
+  my $self = shift;
+  my %args = @_;
+  return {} unless $args{label_hash};
+
+  my @entries;
+
+  if ( $args{label_order} ) {
+    for my $key ( @{$args{label_order}} ) {
+      push @entries, { key => $key, value => $args{label_hash}->{$key} };
+    }
+  } else {
+    while ( my ($key, $value) = each( %{$args{label_hash}} ) ) {
+      push @entries, { key => $key, value => $value };
+    }
+  }
+  return \@entries;
+}
+
 #+
 # Make toggle-able table of column defs for display 
 #-
@@ -496,12 +515,14 @@ sub make_table_help {
   return '' unless $args{entries};
 
   my $description = $args{description} || '';
+  $args{footnote} || '';
   my $heading = $args{heading} || '';
 
   my $showtext = 'show column descriptions';
   my $hidetext = 'hide column descriptions';
 
   my $help = $self->get_table_help_section( description => $description,
+                                               footnote => $args{footnote},
                                                    name => $heading,
                                                 heading => $heading,
                                                 entries => $args{entries},
