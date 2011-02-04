@@ -232,14 +232,14 @@ sub insertSpectrumIdentification {
     or die("ERROR[$METHOD]: Parameter modified_sequence not passed");
   my $charge = $args{charge}
     or die("ERROR[$METHOD]: Parameter charge not passed");
-  my $probability = $args{probability}
-    or die("ERROR[$METHOD]: Parameter probability not passed");
   my $protein_name = $args{protein_name}
     or die("ERROR[$METHOD]: Parameter protein_name not passed");
   my $spectrum_name = $args{spectrum_name}
     or die("ERROR[$METHOD]: Parameter spectrum_name not passed");
   my $massdiff = $args{massdiff};
-
+  
+  my $probability = $args{probability};
+  die("ERROR[$METHOD]: Parameter probability not passed") if($probability eq '');
   our $counter;
 
   #### Get the modified_peptide_instance_id for this peptide
@@ -849,9 +849,10 @@ sub insertSpectrumIdentificationRecord {
     or die("ERROR[$METHOD]: Parameter spectrum_id not passed");
   my $atlas_search_batch_id = $args{atlas_search_batch_id}
     or die("ERROR[$METHOD]: Parameter atlas_search_batch_id not passed");
-  my $probability = $args{probability}
-    or die("ERROR[$METHOD]: Parameter probability not passed");
   my $massdiff = $args{massdiff};
+
+  my $probability = $args{probability};
+  die("ERROR[$METHOD]: Parameter probability not passed") if($probability eq '');
 
 
   #### Define the attributes to insert
