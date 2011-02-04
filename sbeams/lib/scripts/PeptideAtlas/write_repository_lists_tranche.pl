@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl  -w
+#!/usr/local/bin/perl  
 
 #######################################################################
 # write_repository_lists -- generates the public and "not public" 
@@ -29,24 +29,32 @@
 #   (1)change in get_data_url() =>get rid of existing mzXML.tar.gz
 #   (2)change in write_public_file =>only get the latest search batch results
 #   (3)change it run on phoebe
+#	
+#	Zhi Sun @200908 
+#   upload all file to tranche
+#   upload newer format of mzXML file and search result to tranche. 
+#   remove links for old files
+#
+# Zhi Sun @201010
+#   Create html page directly from this script, remove the dependency of the sForm
+#
 #######################################################################
 use strict;
 use Getopt::Long;
 use FindBin;
 use File::stat;
-
-use XML::Writer;
 use XML::Parser;
 use IO::File;
+use LWP::UserAgent;
 
 use lib "$FindBin::Bin/../../perl";
 
-use vars qw ($sbeams $sbeamsMOD $current_username 
+use vars qw ($sbeams $sbeamsMOD $q $current_username 
              $PROG_NAME $USAGE %OPTIONS $TEST $VERBOSE
-             $repository_url $public_archive_uri $sbeams_data_path
+             $sbeams_data_path
              $repository_path $tranche_path 
              $errorfile $timestamp_pattern
-             $public_xml_outfile $notpublic_xml_outfile
+             $public_php_outfile $notpublic_php_outfile
             );
 
 #### Set up SBEAMS core module
@@ -71,6 +79,9 @@ $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
+my $ua = new LWP::UserAgent;
+$ua->timeout(120);
+
 
 ## USAGE:
 $PROG_NAME = $FindBin::Script;
@@ -88,29 +99,25 @@ Options:
   --make_tmp_files       output files are named rep*.tmp to minimize 
                          interruption of active download service
 
-  --repository_url       URL for PA repository 
-
-  --public_archive_uri   public repository archive URI, relative to repository_url
-
   --sbeams_data_path     path to sbeams data 
 
   --repository_path      path to directory that apache accesses
 
-e.g.:  ./$PROG_NAME --repository_url "http://www.peptideatlas.org/repository" --public_archive_uri "/pa_public_archive" --sbeams_data_path "/disk2/archive" --repository_path "/www/peptideatlas/repository/pa_public_archive" --run --make_tmp_files
 
-e.g.:  ./$PROG_NAME --repository_url "http://www.peptideatlas.org/repository" --public_archive_uri "/pa_public_archive" --sbeams_data_path "/disk2/archive" --repository_path "/www/peptideatlas/repository/pa_public_archive" --make_tmp_files --test --verbose 1
+e.g.:  ./$PROG_NAME --sbeams_data_path "/regis/sbeams/archive" --repository_path "/regis/sbeams2/pa_public_archive" --make_tmp_files --test --verbose 1
 
 EOU
 
 ## get arguments:
 GetOptions(\%OPTIONS, "test", "run", "make_tmp_files", "verbose:s",
-"repository_url:s", "public_archive_uri:s", "sbeams_data_path:s",
+"sbeams_data_path:s",
 "repository_path:s", "test_samples:s");
 
-
+our $buffer='';
+our $notpublic_buffer = '';
+our $rowbuffer = '';
 ## check for required arguments:
 unless ( ($OPTIONS{"test"} || $OPTIONS{"run"} || $OPTIONS{"test_samples"} ) && 
-$OPTIONS{"repository_url"} && $OPTIONS{"public_archive_uri"} &&
 $OPTIONS{"sbeams_data_path"} && $OPTIONS{"repository_path"})
 {
     print "$USAGE";
@@ -138,17 +145,16 @@ $TEST = $OPTIONS{"test"} || 0;
 
 $VERBOSE = $OPTIONS{"verbose"} || 0;
 
-$repository_url = $OPTIONS{"repository_url"};
-
-$public_archive_uri = $OPTIONS{"public_archive_uri"};
-
 $sbeams_data_path = $OPTIONS{"sbeams_data_path"};
 
 $repository_path = $OPTIONS{"repository_path"};
 
 $timestamp_pattern = "+%Y%m%d%H%M";
 
-if ($TEST)
+our %TrancheDescription =();
+
+
+if ($TEST || $OPTIONS{"test_samples"} )
 {
     $repository_path = "$repository_path/TESTFILES";
 }
@@ -156,20 +162,21 @@ if ($TEST)
 
 
 ## paths for output files:
-$public_xml_outfile = "$repository_path/repository_public.xml";
+$public_php_outfile = "$repository_path/repository_public.php";
 
-$notpublic_xml_outfile = "$repository_path/repository_notpublic.xml";
+$notpublic_php_outfile = "$repository_path/repository_notpublic.php";
 
 $errorfile = "$repository_path/errorfile.txt";
 
 if ( $OPTIONS{"make_tmp_files"} )
 {
-    $public_xml_outfile = $public_xml_outfile . ".tmp2";    
+    $public_php_outfile = $public_php_outfile . ".tmp2";    
 
-    $notpublic_xml_outfile = $notpublic_xml_outfile . ".tmp2";    
+    $notpublic_php_outfile = $notpublic_php_outfile . ".tmp2";    
 }
 
-$tranche_path = "/net/dblocal/www/html/devZS/sbeams/lib/scripts/PeptideAtlas/tranche_project";
+#$tranche_path = "/net/dblocal/www/html/devZS/sbeams/lib/scripts/PeptideAtlas/tranche_project";
+$tranche_path = "/regis/sbeams/bin/";
 #### execute main #####
 main();
 
@@ -201,28 +208,30 @@ sub main
 
 
     ## write namespace and root tag to xml file:
-    initializeXMLFile(xml_outfile => $public_xml_outfile);
+    initializePhp(public => 1);
 
-    initializeXMLFile(xml_outfile => $notpublic_xml_outfile);
+    initializePhp(public => 0);
 
-    ## write $public_xml_outfile, tar up relevant files and move em if needed
+    ## write $public_php_outfile, tar up relevant files and move em if needed
     write_public_file();
 
-    ## write $notpublic_xml_outfile
+    ## write $notpublic_php_outfile
     write_private_file();
 
 
     ## write ending root node and check that xml is well-formed
-    finalizeXMLFile(xml_outfile => $public_xml_outfile);
-
-    finalizeXMLFile(xml_outfile => $notpublic_xml_outfile);
-
+    finalizePhp(public => 1);
+    finalizePhp(public => 0);
 
     print "\nWrote the following files:\n";
-
-    print "$public_xml_outfile\n"; 
-
-    print "$notpublic_xml_outfile\n"; 
+    print "$public_php_outfile\n"; 
+    open (OUT, ">$public_php_outfile") ;
+    print OUT "$buffer\n";
+    close OUT;
+    print "$notpublic_php_outfile\n"; 
+    open (OUT2, ">$notpublic_php_outfile") ;
+    print OUT2 "$notpublic_buffer\n";
+    close OUT2;
 
     print "$errorfile\n"; 
 
@@ -239,9 +248,9 @@ sub check_host()
 {
     ## make sure that this is running on atlas for queries
     my $uname = `uname -a`;
-    unless ($uname =~ /.*(helene).*/)
+    unless ($uname =~ /.*(dione).*/)
     {
-       die "you must run this on helene";
+       die "you must run this on dione";
     }
 }
 
@@ -251,7 +260,7 @@ sub check_host()
 #######################################################################
 sub check_files()
 {
-    my @outfiles =  ($public_xml_outfile, $notpublic_xml_outfile, $errorfile);
+    my @outfiles =  ($public_php_outfile, $notpublic_php_outfile, $errorfile);
 
     for (my $i=0; $i <= $#outfiles; $i++)
     {
@@ -336,7 +345,6 @@ sub write_public_file
         ## SQL statement
         my $test_sample_ids = formatSampleIDs(
             sample_ids => $OPTIONS{"test_samples"});
-
         $sql = qq~
         SELECT distinct S.sample_accession, S.sample_tag, S.sample_id,
         O.organism_name, S.is_public
@@ -385,26 +393,56 @@ sub write_public_file
     my @rows = $sbeams->selectSeveralColumns($sql) or 
         die "Couldn't find sample records using $sql";
 
-    my $count = 0;
+   my $date = `date`;
+   my $sample_number = scalar @rows -1;
+   $buffer .= qq~ <p class="rep">
+      There are
+      $sample_number  experimental datasets available for download ($date)</p><br/>
+      <form action="http://db.systemsbiology.net/webapps/repository/sForm" method="post">
+
+      <input type="button" value="Mark All Matching Records" onClick="MarkSelectedTexts()">
+      <input type="button" value="Generate Hash File" onClick="GenerateHashFile()">
+      <input type="button" value="TrancheDownloader" onClick="window.open('https://proteomecommons.org/tranche/advanced.jsp')">
+
+      <table class="rep" id="table1">
+
+      <tbody>
+      <tr><th class="rep">
+              Sample Accession
+            </th><th class="rep">
+              Name
+            </th><th class="rep">
+                Organism
+            </th><th class="rep"><a target="_blank" href="http://www.peptideatlas.org/repository/resources_help.php">
+                Resources
+              </a></th><th class="rep">
+                Description
+            </th><th class="rep">
+
+                Data Contributors
+            </th><th class="rep">
+                Related Publications
+            </th></tr>
+     ~;
 
     ## store query results in $sample_info
     for (my $i=1; $i< scalar @rows; $i+=1) 
     {
         my $row = $rows[$i];
-        $count = $count + 1;
-
+        %TrancheDescription =();
         my (@file_array_for_README, @pubmed_id_array_for_README);
-
         my (@pub_cit_array_for_README, @pub_url_array_for_README);
-
-
         my ($sample_accession, $sample_tag, $sample_id, $organism, 
             $is_public) = @{$row};
-        print $sample_accession,"\n";
+
+        next if($organism eq 'Chimpanzee');
+        #next if( $sample_accession !~ /PAe0012(89|82|91|86|88|80|81|90|87)/);
+        print "$sample_accession\n";
+
         my $sql2 = qq~
         SELECT S.sample_description, S.data_contributors
         FROM $TBAT_SAMPLE S
-        WHERE S.sample_id = '$sample_id'
+        WHERE S.sample_id = $sample_id
         AND S.record_status != 'D'
         ~;
 
@@ -424,6 +462,9 @@ sub write_public_file
             $data_contributors =~ s/\r/ /g;
             $data_contributors =~ s/\n/ /g;
         }
+        
+        $TrancheDescription{sample_description} = $sample_description;
+        $TrancheDescription{data_contributors} = $data_contributors;
 
         ## write to xml file, the start of the sample tag, and some of the sample info:
         startSampleTag(
@@ -449,21 +490,22 @@ sub write_public_file
         ## be present in the apache accessible archive area for anyone dialing up the url directly.
         my $spectra_data_dir = get_spectra_location( sample_id => $sample_id);
 
-
         ## get mzXML url, check properties of database with timestamp properties file ( if lagging,
         ## pack up new files etc, or if the archive doesn't already exist create the archive file, etc)
-        my $mzXML_url = get_mzXML_url(  
+        my $mzXML_url= get_mzXML_url(  
                        sample_id => $sample_id, 
                        organism => $organism,
                        sample_accession => $sample_accession, 
-                       spectra_data_dir => $spectra_data_dir);
-        my $mzXML_size = getFileSize( file => $OPTIONS{"repository_path"}, 
-                                      accession => $sample_accession."_mzXML" );
+                       spectra_data_dir => $spectra_data_dir,
+                       );
+        my $mzXML_size  = getFileSize( file => $repository_path, 
+                                      accession => $sample_accession."_mzXML",
+                                       url  => $mzXML_url);
+
         addResourceTag(attr_name => "mzXML_format", 
                        attr_value => $mzXML_url, 
                        file_size => $mzXML_size);
-
-        push(@file_array_for_README, "mzXML_$mzXML_size");
+       push(@file_array_for_README, "mzXML_$mzXML_size");
 
 
         ## get orig data type by searching data dir for known suffixes
@@ -486,8 +528,9 @@ sub write_public_file
             );
        
             my $attr = $origDataType . "_format";
-            my $orig_data_size = getFileSize( file => $OPTIONS{"repository_path"}, 
-                                              accession => $sample_accession."_$origDataType");
+            my $orig_data_size = getFileSize( file => $repository_path, 
+                                              accession => $sample_accession."_$origDataType",
+                                              url => $orig_data_url);
             ## write xml resource element for this:
             addResourceTag(attr_name => $attr, 
                            attr_value => $orig_data_url,  
@@ -496,8 +539,8 @@ sub write_public_file
         }
 
         ###########  iterate over all search batches for this sample #############
-	#unlike before, we only want to latest search results
-	#in other words, the highest atlas_search_batch_id
+       	#unlike before, we only want to latest search results
+       	#in other words, the highest atlas_search_batch_id
 
         my $sql2 = qq~
             SELECT distinct ASB.TPP_version, ASB.atlas_search_batch_id, ASB.data_location,
@@ -514,7 +557,7 @@ sub write_public_file
         my @rows2 = $sbeams->selectSeveralColumns($sql2) or 
         die "Couldn't find ATLAS_SEARCH_BATCH records for sample $sample_id";
 
-	#Ning changed the following code
+       	#Ning changed the following code
         #foreach my $row2 (@rows2) 
         #{
             my ($TPP_version, $atlas_search_batch_id, $data_location,
@@ -549,8 +592,9 @@ sub write_public_file
                 search_results_dir => $data_location,
             );
 
-            my $search_results_size = getFileSize( file => $OPTIONS{"repository_path"}, 
-                                                   accession => $sample_accession."_Search_Results" );
+            my $search_results_size = getFileSize( file => $repository_path,
+                                              accession => $sample_accession."_Search_Results" ,
+                                                   url  => $search_results_url);
             ## write url to xml file as attribute in a resource element
             addResourceTag(attr_name => "Search_Results", 
                            attr_value => $search_results_url, 
@@ -606,8 +650,9 @@ sub write_public_file
                 sample_accession => $sample_accession,
                 search_results_dir => $data_location
             );
-            my $ProteinProphet_size = getFileSize( file => $OPTIONS{"repository_path"}, 
-                                                   accession => $sample_accession."_prot" ); 
+            my $ProteinProphet_size = getFileSize( file => $repository_path,
+                                              accession => $sample_accession."_prot",
+                                                   url  =>$protein_prophet_url  ); 
             ## write url to xml file as attribute in a resource element
             addResourceTag(attr_name => "ProteinProphet_file", 
                 attr_value => $protein_prophet_url, 
@@ -630,6 +675,8 @@ sub write_public_file
 
         my @rows3 = $sbeams->selectSeveralColumns($sql3);
 
+        $rowbuffer .= qq~ <td class="rep"> ~;
+
         foreach my $row3 (@rows3) 
         {
             my ($pub_name, $pub_url, $pubmed_id) = @{$row3};
@@ -643,6 +690,8 @@ sub write_public_file
 
             push(@pub_url_array_for_README, $pub_url);
         } 
+
+        $rowbuffer .= "</td>";
 
         ## writes the readme file and returns its URL
         my $readme_url = write_readme_and_get_readme_url(
@@ -674,6 +723,8 @@ sub write_public_file
         addResourceTag(attr_name => "README", attr_value => $readme_url);
         addResourceTag(attr_name => "README_TRANCHE", attr_value => $readmehash);
         ## write to xml file, the end of the sample tag
+        $buffer .= $rowbuffer;
+
         endSampleTag();
     } ## end loop over samples
 }
@@ -710,56 +761,17 @@ sub startSampleTag
 
     ## write opening sample tag information to xml:
     ## open xml file and writer:
-    my $out = new IO::File(">>$public_xml_outfile");
-
-    my $writer = new XML::Writer(OUTPUT=> $out, UNSAFE => 1);
-
-    ## indent 2 spaces, write start tag, write end-of line marker
-    $out->print("  ");
-    $writer->startTag("sample");
-    $out->print("\n");
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("sample_accession");
-    $writer->characters($sample_accession);
-    $writer->endTag("sample_accession");
-    $out->print("\n");
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("sample_tag");
-    $writer->characters($sample_tag);
-    $writer->endTag("sample_tag");
-    $out->print("\n");
-
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("organism");
-    $writer->characters($organism);
-    $writer->endTag("organism");
-    $out->print("\n");
-
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("description");
-    $writer->characters($description);
-    $writer->endTag("description");
-    $out->print("\n");
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("data_contributors");
-    $writer->characters($data_contributors);
-    $writer->endTag("data_contributors");
-#   $out->print("\n");
-
-    $writer->end();
-
-    $out->close();
-
+    
+    $buffer .= qq~
+     <tr><td class="rep">$sample_accession</td>
+     <td class="rep">$sample_tag</td>
+     <td class="rep">$organism</td>
+     <td class="rep">
+    ~;
+    $rowbuffer = qq~
+     <td class="rep">$description</td>
+     <td class="rep">$data_contributors</td>
+    ~;
 }
 
 #######################################################################
@@ -768,17 +780,8 @@ sub startSampleTag
 sub endSampleTag
 {
     ## open xml file and writer:
-    my $out = new IO::File(">>$public_xml_outfile");
+    $buffer.= "</tr>";
 
-    my $writer = new XML::Writer(OUTPUT=> $out, UNSAFE => 1);
-
-    ## indent 2 spaces, write end sample tag:
-    $out->print("  ");
-    $writer->endTag("sample");
-
-    $writer->end();
-
-    $out->close();
 }
 
 #######################################################################
@@ -801,6 +804,7 @@ sub get_mzXML_url
     my $spectra_data_dir = $args{spectra_data_dir} or die "need spectra_data_dir";
 
     my $organism = $args{organism} or die "need organism name";
+
     ## Get hash of spectra info with keys: conversion_software_name, conversion_software_version,
     ## and mzXML_schema
     my %spectra_properties = get_spectra_properties_info_from_db( sample_id => $sample_id);
@@ -823,8 +827,8 @@ sub get_mzXML_url
         data_dir => $spectra_data_dir,
         file_suffix => "mzXML",
         file_pattern => "mzXML",
-        properties_ref => \%spectra_properties
-    );
+        properties_ref => \%spectra_properties,
+        );
 
     #return $mzXML_url;
    # $file_url = convertAbsolutePathToURL( file_path => $file_path );
@@ -836,73 +840,112 @@ sub get_mzXML_url
 
 
 #######################################################################
-#  initializeXMLFile -- write xml declaration and root node start tag
+#  initializePhp -- write xml declaration and root node start tag
 #######################################################################
-sub initializeXMLFile
+sub initializePhp
 {
-    my %args = @_;
-
-    my $xml_outfile = $args{'xml_outfile'} || die "need xml_outfile ($!)";
-
-    my $out = new IO::File(">$xml_outfile");
-
-    my $writer = new XML::Writer(OUTPUT=> $out, UNSAFE => 1);
-
-    $writer->xmlDecl('UTF-8');
-
-    $writer->startTag( 'repository' );
-
-    $writer->end();
-
-    $out->close();
+  my %args = @_;
+  my $public = $args{public};;
+  if($public){
+    $buffer = `cat /net/dblocal/wwwspecial/peptideatlas/repository/Header.php`;
+  }else{
+    $notpublic_buffer= `cat /net/dblocal/wwwspecial/peptideatlas/repository/Header_unrelease.php`; 
+  }
+ 
 }
 
 #######################################################################
-#  finalizeXMLFile -- write root node end tag, and check well-formedness
+#  finalizePhp -- write root node end tag, and check well-formedness
 #######################################################################
-sub finalizeXMLFile
+sub finalizePhp
 {
-    my %args = @_;
+  my %args = @_;
+  my $public = $args{public};;
+  if($public){
+  $buffer .= qq~
+    </tbody></table>
+		</form>
 
-    my $xml_outfile = $args{xml_outfile} || die "need xml_outfile ($!)";
+		<br/><br/><br/><br/>
 
-    my $out = new IO::File(">>$xml_outfile");
+		<script language="javascript" type="text/javascript">
+		//<![CDATA[	
+			var table_Props =		{					
+							col_2: "select",
+							display_all_text: " [ Show all ] ",
+							sort_select: true,
+							col_width: ["250px","200px"],//prevents column width variations
+							alternate_rows: true,
+																						rows_counter: true,
+							rows_counter_text: "Matched rows: ",
+							btn_reset: true,
+							bnt_reset_text: "Clear all"
+						};
+			setFilterGrid( "table1",table_Props );
+		//]]>
 
-    my $writer = new XML::Writer(OUTPUT=> $out, UNSAFE => 1);
+		</script>
 
-    $writer->endTag( 'repository' );
 
-    $writer->end();
+		</body></html>
 
-    $out->close();
+		<!-- ------------------------ End of main content ------------------------ -->
+		<!--footer-->
 
-    checkWellFormedness();
+				</td></tr>
+				</table>
+
+				<td height="600" width="1"></td>
+				<tr>
+
+					<td colspan="2" bgcolor="#827975" height="3">
+						<center><span class="copyright">© 2009, Institute for Systems Biology, All Rights Reserved</span>
+						<br></center>
+					</td>
+					<td height="1" width="1">
+						<img src="/images/clear.gif" border="0" height="1" width="1">
+					</td>
+				</tr>
+
+			</tr>
+
+			<tr height="5">
+				<td colspan="2" bgcolor="#294a93" height="5">
+					<img src="/images/clear.gif" border="0" height="5" width="1">
+				</td>
+				<td height="5" width="1">
+					<img src="/images/clear.gif" border="0" height="1" width="1">
+				</td>
+
+			</tr>
+
+			</table>
+			<!-- End Main page table -->
+				
+						<script type="text/javascript">
+		var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+		document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+		</script>
+		<script type="text/javascript">
+		var pageTracker = _gat._getTracker("UA-2217548-2");
+		pageTracker._setDomainName("none");
+		pageTracker._setAllowLinker(true);
+		pageTracker._initData();
+		pageTracker._trackPageview();
+		</script>
+
+
+		</body>
+    </html>
+   ~;
+  }else{
+     $notpublic_buffer .= qq~
+       </tbody></table>
+       <br/><br/><br/><br/></body></html>
+     ~;
+  }
+
 }
-
-
-#######################################################################
-#  checkWellFormedness -- check that xml file is well-formed
-#######################################################################
-sub checkWellFormedness
-{
-    ## check that xml file is well-formed
-    my $parser = new XML::Parser();
-
-    eval
-    {
-        $parser->parsefile ("$public_xml_outfile");
-    };
-
-
-    if ($@)
-    {
-        print "WARNING: $public_xml_outfile is not well-formed\n";
-
-        error_message (
-            message => "WARNING: $public_xml_outfile is not well-formed");
-    }
-}
-
 
 #######################################################################
 # get_data_url -- given sample_accession, search dir, and data_type, 
@@ -942,7 +985,7 @@ sub get_data_url
     my $data_dir = $args{data_dir} || die "need data directory for $sample_accession";
 
     my $properties_ref = $args{properties_ref} or die "need properties_ref";
-
+    
     my %properties = %{$properties_ref};
 
     my $file_suffix = $args{file_suffix} || 
@@ -955,7 +998,7 @@ sub get_data_url
     #### make a file containing files with pattern: ####
     my $fileWithFileNames = "tt.txt"; 
 
-    my $pat = $sample_accession . ".*" . $file_pattern . ".*" . "gz";
+    my $pat = $sample_accession . ".*" . $file_pattern;
 
     ## files are in $repository_path, but be careful not to include $repository_path/TESTFILES
    # my $cmd = "find $repository_path/ -maxdepth 1 -name \"$pat\"  -print > $fileWithFileNames";
@@ -963,14 +1006,14 @@ sub get_data_url
     ## where each file in $fileWithFileNames is given as the absolute path to the file
     #print "$cmd\n" if ($VERBOSE);
     #system $cmd;
-
+    `rm tt.txt`;
     if ( -e "$repository_path\/$sample_accession".'_tranche.hash')
     {
        `grep \'$pat\' "$repository_path\/$sample_accession\_tranche.hash" > $fileWithFileNames`; 
+       print "grep \'$pat\' \"$repository_path\/$sample_accession\_tranche.hash\" > $fileWithFileNames\n"        if ($VERBOSE);  
     } 
 
     my $latestFile = "";
-
     ## if filelist is not empty
     if (-s $fileWithFileNames)
     {
@@ -978,44 +1021,38 @@ sub get_data_url
         $latestFile = getLatestFileName( fileWithFileNames => $fileWithFileNames ); 
         ## this is absolute path
     }
-
-
-    if ($latestFile)
-    {
+    if ($latestFile) {
         ## [case: versioned files exist, and we found the latest]
         ## compare properties timestamp file to database properties
         ## and return true if it is current, or false if it is not
         my $fileIsCurrent = isFileCurrent( 
                               file => $latestFile, 
                               properties_ref => $properties_ref);
-
-        if ($fileIsCurrent)
-        {
+        if ($fileIsCurrent){
             ## [case: versioned file exists and is in sync with database info]
-        } else
-        {
+        } else{
             ## [case: versioned file is lagging behind database info]
 
             ## create new properties file and new gzipped archive, 
             ## return absolute path (= $repository_path/file)
             ## for newly created gzipped archive
             ## AND update the database information
-	    ## Ning_added, remove all other versions of mzXML.tar.gz
-	    my $rm_pat = "$repository_path/$pat";
-	    system "rm -f $rm_pat";
+	          ## Ning_added, remove all other versions of mzXML.tar.gz
+	          #my $rm_pat = "$repository_path/$pat";
+	          #system "rm -f $rm_pat";
 
             $latestFile = makeNewArchiveAndProperties(
                 sample_accession => $sample_accession,
                 organism => $organism,
                 data_dir => $data_dir,
                 file_suffix => $file_suffix,
-                file_pattern => $file_pattern
-            );
+                file_pattern => $file_pattern,
+                );
+
             
         }
 
-    } else
-    {
+    } else{
         ## [case: no versioned file exists yet]
            
         ## create new properties file and new gzipped archive
@@ -1030,8 +1067,9 @@ sub get_data_url
             organism => $organism,
             data_dir => $data_dir,
             file_suffix => $file_suffix,
-            file_pattern => $file_pattern
-        );
+            file_pattern => $file_pattern,
+            );
+
     }
 
 
@@ -1355,6 +1393,18 @@ sub write_private_file
     ##  $samples{$sample_tag}->{organism} = $cell_type;
     ##  $samples{$sample_tag}->{data_contributors} = $data_contributors;
     my %samples = get_notpublic_sample_info();
+    my $sample_count = scalar keys %samples;
+    my $date = `date`;
+   $notpublic_buffer .= qq~
+        There are
+        $sample_count experimental datasets not released ($date)</p><br/><table class="rep2">
+        <tbody>
+        <tr><th class="rep">Name </th><th class="rep">
+            Organism
+        </th><th class="rep">
+            Data Contributors
+        </th></tr>
+    ~;
 
 
     ## iterate over sample_tags, writing formatted info to file:
@@ -1406,7 +1456,7 @@ sub write_to_notpublic_file
     my $cell_type = $args{'cell_type'} || "[]"; ## might not be in record
 
    ######## write to xml file: ########
-    writeNotPublicXMLSample(
+    writeNotPublicPhpSample(
         sample_tag => $sample_tag,
         organism => $organism,
         cell_type => $cell_type,
@@ -1417,7 +1467,7 @@ sub write_to_notpublic_file
 
 
 #######################################################################
-# writeNotPublicXMLSample -- write not public sample info to xml file.  
+# writeNotPublicPhpSample -- write not public sample info to xml file.  
 #
 # Format is:
 # <sample>
@@ -1427,7 +1477,7 @@ sub write_to_notpublic_file
 # </sample>
 #
 #######################################################################
-sub writeNotPublicXMLSample
+sub writeNotPublicPhpSample
 {
     my %args = @_;
 
@@ -1446,57 +1496,12 @@ sub writeNotPublicXMLSample
     {
        $data_contributors = $args{data_contributors} #zhi or die "need data_contributors";
     }
-
-
-    ## open xml file and writer:
-    my $out = new IO::File(">>$notpublic_xml_outfile");
-
-    my $writer = new XML::Writer(OUTPUT=> $out, UNSAFE => 1);
-
-    ## indent 2 spaces, write start tag, write end-of line marker
-    $out->print("  ");
-    $writer->startTag("sample");
-    $out->print("\n");
-
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("sample_tag");
-    $writer->characters($sample_tag);
-    $writer->endTag("sample_tag");
-    $out->print("\n");
-
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("organism");
-    $writer->characters($organism);
-    $writer->endTag("organism");
-    $out->print("\n");
-
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("cell_type");
-    $writer->characters($cell_type);
-    $writer->endTag("cell_type");
-    $out->print("\n");
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("data_contributors");
-    $writer->characters($data_contributors);
-    $writer->endTag("data_contributors");
-    $out->print("\n");
-
-
-    ## indent 2 spaces, write end sample tag:
-    $out->print("  ");
-    $writer->endTag("sample");
-
-    $writer->end();
-
-    $out->close();
+    $notpublic_buffer .= qq~
+         <tr><td class="rep">$sample_tag</td>
+         <td class="rep">$organism</td>
+         <td class="rep">$data_contributors</td>
+         </tr>
+    ~;
 
 }
 
@@ -1546,30 +1551,62 @@ sub getLatestFileName
 
     return $latestFile;
 }
-
 #######################################################################
-# getAFileInFile - open given file which has a list of files, and
-# return the name of the first file in it
-# @param fileWithFileNames
-# @return aFile - a file in the file which contains a list of files
+# getFileSize -- get file size in units of MB
+#
+# @param file
 #######################################################################
-sub getAFileInFile
+sub getFileSize
 {
     my %args = @_;
 
-    my $infile = $args{fileWithFileNames} or die "need fileWithFileNames";
+    my $path = $args{file};
+    my $accession = $args{accession};
+    my $url   = $args{url};
+    my $file;
+    my $file_size;
 
-    my $latestFile;
+    #get file size from README
+    if(! $url) {
+    my $readme = $accession;
+    $readme =~ s/\_.*//;
+    $readme .= "_README";
+    $file_size = `grep $accession $repository_path/$readme`;
+    if($file_size){
+      if($file_size =~/.*\s+(\d+)\s+.*/){
+        $file_size = $1;
+        if($file_size >= 1000000000){
+          $file_size = sprintf("%.3f", $file_size/1000000000);
+          $file_size .= " GB";
+        }elsif($file_size < 1000000000 and $file_size >= 1000000){
+          $file_size = sprintf("%.3f", $file_size/1000000);
+          $file_size .= " MB";
+        }elsif ($file_size < 1000000 and $file_size >= 1000){
+          $file_size = sprintf("%.3f", $file_size/1000);
+          $file_size .= " KB";
+        }
 
-    open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
+      }else{
+        $file_size = '';
+      }
+     }
+    }else{
 
-    my $fileName = <INFILE>;
-
-    chomp($fileName);
-
-    close(INFILE) or die "Cannot close $infile";
-
-    return $fileName;
+       if($url =~ /data-downloader/){
+          $url =~ s/data-downloader.jsp\?fileName/dataset.jsp\?i/;
+          $url =~ s/http/https/;
+       }else{
+          $url =~ s/\+/%2B/g;
+          $url = "https://proteomecommons.org/dataset.jsp?i=$url";
+       }
+       my $request = new HTTP::Request('GET', $url);
+       my $response = $ua->request($request);
+       my $content = $response->content();
+       $content =~ /\D+([\d\.]+\s+(MB|GB|bytes|KB)).*/;
+       print "$url\n";
+       $file_size = $1;
+    }
+    return $file_size;
 }
 
 
@@ -1605,16 +1642,16 @@ sub isFileCurrent
     my %propertiesInFile = getPropertiesInFile( 
         propertiesFileName => $propertiesFileName 
     );
-
     ## comparator for mzXML
-    if ( exists $propertiesInDatabase{mzXML_schema} )
+    if ( $propertiesInDatabase{mzXML_schema})
     {
         $fileIsCurrent = mzXML_comparator( 
             propertiesInDatabase_ref => \%propertiesInDatabase,
             propertiesInFile_ref => \%propertiesInFile
         );
+    }else{
+      $fileIsCurrent =1;
     }
-
     return $fileIsCurrent;
 }
 
@@ -1670,7 +1707,7 @@ sub getPropertiesInFile
         {
             $propertiesHash{$1} = $3;
         }
-
+       
     }
 
     close(INFILE) or die "Cannot close $infile";
@@ -1880,45 +1917,6 @@ sub convertURLToFileName
 } 
 
 #######################################################################
-# convertFileNameToURL  -- convert file name to the URL
-# @param file_name  - the relative file name
-# @return URL for file
-#######################################################################
-sub convertFileNameToURL
-{
-    my %args = @_;
-
-    my $file_name = $args{file_name} or die "need file_name";
-
-    my $file_url;
-
-    $file_url = $repository_url . $public_archive_uri . "/" . $file_name;
-
-    return $file_url;
-} 
-#######################################################################
-# convertAbsolutePathToURL  -- convert file path to the full URL
-# @param file_path  - absolute path to file
-# @return URL for file
-#######################################################################
-sub convertAbsolutePathToURL
-{
-    my %args = @_;
-
-    my $file_path = $args{file_path} or die "need file_path";
-
-    my $file_name = $file_path;
- 
-    ## get file name (drop directory path)
-    $file_name =~ s/^(.*)\/(.+\.tar\.gz)$/$2/;
-    $file_name =~ s/^(.*)\/(.+\.gz)$/$2/;
-
-    my $file_url = $repository_url . $public_archive_uri . "/" . $file_name;
-
-    return $file_url;
-} 
-
-#######################################################################
 # deriveFileContentFromName -- derive the file content from the file
 # name.  this is used to fill out an item in the README file
 # @param filename
@@ -2008,7 +2006,6 @@ sub makeNewArchiveAndProperties
 
     my $versioned_compressed_archive_file_path;
 
- 
     #######  create new versioned gzipped archive and properties file  #######
 
     ## get a local (relative) filename to use for the .tar file: 
@@ -2030,9 +2027,9 @@ sub makeNewArchiveAndProperties
 
     chdir $data_dir || die "cannot chdir to $data_dir ($!)";
     print "chdir $data_dir\n" if ($VERBOSE);
-
+  
     #### make a file containing files with pattern: ####
-    my $filelist = "tt.txt";
+    my $filelist = "$repository_path/tt.txt";
     my $cmd = "rm -f $filelist";
     print "$cmd\n" if ($VERBOSE);
     system $cmd;
@@ -2050,7 +2047,6 @@ sub makeNewArchiveAndProperties
         print "$cmd\n" if ($VERBOSE);
         system $cmd;
     }
-
     ## if filelist is empty, report error message, and set final file to null: 
     if (-z $filelist)
     {
@@ -2060,14 +2056,13 @@ sub makeNewArchiveAndProperties
 
         $versioned_compressed_archive_file_path = "";
 
-    } else
-    {
+    } else{
         my %properties_hash;
 
         ## if this is an mzXML file, get it's properties
         if ( $file_suffix eq "mzXML" )
         {
-            ## write a properties file with the mzXML characteristics
+            ## write a poperties file with the mzXML characteristics
             my $mzXMLFile = getAFileInFile( fileWithFileNames => $filelist);
 
             my $spectrum_parser = new SpectraDescriptionSetParametersParser();
@@ -2098,41 +2093,42 @@ sub makeNewArchiveAndProperties
 
             %properties_hash = ( TPP_version => $TPP_version );
         }
-         
         writePropertiesFile(
-            versioned_properties_filename => $versioned_properties_filename,
+            versioned_properties_filename => "$repository_path/$versioned_properties_filename",
             properties_hash_ref => \%properties_hash);
-
 
         ## get archive filename from $versioned_compressed_archive_filename
         my $versioned_archive_filename = $versioned_compressed_archive_filename;
         $versioned_archive_filename =~ s/\.gz//;
 
         ## make tar file
-        my $cmd = "tar -cf $versioned_archive_filename --files-from=$filelist";
-        print "$cmd\n" if ($VERBOSE);
-        system $cmd;
+        #my $cmd = "tar -cf $versioned_archive_filename --files-from=$filelist";
+        #print "$cmd\n" if ($VERBOSE);
+        #system $cmd;
     
         ## compress the tar file:
-        my $cmd = "gzip $versioned_archive_filename";
-        print "$cmd\n" if ($VERBOSE);
-        system $cmd;
+        #my $cmd = "gzip $versioned_archive_filename";
+        #print "$cmd\n" if ($VERBOSE);
+        #system $cmd;
 
         ## move them to $repository_path/  
-        $cmd = "mv $versioned_compressed_archive_filename $repository_path/";
-        print "$cmd\n" if ($VERBOSE);
+        #$cmd = "mv $versioned_compressed_archive_filename $repository_path/";
+        my $versioned_compressed_archive_filepath = $versioned_compressed_archive_filename;
+         $versioned_compressed_archive_filepath  =~ s/.tar.gz//;
+        `mkdir $repository_path/$versioned_compressed_archive_filepath`; 
+        $cmd = "cp \`cat $filelist\` $repository_path/$versioned_compressed_archive_filepath";
+        print "$cmd\n";
         system $cmd;
 
-        $cmd = "mv $versioned_properties_filename $repository_path/";
-        print "$cmd\n" if ($VERBOSE);
-        system $cmd;
+        #$cmd = "mv $versioned_properties_filename $repository_path/";
+        #print "$cmd\n" if ($VERBOSE);
 
-        my $check_path1 = $repository_path . "/" . $versioned_compressed_archive_filename;
+        my $check_path1 = $repository_path . "/" . $versioned_compressed_archive_filepath;
 
         my $check_path2 = $repository_path . "/" . $versioned_properties_filename;
 
         ## update the database, but make sure the move completed first:
-        if ( (-e $check_path1 ) && ( -e $check_path2 ) )
+        if ( (-d $check_path1 ) && ( -e $check_path2 ) )
         {
             if (exists $properties_hash{mzXML_schema})
             {
@@ -2199,7 +2195,9 @@ sub makeNewArchiveAndProperties
     {
        my $samplelocation = "$repository_path/$versioned_compressed_archive_filename";
        my $hash = upload2tranche(sample_location => "$samplelocation",
-                                 organism => $organism);
+                                  organism => $organism,
+                                 );
+
        chdir $progwd;
        return $hash;
    } 
@@ -2209,6 +2207,34 @@ sub makeNewArchiveAndProperties
       return  $versioned_compressed_archive_file_path;
    }
 }
+#######################################################################
+# getAFileInFile - open given file which has a list of files, and
+# return the name of the first file in it
+# @param fileWithFileNames
+# @return aFile - a file in the file which contains a list of files
+#######################################################################
+sub getAFileInFile
+{
+    my %args = @_;
+
+    my $infile = $args{fileWithFileNames} or die "need fileWithFileNames";
+
+    my $latestFile;
+
+    open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
+    my $fileName='';
+    foreach my $f (<INFILE>){
+     chomp $f;
+     if( ! -z $f){
+      $fileName = $f;
+      last;
+     }
+    }
+    close(INFILE) or die "Cannot close $infile";
+
+    return $fileName;
+}
+
 
 
 #######################################################################
@@ -2335,34 +2361,21 @@ sub addResourceTag
 
     ## write opening sample tag information to xml:
     ## open xml file and writer:
-    my $out = new IO::File(">>$public_xml_outfile");
-
-    my $writer = new XML::Writer(OUTPUT=> $out, UNSAFE => 1);
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    if (($file_size) && !($asbid))
-    {
-        $writer->startTag("resource", $attr_name => $attr_value, 
-            'file_size' => $file_size );
-    } elsif (($file_size) && ($asbid))
-    {
-        $writer->startTag("resource", $attr_name => $attr_value, 
-            'file_size' => $file_size, 'asbid' => $asbid );
-    } elsif (!($file_size) && ($asbid))
-    {
-        $writer->startTag("resource", $attr_name => $attr_value, 
-            'asbid' => $asbid );
-    } else
-    {
-        $writer->startTag("resource", $attr_name => $attr_value);
+    $file_size = "($file_size)<nobr>" if $file_size;
+    if($attr_name eq 'README'){
+      $buffer .= qq~ <a onmousedown="whichButton=event.button;Mousedown(this)" href="$attr_value">README</a>~;
+   }elsif($attr_name eq 'README_TRANCHE'){
+       $buffer .= qq~
+                <input value="$attr_value" type="hidden"/>
+                </td> 
+                ~;
+    }else{
+      $buffer .= qq~
+                <a onmousedown="whichButton=event.button;Mousedown(this)" href="$attr_value">
+                $attr_name</a>$file_size<br/>
+                ~;
     }
-    $writer->endTag("resource");
-#   $out->print("\n");
 
-    $writer->end();
-
-    $out->close();
 }
 
 #######################################################################
@@ -2379,21 +2392,7 @@ sub addPublicationTag
     my $url = $args{url} or die "need url for citation: $citation";
 
     ## write opening sample tag information to xml:
-    ## open xml file and writer:
-    my $out = new IO::File(">>$public_xml_outfile");
-
-    my $writer = new XML::Writer(OUTPUT=> $out, UNSAFE => 1);
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("publication", "citation" => $citation,
-        "url" => $url );
-    $writer->endTag("publication");
-#   $out->print("\n");
-
-    $writer->end();
-
-    $out->close();
+    $rowbuffer .= qq~ <a href="$url">$citation</a><br/>~;
 }
 
 
@@ -2425,10 +2424,11 @@ sub get_orig_data_url
         "orig_data_type";
 
     my $hash;
-
     ## does an archive file already exist in the repository?
-    my $filelist = "tt.txt";
-    my $pat = "$sample_accession.*$orig_data_type.*";
+    my $filelist = "$repository_path/tt.txt";
+    `rm -f $filelist`;
+    `touch $filelist`;
+     my $pat = "$sample_accession.*$orig_data_type.*";
 #    my $cmd = "find $repository_path/ -maxdepth 1 -name \'$pat\' -print > $filelist";
 #    print "$cmd\n" if ($VERBOSE);
 #    system $cmd;
@@ -2452,7 +2452,6 @@ sub get_orig_data_url
 
     if (-z $filelist)
     {   ## [case: file list is empty]
-
         ## get a local (relative) filename to use for the .tar file:
         my $versioned_compressed_archive_filename =
             get_versioned_compressed_archive_filename(
@@ -2462,13 +2461,13 @@ sub get_orig_data_url
 
         ## get archive filename from $versioned_compressed_archive_filename
         my $versioned_archive_filename = $versioned_compressed_archive_filename;
-        $versioned_archive_filename =~ s/\.gz//;
+        $versioned_archive_filename =~ s/\.tar\.gz//;
 
         ####  return the absolute path of the versioned gzipped archive file  ####
         $versioned_compressed_archive_file_path =
-        "$repository_path/$versioned_compressed_archive_filename";
+        "$repository_path/$versioned_archive_filename";
         my $progwd = `pwd`;
-        unless (-e $versioned_compressed_archive_file_path)
+        unless (-d $versioned_compressed_archive_file_path)
         {
             ## [case: no file exists yet in repository]
         
@@ -2481,7 +2480,7 @@ sub get_orig_data_url
             print "chdir $data_dir\n" if ($VERBOSE);
 
             #### make a file containing files with pattern: ####
-            $filelist = "tt.txt";
+            $filelist = "$repository_path/tt.txt";
             my $cmd = "rm -f $filelist";
             print "$cmd\n" if ($VERBOSE);
             system $cmd;
@@ -2494,34 +2493,33 @@ sub get_orig_data_url
             ## if filelist is empty, report error message, and set final file to null: 
             ## this shouldn't happen though, as only reach this point with a defined
             ## orig data type
-            if (-z $filelist)
-            {
+            if (-z $filelist){
                 error_message ( 
                     message => "could not find $orig_data_type files in $data_dir",
                 );
 
                 $versioned_compressed_archive_filename = "";
 
-            } else
-            {
-                my $tar_file_name = $versioned_archive_filename;
-
+            } else{
+                #my $tar_file_name = $versioned_archive_filename;
                 ## make tar file
-                my $cmd = "tar -cf $tar_file_name --files-from=$filelist";
-                print "$cmd\n" if ($VERBOSE);
-                system $cmd;
+                #my $cmd = "tar -cf $tar_file_name --files-from=$filelist";
+                #print "$cmd\n" if ($VERBOSE);
+                #system $cmd;
     
                 ## compress the tar file:
-                my $cmd = "gzip $tar_file_name";
-                print "$cmd\n" if ($VERBOSE);
-                system $cmd;
+                #my $cmd = "gzip $tar_file_name";
+                #print "$cmd\n" if ($VERBOSE);
+                #system $cmd;
 
                 ####  move them to $repository_path/  ####
-                $cmd = "mv $versioned_compressed_archive_filename $versioned_compressed_archive_file_path";
+                #$cmd = "mv $versioned_compressed_archive_filename $versioned_compressed_archive_file_path";
+                `mkdir $versioned_compressed_archive_file_path`;
+                $cmd = "cp \`cat $filelist\` $versioned_compressed_archive_file_path";
                 print "$cmd\n" if ($VERBOSE);
                 system $cmd;
                 $hash = upload2tranche(
-                    sample_location => "$repository_path/$versioned_compressed_archive_filename",
+                    sample_location => "$versioned_compressed_archive_file_path",
                     organism => $organism);
 
             }
@@ -2559,14 +2557,15 @@ sub get_an_sb_file_url
          
     ## does a search_batch for this atlas_search_batch_id already exist in
     ## the archive?  if not, make one:
-    my $filelist = "tt.txt";
+    my $filelist = "$repository_path/tt.txt";
+    `rm -f $filelist`;
     my $pat = "$file_name";
     $pat =~ /(.*)\_.*\_.*/;
     my $sample_accession = $1;
     my $progwd = `pwd`;
     if ( -e "$repository_path\/$sample_accession".'_tranche.hash')
     {
-       `rm -f $filelist`;
+       #`rm -f $filelist`;
        `grep \'$pat\' "$repository_path\/$sample_accession\_tranche.hash" > $filelist`;
     }
     my $file_path;
@@ -2604,20 +2603,23 @@ sub get_an_sb_file_url
         ## if filelist is not empty
         unless (-z $filelist)
         {
-            my $cmd = "cp $sb_file_name $file_name";
+            my $cmd = "cp $sb_file_name $repository_path/$file_name";
             print "$cmd\n" if ($VERBOSE);
             system $cmd;
             ## move it to $repository_path/
-            $cmd = "mv $file_name $repository_path/";
-            print "$cmd\n" if ($VERBOSE);
-            system $cmd;
+            #$cmd = "mv $file_name $repository_path/";
+            #print "$cmd\n" if ($VERBOSE);
+            #system $cmd;
             $hash = upload2tranche(sample_location => "$repository_path/$file_name",
                                    organism => $organism);
        }
        chdir $progwd;
     }
-    $hash =~ s/\+/\%2B/g;
-    my $file_url = "http://www.proteomecommons.org/data-downloader.jsp?fileName=".$hash;   
+    my $file_url = '';
+    if($hash){
+      $hash =~ s/\+/\%2B/g;
+      $file_url ="http://www.proteomecommons.org/data-downloader.jsp?fileName=".$hash;   
+    }
     return $file_url;
  
 }
@@ -2628,21 +2630,32 @@ sub upload2tranche
 {
     my %args =@_;
 
-    ## search results file name will be:
-    ## PAe0000001_Search_Results_<atlas_search_batch_id>_<timestamp>.properties
 
     my $organism = $args{organism} or die
         "need organism";
     my $samplelocation = $args{sample_location} or die
         "need samplelocation";
 
-    my ($file_name,$sample_accession);
+    my ($file_name,$sample_accession, $desc);
     my $file_path = $samplelocation;
+
+    $desc = "peptideAtlas data\n";
+    $desc .= "Organism: $organism\n";
+
+    if($TrancheDescription{data_contributors}){
+       $desc .="data contributors: $TrancheDescription{data_contributors}\n";
+    }
+    if($TrancheDescription{sample_description}){
+       $desc .="sample description: $TrancheDescription{sample_description}\n";
+    }
+    print "$desc\n"; #zhi
+
     $samplelocation =~ /.*\/(.*)/;
     $file_name = $1;
     $file_name =~ /(PAe\d+)/;
     $sample_accession = $1;
     $samplelocation =~ s/\..*//;
+   
     chdir $repository_path;
     mkdir "$samplelocation";
     `mv $file_path $samplelocation`;
@@ -2652,21 +2665,25 @@ sub upload2tranche
              --pass cscf0616 \\
              --email zsun\@systemsbiology.org \\
              --title \"PeptideAtlas repository $file_name\" \\
-             --desc "peptideAtlas data" \\
+             --desc "$desc" \\
              --data_loc $samplelocation \\
              --organism $organism;
              ~;
     print "$cmd\n";
     system($cmd);
     my $hash = `tail -1 tranche_*.hashes`;
+
     if($hash)
     {
+      if($hash =~ /Tearing/){
+        print  "ERROR Tranche uploading fail\n";
+      }else{
        `touch $sample_accession\_tranche.hash`;
        `echo "$file_name\t$hash" >> $sample_accession\_tranche.hash`;
+      }
     }
-    `rm tranche*`;
-    `mv $samplelocation/* $samplelocation/../`;
-	`rm -r $samplelocation`;
+    `mv tranche* log`;
+	  `rm -r $samplelocation`;
     return $hash;
 
 }
@@ -2794,21 +2811,17 @@ sub get_protein_prophet_url
     ## does a protein prophet archive for this atlas_search_batch_id already exist in
     ## the archive?  if not, make one:
     my $filelist = "tt.txt";
-    my $pat = "$sample_accession.*$suffix.*gz";
 
-
-  #  my $cmd = "find $repository_path/ -maxdepth 1 -name \"$pat\">$filelist";
+    my $pat = "$sample_accession.*$suffix";
+    #  my $cmd = "find $repository_path/ -maxdepth 1 -name \"$pat\">$filelist";
     if ( -e "$repository_path\/$sample_accession".'_tranche.hash')
     {
        `grep \'$pat\' "$repository_path\/$sample_accession\_tranche.hash" > $filelist`; 
     } 
 
-    #print "command $cmd\n" if ($VERBOSE);
-    #system $cmd;
     my $file_path;
     if (-s $filelist)
     { ## [case: file list is not empty]
-
         $file_path = getLatestFileName( fileWithFileNames => $filelist );
        print "Found archive file: $file_path\n" if ($VERBOSE);
     }
@@ -2896,8 +2909,8 @@ sub write_readme_and_get_readme_url
     my $outfile = "$repository_path/$sample_accession" . "_README";
 
     my $file_name = $sample_accession . "_README";
-    my $readme_url = convertFileNameToURL( file_name => $file_name );
-
+    #my $readme_url = convertFileNameToURL( file_name => $file_name );
+    my $readme_url  = "http://www.peptideatlas.org/repository/pa_public_archive/".$file_name;
     ## write to README file
     open(OUTFILE,">$outfile") or die "cannot open $outfile for writing";
 
@@ -2951,14 +2964,14 @@ sub write_readme_and_get_readme_url
     print OUTFILE "$str";
     for ( my $i = 0; $i <= $#array_of_file_urls ; $i++){
         my $size = $array_of_file_urls[$i];
-        $size =~ /(.*)\_(\d+)/;
+        $size =~ /(.*)\_(\d*)/;
         my $file_type = $1;
         my $file_size = $2;
         my $tranche_hashfile = "$repository_path/$sample_accession"."_tranche.hash";
         if (!-e $tranche_hashfile){
             error_message( message => "file does not exist: $tranche_hashfile");
         } else{
-         print "grep $size $file_type $tranche_hashfile\n";
+         print "grep $file_type $tranche_hashfile\n";
             my $tmp = `grep $file_type $tranche_hashfile`;
             my ($file_name,$hash) = split(/\s+/, $tmp);
             #$str = sprintf("$fmt", $file_name, $file_size, $hash);
@@ -2970,7 +2983,7 @@ sub write_readme_and_get_readme_url
             }
         }
     }
-#zhi    close(OUTFILE) or die "cannot close $outfile ($!)";
+    close(OUTFILE) or print "cannot close $outfile ($!)";
     return $readme_url;
 
 }
@@ -3034,43 +3047,46 @@ sub getFileSize
 
     my $path = $args{file};
     my $accession = $args{accession};
-
+    my $url   = $args{url};
     my $file;
-    my $file_path;
     my $file_size;
-    
-    if(-e "$path/$accession*.tar.gz")
-    {
-      $file = `ls $path/$accession*.tar.gz`;
-      $file =~ s/\s+/\|/g;
-      my @file_path = split(/\|/, $file);
-      if($file_path[1]){ print "ERROR: too many gz file\n";}
-      $file_path = $file_path[0];
+   
+    #get file size from README
+    my $readme = $accession;
+    $readme =~ s/\_.*//;
+    $readme .= "_README";
+    $file_size = `grep $accession $repository_path/$readme`;
+    if($file_size){
+      if($file_size =~/.*\s+(\d+)\s+.*/){
+        $file_size = $1;
+      }else{
+        $file_size = '';
+      }
     }
- 
-    if (!-e $file_path)
-    {
-       #get file size from README
-       my $readme = $accession;
-       $readme =~ s/\_.*//;
-       $readme .= "_README";
-       $file_size = `grep $accession $repository_path/$readme`;
-       if($file_size)
-       {
-          my @tmp = split(/\s+/, $file_size);
-          if($tmp[1] =~ /^\d+$/)
-          {
-            $file_size = $tmp[1];
-          }
+    if(! $file_size and $url){
+        
+       if($url =~ /data-downloader/){
+          $url =~ s/data-downloader.jsp\?fileName/dataset.jsp\?i/;
+          $url =~ s/http/https/;
+       }else{
+          $url =~ s/\+/%2B/g;
+          $url = "https://proteomecommons.org/dataset.jsp?i=$url";
        }
-       else
-       { 
-         error_message( message => "file does not exist: $file_path");
-       }
-    } else
-    {
-        $file_size = stat($file_path)->size;
+       my $request = new HTTP::Request('GET', $url);
+       my $response = $ua->request($request);
+       my $content = $response->content();
+       $content =~ /\D+([\d\.]+)\s+((MB|GB|bytes|KB)).*/;
+       
+       $file_size = $1;
+       my $unit = $2;
+       if($unit =~ /MB/){
+         $file_size *= 1000000;
+       }elsif($unit =~ /KB/){
+         $file_size *= 1000;
+       }elsif($unit =~ /GB/){
+         $file_size *= 1000000000;
+       } 
+       chomp $file_size;
     }
-print " $file_path\t$file_size\n";  
-  return $file_size;
+    return $file_size;
 }
