@@ -279,7 +279,7 @@ if ($DEBUG) {
   print "  TESTONLY = $TESTONLY\n";
 }
 
-my $PEP_PROB_CUTOFF = 0.5;
+my $PEP_PROB_CUTOFF = $OPTIONS{P_threshold} || 0.5;;
 
 my $source_file = $OPTIONS{source_file} || '';
 my $build_dir = $OPTIONS{build_dir} || '';
@@ -508,7 +508,7 @@ sub pepXML_start_element {
   #### If this is the search_hit, then store some attributes
   #### Note that this whole logic will break if there's more than one
   #### search_hit, which shouldn't be true so far
-  if ($localname eq 'search_hit') {
+  if ($localname eq 'search_hit' ){
     die("ERROR: Multiple search_hits not yet supported!")
       if (exists($self->{pepcache}->{peptide}));
     $self->{pepcache}->{peptide} = $attrs{peptide};
@@ -2350,18 +2350,18 @@ sub main {
       #### If we're encountering the new peptide, process and write the previous
       if ($prev_peptide_sequence &&
           $peptide_sequence ne $prev_peptide_sequence) {
-	my $peptide_summary = coalesceIdentifications(
-	  rows => \@rows,
-	  column_names => \@column_names,
-	);
-	writeToAPDFormatFile(
-	  peptide_summary => $peptide_summary,
-	);
-	writeToPAxmlFile(
-	  peptide_summary => $peptide_summary,
-	);
-	$prev_peptide_sequence = $peptide_sequence;
-	@rows = ();
+         	my $peptide_summary = coalesceIdentifications(
+	        rows => \@rows,
+	        column_names => \@column_names,
+          );
+          writeToAPDFormatFile(
+    	    peptide_summary => $peptide_summary,
+          );
+          writeToPAxmlFile(
+        	  peptide_summary => $peptide_summary,
+        	);
+        	$prev_peptide_sequence = $peptide_sequence;
+        	@rows = ();
       }
 
       #### If there is no peptide sequence, the we're at the end of the file
@@ -3319,7 +3319,7 @@ sub coalesceIdentifications {
     $info->{preceding_residue} = $row->[$columns->{preceding_residue}];
     $info->{following_residue} = $row->[$columns->{following_residue}];
     if (!defined($info->{best_probability}) ||
-	$info->{best_probability} < $row->[$columns->{probability}]) {
+    	$info->{best_probability} < $row->[$columns->{probability}]) {
       $info->{best_probability} = $row->[$columns->{probability}];
     }
     $info->{n_instances}++;
@@ -3700,7 +3700,7 @@ sub encodeXMLEntity {
   if ($attributes) {
 
     while (my ($name,$value) = each %{$attributes}) {
-      if ($value  && $value ne "")
+      if (defined $value  && $value ne "")
       {
         if ($compact) {
   	$buffer .= qq~ $name="$value"~;
