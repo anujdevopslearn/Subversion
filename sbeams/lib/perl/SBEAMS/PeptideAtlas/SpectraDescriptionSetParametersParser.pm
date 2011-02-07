@@ -102,6 +102,10 @@ sub parse {
       close(INFILE) or die "Cannot close $infile";
       $self->parse_mzXML();
       return;
+    }elsif($line =~ /<msRun/){
+      close(INFILE) or die "Cannot close $infile";
+      $self->parse_mzXML();
+      return;
     }
     $n_lines++;
   }
@@ -169,8 +173,8 @@ sub parse_mzML {
   if ($schema eq "") {
     carp "[WARN] please edit parser to pick up schema for $infile";
   } 
-  $self->{mzXML_schema} = $schema;
-
+  $self->{spectrumXML_schema} = $schema;
+  print "$schema \n";
   if ($model_name eq "") {
     carp "[WARN] please edit parser to pick up instrument_model_name for $infile";
   }
@@ -194,17 +198,9 @@ sub parse_mzXML {
   my ($schema, $model_name, $software_name, $software_version);
 
   open(INFILE, "<$infile") or die "cannot open $infile for reading ($!)";
-
   while ( defined(my $line = <INFILE>)) {
 
     chomp($line);
-
-    ## recent schema:
-#      if ($line =~ /.+schemaLocation=\".+\/(.+)\/schema_revision\/(.+)\/(.+\.xsd)\">/) 
-    if ($line =~ /.+schemaLocation=\".+\/(.+)\/schema[^\\]*\/(.+)\.xsd\"/ ) {
-      $schema = $2;
-    }
-
 
     #### Once we get to an msLevel attribute, we have all the information
     #### we need, so stop the parsing
@@ -215,10 +211,17 @@ sub parse_mzXML {
 
     ## former MsXML schema:
     ## xsi:schemaLocation="http://sashimi.sourceforge.net/schema/ http://sashimi.sourceforge.net/schema/MsXML.xsd
-    if ($line =~ /.+schemaLocation=\".+\/(.+)\/schema\/(.+)\.xsd\"/ ) {
-      $schema = $2;
+    if($line =~ /schemaLocation/){
+      if ($line =~ /.*\/(\S+.xsd)\"/ ) {
+        $schema = $1;
+      }
     }
-
+    #if ($line =~ /.+schemaLocation=\".+\/(.+)\/schema_revision\/.*(mz\S+.xsd)\"/ ) {
+    #  $schema = $2;
+    #}
+    #if ($line =~ /.+schemaLocation=\".+\/(.+)\/schema\/(.+)\.xsd\"/ ) {
+    #  $schema = $2;
+    #}
 #        if ($line =~ /\<msManufacturer\scategory=\".+\"\svalue=\"(.+)\"\/\>/)
     if ($line =~ /\<msManufacturer\s+category=\".+\"\s+value=\"(.+)\".*\/\>/) {
       $model_name = ( $model_name ) ? $model_name . " $1" : $1;
@@ -290,7 +293,7 @@ sub parse_mzXML {
   if ($schema eq "") {
     carp "[WARN] please edit parser to pick up schema for $infile";
   } 
-  $self->{mzXML_schema} = $schema;
+  $self->{spectrumXML_schema} = $schema;
 
   if ($model_name eq "") {
     carp "[WARN] please edit parser to pick up instrument_model_name for $infile";
