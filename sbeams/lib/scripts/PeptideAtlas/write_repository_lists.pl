@@ -29,24 +29,29 @@
 #   (1)change in get_data_url() =>get rid of existing mzXML.tar.gz
 #   (2)change in write_public_file =>only get the latest search batch results
 #   (3)change it run on phoebe
+#
+#    Zhi Sun @ 20110207 
+#    1: use peptideatlas FTP site to store the tar file.
+#    2: Create html page directly from this script, remove the dependency of the sForm
 #######################################################################
+
 use strict;
 use Getopt::Long;
 use FindBin;
 use File::stat;
 
-use XML::Writer;
 use XML::Parser;
 use IO::File;
+use LWP::UserAgent;
 
 use lib "$FindBin::Bin/../../perl";
 
-use vars qw ($sbeams $sbeamsMOD $current_username 
+use vars qw ($sbeams $sbeamsMOD $q $current_username 
              $PROG_NAME $USAGE %OPTIONS $TEST $VERBOSE
-             $repository_url $public_archive_uri $sbeams_data_path
-             $repository_path 
+             $repository_url $repository_path
+             $sbeams_data_path
              $errorfile $timestamp_pattern
-             $public_xml_outfile $notpublic_xml_outfile
+             $public_php_outfile $notpublic_php_outfile
             );
 
 #### Set up SBEAMS core module
@@ -82,39 +87,28 @@ Options:
   --test_samples         if would like to run test, using specific samples,
                          can specify them here separated by commas
                          (e.g.,  --test_samples "26,34")
-
-  --run                  run program
-
+  --test_project_ids        --test_project_id "965" 
+  --project_ids
+  --run 
   --make_tmp_files       output files are named rep*.tmp to minimize 
                          interruption of active download service
 
-  --repository_url       URL for PA repository 
-
-  --public_archive_uri   public repository archive URI, relative to repository_url
-
-  --sbeams_data_path     path to sbeams data 
-
-  --repository_path      path to directory that apache accesses
-
-e.g.:  ./$PROG_NAME --repository_url "http://www.peptideatlas.org/repository" --public_archive_uri "/pa_public_archive" --sbeams_data_path "/disk2/archive" --repository_path "/www/peptideatlas/repository/pa_public_archive" --run --make_tmp_files
-
-e.g.:  ./$PROG_NAME --repository_url "http://www.peptideatlas.org/repository" --public_archive_uri "/pa_public_archive" --sbeams_data_path "/disk2/archive" --repository_path "/www/peptideatlas/repository/pa_public_archive" --make_tmp_files --test --verbose 1
+e.g.:  ./$PROG_NAME  --test_sample 2700 --verbose 1 
+       ./$PROG_NAME  --test_project_ids "965" --verbose 1
 
 EOU
 
 ## get arguments:
-GetOptions(\%OPTIONS, "test", "run", "make_tmp_files", "verbose:s",
-"repository_url:s", "public_archive_uri:s", "sbeams_data_path:s",
-"repository_path:s", "test_samples:s");
+GetOptions(\%OPTIONS, "test", "make_tmp_files", "verbose:s", "test_samples:s",
+           "test_project_ids:s","project_ids:s");
 
 
 ## check for required arguments:
-unless ( ($OPTIONS{"test"} || $OPTIONS{"run"} || $OPTIONS{"test_samples"} ) && 
-$OPTIONS{"repository_url"} && $OPTIONS{"public_archive_uri"} &&
-$OPTIONS{"sbeams_data_path"} && $OPTIONS{"repository_path"})
+unless ( $OPTIONS{"test"} || $OPTIONS{"test_samples"} || 
+         $OPTIONS{"test_project_ids"} || $OPTIONS{"run"} ||
+         $OPTIONS{"project_ids"})
 {
     print "$USAGE";
-
     exit;
 };
 
@@ -138,15 +132,18 @@ $TEST = $OPTIONS{"test"} || 0;
 
 $VERBOSE = $OPTIONS{"verbose"} || 0;
 
-$repository_url = $OPTIONS{"repository_url"};
+$repository_url = "http://www.peptideatlas.org/repository/pa_public_archive2";;
 
-$public_archive_uri = $OPTIONS{"public_archive_uri"};
+#$public_archive_uri = $OPTIONS{"public_archive_uri"};
+$sbeams_data_path = "/regis/sbeams/archive/";
 
-$sbeams_data_path = $OPTIONS{"sbeams_data_path"};
-
-$repository_path = $OPTIONS{"repository_path"};
+$repository_path = "/prometheus/u1/ftp/pub/PeptideAtlas/Repository";
 
 $timestamp_pattern = "+%Y%m%d%H%M";
+our %TrancheDescription =();
+our $buffer='';
+our $notpublic_buffer = '';
+our $rowbuffer = '';
 
 if ($TEST)
 {
@@ -156,17 +153,17 @@ if ($TEST)
 
 
 ## paths for output files:
-$public_xml_outfile = "$repository_path/repository_public.xml";
+$public_php_outfile = "$repository_path/repository_public.php";
 
-$notpublic_xml_outfile = "$repository_path/repository_notpublic.xml";
+$notpublic_php_outfile = "$repository_path/repository_notpublic.php";
 
 $errorfile = "$repository_path/errorfile.txt";
 
 if ( $OPTIONS{"make_tmp_files"} )
 {
-    $public_xml_outfile = $public_xml_outfile . ".tmp";    
+    $public_php_outfile = $public_php_outfile . ".tmp";    
 
-    $notpublic_xml_outfile = $notpublic_xml_outfile . ".tmp";    
+    $notpublic_php_outfile = $notpublic_php_outfile . ".tmp";    
 }
 
 
@@ -201,33 +198,48 @@ sub main
 
 
     ## write namespace and root tag to xml file:
-    initializeXMLFile(xml_outfile => $public_xml_outfile);
+    #initializeXMLFile(xml_outfile => $public_php_outfile);
 
-    initializeXMLFile(xml_outfile => $notpublic_xml_outfile);
+    #initializeXMLFile(xml_outfile => $notpublic_php_outfile);
+    initializePhp(public => 1);
+    initializePhp(public => 0);
 
-    ## write $public_xml_outfile, tar up relevant files and move em if needed
+    ## write $public_php_outfile, tar up relevant files and move em if needed
     write_public_file();
 
-    ## write $notpublic_xml_outfile
+    ## write $notpublic_php_outfile
     write_private_file();
 
 
     ## write ending root node and check that xml is well-formed
-    finalizeXMLFile(xml_outfile => $public_xml_outfile);
+    #finalizeXMLFile(xml_outfile => $public_php_outfile);
 
-    finalizeXMLFile(xml_outfile => $notpublic_xml_outfile);
-
+    #finalizeXMLFile(xml_outfile => $notpublic_php_outfile);
+    #finalizeXMLFile(xml_outfile => $public_php_outfile);
+    #finalizeXMLFile(xml_outfile => $notpublic_php_outfile);
+    finalizePhp(public => 1);
+    finalizePhp(public => 0);
 
     print "\nWrote the following files:\n";
 
-    print "$public_xml_outfile\n"; 
+    print "$public_php_outfile\n"; 
+    open (OUT, ">$public_php_outfile") ;
+    print OUT "$buffer\n";
+    close OUT;
 
-    print "$notpublic_xml_outfile\n"; 
+    print "$notpublic_php_outfile\n"; 
+    open (OUT2, ">$notpublic_php_outfile") ;
+    print OUT2 "$notpublic_buffer\n";
+    close OUT2;
 
     print "$errorfile\n"; 
+   
 
-    print "\nDial up jsp page on browser to generate static HTML and
-    copy that viewed source to web location. \n";
+    close OUT;
+    close OUT2;
+    # update symbolic link
+    system("rm -f /net/dblocal/wwwspecial/peptideatlas/repository/pa_public_archive2/*");
+    system("ln -s $repository_path/* /net/dblocal/wwwspecial/peptideatlas/repository/pa_public_archive2/");
 
 } ## end main
 
@@ -241,9 +253,9 @@ sub check_host()
     ## make sure that this is running on atlas for queries
     my $uname = `uname -a`;
 
-    unless ($uname =~ /.*(helene).*/)
+    unless ($uname =~ /.*(dione).*/)
     {
-        die "you must run this on helene";
+        die "you must run this on dione";
     }
 }
 
@@ -253,7 +265,7 @@ sub check_host()
 #######################################################################
 sub check_files()
 {
-    my @outfiles =  ($public_xml_outfile, $notpublic_xml_outfile, $errorfile);
+    my @outfiles =  ($public_php_outfile, $notpublic_php_outfile, $errorfile);
 
     for (my $i=0; $i <= $#outfiles; $i++)
     {
@@ -294,7 +306,7 @@ sub check_samples
         {
             print "[ERROR] $st is missing data_contributors\n";
 
-            $exit_flag = 1;
+            #$exit_flag = 1;
         }
 
     }
@@ -332,13 +344,33 @@ sub write_public_file
 {
     my $sql;
 
-    if ($OPTIONS{"test_samples"})
+    if ($OPTIONS{"test_samples"} || $OPTIONS{"test_project_ids"})
     {
         ## get a string of sample id formatted for use in IN clause of
         ## SQL statement
-        my $test_sample_ids = formatSampleIDs(
+        my $test_sample_ids ='';
+        if($OPTIONS{"test_samples"}  ne ''){
+          $test_sample_ids = formatSampleIDs(
             sample_ids => $OPTIONS{"test_samples"});
-
+        }elsif($OPTIONS{"test_project_ids"} ne ''){
+          my $test_project_ids = formatSampleIDs(
+            sample_ids => $OPTIONS{"test_project_ids"});
+          $test_sample_ids = qq~
+						SELECT DISTINCT S.SAMPLE_ID
+						FROM
+						$TBPR_PROTEOMICS_EXPERIMENT E,
+						$TBPR_SEARCH_BATCH SB,
+						$TBAT_ATLAS_SEARCH_BATCH ASB,
+						$TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB,
+						$TBAT_SAMPLE S
+						WHERE
+						E.EXPERIMENT_ID = SB.EXPERIMENT_ID
+						AND SB.SEARCH_BATCH_ID = ASB.PROTEOMICS_SEARCH_BATCH_ID
+						AND ASB.SAMPLE_ID = ABSB.SAMPLE_ID
+						AND ABSB.SAMPLE_ID = S.SAMPLE_ID
+						AND E.PROJECT_ID in ($test_project_ids)
+         ~;
+        } 
         $sql = qq~
         SELECT distinct S.sample_accession, S.sample_tag, S.sample_id,
         O.organism_name, S.is_public
@@ -351,6 +383,8 @@ sub write_public_file
         AND S.sample_id IN ($test_sample_ids)
         ORDER BY O.organism_name, S.sample_tag
         ~;
+        print "$sql\n";
+        
         
     } elsif ($TEST)
     {   ## Use 2 records for TEST
@@ -368,6 +402,27 @@ sub write_public_file
 
     } else
     {
+        my $sample_id_clause='';
+        if( $OPTIONS{"project_ids"} ne ''){
+          my $project_ids = formatSampleIDs(
+            sample_ids => $OPTIONS{"project_ids"});
+          $sample_id_clause = qq~
+            AND S.sample_id in (
+            SELECT DISTINCT S.SAMPLE_ID
+            FROM
+            $TBPR_PROTEOMICS_EXPERIMENT E,
+            $TBPR_SEARCH_BATCH SB,
+            $TBAT_ATLAS_SEARCH_BATCH ASB,
+            $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB,
+            $TBAT_SAMPLE S
+            WHERE
+            E.EXPERIMENT_ID = SB.EXPERIMENT_ID
+            AND SB.SEARCH_BATCH_ID = ASB.PROTEOMICS_SEARCH_BATCH_ID
+            AND ASB.SAMPLE_ID = ABSB.SAMPLE_ID
+            AND ABSB.SAMPLE_ID = S.SAMPLE_ID
+            AND E.PROJECT_ID in ($project_ids))
+           ~;
+        }
         $sql = qq~
         SELECT distinct S.sample_accession, S.sample_tag, S.sample_id,
         O.organism_name, S.is_public
@@ -377,7 +432,8 @@ sub write_public_file
         JOIN $TBAT_BIOSEQUENCE_SET BS ON (BS.biosequence_set_id = AB.biosequence_set_id)
         JOIN $TB_ORGANISM O ON (BS.organism_id = O.organism_id)
         WHERE S.is_public = 'Y' AND S.record_status != 'D'
-        AND S.sample_id != '198' AND S.sample_id != '292'
+        $sample_id_clause
+        --AND S.sample_id != '198' AND S.sample_id != '292'
         ORDER BY O.organism_name, S.sample_tag
         ~;
         ## xx temporarily adding ignore MicroProt datasets as their 
@@ -387,18 +443,48 @@ sub write_public_file
     my @rows = $sbeams->selectSeveralColumns($sql) or 
         die "Couldn't find sample records using $sql";
 
+   my $date = `date`;
+   my $sample_number = scalar @rows;
+   $buffer .= qq~ <p class="rep">
+      There are
+      $sample_number  experimental datasets available for download ($date)</p><br/>
+      <form action="http://db.systemsbiology.net/webapps/repository/sForm" method="post">
+
+      <input type="button" value="Mark All Matching Records" onClick="MarkSelectedTexts()">
+      <input type="button" value="Generate Bash File" onClick="GenerateBashFile()">
+      <table class="rep" id="table1">
+
+      <tbody>
+      <tr><th class="rep">
+              Sample Accession
+            </th><th class="rep">
+              Name
+            </th><th class="rep">
+                Organism
+            </th><th class="rep"><a target="_blank" href="http://www.peptideatlas.org/repository/resources_help.php">
+                Resources
+              </a></th><th class="rep">
+                Description
+            </th><th class="rep">
+
+                Data Contributors
+            </th><th class="rep">
+                Related Publications
+            </th></tr>
+     ~;
+
+
+
     my $count = 0;
 
     ## store query results in $sample_info
     foreach my $row (@rows) 
     {
+        %TrancheDescription =();
         $count = $count + 1;
-
         my (@file_array_for_README, @pubmed_id_array_for_README);
 
         my (@pub_cit_array_for_README, @pub_url_array_for_README);
-
-#       print "\n";
 
         my ($sample_accession, $sample_tag, $sample_id, $organism, 
             $is_public) = @{$row};
@@ -409,6 +495,8 @@ sub write_public_file
         WHERE S.sample_id = '$sample_id'
         AND S.record_status != 'D'
         ~;
+
+        next if($organism eq 'Chimpanzee');
 
         my @rows2 = $sbeams->selectSeveralColumns($sql2) or 
             die "Couldn't find sample records using $sql2";
@@ -427,6 +515,9 @@ sub write_public_file
             $data_contributors =~ s/\r/ /g;
             $data_contributors =~ s/\n/ /g;
         }
+ 
+        $TrancheDescription{sample_description} = $sample_description;
+        $TrancheDescription{data_contributors} = $data_contributors;
 
         ## write to xml file, the start of the sample tag, and some of the sample info:
         startSampleTag(
@@ -437,6 +528,7 @@ sub write_public_file
             data_contributors => $data_contributors,
         );
 
+        
         ######### handle the remaining resources  ####
         #### resource mzXML_format
         #### resource RAW_format
@@ -485,11 +577,12 @@ sub write_public_file
                 spectra_data_dir => $spectra_data_dir,
                 orig_data_type => $origDataType,
             );
-       
+            my $orig_data_size = getFileSize( file => $orig_data_url);       
             my $attr = $origDataType . "_format";
 
             ## write xml resource element for this:
-            addResourceTag(attr_name => $attr, attr_value => $orig_data_url);
+            addResourceTag(attr_name => $attr, attr_value => $orig_data_url,
+                           file_size => $orig_data_size);
 
             push(@file_array_for_README, $orig_data_url);
         }
@@ -600,12 +693,14 @@ sub write_public_file
                 TPP_version => $TPP_version,
                 atlas_search_batch_id => $atlas_search_batch_id,
                 sample_accession => $sample_accession,
-                search_results_dir => $data_location
+                search_results_dir => $data_location,
             );
 
             ## write url to xml file as attribute in a resource element
+            my $protein_prophet_size = getFileSize( file => $protein_prophet_url );
             addResourceTag(attr_name => "ProteinProphet_file", 
                 attr_value => $protein_prophet_url, 
+                file_size => $protein_prophet_size,
                 asbid => $atlas_search_batch_id);
 
             push(@file_array_for_README, $protein_prophet_url);
@@ -623,6 +718,7 @@ sub write_public_file
         ~;
 
         my @rows3 = $sbeams->selectSeveralColumns($sql3);
+        $rowbuffer .= qq~ <td class="rep"> ~;
 
         foreach my $row3 (@rows3) 
         {
@@ -638,7 +734,7 @@ sub write_public_file
             push(@pub_url_array_for_README, $pub_url);
         } 
 
-
+        $rowbuffer .= "</td>";
         ## writes the readme file and returns its URL
         my $readme_url = write_readme_and_get_readme_url(
             sample_accession => $sample_accession,
@@ -654,7 +750,7 @@ sub write_public_file
 
         ## write url to xml file as attribute in a resource element
         addResourceTag(attr_name => "README", attr_value => $readme_url);
-
+        $buffer .= $rowbuffer;
         ## write to xml file, the end of the sample tag
         endSampleTag();
 
@@ -682,68 +778,29 @@ sub startSampleTag
 
     my $description = $args{description} or die "need description";
 
-    my $data_contributors; 
+    my $data_contributors;
     if ($TEST)
     {
         $data_contributors = $args{data_contributors}; ## dev database isn't annotated
     } else
     {
-       $data_contributors = $args{data_contributors} or die "need data_contributors";
+       $data_contributors = $args{data_contributors}; # zhi or die "need data_contributors";
     }
 
 
     ## write opening sample tag information to xml:
     ## open xml file and writer:
-    my $out = new IO::File(">>$public_xml_outfile");
 
-    my $writer = new XML::Writer(OUTPUT=> $out, UNSAFE => 1);
-
-    ## indent 2 spaces, write start tag, write end-of line marker
-    $out->print("  ");
-    $writer->startTag("sample");
-    $out->print("\n");
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("sample_accession");
-    $writer->characters($sample_accession);
-    $writer->endTag("sample_accession");
-    $out->print("\n");
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("sample_tag");
-    $writer->characters($sample_tag);
-    $writer->endTag("sample_tag");
-    $out->print("\n");
-
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("organism");
-    $writer->characters($organism);
-    $writer->endTag("organism");
-    $out->print("\n");
-
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("description");
-    $writer->characters($description);
-    $writer->endTag("description");
-    $out->print("\n");
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("data_contributors");
-    $writer->characters($data_contributors);
-    $writer->endTag("data_contributors");
-#   $out->print("\n");
-
-    $writer->end();
-
-    $out->close();
-
+    $buffer .= qq~
+     <tr><td class="rep">$sample_accession</td>
+     <td class="rep">$sample_tag</td>
+     <td class="rep">$organism</td>
+     <td class="rep">
+    ~;
+    $rowbuffer = qq~
+     <td class="rep">$description</td>
+     <td class="rep">$data_contributors</td>
+    ~;
 }
 
 #######################################################################
@@ -752,17 +809,8 @@ sub startSampleTag
 sub endSampleTag
 {
     ## open xml file and writer:
-    my $out = new IO::File(">>$public_xml_outfile");
+    $buffer.= "</tr>";
 
-    my $writer = new XML::Writer(OUTPUT=> $out, UNSAFE => 1);
-
-    ## indent 2 spaces, write end sample tag:
-    $out->print("  ");
-    $writer->endTag("sample");
-
-    $writer->end();
-
-    $out->close();
 }
 
 #######################################################################
@@ -814,71 +862,112 @@ sub get_mzXML_url
 
 
 #######################################################################
-#  initializeXMLFile -- write xml declaration and root node start tag
+#  initializePhp 
 #######################################################################
-sub initializeXMLFile
+sub initializePhp
 {
-    my %args = @_;
+  my %args = @_;
+  my $public = $args{public};;
+  if($public){
+    $buffer = `cat /net/dblocal/wwwspecial/peptideatlas/repository/Header_ftp.php`;
+  }else{
+    $notpublic_buffer= `cat /net/dblocal/wwwspecial/peptideatlas/repository/Header_unrelease.php`;
+  }
 
-    my $xml_outfile = $args{'xml_outfile'} || die "need xml_outfile ($!)";
-
-    my $out = new IO::File(">$xml_outfile");
-
-    my $writer = new XML::Writer(OUTPUT=> $out, UNSAFE => 1);
-
-    $writer->xmlDecl('UTF-8');
-
-    $writer->startTag( 'repository' );
-
-    $writer->end();
-
-    $out->close();
-}
-
-#######################################################################
-#  finalizeXMLFile -- write root node end tag, and check well-formedness
-#######################################################################
-sub finalizeXMLFile
-{
-    my %args = @_;
-
-    my $xml_outfile = $args{xml_outfile} || die "need xml_outfile ($!)";
-
-    my $out = new IO::File(">>$xml_outfile");
-
-    my $writer = new XML::Writer(OUTPUT=> $out, UNSAFE => 1);
-
-    $writer->endTag( 'repository' );
-
-    $writer->end();
-
-    $out->close();
-
-    checkWellFormedness();
 }
 
 
+
 #######################################################################
-#  checkWellFormedness -- check that xml file is well-formed
+#  finalizePhp -- write root node end tag, and check well-formedness
 #######################################################################
-sub checkWellFormedness
+sub finalizePhp
 {
-    ## check that xml file is well-formed
-    my $parser = new XML::Parser();
+  my %args = @_;
+  my $public = $args{public};;
+  if($public){
+  $buffer .= qq~
+    </tbody></table>
+    </form>
 
-    eval
-    {
-        $parser->parsefile ("$public_xml_outfile");
-    };
+    <br/><br/><br/><br/>
+
+    <script language="javascript" type="text/javascript">
+    //<![CDATA[
+      var table_Props =   {
+              col_2: "select",
+              display_all_text: " [ Show all ] ",
+              sort_select: true,
+              col_width: ["250px","200px"],//prevents column width variations
+              alternate_rows: true,
+                                            rows_counter: true,
+              rows_counter_text: "Matched rows: ",
+              btn_reset: true,
+              bnt_reset_text: "Clear all"
+            };
+      setFilterGrid( "table1",table_Props );
+    //]]>
+
+    </script>
 
 
-    if ($@)
-    {
-        print "WARNING: $public_xml_outfile is not well-formed\n";
+    </body></html>
 
-        error_message (
-            message => "WARNING: $public_xml_outfile is not well-formed");
-    }
+    <!-- ------------------------ End of main content ------------------------ -->
+    <!--footer-->
+
+        </td></tr>
+        </table>
+
+        <td height="600" width="1"></td>
+        <tr>
+
+          <td colspan="2" bgcolor="#827975" height="3">
+            <center><span class="copyright">© 2009, Institute for Systems Biology, All Rights Reserved</span>
+            <br></center>
+          </td>
+          <td height="1" width="1">
+            <img src="/images/clear.gif" border="0" height="1" width="1">
+          </td>
+        </tr>
+
+      </tr>
+
+      <tr height="5">
+        <td colspan="2" bgcolor="#294a93" height="5">
+          <img src="/images/clear.gif" border="0" height="5" width="1">
+        </td>
+        <td height="5" width="1">
+          <img src="/images/clear.gif" border="0" height="1" width="1">
+        </td>
+
+      </tr>
+
+      </table>
+      <!-- End Main page table -->
+
+            <script type="text/javascript">
+    var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+    document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+    var pageTracker = _gat._getTracker("UA-2217548-2");
+    pageTracker._setDomainName("none");
+    pageTracker._setAllowLinker(true);
+    pageTracker._initData();
+    pageTracker._trackPageview();
+    </script>
+
+
+    </body>
+    </html>
+   ~;
+  }else{
+     $notpublic_buffer .= qq~
+       </tbody></table>
+       <br/><br/><br/><br/></body></html>
+     ~;
+  }
 }
 
 
@@ -970,9 +1059,9 @@ sub get_data_url
             ## return absolute path (= $repository_path/file)
             ## for newly created gzipped archive
             ## AND update the database information
-	    ## Ning_added, remove all other versions of mzXML.tar.gz
-	    my $rm_pat = "repository_path/$pat";
-	    system "rm -f $rm_pat";
+      	    ## Ning_added, remove all other versions of mzXML.tar.gz
+	          my $rm_pat = "repository_path/$pat";
+	          system "rm -f $rm_pat";
 
             $latestFile = makeNewArchiveAndProperties(
                 sample_accession => $sample_accession,
@@ -1355,8 +1444,8 @@ sub write_to_notpublic_file
         $data_contributors = $args{data_contributors}; ## dev database isn't annotated
     } else
     {
-        $data_contributors = $args{data_contributors} or 
-            die "need data_contributors for sample_tag $sample_tag";
+        $data_contributors = $args{data_contributors} || '';
+            # or die "need data_contributors for sample_tag $sample_tag";
     }
 
     $data_contributors =~ s/\r/ /g;
@@ -1367,7 +1456,7 @@ sub write_to_notpublic_file
     my $cell_type = $args{'cell_type'} || "[]"; ## might not be in record
 
    ######## write to xml file: ########
-    writeNotPublicXMLSample(
+    writeNotPublicPhpSample(
         sample_tag => $sample_tag,
         organism => $organism,
         cell_type => $cell_type,
@@ -1388,7 +1477,8 @@ sub write_to_notpublic_file
 # </sample>
 #
 #######################################################################
-sub writeNotPublicXMLSample
+
+sub writeNotPublicPhpSample
 {
     my %args = @_;
 
@@ -1399,69 +1489,23 @@ sub writeNotPublicXMLSample
 
     my $organism = $args{'organism'} || die "need organism ($!)";
 
-    my $data_contributors; 
+    my $data_contributors;
     if ($TEST)
     {
         $data_contributors = $args{data_contributors}; ## dev database isn't annotated
     } else
     {
-       $data_contributors = $args{data_contributors} or die "need data_contributors";
+       $data_contributors = $args{data_contributors} #zhi or die "need data_contributors";
     }
-
-
-    ## open xml file and writer:
-    my $out = new IO::File(">>$notpublic_xml_outfile");
-
-    my $writer = new XML::Writer(OUTPUT=> $out, UNSAFE => 1);
-
-    ## indent 2 spaces, write start tag, write end-of line marker
-    $out->print("  ");
-    $writer->startTag("sample");
-    $out->print("\n");
-
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("sample_tag");
-    $writer->characters($sample_tag);
-    $writer->endTag("sample_tag");
-    $out->print("\n");
-
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("organism");
-    $writer->characters($organism);
-    $writer->endTag("organism");
-    $out->print("\n");
-
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("cell_type");
-    $writer->characters($cell_type);
-    $writer->endTag("cell_type");
-    $out->print("\n");
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("data_contributors");
-    $writer->characters($data_contributors);
-    $writer->endTag("data_contributors");
-    $out->print("\n");
-
-
-    ## indent 2 spaces, write end sample tag:
-    $out->print("  ");
-    $writer->endTag("sample");
-
-    $writer->end();
-
-    $out->close();
-
+    $notpublic_buffer .= qq~
+         <tr><td class="rep">$sample_tag</td>
+         <td class="rep">$organism</td>
+         <td class="rep">$data_contributors</td>
+         </tr>
+    ~;
 }
 
-#######################################################################
+##################################################################
 # getLatestFileName - get the filename with the most recent timestamp
 # (where filenames are in in file).  It will return null if it didn't
 # find a versioned file in the list.
@@ -1650,7 +1694,7 @@ sub writePropertiesFile
 
     my %properties_hash = %{$properties_hash_ref};
 
-    open(OUTFILE, ">$outfile") or die "cannot open $outfile for writing";
+    open(OUTFILE, ">$repository_path/$outfile") or die "cannot open $outfile for writing";
 
     foreach my $key ( keys %properties_hash )
     {
@@ -1846,7 +1890,7 @@ sub convertFileNameToURL
 
     my $file_url;
 
-    $file_url = $repository_url . $public_archive_uri . "/" . $file_name;
+    $file_url = $repository_url . "/" . $file_name;
 
     return $file_url;
 } 
@@ -1867,7 +1911,7 @@ sub convertAbsolutePathToURL
     $file_name =~ s/^(.*)\/(.+\.tar\.gz)$/$2/;
     $file_name =~ s/^(.*)\/(.+\.gz)$/$2/;
 
-    my $file_url = $repository_url . $public_archive_uri . "/" . $file_name;
+    my $file_url = $repository_url . "/" . $file_name;
 
     return $file_url;
 } 
@@ -2030,7 +2074,6 @@ sub makeNewArchiveAndProperties
             $spectrum_parser->parse();
 
             my $mzXML_schema = $spectrum_parser->getSpectrumXML_schema();
-        
             my $conversion_software_name = $spectrum_parser->getConversion_software_name();
 
             my $conversion_software_version = $spectrum_parser->getConversion_software_version();
@@ -2062,23 +2105,23 @@ sub makeNewArchiveAndProperties
         $versioned_archive_filename =~ s/\.gz//;
 
         ## make tar file
-        my $cmd = "tar -cf $versioned_archive_filename --files-from=$filelist";
+        my $cmd = "tar -cf $repository_path/$versioned_archive_filename --files-from=$filelist";
         print "$cmd\n" if ($VERBOSE);
         system $cmd;
     
         ## compress the tar file:
-        my $cmd = "gzip $versioned_archive_filename";
+        my $cmd = "gzip $repository_path/$versioned_archive_filename";
         print "$cmd\n" if ($VERBOSE);
         system $cmd;
 
         ## move them to $repository_path/  
-        $cmd = "mv $versioned_compressed_archive_filename $repository_path/";
-        print "$cmd\n" if ($VERBOSE);
-        system $cmd;
+        #$cmd = "mv $versioned_compressed_archive_filename $repository_path/";
+        #print "$cmd\n" if ($VERBOSE);
+        #system $cmd;
 
-        $cmd = "mv $versioned_properties_filename $repository_path/";
-        print "$cmd\n" if ($VERBOSE);
-        system $cmd;
+        #$cmd = "mv $versioned_properties_filename $repository_path/";
+        #print "$cmd\n" if ($VERBOSE);
+        #system $cmd;
 
         my $check_path1 = $repository_path . "/" . $versioned_compressed_archive_filename;
 
@@ -2263,33 +2306,21 @@ sub addResourceTag
 
     ## write opening sample tag information to xml:
     ## open xml file and writer:
-    my $out = new IO::File(">>$public_xml_outfile");
-
-    my $writer = new XML::Writer(OUTPUT=> $out, UNSAFE => 1);
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    if (($file_size) && !($asbid))
-    {
-        $writer->startTag("resource", $attr_name => $attr_value, 
-            'file_size' => $file_size );
-    } elsif (($file_size) && ($asbid))
-    {
-        $writer->startTag("resource", $attr_name => $attr_value, 
-            'file_size' => $file_size, 'asbid' => $asbid );
-    } elsif (!($file_size) && ($asbid))
-    {
-        $writer->startTag("resource", $attr_name => $attr_value, 'asbid' => $asbid );
-    } else
-    {
-        $writer->startTag("resource", $attr_name => $attr_value );
+    $file_size = "($file_size)<nobr>" if $file_size;
+    if($attr_name eq 'README'){
+      $buffer .= qq~ <a onmousedown="whichButton=event.button;Mousedown(this)" href="$attr_value">README</a>~;
+   }elsif($attr_name eq 'README_TRANCHE'){
+       $buffer .= qq~
+                <input value="$attr_value" type="hidden"/>
+                </td>
+                ~;
+    }else{
+      $buffer .= qq~
+                <a onmousedown="whichButton=event.button;Mousedown(this)" href="$attr_value">
+                $attr_name</a>$file_size<br/>
+                ~;
     }
-    $writer->endTag("resource");
-#   $out->print("\n");
 
-    $writer->end();
-
-    $out->close();
 }
 
 #######################################################################
@@ -2297,7 +2328,7 @@ sub addResourceTag
 # @param short name for the publication
 # @param url for publication
 #######################################################################
-sub addPublicationTag 
+sub addPublicationTag
 {
     my %args = @_;
 
@@ -2306,21 +2337,7 @@ sub addPublicationTag
     my $url = $args{url} or die "need url for citation: $citation";
 
     ## write opening sample tag information to xml:
-    ## open xml file and writer:
-    my $out = new IO::File(">>$public_xml_outfile");
-
-    my $writer = new XML::Writer(OUTPUT=> $out, UNSAFE => 1);
-
-    ## indent 4 spaces, write tag, write end-of line marker
-    $out->print("    ");
-    $writer->startTag("publication", "citation" => $citation,
-        "url" => $url );
-    $writer->endTag("publication");
-#   $out->print("\n");
-
-    $writer->end();
-
-    $out->close();
+    $rowbuffer .= qq~ <a href="$url">$citation</a><br/>~;
 }
 
 
@@ -2429,12 +2446,12 @@ sub get_orig_data_url
                 my $tar_file_name = $versioned_archive_filename;
 
                 ## make tar file
-                my $cmd = "tar -cf $tar_file_name --files-from=$filelist";
+                my $cmd = "tar -cf $repository_path/$tar_file_name --files-from=$filelist";
                 print "$cmd\n" if ($VERBOSE);
                 system $cmd;
     
                 ## compress the tar file:
-                my $cmd = "gzip $tar_file_name";
+                my $cmd = "gzip $repository_path/$tar_file_name";
                 print "$cmd\n" if ($VERBOSE);
                 system $cmd;
 
@@ -2894,6 +2911,17 @@ sub getFileSize
     } else
     {
         $file_size = stat($file_path)->size;
+        if($file_size >= 1000000000){
+          $file_size = sprintf("%.3f", $file_size/1000000000);
+          $file_size .= " GB";
+        }elsif($file_size < 1000000000 and $file_size >= 1000000){
+          $file_size = sprintf("%.3f", $file_size/1000000);
+          $file_size .= " MB";
+        }elsif ($file_size < 1000000 and $file_size >= 1000){
+          $file_size = sprintf("%.3f", $file_size/1000);
+          $file_size .= " KB";
+        }
+
     }
 
     return $file_size;
