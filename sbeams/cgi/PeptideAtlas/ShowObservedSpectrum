@@ -273,6 +273,15 @@ sub processRequest {
     my $protein_name_alt = $parameters{'protein_name_alt'};
     my $modified_sequence = $parameters{'modified_sequence'};
 
+    # default ion series
+    $parameters{'ShowA'} ||= '[0,0,0]';
+    $parameters{'ShowB'} ||= '[1,1,0]';
+    $parameters{'ShowC'} ||= '[0,0,0]';
+    $parameters{'ShowX'} ||= '[0,0,0]';
+    $parameters{'ShowY'} ||= '[1,1,0]';
+    $parameters{'ShowZ'} ||= '[0,0,0]';
+
+
     $parameters{assumed_charge} = $charge;
 
     my %spectrum = get_spectrum(
@@ -299,6 +308,7 @@ sub processRequest {
 
     my $prec = sprintf ("%0.1f", $precursor_mass);
 
+    # ToDo: should check these values for integrity
     my $seq = $parameters{'alt_sequence'} ? $parameters{'alt_sequence'} : $parameters{'modified_sequence'};
     my $chg = $parameters{'alt_charge'}   ? $parameters{'alt_charge'}   : $parameters{'assumed_charge'};
 
@@ -310,6 +320,12 @@ sub processRequest {
 				      precursor_mass    => $parameters{'precursor_mass'},
 				      scan              => $parameters{'start_scan'},
 				      name              => $parameters{'spectrum_name'},
+				      a_ions            => $parameters{'ShowA'},
+				      b_ions            => $parameters{'ShowB'},
+				      c_ions            => $parameters{'ShowC'},
+				      x_ions            => $parameters{'ShowX'},
+				      y_ions            => $parameters{'ShowY'},
+				      z_ions            => $parameters{'ShowZ'},
 				      spectrum          => \@spectrum_array
 				      );
 
@@ -336,10 +352,11 @@ sub processRequest {
         <INPUT TYPE="hidden" NAME="peptide" VALUE="$parameters{peptide}">
 	~;
 
+    my $spectext = '(enter alternate sequence)';
     print qq~
 	<FORM METHOD="post" action="$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME">
 	$hidden_form_fields
-        <INPUT TYPE="text" NAME="alt_sequence" SIZE="40" ONCLICK="if(this.value=='(enter alternate sequence)'){this.value='';}" ONFOCUS="this.select();" VALUE="(enter alternate sequence)"></INPUT>
+        <INPUT TYPE="text" NAME="alt_sequence" SIZE="40" ONCLICK="if(this.value=='$spectext'){this.value='';}" ONBLUR="if(this.value==''){this.value='$spectext';}" ONFOCUS="this.select();" VALUE="$spectext"></INPUT>
 	<SELECT NAME="alt_charge"><OPTION VALUE="1">+1</OPTION><OPTION VALUE="2">+2</OPTION><OPTION VALUE="3">+3</OPTION></SELECT>
 	<INPUT TYPE='submit' VALUE='GO!'>
 	</FORM>
