@@ -444,6 +444,7 @@ sub insert_consensus_library
        comment => $library_comment,
        consensus_library_name => $consensus_library_name,
        md5sum => $args{'md5sum'},
+       file_path => $args{file_path},
     );
 
     ## create a consensus_library record:
