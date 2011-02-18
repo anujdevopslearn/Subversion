@@ -300,7 +300,7 @@ sub handle_request {
   # None
   if($atlas_build_name =~/Origene/i){
     my %hidden_parameters=();
-    $parameters{plate_contrain} = '';
+    my %display_parameters = ();
     foreach my $p (qw(start_in_chromosome 
                       protein_group_representative_constraint
                       chromosome
@@ -315,6 +315,9 @@ sub handle_request {
           
       $hidden_parameters{$p} = 1;
     }
+    $display_parameters{tube_constraint} = 1;
+    $display_parameters{sku_constraint} = 1;
+
     #### Display the user-interaction input form
     $sbeams->display_input_form(
       TABLE_NAME=>$TABLE_NAME,
@@ -324,10 +327,12 @@ sub handle_request {
       parameters_ref=>\%parameters,
       input_types_ref=>\%input_types,
       hidden_parameter_ref => \%hidden_parameters,
+      display_parameters_ref => \%display_parameters,
       mask_user_context=> '1',
     );
 
   }else{
+
     #### Display the user-interaction input form
     $sbeams->display_input_form(
       TABLE_NAME=>$TABLE_NAME,
@@ -759,8 +764,9 @@ sub handle_request {
         "CAST(BS_INDIS.biosequence_desc AS varchar(255))";
 
   if($atlas_build_name =~/Origene/i){                                        
-      my  @column_array =(                                                       
-        ["plate","NULL","Plate"],                                              
+      my  @column_array =(
+        ["SKU","NULL","SKU"],                                                       
+        ["tube","NULL","Tube"],                                              
         ["origene_acc","NULL","Origene Accession"],                            
         ["biosequence_name","BS.biosequence_name","Biosequence Name"],           
         ["group_number","PID.protein_group_number","Group Number"],
@@ -769,7 +775,8 @@ sub handle_request {
         ["expected_prot","NULL","Expected"],                                  
         ["observed_in","NULL","Observed in"],                                  
         ["n_observations",0,"N Obs"],                                          
-        ["n_distinct_peptides",0,"N Distinct Peptides"],                       
+        ["n_distinct_peptides",0,"N Distinct Peptides"],
+        ["protein_content",0,"mol %"],                       
         ["sequence_coverage",0,"Sequence Coverage %"],                         
         ["seq_unique_prots_in_group","PID.seq_unique_prots_in_group", "Seq Uniq Prots in Grp"], 
         ["protein_group_seq_align_link","NULL","Protein Group Seq Alignmt"],   
@@ -1061,7 +1068,8 @@ sub handle_request {
   # %NV inserts the value of column N
   %url_cols = (
           'Biosequence Name' => "$CGI_BASE_DIR/PeptideAtlas/GetProtein?protein_name=\%$colnameidx{biosequence_name}V&apply_action=$pass_action",
-          'Plate' => "http://www.origene.com/protein/\%$colnameidx{origene_acc}V/B2M.aspx",
+          'SKU' =>  "http://www.origene.com/protein/\%$colnameidx{SKU}V/B2M.aspx",
+          #'Tube' 
           'Biosequence Name_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein\'; return true"',
           #'Group Representative' => "$CGI_BASE_DIR/PeptideAtlas/GetProteins_beta?protein_group_number_constraint=\%$colnameidx{group_number}V&apply_action=$pass_action",
           'Protein Group' => "$CGI_BASE_DIR/PeptideAtlas/GetProteins?protein_group_representative_constraint=\%$colnameidx{protein_group_representative}V&apply_action=$pass_action",
@@ -1086,7 +1094,8 @@ sub handle_request {
 
   
   if($atlas_build_name =~/Origene/i){
-    $url_cols{'Biosequence Name'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?protein_name=\%$colnameidx{biosequence_name}V&origene_plate=\%$colnameidx{plate}V&apply_action=$pass_action";
+    $url_cols{'Biosequence Name'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?protein_name=\%$colnameidx{biosequence_name}".
+                                    "V&ori_sku=\%$colnameidx{SKU}V&ori_tube=\%$colnameidx{tube}V&ori_expected_prot=\%$colnameidx{expected_prot}V&apply_action=$pass_action";
   }
   #### Define columns that should be hidden in the output table
   # biosequence_accessor is prefix to compose URL
@@ -1133,37 +1142,6 @@ sub handle_request {
       constraint_value=>$parameters{biosequence_name_constraint} );
     return if ($biosequence_name_clause eq '-1');
 
-#    $sql=qq~
-#       SELECT 
-#       --BS.biosequence_name, modified_peptide_sequence, 
-#			 --S.spectrum_name
-#       $columns_clause[0]
-#			 FROM $TBAT_PEPTIDE_INSTANCE PI
-#			 INNER JOIN $TBAT_PEPTIDE P
-#						 ON ( PI.peptide_id = P.peptide_id )
-#       INNER JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI
-#             ON ( PI.peptide_instance_id = MPI.peptide_instance_id )
-#       INNER JOIN $TBAT_SPECTRUM_IDENTIFICATION SI
-#             ON ( MPI.modified_peptide_instance_id = SI.modified_peptide_instance_id )
-#       INNER JOIN $TBAT_SPECTRUM S
-#             ON ( SI.spectrum_id = S.spectrum_id )
-#       INNER JOIN $TBAT_ATLAS_BUILD AB
-#             ON ( PI.atlas_build_id = AB.atlas_build_id )
-#       INNER JOIN $TBAT_BIOSEQUENCE_SET BSS
-#             ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
-#       INNER JOIN $TB_ORGANISM O
-#             ON ( BSS.organism_id = O.organism_id )
-#       INNER JOIN $TBAT_PEPTIDE_MAPPING PM
-#             ON ( PI.peptide_instance_id = PM.peptide_instance_id )
-#       INNER JOIN $TBAT_BIOSEQUENCE BS
-#             ON ( PM.matched_biosequence_id = BS.biosequence_id )
-#       INNER JOIN $TBAT_PROTEIN_IDENTIFICATION PID 
-#             ON (BS.biosequence_id = PID.biosequence_id and PID.atlas_build_id = AB.atlas_build_id)
-#			 WHERE 1 = 1 AND AB.atlas_build_id IN ( $atlas_build_id )
-#         $biosequence_name_clause
-#         $biosequence_gene_name_clause
-#         $biosequence_desc_clause
-#			~;
    
     $sql=qq~
        SELECT
@@ -1800,10 +1778,14 @@ sub postProcessResultset_Origene{
   my %rs_params = %{$rs_params_ref};
   my %parameters = %{$query_parameters_ref};
   
-  if( $parameters{plate_contraint} ne ''){
-     $parameters{plate_contraint} =~ s/\%//g;
-     $parameters{plate_contraint} =~ s/([\[\]])/\\$1/g;
-  } 
+  if( $parameters{tube_constraint} ne ''){
+     $parameters{tube_constraint} =~ s/[\s+\%]//g;
+  }
+
+  if( $parameters{sku_contraint} ne ''){
+     $parameters{sku_contraint} =~ s/[\s+\%]//g;
+  }
+
 
   my $n_rows = scalar(@{$resultset_ref->{data_ref}});                       
   my $cols = $resultset_ref->{column_hash_ref};                             
@@ -1817,11 +1799,20 @@ sub postProcessResultset_Origene{
 	my %prot_seq = $sbeams->selectTwoColumnHash($get_protseq_sql);
 	my %obs_peptide_per_protein = ();
 	my $file = "/net/db/projects/PeptideAtlas/species/Human/Origene/ExpectedProtein.txt";
+  my $emPAI_file = "/net/db/projects/PeptideAtlas/species/Human/Origene/emPAI.out";
   my %prot_seq_cov = ();
   my %obs_in_samples = ();
   my %prot2tube = ();
   my %tube2Origene = ();
   my %prot_obs_tubes =();
+  my %content_in_molar = ();
+  open (CIM, "<$emPAI_file") or die "cannot open $emPAI_file\n";
+  while (my $line = <CIM>){
+    chomp $line ;
+    my ($tube,$acc,$value)  = split(/\s+/, $line);
+    $tube =~ s/(\-\w)0+/$1/g;
+    $content_in_molar{$tube}{$acc} = $value;
+  }
 
 	open(IN, "<$file") or die "cannot open $file\n";
 	foreach my $line (<IN>){
@@ -1829,12 +1820,12 @@ sub postProcessResultset_Origene{
 		$line =~ /(TP\d+),([^,]+),(RC[^,]+,)?(\w),(\d+),.*_ISBHOT(00\d)/;
 		my $tpid = $1;
 		my @spids = split(/\./,$2);
-    my $plate = "ISBHOT$6-$4$5";
+    my $tube = "ISBHOT$6-$4$5";
 		foreach my $a (@spids){
-		  $prot2tube{$a} = $plate;
-      $tube2Origene{$plate} = $tpid; 
+		  $prot2tube{$a} = $tube;
+      $tube2Origene{$tube} = $tpid; 
 		  if($a =~ /(\S+)\-\d+/){
-			 $prot2tube{$1} = $plate;
+			 $prot2tube{$1} = $tube;
 		  } 
 		}
 	} 
@@ -1856,10 +1847,10 @@ sub postProcessResultset_Origene{
 
 		$spectrum_name =~ /VE_\d+_ISBHOT(\d{3})\_\d+\_(\w)0?(\d+)\_/;
     my $tag = "$1-$2$3";
-    my $tube = "ISBHOT$1-$2";
+    my $plate = "ISBHOT$1-$2";
     my $tube_num = $3;
-    push @{$prot_obs_pep_per_tube{$tube}{$tube_num}{$biosequence_name}}, $modpep;
-    $prot_obs_spectra_per_tube{$tube}{$tube_num}{$biosequence_name}++;
+    push @{$prot_obs_pep_per_tube{$plate}{$tube_num}{$biosequence_name}}, $modpep;
+    $prot_obs_spectra_per_tube{$plate}{$tube_num}{$biosequence_name}++;
 		$tag =~ s/^0+//;
 		$prot_obs_tubes{$biosequence_name}{$tag} =1;
    
@@ -1870,9 +1861,13 @@ sub postProcessResultset_Origene{
   $resultset_ref->{types_list_ref}->[$cols->{observed_in}] = 'string';
   $resultset_ref->{types_list_ref}->[$cols->{expected_prot}] = 'string';
   $resultset_ref->{types_list_ref}->[$cols->{origene_acc}] = 'string';
-  $resultset_ref->{types_list_ref}->[$cols->{plate}] = 'string';
+  $resultset_ref->{types_list_ref}->[$cols->{tube}] = 'string';
+  $resultset_ref->{types_list_ref}->[$cols->{SKU}] = 'string';
+  $resultset_ref->{types_list_ref}->[$cols->{protein_content}] = 'float';
   $resultset_ref->{precisions_list_ref}->[$cols->{observed_in}] = 20;
-  $resultset_ref->{precisions_list_ref}->[$cols->{plate}] =  255;
+  $resultset_ref->{precisions_list_ref}->[$cols->{tube}] =  255;
+  $resultset_ref->{precisions_list_ref}->[$cols->{SKU}] =  255;
+
   my @modified_results = ();
   my $c=0;
 
@@ -1883,17 +1878,18 @@ sub postProcessResultset_Origene{
          my @row = ();
          my $row_ref = \@row;
          my $nobs = $prot_obs_spectra_per_tube{$plate}{$num}{$prot};
-         
          $row_ref -> [$cols->{biosequence_name}] = $prot;
-         $row_ref -> [$cols->{plate}] = "$tube2Origene{$plate.$num} [$plate$num]";
+         $row_ref -> [$cols->{SKU}] = "$tube2Origene{$plate.$num}";
+         $row_ref -> [$cols->{tube}] = $plate.$num;
          $row_ref -> [$cols->{origene_acc}] = $tube2Origene{$plate.$num};
          $row_ref -> [$cols->{n_observations}] = $nobs;
+         $row_ref -> [$cols->{protein_content}] = $content_in_molar{$plate.$num}{$prot};
          $row_ref -> [$cols->{observed_in}] = join(",", sort keys %{$prot_obs_tubes{$prot}});
          $row_ref -> [$cols->{biosequence_description}] = $bioseq_info{$prot}{desc};
          $row_ref -> [$cols->{group_number}] = $bioseq_info{$prot}{group_number};
          $row_ref -> [$cols->{seq_unique_prots_in_group}] =  $bioseq_info{$prot}{seq_unique_prots_in_group};
-
-         next if($parameters{plate_contraint} ne '' and "$tube2Origene{$plate.$num} [$plate$num]" !~ /$parameters{plate_contraint}/i);
+         next if($parameters{tube_constraint} ne '' and "$plate$num" !~ /$parameters{tube_constraint}/ );
+         next if ($parameters{sku_constraint} ne '' and $tube2Origene{$plate.$num} !~ /$parameters{sku_constraint}/);
 				 if(defined $prot2tube{$prot} and  "$plate$num" eq $prot2tube{$prot}){
             $row_ref -> [$cols->{expected_prot}] =  'YES' #$prot2tube{$prot};
          }else{
