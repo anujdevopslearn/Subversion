@@ -199,7 +199,7 @@ sub handle_request {
 
   #### Get the search keyword
   my $protein_name = $parameters{"protein_name"};
-  my $plate =  $parameters{"origene_plate"};
+  my ($tube, $origene_accession,$expected_prot);
 
   #### If a new protein_name was supplied, store it
   if ($protein_name) {
@@ -218,19 +218,33 @@ sub handle_request {
     }
   }
 
-  #### do the same for plate name
-  if ($plate ne '') {
+  #### do the same for tube name
+  if ($parameters{ori_tube} ne '') {
     $sbeams->setSessionAttribute(
-      key => 'PeptideAtlas_origene_plate',
-      value => $parameters{"origene_plate"},
+      key => 'PeptideAtlas_ori_tube',
+      value => $parameters{"ori_tube"},
+    );
+    $sbeams->setSessionAttribute(
+      key => 'PeptideAtlas_ori_sku',
+      value => $parameters{"ori_sku"},
+    );
+    $sbeams->setSessionAttribute(
+      key => 'PeptideAtlas_ori_expected_prot',
+      value => $parameters{"ori_expected_prot"},
     );
 
   #### Else see if we had one stored
   } else {
-    $plate = $sbeams->getSessionAttribute(
-      key => 'PeptideAtlas_origene_plate',
+    $tube = $sbeams->getSessionAttribute(
+      key => 'PeptideAtlas_ori_tube',
     );
-    if ($plate and $protein_name) {
+    $origene_accession = $sbeams->getSessionAttribute(
+      key => 'PeptideAtlas_ori_sku',
+    );
+    $expected_prot = $sbeams->getSessionAttribute(
+      key => 'PeptideAtlas_ori_expected_prot',
+    );
+    if ($tube and $protein_name) {
       $parameters{'apply_action'} = 'GO';
     }
   }
@@ -282,21 +296,23 @@ sub handle_request {
   my %atlas_build_names = $sbeams->selectTwoColumnHash($sql);
 
 
-  my $plate_pattern = '';
-  my $plate_pattern2 = '';
+  my $tube_pattern = '';
+  my $tube_pattern2 = '';
   my $origene_accession = '';
-  if($plate ne '' and $atlas_build_names{$atlas_build_id} =~ /Origene/i){
-    $plate =~ /(TP\d+).*(ISBHOT\d+)\-(\w)(\d+)/;
-    $origene_accession = $1;
-    #$plate = "$2-$3$4";
+  my $tube = '';  
+  if($parameters{ori_tube} ne '' and $atlas_build_names{$atlas_build_id} =~ /Origene/i){
+
+    $tube = $parameters{ori_tube}; 
+    if($parameters{ori_expected_prot} =~ /yes/i ){
+      $origene_accession = $parameters{ori_sku};
+    };
+    $tube =~ /(ISBHOT\d+)\-(\w)(\d+)/;
     if($4 <= 10 and $4 !~ /^0/){
-      $plate_pattern = '%'.$2.'%'.$3.$4.'%';
-      $plate_pattern2 = '%'.$2.'%'.$3.'0'.$4.'%';
+      $tube_pattern = '%'.$1.'%'.$2.$3.'%';
+      $tube_pattern2 = '%'.$1.'%'.$2.'0'.$3.'%';
     }else{
-      $plate_pattern = '%'.$2.'%'.$3.$4.'%';
+      $tube_pattern = '%'.$1.'%'.$2.$3.'%';
     }
-  }else{
-   $plate = '';
   }
 
   #### Get a list of id's sorted by name
@@ -356,9 +372,9 @@ sub handle_request {
       print $q->textfield( "protein_name", $protein_name);
       if( $atlas_build_names{$atlas_build_id} =~ /Origene/i){
         print "&nbsp;&nbsp;&nbsp;";
-        print "Origene Plate: ";
-        print $q->textfield( -name => "origene_plate",
-                             -value => $plate,
+        print "Origene Tube: ";
+        print $q->textfield( -name => "ori_tube",
+                             -value => $tube,
                              -size => 25);
       }
       print $q->hidden( "apply_action", '');
@@ -837,7 +853,7 @@ sub handle_request {
     ["best_probability","STR(PI.best_probability,7,3)","<DIV TITLE='Highest PeptideProphet probability for this observed sequence'>Best Prob</DIV>"],
     ["best_adjusted_probability","STR(PI.best_adjusted_probability,7,3)","<DIV TITLE=''>Best Adj Prob</DIV>"],
   );
-  if($plate_pattern){
+  if($tube_pattern){
     push @column_array, (["n_observations","PI2.n_observations","<DIV TITLE='Total number of observations in all modified forms and charge states'>N Obs</DIV>"]);
   }else{
     push @column_array, (["n_observations","PI.n_observations","<DIV TITLE='Total number of observations in all modified forms and charge states'>N Obs</DIV>"]);
@@ -869,7 +885,7 @@ sub handle_request {
   );
 
   my $peptide_instance_clause='';
-  if($plate_pattern){
+  if($tube_pattern){
     $peptide_instance_clause = qq~
      INNER JOIN (
        SELECT MPI.PEPTIDE_INSTANCE_ID, count(S.spectrum_id) as n_observations
@@ -878,7 +894,7 @@ sub handle_request {
              ON (SI.SPECTRUM_ID = S.SPECTRUM_ID )
        INNER JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI 
              ON ( MPI.MODIFIED_PEPTIDE_INSTANCE_ID = SI.MODIFIED_PEPTIDE_INSTANCE_ID)
-       WHERE S.SPECTRUM_NAME LIKE '$plate_pattern' or S.SPECTRUM_NAME LIKE '$plate_pattern2'
+       WHERE S.SPECTRUM_NAME LIKE '$tube_pattern' or S.SPECTRUM_NAME LIKE '$tube_pattern2'
        GROUP BY MPI.PEPTIDE_INSTANCE_ID
        ) AS PI2  on (PI2.peptide_instance_id = PI.peptide_instance_id)
      ~;
@@ -970,7 +986,7 @@ sub handle_request {
       print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
                               key => 'ProteinProphet-adjusted N Obs',
                               value => $biosequence->{n_observations} )
-            if (defined $biosequence->{n_observations} and ! $plate);
+            if (defined $biosequence->{n_observations} and ! $tube);
       print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
                               key => 'Normalized PSMs per 100K',
                               value => sprintf("%0.3f", $biosequence->{norm_PSMs_per_100K}) )
