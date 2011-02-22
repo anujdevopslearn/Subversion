@@ -4729,12 +4729,6 @@ sub display_input_form {
   my $apply_action = $args{'apply_action'};
   my $parameters_ref = $args{'parameters_ref'};
   my %parameters = %{$parameters_ref};
-
-  my $hidden_parameter_ref = $args{'hidden_parameter_ref'} || {};
-  my %hidden_parameters = %{$hidden_parameter_ref};
-  my $display_parameters_ref = $args{'display_parameters_ref'} || {};
-  my %display_parameters = %{$display_parameters_ref};
-
   my $input_types_ref = $args{'input_types_ref'};
   my %input_types = %{$input_types_ref};
   my $mask_user_context = $args{'mask_user_context'};
@@ -4761,17 +4755,6 @@ sub display_input_form {
   my ($row);
 
 
-  my $hidden_parameter_clause ='';
-  my $n_hid = scalar keys %hidden_parameters;
-  if($n_hid > 0){
-    my $hidden_par_str='';
-    foreach my $str (keys %hidden_parameters){
-      $hidden_par_str .= "'$str',";
-    }
-    $hidden_par_str =~ s/,$//;
-    $hidden_parameter_clause = "AND column_name not in ($hidden_par_str)";
-  }
-  
   #### Query to obtain column information about this table or query
   $sql = qq~
       SELECT column_name,column_title,is_required,input_type,input_length,
@@ -4780,7 +4763,6 @@ sub display_input_form {
         FROM $TB_TABLE_COLUMN
        WHERE table_name='$TABLE_NAME'
          AND is_data_column='Y'
-         $hidden_parameter_clause
        ORDER BY column_index
   ~;
   my @cols_data = $self->selectSeveralColumns($sql);
@@ -4788,6 +4770,7 @@ sub display_input_form {
   foreach my $inner (@cols_data) {
     push(@columns_data, [@$inner]);
   }
+
   for (my $i = 0; $i <= $#columns_data; $i++) {
     my @irow = @{$columns_data[$i]};
     my $column_name = $irow[0];
@@ -4823,10 +4806,6 @@ sub display_input_form {
     my ($column_name,$column_title,$is_required,$input_type,$input_length,
         $is_data_column,$is_display_column,$column_text,
         $optionlist_query,$onChange) = @row;
-    if(defined $display_parameters{$column_name}){
-       $is_display_column = 'Y';
-    }
-
     if (defined($optionlist_query) && $optionlist_query gt '') {
       #print "<font color=\"red\">$column_name</font><BR><PRE>$optionlist_query</PRE><BR>\n";
       $optionlist_queries{$column_name}=$optionlist_query;
@@ -4984,11 +4963,6 @@ sub display_input_form {
         $is_data_column,$is_display_column,$column_text,
         $optionlist_query,$onChange) = @row;
     my $default_column_name;
-    if(defined $display_parameters{$column_name}){
-      $is_display_column = 'Y';
-    }
-
-
     if ($parameters{$column_name}) {
       $default_column_name = $column_name;
     } else {
