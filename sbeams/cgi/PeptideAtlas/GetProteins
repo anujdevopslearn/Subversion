@@ -317,9 +317,9 @@ sub handle_request {
     }
     $display_parameters{tube_constraint} = 1;
     $display_parameters{sku_constraint} = 1;
-
+    my $atlas = new SBEAMS::PeptideAtlas;
     #### Display the user-interaction input form
-    $sbeams->display_input_form(
+    $atlas->display_input_form(
       TABLE_NAME=>$TABLE_NAME,
       CATEGORY=>$CATEGORY,
       apply_action=>$apply_action,
