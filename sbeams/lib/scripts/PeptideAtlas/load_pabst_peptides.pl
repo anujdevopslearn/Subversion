@@ -17,16 +17,22 @@ use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::Proteomics::PeptideMassCalculator;
 my $massCalculator = new SBEAMS::Proteomics::PeptideMassCalculator;
 
+$|++; # don't buffer output
+
+print "Begin at " . time() . "\n";
+
+print "Loading fragment compare\n";
 # Load spectrum comparer code
 use lib '/net/db/projects/spectraComparison';
 use FragmentationComparator;
 my $fc = new FragmentationComparator;
-$fc->loadFragmentationModel( filename => '/net/db/projects/spectraComparison/FragModel_AgilentQTOF.fragmod' );   
+#$fc->loadFragmentationModel( filename => '/net/db/projects/spectraComparison/FragModel_AgilentQTOF.fragmod' );   
+$fc->loadFragmentationModel( filename => '/net/db/projects/spectraComparison/FragModel_4000QTRAP.fragmod' );
 $fc->setUseBondInfo(1);
 $fc->setNormalizationMethod(1);
+print "done\n";
 
 
-$|++; # don't buffer output
 
 my $sbeams = SBEAMS::Connection->new();
 $sbeams->Authenticate();
@@ -47,13 +53,16 @@ my $dbh = $sbeams->getDBHandle();
 $dbh->{RaiseError}++;
 my $transition_limit = 16;
 
-print "Begin at " . time() . "\n";
+my $mrm_peak_limit = $transition_limit + 10;
+my %all_mrm_peaks;
+
 print "process args\n";
 my $args = process_args();
 print "done\n";
 
 # Flag for uber-verbose logging.
-my $paranoid = 1;
+my $paranoid = 0;
+$paranoid++ if $args->{verbose} > 1;
 
 use Data::Dumper;
 
@@ -74,25 +83,6 @@ use Data::Dumper;
     print "Done\n";
   }
 
-
-#  my $qqq = readSpectrastSRMFile( 'qqq' );
-#  print "done\n";
-#  print Dumper( $qqq );
-#  for my $q ( keys( %{$qqq} ) ) {
-#    print "$q => " . join( ', ', @{$qqq->{$q}} ) . "\n";
-#    print "$q => $qqq->{$q}\n";
-#  }
-#  exit;
-#  print "read qtof\n";
-#  my $qtof = readSpectrastSRMFile( 'qtof' );
-#  print "done\n";
-#  print "read ion_trap\n";
-#  my $it = readSpectrastSRMFile( 'ion_trap' );
-#  print "done\n";
-  # This is done on the fly due to memory constraints. 
-  #print "read theoretical\n";
-  #my $theo = readTIQAMSRMFile( $args->{theoretical} );
-  
   my $name2id = getBioseqInfo( $args->{biosequence_set_id} );
   
   open PEP, $args->{peptides} || die "Unable to open peptide file $args->{peptides}";
@@ -120,11 +110,15 @@ use Data::Dumper;
     chomp $line;
     my @line = split( "\t", $line, -1 );
 
+    # Often loading a fetch_best_peptides file
+    next if $line[0] eq 'biosequence_name';
+
+    # Disregard peptides with odd amino acids 
+    next unless $line[2] =~ /^[ACDEFGHIKLMNOPQRSTVWY]+$/;
+
     # Cys must be alkylated
     if ( $line[2] =~ /^\w+$/ && $line[2] =~ /C/ ) {
-      print "Line was $line[2]\n";
       $line[2] =~ s/C/C\[160\]/g;
-      print "Line s $line[2]\n";
     }
 
     # Looks like we have a build to load - insert build record
@@ -164,10 +158,11 @@ use Data::Dumper;
 
       my $pep = $line[2];
       $pep =~ s/\'//g;
-      if ( $pep =~ /X/ ) {
+      if ( $pep =~ /X|B|Z/ ) {
         $stats{bad_aa}++;
         next;
       }
+#      print "peptide $pep\n";
 
       # Go through and populate in order of priority
       populate( $patr, $pep, \@trans, 'patr', \%used_trans );
@@ -175,7 +170,7 @@ use Data::Dumper;
     
       if ( scalar( @trans ) < $transition_limit ) {
         for my $src ( @mrm_libs ) {
-          print "Adding from $src\n";
+          print "Adding from $src\n" if $paranoid;
           populate( $lib_data{$src}, $pep, \@trans, $mrm_libs{$src}, \%used_trans );
           $stats{$src}++;
           print "Trans has " . scalar( @trans ) . " post $src\n" if $paranoid; # if scalar( @trans ) ;
@@ -183,8 +178,8 @@ use Data::Dumper;
         }
       }
     
-      if ( scalar( @trans ) < $transition_limit ) {
-        print "Adding from Theoretical\n";
+      if ( !$args->{specified_only} || ( scalar( @trans ) < $transition_limit ) ) {
+        print "Adding from Theoretical\n" if $paranoid;
         if ( !$theoretical->{$pep} ) {
           # Reset...
           $theoretical = {};
@@ -197,6 +192,7 @@ use Data::Dumper;
       
       if ( !scalar( @trans ) ) {
         $stats{unfound}++;
+        next if $args->{specified_only};
     #    print "peptide $pep not found ( $line[1], $line[3], $line[14] )\n";
       } elsif ( scalar( @trans ) < $transition_limit ) {
         $stats{shorted}++;
@@ -437,7 +433,7 @@ sub check_build {
   my ( $cnt ) = $sbeams->selectrow_array( $sql );
   if ( $cnt ) {
     print STDERR "Pabst build found, will delete in 3 seconds unless cntl-c is pressed\n";
-    sleep 0;
+    sleep 3;
   } else {
     print STDERR "No Pabst build found with ID $build_id, exiting\n";
     exit;
@@ -510,14 +506,14 @@ sub generate_theoretical {
     my $spec = $fc->synthesizeIon( "$pep/$chg");
     if ($spec) {
       $fc->normalizeSpectrum($spec);
+      print STDERR "GOSPEC: No spectrum from $pep/$chg\n" if $paranoid;
     } else {
-      print STDERR "NOSPEC: No spectrum from $pep/$chg\n";
+      print STDERR "NOSPEC: No spectrum from $pep/$chg\n" if $paranoid;
       next;
     }
 
     # Sort by fragment intensity
     my @unsorted = @{$spec->{mzIntArray}};
-    print " Unsorted has " . scalar @unsorted . " entries\n";
     my @sorted_frags = sort { $b->[1] <=> $a->[1] } @{$spec->{mzIntArray}};
 
     for my $frag ( @sorted_frags ) {
@@ -561,13 +557,14 @@ sub process_args {
   my %args;
   GetOptions( \%args, 'mrm_file=s@', 'help',
               'peptides:s', 'conf=s', 'parameters=s', 'description=s',
-              'verbose', 'testonly', 'biosequence_set_id=i', 'name=s',
+              'verbose:i', 'testonly', 'biosequence_set_id=i', 'name=s',
               'load', 'output_file=s', 'project_id=i', 'organism=i',
-              'mapping_build:i', 'delete', 'build_id=i' );
+              'mapping_build:i', 'delete', 'build_id=i', 'specified_only' );
 
   my $missing;
 
   $args{mapping_build} ||= 0;
+  $args{verbose} ||= 0;
 
   print_usage() if $args{help};
 
@@ -618,6 +615,11 @@ sub readSpectrastSRMFile {
 
     my ( $seq, $chg ) = split( "/", $line[9], -1 );
 
+    $srm{$seq} ||= {};
+    $srm{$seq}->{$chg} ||= [];
+    next if scalar( @{$srm{$seq}->{$chg}} ) > $transition_limit;
+    next if $all_mrm_peaks{$srm{$seq}->{$chg}} > $mrm_peak_limit;
+
     my @labels = split( "/", $line[7], -1 );
     my $primary_label = $labels[0];
 
@@ -665,8 +667,6 @@ sub readSpectrastSRMFile {
       $q3_peak .= $q3_delta;
     }
 
-    $srm{$seq} ||= {};
-    $srm{$seq}->{$chg} ||= [];
 # Reads in specified file, returns ordered MRM list with fields as follows.
 # peptide sequence
 # modified_peptide_sequence
@@ -682,6 +682,7 @@ sub readSpectrastSRMFile {
     # srm{peptide_sequence}->{charge} == pep seq, pep seq, q1 mz, q1 charge, q3 mz, q3 charge, ion series, ion number, CE, intensity, lib_type
 
     push @{$srm{$seq}->{$chg}}, [ $seq, $seq, $line[3], $chg, @line[5], $q3_chg, $q3_series, $q3_peak, $line[10], $line[6], $args{type} ];
+    $all_mrm_peaks{$srm{$seq}->{$chg}}++;
 
 #    print "For $seq and $chg, pushed $line[6], top is $srm{$seq}->{$chg}->[0]->[9]\n" unless $lib_type =~ /ion_trap/;
 #    push @{$srm{$line[1]}->{$line[2]}}, [ ];
@@ -760,16 +761,18 @@ sub print_usage {
   my $msg = shift || '';
   my $exe = basename( $0 );
 
-#  GetOptions( \%args, 'qqq:s', 'ion_trap:s', 'qtof:s', 'help',
+  my $instrument_str = join( ', ', sort( grep( !/PATR|Predicted/, keys( %{$instrument_map} ) ) ) );
+  
+
+#  GetOptions( \%args, 'mrm_file=s@', 'help',
 #              'peptides:s', 'conf=s', 'parameters=s', 'description=s',
 #              'verbose', 'testonly', 'biosequence_set_id=i', 'name=s',
 #              'load', 'output_file=s', 'project_id=i', 'organism=i',
-#              'mapping_build:i', 'delete' );
-
+#              'mapping_build:i', 'delete', 'build_id=i', 'specified_only' );
   print <<"  END";
       $msg
 
-usage: $exe -q qtrap_file -i ion_trap_file -t theoretical_file --pep peptide_file --load
+usage: $exe --mrm qtrap_file:QTrap5500 [ --mrm ion_trap_file:IonTrap ... ] --pep peptide_file --load -c conf_file --param params -o 2 -n build_name
 
    -b, --build_id       PABST build ID, required with --delete mode
        --delete         Delete specified build
@@ -778,16 +781,18 @@ usage: $exe -q qtrap_file -i ion_trap_file -t theoretical_file --pep peptide_fil
    -h, --help           print this usage and exit
    -i, --ion_trap       Ion Trap consensus library location 
    -l, --load           Load pabst build
-   -m, --mapping_build  existing PABST build id to use for mapping, default 0
+       --mapping_build  existing PABST build id to use for mapping, default 0
                         which will insert all de-novo.
    -n, --name           Name for pabst_build 
    -o, --organism       Organism for pabst_build  
        --peptides       List of 'best' peptides
        --project_id     Project with which build is associated
        --parameters     parameter string for best peptide run
-   -q, --qqq            QQQ consensus library location
-       --theoretical    DEPRECATED Theoretical transition information in TIQAM format 
+       --mrm            MRM file(s) to load, must also specify type, e.g. --mrm qtof_file:QTOF 
+                        permitted values: $instrument_str
    -t, --testonly       Run delete in testonly mode
+   -s, --specified_only Only load peptides for which transitions were found in
+                        one of the speclims (supress theoretical)
   END
 
   exit;
