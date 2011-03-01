@@ -60,6 +60,7 @@ sub print_process {
   if ( $args->{chk_file} && defined $args->{chk_scr} ) {
     $chk_args{chk_peptide_hash} = get_chk_hash();
     $chk_args{peptide_hash_scr} = $args->{chk_scr};
+    $chk_args{chk_only} = $args->{chk_only} || 0;
   }
 
   my $merged = $pep_sel->merge_pabst_peptides(  obs => $observed, 
@@ -96,6 +97,11 @@ sub print_process {
     if ( defined $args->{no_st} ) {
       next if ( $peptide->[14] && $peptide->[14] =~ /ST/ );
     }
+
+# Handle in merge_pabst_peptides call.
+#    if ( defined $args->{chk_only} ) {
+#      next if ( $peptide->[14] && $peptide->[14] =~ /ST/ );
+#    }
 
     $peptide->[4] = sprintf( "%0.2f", $peptide->[4] ) if $peptide->[4] !~ /na/;
     $peptide->[5] = sprintf( "%0.2f", $peptide->[5] ) if $peptide->[5] !~ /na/;
@@ -162,7 +168,7 @@ sub process_args {
               'protein_file=s', 'n_peptides=i', 'config=s', 'default_config', 
               'bioseq_set=i', 'obs_min=i', 'verbose', 'name_prefix=s',
               'build_name=s', 'min_score=f', 'chk_file=s', 'chk_scr=f',
-              'no_mc', 'no_st'
+              'no_mc', 'no_st', 'chk_only'
              ) || print_usage();
 
   # Short-circuit if we just want help/documention
@@ -181,6 +187,11 @@ sub process_args {
       print_usage( "$opt must be an integer" );
     }
   }
+
+  if ( $args{chk_file} ) {
+    $args{chk_scr} = 1.0 unless defined $args{chk_scr};
+  }
+  print STDERR "File is $args{chk_file}, scr is $args{chk_scr}, and only is $args{chk_only}\n";
 
   # Atlas build option changed from single INT to string array - might have 
   # appended weight in addition to id.
@@ -247,30 +258,33 @@ usage: $sub -a build_id [ -t outfile -o 3 -p proteins_file -v --conf my_config_f
                         specified as a numeric id ( -a 123 -a 189 ) or as a composite
                         id:weight ( -a 123:3 ).  Scores from EPS and ESS will 
                         be multiplied by given weight, defaults to 1.
-       --config         Config file defining penalites for various sequence  
-       --chk_file       File of peptide accessions for which to modify score.  
-                        Primary purpose is to boost proteins on a particular 
-                        list, e.g.
-       --chk_scr        Score to apply for items in chk_file above.
-   -d, --default_config prints an example config file with defaults in CWD,
-                        named best_peptide.conf, will not overwrite existing
-                        file.  Exits after printing.
-   -p, --protein_file   file of protein names, one per line.  Should match 
-                        biosequence.biosequence_name
-   -s, --show_builds    Print info about builds in db 
+       --bioseq_set     Explictly defined biosequence set.  If not provided, 
+                        the BSS defined by the first atlas_build specified will
+                        be used.
        --build_name     Regular expression to limit return values from 
                         show builds, will be used in LIKE clause, with wildcard
                         characters added automatically.
-   -b, --bioseq_set     Explictly defined biosequence set.  If not provided, 
-                        the BSS defined by the first atlas_build specified will
-                        be used.
-   -t, --tsv_file       print output to specified file rather than stdout
+       --chk_file       File of peptide accessions for which to modify score.  
+                        Primary purpose is to boost proteins on a particular 
+                        list, e.g.
+       --chk_scr        Score to apply for items in chk_file above, default 1
+       --chk_only       Omit any peptides that are *not* in chk_file 
+       --config         Config file defining penalites for various sequence  
+   -d, --default_config prints an example config file with defaults in CWD,
+                        named best_peptide.conf, will not overwrite existing
+                        file.  Exits after printing.
+   -h, --help           Print usage
+   -m, --min_score      Only print out peptides above min score threshold
        --n_peptides     number of peptides to return per protein
        --name_prefix    prefix constraint on biosequences, allows subset of 
                         of bioseqs to be selected.
+       --no_mc          Omit any peptides annotated as MC (missed cleavage)
+       --no_st          Omit any peptides annotated as ST (semi-tryptic cleavage)
    -o, --obs_min        Minimum n_obs to consider for observed peptides
-   -m, --min_score      Only print out peptides above min score threshold
-   -h, --help           Print usage
+   -p, --protein_file   file of protein names, one per line.  Should match 
+                        biosequence.biosequence_name
+   -s, --show_builds    Print info about builds in db 
+   -t, --tsv_file       print output to specified file rather than stdout
    -v, --verbose        Verbose output, prints progress 
   END
 # End of the line
