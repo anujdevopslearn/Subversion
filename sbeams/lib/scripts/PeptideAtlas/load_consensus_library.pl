@@ -61,7 +61,7 @@ EOU
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","test",
                    "load", "library_name:s", "organism_name:s",
-                   "path:s", "delete:s", 'comment=s'  ) ) {
+                   "path:s", "delete:s", 'comment=s', "project_id:i"  ) ) {
     print "\n$USAGE\n";
     exit;
   }
@@ -84,7 +84,7 @@ unless ( $OPTIONS{'delete'}  || $OPTIONS{'load'} || $OPTIONS{'test'})
 if ($OPTIONS{'load'} || $OPTIONS{'test'})
 {
     unless ($OPTIONS{path} && $OPTIONS{library_name}
-    && $OPTIONS{organism_name})
+    && $OPTIONS{organism_name} && $OPTIONS{project_id} )
     {
         print "\n$USAGE\n";
         print "Need --path and --library_name ";
@@ -203,7 +203,8 @@ sub populateRecords
         library_comment => $library_comment,
         consensus_library_name => $consensus_library_name,
         md5sum => $md5sum,
-        file_path => $args{file_path}  );
+        file_path => $args{file_path},
+				project_id => $OPTIONS{project_id} );
 
     my $count = 0;
 
@@ -439,12 +440,16 @@ sub insert_consensus_library
 
     my $library_comment = $args{library_comment} || '';
 
+    # private by default
+    $args{project_id} ||= 476;
+
     my %rowdata = (
        organism_id => $organism_id,
        comment => $library_comment,
        consensus_library_name => $consensus_library_name,
        md5sum => $args{'md5sum'},
        file_path => $args{file_path},
+       project_id => $args{project_id},
     );
 
     ## create a consensus_library record:
