@@ -639,6 +639,7 @@ sub encodeSectionTable {
   my @rs_data =  @{$args{rows}};
 
   if ( $args{set_download} ) {
+
     my $rs_headers = shift( @rs_data );
     $rs_headers = $args{rs_headings} if $args{rs_headings};
     
@@ -646,7 +647,14 @@ sub encodeSectionTable {
                                       headers => $rs_headers,
                                   file_prefix => $file_prefix );
 
-    $rs_link = "<a href='$CGI_BASE_DIR/GetResultSet.cgi/$rs_name.tsv?rs_set_name=$rs_name&format=tsv;remove_markup=1' TITLE='Download table as tab-delimited text file' CLASS=info_box>Download as TSV</a>",
+    my $tsv_link = "<a href='$CGI_BASE_DIR/GetResultSet.cgi/$rs_name.tsv?rs_set_name=$rs_name&format=tsv;remove_markup=1' TITLE='Download table as tab-delimited text file'>TSV</a>";
+    my @downloads = ( $tsv_link ); 
+    if ( $args{download_links} ) {
+      push @downloads, @{$args{download_links}};
+    }
+    my $download_links = join( ', ', @downloads );
+
+    $rs_link = "<SPAN CLASS=info_box>Download as: $download_links</SPAN>",
   }
 
   return '' unless $args{rows};
