@@ -1260,6 +1260,63 @@ sub get_html_seq {
   return $str;
 }
 
+sub make_qtrap5500_target_list {
+  my $self = shift;
+	my %args = @_;
+
+  my $data = $args{data} || die;
+# 0 'Protein',
+# 1 'Pre AA',
+# 2 'Sequence',
+# 3 'Fol AA',
+# 4 'Adj SS',
+# 5 'SSRT',
+# 6 'Source',
+# 7 'q1_mz',
+# 8 'q1_chg',
+# 9 'q3_mz',
+# 10 'q3_chg',
+# 11 'Label',
+# 12 'RI',
+# 0 'QTOF',
+# 0 'QTRAP',
+# 0 'IonTrap',
+# 0 'Predicted',
+# 0 'CE_range
+# Q1,Q3,RT,sequence/annotation,CE,,Comment
+# 537.2933,555.30475,25.97,LLEYTPTAR.P49841.2y5.heavy,29.140903,,
+  my $head = 0;
+  my $csv_file = '';
+  for my $row ( @{$data} ) {
+    next unless $head++;
+    my $protein = $self->extract_link( $row->[0] );
+		my $seq = $row->[2];
+		if ( $args{remove_mods} ) {
+		  $seq =~ s/\[\d+\]//g;
+		}
+		my $ce = $self->get_qtrap5500_ce( medium_only => 1, mz => $row->[7], charge => $row->[8] );
+
+    my $seq_string = join( '.', $seq, $protein, $row->[8] . $row->[11] . '-' . $row->[10] );
+    $csv_file .= join( ',', $row->[7], $row->[9], 'RT', $seq_string, $ce, 'Auto-generated' ) . "\n";
+  }
+  my $sbeams = $self->getSBEAMS();
+  my $file_path = $sbeams->writeSBEAMSTempFile( content => $csv_file );
+
+  return $file_path;
+}
+
+sub extract_link {
+  my $self = shift;
+  my $url = shift;
+  if ( $url =~ />([^<]+)<\/A>/ ) {
+    my $link = $1;
+    $link =~ s/^\s+//;
+    $link =~ s/\s+$//;
+    return $link;
+  }
+  return '';
+}
+
 sub make_resultset {
   my $self = shift;
   my %args = @_;
@@ -1410,6 +1467,31 @@ sub fragment_peptide {
   return \@residues;
 }
 
+sub get_qtrap5500_ce {
+	my $self = shift;
+  my %args = @_;
+
+  my $ce = '';
+	if ( $args{charge} && $args{mz} ) {
+		my ($m, $i);
+		if ( $args{charge} == 1 ) {
+			$m = 0.058;
+			$i = 9;
+		} elsif ( $args{charge} == 2 ) {
+			$m = 0.044;
+			$i = 5.5;
+		} elsif ( $args{charge} == 3 ) {
+			$m = 0.051;
+			$i = 0.5;
+		} else {
+			$m = 0.05;
+			$i = 3;
+  	}
+		$ce = sprintf( "%0.1f", $m*$args{mz} + $i );
+	}
+	return $ce;
+}
+
 sub get_Agilent_ce {
 
 	my $self = shift;
@@ -1423,6 +1505,9 @@ sub get_Agilent_ce {
     } else {
       $ce{medium} = ( (3.6* $args{mz} )/100 ) -4.8;
     }
+	  if ( $args{medium_only} ) {
+			return $ce{medium};
+	  }
 
     my $delta = 0;
     if ( $args{charge} == 2 ) {
