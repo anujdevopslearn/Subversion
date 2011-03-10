@@ -1253,7 +1253,8 @@ sub get_http_header {
   if ( @cookie_jar && $cookies ) {
     $param_hash{'-cookie'} = \@cookie_jar;
 #    $header = $q->header( -type => $type, -cookie => \@cookie_jar );
-  } elsif ( $args{filename} ) {
+  } 
+	if ( $args{filename} ) {
     $param_hash{'Content-Disposition'}="attachment;filename=$args{filename}";
 #    $header = $q->header( -type => $type );
   } else {
