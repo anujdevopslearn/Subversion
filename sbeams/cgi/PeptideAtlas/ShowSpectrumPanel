@@ -50,6 +50,7 @@ use PDL::Graphics::PGPLOT;
 use File::Basename;
 
 my $denormalize = 1;
+my $curveType = 'function';
 
 my $error_state = 0;
 $sbeams = new SBEAMS::Connection;
@@ -64,6 +65,9 @@ $PROG_NAME="ShowOneSpectrum";
 ###############################################################################
 # Define global variables if any and execute main()
 ###############################################################################
+
+my $ymax = 10;
+
 main();
 
 
@@ -74,6 +78,7 @@ main();
 # print the footer, and end.
 ###############################################################################
 sub main {
+
 
   #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($current_username = $sbeams->Authenticate(
@@ -89,13 +94,17 @@ sub main {
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
   $denormalize = 0 if $parameters{normalize};
+  $curveType = $parameters{curveType} if $parameters{curveType};
  
   my %results;
   my $ce_vals;
   my $has_median = 0;
+  my $max_intensity = 0;
+  # First, grab da peaks
+  use Data::Dumper;
   for my $ce ( qw( low mlow medium mhigh high avg  ) ) {
     my $ce_results = mk_plot( %parameters, ce => $parameters{$ce} );
-    next unless $ce_results->{image};
+    next unless $ce_results->{max_intensity};
 
     # Going to base peaks to watch on this guy...
     $has_median++ if $ce eq 'medium';
@@ -103,11 +112,39 @@ sub main {
     $ce_vals ||= $sbeamsMOD->get_Agilent_ce( %{$ce_results} );
 
     $ce_results->{ce} = $ce_vals->{$ce};
-    $ce_results->{level} = $ce;
-    $results{$ce} = $ce_results;
+    $ce_results->{level} = ucfirst($ce);
+
     $parameters{modified_sequence} = $ce_results->{modified_sequence};
     $parameters{charge} = $ce_results->{charge};
+    $max_intensity = $ce_results->{max_intensity} if $ce_results->{max_intensity} > $max_intensity; 
+
+    $results{spectra} ||= {};
+    $results{spectra}->{$ce} = $ce_results;
   }
+
+  # This has to go into the header
+  my $peak_plot = '';
+  if ( $has_median ) {
+    my $num_ions = get_num_ions( $parameters{modified_sequence} );
+    my $chart_data = get_top_peaks( \%results, $num_ions );
+    
+    # Trying to get CE and spectra plots on same scale... 
+    $parameters{ymax} = $ymax * 1.075;
+
+    $peak_plot = get_chart( data => $chart_data,seq => $parameters{modified_sequence}, chg => $parameters{charge} );
+  }
+
+  # The plot them, now that we know the scale 
+  for my $ce ( qw( low mlow medium mhigh high ) ) {
+    next unless $results{spectra}->{$ce};
+    my $plot_results = mk_plot( %parameters, ce => $parameters{$ce}, spectrum => $results{spectra}->{$ce} );
+    $results{$ce}->{image} = $plot_results->{image};
+    $results{$ce}->{lib_desc} = $plot_results->{lib_desc};
+    $results{$ce}->{modified_sequence} = $plot_results->{modified_sequence};
+    $results{$ce}->{charge} = $plot_results->{charge};
+    $results{$ce}->{mz} = $plot_results->{precursor_mass};
+  }
+
 
   my $content = "<TABLE>\n";
   $content .= "<TR><TD ALIGN=CENTER> <div id='chart_div'></div> </TD></TR>\n";
@@ -115,15 +152,11 @@ sub main {
   for my $ce ( qw( low mlow medium mhigh high avg  ) ) {
     next unless $results{$ce};
     $content .= "<TR><TD><IMG SRC='$results{$ce}->{image}' BORDER=0></TD></TR>\n";
-    $content .= "<TR><TD ALIGN=CENTER><H4>CE: $results{$ce}->{ce}, Level: $results{$ce}->{level}, Library: $results{$ce}->{lib_desc}</TD></TR>\n";
+    $content .= "<TR><TD ALIGN=CENTER><H4>CE: $results{spectra}->{$ce}->{ce}, Level: $results{spectra}->{$ce}->{level}, Library: $results{$ce}->{lib_desc}</TD></TR>\n";
   }
   $content .= "</TABLE>\n";
 
-  # This has to go into the header
-  my $peak_plot = '';
-  if ( $has_median ) {
-    $peak_plot = get_top_peaks( \%results );
-  }
+
   $sbeamsMOD->display_page_header( header_info => $peak_plot );
   print $content;
   $sbeamsMOD->display_page_footer();
@@ -134,9 +167,6 @@ sub main {
 } # end main
 
 
-###############################################################################
-# Print Entry Form
-###############################################################################
 sub mk_plot {
 
     my %parameters = @_;
@@ -220,9 +250,15 @@ sub mk_plot {
 
     $modification_helper = new SBEAMS::PeptideAtlas::ModificationHelper();
 
-    $results{spectrum} = $consensus->get_spectrum_peaks( %parameters );
+    if ( !$parameters{spectrum} ) {
+      my $peaks = $consensus->get_spectrum_peaks( %parameters, denormalize => 1 );
+      $peaks->{mz} = $results{mz};
+      $peaks->{modified_sequence} = $results{modified_sequence};
+      $peaks->{charge} = $results{charge};
+      return $peaks;
+    }
 
-    my %spectrum = %{$results{spectrum}};
+    my %spectrum = %{$parameters{spectrum}};
 
     unless (%spectrum) {
 			$error_state++;
@@ -247,6 +283,7 @@ sub mk_plot {
     $parameters{xmax} = int($massmax/100)*100+100 unless $parameters{xmax};
 
     $parameters{ymax} ||= $intenmax + 600;
+    $ymax = $parameters{ymax};
 
     if ($q->param("reset") eq "ZOOM OUT") {
       $parameters{xmin} = int($massmin/100)*100;
@@ -344,22 +381,31 @@ sub mk_plot {
 
 sub get_top_peaks {
   my $results = shift;
-  return '' unless $results->{medium};
+  my $num_peaks = shift || 7;
+  return '' unless $results->{spectra}->{medium};
   my %top_peaks;
-  my @medium = $consensus->get_top_n_peaks( n_peaks => 7,
+  $denormalize = 0;
+  my @medium = $consensus->get_top_n_peaks( n_peaks => $num_peaks,
                                         denormalize => $denormalize,
-                                            spectra => $results->{medium} );
+                                            spectra => $results->{spectra}->{medium} );
                                                      
   $top_peaks{medium} = $medium[0];
   my $peak_list = $medium[1];
+  $ymax = $top_peaks{medium}->{$peak_list->[0]};
 
   for my $ce ( qw( low mlow mhigh high ) ) {
-    $top_peaks{$ce} = $consensus->get_top_n_peaks( n_peaks => 5,
+    $top_peaks{$ce} = $consensus->get_top_n_peaks( n_peaks => $num_peaks,
                                                denormalize => $denormalize,
-                                                   spectra => $results->{$ce},
+                                                   spectra => $results->{spectra}->{$ce},
                                                  peak_list => $peak_list );
     
+    next unless $top_peaks{$ce};
+    for my $ion ( keys( %{$top_peaks{$ce}} ) ) {
+      next unless $ion;
+      $ymax = $top_peaks{$ce}->{$ion} if $top_peaks{$ce}->{$ion} > $ymax;
+    }
   }
+
 
   my $columns .= " data.addColumn( 'string', 'CE' )\n";
   for my $ion ( @{$peak_list} ) {
@@ -370,15 +416,16 @@ sub get_top_peaks {
 #        data.setValue(0, 1, 1000);
 #        data.setValue(0, 2, 400);
 
-  my $plot_data;
+  my $plot_data = '';
   my %plot_data;
   my $num_rows = 0;
   my $row = 0;
   for my $ce ( qw( low mlow medium mhigh high ) ) {
-    next unless $results->{$ce};
+    next unless $results->{spectra}->{$ce};
     my $col = 0;
     $num_rows++;
-    $plot_data .= "data.setValue( $row, $col, '$results->{$ce}->{ce}' );\n";
+    my $ce_label = ( $ce eq 'medium' ) ? "$results->{spectra}->{$ce}->{ce}*" : $results->{spectra}->{$ce}->{ce};
+    $plot_data .= "data.setValue( $row, $col, '$ce_label' );\n";
     $col++;
     for my $ion ( @{$peak_list} ) {
       $top_peaks{$ce}->{$ion} = sprintf( "%i", $top_peaks{$ce}->{$ion} );
@@ -393,15 +440,15 @@ sub get_top_peaks {
     data.addRows($num_rows);
     $plot_data
   ~;
-  $log->info( $chart_data );
-  my $chart = get_chart( $chart_data );
-  return "$chart";
+  return $chart_data;
 }
 
 sub get_chart {
 
-  my $data = shift;
-  my $normalized = ( $denormalize ) ? '' : '(normalized)';
+  my %args = @_;
+
+  my $data = $args{data} || return '';
+  my $ion_info = "$args{seq}+$args{chg}" || '';
   
   my $chart = qq~
     <script type="text/javascript" src="https://www.google.com/jsapi"></script>
@@ -412,7 +459,17 @@ sub get_chart {
         var data = new google.visualization.DataTable();
         $data
         var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
-        chart.draw(data, {width: 800, height: 600, title: 'Intensity $normalized vs CE'});
+
+//         chart.draw(data, {width: 800, height: 600, title: 'Intensity vs CE'});
+
+        chart.draw(data, {width: 800, height: 600, title: 'Intensity vs CE, $ion_info',
+                          hAxis: {title: 'CE value (Volts)             * is vendor optimum', showTextEvery: 1,
+                                     textStyle: {color: 'black', fontSize: 16, fontWeight: 'bold' },
+												          },
+                          vAxis: {title: 'Intensity', minValue: 0, maxValue: $ymax },
+                          pointSize: 7, curveType: '$curveType'
+                         }
+            );
       }
     </script>
   ~;
@@ -500,6 +557,18 @@ sub get_library_spectrum
   }
 
 }
+
+sub get_num_ions {
+  my $sequence = shift;
+  $log->info( "initial seq is $sequence" );
+  $sequence =~ s/\[\d+\]//g;
+  my $length = length $sequence;
+  my $n_ions = int( $length/2 + 3.1 ) ;
+  $n_ions = 12 if $n_ions > 12;
+  $log->info( "mod seq is $sequence, length is $length, n_ions is $n_ions" );
+  return $n_ions;
+}
+
 
 ###############################################################################
 # pg_setup
