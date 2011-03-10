@@ -136,7 +136,8 @@ sub get_spectrum_peaks {
                    masses => [],
                    intensities => [],
                    labels => [],
-                   original_intensity => 1 );
+                   original_intensity => 1,
+                   max_intensity => 1 );
 
   my $cnt = 0;
   my $peak_cnt;
@@ -144,9 +145,17 @@ sub get_spectrum_peaks {
     $cnt++;
     chomp $line;
 
+    # Nreps=2/2 
+    if ( $line =~ /Nreps=(\d+\/\d+)\s+/ ) {
+      $spectrum{replicates} = $1;
+    }
     # OrigMaxIntensity=2.3e+03
     if ( $line =~ /OrigMaxIntensity=(\S+)\s+/ ) {
       $spectrum{original_intensity} = $1;
+    }
+    #PrecursorIntensity=5.7e+04
+    if ( $line =~ /PrecursorIntensity=(\S+)\s+/ ) {
+      $spectrum{precursor_intensity} = $1;
     }
 
     if ( $line =~ /^NumPeaks:\s+(\d+)\s*$/ ) {
@@ -158,12 +167,32 @@ sub get_spectrum_peaks {
     }
     next unless $collect_peaks;
     last if $line =~ /^\s*$/;
-    $line =~ /(\S+)\s+(\S+)\s+(\S+)\s.*$/;
-    push @{$spectrum{masses}}, $1;
-    push @{$spectrum{intensities}}, $2;
-    my $annot = $3;
+
+    my ( $mass, $intensity, $annot ) = $line =~ /(\S+)\s+(\S+)\s+(\S+)\s.*$/;
+    push @{$spectrum{masses}}, $mass;
+
+    # User wants intensities normalized to precursor m/z 
+    if ( $args{precursor_normalize} ) {
+   #   $intensity = sprintf( "%0.4f", (($intensity*($spectrum{original_intensity}/10000))/($spectrum{precursor_intensity}/10000)) );
+      $intensity = sprintf( "%0.4f", (($intensity)/($spectrum{precursor_intensity}/10000)) );
+    # User wants real intensities instead of norm to 10K
+    } 
+		if ( $args{denormalize} ) {
+      $spectrum{denormalized}++;
+      $intensity = sprintf( "%0.4f", $intensity*($spectrum{original_intensity}/10000) );
+    }
+
+    # Cache the max intensity
+    $spectrum{max_intensity} = $intensity if $intensity > $spectrum{max_intensity};
+    $spectrum{max_intensity} ||= '';
+    push @{$spectrum{intensities}}, $intensity;
+
     my @annot = split( /\//, $annot );
     push @{$spectrum{labels}}, $annot[0];
+
+    if ( $annot =~ /^(p\^\d)\// ) {
+      $spectrum{postfrag_precursor_intensity} = sprintf( "%0i", $intensity);
+    }
 
 #    print STDERR "pushing $1 and $2 to the m/i arrays\n";
     $peak_cnt++;
@@ -215,7 +244,7 @@ sub get_top_n_peaks {
 
   return '' unless $args{spectra};
 
-  my $spectrum = $args{spectra}->{spectrum};
+  my $spectrum = $args{spectra};
 
 #  $spectrum = { masses => [], 
 #                intensities => [],
@@ -227,6 +256,7 @@ sub get_top_n_peaks {
   for ( my $i = 0; $i <= $spectrum->{n_peaks}; $i++ ) {
     # only look for b/y ions
     next unless $spectrum->{labels}->[$i] =~ /^[yb]/i;
+    next if $spectrum->{labels}->[$i] =~ /\w\d+i/i;
     my $peak = { label => $spectrum->{labels}->[$i],
                   mass => $spectrum->{masses}->[$i],
              intensity => $spectrum->{intensities}->[$i] };
