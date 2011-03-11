@@ -1297,7 +1297,8 @@ sub make_qtrap5500_target_list {
 		my $ce = $self->get_qtrap5500_ce( medium_only => 1, mz => $row->[7], charge => $row->[8] );
 
     my $seq_string = join( '.', $seq, $protein, $row->[8] . $row->[11] . '-' . $row->[10] );
-    $csv_file .= join( ',', $row->[7], $row->[9], 'RT', $seq_string, $ce, 'Auto-generated' ) . "\n";
+		my $rt = $args{rt_file}->{$seq} || 'RT';
+    $csv_file .= join( ',', $row->[7], $row->[9], $rt, $seq_string, $ce, 'Auto-generated' ) . "\n";
   }
   my $sbeams = $self->getSBEAMS();
   my $file_path = $sbeams->writeSBEAMSTempFile( content => $csv_file );
