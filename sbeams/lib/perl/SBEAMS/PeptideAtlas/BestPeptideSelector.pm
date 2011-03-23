@@ -1268,13 +1268,14 @@ sub get_pabst_static_peptide_display {
                                               default => 'Adj SS' )  );
   my $naa = 'n/a';
   $naa = $sbeams->makeInactiveText($naa) if $sbeams->output_mode() =~ /html/i;
-
+	 
   my $sth = $sbeams->get_statement_handle( $sql );
 
   my %uniq_peps;
 
   while( my @row = $sth->fetchrow_array() ) {
     $uniq_peps{$row[1]}++;
+    $row[7] = $naa if $row[7] && $row[7] == 9999;
     for my $idx ( 3,4,5 ) {
       if ( defined $row[$idx] && $row[$idx] ne '' ) {
         $row[$idx] = sprintf( "%0.2f", $row[$idx] );
@@ -1316,7 +1317,7 @@ sub get_pabst_static_peptide_display {
 #    $row[10] = sprintf( "%0.2f", $row[10] );
 
     if ( $row[11] eq 'Yes' ) {
-      $row[3] *= 5;
+#      $row[3] *= 5;
     }
 
     $row[1] = "<A HREF=GetPeptide?_tab=3;atlas_build_id=$args{atlas_build_id};searchWithinThis=Peptide+Sequence;searchForThis=$row[1];action=QUERY;biosequence_id=$args{biosequence_id} TITLE='View peptide $row[1] details'>$row[1]</A>" if $row[8];
