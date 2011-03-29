@@ -120,8 +120,7 @@ sub do_simple_digestion {
     }
   }
   if ( $term eq 'N' && $args{aa_seq} =~ /$regex{$enz}$/ ) {
-    next if ( $args{min_len} && 1 < $args{min_len} ); 
-    push @fullpeps, $regex{$enz};
+    push @fullpeps, $regex{$enz} unless ( $args{min_len} && 1 < $args{min_len} ); 
   }
   return \@fullpeps;
   
