@@ -1243,13 +1243,13 @@ sub handle_request {
         {my $data_item = $resultset_ref->{data_ref}->[$row]->[0];
         push @acclist, $data_item;
         }
-        {my $data_item = $resultset_ref->{data_ref}->[$row]->[9];
+        {my $data_item = $resultset_ref->{data_ref}->[$row]->[10];
         push @coord1_list, $data_item;
         }
-        {my $data_item = $resultset_ref->{data_ref}->[$row]->[10];
+        {my $data_item = $resultset_ref->{data_ref}->[$row]->[11];
         push @coord2_list, $data_item;
         }
-        {my $data_item = $resultset_ref->{data_ref}->[$row]->[11];
+        {my $data_item = $resultset_ref->{data_ref}->[$row]->[12];
         push @strand_list, $data_item;
         }
       }
