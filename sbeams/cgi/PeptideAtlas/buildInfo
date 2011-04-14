@@ -230,20 +230,16 @@ sub handle_request {
                                                   hidetext => 'View default builds',
                                                   showtext => 'View all builds',
                                                   sticky  => 1 );
-  print $link;
-
-#  print qq~
-#  <P>Below is a listing of the PeptideAtlas builds.</P>
-#  <P>Your current build is: <font color="red">$default_build_name</font></P>
-#  $link
-#  ~;
+  print qq~
+  <P>Listing takes 8 - 90 seconds to generate. Screen will be empty until complete.<BR>
+  See <i>Protein ID terms</i> in left sidebar for nomenclature.</P>
+  $link
+  ~;
 
   my $table = SBEAMS::Connection::DataTable->new();
 
   my $this_row = $table->getRowNum();
 
-  #my $radio_button_idx = 0;
-  #my $is_def_idx = 5;
   my $build_name_idx = 0;
   my $org_idx = 1;
   my $smpl_count_idx = 2;
@@ -259,20 +255,18 @@ sub handle_request {
   my $ncols = 12;
 
   my @headers;
-  #$headers[$radio_button_idx] = '';
-  #$headers[$is_def_idx] = 'is_def';
   $headers[$build_name_idx] = 'Build Name';
-  $headers[$distinct_peps_idx] = '# distinct peptides';
-  $headers[$smpl_count_idx] = '# samples';
+  $headers[$distinct_peps_idx] = 'distinct peptides';
+  $headers[$smpl_count_idx] = 'samples';
   $headers[$org_idx] = 'Organism';
   $headers[$descr_idx] = 'Description';
-  $headers[$psm_count_idx] = '# observations';
-  $headers[$spectra_searched_idx] = '# spectra searched';
-  $headers[$n_canonicals_idx] = '# canonical proteins';
-  $headers[$n_canon_dist_idx] = '# canonical + possibly distinguished proteins';
-  $headers[$n_disting_prots_idx] = '# distinguishable proteins';
-  $headers[$n_seq_unique_prots_idx] = '# sequence unique proteins';
-  $headers[$n_covering_idx] = 'size covering set';
+  $headers[$psm_count_idx] = 'observations';
+  $headers[$spectra_searched_idx] = 'spectra searched';
+  $headers[$n_canonicals_idx] = 'canonical proteins';
+  $headers[$n_canon_dist_idx] = 'canonical + possibly distinguished proteins';
+  $headers[$n_disting_prots_idx] = 'peptide set unique proteins';
+  $headers[$n_seq_unique_prots_idx] = 'sequence unique proteins';
+  $headers[$n_covering_idx] = 'covering set';
 
   # Define header row
   $table ->addRow( \@headers );
@@ -358,20 +352,30 @@ sub handle_request {
     $atlas_build->[$atlas_build_name_idx]</A>
     END
 
-#      $row[$radio_button_idx] =<<"      END";
-#      <INPUT $selected TYPE="radio" NAME="atlas_build_id" VALUE="$atlas_build->[$atlas_build_id_idx]" onchange="switchAtlasBuild()">
-#      END
-
-    $row[$distinct_peps_idx] = $atlas_build->[$dist_peps_idx];
+    $row[$distinct_peps_idx] =<<"    END";
+<A HREF=GetPeptides?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&apply_action=QUERY TITLE="Retrieve distinct peptides for Atlas Build $atlas_build->[$atlas_build_name_idx]">$atlas_build->[$dist_peps_idx]</A>
+    END
     $row[$org_idx] = $atlas_build->[$org_name_idx];
-    $row[$smpl_count_idx] = $samples_href->{smpl_count};
+    $row[$smpl_count_idx] =<<"    END";
+    <A HREF=buildDetails?atlas_build_id=$atlas_build->[$atlas_build_id_idx] TITLE="View samples included in Atlas Build $atlas_build->[$atlas_build_name_idx]">$samples_href->{smpl_count}</A>
+    END
     $row[$psm_count_idx] = $samples_href->{psm_count};
     $row[$spectra_searched_idx] = $spectra_searched_href->{nspec};
-    $row[$n_canonicals_idx] = $canonical_count;
-    $row[$n_covering_idx] = $covering_count;
-    $row[$n_canon_dist_idx] = $canon_dist_count;
-    $row[$n_disting_prots_idx] = $distinguishable_prot_count;
-    $row[$n_seq_unique_prots_idx] = $sequence_unique_prot_count;
+    $row[$n_canonicals_idx] =<<"    END";
+<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&presence_level_constraint=1&redundancy_constraint=4&apply_action=QUERY TITLE="Retrieve canonical protein list for Atlas Build $atlas_build->[$atlas_build_name_idx]">$canonical_count</A>
+    END
+    $row[$n_covering_idx] =<<"    END";
+<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&redundancy_constraint=4&covering_constraint=on&apply_action=QUERY TITLE="Retrieve protein list sufficient to explain all peptides observed in Atlas Build $atlas_build->[$atlas_build_name_idx]">$covering_count</A>
+    END
+    $row[$n_canon_dist_idx] =<<"    END";
+<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&presence_level_constraint=1,2&redundancy_constraint=4&apply_action=QUERY TITLE="Retrieve canonical and possibly-distinguished protein list for Atlas Build $atlas_build->[$atlas_build_name_idx]">$canon_dist_count</A>
+    END
+    $row[$n_disting_prots_idx] =<<"    END";
+<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&redundancy_constraint=4&apply_action=QUERY TITLE="Retrieve one protein per distinct peptide set for Atlas Build $atlas_build->[$atlas_build_name_idx]">$distinguishable_prot_count</A>
+    END
+    $row[$n_seq_unique_prots_idx] =<<"    END";
+<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&redundancy_constraint=1&apply_action=QUERY TITLE="Retrieve a list of sequence-unique proteins Atlas Build $atlas_build->[$atlas_build_name_idx]">$sequence_unique_prot_count</A>
+    END
     $row[$descr_idx] = $sbeams->truncateStringWithMouseover( string => $atlas_build->[$atlas_build_descr_idx], len => 50 );
 #      $row[$is_def_idx] = $atlas_build->[$org_spec_build_idx] || '';
 #      $row[$is_def_idx] = ( !$atlas_build->[$def_build_id_idx] ) ? 'N' : ( $row[$is_def_idx] ) ?
@@ -379,14 +383,14 @@ sub handle_request {
 
     $table->addRow( \@row );
     my $this_row = $table->getRowNum();
-    $table->setRowAttr(  COLS => [1..6], ROWS => [$this_row], BGCOLOR => $bgcolor, @trinfo );
+    $table->setRowAttr(  COLS => [1..$ncols], ROWS => [$this_row], BGCOLOR => $bgcolor, @trinfo );
   }
 
   my $nrows = $this_row;
   $table->setColAttr(  COLS => [$build_name_idx+1], ROWS => [2..$nrows], NOWRAP => 1 );
   $table->setColAttr(  COLS => [$descr_idx+1], ROWS => [2..$nrows], NOWRAP => 1 );
-  $table->setColAttr(  COLS => [1,$smpl_count_idx], ROWS => [1..$nrows], ALIGN => 'LEFT' );
-  $table->setColAttr(  COLS => [$smpl_count_idx+1,$ncols], ROWS => [1..$nrows], ALIGN => 'CENTER' );
+  $table->setColAttr(  COLS => [$build_name_idx+1], ROWS => [1..$nrows], ALIGN => 'LEFT' );
+  $table->setColAttr(  COLS => [$build_name_idx+2..$descr_idx], ROWS => [1..$nrows], ALIGN => 'CENTER' );
 #    $table->setColAttr(  COLS => [3], ROWS => [1..$nrows], BGCOLOR => '#eeeeee' );
   print "$table";
   print $q->hidden( "apply_action", '');

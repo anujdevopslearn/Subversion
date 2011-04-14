@@ -1,0 +1,238 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : defaultBuildsPepsProts
+# Author      : Terry Farrah 
+# $Id: main.cgi 5994 2009-03-06 08:01:38Z dcampbel $
+#
+# Description : This script displays details about all Atlas builds
+#
+# SBEAMS is Copyright (C) 2000-2009 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Get the script set up with everything it will need
+###############################################################################
+use strict;
+use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
+             $current_contact_id $current_username);
+use lib qw (../../lib/perl);
+use CGI::Carp qw(fatalsToBrowser croak);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::DataTable;
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+
+
+###############################################################################
+# Global Variables
+###############################################################################
+$PROG_NAME = 'defaultBuildsPepsProts';
+main();
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authentication and stop immediately if authentication
+# fails else continue.
+###############################################################################
+sub main
+{
+    #### Do the SBEAMS authentication and exit if a username is not returned
+    exit unless ($current_username = $sbeams->Authenticate(
+        permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+        'PeptideAtlas_readonly', 'PeptideAtlas_exec'],
+        #connect_read_only=>1,
+        allow_anonymous_access=>1,
+    ));
+
+
+    #### Read in the default input parameters
+    my %parameters;
+    my $n_params_found = $sbeams->parse_input_parameters(
+        q=>$q,
+        parameters_ref=>\%parameters
+        );
+
+    if ( $parameters{reset_id} && $parameters{reset_id} eq 'true' ) {
+      $sbeamsMOD->clearBuildSettings();
+    }
+
+    ## get project_id to send to HTMLPrinter display
+    my $project_id = $sbeamsMOD->getProjectID(
+        atlas_build_name => $parameters{atlas_build_name},
+        atlas_build_id => $parameters{atlas_build_id}
+        );
+
+
+    #### Process generic "state" parameters before we start
+    $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+
+    #### Decide what action to take based on information so far
+    if ($parameters{action} eq "???") {
+
+        # Some action
+ 
+    } else {
+
+        $sbeamsMOD->display_page_header(project_id => $project_id);
+
+        handle_request(ref_parameters=>\%parameters);
+
+        $sbeamsMOD->display_page_footer();
+
+    }
+
+
+
+
+} # end main
+
+
+###############################################################################
+# Show the main welcome page
+###############################################################################
+sub handle_request {
+
+    my %args = @_;
+
+    #### Process the arguments list
+    my $ref_parameters = $args{'ref_parameters'}
+        || die "ref_parameters not passed";
+
+    my %parameters = %{$ref_parameters};
+
+
+  #### Get the current atlas_build_id based on parameters or session
+  my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+    parameters_ref => \%parameters,
+  );
+  if (defined($atlas_build_id) && $atlas_build_id < 0) {
+    #### Don't return. Let the user pick from a valid one.
+    #return;
+  }
+
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+    parameters_ref => \%parameters,
+    program_name => $PROG_NAME,
+  );
+  if ($sbeams->output_mode() eq 'html') {
+    print "<BR>\n";
+    print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+    print "<BR>\n";
+  }
+
+
+    #### Read in the standard form values
+    my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+    my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+
+    #### Set some specific settings for this program
+    my $PROGRAM_FILE_NAME = $PROG_NAME;
+    my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+    my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
+
+
+    #### If the output_mode is HTML, then display the form
+    if ($sbeams->output_mode() eq 'html') {
+
+        print qq~
+        <script LANGUAGE="Javascript">
+          function switchAtlasBuild() {
+            document.AtlasBuildList.apply_action.value = "GO";
+            document.AtlasBuildList.submit();
+          }
+        </script>
+        ~;
+
+        print $q->start_form(-method=>"POST",
+                             -action=>"$base_url",
+			     -name=>"AtlasBuildList",
+                            );
+  print qq~
+  <P>Links below will retrieve the identified peptides and proteins
+     for the latest PeptideAtlas build for each organism.<br>
+     These URLs stay constant over time and can be used programmatically.
+  </P>
+  ~;
+
+
+  my $table = SBEAMS::Connection::DataTable->new();
+
+  my $this_row = $table->getRowNum();
+
+  my $org_idx = 0;
+  my $distinct_peps_idx = 1;
+  my $n_canonicals_idx = 2;
+  my $ncols = 3;
+
+  my @headers;
+  $headers[$distinct_peps_idx] = 'distinct peptides';
+  $headers[$org_idx] = 'Organism';
+  $headers[$n_canonicals_idx] = 'canonical proteins';
+
+  # Define header row
+  $table ->addRow( \@headers );
+  $table->setRowAttr(  COLS => [1..$ncols], ROWS => [1], BGCOLOR => '#bbbbbb', ALIGN=>'CENTER' );
+  $table->setHeaderAttr( BOLD => 1 );
+
+  my @organisms = ('Human', 'Mouse', 'Pig', 'Drosophila', 'C elegans', 'Yeast');
+
+  foreach my $organism ( @organisms ) {
+    my @row;
+    my @trinfo;
+    my $selected = '';
+    my $bgcolor = '#dddddd';
+
+    $row[$org_idx] = $organism;
+    $row[$distinct_peps_idx] =<<"    END";
+<A HREF="GetPeptides?organism_name=$organism&apply_action=QUERY&output_mode=html" TITLE="Display distinct peptides for $organism default build in browser">browser</A>,
+<A HREF="GetPeptides?organism_name=$organism&apply_action=QUERY&output_mode=excel" TITLE="Retrieve distinct peptides for $organism default build in Excel format">Excel</A>,
+<A HREF="GetPeptides?organism_name=$organism&apply_action=QUERY&output_mode=xml" TITLE="Retrieve distinct peptides for $organism default build in XML format">XML</A>,
+<A HREF="GetPeptides?organism_name=$organism&apply_action=QUERY&output_mode=tsv" TITLE="Retrieve distinct peptides for $organism default build in TSV format">TSV</A>,
+<A HREF="GetPeptides?organism_name=$organism&apply_action=QUERY&output_mode=csv" TITLE="Retrieve distinct peptides for $organism default build in CSV format">CSV</A>
+    END
+    $row[$n_canonicals_idx] =<<"    END";
+<A HREF="GetProteins?organism_name=$organism&presence_level_constraint=1&redundancy_constraint=4&apply_action=QUERY&output_mode=html" TITLE="Display canonical protein list for $organism default build in browser">browser</A>,
+<A HREF="GetProteins?organism_name=$organism&presence_level_constraint=1&redundancy_constraint=4&apply_action=QUERY&output_mode=excel" TITLE="Retrieve canonical protein list for $organism default build in Excel format">Excel</A>,
+<A HREF="GetProteins?organism_name=$organism&presence_level_constraint=1&redundancy_constraint=4&apply_action=QUERY&output_mode=xml" TITLE="Retrieve canonical protein list for $organism default build in XML format">XML</A>,
+<A HREF="GetProteins?organism_name=$organism&presence_level_constraint=1&redundancy_constraint=4&apply_action=QUERY&output_mode=tsv" TITLE="Retrieve canonical protein list for $organism default build in TSV format">TSV</A>,
+<A HREF="GetProteins?organism_name=$organism&presence_level_constraint=1&redundancy_constraint=4&apply_action=QUERY&output_mode=csv" TITLE="Retrieve canonical protein list for $organism default build in CSV format">CSV</A>
+    END
+
+    $table->addRow( \@row );
+    my $this_row = $table->getRowNum();
+    $table->setRowAttr(  COLS => [1..$ncols], ROWS => [$this_row], BGCOLOR => $bgcolor, @trinfo );
+  }
+
+  my $nrows = $this_row;
+  $table->setColAttr(  COLS => [$org_idx+1], ROWS => [2..$nrows], NOWRAP => 1 );
+  $table->setColAttr(  COLS => [$org_idx+1], ROWS => [1..$nrows], ALIGN => 'LEFT' );
+  $table->setColAttr(  COLS => [$org_idx+2..$ncols], ROWS => [1..$nrows], ALIGN => 'CENTER' );
+  print "$table";
+  print $q->hidden( "apply_action", '');
+  print $q->endform;
+
+  }
+} # end showMainPage

@@ -89,6 +89,18 @@ sub getTabMenu
     {
        $current_tab=2;
 
+    } elsif ( ($PROG_NAME =~ /^buildInfo/) ||
+    ($PROG_NAME =~ /buildInfo\?(\S+)/ ))
+    {
+       $current_tab=2;
+       $current_subtab=2;
+
+    } elsif ( ($PROG_NAME =~ /^defaultBuildsPepsProts/) ||
+    ($PROG_NAME =~ /defaultBuildsPepsProts\?(\S+)/ ))
+    {
+       $current_tab=2;
+       $current_subtab=3;
+
     } elsif ( ($PROG_NAME =~ /^SearchProteins/) ||
     ($PROG_NAME =~ /SearchProteins\?(\S+)/ ))
     {
@@ -116,6 +128,12 @@ sub getTabMenu
        $current_tab=4;
        $current_subtab=2;
 
+    } elsif ( ($PROG_NAME =~ /^CompareBuildsProteins/) ||
+    ($PROG_NAME =~ /CompareBuildsProteins\?(\S+)/ ))
+    {
+       $current_tab=4;
+       $current_subtab=3;
+
     } elsif ( ($PROG_NAME =~ /^showPathways/) ||
     ($PROG_NAME =~ /showPathways\?(\S+)/ ))
     {
@@ -138,7 +156,7 @@ sub getTabMenu
     ($PROG_NAME =~ /Summarize_Peptide\?(\S+)/ ))
     {
        $current_tab=2;
-       $current_subtab=2;
+       $current_subtab=4;
 
     }elsif ( ($PROG_NAME =~ /^GetTransitionLists/) ||
     ($PROG_NAME =~ /GetTransitionLists\?(\S+)/ ))
@@ -189,6 +207,18 @@ sub getTabMenu
 			   );
 
     $tabmenu->addMenuItem( tablabel => 'All Builds',
+			   label => 'Stats & Lists',
+			   helptext => 'Get stats, retrieve peptide and protein lists for all builds',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/buildInfo"
+			   );
+
+    $tabmenu->addMenuItem( tablabel => 'All Builds',
+			   label => 'Peps & Prots for Default Builds',
+			   helptext => 'Retrieve peptide and protein lists for default builds',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/defaultBuildsPepsProts"
+			   );
+
+    $tabmenu->addMenuItem( tablabel => 'All Builds',
 			   label => 'Summarize Peptide',
 			   helptext => 'Browsing the basic information about a peptide',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/Summarize_Peptide"
@@ -221,6 +251,12 @@ sub getTabMenu
 			   label => 'Browse Proteins',
 			   helptext => 'Multi-constraint browsing of PeptideAtlas Proteins',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/GetProteins"
+			   );
+
+    $tabmenu->addMenuItem( tablabel => 'Queries',
+			   label => 'Compare Proteins in 2 Builds',
+			   helptext => 'Display proteins identified in both of two specified PeptideAtlas builds',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/CompareBuildsProteins"
 			   );
 
     $tabmenu->addMenuItem( tablabel => 'Queries',
