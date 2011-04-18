@@ -56,8 +56,13 @@ AT_biosequence_relationship_type	Biosequence Relationship Type	PeptideAtlas_infr
 AT_GetPABSTList	Get PABST List	QUERY					GetPABSTList		
 AT_SearchProteins	Search Proteins	QUERY					SearchProteins		
 AT_pabst_build	PABST Build	PeptideAtlas_infrastructure	YES	$TBAT_PABST_BUILD	pabst_build_id		ManageTable.cgi?TABLE_NAME=AT_PABST_build		
+AT_pabst_build_file	PABST Build File	PeptideAtlas_infrastructure	NO	$TBAT_PABST_BUILD_FILE	pabst_build_file_id				
 AT_pabst_peptide	PABST Peptide	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE	pabst_peptide_id				
 AT_pabst_peptide_mapping	PABST Peptide Mapping	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE_MAPPING	pabst_peptide_id, biosequence_id				
 AT_pabst_transition	PABST Transition	PeptideAtlas_infrastructure	NO	$TBAT_PABST_TRANSITION	pabst_transition_id				
+AT_pabst_transition_instance	PABST Transition Instance	PeptideAtlas_infrastructure	NO	$TBAT_PABST_TRANSITION_INSTANCE	pabst_transition_instance_id				
+AT_pabst_source_priority	PABST Source Priority	PeptideAtlas_infrastructure	NO	$TBAT_PABST_SOURCE_PRIORITY	pabst_source_priority_id				
+AT_instrument_type	Instrument Type	PeptideAtlas_infrastructure	NO	$TBAT_INSTRUMENT_TYPE	instrument_type_id				
+AT_transition_type	Transition Type	PeptideAtlas_infrastructure	NO	$TBAT_TRANSITION_TYPE	transition_type_id				
 AT_protein_list	Protein List	PeptideAtlas_infrastructure	YES	$TBAT_PROTEIN_LIST	protein_list_id		ManageTable.cgi?TABLE_NAME=AT_Protein_list		
 AT_protein_list_protein	Protein List Protein	PeptideAtlas_infrastructure	NO	$TBAT_PROTEIN_LIST_PROTEIN	protein_list_protein_id				
