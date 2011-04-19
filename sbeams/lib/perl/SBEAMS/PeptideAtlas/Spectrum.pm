@@ -119,7 +119,7 @@ sub loadBuildSpectra {
   my $filetype = 'PAidentlist';
   my $expected_n_columns = 14;
   my $peplist_file = "$atlas_build_directory/".
-    "PeptideAtlasInput_sorted.PAidentlist";
+    "PeptideAtlasInput_concat.PAidentlist";
 
   #### Else try the older peplist file
   unless (-e $peplist_file) {
@@ -459,20 +459,24 @@ sub get_spectrum_id {
   #### If we haven't loaded all spectrum_ids into the
   #### cache yet, do so
   our %spectrum_ids;
-  unless (%spectrum_ids) {
-    print "[INFO] Loading all spectrum_ids...\n";
+  our %processed_sample_ids;
+  unless ($processed_sample_ids{$sample_id}) {
+    print "\n[INFO] Loading spectrum_ids for sample_id $sample_id...\n";
+    %spectrum_ids = ();
+    $processed_sample_ids{$sample_id} = 1;
     my $sql = qq~
       SELECT sample_id,spectrum_name,spectrum_id
-        FROM $TBAT_SPECTRUM
+        FROM $TBAT_SPECTRUM 
+        WHERE sample_id=$sample_id
     ~;
 
     my $sth = $sbeams->get_statement_handle( $sql );
     while ( my $row = $sth->fetchrow_arrayref() ) {
-      my $key = "$row->[0] - $row->[1]";
+      my $key = "$row->[0]-$row->[1]";
       $spectrum_ids{$key} = $row->[2];
     }
     my $num_ids = scalar(keys(%spectrum_ids));
-    print "       $num_ids spectrum IDs loaded...\n";
+    print "       $num_ids spectrum IDs loaded for sample_id $sample_id...\n";
 
     #### Put a dummy entry in the hash so load won't trigger twice if
     #### table is empty at this point
@@ -490,7 +494,7 @@ sub get_spectrum_id {
 
 
   #### Lookup and return spectrum_id
-  my $key = "$sample_id - $spectrum_name";
+  my $key = "$sample_id-$spectrum_name";
   #print "key = $key  spectrum_ids{key} = $spectrum_ids{$key}\n";
   if ($spectrum_ids{$key}) {
     return($spectrum_ids{$key});
@@ -791,8 +795,11 @@ sub get_spectrum_identification_id {
   #### If we haven't loaded all spectrum_identification_ids into the
   #### cache yet, do so
   our %spectrum_identification_ids;
-  unless (%spectrum_identification_ids) {
-    print "[INFO] Loading all spectrum_identification_ids...\n";
+  our %processed_atlas_search_batch_id;
+  unless ($processed_atlas_search_batch_id{$atlas_search_batch_id}) {
+    print "\n[INFO] Loading all spectrum_identification_ids for atlas_search_batch_id $atlas_search_batch_id...\n";
+    $processed_atlas_search_batch_id{$atlas_search_batch_id} = 1;
+    %spectrum_identification_ids = ();
     my $sql = qq~
       SELECT SI.modified_peptide_instance_id,SI.spectrum_id,
              SI.atlas_search_batch_id,SI.spectrum_identification_id
@@ -802,13 +809,14 @@ sub get_spectrum_identification_id {
         JOIN $TBAT_PEPTIDE_INSTANCE PEPI
              ON ( MPI.peptide_instance_id = PEPI.peptide_instance_id )
        WHERE PEPI.atlas_build_id = '$atlas_build_id'
+             AND SI.atlas_search_batch_id = $atlas_search_batch_id
     ~;
 
     my $sth = $sbeams->get_statement_handle( $sql );
 
     #### Create a hash out of it
     while ( my $row = $sth->fetchrow_arrayref() ) {
-      my $key = "$row->[0] - $row->[1] - $row->[2]";
+      my $key = "$row->[0]-$row->[1]-$row->[2]";
       $spectrum_identification_ids{$key} = $row->[3];
     }
 
@@ -821,7 +829,7 @@ sub get_spectrum_identification_id {
 
 
   #### Lookup and return spectrum_id
-  my $key = "$modified_peptide_instance_id - $spectrum_id - $atlas_search_batch_id";
+  my $key = "$modified_peptide_instance_id-$spectrum_id-$atlas_search_batch_id";
   if ($spectrum_identification_ids{$key}) {
     return($spectrum_identification_ids{$key});
   };
