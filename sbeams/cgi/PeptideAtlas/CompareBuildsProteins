@@ -871,11 +871,12 @@ sub handle_request {
   #########################################################################
   #### If "Swap Builds" was selected, do so.
   if ($apply_action =~ /swap builds/i ) {
-print "build1 = $parameters{atlas_build_id}<br>\n";
-print "build1 = $atlas_build_id[1]<br>\n";
-print "build2 = $parameters{atlas_build_id_2}<br>\n";
-print "build2 = $atlas_build_id[2]<br>\n";
-print "-- Swapping --<br>\n";
+### debugging statements for SWAP button
+#print "build1 = $parameters{atlas_build_id}<br>\n";
+#print "build1 = $atlas_build_id[1]<br>\n";
+#print "build2 = $parameters{atlas_build_id_2}<br>\n";
+#print "build2 = $atlas_build_id[2]<br>\n";
+#print "-- Swapping --<br>\n";
 
     my $tmp = $parameters{atlas_build_id};
     $parameters{atlas_build_id} = $parameters{atlas_build_id_2};
@@ -890,10 +891,11 @@ print "-- Swapping --<br>\n";
 	parameters_ref => \%parameters,
 	secondary_build => 1,
     );
-print "build1 = $parameters{atlas_build_id}<br>\n";
-print "build1 = $atlas_build_id[1]<br>\n";
-print "build2 = $parameters{atlas_build_id_2}<br>\n";
-print "build2 = $atlas_build_id[2]<br>\n";
+# Print statements for debugging SWAP button
+#print "build1 = $parameters{atlas_build_id}<br>\n";
+#print "build1 = $atlas_build_id[1]<br>\n";
+#print "build2 = $parameters{atlas_build_id_2}<br>\n";
+#print "build2 = $atlas_build_id[2]<br>\n";
   }
 
 
@@ -1106,10 +1108,11 @@ print "build2 = $atlas_build_id[2]<br>\n";
   }
 
 
-print "build1 = $parameters{atlas_build_id}<br>\n";
-print "build1 = $atlas_build_id[1]<br>\n";
-print "build2 = $parameters{atlas_build_id_2}<br>\n";
-print "build2 = $atlas_build_id[2]<br>\n";
+# Print statements for debugging SWAP button
+#print "build1 = $parameters{atlas_build_id}<br>\n";
+#print "build1 = $atlas_build_id[1]<br>\n";
+#print "build2 = $parameters{atlas_build_id_2}<br>\n";
+#print "build2 = $atlas_build_id[2]<br>\n";
 
 } # end handle_request
 

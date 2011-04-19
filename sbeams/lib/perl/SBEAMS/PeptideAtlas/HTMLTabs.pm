@@ -105,7 +105,7 @@ sub getTabMenu
     ($PROG_NAME =~ /SearchProteins\?(\S+)/ ))
     {
        $current_tab=4;
-       $current_subtab=3;
+       $current_subtab=4;
 
     } elsif( ($PROG_NAME =~ /^Search/) ||
     ($PROG_NAME =~ /^Search\?(\S+)/ ))
@@ -138,7 +138,7 @@ sub getTabMenu
     ($PROG_NAME =~ /showPathways\?(\S+)/ ))
     {
        $current_tab=4;
-       $current_subtab=4;
+       $current_subtab=5;
 
     } elsif ( ($PROG_NAME =~ /^GetTransitions/) ||
     ($PROG_NAME =~ /ViewSRMList\?(\S+)/ ))
