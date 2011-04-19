@@ -917,7 +917,7 @@ sub get_pabst_static_peptide_transitions_display {
   }
   die "Missing required parameter(s) $err" if $err;
 
-#  pabst_peptide_id     pabst_build_id     biosequence_id     preceding_residue     peptide_sequence                         following_residue     empirical_proteotypic_score     suitability_score     merged_score     molecular_weight     SSRCalc_relative_hydrophobicity     n_protein_mappings     n_genome_locations     best_probability     n_observations     synthesis_score     synthesis_warnings     syntheis_adjusted_score    
+#  pabst_peptide_id     pabst_build_id     biosequence_id     preceding_residue     peptide_sequence                         following_residue     empirical_proteotypic_score     suitability_score     merged_score     molecular_weight     SSRCalc_relative_hydrophobicity     n_protein_mappings     n_genome_locations     best_probability     n_observations     synthesis_score     synthesis_warnings     synthesis_adjusted_score    
 # 0 pabst_peptide_id
 # 1 pabst_build_id
 # 2 biosequence_id
@@ -936,7 +936,7 @@ sub get_pabst_static_peptide_transitions_display {
 # 15 atlas_build_id
 # 16 synthesis_score
 # 17 synthesis_warnings
-# 18 syntheis_adjusted_score
+# 18 synthesis_adjusted_score
 #
 # 3,4,5,6,7,8,10,11,12,16,15 
 #
@@ -1214,7 +1214,7 @@ sub get_pabst_static_peptide_display {
 # 15 atlas_build_id
 # 16 synthesis_score
 # 17 synthesis_warnings
-# 18 syntheis_adjusted_score
+# 18 synthesis_adjusted_score
 #
 # 3, 4,5, 6, 7, 8, 10, 11,12, 16,15 
 
@@ -2388,7 +2388,7 @@ sub get_pabst_headings {
                      annotations
                      atlas_build
                      synthesis_score
-                     syntheis_adjusted_score );
+                     synthesis_adjusted_score );
 
   if ( $args{as_col_hash} ) {
     my %col_hash;
@@ -2570,7 +2570,7 @@ sub merge_pabst_peptides {
 # 14 annotations
 # 15 atlas build
 # 16 synthesis_score
-# 17 syntheis_adjusted_score
+# 17 synthesis_adjusted_score
 
     my $naa = 'na';
     $naa = $sbeams->makeInactiveText($naa) if $sbeams->output_mode() =~ /html/i;
