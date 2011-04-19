@@ -162,11 +162,14 @@ sub handle_request {
     my $sql = qq~
     SELECT AB.atlas_build_id, atlas_build_name, atlas_build_description,
            default_atlas_build_id, organism_specialized_build, organism_name,
+           ( SELECT  COUNT(*) cnt
+	      FROM $TBAT_PEPTIDE_INSTANCE
+	      WHERE atlas_build_id = AB.atlas_build_id ) AS n_distinct,
            ( SELECT SUM(n_progressive_peptides) 
              FROM $TBAT_SEARCH_BATCH_STATISTICS SBS JOIN
                   $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB 
                ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
-             WHERE atlas_build_id = AB.atlas_build_id ) AS n_distinct
+             WHERE atlas_build_id = AB.atlas_build_id ) AS n_distinct_2
     FROM $TBAT_ATLAS_BUILD AB JOIN $TBAT_BIOSEQUENCE_SET BS
       ON AB.biosequence_set_id = BS.biosequence_set_id
     JOIN $TB_ORGANISM O ON BS.organism_id = O.organism_id
@@ -193,6 +196,7 @@ sub handle_request {
     my $org_spec_build_idx = 4;
     my $org_name_idx = 5;
     my $dist_peps_idx = 6;
+    my $dist_peps_2_idx = 7;   #this can undercount; it's based on experiment_contribution_summary.out
 
     my $default_build_name = '';
     foreach my $atlas_build ( @atlas_builds ) {
@@ -232,9 +236,21 @@ sub handle_request {
                                                   sticky  => 1 );
   print qq~
   <P>Listing takes 8 - 90 seconds to generate. Screen will be empty until complete.<BR>
+  Protein tallies exclude decoy, unmapped, and some contaminant proteins;
+  number of proteins returned on click may be higher.<BR>
   See <i>Protein ID terms</i> in left sidebar for nomenclature.</P>
   $link
   ~;
+
+#  print qq~
+# <?php require_once 'HTML/progress.php';
+# $bar = new HTML Progress();
+# $bar->setAnimSpeed(50);
+# ?>
+# <html>
+# <head>
+# <
+# ~;
 
   my $table = SBEAMS::Connection::DataTable->new();
 
