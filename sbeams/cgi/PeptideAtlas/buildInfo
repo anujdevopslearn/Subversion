@@ -236,8 +236,9 @@ sub handle_request {
                                                   sticky  => 1 );
   print qq~
   <P>Listing takes 8 - 90 seconds to generate. Screen will be empty until complete.<BR>
-  Protein tallies exclude decoy, unmapped, and some contaminant proteins;
-  number of proteins returned on click may be higher.<BR>
+  Number of proteins returned on click may be higher than tallies shown here:<BR>
+  &nbsp;&nbsp;--Protein tallies exclude decoy, unmapped, and some contaminant proteins.<BR>
+  &nbsp;&nbsp;--Swiss-Prot tallies count each core 6-char identifier once, even when multiple splice variants exist.<BR>
   See <i>Protein ID terms</i> in left sidebar for nomenclature.</P>
   $link
   ~;
@@ -266,9 +267,10 @@ sub handle_request {
   my $n_canon_dist_idx = 7;
   my $n_disting_prots_idx = 8;
   my $n_seq_unique_prots_idx = 9;
-  my $n_covering_idx = 10;
-  my $descr_idx = 11;
-  my $ncols = 12;
+  my $n_swiss_idx = 10;
+  my $n_covering_idx = 11;
+  my $descr_idx = 12;
+  my $ncols = 13;
 
   my @headers;
   $headers[$build_name_idx] = 'Build Name';
@@ -282,6 +284,7 @@ sub handle_request {
   $headers[$n_canon_dist_idx] = 'canonical + possibly distinguished proteins';
   $headers[$n_disting_prots_idx] = 'peptide set unique proteins';
   $headers[$n_seq_unique_prots_idx] = 'sequence unique proteins';
+  $headers[$n_swiss_idx] = 'Core Swiss-Prot identifiers covered';
   $headers[$n_covering_idx] = 'covering set';
 
   # Define header row
@@ -335,6 +338,9 @@ sub handle_request {
       relationship_name => 'indistinguishable',
     );
     my $indistinguishable_count = $prot_count_href->{nprots};
+    my $swiss_count = get_swissprot_coverage (
+      build_id => $atlas_build->[$atlas_build_id_idx],
+    );
 
     my $canon_dist_count = $canonical_count + $poss_dist_count || "";
 
@@ -390,8 +396,20 @@ sub handle_request {
 <A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&redundancy_constraint=4&apply_action=QUERY TITLE="Retrieve one protein per distinct peptide set for Atlas Build $atlas_build->[$atlas_build_name_idx]">$distinguishable_prot_count</A>
     END
     $row[$n_seq_unique_prots_idx] =<<"    END";
-<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&redundancy_constraint=1&apply_action=QUERY TITLE="Retrieve a list of sequence-unique proteins Atlas Build $atlas_build->[$atlas_build_name_idx]">$sequence_unique_prot_count</A>
+<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&redundancy_constraint=1&apply_action=QUERY TITLE="Retrieve a list of sequence-unique proteins for Atlas Build $atlas_build->[$atlas_build_name_idx]">$sequence_unique_prot_count</A>
     END
+# The following query might match some identifiers other than Swiss-Prot.
+# Correct pattern to match is [ABCOPQ]_____;[ABCOPQ]_____-%  but the
+# semi-colon is interpreted as a param separator and quotes, backslashes do not
+# escape it effectively. Is problem in DBInterface.pm, parse_input_parameters?
+    if ($swiss_count) {
+      $row[$n_swiss_idx] =<<"    END";
+<A HREF=GetProteins?&atlas_build_id=$atlas_build->[$atlas_build_id_idx]&redundancy_constraint=4&biosequence_name_constraint=[ABCOPQ]_____%&apply_action=QUERY TITLE="Retrieve all Swiss-Prot identifiers in Atlas Build $atlas_build->[$atlas_build_name_idx]">$swiss_count</A>
+    END
+    } else {
+      $row[$n_swiss_idx] = '';
+    }
+    
     $row[$descr_idx] = $sbeams->truncateStringWithMouseover( string => $atlas_build->[$atlas_build_descr_idx], len => 50 );
 #      $row[$is_def_idx] = $atlas_build->[$org_spec_build_idx] || '';
 #      $row[$is_def_idx] = ( !$atlas_build->[$def_build_id_idx] ) ? 'N' : ( $row[$is_def_idx] ) ?
@@ -605,4 +623,68 @@ sub get_protein_relationship_count
   my $result_hash = $sbeams->selectrow_hashref( $sql );
  
   return $result_hash;
+}
+
+sub get_swissprot_coverage
+{
+  my %args = @_;
+
+  my $build_id = $args{'build_id'}
+      || die "atlas_build_id not passed";
+  my $count_decoys = $args{'count_decoys'} || 0;
+  my $count_crap = $args{'count_crap'} || 0;
+
+  my $decoy_clause = " ";
+  if (! $count_decoys) {
+    $decoy_clause = "AND NOT BS.biosequence_name LIKE \'DECOY%\'";
+  }
+
+  my $crap_clause = " ";
+  if (! $count_crap) {
+    $crap_clause = "AND NOT BS.biosequence_desc LIKE \'%common contaminant%\'";
+  }
+
+  # Get the exhaustive list -- the list of all protein identifiers
+  # in this atlas.
+  my $sql =<<"  END";
+  (
+    SELECT BS.biosequence_name as bsid
+    FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR 
+      JOIN $TBAT_BIOSEQUENCE BS ON 
+       BS.biosequence_id = BR.related_biosequence_id
+    WHERE BR.atlas_build_id = $build_id
+    $decoy_clause
+    $crap_clause
+  )
+  UNION
+  (
+    SELECT BS.biosequence_name as bsid
+    FROM $TBAT_PROTEIN_IDENTIFICATION PID
+      JOIN $TBAT_BIOSEQUENCE BS ON 
+       BS.biosequence_id = PID.biosequence_id
+    WHERE PID.atlas_build_id = $build_id
+    $decoy_clause
+    $crap_clause
+  )
+  END
+
+  my @exhaustive_set = $sbeams->selectOneColumn($sql);
+
+  # Now, count distinct 6-char Swiss-Prot identifiers. If P12345 and P12345-3
+  # are both in the atlas, just count it once.
+  my %swiss_prot_hash;
+  my @swiss_prot_ids = grep( /^[ABCOPQ]\w{5}$/ , @exhaustive_set );
+  for my $swiss_id (@swiss_prot_ids) {
+    $swiss_prot_hash{$swiss_id} = 1;
+  }
+  my @swiss_prot_varsplic_ids = grep( /^[ABCOPQ]\w{5}-\d{1,3}$/ , @exhaustive_set );
+  for my $swiss_id (@swiss_prot_varsplic_ids) {
+    # Strip off the varsplic suffix to get the basic 6-char identifier.
+    $swiss_id =~ /^([ABCOPQ]\w{5})/;
+    $swiss_id = $1;
+    $swiss_prot_hash{$swiss_id} = 1;
+  }
+  my $n_swiss = scalar keys %swiss_prot_hash;
+  
+  return $n_swiss;
 }
