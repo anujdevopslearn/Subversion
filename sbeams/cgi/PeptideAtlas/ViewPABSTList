@@ -446,7 +446,7 @@ sub handle_request {
 
     my $lib_sql = qq~
     SELECT DISTINCT preceding_residue, peptide_sequence, following_residue,
-    syntheis_adjusted_score, transition_source, precursor_ion_mass, 
+    synthesis_adjusted_score, transition_source, precursor_ion_mass, 
     precursor_ion_charge, fragment_ion_mass, fragment_ion_charge,
     fragment_ion_label, ion_rank, relative_intensity, 
     SSRCalc_relative_hydrophobicity, biosequence_name,
@@ -470,7 +470,7 @@ sub handle_request {
       $peptide_length_clause
       $biosequence_name_clause
     ORDER BY biosequence_name, 
-    syntheis_adjusted_score DESC, precursor_ion_charge ASC,
+    synthesis_adjusted_score DESC, precursor_ion_charge ASC,
     ion_rank ASC, relative_intensity DESC  
     ~;
 
@@ -575,7 +575,7 @@ sub handle_request {
 # 0 preceding_residue
 # 1 peptide_sequence
 # 2 following_residue
-# 3 syntheis_adjusted_score
+# 3 synthesis_adjusted_score
 # 4 transition_source
 # 5 precursor_ion_mass
 # 6 precursor_ion_charge
@@ -654,7 +654,7 @@ sub handle_request {
 # 0 preceding_residue
 # 1 peptide_sequence
 # 2 following_residue
-# 3 syntheis_adjusted_score
+# 3 synthesis_adjusted_score
 # 4 transition_source
 # 5 precursor_ion_mass
 # 6 precursor_ion_charge

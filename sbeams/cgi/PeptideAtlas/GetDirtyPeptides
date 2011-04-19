@@ -341,7 +341,7 @@ sub fetch_peptides {
   }
 
   # Hard Code
-  $parameters{pabst_build_id} = 13;
+  $parameters{pabst_build_id} = 56;
 
   my $protein_and = '';
   if ( scalar( keys( %protein_hash ) ) < 500 ) {
@@ -362,6 +362,7 @@ sub fetch_peptides {
   ORDER BY biosequence_name ASC, synthesis_adjusted_score DESC
   ~;
   $log->debug( $pabst_sql );
+	print "$pabst_sql";
 
   my $dp_sql = qq~
   SELECT distinct sequence, plate, status , 
