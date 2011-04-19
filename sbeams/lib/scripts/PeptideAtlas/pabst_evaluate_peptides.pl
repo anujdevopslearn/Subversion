@@ -229,7 +229,7 @@ sub process_opts {
 # 14 annotations
 # 15 atlas_build
 # 16 synthesis_score
-# 17 syntheis_adjusted_score
+# 17 synthesis_adjusted_score
 
   my $err = '';
   for my $req_arg ( qw ( fasta_file idx_peptide peptide_file output_file ) ) {

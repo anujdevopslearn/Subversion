@@ -51,7 +51,7 @@ my %mrm_libs;
 
 my $dbh = $sbeams->getDBHandle();
 $dbh->{RaiseError}++;
-my $transition_limit = 16;
+my $transition_limit = 10;
 
 my $mrm_peak_limit = $transition_limit + 10;
 my %all_mrm_peaks;
@@ -162,6 +162,12 @@ use Data::Dumper;
         $stats{bad_aa}++;
         next;
       }
+      my $annot = $line[14] || '';
+      if ( $annot =~ /ST|MC/ ) {
+        $stats{nontryptic}++;
+        next;
+      }
+
 #      print "peptide $pep\n";
 
       # Go through and populate in order of priority
@@ -219,7 +225,7 @@ use Data::Dumper;
     # 14 annotations
     # 15 atlas_build
     # 16 synthesis_score
-    # 17 syntheis_adjusted_score
+    # 17 synthesis_adjusted_score
     
       # A little massaging?
       my $suit = ( $line[5] && $line[5] !~ /n/ ) ? $line[5] : $line[6];
@@ -248,7 +254,7 @@ use Data::Dumper;
                       n_observations => $line[13],
                       synthesis_score => $line[16],
                       synthesis_warnings => $line[14],
-                      syntheis_adjusted_score => $line[17],
+                      synthesis_adjusted_score => $line[17],
                       source_build => $line[15] 
       };
     
@@ -952,7 +958,7 @@ suitability_score   FLOAT,
 merged_score     FLOAT,
 synthesis_score   FLOAT,
 synthesis_warnings  VARCHAR(255),
-syntheis_adjusted_score  FLOAT,
+synthesis_adjusted_score  FLOAT,
 );
 
 GO
@@ -987,7 +993,7 @@ n_observations
 annotations
 atlas_build
 synthesis_score
-syntheis_adjusted_score
+synthesis_adjusted_score
 
 fragment_ion_id
 best_peptide_id
@@ -1024,7 +1030,7 @@ best_probability  FLOAT,
 n_observations   INTEGER,
 synthesis_score   FLOAT,
 synthesis_warnings  VARCHAR,
-syntheis_adjusted_score  FLOAT
+synthesis_adjusted_score  FLOAT
 parameter_set_id  INTEGER );
 
 GO
