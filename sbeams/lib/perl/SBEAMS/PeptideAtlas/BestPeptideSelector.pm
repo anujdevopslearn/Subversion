@@ -1053,7 +1053,7 @@ sub get_dirty_peptide_display {
     $err = ( $err ) ? $err . ',' . $opt : $opt if !defined $args{$opt};
   }
   die "Missing required parameter(s) $err" if $err;
-  my $organism_id = $atlas->getCurrentAtlasOrganism( parameters_ref => {},
+  my $organism_id = $atlas->getCurrentAtlasOrganism( parameters_ref => { atlas_build_id => $args{atlas_build_id} },
                                                      type => 'organism_id' );
 
   my $sql = qq~
@@ -1151,7 +1151,7 @@ sub get_pabst_static_peptide_display {
     $err = ( $err ) ? $err . ',' . $opt : $opt if !defined $args{$opt};
   }
   die "Missing required parameter(s) $err" if $err;
-  my $organism = $atlas->getCurrentAtlasOrganism( parameters_ref => {} );
+  my $organism = $atlas->getCurrentAtlasOrganism( parameters_ref => { atlas_build_id => $args{atlas_build_id} } );
 #  $log->debug( "Org is $organism" );
 
   # If atlas build ID is passed, use organism to set pabst_build_id
