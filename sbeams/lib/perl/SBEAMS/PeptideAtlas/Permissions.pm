@@ -456,29 +456,40 @@ sub getCurrentAtlasBuildID {
   ~;
   my @rows = $sbeams->selectOneColumn($sql);
 
-  #### If not, stop here
+  # No build specified, or user lacks project access to specified build. 
   unless (scalar(@rows) == 1 && $rows[0] eq $atlas_build_id) {
 
-    my $reset_link = "$CGI_BASE_DIR/PeptideAtlas/main.cgi?tab=1;reset_id=true";
-    my $current_username = $sbeams->getCurrent_username();
+    my $protein_list_allowed = 0;
 
-    my $LOGIN_URI = "$SERVER_BASE_DIR$ENV{REQUEST_URI}";
-    if ($LOGIN_URI =~ /\?/) {
-      $LOGIN_URI .= "&force_login=yes";
-    } else {
-      $LOGIN_URI .= "?force_login=yes";
+    # The onus is on the passed SQL to meter access.
+    if ( $args{protein_list_sql} && $args{allow_protein_list_login} ) {
+      my $build = $sbeams->selectrow_arrayref( $args{protein_list_sql} );
+      $protein_list_allowed++ if $build->[0];
     }
 
-    my $alt_link = $args{alt_link} || '';
-    print qq~
-      <BR>Sorry, you are not permitted to access atlas_build_id
-      '$atlas_build_id' with your current credentials as
-      user '$current_username'.<BR><BR>
-      - <A HREF="$LOGIN_URI">LOGIN</A> as a different user.<BR><BR>
-      - <A HREF="$reset_link">SELECT</A> a different atlas build to explore<BR><BR>
-      -$alt_link
-    ~;
-    return(-1);
+    if ( !$protein_list_allowed ) {
+      my $reset_link = "$CGI_BASE_DIR/PeptideAtlas/main.cgi?tab=1;reset_id=true";
+      my $current_username = $sbeams->getCurrent_username();
+
+      my $LOGIN_URI = "$SERVER_BASE_DIR$ENV{REQUEST_URI}";
+      if ($LOGIN_URI =~ /\?/) {
+        $LOGIN_URI .= "&force_login=yes";
+      } else {
+        $LOGIN_URI .= "?force_login=yes";
+      }
+
+      my $alt_link = $args{alt_link} || '';
+      $log->printStack( 'debug' );
+      print qq~
+        <BR>Sorry, you are not permitted to access atlas_build_id
+        '$atlas_build_id' with your current credentials as
+        user '$current_username'.<BR><BR>
+        - <A HREF="$LOGIN_URI">LOGIN</A> as a different user.<BR><BR>
+        - <A HREF="$reset_link">SELECT</A> a different atlas build to explore<BR><BR>
+        -$alt_link
+      ~;
+      return(-1);
+    }
   }
 
 
