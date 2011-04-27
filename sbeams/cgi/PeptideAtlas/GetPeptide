@@ -52,6 +52,8 @@ $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 my $modification_helper = new SBEAMS::PeptideAtlas::ModificationHelper();
 
+my $current_page = { organism => '', atlas_build_id => '' };
+
 #$q = new CGI;
 
 
@@ -270,15 +272,59 @@ sub handle_request {
     $alt_link = "<A HREF='Summarize_Peptide?searchForThis=$parameters{searchForThis};query=QUERY'>View a summary </A> for this peptide across all accessible builds";
   }
 
+  my $protein_list_sql = '';
+  if ( $parameters{atlas_build_id} && $parameters{searchWithinThis} && $parameters{searchForThis}  ) {
+
+    my $contact_id = $sbeams->getCurrent_contact_id();
+    my $peptide_and = 'XXX';
+    if ( $parameters{searchWithinThis} =~ /Name/ ) {
+      $peptide_and = " AND P.peptide_accession = '$parameters{searchForThis}'\n";
+    } else {
+      $peptide_and = " AND P.peptide_sequence = '$parameters{searchForThis}'\n";
+    }
+    $protein_list_sql = qq~  
+    SELECT DISTINCT AB.atlas_build_id
+    FROM $TBAT_ATLAS_BUILD AB
+    JOIN peptideatlas.dbo.protein_list_build PLB 
+      ON AB.atlas_build_id = PLB.atlas_build_id
+    JOIN peptideatlas.dbo.protein_list PL 
+      ON PL.protein_list_id = PLB.protein_list_id
+    JOIN peptideatlas.dbo.protein_list_protein PLP
+      ON PL.protein_list_id = PLP.protein_list_id
+    JOIN $TBAT_BIOSEQUENCE B 
+      ON ( B.biosequence_set_id = AB.biosequence_set_id AND
+           B.biosequence_accession = PLP.protein_name )
+    JOIN $TBAT_PEPTIDE_MAPPING PM 
+      ON PM.matched_biosequence_id = B.biosequence_id
+    JOIN $TBAT_PEPTIDE_INSTANCE PI 
+      ON PI.peptide_instance_id = PM.peptide_instance_id
+    JOIN $TBAT_PEPTIDE P 
+      ON PI.peptide_id = P.peptide_id
+    WHERE PL.contributor_contact_id = $contact_id
+      AND AB.atlas_build_id = $parameters{atlas_build_id}
+      $peptide_and
+    ~;
+  }
+
   #### Get the current atlas_build_id based on parameters or session
   my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+    allow_protein_list_login => 1,
+    protein_list_sql => $protein_list_sql, 
     parameters_ref => \%parameters,
     alt_link => $alt_link
-
   );
+
   if (defined($atlas_build_id) && $atlas_build_id < 0) {
     return;
   }
+
+  # Cache in case we go out of scope later.
+  $current_page->{atlas_build_id} = $atlas_build_id;
+
+  # If we've gotten this far, user must have access to specified build
+  my ( $extra_project ) = $sbeams->selectrow_array( "Select project_id FROM $TBAT_ATLAS_BUILD WHERE atlas_build_id = $atlas_build_id" );
+  $project_string .= ", $extra_project";
+
   $parameters{atlas_build_id} = $atlas_build_id;
 
   # Set build_name
@@ -292,7 +338,8 @@ sub handle_request {
   } elsif ( $atlas_build_id < 0 ) {
     $validation_error = "Illegal build ID";
   } elsif ( !$sbeamsMOD->isAccessibleBuild( build_id => $atlas_build_id ) ) {
-    $validation_error = "You lack permission to access the specified build";
+#    $validation_error = "You lack permission to access the specified build";
+    $log->debug( "Must have used protein_list authentication" );
   }
   if ( $validation_error ) {
     my $error_string = $sbeams->makeErrorText( $validation_error );
@@ -851,7 +898,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
     # display protein names as gaggle microformat
     if ($sbeams->output_mode() eq 'html') {
-      my $organism = $sbeamsMOD->getCurrentAtlasOrganism( parameters_ref => {} );
+      my $organism = $sbeamsMOD->getCurrentAtlasOrganism( parameters_ref => { atlas_build_id => $current_page->{atlas_build_id} } );
       my @proteins = keys( %biosequence_name );
       my $protein_microformat = $sbeams->getGaggleMicroformat( 
                                           name => "Protein(s) in which peptide is found",
@@ -947,7 +994,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
   my @mod_peps = $sbeams->selectSeveralColumns( $modSQL );
 
   # Use build-specific library if warranted
-  my $lib_id = $sbeamsMOD->getBuildConsensusLib();
+  my $lib_id = $sbeamsMOD->getBuildConsensusLib( build_id => $current_page->{atlas_build_id} );
 
 
   my $cs_obj = SBEAMS::PeptideAtlas::ConsensusSpectrum->new();
