@@ -68,6 +68,8 @@ my @coverage;
 my @sp_rows;
 my $sp_rationale;
 
+my $current_page = { organism => '', atlas_build_id => '' };
+
 
 use constant MIN_OBS_LENGTH => 6;
 
@@ -186,16 +188,39 @@ sub handle_request {
   );
   print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
 
+  my $contact_id = $sbeams->getCurrent_contact_id();
+#  die $contact_id;
+
+  my $protein_list_sql = '';
+  if ( $parameters{atlas_build_id} && $parameters{protein_name} ) {
+    $protein_list_sql = qq~  
+    SELECT DISTINCT AB.atlas_build_id
+    FROM $TBAT_ATLAS_BUILD AB
+    JOIN peptideatlas.dbo.protein_list_build PLB 
+      ON AB.atlas_build_id = PLB.atlas_build_id
+    JOIN peptideatlas.dbo.protein_list PL 
+      ON PL.protein_list_id = PLB.protein_list_id
+    JOIN peptideatlas.dbo.protein_list_protein PLP
+      ON PL.protein_list_id = PLP.protein_list_id
+    JOIN $TBAT_BIOSEQUENCE B ON ( B.biosequence_set_id = AB.biosequence_set_ID
+                            AND B.biosequence_accession = PLP.protein_name )
+    WHERE PL.contributor_contact_id = $contact_id
+      AND AB.atlas_build_id = $parameters{atlas_build_id}
+      AND PLP.protein_name = '$parameters{protein_name}'
+    ~;
+  }
 
   #### Get the current atlas_build_id based on parameters or session
   my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+    allow_protein_list_login => 1,
+    protein_list_sql => $protein_list_sql, 
     parameters_ref => \%parameters,
   );
   if (defined($atlas_build_id) && $atlas_build_id < 0) {
     return;
   }
   $parameters{atlas_build_id} = $atlas_build_id;
-
+  $current_page->{atlas_build_id} = $atlas_build_id;
 
   #### Get the search keyword
   my $protein_name = $parameters{"protein_name"};
@@ -292,9 +317,33 @@ sub handle_request {
       FROM $TBAT_ATLAS_BUILD
       WHERE project_id IN ( $accessible_project_ids )
       AND record_status!='D'
+      ORDER BY atlas_build_name
   ~;
   my %atlas_build_names = $sbeams->selectTwoColumnHash($sql);
 
+  my %name2build = reverse( %atlas_build_names );
+  my @ordered_atlas_build_ids;
+  for my $name ( sort ( keys( %name2build ) ) ) {
+    push @ordered_atlas_build_ids, $name2build{$name};
+  }
+
+  #### Get a list of id's sorted by name
+#  my $sql = qq~
+#      SELECT DISINCT atlas_build_id,atlas_build_name
+#      FROM $TBAT_ATLAS_BUILD
+#      WHERE project_id IN ( $accessible_project_ids )
+#      AND record_status!='D'
+#      ORDER BY atlas_build_name
+#  ~;
+#  my @ordered_atlas_build_ids = $sbeams->selectOneColumn($sql);
+
+
+  unless ( grep /^$atlas_build_id$/, @ordered_atlas_build_ids ) {
+    my ($build_name) = $sbeams->selectOneColumn( "SELECT atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE atlas_build_id = $atlas_build_id" );
+    push  @ordered_atlas_build_ids, $atlas_build_id;
+    $atlas_build_names{$atlas_build_id} = $build_name;
+  }
+#  die "ID is $atlas_build_id, and name is $atlas_build_names{$atlas_build_id}";
 
   my $tube_pattern = '';
   my $tube_pattern2 = '';
@@ -315,15 +364,6 @@ sub handle_request {
     }
   }
 
-  #### Get a list of id's sorted by name
-  my $sql = qq~
-      SELECT atlas_build_id,atlas_build_name
-      FROM $TBAT_ATLAS_BUILD
-      WHERE project_id IN ( $accessible_project_ids )
-      AND record_status!='D'
-      ORDER BY atlas_build_name
-  ~;
-  my @ordered_atlas_build_ids = $sbeams->selectOneColumn($sql);
 
   #### If the output_mode is HTML, then display the form
   if ($sbeams->output_mode() eq 'html') {
@@ -359,9 +399,9 @@ sub handle_request {
       print "<BR>";
       print "Protein Name: ";
 
-      my $organism = $sbeamsMOD->getCurrentAtlasOrganism( parameters_ref => {} );
+      $current_page->{organism} = $sbeamsMOD->getCurrentAtlasOrganism( parameters_ref => { atlas_build_id => $atlas_build_id } );
       my $gaggle = $sbeams->getGaggleMicroformat(
-                                          organism => $organism, 
+                                          organism => $current_page->{organism}, 
                                               data => [$protein_name],
                                             object => 'namelist',
                                               name => 'Protein name',
@@ -997,13 +1037,15 @@ sub handle_request {
 
   #############################################################################
   #### Display the External Links section
-  displayExternalLinksSection(biosequence=>$biosequence);
+  displayExternalLinksSection( biosequence =>$biosequence,
+                            atlas_build_id => $current_page->{atlas_build_id}, 
+                                  organism => $current_page->{organism} );
 
 
   #############################################################
   ## Display the sequence graphic ##
 
-  my $motif = $sbeamsMOD->getBuildMotif();
+  my $motif = $sbeamsMOD->getBuildMotif( build_id => $current_page->{atlas_build_id} );
 
   # Widget to allow show/hide of graphic section
   my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_graphic',
@@ -1277,6 +1319,7 @@ sub handle_request {
   
       #### Display the best peptide information
       my $dirty_peptide_display = $bestPeptideSelector->get_dirty_peptide_display(
+         atlas_build_id => $current_page->{atlas_build_id},
          'link' => $link,
          base_url=>$base_url,
          biosequence_id => $biosequence_id,
@@ -3153,7 +3196,7 @@ sub displayExternalLinksSection {
 
 
   #### Display a link to Human Protein Atlas (hpr)
-  my $currentOrganism = $sbeamsMOD->getCurrentAtlasOrganism(parameters_ref=>{});
+  my $currentOrganism = $current_page->{organism} || $sbeamsMOD->getCurrentAtlasOrganism(parameters_ref=>{});
   my $entrezGeneID = $biosequence->{synonyms}->{'Entrez Gene Symbol'};
   if ($currentOrganism eq 'Human' && $entrezGeneID) {
     if ($sbeams->output_mode() eq 'html') {
