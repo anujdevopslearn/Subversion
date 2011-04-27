@@ -1,4 +1,5 @@
 #!/usr/local/bin/perl
+#
 
 ###############################################################################
 # Program     : GetTransitions
@@ -50,6 +51,7 @@ exit(0);
 # Main Program
 sub main 
 {
+  $log->debug( "in main" . time() );
   # Authenticate and exit if a username is not returned
   my $current_username = $sbeams->Authenticate( allow_anonymous_access => 1 );
   exit unless $current_username;
@@ -84,7 +86,7 @@ sub main
 
   # set up some defaults, only in command-line mode, to time queries/operations
   if ( !$parameters{action} && !$is_html ) {
-    $log->debug( "in the auto-setting mode, command-line only!" );
+    $log->debug( "in the auto-setting mode, command-line only!"  . time());
     $parameters{n_highest_intensity_fragment_ions} = 4;
     $parameters{n_peptides_per_protein} = 5;
     $parameters{protein_name_constraint} = 'YAL003W%';
@@ -97,7 +99,9 @@ sub main
 
   print_form ( %parameters );  
   if ( $parameters{action} eq 'QUERY' ) {
+    $log->debug( "  Going to fetch transitions"  . time());
     fetch_transitions( %parameters );  
+    $log->debug( "  Done fetching transitions"  . time());
   }
   $atlas->display_page_footer( close_tables => 0 );
 
@@ -347,6 +351,7 @@ sub fetch_transitions {
   my ($i,$element,$key,$value,$line,$result,$sql);
 
 
+  $log->debug( "    Build constraints"  . time());
   #### Define some variables for a query and resultset
   my %resultset = ();
   my $resultset_ref = \%resultset;
@@ -599,7 +604,7 @@ sub fetch_transitions {
   for my $pparam ( keys ( %{$default_params} ) ) {
     if ( defined $parameters{$pparam} ) {
       if ( $parameters{$pparam} ne $default_params->{$pparam} ) {
-        $log->debug( "$pparam is different, $parameters{$pparam} ne $default_params->{$pparam} " );
+        $log->info( "$pparam is different, $parameters{$pparam} ne $default_params->{$pparam} " );
         $is_changed++;
       }
     }
@@ -609,6 +614,7 @@ sub fetch_transitions {
     $best_peptide->set_pabst_penalty_values( %parameters );
   }
 
+  $log->debug( "    done building constraints"  . time());
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
   if ($apply_action =~ /QUERY/i ) {
@@ -647,9 +653,6 @@ sub fetch_transitions {
     ion_rank ASC, relative_intensity DESC,  
     precursor_ion_charge ASC
     ~;
-
-#      $log->debug( $sql );
-#      die " $transition_source_clause";
 
   my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs' );
 
@@ -711,11 +714,9 @@ sub fetch_transitions {
     my $cnt;
     while( my @row = $sth->fetchrow_array() ) {
       $cnt++;
-#      $log->debug( "going in, prot $row[13] pep $row[1] has " . scalar( @row ) . " items " );
 
       # Add each unique prot peptide
       my $peptide_key = join( '', @row[13,1] );
-#      $log->debug( "caching for pepkey $peptide_key" );
       if ( !$peptide_fragments{$peptide_key} ) {
         $peptide_fragments{$peptide_key} ||= []; 
         push @short_list, [@row];
