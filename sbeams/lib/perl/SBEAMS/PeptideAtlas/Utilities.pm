@@ -1264,6 +1264,21 @@ sub make_qtrap5500_target_list {
 	my %args = @_;
 
   my $data = $args{data} || die;
+  my $col_idx = $args{col_idx} || 
+  {  'Protein' => 0,
+     'Pre AA' => 1,
+     'Sequence' => 2,
+     'Fol AA' => 3,
+     'Adj SS' => 4,
+     'SSRT' => 5,
+     'Source' => 6,
+     'q1_mz' => 7,
+     'q1_chg' => 8,
+     'q3_mz' => 9,
+     'q3_chg' => 10,
+     'Label' => 11,
+     'RI' => 12 };
+
 # 0 'Protein',
 # 1 'Pre AA',
 # 2 'Sequence',
@@ -1277,10 +1292,7 @@ sub make_qtrap5500_target_list {
 # 10 'q3_chg',
 # 11 'Label',
 # 12 'RI',
-# 0 'QTOF',
-# 0 'QTRAP',
-# 0 'IonTrap',
-# 0 'Predicted',
+#
 # 0 'CE_range
 # Q1,Q3,RT,sequence/annotation,CE,,Comment
 # 537.2933,555.30475,25.97,LLEYTPTAR.P49841.2y5.heavy,29.140903,,
@@ -1288,16 +1300,15 @@ sub make_qtrap5500_target_list {
   my $csv_file = '';
   for my $row ( @{$data} ) {
     next unless $head++;
-    my $protein = $self->extract_link( $row->[0] );
-		my $seq = $row->[2];
+    my $protein = $self->extract_link( $row->[$col_idx->{Protein}] );
+		my $seq = $row->[$col_idx->{Sequence}];
 		if ( $args{remove_mods} ) {
 		  $seq =~ s/\[\d+\]//g;
 		}
-		my $ce = $self->get_qtrap5500_ce( medium_only => 1, mz => $row->[7], charge => $row->[8] );
-
-    my $seq_string = join( '.', $seq, $protein, $row->[8] . $row->[11] . '-' . $row->[10] );
+		my $ce = $self->get_qtrap5500_ce( medium_only => 1, mz => $row->[$col_idx->{q1_mz}], charge => $row->[$col_idx->{q1_chg}] );
+    my $seq_string = join( '.', $seq, $protein, $row->[$col_idx->{q1_chg}] . $row->[$col_idx->{Label}] . '-' . $row->[$col_idx->{q3_chg}] );
 		my $rt = $args{rt_file}->{$seq} || 'RT';
-    $csv_file .= join( ',', $row->[7], $row->[9], $rt, $seq_string, $ce, 'Auto-generated' ) . "\n";
+    $csv_file .= join( ',', $row->[$col_idx->{q1_mz}], $row->[$col_idx->{q3_mz}], $rt, $seq_string, $ce, 'Auto-generated' ) . "\n";
   }
   my $sbeams = $self->getSBEAMS();
   my $file_path = $sbeams->writeSBEAMSTempFile( content => $csv_file );
