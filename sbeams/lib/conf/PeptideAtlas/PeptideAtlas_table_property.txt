@@ -29,6 +29,7 @@ AT_BrowseBiosequence	Browse Biosequence	QUERY					BrowseBioSequence.cgi
 AT_GetPeptides	Get Peptides	QUERY					GetPeptides		
 AT_GetProteins	Get Proteins	QUERY					GetProteins		
 AT_GetProteinsByPep	Get Proteins By Pep	QUERY					GetProteinsByPep		
+AT_GetSELTransitions	Get SRM Experiment Library Transitions	QUERY					GetSELTransitions		
 AT_CompareBuildsProteins	Compare Builds Proteins	QUERY					CompareBuildsProteins		
 AT_consensus_library	Consensus Library	PeptideAtlas_infrastructure	YES	$TBAT_CONSENSUS_LIBRARY	consensus_library_id		ManageTable.cgi?TABLE_NAME=AT_consensus_library		
 AT_consensus_library_spectrum	Consensus Library Spectrum	PeptideAtlas_infrastructure	NO	$TBAT_CONSENSUS_LIBRARY_SPECTRUM	consensus_library_spectrum_id				
@@ -66,3 +67,7 @@ AT_instrument_type	Instrument Type	PeptideAtlas_infrastructure	NO	$TBAT_INSTRUME
 AT_transition_type	Transition Type	PeptideAtlas_infrastructure	NO	$TBAT_TRANSITION_TYPE	transition_type_id				
 AT_protein_list	Protein List	PeptideAtlas_infrastructure	YES	$TBAT_PROTEIN_LIST	protein_list_id		ManageTable.cgi?TABLE_NAME=AT_Protein_list		
 AT_protein_list_protein	Protein List Protein	PeptideAtlas_infrastructure	NO	$TBAT_PROTEIN_LIST_PROTEIN	protein_list_protein_id				
+AT_SEL_experiment	SEL Experiment	PeptideAtlas_infrastructure	YES	$TBAT_SEL_EXPERIMENT	sel_experiment_id		ManageTable.cgi?TABLE_NAME=AT_SEL_experiment		
+AT_SEL_run	SEL Experiment Run	PeptideAtlas_infrastructure	YES	$TBAT_SEL_RUN	sel_run_id		ManageTable.cgi?TABLE_NAME=AT_SEL_run		
+AT_SEL_transition	SEL Experiment Transition	PeptideAtlas_infrastructure	NO	$TBAT_SEL_TRANSITION	sel_transition_id				
+AT_SEL_chromatogram	SEL Experiment Chromatogram	PeptideAtlas_infrastructure	NO	$TBAT_SEL_CHROMATOGRAM	sel_chromatogram_id				
