@@ -72,4 +72,4 @@ AT_SEL_run	SEL Experiment Run	PeptideAtlas_infrastructure	YES	$TBAT_SEL_RUN	sel_
 AT_SEL_transition	SEL Experiment Transition	PeptideAtlas_infrastructure	NO	$TBAT_SEL_TRANSITION	sel_transition_id				
 AT_SEL_chromatogram	SEL Experiment Chromatogram	PeptideAtlas_infrastructure	NO	$TBAT_SEL_CHROMATOGRAM	sel_chromatogram_id				
 AT_elution_time_type	Elution time type	PeptideAtlas_infrastructure	YES	$TBAT_ELUTION_TIME_TYPE	elution_time_type_id		ManageTable.cgi?TABLE_NAME=AT_elution_time_type		
-AT_elution_time	Elution time type	PeptideAtlas_infrastructure	YES	$TBAT_ELUTION_TIME_TYPE	elution_time_id		ManageTable.cgi?TABLE_NAME=AT_elution_time		
+AT_elution_time	Elution time	PeptideAtlas_infrastructure	YES	$TBAT_ELUTION_TIME	elution_time_id		ManageTable.cgi?TABLE_NAME=AT_elution_time		
