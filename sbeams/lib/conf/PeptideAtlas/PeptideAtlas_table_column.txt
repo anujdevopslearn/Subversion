@@ -755,9 +755,9 @@ AT_pabst_transition_instance	6	instrument_type_id	(Source) Instrument Type	int	4
 AT_instrument_type	1	instrument_type_id	instrument_type_id	int	4	0	N		Y			N						Y			
 AT_instrument_type	2	instrument_type_name	instrument_type_name	varchar	255	0	N		N			Y	text	24		Y	Y	N			
 AT_instrument_type	3	instrument_type_comment	instrument_type_comment	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
-AT_instrument_type	4	is_source_instrument	is_source_instrument	char	1	0	Y		N			N						N			
-AT_instrument_type	5	is_target_instrument	is_target_instrument	char	1	0	Y		N			N						N			
-AT_instrument_type	6	sort_order	sort_order	int	4	0	Y		N			N						Y			
+AT_instrument_type	4	is_source_instrument	is_source_instrument	char	1	0	Y		N			N	optionlist			Y	Y	N	Is this a source instrument type	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+AT_instrument_type	5	is_target_instrument	is_target_instrument	char	1	0	Y		N			N	optionlist			Y	Y	N	Is this a target instrument type	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+AT_instrument_type	6	sort_order	sort_order	int	4	0	Y		N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
 AT_instrument_type	7	date_created	date_created	datetime	8	0	Y		N			N						N			
 AT_instrument_type	8	created_by_id	created_by_id	int	4	0	Y		N			N						Y			
 AT_instrument_type	9	date_modified	date_modified	datetime	8	0	Y		N			N						N			
