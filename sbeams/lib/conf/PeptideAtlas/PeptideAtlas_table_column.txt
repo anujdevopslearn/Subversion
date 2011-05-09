@@ -396,7 +396,7 @@ AT_GetProteins	15	protein_property_constraint	Protein Properties									N	multi
 AT_GetProteins	16	presence_level_constraint	Presence Levels									N	multioptionlist	3		Y	Y	N	Constraint for presence level. No selection shows all. Canonical=protein(s) with best evidence in group. Subsumed=peptides are a subset of peptides for other protein(s) in group. Possibly distingished=all others.  Can Ctrl-select multiple options.	"SELECT protein_presence_level_id,level_phrase FROM $TBAT_PROTEIN_PRESENCE_LEVEL WHERE record_status != 'D' ORDER BY sort_order;"	
 AT_GetProteins	17	redundancy_constraint	Redundancy									N	multioptionlist	3		Y	Y	N	"Constraint for which redundant proteins to display. Indistinguishable=sequence-unique but exact same peptide set as a canonical, possibly distinguished, or subsumed protein. Identical=sequence-identical to a canonical, possibly distingusihed, subsumed, or indistinguishable. Can Ctrl-select multiple options."	"SELECT biosequence_relationship_type_id, relationship_phrase FROM $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE WHERE record_status != 'D' ORDER BY sort_order, biosequence_relationship_type_id"	
 AT_GetProteins	18	covering_constraint	Display only proteins in covering set									N	checkbox	0		Y	Y	N	Display only proteins in covering set (smallest set needed to explain all peptides).		
-AT_GetProteins	19	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE record_status != 'D' AND option_type = 'GProt_display_options' ORDER BY sort_order,option_value	
+AT_GetProteins	19	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE record_status != 'D' AND option_type = 'GProt_display_options' ORDER BY sort_order,option_value"	
 AT_GetSELTransitions	1	protein_name_constraint	Protein Name Constraint									N	text	40		Y	Y	N	Constraint for the Protein Name (accession). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
 AT_GetSELTransitions	2	stripped_peptide_sequence_constraint	Stripped Peptide Sequence Constraint									N	text	40		Y	Y	N	Constraint for the Stripped Peptide Sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
 AT_GetSELTransitions	3	modified_peptide_sequence_constraint	Modified Peptide Sequence Constraint									N	text	40		Y	Y	N	Constraint for the Modified Peptide Sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
@@ -412,10 +412,10 @@ AT_GetSELTransitions	12	SEL_experiments	SRM Experiments									N	multioptionlis
 AT_GetSELTransitions	13	SEL_runs	SRM Experiment Runs									N	multioptionlist	4		Y	Y	N	Limit query to one or more of SRM runs	"SELECT SELR.SEL_run_id, SELR.spectrum_filename FROM $TBAT_SEL_RUN SELR   ORDER BY SELR.spectrum_filename ASC"	
 AT_GetSELTransitions	14	sample_ids	Samples									N	multioptionlist	4		Y	Y	N	Limit query to one or more of the samples used to compile this Atlas build	"SELECT S.sample_id, sample_title FROM $TBAT_SAMPLE S JOIN $TBAT_SEL_EXPERIMENT SELT ON S.sample_id = SELT.sample_id   ORDER BY sample_title ASC"	
 AT_GetSELTransitions	15	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE record_status != 'D' AND option_type = 'SELTran_display_options' ORDER BY sort_order,option_value"	
-AT_CompareBuildsProteins	1	atlas_build_id	Atlas Build									Y	optionlist	4		Y	Y	N	Select desired Atlas Build to compare with, required.	SELECT atlas_build_id,atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY atlas_build_name 	
-AT_CompareBuildsProteins	2	atlas_build_id_2	Atlas Build 2									Y	optionlist	4		Y	Y	N	Select desired Atlas Build to compare against, required.	SELECT atlas_build_id,atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY atlas_build_name 	
-AT_CompareBuildsProteins	3	comparison_type_constraint	Comparison Type					intersection				Y	optionlist			Y	Y	N	Type of comparison desired.	SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'CBP_comparison_types' AND record_status != 'D' ORDER BY sort_order,option_value;	
-AT_CompareBuildsProteins	4	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE record_status != 'D' AND option_type = 'CBP_display_options' ORDER BY sort_order,option_value	
+AT_CompareBuildsProteins	1	atlas_build_id	Atlas Build									Y	optionlist	4		Y	Y	N	"Select desired Atlas Build to compare with, required."	"SELECT atlas_build_id,atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY atlas_build_name "	
+AT_CompareBuildsProteins	2	atlas_build_id_2	Atlas Build 2									Y	optionlist	4		Y	Y	N	"Select desired Atlas Build to compare against, required."	"SELECT atlas_build_id,atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY atlas_build_name "	
+AT_CompareBuildsProteins	3	comparison_type_constraint	Comparison Type					intersection				Y	optionlist			Y	Y	N	Type of comparison desired.	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'CBP_comparison_types' AND record_status != 'D' ORDER BY sort_order,option_value;"	
+AT_CompareBuildsProteins	4	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE record_status != 'D' AND option_type = 'CBP_display_options' ORDER BY sort_order,option_value"	
 AT_spectra_description_set	1	spectra_description_set_id	Spectra Description Set ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_spectra_description_set	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id					N	N		Associated Atlas Build		
 AT_spectra_description_set	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
@@ -753,20 +753,20 @@ AT_pabst_transition_instance	4	ion_rank	Ion Rank	int	4	0	Y		N			N						N
 AT_pabst_transition_instance	5	relative_intensity	Relative Intensity	float	8	0	Y		N			N						N			
 AT_pabst_transition_instance	6	instrument_type_id	(Source) Instrument Type	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N						N			
 AT_instrument_type	1	instrument_type_id	instrument_type_id	int	4	0	N		Y			N						Y			
-AT_instrument_type	2	instrument_type_name	instrument_type_name	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
+AT_instrument_type	2	instrument_type_name	instrument_type_name	varchar	255	0	N		N			Y	text	24		Y	Y	N			
 AT_instrument_type	3	instrument_type_comment	instrument_type_comment	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
 AT_instrument_type	4	is_source_instrument	is_source_instrument	char	1	0	Y		N			N						N			
 AT_instrument_type	5	is_target_instrument	is_target_instrument	char	1	0	Y		N			N						N			
-AT_instrument_type	6	sort_order	sort_order	int	4	0	N		Y			N						Y			
+AT_instrument_type	6	sort_order	sort_order	int	4	0	Y		N			N						Y			
 AT_instrument_type	7	date_created	date_created	datetime	8	0	Y		N			N						N			
-AT_instrument_type	8	created_by_id	created_by_id	int	4	0	N		Y			N						Y			
+AT_instrument_type	8	created_by_id	created_by_id	int	4	0	Y		N			N						Y			
 AT_instrument_type	9	date_modified	date_modified	datetime	8	0	Y		N			N						N			
-AT_instrument_type	10	modified_by_id	modified_by_id	int	4	0	N		Y			N						Y			
-AT_instrument_type	11	owner_group_id	owner_group_id	int	4	0	N		Y			N						Y			
+AT_instrument_type	10	modified_by_id	modified_by_id	int	4	0	Y		N			N						Y			
+AT_instrument_type	11	owner_group_id	owner_group_id	int	4	0	Y		N			N						Y			
 AT_instrument_type	12	record_status	record_status	char	1	0	Y		N			N						N			
 AT_pabst_source_priority	1	pabst_source_priority_id	pabst_source_priority_id	int	4	0	N		Y			N						Y			
-AT_pabst_source_priority	2	(source) instrument_type_id	(source) instrument_type_id	int	4	0	N		Y			N						Y			
-AT_pabst_source_priority	3	(target) instrument_type_id	(target) instrument_type_id	int	4	0	N		Y			N						Y			
+AT_pabst_source_priority	2	(source) instrument_type_id	(source) instrument_type_id	int	4	0	Y		N			N						Y			
+AT_pabst_source_priority	3	(target) instrument_type_id	(target) instrument_type_id	int	4	0	Y		N			N						Y			
 AT_pabst_source_priority	4	is_predicted	is_predicted	char	1	0	Y		N			N						N			
 AT_protein_list	1	protein_list_id	Protein List ID	int	4	0	N		Y			N						Y	Primary Key		
 AT_protein_list	2	protein_list_name	Protein List Name	varchar	255	0	Y		N			Y	text	24		Y	Y	N	Name for Protein List		
@@ -813,15 +813,22 @@ AT_SEL_transition	4	monoisotopic_peptide_mass	Monoisotopic Neutral Peptide Mass	
 AT_SEL_transition	5	peptide_charge	Peptide Precursor Charge	int	4	0	Y		N			N							Precursor charge		
 AT_SEL_transition	6	q1_mz	Q1 mz value	float	8	0	Y		N			N							Q1 mz value		
 AT_SEL_transition	7	q3_mz	Q3 mz value	float	8	0	Y		N			N							Q3 mz value		
-AT_SEL_transition	8	frg_type	Fragment Type	char	1	0	Y		N			N							Fragment type (b, y, etc.)		
+AT_SEL_transition	8	frg_type	Fragment Type	char	1	0	Y		N			N							"Fragment type (b, y, etc.)"		
 AT_SEL_transition	9	frg_nr	Fragment Number	int	4	0	Y		N			N							Fragment number		
 AT_SEL_transition	10	frg_z	Fragment Charge	float	8	0	Y		N			N							Fragment charge		
 AT_SEL_transition	11	collision_energy	Collision Energy	float	8	0	Y		N			N							Collision energy		
 AT_SEL_transition	12	retention_time	Retention Time	float	8	0	Y		N			N	text	10		Y	Y	Y	Retention time in minutes of parent peptide		
-AT_SEL_transition	13	isotype	Isotype	varchar	255	0	Y		N			N							Isotype (heavy, light)		
+AT_SEL_transition	13	isotype	Isotype	varchar	255	0	Y		N			N							"Isotype (heavy, light)"		
 AT_SEL_transition	14	protein_name	Protein Name	varchar	255	0	Y		N			N							Protein name		
 AT_SEL_chromatogram	1	SEL_chromatogram_id	SEL Chromatogram ID	int	4	0	N		Y			Y						Y	Primary Key		
 AT_SEL_chromatogram	2	SEL_run_id	SEL Run ID	int	4	0	Y		N	AT_SEL_run	SEL_run_id	N						Y	Foreign Key		
 AT_SEL_chromatogram	3	SEL_transition_id	SEL Transition ID	int	4	0	Y		N	AT_SEL_transition	SEL_transition_id	N						Y	Foreign Key		
 AT_SEL_chromatogram	4	probability	Probability	real	8	0	Y		N			N							Probability that this chromatogram represents this transition		
 AT_SEL_chromatogram	5	spectrum_file_offset	Spectrum File Offset	int	4	0	Y		N			N						N	Offset within mzML file where the data for this chromatogram begins		
+AT_elution_time_type	1	elution_time_type_id	Elution Time Type ID	int	4	0	N		Y			N						Y	Primary Key		
+AT_elution_time_type	2	elution_time_type	Elution Time Type	varchar	255	0	N		N	AT_elution_time_type	elution_time_type_id	N			elution_time_type			Y	"Type of elution time represented, SSRCalc, RTCatalog, etc"		
+AT_elution_time_type	3	instrument_id	Instrument ID	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N			instrument_id			Y	"type of intrument observed on, foreign key to instrument type table"		
+AT_elution_time_type	4	is_observed	Is Observed	char	1	0	Y		N			N			is_observed			N	Whether this is an observed type (T/F)		
+AT_elution_time	1	elution_time_id	Elution Time ID	int	4	0	N		Y			N						Y	Primary Key		
+AT_elution_time	2	elution_time_type_id	Elution Time Type ID	int	4	0	N		N	AT_elution_time_type	elution_time_type_id	N						Y	"Elution time source type, foreign key to elution_time_type table"		
+AT_elution_time	3	elution_time	Elution Time	int	4	0	Y		N			N						Y	Elution time in seconds		
