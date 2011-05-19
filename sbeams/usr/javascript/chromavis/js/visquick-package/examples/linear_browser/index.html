@@ -1,0 +1,99 @@
+<html>
+<head>
+    <title>Linear Data Browser Demo</title>
+<script type="text/javascript" src="../../js/visquick-core-1.0/google-code.js"></script>
+<script type="text/javascript" src="../../js/visquick-core-1.0/protovis-d3.3.1.js"></script>
+<script type="text/javascript" src="../../js/visquick-core-1.0/visquick-utils.js"></script>
+<script type="text/javascript" src="../../js/linear_browser/linear_browser.js"></script>
+<script type="text/javascript" src="js/data/chromInfo.json"></script>
+<script type="text/javascript" src="js/data/per_protein.json"></script>
+<script type="text/javascript" src="js/data/protein_density.json"></script>
+<script type="text/javascript" src="js/linear_plot.js"></script>
+
+    <style type="text/css">
+
+        #fig {
+            width: 580px;
+        }
+
+        .title, .subtitle {
+            font-size: 16px;
+            font-weight: bold;
+            padding-bottom: 10px;
+        }
+    </style>
+
+</head>
+<body>
+<div id="fig" style="float:right">
+    <div class="title">Linear Browser: Single Region Data Explorer</div>
+    <div id="description" style="width: 500px; " >
+        Select a chromosome from the list.  The Linear Browser will update with proteomics data from the selected region.
+
+        <h4>Regions : </h4>
+        <b>Focus :</b> The upper region presents the data at a "zoomed in" level.  The data
+        can be presented in several different ways, including a bar plot, line plot, tiling, scatterplot, or line plot.
+        <p>
+        <b>Context :</b> The lower region presents the overall context of the datasets.  It presents a simple view of
+            each plot at the range of the entire region.  The transparent red window denotes the range presented in the
+            Focus region.
+        </p><p>
+        <h4>Data : </h4>
+        For each plot displayed, the data consists of and array of Feature objects, the same datatype as in other VisQuick
+        tools.  For each Feature JSON object, the required members are (chr,start,end,value,options).
+        </p><p>
+        <h4>Behavior :</h4>
+        When the cursor appears as a "crosshair" (when it is over an empty region of the plots), a rectangular region
+        can be created by dragging horizontally.  The focus window is then re-drawn at the selected region.
+        </p>
+        <p>
+        When cursor appears as a "hand" (when it is over a data feature in the Focus region), the feature may be clicked on.
+        This enacts a behavior specific to the data as configured in the application.  For example, in this demonstration
+            the SwissProt data opens a link to UniProt, while the PeptideAtlas data opens a window containing additional PA data.
+        </p><p>
+        <h4>Configuration :</h4>
+        The plot is configured with a JSON object at the time of render.  Optional display properties include padding, color,
+        behavior, plot types, plot ranges and baselines, labels, and plot-specific parameters.
+        </p>
+
+    </div>
+
+</div>
+
+<script type="text/javascript">
+    var  linear,
+            pa_url = 'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetProtein?protein_name=',
+            pa_uri = '&apply_action=QUERY',
+            up_url = 'http://www.uniprot.org/uniprot/',
+            genome_listener = function(chr) {
+                onLinearLoad(chr);
+            },
+
+            bar_listener = function(feature,track) {
+                var label = vq.utils.VisUtils.options_map(feature)['label'];
+                window.open(pa_url+label+pa_uri,'protein','height=700,width=900,left=100,scrollbars=1,top=100');
+            },
+            uniprot_listener = function(feature,track) {
+                var label = vq.utils.VisUtils.options_map(feature)['label'];
+                window.open(up_url+label,'uniprot','height=700,width=900,left=100,scrollbars=1,top=100');
+            };
+
+    function onLinearDataComplete() {
+        document.getElementById('protein_browser').innerHTML="";
+        document.getElementById('linear_title').innerHTML="Chromosome 1";
+        linear = linear_plot(document.getElementById('protein_browser'),1);
+    }
+
+    google.setOnLoadCallback(onLinearDataComplete);
+
+</script>
+
+<div id="lin_container" style='float:left'>
+<div id='linear_title' class='title' style='text-align:center'></div>
+
+<div id="protein_browser">
+</div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,76 @@
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+
+    <title>FlexScroll Demonstration</title>
+
+
+    <script type="text/javascript" src="../../js/visquick-core-1.0/google-code.js"></script>
+<script type="text/javascript" src="../../js/visquick-core-1.0/protovis-d3.3.1.js"></script>
+<script type="text/javascript" src="../../js/visquick-core-1.0/visquick-utils.js"></script>
+
+<script type="text/javascript" language="javascript" src="../../js/flex_scroll/flexscroll.js"></script>
+        </head>
+
+<body>
+<div style="width:650px">
+                  <p>
+This is a simple demonstration of the flexScroll utility.  Written using Protovis on top of SVG, it is a widget used to select
+a range of values.  The design was focused on chromosomal position selection to allow a user to quickly zoom to data within a specific
+                      region of a given chromosome.
+                  </p>
+                  <p>
+                      To Use:<br/>
+                      <ul>
+                      <li>Drag the red area of the window to move it.
+                      <li>Drag the blue handles to resize the window.
+                      <li>When the proper selection has been made, clicking on the window creates an event.
+                      </ul>
+                  </p>
+                  <p>
+                      Interesting features:<br/>
+                      <ul>
+                      <li>The tool can be given a scale multiplier.  This is useful in a case where it is better to show a user a position in
+                      MBp or KBp.
+                      <li>A click ( or double click) can be used to re-initialize the tool at the selected range.  This effectively gives the tool the ability
+                      to zoom to smaller region for finer control.
+                      <li>The window width can be fixed for applications which require a range of a certain size.
+                      <li>The tool can send an event notification on any event (window resize or drag).  This would include any moment during a drag, rather than
+                      simply notifiying after a drag is completed (a "mouseup" event).
+                      </ul>
+                  </p>
+    </div>
+
+<div id="masterContainer"  style="height:70px;width:400px;"> </div>
+
+Scroll scale is in Kbp
+<div id="event_select"></div>                  
+
+<script type="text/javascript">
+var listener = function(x,dx) { document.getElementById('event_select').innerHTML = 'Event detected: x is ' + x + ' base pairs.  Width is ' + dx + ' base pairs.'};
+var flexbar = new vq.FlexScroll();
+
+var data ={
+    DATATYPE : "vq.models.FlexScrollData",
+    CONTENTS : {
+        PLOT :    {
+            container : document.getElementById("masterContainer"),
+            width : 460,
+            height: 50,
+            vertical_padding : 10,
+            horizontal_padding: 30,
+            min_position: 0 ,
+            max_position: 1000,
+            interval : 100,
+            scale_multiplier : 1000
+        },
+        notifier : listener,
+        dblclick_notifier : listener
+    }
+};
+
+
+flexbar.draw(data);
+</script>
+</body>
+</html>

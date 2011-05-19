@@ -1,0 +1,126 @@
+<html>
+<head>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>ChromaVis Demo</title>
+
+
+<script type="text/javascript" src="js/visquick-core-1.0/google-code.js"></script>
+<script type="text/javascript" src="js/visquick-core-1.0/protovis-r3.3.1.js"></script>
+<script type="text/javascript" src="js/visquick-core-1.0/visquick-utils.js"></script>
+    <script type="text/javascript" language="javascript" src="js/chromavis.js"></script>
+    <script type="text/javascript" language="javascript" src="js/data/test.json"></script>
+            
+        </head>
+
+<body>
+<!--[if IE]>      
+    <script type="text/javascript"
+     src="http://ajax.googleapis.com/ajax/libs/chrome-frame/1/CFInstall.min.js"></script>
+
+    <style>
+     .chromeFrameInstallDefaultStyle {
+       width: 100%; /* default is 800px */
+       border: 5px solid blue;
+     }
+    </style>
+            <div id="notice"></div>
+            <div id="prompt"></div>
+
+    <script>
+          function displayGCFText() {
+            document.getElementById('notice').innerHTML = "Internet Explorer has been detected." +
+            "Please install the Google Chrome Frame if it is not already installed.  This will enable" +
+            "HTML5 features necessary for the web application.<p>"+
+            "If the install panel does not appear, please enable Compatibility mode in your browser and reload this page.";
+            };
+     // The conditional ensures that this code will only execute in IE,
+     // Therefore we can use the IE-specific attachEvent without worry
+     window.attachEvent("onload", function() {
+       CFInstall.check({
+         mode: "inline", // the default
+         node: "prompt"
+       });
+     });
+    </script>
+  <![endif]-->
+
+
+<div id="masterContainer"  style="display:block;float:none;"></div>
+<div id="scrollContainer" style="display:block;float:none;"></div>
+
+<script type="text/javascript">
+
+    var chromavis;
+    function renderChromatogram(){
+//        var plotListener = function(x) { var array_str='';
+//            for (var key in x) {
+//                if (!key) {continue;}
+//                array_str += key; array_str += ": "; array_str+=x[key] + ", ";
+//            }
+//            console.log('Clicked on object with data: ' + array_str)
+//        };
+
+//        vmarker_json = {id: "Retention Time",value: 3.2};
+//        var data_array = [];
+//                    var x = pv.range(1,5,0.01);
+//                    var coef = pv.range(0.2,0.9,0.1);
+//        for (var i = 0;i <coef.length; i++){
+//            var y = x.map(function(a) { return Math.exp(-Math.pow(a - 2.5,2)/2) * coef[i] + Math.random() / 40;});
+//            data_array.push({eri:coef[i] + Math.random()/10, label : i+'',data: x.map(function(a,index) { return {x:a,y:y[index]};})});
+//        }
+
+        chromavis = new vq.ChromaVis();
+
+        var data = {
+            DATATYPE : "vq.models.ChromaVisData",
+            CONTENTS :{
+                    PLOT: {
+                        container :document.getElementById("masterContainer"),
+                        width : 700,
+                        height: 400,
+                        auto_scale_x : true,
+                        min_x_axis_value : 1,
+                        max_x_axis_value : 5,
+                        auto_scale_y : true,
+                        auto_update_scale_y : false,
+                        min_y_axis_value : 0,
+                        vertical_padding : 20,
+                        horizontal_padding: 40,
+                        legend_width : 130,
+                        context_height : 50,
+                        eri_gauge : true
+                        },
+                    data_array : data_json,
+                    data_label : 'label',
+                    vertical_marker_array : vmarker_json,
+                    x_axis_label: 'Time(sec)',
+                    y_axis_label: 'Intensity',
+                    data_contents_id : 'data',
+                    x_column_id: 'time',
+                    y_column_id: 'intensity',
+		    eri_bubble_max: 1,
+                    line_width : 2,
+                    eri_id : 'eri',
+                    tooltip_items : {Time : 'time', Intensity : 'intensity'},
+                    stroke_style : pv.Colors.category10().by(function() {return this.index;})
+            }
+        };
+
+        chromavis.draw(data);
+      
+    }
+
+    google.setOnLoadCallback(renderChromatogram)
+</script>
+<br/>
+<div id="instructions" style="display:none;">Drag the red area over the context panel to shift the focus panel.  When the cursor is a crosshair, you may
+draw a new context window.</div>
+<br/>
+<input type="checkbox" id="auto_scale_y" onchange="chromavis.auto_update_scale_y(this.checked); return false;">Auto Scale Y Axis</input>
+<br/>
+
+
+</body>
+</html>
+

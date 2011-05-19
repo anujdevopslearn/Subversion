@@ -1,0 +1,78 @@
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Scatterplot Demo</title>
+    <script type="text/javascript" src="../../js/visquick-core-1.0/google-code.js"></script>
+<script type="text/javascript" src="../../js/visquick-core-1.0/protovis-d3.3.1.js"></script>
+<script type="text/javascript" src="../../js/visquick-core-1.0/visquick-utils.js"></script>
+<script type="text/javascript" language="javascript" src="../../js/scatterplot/scatterplot.js"></script>
+<script type="text/javascript" language="javascript" src="js/data/mass_spec.json"></script>
+</head>
+<body>
+
+<div id="instructions" style="font: 18pt helvetica neue;display:block;">Scatter plot:   M/L vs H/L for 1 binding phospho</div>  &nbsp;&nbsp;&nbsp;
+<div id="masterContainer"  style="display:block;float:none;">
+</div>
+
+<script type="text/javascript">
+    function handleProteomicsData(){
+        var listener = function(x) { var array_str='';
+            for (var key in x) {
+                if (!key) {continue;}
+                array_str += key; array_str += ": "; array_str+=x[key] + ", ";
+            }
+            document.getElementById('event_select').innerHTML = 'Clicked on object with data: ' + array_str;
+        };
+        var data_array = mass_spec;
+        var sp = new vq.ScatterPlot();
+
+        var data ={
+            DATATYPE : "vq.models.ScatterPlotData",
+            CONTENTS : {
+                PLOT : {
+                    container: document.getElementById("masterContainer"),
+                    width : 700, height: 400,
+                    dblclick_notifier : listener,
+                    vertical_padding : 40,
+                    horizontal_padding: 40,
+                    font :"14px sans"},
+                data_array: data_array, xcolumnid: 'ml_norm1',
+                ycolumnid: 'hl_norm1',valuecolumnid: 'id'
+            }
+        };
+
+        sp.draw(data);
+    }
+
+    google.setOnLoadCallback(handleProteomicsData);
+</script>
+<br/>
+<div id="event_select"></div>
+
+<div style="width:650px">
+   <p>
+This is a demonstration of the scatterplot application.  Written using Protovis on top of SVG, it is a widget used to plot on an x-y plane.
+  By modulating the hue, saturation, size, and position of each element, the user can be given additional information about the
+  underlying dataset for a given chromosome.  For example, visual properties may correspond to read coverage, a summmary of features, and the source
+                      of the data.
+                  </p>
+                  <p>
+                      To Use:<br/>
+                      <ul>
+                      <li>Click and drag on the plot to pan around.  Note that the axes move smoothly.</li>
+                      <li>Scroll the mousewheel over the plot to zoom in/out.</li>
+                      </ul>
+                  </p>
+    <p>
+        Interesting Features:<br/>
+        <ul>
+         <li>Note that datapoints activate/display an id when the cursor is nearby, but not necessarily hovering above a point.
+                       This is called "bubble pointing".  It can be useful when exploring data to rapidly get a sense of the features.</li>
+        <li>The green line is a 1st order linear regression of the displayed data.</li>
+        </ul>
+    </p>
+    <p>This plot is displaying the M/L and H/L values for each detected ion in a given Mass Spectrometry experiment.</p>
+    </div>
+
+</body>
+</html>

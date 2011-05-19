@@ -1,0 +1,59 @@
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Brush Link Demo</title>
+<script type="text/javascript" src="../../js/visquick-core-1.0/google-code.js"></script>
+<script type="text/javascript" src="../../js/visquick-core-1.0/protovis-d3.3.1.js"></script>
+<script type="text/javascript" src="../../js/visquick-core-1.0/visquick-utils.js"></script>
+<script type="text/javascript" language="javascript" src="../../js/brush_link/brush_link.js"></script>
+    <script type="text/javascript" language="javascript" src="js/data/protein.json"></script>
+ </head>
+<body>
+
+<div id="masterContainer"  style="display:block;float:none;">
+
+</div>
+
+<script type="text/javascript">
+
+    function drawBrushLink(){
+        var listener = function(x) { var array_str='';
+            for (var key in x) {
+                if (!key) {continue;}
+                array_str += key; array_str += ": "; array_str+=x[key] + ", ";
+            }
+            console.log('Clicked on object with data: ' + array_str)
+        };
+
+        var data_array = protein;
+        var flexbar = new vq.BrushLink();
+
+        var data ={
+            DATATYPE : "vq.models.BrushLinkData",
+            CONTENTS : {
+                PLOT : {
+                    container: document.getElementById("masterContainer"),
+                    width : 130, height: 130, dblclick_notifier : listener,
+                    vertical_padding : 20, horizontal_padding: 20,
+                    font :"14px sans", interval : 100
+                },
+                tooltip_items :
+                {'Peptide id' :'Peptide_IDs',
+                    'M/L Norm 1' : 'ml_norm1',
+                    'M/L Norm 2' : 'ml_norm2',
+                    'M/L Norm 3' : 'ml_norm3',
+                    'Scatter Plot' : function(data_point) {return '<a href="#" onclick="uniprot_listener()">Link</a>';}
+                },
+                notifier : listener,
+                data_array: data_array, columns: pv.permute(pv.keys(data_array[0]),[1,2,3])}
+    };
+        flexbar.draw(data);
+    }
+google.setOnLoadCallback(drawBrushLink);
+</script>
+
+<br/>
+<div id="instructions" style="display:block;">Click and drag over any plot to highlight the corresponding peptides in all of the plots.</div>
+
+</body>
+</html>

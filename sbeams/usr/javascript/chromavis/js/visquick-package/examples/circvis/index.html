@@ -1,0 +1,114 @@
+<html>
+
+<head>
+<title>Circvis Demo</title>
+<script type="text/javascript" src="../../js/visquick-core-1.0/google-code.js"></script>
+<script type="text/javascript" src="../../js/visquick-core-1.0/protovis-d3.3.1.js"></script>
+<script type="text/javascript" src="../../js/visquick-core-1.0/visquick-utils.js"></script>
+<script type="text/javascript" src="../../js/visquick-core-1.0/prototype.js"></script>
+
+<script type="text/javascript" src="js/data/GBM_cnv_track.json"></script>
+<script type="text/javascript" src="js/data/GBM_link_density_track.json"></script>
+<script type="text/javascript" src="js/data/GBM_tick_track.json"></script>
+<script type="text/javascript" src="js/data/GBM_network.json"></script>
+<script type="text/javascript" src="js/data/chromInfo.json"></script>
+<script type="text/javascript" src="../../js/circvis/data/cytoband.hg18.json"></script>
+<script type="text/javascript" src="../../js/circvis/circvis.js"></script>
+
+
+    <script type="text/javascript">
+        var ucsc_cancer_url = 'https://genome-cancer.soe.ucsc.edu/cgi-bin/hgHeatmap2';
+        var ucsc_genome_url = 'http://genome.ucsc.edu/cgi-bin/hgTracks';
+        var tick_listener = function(node){
+            var chr = node.chr;
+            var start = node.start;
+            var stop = node.end;
+            var label = node.value;
+            window.open(ucsc_genome_url + '?position=chr' + chr + ':' + start + '-'+ stop,'_blank')
+            if (label != null) {alert('Opening UCSC Genome Browser for Feature with label: ' + label); }
+            return false;
+            };
+
+
+    </script>
+
+
+<style type="text/css">
+
+#fig {
+  width: 580px;
+  height: 740px;
+}
+
+.title, .subtitle {
+  font-size: 16px;
+  font-weight: bold;
+  padding-bottom: 10px;
+}
+
+.subtitle {
+  float: right;
+  color: #999;
+}
+
+.footer {
+  padding-top: 10px;
+  text-align: right;
+}
+
+    </style>
+
+</head>
+<body>
+<div id="fig">
+<div class="title">CircVis: Whole-Chromosome Data Explorer</div>
+    <div id="description" style="width: 800px; " >
+        <p>
+        This plot was generated using GBM data from a TCGA repository. Data sources include Methylation (METH), Copy Number Variation (CNV), microRNA, and Gene Expression.
+    Several hundred features pairs were identified as highly correlated.
+            </p><p>
+        The data is arranged in concentric rings.  The human chromosome is mapped by position to the circle; first, in order of increasing chromosome number(1 - 22,X,Y) and secondly
+        in order of increasing DNA base pair number.<br>
+        Radial lines pass through the data at the same position on the chromosome which is labeled at the outer edge of the largest ring.  The graph data at the center of the
+        plot can be used to display relationships between features found at various points in the genome/proteome/transcriptome, etc.
+        </p>
+
+    Data in this plot, in order from outside edge to the center:
+        <ul>
+<li>The outer edge contains colored ticks that indicate the presence of a 'feature' identified in the analysis.  Hover the mouse cursor over a tick to show the feature label.
+    Click on a label to open the UCSC Genome Browser at the feature's location.</li>
+<li>The outer ring contains a bar plot of the aggregated Copy Number Variation present at each interval in the genomic data.</li>
+<li>The inner ring presents a histogram of the 'link density' or total number of features present in the list of correlated pairs.</li>
+<li>The graph in the center presents the connection graph representing all feature pairs identified in the algorithm.  Red dots indicate that connections are
+occuring at very close intervals.</li>
+            </ul>
+        <p>
+        The entire plot can be manipulated.  Drag any painted part of the plot to pan the view.  Scroll the mousewheel over any painted position on the plot to zoom/unzoom.
+</p>
+        An example filtering step:  Use the text boxes below to manipulate the outer ring on the fly.  Ranges should typically fall between -3 and 3.
+  <p>
+Max CNV: <input type="text" id="max_cnv" onchange="circle.setMaxPlotValue(1,parseFloat(this.value));"/>  ( greater than zero )
+<br />
+Min CNV: <input type="text" id="min_cnv" onchange="circle.setMinPlotValue(1,parseFloat(this.value));"/>   ( less than zero )
+      </p>
+    <br/>
+    An example popup link that can be implemented.  For any given position on the plot, a web service can be called to display additional information.
+        In this case, the UCSC Genome Browser can be opened at the given chromosomal position.  Additionally, the UCSC Cancer Genome Browser can be used to look
+        at pertinent TCGA data.  <br/>
+    <a href="#" onClick="tick_listener({chr:'1',start:'151,073,054',end:'151,383,976'}); return false;">Example UCSC Genome Browser popup</a>
+        </div>
+  <div style="height:30px"></div>
+
+<div id="CircVis_div" style="margin:100px"></div></div>
+
+<script type="text/javascript" src="js/wedge_plot.js"></script>
+<script type="text/javascript">
+    var circle;
+function onLoadDataComplete() {
+            circle = wedge_plot($('CircVis_div'));
+}
+   google.setOnLoadCallback(onLoadDataComplete);
+</script>
+
+</body>
+</html>

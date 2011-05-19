@@ -1,0 +1,83 @@
+
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Treemap Demo</title>
+    <script type="text/javascript" src="../../js/visquick-core-1.0/google-code.js"></script>
+    <script type="text/javascript" src="../../js/visquick-core-1.0/protovis-r3.3.1.js"></script>
+    <script type="text/javascript" src="../../js/visquick-core-1.0/visquick-utils.js"></script>
+
+    <script type="text/javascript" language="javascript" src="../../js/treemap/treemap.js"></script>
+    <script type="text/javascript" language="javascript" src="js/data/disease_data.json"></script>
+</head>
+<body>
+<div id="masterContainer"  style="display:block;float:none;">
+
+</div>
+
+<script type="text/javascript">
+       var lookup_key = {}, lookup_term = {};
+       function filterDiseaseData(key){
+
+
+           var data = disease.filter(function(entry) { return (entry.disease_mesh_key).match("^"+key) == key &&
+                   entry.disease_mesh_key.length >= key.length +4 && entry.disease_mesh_key.length <= key.length + 8;});
+           var key_arr = key.split('.');
+           if (key_arr.length == 0) {
+               var ancestor = disease.filter(function(entry) { return (entry.disease_mesh_key) == key_term;});
+               data = data.concat(ancestor);
+           }
+           key_arr.forEach(function(term,index) {
+               var key_term = key_arr.slice(0,index+1).join('.');
+               var ancestor = disease.filter(function(entry) { return (entry.disease_mesh_key) == key_term;});
+               data = data.concat(ancestor);
+           });
+           handleDiseaseData(data);
+       }
+
+       function handleDiseaseData(data_array){
+           var listener = function(data) {
+            filterDiseaseData(lookup_term[data.nodeName]);
+            };
+
+           data_array.forEach(function(mesh) { lookup_key[mesh.disease_mesh_key] = mesh.disease_mesh_term; lookup_term[mesh.disease_mesh_term] = mesh.disease_mesh_key;});
+           var leaf_depth = pv.max(data_array, function(term) { return term.disease_mesh_key.split('.').length;});
+           data_array.forEach(function(mesh) { var key_array = mesh.disease_mesh_key.split('.');
+               mesh.key =
+                       key_array.map(function(key,index) { return lookup_key[key_array.slice(0,index+1).join('.')];}).join("*");
+           });
+           //eliminate all data points except for leafs!
+           data_array = data_array.filter(function(term1) {
+               return data_array.every(function(term2) {
+                   return term2.disease_mesh_key.match("^" + term1.disease_mesh_key + '.') != term1.disease_mesh_key + '.';
+               });
+           });
+
+           var treemap = new vq.Treemap();
+
+           var data ={
+               DATATYPE : "vq.models.TreemapData",
+               CONTENTS : {
+                   PLOT : {
+                       container: document.getElementById("masterContainer"),
+                       width : 900,
+                       height: 700,
+                       vertical_padding : 20,
+                       horizontal_padding: 20
+                   },
+                   notifier : listener,
+                   data_array: data_array,
+                   key : 'key',
+                   key_delimiter : '*',
+                   value : 'disease_mesh_term'
+               }
+           };
+           treemap.draw(data);
+       }
+
+    google.setOnLoadCallback(filterDiseaseData('C04'));
+</script>
+<br/>
+
+</body>
+</html>

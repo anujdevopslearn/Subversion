@@ -1,0 +1,98 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <title>Parallel Coordinates Demo</title>
+<script type="text/javascript" src="../../js/visquick-core-1.0/google-code.js"></script>
+<script type="text/javascript" src="../../js/visquick-core-1.0/protovis-d3.3.1.js"></script>
+<script type="text/javascript" src="../../js/visquick-core-1.0/visquick-utils.js"></script>
+
+<script type="text/javascript" language="javascript" src="../../js/par_coord/parallel_coordinates.js"></script>
+<script type="text/javascript" src="js/data/kmeans.json"></script>
+<script type="text/javascript" src="js/selection_grid.js"></script>
+<script type="text/javascript" src="js/paco_plot.js"></script>
+
+    <style type="text/css">
+        #fig {
+            width: 860px;
+            height: 580px;
+        }
+        .title, .subtitle {
+            font-size: 16px;
+            font-weight: bold;
+            padding-bottom: 10px;
+        }
+        #footer {
+            font: 20pt helvetica neue;
+            padding-left: 40px;
+            color: #666;
+        }
+        input {
+            font: 20pt helvetica neue;
+            width: 600px;
+            background: none;
+            border: none;
+            outline: 0;
+        }
+
+    </style>
+
+<script type="text/javascript">
+    var par_coord;
+
+    function display_msg(msg) {
+        document.getElementById('error_msg').innerHTML = msg;
+    }
+    function clear_msg() {
+        document.getElementById('error_msg').innerHTML = "";
+    }
+
+    function handleFilterSelection() {
+        var data = par_coord.getFiltered();
+
+        if (data.length < 1) { return; }
+        selectionGrid.setStore(data);
+    }
+
+    function handleSingleSelection() {
+        var data = par_coord.getSelected();
+        if (data != undefined && data != null ) { selectionGrid.appendDataItem(data);}
+
+    }
+
+    function onLoadDataComplete() {
+
+        clear_msg();
+        par_coord = paco_plot(document.getElementById('par_coord_div'));
+
+        selectionGrid = new vq.PaCo.SelectionGrid('',document.getElementById('selection_grid'),
+                handleFilterSelection,handleSingleSelection,null,null);
+        selectionGrid.render();
+        document.getElementById('button_div').style.display = 'block';
+    }
+
+    google.setOnLoadCallback(onLoadDataComplete);
+
+</script>
+
+</head>
+
+<body>
+<div class="title">Kmeans of DNA reads</div>
+<div id="error_msg" style="color:red;width:400px;font:10pt sans-serif"></div>
+
+<div style="position:relative;height:610px;top:40px">
+
+    <div id="par_coord_div" style="float:left;padding:30px" ></div>
+    <div id="selection_grid"  style="position:relative;float:left;padding:0px 0px 0px 0px;"></div>
+    <div id="button_div" style="position:absolute;bottom:0px;display:none">
+        <button id="populate_selection_grid_btn" onclick="handleFilterSelection(); return false;" style="height:20px;width:100px">Populate Grid</button>
+        <button id="add_selection_grid_btn" onclick="handleSingleSelection(); return false;" style="height:20px;width:120px">Add Selection</button>
+    </div> </div>
+
+<br/><br/><br/>
+
+
+
+</body>
+</html>

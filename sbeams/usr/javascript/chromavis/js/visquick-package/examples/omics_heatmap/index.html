@@ -1,0 +1,68 @@
+<html>
+
+<head>
+<title>Omics Heatmap Demo</title>
+<script type="text/javascript" src="../../js/visquick-core-1.0/google-code.js"></script>
+<script type="text/javascript" src="../../js/visquick-core-1.0/protovis-d3.3.1.js"></script>
+<script type="text/javascript" src="../../js/visquick-core-1.0/visquick-utils.js"></script>
+<script type="text/javascript" src="../../js/omics_heatmap/omics_heatmap.js"></script>
+<script type="text/javascript" src="js/selection_grid.js"></script>
+<script type="text/javascript" src="js/wedge_plot.js"></script>
+
+<style type="text/css">
+#fig {
+  width: 400px;
+  height: 400px;
+}
+
+.title, .subtitle {
+  font-size: 16px;
+  font-weight: bold;
+  padding-bottom: 10px;
+}
+
+.subtitle {
+  float: right;
+  color: #999;
+}
+
+.footer {
+  padding-top: 10px;
+  text-align: right;
+}
+</style>
+
+</head>
+<body>
+<div id="fig">
+<div class="title">Omics Heatmap Demo</div>
+    <a href="#" onclick ='wedge_plot_simulated(document.getElementById("heatmap"));' >Simulated Data</a>&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="#" onclick ='wedge_plot(document.getElementById("heatmap"));' >Random Data</a>
+    <div id="description" style="width:650px;">
+        <p>
+
+<div style="position:relative;left:10px" id="heatmap"></div><div id="selection_grid"  style="position:absolute;left:670px;top:30px;padding:0 0 0 0;">
+
+</div></div>  </div>
+
+<script type="text/javascript">
+    var heatmap;
+    var selectionGrid;
+    var row_click = function(row_obj) {
+        selectionGrid.appendDataItem(row_obj);
+    };
+    function onLoadDataComplete() {
+        heatmap = wedge_plot_simulated(document.getElementById('heatmap'));
+        selectionGrid = new vq.PaCo.SelectionGrid('DIABLO',document.getElementById('selection_grid'),function(){},function(){});
+        selectionGrid.render();
+    }
+    function onLoadGoogleComplete(){
+        loadData(onLoadDataComplete);
+    }
+
+    google.setOnLoadCallback(onLoadDataComplete);
+</script>
+
+
+</body>
+</html>
