@@ -1,0 +1,804 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : GetSELTransitions
+# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
+# $Id: GetSELTransitions 6576 2010-10-29 17:07:59Z zsun $
+#
+# Description : This program that allows users to
+#               get SRM Experiment library
+#               transitions from the PeptideAtlas based on various criteria.
+#
+# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    #permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin'],
+    # connect_read_only=>1,
+    allow_anonymous_access=>1,
+  ));
+
+
+  #### Read in the default input parameters
+  my %parameters;
+
+  $parameters{uploaded_file_not_saved} = 1;
+
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+     #$sbeams->printDebuggingInfo($q);
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+  #### Decide what action to take based on information so far
+  if ($parameters{action} eq "???") {
+
+    # Some action
+
+  } else {
+
+    my $project_id = $sbeamsMOD->getProjectID(
+        atlas_build_id => $parameters{atlas_build_id}
+        );
+
+    $sbeamsMOD->display_page_header(project_id => $project_id);
+
+    handle_request(ref_parameters=>\%parameters);
+
+    $sbeamsMOD->display_page_footer();
+
+  }
+
+
+} # end main
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+
+  #### Show current user context information
+  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+  #$sbeams->printUserContext();
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+    parameters_ref => \%parameters,
+    program_name => $PROG_NAME,
+  );
+  print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+
+
+  #### Get the current atlas_build_id based on parameters or session
+  my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+    parameters_ref => \%parameters,
+  );
+  if (defined($atlas_build_id) && $atlas_build_id < 0) {
+    return;
+  }
+  $parameters{atlas_build_id} = $atlas_build_id;
+
+
+  #### Define some generic variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+  #### Read in the standard form values
+  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+  #### Set some specific settings for this program
+  my $CATEGORY="Get SRM Experiment Transitions";
+  $TABLE_NAME="AT_GetSELTransitions" unless ($TABLE_NAME);
+  ($PROGRAM_FILE_NAME) =
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+
+  #### Get the columns and input types for this table/query
+  my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+
+  my %input_types = 
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+
+
+  #### Read the input parameters for each column
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters,
+    columns_ref=>\@columns,input_types_ref=>\%input_types);
+   #$sbeams->printDebuggingInfo($q);
+
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  if ($apply_action eq "VIEWRESULTSET") {
+    $sbeams->readResultSet(
+        resultset_file=>$rs_params{set_name},
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters
+    );
+    $n_params_found = 99;
+  }
+
+
+  #### Set some reasonable defaults if no parameters supplied
+  unless ($n_params_found) {
+    $parameters{input_form_format} = "minimum_detail";
+  }
+
+
+  #### Apply any parameter adjustment logic
+  # None
+
+
+  #### Display the user-interaction input form
+  $sbeams->display_input_form(
+    TABLE_NAME=>$TABLE_NAME,
+    CATEGORY=>$CATEGORY,
+    apply_action=>$apply_action,
+    PROGRAM_FILE_NAME=>$PROG_NAME,
+    parameters_ref=>\%parameters,
+    input_types_ref=>\%input_types,
+    mask_user_context=> '1',
+  );
+
+  #### Display the form action buttons
+  $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
+
+
+  #### Finish the upper part of the page and go begin the full-width
+  #### data portion of the page
+  $sbeams->display_page_footer(close_tables=>'YES',
+    separator_bar=>'YES',display_footer=>'NO');
+
+
+  #########################################################################
+  #### Process all the constraints
+
+  #### If no atlas_build_id was selected, stop here
+  unless ($parameters{atlas_build_id}) {
+    $sbeams->reportException(
+      state => 'ERROR',
+      type => 'INSUFFICIENT CONSTRAINTS',
+      message => 'You must select at least one Atlas Build',
+    );
+    return;
+  }
+
+  #### Build PROTEIN_NAME constraint
+  my $protein_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SELTG.protein_name",
+    constraint_type=>"plain_text",
+    constraint_name=>"Protein Name",
+    constraint_value=>$parameters{protein_name_constraint} );
+  return if ($protein_name_clause eq '-1');
+
+  #### Build STRIPPED PEPTIDE_SEQUENCE constraint
+  my $stripped_peptide_sequence_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SELTG.stripped_peptide_sequence",
+    constraint_type=>"plain_text",
+    constraint_name=>"Peptide Sequence",
+    constraint_value=>$parameters{stripped_peptide_sequence_constraint} );
+  return if ($stripped_peptide_sequence_clause eq '-1');
+
+  #### Build modified_peptide_sequence_constraint  
+  my $modified_peptide_sequence_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SELTG.modified_peptide_sequence",
+    constraint_type=>"plain_text",
+    constraint_name=>"Modified Peptide Sequence",
+    constraint_value=>$parameters{modified_peptide_sequence_constraint} );
+  return if ($modified_peptide_sequence_clause eq '-1');
+
+  #### Build Q1 m/z constraint
+  my $q1_mz_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SELTG.q1_mz",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Q1 m/z",
+    constraint_value=>$parameters{q1_mz_constraint} );
+  return if ($q1_mz_clause eq '-1');
+
+  #### Build Q3 m/z constraint
+  my $q3_mz_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SELT.q3_mz",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Q3 m/z",
+    constraint_value=>$parameters{q3_mz_constraint} );
+  return if ($q3_mz_clause eq '-1');
+
+  #### Build m_score constraint
+  my $m_score_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SELC.m_score",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Probabiity",
+    constraint_value=>$parameters{m_score_constraint} );
+  return if ($m_score_clause eq '-1');
+
+  #### Build fragment type constraint
+  my $fragment_type_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SELT.frg_type",
+    constraint_type=>"text_list",
+    constraint_name=>"frg_type",
+    constraint_value=>$parameters{fragment_type_constraint} );
+  return if ($fragment_type_clause eq '-1');
+
+  #### Build fragment number constraint
+  my $fragment_number_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SELT.frg_nr",
+    constraint_type=>"flexible_int",
+    constraint_name=>"frg_nr",
+    constraint_value=>$parameters{fragment_number_constraint} );
+  return if ($fragment_number_clause eq '-1');
+
+  #### Build fragment charge constraint
+  my $fragment_charge_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SELT.frg_z",
+    constraint_type=>"flexible_int",
+    constraint_name=>"frg_z",
+    constraint_value=>$parameters{fragment_charge_constraint} );
+  return if ($fragment_charge_clause eq '-1');
+
+  #### Build isotype constraint
+  my $isotype_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SELTG.isotype",
+    constraint_type=>"plain_text",
+    constraint_name=>"Isotype",
+    constraint_value=>$parameters{isotype_constraint} );
+  return if ($isotype_clause eq '-1');
+
+  #### Build organism constraint
+  my $organism_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"O.organism_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Organism",
+    constraint_value=>$parameters{organism_constraint} );
+  return if ($organism_clause eq '-1');
+
+  #### Build Experiment_ID constraint 
+  my $experiments_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SELE.SEL_experiment_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Experiment",
+    constraint_value=>$parameters{SEL_experiments} );
+  return if ($experiments_clause eq '-1');
+
+  #### Build experiment runs constraint 
+  my $runs_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SELR.SEL_run_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Runs",
+    constraint_value=>$parameters{SEL_runs} );
+  return if ($runs_clause eq '-1');
+
+  #### Build samples constraint 
+  my $samples_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"S.sample_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Samples",
+    constraint_value=>$parameters{sample_ids} );
+  return if ($samples_clause eq '-1');
+
+
+  #### Build ROWCOUNT constraint
+  $parameters{row_limit} = 5000
+    unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
+  my $limit_clause = "TOP $parameters{row_limit}";
+  #### Disable row limits
+  $limit_clause = "";
+
+
+  #### Define some variables needed to build the query
+
+
+  #### Define the desired columns in the query
+  #### [friendly name used in url_cols,SQL,displayed column title]
+
+  # Set up base column defs
+
+  # If user wants to see a line for each transition, include
+  # columns for Q1, Q3, and ion type. Otherwise, don't.
+  my @transition_column_array =  ( $parameters{display_options} =~ /ShowEachTransition/ ) ? (
+   ["q3_mz","SELT.q3_mz","Q3 m/z"],
+   ["ion_type","(SELT.frg_type +  CAST(SELT.frg_nr AS VARCHAR) + ' +' + CAST(SELT.frg_z AS VARCHAR))","Ion Type"],
+   ["frg_type","SELT.frg_type","frg_type"],
+   ["frg_nr","SELT.frg_nr","frg_nr"],
+   ["frg_z","SELT.frg_z","frg_z"],
+  ) : ();
+
+  my @column_array = (
+   ["stripped_peptide_sequence","SELTG.stripped_peptide_sequence","Stripped Peptide Sequence"],
+   ["peptide_PA","NULL","Peptide in Peptide Atlas"],
+   ["protein_name","SELTG.protein_name","Protein Name"],
+   ["protein_name_PA","NULL","Protein in Peptide Atlas"],
+   ["modified_peptide_sequence","SELTG.modified_peptide_sequence","Modified Peptide Sequence"],
+   ["peptide_charge","SELTG.peptide_charge","Peptide Precursor Charge"],
+   ["q1_mz","SELTG.q1_mz","Q1 m/z"],
+   @transition_column_array,
+   ["chromatogram_link","NULL", "Chro mato gram"],
+   ["m_score","STR(SELC.m_score,7,4)", "mProphet score"],
+   ["log10_max_apex_intensity","STR(SELC.max_apex_intensity,7,4)", "Log Max Apex Intens"],
+   ["collision_energy","SELTG.collision_energy","Collision Energy"],
+   ["isotype","SELTG.isotype","Isotype"],
+   ["experiment","SELE.SEL_experiment_id","Experiment"],
+   ["sample","S.sample_tag", "Sample"],
+   ["organism","O.organism_name", "Organism"],
+   ["run","SELR.spectrum_filename","Run"],
+   ["SEL_chromatogram_id","SELC.SEL_chromatogram_id", "SEL_chromatogram_id"],
+   ["sample_id","S.sample_id", "sample_id"],
+#   ["SEL_run_id","SELR.SEL_run_id", "Run ID"],
+#   ["SEL_transition_id","SELT.SEL_transition_id", "Transition ID"],
+  );
+
+  ## If the modifications view was selected DISABLED FOR NOW
+  if ( 0 && $parameters{display_options} =~ /ShowModifications/) {
+    @column_array = ( @column_array[0], 
+		      ["modified_peptide_sequence","MPI.modified_peptide_sequence","Modified Peptide Sequence"],
+		      $column_array[2],
+		      ["n_observations","MPI.n_observations","N Obs"],
+		      @column_array[4..5],
+		      ["peptide_charge","MPI.peptide_charge","Peptide Charge"],
+		      ["monoisotopic_parent_mz","STR(MPI.monoisotopic_parent_mz,10,4)","Monoisotopic Parent m/z"],
+		      @column_array[6..$#column_array],
+		      );
+
+  } 
+
+
+  #### Set flag to display SQL statement if user selected
+  if ( $parameters{display_options} =~ /ShowSQL/ ) {
+    $show_sql = 1;
+  }
+
+
+  #### Build the columns part of the SQL statement
+  my %colnameidx = ();
+  my @column_titles = ();
+  ## Sends @column_array_ref to build_SQL_columns_list, which
+  ## (1) appends the 2nd element in array to $columns_clause
+  ## (2) fills %colnameidx_ref as a hash with key = 1st element
+  ## and value = 3rd element, and (3) fills @column_titles_ref
+  ## array with the 3rd element
+  my $columns_clause = $sbeams->build_SQL_columns_list(
+    column_array_ref=>\@column_array,
+    colnameidx_ref=>\%colnameidx,
+    column_titles_ref=>\@column_titles
+  );
+  my $group_by_clause =  ( $parameters{display_options} =~ /ShowEachTransition/ ) ?  "" :
+    qq ~
+    GROUP BY SELTG.stripped_peptide_sequence,
+             SELTG.protein_name,
+             SELTG.modified_peptide_sequence,
+             SELTG.peptide_charge,
+             SELTG.collision_energy,
+             SELTG.isotype,
+             SELTG.q1_mz,
+             S.sample_tag,
+             S.sample_id,
+             O.organism_name,
+             SELC.SEL_chromatogram_id,
+             SELC.m_score,
+             SELC.max_apex_intensity,
+             SELR.spectrum_filename,
+             SELE.SEL_experiment_id
+  ~;
+
+  #### Define the SQL statement
+  $sql = qq~
+     SELECT distinct $limit_clause $columns_clause
+       FROM $TBAT_SEL_TRANSITION_GROUP SELTG
+      LEFT JOIN $TBAT_SEL_CHROMATOGRAM SELC
+            ON ( SELTG.SEL_transition_group_id = SELC.SEL_transition_group_id )
+      LEFT JOIN $TBAT_SEL_TRANSITION SELT
+            ON ( SELT.SEL_transition_group_id = SELTG.SEL_transition_group_id )
+      LEFT JOIN $TBAT_SEL_RUN SELR
+            ON ( SELR.SEL_run_id = SELC.SEL_run_id )
+      LEFT JOIN $TBAT_SEL_EXPERIMENT SELE
+            ON ( SELE.SEL_experiment_id = SELR.SEL_experiment_id )
+      LEFT JOIN $TBAT_SAMPLE S
+            ON ( S.sample_id = SELE.sample_id )
+      LEFT JOIN $TB_ORGANISM O
+            ON ( S.organism_id = O.organism_id )
+
+     WHERE 1 = 1
+        $protein_name_clause
+	$stripped_peptide_sequence_clause
+	$modified_peptide_sequence_clause
+        $q1_mz_clause
+        $q3_mz_clause
+        $fragment_type_clause
+        $fragment_number_clause
+        $fragment_charge_clause
+        $m_score_clause
+        $isotype_clause
+        $organism_clause
+        $experiments_clause
+        $runs_clause
+        $samples_clause
+
+    $group_by_clause
+   ~;
+
+  if ($parameters{display_options} =~ /ShowModifications/) {
+    if($modified_peptide_sequence_clause ne ''){
+     $modified_peptide_sequence_clause =~ s/\)$//;
+     $sql .= $modified_peptide_sequence_clause ."ESCAPE '\\')";
+    }
+  }
+  
+  $sql .="ORDER BY SELTG.stripped_peptide_sequence";
+
+  # debugging, when ShowSQL didn't work
+  #print $sql if ($sbeams->output_mode() eq 'html');
+
+  #### Certain types of actions should be passed to links
+  my $pass_action = "QUERY";
+  $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
+
+
+  #### Pass nearly all of the constraints down to a child query
+  my @parameters_to_pass;
+  my $parameters_list = '';
+  while ( ($key,$value) = each %input_types ) {
+    if ($key ne 'sort_order' && $key ne 'display_options') {
+      if ($parameters{$key}) {
+        push(@parameters_to_pass,"$key=$parameters{$key}");
+      }
+    }
+  }
+  if (@parameters_to_pass) {
+    $parameters_list = join('&',@parameters_to_pass);
+  }
+
+
+
+  #### Define the hypertext links for columns that need them
+  %url_cols = (
+          'Sample' => "$CGI_BASE_DIR/PeptideAtlas/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=\%$colnameidx{sample_id}V",
+          'Sample_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show details about this sample\'; return true"',
+
+          'Protein Name' => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?protein_name_constraint=\%$colnameidx{protein_name}V&action=QUERY",
+          'Protein Name_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show all transitions for this protein name\'; return true"',
+
+          'Protein in Peptide Atlas' => "$CGI_BASE_DIR/PeptideAtlas/Search?build_type_name=Any&all_fields=on&search_key=\%$colnameidx{protein_name}V&action=GO&apply_action=$pass_action",
+          'Protein in Peptide Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show PeptideAtlas data for this protein name\'; return true"',
+          'Protein in Peptide Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/pa_tiny.png>",
+          'Protein in Peptide Atlas_OPTIONS' => {embed_html=>1},
+
+          'Stripped Peptide Sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?stripped_peptide_sequence_constraint=\%$colnameidx{stripped_peptide_sequence}V&action=QUERY",
+          'Stripped Peptide Sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show all transitions for this peptide\'; return true"',
+
+          'Peptide in Peptide Atlas' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&searchWithinThis=Peptide+Sequence&searchForThis=\%$colnameidx{stripped_peptide_sequence}V&organism_name=\%$colnameidx{organism}V&action=QUERY",
+          'Peptide in Peptide Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'See whether this peptide is in PeptideAtlas shotgun data\'; return true"',
+          'Peptide in Peptide Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/pa_tiny.png>",
+          'Peptide in Peptide Atlas_OPTIONS' => {embed_html=>1},
+
+          'Chro mato gram' => "$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?_tab=3&SEL_chromatogram_id=\%$colnameidx{SEL_chromatogram_id}V&action=QUERY",
+          'Chro mato gram_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show chromatogram\'; return true"',
+          'Chro mato gram_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/chromatogram.gif>",
+          'Chro mato gram_OPTIONS' => {embed_html=>1},
+      );
+
+
+
+  #### Define columns that should be hidden in the output table
+  %hidden_cols = (
+#                  'SEL_run_id' => 1,
+#                  'SEL_transition_id' => 1,
+                  'sample_id' => 1,
+                  'frg_type' => 1,
+                  'frg_nr' => 1,
+                  'frg_z' => 1,
+                  'SEL_chromatogram_id' => 1,
+  );
+
+
+
+
+  #########################################################################
+  #### If QUERY or VIEWRESULTSET was selected, display the data
+  if ($apply_action =~ /QUERY/i || $apply_action eq "VIEWRESULTSET") {
+
+    #### If the action contained QUERY, then fetch the results from
+    #### the database
+    if ($apply_action =~ /QUERY/i) {
+
+      #### Show the SQL that will be or was executed
+      $sbeams->display_sql(sql=>$sql) if ($show_sql);
+
+      #### Fetch the results from the database server
+      $sbeams->fetchResultSet(
+        sql_query=>$sql,
+        resultset_ref=>$resultset_ref,
+      );
+
+      #### Post process the resultset
+      postProcessResultset(
+        rs_params_ref=>\%rs_params,
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
+        column_titles_ref=>\@column_titles,
+      ) if ($parameters{display_options} =~ /DASFormat/i);
+
+      #### Store the resultset and parameters to disk resultset cache
+      $rs_params{set_name} = "SETME";
+      $sbeams->writeResultSet(
+        resultset_file_ref=>\$rs_params{set_name},
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
+        resultset_params_ref=>\%rs_params,
+        query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+        column_titles_ref=>\@column_titles,
+      );
+    }
+
+    #### Display table help
+    my $obs_help = get_table_help( 'transitions' );
+    my $tr = "";
+    print qq~ <TABLE><TR $tr><TD ALIGN=left>$obs_help</TD></TR></TABLE>
+      ~ if ( $sbeams->output_mode() eq 'html' );
+
+
+    #### Display the resultset
+    $sbeams->displayResultSet(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      url_cols_ref=>\%url_cols,
+      hidden_cols_ref=>\%hidden_cols,
+      max_widths=>\%max_widths,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
+    );
+
+
+    #### Display the resultset controls
+    $sbeams->displayResultSetControls(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      base_url=>$base_url,
+    );
+
+
+    #### Display a plot of data from the resultset
+    $sbeams->displayResultSetPlot(
+      rs_params_ref=>\%rs_params,
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
+    );
+
+
+  #### If QUERY was not selected, then tell the user to enter some parameters
+  } else {
+    if ($sbeams->invocation_mode() eq 'http') {
+      print "<H4>Select parameters above and press QUERY</H4>\n";
+    } else {
+      print "You need to supply some parameters to contrain the query\n";
+    }
+  }
+
+
+} # end handle_request
+
+
+
+###############################################################################
+# evalSQL
+#
+# Callback for translating Perl variables into their values,
+# especially the global table variables to table names
+###############################################################################
+sub evalSQL {
+  my $sql = shift;
+
+  return eval "\"$sql\"";
+
+} # end evalSQL
+
+
+###############################################################################
+# postProcessResultset
+#
+# Perform some additional processing on the resultset that would otherwise
+# be very awkward to do in SQL.
+###############################################################################
+sub postProcessResultset {
+  my %args = @_;
+
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+  #### Process the arguments list
+  my $resultset_ref = $args{'resultset_ref'};
+  my $rs_params_ref = $args{'rs_params_ref'};
+  my $query_parameters_ref = $args{'query_parameters_ref'};
+  my $column_titles_ref = $args{'column_titles_ref'};
+
+  my %rs_params = %{$rs_params_ref};
+  my %parameters = %{$query_parameters_ref};
+
+  my $n_rows = scalar(@{$resultset_ref->{data_ref}});
+
+  my $cols = $resultset_ref->{column_hash_ref};
+
+  my $peptide_accession;
+  my $nprot;
+  my $nloc;
+
+  for (my $i=0; $i<$n_rows; $i++) {
+#    $peptide_accession = $resultset_ref->{data_ref}->[$i]->[$cols->{peptide_accession}];
+#    $nprot = $resultset_ref->{data_ref}->[$i]->[$cols->{n_protein_mappings}];
+#    $nloc = $resultset_ref->{data_ref}->[$i]->[$cols->{n_genome_locations}];
+
+    if ($nprot > 1) {
+      if ($nloc > 1) {
+	$peptide_accession .= "(degen_NLoc=$nloc)";
+      } else {
+	$peptide_accession .= "(degen)";
+      }
+
+      $resultset_ref->{data_ref}->[$i]->[$cols->{peptide_accession}] = $peptide_accession;
+
+    } elsif ($nloc > 1) {
+      die("ERROR: nprot <=2 but $nloc > 1. This is wrong. Please report this error.");
+    }
+
+  }
+
+  return 1;
+
+} # end postProcessResult
+
+#######################################################################
+sub getOrganismFullName 
+{
+    my %args = @_;
+    
+    my $organism_id = $args{organism_id};
+
+    my $sql = qq~
+        SELECT full_name
+        FROM $TB_ORGANISM
+        WHERE organism_id = '$organism_id'
+        AND record_status != 'D'
+    ~;
+
+    my ($full_name) = $sbeams->selectOneColumn($sql);
+
+    ## replace spaces with _
+    $full_name =~ s/ /\_/g;
+
+    return $full_name;
+}
+
+#######################################################################
+sub get_table_help {
+  my $name = shift;
+  return '' unless $name;
+  my @entries;
+  my $hidetext;
+  my $showtext;
+  my $heading;
+  my $description;
+  if ( $name eq 'transitions' ) {
+    @entries = (
+      { key => 'Protein Name', value => 'Protein name provided by investigator. Click to see PeptideAtlas info on protein.' },
+      { key => 'Stripped Peptide Sequence', value => 'Peptide sequence without modifications. Click to see observations in PeptideAtlas shotgun data.' },
+      { key => 'Modified Peptide Sequence', value => 'Peptide sequence with modifications.' },
+      { key => 'Isotype', value => 'heavy / light' },
+      { key => 'Experiment', value => 'Experiment ID in PeptideAtlas.' },
+      { key => 'Chromatogram', value => 'Click to view chromatogram for all traces for this Q1 in this run.' },
+    );
+
+    $showtext = 'show column descriptions';
+    $hidetext = 'hide column descriptions';
+    $heading = 'SRM Experiment Transitions';
+    $description= 'Transitions that have been measured in biological samples';
+
+  }
+
+  return unless @entries;
+  my $help = $sbeamsMOD->get_table_help_section( name => $name,
+  description => $description,
+  heading => $heading,
+  entries => \@entries,
+  showtext => $showtext,
+  hidetext => $hidetext  );
+  return $help;
+
+} # end get_table_help
+

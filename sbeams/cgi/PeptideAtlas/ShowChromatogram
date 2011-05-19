@@ -1,0 +1,488 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : ShowChromatogram
+#
+# Description : This CGI program displays a single chromatogram in PeptideAtlas
+#
+# Terry Farrah
+#
+###############################################################################
+
+
+###############################################################################
+# Basic SBEAMS setup
+###############################################################################
+use strict;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
+             $current_username $massCalculator );
+
+use SBEAMS::Connection qw($q);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+use SBEAMS::Proteomics::ChromatogramViewer;
+
+use File::Basename;
+
+use Carp;
+$SIG{__DIE__} = sub { &Carp::confess };
+use CGI::Carp qw (fatalsToBrowser);
+
+#$q = new CGI;
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+
+$PROG_NAME="ShowChromatogram";
+
+# Allowable neutral losses
+my @neutral_loss_masses = ();
+
+###############################################################################
+# Define global variables if any and execute main()
+###############################################################################
+main();
+
+
+###############################################################################
+# Main Program:
+#
+# If $sbeams->Authenticate() succeeds, print header, process the CGI request,
+# print the footer, and end.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+      'PeptideAtlas_readonly', 'PeptideAtlas_exec'],
+    #connect_read_only=>1,
+    allow_anonymous_access=>1,
+  ));
+
+
+  #### Process certain actions, then print the header, figure and do what the user wants, and print footer
+  $sbeamsMOD->display_page_header();
+  processRequest();
+  $sbeamsMOD->display_page_footer();
+
+  $sbeams->display_page_footer(close_tables=>'YES',
+    separator_bar=>'YES',display_footer=>'NO');
+
+} # end main
+
+
+
+###############################################################################
+# Print Entry Form
+###############################################################################
+sub processRequest {
+
+    #### Define some general variables
+    my ($i,$element,$key,$value,$sql);
+
+    my %parameters;
+
+    $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
+
+    $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+    my $apply_action  = $q->param('apply_action');
+    my ($ion, $ion_charge, $precursor_charge, $pepseq, $modified_pepseq, $q1, $q3, $mzml_basename,
+          $mzml_pathname, $ce, $rt, $delta_rt, $fragmentor, $precursor_neutral_mass);
+
+    my (@chromatogram_array, $json_physical_pathname, $json_html_pathname);
+    my $first_charge;
+
+    # If a chromatogram ID was given, get all other info from the database.
+    if ( $parameters{'SEL_chromatogram_id'} ) {
+      my $sql = qq~
+	SELECT distinct
+               SELR.spectrum_filename,
+	       SELE.data_path,
+	       SELTG.stripped_peptide_sequence,
+	       SELTG.modified_peptide_sequence,
+	       SELTG.monoisotopic_peptide_mass,
+	       SELTG.peptide_charge,
+	       SELTG.q1_mz,
+	       SELTG.collision_energy,
+	       SELTG.retention_time,
+	       SELTG.isotype,
+	       SELTG.protein_name,
+               SELC.m_score,
+               SELC.Tr,
+               SELC.max_apex_intensity,
+               SELTG.SEL_transition_group_id
+	  FROM $TBAT_SEL_CHROMATOGRAM SELC
+	  JOIN $TBAT_SEL_TRANSITION_GROUP SELTG
+	       ON ( SELTG.SEL_transition_group_id = SELC.SEL_transition_group_id )
+	  JOIN $TBAT_SEL_RUN SELR
+	       ON ( SELR.SEL_run_id = SELC.SEL_run_id )
+	  JOIN $TBAT_SEL_EXPERIMENT SELE
+	       ON ( SELE.SEL_experiment_id = SELR.SEL_experiment_id )
+	 WHERE SELC.SEL_chromatogram_id = $parameters{'SEL_chromatogram_id'}
+	 ;
+      ~;
+      my @rows = $sbeams->selectSeveralColumns($sql);
+      my $n_rows = scalar @rows;
+      print "<P>WARNING: $n_rows rows of data returned for chromatogram $parameters{'SEL_chromatogram_id'}! Displaying first.</P>\n"
+	 if ($n_rows > 1);
+      my $results_aref = $rows[0];
+
+      $parameters{'mzml_basename'} = $results_aref->[0];
+      $parameters{'mzml_pathname'} = $results_aref->[1].'/'.$results_aref->[0];
+      $parameters{'pepseq'} = $results_aref->[2];
+      $parameters{'modified_pepseq'} = $results_aref->[3];
+      $parameters{'precursor_neutral_mass'} = $results_aref->[4];
+      $parameters{'precursor_charge'} = $results_aref->[5];
+      $parameters{'q1'} = $results_aref->[6];
+      $parameters{'ce'} = $results_aref->[7];
+      $parameters{'rt'} = $results_aref->[8] || 0;
+      $parameters{'isotype'} = $results_aref->[9];
+      $parameters{'protein_name'} = $results_aref->[10];
+      $parameters{'m_score'} = $results_aref->[11];
+      $parameters{'Tr'} = $results_aref->[12];
+      $parameters{'max_apex_intensity'} = $results_aref->[13];
+      my $transition_group_id = $results_aref->[14];
+      $parameters{'relative_intensities'} =
+          getRelativeIntensities($transition_group_id);
+
+      sub getRelativeIntensities {
+        my $transition_group_id = shift;
+        my $sql = qq~
+          SELECT q3_mz, relative_intensity
+            FROM $TBAT_SEL_TRANSITION
+           WHERE SEL_transition_group_id = $transition_group_id
+        ~;
+	my @rows = $sbeams->selectSeveralColumns($sql);
+        my $string = "";
+        for my $row (@rows) {
+          $string .= "$row->[0],$row->[1],";
+        }
+        return $string;
+      }
+
+    }
+
+    # If a chromatogram filename wasn't given, create the chromatogram.
+    if ( ! defined $parameters{'chromatogram_fname'} ) {
+      $precursor_charge = $parameters{'precursor_charge'};
+      $pepseq = $parameters{'pepseq'};
+      $modified_pepseq = $parameters{'modified_pepseq'};
+      $q1 = $parameters{'q1'};
+      $mzml_pathname = $parameters{'mzml_pathname'} || die 'ShowChromatogram; Need parameter mzml_pathname';
+      $mzml_basename = $parameters{'mzml_basename'};
+      if (! $mzml_basename ) {
+	$mzml_pathname =~ /.*\/(\S+?)\.mzML/;
+	$mzml_basename = $1;
+      }
+      $ce = $parameters{'ce'} || 99;
+      $rt = $parameters{'rt'} || $parameters{'Tr'} || 99;
+      $delta_rt = $parameters{'delta_rt'} || 99 ;
+      $fragmentor = $parameters{'fragmentor'} || 125;
+      $precursor_neutral_mass = $parameters{'precursor_neutral_mass'};
+
+      # Create a descriptive, unique filename for the chromatogram
+      my ($sec,$min,$hour,$mday,$mon,$year,$wday, $yday,$isdst)=localtime(time);
+      my $timestamp = sprintf "%1d%02d%02d%02d%02d%02d-%02d",
+	 $year-110,$mon+1,$mday,$hour,$min,$sec,int(rand(100));
+      my $chromgram_basename = "${mzml_basename}_${pepseq}_${timestamp}";
+
+      # Create name for json file
+      my $physical_tmp_dir = "$PHYSICAL_BASE_DIR/images/tmp";
+      my $html_tmp_dir = "$HTML_BASE_DIR/images/tmp";
+      my $json_fname = "$chromgram_basename.json";
+      my $chromavis_dir = "$PHYSICAL_BASE_DIR/usr/javascript/chromavis/js/data";
+      #$shell_result = `ls -ld $chromavis_dir 2>&1`;
+      #print "<p>$shell_result</p>\n";
+      $json_html_pathname = "$html_tmp_dir/$json_fname";
+      $json_physical_pathname = "$physical_tmp_dir/$json_fname";
+
+      # If precursor_neutral_mass is given and file is mzML,
+      # get all traces for this peptide.
+      if (defined $precursor_neutral_mass && $mzml_pathname =~ /.mzML$/)  {
+	# get infos from mzML file
+#	my @file_list = split(" ", `find /regis/sbeams4/nobackup/edeutsch/HumanMRMAtlas/QTrap5500/Runs_By_Order/ -name $mzml_fname -print`);
+#	my $mzml_pathname = shift @file_list;
+	#print "<p>basename: $mzml_basename charge: $precursor_charge</p>\n";
+	#print "<p>full pathname: $mzml_pathname<\p>\n";
+
+	# Get charge 2, 3 Q1 values for this peptide.
+	my $q1_charge3 = $precursor_neutral_mass / 3 + 1.00727638;
+	my $q1_charge2 = $precursor_neutral_mass / 2 + 1.00727638;
+
+	# Get the Q3 for all transitions for this peptide. 
+	# Open mzML file for reading
+	open(MZML, $mzml_pathname) || print "<p>Can't open $mzml_pathname.</p>\n";
+
+        my $line;
+	# Look for <index name="chromatogram"
+	while ($line = <MZML>) {
+	  last if ($line =~ /<index name="chromatogram"/);
+	}
+	# Look for Q1=xxxxx Q3=xxxx
+	# If Q1 within 0.01 of desired, save exact value plus Q3 value
+	my $q3;
+	my (@q1_list, @q3_list, @charge_list);
+	my $tolerance = 0.01;
+	while ($line = <MZML>) {
+	  if ($line =~ /Q1=(\S+) Q3=(\S+)/) {
+	    my $this_q1 = $1; my $this_q3 = $2;
+            # CLEANUP
+	    if (abs($this_q1-$q1_charge2) < $tolerance) {
+	      push (@q1_list, $this_q1);
+	      push (@q3_list, $this_q3);
+              push (@charge_list, 2);
+	    } elsif (abs($this_q1-$q1_charge3) < $tolerance) {
+	      push (@q1_list, $this_q1);
+	      push (@q3_list, $this_q3);
+              push (@charge_list, 3);
+	    }
+	  }
+	}
+	close MZML;
+
+
+        # Now, make the .tsv file for PeptideChromatogramExtractor.
+        # Standard ATAQS format.
+        my $tsv_pathname = "$physical_tmp_dir/$chromgram_basename.tsv";
+        # For some reason, I can't write to tmp, only to images/tmp.
+        # Hmmph!
+        open (TSV, ">$tsv_pathname") || print "<p>Can't open $tsv_pathname for writing!</p>\n";
+        print TSV "Dynamic MRM\n";
+        print TSV "Compound Name\tISTD?\tPrecursor Ion\tMS1 Res\tProduct Ion\tMS2 Res\tFragmentor\tCollision Energy\tRet Time (min)\tDelta Ret Time\tPolarity\n";
+
+        # Trick PeptideChromatogramExtractor to put traces for all charges
+        # into a single .txt file, by including the same charge digit in all
+        # pepnames. Might be better to change ataqs2json to combine several
+        # .txt files into one .json file. CLEANUP.
+        $first_charge = $charge_list[0];
+        for my $q1 (@q1_list) {
+          my $q3 = shift @q3_list;
+          my $charge = shift @charge_list;
+	  # $ion and $ion_charge are currently bogus, but they are needed for the
+	  # pepname syntax
+          $ion = "y1"; $ion_charge = "1";
+	  my $pepname = $pepseq . "." . $first_charge . $ion . "-" .$ion_charge;
+	  print TSV "$pepname\t".
+		    "FALSE\t".
+		    "$q1\t".
+		    "Wide\t".
+		    "$q3\t".
+		    "Unit\t".
+		    "$fragmentor\t".
+		    "$ce\t".
+		    "$rt\t".
+		    "$delta_rt\t".
+		    "Positive\n";
+           # In case multiple traces per charge, increment ion_charge to
+           # allow unique pepnames
+           $ion_charge++;
+        }
+        close TSV;
+
+        # Now! run the java program and create a .txt file that is
+        # then automatically filtered into a JSON object!
+        my $java_dir = "$PHYSICAL_BASE_DIR/lib/java/SBEAMS/SRM";
+        my $java_cmd =
+          "$java_dir/PeptideChromatogramExtractor.sh ".
+          "$tsv_pathname $mzml_pathname $chromgram_basename $rt";
+
+        #print "<p>Current working directory:</p>\n";
+        #my $shell_result = `pwd 2>&1`;
+        #print "<p>$shell_result</p>\n";
+
+        #print "<p>Running Java command: $java_cmd<br>\n";
+        my $shell_result = `$java_cmd 2>&1`;
+        print "<!-- java shell result: $shell_result-->\n";
+
+        # This is what PeptideChromatogramExtractor names the file.
+        my $chromgram_basename_orig =
+          "${chromgram_basename}_PeptideChromatogram_${pepseq}_${first_charge}";
+        my $json_fname_orig = "$chromgram_basename_orig.json";
+
+        #  Move the JSON file into $SBEAMS/usr/javascript/chromavis/js/data
+        #  with a new name that is still unique.
+        my $mv_cmd = "mv -f $java_dir/$json_fname_orig $json_physical_pathname";
+        #print "<p>Moving using command $mv_cmd</p>\n";
+        $shell_result = `$mv_cmd 2>&1`;
+        print "<!-- mv command result: $shell_result-->\n";
+
+        $parameters{'chromatogram_fname'} = $json_fname;
+
+      # If we have an mzXML file ...
+      } elsif ($mzml_pathname =~ /.mzXML$/)  {
+        my $rt = $parameters{rt} || $parameters{Tr} || 0;
+        my $srm2json_cmd =
+           "$PHYSICAL_BASE_DIR/lib/scripts/PeptideAtlas/srm2json.pl ".
+           "mzxml $rt $parameters{q1} ".
+           "$parameters{relative_intensities} ".
+           "< $parameters{mzml_pathname} ".
+           "> $json_physical_pathname";
+        print "<!-- srm2json cmd: $srm2json_cmd-->\n";
+        my $shell_result = `$srm2json_cmd 2>&1`;
+        print "<!-- srm2json result: $shell_result-->\n";
+      }
+    }
+
+
+
+    #### Chromavis me! ##################################################
+    my $chromavis = new SBEAMS::Proteomics::ChromatogramViewer;
+    my $seq = (defined $modified_pepseq) ? $modified_pepseq : $pepseq;
+    print $chromavis->generateChromatogram(
+	      chromatogram_pathname => $json_html_pathname,
+              mzml_pathname         => $mzml_pathname,
+              precursor_neutral_mass=> $precursor_neutral_mass,
+              precursor_charge      => $precursor_charge,
+	      seq                   => $seq,
+              precursor_rt          => $parameters{rt},
+              best_peak_group_rt    => $parameters{Tr},
+              m_score               => $parameters{m_score},
+	  );
+
+
+
+
+    #### Store the observed chromatogram data as a recallable resultset
+
+    # First, read the data from the JSON file.
+    # Simple-minded parsing assumes that each time/intensity pair has own line
+    open (JSON, $json_physical_pathname) || die "Can't open .json file $json_physical_pathname";
+    my ($trace_num, $time, $q1, $q3, $intensity);
+    $trace_num = 0;
+    while (my $line = <JSON>) {
+      chomp $line;
+      #print "<br>$line\n";
+      if ($line =~ /full/ ) {
+        $trace_num++;
+      }
+      if ($line =~ /Q1:(\d+\.\d+)/ ) {
+        $q1 = $1;
+      }
+      if ($line =~ /Q3:(\d+\.\d+)/ ) {
+        $q3 = $1;
+      }
+      if ($line =~ /\{\s*time\s*:\s*(\d+\.\d+),\s*intensity\s*:\s*(\d+\.\d+)\s*\}/) {
+        $time = $1; $intensity = $2;
+        push (@chromatogram_array, [$trace_num, $time, $q1, $q3, $intensity]);
+        #print "<br>$time $q3 $intensity<br>\n";
+      }
+    }
+    
+    my %dataset;
+    $dataset{data_ref} = \@chromatogram_array;
+    $dataset{column_list_ref} = ['trace_num', 'seconds', 'Q1', 'Q3', 'intensity'];
+    my $rs_set_name = "SETME";
+    $sbeams->writeResultSet(resultset_file_ref=>\$rs_set_name,
+      resultset_ref=>\%dataset,
+      file_prefix=>'chromgram_',
+      query_parameters_ref=>\%parameters);
+
+    print qq~
+        <BR>Download chromatogram in Format: 
+        <a href="$CGI_BASE_DIR/GetResultSet.cgi/$rs_set_name.tsv?rs_set_name=$rs_set_name&format=tsv">TSV</a>,
+        <a href="$CGI_BASE_DIR/GetResultSet.cgi/$rs_set_name.xls?rs_set_name=$rs_set_name&format=excel">Excel</a>
+        <BR><BR>
+	~;
+
+    my $hidden_form_fields = qq~
+        <INPUT TYPE="hidden" NAME="chromatogram_identification_id" VALUE="$parameters{chromatogram_identification_id}">
+        <INPUT TYPE="hidden" NAME="assumed_charge" VALUE="$parameters{assumed_charge}">
+        <INPUT TYPE="hidden" NAME="peptide" VALUE="$parameters{peptide}">
+	~;
+
+
+} # end processRequest
+
+
+###############################################################################
+# get_chromatogram   lifted from ShowSpectrum and currently UNUSED,
+#                     but maybe we'll adapt it for our use.
+###############################################################################
+sub get_chromatogram
+{
+  my %args = @_;
+
+  my $chromatogram_id = $args{'chromatogram_id'};
+  unless ($chromatogram_id) {
+    print "\nERROR: chromatogram_id not passed.\n\n";
+    return;
+  }
+
+
+  my $sql = qq~
+    SELECT proteomics_search_batch_id,chromatogram_name
+      FROM $TBAT_SPECTRUM S
+      JOIN $TBAT_SPECTRUM_IDENTIFICATION SI
+           ON (S.chromatogram_id = SI.chromatogram_id )
+      JOIN $TBAT_ATLAS_SEARCH_BATCH ASB
+           ON (SI.atlas_search_batch_id = ASB.atlas_search_batch_id )
+     WHERE S.chromatogram_id = $chromatogram_id
+  ~;
+
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  unless (@rows) {
+    print "\nERROR: Unable to get search batch information for ".
+      "chromatogram_id '$chromatogram_id'.\n\n";
+    return;
+  }
+  my $search_batch_id = $rows[0]->[0];
+  my $chromatogram_name = $rows[0]->[1];
+  my $fraction_tag;
+  if ($chromatogram_name =~ /^(.+)\.(\d+)\.(\d+)\.\d$/) {
+    $fraction_tag = $1;
+  } else {
+    die("ERROR: Unable to parse fraction name from '$chromatogram_name'");
+  }
+
+  #print "search_batch_id = $search_batch_id\n";
+  #print "chromatogram_name = $chromatogram_name\n";
+  #print "fraction_tag = $fraction_tag\n";
+
+
+  use SBEAMS::PeptideAtlas::Spectrum;
+  my $spectra = new SBEAMS::PeptideAtlas::Spectrum;
+  $spectra->setSBEAMS($sbeams);
+
+  my @mass_intensities = $spectra->getSpectrumPeaks(
+    proteomics_search_batch_id => $search_batch_id,
+    chromatogram_name => $chromatogram_name,
+    fraction_tag => $fraction_tag,
+  );
+
+
+  #### If we still have no chromatogram data, then bail out
+  unless (@mass_intensities) {
+    print "\nERROR: Unable to get m/z,intensity pairs for ".
+      "chromatogram_id '$chromatogram_id'.\n\n";
+    return;
+  }
+
+  #### Extract rows into two arrays of masses and intensities
+  my (@masses,@intensities);
+  for (my $i=0; $i<=$#mass_intensities; $i++) {
+    push(@masses,$mass_intensities[$i]->[0]);
+    push(@intensities,$mass_intensities[$i]->[1]);
+  }
+
+  my %chromatogram;
+  $chromatogram{n_peaks} = $#mass_intensities + 1;
+
+
+  #### Put data into hash and return
+  $chromatogram{mz} = \@masses;
+  $chromatogram{intensities} = \@intensities;
+
+  return %chromatogram;
+
+
+}

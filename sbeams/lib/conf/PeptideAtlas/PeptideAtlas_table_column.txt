@@ -806,25 +806,29 @@ AT_SEL_run	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP
 AT_SEL_run	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 AT_SEL_run	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 AT_SEL_run	10	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_SEL_transition_group	1	SEL_transition_group_id	SEL Transition Group ID	int	4	0	N		Y			Y						Y	Primary Key		
+AT_SEL_transition_group	2	stripped_peptide_sequence	Stripped Peptide Sequence	varchar	255	0	Y		N			N							Stripped peptide sequence (without modifications)		
+AT_SEL_transition_group	3	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	Y		N			N							Modified peptide sequence		
+AT_SEL_transition_group	4	monoisotopic_peptide_mass	Monoisotopic Neutral Peptide Mass	float	8	0	Y		N			N	text	10		Y	Y	N	Neutral peptide monoisotopic mass		
+AT_SEL_transition_group	5	peptide_charge	Peptide Precursor Charge	int	4	0	Y		N			N							Precursor charge		
+AT_SEL_transition_group	6	q1_mz	Q1 mz value	float	8	0	Y		N			N							Q1 mz value		
+AT_SEL_transition_group	7	collision_energy	Collision Energy	float	8	0	Y		N			N							Collision energy		
+AT_SEL_transition_group	8	retention_time	Retention Time	float	8	0	Y		N			N	text	10		Y	Y	Y	Retention time in minutes of parent peptide		
+AT_SEL_transition_group	9	isotype	Isotype	varchar	255	0	Y		N			N							"Isotype (heavy, light)"		
+AT_SEL_transition_group	10	protein_name	Protein Name	varchar	255	0	Y		N			N							Protein name		
 AT_SEL_transition	1	SEL_transition_id	SEL Transition ID	int	4	0	N		Y			Y						Y	Primary Key		
-AT_SEL_transition	2	stripped_peptide_sequence	Stripped Peptide Sequence	varchar	255	0	Y		N			N							Stripped peptide sequence (without modifications)		
-AT_SEL_transition	3	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	Y		N			N							Modified peptide sequence		
-AT_SEL_transition	4	monoisotopic_peptide_mass	Monoisotopic Neutral Peptide Mass	float	8	0	Y		N			N	text	10		Y	Y	N	Neutral peptide monoisotopic mass		
-AT_SEL_transition	5	peptide_charge	Peptide Precursor Charge	int	4	0	Y		N			N							Precursor charge		
-AT_SEL_transition	6	q1_mz	Q1 mz value	float	8	0	Y		N			N							Q1 mz value		
-AT_SEL_transition	7	q3_mz	Q3 mz value	float	8	0	Y		N			N							Q3 mz value		
-AT_SEL_transition	8	frg_type	Fragment Type	char	1	0	Y		N			N							"Fragment type (b, y, etc.)"		
-AT_SEL_transition	9	frg_nr	Fragment Number	int	4	0	Y		N			N							Fragment number		
-AT_SEL_transition	10	frg_z	Fragment Charge	float	8	0	Y		N			N							Fragment charge		
-AT_SEL_transition	11	collision_energy	Collision Energy	float	8	0	Y		N			N							Collision energy		
-AT_SEL_transition	12	retention_time	Retention Time	float	8	0	Y		N			N	text	10		Y	Y	Y	Retention time in minutes of parent peptide		
-AT_SEL_transition	13	isotype	Isotype	varchar	255	0	Y		N			N							"Isotype (heavy, light)"		
-AT_SEL_transition	14	protein_name	Protein Name	varchar	255	0	Y		N			N							Protein name		
+AT_SEL_transition	2	SEL_transition_group_id	SEL Transition Group ID	int	4	0	N		N			Y						Y	Foreign Key		
+AT_SEL_transition	3	q3_mz	Q3 mz value	float	8	0	Y		N			N							Q3 mz value		
+AT_SEL_transition	4	frg_type	Fragment Type	char	1	0	Y		N			N							"Fragment type (b, y, etc.)"		
+AT_SEL_transition	5	frg_nr	Fragment Number	int	4	0	Y		N			N							Fragment number		
+AT_SEL_transition	6	frg_z	Fragment Charge	int	4	0	Y		N			N							Fragment charge		
+AT_SEL_transition	7	relative_intensity	Relative Intensity	float	8	0	Y		N			N							Expected intensity relative to other transitions in group		
 AT_SEL_chromatogram	1	SEL_chromatogram_id	SEL Chromatogram ID	int	4	0	N		Y			Y						Y	Primary Key		
 AT_SEL_chromatogram	2	SEL_run_id	SEL Run ID	int	4	0	Y		N	AT_SEL_run	SEL_run_id	N						Y	Foreign Key		
-AT_SEL_chromatogram	3	SEL_transition_id	SEL Transition ID	int	4	0	Y		N	AT_SEL_transition	SEL_transition_id	N						Y	Foreign Key		
-AT_SEL_chromatogram	4	probability	Probability	real	8	0	Y		N			N							Probability that this chromatogram represents this transition		
-AT_SEL_chromatogram	5	spectrum_file_offset	Spectrum File Offset	int	4	0	Y		N			N						N	Offset within mzML file where the data for this chromatogram begins		
+AT_SEL_chromatogram	3	SEL_transition_group_id	SEL Transition Group ID	int	4	0	Y		N	AT_SEL_transition_group	SEL_transition_group_id	N						Y	Foreign Key		
+AT_SEL_chromatogram	4	m_score	mProphet m_score	real	8	0	Y		N			N							mProphet's m_score; FDR for all ID's at least this good (lower is better)		
+AT_SEL_chromatogram	5	Tr	Best Peakgroup Retention Time	real	8	0	Y		N			N						N	Retention time for center of top scoring peak group		
+AT_SEL_chromatogram	6	max_apex_intensity	Maximum Apex Intensity	real	8	0	Y		N			N						N	Maximum Apex Intensity (mProphet); a measure of abundance		
 AT_elution_time_type	1	elution_time_type_id	Elution Time Type ID	int	4	0	N		Y			N						Y	Primary Key		
 AT_elution_time_type	2	elution_time_type	Elution Time Type	varchar	255	0	N		N	AT_elution_time_type	elution_time_type_id	N			elution_time_type			Y	"Type of elution time represented, SSRCalc, RTCatalog, etc"		
 AT_elution_time_type	3	instrument_id	Instrument ID	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N			instrument_id			Y	"type of intrument observed on, foreign key to instrument type table"		
