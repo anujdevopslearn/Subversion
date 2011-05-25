@@ -333,7 +333,7 @@ my $module_styles =<<"  END_STYLE";
     END
   }
 
-  print qq~
+  my $complete_style = qq~
 	<style type="text/css">
 	body {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt}
 	th   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; font-weight: bold;}
@@ -490,6 +490,12 @@ a.blue_button:active{
 
 
     ~;
+
+	if ( $args{return_style_html} ) {
+		return $complete_style;
+	} 
+	print $complete_style;
+
 
   my $agent = $q->user_agent();
   # Style for turning text sideways for vertical printing, MSIE only
