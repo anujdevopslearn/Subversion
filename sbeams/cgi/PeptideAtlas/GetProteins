@@ -1097,7 +1097,9 @@ sub handle_request {
   
   if($atlas_build_name =~/Origene/i){
     $url_cols{'Biosequence Name'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?protein_name=\%$colnameidx{biosequence_name}".
-                                    "V&ori_sku=\%$colnameidx{SKU}V&ori_tube=\%$colnameidx{tube}V&ori_expected_prot=\%$colnameidx{expected_prot}V&apply_action=$pass_action";
+                                    "V&ori_sku=\%$colnameidx{SKU}V&ori_tube=\%$colnameidx{tube}".
+                                    "V&ori_expected_prot=\%$colnameidx{expected_prot}".
+                                    "V&apply_action=$pass_action";
   }
   #### Define columns that should be hidden in the output table
   # biosequence_accessor is prefix to compose URL
@@ -1819,10 +1821,12 @@ sub postProcessResultset_Origene{
 	open(IN, "<$file") or die "cannot open $file\n";
 	foreach my $line (<IN>){
 		chomp $line ;
-		$line =~ /(TP\d+),([^,]+),(RC[^,]+,)?(\w),(\d+),.*_ISBHOT(00\d)/;
-		my $tpid = $1;
-		my @spids = split(/\./,$2);
-    my $tube = "ISBHOT$6-$4$5";
+    my ($tpid, @spids,$tube);
+		if( $line =~ /(TP\d+),([^,]+),(\w),(\d+),.*VE.+_ISBHOT(0[012]\d).*/ || $line =~ /(TP\d+),([^,]+),(\w),(\d+).*,ISBHOT(0[012]\d).*/){
+		  $tpid = $1;
+		  @spids = split(/\./,$2);
+      $tube = "ISBHOT$5-$3$4";
+    }
 		foreach my $a (@spids){
 		  $prot2tube{$a} = $tube;
       $tube2Origene{$tube} = $tpid; 
@@ -1831,8 +1835,6 @@ sub postProcessResultset_Origene{
 		  } 
 		}
 	} 
-  #my %prot_n_obs = ();
-  #my %prot_n_dinctpep = ();
   my %prot_obs_tubes = ();
   my %prot_obs_pep_per_tube = ();
   my %prot_obs_spectra_per_tube = ();
@@ -1846,11 +1848,14 @@ sub postProcessResultset_Origene{
     $bioseq_info{$biosequence_name}{desc} = $resultset_ref->{data_ref}->[$i]->[$cols->{biosequence_description}];
     $bioseq_info{$biosequence_name}{seq_unique_prots_in_group} = $resultset_ref->{data_ref}->[$i]->[$cols->{seq_unique_prots_in_group}];
 		$modpep =~ s/\[\d+\]//g;
-
-		$spectrum_name =~ /VE_\d+_ISBHOT(\d{3})\_\d+\_(\w)0?(\d+)\_/;
-    my $tag = "$1-$2$3";
-    my $plate = "ISBHOT$1-$2";
-    my $tube_num = $3;
+  
+    my ($tag,$plate,$tube_num);
+  
+	  if(	$spectrum_name =~ /VE_?\d+_ISBHOT(\d{3})\_\d+\_(\w)0?(\d+)\_/ || $spectrum_name =~ /VE_?\d+_ISBHOT(\d{3})\_(\w)0?(\d+)_\d+\_/){
+      $tag = "$1-$2$3";
+      $plate = "ISBHOT$1-$2";
+      $tube_num = $3;
+    }
     push @{$prot_obs_pep_per_tube{$plate}{$tube_num}{$biosequence_name}}, $modpep;
     $prot_obs_spectra_per_tube{$plate}{$tube_num}{$biosequence_name}++;
 		$tag =~ s/^0+//;
