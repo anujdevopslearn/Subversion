@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SBEAMS_EXPORT>
+    <instrument_type
+        instrument_type_name="QTOF"
+        instrument_type_comment="QTOF"
+        is_source_instrument="Y"
+        is_target_instrument="Y"
+        record_status="N"
+        created_by_id="372"
+        sort_order="10"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        />
+    <instrument_type
+        instrument_type_name="Agilent QQQ"
+        instrument_type_comment="Agilent Triple Quadrupole"
+        is_source_instrument="Y"
+        is_target_instrument="Y"
+        record_status="N"
+        created_by_id="372"
+        sort_order="10"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        />
+    <instrument_type
+        instrument_type_name="5500 QTrap"
+        instrument_type_comment="ABI 5500 QTrap"
+        is_source_instrument="Y"
+        is_target_instrument="Y"
+        record_status="N"
+        created_by_id="372"
+        sort_order="10"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        />
+    <instrument_type
+        instrument_type_name="4000 QTrap"
+        instrument_type_comment="ABI 4000 QTrap"
+        is_source_instrument="Y"
+        is_target_instrument="Y"
+        record_status="N"
+        created_by_id="372"
+        sort_order="10"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        />
+    <instrument_type
+        instrument_type_name="TSQ"
+        instrument_type_comment="TSQ"
+        is_source_instrument="N"
+        is_target_instrument="Y"
+        record_status="N"
+        created_by_id="372"
+        sort_order="10"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        />
+    <instrument_type
+        instrument_type_name="IonTrap"
+        instrument_type_comment="IonTrap"
+        is_source_instrument="Y"
+        is_target_instrument="N"
+        record_status="N"
+        created_by_id="372"
+        sort_order="10"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        />
+</SBEAMS_EXPORT>
