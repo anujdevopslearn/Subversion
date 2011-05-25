@@ -129,7 +129,7 @@ sub get_spectrum_peaks {
 
 #  print "Looking in file $args{file_path} for index $args{entry_idx}\n";
 
-  open FIL, $args{file_path} || die "Dang, yo";
+  open FIL, $args{file_path} || die "Unable to open library file $args{file_path}";
   seek ( FIL, $args{entry_idx}, 0 );
   my $collect_peaks;
   my %spectrum = ( n_peaks => 0,
@@ -137,7 +137,8 @@ sub get_spectrum_peaks {
                    intensities => [],
                    labels => [],
                    original_intensity => 1,
-                   max_intensity => 1 );
+                   max_intensity => 1,
+                   full_name => '' );
 
   my $cnt = 0;
   my $peak_cnt;
@@ -158,6 +159,12 @@ sub get_spectrum_peaks {
       $spectrum{precursor_intensity} = $1;
     }
 
+    #FullName: X.VLDVNDNAPK.X/2
+    if ( $line =~ /FullName:\s+(\S+)\s*/ ) {
+      $spectrum{full_name} = $1;
+#      print STDERR "Fullname is $spectrum{full_name}\n";
+    }
+
     if ( $line =~ /^NumPeaks:\s+(\d+)\s*$/ ) {
       $spectrum{n_peaks} = $1;
       $collect_peaks++;
@@ -169,7 +176,19 @@ sub get_spectrum_peaks {
     last if $line =~ /^\s*$/;
 
     my ( $mass, $intensity, $annot ) = $line =~ /(\S+)\s+(\S+)\s+(\S+)\s.*$/;
+    my @annot = split( /\//, $annot );
+
+    if ( $args{strip_unknowns} ) {
+			next if $annot[0] =~ /^\?$/;
+		}
+
+    push @{$spectrum{labels}}, $annot[0];
+
     push @{$spectrum{masses}}, $mass;
+
+#    if ( $annot[0] eq 'y8' ) {
+#      print STDERR "pushing $mass and $intensity for $annot[0]\n";
+#    }
 
     # User wants intensities normalized to precursor m/z 
     if ( $args{precursor_normalize} ) {
@@ -186,9 +205,6 @@ sub get_spectrum_peaks {
     $spectrum{max_intensity} = $intensity if $intensity > $spectrum{max_intensity};
     $spectrum{max_intensity} ||= '';
     push @{$spectrum{intensities}}, $intensity;
-
-    my @annot = split( /\//, $annot );
-    push @{$spectrum{labels}}, $annot[0];
 
     if ( $annot =~ /^(p\^\d)\// ) {
       $spectrum{postfrag_precursor_intensity} = sprintf( "%0i", $intensity);
@@ -256,7 +272,19 @@ sub get_top_n_peaks {
   for ( my $i = 0; $i <= $spectrum->{n_peaks}; $i++ ) {
     # only look for b/y ions
     next unless $spectrum->{labels}->[$i] =~ /^[yb]/i;
-    next if $spectrum->{labels}->[$i] =~ /\w\d+i/i;
+    next if $spectrum->{labels}->[$i] =~ /\i$/i;
+
+    if ( $args{precursor_exclusion} ) {
+      my $min = $spectrum->{mz} - $args{precursor_exclusion};
+      my $max = $spectrum->{mz} + $args{precursor_exclusion};
+
+      if (  $spectrum->{masses}->[$i] > $min && $spectrum->{masses}->[$i] < $max ) {
+#        die "Excluded $spectrum->{masses}->[$i] ( $spectrum->{labels}->[$i] ) becuase min is $min and max is $max from  $spectrum->{mz} - $args{precursor_exclusion}";
+        next;
+      }
+    }
+#    next unless $spectrum->{labels}->[$i] eq 'y8';
+#    print STDERR "$spectrum->{labels}->[$i] has $spectrum->{intensities}->[$i]\n";
     my $peak = { label => $spectrum->{labels}->[$i],
                   mass => $spectrum->{masses}->[$i],
              intensity => $spectrum->{intensities}->[$i] };
@@ -279,7 +307,6 @@ sub get_top_n_peaks {
   } else {
     my @ordered = sort { $b->{intensity} <=> $a->{intensity} } ( @peaks );
     for my $peak ( @ordered ) {
-#      print "$peak->{label} has $peak->{intensity}<BR>\n";
       $peaks{$peak->{label}} = $peak->{intensity};
       push @peak_list, $peak->{label};
       last if scalar( @peak_list ) >= $args{n_peaks};
