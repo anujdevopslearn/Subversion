@@ -48,9 +48,12 @@ use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::ProtInfo;
+use SBEAMS::PeptideAtlas::GetOrigeneCov;
+
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+my $origenecov = new SBEAMS::PeptideAtlas::GetOrigeneCov;
 
 use SBEAMS::PeptideAtlas::KeySearch;
 my $keySearch = new SBEAMS::PeptideAtlas::KeySearch;
@@ -63,6 +66,9 @@ $bestPeptideSelector->setAtlas($sbeamsMOD);
 
 # Global sequence coverage array, will be populated post-graphic
 my @coverage;  
+my $max_intensity = 1;
+my %coverage=();
+my @methods =  qw(ITCID FTCID ITETD FTETD HCD);
 
 # Swiss Prot annotations
 my @sp_rows;
@@ -347,7 +353,6 @@ sub handle_request {
 
   my $tube_pattern = '';
   my $tube_pattern2 = '';
-  my $origene_accession = '';
   my $tube = '';  
   if($parameters{ori_tube} ne '' and $atlas_build_names{$atlas_build_id} =~ /Origene/i){
 
@@ -939,7 +944,6 @@ sub handle_request {
        ) AS PI2  on (PI2.peptide_instance_id = PI.peptide_instance_id)
      ~;
   }
-
   #### Define a query to return peptides for this protein
   $sql = qq~
      SELECT DISTINCT $columns_clause
@@ -1092,16 +1096,116 @@ sub handle_request {
            glyco => $motif_params{glyco},
     );
 
-    #### Display the annotated sequence
-    #displayAnnotatedSequence(
-    #  biosequence => $biosequence,
-    #  resultset_ref=>$resultset_ref,
-    #  line_length => 700000,
-    #  enzyme => 'trypsin',
-    #  protein_structure => $protein_structure,
-    #);
+  ### show sequence coverage for difference method
+  if ($htmlmode and $atlas_build_names{$atlas_build_id} =~ /Origene/i){
+    
+    my $file = "/net/db/projects/PeptideAtlas/species/Human/Origene/ExpectedProtein.txt";
+		open(IN, "<$file") or die "cannot open $file\n";
+    my %PPfile = ();
+    my %peptides_m;
+
+		foreach my $line (<IN>){
+			chomp $line ;
+			my (@spids,$plate,$tube);
+			if( $line =~ /TP\d+,([^,]+),(\w),(\d+),.*VE.+_ISBHOT(0[012]\d).*/ || $line =~ /TP\d+,([^,]+),(\w),(\d+).*,ISBHOT(0[012]\d).*/){
+				$plate = "ISBHOT$4";
+				@spids = split(/\./,$1);
+        if(length($3) == 1){
+          $tube = "{$2".'0'."$3,$2$3}";
+        }else{
+          $tube = "$2$3";
+        }
+			}
+			foreach my $a (@spids){
+        my $p = "/proteomics/peptideatlas/archive/rmoritz/HumanMRMAtlas/Origene/Velos/$plate*/".
+                 "method/{XTK,XTK*allmod}/VE*_$tube\_*-ipro.prot.xml";
+
+				$PPfile{$a}{path} = $p;
+        if($tube =~ /\{(\w+),.*/){
+          $tube = $1;
+        }
+        $PPfile{$a}{tube} = $plate.'-'.$tube;
+				if($a =~ /(\S+)\-\d+/){
+           $a = $1;
+				   $PPfile{$a}{path} = $p;
+           $PPfile{$a}{tube} = $plate.'-'.$tube;
+
+				}
+			}
+		}
+    if(defined $PPfile{$protein_name}){
+      foreach my $m (@methods){
+        my $file = $PPfile{$protein_name}{path}; 
+        my $str;
+        if($parameters{ori_tube} ne ''){
+          $parameters{ori_tube} =~ /(ISBHOT\d{3})-(\w)(\d+)/;
+          if(length($3) == 1){
+            $str = "$1*/method/{XTK,XTK*allmod}/VE*_{$2".'0'."$3,$2$3}_*-ipro.prot.xml";
+          }else{
+            $str = "$1*/method/{XTK,XTK*allmod}/VE*_$2$3\_*-ipro.prot.xml";
+          }
+          $file = "/proteomics/peptideatlas/archive/rmoritz/HumanMRMAtlas/Origene/Velos/$str";
+        }
+        $file =~ s/method/$m/;
+        my @files = `ls $file`;
+        if(@files > 1 or @files == 0 ){
+          print join("<BR>", @files);
+          goto LABEL;
+        #}#elsif(! @files ){
+         #  print "$PPfile <BR>";
+        }else{
+         %{$peptides_m{$m}} = $origenecov -> getPeptides(
+                                 ref_parameters     => \%parameters,
+                                 ProteinProphetfile => $files[0],
+                                 protein_name       => $protein_name);
+      }
+
+    } 
+
+  ($tr, $link ) = $sbeams->make_table_toggle( name => 'ori_getprotein_sequence',
+                                                visible => 0,
+                                                tooltip => 'Show/Hide Section',
+                                                imglink => 1,
+                                                sticky => 1 );
 
 
+    my $ori_help = $origenecov ->get_plot_help(name => 'ori_getprotein_sequence_desc' );
+    my $graphic_head = $sbeamsMOD->encodeSectionHeader( text => "Sequence Coverage of Each Fragmentation Method (TPP PeptideProb >= 0.9 and ProteinProb >= 0.9)", link => $link );
+    my %graphic_params = (     peptide => \%peptides_m,
+                         protein_data  => $biosequence,
+                               tr_info => $tr,
+                             obs_color => $parameters{obs_color} );
+
+    $graphic_section = $origenecov -> get_sequence_graphic( %graphic_params, %motif_params );
+    my $primary = qq~ &nbsp;&nbsp;<b>Below show $protein_name in</b>:&nbsp;$PPfile{$protein_name}{tube}<BR> ~;
+    if($parameters{ori_tube}){
+       $primary =  qq~ &nbsp;&nbsp;<b>Below show $protein_name in</b>:&nbsp;$parameters{ori_tube}<BR> ~;
+    }
+    print qq~ <TABLE width="600" >
+               <TR $tr><TD ALIGN=left>$graphic_head</TD></TR>
+               <TR $tr><TD ALIGN=left>$ori_help</TD></TR>
+               <TR $tr><TD ALIGN=left> 
+                        &nbsp;&nbsp;<b>$protein_name is primary protein in</b>:&nbsp;$PPfile{$protein_name}{tube} <BR>
+                        $primary
+               </TD></TR>
+               <TR $tr><TD> $graphic_section</TD></TR>
+          ~;
+
+     for my $method( @methods){
+				my ( $sequence, $tags ,$coverage) = $origenecov -> displayAnnotatedSequence(
+								 peptides => \%{$peptides_m{$method}},
+							biosequence => $biosequence,
+									 method => $method,
+				);
+				print "\n <TR $tr><TD > " . $origenecov -> get_html_seq( sequence => $sequence, 
+                                                                tags => $tags,
+                                                                method => $method, 
+                                                                coverage => $coverage ) . "</TD></TR>\n";
+     }
+    print "</TABLE></DIV>\n";
+    }
+    LABEL:
+  }
   #############################################################
   # Widget to allow show/hide of observed peptides section
   my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_observedlist',
@@ -1589,7 +1693,6 @@ sub handle_request {
 
 
 } # end handle_request
-
 sub get_ortholog_information {
   my $biosequence = shift;
   return unless $biosequence->{biosequence_name};
@@ -2359,7 +2462,6 @@ sub getPeptideCount {
     push(@peptides,$row->[$col{peptide_sequence}]);
    $total_observations += $row->[$col{n_observations}];
   }
-
   return( $total_observations, \@peptides );
 }
 
