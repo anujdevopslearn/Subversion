@@ -737,11 +737,17 @@ AT_pabst_peptide	17	merged_score	Merged Score	float	8	0	Y		N			N						N
 AT_pabst_peptide	18	synthesis_score	Synthesis Score	float	8	0	Y		N			N						N			
 AT_pabst_peptide	19	annotations	Annotations	varchar	255	0	Y		N			N						N			
 AT_pabst_peptide	20	synthesis_adjusted_score	Synthesis Adjusted Score	float	8	0	Y		N			N						N			
+AT_pabst_peptide_ion	1	pabst_peptide_ion_id	PABST Peptide Ion Id	int	4	0	N		Y			N						Y	Primary Key		
+AT_pabst_peptide_ion	2	pabst_peptide_id	PABST Peptide Id	int	4	0	Y		N	AT_pabst_peptide	pabst_peptide_id	N						N	Pabst peptide of which this is an instance		
+AT_pabst_peptide_ion	3	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	Y		N			N						N	Charge/Mass modified peptide ion sequence		
+AT_pabst_peptide_ion	4	peptide_charge	Peptide Charge	int	4	0	Y		N			N						N	charge of peptide		
+AT_pabst_peptide_ion	5	peptide_mz	Peptide MZ	float	8	0	Y		N			N						N	mz of peptide		
+AT_pabst_peptide_ion	6	n_observations	N Observations	int	4	0	Y		N			N						N	number of observations		
 AT_pabst_transition	1	pabst_transition_id	PABST Transition Id	int	4	0	N		Y			N						Y			
-AT_pabst_transition	2	pabst_peptide_id	PABST Peptide Id	int	4	0	Y		N	AT_pabst_peptide	pabst_peptide_id	N						N			
-AT_pabst_transition	4	precursor_ion_mass	Precursor Ion Mass	float	8	0	Y		N			N						N			
+AT_pabst_transition	2	pabst_peptide_ion_id	PABST Peptide Ion Id	int	4	0	Y		N	AT_pabst_peptide_ion	pabst_peptide_ion_id	N						N			
+AT_pabst_transition	4	precursor_ion_mz	Precursor Ion Mz	float	8	0	Y		N			N						N			
 AT_pabst_transition	5	precursor_ion_charge	Precursor Ion Charge	int	4	0	Y		N			N						N			
-AT_pabst_transition	6	fragment_ion_mass	Fragment Ion Mass	float	8	0	Y		N			N						N			
+AT_pabst_transition	6	fragment_ion_mz	Fragment Ion Mz	float	8	0	Y		N			N						N			
 AT_pabst_transition	7	fragment_ion_charge	Fragment Ion Charge	int	4	0	Y		N			N						N			
 AT_pabst_transition	8	fragment_ion_label	Fragment Ion Label	varchar	36	0	Y		N			N						N			
 AT_transition_type	1	transition_type_id	Transition Type Id	int	4	0	N		Y			N						Y			
@@ -751,7 +757,7 @@ AT_pabst_transition_instance	2	pabst_transition_id	PABST Transition ID	int	4	0	Y
 AT_pabst_transition_instance	3	precursor_ion_mass	Precursor Ion Mass	float	8	0	Y		N			N						N			
 AT_pabst_transition_instance	4	ion_rank	Ion Rank	int	4	0	Y		N			N						N			
 AT_pabst_transition_instance	5	relative_intensity	Relative Intensity	float	8	0	Y		N			N						N			
-AT_pabst_transition_instance	6	instrument_type_id	(Source) Instrument Type	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N						N			
+AT_pabst_transition_instance	6	source_instrument_type_id	Source Instrument Type	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N						N			
 AT_instrument_type	1	instrument_type_id	instrument_type_id	int	4	0	N		Y			N						Y			
 AT_instrument_type	2	instrument_type_name	instrument_type_name	varchar	255	0	N		N			Y	text	24		Y	Y	N			
 AT_instrument_type	3	instrument_type_comment	instrument_type_comment	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
@@ -765,8 +771,8 @@ AT_instrument_type	10	modified_by_id	modified_by_id	int	4	0	Y		N			N						Y
 AT_instrument_type	11	owner_group_id	owner_group_id	int	4	0	Y		N			N						Y			
 AT_instrument_type	12	record_status	record_status	char	1	0	Y		N			N						N			
 AT_pabst_source_priority	1	pabst_source_priority_id	pabst_source_priority_id	int	4	0	N		Y			N						Y			
-AT_pabst_source_priority	2	(source) instrument_type_id	(source) instrument_type_id	int	4	0	Y		N			N						Y			
-AT_pabst_source_priority	3	(target) instrument_type_id	(target) instrument_type_id	int	4	0	Y		N			N						Y			
+AT_pabst_source_priority	2	source_instrument_type_id	Source instrument_type_id	int	4	0	Y		N			N						Y			
+AT_pabst_source_priority	3	target_instrument_type_id	Target instrument_type_id	int	4	0	Y		N			N						Y			
 AT_pabst_source_priority	4	is_predicted	is_predicted	char	1	0	Y		N			N						N			
 AT_protein_list	1	protein_list_id	Protein List ID	int	4	0	N		Y			N						Y	Primary Key		
 AT_protein_list	2	protein_list_name	Protein List Name	varchar	255	0	Y		N			Y	text	24		Y	Y	N	Name for Protein List		
@@ -831,8 +837,10 @@ AT_SEL_chromatogram	5	Tr	Best Peakgroup Retention Time	real	8	0	Y		N			N						N	
 AT_SEL_chromatogram	6	max_apex_intensity	Maximum Apex Intensity	real	8	0	Y		N			N						N	Maximum Apex Intensity (mProphet); a measure of abundance		
 AT_elution_time_type	1	elution_time_type_id	Elution Time Type ID	int	4	0	N		Y			N						Y	Primary Key		
 AT_elution_time_type	2	elution_time_type	Elution Time Type	varchar	255	0	N		N	AT_elution_time_type	elution_time_type_id	N			elution_time_type			Y	"Type of elution time represented, SSRCalc, RTCatalog, etc"		
-AT_elution_time_type	3	instrument_id	Instrument ID	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N			instrument_id			Y	"type of intrument observed on, foreign key to instrument type table"		
+AT_elution_time_type	3	source_instrument_type_id	Source Instrument Type ID	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N			instrument_id			Y	"type of intrument observed on, foreign key to instrument type table"		
 AT_elution_time_type	4	is_observed	Is Observed	char	1	0	Y		N			N			is_observed			N	Whether this is an observed type (T/F)		
 AT_elution_time	1	elution_time_id	Elution Time ID	int	4	0	N		Y			N						Y	Primary Key		
 AT_elution_time	2	elution_time_type_id	Elution Time Type ID	int	4	0	N		N	AT_elution_time_type	elution_time_type_id	N						Y	"Elution time source type, foreign key to elution_time_type table"		
 AT_elution_time	3	elution_time	Elution Time	int	4	0	Y		N			N						Y	Elution time in seconds		
+AT_elution_time	4	peptide_sequence	Peptide Sequence	varchar	255	0	Y		N			N						N	Stripped peptide sequence		
+AT_elution_time	5	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	Y		N			N						N	Charge/Mass modified peptide sequence		
