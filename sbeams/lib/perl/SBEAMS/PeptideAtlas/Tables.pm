@@ -107,6 +107,15 @@ use vars qw(@ISA @EXPORT
     $TBAT_PABST_PEPTIDE_MAPPING
     $TBAT_PABST_TRANSITION
     $TBAT_PABST_BUILD
+    $TBAT_PABST_BUILD_FILE
+    $TBAT_PABST_TRANSITION_INSTANCE
+    $TBAT_INSTRUMENT_TYPE
+    $TBAT_TRANSITION_TYPE
+    $TBAT_PABST_SOURCE_PRIORITY
+    $TBAT_ELUTION_TIME_TYPE
+    $TBAT_ELUTION_TIME
+
+
 
     $TBAT_PROTEIN_LIST
     $TBAT_PROTEIN_LIST_PROTEIN
@@ -215,6 +224,13 @@ require Exporter;
     $TBAT_PABST_PEPTIDE_MAPPING
     $TBAT_PABST_TRANSITION
     $TBAT_PABST_BUILD
+    $TBAT_PABST_BUILD_FILE
+    $TBAT_PABST_TRANSITION_INSTANCE
+    $TBAT_INSTRUMENT_TYPE
+    $TBAT_TRANSITION_TYPE
+    $TBAT_PABST_SOURCE_PRIORITY
+    $TBAT_ELUTION_TIME_TYPE
+    $TBAT_ELUTION_TIME
 
     $TBAT_PROTEIN_LIST
     $TBAT_PROTEIN_LIST_PROTEIN
@@ -326,6 +342,13 @@ $TBAT_PABST_PEPTIDE                 = "${mod}pabst_peptide";
 $TBAT_PABST_PEPTIDE_MAPPING         = "${mod}pabst_peptide_mapping";
 $TBAT_PABST_TRANSITION              = "${mod}pabst_transition";
 $TBAT_PABST_BUILD                   = "${mod}pabst_build";
+$TBAT_PABST_BUILD_FILE              = "${mod}pabst_build_file";
+$TBAT_PABST_TRANSITION_INSTANCE     = "${mod}pabst_transition_instance";
+$TBAT_INSTRUMENT_TYPE               = "${mod}instrument_type";
+$TBAT_TRANSITION_TYPE               = "${mod}transition_type";
+$TBAT_PABST_SOURCE_PRIORITY         = "${mod}pabst_source_priority";
+$TBAT_ELUTION_TIME_TYPE             = "${mod}elution_time_type";
+$TBAT_ELUTION_TIME                  = "${mod}elution_time";
 
 $TBAT_PROTEIN_LIST                  = "${mod}protein_list";
 $TBAT_PROTEIN_LIST_PROTEIN          = "${mod}protein_list_protein";
