@@ -37,6 +37,48 @@ $|++; # don't buffer output
   exit 0;
 }
 
+sub parseXML {
+  my $args = shift;
+  my @cmds;
+
+  # Otherwise, parse the file as usual.
+  print "Parsing command file $args->{sfile}\n" if $args->{verbose};
+
+  open( FIL, $args->{sfile} ) || die "Unable to open file $args->{sfile}";
+  my @fields;
+  my @values;
+  my $table;
+  while ( my $line = <FIL> ) {
+
+    chomp $line;
+    next if $line =~ /^\s*$/;
+    next if $line =~ /^<SBEAMS_EXPORT/;
+    next if $line =~ /^<\?xml/;
+
+    if ( $line =~ /\/>/ ) {
+      my $cmd = "INSERT INTO $table (" . join( ", ", @fields ) . ") VALUES ( " . join( ", ", @values ) . ")\n";
+      push @cmds, $cmd;
+      @values = ();
+      @fields = ();
+    } elsif ( $line =~ /<\s*(\w+)/ ) {
+      $table = ( $args->{database} ) ? "$args->{database}.dbo.$1" : $1;
+    } else {
+      my @entry = split( "=", $line );
+      for my $item ( @entry ) {
+        $item =~ s/^\s+//;
+        $item =~ s/\s+$//;
+        if ( $item =~ /CURRENT_TIMESTAMP|NULL/i ) {
+          $item =~ s/\"//g;
+        } else {
+          $item =~ s/\"/'/g;
+        }
+      }
+      push @fields, $entry[0];
+      push @values, $entry[1];
+    }
+  }
+  return \@cmds;
+}
 
 sub parseFile {
   my $args = shift;
@@ -49,6 +91,10 @@ sub parseFile {
     $args->{query} ||= 1;
     print "Running manual query\n";
     return( [ $args->{manual} ] );
+  }
+
+  if ( $args->{xml} ) {
+    return parseXML( $args );
   }
 
   # Otherwise, parse the file as usual.
@@ -169,7 +215,7 @@ sub processArgs {
   unless( GetOptions ( \%args, 'pass=s', 'user=s', 'verbose', 'sfile=s',
                       'delimiter=s', 'ignore_errors', 'manual:s',
                       'no_audit_constraints', 'database=s', 'query_mode', 
-                      'test_mode', 'quiet|q', 'outfile=s' ) ) {
+                      'test_mode', 'quiet|q', 'outfile=s', 'xml' ) ) {
   printUsage("Error with options, please check usage:");
   }
 
@@ -234,6 +280,7 @@ sub printUsage {
    -n --no_audit_constraints  If set, then the Audit Trail FOREIGN KEYS are skipped
       --database      Specify a database to initially connect to besides the default
       --quiet         Suppress printing of database errors
+   -x, --xml          File is in generic SBEAMS XML format
      
   EOU
   exit;
