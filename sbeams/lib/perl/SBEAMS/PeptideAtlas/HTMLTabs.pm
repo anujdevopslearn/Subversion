@@ -168,6 +168,11 @@ sub getTabMenu
     {
        $current_tab=5;
        $current_subtab=3;
+#    }elsif ( ($PROG_NAME =~ /^GetSELTransitions/) ||
+#    ($PROG_NAME =~ /GetSELTransitions\?(\S+)/ ))
+#    {
+#       $current_tab=5;
+#       $current_subtab=4;
     }
 
 
@@ -290,6 +295,12 @@ sub getTabMenu
 			   helptext => 'View statistics on available SRMAtlas builds',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/ViewSRMBuild"
 			   );
+
+#    $tabmenu->addMenuItem( tablabel => 'SRMAtlas',
+#			   label => 'SRMAtlas Experimental Data',
+#			   helptext => 'View transitions for SRM experiments',
+#			   url => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions"
+#			   );
 
 
     $tabmenu->setCurrentTab( currtab => $current_tab, currsubtab => $current_subtab );
