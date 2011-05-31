@@ -83,6 +83,8 @@
         <p class="rep">
           If you need help, please write to us with our feedback page on the
           navigation bar.
+<br>
+          If you would like to browse the old repository page, click <a href="http://www.peptideatlas.org/repository/index_old.php">here</a>
         </p>
 
 <br>
