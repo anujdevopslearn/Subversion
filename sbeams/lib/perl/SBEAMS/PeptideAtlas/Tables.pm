@@ -119,6 +119,12 @@ use vars qw(@ISA @EXPORT
 
     $TBAT_PROTEIN_LIST
     $TBAT_PROTEIN_LIST_PROTEIN
+
+    $TBAT_SEL_EXPERIMENT
+    $TBAT_SEL_RUN
+    $TBAT_SEL_TRANSITION_GROUP
+    $TBAT_SEL_TRANSITION
+    $TBAT_SEL_CHROMATOGRAM
 );
 
 
@@ -234,6 +240,12 @@ require Exporter;
 
     $TBAT_PROTEIN_LIST
     $TBAT_PROTEIN_LIST_PROTEIN
+
+    $TBAT_SEL_EXPERIMENT
+    $TBAT_SEL_RUN
+    $TBAT_SEL_TRANSITION_GROUP
+    $TBAT_SEL_TRANSITION
+    $TBAT_SEL_CHROMATOGRAM
 );
 
 
@@ -352,3 +364,9 @@ $TBAT_ELUTION_TIME                  = "${mod}elution_time";
 
 $TBAT_PROTEIN_LIST                  = "${mod}protein_list";
 $TBAT_PROTEIN_LIST_PROTEIN          = "${mod}protein_list_protein";
+
+$TBAT_SEL_EXPERIMENT                = "${mod}SEl_experiment";
+$TBAT_SEL_RUN                       = "${mod}SEL_run";
+$TBAT_SEL_TRANSITION_GROUP          = "${mod}SEL_transition_group";
+$TBAT_SEL_TRANSITION                = "${mod}SEL_transition";
+$TBAT_SEL_CHROMATOGRAM              = "${mod}SEL_chromatogram";
