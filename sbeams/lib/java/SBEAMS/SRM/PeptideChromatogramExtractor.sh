@@ -24,12 +24,22 @@ echo "Filetype is $EXT"
 echo "RT is $RT"
 
 
-SBEAMS="/net/dblocal/www/html/devTF/sbeams"
-if [ ! -d $SBEAMS ] ; then
-  SBEAMS="/local/www/html/devTF/sbeams"
+#SBEAMS_ROOT_DIR="/net/dblocal/www/html/devTF/sbeams"
+#if [ ! -d $SBEAMS_ROOT_DIR ] ; then
+#  SBEAMS_ROOT_DIR="/local/www/html/devTF/sbeams"
+#fi
+
+#PA_PERL_HOME="$SBEAMS_ROOT_DIR/lib/scripts/PeptideAtlas"
+#PA_JAVA_HOME="$SBEAMS_ROOT_DIR/lib/java/SBEAMS/SRM"
+
+PA_JAVA_HOME=`dirname $0`;  # directory containing this script
+if [ ! -d $PA_JAVA_HOME ] ; then
+  PA_JAVA_HOME=`echo $PA_JAVA_HOME | sed 's|/net/dblocal|/local|'`
 fi
-PA_JAVA_HOME="$SBEAMS/lib/java/SBEAMS/SRM"
-PA_PERL_HOME="$SBEAMS/lib/scripts/PeptideAtlas"
+PA_PERL_HOME="$PA_JAVA_HOME/../../../scripts/PeptideAtlas"
+
+echo Java home: $PA_JAVA_HOME
+echo Perl home: $PA_PERL_HOME
 CONFDIR="$PA_JAVA_HOME"
 BINDIR="/serum/analysis/SRM/bin"
 JAVA='/tools/java/jdk1.6.0/bin/java'
