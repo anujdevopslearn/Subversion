@@ -963,6 +963,16 @@ if ($apply_action =~ /QUERY|GO/i ) {
    'link' => $link,
     bold => 1
   );
+
+  my $mseq_idx = 0;      # modified peptide sequence
+  my $chrg_idx = 1;      # charge
+  my $mz_idx = 2;        # monoisotopic parent m/z
+  my $prob_idx = 3;      # best probability
+  my $nobs_idx = 4;      # number observations
+  my $nsib_idx = 5;      # num siblings
+  my $smpl_idx = 6;      # sample IDs
+  my $spec_idx = 7;      # consensus spectrum
+
   my $modSQL = qq~
   SELECT distinct
   modified_peptide_sequence, MPI.peptide_charge, MPI.monoisotopic_parent_mz,
@@ -1013,16 +1023,16 @@ if ($apply_action =~ /QUERY|GO/i ) {
 			# Originally showed only one consensus per peptide ion, now
 			# show as a list, with default in first position.
 			my %all_consensus;
-      $pep->[7] = '';
+      $pep->[$spec_idx] = '';
       
       for my $c_spectrum ( @$consensus ) {
-        if ( $c_spectrum->[2] == $pep->[1] ) {
+        if ( $c_spectrum->[2] == $pep->[$chrg_idx] ) {
 
-          if ( $peptide_sequence[0] eq $pep->[0] ) {
+          if ( $peptide_sequence[0] eq $pep->[$mseq_idx] ) {
             # No mods except charge
-            next if $c_spectrum->[8] && $c_spectrum->[8] ne $pep->[0];
+            next if $c_spectrum->[8] && $c_spectrum->[8] ne $pep->[$mseq_idx];
           } else {
-            next if !$c_spectrum->[8] || $c_spectrum->[8] ne $pep->[0];
+            next if !$c_spectrum->[8] || $c_spectrum->[8] ne $pep->[$mseq_idx];
           }
 
           my $default_txt = ( $lib_id eq $c_spectrum->[6] ) ? '(Build default)' : '';
@@ -1043,22 +1053,22 @@ if ($apply_action =~ /QUERY|GO/i ) {
 			}
 
       if ( $best ) {
-				$pep->[7] = $best;
+				$pep->[$spec_idx] = $best;
 				if ( $rest ) {
-					$pep->[7] .= "&nbsp;&nbsp;$rest";
+					$pep->[$spec_idx] .= "&nbsp;&nbsp;$rest";
 				}
 			} elsif ( $rest ) {
-				$pep->[7] = $rest;
+				$pep->[$spec_idx] = $rest;
 			}
 			
 
       # Final formatting for list items
-      $pep->[2] = sprintf("%0.4f", $pep->[2]);  # parent m/z
-      $pep->[3] = sprintf("%0.2f", $pep->[3]) unless $pep->[3] == 1; # probability
-      $pep->[3] = 1 if $pep->[3] == 1; # huh?
-      $pep->[5] = sprintf("%0.1f", $pep->[5]) if $pep->[5]; # number of siblings
-      $pep->[6] = sample_view( $pep->[6] ); # Sample IDs, keep list under control
-      $pep->[0] = $sbeamsMOD->formatMassMods( $pep->[0] );
+      $pep->[$mz_idx] = sprintf("%0.4f", $pep->[$mz_idx]);  # parent m/z
+      $pep->[$prob_idx] = sprintf("%0.2f", $pep->[$prob_idx]) unless $pep->[$prob_idx] == 1; # probability
+      $pep->[$prob_idx] = 1 if $pep->[$prob_idx] == 1; # huh?
+      $pep->[$nsib_idx] = sprintf("%0.1f", $pep->[$nsib_idx]) if $pep->[$nsib_idx]; # number of siblings
+      $pep->[$smpl_idx] = sample_view( $pep->[$smpl_idx] ); # Sample IDs, keep list under control
+      $pep->[$mseq_idx] = $sbeamsMOD->formatMassMods( $pep->[$mseq_idx] );
     }
 
     #### Add table column headings
@@ -1184,6 +1194,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
   #############################################################################
   #### Spectra Section
 
+
   # Widget to allow show/hide of modified peptides section
   my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprot_indiv_spec',
                                                 visible => 1,
@@ -1236,12 +1247,26 @@ if ($apply_action =~ /QUERY|GO/i ) {
   my $sth = $sbeams->get_statement_handle( $modSQL );
   my $has_header_info = 0;
 
-  my $align = [qw(left center right right left center center)];
+  $mseq_idx = 0;      # modified peptide sequence
+  $chrg_idx = 1;      # charge
+  my $smpl_idx = 2;      # sample
+  my $inst_idx = 3;      # instrument
+  $prob_idx = 4;      # probability
+  my $name_idx = 5;      # spectrum name: mzML basename, scan, scan, chrg
+  $spec_idx = 6;      # spectrum
+  my $chrm_idx = 7;      # chromatogram
+  my $it_idx = 8;        # precursor intensity
+  my $rt_idx = 9;        # retention time
+  my $ce_idx = 10;       # collision energy
+
+
+
+  my $align = [qw(left center right right left center center center)];
   while ( my @row = $sth->fetchrow_array() ) {
     # We only want to display PI and RT cols if we have data!
-    if ( !$has_header_info && $row[7] ) {
+    if ( !$has_header_info && $row[$it_idx] ) {
       $has_header_info++;
-      $align = [qw(left center right right left center center center right right)];
+      $align = [qw(left center right right left center center center center right right)];
     }
     push @mod_peps, \@row;
   }
@@ -1251,28 +1276,139 @@ if ($apply_action =~ /QUERY|GO/i ) {
     $modHTML .= $sbeams->getPopupDHTML();
 
     #### Loops through resultset and do formatting
+
     my @display_peps;
+    my $at_least_one_chromatogram = 0;
     for my $pep ( @mod_peps ) {
-      $pep->[4] = sprintf("%0.3f", $pep->[4]) unless $pep->[4] == 1;
-      $pep->[4] = 1 if $pep->[4] == 1;
-      $pep->[3] =~ s/ +/&nbsp;/g;
-      my $img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='View spectrum for $pep->[0] (+$pep->[1])'>";
-      $pep->[6] = qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowObservedSpectrum?spectrum_identification_id=$pep->[6]&peptide=$pep->[0]&assumed_charge=$pep->[1]" TARGET=blank>$img</A>~;
-      $pep->[0] = $sbeamsMOD->formatMassMods( $pep->[0] );
+
+      # Get mzML filename, cycle, and charge from spectrum name
+      $pep->[$name_idx] =~ /(\S+)\.(\d+?)\.(\d+?)\.(\d)/;
+      my $mzml_basename = $1;
+      my $cycle = $2;
+      my $cycle2 = $3;
+      my $precursor_charge = $4;
+      $mzml_basename =~ s/\.mzML$//;    #remove .mzML if it's there
+      my $mzml_fname = "$mzml_basename.mzML";
+      my $rt;
+      my @trace_array;
+      my %trace;
+
+      #### Temporary extreme hack: get infos from mzML file.
+      # What I really need is to get all the infos I need from the
+      # SBEAMS database via SEL_experiment, run, chromatogram, and
+      # transition tables.
+      my $chromatogram_entry = '';
+
+      #### If this is a QTRAP 5500 mzML file ... (HACK!!)
+      if (($mzml_fname =~ /^5Q/) || ($mzml_fname =~ /^QT_ZH/) ||
+          ($mzml_fname =~ /^Z5Q/) ) {
+
+        # Get the full pathname for the file
+        my $SRMAtlas_data_dir = '/regis/sbeams4/nobackup/edeutsch/HumanMRMAtlas';
+        my $qtrap_data_dir = "$SRMAtlas_data_dir/QTrap5500/Runs_By_Order/";
+        my @file_list = split(" ", `find $qtrap_data_dir -name $mzml_fname -print`);
+        my $mzml_pathname = shift @file_list;
+
+        my ($q1, $q1_charge2, $q1_charge3, $precursor_neutral_mass);
+
+        # Make system call to readmzXML to get precursor m/z, RT.
+        my $mzml_info = `/proteomics/sw/tpp/bin/readmzXML -b $mzml_pathname $cycle`;
+        #print $mzml_info;
+        $mzml_info =~ /precursorMZ:\s*(\d+\.\d+)/;
+        my $precursor_mz = $1;
+        $mzml_info =~ /scanTime:\s*(\d+\.\d+)/;
+        $rt = $1;
+        #print "Precursor m/z: $precursor_mz RT: $rt<br>\n";
+        if (! ($rt && $precursor_mz)) {
+          die "Can't find RT and/or prec. m/z for $cycle in $mzml_pathname".
+              " using readmzXML.";
+        }
+
+        # Compute precursor neutral mass for this peptide
+        # (Could also compute theoretical mass from pepseq + mods)
+        my $precursor_charged_mass = $precursor_mz * $precursor_charge;
+        # Subtract mass for each proton added when precursor was charged
+        $precursor_neutral_mass = $precursor_charged_mass - ($precursor_charge * 1.00727638);
+
+        #### End of extreme hack
+
+        # We must invent the ion because we don't have transition list
+	my $ion = "y1";        ### INVENTED!!!
+	my $ion_charge = '1';    ### INVENTED!!!
+	# remove mods from pepseq
+	my $modified_pepseq = $pep->[$mseq_idx];
+        my $pepseq = $modified_pepseq;
+	$pepseq =~ s/\[.+?\]//g;
+	my $fragmentor = 125;  ### INVENTED!!! but maybe unused.
+        # There are fields for CE & RT in the Spectrum table,
+        # but unfortunately for SRM atlas these values are not loaded.
+	my $ce = $pep->[$ce_idx] ?  $pep->[$ce_idx] : 99;
+        if (! $rt ) {
+	  $rt = $pep->[$rt_idx] ?  $pep->[$rt_idx] : 99;
+        }
+	my $delta_rt = 5.00;   ### INVENTED!!! but maybe unused.
+
+	$at_least_one_chromatogram = 1;
+	my $chrom_img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/chromatogram.gif' TITLE='View chromatogram for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
+
+        
+        #print "<p>Charge $precursor_charge Precursor Neutral Mass $precursor_neutral_mass Precursor Charged Mass $precursor_charged_mass<br>\n";
+
+	$chromatogram_entry =
+	  qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?~;
+	$chromatogram_entry .= ""
+#	."&ion=$ion"  #multiple; different per trace.
+#	."&ion_charge=$ion_charge"  #multiple
+	."&precursor_charge=$precursor_charge"  #multiple
+	."&pepseq=$pepseq"
+	."&modified_pepseq=$modified_pepseq"
+#	."&q1=$q1"  #multiple
+#	."&q3=$q3"  #multiple
+	."&mzml_basename=$mzml_basename"
+	."&mzml_pathname=$mzml_pathname"
+#	."&ce=$ce"
+	."&rt=$rt"  #multiple
+	."&delta_rt=$delta_rt"
+	."&fragmentor=$fragmentor"
+	."&precursor_neutral_mass=$precursor_neutral_mass";
+
+         $chromatogram_entry =
+	  qq~$chromatogram_entry" TARGET=blank>$chrom_img</A>~;
+
+      } # end if Qtrap 5500
+
+      $pep->[$prob_idx] = sprintf("%0.3f", $pep->[$prob_idx]) unless $pep->[$prob_idx] == 1;
+      $pep->[$prob_idx] = 1 if $pep->[$prob_idx] == 1;
+      $pep->[$inst_idx] =~ s/ +/&nbsp;/g;
+      my $img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='View spectrum for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
+      $pep->[$spec_idx] = qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowObservedSpectrum?spectrum_identification_id=$pep->[$spec_idx]&peptide=$pep->[$mseq_idx]&assumed_charge=$pep->[$chrg_idx]" TARGET=blank>$img</A>~;
+
+      $pep->[$chrm_idx] = $chromatogram_entry;
+      $pep->[$mseq_idx] = $sbeamsMOD->formatMassMods( $pep->[$mseq_idx] );
+
       if ( !$has_header_info ) {
-        delete $pep->[9];
-        delete $pep->[8];
-        delete $pep->[7];
+        delete $pep->[$ce_idx];
+        delete $pep->[$rt_idx];
+        delete $pep->[$it_idx];
       } else {
-        $pep->[7] = ( $pep->[7] ) ? $sbeams->formatScientific( number=> $pep->[7], precision=>1, output_mode => $sbeams->get_output_mode() ): $sbeams->makeInactiveText('n/a'); 
-        $pep->[8] = ( $pep->[8] ) ? sprintf( "%0.1f", $pep->[8]/60 ) : $sbeams->makeInactiveText('n/a'); 
-        $pep->[9] = ( $pep->[9] ) ? sprintf( "%0.1f", $pep->[9] ) : $sbeams->makeInactiveText('n/a'); 
+        $pep->[$it_idx] = ( $pep->[$it_idx] ) ? $sbeams->formatScientific( number=> $pep->[$it_idx], precision=>1, output_mode => $sbeams->get_output_mode() ): $sbeams->makeInactiveText('n/a'); 
+        $pep->[$rt_idx] = ( $pep->[$rt_idx] ) ? sprintf( "%0.1f", $pep->[$rt_idx]/60 ) : $sbeams->makeInactiveText('n/a'); 
+        $pep->[$ce_idx] = ( $pep->[$ce_idx] ) ? sprintf( "%0.1f", $pep->[$ce_idx] ) : $sbeams->makeInactiveText('n/a'); 
       }
+
       push @display_peps, $pep;
 
+    } # end for each pep
+
+    # if no chromatograms, remove chromatogram column
+    if (! $at_least_one_chromatogram) {
+      for my $pep (@display_peps) {
+        delete $pep->[$chrm_idx];
+      }
     }
 
     my @headings = ( 'Modified Sequence', 'Chg', 'Smpl', 'Instr', 'Prob', 'Spectrum Name', 'Spectrum' );
+    push @headings, 'Chromatogram' if $at_least_one_chromatogram;
     push @headings, ( 'Precursor Intensity', 'RT', 'CE' ) if $has_header_info;
     #### Add table column headings
     unshift @display_peps, [ @headings ];
