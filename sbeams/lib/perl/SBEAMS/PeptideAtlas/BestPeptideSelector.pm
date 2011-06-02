@@ -728,16 +728,40 @@ sub sortBySuitabilityScore {
 
 } # end sortBySuitabilityScore
 
+sub getStaticInstrumentMap {
+  my $self = shift;
+	my %args = @_;
+  my %instruments = ( QTrap4000 => 'Q',
+                     QTrap5500 => 'S',
+                     Orbitrap => 'B',
+                    Predicted => 'P',
+                    IonTrap => 'I',
+                    PATR => 'R',
+                    QTOF => 'T' );
+  if ( $args{invert} ) {
+    my %code2instr = reverse( %instruments );
+    return \%code2instr;
+  }
+  return \%instruments;
+}
+
+
 sub getInstrumentMap {
   my $self = shift;
 	my %args = @_;
-	my %instr = ( QTrap4000 => 'Q',
-	              QTrap5500 => 'S',
-	              Orbitrap => 'B',
-								Predicted => 'P',
-								IonTrap => 'I',
-								PATR => 'R',
-								QTOF => 'T' );
+  my $sql = "SELECT DISTINCT instrument_type_id, instrument_type_name FROM $TBAT_INSTRUMENT_TYPE";
+  my $sth;
+  eval {
+    $sth = $sbeams->get_statement_handle( $sql );
+  };
+  if ( $@ ) {
+    return $self->getStaticInstrumentMap( %args );
+  }
+
+  my %instr;
+  while( my @row = $sth->fetchrow_array() ) {
+    $instr{$row[1]} = $row[0];
+  }
 	if ( $args{invert} ) {
 		my %code2instr = reverse( %instr );
 		return \%code2instr;
