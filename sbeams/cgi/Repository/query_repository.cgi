@@ -10,9 +10,12 @@ use CGI qw(:standard);
 use JSON;
 
 $sbeams = new SBEAMS::Connection;
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
 my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
 $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
 
 my $cmd  = $parameters{'cmd'};
 my $scope = $parameters{'scope'};
@@ -25,7 +28,8 @@ my $filtercol = $parameters{'filtercol'} || 'all';
 my $filterstr = $parameters{'filterstr'};
 my $dlfiletype = $parameters{'dlfiletype'} || '';
  
-my $file = "/net/dblocal/www/html/devZS/sbeams/cgi/Repository/PA_Samples_entries.json" ;
+my $file = "$FindBin::Bin/PA_Samples_entries.json" ;
+
 my $json = new JSON;
 open(IN, "<$file");
 my @contents = <IN>;
