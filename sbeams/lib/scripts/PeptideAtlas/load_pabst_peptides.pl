@@ -6,6 +6,7 @@ use File::Basename;
 use FindBin;
 
 use lib "$FindBin::Bin/../../perl";
+use lib '/net/db/projects/spectraComparison';
 
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
@@ -14,25 +15,10 @@ use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::BestPeptideSelector;
 use SBEAMS::PeptideAtlas::Tables;
 
+use FragmentationComparator;
 use SBEAMS::Proteomics::PeptideMassCalculator;
-my $massCalculator = new SBEAMS::Proteomics::PeptideMassCalculator;
 
 $|++; # don't buffer output
-
-print "Begin at " . time() . "\n";
-
-print "Loading fragment compare\n";
-# Load spectrum comparer code
-use lib '/net/db/projects/spectraComparison';
-use FragmentationComparator;
-my $fc = new FragmentationComparator;
-#$fc->loadFragmentationModel( filename => '/net/db/projects/spectraComparison/FragModel_AgilentQTOF.fragmod' );   
-$fc->loadFragmentationModel( filename => '/net/db/projects/spectraComparison/FragModel_4000QTRAP.fragmod' );
-$fc->setUseBondInfo(1);
-$fc->setNormalizationMethod(1);
-print "done\n";
-
-
 
 my $sbeams = SBEAMS::Connection->new();
 $sbeams->Authenticate();
@@ -42,29 +28,61 @@ $atlas->setSBEAMS( $sbeams );
 
 my $pep_sel = SBEAMS::PeptideAtlas::BestPeptideSelector->new();
 $pep_sel->setSBEAMS( $sbeams );
+
 my $instrument_map = $pep_sel->getInstrumentMap();
+#for my $i ( sort( keys( %{$instrument_map} ) ) ) { print "$i => $instrument_map->{$i}\n"; }
+
+my %instr_type = reverse( %{$instrument_map} );
+#for my $i ( sort( keys( %instr_type ) ) ) { print "$i => $instr_type{$i}\n"; }
+
+my $massCalculator = new SBEAMS::Proteomics::PeptideMassCalculator;
 
 # Will be populated in process_args
 my @mrm_libs;
 my %mrm_libs;
 
+my $args = process_args();
+
+print "Begin at " . time() . "\n" if $args->{verbose};
+
+print "Loading fragment compare\n" if $args->{verbose};
+
+# Load spectrum comparer code
+my %fc;
+my $fc; #DELETEME
+my @trans; #DELETEME
+my %model_map = ( QTrap4000 => '/net/db/projects/spectraComparison/FragModel_4000QTRAP.fragmod',
+                  QTOF => '/net/db/projects/spectraComparison/FragModel_AgilentQTOF.fragmod', 
+                  IonTrap => '/net/db/projects/spectraComparison/FragModel_IonTrap.fragmod', 
+                  QTrap5500 => '/net/db/projects/spectraComparison/FragModel_QTRAP5500.fragmod', 
+             );
+
+for my $model ( keys( %model_map ) ) {
+  print STDERR "loading model for $model\n" if $args->{verbose}; 
+  $fc{$model} = new FragmentationComparator;
+  $fc{$model}->loadFragmentationModel( filename => $model_map{$model} );
+  $fc{$model}->setUseBondInfo(1);
+  $fc{$model}->setNormalizationMethod(1);
+}
+
+print "done\n" if $args->{verbose};
 
 my $dbh = $sbeams->getDBHandle();
 $dbh->{RaiseError}++;
 my $transition_limit = 10;
 
+# DELETEME
 my $mrm_peak_limit = $transition_limit + 10;
-my %all_mrm_peaks;
 
-print "process args\n";
-my $args = process_args();
-print "done\n";
+#my %all_mrm_peaks;
+
 
 # Flag for uber-verbose logging.
 my $paranoid = 0;
 $paranoid++ if $args->{verbose} > 1;
 
 use Data::Dumper;
+my %stats;
 
 { # Main 
 
@@ -78,19 +96,53 @@ use Data::Dumper;
   
   my %lib_data;
   for my $mrm ( @mrm_libs ) {
-    print "Reading $mrm file data\n";
-    $lib_data{$mrm} = readSpectrastSRMFile( file => $mrm, type => $mrm_libs{$mrm} );
-    print "Done\n";
+
+    my $time = time();
+    print "Reading $mrm file data: $time\n" if $args->{verbose};
+
+    # lib data is hash ref, init here, and pass to reading routine.  If more than one lib
+    # is provided for a given data type, will use first instance of a given peptide ion
+    my $type = $instr_type{$mrm_libs{$mrm}};
+
+    $lib_data{$type} ||= {};
+    $lib_data{$type} = readSpectrastSRMFile( file => $mrm,
+                                            type => $type,
+                                             lib => \%lib_data );
   }
+  
+  my $time = time();
+  print "Done reading MRM files: $time\n";
 
   my $name2id = getBioseqInfo( $args->{biosequence_set_id} );
+  my $organism_id = getOrganismID( $args->{biosequence_set_id} );
   
   open PEP, $args->{peptides} || die "Unable to open peptide file $args->{peptides}";
+
+
+  # Looks like we have a build to load - insert build record
+  my $build_id;
+  if ( $args->{load} ) {
+    my $rowdata = {  build_name => $args->{name},
+                    build_comment => $args->{description},
+                      organism_id => $organism_id,
+                 parameter_string => $args->{parameters},
+                   parameter_file => $args->{conf}, 
+               biosequence_set_id => $args->{biosequence_set_id}, 
+                       project_id => $args->{project_id}, 
+                       is_default => 'T'
+                    };
   
+    $build_id = $sbeams->updateOrInsertRow( insert => 1,
+                                       table_name  => $TBAT_PABST_BUILD,
+                                       rowdata_ref => $rowdata,
+                                       verbose     => 0, 
+#                                       verbose     => $args->{verbose},
+                                      return_PK    => 1,
+                                                PK => 'pabst_build_id',
+                                       testonly    => $args->{testonly} );
+  }
   
   my $cnt;
-  my %stats;
-  my $build_id;
 
   if ( $args->{output_file} ) {
 #    $build_id = 'output_file';
@@ -105,8 +157,10 @@ use Data::Dumper;
   if ( $args->{output_file} ) {
     open( OUT, ">$args->{output_file}" );
   }
+
+  # Meat and 'taters
   while ( my $line = <PEP> ) {
-#    next unless $cnt++;
+
     chomp $line;
     my @line = split( "\t", $line, -1 );
 
@@ -114,100 +168,29 @@ use Data::Dumper;
     next if $line[0] eq 'biosequence_name';
 
     # Disregard peptides with odd amino acids 
-    next unless $line[2] =~ /^[ACDEFGHIKLMNOPQRSTVWY]+$/;
-
-    # Cys must be alkylated
-    if ( $line[2] =~ /^\w+$/ && $line[2] =~ /C/ ) {
-      $line[2] =~ s/C/C\[160\]/g;
+    unless ( $line[2] =~ /^[ACDEFGHIKLMNOPQRSTVWY]+$/ ) {
+      $stats{bad_aa}++;
+      next;
+    }
+    if ( $line[14] =~ /ST|MC/ ) {
+      $stats{nontryptic}++;
+      next;
     }
 
-    # Looks like we have a build to load - insert build record
-    if ( $args->{load} && !$build_id ) {
-      my $rowdata = {  build_name => $args->{name},
-                    build_comment => $args->{description},
-                    ion_trap_file => $args->{ion_trap},
-                         qqq_file => $args->{qqq},
-                      organism_id => $args->{organism},
-                 theoretical_file => '',
-                 parameter_string => $args->{parameters},
-                   parameter_file => $args->{conf}, 
-               biosequence_set_id => $args->{biosequence_set_id}, 
-                       project_id => $args->{project_id}, 
-                       is_default => 'T'
-                    };
-  
-      $build_id = $sbeams->updateOrInsertRow( insert => 1,
-                                         table_name  => $TBAT_PABST_BUILD,
-                                         rowdata_ref => $rowdata,
-                                         verbose     => $args->{verbose},
-                                        return_PK    => 1,
-                                                  PK => 'pabst_build_id',
-                                         testonly    => $args->{testonly} );
+    # All Cys residues must be alkylated carboxymethyl...
+    if ( $line[2] =~ /C/ ) {
+      $line[2] =~ s/C([^\[])/C[160]$1/g;
+      $line[2] =~ s/C$/C[160]/; 
     }
-  
+
     my $pep_key = $line[1] . $line[2] . $line[3];
   
     # Only insert if we need to?
     if ( !$seq2id->{$pep_key} || $args->{output_file} ) {
   
-      $stats{insert_new_yes}++;
-
-      # Fill up transition list for this peptide entry
-      my @trans;
-      my %used_trans;
-
-      my $pep = $line[2];
-      $pep =~ s/\'//g;
-      if ( $pep =~ /X|B|Z/ ) {
-        $stats{bad_aa}++;
-        next;
-      }
-      my $annot = $line[14] || '';
-      if ( $annot =~ /ST|MC/ ) {
-        $stats{nontryptic}++;
-        next;
-      }
-
-#      print "peptide $pep\n";
-
-      # Go through and populate in order of priority
-      populate( $patr, $pep, \@trans, 'patr', \%used_trans );
-      print "Trans has " . scalar( @trans ) . " post PATR\n" if $paranoid; # if scalar( @trans ) ;
+      $stats{insert_new_peptide}++;
     
-      if ( scalar( @trans ) < $transition_limit ) {
-        for my $src ( @mrm_libs ) {
-          print "Adding from $src\n" if $paranoid;
-          populate( $lib_data{$src}, $pep, \@trans, $mrm_libs{$src}, \%used_trans );
-          $stats{$src}++;
-          print "Trans has " . scalar( @trans ) . " post $src\n" if $paranoid; # if scalar( @trans ) ;
-          last if scalar( @trans ) >= $transition_limit;
-        }
-      }
-    
-      if ( !$args->{specified_only} || ( scalar( @trans ) < $transition_limit ) ) {
-        print "Adding from Theoretical\n" if $paranoid;
-        if ( !$theoretical->{$pep} ) {
-          # Reset...
-          $theoretical = {};
-          $theoretical->{$pep} = generate_theoretical( $pep );
-        }
-        populate_theoretical( $pep, $theoretical->{$pep}, \@trans, \%used_trans );
-        $stats{theo_look}++;
-        print "Trans has " . scalar( @trans ) . " post THEO\n" if $paranoid; # if scalar( @trans );
-      }
-      
-      if ( !scalar( @trans ) ) {
-        $stats{unfound}++;
-        next if $args->{specified_only};
-    #    print "peptide $pep not found ( $line[1], $line[3], $line[14] )\n";
-      } elsif ( scalar( @trans ) < $transition_limit ) {
-        $stats{shorted}++;
-      } else {
-        $stats{fulfilled}++;
-      }
-    
-      # Insert peptide record
-      # Fields in the PABST peptides file
+    # Fields in the PABST peptides file
     # 00 biosequence_name
     # 01 preceding_residue
     # 02 peptide_sequence
@@ -238,6 +221,7 @@ use Data::Dumper;
         $line[$col] =~ s/\s//g if ( $line[$col] ); 
       }
     
+      # Insert peptide record
       my $peprow = {  pabst_build_id => $build_id,
                       preceding_residue => $line[1],
                       peptide_sequence => $line[2],
@@ -253,28 +237,20 @@ use Data::Dumper;
                       best_probability => $line[12],
                       n_observations => $line[13],
                       synthesis_score => $line[16],
-                      synthesis_warnings => $line[14],
+                      annotations => $line[14],
                       synthesis_adjusted_score => $line[17],
                       source_build => $line[15] 
       };
     
-    #  for my $k ( keys( %$peprow ) ) { print "$k => $peprow->{$k}\n"; }
-    
-    
       my $pep_id;
-
       if ( $args->{output_file} ) {
-
-        #Print out transition data
-#        print OUT join( "\t", $build_id, $line[1], $line[2], $line[3], $line[4], $line[5], $line[6],
-#                              $line[7], $line[8], $line[9], $line[10], $line[11], $line[12], $line[13],
-#                              $line[16], $line[14], $line[17], $line[15] ) . "\n";
-
+        # Unsure how to implement this... which transitions to print?
       } else {
-       $pep_id = $sbeams->updateOrInsertRow( insert => 1,
+       $pep_id = $sbeams->updateOrInsertRow(   insert => 1,
                                           table_name  => $TBAT_PABST_PEPTIDE,
                                           rowdata_ref => $peprow,
                                           verbose     => $args->{verbose},
+                                          verbose     => 0, 
                                          return_PK    => 1,
                                                    PK => 'pabst_peptide_id',
                                           testonly    => $args->{testonly} );
@@ -282,7 +258,37 @@ use Data::Dumper;
     
       # Cache this to avoid double insert.
       $seq2id->{$pep_key} = $pep_id;
-    
+
+      # END Insert peptide record
+
+#      for my $instr ( keys( %{$instrument_map} ) ) {
+      my %peptide_ions;
+      for my $instr ( keys( %lib_data ) ) {
+#        print "Checking $instr for $line[2]\n";
+        if  ( $lib_data{$instr} ) {
+#          print "Found lib data!\n";
+          if ( $lib_data{$instr}->{$line[2]} ) {
+            for my $chg ( sort { $a <=> $b } ( keys( %{$lib_data{$instr}->{$line[2]}} ) ) ) {
+
+              my $ion_key = $line[2] . $chg;
+              if ( !$peptide_ions{$ion_key} ) {
+                # Insert peptide ion here...
+              }
+              print "Found $instr lib data for $line[2] in charge state $chg\n";
+              for my $trans ( @{$lib_data{$instr}->{$line[2]}->{$chg}} ) {
+                die Dumper( $trans );
+              }
+            }
+          }
+        }
+      }
+
+      if ( !scalar( keys( %peptide_ions ) ) ) {
+        my $ech = calculate_expected_charge( $line[2] );
+        if ( $ech > 2 ) {
+        } else {
+        }
+      }
     
     
     # 0 pep seq
@@ -322,6 +328,7 @@ use Data::Dumper;
                                               table_name  => $TBAT_PABST_TRANSITION,
                                               rowdata_ref => $tranrow,
                                               verbose     => $args->{verbose},
+                                       verbose     => 0, 
                                              return_PK    => 1,
                                                        PK => 'fragment_ion_id',
                                               testonly    => $args->{testonly} );
@@ -344,6 +351,7 @@ use Data::Dumper;
                                         table_name  => $TBAT_PABST_PEPTIDE_MAPPING,
                                         rowdata_ref => $maprow,
                                         verbose     => $args->{verbose},
+                                       verbose     => 0, 
                                        return_PK    => 1,
                                                  PK => 'pabst_peptide_id',
                                         testonly    => $args->{testonly} );
@@ -361,7 +369,17 @@ use Data::Dumper;
 
 print "Finished at " . time() . "\n";
 
+sub calculate_expected_charge {
+  my $seq = shift || return '';
+  my $lys = $seq =~ tr/K/K/;
+  my $arg = $seq =~ tr/R/R/;
+  my $his = $seq =~ tr/H/H/;
+  return( 1 + $lys + $arg + $his );
+}
+
 sub getPABSTPeptideData {
+
+  my %seq_to_id;
 
   my $build_where = '';
   if ( $args->{mapping_build} ) {
@@ -369,8 +387,9 @@ sub getPABSTPeptideData {
   }
 
   # Now require explicit mapping build, else return empty hashref
-  my %seq_to_id;
   return \%seq_to_id unless $build_where;
+
+  die "Is this properly implemented? $build_where";
 
   my $sql = qq~
   SELECT preceding_residue || peptide_sequence || following_residue, 
@@ -472,6 +491,7 @@ sub delete_pabst_build {
          delete_batch => 1000,
          database => $database_name,
          verbose => $args->{verbose},
+                                       verbose     => 0, 
          testonly => $args->{testonly},
       );
 
@@ -563,7 +583,7 @@ sub process_args {
   my %args;
   GetOptions( \%args, 'mrm_file=s@', 'help',
               'peptides:s', 'conf=s', 'parameters=s', 'description=s',
-              'verbose:i', 'testonly', 'biosequence_set_id=i', 'name=s',
+              'verbose', 'testonly', 'biosequence_set_id=i', 'name=s',
               'load', 'output_file=s', 'project_id=i', 'organism=i',
               'mapping_build:i', 'delete', 'build_id=i', 'specified_only' );
 
@@ -609,12 +629,17 @@ sub process_args {
 
 #MARK
 sub readSpectrastSRMFile {
+
   my %args = @_;
-  print "Library file is $args{file}, type is $args{type}\n";
+
+#  print "Library file is $args{file}, type is $args{type}, lib is $args{lib}\n";
+#  exit;
+#  return;
 
   open SRM, $args{file} || die "Unable to open SRM file $args{file}";
 
-  my %srm;
+  my %srm = %{$args{lib}->{$args{type}}};
+
   while ( my $line = <SRM> ) {
     chomp $line;
     my @line = split( /\t/, $line, -1 );
@@ -624,12 +649,15 @@ sub readSpectrastSRMFile {
     $srm{$seq} ||= {};
     $srm{$seq}->{$chg} ||= [];
     next if scalar( @{$srm{$seq}->{$chg}} ) > $transition_limit;
-    next if $all_mrm_peaks{$srm{$seq}->{$chg}} > $mrm_peak_limit;
+#    next if $all_mrm_peaks{$srm{$seq}->{$chg}} > $mrm_peak_limit;
 
     my @labels = split( "/", $line[7], -1 );
     my $primary_label = $labels[0];
 
     next if $primary_label !~ /^[yb]/;
+
+    # Exclude isotope ions
+    next if $primary_label !~ /[yb]\d+i/;
 #    next if $primary_label =~ /^p/;
 #    next if $primary_label =~ /^\?/;
 #    next if $primary_label =~ /^IWA/;
@@ -688,7 +716,7 @@ sub readSpectrastSRMFile {
     # srm{peptide_sequence}->{charge} == pep seq, pep seq, q1 mz, q1 charge, q3 mz, q3 charge, ion series, ion number, CE, intensity, lib_type
 
     push @{$srm{$seq}->{$chg}}, [ $seq, $seq, $line[3], $chg, @line[5], $q3_chg, $q3_series, $q3_peak, $line[10], $line[6], $args{type} ];
-    $all_mrm_peaks{$srm{$seq}->{$chg}}++;
+#    $all_mrm_peaks{$srm{$seq}->{$chg}}++;
 
 #    print "For $seq and $chg, pushed $line[6], top is $srm{$seq}->{$chg}->[0]->[9]\n" unless $lib_type =~ /ion_trap/;
 #    push @{$srm{$line[1]}->{$line[2]}}, [ ];
@@ -711,57 +739,6 @@ sub readSpectrastSRMFile {
 # 12 protein(s)  YJL026W
 }
 
-# Reads in specified file, returns ordered MRM list with fields as follows.
-# peptide sequence
-# modified_peptide_sequence
-# q1_mz
-# q1_charge
-# q3_mz
-# q3_charge
-# ion_series
-# ion_number
-# CE
-# Relative intensity 
-# Type 
-sub readTIQAMSRMFile {
-  die unless $args->{theoretical};
-  open THEO, $args->{theoretical} || die "Unable to open Theoretical peptide file $args->{theoretical}";
-  my %srm;
-  my $cnt;
-  while ( my $line = <THEO> ) {
-    $cnt++;
-
-    print '*' unless $cnt % 5000;
-    print "\n" unless $cnt % 100000;
-
-    chomp $line;
-    my @line = split( ',', $line, -1 );
-    $srm{$line[1]} ||= {};
-    $srm{$line[1]}->{$line[2]} ||= [];
-
-    # Only cache 8 transitions per peptide, memory footprint
-    next if scalar( @{$srm{$line[1]}->{$line[2]}} ) >= 8;
-
-    # srm{peptide_sequence}->{charge} == pep seq, pep seq, q1 mz, q1 charge, q3 mz, q3 charge, ion series, ion number, CE, intensity
-    push @{$srm{$line[1]}->{$line[2]}}, [ @line[1,1,3,2,5], 1, @line[6,7,9], '', 'T' ];
-  }
-  return \%srm;
-
-# 00 Protein name YJL026W
-# 01 Peptide sequence AAADALSDLEIK
-# 02 Charge 2
-# 03 Q1 m/z 608.8251475
-# 04 ??? 1
-# 05 Q3 m/z 704.38303
-# 06 Ion series y
-# 07 Series number 6
-# 08 ??? 30
-# 09 CE 32.28830649
-# 10 ??> 1
-# 11 ??? 2859
-# 12 ??? 1215.634645
-# "$protein,$pepSeq,$charge,$precursor,1,$fragmass,y,", $i + 1, ",$dwelltime,$CE,$modification,$bad,$unique,$nrProt,$mass\n"
-}
 
 sub print_usage {
   my $msg = shift || '';
@@ -804,6 +781,20 @@ usage: $exe --mrm qtrap_file:QTrap5500 [ --mrm ion_trap_file:IonTrap ... ] --pep
   exit;
 }
 
+sub getOrganismID {
+  my $bioseq_set_id = shift || return {};
+  my $sql = qq~
+  SELECT organism_id 
+  FROM $TBAT_BIOSEQUENCE_SET
+  WHERE biosequence_set_id = $bioseq_set_id
+  ~;
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while( my @row = $sth->fetchrow_array() ) {
+    return $row[0];
+  }
+  return 0;
+}
+
 sub getBioseqInfo {
 
   my $bioseq_set_id = shift || return {};
@@ -830,6 +821,10 @@ sub getPATRPeptides {
   # return hashref
 
     # srm{peptide_sequence}->{charge} == pep seq, pep seq, q1 mz, q1 charge, q3 mz, q3 charge, ion series, ion number, CE, intensity, lib_type
+
+  # DELETEME
+  $TBAT_SRM_TRANSITION = 'peptideatlas.dbo.srm_transition';
+
   my $sql = qq~
   SELECT * FROM ( 
     SELECT stripped_peptide_sequence,
