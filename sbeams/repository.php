@@ -7,7 +7,11 @@
   $host = $_SERVER['HTTP_HOST'];
   $pattern = '/(.*)(\/.*)/';
   $replacement = '$1';
-  $SBEAMS = "http://". $host . preg_replace($pattern,$replacement,$str);
+
+	$https = $_SERVER['HTTPS'];
+	$protocol = ( $https == 'on' ) ? 'https://' : 'http://';
+  $SBEAMS = $protocol . $host . preg_replace($pattern,$replacement,$str);
+
   include("http://www.peptideatlas.org/includes/style.inc.php");
   include("$SBEAMS/usr/javascript/repository/header.inc.php");
   include("$SBEAMS/usr/javascript/repository/navbar.inc.php");
