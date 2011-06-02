@@ -1794,7 +1794,7 @@ sub getFormButtons {
     $args{$_} = "onClick=$args{$_}" if $args{$_};
   }
   
-  $args{types} ||= [];
+  $args{types} ||= [ 'submit' ];
 
   my @b;
 
