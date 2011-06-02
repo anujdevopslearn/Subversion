@@ -26,7 +26,7 @@ function sortFileSz(a,b){
 	    this.projectsURL = '/repository';
       this.rootURL = this.projectsURL;
       this.repositoryName = 'repository';
-      this.pathname = window.location.pathname.replace("repository.php", '');
+      this.pathname = window.location.pathname.replace(/\/cgi.*/, '');
     	this.httpProxyLoadFunc = function(E,B,F,C,A){
         var EE = {}; 
         for(k in E){
