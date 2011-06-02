@@ -166,6 +166,9 @@ while( my $line = <PEPS> ) {
 }
 close OUT;
 
+if ( $opts->{show_nomap} ) {
+  open NOMAP, ">nomap.acc";
+}
 print "\n";
 for my $acc ( keys( %{$acc2seq} ) ) {
   next unless $acc;
@@ -208,13 +211,17 @@ for my $acc ( keys( %{$acc2seq} ) ) {
   if ( $opts->{bin_max} ) {
     $n_peps = $opts->{bin_max} if $n_peps > $opts->{bin_max};
   }
-#  if ( $opts->{show_nomap} && ( !$n_peps || ($n_peps < 5 ))) {
-  if ( $opts->{show_nomap} && !$n_peps ) {
-    print "NOMAP: $acc\n";
+#  if ( $opts->{show_nomap} && ( !$n_peps || ($n_peps < 2 ))) {
+  if ( $opts->{show_nomap} && $n_peps > $opts->{min_nomap} ) {
+    print NOMAP "$acc\n";
   }
   my $key_num = ( $n_peps > 9 ) ? $n_peps : '0' . $n_peps;
   my $bin_key = 'prot_cnt_' . $key_num;
   $stats{$bin_key}++;
+}
+
+if ( $opts->{show_nomap} ) {
+  close NOMAP;
 }
 
 if ( $opts->{key_calc} ) {
@@ -269,10 +276,16 @@ sub run_key_calc {
   }
 
   for my $key ( keys( %keys ) ) {
+
     if ( scalar( @{$keys{$key}} ) > 1 ) {
+      for my $acc ( @{$keys{$key}} ) {
+        print join( "\t", 'DEG', $acc, $key ) . "\n";
+      }
       $stats{key_dopple}++;
       $stats{key_dopple_cnt} += scalar( @{$keys{$key}} );
     } else {
+      my $acc = $keys{$key}->[0];
+      print join( "\t", 'UNI', $acc, $key ) . "\n";
       $stats{key_unique}++;
     }
   }
@@ -519,7 +532,7 @@ sub get_options {
              'acc_swiss', 'ZtoC', 'bin_max=i', 'grep_only', 'init_mapping=i',
              'show_degen', 'show_mia', 'nocount_degen', 'show_nomap',
              'show_proteo', 'show_all_pep', 'omit_match_seq', 'suppress_brute',
-             'key_calc', 'show_all_flanking' );
+             'key_calc', 'show_all_flanking', "min_nomap=i" );
 
   print_usage() if $opts{help};
 
@@ -533,6 +546,9 @@ sub get_options {
   if ( defined $opts{column_labels} ) {
     $opts{column_labels} ||= 1;
   }
+
+  # This is the minium number of peptides to print out with show_nomap
+	$opts{min_nomap} ||= 0;
 
   # adjust seq idx to 0-based, or set to default.
   if ( $opts{seq_idx} ) {
@@ -573,7 +589,8 @@ sub print_usage {
       --seq_idx        1-based Index of peptide sequence in file, defaults to 1
       --suppress_brute  Do not use brute-force mapping (IDs non-tryptic)
   -n, --n_convert      Convert DxST to NxST if necessary to get matches
-  -m, --mapping_out    Print mapping results, appended to peptide line
+      --mapping_out    Print mapping results, appended to peptide line
+      --min_nomap      Minimum number of mapping peptides for nomap
       --output_file    File to which to print results, else STDOUT
   -c, --column_labels  Peptide file has column labels (headings) to skip.
   -a, --acc_swiss      Pull swiss prot acc from Uniprot fasta heading.
