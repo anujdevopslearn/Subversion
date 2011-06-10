@@ -758,7 +758,7 @@ AT_pabst_transition_instance	3	precursor_ion_mass	Precursor Ion Mass	float	8	0	Y
 AT_pabst_transition_instance	4	ion_rank	Ion Rank	int	4	0	Y		N			N						N			
 AT_pabst_transition_instance	5	relative_intensity	Relative Intensity	float	8	0	Y		N			N						N			
 AT_pabst_transition_instance	6	source_instrument_type_id	Source Instrument Type	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N						N			
-AT_instrument_type	1	instrument_type_id	instrument_type_id	int	4	0	N		Y			N						Y			
+AT_instrument_type	1	instrument_type_id	instrument_type_id	int	4	0	N		Y			N						Y			pkDEFAULT
 AT_instrument_type	2	instrument_type_name	instrument_type_name	varchar	255	0	N		N			Y	text	24		Y	Y	N			
 AT_instrument_type	3	instrument_type_comment	instrument_type_comment	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
 AT_instrument_type	4	is_source_instrument	is_source_instrument	char	1	0	Y		N			N	optionlist			Y	Y	N	Is this a source instrument type	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
@@ -835,12 +835,18 @@ AT_SEL_chromatogram	3	SEL_transition_group_id	SEL Transition Group ID	int	4	0	Y	
 AT_SEL_chromatogram	4	m_score	mProphet m_score	real	8	0	Y		N			N							mProphet's m_score; FDR for all ID's at least this good (lower is better)		
 AT_SEL_chromatogram	5	Tr	Best Peakgroup Retention Time	real	8	0	Y		N			N						N	Retention time for center of top scoring peak group		
 AT_SEL_chromatogram	6	max_apex_intensity	Maximum Apex Intensity	real	8	0	Y		N			N						N	Maximum Apex Intensity (mProphet); a measure of abundance		
-AT_elution_time_type	1	elution_time_type_id	Elution Time Type ID	int	4	0	N		Y			N						Y	Primary Key		
-AT_elution_time_type	2	elution_time_type	Elution Time Type	varchar	255	0	N		N	AT_elution_time_type	elution_time_type_id	N			elution_time_type			Y	"Type of elution time represented, SSRCalc, RTCatalog, etc"		
-AT_elution_time_type	3	source_instrument_type_id	Source Instrument Type ID	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N			instrument_id			Y	"type of intrument observed on, foreign key to instrument type table"		
-AT_elution_time_type	4	is_observed	Is Observed	char	1	0	Y		N			N			is_observed			N	Whether this is an observed type (T/F)		
+AT_elution_time_type	1	elution_time_type_id	Elution Time Type ID	int	4	0	N		Y			Y					N	Y	Primary Key		pkDEFAULT
+AT_elution_time_type	2	elution_time_type	Elution Time Type	varchar	255	0	N		N			Y	text	20		Y	Y	N	"Type of elution time represented, SSRCalc, RTCatalog, etc"		
+AT_elution_time_type	3	opt	Source Instrument Type	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N	optionlist			Y	Y	Y	"type of intrument observed on, foreign key to instrument type table"	"select instrument_type_id, instrument_type_name from $TBAT_INSTRUMENT_TYPE"	
+AT_elution_time_type	4	is_observed	Is Observed	char	1	0	Y		N			Y	optionlist			Y	Y	N	Whether this is an observed type (T/F)	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+AT_elution_time_type	5	date_created	date_created	datetime	8	0	Y		N			N					Y	N			
+AT_elution_time_type	6	created_by_id	created_by_id	int	4	0	Y		N			N					Y	N			
+AT_elution_time_type	7	date_modified	date_modified	datetime	8	0	Y		N			N					Y	N			
+AT_elution_time_type	8	modified_by_id	modified_by_id	int	4	0	Y		N			N					Y	N			
+AT_elution_time_type	9	owner_group_id	owner_group_id	int	4	0	Y		N			N					Y	N			
+AT_elution_time_type	10	record_status	record_status	char	1	0	Y		N			N					Y	N			
 AT_elution_time	1	elution_time_id	Elution Time ID	int	4	0	N		Y			N						Y	Primary Key		
 AT_elution_time	2	elution_time_type_id	Elution Time Type ID	int	4	0	N		N	AT_elution_time_type	elution_time_type_id	N						Y	"Elution time source type, foreign key to elution_time_type table"		
-AT_elution_time	3	elution_time	Elution Time	int	4	0	Y		N			N						Y	Elution time in seconds		
+AT_elution_time	3	elution_time	Elution Time	float	4	0	Y		N			N						N	Elution time in seconds		
 AT_elution_time	4	peptide_sequence	Peptide Sequence	varchar	255	0	Y		N			N						N	Stripped peptide sequence		
 AT_elution_time	5	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	Y		N			N						N	Charge/Mass modified peptide sequence		
