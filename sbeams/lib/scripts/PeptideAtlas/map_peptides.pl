@@ -212,7 +212,7 @@ for my $acc ( keys( %{$acc2seq} ) ) {
     $n_peps = $opts->{bin_max} if $n_peps > $opts->{bin_max};
   }
 #  if ( $opts->{show_nomap} && ( !$n_peps || ($n_peps < 2 ))) {
-  if ( $opts->{show_nomap} && $n_peps > $opts->{min_nomap} ) {
+  if ( $opts->{show_nomap} && $n_peps <= $opts->{min_nomap} ) {
     print NOMAP "$acc\n";
   }
   my $key_num = ( $n_peps > 9 ) ? $n_peps : '0' . $n_peps;
