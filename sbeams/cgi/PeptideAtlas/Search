@@ -425,6 +425,15 @@ sub handle_request {
                    AND DAB.organism_id IS NOT NULL )
     ~;
   }
+  
+  #$sql = qq~
+  #  SELECT ATLAS_BUILD_ID
+  #  FROM $TBAT_ATLAS_BUILD
+  #  WHERE ATLAS_BUILD_ID IN ( $atlas_build_ids )
+  #  AND ATLAS_BUILD_NAME LIKE '%$exact_search_key%'
+  #~;
+  #my @matched_buildids= $sbeams->selectOneColumn($sql);
+
 
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
@@ -644,7 +653,7 @@ sub handle_request {
 					if( ! $search_type_param{single_table} ){
 						$sbeamsMOD->display_page_header(project_id =>$project_id,init_tooltip =>0,onload=>'sortables_init()');
 						print $buffer;
-						print "<BR>";
+            print "<BR>Exact search results: None";
 					}else{
 						$sbeamsMOD->display_page_header(project_id => $project_id);
 						print $buffer;
@@ -801,7 +810,11 @@ sub displayTable{
          $max_n_matches{$resource_type}{$search_key}{$organism_name} = $resource_n_matches;
        }
 			 if(not defined $Distinct_SearchResult{$search_key}{$organism_name}{$build_type}{$rescource_name}){
-					push @{$filtered_result{$resource_type}{$search_key}{$organism_name}} , $row;
+          if($search_key =~ /(\s+|^)$ini_search_key(\s+|$)/i){
+           	push @{$filtered_result{$resource_type}{highpriority}{$search_key}{$organism_name}} , $row;
+          }else{
+            push @{$filtered_result{$resource_type}{lowpriority}{$search_key}{$organism_name}} , $row;
+          }
 			 }
 			 $Distinct_SearchResult{$search_key}{$organism_name}{$build_type}{$rescource_name} = 1;
 	 }
@@ -809,10 +822,11 @@ sub displayTable{
 
   my $pre_resource_type = '';
   foreach my $resource_type (sort {$b cmp $a} keys %filtered_result){
-   	foreach my $search_key (sort {$a cmp $b} keys %{$filtered_result{$resource_type}}){
-			foreach my $organism_name(keys %{$filtered_result{$resource_type}{$search_key}}){
+    foreach my $order (qw(highpriority lowpriority)){
+   	foreach my $search_key (sort {$a cmp $b} keys %{$filtered_result{$resource_type}{$order}}){
+			foreach my $organism_name(keys %{$filtered_result{$resource_type}{$order}{$search_key}}){
 				if( $ROW_COUNT >= $page_size*$page_number && $ROW_COUNT < $page_size*($page_number+1)){
-					$resultset_ref->{data_ref} = \@{$filtered_result{$resource_type}{$search_key}{$organism_name}};      
+					$resultset_ref->{data_ref} = \@{$filtered_result{$resource_type}{$order}{$search_key}{$organism_name}};      
 					my %resource_names = ();
 					my $n_resource_name = 1 ;
 					my $n_builds = scalar keys %{$Distinct_SearchResult{$search_key}{$organism_name}};
@@ -830,8 +844,6 @@ sub displayTable{
 					 }
 					}
 					$n_resource_name = scalar keys %resource_names;
-					
-					#$search_key = @{$filtered_result{$search_key}{$organism_name}}->[0]-> [0];
 
 					if($n_resource_name > 1){
 						$str = 's';
@@ -939,6 +951,7 @@ sub displayTable{
 				}#check row_count
 				$ROW_COUNT++;
 			}
+     }
 		}
   }
 } # end displayTable
