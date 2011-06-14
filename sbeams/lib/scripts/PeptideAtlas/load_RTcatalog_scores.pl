@@ -35,6 +35,12 @@ $atlas = new SBEAMS::PeptideAtlas;
 $atlas->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 $PROG_NAME = basename( $0 );
+## Set up environment
+$ENV{SSRCalc} = '/net/db/src/SSRCalc/ssrcalc';
+
+my $SSRCalculator = new SSRCalculator;
+$SSRCalculator->initializeGlobals3();
+$SSRCalculator->ReadParmFile3();
 
 ## Process options
 GetOptions( \%opts,"verbose:s","quiet","debug:s","testonly",
@@ -150,8 +156,7 @@ sub fillTable{
 
   ## get a list of ELUTION_TIME_ID which have matching elution_time_type_id, peptide_sequence and modified_peptide_sequence
   $sql = qq~
-      SELECT ET.PEPTIDE_SEQUENCE, 
-             ET.MODIFIED_PEPTIDE_SEQUENCE, 
+      SELECT ET.MODIFIED_PEPTIDE_SEQUENCE, 
              ET.ELUTION_TIME_ID, 
              ET.ELUTION_TIME
       FROM $TBAT_ELUTION_TIME ET
@@ -161,12 +166,21 @@ sub fillTable{
   my @rows = $sbeams->selectSeveralColumns($sql);
   my %elution_time_record =();
   foreach my $row (@rows){
-    my ($pep,$modpep, $elution_time_id, $elution_time) = @{$row};
-    $elution_time_record{$pep}{id} = $elution_time_id;
-    $elution_time_record{$pep}{modpep} = $modpep;
-    $elution_time_record{$pep}{elution_time} = $elution_time;
+    my ($modSeq, $elution_time_id, $elution_time) = @{$row};
+    $elution_time = sprintf("%.6f", $elution_time);
+    $elution_time_record{$modSeq}{id} = $elution_time_id;
+    $elution_time_record{$modSeq}{elution_time} = $elution_time;
   }
    
+  ## get a list of peptide sequence that have SSRCalc Hp value
+  $sql = qq~
+      SELECT ET.PEPTIDE_SEQUENCE
+      FROM $TBAT_ELUTION_TIME ET
+      WHERE ET.elution_time_type_id = 4
+    ~;
+  @rows = $sbeams->selectOneColumn($sql);
+  my %elution_time_SSRCalc = map{$_ => 1} @rows;
+
   while ( my $line = <INFILE> ) {
     next if($line =~ /Median/i);
     chomp($line);
@@ -185,14 +199,16 @@ sub fillTable{
       next;
     }
 
-    my $pepSeq = $columns[0];
+    my $modSeq = $columns[0];
     my $median = $columns[1];
     my $SIQR = $columns[2];
     my $mean = $columns[3]; 
     my $stdev = $columns[4];
     my $min = $columns[5];
     my $obs = $columns[6];
-  
+    my $pepSeq = $modSeq;
+    $pepSeq =~ s/[\[\]\d]//g;
+
     ## round to integer 
     #$mean = sprintf("%.0f", $mean);
     #print  $mean/60 , "\t";
@@ -209,23 +225,21 @@ sub fillTable{
 
     # Insert row in elution_time table
     my %rowdata;
-    if(defined $elution_time_record{$pepSeq}){
-      next if($elution_time_record{$pepSeq}{elution_time} == $mean and 
-              $elution_time_record{$pepSeq}{modpep} = $pepSeq);
-     
+    if(defined $elution_time_record{$modSeq}){
+      next if($elution_time_record{$modSeq}{elution_time} == $mean );
       %rowdata=(elution_time =>$mean);
       $sbeams->updateOrInsertRow( update => 1,
                                  table_name  => $TBAT_ELUTION_TIME,
                                  rowdata_ref => \%rowdata,
                                      verbose => $VERBOSE,
                                           PK => 'elution_time_id',
-                                    PK_value => $elution_time_record{$pepSeq}{id},
+                                    PK_value => $elution_time_record{$modSeq}{id},
                                  testonly    => $TESTONLY );
 
      }else{
         %rowdata=(    peptide_sequence => $pepSeq,
                   elution_time_type_id => $elution_time_type_id,
-             modified_peptide_sequence => $pepSeq,
+             modified_peptide_sequence => $modSeq,
                           elution_time => $mean
                  );
        my $id  = $sbeams->updateOrInsertRow(
@@ -236,6 +250,25 @@ sub fillTable{
 															return_PK    => 1,
 																				PK => 'elution_time_id',
 															 testonly    => $TESTONLY );
+       ## insert SSRCalc HP for the peptide
+       next if(defined $elution_time_SSRCalc{$pepSeq});
+       my $hPhoby = sprintf("%.6f", $SSRCalculator->TSUM3($pepSeq));
+       %rowdata=(    peptide_sequence => $pepSeq,
+                  elution_time_type_id => 4,
+             modified_peptide_sequence => $pepSeq,
+                          elution_time => $hPhoby
+                 );
+       
+       $id  = $sbeams->updateOrInsertRow(
+                                    insert => 1,
+                               table_name  => $TBAT_ELUTION_TIME,
+                               rowdata_ref => \%rowdata,
+                               verbose     => $VERBOSE,
+                              return_PK    => 1,
+                                        PK => 'elution_time_id',
+                               testonly    => $TESTONLY );
+
+       $elution_time_SSRCalc{$pepSeq} = 1;
     }
     $counter++;
     print "$counter." if($counter%100 == 0);
