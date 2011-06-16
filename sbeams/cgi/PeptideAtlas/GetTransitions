@@ -43,10 +43,12 @@ $PROG_NAME = 'GetTransitions';
 my $pabst_build_id;
 
 my $is_html = 0;
+my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
 
 main();
 $sbeams->profile_sql( list => 1 );
 exit(0);
+my %rs_params;
 
 # Main Program
 sub main 
@@ -66,7 +68,8 @@ sub main
   my $n_params_found = $sbeams->parse_input_parameters(
       q=>$q,parameters_ref=>\%parameters);
 
-  # $sbeams->printCGIParams($q);
+
+  %rs_params = $sbeams->parseResultSetParams(q=>$q);
 
   # Process generic "state" parameters before we start
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
@@ -243,6 +246,8 @@ sub print_form {
     my $id = 'ID="protein_name_constraint"';
     $form =~ s/(NAME=\"protein_name_constraint\")/$1 $id/;
 
+    my $rt_select = get_rt_select( $parameters{rt_type} );
+
     # FINDME
     my ( $sub_form ) = $best_peptide->get_change_form( form_only => 1, hide_buttons => 1, shade_defs => 1, set_params => \%parameters );
     $sub_form =~ s/tbl_visible/tbl_hidden/gm;
@@ -268,6 +273,12 @@ sub print_form {
     $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Maximum m/z:</B></TD>$max_help<TD><INPUT TYPE=TEXT NAME=max_mz SIZE=10 VALUE=$parameters{max_mz}></INPUT></TD></TR> ~;
 #    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Allowable Modifications:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$select_lists->[1]</TD></TR> ~;
 
+    my $rt_help =  "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Select type of RT value to show in results'</TD>";
+
+    unless ( $sbeams->isGuestUser() ) {
+      $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Elution Time Type</B></TD>$rt_help<TD>$rt_select</INPUT></TD></TR> ~;
+    }
+
     print qq~
     $form
     ~;
@@ -277,6 +288,27 @@ sub print_form {
     $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
 
 } # end print_form
+
+sub get_rt_select {
+  my $rt_type = shift || 'SSRCalc';
+  my $rt_select = "<SELECT NAME=rt_type>\n";
+
+  my $sql = qq~
+  SELECT DISTINCT elution_time_type FROM $TBAT_ELUTION_TIME_TYPE 
+  WHERE record_status != 'D' 
+  ~;
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+
+#  for my $type ( 'SSRCalc', 'RT_catalog Chipcube', 'RT_catalog QTrap5500' ) {
+  while ( my @row = $sth->fetchrow_array() ) {
+    my $type = $row[0];
+    my $selected = ( $rt_type eq $type ) ? 'selected' : '';
+    $rt_select .= "<OPTION VALUE='$type' $selected>$type</OPTION>\n";
+  }
+  $rt_select .= "</SELECT>\n";
+  return $rt_select;
+}
 
 sub get_cmod_select {
   my $curr_val = shift || '';
@@ -362,7 +394,6 @@ sub fetch_transitions {
   my $TABLE_NAME = $parameters{'QUERY_NAME'};
 
   #### If the apply action was to recall a previous resultset, do it
-  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
 
 
   #########################################################################
@@ -623,12 +654,29 @@ sub fetch_transitions {
 #    my $note = $sbeams->makeInfoText( "Note: masses are mono-isotopic" );
 #    $content .= "<BR>$note\n"  if $is_html;
 
+  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs' );
+
+  my $ssr_field = 'SSRCalc_relative_hydrophobicity';
+  my $ssr_clause = '';
+  my $ssr_join = '';
+  if ( $parameters{rt_type} || $parameters{rt_type} ne 'SSRCalc' ) {
+    $headings[13] = 'RT_Cat';
+    $ssr_field = 'elution_time';
+    $ssr_join = qq~
+     LEFT JOIN $TBAT_ELUTION_TIME ET ON ET.modified_peptide_sequence = PP.peptide_sequence
+     LEFT JOIN $TBAT_ELUTION_TIME_TYPE ETT ON ET.elution_time_type_id = ETT.elution_time_type_id
+    ~;
+
+    $ssr_clause = " AND (elution_time_type = '$parameters{rt_type}' OR elution_time_type IS NULL)\n";
+      
+  }
+
     my $lib_sql = qq~
-    SELECT DISTINCT preceding_residue, peptide_sequence, following_residue,
+    SELECT DISTINCT preceding_residue, PP.peptide_sequence, following_residue,
     synthesis_adjusted_score, transition_source, precursor_ion_mass, 
     precursor_ion_charge, fragment_ion_mass, fragment_ion_charge,
     fragment_ion_label, ion_rank, relative_intensity, 
-    SSRCalc_relative_hydrophobicity, biosequence_name,
+    $ssr_field, biosequence_name,
     merged_score, n_observations, source_build
     FROM $TBAT_PABST_PEPTIDE PP 
     JOIN $TBAT_PABST_PEPTIDE_MAPPING PM 
@@ -637,6 +685,7 @@ sub fetch_transitions {
     ON PT.pabst_peptide_id = PP.pabst_peptide_id 
     JOIN $TBAT_BIOSEQUENCE BS
     ON BS.biosequence_id = PM.biosequence_id 
+    $ssr_join
     WHERE pabst_build_id = $parameters{pabst_build_id}
       $pabst_build_clause
       $atlas_build_clause
@@ -648,13 +697,18 @@ sub fetch_transitions {
 --      $n_genome_locations_clause
       $peptide_length_clause
       $biosequence_name_clause
+      $ssr_clause
     ORDER BY biosequence_name, 
-    synthesis_adjusted_score DESC, peptide_sequence,
+    synthesis_adjusted_score DESC, PP.peptide_sequence,
     ion_rank ASC, relative_intensity DESC,  
     precursor_ion_charge ASC
     ~;
 
   my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs' );
+
+  if ( $parameters{rt_type} && $parameters{rt_type} ne 'SSRCalc' ) {
+    $headings[13] = 'RT_Cat';
+  }
 
   #  peptides_only
   if ( $parameters{peptides_only} ) {
@@ -921,7 +975,7 @@ sub fetch_transitions {
       $row[4] = $src_name{$row[4]};
       $row[7] = sprintf( "%0.2f", $row[7] );
       $row[3] = sprintf( "%0.2f", $row[3] );
-      $row[12] = sprintf( "%0.1f", $row[12] );
+      $row[12] = ( $row[12] ) ? sprintf( "%0.1f", $row[12] ) : '';
       if ( $row[11] ) {
         $row[11] = int( $row[11] );
       } elsif ( $is_html ) {
@@ -1123,14 +1177,15 @@ sub fetch_transitions {
 
 
       
-      if ( $is_html ) {
-        $content .= "<BR><BR><TABLE>$html</TABLE> $gXML" 
-      } else {
 				my $rs = $atlas->get_cached_resultset( rs_name => $rs_name );
+      if ( $is_html ) {
+        $content .= "<BR><BR><TABLE>$html</TABLE> $gXML";
+
+      } else {
 
         $sbeams->displayResultSet( resultset_ref => $rs,
                              query_parameters_ref=>\%parameters,
-                             rs_params_ref=> {},
+                             rs_params_ref=> \%rs_params,
                              url_cols_ref=> [],
                              hidden_cols_ref=> {},
                              max_widths=> {},
