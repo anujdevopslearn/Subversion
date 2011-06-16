@@ -847,6 +847,6 @@ AT_elution_time_type	9	owner_group_id	owner_group_id	int	4	0	Y		N			N					Y	N
 AT_elution_time_type	10	record_status	record_status	char	1	0	Y		N			N					Y	N			
 AT_elution_time	1	elution_time_id	Elution Time ID	int	4	0	N		Y			N						Y	Primary Key		
 AT_elution_time	2	elution_time_type_id	Elution Time Type ID	int	4	0	N		N	AT_elution_time_type	elution_time_type_id	N						Y	"Elution time source type, foreign key to elution_time_type table"		
-AT_elution_time	3	elution_time	Elution Time	float	4	0	Y		N			N						N	Elution time in seconds		
+AT_elution_time	3	elution_time	Elution Time	float	4	0	Y		N			N						N	Elution time in minutes		
 AT_elution_time	4	peptide_sequence	Peptide Sequence	varchar	255	0	Y		N			N						N	Stripped peptide sequence		
 AT_elution_time	5	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	Y		N			N						N	Charge/Mass modified peptide sequence		
