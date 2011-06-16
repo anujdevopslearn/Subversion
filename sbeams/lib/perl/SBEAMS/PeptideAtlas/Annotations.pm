@@ -447,6 +447,7 @@ sub get_column_defs {
     'Intensity' => 'Relative intensity of peak in CID spectrum, scaled to 10000 units',
     'CE' => 'Collision energy, the kinetic energy conferred to the peptide ion and resulting in peptide fragmentation. (eV)',
     'RT' => 'Peptide retention time( in minutes ) in the LC/MS system.',
+    'RT_Cat' => 'Peptide retention time(minutes) on specified LC/MS system.',
     'SSRT' => "Sequence Specific Retention time provides a hydrophobicity measure for each peptide using the algorithm of Krohkin et al. Version 3.0 <A HREF=http://hs2.proteome.ca/SSRCalc/SSRCalc.html target=_blank>[more]</A>",
     'Instr' => 'Model of mass spectrometer.',
     'Annotator' => 'Person/lab who contributed validated transition.',
