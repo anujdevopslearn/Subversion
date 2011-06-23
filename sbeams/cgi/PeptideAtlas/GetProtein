@@ -1107,7 +1107,7 @@ sub handle_request {
 		foreach my $line (<IN>){
 			chomp $line ;
 			my (@spids,$plate,$tube);
-			if( $line =~ /TP\d+,([^,]+),(\w),(\d+),.*VE.+_ISBHOT(0[012]\d).*/ || $line =~ /TP\d+,([^,]+),(\w),(\d+).*,ISBHOT(0[012]\d).*/){
+			if( $line =~ /TP\d+,([^,]+),(\w),(\d+),.*VE.+_ISBHOT(0[0123]\d).*/ || $line =~ /TP\d+,([^,]+),(\w),(\d+).*,ISBHOT(0[0123]\d).*/){
 				$plate = "ISBHOT$4";
 				@spids = split(/\./,$1);
         if(length($3) == 1){
