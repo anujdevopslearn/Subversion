@@ -1822,7 +1822,7 @@ sub postProcessResultset_Origene{
 	foreach my $line (<IN>){
 		chomp $line ;
     my ($tpid, @spids,$tube);
-		if( $line =~ /(TP\d+),([^,]+),(\w),(\d+),.*VE.+_ISBHOT(0[012]\d).*/ || $line =~ /(TP\d+),([^,]+),(\w),(\d+).*,ISBHOT(0[012]\d).*/){
+		if( $line =~ /(TP\d+),([^,]+),(\w),(\d+),.*VE.+_ISBHOT(0[0123]\d).*/ || $line =~ /(TP\d+),([^,]+),(\w),(\d+).*,ISBHOT(0[0123]\d).*/){
 		  $tpid = $1;
 		  @spids = split(/\./,$2);
       $tube = "ISBHOT$5-$3$4";
