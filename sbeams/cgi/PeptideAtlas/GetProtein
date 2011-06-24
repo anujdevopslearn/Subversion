@@ -411,7 +411,6 @@ sub handle_request {
                                             object => 'namelist',
                                               name => 'Protein name',
                                               type => 'direct' );
-      print "$gaggle\n";
 
 
       print $q->textfield( "protein_name", $protein_name);
@@ -434,6 +433,7 @@ sub handle_request {
       print "</nobr>";
 
       print "</P>";
+      print "$gaggle\n";
   }
 
 
