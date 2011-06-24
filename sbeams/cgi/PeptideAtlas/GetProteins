@@ -1828,10 +1828,10 @@ sub postProcessResultset_Origene{
       $tube = "ISBHOT$5-$3$4";
     }
 		foreach my $a (@spids){
-		  $prot2tube{$a} = $tube;
+		  $prot2tube{$a} .= "'$tube'";
       $tube2Origene{$tube} = $tpid; 
 		  if($a =~ /(\S+)\-\d+/){
-			 $prot2tube{$1} = $tube;
+			 $prot2tube{$1} .= "'$tube'";
 		  } 
 		}
 	} 
@@ -1897,7 +1897,7 @@ sub postProcessResultset_Origene{
          $row_ref -> [$cols->{seq_unique_prots_in_group}] =  $bioseq_info{$prot}{seq_unique_prots_in_group};
          next if($parameters{tube_constraint} ne '' and "$plate$num" !~ /$parameters{tube_constraint}/ );
          next if ($parameters{sku_constraint} ne '' and $tube2Origene{$plate.$num} !~ /$parameters{sku_constraint}/);
-				 if(defined $prot2tube{$prot} and  "$plate$num" eq $prot2tube{$prot}){
+				 if(defined $prot2tube{$prot} and  $prot2tube{$prot} =~ /'$plate$num'/){
             $row_ref -> [$cols->{expected_prot}] =  'YES' #$prot2tube{$prot};
          }else{
             $row_ref -> [$cols->{expected_prot}] = '';
