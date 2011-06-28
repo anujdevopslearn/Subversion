@@ -111,6 +111,7 @@ sub spectrum_search {
     FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM CLS
     JOIN $TBAT_CONSENSUS_LIBRARY CL ON CL.consensus_library_id = CLS.consensus_library_id
     WHERE sequence = '$args{seq}'
+    AND file_path IS NULL
     $charge
     $m_seq
     $lib
@@ -118,6 +119,60 @@ sub spectrum_search {
   my @rows = $sbeams->selectSeveralColumns( $sql );
   return \@rows || [];
 }
+
+
+sub has_QTOF_stepping {
+  my $self = shift;
+  my %args = @_;
+
+  for my $opt ( qw( seq ) ) {
+    die( "Missing required parameter $opt" ) unless defined $args{$opt};
+  }
+
+  my $sql =<<"  END";
+  SELECT consensus_library_spectrum_id 
+    FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM CLS
+    WHERE consensus_library_id = 244
+    AND sequence = '$args{seq}'
+  END
+  my @rows = $sbeams->selectSeveralColumns( $sql );
+  return ( scalar( @rows ) ) ? 1 : 0;
+}
+
+sub get_QTOF_stepping {
+  my $self = shift;
+  my %args = @_;
+
+  for my $opt ( qw( seq ) ) {
+    die( "Missing required parameter $opt" ) unless defined $args{$opt};
+  }
+
+  my %libmap = ( 242 => 'low',
+                 243 => 'mlow', 
+                 244 => 'medium',
+                 245 => 'mhigh', 
+                 246 => 'high' );
+	my $libs = join( ',', keys( %libmap ));
+
+  my $sql =<<"  END";
+  SELECT modified_sequence, charge, consensus_library_id, 
+         consensus_library_spectrum_id 
+    FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM CLS
+    WHERE consensus_library_id IN ( $libs )
+    AND sequence = '$args{seq}'
+  END
+  my %ce;
+  return \%ce if $sbeams->isGuestUser();
+
+  for my $row ( $sbeams->selectSeveralColumns( $sql ) ) {
+    my $key = $row->[0] . $row->[1];
+    $ce{$key} ||= {};
+    $ce{$key}->{$libmap{$row->[2]}} = $row->[3];
+  }
+  return \%ce;
+
+}
+
 
 sub get_spectrum_peaks {
 	my $self = shift;
