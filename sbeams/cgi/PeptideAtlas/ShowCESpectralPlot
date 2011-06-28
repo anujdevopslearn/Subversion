@@ -490,7 +490,7 @@ sub get_top_peaks {
   }
   for my $ce ( qw( low mlow medium mhigh high ) ) {
     next unless $results->{spectra}->{$ce};
-    $top_peaks{$ce}->{Fp} *= ( (2.2 * $ymax)/ $fpmax ); 
+    $top_peaks{$ce}->{Fp} *= ( (1.2 * $ymax)/ $fpmax ); 
   }
 
 
