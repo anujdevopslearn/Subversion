@@ -972,6 +972,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
   my $nsib_idx = 5;      # num siblings
   my $smpl_idx = 6;      # sample IDs
   my $spec_idx = 7;      # consensus spectrum
+  my $ce_idx = 8;      # consensus spectrum
 
   my $modSQL = qq~
   SELECT distinct
@@ -1015,6 +1016,11 @@ if ($apply_action =~ /QUERY|GO/i ) {
   #### If a result is returned
   if ( scalar @mod_peps ) {
     $modHTML .= $sbeams->getPopupDHTML();
+
+    my $ce_ids;
+    if ( $cs_obj->has_QTOF_stepping( seq => $peptide_sequence[0] ) ) {
+      $ce_ids = $cs_obj->get_QTOF_stepping( seq => $peptide_sequence[0] ); 
+    }
 
 
     #### Loops through resultset and do formatting
@@ -1061,6 +1067,22 @@ if ($apply_action =~ /QUERY|GO/i ) {
 				$pep->[$spec_idx] = $rest;
 			}
 			
+      my $ce_key = $pep->[$mseq_idx] . $pep->[$chrg_idx];
+      my $ce_link = '&nbsp;';
+      if ( !$sbeams->isGuestUser() && $ce_ids->{$ce_key} ) {
+        my $title = "View +$pep->[$chrg_idx] spectra for $pep->[$mseq_idx] on QTOF at various CE values";
+        my $max_mz = ( int( $pep->[$mz_idx] * $pep->[$chrg_idx] / 200 ) * 200 );
+        my $param_str = "xmin=200;xmax=$max_mz";
+        for my $opt ( 'medium','high','low','mhigh', 'mlow' ) {
+          my $id = $ce_ids->{$ce_key}->{$opt} || '';
+          $param_str .= ";$opt=$id";
+        }
+        
+        $ce_link = "<A HREF='ShowCESpectralPlot?$param_str' TARGET='_CE_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
+
+      }
+      $pep->[$ce_idx] = $ce_link unless $sbeams->isGuestUser();
+
 
       # Final formatting for list items
       $pep->[$mz_idx] = sprintf("%0.4f", $pep->[$mz_idx]);  # parent m/z
@@ -1069,10 +1091,13 @@ if ($apply_action =~ /QUERY|GO/i ) {
       $pep->[$nsib_idx] = sprintf("%0.1f", $pep->[$nsib_idx]) if $pep->[$nsib_idx]; # number of siblings
       $pep->[$smpl_idx] = sample_view( $pep->[$smpl_idx] ); # Sample IDs, keep list under control
       $pep->[$mseq_idx] = $sbeamsMOD->formatMassMods( $pep->[$mseq_idx] );
+
     }
 
     #### Add table column headings
-    unshift @mod_peps, ['Modified Sequence', 'Charge', 'Mono Parent m/z', 'Best Prob', '# Obs', '# Siblings', 'Sample IDs', 'Consensus Spectra' ];
+    my $column_headings = ['Modified Sequence', 'Charge', 'Mono Parent m/z', 'Best Prob', '# Obs', '# Siblings', 'Sample IDs', 'Consensus Spectra' ];
+    push @{$column_headings}, 'CE_range' unless $sbeams->isGuestUser();
+    unshift @mod_peps, $column_headings;
 
     #### Format table
     $modHTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
@@ -1085,7 +1110,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
                                                 );
     #### Display table
     print "<TABLE WIDTH=600><BR>$modHTML</TABLE>\n";
-  }
+    }
 
   $log->debug( "End modified peptides " . time() );
 
@@ -1300,8 +1325,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
       my $chromatogram_entry = '';
 
       #### If this is a QTRAP 5500 mzML file ... (HACK!!)
-      if (($mzml_fname =~ /^5Q/) || ($mzml_fname =~ /^QT_ZH/) ||
-          ($mzml_fname =~ /^Z5Q/) ) {
+      if ( 0 && ( ($mzml_fname =~ /^5Q/) || ($mzml_fname =~ /^QT_ZH/) ||
+          ($mzml_fname =~ /^Z5Q/) ) ) {
 
         # Get the full pathname for the file
         my $SRMAtlas_data_dir = '/regis/sbeams4/nobackup/edeutsch/HumanMRMAtlas';
