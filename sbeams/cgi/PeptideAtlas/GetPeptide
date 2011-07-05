@@ -1318,88 +1318,89 @@ if ($apply_action =~ /QUERY|GO/i ) {
       my @trace_array;
       my %trace;
 
-      #### Temporary extreme hack: get infos from mzML file.
-      # What I really need is to get all the infos I need from the
-      # SBEAMS database via SEL_experiment, run, chromatogram, and
-      # transition tables.
-      my $chromatogram_entry = '';
+      my $chromatogram_entry = '';  #empty, unless we can find chromgram info
 
-      #### If this is a QTRAP 5500 mzML file ... (HACK!!)
-      if ( 0 && ( ($mzml_fname =~ /^5Q/) || ($mzml_fname =~ /^QT_ZH/) ||
-          ($mzml_fname =~ /^Z5Q/) ) ) {
+      #### If this is a QTRAP 5500 mzML file, get info from special
+      #### table, QT5500_TRANSITION_GROUP.
+      #### This table needs to be updated each time the Human SRMAtlas is rebuilt.
+      #### Takes ~3 days. Clear existing table, then reload with
+      #### $SBEAMS/lib/scripts/PeptideAtlas/load_Q55500_transition_groups.PL
+      #### PeptideChromatogramExtractor java code is now failing
+      #### for all QT_ZH* files (see /Appears that all the QT files/ in
+      #### Terry's log), so for now
+      #### we won't display chromatogram icons/links for them.  07/05/11
+      if ( ( ($mzml_fname =~ /^5Q/) ||
+           #( $mzml_fname =~ /^QT_ZH/) ||
+           ( $mzml_fname =~ /^Z5Q/) ) ) {
 
-        # Get the full pathname for the file
-        my $SRMAtlas_data_dir = '/regis/sbeams4/nobackup/edeutsch/HumanMRMAtlas';
-        my $qtrap_data_dir = "$SRMAtlas_data_dir/QTrap5500/Runs_By_Order/";
-        my @file_list = split(" ", `find $qtrap_data_dir -name $mzml_fname -print`);
-        my $mzml_pathname = shift @file_list;
+        my $sql = qq~
+          SELECT *
+          FROM $TBAT_QT5500_TRANSITION_GROUP QTG
+          WHERE QTG.mzml_filename = '$mzml_fname'
+        ~;
 
-        my ($q1, $q1_charge2, $q1_charge3, $precursor_neutral_mass);
-
-        # Make system call to readmzXML to get precursor m/z, RT.
-        my $mzml_info = `/proteomics/sw/tpp/bin/readmzXML -b $mzml_pathname $cycle`;
-        #print $mzml_info;
-        $mzml_info =~ /precursorMZ:\s*(\d+\.\d+)/;
-        my $precursor_mz = $1;
-        $mzml_info =~ /scanTime:\s*(\d+\.\d+)/;
-        $rt = $1;
-        #print "Precursor m/z: $precursor_mz RT: $rt<br>\n";
-        if (! ($rt && $precursor_mz)) {
-          die "Can't find RT and/or prec. m/z for $cycle in $mzml_pathname".
-              " using readmzXML.";
-        }
-
-        # Compute precursor neutral mass for this peptide
-        # (Could also compute theoretical mass from pepseq + mods)
-        my $precursor_charged_mass = $precursor_mz * $precursor_charge;
-        # Subtract mass for each proton added when precursor was charged
-        $precursor_neutral_mass = $precursor_charged_mass - ($precursor_charge * 1.00727638);
-
-        #### End of extreme hack
-
-        # We must invent the ion because we don't have transition list
-	my $ion = "y1";        ### INVENTED!!!
-	my $ion_charge = '1';    ### INVENTED!!!
-	# remove mods from pepseq
-	my $modified_pepseq = $pep->[$mseq_idx];
-        my $pepseq = $modified_pepseq;
-	$pepseq =~ s/\[.+?\]//g;
-	my $fragmentor = 125;  ### INVENTED!!! but maybe unused.
-        # There are fields for CE & RT in the Spectrum table,
-        # but unfortunately for SRM atlas these values are not loaded.
-	my $ce = $pep->[$ce_idx] ?  $pep->[$ce_idx] : 99;
-        if (! $rt ) {
-	  $rt = $pep->[$rt_idx] ?  $pep->[$rt_idx] : 99;
-        }
-	my $delta_rt = 5.00;   ### INVENTED!!! but maybe unused.
-
-	$at_least_one_chromatogram = 1;
-	my $chrom_img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/chromatogram.gif' TITLE='View chromatogram for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
-
+        my @rows = $sbeams->selectSeveralColumns($sql);
+        if (scalar @rows) {
+	  my $first_row = shift @rows;
+	  my ($qt5500_transition_group_id,
+              $mzml_filename, $mzml_pathname, $cycle, $precursor_charge,
+	       $precursor_mz, $rt) = @{$first_row};
+          $mzml_pathname .= "/$mzml_filename";
         
-        #print "<p>Charge $precursor_charge Precursor Neutral Mass $precursor_neutral_mass Precursor Charged Mass $precursor_charged_mass<br>\n";
 
-	$chromatogram_entry =
-	  qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?~;
-	$chromatogram_entry .= ""
-#	."&ion=$ion"  #multiple; different per trace.
-#	."&ion_charge=$ion_charge"  #multiple
-	."&precursor_charge=$precursor_charge"  #multiple
-	."&pepseq=$pepseq"
-	."&modified_pepseq=$modified_pepseq"
-#	."&q1=$q1"  #multiple
-#	."&q3=$q3"  #multiple
-	."&mzml_basename=$mzml_basename"
-	."&mzml_pathname=$mzml_pathname"
-#	."&ce=$ce"
-	."&rt=$rt"  #multiple
-	."&delta_rt=$delta_rt"
-	."&fragmentor=$fragmentor"
-	."&precursor_neutral_mass=$precursor_neutral_mass";
+	  my ($q1, $q1_charge2, $q1_charge3, $precursor_neutral_mass);
 
-         $chromatogram_entry =
-	  qq~$chromatogram_entry" TARGET=blank>$chrom_img</A>~;
+	  # Compute precursor neutral mass for this peptide
+	  # (Could also compute theoretical mass from pepseq + mods)
+	  my $precursor_charged_mass = $precursor_mz * $precursor_charge;
+	  # Subtract mass for each proton added when precursor was charged
+	  $precursor_neutral_mass = $precursor_charged_mass -
+		   ($precursor_charge * 1.00727638);
 
+	  # We must invent the ion because we don't have transition list
+	  my $ion = "y1";        ### INVENTED!!!
+	  my $ion_charge = '1';    ### INVENTED!!!
+	  # remove mods from pepseq
+	  my $modified_pepseq = $pep->[$mseq_idx];
+	  my $pepseq = $modified_pepseq;
+	  $pepseq =~ s/\[.+?\]//g;
+	  my $fragmentor = 125;  ### INVENTED!!! but maybe unused.
+	  # There are fields for CE & RT in the Spectrum table,
+	  # but unfortunately for SRM atlas these values are not loaded.
+	  my $ce = $pep->[$ce_idx] ?  $pep->[$ce_idx] : 99;
+	  if (! $rt ) {
+	    $rt = $pep->[$rt_idx] ?  $pep->[$rt_idx] : 99;
+	  }
+	  my $delta_rt = 5.00;   ### INVENTED!!! but maybe unused.
+
+	  $at_least_one_chromatogram = 1;
+	  my $chrom_img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/chromatogram.gif' TITLE='View chromatogram for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
+
+	  
+	  #print "<p>Charge $precursor_charge Precursor Neutral Mass $precursor_neutral_mass Precursor Charged Mass $precursor_charged_mass<br>\n";
+
+	  $chromatogram_entry =
+	    qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?~;
+	  $chromatogram_entry .= ""
+  #	."&ion=$ion"  #multiple; different per trace.
+  #	."&ion_charge=$ion_charge"  #multiple
+	  ."&precursor_charge=$precursor_charge"  #multiple
+	  ."&pepseq=$pepseq"
+	  ."&modified_pepseq=$modified_pepseq"
+  #	."&q1=$q1"  #multiple
+  #	."&q3=$q3"  #multiple
+	  ."&mzml_basename=$mzml_basename"
+	  ."&mzml_pathname=$mzml_pathname"
+  #	."&ce=$ce"
+	  ."&rt=$rt"  #multiple
+	  ."&delta_rt=$delta_rt"
+	  ."&fragmentor=$fragmentor"
+	  ."&precursor_neutral_mass=$precursor_neutral_mass";
+
+	   $chromatogram_entry =
+	    qq~$chromatogram_entry" TARGET=blank>$chrom_img</A>~;
+
+	} # end if there is info for this pep in the QT5500_transition_group table
       } # end if Qtrap 5500
 
       $pep->[$prob_idx] = sprintf("%0.3f", $pep->[$prob_idx]) unless $pep->[$prob_idx] == 1;

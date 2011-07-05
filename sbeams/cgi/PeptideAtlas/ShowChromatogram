@@ -108,24 +108,28 @@ sub processRequest {
 	SELECT distinct
                SELR.spectrum_filename,
 	       SELE.data_path,
-	       SELTG.stripped_peptide_sequence,
-	       SELTG.modified_peptide_sequence,
-	       SELTG.monoisotopic_peptide_mass,
-	       SELTG.peptide_charge,
+	       SELPI.stripped_peptide_sequence,
+	       SELPI.modified_peptide_sequence,
+	       SELPI.monoisotopic_peptide_mass,
+	       SELPI.peptide_charge,
 	       SELTG.q1_mz,
 	       SELTG.collision_energy,
 	       SELTG.retention_time,
 	       SELTG.isotype,
-	       SELTG.protein_name,
-               SELC.m_score,
-               SELC.Tr,
-               SELC.max_apex_intensity,
+	       SELTG.experiment_protein_name,
+               SELPG.m_score,
+               SELPG.Tr,
+               SELPG.max_apex_intensity,
                SELTG.SEL_transition_group_id
 	  FROM $TBAT_SEL_CHROMATOGRAM SELC
 	  JOIN $TBAT_SEL_TRANSITION_GROUP SELTG
 	       ON ( SELTG.SEL_transition_group_id = SELC.SEL_transition_group_id )
+	  JOIN $TBAT_SEL_PEAK_GROUP SELPG
+	       ON ( SELPG.SEL_chromatogram_id = SELC.SEL_chromatogram_id )
+	  JOIN $TBAT_SEL_PEPTIDE_ION SELPI
+               ON ( SELPI.SEL_peptide_ion_id = SELTG.SEL_peptide_ion_id )
 	  JOIN $TBAT_SEL_RUN SELR
-	       ON ( SELR.SEL_run_id = SELC.SEL_run_id )
+	       ON ( SELR.SEL_run_id = SELTG.SEL_run_id )
 	  JOIN $TBAT_SEL_EXPERIMENT SELE
 	       ON ( SELE.SEL_experiment_id = SELR.SEL_experiment_id )
 	 WHERE SELC.SEL_chromatogram_id = $parameters{'SEL_chromatogram_id'}
@@ -165,7 +169,7 @@ sub processRequest {
 	my @rows = $sbeams->selectSeveralColumns($sql);
         my $string = "";
         for my $row (@rows) {
-          $string .= "$row->[0],$row->[1],";
+          $string .= "$row->[0],$row->[1]," if ($row->[1]);
         }
         return $string;
       }
@@ -197,6 +201,8 @@ sub processRequest {
       my $chromgram_basename = "${mzml_basename}_${pepseq}_${timestamp}";
 
       # Create name for json file
+      ### 06/28/11: why not $PHYSICAL_BASE_DIR/tmp? I seem to recall
+      ###   I tried that, but it didn't work, but I can't remember why.
       my $physical_tmp_dir = "$PHYSICAL_BASE_DIR/images/tmp";
       my $html_tmp_dir = "$HTML_BASE_DIR/images/tmp";
       my $json_fname = "$chromgram_basename.json";
@@ -294,7 +300,7 @@ sub processRequest {
         my $java_dir = "$PHYSICAL_BASE_DIR/lib/java/SBEAMS/SRM";
         my $java_cmd =
           "$java_dir/PeptideChromatogramExtractor.sh ".
-          "$tsv_pathname $mzml_pathname $chromgram_basename $rt";
+          "$tsv_pathname $mzml_pathname $chromgram_basename $rt $PHYSICAL_BASE_DIR";
 
         #print "<p>Current working directory:</p>\n";
         #my $shell_result = `pwd 2>&1`;
@@ -309,7 +315,7 @@ sub processRequest {
           "${chromgram_basename}_PeptideChromatogram_${pepseq}_${first_charge}";
         my $json_fname_orig = "$chromgram_basename_orig.json";
 
-        #  Move the JSON file into $SBEAMS/usr/javascript/chromavis/js/data
+        #  Move the JSON file into a common tmp dir
         #  with a new name that is still unique.
         my $mv_cmd = "mv -f $java_dir/$json_fname_orig $json_physical_pathname";
         #print "<p>Moving using command $mv_cmd</p>\n";
@@ -330,6 +336,8 @@ sub processRequest {
         print "<!-- srm2json cmd: $srm2json_cmd-->\n";
         my $shell_result = `$srm2json_cmd 2>&1`;
         print "<!-- srm2json result: $shell_result-->\n";
+      } else {
+	die "<p>Need spectrum file with .mzML OR .mzXML extension; if .mzML, also need precursor_neutral_mass.<\p>\n";
       }
     }
 
