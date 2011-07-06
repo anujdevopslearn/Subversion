@@ -3,7 +3,9 @@ use strict;
 use DBI;
 use Getopt::Long;
 use File::Basename;
+use Cwd qw( abs_path );
 use FindBin;
+use Data::Dumper;
 
 use lib "$FindBin::Bin/../../perl";
 use lib '/net/db/projects/spectraComparison';
@@ -14,6 +16,7 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::BestPeptideSelector;
 use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::PeptideFragmenter;
 
 use FragmentationComparator;
 use SBEAMS::Proteomics::PeptideMassCalculator;
@@ -29,13 +32,15 @@ $atlas->setSBEAMS( $sbeams );
 my $pep_sel = SBEAMS::PeptideAtlas::BestPeptideSelector->new();
 $pep_sel->setSBEAMS( $sbeams );
 
-my $instrument_map = $pep_sel->getInstrumentMap();
-#for my $i ( sort( keys( %{$instrument_map} ) ) ) { print "$i => $instrument_map->{$i}\n"; }
+my $instrument_map = $pep_sel->getInstrumentMap( src_only => 1 );
+#for my $i ( sort( keys( %{$instrument_map} ) ) ) { print "$i => $instrument_map->{$i}\n"; } exit;
 
 my %instr_type = reverse( %{$instrument_map} );
 #for my $i ( sort( keys( %instr_type ) ) ) { print "$i => $instr_type{$i}\n"; }
 
 my $massCalculator = new SBEAMS::Proteomics::PeptideMassCalculator;
+
+my $peptide_fragmentor = new SBEAMS::PeptideAtlas::PeptideFragmenter( MzMaximum => 3000, MzMinimum => 100 );
 
 # Will be populated in process_args
 my @mrm_libs;
@@ -53,6 +58,7 @@ my $fc; #DELETEME
 my @trans; #DELETEME
 my %model_map = ( QTrap4000 => '/net/db/projects/spectraComparison/FragModel_4000QTRAP.fragmod',
                   QTOF => '/net/db/projects/spectraComparison/FragModel_AgilentQTOF.fragmod', 
+                  QQQ => '/net/db/projects/spectraComparison/FragModel_AgilentQTOF.fragmod', 
                   IonTrap => '/net/db/projects/spectraComparison/FragModel_IonTrap.fragmod', 
                   QTrap5500 => '/net/db/projects/spectraComparison/FragModel_QTRAP5500.fragmod', 
              );
@@ -81,7 +87,6 @@ my $mrm_peak_limit = $transition_limit + 10;
 my $paranoid = 0;
 $paranoid++ if $args->{verbose} > 1;
 
-use Data::Dumper;
 my %stats;
 
 { # Main 
@@ -122,24 +127,59 @@ my %stats;
   # Looks like we have a build to load - insert build record
   my $build_id;
   if ( $args->{load} ) {
+    my $conffile = abs_path( $args->{conf} );
     my $rowdata = {  build_name => $args->{name},
                     build_comment => $args->{description},
                       organism_id => $organism_id,
                  parameter_string => $args->{parameters},
-                   parameter_file => $args->{conf}, 
+                   parameter_file => $conffile,
                biosequence_set_id => $args->{biosequence_set_id}, 
                        project_id => $args->{project_id}, 
+                       build_date => 'CURRENT_TIMESTAMP', 
                        is_default => 'T'
                     };
   
     $build_id = $sbeams->updateOrInsertRow( insert => 1,
                                        table_name  => $TBAT_PABST_BUILD,
                                        rowdata_ref => $rowdata,
+                                       verbose     => $args->{verbose},
                                        verbose     => 0, 
-#                                       verbose     => $args->{verbose},
                                       return_PK    => 1,
                                                 PK => 'pabst_build_id',
                                        testonly    => $args->{testonly} );
+
+    # TODO add build_file insert
+    my $cnt = 0;
+    for my $file ( @mrm_libs, $args->{conf} ) {
+      $cnt++;
+      my $fullpath = abs_path( $file );
+      my ($name,$path) = fileparse($fullpath);
+      my $checksum = `md5sum $file`;
+      $checksum =~ s/\s+/\t/;
+      my @checksum = split( /\t/, $checksum );
+
+      $mrm_libs{$file} ||= '';
+
+      my $rowdata = { pabst_build_id => $build_id,
+                          file_order => $cnt,
+                     file_name => $name,
+                     file_path => $path,
+                 file_checksum => $checksum[0],
+           source_instrument_type_id => $mrm_libs{$file}
+                    };
+
+      $sbeams->updateOrInsertRow( insert => 1,
+                             table_name  => $TBAT_PABST_BUILD_FILE,
+                             rowdata_ref => $rowdata,
+                             verbose     => $args->{verbose},
+                             verbose     => 0,
+                            return_PK    => 0,
+                                      PK => 'pabst_build_file_id',
+                             testonly    => $args->{testonly} );
+
+
+
+    }
   }
   
   my $cnt;
@@ -158,6 +198,13 @@ my %stats;
     open( OUT, ">$args->{output_file}" );
   }
 
+  # stripped peptide sequence to instrument to mass/chg modified hash
+  my %peptide_ions = ( charge => { 1 => 0, 2 => 0, 3 => 0, 4 => 0 }, ions => {}, ion_id => '' );
+  for my $model ( keys( %model_map ) ) {
+    $peptide_ions{$model} ||= {};
+  }
+
+
   # Meat and 'taters
   while ( my $line = <PEP> ) {
 
@@ -174,13 +221,16 @@ my %stats;
     }
     if ( $line[14] =~ /ST|MC/ ) {
       $stats{nontryptic}++;
+      # print STDERR "$line[2] is nontryptic!\n";
+
       next;
     }
 
     # All Cys residues must be alkylated carboxymethyl...
-    if ( $line[2] =~ /C/ ) {
-      $line[2] =~ s/C([^\[])/C[160]$1/g;
-      $line[2] =~ s/C$/C[160]/; 
+    my $modified_sequence = $line[2];
+    if ( $modified_sequence =~ /C/ ) {
+      $modified_sequence =~ s/C([^\[])/C[160]$1/g;
+      $modified_sequence =~ s/C$/C[160]/; 
     }
 
     my $pep_key = $line[1] . $line[2] . $line[3];
@@ -258,37 +308,85 @@ my %stats;
     
       # Cache this to avoid double insert.
       $seq2id->{$pep_key} = $pep_id;
-
       # END Insert peptide record
 
-#      for my $instr ( keys( %{$instrument_map} ) ) {
-      my %peptide_ions;
-      for my $instr ( keys( %lib_data ) ) {
-#        print "Checking $instr for $line[2]\n";
-        if  ( $lib_data{$instr} ) {
-#          print "Found lib data!\n";
-          if ( $lib_data{$instr}->{$line[2]} ) {
-            for my $chg ( sort { $a <=> $b } ( keys( %{$lib_data{$instr}->{$line[2]}} ) ) ) {
 
-              my $ion_key = $line[2] . $chg;
+      my %peptide_ions;
+      # loop over instrument types, calc theoretical frag masses for any pepions seen.
+      for my $instr ( keys( %lib_data ) ) {
+        if  ( $lib_data{$instr} ) {
+          if ( $lib_data{$instr}->{$modified_sequence} ) {
+            for my $chg ( sort { $a <=> $b } ( keys( %{$lib_data{$instr}->{$modified_sequence}} ) ) ) {
+              my $ion_key = $modified_sequence . $chg;
               if ( !$peptide_ions{$ion_key} ) {
+                $peptide_ions{$ion_key} ||= { charge => $chg,
+                                    modifiedSequence => $modified_sequence
+                                            };
+                my $mz_value = $peptide_fragmentor->getExpectedFragments( modifiedSequence => $modified_sequence, 
+                                                                                    charge => $chg );
+
+                for my $row ( @{$mz_value} ) {
+                  $peptide_ions{$ion_key}->{$row->{label}} ||=  sprintf( "%0.4f", $row->{mz} );
+                }
+
                 # Insert peptide ion here...
-              }
-              print "Found $instr lib data for $line[2] in charge state $chg\n";
-              for my $trans ( @{$lib_data{$instr}->{$line[2]}->{$chg}} ) {
-                die Dumper( $trans );
+                $peptide_ions{$ion_key}->{peptide_ion_id} = insert_peptide_ion( ion_ref =>  $peptide_ions{$ion_key},
+                                                                                peptide_id => $pep_id );
               }
             }
           }
         }
       }
+#      die Dumper %peptide_ions;
 
-      if ( !scalar( keys( %peptide_ions ) ) ) {
-        my $ech = calculate_expected_charge( $line[2] );
-        if ( $ech > 2 ) {
-        } else {
+      
+      # loop over instruments, insert any transitions
+      my %transitions;
+      for my $instr ( keys( %lib_data ) ) {
+
+#       If not, make theoretical spectrum for most prevalent PI for this peptide
+
+#       For each instrument type, insert all available peptide ions - cache list
+        if  ( $lib_data{$instr} ) {
+
+
+          if ( $lib_data{$instr}->{$modified_sequence} ) {
+#            die Dumper( $lib_data{$instr}->{$modified_sequence} );
+
+
+            for my $chg ( sort { $a <=> $b } ( keys( %{$lib_data{$instr}->{$modified_sequence}} ) ) ) {
+              my $ion_key = $modified_sequence . $chg;
+              # Insert peptide ion instance here...
+              my $pii_id = insert_peptide_ion_instance( ion_id => $peptide_ions{$ion_key}->{peptide_ion_id},
+                                                        instr_id => $instrument_map->{$instr},
+                                                        n_obs => 1001
+                                                      );
+
+#              if ( !$peptide_ions{$ion_key} ) {
+#                die "$ion_key not defined!";
+#                die Dumper( $lib_data{$instr}->{$modified_sequence} );
+#              } else {
+#                die "$ion_key was defined!\n";
+#              }
+              # Insert peptide ion instance here...
+
+                insert_transitions( transitions_ref => $lib_data{$instr}->{$modified_sequence}->{$chg}, 
+                                    peptide_ion_ref => $peptide_ions{$ion_key},
+                                 transition_ids_ref => \%transitions,
+                                           instr_id => $instrument_map->{$instr},
+                                  );
+
+            }
+          }
         }
       }
+
+#      if ( !scalar( keys( %peptide_ions ) ) ) {
+#        my $ech = calculate_expected_charge( $line[2] );
+#        if ( $ech > 2 ) {
+#        } else {
+#        }
+#      }
     
     
     # 0 pep seq
@@ -304,37 +402,6 @@ my %stats;
     # 10 lib_type
     #
     #
-      my $tcnt = 1;
-      for my $t ( @trans ) {
-        my $tranrow = { pabst_peptide_id => $seq2id->{$pep_key},
-                        transition_source => $t->[10],
-                        precursor_ion_mass => $t->[2],
-                        precursor_ion_charge => $t->[3],
-                        fragment_ion_mass => $t->[4],
-                        fragment_ion_charge => $t->[5],
-                        fragment_ion_label => $t->[6] . $t->[7],
-                        ion_rank => $tcnt++,
-                        relative_intensity => $t->[9],
-        };
-    #    print "Tranrow is $tranrow\n"; for my $k ( keys ( %$tranrow ) ) { print "$k => $tranrow->{$k}\n"; } 
-        if ( $args->{output_file} ) {
-           print OUT join( "\t", $line[2], values( %$tranrow) ) . "\n" ;
-
-
-    
-        } else {
-    
-        my $trans_id = $sbeams->updateOrInsertRow( insert => 1,
-                                              table_name  => $TBAT_PABST_TRANSITION,
-                                              rowdata_ref => $tranrow,
-                                              verbose     => $args->{verbose},
-                                       verbose     => 0, 
-                                             return_PK    => 1,
-                                                       PK => 'fragment_ion_id',
-                                              testonly    => $args->{testonly} );
-    
-        }
-      }
     
     } else {
       $stats{insert_new_no}++;
@@ -351,7 +418,7 @@ my %stats;
                                         table_name  => $TBAT_PABST_PEPTIDE_MAPPING,
                                         rowdata_ref => $maprow,
                                         verbose     => $args->{verbose},
-                                       verbose     => 0, 
+                                        verbose     => 0, 
                                        return_PK    => 1,
                                                  PK => 'pabst_peptide_id',
                                         testonly    => $args->{testonly} );
@@ -368,6 +435,146 @@ my %stats;
 } # End Main
 
 print "Finished at " . time() . "\n";
+
+
+
+sub insert_transitions {
+
+  my %args = @_;
+
+# transition_id_ref
+# transitions_ref
+# peptide_ion_ref
+# instr_id
+
+  my $tcnt = 1;
+  for my $t ( @{$args{transitions_ref}} ) {
+
+    my $label = $t->[6] . $t->[7] . '+' x $t->[5];
+
+    # Insert transition only once 
+    if ( !$args{transition_id_ref}->{$label} ) {
+
+      my $tranrow = { pabst_peptide_ion_id => $args{peptide_ion_ref}->{peptide_ion_id},
+                        precursor_ion_mz => $args{peptide_ion_ref}->{precursor} ,
+                      precursor_ion_charge => $t->[3],
+                         fragment_ion_mz => $args{peptide_ion_ref}->{$label},
+                       fragment_ion_charge => $t->[5],
+                        fragment_ion_label => $t->[6] . $t->[7],
+                      };
+
+      $args{transition_id_ref}->{$label} = $sbeams->updateOrInsertRow( insert => 1,
+                                                                 table_name  => $TBAT_PABST_TRANSITION,
+                                                                rowdata_ref => $tranrow,
+                                                                 verbose     => $args->{verbose},
+                                                                 verbose     => 0,
+                                                                return_PK    => 1,
+                                                                          PK => 'pabst_transition_id',
+                                                                 testonly    => $args->{testonly} );
+    }
+
+      my $rowdata = { pabst_transition_id => $args{transition_id_ref}->{$label},
+                           ion_rank => $tcnt++,
+                 relative_intensity => $t->[9],
+          source_instrument_type_id => $args{instr_id}
+                      };
+      $sbeams->updateOrInsertRow( insert => 1,
+                             table_name  => $TBAT_PABST_TRANSITION_INSTANCE,
+                             rowdata_ref => $rowdata,
+                             verbose     => $args->{verbose},
+                             verbose     => 0,
+                            return_PK    => 1,
+                                      PK => 'pabst_transition_instance_id',
+                             testonly    => $args->{testonly} );
+
+
+
+  }
+
+  # Insert peptide record
+#  my $rowdata = { pabst_peptide_id => $args{peptide_id},
+#                  modified_peptide_sequence => $args{ion_ref}->{modifiedSequence},
+#                  peptide_charge => $args{ion_ref}->{charge},
+#                  peptide_mz => $args{ion_ref}->{precursor},
+#  };
+# 
+#  my $peptide_ion_id;
+#   $peptide_ion_id = $sbeams->updateOrInsertRow( insert => 1,
+#                                            table_name  => $TBAT_PABST_PEPTIDE_ION,
+#                                            rowdata_ref => $rowdata,
+#                                                verbose => $args->{verbose},
+#                                                verbose => 0,
+#                                              return_PK => 1,
+#                                                     PK => 'pabst_peptide_ion_id',
+#                                            testonly    => $args->{testonly} );
+#
+#   return $peptide_ion_id;
+}
+
+sub insert_peptide_ion {
+  my %args = @_;
+#ion_ref - precursor
+#        - modseq
+#        - charge
+#peptide_id  
+
+  # Insert peptide record
+  my $rowdata = { pabst_peptide_id => $args{peptide_id},
+                  modified_peptide_sequence => $args{ion_ref}->{modifiedSequence},
+                  peptide_charge => $args{ion_ref}->{charge},
+                  peptide_mz => $args{ion_ref}->{precursor},
+  };
+ 
+  my $peptide_ion_id;
+   $peptide_ion_id = $sbeams->updateOrInsertRow( insert => 1,
+                                            table_name  => $TBAT_PABST_PEPTIDE_ION,
+                                            rowdata_ref => $rowdata,
+                                                verbose => $args->{verbose},
+                                                verbose => 0,
+                                              return_PK => 1,
+                                                     PK => 'pabst_peptide_ion_id',
+                                            testonly    => $args->{testonly} );
+
+   return $peptide_ion_id;
+}
+
+
+sub insert_peptide_ion_instance {
+  my %args = @_;
+#ion_id 
+#instr_id
+#n_obs
+
+  # Insert peptide record
+  my $rowdata = { pabst_peptide_ion_id => $args{ion_id},
+                  source_instrument_id => $args{instr_id},
+                  n_observations => $args{n_obs},
+  };
+ 
+  my $peptide_ion_instance_id;
+  $peptide_ion_instance_id = $sbeams->updateOrInsertRow( insert => 1,
+                                           table_name  => $TBAT_PABST_PEPTIDE_ION_INSTANCE,
+                                           rowdata_ref => $rowdata,
+                                               verbose => $args->{verbose},
+                                               verbose => 0,
+                                             return_PK => 1,
+                                                    PK => 'pabst_peptide_ion_instance_id',
+                                           testonly    => $args->{testonly} );
+
+   return $peptide_ion_instance_id;
+}
+
+
+
+
+
+
+
+
+
+
+## FINITO
+
 
 sub calculate_expected_charge {
   my $seq = shift || return '';
@@ -603,7 +810,7 @@ sub process_args {
   }
 
   if ( $args{load} || $args{output_file} ) {
-    for my $opt ( qw( mrm_file peptides conf parameters biosequence_set_id project_id ) ) {
+    for my $opt ( qw( mrm_file peptides conf parameters biosequence_set_id project_id name description ) ) {
       $missing = ( $missing ) ? $missing . ", $opt" : "Missing required arg(s) $opt" if !$args{$opt};
     }
   }
@@ -612,7 +819,7 @@ sub process_args {
   if ( $args{conf} ) {
     undef local $/;
     open CONF, $args{conf} || die "unable to open config file $args{conf}";
-    $args{conf} = <CONF>;
+    $args{conf_file} = <CONF>;
   }
 
   for my $consensus ( @{$args{mrm_file}} ) {
@@ -632,10 +839,11 @@ sub readSpectrastSRMFile {
 
   my %args = @_;
 
-#  print "Library file is $args{file}, type is $args{type}, lib is $args{lib}\n";
-#  exit;
-#  return;
+  print "Library file is $args{file}, type is $args{type}, lib is $args{lib}\n";
 
+  if ( ! -e $args{file} ) {
+    die "File $args{file} does not exist";
+  }
   open SRM, $args{file} || die "Unable to open SRM file $args{file}";
 
   my %srm = %{$args{lib}->{$args{type}}};
@@ -648,6 +856,7 @@ sub readSpectrastSRMFile {
 
     $srm{$seq} ||= {};
     $srm{$seq}->{$chg} ||= [];
+#    print "$seq and $chg has " . scalar( @{$srm{$seq}->{$chg}} ) . " \n";
     next if scalar( @{$srm{$seq}->{$chg}} ) > $transition_limit;
 #    next if $all_mrm_peaks{$srm{$seq}->{$chg}} > $mrm_peak_limit;
 
@@ -657,10 +866,10 @@ sub readSpectrastSRMFile {
     next if $primary_label !~ /^[yb]/;
 
     # Exclude isotope ions
-    next if $primary_label !~ /[yb]\d+i/;
-#    next if $primary_label =~ /^p/;
-#    next if $primary_label =~ /^\?/;
-#    next if $primary_label =~ /^IWA/;
+    next if $primary_label =~ /[yb]\d+i/;
+    next if $primary_label =~ /^p/;
+    next if $primary_label =~ /^\?/;
+    next if $primary_label =~ /^IWA/;
 
 #    my $show = 0;
 
@@ -693,13 +902,17 @@ sub readSpectrastSRMFile {
       next;
       die ( "does not compute!!! - $labels[0]" );
     }
+    my $show = 1;
 #    print "q3 series is $q3_series\n" if $show;
 #    print "q3 peak is $q3_peak\n" if $show;
 
     # Skip delta masses?
-    if ( $q3_delta ) {
+    if ( 0 && $q3_delta ) {
       $q3_peak .= $q3_delta;
     }
+#    print "q3 delta is $q3_delta\n" if $show;
+#    print "q3 peak is now $q3_peak\n" if $show;
+#    exit;
 
 # Reads in specified file, returns ordered MRM list with fields as follows.
 # peptide sequence
@@ -714,8 +927,10 @@ sub readSpectrastSRMFile {
 # Relative intensity 
 # Type 
     # srm{peptide_sequence}->{charge} == pep seq, pep seq, q1 mz, q1 charge, q3 mz, q3 charge, ion series, ion number, CE, intensity, lib_type
+#
+    my @reps = split( "/", $line[1] );
 
-    push @{$srm{$seq}->{$chg}}, [ $seq, $seq, $line[3], $chg, @line[5], $q3_chg, $q3_series, $q3_peak, $line[10], $line[6], $args{type} ];
+    push @{$srm{$seq}->{$chg}}, [ $seq, $seq, $line[3], $chg, @line[5], $q3_chg, $q3_series, $q3_peak, $line[10], $line[6], $args{type}, $reps[1] ];
 #    $all_mrm_peaks{$srm{$seq}->{$chg}}++;
 
 #    print "For $seq and $chg, pushed $line[6], top is $srm{$seq}->{$chg}->[0]->[9]\n" unless $lib_type =~ /ion_trap/;
@@ -783,9 +998,12 @@ usage: $exe --mrm qtrap_file:QTrap5500 [ --mrm ion_trap_file:IonTrap ... ] --pep
 
 sub getOrganismID {
   my $bioseq_set_id = shift || return {};
+# FIXME - replace with $TBAT
+#  FROM $TBAT_BIOSEQUENCE
+#
   my $sql = qq~
   SELECT organism_id 
-  FROM $TBAT_BIOSEQUENCE_SET
+  FROM peptideatlas.dbo.biosequence_set
   WHERE biosequence_set_id = $bioseq_set_id
   ~;
   my $sth = $sbeams->get_statement_handle( $sql );
@@ -799,9 +1017,12 @@ sub getBioseqInfo {
 
   my $bioseq_set_id = shift || return {};
   
+# FIXME - replace with $TBAT
+#  FROM $TBAT_BIOSEQUENCE
+#
   my $sql = qq~
   SELECT biosequence_id, biosequence_name
-  FROM $TBAT_BIOSEQUENCE
+  FROM peptideatlas.dbo.biosequence
   WHERE biosequence_set_id = $bioseq_set_id
   ~;
   my $sth = $sbeams->get_statement_handle( $sql );
