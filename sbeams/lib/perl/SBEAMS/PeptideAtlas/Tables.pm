@@ -105,6 +105,8 @@ use vars qw(@ISA @EXPORT
 
     $TBAT_PABST_PEPTIDE
     $TBAT_PABST_PEPTIDE_MAPPING
+    $TBAT_PABST_PEPTIDE_ION
+    $TBAT_PABST_PEPTIDE_ION_INSTANCE
     $TBAT_PABST_TRANSITION
     $TBAT_PABST_BUILD
     $TBAT_PABST_BUILD_FILE
@@ -228,6 +230,8 @@ require Exporter;
 
     $TBAT_PABST_PEPTIDE
     $TBAT_PABST_PEPTIDE_MAPPING
+    $TBAT_PABST_PEPTIDE_ION
+    $TBAT_PABST_PEPTIDE_ION_INSTANCE
     $TBAT_PABST_TRANSITION
     $TBAT_PABST_BUILD
     $TBAT_PABST_BUILD_FILE
@@ -252,6 +256,7 @@ require Exporter;
 #### Get the appropriate database prefixes for the SBEAMS core and this module
 my $core = $DBPREFIX{Core};
 my $mod = $DBPREFIX{PeptideAtlas};
+my $prodmod = 'peptideatlas.dbo.';
 my $test_mod = $DBPREFIX{PeptideAtlasTest} || $DBPREFIX{PeptideAtlas};
 my $glycomod = $DBPREFIX{GlycoPeptide} || $DBPREFIX{PeptideAtlas};
 my $BioLink = $DBPREFIX{BioLink};
@@ -352,6 +357,8 @@ $TBAT_BIOSEQUENCE_RELATIONSHIP      = "${mod}biosequence_relationship";
 
 $TBAT_PABST_PEPTIDE                 = "${mod}pabst_peptide";
 $TBAT_PABST_PEPTIDE_MAPPING         = "${mod}pabst_peptide_mapping";
+$TBAT_PABST_PEPTIDE_ION             = "${mod}pabst_peptide_ion";
+$TBAT_PABST_PEPTIDE_ION_INSTANCE    = "${mod}pabst_peptide_ion_instance";
 $TBAT_PABST_TRANSITION              = "${mod}pabst_transition";
 $TBAT_PABST_BUILD                   = "${mod}pabst_build";
 $TBAT_PABST_BUILD_FILE              = "${mod}pabst_build_file";
@@ -359,8 +366,8 @@ $TBAT_PABST_TRANSITION_INSTANCE     = "${mod}pabst_transition_instance";
 $TBAT_INSTRUMENT_TYPE               = "${mod}instrument_type";
 $TBAT_TRANSITION_TYPE               = "${mod}transition_type";
 $TBAT_PABST_SOURCE_PRIORITY         = "${mod}pabst_source_priority";
-$TBAT_ELUTION_TIME_TYPE             = "${mod}elution_time_type";
-$TBAT_ELUTION_TIME                  = "${mod}elution_time";
+$TBAT_ELUTION_TIME_TYPE             = "${prodmod}elution_time_type";
+$TBAT_ELUTION_TIME                  = "${prodmod}elution_time";
 
 $TBAT_PROTEIN_LIST                  = "${mod}protein_list";
 $TBAT_PROTEIN_LIST_PROTEIN          = "${mod}protein_list_protein";
