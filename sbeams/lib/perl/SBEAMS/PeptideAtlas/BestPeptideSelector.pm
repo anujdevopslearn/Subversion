@@ -750,11 +750,15 @@ sub getInstrumentMap {
   my $self = shift;
 	my %args = @_;
   my $sql = "SELECT DISTINCT instrument_type_id, instrument_type_name FROM $TBAT_INSTRUMENT_TYPE";
+  if ( $args{src_only} ) {
+    $sql .= " WHERE is_source_instrument = 'Y'";
+  }
   my $sth;
   eval {
     $sth = $sbeams->get_statement_handle( $sql );
   };
   if ( $@ ) {
+    die $sql;
     return $self->getStaticInstrumentMap( %args );
   }
 
@@ -2787,7 +2791,7 @@ sub pabst_evaluate_peptides {
   my %rx =  (  M => ['M'],
               nQ => ['^Q'],
               nE => ['^E'],
-              nE => ['^M'],
+              nM => ['^M'],
                C => ['C'],
                R => ['R'],
                W => ['W'],
@@ -3198,8 +3202,80 @@ sub order_fragments {
   return \@frags;
 }
 
+# Routine to return charge state ratios for transitions based on
+# peptide sequence (length and expected charge).
+sub get_charge_ratios {
+  my $self = shift;
+  my %args = @_;
+  return undef unless $args{sequence};
+  my $len = length( $args{sequence} );
+  my $bnum = $self->get_expected_charge( %args );
+  my $instrument = $args{instrument_type} || 'QTOF';
+
+  # Put code here to get 
+  $self->{_ratio_matrix} ||= generate_ratio_matrix();
+
+  unless ( $self->{'_ratio_matrix'}->{$args{instrument_type}} ) {
+    return "Unknown instrument type $args{instrument_type}";
+  }
 
 
+  my $mass = $args{mass} || $len * 115;
+
+}
+
+sub generate_ratio_matrix {
+  my $self = shift;
+  my %map;
+  for my $instr ( qw( QTOF QTrap4000 QTrap5500 IonTrap ) ) {
+    $map{$instr} ||= {};
+    for my $ex_ch ( 1..10 ) {
+      $map{$instr}->{$ex_ch} ||= {};
+      for my $len ( 6..50 ) {
+        $map{$instr}->{$ex_ch}->{$len} ||= [];
+        if ( $ex_ch > 3 ) {
+          $map{$instr}->{$ex_ch}->{$len} = [0,0,25,75];
+        } elsif ( $ex_ch == 3 ) {
+          $map{$instr}->{$ex_ch}->{$len} = [0,25,50,25];
+        } elsif ( $ex_ch == 2 ) {
+          $map{$instr}->{$ex_ch}->{$len} = [25,50,25,0];
+        } else {
+          $map{$instr}->{$ex_ch}->{$len} = [75,25,0,0];
+        }
+        next;
+        
+        # deprecated, will use matrix eventually
+        my $low_lim = 300;
+        my $hi_lim = ( $instr =~ /QTrap/ ) ? 1200 : 2000;
+        my $mass = $len + 115;
+        my $ex_mz = $mass/$ex_ch;
+        if ( $ex_mz > $low_lim ) {
+          if ( $ex_mz < $hi_lim ) {
+          }
+        }
+
+      }
+    }
+  }
+  return \%map;
+}
+
+sub get_expected_charge {
+
+  my $self = shift;
+  my %args = @_;
+  return undef unless $args{sequence};
+  my $seq = $args{sequence};
+
+  my $lys = $seq =~ tr/K/K/;
+  my $arg = $seq =~ tr/R/R/;
+  my $his = $seq =~ tr/H/H/;
+
+  my $bnum = 1 + $lys + $arg + $his;
+  return $bnum;
+
+
+}
 ###############################################################################
 =head1 BUGS
 
@@ -3221,3 +3297,4 @@ __END__
 ###############################################################################
 ###############################################################################
 ###############################################################################
+
