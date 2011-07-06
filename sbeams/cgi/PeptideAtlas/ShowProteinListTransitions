@@ -1,0 +1,697 @@
+#!/usr/local/bin/perl -w
+
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : ShowProteinTransitions
+#
+# Description : page retrieve peptides and MS/MS fragment ions from PABST
+#               and PATR tables 
+###############################################################################
+
+$|++;
+
+## Setup objects and globals 
+use strict;
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ( $q $current_contact_id $current_username
+$PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+$TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+@MENU_OPTIONS $SBEAMS_PART);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+use SBEAMS::Connection::DataTable;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::BestPeptideSelector;
+
+# Set up Atlas objects
+my $sbeams = new SBEAMS::Connection;
+my $atlas = new SBEAMS::PeptideAtlas;
+$atlas->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR( 'PeptideAtlas' );
+my $best_peptide = new SBEAMS::PeptideAtlas::BestPeptideSelector;
+$best_peptide->setAtlas( $atlas );
+$best_peptide->setSBEAMS( $sbeams );
+my $pabst_build_id;
+
+my $is_html = 0;
+$SBEAMS_PART = 'PeptideAtlas';
+
+my $preferred = getPreferredPeptides();
+
+main();
+exit(0);
+
+# Main Program
+sub main 
+{
+  # Authenticate and exit if a username is not returned
+  $current_username = $sbeams->Authenticate( allow_anonymous_access => 0 );
+  exit unless $current_username;
+
+
+  $is_html = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
+
+  #### Read in the default input parameters
+  my %parameters;
+
+  $parameters{uploaded_file_not_saved} = 1;
+
+  my $n_params_found = $sbeams->parse_input_parameters(
+      q=>$q,parameters_ref=>\%parameters);
+
+  # $sbeams->printCGIParams($q);
+
+  # Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+  # This will look for mod-specific params and do the right thing
+  $atlas->processModuleParameters(parameters_ref=>\%parameters);
+
+  $parameters{pabst_build_id} = $pabst_build_id;
+
+  # Decide what action to take based on information so far
+
+  $atlas->display_page_header();
+#  if ( $sbeams->isProjectAccessible( project_id => 1066 ) ) {
+    display_peptides( \%parameters );
+#  } else {
+#    print "<H3>You are not permitted to view this page with your current credentials</H3>";
+#  }
+
+  $atlas->display_page_footer();
+
+} # end main
+
+
+
+
+sub display_peptides {
+
+  my $params = shift;
+  my $paranoid = 0;
+  print "In display_peptides at " . time() . "<BR>\n" if $paranoid;
+
+##  #  peptides_only
+##  if ( $parameters{peptides_only} ) {
+##    splice( @headings, 5, 8 );
+##  }
+
+## my $headings = $atlas->get_column_defs( labels => \@headings, plain_hash => 1 );
+##
+##  my $headings_ref = ( $sbeams->output_mode() =~ /html/i ) ? 
+##           $best_peptide->make_sort_headings( headings => $headings, default => 'adj_SS' ) :
+##           \@headings;
+##           
+##  my @peptides = ( $headings_ref );
+##
+##  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs' );
+##
+
+  my @headers = ( 'Protein', 'Atlas Builds', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'SSRT', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'RI', qw( QTOF QTRAP IonTrap Predicted CE_range ) );
+  my $headings = $atlas->get_column_defs( labels => \@headers );
+
+  my $help_text = $atlas->make_table_help( description => 'Q1/Q3 transition pairs for SRM experiments',
+                                               entries => $headings,
+                                          );
+
+  my $fields = join( ", ", @headers );
+
+  print "Getting protlist at " . time() . "<BR>\n" if $paranoid;
+  my $protlist = getProtList( $params );
+  my @protlist = sort( keys( %{$protlist} ) );
+
+  if ( !scalar( @protlist ) ) {
+    print "<H4>No proteins found for user $current_username</H4>";
+    exit;
+  }
+
+#  my %prot2build;
+#  for my $prot ( @protlist ) {
+#  use Data::Dumper;
+#  die Dumper( $protlist->{$prot}->[0] );
+
+#    die $protlist->{$prot}->[0];
+#    $prot2build{$prot} ||= {};
+#    $prot2build{$prot}->{$protlist->{$prot}->[0]} = $protlist->{$prot}->[1];
+#  }
+
+  my $prots = "'" . join( "','", @protlist ) . "'";
+
+  print "protMappings at " . time() . "<BR>\n" if $paranoid;
+  my $protMappings = getProtMappings();
+
+  print "get Consensus at " . time() . "<BR>\n" if $paranoid;
+	my $libs = getConsensus();
+
+  print "Plate Mappings  at " . time() . "<BR>\n" if $paranoid;
+	my $pep_info = getPlateMappings();
+
+  my $peplist = getPeptideList( $params );
+
+#  my @rows;
+  my @rows = ( \@headers );
+
+  my $min_mz = ( $params->{min_mz} ) ? $params->{min_mz} : 0;
+  my $max_mz = ( $params->{max_mz} ) ? $params->{max_mz} : 5000;
+
+#  my $table = new SBEAMS::Connection::DataTable();
+#  $table ->addRow( \@headers );
+#  $table->setRowAttr(  COLS => [1..scalar(@headers)], ROWS => [1], BGCOLOR => '#bbbbbb', ALIGN=>'CENTER' );
+#  $table->setHeaderAttr( BOLD => 1 );
+
+  print "Instr2code at " . time() . "<BR>\n" if $paranoid;
+  my $instr2code = $best_peptide->getStaticInstrumentMap();
+
+  my $sql = qq~
+SELECT DISTINCT biosequence_accession, preceding_residue, peptide_sequence, following_residue,
+synthesis_adjusted_score, ssrcalc_relative_hydrophobicity, transition_source,
+precursor_ion_mass, precursor_ion_charge, fragment_ion_mass, fragment_ion_charge,
+fragment_ion_label, ion_rank, relative_intensity
+FROM $TBAT_BIOSEQUENCE B 
+JOIN $TBAT_PABST_PEPTIDE_MAPPING PPM ON B.biosequence_id = PPM.biosequence_id
+JOIN $TBAT_PABST_PEPTIDE PP ON PP.pabst_peptide_id = PPM.pabst_peptide_id
+JOIN $TBAT_PABST_TRANSITION PT ON PT.pabst_peptide_id = PP.pabst_peptide_id
+ WHERE B.biosequence_accession  IN ( $prots )
+ AND pabst_build_id = 49
+ AND precursor_ion_mass BETWEEN $min_mz AND $max_mz
+ AND fragment_ion_mass BETWEEN $min_mz AND $max_mz
+ORDER BY biosequence_accession DESC, synthesis_adjusted_score DESC, peptide_sequence,
+ion_rank ASC, relative_intensity DESC
+  ~;
+  $paranoid++;
+  print "<H4>Generating protein list for $current_username</H4><BR>\n" if $paranoid;
+  print "SQL statement at " . time() . "<BR>\n" if $paranoid;
+  my $sth = $sbeams->get_statement_handle( $sql );
+  
+  my %src_name;
+  for my $src ( keys( %{$instr2code} ) ) {
+    my $code = $instr2code->{$src};
+    if ( $src =~ /PATR/ ) {
+      $src_name{$code} = $src . '-validated';
+    } elsif ( $src =~ /Predicted/ ) {
+      $src_name{$code} = $src;
+    } else { 
+      $src_name{$code} = $src . '-observed';
+    }
+  }
+
+# 0 biosequence_accession
+# 1 preceding_aa
+# 2 peptide_sequence
+# 3 following_aa
+# 4 synthesis_adjusted_score
+# 5 ssrcalc_relative_hydrophobicity
+# 6 transition_source
+# 7 precursor_ion_mass
+# 8 precursor_ion_charge
+# 9 fragment_ion_mass
+# 10 fragment_ion_charge
+# 11 fragment_ion_label
+# 12 ion_rank
+# 13 relative_intensity
+
+  my %protpep;  # acc plus sequence
+  my %prot;  # accession
+	my %survey;
+  my $sp = '&nbsp;&nbsp;';
+  my $num_peptides = $params->{num_peptides} || 6;
+
+  while ( my @row = $sth->fetchrow_array() ) {
+
+#    next if $row[6] eq 'P';
+
+    # Prot + pep is key, 5 trans per pep, 6 peps per prot
+    next if $protpep{$row[0] . $row[2]}++ > $num_peptides;
+    $prot{$row[0]}++ if $protpep{$row[0] . $row[2]} == 1;
+    next if $prot{$row[0]} > $num_peptides;
+    
+    # Calc plot range
+		my $xmax = int( ($row[7] * $row[8])/100 ) * 100;
+		$xmax = 3000 if $xmax > 3000;
+		my $xmin = 100;
+
+    next if $prot{$row[0] . $row[2]}++ > 5;
+
+    my $atitle = "Look up protein in Peptide Atlas";
+    my $utitle = "Look up protein in Uniprot";
+
+    for my $idx ( 4,5 ) {
+      $row[$idx] = sprintf( "%0.1f", $row[$idx] );
+    }
+    $row[6] = $src_name{$row[6]};
+    for my $idx ( 7, 9  ) {
+			if ( $row[6] =~ /QTOF/i ) {
+        $row[$idx] = sprintf( "%0.3f", $row[$idx] );
+			} else {
+        $row[$idx] =  sprintf( "%0.1f", $row[$idx] ) . '&nbsp;' x 4;
+			}
+    }
+    $row[12] = int( $row[13] );
+
+		$survey{$row[6]}++;
+
+
+    my $spectrum_key = $row[2] . $row[8];
+
+    if ( $libs->{qtof}->{$spectrum_key} ) {
+      my $title = "View +$row[8] spectrum for $row[2] in QTOF library";
+      $row[13] = "<A HREF='ShowOneSpectrumTest?consensus_library_spectrum_id=$libs->{qtof}->{$spectrum_key};xmax=$xmax;xmin=$xmin' TARGET='_qtof_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
+    } else {
+      $row[13] = '';
+    }
+    if ( $libs->{qtrap}->{$spectrum_key} ) {
+      my $title = "View +$row[8] spectrum for $row[2] in QTrap5500 library";
+      $row[14] = "<A HREF='ShowOneSpectrumTest?consensus_library_spectrum_id=$libs->{qtrap}->{$spectrum_key};xmax=$xmax;xmin=$xmin' TARGET='_qtrap_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
+    } else {
+      $row[14] = '';
+    }
+    if ( $libs->{it}->{$spectrum_key} ) {
+      my $title = "View +$row[8] spectrum for $row[2] in NIST IonTrap library";
+      $row[15] = "<A HREF='ShowOneSpectrum?consensus_library_spectrum_id=$libs->{it}->{$spectrum_key};xmax=$xmax;xmin=$xmin' TARGET='_it_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
+    } else {
+      $row[15] = '';
+    }
+
+    my $title = "View predicted +$row[8] spectrum for $row[2] ";
+    $row[16] = "<A HREF='ShowOneSpectrumPred?assumed_charge=$row[8];peptide=$row[2];xmax=$xmax;xmin=$xmin' TARGET='_pred_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
+
+    if ( $libs->{CE}->{$spectrum_key} ) {
+      my $title = "View +$row[8] spectra for $row[2] on QTOF at various CE values";
+      my $param_str;
+      for my $opt ( 'medium','high','low','mhigh', 'mlow', 'avg' ) {
+        $libs->{$opt}->{$spectrum_key} ||= '';
+        $param_str .= ";$opt=$libs->{$opt}->{$spectrum_key}";
+      }
+
+      my $alt_title = $title;
+			$alt_title =~ s/spectra/normalized spectra/;
+      $row[17] = "<A HREF='ShowCESpectralPlot?xmax=$xmax;xmin=$xmin$param_str' TARGET='_CE_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
+#, <A HREF='ShowSpectrumPanelNorm?xmax=$xmax;xmin=$xmin$param_str' TARGET='_CE_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$alt_title'></A>";
+    } else {
+      $row[17] = '';
+    }
+
+    my $cmt = $protMappings->{$row[0]}->{comment} || '';
+
+    my $atitle = "View protein $row[0] ($cmt) in the Peptide Atlas";
+    my $utitle = "Look up protein $row[0] ($cmt) in Uniprot";
+
+    my $name = $protMappings->{$row[0]}->{name} || '';
+    my $sp = "<A TITLE='$utitle' TARGET='_uniprot' HREF='http://www.uniprot.org/uniprot/$row[0]'>$row[0] </A>";
+    
+    my $build_link = '';
+    my $sep = '';
+    for my $build ( keys( %{$protlist->{$row[0]}} ) ) {
+      $build_link .= "$sep <A TARGET='${build}_protein' HREF='https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetProtein?atlas_build_id=$build&protein_name=$row[0]&action=GO' TITLE='View details for $row[0]'>$protlist->{$row[0]}->{$build}</A>";
+      $sep = ',&nbsp;';
+    }
+
+    my $stripped = $row[1];
+    $stripped =~ s/\[\d+\]//g;
+    if ( $pep_info->{$stripped} ) {
+#      $row[14] = $pep_info->{$stripped};
+    } else {
+#      $row[14] = '';
+    }
+
+    next if $row[6] !~ /^Q/i;
+
+    unshift @row, "$sp ( $name )";
+    $row[1] = $build_link;
+
+
+    if ( $params->{peptides} ) {
+      if ( $peplist->{$row[2]} ) {
+        push @rows, [@row, $build_link];
+      }
+    } else {
+       push @rows, \@row;
+    }
+#    $table->addRow( \@row );
+  }
+  
+  my %seen_proteins;
+  for my $row ( @rows ) {
+    my $prot = $row->[0];
+    my $pep = $row->[2];
+    $seen_proteins{$prot} ||= {};
+    next if scalar( keys ( %{$seen_proteins{$prot}} ) ) > 5;
+    $seen_proteins{$prot}->{$pep} ||= [];
+    push @{$seen_proteins{$prot}->{$pep}}, $row;
+  }
+
+  my @final_rows = ( \@headers );
+  for my $prot ( sort( keys ( %seen_proteins ) ) ) {
+    for my $pep ( sort( keys ( %{$seen_proteins{$prot}} ) ) ) {
+      push @final_rows, @{$seen_proteins{$prot}->{$pep}};
+    }
+  }
+
+  my $rt_file = {};
+#  if ( $params->{read_rt} && $params->{read_rt} eq 'qtrap_5500' ) {
+	if ( 1 ) {
+  print "read qtrap rt file at " . time() . "<BR>\n" if $paranoid;
+    $rt_file = read_qtrap5500_rt_file();
+    my $cnt = scalar( keys( %{$rt_file} ) );
+    print "read $cnt peptide RT values at " . time() . "<BR>\n" if $paranoid;
+
+    # Just for grins...
+#    open( RTSSR, ">/tmp/rt2ssr.tsv" );
+#    for my $row ( @rows ) {
+#      my $seq = $row->[2];
+#      $seq =~ s/\[\d+\]//gm;
+#      my $rt = $row->[5];
+#      if ( $rt_file->{$seq} ) {
+#        print RTSSR join( "\t", $seq, $rt, $rt_file->{$seq} ) . "\n";
+#      } else {
+#        print RTSSR join( "\t", $seq, $rt, 'Nada' ) . "\n";
+#      }
+#
+#    }
+#    close RTSSR;
+#    print "printed RT2SSR values at " . time() . "<BR>\n" if $paranoid;
+
+#    my $dna = $rt_file->{DNGAIEFTFDLEK};
+#    die "Cnt is $cnt and DNA is $dna!\n";
+  }
+
+  my %col_idx = ( 'Protein' => 0,
+                   'Pre AA' => 2,
+                 'Sequence' => 3,
+                   'Fol AA' => 4,
+                   'Adj SS' => 5,
+                     'SSRT' => 6,
+                   'Source' => 7,
+                    'q1_mz' => 8,
+                   'q1_chg' => 9,
+                    'q3_mz' => 10,
+                   'q3_chg' => 11,
+                    'Label' => 12,
+                       'RI' => 13 );
+
+  print "make target list at " . time() . "<BR>\n" if $paranoid;
+  my $qtrap_file = $atlas->make_qtrap5500_target_list( data => \@rows, remove_mods => 1, rt_file => $rt_file, col_idx => \%col_idx );
+  print "more stuff at " . time() . "<BR>\n" if $paranoid;
+  my @name = split "/", $qtrap_file;
+  my $filename = $name[$#name];
+
+  my $base = $q->url( -base => 1 );
+  my $qtrap_url = "<A HREF='$base/$HTML_BASE_DIR/tmp/$filename'>QTrap</A>";
+
+  my $qtrap_download = "<A HREF='$base/$CGI_BASE_DIR/downloadFile.cgi?name=QTrap5500.csv;tmp_file=$filename;format=csv'>QTrap5500</A>";
+
+	for my $k ( sort (keys( %survey ) ) ) {
+#		print "$k\t$survey{$k}<BR>\n";
+	}
+
+#          <TR ><TD NOWRAP bgcolor="cccccc" >QTOF</TD><TD NOWRAP >Not Defined</TD></TR>
+#        <TR ><TD NOWRAP bgcolor="cccccc" >QTRAP</TD><TD NOWRAP >Not Defined</TD></TR>
+#        <TR ><TD NOWRAP bgcolor="cccccc" >IonTrap</TD><TD NOWRAP >Not Defined</TD></TR>
+#        <TR ><TD NOWRAP bgcolor="cccccc" >Predicted</TD><TD NOWRAP >Not Defined</TD></TR>
+
+
+  my $align =  [qw(center center center center right right left right right right right left right center center center center )];
+
+  my ( $html, $rs_name ) = $atlas->encodeSectionTable( header => 1, 
+                                                        width => '800',
+                                                       align  => $align,
+                                                         rows => \@rows,
+                                                 rows_to_show => 200,
+                                                     max_rows => 5000,
+                                                    help_text => $help_text,
+                                                  chg_bkg_idx => 4, 
+                                                 set_download => 'Download transitions', 
+                                               download_links => [ $qtrap_download ], 
+                                                  file_prefix => 'SRM_Atlas_', 
+                                                     bg_color => '#EAEAEA',
+                                                     sortable => 1,
+                                                     table_id => 'srm',
+                                                  close_table => 1,
+                                                     );
+  
+
+
+#  $table->setColAttr(  COLS => [3..9,11], ROWS => [2..$table->getRowNum()], ALIGN=>'right' );
+#	      $tab->setColAttr( ROWS => [2..$tot], COLS => [$i + 1], ALIGN => $args{align}->[$i] );
+
+#  $table->alternateColors( PERIOD => 30, FIRSTROW => 2 );
+#  print "$table\n";
+  print "Final stuff at " . time() . "<BR>\n" if $paranoid;
+  print "$html\n";
+
+}
+
+sub read_qtrap5500_rt_file {
+	my $file = "/regis/sbeams4/nobackup/edeutsch/HumanMRMAtlas/QTrap5500/Runs_By_Order/speclib/2011-01-30/speclist_summary.tsv";
+  open( RT, $file ) || die "can't open $file";
+  my %rt;
+  while ( my $line = <RT> ) {
+    next if $line =~ /Sequence/;
+    my @line = split( /\t/, $line );
+    my $seq = $line[0];
+    my @reps = split( /\//, $line[1] );
+    my $reps = $reps[0];
+    my $rt = $line[5];
+#Sequence	NReps	OrigMaxInten	PrecInten	TotalIonCurr	RTAvg
+#AAADFATHGK	4/5	1.7e+07	0	3.9e+08	611.4	
+#AAADFATHGK	2/2	2.1e+07	0	8.2e+08	585.3	
+#AAALGGPEDEPGAAEAHFLPR	1/3	7e+03	0	5.4e+05	2012.0	
+    $rt{$seq} ||= {};
+    $rt{$seq}->{reps} += $reps;
+    $rt{$seq}->{rtime} += $rt * $reps;
+  }
+  my %rt_final;
+  for my $seq ( keys %rt ) {
+    $rt_final{$seq} = sprintf( "%0.1f", $rt{$seq}->{rtime}/$rt{$seq}->{reps} );
+  }
+  return \%rt_final;
+}
+
+
+sub getPreferredPeptides {
+  my @peps = ( 
+
+'YALSQDVCTYR',
+'TVEIPGCPLHVAPYFSYPVALSCK',
+'CRPINATLAVEK',
+'APPPSLPSPSR',
+'LPGCPR',
+'DISEMFLQIYK',
+'QGGFLGLSNIK',
+'DTYHPMSEYPTYHTHGR',
+'NYGQLDIFPAR',
+'FRPGSVVVQLTLAFR',
+'YVPPSSTDR',
+'SSVPSSTEK' );
+
+my @all = (
+'CNTDYSDCIHEAIK',
+'YALSQDVCTYR',
+'ECAYCLTINTTICAGYCMTR',
+'TVEIPGCPLHVAPYFSYPVALSCK',
+'TNYCTKPQK',
+'CRPINATLAVEK',
+'EGCPVCITVNTTICAGYCPTMTR',
+'VLQGVLPALPQVVCNYR',
+'APPPSLPSPSR',
+'GVNPVVSYAVALSCQCALCR',
+'FQDSSSSK',
+'LPGCPR',
+'DISEMFLQIYK',
+'ATTTPASK',
+'EGTINVHDVETQFNQYK',
+'QGGFLGLSNIK',
+'DTYHPMSEYPTYHTHGR',
+'NYGQLDIFPAR',
+'FRPGSVVVQLTLAFR',
+'YVPPSSTDR',
+'SSVPSSTEK' );
+  my %peps;
+  for my $pep ( @peps ) {
+    $pep =~ s/C/C\[160\]/g;
+    $peps{$pep}++;
+  }
+  return \%peps;
+}
+
+sub getConsensus {
+
+  my %libs = ( it => {}, qtof => {}, qtrap => {}, CE => {},
+          low => {}, mlow => {}, medium => {}, mhigh => {}, high=> {} );
+
+  my $it_sql = qq~
+  SELECT modified_sequence, consensus_library_spectrum_id, charge
+  FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM 
+  WHERE consensus_library_id = 16
+  ~;
+  my $sth = $sbeams->get_statement_handle( $it_sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    $libs{it}->{$row[0]. $row[2]} = $row[1];
+  }
+
+  my $qtof_sql = qq~
+  SELECT modified_sequence, consensus_library_spectrum_id, charge
+  FROM peptideatlas_test.dbo.consensus_library_spectrum 
+  WHERE consensus_library_id = 27
+  ~;
+  my $sth = $sbeams->get_statement_handle( $qtof_sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    $libs{qtof}->{$row[0]. $row[2]} = $row[1];
+  }
+
+  my $qtrap_sql = qq~
+  SELECT modified_sequence, consensus_library_spectrum_id, charge
+  FROM peptideatlas_test.dbo.consensus_library_spectrum 
+  WHERE consensus_library_id = 28
+  ~;
+  my $sth = $sbeams->get_statement_handle( $qtrap_sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    $libs{qtrap}->{$row[0]. $row[2]} = $row[1];
+  }
+
+
+#  my %libmap = ( 21 => 'medium', 22 => 'high', 23 => 'low', 24 => 'mhigh', 25 => 'mlow', 26 => 'avg' );
+#  my %libmap = ( 29 => 'medium', 30 => 'high', 31 => 'low', 32 => 'mhigh', 33 => 'mlow', 27 => 'avg' );
+  my %libmap = ( 242 => 'low',
+                 243 => 'mlow', 
+                 244 => 'medium',
+                 245 => 'mhigh', 
+                 246 => 'high' );
+	my $libs = join( ',', keys( %libmap ));
+  my $ce_sql = qq~
+  SELECT modified_sequence, consensus_library_spectrum_id, charge, consensus_library_id
+  FROM peptideatlas.dbo.consensus_library_spectrum 
+  WHERE consensus_library_id IN ( $libs ); 
+  ~;
+  my $sth = $sbeams->get_statement_handle( $ce_sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    $libs{$libmap{$row[3]}}->{$row[0]. $row[2]} = $row[1];
+    $libs{CE}->{$row[0]. $row[2]}++;
+  }
+
+  return \%libs;
+
+}
+
+sub getProtList {
+  my $params = shift;
+  my %proteins;
+  my $contact_id = $sbeams->getCurrent_contact_id();
+  my $sql = qq~ 
+    SELECT DISTINCT protein_name, atlas_build_id, build_name 
+    FROM peptideatlas.dbo.protein_list PL
+    JOIN peptideatlas.dbo.protein_list_protein PLP
+      ON PL.protein_list_id = PLP.protein_list_id
+    JOIN peptideatlas.dbo.protein_list_build PLB
+      ON PL.protein_list_id = PLB.protein_list_id
+    WHERE PL.contributor_contact_id = $contact_id
+  ~;
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while ( my @line = $sth->fetchrow_array() ) {
+    $proteins{$line[0]} ||= {};
+    $proteins{$line[0]}->{$line[1]} = $line[2];
+  }
+  return \%proteins;
+}
+
+sub getPeptideList {
+  my $params = shift;
+  return undef unless $params->{peptides};
+  my %peps;
+  if ( $params->{peptides} ) {
+    my @peptides = split( /\,/, $params->{peptides} );
+    print "Found " . scalar( @peptides ) . " peptides <BR>\n";
+    for my $pep ( @peptides ) { $peps{$pep}++ }  
+  } else {
+    use Data::Dumper;
+    die Dumper $params;
+    while ( my $line = <DATA> ) {
+      chomp $line;
+      next if $line =~ /^\s*$/;
+      $line =~ s/\s//g;
+      $line =~ s/C/C[160]/g;
+      $peps{$line}++;
+    }
+  }
+  return \%peps;
+}
+
+
+sub getProtMappings {
+  my %prots;
+  open SPFIL, "sprot_acc.txt" || die "No sprot file!";
+  while ( my $line = <SPFIL> ) {
+    chomp $line;
+    $line =~ s/\s+/ /g;
+    my @line = split( " ", $line );
+    $line[0] =~ s/>//g;
+    $prots{$line[0]} ||= { name => $line[1], comment => '' };
+    my $sep = '';
+    for ( my $i = 2; $i <= $#line; $i++ ) {
+      last if $line[$i] =~ /OS=/;
+      $prots{$line[0]}->{comment} = $prots{$line[0]}->{comment} . $sep . $line[$i];
+      $sep = ' ';
+    }
+  }
+  return \%prots;
+}
+
+
+
+sub getPlateMappings {
+
+  my $driver = 'DBI:mysql:mrmatlas_lims:mslims';
+  my $user = 'mrm_ro';
+  my $pass = 'Tsr3#@gfA356!&5';
+  my %error = ( PrintError => 1, RaiseError => 1);
+  my $dbh = DBI->connect($driver,$user,$pass,\%error);
+  my $sql = qq~
+  SELECT sequence, plate_barcode_id, row, col, peptides.status, orders.name
+  FROM plates JOIN orders ON plates.order_id = orders.id
+  JOIN plate_peptides ON plate_peptides.plate_id = plates.id
+  JOIN peptides  ON peptides.id = plate_peptides.peptide_id
+  WHERE plate_type = 'MASTER'
+  ORDER BY orders.id ASC, isb_index ASC
+  ~;
+  my $sth = $dbh->prepare( $sql );
+  $sth->execute();
+
+  my %pep;
+  while ( my @row = $sth->fetchrow_array() ) {
+    if ( $pep{$row[0]} ) {
+      next if $row[5] =~ /^ZH/i;
+    }
+    $pep{$row[0]} = "$row[5] $row[1]_$row[2]$row[3]";
+  }
+  return \%pep;
+
+}
+
+__DATA__
+P09544
+P56703
+P56704
+P56705
+O00755
+P56706
+Sequence	NReps	OrigMaxInten	PrecInten	TotalIonCurr	RTAvg
+AAADFATHGK	4/5	1.7e+07	0	3.9e+08	611.4	
+AAADFATHGK	2/2	2.1e+07	0	8.2e+08	585.3	
+AAALGGPEDEPGAAEAHFLPR	1/3	7e+03	0	5.4e+05	2012.0	
+AAALVDEGLDPEEHTADGEPSAK	4/7	9.4e+04	0	1.2e+07	1608.1	
+AAAPTGLQPPGC[160]K	12/12	1.7e+08	0	4.5e+09	1057.7	
+AAAPTGLQPPGC[160]K	2/3	8.9e+06	0	1.6e+08	1013.1	
+AADEESLEGEGAGGADAAEESSGTK	2/11	1.6e+06	0	1.5e+08	1031.5	
+AADFIDQALAQK	2/5	2.4e+07	0	6.1e+08	1849.9	
+AADFIDQALAQK	1/1	2.2e+06	0	1.4e+08	1861.3	
