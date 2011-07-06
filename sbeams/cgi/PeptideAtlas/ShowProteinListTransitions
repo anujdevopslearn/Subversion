@@ -312,7 +312,7 @@ ion_rank ASC, relative_intensity DESC
     my $build_link = '';
     my $sep = '';
     for my $build ( keys( %{$protlist->{$row[0]}} ) ) {
-      $build_link .= "$sep <A TARGET='${build}_protein' HREF='https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetProtein?atlas_build_id=$build&protein_name=$row[0]&action=GO' TITLE='$atitle'>$protlist->{$row[0]}->{$build}</A>";
+      $build_link .= "$sep <A TARGET='${build}_protein' HREF='GetProtein?atlas_build_id=$build&protein_name=$row[0]&action=GO' TITLE='$atitle'>$protlist->{$row[0]}->{$build}</A>";
       $sep = ',&nbsp;';
     }
 
