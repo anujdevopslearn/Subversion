@@ -312,7 +312,7 @@ ion_rank ASC, relative_intensity DESC
     my $build_link = '';
     my $sep = '';
     for my $build ( keys( %{$protlist->{$row[0]}} ) ) {
-      $build_link .= "$sep <A TARGET='${build}_protein' HREF='https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetProtein?atlas_build_id=$build&protein_name=$row[0]&action=GO' TITLE='View details for $row[0]'>$protlist->{$row[0]}->{$build}</A>";
+      $build_link .= "$sep <A TARGET='${build}_protein' HREF='https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetProtein?atlas_build_id=$build&protein_name=$row[0]&action=GO' TITLE='$atitle'>$protlist->{$row[0]}->{$build}</A>";
       $sep = ',&nbsp;';
     }
 
@@ -332,6 +332,10 @@ ion_rank ASC, relative_intensity DESC
 
     if ( $params->{peptides} ) {
       if ( $peplist->{$row[2]} ) {
+#				my $pepseq = $row[2];
+#				$pepseq =~ s/\W//g;
+#				$row[2] =~ s/\W//g;
+#				$row[2] = "GetP <A TARGET='_peptide' HREF='GetPeptide?atlas_build_id=$build=$row[2]&action=GO' TITLE='$atitle'>$protlist->{$row[0]}->{$build}</A>";
         push @rows, [@row, $build_link];
       }
     } else {
