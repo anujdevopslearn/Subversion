@@ -433,7 +433,7 @@ ion_rank ASC, relative_intensity DESC
                                                  rows_to_show => 200,
                                                      max_rows => 5000,
                                                     help_text => $help_text,
-                                                  chg_bkg_idx => 4, 
+                                                  chg_bkg_idx => 3, 
                                                  set_download => 'Download transitions', 
                                                download_links => [ $qtrap_download ], 
                                                   file_prefix => 'SRM_Atlas_', 
