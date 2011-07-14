@@ -124,9 +124,13 @@ use vars qw(@ISA @EXPORT
 
     $TBAT_SEL_EXPERIMENT
     $TBAT_SEL_RUN
+    $TBAT_SEL_PEPTIDE_ION
+    $TBAT_SEL_PEPTIDE_ION_PROTEIN
     $TBAT_SEL_TRANSITION_GROUP
     $TBAT_SEL_TRANSITION
     $TBAT_SEL_CHROMATOGRAM
+    $TBAT_SEL_PEAK_GROUP
+    $TBAT_QT5500_TRANSITION_GROUP
 );
 
 
@@ -247,9 +251,13 @@ require Exporter;
 
     $TBAT_SEL_EXPERIMENT
     $TBAT_SEL_RUN
+    $TBAT_SEL_PEPTIDE_ION
+    $TBAT_SEL_PEPTIDE_ION_PROTEIN
     $TBAT_SEL_TRANSITION_GROUP
     $TBAT_SEL_TRANSITION
     $TBAT_SEL_CHROMATOGRAM
+    $TBAT_SEL_PEAK_GROUP
+    $TBAT_QT5500_TRANSITION_GROUP
 );
 
 
@@ -374,6 +382,10 @@ $TBAT_PROTEIN_LIST_PROTEIN          = "${mod}protein_list_protein";
 
 $TBAT_SEL_EXPERIMENT                = "${mod}SEl_experiment";
 $TBAT_SEL_RUN                       = "${mod}SEL_run";
+$TBAT_SEL_PEPTIDE_ION               = "${mod}SEL_peptide_ion";
+$TBAT_SEL_PEPTIDE_ION_PROTEIN       = "${mod}SEL_peptide_ion_protein";
 $TBAT_SEL_TRANSITION_GROUP          = "${mod}SEL_transition_group";
 $TBAT_SEL_TRANSITION                = "${mod}SEL_transition";
 $TBAT_SEL_CHROMATOGRAM              = "${mod}SEL_chromatogram";
+$TBAT_SEL_PEAK_GROUP                = "${mod}SEL_peak_group";
+$TBAT_QT5500_TRANSITION_GROUP       = "${mod}QT5500_transition_group";
