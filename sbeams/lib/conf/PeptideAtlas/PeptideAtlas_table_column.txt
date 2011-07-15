@@ -406,12 +406,11 @@ AT_GetSELTransitions	6	fragment_type_constraint	Fragment Type Constraint								
 AT_GetSELTransitions	7	fragment_number_constraint	Fragment Number Constraint									N	text	15		Y	Y	N	"Constraint for fragment number.  Allowed syntax: ""n"", ""> n"", ""< n"", between n and n"""", """"n +- n"""""""		
 AT_GetSELTransitions	8	fragment_charge_constraint	Fragment Charge Constraint									N	text	15		Y	Y	N	"Constraint for fragment charge.  Allowed syntax: ""n"", ""> n"", ""< n"", between n and n"""", """"n +- n"""""""		
 AT_GetSELTransitions	9	isotype_constraint	Isotype Constraint									N	text	50		Y	Y	N	Constraint for isotype (e.g. heavy/light). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
-AT_GetSELTransitions	10	organism_constraint	Organism Constraint									N	multioptionlist	4		Y	Y	N	Limit query to one or more organisms	"SELECT O.organism_id, O.organism_name FROM $TB_ORGANISM O    ORDER BY O.organism_name ASC"	
-AT_GetSELTransitions	11	probability_constraint	Probability Constraint									N	text	15		Y	Y	N	"Constraint for mProphet probability.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", between n.n and n.n"""", """"n.n +- n.n"""""""		
-AT_GetSELTransitions	12	SEL_experiments	SRM Experiments									N	multioptionlist	4		Y	Y	N	Limit query to one or more SRM experiments	"SELECT SELE.SEL_experiment_id, data_path FROM $TBAT_SEL_EXPERIMENT SELE   ORDER BY SEL_experiment_id ASC"	
-AT_GetSELTransitions	13	SEL_runs	SRM Experiment Runs									N	multioptionlist	4		Y	Y	N	Limit query to one or more of SRM runs	"SELECT SELR.SEL_run_id, SELR.spectrum_filename FROM $TBAT_SEL_RUN SELR   ORDER BY SELR.spectrum_filename ASC"	
-AT_GetSELTransitions	14	sample_ids	Samples									N	multioptionlist	4		Y	Y	N	Limit query to one or more of the samples used to compile this Atlas build	"SELECT S.sample_id, sample_title FROM $TBAT_SAMPLE S JOIN $TBAT_SEL_EXPERIMENT SELT ON S.sample_id = SELT.sample_id   ORDER BY sample_title ASC"	
-AT_GetSELTransitions	15	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE record_status != 'D' AND option_type = 'SELTran_display_options' ORDER BY sort_order,option_value"	
+AT_GetSELTransitions	10	probability_constraint	Probability Constraint									N	text	15		Y	Y	N	"Constraint for mProphet probability.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", between n.n and n.n"""", """"n.n +- n.n"""""""		
+AT_GetSELTransitions	11	organism_constraint	Organism Constraint									N	multioptionlist	4		Y	Y	N	Limit query to one or more organisms	"SELECT O.organism_id, O.organism_name FROM $TB_ORGANISM O    ORDER BY O.organism_name ASC"	
+AT_GetSELTransitions	12	SEL_experiments	SRM Experiments									N	multioptionlist	4	refreshDocument()	Y	Y	N	Limit query to one or more SRM experiments	"SELECT SELE.SEL_experiment_id, experiment_title FROM $TBAT_SEL_EXPERIMENT SELE  ORDER BY SEL_experiment_id ASC"	
+AT_GetSELTransitions	13	SEL_runs	SRM Experiment Runs									N	multioptionlist	4		Y	Y	N	Limit query to one or more SRM runs	"SELECT SELR.SEL_run_id,SELR.spectrum_filename FROM $TBAT_SEL_RUN SELR JOIN $TBAT_SEL_EXPERIMENT SELE ON SELE.SEL_experiment_id = SELR.SEL_experiment_id   WHERE SELE.SEL_experiment_id = $parameters{SEL_experiments} ORDER BY spectrum_filename ASC"	
+AT_GetSELTransitions	14	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE record_status != 'D' AND option_type = 'SELTran_display_options' ORDER BY sort_order,option_value"	
 AT_CompareBuildsProteins	1	atlas_build_id	Atlas Build									Y	optionlist	4		Y	Y	N	"Select desired Atlas Build to compare with, required."	"SELECT atlas_build_id,atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY atlas_build_name "	
 AT_CompareBuildsProteins	2	atlas_build_id_2	Atlas Build 2									Y	optionlist	4		Y	Y	N	"Select desired Atlas Build to compare against, required."	"SELECT atlas_build_id,atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY atlas_build_name "	
 AT_CompareBuildsProteins	3	comparison_type_constraint	Comparison Type					intersection				Y	optionlist			Y	Y	N	Type of comparison desired.	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'CBP_comparison_types' AND record_status != 'D' ORDER BY sort_order,option_value;"	
@@ -791,7 +790,7 @@ AT_protein_list_protein	2	protein_list_id	Protein List ID	int	4	0	N		N	AT_protei
 AT_protein_list_protein	3	protein_name	Protein Name	varchar	255	0	N		N			Y	text	24		Y	Y	N	Protein Name		
 AT_protein_list_protein	4	key_accession	Key Accession	varchar	255	0	N		N			Y	text	24		Y	Y	N	"Key Accession, accession that unites related proteins in list"		
 AT_protein_list_protein	5	protein_list_description	Protein List Description	varchar	2000	0	Y		N			Y	text	24		Y	Y	N	Protein Description		
-AT_SEL_experiment	1	SEL_experiment_id	SEL Experiment ID	int	4	0	N		Y			N						Y	Primary Key		pkDEFAULT
+AT_SEL_experiment	1	SEL_experiment_id	SEL Experiment ID	int	4	0	N		Y			N					N	Y	Primary Key		pkDEFAULT
 AT_SEL_experiment	2	sample_id	Sample ID	int	4	0	Y		N	AT_sample	sample_id		text	50		Y	Y		Sample for this experiment		
 AT_SEL_experiment	3	data_path	Data Path	varchar	255	0	N		N			Y	text	100		Y	Y	N	Path to the data		
 AT_SEL_experiment	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
@@ -802,7 +801,7 @@ AT_SEL_experiment	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	cont
 AT_SEL_experiment	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 AT_SEL_experiment	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_SEL_experiment	11	experiment_title	Experiment Title	varchar	255	0	Y		N			N	text	50		Y	Y	N	Experiment Title		
-AT_SEL_run	1	SEL_run_id	SEL Run ID	int	4	0	N		Y			N						Y	Primary Key		pkDEFAULT
+AT_SEL_run	1	SEL_run_id	SEL Run ID	int	4	0	N		Y			N					N	Y	Primary Key		pkDEFAULT
 AT_SEL_run	2	SEL_experiment_id	SEL Experiment ID	int	4	0	Y		N	AT_SEL_experiment	SEL_experiment_id	N	text	50		Y	Y	Y	Foreign key		
 AT_SEL_run	3	spectrum_filename	Spectrum Filename	varchar	255	0	Y		N			N	text	100		Y	Y	N	Spectrum filename		
 AT_SEL_run	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
@@ -812,29 +811,43 @@ AT_SEL_run	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP
 AT_SEL_run	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 AT_SEL_run	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 AT_SEL_run	10	record_status	Record Status	char	1	0	N	N	N							N	N				
-AT_SEL_transition_group	1	SEL_transition_group_id	SEL Transition Group ID	int	4	0	N		Y			Y						Y	Primary Key		
-AT_SEL_transition_group	2	stripped_peptide_sequence	Stripped Peptide Sequence	varchar	255	0	Y		N			N							Stripped peptide sequence (without modifications)		
-AT_SEL_transition_group	3	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	Y		N			N							Modified peptide sequence		
-AT_SEL_transition_group	4	monoisotopic_peptide_mass	Monoisotopic Neutral Peptide Mass	float	8	0	Y		N			N	text	10		Y	Y	N	Neutral peptide monoisotopic mass		
-AT_SEL_transition_group	5	peptide_charge	Peptide Precursor Charge	int	4	0	Y		N			N							Precursor charge		
-AT_SEL_transition_group	6	q1_mz	Q1 mz value	float	8	0	Y		N			N							Q1 mz value		
-AT_SEL_transition_group	7	collision_energy	Collision Energy	float	8	0	Y		N			N							Collision energy		
-AT_SEL_transition_group	8	retention_time	Retention Time	float	8	0	Y		N			N	text	10		Y	Y	Y	Retention time in minutes of parent peptide		
-AT_SEL_transition_group	9	isotype	Isotype	varchar	255	0	Y		N			N							"Isotype (heavy, light)"		
-AT_SEL_transition_group	10	protein_name	Protein Name	varchar	255	0	Y		N			N							Protein name		
-AT_SEL_transition	1	SEL_transition_id	SEL Transition ID	int	4	0	N		Y			Y						Y	Primary Key		
+AT_SEL_peptide_ion	1	SEL_peptide_ion_id	SEL Peptide Ion ID	int	4	0	N		Y			Y					N	Y	Primary Key		
+AT_SEL_peptide_ion	2	stripped_peptide_sequence	Stripped Peptide Sequence	varchar	255	0	Y		N			N							Stripped peptide sequence (without modifications)		
+AT_SEL_peptide_ion	3	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	Y		N			N							Modified peptide sequence		
+AT_SEL_peptide_ion	4	monoisotopic_peptide_mass	Monoisotopic Neutral Peptide Mass	float	8	0	Y		N			N	text	10		Y	Y	N	Neutral peptide monoisotopic mass		
+AT_SEL_peptide_ion	5	peptide_charge	Peptide Precursor Charge	int	4	0	Y		N			N							Precursor charge		
+AT_SEL_peptide_ion	6	q1_mz	Ideal Q1 mz value	float	8	0	Y		N			N							Calculated Q1 mz value		
+AT_SEL_peptide_ion	7	is_decoy	Is Decoy	char	1	0	Y		N			N	optionlist			Y	Y	N	Is this a decoy peptide?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+AT_SEL_peptide_ion_protein	1	SEL_peptide_ion_protein_id	SEL Peptide Ion Protein ID	int	4	0	N		Y			Y					N	Y	Primary Key		
+AT_SEL_peptide_ion_protein	2	SEL_peptide_ion_id	SEL Peptide Ion ID	int	4	0	N		N	AT_SEL_peptide_ion	SEL_peptide_ion_id	Y					N	Y	Foreign Key		
+AT_SEL_peptide_ion_protein	3	biosequence_id	BioSequence ID	int	4	0	N		N	AT_biosequence	biosequence_id	Y				N	N	Y	Foreign Key		
+AT_SEL_peptide_ion_protein	4	protein_accession	Protein Accession	varchar	255	0	N		N			N	text	50		Y	Y	Y	Protein Accession (generally everything before the first space in a FASTA file header line)		
+AT_SEL_transition_group	1	SEL_transition_group_id	SEL Transition Group ID	int	4	0	N		Y			Y					N	Y	Primary Key		
+AT_SEL_transition_group	2	SEL_peptide_ion_id	SEL Peptide Ion ID	int	4	0	N		N			Y					N	Y	Foreign Key		
+AT_SEL_transition_group	3	SEL_run_id	SEL Run ID	int	4	0	Y		N	AT_SEL_run	SEL_run_id	N						Y	Foreign Key		
+AT_SEL_transition_group	4	q1_mz	Experiment Q1 mz value	float	8	0	Y		N			N							Experiment Q1 mz value		
+AT_SEL_transition_group	5	collision_energy	Collision Energy	float	8	0	Y		N			N							Collision energy		
+AT_SEL_transition_group	6	retention_time	Retention Time	float	8	0	Y		N			N	text	10		Y	Y	Y	Retention time in minutes of parent peptide		
+AT_SEL_transition_group	7	isotype	Isotype	varchar	255	0	Y		N			N							"Isotype (heavy, light)"		
+AT_SEL_transition_group	8	isotype_delta_mass	Isotype Delta Mass	float	8	0	Y		N			N	text	10		Y	Y	N	Additional mass for heavy isotype		
+AT_SEL_transition_group	9	experiment_protein_name	Experiment Protein Name	varchar	255	0	Y		N			N							Protein name provided by investigator		
+AT_SEL_transition_group	10	fragment_ions	Fragment Ions	varchar	255	0	Y		N			N							"Fragment ions, comma separated"		
+AT_SEL_transition	1	SEL_transition_id	SEL Transition ID	int	4	0	N		Y			Y					N	Y	Primary Key		
 AT_SEL_transition	2	SEL_transition_group_id	SEL Transition Group ID	int	4	0	N		N			Y						Y	Foreign Key		
 AT_SEL_transition	3	q3_mz	Q3 mz value	float	8	0	Y		N			N							Q3 mz value		
 AT_SEL_transition	4	frg_type	Fragment Type	char	1	0	Y		N			N							"Fragment type (b, y, etc.)"		
 AT_SEL_transition	5	frg_nr	Fragment Number	int	4	0	Y		N			N							Fragment number		
 AT_SEL_transition	6	frg_z	Fragment Charge	int	4	0	Y		N			N							Fragment charge		
 AT_SEL_transition	7	relative_intensity	Relative Intensity	float	8	0	Y		N			N							Expected intensity relative to other transitions in group		
-AT_SEL_chromatogram	1	SEL_chromatogram_id	SEL Chromatogram ID	int	4	0	N		Y			Y						Y	Primary Key		
-AT_SEL_chromatogram	2	SEL_run_id	SEL Run ID	int	4	0	Y		N	AT_SEL_run	SEL_run_id	N						Y	Foreign Key		
-AT_SEL_chromatogram	3	SEL_transition_group_id	SEL Transition Group ID	int	4	0	Y		N	AT_SEL_transition_group	SEL_transition_group_id	N						Y	Foreign Key		
-AT_SEL_chromatogram	4	m_score	mProphet m_score	real	8	0	Y		N			N							mProphet's m_score; FDR for all ID's at least this good (lower is better)		
-AT_SEL_chromatogram	5	Tr	Best Peakgroup Retention Time	real	8	0	Y		N			N						N	Retention time for center of top scoring peak group		
-AT_SEL_chromatogram	6	max_apex_intensity	Maximum Apex Intensity	real	8	0	Y		N			N						N	Maximum Apex Intensity (mProphet); a measure of abundance		
+AT_SEL_transition	8	intensity_rank	Intensity Rank	int	4	0	Y		N			N	text	10		Y	Y	N	Expected intensity rank among all transitions in group		
+AT_SEL_chromatogram	1	SEL_chromatogram_id	SEL Chromatogram ID	int	4	0	N		Y			Y					N	Y	Primary Key		
+AT_SEL_chromatogram	2	SEL_transition_group_id	SEL Transition Group ID	int	4	0	Y		N	AT_SEL_transition_group	SEL_transition_group_id	N						Y	Foreign Key		
+AT_SEL_peak_group	1	SEL_peak_group_id	SEL Peak Group ID	int	4	0	N		Y			Y					N	Y	Primary Key		pkDEFAULT
+AT_SEL_peak_group	2	SEL_chromatogram_id	SEL Chromatogram ID	int	4	0	N		N	AT_SEL_chromatogram	SEL_chromatogram_id	Y					N	Y	Foreign Key		
+AT_SEL_peak_group	3	m_score	mProphet m_score	real	8	0	Y		N			N							mProphet's m_score; FDR for all ID's at least this good (lower is better)		
+AT_SEL_peak_group	4	Tr	Best Peakgroup Retention Time	real	8	0	Y		N			N						N	Retention time for center of peak group		
+AT_SEL_peak_group	5	max_apex_intensity	Maximum Apex Intensity	real	8	0	Y		N			N						N	Maximum Apex Intensity (mProphet); a measure of abundance		
+AT_SEL_peak_group	6	rank	Rank	int	4	0	Y		N			N				Y	Y	N	Rank of this peak group among all peak groups in chromatogram		
 AT_elution_time_type	1	elution_time_type_id	Elution Time Type ID	int	4	0	N		Y			Y					N	Y	Primary Key		pkDEFAULT
 AT_elution_time_type	2	elution_time_type	Elution Time Type	varchar	255	0	N		N			Y	text	20		Y	Y	N	"Type of elution time represented, SSRCalc, RTCatalog, etc"		
 AT_elution_time_type	3	opt	Source Instrument Type	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N	optionlist			Y	Y	Y	"type of intrument observed on, foreign key to instrument type table"	"select instrument_type_id, instrument_type_name from $TBAT_INSTRUMENT_TYPE"	
