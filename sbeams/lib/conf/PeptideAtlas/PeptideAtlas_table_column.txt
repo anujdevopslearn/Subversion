@@ -820,7 +820,7 @@ AT_SEL_peptide_ion	6	q1_mz	Ideal Q1 mz value	float	8	0	Y		N			N							Calculated
 AT_SEL_peptide_ion	7	is_decoy	Is Decoy	char	1	0	Y		N			N	optionlist			Y	Y	N	Is this a decoy peptide?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 AT_SEL_peptide_ion_protein	1	SEL_peptide_ion_protein_id	SEL Peptide Ion Protein ID	int	4	0	N		Y			Y					N	Y	Primary Key		
 AT_SEL_peptide_ion_protein	2	SEL_peptide_ion_id	SEL Peptide Ion ID	int	4	0	N		N	AT_SEL_peptide_ion	SEL_peptide_ion_id	Y					N	Y	Foreign Key		
-AT_SEL_peptide_ion_protein	3	biosequence_id	BioSequence ID	int	4	0	N		N	AT_biosequence	biosequence_id	Y				N	N	Y	Foreign Key		
+AT_SEL_peptide_ion_protein	3	biosequence_id	BioSequence ID	int	4	0	Y		N	AT_biosequence	biosequence_id	Y				N	N	Y	Foreign Key		
 AT_SEL_peptide_ion_protein	4	protein_accession	Protein Accession	varchar	255	0	N		N			N	text	50		Y	Y	Y	Protein Accession (generally everything before the first space in a FASTA file header line)		
 AT_SEL_transition_group	1	SEL_transition_group_id	SEL Transition Group ID	int	4	0	N		Y			Y					N	Y	Primary Key		
 AT_SEL_transition_group	2	SEL_peptide_ion_id	SEL Peptide Ion ID	int	4	0	N		N			Y					N	Y	Foreign Key		
