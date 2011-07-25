@@ -30,6 +30,8 @@ my $log = SBEAMS::Connection::Log->new();
 
 ##our $VERSION = '0.20'; can get this from Settings::get_sbeams_version
 
+my $activate_PASSEL = 1;
+
 
 ###############################################################################
 # Constructor
@@ -168,11 +170,16 @@ sub getTabMenu
     {
        $current_tab=5;
        $current_subtab=3;
-#    }elsif ( ($PROG_NAME =~ /^GetSELTransitions/) ||
-#    ($PROG_NAME =~ /GetSELTransitions\?(\S+)/ ))
-#    {
-#       $current_tab=5;
-#       $current_subtab=4;
+    }elsif ( ($PROG_NAME =~ /^GetSELExperiments/) ||
+    ($PROG_NAME =~ /GetSELExperiments\?(\S+)/ ))
+    {
+       $current_tab=6;
+       $current_subtab=1;
+    }elsif ( ($PROG_NAME =~ /^GetSELTransitions/) ||
+    ($PROG_NAME =~ /GetSELTransitions\?(\S+)/ ))
+    {
+       $current_tab=6;
+       $current_subtab=2;
     }
 
 
@@ -296,11 +303,21 @@ sub getTabMenu
 			   url => "$CGI_BASE_DIR/PeptideAtlas/ViewSRMBuild"
 			   );
 
-#    $tabmenu->addMenuItem( tablabel => 'SRMAtlas',
-#			   label => 'SRMAtlas Experimental Data',
-#			   helptext => 'View transitions for SRM experiments',
-#			   url => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions"
-#			   );
+if ($activate_PASSEL) {
+    $tabmenu->addTab( label => 'PASSEL' );
+
+    $tabmenu->addMenuItem( tablabel => 'PASSEL',
+			   label => 'SRM Experiments',
+			   helptext => 'Browse SRM experiments',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/GetSELExperiments"
+			   );
+
+    $tabmenu->addMenuItem( tablabel => 'PASSEL',
+			   label => 'SRM Experimental Data',
+			   helptext => 'View transition groups for SRM experiments',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions"
+			   );
+}
 
 
     $tabmenu->setCurrentTab( currtab => $current_tab, currsubtab => $current_subtab );
