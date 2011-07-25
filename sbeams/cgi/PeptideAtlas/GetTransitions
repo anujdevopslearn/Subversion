@@ -582,23 +582,20 @@ sub fetch_transitions {
     $biosequence_name_clause = "     AND BS.biosequence_name IN ( $protein_list )" if $protein_list;
   }
 
-  unless ( 1 || $ok_param{overall} ) {
+  unless ( $ok_param{overall} ) {
     # Print page message
     # redirect back to form
 		my $url = $q->self_url();
-		$url =~ s/ViewPABSTList/GetPABSTList/;
-		$sbeams->set_page_message( type => 'Error', msg => <<"    END" );
+		print <<"    END";
+		<H4><BR>
+		Due to the size of the source dataset, you must provide either a protein list
+    <BR> (via protein_name form field or uploaded file) or
+		a peptide sequence constraint. <BR> A full wildcard search does not constitute a valid constraint. 
 		<BR>
-		You must provide either a protein list (via protein_name form field or uploaded file) or
-		a peptide sequence constraint.  A full wildcard search does not constitute a valid constraint. 
-		<BR>
+    </H4>
     END
 		$log->warn( "Bad constraints, URL is $url" );
 
-		# rassa frassa
-#    my $std = $sbeams->fetchSTDOUT();
-
-		print $q->redirect( -uri => $url );
 		exit;
 	}
 
@@ -727,7 +724,7 @@ sub fetch_transitions {
 
 #  my %src_name = ( P => 'Predicted', Q => 'QQQ-observed', T => 'Predicted', I => 'IT-observed', 'R' => 'PATR-validated' );
 #  my %src_name = ( P => 'Predicted', Q => 'QQQ-observed', T => 'QTOF-observed', I => 'IT-observed', 'R' => 'PATR-validated' );
-  my $instr2code = $best_peptide->getInstrumentMap();
+  my $instr2code = $best_peptide->getStaticInstrumentMap();
   my %src_name;
   for my $src ( keys( %{$instr2code} ) ) {
     my $code = $instr2code->{$src};
@@ -756,7 +753,7 @@ sub fetch_transitions {
   my %peps;
   my %patr_peps;
 
-  my $organism = $atlas->getCurrentAtlasOrganism( parameters_ref => \%parameters );
+  my $organism = $best_peptide->getBuildOrganism( %parameters );
 
   # If the user has modified any of the weights we have to do this from scratch...
   if ( $is_changed ) {
@@ -1147,6 +1144,7 @@ sub fetch_transitions {
                                                         width => '600',
                                                       tr_info => $args{tr},
                                                        align  => $align,
+                                                  rs_headings => \@headings,
                                                          rows => \@peptides,
                                                  rows_to_show => 20,
                                                      max_rows => 500,
