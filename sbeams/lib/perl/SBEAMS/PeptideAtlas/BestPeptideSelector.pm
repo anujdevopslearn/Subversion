@@ -728,6 +728,23 @@ sub sortBySuitabilityScore {
 
 } # end sortBySuitabilityScore
 
+sub getBuildOrganism {
+  my $self = shift;
+	my %args = @_;
+ 
+  # Default to human
+	return 2 unless $args{pabst_build_id};
+
+	my $sql = "SELECT organism_id FROM $TBAT_PABST_BUILD WHERE pabst_build_id = $args{pabst_build_id}";
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while( my @row = $sth->fetchrow_array() ) {
+		return $row[0];
+	}
+  # Default to human
+	return 2;
+}
+
 sub getStaticInstrumentMap {
   my $self = shift;
 	my %args = @_;
