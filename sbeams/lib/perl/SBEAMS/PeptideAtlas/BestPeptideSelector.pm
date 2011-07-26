@@ -1499,10 +1499,11 @@ sub get_pabst_build {
 
   my $organism = $params{organism_name} || '';
 
+  # Hash build_id to organism_name and build_name
   my @accessible = $sbeams->getAccessibleProjects();
   my $acc_str = join( ',', @accessible );
   my $sql = qq~
-  SELECT pabst_build_id, organism_name
+  SELECT pabst_build_id, organism_name, build_name
   FROM $TBAT_PABST_BUILD PB 
   JOIN $TB_ORGANISM O ON O.organism_id = PB.organism_id
   WHERE PB.project_id IN ( $acc_str )
@@ -1511,11 +1512,13 @@ sub get_pabst_build {
 
 #  $log->debug( "organism is $organism!!!" );
 
-  my %builds;
+  my %build_organisms;
+  my %build_names;
   my $validated_build_id = '';
   my $sth = $sbeams->get_statement_handle( $sql );
   while ( my @row = $sth->fetchrow_array() ) {
-    $builds{$row[0]} = $row[1];
+    $build_organisms{$row[0]} = $row[1];
+    $build_names{$row[0]} = $row[2];
 
     # Set this to the default, might well get reset based on priority
     $validated_build_id ||= $row[0];
@@ -1524,15 +1527,22 @@ sub get_pabst_build {
   my $found = 0;
     
   # Use preset value from cgi param if possible
-  if ( $build_id && $builds{$build_id} ) {
+  if ( $build_id && $build_names{$build_id} ) {
     $validated_build_id = $build_id;
     $log->debug( "Returning $validated_build_id based on pabst_build_id" );
     $found++;
   }
 
+  # Get most recent build (highest build_id) for organism
   if ( !$found && $organism ) {
-    for my $build_id ( sort { $b <=> $a } ( keys( %builds ) ) ) {
-      if ( lc( $builds{$build_id} ) eq lc( $organism ) ) {
+    for my $build_id ( sort { $b <=> $a } ( keys( %build_names ) ) ) {
+      if ( ( lc( $build_organisms{$build_id} ) eq lc( $organism ) )
+	   # Kludge added to be sure to get vanilla buiid for organism.
+	   # Correct solution is to implement concept of "default build" as with
+	   # the shotgun section of PeptideAtlas.
+	   && ( $build_names{$build_id} !~ /plasma/i )
+	   && ( $build_names{$build_id} =~ /$organism/i ) 
+	 ) {
         $validated_build_id = $build_id;
         $log->debug( "Returning $validated_build_id based on organism" );
         $found++;
@@ -1541,7 +1551,7 @@ sub get_pabst_build {
     $log->info( "No suitable builds found for organism $organism!" ) if !$found;
   }
 
-  if ( !$found && $cookie_build_id && $builds{$cookie_build_id} ) {
+  if ( !$found && $cookie_build_id && $build_organisms{$cookie_build_id} ) {
     $validated_build_id = $cookie_build_id;
     $log->debug( "Returning $validated_build_id based on cookie" );
     $found++;
