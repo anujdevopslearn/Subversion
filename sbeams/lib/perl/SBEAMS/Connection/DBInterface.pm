@@ -8,7 +8,7 @@ package SBEAMS::Connection::DBInterface;
 # Description : This is part of the SBEAMS::Connection module which handles
 #               general communication with the database.
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2011 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -3229,6 +3229,8 @@ sub displayResultSet {
       } else {
         @TDformats=('NOWRAP');
       }
+
+      print $self->addTabbedPane(label => "Resultset") if $args{use_tabbed_panes};
       ShowHTMLTable{
         titles=>$column_titles_ref,
       	types=>$types_ref,
@@ -3437,7 +3439,7 @@ sub displayResultSetControls {
     if ($self->output_mode() eq 'html') {
       $BR = "<BR>\n";
       print qq~
-      <TABLE WIDTH="570" BORDER="0"><TR><TD>
+      <TABLE WIDTH="100%" BORDER="0"><TR><TD>
       <FORM METHOD="POST">
       ~;
     }
@@ -3591,7 +3593,7 @@ sub displayResultSetControls {
     }
 
 
-    #### If this resulset has a name, show it and the date is was created
+    #### If this resultset has a name, show it and the date is was created
     if (defined($rs_params_ref->{cached_resultset_id})) {
       print qq~
         <BR><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=cached_resultset&cached_resultset_id=$rs_params_ref->{cached_resultset_id}">[Annotate this Resultset]</A>
@@ -3640,7 +3642,7 @@ sub displayResultSetControls {
       $param_string =~ s/[\?\&]$stripword=.+$//;
     }
 
-    my $reexec_url = "${base_url}${param_string}"; 
+    my $reexec_url = "${base_url}${param_string}";
     my $recall_url = "$base_url${separator}apply_action=VIEWRESULTSET&" .
                      "rs_set_name=$rs_params{set_name}&rs_page_size" .
                      "=$rs_params{page_size}&rs_page_number=$pg$plot_params";
@@ -3685,6 +3687,7 @@ sub displayResultSetControls {
       print "rs_set_name=",$rs_params{set_name},"<BR>\n";
     }
 
+    print $self->closeTabbedPane(selected=>'1') if $args{use_tabbed_panes}; # close Resultset div
 
     return 1;
 
@@ -3732,8 +3735,9 @@ sub displayResultSetPlot {
     my $BR = "\n";
     if ($self->output_mode() eq 'html') {
       $BR = "<BR>\n";
-      print qq~<BR><BR>
-      <TABLE WIDTH="680" BORDER=0>
+      my $spacer = $args{use_tabbed_panes} ? $self->addTabbedPane(label => "Plot") : '<BR><BR>';
+      print qq~$spacer
+      <TABLE WIDTH="100%" BORDER=0>
       <FORM METHOD="POST">
       ~;
     }
@@ -3945,10 +3949,10 @@ sub displayResultSetPlot {
       print "</SELECT></TD></TR>\n";
     }
 
-
+    my $plot_action = $args{use_tabbed_panes} ? 'VIEWPLOT' : 'VIEWRESULTSET';
     print qq~
       <TR><TD></TD><TD>
-      <INPUT TYPE="submit" NAME="apply_action" VALUE="VIEWRESULTSET">
+      <INPUT TYPE="submit" NAME="apply_action" VALUE="$plot_action">
       </TD></TR></TABLE>
       </TD><TD>
       <TABLE>
@@ -3972,6 +3976,8 @@ sub displayResultSetPlot {
       print qq~
         </FORM>
       ~;
+      my $tab_selected = ($args{'apply_action'} eq 'VIEWPLOT') ? '1' : '0';
+      print $self->closeTabbedPane(selected=>$tab_selected) if $args{use_tabbed_panes};# close Plot div
       print "</TABLE>" unless $args{quell_tables};
     }
 
@@ -4821,14 +4827,19 @@ sub display_input_form {
   # that had multipart encoding.  So, only include form type multipart if
   # we really have an upload field.  IE users are fine either way.
   $self->printUserContext() unless ($mask_user_context);
-  print qq!
-      <P>
-      <H2>$CATEGORY</H2>
-      $LINESEPARATOR
-      <FORM METHOD="post" ACTION="$PROGRAM_FILE_NAME" NAME="$form_name" $file_upload_flag $onSubmit>
-      <TABLE BORDER=0>
-  ! unless ($mask_form_start);
 
+  if ($mask_form_start) {
+      print $self->getTabbedPanesDHTML() if $args{use_tabbed_panes}
+  } else {
+      my $spacer = $args{use_tabbed_panes} ? $self->getTabbedPanesDHTML()."<br/>\n".$self->addTabbedPane(label => "Form") : $LINESEPARATOR;
+      print qq!
+	  <P>
+	  <H2>$CATEGORY</H2>
+	  $spacer
+	  <FORM METHOD="post" ACTION="$PROGRAM_FILE_NAME" NAME="$form_name" $file_upload_flag $onSubmit>
+	  <TABLE BORDER=0>
+      !;
+  }
 
   # ---------------------------
   # Build option lists for each optionlist query provided for this table
@@ -5256,6 +5267,7 @@ sub display_form_buttons {
        </TR></TABLE>
        </FORM>
   ~;
+  print $self->closeTabbedPane(selected=>1) if $args{use_tabbed_panes};
 
 } # end display_form_buttons
 
@@ -5283,8 +5295,13 @@ sub display_sql {
   my $prefix = '';
   my $suffix = '';
   if ($self->output_mode eq 'html') {
-    $prefix = '<PRE>';
-    $suffix = '</PRE><BR>';
+      if ($args{use_tabbed_panes}) {
+	  $prefix = $self->addTabbedPane(label => "SQL").'<PRE>';
+	  $suffix = '</PRE>'.$self->closeTabbedPane();
+      } else {
+	  $prefix = '<PRE>';
+	  $suffix = '</PRE><BR>';
+      }
   }
 
 
@@ -6961,6 +6978,176 @@ sub linkToColumnText {
   END_LINK
   return $link;
 } # End linkToColumnText
+
+
+###############################################################################
+# getTabbedPanesDHTML: returns CSS and javascript for Form/SQL/Resultset/Plot
+#                     'tab' selection, and 'form' tab
+#
+# returns CSS/javascript/HTML in a scalar
+# 
+###############################################################################
+sub getTabbedPanesDHTML {
+  my $this = shift;
+
+  # add CSS classes for section tabs
+  my $dhtml =<<"  END_CLASS";
+  <STYLE>
+  #messagetab {
+    color:#bb0000;
+/*    text-decoration:blink; */
+    font-weight:bold;
+  }
+  table.tabs {border-collapse: collapse; border-color: #000000;}
+  table.resultsettabs {border-collapse: collapse; border-color: #000000; white-space:nowrap;}
+  td.formtab {
+      border: 2px solid #666666;
+      border-bottom: 2px solid #010101;  /* can't be pure black due to Firefox bug! */
+      font-weight:bold;
+      color: #666666;
+      background:#dedede;
+  }
+  td.formtabON {
+      border-top: 2px solid black;
+      border-right: 2px solid black;
+      border-left: 2px solid black;
+      border-bottom: 0px;
+      font-weight: bold;
+      background: #ffffff;
+  }
+
+  .formtab a {
+      text-decoration:none;
+      color:#666666;
+  }
+  .formtab a:hover {
+      background:#bb0000;
+      color:#ffffff;
+  }
+
+  .formtabON a {
+      text-decoration:none;
+      color:#666666;
+      color:#000000;
+  }
+
+  td.formtabbase {
+      border-bottom: 2px solid black;
+  }
+  </STYLE>
+  END_CLASS
+
+  # add javascript function to switch tabs
+  $dhtml .=<<'  END_JS';
+  <SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript">
+  <!--
+  var resultsettabs = new Array();
+
+  function showResultSetPane(divId) {
+      var x;
+      for (x in resultsettabs) {
+	  var elId = "resultsettab"+x;
+	  document.getElementById(elId).className = "formtab";
+
+	  if (document.getElementById(elId+"_content"))
+	      document.getElementById(elId+"_content").className="hidden";
+      }
+
+      if (document.getElementById("messagetab").innerHTML != " ")
+	  document.getElementById("messagetab").innerHTML = " ";
+
+      if (document.getElementById(divId+"_content"))
+	  document.getElementById(divId+"_content").className="visible";
+      document.getElementById(divId).className="formtabON";
+  }
+
+  // -->
+  </SCRIPT>
+  END_JS
+
+  # start table of tabs
+  my $pad = '&nbsp;' x 3;
+  $dhtml .= "<table cellpadding='0' class='resultsettabs'>\n<tr>\n<td class='formtabbase'>$pad$pad</td>\n";
+
+  for my $i (0..9) {
+      $dhtml .= "<td class='formtabbase' id='resultsettab$i'></td>\n<td class='formtabbase'>$pad</td>\n";
+  }
+
+  $dhtml .= "<td class='formtabbase' id='messagetab'></td>\n<td class='formtabbase'>$pad</td>\n";
+  $dhtml .= "<td class='formtabbase' width='800'>$pad</td>\n</tr></table>\n\n";
+
+  return $dhtml;
+
+} # end getTabbedPanesDHTML
+
+
+
+###############################################################################
+# addTabbedPane: adds javascript code to add tab entry and opens corresponding div
+#
+# returns javascript in a scalar
+# 
+###############################################################################
+sub addTabbedPane {
+  my $this = shift;
+  my %args = @_;
+
+  $args{label} ||= 'tab';
+  my $pad = '&nbsp;' x 3;
+
+  my $dhtml =<<"  END_JS";
+  <SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript">
+  <!--
+      var index = resultsettabs.push('$args{label}') - 1;
+      document.getElementById("messagetab").innerHTML = "Loading $args{label}...";
+
+      document.getElementById("resultsettab"+index).innerHTML = "<a href=\\\"javascript:showResultSetPane('resultsettab" + index + "');\\\">${pad}$args{label}$pad</a>";
+      document.getElementById("resultsettab"+index).className = "formtab";
+
+      document.write("<div class=\\\"hidden\\\" id=\\\"resultsettab"+index+"_content\\\">\\n");
+
+  // -->
+  </SCRIPT>
+  END_JS
+
+
+  return $dhtml;
+
+} # end addTabbedPane
+
+###############################################################################
+# closeTabbedPane: close div; add hr; select if requested
+#
+# returns html in a scalar
+# 
+###############################################################################
+sub closeTabbedPane {
+  my $this = shift;
+  my %args = @_;
+
+  $args{selected} ||= '';
+
+  my $dhtml =<<"  END_HTML";
+
+    <hr color='black'></div>
+      <SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript">
+       <!--
+       document.getElementById("messagetab").innerHTML = " ";
+
+  END_HTML
+
+  if ($args{selected}) {
+      $dhtml .=<<"      END_DHTML";
+          var mytab = 'resultsettab' + (resultsettabs.length - 1);
+          document.onload = showResultSetPane(mytab);
+      END_DHTML
+  }
+
+  $dhtml .= "    // -->\n    </SCRIPT>\n";
+
+  return $dhtml;
+
+} # end closeTabbedPane
 
 
 ###############################################################################
