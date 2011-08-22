@@ -1,0 +1,899 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : PASS_Submit
+# $Id: GetPeptide 6798 2011-07-05 21:35:27Z tfarrah $
+#
+# Description : PeptideAtlas Submission System main submit page
+#
+# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+
+use POSIX qw(ceil);
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+##use CGI::Carp qw(fatalsToBrowser croak);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::ConsensusSpectrum;
+use SBEAMS::PeptideAtlas::ModificationHelper;
+use SBEAMS::PeptideAtlas::Utilities;
+
+use SBEAMS::Proteomics::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+my $modification_helper = new SBEAMS::PeptideAtlas::ModificationHelper();
+
+my $current_page = { organism => '', atlas_build_id => '' };
+
+#$q = new CGI;
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+     my @datasetTypes = ( 'MSMS' => 'MS/MS dataset',
+			  'SRM' => 'SRM dataset',
+			  'MS1' => 'MS1 dataset',
+			  'QC' => 'Ongoing QC dataset',
+			  'Other' => 'Other',
+			);
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+    #### Do the SBEAMS authentication and exit if a username is not returned
+    exit unless ($current_username = $sbeams->Authenticate(
+        permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+        'PeptideAtlas_readonly', 'PeptideAtlas_exec'],
+        #connect_read_only=>1,
+        allow_anonymous_access=>1,
+    ));
+
+    #### Read in the default input parameters
+    my %parameters;
+    my $n_params_found = $sbeams->parse_input_parameters(
+        q=>$q,
+        parameters_ref=>\%parameters
+        );
+
+    #### Decide what action to take based on information so far
+    if ($parameters{action} eq "???") 
+    {
+      # Some action
+    } else 
+    {
+        my $project_id = $sbeamsMOD->getProjectID(
+            atlas_build_id => $parameters{atlas_build_id}
+        );
+
+        $sbeamsMOD->display_page_header(project_id => $project_id,
+				                                init_tooltip => 1);
+
+        handle_request(ref_parameters=>\%parameters);
+
+        $sbeamsMOD->display_page_footer();
+    }
+    $sbeams->profile_sql( list => 0 );
+
+} # end main
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+
+  my %args = @_;
+  $log->debug( "Start page " . time() );
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+      || die "ref_parameters not passed";
+
+  my %parameters = %{$ref_parameters};
+
+  #### Show current user context information
+  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+  #$sbeams->printUserContext();
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+     parameters_ref => \%parameters,
+     program_name => $PROG_NAME,
+  );
+
+  print $tabMenu->asHTML() . '<BR>' if ($sbeams->output_mode() eq 'html');
+
+
+  #### Define some generic variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+
+  #### Read in the standard form values
+  my $action  = $parameters{'action'} || $parameters{'apply_action'};
+
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+  #### Set some specific settings for this program
+  my $CATEGORY="PASS_Submit";
+  my $PROGRAM_FILE_NAME = $PROG_NAME;
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+  my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
+
+
+  #### Check the session cookie for a PASS_emailaddress
+  my $cachedEmailAddress = $sbeams->getSessionAttribute( key => 'PASS_emailAddress' );
+  my $cachedPassword = $sbeams->getSessionAttribute( key => 'PASS_xx' );
+  my $emailAddress = $parameters{'emailAddress'};
+  $emailAddress = $cachedEmailAddress if (!$emailAddress && $cachedEmailAddress);
+  my $password = $parameters{'password'};
+  $password = $cachedPassword if (!$password && $cachedPassword);
+  my $firstName = $parameters{'firstName'};
+  my $lastName = $parameters{'lastName'};
+  my $confirmingPassword = $parameters{'confirmingPassword'};
+
+  #### Compile any error we encounter in an array
+  my @errors;
+  my $printForm = 1;
+
+
+  #### If the request was to LOGOUT, then purge everything
+  if ($action =~ /LOGOUT/i ) {
+    $sbeams->setSessionAttribute( key => 'PASS_emailAddress', value => '' );
+    $sbeams->setSessionAttribute( key => 'PASS_xx', value => ''  );
+    $emailAddress = '';
+    $password = '';
+    $confirmingPassword = '';
+    $firstName = '';
+    $lastName = '';
+  }
+
+
+  #### See if we're already logged in
+  my $authentication;
+  if ($emailAddress && $password) {
+    $authentication = authenticateUser(emailAddress=>$emailAddress,password=>$password);
+    if ($authentication->{result} eq 'Success') {
+      $firstName = $authentication->{firstName};
+      $lastName = $authentication->{lastName};
+    }
+  }
+
+
+  #### Check authentication parameters and warn of any problems
+  if ($action =~ /SUBMIT/i || $action =~ /LOGIN/i ) {
+    unless ($emailAddress) {
+      push(@errors,"The submitter email address is not filled in");
+    }
+    unless ($password) {
+      push(@errors,"The submitter password is not filled in");
+    }
+  }
+
+
+  #### Check authentication parameters and warn of any problems
+  if ($action =~ /LOGIN/i && ! @errors ) {
+    if ($authentication->{result} eq 'Success') {
+      $sbeams->setSessionAttribute( key => 'PASS_emailAddress', value => $emailAddress );
+      $sbeams->setSessionAttribute( key => 'PASS_xx', value => $password  );
+    } else {
+      push(@errors,@{$authentication->{errors}});
+    }
+  }
+
+
+  #########################################################################
+  #### If REGISTER, see if there's enough information to register
+  if ($action =~ /REGISTER/i && ! @errors ) {
+    my $authentication = authenticateUser(emailAddress=>$emailAddress,password=>$password);
+    if ($authentication->{result} eq 'Success') {
+
+    } elsif ($authentication->{result} eq 'NoSuchUser') {
+      unless ($firstName) {
+	push(@errors,"The first name field is not filled in");
+      }
+      unless ($lastName) {
+	push(@errors,"The last name is not filled in");
+      }
+      unless ($confirmingPassword) {
+	push(@errors,"The confirm password field is not filled in");
+      }
+      unless ($confirmingPassword eq $password) {
+	push(@errors,"The two password fields do not match. Please re-enter both passwords");
+      }
+
+      unless (@errors) {
+	my $regResult = registerUser(emailAddress=>$emailAddress,password=>$password,
+				     firstName=>$firstName,lastName=>$lastName);
+	if ($regResult->{result} eq 'Success') {
+	  $sbeams->setSessionAttribute( key => 'PASS_emailAddress', value => $emailAddress );
+	  $sbeams->setSessionAttribute( key => 'PASS_xx', value => $password  );
+	} else {
+	  push(@errors,@{$regResult->{errors}});
+	}
+
+      }
+
+    }
+
+  }
+
+
+  #########################################################################
+  #### If SUBMIT, see if there's enough information to submit the dataset
+  if ($action =~ /SUBMIT/i && ! @errors) {
+    my $authentication = authenticateUser(emailAddress=>$emailAddress,password=>$password);
+    if ($authentication->{result} eq 'Success') {
+
+    } elsif ($authentication->{result} eq 'NoSuchUser') {
+      unless ($firstName) {
+	push(@errors,"The first name field is not filled in");
+      }
+      unless ($lastName) {
+	push(@errors,"The last name is not filled in");
+      }
+      unless ($confirmingPassword) {
+	push(@errors,"The confirm password field is not filled in");
+      }
+      unless ($confirmingPassword eq $password) {
+	push(@errors,"The two password fields do not match. Please re-enter both passwords");
+      }
+
+      unless (@errors) {
+	my $regResult = registerUser(emailAddress=>$emailAddress,password=>$password,
+				     firstName=>$firstName,lastName=>$lastName);
+	if ($regResult->{result} eq 'Success') {
+	  $sbeams->setSessionAttribute( key => 'PASS_emailAddress', value => $emailAddress );
+	  $sbeams->setSessionAttribute( key => 'PASS_xx', value => $password  );
+	} else {
+	  push(@errors,@{$regResult->{errors}});
+	}
+
+      }
+
+    } else {
+      push(@errors,@{$authentication->{errors}});
+    }
+
+    unless (@errors) {
+      my $validation = validateDatasetAnnotations(formParameters=>\%parameters);
+      if ($validation->{result} eq 'Success') {
+	my $insertResult = addDataset(authentication=>$authentication,formParameters=>\%parameters);
+	if ($insertResult->{result} eq 'Success') {
+	  $printForm = 0;
+	} else {
+	  push(@errors,@{$validation->{errors}});
+	}
+
+      } else {
+	push(@errors,@{$validation->{errors}});
+      }
+    }
+
+  }
+
+
+  $log->debug( "end param handling " . time() );
+
+
+  #########################################################################
+  #### Print the form
+  if ($sbeams->output_mode() eq 'html' && $printForm) {
+     print "<H3>Submit a new Dataset</H3>";
+     print "<P>Thank you for submitting a dataset to PeptideAtlas.";
+     print "<UL><LI>Please fill out the form below to register a new submission.";
+     print "<LI>After completing the form, you will receive instructions on how to upload your data via FTP";
+     print "<LI>Items <B><font color=\"red\">in red</B></font> are required";
+     print "</UL></P>";
+
+     if (@errors) {
+     print "<HR>\n";
+       print "<TABLE cellpadding=\"5\"><TR><TD bgcolor=\"#ff9999\">";
+       foreach my $error ( @errors ) {
+	 print "<LI>$error\n";
+       }
+       print "</TD></TR></TABLE>\n";
+     }
+
+
+     print "<HR>\n";
+     print "<nobr>";
+     print $q->start_form(-method=>"POST",
+                          -action=>"$base_url",
+			 );
+
+     print "<B><font color=\"red\">Submitter email address</B></font> (This is your login name and the address that PASS will use to communicate with you)<BR>\n";
+     #### Strangly, using the Perl CGI call leads to strange persistence effects that I can't defeat
+     #print $q->textfield( "emailAddress", $emailAddress, 50, 80);
+     print qq~<input type="text" name="emailAddress" value="$emailAddress" size=50 maxlength=80/>~;
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Submitter password</B></font> (Enter your password if you already have an account or choose a password for a new account)<BR>\n";
+     #print $q->textfield( "password", $password, 10, 50);
+     print qq~<input type="text" name="password" value="$password" size=10 maxlength=50/>~;
+     print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+
+     if ($authentication->{result} eq 'Success') {
+       print $q->submit(-name => "action",
+			-value => 'LOGOUT',
+			-label => 'LOGOUT');
+     } else {
+       print $q->submit(-name => "action",
+			-value => 'LOGIN',
+			-label => 'LOGIN');
+     }
+     print "<BR>\n";
+
+     if ($authentication->{result} ne 'Success') {
+       print "<B><font color=\"red\">Confirm password</font></B> (If you don't yet have an account, please confirm your password by entering it again)<BR>\n";
+       #print $q->textfield( "confirmingPassword", $parameters{'confirmingPassword'}, 10, 50);
+       print qq~<input type="text" name="confirmingPassword" value="$confirmingPassword" size=10 maxlength=50/>~;
+       print "<BR>\n";
+     }
+
+     print "<B><font color=\"red\">Submitter first name</B></font> (Enter submitter's first name)<BR>\n";
+     #print $q->textfield(-name=>"firstName",-value=>$firstName,-size=>50,-maxlength=>100);
+     print qq~<input type="text" name="firstName" value="$firstName" size=50 maxlength=100/>~;
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Submitter last name</B></font> (Enter submitter's last name)<BR>\n";
+     #print $q->textfield( "lastName", $lastName, 50, 100);
+     print qq~<input type="text" name="lastName" value="$lastName" size=50 maxlength=100/>~;
+     print "<BR>\n";
+     if ($authentication->{result} ne 'Success') {
+       print $q->submit(-name => "action",
+			-value => 'REGISTER',
+			-label => 'REGISTER');
+       print "<BR>\n";
+     }
+     print "<HR>\n";
+
+
+     print "<B><font color=\"red\">Dataset type</B></font> (Please select the broad category classifying the dataset. This will aid in determining how to process it.)<BR>\n";
+     print qq~<select name="datasetType">~;
+     for (my $i=0; $i < scalar(@datasetTypes); $i+=2) {
+       my ($key,$label) = @datasetTypes[$i..$i+1];
+       my $selected = '';
+       $selected = 'selected="true" ' if ($parameters{'datasetType'} eq $key);
+       print qq~  <option $selected value="$key">$label</option>\n~;
+     }
+     print "</select>\n";
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Dataset tag</B></font> (Enter a short {up to 20 characters} \"tag\" for this dataset)<BR>It should be globally unique. It will be used in lists of datasets where the title might be too long.<BR>\n";
+     print $q->textfield( "datasetTag", $parameters{'datasetTag'}, 20, 20);
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Dataset title</B></font> (Enter a nice descriptive title {up to 200 characters} for this dataset)<BR>\n";
+     print $q->textarea( "datasetTitle", $parameters{'datasetTitle'}, 3, 66);
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Dataset Release Date</B></font> (Enter the date on which the data may be released publicly)<BR>\n";
+     print "(Please use the format  2011-08-16)<BR>\n";
+     print $q->textfield( "publicReleaseDate", $parameters{'publicReleaseDate'}, 10, 10);
+     print "<BR>\n";
+     print "<HR>\n";
+
+     print "<B><font color=\"red\">Contributors</B></font> (Enter the names of people who are contributing this dataset, including the submitter, if applicable)<BR>\n";
+     print $q->textarea( "contributors", $parameters{'contributors'}, 5, 50);
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Publication</B></font> (Enter the associated publication with this dataset) (Please enter a PubMed ID if available.)<BR>\n";
+     print "(If no PubMed ID is available yet, please use format: Smith, DA, and Wesson, TB, Manuscript Title, Journal, submitted)<BR>\n";
+     print "(Or if no publication is on the horizon, please just enter \"unpublished\")<BR>\n";
+     print $q->textarea( "publication", $parameters{'publication'}, 5, 50);
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Instrument(s) used</B></font> (Enter the model name of the instrument(s) used for this dataset)<BR>\n";
+     print "(Please use the format: Thermo Scientific LTQ Orbitrap, AB Sciex QTRAP 5600, etc.) (You may enter more than one if applicable)<BR>\n";
+     print $q->textarea( "instruments", $parameters{'instruments'}, 2, 40);
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Species studied</B></font> (Enter the name of the species studied)<BR>\n";
+     print "(Please use the format: Human, Mouse, Drosophila melanogaster, etc.) (You may enter more than one if applicable)<BR>\n";
+     print $q->textarea( "species", $parameters{'species'}, 2, 40);
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Mass modifications</B></font> (Enter any mass modifications applied to the sample)<BR>\n";
+     print "(Please use the format: C+57.021464, K+8.014199, R+10.008269)<BR>\n";
+     print $q->textarea( "massModifications", $parameters{'massModifications'}, 2, 40);
+     print "<BR>\n";
+     print "<HR>\n";
+
+     print "<B>Summary</B> (Enter a free-text summary or description of the dataset, experiment, or project)<BR>\n";
+     print $q->textarea( "summary", $parameters{'summary'}, 6, 80);
+     print "<BR>\n";
+
+     print "<B>Growth Protocol</B> (Enter a free-text description of the growth protocol or organism preparation)<BR>\n";
+     print $q->textarea( "growth", $parameters{'growth'}, 6, 80);
+     print "<BR>\n";
+
+     print "<B>Treatment Protocol</B> (Enter a free-text description of the treatments applied to the organism prior to sample acquisition)<BR>\n";
+     print $q->textarea( "treatment", $parameters{'treatment'}, 6, 80);
+     print "<BR>\n";
+
+     print "<B>Extraction Protocol</B> (Enter a free-text description of the extraction of proteins from the treated sample(s))<BR>\n";
+     print $q->textarea( "extraction", $parameters{'extraction'}, 6, 80);
+     print "<BR>\n";
+
+     print "<B>Separation Protocol</B> (Enter a free-text description of the separation of proteins and/or peptides))<BR>\n";
+     print $q->textarea( "separation", $parameters{'separation'}, 6, 80);
+     print "<BR>\n";
+
+     print "<B>Digestion Protocol</B> (Enter a free-text description of the digestion of the proteins into peptides))<BR>\n";
+     print $q->textarea( "digestion", $parameters{'digestion'}, 6, 80);
+     print "<BR>\n";
+
+     print "<B>Acquisition Protocol</B> (Enter a free-text description of the acquisition of mass spectra from the peptide sample))<BR>\n";
+     print $q->textarea( "acquisition", $parameters{'acquisition'}, 6, 80);
+     print "<BR>\n";
+
+     print "<B>Informatics Protocol</B> (Enter a free-text description of the informatics processing of the raw data produced by the instrument(s)))<BR>\n";
+     print $q->textarea( "informatics", $parameters{'informatics'}, 6, 80);
+     print "<BR>\n";
+     print "<HR>\n";
+
+     print $q->submit(-name => "action",
+		      -value => 'SUBMIT',
+		      -label => 'SUBMIT');
+     print $q->submit(-name => "refresh",
+		      -value => 'REFRESH',
+		      -label => 'REFRESH');
+
+
+     print $q->endform;
+     print "</nobr>";
+
+
+     print "</p>";
+    }
+
+
+
+
+
+
+  $log->debug( "End samples, handlerequest " . time() );
+
+} # end handle_request
+
+
+
+#######################################################################
+# authenticateUser
+#######################################################################
+sub authenticateUser {
+  my %args = @_;
+  my $SUB_NAME = 'authenticateUser';
+
+  #### Decode the argument list
+  my $emailAddress = $args{'emailAddress'} || die "[$SUB_NAME] ERROR:emailAddress  not passed";
+  my $password = $args{'password'} || die "[$SUB_NAME] ERROR:password  not passed";
+
+  my $response;
+
+  my $sql = qq~
+        SELECT submitter_id,firstName,lastName,password
+        FROM $TBAT_PASS_SUBMITTER
+        WHERE emailAddress = '$emailAddress'
+    ~;
+
+    my @rows = $sbeams->selectSeveralColumns($sql);
+    if ( @rows ) {
+      if (scalar(@rows) == 1) {
+	my $databasePassword = $rows[0]->[3];
+	if ($password eq $databasePassword) {
+	  $response->{result} = 'Success';
+	  $response->{firstName} = $rows[0]->[1];
+	  $response->{lastName} = $rows[0]->[2];
+	  $response->{submitter_id} = $rows[0]->[0];
+	} else {
+	  $response->{result} = 'IncorrectPassword';
+	  push(@{$response->{errors}},'Incorrect password for this email address');
+	}
+
+      } else {
+	die("ERROR: Too many rows returned for email address '$emailAddress'");
+      }
+
+    } else {
+      $response->{result} = 'NoSuchUser';
+      push(@{$response->{errors}},"There is not any user registered to '$emailAddress'");
+    }
+
+    return $response;
+}
+
+
+#######################################################################
+# registerUser
+#######################################################################
+sub registerUser {
+  my %args = @_;
+  my $SUB_NAME = 'registerUser';
+
+  #### Decode the argument list
+  my $emailAddress = $args{'emailAddress'} || die "[$SUB_NAME] ERROR: emailAddress  not passed";
+  my $password = $args{'password'} || die "[$SUB_NAME] ERROR: password not passed";
+  my $firstName = $args{'firstName'} || die "[$SUB_NAME] ERROR: firstName not passed";
+  my $lastName = $args{'lastName'} || die "[$SUB_NAME] ERROR: lastName not passed";
+
+  my $response;
+  my $readyToRegister = 0;
+
+  my $authentication = authenticateUser(emailAddress=>$emailAddress,password=>$password);
+  if ($authentication->{result} eq 'Success') {
+    $response->{result} = 'UserAlreadyExists';
+    push(@{$response->{errors}},"This user '$emailAddress' already exists. Login instead.");
+
+  } elsif ($authentication->{result} eq 'IncorrectPassword') {
+    $response->{result} = 'UserAlreadyExists';
+    push(@{$response->{errors}},"This user '$emailAddress' already exists, although the password provided is incorrect.");
+
+  } elsif ($authentication->{result} eq 'NoSuchUser') {
+    $readyToRegister = 1;
+
+  } else {
+    $response->{result} = 'UnknownError';
+    push(@{$response->{errors}},"Unknown error 456. Please report.");
+  }
+
+
+  my $PK;
+  if ($readyToRegister) {
+    my %rowdata = (
+      emailAddress => $emailAddress,
+      password => $password,
+      firstName => $firstName,
+      lastName => $lastName,
+      emailReminders => 'YES',
+      emailPasswords => 'YES',
+    );
+
+    $PK = $sbeams->updateOrInsertRow(
+					insert => 1,
+					table_name => $TBAT_PASS_SUBMITTER,
+					rowdata_ref => \%rowdata,
+					PK => 'submitter_id',
+					return_PK => 1,
+					add_audit_parameters => 1
+				       );
+
+  }
+
+  if ($PK && $PK > 0) {
+    $response->{result} = 'Success';
+  } else {
+    $response->{result} = 'Failed';
+  }
+
+  return $response;
+
+}
+
+
+#######################################################################
+# validateDatasetAnnotations
+#######################################################################
+sub validateDatasetAnnotations {
+  my %args = @_;
+  my $SUB_NAME = 'validateDatasetAnnotations';
+
+  #### Decode the argument list
+  my $formParameters = $args{'formParameters'} || die "[$SUB_NAME] ERROR: formParameters not passed";
+
+  my $response;
+  my $test;
+  $response->{result} = 'Success';
+
+  $test = $formParameters->{datasetType};
+  my $result = 0;
+  for (my $i=0; $i < scalar(@datasetTypes); $i+=2) {
+    my ($key,$label) = @datasetTypes[$i..$i+1];
+    $result = 1 if ($test eq $key);
+  }
+  unless ($result) {
+    $response->{result} = 'Failed';
+    push(@{$response->{errors}},"Dataset type is not a legal option");
+  }
+
+
+  $test = $formParameters->{datasetTag};
+  unless (defined($test) && $test =~ /^[A-Za-z0-9\_\-]+$/ && length($test) > 5 && length($test) <= 20) {
+    $response->{result} = 'Failed';
+    push(@{$response->{errors}},"Dataset Tag must be an alphanumeric string with length more than 5 up to 20");
+  }
+
+  $test = $formParameters->{datasetTitle};
+  unless (defined($test) && length($test) > 20 && length($test) <= 200) {
+    $response->{result} = 'Failed';
+    push(@{$response->{errors}},"Dataset Title must be a string with length more than 20 up to 200");
+  }
+
+  $test = $formParameters->{publicReleaseDate};
+  unless (defined($test) && $test =~ /^(\d\d\d\d)\-(\d\d)\-(\d\d)$/ && $1>=2000 && $2>0 && $2<12 && $3>0 && $3<32) {
+    $response->{result} = 'Failed';
+    push(@{$response->{errors}},"Public release data must be a valid date of the form YYYY-MM-DD like 2011-10-25");
+  }
+
+  $test = $formParameters->{contributors};
+  unless (defined($test) && length($test) > 10 && length($test) <= 10000) {
+    $response->{result} = 'Failed';
+    push(@{$response->{errors}},"Contributors must be a string with length more than 10 up to 10000");
+  }
+
+  $test = $formParameters->{publication};
+  unless (defined($test) && length($test) > 5 && length($test) <= 1000) {
+    $response->{result} = 'Failed';
+    push(@{$response->{errors}},"Publication must be a string with length more than 5 up to 1000");
+  }
+
+  $test = $formParameters->{instruments};
+  unless (defined($test) && length($test) > 5 && length($test) <= 1000) {
+    $response->{result} = 'Failed';
+    push(@{$response->{errors}},"Instruments must be a string with length more than 5 up to 1000");
+  }
+
+  $test = $formParameters->{species};
+  unless (defined($test) && length($test) > 3 && length($test) <= 1000) {
+    $response->{result} = 'Failed';
+    push(@{$response->{errors}},"Species must be a string with length more than 3 up to 1000");
+  }
+
+  $test = $formParameters->{massModifications};
+  unless (defined($test) && length($test) > 3 && length($test) <= 1000) {
+    $response->{result} = 'Failed';
+    push(@{$response->{errors}},"Mass modidications must be a string with length more than 3 up to 1000");
+  }
+
+
+  return $response;
+
+}
+
+
+#######################################################################
+# addDataset
+#######################################################################
+sub addDataset {
+  my %args = @_;
+  my $SUB_NAME = 'addDataset';
+
+  #### Decode the argument list
+  my $authentication = $args{'authentication'} || die "[$SUB_NAME] ERROR: authentication  not passed";
+  my $formParameters = $args{'formParameters'} || die "[$SUB_NAME] ERROR: formParameters not passed";
+
+  my $response;
+
+  return unless ($authentication->{result} eq 'Success');
+
+  my $datasetPassword = 'PAds11';
+
+  $formParameters->{datasetTitle} =~ s/[\n\r]//g;
+
+  my $PK;
+  my %rowdata = (
+    submitter_id => $authentication->{submitter_id},
+    datasetIdentifier => "tmp_$formParameters->{datasetTag}",
+    datasetType => $formParameters->{datasetType},
+    datasetPassword => $datasetPassword,
+    datasetTag => $formParameters->{datasetTag},
+    datasetTitle => $formParameters->{datasetTitle},
+    publicReleaseDate => $formParameters->{publicReleaseDate},
+    finalizedDate => 'NULL',
+  );
+
+  print "<PRE>\n";
+  $PK = $sbeams->updateOrInsertRow(
+				   insert => 1,
+				   table_name => $TBAT_PASS_DATASET,
+				   rowdata_ref => \%rowdata,
+				   PK => 'dataset_id',
+				   return_PK => 1,
+				   add_audit_parameters => 1,
+				   #testonly => 1,
+				   #verbose => 0,
+				  );
+
+  if ($PK && $PK > 0) {
+    $response->{result} = 'Success';
+  } else {
+    $response->{result} = 'Failed';
+    return $response;
+  }
+
+  my $datasetIdentifier = "PASS".substr('000000',0,5-length($PK)).$PK;
+  %rowdata = ( datasetIdentifier => $datasetIdentifier );
+  my $result = $sbeams->updateOrInsertRow(
+					  update => 1,
+					  table_name => $TBAT_PASS_DATASET,
+					  rowdata_ref => \%rowdata,
+					  PK => 'dataset_id',
+					  PK_value => $PK,
+					  #testonly => 1,
+					  #verbose => 0,
+					 );
+  print "</PRE>\n";
+
+
+  my $PASS_FTP_AGENT_BASE = '/prometheus/u1/home/PASSftpAgent';
+
+  my $outfile = "$PASS_FTP_AGENT_BASE/Incoming/${datasetIdentifier}_DESCRIPTION.txt";
+  open(OUTFILE,">$outfile") || die("ERROR: Unable to write to '$outfile'");
+
+  my $metadata = '';
+  $metadata .= "identifier:\t$datasetIdentifier\r\n";
+  $metadata .= "tag:\t$formParameters->{datasetTag}\r\n";
+  $metadata .= "title:\t$formParameters->{datasetTitle}\r\n";
+  $metadata .= "summary:\t$formParameters->{summary}\r\n";
+  $metadata .= "contributor:\t$formParameters->{contributors}\r\n";
+
+  $metadata .= "pubmed id:\t$formParameters->{publication}\r\n";
+
+  foreach my $tag ( 'growth','treatment','extraction','separation','digestion','acquisition','informatics' ) {
+    $metadata .= "$tag:\t$formParameters->{$tag}\r\n";
+  }
+
+  foreach my $tag ( 'instruments','species','massModifications' ) {
+    $metadata .= "$tag:\t$formParameters->{$tag}\r\n";
+  }
+
+  print OUTFILE $metadata;
+  close(OUTFILE);
+
+
+  #### Tell the FTP agent to create the account
+  my $cmdfile = "$PASS_FTP_AGENT_BASE/commands.queue";
+  open(CMDFILE,">>$cmdfile") || die("ERROR: Unable to append to '$outfile'");
+  print CMDFILE "CreateUser $datasetIdentifier with password $datasetPassword\n";
+  close(CMDFILE);
+
+
+  #### Print the information for the user
+  my $confirmationMessage = qq~<H3>Thank you for submitting to PeptideAtlas</H3>
+Your submission has been assigned the identifier $datasetIdentifier.<PRE>
+Identifier: $datasetIdentifier
+Dataset tag: $formParameters->{datasetTag}
+Datset title: $formParameters->{datasetTitle}</PRE>
+You will receive an email confirmation about this submission with this information.<P>
+The next step is to upload your data via FTP.<P>
+You may use any FTP application for this, but we highly recommend FileZilla. It is extremely easy to use and reliable with such advanced features as automatic retry and parallel uploads. It has a very nice graphical user interface for Windows, MacOS, and Linux. Please download and install FileZilla at <a href="http://filezilla-project.org/download.php?type=client">http://filezilla-project.org/download.php?type=client</a> if you don't already have it.<P>
+Here is the FTP information:<PRE>
+Servername: ftp.peptideatlas.org
+Username: $datasetIdentifier
+Password: $datasetPassword
+</PRE>
+After you have finished uploading all your data, please return to:<PRE>
+    <a href="http://www.peptideatlas.org/PASS/$datasetIdentifier">http://www.peptideatlas.org/PASS/$datasetIdentifier</a></PRE>
+and mark your submission finalized.<P>
+If you have problems with the upload, please contact us at edeutsch\@systemsbiology.org<P>
+Thank you again for your contribution. If you have comments about this submission process, please leave us your comments at <a href="http://www.peptideatlas.org/feedback.php">http://www.peptideatlas.org/feedback.php</a>
+~;
+  print $confirmationMessage;
+
+  #### Reformat the message for email
+  $confirmationMessage =~ s/\<H3\>//g;
+  $confirmationMessage =~ s/\<\/H3\>/\n/g;
+  $confirmationMessage =~ s/\<PRE\>//g;
+  $confirmationMessage =~ s/\<\/PRE\>/\n/g;
+  $confirmationMessage =~ s/\<P\>/\n/g;
+  $confirmationMessage =~ s/\<a .+?\>//g;
+  $confirmationMessage =~ s/\<\/a\>//g;
+
+  #### Send the submitter the information by email
+  my $mailprog = "/usr/lib/sendmail";
+  my $recipient_name = "$formParameters->{firstName} $formParameters->{lastName}";
+  my $recipient = $formParameters->{emailAddress};
+  my $cc_name = "SBEAMS";
+  my $cc = "edeutsch\@systemsbiology.org";
+
+  open (MAIL, "|$mailprog $recipient") || die("Can't open $mailprog!\n");
+  print MAIL "From: PeptideAtlas Agent <edeutsch\@db.systemsbiology.net>\n";
+  print MAIL "To: $recipient_name <$recipient>\n";
+  #print MAIL "Cc: $cc_name <$cc>\n";
+  print MAIL "Reply-to: PeptideAtlas Agent <edeutsch\@db.systemsbiology.net>\n";
+  print MAIL "Subject: PeptideAtlas dataset submission $datasetIdentifier\n\n";
+  print MAIL "Dear $formParameters->{firstName},\n\n$confirmationMessage\n\n";
+  close (MAIL);
+
+
+  #### Email Eric about the submission
+  my $adminMessage = qq~A new PASS submission has occurred:\n
+Submitter: $recipient_name <$recipient>
+URL: http://www.peptideatlas.org/PASS/$datasetIdentifier
+Username: $datasetIdentifier
+Password: $datasetPassword
+
+$metadata
+~;
+  $recipient_name = "PeptideAtlas Admin";
+  $recipient = 'Eric.Deutsch@systemsbiology.org';
+
+  open (MAIL, "|$mailprog $recipient") || die("Can't open $mailprog!\n");
+  print MAIL "From: PeptideAtlas Agent <edeutsch\@db.systemsbiology.net>\n";
+  print MAIL "To: $recipient_name <$recipient>\n";
+  #print MAIL "Cc: $cc_name <$cc>\n";
+  print MAIL "Reply-to: PeptideAtlas Agent <edeutsch\@db.systemsbiology.net>\n";
+  print MAIL "Subject: PeptideAtlas dataset submission $datasetIdentifier\n\n";
+  print MAIL "$adminMessage\n\n";
+  close (MAIL);
+
+
+
+
+  return $response;
+
+}
