@@ -20,6 +20,7 @@ AT_publication	Publication	PeptideAtlas_user	YES	$TBAT_PUBLICATION	publication_i
 AT_biosequence_annotated_gene	Biosequence Annotated Gene	PeptideAtlas_infrastructure	NO	$TBAT_BIOSEQUENCE_ANNOTATED_GENE	biosequence_annotated_gene_id				
 AT_biosequence_annotation	Biosequence Annotation	PeptideAtlas_project	YES	$TBAT_BIOSEQUENCE_ANNOTATION	biosequence_annotation_id		ManageTable.cgi?TABLE_NAME=AT_biosequence_annotation		
 AT_search_key	Search Key	PeptideAtlas_infrastructure	NO	$TBAT_SEARCH_KEY	search_key_id				
+AT_search_key_entity	Search Key Entity	PeptideAtlas_infrastructure	NO	$TBAT_SEARCH_KEY_ENTITY	search_key_id			
 AT_query_option	Query Option	PeptideAtlas_infrastructure	YES	$TBAT_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=AT_query_option	AT_query_option	
 AT_sample_publication	Sample Publication	PeptideAtlas_user	NO	$TBAT_SAMPLE_PUBLICATION	sample_publication_id				
 AT_atlas_search_batch_parameter	Atlas Search Batch Parameter	PeptideAtlas_infrastructure	NO	$TBAT_ATLAS_SEARCH_BATCH_PARAMETER	atlas_search_batch_id				
