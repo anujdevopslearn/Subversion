@@ -149,7 +149,7 @@ AT_peptide_instance_search_batch	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	w
 AT_peptide_instance_search_batch	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_modified_peptide_instance	1	modified_peptide_instance_id	Modified Peptide Instance ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_modified_peptide_instance	2	peptide_instance_id	Peptide Instance ID	int	4	0	N		N	AT_peptide_instance	peptide_instance_id	Y	text	10		Y	Y	Y	Parent peptide_instance_id		
-AT_modified_peptide_instance	3	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Sequence of the peptide including modification notations		
+AT_modified_peptide_instance	3	modified_peptide_sequence	Modified Peptide Sequence	varchar	300	0	N		N			Y	text	50		Y	Y	Y	Sequence of the peptide including modification notations		
 AT_modified_peptide_instance	4	peptide_charge	Peptide Charge	int	4	0	N		N			Y	text	10		Y	Y	Y	Charge on the precursor ion		
 AT_modified_peptide_instance	5	monoisotopic_peptide_mass	Monoisotopic Neutral Peptide Mass	float	8	0	N		N			Y	text	10		Y	Y	N	Neutral peptide monoisotopic mass		
 AT_modified_peptide_instance	6	average_peptide_mass	Average Neutral Peptide Mass	float	8	0	N		N			Y	text	10		Y	Y	N	Neutral peptide average mass		
@@ -307,6 +307,13 @@ AT_search_key	8	resource_type	Resource Type	varchar	50	0	N		N
 AT_search_key	9	resource_url	Resource URL	varchar	255	0	N		N												
 AT_search_key	10	resource_n_matches	Resource N Matches	int	4	0	Y		N												
 AT_search_key	11	protein_alias_master	Protein Alias Master	varchar	255	0	N		N												
+AT_search_key_entity	1	search_key_id	Search Key ID	int	4	0	N		Y												
+AT_search_key_entity	2	search_key_name	Search Key Name	varchar	800	0	N		N												
+AT_search_key_entity	3	search_key_type	Search Key Type	varchar	50	0	N		N												
+AT_search_key_entity	4	search_key_dbxref_id	Database Cross Reference	int	4	0	Y		N												
+AT_search_key_entity	5	resource_name	Resource Name	varchar	255	0	N		N												
+AT_search_key_entity	6	resource_type	Resource Type	varchar	50	0	N		N												
+AT_search_key_entity	7	protein_alias_master	Protein Alias Master	varchar	255	0	N		N												
 AT_query_option	1	query_option_id	Query Option ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_query_option	2	option_type	Option Type	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Type or category of this option		
 AT_query_option	3	option_key	Option Key	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Key for this key/value pair option		
