@@ -878,7 +878,7 @@ AT_PASS_submitter	12	modified_by_id	Record Modified By	int	8	0	N		N	contact	cont
 AT_PASS_submitter	13	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 AT_PASS_submitter	14	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_PASS_dataset	1	dataset_id	Dataset	int	4	0	N		Y							N	N				pkDEFAULT
-AT_PASS_dataset	2	submitter_id	Submitter	int	4	0	N		N			Y	optionlist			Y	Y	N	Submitter of the dataset	"SELECT submitter_id,lastName+', '+firstName+' <'+emailAddress+'>' FROM $TB_PASS_SUBMITTER ORDER BY lastName,firstName,emailAddress"	
+AT_PASS_dataset	2	submitter_id	Submitter	int	4	0	N		N			Y	optionlist			Y	Y	N	Submitter of the dataset	"SELECT submitter_id,lastName+', '+firstName+' <'+emailAddress+'>' FROM $TBAT_PASS_SUBMITTER ORDER BY lastName,firstName,emailAddress"	
 AT_PASS_dataset	3	datasetIdentifier	Dataset Identifier	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Identifier of the dataset in standard format PASS000001		
 AT_PASS_dataset	4	datasetType	Dataset Type	varchar	20	0	N		N			Y	text	20		Y	Y	N	Dataset type		
 AT_PASS_dataset	5	datasetPassword	Dataset Password	varchar	50	0	N		N			Y	text	20		Y	Y	N	Password for this dataset		
