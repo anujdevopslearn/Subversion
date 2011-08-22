@@ -131,6 +131,10 @@ use vars qw(@ISA @EXPORT
     $TBAT_SEL_CHROMATOGRAM
     $TBAT_SEL_PEAK_GROUP
     $TBAT_QT5500_TRANSITION_GROUP
+
+    $TBAT_PASS_SUBMITTER
+    $TBAT_PASS_DATASET
+
 );
 
 
@@ -258,6 +262,10 @@ require Exporter;
     $TBAT_SEL_CHROMATOGRAM
     $TBAT_SEL_PEAK_GROUP
     $TBAT_QT5500_TRANSITION_GROUP
+
+    $TBAT_PASS_SUBMITTER
+    $TBAT_PASS_DATASET
+
 );
 
 
@@ -389,3 +397,6 @@ $TBAT_SEL_TRANSITION                = "${mod}SEL_transition";
 $TBAT_SEL_CHROMATOGRAM              = "${mod}SEL_chromatogram";
 $TBAT_SEL_PEAK_GROUP                = "${mod}SEL_peak_group";
 $TBAT_QT5500_TRANSITION_GROUP       = "${mod}QT5500_transition_group";
+
+$TBAT_PASS_SUBMITTER                = "${mod}PASS_submitter";
+$TBAT_PASS_DATASET                  = "${mod}PASS_dataset";
