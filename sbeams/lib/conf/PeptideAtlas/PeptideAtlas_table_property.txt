@@ -75,3 +75,5 @@ AT_SEL_transition	SEL Experiment Transition	PeptideAtlas_infrastructure	NO	$TBAT
 AT_SEL_chromatogram	SEL Experiment Chromatogram	PeptideAtlas_infrastructure	NO	$TBAT_SEL_CHROMATOGRAM	sel_chromatogram_id				
 AT_elution_time_type	Elution time type	PeptideAtlas_infrastructure	YES	$TBAT_ELUTION_TIME_TYPE	elution_time_type_id		ManageTable.cgi?TABLE_NAME=AT_elution_time_type		
 AT_elution_time	Elution time	PeptideAtlas_infrastructure	YES	$TBAT_ELUTION_TIME	elution_time_id		ManageTable.cgi?TABLE_NAME=AT_elution_time		
+AT_PASS_submitter	PASS Submitter	PeptideAtlas_infrastructure	YES	$TBAT_PASS_SUBMITTER	submitter_id		ManageTable.cgi?TABLE_NAME=AT_PASS_submitter	"AT_PASS_submitter,AT_PASS_dataset"	
+AT_PASS_dataset	PASS Dataset	PeptideAtlas_infrastructure	YES	$TBAT_PASS_DATASET	dataset_id		ManageTable.cgi?TABLE_NAME=AT_PASS_dataset	"AT_PASS_submitter,AT_PASS_dataset"	

@@ -863,3 +863,33 @@ AT_elution_time	2	elution_time_type_id	Elution Time Type ID	int	4	0	N		N	AT_elut
 AT_elution_time	3	elution_time	Elution Time	float	4	0	Y		N			N						N	Elution time in minutes		
 AT_elution_time	4	peptide_sequence	Peptide Sequence	varchar	255	0	Y		N			N						N	Stripped peptide sequence		
 AT_elution_time	5	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	Y		N			N						N	Charge/Mass modified peptide sequence		
+AT_PASS_submitter	1	submitter_id	Submitter	int	4	0	N		Y							N	N				pkDEFAULT
+AT_PASS_submitter	2	firstName	First Name	varchar	50	0	N		N			Y	text	50		Y	Y	N	First name of the submitter		
+AT_PASS_submitter	3	lastName	Last Name	varchar	50	0	N		N			Y	text	50		Y	Y	N	Last name of the submitter		
+AT_PASS_submitter	4	emailAddress	Email Address	varchar	100	0	N		N			Y	text	50		Y	Y	Y	Email address of the submitter		
+AT_PASS_submitter	5	password	Password	varchar	100	0	N		N			Y	text	30		Y	Y	N	Password of the submitter		
+AT_PASS_submitter	6	emailReminders	Email Reminders?	varchar	10	0	N		N			Y	text	10		Y	Y	N	Send the submitter email notifications of submissions?		
+AT_PASS_submitter	7	emailPasswords	Email Passwords?	varchar	10	0	N		N			Y	text	10		Y	Y	N	Include passwords in the email notifications?		
+AT_PASS_submitter	8	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_PASS_submitter	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_PASS_submitter	10	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+AT_PASS_submitter	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_PASS_submitter	12	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+AT_PASS_submitter	13	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+AT_PASS_submitter	14	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_PASS_dataset	1	dataset_id	Dataset	int	4	0	N		Y							N	N				pkDEFAULT
+AT_PASS_dataset	2	submitter_id	Submitter	int	4	0	N		N			Y	optionlist			Y	Y	N	Submitter of the dataset	"SELECT submitter_id,lastName+', '+firstName+' <'+emailAddress+'>' FROM $TB_PASS_SUBMITTER ORDER BY lastName,firstName,emailAddress"	
+AT_PASS_dataset	3	datasetIdentifier	Dataset Identifier	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Identifier of the dataset in standard format PASS000001		
+AT_PASS_dataset	4	datasetType	Dataset Type	varchar	20	0	N		N			Y	text	20		Y	Y	N	Dataset type		
+AT_PASS_dataset	5	datasetPassword	Dataset Password	varchar	50	0	N		N			Y	text	20		Y	Y	N	Password for this dataset		
+AT_PASS_dataset	6	datasetTag	Dataset Tag	varchar	50	0	N		N			Y	text	30		Y	Y	N	Short tag (name) for this dataset. Limited to 20 characters		
+AT_PASS_dataset	7	datasetTitle	Dataset Title	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Title for this dataset		
+AT_PASS_dataset	8	publicReleaseDate	Public Release Date	datetime	8	0	N		N			Y	text	20		Y	Y	N	Date on which the data becomes publicly available		
+AT_PASS_dataset	9	finalizedDate	Finalized Date	datetime	8	0	Y		N			N	text	20		Y	Y	N	Datetime when the submitter declared the upload finalized		
+AT_PASS_dataset	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_PASS_dataset	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_PASS_dataset	12	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+AT_PASS_dataset	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_PASS_dataset	14	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+AT_PASS_dataset	15	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+AT_PASS_dataset	16	record_status	Record Status	char	1	0	N	N	N							N	N				
