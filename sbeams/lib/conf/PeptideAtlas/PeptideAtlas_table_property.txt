@@ -71,9 +71,12 @@ AT_protein_list	Protein List	PeptideAtlas_infrastructure	YES	$TBAT_PROTEIN_LIST	
 AT_protein_list_protein	Protein List Protein	PeptideAtlas_infrastructure	NO	$TBAT_PROTEIN_LIST_PROTEIN	protein_list_protein_id				
 AT_SEL_experiment	SEL Experiment	PeptideAtlas_infrastructure	YES	$TBAT_SEL_EXPERIMENT	sel_experiment_id		ManageTable.cgi?TABLE_NAME=AT_SEL_experiment		
 AT_SEL_run	SEL Experiment Run	PeptideAtlas_infrastructure	YES	$TBAT_SEL_RUN	sel_run_id		ManageTable.cgi?TABLE_NAME=AT_SEL_run		
-AT_SEL_transition_group	SEL Experiment Transition Group	PeptideAtlas_infrastructure	NO	$TBAT_SEL_TRANSITION_GROUP	sel_transition_id_group				
-AT_SEL_transition	SEL Experiment Transition	PeptideAtlas_infrastructure	NO	$TBAT_SEL_TRANSITION	sel_transition_id				
-AT_SEL_chromatogram	SEL Experiment Chromatogram	PeptideAtlas_infrastructure	NO	$TBAT_SEL_CHROMATOGRAM	sel_chromatogram_id				
+AT_SEL_peptide_ion	SEL Peptide Ion	PeptideAtlas_infrastructure	NO	$TBAT_SEL_PEPTIDE_ION	sel_peptide_ion_id				
+AT_SEL_peptide_ion_protein	SEL Peptide Ion Protein	PeptideAtlas_infrastructure	NO	$TBAT_SEL_PEPTIDE_ION_PROTEIN	sel_peptide_ion_protein_id				
+AT_SEL_transition_group	SEL Transition Group	PeptideAtlas_infrastructure	NO	$TBAT_SEL_TRANSITION_GROUP	sel_transition_group_id				
+AT_SEL_transition	SEL Transition	PeptideAtlas_infrastructure	NO	$TBAT_SEL_TRANSITION	sel_transition_id				
+AT_SEL_chromatogram	SEL Chromatogram	PeptideAtlas_infrastructure	NO	$TBAT_SEL_CHROMATOGRAM	sel_chromatogram_id				
+AT_SEL_peak_group	SEL Peak Group	PeptideAtlas_infrastructure	NO	$TBAT_SEL_PEAK_GROUP	sel_peak_group_id				
 AT_elution_time_type	Elution time type	PeptideAtlas_infrastructure	YES	$TBAT_ELUTION_TIME_TYPE	elution_time_type_id		ManageTable.cgi?TABLE_NAME=AT_elution_time_type		
 AT_elution_time	Elution time	PeptideAtlas_infrastructure	YES	$TBAT_ELUTION_TIME	elution_time_id		ManageTable.cgi?TABLE_NAME=AT_elution_time		
 AT_PASS_submitter	PASS Submitter	PeptideAtlas_infrastructure	YES	$TBAT_PASS_SUBMITTER	submitter_id		ManageTable.cgi?TABLE_NAME=AT_PASS_submitter	"AT_PASS_submitter,AT_PASS_dataset"	
