@@ -3,7 +3,7 @@
 #$Id:  $
 
 use DBI;
-use Test::More tests => 26;
+use Test::More tests => 27;
 use Test::Harness;
 use strict;
 use FindBin qw ( $Bin );
@@ -45,6 +45,7 @@ ok( test_aspn_digest() , 'Test AspN Digestion' );
 ok( test_gluc_digest() , 'Test GluC Digestion' );
 ok( test_lysc_digest() , 'Test LysC Digestion' );
 ok( test_orig_lysc_digest() , 'Test Original LysC Digestion' );
+ok( test_charge_matrix(), 'Test Charge Matrix' );
 
 
 sub test_bad_peptide {
@@ -64,27 +65,20 @@ sub test_bad_peptide {
 #
 #  changed...
 #
-#    my %scores =  (  M => .3,
-#                  nQ => .1,
-#                  nE => .4,
-#                  Xc => .5,
-#                   C => .3,
-#                   W => .1,
-#                   P => .3,
-#                  NG => .5,
-#                  DP => .5,
-#                  QG => .5,
-#                  DG => .5,
-#                nxxG => .3,
-#                nGPG => .1,
-#                   D => 1.0,
-#                   S => 1.0 );
-#
+    my %scores =  (  M => .3,
+                  nQ => .1,
+                   C => .3,
+                   W => .1,
+                   P => .3,
+                   );
+
+  $pepselector->set_pabst_penalty_values( %scores );   
+
   my $peptide = 'QPGMCWNGDPQGDSR';
 	my @peptides = ( [$peptide, 100000000] );
 
   # Score will vary with the default params
-  my $score = 85737500;
+  my $score = 27000;
 
 	my $results = $pepselector->pabst_evaluate_peptides( peptides => \@peptides, score_idx => 1 );
 	for my $res ( @{$results} ) {
@@ -97,6 +91,22 @@ sub test_bad_peptide {
       return 0;
     }
 	}
+}
+
+sub test_charge_matrix {
+  my @results;
+  my $ok = 1;
+  for my $m ( 1000, 2000, 400, 10000 ) {
+    for my $c ( 2, 3, 4, 5 ) {
+      my $chg = $pepselector->get_predicted_charge( mass => $m, e_chg => $c );
+      push @results, $chg;
+      if ( !$chg || $chg !~ /[234]/ ) {
+        $ok = 0;
+      }
+    }
+  }
+#  print STDERR join( "::", @results ) . "\n";
+  return $ok;
 }
 
 sub test_bad_override_peptide {
@@ -128,11 +138,12 @@ sub test_bad_override_peptide {
 sub test_hydrophobic_peptide {
 
   my %scores = ( 
-                'M' => 1,
-                'C' => 1,
                 '4H' => 0.5,
                 'Hper' => 0.5,
                 '5H' => 0.5,
+                'M' => 1,
+                'W' => 1,
+                'C' => 1,
                );
 
   my $peptide = 'MMYCLVAFWMILALLWM';
@@ -141,7 +152,6 @@ sub test_hydrophobic_peptide {
 	my @peptides = ( [$peptide, 1000] );
 	my $results = $pepselector->pabst_evaluate_peptides( peptides => \@peptides, score_idx => 1, pen_defs => \%scores );
 	for my $res ( @{$results} ) {
-#    print STDERR join( ", ", @{$res} ) . "\n";
     if ( int($res->[4]) == 125 && $res->[2] =~ /4H/ && $res->[2] =~ /Hper/ && $res->[2] =~ /5H/ ) {
       return 1;
     } else {
