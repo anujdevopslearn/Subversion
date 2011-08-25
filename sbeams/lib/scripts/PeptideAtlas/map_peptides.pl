@@ -30,6 +30,7 @@ my %stats;
 # read in protein file
 print STDERR "reading fasta file..." if $opts->{verbose};
 my ( $seq2acc, $acc2seq, $allpeptides ) = read_fasta();
+my $manually_mapped = read_manual();
 print STDERR "Done\n" if $opts->{verbose};
 my @seqs = keys( %{$seq2acc} );
 my @accs = keys( %{$acc2seq} );
@@ -169,10 +170,22 @@ close OUT;
 if ( $opts->{show_nomap} ) {
   open NOMAP, ">nomap.acc";
 }
+if ( $opts->{show_himap} ) {
+  open HIMAP, ">himap.acc";
+}
 print "\n";
 for my $acc ( keys( %{$acc2seq} ) ) {
   next unless $acc;
+
   my $n_peps = 0;
+
+  # increment each prot in the manually mapped list by one
+  if ( $manually_mapped && $manually_mapped->{$acc} ) {
+    $n_peps++;
+  }
+  
+
+
   if ( $prots{$acc} ) {
     if ( $opts->{nocount_degen} ) {
       for my $mapped_pep (  keys( %{$prots{$acc}} ) ) {
@@ -215,6 +228,9 @@ for my $acc ( keys( %{$acc2seq} ) ) {
   if ( $opts->{show_nomap} && $n_peps <= $opts->{min_nomap} ) {
     print NOMAP "$acc\n";
   }
+  if ( $opts->{show_himap} && $n_peps == $opts->{show_himap} ) {
+    print HIMAP "$acc\n";
+  }
   my $key_num = ( $n_peps > 9 ) ? $n_peps : '0' . $n_peps;
   my $bin_key = 'prot_cnt_' . $key_num;
   $stats{$bin_key}++;
@@ -222,6 +238,9 @@ for my $acc ( keys( %{$acc2seq} ) ) {
 
 if ( $opts->{show_nomap} ) {
   close NOMAP;
+}
+if ( $opts->{show_himap} ) {
+  close HIMAP;
 }
 
 if ( $opts->{key_calc} ) {
@@ -490,20 +509,15 @@ sub read_fasta {
 
 }
 
-sub read_buildpeps {
-  my $buildpeps = shift();
+sub read_manual {
   
-  open( BPEPS, "$buildpeps") || die "Couldn't open $buildpeps: $!\n";
+  return undef;
   
-  my %bpeps;
   while( my $line = <BPEPS> ) {
     chomp $line;
     my ( $pep, $build ) = split( "\t", $line );
     $pep = uc( $pep );
-    $bpeps{$pep} ||= [];
-    push @{$bpeps{$pep}}, $build;
   }
-  return \%bpeps;
 }
 
 
@@ -530,7 +544,7 @@ sub get_options {
              'peptide_file=s', 'n_convert', 'duplicates', 'pipe_acc',
              'mapping_out', 'trim_acc', 'output_file=s', 'column_labels:i',
              'acc_swiss', 'ZtoC', 'bin_max=i', 'grep_only', 'init_mapping=i',
-             'show_degen', 'show_mia', 'nocount_degen', 'show_nomap',
+             'show_degen', 'show_mia', 'nocount_degen', 'show_nomap', 'show_himap=i',
              'show_proteo', 'show_all_pep', 'omit_match_seq', 'suppress_brute',
              'key_calc', 'show_all_flanking', "min_nomap=i" );
 
@@ -605,6 +619,7 @@ sub print_usage {
       --omit_match_seq List all peptides
       --show_mia       List missing peptides
       --show_nomap     List proteins for which there are no peptides
+      --show_himap     List proteins for which there are more than show_himap peptides for 
       --nocount_degen  Omit degenerate peptides in counting protein bins
   ~;
   print "\n";
