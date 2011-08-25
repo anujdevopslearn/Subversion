@@ -87,7 +87,6 @@ if ($spectrum_name) {
 }
   
 
-
 # Get all QT5500 samples from SRMAtlas
 #for each spectrum_name in each QT5500 sample in SRM_Atlas
 
@@ -179,8 +178,6 @@ for my $mzml_fname (keys %info) {
     if ( /scanTime:\s*(\d+\.\d+)/ ) {
       $rt = $1;
       print "Scan $cycle Precursor m/z: $precursorMZ RT: $rt\n" if $VERBOSE > 2;
-      # $info{$mzml_fname}->{cycles}->{$cycle}->{rt} = $rt;
-      # $info{$mzml_fname}->{cycles}->{$cycle}->{precursorMZ} = $precursorMZ;
       $insert_count++;
 
       my $rowdata_ref;
@@ -213,7 +210,8 @@ for my $mzml_fname (keys %info) {
 
 
 
-# What is the most efficient way to do this insert?
+# Is there a more efficient way to do this insert? Batch inserts?
+# This script took 64 hours to do a million inserts June 29 2011.
 
 }
 

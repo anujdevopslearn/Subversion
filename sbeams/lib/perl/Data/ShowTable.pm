@@ -1237,6 +1237,30 @@ sub ShowHTMLTable {
   			$Atag = $url_keys->{$tmp};
   		      }
 
+  			#### %nnV is replaced by column nn's value,
+			#### this time for Atag. Added for PASSEL.
+  			if ($Atag =~ /%(\d{1,2})V/) {
+  			      my $s = &htmltext($values[$1],'URL');
+
+			      #### A most exquisite bug fix!  If the
+			      #### referenced value contained a '#V'
+			      #### in it and was column 23, this was
+			      #### converted to '%23V' and an infinite
+			      #### loop was generated!
+			      $s =~ s/%23V/%23eutsch/ if ($s =~ /%23V/);
+
+			#--------------------------------------------------
+			#       if ($semicolon_separated_list_flag) {
+			#         my @ss = split(/;/,$s);
+			# 	if ($ss[$cellvalues_counter]) {
+			# 	  $s = $ss[$cellvalues_counter];
+			# 	}
+			#       }
+			#-------------------------------------------------- 
+  			      $Atag =~ s/%(\d{1,2})V/$s/;
+  			      $modflag++;
+  			}
+
   		      #### Write out the HREF
             if ( !$leave_it ) {
   		        $out .= sprintf("<A $Atag HREF=\"%s\">",$href);

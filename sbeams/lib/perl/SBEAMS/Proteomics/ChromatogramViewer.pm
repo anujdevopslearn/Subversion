@@ -68,19 +68,21 @@ sub generateChromatogram {
     $chromavis_html =~ s:src="js:src="$chromavis_resources/js:g;
 
     # Add extra stuff at bottom.
-    $precursor_neutral_mass = sprintf "%0.3f", $precursor_neutral_mass;
-    $chromavis_html =~ s:</body>:<p>$seq ($precursor_neutral_mass Daltons calculated from +$precursor_charge precursor m/z)\n</body>:;
-    $chromavis_html =~ s:</body>:<br>Spectrum file\: $mzml_pathname\n</body>:;
-    if ($precursor_rt) {
-      $precursor_rt = sprintf "%0.3f", $precursor_rt;
-      $chromavis_html =~ s:</body>:<br>Precursor RT\: $precursor_rt\n</body>:;
-    }
-    if ($m_score) {
-      $best_peak_group_rt = sprintf "%0.3f", $best_peak_group_rt;
-      $chromavis_html =~ s:</body>:<br>mProphet best peakgroup RT\: $best_peak_group_rt\n</body>:;
-      $m_score = sprintf "%0.3f", $m_score;
-      $chromavis_html =~ s:</body>:<br>mProphet m_score\: $m_score\n</body>:;
-    }
+#--------------------------------------------------
+#     $precursor_neutral_mass = sprintf "%0.3f", $precursor_neutral_mass;
+#     $chromavis_html =~ s:</body>:<p>$seq ($precursor_neutral_mass Daltons calculated from +$precursor_charge precursor m/z)\n</body>:;
+#     $chromavis_html =~ s:</body>:<br>Spectrum file\: $mzml_pathname\n</body>:;
+#     if ($precursor_rt) {
+#       $precursor_rt = sprintf "%0.3f", $precursor_rt;
+#       $chromavis_html =~ s:</body>:<br>Precursor RT\: $precursor_rt\n</body>:;
+#     }
+#     if ($m_score) {
+#       $best_peak_group_rt = sprintf "%0.3f", $best_peak_group_rt;
+#       $chromavis_html =~ s:</body>:<br>mProphet best peakgroup RT\: $best_peak_group_rt\n</body>:;
+#       $m_score = sprintf "%0.3f", $m_score;
+#       $chromavis_html =~ s:</body>:<br>mProphet m_score\: $m_score\n</body>:;
+#     }
+#-------------------------------------------------- 
 
     return $chromavis_html;
 }

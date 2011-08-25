@@ -2,14 +2,14 @@
 
 ###############################################################################
 # Program     : GetSELTransitions
-# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
+# Author      : Terry Farrah <tfarrah@systemsbiology.org>
 # $Id: GetSELTransitions 6576 2010-10-29 17:07:59Z zsun $
 #
 # Description : This program that allows users to
 #               get SRM Experiment library
 #               transitions from the PeptideAtlas based on various criteria.
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2011 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -35,6 +35,10 @@ use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TabMenu;
+use SBEAMS::Connection::Permissions;
+
+use SBEAMS::Proteomics;
+use SBEAMS::Proteomics::Tables;
 
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
@@ -123,11 +127,16 @@ sub main {
         atlas_build_id => $parameters{atlas_build_id}
         );
 
-    $sbeamsMOD->display_page_header(project_id => $project_id);
+    $sbeamsMOD->display_page_header(
+      project_id => $project_id,
+      use_tabbed_panes=> '1',
+    );
 
     handle_request(ref_parameters=>\%parameters);
 
-    $sbeamsMOD->display_page_footer();
+    $sbeamsMOD->display_page_footer(
+      use_tabbed_panes=> '1',
+    );
 
   }
 
@@ -148,7 +157,7 @@ sub handle_request {
 
 
   #### Show current user context information
-  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+  #print "<BR>\n" if ($sbeams->output_mode() eq 'html');
   #$sbeams->printUserContext();
 
   #### Get the HTML to display the tabs
@@ -205,7 +214,7 @@ sub handle_request {
 
   #### If the apply action was to recall a previous resultset, do it
   my %rs_params = $sbeams->parseResultSetParams(q=>$q);
-  if ($apply_action eq "VIEWRESULTSET") {
+  if ($apply_action eq "VIEWRESULTSET" || $apply_action eq "VIEWPLOT") {
     $sbeams->readResultSet(
         resultset_file=>$rs_params{set_name},
         resultset_ref=>$resultset_ref,
@@ -234,16 +243,24 @@ sub handle_request {
     parameters_ref=>\%parameters,
     input_types_ref=>\%input_types,
     mask_user_context=> '1',
+    use_tabbed_panes=> '1',
   );
 
   #### Display the form action buttons
-  $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
+  $sbeams->display_form_buttons(
+    TABLE_NAME=>$TABLE_NAME,
+    use_tabbed_panes=> '1',
+  );
 
 
   #### Finish the upper part of the page and go begin the full-width
   #### data portion of the page
-  $sbeams->display_page_footer(close_tables=>'YES',
-    separator_bar=>'YES',display_footer=>'NO');
+  $sbeams->display_page_footer(
+    close_tables=>'NO',
+    separator_bar=>'NO',
+    display_footer=>'NO',
+    use_tabbed_panes=> '1',
+  );
 
 
   #########################################################################
@@ -259,17 +276,25 @@ sub handle_request {
     return;
   }
 
-  #### Build PROTEIN_NAME constraint
-  my $protein_name_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"SELTG.protein_name",
+  #### Build EXPT_PROTEIN_NAME constraint
+  my $expt_protein_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SELTG.experiment_protein_name",
     constraint_type=>"plain_text",
-    constraint_name=>"Protein Name",
+    constraint_name=>"Experiment Protein Name",
     constraint_value=>$parameters{protein_name_constraint} );
-  return if ($protein_name_clause eq '-1');
+  return if ($expt_protein_name_clause eq '-1');
+
+  #### Build SWISS_PROT_MAPPING constraint
+  my $swissprot_mapping_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SELPIP.protein_accession",
+    constraint_type=>"plain_text",
+    constraint_name=>"Swiss-Prot Mapping",
+    constraint_value=>$parameters{swissprot_mapping_constraint} );
+  return if ($swissprot_mapping_clause eq '-1');
 
   #### Build STRIPPED PEPTIDE_SEQUENCE constraint
   my $stripped_peptide_sequence_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"SELTG.stripped_peptide_sequence",
+    constraint_column=>"SELPI.stripped_peptide_sequence",
     constraint_type=>"plain_text",
     constraint_name=>"Peptide Sequence",
     constraint_value=>$parameters{stripped_peptide_sequence_constraint} );
@@ -277,7 +302,7 @@ sub handle_request {
 
   #### Build modified_peptide_sequence_constraint  
   my $modified_peptide_sequence_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"SELTG.modified_peptide_sequence",
+    constraint_column=>"SELPI.modified_peptide_sequence",
     constraint_type=>"plain_text",
     constraint_name=>"Modified Peptide Sequence",
     constraint_value=>$parameters{modified_peptide_sequence_constraint} );
@@ -301,9 +326,9 @@ sub handle_request {
 
   #### Build m_score constraint
   my $m_score_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"SELC.m_score",
+    constraint_column=>"SELPG.m_score",
     constraint_type=>"flexible_float",
-    constraint_name=>"Probabiity",
+    constraint_name=>"m_score",
     constraint_value=>$parameters{m_score_constraint} );
   return if ($m_score_clause eq '-1');
 
@@ -355,6 +380,13 @@ sub handle_request {
     constraint_value=>$parameters{SEL_experiments} );
   return if ($experiments_clause eq '-1');
 
+  #### Build project_id constraint
+  my @accessible_project_ids = $sbeams->getAccessibleProjects();
+  my $project_id_string = join (',', @accessible_project_ids);
+  my $project_id_clause = qq~
+    AND SELE.project_id in ( $project_id_string )
+  ~;
+
   #### Build experiment runs constraint 
   my $runs_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"SELR.SEL_run_id",
@@ -363,13 +395,19 @@ sub handle_request {
     constraint_value=>$parameters{SEL_runs} );
   return if ($runs_clause eq '-1');
 
-  #### Build samples constraint 
-  my $samples_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"S.sample_id",
-    constraint_type=>"int_list",
-    constraint_name=>"Samples",
-    constraint_value=>$parameters{sample_ids} );
-  return if ($samples_clause eq '-1');
+  #### Build display decoys constraint 
+  my $display_decoys = $parameters{display_options} =~ /ShowDecoys/ ;
+  my $display_decoys_clause = $display_decoys ?
+    "" : "AND SELPI.is_decoy = 'N' " ;
+
+  #### Build samples constraint   06/15/11: removed; not that useful
+#  my $samples_clause = $sbeams->parseConstraint2SQL(
+#    constraint_column=>"S.sample_id",
+#    constraint_type=>"int_list",
+#    constraint_name=>"Samples",
+#    constraint_value=>$parameters{sample_ids} );
+#  return if ($samples_clause eq '-1');
+
 
 
   #### Build ROWCOUNT constraint
@@ -389,30 +427,44 @@ sub handle_request {
   # Set up base column defs
 
   # If user wants to see a line for each transition, include
-  # columns for Q1, Q3, and ion type. Otherwise, don't.
+  # columns for Q1, Q3, and ion type. Otherwise, show the fragment ion string.
   my @transition_column_array =  ( $parameters{display_options} =~ /ShowEachTransition/ ) ? (
    ["q3_mz","SELT.q3_mz","Q3 m/z"],
    ["ion_type","(SELT.frg_type +  CAST(SELT.frg_nr AS VARCHAR) + ' +' + CAST(SELT.frg_z AS VARCHAR))","Ion Type"],
    ["frg_type","SELT.frg_type","frg_type"],
    ["frg_nr","SELT.frg_nr","frg_nr"],
    ["frg_z","SELT.frg_z","frg_z"],
-  ) : ();
+   ["collision_energy","SELTG.collision_energy","Collision Energy"],
+  ) : (
+   ["fragment_ions","SELTG.fragment_ions","fragment_ions"],
+  );
+
+  my @decoy_column_array = ( $display_decoys) ?
+   (["is_decoy",("CASE WHEN SELPI.is_decoy='Y' THEN 'decoy' ELSE '' END"),"Decoy"]) : ();
+   
 
   my @column_array = (
-   ["stripped_peptide_sequence","SELTG.stripped_peptide_sequence","Stripped Peptide Sequence"],
-   ["peptide_PA","NULL","Peptide in Peptide Atlas"],
-   ["protein_name","SELTG.protein_name","Protein Name"],
-   ["protein_name_PA","NULL","Protein in Peptide Atlas"],
-   ["modified_peptide_sequence","SELTG.modified_peptide_sequence","Modified Peptide Sequence"],
-   ["peptide_charge","SELTG.peptide_charge","Peptide Precursor Charge"],
-   ["q1_mz","SELTG.q1_mz","Q1 m/z"],
+   ["stripped_peptide_sequence","SELPI.stripped_peptide_sequence","Stripped Peptide Sequence"],
+   @decoy_column_array,
+   ["peptide_PA","NULL","Pep in Pep tide Atlas"],
+   ["peptide_SRMA","NULL","Pep in SRM Atlas"],
+   ["chromatogram_selector_left","NULL", "Chro mavis Left"],
+   ["chromatogram_selector_right","NULL", "Chro mavis Right"],
+   ["swissprot_mapping","MIN(SELPIP.protein_accession)","Primary Swiss-Prot Mapping"],
+   ["swissprot_name_PA","NULL","Swiss Prot in Pep tide Atlas"],
+   ["protein_name_PA","NULL","Expt Prot in Pep tide Atlas"],
+   ["modified_peptide_sequence","SELPI.modified_peptide_sequence","Modified Peptide Sequence"],
+   ["peptide_charge","SELPI.peptide_charge","Peptide Precursor Charge"],
+   ["instrument","I.instrument_name", "Instrument"],
+   ["targeted_q1_mz","SELTG.q1_mz","tar geted Q1 m/z"],
+   ["calculated_q1_mz","SELPI.q1_mz","calc. Q1 m/z"],
    @transition_column_array,
-   ["chromatogram_link","NULL", "Chro mato gram"],
-   ["m_score","STR(SELC.m_score,7,4)", "mProphet score"],
-   ["log10_max_apex_intensity","STR(SELC.max_apex_intensity,7,4)", "Log Max Apex Intens"],
-   ["collision_energy","SELTG.collision_energy","Collision Energy"],
+   ["chromatogram_link","NULL", "Single Chro mato gram (not working)"],
+   ["m_score","STR(SELPG.m_score,7,4)", "mProphet score"],
+   ["log10_max_apex_intensity","STR(SELPG.max_apex_intensity,7,4)", "Log Max Apex Intens"],
    ["isotype","SELTG.isotype","Isotype"],
-   ["experiment","SELE.SEL_experiment_id","Experiment"],
+   ["protein_name","SELTG.experiment_protein_name","Expt Protein Name"],
+   #["experiment","SELE.experiment_title","Experiment"],
    ["sample","S.sample_tag", "Sample"],
    ["organism","O.organism_name", "Organism"],
    ["run","SELR.spectrum_filename","Run"],
@@ -456,23 +508,55 @@ sub handle_request {
     colnameidx_ref=>\%colnameidx,
     column_titles_ref=>\@column_titles
   );
-  my $group_by_clause =  ( $parameters{display_options} =~ /ShowEachTransition/ ) ?  "" :
+  my $group_by_clause = 
+  ( $parameters{display_options} =~ /ShowEachTransition/ ) ?  
+ 
     qq ~
-    GROUP BY SELTG.stripped_peptide_sequence,
-             SELTG.protein_name,
-             SELTG.modified_peptide_sequence,
-             SELTG.peptide_charge,
+    GROUP BY SELPI.stripped_peptide_sequence,
+             SELTG.experiment_protein_name,
+             SELPI.modified_peptide_sequence,
+             SELPI.peptide_charge,
+             SELPI.is_decoy,
              SELTG.collision_energy,
              SELTG.isotype,
              SELTG.q1_mz,
+             SELT.q3_mz,
+             SELT.frg_type,
+             SELT.frg_nr,
+             SELT.frg_z,
+             SELPI.q1_mz,
+             SELTG.fragment_ions,
              S.sample_tag,
              S.sample_id,
              O.organism_name,
              SELC.SEL_chromatogram_id,
-             SELC.m_score,
-             SELC.max_apex_intensity,
+             SELPG.m_score,
+             SELPG.max_apex_intensity,
              SELR.spectrum_filename,
-             SELE.SEL_experiment_id
+             SELE.experiment_title,
+	     I.instrument_name
+  ~
+  :
+    qq ~
+    GROUP BY SELPI.stripped_peptide_sequence,
+             SELTG.experiment_protein_name,
+             SELPI.modified_peptide_sequence,
+             SELPI.peptide_charge,
+             SELPI.is_decoy,
+             SELTG.collision_energy,
+             SELTG.isotype,
+             SELTG.q1_mz,
+             SELPI.q1_mz,
+             SELTG.fragment_ions,
+             S.sample_tag,
+             S.sample_id,
+             O.organism_name,
+             SELC.SEL_chromatogram_id,
+             SELPG.m_score,
+             SELPG.max_apex_intensity,
+             SELR.spectrum_filename,
+             SELE.experiment_title,
+	     I.instrument_name
   ~;
 
   #### Define the SQL statement
@@ -480,20 +564,29 @@ sub handle_request {
      SELECT distinct $limit_clause $columns_clause
        FROM $TBAT_SEL_TRANSITION_GROUP SELTG
       LEFT JOIN $TBAT_SEL_CHROMATOGRAM SELC
-            ON ( SELTG.SEL_transition_group_id = SELC.SEL_transition_group_id )
+            ON ( SELC.SEL_transition_group_id = SELTG.SEL_transition_group_id )
+      LEFT JOIN $TBAT_SEL_PEAK_GROUP SELPG
+            ON ( SELPG.SEL_chromatogram_id = SELC.SEL_chromatogram_id )
+      LEFT JOIN $TBAT_SEL_PEPTIDE_ION SELPI
+            ON ( SELPI.SEL_peptide_ion_id = SELTG.SEL_peptide_ion_id )
+      LEFT JOIN $TBAT_SEL_PEPTIDE_ION_PROTEIN SELPIP
+            ON ( SELPIP.SEL_peptide_ion_id = SELPI.SEL_peptide_ion_id )
       LEFT JOIN $TBAT_SEL_TRANSITION SELT
             ON ( SELT.SEL_transition_group_id = SELTG.SEL_transition_group_id )
       LEFT JOIN $TBAT_SEL_RUN SELR
-            ON ( SELR.SEL_run_id = SELC.SEL_run_id )
+            ON ( SELR.SEL_run_id = SELTG.SEL_run_id )
       LEFT JOIN $TBAT_SEL_EXPERIMENT SELE
             ON ( SELE.SEL_experiment_id = SELR.SEL_experiment_id )
       LEFT JOIN $TBAT_SAMPLE S
             ON ( S.sample_id = SELE.sample_id )
       LEFT JOIN $TB_ORGANISM O
             ON ( S.organism_id = O.organism_id )
+      LEFT JOIN $TBPR_INSTRUMENT I
+            ON ( I.instrument_id = S.instrument_model_id )
 
      WHERE 1 = 1
-        $protein_name_clause
+        $expt_protein_name_clause
+	$swissprot_mapping_clause
 	$stripped_peptide_sequence_clause
 	$modified_peptide_sequence_clause
         $q1_mz_clause
@@ -505,8 +598,9 @@ sub handle_request {
         $isotype_clause
         $organism_clause
         $experiments_clause
+	$project_id_clause
         $runs_clause
-        $samples_clause
+	$display_decoys_clause
 
     $group_by_clause
    ~;
@@ -549,26 +643,49 @@ sub handle_request {
           'Sample' => "$CGI_BASE_DIR/PeptideAtlas/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=\%$colnameidx{sample_id}V",
           'Sample_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show details about this sample\'; return true"',
 
-          'Protein Name' => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?protein_name_constraint=\%$colnameidx{protein_name}V&action=QUERY",
-          'Protein Name_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show all transitions for this protein name\'; return true"',
+          'Expt Protein Name' => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?protein_name_constraint=\%$colnameidx{protein_name}V&action=QUERY",
+          'Expt Protein Name_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show all transitions for this protein name\'; return true"',
 
-          'Protein in Peptide Atlas' => "$CGI_BASE_DIR/PeptideAtlas/Search?build_type_name=Any&all_fields=on&search_key=\%$colnameidx{protein_name}V&action=GO&apply_action=$pass_action",
-          'Protein in Peptide Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show PeptideAtlas data for this protein name\'; return true"',
-          'Protein in Peptide Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/pa_tiny.png>",
-          'Protein in Peptide Atlas_OPTIONS' => {embed_html=>1},
+          'Expt Prot in Pep tide Atlas' => "$CGI_BASE_DIR/PeptideAtlas/Search?build_type_name=Any&all_fields=on&search_key=\%$colnameidx{protein_name}V&action=GO&apply_action=$pass_action",
+          'Expt Prot in Pep tide Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show PeptideAtlas data for this protein name\'; return true"',
+          'Expt Prot in Pep tide Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/pa_tiny.png>",
+          'Expt Prot in Pep tide Atlas_OPTIONS' => {embed_html=>1},
+
+          'Primary Swiss-Prot Mapping' => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?swissprot_mapping_constraint=\%$colnameidx{swissprot_mapping}V&action=QUERY",
+          'Primary Swiss-Prot Mapping_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show all transitions for peps mapping to this Swiss-Prot accession\'; return true"',
+
+          'Swiss Prot in Pep tide Atlas' => "$CGI_BASE_DIR/PeptideAtlas/GetProtein?organism_name=\%$colnameidx{organism}V&search_key=\%$colnameidx{swissprot_mapping}V&action=GO&apply_action=$pass_action",
+          'Swiss Prot in Pep tide Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show PeptideAtlas data for this protein name\'; return true"',
+          'Swiss Prot in Pep tide Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/pa_tiny.png>",
+          'Swiss Prot in Pep tide Atlas_OPTIONS' => {embed_html=>1},
 
           'Stripped Peptide Sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?stripped_peptide_sequence_constraint=\%$colnameidx{stripped_peptide_sequence}V&action=QUERY",
           'Stripped Peptide Sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show all transitions for this peptide\'; return true"',
 
-          'Peptide in Peptide Atlas' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&searchWithinThis=Peptide+Sequence&searchForThis=\%$colnameidx{stripped_peptide_sequence}V&organism_name=\%$colnameidx{organism}V&action=QUERY",
-          'Peptide in Peptide Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'See whether this peptide is in PeptideAtlas shotgun data\'; return true"',
-          'Peptide in Peptide Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/pa_tiny.png>",
-          'Peptide in Peptide Atlas_OPTIONS' => {embed_html=>1},
+          'Pep in Pep tide Atlas' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&searchWithinThis=Peptide+Sequence&searchForThis=\%$colnameidx{stripped_peptide_sequence}V&organism_name=\%$colnameidx{organism}V&action=QUERY",
+          'Pep in Pep tide Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'See whether this peptide is in PeptideAtlas shotgun data\'; return true"',
+          'Pep in Pep tide Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/pa_tiny.png>",
+          'Pep in Pep tide Atlas_OPTIONS' => {embed_html=>1},
 
-          'Chro mato gram' => "$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?_tab=3&SEL_chromatogram_id=\%$colnameidx{SEL_chromatogram_id}V&action=QUERY",
-          'Chro mato gram_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show chromatogram\'; return true"',
-          'Chro mato gram_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/chromatogram.gif>",
-          'Chro mato gram_OPTIONS' => {embed_html=>1},
+          'Pep in SRM Atlas' => "$CGI_BASE_DIR/PeptideAtlas/GetTransitions?organism_name=\%$colnameidx{organism}V&peptide_sequence_constraint=\%$colnameidx{stripped_peptide_sequence}V&action=QUERY",
+          'Pep in SRM Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Retrieve transitions for this peptide from SRMAtlas\'; return true"',
+          'Pep in SRM Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/srmatlas-icon.gif>",
+          'Pep in SRM Atlas_OPTIONS' => {embed_html=>1},
+
+          'Single Chro mato gram (not working)' => "$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?_tab=3&SEL_chromatogram_id=\%$colnameidx{SEL_chromatogram_id}V&action=QUERY",
+          'Single Chro mato gram (not working)_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show chromatogram\'; return true"',
+          'Single Chro mato gram (not working)_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/chromatogram.gif>",
+          'Single Chro mato gram (not working)_OPTIONS' => {embed_html=>1},
+
+          'Chro mavis Left' => "#",
+          'Chro mavis Left_ATAG' => "ONMOUSEOVER=\"window.status=\'Show chromatogram\'; return true;\" ONCLICK=\"update_chromavis(\%$colnameidx{SEL_chromatogram_id}V,\'left\'); return false;\"",
+          'Chro mavis Left_ISNULL' => "Left",
+          'Chro mavis Left_OPTIONS' => {embed_html=>1},
+
+          'Chro mavis Right' => "#",
+          'Chro mavis Right_ATAG' => "ONMOUSEOVER=\"window.status=\'Show chromatogram\'; return true;\" ONCLICK=\"update_chromavis(\%$colnameidx{SEL_chromatogram_id}V,\'right\'); return false;\"",
+          'Chro mavis Right_ISNULL' => "Right",
+          'Chro mavis Right_OPTIONS' => {embed_html=>1},
       );
 
 
@@ -589,14 +706,17 @@ sub handle_request {
 
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
-  if ($apply_action =~ /QUERY/i || $apply_action eq "VIEWRESULTSET") {
+  if ($apply_action =~ /QUERY/i || $apply_action eq "VIEWRESULTSET" || $apply_action eq "VIEWPLOT") {
 
     #### If the action contained QUERY, then fetch the results from
     #### the database
     if ($apply_action =~ /QUERY/i) {
 
       #### Show the SQL that will be or was executed
-      $sbeams->display_sql(sql=>$sql) if ($show_sql);
+      $sbeams->display_sql(
+	sql=>$sql,
+	use_tabbed_panes=> '1',
+      ) if ($show_sql);
 
       #### Fetch the results from the database server
       $sbeams->fetchResultSet(
@@ -641,8 +761,8 @@ sub handle_request {
       max_widths=>\%max_widths,
       column_titles_ref=>\@column_titles,
       base_url=>$base_url,
+      use_tabbed_panes=>'1',
     );
-
 
     #### Display the resultset controls
     $sbeams->displayResultSetControls(
@@ -650,7 +770,28 @@ sub handle_request {
       query_parameters_ref=>\%parameters,
       rs_params_ref=>\%rs_params,
       base_url=>$base_url,
+      use_tabbed_panes=>'1',
     );
+
+    #### Display a future chromatogram!
+    my $chromavis_tab = '';
+    $chromavis_tab .=
+      $sbeams->addTabbedPane(
+	label=>'ChromaVis',
+      );
+
+# Read the HTML code for the viewer from a template file.
+open(HTML,
+  "$PHYSICAL_BASE_DIR/usr/javascript/chromavis/js/master_ajax.html");
+my @chromavis_html = <HTML>;
+my $chromavis_html = join('', @chromavis_html);
+
+    $chromavis_tab .= $chromavis_html;
+    $chromavis_tab .=
+      $sbeams->closeTabbedPane(
+	selected=>'0',
+      );
+    print $chromavis_tab;
 
 
     #### Display a plot of data from the resultset
@@ -660,6 +801,8 @@ sub handle_request {
       query_parameters_ref=>\%parameters,
       column_titles_ref=>\@column_titles,
       base_url=>$base_url,
+      use_tabbed_panes=>'1',
+      apply_action=>$apply_action,
     );
 
 
@@ -776,11 +919,11 @@ sub get_table_help {
   my $description;
   if ( $name eq 'transitions' ) {
     @entries = (
-      { key => 'Protein Name', value => 'Protein name provided by investigator. Click to see PeptideAtlas info on protein.' },
+      { key => 'Expt Protein Name', value => 'Protein name provided by investigator. Click to see PeptideAtlas info on protein.' },
       { key => 'Stripped Peptide Sequence', value => 'Peptide sequence without modifications. Click to see observations in PeptideAtlas shotgun data.' },
       { key => 'Modified Peptide Sequence', value => 'Peptide sequence with modifications.' },
       { key => 'Isotype', value => 'heavy / light' },
-      { key => 'Experiment', value => 'Experiment ID in PeptideAtlas.' },
+      #{ key => 'Experiment', value => 'Experiment ID in PeptideAtlas.' },
       { key => 'Chromatogram', value => 'Click to view chromatogram for all traces for this Q1 in this run.' },
     );
 

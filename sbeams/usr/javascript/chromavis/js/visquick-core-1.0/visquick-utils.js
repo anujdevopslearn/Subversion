@@ -1,19 +1,17 @@
-
-
-
-if (!vq)
-    var vq = {};
+/** The top-level VisQuick namespace.
+ * @namespace Top-level namespace, vq *
+*/
+var vq = {};
 /**
- * @namespace - the parent class of all data models for Protovis-based Visualization Tool Data
- */
-if (!vq.models)
-    vq.models = {};
+ * @namespace The namespace of all data models for Protovis-based Visualization Tool Data **/
+vq.models = {};
+/** @namespace The namespace for utility classes focused on visualization tools. **/
+vq.utils = {};
+/** @namespace The namespace for event classes. **/
+vq.events = {};
 /**
- * @namespace - the parent class for utility classes focused on visualization tools.
- */
-if (!vq.utils)
-    vq.utils = {};
-
+ * @class Abstract base class for VisQuick.  Handles properties of the Visualizations and the data models. *
+*/
 vq.Base = function() {
       this.$properties = {};
 };
@@ -25,7 +23,7 @@ vq.Base.prototype.extend =  function(proto) {
   return this;
 };
 
-
+/** @private **/
 vq.Base.prototype.property = function(name, cast) {
   if (!this.hasOwnProperty("properties")) {
     this.properties = pv.extend(this.properties);
@@ -39,6 +37,7 @@ vq.Base.prototype.property = function(name, cast) {
    * define a "name" property that is evaluated on derived marks, even though
    * those marks don't normally have a name.
    */
+    /** @private **/
   vq.Base.prototype.propertyMethod(name, vq.Base.cast[name] = cast);
   return this;
 };
@@ -83,10 +82,120 @@ vq.Base.prototype.propertyMethod = function(name, cast) {
 };
 
 
+vq.events.Event = function(label,source,obj) {
+
+    this.id = label || '';
+    this.source =source || null;
+    this.obj = obj || {} ;
+};
+
+vq.events.Event.prototype.dispatch = function() {
+    vq.events.Dispatcher.dispatch(this);
+};
+
+/*
+Dispatcher
+    Manages Listeners
+            Two types of listeners:
+                    Global - event of type X from any source
+                    Distinct - event of type X from source Z
+
+                    addListener and removeListener are overloaded to accept both kinds
+                    dispatchEvent accepts an vq.events.Event object
+                            Event object is Global if source == null
+                            Event object is Distinct if source typeof == 'string'
+ */
+
+vq.events.Dispatcher = (function() {
+    //private methods and variables
+        var eventList = {};
+    return {
+          addListener : function(label) {
+            var id,handler;
+            if (label === undefined || arguments.length < 2) { return; }
+            if(arguments.length == 2 && typeof arguments[1] == 'function') {
+                handler = arguments[1];
+                id = null;
+            } else if (arguments.length == 3 && typeof arguments[1] == 'string') {
+                id = arguments[1], handler = arguments[2];
+            } else { return; }
+                if (eventList[label] === undefined) {
+                    eventList[label] = {};
+                }
+                if (eventList[label][id] === undefined) {
+                    eventList[label][id] = [];
+                }
+                 eventList[label][id].push(handler);
+        },
+
+        removeListener : function(label) {
+            var id,handler;
+            if (label === undefined || arguments.length < 2) { return; }
+            if(arguments.length == 2 && typeof arguments[1] == 'function') {
+                handler = arguments[1];
+                id = null;
+            } else if (arguments.length == 3 && typeof arguments[1] == 'string') {
+                id = arguments[1], handler = arguments[2];
+            }  else { return; }
+            if (eventList[label] === undefined || eventList[label][id] === undefined) {
+                return;
+            }
+            eventList[label][id].forEach(function(e,index) {
+                if (e === handler) {
+                    eventList[label][id].splice(index,1);
+                }
+            });
+        },
+
+        dispatch : function(event) {
+            var source = event.source || null;
+  	    var event_id = event.id || null;
+            var i = null,f = null;
+            if (event_id == null || eventList[event_id] === undefined) { return;}
+            if (eventList[event_id][source] !== undefined) {
+                i =eventList[event_id][source].length;
+                while (i--) {
+                     f =  eventList[event_id][source][i];
+                   f.call(event,event.obj);
+                }
+            }
+            if (eventList[event_id][null] !== undefined) {
+                 i =eventList[event_id][null].length;
+                while (i--) {
+                    f =  eventList[event_id][null][i];
+                   f.call(event,event.obj);
+                }
+            }
+        }
+};
+
+})();
+
+/** @class The abstract base class for the VisQuick tools.  It provides the base properties.
+ * @extends vq.Base
+ */
 vq.Vis = function() {
    vq.Base.call(this);
 };
-
+/**
+ *
+ *
+ * @type number
+ * @name vertical_padding
+ *
+ * @type number
+ * @name horizontal_padding
+ *
+ * @type number
+ * @name width
+ *
+ * @type number
+ * @name height
+ *
+ * @type string/HTMLElement
+ * @name container
+ *
+ */
 vq.Vis.prototype = pv.extend(vq.Base);
 
 vq.Vis.prototype
@@ -100,18 +209,20 @@ vq.Vis.prototype
             : c; // assume that c is the passed-in element
       });
 
-
-vq.models.VisData = function(data){
-    /** @lends vq.models.VisData# */
-
-    /**
+   /**
      * It contains a meta-tag for the included data, as well as the data in JSON format.
      *
-     * @constructs
+     * @class The abstract base class for the data model of each VisQuick tool.  It provides the
+     * necessary functionality to read, parse, analyze, and retain the input parameters.
+     *
      * @param data - a JSON object
      * @param {String} data.DATATYPE - a string describing the contents of the JSON data object
      * @param {JSON} data.CONTENTS - a JSON object containing the necessary input to create the visualization
      */
+
+vq.models.VisData = function(data){
+
+
         if (data.DATATYPE != null) {
             this.DATATYPE = data.DATATYPE;
         } else {
@@ -162,7 +273,6 @@ vq.models.VisData.prototype.get =  function(prop) {
     return obj[p] === undefined ?  undefined : obj[p];
 };
 
-
 vq.models.VisData.prototype.set = function(prop,value) {
     var parts = prop.split('.');
     var obj = this;
@@ -204,6 +314,7 @@ vq.models.VisData.prototype.setValue = function(data,o) {
     }
 };
 
+/** private **/
 
 vq.models.VisData.prototype._processData = function(data) {
     var that = this;
@@ -219,7 +330,7 @@ vq.models.VisData.prototype._processData = function(data) {
             //use default value if nothing defined
             if (!o.optional) {
                 if (get(data,o.id)  === undefined) {
-                    that.set(o.label,o.defaultValue || o['cast'](0));
+                    that.set(o.label,(o.defaultValue != undefined ? o.defaultValue :  o['cast'](null)));
                 } else { //o.id value is found and not optional
                     that.setValue(data,o);
                 }
@@ -369,6 +480,13 @@ vq.utils.VisUtils.set = function(obj,prop,value) {
 //function tick_node_id(tick) { return tick.chr + tick.start.toFixed(4) + tick.end.toFixed(4);};
     vq.utils.VisUtils.tick_node_id = function(tick) { return tick.value;};
 
+    vq.utils.VisUtils.extend = function(target,source) {
+    for (var v in source) {
+          target[v] = source[v];
+    }
+        return target;
+};
+
     vq.utils.VisUtils.parse_pairs = function(column,assign_str,delimit_str) {
         var map = {}, pair_arr =[], pairs = [];
             pair_arr =[];
@@ -397,7 +515,6 @@ vq.utils.VisUtils.set = function(obj,prop,value) {
             return function() {return property;}
         }
     };
-
 vq.utils.VisUtils.pivotArray = function(array,pivot_on,group_by,value_id,aggregate_object,
                                         include_other_properties,filter_incomplete){
 
@@ -447,21 +564,32 @@ vq.utils.VisUtils.pivotArray = function(array,pivot_on,group_by,value_id,aggrega
 
 };
 
-vq.utils.VisUtils.layoutChrTiles = function(tiles,overlap) {
+vq.utils.VisUtils.layoutChrTiles = function(tiles,overlap, max_level) {
     var new_tiles = [], chr_arr = [];
     chr_arr = pv.uniq(tiles, function(tile) { return tile.chr;});
     chr_arr.forEach(function(chr) {
         new_tiles = pv.blend([new_tiles,
-                vq.utils.VisUtils.layoutTiles(tiles.filter(function(tile) { return tile.chr == chr;}),overlap)]);
+                vq.utils.VisUtils.layoutTiles(tiles.filter(function(tile) { return tile.chr == chr;}),overlap,max_level)]);
     });
-    return new_tiles;
+    tiles.forEach(function(tile) {
+        var match = null,
+        index= 0,
+        props = pv.keys(tile);
+        do {
+             match = props.every(function(prop) { return tile[prop] == new_tiles[index][prop];}) ? 1 : 0;
+            index++;
+        }
+      while (index < new_tiles.length && match != 1);
+        tile.level = new_tiles[index-1].level;
+    });
+    return tiles;
 };
 
 //tiles : {Array} of tiles.  tile is composed of start,end
 // this returns an array with tile appended with a 'level' property representing a linear layout
 // of non-overlapping Tiles
 
-vq.utils.VisUtils.layoutTiles = function(tiles,overlap) {
+vq.utils.VisUtils.layoutTiles = function(tiles,overlap,max_level) {
 
     tiles.forEach (function(b) { b.tile_length = (b.end - b.start);});  // generate a tile length property
     tiles = tiles.sort(function(a,b) { return (a.tile_length < b.tile_length) ? -1 :
@@ -469,14 +597,25 @@ vq.utils.VisUtils.layoutTiles = function(tiles,overlap) {
     if (tiles.length) {tiles[0].level = 0;}
     tiles.forEach(function(tile,index,array) {
 
-        var levels = array.slice(0,index).map(function(a){return vq.utils.VisUtils._isOverlapping(a,tile,overlap || 0) ? a.level : null;});
+        var levels = array.slice(0,index)
+                .map(
+                function(a){
+                    var t1 = vq.utils.VisUtils.extend({},a);
+                    var t2 = vq.utils.VisUtils.extend({},tile);
+                    if(a.end == null)  t1.end = t2.start + 0.1;
+                    else if(tile.end == null) t2.end = t2.start + 0.1;
+                    return vq.utils.VisUtils._isOverlapping(t1,t2,overlap || 0) ? a.level : null;
+                }
+                );
         levels = levels.filter(function(a) { return a != null;}).sort(pv.naturalOrder);
         var find = 0, l_index =0;
         while (find >= levels[l_index]) {
             if (find == levels[l_index]) { find++;}
             l_index++;
         }
-        tile.level = find;
+        if (max_level === undefined) { tile.level = find;}
+        else
+        {tile.level  = find <= max_level ? find : Math.floor(Math.random() * (max_level + 1));}
     });
     return tiles;
 };
@@ -485,9 +624,108 @@ vq.utils.VisUtils._isOverlapping = function(tile1,tile2,overlap) {
     return ((tile1.start-overlap) <= tile2.end && (tile1.end + overlap) >= tile2.start);
 };
 
+//taken from PrototypeJS
+
+
+  vq.utils.VisUtils.cumulativeOffset = function (element) {
+    var valueT = 0, valueL = 0;
+    if (element.parentNode) {
+      do {
+        valueT += element.offsetTop  || 0;
+        valueL += element.offsetLeft || 0;
+        element = element.offsetParent;
+      } while (element);
+    }
+    return {left : valueL, top: valueT};
+  };
+
+ vq.utils.VisUtils.viewportOffset = function(forElement) {
+    var valueT = 0, valueL = 0, docBody = document.body;
+
+    var element = forElement;
+    do {
+      valueT += element.offsetTop  || 0;
+      valueL += element.offsetLeft || 0;
+      if (element.offsetParent == docBody &&
+        element.style.position == 'absolute') break;
+    } while (element = element.offsetParent);
+
+    element = forElement;
+    do {
+      if (element != docBody) {
+        valueT -= element.scrollTop  || 0;
+        valueL -= element.scrollLeft || 0;
+      }
+    } while (element = element.parentNode);
+    return {left:valueL, top:valueT};
+  };
+
+vq.utils.VisUtils.scrollOffset = function (element) {
+    var valueT = 0, valueL = 0;
+      do {
+        valueT += element.scrollTop  || 0;
+  	    valueL += element.scrollLeft || 0;
+      } while (element = element.parentNode);
+    return {left : valueL, top: valueT};
+  };
+
+vq.utils.VisUtils.outerHTML = function(node){
+        // if IE, Chrome take the internal method otherwise build one
+        return node.outerHTML || (
+                                 function(n){
+                                     var div = document.createElement('div'), h;
+                                     div.appendChild( n.cloneNode(true) );
+                                     h = div.innerHTML;
+                                     div = null;
+                                     return h;
+                                 })(node);
+};
+
+vq.utils.VisUtils.translateToReferenceCoord = function(coord,panel) {
+    var offset = vq.utils.VisUtils.scrollOffset(panel.root.canvas());
+    return {x:coord.x + offset.left,y:coord.y+offset.top};
+};
+
+/* found on stackoverflow.com
+    credit to "broofa"
+ */
+
+vq.utils.VisUtils.guid = function() {
+   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+    return v.toString(16);
+    });
+};
+
+vq.utils.VisUtils.openBrowserTab= function(url) {
+        var new_window = window.open(url,'_blank');
+        new_window.focus();
+} ;
+
+vq.utils.VisUtils.disabler = function(e) {
+    if(e.preventDefault) { e.preventDefault();}
+    return false;
+};
+
+vq.utils.VisUtils.disableSelect= function(el) {
+       if(el.attachEvent){
+        el.attachEvent("onselectstart",vq.utils.VisUtils.disabler);
+    } else {
+        el.addEventListener("selectstart",vq.utils.VisUtils.disabler,false);
+    }
+};
+
+vq.utils.VisUtils.enableSelect = function(el){
+    if(el.attachEvent){
+        el.detachEvent("onselectstart",vq.utils.VisUtils.disabler);
+    } else {
+        el.removeEventListener("selectstart",vq.utils.VisUtils.disabler,false);
+    }
+};
+
 
 /**
- * Provides a set of static functions for use in converting
+ * @class Provides a set of static functions for use in converting
  * a google.visualization.DataTable object into a Protovis consumable
  * JSON array.
  *
@@ -554,7 +792,7 @@ vq.utils.GoogleDSUtils = {};
      *  The JSON array can then be passed into the NETWORK.DATA.data_array parameter used to configure Circvis.
      *
      * @param googleDataTable - google.visualizations.DataTable object returned by a google datasource query
-     * @returns network_json_array - a JSON array which can be used into Protovis code.  Each element contains
+     * @returns network_json_array - a JSON array representation of a Google Visualizations DataTable object. The column label is assigned as the property label
      */
 
     vq.utils.GoogleDSUtils.dataTableToNetworkArray = function(googleDataTable) {
@@ -575,24 +813,25 @@ vq.utils.GoogleDSUtils = {};
 
 
 /**
- * Constructs a utility object for use with multiple-source Ajax requests.
+ * @class Constructs a utility object for use with multiple-source Ajax requests.
  * If data must be retrieved from several sources before a workflow may be started, this tool can be used to
  * check that all necessary data is available.
  *
- * @param {integer} timeout number of milliseconods between checks for valid data.  Defaults to 200ms.
+ * @param {integer} timeout number of milliseconds between checks for valid data.  Defaults to 200ms.
  * @param {total_checks}  total number of checks to perform. Defaults to 20.
  * @param {callback}    function to call if all data is successfully found
  * @param {args}    an object containing the variables which will be assigned values by the Ajax responses.
+ * @param {args}    function called if timeout reached without check object being filled.
  */
 
-vq.utils.SyncDatasources = function(timeout,total_checks,callback,args){
+vq.utils.SyncDatasources = function(timeout,total_checks,success_callback,args,fail_callback){
 
-        if (timeout && timeout instanceof Number) {
+        if (timeout && !isNaN(timeout)) {
             this.timeout = timeout;
         } else {
             this.timeout = 200;
         }
-        if (total_checks && total_checks instanceof Number) {
+        if (total_checks && !isNaN(total_checks)) {
             this.num_checks_until_quit = total_checks;
         } else {
             this.num_checks_until_quit = 20;
@@ -603,11 +842,14 @@ vq.utils.SyncDatasources = function(timeout,total_checks,callback,args){
             console.log('Error: variable array not passed to timer initialize method.');
             return;
         }
-        if (callback instanceof Function) {
-            this.callback = callback
+        if (success_callback instanceof Function) {
+            this.success_callback = success_callback
         } else {
             console.log('Error: callback function not passed to timer initialize method.');
             return;
+        }
+     if (fail_callback instanceof Function) {
+            this.fail_callback = fail_callback
         }
         this.num_checks_so_far = 0;
     };
@@ -634,59 +876,291 @@ vq.utils.SyncDatasources = function(timeout,total_checks,callback,args){
     /** @private */
     vq.utils.SyncDatasources.prototype.poll_args = function(){
         var that=this;
-        if (this.check_args()) { this.callback.apply(); return false;}
+        if (this.check_args()) { this.success_callback.apply(); return false;}
         this.num_checks_so_far++;
         if(this.num_checks_so_far >= this.num_checks_until_quit) {
             console.log('Maximum number of polling events reached.  Datasets not loaded.  Aborting.');
-            return false;
+            if (this.fail_callback === undefined) { return false;}
+            else {this.fail_callback.apply(); return false;}
         }
-        setTimeout(function() { that.poll_args();},that.timeout)
+        setTimeout(function() { that.poll_args();},that.timeout);
     };
 
+
+/*
+ * @class creates a Hovercard with options to persist the display and offer multiple actions, data, tools
+ *
+ * <pre>
+ *     {
+ *     timeout : {Number} - Milliseconds to persist the display after cursor has left the event source.  If self_hover is true, the
+ *          hovercard also cancels the timer.
+ *     target_mark : {HTMLElement} - Event source that represents the protovis Mark as an SVG/HTML Element
+ *     data_config : {Object} - designates the display for the data section.  Each Object in the config consists of
+ *              {title : property}
+ *                      title : {String} - Title of the property to be displayed
+ *                       property : {String/Function} - The string value of the property to be displayed or a function that returns a string.
+ *                                                                  The function is passed the target's data as a parameter.
+ *
+ *      self_hover : {Boolean} - If true, placing the mouse cursor over the hovercard cancels the timer which hides the hovercard
+ *      include_header : {Boolean} - If true, the header of the data panel is displayed.
+*       include_footer : {Boolean} - If true, the footer containing the CLOSE [X} action is displayed at the bottom of the hovercard
+*       include_frame : {Boolean} - If true, the frame that contains the hovercard actions (move,pin, etc) is displayed.
+ *     </pre>
+ */
+
 vq.Hovercard = function(options) {
-
-        this.hovercard = vq.utils.VisUtils.createDiv('hovercard');
-        this.hovercard.style.display = 'hidden';
-
-
+    this.id = 'hovercard_'+vq.utils.VisUtils.guid();
+    this.hovercard = vq.utils.VisUtils.createDiv(this.id);
+    this.hovercard.style.display = 'hidden';
+    this.hovercard.style.zIndex=100000;
+    this.hovercard.style.position='absolute';
+    this.lock_display = false;
     if (options) {
-        this.include_footer = options.include_footer != null ? options.include_footer : false;
-        this.include_header = options.include_header != null ? options.include_header : true;
-        this.data_config = options.data_config ? options.data_config : null;
-        this.self_hover = options.self_hover ? options.self_hover : false;
+        this.timeout = options.timeout || 800;
+        this.target_mark = options.target || null;
+        this.data_config = options.data_config || null;
+        this.tool_config = options.tool_config ||  null;
+        this.self_hover = options.self_hover || true;
+        this.include_footer = options.include_footer != null ? options.include_footer : this.self_hover || false;
+        this.include_header = options.include_header != null ? options.include_header :  this.self_hover || true;
+        this.include_frame = options.include_frame != null ? options.include_frame :  false;
+        this.transform = options.transform || {k:1,x:0,y:0};
     }
-
+    var that = this;
+    vq.events.Dispatcher.addListener('zoom_select','tooltip',function() { that.togglePin();});
 };
 
 vq.Hovercard.prototype.show = function(anchorTarget,dataObject) {
+    var that = this;
     if (!anchorTarget) { throw 'vq.Hovercard.show: target div not found.'; return;}
-    if (anchorTarget.hasChildNodes()) {anchorTarget.innerHTML ='';anchorTarget.appendChild(this.hovercard);}
-    else {anchorTarget.appendChild(this.hovercard);}
-    var html = this.renderCard(dataObject);
-    this.hovercard.innerHTML = html;
+    this.target =  anchorTarget;
+        this.hovercard.appendChild(this.renderCard(dataObject));
+    if (this.tool_config) {
+        var hr = document.createElement('div');
+        hr.setAttribute('style',"height:1px;background:#000;border:1px solid #333");
+        this.hovercard.appendChild(hr);
+        this.hovercard.appendChild(this.renderTools(dataObject));
+    }
     if (this.include_footer) this.hovercard.appendChild(this.renderFooter());
-    this.hovercard.style.display = 'block';
+    this.hovercard.style.display = 'none';
     this.hovercard.style.backgroundColor = 'white';
     this.hovercard.style.borderWidth = '2px';
     this.hovercard.style.borderColor = '#222';
     this.hovercard.style.borderStyle = 'solid';
     this.hovercard.style.font = "9px sans-serif";
+    this.hovercard.style.borderRadius = "10px";
 
+    this.placeInDocument();
+
+    this.getContainer().className ="temp";
+    this.start = function() {that.startOutTimer();};
+    this.cancel = function() {that.cancelOutTimer();};
+    this.close = function() {that.destroy();};
+    this.target_mark.addEventListener('mouseout',that.start, false);
+    this.getContainer().addEventListener('mouseover',that.cancel, false);
+    this.getContainer().addEventListener('mouseout',that.start,false);
+
+};
+
+  vq.Hovercard.prototype.startOutTimer =   function() {
+      var that = this;
+        if (!this.outtimer_id){ this.outtimer_id = window.setTimeout(function(){that.trigger();},that.timeout); }
+ };
+
+ vq.Hovercard.prototype.cancelOutTimer =  function() {
+        if (this.outtimer_id){
+            window.clearTimeout(this.outtimer_id);
+            this.outtimer_id = null;
+        }
+ };
+
+ vq.Hovercard.prototype.trigger = function (){
+        if(this.outtimer_id) {
+            window.clearTimeout(this.outtimer_id);
+            this.outtimer_id = null;
+            this.destroy();
+        }
+        return false;
+};
+
+vq.Hovercard.prototype.togglePin = function() {
+  this.lock_display = !this.lock_display || false;
+    var that = this;
+            if (this.getContainer().className=="") {
+                this.getContainer().addEventListener('mouseout',that.start,false);
+                this.getContainer().className ="temp";
+            } else {
+                this.cancelOutTimer();
+                this.getContainer().removeEventListener('mouseout',that.start,false);
+                this.target_mark.removeEventListener('mouseout',that.start,false);
+                this.getContainer().className ="";
+            }
+    this.pin_div.innerHTML = this.lock_display ? vq.Hovercard.icon.pin_in : vq.Hovercard.icon.pin_out;
+};
+
+vq.Hovercard.prototype.placeInDocument = function(){
+    var card = this.hovercard;
+    var target = this.target;
+    var offset = vq.utils.VisUtils.cumulativeOffset(this.target);
+    offset.height = target.offsetHeight;
+    offset.width = target.offsetWidth;
+    card.style.display='block';
+    card.style.visibility='hidden';
+    card.style.top = 0;
+    card.style.left = 0;
+    document.body.appendChild(card);
+     card.style.top = offset.top + offset.height + (20 * this.transform.invert().k ) + 'px';
+     card.style.left = offset.left + offset.width + (20 * this.transform.invert().k  ) + 'px';
+    card.style.visibility='visible';
+
+    if (this.include_frame) {
+        var hr = document.createElement('div');
+        hr.setAttribute('style',"height:1px;background:#000;border:1px solid #333");
+         this.hovercard.insertBefore(hr,this.hovercard.childNodes.item(0));
+        this.frame = this.hovercard.insertBefore(this.renderFrame(),this.hovercard.childNodes.item(0));
+
+        this.attachMoveListener();}
 };
 
 vq.Hovercard.prototype.hide = function() {
     if(!this.self_hover || !this.over_self) {
     this.hovercard.style.display = 'none';
+    this.hovercard.style.visibility='hidden';
+    }
+};
+
+vq.Hovercard.prototype.destroy = function() {
+    this.hide();
+    this.target_mark.removeEventListener('mouseout',this.start, false);
+    this.getContainer().removeEventListener('mouseout',this.start,false);
+    this.cancelOutTimer();
+    if (this.getContainer().parentNode == document.body) {
+        document.body.removeChild(this.getContainer());
     }
 };
 
 vq.Hovercard.prototype.isHidden = function() {
-    return this.hovercard.style.display == 'none';
+    return this.hovercard.style.display == 'none' || this.hovercard.style.visibility=='hidden';
 };
 
 vq.Hovercard.prototype.renderCard = function(dataObject) {
-          return this.renderData(dataObject);
+          return  this.renderData(dataObject);
 };
+
+vq.Hovercard.prototype.attachMoveListener = function() {
+    var that = this;
+    var pos= {}, offset = {};
+
+    function activateDrag(evt) {
+         var ev = !evt?window.event:evt;
+        //begin tracking mouse movement!
+        window.addEventListener('mousemove',trackMouse,false);
+        offset = vq.utils.VisUtils.cumulativeOffset(that.hovercard);
+        pos.top = ev.clientY ? ev.clientY : ev.pageY;
+        pos.left = ev.clientX ? ev.clientX : ev.pageX;
+        //don't allow text selection during drag
+        window.addEventListener('selectstart',vq.utils.VisUtils.disabler,false);
+    }
+    function disableDrag() {
+        //stop tracking mouse movement!
+        window.removeEventListener('mousemove',trackMouse,false);
+        //enable text selection after drag
+        window.removeEventListener('selectstart',vq.utils.VisUtils.disabler,false);
+        pos = {};
+    }
+    function trackMouse(evt) {
+        var ev = !evt?window.event:evt;
+        var x = ev.clientX ? ev.clientX : ev.pageX;
+        var y = ev.clientY ? ev.clientY : ev.pageY;
+        that.hovercard.style.left = offset.left + (x - pos.left);
+        that.hovercard.style.top = offset.top +  (y - pos.top);
+    }
+    //track mouse button for begin/end of drag
+    this.move_div.addEventListener('mousedown',activateDrag,false);
+    this.move_div.addEventListener('mouseup' , disableDrag,false);
+    //track mouse button in window, too.
+    window.addEventListener('mouseup' , disableDrag,false);
+};
+
+
+vq.Hovercard.prototype.renderFrame = function(pin_out) {
+    var that = this;
+    var frame = vq.utils.VisUtils.createDiv();
+    frame.setAttribute('style','width:100%;cursor:arrow;background:#55eeff');
+    var table = document.createElement('table');
+    var tBody = document.createElement("tbody");
+    table.appendChild(tBody);
+    var trow = tBody.insertRow(-1);
+    var tcell= trow.insertCell(-1);
+    this.move_div = vq.utils.VisUtils.createDiv('hovercard_move');
+    this.move_div.setAttribute('style','width:30px;height:15px;background:black;cursor:move;');
+    this.move_div.setAttribute('title','Drag to move');
+    vq.utils.VisUtils.disableSelect(this.move_div);
+    tcell.appendChild(this.move_div);
+    tcell=trow.insertCell(-1);
+    this.pin_div = vq.utils.VisUtils.createDiv();
+    tcell.appendChild(this.pin_div);
+    function pin_toggle() {
+        that.togglePin();
+        return false;
+    }
+    this.pin_div.addEventListener('click', pin_toggle, false);
+    this.pin_div.setAttribute('style', "width:15px;text-align:center;cursor:pointer;background:#FFF");
+    vq.utils.VisUtils.disableSelect(this.pin_div);
+    this.pin_div.innerHTML = vq.Hovercard.icon.pin_out;
+    tcell=trow.insertCell(-1);
+    var zoom_div = vq.utils.VisUtils.createDiv('hovercard_zoom');
+    tcell.appendChild(zoom_div);
+    function zoom() {
+        vq.events.Dispatcher.dispatch(new vq.events.Event('zoom','tooltip',{hovercard:that}));
+        return false;
+    }
+    zoom_div.addEventListener('click', zoom, false);
+    tcell=trow.insertCell(-1);
+    var select_div = vq.utils.VisUtils.createDiv('hovercard_select');
+    tcell.appendChild(select_div);
+    function select() {
+        vq.events.Dispatcher.dispatch(new vq.events.Event('select','tooltip',{hovercard:that}));
+        return false;
+    }
+    select_div.addEventListener('click', select, false);
+    frame.appendChild(table);
+    return frame;
+};
+
+vq.Hovercard.prototype.renderTools = function(dataObject) {
+    var get = vq.utils.VisUtils.get;
+    var table = document.createElement('table');
+    table.setAttribute('style',"font-size:10px");
+    var tBody = document.createElement("tbody");
+    table.appendChild(tBody);
+
+    if (this.tool_config) {
+        for (var key in this.tool_config) {
+            try {
+                if (!this.tool_config.hasOwnProperty(key)) continue;
+                var trow = tBody.insertRow(-1);
+                var tcell= trow.insertCell(-1);
+                var link = document.createElement('a');
+                if (typeof  this.tool_config[key] == 'function') {
+                    link.setAttribute('href',this.tool_config[key](dataObject));
+                }else {
+                    link.setAttribute('href', get(dataObject,this.tool_config[key]));
+                }
+                link.setAttribute('target',"_blank");
+                link.innerHTML = key;
+                tcell.appendChild(link);
+            } catch(e) {
+                console.warn('Data not found for tools in tooltip. ' + e);
+            }
+        }
+    }
+    return table;
+};
+
+vq.Hovercard.icon = {};
+vq.Hovercard.icon.pin_in =  '<span style="font-size:15px;color:#000;" title="Click to unpin card from the window">O</span>';
+vq.Hovercard.icon.pin_out =  '<span style="font-size:15px;color:#000" title="Click to pin card to the window">T</span>';
 
 vq.Hovercard.prototype.renderData = function(dataObject) {
     var html = '';
@@ -711,6 +1185,7 @@ vq.Hovercard.prototype.renderData = function(dataObject) {
                     var trow = tBody.insertRow(-1);
                     var tcell= trow.insertCell(-1);
                     tcell.innerHTML = '<b>' + key + '</b>:';
+                    tcell.style.textAlign = 'right';
                     tcell= trow.insertCell(-1);
                     if (typeof  this.data_config[key] == 'function') {
                         tcell.innerHTML= '<span>' +  this.data_config[key](dataObject) + '</span>';
@@ -740,18 +1215,7 @@ vq.Hovercard.prototype.renderData = function(dataObject) {
     else if ( typeof dataObject == 'string') {
         return dataObject;
     }
-    function outerHTML(node){
-        // if IE, Chrome take the internal method otherwise build one
-        return node.outerHTML || (
-                                 function(n){
-                                     var div = document.createElement('div'), h;
-                                     div.appendChild( n.cloneNode(true) );
-                                     h = div.innerHTML;
-                                     div = null;
-                                     return h;
-                                 })(node);
-    }
-    return outerHTML(table);
+    return table;
 };
 
 vq.Hovercard.prototype.getContainer = function() {
@@ -759,156 +1223,240 @@ vq.Hovercard.prototype.getContainer = function() {
 };
 
 vq.Hovercard.prototype.renderFooter = function() {
-    var footer = document.createElement('p');
-    footer.style.textAlign = 'right';
-    var close = document.createElement('a');
-    close.href = "#";
-    function hideHovercard() {
-        document.getElementById('hovercard').style.display = "none";
+    var that = this;
+    var footer = document.createElement('div');
+    footer.setAttribute('style',"text-align:right;font-size:13px;margin-right:5px;color:rgb(240,10,10);cursor:pointer;");
+    var close = document.createElement('span');
+        function hideHovercard() {
+        that.destroy();
+        return false;
     }
-    close.onclick = hideHovercard;
+    close.addEventListener('click',hideHovercard,false);
     close.innerHTML = 'CLOSE [X]';
     footer.appendChild(close);
     return footer;
 };
 
+/**
+ *
+ * @class provides an anchor div for a target object this is "in scope" or using the mouse cursor.
+ *  The anchor div's location is used to instantiate a vq.Hovercard object that
+ *  provides self_hover, moveable, pin-able and tools
+ *
+ *
+ * The configuration object has the following options:
+ *
+ * <pre>
+ *
+ * {
+ *  timeout : {Number} - number of milliseconds (ms) before the box is shown. Default is 1000,
+ *  close_timeout : {Number} - number of milliseconds (ms) the box continues to appear after 'mouseout' - Default is 0,
+ *  param_data : {Boolean} -  If true, the object explicitly passed into the function at event (mouseover) time is used as the
+ *          data.  If false, the data point underlying the event source (panel, dot, etc) is used.  Default is false.
+ *  on_mark : {Boolean} - If true, the box is placed in respect to the event source mark.  If false, the box is placed in
+ *          respect to the cursor/mouse position.  Defaults to false.
+ *
+ * include_header : {Boolean} - Place Label/Value headers at top of box.  Defaults to true.
+ * include_footer : {Boolean} - Place "Close" footer at bottom of box.  Defaults to false.
+ * self_hover : {Boolean} - If true, the box will remain visible when the cursor is above it.  Creates the "hovercard" effect.
+ *          The footer must be rendered to allow the user to close the box.  Defaults to false.
+ * data_config : {Object} - Important!  This configures the content of the hovering box.  This object is identical to the
+ *          "tooltip_items" configuration in Circvis.  Ex. { Chr : 'chr', Start : 'start', End : 'end'}.  Defaults to null
+ * }
+ *
+ * </pre>
+ *
+ * @param opts {JSON Object} - Configuration object defined above.
+ */
+
 
 pv.Behavior.hovercard = function(opts) {
 
-    var hovercard, anchor_div, outtimer_id,target, timeout = 800;
+    var hovercard, anchor_div,target,relative_div;
     var hovercard_div_id =  'vq_hover';
 
-
-    function startOutTimer() {
-        if (!outtimer_id){ outtimer_id = window.setTimeout(trigger,timeout); }
-    }
-
-    function cancelOutTimer() {
-        if (outtimer_id){
-            window.clearTimeout(outtimer_id);
-            outtimer_id = null;
-        }
-    }
-
-    function trigger() {
-        if(outtimer_id) {
-            window.clearTimeout(outtimer_id);
-            outtimer_id = null;
-            target.onmouseout = null;
-            hovercard.hide();
-        }
-    }
-    return function(d) {
-        var info = opts.param_data ? d : (this instanceof pv.Mark ? (this.data() ||  this.title()) : d);
-        if (hovercard && hovercard.getContainer() &&
-                hovercard.getContainer().style.display != 'none') {return;}
-        var t= pv.Transform.identity, p = this.parent;
-        do {
-            t=t.translate(p.left(),p.top()).times(p.transform());
-        } while( p=p.parent);
-
-         var c = this.root.canvas();
-        c.style.position = "relative";
-       // c.onmouseout = trigger;
-
-        if (!document.getElementById(hovercard_div_id)) {
-            anchor_div = vq.utils.VisUtils.createDiv(hovercard_div_id);
-            c.appendChild(anchor_div);
-            anchor_div.style.position = "absolute";
-        }
-        else {
-            anchor_div = document.getElementById(hovercard_div_id);
-            if (anchor_div.parentNode.id != c.id) {
-                c.appendChild(anchor_div);
-                }
+    //list all hovercards that are visible, yet have not been persisted/pinned to the screen.
+    function recoverHovercard() {
+        var nodes =  document.body.childNodes;
+        var body_length = nodes.length;
+        var node_arr = [];
+        for (var i =0; i< body_length; i++) {
+            if (nodes.item(i).id && nodes.item(i).id.slice(0,'hovercard_'.length) == 'hovercard_' &&
+                nodes.item(i).className != "" ) {
+                node_arr.push(nodes.item(i));
             }
-        hovercard = new vq.Hovercard(opts);
-
-
-        target = pv.event.target;
-         target.onmouseout = startOutTimer;
-
-        hovercard.getContainer().onmouseover = cancelOutTimer;
-        hovercard.getContainer().onmouseout = startOutTimer;
-
-        if (this.properties.radius) {
-            var r = this.radius();
-            t.x -= r;
-            t.y -= r;
         }
-        var width = this.width() ? this.width() : this.properties.radius ? this.radius() * 2 : 0;
-        var height = this.height() ? this.height() : this.properties.radius ? this.radius() * 2 : 0;
-
-        anchor_div.style.left = opts.on_mark ? Math.floor(this.left() * t.k + t.x) + width + "px" : this.parent.mouse().x + t.x + 20 + "px";
-        anchor_div.style.top = opts.on_mark ? Math.floor(this.top() * t.k + t.y) + height + "px" : this.parent.mouse().y + t.y + 20 + "px";
-
-        hovercard.show(anchor_div,this.data() || this.title());
-
-    };
-};
-
-
-pv.Behavior.flextip = function(opts) {
-
-    var hovercard, anchor_div,timeout_id;
-    var timeout = opts.timeout || 1000;
-    var hovercard_div_id =  'vq_hover';
-
-
-    function trigger() {
-        if(timeout_id) {
-            window.clearTimeout(timeout_id);
-            timeout_id = null;
-        }
-        if (hovercard) {  hovercard.hide();}
+        return node_arr;
     }
 
     return function(d) {
         var info = opts.param_data ? d : (this instanceof pv.Mark ? (this.data() ||  this.title()) : d);
-        if (hovercard && hovercard.getContainer() &&
-                hovercard.getContainer().style.display != 'none') {return;}
+        var hovercard_arr = recoverHovercard();
+        // quit if there is already a temprorary hovercard on the window
+        if (hovercard_arr.length > 0) {return;}
+
         var t= pv.Transform.identity, p = this.parent;
         do {
             t=t.translate(p.left(),p.top()).times(p.transform());
         } while( p=p.parent);
 
         var c = this.root.canvas();
-        c.style.position = "relative";
-        c.onmouseout = trigger;
+        if (!document.getElementById(c.id+'_rel')) {
+            relative_div = vq.utils.VisUtils.createDiv(c.id+'_rel');
+            c.insertBefore(relative_div,c.firstChild);
+            relative_div.style.position = "relative";
+            relative_div.style.top = "0px";
+            relative_div.style.zIndex=-1;
+        }
+        else {
+            relative_div = document.getElementById(c.id+'_rel');
+        }
 
         if (!document.getElementById(hovercard_div_id)) {
             anchor_div = vq.utils.VisUtils.createDiv(hovercard_div_id);
-            c.appendChild(anchor_div);
+            relative_div.appendChild(anchor_div);
             anchor_div.style.position = "absolute";
+            anchor_div.style.zIndex = -1;
         }
         else {
             anchor_div = document.getElementById(hovercard_div_id);
-            if (anchor_div.parentNode.id != c.id) {
-                c.appendChild(anchor_div);
+            if (anchor_div.parentNode.id != relative_div.id) {
+                relative_div.appendChild(anchor_div);
             }
         }
+        target = pv.event.target;
+        opts.self_hover = true;
+        opts.include_frame = true;
+        opts.include_footer = true;
+        opts.target = target;
 
 
-        hovercard = new vq.Hovercard(opts);
-        pv.event.target.onmouseout = trigger;
-
-
-        if (this.properties.radius) {
+        if(this.properties.width) {
+            anchor_div.style.width =  opts.on_mark ? Math.ceil(this.width() * t.k) + 1 : 1;
+            anchor_div.style.height =  opts.on_mark ? Math.ceil(this.height() * t.k) + 1 : 1;
+        }
+        else if (this.properties.radius) {
             var r = this.radius();
             t.x -= r;
             t.y -= r;
+            anchor_div.style.height = anchor_div.style.width = Math.ceil(2 * r * t.k);
         }
-        var width = this.width() ? this.width() : this.properties.radius ? this.radius() * 2 : 0;
-        var height = this.height() ? this.height() : this.properties.radius ? this.radius() * 2 : 0;
+        anchor_div.style.left = opts.on_mark ? Math.floor(this.left() * t.k + t.x) + "px" : Math.floor(this.parent.mouse().x  * t.k+ t.x)  + "px";
+        anchor_div.style.top = opts.on_mark ? Math.floor(this.top() * t.k + t.y) + "px" : Math.floor(this.parent.mouse().y * t.k + t.y) + "px";
+        opts.transform = t;
 
-         anchor_div.style.left = opts.on_mark ? Math.floor(this.left() * t.k + t.x) + width + "px" : this.parent.mouse().x + t.x +20 + "px";
-          anchor_div.style.top = opts.on_mark ? Math.floor(this.top() * t.k + t.y) + height + "px" : this.parent.mouse().y + t.y +20 + "px";
+        hovercard = new vq.Hovercard(opts);
+        hovercard.show(anchor_div,info);
+    };
+};
 
-        function showTip() {
-            hovercard.show(anchor_div,info);
-            timeout_id = null;
+/**
+ *
+ * @class provides an anchor div for a target object this is "in scope" or using the mouse cursor.
+ *  The anchor div's location is used to instantiate a vq.Hovercard object that appears onmouseover.  Not persist-able
+ *
+ *
+ *
+ * The configuration object has the following options:
+ *
+ * <pre>
+ *
+ * {
+ *  timeout : {Number} - number of milliseconds (ms) before the box is shown. Default is 1000,
+ *  close_timeout : {Number} - number of milliseconds (ms) the box continues to appear after 'mouseout' - Default is 0,
+ *  param_data : {Boolean} -  If true, the object explicitly passed into the function at event (mouseover) time is used as the
+ *          data.  If false, the data point underlying the event source (panel, dot, etc) is used.  Default is false.
+ *  on_mark : {Boolean} - If true, the box is placed in respect to the event source mark.  If false, the box is placed in
+ *          respect to the cursor/mouse position.  Defaults to false.
+ *
+ * include_header : {Boolean} - Place Label/Value headers at top of box.  Defaults to true.
+ * include_footer : {Boolean} - Place "Close" footer at bottom of box.  Defaults to false.
+ * self_hover : {Boolean} - If true, the box will remain visible when the cursor is above it.  Creates the "hovercard" effect.
+ *          The footer must be rendered to allow the user to close the box.  Defaults to false.
+ * data_config : {Object} - Important!  This configures the content of the hovering box.  This object is identical to the
+ *          "tooltip_items" configuration in Circvis.  Ex. { Chr : 'chr', Start : 'start', End : 'end'}.  Defaults to null
+ * }
+ *
+ * </pre>
+ *
+ * @param opts {JSON Object} - Configuration object defined above.
+ */
+
+
+pv.Behavior.flextip = function(opts) {
+
+    var hovercard, anchor_div,relative_div;
+    opts.timeout = opts.timeout || 800;
+    var hovercard_div_id =  'vq_flex';
+
+    function destroyAllCards() {
+        vq.events.Dispatcher.dispatch(new vq.events.Event('close_all_tooltips','flextip',{}));
+    }
+
+    return function(d) {
+        var info = opts.param_data ? d : (this instanceof pv.Mark ? (this.data() ||  this.title()) : d);
+        destroyAllCards();
+        var t= pv.Transform.identity, p = this.parent;
+        do {
+            t=t.translate(p.left(),p.top()).times(p.transform());
+        } while( p=p.parent);
+
+        var c = this.root.canvas();
+
+        if (!document.getElementById(c.id+'_rel')) {
+            relative_div = vq.utils.VisUtils.createDiv(c.id+'_rel');
+            c.insertBefore(relative_div,c.firstChild);
+            relative_div.style.position = "relative";
+            relative_div.style.top = "0px";
+            relative_div.style.zIndex=-1;
         }
-        timeout_id = window.setTimeout(showTip,timeout);
+        else {
+            relative_div = document.getElementById(c.id+'_rel');
+ 	    }
+
+        if (!document.getElementById(hovercard_div_id)) {
+            anchor_div = vq.utils.VisUtils.createDiv(hovercard_div_id);
+            relative_div.appendChild(anchor_div);
+            anchor_div.style.position = "absolute";
+            anchor_div.style.zIndex = -1;
+        }
+        else {
+            anchor_div = document.getElementById(hovercard_div_id);
+            if (anchor_div.parentNode.id != relative_div.id) {
+                relative_div.appendChild(anchor_div);
+            }
+        }
+        opts.include_frame = false;
+        opts.include_footer = false;
+        opts.target =  pv.event.target;
+        hovercard = new vq.Hovercard(opts);
+
+        if(this.properties.width) {
+          anchor_div.style.width =  opts.on_mark ? Math.ceil(this.width() * t.k) + 1 : 1;
+            anchor_div.style.height =  opts.on_mark ? Math.ceil(this.height() * t.k) + 1 : 1;
+        }
+        else if (this.properties.radius) {
+            var r = this.radius();
+            t.x -= r;
+            t.y -= r;
+            anchor_div.style.height = anchor_div.style.width = Math.ceil(2 * r * t.k);
+        }
+//        var width = this.width() ? this.width() : this.properties.radius ? this.radius() * 2 : 0;
+//        var height = this.height() ? this.height() : this.properties.radius ? this.radius() * 2 : 0;
+
+         anchor_div.style.left = opts.on_mark ? Math.floor(this.left() * t.k + t.x) + "px" : this.parent.mouse().x + t.x  + "px";
+          anchor_div.style.top = opts.on_mark ? Math.floor(this.top() * t.k + t.y) + "px" : this.parent.mouse().y + t.y + "px";
+
+        //be sure to destroy any visible flexible hovercards before displaying the current one.  Won't destroy pinned/persisted hovercards
+        function deleteHovercard() {
+            hovercard.destroy();
+            vq.events.Dispatcher.removeListener('close_all_tooltips',deleteHovercard);
+            return false;
+        }
+
+        vq.events.Dispatcher.addListener('close_all_tooltips',deleteHovercard);
+
+        hovercard.show(anchor_div,info);
 
     };
 };

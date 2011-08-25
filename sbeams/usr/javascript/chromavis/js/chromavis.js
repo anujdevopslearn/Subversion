@@ -24,12 +24,14 @@ vq.ChromaVis = function() {
     this.context_height(50);
     this.max_y_axis_value(1);
     this.min_y_axis_value(1);
+    this.uuid(vq.utils.VisUtils.guid());
 
 };
 
 vq.ChromaVis.prototype = pv.extend(vq.Vis);
 
 vq.ChromaVis.prototype
+        .property('uuid',String)
         .property('max_x_axis_value',Number)
         .property('min_x_axis_value',Number)
         .property('max_y_axis_value',Number)
@@ -39,6 +41,32 @@ vq.ChromaVis.prototype
         .property('auto_update_scale_y',Boolean)
         .property('context_height',Number);
 
+vq.ChromaVis.prototype.slaveTo = function(master_id) {
+    var that = this;
+    var slave_x = true, slave_y = true;
+    if (arguments.length == 3) { slave_x = arguments[1]; slave_y=arguments[2];}
+    this.slaveX = slave_x;
+    this.slaveY = slave_y;
+    if (!this.windowChangeHandler)  this.windowChangeHandler = {};
+    this.windowChangeHandler[master_id] = function(obj) {that.windowchange(obj);};
+    vq.events.Dispatcher.addListener('chromavis_windowchange',master_id,that.windowChangeHandler[master_id]);
+};
+
+vq.ChromaVis.prototype.unSlaveFrom =function(master_id) {
+    var that =this;
+    if (!that.windowChangeHandler || !that.windowChangeHandler[master_id]) { return;}
+    vq.events.Dispatcher.removeListener('chromavis_windowchange',master_id,that.windowChangeHandler[master_id]);
+};
+
+vq.ChromaVis.prototype.windowchange = function(window_obj) {
+    this.slaveRenderX = this.slaveX;
+    this.slaveRenderY = this.slaveY;
+    if (this.slaveRenderX) this.posX.domain(window_obj.pos.x.min,window_obj.pos.x.max);
+    if (this.slaveRenderY) this._bl_data.yScale.domain(window_obj.pos.y.min,window_obj.pos.y.max);
+    this.drawPanel.render();
+    this.slaveRenderX = false;
+    this.slaveRenderY = false;
+};
 
 vq.ChromaVis.prototype._setOptionDefaults =  function(options) {
 
@@ -70,8 +98,6 @@ vq.ChromaVis.prototype._setOptionDefaults =  function(options) {
 
 vq.ChromaVis.prototype.draw = function(data) {
     var that = this;
-
-
     this._bl_data = new vq.models.ChromaVisData(data);
     if (this._bl_data.isDataReady()) {
         this._setOptionDefaults(that._bl_data);
@@ -90,6 +116,8 @@ vq.ChromaVis.prototype._render = function() {
     this.show_vals = false;
     this.current_vals = {};
     that.mouse_x = null;
+    that.slaveRenderX = false;
+    that.slaveRenderY = false;
 
     this.visibleWidth = (this.width() - 2 * this.horizontal_padding() - dataObj.legend_width) - left_margin;  //40 is for y-axis label
     this.visibleHeight = (this.height() - this.vertical_padding() * 2);
@@ -168,40 +196,54 @@ vq.ChromaVis.prototype._render = function() {
         return function() { return pv.range(i,j+1,1).map(pow);};};
 
     var init =  function() {
-        var d1 = that.context_posX.invert(that.window.x),
+
+        var d1,d2;
+        var dd =   vq.utils.VisUtils.clone(dataObj.data_array);
+
+        if (!that.slaveRenderX) {
+            d1 = that.context_posX.invert(that.window.x),
                 d2 =  that.context_posX.invert(that.window.x + that.window.dx),
-                dd =   vq.utils.VisUtils.clone(dataObj.data_array);
-        that.posX.domain(d1, d2);
+                that.posX.domain(d1, d2);
+        }
+        else {
+            d1 =that.posX.domain()[0];
+            d2 =that.posX.domain()[1];
+            that.window.x =that.context_posX(d1);
+            that.window.dx = that.context_posX(d2) - that.window.x;
+        }
         var min_val = pv.max(pv.blend(dd.map(function(a) {
             return a[dataObj.data_contents_id].filter(function(d) {
                 return d[dataObj.x_column_id] < d1;});})),
+            function(e) {
+                return e[dataObj.x_column_id];});
+        var max_val =
+            pv.min(pv.blend(dd.map(function(a)
+            { return a[dataObj.data_contents_id].filter(function(d) {
+                return d[dataObj.x_column_id] > d2;});})),
                 function(e) {
                     return e[dataObj.x_column_id];});
-        var max_val =
-                pv.min(pv.blend(dd.map(function(a)
-                    { return a[dataObj.data_contents_id].filter(function(d) {
-                        return d[dataObj.x_column_id] > d2;});})),
-                            function(e) {
-                                return e[dataObj.x_column_id];});
 
         dd = dd.map(function(line) {
             var obj = {};
             obj[dataObj.data_label] = line[dataObj.data_label];
             obj[dataObj.data_contents_id] =
-                    line[dataObj.data_contents_id].filter(function(d){
-                        return (d[dataObj.x_column_id] <= max_val && d[dataObj.x_column_id] >= min_val);
-                    });
+                line[dataObj.data_contents_id].filter(function(d){
+                    return (d[dataObj.x_column_id] <= max_val && d[dataObj.x_column_id] >= min_val);
+                });
             return obj;
         });
-        if (that.auto_update_scale_y()) {
-            var y_max_val  =
+        if(!that.slaveRenderY) {
+            if (that.auto_update_scale_y()) {
+                var y_max_val  =
                     pv.max(dd,function(a) { return pv.max(a[dataObj.data_contents_id],function(b) {return b[dataObj.y_column_id];});});
-            var domain = dataObj.yScale.domain();
-            dataObj.yScale.domain(domain[0],y_max_val);
-        } else {
-            dataObj.yScale.domain(that.min_y_axis_value(),that.max_y_axis_value());
+                var domain = dataObj.yScale.domain();
+                dataObj.yScale.domain(domain[0],y_max_val);
+            } else {
+                dataObj.yScale.domain(that.min_y_axis_value(),that.max_y_axis_value());
+            }
         }
-        return dd;
+
+       return dd;
     };
 
     var vis = new pv.Panel()
@@ -391,6 +433,22 @@ vq.ChromaVis.prototype._render = function() {
     context.add(pv.Rule)
             .bottom(0);
 
+function render() {
+            if (that.window.dx < 2) { return; }
+                drawPanel.render();
+}
+
+    function renderAndDispatch() {
+        render();
+        if(!dataObj.dispatch_events) { return; }
+         vq.events.Dispatcher.dispatch(
+                new vq.events.Event('chromavis_windowchange',that.uuid(),{
+                    pos: {
+                        x:{min:that.context_posX.invert(that.window.x),max:that.context_posX.invert(that.window.dx +that.window.x) },
+                        y:{min: dataObj.yScale.domain()[0], max : dataObj.yScale.domain()[1]}        }
+        }));
+    }
+
     /* The selectable, draggable focus region. */
     context.add(pv.Panel)
             .data(function() {return [that.window];})
@@ -398,15 +456,17 @@ vq.ChromaVis.prototype._render = function() {
             .events("all")
             .event("mousedown", pv.Behavior.select())
             .event("select", function() {
-        if (that.window.dx < 2) { return; }
-        focus.render();})
-            .add(pv.Bar)
-            .left(function(d) { return d.x;})
-            .width(function(d) {return d.dx;})
-            .fillStyle("rgba(255, 128, 128, .4)")
-            .cursor("move")
-            .event("mousedown", pv.Behavior.drag())
-            .event("drag", focus);
+            renderAndDispatch();
+        })
+        .add(pv.Bar)
+        .left(function(d) { return d.x;})
+         .width(function(d) {return d.dx;})
+         .fillStyle("rgba(255, 128, 128, .4)")
+         .cursor("move")
+         .event("mousedown", pv.Behavior.drag())
+         .event("drag", function() {
+         renderAndDispatch();
+             });
 
     /* The selectable, draggable focus region. */
     focus_click_panel
@@ -420,9 +480,18 @@ vq.ChromaVis.prototype._render = function() {
         that.window ={x: that.context_posX(that.posX.invert(that.focus_window.x)),
             dx: that.context_posX(that.posX.invert(that.focus_window.dx)) -
                     that.context_posX(that.posX.invert(0))};
-        that.focus_window = {x:0,dx:0};
-        focus.render();
-        context.render();})
+            if (dataObj.dispatch_events) {
+                vq.events.Dispatcher.dispatch(
+                new vq.events.Event('chromavis_windowchange',that.uuid(),{
+                    pos: {
+                        x:{min:that.posX.invert(that.focus_window.x),max:that.posX.invert(that.focus_window.dx+that.focus_window.x)},
+                        y:{min: dataObj.yScale.domain()[0], max : dataObj.yScale.domain()[1]}        }
+
+                }));
+            }
+            that.focus_window = {x:0,dx:0};
+        drawPanel.render();
+        })
             .add(pv.Bar)
             .left(function(d) { return d.x;})
             .width(function(d) {return d.dx;})
@@ -625,6 +694,7 @@ vq.models.ChromaVisData.prototype._setDataModel = function() {
         {label : 'notifier', id: 'notifier', cast: Function, optional : true },
         {label : 'tooltipItems', id: 'tooltip_items', defaultValue :
         {X : 'x' , Value : 'y'} },
+        {label : 'dispatch_events', id:'dispatch_events',cast: Boolean, defaultValue: true},
         {label : 'data_array', id: 'data_array', defaultValue : [] },
         {label : 'vertical_marker_array', id:'vertical_marker_array', cast: Object, defaulValue: [] },
         {label : 'data_label', id: 'data_label', defaultValue : 'label'},
