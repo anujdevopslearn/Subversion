@@ -180,6 +180,10 @@ sub getTabMenu
     {
        $current_tab=5;
        $current_subtab=5;
+    }elsif ( ($PROG_NAME =~ /^GetPTP/) ||
+    ($PROG_NAME =~ /GetPTP\?(\S+)/ ))
+    {
+       $current_tab=6;
     }
 
 
@@ -318,6 +322,12 @@ if ($activate_PASSEL) {
 			   url => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions"
 			   );
 }
+
+    $tabmenu->addTab( label => 'PTPAtlas',
+         label => 'PTPAtlas',
+         helptext => 'Get Proteotypic Peptides',
+         url => "$CGI_BASE_DIR/PeptideAtlas/GetPTP"
+         );
 
 
     $tabmenu->setCurrentTab( currtab => $current_tab, currsubtab => $current_subtab );
