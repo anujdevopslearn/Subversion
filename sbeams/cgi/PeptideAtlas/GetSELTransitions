@@ -324,14 +324,6 @@ sub handle_request {
     constraint_value=>$parameters{q3_mz_constraint} );
   return if ($q3_mz_clause eq '-1');
 
-  #### Build m_score constraint
-  my $m_score_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"SELPG.m_score",
-    constraint_type=>"flexible_float",
-    constraint_name=>"m_score",
-    constraint_value=>$parameters{m_score_constraint} );
-  return if ($m_score_clause eq '-1');
-
   #### Build fragment type constraint
   my $fragment_type_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"SELT.frg_type",
@@ -363,6 +355,38 @@ sub handle_request {
     constraint_name=>"Isotype",
     constraint_value=>$parameters{isotype_constraint} );
   return if ($isotype_clause eq '-1');
+
+  #### Build m_score constraint
+  my $m_score_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SELTG.m_score",
+    constraint_type=>"flexible_float",
+    constraint_name=>"m_score",
+    constraint_value=>$parameters{m_score_constraint} );
+  return if ($m_score_clause eq '-1');
+
+  #### Build d_score constraint
+  my $d_score_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SELTG.d_score",
+    constraint_type=>"flexible_float",
+    constraint_name=>"d_score",
+    constraint_value=>$parameters{d_score_constraint} );
+  return if ($m_score_clause eq '-1');
+
+  #### Build S_N constraint
+  my $d_score_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SELTG.S_n",
+    constraint_type=>"flexible_float",
+    constraint_name=>"S_N",
+    constraint_value=>$parameters{S_N_constraint} );
+  return if ($m_score_clause eq '-1');
+
+  #### Build max apex intensity constraint
+  my $d_score_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SELTG.max_apex_intensity",
+    constraint_type=>"flexible_float",
+    constraint_name=>"mas_apex_intensity",
+    constraint_value=>$parameters{max_apex_intensity_constraint} );
+  return if ($m_score_clause eq '-1');
 
   #### Build organism constraint
   my $organism_clause = $sbeams->parseConstraint2SQL(
@@ -444,6 +468,8 @@ sub handle_request {
    
 
   my @column_array = (
+   ["modified_peptide_sequence","SELPI.modified_peptide_sequence","Modified Peptide Sequence"],
+   ["peptide_charge","SELPI.peptide_charge","Z"],
    ["stripped_peptide_sequence","SELPI.stripped_peptide_sequence","Stripped Peptide Sequence"],
    @decoy_column_array,
    ["peptide_PA","NULL","Pep in Pep tide Atlas"],
@@ -452,18 +478,18 @@ sub handle_request {
    ["chromatogram_selector_right","NULL", "Chro mavis Right"],
    ["swissprot_mapping","MIN(SELPIP.protein_accession)","Primary Swiss-Prot Mapping"],
    ["swissprot_name_PA","NULL","Swiss Prot in Pep tide Atlas"],
-   ["protein_name_PA","NULL","Expt Prot in Pep tide Atlas"],
-   ["modified_peptide_sequence","SELPI.modified_peptide_sequence","Modified Peptide Sequence"],
-   ["peptide_charge","SELPI.peptide_charge","Peptide Precursor Charge"],
+   #["protein_name_PA","NULL","Expt Prot in Pep tide Atlas"],
    ["instrument","I.instrument_name", "Instrument"],
    ["targeted_q1_mz","SELTG.q1_mz","tar geted Q1 m/z"],
    ["calculated_q1_mz","SELPI.q1_mz","calc. Q1 m/z"],
    @transition_column_array,
    ["chromatogram_link","NULL", "Single Chro mato gram (not working)"],
-   ["m_score","STR(SELPG.m_score,7,4)", "mProphet score"],
-   ["log10_max_apex_intensity","STR(SELPG.max_apex_intensity,7,4)", "Log Max Apex Intens"],
+   ["d_score","STR(SELTG.m_score,7,4)", "d_score"],
+   ["m_score","STR(SELTG.m_score,7,4)", "m_score"],
+   ["log10_max_apex_intensity","STR(SELTG.max_apex_intensity,7,4)", "Log Max Apex Intens"],
+   ["S_N","STR(SELTG.S_N,7,4)", "S/N"],
    ["isotype","SELTG.isotype","Isotype"],
-   ["protein_name","SELTG.experiment_protein_name","Expt Protein Name"],
+   #["protein_name","SELTG.experiment_protein_name","Expt Protein Name"],
    #["experiment","SELE.experiment_title","Experiment"],
    ["sample","S.sample_tag", "Sample"],
    ["organism","O.organism_name", "Organism"],
@@ -530,8 +556,10 @@ sub handle_request {
              S.sample_id,
              O.organism_name,
              SELC.SEL_chromatogram_id,
-             SELPG.m_score,
-             SELPG.max_apex_intensity,
+             SELTG.d_score,
+             SELTG.m_score,
+             SELTG.S_N,
+             SELTG.max_apex_intensity,
              SELR.spectrum_filename,
              SELE.experiment_title,
 	     I.instrument_name
@@ -552,8 +580,10 @@ sub handle_request {
              S.sample_id,
              O.organism_name,
              SELC.SEL_chromatogram_id,
-             SELPG.m_score,
-             SELPG.max_apex_intensity,
+             SELTG.d_score,
+             SELTG.m_score,
+             SELTG.S_N,
+             SELTG.max_apex_intensity,
              SELR.spectrum_filename,
              SELE.experiment_title,
 	     I.instrument_name
@@ -646,10 +676,10 @@ sub handle_request {
           'Expt Protein Name' => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?protein_name_constraint=\%$colnameidx{protein_name}V&action=QUERY",
           'Expt Protein Name_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show all transitions for this protein name\'; return true"',
 
-          'Expt Prot in Pep tide Atlas' => "$CGI_BASE_DIR/PeptideAtlas/Search?build_type_name=Any&all_fields=on&search_key=\%$colnameidx{protein_name}V&action=GO&apply_action=$pass_action",
-          'Expt Prot in Pep tide Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show PeptideAtlas data for this protein name\'; return true"',
-          'Expt Prot in Pep tide Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/pa_tiny.png>",
-          'Expt Prot in Pep tide Atlas_OPTIONS' => {embed_html=>1},
+#          'Expt Prot in Pep tide Atlas' => "$CGI_BASE_DIR/PeptideAtlas/Search?build_type_name=Any&all_fields=on&search_key=\%$colnameidx{protein_name}V&action=GO&apply_action=$pass_action",
+#          'Expt Prot in Pep tide Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show PeptideAtlas data for this protein name\'; return true"',
+#          'Expt Prot in Pep tide Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/pa_tiny.png>",
+#          'Expt Prot in Pep tide Atlas_OPTIONS' => {embed_html=>1},
 
           'Primary Swiss-Prot Mapping' => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?swissprot_mapping_constraint=\%$colnameidx{swissprot_mapping}V&action=QUERY",
           'Primary Swiss-Prot Mapping_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show all transitions for peps mapping to this Swiss-Prot accession\'; return true"',
@@ -659,8 +689,8 @@ sub handle_request {
           'Swiss Prot in Pep tide Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/pa_tiny.png>",
           'Swiss Prot in Pep tide Atlas_OPTIONS' => {embed_html=>1},
 
-          'Stripped Peptide Sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?stripped_peptide_sequence_constraint=\%$colnameidx{stripped_peptide_sequence}V&action=QUERY",
-          'Stripped Peptide Sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show all transitions for this peptide\'; return true"',
+          'Modified Peptide Sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?stripped_peptide_sequence_constraint=\%$colnameidx{stripped_peptide_sequence}V&action=QUERY",
+          'Modified Peptide Sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show all transitions for this peptide\'; return true"',
 
           'Pep in Pep tide Atlas' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&searchWithinThis=Peptide+Sequence&searchForThis=\%$colnameidx{stripped_peptide_sequence}V&organism_name=\%$colnameidx{organism}V&action=QUERY",
           'Pep in Pep tide Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'See whether this peptide is in PeptideAtlas shotgun data\'; return true"',
@@ -694,6 +724,8 @@ sub handle_request {
   %hidden_cols = (
 #                  'SEL_run_id' => 1,
 #                  'SEL_transition_id' => 1,
+                  'calc. Q1 m/z' => 1,
+                  'Stripped Peptide Sequence' => 1,
                   'sample_id' => 1,
                   'frg_type' => 1,
                   'frg_nr' => 1,
