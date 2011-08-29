@@ -92,12 +92,39 @@
         function renderChromavis(json,side) {
             var chromavis = side == 'left' ? chromavis_left : chromavis_right;
              var config = defaultConfig();
-             config.CONTENTS.PLOT.container = document.getElementById("chromavis_" + side);
+
+	     var info_html = "<span style='font-size:12px'>";
+	     var info = json.info[0];
+	     if (info.decoy == 'Y') {
+	       info_html += "<b>DECOY </b>";
+	     }
+	     info_html += "<b>"+info.pepseq+" </b>";
+	     info_html += "("+info.mass+" Daltons) ";
+	     info_html += "<b>+"+info.charge;
+	     info_html += ", "+info.isotype+"</b><br>";
+	     info_html += "<b>Experiment: </b>"+info.experiment+"<br>";
+	     info_html += "<b>Spectrum file: </b>"+info.spectrum_file+"<br>";
+	     info_html += "<b>Chromatogram_id: </b>"+info.chromatogram_id+"<br>";
+	     info_html += "</span>";
+	    document.getElementById(side+"_info").innerHTML=info_html;
+
+	    var labels = pv.map(json.data_json, function(data){ return data.label;});
+	    var labels_html = " <span style='font-size:9px'>";
+	    labels.forEach(function(data){ 
+		labels_html += data+"<br>";})
+	      labels_html += "</span>";
+	    document.getElementById(side+"_legend").innerHTML=labels_html;
+
+	    json.data_json.forEach(function(data){ 
+		data.label=data.label.split(" ")[0];})
+
+            config.CONTENTS.PLOT.container = document.getElementById("chromavis_" + side);
             config.CONTENTS.data_array = json.data_json;
             config.CONTENTS.vertical_marker_array = json.vmarker_json;
             chromavis.draw(config);
             updateConnections();
         }
+
 
     function renderChromatogram(){
         var plotListener = function(x) { var array_str='';
@@ -113,15 +140,36 @@
 
 </script>
 <br/>
-<div id="instructions" style="display:none;">Drag the red area over the context panel to shift the focus panel.  When the cursor is a crosshair, you may
-    draw a new context window.</div>
+<div id="instructions">Select left and right chromatograms from the Results
+  tab.<br> Drag the red area over the context panel to shift the focus panel.  When the cursor is a crosshair, you may
+  draw a new context window.
+  Lock/unlock X and Y axes as desired.<br>&nbsp;<br></div>
 <div style="width:1100px;display:block">
-    <div id="chromavis_left"  style="width:510px;display:inline-block;"></div>
-    <div style="width:50px;display:inline-block;"><a id="yaxis_toggle" href="#" onclick="toggle_y_axis();return false;">Y&nbsp;<img border=0 src=../../images/locked.bmp alt=\'Y-Axis Locked\'></a><br/><br/>
+
+  <div id="chromavis_left_parent"  style="width:510px;display:inline-block;">
+    <div id="left_info">
+    </div>
+    <div id="chromavis_left">
+    </div>
+    <div id="left_legend">
+    </div>
+  </div>
+
+    <div style="top:0;width:30px;display:inline-block;"><a id="yaxis_toggle" href="#" onclick="toggle_y_axis();return false;">Y&nbsp;<img border=0 src=../../images/locked.bmp alt=\'Y-Axis Locked\'></a><br/><br/>
       <a  id="xaxis_toggle"  href="#" onclick="toggle_x_axis();return false;">X&nbsp;<img border=0 src=../../images/locked.bmp alt=\'X-Axis Locked\'></a>
     </div>
-    <div id="chromavis_right"  style="width:510px;display:inline-block;"></div>
+
+  <div id="chromavis_right_parent"  style="width:510px;display:inline-block;">
+    <div id="right_info">
+    </div>
+    <div id="chromavis_right">
+    </div>
+    <div id="right_legend">
+    </div>
+  </div>
 </div>
+
+<br>
 <input type="checkbox" id="auto_scale_y" onchange="toggle_autoscale_y();">
 Auto Scale Y Axis
 </input>

@@ -195,12 +195,14 @@ vq.ChromaVis.prototype._render = function() {
                 j = Math.ceil(n ? -log(-domain[1]) : log(domain[1]));
         return function() { return pv.range(i,j+1,1).map(pow);};};
 
+    var dd =   vq.utils.VisUtils.clone(dataObj.data_array);
+    //array of array of  timestamps
+    var contents = dd.map(function(a) { return a[dataObj.data_contents_id].map(function(b) { return b[dataObj.x_column_id];});});
+
     var init =  function() {
 
         var d1,d2;
-        var dd =   vq.utils.VisUtils.clone(dataObj.data_array);
-
-        if (!that.slaveRenderX) {
+          if (!that.slaveRenderX) {
             d1 = that.context_posX.invert(that.window.x),
                 d2 =  that.context_posX.invert(that.window.x + that.window.dx),
                 that.posX.domain(d1, d2);
@@ -211,19 +213,23 @@ vq.ChromaVis.prototype._render = function() {
             that.window.x =that.context_posX(d1);
             that.window.dx = that.context_posX(d2) - that.window.x;
         }
-        var min_val = pv.max(pv.blend(dd.map(function(a) {
-            return a[dataObj.data_contents_id].filter(function(d) {
-                return d[dataObj.x_column_id] < d1;});})),
-            function(e) {
-                return e[dataObj.x_column_id];});
-        var max_val =
-            pv.min(pv.blend(dd.map(function(a)
-            { return a[dataObj.data_contents_id].filter(function(d) {
-                return d[dataObj.x_column_id] > d2;});})),
-                function(e) {
-                    return e[dataObj.x_column_id];});
+        //find the values just less than the minimum displayed x-axis value
+        //find the data line with the smallest of these values (how low to plot from)
+        var min_val = pv.min(
+            pv.blend(
+                contents.map(function(a) {
+                    return pv.max(
+                        a.filter(function(d) {
+                            return d < d1;}));})));
 
-        dd = dd.map(function(line) {
+        var max_val = pv.max(
+            pv.blend(
+                contents.map(function(a) {
+                    return pv.min(
+                        a.filter(function(d) {
+                            return d > d2;}));})));
+
+        var data = dd.map(function(line) {
             var obj = {};
             obj[dataObj.data_label] = line[dataObj.data_label];
             obj[dataObj.data_contents_id] =
@@ -235,7 +241,7 @@ vq.ChromaVis.prototype._render = function() {
         if(!that.slaveRenderY) {
             if (that.auto_update_scale_y()) {
                 var y_max_val  =
-                    pv.max(dd,function(a) { return pv.max(a[dataObj.data_contents_id],function(b) {return b[dataObj.y_column_id];});});
+                    pv.max(data,function(a) { return pv.max(a[dataObj.data_contents_id],function(b) {return b[dataObj.y_column_id];});});
                 var domain = dataObj.yScale.domain();
                 dataObj.yScale.domain(domain[0],y_max_val);
             } else {
@@ -243,7 +249,7 @@ vq.ChromaVis.prototype._render = function() {
             }
         }
 
-       return dd;
+       return data;
     };
 
     var vis = new pv.Panel()
@@ -434,11 +440,11 @@ vq.ChromaVis.prototype._render = function() {
             .bottom(0);
 
 function render() {
-            if (that.window.dx < 2) { return; }
                 drawPanel.render();
 }
 
     function renderAndDispatch() {
+        if (that.window.dx < 2) { return; }
         render();
         if(!dataObj.dispatch_events) { return; }
          vq.events.Dispatcher.dispatch(
@@ -456,8 +462,12 @@ function render() {
             .events("all")
             .event("mousedown", pv.Behavior.select())
             .event("select", function() {
+            render();
+            })
+            .event("selectend", function() {
             renderAndDispatch();
         })
+
         .add(pv.Bar)
         .left(function(d) { return d.x;})
          .width(function(d) {return d.dx;})
@@ -465,6 +475,9 @@ function render() {
          .cursor("move")
          .event("mousedown", pv.Behavior.drag())
          .event("drag", function() {
+         render();
+             })
+         .event("dragend", function() {
          renderAndDispatch();
              });
 
@@ -475,22 +488,22 @@ function render() {
             .events("all")
             .event("mousedown", pv.Behavior.select())
             .event("selectend", function() {
-        if (that.focus_window.dx < 2) { that.focus_window = {x:0,dx:0}; focus.render();
-            context.render();return; }
-        that.window ={x: that.context_posX(that.posX.invert(that.focus_window.x)),
-            dx: that.context_posX(that.posX.invert(that.focus_window.dx)) -
-                    that.context_posX(that.posX.invert(0))};
-            if (dataObj.dispatch_events) {
-                vq.events.Dispatcher.dispatch(
-                new vq.events.Event('chromavis_windowchange',that.uuid(),{
-                    pos: {
-                        x:{min:that.posX.invert(that.focus_window.x),max:that.posX.invert(that.focus_window.dx+that.focus_window.x)},
-                        y:{min: dataObj.yScale.domain()[0], max : dataObj.yScale.domain()[1]}        }
+                    if (that.focus_window.dx < 2) { that.focus_window = {x:0,dx:0}; focus.render();
+                        context.render();return; }
+                        that.window ={x: that.context_posX(that.posX.invert(that.focus_window.x)),
+                            dx: that.context_posX(that.posX.invert(that.focus_window.dx)) -
+                                    that.context_posX(that.posX.invert(0))};
+                            if (dataObj.dispatch_events) {
+                                vq.events.Dispatcher.dispatch(
+                                new vq.events.Event('chromavis_windowchange',that.uuid(),{
+                                    pos: {
+                                        x:{min:that.posX.invert(that.focus_window.x),max:that.posX.invert(that.focus_window.dx+that.focus_window.x)},
+                                        y:{min: dataObj.yScale.domain()[0], max : dataObj.yScale.domain()[1]}        }
 
-                }));
-            }
-            that.focus_window = {x:0,dx:0};
-        drawPanel.render();
+                                }));
+                            }
+                        that.focus_window = {x:0,dx:0};
+                    drawPanel.render();
         })
             .add(pv.Bar)
             .left(function(d) { return d.x;})
