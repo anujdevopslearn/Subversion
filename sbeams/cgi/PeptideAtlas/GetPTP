@@ -69,6 +69,7 @@ my $sp_rationale;
 
 
 use constant MIN_OBS_LENGTH => 6;
+use constant MAX_OBS_LENGTH => 50;
 
 ###############################################################################
 # Set program name and usage banner for command like use
@@ -321,7 +322,7 @@ sub handle_request {
 
   #### Define the SQL statement to find the biosequence
   my $sql = qq~
-       SELECT  TOP 1 AB.atlas_build_id, BS.biosequence_id, AB.atlas_build_name
+       SELECT  TOP 1 AB.atlas_build_id, BS.biosequence_id, AB.atlas_build_name, dbxref_id
        FROM  $TBAT_BIOSEQUENCE BS 
        LEFT JOIN $TBAT_ATLAS_BUILD AB ON (BS.biosequence_set_id = AB.biosequence_set_id)
        WHERE 1 = 1
@@ -352,7 +353,9 @@ sub handle_request {
     return;
   }
 
-  my ($atlas_build_id,$biosequence_id,$atlas_build_name) = @{$rows[0]};
+  my ($atlas_build_id,$biosequence_id,$atlas_build_name, $dbxref_id) = @{$rows[0]};
+
+#  die "DBX is $dbxref_id\n";
 
   #### Return some information about this biosequence
   $sql = qq~
@@ -493,105 +496,14 @@ sub handle_request {
 
   #############################################################################
   #### Continue with main query
-#  my @labels = ( 'Accession', 'Pre AA', 'Sequence', 'Fol AA', 'ESS','Best Prob', 'Best Adj Prob', 'N Obs', 'EOS', 'SSRT', 'N Prot Map', 'N Gen Loc', 'N Samples', 'Subpep of');
-#
-#  #### [friendly name used in url_cols,SQL,displayed column title]
-##    ["peptide_accession","P.peptide_accession","<DIV TITLE='PeptideAtlas accession number for this peptide'>Accession</DIV>"],
-#  my @column_array = (
-#    ["peptide_accession","P.peptide_accession","Peptide Accession"],
-#    ["preceding_residue","PI.preceding_residue","<DIV TITLE='Preceding (towards the N terminus) amino acid'>Pre AA</DIV>"],
-#    ["peptide_sequence","P.peptide_sequence","<DIV TITLE='Amino Acid sequence of this peptide'>Peptide Sequence</DIV>"],
-#    ["following_residue","PI.following_residue","<DIV TITLE='Following (towards the C terminus) amino acid'>Fol AA</DIV>"],
-#    ["suitability_score","0.0001","<DIV TITLE='Score derived from peptide probability, EOS, and sequence characteristics such as missed cleavage(MC) or semi-tryptic(ST); these are annotated in red.'>Suitability<BR>Score</DIV>"],
-#    ["best_probability","STR(PI.best_probability,7,3)","<DIV TITLE='Highest PeptideProphet probability for this observed sequence'>Best Prob</DIV>"],
-#    ["best_adjusted_probability","STR(PI.best_adjusted_probability,7,3)","<DIV TITLE=''>Best Adjusted Prob</DIV>"],
-#    ["n_observations","PI.n_observations","<DIV TITLE='Total number of observations in all modified forms and charge states'>N Obs</DIV>"],
-#    ["empirical_proteotypic_score","STR(PI.empirical_proteotypic_score,7,2)","<DIV TITLE='Empirical Observability Score'>EOS</DIV>"],
-#    ["SSRCalc_relative_hydrophobicity","STR(P.SSRCalc_relative_hydrophobicity,7,2)","<DIV TITLE='SSRCalc Relative Hydrophobicity score'>RHS</DIV>"],
-#    ["n_protein_mappings","PI.n_protein_mappings","<DIV TITLE='Number of proteins in the reference database to which this peptide maps'>N Protein Mappings</DIV>"],
-#    ["n_genome_locations","PI.n_genome_locations","<DIV TITLE='Number of discrete genome locations which encode this amino acid sequence'>N Genome Locations</DIV>"],
-#    ["sample_ids","PI.sample_ids","sample_ids"],
-#    #["sample_ids","PI.sample_ids","<DIV TITLE='Samples in which this sequence was seen'>Sample IDs</DIV>"],
-#    #["is_subpeptide_of","PI.is_subpeptide_of","<DIV TITLE='Observed peptides of which this peptide is a subsequence'>Parent Peptides</DIV>"],
-#    ["is_subpeptide_of","PI.is_subpeptide_of",'is_subpeptide_of'],
-#    ["peptide_instance_id","PI.peptide_instance_id","peptide_instance_id"],
-#  );
 
   #### Build the columns part of the SQL statement
   my %colnameidx = ();
   my @column_titles = ();
-  ## Sends @column_array_ref to build_SQL_columns_list, which
-  ## (1) appends the 2nd element in array to $columns_clause
-  ## (2) fills %colnameidx_ref as a hash with key = 1st element
-  ## and value = 3rd element, and (3) fills @column_titles_ref
-  ## array with the 3rd element
-#  my $columns_clause = $sbeams->build_SQL_columns_list(
-#    column_array_ref=>\@column_array,
-#    colnameidx_ref=>\%colnameidx,
-#    column_titles_ref=>\@column_titles
-#  );
-
-
-  #### Define a query to return peptides for this protein
-#  $sql = qq~
-#     SELECT DISTINCT $columns_clause
-#     FROM $TBAT_PEPTIDE_INSTANCE PI
-#    INNER JOIN $TBAT_PEPTIDE P
-#          ON ( PI.peptide_id = P.peptide_id )
-#     LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
-#          ON ( PI.peptide_instance_id = PM.peptide_instance_id )
-#    INNER JOIN $TBAT_ATLAS_BUILD AB
-#          ON ( PI.atlas_build_id = AB.atlas_build_id )
-#     LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
-#          ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
-#     LEFT JOIN $TB_ORGANISM O
-#          ON ( BSS.organism_id = O.organism_id )
-#     LEFT JOIN $TBAT_BIOSEQUENCE BS
-#          ON ( PM.matched_biosequence_id = BS.biosequence_id )
-#     LEFT JOIN $TBAT_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
-#    WHERE 1 = 1
-#          AND AB.atlas_build_id IN ( $atlas_build_id )
-#	  AND BS.biosequence_id = $biosequence_id
-#    ORDER BY P.peptide_accession
-#  ~;
-
-  #### Define the hypertext links for columns that need them
-#  %url_cols = (
-#    'Peptide Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
-#  );
-#
-#  %hidden_cols = (
-#    'Best Adjusted Prob' => 1,
-#    'peptide_instance_id' => 1,
-#  );
 
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
   if ($apply_action =~ /(QUERY|GO|VIEWRESULTSET)/) {
-
-    #### Show the SQL that will be or was executed
-#    $sbeams->display_sql(sql=>$sql) if ($show_sql);
-#
-#    #### If the action contained QUERY, then fetch the results from
-#    #### the database
-#    if ($apply_action =~ /(QUERY|GO)/i) {
-#
-#      #### Fetch the results from the database server
-#      $sbeams->fetchResultSet(
-#        sql_query=>$sql,
-#        resultset_ref=>$resultset_ref,
-#      );
-#
-#      #### Store the resultset and parameters to disk resultset cache
-#      $rs_params{set_name} = "SETME";
-#      $sbeams->writeResultSet(
-#        resultset_file_ref=>\$rs_params{set_name},
-#        resultset_ref=>$resultset_ref,
-#        query_parameters_ref=>\%parameters,
-#        resultset_params_ref=>\%rs_params,
-#        query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
-#      );
-#    }
 
 
     #### Get protein structure information
@@ -599,24 +511,17 @@ sub handle_request {
       biosequence_id => $biosequence_id,
     );
 
-#    my ( $obs, $peptides ) = getPeptideCount( biosequence => $biosequence,
-#                                            resultset_ref => $resultset_ref );
-
-
-#    my $peptide_counts = scalar( @$peptides );
-#my $obs =0;
     my $tryptic_pep_ref = $sbeamsMOD->do_tryptic_digestion(
                                    aa_seq => $biosequence->{biosequence_seq} ,
                                    min_len => 6);
+
     my $tryptic_peptide_counts = scalar @$tryptic_pep_ref;
+
     # Stragglers for protein section, doh!
     if ( $htmlmode ) {
       print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
                                                key => 'Tryptic Peptides with length >=6',
                                              value => "$tryptic_peptide_counts" ); 
-#      print $sbeamsMOD->encodeSectionItem( tr_info => $tr,
-#                                               key => 'Total Observations',
-#                                             value => "$obs in $atlas_build_name build" ) . "</TABLE>\n"; 
     }
 
 
@@ -699,6 +604,8 @@ sub handle_request {
       #### Display the best peptide information
       my $samples = $bestPeptideSelector->getHighlyObservablePeptidesDisplay(
         atlas_build_id => $atlas_build_id,
+        add_num_mapped => 1,
+        dbxref_id => $dbxref_id,
         best_peptide_information  => $best_peptide_information,
         query_parameters_ref=>\%parameters,
         column_titles_ref=>\@column_titles,
@@ -1223,6 +1130,14 @@ sub get_sequence_graphic {
                                                -primary => 'Difficult',
                                           -display_name => 'Difficult' );
         push @difficult, $f if $index && $peptide_end;
+      } elsif ( length( $tryp ) > MAX_OBS_LENGTH ) {
+        my $peptide_end =  $index + length($tryp) - 1;
+        push @unlikely_to_observe, { start => $index, end => $peptide_end, rationale => 'Long peptide', seq => $tryp };
+        my $f = Bio::SeqFeature::Generic->new( -start   => $index,
+                                               -end     => $peptide_end,
+                                               -primary => 'Difficult',
+                                          -display_name => 'Difficult' );
+        push @difficult, $f if $index && $peptide_end;
       } else {
 #        $log->debug( "Might see $tryp" );
       }
@@ -1393,7 +1308,7 @@ sub get_sequence_graphic {
                 in_dom => "Predicted orientation inside, (intracellular for cell membrane proteins)",
                 ex_dom =>  "Predicted orientation outside, (extracellular for cell membrane proteins)",
                 pep_cov => "Cumulative sequence coverage",
-                unlikely_obs => "tryptic peptides &le; " . MIN_OBS_LENGTH . " residues or signal peptides" 
+                unlikely_obs => "tryptic peptides &le; " . MIN_OBS_LENGTH . ", &gt; " . MAX_OBS_LENGTH . " residues or signal peptides" 
               );
 
 

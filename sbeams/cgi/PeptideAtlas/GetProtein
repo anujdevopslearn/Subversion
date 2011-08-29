@@ -78,6 +78,7 @@ my $current_page = { organism => '', atlas_build_id => '' };
 
 
 use constant MIN_OBS_LENGTH => 6;
+use constant MAX_OBS_LENGTH => 40;
 
 ###############################################################################
 # Set program name and usage banner for command like use
@@ -2163,6 +2164,15 @@ sub get_sequence_graphic {
                                                -primary => 'Difficult',
                                           -display_name => 'Difficult' );
         push @difficult, $f if $index && $peptide_end;
+      } elsif ( length( $tryp ) > MAX_OBS_LENGTH ) {
+        my $peptide_end =  $index + length($tryp) - 1;
+        push @unlikely_to_observe, { start => $index, end => $peptide_end, rationale => 'Long peptide', seq => $tryp };
+        my $f = Bio::SeqFeature::Generic->new( -start   => $index,
+                                               -end     => $peptide_end,
+                                               -primary => 'Difficult',
+                                          -display_name => 'Difficult' );
+        push @difficult, $f if $index && $peptide_end;
+
       } else {
 #        $log->debug( "Might see $tryp" );
       }
