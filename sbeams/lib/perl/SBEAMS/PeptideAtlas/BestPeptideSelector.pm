@@ -730,19 +730,19 @@ sub sortBySuitabilityScore {
 
 sub getBuildOrganism {
   my $self = shift;
-	my %args = @_;
- 
-  # Default to human
-	return 2 unless $args{pabst_build_id};
+  my %args = @_;
 
-	my $sql = "SELECT organism_id FROM $TBAT_PABST_BUILD WHERE pabst_build_id = $args{pabst_build_id}";
+  # Default to human
+  return 2 unless $args{pabst_build_id};
+
+  my $sql = "SELECT organism_id FROM $TBAT_PABST_BUILD WHERE pabst_build_id = $args{pabst_build_id}";
 
   my $sth = $sbeams->get_statement_handle( $sql );
   while( my @row = $sth->fetchrow_array() ) {
-		return $row[0];
-	}
+    return $row[0];
+  }
   # Default to human
-	return 2;
+  return 2;
 }
 
 sub getStaticInstrumentMap {
@@ -3303,6 +3303,61 @@ sub get_expected_charge {
 
 
 }
+
+sub get_predicted_charge {
+  my $self = shift;
+  my %args = @_;
+  for my $arg ( qw( mass e_chg ) ) {
+    die " Missing required parameter $arg" if !defined $args{$arg};
+  }
+
+  my $mass = int( $args{mass}/10 );
+
+  $mass = 50 if $mass < 50;
+  $mass = 400 if $mass > 400;
+
+
+  $self->{"_charge_matrix"} ||= $self->get_charge_matrix();
+
+#  print STDERR $self->{"_charge_matrix"};
+#  exit;
+
+  my $pred_chg = $self->{"_charge_matrix"}->{$mass}->{$args{e_chg}}; 
+  
+#  use Data::Dumper;
+#  print STDERR Dumper( $self->{"_charge_matrix"} );
+
+  print STDERR "No result for m=$args{mass}, c=$args{e_chg}" if !$pred_chg;
+  return $pred_chg;
+}
+
+sub get_charge_matrix {
+  my $self = shift;
+  my %args = @_;
+
+  my %matrix;
+  for my $mass ( 50..400 ) {
+    $matrix{$mass} = {};
+    for my $ec ( 1..5 ) {
+      my $pc = ( $ec < 4 ) ? $ec : 4;
+      $matrix{$mass}->{$ec} = $pc;
+    }
+  }
+  my $chg_file = "$PHYSICAL_BASE_DIR/lib/refdata/PeptideAtlas/QTOF_expected2observed_charge.tsv";
+
+  return \%matrix unless ( -e $chg_file );
+
+  open( CHG_FILE, $chg_file ) || return \%matrix;
+  while ( my $line = <CHG_FILE> ) {
+    chomp $line;
+    my @vals = split( /\t/, $line );
+    next unless $vals[0] && $vals[1];
+    $matrix{$vals[0]}->{$vals[1]} = $vals[2];
+  }
+  return \%matrix;
+
+}
+
 ###############################################################################
 =head1 BUGS
 
@@ -3324,4 +3379,3 @@ __END__
 ###############################################################################
 ###############################################################################
 ###############################################################################
-
