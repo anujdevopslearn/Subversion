@@ -1,0 +1,67 @@
+{
+   "MS_QueryResponse" : {
+      "userinfo" : {
+         "name" : "Anonymous",
+         "id" : 0,
+         "role" : "anonymous"
+      },
+      "samples" : [
+         {
+            "sampletag" : "Dissections_DMuc_B1T1",
+            "dates" : {
+               "release" : {
+                  "std" : {
+                     "month" : "4",
+                     "day" : "30",
+                     "year" : "2009"
+                  }
+               },
+               "deposit" : {
+                  "std" : {
+                     "month" : "4",
+                     "day" : "30",
+                     "year" : "2009"
+                  }
+               }
+            },
+            "taxonomy" : {
+               "name" : "Honeybee"
+            },
+            "counts" : {
+               "proteins" : 1,
+               "samples" : 1,
+               "spectra" : 1
+            },
+            "acc" : "PAe001182",
+            "approved" : "true",
+            "summary" : "Dissections_DMuc_B1T1",
+            "contributors" : "Leonard Foster",
+            "instrumentation" : {
+               "platform" : "LTQ Orbitrap"
+            },
+            "public" : "true",
+            "publication" : {
+               "link" : "http://www.biomedcentral.com/1471-2164/12/290",
+               "ids" : [
+                  ""
+               ],
+               "author" : "Chan et al. (2011)",
+               "cite" : "A honey bee (Apis mellifera L.) PeptideAtlas crossing castes and tissues ,BMC Genomics 2011"
+            },
+            "title" : "Dissections_DMuc_B1T1",
+            "modifications" : {
+               "variable" : [],
+               "static" : [
+                  "C@57.0215"
+               ]
+            },
+            "search_type" : [
+               "X! Tandem (k-score)"
+            ]
+         }
+      ],
+      "counts" : {
+         "samples" : 1
+      }
+   }
+}
