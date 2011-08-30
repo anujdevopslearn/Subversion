@@ -1,0 +1,170 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : getChromatogramInfo
+#
+# Description : given SEL_chromatogram_id, return json object
+#
+# Terry Farrah
+#
+###############################################################################
+
+
+###############################################################################
+# Basic SBEAMS setup
+###############################################################################
+#print "hello -9\n";
+use strict;
+use FindBin;
+
+#print "hello -8\n";
+use lib "$FindBin::Bin/../../lib/perl";
+
+  #print "hello -7\n";
+
+use File::Basename;
+use Carp;
+
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
+use SBEAMS::Connection qw($q);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::Permissions;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::Chromatogram;
+
+$sbeams = new SBEAMS::Connection;
+
+
+###############################################################################
+# Define global variables if any and execute main()
+###############################################################################
+main();
+
+
+###############################################################################
+# Main Program:
+#
+# If $sbeams->Authenticate() succeeds, print header, process the CGI request,
+# print the footer, and end.
+###############################################################################
+sub main {
+  exit unless ($current_username = $sbeams->Authenticate(
+      allow_anonymous_access=>1,
+    ));
+
+  #### Read in the default input parameters
+  my %parameters;
+  #print "hello -3\n";
+  my $n_params_found = 
+  $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
+
+  #print "hello -2\n";
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+  #print "hello -1\n";
+
+  my $apply_action  = $q->param('apply_action');
+
+
+  my $json = processRequest(ref_parameters=>\%parameters);
+  if  ($sbeams->output_mode() eq 'html') {
+    my $header = "Content-type:text/x-json\n\n";
+    $json = $header . $json;
+  }
+  print $json;
+
+} # end main
+
+###############################################################################
+# processRequest
+###############################################################################
+sub processRequest {
+  my %args = @_;
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+  # Create a chromatogram object so we can use its methods
+  my $cgram = new SBEAMS::PeptideAtlas::Chromatogram;
+  $cgram->setSBEAMS($sbeams);
+
+  # Get all necessary info from database using chromatogram_id, if
+  # provided. Else, we assume info was passed in via parameters.
+  if ( $parameters{'SEL_chromatogram_id'} ) {
+    $cgram->getChromatogramParameters(
+      SEL_chromatogram_id => $parameters{'SEL_chromatogram_id'},
+      param_href => \%parameters,
+    );
+  }
+
+  # Fetch some of the parameters into scalar variables.
+  my $precursor_charge = $parameters{'precursor_charge'};
+  my $pepseq = $parameters{'pepseq'};
+  my $modified_pepseq = $parameters{'modified_pepseq'};
+  my $spectrum_pathname = $parameters{'spectrum_pathname'} ||
+  die 'getChromatogramInfo: Need parameter spectrum_pathname';
+#--------------------------------------------------
+#   my $spectrum_basename = $parameters{'spectrum_basename'};
+#   if (! $spectrum_basename ) {
+#     $spectrum_pathname =~ /.*\/(\S+?)\.mzML/;
+#     $spectrum_basename = $1;
+#   }
+#-------------------------------------------------- 
+  my $precursor_neutral_mass = $parameters{'precursor_neutral_mass'};
+
+  # Create a descriptive, unique filename for the chromatogram data
+#--------------------------------------------------
+#   my $chromgram_basename = $cgram->getNewChromatogramFilename(
+#     spectrum_basename => $spectrum_basename,
+#     pepseq => $pepseq,
+#   );
+#-------------------------------------------------- 
+  # Create tmp dirname
+  # $PHYSICAL_BASE_DIR/tmp somehow doesn't work, so we use images/tmp
+  #my $physical_tmp_dir = "$PHYSICAL_BASE_DIR/images/tmp";
+
+  # Create .json string by reading spectrum file
+  my $json_string;
+  if (defined $parameters{'precursor_neutral_mass'} &&
+    $spectrum_pathname =~ /.mzML$/)  {
+    $json_string = $cgram->mzML2json(
+      param_href => \%parameters,
+      #physical_tmp_dir => $physical_tmp_dir,
+      #chromgram_basename => $chromgram_basename,
+		pepseq => $modified_pepseq,
+		mass => $precursor_neutral_mass,
+		charge => $precursor_charge,
+		isotype => $parameters{'isotype'},
+		is_decoy => $parameters{'is_decoy'},
+		experiment => $parameters{'experiment_title'},
+		spectrum_file => $spectrum_pathname,
+		chromatogram_id => $parameters{'SEL_chromatogram_id'},
+    );
+  } elsif ($spectrum_pathname =~ /.mzXML$/)  {
+    $json_string = $cgram->mzXML2json (
+      param_href => \%parameters,
+		pepseq => $modified_pepseq,
+		mass => $precursor_neutral_mass,
+		charge => $precursor_charge,
+		isotype => $parameters{'isotype'},
+		is_decoy => $parameters{'is_decoy'},
+		experiment => $parameters{'experiment_title'},
+		spectrum_file => $spectrum_pathname,
+		chromatogram_id => $parameters{'SEL_chromatogram_id'},
+    );
+  } else {
+    die "Need spectrum file with .mzML OR .mzXML extension ".
+    "(have $spectrum_pathname); if .mzML, also need precursor_neutral_mass.\n";
+  }
+
+  return $json_string;
+}
