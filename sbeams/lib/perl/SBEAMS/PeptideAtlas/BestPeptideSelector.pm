@@ -628,8 +628,7 @@ sub getHighlyObservablePeptidesDisplay {
 
 #   add_num_mapped => 1,
 #   dbxref_id => $dbxref_id,
-#   biosequence_id
-#
+
   my %pep2mappings;
   if ( $args{add_num_mapped} ) {
 
@@ -678,6 +677,7 @@ sub getHighlyObservablePeptidesDisplay {
       $row->[$idx] = sprintf( "%0.2f", $row->[$idx] );
     }
     my $nmappings = $pep2mappings{$row->[2]} || 'na';
+		$nmappings = "<FONT COLOR=RED>$nmappings</FONT>" if $nmappings > 1;
     my @data_row = @{$row}[0..6,8..10];
     if ( $args{add_num_mapped} ) {
       push @data_row, $nmappings;
@@ -724,7 +724,7 @@ sub getHighlyObservablePeptidesDisplay {
                                            description => "Theoretical tryptic peptides ranked by combined predictor score (PSS)" );
 
 
-  my $align = [qw(center right left left right right right right right right)];
+  my $align = [qw(center right left left right right right right right right right)];
 
   my $html = $atlas->encodeSectionTable( header => 1, 
                                                  width => '600',
