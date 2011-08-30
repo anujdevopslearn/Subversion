@@ -371,6 +371,70 @@ sub get_top_n_peaks {
   return \%peaks;
 }
 
+sub getConsensusLinks {
+
+  my $self = shift;
+
+  # Force production for now
+  $TBAT_CONSENSUS_LIBRARY_SPECTRUM = 'peptideatlas.dbo.consensus_library_spectrum';
+  $TBAT_CONSENSUS_LIBRARY = 'peptideatlas.dbo.consensus_library';
+
+  my %libs = ( it => {}, qtof => {}, qtrap => {}, CE => {},
+          low => {}, mlow => {}, medium => {}, mhigh => {}, high=> {} );
+
+  my $it_sql = qq~
+  SELECT modified_sequence, consensus_library_spectrum_id, charge
+  FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM 
+  WHERE consensus_library_id = 16
+  ~;
+  my $sth = $sbeams->get_statement_handle( $it_sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    $libs{it}->{$row[0]. $row[2]} = $row[1];
+  }
+
+  my $qtof_sql = qq~
+  SELECT modified_sequence, consensus_library_spectrum_id, charge
+  FROM peptideatlas_test.dbo.consensus_library_spectrum 
+  WHERE consensus_library_id = 27
+  ~;
+  my $sth = $sbeams->get_statement_handle( $qtof_sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    $libs{qtof}->{$row[0]. $row[2]} = $row[1];
+  }
+
+  my $qtrap_sql = qq~
+  SELECT modified_sequence, consensus_library_spectrum_id, charge
+  FROM peptideatlas_test.dbo.consensus_library_spectrum 
+  WHERE consensus_library_id = 28
+  ~;
+  my $sth = $sbeams->get_statement_handle( $qtrap_sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    $libs{qtrap}->{$row[0]. $row[2]} = $row[1];
+  }
+
+
+#  my %libmap = ( 21 => 'medium', 22 => 'high', 23 => 'low', 24 => 'mhigh', 25 => 'mlow', 26 => 'avg' );
+#  my %libmap = ( 29 => 'medium', 30 => 'high', 31 => 'low', 32 => 'mhigh', 33 => 'mlow', 27 => 'avg' );
+  my %libmap = ( 242 => 'low',
+                 243 => 'mlow', 
+                 244 => 'medium',
+                 245 => 'mhigh', 
+                 246 => 'high' );
+	my $libs = join( ',', keys( %libmap ));
+  my $ce_sql = qq~
+  SELECT modified_sequence, consensus_library_spectrum_id, charge, consensus_library_id
+  FROM peptideatlas.dbo.consensus_library_spectrum 
+  WHERE consensus_library_id IN ( $libs ); 
+  ~;
+  my $sth = $sbeams->get_statement_handle( $ce_sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    $libs{$libmap{$row[3]}}->{$row[0]. $row[2]} = $row[1];
+    $libs{CE}->{$row[0]. $row[2]}++;
+  }
+
+  return \%libs;
+
+}
 
 1;
 
