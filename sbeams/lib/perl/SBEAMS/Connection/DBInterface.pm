@@ -4568,14 +4568,20 @@ sub parse_input_parameters {
   my $n_CGI_params_found = 0;
   my $n_cmdln_params_found = 0;
 
+# TMF debug
+#  open (FOO, ">/net/dblocal/www/html/devTF/sbeams/cgi/PeptideAtlas/tmp.out");
+#  print FOO "command line!\n";
 
   #### Resolve all the parameters from the command line if any
   my %cmdln_parameters;
   foreach $element (@ARGV) {
     if ( ($key,$value) = split("=",$element) ) {
+# TMF debug
+#    print FOO "$key = '$value'\n";
       my $tmp = $value;
       $tmp = '' unless (defined($tmp));
-      print "$key = '$tmp'<BR>\n";
+# TMF debug
+#      print "$key = '$tmp'<BR>\n";
       $cmdln_parameters{$key} = $value;
       $ref_parameters->{$key} = $value;
       $n_cmdln_params_found++;
@@ -4586,6 +4592,8 @@ sub parse_input_parameters {
   }
 
   #### Resolve all the parameters from the CGI interface if any
+#debug
+#  print FOO "cgi!\n";
   my %CGI_parameters;
   foreach $element ($q->param()) {
 
@@ -4598,7 +4606,8 @@ sub parse_input_parameters {
     #### Convert to a comma separated list
     $value = join(",",@tmparray);
 
-    #print "$element = '$value'<BR>\n";
+#debug
+#    print FOO "$element = '$value'\n";
     $CGI_parameters{$element} = $value;
     $ref_parameters->{$element} = $value;
     $n_CGI_params_found++;
@@ -4608,6 +4617,8 @@ sub parse_input_parameters {
   #### Add a set of standard set of input options
   my @columns = @{$ref_columns};
   if ($add_standard_params eq 'YES') {
+#debug
+#  print FOO "adding standard options!\n";
     push(@columns,'apply_action','action','output_mode','TABLE_NAME',
       'QUERY_NAME','navigation_bar');
   }
@@ -4627,6 +4638,8 @@ sub parse_input_parameters {
 
   #### Sum the total parameters found
   $n_params_found = $n_CGI_params_found + $n_cmdln_params_found;
+#debug
+#  print FOO "$n_params_found params found!\n";
 
 
   #### If some CGI parameters were found, assume we're doing a web interface
@@ -4663,6 +4676,9 @@ sub parse_input_parameters {
     $ref_parameters->{action} = $ref_parameters->{apply_action};
   }
 
+#debug
+#  print FOO "bye\n";
+#  close FOO;
 
   return $n_params_found;
 

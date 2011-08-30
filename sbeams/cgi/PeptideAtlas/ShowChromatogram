@@ -189,6 +189,7 @@ sub processRequest {
     # Generate the Chromavis javascript chromatogram viewer
     my $chromavis = new SBEAMS::Proteomics::ChromatogramViewer;
     print $chromavis->generateChromatogram(
+              chromatogram_id => $parameters{'SEL_chromatogram_id'},
 	      chromatogram_pathname => $json_html_pathname,
               spectrum_pathname         => $spectrum_pathname,
               precursor_neutral_mass=> $precursor_neutral_mass,

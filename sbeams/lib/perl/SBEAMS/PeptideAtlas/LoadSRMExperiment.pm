@@ -194,7 +194,9 @@ sub read_mprophet_peakgroup_file {
                         protein => [ qw( protein ) ],
                   peak_group_id => [ qw( peak_group_id ) ],
                    peakgroup_id => [ qw( peakgroup_id ) ],
-                        m_score => [ qw( m_score mrm_prophet_score ) ],
+                        m_score => [ qw( m_score ) ],
+			#mrm_prophet_score is from M-Y's file for Ulli's data
+                        d_score => [ qw( d_score mrm_prophet_score ) ],
                       file_name => [ qw( file_name ) ],  # Ruth 2011 only
         transition_group_pepseq => [ qw( transition_group_pepseq ) ], #Ruth 2011
         # I think the record below is simply a result of M-Y creating custom file
@@ -237,7 +239,8 @@ sub read_mprophet_peakgroup_file {
   ### The one for Ruth's 2011 data contains only one line per pep, for the top
   ### peakgroup! This code seems to stumble along for both.
   print "Processing mProphet file!\n" if ($VERBOSE);
-  my ($decoy, $log10_max_apex_intensity, $protein,  $stripped_pepseq, $modified_pepseq, $charge, $peak_group,  $m_score, $Tr);
+  my ($decoy, $log10_max_apex_intensity, $protein,  $stripped_pepseq, $modified_pepseq,
+    $charge, $peak_group,  $m_score, $d_score, $Tr);
 
   my $mpro_href;
   my $spectrum_file;
@@ -309,7 +312,9 @@ sub read_mprophet_peakgroup_file {
     my $this_file_basename = $1;
 
     print "$this_file_basename, $modified_pepseq, $charge, $decoy, $peak_group\n" if ($VERBOSE)>1;
-    $m_score = $fields[$idx{m_score}];
+    my ($m_score, $d_score);
+    $m_score =  $fields[$idx{m_score}] if (defined $idx{m_score});
+    $d_score =  $fields[$idx{d_score}] if (defined $idx{d_score});
 
     # 06/15/11: removed check for !$decoy from below -- why did I have it?
     if ($this_file_basename && $modified_pepseq && (defined $peak_group)) {
@@ -323,6 +328,7 @@ sub read_mprophet_peakgroup_file {
 	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$decoy}->{$peak_group}->{log10_max_apex_intensity} = $log10_max_apex_intensity;
 	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$decoy}->{$peak_group}->{protein} = $protein; #probably unnecessary
 	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$decoy}->{$peak_group}->{m_score} = $m_score;
+	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$decoy}->{$peak_group}->{d_score} = $d_score;
 	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$decoy}->{$peak_group}->{Tr} = $Tr;
 	print 'Storing $mpro_href->{',$this_file_basename,'}->{',$modified_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$peak_group,'}->{m_score} = ', $mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$decoy}->{$peak_group}->{m_score}, "\n" if ($VERBOSE > 1);
 	print 'Storing $mpro_href->{',$this_file_basename,'}->{',$modified_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$peak_group,'}->{Tr} = ', $mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$decoy}->{$peak_group}->{Tr}, "\n" if ($VERBOSE > 1);
@@ -536,10 +542,10 @@ sub read_transition_list {
 }
 
 ###############################################################################
-# store_mprophet_scores_in_transition_hash
+# store_mquest_scores_in_transition_hash
 ###############################################################################
 
-sub store_mprophet_scores_in_transition_hash {
+sub store_mquest_scores_in_transition_hash {
   my $self = shift || die ("self not passed");
   my %args = @_;
   my $mpro_href = $args{mpro_href};
@@ -563,14 +569,76 @@ sub store_mprophet_scores_in_transition_hash {
     # but for ruth_prelim it gives scores for all peakgroups.
     # Store them all.
     my $best_m_score = 0;
+    my $best_d_score = 0;
     my $Tr = 0;
     my $log10_max_apex_intensity = 0;
+    for my $pg (keys %{$mpro_href->{$spec_file_basename}->{$modified_pepseq}->{$charge}->{$decoy}} ) {
+      my $m_score = $mpro_href->{$spec_file_basename}->{$modified_pepseq}->{$charge}->{$decoy}->{$pg}->{m_score};
+      my $d_score = $mpro_href->{$spec_file_basename}->{$modified_pepseq}->{$charge}->{$decoy}->{$pg}->{d_score};
+      #print "Found m_score $m_score\n" if ($VERBOSE > 2);
+      $log10_max_apex_intensity = $mpro_href->{$spec_file_basename}->{$modified_pepseq}->{$charge}->{$decoy}->{$pg}->{log10_max_apex_intensity};
+      $Tr = $mpro_href->{$spec_file_basename}->{$modified_pepseq}->{$charge}->{$decoy}->{$pg}->{Tr};
+      $transdata_href->{$q1_mz}->{peak_groups}->{$pg}->{m_score} = $m_score;
+      if ($m_score) {
+	if (!$best_m_score || (abs($m_score) < abs($best_m_score))) {
+	  $best_m_score = $m_score;
+	  $best_d_score = $d_score;
+	}
+	print '$mpro_href->{',$spec_file_basename,'}->{',$modified_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$pg,'}->{m_score} = ', $m_score, "\n" if ($VERBOSE > 1);
+      } else {
+	print 'No m_score for $mpro_href->{',$spec_file_basename,'}->{',$modified_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$pg,'}->{m_score}', "\n"  if ($VERBOSE > 1);
+      }
+    }
+    # Store the max m_score. Store the most recent Tr, intensity (they should all be identical).
+    $transdata_href->{$q1_mz}->{best_m_score} = $best_m_score;
+    $transdata_href->{$q1_mz}->{best_d_score} = $best_d_score;
+    #print "Storing best_m_score $best_m_score\n" if ($VERBOSE > 2);
+    $transdata_href->{$q1_mz}->{Tr} = $Tr;
+    $transdata_href->{$q1_mz}->{log10_max_apex_intensity} = $log10_max_apex_intensity;
+  }
+}
+
+###############################################################################
+# store_mprophet_scores_in_transition_hash
+###############################################################################
+
+sub store_mprophet_scores_in_transition_hash {
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+  my $mpro_href = $args{mpro_href};
+  my $transdata_href = $args{transdata_href};
+  my $spec_file_basename = $args{spec_file_basename};
+  my $VERBOSE = $args{'verbose'} || 0;
+  my $QUIET = $args{'quiet'} || 0;
+  my $TESTONLY = $args{'testonly'} || 0;
+  my $DEBUG = $args{'debug'} || 0;
+
+  print "Getting the mProphet scores for each transition group!\n" if ($VERBOSE);
+
+  # For each measured Q1
+  for my $q1_mz (keys %{$transdata_href}) {
+    # Grab the mProphet score(s) for this Q1's transition group.
+    my $modified_pepseq = $transdata_href->{$q1_mz}->{modified_peptide_sequence};
+    my $charge = $transdata_href->{$q1_mz}->{peptide_charge};
+    my $decoy = 0;
+    print "Getting mProphet scores for $spec_file_basename, $modified_pepseq, $charge, $decoy\n"
+      if ($VERBOSE > 1);
+    # For Ruth 2011 expt., mProphet file gives scores for only top peakgroup,
+    # but for ruth_prelim it gives scores for all peakgroups.
+    # Store them all.
+    my $best_m_score = 0;
+    my $Tr = 0;
+    my $log10_max_apex_intensity = 0;
+    # For each peak_group we have info on, get the scores.
     for my $pg (keys %{$mpro_href->{$spec_file_basename}->{$modified_pepseq}->{$charge}->{$decoy}} ) {
       my $m_score = $mpro_href->{$spec_file_basename}->{$modified_pepseq}->{$charge}->{$decoy}->{$pg}->{m_score};
       #print "Found m_score $m_score\n" if ($VERBOSE > 2);
       $log10_max_apex_intensity = $mpro_href->{$spec_file_basename}->{$modified_pepseq}->{$charge}->{$decoy}->{$pg}->{log10_max_apex_intensity};
       $Tr = $mpro_href->{$spec_file_basename}->{$modified_pepseq}->{$charge}->{$decoy}->{$pg}->{Tr};
       $transdata_href->{$q1_mz}->{peak_groups}->{$pg}->{m_score} = $m_score;
+      # Keep the m_score for the highest scoring peakgroup (should be #1)
+      # There's funny business here due to mix-up of d_score/m_score. Can
+      #  be simplified!
       if ($m_score) {
 	if (!$best_m_score || (abs($m_score) < abs($best_m_score))) { $best_m_score = $m_score; }
 	print '$mpro_href->{',$spec_file_basename,'}->{',$modified_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$pg,'}->{m_score} = ', $m_score, "\n" if ($VERBOSE > 1);
@@ -579,10 +647,11 @@ sub store_mprophet_scores_in_transition_hash {
       }
     }
     # Store the max m_score. Store the most recent Tr, intensity (they should all be identical).
-    $transdata_href->{$q1_mz}->{best_m_score} = $best_m_score;
+    $transdata_href->{$q1_mz}->{scores}->{$decoy}->{best_m_score} = $best_m_score;
     #print "Storing best_m_score $best_m_score\n" if ($VERBOSE > 2);
-    $transdata_href->{$q1_mz}->{Tr} = $Tr;
-    $transdata_href->{$q1_mz}->{log10_max_apex_intensity} = $log10_max_apex_intensity;
+    $transdata_href->{$q1_mz}->{scores}->{$decoy}->{Tr} = $Tr;
+    $transdata_href->{$q1_mz}->{scores}->{$decoy}->{log10_max_apex_intensity} =
+          $log10_max_apex_intensity;
   }
 }
 
@@ -954,6 +1023,16 @@ sub load_transition_data {
 	$rowdata_ref->{SEL_run_id} = $SEL_run_id;
 	$rowdata_ref->{collision_energy} = $transdata_href->{$q1_mz}->{collision_energy};
 	$rowdata_ref->{isotype} = $transdata_href->{$q1_mz}->{isotype};
+
+	# Added 08/27/11
+	$rowdata_ref->{m_score} = $transdata_href->{$q1_mz}->{scores}->{$is_decoy}->{best_m_score};
+	$rowdata_ref->{d_score} = $transdata_href->{$q1_mz}->{scores}->{$is_decoy}->{best_d_score};
+	$rowdata_ref->{max_apex_intensity} =
+	  $transdata_href->{$q1_mz}->{scores}->{$is_decoy}->{log10_max_apex_intensity};
+	if (! $rowdata_ref->{m_score} ) { $rowdata_ref->{m_score} = 'NULL' };
+	if (! $rowdata_ref->{d_score} ) { $rowdata_ref->{d_score} = 'NULL' };
+	if (! $rowdata_ref->{max_apex_intensity} ) { $rowdata_ref->{max_apex_intensity} = 'NULL' };
+
 	# NEW. change to experiment_protein_name. 07/06/11: discovered that
 	#  I accidentally changed the right side of the assignment to
 	#  experiment_protein_name, as well. Changed back, but didn't test.
@@ -1003,17 +1082,9 @@ sub load_transition_data {
 	}
 
 	# Load a chromatogram record for this transition group
-	# NEW :  Move rows m_score, Tr, and max_apex_intensity to peak_group.
-	#   Also store rank=1.
 
 	$rowdata_ref = {};  #reset
 	$rowdata_ref->{SEL_transition_group_id} = $transition_group_id;
-#    $rowdata_ref->{m_score} = $transdata_href->{$q1_mz}->{best_m_score};
-#    $rowdata_ref->{Tr} = $transdata_href->{$q1_mz}->{Tr};
-#    $rowdata_ref->{max_apex_intensity} = $transdata_href->{$q1_mz}->{log10_max_apex_intensity};
-#    if (! $rowdata_ref->{m_score} ) { $rowdata_ref->{m_score} = 'NULL' };
-#    if (! $rowdata_ref->{Tr} ) { $rowdata_ref->{Tr} = 'NULL' };
-#    if (! $rowdata_ref->{max_apex_intensity} ) { $rowdata_ref->{max_apex_intensity} = 'NULL' };
 
 	my $chromatogram_id = 0;
 	if ($load_chromatograms) {
@@ -1030,16 +1101,18 @@ sub load_transition_data {
 
 	# NEW. Load a peak group record for this chromatogram, if we have peak group infos.
 	if ($load_chromatograms &&
-	  ($transdata_href->{$q1_mz}->{best_m_score} ||
-	    $transdata_href->{$q1_mz}->{Tr} ||
-	    $transdata_href->{$q1_mz}->{log10_max_apex_intensity} )) {
+	  (
+	    #$transdata_href->{$q1_mz}->{scores}->{$is_decoy}->{best_m_score} ||
+	    $transdata_href->{$q1_mz}->{scores}->{$is_decoy}->{Tr} ||
+	    $transdata_href->{$q1_mz}->{scores}->{$is_decoy}->{log10_max_apex_intensity} )) {
 	  $rowdata_ref = {};  #reset
 	  $rowdata_ref->{SEL_chromatogram_id} = $chromatogram_id;
-	  $rowdata_ref->{m_score} = $transdata_href->{$q1_mz}->{best_m_score};
-	  $rowdata_ref->{Tr} = $transdata_href->{$q1_mz}->{Tr};
-	  $rowdata_ref->{max_apex_intensity} = $transdata_href->{$q1_mz}->{log10_max_apex_intensity};
+	  #$rowdata_ref->{m_score} = $transdata_href->{$q1_mz}->{scores}->{$is_decoy}->{best_m_score};
+	  $rowdata_ref->{Tr} = $transdata_href->{$q1_mz}->{scores}->{$is_decoy}->{Tr};
+	  $rowdata_ref->{max_apex_intensity} =
+	    $transdata_href->{$q1_mz}->{scores}->{$is_decoy}->{log10_max_apex_intensity};
 	  $rowdata_ref->{rank} = 1;  # will change when we load multiple peak groups
-	  if (! $rowdata_ref->{m_score} ) { $rowdata_ref->{m_score} = 'NULL' };
+	  #if (! $rowdata_ref->{m_score} ) { $rowdata_ref->{m_score} = 'NULL' };
 	  if (! $rowdata_ref->{Tr} ) { $rowdata_ref->{Tr} = 'NULL' };
 	  if (! $rowdata_ref->{max_apex_intensity} ) { $rowdata_ref->{max_apex_intensity} = 'NULL' };
 

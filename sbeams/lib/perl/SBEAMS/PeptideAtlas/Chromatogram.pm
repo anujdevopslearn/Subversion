@@ -233,6 +233,15 @@ sub mzML2json {
   my %args = @_;
   my $param_href = $args{param_href};    # describes desired chromatogram
 
+	my $pepseq = $args{	pepseq};
+	my $mass = $args{ mass};
+	my $charge = $args{charge};
+	my $isotype = $args{isotype};
+	my $is_decoy = $args{is_decoy};
+	my $experiment = $args{experiment};
+	my $spectrum_file = $args{spectrum_file};
+	my $chromatogram_id = $args{chromatogram_id};
+
   my $rt = $param_href->{rt} || $param_href->{Tr} || 0;
   my $target_q1 = $param_href->{q1};
   my $tx_info = $param_href->{transition_info};
@@ -257,8 +266,16 @@ sub mzML2json {
   # Create and return .json string.
   return traces2json(
 		traces_href => $traces_href,
-    rt => $rt,
-    tx_info => $tx_info,
+		rt => $rt,
+		tx_info => $tx_info,
+		pepseq => $pepseq,
+		mass => $mass,
+		charge => $charge,
+		isotype => $isotype,
+		is_decoy => $is_decoy,
+		experiment => $experiment,
+		spectrum_file => $spectrum_file,
+		chromatogram_id => $chromatogram_id,
   );
 }
 
@@ -269,6 +286,15 @@ sub mzXML2json {
   my $self = shift;
   my %args = @_;
   my $param_href = $args{param_href};    # describes desired chromatogram
+
+	my $pepseq = $args{	pepseq};
+	my $mass = $args{ mass};
+	my $charge = $args{charge};
+	my $isotype = $args{isotype};
+	my $is_decoy = $args{is_decoy};
+	my $experiment = $args{experiment};
+	my $spectrum_file = $args{spectrum_file};
+	my $chromatogram_id = $args{chromatogram_id};
 
   my $rt = $param_href->{rt} || $param_href->{Tr} || 0;
   my $target_q1 = $param_href->{q1};
@@ -298,7 +324,15 @@ sub mzXML2json {
   my $json_string = traces2json(
     traces_href => \%traces,
     rt => $rt,
-    tx_info => $tx_info,
+		tx_info => $tx_info,
+		pepseq => $pepseq,
+		mass => $mass,
+		charge => $charge,
+		isotype => $isotype,
+		is_decoy => $is_decoy,
+		experiment => $experiment,
+		spectrum_file => $spectrum_file,
+		chromatogram_id => $chromatogram_id,
   );
   return $json_string;
 }
@@ -481,9 +515,21 @@ sub mzXML2traces {
 ###############################################################################
 sub traces2json {
   my %args = @_;
-  my $traces_href = $args{traces_href};
-  my %traces = %{$traces_href};
-  my $rt = $args{rt};
+	my $traces_href = $args{traces_href};
+
+	my $pepseq = $args{	pepseq};
+	my $mass = sprintf "%0.4f", $args{ mass};
+	my $charge = $args{charge};
+	my $isotype = $args{isotype};
+	my $is_decoy = $args{is_decoy};
+	my $experiment = $args{experiment};
+	my $spectrum_file = $args{spectrum_file};
+	$spectrum_file =~ ".*/(.*)" ;
+	$spectrum_file = $1;
+	my $chromatogram_id = $args{chromatogram_id};
+
+	my %traces = %{$traces_href};
+	my $rt = $args{rt};
   my $tx_info = $args{tx_info};
 
   my $json_string = '{';
@@ -529,7 +575,23 @@ sub traces2json {
   } else {
     $json_string .= ", vmarker_json : [  ]\n";
   }
+
+	# Write auxiliary infos, if provided
+	$json_string .= qq~
+		, info: [ {
+			pepseq: "$pepseq",
+			mass: $mass,
+			charge: $charge,
+			isotype: "$isotype",
+			is_decoy: "$is_decoy",
+			experiment: "$experiment",
+			spectrum_file: "$spectrum_file",
+			chromatogram_id: $chromatogram_id,
+		 } ]
+	~;
+
   $json_string .= "}\n";
+
   return $json_string;
 }
 
@@ -637,6 +699,15 @@ sub mzML2json_using_PCE {
   my $param_href = $args{param_href};
   my $physical_tmp_dir = $args{physical_tmp_dir};
   my $chromgram_basename = $args{chromgram_basename};
+
+	my $pepseq = $args{	pepseq};
+	my $mass = $args{ mass};
+	my $charge = $args{charge};
+	my $isotype = $args{isotype};
+	my $is_decoy = $args{decoy};
+	my $experiment = $args{experiment};
+	my $spectrum_file = $args{spectrum_file};
+	my $chromatogram_id = $args{chromatogram_id};
 
   my ($ion, $ion_charge, $pepseq, $spectrum_pathname,
 	$ce, $rt, $delta_rt, $fragmentor, $precursor_neutral_mass);

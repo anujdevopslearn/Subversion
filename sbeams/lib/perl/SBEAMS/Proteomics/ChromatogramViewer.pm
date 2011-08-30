@@ -48,6 +48,7 @@ sub generateChromatogram {
     my $self = shift;
     my %args = @_;
 
+    my $chromatogram_id = $args{'chromatogram_id'};
     my $chromatogram_pathname = $args{'chromatogram_pathname'};
     my $mzml_pathname = $args{'mzml_pathname'};
     my $precursor_neutral_mass = $args{'precursor_neutral_mass'};
@@ -62,10 +63,15 @@ sub generateChromatogram {
     my @chromavis_html = <HTML>;
     my $chromavis_html = join('', @chromavis_html);
     # Substitute in the filename of the chromatogram
-    $chromavis_html =~ s:js/data/test.json:$chromatogram_pathname:g;
+    #$chromavis_html =~ s:js/data/test.json:$chromatogram_pathname:g;
     # Substitute in the location of the chromavis code
     my $chromavis_resources = "$HTML_BASE_DIR/usr/javascript/chromavis";
-    $chromavis_html =~ s:src="js:src="$chromavis_resources/js:g;
+    #$chromavis_html =~ s:src="js:src="$chromavis_resources/js:g;
+    $chromavis_html .= qq~
+    <script language="javascript">
+    var chromatogram_id = $chromatogram_id;
+    </script>
+    ~;
 
     # Add extra stuff at bottom.
 #--------------------------------------------------

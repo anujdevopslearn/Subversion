@@ -474,6 +474,7 @@ sub handle_request {
    @decoy_column_array,
    ["peptide_PA","NULL","Pep in Pep tide Atlas"],
    ["peptide_SRMA","NULL","Pep in SRM Atlas"],
+   ["chromatogram_link","NULL", "Single Chro mato gram"],
    ["chromatogram_selector_left","NULL", "Chro mavis Left"],
    ["chromatogram_selector_right","NULL", "Chro mavis Right"],
    ["swissprot_mapping","MIN(SELPIP.protein_accession)","Primary Swiss-Prot Mapping"],
@@ -483,7 +484,6 @@ sub handle_request {
    ["targeted_q1_mz","SELTG.q1_mz","tar geted Q1 m/z"],
    ["calculated_q1_mz","SELPI.q1_mz","calc. Q1 m/z"],
    @transition_column_array,
-   ["chromatogram_link","NULL", "Single Chro mato gram (not working)"],
    ["d_score","STR(SELTG.m_score,7,4)", "d_score"],
    ["m_score","STR(SELTG.m_score,7,4)", "m_score"],
    ["log10_max_apex_intensity","STR(SELTG.max_apex_intensity,7,4)", "Log Max Apex Intens"],
@@ -702,19 +702,22 @@ sub handle_request {
           'Pep in SRM Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/srmatlas-icon.gif>",
           'Pep in SRM Atlas_OPTIONS' => {embed_html=>1},
 
-          'Single Chro mato gram (not working)' => "$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?_tab=3&SEL_chromatogram_id=\%$colnameidx{SEL_chromatogram_id}V&action=QUERY",
-          'Single Chro mato gram (not working)_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show chromatogram\'; return true"',
-          'Single Chro mato gram (not working)_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/chromatogram.gif>",
-          'Single Chro mato gram (not working)_OPTIONS' => {embed_html=>1},
+          'Single Chro mato gram' => "$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?_tab=3&SEL_chromatogram_id=\%$colnameidx{SEL_chromatogram_id}V&action=QUERY",
+          'Single Chro mato gram_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show chromatogram\'; return true"',
+          'Single Chro mato gram_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/chromatogram.gif>",
+          'Single Chro mato gram_OPTIONS' => {embed_html=>1},
 
           'Chro mavis Left' => "#",
-          'Chro mavis Left_ATAG' => "ONMOUSEOVER=\"window.status=\'Show chromatogram\'; return true;\" ONCLICK=\"update_chromavis(\%$colnameidx{SEL_chromatogram_id}V,\'left\'); return false;\"",
-          'Chro mavis Left_ISNULL' => "Left",
+	  #'Chro mavis Left_ATAG' => "ONMOUSEOVER=\"window.status=\'Show chromatogram\'; return true;\" ONCLICK=update_chromavis(\%$colnameidx{SEL_chromatogram_id}V,\'left\'); return false;\"",
+	  'Chro mavis Left_ATAG' => "ONMOUSEOVER=\"window.status=\'Show chromatogram\'; return true;\" ONCLICK=\"document.getElementById(\'resultsettab2\').setAttribute(\'style\',\'background:#BB0000;color:#FFFFFF\');update_chromavis(\%$colnameidx{SEL_chromatogram_id}V,\'left\'); window.setTimeout(function(){document.getElementById(\'resultsettab2\').setAttribute(\'style\',\'\');},2000);return false;\"",
+          'Chro mavis Left_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/left_off.gif>",
           'Chro mavis Left_OPTIONS' => {embed_html=>1},
 
           'Chro mavis Right' => "#",
-          'Chro mavis Right_ATAG' => "ONMOUSEOVER=\"window.status=\'Show chromatogram\'; return true;\" ONCLICK=\"update_chromavis(\%$colnameidx{SEL_chromatogram_id}V,\'right\'); return false;\"",
-          'Chro mavis Right_ISNULL' => "Right",
+	  #'Chro mavis Right_ATAG' => "ONMOUSEOVER=\"window.status=\'Show chromatogram\'; return true;\" ONCLICK=\"update_chromavis(\%$colnameidx{SEL_chromatogram_id}V,\'right\'); return false;\"",
+	  'Chro mavis Right_ATAG' => "ONMOUSEOVER=\"window.status=\'Show chromatogram\'; return true;\" ONCLICK=\"document.getElementById(\'resultsettab2\').setAttribute(\'style\',\'background:#BB0000;color:#FFFFFF\');update_chromavis(\%$colnameidx{SEL_chromatogram_id}V,\'right\'); window.setTimeout(function(){document.getElementById(\'resultsettab2\').setAttribute(\'style\',\'\');},2000);return false;\"",
+	  #'Chro mavis Right_ISNULL' => "Right",
+          'Chro mavis Right_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/right_off.gif>",
           'Chro mavis Right_OPTIONS' => {embed_html=>1},
       );
 
@@ -777,10 +780,13 @@ sub handle_request {
     }
 
     #### Display table help
-    my $obs_help = get_table_help( 'transitions' );
-    my $tr = "";
-    print qq~ <TABLE><TR $tr><TD ALIGN=left>$obs_help</TD></TR></TABLE>
-      ~ if ( $sbeams->output_mode() eq 'html' );
+    # turned off until we can make this compatible with tabbed panes.
+#--------------------------------------------------
+#     my $obs_help = get_table_help( 'transitions' );
+#     my $tr = "";
+#     print qq~ <TABLE><TR $tr><TD ALIGN=left>$obs_help</TD></TR></TABLE>
+#       ~ if ( $sbeams->output_mode() eq 'html' );
+#-------------------------------------------------- 
 
 
     #### Display the resultset

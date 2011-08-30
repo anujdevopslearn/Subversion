@@ -216,39 +216,49 @@ sub handle_request {
 	  <h1>SRM Experiments Available in PASSEL</h1>
 	  <br>
 					  <p class="rep">
-  Filter experiments using Search, then click individual experiments
+  Click individual experiments
   for detailed info and links to transition lists and experimental results.
 
 					  </p>
 					  </p>
 
+	  <div class="search">
+	  <input type="button" id="downloadbtn" name="downloadbtn" value="Download Table">
+
+	  </div>
 	  <br>
 	  </div>
   ~;
   print $html;
 
-  # Search boxes and buttons
-  $html = qq~
-	  <div class="search">
-	  <span>&nbsp;&nbsp;Search:&nbsp;</span>
-	  <select id="selectedTitle" name="selectedTitle" style="font-size:92%">
-	    <option value="all" selected="selected">&nbsp;All </option>
-	    <option value="title" >&nbsp;Experiment Title</option>
-	    <option value="organism" >&nbsp;Organism</option>
-	    <option value="tag" >&nbsp;Sample Tag</option>
-	    <option value="instrument" >&nbsp;Instrument</option>
-	    <option value="publication" >&nbsp;Publication</option>
-	  </select>
-	  <span>for</span>
-	  <input type="text" size="38" id="searchq" name="searchq"  >
-	  <input type="button" id="searchbtn" name="searchbtn" class="sarchBtnOK" value="Search" >
+  # Text for when search/filter is activated
+#  Filter experiments using Search, then click individual experiments
+#  for detailed info and links to transition lists and experimental results.
 
-	  &nbsp;&nbsp; 
-	  <input type="button" id="downloadbtn" name="downloadbtn" value="Download Table">
-
-	  </div>
-  ~;
-  print $html;
+#--------------------------------------------------
+#   # Search boxes and buttons
+#   $html = qq~
+# 	  <div class="search">
+# 	  <span>&nbsp;&nbsp;Search:&nbsp;</span>
+# 	  <select id="selectedTitle" name="selectedTitle" style="font-size:92%">
+# 	    <option value="all" selected="selected">&nbsp;All </option>
+# 	    <option value="title" >&nbsp;Experiment Title</option>
+# 	    <option value="organism" >&nbsp;Organism</option>
+# 	    <option value="tag" >&nbsp;Sample Tag</option>
+# 	    <option value="instrument" >&nbsp;Instrument</option>
+# 	    <option value="publication" >&nbsp;Publication</option>
+# 	  </select>
+# 	  <span>for</span>
+# 	  <input type="text" size="38" id="searchq" name="searchq"  >
+# 	  <input type="button" id="searchbtn" name="searchbtn" class="sarchBtnOK" value="Search" >
+# 
+# 	  &nbsp;&nbsp; 
+# 	  <input type="button" id="downloadbtn" name="downloadbtn" value="Download Table">
+# 
+# 	  </div>
+#   ~;
+#   print $html;
+#-------------------------------------------------- 
 
   my $passel = new SBEAMS::PeptideAtlas::PASSEL;
   # Make a JSON file containing data from all of the experiments.
@@ -278,6 +288,7 @@ sub handle_request {
 	  </body>
   ~;
   print $html;
+
 
   $sbeamsMOD->display_page_footer();
 }

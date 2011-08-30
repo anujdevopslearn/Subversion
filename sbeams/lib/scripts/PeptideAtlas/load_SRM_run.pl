@@ -159,6 +159,7 @@ my $q1_measured_aref =
 
 ### Read mProphet peakgroup file; store scores in mpro hash
 my $mpro_href;
+my $mquest_href;
 if ($mpro_file) {
   $mpro_href = $loader->read_mprophet_peakgroup_file (
     mpro_file => $mpro_file,
@@ -184,11 +185,11 @@ my $transdata_href = $loader->read_transition_list(
 );
 
 ### Store mquest scores in transdata hash
-if ($mpro_file) {
-  $loader->store_quest_scores_in_transition_hash (
+if ($mquest_file) {
+  $loader->store_mquest_scores_in_transition_hash (
     spec_file_basename => $spec_file_basename,
     transdata_href => $transdata_href,
-    mpro_href => $mpro_href,
+    mquest_href => $mquest_href,
     verbose => $VERBOSE,
     quiet => $QUIET,
     testonly => $TESTONLY,
