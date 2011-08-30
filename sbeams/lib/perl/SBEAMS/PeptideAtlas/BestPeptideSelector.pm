@@ -345,10 +345,10 @@ sub getHighlyObservablePeptides {
        ORDER BY BS.BIOSEQUENCE_ID DESC
   ~;
  
-  my @biosequece_ids = $sbeams->selectOneColumn($sql); 
+  my @biosequence_ids = $sbeams->selectOneColumn($sql); 
 
   #print "<H4>@biosequece_ids $atlas_build_id $biosequence_id</H4>\n";
-  if( @biosequece_ids == 0 ){
+  if( @biosequence_ids == 0 ){
     my $result = $self -> getHighlyObservablePeptides_old(
       atlas_build_id => $atlas_build_id,
       biosequence_id => $biosequence_id,
@@ -398,7 +398,7 @@ sub getHighlyObservablePeptides {
           ON ( PTPM.source_biosequence_id = BS.biosequence_id )
      LEFT JOIN $TBAT_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
     WHERE 1 = 1
-	  AND PTPM.source_biosequence_id = $biosequece_ids[0]
+	  AND PTPM.source_biosequence_id = $biosequence_ids[0]
     AND ( PTP.combined_predictor_score is not null OR peptide_accession IS NOT NULL )
     ORDER BY PTP.combined_predictor_score DESC
   ~;
@@ -418,6 +418,7 @@ sub getHighlyObservablePeptides {
   my $result;
   $result->{resultset_ref} = $resultset_ref;
   $result->{column_titles_ref} = \@column_titles;
+  $result->{mapping_biosequence_id} = $biosequence_ids[0];
 
   return $result;
 
@@ -617,15 +618,55 @@ sub getHighlyObservablePeptidesDisplay {
   my $self = shift || die ("self not passed");
   my %args = @_;
 
-
   my $best_peptide_information = $args{best_peptide_information}
     or die("ERROR[$METHOD]: Parameter best_peptide_information not passed");
 
   my $base_url = $args{base_url}
     or die("ERROR[$METHOD]: Parameter base_url not passed");
 
-
   my $resultset_ref = $best_peptide_information->{resultset_ref};
+
+#   add_num_mapped => 1,
+#   dbxref_id => $dbxref_id,
+#   biosequence_id
+#
+  my %pep2mappings;
+  if ( $args{add_num_mapped} ) {
+
+    my @peps;
+
+    for my $line ( @{$args{best_peptide_information}->{resultset_ref}->{data_ref}} ) {
+      push @peps, $line->[2];
+    }
+    my $biosequence_id = $args{best_peptide_information}->{mapping_biosequence_id};
+
+    my $pepstr = "'" . join(  "','", @peps ) . "'";
+
+    my $sql = qq~
+    SELECT peptide_sequence, count(*) 
+    FROM $TBAT_PROTEOTYPIC_PEPTIDE PTP
+    JOIN $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING PTPM
+      ON ( PTP.proteotypic_peptide_id = PTPM.proteotypic_peptide_id )
+    JOIN $TBAT_BIOSEQUENCE BS
+      ON ( PTPM.source_biosequence_id = BS.biosequence_id )
+    WHERE biosequence_set_id IN (SELECT biosequence_set_id FROM $TBAT_BIOSEQUENCE WHERE biosequence_id = $biosequence_id )
+    AND peptide_sequence IN ( $pepstr )
+    AND dbxref_id = $args{dbxref_id}
+    GROUP BY peptide_sequence
+    ~;
+    my $sth = $sbeams->get_statement_handle( $sql );
+    while( my @row = $sth->fetchrow_array() ) {
+      $pep2mappings{$row[0]} = $row[1];
+    }
+
+
+    $resultset_ref->{column_hash_ref}->{num_prot_mappings} = 11;
+    push @{$resultset_ref->{column_list_ref}}, 'num_prot_mappings';
+    push @{$resultset_ref->{types_list_ref}}, 'int';
+
+  }
+
+
   my @data;
   for my $row ( @{$resultset_ref->{data_ref}} ) {
     # Define the hypertext links for columns that need them
@@ -636,13 +677,20 @@ sub getHighlyObservablePeptidesDisplay {
     for my $idx ( 4..10 ) {
       $row->[$idx] = sprintf( "%0.2f", $row->[$idx] );
     }
-    push @data, [@{$row}[0..6,8..10]];
+    my $nmappings = $pep2mappings{$row->[2]} || 'na';
+    my @data_row = @{$row}[0..6,8..10];
+    if ( $args{add_num_mapped} ) {
+      push @data_row, $nmappings;
+    }
+    push @data, [@data_row];
   }
 
   my %cols;
+  my $last;
   for my $col ( keys( %{$resultset_ref->{column_hash_ref}} ) ) {
 #    $log->debug( "Col is $col, ColHR is $resultset_ref->{column_hash_ref}->{$col}" );
     $cols{$resultset_ref->{column_hash_ref}->{$col}} = $col;
+    $last = $col;
   }
 
   my %translate = ( 'detectabilitypredictor_score' => 'DPred',
@@ -655,6 +703,7 @@ sub getHighlyObservablePeptidesDisplay {
                                       'espp_score' => 'ESPP',
                                      'stepp_score' => 'STEPP',
                                'following_residue' => 'Fol AA',
+                               'num_prot_mappings' => 'N Prot Map',
                       ); 
 
   my @headings;
