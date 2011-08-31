@@ -975,15 +975,23 @@ sub readJsonChromatogramIntoResultsetHash {
   my $self = shift;
   my %args = @_;
   my $param_href = $args{param_href};
+  my $json_string = $args{json_string};
   my $json_physical_pathname = $args{json_physical_pathname};
   my %dataset;
   my @chromatogram_array = ();
 
-  open (JSON, $json_physical_pathname) ||
-      die "Can't open .json file $json_physical_pathname";
+  my @json_lines;
+  if (! $json_string ) {
+    open (JSON, $json_physical_pathname) ||
+    die "Can't open .json file $json_physical_pathname";
+    @json_lines = <JSON>;
+    close JSON;
+  } else {
+    @json_lines = split("\n", $json_string); 
+  }
   my ($trace_num, $time, $q1, $q3, $intensity);
   $trace_num = 0;
-  while (my $line = <JSON>) {
+  for my $line (@json_lines) {
     chomp $line;
     #print "<br>$line\n";
     if ($line =~ /full/ ) {
@@ -1003,7 +1011,7 @@ sub readJsonChromatogramIntoResultsetHash {
   }
   $dataset{data_ref} = \@chromatogram_array;
   $dataset{column_list_ref} =
-      ['trace_num', 'seconds', 'Q1', 'Q3', 'intensity'];
+  ['trace_num', 'seconds', 'Q1', 'Q3', 'intensity'];
   return \%dataset;
 }
 

@@ -157,13 +157,27 @@ my $q1_measured_aref =
 # exit;
 #-------------------------------------------------- 
 
+### Read mQuest peakgroup file; store scores in mpro hash
+my $mpro_href = {};
+if ($mquest_file) {
+  $loader->read_mquest_peakgroup_file (
+    mquest_file => $mquest_file,
+    spec_file_basename => $spec_file_basename,
+    mpro_href => $mpro_href,
+    special_expt => $special_expt,
+    verbose => $VERBOSE,
+    quiet => $QUIET,
+    testonly => $TESTONLY,
+    debug => $DEBUG,
+  );
+}
+
 ### Read mProphet peakgroup file; store scores in mpro hash
-my $mpro_href;
-my $mquest_href;
 if ($mpro_file) {
-  $mpro_href = $loader->read_mprophet_peakgroup_file (
+  $loader->read_mprophet_peakgroup_file (
     mpro_file => $mpro_file,
     spec_file_basename => $spec_file_basename,
+    mpro_href => $mpro_href,
     special_expt => $special_expt,
     verbose => $VERBOSE,
     quiet => $QUIET,
@@ -184,23 +198,8 @@ my $transdata_href = $loader->read_transition_list(
   debug => $DEBUG,
 );
 
-### Store mquest scores in transdata hash
-if ($mquest_file) {
-  $loader->store_mquest_scores_in_transition_hash (
-    spec_file_basename => $spec_file_basename,
-    transdata_href => $transdata_href,
-    mquest_href => $mquest_href,
-    verbose => $VERBOSE,
-    quiet => $QUIET,
-    testonly => $TESTONLY,
-    debug => $DEBUG,
-  );
-} else {
-  print "No mQuest file given.\n" if ($VERBOSE);
-}
-
-### Store mprophet scores in transdata hash
-if ($mpro_file) {
+### Store mquest/mprophet scores in transdata hash
+if ($mpro_href) {
   $loader->store_mprophet_scores_in_transition_hash (
     spec_file_basename => $spec_file_basename,
     transdata_href => $transdata_href,
@@ -211,7 +210,7 @@ if ($mpro_file) {
     debug => $DEBUG,
   );
 } else {
-  print "No mProphet file given.\n" if ($VERBOSE);
+  print "No mProphet or mQuest file given.\n" if ($VERBOSE);
 }
 
 ### Load transition data into database

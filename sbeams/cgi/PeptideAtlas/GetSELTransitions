@@ -370,23 +370,23 @@ sub handle_request {
     constraint_type=>"flexible_float",
     constraint_name=>"d_score",
     constraint_value=>$parameters{d_score_constraint} );
-  return if ($m_score_clause eq '-1');
+  return if ($d_score_clause eq '-1');
 
   #### Build S_N constraint
-  my $d_score_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"SELTG.S_n",
+  my $signal_noise_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SELTG.S_N",
     constraint_type=>"flexible_float",
     constraint_name=>"S_N",
     constraint_value=>$parameters{S_N_constraint} );
-  return if ($m_score_clause eq '-1');
+  return if ($signal_noise_clause eq '-1');
 
   #### Build max apex intensity constraint
-  my $d_score_clause = $sbeams->parseConstraint2SQL(
+  my $max_apex_intensity_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"SELTG.max_apex_intensity",
     constraint_type=>"flexible_float",
     constraint_name=>"mas_apex_intensity",
     constraint_value=>$parameters{max_apex_intensity_constraint} );
-  return if ($m_score_clause eq '-1');
+  return if ($max_apex_intensity_clause eq '-1');
 
   #### Build organism constraint
   my $organism_clause = $sbeams->parseConstraint2SQL(
@@ -469,7 +469,7 @@ sub handle_request {
 
   my @column_array = (
    ["modified_peptide_sequence","SELPI.modified_peptide_sequence","Modified Peptide Sequence"],
-   ["peptide_charge","SELPI.peptide_charge","Z"],
+   ["peptide_charge","SELPI.peptide_charge + '+'","Z"],
    ["stripped_peptide_sequence","SELPI.stripped_peptide_sequence","Stripped Peptide Sequence"],
    @decoy_column_array,
    ["peptide_PA","NULL","Pep in Pep tide Atlas"],
@@ -484,7 +484,7 @@ sub handle_request {
    ["targeted_q1_mz","SELTG.q1_mz","tar geted Q1 m/z"],
    ["calculated_q1_mz","SELPI.q1_mz","calc. Q1 m/z"],
    @transition_column_array,
-   ["d_score","STR(SELTG.m_score,7,4)", "d_score"],
+   ["d_score","STR(SELTG.d_score,7,4)", "d_score"],
    ["m_score","STR(SELTG.m_score,7,4)", "m_score"],
    ["log10_max_apex_intensity","STR(SELTG.max_apex_intensity,7,4)", "Log Max Apex Intens"],
    ["S_N","STR(SELTG.S_N,7,4)", "S/N"],
@@ -625,6 +625,9 @@ sub handle_request {
         $fragment_number_clause
         $fragment_charge_clause
         $m_score_clause
+        $d_score_clause
+        $signal_noise_clause
+        $max_apex_intensity_clause
         $isotype_clause
         $organism_clause
         $experiments_clause
@@ -747,6 +750,12 @@ sub handle_request {
     #### the database
     if ($apply_action =~ /QUERY/i) {
 
+
+#--------------------------------------------------
+#       print "Physical: $PHYSICAL_BASE_DIR\n";
+#       print "HTML: $HTML_BASE_DIR\n";
+#-------------------------------------------------- 
+
       #### Show the SQL that will be or was executed
       $sbeams->display_sql(
 	sql=>$sql,
@@ -820,7 +829,7 @@ sub handle_request {
 
 # Read the HTML code for the viewer from a template file.
 open(HTML,
-  "$PHYSICAL_BASE_DIR/usr/javascript/chromavis/js/master_ajax.html");
+  "${PHYSICAL_BASE_DIR}/usr/javascript/chromavis/js/master_ajax.html");
 my @chromavis_html = <HTML>;
 my $chromavis_html = join('', @chromavis_html);
 

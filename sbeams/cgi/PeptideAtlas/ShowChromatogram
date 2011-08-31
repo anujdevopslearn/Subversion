@@ -160,11 +160,13 @@ sub processRequest {
       "(have $spectrum_pathname); if .mzML, also need precursor_neutral_mass.\n";
     }
 
-    # Write .json string to file
-    $cgram->writeJsonFile (
-      json_string => $json_string,
-      json_physical_pathname => $json_physical_pathname,         
-    ) if ($json_string);
+#--------------------------------------------------
+#     # Write .json string to file
+#     $cgram->writeJsonFile (
+#       json_string => $json_string,
+#       json_physical_pathname => $json_physical_pathname,         
+#     ) if ($json_string);
+#-------------------------------------------------- 
 
 #--------------------------------------------------
 #     print "<br>json_physical_pathname:<br>\n";
@@ -200,11 +202,12 @@ sub processRequest {
               m_score               => $parameters{m_score},
 	  );
 
-    # Read the data from the JSON file into a hash of the
+    # Read the data from the JSON object into a hash of the
     # format required by writeResultSet
     my $cgram_href = $cgram->readJsonChromatogramIntoResultsetHash (
       param_href => \%parameters,
-      json_physical_pathname => $json_physical_pathname,
+      json_string => $json_string,
+      #json_physical_pathname => $json_physical_pathname,
     );
 
     # Store chromatogram data as a recallable resultset
