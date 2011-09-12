@@ -819,8 +819,25 @@ sub displayTable{
 			 $Distinct_SearchResult{$search_key}{$organism_name}{$build_type}{$rescource_name} = 1;
 	 }
 
+  ### count number of result rows, auto expand when result row <= 2 
+  my $n_result_rows = 0;
+  my $pre_resource_type = '';
+  my $visible = 0;
+  foreach my $resource_type (sort {$b cmp $a} keys %filtered_result){
+    foreach my $order (qw(highpriority lowpriority)){
+      foreach my $search_key (keys%{$filtered_result{$resource_type}{$order}}){
+        foreach my $organism_name(keys%{$filtered_result{$resource_type}{$order}{$search_key}}){
+          $n_result_rows++;
+        }
+      }
+    }
+  }
+  if($n_result_rows <= 2 ){
+    $visible =1;
+  }
 
   my $pre_resource_type = '';
+
   foreach my $resource_type (sort {$b cmp $a} keys %filtered_result){
     foreach my $order (qw(highpriority lowpriority)){
    	foreach my $search_key (sort {$a cmp $b} keys %{$filtered_result{$resource_type}{$order}}){
@@ -869,7 +886,7 @@ sub displayTable{
 				 }
 				 if ( $sbeams->output_mode() eq 'html') {
 						 my ( $tr, $link ) = $sbeams->make_table_toggle( name => $table_name,
-																									visible => 0,
+																									visible => $visible,
 																									tooltip => 'Show/Hide Section',
 																									imglink => 0,
 																									sticky => 0 );
@@ -930,6 +947,7 @@ sub displayTable{
 						 }else{
 								$text .=  qq~, observed <B>0</B> times~;
 						 }
+
 						 my $buffer = qq~<TR><TD colspan="2" width="1000">$link $text</TD></TR>~;
 					
              print "$resource_type hits<BR>" if($pre_resource_type ne $resource_type);
