@@ -352,14 +352,32 @@ sub map_peptide {
           $prots{$acc} ||= {};
           $prots{$acc}->{$pepseq}++;
 
-          if ( $opts->{show_all_flanking} ) {
+          if ( $opts->{show_all_flanking} || $opts->{c_term_cnt} ) {
             my $posn = $atlas->get_site_positions( pattern => $pepseq, 
                                                        seq => $seq );
+            if ( $opts->{c_term_cnt} ) {
+              my $c_term = is_c_term( seq => $seq, pep => $pepseq );
+              $stats{cterm}++ if $c_term;
+#              die "$pepseq is cterminal to $seq " if $c_term;
+            }
+            if ( $opts->{n_term_cnt} ) {
+              my $n_term = is_n_term( seq => $seq, pep => $pepseq );
+              if ( $n_term ) {
+                if ( $n_term == 1 ) {
+                  $stats{nterm}++;
+                } else {
+                  $stats{nterm_metcleave}++;
+#                  print "metcleave is $pepseq\n";
+                }
+              }
+            }
+
+
             my $pre = ( !$posn->[0] ) ? '-' : substr( $seq, $posn->[0] - 1, 1 );
             my $pseq = substr( $seq, $posn->[0], $peplen );
             my $fol = ( $posn->[0] + $peplen == length( $seq ) ) ? '-' : substr( $seq, $posn->[0] + $peplen, 1 );
 #            print "$pepseq yeilds $pre, $pseq, $fol from $posn->[0], $posn->[1], $seq\n";
-            print join( "\t", $acc, $pre, $pseq, $fol ) . "\n";
+#            print join( "\t", $acc, $pre, $pseq, $fol ) . "\n";
 
           }
 
@@ -376,6 +394,22 @@ sub map_peptide {
       my $sep = '';
       for my $acc ( sort( keys( %{$allpeptides->{$pepseq}} ) ) ) {
         next unless $acc;
+        my $seq = $acc2seq->{$acc};
+        if ( $opts->{c_term_cnt}  ) {
+          my $c_term = is_c_term( seq => $seq, pep => $pepseq );
+          $stats{cterm}++ if $c_term;
+        }
+        if ( $opts->{n_term_cnt} ) {
+          my $n_term = is_n_term( seq => $seq, pep => $pepseq );
+          if ( $n_term ) {
+            if ( $n_term == 1 ) {
+              $stats{nterm}++;
+            } else {
+              $stats{nterm_metcleave}++;
+#              print "metcleave is $pepseq\n";
+            }
+          }
+        }
         $match_str .= $sep . $acc;
         $prots{$acc} ||= {};
         $prots{$acc}->{$pepseq}++;
@@ -424,7 +458,27 @@ sub map_peptide {
 
 
 
+sub is_n_term {
+  my %args = @_;
 
+  my $peplen = length($args{pep});
+  my $nterm = substr( $args{seq}, 0, $peplen);
+  if ( $nterm eq $args{pep} ) {
+    return 1;
+  } else {
+    $nterm = substr( $args{seq}, 1, $peplen);
+  }
+  return ( $nterm eq $args{pep} ) ? 2 : 0;
+  
+}
+
+
+sub is_c_term {
+  my %args = @_;
+  my $peplen = length($args{pep});
+  my $cterm = substr( $args{seq}, -1 * $peplen, $peplen);
+  return ( $cterm eq $args{pep} ) ? 1 : 0;
+}
 
 sub read_fasta {
 	
@@ -546,7 +600,7 @@ sub get_options {
              'acc_swiss', 'ZtoC', 'bin_max=i', 'grep_only', 'init_mapping=i',
              'show_degen', 'show_mia', 'nocount_degen', 'show_nomap', 'show_himap=i',
              'show_proteo', 'show_all_pep', 'omit_match_seq', 'suppress_brute',
-             'key_calc', 'show_all_flanking', "min_nomap=i" );
+             'key_calc', 'show_all_flanking', "min_nomap=i", 'c_term_cnt', 'n_term_cnt' );
 
   print_usage() if $opts{help};
 
