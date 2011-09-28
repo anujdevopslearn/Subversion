@@ -373,6 +373,7 @@ sub handle_request {
      print "<nobr>";
      print $q->start_form(-method=>"POST",
                           -action=>"$base_url",
+                          -name=>"MainForm",
 			 );
 
      print "<B><font color=\"red\">Submitter email address</B></font> (This is your login name and the address that PASS will use to communicate with you)<BR>\n";
@@ -383,7 +384,7 @@ sub handle_request {
 
      print "<B><font color=\"red\">Submitter password</B></font> (Enter your password if you already have an account or choose a password for a new account)<BR>\n";
      #print $q->textfield( "password", $password, 10, 50);
-     print qq~<input type="text" name="password" value="$password" size=10 maxlength=50/>~;
+     print qq~<input type="password" name="password" value="$password" size=10 maxlength=50/>~;
      print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
 
      if ($authentication->{result} eq 'Success') {
@@ -400,7 +401,7 @@ sub handle_request {
      if ($authentication->{result} ne 'Success') {
        print "<B><font color=\"red\">Confirm password</font></B> (If you don't yet have an account, please confirm your password by entering it again)<BR>\n";
        #print $q->textfield( "confirmingPassword", $parameters{'confirmingPassword'}, 10, 50);
-       print qq~<input type="text" name="confirmingPassword" value="$confirmingPassword" size=10 maxlength=50/>~;
+       print qq~<input type="password" name="confirmingPassword" value="$confirmingPassword" size=10 maxlength=50/>~;
        print "<BR>\n";
      }
 
@@ -441,9 +442,27 @@ sub handle_request {
      print $q->textarea( "datasetTitle", $parameters{'datasetTitle'}, 3, 66);
      print "<BR>\n";
 
+     print qq~
+       <SCRIPT LANGUAGE="JavaScript">
+       function ClickedTodayButton(input_field) {
+         today = new Date();
+         month = today.getMonth()+1;
+         if (month < 10) { month = "0" + month; }
+         date = today.getDate();
+         if (date < 10) { date = "0" + date; }
+         date_value =
+           today.getFullYear() + "-" + month + "-" + date;
+         document.MainForm.publicReleaseDate.value = date_value;
+         return;
+       }
+       </SCRIPT>
+     ~;
+
      print "<B><font color=\"red\">Dataset Release Date</B></font> (Enter the date on which the data may be released publicly)<BR>\n";
      print "(Please use the format  2011-08-16)<BR>\n";
      print $q->textfield( "publicReleaseDate", $parameters{'publicReleaseDate'}, 10, 10);
+     print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+     print qq~<INPUT TYPE="button" NAME="publicReleaseDate_button" VALUE="TODAY" onClick="ClickedTodayButton(publicReleaseDate)">\n~;
      print "<BR>\n";
      print "<HR>\n";
 
@@ -468,7 +487,7 @@ sub handle_request {
      print "<BR>\n";
 
      print "<B><font color=\"red\">Mass modifications</B></font> (Enter any mass modifications applied to the sample)<BR>\n";
-     print "(Please use the format: C+57.021464, K+8.014199, R+10.008269)<BR>\n";
+     print "(Please use the format: static: C+57.021464, variable: K+8.014199, R+10.008269)<BR>\n";
      print $q->textarea( "massModifications", $parameters{'massModifications'}, 2, 40);
      print "<BR>\n";
      print "<HR>\n";
@@ -612,6 +631,12 @@ sub registerUser {
   }
 
 
+  unless ($emailAddress =~ /^[A-Za-z0-9\_\-\.]+\@[A-Za-z0-9\_\-\.]+\.[A-Za-z0-9\_\-\.]+$/) {
+    push(@{$response->{errors}},"The '$emailAddress' does not appear to be a fully formed email address. Please use your real email address so that the system can communicate with with on your submission.");
+    $readyToRegister = 0;
+  }
+
+
   my $PK;
   if ($readyToRegister) {
     my %rowdata = (
@@ -690,9 +715,9 @@ sub validateDatasetAnnotations {
   }
 
   $test = $formParameters->{contributors};
-  unless (defined($test) && length($test) > 10 && length($test) <= 10000) {
+  unless (defined($test) && length($test) > 6 && length($test) <= 10000) {
     $response->{result} = 'Failed';
-    push(@{$response->{errors}},"Contributors must be a string with length more than 10 up to 10000");
+    push(@{$response->{errors}},"Contributors must be a string with length more than 6 up to 10000");
   }
 
   $test = $formParameters->{publication};
@@ -716,7 +741,7 @@ sub validateDatasetAnnotations {
   $test = $formParameters->{massModifications};
   unless (defined($test) && length($test) > 3 && length($test) <= 1000) {
     $response->{result} = 'Failed';
-    push(@{$response->{errors}},"Mass modidications must be a string with length more than 3 up to 1000");
+    push(@{$response->{errors}},"Mass modifications must be a string with length more than 3 up to 1000");
   }
 
 
@@ -740,7 +765,7 @@ sub addDataset {
 
   return unless ($authentication->{result} eq 'Success');
 
-  my $datasetPassword = 'PAds11';
+  my $datasetPassword = generatePassword();;
 
   $formParameters->{datasetTitle} =~ s/[\n\r]//g;
 
@@ -799,16 +824,22 @@ sub addDataset {
   $metadata .= "tag:\t$formParameters->{datasetTag}\r\n";
   $metadata .= "title:\t$formParameters->{datasetTitle}\r\n";
   $metadata .= "summary:\t$formParameters->{summary}\r\n";
-  $metadata .= "contributor:\t$formParameters->{contributors}\r\n";
+  $metadata .= "contributors:\t$formParameters->{contributors}\r\n";
 
-  $metadata .= "pubmed id:\t$formParameters->{publication}\r\n";
+  $metadata .= "publication:\t$formParameters->{publication}\r\n";
 
   foreach my $tag ( 'growth','treatment','extraction','separation','digestion','acquisition','informatics' ) {
-    $metadata .= "$tag:\t$formParameters->{$tag}\r\n";
+    my $tmp = $formParameters->{$tag};
+    $tmp =~ s/^\s+//;
+    $tmp =~ s/\s+$//;
+    $metadata .= "$tag:\t$tmp\r\n";
   }
 
   foreach my $tag ( 'instruments','species','massModifications' ) {
-    $metadata .= "$tag:\t$formParameters->{$tag}\r\n";
+    my $tmp = $formParameters->{$tag};
+    $tmp =~ s/^\s+//;
+    $tmp =~ s/\s+$//;
+    $metadata .= "$tag:\t$tmp\r\n";
   }
 
   print OUTFILE $metadata;
@@ -835,6 +866,7 @@ Here is the FTP information:<PRE>
 Servername: ftp.peptideatlas.org
 Username: $datasetIdentifier
 Password: $datasetPassword
+Full URL: ftp://$datasetIdentifier:$datasetPassword\@ftp.peptideatlas.org/
 </PRE>
 After you have finished uploading all your data, please return to:<PRE>
     <a href="http://www.peptideatlas.org/PASS/$datasetIdentifier">http://www.peptideatlas.org/PASS/$datasetIdentifier</a></PRE>
@@ -876,6 +908,7 @@ Submitter: $recipient_name <$recipient>
 URL: http://www.peptideatlas.org/PASS/$datasetIdentifier
 Username: $datasetIdentifier
 Password: $datasetPassword
+Full URL: ftp://$datasetIdentifier:$datasetPassword\@ftp.peptideatlas.org/
 
 $metadata
 ~;
@@ -896,4 +929,31 @@ $metadata
 
   return $response;
 
+}
+
+
+#######################################################################
+# generatePassword
+#######################################################################
+sub generatePassword {
+  my %args = @_;
+  my $SUB_NAME = 'generatePassword';
+
+  my $password = '';
+  $password .= pack("c",int(rand(26))+65);
+  $password .= pack("c",int(rand(26))+65);
+
+  $password .= int(rand(9900))+100;
+
+  for (my $i=0; $i<int(rand(3))+1; $i++) {
+    $password .= pack("c",int(rand(26))+97);
+  }
+
+  #### Replace troublesome letters and numbers with more distinguishable ones
+  $password =~ s/O/P/g;
+  $password =~ s/0/5/g;
+  $password =~ s/1/4/g;
+  $password =~ s/l/m/g;
+
+  return($password);
 }
