@@ -188,7 +188,7 @@ sub handle_request {
   my $TABLE_NAME = $parameters{'QUERY_NAME'};
 
   #### Set some specific settings for this program
-  my $CATEGORY="PASS_Submit";
+  my $CATEGORY="PASS_View";
   my $PROGRAM_FILE_NAME = $PROG_NAME;
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
   my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
@@ -250,12 +250,49 @@ sub handle_request {
   }
 
 
-  #### See if the identifier was supplied
-  my $datasetIdentifer = $parameters{'identifier'};
+  #### If a dataset identifier was supplied, get the metadata for this dataset
+  #### and check to see if current user is the owner
+  my $datasetIdentifier = $parameters{'identifier'};
+  my $datasetMetadata;
+  my $isOwner = 0;
+  my $isAccessible = 0;
+  my $isAdmin = 0;
+  if ($datasetIdentifier) {
+    $datasetMetadata = getPASSMetaData(identifier=>$datasetIdentifier);
+    if ($datasetMetadata->{result} eq 'Success' && $emailAddress eq $datasetMetadata->{emailAddress}) {
+      $isOwner = 1;
+      $isAccessible = 1;
+    } elsif ($parameters{datasetPassword} && $datasetMetadata->{datasetPassword} eq $parameters{datasetPassword}) {
+      $isAccessible = 1;
+    } else {
+      my ($date) = `date '+%F'`;
+      chomp($date);
+      #print "Is '$date' ge '$datasetMetadata->{publicReleaseDate}'?<BR>\n";
+      if ($datasetMetadata->{publicReleaseDate} && substr($date,0,10) ge substr($datasetMetadata->{publicReleaseDate},0,10)) {
+	#print "INFO: Current date '$date' is greater than release date '$datasetMetadata->{publicReleaseDate}'<BR>\n";
+	$isAccessible = 1;
+      }
+    }
 
-  #### Determine if the current user can view this record
-  # not yet!
+    #### If the current session is logged in via SBEAMS as a user with Admin rights, set flag
+    if ($sbeams->isAdminUser(current_group=>0)) {
+      $isAccessible = 1;
+      $isAdmin = 1;
+    }
+    push(@errors,@{$datasetMetadata->{errors}}) if ($datasetMetadata->{errors});
 
+  }
+
+
+  #### Check authentication parameters and warn of any problems
+  if ($action =~ /FINALIZE/i && ! @errors ) {
+    if ($authentication->{result} eq 'Success' && $emailAddress eq $datasetMetadata->{emailAddress}) {
+      finalizeDataset(authentication=>$authentication,identifier=>$parameters{'identifier'});
+      $datasetMetadata = getPASSMetaData(identifier=>$datasetIdentifier);
+    } else {
+      push(@errors,@{$authentication->{errors}});
+    }
+  }
 
 
   $log->debug( "end param handling " . time() );
@@ -283,6 +320,12 @@ sub handle_request {
                           -action=>"$base_url",
 			 );
 
+     if ($isAdmin) {
+       my $current_username = $sbeams->getCurrent_username;
+       print "<B><font color=\"blue\">Your SBEAMS authentication is $current_username, which has Admin rights. Viewing in Admin mode</B></font><BR>\n";
+     }
+
+
      if ($authentication->{result} eq 'Success') {
        print "<B><font color=\"red\">Welcome $firstName $lastName</B></font>\n";
        print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
@@ -291,12 +334,12 @@ sub handle_request {
 			-label => 'LOGOUT');
      } else {
 
-       print "<B><font color=\"red\">Email address</B></font>\n";
+       print "<B>Email address</B>\n";
        print qq~<input type="text" name="emailAddress" value="$emailAddress" size=50 maxlength=80/>~;
        print "&nbsp;&nbsp;&nbsp;&nbsp;\n";
 
-       print "<B><font color=\"red\">Password</B></font>";
-       print qq~<input type="text" name="password" value="$password" size=10 maxlength=50/>~;
+       print "<B>Password</B>";
+       print qq~<input type="password" name="password" value="$password" size=10 maxlength=50/>~;
        print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
 
        print $q->submit(-name => "action",
@@ -306,7 +349,14 @@ sub handle_request {
      print "<BR>\n";
 
      print "<B><font color=\"red\">Dataset Identifier</B></font>\n";
-     print $q->textfield( "identifier", $datasetIdentifer, 10, 10);
+     print $q->textfield( "identifier", $datasetIdentifier, 10, 10);
+
+     if (! $isAccessible || $parameters{datasetPassword}) {
+       print "<B>Dataset Password</B>\n";
+       print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+       print qq~<input type="password" name="datasetPassword" value="$parameters{datasetPassword}" size=10 maxlength=10/>~;
+     }
+
      print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
      print $q->submit(-name => "action",
 		      -value => 'VIEW',
@@ -314,13 +364,58 @@ sub handle_request {
      print "<BR>\n";
      print "<HR>\n";
 
+     unless ($datasetIdentifier) {
+       print "<BR><BR>Please provide a dataset identifier above and click [View].<P>";
+       return;
+     }
+     if (@errors) {
+       print "<BR><BR>Please provide a valid dataset identifier above and click [View].<P>";
+       return;
+     }
+
+     unless ($isAccessible) {
+       print "<BR><BR>$datasetIdentifier is not accessible with current credentials.<P>";
+       print "If you are the owner of this dataset and have not logged in, please provide credentials above.<P>";
+       print "The dataset is scheduled to become public on $datasetMetadata->{publicReleaseDate}, at which point you can access it.<P>";
+       print "To access the dataset in advance of this date, enter the dataset password if it has been given to you,<BR>or you may contact the dataset owner $datasetMetadata->{submitterStr} to request the dataset password.<P>";
+       return;
+     }
+
+
+     if ($datasetMetadata->{result} eq 'Success' && $emailAddress eq $datasetMetadata->{emailAddress}) {
+       if ($datasetMetadata->{finalizedDate}) {
+       } else {
+         print "<B><font color=\"red\">Notice:</B></font> This dataset has not yet been marked as finalized!<BR>";
+         print "If the upload is now done and you are happy with the result: ";
+         print $q->submit(-name => "action",
+		      -value => 'FINALIZE',
+		      -label => 'FINALIZE');
+         print "<BR>\n";
+         print "<HR>\n";
+       }
+     }
+
+     #### Display the password if the user is the owner or an admin
+     if ($isOwner || $isAdmin) {
+       print "<B><font color=\"blue\">datasetPassword:</B></font> $datasetMetadata->{datasetPassword}<BR>";
+       print "<HR>\n";
+     }
+
+
+     print "<TABLE width=\"800\"><TR><TD>\n";
      print "<B>Metadata:</B><P>\n";
-     print DisplayPASSMetaData(identifier=>$datasetIdentifer);
+     print DisplayPASSMetaData(identifier=>$datasetIdentifier);
      print "<BR>\n";
+     print "</TR></TD></TABLE>\n";
      print "<HR>\n";
 
-     print "<B>Files:</B><P>\n";
-     print DisplayPASSDirListing(identifier=>$datasetIdentifer);
+     print "<B>To access files via FTP, use credentials:</B><PRE>\n";
+     print "Servername: ftp.peptideatlas.org\nUsername: $datasetIdentifier\nPassword: $datasetMetadata->{datasetPassword}\n</PRE><BR>\n";
+     print "Or use your browser's FTP mode: <a target=\"_blank\" href=\"ftp://$datasetIdentifier:$datasetMetadata->{datasetPassword}\@ftp.peptideatlas.org/\">ftp://$datasetIdentifier:$datasetMetadata->{datasetPassword}\@ftp.peptideatlas.org/</a><BR><BR>\n";
+     print "<HR>\n";
+
+     print "<B>Listing of files:</B><P>\n";
+     print DisplayPASSDirListing(identifier=>$datasetIdentifier);
      print "<BR>\n";
      print "<HR>\n";
 
@@ -524,6 +619,97 @@ sub validateDatasetAnnotations {
 
 
 #######################################################################
+# getPASSMetaData
+#######################################################################
+sub getPASSMetaData {
+  my %args = @_;
+  my $SUB_NAME = 'getPASSMetaData';
+
+  #### Decode the argument list
+  my $identifier = $args{'identifier'} || die "[$SUB_NAME] ERROR: identifier not passed";
+
+  my $response;
+
+  my $sql = qq~
+    SELECT datasetIdentifier,submitter_id,datasetType,datasetPassword,datasetTag,datasetTitle,publicReleaseDate,finalizedDate
+      FROM $TBAT_PASS_DATASET
+     WHERE datasetIdentifier = '$identifier'
+  ~;
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  if (@rows) {
+    my ($datasetIdentifier,$submitter_id,$datasetType,$datasetPassword,$datasetTag,$datasetTitle,$publicReleaseDate,$finalizedDate) = 
+      @{$rows[0]};
+
+    my $sql2 = qq~
+      SELECT firstName,lastName,emailAddress
+        FROM $TBAT_PASS_SUBMITTER
+       WHERE submitter_id = '$submitter_id'
+    ~;
+
+    my @rows2 = $sbeams->selectSeveralColumns($sql2);
+    my $submitterStr = '';
+    if (@rows2) {
+      my ($firstName,$lastName,$emailAddress) = @{$rows2[0]};
+      $submitterStr = "$firstName $lastName &lt;$emailAddress&gt;";
+      $response->{emailAddress} = $emailAddress;
+      $response->{submitterStr} = $submitterStr;
+    } else {
+      $response->{results} = 'Failed';
+      push(@{$response->{errors}},"ERROR: Query<PRE>\n$sql2</PRE> failed to return any rows.<BR>");
+    }
+
+    $response->{datasetIdentifier} = $datasetIdentifier;
+    $response->{datasetType} = $datasetType;
+    $response->{submitter} = $submitterStr;
+    $response->{datasetPassword} = $datasetPassword;
+    $response->{datasetTag} = $datasetTag;
+    $response->{datasetTitle} = $datasetTitle;
+    $response->{publicReleaseDate} = $publicReleaseDate;
+    $response->{finalizedDate} = $finalizedDate;
+
+  } else {
+    if ($identifier =~ /^PASS\d{5}$/) {
+      push(@{$response->{errors}},"ERROR: Nonexistent PASS accession number $identifier. Please enter the correct accession number.<BR>");
+      return($response);
+    } else {
+      push(@{$response->{errors}},"ERROR: Malformed PASS accession number '$identifier'. It should be PASSnnnnn, where nnnnn is a 5-digit number. Please enter the correct accession number.<BR>");
+      return($response);
+    }
+  }
+
+  my $PASS_ACCOUNTS_BASE = '/prometheus/u1/home';
+
+  my $infile = "$PASS_ACCOUNTS_BASE/${identifier}/${identifier}_DESCRIPTION.txt";
+  unless (open(INFILE,$infile)) {
+    print "ERROR: Unable to read description file for this submission: '$infile'";
+    $response->{result} = 'Success';
+    return $response;
+  }
+
+  my ($key,$value);
+  my $prevKey = '';
+  while (my $line = <INFILE>) {
+    $line =~ s/[\r\n]//g;
+    if ($line =~ /^\s*(\S+):\s*(.*)$/) {
+      $key = $1;
+      $value = $2;
+      $response->{$key} = $value;
+      $prevKey = $key;
+    } else {
+      $key = $prevKey;
+      $response->{$key} .= "<BR>\n$line";
+    }
+  }
+
+  close(INFILE);
+
+  $response->{result} = 'Success';
+  return $response;
+
+}
+
+
+#######################################################################
 # DisplayPASSMetaData
 #######################################################################
 sub DisplayPASSMetaData {
@@ -535,50 +721,34 @@ sub DisplayPASSMetaData {
 
   my $response;
 
-  my $sql = qq~
-    SELECT datasetIdentifier,datasetPassword,datasetTag,datasetTitle,publicReleaseDate,finalizedDate
-      FROM $TBAT_PASS_DATASET
-     WHERE datasetIdentifier = '$identifier'
-  ~;
-  my @rows = $sbeams->selectSeveralColumns($sql);
-  if (@rows) {
-    my ($datasetIdentifier,$datasetPassword,$datasetTag,$datasetTitle,$publicReleaseDate,$finalizedDate) = 
-      @{$rows[0]};
-    print "<B><font color=red>datasetIdentifier: </font></B> $datasetIdentifier<BR>\n";
-    print "<B><font color=red>datasetPassword: </font></B> $datasetPassword<BR>\n";
-    print "<B><font color=red>datasetTag: </font></B> $datasetTag<BR>\n";
-    print "<B><font color=red>datasetTitle: </font></B> $datasetTitle<BR>\n";
-    print "<B><font color=red>publicReleaseDate: </font></B> $publicReleaseDate<BR>\n";
-    print "<B><font color=red>finalizedDate: </font></B> $finalizedDate<BR>\n";
+  my $result = getPASSMetaData(identifier=>$identifier);
+
+  if ($result->{result} eq 'Success') {
+    print "<B><font color=red>datasetIdentifier:</font></B> $result->{datasetIdentifier}<BR>\n";
+    print "<B><font color=red>datasetType:</font></B> $result->{datasetType}<BR>\n";
+    print "<B><font color=red>submitter:</font></B> $result->{submitterStr}<BR>\n";
+    print "<B><font color=red>datasetTag:</font></B> $result->{datasetTag}<BR>\n";
+    print "<B><font color=red>datasetTitle:</font></B> $result->{datasetTitle}<BR>\n";
+    print "<B><font color=red>publicReleaseDate:</font></B> $result->{publicReleaseDate}<BR>\n";
+    print "<B><font color=red>finalizedDate:</font></B> $result->{finalizedDate}<BR>\n";
+
+    print "<B><font color=red>summary:</font></B> $result->{summary}<BR>\n";
+    print "<B><font color=red>contributors:</font></B> $result->{contributors}<BR>\n";
+    print "<B><font color=red>publication:</font></B> $result->{publication}<BR>\n";
+    print "<B><font color=red>growth:</font></B> $result->{growth}<BR>\n";
+    print "<B><font color=red>treatment:</font></B> $result->{treatment}<BR>\n";
+    print "<B><font color=red>extraction:</font></B> $result->{extraction}<BR>\n";
+    print "<B><font color=red>separation:</font></B> $result->{separation}<BR>\n";
+    print "<B><font color=red>digestion:</font></B> $result->{digestion}<BR>\n";
+    print "<B><font color=red>acquisition:</font></B> $result->{acquisition}<BR>\n";
+    print "<B><font color=red>informatics:</font></B> $result->{informatics}<BR>\n";
+    print "<B><font color=red>instruments:</font></B> $result->{instruments}<BR>\n";
+    print "<B><font color=red>species:</font></B> $result->{species}<BR>\n";
+    print "<B><font color=red>massModifications:</font></B> $result->{massModifications}<BR>\n";
 
   } else {
-    print "ERROR: Query<PRE>\n$sql</PRE> failed to return any rows.<BR>\n";
+    print "ERROR: Unable to get dataset metadata.<BR>\n";
   }
-
-#  my $sql = qq~
-#    SELECT submitter_id,firstName,lastName,emailAddress
-#      FROM $TB_PASS_SUBMITTER
-#     WHERE submitter_id = '$submitter_id'
-#  ~;
-
-
-
-  my $PASS_ACCOUNTS_BASE = '/prometheus/u1/home';
-
-  my $infile = "$PASS_ACCOUNTS_BASE/${identifier}/${identifier}_DESCRIPTION.txt";
-  open(INFILE,"$infile") || die("ERROR: Unable to read '$infile'");
-  while (my $line = <INFILE>) {
-    $line =~ s/[\r\n]//g;
-    if ($line =~ /^\s*(\S+):\s*(.*)$/) {
-      my $key = $1;
-      my $value = $2;
-      print "<B><font color=red>$key: </font></B> $value<BR>\n";
-    } else {
-      print "<B>Unparsable line: </B>$line<BR>\n";
-    }
-  }
-
-  close(INFILE);
 
 
   return $response;
@@ -600,12 +770,12 @@ sub DisplayPASSDirListing {
 
   my $PASS_ACCOUNTS_BASE = '/prometheus/u1/home';
 
-  my @listing = `ls -al $PASS_ACCOUNTS_BASE/$identifier/`;
+  my @listing = `ls -lh $PASS_ACCOUNTS_BASE/$identifier/`;
   print "<PRE>\n";
   foreach my $line ( @listing ) {
     chomp($line);
-    if (length($line) > 40 && substr($line,44,1) ne '.') {
-      print substr($line,31,999)."\n";
+    if (length($line) > 32) {
+      print substr($line,23,999)."\n";
     }
   }
   print "</PRE>\n";
@@ -614,3 +784,43 @@ sub DisplayPASSDirListing {
 
 }
 
+#0123456789012345678901234567890123456789012345678901234567890123456789
+#-rw-r--r--  1 PASS00005 ftpusers    176 Aug 25 23:41 .bash_profile
+
+
+#######################################################################
+# finalizeDataset
+#######################################################################
+sub finalizeDataset {
+  my %args = @_;
+  my $SUB_NAME = 'finalizeDataset';
+
+  #### Decode the argument list
+  my $authentication = $args{'authentication'} || die "[$SUB_NAME] ERROR: authentication not passed";
+  my $identifier = $args{'identifier'} || die "[$SUB_NAME] ERROR: identifier not passed";
+
+  if ($identifier =~ /^PASS(\d+)$/) {
+    my $PK = $1;
+    my %rowdata = ( finalizedDate => 'CURRENT_TIMESTAMP' );
+    my $result = $sbeams->updateOrInsertRow(
+					  update => 1,
+					  table_name => $TBAT_PASS_DATASET,
+					  rowdata_ref => \%rowdata,
+					  PK => 'dataset_id',
+					  PK_value => $PK,
+					 );
+
+    my $PASS_FTP_AGENT_BASE = '/prometheus/u1/home/PASSftpAgent';
+
+    my $cmdfile = "$PASS_FTP_AGENT_BASE/commands.queue";
+    open(CMDFILE,">>$cmdfile") || die("ERROR: Unable to append to '$cmdfile'");
+    print CMDFILE "FinalizeDataset $identifier\n";
+    close(CMDFILE);
+
+
+  } else {
+    print "ERROR: Unable to parse identifier '$identifier'. Please report this. ERROR449<BR>\n";
+  }
+
+  return;
+}
