@@ -30,7 +30,7 @@ my $log = SBEAMS::Connection::Log->new();
 
 ##our $VERSION = '0.20'; can get this from Settings::get_sbeams_version
 
-my $activate_PASSEL = 0;
+my $activate_PASSEL = 1;
 
 
 ###############################################################################
@@ -184,8 +184,18 @@ sub getTabMenu
     ($PROG_NAME =~ /GetPTP\?(\S+)/ ))
     {
        $current_tab=6;
-    }
 
+    #### PeptideAtlas Submission System PASS tabs
+    } elsif ($PROG_NAME =~ /^PASS_Summary/) {
+       $current_tab=7;
+       $current_subtab=1;
+    } elsif ($PROG_NAME =~ /^PASS_Submit/) {
+       $current_tab=7;
+       $current_subtab=2;
+    } elsif ($PROG_NAME =~ /^PASS_View/) {
+       $current_tab=7;
+       $current_subtab=3;
+    }
 
 
 
@@ -328,6 +338,33 @@ if ($activate_PASSEL) {
          helptext => 'Get Proteotypic Peptides',
          url => "$CGI_BASE_DIR/PeptideAtlas/GetPTP"
          );
+
+
+    #### PeptideAtlas Submission System PASS tabs
+    if (1) {
+    $tabmenu->addTab( label => 'Submission',
+         label => 'Submission',
+         helptext => 'Submit or access datasets',
+         url => "$CGI_BASE_DIR/PeptideAtlas/PASS_Submit"
+         );
+    $tabmenu->addMenuItem( tablabel => 'Submission',
+			   label => 'Datasets Summary',
+			   helptext => 'View/manage submitted datasets',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/PASS_Summary"
+			   );
+    $tabmenu->addMenuItem( tablabel => 'Submission',
+			   label => 'Submit Dataset',
+			   helptext => 'Submit a datasets to one of the PeptideAtlas resources',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/PASS_Submit"
+			   );
+    $tabmenu->addMenuItem( tablabel => 'Submission',
+			   label => 'View Dataset',
+			   helptext => 'View/access a previously submitted dataset',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/PASS_View"
+			   );
+    }
+
+
 
 
     $tabmenu->setCurrentTab( currtab => $current_tab, currsubtab => $current_subtab );
