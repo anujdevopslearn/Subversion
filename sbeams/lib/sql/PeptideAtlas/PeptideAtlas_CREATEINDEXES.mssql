@@ -63,3 +63,7 @@ CREATE INDEX idx_protein_list_id ON dbo.protein_list_protein ( protein_list_id )
 -- srm_transition
 CREATE NONCLUSTERED INDEX idx_stripped_peptide_sequence ON dbo.srm_transition ( stripped_peptide_sequence ) --WITH DROP_EXISTING
 
+-- elution_time
+CREATE NONCLUSTERED INDEX idx_modified_peptide_sequence ON dbo.elution_time ( modified_peptide_sequence ) --WITH DROP_EXISTING
+
+
