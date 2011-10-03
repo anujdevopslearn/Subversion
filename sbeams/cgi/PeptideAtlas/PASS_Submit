@@ -848,7 +848,7 @@ sub addDataset {
 
   #### Tell the FTP agent to create the account
   my $cmdfile = "$PASS_FTP_AGENT_BASE/commands.queue";
-  open(CMDFILE,">>$cmdfile") || die("ERROR: Unable to append to '$outfile'");
+  open(CMDFILE,">>$cmdfile") || die("ERROR: Unable to append to '$cmdfile'");
   print CMDFILE "CreateUser $datasetIdentifier with password $datasetPassword\n";
   close(CMDFILE);
 
