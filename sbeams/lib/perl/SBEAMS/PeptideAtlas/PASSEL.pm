@@ -127,6 +127,7 @@ sub srm_experiments_2_json {
      CAST(S.data_contributors AS varchar(4000)),
      SELE.SEL_experiment_id,
      O.organism_name
+  ORDER BY O.organism_name,SELE.experiment_title
   ~;
 
   my @rows = $sbeams->selectSeveralColumns($sql);
