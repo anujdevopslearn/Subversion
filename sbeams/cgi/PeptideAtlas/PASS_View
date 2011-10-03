@@ -184,6 +184,7 @@ sub handle_request {
 
   #### Read in the standard form values
   my $action  = $parameters{'action'} || $parameters{'apply_action'};
+  #print "action='$action'<BR>\n";
 
   my $TABLE_NAME = $parameters{'QUERY_NAME'};
 
@@ -284,7 +285,7 @@ sub handle_request {
   }
 
 
-  #### Check authentication parameters and warn of any problems
+  #### If the desired action was to finalize the dataset
   if ($action =~ /FINALIZE/i && ! @errors ) {
     if ($authentication->{result} eq 'Success' && $emailAddress eq $datasetMetadata->{emailAddress}) {
       finalizeDataset(authentication=>$authentication,identifier=>$parameters{'identifier'});
@@ -295,6 +296,43 @@ sub handle_request {
   }
 
 
+  #### If the desired action was to reset the password
+  if ($action eq 'SET' && ! @errors ) {
+    if (($authentication->{result} eq 'Success' && $isOwner) || $isAdmin) {
+      my $result = setNewDatasetPassword(
+        authentication => $authentication,
+        identifier => $parameters{'identifier'},
+        newDatasetPassword => $parameters{'newDatasetPassword'},
+      );
+      if ($result->{errors}) {
+	push(@errors,@{$result->{errors}});
+      }
+      $datasetMetadata = getPASSMetaData(identifier=>$datasetIdentifier);
+    } else {
+      push(@errors,@{$authentication->{errors}}) if ($authentication->{errors});
+    }
+  }
+
+
+  #### If the desired action was to reset the Public Release Date
+  if ($action eq 'SETDATE' && ! @errors ) {
+    if (($authentication->{result} eq 'Success' && $isOwner) || $isAdmin) {
+      my $result = setNewPublicReleaseDate(
+        authentication => $authentication,
+        identifier => $parameters{'identifier'},
+        newPublicReleaseDate => $parameters{'newPublicReleaseDate'},
+      );
+      if ($result->{errors}) {
+	push(@errors,@{$result->{errors}});
+      }
+      $datasetMetadata = getPASSMetaData(identifier=>$datasetIdentifier);
+    } else {
+      push(@errors,@{$authentication->{errors}}) if ($authentication->{errors});
+    }
+  }
+
+
+  #### Logging
   $log->debug( "end param handling " . time() );
 
 
@@ -318,6 +356,7 @@ sub handle_request {
      print "<nobr>";
      print $q->start_form(-method=>"POST",
                           -action=>"$base_url",
+                          -name=>"MainForm",
 			 );
 
      if ($isAdmin) {
@@ -397,9 +436,43 @@ sub handle_request {
 
      #### Display the password if the user is the owner or an admin
      if ($isOwner || $isAdmin) {
-       print "<B><font color=\"blue\">datasetPassword:</B></font> $datasetMetadata->{datasetPassword}<BR>";
+       print "<B><font color=\"blue\">datasetPassword:</B></font> $datasetMetadata->{datasetPassword}";
+       print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+       print "change to ";
+       print qq~<input type="password" name="newDatasetPassword" value="" size=10 maxlength=10/>~;
+       print $q->submit(-name => "action",
+			-value => 'SET',
+			-label => 'SET');
+       print "<BR>\n";
+
+       print "<font color=\"blue\"><B>Reset publicReleaseDate</B></font> ";
+       my $publicReleaseDate = substr($datasetMetadata->{publicReleaseDate},0,10);
+       print qq~<input type="text" name="newPublicReleaseDate" value="$publicReleaseDate" size=10 maxlength=10/>~;
+       print $q->submit(-name => "action",
+			-value => 'SETDATE',
+			-label => 'SETDATE');
+       print qq~
+         <SCRIPT LANGUAGE="JavaScript">
+         function ClickedTodayButton(input_field) {
+           today = new Date();
+           month = today.getMonth()+1;
+           if (month < 10) { month = "0" + month; }
+           date = today.getDate();
+           if (date < 10) { date = "0" + date; }
+           date_value =
+             today.getFullYear() + "-" + month + "-" + date;
+           document.MainForm.newPublicReleaseDate.value = date_value;
+           return;
+         }
+         </SCRIPT>
+       ~;
+       print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+       print qq~<INPUT TYPE="button" NAME="publicReleaseDateToday_button" VALUE="TODAY" onClick="ClickedTodayButton(newPublicReleaseDate)">\n~;
        print "<HR>\n";
      }
+
+
+
 
 
      print "<TABLE width=\"800\"><TR><TD>\n";
@@ -409,6 +482,7 @@ sub handle_request {
      print "</TR></TD></TABLE>\n";
      print "<HR>\n";
 
+     print "<B>Official URL for this dataset:</B> http://www.peptideatlas.org/PASS/$datasetIdentifier<BR>\n";
      print "<B>To access files via FTP, use credentials:</B><PRE>\n";
      print "Servername: ftp.peptideatlas.org\nUsername: $datasetIdentifier\nPassword: $datasetMetadata->{datasetPassword}\n</PRE><BR>\n";
      print "Or use your browser's FTP mode: <a target=\"_blank\" href=\"ftp://$datasetIdentifier:$datasetMetadata->{datasetPassword}\@ftp.peptideatlas.org/\">ftp://$datasetIdentifier:$datasetMetadata->{datasetPassword}\@ftp.peptideatlas.org/</a><BR><BR>\n";
@@ -824,3 +898,115 @@ sub finalizeDataset {
 
   return;
 }
+
+
+#######################################################################
+# setNewDatasetPassword
+#######################################################################
+sub setNewDatasetPassword {
+  my %args = @_;
+  my $SUB_NAME = 'setNewDatasetPassword';
+
+  #### Decode the argument list
+  my $authentication = $args{'authentication'} || die "[$SUB_NAME] ERROR: authentication not passed";
+  my $identifier = $args{'identifier'} || die "[$SUB_NAME] ERROR: identifier not passed";
+  my $newDatasetPassword = $args{'newDatasetPassword'};
+
+  my $response;
+  $response->{result} = 'Failure';
+
+  #### Check to make sure the password is not empty
+  if (!defined($newDatasetPassword) || $newDatasetPassword eq '') {
+    push(@{$response->{errors}},"ERROR: You may not set a blank password.<BR>");
+    return $response;
+  }
+
+  #### Check to make sure the password is not too long
+  if (length($newDatasetPassword) > 10) {
+    push(@{$response->{errors}},"ERROR: Password may only be up to 10 characters.<BR>");
+    return $response;
+  }
+
+
+  #### If the identifier is valid, set the new password
+  if ($identifier =~ /^PASS(\d+)$/) {
+    my $PK = $1;
+    my %rowdata = ( datasetPassword => $newDatasetPassword );
+    my $result = $sbeams->updateOrInsertRow(
+					  update => 1,
+					  table_name => $TBAT_PASS_DATASET,
+					  rowdata_ref => \%rowdata,
+					  PK => 'dataset_id',
+					  PK_value => $PK,
+					 );
+
+    my $PASS_FTP_AGENT_BASE = '/prometheus/u1/home/PASSftpAgent';
+
+    my $cmdfile = "$PASS_FTP_AGENT_BASE/commands.queue";
+    open(CMDFILE,">>$cmdfile") || die("ERROR: Unable to append to '$cmdfile'");
+    print CMDFILE "UpdatePassword for user $identifier to password $newDatasetPassword\n";
+    close(CMDFILE);
+
+
+  } else {
+    push(@{$response->{errors}},"ERROR: Unable to parse identifier '$identifier'. Please report this. ERROR450");
+    return $response;
+  }
+
+  $response->{result} = 'Success';
+  return $response;
+}
+
+
+
+
+#######################################################################
+# setNewPublicReleaseDate
+#######################################################################
+sub setNewPublicReleaseDate {
+  my %args = @_;
+  my $SUB_NAME = 'setNewPublicReleaseDate';
+
+  #### Decode the argument list
+  my $authentication = $args{'authentication'} || die "[$SUB_NAME] ERROR: authentication not passed";
+  my $identifier = $args{'identifier'} || die "[$SUB_NAME] ERROR: identifier not passed";
+  my $newPublicReleaseDate = $args{'newPublicReleaseDate'};
+
+  my $response;
+  $response->{result} = 'Failure';
+
+  #### Check to make sure the newPublicReleaseDate is not empty
+  if (!defined($newPublicReleaseDate) || $newPublicReleaseDate eq '') {
+    push(@{$response->{errors}},"ERROR: You may not set a blank public release date.<BR>");
+    return $response;
+  }
+
+  #### Check to make sure the newPublicReleaseDate is formed correctly
+  unless ($newPublicReleaseDate =~ /^\d{4}\-\d{2}-\d{2}\S*$/) {
+    push(@{$response->{errors}},"ERROR: Malformed date. Please use format like 2012-01-01.<BR>");
+    return $response;
+  }
+
+
+  #### If the identifier is valid, set the new password
+  if ($identifier =~ /^PASS(\d+)$/) {
+    my $PK = $1;
+    my %rowdata = ( publicReleaseDate => $newPublicReleaseDate );
+    my $result = $sbeams->updateOrInsertRow(
+					  update => 1,
+					  table_name => $TBAT_PASS_DATASET,
+					  rowdata_ref => \%rowdata,
+					  PK => 'dataset_id',
+					  PK_value => $PK,
+					 );
+
+  } else {
+    push(@{$response->{errors}},"ERROR: Unable to parse identifier '$identifier'. Please report this. ERROR451");
+    return $response;
+  }
+
+  $response->{result} = 'Success';
+  return $response;
+}
+
+
