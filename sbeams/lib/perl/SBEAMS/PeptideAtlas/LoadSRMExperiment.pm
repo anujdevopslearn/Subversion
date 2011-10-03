@@ -333,6 +333,8 @@ sub read_mprophet_peakgroup_file {
         # I think the record below is simply a result of M-Y creating custom file
         transition_group_record => [ qw( transition_group_record ) ], #Ulli
 		             Tr => [ qw( tr ) ],  # Ruth 2011 only?
+		         run_id => [ qw( run_id ) ],  # Added by EWD for final Ruth data 2011-09-30
+		            S_N => [ qw( s_n ) ],  # Added by EWD for final Ruth data 2011-09-30. Can we use this?
   );
 
   # Now reverse the direction of the hash to make it easier to use.
@@ -371,9 +373,10 @@ sub read_mprophet_peakgroup_file {
   ### peakgroup! This code seems to stumble along for both.
   print "Processing mProphet file!\n" if ($VERBOSE);
   my ($decoy, $log10_max_apex_intensity, $protein,  $stripped_pepseq, $modified_pepseq,
-    $charge, $peak_group,  $m_score, $d_score, $Tr, $isotype);
+    $charge, $peak_group,  $m_score, $d_score, $Tr, $S_N, $isotype);
 
   my $spectrum_file;
+  my $counter = 0;
   while ($line = <MPRO_FILE>) {
     chomp $line;
     @fields = split('\t', $line);
@@ -397,8 +400,20 @@ sub read_mprophet_peakgroup_file {
       my $dummy;
       ($stripped_pepseq, $charge, $decoy, $dummy, $peak_group) =
             /pg_(\S+?)\.(\d)_(\d)_target_(dummy)?(\d)/;
+
       $modified_pepseq = $fields[$idx{transition_group_pepseq}];
+      #### EWD: These mProphet files seem to have a funny nomenclature [C160] instead of C[160]. Fix it.
+      while ( $modified_pepseq =~ /\[([A-Z])(\d{3})\]/) {
+	$modified_pepseq =~ s/\[([A-Z])(\d{3})\]/$1\[$2\]/;
+      }
+
       $spectrum_file = $fields[$idx{file_name}] . ".mzXML";
+      #### EWD: The run_id seems like a better column to use here?
+      my $run_id = (defined $idx{run_id}) ? $fields[$idx{run_id}] : undef ;
+      $spectrum_file = $run_id if ($run_id);
+
+      #### EWD: Added S_N
+      $S_N = (defined $idx{S_N}) ? $fields[$idx{S_N}] : 0 ;  # Signal-to-noise correctly interpreted I hope??
 
     } elsif ( defined $idx{transition_group_record} ) {   #Ulli's data
       $spectrum_file = "${spec_file_basename}.mzXML";
@@ -447,6 +462,7 @@ sub read_mprophet_peakgroup_file {
     my ($m_score, $d_score);
     $m_score =  $fields[$idx{m_score}] if (defined $idx{m_score});
     $d_score =  $fields[$idx{d_score}] if (defined $idx{d_score});
+    print "  -- m_score = $m_score; d_score = $d_score\n" if ($DEBUG);
 
     # 06/15/11: removed check for !$decoy from below -- why did I have it?
     if ($this_file_basename && $modified_pepseq && (defined $peak_group)) {
@@ -465,16 +481,24 @@ sub read_mprophet_peakgroup_file {
 	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{m_score} = $m_score;
 	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{d_score} = $d_score;
 	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{Tr} = $Tr;
+	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{S_N} = $S_N;
 	print 'Storing $mpro_href->{',$this_file_basename,'}->{',$modified_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$peak_group,'}->{m_score} = ', $mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{m_score}, "\n" if ($VERBOSE > 1);
 	print 'Storing $mpro_href->{',$this_file_basename,'}->{',$modified_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$peak_group,'}->{d_score} = ', $mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{d_score}, "\n" if ($VERBOSE > 1);
 	print 'Storing $mpro_href->{',$this_file_basename,'}->{',$modified_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$peak_group,'}->{Tr} = ', $mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{Tr}, "\n" if ($VERBOSE > 1);
+	print 'Storing $mpro_href->{',$this_file_basename,'}->{',$modified_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$peak_group,'}->{S_N} = ', $mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{S_N}, "\n" if ($VERBOSE > 1);
 	print 'Storing $mpro_href->{',$this_file_basename,'}->{',$modified_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$peak_group,'}->{log10_max_apex_intensity} = ',
 	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{log10_max_apex_intensity}, " if exists\n" if ($VERBOSE > 1);
       }
     } else {
       print "Not storing mProphet scores. file_basename = $this_file_basename modified_pepseq = $modified_pepseq decoy = $decoy peak_group = $peak_group\n" if ($VERBOSE > 1);
     }
+
+    $counter++;
+    print "$counter..." if ($counter/100 == int($counter/100) && $VERBOSE);
   }
+
+  print "\n";
+
 }
 
 ###############################################################################
