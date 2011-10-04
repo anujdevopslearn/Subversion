@@ -78,7 +78,7 @@ sub display_page_header {
   #### Obtain main SBEAMS object and use its http_header
   $sbeams = $self->getSBEAMS();
 
-  if( $sbeams->isGuestUser() ) {
+  if( $sbeams->isGuestUser() || $sbeams->getCurrent_username() =~ /^reviewer/ ) {
       $self->displayGuestPageHeader( @_ );
       return;
   } elsif ( $CONFIG_SETTING{PA_USER_SKIN} ) {
