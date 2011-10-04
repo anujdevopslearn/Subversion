@@ -109,6 +109,13 @@ exit(0);
 ###############################################################################
 sub main {
 
+    #### Read in the default input parameters
+    my %parameters;
+    my $n_params_found = $sbeams->parse_input_parameters(
+        q=>$q,
+        parameters_ref=>\%parameters
+        );
+
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate(
         permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
@@ -116,13 +123,6 @@ sub main {
         #connect_read_only=>1,
         allow_anonymous_access=>1,
     ));
-
-    #### Read in the default input parameters
-    my %parameters;
-    my $n_params_found = $sbeams->parse_input_parameters(
-        q=>$q,
-        parameters_ref=>\%parameters
-        );
 
     #### Decide what action to take based on information so far
     if ($parameters{action} eq "???") 
@@ -272,7 +272,74 @@ sub handle_request {
      print "<nobr>";
      print $q->start_form(-method=>"POST",
                           -action=>"$base_url",
+                          -name=>"MainForm",
 			 );
+
+
+     #### If a studyPassword parameter was specified, then display data for the study
+     if (defined($parameters{studyPassword})) {
+       print "<B><font color=\"red\">Study Password</B></font>";
+       print qq~<input type="password" name="studyPassword" value="$parameters{studyPassword}" size=10 maxlength=50/>~;
+       print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+
+       print $q->submit(-name => "action",
+			-value => 'VIEW',
+			-label => 'VIEW');
+print " - - - ($parameters{studyPassword})\n";
+       print "<BR>\n";
+       print "<HR>\n";
+
+       my $sql = qq~
+        SELECT datasetIdentifier,datasetTag,publicReleaseDate,datasetTitle
+        FROM $TBAT_PASS_SUBMITTER S
+        JOIN $TBAT_PASS_DATASET D ON (D.submitter_id = S.submitter_id)
+        WHERE datasetPassword = '$parameters{studyPassword}'
+       ~;
+       my @rows = $sbeams->selectSeveralColumns($sql);
+       foreach my $row ( @rows ) {
+	 $row->[0] = qq~<a href="$CGI_BASE_DIR/PeptideAtlas/PASS_View?identifier=$row->[0]&datasetPassword=$parameters{studyPassword}">$row->[0]</a>~;
+       }
+       my @labels = qw ( identifier datasetTag releaseDate datasetTitle );
+       unshift @rows, \@labels;
+       my $HTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
+                                                      #tr_info => $tr,
+                                                        width => '600',
+                                                       align  => [qw(left left left left )],
+                                                         rows => \@rows );
+       #### Display table
+       print "<B>Study datasets:</B><BR>\n";
+       print "<TABLE WIDTH=600><BR>$HTML</TABLE>\n";
+       print "<BR>\n";
+       print "<HR>\n";
+
+       if (open(PWFILE,"$PHYSICAL_BASE_DIR/lib/conf/SBEAMSentrycodes.conf")) {
+	 while (my $line = <PWFILE>) {
+	   chomp($line);
+	   my @columns = split("\t",$line);
+	   if ($parameters{studyPassword} eq $columns[0]) {
+	     $parameters{SBEAMSentrycode} = $columns[1];
+	   }
+	 }
+	 close(PWFILE);
+       } else {
+	 #print "ERROR: Unable to open $PHYSICAL_BASE_DIR/lib/conf/SBEAMSentrycodes.conf<BR>\n";
+       }
+
+       if ($parameters{SBEAMSentrycode}) {
+	 print qq~
+<table>
+<tr><td><a href="$CGI_BASE_DIR/PeptideAtlas/GetSELExperiments?SBEAMSentrycode=$parameters{SBEAMSentrycode}"><img border="0" src="$HTML_BASE_DIR/images/PASSEL_ExpViewer_thumbnail.png"></a></td>
+<td><a href="$CGI_BASE_DIR/PeptideAtlas/GetSELExperiments?SBEAMSentrycode=$parameters{SBEAMSentrycode}"><font size="+1">Browse SRM experiments</font></a></td></tr>
+
+<tr><td><a href="$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?SBEAMSentrycode=$parameters{SBEAMSentrycode}"><img border="0" src="$HTML_BASE_DIR/images/PASSEL_TxnViewer_thumbnail.png"></a></td>
+<td><a href="$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?SBEAMSentrycode=$parameters{SBEAMSentrycode}"><font size="+1">Query SRM results</font></a></td></tr>
+</table>
+         ~;
+       }
+
+       return;
+     }
+
 
      if ($authentication->{result} eq 'Success') {
        print "<B><font color=\"red\">Welcome $firstName $lastName</B></font>\n";
@@ -299,7 +366,7 @@ sub handle_request {
 
      if ($authentication->{result} eq 'Success') {
        my $sql = qq~
-        SELECT datasetIdentifier,datasetTag,password,publicReleaseDate,datasetTitle
+        SELECT datasetIdentifier,datasetTag,datasetPassword,publicReleaseDate,datasetTitle
         FROM $TBAT_PASS_SUBMITTER S
         JOIN $TBAT_PASS_DATASET D ON (D.submitter_id = S.submitter_id)
         WHERE emailAddress = '$emailAddress'
@@ -308,7 +375,7 @@ sub handle_request {
        foreach my $row ( @rows ) {
 	 $row->[0] = qq~<a href="http://www.peptideatlas.org/PASS/$row->[0]">$row->[0]</a>~;
        }
-       my @labels = qw ( identifier datasetTag password releaseDate datasetTitle );
+       my @labels = qw ( identifier datasetTag datasetPassword releaseDate datasetTitle );
        unshift @rows, \@labels;
        my $HTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
                                                       #tr_info => $tr,
