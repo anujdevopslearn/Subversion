@@ -285,7 +285,7 @@ sub handle_request {
        print $q->submit(-name => "action",
 			-value => 'VIEW',
 			-label => 'VIEW');
-print " - - - ($parameters{studyPassword})\n";
+
        print "<BR>\n";
        print "<HR>\n";
 
