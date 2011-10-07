@@ -130,6 +130,8 @@ sub handleRequest {
   my $delete_set_tag = $opts{"delete_set"};
   my $input_file = $opts{"input_file"};
 
+  my $organism_id = getBioseqSetOrganism( %opts );
+
   my $set_id = getBioseqSetID( %opts );
 
   #### If specified, read the file in to fill the table
@@ -171,33 +173,29 @@ sub getBioseqSetID {
   return $bioseq_set_id;
 }
 
-###############################################################################
-# getAtlasBuildID -- Return an atlas_build_id
-###############################################################################
-sub getAtlasBuildID {
-  my $SUB = 'getAtlasBuildID';
+##############################################################################
+#getBioseqSetOrganism  -- return organism
+##############################################################################
+sub getBioseqSetOrganism {
+
+  my $SUB = 'getBioseqSetOrganism';
   my %args = @_;
 
-  print "INFO[$SUB] Getting atlas_build_id..." if ($VERBOSE);
-
-  my $bioseq_set_id  = $args{bioseq_set_id} or
-    die("ERROR[$SUB]: parameter bioseq_set_id not provided");
-
+  print "INFO[$SUB] Getting bioseq_set_id....." if ($VERBOSE);
+  my $bioseq_set_tag = $args{set_tag} or
+    die("ERROR[$SUB]: parameter set_tag not provided");
+  
   my $sql = qq~
-    SELECT atlas_build_id,atlas_build_name
-      FROM $TBAT_ATLAS_BUILD
-     WHERE record_status != 'D'
-           AND biosequence_set_id = '$bioseq_set_id'
-     ORDER BY atlas_build_name
+    SELECT organism_id
+      FROM $TBAT_BIOSEQUENCE_SET
+     WHERE set_tag = '$bioseq_set_tag'
   ~;
+  
+  my ($organism_id) = $sbeams->selectOneColumn($sql);
 
-  my ($atlas_build_id) = $sbeams->selectOneColumn($sql);
-
-  print "$atlas_build_id\n" if ($VERBOSE);
-  return $atlas_build_id;
-
-} # end getAtlasBuildID
-
+  print "organism_id: $organism_id\n" if ($VERBOSE);
+  return $organism_id;
+}
 
 
 ###############################################################################
@@ -221,22 +219,43 @@ sub fillTable{
   my ($acc_to_id, $seq_to_id ) = getBioSeqData( $bioseq_set_id );
   # This is global, do this once so mapping can run in a sub
   @biosequences = keys( %$seq_to_id );
+  print "Memory at " . &memusage . "\n";
 
+  # Cache this to limit records fetched from other sources...
+  print "cache source peptide list\n";
+  open(INFILE,$source_file) || die "unable to open file $source_file"; 
+  my %src_peptides;
+  my $cnt = 0;
+  while ( my $line = <INFILE> ) {
+    next unless $cnt++;
+    chomp $line;
+    my @line = split( /\t/, $line, -1 );
+    $src_peptides{$line[2]}++;
+  }
+  close INFILE;
+
+  print "Stored $cnt records, memory at " . &memusage . "\n";
+  
   print "get peptide info\n";
   # then get pepseq and pepid
-  my $pepseq_to_id = getPeptideData();
+  # Limit this to just the peptides being loadedLimit this to just the peptides being loaded??
+  my $pepseq_to_id = getPeptideData( \%src_peptides );
+  print "Memory at " . &memusage . "\n";
+
 
   print "get proteotypic peptides\n";
   # Fetch existing paa . seq . faa items, to avoid inserting doubles
-  my $proteopepseq_to_id = getProteotypicPeptideData();
+  my $proteopepseq_to_id = getProteotypicPeptideData( \%src_peptides );
+  print "Memory at " . &memusage . "\n";
 
   print "get proteotypic peptide mappings\n";
-  my $proteopep_mapping = getProteotypicPeptideMapData();
+  my $proteopep_mapping = getProteotypicPeptideMapData( %args );
+  print "Memory at " . &memusage . "\n";
 
   # Cache peptide ssrcalc, mw, nmappings
-  my $ssrcalc = getSSRValues();
-  my $mw = getMWValues();
-  my $pI = getpIValues();
+  print "Get MW, pI, SSRCalc Values\n";
+  my $annot = getAnnotations( \%src_peptides );
+  print "Memory at " . &memusage . "\n";
 
   my %cached;
   my %uncached;
@@ -290,8 +309,12 @@ sub fillTable{
 # 11 n_gen_loc
 
     # Hard-coded n_columns check
-    if ( scalar( @columns ) != 12 ) {
+    if ( scalar( @columns ) != 13 ) {
       $fill_stats{bad_line}++;
+      next;
+    }
+    if ( $columns[2] !~ /^[ACDEFGHIKLMNPQRSTVWY]+$/ ) {
+      $fill_stats{bad_peptide}++;
       next;
     }
 
@@ -304,16 +327,17 @@ sub fillTable{
     my $espp = $columns[5];
     my $detect = $columns[6];
     my $pepsieve = $columns[7];
-    my $combined = $columns[8];
+    my $stepp = $columns[8];
+    my $combined = $columns[9];
 
     for my $score ( $apex, $espp, $detect, $pepsieve, $combined ) {
       $score = -1 if $score =~ /NA/i;
     }
 
     # These are three new cols added by calcNGenomeLocation script
-    my $n_prot_mappings = $columns[9] || 0;
-    my $n_exact_prot_mappings = $columns[10] || 0;
-    my $n_genome_locations = $columns[11] || 0;
+    my $n_prot_mappings = $columns[10] || 0;
+    my $n_exact_prot_mappings = $columns[11] || 0;
+    my $n_genome_locations = $columns[12] || 0;
 
     # Decoys are duds!
     
@@ -354,24 +378,26 @@ sub fillTable{
       
         $matched_pep_id = $pepseq_to_id->{$pepSeq};
   
+	      $annot->{$pepSeq} ||= { SSR => '', MW => '', pI => '' };
         # calc relative hydrophobicity if necessary
-        if ( !defined $ssrcalc->{$pepSeq} || $opts{update_peptide_info} ) {
-           $ssrcalc->{$pepSeq} = getRelativeHydrophobicity( $pepSeq );
+        if ( !$annot->{$pepSeq}->{SSR} || $opts{update_peptide_info} ) {
+           $annot->{$pepSeq}->{SSR} = getRelativeHydrophobicity( $pepSeq );
+					 $fill_stats{SSR_RECALC}++;
         }
   
-        if ( !$mw->{$pepSeq} || $opts{update_peptide_info} ) {
+        if ( !$annot->{$pepSeq}->{MW} || $opts{update_peptide_info} ) {
           eval {
-            $mw->{$pepSeq} = $massCalculator->getPeptideMass( sequence => $pepSeq,
+            $annot->{$pepSeq}->{MW}= $massCalculator->getPeptideMass( sequence => $pepSeq,
                                                              mass_type => 'monoisotopic' ) || '';
           };
           if ( $@ ) {
-            $mw->{$pepSeq} ||= ''; 
+            $annot->{$pepSeq}->{MW} ||= ''; 
             print STDERR "WARN: Mass Calculator failed: $pepSeq\n";
           }
         }
   
-        if ( !$pI->{$pepSeq} || $opts{update_peptide_info} ) {
-          $pI->{$pepSeq} = getPeptidePI( $pepSeq ) || '';
+        if ( !$annot->{$pepSeq}->{pI} || $opts{update_peptide_info} ) {
+          $annot->{$pepSeq}->{pI} = getPeptidePI( $pepSeq ) || '';
         }
   
   
@@ -405,11 +431,12 @@ sub fillTable{
                       peptidesieve_score => $pepsieve,
                               apex_score => $apex,
                               espp_score => $espp,
+                             stepp_score => $stepp,
             detectabilitypredictor_score => $detect,
                 combined_predictor_score => $combined,
-         ssrcalc_relative_hydrophobicity => $ssrcalc->{$pepSeq},
-                        molecular_weight => $mw->{$pepSeq},
-               peptide_isoelectric_point => $pI->{$pepSeq},
+         ssrcalc_relative_hydrophobicity => $annot->{$pepSeq}->{SSR},
+                        molecular_weight => $annot->{$pepSeq}->{MW},
+               peptide_isoelectric_point => $annot->{$pepSeq}->{pI},
                      );
   
   
@@ -446,7 +473,7 @@ sub fillTable{
     # By here we should have a biosequence_id and a proteotypic peptide_id
     # Is it already in the datbase?  FIXME - should this be revisited for 
     # for update mode? - for now will recommend purge followed by update mode
-    if ( $proteopep_mapping->{$proteopepseq_to_id->{$full_seq_key} . $acc_to_id->{$proName}} ) {
+    if ( $proteopep_mapping->{$proteopepseq_to_id->{$full_seq_key} . '-' . $acc_to_id->{$proName}} ) {
       #print "Skipping, this thing is already in the database!\n";
     } else {
       # Insert row in proteotypic_peptide_mapping
@@ -496,7 +523,6 @@ sub fillTable{
 #      print " -  loaded $cnt records in $td seconds, ". sprintf( "%0.1f", $cnt/$td )  . " records per second ";
       print "\n"; 
     }
-     
     
   } # End file reading loop
   close(INFILE);
@@ -507,18 +533,47 @@ sub fillTable{
 
 } # end fillTable
 
-sub getSSRValues {
-  print "get SSR Calc values\n";
+
+#exit 0;
+
+sub memusage {
+  my @results = `ps -o pmem,pid $$`;
+  my $mem = '';
+  for my $line  ( @results ) {
+    chomp $line;
+    my $pid = $$;
+    if ( $line =~ /\s*(\d+\.*\d*)\s+$pid/ ) {
+      $mem = $1;
+      last;
+    }
+  }
+  $mem .= '% (' . time() . ')';
+  return $mem;
+}
+
+
+sub getAnnotations {
+
+  my $src_peptides = shift;
   my $sql = qq~
-  SELECT DISTINCT peptide_sequence, SSRCalc_relative_hydrophobicity 
+  SELECT DISTINCT peptide_sequence, SSRCalc_relative_hydrophobicity, peptide_isoelectric_point, molecular_weight 
   FROM $TBAT_PROTEOTYPIC_PEPTIDE
   ~;
   my $sth = $sbeams->get_statement_handle( $sql );
-  my %ssr;
+  my %annot;
+
+  my %cnt = ( used => 0, skipped => 0 );
   while( my @row = $sth->fetchrow_array() ) {
-    $ssr{$row[0]} = $row[1];
+    if ( $src_peptides->{$row[0]} ) {
+      $annot{$row[0]} ||= { SSR => $row[1], pI => $row[2], MW => $row[3] };
+      $cnt{used}++;
+    } else {
+      $cnt{skipped}++;
+    }
   }
-  return \%ssr;
+  print "used $cnt{used}, skipped $cnt{skipped}, " . sprintf( "%0.1f", ($cnt{used}/($cnt{used}+$cnt{skipped}))*100 ) . "%\n";
+  return \%annot;
+
 }
 
 sub getpIValues {
@@ -612,8 +667,9 @@ sub purgeMappings {
   } else {
     die "Must provide bioseq_set";
   }
-  my $proteopep_mapping = getProteotypicPeptideMapData( $bioseq_set_id );
+  my $proteopep_mapping = getProteotypicPeptideMapData( bioseq_set_id => $bioseq_set_id, purge_mode => 1 );
   print "Found " . scalar( keys( %{$proteopep_mapping} ) ) . " mappings\n";
+  exit;
 
   my @ids;
   my $cnt = 1;
@@ -642,48 +698,52 @@ sub purgeMappings {
 
 
 sub getProteotypicPeptideMapData {
-  my $bioseq_set_id = shift;
+
+  my %args = @_;
+  die unless $args{bioseq_set_id};
 
   my $sql = qq~
   SELECT DISTINCT proteotypic_peptide_id, source_biosequence_id 
-    FROM $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING
+  FROM $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING PPM
+  JOIN $TBAT_BIOSEQUENCE B 
+  ON B.biosequence_id = PPM.source_biosequence_id
+  WHERE biosequence_set_id = $args{bioseq_set_id}
   ~;
-  if ( $bioseq_set_id ) {
-    chomp $sql;
-    $sql = qq~
-    $sql PPM
-    JOIN $TBAT_BIOSEQUENCE B 
-    ON B.biosequence_id = PPM.source_biosequence_id
-    WHERE biosequence_set_id = $bioseq_set_id
-    ORDER BY proteotypic_peptide_id ASC
-    ~;
-  }
 
   my $sth = $sbeams->get_statement_handle( $sql );
 
   my %mapping;
   while( my $row = $sth->fetchrow_arrayref() ) {
-    if ( $bioseq_set_id ) { 
+    if ( $args{purge_mode} ) { 
       $mapping{$row->[0]}++;
     } else {
-      $mapping{$row->[0] . $row->[1]}++;
+      $mapping{$row->[0] . '-' . $row->[1]}++;
     }
   }
   return \%mapping;
 }
 
 sub getProteotypicPeptideData {
+  my $src_peptides = shift;
   my $sql = qq~
-  SELECT preceding_residue || peptide_sequence || following_residue, 
+  SELECT preceding_residue, peptide_sequence, following_residue, 
          proteotypic_peptide_id
     FROM $TBAT_PROTEOTYPIC_PEPTIDE
   ~;
   my $sth = $sbeams->get_statement_handle( $sql );
 
   my %seq_to_id;
-  while( my $row = $sth->fetchrow_arrayref() ) {
-    $seq_to_id{$row->[0]} = $row->[1];
+  my %cnt = ( used => 0, skipped => 0 );
+  while( my @row = $sth->fetchrow_array() ) {
+    if ( $src_peptides->{$row[1]} ) {
+      my $key = join( '', @row );
+      $seq_to_id{$key} = $row[1];
+      $cnt{used}++;
+    } else {
+      $cnt{skipped}++;
+    }
   }
+  print "used $cnt{used}, skipped $cnt{skipped}, " . sprintf( "%0.1f", ($cnt{used}/($cnt{used}+$cnt{skipped}))*100 ) . "%\n";
   return \%seq_to_id;
 }
 
@@ -709,15 +769,24 @@ sub getBioSeqData {
 }
 
 sub getPeptideData {
+  my $src_peptides = shift;
   my $sql = qq~
   SELECT peptide_sequence, peptide_id
     FROM $TBAT_PEPTIDE
   ~;
   my $sth = $sbeams->get_statement_handle( $sql );
   my %seq_to_id;
+
+  my %cnt = ( used => 0, skipped => 0 );
   while( my $row = $sth->fetchrow_arrayref() ) {
-    $seq_to_id{$row->[0]} = $row->[1];
+    if ( $src_peptides->{$row->[0]} ) {
+      $seq_to_id{$row->[0]} = $row->[1];
+      $cnt{used}++;
+    } else {
+      $cnt{skipped}++;
+    }
   }
+  print "used $cnt{used}, skipped $cnt{skipped}, " . sprintf( "%0.1f", ($cnt{used}/($cnt{used}+$cnt{skipped}))*100 ) . "%\n";
   return \%seq_to_id;
 }
 
