@@ -378,7 +378,10 @@ sub map_peptide {
             my $fol = ( $posn->[0] + $peplen == length( $seq ) ) ? '-' : substr( $seq, $posn->[0] + $peplen, 1 );
 #            print "$pepseq yeilds $pre, $pseq, $fol from $posn->[0], $posn->[1], $seq\n";
 #            print join( "\t", $acc, $pre, $pseq, $fol ) . "\n";
-
+             if ( $opts->{print_context} ) {
+                next if ( $pre =~ /[KR-]/  && $pseq !~ /^P/ );
+                print join( "\t", $acc, $pre, $pseq, $fol, $seq ) . "\n";
+             }
           }
 
           # Even though this is not tryptic, cache peptide for later degeneracy test.
@@ -600,7 +603,8 @@ sub get_options {
              'acc_swiss', 'ZtoC', 'bin_max=i', 'grep_only', 'init_mapping=i',
              'show_degen', 'show_mia', 'nocount_degen', 'show_nomap', 'show_himap=i',
              'show_proteo', 'show_all_pep', 'omit_match_seq', 'suppress_brute',
-             'key_calc', 'show_all_flanking', "min_nomap=i", 'c_term_cnt', 'n_term_cnt' );
+             'key_calc', 'show_all_flanking', "min_nomap=i", 'c_term_cnt', 'n_term_cnt',
+             'print_context' );
 
   print_usage() if $opts{help};
 
