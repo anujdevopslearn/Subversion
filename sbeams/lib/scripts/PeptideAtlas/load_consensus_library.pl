@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/local/bin/perl 
 
 ###############################################################################
 # Program     : load_consensus_library.pl
@@ -46,21 +46,25 @@ Options:
   --verbose n            Set verbosity level.  default is 0
   --quiet                Set flag to print nothing at all except errors
   --debug n              Set debug flag
-  --test                 test only, don't write records
+  --help                 Print usage statement and exit
+
   --load                 load the library
-  --delete id            delete the library with consensus_library_id
+  --test                 test only, don't write records
   --path                 path to library file
   --comment              Description of library. 
   --library_name         Name for consensus library
   --organism_name        Organism name (e.g. yeast, Human,...)
+
+  --delete id            delete the library with consensus_library_id
+  --list                 List existing library name/id pairs
 
  e.g.: ./$PROG_NAME --path /data/yeast.msp --library_name 'NIST Sc' --organism_name Yeast --load
 EOU
 
 
 #### Process options
-unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","test",
-                   "load", "library_name:s", "organism_name:s",
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","test", 'help',
+                   "load", "library_name:s", "organism_name:s", 'list',
                    "path:s", "delete:s", 'comment=s', "project_id:i"  ) ) {
     print "\n$USAGE\n";
     exit;
@@ -74,15 +78,13 @@ $DEBUG = $OPTIONS{"debug"} || 0;
 
 $TESTONLY = $OPTIONS{"test"} || 0;
 
-unless ( $OPTIONS{'delete'}  || $OPTIONS{'load'} || $OPTIONS{'test'})
-{
+unless ( $OPTIONS{'delete'}  || $OPTIONS{'load'} || $OPTIONS{'test'} ) {
     print "\n$USAGE\n";
     print "Need --load or --test or --delete id\n";
     exit(0);
 }
 
-if ($OPTIONS{'load'} || $OPTIONS{'test'})
-{
+if ( $OPTIONS{'load'} || $OPTIONS{'test'} ) {
     unless ($OPTIONS{path} && $OPTIONS{library_name}
     && $OPTIONS{organism_name} && $OPTIONS{project_id} )
     {
@@ -91,6 +93,16 @@ if ($OPTIONS{'load'} || $OPTIONS{'test'})
         print " and --organism_name\n";
         exit(0);
     }
+}
+
+if ( $OPTIONS{help} ) {
+    print "\n$USAGE\n";
+    exit(0);
+}
+
+if ( $OPTIONS{list} ) {
+  printBuildList();
+  exit(0);
 }
 
 
@@ -151,18 +163,9 @@ sub handleRequest
                        );
     }
 
-    if ($OPTIONS{delete})
-    {
-        my $consensus_library_spectrum_id = $OPTIONS{delete};
-
-        unless ($consensus_library_spectrum_id > 0)
-        {
-            print "\n$USAGE\n";
-            print "need --delete consensus_library_spectrum_id \n";
-        }
-
-        removeConsensusLibrary( consensus_library_spectrum_id => 
-            $consensus_library_spectrum_id);
+    if ($OPTIONS{delete}) {
+        removeConsensusLibrary( consensus_library_id => $OPTIONS{delete} );
+        exit 0;
     }
 
 } # end handleRequest
@@ -875,35 +878,44 @@ sub get_consensus_spectrum_type_id
 # removeConsensusLibrary - remove parent record and children
 # @param consensus_library_spectrum_id
 #######################################################################
-sub removeConsensusLibrary
-{
-    my %args = @_;
+sub removeConsensusLibrary {
 
-    my $consensus_library_spectrum_id = $args{consensus_library_spectrum_id}
-        || die "need consensus_library_spectrum_id";
+  my %args = @_;
 
-    my $keep_parent_record = 1;
+  unless ( $args{consensus_library_id} ) {
+    die "Missing required option consensus_library_id";
+  }
 
-    my $database_name = $DBPREFIX{PeptideAtlas};
+  print "lib id string is $args{consensus_library_id}\n";
+  $args{consensus_library_id} =~ s/\s//g;
 
-    my $table_name = "consensus_library";
-
-    my $full_table_name = "$database_name$table_name";
+  for my $id ( split( ',', $args{consensus_library_id} ) ) {
+    if ( $id !~ /^\d+$/ ) {
+      die "illegal ID: $id\n";
+    }
+    print "Deleting library: ";
+    printBuildList( $id );
+    print "\n";
 
     my %table_child_relationship = (
-        consensus_library => 'consensus_library_spectrum(C)',
-        consensus_library_spectrum => 'consensus_library_spectrum_peak(C),consensus_library_spectrum_comment(PKLC)',
-    );
+      consensus_library => 'consensus_library_spectrum(C)',
+      consensus_library_spectrum => 'consensus_library_spectrum_peak(C),consensus_library_spectrum_comment(PKLC)',
+      );
 
     my $result = $sbeams->deleteRecordsAndChildren(
-         table_name => 'consensus_library',
-         table_child_relationship => \%table_child_relationship,
-         delete_PKs => [ $consensus_library_spectrum_id ],
-         delete_batch => 1000,
-         database => $database_name,
-         verbose => $VERBOSE,
-         testonly => $TESTONLY,
-      );
+      table_name => 'consensus_library',
+      table_child_relationship => \%table_child_relationship,
+      delete_PKs => [ $id ],
+      delete_batch => 1000,
+      verbose => $VERBOSE,
+      database => $DBPREFIX{PeptideAtlas},
+      testonly => $TESTONLY,
+    );
+    $result = ' success' if $result;
+    $result ||= ' failure';
+    print "$result\n\n";
+  }
+  exit;
 }
 
 
@@ -954,6 +966,24 @@ sub insert_consensus_library_comments
             testonly=>$TESTONLY,
         );
     }
+}
+
+sub printBuildList {
+  my $id = shift;
+  my $sql = "SELECT consensus_library_name, consensus_library_id FROM $TBAT_CONSENSUS_LIBRARY ";
+  if ( $id ) {
+    $sql .= " WHERE consensus_library_id = $id ";
+  }
+  $sql .= " ORDER BY consensus_library_id ASC";
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while( my @row = $sth->fetchrow_array() ) {
+    if ( $id ) {
+      print "$row[0] ($row[1]}";
+    } else {
+      print join( "\t", @row ) . "\n";
+    }
+  }
 }
 
 __DATA__
