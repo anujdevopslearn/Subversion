@@ -20,7 +20,7 @@ AT_publication	Publication	PeptideAtlas_user	YES	$TBAT_PUBLICATION	publication_i
 AT_biosequence_annotated_gene	Biosequence Annotated Gene	PeptideAtlas_infrastructure	NO	$TBAT_BIOSEQUENCE_ANNOTATED_GENE	biosequence_annotated_gene_id				
 AT_biosequence_annotation	Biosequence Annotation	PeptideAtlas_project	YES	$TBAT_BIOSEQUENCE_ANNOTATION	biosequence_annotation_id		ManageTable.cgi?TABLE_NAME=AT_biosequence_annotation		
 AT_search_key	Search Key	PeptideAtlas_infrastructure	NO	$TBAT_SEARCH_KEY	search_key_id				
-AT_search_key_entity	Search Key Entity	PeptideAtlas_infrastructure	NO	$TBAT_SEARCH_KEY_ENTITY	search_key_id			
+AT_search_key_entity	Search Key Entity	PeptideAtlas_infrastructure	NO	$TBAT_SEARCH_KEY_ENTITY	search_key_id				
 AT_query_option	Query Option	PeptideAtlas_infrastructure	YES	$TBAT_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=AT_query_option	AT_query_option	
 AT_sample_publication	Sample Publication	PeptideAtlas_user	NO	$TBAT_SAMPLE_PUBLICATION	sample_publication_id				
 AT_atlas_search_batch_parameter	Atlas Search Batch Parameter	PeptideAtlas_infrastructure	NO	$TBAT_ATLAS_SEARCH_BATCH_PARAMETER	atlas_search_batch_id				
@@ -57,14 +57,15 @@ AT_biosequence_relationship	Biosequence Relationship	PeptideAtlas_infrastructure
 AT_biosequence_relationship_type	Biosequence Relationship Type	PeptideAtlas_infrastructure	YES	$TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE	biosequence_relationship_type_id		ManageTable.cgi?TABLE_NAME=AT_biosequence_relationship_type		
 AT_GetTransitions	Get transition List	QUERY					GetTransitions		
 AT_SearchProteins	Search Proteins	QUERY					SearchProteins		
-AT_pabst_build	PABST Build	PeptideAtlas_infrastructure	YES	$TBAT_PABST_BUILD	pabst_build_id		ManageTable.cgi?TABLE_NAME=AT_PABST_build		
-AT_pabst_build_file	PABST Build File	PeptideAtlas_infrastructure	NO	$TBAT_PABST_BUILD_FILE	pabst_build_file_id				
-AT_pabst_peptide	PABST Peptide	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE	pabst_peptide_id				
-AT_pabst_peptide_mapping	PABST Peptide Mapping	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE_MAPPING	"pabst_peptide_id, biosequence_id"				
-AT_pabst_peptide_ion	PABST Peptide Ion	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE_ION	pabst_peptide_ion_id				
-AT_pabst_transition	PABST Transition	PeptideAtlas_infrastructure	NO	$TBAT_PABST_TRANSITION	pabst_transition_id				
-AT_pabst_transition_instance	PABST Transition Instance	PeptideAtlas_infrastructure	NO	$TBAT_PABST_TRANSITION_INSTANCE	pabst_transition_instance_id				
-AT_pabst_source_priority	PABST Source Priority	PeptideAtlas_infrastructure	YES	$TBAT_PABST_SOURCE_PRIORITY	pabst_source_priority_id		ManageTable.cgi?TABLE_NAME=AT_source_priority		
+AT_pabst_tmp_build	PABST Build	PeptideAtlas_infrastructure	YES	$TBAT_PABST_BUILD	pabst_build_id		ManageTable.cgi?TABLE_NAME=AT_PABST_build		
+AT_pabst_tmp_build_file	PABST Build File	PeptideAtlas_infrastructure	NO	$TBAT_PABST_BUILD_FILE	pabst_build_file_id				
+AT_pabst_tmp_peptide	PABST Peptide	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE	pabst_peptide_id				
+AT_pabst_tmp_peptide_mapping	PABST Peptide Mapping	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE_MAPPING	"pabst_peptide_id, biosequence_id"				
+AT_pabst_tmp_peptide_ion	PABST Peptide Ion	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE_ION	pabst_peptide_ion_id				
+AT_pabst_tmp_peptide_ion_instance	PABST Peptide Ion Instance	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE_ION_INSTANCE	pabst_peptide_ion_instance_id				
+AT_pabst_tmp_transition	PABST Transition	PeptideAtlas_infrastructure	NO	$TBAT_PABST_TRANSITION	pabst_transition_id				
+AT_pabst_tmp_transition_instance	PABST Transition Instance	PeptideAtlas_infrastructure	NO	$TBAT_PABST_TRANSITION_INSTANCE	pabst_transition_instance_id				
+AT_pabst_tmp_source_priority	PABST Source Priority	PeptideAtlas_infrastructure	YES	$TBAT_PABST_SOURCE_PRIORITY	pabst_source_priority_id		ManageTable.cgi?TABLE_NAME=AT_source_priority		
 AT_instrument_type	Instrument Type	PeptideAtlas_infrastructure	YES	$TBAT_INSTRUMENT_TYPE	instrument_type_id		ManageTable.cgi?TABLE_NAME=AT_instrument_type		
 AT_transition_type	Transition Type	PeptideAtlas_infrastructure	YES	$TBAT_TRANSITION_TYPE	transition_type_id		ManageTable.cgi?TABLE_NAME=AT_transition_type		
 AT_protein_list	Protein List	PeptideAtlas_infrastructure	YES	$TBAT_PROTEIN_LIST	protein_list_id		ManageTable.cgi?TABLE_NAME=AT_Protein_list		

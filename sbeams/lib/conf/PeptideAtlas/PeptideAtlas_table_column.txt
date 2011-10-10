@@ -708,66 +708,73 @@ AT_GetPABSTList	8	n_genome_locations_constraint	Number of Genome Locations Mappe
 AT_GetPABSTList	9	n_highest_intensity_fragment_ions	Num of highest Inten Frag Ions to Keep									N	text	5		Y	Y	N	"Number highest inten frag ions per spec to keep, default 3, max 10."		
 AT_GetPABSTList	10	n_peptides_per_protein	Number of peptides per protein constraint									N	text	5		Y	Y	N	"Number of peptides to return per protein, default 3, max 10."		
 AT_GetPABSTList	11	transition_source	Transition Source									N	multioptionlist	5		Y	Y	N	"Desired source(s) for picking transitions.  Can Ctrl-select multiple options, no selection allows all."	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'GetTransitions_Transition_Source' AND record_status != 'D' ORDER BY sort_order,option_value;"	
-AT_pabst_build	1	pabst_build_id	PABST Build Id	int	4	0	N		Y			N						Y			
-AT_pabst_build	2	build_name	Build Name	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
-AT_pabst_build	3	build_comment	Build Comment	varchar	2000	0	Y		N			Y	text	24		Y	Y	N			
-AT_pabst_build	8	parameter_string	Parameter String	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
-AT_pabst_build	9	organism_id	Organism Id	int	4	0	Y		N	organism	organism_id	Y	optionlist			Y	Y	N			
-AT_pabst_build	10	parameter_file	Parameter File	text	16	0	Y		N			Y	text	24		Y	Y	N			
-AT_pabst_build	11	project_id	Project Id	int	4	0	Y		N	project	project_id	Y	optionlist			Y	Y	N			
-AT_pabst_build	12	build_date	Build Date	datetime	8	0	Y		N			N						N			
-AT_pabst_build	13	biosequence_set_id	Biosequence Set Id	int	4	0	Y		N			N						N			
-AT_pabst_build	14	is_default	Is Default	char	1	0	Y		N			N						N			
-AT_pabst_build_file	1	pabst_build_file_id	PABST Build File Id	int	4	0	N		Y			N						Y	Primary Key		
-AT_pabst_build_file	1	pabst_build_id	PABST Build Id	int	4	0	N		N	AT_pabst_build	pabst_build_id	Y	optionlist			Y	Y	Y	PABST build with which file is associated	"SELECT pabst_build_id, build_name FROM $TBAT_PABST_BUILD PB JOIN $TB_ORGANISM O ON O.organism_id = PB.organism_id WHERE is_default = 'T' AND project_id IN ( $accessible_project_ids ) order by build_name "	
-AT_pabst_build_file	1	file_order	File Order	int	4	0	N		N			Y	text	24		Y	Y	Y	Order in which file was considered		
-AT_pabst_build_file	2	file_name	File Name	varchar	255	0	N		N			Y	text	24		Y	Y	N	file name		
-AT_pabst_build_file	3	file_path	File Path	varchar	2000	0	N		N			Y	text	24		Y	Y	N	path to file		
-AT_pabst_build_file	8	file_checksum	File Checksum	varchar	255	0	N		N			Y	text	24		Y	Y	N	md5 checksum of file		
-AT_pabst_build_file	9	source_instrument_id	Source Instrument ID	int	4	0	N		N	AT_source_instrument	source_instrument_id	Y	optionlist			Y	Y	Y	Source instrument 	"SELECT instrument_id, instrument_name FROM $TBAT_INSTRUMENT WHERE type='source'"	
-AT_pabst_peptide_mapping	1	pabst_peptide_mapping_id	PABST Peptide Mapping Id	int	4	0	N		Y			N						Y			
-AT_pabst_peptide_mapping	2	biosequence_id	Biosequence Id	int	4	0	Y		N	AT_biosequence	biosequence_id	N						N			
-AT_pabst_peptide_mapping	3	pabst_peptide_id	PABST Peptide Id	int	4	0	Y		N	AT_pabst_peptide	pabst_peptide_id	N						N			
-AT_pabst_peptide	1	pabst_peptide_id	PABST Peptide Id	int	4	0	N		Y			N						Y			
-AT_pabst_peptide	2	pabst_build_id	PABST Build Id	int	4	0	Y		N	AT_pabst_build	pabst_build_id	N						N			
-AT_pabst_peptide	3	preceding_residue	Preceding Residue	char	1	0	Y		N			N						N			
-AT_pabst_peptide	4	peptide_sequence	Peptide Sequence	varchar	255	0	Y		N			N						N			
-AT_pabst_peptide	5	following_residue	Following Residue	char	1	0	Y		N			N						N			
-AT_pabst_peptide	6	molecular_weight	Molecular Weight	float	8	0	Y		N			N						N			
-AT_pabst_peptide	7	n_protein_mappings	N Protein Mappings	int	4	0	Y		N			N						N			
-AT_pabst_peptide	8	n_genome_locations	N Genome Locations	int	4	0	Y		N			N						N			
-AT_pabst_peptide	9	SSRCalc_relative_hydrophobicity	SSRCalc Relative Hydrophobicity	float	8	0	Y		N			N						N			
-AT_pabst_peptide	10	best_probability	Best Probability	float	8	0	Y		N			N						N			
-AT_pabst_peptide	12	n_observations	N Observations	int	4	0	Y		N			N						N			
-AT_pabst_peptide	13	source_build	Source Build	int	4	0	Y		N			N						N			
-AT_pabst_peptide	14	empirical_proteotypic_score	Empirical Proteotypic Score	float	8	0	Y		N			N						N			
-AT_pabst_peptide	15	suitability_score	Suitability Score	float	8	0	Y		N			N						N			
-AT_pabst_peptide	16	predicted_suitability_score	Predicted Suitability Score	float	8	0	Y		N			N						N			
-AT_pabst_peptide	17	merged_score	Merged Score	float	8	0	Y		N			N						N			
-AT_pabst_peptide	18	synthesis_score	Synthesis Score	float	8	0	Y		N			N						N			
-AT_pabst_peptide	19	annotations	Annotations	varchar	255	0	Y		N			N						N			
-AT_pabst_peptide	20	synthesis_adjusted_score	Synthesis Adjusted Score	float	8	0	Y		N			N						N			
-AT_pabst_peptide_ion	1	pabst_peptide_ion_id	PABST Peptide Ion Id	int	4	0	N		Y			N						Y	Primary Key		
-AT_pabst_peptide_ion	2	pabst_peptide_id	PABST Peptide Id	int	4	0	Y		N	AT_pabst_peptide	pabst_peptide_id	N						N	Pabst peptide of which this is an instance		
-AT_pabst_peptide_ion	3	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	Y		N			N						N	Charge/Mass modified peptide ion sequence		
-AT_pabst_peptide_ion	4	peptide_charge	Peptide Charge	int	4	0	Y		N			N						N	charge of peptide		
-AT_pabst_peptide_ion	5	peptide_mz	Peptide MZ	float	8	0	Y		N			N						N	mz of peptide		
-AT_pabst_peptide_ion	6	n_observations	N Observations	int	4	0	Y		N			N						N	number of observations		
-AT_pabst_transition	1	pabst_transition_id	PABST Transition Id	int	4	0	N		Y			N						Y			
-AT_pabst_transition	2	pabst_peptide_ion_id	PABST Peptide Ion Id	int	4	0	Y		N	AT_pabst_peptide_ion	pabst_peptide_ion_id	N						N			
-AT_pabst_transition	4	precursor_ion_mz	Precursor Ion Mz	float	8	0	Y		N			N						N			
-AT_pabst_transition	5	precursor_ion_charge	Precursor Ion Charge	int	4	0	Y		N			N						N			
-AT_pabst_transition	6	fragment_ion_mz	Fragment Ion Mz	float	8	0	Y		N			N						N			
-AT_pabst_transition	7	fragment_ion_charge	Fragment Ion Charge	int	4	0	Y		N			N						N			
-AT_pabst_transition	8	fragment_ion_label	Fragment Ion Label	varchar	36	0	Y		N			N						N			
+AT_pabst_tmp_build	1	pabst_build_id	PABST Build Id	int	4	0	N		Y			N						Y			
+AT_pabst_tmp_build	2	build_name	Build Name	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
+AT_pabst_tmp_build	3	build_comment	Build Comment	varchar	2000	0	Y		N			Y	text	24		Y	Y	N			
+AT_pabst_tmp_build	8	parameter_string	Parameter String	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
+AT_pabst_tmp_build	9	organism_id	Organism Id	int	4	0	Y		N	organism	organism_id	Y	optionlist			Y	Y	N			
+AT_pabst_tmp_build	10	parameter_file	Parameter File	text	16	0	Y		N			Y	text	24		Y	Y	N			
+AT_pabst_tmp_build	11	project_id	Project Id	int	4	0	Y		N	project	project_id	Y	optionlist			Y	Y	N			
+AT_pabst_tmp_build	12	build_date	Build Date	datetime	8	0	Y		N			N						N			
+AT_pabst_tmp_build	13	biosequence_set_id	Biosequence Set Id	int	4	0	Y		N			N						N			
+AT_pabst_tmp_build	14	is_default	Is Default	char	1	0	Y		N			N						N			
+AT_pabst_tmp_build_file	1	pabst_build_file_id	PABST Build File Id	int	4	0	N		Y			N						Y	Primary Key		
+AT_pabst_tmp_build_file	1	pabst_build_id	PABST Build Id	int	4	0	N		N	AT_pabst_tmp_build	pabst_build_id	Y	optionlist			Y	Y	Y	PABST build with which file is associated	"SELECT pabst_build_id, build_name FROM $TBAT_PABST_BUILD PB JOIN $TB_ORGANISM O ON O.organism_id = PB.organism_id WHERE is_default = 'T' AND project_id IN ( $accessible_project_ids ) order by build_name "	
+AT_pabst_tmp_build_file	1	file_order	File Order	int	4	0	N		N			Y	text	24		Y	Y	Y	Order in which file was considered		
+AT_pabst_tmp_build_file	2	file_name	File Name	varchar	255	0	N		N			Y	text	24		Y	Y	N	file name		
+AT_pabst_tmp_build_file	3	file_path	File Path	varchar	2000	0	N		N			Y	text	24		Y	Y	N	path to file		
+AT_pabst_tmp_build_file	8	file_checksum	File Checksum	varchar	255	0	N		N			Y	text	24		Y	Y	N	md5 checksum of file		
+AT_pabst_tmp_build_file	9	source_instrument_type_id	Source Instrument ID	int	4	0	N		N	AT_source_instrument	source_instrument_type_id	Y	optionlist			Y	Y	Y	Source instrument 	"SELECT instrument_id, instrument_name FROM $TBAT_INSTRUMENT WHERE type='source'"	
+AT_pabst_tmp_peptide_mapping	1	pabst_peptide_mapping_id	PABST Peptide Mapping Id	int	4	0	N		Y			N						Y			
+AT_pabst_tmp_peptide_mapping	2	biosequence_id	Biosequence Id	int	4	0	Y		N	AT_biosequence	biosequence_id	N						N			
+AT_pabst_tmp_peptide_mapping	3	pabst_peptide_id	PABST Peptide Id	int	4	0	Y		N	AT_pabst_tmp_peptide	pabst_peptide_id	N						N			
+AT_pabst_tmp_peptide	1	pabst_peptide_id	PABST Peptide Id	int	4	0	N		Y			N						Y			
+AT_pabst_tmp_peptide	2	pabst_build_id	PABST Build Id	int	4	0	Y		N	AT_pabst_tmp_build	pabst_build_id	N						N			
+AT_pabst_tmp_peptide	3	preceding_residue	Preceding Residue	char	1	0	Y		N			N						N			
+AT_pabst_tmp_peptide	4	peptide_sequence	Peptide Sequence	varchar	255	0	Y		N			N						N			
+AT_pabst_tmp_peptide	5	following_residue	Following Residue	char	1	0	Y		N			N						N			
+AT_pabst_tmp_peptide	6	molecular_weight	Molecular Weight	float	8	0	Y		N			N						N			
+AT_pabst_tmp_peptide	7	n_protein_mappings	N Protein Mappings	int	4	0	Y		N			N						N			
+AT_pabst_tmp_peptide	8	n_genome_locations	N Genome Locations	int	4	0	Y		N			N						N			
+AT_pabst_tmp_peptide	9	SSRCalc_relative_hydrophobicity	SSRCalc Relative Hydrophobicity	float	8	0	Y		N			N						N			
+AT_pabst_tmp_peptide	10	best_probability	Best Probability	float	8	0	Y		N			N						N			
+AT_pabst_tmp_peptide	12	n_observations	N Observations	int	4	0	Y		N			N						N			
+AT_pabst_tmp_peptide	13	source_build	Source Build	int	4	0	Y		N			N						N			
+AT_pabst_tmp_peptide	14	empirical_proteotypic_score	Empirical Proteotypic Score	float	8	0	Y		N			N						N			
+AT_pabst_tmp_peptide	15	suitability_score	Suitability Score	float	8	0	Y		N			N						N			
+AT_pabst_tmp_peptide	16	predicted_suitability_score	Predicted Suitability Score	float	8	0	Y		N			N						N			
+AT_pabst_tmp_peptide	17	merged_score	Merged Score	float	8	0	Y		N			N						N			
+AT_pabst_tmp_peptide	18	synthesis_score	Synthesis Score	float	8	0	Y		N			N						N			
+AT_pabst_tmp_peptide	19	annotations	Annotations	varchar	255	0	Y		N			N						N			
+AT_pabst_tmp_peptide	20	synthesis_adjusted_score	Synthesis Adjusted Score	float	8	0	Y		N			N						N			
+AT_pabst_tmp_peptide_ion	1	pabst_peptide_ion_id	PABST Peptide Ion Id	int	4	0	N		Y			N						Y	Primary Key		
+AT_pabst_tmp_peptide_ion	2	pabst_peptide_id	PABST Peptide Id	int	4	0	Y		N	AT_pabst_tmp_peptide	pabst_peptide_id	N						N	Pabst peptide of which this is an instance		
+AT_pabst_tmp_peptide_ion	3	modified_peptide_sequence	Modified Peptide Sequence	varchar	255	0	Y		N			N						N	Charge/Mass modified peptide ion sequence		
+AT_pabst_tmp_peptide_ion	4	peptide_charge	Peptide Charge	int	4	0	Y		N			N						N	charge of peptide		
+AT_pabst_tmp_peptide_ion	5	peptide_mz	Peptide MZ	float	8	0	Y		N			N						N	mz of peptide		
+AT_pabst_tmp_peptide_ion	6	n_observations	N Observations	int	4	0	Y		N			N						N	number of observations		
+AT_pabst_tmp_peptide_ion_instance	1	pabst_peptide_ion_instance_id	PABST Peptide Ion Instance Id	int	4	0	N		Y			N						Y	Primary Key		
+AT_pabst_tmp_peptide_ion_instance	2	pabst_peptide_ion_id	PABST Peptide Ion Id	int	4	0	Y		N	AT_pabst_tmp_peptide_ion	pabst_peptide_ion_id	N						N	Pabst peptide of which this is an instance		
+AT_pabst_tmp_peptide_ion_instance	6	source_instrument_type_id	Source Instrument Type Id	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N						N			
+AT_pabst_tmp_peptide_ion_instance	6	n_observations	N Observations	int	4	0	Y		N			N						N	number of observations		
+AT_pabst_tmp_transition	1	pabst_transition_id	PABST Transition Id	int	4	0	N		Y			N						Y			
+AT_pabst_tmp_transition	2	pabst_peptide_ion_id	PABST Peptide Ion Id	int	4	0	Y		N	AT_pabst_tmp_peptide_ion	pabst_peptide_ion_id	N						N			
+AT_pabst_tmp_transition	4	precursor_ion_mz	Precursor Ion Mz	float	8	0	Y		N			N						N			
+AT_pabst_tmp_transition	5	precursor_ion_charge	Precursor Ion Charge	int	4	0	Y		N			N						N			
+AT_pabst_tmp_transition	6	fragment_ion_mz	Fragment Ion Mz	float	8	0	Y		N			N						N			
+AT_pabst_tmp_transition	7	fragment_ion_charge	Fragment Ion Charge	int	4	0	Y		N			N						N			
+AT_pabst_tmp_transition	8	fragment_ion_label	Fragment Ion Label	varchar	36	0	Y		N			N						N			
 AT_transition_type	1	transition_type_id	Transition Type Id	int	4	0	N		Y			N						Y			
 AT_transition_type	2	transition_type	Transition Type	varchar	36	0	Y		N			N						N			
-AT_pabst_transition_instance	1	pabst_transition_instance_id	PABST Transition Instance Id	int	4	0	N		Y			N						Y			
-AT_pabst_transition_instance	2	pabst_transition_id	PABST Transition ID	int	4	0	Y		N	AT_pabst_transition	pabst_transition_id	N						N			
-AT_pabst_transition_instance	3	precursor_ion_mass	Precursor Ion Mass	float	8	0	Y		N			N						N			
-AT_pabst_transition_instance	4	ion_rank	Ion Rank	int	4	0	Y		N			N						N			
-AT_pabst_transition_instance	5	relative_intensity	Relative Intensity	float	8	0	Y		N			N						N			
-AT_pabst_transition_instance	6	source_instrument_type_id	Source Instrument Type	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N						N			
+AT_pabst_tmp_transition_instance	1	pabst_transition_instance_id	PABST Transition Instance Id	int	4	0	N		Y			N						Y			
+AT_pabst_tmp_transition_instance	2	pabst_transition_id	PABST Transition ID	int	4	0	Y		N	AT_pabst_tmp_transition	pabst_transition_id	N						N			
+AT_pabst_tmp_transition_instance	3	precursor_ion_mass	Precursor Ion Mass	float	8	0	Y		N			N						N			
+AT_pabst_tmp_transition_instance	4	ion_rank	Ion Rank	int	4	0	Y		N			N						N			
+AT_pabst_tmp_transition_instance	5	relative_intensity	Relative Intensity	float	8	0	Y		N			N						N			
+AT_pabst_tmp_transition_instance	6	source_instrument_type_id	Source Instrument Type	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N						N			
+AT_pabst_tmp_transition_instance	7	observed_mz	Observed mz	float	8	0	Y		N			N									
+AT_pabst_tmp_transition_instance	8	collision_energy	Collision Energy	float	8	0	Y		N			N									
+AT_pabst_tmp_transition_instance	9	is_predicted	Is Predicted	char	1	0	Y		N			N									
 AT_instrument_type	1	instrument_type_id	instrument_type_id	int	4	0	N		Y			N						Y			pkDEFAULT
 AT_instrument_type	2	instrument_type_name	instrument_type_name	varchar	255	0	N		N			Y	text	24		Y	Y	N			
 AT_instrument_type	3	instrument_type_comment	instrument_type_comment	varchar	255	0	Y		N			Y	text	24		Y	Y	N			
@@ -780,10 +787,11 @@ AT_instrument_type	9	date_modified	date_modified	datetime	8	0	Y		N			N						N
 AT_instrument_type	10	modified_by_id	modified_by_id	int	4	0	Y		N			N						Y			
 AT_instrument_type	11	owner_group_id	owner_group_id	int	4	0	Y		N			N						Y			
 AT_instrument_type	12	record_status	record_status	char	1	0	Y		N			N						N			
-AT_pabst_source_priority	1	pabst_source_priority_id	pabst_source_priority_id	int	4	0	N		Y			N						Y			
-AT_pabst_source_priority	2	source_instrument_type_id	Source instrument_type_id	int	4	0	Y		N			N						Y			
-AT_pabst_source_priority	3	target_instrument_type_id	Target instrument_type_id	int	4	0	Y		N			N						Y			
-AT_pabst_source_priority	4	is_predicted	is_predicted	char	1	0	Y		N			N						N			
+AT_pabst_tmp_source_priority	1	pabst_source_priority_id	pabst_source_priority_id	int	4	0	N		Y			N						Y			
+AT_pabst_tmp_source_priority	2	source_instrument_type_id	Source instrument_type_id	int	4	0	Y		N			N						Y			
+AT_pabst_tmp_source_priority	3	target_instrument_type_id	Target instrument_type_id	int	4	0	Y		N			N						Y			
+AT_pabst_tmp_source_priority	4	is_predicted	is_predicted	char	1	0	Y		N			N						N			
+AT_pabst_tmp_source_priority	5	priority	Priority	Int	4	0	Y		N			N						N			
 AT_protein_list	1	protein_list_id	Protein List ID	int	4	0	N		Y			N						Y	Primary Key		
 AT_protein_list	2	protein_list_name	Protein List Name	varchar	255	0	Y		N			Y	text	24		Y	Y	N	Name for Protein List		
 AT_protein_list	3	contributor_name	Contributor Name	varchar	255	0	Y		N			Y	text	24		Y	Y	N	Name of list contributor		
