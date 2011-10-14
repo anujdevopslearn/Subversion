@@ -31,6 +31,8 @@ use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::BestPeptideSelector;
 
+use constant ROW_LIMIT => 50000;
+
 # Set up Atlas objects
 my $sbeams = new SBEAMS::Connection;
 my $atlas = new SBEAMS::PeptideAtlas;
@@ -85,7 +87,10 @@ sub main
   $pabst_build_id = $best_peptide->get_pabst_build( %parameters );
 
   # This might have gotten overridden due to permissions.
-  $parameters{pabst_build_id} = $pabst_build_id;
+  my $bad_build_specified = 0;
+  if ( $parameters{pabst_build_id} && $parameters{pabst_build_id} != $pabst_build_id ) {
+    $bad_build_specified++;
+  }
 
   # set up some defaults, only in command-line mode, to time queries/operations
   if ( !$parameters{action} && !$is_html ) {
@@ -101,7 +106,11 @@ sub main
   # Decide what action to take based on information so far
 
   print_form ( %parameters );  
-  if ( $parameters{action} eq 'QUERY' ) {
+  if ( ! $parameters{pabst_build_id} ) {
+    print $sbeams->makeErrorText( "<BR>No build specified" );
+  } elsif ( $bad_build_specified ) {
+    print $sbeams->makeErrorText( "<BR>Specified build is not accessible to this user" );
+  } elsif ( $parameters{action} eq 'QUERY' ) {
     $log->debug( "  Going to fetch transitions"  . time());
     fetch_transitions( %parameters );  
     $log->debug( "  Done fetching transitions"  . time());
@@ -763,8 +772,13 @@ sub fetch_transitions {
     my @short_list;
     my %peptide_fragments;
     my $cnt;
+    my $row_cnt = 0;
     while( my @row = $sth->fetchrow_array() ) {
-      $cnt++;
+      $row_cnt++;
+      if ( $row_cnt >= ROW_LIMIT ) {
+        print $sbeams->makeInfoText( "Maximum query size (" . ROW_LIMIT . ") exceeded, results are truncated" );
+        last;
+      }
 
       # Add each unique prot peptide
       my $peptide_key = join( '', @row[13,1] );
@@ -907,6 +921,7 @@ sub fetch_transitions {
      $log->debug( "Iterating over results " . time() );
 
     my %frag_seen;
+    my $row_cnt = 0;
     while( my @row = $sth->fetchrow_array() ) {
       my $prot = $row[13];
 
@@ -1059,6 +1074,11 @@ sub fetch_transitions {
 # 6 q1_chg
 # 7 q3_chg
 
+      $row_cnt++;
+      if ( $row_cnt >= ROW_LIMIT ) {
+        print $sbeams->makeInfoText( "Maximum query size (" . ROW_LIMIT . ") exceeded, results are truncated" );
+        last;
+      }
     } # End loop over resultset
 
   }
