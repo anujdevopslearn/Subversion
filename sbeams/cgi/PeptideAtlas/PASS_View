@@ -125,11 +125,9 @@ sub main {
         );
 
     #### Decide what action to take based on information so far
-    if ($parameters{action} eq "???") 
-    {
-      # Some action
-    } else 
-    {
+    if (defined($parameters{filename}) && $parameters{filename} ne '') {
+      handle_request(ref_parameters=>\%parameters);
+    } else {
         my $project_id = $sbeamsMOD->getProjectID(
             atlas_build_id => $parameters{atlas_build_id}
         );
@@ -160,17 +158,23 @@ sub handle_request {
 
   my %parameters = %{$ref_parameters};
 
+  my $output_mode = $sbeams->output_mode();
+  if (defined($parameters{filename}) && $parameters{filename} ne '') {
+    $output_mode = 'direct';
+  }
+
+
   #### Show current user context information
-  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+  print "<BR>\n" if ($output_mode eq 'html');
   #$sbeams->printUserContext();
 
   #### Get the HTML to display the tabs
   my $tabMenu = $sbeamsMOD->getTabMenu(
      parameters_ref => \%parameters,
      program_name => $PROG_NAME,
-  );
+  ) if ($output_mode eq 'html');
 
-  print $tabMenu->asHTML() . '<BR>' if ($sbeams->output_mode() eq 'html');
+  print $tabMenu->asHTML() . '<BR>' if ($output_mode eq 'html');
 
 
   #### Define some generic variables
@@ -336,6 +340,23 @@ sub handle_request {
   $log->debug( "end param handling " . time() );
 
 
+  if (defined($parameters{filename}) && $parameters{filename} ne '') {
+    unless ($isAccessible) {
+      print "Content-type: text/plain\n\n";
+      print "ERROR: This file is not accessible\n";
+      return;
+    }
+    showFile(identifier=>$datasetIdentifier,
+      baseURL=>$base_url,
+      browseArea=>$parameters{browseArea},
+      path=>$parameters{path},
+      filename=>$parameters{filename},
+    );
+    return;
+  }
+
+
+
 
   #########################################################################
   #### Print the form
@@ -420,6 +441,18 @@ sub handle_request {
        return;
      }
 
+     if ($parameters{browseArea}) {
+       print "<BR>\n";
+       print "<a href=\"$base_url?identifier=$datasetIdentifier\">Back to main dataset view</a>\n";
+       print "<BR>\n";
+       print DisplayPASSDirListing(identifier=>$datasetIdentifier,
+         baseURL=>$base_url,
+         browseArea=>$parameters{browseArea},
+         path=>$parameters{path},
+       );
+       return(1);
+     }
+
 
      if ($datasetMetadata->{result} eq 'Success' && $emailAddress eq $datasetMetadata->{emailAddress}) {
        if ($datasetMetadata->{finalizedDate}) {
@@ -489,7 +522,12 @@ sub handle_request {
      print "<HR>\n";
 
      print "<B>Listing of files:</B><P>\n";
-     print DisplayPASSDirListing(identifier=>$datasetIdentifier);
+     print DisplayPASSDirListing(identifier=>$datasetIdentifier,
+             baseURL=>$base_url,
+           );
+     print "<BR>\n";
+     print "<a href=\"$base_url?identifier=$datasetIdentifier&browseArea=upload&path=/\">Browse FTP upload area</a><BR>\n";
+     print "<a href=\"$base_url?identifier=$datasetIdentifier&browseArea=processing&path=/\">Browse AutoQCprocessing area</a><BR>\n";
      print "<BR>\n";
      print "<HR>\n";
 
@@ -839,17 +877,75 @@ sub DisplayPASSDirListing {
 
   #### Decode the argument list
   my $identifier = $args{'identifier'} || die "[$SUB_NAME] ERROR: identifier not passed";
+  my $baseURL = $args{'baseURL'};
+  my $browseArea = $args{'browseArea'};
+  my $path = $args{'path'};
 
   my $response;
 
   my $PASS_ACCOUNTS_BASE = '/prometheus/u1/home';
+  my $PASS_PROCESSING_BASE = '/regis/sbeams/PASS';
 
-  my @listing = `ls -lh $PASS_ACCOUNTS_BASE/$identifier/`;
+  my $base = $PASS_ACCOUNTS_BASE;
+  if ($browseArea eq 'processed') {
+    $base = $PASS_PROCESSING_BASE;
+    print "<BR>\n";
+    print "<a href=\"$baseURL?identifier=$identifier&browseArea=upload&path=$path\">[View upload area]</a><BR>\n";
+  } else {
+    $base = $PASS_ACCOUNTS_BASE;
+    print "<BR>\n";
+    print "<a href=\"$baseURL?identifier=$identifier&browseArea=processed&path=$path\">[View processing area]</a><BR>\n";
+  }
+  print "<BR>\n";
+
+  $path = '/' unless ($path);
+  $path =~ s/\.\.//g;
+
+  my $fullPath = "$base/$identifier$path";
+
+  if ( ! -d $fullPath ) {
+    return $response;
+  }
+
+  my @listing = `ls -lh $fullPath`;
+
   print "<PRE>\n";
+
+  if ($path ne '/') {
+    my $parentPath = '/';
+    if ($path =~ /^(.+)\//) {
+      $parentPath = $1;
+    }
+    print "<a href=\"$baseURL?identifier=$identifier&browseArea=$browseArea&path=/\">-- Back to top --</a>\n";
+    print "<a href=\"$baseURL?identifier=$identifier&browseArea=$browseArea&path=$parentPath\">-- Back up one level --</a>\n";
+    print "\n";
+    print "$path\n\n";
+  }
+
   foreach my $line ( @listing ) {
     chomp($line);
+    my @fields = split(/\s+/,$line);
+    my $offset = index($line," $fields[4] ") + length($fields[4]) - 4;
+
+    my $hlink = '';
+    my $aclose = '';
     if (length($line) > 32) {
-      print substr($line,23,999)."\n";
+      if ($line =~ /^d/) {
+	my $dirname = substr($line,$offset+19,999);
+	my $tmpPath = $path;
+	$tmpPath = '' if ($path eq '/');
+	$hlink = "<a href=\"$baseURL?identifier=$identifier&browseArea=$browseArea&path=$tmpPath/$dirname\">";
+	print substr($line,$offset,19).$hlink.$dirname."</a>\n";
+      } else {
+	my $filename = substr($line,$offset+19,999);
+	if (isSupportedFile(filename=>$filename)) {
+	  $hlink = "<a href=\"$baseURL?identifier=$identifier&browseArea=$browseArea&path=$path&filename=$filename\">";
+	  $aclose="</a>";
+	} else {
+	  $hlink="";
+	}
+	print substr($line,$offset,19).$hlink.$filename.$aclose."\n";
+      }
     }
   }
   print "</PRE>\n";
@@ -858,8 +954,85 @@ sub DisplayPASSDirListing {
 
 }
 
-#0123456789012345678901234567890123456789012345678901234567890123456789
-#-rw-r--r--  1 PASS00005 ftpusers    176 Aug 25 23:41 .bash_profile
+
+#######################################################################
+# isSupportedFile
+#######################################################################
+sub isSupportedFile {
+  my %args = @_;
+  my $SUB_NAME = 'isSupportedFile';
+
+  #### Decode the argument list
+  my $filename = $args{'filename'};
+
+  my %supportedFiles = (
+    'summary.txt' => 1,
+    'summary.peptides.txt' => 1,
+    'summary.proteins.txt' => 1,
+    'summary.tsv' => 1,
+    'summary.html' => 1,
+    'summary.QCruns' => 1,
+    'tandem.params' => 1,
+    'interact-ipro.pep.summary.txt' => 1,
+    'interact-ipro.peptides.out' => 1,
+    'interact-ipro.proteins.out' => 1,
+  );
+
+  return($supportedFiles{$filename});
+}
+
+
+#######################################################################
+# showFile
+#######################################################################
+sub showFile {
+  my %args = @_;
+  my $SUB_NAME = 'showFile';
+
+  #### Decode the argument list
+  my $identifier = $args{'identifier'} || die "[$SUB_NAME] ERROR: identifier not passed";
+  my $browseArea = $args{'browseArea'} || die "[$SUB_NAME] ERROR: identifier not passed";
+  my $path = $args{'path'} || die "[$SUB_NAME] ERROR: identifier not passed";
+  my $filename = $args{'filename'};
+
+  my $response;
+
+  my $PASS_ACCOUNTS_BASE = '/prometheus/u1/home';
+  my $PASS_PROCESSING_BASE = '/regis/sbeams/PASS';
+
+  my $base = $PASS_ACCOUNTS_BASE;
+  if ($browseArea eq 'processed') {
+    $base = $PASS_PROCESSING_BASE;
+  } else {
+    $base = $PASS_ACCOUNTS_BASE;
+  }
+
+  $path = '/' unless ($path);
+  $path =~ s/\.\.//g;
+
+  my $fullPath = "$base/$identifier$path/$filename";
+
+  if ( ! -f $fullPath ) {
+    return $response;
+  }
+
+  if ($fullPath =~ /html$/i) {
+    print "Content-type: text/html\n\n";
+  } else {
+    print "Content-type: text/plain\n\n";
+  }
+  open(INFILE,$fullPath) || die("ERROR: Unable to open file $fullPath");
+
+  foreach my $line ( <INFILE> ) {
+    print $line;
+  }
+
+  close(INFILE);
+
+  return $response;
+
+}
+
 
 
 #######################################################################
