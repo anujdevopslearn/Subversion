@@ -3231,23 +3231,28 @@ sub displayResultSet {
       }
 
       print $self->addTabbedPane(label => "Resultset") if $args{use_tabbed_panes};
-      ShowHTMLTable{
-        titles=>$column_titles_ref,
-      	types=>$types_ref,
-      	widths=>\@precisions,
-      	row_sub=>\&returnNextRow,
-        table_attrs=>"$table_width $table_class BORDER=0 CELLPADDING=2 CELLSPACING=2",
-        title_formats=>['FONT COLOR=white,BOLD'],
-        url_keys=>$url_cols_ref,
-        hidden_cols=>$hidden_cols_ref,
-        THformats=>["BGCOLOR=".$row_color_scheme_ref->{header_background} . $nowrap],
-        TDformats=>\@TDformats,
-        row_color_scheme=>$row_color_scheme_ref,
-        base_url=>$base_url,
-        image_dir=>"$HTML_BASE_DIR/images",
-        resort_url=>$resort_url,
-        no_escape => $no_escape
-      };
+      if ( $args{html_table} ) {
+        print "$args{html_table}\n";
+      } else {
+
+        ShowHTMLTable{
+          titles=>$column_titles_ref,
+        	types=>$types_ref,
+        	widths=>\@precisions,
+      	  row_sub=>\&returnNextRow,
+          table_attrs=>"$table_width $table_class BORDER=0 CELLPADDING=2 CELLSPACING=2",
+          title_formats=>['FONT COLOR=white,BOLD'],
+          url_keys=>$url_cols_ref,
+          hidden_cols=>$hidden_cols_ref,
+          THformats=>["BGCOLOR=".$row_color_scheme_ref->{header_background} . $nowrap],
+          TDformats=>\@TDformats,
+          row_color_scheme=>$row_color_scheme_ref,
+          base_url=>$base_url,
+          image_dir=>"$HTML_BASE_DIR/images",
+          resort_url=>$resort_url,
+          no_escape => $no_escape
+        };
+      }
 
     }
 
@@ -3976,7 +3981,9 @@ sub displayResultSetPlot {
       print qq~
         </FORM>
       ~;
-      my $tab_selected = ($args{'apply_action'} eq 'VIEWPLOT') ? '1' : '0';
+
+      my $tab_selected = ($args{rs_params_ref}->{apply_action} eq 'VIEWPLOT') ? '1' : '0';
+
       print $self->closeTabbedPane(selected=>$tab_selected) if $args{use_tabbed_panes};# close Plot div
       print "</TABLE>" unless $args{quell_tables};
     }
