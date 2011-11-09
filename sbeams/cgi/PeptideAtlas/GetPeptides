@@ -122,11 +122,13 @@ sub main {
         atlas_build_id => $parameters{atlas_build_id}
         );
 
-    $sbeamsMOD->display_page_header(project_id => $project_id);
+    $sbeamsMOD->display_page_header( project_id => $project_id, 
+                                     use_tabbed_panes => 1
+                                   );
 
     handle_request(ref_parameters=>\%parameters);
 
-    $sbeamsMOD->display_page_footer();
+    $sbeamsMOD->display_page_footer( use_tabbed_panes => 1 );
 
   }
 
@@ -204,7 +206,7 @@ sub handle_request {
 
   #### If the apply action was to recall a previous resultset, do it
   my %rs_params = $sbeams->parseResultSetParams(q=>$q);
-  if ($apply_action eq "VIEWRESULTSET") {
+  if ($apply_action =~ /VIEWRESULTSET|VIEWPLOT/ ) {
     $sbeams->readResultSet(
         resultset_file=>$rs_params{set_name},
         resultset_ref=>$resultset_ref,
@@ -232,17 +234,22 @@ sub handle_request {
     PROGRAM_FILE_NAME=>$PROG_NAME,
     parameters_ref=>\%parameters,
     input_types_ref=>\%input_types,
+    use_tabbed_panes => 1,
     mask_user_context=> '1',
   );
 
   #### Display the form action buttons
-  $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
+  $sbeams->display_form_buttons( TABLE_NAME=>$TABLE_NAME,
+                                 use_tabbed_panes => 1,
+                               );
 
 
   #### Finish the upper part of the page and go begin the full-width
   #### data portion of the page
-  $sbeams->display_page_footer(close_tables=>'YES',
-    separator_bar=>'YES',display_footer=>'NO');
+  $sbeams->display_page_footer( close_tables=>'NO',
+                                use_tabbed_panes => 1,
+                                separator_bar=>'NO',
+                                display_footer=>'NO');
 
 
   #########################################################################
@@ -780,14 +787,15 @@ sub handle_request {
 
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
-  if ($apply_action =~ /QUERY/i || $apply_action eq "VIEWRESULTSET") {
+  if ($apply_action =~ /QUERY|VIEWRESULTSET|VIEWPLOT/i ) {
 
     #### If the action contained QUERY, then fetch the results from
     #### the database
     if ($apply_action =~ /QUERY/i) {
 
       #### Show the SQL that will be or was executed
-      $sbeams->display_sql(sql=>$sql) if ($show_sql);
+      $sbeams->display_sql( sql => $sql,
+                            use_tabbed_panes => 1 ) if ($show_sql);
 
       #### Fetch the results from the database server
       $sbeams->fetchResultSet(
@@ -824,6 +832,7 @@ sub handle_request {
       url_cols_ref=>\%url_cols,
       hidden_cols_ref=>\%hidden_cols,
       max_widths=>\%max_widths,
+      use_tabbed_panes => 1,
       column_titles_ref=>\@column_titles,
       base_url=>$base_url,
     );
@@ -834,6 +843,7 @@ sub handle_request {
       resultset_ref=>$resultset_ref,
       query_parameters_ref=>\%parameters,
       rs_params_ref=>\%rs_params,
+      use_tabbed_panes => 1,
       base_url=>$base_url,
     );
 
@@ -844,6 +854,7 @@ sub handle_request {
       resultset_ref=>$resultset_ref,
       query_parameters_ref=>\%parameters,
       column_titles_ref=>\@column_titles,
+      use_tabbed_panes => 1,
       base_url=>$base_url,
     );
 
