@@ -859,6 +859,7 @@ AT_SEL_transition_group	11	d_score	mProphet d_score	real	8	0	Y		N			N						N	mPr
 AT_SEL_transition_group	12	m_score	mProphet m_score	real	8	0	Y		N			N							mProphet's m_score; FDR for all ID's at least this good (lower is better)		
 AT_SEL_transition_group	13	S_N	Signal to Noise Ratio	real	8	0	Y		N			N					Y	N	Signal-to-noise ratio for highest ranking peak group		
 AT_SEL_transition_group	14	max_apex_intensity	Maximum Apex Intensity	real	8	0	Y		N			N					Y	N	Maximum apex intensity for highest ranking peak group; a measure of relative abundance		
+AT_SEL_transition_group	15	light_heavy_ratio_maxapex	Light Heavy Ratio Maximum Apex Intensity	real	8	0	Y		N			N					Y	N	mQuest ratio of maximum apex intensity vs. heavy standard; a measure of relative abundance		
 AT_SEL_transition	1	SEL_transition_id	SEL Transition ID	int	4	0	N		Y			Y					N	Y	Primary Key		
 AT_SEL_transition	2	SEL_transition_group_id	SEL Transition Group ID	int	4	0	N		N			Y						Y	Foreign Key		
 AT_SEL_transition	3	q3_mz	Q3 mz value	float	8	0	Y		N			N							Q3 mz value		
