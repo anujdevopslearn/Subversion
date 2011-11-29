@@ -596,7 +596,7 @@ sub handle_request {
 					);
 
 					$sql = qq~
-							 SELECT DISTINCT $columns_clause
+							 SELECT DISTINCT TOP 50000 $columns_clause
 							 FROM $TBAT_SEARCH_KEY_LINK SKL
 							 LEFT JOIN  $TBAT_SEARCH_KEY_ENTITY SKE
 										ON (SKL.RESOURCE_NAME = SKE.RESOURCE_NAME)
