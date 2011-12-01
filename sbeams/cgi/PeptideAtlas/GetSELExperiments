@@ -216,8 +216,9 @@ sub handle_request {
 	  <h1>SRM Experiments Available in PASSEL</h1>
 	  <br>
 					  <p class="rep">
-  Click individual experiments
-  for detailed info and links to transition lists and experimental results.
+  <b>Please wait a few seconds for table to display.</b><br>Then, click individual experiments
+  for detailed info and links to raw data.<br>Click TxGrps link for PASSEL
+  transition group tables.
 
 					  </p>
 					  </p>

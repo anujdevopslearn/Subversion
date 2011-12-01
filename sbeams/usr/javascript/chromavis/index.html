@@ -54,18 +54,17 @@
 
     var chromavis;
 
-    function update_chromavis()     {
-              jx.load('getChromatogramInfo?SEL_chromatogram_id=' +
-		  chromatogram_id, function(response){
-                  renderChromatogram(response);
-              },'json');
-        }
+    <!-- placeholder string is replaced with multi-line json object -->
+    <!-- in traces2json() in Chromatogram.pm -->
+    var json_string =  
+      JSON_PLACEHOLDER 
+    ; 
 
-    function renderChromatogram(response){
+    function renderChromatogram(){
 
         chromavis = new vq.ChromaVis();
-	var data_json = response.data_json;
-	var vmarker_json = response.vmarker_json;
+	var data_json = json_string.data_json;
+	var vmarker_json = json_string.vmarker_json;
 
         var data = {
             DATATYPE : "vq.models.ChromaVisData",
@@ -106,7 +105,7 @@
       
     }
 
-    google.setOnLoadCallback(update_chromavis)
+    google.setOnLoadCallback(renderChromatogram)
 </script>
 <br/>
 <div id="instructions" style="display:none;">Drag the red area over the context panel to shift the focus panel.  When the cursor is a crosshair, you may

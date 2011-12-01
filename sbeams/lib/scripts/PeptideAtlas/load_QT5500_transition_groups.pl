@@ -45,7 +45,7 @@ $sbeams = new SBEAMS::Connection;
 ###############################################################################
 $PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
-Usage: $PROG_NAME --trans trans_file [OPTIONS]
+Usage: $PROG_NAME [OPTIONS]
 Options:
   --verbose n                 Set verbosity level.  default is 0
   --quiet                     Set flag to print nothing at all except errors
@@ -201,6 +201,7 @@ for my $mzml_fname (keys %info) {
 	verbose=>$sql_verbose,
 	testonly=>$TESTONLY,
       );
+      next;
     }
   }
 

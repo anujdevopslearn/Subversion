@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
-# Skeleton for executing a few SQL queries into SBEAMS.
-# Just set $query to the query you want, and go!
-# June 2009  Terry Farrah
+# Create a database record in the table SEL_run for mzML or mzXML file(s)
+# from the same PASSEL experiment.
+# July 2011  Terry Farrah
 
 use strict;
 $| = 1;  #disable output buffering

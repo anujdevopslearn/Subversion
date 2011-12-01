@@ -81,6 +81,7 @@ sub srm_experiments_2_json {
   my $sql = qq~
    SELECT
      SELE.experiment_title,
+     SELE.datasetIdentifier,
      SELE.data_path,
      CAST(SELE.comment AS varchar(4000)) as comment,
      count (distinct SELR.SEL_run_id) as n_runs,
@@ -116,6 +117,7 @@ sub srm_experiments_2_json {
    WHERE SELE.project_id in ( $accessible_projects )
    GROUP BY
      SELE.experiment_title,
+     SELE.datasetIdentifier,
      SELE.data_path,
      CAST(SELE.comment AS varchar(4000)),
      S.sample_tag,
@@ -140,7 +142,8 @@ sub srm_experiments_2_json {
   # store data for each experiment
   my $count=0;
   for my $row (@rows) {
-    my ( $experiment_title, $data_path, $comment, $n_runs, $sample_tag, $sample_title,
+    my ( $experiment_title, $datasetIdentifier,
+     $data_path, $comment, $n_runs, $sample_tag, $sample_title,
      $sample_date, $instrument_name, $sample_publication_ids, $sample_description,
      $data_contributors,$SEL_experiment_id,$organism_name,
      $n_prots, $n_peps, $n_ions, $n_transition_groups,
@@ -195,6 +198,7 @@ sub srm_experiments_2_json {
     $data{"summary"} = "";
     $data{"contributors"} = "$data_contributors",
     $data{"experiment_title"} = "$experiment_title",
+    $data{"datasetIdentifier"} = "$datasetIdentifier",
     $data{"SEL_experiment_id"} = "$SEL_experiment_id",
     $data{"data_path"} = "$data_path",
     $data{"comment"} = "$comment",

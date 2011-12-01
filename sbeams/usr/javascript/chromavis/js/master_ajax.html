@@ -69,7 +69,7 @@
                 vertical_marker_array : [{id:'Retention Time', value:2800}],
                 data_contents_id : 'data',
                 data_label : 'label',
-                x_axis_label: 'Time(ms)',
+                x_axis_label: 'Time(min)',
                 y_axis_label: 'Intensity',
                 x_column_id: 'time',
                 y_column_id: 'intensity',
@@ -99,7 +99,11 @@
 	       info_html += "<b>DECOY </b>";
 	     }
 	     info_html += "<b>"+info.pepseq+" </b>";
-	     info_html += "("+info.mass+" Daltons) ";
+	     var total_mass = parseFloat(info.mass);
+	     if (info.isotype_delta_mass) {
+	       total_mass += parseFloat(info.isotype_delta_mass);
+	     }
+	     info_html += "("+total_mass+" Daltons) ";
 	     info_html += "<b>+"+info.charge;
 	     info_html += ", "+info.isotype+"</b><br>";
 	     info_html += "<b>Experiment: </b>"+info.experiment+"<br>";

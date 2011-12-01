@@ -48,7 +48,7 @@ sub generateChromatogram {
     my $self = shift;
     my %args = @_;
 
-    my $chromatogram_id = $args{'chromatogram_id'};
+    my $chromatogram_id = $args{'chromatogram_id'} || '\'\'';
     my $chromatogram_pathname = $args{'chromatogram_pathname'};
     my $mzml_pathname = $args{'mzml_pathname'};
     my $precursor_neutral_mass = $args{'precursor_neutral_mass'};
@@ -57,38 +57,19 @@ sub generateChromatogram {
     my $precursor_rt = $args{'precursor_rt'};
     my $best_peak_group_rt = $args{'best_peak_group_rt'};
     my $m_score = $args{'m_score'};
+    my $json_string = $args{'json_string'};
 
     # Read the HTML code for the viewer from a template file.
     open(HTML, "$PHYSICAL_BASE_DIR/usr/javascript/chromavis/index.html");
     my @chromavis_html = <HTML>;
     my $chromavis_html = join('', @chromavis_html);
-    # Substitute in the filename of the chromatogram
-    #$chromavis_html =~ s:js/data/test.json:$chromatogram_pathname:g;
-    # Substitute in the location of the chromavis code
-    my $chromavis_resources = "$HTML_BASE_DIR/usr/javascript/chromavis";
-    #$chromavis_html =~ s:src="js:src="$chromavis_resources/js:g;
+    #Attempt to not have to call mzML2json from index.html
+    $chromavis_html =~ s/JSON_PLACEHOLDER/${json_string}/;
     $chromavis_html .= qq~
     <script language="javascript">
     var chromatogram_id = $chromatogram_id;
     </script>
     ~;
-
-    # Add extra stuff at bottom.
-#--------------------------------------------------
-#     $precursor_neutral_mass = sprintf "%0.3f", $precursor_neutral_mass;
-#     $chromavis_html =~ s:</body>:<p>$seq ($precursor_neutral_mass Daltons calculated from +$precursor_charge precursor m/z)\n</body>:;
-#     $chromavis_html =~ s:</body>:<br>Spectrum file\: $mzml_pathname\n</body>:;
-#     if ($precursor_rt) {
-#       $precursor_rt = sprintf "%0.3f", $precursor_rt;
-#       $chromavis_html =~ s:</body>:<br>Precursor RT\: $precursor_rt\n</body>:;
-#     }
-#     if ($m_score) {
-#       $best_peak_group_rt = sprintf "%0.3f", $best_peak_group_rt;
-#       $chromavis_html =~ s:</body>:<br>mProphet best peakgroup RT\: $best_peak_group_rt\n</body>:;
-#       $m_score = sprintf "%0.3f", $m_score;
-#       $chromavis_html =~ s:</body>:<br>mProphet m_score\: $m_score\n</body>:;
-#     }
-#-------------------------------------------------- 
 
     return $chromavis_html;
 }

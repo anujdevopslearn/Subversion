@@ -198,7 +198,7 @@ my $transdata_href = $loader->read_transition_list(
   debug => $DEBUG,
 );
 
-### Store mquest/mprophet scores in transdata hash
+### Transfer mquest/mprophet scores into transdata hash
 if ($mpro_href) {
   $loader->store_mprophet_scores_in_transition_hash (
     spec_file_basename => $spec_file_basename,

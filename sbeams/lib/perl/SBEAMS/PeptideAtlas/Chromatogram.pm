@@ -128,7 +128,8 @@ sub getChromatogramParameters{
 	   SELE.experiment_title,
 	   SELPI.is_decoy,
 	   SELPI.monoisotopic_peptide_mass,
-	   SELPI.q1_mz as calculated_q1_mz
+	   SELPI.q1_mz as calculated_q1_mz,
+	   SELTG.isotype_delta_mass
       FROM $TBAT_SEL_CHROMATOGRAM SELC
       JOIN $TBAT_SEL_TRANSITION_GROUP SELTG
 	   ON ( SELTG.SEL_transition_group_id = SELC.SEL_transition_group_id )
@@ -173,6 +174,7 @@ sub getChromatogramParameters{
   $param_href->{'is_decoy'} = $results_aref->[16];
   $param_href->{'monoisotopic_peptide_mass'} = $results_aref->[17];
   $param_href->{'calculated_q1'} = $results_aref->[18];
+  $param_href->{'isotype_delta_mass'} = $results_aref->[19];
 
       # Create a string describing this transition group.
       sub getTransitionInfo {
@@ -211,7 +213,7 @@ sub getNewChromatogramFilename {
 }
 
 ###############################################################################
-# writeJsonFile
+# writeJsonFile  -- deprecated
 ###############################################################################
 sub writeJsonFile {
   my $self = shift;
@@ -233,8 +235,8 @@ sub mzML2json {
   my %args = @_;
   my $param_href = $args{param_href};    # describes desired chromatogram
 
-	my $pepseq = $args{	pepseq};
-	my $mass = $args{ mass};
+	my $pepseq = $args{pepseq};
+	my $mass = $args{mass};
 	my $charge = $args{charge};
 	my $isotype = $args{isotype};
 	my $is_decoy = $args{is_decoy};
@@ -245,16 +247,75 @@ sub mzML2json {
   my $rt = $param_href->{rt} || $param_href->{Tr} || 0;
   my $target_q1 = $param_href->{q1};
   my $tx_info = $param_href->{transition_info};
+  #DEBUG
+  print "<!-- target_q1 is $target_q1 -->\n";
+  print "<!-- tx_info is $tx_info -->\n";
+  my $isotype_delta_mass = $param_href->{isotype_delta_mass};
 
   my $count = 0;
   my $tol = 0.005;
+
+
+#--------------------------------------------------
+#   #-------------------------------------------
+#   # below is code to make the next code work
+#   my $precursor_neutral_mass = $mass;
+#   my $spectrum_pathname = $param_href->{spectrum_pathname};
+#   #-------------------------------------------
+#   # below is stolen from mzML2json_using_PCE
+#   # Get charge 2, 3 Q1 values for this peptide.
+#   my $q1_charge3 = $precursor_neutral_mass / 3 + 1.00727638;
+#   my $q1_charge2 = $precursor_neutral_mass / 2 + 1.00727638;
+# 
+#   # Get the Q3 for all transitions for this peptide. 
+#   # Open mzML file for reading
+#   open(MZML, $spectrum_pathname) || print "<p>Can't open mzML file $spectrum_pathname.</p>\n";
+# 
+#   my $line;
+#   # Look for <index name="chromatogram"
+#   while ($line = <MZML>) {
+#     last if ($line =~ /<index name="chromatogram"/);
+#   }
+#   # Look for Q1=xxxxx Q3=xxxx
+#   # If Q1 within 0.01 of desired, save exact value plus Q3 value
+#   my $q3;
+#   my (@q1_list, @q3_list, @charge_list);
+#   my $tolerance = 0.01;
+#   while ($line = <MZML>) {
+#     if ($line =~ /Q1=(\S+) Q3=(\S+)/) {
+#       my $this_q1 = $1; my $this_q3 = $2;
+#       # CLEANUP
+#       if (abs($this_q1-$q1_charge2) < $tolerance) {
+# 	push (@q1_list, $this_q1);
+# 	push (@q3_list, $this_q3);
+# 	push (@charge_list, 2);
+#       } elsif (abs($this_q1-$q1_charge3) < $tolerance) {
+# 	push (@q1_list, $this_q1);
+# 	push (@q3_list, $this_q3);
+# 	push (@charge_list, 3);
+#       }
+#     }
+#   }
+#   close MZML;
+#   # end of code stolen from mzML2json_using_PCE
+#   #-------------------------------------------
+#   # code below makes code above work
+#   # need string with q3_mz,frg_ion,relative_intensity,
+#   my $alt_tx_info = '';
+#   for $q3 (@q3_list) {
+#     $alt_tx_info .= "$q3,,,";
+#   }
+#   $tx_info = $alt_tx_info;
+#   # end of code to make code above work
+#   #-------------------------------------------
+#-------------------------------------------------- 
 
   # Read scans for $q1 into a hash
   my $traces_href = mzML2traces(
     spectrum_pathname => $param_href->{spectrum_pathname},
     target_q1 => $target_q1,
     tol => $tol,
-    tx_info => $tx_info,
+    tx_info => $tx_info,    #optional
   );
 
   # Unpack and store the transition info string, if provided
@@ -270,6 +331,7 @@ sub mzML2json {
 		tx_info => $tx_info,
 		pepseq => $pepseq,
 		mass => $mass,
+		isotype_delta_mass => $isotype_delta_mass,
 		charge => $charge,
 		isotype => $isotype,
 		is_decoy => $is_decoy,
@@ -299,6 +361,7 @@ sub mzXML2json {
   my $rt = $param_href->{rt} || $param_href->{Tr} || 0;
   my $target_q1 = $param_href->{q1};
   my $tx_info = $param_href->{transition_info};
+  my $isotype_delta_mass = $param_href->{isotype_delta_mass};
 
   my $count = 0;
   my $tol = 0.005;
@@ -308,7 +371,7 @@ sub mzXML2json {
     spectrum_pathname => $param_href->{spectrum_pathname},
     target_q1 => $target_q1,
     tol => $tol,
-    tx_info => $tx_info,
+    tx_info => $tx_info,    #optional
   );
   my %traces = %{$traces_href};
 
@@ -327,6 +390,7 @@ sub mzXML2json {
 		tx_info => $tx_info,
 		pepseq => $pepseq,
 		mass => $mass,
+		isotype_delta_mass => $isotype_delta_mass,
 		charge => $charge,
 		isotype => $isotype,
 		is_decoy => $is_decoy,
@@ -351,9 +415,17 @@ sub mzML2traces {
 	my $spectrum_pathname = $args{spectrum_pathname};
 	my $target_q1 = $args{target_q1};
 	my $tol = $args{tol};
-	my $tx_info = $args{tx_info};
+	my $tx_info = $args{tx_info} || '';
 
 	my %traces;
+  #DEBUG
+  $tol = 0.05;
+  print "\n<!-- mzML2traces -->\n";
+  print "<!-- tol is $tol -->\n";
+  print "<!-- spectrum_pathname is $spectrum_pathname -->\n";
+  print "<!-- target_q1 is $target_q1 -->\n";
+  print "<!-- tx_info is $tx_info -->\n";
+
 
 	my $mzMLtree    = XML::TreeBuilder->new();
 	$mzMLtree->parse_file($spectrum_pathname) || die
@@ -372,10 +444,13 @@ sub mzML2traces {
 		if (($id =~
 				/.*SRM.*\s+Q1=(\S+)\s+Q3=(\S+)\s+sample=(\S+)\s+period=(\S+)\s+experiment=(\S+)\s+transition=(\S+)/) #QTRAP data from Cima and Ralph Scheiss
 			||
+			($id =~ /SRM SIC Q1=(\S+) Q3=(\S+)/) #QQQ data from SRMAtlas
+			||
 			($id =~ /SRM SIC (\S+),(\S+)/) )   #TSQ data from Nathalie
 		{
 			$q1 = $1;
 			$q3 = $2;
+			print "<!-- Q1 $q1  Q3 $q3 -->\n";
 			$sample = $3;
 			$period = $4;
 			$experiment = $5;
@@ -447,7 +522,7 @@ sub mzXML2traces {
   my $spectrum_pathname = $args{spectrum_pathname};
   my $target_q1 = $args{target_q1};
   my $tol = $args{tol};
-  my $tx_info = $args{tx_info};
+  my $tx_info = $args{tx_info} || '';
 
   my ($scan, $time, $q1, $q3, $intensity);
   my (%traces, $intensity_aref);
@@ -521,6 +596,7 @@ sub traces2json {
 	my $mass = sprintf "%0.4f", $args{ mass};
 	my $charge = $args{charge};
 	my $isotype = $args{isotype};
+	my $isotype_delta_mass = $args{isotype_delta_mass};
 	my $is_decoy = $args{is_decoy};
 	my $experiment = $args{experiment};
 	my $spectrum_file = $args{spectrum_file};
@@ -531,6 +607,15 @@ sub traces2json {
 	my %traces = %{$traces_href};
 	my $rt = $args{rt};
   my $tx_info = $args{tx_info};
+
+  #DEBUG
+  print "\n<!-- traces2json -->\n";
+  print "<!-- pepseq is $pepseq -->\n";
+  print "<!-- mass is $mass -->\n";
+  print "<!-- charge is $charge -->\n";
+  print "<!-- isotype is $isotype -->\n";
+  print "<!-- spectrum_file is $spectrum_file -->\n";
+  print "<!-- tx_info is $tx_info -->\n";
 
   my $json_string = '{';
 
@@ -580,13 +665,14 @@ sub traces2json {
 	$json_string .= qq~
 		, info: [ {
 			pepseq: "$pepseq",
-			mass: $mass,
-			charge: $charge,
+			mass: "$mass",
+			charge: "$charge",
 			isotype: "$isotype",
+			isotype_delta_mass: "$isotype_delta_mass",
 			is_decoy: "$is_decoy",
 			experiment: "$experiment",
 			spectrum_file: "$spectrum_file",
-			chromatogram_id: $chromatogram_id,
+			chromatogram_id: "$chromatogram_id",
 		 } ]
 	~;
 
@@ -700,8 +786,8 @@ sub mzML2json_using_PCE {
   my $physical_tmp_dir = $args{physical_tmp_dir};
   my $chromgram_basename = $args{chromgram_basename};
 
-	my $pepseq = $args{	pepseq};
-	my $mass = $args{ mass};
+	my $pepseq = $args{pepseq};
+	my $mass = $args{mass};
 	my $charge = $args{charge};
 	my $isotype = $args{isotype};
 	my $is_decoy = $args{decoy};
@@ -941,7 +1027,10 @@ sub getTopHTMLforChromatogramViewer {
   $top_html .= " DECOY" if $param_href->{is_decoy} eq 'Y';
   $top_html .= " <b>$seq</b></big> ";
   if ($param_href->{monoisotopic_peptide_mass}) {
-    my $mpm_s = sprintf "%0.3f", $param_href->{monoisotopic_peptide_mass};
+    my $mass = $param_href->{monoisotopic_peptide_mass};
+    $mass += $param_href->{isotype_delta_mass}
+       if ($param_href->{isotype_delta_mass});
+    my $mpm_s = sprintf "%0.3f", $mass;
     $top_html .= "($mpm_s Daltons) </b>\n";
   }
   $top_html .= "<b><big>+$precursor_charge, $param_href->{isotype}</big></b>\n";
@@ -981,13 +1070,15 @@ sub readJsonChromatogramIntoResultsetHash {
   my @chromatogram_array = ();
 
   my @json_lines;
-  if (! $json_string ) {
+  # If a string is provided, use it. Otherwise, try opening the file.
+  # Best to pass in a string, though.
+  if ( $json_string ) {
+    @json_lines = split("\n", $json_string); 
+  } else {
     open (JSON, $json_physical_pathname) ||
     die "Can't open .json file $json_physical_pathname";
     @json_lines = <JSON>;
     close JSON;
-  } else {
-    @json_lines = split("\n", $json_string); 
   }
   my ($trace_num, $time, $q1, $q3, $intensity);
   $trace_num = 0;
@@ -1035,6 +1126,103 @@ sub getBottomHTMLforChromatogramViewer {
   return $bottom_html;
 }
 
+###############################################################################
+# getTransitionGroupInfo_from_sptxt  11/30/11: it works!!! Nabbed from Eric's
+#  /net/db/projects/spectraComparison/FragmentationComparator.pm
+###############################################################################
+sub getTransitionGroupInfo_from_sptxt {
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+  my $pepseq = $args{pepseq};
+  my $charge = $args{charge};
+  my $sptxt_pathname = $args{sptxt_pathname};
+  my $target_peptideIon = $pepseq . "/" . $charge;
+
+  my $q1;
+  my $transition_info = '';
+
+  my $forceCysToAlkylate = 1;
+
+  open(INFILE,$sptxt_pathname)
+     || die("ERROR: Cannot open file '$sptxt_pathname'");
+  my $line;
+  my $peptideIon;
+  my $is_match = 0;
+  my $nMatches = 0;
+  my $comment;
+  my %info;
+  while ($line = <INFILE>) {
+    $line =~ s/\r\n//g;
+    next if ($line =~ /^#/);
+    if ($line =~ /^Name: (.+)/) {
+      $peptideIon = $1;
+
+      #### Hack to work around non-alkylation
+      if ( $forceCysToAlkylate && $peptideIon =~ /C[A-Z]/ ) {
+	$peptideIon =~ s/C/C[160]/g;
+      }
+
+      # Check stripped pepseq, also. ?
+      $is_match = ($peptideIon eq $target_peptideIon);
+      print "<!-- target $target_peptideIon -->\n" if $is_match;
+
+    }
+    if ($is_match) {
+      if ($line =~ /^PrecursorMZ: (.+)/i) {
+	$q1 = $1;
+      }
+      if ($line =~ /^NumPeaks: (.+)/) {
+	my $nPeaks = $1;
+	for (my $i=0; $i< $nPeaks; $i++) {
+	  $line = <INFILE>;
+	  my ($mz,$int,$explanations) = split(/\s+/,$line);
+
+	  if ($explanations =~ /^([by])(\d+)([-\d]*)(\^\d)*\/([-\.\d]+)/) {
+	    my $variance = $5;
+	    #if (abs($variance) <= $matchTolerance) {
+	    my $series = $1;
+	    my $ordinal = $2;
+
+	    #### Handle the neutral loss if present
+	    my $neutralLoss = $3;
+	    if (!defined($neutralLoss) || $neutralLoss eq '') {
+	      $neutralLoss = 0;
+	    } else {
+	    }
+
+	    #### Handle the option charge designation
+	    my $fragmentCharge = $4;
+	    if (!defined($fragmentCharge)) {
+	      $fragmentCharge = 1;
+	    } else {
+	      $fragmentCharge =~ s/\^//;
+	    }
+
+	    my @tmp;
+	    #### For now, ignore neutral losses until we're ready to
+	    #### handle them everywhere
+	    if ($neutralLoss) {
+	    } else {
+	      # is this the correct format?
+	      $transition_info .= "$mz,$series$ordinal+$fragmentCharge,,";
+	    }
+
+	    #}
+	  } else {
+	    $transition_info .= "$mz,,,";
+	  }
+	}
+	$nMatches++;
+      }
+    }
+  }
+
+  die "$nMatches matches for $peptideIon in $sptxt_pathname! Last one used."
+    if ($nMatches > 1);
+
+  close(INFILE);
+  return($q1, $transition_info);
+}
 
 ###############################################################################
 =head1 BUGS

@@ -14,7 +14,7 @@ use strict;
 use Getopt::Long;
 use FindBin;
 use lib "$FindBin::Bin";
-use lib "/net/db/projects/PeptideAtlas/pipeline/lib/ensembl-57/modules";
+use lib "/net/db/projects/PeptideAtlas/pipeline/lib/ensembl-64/modules";
 use lib "/net/db/projects/PeptideAtlas/pipeline/bin";
 
 use PeptideFilesGenerator;

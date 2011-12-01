@@ -1337,6 +1337,7 @@ var sampleClass = function(settings){
 			details += common.checkIfExists(data.taxonomy)? "<h3>Organism</h3><div id='box'>"+org+"</div>" : '';	
 
 */
+			details += common.checkIfExists(data.datasetIdentifier)? '<h3><a href="http://www.peptideatlas.org/PASS/'+data.datasetIdentifier+'">Download raw data and supporting files</a></h3>' : '';				
 			details += common.checkIfExists(data.description)? "<h3>Description</h3><div id='box'>"+common.print_array(data.description)+"</div>" : '';	
 			details += common.checkIfExists(data.contact)? "<h3>Comment</h3><div id='box'>"+data.comment+"</div>" : '';
 		
@@ -1474,6 +1475,7 @@ var sampleClass = function(settings){
 	  { name: 'public' },
 	  { name: 'sampletag' },
 	  { name: 'experiment_title'},
+	  { name: 'datasetIdentifier'},
 	  { name: 'taxonomy' },
 	  { name: 'data_path' },
 	  { name: 'description' },

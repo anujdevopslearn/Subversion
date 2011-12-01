@@ -487,6 +487,7 @@ sub handle_request {
    ["d_score","STR(SELTG.d_score,7,4)", "d_score"],
    ["m_score","STR(SELTG.m_score,7,4)", "m_score"],
    ["log10_max_apex_intensity","STR(SELTG.max_apex_intensity,7,4)", "Log Max Apex Intens"],
+   ["light_heavy_ratio_maxapex","STR(SELTG.light_heavy_ratio_maxapex,7,4)", "Ratio Vs Heavy Max Apex"],
    ["S_N","STR(SELTG.S_N,7,4)", "S/N"],
    ["isotype","SELTG.isotype","Isotype"],
    #["protein_name","SELTG.experiment_protein_name","Expt Protein Name"],
@@ -560,6 +561,7 @@ sub handle_request {
              SELTG.m_score,
              SELTG.S_N,
              SELTG.max_apex_intensity,
+             SELTG.light_heavy_ratio_maxapex,
              SELR.spectrum_filename,
              SELE.experiment_title,
 	     I.instrument_name
@@ -584,6 +586,7 @@ sub handle_request {
              SELTG.m_score,
              SELTG.S_N,
              SELTG.max_apex_intensity,
+             SELTG.light_heavy_ratio_maxapex,
              SELR.spectrum_filename,
              SELE.experiment_title,
 	     I.instrument_name
@@ -646,9 +649,6 @@ sub handle_request {
   }
   
   $sql .="ORDER BY SELTG.stripped_peptide_sequence";
-
-  # debugging, when ShowSQL didn't work
-  #print $sql if ($sbeams->output_mode() eq 'html');
 
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
@@ -821,24 +821,26 @@ sub handle_request {
     );
 
     #### Display a future chromatogram!
+    if ( $sbeams->output_mode() eq 'html' ) {
     my $chromavis_tab = '';
     $chromavis_tab .=
       $sbeams->addTabbedPane(
 	label=>'ChromaVis',
       );
 
-# Read the HTML code for the viewer from a template file.
-open(HTML,
-  "${PHYSICAL_BASE_DIR}/usr/javascript/chromavis/js/master_ajax.html");
-my @chromavis_html = <HTML>;
-my $chromavis_html = join('', @chromavis_html);
+      # Read the HTML code for the viewer from a template file.
+      open(HTML,
+	"${PHYSICAL_BASE_DIR}/usr/javascript/chromavis/js/master_ajax.html");
+      my @chromavis_html = <HTML>;
+      my $chromavis_html = join('', @chromavis_html);
 
-    $chromavis_tab .= $chromavis_html;
-    $chromavis_tab .=
+      $chromavis_tab .= $chromavis_html;
+      $chromavis_tab .=
       $sbeams->closeTabbedPane(
 	selected=>'0',
       );
-    print $chromavis_tab;
+      print $chromavis_tab;
+    }
 
 
     #### Display a plot of data from the resultset

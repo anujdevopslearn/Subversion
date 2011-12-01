@@ -99,7 +99,8 @@ sub processRequest {
     $cgram->setSBEAMS($sbeams);
 
     # Get all necessary info from database using chromatogram_id, if
-    # provided. Else, we assume info was passed in via parameters.
+    # provided. Else, we assume info was passed in via parameters or that we
+    # can get it from an .sptxt file.
     if ( $parameters{'SEL_chromatogram_id'} ) {
       $cgram->getChromatogramParameters(
 	SEL_chromatogram_id => $parameters{'SEL_chromatogram_id'},
@@ -114,31 +115,53 @@ sub processRequest {
     my $spectrum_pathname = $parameters{'spectrum_pathname'} ||
 	  die 'ShowChromatogram; Need parameter spectrum_pathname';
     my $spectrum_basename = $parameters{'spectrum_basename'};
+    $spectrum_pathname =~ /.*(\..*)/; my $filename_extension = $1;
     if (! $spectrum_basename ) {
-      $spectrum_pathname =~ /.*\/(\S+?)\.mzML/;
+      $spectrum_pathname =~ /.*\/(\S+?)\.${filename_extension}/;
       $spectrum_basename = $1;
     }
     my $precursor_neutral_mass = $parameters{'precursor_neutral_mass'};
+    if ($parameters{'isotype'} =~ /heavy/i) {    # tested; works.
+      $precursor_neutral_mass += $parameters{'isotype_delta_mass'};
+    }
+    my $machine = $parameters{'machine'};
 
+    if (! ( defined $parameters{transition_info} && defined $parameters{q1}) ) {
+	# see if there is an sptxt file to go with the spectrum_pathname
+	my $sptxt_pathname = $spectrum_pathname;
+	$sptxt_pathname =~ s/${filename_extension}/\.sptxt/ ;
+	if (-e $sptxt_pathname) {
+	  ($parameters{'q1'},$parameters{'transition_info'}) =
+	    $cgram->getTransitionGroupInfo_from_sptxt (
+	      pepseq => $pepseq,
+	      charge => $precursor_charge,
+	      sptxt_pathname => $sptxt_pathname,
+	    );
+	} else {
+	  die "Cannot find transition info. Must provide PASSEL SEL_chromatogram_id, OR spectrum_pathname for an mzML that has an .sptxt file of same name, OR q1 param and  transition_info param with format Q3,ion,rel_intens,Q3,ion,rel_intens, ...";
+	}
+      }
 
 
     #### Extract chromatogram data from spectrum file
-    ####  into a json data structure and store in a .json file
+    ####  into a json data structure
 
+#--------------------------------------------------
+    # DELETE IN JAN 2012 IF ALL IS WELL
     # Create a descriptive, unique filename for the chromatogram data
-    my $chromgram_basename = $cgram->getNewChromatogramFilename(
-      spectrum_basename => $spectrum_basename,
-      pepseq => $pepseq,
-    );
-
-    # Create names for .json file
-    # $PHYSICAL_BASE_DIR/tmp somehow doesn't work, so we use images/tmp
-    my $physical_tmp_dir = "$PHYSICAL_BASE_DIR/images/tmp";
-    my $html_tmp_dir = "$HTML_BASE_DIR/images/tmp";
-    my $json_fname = "$chromgram_basename.json";
-    $parameters{'chromatogram_fname'} = $json_fname;
-    my $json_html_pathname = "$html_tmp_dir/$json_fname";
-    my $json_physical_pathname = "$physical_tmp_dir/$json_fname";
+#     my $chromgram_basename = $cgram->getNewChromatogramFilename(
+#       spectrum_basename => $spectrum_basename,
+#       pepseq => $pepseq,
+#     );
+# 
+#     # Create names for .json file
+#     # $PHYSICAL_BASE_DIR/tmp somehow doesn't work, so we use images/tmp
+#     my $physical_tmp_dir = "$PHYSICAL_BASE_DIR/images/tmp";
+#     my $html_tmp_dir = "$HTML_BASE_DIR/images/tmp";
+#     my $json_fname = "$chromgram_basename.json";
+#     $parameters{'chromatogram_fname'} = $json_fname;
+#     my $json_physical_pathname = "$physical_tmp_dir/$json_fname";
+#-------------------------------------------------- 
 
     # Create .json string by reading spectrum file
     my $json_string;
@@ -146,14 +169,15 @@ sub processRequest {
 	    $spectrum_pathname =~ /.mzML$/)  {
       $json_string = $cgram->mzML2json(
 	param_href => \%parameters,
-	json_physical_pathname => $json_physical_pathname,
-	physical_tmp_dir => $physical_tmp_dir,
-	chromgram_basename => $chromgram_basename,
+    # DELETE IN JAN 2012 IF ALL IS WELL
+	#json_physical_pathname => $json_physical_pathname,
+	#physical_tmp_dir => $physical_tmp_dir,
+	#chromgram_basename => $chromgram_basename,
       );
     } elsif ($spectrum_pathname =~ /.mzXML$/)  {
       $json_string = $cgram->mzXML2json (
 	param_href => \%parameters,
-	json_physical_pathname => $json_physical_pathname,
+	#json_physical_pathname => $json_physical_pathname,
       );
     } else {
       die "Need spectrum file with .mzML OR .mzXML extension ".
@@ -161,6 +185,7 @@ sub processRequest {
     }
 
 #--------------------------------------------------
+    # DELETE IN JAN 2012 IF ALL IS WELL
 #     # Write .json string to file
 #     $cgram->writeJsonFile (
 #       json_string => $json_string,
@@ -192,7 +217,6 @@ sub processRequest {
     my $chromavis = new SBEAMS::Proteomics::ChromatogramViewer;
     print $chromavis->generateChromatogram(
               chromatogram_id => $parameters{'SEL_chromatogram_id'},
-	      chromatogram_pathname => $json_html_pathname,
               spectrum_pathname         => $spectrum_pathname,
               precursor_neutral_mass=> $precursor_neutral_mass,
               precursor_charge      => $precursor_charge,
@@ -200,6 +224,7 @@ sub processRequest {
               precursor_rt          => $parameters{rt},
               best_peak_group_rt    => $parameters{Tr},
               m_score               => $parameters{m_score},
+	      json_string           => $json_string,
 	  );
 
     # Read the data from the JSON object into a hash of the
@@ -212,7 +237,8 @@ sub processRequest {
 
     # Store chromatogram data as a recallable resultset
     my $rs_set_name = "SETME";
-    $sbeams->writeResultSet(resultset_file_ref=>\$rs_set_name,
+    $sbeams->writeResultSet(
+      resultset_file_ref=>\$rs_set_name,
       resultset_ref=>$cgram_href,
       file_prefix=>'chromgram_',
       query_parameters_ref=>\%parameters);

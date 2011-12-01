@@ -52,7 +52,7 @@ Options:
   --number N                  Map peptides for experiment N.
   --glyco                     Glycocapture. D's replace N's in NX[ST].
  
- e.g.:  $PROG_NAME --num 4
+ e.g.:  $PROG_NAME --verbose 3 --debug 1 --num 4 --glyco
 
 EOU
 
