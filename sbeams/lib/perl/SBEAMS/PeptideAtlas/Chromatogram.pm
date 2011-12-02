@@ -228,90 +228,52 @@ sub writeJsonFile {
 }
 
 ###############################################################################
-# mzML2json - Create a .json string representing a given chromatogram
+# specfile2json - Create a .json string representing a given chromatogram
 ###############################################################################
-sub mzML2json {
+sub specfile2json {
   my $self = shift;
   my %args = @_;
   my $param_href = $args{param_href};    # describes desired chromatogram
 
-	my $pepseq = $args{pepseq};
-	my $mass = $args{mass};
-	my $charge = $args{charge};
-	my $isotype = $args{isotype};
-	my $is_decoy = $args{is_decoy};
-	my $experiment = $args{experiment};
-	my $spectrum_file = $args{spectrum_file};
-	my $chromatogram_id = $args{chromatogram_id};
+  my $pepseq = $args{pepseq};
+  my $mass = $args{mass};
+  my $charge = $args{charge};
+  my $isotype = $args{isotype};
+  my $is_decoy = $args{is_decoy};
+  my $experiment = $args{experiment};
+  my $spectrum_file = $args{spectrum_file};
+  my $chromatogram_id = $args{chromatogram_id};
 
   my $rt = $param_href->{rt} || $param_href->{Tr} || 0;
   my $target_q1 = $param_href->{q1};
   my $tx_info = $param_href->{transition_info};
-  #DEBUG
-  print "<!-- target_q1 is $target_q1 -->\n";
-  print "<!-- tx_info is $tx_info -->\n";
   my $isotype_delta_mass = $param_href->{isotype_delta_mass};
+  #DEBUG
+  #print "<!-- target_q1 is $target_q1 -->\n";
+  #print "<!-- tx_info is $tx_info -->\n";
 
   my $count = 0;
   my $tol = 0.005;
+  my $proton_mass = 1.00727638;
 
-
-#--------------------------------------------------
-#   #-------------------------------------------
-#   # below is code to make the next code work
-#   my $precursor_neutral_mass = $mass;
-#   my $spectrum_pathname = $param_href->{spectrum_pathname};
-#   #-------------------------------------------
-#   # below is stolen from mzML2json_using_PCE
-#   # Get charge 2, 3 Q1 values for this peptide.
-#   my $q1_charge3 = $precursor_neutral_mass / 3 + 1.00727638;
-#   my $q1_charge2 = $precursor_neutral_mass / 2 + 1.00727638;
-# 
-#   # Get the Q3 for all transitions for this peptide. 
-#   # Open mzML file for reading
-#   open(MZML, $spectrum_pathname) || print "<p>Can't open mzML file $spectrum_pathname.</p>\n";
-# 
-#   my $line;
-#   # Look for <index name="chromatogram"
-#   while ($line = <MZML>) {
-#     last if ($line =~ /<index name="chromatogram"/);
-#   }
-#   # Look for Q1=xxxxx Q3=xxxx
-#   # If Q1 within 0.01 of desired, save exact value plus Q3 value
-#   my $q3;
-#   my (@q1_list, @q3_list, @charge_list);
-#   my $tolerance = 0.01;
-#   while ($line = <MZML>) {
-#     if ($line =~ /Q1=(\S+) Q3=(\S+)/) {
-#       my $this_q1 = $1; my $this_q3 = $2;
-#       # CLEANUP
-#       if (abs($this_q1-$q1_charge2) < $tolerance) {
-# 	push (@q1_list, $this_q1);
-# 	push (@q3_list, $this_q3);
-# 	push (@charge_list, 2);
-#       } elsif (abs($this_q1-$q1_charge3) < $tolerance) {
-# 	push (@q1_list, $this_q1);
-# 	push (@q3_list, $this_q3);
-# 	push (@charge_list, 3);
-#       }
-#     }
-#   }
-#   close MZML;
-#   # end of code stolen from mzML2json_using_PCE
-#   #-------------------------------------------
-#   # code below makes code above work
-#   # need string with q3_mz,frg_ion,relative_intensity,
-#   my $alt_tx_info = '';
-#   for $q3 (@q3_list) {
-#     $alt_tx_info .= "$q3,,,";
-#   }
-#   $tx_info = $alt_tx_info;
-#   # end of code to make code above work
-#   #-------------------------------------------
-#-------------------------------------------------- 
+  # Calculate Q1 if not given
+  if (! defined $target_q1) {
+    if ( defined $mass) {
+      if ( defined $charge) {
+	$target_q1 = $mass / $charge + $proton_mass;
+      } else {
+	# Get charge 2, 3 Q1 values for this peptide.
+	my $q1_charge3 = $mass / 3 + $proton_mass;
+	my $q1_charge2 = $mass / 2 + $proton_mass;
+	die "Currently need Q1, pepseq + charge, or precursor_neutral_mass + charge. To be implemented: display +2 and/or +3 if no charge given.";
+      }
+    } else {
+      die "Need Q1, pepseq, or precursor_neutral_mass";
+    }
+  }
 
   # Read scans for $q1 into a hash
-  my $traces_href = mzML2traces(
+  my $traces_href = specfile2traces(
     spectrum_pathname => $param_href->{spectrum_pathname},
     target_q1 => $target_q1,
     tol => $tol,
@@ -319,86 +281,61 @@ sub mzML2json {
   );
 
   # Unpack and store the transition info string, if provided
-	store_tx_info_in_traces_hash (
-		tx_info => $tx_info,
-		traces_href => $traces_href,
-	) if ($tx_info);
+  store_tx_info_in_traces_hash (
+    tx_info => $tx_info,
+    traces_href => $traces_href,
+  ) if ($tx_info);
 
   # Create and return .json string.
   return traces2json(
-		traces_href => $traces_href,
-		rt => $rt,
-		tx_info => $tx_info,
-		pepseq => $pepseq,
-		mass => $mass,
-		isotype_delta_mass => $isotype_delta_mass,
-		charge => $charge,
-		isotype => $isotype,
-		is_decoy => $is_decoy,
-		experiment => $experiment,
-		spectrum_file => $spectrum_file,
-		chromatogram_id => $chromatogram_id,
+    traces_href => $traces_href,
+    rt => $rt,
+    tx_info => $tx_info,
+    pepseq => $pepseq,
+    mass => $mass,
+    isotype_delta_mass => $isotype_delta_mass,
+    charge => $charge,
+    isotype => $isotype,
+    is_decoy => $is_decoy,
+    experiment => $experiment,
+    spectrum_file => $spectrum_file,
+    chromatogram_id => $chromatogram_id,
   );
 }
 
+
 ###############################################################################
-# mzXML2json - Create a .json string representing a given chromatogram
+# specfile2traces
+# Read the chromatograms for a particular peptide from an spectrum file
+#  and store  the time & intensity information in a hash.
 ###############################################################################
-sub mzXML2json {
-  my $self = shift;
+sub specfile2traces {
+
   my %args = @_;
-  my $param_href = $args{param_href};    # describes desired chromatogram
+  my $spectrum_pathname = $args{spectrum_pathname};
+  my $target_q1 = $args{target_q1};
+  my $q1_tol = $args{tol};
+  my $tx_info = $args{tx_info} || '';
 
-	my $pepseq = $args{	pepseq};
-	my $mass = $args{ mass};
-	my $charge = $args{charge};
-	my $isotype = $args{isotype};
-	my $is_decoy = $args{is_decoy};
-	my $experiment = $args{experiment};
-	my $spectrum_file = $args{spectrum_file};
-	my $chromatogram_id = $args{chromatogram_id};
-
-  my $rt = $param_href->{rt} || $param_href->{Tr} || 0;
-  my $target_q1 = $param_href->{q1};
-  my $tx_info = $param_href->{transition_info};
-  my $isotype_delta_mass = $param_href->{isotype_delta_mass};
-
-  my $count = 0;
-  my $tol = 0.005;
-
-  # Read scans for $q1 into a hash
-  my $traces_href = mzXML2traces(
-    spectrum_pathname => $param_href->{spectrum_pathname},
-    target_q1 => $target_q1,
-    tol => $tol,
-    tx_info => $tx_info,    #optional
-  );
-  my %traces = %{$traces_href};
-
-  # Unpack and store the transition info string, if provided
-  if ($tx_info) {
-    store_tx_info_in_traces_hash (
+  my $traces_href;
+  if ($spectrum_pathname =~ /\.mzML/) {
+    $traces_href = mzML2traces(
+      spectrum_pathname => $spectrum_pathname,
+      target_q1 => $target_q1,
+      tol => $q1_tol,
       tx_info => $tx_info,
-      traces_href => \%traces,
     );
+  } elsif ($spectrum_pathname =~ /\.mzXML/) {
+    $traces_href = mzXML2traces(
+      spectrum_pathname => $spectrum_pathname,
+      target_q1 => $target_q1,
+      tol => $q1_tol,
+      tx_info => $tx_info,
+    );
+  } else {
+    die "$spectrum_pathname: unknown filetype (.mzML, .mzXML recognized)";
   }
-
-  # Create .json string.
-  my $json_string = traces2json(
-    traces_href => \%traces,
-    rt => $rt,
-		tx_info => $tx_info,
-		pepseq => $pepseq,
-		mass => $mass,
-		isotype_delta_mass => $isotype_delta_mass,
-		charge => $charge,
-		isotype => $isotype,
-		is_decoy => $is_decoy,
-		experiment => $experiment,
-		spectrum_file => $spectrum_file,
-		chromatogram_id => $chromatogram_id,
-  );
-  return $json_string;
+  return $traces_href;
 }
 
 ###############################################################################
@@ -408,107 +345,161 @@ sub mzXML2json {
 ###############################################################################
 sub mzML2traces {
 
-	use XML::TreeBuilder;
-	use XML::Writer; 
+  use XML::TreeBuilder;
+  use XML::Writer; 
 
-	my %args = @_;
-	my $spectrum_pathname = $args{spectrum_pathname};
-	my $target_q1 = $args{target_q1};
-	my $tol = $args{tol};
-	my $tx_info = $args{tx_info} || '';
+  my %args = @_;
+  my $spectrum_pathname = $args{spectrum_pathname};
+  my $target_q1 = $args{target_q1};
+  my $q1_tol = $args{tol};
+  my $tx_info = $args{tx_info} || '';
 
-	my %traces;
+  my %traces;
+  my $q3_tol = 0.05;
   #DEBUG
-  $tol = 0.05;
-  print "\n<!-- mzML2traces -->\n";
-  print "<!-- tol is $tol -->\n";
-  print "<!-- spectrum_pathname is $spectrum_pathname -->\n";
-  print "<!-- target_q1 is $target_q1 -->\n";
-  print "<!-- tx_info is $tx_info -->\n";
+  $q1_tol = 0.05;
+  #print "\n<!-- mzML2traces -->\n";
+  #print "<!-- q1_tol is $q1_tol -->\n";
+  #print "<!-- q3_tol is $q3_tol -->\n";
+  #print "<!-- spectrum_pathname is $spectrum_pathname -->\n";
+  #print "<!-- target_q1 is $target_q1 -->\n";
+  #print "<!-- tx_info is $tx_info -->\n";
+
+  # Extract lists of Q3, fragment ions, from tx_info string, which is in form
+  # Q3,ion,rel_intensity,Q3,ion,rel_intensity, ...
+  my @q3_array;
+  my @frg_ion_array;
+  my @q3_found_array;
+  my @tx_info_elements = split(",",$tx_info);
+  my $n = scalar @tx_info_elements;
+  for (my $i=0; $i < $n; $i +=3) {
+    push (@q3_array, $tx_info_elements[$i]);
+    push (@frg_ion_array, $tx_info_elements[$i+1]);
+  }
+  my $n_q3 = $n/3;
+
+  my $mzMLtree    = XML::TreeBuilder->new();
+  $mzMLtree->parse_file($spectrum_pathname) || die
+  "Couldn't parse $spectrum_pathname";
+  my @allcgrams = $mzMLtree->find_by_tag_name('chromatogram');
+  my @alloffsets = $mzMLtree->find_by_tag_name('offset');
+  my $ncgrams = scalar (@allcgrams);
+  my $noffsets = scalar (@alloffsets);
+
+  for my $cgram (@allcgrams) {
+    #my $index = $cgram->attr('index');
+    #$verbose && print "Processing chromatogram $index\n";
+    my $id = $cgram->attr('id');
+    my ($q1, $q3, $sample, $period, $experiment, $transition,);
+    # If this is a parsable chromatogram ID, get its infos
+    if (($id =~
+	/.*SRM.*\s+Q1=(\S+)\s+Q3=(\S+)\s+sample=(\S+)\s+period=(\S+)\s+experiment=(\S+)\s+transition=(\S+)/) #QTRAP data from Cima and Ralph Scheiss
+      ||
+      ($id =~ /SRM SIC Q1=(\S+) Q3=(\S+)/) #QQQ data from SRMAtlas
+      ||
+      ($id =~ /SRM SIC (\S+),(\S+)/) )   #TSQ data from Nathalie
+    {
+      $q1 = $1;
+      $q3 = $2;
+      #DEBUG
+      #print "<!-- mzML chromatogram for Q1=$q1 Q3=$q3 -->\n";
+      $sample = $3;
+      $period = $4;
+      $experiment = $5;
+      $transition = $6;
+
+      # If this is close to our target Q1 ...
+      if (($q1 <= $target_q1+$q1_tol) && ($q1 >= $target_q1-$q1_tol)) {
+	#DEBUG
+	#print "<!-- mzML chromatogram for Q1=$q1 Q3=$q3 -->\n";
+
+	# If tx_info provided, check to see if this is one of the Q3s we want
+	if ($tx_info) {
+	  my $q3_match = 0;
+	  for (my $i=0; $i < $n_q3; $i++) {
+	    my $target_q3 = $q3_array[$i];
+	    if (($q3 <= $target_q3+$q3_tol) && ($q3 >= $target_q3-$q3_tol)) {
+	      if ($q3_found_array[$i]) {
+		print "<p>WARNING: target Q1=${target_q1}/Q3=${target_q3} found in mzML more than once.<br>Q1 tolerance = $q1_tol  Q3 tolerance = $q3_tol</p>\n";
+		$q3_found_array[$i]++;
+	      } else {
+		$q3_found_array[$i]=1;
+	      }
+	      $q3_match++;
+	      last;
+	    }
+	  }
+	  next unless $q3_match;
+	  if ($q3_match > 1) {
+	    print "<p>WARNING: mzML Q3 $q3 matched >1 target Q3 for target Q1=${target_q1}.<br>Q1 tolerance = $q1_tol  Q3 tolerance = $q3_tol</p>\n";
+	  }
+	}
+
+	# Process the time and intensity arrays for this cgram
+	my @binaryDataArrayLists =
+	$cgram->find_by_tag_name('binaryDataArrayList');
+
+	my $n = scalar @binaryDataArrayLists;
+	my @binaryDataArrays =
+	  $binaryDataArrayLists[0]->find_by_tag_name('binaryDataArray');
+	$n = scalar @binaryDataArrays;
 
 
-	my $mzMLtree    = XML::TreeBuilder->new();
-	$mzMLtree->parse_file($spectrum_pathname) || die
-	"Couldn't parse $spectrum_pathname";
-	my @allcgrams = $mzMLtree->find_by_tag_name('chromatogram');
-	my @alloffsets = $mzMLtree->find_by_tag_name('offset');
-	my $ncgrams = scalar (@allcgrams);
-	my $noffsets = scalar (@alloffsets);
+	my ($n_time, $n_int, $time_aref, $int_aref);
 
-	for my $cgram (@allcgrams) {
-		#my $index = $cgram->attr('index');
-		#$verbose && print "Processing chromatogram $index\n";
-		my $id = $cgram->attr('id');
-		my ($q1, $q3, $sample, $period, $experiment, $transition,);
-		# If this is a parsable chromatogram ID, get its infos
-		if (($id =~
-				/.*SRM.*\s+Q1=(\S+)\s+Q3=(\S+)\s+sample=(\S+)\s+period=(\S+)\s+experiment=(\S+)\s+transition=(\S+)/) #QTRAP data from Cima and Ralph Scheiss
-			||
-			($id =~ /SRM SIC Q1=(\S+) Q3=(\S+)/) #QQQ data from SRMAtlas
-			||
-			($id =~ /SRM SIC (\S+),(\S+)/) )   #TSQ data from Nathalie
-		{
-			$q1 = $1;
-			$q3 = $2;
-			print "<!-- Q1 $q1  Q3 $q3 -->\n";
-			$sample = $3;
-			$period = $4;
-			$experiment = $5;
-			$transition = $6;
+	#Get times
+	my @cvParam = $binaryDataArrays[0]->find_by_tag_name('cvParam');
+	my $time_unit = 'second';
+	for my $cvParam (@cvParam) {
+	  if ((defined $cvParam->{'name'}) &&
+	      ($cvParam->{'name'} eq 'time array')) {
+	    $time_unit = $cvParam->{'unitName'};
+	  }
+	}
+	my $time_factor = 1.0;
+	$time_factor *= 60.0 if ($time_unit eq 'hour');
+	$time_factor /= 60 if ($time_unit eq 'second');
+	my @binary = $binaryDataArrays[0]->find_by_tag_name('binary');
+	$n = scalar @binary;
+	if (defined $binary[0]->content) {
+	  $time_aref = decode_mzMLtimeArray($binary[0]->content->[0]);
+	  $n_time = scalar @{$time_aref};
+	  # convert all times to minutes
+	  for (my $i=0; $i<$n_time; $i++) {
+	    $time_aref->[$i] *= $time_factor;
+	  }
+	} else {
+	  $n_time = 0;
+	}
 
-			# If this is our target Q1 ...
-			if (($q1 <= $target_q1+$tol) && ($q1 >= $target_q1-$tol)) {
-				my @binaryDataArrayLists =
-				$cgram->find_by_tag_name('binaryDataArrayList');
+	#Get intensities
+	@binary = $binaryDataArrays[1]->find_by_tag_name('binary');
+	$n = scalar @binary;
+	if (defined $binary[0]->content) {
+	  $int_aref = decode_mzMLintensityArray($binary[0]->content->[0]);
+	  $n_int = scalar @{$int_aref};
+	  for (my $i=0; $i<$n_int; $i++) {
+	  }
+	} else {
+	  $n_int = 0;
+	}
 
-				my $n = scalar @binaryDataArrayLists;
-				my @binaryDataArrays =
-				$binaryDataArrayLists[0]->find_by_tag_name('binaryDataArray');
-				$n = scalar @binaryDataArrays;
+	die "$n_time timepoints, $n_int intensities!" if ($n_time != $n_int);
 
+	# Store info in traces hash
+	for (my $i=0; $i<$n_time; $i++) {
+	  my $time = $time_aref->[$i];
+	  my $intensity = $int_aref->[$i];
+	  $traces{$q1}->{$q3}->{'rt'}->{$time} = $intensity;
+	  $traces{$q1}->{$q3}->{'q1'} = $q1;
+	  $traces{$q1}->{$q3}->{'eri'} = 0.01 if $tx_info;
+	}
 
-				my ($n_time, $n_int, $time_aref, $int_aref);
+      } # end if target Q1
+    } # end if parsable chromatogram ID
+  } # end for each chromatogram
 
-				#Get times
-				my @binary = $binaryDataArrays[0]->find_by_tag_name('binary');
-				$n = scalar @binary;
-				if (defined $binary[0]->content) {
-					$time_aref = decode_mzMLtimeArray($binary[0]->content->[0]);
-					$n_time = scalar @{$time_aref};
-					for (my $i=0; $i<$n_time; $i++) {
-					}
-				} else {
-					$n_time = 0;
-				}
-
-				#Get intensities
-				@binary = $binaryDataArrays[1]->find_by_tag_name('binary');
-				$n = scalar @binary;
-				if (defined $binary[0]->content) {
-					$int_aref = decode_mzMLintensityArray($binary[0]->content->[0]);
-					$n_int = scalar @{$int_aref};
-					for (my $i=0; $i<$n_int; $i++) {
-					}
-				} else {
-					$n_int = 0;
-				}
-
-				die "$n_time timepoints, $n_int intensities!" if ($n_time != $n_int);
-
-				# Store info in traces hash
-				for (my $i=0; $i<$n_time; $i++) {
-					my $time = $time_aref->[$i];
-					my $intensity = $int_aref->[$i];
-					$traces{$q1}->{$q3}->{'rt'}->{$time} = $intensity;
-					$traces{$q1}->{$q3}->{'q1'} = $q1;
-					$traces{$q1}->{$q3}->{'eri'} = 0.01 if $tx_info;
-				}
-
-			} # end if target Q1
-		} # end if parsable chromatogram ID
-	} # end for each chromatogram
-
-	return (\%traces);
+  return (\%traces);
 }
 
 ###############################################################################
@@ -539,6 +530,8 @@ sub mzXML2traces {
 	if ($intensity_aref) {
 	  my @intensities = @{$intensity_aref};
 	  while (@intensities) {
+	    # TODO: if (defined $tx_info), only store scan if $q3 matches
+	    # a Q3 in $tx_info.
 	    my $q3 = shift @intensities;
 	    my $intensity = shift @intensities;
 	    $traces{$q1}->{$q3}->{'rt'}->{$time} = $intensity;
@@ -609,13 +602,13 @@ sub traces2json {
   my $tx_info = $args{tx_info};
 
   #DEBUG
-  print "\n<!-- traces2json -->\n";
-  print "<!-- pepseq is $pepseq -->\n";
-  print "<!-- mass is $mass -->\n";
-  print "<!-- charge is $charge -->\n";
-  print "<!-- isotype is $isotype -->\n";
-  print "<!-- spectrum_file is $spectrum_file -->\n";
-  print "<!-- tx_info is $tx_info -->\n";
+  #print "\n<!-- traces2json -->\n";
+  #print "<!-- pepseq is $pepseq -->\n";
+  #print "<!-- mass is $mass -->\n";
+  #print "<!-- charge is $charge -->\n";
+  #print "<!-- isotype is $isotype -->\n";
+  #print "<!-- spectrum_file is $spectrum_file -->\n";
+  #print "<!-- tx_info is $tx_info -->\n";
 
   my $json_string = '{';
 
@@ -644,7 +637,7 @@ sub traces2json {
       # Write each pair of numbers in Dick's JSON format.
       for my $time (sort {$a <=> $b} keys %{$traces{$q1}->{$q3}->{'rt'}}) {
 	my $intensity = $traces{$q1}->{$q3}->{'rt'}->{$time};
-	$json_string .= sprintf "          {time : %0.4f, intensity : %0.5f},\n", $time/60, $intensity;
+	$json_string .= sprintf "          {time : %0.4f, intensity : %0.5f},\n", $time, $intensity;
       }
       # Close this chromatogram in JSON object
       $json_string .= "        ]},\n";
@@ -878,7 +871,7 @@ sub mzML2json_using_PCE {
      $ion_charge++;
   }
   close TSV;
-  print "<!-- TSV pathname: $tsv_pathname -->\n";
+  #print "<!-- TSV pathname: $tsv_pathname -->\n";
 
   # Now! run the java program to extract the traces for the
   # transitions described in the .tsv file and store in a .txt file
@@ -889,11 +882,11 @@ sub mzML2json_using_PCE {
     "$tsv_pathname $spectrum_pathname $user $rt";
 
   my $shell_result = `pwd 2>&1`;
-  print "<!-- Current working directory: $shell_result -->\n";
-  print "<!-- Running Java wrapper: $java_wrapper -->\n";
+  #print "<!-- Current working directory: $shell_result -->\n";
+  #print "<!-- Running Java wrapper: $java_wrapper -->\n";
   my $shell_result = `$java_wrapper 2>&1`;
   # This does not seem to be printing the errors.
-  print "<!-- Java wrapper result: $shell_result -->\n";
+  #print "<!-- Java wrapper result: $shell_result -->\n";
 
   # Convert the .txt file into a .json files for chromatogram viewer,
   # then delete it. (Original early 2011 code handled multiple files;
@@ -901,12 +894,12 @@ sub mzML2json_using_PCE {
   # mod_pep and charge combo", it says in wrapper script.)
   my @txt_files = split (" ",  `ls ${pa_java_home}/$user*.txt`);
   if ((scalar @txt_files) > 1) {
-    print "<!-- Warning: multiple files ${pa_java_home}/${user}*.txt -->\n";
+    #print "<!-- Warning: multiple files ${pa_java_home}/${user}*.txt -->\n";
   } elsif ((scalar @txt_files) < 1) {
-    die "mzML2json(): No files match ${pa_java_home}/${user}*.txt";
+    die "mzML2json_using_PCE(): No files match ${pa_java_home}/${user}*.txt";
   }
   my $pce_txt_file = $txt_files[0];
-  print "<!-- Converting $pce_txt_file to json -->\n";
+  #print "<!-- Converting $pce_txt_file to json -->\n";
   my $json_string = $self->PCEtxt2json (
     rt => $rt,
     pce_txt_file => $pce_txt_file,

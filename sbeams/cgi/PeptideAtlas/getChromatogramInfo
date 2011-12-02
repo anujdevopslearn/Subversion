@@ -62,17 +62,13 @@ sub main {
 
   #### Read in the default input parameters
   my %parameters;
-  #print "hello -3\n";
   my $n_params_found = 
   $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
 
-  #print "hello -2\n";
   #### Process generic "state" parameters before we start
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
-  #print "hello -1\n";
 
   my $apply_action  = $q->param('apply_action');
-
 
   my $json = processRequest(ref_parameters=>\%parameters);
   if  ($sbeams->output_mode() eq 'html') {
@@ -106,65 +102,67 @@ sub processRequest {
     );
   }
 
-  # Fetch some of the parameters into scalar variables.
-  my $precursor_charge = $parameters{'precursor_charge'};
-  my $pepseq = $parameters{'pepseq'};
-  my $modified_pepseq = $parameters{'modified_pepseq'};
-  my $spectrum_pathname = $parameters{'spectrum_pathname'} ||
-  die 'getChromatogramInfo: Need parameter spectrum_pathname';
-#--------------------------------------------------
-#   my $spectrum_basename = $parameters{'spectrum_basename'};
-#   if (! $spectrum_basename ) {
-#     $spectrum_pathname =~ /.*\/(\S+?)\.mzML/;
-#     $spectrum_basename = $1;
-#   }
-#-------------------------------------------------- 
-  my $precursor_neutral_mass = $parameters{'precursor_neutral_mass'};
+  die 'getChromatogramInfo: Need parameter spectrum_pathname'
+    if ! defined  $parameters{'spectrum_pathname'};
 
-  # Create a descriptive, unique filename for the chromatogram data
+  my $json_string = $cgram->specfile2json(
+    param_href => \%parameters,
+    pepseq => $parameters{'modified_pepseq'},
+    mass => $parameters{'precursor_neutral_mass'},
+    charge => $parameters{'precursor_charge'},
+    isotype => $parameters{'isotype'},
+    is_decoy => $parameters{'is_decoy'},
+    experiment => $parameters{'experiment_title'},
+    spectrum_file => $parameters{'spectrum_pathname'},
+    chromatogram_id => $parameters{'SEL_chromatogram_id'},
+  );
+  return $json_string;
+
 #--------------------------------------------------
-#   my $chromgram_basename = $cgram->getNewChromatogramFilename(
-#     spectrum_basename => $spectrum_basename,
-#     pepseq => $pepseq,
-#   );
+  # To delete after stuff is working 12/02/11
+#   # Fetch some of the parameters into scalar variables.
+#   my $precursor_charge = $parameters{'precursor_charge'};
+#   my $pepseq = $parameters{'pepseq'};
+#   my $modified_pepseq = $parameters{'modified_pepseq'};
+#   my $spectrum_pathname = $parameters{'spectrum_pathname'} ||
+#   die 'getChromatogramInfo: Need parameter spectrum_pathname';
+#   my $precursor_neutral_mass = $parameters{'precursor_neutral_mass'};
+# 
 #-------------------------------------------------- 
-  # Create tmp dirname
-  # $PHYSICAL_BASE_DIR/tmp somehow doesn't work, so we use images/tmp
-  #my $physical_tmp_dir = "$PHYSICAL_BASE_DIR/images/tmp";
 
   # Create .json string by reading spectrum file
-  my $json_string;
-  if (defined $parameters{'precursor_neutral_mass'} &&
-    $spectrum_pathname =~ /.mzML$/)  {
-    $json_string = $cgram->mzML2json(
-      param_href => \%parameters,
-      #physical_tmp_dir => $physical_tmp_dir,
-      #chromgram_basename => $chromgram_basename,
-      pepseq => $modified_pepseq,
-      mass => $precursor_neutral_mass,
-      charge => $precursor_charge,
-      isotype => $parameters{'isotype'},
-      is_decoy => $parameters{'is_decoy'},
-      experiment => $parameters{'experiment_title'},
-      spectrum_file => $spectrum_pathname,
-      chromatogram_id => $parameters{'SEL_chromatogram_id'},
-    );
-  } elsif ($spectrum_pathname =~ /.mzXML$/)  {
-    $json_string = $cgram->mzXML2json (
-      param_href => \%parameters,
-      pepseq => $modified_pepseq,
-      mass => $precursor_neutral_mass,
-      charge => $precursor_charge,
-      isotype => $parameters{'isotype'},
-      is_decoy => $parameters{'is_decoy'},
-      experiment => $parameters{'experiment_title'},
-      spectrum_file => $spectrum_pathname,
-      chromatogram_id => $parameters{'SEL_chromatogram_id'},
-    );
-  } else {
-    die "Need spectrum file with .mzML OR .mzXML extension ".
-    "(have $spectrum_pathname); if .mzML, also need precursor_neutral_mass.\n";
-  }
-
-  return $json_string;
+#--------------------------------------------------
+#   my $json_string;
+#   if (defined $parameters{'precursor_neutral_mass'} &&
+#     $spectrum_pathname =~ /.mzML$/)  {
+#     $json_string = $cgram->mzML2json(
+#       param_href => \%parameters,
+#       #physical_tmp_dir => $physical_tmp_dir,
+#       #chromgram_basename => $chromgram_basename,
+#       pepseq => $modified_pepseq,
+#       mass => $precursor_neutral_mass,
+#       charge => $precursor_charge,
+#       isotype => $parameters{'isotype'},
+#       is_decoy => $parameters{'is_decoy'},
+#       experiment => $parameters{'experiment_title'},
+#       spectrum_file => $spectrum_pathname,
+#       chromatogram_id => $parameters{'SEL_chromatogram_id'},
+#     );
+#   } elsif ($spectrum_pathname =~ /.mzXML$/)  {
+#     $json_string = $cgram->mzXML2json (
+#       param_href => \%parameters,
+#       pepseq => $modified_pepseq,
+#       mass => $precursor_neutral_mass,
+#       charge => $precursor_charge,
+#       isotype => $parameters{'isotype'},
+#       is_decoy => $parameters{'is_decoy'},
+#       experiment => $parameters{'experiment_title'},
+#       spectrum_file => $spectrum_pathname,
+#       chromatogram_id => $parameters{'SEL_chromatogram_id'},
+#     );
+#   } else {
+#     die "Need spectrum file with .mzML OR .mzXML extension ".
+#     "(have $spectrum_pathname); if .mzML, also need precursor_neutral_mass.\n";
+#   }
+#-------------------------------------------------- 
 }

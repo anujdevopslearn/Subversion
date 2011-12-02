@@ -63,7 +63,7 @@ sub generateChromatogram {
     open(HTML, "$PHYSICAL_BASE_DIR/usr/javascript/chromavis/index.html");
     my @chromavis_html = <HTML>;
     my $chromavis_html = join('', @chromavis_html);
-    #Attempt to not have to call mzML2json from index.html
+    # Insert json string
     $chromavis_html =~ s/JSON_PLACEHOLDER/${json_string}/;
     $chromavis_html .= qq~
     <script language="javascript">

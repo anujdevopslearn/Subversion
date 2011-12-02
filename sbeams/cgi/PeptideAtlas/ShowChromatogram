@@ -126,7 +126,8 @@ sub processRequest {
     }
     my $machine = $parameters{'machine'};
 
-    if (! ( defined $parameters{transition_info} && defined $parameters{q1}) ) {
+    if (! ( defined $parameters{q1} ||
+	    defined $parameters{precursor_neutral_mass}) ) {
 	# see if there is an sptxt file to go with the spectrum_pathname
 	my $sptxt_pathname = $spectrum_pathname;
 	$sptxt_pathname =~ s/${filename_extension}/\.sptxt/ ;
@@ -138,7 +139,7 @@ sub processRequest {
 	      sptxt_pathname => $sptxt_pathname,
 	    );
 	} else {
-	  die "Cannot find transition info. Must provide PASSEL SEL_chromatogram_id, OR spectrum_pathname for an mzML that has an .sptxt file of same name, OR q1 param and  transition_info param with format Q3,ion,rel_intens,Q3,ion,rel_intens, ...";
+	  die "Cannot find transition info. Must provide PASSEL SEL_chromatogram_id, OR spectrum_pathname for an mzML that has an .sptxt file of same name, OR q1 or precursor_neutral_mass param plus optional transition_info param with format Q3,ion,rel_intens,Q3,ion,rel_intens, ...";
 	}
       }
 
@@ -164,25 +165,21 @@ sub processRequest {
 #-------------------------------------------------- 
 
     # Create .json string by reading spectrum file
-    my $json_string;
-    if (defined $parameters{'precursor_neutral_mass'} &&
-	    $spectrum_pathname =~ /.mzML$/)  {
-      $json_string = $cgram->mzML2json(
-	param_href => \%parameters,
-    # DELETE IN JAN 2012 IF ALL IS WELL
-	#json_physical_pathname => $json_physical_pathname,
-	#physical_tmp_dir => $physical_tmp_dir,
-	#chromgram_basename => $chromgram_basename,
-      );
-    } elsif ($spectrum_pathname =~ /.mzXML$/)  {
-      $json_string = $cgram->mzXML2json (
-	param_href => \%parameters,
-	#json_physical_pathname => $json_physical_pathname,
-      );
-    } else {
-      die "Need spectrum file with .mzML OR .mzXML extension ".
-      "(have $spectrum_pathname); if .mzML, also need precursor_neutral_mass.\n";
-    }
+    my $json_string = $cgram->specfile2json(
+      param_href => \%parameters,
+      pepseq => $parameters{'modified_pepseq'},
+      mass => $parameters{'precursor_neutral_mass'},
+      charge => $parameters{'precursor_charge'},
+      isotype => $parameters{'isotype'},
+      is_decoy => $parameters{'is_decoy'},
+      experiment => $parameters{'experiment_title'},
+      spectrum_file => $parameters{'spectrum_pathname'},
+      chromatogram_id => $parameters{'SEL_chromatogram_id'},
+      # DELETE IN JAN 2012 IF ALL IS WELL
+      #json_physical_pathname => $json_physical_pathname,
+      #physical_tmp_dir => $physical_tmp_dir,
+      #chromgram_basename => $chromgram_basename,
+    );
 
 #--------------------------------------------------
     # DELETE IN JAN 2012 IF ALL IS WELL
