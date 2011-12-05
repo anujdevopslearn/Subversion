@@ -209,6 +209,16 @@ sub InsertSearchKeyEntity {
     );
   }
 
+  if ($organism_name =~ /candida/i) {
+    my $reference_directory = $args{reference_directory}
+      or die("ERROR[$METHOD]: Parameter reference_directory not passed");
+    print "Loading protein keys from C_albicans feature...\n";
+    $self->buildCANALKeyIndex(
+      reference_directory => $reference_directory,
+      biosequence_set_id => $biosequence_set_id,
+    );
+  }
+
   if ($organism_name eq 'Halobacterium') {
     my $reference_directory = $args{reference_directory}
       or die("ERROR[$METHOD]: Parameter reference_directory not passed");
@@ -720,6 +730,142 @@ sub readGOAAssociations {
 
 } # end readGOAAssociations
 
+###############################################################################
+# buildCANALKeyIndex
+###############################################################################
+sub buildCANALKeyIndex {
+  my $METHOD = 'buildCANALKeyIndex';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  print "INFO[$METHOD]: Building SGD key index...\n" if ($VERBOSE);
+
+  my $biosequence_set_id = $args{biosequence_set_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+
+  my $reference_directory = $args{reference_directory}
+    or die("ERROR[$METHOD]: Parameter reference_directory not passed");
+
+  unless (-d $reference_directory) {
+    die("ERROR[$METHOD]: '$reference_directory' is not a directory");
+  }
+
+  my $proteinList =  $self->getProteinList(
+    biosequence_set_id => $biosequence_set_id,
+  );
+
+
+  #### Open the provided SGD_features.tab file
+  my $feature_file = "$reference_directory/CANAL_feature.tab";
+  open(INFILE,$feature_file)
+    or die("ERROR[$METHOD]: Unable to open file '$feature_file'");
+
+  #### Read all the data
+  my $line;
+  my $counter = 0;
+
+  while ($line=<INFILE>) {
+    chomp($line);
+    my ($feature_name,$gene_name,
+        $aliases,$feature_type,$chromosome,
+      	$chr_start,$chr_end,$strand,
+        $CGID,$sec_CGIDs,$description,$others
+       ) = split(/\t/,$line);
+
+    #### Skip if this isn't an ORF
+    my @protein_synonyms = ();
+    unless ($feature_type =~  /ORF/i) {
+      next;
+    }
+
+    if (0) {
+      print "-------------------------------------------------\n";
+      print "orf19_name=$feature_name\n";
+      print "feature_type=$feature_type\n";
+      print "feature_name=$feature_name\n";
+      print "gene_name=$gene_name\n";
+      print "chromosome=$chromosome\n";
+      print "chr_start=$chr_start\n";
+      print "chr_end=$chr_end\n";
+      print "strand=$strand\n";
+      print "description=$description\n";
+    }
+
+    #### Build a list of protein links
+    my @links;
+
+    if ($feature_name) {
+      my @tmp = ('ORF name',$feature_name);
+      push(@links,\@tmp);
+    }
+
+    if ($gene_name) {
+      my @tmp = ('Gene name',$gene_name);
+      push(@links,\@tmp);
+    }
+
+    if ($aliases) {
+      my @list = splitEntities(list=>$aliases,delimiter=>'\|');
+      push @protein_synonyms,@list;
+      foreach my $item ( @list ) {
+        my @tmp = ('Alias',$item);
+        push(@links,\@tmp);
+      }
+    }
+    my @CGIDS;
+    if($CGID){
+      push(@CGIDS, $CGID);
+    }
+    if($sec_CGIDs){
+      my @list = splitEntities(list=>$sec_CGIDs,delimiter=>'\|');
+      push @CGIDS, @list;
+    }
+    foreach my $item ( @CGIDS ) {
+        my @tmp = ('CGID',$item);
+        push(@links,\@tmp);
+    }
+     
+ 
+
+    if ($description) {
+      my @tmp = ('Description',$description);
+      push(@links,\@tmp);
+    }
+
+    my $protein_alias_master = $protein_synonyms[0];
+    foreach my $link (@links) {
+      if(defined $proteinList->{$link->[1]}){
+        $proteinList->{$link->[1]} = 1;
+      }
+
+      my %rowdata = (
+        search_key_name => $link->[1],
+        search_key_type => $link->[0],
+        search_key_dbxref_id => $link->[2],
+        resource_name => $feature_name,
+        resource_type => 'ORF Name',
+      );
+       $self -> insertSearchKeyEntity( rowdata => \%rowdata);
+    }
+
+
+    $counter++;
+    print "$counter... " if ($counter/100 eq int($counter/100));
+
+    my $xx=<STDIN> if (0);
+
+  } # endwhile ($line=<INFILE>)
+
+  print "\n";
+  close(INFILE);
+
+  $self -> checkCompleteness(proteinList=> $proteinList,
+                             count      => $counter);
+
+
+} # end buildCANALKeyIndex
+
+
 
 
 ###############################################################################
@@ -744,14 +890,16 @@ sub buildSGDKeyIndex {
 
 
   #### Read the contents of the UniProtKB mapping file
-  my $UP_file = "$reference_directory/UniProtKB_identifiers_from_AlainGateau.txt";
+  #my $UP_file = "$reference_directory/UniProtKB_identifiers_from_AlainGateau.txt";
+  my $UP_file = "$reference_directory/uniprot_SGD_mapping.txt";
   my %UniProtAccessions;
   open(INFILE,$UP_file)
     or die("ERROR[$METHOD]: Unable to open file '$UP_file'");
   while (my $line = <INFILE>) {
     chomp($line);
     next if ($line =~ /^\s*$/);
-    if ($line =~ /^(\S+)\sDR\s+PeptideAtlas;\s([\w\d\-]+);/) {
+    #if ($line =~ /^(\S+)\sDR\s+PeptideAtlas;\s([\w\d\-]+);/) {
+    if ($line =~ /^(\S+)\s+(\S+)$/){
       $UniProtAccessions{$2} = $1;
     } else {
       print "ERROR: Unable to parse line '$line'\n";
@@ -1453,27 +1601,21 @@ sub buildMTBKeyIndex {
 
   
   my %proteins = ();
-  my $protein_file = "$reference_directory/Mtb-H37RvH37Ra_Mb-BCG_All_2010-06.fasta";
+  my $protein_file = "$reference_directory/TubercuList_v2-3.fasta";
   open(INFILE,$protein_file) || die("ERROR: Unable to open '$protein_file'");
   while (my $line = <INFILE>) {
     if ($line =~ /^>/) {
-      my ($FullName, $uniprotKB, $strain, $gene);
-      $strain = ''; 
-      if($line =~ />(\S+\|(\S+)\|\S+).+OS=.+GN=(.*)/){        
-        if ($line =~ />(\S+\|(\S+)\|\S+).+OS=.+\(strain (.+)\)\s+GN=(.*)/){
-          $FullName = $1;
-          $uniprotKB= $2;
-          $strain = $3;
-          $gene = $4;
-         }else {
-          $FullName = $1;
-          $uniprotKB= $2;
-          $gene = $3;
-         }
+      my ($FullName, $uniprotKB, $gene);
+      if($line =~ /^>/){        
+          $line =~ />(\S+)\|(\S+)/;
+          $FullName = "$1|$2";
+          $uniprotKB= $1;
+					if($1 ne $2){
+            $gene = $2;
+					}
        }
-      print "uniprotKB $uniprotKB FullName $FullName $strain $gene\n";
+      print "uniprotKB $uniprotKB FullName $FullName $gene\n" if ($VERBOSE);
       $proteins{$uniprotKB}{'Gene Symbol'} = $gene;
-      $proteins{$uniprotKB}{Strain} = $strain;
       $proteins{$uniprotKB}{'Full Name'} = $FullName;
     }
   }
@@ -1492,18 +1634,13 @@ sub buildMTBKeyIndex {
   );
 
   foreach my $uniprotKB (keys %proteins) {
-    my $Database = 'UniProt' ;
+    my $Database = 'TubercuList' ;
     my $Accession = $uniprotKB;
     my $proteinName = $proteins{$uniprotKB}{'Full Name'};
-    my $strain = $proteins{$uniprotKB}{Strain};
     my $gene = $proteins{$uniprotKB}{'Gene Symbol'};
     my @links;
 
-    if($strain) {       
-       my @tmp = ('Strain',$strain);
-       push(@links,\@tmp);
-    }
-    my @tmp = ('UniProt',$uniprotKB,35);
+    my @tmp = ('TubercuList',$uniprotKB,58);
     push(@links,\@tmp);
 
     @tmp = ('Gene Symbol',$gene);
@@ -2093,7 +2230,7 @@ sub buildCelegansKeyIndex {
 		    );
 
   #### Load information from fasta file
-  my $reference_file = "$reference_directory/decoy_wormpep170.fa";
+  my $reference_file = "$reference_directory/wormpep215.fasta";
   print "Reading $reference_file\n" if ($VERBOSE);
   open(INFILE,$reference_file)
     or die("ERROR[$METHOD]: Unable to open file '$reference_file'");
