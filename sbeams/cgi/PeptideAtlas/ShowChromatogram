@@ -105,14 +105,56 @@ sub processRequest {
   my $ref_parameters = $args{'ref_parameters'}
     || die "ref_parameters not passed";
 
+  #### Define param usage and print if parameter "help=1" defined.
+  my $usage = qq~
+     spectrum_pathname           full pathname of mzML or mzXML file
+     modified_pepseq             peptide to display
+     q1                          precursor mz to display
+     q1_tolerance                matching tolerance; default 0.05
+     precursor_neutral_mass      computed from modified_pepseq if not supplied;
+                                   used to derive q1
+     precursor_charge            if not provided, +2 and +3 will be displayed
+     isotype                     light or heavy
+     machine                     QTRAP, QQQ, TSQ. Currently unused; machine
+                                   type is guessed from spectrum file.
+     transition_info             string of form Q3,frg_ion,eri,Q3,frg_ion,eri, ...
+                                   frg_ion of form 3y+1  or 12b+2; can be empty
+                                   eri=expected relative intensity; can be empty
+                                   If not provided, all Q3 for given Q1 displayed.
+     q3_tolerance                matching tolerance; default 0.05
+
+   For display only (not needed to draw chromatogram):
+     ce                          collision energy
+     rt                          precursor retention time
+     Tr                          best peak group RT
+     is_decoy                    1 or 0
+     m_score                     mProphet score
+     experiment_title            
+     monoisotopic_peptide_mass
+     isotype_delta_mass          for heavy isotypes, mass of label
+
+   For PASSEL chromatograms:
+     SEL_chromatogram_id         overwrites all of the above params with info
+                                   from the PASSEL tables
+
+   REQUIRED: spectrum_pathname, plus one of the following:
+       SEL_chromatogram_id,  modified_pepseq, Q1, precursor_neutral_mass
+   ~;
+
+  $sbeams->show_help_if_requested(
+    usage_string   => $usage,
+    ref_parameters => $ref_parameters,
+  );
+
   # Create a chromatogram object so we can use its methods
   my $cgram = new SBEAMS::PeptideAtlas::Chromatogram;
   $cgram->setSBEAMS($sbeams);
 
-  # The function below may add to the contents of the parameters hash.
+  # If there is any data on this chromatogram in the PASSEL database tables,
+  # fetch it and add it to the parameters hash.
   my $json_string = $cgram->getChromatogramInfo($ref_parameters);
 
-  # Fetch some of the parameters into scalar variables.
+  # Fetch some of the parameters into scalar variables and do some processing.
   my $precursor_charge = $ref_parameters->{'precursor_charge'};
   my $pepseq = $ref_parameters->{'pepseq'};
   my $modified_pepseq = $ref_parameters->{'modified_pepseq'} || $pepseq;
@@ -128,16 +170,15 @@ sub processRequest {
   if ($ref_parameters->{'isotype'} =~ /heavy/i) {
     $precursor_neutral_mass += $ref_parameters->{'isotype_delta_mass'};
   }
-  my $machine = $ref_parameters->{'machine'};
+  my $machine = $ref_parameters->{'machine'};  #unused 12/06/11
 
 
   #### Display the Chromatogram Viewer page.
 
   # Print the HTML for the top of the chromatogram viewer page
-  my $seq = (defined $modified_pepseq) ? $modified_pepseq : $pepseq;
   my $top_html = $cgram->getTopHTMLforChromatogramViewer (
     param_href => $ref_parameters,
-    seq => $seq,
+    seq => $modified_pepseq,
     precursor_neutral_mass => $precursor_neutral_mass,
     precursor_charge => $precursor_charge,
     spectrum_pathname => $spectrum_pathname,
@@ -151,7 +192,7 @@ sub processRequest {
     spectrum_pathname         => $spectrum_pathname,
     precursor_neutral_mass=> $precursor_neutral_mass,
     precursor_charge      => $precursor_charge,
-    seq                   => $seq,
+    seq                   => $modified_pepseq,
     precursor_rt          => $ref_parameters->{rt},
     best_peak_group_rt    => $ref_parameters->{Tr},
     m_score               => $ref_parameters->{m_score},

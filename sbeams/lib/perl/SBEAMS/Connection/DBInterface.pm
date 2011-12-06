@@ -2376,8 +2376,6 @@ sub buildOptionList {
     #### Convert the SQL dialect if necessary
     $sql_query = $self->translateSQL(sql=>$sql_query);
 
-    ##for debugging:
-    ##$self->display_sql(sql=>$sql_query);
     my $options="";
     my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
     my $rv  = $sth->execute;
@@ -2772,7 +2770,7 @@ sub fetchResultSet {
 ###############################################################################
 # displayResultSet
 #
-# Displays a resultset in memory as an HTML table
+# Displays a resultset in memory as HTML, tsv, csv, xml, etc.
 ###############################################################################
 sub displayResultSet {
     my $self = shift;
@@ -4575,20 +4573,12 @@ sub parse_input_parameters {
   my $n_CGI_params_found = 0;
   my $n_cmdln_params_found = 0;
 
-# TMF debug
-#  open (FOO, ">/net/dblocal/www/html/devTF/sbeams/cgi/PeptideAtlas/tmp.out");
-#  print FOO "command line!\n";
-
   #### Resolve all the parameters from the command line if any
   my %cmdln_parameters;
   foreach $element (@ARGV) {
     if ( ($key,$value) = split("=",$element) ) {
-# TMF debug
-#    print FOO "$key = '$value'\n";
       my $tmp = $value;
       $tmp = '' unless (defined($tmp));
-# TMF debug
-#      print "$key = '$tmp'<BR>\n";
       $cmdln_parameters{$key} = $value;
       $ref_parameters->{$key} = $value;
       $n_cmdln_params_found++;
@@ -4599,8 +4589,6 @@ sub parse_input_parameters {
   }
 
   #### Resolve all the parameters from the CGI interface if any
-#debug
-#  print FOO "cgi!\n";
   my %CGI_parameters;
   foreach $element ($q->param()) {
 
@@ -4613,8 +4601,6 @@ sub parse_input_parameters {
     #### Convert to a comma separated list
     $value = join(",",@tmparray);
 
-#debug
-#    print FOO "$element = '$value'\n";
     $CGI_parameters{$element} = $value;
     $ref_parameters->{$element} = $value;
     $n_CGI_params_found++;
@@ -4624,8 +4610,6 @@ sub parse_input_parameters {
   #### Add a set of standard set of input options
   my @columns = @{$ref_columns};
   if ($add_standard_params eq 'YES') {
-#debug
-#  print FOO "adding standard options!\n";
     push(@columns,'apply_action','action','output_mode','TABLE_NAME',
       'QUERY_NAME','navigation_bar');
   }
@@ -4645,8 +4629,6 @@ sub parse_input_parameters {
 
   #### Sum the total parameters found
   $n_params_found = $n_CGI_params_found + $n_cmdln_params_found;
-#debug
-#  print FOO "$n_params_found params found!\n";
 
 
   #### If some CGI parameters were found, assume we're doing a web interface
@@ -4683,14 +4665,52 @@ sub parse_input_parameters {
     $ref_parameters->{action} = $ref_parameters->{apply_action};
   }
 
-#debug
-#  print FOO "bye\n";
-#  close FOO;
-
   return $n_params_found;
 
 } # end parse_input_parameters
 
+
+
+###############################################################################
+# show_help_if_requested
+#   If parameter 'help' is defined, print a provided statement of param usage
+#   and exit.
+###############################################################################
+sub show_help_if_requested {
+  my $self = shift;
+  my %args = @_;
+  my $usage_string = $args{'usage_string'} ||
+     die "show_help_if_requested: usage_string not provided";
+  my $ref_parameters = $args{'ref_parameters'} ||
+     die "show_help_if_requested: ref_parameters not provided";
+
+  if (defined $ref_parameters->{'help'}) {
+    $self->show_help(usage_string=>$usage_string);
+    exit;
+  }
+}
+
+
+###############################################################################
+# show_help
+#   print a provided statement of param usage
+###############################################################################
+sub show_help {
+  my $self = shift;
+  my %args = @_;
+  my $usage_string = $args{'usage_string'} ||
+     die "show_help_if_requested: usage_string not provided";
+
+  my ($prog_name) = ( $0 =~ ".*/(.*)");
+  $usage_string =
+    "$prog_name -- Program-specific parameters:\n\n".
+    $usage_string;
+  if ($self->output_mode() eq 'html') {
+    $usage_string =~ s/^/<pre>\n/g ;
+    $usage_string =~ s/$/<\/pre>\n/g ;
+  }
+  print $usage_string;
+}
 
 
 ###############################################################################
