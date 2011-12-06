@@ -123,7 +123,8 @@ sub getPeptideMass {
 
   #### Convert to m/z if charge was supplied
   if (defined($charge) && $charge > 0 && $charge <= 10) {
-    $mass = ($mass+$charge*$H)/$charge;
+    my $proton_mass = 1.00727646688;  #from Jimmy Eng, 08July2011 to E Deutsch
+    $mass = ($mass+$charge*$proton_mass)/$charge;
   }
 
   return($mass);
