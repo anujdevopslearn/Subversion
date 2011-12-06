@@ -127,7 +127,6 @@ sub getChromatogramParameters{
 	   SELTG.SEL_transition_group_id,
 	   SELE.experiment_title,
 	   SELPI.is_decoy,
-	   SELPI.monoisotopic_peptide_mass,
 	   SELPI.q1_mz as calculated_q1_mz,
 	   SELTG.isotype_delta_mass
       FROM $TBAT_SEL_CHROMATOGRAM SELC
@@ -172,9 +171,8 @@ sub getChromatogramParameters{
       getTransitionInfo($transition_group_id);
   $param_href->{'experiment_title'} = $results_aref->[15];
   $param_href->{'is_decoy'} = $results_aref->[16];
-  $param_href->{'monoisotopic_peptide_mass'} = $results_aref->[17];
-  $param_href->{'calculated_q1'} = $results_aref->[18];
-  $param_href->{'isotype_delta_mass'} = $results_aref->[19];
+  $param_href->{'calculated_q1'} = $results_aref->[17];
+  $param_href->{'isotype_delta_mass'} = $results_aref->[18];
 
       # Create a string describing this transition group.
       sub getTransitionInfo {
@@ -265,7 +263,7 @@ sub specfile2json {
   my $isotype_delta_mass = $param_href->{isotype_delta_mass};
 
   my $count = 0;
-  my $proton_mass = 1.00727638;
+  my $proton_mass = 1.00727646688; # from J Eng to edeutsch via 08July2011 email.
 
   my $target_q1_2;   #if we look up Q1 for both +2, +3
 
@@ -281,7 +279,7 @@ sub specfile2json {
       }
     } else {
       # 12/02/11: this is currently caught in ShowChromatogram.
-      die "Need Q1, pepseq, or precursor_neutral_mass";
+      die "specfile2json: Need Q1, pepseq, or precursor_neutral_mass";
     }
   }
 
@@ -683,15 +681,6 @@ sub traces2json {
 	my $rt = $args{rt};
   my $tx_info = $args{tx_info};
 
-  #DEBUG
-  #print "\n<!-- traces2json -->\n";
-  #print "<!-- pepseq is $pepseq -->\n";
-  #print "<!-- mass is $mass -->\n";
-  #print "<!-- charge is $charge -->\n";
-  #print "<!-- isotype is $isotype -->\n";
-  #print "<!-- spectrum_file is $spectrum_file -->\n";
-  #print "<!-- tx_info is $tx_info -->\n";
-
   my $json_string = '{';
 
   # Open data_json element
@@ -1091,24 +1080,22 @@ sub getTopHTMLforChromatogramViewer {
   my %args = @_;
   my $param_href = $args{param_href};
   my $seq = $args{seq};
-  my $precursor_neutral_mass = $args{precursor_neutral_mass};
   my $precursor_charge = $args{precursor_charge};
   my $spectrum_pathname = $args{spectrum_pathname};
 
-  # we are not using this anymore b/c we have stored monois. pep mass07/08/11
-  my $precursor_neutral_mass_s = sprintf "%0.3f", $precursor_neutral_mass;
   my $precursor_rt = $param_href->{rt};
   my $best_peak_group_rt = $param_href->{Tr};
   my $m_score = $param_href->{m_score};
   my $top_html = "<p><big>";
   $top_html .= " DECOY" if $param_href->{is_decoy} eq 'Y';
   $top_html .= " <b>$seq</b></big> ";
-  if ($param_href->{monoisotopic_peptide_mass}) {
-    my $mass = $param_href->{monoisotopic_peptide_mass};
+  my $mass = $args{precursor_neutral_mass};
+  if ($mass) {
     $mass += $param_href->{isotype_delta_mass}
-       if ($param_href->{isotype_delta_mass});
-    my $mpm_s = sprintf "%0.3f", $mass;
-    $top_html .= "($mpm_s Daltons) </b>\n";
+       if (($param_href->{isotype_delta_mass}) &&
+	   ($param_href->{'isotype'} =~ /heavy/i));
+    my $mass_s = sprintf "%0.3f", $mass;
+    $top_html .= "($mass_s Daltons) </b>\n";
   }
   $top_html .= "<b><big>+$precursor_charge</big></b>\n"
      if $param_href->{precursor_charge};
@@ -1345,9 +1332,6 @@ sub getChromatogramInfo {
     $spectrum_basename = $1;
   }
   my $precursor_neutral_mass = $parameters_href->{'precursor_neutral_mass'};
-  if ($parameters_href->{'isotype'} =~ /heavy/i) {
-    $precursor_neutral_mass += $parameters_href->{'isotype_delta_mass'};
-  }
   my $machine = $parameters_href->{'machine'};
 
   # Check that we can obtain or calculate a Q1 or precursor_neutral_mass.

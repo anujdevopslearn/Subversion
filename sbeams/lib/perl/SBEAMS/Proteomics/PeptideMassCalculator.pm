@@ -20,10 +20,12 @@ package SBEAMS::Proteomics::PeptideMassCalculator;
 
 use strict;
 use SBEAMS::Connection::Settings qw(:default );
-use InSilicoSpectro::InSilico::MassCalculator 'setMassType','getMass';
+#use InSilicoSpectro::InSilico::MassCalculator 'setMassType','getMass';
+use InSilicoSpectro::InSilico::MassCalculator;
 use SBEAMS::Proteomics::AminoAcidModifications;
 
-use vars qw ( $H $O %supported_modifications @InSilicoConfig );
+#use vars qw ( $H $O %supported_modifications @InSilicoConfig );
+use vars qw ( %supported_modifications @InSilicoConfig );
 
 @InSilicoConfig= @{$CONFIG_SETTING{INSILICOSPECTRO_CONFIG}};
 ###############################################################################
@@ -47,9 +49,11 @@ sub new {
 
   InSilicoSpectro::InSilico::MassCalculator::init( $config_file );
 
-  #### Get some constants
-  $H = getMass('el_H');
-  $O = getMass('el_O');
+#--------------------------------------------------
+#   #### Get some constants
+#   $H = getMass('el_H');
+#   $O = getMass('el_O');
+#-------------------------------------------------- 
 
   my $AAmodifications = new SBEAMS::Proteomics::AminoAcidModifications;
   %supported_modifications = %{$AAmodifications->{supported_modifications}};
