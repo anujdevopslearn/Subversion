@@ -25,6 +25,7 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
 use SBEAMS::Proteomics::ChromatogramViewer;
+use SBEAMS::Proteomics::PeptideMassCalculator;
 
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
@@ -70,10 +71,21 @@ sub main {
     allow_anonymous_access=>1,
   ));
 
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = 
+  $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+  my $apply_action  = $q->param('apply_action');
+
 
   #### Process certain actions, then print the header, figure and do what the user wants, and print footer
   $sbeamsMOD->display_page_header();
-  processRequest();
+  #processRequest();
+  processRequest(ref_parameters=>\%parameters);
   $sbeamsMOD->display_page_footer();
 
   $sbeams->display_page_footer(close_tables=>'YES',
@@ -88,246 +100,85 @@ sub main {
 ###############################################################################
 sub processRequest {
 
-    my %parameters;
-    $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
-    $sbeams->processStandardParameters(parameters_ref=>\%parameters);
-
-    my $apply_action  = $q->param('apply_action');
-
-    # Create a chromatogram object so we can use its methods
-    my $cgram = new SBEAMS::PeptideAtlas::Chromatogram;
-    $cgram->setSBEAMS($sbeams);
-
-    # Get all necessary info from database using chromatogram_id, if
-    # provided. Else, we assume info was passed in via parameters or that we
-    # can get it from an .sptxt file.
-    if ( $parameters{'SEL_chromatogram_id'} ) {
-      $cgram->getChromatogramParameters(
-	SEL_chromatogram_id => $parameters{'SEL_chromatogram_id'},
-	param_href => \%parameters,
-      );
-    }
-
-    # Fetch some of the parameters into scalar variables.
-    my $precursor_charge = $parameters{'precursor_charge'};
-    my $pepseq = $parameters{'pepseq'};
-    my $modified_pepseq = $parameters{'modified_pepseq'};
-    my $spectrum_pathname = $parameters{'spectrum_pathname'} ||
-	  die 'ShowChromatogram; Need parameter spectrum_pathname';
-    my $spectrum_basename = $parameters{'spectrum_basename'};
-    $spectrum_pathname =~ /.*(\..*)/; my $filename_extension = $1;
-    if (! $spectrum_basename ) {
-      $spectrum_pathname =~ /.*\/(\S+?)\.${filename_extension}/;
-      $spectrum_basename = $1;
-    }
-    my $precursor_neutral_mass = $parameters{'precursor_neutral_mass'};
-    if ($parameters{'isotype'} =~ /heavy/i) {    # tested; works.
-      $precursor_neutral_mass += $parameters{'isotype_delta_mass'};
-    }
-    my $machine = $parameters{'machine'};
-
-    if (! ( defined $parameters{q1} ||
-	    defined $parameters{precursor_neutral_mass}) ) {
-	# see if there is an sptxt file to go with the spectrum_pathname
-	my $sptxt_pathname = $spectrum_pathname;
-	$sptxt_pathname =~ s/${filename_extension}/\.sptxt/ ;
-	if (-e $sptxt_pathname) {
-	  ($parameters{'q1'},$parameters{'transition_info'}) =
-	    $cgram->getTransitionGroupInfo_from_sptxt (
-	      pepseq => $pepseq,
-	      charge => $precursor_charge,
-	      sptxt_pathname => $sptxt_pathname,
-	    );
-	} else {
-	  die "Cannot find transition info. Must provide PASSEL SEL_chromatogram_id, OR spectrum_pathname for an mzML that has an .sptxt file of same name, OR q1 or precursor_neutral_mass param plus optional transition_info param with format Q3,ion,rel_intens,Q3,ion,rel_intens, ...";
-	}
-      }
-
-
-    #### Extract chromatogram data from spectrum file
-    ####  into a json data structure
-
-#--------------------------------------------------
-    # DELETE IN JAN 2012 IF ALL IS WELL
-    # Create a descriptive, unique filename for the chromatogram data
-#     my $chromgram_basename = $cgram->getNewChromatogramFilename(
-#       spectrum_basename => $spectrum_basename,
-#       pepseq => $pepseq,
-#     );
-# 
-#     # Create names for .json file
-#     # $PHYSICAL_BASE_DIR/tmp somehow doesn't work, so we use images/tmp
-#     my $physical_tmp_dir = "$PHYSICAL_BASE_DIR/images/tmp";
-#     my $html_tmp_dir = "$HTML_BASE_DIR/images/tmp";
-#     my $json_fname = "$chromgram_basename.json";
-#     $parameters{'chromatogram_fname'} = $json_fname;
-#     my $json_physical_pathname = "$physical_tmp_dir/$json_fname";
-#-------------------------------------------------- 
-
-    # Create .json string by reading spectrum file
-    my $json_string = $cgram->specfile2json(
-      param_href => \%parameters,
-      pepseq => $parameters{'modified_pepseq'},
-      mass => $parameters{'precursor_neutral_mass'},
-      charge => $parameters{'precursor_charge'},
-      isotype => $parameters{'isotype'},
-      is_decoy => $parameters{'is_decoy'},
-      experiment => $parameters{'experiment_title'},
-      spectrum_file => $parameters{'spectrum_pathname'},
-      chromatogram_id => $parameters{'SEL_chromatogram_id'},
-      # DELETE IN JAN 2012 IF ALL IS WELL
-      #json_physical_pathname => $json_physical_pathname,
-      #physical_tmp_dir => $physical_tmp_dir,
-      #chromgram_basename => $chromgram_basename,
-    );
-
-#--------------------------------------------------
-    # DELETE IN JAN 2012 IF ALL IS WELL
-#     # Write .json string to file
-#     $cgram->writeJsonFile (
-#       json_string => $json_string,
-#       json_physical_pathname => $json_physical_pathname,         
-#     ) if ($json_string);
-#-------------------------------------------------- 
-
-#--------------------------------------------------
-#     print "<br>json_physical_pathname:<br>\n";
-#     print `ls -l $json_physical_pathname`, "<br>\n";
-#-------------------------------------------------- 
-
-
-
-    #### Display the Chromatogram Viewer page.
-
-    # Print the HTML for the top of the chromatogram viewer page
-    my $seq = (defined $modified_pepseq) ? $modified_pepseq : $pepseq;
-    my $top_html = $cgram->getTopHTMLforChromatogramViewer (
-      param_href => \%parameters,
-      seq => $seq,
-      precursor_neutral_mass => $precursor_neutral_mass,
-      precursor_charge => $precursor_charge,
-      spectrum_pathname => $spectrum_pathname,
-    );
-    print $top_html;
-
-    # Generate the Chromavis javascript chromatogram viewer
-    my $chromavis = new SBEAMS::Proteomics::ChromatogramViewer;
-    print $chromavis->generateChromatogram(
-              chromatogram_id => $parameters{'SEL_chromatogram_id'},
-              spectrum_pathname         => $spectrum_pathname,
-              precursor_neutral_mass=> $precursor_neutral_mass,
-              precursor_charge      => $precursor_charge,
-	      seq                   => $seq,
-              precursor_rt          => $parameters{rt},
-              best_peak_group_rt    => $parameters{Tr},
-              m_score               => $parameters{m_score},
-	      json_string           => $json_string,
-	  );
-
-    # Read the data from the JSON object into a hash of the
-    # format required by writeResultSet
-    my $cgram_href = $cgram->readJsonChromatogramIntoResultsetHash (
-      param_href => \%parameters,
-      json_string => $json_string,
-      #json_physical_pathname => $json_physical_pathname,
-    );
-
-    # Store chromatogram data as a recallable resultset
-    my $rs_set_name = "SETME";
-    $sbeams->writeResultSet(
-      resultset_file_ref=>\$rs_set_name,
-      resultset_ref=>$cgram_href,
-      file_prefix=>'chromgram_',
-      query_parameters_ref=>\%parameters);
-
-    # Print the HTML that allows user to recall and download resultset
-    print $cgram->getBottomHTMLforChromatogramViewer(
-      param_href => \%parameters,
-      rs_set_name => $rs_set_name,
-    );
-
-} # end processRequest
-
-
-###############################################################################
-# get_chromatogram   lifted from ShowSpectrum and currently UNUSED,
-#                     but maybe we'll adapt it for our use.
-###############################################################################
-sub get_chromatogram
-{
+  #### Process the arguments list
   my %args = @_;
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
 
-  my $chromatogram_id = $args{'chromatogram_id'};
-  unless ($chromatogram_id) {
-    print "\nERROR: chromatogram_id not passed.\n\n";
-    return;
+  # Create a chromatogram object so we can use its methods
+  my $cgram = new SBEAMS::PeptideAtlas::Chromatogram;
+  $cgram->setSBEAMS($sbeams);
+
+  # The function below may add to the contents of the parameters hash.
+  my $json_string = $cgram->getChromatogramInfo($ref_parameters);
+
+  # Fetch some of the parameters into scalar variables.
+  my $precursor_charge = $ref_parameters->{'precursor_charge'};
+  my $pepseq = $ref_parameters->{'pepseq'};
+  my $modified_pepseq = $ref_parameters->{'modified_pepseq'} || $pepseq;
+  my $spectrum_pathname = $ref_parameters->{'spectrum_pathname'} ||
+    die 'ShowChromatogram; Need parameter spectrum_pathname';
+  my $spectrum_basename = $ref_parameters->{'spectrum_basename'};
+  $spectrum_pathname =~ /.*(\..*)/; my $filename_extension = $1;
+  if (! $spectrum_basename ) {
+    $spectrum_pathname =~ /.*\/(\S+?)\.${filename_extension}/;
+    $spectrum_basename = $1;
   }
-
-
-  my $sql = qq~
-    SELECT proteomics_search_batch_id,chromatogram_name
-      FROM $TBAT_SPECTRUM S
-      JOIN $TBAT_SPECTRUM_IDENTIFICATION SI
-           ON (S.chromatogram_id = SI.chromatogram_id )
-      JOIN $TBAT_ATLAS_SEARCH_BATCH ASB
-           ON (SI.atlas_search_batch_id = ASB.atlas_search_batch_id )
-     WHERE S.chromatogram_id = $chromatogram_id
-  ~;
-
-  my @rows = $sbeams->selectSeveralColumns($sql);
-  unless (@rows) {
-    print "\nERROR: Unable to get search batch information for ".
-      "chromatogram_id '$chromatogram_id'.\n\n";
-    return;
+  my $precursor_neutral_mass = $ref_parameters->{'precursor_neutral_mass'};
+  if ($ref_parameters->{'isotype'} =~ /heavy/i) {
+    $precursor_neutral_mass += $ref_parameters->{'isotype_delta_mass'};
   }
-  my $search_batch_id = $rows[0]->[0];
-  my $chromatogram_name = $rows[0]->[1];
-  my $fraction_tag;
-  if ($chromatogram_name =~ /^(.+)\.(\d+)\.(\d+)\.\d$/) {
-    $fraction_tag = $1;
-  } else {
-    die("ERROR: Unable to parse fraction name from '$chromatogram_name'");
-  }
-
-  #print "search_batch_id = $search_batch_id\n";
-  #print "chromatogram_name = $chromatogram_name\n";
-  #print "fraction_tag = $fraction_tag\n";
+  my $machine = $ref_parameters->{'machine'};
 
 
-  use SBEAMS::PeptideAtlas::Spectrum;
-  my $spectra = new SBEAMS::PeptideAtlas::Spectrum;
-  $spectra->setSBEAMS($sbeams);
+  #### Display the Chromatogram Viewer page.
 
-  my @mass_intensities = $spectra->getSpectrumPeaks(
-    proteomics_search_batch_id => $search_batch_id,
-    chromatogram_name => $chromatogram_name,
-    fraction_tag => $fraction_tag,
+  # Print the HTML for the top of the chromatogram viewer page
+  my $seq = (defined $modified_pepseq) ? $modified_pepseq : $pepseq;
+  my $top_html = $cgram->getTopHTMLforChromatogramViewer (
+    param_href => $ref_parameters,
+    seq => $seq,
+    precursor_neutral_mass => $precursor_neutral_mass,
+    precursor_charge => $precursor_charge,
+    spectrum_pathname => $spectrum_pathname,
+  );
+  print $top_html;
+
+  # Generate the Chromavis javascript chromatogram viewer
+  my $chromavis = new SBEAMS::Proteomics::ChromatogramViewer;
+  print $chromavis->generateChromatogram(
+    chromatogram_id => $ref_parameters->{'SEL_chromatogram_id'},
+    spectrum_pathname         => $spectrum_pathname,
+    precursor_neutral_mass=> $precursor_neutral_mass,
+    precursor_charge      => $precursor_charge,
+    seq                   => $seq,
+    precursor_rt          => $ref_parameters->{rt},
+    best_peak_group_rt    => $ref_parameters->{Tr},
+    m_score               => $ref_parameters->{m_score},
+    json_string           => $json_string,
   );
 
+  # Read the data from the JSON object into a hash of the
+  # format required by writeResultSet
+  my $cgram_href = $cgram->readJsonChromatogramIntoResultsetHash (
+    param_href => $ref_parameters,
+    json_string => $json_string,
+    #json_physical_pathname => $json_physical_pathname,
+  );
 
-  #### If we still have no chromatogram data, then bail out
-  unless (@mass_intensities) {
-    print "\nERROR: Unable to get m/z,intensity pairs for ".
-      "chromatogram_id '$chromatogram_id'.\n\n";
-    return;
-  }
+  # Store chromatogram data as a recallable resultset
+  my $rs_set_name = "SETME";
+  $sbeams->writeResultSet(
+    resultset_file_ref=>\$rs_set_name,
+    resultset_ref=>$cgram_href,
+    file_prefix=>'chromgram_',
+    query_parameters_ref=>$ref_parameters,
+  );
 
-  #### Extract rows into two arrays of masses and intensities
-  my (@masses,@intensities);
-  for (my $i=0; $i<=$#mass_intensities; $i++) {
-    push(@masses,$mass_intensities[$i]->[0]);
-    push(@intensities,$mass_intensities[$i]->[1]);
-  }
+  # Print the HTML that allows user to recall and download resultset
+  print $cgram->getBottomHTMLforChromatogramViewer(
+    param_href => $ref_parameters,
+    rs_set_name => $rs_set_name,
+  );
 
-  my %chromatogram;
-  $chromatogram{n_peaks} = $#mass_intensities + 1;
-
-
-  #### Put data into hash and return
-  $chromatogram{mz} = \@masses;
-  $chromatogram{intensities} = \@intensities;
-
-  return %chromatogram;
-
-
-}
+} # end processRequest

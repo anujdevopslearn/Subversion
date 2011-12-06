@@ -185,13 +185,26 @@ sub getChromatogramParameters{
            WHERE SEL_transition_group_id = '$transition_group_id'
         ~;
 	my @rows = $sbeams->selectSeveralColumns($sql);
-        my $string = "";
-        for my $row (@rows) {
-          $string .= "$row->[0],$row->[1]$row->[2]+$row->[3],$row->[4],";
-        }
-        return $string;
-      }
 
+	# See if there are any relative_intensity (eri) values.
+	# If there are, we will set eri to very small number for those rows
+	# that have no value.
+	my $any_eri = 0;
+	for my $row (@rows) {
+	  if ( defined $row->[4] && $row->[4] ne '' && $row->[4] > 0) {
+	      $any_eri = 1;
+	      last;
+	  }
+	}
+
+        my $tx_info = "";
+        for my $row (@rows) {
+	  $row->[4] = 0.01
+	     if ($any_eri && ($row->[4] eq '' || $row->[4] == 0));
+          $tx_info .= "$row->[0],$row->[1]$row->[2]+$row->[3],$row->[4],";
+        }
+        return $tx_info;
+      }
 }
 
 ###############################################################################
@@ -243,18 +256,18 @@ sub specfile2json {
   my $experiment = $args{experiment};
   my $spectrum_file = $args{spectrum_file};
   my $chromatogram_id = $args{chromatogram_id};
+  my $q1_tolerance = $args{q1_tolerance};
+  my $q3_tolerance = $args{q3_tolerance};
 
   my $rt = $param_href->{rt} || $param_href->{Tr} || 0;
   my $target_q1 = $param_href->{q1};
   my $tx_info = $param_href->{transition_info};
   my $isotype_delta_mass = $param_href->{isotype_delta_mass};
-  #DEBUG
-  #print "<!-- target_q1 is $target_q1 -->\n";
-  #print "<!-- tx_info is $tx_info -->\n";
 
   my $count = 0;
-  my $tol = 0.005;
   my $proton_mass = 1.00727638;
+
+  my $target_q1_2;   #if we look up Q1 for both +2, +3
 
   # Calculate Q1 if not given
   if (! defined $target_q1) {
@@ -262,12 +275,12 @@ sub specfile2json {
       if ( defined $charge) {
 	$target_q1 = $mass / $charge + $proton_mass;
       } else {
-	# Get charge 2, 3 Q1 values for this peptide.
-	my $q1_charge3 = $mass / 3 + $proton_mass;
-	my $q1_charge2 = $mass / 2 + $proton_mass;
-	die "Currently need Q1, pepseq + charge, or precursor_neutral_mass + charge. To be implemented: display +2 and/or +3 if no charge given.";
+	# If neither Q1 nor charge given, get +2 and +3 traces.
+	$target_q1 = $mass / 3 + $proton_mass;
+	$target_q1_2 = $mass / 2 + $proton_mass;
       }
     } else {
+      # 12/02/11: this is currently caught in ShowChromatogram.
       die "Need Q1, pepseq, or precursor_neutral_mass";
     }
   }
@@ -276,14 +289,28 @@ sub specfile2json {
   my $traces_href = specfile2traces(
     spectrum_pathname => $param_href->{spectrum_pathname},
     target_q1 => $target_q1,
-    tol => $tol,
+    q1_tolerance => $q1_tolerance,
+    q3_tolerance => $q3_tolerance,
     tx_info => $tx_info,    #optional
   );
+  
+  # If we have a second Q1, add that to the hash
+  my $traces_href_2 = specfile2traces(
+    spectrum_pathname => $param_href->{spectrum_pathname},
+    target_q1 => $target_q1_2,
+    q1_tolerance => $q1_tolerance,
+    q3_tolerance => $q3_tolerance,
+    tx_info => $tx_info, 
+  );
+  my %combined_traces = (%{$traces_href}, %{$traces_href_2});
+  $traces_href = \%combined_traces;
+
 
   # Unpack and store the transition info string, if provided
   store_tx_info_in_traces_hash (
     tx_info => $tx_info,
     traces_href => $traces_href,
+    q3_tolerance => $q3_tolerance,
   ) if ($tx_info);
 
   # Create and return .json string.
@@ -312,29 +339,41 @@ sub specfile2json {
 sub specfile2traces {
 
   my %args = @_;
-  my $spectrum_pathname = $args{spectrum_pathname};
-  my $target_q1 = $args{target_q1};
-  my $q1_tol = $args{tol};
-  my $tx_info = $args{tx_info} || '';
+  my $spectrum_pathname = $args{'spectrum_pathname'};
+  my $tx_info = $args{'tx_info'};
 
   my $traces_href;
+
+  # Extract lists of Q3, fragment ions, from tx_info string, which is in form
+  # Q3,ion,rel_intensity,Q3,ion,rel_intensity, ...
+  my @q3_array;
+  my @frg_ion_array;
+  my @tx_info_elements = split(",",$tx_info);
+  my $n = scalar @tx_info_elements;
+  for (my $i=0; $i < $n; $i +=3) {
+    push (@q3_array, $tx_info_elements[$i]);
+    push (@frg_ion_array, $tx_info_elements[$i+1]);
+  }
+
+
+  # Parse the spectrum file according to filetype and obtain a hash of
+  # time/intensity traces.
   if ($spectrum_pathname =~ /\.mzML/) {
     $traces_href = mzML2traces(
-      spectrum_pathname => $spectrum_pathname,
-      target_q1 => $target_q1,
-      tol => $q1_tol,
-      tx_info => $tx_info,
+      %args,
+      q3_aref=>\@q3_array,
+      frg_ion_aref=>\@frg_ion_array,
     );
   } elsif ($spectrum_pathname =~ /\.mzXML/) {
     $traces_href = mzXML2traces(
-      spectrum_pathname => $spectrum_pathname,
-      target_q1 => $target_q1,
-      tol => $q1_tol,
-      tx_info => $tx_info,
+      %args,
+      q3_aref=>\@q3_array,
+      frg_ion_aref=>\@frg_ion_array,
     );
   } else {
-    die "$spectrum_pathname: unknown filetype (.mzML, .mzXML recognized)";
+    die "specfile2traces(): ${spectrum_pathname} invalid filetype; must be .mzML or .mzXML";
   }
+
   return $traces_href;
 }
 
@@ -344,41 +383,22 @@ sub specfile2traces {
 # the time & intensity information in a hash.
 ###############################################################################
 sub mzML2traces {
-
-  use XML::TreeBuilder;
-  use XML::Writer; 
-
   my %args = @_;
   my $spectrum_pathname = $args{spectrum_pathname};
   my $target_q1 = $args{target_q1};
-  my $q1_tol = $args{tol};
+  my $q1_tolerance = $args{q1_tolerance};
+  my $q3_tolerance = $args{q3_tolerance};
+  my @q3_array = @{ $args{'q3_aref'} };
+  my @frg_ion_array = @{ $args{'frg_ion_aref'} };
   my $tx_info = $args{tx_info} || '';
 
-  my %traces;
-  my $q3_tol = 0.05;
-  #DEBUG
-  $q1_tol = 0.05;
-  #print "\n<!-- mzML2traces -->\n";
-  #print "<!-- q1_tol is $q1_tol -->\n";
-  #print "<!-- q3_tol is $q3_tol -->\n";
-  #print "<!-- spectrum_pathname is $spectrum_pathname -->\n";
-  #print "<!-- target_q1 is $target_q1 -->\n";
-  #print "<!-- tx_info is $tx_info -->\n";
-
-  # Extract lists of Q3, fragment ions, from tx_info string, which is in form
-  # Q3,ion,rel_intensity,Q3,ion,rel_intensity, ...
-  my @q3_array;
-  my @frg_ion_array;
   my @q3_found_array;
-  my @tx_info_elements = split(",",$tx_info);
-  my $n = scalar @tx_info_elements;
-  for (my $i=0; $i < $n; $i +=3) {
-    push (@q3_array, $tx_info_elements[$i]);
-    push (@frg_ion_array, $tx_info_elements[$i+1]);
-  }
-  my $n_q3 = $n/3;
+  my %traces;
 
-  my $mzMLtree    = XML::TreeBuilder->new();
+  # Initialize parser and parse the file.
+  use XML::TreeBuilder;
+  use XML::Writer; 
+  my $mzMLtree = XML::TreeBuilder->new();
   $mzMLtree->parse_file($spectrum_pathname) || die
   "Couldn't parse $spectrum_pathname";
   my @allcgrams = $mzMLtree->find_by_tag_name('chromatogram');
@@ -386,14 +406,13 @@ sub mzML2traces {
   my $ncgrams = scalar (@allcgrams);
   my $noffsets = scalar (@alloffsets);
 
+  # Process each chromatogram
   for my $cgram (@allcgrams) {
-    #my $index = $cgram->attr('index');
-    #$verbose && print "Processing chromatogram $index\n";
     my $id = $cgram->attr('id');
     my ($q1, $q3, $sample, $period, $experiment, $transition,);
     # If this is a parsable chromatogram ID, get its infos
     if (($id =~
-	/.*SRM.*\s+Q1=(\S+)\s+Q3=(\S+)\s+sample=(\S+)\s+period=(\S+)\s+experiment=(\S+)\s+transition=(\S+)/) #QTRAP data from Cima and Ralph Scheiss
+	/.*SRM.*\s+Q1=(\S+)\s+Q3=(\S+)\s+sample=(\S+)\s+period=(\S+)\s+experiment=(\S+)\s+transition=(\S+)/) #QTRAP data from Cima and Ralph Schiess
       ||
       ($id =~ /SRM SIC Q1=(\S+) Q3=(\S+)/) #QQQ data from SRMAtlas
       ||
@@ -401,38 +420,27 @@ sub mzML2traces {
     {
       $q1 = $1;
       $q3 = $2;
-      #DEBUG
-      #print "<!-- mzML chromatogram for Q1=$q1 Q3=$q3 -->\n";
       $sample = $3;
       $period = $4;
       $experiment = $5;
       $transition = $6;
 
       # If this is close to our target Q1 ...
-      if (($q1 <= $target_q1+$q1_tol) && ($q1 >= $target_q1-$q1_tol)) {
-	#DEBUG
-	#print "<!-- mzML chromatogram for Q1=$q1 Q3=$q3 -->\n";
+      if (($q1 <= $target_q1+$q1_tolerance) &&
+	  ($q1 >= $target_q1-$q1_tolerance)) {
 
 	# If tx_info provided, check to see if this is one of the Q3s we want
 	if ($tx_info) {
-	  my $q3_match = 0;
-	  for (my $i=0; $i < $n_q3; $i++) {
-	    my $target_q3 = $q3_array[$i];
-	    if (($q3 <= $target_q3+$q3_tol) && ($q3 >= $target_q3-$q3_tol)) {
-	      if ($q3_found_array[$i]) {
-		print "<p>WARNING: target Q1=${target_q1}/Q3=${target_q3} found in mzML more than once.<br>Q1 tolerance = $q1_tol  Q3 tolerance = $q3_tol</p>\n";
-		$q3_found_array[$i]++;
-	      } else {
-		$q3_found_array[$i]=1;
-	      }
-	      $q3_match++;
-	      last;
-	    }
-	  }
+	  my $q3_match = check_q3_against_list (
+	    q3 => $q3,
+	    q3_aref => \@q3_array,
+	    q3_tolerance => $q3_tolerance,
+	    q3_found_aref => \@q3_found_array,
+	  );
 	  next unless $q3_match;
-	  if ($q3_match > 1) {
-	    print "<p>WARNING: mzML Q3 $q3 matched >1 target Q3 for target Q1=${target_q1}.<br>Q1 tolerance = $q1_tol  Q3 tolerance = $q3_tol</p>\n";
-	  }
+  if ($q3_match > 1) {
+    print "<p>WARNING: mzML Q3 $q3 matched >1 target Q3 for target Q1=${target_q1}.<br>Q1 tolerance = $q1_tolerance  Q3 tolerance = $q3_tolerance</p>\n";
+  }
 	}
 
 	# Process the time and intensity arrays for this cgram
@@ -492,7 +500,6 @@ sub mzML2traces {
 	  my $intensity = $int_aref->[$i];
 	  $traces{$q1}->{$q3}->{'rt'}->{$time} = $intensity;
 	  $traces{$q1}->{$q3}->{'q1'} = $q1;
-	  $traces{$q1}->{$q3}->{'eri'} = 0.01 if $tx_info;
 	}
 
       } # end if target Q1
@@ -505,46 +512,84 @@ sub mzML2traces {
 ###############################################################################
 # mzXML2traces
 # Read the scans for a particular Q1 from an mzXML file and store
-# the time & intensity information in a hash.
+# the time & intensity information in a hash. Handle two types of mzXML:
+# q3/intensity pairs encoded in array, or each pair stored in indiv.
+# scans
 ###############################################################################
 
 sub mzXML2traces {
   my %args = @_;
   my $spectrum_pathname = $args{spectrum_pathname};
   my $target_q1 = $args{target_q1};
-  my $tol = $args{tol};
+  my $q1_tolerance = $args{q1_tolerance};
+  my $q3_tolerance = $args{q3_tolerance};
+  my @q3_array = @{ $args{'q3_aref'} };
+  my @frg_ion_array = @{ $args{'frg_ion_aref'} };
   my $tx_info = $args{tx_info} || '';
 
+  my @q3_found_array;
+  my %traces;
+
+  #Parse the file without using a parser.
   my ($scan, $time, $q1, $q3, $intensity);
-  my (%traces, $intensity_aref);
+  my $intensity_aref;
   open (MZXML, $spectrum_pathname);
   #open (MZXML, $param_href->{spectrum_pathname});
   while (my $line = <MZXML>) {
-    # New scan. Store data from previous.
+    # New scan.
     if ($line =~ /<scan num="(\d+)"/) {
       $scan = $1;
       # maybe need to check when scans start at 0
       #print "Q1: $q1\n";
+      # Score data from previous scan if it's for the target Q1
       if (($scan > 1) &&
-	  ($q1 <= $target_q1+$tol) && ($q1 >= $target_q1-$tol)) {
+	  ($q1 <= $target_q1+$q1_tolerance) &&
+	  ($q1 >= $target_q1-$q1_tolerance)) {
+	# If intensity array,  get the q3, intensity pairs and store each one
 	if ($intensity_aref) {
 	  my @intensities = @{$intensity_aref};
 	  while (@intensities) {
 	    # TODO: if (defined $tx_info), only store scan if $q3 matches
 	    # a Q3 in $tx_info.
 	    my $q3 = shift @intensities;
+
+	# If tx_info provided, check to see if this is one of the Q3s we want
+	my $q3_match;
+	if ($tx_info) {
+	  $q3_match = check_q3_against_list (
+	    q3 => $q3,
+	    q3_aref => \@q3_array,
+	    q3_tolerance => $q3_tolerance,
+	    q3_found_aref => \@q3_found_array,
+	  );
+	  next unless $q3_match;
+  if ($q3_match > 1) {
+    print "<p>WARNING: mzML Q3 $q3 matched >1 target Q3 for target Q1=${target_q1}.<br>Q1 tolerance = $q1_tolerance  Q3 tolerance = $q3_tolerance</p>\n";
+  }
+	}
 	    my $intensity = shift @intensities;
 	    $traces{$q1}->{$q3}->{'rt'}->{$time} = $intensity;
 	    $traces{$q1}->{$q3}->{'q1'} = $q1;
-	    # initialize eri to a tiny value in case we don't get a value
-	    $traces{$q1}->{$q3}->{'eri'} = 0.1 if $tx_info;
-	    #print "$q1\t$q3\t$time\t$intensity\n";
 	  }
+	# Else we have only one q3, intensity pair. Store it.
 	} else {
+	# If tx_info provided, check to see if this is one of the Q3s we want
+	my $q3_match=1;
+	if ($tx_info) {
+	  $q3_match = check_q3_against_list (
+	    q3 => $q3,
+	    q3_aref => \@q3_array,
+	    q3_tolerance => $q3_tolerance,
+	    q3_found_aref => \@q3_found_array,
+	  );
+	}
+  if ($q3_match > 1) {
+    print "<p>WARNING: mzML Q3 $q3 matched >1 target Q3 for target Q1=${target_q1}.<br>Q1 tolerance = $q1_tolerance  Q3 tolerance = $q3_tolerance</p>\n";
+  }
+	  if ( $q3_match ) {
 	  $traces{$q1}->{$q3}->{'rt'}->{$time} = $intensity;
 	  $traces{$q1}->{$q3}->{'q1'} = $q1;
-	  $traces{$q1}->{$q3}->{'eri'} = 0.01 if $tx_info;
-	  #print "$q1\t$q3\t$time\t$intensity\n";
+	}
 	}
 	undef $intensity_aref;
       }
@@ -557,7 +602,9 @@ sub mzXML2traces {
       my $units = $2;
       # NOTE: most/all of the sprintf field width specifiers below are useless
       # because the whitespace gets lost via the javascript.
-      $time = sprintf ("%0.3f", ($units eq 'M') ? $n*60 : $n );
+      $time = sprintf ("%0.3f", ($units eq 'S') ? $n/60 :   #seconds
+                                ($units eq 'H') ? $n*60 :   #hours
+				                  $n);      #minutes
     } elsif ($line =~ /basePeakIntensity="(\S*?)"/) {
       $intensity = $1;
     } elsif ($line =~ /basePeakMz="(\S*?)"/) {
@@ -575,6 +622,41 @@ sub mzXML2traces {
   return (\%traces);
 }
 
+
+###############################################################################
+# check_q3_against_list
+# See if given Q3 is in a list of target Q3s, within a given tolerance.
+#   If it is, make a note of it in q3_found_array.
+#   Warn if we already saw it before.
+#   This is inefficient as it performs the same arithmetic many times.
+###############################################################################
+sub check_q3_against_list {
+  my %args = @_;
+  my $q3 = $args{'q3'};
+  my @q3_array = @{ $args{'q3_aref'} };
+  my $q3_tolerance = $args{'q3_tolerance'};
+  my @q3_found_array = @{ $args{'q3_found_aref'} };
+
+  my $q3_match = 0;
+  for (my $i=0; $i < scalar @q3_array; $i++) {
+    my $target_q3 = $q3_array[$i];
+    if (($q3 <= $target_q3+$q3_tolerance) &&
+        ($q3 >= $target_q3-$q3_tolerance)) {
+      if (defined  $args{'q3_found_aref'}) {
+	if ($q3_found_array[$i]) {
+	  print "<p>WARNING: target Q3=${target_q3} found in spectrum file
+	  more than once for specified Q1. Q3 tolerance = $q3_tolerance</p>\n";
+	  $q3_found_array[$i]++;
+	} else {
+	  $q3_found_array[$i]=1;
+	}
+      }
+      $q3_match++;
+      last;
+    }
+  }
+  return $q3_match;
+}
 
 ###############################################################################
 # traces2json
@@ -629,10 +711,11 @@ sub traces2json {
 
 
       $label .=  sprintf "%7.3f / %7.3f",  $traces{$q1}->{$q3}->{'q1'}, $q3;
-      $label .= sprintf " ERI: %0.1f", $traces{$q1}->{$q3}->{eri},
-      if ($traces{$q1}->{$q3}->{eri});
+      $label .= sprintf (" ERI: %0.1f", $traces{$q1}->{$q3}->{'eri'} )
+	if ($traces{$q1}->{$q3}->{'eri'});
       $json_string .= "    label : '$label',\n";
-      $json_string .= "      eri : $traces{$q1}->{$q3}->{eri},\n" if ($traces{$q1}->{$q3}->{eri});
+      $json_string .= "      eri : $traces{$q1}->{$q3}->{'eri'},\n"
+        if ($traces{$q1}->{$q3}->{'eri'});
       $json_string .= "     data : [\n";
       # Write each pair of numbers in Dick's JSON format.
       for my $time (sort {$a <=> $b} keys %{$traces{$q1}->{$q3}->{'rt'}}) {
@@ -684,9 +767,9 @@ sub store_tx_info_in_traces_hash {
   my $tx_info = $args{tx_info};
   my $traces_href = $args{traces_href};
   my %traces = %{$traces_href};
+  my $tol = $args{q3_tolerance};
 
   my %tx_info_values;
-  my $tol = 0.0005;
   my @values = split(",",$tx_info);
   while (@values) {
     # get a q3, fragment ion, expected intensity triplet
@@ -695,12 +778,11 @@ sub store_tx_info_in_traces_hash {
     my $int = shift @values;
     # see if we have data for this q3
     for my $data_q1 (keys %traces) {
-      # initialize eri to a small number in case we don't find it.
       for my $data_q3 (keys %{$traces{$data_q1}}) {
 	if (($q3 <= $data_q3+$tol) && ($q3 >= $data_q3-$tol)) {
 	  # if we do, store the fragment ion and the eri
 	  $traces{$data_q1}->{$data_q3}->{'frg_ion'} = $frg_ion;
-	  $traces{$data_q1}->{$data_q3}->{'eri'} = $int;
+	  $traces{$data_q1}->{$data_q3}->{'eri'} = $int if (defined $int);
 	  last;
 	}
       }
@@ -766,10 +848,12 @@ sub byteSwap {
 }
 
 ###############################################################################
-# mzML2json - Create a .json file representing a given chromatogram
+# mzML2json_using_PCE - Create a .json file representing a given chromatogram
 #   This makes use of the ATAQS peptideChromatogramExtractor, but
 #   it is slow and it wasn't working for PASSEL for unknown reasons.
 #    08/23/11: DEPRECATED, because it's slow to call out.
+#    12/05/11: mzML2json, initially a copy of this subroutine,
+#    has now diverged a lot.
 ###############################################################################
 sub mzML2json_using_PCE {
 
@@ -1026,7 +1110,10 @@ sub getTopHTMLforChromatogramViewer {
     my $mpm_s = sprintf "%0.3f", $mass;
     $top_html .= "($mpm_s Daltons) </b>\n";
   }
-  $top_html .= "<b><big>+$precursor_charge, $param_href->{isotype}</big></b>\n";
+  $top_html .= "<b><big>+$precursor_charge</big></b>\n"
+     if $param_href->{precursor_charge};
+  $top_html .= "<b><big>, $param_href->{isotype}</big></b>\n"
+     if $param_href->{isotype};
   $top_html .= "<br><b>Experiment: </b> $param_href->{experiment_title}\n"
      if $param_href->{experiment_title};
   $top_html .= "<br><b>Spectrum file:</b> $spectrum_pathname\n";
@@ -1120,7 +1207,7 @@ sub getBottomHTMLforChromatogramViewer {
 }
 
 ###############################################################################
-# getTransitionGroupInfo_from_sptxt  11/30/11: it works!!! Nabbed from Eric's
+# getTransitionGroupInfo_from_sptxt        Nabbed from Eric's
 #  /net/db/projects/spectraComparison/FragmentationComparator.pm
 ###############################################################################
 sub getTransitionGroupInfo_from_sptxt {
@@ -1215,6 +1302,95 @@ sub getTransitionGroupInfo_from_sptxt {
 
   close(INFILE);
   return($q1, $transition_info);
+}
+
+###############################################################################
+# getChromatogramInfo
+#    Given some parameters defining a chromatogram, return that chromatogram
+#    as a json object that can be read by Chromavis. Called from both
+#    getChromatogramInfo wrapper cgi and from PeptideAtlas page
+#    ShowChromatogram cgi.
+###############################################################################
+sub getChromatogramInfo {
+
+  #### Process the arguments list
+  my $self = shift;
+  my $parameters_href = shift;
+
+  # Create a chromatogram object so we can use its methods
+  my $cgram = new SBEAMS::PeptideAtlas::Chromatogram;
+  $cgram->setSBEAMS($sbeams);
+
+  # Get all necessary info from database using chromatogram_id, if
+  # provided. Else, we assume info was passed in via parameters or that we
+  # can get it from an .sptxt file.
+
+  if ( $parameters_href->{'SEL_chromatogram_id'} ) {
+    $cgram->getChromatogramParameters(
+      SEL_chromatogram_id => $parameters_href->{'SEL_chromatogram_id'},
+      param_href => $parameters_href,
+    );
+  }
+
+  # Fetch some of the parameters into scalar variables.
+  my $precursor_charge = $parameters_href->{'precursor_charge'};
+  my $pepseq = $parameters_href->{'pepseq'};
+  my $modified_pepseq = $parameters_href->{'modified_pepseq'} || $pepseq;
+  my $spectrum_pathname = $parameters_href->{'spectrum_pathname'} ||
+  die 'getChromatogramInfo(): Need parameter spectrum_pathname';
+  my $spectrum_basename = $parameters_href->{'spectrum_basename'};
+  $spectrum_pathname =~ /.*(\..*)/; my $filename_extension = $1;
+  if (! $spectrum_basename ) {
+    $spectrum_pathname =~ /.*\/(\S+?)\.${filename_extension}/;
+    $spectrum_basename = $1;
+  }
+  my $precursor_neutral_mass = $parameters_href->{'precursor_neutral_mass'};
+  if ($parameters_href->{'isotype'} =~ /heavy/i) {
+    $precursor_neutral_mass += $parameters_href->{'isotype_delta_mass'};
+  }
+  my $machine = $parameters_href->{'machine'};
+
+  # Check that we can obtain or calculate a Q1 or precursor_neutral_mass.
+  if ( ! defined $parameters_href->{q1} ) {
+    # see if there is an sptxt file to go with the spectrum_pathname
+    my $sptxt_pathname = $spectrum_pathname;
+    $sptxt_pathname =~ s/${filename_extension}/\.sptxt/ ;
+    if (-e $sptxt_pathname) {
+      ($parameters_href->{'q1'},$parameters_href->{'transition_info'}) =
+      $cgram->getTransitionGroupInfo_from_sptxt (
+	pepseq => $modified_pepseq,
+	charge => $precursor_charge,
+	sptxt_pathname => $sptxt_pathname,
+      );
+      # if there is no sptxt, and no precursor mass, try to calculate the
+      # mass from the pepseq. If no pepseq either, we can't proceed.
+    } elsif ( ! defined $precursor_neutral_mass ) {
+      if ( defined $modified_pepseq )  {
+	$precursor_neutral_mass = getPeptideMass( sequence=>$modified_pepseq );
+      } else {
+	die "Cannot find transition info. Must provide PASSEL SEL_chromatogram_id--OR--spectrum_pathname for an mzML that has an .sptxt file of same name--OR--q1, peptide, or precursor_neutral_mass param (plus optional precursor_charge and/or optional transition_info param with format Q3,ion,rel_intens,Q3,ion,rel_intens, ...)";
+      }
+    }
+  }
+
+  #### Extract chromatogram data from spectrum file
+  ####  into a json data structure
+  my $json_string = $cgram->specfile2json(
+    param_href => $parameters_href,
+    pepseq => $parameters_href->{'modified_pepseq'},
+    mass => $parameters_href->{'precursor_neutral_mass'},
+    charge => $parameters_href->{'precursor_charge'},
+    isotype => $parameters_href->{'isotype'},
+    is_decoy => $parameters_href->{'is_decoy'},
+    experiment => $parameters_href->{'experiment_title'},
+    spectrum_file => $parameters_href->{'spectrum_pathname'},
+    chromatogram_id => $parameters_href->{'SEL_chromatogram_id'},
+    q1_tolerance => $parameters_href->{'q1_tolerance'} || 0.05,
+    q3_tolerance => $parameters_href->{'q3_tolerance'} || 0.05,
+  );
+
+  return $json_string;
+
 }
 
 ###############################################################################

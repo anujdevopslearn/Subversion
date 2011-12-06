@@ -1324,7 +1324,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
       #### table, QT5500_TRANSITION_GROUP.
       #### This table needs to be updated each time the Human SRMAtlas is rebuilt.
       #### Takes ~3 days. Clear existing table, then reload with
-      #### $SBEAMS/lib/scripts/PeptideAtlas/load_Q55500_transition_groups.PL
+      #### $SBEAMS/lib/scripts/PeptideAtlas/load_Q55500_transition_groups.pl
       #### PeptideChromatogramExtractor java code is now failing
       #### for all QT_ZH* files (see /Appears that all the QT files/ in
       #### Terry's log), so for now
@@ -1384,15 +1384,15 @@ if ($apply_action =~ /QUERY|GO/i ) {
 	  $chromatogram_entry .= ""
   #	."&ion=$ion"  #multiple; different per trace.
   #	."&ion_charge=$ion_charge"  #multiple
-	  ."&precursor_charge=$precursor_charge"  #multiple
+#	  ."&precursor_charge=$precursor_charge"  #both +2 & +3 will be shown.
 	  ."&pepseq=$pepseq"
 	  ."&modified_pepseq=$modified_pepseq"
   #	."&q1=$q1"  #multiple
   #	."&q3=$q3"  #multiple
-	  ."&mzml_basename=$mzml_basename"
-	  ."&mzml_pathname=$mzml_pathname"
+	  ."&spectrum_basename=$mzml_basename"
+	  ."&spectrum_pathname=$mzml_pathname"
   #	."&ce=$ce"
-	  ."&rt=$rt"  #multiple
+#	  ."&rt=$rt"  #multiple
 	  ."&delta_rt=$delta_rt"
 	  ."&fragmentor=$fragmentor"
 	  ."&precursor_neutral_mass=$precursor_neutral_mass";
