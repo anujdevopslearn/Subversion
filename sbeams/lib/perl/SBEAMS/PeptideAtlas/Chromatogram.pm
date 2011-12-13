@@ -1217,14 +1217,13 @@ sub getTransitionGroupInfo_from_sptxt {
   my $is_match = 0;
   my $nMatches = 0;
   my $fulltext = '';
-  my $comment;
-  my %info;
+
   while ($line = <INFILE>) {
-    $line =~ s/\r\n//g;
-    next if ($line =~ /^#/);
+    my $full_line = $line;
+    $line =~ s/\r\n//g; #strip newline; but why not use chomp?
+    next if ($line =~ /^#/);  # skip comments.
     if ($line =~ /^Name: (.+)/) {
       $peptideIon = $1;
-      $fulltext = '';
 
       #### Hack to work around non-alkylation
       if ( $forceCysToAlkylate && $peptideIon =~ /C[A-Z]/ ) {
@@ -1237,6 +1236,7 @@ sub getTransitionGroupInfo_from_sptxt {
 
     }
     if ($is_match) {
+      $fulltext .= $full_line;
       if ($line =~ /^PrecursorMZ: (.+)/i) {
 	$q1 = $1;
       }
@@ -1244,6 +1244,7 @@ sub getTransitionGroupInfo_from_sptxt {
 	my $nPeaks = $1;
 	for (my $i=0; $i< $nPeaks; $i++) {
 	  $line = <INFILE>;
+	  $fulltext .= $line;
 	  my ($mz,$int,$explanations) = split(/\s+/,$line);
 
 	  if ($explanations =~ /^([by])(\d+)([-\d]*)(\^\d)*\/([-\.\d]+)/) {
@@ -1284,7 +1285,6 @@ sub getTransitionGroupInfo_from_sptxt {
 	$nMatches++;
       }
     }
-    $fulltext .= $line;
   }
 
   die "$nMatches matches for $peptideIon in $sptxt_pathname! Last one used."
