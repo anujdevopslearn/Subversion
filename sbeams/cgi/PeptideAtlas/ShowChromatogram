@@ -152,7 +152,8 @@ sub processRequest {
 
   # If there is any data on this chromatogram in the PASSEL database tables,
   # fetch it and add it to the parameters hash.
-  my $json_string = $cgram->getChromatogramInfo($ref_parameters);
+  my ($json_string, $sptxt_fulltext)
+     = $cgram->getChromatogramInfo($ref_parameters);
 
   # Fetch some of the parameters into scalar variables and do some processing.
   my $precursor_charge = $ref_parameters->{'precursor_charge'};
@@ -215,6 +216,9 @@ sub processRequest {
     file_prefix=>'chromgram_',
     query_parameters_ref=>$ref_parameters,
   );
+
+  # Print sptxt info, if provided.
+  print "<pre>$sptxt_fulltext</pre>\n";
 
   # Print the HTML that allows user to recall and download resultset
   print $cgram->getBottomHTMLforChromatogramViewer(

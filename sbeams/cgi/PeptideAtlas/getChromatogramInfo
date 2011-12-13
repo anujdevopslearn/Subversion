@@ -90,7 +90,7 @@ sub processRequest {
   my $cgram = new SBEAMS::PeptideAtlas::Chromatogram;
   $cgram->setSBEAMS($sbeams);
 
-  my $json_string = $cgram->getChromatogramInfo($ref_parameters);
+  my ($json_string, $foo) = $cgram->getChromatogramInfo($ref_parameters);
   return $json_string;
 
 }

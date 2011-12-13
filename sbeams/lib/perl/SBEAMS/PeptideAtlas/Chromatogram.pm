@@ -1216,6 +1216,7 @@ sub getTransitionGroupInfo_from_sptxt {
   my $peptideIon;
   my $is_match = 0;
   my $nMatches = 0;
+  my $fulltext = '';
   my $comment;
   my %info;
   while ($line = <INFILE>) {
@@ -1223,6 +1224,7 @@ sub getTransitionGroupInfo_from_sptxt {
     next if ($line =~ /^#/);
     if ($line =~ /^Name: (.+)/) {
       $peptideIon = $1;
+      $fulltext = '';
 
       #### Hack to work around non-alkylation
       if ( $forceCysToAlkylate && $peptideIon =~ /C[A-Z]/ ) {
@@ -1282,13 +1284,14 @@ sub getTransitionGroupInfo_from_sptxt {
 	$nMatches++;
       }
     }
+    $fulltext .= $line;
   }
 
   die "$nMatches matches for $peptideIon in $sptxt_pathname! Last one used."
     if ($nMatches > 1);
 
   close(INFILE);
-  return($q1, $transition_info);
+  return($q1, $transition_info, $fulltext);
 }
 
 ###############################################################################
@@ -1333,6 +1336,7 @@ sub getChromatogramInfo {
   }
   my $precursor_neutral_mass = $parameters_href->{'precursor_neutral_mass'};
   my $machine = $parameters_href->{'machine'};
+  my $sptxt_fulltext = '';
 
   # Check that we can obtain or calculate a Q1 or precursor_neutral_mass.
   if ( ! defined $parameters_href->{q1} ) {
@@ -1340,7 +1344,9 @@ sub getChromatogramInfo {
     my $sptxt_pathname = $spectrum_pathname;
     $sptxt_pathname =~ s/${filename_extension}/\.sptxt/ ;
     if (-e $sptxt_pathname) {
-      ($parameters_href->{'q1'},$parameters_href->{'transition_info'}) =
+       ($parameters_href->{'q1'},
+        $parameters_href->{'transition_info'},
+        $sptxt_fulltext ) =
       $cgram->getTransitionGroupInfo_from_sptxt (
 	pepseq => $modified_pepseq,
 	charge => $precursor_charge,
@@ -1373,7 +1379,7 @@ sub getChromatogramInfo {
     q3_tolerance => $parameters_href->{'q3_tolerance'} || 0.05,
   );
 
-  return $json_string;
+  return $json_string, $sptxt_fulltext;
 
 }
 
