@@ -52,6 +52,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS
     $LOGIN_DURATION
     $SESSION_REAUTH
     $SMBAUTH
+    $LDAPAUTH
     %CONFIG_SETTING
     $SBEAMS_VERSION
     );
@@ -60,7 +61,7 @@ require Exporter;
 @ISA = qw (Exporter);
 
 @EXPORT_OK = qw($LOGGING_LEVEL $LOG_BASE_DIR $LOGIN_DURATION 
-                $SESSION_REAUTH $SMBAUTH );
+                $SESSION_REAUTH $SMBAUTH $LDAPAUTH );
 @EXPORT = qw (
     $DBTITLE
     $DBADMIN
@@ -186,6 +187,7 @@ sub extractInstanceParams {
     $LOGIN_DURATION = $DBCONFIG->{$DBINSTANCE}->{LOGIN_DURATION};
     $SESSION_REAUTH = $DBCONFIG->{$DBINSTANCE}->{SESSION_REAUTH};
     $SMBAUTH = \%{$DBCONFIG->{$DBINSTANCE}->{SMBAUTH}};
+    $LDAPAUTH = \%{$DBCONFIG->{$DBINSTANCE}->{LDAPAUTH}};
 
     my $config_setting = $DBCONFIG->{$DBINSTANCE}->{CONFIG_SETTING} || {};
     %CONFIG_SETTING = %{$config_setting};
