@@ -1555,6 +1555,8 @@ sub checkLogin {
             AND record_status != 'D'
         ");
 
+		my $success_code = 'SUCCESS (DB)';
+
     #### If this user is not in the user_login table, don't look any further
     unless (exists $query_result{$user}) {
       if ($more_helpful_message) {
@@ -1572,6 +1574,7 @@ sub checkLogin {
     } else {
       unless ($query_result{$user}) {
         $query_result{$user} = $self->getUnixPassword($user);
+		    $success_code = 'SUCCESS (NIS)';
       }
     }
 
@@ -1579,7 +1582,7 @@ sub checkLogin {
     if ($failed == 0 && $query_result{$user}) {
       if (crypt($pass, $query_result{$user}) eq $query_result{$user}) {
         $success = 1;
-        $error_code = 'SUCCESS';
+        $error_code = $success_code;
       } else {
         if ($more_helpful_message) {
           push(@ERRORS, "Incorrect password for this username");
