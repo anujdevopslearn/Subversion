@@ -68,6 +68,15 @@ SMBAUTH{PDC}         = DC1
 SMBAUTH{BDC}         = DC2
 SMBAUTH{Domain}      = MYDOMAIN
 
+# Settings to enable and configure LDAPS authentication.
+# Enable LDAP Auth?
+LDAPAUTH{ENABLE}        = YES
+# LDAP server URI
+LDAPAUTH{SERVER}        = ldap.systemsbiology.net
+# LDAP port
+LDAPAUTH{PORT}        = 636
+# username to LDAP pattern, user-supplied username will be substituted in.
+LDAPAUTH{USERTEMPLATE}  = USERNAME@systemsbiology.net
 
 #### Set the RDBMS flavor.  This triggers engine-specific code within the
 #### system.  Can be one of "MS SQL Server", "MySQL", "PostgreSQL", "Oracle",
@@ -299,4 +308,3 @@ HTML_BASE_DIR          = /mysqldev1/sbeams
 PHYSICAL_BASE_DIR      = /local/www/html/mysqldev1/sbeams
 UPLOAD_DIR             = /local/data/mysqldev1/sbeams
 DBPREFIX{Biosap}       = biosap.
-
