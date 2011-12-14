@@ -22,7 +22,7 @@ use vars qw( $q $http_header $log @ISA $DBTITLE $SESSION_REAUTH @ERRORS
              $current_contact_id $current_username $LOGIN_DURATION
              $current_work_group_id $current_work_group_name $LOGGING_LEVEL 
              $current_project_id $current_project_name $current_project_tag $SMBAUTH
-             $current_user_context_id @EXPORT_OK  );
+             $current_user_context_id @EXPORT_OK $LDAPAUTH );
 
 use vars qw( %session $session_string );
 use Storable qw( nstore retrieve );
@@ -32,9 +32,10 @@ use CGI qw(-no_debug);
 use DBI;
 use Crypt::CBC;
 use Authen::Smb;
+use Net::LDAPS;
 
 use SBEAMS::Connection::DBConnector;
-use SBEAMS::Connection::Settings qw(:default $SESSION_REAUTH $LOGIN_DURATION $SMBAUTH);
+use SBEAMS::Connection::Settings qw(:default $SESSION_REAUTH $LOGIN_DURATION $SMBAUTH $LDAPAUTH);
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
 use SBEAMS::Connection::Log;
@@ -1574,7 +1575,6 @@ sub checkLogin {
       }
     }
 
-
     #### If there is an encrypted password, test it
     if ($failed == 0 && $query_result{$user}) {
       if (crypt($pass, $query_result{$user}) eq $query_result{$user}) {
@@ -1592,9 +1592,40 @@ sub checkLogin {
       }
     }
 
+    # If success is still 0 but we haven't failed, try LDAP Authentication if enabled 
+    if ( !$success && !$failed && $LDAPAUTH && $LDAPAUTH->{ENABLE} && $LDAPAUTH->{ENABLE} =~ /yes/i ) { 
+      my $ldap_user = $user;
+      if ( $LDAPAUTH->{USERTEMPLATE} ) {
+        $ldap_user = $LDAPAUTH->{USERTEMPLATE};
+        $ldap_user =~ s/USERNAME/$user/g;
+      }
+
+      my $port = $LDAPAUTH->{PORT} || 636;
+      my $ldap = Net::LDAPS->new ( $LDAPAUTH->{SERVER}, port => $port );
+
+      if ( !$ldap ) {
+        $log->error( "LDAP connection failes: $@\n" );
+        push(@ERRORS, "$@" );
+      } else {
+        # Try to bind as user to verify password
+        my $result = $ldap->bind ( $ldap_user,
+                                   password => $pass,
+                                   version => 3 ); 
+
+        if ( $result->code() ) {
+          $log->warn( "LDAP Error: " . $result->error()  );
+        } else {
+          $success = 1;
+          $error_code = 'SUCCESS (LDAP)';
+        }
+      }
+    }
+
     #### If success is still 0 but we haven't failed, try SMB Authentication
-    if ($success == 0 && $failed == 0 && $SMBAUTH &&
-	$SMBAUTH->{ENABLE} =~ /Y/i) {
+    if ($success == 0 && $failed == 0 && $SMBAUTH && $SMBAUTH->{ENABLE} =~ /Y/i) {
+
+      $log->debug( "Dropped to SMB Auth" );
+
       my $authResult = Authen::Smb::authen($user,$pass, 
                                            @$SMBAUTH{qw(PDC BDC Domain)});
       if ( $authResult == 0 ) {
@@ -1604,7 +1635,7 @@ sub checkLogin {
       } elsif ( $authResult == 3 ) {
         if ($more_helpful_message) {
           push(@ERRORS, "Incorrect password for this username");
-          $log->warn( "Incorrect SMB password for $user ");
+          $log->warn( "Incorrect SMB password for $user: $authResult ");
         } else {
           push(@ERRORS, "Login Incorrect");
         }
@@ -1622,11 +1653,11 @@ sub checkLogin {
         $success = 0;
         $error_code = 'UNABLE TO CONTACT DC';
       }
+      $log->debug( "Success is $success" );
 
     }
 
-
-    #### Register the outcome of this attempt
+    # Register the outcome of this attempt
     my $remote_host = $ENV{REMOTE_HOST} || $ENV{REMOTE_ADDR} || '?';
     $logging_query = qq~
 	INSERT INTO $TB_USAGE_LOG (username,usage_action,result,remote_host)
