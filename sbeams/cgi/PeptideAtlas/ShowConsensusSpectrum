@@ -1,0 +1,208 @@
+#!/usr/local/bin/perl
+
+
+###############################################################################
+# Basic SBEAMS setup
+###############################################################################
+use strict;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+
+use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
+             $current_username $modification_helper );
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::ModificationHelper;
+use SBEAMS::PeptideAtlas::ConsensusSpectrum;
+
+use SBEAMS::Proteomics::SpecViewer;
+
+use File::Basename;
+
+my $denormalize = 0;
+my $curveType = 'function';
+
+my $error_state = 0;
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+
+my $consensus = new SBEAMS::PeptideAtlas::ConsensusSpectrum;
+$consensus->setSBEAMS($sbeams);
+
+$PROG_NAME="ShowOneSpectrum";
+
+###############################################################################
+# Define global variables if any and execute main()
+###############################################################################
+
+my $ymax = 10;
+
+main();
+
+
+###############################################################################
+# Main Program:
+#
+# If $sbeams->Authenticate() succeeds, print header, process the CGI request,
+# print the footer, and end.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+      'PeptideAtlas_readonly', 'PeptideAtlas_exec'],
+    #connect_read_only=>1,
+    allow_anonymous_access=>1,
+  ));
+
+  #### Print the header, figure and do what the user want, and print footer
+  my %parameters;
+  $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+  use Data::Dumper;
+
+  my $spectrum = get_consensus( %parameters );
+#  die Dumper $spectrum;
+
+  my @peak_array;
+  for ( my $i = 0; $i < scalar( @{$spectrum->{intensities}} ); $i++ ) {
+    push @peak_array, [$spectrum->{masses}->[$i], $spectrum->{intensities}->[$i]];
+  }
+
+  my $start_scan = 1;
+  my $spectrum_name = $spectrum->{modified_sequence} . '+' . $spectrum->{charge};
+#  die $spectrum_name;
+  my $content = "<TABLE>";
+
+  #### Lorikeet me! ##################################################
+  my $lorikeet = new SBEAMS::Proteomics::SpecViewer;
+  my $lorispectrum = $lorikeet->generateSpectrum(
+              charge            => $spectrum->{charge},
+              modified_sequence => $spectrum->{modified_sequence},
+              precursor_mass    => $spectrum->{mz},
+              scan              => $start_scan,
+              name              => $spectrum->{library_name},
+              a_ions            => $parameters{'ShowA'},
+              b_ions            => $parameters{'ShowB'},
+              c_ions            => $parameters{'ShowC'},
+              x_ions            => $parameters{'ShowX'},
+              y_ions            => $parameters{'ShowY'},
+              z_ions            => $parameters{'ShowZ'},
+              spectrum          => \@peak_array 
+              );
+
+  $content .= "<TR><TD>$lorispectrum</TD></TR>";
+
+  $content .= "</TABLE>\n";
+
+
+  $sbeamsMOD->display_page_header();
+  print $content;
+  $sbeamsMOD->display_page_footer();
+
+  $sbeams->display_page_footer(close_tables=>'YES',
+    separator_bar=>'YES',display_footer=>'NO');
+
+} # end main
+
+
+sub get_consensus {
+
+    my %parameters = @_;
+
+    my $sql = qq~
+       SELECT sequence,charge,mz_exact,protein_name,
+       protein_name_alt,modified_sequence, consensus_library_name, file_path, entry_idx
+       FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM CLS
+       JOIN $TBAT_CONSENSUS_LIBRARY CL ON CL.consensus_library_id = CLS.consensus_library_id
+       WHERE consensus_library_spectrum_id = '$parameters{consensus_library_spectrum_id}'
+    ~;
+
+    my @rows = $sbeams->selectSeveralColumns($sql);
+
+    foreach my $row (@rows) {
+      my ($seq, $chg, $mz, $pn, $pn_alt, $mod_seq, $lib_name, $file_path, $entry_idx ) = @{$row};
+      $parameters{'peptide'} = $seq;
+      $parameters{'charge'} = $chg;
+      $parameters{'precursor_mass'} = $mz;
+      $parameters{'protein_name'} = $pn;
+      $parameters{'protein_name_alt'} = $pn_alt;
+      $parameters{'modified_sequence'} = $mod_seq;
+      $parameters{'library_name'} = $lib_name;
+      $parameters{'file_path'} = $file_path;
+      $parameters{'entry_idx'} = $entry_idx;
+    }
+
+    my %results;
+    $results{modified_sequence} = $parameters{modified_sequence};
+    $results{charge} = $parameters{charge};
+    $results{mz} = $parameters{'precursor_mass'};
+
+    $results{lib_desc} = "$parameters{library_name}";
+    $results{lib_desc} =~ s/\.sptxt//;
+
+    my $peptide = $parameters{peptide};
+    $peptide =~ s/^.\.//;
+    $peptide =~ s/\..$//;
+    my $precursor_mass = $parameters{'precursor_mass'};
+    my $charge = $parameters{'charge'};
+    my $protein_name = $parameters{'protein_name'};
+    my $protein_name_alt = $parameters{'protein_name_alt'};
+    my $modified_sequence = $parameters{'modified_sequence'};
+
+    $parameters{assumed_charge} = $charge;
+
+    ## if no modified_sequence, use unmodified sequence
+    unless ($modified_sequence) {
+        $modified_sequence = $parameters{peptide};
+    }
+
+    #### Calculate peptide mass information
+    my $masstype = $parameters{masstype} || 0;
+
+    $modification_helper = new SBEAMS::PeptideAtlas::ModificationHelper();
+
+    my $peaks;
+    if ( $parameters{file_path} ) {
+      $peaks = $consensus->get_spectrum_peaks( %parameters, denormalize => 0, strip_unknowns => 1 );
+    } else {
+      $peaks = get_db_peaks($parameters{consensus_library_spectrum_id}); 
+    }
+    $peaks->{mz} = $results{mz};
+    $peaks->{modified_sequence} = $results{modified_sequence};
+    $peaks->{charge} = $results{charge};
+    for my $param ( keys( %parameters ) ) {
+      $peaks->{$param} ||= $parameters{$param};
+    }
+    return $peaks;
+
+} # end get_consensus
+
+sub get_db_peaks {
+  my $library_spectrum_id = shift || return undef;
+
+  #### Extract the actual mass,intensity pairs from database
+  my $sql = "SELECT mz, relative_intensity ".
+         "  FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM_PEAK ".
+         " WHERE consensus_library_spectrum_id = '$library_spectrum_id'";
+
+  my $sth = $sbeams->get_statement_handle($sql);
+  my %peaks = ( intensities => [], masses => [] );
+  while ( my @row = $sth->fetchrow_array() ) {
+    push @{$peaks{intensities}}, $row[1];
+    push @{$peaks{masses}}, $row[0];
+  }
+  return \%peaks;
+}
+
+__DATA__
