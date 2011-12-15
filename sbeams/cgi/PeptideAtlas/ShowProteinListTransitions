@@ -117,7 +117,7 @@ sub display_peptides {
 ##  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs' );
 ##
 
-  my @headers = ( 'Protein', 'Atlas Builds', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'SSRT', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'RI', qw( QTOF QTRAP IonTrap Predicted CE_range ) );
+  my @headers = ( 'Protein', 'Atlas Builds', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'SSRT', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'RI', qw( QTOF QTRAP IonTrap Predicted CE_range QQQ ) );
   my $headings = $atlas->get_column_defs( labels => \@headers );
 
   my $help_text = $atlas->make_table_help( description => 'Q1/Q3 transition pairs for SRM experiments',
@@ -182,7 +182,7 @@ JOIN $TBAT_PABST_PEPTIDE_MAPPING PPM ON B.biosequence_id = PPM.biosequence_id
 JOIN $TBAT_PABST_PEPTIDE PP ON PP.pabst_peptide_id = PPM.pabst_peptide_id
 JOIN $TBAT_PABST_TRANSITION PT ON PT.pabst_peptide_id = PP.pabst_peptide_id
  WHERE B.biosequence_accession  IN ( $prots )
- AND pabst_build_id = 49
+ AND pabst_build_id = 59
  AND precursor_ion_mass BETWEEN $min_mz AND $max_mz
  AND fragment_ion_mass BETWEEN $min_mz AND $max_mz
 ORDER BY biosequence_accession DESC, synthesis_adjusted_score DESC, peptide_sequence,
@@ -299,6 +299,12 @@ ion_rank ASC, relative_intensity DESC
 #, <A HREF='ShowSpectrumPanelNorm?xmax=$xmax;xmin=$xmin$param_str' TARGET='_CE_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$alt_title'></A>";
     } else {
       $row[17] = '';
+    }
+    if ( $libs->{qqq}->{$spectrum_key} ) {
+      my $title = "View +$row[8] spectrum for $row[2] in QQQ library";
+      $row[18] = "<A HREF='ShowOneSpectrum?consensus_library_spectrum_id=$libs->{qqq}->{$spectrum_key};xmax=$xmax;xmin=$xmin' TARGET='_it_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
+    } else {
+      $row[18] = '';
     }
 
     my $cmt = $protMappings->{$row[0]}->{comment} || '';
@@ -545,8 +551,8 @@ sub getConsensus {
 
   my $qtof_sql = qq~
   SELECT modified_sequence, consensus_library_spectrum_id, charge
-  FROM peptideatlas_test.dbo.consensus_library_spectrum 
-  WHERE consensus_library_id = 27
+  FROM peptideatlas.dbo.consensus_library_spectrum 
+  WHERE consensus_library_id = 279
   ~;
   my $sth = $sbeams->get_statement_handle( $qtof_sql );
   while ( my @row = $sth->fetchrow_array() ) {
@@ -555,22 +561,32 @@ sub getConsensus {
 
   my $qtrap_sql = qq~
   SELECT modified_sequence, consensus_library_spectrum_id, charge
-  FROM peptideatlas_test.dbo.consensus_library_spectrum 
-  WHERE consensus_library_id = 28
+  FROM peptideatlas.dbo.consensus_library_spectrum 
+  WHERE consensus_library_id = 282
   ~;
   my $sth = $sbeams->get_statement_handle( $qtrap_sql );
   while ( my @row = $sth->fetchrow_array() ) {
     $libs{qtrap}->{$row[0]. $row[2]} = $row[1];
   }
 
+  my $qqq_sql = qq~
+  SELECT modified_sequence, consensus_library_spectrum_id, charge
+  FROM peptideatlas.dbo.consensus_library_spectrum 
+  WHERE consensus_library_id = 292
+  ~;
+  my $sth = $sbeams->get_statement_handle( $qqq_sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    $libs{qqq}->{$row[0]. $row[2]} = $row[1];
+  }
+
 
 #  my %libmap = ( 21 => 'medium', 22 => 'high', 23 => 'low', 24 => 'mhigh', 25 => 'mlow', 26 => 'avg' );
 #  my %libmap = ( 29 => 'medium', 30 => 'high', 31 => 'low', 32 => 'mhigh', 33 => 'mlow', 27 => 'avg' );
-  my %libmap = ( 242 => 'low',
-                 243 => 'mlow', 
-                 244 => 'medium',
-                 245 => 'mhigh', 
-                 246 => 'high' );
+  my %libmap = ( 277 => 'low',
+                 278 => 'mlow', 
+                 279 => 'medium',
+                 280 => 'mhigh', 
+                 281 => 'high' );
 	my $libs = join( ',', keys( %libmap ));
   my $ce_sql = qq~
   SELECT modified_sequence, consensus_library_spectrum_id, charge, consensus_library_id
