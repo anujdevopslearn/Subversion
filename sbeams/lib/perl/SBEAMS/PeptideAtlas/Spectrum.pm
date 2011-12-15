@@ -675,7 +675,16 @@ sub getSpectrumPeaks {
 
 
   #### First try to fetch the spectrum from an mzXML file
-  my $mzXML_filename = "$data_location/$fraction_tag.mzML";
+  my $mzXML_filename;
+
+  if($fraction_tag =~ /.mzML/){
+    $mzXML_filename = "$data_location/$fraction_tag";
+    if ( ! -e $mzXML_filename ){
+      $mzXML_filename = "$data_location/$fraction_tag.mzML";
+    }
+  }else{
+    $mzXML_filename = "$data_location/$fraction_tag.mzML";
+  }
 
   if( ! -e $mzXML_filename){
      $mzXML_filename = "$data_location/$fraction_tag.mzXML";
