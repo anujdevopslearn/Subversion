@@ -180,7 +180,7 @@ sub InsertSearchKeyEntity {
 
   my $reference_directory;
 
-  if ($organism_name =~ /^Human$|^Mouse$/i ) {
+  if ($organism_name =~ /^Human$|^Mouse$|^COW$/i ) {
     #my $GOA_directory = $args{GOA_directory}
     my $uc_organism_name = uc($organism_name);
     my $GOA_directory = `ls -dlrt /net/db/src/GOA/* | grep '^d' | tail -1`;
@@ -684,10 +684,10 @@ sub readGOAAssociations {
   my $self = shift || die ("self not passed");
   my %args = @_;
 
-  print "INFO[$METHOD]: Reading GOA assocations file...\n" if ($VERBOSE);
 
   my $assocations_file = $args{assocations_file}
     or die("ERROR[$METHOD]: Parameter assocations_file not passed");
+  print "INFO[$METHOD]: Reading GOA assocations file...$assocations_file \n" if ($VERBOSE);
 
   #### Open the provided GOA xrefs file
   open(ASSOCINFILE,$assocations_file)
