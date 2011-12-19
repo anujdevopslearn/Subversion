@@ -1812,6 +1812,21 @@ sub getFormButtons {
   return @b;
 }
 
+sub get_user_agent {
+  my $self = shift;
+  return $q->user_agent();
+}
+
+sub get_MSIE_javascript_error {
+  my $self = shift;
+  my $message = shift || "<BR>There is a known issue with this page on Internet Explorer.  We are working to resolve the problem, and in the meantime suggest that you use Firefox or Google Chrome to view this page";
+  if ( $self->get_user_agent =~ /MSIE/ ) {
+    return $self->makeErrorText( $message );
+  }
+  return '';
+}
+
+
 ###############################################################################
 
 1;
