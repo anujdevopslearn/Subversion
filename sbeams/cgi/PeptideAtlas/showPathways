@@ -1,4 +1,3 @@
-#!/tools32/bin/perl -w
 #!/usr/local/bin/perl -w
 
 ###############################################################################
@@ -14,9 +13,6 @@
 # LICENSE file distributed with this software.
 #
 ###############################################################################
-BEGIN {
-unshift @INC, qw( /net/db/src/SSRCalc/ssrcalc .  /tools32/lib/perl5/5.8.0/i386-linux-thread-multi /tools32/lib/perl5/5.8.0 /tools32/lib/perl5/site_perl/5.8.0/i386-linux-thread-multi /tools32/lib/perl5/site_perl/5.8.0 /tools32/lib/perl5/site_perl );
-}
 
 
 use strict;
