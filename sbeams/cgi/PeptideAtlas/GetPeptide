@@ -1044,7 +1044,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
           my $default_txt = ( $lib_id eq $c_spectrum->[6] ) ? '(Build default)' : '';
           my $title = "View consensus spectrum from the $c_spectrum->[9] library $default_txt"; 
 
-					$all_consensus{$c_spectrum->[6]} = "<A HREF='ShowOneSpectrum?consensus_library_spectrum_id=$c_spectrum->[0];ymax=11000' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
+					$all_consensus{$c_spectrum->[6]} = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$c_spectrum->[0];ymax=11000' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
         }
       }
 
