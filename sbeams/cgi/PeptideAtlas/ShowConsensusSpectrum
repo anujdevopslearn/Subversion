@@ -39,6 +39,7 @@ $consensus->setSBEAMS($sbeams);
 
 $PROG_NAME="ShowOneSpectrum";
 
+
 ###############################################################################
 # Define global variables if any and execute main()
 ###############################################################################
@@ -70,7 +71,6 @@ sub main {
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
   use Data::Dumper;
-
   my $spectrum = get_consensus( %parameters );
 #  die Dumper $spectrum;
 
@@ -107,6 +107,7 @@ sub main {
 
 
   $sbeamsMOD->display_page_header();
+	print $sbeams->get_MSIE_javascript_error();
   print $content;
   $sbeamsMOD->display_page_footer();
 
