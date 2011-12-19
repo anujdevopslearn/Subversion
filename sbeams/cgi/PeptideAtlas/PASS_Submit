@@ -709,7 +709,7 @@ sub validateDatasetAnnotations {
   }
 
   $test = $formParameters->{publicReleaseDate};
-  unless (defined($test) && $test =~ /^(\d\d\d\d)\-(\d\d)\-(\d\d)$/ && $1>=2000 && $2>0 && $2<12 && $3>0 && $3<32) {
+  unless (defined($test) && $test =~ /^(\d\d\d\d)\-(\d\d)\-(\d\d)$/ && $1>=2000 && $2>0 && $2<=12 && $3>0 && $3<=31) {
     $response->{result} = 'Failed';
     push(@{$response->{errors}},"Public release data must be a valid date of the form YYYY-MM-DD like 2011-10-25");
   }
