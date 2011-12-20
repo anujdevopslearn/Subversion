@@ -184,7 +184,6 @@ sub processRequest {
     precursor_charge => $precursor_charge,
     spectrum_pathname => $spectrum_pathname,
   );
-	print $sbeams->get_MSIE_javascript_error();
   print $top_html;
 
   # Generate the Chromavis javascript chromatogram viewer
