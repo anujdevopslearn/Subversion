@@ -499,7 +499,7 @@ sub handle_request {
 
       my %spectral_links;
 			my $spec = 'spectrum';
-      $spec = "<A HREF='ShowOneSpectrum?consensus_library_spectrum_id=NLS_ID_HERE' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='Show spectrum'></A>" if $is_html;
+      $spec = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=NLS_ID_HERE' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='Show spectrum'></A>" if $is_html;
 
       my $idx = 0;
       my %peptide_order;
