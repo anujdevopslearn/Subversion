@@ -1003,9 +1003,9 @@
 		
 		// placeholder for sequence, m/z, scan number etc
 		parentTable += '<td style="background-color: white; padding:5px; border:1px dotted #cccccc;" valign="bottom" align="center"> '; 
-		parentTable += '<div id="seqinfo" style="width:100%;"></div> ';
+		parentTable += '<div id="seqinfo" style="width:b.browser.msie ? 103%:100%;"></div> ';
 		// placeholder for file name, scan number and charge
-		parentTable += '<div id="fileinfo" style="width:100%;"></div> ';
+		parentTable += '<div id="fileinfo" style="width:b.browser.msie ? 103%:100%;"></div> ';
 		parentTable += '</td> ';
 		
 		
@@ -1039,7 +1039,7 @@
 		// Footer & placeholder for moving ion table
 		parentTable += '<tr> ';
 		parentTable += '<td colspan="3" class="bar noprint" valign="top" align="center" id="ionTableLoc2" > ';
-		parentTable += '<div align="center" style="width:100%;font-size:10pt;"> ';
+		parentTable += '<div align="center" style="width:b.browser.msie ? 103%:100%;font-size:10pt;"> ';
 		parentTable += '</div> ';
 		parentTable += '</td> ';
 		parentTable += '</tr> ';
@@ -1085,7 +1085,6 @@
 		var selectedIonTypes = getSelectedIonTypes();
 		var ntermIons = getSelectedNtermIons(selectedIonTypes);
 		var ctermIons = getSelectedCtermIons(selectedIonTypes);
-		
 		var myTable = '' ;
 		myTable += '<table id="ionTable" cellpadding="2" class="font_small">' ;
 		myTable +=  "<thead>" ;
@@ -1107,7 +1106,6 @@
 		myTable +=  "<tbody>" ;
 		for(var i = 0; i < options.sequence.length; i += 1) {
 			myTable +=   "<tr>";
-			
 			// nterm ions
 			for(var n = 0; n < ntermIons.length; n += 1) {
 				if(i < options.sequence.length - 1) {
@@ -1307,7 +1305,7 @@
 		
 		// reset zoom option
 		myContent += '<nobr> ';
-		myContent += '<span style="width:100%; font-size:8pt; margin-top:5px; color:sienna;">Click and drag in the plot to zoom</span> ';
+		myContent += '<span style="width:b.browser.msie ? 103%:100%; font-size:8pt; margin-top:5px; color:sienna;">Click and drag in the plot to zoom</span> ';
 		myContent += 'X:<input id="zoom_x" type="checkbox" value="X" checked="checked"/> ';
 		myContent += '&nbsp;Y:<input id="zoom_y" type="checkbox" value="Y" /> ';
 		myContent += '&nbsp;<input id="resetZoom" type="button" value="Zoom Out" /> ';
