@@ -1639,7 +1639,7 @@ var sampleClass = function(settings){
       {
         header: "Experiment Title", dataIndex: 'experiment_title', width: 190,
         tooltip: 'Experiment Title',
-        sortable: true,
+        sortable: true
       }, 
 			{ 
 				header: "TxGrps", width: 25, fixed: false, dataIndex: 'transition_groups',  
@@ -1686,7 +1686,7 @@ var sampleClass = function(settings){
 			},
       {
         header: "Publication", dataIndex: 'publication_name', width: 100,
-        tooltip: 'Publication',
+        tooltip: 'Publication'
 //        renderer: common.publication_render
       }
 		/*	{ 
