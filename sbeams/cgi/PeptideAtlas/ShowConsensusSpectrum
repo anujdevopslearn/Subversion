@@ -106,13 +106,21 @@ sub main {
   $content .= "</TABLE>\n";
 
 
-  $sbeamsMOD->display_page_header();
-	print $sbeams->get_MSIE_javascript_error();
-  print $content;
-  $sbeamsMOD->display_page_footer();
+  if ( $parameters{plot_only} && $parameters{plot_only} =~ /true/i ) {
+    print $sbeams->get_http_header();
+    print "<HTML><BODY>";
+  	print $sbeams->get_MSIE_javascript_error();
+    print $content;
+    print "</BODY></HTML>";
+  } else {
+    $sbeamsMOD->display_page_header();
+  	print $sbeams->get_MSIE_javascript_error();
+    print $content;
+    $sbeamsMOD->display_page_footer();
+  }
 
-  $sbeams->display_page_footer(close_tables=>'YES',
-    separator_bar=>'YES',display_footer=>'NO');
+#  $sbeams->display_page_footer(close_tables=>'YES',
+#    separator_bar=>'YES',display_footer=>'NO');
 
 } # end main
 
