@@ -83,8 +83,8 @@ sub main {
                         charge => 0,
                         seq => '' );
   for my $ce ( qw( low mlow medium mhigh high avg  ) ) {
-    my $ce_results = mk_plot( %parameters, ce => $parameters{$ce} );
 
+    my $ce_results = mk_plot( %parameters, ce => $parameters{$ce} );
     if ( $ce eq 'medium' ) {
 #      die Dumper( $ce_results );
       $spectrum_plot{mz} = $ce_results->{mz};
@@ -173,13 +173,25 @@ sub main {
               spectrum          => $spectrum_plot{peak_array} 
               );
 
-    $content .= "<TR><TD>$lorispectrum</TD></TR>";
+#    $content .= "<TR><TD>$lorispectrum</TD></TR>";
 
   }
 
   $content .= "<TR><TD ALIGN=CENTER><H2>Spectra for $parameters{modified_sequence} <SUP>+$parameters{charge} </SUP></H2></TD></TR>\n";
   $content .= "</TABLE>\n";
 
+	my $url_base = "ShowConsensusSpectrum?plot_only=true;consensus_library_spectrum_id=";
+  for my $ce ( qw( low mlow medium mhigh high  ) ) {
+	  $content .= "<BR><IFRAME ID=$ce SRC=$url_base" . $parameters{$ce} . "></IFRAME><BR>\n";
+    $content .= qq~ 
+      <SCRIPT LANGUANGE=javascript>
+//        parent.document.getElementById('$ce').height = document['body'].offsetHeight;
+//        parent.document.getElementById('$ce').width = document['body'].offsetWidth;
+        parent.document.getElementById('$ce').height = 800;
+        parent.document.getElementById('$ce').width = 1200;
+      </SCRIPT>";
+    ~;
+	}
 
   $sbeamsMOD->display_page_header( header_info => $peak_plot );
   print $content;
