@@ -413,9 +413,8 @@ sub mzML2traces {
   if ($ms2_scan) {
     my @allspectra = $mzMLtree->find_by_tag_name('spectrum');
     for my $spectrum (@allspectra) {
-      my $id = $spectrum->attr('id');
-      my ($cycle) = ($id =~ /cycle=(\S*)/);
-      if ($cycle == $ms2_scan) {
+      my $index = $spectrum->attr('index');
+      if ($index == $ms2_scan) {
 	my @cvParams = $spectrum->find_by_tag_name('cvParam');
 	for my $cvParam (@cvParams) {
 	  my $name = $cvParam->attr('name');
@@ -1116,7 +1115,7 @@ sub getTopHTMLforChromatogramViewer {
   my $m_score = $param_href->{m_score};
   my $top_html = "";
 
-  $top_html .= $sbeams->get_MSIE_javascript_error();
+  #$top_html .= $sbeams->get_MSIE_javascript_error();
   $top_html .= "<p><big>";
   $top_html .= " DECOY" if $param_href->{is_decoy} eq 'Y';
   $top_html .= " <b>$seq</b></big> ";
