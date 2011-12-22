@@ -304,9 +304,10 @@ sub specfile2json {
     # no need to get ms2_scan b/c we got it the first time.
     #ms2_scan => $ms2_scan,
   );
-  my %combined_traces = (%{$traces_href->{'tx'}}, %{$traces_href_2->{'tx'}});
-  $traces_href->{'tx'} = \%combined_traces;
-
+  if ( defined $traces_href_2 && defined $traces_href_2->{'tx'} ) {
+    my %combined_traces = (%{$traces_href->{'tx'}}, %{$traces_href_2->{'tx'}});
+    $traces_href->{'tx'} = \%combined_traces;
+  }
 
   # Unpack and store the transition info string, if provided
   store_tx_info_in_traces_hash (
