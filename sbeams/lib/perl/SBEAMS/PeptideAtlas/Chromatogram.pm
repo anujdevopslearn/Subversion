@@ -301,10 +301,11 @@ sub specfile2json {
     q1_tolerance => $q1_tolerance,
     q3_tolerance => $q3_tolerance,
     tx_info => $tx_info, 
-    ms2_scan => $ms2_scan,
+    # no need to get ms2_scan b/c we got it the first time.
+    #ms2_scan => $ms2_scan,
   );
-  my %combined_traces = (%{$traces_href}, %{$traces_href_2});
-  $traces_href = \%combined_traces;
+  my %combined_traces = (%{$traces_href->{'tx'}}, %{$traces_href_2->{'tx'}});
+  $traces_href->{'tx'} = \%combined_traces;
 
 
   # Unpack and store the transition info string, if provided
