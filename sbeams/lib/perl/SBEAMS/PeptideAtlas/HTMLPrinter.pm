@@ -277,6 +277,7 @@ sub displayStandardPageHeader {
   $header_bkg = "background=\"$HTML_BASE_DIR//images/plaintop.jpg\"" if ($DBVERSION =~ /Primary/);
 
   print qq~
+	<META http-equiv="X-UA-Compatible" content="chrome=IE8,IE=edge">
 	<!--META HTTP-EQUIV="Expires" CONTENT="Fri, Jun 12 1981 08:20:00 GMT"-->
 	<!--META HTTP-EQUIV="Pragma" CONTENT="no-cache"-->
 	<!--META HTTP-EQUIV="Cache-Control" CONTENT="no-cache"-->
