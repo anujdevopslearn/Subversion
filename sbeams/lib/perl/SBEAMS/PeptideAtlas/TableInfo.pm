@@ -193,6 +193,29 @@ sub returnTableInfo {
       END
       return \%projectSQL
     } 
+  } elsif ( uc($table_name) eq 'AT_PASS_SUBMITTER' ) {
+      
+    if ($info_key eq "BASICQuery") {
+      return( <<"      END_QUERY" ); 
+     	SELECT submitter_id, firstName, lastName, emailAddress,
+	    emailReminders, emailPasswords, comment
+      FROM $TBAT_PASS_SUBMITTER
+      WHERE record_status!='D'
+      END_QUERY
+    }
+
+  } elsif ( uc($table_name) eq 'AT_PASS_DATASET' ) {
+      
+    if ($info_key eq "BASICQuery") {
+      return( <<"      END_QUERY" ); 
+     	SELECT dataset_id, submitter_id, datasetIdentifier, datasetType,
+	  datasetTag, datasetTitle, publicReleaseDate, finalizedDate,
+	  comment
+      FROM $TBAT_PASS_DATASET
+      WHERE record_status!='D'
+      END_QUERY
+    }
+
   }
 
   #### Obtain main SBEAMS object and fall back to its TableInfo handler
