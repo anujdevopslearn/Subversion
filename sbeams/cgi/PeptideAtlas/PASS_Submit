@@ -860,7 +860,8 @@ Your submission has been assigned the identifier $datasetIdentifier.<PRE>
 Identifier: $datasetIdentifier
 Dataset tag: $formParameters->{datasetTag}
 Datset title: $formParameters->{datasetTitle}</PRE>
-You will receive an email confirmation about this submission with this information.<P>
+All of the information you see here is simultaneously displayed in your browser and sent to you via email.<P>
+For SRM datasets, please first prepare your transition list(s) (methods file) using <a href='http://www.peptideatlas.org/upload/PASSEL_transition_list_template.xlsx'>this template</a>.<P>
 The next step is to upload your data via FTP.<P>
 You may use any FTP application for this, but we highly recommend FileZilla. It is extremely easy to use and reliable with such advanced features as automatic retry and parallel uploads. It has a very nice graphical user interface for Windows, MacOS, and Linux. Please download and install FileZilla at <a href="http://filezilla-project.org/download.php?type=client">http://filezilla-project.org/download.php?type=client</a> if you don't already have it.<P>
 Here is the FTP information:<PRE>
@@ -869,7 +870,14 @@ Username: $datasetIdentifier
 Password: $datasetPassword
 Full URL: ftp://$datasetIdentifier:$datasetPassword\@ftp.peptideatlas.org/
 </PRE>
-After you have finished uploading all your data, please return to:<PRE>
+<P>We ask that you upload the following:
+<UL>
+<LI>raw data files</LI>
+<LI>mzML files, if available</LI>
+<LI>SRM: transition list(s) prepared with <a href='http://www.peptideatlas.org/upload/PASSEL_transition_list_template.xlsx'>this template</a></LI>
+<LI>SRM: mProphet output files if available</LI>
+</UL>
+<P>After you have finished uploading all your data, please return to:<PRE>
     <a href="http://www.peptideatlas.org/PASS/$datasetIdentifier">http://www.peptideatlas.org/PASS/$datasetIdentifier</a></PRE>
 and mark your submission finalized.<P>
 If you have problems with the upload, please contact us at edeutsch\@systemsbiology.org<P>
