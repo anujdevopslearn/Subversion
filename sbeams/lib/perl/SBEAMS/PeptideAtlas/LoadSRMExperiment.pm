@@ -229,7 +229,7 @@ sub read_mquest_peakgroup_file {
   }
 
   ### Read and store each line of mQuest file, except for dummy peakgroups.
-  print "Processing mQuest file!\n" if ($VERBOSE);
+  print "Processing mQuest file $mquest_file!\n" if ($VERBOSE);
 
   my $spectrum_file;
   while ($line = <MQUEST_FILE>) {
@@ -245,6 +245,7 @@ sub read_mquest_peakgroup_file {
     my $decoy = $fields[$idx{decoy}] || 0;
     # Hack to see if this is a heavy-labelled TG
     # 11/17/11: learned today that light & heavy combine in same TG
+    #   Store info under 'light' always.
     #my $isotype =  $line =~ /heavy/i ? 'heavy' : 'light';
     my $isotype = 'light';
 
@@ -603,7 +604,7 @@ sub read_transition_list {
       }
     }
 
-    # Finally, associate each header string with its position in this particular
+    # Associate each header string with its position in this particular
     # transition file.
     my $line = <TRAN_FILE>;
     chomp $line;
@@ -617,6 +618,15 @@ sub read_transition_list {
       }
       $i++;
     }
+
+    # Check that essential headers are present
+    if ( ! ( defined $idx{'q1_mz'} &&  defined $idx{'q3_mz'})) {
+	die "Q1 and Q3 must be specified in ${transition_file}.";
+    }
+    if ( ! ( defined $idx{'frg_type'} &&  defined $idx{'frg_nr'} &&  defined $idx{'frg_z'})) {
+	print "WARNING: one or more of frg_nr, frg_type, frg_z missing from ${transition_file}.\n";
+    }
+
   } # end read transition file header
 
   
@@ -645,6 +655,7 @@ sub read_transition_list {
     $transdata_href->{$q1_mz}->{stripped_peptide_sequence} = $stripped_sequence;
 
     # Set isotype
+    $transdata_href->{$q1_mz}->{isotype} = 'light'; #default
     $transdata_href->{$q1_mz}->{isotype} = $fields[$idx{isotype}]
       if defined $idx{isotype};
     # Simon's data: translate H to heavy, L to light
@@ -751,7 +762,7 @@ sub store_mprophet_scores_in_transition_hash {
   my $TESTONLY = $args{'testonly'} || 0;
   my $DEBUG = $args{'debug'} || 0;
 
-  print "Getting the mProphet scores for each transition group!\n" if ($VERBOSE);
+  print "Getting the mQuest and/or mProphet scores for each transition group!\n" if ($VERBOSE);
 
   # For each measured Q1
   for my $q1_mz (keys %{$transdata_href}) {

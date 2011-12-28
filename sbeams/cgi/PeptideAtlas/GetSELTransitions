@@ -124,7 +124,7 @@ sub main {
   } else {
 
     my $project_id = $sbeamsMOD->getProjectID(
-        atlas_build_id => $parameters{atlas_build_id}
+      #atlas_build_id => $parameters{atlas_build_id}
         );
 
     $sbeamsMOD->display_page_header(
@@ -168,14 +168,16 @@ sub handle_request {
   print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
 
 
-  #### Get the current atlas_build_id based on parameters or session
-  my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
-    parameters_ref => \%parameters,
-  );
-  if (defined($atlas_build_id) && $atlas_build_id < 0) {
-    return;
-  }
-  $parameters{atlas_build_id} = $atlas_build_id;
+#--------------------------------------------------
+#   #### Get the current atlas_build_id based on parameters or session
+#   my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+#     parameters_ref => \%parameters,
+#   );
+#   if (defined($atlas_build_id) && $atlas_build_id < 0) {
+#     return;
+#   }
+#   $parameters{atlas_build_id} = $atlas_build_id;
+#-------------------------------------------------- 
 
 
   #### Define some generic variables
@@ -229,10 +231,14 @@ sub handle_request {
     $parameters{input_form_format} = "minimum_detail";
   }
 
-
   #### Apply any parameter adjustment logic
   # None
 
+
+  # Hopefully harmless hack to sidestep how display_input_form clears
+  # this param if its value is invalid. Why does it do that?
+  # Probably more appropriately solved by modifying display_input_form.
+  my $save_expts = $parameters{SEL_experiments};
 
   #### Display the user-interaction input form
   $sbeams->display_input_form(
@@ -245,6 +251,9 @@ sub handle_request {
     mask_user_context=> '1',
     use_tabbed_panes=> '1',
   );
+
+  # Completion of hack above.
+  $parameters{SEL_experiments} = $save_expts;
 
   #### Display the form action buttons
   $sbeams->display_form_buttons(
@@ -266,15 +275,17 @@ sub handle_request {
   #########################################################################
   #### Process all the constraints
 
-  #### If no atlas_build_id was selected, stop here
-  unless ($parameters{atlas_build_id}) {
-    $sbeams->reportException(
-      state => 'ERROR',
-      type => 'INSUFFICIENT CONSTRAINTS',
-      message => 'You must select at least one Atlas Build',
-    );
-    return;
-  }
+#--------------------------------------------------
+#   #### If no atlas_build_id was selected, stop here
+#   unless ($parameters{atlas_build_id}) {
+#     $sbeams->reportException(
+#       state => 'ERROR',
+#       type => 'INSUFFICIENT CONSTRAINTS',
+#       message => 'You must select at least one Atlas Build',
+#     );
+#     return;
+#   }
+#-------------------------------------------------- 
 
   #### Build EXPT_PROTEIN_NAME constraint
   my $expt_protein_name_clause = $sbeams->parseConstraint2SQL(

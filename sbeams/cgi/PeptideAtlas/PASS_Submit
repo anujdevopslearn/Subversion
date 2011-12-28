@@ -357,6 +357,7 @@ sub handle_request {
      print "<UL><LI>Please fill out the form below to register a new submission.";
      print "<LI>After completing the form, you will receive instructions on how to upload your data via FTP";
      print "<LI>Items <B><font color=\"red\">in red</B></font> are required";
+     print "<LI>For SRM datasets, please prepare your transition list (methods file) using <a href='http://www.peptideatlas.org/upload/PASSEL_transition_list_template.xlsx'><font color=\"red\"><B>this template</B></font></a> before uploading.";
      print "</UL></P>";
 
      if (@errors) {
