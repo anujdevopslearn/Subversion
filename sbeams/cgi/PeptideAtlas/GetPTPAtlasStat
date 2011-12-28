@@ -1,0 +1,433 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : GetPTPAtlasStat
+# $Id: GetProtein 6439 2010-05-24 17:44:08Z dcampbel $
+#
+# Description : Prints summary of a given biosequence set 
+#
+# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use GD::Graph;
+use GD::Graph::bars;
+use CGI;
+use strict;
+use strict;
+use Getopt::Long;
+use FindBin;
+
+$|++;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+$sbeams = new SBEAMS::Connection;
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+      permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+      'PeptideAtlas_readonly', 'PeptideAtlas_exec'],
+      #connect_read_only=>1,
+      allow_anonymous_access=>1,
+  ));
+
+
+  $sbeamsMOD->display_page_header( init_tooltip => 1);
+    handle_request();
+  $sbeamsMOD->display_page_footer();
+
+
+} # end main
+
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+
+  $PROG_NAME  = 'GetPTPAtlasStat';
+  my %parameters = ();
+  #### Get the HTML to display the tabs
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+    parameters_ref => \%parameters,
+    program_name => $PROG_NAME,
+  );
+  print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+
+  ## get latest biosequence_set that have most protein
+  my $sql = qq~
+    SELECT O.ORGANISM_NAME, BSS.BIOSEQUENCE_SET_ID, BSS.SET_DESCRIPTION
+    FROM $TBAT_BIOSEQUENCE_SET BSS
+    JOIN $TB_ORGANISM O ON (O.ORGANISM_ID = BSS.ORGANISM_ID)
+    WHERE O.ORGANISM_ID in (6,2,3)
+    AND (BSS.SET_NAME LIKE '%ENSEMBL%'
+         AND BSS.SET_NAME LIKE '%IPI%' 
+         AND BSS.SET_NAME LIKE '%SWISS%') 
+    OR ( BSS.SET_NAME LIKE '%SGD%' AND BSS.SET_NAME LIKE '%SWISS%')
+    ORDER BY O.ORGANISM_NAME , BSS.BIOSEQUENCE_SET_ID DESC
+    ~;
+ 
+   my @rows = $sbeams->selectSeveralColumns($sql);
+   my %biosequence_set=();
+   my $pre = '';
+   my %biosequence_set_desc=();
+   foreach my $row(@rows) {
+     my ($organism_name, $biosequence_set_id, $set_desc) = @$row;
+     next if($pre ne '' and $pre eq $organism_name);
+     $biosequence_set{$biosequence_set_id} = lc($organism_name);
+     $biosequence_set_desc{lc($organism_name)} = $set_desc;
+     $pre = $organism_name;
+   }
+  
+  print "<BR>";
+  foreach my $org (keys %biosequence_set_desc){
+    my $str = $org;
+    print ucfirst($org) , ": $biosequence_set_desc{$org} <BR>";
+  }
+
+
+  my $biosequence_set_ids= join(",", keys %biosequence_set);
+  my $file_name = "PTPstat_$biosequence_set_ids.tsv";
+  my $tmp_path = "tmp";
+  $file_name =~ s/,/_/g;
+
+  my %table_row=(); 
+	@{$table_row{1}} = (
+              'Number of Proteins in DB',
+              'Number of SwissProt Primary Proteins',
+              'Number of SP Primary and Varsplic Proteins',
+              'Number of Ensembl Proteins',
+              'Number of NR Ensembl Proteins',
+              'Number of Ensembl Genes',
+              'Number of IPI/SGD Proteins');
+  @{$table_row{2}} =(
+              'Number of Distinct DMSAT Peptides in SP Primary',
+							'Fraction of DMSAT Peptides that Map Uniquely in SP Primary',
+              'Fraction of DMSAT Peptides that Map Uniquely in SP Primary + Varsplic',
+							'Fraction of DMSAT Peptides that Map to One Chromosomal Location' ,
+							'Fraction of DMSAT Peptides that Map to Human' ,
+							'Fraction of DMSAT Peptides that Map to Mouse' ,
+							'Fraction of DMSAT Peptides that Map to Yeast' ,
+							'Proteotypic DMSAT Peptides With Observability > 0.9' ,
+							'Proteotypic DMSAT Peptide With Observability > 0.7' ,
+		 );
+  my %stat =();
+  if( ! -e "$PHYSICAL_BASE_DIR/$tmp_path/$file_name" ){
+    open (OUT , ">$PHYSICAL_BASE_DIR/$tmp_path/$file_name" ) or die "cannot open $PHYSICAL_BASE_DIR/$tmp_path/$file_name\n";
+ 
+   #### Define the SQL statement
+    my $sql = qq~
+     SELECT DISTINCT
+     BS.BIOSEQUENCE_SET_ID, 
+     PTP.PEPTIDE_SEQUENCE, 
+     PTP.COMBINED_PREDICTOR_SCORE, 
+     PTPM.N_SP_MAPPING,
+     PTPM.N_SPVAR_MAPPING,
+     PTPM.N_GENOME_LOCATIONS,
+     PTP.SSRCALC_RELATIVE_HYDROPHOBICITY,
+     LEN(PTP.PEPTIDE_SEQUENCE) 
+     FROM $TBAT_PROTEOTYPIC_PEPTIDE PTP
+     LEFT JOIN $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING PTPM
+          ON ( PTP.PROTEOTYPIC_PEPTIDE_ID = PTPM.PROTEOTYPIC_PEPTIDE_ID )
+     LEFT JOIN $TBAT_BIOSEQUENCE BS
+          ON ( PTPM.SOURCE_BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID )
+     WHERE 1 = 1
+     AND BS.BIOSEQUENCE_SET_ID IN ($biosequence_set_ids)
+     AND BS.BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
+     AND PTP.SSRCALC_RELATIVE_HYDROPHOBICITY BETWEEN 4 AND 60
+     AND LEN(PTP.PEPTIDE_SEQUENCE) BETWEEN 7 AND 30
+     AND BS.BIOSEQUENCE_NAME LIKE '[ABCDOPQ]_____'
+     ORDER BY PTP.PEPTIDE_SEQUENCE
+   ~;
+
+		my %peptides;
+		my %peptide_org_mapping=();
+		my @rows =  $sbeams->selectSeveralColumns($sql);
+		foreach my $row (@rows){
+			my ($biosequence_set_id,$peptide,$score,$n_sp_mapping,$n_spvar_mapping,$n_genome_locations) = @$row;
+			#print "$biosequence_set_id,$peptide,$score,$n_sp_mapping,$n_genome_locations\n";
+			$peptides{$biosequence_set_id}{$peptide} = {};
+			$peptides{$biosequence_set_id}{$peptide}{"score"} = $score;
+			if($score > 0.9){ $peptides{$biosequence_set_id}{$peptide}{"hscore"} = 1;}
+			if($score > 0.7){ $peptides{$biosequence_set_id}{$peptide}{"mhscore"} = 1;}
+			if($n_sp_mapping > 0){$peptides{$biosequence_set_id}{$peptide}{"sp_mapping"} =1;}
+			if($n_sp_mapping == 1){$peptides{$biosequence_set_id}{$peptide}{"uniq_sp_mapping"} = 1;}    
+      if($n_spvar_mapping == 1){$peptides{$biosequence_set_id}{$peptide}{"uniq_spvar_mapping"} = 1;}
+			if($n_genome_locations == 1){$peptides{$biosequence_set_id}{$peptide}{"uniq_genome_mapping"} = 1;}
+			$peptide_org_mapping{$peptide}{$biosequence_set{$biosequence_set_id}} = 1;
+		}
+		foreach my $biosequence_set_id (keys %biosequence_set){
+		  my $count=1;
+      my $organism = $biosequence_set{$biosequence_set_id};
+			my $n_distinct_DMSAT_peptides,
+			my $n_distinct_sp_mapping_DMSAT_peptides = 0;
+			my $n_hscore = 0;
+			my $n_mhscore = 0; 
+			my $n_uniq_sp_mapping_peptides = 0;
+      my $n_uniq_spvar_mapping_peptides = 0;
+			my $n_uniq_genome_mapping_peptides = 0;
+			my $n_human_mapping_peptides = 0;
+			my $n_mouse_mapping_peptides = 0;
+			my $n_yeast_mapping_peptides = 0;
+			my $n_protein = 0;
+			my $n_sp = 0;
+			my $n_sp_plus_varsplic = 0;
+			my $n_ensp = 0;
+			my $n_nr_ensp = 0;
+			my $n_ensg = 0;
+			my $n_ipiandsgd = 0;
+
+			my $sql = qq~
+				SELECT BIOSEQUENCE_SEQ, BIOSEQUENCE_NAME, BIOSEQUENCE_GENE_NAME , BIOSEQUENCE_DESC
+				FROM $TBAT_BIOSEQUENCE
+				WHERE BIOSEQUENCE_SET_ID = $biosequence_set_id
+				AND BIOSEQUENCE_NAME NOT LIKE 'DECOY%'
+			~;
+
+			my @rows = $sbeams->selectSeveralColumns($sql);
+			my %nr_Ensembl_entry=();
+			my %Ensembl_gene=();
+			foreach my $row (@rows){
+				my ($seq, $acc,$gene,$desc) = @$row;
+				$n_protein++;
+        if($organism !~ /yeast/i){
+					if($acc  =~ /^[ABCDOPQ]\w{5}$/){
+						$n_sp++;
+						$n_sp_plus_varsplic++;
+					}elsif($acc =~ /^[ABCDOPQ]\w{5}-\d{1,2}$/){
+						$n_sp_plus_varsplic++;
+					}elsif($acc =~ /^IPI/){
+						$n_ipiandsgd++;
+					}elsif($acc =~ /^ENS/){
+						$n_ensp++;
+						push @{$nr_Ensembl_entry{$seq}} , $acc;
+						$Ensembl_gene{$gene} = 1;
+					}
+        }else{
+          if($desc =~ /SGDID/ and $desc =~ /chromosome.*gene:.*transcript:/){
+            $n_ipiandsgd++;
+            $n_ensp++;
+            push @{$nr_Ensembl_entry{$seq}} , $acc;
+            $Ensembl_gene{$gene} = 1;
+          }elsif($desc =~ /SGDID/ and $desc !~ /chromosome.*gene:.*transcript:/){
+            $n_ipiandsgd++;
+          }elsif($desc !~ /SGDID/ and $desc =~ /chromosome.*gene:.*transcript:/){
+            $n_ensp++;
+            push @{$nr_Ensembl_entry{$seq}} , $acc;
+            $Ensembl_gene{$gene} = 1;
+          }else{
+            if($acc  =~ /^[ABCDOPQ]\w{5}$/){
+              $n_sp++;
+              $n_sp_plus_varsplic++;
+            }elsif($acc =~ /^[ABCDOPQ]\w{5}-\d{1,2}$/){
+              $n_sp_plus_varsplic++;
+            }
+          }
+        }
+			}
+
+
+			$n_nr_ensp = scalar keys %nr_Ensembl_entry;
+			$n_ensg = scalar keys %Ensembl_gene;
+			$n_distinct_DMSAT_peptides = scalar keys %{$peptides{$biosequence_set_id}};
+			$n_yeast_mapping_peptides = 0;
+
+			foreach my $peptide (keys %{$peptides{$biosequence_set_id}}){
+				if(defined $peptides{$biosequence_set_id}{$peptide}{sp_mapping}){
+					$n_distinct_sp_mapping_DMSAT_peptides++;
+					if(defined $peptides{$biosequence_set_id}{$peptide}{"uniq_sp_mapping"}){
+						$n_uniq_sp_mapping_peptides++;
+					}
+          if(defined $peptides{$biosequence_set_id}{$peptide}{"uniq_spvar_mapping"}){
+            $n_uniq_spvar_mapping_peptides++;
+          }
+					if(defined $peptides{$biosequence_set_id}{$peptide}{"uniq_genome_mapping"}){
+						$n_uniq_genome_mapping_peptides++;
+					}
+					if(defined $peptides{$biosequence_set_id}{$peptide}{"hscore"} ){
+						 $n_hscore++;
+					}
+					if(defined $peptides{$biosequence_set_id}{$peptide}{"mhscore"} ){
+						 $n_mhscore++;
+					}
+					if(defined $peptide_org_mapping{$peptide}{human}){
+						$n_human_mapping_peptides++;
+					}
+					if(defined $peptide_org_mapping{$peptide}{mouse}){
+						$n_mouse_mapping_peptides++;
+					}
+					if(defined $peptide_org_mapping{$peptide}{yeast}){
+						$n_yeast_mapping_peptides++;
+					}
+				}
+			}
+		 my @values = ($n_protein,$n_sp, $n_sp_plus_varsplic, $n_ensp ,$n_nr_ensp, $n_ensg, $n_ipiandsgd);
+     push @{$stat{$count}{$biosequence_set{$biosequence_set_id}}}, @values;
+     print OUT "$count\t$biosequence_set{$biosequence_set_id}\t", join ("\t", @values);
+     print OUT "\n";
+
+
+		 $count++;
+		 @values =  (
+		   $n_distinct_sp_mapping_DMSAT_peptides,
+			 ($n_uniq_sp_mapping_peptides/$n_distinct_sp_mapping_DMSAT_peptides),
+       ($n_uniq_spvar_mapping_peptides/$n_distinct_sp_mapping_DMSAT_peptides),
+			 ($n_uniq_genome_mapping_peptides/$n_distinct_sp_mapping_DMSAT_peptides),
+			 ($n_human_mapping_peptides/$n_distinct_sp_mapping_DMSAT_peptides),
+			 ($n_mouse_mapping_peptides/$n_distinct_sp_mapping_DMSAT_peptides),
+			 ($n_yeast_mapping_peptides/$n_distinct_sp_mapping_DMSAT_peptides),
+			 ($n_hscore/$n_distinct_sp_mapping_DMSAT_peptides),
+			 ($n_mhscore/$n_distinct_sp_mapping_DMSAT_peptides),
+		 );
+     push @{$stat{$count}{$biosequence_set{$biosequence_set_id}}}, @values;
+     print OUT "$count\t$biosequence_set{$biosequence_set_id}\t", join ("\t", @values);
+     print OUT "\n";
+
+   }
+   close OUT;
+  }else{
+    my $file = "$PHYSICAL_BASE_DIR/$tmp_path/$file_name";
+    open (IN, "<$file") or die "cannot open $file\n";
+    foreach my $line (<IN>){
+      chomp $line;
+      my @attrs =  split("\t", $line); 
+      my $table = shift @attrs;
+      my $org =  shift @attrs;
+      push @{$stat{$table}{$org}},  @attrs; 
+   }
+  }
+  
+  draw_table (stat => \%stat, col => \%table_row);  
+      
+}
+
+sub draw_table {
+  my %arg = @_;
+  my %stat = %{$arg{stat}};
+  my %table_row = %{$arg{col}};
+  foreach my $table (qw(1 2)){
+    my $numbers=[];
+    my @rows = @{$table_row{$table}};
+    my $cl=1;    
+    foreach my $org (keys %{$stat{$table}}){
+      my $row=0;
+      my @val = @{$stat{$table}{$org}};
+      foreach my $i (0..$#val){
+        if ($val[$i] =~ /\./){
+          $val[$i] = sprintf("%.4f", $val[$i]);
+        }
+        if($cl == 1){
+          push @$numbers , [$row, 0, "'$table_row{$table}[$row]'"];
+        }
+        push @$numbers , [$row, $cl,$val[$i]];
+        $row++;
+     }
+     $cl++;
+    }
+     
+    my @datatypes  = ();
+    for my $i (0..2){
+      push @datatypes, 'number';
+    }
+    my %package =();
+    $package{'table'} = 1;
+    my $GV = SBEAMS::Connection::GoogleVisualization->new('_packages' => \%package,
+                                                          '_callbacks' => ['drawTable'],
+                                                          '_tables' => $table);
+    my $chart = $GV->setDrawDataTable(  data => $numbers,
+                                  data_types => ['string', @datatypes ],
+                                  headings => ['Categories', 'Human','Mouse','Yeast'],
+                                  );
+
+    $chart .= "\n" . $GV->getHeaderInfo();
+    $chart =~ s/src=".*jsapi/src="https:\/\/www.google.com\/jsapi/;
+    $chart =~ s/<script.*devZS.*<\/script>//g;
+
+    print qq~
+    <BR>
+    <TABLE>
+    <TR><TD COLSPAN=2>
+     $chart
+    </TD></TR>
+    </TABLE>
+    <BR>
+    ~;
+  }
+
+
+}
+
+
