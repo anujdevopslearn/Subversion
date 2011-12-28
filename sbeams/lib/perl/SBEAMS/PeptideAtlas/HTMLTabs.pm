@@ -180,11 +180,15 @@ sub getTabMenu
     {
        $current_tab=5;
        $current_subtab=5;
-    }elsif ( ($PROG_NAME =~ /^GetPTP/) ||
-    ($PROG_NAME =~ /GetPTP\?(\S+)/ ))
-    {
-       $current_tab=6;
-
+    }elsif($PROG_NAME =~ /^GetPTP$/){
+      $current_tab=6;
+      $current_subtab=1;
+    }elsif($PROG_NAME =~ /^GetPTPP.*/){
+      $current_tab=6;
+      $current_subtab=2;
+    }elsif($PROG_NAME =~ /^GetPTPAtlasS.*/){
+      $current_tab=6;
+      $current_subtab=3;
     #### PeptideAtlas Submission System PASS tabs
     } elsif ($PROG_NAME =~ /^PASS_Summary/) {
        $current_tab=7;
@@ -333,11 +337,22 @@ if ($activate_PASSEL) {
 			   );
 }
 
-    $tabmenu->addTab( label => 'PTPAtlas',
-         label => 'PTPAtlas',
-         helptext => 'Get Proteotypic Peptides',
-         url => "$CGI_BASE_DIR/PeptideAtlas/GetPTP"
+    $tabmenu->addTab( label => 'PTPAtlas' );
+		$tabmenu->addMenuItem( tablabel => 'PTPAtlas',
+  		 label => 'Search Protein',
+	  	 helptext => 'Get Proteotypic Peptides for one Protein',
+		   url => "$CGI_BASE_DIR/PeptideAtlas/GetPTP"
+		 );
+    $tabmenu->addMenuItem( tablabel => 'PTPAtlas',
+         label => 'Get PTP Peptides',
+         helptext => 'Get Proteotypic Peptides for one or more Proteins',
+         url => "$CGI_BASE_DIR/PeptideAtlas/GetPTPPeptides"
          );
+    $tabmenu->addMenuItem( tablabel => 'PTPAtlas',
+         label => 'Get Database Statistics',
+         url => "$CGI_BASE_DIR/PeptideAtlas/GetPTPAtlasStat"
+         );
+
 
 
     #### PeptideAtlas Submission System PASS tabs
