@@ -237,6 +237,9 @@ sub populateRecords
         } elsif ( $line =~ /^MW:\s(.*)$/ ) { # line 2 is MW
           $spectrum{mw} = $1;
           next;
+        } elsif ( $line =~ /^PrecursorMZ:\s(.*)$/ ) { # line 2 is MW
+          $spectrum{PrecursorMZ} = $1;
+          next;
         } elsif ( $line =~ /^Comment:/ ) { # line 3 is Comment:
           $spectrum{comment} = parseComment( comment_line => $line);
           next;
@@ -264,6 +267,7 @@ sub populateRecords
             );
         }
 
+        $commentHash{'Spec'} ||= 'Single';
         my $consensus_spectrum_type_id = get_consensus_spectrum_type_id(
             consensus_spectrum_type_name => $commentHash{'Spec'}
 
@@ -275,6 +279,9 @@ sub populateRecords
           $protein = substr( $protein, 0, 254 );
           print STDERR "protein was " . length(  $commentHash{Protein} ) . " but is now " . length( $protein ) . "\n";
         }
+
+        # Triage for QQQ pseudo libs
+        $commentHash{Mz_exact} ||= $spectrum{PrecursorMZ};
 
           print STDERR "Inserting peptide $spectrum{sequence}\n" if $verbose;
         my $consensus_library_spectrum_id = insert_consensus_library_spectrum(
@@ -491,32 +498,9 @@ sub insert_consensus_library_spectrum
 
     my $METHOD='insert_consensus_library_spectrum';
 
-# WTH?
-#
-#    my %rowdata;
-#
-#    $rowdata{consensus_library_id} = $args{consensus_library_id} || 
-#        die "need consensus_library_id";
-#
-#    $rowdata{consensus_spectrum_type_id} = $args{consensus_spectrum_type_id} ||
-#        die "need consensus_spectrum_type_id";
-#
-#    $rowdata{sequence} = $args{sequence} || die "need sequence";
-#
-#    if ($args{modified_sequence})
-#    {
-#        $rowdata{modified_sequence} = $args{modified_sequence};
-#        $rowdata{modifications} = $args{modifications};
-#    }
-#
-#    $rowdata{charge} = $args{charge} || die "need charge";
-#
-#    $rowdata{protein_name} = $args{protein_identifiers} ||
-#        die "need protein_identifiers";
-#
-#    $rowdata{mz_exact} = $args{mz_exact} || die "need mz_exact";
 
-    for my $arg ( qw( consensus_library_id consensus_spectrum_type_id sequence charge protein_name mz_exact ) ) {
+    # Removed protein_name from list of required params (DSC 2011-10).
+    for my $arg ( qw( consensus_library_id consensus_spectrum_type_id sequence charge mz_exact ) ) {
       die "Missing required parameter $arg" unless $args{$arg};
     }
 
@@ -736,8 +720,7 @@ sub parseComment
 #       $hash{$1} = $2;
 #   }
 
-    if ($line =~ /.*(Fullname)=(.+?)\s.*/)
-    {
+    if ($line =~ /.*(Fullname)=(.+?)\s.*/) {
         $hash{$1} = $2;
     }
 
@@ -760,8 +743,7 @@ sub parseComment
 #   {
 #       $hash{$1} = $2;
 #   }
-    if ($line =~ /.*(Parent)=(.+?)\s.*/)
-    {
+    if ($line =~ /.*(Parent)=(.+?)\s.*/) {
         $hash{'Mz_exact'} = $2;
     }
 
