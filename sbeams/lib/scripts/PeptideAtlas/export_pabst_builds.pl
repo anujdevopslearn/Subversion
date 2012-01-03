@@ -64,12 +64,12 @@ sub export_build {
     return;
   }
 
-  my @headings = qw( biosequence_name preceding_residue peptide_sequence
+  my @headings = qw( biosequence_name preceding_residue modified_peptide_sequence
                      following_residue synthesis_adjusted_score transition_source
-                     precursor_ion_mass precursor_ion_charge fragment_ion_mass
+                     precursor_ion_mz precursor_ion_charge fragment_ion_mz
                      fragment_ion_charge fragment_ion_label ion_rank
                      relative_intensity SSRCalc_relative_hydrophobicity
-                     merged_score n_observations );
+                     merged_score n_observations max_precursor_intensity );
 
   my $col_string = join( ", ", @headings );
 
@@ -77,25 +77,51 @@ sub export_build {
 
   open ( FIL, ">$file_name" );
   print FIL join( "\t", @headings ) . "\n";
+
+  $col_string =~ s/modified_peptide_sequence/PI.modified_peptide_sequence/;
+  $col_string =~ s/transition_source/instrument_type_name/;
+  $col_string =~ s/SSRCalc_relative_hydrophobicity/elution_time/;
+  $col_string =~ s/n_observations/PII.n_observations/;
+  $col_string =~ s/biosequence_name/BS.biosequence_name/;
    
   my $sql = qq~
   SELECT DISTINCT  
-  $col_string
-  FROM $TBAT_PABST_PEPTIDE PP 
-  JOIN $TBAT_PABST_PEPTIDE_MAPPING PM 
+  $col_string, PTI.is_predicted
+  FROM PeptideAtlas.dbo.pabst_tmp_peptide PP 
+  JOIN PeptideAtlas.dbo.pabst_tmp_peptide_ion PI 
+  ON PP.pabst_peptide_id = PI.pabst_peptide_id
+  JOIN PeptideAtlas.dbo.pabst_tmp_peptide_mapping PM 
   ON PM.pabst_peptide_id = PP.pabst_peptide_id
-  JOIN $TBAT_PABST_TRANSITION PT 
-  ON PT.pabst_peptide_id = PP.pabst_peptide_id 
-  JOIN $TBAT_BIOSEQUENCE BS
+  JOIN PeptideAtlas.dbo.pabst_tmp_peptide_ion_instance PII 
+  ON PI.pabst_peptide_ion_id = PII.pabst_peptide_ion_id
+  JOIN PeptideAtlas.dbo.pabst_tmp_transition PT 
+  ON PT.pabst_peptide_ion_id = PI.pabst_peptide_ion_id 
+  JOIN PeptideAtlas.dbo.pabst_tmp_transition_instance PTI 
+  ON PT.pabst_transition_id = PTI.pabst_transition_id 
+  JOIN PeptideAtlas.dbo.instrument_type IT 
+  ON ( IT.instrument_type_id = PTI.source_instrument_type_id  AND
+       IT.instrument_type_id = PII.source_instrument_type_id ) 
+  JOIN PeptideAtlas.dbo.pabst_tmp_source_priority PSP 
+  ON ( PSP.source_instrument_type_id = PTI.source_instrument_type_id )
+  JOIN peptideatlas.dbo.biosequence BS
   ON BS.biosequence_id = PM.biosequence_id 
-  WHERE pabst_build_id = $args{build_id}
+  LEFT JOIN PeptideAtlas.dbo.elution_time ET ON ET.modified_peptide_sequence = PP.peptide_sequence
+  LEFT JOIN PeptideAtlas.dbo.elution_time_type ETT ON ET.elution_time_type_id = ETT.elution_time_type_id
+  WHERE  PP.pabst_build_id IN ( $args{build_id} )
+  AND ( BS.biosequence_name LIKE 'P%'  )
+  AND (elution_time_type = 'SSRCalc' OR elution_time_type IS NULL)
   ORDER BY biosequence_name, 
-  synthesis_adjusted_score DESC, peptide_sequence,
-  precursor_ion_charge ASC,
-  ion_rank ASC, relative_intensity DESC  
+  PTI.is_predicted ASC,
+  synthesis_adjusted_score DESC,
+  PI.modified_peptide_sequence,
+  instrument_type_name DESC,
+  PII.max_precursor_intensity DESC,
+  PII.n_observations DESC,
+  relative_intensity DESC,
+  ion_rank ASC
   ~;
 
-  print STDERR "\tpreparing SQL " . time() . "\n" if $args->{verbose};
+#  print STDERR "\tpreparing SQL " . time() . "\n" if $args->{verbose};
   my $sth = $sbeams->get_statement_handle( $sql );
   print STDERR "\tprinting " . time() . "\n" if $args->{verbose};
   while ( my @row = $sth->fetchrow_array() ) {
@@ -106,8 +132,8 @@ sub export_build {
       $row[$i] = sprintf( "%0.1f", $row[$i] );
     }
     $row[12] = int( $row[12] );
-    $row[5] = $map->{$row[5]} || $row[5];
-    print FIL join( "\t", @row ) . "\n";
+    $row[5] .= '(pred)' if $row[16] eq 'Y';
+    print FIL join( "\t", @row[0..15] ) . "\n";
     
   }
   close FIL;
@@ -132,6 +158,7 @@ sub processArgs {
   unless( GetOptions ( \%args, 'build_id=i@', 'verbose', 'force' ) ) {
     printUsage("Error with options, please check usage:");
   }
+  die "need build_id " unless $args{build_id};
 
   return \%args;
 }
