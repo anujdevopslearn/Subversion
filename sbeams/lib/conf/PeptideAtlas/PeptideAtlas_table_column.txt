@@ -963,7 +963,9 @@ AT_GetPTPPeptides	17	n_ensp_mapping_constraint	Number of Ensembl Protein Mapping
 AT_GetPTPPeptides	18	n_ensg_mapping_constraint	Number of Ensembl Gene Mapping Constraint									N	text	10		Y	Y	N	"Constraint for Number of Ensembl Gene Mapping. Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
 AT_GetPTPPeptides	19	n_ipi_mapping_constraint	Number of IPI Protein Mapping Constraint									N	text	10		Y	Y	N	"Constraint for Number of IPI Protein Mapping. Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
 AT_GetPTPPeptides	20	n_sgd_mapping_constraint	Number of SGD Protein Mapping Constraint									N	text	10		Y	Y	N	"Constraint for Number of SGD Protein Mapping. Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
-AT_proteotypic_peptide_xspecies_mapping	1	proteotypic_peptide_mapping_id	Proteotypic Peptide Mapping ID	int	4	0	N		N	At_PROTEOTYPIC_PEPTIDE_MAPPING 	PROTEOTYPIC_PEPTIDE_MAPPING_ID								Foreign Key		
-AT_proteotypic_peptide_xspecies_mapping	2	n_human_mapping	Number of Human Protein Mapping 	int	4	0	Y		N										Number of distinct accession numbers (proteins) for peptide in Human		
-AT_proteotypic_peptide_xspecies_mapping	3	n_mouse_mapping	Number of Mouse Protein Mapping 	int	4	0	Y		N										Number of distinct accession numbers (proteins) for peptide in Mouse		
-AT_proteotypic_peptide_xspecies_mapping	4	n_yeast_mapping	Number of Yeast Protein Mapping 	int	4	0	Y		N										Number of distinct accession numbers (proteins) for peptide in Yeast		
+AT_proteotypic_peptide_xspecies_mapping	1	proteotypic_peptide_xspecies_mapping_id	Proteotypic Peptide Cross Species Mapping ID	int	4	0	N		Y												
+AT_proteotypic_peptide_xspecies_mapping	2	proteotypic_peptide_mapping_id	Proteotypic Peptide Mapping ID	int	4	0	N		N	At_PROTEOTYPIC_PEPTIDE_MAPPING 	PROTEOTYPIC_PEPTIDE_MAPPING_ID								Foreign Key		
+AT_proteotypic_peptide_xspecies_mapping	3	biosequence_set_ids	biosequence set ids	varchar	100	0	N		N										"Biosequence set ids used to do the mapping, currently need three numbers "		
+AT_proteotypic_peptide_xspecies_mapping	4	n_human_mapping	Number of Human Protein Mapping 	int	4	0	Y		N										Number of distinct accession numbers (proteins) for peptide in Human		
+AT_proteotypic_peptide_xspecies_mapping	5	n_mouse_mapping	Number of Mouse Protein Mapping 	int	4	0	Y		N										Number of distinct accession numbers (proteins) for peptide in Mouse		
+AT_proteotypic_peptide_xspecies_mapping	6	n_yeast_mapping	Number of Yeast Protein Mapping 	int	4	0	Y		N										Number of distinct accession numbers (proteins) for peptide in Yeast		
