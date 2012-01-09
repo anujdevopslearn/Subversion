@@ -412,11 +412,13 @@ sub get_column_defs {
 
   my %coldefs = ( 
     'Protein' => 'Protein Name/Accession.',
-    'Accession' => 'Peptide Atlas accession number, beginning with PAp followed by 9 digits.',
+    'Biosequence Name' => 'Protein Name/Accession.',
+    'Peptide Accession' => 'Peptide Atlas accession number, beginning with PAp followed by 9 digits.',
     'Pre AA' => 'Preceding (towards the N terminus) amino acid',
     'Sequence' => 'Amino Acid sequence of this peptide', 
     'Source' => 'Source from which transitions were obtained', 
-    'Fol AA' =>'Following (towards the C terminus) amino acid', 
+    'Fol AA' =>'Following (towards the C terminus) amino acid',
+    'Peptide Length' => 'Length of peptide', 
     'ESS' => 'Empirical suitability score, derived from peptide probability, EOS, and sequence characteristics such as missed cleavage <SUP><FONT COLOR=RED>[MC]</FONT></SUP> or semi-tryptic <SUP><FONT COLOR=RED>[ST]</FONT></SUP>, or <BR> multiple genome locations <SUP><FONT COLOR=RED>[MGL]</FONT></SUP>.', 
     'PSS' => 'Predicted suitability score, derived from combining publicly available algorithms (Peptide Sieve, STEPP, ESPP, APEX, Detectability Predictor)', 
 
@@ -425,7 +427,7 @@ sub get_column_defs {
     'ESPP' => 'Predicted peptide score calculated by ESPP algorithm',
     'APEX' => 'Predicted peptide score calculated by APEX algorithm',
     'DPred' => 'Predicted peptide score calculated by Detectability Predictor algorithm',
-
+    'Combined Predictor Score' => 'Score genereated based on STEPP, PSieve, ESPP, APEX and DPred scores',
     'Adj SS' => 'Final suitablity score, the greater of ESS and PSS, adjusted by PABST weightings.', 
     'Best Prob' => 'Highest PeptideProphet probability for this observed sequence', 
     'Best Adj Prob' => 'Highest iProphet-adjusted probablity for this observed sequence', 
@@ -464,7 +466,15 @@ sub get_column_defs {
     'QTrap' => 'Consensus spectrum from QTrap instrument(s)',
     'IT' => 'Consensus spectrum from Ion Trap instrument(s)',
     'Pred' => 'Predicted spectrum',
-
+    'N SP Mapping' => 'Number of SwissProt primary protein mapping',
+    'N SP-varsplic Mapping' => 'Number of SwissProt primary and alternatively-spliced protein mapping',
+    'N SP-nsSNP Mapping' =>  'Number of SwissProt primary and alternatively-spliced protein mapping, plus nsSNP mapping,<BR>wherein all Swiss-Prot-annotated nsSNPs have been expanded out to sequence with context so that any nsSNP-containing peptides are properly mapped.',
+    'N ENSP Mapping' => 'Number of Ensembl protein mapping',
+    'N ENSG Mapping' =>  'Number of Ensembl gene mapping',
+    'N IPI Mapping' => 'Number of IPI protein mapping',
+    'N Human Mapping' => 'Number of Human protein mapping, including SwissProt, IPI and Ensembl Proteins',
+    'N Mouse Mapping' => 'Number of Mouse protein mapping, including SwissProt, IPI and Ensembl Proteins',
+    'N Yeast Mapping', => 'Number of Yeast protein mapping, including SwissProt, SGD and Ensembl Proteins',
     );
   if ( $args{labels} ) {
     my @entries;
