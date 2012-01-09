@@ -127,18 +127,22 @@ sub handle_request {
   );
   print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
 
-  ## get latest biosequence_set that have most protein
+  ## get latest biosequence_set_ids that have xspecies mapping
+  my $sql = qq~
+     SELECT DISTINCT BIOSEQUENCE_SET_IDS
+     FROM $TBAT_PROTEOTYPIC_PEPTIDE_XSPECIES_MAPPING
+  ~;
+  my @rows = $sbeams->selectOneColumn($sql);
+  my @tmp = sort {$b cmp $a} @rows;
+  my $biosequence_set_ids  = $tmp[0];
+
   my $sql = qq~
     SELECT O.ORGANISM_NAME, BSS.BIOSEQUENCE_SET_ID, BSS.SET_DESCRIPTION
     FROM $TBAT_BIOSEQUENCE_SET BSS
-    JOIN $TB_ORGANISM O ON (O.ORGANISM_ID = BSS.ORGANISM_ID)
+    JOIN $TB_ORGANISM O ON ( BSS.ORGANISM_ID = O.ORGANISM_ID)
     WHERE O.ORGANISM_ID in (6,2,3)
-    AND (BSS.SET_NAME LIKE '%ENSEMBL%'
-         AND BSS.SET_NAME LIKE '%IPI%' 
-         AND BSS.SET_NAME LIKE '%SWISS%') 
-    OR ( BSS.SET_NAME LIKE '%SGD%' AND BSS.SET_NAME LIKE '%SWISS%')
-    ORDER BY O.ORGANISM_NAME , BSS.BIOSEQUENCE_SET_ID DESC
-    ~;
+    AND BSS.BIOSEQUENCE_SET_ID IN ($biosequence_set_ids)
+  ~;
  
    my @rows = $sbeams->selectSeveralColumns($sql);
    my %biosequence_set=();
