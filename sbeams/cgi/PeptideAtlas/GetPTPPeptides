@@ -267,38 +267,56 @@ sub handle_request {
 
   my ($organism_id) = $parameters{organism_id};
   
-  my $sql = qq~
-    SELECT O.ORGANISM_NAME, BSS.BIOSEQUENCE_SET_ID
+#  my $sql = qq~
+#    SELECT O.ORGANISM_NAME, BSS.BIOSEQUENCE_SET_ID
+#    FROM $TBAT_BIOSEQUENCE_SET BSS
+#    JOIN $TB_ORGANISM O ON (O.ORGANISM_ID = BSS.ORGANISM_ID)
+#    WHERE O.ORGANISM_ID in (6,2,3)
+#    AND (BSS.SET_NAME LIKE '%ENSEMBL%'
+#         AND BSS.SET_NAME LIKE '%IPI%'
+#         AND BSS.SET_NAME LIKE '%SWISS%')
+#    OR ( BSS.SET_NAME LIKE '%SGD%' 
+#         AND BSS.SET_NAME LIKE '%SWISS%'
+#         AND BSS.SET_NAME LIKE '%ENSEMBL%')
+#    ORDER BY O.ORGANISM_NAME , BSS.BIOSEQUENCE_SET_ID DESC
+#    ~;
+#
+#   my @rows = $sbeams->selectSeveralColumns($sql);
+#   my %biosequence_set=();
+#   my $pre = '';
+#   my $biosequence_set_id = '';
+
+
+#   my $organism_name = getOrganismName(organism_id => $organism_id);
+#   foreach my $row(@rows) {
+#     my ($name, $set_id) = @$row;
+#     next if($pre ne '' and $pre eq $name);
+#     $biosequence_set{$set_id} = lc($name);
+#     if($organism_name =~ /$name/i){
+#       $biosequence_set_id = $set_id;
+#     }
+#     $pre = $name;
+#   }
+#
+  ## get latest biosequence_set_ids that have xspecies mapping 
+  my $sql = qq~ 
+     SELECT DISTINCT BIOSEQUENCE_SET_IDS 
+     FROM $TBAT_PROTEOTYPIC_PEPTIDE_XSPECIES_MAPPING
+  ~;
+  my @rows = $sbeams->selectOneColumn($sql);
+  my @tmp = sort {$b cmp $a} @rows;
+  my $biosequence_set_ids  = $tmp[0];
+  my $organism_name = getOrganismName(organism_id => $organism_id);
+  ## get biosequence set id for current organism
+  $sql = qq~ 
+    SELECT BSS.BIOSEQUENCE_SET_ID
     FROM $TBAT_BIOSEQUENCE_SET BSS
-    JOIN $TB_ORGANISM O ON (O.ORGANISM_ID = BSS.ORGANISM_ID)
-    WHERE O.ORGANISM_ID in (6,2,3)
-    AND (BSS.SET_NAME LIKE '%ENSEMBL%'
-         AND BSS.SET_NAME LIKE '%IPI%'
-         AND BSS.SET_NAME LIKE '%SWISS%')
-    OR ( BSS.SET_NAME LIKE '%SGD%' 
-         AND BSS.SET_NAME LIKE '%SWISS%'
-         AND BSS.SET_NAME LIKE '%ENSEMBL%')
-    ORDER BY O.ORGANISM_NAME , BSS.BIOSEQUENCE_SET_ID DESC
-    ~;
+    where BSS.biosequence_set_id in ($biosequence_set_ids) 
+    and BSS.organism_id = $organism_id
+  ~; 
+  @rows = $sbeams->selectOneColumn($sql);
+  my $biosequence_set_id = $rows[0];
 
-   my @rows = $sbeams->selectSeveralColumns($sql);
-   my %biosequence_set=();
-   my $pre = '';
-   my $biosequence_set_id = '';
-
-   ## tailor the chromosomal url link to a genome browser by the organism name:
-   my $organism_name = getOrganismName(organism_id => $organism_id);
-   foreach my $row(@rows) {
-     my ($name, $set_id) = @$row;
-     next if($pre ne '' and $pre eq $organism_name);
-     $biosequence_set{$biosequence_set_id} = lc($name);
-     if($organism_name =~ /$name/i){
-       $biosequence_set_id = $set_id;
-     }
-     $pre = $name;
-   }
-
-  #print "$biosequence_set_id <BR>";
 
   my $biosequence_name_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"BS.biosequence_name",
@@ -450,6 +468,10 @@ sub handle_request {
     ["n_ensg_mapping", "PTPM.n_ensg_mapping", "N ENSG Mapping"],
     ["n_ipi_mapping", "PTPM.n_ipi_mapping", "N IPI Mapping"],
     ["n_sgd_mapping", "PTPM.n_sgd_mapping", "N SGD Mapping"],
+    ["n_human_mapping", "PTPXM.n_human_mapping", "N Human Mapping"],
+    ["n_mouse_mapping", "PTPXM.n_mouse_mapping", "N Mouse Mapping"],
+    ["n_yeast_mapping", "PTPXM.n_yeast_mapping", "N Yeast Mapping"],
+
     );
 
 
@@ -489,6 +511,8 @@ sub handle_request {
           ON ( PTP.MATCHED_PEPTIDE_ID = P.PEPTIDE_ID )
      LEFT JOIN $TBAT_BIOSEQUENCE BS
           ON ( PTPM.SOURCE_BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID )
+     LEFT JOIN $TBAT_PROTEOTYPIC_PEPTIDE_XSPECIES_MAPPING PTPXM
+          ON (PTPXM.PROTEOTYPIC_PEPTIDE_MAPPING_ID = PTPM.PROTEOTYPIC_PEPTIDE_MAPPING_ID )
     WHERE 1 = 1
     AND BS.Biosequence_set_id = $biosequence_set_id 
     $biosequence_names_clause
@@ -526,10 +550,17 @@ sub handle_request {
   if($organism_name =~ /Yeast/i){ 
     %hidden_cols = (
        'N IPI Mapping' => 1,
+       #'N Yeast Mapping' => 1,
+    );
+  }elsif($organism_name =~ /Human/i){
+    %hidden_cols = (
+       'N SGD Mapping' => 1,
+       #'N Human Mapping' => 1,
     );
   }else{
     %hidden_cols = (
        'N SGD Mapping' => 1,
+       #'N Mouse Mapping' => 1,
     );
   }
 
@@ -540,7 +571,6 @@ sub handle_request {
     #### If the action contained QUERY, then fetch the results from
     #### the database
     if ($apply_action =~ /QUERY/i) {
-
       #### Show the SQL that will be or was executed
       $sbeams->display_sql(sql=>$sql,use_tabbed_panes=> '1',) if ($show_sql);
 
