@@ -44,6 +44,8 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 
+
+
 use constant MIN_PEP_LEN => 6;
 use constant MAX_PEP_LEN => 50;
 
@@ -452,15 +454,15 @@ sub handle_request {
     ["biosequence_name", "BS.biosequence_name", "Biosequence Name"],
     ["peptide_accession","P.peptide_accession","Peptide Accession"],
     ["preceding_residue","PTP.preceding_residue","Pre AA"],
-    ["peptide_sequence","PTP.peptide_sequence","Peptide Sequence"],
+    ["peptide_sequence","PTP.peptide_sequence","Sequence"],
     ["following_residue","PTP.following_residue","Fol AA"],
     ["peptide_length", "LEN(PTP.peptide_sequence)", "Peptide Length"],
     ["combined_predictor_score","PTP.combined_predictor_score","Combined Predictor Score"],
-    ["peptidesieve_score","PTP.peptidesieve_score","PeptideSieve Score"],
-    ["espp_score", "PTP.espp_score","ESPP Score"],
-    ["detectabilitypredictor_score","PTP.detectabilitypredictor_score","Detectability Predictor Score"],
-    ["apex_score", "PTP.apex_score", "APEX Score"],
-    ["stepp_score", "PTP.stepp_score", "STEPP Score"],
+    ["peptidesieve_score","PTP.peptidesieve_score","PSieve"],
+    ["espp_score", "PTP.espp_score","ESPP"],
+    ["detectabilitypredictor_score","PTP.detectabilitypredictor_score","DPred"],
+    ["apex_score", "PTP.apex_score", "APEX"],
+    ["stepp_score", "PTP.stepp_score", "STEPP"],
     ["n_sp_mapping", "PTPM.n_sp_mapping", "N SP Mapping"],
     ["n_spvar_mapping","PTPM.n_spvar_mapping", "N SP-varsplic Mapping"],
     ["n_spsnp_mapping", "PTPM.n_spsnp_mapping", "N SP-nsSNP Mapping"],
@@ -601,6 +603,40 @@ sub handle_request {
     }
 
 
+		my @headings = ('Biosequence Name',
+										'Peptide Accession',
+										'Pre AA',
+										'Sequence',
+										'Fol AA',
+										'Peptide Length',
+										'Combined Predictor Score',
+										'PSieve',
+										'ESPP',
+										'DPred',
+										'APEX',
+										'STEPP',
+										'N SP Mapping',
+										'N SP-varsplic Mapping',
+										'N SP-nsSNP Mapping',
+										'N ENSP Mapping',
+										'N ENSG Mapping',
+										'N IPI Mapping',
+										'N Human Mapping',
+										'N Mouse Mapping',
+										'N Yeast Mapping',
+		);
+
+		my $col_info = $sbeamsMOD->get_column_defs( labels => \@headings );
+		my $help_text = $sbeamsMOD->make_table_help( entries => $col_info,);
+    $help_text =~ s/<span.*<\/span>//g;
+    $help_text =~ s/<BR>//g;
+
+    my $use_tabbed_panes = 1;
+		if ( $help_text ) {
+       my $prefix = $sbeams->addTabbedPane(label => "Result");
+       print "$prefix$help_text\n";
+       $use_tabbed_panes = 0;
+    }
     #### Display the resultset
     $sbeams->displayResultSet(
       resultset_ref=>$resultset_ref,
@@ -611,9 +647,9 @@ sub handle_request {
       max_widths=>\%max_widths,
       column_titles_ref=>\@column_titles,
       base_url=>$base_url,
-      use_tabbed_panes=>'1',
+      use_tabbed_panes=>$use_tabbed_panes,
     );
-
+      
 
     #### Display the resultset controls
     $sbeams->displayResultSetControls(
@@ -621,8 +657,12 @@ sub handle_request {
       query_parameters_ref=>\%parameters,
       rs_params_ref=>\%rs_params,
       base_url=>$base_url,
-      use_tabbed_panes=>'1',
+      use_tabbed_panes=>$use_tabbed_panes,
     );
+    if(! $use_tabbed_panes ){
+      print $sbeams->closeTabbedPane() , "\n";
+    }
+
 
     #print "$parameters{organism_id}<BR>";
     #### Display a plot of data from the resultset
