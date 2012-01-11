@@ -295,16 +295,16 @@ sub specfile2json {
   );
   
   # If we have a second Q1, add that to the hash
-  my $traces_href_2 = specfile2traces(
-    spectrum_pathname => $param_href->{spectrum_pathname},
-    target_q1 => $target_q1_2,
-    q1_tolerance => $q1_tolerance,
-    q3_tolerance => $q3_tolerance,
-    tx_info => $tx_info, 
-    # no need to get ms2_scan b/c we got it the first time.
-    #ms2_scan => $ms2_scan,
-  );
-  if ( defined $traces_href_2 && defined $traces_href_2->{'tx'} ) {
+  if ( defined $target_q1_2) {
+    my $traces_href_2 = specfile2traces(
+      spectrum_pathname => $param_href->{spectrum_pathname},
+      target_q1 => $target_q1_2,
+      q1_tolerance => $q1_tolerance,
+      q3_tolerance => $q3_tolerance,
+      tx_info => $tx_info, 
+      # no need to get ms2_scan b/c we got it the first time.
+      #ms2_scan => $ms2_scan,
+    );
     my %combined_traces = (%{$traces_href->{'tx'}}, %{$traces_href_2->{'tx'}});
     $traces_href->{'tx'} = \%combined_traces;
   }

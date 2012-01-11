@@ -2033,6 +2033,7 @@ sub deleteRecordsAndChildren {
       	  print "$sql\n\n" if ($VERBOSE > 1);
       	  print "  DELETING FROM PKLC_2 $child_table_name by $parent_PK NUMBER OF RECORDS:" .scalar(@ids) ."\n"
       	    if ($VERBOSE);
+	  print "  (Testing only; not really deleting.)\n" if ($VERBOSE && $TESTONLY);
       	  print "." unless ($QUIET || $VERBOSE);
       	  $self->executeSQL($sql) unless ($TESTONLY);
 
@@ -2085,6 +2086,7 @@ sub deleteRecordsAndChildren {
        print "$sql\n\n" if ($VERBOSE > 1);
        print "  DELETING FROM $table_name (batch $first_element / $n_ids)\n"
          if ($VERBOSE);
+       print "  (Testing only; not really deleting.)\n" if ($VERBOSE && $TESTONLY);
        print "." unless ($QUIET || $VERBOSE);
        $self->executeSQL($sql) unless ($TESTONLY);
 
@@ -4227,6 +4229,7 @@ sub readResultSet {
     my $query_parameters_ref = $args{'query_parameters_ref'};
     my $resultset_params_ref = $args{'resultset_params_ref'};
     my $column_titles_ref = $args{'column_titles_ref'};
+    my $colnameidx_ref = $args{'colnameidx_ref'};
 
 
     #### Update timing info
@@ -4245,9 +4248,12 @@ sub readResultSet {
     eval $indata;
     %{$query_parameters_ref} = %{$VAR1} if $VAR1;
 
-    #### If columns titles are there, extract them
+    #### If columns titles and/or column name index are there, extract them
     if (exists($query_parameters_ref->{'__column_titles'})) {
       @{$column_titles_ref} = @{$query_parameters_ref->{'__column_titles'}};
+    }
+    if (exists($query_parameters_ref->{'__colnameidx'})) {
+      %{$colnameidx_ref} = %{$query_parameters_ref->{'__colnameidx'}};
     }
 
     #### Read in the resultset
@@ -4327,6 +4333,7 @@ sub writeResultSet {
     my $file_prefix = $args{'file_prefix'} || 'query_';
     my $query_name = $args{'query_name'} || '';
     my $column_titles_ref = $args{'column_titles_ref'};
+    my $colnameidx_ref = $args{'colnameidx_ref'};
 
 
     #### If a filename was not provided, create one
@@ -4358,9 +4365,12 @@ sub writeResultSet {
     #  $query_parameters_ref->{cellular_component_constraint}."=\n</PRE>";
 
 
-    #### Add the column title list to the hash
+    #### Add the column title list and column name index to the hash
     if (defined($column_titles_ref)) {
       $temp_hash_ref->{'__column_titles'} = $column_titles_ref;
+    }
+    if (defined($colnameidx_ref)) {
+      $temp_hash_ref->{'__colnameidx'} = $colnameidx_ref;
     }
 
 
@@ -7146,6 +7156,7 @@ sub addTabbedPane {
 
       document.getElementById("resultsettab"+index).innerHTML = "<a href=\\\"javascript:showResultSetPane('resultsettab" + index + "');\\\">${pad}$args{label}$pad</a>";
       document.getElementById("resultsettab"+index).className = "formtab";
+      document.getElementById("resultsettab"+index).name = "$args{label}";
 
       document.write("<div class=\\\"hidden\\\" id=\\\"resultsettab"+index+"_content\\\">\\n");
 

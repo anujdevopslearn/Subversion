@@ -36,6 +36,7 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::Annotations;
+use SBEAMS::PeptideAtlas::ProtInfo;
 use SBEAMS::Proteomics::PeptideMassCalculator;
 
 my $sbeams = SBEAMS::Connection->new();
@@ -111,6 +112,33 @@ sub collect_q1s_from_spectrum_file {
   return \@q1_measured;
 }
 
+
+###############################################################################
+# get_spec_file_basename_and_extension
+###############################################################################
+
+sub get_spec_file_basename_and_extension {
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+  my $SEL_run_id = $args{'SEL_run_id'};
+
+  my $sql = qq~
+    SELECT spectrum_filename FROM $TBAT_SEL_RUN SELR
+   WHERE SELR.SEL_run_id = $SEL_run_id;
+  ~;
+  my ($specfile) = $sbeams->selectOneColumn($sql);
+  if (! $specfile ) {
+    return 0;
+  }
+
+  $specfile =~ /^(.*)\.(mzX?ML)$/;
+  my $spec_file_basename = $1;
+  my $extension = $2;
+  if (! $spec_file_basename) {
+    die "get_spec_file_basename_and_extension: $specfile: must be .mzML or .mzXML";
+  }
+  return $spec_file_basename, $extension;
+}
 
 ###############################################################################
 # get_SEL_run_id
@@ -777,7 +805,7 @@ sub store_mprophet_scores_in_transition_hash {
       $decoy = 0
         if !$transdata_href->{$q1_mz}->{transitions}->{$q3_mz}->{is_decoy};
     }
-    print "Getting mProphet scores for $spec_file_basename, $modified_pepseq, +$charge, $isotype, decoy=$decoy\n"
+    print "Getting mQuest/mProphet scores for $spec_file_basename, $modified_pepseq, +$charge, $isotype, decoy=$decoy\n"
       if ($VERBOSE > 1);
     # For Ruth 2011 expt., mProphet file gives scores for only top peakgroup,
     # but for ruth_prelim it gives scores for all peakgroups.
@@ -846,10 +874,10 @@ sub store_mprophet_scores_in_transition_hash {
 
 
 ###############################################################################
-# map_peps_to_swissprot
+# map_peps_to_prots
 ###############################################################################
  
-sub map_peps_to_swissprot {
+sub map_peps_to_prots {
   my $self = shift || die ("self not passed");
   my %args = @_;
   my $SEL_experiment_id = $args{'SEL_experiment_id'};
@@ -859,7 +887,7 @@ sub map_peps_to_swissprot {
   my $TESTONLY = $args{'testonly'} || 0;
   my $DEBUG = $args{'debug'} || 0;
 
-  print "Mapping peptides to Swiss-Prot identifiers!\n" if ($VERBOSE);
+  print "Mapping peptides to protein sequences in biosequence set!\n" if ($VERBOSE);
 
   # Get organism ID for this experiment
   my $sql = qq~
@@ -870,7 +898,7 @@ sub map_peps_to_swissprot {
   ~;
   my ($organism_id) = $sbeams->selectOneColumn($sql);
   if (! defined $organism_id ) {
-    print "map_peps_to_swissprot: No organism ID for experiment ${SEL_experiment_id}.\n";
+    print "map_peps_to_prots: No organism ID for experiment ${SEL_experiment_id}.\n";
     return;
   }
 
@@ -893,12 +921,13 @@ sub map_peps_to_swissprot {
   ~;
   my ($set_path) = $sbeams->selectOneColumn($sql);
 
-  # Read all Swiss-Prot entries in this organism's latest biosequence set
+  # Read all entries in this organism's latest biosequence set
   # into a hash according to protein sequence. Store accession(s) and,
   # optionally, biosequence_id for each seq in the hash.
   my $prots_href = read_prots_into_hash (
     prot_file => $set_path,
     store_biosequence_id => 0,
+    swissprot_only => 0,
     verbose => $VERBOSE,
     quiet => $QUIET,
     testonly => $TESTONLY,
@@ -906,6 +935,18 @@ sub map_peps_to_swissprot {
   );
   my @biosequences = keys %{$prots_href};
   my $n_bss = scalar @biosequences;
+
+  # Read regexes for preferred protein identifiers
+  my $preferred_patterns_aref =
+  SBEAMS::PeptideAtlas::ProtInfo::read_protid_preferences(
+    organism_id=>$organism_id,
+  );
+  my $n_patterns = scalar @{$preferred_patterns_aref};
+  if ( $n_patterns == 0 ) {
+    print "WARNING: No preferred protein identifier patterns found ".
+    "for organism $organism_id! ".
+    "Arbitrary identifiers will be used.\n";
+  }
 
   # Create a hash of all peptide ions in this experiment,
   # mapping peptide sequence to SEL_peptide_ion_id
@@ -943,10 +984,11 @@ sub map_peps_to_swissprot {
   for my $pepseq (@pepseqs) {
     print "Mapping $pepseq\n" if $VERBOSE;
 
-    map_pep_to_prots(
+    map_single_pep_to_prots(
       pepseq => $pepseq,
       prots_href => $prots_href,
       peps_href => $peps_href,
+      preferred_patterns_aref => $preferred_patterns_aref,
       glyco => $glyco,
       verbose => $VERBOSE,
       quiet => $QUIET,
@@ -1025,6 +1067,55 @@ sub map_peps_to_swissprot {
     }
   }
 }
+
+###############################################################################
+# purge_protein_mapping (not tested, needs wrapper )
+###############################################################################
+ 
+sub purge_protein_mapping {
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+  my $SEL_experiment_id = $args{'SEL_experiment_id'} ||
+    die "purge_protein_mapping: need SEL_experiment_id";
+  my $VERBOSE = $args{'verbose'} || 0;
+  my $QUIET = $args{'quiet'} || 0;
+  my $TESTONLY = $args{'testonly'} || 0;
+  my $DEBUG = $args{'debug'} || 0;
+
+  print "Purging SEL_peptide_ion_protein for experiment $SEL_experiment_id!\n" 
+    if ($VERBOSE);
+
+  # Get primary keys for all records we want to delete
+  my $sql = qq~
+    SELECT SELPIP.SEL_peptide_ion_protein_id
+    FROM $TBAT_SEL_PEPTIDE_ION_PROTEIN SELPIP
+    INNER JOIN $TBAT_SEL_TRANSITION_GROUP SELTG
+    ON SELTG.SEL_peptide_ion_id = SELPIP.SEL_peptide_ion_id
+    INNER JOIN $TBAT_SEL_RUN SELR
+    ON SELR.SEL_run_id = SELTG.SEL_run_id
+    WHERE SELR.SEL_experiment_id = $SEL_experiment_id;
+  ~;
+  print $sql if ($VERBOSE > 1);
+  my @SEL_peptide_ion_protein_ids = $sbeams->selectOneColumn($sql);
+  my $nrecords = scalar @SEL_peptide_ion_protein_ids;
+  print "About to delete $nrecords records from SEL_peptide_ion_protein\n"
+      if ($VERBOSE);
+  print "(Test only, not really deleting.)\n" if ($VERBOSE && $TESTONLY);
+
+  # delete
+  my $result = $sbeams->deleteRecordsAndChildren(
+    table_name => 'SEL_peptide_ion_protein',
+    table_child_relationship => {},
+    delete_PKs => \@SEL_peptide_ion_protein_ids,
+    delete_batch => 1000,
+    database => $DBPREFIX{PeptideAtlas},
+    verbose => $VERBOSE,
+    testonly => $TESTONLY,
+    keep_parent_record => 0,
+  );
+  print "deleteRecordsAndChildren return value = $result\n" if $VERBOSE > 1;
+}
+
 ###############################################################################
 # glycoswap --  For any DX[ST] or D.$, replace D with [ND].
 ###############################################################################
@@ -1073,8 +1164,9 @@ sub load_transition_data {
   my %args = @_;
   my $SEL_run_id = $args{SEL_run_id};
   my $transdata_href = $args{transdata_href};
-  my $q1_measured_aref = $args{q1_measured_aref};
   my $spec_file_basename = $args{spec_file_basename};
+  my $q1_measured_aref = $args{q1_measured_aref};
+  my $q1_tolerance = $args{q1_tolerance} || 0.005;
   my $load_chromatograms = $args{load_chromatograms};
   my $load_transitions = $args{load_transitions};
   my $load_peptide_ions = $args{load_peptide_ions};
@@ -1089,14 +1181,6 @@ sub load_transition_data {
 
   print "Loading data into SBEAMS!\n" if ($VERBOSE);
 
-#--------------------------------------------------
-#   # Get SEL_run_id from spectrum_filename
-#   my $sql = qq~
-#     SELECT SEL_run_id FROM $TBAT_SEL_RUN SELR
-#    WHERE SELR.spectrum_filename LIKE '$spec_file_basename.%';
-#   ~;
-#   my ($SEL_run_id) = $sbeams->selectOneColumn($sql);
-#-------------------------------------------------- 
 
   # For each Q1 in the transition list
   for my $q1_mz (keys %{$transdata_href}) {
@@ -1106,12 +1190,17 @@ sub load_transition_data {
     my $was_scanned = find_q1_in_list (
       q1_mz=>$q1_mz,
       list_aref=>$q1_measured_aref,
-      tol=>0.005,
+      tol=>$q1_tolerance,
     );
     if ( ! $was_scanned) {
       print "Q1 $q1_mz $transdata_href->{$q1_mz}->{stripped_peptide_sequence} does not appear in this spectrum file.\n" if ($VERBOSE);
       next;
     }
+
+    ### TODO: check to see whether each Q3 was actually scanned. Perhaps
+    ###  should collect and store all measured Q3s for each Q1
+    ###  in collect_q1s_from_spectrum_file
+    ### (can call it collect_tx_from_spectrum_file).
 
     # See if this peptide ion was measured as a decoy and/or as a real pep.
     my @q3_list = keys %{$transdata_href->{$q1_mz}->{transitions}};
@@ -1119,7 +1208,7 @@ sub load_transition_data {
     my $q3_real_aref = [];
     my $measured_as_decoy = 0;
     my $measured_as_real = 0;
-    # For all the Q3s for this Q1, see if decoy or real.
+    # For all the Q3s in the Tx list for this Q1, see if decoy or real.
     for my $q3_mz (@q3_list) {
       if ($transdata_href->{$q1_mz}->{transitions}->{$q3_mz}->{is_decoy}) {
 	  $measured_as_decoy = 1;
@@ -1405,6 +1494,7 @@ sub removeSRMExperiment {
 
    if ($keep_experiments_and_runs) {
      print "Purging experiment $SEL_experiment_id; keeping expt & run records.\n" if $VERBOSE;
+     print "(not really purging because of --testonly)\n" if ($VERBOSE && $TESTONLY);
 
      #don't delete experiment OR run records
      delete $table_child_relationship{SEL_EXPERIMENT};
@@ -1420,6 +1510,7 @@ sub removeSRMExperiment {
     );
   } else {
      print "Purging experiment $SEL_experiment_id; removing expt & run records.\n" if $VERBOSE;
+     print "(not really purging because of --testonly)\n" if ($VERBOSE && $TESTONLY);
       $sbeams->deleteRecordsAndChildren(
          table_name => 'SEL_experiment',
          table_child_relationship => \%table_child_relationship,
@@ -1565,6 +1656,7 @@ sub read_prots_into_hash {
   my %args = @_;
   my $prot_file = $args{'prot_file'};
   my $store_biosequence_id = $args{'store_biosequence_id'} || 0;
+  my $swissprot_only = $args{'swissprot_only'} || 0;
   my $VERBOSE = $args{'verbose'} || 0;
   my $QUIET = $args{'quiet'} || 0;
   my $TESTONLY = $args{'testonly'} || 0;
@@ -1596,7 +1688,8 @@ sub read_prots_into_hash {
       if ($line =~ /^>\s*(\S+)/) {
 	my $next_acc = $1;
 	if ( $current_seq &&     # check for Swiss-Prot accession
-	    ( ( $acc =~ /^[ABOPQ]\w{5}$/ ) ||
+	    ( ( ! $swissprot_only ) ||
+              ( $acc =~ /^[ABOPQ]\w{5}$/ ) ||
 	      ( $acc =~ /^[ABCOPQ]\w{5}-\d{1,2}$/ ) ) ) {
 	  if ($prots_href->{$current_seq}) {
 	    $prots_href->{$current_seq}->{accessions_string} .= ",$acc";
@@ -1637,13 +1730,14 @@ sub read_prots_into_hash {
 }
 
 ###############################################################################
-# map_pep_to_prots
+# map_single_pep_to_prots
 ###############################################################################
-sub map_pep_to_prots {
+sub map_single_pep_to_prots {
   my %args = @_;
   my $pepseq = $args{'pepseq'};
   my $prots_href = $args{'prots_href'};
   my $peps_href = $args{'peps_href'};
+  my $preferred_patterns_aref =$args{'preferred_patterns_aref'};
   my $glyco = $args{'glyco'};
   my $VERBOSE = $args{'verbose'} || 0;
   my $QUIET = $args{'quiet'} || 0;
@@ -1668,18 +1762,214 @@ sub map_pep_to_prots {
   print "Matched $pepseq_to_lookup to $n_matches out of $n_bss bioseqs\n"
      if $VERBOSE > 2;
 
-  # Store the accessions of these as a list, in string format, in the peptide hash
+
+  # Collect the accessions of these as a list
+  my @all_accessions = ();
   for my $match (@matches) {
     my @bs_ids = split (/,/, $prots_href->{$match}->{bs_ids_string});
     my @accessions = split (/,/, $prots_href->{$match}->{accessions_string});
-    foreach my $acc (@accessions) {
-      if ( defined $peps_href->{$pepseq}->{accessions_string} ) {
-	 $peps_href->{$pepseq}->{accessions_string} .= ",$acc";
-      } else {
-	 $peps_href->{$pepseq}->{accessions_string} = "$acc";
-      }
-      print "   acc string: $prots_href->{$match}->{accessions_string}\n"
+    print "   acc string: $prots_href->{$match}->{accessions_string}\n"
         if ($VERBOSE > 2);
-    }
+    @all_accessions = (@all_accessions, @accessions);
   }
+
+  # If preferred protein accesion patterns are passed,
+  # get and store only the most preferred accession.
+  if (defined  $preferred_patterns_aref ) {
+        my $preferred_protein_name =
+          SBEAMS::PeptideAtlas::ProtInfo::get_preferred_protid_from_list(
+            protid_list_ref=>\@all_accessions,
+            preferred_patterns_aref => $preferred_patterns_aref,
+        );
+    @all_accessions = ($preferred_protein_name);
+    print " Preferred is $preferred_protein_name\n" if ($VERBOSE > 2);
+  }
+
+  # Store the accession(s) as a csv list, in string format,
+  # in the peptide hash
+  $peps_href->{$pepseq}->{accessions_string} = join (",", @all_accessions);
+#--------------------------------------------------
+#     foreach my $acc (@accessions) {
+#       if ( defined $peps_href->{$pepseq}->{accessions_string} ) {
+# 	 $peps_href->{$pepseq}->{accessions_string} .= ",$acc";
+#       } else {
+# 	 $peps_href->{$pepseq}->{accessions_string} = "$acc";
+#       }
+#-------------------------------------------------- 
+#--------------------------------------------------
+#     }
+#-------------------------------------------------- 
+}
+
+###############################################################################
+# load_srm_run
+###############################################################################
+sub load_srm_run {
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+  my $SEL_run_id = $args{'SEL_run_id'};
+  my $spectrum_file = $args{'spectrum_file'};
+  my $mquest_file = $args{'mquest_file'};
+  my $mpro_file = $args{'mpro_file'};
+  my $transition_file = $args{'transition_file'};
+  my $tr_format = $args{'tr_format'};
+  my $ataqs = $args{'ataqs'};
+  my $special_expt = $args{'special_expt'};
+  my $q1_tolerance = $args{'q1_tolerance'};
+  my $load_peptide_ions = $args{'load_peptide_ions'} || 1;
+  my $load_transition_groups = $args{'load_transition_groups'} || 1;
+  my $load_transitions = $args{'load_transitions'} || 1;
+  my $load_chromatograms = $args{'load_chromatograms'} || 1;
+  my $VERBOSE = $args{'verbose'};
+  my $QUIET = $args{'quiet'};
+  my $TESTONLY = $args{'testonly'};
+  my $DEBUG = $args{'debug'};
+
+  if ( (! defined $SEL_run_id) &&
+       (! defined $spectrum_file) &&
+       (! defined $transition_file)) {
+    die "load_srm_run: need either SEL_run_id, spec_file_basename, or transition_file."
+  }
+
+  my ($data_dir, $tran_file_basename);
+  my $spec_file_basename;
+  my $spectrum_filepath;
+  my $extension;
+  
+  # The code just below, which attempts to get file paths for the spectrum
+  # and transition files, is hokey and not totally logical. Should be cleaned
+  # up.
+
+  # if a transition_file was given, get the data_dir from it.
+  if ( defined $transition_file ) {
+    my $data_dir = `dirname $transition_file`;
+    chomp $data_dir;
+    $_ = `basename $transition_file`;
+    my ($tran_file_basename) = /^(\S+)\.\S+$/;  #strip extension
+  }
+
+  # if a spectrum_file was given, assume it's a path
+  if ($spectrum_file) {
+    $_ = `basename $spectrum_file`;
+    ($spec_file_basename, $extension) = /^(\S+)\.(\S+)$/;  #strip extension
+    $spectrum_filepath = $spectrum_file;
+    $SEL_run_id = $self->get_SEL_run_id(
+      spec_file_basename => $spec_file_basename,
+    );
+
+  # if no spectrum_file, but SEL_run_id, get spectrum file from run
+  # Actually, this is  not fully functional. Would need to get data_dir
+  # from experiment record. TODO .
+  } elsif (defined $SEL_run_id) {
+    ($spec_file_basename, $extension) =
+      $self->get_spec_file_basename_and_extension (
+	SEL_run_id => $SEL_run_id,
+      );
+    if (! $spec_file_basename) {
+      die "No spectrum file for $SEL_run_id.";
+    }
+    $spectrum_filepath = "$data_dir/$spec_file_basename.mzXML";
+
+  # if still no spectrum file, assume base is same as transition file.
+  } else {
+    $spec_file_basename = $tran_file_basename;
+    print "No spectrum filename given; assume same basename as transition file with .mzXML extension.\n";
+    $extension = 'mzXML';
+    $spectrum_filepath = "$data_dir/$spec_file_basename.mzXML";
+  }
+
+  my $SEL_experiment_id = $self->get_SEL_experiment_id(
+    SEL_run_id => $SEL_run_id,
+  );
+  print "Loading run $SEL_run_id, specfile $spec_file_basename, filepath $spectrum_filepath, expt $SEL_experiment_id\n" if ($VERBOSE);
+
+### Read through spectrum file and collect all the Q1s measured.
+  my $q1_measured_aref =
+    $self->collect_q1s_from_spectrum_file (
+      spectrum_filepath => $spectrum_filepath,
+    );
+#--------------------------------------------------
+# my @q1s = @{$q1_measured_aref};
+# for my $q1 (@q1s) { print "$q1\n"; }
+# exit;
+#-------------------------------------------------- 
+
+### Read mQuest peakgroup file; store scores in mpro hash
+  my $mpro_href = {};
+  if ($mquest_file) {
+    $self->read_mquest_peakgroup_file (
+      mquest_file => $mquest_file,
+      spec_file_basename => $spec_file_basename,
+      mpro_href => $mpro_href,
+      special_expt => $special_expt,
+      verbose => $VERBOSE,
+      quiet => $QUIET,
+      testonly => $TESTONLY,
+      debug => $DEBUG,
+    );
+  } else {
+    print "No mQuest file given.\n" if ($VERBOSE);
+  }
+
+### Read mProphet peakgroup file; store scores in mpro hash
+  if ($mpro_file) {
+    $self->read_mprophet_peakgroup_file (
+      mpro_file => $mpro_file,
+      spec_file_basename => $spec_file_basename,
+      mpro_href => $mpro_href,
+      special_expt => $special_expt,
+      verbose => $VERBOSE,
+      quiet => $QUIET,
+      testonly => $TESTONLY,
+      debug => $DEBUG,
+    );
+  } else {
+    print "No mProphet file given.\n" if ($VERBOSE);
+  }
+
+### Read transition file; store info in transdata hash.
+  my $transdata_href = $self->read_transition_list(
+    transition_file => $transition_file,
+    tr_format => $tr_format,
+    ataqs => $ataqs,
+    special_expt => $special_expt,
+    verbose => $VERBOSE,
+    quiet => $QUIET,
+    testonly => $TESTONLY,
+    debug => $DEBUG,
+  );
+
+### Transfer mquest/mprophet scores into transdata hash
+  if ($mpro_href) {
+    $self->store_mprophet_scores_in_transition_hash (
+      spec_file_basename => $spec_file_basename,
+      transdata_href => $transdata_href,
+      mpro_href => $mpro_href,
+      verbose => $VERBOSE,
+      quiet => $QUIET,
+      testonly => $TESTONLY,
+      debug => $DEBUG,
+    );
+  } else {
+    print "No mProphet or mQuest file given; no scores loaded.\n" if ($VERBOSE);
+  }
+
+### Load transition data into database. Doesn't currently check to see
+###  whether each Q3 in Tx file was actually measured in spectrum file!.
+  $self->load_transition_data (
+    SEL_run_id => $SEL_run_id,
+    transdata_href => $transdata_href,
+    spec_file_basename => $spec_file_basename,
+    q1_measured_aref => $q1_measured_aref,
+    q1_tolerance => $q1_tolerance,
+    load_peptide_ions => $load_peptide_ions,
+    load_transition_groups => $load_transition_groups,
+    load_transitions => $load_transitions,
+    load_chromatograms => $load_chromatograms,
+    verbose => $VERBOSE,
+    quiet => $QUIET,
+    testonly => $TESTONLY,
+    debug => $DEBUG,
+  );
+
 }

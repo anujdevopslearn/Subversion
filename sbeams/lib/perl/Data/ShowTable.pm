@@ -1081,12 +1081,24 @@ sub ShowHTMLTable {
 	        $val = $url_keys->{$tmp};
 	    }
 
+	    #### Find out if there are specific options set for this column
+	    my $cell_option_string = &PlainText($titles->[$c]) . "_OPTIONS";
+
+	    # This option says leave cell empty if a certain other column
+	    # has no value. Added Dec. 2011 for chromatogram viewer cells.
+	    my $leave_it_empty = 0;
+	    my $colnum =
+	       $url_keys->{$cell_option_string}->{content_iff_column_value};
+	    if ( defined $colnum ) {
+	      if ( !$values[$colnum] ) {
+		$leave_it_empty++;
+	      }
+	    }
+
 
 	    #### If the value of the cell is defined, process it
-	    if (defined($val)) {
+	    if (defined($val) && !$leave_it_empty) {
 
-	        #### Find out if there are specific options set for this column
-      		my $cell_option_string = &PlainText($titles->[$c]) . "_OPTIONS";
 		my $embed_html = '';
       		$embed_html = 1 if ($url_keys->{$cell_option_string}->{embed_html});
 
@@ -1101,6 +1113,16 @@ sub ShowHTMLTable {
 		    $out .= " ALIGN=RIGHT";
 		}
 
+
+		# Added Dec. 2011 for chromatogram viewer cells: we don't want
+		# any image or link there if there is no chromatogram.
+    my $leave_it_empty = 0;
+    if ( defined $url_keys->{$cell_option_string}->{content_iff_column_value} ) {
+      if ( !defined
+	  $values[$url_keys->{$cell_option_string}->{content_iff_column_value}] ) {
+        $leave_it_empty++;
+      }
+    }
 
 		#### Insert format for the TD tag if one was supplied
 		if (($x = $#$TDformats) >= 0) {
@@ -1237,8 +1259,13 @@ sub ShowHTMLTable {
   			$Atag = $url_keys->{$tmp};
   		      }
 
-  			#### %nnV is replaced by column nn's value,
-			#### this time for Atag. Added for PASSEL.
+		      #### %nnV is replaced by column nn's value,
+		      #### this time for Atag. Added for PASSEL.
+		      #### As long as there continue to be modifications to
+		      #### the URL, keep looping through it, processing codes
+		      my $modflag = 1;
+		      while ($modflag) {
+  			$modflag = 0;
   			if ($Atag =~ /%(\d{1,2})V/) {
   			      my $s = &htmltext($values[$1],'URL');
 
@@ -1248,18 +1275,14 @@ sub ShowHTMLTable {
 			      #### converted to '%23V' and an infinite
 			      #### loop was generated!
 			      $s =~ s/%23V/%23eutsch/ if ($s =~ /%23V/);
-
-			#--------------------------------------------------
-			#       if ($semicolon_separated_list_flag) {
-			#         my @ss = split(/;/,$s);
-			# 	if ($ss[$cellvalues_counter]) {
-			# 	  $s = $ss[$cellvalues_counter];
-			# 	}
-			#       }
-			#-------------------------------------------------- 
   			      $Atag =~ s/%(\d{1,2})V/$s/;
   			      $modflag++;
   			}
+		      }
+
+		      #### Convert a %23V back
+		      $Atag =~ s/%23eutsch/%23V/g if ($href =~ /%23eutsch/);
+
 
   		      #### Write out the HREF
             if ( !$leave_it ) {
