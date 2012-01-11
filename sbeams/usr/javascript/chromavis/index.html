@@ -1,10 +1,4 @@
-<html>
-<head>
-    <meta http-equiv="X-UA-Compatible" content="chrome=1,IE=edge">
-    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
-    <title>ChromaVis Demo</title>
-
-
+<!-- Begin Chromavis index.html -->
 <script type="text/javascript"
   src="../../usr/javascript/chromavis/js/visquick-core-1.0/google-code.js"></script>
 <script type="text/javascript" src="../../usr/javascript/chromavis/js/visquick-core-1.0/protovis-r3.3.1.js"></script>
@@ -12,9 +6,6 @@
     <script type="text/javascript" language="javascript" src="../../usr/javascript/chromavis/js/chromavis.js"></script>
     <script type="text/javascript" language="javascript" src="../../usr/javascript/chromavis/js/jx.js"></script>
 
-        </head>
-
-<body>
 <!--[if lt IE 9]>      
     <script type="text/javascript"
      src="http://ajax.googleapis.com/ajax/libs/chrome-frame/1/CFInstall.min.js"></script>
@@ -60,11 +51,16 @@
       JSON_PLACEHOLDER 
     ; 
 
-    function renderChromatogram(){
+    function renderChromatogram(smooth_width){
 
         chromavis = new vq.ChromaVis();
-	var data_json = json_string.data_json;
 	var vmarker_json = json_string.vmarker_json;
+
+	JSON.clone = function (obj) {
+	    return JSON.parse( JSON.stringify( obj ) );
+	};
+	var data_json = JSON.clone(json_string.data_json);
+	smoothChromatogram(data_json,parseInt(smooth_width));
 
         var data = {
             DATATYPE : "vq.models.ChromaVisData",
@@ -105,16 +101,61 @@
       
     }
 
-    google.setOnLoadCallback(renderChromatogram)
+    function smoothChromatogram(data_array,smooth_width) {
+      if ((smooth_width == 0) || (smooth_width == 1)) return;
+      var ntraces = data_array.length;
+      var halfwidth = (smooth_width-1)/2;
+      for (i = 0; i < ntraces; i++ ) {
+	trace = data_array[i];
+	var ntimepoints = trace.data.length;
+	for (j = halfwidth; j < ntimepoints-halfwidth; j++) {
+	  var timepoint = trace.data[j];
+	  var sum_intensity_over_width = 0;
+	  for (k = j-halfwidth; k <= j+halfwidth; k++) {
+	    sum_intensity_over_width += trace.data[k].intensity;
+	  }
+	  var smoothed_intensity = sum_intensity_over_width / smooth_width;
+	  timepoint.intensity = smoothed_intensity;
+	}
+      }
+    }
+
+    function RefreshChromatogram() {
+      var smooth_width = document.getElementById("smoothFactor").value;
+      renderChromatogram(smooth_width);
+    }
+
+    google.setOnLoadCallback(renderChromatogram(3))
+
 </script>
 <br/>
-<div id="instructions" style="display:none;">Drag the red area over the context panel to shift the focus panel.  When the cursor is a crosshair, you may
+
+<div id="instructions">Drag the red area over the context panel to shift the focus panel.  When the cursor is a crosshair, you may
 draw a new context window.</div>
 <br/>
+
+<!-- put forms between the rows of an empty table to force them not to stack vertically -->
+<table><tr><td></td></tr>
 <input type="checkbox" id="auto_scale_y" onchange="chromavis.auto_update_scale_y(this.checked); return false;">Auto Scale Y Axis</input>
-<br/>
+&nbsp;&nbsp;
+&nbsp;&nbsp;
+&nbsp;&nbsp;Smoothing width:
+<form>
+  <select id="smoothFactor">
+    <option value=1>none</option>
+    <option value=3 selected>3</option>
+    <option value=5>5</option>
+    <option value=7>7</option>
+    <option value=9>9</option>
+    <option value=11>11</option>
+    <option value=13>13</option>
+    <option value=15>15</option>
+    <option value=17>17</option>
+    <option value=19>19</option>
+    <option value=21>21</option>
+  </select>
+</form>
+<input type="button" onclick="RefreshChromatogram()" value="Refresh">
+<tr><td></td></tr></table>
 
-
-</body>
-</html>
-
+<!-- End Chromavis index.html -->
