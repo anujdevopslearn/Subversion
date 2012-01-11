@@ -50,6 +50,7 @@
     var json_string =  
       JSON_PLACEHOLDER 
     ; 
+    var default_smooth_width=3;
 
     function renderChromatogram(smooth_width){
 
@@ -60,7 +61,7 @@
 	    return JSON.parse( JSON.stringify( obj ) );
 	};
 	var data_json = JSON.clone(json_string.data_json);
-	smoothChromatogram(data_json,parseInt(smooth_width));
+	smoothChromatogram(data_json,smooth_width);
 
         var data = {
             DATATYPE : "vq.models.ChromaVisData",
@@ -120,15 +121,9 @@
       }
     }
 
-    function RefreshChromatogram() {
-      var smooth_width = document.getElementById("smoothFactor").value;
-      renderChromatogram(smooth_width);
-    }
-
-    google.setOnLoadCallback(renderChromatogram(3))
+    google.setOnLoadCallback(renderChromatogram(default_smooth_width))
 
 </script>
-<br/>
 
 <div id="instructions">Drag the red area over the context panel to shift the focus panel.  When the cursor is a crosshair, you may
 draw a new context window.</div>
@@ -141,7 +136,7 @@ draw a new context window.</div>
 &nbsp;&nbsp;
 &nbsp;&nbsp;Smoothing width:
 <form>
-  <select id="smoothFactor">
+  <select id="smoothFactor" onChange="renderChromatogram(parseInt(value))">
     <option value=1>none</option>
     <option value=3 selected>3</option>
     <option value=5>5</option>
@@ -155,7 +150,6 @@ draw a new context window.</div>
     <option value=21>21</option>
   </select>
 </form>
-<input type="button" onclick="RefreshChromatogram()" value="Refresh">
 <tr><td></td></tr></table>
 
 <!-- End Chromavis index.html -->
