@@ -117,7 +117,7 @@ sub display_peptides {
 ##  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs' );
 ##
 
-  my @headers = ( 'Protein', 'Atlas Builds', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'SSRT', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'RI', qw( QTOF QTRAP IonTrap Predicted CE_range QQQ ) );
+  my @headers = ( 'Protein', 'Atlas Builds', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'SSRT', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'RI', qw( QTOF QTRAP IonTrap CE_range QQQ ) );
   my $headings = $atlas->get_column_defs( labels => \@headers );
 
   my $help_text = $atlas->make_table_help( description => 'Q1/Q3 transition pairs for SRM experiments',
@@ -151,7 +151,7 @@ sub display_peptides {
   my $protMappings = getProtMappings();
 
   print "get Consensus at " . time() . "<BR>\n" if $paranoid;
-	my $libs = getConsensus();
+	my $libs = getConsensus( protlist => \@protlist );
 
   print "Plate Mappings  at " . time() . "<BR>\n" if $paranoid;
 	my $pep_info = getPlateMappings();
@@ -265,25 +265,25 @@ ion_rank ASC, relative_intensity DESC
 
     if ( $libs->{qtof}->{$spectrum_key} ) {
       my $title = "View +$row[8] spectrum for $row[2] in QTOF library";
-      $row[13] = "<A HREF='ShowOneSpectrumTest?consensus_library_spectrum_id=$libs->{qtof}->{$spectrum_key};xmax=$xmax;xmin=$xmin' TARGET='_qtof_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
+      $row[13] = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{qtof}->{$spectrum_key};xmax=$xmax;xmin=$xmin' TARGET='_qtof_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
     } else {
       $row[13] = '';
     }
     if ( $libs->{qtrap}->{$spectrum_key} ) {
       my $title = "View +$row[8] spectrum for $row[2] in QTrap5500 library";
-      $row[14] = "<A HREF='ShowOneSpectrumTest?consensus_library_spectrum_id=$libs->{qtrap}->{$spectrum_key};xmax=$xmax;xmin=$xmin' TARGET='_qtrap_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
+      $row[14] = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{qtrap}->{$spectrum_key};xmax=$xmax;xmin=$xmin' TARGET='_qtrap_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
     } else {
       $row[14] = '';
     }
     if ( $libs->{it}->{$spectrum_key} ) {
       my $title = "View +$row[8] spectrum for $row[2] in NIST IonTrap library";
-      $row[15] = "<A HREF='ShowOneSpectrum?consensus_library_spectrum_id=$libs->{it}->{$spectrum_key};xmax=$xmax;xmin=$xmin' TARGET='_it_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
+      $row[15] = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{it}->{$spectrum_key};xmax=$xmax;xmin=$xmin' TARGET='_it_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
     } else {
       $row[15] = '';
     }
 
     my $title = "View predicted +$row[8] spectrum for $row[2] ";
-    $row[16] = "<A HREF='ShowOneSpectrumPred?assumed_charge=$row[8];peptide=$row[2];xmax=$xmax;xmin=$xmin' TARGET='_pred_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
+    $row[16] = "<A HREF='ShowConsensusSpectrum?assumed_charge=$row[8];peptide=$row[2];xmax=$xmax;xmin=$xmin' TARGET='_pred_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
 
     if ( $libs->{CE}->{$spectrum_key} ) {
       my $title = "View +$row[8] spectra for $row[2] on QTOF at various CE values";
@@ -295,16 +295,16 @@ ion_rank ASC, relative_intensity DESC
 
       my $alt_title = $title;
 			$alt_title =~ s/spectra/normalized spectra/;
-      $row[17] = "<A HREF='ShowCESpectralPlot?xmax=$xmax;xmin=$xmin$param_str' TARGET='_CE_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
+      $row[16] = "<A HREF='ShowCESpectralPlot?xmax=$xmax;xmin=$xmin$param_str' TARGET='_CE_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
 #, <A HREF='ShowSpectrumPanelNorm?xmax=$xmax;xmin=$xmin$param_str' TARGET='_CE_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$alt_title'></A>";
     } else {
-      $row[17] = '';
+      $row[16] = '';
     }
     if ( $libs->{qqq}->{$spectrum_key} ) {
       my $title = "View +$row[8] spectrum for $row[2] in QQQ library";
-      $row[18] = "<A HREF='ShowOneSpectrum?consensus_library_spectrum_id=$libs->{qqq}->{$spectrum_key};xmax=$xmax;xmin=$xmin' TARGET='_it_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
+      $row[17] = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{qqq}->{$spectrum_key};xmax=$xmax;xmin=$xmin' TARGET='_it_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
     } else {
-      $row[18] = '';
+      $row[17] = '';
     }
 
     my $cmt = $protMappings->{$row[0]}->{comment} || '';
@@ -536,8 +536,14 @@ my @all = (
 
 sub getConsensus {
 
+	my %args = @_;
+#	if ( $args{protlist} ) {
+#		print join( ",", @{$args{protlist}} ) . "<BR>\n";;
+#	}
+
   my %libs = ( it => {}, qtof => {}, qtrap => {}, CE => {},
           low => {}, mlow => {}, medium => {}, mhigh => {}, high=> {} );
+
 
   my $it_sql = qq~
   SELECT modified_sequence, consensus_library_spectrum_id, charge
@@ -572,7 +578,7 @@ sub getConsensus {
   my $qqq_sql = qq~
   SELECT modified_sequence, consensus_library_spectrum_id, charge
   FROM peptideatlas.dbo.consensus_library_spectrum 
-  WHERE consensus_library_id = 292
+  WHERE consensus_library_id = 293
   ~;
   my $sth = $sbeams->get_statement_handle( $qqq_sql );
   while ( my @row = $sth->fetchrow_array() ) {
@@ -713,5 +719,3 @@ AAALVDEGLDPEEHTADGEPSAK	4/7	9.4e+04	0	1.2e+07	1608.1
 AAAPTGLQPPGC[160]K	12/12	1.7e+08	0	4.5e+09	1057.7	
 AAAPTGLQPPGC[160]K	2/3	8.9e+06	0	1.6e+08	1013.1	
 AADEESLEGEGAGGADAAEESSGTK	2/11	1.6e+06	0	1.5e+08	1031.5	
-AADFIDQALAQK	2/5	2.4e+07	0	6.1e+08	1849.9	
-AADFIDQALAQK	1/1	2.2e+06	0	1.4e+08	1861.3	
