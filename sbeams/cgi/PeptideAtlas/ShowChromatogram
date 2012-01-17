@@ -105,6 +105,8 @@ sub processRequest {
   my $ref_parameters = $args{'ref_parameters'}
     || die "ref_parameters not passed";
 
+  $ref_parameters->{show_sptxt_info} = 1 if !defined $ref_parameters->{show_sptxt_info};
+
   #### Define param usage and print if parameter "help=1" defined.
   my $usage = qq~
      spectrum_pathname           full pathname of mzML or mzXML file
@@ -122,6 +124,7 @@ sub processRequest {
                                    eri=expected relative intensity; can be empty
                                    If not provided, all Q3 for given Q1 displayed.
      q3_tolerance                matching tolerance; default 0.05
+     show_sptxt_info             Print sptxt file information; default true.
 
    For display only (not needed to draw chromatogram):
      ce                          collision energy
@@ -185,6 +188,16 @@ sub processRequest {
     spectrum_pathname => $spectrum_pathname,
   );
   print $top_html;
+	my %smoothing;
+	if ( $ref_parameters->{default_smoothing_factor} ) {
+		$smoothing{default_smoothing_factor} = $ref_parameters->{default_smoothing_factor};
+	}
+	if ( $ref_parameters->{limit_smoothing_options} ) {
+		$smoothing{limit_smoothing_options} = $ref_parameters->{limit_smoothing_options};
+	}
+	if ( $ref_parameters->{expand_timeframe} ) {
+		$smoothing{expand_timeframe} = $ref_parameters->{expand_timeframe};
+	}
 
   # Generate the Chromavis javascript chromatogram viewer
   my $chromavis = new SBEAMS::Proteomics::ChromatogramViewer;
@@ -198,6 +211,7 @@ sub processRequest {
     best_peak_group_rt    => $ref_parameters->{Tr},
     m_score               => $ref_parameters->{m_score},
     json_string           => $json_string,
+		%smoothing
   );
 
   # Read the data from the JSON object into a hash of the
@@ -219,8 +233,10 @@ sub processRequest {
 
   # Print sptxt info, if provided.
   my ($SRMProb) = ($sptxt_fulltext =~ /SRMProb=(\S*)\s*/);
-  print "<p>SRM Probability: $SRMProb</p>\n" if $SRMProb;
-  print "<pre>$sptxt_fulltext</pre>\n";
+	if ( $ref_parameters->{show_sptxt_info} ) {
+    print "<p>SRM Probability: $SRMProb</p>\n" if $SRMProb;
+    print "<pre>$sptxt_fulltext</pre>\n";
+	}
 
   # Print the HTML that allows user to recall and download resultset
   print $cgram->getBottomHTMLforChromatogramViewer(
