@@ -248,7 +248,7 @@ sub srm_experiments_2_json_old {
 ###############################################################################
 # srm_experiments_2_json
 #   Grab all data for all SRM experiments from JSON file, filter out those
-#     for which we don't have permission, and write in a new JSON file.
+#     for which we don't have permission, and return a JSON hash
 ###############################################################################
 
 sub srm_experiments_2_json {
@@ -268,8 +268,10 @@ sub srm_experiments_2_json {
   my $json = new JSON;
   $json = $json->pretty([1]);  # print json objects with indentation, etc.
 
-  # Read the json object from a cache file into a hash
+  # Read the json object from a cache file into a hash. If not there, create.
+  # This filename shouldn't be hardcoded ...
   my $json_filename_all = "$PHYSICAL_BASE_DIR/tmp/PASSEL_experiments_all.json";
+  $self->srm_experiments_2_json_all() if (! -e $json_filename_all);
   open (JSONFILE, "$json_filename_all") ||
     die "Can't open $json_filename_all for reading\n";
   $json_href = $json->decode(join(" ",<JSONFILE>));
@@ -285,16 +287,7 @@ sub srm_experiments_2_json {
     debug => $DEBUG,
   );
 
-  # Print the filtered json into another file
-  # IMPORTANT: must create unique filename and pass back to calling pgm
-  #  and somehow get it to where it is used in grid_ISB.js. Else, clobber danger
-  #  as PASSEL becomes more highly used. TODO
-  my $json_filename_filtered = "$PHYSICAL_BASE_DIR/tmp/PASSEL_experiments.json";
-  open (JSONFILE, ">$json_filename_filtered") ||
-    die "Can't open $json_filename_filtered for writing\n";
-  print "Writing to $json_filename_filtered\n" if ($VERBOSE);
-  print JSONFILE  $json->encode($json_href);
-  close JSONFILE;
+  return ($json_href);
 }
 
 sub filterForAccessibleProjects {

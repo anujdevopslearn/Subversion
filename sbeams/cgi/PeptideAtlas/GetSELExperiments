@@ -32,7 +32,6 @@ use SBEAMS::Connection::TabMenu;
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
-use SBEAMS::PeptideAtlas::PASSEL;
 
 $sbeams = new SBEAMS::Connection;
 my $sbeamsMOD = new SBEAMS::PeptideAtlas;
@@ -260,10 +259,6 @@ sub handle_request {
 #   ~;
 #   print $html;
 #-------------------------------------------------- 
-
-  my $passel = new SBEAMS::PeptideAtlas::PASSEL;
-  # Make a JSON file containing data from all of the experiments.
-  $passel->srm_experiments_2_json();
 
   # Display of data table
   $html = qq~

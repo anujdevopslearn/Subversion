@@ -1,18 +1,44 @@
 #!/usr/local/bin/perl
+use strict;
+use CGI::Carp qw(fatalsToBrowser croak);
 use FindBin;
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
 
-use lib "/net/dblocal/wwwSSL/html/devDC/sbeams/lib/perl";
-use vars qw ($sbeams $q $QUIET $VERBOSE $DEBUG );
+use SBEAMS::Connection qw($q $log );
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Authenticator;
+use SBEAMS::Connection::Tables;
 
-use SBEAMS::Connection qw($q $log);
-use SBEAMS::Connection::Settings qw( $PHYSICAL_BASE_DIR );
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::PASSEL;
 use CGI qw(:standard);
 use JSON;
 
 $sbeams = new SBEAMS::Connection;
+my $sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+#### Read in the default input parameters
+my %parameters;
 my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
 $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+#### Authenticate. Seems a shame to authenticate here when we already did it
+#### in the calling cgi, GetSELExperiments. Seems to print 2 page footers?
+# Use same permitted_work_groups as GetSELExperiments.
+exit unless ($current_username = $sbeams->Authenticate(
+      permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+      'PeptideAtlas_readonly', 'PeptideAtlas_exec'],
+      allow_anonymous_access=>1,
+  ));
 
 my $cmd  = $parameters{'cmd'};
 my $scope = $parameters{'scope'};
@@ -24,15 +50,14 @@ my $sort = $parameters{'orderby'} || 'ASC';
 my $filtercol = $parameters{'filtercol'} || 'all';
 my $filterstr = $parameters{'filterstr'};
 my $dlfiletype = $parameters{'dlfiletype'} || '';
- 
-#my $file =  "/net/dblocal/wwwspecial/peptideatlas/cgi/passel/PASSEL_experiments.json" ;
-#my $file =  "/net/dblocal/www/html/devTF/sbeams/tmp/PASSEL_experiments.json" ;
-my $file =  "${PHYSICAL_BASE_DIR}/tmp/PASSEL_experiments.json" ;
+
+my $passel = new SBEAMS::PeptideAtlas::PASSEL;
 my $json = new JSON;
-open(IN, "<$file") || die "Can't open $file for reading";
-my @contents = <IN>;
-my $jsonstr = join("", @contents);
-my $content = $json -> decode($jsonstr);
+
+# Collect a JSON hash containing data from all of the experiments.
+# Store also in string form to use for searching, sorting.
+my $json_href = $passel->srm_experiments_2_json();
+my $jsonstr = $json->encode($json_href);
 my $hash;
 
 my $count = 0;
@@ -47,8 +72,7 @@ if($filterstr ne '' and $filtercol eq 'all'){
   $filterstr =~ s/\s+$//;
   my %tmp;
   my @qts = split (/\s+/, $filterstr);
-  open (IN, "<$file");
-  my @lines = <IN>;
+  my @lines = split("\n", $jsonstr);
 	my $first = 1;
   my $str = ''; 
   my $acc = '';
@@ -80,7 +104,7 @@ if($filterstr ne '' and $filtercol eq 'all'){
   }
 }
 
-foreach my $sample (@{$content->{"MS_QueryResponse"}{samples}}){
+foreach my $sample (@{$json_href->{"MS_QueryResponse"}{samples}}){
   ## filter the record using filterstr and filtercol
   if($filterstr ne ''){
 		if($filtercol ne 'all'){
@@ -134,37 +158,9 @@ if($cmd eq 'downloadtable'){
     print "$title\t$sampletag\t$sample_date\t$contributors\t$instrument\t";
     print "$publication\t$authors\n";
   }
-#--------------------------------------------------
-# }elsif($cmd eq 'download'){
-#   my $url = 'ftp://ftp:a@ftp.peptideatlas.org/pub/PeptideAtlas/Repository';
-#   my @list;
-#   print header( -type => 'application/txt', -attachment => 'list.txt' ); 
-#   foreach my $idx (sort {$sort_cols_hash{$a}{sortby} cmp $sort_cols_hash{$b}{sortby}} keys %sort_cols_hash ){
-#     my $acc  = $sort_cols_hash{$idx}{sample}->{acc};
-#     my $files = opendir(DIR , "/prometheus/u1/ftp/pub/PeptideAtlas/Repository/$acc");
-#     my @files = readdir(DIR);
-# 
-#     if($dlfiletype eq 'all'){
-#       foreach my $file (@files){
-# 	if($file =~ /gz$/ || $file =~ /README/ || $file =~ /fasta/){
-# 	  print "$url/$acc/$file\n";
-# 	}
-#       }
-#     }else{
-#       foreach my $file (@files){
-# 	if($file =~ /$dlfiletype/i){
-# 	  if($file =~ /gz$/ || $file =~ /README/ || $file =~ /fasta/){
-# 	    print "$url/$acc/$file\n";
-# 	    print "$url/$acc/$file\n";
-# 	  }
-# 	}
-#       }
-#     } 
-#   } 
-#-------------------------------------------------- 
 } else {
-  $hash ->{"MS_QueryResponse" }{"userinfo"} = $content->{"MS_QueryResponse"}{"userinfo"};
-  $hash ->{"MS_QueryResponse" }{"counts"} = $content->{"MS_QueryResponse"}{"counts"};
+  $hash ->{"MS_QueryResponse" }{"userinfo"} = $json_href->{"MS_QueryResponse"}{"userinfo"};
+  $hash ->{"MS_QueryResponse" }{"counts"} = $json_href->{"MS_QueryResponse"}{"counts"};
 
 	if($sort =~ /ASC/){
 		foreach my $idx (sort {$sort_cols_hash{$a}{sortby} cmp $sort_cols_hash{$b}{sortby}} keys %sort_cols_hash ){
