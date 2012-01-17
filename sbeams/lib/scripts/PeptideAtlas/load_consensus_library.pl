@@ -89,8 +89,7 @@ if ( $OPTIONS{'load'} || $OPTIONS{'test'} ) {
     && $OPTIONS{organism_name} && $OPTIONS{project_id} )
     {
         print "\n$USAGE\n";
-        print "Need --path and --library_name ";
-        print " and --organism_name\n";
+        print "Need --path, --library_name, --project_id, and --organism_name\n";
         exit(0);
     }
 }
@@ -296,6 +295,7 @@ sub populateRecords
             precursor_intensity => $commentHash{PrecursorIntensity},
             scan_time => $commentHash{RetentionTime},
             nreps => $commentHash{Nreps},
+            probability => $commentHash{Prob},
             entry_idx => $spectrum{entry_idx}
         );
 
@@ -798,6 +798,13 @@ sub parseComment
     {
         $hash{$1} = $2;
     }
+
+    # Pull out the probability.  Agilent QQQ is the only one that should match SRMProb 
+    if ($line =~ /.*(SRMProb)=(.+?)\s.*/) {
+        $hash{Prob} = $2;
+    } elsif ($line =~ /.*(Prob)=(.+?)\s.*/) {
+        $hash{Prob} = $2;
+		}
 
 #   ## Specqual is the last entry in comment field:
 #   if ($line =~ /.*(Specqual)=(.*)/)
