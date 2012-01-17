@@ -58,11 +58,19 @@ sub generateChromatogram {
     my $best_peak_group_rt = $args{'best_peak_group_rt'};
     my $m_score = $args{'m_score'};
     my $json_string = $args{'json_string'};
+		$args{default_smoothing_factor} ||= 3;
 
     # Read the HTML code for the viewer from a template file.
     open(HTML, "$PHYSICAL_BASE_DIR/usr/javascript/chromavis/index.html");
     my @chromavis_html = <HTML>;
     my $chromavis_html = join('', @chromavis_html);
+
+    if ( $args{expand_timeframe} ) {
+      my $json_exp = $self->expand_json_timeframe( $json_string, $args{expand_timeframe} );
+      $json_string = $json_exp;
+#			die $json_exp;
+		}
+
     # Insert json string
     $chromavis_html =~ s/JSON_PLACEHOLDER/${json_string}/;
     $chromavis_html .= qq~
@@ -71,9 +79,100 @@ sub generateChromatogram {
     </script>
     ~;
 
+		$chromavis_html =~ s/DEFAULT_SMOOTHING_PH/$args{default_smoothing_factor}/;
+		my $smoothing_select = $self->get_smoothing_select( %args );
+		$chromavis_html =~ s/SMOOTHING_SELECT_PH/$smoothing_select/;
+		$chromavis_html =~ s/Smoothing width/Data smoothing/ if $args{limit_smoothing_options};
+
     return $chromavis_html;
 }
 
+sub expand_json_timeframe {
+	my $self = shift;
+	my $json = shift;
+	my $expand_by = shift || 25;
+	my @json = split( /\n/, $json );
+	my $max_inten = 0;
+	my $max_time = 0;
+	my $min_inten = 1000000;
+	for my $line ( @json ) {
+		if ( $line =~ /time\s*:\s*([^,]*)\,\s+intensity\s*:\s*([^}]*)/ ) {
+			# die "intensity is $2 at time $1\n";
+      if ( $2 > $max_inten ) {
+				$max_inten = $2;
+				$max_time = $1;
+			}
+      if ( $2 < $min_inten ) {
+				$min_inten = $2;
+			}
+		}
+  }
+#	print "Saw max intensity $max_inten at $max_time seconds\n";
+	my $start_time = $max_time - $expand_by;
+	$start_time = 0.0 if $start_time < 0;
+	my $end_time = $max_time + $expand_by;
+	$min_inten ||= 10;
+#	die "max is $max_time, start is $start_time, end is $end_time, max is $max_inten and min is $min_inten\n";;
+
+	my $data_min = "          {time : $start_time, intensity : $min_inten},\n"; 
+	my $data_max = "          {time : $end_time, intensity : $min_inten},\n"; 
+
+	my $new_json = '';
+	my $previous;
+	my $add_extra = 0;
+	for my $line ( @json ) {
+		if ( $line =~ /^\s+data/ ) {
+			$new_json .= $line . "\n";
+			$new_json .= $data_min;
+			$add_extra++;
+		} elsif ( $line =~ /^\s+\]/ ) {
+			my $new_base = $previous;
+			$new_base =~ s/intensity.*$/intensity : $min_inten},/;
+			$new_json .= $new_base . "\n";
+			$new_json .= $data_max;
+			$new_json .= $line . "\n";
+		} else {
+			if ( $add_extra ) {
+				$add_extra = 0;
+  			my $new_base = $line;
+	  		$new_base =~ s/intensity.*$/intensity : $min_inten},/;
+		  	$new_json .= $new_base . "\n";
+	    }
+			$new_json .= $line . "\n";
+		}
+		$previous = $line;
+	}
+	return $new_json;
+
+#      data : [
+#			          {time : 20.0721, intensity : 51.44000},
+#          {time : 25.8213, intensity : 1772.64014},
+#					        ]},
+#	die $json;
+}
+
+sub get_smoothing_select {
+	my $self = shift;
+	my %args = @_;
+  my @s_values = ( 1 );
+	if ( $args{limit_smoothing_options} ) {
+		push @s_values, $args{default_smoothing_factor}
+	} else {
+		push @s_values, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21;
+	}
+	my $select = '<select id="smoothFactor" onChange="renderChromatogram(parseInt(value))">' . "\n";
+	for my $sval ( @s_values ) {
+		my $s_display = ( $sval == 1 ) ? 'none' : $sval;
+		my $selected = ( $sval == $args{default_smoothing_factor} ) ? ' selected' : '';
+    if ( $selected && $args{limit_smoothing_options} ) {
+			$s_display = 'smoothed';
+			$select =~ s/none/unsmoothed/;
+		}
+		$select .= "<option value=$sval $selected>$s_display</option>\n";
+	}
+	$select .= "</select>\n";
+
+}
 
 ###############################################################################
 
