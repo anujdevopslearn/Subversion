@@ -50,7 +50,7 @@
     var json_string =  
       JSON_PLACEHOLDER 
     ; 
-    var default_smooth_width=3;
+    var default_smooth_width=DEFAULT_SMOOTHING_PH;
 
     function renderChromatogram(smooth_width){
 
@@ -136,19 +136,7 @@ draw a new context window.</div>
 &nbsp;&nbsp;
 &nbsp;&nbsp;Smoothing width:
 <form>
-  <select id="smoothFactor" onChange="renderChromatogram(parseInt(value))">
-    <option value=1>none</option>
-    <option value=3 selected>3</option>
-    <option value=5>5</option>
-    <option value=7>7</option>
-    <option value=9>9</option>
-    <option value=11>11</option>
-    <option value=13>13</option>
-    <option value=15>15</option>
-    <option value=17>17</option>
-    <option value=19>19</option>
-    <option value=21>21</option>
-  </select>
+  SMOOTHING_SELECT_PH 
 </form>
 <tr><td></td></tr></table>
 
