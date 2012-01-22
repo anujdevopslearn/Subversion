@@ -152,6 +152,7 @@ sub srm_experiments_2_json_old {
      $data_contributors,$SEL_experiment_id,$organism_name,
      $n_prots, $n_peps, $n_ions, $n_transition_groups,
      $n_transitions ) = @{$row};
+   my $acc = $SEL_experiment_id;
 
     # TODO: get all publications, if multiple. For now we just get the first.
     my @pub_ids = split(",", $sample_publication_ids);
@@ -198,6 +199,7 @@ sub srm_experiments_2_json_old {
 
     my %data;
     $data{"sampletag"} = $sample_tag;
+    $data{"acc"} = $SEL_experiment_id;
     $data{"taxonomy"} = $organism_name;
     $data{"summary"} = "";
     $data{"contributors"} = "$data_contributors",
@@ -425,6 +427,7 @@ sub srm_experiments_2_json_all {
      $data_contributors,$SEL_experiment_id,$organism_name,
      $n_prots, $n_peps, $n_ions, $n_transition_groups,
      $n_transitions, $project_id ) = @{$row};
+   my $acc = $SEL_experiment_id;
 
     # TODO: get all publications, if multiple. For now we just get the first.
     my @pub_ids = split(",", $sample_publication_ids);
@@ -471,6 +474,7 @@ sub srm_experiments_2_json_all {
 
     my %data;
     $data{"sampletag"} = $sample_tag;
+    $data{"acc"} = "$SEL_experiment_id";
     $data{"taxonomy"} = $organism_name;
     $data{"summary"} = "";
     $data{"contributors"} = "$data_contributors",

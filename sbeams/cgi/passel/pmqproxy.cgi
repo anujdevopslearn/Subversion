@@ -7,7 +7,8 @@ $ua->timeout(120);
 
 my $query = new CGI;
 my $ids  = $query->param(ids);
-my $url = 'http://www.ncbi.nlm.nih.gov//projects/geo/tools/pmqproxy.cgi?'.$ids;
+#my $url = 'http://www.ncbi.nlm.nih.gov//projects/geo/tools/pmqproxy.cgi?'.$ids;
+my $url = 'http://www.ncbi.nlm.nih.gov/pubmed/'.$ids;
 
 
 my $request = new HTTP::Request('GET', $url);
