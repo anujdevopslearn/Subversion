@@ -80,6 +80,7 @@ while( my $line = <PEPS> ) {
   }
 
   my $pepseq = $line[$opts->{seq_idx}];
+  $pepseq =~ s/\s//g;
   if ( $opts->{ZtoC} ) {
     $pepseq =~ s/Z/C/g;
   }
@@ -102,7 +103,7 @@ while( my $line = <PEPS> ) {
         $stats{NnotD}++;
       } else {
         my $alt_pepseq = $pepseq;
-        $alt_pepseq =~ s/D(.[ST])/N$1/g;
+        $alt_pepseq =~ s/D([^P][ST])/N$1/g;
         $matched = map_peptide( $alt_pepseq );
         if ( $matched ) {
           $matching_seq = $alt_pepseq;
@@ -150,11 +151,11 @@ while( my $line = <PEPS> ) {
 
   my $prot_str = 'na';
   my $prot_cnt = 0;
-  if ( $peps{$pepseq} ) {
-    $prot_str = $peps{$pepseq};
+  if ( $peps{$matching_seq} ) {
+    $prot_str = $peps{$matching_seq};
     $prot_cnt = $prot_str =~ tr/,/./;
     $prot_cnt += 1;
-  }
+  } 
 
   if ( $opts->{mapping_out} ) {
     if ( $opts->{omit_match_seq} ) {
@@ -420,8 +421,10 @@ sub map_peptide {
       }
     }
   } # End if brute else block
-
-  $peps{$pepseq} = $match_str;
+ 
+  if ( $match_str ) {
+    $peps{$pepseq} = $match_str;
+  }
   my $prot_cnt = 0;
   if ( $match_str ) {
     $prot_cnt = $match_str =~ tr/,/,/;
