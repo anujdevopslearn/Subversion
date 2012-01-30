@@ -198,6 +198,16 @@ sub prntVar
 
 ###############################################################################
 # getCurrentAtlasBuildID
+### Get an atlas build ID by checking the following, in order:
+###  - Was one supplied as a parameter?
+###  - Was an atlas build name supplied?
+###  - Was an organism ID or name supplied?
+###  - Is there a "current" atlas_build_id stored as a session cookie?
+###  - Is there a "current" organism stored as a session cookie?
+### Check to see whether user can access selected build.
+### If not, require them to log in or select a different build.
+### Else, store atlas build ID in appropriate session cookie and
+###    return atlas build ID.
 ###############################################################################
 sub getCurrentAtlasBuildID {
   my $METHOD_NAME = 'getCurrentAtlasBuildID';
@@ -208,18 +218,26 @@ sub getCurrentAtlasBuildID {
   my $parameters_ref = $args{'parameters_ref'}
    || die "ERROR[$METHOD_NAME]: parameters_ref not passed";
   my %parameters = %{$parameters_ref};
+  # for CompareBuildsProteins
+  my $secondary_build = $args{'secondary_build'} || 0;
+  my $primary_build = !$secondary_build;
   my $sbeams = $self->getSBEAMS();
 
 
   #### Extract what was specified as a parameter
   my $atlas_build_id = $parameters{'atlas_build_id'};
+  my $atlas_build_id_2 = $parameters{'atlas_build_id_2'};
   my $atlas_build_name = $parameters{'atlas_build_name'};
   my $organism_id = $parameters{'organism_id'};
   my $organism_name = $parameters{'organism_name'};
+  my $build_key = $primary_build ?
+      'PeptideAtlas_atlas_build_id' : 'PeptideAtlas_atlas_build_id_2';
+  my $this_atlas_build_id = $primary_build ?
+          $atlas_build_id : $atlas_build_id_2;
 
 
   #### If atlas_build_id was supplied
-  if ($atlas_build_id) {
+  if ($this_atlas_build_id) {
     #### we're fine, this is exactly what we want
 
   #### Else if atlas_build_name was supplied
@@ -256,9 +274,9 @@ sub getCurrentAtlasBuildID {
       return(-1);
 
     } else {
-      $atlas_build_id = $rows[0];
+      $this_atlas_build_id = $rows[0];
     }
-    #print "atlas build is $atlas_build_id\n";
+    #print "atlas build is $this_atlas_build_id\n";
 
 
   #### If an organism name or the organism_id was supplied,
@@ -376,19 +394,19 @@ sub getCurrentAtlasBuildID {
       return(-1);
 
     } else {
-      $atlas_build_id = $rows[0];
+      $this_atlas_build_id = $rows[0];
     }
 
   #### Otherwise try to get it from the session cookie
   } else {
-    $atlas_build_id = $sbeams->getSessionAttribute(
-      key => 'PeptideAtlas_atlas_build_id',
+    $this_atlas_build_id = $sbeams->getSessionAttribute(
+      key => $build_key,
     );
 
   }
 
   #### If we still don't have an atlas_build_id, guess!
-  unless ($atlas_build_id) {
+  unless ($this_atlas_build_id) {
     my $organism_name = $sbeams->getSessionAttribute(
       key => 'PeptideAtlas_organism_name',
     );
@@ -416,7 +434,7 @@ sub getCurrentAtlasBuildID {
     if (scalar(@rows) > 1) {
       die("ERROR: Too may rows returned for $sql");
     } elsif ( @rows ) {
-      $atlas_build_id = $rows[0];
+      $this_atlas_build_id = $rows[0];
     }
 
   }
@@ -424,10 +442,12 @@ sub getCurrentAtlasBuildID {
   my @accessible_project_ids = $sbeams->getAccessibleProjects();
   my $accessible_project_ids = join( ",", @accessible_project_ids ) || '0';
 
+  #### If we still don't hae a build id, get the lowest numbered
+  ####   accessible build.
   #### If we still don't have an atlas_build_id, just assume id 1!
-  unless ($atlas_build_id) {
+  unless ($this_atlas_build_id) {
     
-  my $sql = qq~
+    my $sql = qq~
       SELECT AB.atlas_build_id
         FROM $TBAT_DEFAULT_ATLAS_BUILD DAB
         JOIN $TBAT_ATLAS_BUILD AB
@@ -440,10 +460,10 @@ sub getCurrentAtlasBuildID {
 
     my $sth = $sbeams->get_statement_handle($sql);
     while ( my @row = $sth->fetchrow_array() ) {
-      $atlas_build_id = $row[0];
+      $this_atlas_build_id = $row[0];
       last;
     }
-    $atlas_build_id ||= 1;
+    $this_atlas_build_id ||= 1;
   }
 
   #### Verify that the user is allowed to see this atlas_build_id
@@ -452,12 +472,12 @@ sub getCurrentAtlasBuildID {
         FROM $TBAT_ATLAS_BUILD AB
        WHERE AB.project_id IN ( $accessible_project_ids )
          AND AB.record_status!='D'
-         AND atlas_build_id = '$atlas_build_id'
+         AND atlas_build_id = '$this_atlas_build_id'
   ~;
   my @rows = $sbeams->selectOneColumn($sql);
 
   # No build specified, or user lacks project access to specified build. 
-  unless (scalar(@rows) == 1 && $rows[0] eq $atlas_build_id) {
+  unless (scalar(@rows) == 1 && $rows[0] eq $this_atlas_build_id) {
 
     my $protein_list_allowed = 0;
 
@@ -499,18 +519,18 @@ sub getCurrentAtlasBuildID {
     $log->info( "Skipping storage due to no_cache directive" );
   } else {
     my $cached_atlas_build_id = $sbeams->getSessionAttribute(
-      key => 'PeptideAtlas_atlas_build_id',
+      key => $build_key,
     );
 
-    if ($cached_atlas_build_id != $atlas_build_id) {
+    if ($cached_atlas_build_id != $this_atlas_build_id) {
       $sbeams->setSessionAttribute(
-        key => 'PeptideAtlas_atlas_build_id',
-        value => $atlas_build_id,
+        key => $build_key,
+        value => $this_atlas_build_id,
       );
     }
   }
 
-  return($atlas_build_id);
+  return($this_atlas_build_id);
 
 } # end getCurrentAtlasBuildID
 
@@ -519,6 +539,9 @@ sub clearBuildSettings {
   my $sbeams = $self->getSBEAMS();
   $sbeams->deleteSessionAttribute(
     key => 'PeptideAtlas_atlas_build_id',
+  );
+  $sbeams->deleteSessionAttribute(
+    key => 'PeptideAtlas_atlas_build_id_2',
   );
   $sbeams->deleteSessionAttribute(
     key => 'PeptideAtlas_atlas_name',
@@ -543,6 +566,10 @@ sub setBuildSessionAttributes {
   END
   $sbeams->setSessionAttribute(
     key => 'PeptideAtlas_atlas_build_id',
+    value => $args{build_id},
+  );
+  $sbeams->setSessionAttribute(
+    key => 'PeptideAtlas_atlas_build_id_2',
     value => $args{build_id},
   );
   $sbeams->setSessionAttribute(
