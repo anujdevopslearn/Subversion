@@ -1084,14 +1084,17 @@ sub ShowHTMLTable {
 	    #### Find out if there are specific options set for this column
 	    my $cell_option_string = &PlainText($titles->[$c]) . "_OPTIONS";
 
-	    # This option says leave cell empty if a certain other column
-	    # has no value. Added Dec. 2011 for chromatogram viewer cells.
+	    # This option says leave cell empty unless certain other columns
+	    # have value. Added Dec. 2011 for chromatogram viewer cells.
 	    my $leave_it_empty = 0;
-	    my $colnum =
-	       $url_keys->{$cell_option_string}->{content_iff_column_value};
-	    if ( defined $colnum ) {
-	      if ( !$values[$colnum] ) {
-		$leave_it_empty++;
+	    my $colnum_aref =
+	      $url_keys->{$cell_option_string}->{content_iff_column_values};
+	    if ( defined $colnum_aref ) {
+	      my @colnums = @{$colnum_aref};
+	      for my $colnum (@colnums) {
+		if ( !$values[$colnum] ) {
+		  $leave_it_empty++;
+		}
 	      }
 	    }
 

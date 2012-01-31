@@ -123,9 +123,7 @@ sub main {
 
   } else {
 
-    my $project_id = $sbeamsMOD->getProjectID(
-      #atlas_build_id => $parameters{atlas_build_id}
-        );
+    my $project_id = $sbeamsMOD->getProjectID();
 
     $sbeamsMOD->display_page_header(
       project_id => $project_id,
@@ -168,18 +166,6 @@ sub handle_request {
   print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
 
 
-#--------------------------------------------------
-#   #### Get the current atlas_build_id based on parameters or session
-#   my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
-#     parameters_ref => \%parameters,
-#   );
-#   if (defined($atlas_build_id) && $atlas_build_id < 0) {
-#     return;
-#   }
-#   $parameters{atlas_build_id} = $atlas_build_id;
-#-------------------------------------------------- 
-
-
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
 
@@ -202,6 +188,8 @@ sub handle_request {
 
   #### Get the columns and input types for this table/query
   my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+  my @column_titles = ();
+  my %colnameidx = ();
 
   my %input_types = 
     $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
@@ -220,7 +208,9 @@ sub handle_request {
     $sbeams->readResultSet(
         resultset_file=>$rs_params{set_name},
         resultset_ref=>$resultset_ref,
-        query_parameters_ref=>\%parameters
+        query_parameters_ref=>\%parameters,
+	column_titles_ref=>\@column_titles,
+	colnameidx_ref=>\%colnameidx,
     );
     $n_params_found = 99;
   }
@@ -247,7 +237,7 @@ sub handle_request {
     apply_action=>$apply_action,
     PROGRAM_FILE_NAME=>$PROG_NAME,
     parameters_ref=>\%parameters,
-    input_types_ref=>\%input_types,
+   input_types_ref=>\%input_types,
     mask_user_context=> '1',
     use_tabbed_panes=> '1',
   );
@@ -275,33 +265,29 @@ sub handle_request {
   #########################################################################
   #### Process all the constraints
 
+  # 01/02/12: do this only if the action is QUERY. Otherwise, there is no
+  # need. Right? Motivation for this conditional: don't want to clobber
+  # column_titles and colnameidx which may have been retrieved with
+  # readResultSet().
+  if ($apply_action =~ /QUERY/i) {
+
 #--------------------------------------------------
-#   #### If no atlas_build_id was selected, stop here
-#   unless ($parameters{atlas_build_id}) {
-#     $sbeams->reportException(
-#       state => 'ERROR',
-#       type => 'INSUFFICIENT CONSTRAINTS',
-#       message => 'You must select at least one Atlas Build',
-#     );
-#     return;
-#   }
+#   #### Build EXPT_PROTEIN_NAME constraint
+#   my $expt_protein_name_clause = $sbeams->parseConstraint2SQL(
+#     constraint_column=>"SELTG.experiment_protein_name",
+#     constraint_type=>"plain_text",
+#     constraint_name=>"Experiment Protein Name",
+#     constraint_value=>$parameters{protein_name_constraint} );
+#   return if ($expt_protein_name_clause eq '-1');
 #-------------------------------------------------- 
 
-  #### Build EXPT_PROTEIN_NAME constraint
-  my $expt_protein_name_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"SELTG.experiment_protein_name",
-    constraint_type=>"plain_text",
-    constraint_name=>"Experiment Protein Name",
-    constraint_value=>$parameters{protein_name_constraint} );
-  return if ($expt_protein_name_clause eq '-1');
-
-  #### Build SWISS_PROT_MAPPING constraint
-  my $swissprot_mapping_clause = $sbeams->parseConstraint2SQL(
+  #### Build PROTEIN_MAPPING constraint
+  my $protein_mapping_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"SELPIP.protein_accession",
     constraint_type=>"plain_text",
-    constraint_name=>"Swiss-Prot Mapping",
-    constraint_value=>$parameters{swissprot_mapping_constraint} );
-  return if ($swissprot_mapping_clause eq '-1');
+    constraint_name=>"Protein Mapping",
+    constraint_value=>$parameters{protein_mapping_constraint} );
+  return if ($protein_mapping_clause eq '-1');
 
   #### Build STRIPPED PEPTIDE_SEQUENCE constraint
   my $stripped_peptide_sequence_clause = $sbeams->parseConstraint2SQL(
@@ -453,9 +439,6 @@ sub handle_request {
   $limit_clause = "";
 
 
-  #### Define some variables needed to build the query
-
-
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
 
@@ -485,11 +468,11 @@ sub handle_request {
    @decoy_column_array,
    ["peptide_PA","NULL","Pep in Pep tide Atlas"],
    ["peptide_SRMA","NULL","Pep in SRM Atlas"],
-   ["chromatogram_link","NULL", "Single Chro mato gram"],
-   ["chromatogram_selector_left","NULL", "Chro mavis Left"],
-   ["chromatogram_selector_right","NULL", "Chro mavis Right"],
-   ["swissprot_mapping","MIN(SELPIP.protein_accession)","Primary Swiss-Prot Mapping"],
-   ["swissprot_name_PA","NULL","Swiss Prot in Pep tide Atlas"],
+   ["chromatogram_link","NULL", "Light Chro mato gram"],
+   ["chromatogram_selector_left","NULL", "Chro mavis Tab Left"],
+   ["chromatogram_selector_right","NULL", "Chro mavis Tab Right"],
+   ["protein_mapping","SELPIP.protein_accession","Primary Protein Mapping"],
+   ["protein_name_PA","NULL","Protein in Pep tide Atlas"],
    #["protein_name_PA","NULL","Expt Prot in Pep tide Atlas"],
    ["instrument","I.instrument_name", "Instrument"],
    ["targeted_q1_mz","SELTG.q1_mz","tar geted Q1 m/z"],
@@ -534,74 +517,81 @@ sub handle_request {
 
 
   #### Build the columns part of the SQL statement
-  my %colnameidx = ();
-  my @column_titles = ();
   ## Sends @column_array_ref to build_SQL_columns_list, which
   ## (1) appends the 2nd element in array to $columns_clause
-  ## (2) fills %colnameidx_ref as a hash with key = 1st element
-  ## and value = 3rd element, and (3) fills @column_titles_ref
+  ## (2) fills %colnameidx with key = 1st element
+  ## and value = 3rd element, and (3) fills @column_titles
   ## array with the 3rd element
   my $columns_clause = $sbeams->build_SQL_columns_list(
     column_array_ref=>\@column_array,
     colnameidx_ref=>\%colnameidx,
     column_titles_ref=>\@column_titles
   );
-  my $group_by_clause = 
-  ( $parameters{display_options} =~ /ShowEachTransition/ ) ?  
- 
-    qq ~
-    GROUP BY SELPI.stripped_peptide_sequence,
-             SELTG.experiment_protein_name,
-             SELPI.modified_peptide_sequence,
-             SELPI.peptide_charge,
-             SELPI.is_decoy,
-             SELTG.collision_energy,
-             SELTG.isotype,
-             SELTG.q1_mz,
-             SELT.q3_mz,
-             SELT.frg_type,
-             SELT.frg_nr,
-             SELT.frg_z,
-             SELPI.q1_mz,
-             SELTG.fragment_ions,
-             S.sample_tag,
-             S.sample_id,
-             O.organism_name,
-             SELC.SEL_chromatogram_id,
-             SELTG.d_score,
-             SELTG.m_score,
-             SELTG.S_N,
-             SELTG.max_apex_intensity,
-             SELTG.light_heavy_ratio_maxapex,
-             SELR.spectrum_filename,
-             SELE.experiment_title,
-	     I.instrument_name
-  ~
-  :
-    qq ~
-    GROUP BY SELPI.stripped_peptide_sequence,
-             SELTG.experiment_protein_name,
-             SELPI.modified_peptide_sequence,
-             SELPI.peptide_charge,
-             SELPI.is_decoy,
-             SELTG.collision_energy,
-             SELTG.isotype,
-             SELTG.q1_mz,
-             SELPI.q1_mz,
-             SELTG.fragment_ions,
-             S.sample_tag,
-             S.sample_id,
-             O.organism_name,
-             SELC.SEL_chromatogram_id,
-             SELTG.d_score,
-             SELTG.m_score,
-             SELTG.S_N,
-             SELTG.max_apex_intensity,
-             SELTG.light_heavy_ratio_maxapex,
-             SELR.spectrum_filename,
-             SELE.experiment_title,
-	     I.instrument_name
-  ~;
+
+
+  # We don't need a group_by anymore, now that we're not taking
+  # the MIN() in the protein_name clause.
+    my $group_by_clause;
+#--------------------------------------------------
+#   my $group_by_clause = 
+#   ( $parameters{display_options} =~ /ShowEachTransition/ ) ?  
+#  
+#     qq ~
+#     GROUP BY SELPI.stripped_peptide_sequence,
+#              SELTG.experiment_protein_name,
+#              SELPI.modified_peptide_sequence,
+#              SELPI.peptide_charge,
+#              SELPI.is_decoy,
+#              SELTG.collision_energy,
+#              SELTG.isotype,
+#              SELTG.q1_mz,
+#              SELT.q3_mz,
+#              SELT.frg_type,
+#              SELT.frg_nr,
+#              SELT.frg_z,
+#              SELPI.q1_mz,
+#              SELTG.fragment_ions,
+#              S.sample_tag,
+#              S.sample_id,
+#              O.organism_name,
+#              SELC.SEL_chromatogram_id,
+#              SELTG.d_score,
+#              SELTG.m_score,
+#              SELTG.S_N,
+#              SELTG.max_apex_intensity,
+#              SELTG.light_heavy_ratio_maxapex,
+#              SELR.spectrum_filename,
+#              SELE.experiment_title,
+# 	     I.instrument_name
+#   ~
+#   :
+#     qq ~
+#     GROUP BY SELPI.stripped_peptide_sequence,
+#              SELTG.experiment_protein_name,
+#              SELPI.modified_peptide_sequence,
+#              SELPI.peptide_charge,
+#              SELPI.is_decoy,
+#              SELTG.collision_energy,
+#              SELTG.isotype,
+#              SELTG.q1_mz,
+#              SELPI.q1_mz,
+#              SELTG.fragment_ions,
+#              S.sample_tag,
+#              S.sample_id,
+#              O.organism_name,
+#              SELC.SEL_chromatogram_id,
+#              SELTG.d_score,
+#              SELTG.m_score,
+#              SELTG.S_N,
+#              SELTG.max_apex_intensity,
+#              SELTG.light_heavy_ratio_maxapex,
+#              SELR.spectrum_filename,
+#              SELE.experiment_title,
+# 	     I.instrument_name
+#   ~;
+#-------------------------------------------------- 
+
+  $group_by_clause = '';
 
   #### Define the SQL statement
   $sql = qq~
@@ -629,8 +619,7 @@ sub handle_request {
             ON ( I.instrument_id = S.instrument_model_id )
 
      WHERE 1 = 1
-        $expt_protein_name_clause
-	$swissprot_mapping_clause
+	$protein_mapping_clause
 	$stripped_peptide_sequence_clause
 	$modified_peptide_sequence_clause
         $q1_mz_clause
@@ -659,7 +648,17 @@ sub handle_request {
     }
   }
   
-  $sql .="ORDER BY SELTG.stripped_peptide_sequence";
+  ### Create ORDER BY clause & customize.
+  $sql .= qq~
+  ORDER BY SELTG.stripped_peptide_sequence,
+	   SELR.spectrum_filename,
+           SELTG.peptide_charge,
+	   SELTG.isotype DESC
+  ~;
+  if ($parameters{display_options} =~ /ShowEachTransition/) {
+    $sql .= ", SELT.q3_mz";
+  }
+}
 
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
@@ -682,61 +681,6 @@ sub handle_request {
 
 
 
-  #### Define the hypertext links for columns that need them
-  %url_cols = (
-          'Sample' => "$CGI_BASE_DIR/PeptideAtlas/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=\%$colnameidx{sample_id}V",
-          'Sample_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show details about this sample\'; return true"',
-
-          'Expt Protein Name' => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?protein_name_constraint=\%$colnameidx{protein_name}V&action=QUERY",
-          'Expt Protein Name_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show all transitions for this protein name\'; return true"',
-
-#          'Expt Prot in Pep tide Atlas' => "$CGI_BASE_DIR/PeptideAtlas/Search?build_type_name=Any&all_fields=on&search_key=\%$colnameidx{protein_name}V&action=GO&apply_action=$pass_action",
-#          'Expt Prot in Pep tide Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show PeptideAtlas data for this protein name\'; return true"',
-#          'Expt Prot in Pep tide Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/pa_tiny.png>",
-#          'Expt Prot in Pep tide Atlas_OPTIONS' => {embed_html=>1},
-
-          'Primary Swiss-Prot Mapping' => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?swissprot_mapping_constraint=\%$colnameidx{swissprot_mapping}V&action=QUERY",
-          'Primary Swiss-Prot Mapping_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show all transitions for peps mapping to this Swiss-Prot accession\'; return true"',
-
-          'Swiss Prot in Pep tide Atlas' => "$CGI_BASE_DIR/PeptideAtlas/GetProtein?organism_name=\%$colnameidx{organism}V&search_key=\%$colnameidx{swissprot_mapping}V&action=GO&apply_action=$pass_action",
-          'Swiss Prot in Pep tide Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show PeptideAtlas data for this protein name\'; return true"',
-          'Swiss Prot in Pep tide Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/pa_tiny.png>",
-          'Swiss Prot in Pep tide Atlas_OPTIONS' => {embed_html=>1},
-
-          'Modified Peptide Sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?stripped_peptide_sequence_constraint=\%$colnameidx{stripped_peptide_sequence}V&action=QUERY",
-          'Modified Peptide Sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show all transitions for this peptide\'; return true"',
-
-          'Pep in Pep tide Atlas' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&searchWithinThis=Peptide+Sequence&searchForThis=\%$colnameidx{stripped_peptide_sequence}V&organism_name=\%$colnameidx{organism}V&action=QUERY",
-          'Pep in Pep tide Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'See whether this peptide is in PeptideAtlas shotgun data\'; return true"',
-          'Pep in Pep tide Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/pa_tiny.png>",
-          'Pep in Pep tide Atlas_OPTIONS' => {embed_html=>1},
-
-          'Pep in SRM Atlas' => "$CGI_BASE_DIR/PeptideAtlas/GetTransitions?organism_name=\%$colnameidx{organism}V&peptide_sequence_constraint=\%$colnameidx{stripped_peptide_sequence}V&action=QUERY",
-          'Pep in SRM Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Retrieve transitions for this peptide from SRMAtlas\'; return true"',
-          'Pep in SRM Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/srmatlas-icon.gif>",
-          'Pep in SRM Atlas_OPTIONS' => {embed_html=>1},
-
-          'Single Chro mato gram' => "$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?_tab=3&SEL_chromatogram_id=\%$colnameidx{SEL_chromatogram_id}V&action=QUERY",
-          'Single Chro mato gram_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show chromatogram\'; return true"',
-          'Single Chro mato gram_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/chromatogram.gif>",
-          'Single Chro mato gram_OPTIONS' => {embed_html=>1},
-
-          'Chro mavis Left' => "#",
-	  #'Chro mavis Left_ATAG' => "ONMOUSEOVER=\"window.status=\'Show chromatogram\'; return true;\" ONCLICK=update_chromavis(\%$colnameidx{SEL_chromatogram_id}V,\'left\'); return false;\"",
-	  'Chro mavis Left_ATAG' => "ONMOUSEOVER=\"window.status=\'Show chromatogram\'; return true;\" ONCLICK=\"document.getElementById(\'resultsettab2\').setAttribute(\'style\',\'background:#BB0000;color:#FFFFFF\');update_chromavis(\%$colnameidx{SEL_chromatogram_id}V,\'left\'); window.setTimeout(function(){document.getElementById(\'resultsettab2\').setAttribute(\'style\',\'\');},2000);return false;\"",
-          'Chro mavis Left_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/left_off.gif>",
-          'Chro mavis Left_OPTIONS' => {embed_html=>1},
-
-          'Chro mavis Right' => "#",
-	  #'Chro mavis Right_ATAG' => "ONMOUSEOVER=\"window.status=\'Show chromatogram\'; return true;\" ONCLICK=\"update_chromavis(\%$colnameidx{SEL_chromatogram_id}V,\'right\'); return false;\"",
-	  'Chro mavis Right_ATAG' => "ONMOUSEOVER=\"window.status=\'Show chromatogram\'; return true;\" ONCLICK=\"document.getElementById(\'resultsettab2\').setAttribute(\'style\',\'background:#BB0000;color:#FFFFFF\');update_chromavis(\%$colnameidx{SEL_chromatogram_id}V,\'right\'); window.setTimeout(function(){document.getElementById(\'resultsettab2\').setAttribute(\'style\',\'\');},2000);return false;\"",
-	  #'Chro mavis Right_ISNULL' => "Right",
-          'Chro mavis Right_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/right_off.gif>",
-          'Chro mavis Right_OPTIONS' => {embed_html=>1},
-      );
-
-
-
   #### Define columns that should be hidden in the output table
   %hidden_cols = (
 #                  'SEL_run_id' => 1,
@@ -748,7 +692,14 @@ sub handle_request {
                   'frg_nr' => 1,
                   'frg_z' => 1,
                   'SEL_chromatogram_id' => 1,
+                  'SEL_chromatogram_id_heavy' => 1,
+                  '' => 1,
   );
+#--------------------------------------------------
+#   if ($parameters{display_options} !~ /ShowEachIsotype/) {
+#     $hidden_cols{'Isotype'} = 1;
+#   }
+#-------------------------------------------------- 
 
 
 
@@ -779,13 +730,35 @@ sub handle_request {
         resultset_ref=>$resultset_ref,
       );
 
+      ### DEBUG
+#--------------------------------------------------
+#       my %revcolnameidx = reverse %colnameidx;
+#       my %revcolhash = reverse %{$resultset_ref->{column_hash_ref}};
+#       for my $key (sort {$a <=> $b} keys %revcolnameidx) {
+# 	print "$key $revcolnameidx{$key} $column_titles[$key] $revcolhash{$key} \n";
+# 	print "$resultset_ref->{data_ref}->[0]->[$key]<br>\n";
+#       }
+#-------------------------------------------------- 
+
       #### Post process the resultset
       postProcessResultset(
         rs_params_ref=>\%rs_params,
         resultset_ref=>$resultset_ref,
         query_parameters_ref=>\%parameters,
         column_titles_ref=>\@column_titles,
-      ) if ($parameters{display_options} =~ /DASFormat/i);
+	colnameidx_ref=>\%colnameidx,
+      ) if ($parameters{display_options} !~ /ShowEachIsotype/i);
+
+      ### DEBUG
+#--------------------------------------------------
+#       print "After postprocessing...<br>\n";
+#       my %revcolnameidx = reverse %colnameidx;
+#       my %revcolhash = reverse %{$resultset_ref->{column_hash_ref}};
+#       for my $key (sort {$a <=> $b} keys %revcolnameidx) {
+# 	print "$key $revcolnameidx{$key} $column_titles[$key] $revcolhash{$key} \n";
+# 	print "$resultset_ref->{data_ref}->[0]->[$key]<br>\n";
+#       }
+#-------------------------------------------------- 
 
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
@@ -796,6 +769,7 @@ sub handle_request {
         resultset_params_ref=>\%rs_params,
         query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
         column_titles_ref=>\@column_titles,
+	colnameidx_ref=>\%colnameidx,
       );
     }
 
@@ -810,11 +784,16 @@ sub handle_request {
 
 
     #### Display the resultset
+    #### (after getting URLs for select columns)
+    my $url_cols_ref = get_url_cols(
+       colnameidx_ref=>\%colnameidx,
+       pass_action=>$pass_action,
+    );
     $sbeams->displayResultSet(
       resultset_ref=>$resultset_ref,
       query_parameters_ref=>\%parameters,
       rs_params_ref=>\%rs_params,
-      url_cols_ref=>\%url_cols,
+      url_cols_ref=>$url_cols_ref,
       hidden_cols_ref=>\%hidden_cols,
       max_widths=>\%max_widths,
       column_titles_ref=>\@column_titles,
@@ -831,25 +810,17 @@ sub handle_request {
       use_tabbed_panes=>'1',
     );
 
-    #### Display a future chromatogram!
+    #### Set up the Chromavis chromatogram viewer.
+    #### This could go into a subroutine in Chromatogram.pm or
+    #### ChromatogramViewer.pm.
     if ( $sbeams->output_mode() eq 'html' ) {
-    my $chromavis_tab = '';
-    $chromavis_tab .=
-      $sbeams->addTabbedPane(
-	label=>'ChromaVis',
-      );
-
+      my $chromavis_tab = '';
+      $chromavis_tab .= $sbeams->addTabbedPane( label=>'ChromaVis',);
       # Read the HTML code for the viewer from a template file.
       open(HTML,
 	"${PHYSICAL_BASE_DIR}/usr/javascript/chromavis/js/master_ajax.html");
-      my @chromavis_html = <HTML>;
-      my $chromavis_html = join('', @chromavis_html);
-
-      $chromavis_tab .= $chromavis_html;
-      $chromavis_tab .=
-      $sbeams->closeTabbedPane(
-	selected=>'0',
-      );
+      $chromavis_tab .= join('', <HTML>);
+      $chromavis_tab .= $sbeams->closeTabbedPane( selected=>'0',);
       print $chromavis_tab;
     }
 
@@ -898,7 +869,8 @@ sub evalSQL {
 # postProcessResultset
 #
 # Perform some additional processing on the resultset that would otherwise
-# be very awkward to do in SQL.
+# be very awkward to do in SQL. In this case, we are merging rows that
+# represent measurements of light/heavy versions of same peptide.
 ###############################################################################
 sub postProcessResultset {
   my %args = @_;
@@ -910,6 +882,7 @@ sub postProcessResultset {
   my $rs_params_ref = $args{'rs_params_ref'};
   my $query_parameters_ref = $args{'query_parameters_ref'};
   my $column_titles_ref = $args{'column_titles_ref'};
+  my $colnameidx_ref = $args{'colnameidx_ref'};
 
   my %rs_params = %{$rs_params_ref};
   my %parameters = %{$query_parameters_ref};
@@ -917,34 +890,211 @@ sub postProcessResultset {
   my $n_rows = scalar(@{$resultset_ref->{data_ref}});
 
   my $cols = $resultset_ref->{column_hash_ref};
+  my $n_cols = scalar (keys %{$cols});
+  # Reverse this hash so that we can easily modify it.
+  my %rev_colnameidx = reverse %{$colnameidx_ref};
 
-  my $peptide_accession;
-  my $nprot;
-  my $nloc;
+  # If we don't actually have multiple isotypes,
+  # there is nothing to do. Exit.
 
-  for (my $i=0; $i<$n_rows; $i++) {
-#    $peptide_accession = $resultset_ref->{data_ref}->[$i]->[$cols->{peptide_accession}];
-#    $nprot = $resultset_ref->{data_ref}->[$i]->[$cols->{n_protein_mappings}];
-#    $nloc = $resultset_ref->{data_ref}->[$i]->[$cols->{n_genome_locations}];
-
-    if ($nprot > 1) {
-      if ($nloc > 1) {
-	$peptide_accession .= "(degen_NLoc=$nloc)";
-      } else {
-	$peptide_accession .= "(degen)";
-      }
-
-      $resultset_ref->{data_ref}->[$i]->[$cols->{peptide_accession}] = $peptide_accession;
-
-    } elsif ($nloc > 1) {
-      die("ERROR: nprot <=2 but $nloc > 1. This is wrong. Please report this error.");
-    }
-
+  my %isotypes;
+  for (my $i=0; $i < scalar @{$resultset_ref->{data_ref}}; $i++) {
+    $isotypes {$resultset_ref->{data_ref}->[$i]->[$cols->{isotype}]} = 1;
   }
+  my $n_isotypes = scalar keys %isotypes;
+  if ($DEBUG) {
+    print "$n_isotypes isotypes:<br>\n";
+    for my $key (keys %isotypes){
+      print "   $key<br>\n";
+    }
+  }
+  return if $n_isotypes < 2;
+
+  # Must properly modify all elements of the resultset:
+  #    data_ref (data matrix, by row)
+  #    column_hash_ref (hashes column_tag to column number)
+  #    types_list_ref (array of datatypes, one per column)
+  #    precisions_list_ref (array of column widths)
+  #  ... plus $column_titles_ref (array of column titles)
+  #  ... plus %colnameidx (hash column_tag to column number)!
+
+  ###
+  ### First, re-organize columns.
+  ###
+  ### 1. Remove isotype column.
+  #delete_resultset_column ( column_label => 'isotype',);
+
+  ### 2. Add this:
+  #   ["SEL_chromatogram_id_heavy","SELC.SEL_chromatogram_id", "SEL_chromatogram_id_heavy"],
+   ### after this:
+  #   ["SEL_chromatogram_id","SELC.SEL_chromatogram_id", "SEL_chromatogram_id"],
+  insert_resultset_column ( column_label => 'SEL_chromatogram_id_heavy',
+             column_tag => 'SEL_chromatogram_id_heavy',
+      idx=>$cols->{"SEL_chromatogram_id"}+1);
+
+  ### 3. Rename 'targeted Q1 m/z' with 'targeted Q1 m/z light'
+  #    $column_titles_ref->[$cols->{'targeted_q1_mz'}] =
+  #       'targeted Q1 m/z (light isotype)';
+
+  ### 4. Add this:
+  #   ["heavy_chromatogram_link","NULL", "Heavy Chro mato gram"],
+   ### after this:
+  #   ["chromatogram_link","NULL", "Light Chro mato gram"],
+  insert_resultset_column ( column_label => 'Heavy Chro mato gram',
+             column_tag => 'heavy_chromatogram_link',
+      idx=>$cols->{"chromatogram_link"}+1);
+
+  ### 5. Replace these:
+  #   ["chromatogram_selector_left","NULL", "Chro mavis Tab Left"],
+  #   ["chromatogram_selector_right","NULL", "Chro mavis Tab Right"],
+   ### with this:
+  #   ["dual_view","NULL", "Dual View in Chroma Vis tab"],
+  delete_resultset_column ( column_label => 'chromatogram_selector_right',);
+  $column_titles_ref->[$cols->{'chromatogram_selector_left'}] =
+         'Heavy vs Light in Chroma Vis tab';
+
+
+  ### Next, combine rows where peptide and run (spec filename),
+  ### and q3 if one row per Tx, are identical.
+  ### There should just be one or two rows. If
+  ### two, they would be for different isotypes, and would be
+  ### adjacent due to ORDER BY clause.
+  ### Perhaps should accomodate >2 for unusual future cases?
+  my %rows_to_delete;
+  for (my $i=0; $i<$n_rows; $i++) {
+    # merge with previous row?
+    my $this_z =
+    $resultset_ref->{data_ref}->[$i]->[$cols->{peptide_charge}];
+    my $prev_z =
+    $resultset_ref->{data_ref}->[$i-1]->[$cols->{peptide_charge}];
+    my $this_run =
+    $resultset_ref->{data_ref}->[$i]->[$cols->{run}];
+    my $prev_run =
+    $resultset_ref->{data_ref}->[$i-1]->[$cols->{run}];
+    my $this_pepseq =
+    $resultset_ref->{data_ref}->[$i]->[$cols->{stripped_peptide_sequence}];
+    my $prev_pepseq =
+    $resultset_ref->{data_ref}->[$i-1]->[$cols->{stripped_peptide_sequence}];
+
+    # Yes!
+    if (($this_run eq $prev_run) &&
+        ($this_z eq $prev_z) &&
+	($this_pepseq eq $prev_pepseq)) {
+	# Copy 2nd chromatogram_id into chromatogram_id_heavy for 1st.
+	# Relies on sorting by isotype!
+	#print "Row $i matches previous!<br>\n";
+    $resultset_ref->{data_ref}->[$i-1]->[$cols->{SEL_chromatogram_id_heavy}] =
+    $resultset_ref->{data_ref}->[$i]->[$cols->{SEL_chromatogram_id}];
+       $resultset_ref->{data_ref}->[$i-1]->[$cols->{isotype}] = 'heavy+light';
+        # Mark duplicate row for deletion
+	$rows_to_delete{$i} = 1;
+    } else {
+       ### url_cols processing will display nothing for empty value
+       if ($resultset_ref->{data_ref}->[$i-1]->[$cols->{isotype}] eq 'heavy') {
+	 $resultset_ref->{data_ref}->[$i-1]->[$cols->{SEL_chromatogram_id_heavy}] =
+	   $resultset_ref->{data_ref}->[$i-1]->[$cols->{SEL_chromatogram_id}];
+	 $resultset_ref->{data_ref}->[$i-1]->[$cols->{SEL_chromatogram_id}] =
+	 '';
+       } else {
+	 $resultset_ref->{data_ref}->[$i-1]->[$cols->{SEL_chromatogram_id_heavy}] =
+	 '';
+       }
+    }
+  }
+
+  # Delete duplicate rows by shifting the other ones up
+  # Start with the lowest row
+  # Somehow this doesn't seem to work quite right when there are more than
+  # two consecutive mergeable rows, though I can't see why.
+  for my $row (sort {$b <=>$a} keys %rows_to_delete) {
+    #print "Deleting row $row!<br>\n";
+    for (my $i=$row; $i<$n_rows-1; $i++) {
+      $resultset_ref->{data_ref}->[$i] =
+	$resultset_ref->{data_ref}->[$i+1];
+    }
+    delete $resultset_ref->{data_ref}->[$n_rows-1];
+    $n_rows--;
+  }
+
+  # Changes were made in %rev_colnameidx. Transfer them back to %colnameidx.
+  %{$colnameidx_ref} = reverse %rev_colnameidx;
 
   return 1;
 
-} # end postProcessResult
+  sub insert_resultset_column {
+    my %args = @_;
+    my $column_label = $args{'column_label'};
+    my $column_tag = $args{'column_tag'};
+    my $idx = $args{'idx'};
+
+    #print "<p>Inserting $column_label at index $idx<br>\n";
+    for (my $i = $n_cols-1; $i >= $idx; $i--) {
+      # Shift columns to right in four array data structures
+      # plus the %ref_colnameidx hash.
+      $resultset_ref->{types_list_ref}->[$i+1] =
+	$resultset_ref->{types_list_ref}->[$i];
+      $resultset_ref->{precisions_list_ref}->[$i+1] =
+	$resultset_ref->{precisions_list_ref}->[$i];
+      $column_titles_ref->[$i+1] =
+	$column_titles_ref->[$i];
+      for (my $j=0; $j < $n_rows; $j++) {
+	$resultset_ref->{data_ref}->[$j]->[$i+1] =
+	  $resultset_ref->{data_ref}->[$j]->[$i];
+      }
+      $rev_colnameidx{$i+1} = $rev_colnameidx{$i};
+    }
+    # Add column label to column_titles
+    $column_titles_ref->[$idx] = $column_label;
+    # Add column_tab to rev_colnameidx
+    $rev_colnameidx{$idx} = $column_tag;
+    # Add entry to column_hash_ref after shifting those to the right.
+    for my $key (keys  %{$resultset_ref->{column_hash_ref}} ) {
+      if ($resultset_ref->{column_hash_ref}->{$key} >= $idx) {
+        $resultset_ref->{column_hash_ref}->{$key}++;
+      }
+    }
+    $resultset_ref->{column_hash_ref}->{$column_tag} = $idx;
+    $cols = $resultset_ref->{column_hash_ref};
+    $n_cols++;
+  }
+
+  sub delete_resultset_column {
+    my %args = @_;
+    my $column_label = $args{'column_label'};
+
+    my $idx = $cols->{$column_label};
+    #print "<p>Deleting $column_label at index $idx<br>\n";
+    # Shift columns to left in four array data structures
+    for (my $i = $idx; $i < $n_cols-1; $i++) {
+      $resultset_ref->{types_list_ref}->[$i] =
+	$resultset_ref->{types_list_ref}->[$i+1];
+      $resultset_ref->{precisions_list_ref}->[$i] =
+	$resultset_ref->{precisions_list_ref}->[$i+1];
+      $column_titles_ref->[$i] =
+	$column_titles_ref->[$i+1];
+      for (my $j=0; $j < $n_rows; $j++) {
+	$resultset_ref->{data_ref}->[$j]->[$i] =
+	  $resultset_ref->{data_ref}->[$j]->[$i+1];
+      }
+      $rev_colnameidx{$i} = $rev_colnameidx{$i+1};
+    }
+    # Remove entry in column_hash_ref and shift the rest
+    # (can't do this unless we complicatedly look up column_tag)
+    #delete $resultset_ref->{column_hash_ref}->{$column_tag};
+    for my $key (keys  %{$resultset_ref->{column_hash_ref}} ) {
+      if ($resultset_ref->{column_hash_ref}->{$key} > $idx) {
+        $resultset_ref->{column_hash_ref}->{$key}--;
+      }
+    }
+    # Remove entry from rev_colnameidx
+    my $key = $rev_colnameidx{$column_label};
+    delete $rev_colnameidx{$key};
+    delete $rev_colnameidx{$n_cols-1};
+    $cols = $resultset_ref->{column_hash_ref};
+    $n_cols--;
+  }
+
+} # end postProcessResultset
 
 #######################################################################
 sub getOrganismFullName 
@@ -982,6 +1132,7 @@ sub get_table_help {
       { key => 'Expt Protein Name', value => 'Protein name provided by investigator. Click to see PeptideAtlas info on protein.' },
       { key => 'Stripped Peptide Sequence', value => 'Peptide sequence without modifications. Click to see observations in PeptideAtlas shotgun data.' },
       { key => 'Modified Peptide Sequence', value => 'Peptide sequence with modifications.' },
+      { key => 'Targeted Q1 m/z', value => 'If both heavy and light, this refers to light isotype.' },
       { key => 'Isotype', value => 'heavy / light' },
       #{ key => 'Experiment', value => 'Experiment ID in PeptideAtlas.' },
       { key => 'Chromatogram', value => 'Click to view chromatogram for all traces for this Q1 in this run.' },
@@ -1005,3 +1156,76 @@ sub get_table_help {
 
 } # end get_table_help
 
+#######################################################################
+sub get_url_cols {
+  my %args = @_;
+  my $colnameidx_ref = $args{'colnameidx_ref'};
+  my $pass_action = $args{'pass_action'};
+  
+  #### Define the hypertext links for columns that need them
+  my %url_cols = (
+          'Sample' => "$CGI_BASE_DIR/PeptideAtlas/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sample_id=\%$colnameidx_ref->{sample_id}V",
+          'Sample_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show details about this sample\'; return true"',
+
+          'Expt Protein Name' => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?protein_name_constraint=\%$colnameidx_ref->{protein_name}V&action=QUERY",
+          'Expt Protein Name_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show all transitions for this protein name\'; return true"',
+
+          'Primary Protein Mapping' => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?protein_mapping_constraint=\%$colnameidx_ref->{protein_mapping}V&action=QUERY",
+          'Primary Protein Mapping_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show all transitions for peps mapping to this accession\'; return true"',
+
+          'Protein in Pep tide Atlas' => "$CGI_BASE_DIR/PeptideAtlas/GetProtein?organism_name=\%$colnameidx_ref->{organism}V&protein_name=\%$colnameidx_ref->{protein_mapping}V&action=GO&apply_action=$pass_action",
+          'Protein in Pep tide Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show PeptideAtlas data for this protein name\'; return true"',
+          'Protein in Pep tide Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/pa_tiny.png>",
+          'Protein in Pep tide Atlas_OPTIONS' => {embed_html=>1},
+
+          'Modified Peptide Sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?stripped_peptide_sequence_constraint=\%$colnameidx_ref->{stripped_peptide_sequence}V&action=QUERY",
+          'Modified Peptide Sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show all transitions for this peptide\'; return true"',
+
+          'Pep in Pep tide Atlas' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&searchWithinThis=Peptide+Sequence&searchForThis=\%$colnameidx_ref->{stripped_peptide_sequence}V&organism_name=\%$colnameidx_ref->{organism}V&action=QUERY",
+          'Pep in Pep tide Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'See whether this peptide is in PeptideAtlas shotgun data\'; return true"',
+          'Pep in Pep tide Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/pa_tiny.png>",
+          'Pep in Pep tide Atlas_OPTIONS' => {embed_html=>1},
+
+          'Pep in SRM Atlas' => "$CGI_BASE_DIR/PeptideAtlas/GetTransitions?organism_name=\%$colnameidx_ref->{organism}V&peptide_sequence_constraint=\%$colnameidx_ref->{stripped_peptide_sequence}V&action=QUERY",
+          'Pep in SRM Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Retrieve transitions for this peptide from SRMAtlas\'; return true"',
+          'Pep in SRM Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/srmatlas-icon.gif>",
+          'Pep in SRM Atlas_OPTIONS' => {embed_html=>1},
+
+          'Light Chro mato gram' => "$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?_tab=3&SEL_chromatogram_id=\%$colnameidx_ref->{SEL_chromatogram_id}V&action=QUERY",
+          'Light Chro mato gram_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show chromatogram\'; return true"',
+          'Light Chro mato gram_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/chromatogram.gif>",
+          'Light Chro mato gram_OPTIONS' => {embed_html=>1,content_iff_column_values=>[$colnameidx_ref->{SEL_chromatogram_id}]},
+
+	  # Using content_iff_column_values,
+	  # display image w/link only if all these columns have a value:
+	  # $resultset_ref->{data_ref}->[$row]->[$colnameidx_ref->{SEL_chromatogram_id_heavy}]
+          'Heavy Chro mato gram' => "$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?_tab=3&SEL_chromatogram_id=\%$colnameidx_ref->{SEL_chromatogram_id_heavy}V&action=QUERY",
+          'Heavy Chro mato gram_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show chromatogram\'; return true"',
+          'Heavy Chro mato gram_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/chromatogram.gif>",
+          'Heavy Chro mato gram_OPTIONS' => {embed_html=>1,content_iff_column_values=>[$colnameidx_ref->{SEL_chromatogram_id_heavy}]},
+
+          'Heavy vs Light in Chroma Vis tab' => "#",
+	  #'Heavy vs Light in Chroma Vis tab_ATAG' => "ONMOUSEOVER=\"window.status=\'Show chromatogram\'; return true;\" ONCLICK=update_chromavis(\%$colnameidx_ref->{SEL_chromatogram_id}V,\'left\'); return false;\"",
+	  'Heavy vs Light in Chroma Vis tab_ATAG' => "ONMOUSEOVER=\"window.status=\'Show chromatogram\'; return true;\" ONCLICK=\"document.getElementById(\'resultsettab2\').setAttribute(\'style\',\'background:#BB0000;color:#FFFFFF\');update_chromavis(\%$colnameidx_ref->{SEL_chromatogram_id_heavy}V,\'left\'); update_chromavis(\%$colnameidx_ref->{SEL_chromatogram_id}V,\'right\'); window.setTimeout(function(){document.getElementById(\'resultsettab2\').setAttribute(\'style\',\'\');},2000);return false;\"",
+          'Heavy vs Light in Chroma Vis tab_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/chromatogram.gif>",
+          'Heavy vs Light in Chroma Vis tab_OPTIONS' =>
+           {embed_html=>1,
+	     content_iff_column_values=>[$colnameidx_ref->{SEL_chromatogram_id},
+	     $colnameidx_ref->{SEL_chromatogram_id_heavy}]},
+
+          'Chro mavis Tab Left' => "#",
+	  #'Chro mavis Tab Left_ATAG' => "ONMOUSEOVER=\"window.status=\'Show chromatogram\'; return true;\" ONCLICK=update_chromavis(\%$colnameidx_ref->{SEL_chromatogram_id}V,\'left\'); return false;\"",
+	  'Chro mavis Tab Left_ATAG' => "ONMOUSEOVER=\"window.status=\'Show chromatogram\'; return true;\" ONCLICK=\"document.getElementById(\'resultsettab2\').setAttribute(\'style\',\'background:#BB0000;color:#FFFFFF\');update_chromavis(\%$colnameidx_ref->{SEL_chromatogram_id}V,\'left\'); window.setTimeout(function(){document.getElementById(\'resultsettab2\').setAttribute(\'style\',\'\');},2000);return false;\"",
+          'Chro mavis Tab Left_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/left_off.gif>",
+          'Chro mavis Tab Left_OPTIONS' => {embed_html=>1},
+
+          'Chro mavis Tab Right' => "#",
+	  #'Chro mavis Tab Right_ATAG' => "ONMOUSEOVER=\"window.status=\'Show chromatogram\'; return true;\" ONCLICK=\"update_chromavis(\%$colnameidx_ref->{SEL_chromatogram_id}V,\'right\'); return false;\"",
+	  'Chro mavis Tab Right_ATAG' => "ONMOUSEOVER=\"window.status=\'Show chromatogram\'; return true;\" ONCLICK=\"document.getElementById(\'resultsettab2\').setAttribute(\'style\',\'background:#BB0000;color:#FFFFFF\');update_chromavis(\%$colnameidx_ref->{SEL_chromatogram_id}V,\'right\'); window.setTimeout(function(){document.getElementById(\'resultsettab2\').setAttribute(\'style\',\'\');},2000);return false;\"",
+	  #'Chro mavis Tab Right_ISNULL' => "Right",
+          'Chro mavis Tab Right_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/right_off.gif>",
+          'Chro mavis Tab Right_OPTIONS' => {embed_html=>1},
+      );
+
+  return \%url_cols;
+}
