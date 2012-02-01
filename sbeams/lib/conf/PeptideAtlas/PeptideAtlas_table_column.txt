@@ -826,8 +826,10 @@ AT_SEL_experiment	10	record_status	Record Status	char	1	0	N	N	N							N	N
 AT_SEL_experiment	11	experiment_title	Experiment Title	varchar	255	0	Y		N			N	text	50		Y	Y	N	Experiment Title		
 AT_SEL_experiment	12	project_id	Project Id	int	4	0	Y		N	project	project_id	Y	optionlist			Y	Y	N	project_id	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
 AT_SEL_experiment	13	mprophet_analysis	mProphet Analysis	char	1	0	Y		N			N	optionlist						Was this experiment analyzed using mProphet?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
-AT_SEL_experiment	14	heavy_label	Heavy Label	varchar	255	0	Y		N			N	text	100					"Heavy lable used, if any"		
+AT_SEL_experiment	14	heavy_label	Heavy Label	varchar	255	0	Y		N			N	text	100					"Heavy label used, if any"		
 AT_SEL_experiment	15	datasetIdentifier	Dataset Identifier	varchar	50	0	Y		N			N	text	20		Y	Y	Y	Foreign Key		
+AT_SEL_experiment	16	q1_tolerance	Q1 tolerance	float	8	0	Y		N			N							Tolerance for matching exact Q1 from transition list to rounded Q1 in spectrum file.		
+AT_SEL_experiment	17	q3_tolerance	Q3 tolerance	float	8	0	Y		N			N							Tolerance for matching exact Q3 from transition list to rounded Q3 in spectrum file.		
 AT_SEL_run	1	SEL_run_id	SEL Run ID	int	4	0	N		Y			N					N	Y	Primary Key		pkDEFAULT
 AT_SEL_run	2	SEL_experiment_id	SEL Experiment ID	int	4	0	Y		N	AT_SEL_experiment	SEL_experiment_id	N	text	50		Y	Y	Y	Foreign key		
 AT_SEL_run	3	spectrum_filename	Spectrum Filename	varchar	255	0	Y		N			N	text	100		Y	Y	N	Spectrum filename		
