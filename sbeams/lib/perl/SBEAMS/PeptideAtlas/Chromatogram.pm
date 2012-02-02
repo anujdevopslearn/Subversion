@@ -128,7 +128,9 @@ sub getChromatogramParameters{
 	   SELE.experiment_title,
 	   SELPI.is_decoy,
 	   SELPI.q1_mz as calculated_q1_mz,
-	   SELTG.isotype_delta_mass
+	   SELTG.isotype_delta_mass,
+	   SELE.q1_tolerance,
+	   SELE.q3_tolerance
       FROM $TBAT_SEL_CHROMATOGRAM SELC
       JOIN $TBAT_SEL_TRANSITION_GROUP SELTG
 	   ON ( SELTG.SEL_transition_group_id = SELC.SEL_transition_group_id )
@@ -173,6 +175,8 @@ sub getChromatogramParameters{
   $param_href->{'is_decoy'} = $results_aref->[16];
   $param_href->{'calculated_q1'} = $results_aref->[17];
   $param_href->{'isotype_delta_mass'} = $results_aref->[18];
+  $param_href->{'q1_tolerance'} = $results_aref->[19];
+  $param_href->{'q3_tolerance'} = $results_aref->[20];
 
       # Create a string describing this transition group.
       sub getTransitionInfo {
@@ -358,8 +362,13 @@ sub specfile2traces {
   # Q3,ion,rel_intensity,Q3,ion,rel_intensity, ...
   my @q3_array;
   my @frg_ion_array;
-  my @tx_info_elements = split(",",$tx_info);
-  my $n = scalar @tx_info_elements;
+  #print $tx_info, "\n";
+  # Without final -1 arg, trailing empty elements are stripped by split().
+  # WITH final -1 arg, an extra empty element ends up being added, because
+  # the list ends in a comma. So we subtract 1 when calculating $n.
+  my @tx_info_elements = split(",",$tx_info, -1);
+  my $n = scalar @tx_info_elements - 1;
+  #print "$n tx_info_elements\n";
   for (my $i=0; $i < $n; $i +=3) {
     push (@q3_array, $tx_info_elements[$i]);
     push (@frg_ion_array, $tx_info_elements[$i+1]);
@@ -573,8 +582,8 @@ sub mzXML2traces {
       #print "Q1: $q1\n";
       # Score data from previous scan if it's for the target Q1
       if (($scan > 1) &&
-	  ($q1 <= $target_q1+$q1_tolerance) &&
-	  ($q1 >= $target_q1-$q1_tolerance)) {
+	($q1 <= $target_q1+$q1_tolerance) &&
+	($q1 >= $target_q1-$q1_tolerance)) {
 	# If intensity array,  get the q3, intensity pairs and store each one
 	if ($intensity_aref) {
 	  my @intensities = @{$intensity_aref};
@@ -583,43 +592,43 @@ sub mzXML2traces {
 	    # a Q3 in $tx_info.
 	    my $q3 = shift @intensities;
 
-	# If tx_info provided, check to see if this is one of the Q3s we want
-	my $q3_match;
-	if ($tx_info) {
-	  $q3_match = check_q3_against_list (
-	    q3 => $q3,
-	    q3_aref => \@q3_array,
-	    q3_tolerance => $q3_tolerance,
-	    q3_found_aref => \@q3_found_array,
-	  );
-	  next unless $q3_match;
-  if ($q3_match > 1) {
-    print "<p>WARNING: mzML Q3 $q3 matched >1 target Q3 for target Q1=${target_q1}.<br>Q1 tolerance = $q1_tolerance  Q3 tolerance = $q3_tolerance</p>\n";
-  }
-	}
+	    # If tx_info provided, check to see if this is one of the Q3s we want
+	    my $q3_match;
+	    if ($tx_info) {
+	      $q3_match = check_q3_against_list (
+		q3 => $q3,
+		q3_aref => \@q3_array,
+		q3_tolerance => $q3_tolerance,
+		q3_found_aref => \@q3_found_array,
+	      );
+	      next unless $q3_match;
+	      if ($q3_match > 1) {
+		print "<p>WARNING: mzML Q3 $q3 matched >1 target Q3 for target Q1=${target_q1}.<br>Q1 tolerance = $q1_tolerance  Q3 tolerance = $q3_tolerance</p>\n";
+	      }
+	    }
 	    my $intensity = shift @intensities;
 	    $traces{'tx'}->{$q1}->{$q3}->{'rt'}->{$time} = $intensity;
 	    $traces{'tx'}->{$q1}->{$q3}->{'q1'} = $q1;
 	  }
-	# Else we have only one q3, intensity pair. Store it.
+	  # Else we have only one q3, intensity pair. Store it.
 	} else {
-	# If tx_info provided, check to see if this is one of the Q3s we want
-	my $q3_match=1;
-	if ($tx_info) {
-	  $q3_match = check_q3_against_list (
-	    q3 => $q3,
-	    q3_aref => \@q3_array,
-	    q3_tolerance => $q3_tolerance,
-	    q3_found_aref => \@q3_found_array,
-	  );
-	}
-  if ($q3_match > 1) {
-    print "<p>WARNING: mzML Q3 $q3 matched >1 target Q3 for target Q1=${target_q1}.<br>Q1 tolerance = $q1_tolerance  Q3 tolerance = $q3_tolerance</p>\n";
-  }
+	  # If tx_info provided, check to see if this is one of the Q3s we want
+	  my $q3_match=1;
+	  if ($tx_info) {
+	    $q3_match = check_q3_against_list (
+	      q3 => $q3,
+	      q3_aref => \@q3_array,
+	      q3_tolerance => $q3_tolerance,
+	      q3_found_aref => \@q3_found_array,
+	    );
+	  }
+	  if ($q3_match > 1) {
+	    print "<p>WARNING: mzML Q3 $q3 matched >1 target Q3 for target Q1=${target_q1}.<br>Q1 tolerance = $q1_tolerance  Q3 tolerance = $q3_tolerance</p>\n";
+	  }
 	  if ( $q3_match ) {
-	  $traces{'tx'}->{$q1}->{$q3}->{'rt'}->{$time} = $intensity;
-	  $traces{'tx'}->{$q1}->{$q3}->{'q1'} = $q1;
-	}
+	    $traces{'tx'}->{$q1}->{$q3}->{'rt'}->{$time} = $intensity;
+	    $traces{'tx'}->{$q1}->{$q3}->{'q1'} = $q1;
+	  }
 	}
 	undef $intensity_aref;
       }
@@ -633,8 +642,8 @@ sub mzXML2traces {
       # NOTE: most/all of the sprintf field width specifiers below are useless
       # because the whitespace gets lost via the javascript.
       $time = sprintf ("%0.3f", ($units eq 'S') ? $n/60 :   #seconds
-                                ($units eq 'H') ? $n*60 :   #hours
-				                  $n);      #minutes
+	($units eq 'H') ? $n*60 :   #hours
+	$n);      #minutes
     } elsif ($line =~ /basePeakIntensity="(\S*?)"/) {
       $intensity = $1;
     } elsif ($line =~ /basePeakMz="(\S*?)"/) {
@@ -674,8 +683,7 @@ sub check_q3_against_list {
         ($q3 >= $target_q3-$q3_tolerance)) {
       if (defined  $args{'q3_found_aref'}) {
 	if ($q3_found_array[$i]) {
-	  print "<p>WARNING: target Q3=${target_q3} found in spectrum file
-	  more than once for specified Q1. Q3 tolerance = $q3_tolerance</p>\n";
+	  print "<p>WARNING: target Q3=${target_q3} found in spectrum file more than once for specified Q1. Q3 tolerance = $q3_tolerance</p>\n";
 	  $q3_found_array[$i]++;
 	} else {
 	  $q3_found_array[$i]=1;
@@ -1418,8 +1426,8 @@ sub getChromatogramInfo {
     experiment => $parameters_href->{'experiment_title'},
     spectrum_file => $parameters_href->{'spectrum_pathname'},
     chromatogram_id => $parameters_href->{'SEL_chromatogram_id'},
-    q1_tolerance => $parameters_href->{'q1_tolerance'} || 0.05,
-    q3_tolerance => $parameters_href->{'q3_tolerance'} || 0.05,
+    q1_tolerance => $parameters_href->{'q1_tolerance'} || 0.07,
+    q3_tolerance => $parameters_href->{'q3_tolerance'} || 0.07,
     ms2_scan => $parameters_href->{'scan'},
   );
 

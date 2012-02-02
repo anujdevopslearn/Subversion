@@ -112,7 +112,7 @@ sub processRequest {
      spectrum_pathname           full pathname of mzML or mzXML file
      modified_pepseq             peptide to display
      q1                          precursor mz to display
-     q1_tolerance                matching tolerance; default 0.05
+     q1_tolerance                matching tolerance; default 0.07
      precursor_neutral_mass      computed from modified_pepseq if not supplied;
                                    used to derive q1
      precursor_charge            if not provided, +2 and +3 will be displayed
@@ -123,7 +123,7 @@ sub processRequest {
                                    frg_ion of form 3y+1  or 12b+2; can be empty
                                    eri=expected relative intensity; can be empty
                                    If not provided, all Q3 for given Q1 displayed.
-     q3_tolerance                matching tolerance; default 0.05
+     q3_tolerance                matching tolerance; default 0.07
      show_sptxt_info             Print sptxt file information; default true.
 
    For display only (not needed to draw chromatogram):
