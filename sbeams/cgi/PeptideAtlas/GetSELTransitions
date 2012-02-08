@@ -651,6 +651,7 @@ sub handle_request {
   ### Create ORDER BY clause & customize.
   $sql .= qq~
   ORDER BY SELTG.stripped_peptide_sequence,
+           SELTG.modified_peptide_sequence,
 	   SELR.spectrum_filename,
            SELTG.peptide_charge,
 	   SELTG.isotype DESC
@@ -910,6 +911,10 @@ sub postProcessResultset {
   }
   return if $n_isotypes < 2;
 
+  ### Special handling if showing each Transition
+  if ($parameters{display_options} !~ /ShowEachTransition/i) {
+  }
+
   # Must properly modify all elements of the resultset:
   #    data_ref (data matrix, by row)
   #    column_hash_ref (hashes column_tag to column number)
@@ -961,44 +966,48 @@ sub postProcessResultset {
   ### adjacent due to ORDER BY clause.
   ### Perhaps should accomodate >2 for unusual future cases?
   my %rows_to_delete;
-  for (my $i=0; $i<$n_rows; $i++) {
+  for (my $i=1; $i<$n_rows; $i++) {
     # merge with previous row?
-    my $this_z =
-    $resultset_ref->{data_ref}->[$i]->[$cols->{peptide_charge}];
-    my $prev_z =
-    $resultset_ref->{data_ref}->[$i-1]->[$cols->{peptide_charge}];
-    my $this_run =
-    $resultset_ref->{data_ref}->[$i]->[$cols->{run}];
-    my $prev_run =
-    $resultset_ref->{data_ref}->[$i-1]->[$cols->{run}];
-    my $this_pepseq =
-    $resultset_ref->{data_ref}->[$i]->[$cols->{stripped_peptide_sequence}];
-    my $prev_pepseq =
-    $resultset_ref->{data_ref}->[$i-1]->[$cols->{stripped_peptide_sequence}];
+    my $this_row = $resultset_ref->{data_ref}->[$i];
+    my $prev_row = $resultset_ref->{data_ref}->[$i-1];
+    my $this_z = $this_row->[$cols->{peptide_charge}];
+    my $prev_z = $prev_row->[$cols->{peptide_charge}];
+    my $this_run = $this_row->[$cols->{run}];
+    my $prev_run = $prev_row->[$cols->{run}];
+    my $this_pepseq = $this_row->[$cols->{modified_peptide_sequence}];
+    my $prev_pepseq = $prev_row->[$cols->{modified_peptide_sequence}];
+    my $this_frg = $this_row->[$cols->{frg_type}]+
+                   $this_row->[$cols->{frg_nr}]+
+                   $this_row->[$cols->{frg_z}];
+    my $prev_frg = $prev_row->[$cols->{frg_type}]+
+                   $prev_row->[$cols->{frg_nr}]+
+                   $prev_row->[$cols->{frg_z}];
+
+    my $merge = (($this_run eq $prev_run) &&
+		 ($this_z eq $prev_z) &&
+		 ($this_pepseq eq $prev_pepseq));
+    $merge &= ($this_frg eq $prev_frg)
+      if ($parameters{display_options} =~ /ShowEachTransition/i);
 
     # Yes!
-    if (($this_run eq $prev_run) &&
-        ($this_z eq $prev_z) &&
-	($this_pepseq eq $prev_pepseq)) {
-	# Copy 2nd chromatogram_id into chromatogram_id_heavy for 1st.
-	# Relies on sorting by isotype!
-	#print "Row $i matches previous!<br>\n";
-    $resultset_ref->{data_ref}->[$i-1]->[$cols->{SEL_chromatogram_id_heavy}] =
-    $resultset_ref->{data_ref}->[$i]->[$cols->{SEL_chromatogram_id}];
-       $resultset_ref->{data_ref}->[$i-1]->[$cols->{isotype}] = 'heavy+light';
-        # Mark duplicate row for deletion
-	$rows_to_delete{$i} = 1;
+    if ($merge) {
+      # Copy 2nd chromatogram_id into chromatogram_id_heavy for 1st.
+      # Relies on sorting by isotype!
+      #print "Row $i matches previous!<br>\n";
+      $prev_row->[$cols->{SEL_chromatogram_id_heavy}] =
+	$this_row->[$cols->{SEL_chromatogram_id}];
+      $prev_row->[$cols->{isotype}] = 'heavy+light';
+      # Mark duplicate row for deletion
+      $rows_to_delete{$i} = 1;
     } else {
-       ### url_cols processing will display nothing for empty value
-       if ($resultset_ref->{data_ref}->[$i-1]->[$cols->{isotype}] eq 'heavy') {
-	 $resultset_ref->{data_ref}->[$i-1]->[$cols->{SEL_chromatogram_id_heavy}] =
-	   $resultset_ref->{data_ref}->[$i-1]->[$cols->{SEL_chromatogram_id}];
-	 $resultset_ref->{data_ref}->[$i-1]->[$cols->{SEL_chromatogram_id}] =
-	 '';
-       } else {
-	 $resultset_ref->{data_ref}->[$i-1]->[$cols->{SEL_chromatogram_id_heavy}] =
-	 '';
-       }
+      ### (url_cols processing will display nothing for empty value)
+      if ($this_row->[$cols->{isotype}] eq 'heavy') {
+	$this_row->[$cols->{SEL_chromatogram_id_heavy}] =
+	  $this_row->[$cols->{SEL_chromatogram_id}];
+	$this_row->[$cols->{SEL_chromatogram_id}] = '';
+      } else {
+	$this_row->[$cols->{SEL_chromatogram_id_heavy}] = '';
+      }
     }
   }
 
