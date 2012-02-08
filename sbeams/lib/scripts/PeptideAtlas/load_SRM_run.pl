@@ -49,27 +49,35 @@ Options:
                                 Implies --tr_format csv.
   --spectra                   Spectrum file in .mzXML or .mzML format
                                If not provided, assume same basename as transition file.
+  --mult_tg_per_q1            Multiple transition groups measured per Q1
+				(e.g. to detect different phospho sites)
+  --q1_tolerance              For matching Q1 in Tx file vs. spectrum file.
+                                Default 0.005
+  --q3_tolerance              Default: same as q1_tolerance
   --mquest                    mQuest output file (not needed if mProphet?)
   --mprophet                  mProphet output file
   --noload_pi                 Don't load peptide ion records
   --noload_tg                 Don't load transition group records
   --noload_tr                 Don't load transition records
   --noload_ch                 Don't load chromatogram records
- 
-  --ruth_prelim               Special handling for Ruth's preliminary data
-  --ruth_2011                 Special handling for Ruth's 2011 data
 
  e.g.:  $PROG_NAME --tr TRID01_decoy_01.tsv --mpro mProphet_peakgroups.tsv
 EOU
 
 #### Process options
-unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly","help",
         "transitions:s", "spectra:s", "mprophet:s", "tr_format:s",
         "noload_pi", "noload_tg", "noload_tr", "noload_ch",
         "ruth_prelim", "ruth_2011",  "ATAQS", "mquest:s",
+        "q1_tolerance:f", "q3_tolerance:f", "mult_tg_per_q1",
     )) {
 
     die "\n$USAGE";
+}
+
+if ($OPTIONS{"help"}) {
+  print "\n$USAGE";
+  exit;
 }
 
 $VERBOSE = $OPTIONS{"verbose"} || 0;
@@ -95,6 +103,9 @@ $special_expt = 'ruth_2011' if  $OPTIONS{"ruth_2011"};
 
 my $mpro_file = $OPTIONS{"mprophet"};
 my $mquest_file = $OPTIONS{"mquest"};
+my $mult_tg_per_q1 = $OPTIONS{"mult_tg_per_q1"};
+my $q1_tolerance = $OPTIONS{"q1_tolerance"};
+my $q3_tolerance = $OPTIONS{"q3_tolerance"} || $q1_tolerance;
 
 my $ataqs = $OPTIONS{"ATAQS"};
 
@@ -130,6 +141,9 @@ $loader-> load_srm_run (
   tr_format => $tr_format,
   ataqs => $ataqs,
   special_expt => $special_expt,
+  q1_tolerance => $q1_tolerance,
+  q3_tolerance => $q3_tolerance,
+  mult_tg_per_q1 => $mult_tg_per_q1,
   load_peptide_ions => $load_peptide_ions,
   load_transition_groups => $load_transition_groups,
   load_transitions => $load_transitions,
