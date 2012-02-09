@@ -701,6 +701,7 @@ sub read_transition_list {
 			frg_type => [ qw( frg_type ), 'fragment type', 'ion type' ],
 			  frg_nr => [ qw( frg_nr ), 'ion number',  ],
 			   frg_z => [ qw( frg_z ), 'q3 z',  ],
+			frg_loss => [ qw( frg_loss ),  ],
       trfile_transition_group_id => [ qw( transition_group_id ) ],
 		    modification => [ qw( modification modified_sequence sequence) ],
 	      relative_intensity => [ qw( relative_intensity intensity ) ],
@@ -835,6 +836,8 @@ sub read_transition_list {
     $tx_href->{frg_type} = $fields[$idx{frg_type}] if defined $idx{frg_type};
     $tx_href->{frg_nr} = int($fields[$idx{frg_nr}]) if defined $idx{frg_nr};
     $tx_href->{frg_z} = int($fields[$idx{frg_z}]) if defined $idx{frg_z};
+    $tx_href->{frg_loss} = 0;
+    $tx_href->{frg_loss} = int($fields[$idx{frg_loss}]) if defined $idx{frg_loss};
     $tx_href->{is_decoy} =
         ( (defined $idx{is_decoy}) && $fields[$idx{is_decoy}] ) ||
 	  ( ( uc($stripped_sequence) =~ /^[KR]/) && $ataqs )  # reverse pepseq.
@@ -1671,7 +1674,7 @@ sub load_transition_data {
 	    $frg_href->{frg_type} = $tx_href->{frg_type};
 	    $frg_href->{frg_nr} = $tx_href->{frg_nr};
 	    $frg_href->{frg_z} = $tx_href->{frg_z};
-	    $frg_href->{neutral_loss} = 0;
+	    $frg_href->{frg_loss} = $tx_href->{frg_loss};
 	    push (@ion_list, $frg_href);
 	  }
 
@@ -1750,6 +1753,7 @@ sub load_transition_data {
 	    $rowdata_ref->{frg_type} = $tx_href->{frg_type};
 	    $rowdata_ref->{frg_nr} = $tx_href->{frg_nr};
 	    $rowdata_ref->{frg_z} = $tx_href->{frg_z};
+	    $rowdata_ref->{frg_loss} = $tx_href->{frg_loss};
 	    $rowdata_ref->{relative_intensity} = $tx_href->{relative_intensity};
 
 	    my $transition_id = 0;
@@ -2073,7 +2077,7 @@ sub encode_transition_group {
   return $encoded_tg;
 }
 
-# Input: an unsorted list of hrefs (frg_type frg_nr frg_z neutral_loss)
+# Input: an unsorted list of hrefs (frg_type frg_nr frg_z frg_loss)
 # Sort by charge, type, number, neutral_loss.
 sub encode_transition_group_list {
   my $self = shift || die ("self not passed");
@@ -2092,8 +2096,8 @@ sub encode_transition_group_list {
     return  1 if (lower_frg_type ($b->{'frg_type'}, $a->{'frg_type'} ));
     return -1 if ($a->{'frg_nr'} < $b->{'frg_nr'});
     return  1 if ($a->{'frg_nr'} > $b->{'frg_nr'});
-    return -1 if ($a->{'neutral_loss'} < $b->{'neutral_loss'});
-    return  1 if ($a->{'neutral_loss'} > $b->{'neutral_loss'});
+    return -1 if ($a->{'frg_loss'} < $b->{'frg_loss'});
+    return  1 if ($a->{'frg_loss'} > $b->{'frg_loss'});
     return 0;
 
     sub lower_frg_type {
@@ -2122,7 +2126,7 @@ sub encode_transition_group_list {
   for my $ion (@sorted_ion_list) {
     $encoded_tg .= $ion->{'frg_type'} . $ion->{'frg_nr'};
     $encoded_tg .= "^$ion->{'frg_z'}" if ($ion->{'frg_z'} > 1);
-    $encoded_tg .= "-$ion->{'neutral_loss'}" if ($ion->{'neutral_loss'} > 0);
+    $encoded_tg .= "$ion->{'frg_loss'}" if ($ion->{'frg_loss'} != 0);
     $i++;
     $encoded_tg .= ',' if ($i < $n_ions);
   }

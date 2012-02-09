@@ -452,6 +452,7 @@ sub handle_request {
    ["frg_type","SELT.frg_type","frg_type"],
    ["frg_nr","SELT.frg_nr","frg_nr"],
    ["frg_z","SELT.frg_z","frg_z"],
+   ["frg_loss","SELT.frg_loss","frg_loss"],
    ["collision_energy","SELTG.collision_energy","Collision Energy"],
   ) : (
    ["fragment_ions","SELTG.fragment_ions","fragment_ions"],
@@ -528,70 +529,9 @@ sub handle_request {
     column_titles_ref=>\@column_titles
   );
 
-
   # We don't need a group_by anymore, now that we're not taking
-  # the MIN() in the protein_name clause.
-    my $group_by_clause;
-#--------------------------------------------------
-#   my $group_by_clause = 
-#   ( $parameters{display_options} =~ /ShowEachTransition/ ) ?  
-#  
-#     qq ~
-#     GROUP BY SELPI.stripped_peptide_sequence,
-#              SELTG.experiment_protein_name,
-#              SELPI.modified_peptide_sequence,
-#              SELPI.peptide_charge,
-#              SELPI.is_decoy,
-#              SELTG.collision_energy,
-#              SELTG.isotype,
-#              SELTG.q1_mz,
-#              SELT.q3_mz,
-#              SELT.frg_type,
-#              SELT.frg_nr,
-#              SELT.frg_z,
-#              SELPI.q1_mz,
-#              SELTG.fragment_ions,
-#              S.sample_tag,
-#              S.sample_id,
-#              O.organism_name,
-#              SELC.SEL_chromatogram_id,
-#              SELTG.d_score,
-#              SELTG.m_score,
-#              SELTG.S_N,
-#              SELTG.max_apex_intensity,
-#              SELTG.light_heavy_ratio_maxapex,
-#              SELR.spectrum_filename,
-#              SELE.experiment_title,
-# 	     I.instrument_name
-#   ~
-#   :
-#     qq ~
-#     GROUP BY SELPI.stripped_peptide_sequence,
-#              SELTG.experiment_protein_name,
-#              SELPI.modified_peptide_sequence,
-#              SELPI.peptide_charge,
-#              SELPI.is_decoy,
-#              SELTG.collision_energy,
-#              SELTG.isotype,
-#              SELTG.q1_mz,
-#              SELPI.q1_mz,
-#              SELTG.fragment_ions,
-#              S.sample_tag,
-#              S.sample_id,
-#              O.organism_name,
-#              SELC.SEL_chromatogram_id,
-#              SELTG.d_score,
-#              SELTG.m_score,
-#              SELTG.S_N,
-#              SELTG.max_apex_intensity,
-#              SELTG.light_heavy_ratio_maxapex,
-#              SELR.spectrum_filename,
-#              SELE.experiment_title,
-# 	     I.instrument_name
-#   ~;
-#-------------------------------------------------- 
-
-  $group_by_clause = '';
+  # the MIN() in the protein_name clause. Fall 2011.
+    my $group_by_clause = '';
 
   #### Define the SQL statement
   $sql = qq~
@@ -692,6 +632,7 @@ sub handle_request {
                   'frg_type' => 1,
                   'frg_nr' => 1,
                   'frg_z' => 1,
+                  'frg_loss' => 1,
                   'SEL_chromatogram_id' => 1,
                   'SEL_chromatogram_id_heavy' => 1,
                   '' => 1,
@@ -978,10 +919,12 @@ sub postProcessResultset {
     my $prev_pepseq = $prev_row->[$cols->{modified_peptide_sequence}];
     my $this_frg = $this_row->[$cols->{frg_type}]+
                    $this_row->[$cols->{frg_nr}]+
-                   $this_row->[$cols->{frg_z}];
+                   $this_row->[$cols->{frg_z}]+
+		   $this_row->[$cols->{frg_loss}];
     my $prev_frg = $prev_row->[$cols->{frg_type}]+
                    $prev_row->[$cols->{frg_nr}]+
-                   $prev_row->[$cols->{frg_z}];
+                   $prev_row->[$cols->{frg_z}]+
+		   $prev_row->[$cols->{frg_loss}];
 
     my $merge = (($this_run eq $prev_run) &&
 		 ($this_z eq $prev_z) &&

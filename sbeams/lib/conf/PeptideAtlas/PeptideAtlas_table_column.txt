@@ -875,6 +875,7 @@ AT_SEL_transition	6	frg_z	Fragment Charge	int	4	0	Y		N			N							Fragment charge
 AT_SEL_transition	7	relative_intensity	Relative Intensity	float	8	0	Y		N			N							Expected intensity relative to other transitions in group		
 AT_SEL_transition	8	intensity_rank	Intensity Rank	int	4	0	Y		N			N	text	10		Y	Y	N	Expected intensity rank among all transitions in group		
 AT_SEL_transition	9	collision_energy	Collision Energy	float	8	0	Y		N			N							Collision energy applied to individual transition		
+AT_SEL_transition	6	frg_loss	Fragment Neutral Loss	int	4	0	Y		N			N							Fragment neutral loss, expressed as a negative number		
 AT_SEL_chromatogram	1	SEL_chromatogram_id	SEL Chromatogram ID	int	4	0	N		Y			Y					N	Y	Primary Key		
 AT_SEL_chromatogram	2	SEL_transition_group_id	SEL Transition Group ID	int	4	0	Y		N	AT_SEL_transition_group	SEL_transition_group_id	N						Y	Foreign Key		
 AT_SEL_peak_group	1	SEL_peak_group_id	SEL Peak Group ID	int	4	0	N		Y			Y					N	Y	Primary Key		pkDEFAULT

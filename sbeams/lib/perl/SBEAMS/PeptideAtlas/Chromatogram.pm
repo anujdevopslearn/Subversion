@@ -182,7 +182,7 @@ sub getChromatogramParameters{
       sub getTransitionInfo {
         my $transition_group_id = shift;
         my $sql = qq~
-          SELECT q3_mz, frg_type, frg_nr, frg_z, relative_intensity
+          SELECT q3_mz, frg_type, frg_nr, frg_z, frg_loss, relative_intensity
             FROM $TBAT_SEL_TRANSITION
            WHERE SEL_transition_group_id = '$transition_group_id'
         ~;
@@ -193,7 +193,7 @@ sub getChromatogramParameters{
 	# that have no value.
 	my $any_eri = 0;
 	for my $row (@rows) {
-	  if ( defined $row->[4] && $row->[4] ne '' && $row->[4] > 0) {
+	  if ( defined $row->[5] && $row->[5] ne '' && $row->[5] > 0) {
 	      $any_eri = 1;
 	      last;
 	  }
@@ -201,9 +201,14 @@ sub getChromatogramParameters{
 
         my $tx_info = "";
         for my $row (@rows) {
-	  $row->[4] = 0.01
-	     if ($any_eri && ($row->[4] eq '' || $row->[4] == 0));
-          $tx_info .= "$row->[0],$row->[1]$row->[2]+$row->[3],$row->[4],";
+	  $row->[5] = 0.01
+	     if ($any_eri && ($row->[5] eq '' || $row->[5] == 0));
+          $tx_info .= "$row->[0],";  #q3
+	  $tx_info .= "$row->[1]";   #frg_type
+	  $tx_info .= "$row->[2]" if $row->[1] ne 'p'; #frg_nr
+	  $tx_info .= "^$row->[3]" if $row->[3] > 1;   #frg_z
+	  $tx_info .= "$row->[4]" if $row->[4] != 0;   #frg_loss
+	  $tx_info .= ",$row->[5],"; #eri
         }
         return $tx_info;
       }
@@ -309,14 +314,22 @@ sub specfile2json {
       # no need to get ms2_scan b/c we got it the first time.
       #ms2_scan => $ms2_scan,
     );
-
+    # 02/09/12: the change below have maybe been added to this
+    #  script by DC since my last checkin? Not sure which is correct
+    #  and which is newer: the commented out line, or the 9 lines
+    #  below it. TMF. 
+    #my %combined_traces = (%{$traces_href->{'tx'}}, %{$traces_href_2->{'tx'}});
     my %combined_traces;
-		if ( $traces_href->{'tx'} ) {
-			%combined_traces = %{$traces_href->{'tx'}};
+    if ( $traces_href->{'tx'} ) {
+      %combined_traces =
+      %{$traces_href->{'tx'}};
     }
-		if ( $traces_href_2->{'tx'} ) {
-			%combined_traces = %{$traces_href_2->{'tx'}};
-		}
+    if ( $traces_href_2->{'tx'} ) {
+      %combined_traces =
+      %{$traces_href_2->{'tx'}};
+    }
+    # end mystery change
+
     $traces_href->{'tx'} = \%combined_traces;
   }
 
@@ -726,9 +739,49 @@ sub traces2json {
   # Open data_json element
   $json_string .= "data_json : [\n";
 
-  my $count = 0;
+  # Create list of Q1, Q3 pairs sorted by frg_ion (stored as format y2+2-18)
+  # First, store in a more convenient data structure, keyed by 
+  # Q1 and then by frg_type
+  # (Ideally, would do a better sort, according to 
+  # frg_z, frg_type, frg_nr, frg_loss)
+  my %ion_hash;
+  my @sorted_unique_q1_list = ();
+  # Basic list of common fragment types in sensible order.
+  my @frg_types = ('y', 'b', 'z', 'a', 'x', 'c', 'p');
+  my $frg_types = join '', @frg_types;
   for my $q1 ( sort { $a <=> $b } keys %{$traces_href->{'tx'}}) {
+    push @sorted_unique_q1_list, $q1;
     for my $q3 ( sort { $a <=> $b } keys %{$traces{'tx'}->{$q1}}) {
+      my $frg_ion = $traces{'tx'}->{$q1}->{$q3}->{frg_ion};
+      my $frg_type = substr($frg_ion,0,1);
+      # Add this frg_type to basic list if not there already.
+      # Rarely/never needed
+      if ( ( index $frg_types, $frg_type) == -1 ) {
+	push (@frg_types, $frg_type);
+	$frg_types = $frg_types . $frg_type;
+      }
+      $ion_hash{$q1}->{$frg_type}->{ion_q3s}->{$frg_ion} = $q3;
+    }
+  }
+  # Do the sort
+  my @sorted_q1_list = ();
+  my @sorted_q3_list = ();
+  for my $q1 ( @sorted_unique_q1_list ) {
+    for my $frg_type (@frg_types) {
+      for my $frg_ion
+      ( sort
+	  keys %{$ion_hash{$q1}->{$frg_type}->{ion_q3s}} ) {
+	push @sorted_q1_list, $q1;
+	push @sorted_q3_list,
+	  $ion_hash{$q1}->{$frg_type}->{ion_q3s}->{$frg_ion};
+      }
+    }
+  }
+
+
+  my $count = 0;
+  for my $q1 ( @sorted_q1_list ) {
+    my $q3 = shift @sorted_q3_list ;
       $count++;
       $json_string .= sprintf "  {  full : 'COUNT: %2.2d Q1:%0.3f Q3:%0.3f',\n", $count, $traces{'tx'}->{$q1}->{$q3}->{'q1'}, $q3;
       my $label = '';
@@ -754,7 +807,6 @@ sub traces2json {
       }
       # Close this chromatogram in JSON object
       $json_string .= "        ]},\n";
-    }
   }
   # Close data_json
   $json_string .= "]\n";
