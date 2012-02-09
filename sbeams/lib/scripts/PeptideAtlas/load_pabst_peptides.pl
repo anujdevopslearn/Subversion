@@ -22,10 +22,6 @@ use SBEAMS::PeptideAtlas::PeptideFragmenter;
 use FragmentationComparator;
 use SBEAMS::Proteomics::PeptideMassCalculator;
 
-my $bulk_update = 1;
-if ( $bulk_update ) {
-  open( BULK, ">bulk_update.sql" );
-}
 
 use constant MIN_FRAGMENT_MZ => 200;
 
@@ -85,6 +81,11 @@ print "Begin at " . time() . "\n" if $args->{verbose};
 if ( $args->{show_builds} ) {
   list_builds();
   exit;
+}
+
+my $bulk_update = 1;
+if ( $bulk_update ) {
+  open( BULK, ">bulk_update.bcp" );
 }
 
 print "Loading fragment compare\n" if $args->{verbose};
@@ -315,6 +316,7 @@ sub segregate_file {
       my $sequence = $line[$args{index}];
       $sequence =~ s/^n\[\d+\]//;
       $sequence =~ s/\[\d+\]//g;
+      $sequence =~ s/\r//;
       $sequence =~ /^(\w\w).*$/;
       $key = $1;
       if ( !defined $fh{$key} ) {
@@ -404,7 +406,9 @@ sub insert_transitions {
           source_instrument_type_id => $args{instr_id},
                       };
       if ( $bulk_update ) {
-        print BULK "INSERT INTO $TBAT_PABST_TRANSITION_INSTANCE ( " . join(',', keys( %{$rowdata} )) . ') VALUES ( ' . join(',', values(%{$rowdata})) . " );\n";
+        my $inten = $t->[9] || 'NULL';
+        my $coll = $t->[8] || 'NULL';
+        print BULK join( "\t", $args{transition_id_ref}->{$label},$t->[4],$rowdata->{ion_rank},$inten,$args{instr_id},$t->[4],$coll,$is_predicted ) . "\n";
 
       } else { 
 
@@ -691,7 +695,7 @@ sub load_build_peptides {
       my $cnt;
       my %is_predicted;
       while ( my $line = <PEP> ) {
-        print "Loaded $cnt peptides, mem usage is " . &memusage . "\n" unless $cnt++ % 500;
+        print "Loaded $cnt peptides, mem usage is " . &memusage . "\n" unless $cnt++ % 2500;
 #        foreach my $entry ( keys %main:: ) {
 #          print "$entry => $main::{$entry}\n";
 #        }
@@ -727,7 +731,7 @@ sub load_build_peptides {
       
   
         # Only insert if we need to?
-        if ( !$seq2id->{$pep_key} || $args->{output_file} ) {
+        if ( !$seq2id->{$pep_key} ) {
       
           $stats{insert_new_peptide}++;
         
