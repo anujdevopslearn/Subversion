@@ -1,0 +1,361 @@
+#!/usr/local/bin/perl -w
+
+###############################################################################
+# Program     : GetPeptideLocations
+#
+# Description : Get locations for user-defined set of peptides
+###############################################################################
+
+$|++;
+
+## Setup objects and globals 
+use strict;
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ( $q $current_contact_id $current_username
+$PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+$TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+@MENU_OPTIONS);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::BestPeptideSelector;
+
+# Set up Atlas objects
+my $sbeams = new SBEAMS::Connection;
+my $atlas = new SBEAMS::PeptideAtlas;
+$atlas->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR( 'PeptideAtlas' );
+my $best_peptide = new SBEAMS::PeptideAtlas::BestPeptideSelector;
+$best_peptide->setAtlas( $atlas );
+$best_peptide->setSBEAMS( $sbeams );
+my $pabst_build_id;
+
+my $is_html = 0;
+
+main();
+exit(0);
+
+# Main Program
+sub main 
+{
+  # Authenticate and exit if a username is not returned
+  my $current_username = $sbeams->Authenticate( allow_anonymous_access => 0 );
+  exit unless $current_username;
+
+  $is_html = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
+
+  #### Read in the default input parameters
+  my %parameters;
+
+  $parameters{uploaded_file_not_saved} = 1;
+
+  my $n_params_found = $sbeams->parse_input_parameters(
+      q=>$q,parameters_ref=>\%parameters);
+
+
+  # Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+  # This will look for mod-specific params and do the right thing
+  $atlas->processModuleParameters(parameters_ref=>\%parameters);
+
+  # Decide what action to take based on information so far
+  print $sbeams->get_http_header( mode => 'html'  );
+	print_style();
+
+#  $sbeams->printCGIParams($q);
+  if ( $parameters{peptides} || $parameters{plates} ) {
+    print_locations( \%parameters );
+  }
+  print_form( %parameters );
+
+} # end main
+
+
+sub print_form {
+
+  my %args = @_;
+
+  my $checked = ( $args{fuzzy} ) ? 'checked' : '';
+
+  print qq~
+	
+<div class="form-container">
+ <form name=GetPlates method=POST>
+  <fieldset>
+   <legend>Search Peptides</legend>
+    <div>
+     <span class=label>Sequences:</span>
+     <textarea id="peptides" name="peptides" cols="30" rows="8">$args{peptide_string}</textarea>
+    </div>
+  </fieldset>
+  <fieldset>
+   <legend>Search Plates</legend>
+    <div>
+     <span class=label>Plate Names:</span>
+     <textarea id="plates" name="plates" cols="30" rows="6">$args{plate_string}</textarea>
+     <br>
+     <span class=label>Fuzzy Match?:</span>
+     <input type=checkbox id="fuzzy" name="fuzzy" $checked></input>
+    </div>
+  </fieldset>
+ 
+  <div class="buttonrow">
+   <input type="submit" value="Search" class="button" />
+   <input type="reset" value="Clear" class="button" />
+  </div>
+ </form>
+</div>
+  ~;
+
+
+
+
+} # end handle_request
+
+sub print_style {
+	print qq~
+<style>
+	div.form-container form p { margin: 0; }
+	div.form-container form p.note { margin-left: 170px; font-size: 90%; color: #333; }
+	div.form-container form fieldset { margin: 10px 0; padding: 10px; border: #DDD 1px solid; }
+	div.form-container form legend { font-weight: bold; color: #666; }
+	div.form-container form fieldset div { padding: 0.25em 0; }
+	div.form-container label, 
+	div.form-container span.label { margin-right: 10px; padding-right: 10px; width: 150px; display: block; float: left; text-align: right; position: relative; }
+	div.form-container label.error, 
+	div.form-container span.error { color: #C00; }
+	div.form-container label em, 
+	div.form-container span.label em { position: absolute; right: 0; font-size: 120%; font-style: normal; color: #C00; }
+	div.form-container input.error { border-color: #C00; background-color: #FEF; }
+	div.form-container input:focus,
+	div.form-container input.error:focus, 
+	div.form-container textarea:focus {	background-color: #EFF; border-color: #FC6; }
+	div.form-container div.controlset label, 
+	div.form-container div.controlset input { display: inline; float: none; }
+	div.form-container div.controlset div { margin-left: 170px; }
+	div.form-container div.buttonrow { margin-left: 180px; }
+
+  .info_box { background: #F0F0F0; border: #000 1px solid; padding: 4px; width: 80%; color: #444444 }
+	.clear_info_box { border: #000 1px solid; padding: 4px; width: 80%; color: #444444 }
+  .sortheader{background-color: #888888; font-size: 10pt; font-weight: bold; color:white; line-height: 25px;}
+	.sortarrow { font-size: 12pt; font-weight: bold }
+
+</style>
+~;
+
+}
+
+sub annotate {
+
+  my %parameters = @_;
+
+# 0 ID
+# 1 Tran_Plate
+# 2 Tran_well
+# 3 Plate
+# 4 well
+# 5 Symbol
+# 6 QC_Positive
+# 7 Lysate_SKU
+# 8 protein_mw
+# 9 RCclone
+# 10 ProteinID
+# 11 Accn
+# 12 locus_id
+# 13 swissprot
+  if ( $parameters{upload_file} ) {
+
+    my %map;
+    while ( my $line = <DATA> ) {
+      chomp $line;
+      my @line = split( "\t", $line, -1 );
+      my $map_acc = $line[9];
+      $map_acc =~ s/RC2//;
+      $map{$map_acc} = $line[13] || $line[12] || 'na';
+    }
+    my $basename = $parameters{upload_file};
+    if ( $basename =~ /\.\w+$/ ) {
+      $basename =~ s/\.\w+/\.map/;
+    } else {
+      $basename .= '.map';
+    }
+
+
+    ## upload the file to a file handler
+    my $fh = $q->upload('upload_file');
+
+    if (!$fh && $q->cgi_error && $is_html) {
+#      print $q->header(-status=>$q->cgi_error);
+    }
+
+    my $max_cnt = 100000;
+    my $cnt = 0;
+
+#    print $header;
+    while ( my $line = <$fh> ) {
+      chomp $line;
+			$line =~ s/\r//g;
+      my @line = split( "\t", $line, -1 );
+      if ( $cnt++ ) {
+        my $map_id = $line[0];
+        $map_id =~ s/TP3//;
+        my $sp_id = $map{$map_id} || 'NoMap';
+        push @line, $sp_id;
+      } else {
+        push @line, 'SwissProt';
+      }
+      print join( "\t", @line ) . "\n";
+    }
+  } else {
+    print_form();
+  }
+  exit;
+
+} # annotate fetch_peptides;
+
+sub print_locations {
+  my $params = shift;
+
+  if ( !$params->{peptides} && !$params->{plates} ) {
+    die "Choans";
+    print "<div class=warning_msg>Must provide either peptides or plates to search</div><br>\n";
+  }
+
+	my $peptides = $params->{peptides};
+	$params->{peptide_string} = '';
+
+	$peptides =~ s/\s+/ /gm;
+	my @peptides = split /\s+/, $peptides;
+	my %peptides;
+	for my $peptide ( @peptides ) {
+		$peptides{$peptide}++;
+	}
+
+  my $peptide_and = '';
+  if ( $params->{peptides} && $params->{peptides} =~ /\w/ ) {
+    $peptide_and = 'AND sequence IN (';
+    my $sep = '';
+  	for my $seq ( keys( %peptides ) ) {
+	  	$peptide_and .= $sep . "'$seq'";
+		  $sep = ',';
+  		$params->{peptide_string} .= "$seq\n";
+  	}
+	  $peptide_and .= ")\n";
+  }
+
+	my $plates = $params->{plates};
+	$params->{plate_string} = '';
+	$plates =~ s/\s+/ /gm;
+	my @plates = split /\s+/, $plates;
+	my %plates;
+	for my $plate ( @plates ) {
+		$plates{$plate}++;
+	}
+
+  my $plate_and = '';
+  if ( $params->{plates} && $params->{plates} =~ /\w/ ) {
+    my $sep = '';
+  	for my $plate ( keys( %plates ) ) {
+      if ( $params->{fuzzy} ) {
+        if ( !$sep ) {
+          $plate_and .= "AND plate_barcode_id LIKE '%" . $plate . "'\n";
+        } else {
+          $plate_and .= "OR plate_barcode_id LIKE '%" . $plate . "'\n";
+        }
+      } else {
+        if ( !$sep ) {
+          $plate_and .= 'AND plate_barcode_id IN (';
+        }
+  	  	$plate_and .= $sep . "'$plate'";
+  	  	$params->{plate_string} .= "$plate\n";
+      }
+	  	$sep = ',';
+  	}
+	  $plate_and .= ")\n" unless $params->{fuzzy};
+  }
+
+
+  open PEPS, "/net/db/projects/PeptideAtlas/MRMAtlas/current_libs/peptides2proteins.tsv" || die "Unable to open peptide file";
+  my %pep2prot;
+  while ( my $line = <PEPS> ) {
+	  chomp $line;
+    my @line = split( /\t/, $line );
+    $pep2prot{$line[0]} = $line[1];
+  }
+
+  my $driver = 'DBI:mysql:mrmatlas_lims:mslims';
+  my $user = 'mrm_ro';
+  my $pass = 'Tsr3#@gfA356!&5';
+  my %error = ( PrintError => 1, RaiseError => 1);
+  my $dbh = DBI->connect($driver,$user,$pass,\%error);
+
+  my @headings = qw( sequence freezer shelf rack box row col mw ssr isb_index peptides.status orders.name plate_barcode_id);
+	my $heading_str = join( ', ', @headings );
+  my $sql = qq~
+  SELECT $heading_str 
+  FROM plates JOIN orders ON plates.order_id = orders.id
+  JOIN locations ON locations.id = plates.location_id
+  JOIN plate_peptides ON plate_peptides.plate_id = plates.id
+  JOIN peptides  ON peptides.id = plate_peptides.peptide_id
+  WHERE plate_type = 'MASTER'
+  $peptide_and
+  $plate_and
+  ORDER BY orders.id ASC, plate_barcode_id ASC, row, col
+  ~;
+
+  my $sth = $dbh->prepare( $sql );
+  $sth->execute();
+	my @peptides;
+  push @headings, 'Protein ACC';
+  while ( my @row = $sth->fetchrow_array() ) {
+    my $prot = $pep2prot{$row[0]} || '';
+		$row[10] = ucfirst( lc($row[10]) );
+		push @peptides, [@row, $prot];
+  }
+
+unshift @peptides, \@headings;
+my $align = [ qw( left right left right right left left left left left left left ) ];
+my $help_text = '';
+my $change_on = 12;
+
+my ( $html, $rs_name ) = $atlas->encodeSectionTable( header => 1,
+                                                      width => '600',
+                                                      align  => $align,
+                                                      rs_headings => \@headings,
+                                                      rows => \@peptides,
+                                                      rows_to_show => 25,
+                                                      max_rows => 1000,
+                                                      help_text => $help_text,
+                                                      chg_bkg_idx => $change_on,
+                                                      set_download => 'Download peptides',
+                                                      file_prefix => 'best_peptides_',
+                                                      bg_color => '#EAEAEA',
+                                                      sortable => 1,
+                                                      table_id => 'pabst',
+                                                      close_table => 1,
+                                                      );
+print qq~
+  <fieldset>
+   <legend>Results</legend>
+    <div>
+		 $html
+    </div>
+  </fieldset>
+	~;
+
+
+
+}
+
+
+__DATA__
