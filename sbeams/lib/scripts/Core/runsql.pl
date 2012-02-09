@@ -156,20 +156,21 @@ sub printResults {
       $sth->execute();
       my $firstrow = 1;
       my $cnt = 0;
-      while ( my $row = $sth->fetchrow_hashref() ) {
+      while ( my $row = $sth->fetchrow_arrayref() ) {
         
         $cnt++;
-        my @keys = keys( %{$row} );
-        my @values;
-        for my $k ( @keys ) {
-          my $v = ( defined $row->{$k} ) ? $row->{$k} : '';
-          push @values, $v;
-        }
         if ( $firstrow ) {
-          print OUTFILE join( "\t", @keys ) . "\n";
+          print OUTFILE join( "\t", @{$sth->{NAME}} ) . "\n";
           $firstrow = 0;
         }
-        print OUTFILE join( "\t", @values ) . "\n";
+        my @row;
+        for my $val ( @{$row} ) {
+          $val = ( defined $val ) ? $val : '';
+          push @row, $val;
+        }
+
+
+        print OUTFILE join( "\t", @$row ) . "\n";
       }
     } else {
       print "Query mode is read-only, not running $sql";
