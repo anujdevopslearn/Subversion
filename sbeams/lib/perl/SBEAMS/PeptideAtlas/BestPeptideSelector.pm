@@ -1284,8 +1284,10 @@ sub get_pabst_static_peptide_display {
     $dp_data++;
     $dirty_peptides{$row[0]} = \@row;
   }
+	print "Finished DP " . time() . " <BR>\n";
 
   my $mapped_id = $self->get_pabst_mapped_id( $args{biosequence_name}, $pabst_build_id );
+	print "Finished mapping Bioseq " . time() . " <BR>\n";
 
   # No id, no query
   return '' unless $mapped_id;
@@ -1366,7 +1368,9 @@ sub get_pabst_static_peptide_display {
   my $sth = $sbeams->get_statement_handle( $sql );
 
   my %uniq_peps;
+	print "Executed kahuna SQL " . time() . " <BR>\n";
 
+	print "looping " . time() . "\n";
   while( my @row = $sth->fetchrow_array() ) {
     $uniq_peps{$row[1]}++;
     $row[7] = $naa if $row[7] && $row[7] == 9999;
@@ -1377,6 +1381,7 @@ sub get_pabst_static_peptide_display {
         $row[$idx] = $naa; 
       }
     }
+	print "Iterated SH " . time() . " <BR>\n";
 
     if ( 0 && $dp_data ) {
 #  SELECT DISTINCT Sequence, ESPPred, N_obs_ident, N_obs_templ, N_obs_Orbi,
@@ -1433,20 +1438,24 @@ sub get_pabst_static_peptide_display {
     $pep2org{$row[0]} ||= [];
     push @{$pep2org{$row[0]}}, $row[1];
   }
+	print "Iterated organism SQL " . time() . " <BR>\n";
 	$uniq_sth->finish();
+	print "uniq sql run " . time() . "<BR>\n";
+	print "$uniq_sql<BR>\n";
 
   my $seen_sql = qq~
   SELECT DISTINCT peptide_sequence 
   FROM $TBAT_PEPTIDE 
   WHERE peptide_sequence IN ( $uniq_peps )
   ~;
+	print "$seen_sql<BR>\n";
 
   $sth = $sbeams->get_statement_handle( $seen_sql );
   my %pep2acc;
   while ( my @row = $sth->fetchrow_array() ) {
     $pep2acc{$row[0]}++;
   }
-  $log->debug( $seen_sql );
+	print "peptide SQL run" . time() . "<BR>\n";
 
   my @mod_peptides;
   my %orgMap = ( 2 => 'Hs', 6 => 'Mm', '3' => 'Sc' );
@@ -1469,6 +1478,7 @@ sub get_pabst_static_peptide_display {
     $pep->[1] = "<A HREF='$CGI_BASE_DIR/PeptideAtlas/Summarize_Peptide?searchForThis=$pep->[1]&query=QUERY'>$pep->[1]</A>" if $pep2acc{$pep->[1]};
     push @mod_peptides, $pep;
   }
+	print "iterated peptides" . time() . "<BR>\n";
 
   my $align = [qw(right left left right right right right right right left left left)];
 
@@ -1492,6 +1502,7 @@ sub get_pabst_static_peptide_display {
                                            close_table => 1,
                                               );
     #### Display table
+	print "returning " . time() . "\n";
     return "<TABLE WIDTH=600><BR>$html\n";
 
 } # End get pabst static display
