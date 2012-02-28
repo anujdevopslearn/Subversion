@@ -419,7 +419,7 @@ sub get_column_defs {
     'Source' => 'Source from which transitions were obtained', 
     'Fol AA' =>'Following (towards the C terminus) amino acid',
     'Peptide Length' => 'Length of peptide', 
-    'ESS' => 'Empirical suitability score, derived from peptide probability, EOS, and sequence characteristics such as missed cleavage <SUP><FONT COLOR=RED>[MC]</FONT></SUP> or semi-tryptic <SUP><FONT COLOR=RED>[ST]</FONT></SUP>, or <BR> multiple genome locations <SUP><FONT COLOR=RED>[MGL]</FONT></SUP>.', 
+    'ESS' => 'Empirical suitability score, derived from peptide probability, EOS, and the number of times observed.  This is then adjusted sequence characteristics such as missed cleavage <SUP><FONT COLOR=RED>[MC]</FONT></SUP> or semi-tryptic <SUP><FONT COLOR=RED>[ST]</FONT></SUP>, or <BR> multiple genome locations <SUP><FONT COLOR=RED>[MGL]</FONT></SUP>.', 
     'PSS' => 'Predicted suitability score, derived from combining publicly available algorithms (Peptide Sieve, STEPP, ESPP, APEX, Detectability Predictor)', 
 
     'STEPP' => 'Predicted peptide score calculated by STEPP algorithm',
@@ -429,10 +429,12 @@ sub get_column_defs {
     'DPred' => 'Predicted peptide score calculated by Detectability Predictor algorithm',
     'Combined Predictor Score' => 'Score genereated based on STEPP, PSieve, ESPP, APEX and DPred scores',
     'Adj SS' => 'Final suitablity score, the greater of ESS and PSS, adjusted by PABST weightings.', 
+    'Src Adj SS' => 'Adj SS weighed by transition source, rewards transitions actually observed in higher-priority instruments (which vary by target instrument).', 
     'Best Prob' => 'Highest PeptideProphet probability for this observed sequence', 
     'Best Adj Prob' => 'Highest iProphet-adjusted probablity for this observed sequence', 
     'N Obs' => 'Total number of observations in all modified forms and charge states', 
-    'EOS' => 'Empirical Observability Score, a measure of how often a particular peptide is seen in samples relative to other peptides from the same protein', 
+    'n_obs' => 'Number of times peptide ion was observed in this particular consensus library', 
+    'EOS' => 'Empirical Observability Score, a measure of how many samples a particular peptide is seen in relative to other peptides from the same protein', 
     'N Prot Map' => 'Number of proteins in the reference database to which this peptide maps', 
     'N Gen Loc' => 'Number of discrete genome locations which encode this amino acid sequence', 
     'Samples' => 'Samples in which this sequence was seen', 
@@ -462,10 +464,16 @@ sub get_column_defs {
     'Rank' => 'PABST Transition rank',
     'RI' => 'Relative Intensity of peak in CID spectrum',
 
-    'QTOF' => 'Consensus spectrum from QTOF instrument(s)',
+    'SpecLinks' => 'Links to spectra for this peptide ion in one or more spectral libraries',
+    'QTOF' => 'Consensus spectrum from Agilent QTOF instrument(s)',
+    'QQQ' => 'Consensus spectrum from QQQ (triple quadrupole) instrument(s)',
+    'QTOF_CE' => 'Consensus spectra from Agilent QTOF instrument(s) at various collision energies',
     'QTrap' => 'Consensus spectrum from QTrap instrument(s)',
     'IT' => 'Consensus spectrum from Ion Trap instrument(s)',
+    'IonTrap' => 'Consensus spectrum from Ion Trap instrument(s)',
     'Pred' => 'Predicted spectrum',
+    'QQQ_ch' => 'Chromatogram from QQQ showing ion intensity over time',
+    'QTrap_ch' => 'Chromatogram from QTrap5500 showing ion intensity over time',
     'N SP Mapping' => 'Number of SwissProt primary protein mapping',
     'N SP-varsplic Mapping' => 'Number of SwissProt primary and alternatively-spliced protein mapping',
     'N SP-nsSNP Mapping' =>  'Number of SwissProt primary and alternatively-spliced protein mapping, plus nsSNP mapping,<BR>wherein all Swiss-Prot-annotated nsSNPs have been expanded out to sequence with context so that any nsSNP-containing peptides are properly mapped.',
@@ -526,7 +534,7 @@ sub make_table_help {
   return '' unless $args{entries};
 
   my $description = $args{description} || '';
-  $args{footnote} || '';
+  $args{footnote} ||= '';
   my $heading = $args{heading} || '';
 
   my $showtext = 'show column descriptions';
