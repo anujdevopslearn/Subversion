@@ -32,6 +32,7 @@ use SBEAMS::Connection;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::Settings;
 use SBEAMS::PeptideAtlas::Tables;
+use JSON;
 
 
 ###############################################################################
@@ -130,7 +131,9 @@ sub getChromatogramParameters{
 	   SELPI.q1_mz as calculated_q1_mz,
 	   SELTG.isotype_delta_mass,
 	   SELE.q1_tolerance,
-	   SELE.q3_tolerance
+	   SELE.q3_tolerance,
+	   SELTG.S_N,
+	   SELTG.light_heavy_ratio_maxapex
       FROM $TBAT_SEL_CHROMATOGRAM SELC
       JOIN $TBAT_SEL_TRANSITION_GROUP SELTG
 	   ON ( SELTG.SEL_transition_group_id = SELC.SEL_transition_group_id )
@@ -177,6 +180,8 @@ sub getChromatogramParameters{
   $param_href->{'isotype_delta_mass'} = $results_aref->[18];
   $param_href->{'q1_tolerance'} = $results_aref->[19];
   $param_href->{'q3_tolerance'} = $results_aref->[20];
+  $param_href->{'S_N'} = $results_aref->[21];
+  $param_href->{'light_heavy_ratio_maxapex'} = $results_aref->[22];
 
       # Create a string describing this transition group.
       sub getTransitionInfo {
@@ -241,10 +246,10 @@ sub writeJsonFile {
   my $json_string = $args{json_string};
   my $json_physical_pathname = $args{json_physical_pathname};
 
-  open (JSON, ">$json_physical_pathname") ||
+  open (JSON_FILE, ">$json_physical_pathname") ||
     die "writeJsonFile: can't open $json_physical_pathname for writing";
-  print JSON $json_string;
-  close JSON;
+  print JSON_FILE $json_string;
+  close JSON_FILE;
 }
 
 ###############################################################################
@@ -255,22 +260,26 @@ sub specfile2json {
   my %args = @_;
   my $param_href = $args{param_href};    # describes desired chromatogram
 
-  my $pepseq = $args{pepseq};
+#--------------------------------------------------
+#   my $pepseq = $args{pepseq};
+#   my $isotype = $args{isotype};
+#   my $is_decoy = $args{is_decoy};
+#   my $experiment = $args{experiment};
+#   my $spectrum_file = $args{spectrum_file};
+#   my $chromatogram_id = $args{chromatogram_id};
+#   my $isotype_delta_mass = $param_href->{isotype_delta_mass};
+#-------------------------------------------------- 
+
   my $mass = $args{mass};
   my $charge = $args{charge};
-  my $isotype = $args{isotype};
-  my $is_decoy = $args{is_decoy};
-  my $experiment = $args{experiment};
-  my $spectrum_file = $args{spectrum_file};
-  my $chromatogram_id = $args{chromatogram_id};
   my $q1_tolerance = $args{q1_tolerance};
   my $q3_tolerance = $args{q3_tolerance};
   my $ms2_scan = $args{ms2_scan};
+  my $top_html = $args{top_html};
 
   my $rt = $param_href->{rt} || $param_href->{Tr} || 0;
   my $target_q1 = $param_href->{q1};
   my $tx_info = $param_href->{transition_info};
-  my $isotype_delta_mass = $param_href->{isotype_delta_mass};
 
   my $count = 0;
   my $proton_mass = 1.00727646688; # from J Eng to edeutsch via 08July2011 email.
@@ -311,7 +320,7 @@ sub specfile2json {
       q1_tolerance => $q1_tolerance,
       q3_tolerance => $q3_tolerance,
       tx_info => $tx_info, 
-      # no need to get ms2_scan b/c we got it the first time.
+      # no need to get ms2_scan b/c we got the first time.
       #ms2_scan => $ms2_scan,
     );
     # 02/09/12: the change below have maybe been added to this
@@ -343,17 +352,20 @@ sub specfile2json {
   # Create and return .json string.
   return traces2json(
     traces_href => $traces_href,
-    rt => $rt,
     tx_info => $tx_info,
-    pepseq => $pepseq,
-    mass => $mass,
-    isotype_delta_mass => $isotype_delta_mass,
-    charge => $charge,
-    isotype => $isotype,
-    is_decoy => $is_decoy,
-    experiment => $experiment,
-    spectrum_file => $spectrum_file,
-    chromatogram_id => $chromatogram_id,
+    rt => $rt,
+#--------------------------------------------------
+#     pepseq => $pepseq,
+#     mass => $mass,
+#     isotype_delta_mass => $isotype_delta_mass,
+#     charge => $charge,
+#     isotype => $isotype,
+#     is_decoy => $is_decoy,
+#     experiment => $experiment,
+#     spectrum_file => $spectrum_file,
+#     chromatogram_id => $chromatogram_id,
+#-------------------------------------------------- 
+    top_html => $top_html,
   );
 }
 
@@ -429,7 +441,7 @@ sub mzML2traces {
   my %traces;
 
   # Initialize parser and parse the file.
-  use XML::TreeBuilder;
+  use XML::TreeBuilder;   # a DOM parser
   use XML::Writer; 
   my $mzMLtree = XML::TreeBuilder->new();
   $mzMLtree->parse_file($spectrum_pathname) || die
@@ -710,11 +722,11 @@ sub check_q3_against_list {
 }
 
 ###############################################################################
-# traces2json
+# traces2json_old
 # Given a hash containing time & intensity information for a Q1,
 #  write a json data object suitable for Chromavis.
 ###############################################################################
-sub traces2json {
+sub traces2json_old {
   my %args = @_;
   my $traces_href = $args{traces_href};
 
@@ -733,9 +745,11 @@ sub traces2json {
   my %traces = %{$traces_href};
   my $rt = $args{rt};
   my $tx_info = $args{tx_info};
+  my $top_html = $args{top_html};
 
   my $json_string = '{';
 
+  # TODO: use perl JSON parser/writer ("use JSON")
   # Open data_json element
   $json_string .= "data_json : [\n";
 
@@ -822,22 +836,166 @@ sub traces2json {
     $json_string .= ", vmarker_json : [  ]\n";
   }
 
-	# Write auxiliary infos, if provided
-	$json_string .= qq~
-		, info: [ {
-			pepseq: "$pepseq",
-			mass: "$mass",
-			charge: "$charge",
-			isotype: "$isotype",
-			isotype_delta_mass: "$isotype_delta_mass",
-			is_decoy: "$is_decoy",
-			experiment: "$experiment",
-			spectrum_file: "$spectrum_file",
-			chromatogram_id: "$chromatogram_id",
-		 } ]
-	~;
+  # Remove newlines from top_html
+  $top_html =~ s/\n/ /g;
+  # Write auxiliary infos, if provided
+  $json_string .= qq~
+  , info: [ {
+    pepseq: "$pepseq",
+    mass: "$mass",
+    charge: "$charge",
+    isotype: "$isotype",
+    isotype_delta_mass: "$isotype_delta_mass",
+    is_decoy: "$is_decoy",
+    experiment: "$experiment",
+    spectrum_file: "$spectrum_file",
+    chromatogram_id: "$chromatogram_id",
+    top_html: "$top_html",
+  } ]
+  ~;
 
   $json_string .= "}\n";
+
+  return $json_string;
+}
+
+###############################################################################
+# traces2json
+# Given a hash containing time & intensity information for a Q1,
+#  write a json data object suitable for Chromavis.
+###############################################################################
+sub traces2json {
+  my %args = @_;
+  my $traces_href = $args{traces_href};
+
+#--------------------------------------------------
+#   my $pepseq = $args{	pepseq};
+#   my $mass = sprintf "%0.4f", $args{ mass};
+#   my $charge = $args{charge};
+#   my $isotype = $args{isotype};
+#   my $isotype_delta_mass = $args{isotype_delta_mass};
+#   my $is_decoy = $args{is_decoy};
+#   my $experiment = $args{experiment};
+#   my $spectrum_file = $args{spectrum_file};
+#   $spectrum_file =~ ".*/(.*)" ;
+#   $spectrum_file = $1;
+#   my $chromatogram_id = $args{chromatogram_id};
+#-------------------------------------------------- 
+
+  my %traces = %{$traces_href};
+  my $rt = $args{rt};
+  my $tx_info = $args{tx_info};
+  my $top_html = $args{top_html};
+
+  my $json_string = '{';
+
+  # Open data_json element
+  my $json = new JSON;
+  my $json_href;
+
+  # Create list of Q1, Q3 pairs sorted by frg_ion (stored as format y2+2-18)
+  # First, store in a more convenient data structure, keyed by 
+  # Q1 and then by frg_type
+  # (Ideally, would do a better sort, according to 
+  # frg_z, frg_type, frg_nr, frg_loss)
+  my %ion_hash;
+  my @sorted_unique_q1_list = ();
+  # Basic list of common fragment types in sensible order.
+  my @frg_types = ('y', 'b', 'z', 'a', 'x', 'c', 'p');
+  my $frg_types = join '', @frg_types;
+  for my $q1 ( sort { $a <=> $b } keys %{$traces_href->{'tx'}}) {
+    push @sorted_unique_q1_list, $q1;
+    for my $q3 ( sort { $a <=> $b } keys %{$traces{'tx'}->{$q1}}) {
+      my $frg_ion = $traces{'tx'}->{$q1}->{$q3}->{frg_ion};
+      my $frg_type = substr($frg_ion,0,1);
+      # Add this frg_type to basic list if not there already.
+      # Rarely/never needed
+      if ( ( index $frg_types, $frg_type) == -1 ) {
+	push (@frg_types, $frg_type);
+	$frg_types = $frg_types . $frg_type;
+      }
+      $ion_hash{$q1}->{$frg_type}->{ion_q3s}->{$frg_ion} = $q3;
+    }
+  }
+  # Do the sort
+  my @sorted_q1_list = ();
+  my @sorted_q3_list = ();
+  for my $q1 ( @sorted_unique_q1_list ) {
+    for my $frg_type (@frg_types) {
+      for my $frg_ion
+      ( sort
+	  keys %{$ion_hash{$q1}->{$frg_type}->{ion_q3s}} ) {
+	push @sorted_q1_list, $q1;
+	push @sorted_q3_list,
+	  $ion_hash{$q1}->{$frg_type}->{ion_q3s}->{$frg_ion};
+      }
+    }
+  }
+
+
+  my $count = 0;
+  for my $q1 ( @sorted_q1_list ) {
+    my $q3 = shift @sorted_q3_list ;
+      $count++;
+      my %data_element;
+      my $str = sprintf "COUNT: %2.2d Q1:%0.3f Q3:%0.3f", $count, $traces{'tx'}->{$q1}->{$q3}->{'q1'}, $q3;
+      $data_element{'full'} = $str;
+      my $label = '';
+      if ($tx_info) {
+	$label .= sprintf "%-5s ", $traces{'tx'}->{$q1}->{$q3}->{frg_ion};
+      } else {
+	$label .= sprintf "%3.3d ", $count;
+      }
+
+
+      $label .=  sprintf "%7.3f / %7.3f",  $traces{'tx'}->{$q1}->{$q3}->{'q1'}, $q3;
+      $label .= sprintf (" ERI: %0.1f", $traces{'tx'}->{$q1}->{$q3}->{'eri'} )
+	if ($traces{'tx'}->{$q1}->{$q3}->{'eri'});
+      $data_element{'label'} = $label;
+      $data_element{'eri'} = $traces{'tx'}->{$q1}->{$q3}->{'eri'}
+        if ($traces{'tx'}->{$q1}->{$q3}->{'eri'});
+      # Write each pair of numbers in Dick's JSON format.
+      for my $time (sort {$a <=> $b} keys %{$traces{'tx'}->{$q1}->{$q3}->{'rt'}}) {
+	my $intensity = $traces{'tx'}->{$q1}->{$q3}->{'rt'}->{$time};
+	my %timepoint;
+	$timepoint{'time'} = $time;
+	$timepoint{'intensity'} = $intensity;
+        push @{$data_element{'data'}}, {%timepoint};
+      }
+      push @{$json_href->{'data_json'}}, {%data_element};
+  }
+
+  # Write the retention time marker, if value provided
+  if (! $rt ) {
+    $rt = $traces{'ms2_rt'};
+  }
+  if ($rt )  {
+    my $formatted_rt = sprintf "%0.3f", $rt;
+    $json_href->{'vmarker_json'}->[0]{'id'} = $formatted_rt;
+    $json_href->{'vmarker_json'}->[0]{'value'} = $rt;
+  } else {
+    $json_href->{'vmarker_json'} = [];
+  }
+
+  # Remove newlines from top_html
+  $top_html =~ s/\n/ /g;
+  # Write auxiliary infos (no longer needed; all are codified in
+  # $top_html  02/28/12 )
+#--------------------------------------------------
+#   $json_href->{'info'}->[0]{'pepseq'} = $pepseq;
+#   $json_href->{'info'}->[0]{'mass'} = $mass;
+#   $json_href->{'info'}->[0]{'charge'} = $charge;
+#   $json_href->{'info'}->[0]{'isotype'} = $isotype;
+#   $json_href->{'info'}->[0]{'isotype_delta_mass'} = $isotype_delta_mass;
+#   $json_href->{'info'}->[0]{'is_decoy'} = $is_decoy;
+#   $json_href->{'info'}->[0]{'experiment'} = $experiment;
+#   $json_href->{'info'}->[0]{'spectrum_file'} = $spectrum_file;
+#   $json_href->{'info'}->[0]{'chromatogram_id'} = $chromatogram_id;
+#-------------------------------------------------- 
+  $json_href->{'info'}->[0]{'top_html'} = $top_html;
+
+  $json = $json->pretty([1]);  # print json objects with indentation, etc.
+  $json_string = $json->encode($json_href);
 
   return $json_string;
 }
@@ -1177,10 +1335,14 @@ sub getTopHTMLforChromatogramViewer {
   my $param_href = $args{param_href};
   my $seq = $args{seq};
   my $precursor_charge = $args{precursor_charge};
-  my $spectrum_pathname = $args{spectrum_pathname};
+  my $spectrum_basename = $args{spectrum_basename};
 
   my $precursor_rt = $param_href->{rt};
   my $best_peak_group_rt = $param_href->{Tr};
+  my $max_apex_intensity = $param_href->{'max_apex_intensity'};
+  my $light_heavy_ratio_maxapex =
+    $param_href->{'light_heavy_ratio_maxapex'};
+  my $S_N = $param_href->{'S_N'};
   my $m_score = $param_href->{m_score};
   my $top_html = "";
 
@@ -1202,22 +1364,56 @@ sub getTopHTMLforChromatogramViewer {
      if $param_href->{isotype};
   $top_html .= "<br><b>Experiment: </b> $param_href->{experiment_title}\n"
      if $param_href->{experiment_title};
-  $top_html .= "<br><b>Spectrum file:</b> $spectrum_pathname\n";
+  $top_html .= "<br><b>Spectrum file:</b> $spectrum_basename\n";
   if ($precursor_rt) {
     $precursor_rt = sprintf "%0.3f", ${precursor_rt}/60;
     $top_html .= "<br>Precursor RT\: $precursor_rt\n";
   }
+  $top_html .= "<br><b>Chromatogram ID: </b>$param_href->{SEL_chromatogram_id}\n"
+     if $param_href->{SEL_chromatogram_id};
+  $top_html .= "<br><b><u>mQuest:</u></b>&nbsp;";
+  if ($best_peak_group_rt) {
+    my $best_peak_group_rt_s = sprintf "%0.3f", ${best_peak_group_rt}/60;
+    $top_html .= "<b>best pg RT</b>=$best_peak_group_rt_s&nbsp;\n"
+  }
+  if ($S_N) {
+    my $S_N_s = sprintf "%0.3f", $S_N;
+    $top_html .= "<b>S/N</b>=$S_N_s&nbsp;\n"
+  }
+  if ($max_apex_intensity) {
+    my $max_apex_intensity_s = sprintf "%0.3f", $max_apex_intensity;
+    $top_html .= "<b>log max apex intens</b>=$max_apex_intensity_s&nbsp;\n"
+  }
+  if ($light_heavy_ratio_maxapex) {
+    my $light_heavy_ratio_maxapex_s = sprintf "%0.3f",
+        $light_heavy_ratio_maxapex;
+    $top_html .=
+        "<b>light/heavy maxapex</b>=$light_heavy_ratio_maxapex_s&nbsp;\n"
+  }
   if ($m_score) {
     $top_html .= "<br><b>mProphet:</b> ";
-    if ($best_peak_group_rt) {
-      my $best_peak_group_rt_s = sprintf "%0.3f", ${best_peak_group_rt}/60;
-      $top_html .= "best peakgroup RT = $best_peak_group_rt_s, "
-    }
     my $m_score_s = sprintf "%0.3f", $m_score;
-    $top_html .= "m_score = $m_score_s\n";
+    $top_html .= "m_score=$m_score_s\n";
   }
   return $top_html;
 }
+
+###############################################################################
+# getTopHTMLfromJson
+###############################################################################
+sub getTopHTMLfromJson {
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+  my $json_string = $args{'json_string'};
+
+  my $json = new JSON;
+  # This is giving an error. Maybe now's the time to CREATE the json
+  # string using the JSON package!
+  my $json_href = $json->decode($json_string);
+  my $top_html = $json_href->{info}->[0]{'top_html'};
+  return $top_html;
+}
+
 
 ###############################################################################
 # readJsonChromatogramIntoResultsetHash -
@@ -1241,10 +1437,10 @@ sub readJsonChromatogramIntoResultsetHash {
   if ( $json_string ) {
     @json_lines = split("\n", $json_string); 
   } else {
-    open (JSON, $json_physical_pathname) ||
+    open (JSON_FILE, $json_physical_pathname) ||
     die "Can't open .json file $json_physical_pathname";
-    @json_lines = <JSON>;
-    close JSON;
+    @json_lines = <JSON_FILE>;
+    close JSON_FILE;
   }
   my ($trace_num, $time, $q1, $q3, $intensity);
   $trace_num = 0;
@@ -1460,27 +1656,38 @@ sub getChromatogramInfo {
 	$parameters_href->{'precursor_neutral_mass'} =
 	  $calculator->getPeptideMass( sequence=>$modified_pepseq );
       } else {
-	die "Cannot find transition info. Must provide PASSEL
-	SEL_chromatogram_id--OR--spectrum_pathname for an mzML that has an .sptxt file of same name--OR--q1, pepseq, or precursor_neutral_mass param (plus optional precursor_charge and/or optional transition_info param with format Q3,ion,rel_intens,Q3,ion,rel_intens, ...)";
+	die "Cannot find transition info. Must provide PASSEL SEL_chromatogram_id--OR--spectrum_pathname for an mzML that has an .sptxt file of same name--OR--q1, pepseq, or precursor_neutral_mass param (plus optional precursor_charge and/or optional transition_info param with format Q3,ion,rel_intens,Q3,ion,rel_intens, ...)";
       }
     }
   }
+
+  # Get the HTML for the top of the chromatogram viewer page
+  my $top_html = $cgram->getTopHTMLforChromatogramViewer (
+    param_href => $parameters_href,
+    seq => $parameters_href->{'modified_pepseq'},
+    precursor_neutral_mass => $parameters_href->{'precursor_neutral_mass'},
+    precursor_charge => $parameters_href->{'precursor_charge'},
+    spectrum_basename => $spectrum_basename,
+  );
 
   #### Extract chromatogram data from spectrum file
   ####  into a json data structure
   my $json_string = $cgram->specfile2json(
     param_href => $parameters_href,
-    pepseq => $parameters_href->{'modified_pepseq'},
     mass => $parameters_href->{'precursor_neutral_mass'},
     charge => $parameters_href->{'precursor_charge'},
-    isotype => $parameters_href->{'isotype'},
-    is_decoy => $parameters_href->{'is_decoy'},
-    experiment => $parameters_href->{'experiment_title'},
-    spectrum_file => $parameters_href->{'spectrum_pathname'},
-    chromatogram_id => $parameters_href->{'SEL_chromatogram_id'},
+#--------------------------------------------------
+#     pepseq => $parameters_href->{'modified_pepseq'},
+#     isotype => $parameters_href->{'isotype'},
+#     is_decoy => $parameters_href->{'is_decoy'},
+#     experiment => $parameters_href->{'experiment_title'},
+#     spectrum_file => $parameters_href->{'spectrum_pathname'},
+#     chromatogram_id => $parameters_href->{'SEL_chromatogram_id'},
+#-------------------------------------------------- 
     q1_tolerance => $parameters_href->{'q1_tolerance'} || 0.07,
     q3_tolerance => $parameters_href->{'q3_tolerance'} || 0.07,
     ms2_scan => $parameters_href->{'scan'},
+    top_html => $top_html,
   );
 
   return $json_string, $sptxt_fulltext;

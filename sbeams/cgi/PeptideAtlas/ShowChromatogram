@@ -180,13 +180,22 @@ sub processRequest {
   #### Display the Chromatogram Viewer page.
 
   # Print the HTML for the top of the chromatogram viewer page
-  my $top_html = $cgram->getTopHTMLforChromatogramViewer (
-    param_href => $ref_parameters,
-    seq => $modified_pepseq,
-    precursor_neutral_mass => $precursor_neutral_mass,
-    precursor_charge => $precursor_charge,
-    spectrum_pathname => $spectrum_pathname,
+#--------------------------------------------------
+#   my $top_html = $cgram->getTopHTMLforChromatogramViewer (
+#     param_href => $ref_parameters,
+#     seq => $modified_pepseq,
+#     precursor_neutral_mass => $precursor_neutral_mass,
+#     precursor_charge => $precursor_charge,
+#     spectrum_pathname => $spectrum_pathname,
+#   );
+#-------------------------------------------------- 
+  my $json_string_no_newlines = $json_string;
+  $json_string_no_newlines =~ s/\n/ /g;
+  $json_string_no_newlines =~ s/'/"/g;
+  my $top_html = $cgram->getTopHTMLfromJson (
+    json_string => $json_string_no_newlines,
   );
+
   print $top_html;
 	my %smoothing;
 	if ( $ref_parameters->{default_smoothing_factor} ) {

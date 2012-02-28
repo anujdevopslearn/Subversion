@@ -94,21 +94,7 @@
              var config = defaultConfig();
 
 	     var info_html = "<span style='font-size:12px'>";
-	     var info = json.info[0];
-	     if (info.decoy == 'Y') {
-	       info_html += "<b>DECOY </b>";
-	     }
-	     info_html += "<b>"+info.pepseq+" </b>";
-	     var total_mass = parseFloat(info.mass);
-	     if (info.isotype_delta_mass) {
-	       total_mass += parseFloat(info.isotype_delta_mass);
-	     }
-	     info_html += "("+total_mass+" Daltons) ";
-	     info_html += "<b>+"+info.charge;
-	     info_html += ", "+info.isotype+"</b><br>";
-	     info_html += "<b>Experiment: </b>"+info.experiment+"<br>";
-	     info_html += "<b>Spectrum file: </b>"+info.spectrum_file+"<br>";
-	     info_html += "<b>Chromatogram_id: </b>"+info.chromatogram_id+"<br>";
+	     info_html += json.info[0].top_html;
 	     info_html += "</span>";
 	    document.getElementById(side+"_info").innerHTML=info_html;
 
