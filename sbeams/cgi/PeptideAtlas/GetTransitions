@@ -447,7 +447,7 @@ sub fetch_transitions {
   my ($i,$element,$key,$value,$line,$result,$sql);
 
 
-  $log->debug( "    Build constraints"  . time());
+  $log->debug( "    Build constraints "  . time());
   #### Define some variables for a query and resultset
   my %resultset = ();
   my $resultset_ref = \%resultset;
@@ -468,7 +468,9 @@ sub fetch_transitions {
   if ( $args{speclinks} && $args{prefetch} ) {
 #    print "Getting libs<BR>\n";
 #    print time() . "\n";
+    $log->debug( "Getting consensus links " . time() );
     $clibs = $consensus->getConsensusLinks();
+    $log->debug( "Done " . time() );
 #    print "<BR>Done<BR>\n";
 #    print time() . "\n";
   }
@@ -703,14 +705,6 @@ sub fetch_transitions {
 
   my %row2chg;
 
-  my $scan_clause = join( "\n", $biosequence_name_clause, $peptide_sequence_clause );
-  print STDERR "get_scan_path " . time()  . "\n";
-  my $pepion2scanpath = get_scan_path( scan_clause => $scan_clause);
-  print STDERR "done " . time()  . "\n";
-
-  print STDERR "get_bad_qqq " . time()  . "\n";
-  my $seq2badlinks = get_bad_qqq( sequence_clause => $peptide_sequence_clause, probability => 0.8 );
-  print STDERR "done " . time()  . "\n";
 
   my $is_changed = 0;
   my $default_params = $best_peptide->get_default_pabst_scoring();
@@ -723,12 +717,54 @@ sub fetch_transitions {
       }
     }
   }
-
   if ( $is_changed ) {
     $best_peptide->set_pabst_penalty_values( %parameters );
   }
-
   $log->debug( "    done building constraints"  . time());
+
+  # Added 2012-02 
+  my $peptide_sql = qq~
+  SELECT DISTINCT biosequence_name, BS.biosequence_id, PP.pabst_peptide_id
+  FROM $TBAT_PABST_PEPTIDE PP 
+  JOIN $TBAT_PABST_PEPTIDE_MAPPING PM 
+    ON PM.pabst_peptide_id = PP.pabst_peptide_id
+  JOIN $TBAT_BIOSEQUENCE BS
+    ON BS.biosequence_id = PM.biosequence_id    
+  WHERE 1 = 1 
+  $pabst_build_clause
+  $peptide_sequence_clause
+  $best_probability_clause
+  $peptide_length_clause
+  $biosequence_name_clause
+  ~;
+  my $sth = $sbeams->get_statement_handle( $peptide_sql );
+  my %pep_ids;
+  my %bioseq_ids;
+  my %bioseq2name;
+  while ( my @row = $sth->fetchrow_array() ) {
+    $pep_ids{$row[2]}++;
+    $bioseq_ids{$row[1]}++;
+    $bioseq2name{$row[1]} = $row[0];
+  }
+  my $pep_id_string = join( ',', keys( %pep_ids ) ) || 1;
+  my $bioseq_id_string = join( ',', keys( %bioseq_ids ) ) || 1;
+
+  $log->debug( "Done fetching peptides: $pep_id_string"  . time());
+
+  my $scan_clause = $pep_id_string;
+
+  my $pepion2scanpath = {};
+  my $seq2badlinks = {};
+  if ( $args{speclinks} ) {
+     $log->debug( "get_scan_path " . time() );
+     $pepion2scanpath = get_scan_path( scan_clause => $scan_clause);
+     $log->debug( "done " . time() );
+
+     $log->debug( "get_bad_qqq " . time() );
+     $seq2badlinks = get_bad_qqq( sequence_clause => $peptide_sequence_clause, probability => 0.8 );
+    $log->debug( "done " . time() );
+  }
+
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
   if ($apply_action =~ /QUERY/i ) {
@@ -758,30 +794,20 @@ sub fetch_transitions {
       
   }
 
-    # FIXME
-#    $TBAT_BIOSEQUENCE = 'peptideatlas.dbo.biosequence';
-
-    my $limit_clause = $sbeams->buildLimitClause( row_limit => 100000 );
-
-    my $weight_clause = get_src_weights( \%parameters );
-#    die Dumper( $limit_clause );
-#    SELECT $limit_clause->{top_clause}
-#    $limit_clause->{trailing_limit_clause}
-
-    print STDERR "lib_sql " . time()  . "\n";
-    my $lib_sql = qq~
+  my $limit_clause = $sbeams->buildLimitClause( row_limit => 100000 );
+  my $weight_clause = get_src_weights( \%parameters );
+  print STDERR "lib_sql " . time()  . "\n";
+  my $lib_sql = qq~
     SELECT DISTINCT preceding_residue, PI.modified_peptide_sequence, following_residue,
     synthesis_adjusted_score, instrument_type_name, precursor_ion_mz, 
     precursor_ion_charge, fragment_ion_mz, fragment_ion_charge,
     fragment_ion_label, ion_rank, relative_intensity, 
-    $ssr_field, biosequence_name,
+    $ssr_field, biosequence_id,
     merged_score, PII.n_observations, source_build, PSP.priority, PTI.is_predicted,
     $weight_clause, PII.max_precursor_intensity
     FROM $TBAT_PABST_PEPTIDE PP 
     JOIN $TBAT_PABST_PEPTIDE_ION PI 
     ON PP.pabst_peptide_id = PI.pabst_peptide_id
-    JOIN $TBAT_PABST_PEPTIDE_MAPPING PM 
-    ON PM.pabst_peptide_id = PP.pabst_peptide_id
     JOIN $TBAT_PABST_PEPTIDE_ION_INSTANCE PII 
     ON PI.pabst_peptide_ion_id = PII.pabst_peptide_ion_id
     JOIN $TBAT_PABST_TRANSITION PT 
@@ -793,20 +819,20 @@ sub fetch_transitions {
          IT.instrument_type_id = PII.source_instrument_type_id ) 
     JOIN $TBAT_PABST_SOURCE_PRIORITY PSP 
     ON ( PSP.source_instrument_type_id = PTI.source_instrument_type_id )
-    JOIN $TBAT_BIOSEQUENCE BS
-    ON BS.biosequence_id = PM.biosequence_id 
+
+    JOIN $TBAT_PABST_PEPTIDE_MAPPING PM
+    ON PM.pabst_peptide_id = PP.pabst_peptide_id
+
     $ssr_join
-    WHERE 1 = 1 
+    WHERE PP.pabst_peptide_id IN ( $pep_id_string ) 
+    AND PM.biosequence_id IN ( $bioseq_id_string ) 
       $pabst_build_clause
       $atlas_build_clause
-      $peptide_sequence_clause
-      $best_probability_clause
       $transition_source_clause
-      $peptide_length_clause
-      $biosequence_name_clause
       $target_instrument_clause
       $ssr_clause
-    ORDER BY biosequence_name, 
+    ORDER BY 
+    biosequence_id,
     PTI.is_predicted ASC,
     SRC_WEIGHT DESC,
     synthesis_adjusted_score DESC,
@@ -818,7 +844,7 @@ sub fetch_transitions {
     ion_rank ASC
     ~;
 
-#    print "<PRE>$lib_sql</PRE>\n";
+#   print "<PRE>$lib_sql</PRE>\n";
 
 #  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs' );
   my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT' );
@@ -886,6 +912,7 @@ if ( 0 ) {
   }
 }
 
+
   $log->debug( "Exec SQL: " . time() );
   my $sth = $sbeams->get_statement_handle( $lib_sql );
   $log->debug( "Done : " . time() );
@@ -903,6 +930,8 @@ if ( 0 ) {
 
   my $organism = $best_peptide->getBuildOrganism( pabst_build_id => $parameters{pabst_build_id} );
 
+  my %counts;
+
   # If the user has modified any of the weights we have to do this from scratch...
   if ( $is_changed && 0 ) {
 
@@ -916,9 +945,15 @@ if ( 0 ) {
     my %links;
     while( my @row = $sth->fetchrow_array() ) {
 
+      $row[13] = $bioseq2name{$row[13]};
       my $prot = $row[13];
+      
+      $counts{row}++;
 
+      $counts{prot}++ unless $prots{$prot};
       $prots{$prot} ||= {};
+
+      $counts{pepions}++ unless $prots{$prot}->{$row[1]};
       $prots{$prot}->{$row[1]}++;
 
       # Do we have enough peptides already?
@@ -1127,10 +1162,12 @@ if ( 0 ) {
         last;
       }
     } # End loop over resultset
-    print STDERR "Done 1 " . time()  . "\n";
+    $log->debug( "Done 1 " . time()  . "\n" );
 
   }
   print STDERR "Done 2 " . time()  . "\n";
+  my $cnttxt = "Looped over $counts{row} total rows for $counts{prot} proteins and $counts{pepions} peptide ions";
+  $log->debug( "CNT: $cnttxt\n" );
 
   $log->debug( "Done! " . time() );
   $log->debug( "processed " . scalar( @namelist )  . " transitions " );
@@ -1320,15 +1357,8 @@ sub get_scan_path {
     $subclause = qq~
     WHERE modified_sequence IN (  
     SELECT DISTINCT modified_peptide_sequence FROM 
-    $TBAT_PABST_PEPTIDE PP 
-    JOIN $TBAT_PABST_PEPTIDE_ION PI 
-    ON PP.pabst_peptide_id = PI.pabst_peptide_id
-    JOIN $TBAT_PABST_PEPTIDE_MAPPING PM 
-    ON PM.pabst_peptide_id = PP.pabst_peptide_id
-    JOIN $TBAT_BIOSEQUENCE BS
-    ON BS.biosequence_id = PM.biosequence_id
-    WHERE 1 = 1
-    $args{scan_clause}  )
+    $TBAT_PABST_PEPTIDE_ION 
+    WHERE pabst_peptide_id IN ( $args{scan_clause}  ) )
     ~;
   }
 
@@ -1340,8 +1370,11 @@ sub get_scan_path {
       ON IT.instrument_type_id = CSF.instrument_type_id
     $subclause
   ~;
+  $log->debug( "Exec scan path SQL" . time() );
 
   my $sth = $sbeams->get_statement_handle($sql);
+  $log->debug( "Done" . time() );
+  $log->debug( $sql );
 
   my %pepion2scan = { QTrap5500 => {}, QQQ => {} };
   while ( my @row = $sth->fetchrow_array() ) {
