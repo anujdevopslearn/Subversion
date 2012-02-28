@@ -139,8 +139,7 @@ sub displayInternalResearcherPageHeader {
  
   print "$http_header\n\n";
   print <<"  END_PAGE";
-  <HTML>
-    $skin
+  $skin
   END_PAGE
 
   $self->printJavascriptFunctions();
@@ -159,7 +158,7 @@ sub displayGuestPageHeader {
   my $LOGIN_URI = "$SERVER_BASE_DIR$ENV{REQUEST_URI}";
 
   if ($LOGIN_URI =~ /\?/) {
-    $LOGIN_URI .= "&force_login=yes";
+    $LOGIN_URI .= ";force_login=yes";
   } else {
     $LOGIN_URI .= "?force_login=yes";
   }
@@ -232,8 +231,7 @@ sub displayGuestPageHeader {
 
   print "$http_header\n\n";
   print <<"  END_PAGE";
-  <HTML>
-    $skin
+  $skin
   END_PAGE
   print "$args{header_info}\n" if $args{header_info};
 
@@ -1289,6 +1287,8 @@ sub get_atlas_select {
   FROM $TBAT_ATLAS_BUILD
   WHERE atlas_build_id IN ( $build_string )
   ~;
+
+  $log->info( $sql );
 
   my $select = "<INPUT TYPE=SELECT NAME=$select_name>\n";
   my $sth = $sbeams->get_statement_handle->( $sql );
