@@ -493,7 +493,7 @@ sub getCurrentAtlasBuildID {
 
       my $LOGIN_URI = "$SERVER_BASE_DIR$ENV{REQUEST_URI}";
       if ($LOGIN_URI =~ /\?/) {
-        $LOGIN_URI .= "&force_login=yes";
+        $LOGIN_URI .= ";force_login=yes";
       } else {
         $LOGIN_URI .= "?force_login=yes";
       }
