@@ -1680,7 +1680,7 @@ sub get_pabst_peptide_display {
                                                atlas_build_id => $args{atlas_build_id}
                                                );
 
-  my $change_form = $self->get_change_form();
+  my $change_form = $self->get_change_form( noop => 1 );
 
   my @headings = ( pre => 'Previous amino acid',
                    sequence => 'Amino acid sequence of peptide',
@@ -1890,13 +1890,14 @@ sub get_change_form {
     }
   }
 
+  my $noop = ( $args{noop} ) ? "Feature temporarily unavailable" : '';
   my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'pabst_penalty_form',
                                                 visible => 1,
                                                 tooltip => 'Show/Hide penalty form',
                                                  sticky => 1,
                                                 imglink => 1,
                                                textlink => 1,
-                                               hidetext => 'Hide form',
+                                               hidetext => "Hide form",
                                                showtext => 'Show form',
                                               );
 
@@ -1904,9 +1905,10 @@ sub get_change_form {
   my $form_table = SBEAMS::Connection::DataTable->new( BORDER => 1 );
   $form_table->addRow( [ "Parameter", 'Weight', 'Description' ] );
   $form_table->setHeaderAttr( BOLD=>1, ALIGN=>'center' );
+  my $action = ( $args{noop} ) ? 'onFocus=this.blur()' : '';
   for my $k ( @pen_names ) {
 
-    my $input = "<INPUT TYPE=text SIZE=8 CLASS=small_form_field NAME=$k VALUE='$penalties->{$k}'></INPUT>";
+    my $input = "<INPUT TYPE=text SIZE=8 CLASS=small_form_field NAME=$k VALUE='$penalties->{$k}' $action></INPUT>";
     $form_table->addRow( [ "<DIV CLASS=small_form_caption>$k:</CLASS>", $input, "<DIV CLASS=small_form_text>$pen_defs->{$k}</DIV>" ] );
   }
   my @buttons = $sbeams->getFormButtons( name => 'recalculate',
