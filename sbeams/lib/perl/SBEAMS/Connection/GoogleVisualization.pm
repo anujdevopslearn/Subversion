@@ -42,6 +42,66 @@ sub new {
   return $this;
 }
 
+sub setDrawDataTable {
+  # Get passed args
+	my $self = shift;
+	my %args = @_;
+	
+	$log->debug( "in setDraw" );
+	if(	$self->{_hide_svg} ) {
+		my $msg = $sbeams->makeInfoText("Your browser appears to be too old to display these graphics, please come back when you have upgraded");
+		$log->debug( $msg );
+		return $msg;
+	}
+  # Required!
+	for my $arg ( qw( data data_types headings ) ) {
+	  unless ( $args{$arg} ) {
+			$log->error( "Missing required option $arg");
+			return undef;
+		}
+	  unless ( ref $args{$arg} eq 'ARRAY' ) {
+			$log->error( "Required option $arg must be an ARRAY, not " . ref $args{$arg} );
+			return undef;
+		}
+	}
+	if ( scalar( @{$args{headings}} ) != scalar( @{$args{data_types}} ) ) {
+    $log->error( "Headings and data type arrays must have same size" );
+    return undef;
+	}
+
+
+  # set script vars
+  my $table = 'table' . $self->{'_tables'}; 
+  # Just want the div name for now...
+  my $table_div = $table . '_div'; 
+  my $n = scalar( @{$args{data}} ); 
+  my $n_rows = @{$args{data}}[$n-1]->[0] +1 ;
+
+	my $fx = qq~
+    function drawTable() {
+      var data = new google.visualization.DataTable();
+  ~;
+
+	for ( my $i = 0; $i <= $#{$args{headings}}; $i++ ) {
+    $fx .= " data.addColumn('$args{data_types}->[$i]', '$args{headings}->[$i]');\n";
+	}
+	$fx .= " data.addRows( $n_rows );\n"; 
+	for my $s ( @{$args{data}} ) {
+      my $line = join(",", @$s);
+    	$fx .= " data.setCell($line );\n";
+	}
+  $fx .= qq~
+    var table = new google.visualization.Table(document.getElementById('$table_div'));
+    table.draw(data, {showRowNumber: false});
+    }
+  ~;
+  push @{$self->{'_functions'}}, $fx;
+
+  $table_div = '<DIV id="' . $table . '_div' . '"></DIV>'; 
+	return $table_div;
+}
+
+
 sub setDrawBarChart {
   # Get passed args
 	my $self = shift;
