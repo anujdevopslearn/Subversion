@@ -237,13 +237,13 @@ sub getTabMenu
 			   );
 
     $tabmenu->addMenuItem( tablabel => 'All Builds',
-			   label => 'Stats & Lists',
+			   label => 'Stats &amp; Lists',
 			   helptext => 'Get stats, retrieve peptide and protein lists for all builds',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/buildInfo"
 			   );
 
     $tabmenu->addMenuItem( tablabel => 'All Builds',
-			   label => 'Peps & Prots for Default Builds',
+			   label => 'Peps &amp; Prots for Default Builds',
 			   helptext => 'Retrieve peptide and protein lists for default builds',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/defaultBuildsPepsProts"
 			   );
