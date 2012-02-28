@@ -235,6 +235,8 @@ sub print_form {
     ##Input form:  action is set by PROGRAM_FILE_NAME, so sub it w/ display page:
     $sbeams->collectSTDOUT();
 
+    
+    my $noop = ( 1 ) ? $sbeams->makeInfoText( '(Weight adjustment temporarily unavailable)' ) : '';
     my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'pabst_penalty_form',
                                                  visible => 0,
                                                  tooltip => 'Show/Hide penalty form',
@@ -242,7 +244,7 @@ sub print_form {
                                                  imglink => 0,
                                                 textlink => 1,
                                                plaintext => 0,
-                                                hidetext => 'Hide form',
+                                                hidetext => "Hide form $noop",
                                                 showtext => 'Show form' );
 
 
@@ -277,7 +279,7 @@ sub print_form {
     my $rt_select = get_rt_select( $parameters{rt_type} );
 
     # FINDME
-    my ( $sub_form ) = $best_peptide->get_change_form( form_only => 1, hide_buttons => 1, shade_defs => 1, set_params => \%parameters );
+    my ( $sub_form ) = $best_peptide->get_change_form( form_only => 1, hide_buttons => 1, shade_defs => 1, set_params => \%parameters, noop => 1 );
     $sub_form =~ s/tbl_visible/tbl_hidden/gm;
    
     my $peptide_chk = "<INPUT TYPE=checkbox NAME=peptides_only></INPUT>";
@@ -292,7 +294,7 @@ sub print_form {
 
     my $select_list = get_cmod_select( $parameters{cmod_mass} );
     my $cmod_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Also fetch heavy-labeled versions of selected peptides'</TD>";
-    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Heavy label:</B></TD>$cmod_help<TD>$select_list</TD></TR> ~;
+#    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Heavy label:</B></TD>$cmod_help<TD>$select_list</TD></TR> ~;
 
     # Min/Max mz values
     my $min_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Set minimum m/z threshold for transitions, applies to both precursor (Q1) and fragment ion (Q3) m/z'</TD>";
@@ -306,7 +308,9 @@ sub print_form {
     my $splinks_chk = ( $parameters{speclinks} ) ? 'checked' : 'checked';
 
     my $spec_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Set minimum m/z threshold for transitions, applies to both precursor (Q1) and fragment ion (Q3) m/z'</TD>";
-    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Show spectral links</B></TD>$spec_help<TD><INPUT TYPE=CHECKBOX NAME=speclinks SIZE=10 $splinks_chk></INPUT></TD></TR> ~;
+    unless ( $sbeams->isGuestUser() ) {
+      $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Show spectral links</B></TD>$spec_help<TD><INPUT TYPE=CHECKBOX NAME=speclinks SIZE=10 $splinks_chk></INPUT></TD></TR> ~;
+    }
     
 
     my $rt_help =  "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Select type of RT value to show in results'</TD>";
