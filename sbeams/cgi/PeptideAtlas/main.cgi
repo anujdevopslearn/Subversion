@@ -198,6 +198,7 @@ sub handle_request {
       if ($atlas_build->[0] == $atlas_build_id) {
       	$default_build_name = $atlas_build->[1];
       }
+			$atlas_build->[2] = $sbeams->escapeXML( value => $atlas_build->[2] );
     }
 
     #### If the output_mode is HTML, then display the form
