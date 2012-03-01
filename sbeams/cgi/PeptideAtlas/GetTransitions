@@ -154,7 +154,7 @@ sub main
     fetch_transitions( %parameters );  
     $log->debug( "  Done fetching transitions"  . time());
   }
-#  $atlas->display_page_footer( close_tables => 1 );
+  $atlas->display_page_footer( close_tables => 1 );
 
 } # end main
 
@@ -276,6 +276,7 @@ sub print_form {
     my $id = 'ID="protein_name_constraint"';
     $form =~ s/(NAME=\"protein_name_constraint\")/$1 $id/;
 
+    $parameters{rt_type} ||= 'SSRCalc';
     my $rt_select = get_rt_select( $parameters{rt_type} );
 
     # FINDME
@@ -786,6 +787,8 @@ sub fetch_transitions {
   my $ssr_field = 'SSRCalc_relative_hydrophobicity';
   my $ssr_clause = '';
   my $ssr_join = '';
+  $parameters{rt_type} ||= 'SSRCalc';
+
   if ( $parameters{rt_type} || $parameters{rt_type} ne 'SSRCalc' ) {
     $headings[13] = 'RT_Cat';
     $ssr_field = 'elution_time';
@@ -849,6 +852,7 @@ sub fetch_transitions {
     ~;
 
 #   print "<PRE>$lib_sql</PRE>\n";
+#  $log->debug( $lib_sql );
 
 #  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs' );
   my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT' );
@@ -949,6 +953,8 @@ if ( 0 ) {
     my %links;
     while( my @row = $sth->fetchrow_array() ) {
 
+#      my $rowdata = join( ':', @row );
+#      $log->debug( "$row_cnt> $rowdata" );
       $row[13] = $bioseq2name{$row[13]};
       my $prot = $row[13];
       
@@ -1163,6 +1169,7 @@ if ( 0 ) {
       $row_cnt++;
       if ( $row_cnt >= ROW_LIMIT ) {
         print $sbeams->makeInfoText( "Maximum query size (" . ROW_LIMIT . ") exceeded, results are truncated" );
+        $log->debug( "ROW LIMIT REAACHED!" );
         last;
       }
     } # End loop over resultset
