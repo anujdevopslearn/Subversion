@@ -137,17 +137,20 @@ sub get_build_details {
                    organism n_peptides n_transitions n_qtrap n_iontrap n_qtof
                    n_predicted pabst_build_id n_proteins );
   my $field_string = join( ',', @fields );
+  $field_string =~ s/pabst_build_id/PB.pabst_build_id/;
   $field_string =~ s/organism/full_name AS organism/;
   $field_string =~ s/reference_DB/set_name AS reference_DB/;
 
   my $sql = qq~
   SELECT $field_string
   FROM $TBAT_PABST_BUILD PB 
+  JOIN peptideatlas.dbo.pabst_tmp_build_statistics PBS 
+    ON PB.pabst_build_id = PBS.pabst_build_id
   JOIN $TBAT_BIOSEQUENCE_SET BSS 
     ON PB.biosequence_set_id = BSS.biosequence_set_id
   JOIN $TB_ORGANISM O 
     ON PB.organism_id = O.organism_id
-  WHERE pabst_build_id = $parameters{pabst_build_id}
+  WHERE PB.pabst_build_id = $parameters{pabst_build_id}
   ~;
 
   my $sth = $sbeams->get_statement_handle( $sql );
@@ -209,6 +212,8 @@ sub get_build_list {
      n_predicted,
      build_comment, n_proteins
 		FROM $TBAT_PABST_BUILD PB
+		JOIN peptideatlas.dbo.pabst_tmp_build_statistics PBS
+      ON PB.pabst_build_id = PBS.pabst_build_id
     WHERE PB.project_id IN ( $accessible_project_ids )
     ORDER BY build_name ASC
     ~;
@@ -261,7 +266,7 @@ sub get_build_list {
 #    $table->addRow( [ '', 'Build Name', '# Peptides', '# Transitions', '% QTrap', '% IonTrap', '% QTOF', '% Predicted', 'Comment' ] );
     my @builds = ( $headings );
     foreach my $build ( @atlas_builds ) {
-			next unless $build->[9];
+#			next unless $build->[9];
       my $selected = '';
       my $bgcolor = '#dddddd';
       if ($build->[0] == $parameters{pabst_build_id} ) {
@@ -277,7 +282,11 @@ sub get_build_list {
                                                suppress_class => 1 );
 
       for my $idx ( 4..7 ) {
-        $build->[$idx] = sprintf( "%0.1f", ($build->[$idx]/$build->[9])*100 );
+        if ( !$build->[9] ) {
+          $build->[$idx] = '0.0'; 
+        } else {
+          $build->[$idx] = sprintf( "%0.1f", ($build->[$idx]/$build->[9])*100 );
+        }
       }
 
       # Truncate for display
