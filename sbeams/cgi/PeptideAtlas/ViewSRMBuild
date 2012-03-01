@@ -206,7 +206,7 @@ sub get_build_list {
     my $sql = qq~
 		SELECT
 		 PB.pabst_build_id, build_name,
-		 n_peptides, n_transitions, n_qtrap,
+		 n_proteins,n_peptides, n_transitions, n_qtrap,
 		 n_qtof,
      n_iontrap,
      n_predicted,
@@ -242,8 +242,9 @@ sub get_build_list {
 
     my $table = SBEAMS::Connection::DataTable->new();
 
-    my $headings = [ '', 'Build Name', '# Peptides', '# Transitions', '% QTrap', '% QTOF', '% IonTrap', '% Pred', 'Comment' ];
+    my $headings = [ '', 'Build Name', '# Proteins', '# Peptides', '# Transitions', '% QTrap', '% QTOF', '% IonTrap', '% Pred', 'Comment' ];
     my $heading_defs = { '' => 'Build Selector', 'Build Name' => 'Name of SRMAtlas build',
+                '# Proteins' => 'Number of peptides in (composite) source proteome',
                 '# Peptides' => 'Number of peptides in SRMAtlas build',
              '# Transitions' => 'Number of transitions in SRMAtlas build',
                    '% QTrap' => 'Number of proteins in reference set with at least some QTrap data<SUP>&dagger;</SUP>',
@@ -276,21 +277,21 @@ sub get_build_list {
       <INPUT $selected TYPE="radio" NAME="pabst_build_id" VALUE="$build->[0]" onClick=blur() onChange="switchBuild()">
       END
 
-      $build->[8] = $sbeams->truncateStringWithMouseover( len => 60, 
-                                                       string => $build->[8],
+      $build->[9] = $sbeams->truncateStringWithMouseover( len => 60, 
+                                                       string => $build->[9],
                                                   add_elipses => 1,
                                                suppress_class => 1 );
 
-      for my $idx ( 4..7 ) {
-        if ( !$build->[9] ) {
+      for my $idx ( 5..8 ) {
+        if ( !$build->[4] ) {
           $build->[$idx] = '0.0'; 
         } else {
-          $build->[$idx] = sprintf( "%0.1f", ($build->[$idx]/$build->[9])*100 );
+          $build->[$idx] = sprintf( "%0.1f", ($build->[$idx]/$build->[4])*100 );
         }
       }
 
       # Truncate for display
-      $#$build = 8;
+      $#$build = 9;
 
       push @builds, $build;
     }
@@ -301,6 +302,7 @@ sub get_build_list {
                                                  rows_to_show => 5000,
                                                      max_rows => 5000,
                                                     help_text => '',
+                                                        align => [ qw( center left right right right right right right right left ) ],
                                                  set_download => 'SRMAtlas_builds',
                                                   file_prefix => 'SRMAtlas_builds',
                                                      bg_color => '#EAEAEA',
@@ -309,7 +311,7 @@ sub get_build_list {
                                                      );
 
 #    $table->setColAttr(  COLS => [1..6], ROWS => [1..$rows], NOWRAP => 1 );
-    $table->setColAttr(  COLS => [3..8], ROWS => [1..$table->getRowNum()], ALIGN => 'RIGHT' );
+    $table->setColAttr(  COLS => [2..8], ROWS => [1..$table->getRowNum()], ALIGN => 'RIGHT' );
 #    $table->setColAttr(  COLS => [4,5], ROWS => [1..$rows], ALIGN => 'CENTER' );
 #    $table->setColAttr(  COLS => [3], ROWS => [1..$rows], BGCOLOR => '#eeeeee' );
 
