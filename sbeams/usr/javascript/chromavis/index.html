@@ -53,30 +53,28 @@
     var default_smooth_width=DEFAULT_SMOOTHING_PH;
 
     function renderChromatogram(smooth_width){
-
-        chromavis = new vq.ChromaVis();
-	var vmarker_json = json_string.vmarker_json;
-
-	JSON.clone = function (obj) {
+	  chromavis = new vq.ChromaVis();
+	  var vmarker_json = json_string.vmarker_json;
+	  var auto_scale = document.getElementById('auto_scale_y').checked;
+	  JSON.clone = function (obj) {
 	    return JSON.parse( JSON.stringify( obj ) );
-	};
-	var data_json = JSON.clone(json_string.data_json);
-	smoothChromatogram(data_json,smooth_width);
-
-        var data = {
-            DATATYPE : "vq.models.ChromaVisData",
-            CONTENTS :{
-                    PLOT: {
-                        container :document.getElementById("masterContainer"),
-                        width : 700,
-                        height: 400,
-                        auto_scale_x : true,
-                        min_x_axis_value : 1,
-                        max_x_axis_value : 5,
-                        auto_scale_y : true,
-                        auto_update_scale_y : false,
-                        min_y_axis_value : 0,
-                        vertical_padding : 20,
+	  };
+	  var data_json = JSON.clone(json_string.data_json);
+	  smoothChromatogram(data_json,smooth_width);
+	  var data = {
+	    DATATYPE : "vq.models.ChromaVisData",
+	    CONTENTS : {
+	         PLOT: {
+			container :document.getElementById("masterContainer"),
+			width : 700,
+			height: 400,
+			auto_scale_x : true,
+			min_x_axis_value : 1,
+			max_x_axis_value : 5,
+			auto_scale_y : true, 
+			auto_update_scale_y : auto_scale,
+			min_y_axis_value : 0,
+			vertical_padding : 20,
                         horizontal_padding: 40,
                         legend_width : 130,
                         context_height : 50,
@@ -121,7 +119,8 @@
       }
     }
 
-    google.setOnLoadCallback(renderChromatogram(default_smooth_width))
+    
+google.setOnLoadCallback(function() {renderChromatogram(default_smooth_width);})
 
 </script>
 

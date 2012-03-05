@@ -350,7 +350,7 @@ sub specfile2json {
   ) if ($tx_info);
 
   # Create and return .json string.
-  return traces2json(
+  return traces2json_new(
     traces_href => $traces_href,
     tx_info => $tx_info,
     rt => $rt,
@@ -726,7 +726,7 @@ sub check_q3_against_list {
 # Given a hash containing time & intensity information for a Q1,
 #  write a json data object suitable for Chromavis.
 ###############################################################################
-sub traces2json_old {
+sub traces2json {
   my %args = @_;
   my $traces_href = $args{traces_href};
 
@@ -747,11 +747,31 @@ sub traces2json_old {
   my $tx_info = $args{tx_info};
   my $top_html = $args{top_html};
 
-  my $json_string = '{';
+  my $json_string = "{";
 
-  # TODO: use perl JSON parser/writer ("use JSON")
+  # Remove newlines from top_html
+  $top_html =~ s/\n/ /g;
+  # Write auxiliary infos, if provided
+  $json_string .= qq~
+   "info" : [
+      {
+         "top_html" : "$top_html"
+      }
+   ],
+~;
+
+#         "pepseq": "$pepseq",
+#         "mass": "$mass",
+#         "charge": "$charge",
+#         "isotype": "$isotype",
+#         "isotype_delta_mass": "$isotype_delta_mass",
+#         "is_decoy": "$is_decoy",
+#         "experiment": "$experiment",
+#         "spectrum_file": "$spectrum_file",
+#         "chromatogram_id": "$chromatogram_id",
+
   # Open data_json element
-  $json_string .= "data_json : [\n";
+  $json_string .= qq~   "data_json" : [\n~;
 
   # Create list of Q1, Q3 pairs sorted by frg_ion (stored as format y2+2-18)
   # First, store in a more convenient data structure, keyed by 
@@ -797,7 +817,7 @@ sub traces2json_old {
   for my $q1 ( @sorted_q1_list ) {
     my $q3 = shift @sorted_q3_list ;
       $count++;
-      $json_string .= sprintf "  {  full : 'COUNT: %2.2d Q1:%0.3f Q3:%0.3f',\n", $count, $traces{'tx'}->{$q1}->{$q3}->{'q1'}, $q3;
+      $json_string .= sprintf qq~      {\n~;
       my $label = '';
       if ($tx_info) {
       # if (defined $traces{'tx'}->{$q1}->{$q3}->{frg_ion}) {
@@ -810,20 +830,27 @@ sub traces2json_old {
       $label .=  sprintf "%7.3f / %7.3f",  $traces{'tx'}->{$q1}->{$q3}->{'q1'}, $q3;
       $label .= sprintf (" ERI: %0.1f", $traces{'tx'}->{$q1}->{$q3}->{'eri'} )
 	if ($traces{'tx'}->{$q1}->{$q3}->{'eri'});
-      $json_string .= "    label : '$label',\n";
-      $json_string .= "      eri : $traces{'tx'}->{$q1}->{$q3}->{'eri'},\n"
+      $json_string .= qq~         "label" : "$label",\n~;
+      $json_string .= qq~         "eri" : $traces{'tx'}->{$q1}->{$q3}->{'eri'},\n~
         if ($traces{'tx'}->{$q1}->{$q3}->{'eri'});
-      $json_string .= "     data : [\n";
+      $json_string .= qq~         "data" : [\n~;
       # Write each pair of numbers in Dick's JSON format.
+      my $first = 1;
       for my $time (sort {$a <=> $b} keys %{$traces{'tx'}->{$q1}->{$q3}->{'rt'}}) {
+        if (! $first) {
+        $json_string .= sprintf ",\n";
+        }
+        $first = 0;
 	my $intensity = $traces{'tx'}->{$q1}->{$q3}->{'rt'}->{$time};
-	$json_string .= sprintf "          {time : %0.4f, intensity : %0.5f},\n", $time, $intensity;
+	$json_string .= sprintf qq~            {\n               "time" : %0.4f,\n               "intensity" : %0.5f\n            }~, $time, $intensity;
       }
       # Close this chromatogram in JSON object
-      $json_string .= "        ]},\n";
+      $json_string .= qq~\n         ],\n~;
+      $json_string .= sprintf qq~         "full" : "COUNT: %2.2d Q1:%0.3f Q3:%0.3f"\n~, $count, $traces{'tx'}->{$q1}->{$q3}->{'q1'}, $q3;
+      $json_string .= qq~      }\n~;
   }
   # Close data_json
-  $json_string .= "]\n";
+  $json_string .= "   ]";
 
   # Write the retention time marker, if value provided
   if (! $rt ) {
@@ -831,29 +858,12 @@ sub traces2json_old {
   }
   if ($rt )  {
     my $formatted_rt = sprintf "%0.3f", $rt;
-    $json_string .= ", vmarker_json : [ {id : '$formatted_rt', value : $rt} ]\n";
+    $json_string .= qq~,\n   "vmarker_json" : [\n      {\n         "id" : "$formatted_rt",\n"value" : $rt\n      }\n   ]~;
   } else {
-    $json_string .= ", vmarker_json : [  ]\n";
+    $json_string .= qq~,\n   "vmarker_json" : []~;
   }
 
-  # Remove newlines from top_html
-  $top_html =~ s/\n/ /g;
-  # Write auxiliary infos, if provided
-  $json_string .= qq~
-  , info: [ {
-    pepseq: "$pepseq",
-    mass: "$mass",
-    charge: "$charge",
-    isotype: "$isotype",
-    isotype_delta_mass: "$isotype_delta_mass",
-    is_decoy: "$is_decoy",
-    experiment: "$experiment",
-    spectrum_file: "$spectrum_file",
-    chromatogram_id: "$chromatogram_id",
-    top_html: "$top_html",
-  } ]
-  ~;
-
+  $json_string .= "\n";
   $json_string .= "}\n";
 
   return $json_string;
@@ -864,7 +874,7 @@ sub traces2json_old {
 # Given a hash containing time & intensity information for a Q1,
 #  write a json data object suitable for Chromavis.
 ###############################################################################
-sub traces2json {
+sub traces2json_new {
   my %args = @_;
   my $traces_href = $args{traces_href};
 
@@ -958,8 +968,8 @@ sub traces2json {
       for my $time (sort {$a <=> $b} keys %{$traces{'tx'}->{$q1}->{$q3}->{'rt'}}) {
 	my $intensity = $traces{'tx'}->{$q1}->{$q3}->{'rt'}->{$time};
 	my %timepoint;
-	$timepoint{'time'} = $time;
-	$timepoint{'intensity'} = $intensity;
+	$timepoint{'time'} = $time + 0;
+	$timepoint{'intensity'} = $intensity + 0;
         push @{$data_element{'data'}}, {%timepoint};
       }
       push @{$json_href->{'data_json'}}, {%data_element};

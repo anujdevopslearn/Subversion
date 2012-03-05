@@ -41,9 +41,9 @@
         chromavis_left.slaveTo(chromavis_right.uuid(),x_lock,y_lock);
     }
 
-    function toggle_autoscale_y() {
-        chromavis_left.auto_update_scale_y(this.checked);
-        max_y_axis_value.disabled = this.checked;
+    function toggle_autoscale_y(checked) {
+        chromavis_left.auto_update_scale_y(checked);
+        max_y_axis_value.disabled = checked;
         return false;
     }
 
@@ -160,7 +160,7 @@
 </div>
 
 <br>
-<input type="checkbox" id="auto_scale_y" onchange="toggle_autoscale_y();">
+<input type="checkbox" id="auto_scale_y" onchange="toggle_autoscale_y(this.checked);">
 Auto Scale Y Axis
 </input>
 <br/>
