@@ -972,8 +972,13 @@ sub store_mprophet_scores_in_transition_hash {
 	  }
 
 	  # For each peak_group we have info on, get the scores.
-	  for my $pg (keys %{ $mpro_href->{$spec_file_basename}->{$mpro_pepseq}->
-	      {$charge}->{$isotype}->{$decoy}} ) {
+	  # First, create descending list of peak_group numbers.
+	  # Lower numbers are for better peak groups.
+	  # (before 02/28/12, we weren't sorting - aack!)
+	  my @pgs = sort {$b <=> $a}
+	    keys %{ $mpro_href->{$spec_file_basename}->{$mpro_pepseq}->
+	      {$charge}->{$isotype}->{$decoy}};
+	  for my $pg (@pgs) {
 	    print "Checking peakgroup $pg\n" if $VERBOSE > 2;
 	    my $mpro_pg_href =
 	    $mpro_href->{$spec_file_basename}->{$mpro_pepseq}->{$charge}->{$isotype}->{$decoy}->{$pg};
@@ -981,10 +986,11 @@ sub store_mprophet_scores_in_transition_hash {
 	    my $d_score = $mpro_pg_href ->{d_score};
 	    print "Found m_score=$m_score\n" if ($VERBOSE > 2);
 	    my $max = $mpro_pg_href ->{max_apex_intensity};
-	    $light_heavy_ratio_maxapex = $mpro_pg_href->{light_heavy_ratio_maxapex};
+	    $light_heavy_ratio_maxapex =
+	      $mpro_pg_href->{light_heavy_ratio_maxapex};
 	    my $log_max = $max ? log10($max) : 0;  #avoid log(0).
 	    $log10_max_apex_intensity =
-	    $mpro_pg_href->{log10_max_apex_intensity} || $log_max;
+	      $mpro_pg_href->{log10_max_apex_intensity} || $log_max;
 	    $Tr = $mpro_pg_href ->{Tr};
 	    $S_N = $mpro_pg_href ->{S_N};
 	    print "Found S_N=$S_N\n" if ($VERBOSE > 2);
@@ -1006,14 +1012,13 @@ sub store_mprophet_scores_in_transition_hash {
 	      print 'No d_score for $mpro_href->{',$spec_file_basename,'}->{',$mpro_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$pg,'}->{d_score}', "\n"  if ($VERBOSE > 1);
 	    }
 	  }
-	  # Store the max m_score. Store the most recent Tr, intensity (they should all be identical).
+	  # Store the max m_score. Store the most recent Tr, intensity 
+	  # (will be for the lowest numbered peak group, #1 except
+	  # in weird cases)
 	  $transdata_href->{$target_q1}->{scores}->{$decoy}->{best_m_score} = $best_m_score;
 	  $transdata_href->{$target_q1}->{scores}->{$decoy}->{best_d_score} = $best_d_score;
 	  #print "Storing best_m_score $best_m_score\n" if ($VERBOSE > 2);
-	  $transdata_href->{$target_q1}->{scores}->{$decoy}->{Tr} = $Tr;
-	  $transdata_href->{$target_q1}->{scores}->{$decoy}->{S_N} = $S_N;
-	  $transdata_href->{$target_q1}->{scores}->{$decoy}->{log10_max_apex_intensity} = $log10_max_apex_intensity;
-	  $transdata_href->{$target_q1}->{scores}->{$decoy}->{light_heavy_ratio_maxapex} = $light_heavy_ratio_maxapex;
+	  $transdata_href->{$target_q1}->{scores}->{$decoy}->{Tr} = $Tr; $transdata_href->{$target_q1}->{scores}->{$decoy}->{S_N} = $S_N; $transdata_href->{$target_q1}->{scores}->{$decoy}->{log10_max_apex_intensity} = $log10_max_apex_intensity; $transdata_href->{$target_q1}->{scores}->{$decoy}->{light_heavy_ratio_maxapex} = $light_heavy_ratio_maxapex;
 
 	} # end if matches target Q1
       } # end for each modpep
@@ -1477,6 +1482,7 @@ sub load_transition_data {
   my $load_transitions = $args{load_transitions};
   my $load_peptide_ions = $args{load_peptide_ions};
   my $load_transition_groups = $args{load_transition_groups};
+  my $load_scores_only = $args{load_scores_only};
   my $VERBOSE = $args{'verbose'} || 0;
   my $QUIET = $args{'quiet'} || 0;
   my $TESTONLY = $args{'testonly'} || 0;
@@ -1589,9 +1595,10 @@ sub load_transition_data {
 	  my @existing_peptide_ions = $sbeams->selectOneColumn($sql);
 	  my $n_existing_pi = scalar @existing_peptide_ions;
 
-
 	  my $peptide_ion_id;
-	  if ( $load_peptide_ions && ! $n_existing_pi ) {
+	  if ( $load_peptide_ions &&
+	       ! $n_existing_pi &&
+	       ! $load_scores_only) {
 	    $peptide_ion_id = $sbeams->updateOrInsertRow(
 	      insert=>1,
 	      table_name=>$TBAT_SEL_PEPTIDE_ION,
@@ -1615,23 +1622,31 @@ sub load_transition_data {
 
 	  # Now, load transition group.
 	  $rowdata_ref = {};  #reset
-	  $rowdata_ref->{q1_mz} = $target_q1;
-	  $rowdata_ref->{SEL_peptide_ion_id} = $peptide_ion_id;
-	  $rowdata_ref->{SEL_run_id} = $SEL_run_id;
-	  $rowdata_ref->{collision_energy} = $tx_href->{collision_energy};
-	  $rowdata_ref->{isotype} = $tx_href->{isotype};
-	  $rowdata_ref->{isotype_delta_mass} = $tx_href->{isotype_delta_mass};
 
+	  # Basic data
+	  if (! $load_scores_only) {
+	    $rowdata_ref->{q1_mz} = $target_q1;
+	    $rowdata_ref->{SEL_peptide_ion_id} = $peptide_ion_id;
+	    $rowdata_ref->{SEL_run_id} = $SEL_run_id;
+	    $rowdata_ref->{collision_energy} = $tx_href->{collision_energy};
+	    $rowdata_ref->{isotype} = $tx_href->{isotype};
+	    $rowdata_ref->{isotype_delta_mass} =
+	      $tx_href->{isotype_delta_mass};
+	    $rowdata_ref->{experiment_protein_name} =
+	      $tx_href->{protein_name};
+	  }
+
+	  # Score data
 	  my $scores_href = $transdata_href->{$target_q1}->{scores}->{$is_decoy};
 	  $rowdata_ref->{m_score} = $scores_href->{best_m_score};
 	  $rowdata_ref->{d_score} = $scores_href->{best_d_score};
 	  $rowdata_ref->{S_N} = $scores_href->{S_N};
 	  $rowdata_ref->{max_apex_intensity} =
-	  $scores_href->{log10_max_apex_intensity};
+	    $scores_href->{log10_max_apex_intensity};
 	  $rowdata_ref->{light_heavy_ratio_maxapex} =
-	  $scores_href->{light_heavy_ratio_maxapex};
+	    $scores_href->{light_heavy_ratio_maxapex};
 
-	  # Set these fields to NULL if there is no value for them.
+	  # Set these score fields to NULL if there is no value for them.
 	  if (! $rowdata_ref->{m_score} || ($rowdata_ref->{m_score} eq 'NA') )
 	  { $rowdata_ref->{m_score} = 'NULL' };
 	  if (! $rowdata_ref->{d_score} || ($rowdata_ref->{d_score} eq 'NA'))
@@ -1645,7 +1660,6 @@ sub load_transition_data {
 	    ($rowdata_ref->{light_heavy_ratio_maxapex} eq 'NA') )
 	  { $rowdata_ref->{light_heavy_ratio_maxapex} = 'NULL' };
 
-	  $rowdata_ref->{experiment_protein_name} = $tx_href->{protein_name};
 
 	  # Compute fragment_ions string and store in field of same name.
 	  my @ion_list;
@@ -1679,13 +1693,30 @@ sub load_transition_data {
 	  }
 
 	  my $fragment_ions = $self->encode_transition_group_list (tg_aref=>\@ion_list);
-	  $rowdata_ref->{fragment_ions} = $fragment_ions;
+	  $rowdata_ref->{fragment_ions} = $fragment_ions
+	    if (! $load_scores_only);
 
+	  # See if a record for this transition group is already
+	  # loaded
+	  my $sql =qq~
+	    SELECT SEL_transition_group_id
+	    FROM $TBAT_SEL_TRANSITION_GROUP
+	    WHERE SEL_peptide_ion_id =
+	      '$peptide_ion_id'
+	    AND SEL_run_id = '$SEL_run_id'
+	    AND q1_mz = '$target_q1'
+	    AND isotype = '$tx_href->{isotype}'
+	  ~;
+
+	  my @existing_tgs = $sbeams->selectOneColumn($sql);
+	  my $n_existing_tg = scalar @existing_tgs;
 
 	  # Load a SEL_transition_group record, or, if already loaded,
 	  # get its SEL_transition_group_id number.
 	  my $transition_group_id = 0;
-	  if ( $load_transition_groups ) {
+	  if ( $load_transition_groups &&
+	       ! $n_existing_tg &&
+	       ! $load_scores_only ) {
 	    $transition_group_id = $sbeams->updateOrInsertRow(
 	      insert=>1,
 	      table_name=>$TBAT_SEL_TRANSITION_GROUP,
@@ -1695,14 +1726,53 @@ sub load_transition_data {
 	      verbose=>$VERBOSE,
 	      testonly=>$TESTONLY,
 	    );
+	  } else {
+	    if ($n_existing_tg > 1) {
+	      print "WARNING: $n_existing_tg transition_groups found for SEL_peptide_ion_id $peptide_ion_id, SEL_run_id $SEL_run_id, q1 $target_q1, isotype $tx_href->{isotype}; using first\n" unless ($QUIET);
+	      $transition_group_id = $existing_tgs[0];
+	    } elsif ($n_existing_tg == 0 ) {
+	      print "ERROR: no transition group found for SEL_peptide_ion_id $peptide_ion_id, SEL_run_id $SEL_run_id, q1 $target_q1, isotype $tx_href->{isotype}.\n" unless ($QUIET);
+	    } elsif ($n_existing_tg == 1 && ! $load_scores_only)  {
+	      $transition_group_id = $existing_tgs[0];
+	      print "Transition group $transition_group_id (SEL_peptide_ion_id $peptide_ion_id, SEL_run_id $SEL_run_id, q1 $target_q1, isotype $tx_href->{isotype}) already loaded\n" if $VERBOSE > 2;
+	    }
+	    if ( $load_scores_only && $n_existing_tg ) {
+	      $transition_group_id = $existing_tgs[0];
+	      print "Updating transition group $transition_group_id!\n"
+	          if $VERBOSE > 2;
+	      my $result = $sbeams->updateOrInsertRow(
+		update=>1,
+		table_name=>$TBAT_SEL_TRANSITION_GROUP,
+		rowdata_ref=>$rowdata_ref,
+		PK => 'SEL_transition_group_id',
+		return_PK => 1,
+		PK_value => $transition_group_id,
+		verbose=>$VERBOSE,
+		testonly=>$TESTONLY,
+	      );
+	    }
 	  }
 
-	  # Load a chromatogram record for this transition group
-	  $rowdata_ref = {};  #reset
-	  $rowdata_ref->{SEL_transition_group_id} = $transition_group_id;
 
+	  # Load a chromatogram record for this transition group
+          # First, see if there is an existing record.
 	  my $chromatogram_id = 0;
-	  if ($load_chromatograms) {
+	  my $sql =qq~
+	  SELECT SEL_chromatogram_id
+	  FROM $TBAT_SEL_CHROMATOGRAM
+	  WHERE SEL_transition_group_id =
+	    $transition_group_id
+	  ~;
+
+	  my @existing_ch = $sbeams->selectOneColumn($sql);
+	  my $n_existing_ch = scalar @existing_ch;
+          $chromatogram_id = $existing_ch[0] if $n_existing_ch;
+	  
+	  if ($load_chromatograms &&
+	      ! $load_scores_only &&
+	      ! $chromatogram_id   ) {
+	    $rowdata_ref = {};  #reset
+	    $rowdata_ref->{SEL_transition_group_id} = $transition_group_id;
 	    $chromatogram_id = $sbeams->updateOrInsertRow(
 	      insert=>1,
 	      table_name=>$TBAT_SEL_CHROMATOGRAM,
@@ -1712,6 +1782,8 @@ sub load_transition_data {
 	      verbose => $VERBOSE,
 	      testonly=> $TESTONLY,
 	    );
+	  } elsif ($load_scores_only && ! $chromatogram_id ) {
+	      print "ERROR: no chromatogram found for SEL_transition_group_id $transition_group_id.\n" unless ($QUIET);
 	  }
 
 	  # Load a peak group record for this chromatogram,
@@ -1729,16 +1801,45 @@ sub load_transition_data {
 	    if (! $rowdata_ref->{Tr} ) { $rowdata_ref->{Tr} = 'NULL' };
 	    if (! $rowdata_ref->{max_apex_intensity} ) { $rowdata_ref->{max_apex_intensity} = 'NULL' };
 
+	    # Is there already a peak group record loaded?
 	    my $peak_group_id = 0;
-	    $peak_group_id = $sbeams->updateOrInsertRow(
-	      insert=>1,
-	      table_name=>$TBAT_SEL_PEAK_GROUP,
-	      rowdata_ref=>$rowdata_ref,
-	      PK => 'SEL_peak_group_id',
-	      return_PK => 1,
-	      verbose => $VERBOSE,
-	      testonly=> $TESTONLY,
-	    );
+	    my $sql =qq~
+	      SELECT SEL_peak_group_id
+	      FROM $TBAT_SEL_PEAK_GROUP
+	      WHERE SEL_chromatogram_id = $chromatogram_id
+	    ~;
+
+	    my @existing_pg = $sbeams->selectOneColumn($sql);
+	    my $n_existing_pg = scalar @existing_pg;
+	    $peak_group_id = $existing_pg[0] if $n_existing_pg;
+
+	    if ($load_scores_only && $n_existing_pg) {
+		# update
+		$peak_group_id = $sbeams->updateOrInsertRow(
+		  update=>1,
+		  table_name=>$TBAT_SEL_PEAK_GROUP,
+		  rowdata_ref=>$rowdata_ref,
+		  PK => 'SEL_peak_group_id',
+		  return_PK => 1,
+		  PK_value => $peak_group_id,
+		  verbose => $VERBOSE,
+		  testonly=> $TESTONLY,
+		);
+	    } elsif (! $n_existing_pg && $chromatogram_id ) {
+	      $peak_group_id = $sbeams->updateOrInsertRow(
+		insert=>1,
+		table_name=>$TBAT_SEL_PEAK_GROUP,
+		rowdata_ref=>$rowdata_ref,
+		PK => 'SEL_peak_group_id',
+		return_PK => 1,
+		verbose => $VERBOSE,
+		testonly=> $TESTONLY,
+	      );
+	    } else {
+	      print "No peak group loaded or updated for chromatogram $chromatogram_id.\n" if $VERBOSE > 2;
+	    }
+	  } else {
+	      print "No peak group loaded for chromatogram $chromatogram_id; either no scores, or request not to load chromatograms.\n" if $VERBOSE > 2;
 	  }
 
 
@@ -1772,15 +1873,19 @@ sub load_transition_data {
 	      print "Transition $transition_id (TG_id $transition_group_id, Q3 $q3_mz) already loaded\n" if $VERBOSE > 2;
 	    }
 	    if ($load_transitions && ! $n_existing_tr) {
-	      $transition_id = $sbeams->updateOrInsertRow(
-		insert=>1,
-		table_name=>$TBAT_SEL_TRANSITION,
-		rowdata_ref=>$rowdata_ref,
-		PK => 'SEL_transition_id',
-		return_PK => 1,
-		verbose => $VERBOSE,
-		testonly=> $TESTONLY,
-	      );
+	      if (! $load_scores_only) {
+		$transition_id = $sbeams->updateOrInsertRow(
+		  insert=>1,
+		  table_name=>$TBAT_SEL_TRANSITION,
+		  rowdata_ref=>$rowdata_ref,
+		  PK => 'SEL_transition_id',
+		  return_PK => 1,
+		  verbose => $VERBOSE,
+		  testonly=> $TESTONLY,
+		);
+	      } else {
+		print "ERROR: no transition loaded for TG_id $transition_group_id, Q3 $q3_mz\n" if $VERBOSE > 2;
+	      }
 	    }
 	  } # end load Tx record for each Q3 measured for this Q1 & decoy state
 	  #} # end for each matching target Q3
@@ -2309,6 +2414,7 @@ sub load_srm_run {
   my $load_transition_groups = $args{'load_transition_groups'} || 1;
   my $load_transitions = $args{'load_transitions'} || 1;
   my $load_chromatograms = $args{'load_chromatograms'} || 1;
+  my $load_scores_only = $args{'load_scores_only'} || 1;
   my $VERBOSE = $args{'verbose'};
   my $QUIET = $args{'quiet'};
   my $TESTONLY = $args{'testonly'};
@@ -2318,6 +2424,12 @@ sub load_srm_run {
        (! defined $spectrum_file) &&
        (! defined $transition_file)) {
     die "load_srm_run: need either SEL_run_id, spec_file_basename, or transition_file."
+  }
+
+  if ( ($load_scores_only) &&
+       (! defined $mquest_file ) &&
+       (! defined $mpro_file )) {
+    die "load_srm_run: load_scores_only specified, but no mProphet or mQuest file given."
   }
 
   my ($data_dir, $tran_file_basename);
@@ -2467,6 +2579,7 @@ sub load_srm_run {
     load_transition_groups => $load_transition_groups,
     load_transitions => $load_transitions,
     load_chromatograms => $load_chromatograms,
+    load_scores_only => $load_scores_only,
     verbose => $VERBOSE,
     quiet => $QUIET,
     testonly => $TESTONLY,
