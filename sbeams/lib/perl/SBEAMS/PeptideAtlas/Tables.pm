@@ -117,7 +117,7 @@ use vars qw(@ISA @EXPORT
     $TBAT_ELUTION_TIME_TYPE
     $TBAT_ELUTION_TIME
 
-
+    $TBAT_CHROMATOGRAM_SOURCE_FILE
 
     $TBAT_PROTEIN_LIST
     $TBAT_PROTEIN_LIST_PROTEIN
@@ -249,6 +249,7 @@ require Exporter;
     $TBAT_PABST_SOURCE_PRIORITY
     $TBAT_ELUTION_TIME_TYPE
     $TBAT_ELUTION_TIME
+    $TBAT_CHROMATOGRAM_SOURCE_FILE
 
     $TBAT_PROTEIN_LIST
     $TBAT_PROTEIN_LIST_PROTEIN
@@ -386,6 +387,7 @@ $TBAT_TRANSITION_TYPE               = "${mod}transition_type";
 $TBAT_PABST_SOURCE_PRIORITY         = "${mod}pabst_tmp_source_priority";
 $TBAT_ELUTION_TIME_TYPE             = "${mod}elution_time_type";
 $TBAT_ELUTION_TIME                  = "${mod}elution_time";
+$TBAT_CHROMATOGRAM_SOURCE_FILE      = "${mod}chromatogram_source_file";
 
 $TBAT_PROTEIN_LIST                  = "${mod}protein_list";
 $TBAT_PROTEIN_LIST_PROTEIN          = "${mod}protein_list_protein";
