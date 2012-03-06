@@ -350,7 +350,7 @@ sub specfile2json {
   ) if ($tx_info);
 
   # Create and return .json string.
-  return traces2json_new(
+  return traces2json(
     traces_href => $traces_href,
     tx_info => $tx_info,
     rt => $rt,
@@ -726,7 +726,7 @@ sub check_q3_against_list {
 # Given a hash containing time & intensity information for a Q1,
 #  write a json data object suitable for Chromavis.
 ###############################################################################
-sub traces2json {
+sub traces2json_old {
   my %args = @_;
   my $traces_href = $args{traces_href};
 
@@ -874,7 +874,7 @@ sub traces2json {
 # Given a hash containing time & intensity information for a Q1,
 #  write a json data object suitable for Chromavis.
 ###############################################################################
-sub traces2json_new {
+sub traces2json {
   my %args = @_;
   my $traces_href = $args{traces_href};
 
@@ -903,41 +903,53 @@ sub traces2json_new {
   my $json = new JSON;
   my $json_href;
 
-  # Create list of Q1, Q3 pairs sorted by frg_ion (stored as format y2+2-18)
-  # First, store in a more convenient data structure, keyed by 
-  # Q1 and then by frg_type
-  # (Ideally, would do a better sort, according to 
-  # frg_z, frg_type, frg_nr, frg_loss)
-  my %ion_hash;
-  my @sorted_unique_q1_list = ();
-  # Basic list of common fragment types in sensible order.
-  my @frg_types = ('y', 'b', 'z', 'a', 'x', 'c', 'p');
-  my $frg_types = join '', @frg_types;
-  for my $q1 ( sort { $a <=> $b } keys %{$traces_href->{'tx'}}) {
-    push @sorted_unique_q1_list, $q1;
-    for my $q3 ( sort { $a <=> $b } keys %{$traces{'tx'}->{$q1}}) {
-      my $frg_ion = $traces{'tx'}->{$q1}->{$q3}->{frg_ion};
-      my $frg_type = substr($frg_ion,0,1);
-      # Add this frg_type to basic list if not there already.
-      # Rarely/never needed
-      if ( ( index $frg_types, $frg_type) == -1 ) {
-	push (@frg_types, $frg_type);
-	$frg_types = $frg_types . $frg_type;
-      }
-      $ion_hash{$q1}->{$frg_type}->{ion_q3s}->{$frg_ion} = $q3;
-    }
-  }
-  # Do the sort
   my @sorted_q1_list = ();
   my @sorted_q3_list = ();
-  for my $q1 ( @sorted_unique_q1_list ) {
-    for my $frg_type (@frg_types) {
-      for my $frg_ion
-      ( sort
+
+  if ($tx_info) {
+    # If we have frg_ion info, create list of Q1, Q3 pairs
+    # sorted by frg_ion (stored as format y2+2-18).
+    # First, store in a more convenient data structure, keyed by 
+    # Q1 and then by frg_type
+    # (Ideally, would do a better sort, according to 
+    # frg_z, frg_type, frg_nr, frg_loss)
+    my %ion_hash;
+    my @sorted_unique_q1_list = ();
+    # Basic list of common fragment types in sensible order.
+    my @frg_types = ('y', 'b', 'z', 'a', 'x', 'c', 'p');
+    my $frg_types = join '', @frg_types;
+    for my $q1 ( sort { $a <=> $b } keys %{$traces_href->{'tx'}}) {
+      push @sorted_unique_q1_list, $q1;
+      for my $q3 ( sort { $a <=> $b } keys %{$traces{'tx'}->{$q1}}) {
+	my $frg_ion = $traces{'tx'}->{$q1}->{$q3}->{frg_ion};
+	my $frg_type = substr($frg_ion,0,1);
+	# Add this frg_type to basic list if not there already.
+	# Rarely/never needed
+	if ( ( index $frg_types, $frg_type) == -1 ) {
+	  push (@frg_types, $frg_type);
+	  $frg_types = $frg_types . $frg_type;
+	}
+	$ion_hash{$q1}->{$frg_type}->{ion_q3s}->{$frg_ion} = $q3;
+      }
+    }
+    # Do the sort
+    for my $q1 ( @sorted_unique_q1_list ) {
+      for my $frg_type (@frg_types) {
+	for my $frg_ion
+	( sort
 	  keys %{$ion_hash{$q1}->{$frg_type}->{ion_q3s}} ) {
-	push @sorted_q1_list, $q1;
-	push @sorted_q3_list,
+	  push @sorted_q1_list, $q1;
+	  push @sorted_q3_list,
 	  $ion_hash{$q1}->{$frg_type}->{ion_q3s}->{$frg_ion};
+	}
+      }
+    }
+  # If we don't have tx_info, don't sort by frg_ion.
+  } else {
+    for my $q1 ( sort { $a <=> $b } keys %{$traces_href->{'tx'}}) {
+      for my $q3 ( sort { $a <=> $b } keys %{$traces{'tx'}->{$q1}}) {
+	push (@sorted_q1_list, $q1);
+	push (@sorted_q3_list, $q3);
       }
     }
   }
