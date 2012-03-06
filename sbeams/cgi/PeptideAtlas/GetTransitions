@@ -1339,7 +1339,7 @@ sub get_bad_qqq {
 	             probability => 0.5,
 							 @_ );
 
-  $args{sequence_clause} =~ s/PP\.peptide_//;
+  $args{sequence_clause} =~ s/PP\.peptide_//gm;
 
   my $sql = qq~
   SELECT DISTINCT modified_sequence, charge  
