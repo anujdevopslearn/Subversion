@@ -323,23 +323,19 @@ sub specfile2json {
       # no need to get ms2_scan b/c we got the first time.
       #ms2_scan => $ms2_scan,
     );
-    # 02/09/12: the change below have maybe been added to this
-    #  script by DC since my last checkin? Not sure which is correct
-    #  and which is newer: the commented out line, or the 9 lines
-    #  below it. TMF. 
-    #my %combined_traces = (%{$traces_href->{'tx'}}, %{$traces_href_2->{'tx'}});
-    my %combined_traces;
+    my %combined_tx = ();
     if ( $traces_href->{'tx'} ) {
-      %combined_traces =
-      %{$traces_href->{'tx'}};
+      %combined_tx = %{$traces_href->{'tx'}};
     }
     if ( $traces_href_2->{'tx'} ) {
-      %combined_traces =
-      %{$traces_href_2->{'tx'}};
+      #%combined_tx = %{$traces_href_2->{'tx'}};
+      %combined_tx = (%combined_tx, %{$traces_href_2->{'tx'}});
     }
-    # end mystery change
 
-    $traces_href->{'tx'} = \%combined_traces;
+    # these 2 lines added 03/08/12
+    my %combined_traces = (%{$traces_href}, %{$traces_href_2});
+    $traces_href = \%combined_traces;
+    $traces_href->{'tx'} = \%combined_tx;
   }
 
   # Unpack and store the transition info string, if provided
