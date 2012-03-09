@@ -473,7 +473,7 @@ sub fetch_transitions {
   if ( $args{speclinks} && $args{prefetch} ) {
 #    print "Getting libs<BR>\n";
 #    print time() . "\n";
-    $log->debug( "Getting consensus links " . time() );
+    $log->debug( "Prefetching consensus links " . time() );
     $clibs = $consensus->getConsensusLinks();
     $log->debug( "Done " . time() );
 #    print "<BR>Done<BR>\n";
@@ -898,32 +898,6 @@ sub fetch_transitions {
     }
   }
 
-# Prefetch chromat paths, FIXME
-if ( 0 ) {
-  my $chromat_sql = qq~
-  SELECT DISTINCT modified_peptide_sequence, peptide_charge,
-       CASE WHEN instrument_type_name = 'QTrap5500' THEN 'QTrap' else instrument_type_name END,
-       source_path
-  FROM peptideatlas.dbo.pabst_tmp_source_path PTSP
-  JOIN $TBAT_PABST_PEPTIDE_ION_INSTANCE PPII 
-    ON PPII.pabst_peptide_ion_instance_id = PTSP.peptide_ion_instance_id
-  JOIN $TBAT_PABST_PEPTIDE_ION PPI 
-    ON PPI.pabst_peptide_ion_id = PPII.pabst_peptide_ion_id
-  JOIN $TBAT_INSTRUMENT_TYPE I 
-    ON I.instrument_type_id = PPII.source_instrument_type_id
-  ~;
-  my $chr_sth = $sbeams->get_statement_handle( $chromat_sql );
-
-  my %chromat_paths = ( QQQ => {},
-                       QTrap => {} );
-
-  while( my @row = $chr_sth->fetchrow_array() ) {
-    my $chromat_key = $row[0] . $row[1];
-    $chromat_paths{$row[2]}->{$chromat_key} = $row[3];
-  }
-}
-
-
   $log->debug( "Exec SQL: " . time() );
   my $sth = $sbeams->get_statement_handle( $lib_sql );
   $log->debug( "Done : " . time() );
@@ -1082,9 +1056,14 @@ if ( 0 ) {
       my  @rowdata = ( $prot, @row[0..12] );
       if ( $parameters{speclinks} ) {
         my $link_key = $row[1] . $row[6];
-        my $links = $links{$link_key} || get_consensus_links( $row[1], $row[6], $clibs, $seq2badlinks );
+
+        # Fetch chromat/spectrum links for this peptide
+        my $links = $links{$link_key} || get_consensus_links( seq => $row[1], 
+                                                              chg => $row[6], 
+                                                              libs => $clibs, 
+                                                              badlinks => $seq2badlinks,
+                                                              organism => $organism );
         $links{$link_key} ||= $links;
-#        my $links = #get_consensus_links( $row[1], $row[6], $clibs );
         my $mass = $massCalculator->getPeptideMass( sequence => $row[1], mass_type => 'monoisotopic' );
 
         my @chromat_links;
@@ -1400,54 +1379,22 @@ sub get_scan_path {
 
 sub get_consensus_links {
 
-  my $seq = shift;
-  my $chg = shift;
-  my $libs = shift;
-	my $seq2badlinks = shift || {};
+  my %args = @_;
+
+  my $seq = $args{seq};
+  my $chg = $args{chg};
+  my $libs = $args{libs};
+	my $seq2badlinks = $args{badlinks} || {};
+	my $organism = $args{organism};
 
   my $spectrum_key = $seq . $chg;
 
   my $link = '';
 
   if ( !$parameters{prefetch} ) {
-    $libs = $consensus->getConsensusLinks( modified_sequence => $seq );
+    $libs = $consensus->getConsensusLinks( modified_sequence => $seq, organism => $organism );
   }
-  if ( 0 ) {
-    my $sep = '';
-    if ( $libs->{qtof}->{$spectrum_key} ) {
-      my $title = "View +$chg spectrum for $seq in QTOF library";
-      $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{qtof}->{$spectrum_key};' TARGET=_qtof_spectrum>QTOF</A>";
-    }
-    $sep = ', ' if $link;
-    if ( $libs->{qtrap}->{$spectrum_key} ) {
-      my $title = "View +$chg spectrum for $seq in QTrap5500 library";
-      $link .= $sep . "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{qtrap}->{$spectrum_key};' TARGET=_qtrap_spectrum>QTrap</A>";
-    }
-    $sep = ', ' if $link;
-    if ( $libs->{qqq}->{$spectrum_key} ) {
-      my $title = "View +$chg spectrum for $seq in Agilent QQQ library";
-      $link .= $sep . "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{qqq}->{$spectrum_key};' TARGET=_qqq_spectrum>QQQ</A>";
-    }
-    $sep = ', ' if $link;
-    if ( $libs->{it}->{$spectrum_key} ) {
-      my $title = "View +$chg spectrum for $seq in NIST IonTrap library";
-      $link .= $sep . "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{it}->{$spectrum_key};' TARGET=_it_spectrum>IonTrap</A>";
-    }
-    $sep = ', ' if $link;
-    if ( $libs->{CE}->{$spectrum_key} ) {
-      my $title = "View +$chg spectra for $seq from QTOF at various CE values";
-      my $param_str;
-      my $xmax = 1200;
-      my $xmin = 200;
-      for my $opt ( 'medium','high','low','mhigh', 'mlow', 'avg' ) {
-        $libs->{$opt}->{$spectrum_key} ||= '';
-        $param_str .= ";$opt=$libs->{$opt}->{$spectrum_key}";
-      }
-      $link .= $sep . "<A HREF='ShowCESpectralPlot?xmax=$xmax;xmin=$xmin$param_str;spectrum_key=$spectrum_key' TARGET='_CE_spectrum'>CE</A>";
-    }
-    return $link;
 
-  } else {
     my @links;
     my $link = '';
     if ( $libs->{qtof}->{$spectrum_key} ) {
@@ -1494,8 +1441,6 @@ sub get_consensus_links {
     push @links, $link;
 
     return \@links;
-  }
-  return $link;
 
 }
 
