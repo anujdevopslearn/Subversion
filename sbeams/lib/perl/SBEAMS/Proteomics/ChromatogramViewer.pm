@@ -23,6 +23,7 @@ use vars qw($sbeams
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::TableInfo;
+use JSON;
 
 #use SBEAMS::Proteomics::AminoAcidModifications;
 
@@ -89,24 +90,28 @@ sub generateChromatogram {
 
 sub expand_json_timeframe {
 	my $self = shift;
-	my $json = shift;
+	my $json_string = shift;
+
+  my $json = new JSON;
+  my $pjson = $json->decode( $json_string );
+
 	my $expand_by = shift || 25;
-	my @json = split( /\n/, $json );
+
 	my $max_inten = 0;
 	my $max_time = 0;
 	my $min_inten = 1000000;
-	for my $line ( @json ) {
-		if ( $line =~ /time\s*:\s*([^,]*)\,\s+intensity\s*:\s*([^}]*)/ ) {
-			# die "intensity is $2 at time $1\n";
-      if ( $2 > $max_inten ) {
-				$max_inten = $2;
-				$max_time = $1;
-			}
-      if ( $2 < $min_inten ) {
-				$min_inten = $2;
-			}
-		}
-  }
+	for my $data ( @{$pjson->{data_json}} ) {
+    for my $row ( @{$data->{data}} ) {
+      if ( $row->{intensity} > $max_inten ) {
+				$max_inten = $row->{intensity};
+				$max_time = $row->{'time'};
+	    }
+      if ( $row->{intensity} < $min_inten ) {
+		  	$min_inten = $row->{intensity};
+		  }
+    }
+	}
+
 #	print "Saw max intensity $max_inten at $max_time seconds\n";
 	my $start_time = $max_time - $expand_by;
 	$start_time = 0.0 if $start_time < 0;
@@ -114,41 +119,14 @@ sub expand_json_timeframe {
 	$min_inten ||= 10;
 #	die "max is $max_time, start is $start_time, end is $end_time, max is $max_inten and min is $min_inten\n";;
 
-	my $data_min = "          {time : $start_time, intensity : $min_inten},\n"; 
-	my $data_max = "          {time : $end_time, intensity : $min_inten},\n"; 
+  my $start_data = { 'time' => $start_time, intensity => $min_inten };
+  my $end_data = { 'time' => $end_time, intensity => $min_inten };
+	for my $entry ( @{$pjson->{data_json}} ) {
+    unshift @{$entry->{data}}, $start_data;
+    push @{$entry->{data}}, $end_data;
+  }
 
-	my $new_json = '';
-	my $previous;
-	my $add_extra = 0;
-	for my $line ( @json ) {
-		if ( $line =~ /^\s+data/ ) {
-			$new_json .= $line . "\n";
-			$new_json .= $data_min;
-			$add_extra++;
-		} elsif ( $line =~ /^\s+\]/ ) {
-			my $new_base = $previous;
-			$new_base =~ s/intensity.*$/intensity : $min_inten},/;
-			$new_json .= $new_base . "\n";
-			$new_json .= $data_max;
-			$new_json .= $line . "\n";
-		} else {
-			if ( $add_extra ) {
-				$add_extra = 0;
-  			my $new_base = $line;
-	  		$new_base =~ s/intensity.*$/intensity : $min_inten},/;
-		  	$new_json .= $new_base . "\n";
-	    }
-			$new_json .= $line . "\n";
-		}
-		$previous = $line;
-	}
-	return $new_json;
-
-#      data : [
-#			          {time : 20.0721, intensity : 51.44000},
-#          {time : 25.8213, intensity : 1772.64014},
-#					        ]},
-#	die $json;
+  return $json->encode( $pjson );
 }
 
 sub get_smoothing_select {
