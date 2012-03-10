@@ -1284,10 +1284,8 @@ sub get_pabst_static_peptide_display {
     $dp_data++;
     $dirty_peptides{$row[0]} = \@row;
   }
-	print "Finished DP " . time() . " <BR>\n";
 
   my $mapped_id = $self->get_pabst_mapped_id( $args{biosequence_name}, $pabst_build_id );
-	print "Finished mapping Bioseq " . time() . " <BR>\n";
 
   # No id, no query
   return '' unless $mapped_id;
@@ -1309,7 +1307,7 @@ sub get_pabst_static_peptide_display {
 # 14 n_observations
 # 15 atlas_build_id
 # 16 synthesis_score
-# 17 synthesis_warnings
+# 17 annotations
 # 18 synthesis_adjusted_score
 #
 # 3, 4,5, 6, 7, 8, 10, 11,12, 16,15 
@@ -1320,7 +1318,7 @@ sub get_pabst_static_peptide_display {
   SELECT DISTINCT preceding_residue, peptide_sequence, following_residue,
   synthesis_adjusted_score, suitability_score, predicted_suitability_score,
   SSRCalc_relative_hydrophobicity, n_genome_locations, n_observations,
-  synthesis_warnings, peptide_sequence AS Organism,
+  annotations, peptide_sequence AS Organism,
   CASE WHEN stripped_peptide_sequence IS NULL then 'No' ELSE 'Yes' END AS PATR
   FROM $TBAT_PABST_PEPTIDE PP 
   JOIN $TBAT_PABST_PEPTIDE_MAPPING PM
