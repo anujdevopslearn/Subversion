@@ -351,7 +351,7 @@ sub fetch_peptides {
 
   my $pabst_sql = qq~
   SELECT DISTINCT biosequence_name, peptide_sequence,
-  synthesis_adjusted_score, n_observations, synthesis_warnings
+  synthesis_adjusted_score, n_observations, annotations
   FROM $TBAT_PABST_PEPTIDE PP 
   JOIN $TBAT_PABST_PEPTIDE_MAPPING PM 
   ON PM.pabst_peptide_id = PP.pabst_peptide_id
