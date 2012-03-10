@@ -90,9 +90,6 @@ sub main
   # This will look for mod-specific params and do the right thing
   $atlas->processModuleParameters(parameters_ref=>\%parameters);
 
-  use Data::Dumper;
-#  die Dumper( %parameters) ;
-
   # Fetch pabst_build_id based on params. 
   # 1 - passed pabst_build_id param
   # 2 - passed organism
@@ -309,9 +306,9 @@ sub print_form {
     my $splinks_chk = ( $parameters{speclinks} ) ? 'checked' : 'checked';
 
     my $spec_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Set minimum m/z threshold for transitions, applies to both precursor (Q1) and fragment ion (Q3) m/z'</TD>";
-    unless ( $sbeams->isGuestUser() ) {
+#    unless ( $sbeams->isGuestUser() ) {
       $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Show spectral links</B></TD>$spec_help<TD><INPUT TYPE=CHECKBOX NAME=speclinks SIZE=10 $splinks_chk></INPUT></TD></TR> ~;
-    }
+#    }
     
 
     my $rt_help =  "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Select type of RT value to show in results'</TD>";
@@ -416,7 +413,6 @@ sub get_multi_selects {
     $src_select .= qq~<OPTION VALUE="$instr2code->{$instr}">$instr</OPTION>\n~;
   }
   $src_select .= "</SELECT>\n";
-  die Dumper $src_select;
 
 # FIXME
   $TBAT_QUERY_OPTION = 'peptideatlas.dbo.query_option';
@@ -441,8 +437,6 @@ sub fetch_transitions {
 
   # Historical, don't ask.
   my %parameters = %args;
-
-  use Data::Dumper;
 
   my $content = '';
 
@@ -759,6 +753,8 @@ sub fetch_transitions {
 
   $log->debug( "Done fetching peptides: $pep_id_string"  . time());
 
+  my $organism = $best_peptide->getBuildOrganism( pabst_build_id => $parameters{pabst_build_id} );
+
   my $scan_clause = $pep_id_string;
 
   my $pepion2scanpath = {};
@@ -785,7 +781,14 @@ sub fetch_transitions {
 #  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs', 'Src Adj SS' );
   my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT' );
 #  push @headings, 'SpecLinks', 'Chromat' if $parameters{speclinks};
-  push @headings, 'QTOF', 'QTOF_CE', 'QTrap', 'QQQ', 'IonTrap', 'QQQ_ch', 'QTrap_ch' if $parameters{speclinks};
+
+  if ( $parameters{speclinks} ) {
+    if ( $organism != 2 || $sbeams->isGuestUser() ) {
+      push @headings, 'IonTrap';
+    } else {
+      push @headings, 'QTOF', 'QTOF_CE', 'QTrap', 'QQQ', 'IonTrap', 'QQQ_ch', 'QTrap_ch';
+    }
+  }
 
   my $ssr_field = 'SSRCalc_relative_hydrophobicity';
   my $ssr_clause = '';
@@ -860,8 +863,13 @@ sub fetch_transitions {
 #  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs' );
   my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT' );
 #  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs', 'Src Adj SS' );
-#  push @headings, 'SpecLinks', 'Chromats' if $parameters{speclinks};
-  push @headings, 'QTOF', 'QTOF_CE', 'QTrap', 'QQQ', 'IonTrap', 'QQQ_ch', 'QTrap_ch' if $parameters{speclinks};
+  if ( $parameters{speclinks} ) {
+    if ( $organism != 2 || $sbeams->isGuestUser() ) {
+      push @headings, 'IonTrap';
+    } else {
+      push @headings, 'QTOF', 'QTOF_CE', 'QTrap', 'QQQ', 'IonTrap', 'QQQ_ch', 'QTrap_ch';
+    }
+  }
 
   if ( $parameters{rt_type} && $parameters{rt_type} ne 'SSRCalc' ) {
     $headings[13] = 'RT_Cat';
@@ -913,7 +921,7 @@ sub fetch_transitions {
   my %peps;
   my %patr_peps;
 
-  my $organism = $best_peptide->getBuildOrganism( pabst_build_id => $parameters{pabst_build_id} );
+#  my $organism = $best_peptide->getBuildOrganism( pabst_build_id => $parameters{pabst_build_id} );
 
   my %counts;
 
@@ -1063,6 +1071,7 @@ sub fetch_transitions {
                                                               libs => $clibs, 
                                                               badlinks => $seq2badlinks,
                                                               organism => $organism );
+
         $links{$link_key} ||= $links;
         my $mass = $massCalculator->getPeptideMass( sequence => $row[1], mass_type => 'monoisotopic' );
 
@@ -1093,7 +1102,10 @@ sub fetch_transitions {
           push @chromat_links, $chromat_link;
         }
 #        push @rowdata, $links, $chromat_link;
-        push @rowdata, @{$links}, @chromat_links;
+        push @rowdata, @{$links};
+        if ( $organism == 2 && !$sbeams->isGuestUser() ) {
+          push @rowdata, @chromat_links;
+        }
       }
       push @peptides, \@rowdata;
 
@@ -1395,7 +1407,8 @@ sub get_consensus_links {
     $libs = $consensus->getConsensusLinks( modified_sequence => $seq, organism => $organism );
   }
 
-    my @links;
+  my @links;
+  if ( $organism == 2 && !$sbeams->isGuestUser() ) {
     my $link = '';
     if ( $libs->{qtof}->{$spectrum_key} ) {
       my $title = "View +$chg spectrum for $seq in QTOF library"; 
@@ -1432,15 +1445,16 @@ sub get_consensus_links {
       $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{qqq}->{$spectrum_key};' TARGET=_qqq_spectrum> <IMG BORDER=0 SRC='$image' TITLE='$title'> </A>";
     }
     push @links, $link;
+  }
 
-    $link = '';
-    if ( $libs->{it}->{$spectrum_key} ) {
-      my $title = "View +$chg spectrum for $seq in NIST IonTrap library";
-      $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{it}->{$spectrum_key};' TARGET=_it_spectrum> <IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'> </A>";
-    }
-    push @links, $link;
+  my $link = '';
+  if ( $libs->{it}->{$spectrum_key} ) {
+    my $title = "View +$chg spectrum for $seq in NIST IonTrap library";
+    $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{it}->{$spectrum_key};' TARGET=_it_spectrum> <IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'> </A>";
+  }
+  push @links, $link;
 
-    return \@links;
+  return \@links;
 
 }
 
