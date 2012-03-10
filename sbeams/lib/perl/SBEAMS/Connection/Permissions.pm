@@ -1002,7 +1002,7 @@ sub getAccessibleProjects{
   foreach my $element (@rows) {
       push(@project_ids,$element->[0]);
   }
-  return (@project_ids);
+  return ( wantarray ) ? @project_ids : join( ',', @project_ids );
 } # end getAccessibleProjects
 
 #+
