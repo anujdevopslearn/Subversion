@@ -500,7 +500,7 @@ sub getConsensusLinks {
     return {};
   }
 
-  if ( $args{organsim} != 2 || $sbeams->isGuestUser() ) {
+  if ( $args{organism} != 2 || $sbeams->isGuestUser() ) {
 
     my $project_ids = $sbeams->getAccessibleProjects();
 
