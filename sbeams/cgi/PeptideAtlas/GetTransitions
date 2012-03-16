@@ -16,6 +16,7 @@ use Getopt::Long;
 use FindBin;
 use Data::Dumper;
 
+
 use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ( $q $current_contact_id $current_username
 $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
@@ -32,7 +33,9 @@ use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::BestPeptideSelector;
 use SBEAMS::PeptideAtlas::ConsensusSpectrum;
+# use SBEAMS::PeptideAtlas::TraMLParser;
 use SBEAMS::Proteomics::PeptideMassCalculator;
+
 my $massCalculator = new SBEAMS::Proteomics::PeptideMassCalculator;
 
 use constant ROW_LIMIT => 50000;
@@ -1097,7 +1100,10 @@ sub fetch_transitions {
                 $scan_param .= ";scan=$pepion2scanpath->{$ch_type}->{$link_key}->{scan};";
               }
             }
-            $chromat_link = "<A HREF=ShowChromatogram?${scan_param}precursor_neutral_mass=$mass;pepseq=$row[1]$precursor_param;precursor_mz=$row[5];limit_smoothing_options=1;default_smoothing_factor=5;spectrum_pathname=$pepion2scanpath->{$ch_type}->{$link_key}->{path} TARGET=$ch_type> <IMG BORDER=0 SRC='$image{$ch_type}' TITLE='$title'> </A>";
+            my $pepion = $q->escape( $row[1] . '+' . $row[6] );
+            my $instr_name = ( $ch_type =~ /QQQ/ ) ? $q->escape('6460 QQQ') : $ch_type;
+           
+            $chromat_link = "<A HREF=ShowChromatogram?${scan_param}precursor_neutral_mass=$mass;pepseq=$row[1]$precursor_param;precursor_mz=$row[5];limit_smoothing_options=1;default_smoothing_factor=5;spectrum_pathname=$pepion2scanpath->{$ch_type}->{$link_key}->{path};peptide=$row[1];no_specfile=1;no_mquest=1;instrument_name=$instr_name TARGET=$ch_type> <IMG BORDER=0 SRC='$image{$ch_type}' TITLE='$title'> </A>";
           }
           push @chromat_links, $chromat_link;
         }
@@ -1441,7 +1447,7 @@ sub get_consensus_links {
     if ( $libs->{qqq}->{$spectrum_key} ) {
 			my $image = "$HTML_BASE_DIR/images/spectrum.gif";
 			$image = "$HTML_BASE_DIR/images/redqmark.gif" if $seq2badlinks->{$spectrum_key};
-      my $title = "View +$chg spectrum for $seq in Agilent QQQ library";
+      my $title = "View +$chg spectrum for $seq in 6460 QQQ library";
       $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{qqq}->{$spectrum_key};' TARGET=_qqq_spectrum> <IMG BORDER=0 SRC='$image' TITLE='$title'> </A>";
     }
     push @links, $link;
