@@ -1416,19 +1416,19 @@ sub get_consensus_links {
   my @links;
   if ( $organism == 2 && !$sbeams->isGuestUser() ) {
     my $link = '';
-    if ( $libs->{qtof}->{$spectrum_key} ) {
+    if ( $libs->{medium}->{$spectrum_key} ) {
       my $title = "View +$chg spectrum for $seq in QTOF library"; 
-      $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{qtof}->{$spectrum_key};' TARGET=_qtof_spectrum> <IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
+      $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{medium}->{$spectrum_key};' TARGET=_qtof_spectrum> <IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
     }
     push @links, $link;
 
     $link = '';
-    if ( $libs->{CE}->{$spectrum_key} ) {
+    if ( $libs->{medium}->{$spectrum_key} ) {
       my $title = "View +$chg spectra for $seq from QTOF at various CE values";
       my $param_str;
       my $xmax = 1200;
       my $xmin = 200;
-      for my $opt ( 'medium','high','low','mhigh', 'mlow', 'avg' ) {
+      for my $opt ( 'medium','high','low','mhigh', 'mlow' ) {
         $libs->{$opt}->{$spectrum_key} ||= '';
         $param_str .= ";$opt=$libs->{$opt}->{$spectrum_key}";
       }
