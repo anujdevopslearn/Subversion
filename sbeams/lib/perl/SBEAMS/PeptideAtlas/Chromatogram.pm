@@ -1380,16 +1380,20 @@ sub getTopHTMLforChromatogramViewer {
      if $param_href->{precursor_charge};
   $top_html .= "<b><big>, $param_href->{isotype}</big></b>\n"
      if $param_href->{isotype};
+  $top_html .= "<br><b>Peptide: </b> $param_href->{peptide}\n"
+     if $param_href->{peptide};
+  $top_html .= "<br><b>Instrument: </b> $param_href->{instrument_name}\n"
+     if $param_href->{instrument_name};
   $top_html .= "<br><b>Experiment: </b> $param_href->{experiment_title}\n"
      if $param_href->{experiment_title};
-  $top_html .= "<br><b>Spectrum file:</b> $spectrum_basename\n";
+  $top_html .= "<br><b>Spectrum file:</b> $spectrum_basename\n" unless $param_href->{no_specfile};
   if ($precursor_rt) {
     $precursor_rt = sprintf "%0.3f", ${precursor_rt}/60;
     $top_html .= "<br>Precursor RT\: $precursor_rt\n";
   }
   $top_html .= "<br><b>Chromatogram ID: </b>$param_href->{SEL_chromatogram_id}\n"
      if $param_href->{SEL_chromatogram_id};
-  $top_html .= "<br><b><u>mQuest:</u></b>&nbsp;";
+  $top_html .= "<br><b><u>mQuest:</u></b>&nbsp;" unless $param_href->{no_mquest};
   if ($best_peak_group_rt) {
     my $best_peak_group_rt_s = sprintf "%0.3f", ${best_peak_group_rt}/60;
     $top_html .= "<b>best pg RT</b>=$best_peak_group_rt_s&nbsp;\n"
