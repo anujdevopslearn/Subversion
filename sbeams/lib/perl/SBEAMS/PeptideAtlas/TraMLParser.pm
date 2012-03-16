@@ -14,6 +14,11 @@
 package SBEAMS::PeptideAtlas::TraMLParser;
 use strict;
 
+use vars qw($VERBOSE $DEBUG);
+$VERBOSE = 1;
+$DEBUG = 1;
+$| = 1;
+
 use LWP::UserAgent;
 
 
@@ -248,46 +253,414 @@ sub _char {
 
 1;
 
-__DATA__
-modified_peptide_annotation_id
-peptide_sequence
-modified_peptide_sequence
-peptide_charge
-q1_mz
-q3_mz
-q3_ion_label
-q3_peak_intensity 
-transition_suitability_level_id
-publication_id
-annotator_name
-annotator_contact_id
-collision_energy
-retention_time
-instrument
-project_id
-comment
-
-peptide_id
-annotation_set
-
-date_created
-created_by_id
-date_modified
-modified_by_id
-owner_group_id
-record_status
+# Begin Writer routines
 
 
-modified_peptide_sequence
-peptide_charge
-q1_mz
-q3_mz
-q3_ion_label
-transition_suitability_level_id
-publication_id
-annotator_name
-annotator_contact_id
-collision_energy
-retention_time
-instrument
-comment
+
+###############################################################################
+# openTraMLFile
+###############################################################################
+sub openTraMLFile {
+  my $self = shift;
+  my %args = @_;
+  my $outputFile = $args{'outputFile'} || die("No outputFile provided");
+
+  print "Opening output file '$outputFile'...\n";
+
+
+  #### Open and write header
+  our $TRAMLOUTFILE;
+  open(TRAMLOUTFILE,">$outputFile")
+    || die("ERROR: Unable to open '$outputFile' for write");
+  print TRAMLOUTFILE qq~<?xml version="1.0" encoding="UTF-8"?>\n~;
+  $TRAMLOUTFILE = *TRAMLOUTFILE;
+
+  #### Write out parent build element
+  my $buffer = encodeXMLEntity(
+    entity_name => 'TraML',
+    indent => 0,
+    entity_type => 'open',
+    attributes => {
+      version => '0.10',
+      xmlns => 'http://psi.hupo.org/ms/traml',
+      'xmlns:xsi' => 'http://www.w3.org/2001/XMLSchema-instance',
+      'xsi:schemaLocation' => 'http://psi.hupo.org/ms/traml TraML0.1.xsd',
+    },
+  );
+
+  print $TRAMLOUTFILE $buffer;
+
+  return(1);
+}
+
+
+###############################################################################
+# writeTraMLFile
+###############################################################################
+sub writeTraMLFile {
+  my $self = shift;
+  my %args = @_;
+  my $transitions = $args{'transitions'} || die("No transitions provided");
+
+  our $TRAMLOUTFILE;
+
+  my $buffer = '';
+
+  #### Write out the cvList information
+  $buffer .= $self->writeCvListSection();
+
+  #### Write out the cvList information
+  $buffer .= $self->writeContactSection();
+
+  #### Write out the instrumentList information
+  $buffer .= $self->writeInstrumentSection();
+
+  print $TRAMLOUTFILE $buffer;
+
+
+  #### Write out the transitions list
+  if ($transitions->{transitionsList}) {
+    $buffer = encodeXMLEntity(
+      entity_name => 'transitionList',
+      indent => 2,
+      entity_type => 'open',
+    );
+    print $TRAMLOUTFILE $buffer;
+
+    foreach my $transition (@{$transitions->{transitionsList}}) {
+
+      $transition->{moleculeName} =~ s/\"//g;
+      $transition->{precursorMz} = 0 unless ($transition->{precursorMz});
+
+      $buffer = encodeXMLEntity(
+        entity_name => 'transition',
+        indent => 4,
+        entity_type => 'open',
+        attributes => {
+          transitionLabel => $transition->{moleculeName},
+          precursorMz => $transition->{precursorMz},
+          fragmentMz => $transition->{productMz},
+          #moleculeCategory => $transition->{moleculeCategory},
+          #groupLabel => $transition->{groupLabel},
+          #retentionTime => $transition->{retentionTime},
+        },
+      );
+      print $TRAMLOUTFILE $buffer;
+
+
+      $buffer = encodeXMLEntity(
+        entity_name => 'configurationList',
+        indent => 6,
+        entity_type => 'open',
+      );
+      print $TRAMLOUTFILE $buffer;
+
+
+      $buffer = encodeXMLEntity(
+        entity_name => 'configuration',
+        indent => 8,
+        entity_type => 'openclose',
+        attributes => {
+          instrumentRef => 'TSQ',
+          collisionEnergy => $transition->{collisionEnergy},
+          tubeLens => $transition->{tubeLens},
+        },
+      );
+      print $TRAMLOUTFILE $buffer;
+
+
+      $buffer = encodeXMLEntity(
+        entity_name => 'configurationList',
+        indent => 6,
+        entity_type => 'close',
+      );
+      print $TRAMLOUTFILE $buffer;
+
+      $buffer = encodeXMLEntity(
+        entity_name => 'transition',
+        indent => 4,
+        entity_type => 'close',
+      );
+      print $TRAMLOUTFILE $buffer;
+
+    }
+
+    $buffer = encodeXMLEntity(
+      entity_name => 'transitionList',
+      indent => 2,
+      entity_type => 'close',
+    );
+    print $TRAMLOUTFILE $buffer;
+
+  }
+
+  return(1);
+}
+
+
+
+###############################################################################
+# writeCvListSection
+###############################################################################
+sub writeCvListSection {
+  my $self = shift;
+  my %args = @_;
+
+  my $buffer = '';
+
+  $buffer .= encodeXMLEntity(
+    entity_name => 'cvList',
+    indent => 2,
+    entity_type => 'open',
+  );
+
+  $buffer .= encodeXMLEntity(
+    entity_name => 'cv',
+    indent => 4,
+    entity_type => 'openclose',
+    attributes => {
+      id => 'MS',
+      fullName => 'Proteomics Standards Initiative Mass Spectrometry Ontology',
+      version => '1.3.10',
+      URI => 'http://psidev.sourceforge.net/ms/xml/mzdata/psi-ms.2.0.2.obo',
+    },
+  );
+
+  $buffer .= encodeXMLEntity(
+    entity_name => 'cv',
+    indent => 4,
+    entity_type => 'openclose',
+    attributes => {
+      id => 'UO',
+      fullName => 'Unit Ontology',
+      version => 'unknown',
+      URI => 'http://obo.cvs.sourceforge.net/obo/obo/ontology/phenotype/unit.obo',
+    },
+  );
+
+  $buffer .= encodeXMLEntity(
+    entity_name => 'cvList',
+    indent => 2,
+    entity_type => 'close',
+  );
+
+  return $buffer;
+}
+
+
+
+###############################################################################
+# writeContactSection
+###############################################################################
+sub writeContactSection {
+  my $self = shift;
+  my %args = @_;
+
+  my $buffer = '';
+
+
+  $buffer .= encodeXMLEntity(
+    entity_name => 'contactList',
+    indent => 2,
+    entity_type => 'open',
+  );
+
+  $buffer .= encodeXMLEntity(
+    entity_name => 'contact',
+    indent => 4,
+    entity_type => 'open',
+    attributes => {
+      id => 'Eric',
+    },
+  );
+
+  $buffer .= encodeXMLEntity(
+    entity_name => 'cvParam',
+    indent => 6,
+    entity_type => 'openclose',
+    attributes => {
+      cvRef => 'MS',
+      accession => 'MS:1000586',
+      name => 'contact name',
+      value => 'Eric Deutsch',
+    },
+  );
+
+  $buffer .= encodeXMLEntity(
+    entity_name => 'cvParam',
+    indent => 6,
+    entity_type => 'openclose',
+    attributes => {
+      cvRef => 'MS',
+      accession => 'MS:1000590',
+      name => 'contact organization',
+      value => 'Institute for Systems Biology',
+    },
+  );
+
+  $buffer .= encodeXMLEntity(
+    entity_name => 'contact',
+    indent => 4,
+    entity_type => 'close',
+  );
+
+  $buffer .= encodeXMLEntity(
+    entity_name => 'contactList',
+    indent => 2,
+    entity_type => 'close',
+  );
+
+  return $buffer;
+}
+
+
+
+###############################################################################
+# writeInstrumentSection
+###############################################################################
+sub writeInstrumentSection {
+  my $self = shift;
+  my %args = @_;
+
+  my $buffer = '';
+
+
+  $buffer .= encodeXMLEntity(
+    entity_name => 'instrumentList',
+    indent => 2,
+    entity_type => 'open',
+  );
+
+  $buffer .= encodeXMLEntity(
+    entity_name => 'instrument',
+    indent => 4,
+    entity_type => 'open',
+    attributes => {
+      id => 'TSQ',
+    },
+  );
+
+  $buffer .= encodeXMLEntity(
+    entity_name => 'cvParam',
+    indent => 6,
+    entity_type => 'openclose',
+    attributes => {
+      cvRef => 'MS',
+      accession => 'MS:1000554',
+      name => 'Thermo TSQ',
+    },
+  );
+
+
+  $buffer .= encodeXMLEntity(
+    entity_name => 'instrument',
+    indent => 4,
+    entity_type => 'close',
+  );
+
+  $buffer .= encodeXMLEntity(
+    entity_name => 'instrumentList',
+    indent => 2,
+    entity_type => 'close',
+  );
+
+  return $buffer;
+}
+
+
+
+###############################################################################
+# closeTraMLFile
+###############################################################################
+sub closeTraMLFile {
+  my $self = shift;
+
+  our $TRAMLOUTFILE;
+
+  #### Close out parent element
+  my $buffer = encodeXMLEntity(
+    entity_name => 'TraML',
+    indent => 0,
+    entity_type => 'close',
+  );
+
+  print $TRAMLOUTFILE $buffer;
+
+  close($TRAMLOUTFILE);
+
+  return(1);
+}
+
+
+
+###############################################################################
+# encodeXMLEntity
+###############################################################################
+sub encodeXMLEntity {
+  my %args = @_;
+  my $entity_name = $args{'entity_name'} || die("No entity_name provided");
+  my $indent = $args{'indent'} || 0;
+  my $entity_type = $args{'entity_type'} || 'openclose';
+  my $attributes = $args{'attributes'} || '';
+
+  #### Define a string from which to get padding
+  my $padstring = '                                                       ';
+  my $compact = 1;
+
+  #### Define a stack to make user we are nesting correctly
+  our @xml_entity_stack;
+
+  #### Close tag
+  if ($entity_type eq 'close') {
+
+    #### Verify that the correct item was on top of the stack
+    my $top_entity = pop(@xml_entity_stack);
+    if ($top_entity ne $entity_name) {
+      die("ERROR forming XML: Was told to close <$entity_name>, but ".
+          "<$top_entity> was on top of the stack!");
+    }
+    return substr($padstring,0,$indent)."</$entity_name>\n";
+  }
+
+  #### Else this is an open tag
+  my $buffer = substr($padstring,0,$indent)."<$entity_name";
+
+
+  #### encode the attribute values if any
+  if ($attributes) {
+
+    while (my ($name,$value) = each %{$attributes}) {
+      if ($value  && $value ne "")
+      {
+        if ($compact) {
+        $buffer .= qq~ $name="$value"~;
+        } else {
+        $buffer .= "\n".substr($padstring,0,$indent+8).qq~$name="$value"~;
+        }
+      }
+    }
+
+  }
+
+  #### If an open and close tag, write the trailing /
+  if ($entity_type eq 'openclose') {
+    $buffer .= "/";
+
+  #### Otherwise push the entity on our stack
+  } else {
+    push(@xml_entity_stack,$entity_name);
+  }
+
+
+  $buffer .= ">\n";
+
+  return($buffer);
+
+} # end encodeXMLEntity
+
+
+
+
+###############################################################################
+1;
+
