@@ -519,15 +519,14 @@ sub getConsensusLinks {
 
   } else {
 
-    %libmap = ( 277 => 'low',
-                278 => 'mlow', 
-                279 => 'medium',
-                280 => 'mhigh', 
-                281 => 'high',
+    %libmap = ( 300 => 'low',
+                301 => 'mlow', 
+                302 => 'medium',
+                303 => 'mhigh', 
+                304 => 'high',
                  16 => 'it',
                 293 => 'qqq',
-  #             279 => 'qtof',
-                282 => 'qtrap',
+                306 => 'qtrap',
                );
   }
 
