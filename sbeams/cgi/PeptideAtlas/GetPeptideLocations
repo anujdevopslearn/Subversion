@@ -95,14 +95,14 @@ sub print_form {
    <legend>Search Peptides</legend>
     <div>
      <span class=label>Sequences:</span>
-     <textarea id="peptides" name="peptides" cols="30" rows="8">$args{peptide_string}</textarea>
+     <textarea id="peptides" name="peptides" cols="30" rows="8">$args{peptides}</textarea>
     </div>
   </fieldset>
   <fieldset>
    <legend>Search Plates</legend>
     <div>
      <span class=label>Plate Names:</span>
-     <textarea id="plates" name="plates" cols="30" rows="6">$args{plate_string}</textarea>
+     <textarea id="plates" name="plates" cols="30" rows="6">$args{plates}</textarea>
      <br>
      <span class=label>Fuzzy Match?:</span>
      <input type=checkbox id="fuzzy" name="fuzzy" $checked></input>
@@ -299,7 +299,7 @@ sub print_locations {
   my %error = ( PrintError => 1, RaiseError => 1);
   my $dbh = DBI->connect($driver,$user,$pass,\%error);
 
-  my @headings = qw( sequence freezer shelf rack box row col mw ssr isb_index peptides.status orders.name plate_barcode_id);
+  my @headings = qw( sequence well_barcode_id freezer shelf rack box row col mw ssr isb_index peptides.status orders.name plate_barcode_id plate_type conc amountMol  );
 	my $heading_str = join( ', ', @headings );
   my $sql = qq~
   SELECT $heading_str 
@@ -307,11 +307,15 @@ sub print_locations {
   JOIN locations ON locations.id = plates.location_id
   JOIN plate_peptides ON plate_peptides.plate_id = plates.id
   JOIN peptides  ON peptides.id = plate_peptides.peptide_id
-  WHERE plate_type = 'MASTER'
+  JOIN vendor_plate_detail  ON vendor_plate_detail.plate_peptide_id = plate_peptides.id
+--  WHERE plate_type = 'MASTER'
+  WHERE 1 = 1
   $peptide_and
   $plate_and
   ORDER BY orders.id ASC, plate_barcode_id ASC, row, col
   ~;
+  $headings[16] = 'nmol';
+  $headings[15] = 'mg/ml';
 
   my $sth = $dbh->prepare( $sql );
   $sth->execute();
