@@ -12,8 +12,8 @@
         date_created="CURRENT_TIMESTAMP"
         />
     <instrument_type
-        instrument_type_name="Agilent QQQ"
-        instrument_type_comment="Agilent Triple Quadrupole"
+        instrument_type_name="QQQ"
+        instrument_type_comment="Triple Quadrupole"
         is_source_instrument="Y"
         is_target_instrument="Y"
         record_status="N"
@@ -23,8 +23,8 @@
         date_created="CURRENT_TIMESTAMP"
         />
     <instrument_type
-        instrument_type_name="5500 QTrap"
-        instrument_type_comment="ABI 5500 QTrap"
+        instrument_type_name="QTrap5500"
+        instrument_type_comment="ABI QTrap 5500"
         is_source_instrument="Y"
         is_target_instrument="Y"
         record_status="N"
@@ -34,8 +34,8 @@
         date_created="CURRENT_TIMESTAMP"
         />
     <instrument_type
-        instrument_type_name="4000 QTrap"
-        instrument_type_comment="ABI 4000 QTrap"
+        instrument_type_name="QTrap4000"
+        instrument_type_comment="ABI QTrap 4000"
         is_source_instrument="Y"
         is_target_instrument="Y"
         record_status="N"
