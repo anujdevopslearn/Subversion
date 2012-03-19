@@ -75,18 +75,21 @@ sub main {
 #  die Dumper $spectrum;
 
   my @peak_array;
-  for ( my $i = 0; $i < scalar( @{$spectrum->{intensities}} ); $i++ ) {
-    push @peak_array, [$spectrum->{masses}->[$i], $spectrum->{intensities}->[$i]];
-  }
+  my $content = $sbeams->makeInfoText( "Spectrum unavailable" );
 
-  my $start_scan = 1;
-  my $spectrum_name = $spectrum->{modified_sequence} . '+' . $spectrum->{charge};
-#  die $spectrum_name;
-  my $content = "<TABLE>";
+  if ( $spectrum->{intensities} ) {
 
-  #### Lorikeet me! ##################################################
-  my $lorikeet = new SBEAMS::Proteomics::SpecViewer;
-  my $lorispectrum = $lorikeet->generateSpectrum(
+    for ( my $i = 0; $i < scalar( @{$spectrum->{intensities}} ); $i++ ) {
+      push @peak_array, [$spectrum->{masses}->[$i], $spectrum->{intensities}->[$i]];
+    }
+
+    my $start_scan = 1;
+    my $spectrum_name = $spectrum->{modified_sequence} . '+' . $spectrum->{charge};
+    $content = "<TABLE>";
+
+    #### Lorikeet me! ##################################################
+    my $lorikeet = new SBEAMS::Proteomics::SpecViewer;
+    my $lorispectrum = $lorikeet->generateSpectrum(
               charge            => $spectrum->{charge},
               modified_sequence => $spectrum->{modified_sequence},
               precursor_mass    => $spectrum->{mz},
@@ -101,10 +104,11 @@ sub main {
               spectrum          => \@peak_array 
               );
 
-  $content .= "<TR><TD>$lorispectrum</TD></TR>";
+    $content .= "<TR><TD>$lorispectrum</TD></TR>";
 
-  $content .= "</TABLE>\n";
+    $content .= "</TABLE>\n";
 
+  }
 
   if ( $parameters{plot_only} && $parameters{plot_only} =~ /true/i ) {
     print $sbeams->get_http_header();
