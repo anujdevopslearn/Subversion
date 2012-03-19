@@ -39,6 +39,7 @@ use SBEAMS::Proteomics::PeptideMassCalculator;
 my $massCalculator = new SBEAMS::Proteomics::PeptideMassCalculator;
 
 use constant ROW_LIMIT => 50000;
+use constant MZ_TOLERANCE => 0.005;
 
 # Set up Atlas objects
 my $sbeams = new SBEAMS::Connection;
@@ -1095,7 +1096,7 @@ sub fetch_transitions {
 				        $image{QQQ} = "$HTML_BASE_DIR/images/smelly.png";
 							}
 						} else {
-						  $scan_param = 'q1_tolerance=0.001';
+						  $scan_param = 'q1_tolerance=' . MZ_TOLERANCE;
               if ( $pepion2scanpath->{$ch_type}->{$link_key} ) {
                 $scan_param .= ";scan=$pepion2scanpath->{$ch_type}->{$link_key}->{scan};";
               }
