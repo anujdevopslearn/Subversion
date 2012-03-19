@@ -66,14 +66,25 @@ sub generateChromatogram {
     my @chromavis_html = <HTML>;
     my $chromavis_html = join('', @chromavis_html);
 
-    if ( $args{expand_timeframe} ) {
-      my $json_exp = $self->expand_json_timeframe( $json_string, $args{expand_timeframe} );
-      $json_string = $json_exp;
-#			die $json_exp;
-		}
-
     # Insert json string
     $chromavis_html =~ s/JSON_PLACEHOLDER/${json_string}/;
+
+    my $x_axis_settings = qq~
+      auto_scale_x : true, 
+     	min_x_axis_value : 1,
+      max_x_axis_value : 50,
+    ~;
+    if ( $args{expand_timeframe} ) {
+      my $range = $self->calculate_timeframe( $json_string, $args{expand_timeframe} );
+      $x_axis_settings = qq~
+        auto_scale_x : false, 
+     	  min_x_axis_value : $range->[0],
+        max_x_axis_value : $range->[1],
+      ~;
+		}
+
+    $chromavis_html =~ s/X_AXIS_PLACEHOLDER/$x_axis_settings/;
+
     $chromavis_html .= qq~
     <script language="javascript">
     var chromatogram_id = $chromatogram_id;
@@ -88,7 +99,7 @@ sub generateChromatogram {
     return $chromavis_html;
 }
 
-sub expand_json_timeframe {
+sub calculate_timeframe {
 	my $self = shift;
 	my $json_string = shift;
 
@@ -113,11 +124,13 @@ sub expand_json_timeframe {
 	}
 
 #	print "Saw max intensity $max_inten at $max_time seconds\n";
-	my $start_time = $max_time - $expand_by;
+	my $start_time = int( $max_time - $expand_by );
 	$start_time = 0.0 if $start_time < 0;
-	my $end_time = $max_time + $expand_by;
+	my $end_time = int( $max_time + $expand_by );
 	$min_inten ||= 10;
 #	die "max is $max_time, start is $start_time, end is $end_time, max is $max_inten and min is $min_inten\n";;
+
+  return [ $start_time, $end_time ];
 
   my $start_data = { 'time' => $start_time, intensity => $min_inten };
   my $end_data = { 'time' => $end_time, intensity => $min_inten };
