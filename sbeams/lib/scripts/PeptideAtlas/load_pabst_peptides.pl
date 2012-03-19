@@ -288,6 +288,8 @@ sub segregate_file {
   for my $opt ( qw( file index ) ) {
     die "Missing required argument $opt in segregate_file" unless defined $args{$opt};
   }
+  return unless -e $args{file};
+
   $args{tmp_path} ||= "/tmp/";
 
   $tmp_files{$args{file}} = {};
