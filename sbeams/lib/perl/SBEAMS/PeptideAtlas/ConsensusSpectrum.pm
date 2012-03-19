@@ -519,11 +519,11 @@ sub getConsensusLinks {
 
   } else {
 
-    %libmap = ( 300 => 'low',
-                301 => 'mlow', 
-                302 => 'medium',
-                303 => 'mhigh', 
-                304 => 'high',
+    %libmap = ( 307 => 'low',
+                308 => 'mlow', 
+                309 => 'medium',
+                310 => 'mhigh', 
+                311 => 'high',
                  16 => 'it',
                 293 => 'qqq',
                 306 => 'qtrap',
@@ -540,11 +540,15 @@ sub getConsensusLinks {
   my $sth = $sbeams->get_statement_handle( $ce_sql );
   while ( my @row = $sth->fetchrow_array() ) {
     $libs{$libmap{$row[3]}}->{$row[0]. $row[2]} = $row[1];
-    if ( $row[3] > 276 && $row[3] < 282 ) {
+    if ( grep /$libmap{$row[3]}/, ( qw( low mlow medium mhigh high ) )  ) {
       $libs{CE}->{$row[0]. $row[2]}++;
     }
-    next unless $row[3] == 279;
-    $libs{qtof}->{$row[0]. $row[2]} = $row[1];
+    $libs{qtof}->{$row[0]. $row[2]} = $row[1] if $libmap{$row[3]} eq 'medium';
+  }
+  if ( $libs{qtof} ) { 
+    for my $type ( qw( low mlow medium mhigh high ) ) {
+      $libs{$type} ||= {};
+    }
   }
 
   return \%libs;
