@@ -3,7 +3,7 @@
 #$Id:  $
 
 use DBI;
-use Test::More tests => 27;
+use Test::More tests => 28;
 use Test::Harness;
 use strict;
 use FindBin qw ( $Bin );
@@ -14,6 +14,7 @@ my $sbeams;
 my $atlas;
 my $pepselector;
 my $pepfragmentor;
+
 
 use_ok( 'SBEAMS::Connection' );
 use_ok( 'SBEAMS::PeptideAtlas' );
@@ -46,7 +47,7 @@ ok( test_gluc_digest() , 'Test GluC Digestion' );
 ok( test_lysc_digest() , 'Test LysC Digestion' );
 ok( test_orig_lysc_digest() , 'Test Original LysC Digestion' );
 ok( test_charge_matrix(), 'Test Charge Matrix' );
-
+ok( test_spectrum_comparator(), 'Test Spectrum comparator' );
 
 sub test_bad_peptide {
 # A very bad peptide, should hit the following penalties!
@@ -492,7 +493,34 @@ sub test_orig_lysc_digest {
   return ( $err ) ? 0 : 1;
 }
 
-
+sub test_spectrum_comparator {
+  use lib '/net/db/projects/spectraComparison';
+  $ENV{SSRCalc} = '/net/db/src/SSRCalc/ssrcalc';
+  require FragmentationComparator;
+  my $pep = 'AAASC[160]GAEGGK';
+  my $chg = 2;
+  my $modelmap = '/net/db/projects/spectraComparison/FragModel_AgilentQTOF.fragmod';
+  my $fc = new FragmentationComparator;
+  $fc->loadFragmentationModel( filename => $modelmap );
+  $fc->setUseBondInfo(1);
+  $fc->setNormalizationMethod(1);
+#  my $results = "Pre-norm\n";
+  my $spec = $fc->synthesizeIon( "$pep/$chg");
+#  for my $mz ( @{$spec->{mzIntArray}} ) {
+#    next if $mz->[1] < 0.1;
+#    $results .= $mz->[2] . $mz->[3] . '^' . $mz->[4] . "($mz->[0]) = " . $mz->[1] . "\n";
+#  }
+  $fc->normalizeSpectrum($spec);
+#  $results .= "\nPost-norm\n";
+#  for my $mz ( @{$spec->{mzIntArray}} ) {
+#    next if $mz->[1] < 0.1;
+#    $results .= $mz->[2] . $mz->[3] . '^' . $mz->[4] . "($mz->[0]) = " . $mz->[1] . "\n";
+#  }
+  if ( ref($spec) eq 'HASH' ) {
+    return 1;
+  }
+  return 0;
+}
 
 sub test_ECS_calculator {
   my $peptide = 'ARVLSQ';
