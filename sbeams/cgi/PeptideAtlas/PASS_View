@@ -790,6 +790,9 @@ sub getPASSMetaData {
   }
 
   my $PASS_ACCOUNTS_BASE = '/prometheus/u1/home';
+  unless ( -d "$PASS_ACCOUNTS_BASE/${identifier}" ) {
+    $PASS_ACCOUNTS_BASE = '/regis/passdata/home';
+  }
 
   my $infile = "$PASS_ACCOUNTS_BASE/${identifier}/${identifier}_DESCRIPTION.txt";
   unless (open(INFILE,$infile)) {
@@ -884,6 +887,10 @@ sub DisplayPASSDirListing {
   my $response;
 
   my $PASS_ACCOUNTS_BASE = '/prometheus/u1/home';
+  unless ( -d "$PASS_ACCOUNTS_BASE/${identifier}" ) {
+    $PASS_ACCOUNTS_BASE = '/regis/passdata/home';
+  }
+
   my $PASS_PROCESSING_BASE = '/regis/sbeams/PASS';
 
   my $base = $PASS_ACCOUNTS_BASE;
@@ -998,6 +1005,10 @@ sub showFile {
   my $response;
 
   my $PASS_ACCOUNTS_BASE = '/prometheus/u1/home';
+  unless ( -d "$PASS_ACCOUNTS_BASE/${identifier}" ) {
+    $PASS_ACCOUNTS_BASE = '/regis/passdata/home';
+  }
+
   my $PASS_PROCESSING_BASE = '/regis/sbeams/PASS';
 
   my $base = $PASS_ACCOUNTS_BASE;
