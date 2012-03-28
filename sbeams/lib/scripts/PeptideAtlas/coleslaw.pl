@@ -80,11 +80,12 @@ sub find_q3_ion {
     my $matches = 0;
     my $num_ions;
     my $ann = '';
-    my $closest = 0.2;
+    my $closest = $opts{q3_mass_tolerance};
 
     foreach my $ion ( @{$ions} ) {
 	$num_ions++;
 
+	# find only closest match -- add logic to select in rank order: y, y++, b, b++ ?
 	my $mdiff = ($q3_mz - $ion->{mz});
 	if ( abs($mdiff) < $closest ) {
 	    $ann = "$ion->{label_st}/".sprintf "%.2f", $mdiff;
@@ -95,7 +96,7 @@ sub find_q3_ion {
 	}
     }
 
-    print "[WARN] Multiple ($matches) fragment ions found within 0.2 mass tolerance; keeping the closest match.\n" if ($matches gt 1);
+    print "[WARN] Multiple ($matches) fragment ions found within $opts{q3_mass_tolerance} mass tolerance; keeping the closest match.\n" if ($matches gt 1);
 
     if ($ann) {
 	return $ann;
@@ -134,7 +135,13 @@ sub process_transition_data {
 	$rowdata{monoisotopic_peptide_mass} = $mw;
 
     } elsif ( abs($data->{monoisotopic_peptide_mass} - $mw) > 0.2) {
-	print "$entry_txt Mass difference of precursor is TOO LARGE; will correct:  Database: $data->{monoisotopic_peptide_mass} :: $mw\n";
+	print "$entry_txt Mass difference of precursor is TOO LARGE; will correct:  Database: $data->{monoisotopic_peptide_mass} :: $mw";
+
+	if ( abs($data->{monoisotopic_peptide_mass} - $mw) > 1.1) {
+	    print " *** Missed a modification?? (delta=".abs($data->{monoisotopic_peptide_mass} - $mw).")\n";
+	} else {
+	    print "\n";
+	}
 	$rowdata{monoisotopic_peptide_mass} = $mw;
 	$orig_vals .= sprintf "MonoisotopicMass:%.1f;", $data->{monoisotopic_peptide_mass};
 
@@ -326,7 +333,7 @@ sub get_set_data {
 
 sub process_options {
     GetOptions( \%opts,"verbose", "testonly",
-		"srm_transitions_set_id:s", "username:s" ) || print_usage();
+		"srm_transitions_set_id:s", "q3_mass_tolerance:s" ) || print_usage();
 
     unless ( $opts{srm_transitions_set_id} ) {
 	print_usage( "Missing required param srm_transition_set_id" );
@@ -334,6 +341,7 @@ sub process_options {
 
     $opts{verbose} ||= 0;
     $opts{testonly} ||= 0;
+    $opts{q3_mass_tolerance} ||= 0.2;
 }
 
 
@@ -349,6 +357,7 @@ Options:
   -v, --verbose                   Set verbose mode
   -t, --testonly                  If set, rows in the database are not changed or added
   -s, --srm_transitions_set_id    SRM transitions set ID to check
+  -q, --q3_mass_tolerance         Largest mass window in which to look for a matching q3 ion (default: 0.2)
 
 EOU
     exit;
