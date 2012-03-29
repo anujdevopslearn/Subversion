@@ -164,6 +164,9 @@ sub displayGuestPageHeader {
   }
   my $LOGIN_LINK = qq~<A HREF="$LOGIN_URI" class="Nav_link">LOGIN</A>~;
 
+  my $doctype = '<!DOCTYPE HTML>' . "\n";
+  $doctype = '' unless $args{show_doctype}; 
+
 
 	my $sbeams = $self->getSBEAMS();
   my $message = $sbeams->get_page_message();
@@ -199,6 +202,15 @@ sub displayGuestPageHeader {
   }
   my $response = $ua->request( HTTP::Request->new( GET => "$skinLink" ) );
   my @page = split( "\n", $response->content() );
+	if ( $args{show_doctype} ) {
+    my $first = shift @page;
+		if ( $first =~ /doctype/i ) {
+			$log->debug( "Got it!" );
+		} else {
+		  unshift @page, $first;
+		}
+		unshift @page, $doctype;
+	}
   my $skin = '';
   my $cnt=0;
   my $init = ( $args{init_tooltip} ) ? $self->init_pa_tooltip() : '';
@@ -256,8 +268,11 @@ sub displayStandardPageHeader {
 
   my $message = $sbeams->get_page_message();
 
+  my $doctype = '<!DOCTYPE HTML>' . "\n";
+  $doctype = '' unless $args{show_doctype}; 
+
   print qq~$http_header
-	<HTML><HEAD>
+	$doctype<HTML><HEAD>
 	<TITLE>$DBTITLE - $SBEAMS_PART</TITLE>
   ~;
 
