@@ -85,7 +85,19 @@ sub print_form {
 
   my %args = @_;
 
-  my $checked = ( $args{fuzzy} ) ? 'checked' : '';
+  my $fuzz_checked = ( $args{fuzzy} ) ? 'checked' : '';
+
+  my $tmp_checked = ( $args{tmp_plate} ) ? 'checked' : '';
+
+
+  my %type_checked = ( m => 'checked', w => '', b => '' );
+  if ( $args{type} eq 'Both' ) {
+    $type_checked{m} = '';
+    $type_checked{b} = 'checked';
+  } elsif ( $args{type} eq 'Working' ) {
+    $type_checked{m} = '';
+    $type_checked{w} = 'checked';
+  }
 
   print qq~
 	
@@ -104,8 +116,19 @@ sub print_form {
      <span class=label>Plate Names:</span>
      <textarea id="plates" name="plates" cols="30" rows="6">$args{plates}</textarea>
      <br>
+     <span class=label>Plate type:</span>
+     <input type=radio id="type" name="type" value='Master' align=left $type_checked{m} >Master</input>
+     <input type=radio id="type" name="type" value='Working' align=left $type_checked{w}>Working</input>
+     <input type=radio id="type" name="type" value='Both' align=left $type_checked{b}>Both</input>
+     <br>
+    </div>
+    <div>
+     <span class=label>Add tmp well?:</span>
+     <input type=checkbox id="tmp_plate" name="tmp_plate" $tmp_checked></input>
+    </div>
+    <div>
      <span class=label>Fuzzy Match?:</span>
-     <input type=checkbox id="fuzzy" name="fuzzy" $checked></input>
+     <input type=checkbox id="fuzzy" name="fuzzy" $fuzz_checked></input>
     </div>
   </fieldset>
  
@@ -314,17 +337,46 @@ sub print_locations {
   $plate_and
   ORDER BY orders.id ASC, plate_barcode_id ASC, row, col
   ~;
-  $headings[16] = 'nmol';
   $headings[15] = 'mg/ml';
+  $headings[16] = 'nmol';
+
+   my @wells;
+   if ( $params->{tmp_plate} ) {
+     $headings[17] = 'tmp_well';
+     for my $row ( 'A'..'H' ) {
+       for my $col ( 1..12 ) {
+         my $pcol = ( $col > 9 ) ? $col : '0' . $col;
+         push @wells, $row . $pcol;
+       }
+     }
+   }
 
   my $sth = $dbh->prepare( $sql );
   $sth->execute();
 	my @peptides;
   push @headings, 'Protein ACC';
+  my $tmp_plate = 1;
   while ( my @row = $sth->fetchrow_array() ) {
     my $prot = $pep2prot{$row[0]} || '';
 		$row[10] = ucfirst( lc($row[10]) );
-		push @peptides, [@row, $prot];
+    
+    if ( $params->{tmp_plate} ) {
+      my $well = shift @wells;
+      
+      my $plate_well = $tmp_plate . '_' . $well;
+      $tmp_plate++ if $well eq 'H12';
+
+      push @row, $plate_well;
+      push @wells, $well;
+    }
+
+    if ( $params->{type} =~ /both/i ) {
+	  	push @peptides, [@row, $prot];
+    } elsif ( $params->{type} =~ /working/i ) {
+	  	push @peptides, [@row, $prot] if $row[14] =~ /working/i;
+    } elsif ( $params->{type} =~ /master/i ) {
+	  	push @peptides, [@row, $prot] if $row[14] =~ /master/i;
+    }
   }
 
 unshift @peptides, \@headings;
