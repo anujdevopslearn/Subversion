@@ -359,6 +359,12 @@ sub print_locations {
   while ( my @row = $sth->fetchrow_array() ) {
     my $prot = $pep2prot{$row[0]} || '';
 		$row[10] = ucfirst( lc($row[10]) );
+
+    if ( $params->{type} =~ /working/i ) {
+	  	next if $row[14] =~ /master/i;
+    } elsif ( $params->{type} =~ /master/i ) {
+	  	next if $row[14] =~ /working/i;
+    }
     
     if ( $params->{tmp_plate} ) {
       my $well = shift @wells;
@@ -369,14 +375,8 @@ sub print_locations {
       push @row, $plate_well;
       push @wells, $well;
     }
+	  push @peptides, [@row, $prot];
 
-    if ( $params->{type} =~ /both/i ) {
-	  	push @peptides, [@row, $prot];
-    } elsif ( $params->{type} =~ /working/i ) {
-	  	push @peptides, [@row, $prot] if $row[14] =~ /working/i;
-    } elsif ( $params->{type} =~ /master/i ) {
-	  	push @peptides, [@row, $prot] if $row[14] =~ /master/i;
-    }
   }
 
 unshift @peptides, \@headings;
