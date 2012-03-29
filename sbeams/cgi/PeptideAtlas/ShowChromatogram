@@ -83,7 +83,7 @@ sub main {
 
 
   #### Process certain actions, then print the header, figure and do what the user wants, and print footer
-  $sbeamsMOD->display_page_header();
+  $sbeamsMOD->display_page_header( show_doctype => 1 );
   #processRequest();
   processRequest(ref_parameters=>\%parameters);
   $sbeamsMOD->display_page_footer();
