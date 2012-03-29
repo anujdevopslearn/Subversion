@@ -86,8 +86,11 @@ sub printPageHeader {
   my $http_header = $self->get_http_header( $self->get_output_mode() );
   print $http_header;
 
+  my $doctype = '<!DOCTYPE HTML>' . "\n";
+  $doctype = '' unless $args{show_doctype}; 
+    
   print qq~
-	<HTML><HEAD>
+	$doctype<HTML><HEAD>
 	<TITLE>$DBTITLE - Systems Biology Experiment Analysis Management System</TITLE>
   ~;
 
