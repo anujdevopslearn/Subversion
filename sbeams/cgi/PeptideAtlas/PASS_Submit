@@ -745,6 +745,24 @@ sub validateDatasetAnnotations {
     push(@{$response->{errors}},"Mass modifications must be a string with length more than 3 up to 1000");
   }
 
+  #### Email Eric about the submission problem
+  my (@toRecipients,@ccRecipients,@bccRecipients);
+  @toRecipients = (
+    'Eric Deutsch','eric.deutsch@systemsbiology.org',
+  );
+  @ccRecipients = ();
+  @bccRecipients = ();
+  my $adminMessage = qq~A new PASS submission has having difficulty:\n
+Submitter: $formParameters->{firstName} $formParameters->{lastName} <$formParameters->{emailAddress}>
+~;
+  $adminMessage .= join("\n",@{$response->{errors}});
+  sendEmail(
+    toRecipients=>\@toRecipients,
+    ccRecipients=>\@ccRecipients,
+    bccRecipients=>\@bccRecipients,
+    subject=>"PeptideAtlas dataset submission difficulty",
+    message=>"$adminMessage\n\n",
+  );
 
   return $response;
 
@@ -895,25 +913,33 @@ Thank you again for your contribution. If you have comments about this submissio
   $confirmationMessage =~ s/\<\/a\>//g;
 
   #### Send the submitter the information by email
-  my $mailprog = "/usr/lib/sendmail";
-  my $recipient_name = "$formParameters->{firstName} $formParameters->{lastName}";
-  my $recipient = $formParameters->{emailAddress};
-  my $cc_name = "SBEAMS";
-  my $cc = "edeutsch\@systemsbiology.org";
-
-  open (MAIL, "|$mailprog $recipient") || die("Can't open $mailprog!\n");
-  print MAIL "From: PeptideAtlas Agent <edeutsch\@db.systemsbiology.net>\n";
-  print MAIL "To: $recipient_name <$recipient>\n";
-  #print MAIL "Cc: $cc_name <$cc>\n";
-  print MAIL "Reply-to: PeptideAtlas Agent <edeutsch\@db.systemsbiology.net>\n";
-  print MAIL "Subject: PeptideAtlas dataset submission $datasetIdentifier\n\n";
-  print MAIL "Dear $formParameters->{firstName},\n\n$confirmationMessage\n\n";
-  close (MAIL);
+  my (@toRecipients,@ccRecipients,@bccRecipients);
+  @toRecipients = (
+    "$formParameters->{firstName} $formParameters->{lastName}",$formParameters->{emailAddress},
+  );
+  @ccRecipients = ();
+  @bccRecipients = (
+    'Eric Deutsch','eric.deutsch@systemsbiology.org',
+  );
+  sendEmail(
+    toRecipients=>\@toRecipients,
+    ccRecipients=>\@ccRecipients,
+    bccRecipients=>\@bccRecipients,
+    subject=>"PeptideAtlas dataset submission $datasetIdentifier",
+    message=>"Dear $formParameters->{firstName},\n\n$confirmationMessage\n\n",
+  );
 
 
   #### Email Eric about the submission
+  @toRecipients = (
+    'Eric Deutsch','eric.deutsch@systemsbiology.org',
+    'Terry Farrah','terry.farrah@systemsbiology.org',
+    'Zhi Sun','zhi.sun@systemsbiology.org',
+  );
+  @ccRecipients = ();
+  @bccRecipients = ();
   my $adminMessage = qq~A new PASS submission has occurred:\n
-Submitter: $recipient_name <$recipient>
+Submitter: $formParameters->{firstName} $formParameters->{lastName} <$formParameters->{emailAddress}>
 URL: http://www.peptideatlas.org/PASS/$datasetIdentifier
 Username: $datasetIdentifier
 Password: $datasetPassword
@@ -921,20 +947,13 @@ Full URL: ftp://$datasetIdentifier:$datasetPassword\@ftp.peptideatlas.org/
 
 $metadata
 ~;
-  $recipient_name = "PeptideAtlas Admin";
-  $recipient = 'Eric.Deutsch@systemsbiology.org';
-
-  open (MAIL, "|$mailprog $recipient") || die("Can't open $mailprog!\n");
-  print MAIL "From: PeptideAtlas Agent <edeutsch\@db.systemsbiology.net>\n";
-  print MAIL "To: $recipient_name <$recipient>\n";
-  #print MAIL "Cc: $cc_name <$cc>\n";
-  print MAIL "Reply-to: PeptideAtlas Agent <edeutsch\@db.systemsbiology.net>\n";
-  print MAIL "Subject: PeptideAtlas dataset submission $datasetIdentifier\n\n";
-  print MAIL "$adminMessage\n\n";
-  close (MAIL);
-
-
-
+  sendEmail(
+    toRecipients=>\@toRecipients,
+    ccRecipients=>\@ccRecipients,
+    bccRecipients=>\@bccRecipients,
+    subject=>"PeptideAtlas dataset submission $datasetIdentifier",
+    message=>"$adminMessage\n\n",
+  );
 
   return $response;
 
@@ -965,4 +984,77 @@ sub generatePassword {
   $password =~ s/l/m/g;
 
   return($password);
+}
+
+
+#######################################################################
+# sendEmail
+#######################################################################
+sub sendEmail {
+  my %args = @_;
+  my $SUB_NAME = 'sendEmail';
+
+  #### Decode the argument list
+  my $toRecipients = $args{'toRecipients'} || die "[$SUB_NAME] ERROR: toRecipients  not passed";
+  my $ccRecipients = $args{'ccRecipients'} || die "[$SUB_NAME] ERROR: ccRecipients not passed";
+  my $bccRecipients = $args{'bccRecipients'} || die "[$SUB_NAME] ERROR: bccRecipients not passed";
+  my $subject = $args{'subject'} || die "[$SUB_NAME] ERROR: subject not passed";
+  my $message = $args{'message'} || die "[$SUB_NAME] ERROR: message not passed";
+
+  my @toRecipients = @{$toRecipients};
+  my @ccRecipients = @{$ccRecipients};
+  my @bccRecipients = @{$bccRecipients};
+
+  my $toLine = '';
+  my $ccLine = '';
+  my $recipients = '';
+
+  #### Process recipients in the To: part
+  for (my $i=0; $i<scalar(@toRecipients); $i+=2) {
+    my $j = $i+1;
+    $toLine .= " $toRecipients[$i] <$toRecipients[$j]>,";
+    $recipients .= "$toRecipients[$j],";
+  }
+
+  #### Process recipients in the Cc: part
+  if (scalar(@ccRecipients) > 1) {
+    for (my $i=0; $i<scalar(@ccRecipients); $i+=2) {
+      my $j = $i+1;
+      $ccLine .= " $ccRecipients[$i] <$ccRecipients[$j]>,";
+      $recipients .= "$ccRecipients[$j],";
+    }
+  }
+
+  #### Process recipients in the Bcc: part
+  if (scalar(@bccRecipients) > 1) {
+    for (my $i=0; $i<scalar(@bccRecipients); $i+=2) {
+      my $j = $i+1;
+      $recipients .= "$bccRecipients[$j],";
+    }
+  }
+
+  #### Remove trailing commas
+  chop($toLine);
+  chop($ccLine);
+  chop($recipients);
+
+  #### Create message
+  my $content = '';
+  $content .= "From: PeptideAtlas Agent <sbeams\@systemsbiology.org>\n";
+  $content .= "To:$toLine\n";
+  $content .= "Cc:$ccLine\n" if ($ccLine);
+  $content .= "Reply-to: PeptideAtlas Agent <sbeams\@systemsbiology.org>\n";
+  $content .= "Subject: $subject\n\n";
+  $content .= $message;
+
+  if (1) {
+    my $mailprog = "/usr/lib/sendmail";
+    open (MAIL, "|$mailprog $recipients") || die("Can't open $mailprog!\n");
+    print MAIL $content;
+    close (MAIL);
+  } else {
+    print $content;
+  }
+
+  return(1);
 }
