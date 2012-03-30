@@ -35,6 +35,7 @@ use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TabMenu;
+use SBEAMS::Connection::Utilities;
 
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
@@ -291,11 +292,12 @@ sub handle_request {
 
   #### If the desired action was to finalize the dataset
   if ($action =~ /FINALIZE/i && ! @errors ) {
-    if ($authentication->{result} eq 'Success' && $emailAddress eq $datasetMetadata->{emailAddress}) {
+    if ($authentication->{result} eq 'Success' &&
+        ($emailAddress eq $datasetMetadata->{emailAddress})) {
       finalizeDataset(authentication=>$authentication,identifier=>$parameters{'identifier'});
       $datasetMetadata = getPASSMetaData(identifier=>$datasetIdentifier);
     } else {
-      push(@errors,@{$authentication->{errors}});
+      push(@errors,@{$authentication->{errors}}) if ($authentication->{errors});
     }
   }
 
@@ -454,7 +456,8 @@ sub handle_request {
      }
 
 
-     if ($datasetMetadata->{result} eq 'Success' && $emailAddress eq $datasetMetadata->{emailAddress}) {
+     if ($datasetMetadata->{result} eq 'Success' &&
+         ($emailAddress eq $datasetMetadata->{emailAddress}) || $isAdmin) {
        if ($datasetMetadata->{finalizedDate}) {
        } else {
          print "<B><font color=\"red\">Notice:</B></font> This dataset has not yet been marked as finalized!<BR>";
@@ -465,6 +468,7 @@ sub handle_request {
          print "<BR>\n";
          print "<HR>\n";
        }
+     } else {
      }
 
      #### Display the password if the user is the owner or an admin
@@ -644,6 +648,7 @@ sub registerUser {
   } else {
     $response->{result} = 'Failed';
   }
+
 
   return $response;
 
@@ -1057,8 +1062,9 @@ sub finalizeDataset {
   my $authentication = $args{'authentication'} || die "[$SUB_NAME] ERROR: authentication not passed";
   my $identifier = $args{'identifier'} || die "[$SUB_NAME] ERROR: identifier not passed";
 
+  my $PK;
   if ($identifier =~ /^PASS(\d+)$/) {
-    my $PK = $1;
+    $PK = $1;
     my %rowdata = ( finalizedDate => 'CURRENT_TIMESTAMP' );
     my $result = $sbeams->updateOrInsertRow(
 					  update => 1,
@@ -1079,6 +1085,25 @@ sub finalizeDataset {
   } else {
     print "ERROR: Unable to parse identifier '$identifier'. Please report this. ERROR449<BR>\n";
   }
+
+  #### Email PeptideAtlas team about the finalization
+  my @toRecipients = (
+    'Eric Deutsch','eric.deutsch@systemsbiology.org',
+    'Terry Farrah','terry.farrah@systemsbiology.org',
+    'Zhi Sun','zhi.sun@systemsbiology.org',
+  );
+  my @ccRecipients = ();
+  my @bccRecipients = ();
+  my $adminMessage = qq~PASS submission PASS$PK has been finalized.\n
+  To view the dataset, go to https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/PASS_View?identifier=PASS$PK
+~;
+  SBEAMS::Connection::Utilities::sendEmail(
+    toRecipients=>\@toRecipients,
+    ccRecipients=>\@ccRecipients,
+    bccRecipients=>\@bccRecipients,
+    subject=>"PeptideAtlas dataset PASS$PK finalized",
+    message=>"$adminMessage\n\n",
+  );
 
   return;
 }

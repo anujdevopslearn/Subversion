@@ -35,6 +35,7 @@ use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TabMenu;
+use SBEAMS::Connection::Utilities;
 
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
@@ -419,7 +420,7 @@ sub handle_request {
        print $q->submit(-name => "action",
 			-value => 'REGISTER',
 			-label => 'REGISTER');
-       print "<BR>\n";
+       print "&nbsp;&nbsp;(Click before completing remainder of form.)<BR>\n";
      }
      print "<HR>\n";
 
@@ -488,7 +489,7 @@ sub handle_request {
      print "<BR>\n";
 
      print "<B><font color=\"red\">Mass modifications</B></font> (Enter any mass modifications applied to the sample)<BR>\n";
-     print "(Please use the format: static: C+57.021464, variable: K+8.014199, R+10.008269)<BR>\n";
+     print "(Please use the format: static: C+57.021464, variable: K+8.014199, R+10.008269, or \"none\" if none.)<BR>\n";
      print $q->textarea( "massModifications", $parameters{'massModifications'}, 2, 40);
      print "<BR>\n";
      print "<HR>\n";
@@ -746,23 +747,25 @@ sub validateDatasetAnnotations {
   }
 
   #### Email Eric about the submission problem
-  my (@toRecipients,@ccRecipients,@bccRecipients);
-  @toRecipients = (
-    'Eric Deutsch','eric.deutsch@systemsbiology.org',
-  );
-  @ccRecipients = ();
-  @bccRecipients = ();
-  my $adminMessage = qq~A new PASS submission has having difficulty:\n
-Submitter: $formParameters->{firstName} $formParameters->{lastName} <$formParameters->{emailAddress}>
-~;
-  $adminMessage .= join("\n",@{$response->{errors}});
-  sendEmail(
-    toRecipients=>\@toRecipients,
-    ccRecipients=>\@ccRecipients,
-    bccRecipients=>\@bccRecipients,
-    subject=>"PeptideAtlas dataset submission difficulty",
-    message=>"$adminMessage\n\n",
-  );
+  if (defined $response->{errors}) {
+    my (@toRecipients,@ccRecipients,@bccRecipients);
+    @toRecipients = (
+      'Eric Deutsch','eric.deutsch@systemsbiology.org',
+    );
+    @ccRecipients = ();
+    @bccRecipients = ();
+    my $adminMessage = qq~A new PASS submission has been having difficulty:\n
+  Submitter: $formParameters->{firstName} $formParameters->{lastName} <$formParameters->{emailAddress}>
+  ~;
+    $adminMessage .= join("\n",@{$response->{errors}});
+    SBEAMS::Connection::Utilities::sendEmail(
+      toRecipients=>\@toRecipients,
+      ccRecipients=>\@ccRecipients,
+      bccRecipients=>\@bccRecipients,
+      subject=>"PeptideAtlas dataset submission difficulty",
+      message=>"$adminMessage\n\n",
+    );
+  }
 
   return $response;
 
@@ -921,7 +924,7 @@ Thank you again for your contribution. If you have comments about this submissio
   @bccRecipients = (
     'Eric Deutsch','eric.deutsch@systemsbiology.org',
   );
-  sendEmail(
+  SBEAMS::Connection::Utilities::sendEmail(
     toRecipients=>\@toRecipients,
     ccRecipients=>\@ccRecipients,
     bccRecipients=>\@bccRecipients,
@@ -930,7 +933,7 @@ Thank you again for your contribution. If you have comments about this submissio
   );
 
 
-  #### Email Eric about the submission
+  #### Email PeptideAtlas team about the submission
   @toRecipients = (
     'Eric Deutsch','eric.deutsch@systemsbiology.org',
     'Terry Farrah','terry.farrah@systemsbiology.org',
@@ -947,7 +950,7 @@ Full URL: ftp://$datasetIdentifier:$datasetPassword\@ftp.peptideatlas.org/
 
 $metadata
 ~;
-  sendEmail(
+  SBEAMS::Connection::Utilities::sendEmail(
     toRecipients=>\@toRecipients,
     ccRecipients=>\@ccRecipients,
     bccRecipients=>\@bccRecipients,
@@ -984,77 +987,4 @@ sub generatePassword {
   $password =~ s/l/m/g;
 
   return($password);
-}
-
-
-#######################################################################
-# sendEmail
-#######################################################################
-sub sendEmail {
-  my %args = @_;
-  my $SUB_NAME = 'sendEmail';
-
-  #### Decode the argument list
-  my $toRecipients = $args{'toRecipients'} || die "[$SUB_NAME] ERROR: toRecipients  not passed";
-  my $ccRecipients = $args{'ccRecipients'} || die "[$SUB_NAME] ERROR: ccRecipients not passed";
-  my $bccRecipients = $args{'bccRecipients'} || die "[$SUB_NAME] ERROR: bccRecipients not passed";
-  my $subject = $args{'subject'} || die "[$SUB_NAME] ERROR: subject not passed";
-  my $message = $args{'message'} || die "[$SUB_NAME] ERROR: message not passed";
-
-  my @toRecipients = @{$toRecipients};
-  my @ccRecipients = @{$ccRecipients};
-  my @bccRecipients = @{$bccRecipients};
-
-  my $toLine = '';
-  my $ccLine = '';
-  my $recipients = '';
-
-  #### Process recipients in the To: part
-  for (my $i=0; $i<scalar(@toRecipients); $i+=2) {
-    my $j = $i+1;
-    $toLine .= " $toRecipients[$i] <$toRecipients[$j]>,";
-    $recipients .= "$toRecipients[$j],";
-  }
-
-  #### Process recipients in the Cc: part
-  if (scalar(@ccRecipients) > 1) {
-    for (my $i=0; $i<scalar(@ccRecipients); $i+=2) {
-      my $j = $i+1;
-      $ccLine .= " $ccRecipients[$i] <$ccRecipients[$j]>,";
-      $recipients .= "$ccRecipients[$j],";
-    }
-  }
-
-  #### Process recipients in the Bcc: part
-  if (scalar(@bccRecipients) > 1) {
-    for (my $i=0; $i<scalar(@bccRecipients); $i+=2) {
-      my $j = $i+1;
-      $recipients .= "$bccRecipients[$j],";
-    }
-  }
-
-  #### Remove trailing commas
-  chop($toLine);
-  chop($ccLine);
-  chop($recipients);
-
-  #### Create message
-  my $content = '';
-  $content .= "From: PeptideAtlas Agent <sbeams\@systemsbiology.org>\n";
-  $content .= "To:$toLine\n";
-  $content .= "Cc:$ccLine\n" if ($ccLine);
-  $content .= "Reply-to: PeptideAtlas Agent <sbeams\@systemsbiology.org>\n";
-  $content .= "Subject: $subject\n\n";
-  $content .= $message;
-
-  if (1) {
-    my $mailprog = "/usr/lib/sendmail";
-    open (MAIL, "|$mailprog $recipients") || die("Can't open $mailprog!\n");
-    print MAIL $content;
-    close (MAIL);
-  } else {
-    print $content;
-  }
-
-  return(1);
 }
