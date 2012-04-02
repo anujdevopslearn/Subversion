@@ -325,13 +325,13 @@ if ($activate_PASSEL) {
   #$tabmenu->addTab( label => 'PASSEL' );   # let's fold into SRMAtlas
 
     $tabmenu->addMenuItem( tablabel => 'SRMAtlas',
-			   label => 'SRM Experiments',
+			   label => 'PASSEL Experiments',
 			   helptext => 'Browse SRM experiments',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/GetSELExperiments"
 			   );
 
     $tabmenu->addMenuItem( tablabel => 'SRMAtlas',
-			   label => 'SRM Experimental Data',
+			   label => 'PASSEL Data',
 			   helptext => 'View transition groups for SRM experiments',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions"
 			   );
