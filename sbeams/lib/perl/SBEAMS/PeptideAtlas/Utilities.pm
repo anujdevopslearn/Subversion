@@ -1316,6 +1316,88 @@ sub make_qtrap5500_target_list {
   return $file_path;
 }
 
+sub get_qqq_unscheduled_transition_list {
+
+  my $self = shift;
+  my $tsv = shift || return '';
+
+  my $method = qq~MRM
+Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Dwell	Fragmentor	Collision Energy	Cell Accelerator Voltage	Polarity	Ion type
+~;
+
+  my $w = 'Wide';
+  my $f = 125;
+  my $d = 10;
+  my $v = 5;
+	my $u = 'Unit';
+	my $p = 'Positive';
+
+	for my $row ( @{$tsv} ) {
+		my @line = @{$row};
+    next if $line[0] eq 'Protein';
+    my $acc = $line[0];
+    my $seq = $line[2];
+    my $q1 = $line[6];
+    my $q1c = $line[7];
+    my $q3 = $line[8];
+    my $q3c = $line[9];
+    my $lbl = $line[10];
+    my $ion = $q1c . $lbl . '-' . $q3c;
+    my $rt = $line[13];
+    my $rtd = 5;
+    my $name = $acc . '.' . $seq;
+
+    my $ce = ( $q1c == 2 ) ? sprintf( "%0.2f", ( 2.93 * $q1 )/100 + 6.72 ) : 
+				                     sprintf( "%0.2f", ( 3.6 * $q1 )/100 - 4.8 );
+
+    my $istd = 'False';
+    $istd = 'True'  if $seq =~ /6\]$/;
+
+    $method .= join( "\t", $name, $istd, $q1, $w, $q3, $u, $d, $f, $ce, $v, $p, $ion ) . "\n";
+	}
+  return $method;
+}
+## END
+
+sub get_qqq_dynamic_transition_list {
+
+  my $self = shift;
+  my $tsv = shift || return '';
+
+  my $method = qq~Dynamic MRM
+Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Fragmentor	Collision Energy	Cell Accelerator Voltage	Ret Time (min)	Delta Ret Time	Polarity	Ion type
+~;
+
+	my $u = 'Unit';
+	my $p = 'Positive';
+
+	for my $row ( @{$tsv} ) {
+		my @line = @{$row};
+    next if $line[0] eq 'Protein';
+    my $acc = $line[0];
+    my $seq = $line[2];
+    my $q1 = $line[6];
+    my $q1c = $line[7];
+    my $q3 = $line[8];
+    my $q3c = $line[9];
+    my $lbl = $line[10];
+    my $ion = $lbl . '-' . $q3c;
+    my $rt = $line[13];
+    my $rtd = 5;
+    my $name = $acc . '.' . $seq;
+
+    my $ce = ( $q1c == 2 ) ? sprintf( "%0.2f", ( 2.93 * $q1 )/100 + 6.72 ) : 
+				                     sprintf( "%0.2f", ( 3.6 * $q1 )/100 - 4.8 );
+
+    my $istd = 'False';
+    $istd = 'True' if $seq =~ /6\]$/;
+    $method .= join( "\t", $name, $istd, $q1, $u, $q3, $u, 125, $ce, 5, $rt, $rtd, $p, $ion ) . "\n";
+	}
+  return $method;
+}
+
+
+
 sub extract_link {
   my $self = shift;
   my $url = shift;
