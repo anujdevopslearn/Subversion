@@ -49,6 +49,7 @@ Options:
                                 Implies --tr_format csv.
   --spectra                   Spectrum file in .mzXML or .mzML format
                                If not provided, assume same basename as transition file.
+  --purge                     Purge before loading
   --mult_tg_per_q1            Multiple transition groups measured per Q1
 				(e.g. to detect different phospho sites)
   --q1_tolerance              For matching Q1 in Tx file vs. spectrum file.
@@ -56,6 +57,8 @@ Options:
   --q3_tolerance              Default: same as q1_tolerance
   --mquest                    mQuest output file (not needed if mProphet?)
   --mprophet                  mProphet output file
+  --scores_only               Load mQuest/mProphet scores only; everything else
+                                already loaded.
   --noload_pi                 Don't load peptide ion records
   --noload_tg                 Don't load transition group records
   --noload_tr                 Don't load transition records
@@ -67,9 +70,9 @@ EOU
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly","help",
         "transitions:s", "spectra:s", "mprophet:s", "tr_format:s",
-        "noload_pi", "noload_tg", "noload_tr", "noload_ch",
+        "noload_pi", "noload_tg", "noload_tr", "noload_ch", "scores_only",
         "ruth_prelim", "ruth_2011",  "ATAQS", "mquest:s",
-        "q1_tolerance:f", "q3_tolerance:f", "mult_tg_per_q1",
+        "q1_tolerance:f", "q3_tolerance:f", "mult_tg_per_q1", "purge",
     )) {
 
     die "\n$USAGE";
@@ -93,10 +96,12 @@ if ($DEBUG) {
     print "  TESTONLY = $TESTONLY\n";
 }
 
+my $purge = $OPTIONS{"purge"};
 my $load_peptide_ions = ! $OPTIONS{"noload_pi"};
 my $load_transition_groups = ! $OPTIONS{"noload_tg"};
 my $load_chromatograms = ! $OPTIONS{"noload_ch"};
 my $load_transitions = ! $OPTIONS{"noload_tr"};
+my $load_scores_only =  $OPTIONS{"scores_only"};
 my $special_expt = '';
 $special_expt = 'ruth_prelim' if  $OPTIONS{"ruth_prelim"};
 $special_expt = 'ruth_2011' if  $OPTIONS{"ruth_2011"};
@@ -148,6 +153,8 @@ $loader-> load_srm_run (
   load_transition_groups => $load_transition_groups,
   load_transitions => $load_transitions,
   load_chromatograms => $load_chromatograms,
+  load_scores_only => $load_scores_only,
+  purge => $purge,
   verbose => $VERBOSE,
   quiet => $QUIET,
   testonly => $TESTONLY,
