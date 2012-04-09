@@ -145,12 +145,13 @@ sub main
 #  print $sbeams->closeTabbedPane();
 
   print_form ( %parameters );  
-  print "<BR><BR>";
+
+
   if ( ! $parameters{pabst_build_id} ) {
 #    print $sbeams->makeErrorText( "<BR>No valid builds found for this user" );
    } elsif ( $bad_build_specified ) {
     print $sbeams->makeErrorText( "<BR>Specified build is not accessible to this user" );
-   } elsif ( $parameters{action} eq 'QUERY' ) {
+   } elsif ( $parameters{action} && $parameters{action} eq 'QUERY' ) {
     $log->debug( "  Going to fetch transitions"  . time());
     fetch_transitions( %parameters );  
     $log->debug( "  Done fetching transitions"  . time());
@@ -274,6 +275,10 @@ sub print_form {
         mask_query_constraints => 1,
     );
     my $form = $sbeams->fetchSTDOUT();
+    $form =~ s/QTrap/QTRAP/gm;
+
+    $log->debug( $form );
+
     my $id = 'ID="protein_name_constraint"';
     $form =~ s/(NAME=\"protein_name_constraint\")/$1 $id/;
 
@@ -294,9 +299,10 @@ sub print_form {
     my $change_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Adjust PABST peptide parameters to fine-tune peptide list (advanced)'</TD>";
     $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Adjust weights:</B></TD>$change_help<TD>$link$sub_form</TD></TR> ~;
 
+
     my $select_list = get_cmod_select( $parameters{cmod_mass} );
     my $cmod_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Also fetch heavy-labeled versions of selected peptides'</TD>";
-#    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Heavy label:</B></TD>$cmod_help<TD>$select_list</TD></TR> ~;
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Heavy label:</B></TD>$cmod_help<TD>$select_list</TD></TR> ~;
 
     # Min/Max mz values
     my $min_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Set minimum m/z threshold for transitions, applies to both precursor (Q1) and fragment ion (Q3) m/z'</TD>";
@@ -332,7 +338,9 @@ sub print_form {
     #### Display the form action buttons
   $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
   print "</TABLE>\n";
-  print $sbeams->closeTabbedPane( selected => 'form' );
+  unless ( $args{action} && $args{action} =~ /QUERY/ ) {
+    print $sbeams->closeTabbedPane( selected => 'form' );
+  }
 
 
 } # end print_form
@@ -388,11 +396,12 @@ sub get_rt_select {
 sub get_cmod_select {
   my $curr_val = shift || '';
 
-  my %sel = ( K8 => '', R10 => '', K6 => '', R6 => '' );
+  my %sel = ( K8 => '', R10 => '', K6 => '', R6 => '', K8A => '', R10A => '' );
   my %seen;
+#  die $curr_val if $curr_val;
   for my $curr ( split( ',', $curr_val ) ) {
-    $curr =~ /(\w)\d+/;
-    next if $seen{$1}++;
+#    $curr =~ /(\w\d+\w*)/;
+#    next if $seen{$1}++;
     $sel{$curr} = 'SELECTED';
   }
 
@@ -405,9 +414,29 @@ sub get_cmod_select {
       <OPTION VALUE=R6 $sel{R6}>Arginine + 6</OPTION>
     </SELECT>
   ~;
+#      <OPTION VALUE=K8A $sel{K8A}>Aqua Lysine + 8</OPTION>
+#      <OPTION VALUE=R10A $sel{R10A}>Aqua Arginine + 10</OPTION>
+#  die $cmod_sel;
   return $cmod_sel;
 }
 
+sub get_download_form {
+
+  my $form = '<FORM NAME=DWNLD ACTION=GetResultSet.cgi/PeptideData.tsv>';
+
+  my $select = qq~
+    <SELECT NAME=download>
+      <OPTION VALUE='TSV' >TSV</OPTION>
+      <OPTION VALUE='AgilentQQQ' >Agilent QQQ MRM</OPTION>
+      <OPTION VALUE='AgilentQQQ_dynamic' >Agilent QQQ dynamic MRM</OPTION>
+    </SELECT>
+  ~;
+#      <OPTION VALUE='TraML' >TraML</OPTION>
+
+  my $button = "<INPUT TYPE=SUBMIT NAME=submit VALUE=Download>";
+  $form .= $select . ' HIDDEN_PLACEHOLDER ' . $button . '</FORM>';
+  return $form;
+}
 
 sub get_multi_selects {
 
@@ -707,7 +736,7 @@ sub fetch_transitions {
   my %prot_peps;
   my %pep_frags;
   my %ce;
-#  my @display_rows = ( [qw( Protein Sequence Chg q1_mz q3_mz Intensity Ion CE SSRCalc RT n_obs Annot Source ) ] );
+#  my @display_rows = ( [qw( Protein Sequence Chg Q1_mz Q3_mz Intensity Ion CE SSRCalc RT n_obs Annot Source ) ] );
 
   my %row2chg;
 
@@ -755,6 +784,8 @@ sub fetch_transitions {
   my $pep_id_string = join( ',', keys( %pep_ids ) ) || 1;
   my $bioseq_id_string = join( ',', keys( %bioseq_ids ) ) || 1;
 
+  $log->debug( "searching for " . scalar( keys( %bioseq_ids ) ) . " biosequences and " . scalar( keys( %pep_ids ) ) . " peptides" );
+
   $log->debug( "Done fetching peptides: $pep_id_string"  . time());
 
   my $organism = $best_peptide->getBuildOrganism( pabst_build_id => $parameters{pabst_build_id} );
@@ -781,16 +812,16 @@ sub fetch_transitions {
 #    my $note = $sbeams->makeInfoText( "Note: masses are mono-isotopic" );
 #    $content .= "<BR>$note\n"  if $is_html;
 
-#  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs' );
-#  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs', 'Src Adj SS' );
-  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT' );
+#  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs' );
+#  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs', 'Src Adj SS' );
+  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT' );
 #  push @headings, 'SpecLinks', 'Chromat' if $parameters{speclinks};
 
   if ( $parameters{speclinks} ) {
     if ( $organism != 2 || $sbeams->isGuestUser() ) {
       push @headings, 'IonTrap';
     } else {
-      push @headings, 'QTOF', 'QTOF_CE', 'QTrap', 'QQQ', 'IonTrap', 'QQQ_ch', 'QTrap_ch';
+      push @headings, 'QTOF', 'QTOF_CE', 'QTRAP', 'QQQ', 'IonTrap', 'QQQ ', 'QTRAP ';
     }
   }
 
@@ -862,16 +893,16 @@ sub fetch_transitions {
     ~;
 
 #   print "<PRE>$lib_sql</PRE>\n";
-#  $log->debug( $lib_sql );
+  $log->debug( $lib_sql );
 
-#  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs' );
-  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT' );
-#  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'q1_mz', 'q1_chg', 'q3_mz', 'q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs', 'Src Adj SS' );
+#  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs' );
+  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT' );
+#  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs', 'Src Adj SS' );
   if ( $parameters{speclinks} ) {
     if ( $organism != 2 || $sbeams->isGuestUser() ) {
       push @headings, 'IonTrap';
     } else {
-      push @headings, 'QTOF', 'QTOF_CE', 'QTrap', 'QQQ', 'IonTrap', 'QQQ_ch', 'QTrap_ch';
+      push @headings, 'QTOF', 'QTOF_CE', 'QTRAP', 'QQQ', 'IonTrap', 'QQQ ', 'QTRAP ';
     }
   }
 
@@ -916,7 +947,7 @@ sub fetch_transitions {
 
   my %prots;
 
-  my @namelist = ( join( '::', qw(protein  sequence q1_mz q3_mz RT rank q1_chg q3_chg peak_intensity ion_label collision SSR) ) );
+  my @namelist = ( join( '::', qw(protein  sequence Q1_mz Q3_mz RT rank Q1_chg Q3_chg peak_intensity ion_label collision SSR) ) );
 
   # placeholder, we don't have a source for retention time.
   my $rt = '';
@@ -1043,7 +1074,7 @@ sub fetch_transitions {
       $patr_peps{$row[1]}++;
 
       # Cache for xfer to ATAQs
-      # protein  sequence q1_mz q3_mz RT rank q1_chg q3_chg peak_intensity ion_label collision SSR
+      # protein  sequence Q1_mz Q3_mz RT rank Q1_chg Q3_chg peak_intensity ion_label collision SSR
       push @namelist, join( '::', $prot, @row[1,5,7],'',@row[10,6,8,11,9],$ce, $row[12] );
 
       if ( $row[15] && $is_html ) {
@@ -1085,9 +1116,13 @@ sub fetch_transitions {
 
         for my $ch_type ( qw( QQQ QTrap5500 ) ) {
 # $chromat_paths{$row[2]}->{$chromat_key} = $row[3];
+
+          my $instr_name = ( $ch_type =~ /QQQ/ ) ? 'Agilent 6460 QQQ' : 
+                           ( $ch_type =~ /QTrap5500/i ) ? 'ABI SCIEX QTRAP 5500' : $ch_type;
+           
           my $chromat_link = '';
           if ( $pepion2scanpath->{$ch_type}->{$link_key} ) {
-            my $title = "View +$row[6] chromatogram for $row[1] on $ch_type"; 
+            my $title = "View +$row[6] chromatogram for $row[1] on $instr_name"; 
 						my $precursor_param = '';
 						my $scan_param = '';
 						if ( $ch_type =~ /QQQ/ ) {
@@ -1102,8 +1137,9 @@ sub fetch_transitions {
               }
             }
             my $pepion = $q->escape( $row[1] . '+' . $row[6] );
-            my $instr_name = ( $ch_type =~ /QQQ/ ) ? $q->escape('6460 QQQ') : $ch_type;
-           
+
+            $instr_name = $q->escape( $instr_name );
+
             $chromat_link = "<A HREF=ShowChromatogram?${scan_param}precursor_neutral_mass=$mass;pepseq=$row[1]$precursor_param;precursor_mz=$row[5];limit_smoothing_options=1;default_smoothing_factor=5;spectrum_pathname=$pepion2scanpath->{$ch_type}->{$link_key}->{path};peptide=$row[1];no_specfile=1;no_mquest=1;instrument_name=$instr_name TARGET=$ch_type> <IMG BORDER=0 SRC='$image{$ch_type}' TITLE='$title'> </A>";
           }
           push @chromat_links, $chromat_link;
@@ -1142,16 +1178,17 @@ sub fetch_transitions {
             my @mod_row = ( $prot, @row[0..12,15] );
             # Omit double labels for now
             next if $mod_row[2] =~ /[RK].*K$/;
-            next unless $mod_row[10] =~ /^y/i;
+
+            my $delta_mass = ( $mod eq 'R10' ) ? 10.008269 :
+                             ( $mod eq 'K8' ) ?  8.014199 : $mass;
 
 
             if ( $mod_row[2] =~ /$aa$/ ) {
-              $log->debug( "seq is $mod_row[2] and annot is $annot before" );
                 $mod_row[2] =~ s/$aa$/$annot/;
-              $log->debug( "seq is $mod_row[2] and annot is $annot after" );
-                $mod_row[6] = sprintf( "%0.2f", $mod_row[6] + $mass/$mod_row[7] );
-                $mod_row[8] = sprintf( "%0.2f", $mod_row[8] + $mass/$mod_row[9] );
-#                $mod_row[8] += $mass/$mod_row[9];
+                $mod_row[6] = sprintf( "%0.2f", $mod_row[6] + $delta_mass/$mod_row[7] );
+                if ($mod_row[10] =~ /^y/i ) {
+                  $mod_row[8] = sprintf( "%0.2f", $mod_row[8] + $delta_mass/$mod_row[9] );
+                }
                 $mod_row[14] = '';
                 push @peptides, \@mod_row;
             }
@@ -1163,10 +1200,10 @@ sub fetch_transitions {
 #      <OPTION VALUE=K8 >Lysine + 8</OPTION>
 #      <OPTION VALUE=R10 >Arginine + 10</OPTION>
 # 1 sequence
-# 2 q1_mz
-# 3 q3_mz
-# 6 q1_chg
-# 7 q3_chg
+# 2 Q1_mz
+# 3 Q3_mz
+# 6 Q1_chg
+# 7 Q3_chg
       $row_cnt++;
       if ( $row_cnt >= ROW_LIMIT ) {
         print $sbeams->makeInfoText( "Maximum query size (" . ROW_LIMIT . ") exceeded, results are truncated" );
@@ -1206,7 +1243,7 @@ sub fetch_transitions {
   my $patr = get_PATR_transitions( peptides => \@peps );
 
 #  SELECT DISTINCT P.peptide_sequence, modified_peptide_sequence, peptide_charge,
-#  q1_mz ,q3_mz, q3_ion_label, collision_energy,
+#  Q1_mz ,Q3_mz, Q3_ion_label, collision_energy,
 #  SSRCalc_relative_hydrophobicity, retention_time, 'na', ''
 #  0 => protein
 #  1 => pre
@@ -1257,9 +1294,14 @@ sub fetch_transitions {
     $change_on = 10;
   }
 
+  my $download_select = get_download_form();
+#  $download_select =~ s/HIDDEN_PLACEHOLDER//gm;
+#  print $download_select;
+#  exit;
+
   my ( $html, $rs_name ) = $atlas->encodeSectionTable( header => 1, 
                                                         width => '600',
-                                                      tr_info => $args{tr},
+                   tr_info => $args{tr},
                                                        align  => $align,
                                                   rs_headings => \@headings,
                                                          rows => \@peptides,
@@ -1268,12 +1310,14 @@ sub fetch_transitions {
                                                     help_text => $help_text,
                                                   chg_bkg_idx => $change_on, 
                                                  set_download => 'Download peptides', 
+                                                 download_form => $download_select, 
                                                   file_prefix => 'best_peptides_', 
                                                      bg_color => '#EAEAEA',
                                                      sortable => 1,
                                                      table_id => 'pabst',
-                                                  close_table => 1,
+        close_table => 1,
                                                      );
+
 
   # "Publish" data as indirect resource for firegoose.  
   my $namelist = join( "\n", @namelist );
@@ -1292,7 +1336,7 @@ sub fetch_transitions {
       
 				my $rs = $atlas->get_cached_resultset( rs_name => $rs_name );
       if ( $is_html ) {
-        $content .= "<BR><BR><TABLE>$html $gXML";
+        $content .= "<BR><BR><TABLE >$html $gXML";
 #        $log->debug( "HTML:\n $html\n" );
 
       } else {
@@ -1321,16 +1365,18 @@ sub fetch_transitions {
     }
   }
 
-    open FRM, ">/tmp/form";
-    print FRM qq~
-    $content
-    ~;
+#    open FRM, ">/tmp/form";
+#    print FRM qq~
+#    $content
+#    ~;
   print $sbeams->addTabbedPane( label => 'results' );
-  print "<TABLE>$content</TABLE>\n";
+#  print 'resultula';
+  print "<TABLE >$content</TABLE>\n";
   print $sbeams->closeTabbedPane( selected => 'results' );
 #  print "$content</BR></BR>";
 
 } # end fetch_transitions
+
 
 sub get_bad_qqq {
   my %args = ( sequence_clause => '',
@@ -1414,18 +1460,22 @@ sub get_consensus_links {
     $libs = $consensus->getConsensusLinks( modified_sequence => $seq, organism => $organism );
   }
 
+  my %instr = ( QQQ => 'Agilent 6460 QQQ', 
+              QTrap => 'ABI SCIEX QTRAP 5500',
+               QTOF => 'Agilent 6530 QTOF' );
+
   my @links;
   if ( $organism == 2 && !$sbeams->isGuestUser() ) {
     my $link = '';
     if ( $libs->{medium}->{$spectrum_key} ) {
-      my $title = "View +$chg spectrum for $seq in QTOF library"; 
+      my $title = "View +$chg spectrum for $seq in $instr{QTOF} library"; 
       $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{medium}->{$spectrum_key};' TARGET=_qtof_spectrum> <IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
     }
     push @links, $link;
 
     $link = '';
     if ( $libs->{medium}->{$spectrum_key} ) {
-      my $title = "View +$chg spectra for $seq from QTOF at various CE values";
+      my $title = "View +$chg spectra for $seq from $instr{QTOF} at various CE values";
       my $param_str;
       my $xmax = 1200;
       my $xmin = 200;
@@ -1439,7 +1489,7 @@ sub get_consensus_links {
 
     $link = '';
     if ( $libs->{qtrap}->{$spectrum_key} ) {
-      my $title = "View +$chg spectrum for $seq in QTrap5500 library";
+      my $title = "View +$chg spectrum for $seq in $instr{QTrap} library";
       $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{qtrap}->{$spectrum_key};' TARGET=_qtrap_spectrum> <IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'> </A>";
     }
     push @links, $link;
@@ -1448,7 +1498,7 @@ sub get_consensus_links {
     if ( $libs->{qqq}->{$spectrum_key} ) {
 			my $image = "$HTML_BASE_DIR/images/spectrum.gif";
 			$image = "$HTML_BASE_DIR/images/redqmark.gif" if $seq2badlinks->{$spectrum_key};
-      my $title = "View +$chg spectrum for $seq in 6460 QQQ library";
+      my $title = "View +$chg spectrum for $seq in $instr{QQQ} library";
       $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{qqq}->{$spectrum_key};' TARGET=_qqq_spectrum> <IMG BORDER=0 SRC='$image' TITLE='$title'> </A>";
     }
     push @links, $link;
@@ -1456,7 +1506,7 @@ sub get_consensus_links {
 
   my $link = '';
   if ( $libs->{it}->{$spectrum_key} ) {
-    my $title = "View +$chg spectrum for $seq in NIST IonTrap library";
+    my $title = "View +$chg spectrum for $seq in NIST Ion Trap library";
     $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{it}->{$spectrum_key};' TARGET=_it_spectrum> <IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'> </A>";
   }
   push @links, $link;
@@ -1483,12 +1533,12 @@ sub get_PATR_transitions {
 
   my $sql = qq~
   SELECT DISTINCT P.peptide_sequence, modified_peptide_sequence, peptide_charge,
-  q1_mz ,q3_mz, q3_ion_label, collision_energy,
+  Q1_mz ,Q3_mz, Q3_ion_label, collision_energy,
   SSRCalc_relative_hydrophobicity, retention_time, 'na', ''
   FROM $TBAT_SRM_TRANSITION SMT 
   JOIN $TBAT_PEPTIDE P ON P.peptide_sequence = SMT.stripped_peptide_sequence
   ORDER BY modified_peptide_sequence, peptide_charge, transition_suitablity_level,
-  q1_mz, q3_mz
+  Q1_mz, Q3_mz
  
   ~;
 #  $log->debug( $sql );
