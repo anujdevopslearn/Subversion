@@ -1441,7 +1441,6 @@ sub getTopHTMLfromJson {
 # readJsonChromatogramIntoResultsetHash -
 #   read json object into array. Store array plus
 #   list of column headers in a hash of format expected by writeResultSet.
-#   Simple-minded parsing assumes that each time/intensity pair has own line.
 ###############################################################################
 sub readJsonChromatogramIntoResultsetHash {
 
@@ -1453,40 +1452,36 @@ sub readJsonChromatogramIntoResultsetHash {
   my %dataset;
   my @chromatogram_array = ();
 
-  my @json_lines;
   # If a string is provided, use it. Otherwise, try opening the file.
   # Best to pass in a string, though.
-  if ( $json_string ) {
-    @json_lines = split("\n", $json_string); 
-  } else {
+  if ( ! $json_string ) {
     open (JSON_FILE, $json_physical_pathname) ||
     die "Can't open .json file $json_physical_pathname";
-    @json_lines = <JSON_FILE>;
+    #@json_lines = <JSON_FILE>;
+    $json_string = join (' ', <JSON_FILE>);
     close JSON_FILE;
   }
+
+  my $json = new JSON;
+  my $json_href = $json->decode( $json_string );
+
   my ($trace_num, $time, $q1, $q3, $intensity);
   $trace_num = 0;
-  for my $line (@json_lines) {
-    chomp $line;
-    #print "<br>$line\n";
-    if ($line =~ /full/ ) {
-      $trace_num++;
-    }
-    if ($line =~ /Q1:(\d+\.\d+)/ ) {
-      $q1 = $1;
-    }
-    if ($line =~ /Q3:(\d+\.\d+)/ ) {
-      $q3 = $1;
-    }
-    if ($line =~ /\{\s*time\s*:\s*(\d+\.\d+),\s*intensity\s*:\s*(\d+\.\d+)\s*\}/) {
-      $time = $1; $intensity = $2;
-      push (@chromatogram_array, [$trace_num, $time, $q1, $q3, $intensity]);
+
+  for my $entry ( @{$json_href->{'data_json'}} ) {
+    $trace_num++;
+    my $full_label = $entry->{'full'};
+    ($q1, $q3) = ($full_label =~ /Q1:(\d+\.\d+)\s+Q3:(\d+\.\d+)/);
+    for my $timepoint (@{$entry->{'data'}}) {
+      $time = $timepoint->{'time'};
+      $intensity = $timepoint->{'intensity'};
       #print "<br>$time $q3 $intensity<br>\n";
+      push (@chromatogram_array, [$trace_num, $time, $q1, $q3, $intensity]);
     }
   }
+
   $dataset{data_ref} = \@chromatogram_array;
-  $dataset{column_list_ref} =
-  ['trace_num', 'seconds', 'Q1', 'Q3', 'intensity'];
+  $dataset{column_list_ref} = ['trace_num', 'seconds', 'Q1', 'Q3', 'intensity'];
   return \%dataset;
 }
 
