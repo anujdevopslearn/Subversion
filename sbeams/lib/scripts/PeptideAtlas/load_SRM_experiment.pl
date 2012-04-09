@@ -170,7 +170,8 @@ my $sql = qq~
   SELECT SEL_experiment_id, data_path, q1_tolerance, q3_tolerance,
      mprophet_analysis, heavy_label
   FROM $TBAT_SEL_EXPERIMENT
-  WHERE SEL_experiment_id = '$SEL_experiment_id';
+  WHERE SEL_experiment_id = '$SEL_experiment_id'
+  AND record_status != 'D'
   ;
 ~;
 my @rows = $sbeams->selectSeveralColumns($sql);
@@ -246,7 +247,8 @@ for my $spectrum_filepath (@specfiles) {
   my $sql = qq~
     SELECT SELR.SEL_run_id FROM $TBAT_SEL_RUN SELR
     WHERE SELR.SEL_experiment_id = '$SEL_experiment_id'
-    AND SELR.spectrum_filename = '$spectrum_filename';
+    AND SELR.spectrum_filename = '$spectrum_filename'
+    AND SELR.record_status != 'D';
   ~;
   my ($SEL_run_id) = $sbeams->selectOneColumn($sql);
 
