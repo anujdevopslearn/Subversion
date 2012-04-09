@@ -196,7 +196,8 @@ sub get_spec_file_basename_and_extension {
 
   my $sql = qq~
     SELECT spectrum_filename FROM $TBAT_SEL_RUN SELR
-   WHERE SELR.SEL_run_id = $SEL_run_id;
+    WHERE SELR.SEL_run_id = $SEL_run_id
+    AND SELR.record_status != 'D';
   ~;
   my ($specfile) = $sbeams->selectOneColumn($sql);
   if (! $specfile ) {
@@ -223,14 +224,15 @@ sub get_SEL_run_id {
 
   my $sql = qq~
     SELECT SEL_run_id FROM $TBAT_SEL_RUN SELR
-   WHERE SELR.spectrum_filename LIKE '$spec_file_basename.%';
+   WHERE SELR.spectrum_filename LIKE '$spec_file_basename.%'
+   AND SELR.record_status != 'D' ;
   ~;
   my @run_ids = $sbeams->selectOneColumn($sql);
   my $n_run_ids = scalar @run_ids;
   if (! $n_run_ids) {
-    die "No entry in SEL_run matches spectrum file basename ${spec_file_basename}.";
+    die "No entry in SEL_run matches spectrum file basename ${spec_file_basename}";
   } elsif ($n_run_ids > 1) {
-    die "More than one SEL_run record matches ${spec_file_basename}.";
+    die "More than one SEL_run record matches ${spec_file_basename}";
   }
 
   my $SEL_run_id = shift @run_ids;
@@ -486,6 +488,7 @@ sub read_mprophet_peakgroup_file {
     $protein,  $stripped_pepseq, $modified_pepseq,
     $charge, $peak_group,  $m_score, $d_score, $Tr, $S_N, $isotype);
 
+  $decoy = 0;
   my $spectrum_file;
   my $counter = 0;
   while ($line = <MPRO_FILE>) {
@@ -505,15 +508,15 @@ sub read_mprophet_peakgroup_file {
     if ( defined $idx{peak_group_id} ) {  # Ruth
       $_ = $fields[$idx{peak_group_id}]; #this field has 5 bits of info!
       ($spectrum_file, $modified_pepseq, $charge, $decoy, $peak_group) =
-             /(\S+) (\S+?)\.(\S+) (\d) (\d+)/;
-	     #} elsif ($special_expt eq 'ruth_2011') {
-      } elsif ( defined $idx{peakgroup_id} ) {  # Can we rely on this, omit prev?
-                                             # we never get here; test is same as
-					     # previous test!
+      /(\S+) (\S+?)\.(\S+) (\d) (\d+)/;
+      #} elsif ($special_expt eq 'ruth_2011') {
+    } elsif ( defined $idx{peakgroup_id} ) {  # Can we rely on this, omit prev?
+      # we never get here; test is same as
+      # previous test!
       $_ = $fields[$idx{peakgroup_id}]; #this field has 5 bits of info as well!
       my $dummy;
       ($stripped_pepseq, $charge, $decoy, $dummy, $peak_group) =
-            /pg_(\S+?)\.(\d)_(\d)_target_(dummy)?(\d)/;
+      /pg_(\S+?)\.(\d)_(\d)_target_(dummy)?(\d)/;
       $peak_group += 1; #zero indexing messes up other stuff
       $decoy = 0 if !$decoy;   #without this, zero value somehow prints as ''
       $modified_pepseq = $fields[$idx{transition_group_pepseq}]; #is it really modified?
@@ -554,8 +557,8 @@ sub read_mprophet_peakgroup_file {
       next if (!$stripped_pepseq);  #empty line
       if ($suffix != $calculated_suffix) {
 	print "suffix mismatch $stripped_pepseq $suffix != $calculated_suffix\n" 
-          if ($VERBOSE > 2);
-        next;
+	if ($VERBOSE > 2);
+	next;
       }
       #print "$stripped_pepseq $suffix\n";
       $modified_pepseq = $stripped_pepseq;
@@ -572,10 +575,14 @@ sub read_mprophet_peakgroup_file {
     # These values may already have been gleaned from peakgroup_id,
     # but we will prefer those stored in dedicated columns.
     $charge = (defined $idx{charge}) ? $fields[$idx{charge}] : $charge ;
-    $peak_group = (defined $idx{peak_group_rank}) ? $fields[$idx{peak_group_rank}] :
+    $peak_group = (defined $idx{peak_group_rank}) ?
+        $fields[$idx{peak_group_rank}] :
         $peak_group ;
     $peak_group = 1 if (! $peak_group); 
-    $decoy = ( defined $idx{decoy} &&  $fields[$idx{decoy}] =~ /TRUE/i ) ? 1 : 0 ;
+    $decoy = ( defined $idx{decoy} &&
+               (( $fields[$idx{decoy}] =~ /TRUE/i ) ||
+	        ( $fields[$idx{decoy}] == 1)) )
+	      ? 1 : $decoy ;
 
     if ($charge =~ /decoy/) {
       $charge =~ /(\S+)\.decoy/;
@@ -648,7 +655,7 @@ sub read_transition_list {
   my $tr_format = $args{tr_format};
   # 11/18/11: may not need the below anymore. mPro is our
   # standard input format & we should convert any ATAQS contributions.
-  my $ataqs = $args{ataqs};
+  my $ataqs = $args{ataqs} || 0;
   my $special_expt = $args{special_expt};
   my $VERBOSE = $args{'verbose'} || 0;
   my $QUIET = $args{'quiet'} || 0;
@@ -728,6 +735,7 @@ sub read_transition_list {
       # if this header is recognized ...
       if ($header = $header_lookup{lc $field}) {
 	$idx{$header} = $i;
+	print "$header $i\n" if $DEBUG;
       }
       $i++;
     }
@@ -751,6 +759,7 @@ sub read_transition_list {
   while (my $line = <TRAN_FILE>) {
     # Store select fields into transdata_href hash
     # and load into SEL_transitions and SEL_transition_groups, if requested.
+    chomp $line;
     my @fields = split($sep, $line);
     my $q1_mz = $fields[$idx{q1_mz}];
     my $q3_mz = $fields[$idx{q3_mz}];
@@ -839,8 +848,11 @@ sub read_transition_list {
     $tx_href->{frg_loss} = 0;
     $tx_href->{frg_loss} = int($fields[$idx{frg_loss}]) if defined $idx{frg_loss};
     $tx_href->{is_decoy} =
-        ( (defined $idx{is_decoy}) && $fields[$idx{is_decoy}] ) ||
-	  ( ( uc($stripped_sequence) =~ /^[KR]/) && $ataqs )  # reverse pepseq.
+        ( ((defined $idx{is_decoy}) &&
+	   (($fields[$idx{is_decoy}] == 1) ||
+	    ($fields[$idx{is_decoy}] =~ /true/i) ||
+	    ($fields[$idx{is_decoy}] =~ /yes/i)) ) ||
+	  ( ( uc($stripped_sequence) =~ /^[KR]/) && $ataqs ))  # reverse pepseq.
 	  || 0;
     if (($idx{relative_intensity}) && $fields[$idx{relative_intensity}]) {
       $tx_href->{relative_intensity} = $fields[$idx{relative_intensity}];
@@ -858,7 +870,7 @@ sub read_transition_list {
           "$tx_href->{stripped_peptide_sequence} ".
           "+$tx_href->{peptide_charge} ".
           "$tx_href->{isotype} ".
-          "q1=$q1_mz q3=$q3_mz\n"
+          "q1=$q1_mz q3=$q3_mz is_decoy=$tx_href->{is_decoy}\n"
        if ($VERBOSE > 1);
 
     $transdata_href->{$q1_mz}->{transitions}->{$q3_mz}->{mod_pepseq}->
@@ -1075,7 +1087,7 @@ sub map_peps_to_prots {
   ~;
   my ($organism_id) = $sbeams->selectOneColumn($sql);
   if (! defined $organism_id ) {
-    print "map_peps_to_prots: No organism ID for experiment ${SEL_experiment_id}.\n";
+    print "map_peps_to_prots: No organism ID for sample linked to experiment ${SEL_experiment_id}.\n";
     return;
   }
 
@@ -1246,7 +1258,7 @@ sub map_peps_to_prots {
 }
 
 ###############################################################################
-# purge_protein_mapping (not tested, needs wrapper )
+# purge_protein_mapping
 ###############################################################################
  
 sub purge_protein_mapping {
@@ -1482,7 +1494,7 @@ sub load_transition_data {
   my $load_transitions = $args{load_transitions};
   my $load_peptide_ions = $args{load_peptide_ions};
   my $load_transition_groups = $args{load_transition_groups};
-  my $load_scores_only = $args{load_scores_only};
+  my $load_scores_only = $args{load_scores_only} || 0;
   my $VERBOSE = $args{'verbose'} || 0;
   my $QUIET = $args{'quiet'} || 0;
   my $TESTONLY = $args{'testonly'} || 0;
@@ -1610,8 +1622,8 @@ sub load_transition_data {
 	    );
 	  } else {
 	    if ($n_existing_pi > 1) {
-	      print "WARNING: $n_existing_pi peptide ions found for q1 $rowdata_ref->{q1_mz}, $rowdata_ref->{modified_peptide_sequence}, is_decoy = $is_decoy_char; using first\n" unless ($QUIET);
-	      $peptide_ion_id = $existing_peptide_ions[0];
+	      print "WARNING: $n_existing_pi peptide ions found for q1 $rowdata_ref->{q1_mz}, $rowdata_ref->{modified_peptide_sequence}, is_decoy = $is_decoy_char; using last\n" unless ($QUIET);
+	      $peptide_ion_id = $existing_peptide_ions[$n_existing_pi-1];
 	    } elsif ($n_existing_pi == 0) {
 	      print "ERROR: no peptide ion found for q1 $rowdata_ref->{q1_mz}, $rowdata_ref->{modified_peptide_sequence}, is_decoy=$is_decoy_char\n";
 	    } else  {
@@ -1728,8 +1740,8 @@ sub load_transition_data {
 	    );
 	  } else {
 	    if ($n_existing_tg > 1) {
-	      print "WARNING: $n_existing_tg transition_groups found for SEL_peptide_ion_id $peptide_ion_id, SEL_run_id $SEL_run_id, q1 $target_q1, isotype $tx_href->{isotype}; using first\n" unless ($QUIET);
-	      $transition_group_id = $existing_tgs[0];
+	      print "WARNING: $n_existing_tg transition_groups found for SEL_peptide_ion_id $peptide_ion_id, SEL_run_id $SEL_run_id, q1 $target_q1, isotype $tx_href->{isotype}; using last\n" unless ($QUIET);
+	      $transition_group_id = $existing_tgs[$n_existing_tg-1];
 	    } elsif ($n_existing_tg == 0 ) {
 	      print "ERROR: no transition group found for SEL_peptide_ion_id $peptide_ion_id, SEL_run_id $SEL_run_id, q1 $target_q1, isotype $tx_href->{isotype}.\n" unless ($QUIET);
 	    } elsif ($n_existing_tg == 1 && ! $load_scores_only)  {
@@ -2034,12 +2046,14 @@ sub get_target_transitions_for_measured_Q1 {
 
 
 ###############################################################################
-# removeSRMExperiment -- removes records for an SRM experiment
+# removeSRMExperiment -- removes records for an SRM experiment or
+# single run
 ###############################################################################
 sub removeSRMExperiment {
   my $self = shift || die ("self not passed");
   my %args = @_;
   my $SEL_experiment_id = $args{'SEL_experiment_id'};
+  my $SEL_run_id = $args{'SEL_run_id'};
   my $keep_experiments_and_runs = $args{'keep_experiments_and_runs'} || 0;
   my $VERBOSE = $args{'verbose'} || 0;
   my $QUIET = $args{'quiet'} || 0;
@@ -2048,18 +2062,29 @@ sub removeSRMExperiment {
 
   my $database_name = $DBPREFIX{PeptideAtlas};
 
-   # First, get SEL_runs in this experiment.
-   my $sql = qq~
-     SELECT SEL_run_id
-       FROM $TBAT_SEL_RUN 
-     WHERE SEL_experiment_id = $SEL_experiment_id
-   ~;
-   my @run_ids = $sbeams->selectOneColumn($sql);
-   my $run_id_string = join (",", @run_ids);
+  # Figure out which runs to purge. If a run_id was given, just
+  # purge that.
+  my (@run_ids, $run_id_string, $msg_string);
+  if ($SEL_run_id) {
+    @run_ids = ($SEL_run_id);
+    $run_id_string = $SEL_run_id;
+    $msg_string = "run $SEL_run_id";
+  } elsif ($SEL_experiment_id) {
+    my $sql = qq~
+    SELECT SEL_run_id
+    FROM $TBAT_SEL_RUN 
+    WHERE SEL_experiment_id = $SEL_experiment_id
+    ~;
+    @run_ids = $sbeams->selectOneColumn($sql);
+    $run_id_string = join (",", @run_ids);
+    $msg_string = "experiment $SEL_experiment_id";
+  } else {
+    die "removeSRMExperiment: must specify either run_id or experiment_id";
+  }
 
    # Next, get SEL_peptide_ion records that belong
-   # to this experiment, and turn the list into a SQL format string.
-   $sql = qq~
+   # to these runs, and turn the list into a SQL format string.
+   my $sql = qq~
      SELECT SELPI.SEL_peptide_ion_id
        FROM $TBAT_SEL_PEPTIDE_ION SELPI
        JOIN $TBAT_SEL_TRANSITION_GROUP SELTG
@@ -2084,7 +2109,7 @@ sub removeSRMExperiment {
    );
 
    if ($keep_experiments_and_runs) {
-     print "Purging experiment $SEL_experiment_id; keeping expt & run records.\n" if $VERBOSE;
+     print "Purging $msg_string; keeping expt & run records.\n" if $VERBOSE;
      print "(not really purging because of --testonly)\n" if ($VERBOSE && $TESTONLY);
 
      #don't delete experiment OR run records
@@ -2100,12 +2125,20 @@ sub removeSRMExperiment {
        keep_parent_record => 1,
     );
   } else {
-     print "Purging experiment $SEL_experiment_id; removing expt & run records.\n" if $VERBOSE;
+     print "Purging $msg_string; removing parent record.\n" if $VERBOSE;
      print "(not really purging because of --testonly)\n" if ($VERBOSE && $TESTONLY);
+     my ($table_name, @PKs);
+    if ($SEL_run_id) {
+      $table_name = 'SEL_run';
+      @PKs = @run_ids
+    } else {
+      $table_name = 'SEL_experiment';
+      @PKs = ( $SEL_experiment_id );
+    }
       $sbeams->deleteRecordsAndChildren(
-         table_name => 'SEL_experiment',
+         table_name => $table_name,
          table_child_relationship => \%table_child_relationship,
-         delete_PKs => [ $SEL_experiment_id ],
+         delete_PKs => \@PKs,
          delete_batch => 100,
          database => $database_name,
          verbose => $VERBOSE,
@@ -2161,7 +2194,7 @@ sub removeSRMExperiment {
       testonly => $TESTONLY,
       keep_parent_record => 0,
    );
- }
+
 
 } # end removeSRMExperiment
 
@@ -2405,7 +2438,7 @@ sub load_srm_run {
   my $mpro_file = $args{'mpro_file'};
   my $transition_file = $args{'transition_file'};
   my $tr_format = $args{'tr_format'};
-  my $ataqs = $args{'ataqs'};
+  my $ataqs = $args{'ataqs'} || 0;
   my $special_expt = $args{'special_expt'};
   my $q1_tolerance = $args{'q1_tolerance'} || 0.007;
   my $q3_tolerance = $args{'q3_tolerance'} || $q1_tolerance;
@@ -2414,7 +2447,8 @@ sub load_srm_run {
   my $load_transition_groups = $args{'load_transition_groups'} || 1;
   my $load_transitions = $args{'load_transitions'} || 1;
   my $load_chromatograms = $args{'load_chromatograms'} || 1;
-  my $load_scores_only = $args{'load_scores_only'} || 1;
+  my $load_scores_only = $args{'load_scores_only'} || 0;
+  my $purge = $args{'purge'} || 0;
   my $VERBOSE = $args{'verbose'};
   my $QUIET = $args{'quiet'};
   my $TESTONLY = $args{'testonly'};
@@ -2484,6 +2518,18 @@ sub load_srm_run {
   );
   print "Loading run $SEL_run_id, specfile $spec_file_basename, filepath $spectrum_filepath, expt $SEL_experiment_id\n" if ($VERBOSE);
 
+### Purge if requested
+  if ($purge) {
+    print "First, purging.\n";
+    $self->removeSRMExperiment(
+      SEL_run_id => ${SEL_run_id},
+      keep_experiments_and_runs => 1,
+      verbose => $VERBOSE,
+      quiet => $QUIET,
+      testonly => $TESTONLY,
+      debug => $DEBUG,
+    );
+  }
 
 
 ### Read through spectrum file and collect all the transitions measured.
