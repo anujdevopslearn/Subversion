@@ -66,4 +66,6 @@ CREATE NONCLUSTERED INDEX idx_stripped_peptide_sequence ON dbo.srm_transition ( 
 -- elution_time
 CREATE NONCLUSTERED INDEX idx_modified_peptide_sequence ON dbo.elution_time ( modified_peptide_sequence ) --WITH DROP_EXISTING
 
+-- PASSEL
+CREATE NONCLUSTERED INDEX idx_SEL_peptide_ion_id ON dbo.SEL_peptide_ion_protein ( SEL_peptide_ion_id )   --WITH DROP_EXISTING
 
