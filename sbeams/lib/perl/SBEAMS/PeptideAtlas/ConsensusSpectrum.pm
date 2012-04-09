@@ -525,7 +525,7 @@ sub getConsensusLinks {
                 310 => 'mhigh', 
                 311 => 'high',
                  16 => 'it',
-                293 => 'qqq',
+                312 => 'qqq',
                 306 => 'qtrap',
                );
   }
