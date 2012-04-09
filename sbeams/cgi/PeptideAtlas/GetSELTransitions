@@ -481,6 +481,7 @@ sub handle_request {
    @transition_column_array,
    ["d_score","STR(SELTG.d_score,7,4)", "d_score"],
    ["m_score","STR(SELTG.m_score,7,4)", "m_score"],
+   ["best_pg_rt","STR(SELPG.Tr/60,7,4)", "Best Peak Group RT"],
    ["log10_max_apex_intensity","STR(SELTG.max_apex_intensity,7,4)", "Log Max Apex Intens"],
    ["light_heavy_ratio_maxapex","STR(SELTG.light_heavy_ratio_maxapex,7,4)", "Ratio Vs Heavy Max Apex"],
    ["S_N","STR(SELTG.S_N,7,4)", "S/N"],
@@ -494,6 +495,9 @@ sub handle_request {
    ["sample_id","S.sample_id", "sample_id"],
 #   ["SEL_run_id","SELR.SEL_run_id", "Run ID"],
 #   ["SEL_transition_id","SELT.SEL_transition_id", "Transition ID"],
+   ["pep_in_shotgun","NULL", "pep_in_shotgun"],
+   ["prot_in_shotgun","NULL", "prot_in_shotgun"],
+   ["pep_in_srmatlas","NULL", "pep_in_srmatlas"],
   );
 
   ## If the modifications view was selected DISABLED FOR NOW
@@ -577,6 +581,8 @@ sub handle_request {
 	$project_id_clause
         $runs_clause
 	$display_decoys_clause
+	AND SELE.record_status != 'D'
+	AND SELR.record_status != 'D'
 
     $group_by_clause
    ~;
@@ -592,8 +598,8 @@ sub handle_request {
   $sql .= qq~
   ORDER BY SELTG.stripped_peptide_sequence,
            SELTG.modified_peptide_sequence,
-	   SELR.spectrum_filename,
            SELTG.peptide_charge,
+	   SELR.spectrum_filename,
 	   SELTG.isotype DESC
   ~;
   if ($parameters{display_options} =~ /ShowEachTransition/) {
@@ -635,6 +641,9 @@ sub handle_request {
                   'frg_loss' => 1,
                   'SEL_chromatogram_id' => 1,
                   'SEL_chromatogram_id_heavy' => 1,
+		  'pep_in_shotgun' => 1,
+		  'prot_in_shotgun' => 1,
+		  'pep_in_srmatlas' => 1,
                   '' => 1,
   );
 #--------------------------------------------------
@@ -811,8 +820,9 @@ sub evalSQL {
 # postProcessResultset
 #
 # Perform some additional processing on the resultset that would otherwise
-# be very awkward to do in SQL. In this case, we are merging rows that
-# represent measurements of light/heavy versions of same peptide.
+# be very awkward to do in SQL. In this case, we are removing links to
+# PeptideAtlas for peptides, proteins that are not in the Atlas, and merging
+# rows that represent measurements of light/heavy versions of same peptide.
 ###############################################################################
 sub postProcessResultset {
   my %args = @_;
@@ -836,13 +846,82 @@ sub postProcessResultset {
   # Reverse this hash so that we can easily modify it.
   my %rev_colnameidx = reverse %{$colnameidx_ref};
 
-  # If we don't actually have multiple isotypes,
-  # there is nothing to do. Exit.
+  #### Mark those rows for peps, prots
+  #### that are in the shotgun section of Atlas
 
-  my %isotypes;
+  # collect all peps, prots, isotypes from query result
+  my (%peps, %prots, %isotypes);
   for (my $i=0; $i < scalar @{$resultset_ref->{data_ref}}; $i++) {
     $isotypes {$resultset_ref->{data_ref}->[$i]->[$cols->{isotype}]} = 1;
+    $peps {$resultset_ref->{data_ref}->[$i]->
+       [$cols->{stripped_peptide_sequence}]} = 1;
+    $prots {$resultset_ref->{data_ref}->[$i]->
+       [$cols->{protein_mapping}]} = 1;
   }
+  my $npeps = scalar keys %peps;
+  my $pep_list_string = join ("','", keys %peps);
+  $pep_list_string = "'$pep_list_string'";
+  my $nprots = scalar keys %prots;
+  my $prot_list_string = join ("','", keys %prots);
+  $prot_list_string = "'$prot_list_string'";
+  print "<br>$npeps peps $pep_list_string<br>$nprots prots $prot_list_string<br>\n"
+    if $DEBUG;
+
+  # run queries to find out which peps, prots are in PeptideAtlas shotgun data
+  my $sql = qq~
+        SELECT distinct peptide_sequence
+        FROM $TBAT_PEPTIDE
+        WHERE peptide_sequence in ( $pep_list_string )
+  ~;
+  my @peps_in_atlas = $sbeams->selectOneColumn($sql);
+  my %pep_hash = map { $_ => 1 } @peps_in_atlas;
+  my $npeps_seen = scalar @peps_in_atlas;
+  print "<br>$npeps_seen peptides in shotgun atlas<br>\n"
+    if $DEBUG;
+
+  $sql = qq~
+        SELECT distinct BS.biosequence_name
+        FROM $TBAT_BIOSEQUENCE BS
+	INNER JOIN $TBAT_PEPTIDE_MAPPING PM
+	ON PM.matched_biosequence_id = BS.biosequence_id
+        WHERE BS.biosequence_name in ( $prot_list_string )
+  ~;
+  my @prots_in_atlas = $sbeams->selectOneColumn($sql);
+  my %prot_hash = map { $_ => 1 } @prots_in_atlas;
+  my $nprots_seen = scalar @prots_in_atlas;
+  print "<br>$nprots_seen proteins in shotgun atlas<br>\n"
+    if $DEBUG;
+
+  my $sql = qq~
+        SELECT distinct peptide_sequence
+        FROM $TBAT_PABST_PEPTIDE
+        WHERE peptide_sequence in ( $pep_list_string )
+  ~;
+  my @peps_in_atlas = $sbeams->selectOneColumn($sql);
+  my %pep_srm_hash = map { $_ => 1 } @peps_in_atlas;
+  $npeps_seen = scalar @peps_in_atlas;
+  print "<br>$npeps_seen peptides in SRM atlas<br>\n"
+    if $DEBUG;
+
+  # populate pep_in_shotgun, prot_in_shotgun columns accordingly
+  for (my $i=0; $i < scalar @{$resultset_ref->{data_ref}}; $i++) {
+    my $this_pep = $resultset_ref->{data_ref}->[$i]->
+                         [$cols->{stripped_peptide_sequence}];
+    if ( defined $pep_hash{$this_pep}) {
+      $resultset_ref->{data_ref}->[$i]->[$cols->{pep_in_shotgun}] = 1;
+    }
+    if ( defined $pep_srm_hash{$this_pep}) {
+      $resultset_ref->{data_ref}->[$i]->[$cols->{pep_in_srmatlas}] = 1;
+    }
+    my $this_prot = $resultset_ref->{data_ref}->[$i]->
+                         [$cols->{protein_mapping}];
+    if ( defined $prot_hash{$this_prot}) {
+      $resultset_ref->{data_ref}->[$i]->[$cols->{prot_in_shotgun}] = 1;
+    }
+  }
+
+  # If resultset doesn't have multiple isotypes,
+  # there is nothing more to do. Exit.
   my $n_isotypes = scalar keys %isotypes;
   if ($DEBUG) {
     print "$n_isotypes isotypes:<br>\n";
@@ -851,6 +930,9 @@ sub postProcessResultset {
     }
   }
   return if $n_isotypes < 2;
+
+  #### Merge rows that represent measurements of heavy & light
+  #### versions of the same peptide.
 
   ### Special handling if showing each Transition
   if ($parameters{display_options} !~ /ShowEachTransition/i) {
@@ -907,6 +989,7 @@ sub postProcessResultset {
   ### adjacent due to ORDER BY clause.
   ### Perhaps should accomodate >2 for unusual future cases?
   my %rows_to_delete;
+
   for (my $i=1; $i<$n_rows; $i++) {
     # merge with previous row?
     my $this_row = $resultset_ref->{data_ref}->[$i];
@@ -942,6 +1025,7 @@ sub postProcessResultset {
       $prev_row->[$cols->{isotype}] = 'heavy+light';
       # Mark duplicate row for deletion
       $rows_to_delete{$i} = 1;
+    # No merge needed.
     } else {
       ### (url_cols processing will display nothing for empty value)
       if ($this_row->[$cols->{isotype}] eq 'heavy') {
@@ -950,6 +1034,16 @@ sub postProcessResultset {
 	$this_row->[$cols->{SEL_chromatogram_id}] = '';
       } else {
 	$this_row->[$cols->{SEL_chromatogram_id_heavy}] = '';
+      }
+      # deal with top row if second row was not merged with it
+      if ($i == 1) {
+	if ($prev_row->[$cols->{isotype}] eq 'heavy') {
+	  $prev_row->[$cols->{SEL_chromatogram_id_heavy}] =
+	    $prev_row->[$cols->{SEL_chromatogram_id}];
+	  $prev_row->[$cols->{SEL_chromatogram_id}] = '';
+	} else {
+	  $prev_row->[$cols->{SEL_chromatogram_id_heavy}] = '';
+	}
       }
     }
   }
@@ -1126,22 +1220,22 @@ sub get_url_cols {
           'Primary Protein Mapping_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show all transitions for peps mapping to this accession\'; return true"',
 
           'Protein in Pep tide Atlas' => "$CGI_BASE_DIR/PeptideAtlas/GetProtein?organism_name=\%$colnameidx_ref->{organism}V&protein_name=\%$colnameidx_ref->{protein_mapping}V&action=GO&apply_action=$pass_action",
-          'Protein in Pep tide Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show PeptideAtlas data for this protein name\'; return true"',
+          'Protein in Pep tide Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show PeptideAtlas shotgun data for this protein name in this organism\'; return true"',
           'Protein in Pep tide Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/pa_tiny.png>",
-          'Protein in Pep tide Atlas_OPTIONS' => {embed_html=>1},
+          'Protein in Pep tide Atlas_OPTIONS' => {embed_html=>1,content_iff_column_values=>[$colnameidx_ref->{prot_in_shotgun}]},
 
           'Modified Peptide Sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?stripped_peptide_sequence_constraint=\%$colnameidx_ref->{stripped_peptide_sequence}V&action=QUERY",
           'Modified Peptide Sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show all transitions for this peptide\'; return true"',
 
           'Pep in Pep tide Atlas' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&searchWithinThis=Peptide+Sequence&searchForThis=\%$colnameidx_ref->{stripped_peptide_sequence}V&organism_name=\%$colnameidx_ref->{organism}V&action=QUERY",
-          'Pep in Pep tide Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'See whether this peptide is in PeptideAtlas shotgun data\'; return true"',
+          'Pep in Pep tide Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'See whether this peptide is in PeptideAtlas shotgun data for this organism\'; return true"',
           'Pep in Pep tide Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/pa_tiny.png>",
-          'Pep in Pep tide Atlas_OPTIONS' => {embed_html=>1},
+          'Pep in Pep tide Atlas_OPTIONS' => {embed_html=>1,content_iff_column_values=>[$colnameidx_ref->{pep_in_shotgun}]},
 
           'Pep in SRM Atlas' => "$CGI_BASE_DIR/PeptideAtlas/GetTransitions?organism_name=\%$colnameidx_ref->{organism}V&peptide_sequence_constraint=\%$colnameidx_ref->{stripped_peptide_sequence}V&action=QUERY",
           'Pep in SRM Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Retrieve transitions for this peptide from SRMAtlas\'; return true"',
           'Pep in SRM Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/srmatlas-icon.gif>",
-          'Pep in SRM Atlas_OPTIONS' => {embed_html=>1},
+          'Pep in SRM Atlas_OPTIONS' => {embed_html=>1,content_iff_column_values=>[$colnameidx_ref->{pep_in_srmatlas}]},
 
           'Light Chro mato gram' => "$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?_tab=3&SEL_chromatogram_id=\%$colnameidx_ref->{SEL_chromatogram_id}V&action=QUERY",
           'Light Chro mato gram_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show chromatogram\'; return true"',
