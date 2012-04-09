@@ -99,9 +99,9 @@ sub insert_transition_data {
     }
   
     # peptide_charge - OK
-    # q1_mz 
-    # q3_mz 
-    # q3_ion_label
+    # Q1_mz 
+    # Q3_mz 
+    # Q3_ion_label
 
     # transition_suitability_level_id
     $log->debug(  $trns->{transition_suitability_level_id} );
@@ -123,7 +123,7 @@ sub insert_transition_data {
     # retention_time
     # instrument
     # comment 
-    # q3_peak_intensity
+    # Q3_peak_intensity
 
     my $mpa_id = $sbeams->updateOrInsertRow ( table_name => $TBAT_MODIFIED_PEPTIDE_ANNOTATION,
                                                   insert => 1,
@@ -199,10 +199,10 @@ sub get_mrm_transitions_acc_list {
   peptide_accession,
   modified_peptide_sequence,
   peptide_charge, 
-  q1_mz,
-  q3_mz,
-  q3_ion_label,  
-  q3_peak_intensity,
+  Q1_mz,
+  Q3_mz,
+  Q3_ion_label,  
+  Q3_peak_intensity,
   collision_energy,
   retention_time,
   ssrcalc_relative_hydrophobicity,
@@ -220,7 +220,7 @@ sub get_mrm_transitions_acc_list {
   WHERE peptide_accession IN ( $acc_string )
   AND project_id IN ( $projects )
   AND level_score > 0.8
-  ORDER BY peptide_accession, modified_peptide_sequence, peptide_charge DESC, level_score DESC, Q3_peak_intensity DESC, q3_mz
+  ORDER BY peptide_accession, modified_peptide_sequence, peptide_charge DESC, level_score DESC, Q3_peak_intensity DESC, Q3_mz
   END
   my @rows = $sbeams->selectSeveralColumns($sql);
   return \@rows;
@@ -260,9 +260,9 @@ sub get_mrm_transitions {
   peptide_accession,
   stripped_peptide_sequence,
   peptide_charge, 
-  q1_mz,
-  q3_mz,
-  q3_ion_label,  
+  Q1_mz,
+  Q3_mz,
+  Q3_ion_label,  
   '' AS intensity,
   collision_energy,
   retention_time,
@@ -281,7 +281,7 @@ sub get_mrm_transitions {
   AND IS_PUBLIC = 'Y'
 --  AND project_id IN ( $projects )
 --  AND level_score > 0.8
-  ORDER BY peptide_accession, peptide_sequence, q1_mz, level_score DESC, q3_mz
+  ORDER BY peptide_accession, peptide_sequence, Q1_mz, level_score DESC, Q3_mz
   END
   $log->debug( $sql );
 
@@ -376,9 +376,9 @@ sub traml_trans_hashref {
   for my $tt ( @{$args{traml_trans}} ) {
     my $row = { modified_peptide_sequence => $tt->{modifiedSequence},
                 peptide_charge => $tt->{precursorCharge},
-                q1_mz => $tt->{precursorMz},
-                q3_mz => $tt->{fragmentMz},
-                q3_ion_label => $tt->{fragmentType},
+                Q1_mz => $tt->{precursorMz},
+                Q3_mz => $tt->{fragmentMz},
+                Q3_ion_label => $tt->{fragmentType},
                 transition_suitability_level_id => 'OK',
                 publication_id => undef,
                 annotator_name => $tt->{contactName},
@@ -386,7 +386,7 @@ sub traml_trans_hashref {
                 retention_time => $tt->{retentionTime},
                 instrument => $tt->{instrument},
                 comment => $tt->{comment},
-                q3_peak_intensity => $tt->{relativeIntensity} 
+                Q3_peak_intensity => $tt->{relativeIntensity} 
               };
 
     push @converted, $row;
@@ -399,7 +399,7 @@ sub traml_trans_hashref {
 
 sub get_std_transition_headers {
   my $self = shift;
-  my @std_headers = qw( modified_peptide_sequence peptide_charge q1_mz q3_mz q3_ion_label transition_suitability_level_id publication_id annotator_name collision_energy retention_time instrument comment q3_peak_intensity );
+  my @std_headers = qw( modified_peptide_sequence peptide_charge Q1_mz Q3_mz Q3_ion_label transition_suitability_level_id publication_id annotator_name collision_energy retention_time instrument comment Q3_peak_intensity );
   return \@std_headers;
 }
 
@@ -443,10 +443,10 @@ sub get_column_defs {
     'Subpep of' => 'Number of observed peptides of which this peptide is a subsequence', 
     'Sequence' => 'Amino acid sequence of detected pepide, including any mass modifications.',
     'Charge' => 'Charge on Q1 (precursor) peptide ion.',
-    'q1_chg' => 'Charge on Q1 (precursor) peptide ion.',
-    'q1_mz' => 'Mass to charge ratio of precursor peptide ion.',
-    'q3_mz' => 'Mass to charge ratio of fragment ion.',
-    'q3_chg' => 'Charge on Q3 (fragment) ion.',
+    'Q1_chg' => 'Charge on Q1 (precursor) peptide ion.',
+    'Q1_mz' => 'Mass to charge ratio of Q1 (precursor) peptide ion.',
+    'Q3_mz' => 'Mass to charge ratio of Q3 (fragment) ion.',
+    'Q3_chg' => 'Charge on Q3 (fragment) ion.',
     'Label' => 'Ion-series designation for fragment ion (Q3).',
     'Intensity' => 'Relative intensity of peak in CID spectrum, scaled to 10000 units',
     'CE' => 'Collision energy, the kinetic energy conferred to the peptide ion and resulting in peptide fragmentation. (eV)',
@@ -465,15 +465,26 @@ sub get_column_defs {
     'RI' => 'Relative Intensity of peak in CID spectrum',
 
     'SpecLinks' => 'Links to spectra for this peptide ion in one or more spectral libraries',
-    'QTOF' => 'Consensus spectrum from Agilent QTOF instrument(s)',
-    'QQQ' => 'Consensus spectrum from QQQ (triple quadrupole) instrument(s)',
-    'QTOF_CE' => 'Consensus spectra from Agilent QTOF instrument(s) at various collision energies',
-    'QTrap' => 'Consensus spectrum from QTrap instrument(s)',
+    '6530 QTOF' => 'Consensus spectrum from Agilent 6530 QTOF instrument(s)',
+    '6460 QQQ' => 'Consensus spectrum from Agilent 6460 QQQ instrument(s)',
+    '6530 QTOF_CE' => 'Consensus spectra from Agilent 6530 QTOF instrument(s) at various collision energies',
+    'QTRAP 5500' => 'Consensus spectrum from AB SCIEX QTRAP 5500 instrument(s)',
+    'QTRAP' => 'Consensus spectrum from AB SCIEX QTRAP 5500 instrument(s)',
+    '6460 QQQ' => 'Consensus spectrum from Agilent 6460 QQQ instrument(s)',
+    'QTRAP 5500' => 'Consensus spectrum from AB SCIEX QTRAP 5500 instrument(s)',
+    'QTOF' => 'Consensus spectrum from Agilent 6530 QTOF instrument(s)',
+    'QQQ' => 'Consensus spectrum from Agilent 6460 QQQ instrument(s)',
+    'QTOF_CE' => 'Consensus spectra from Agilent 6530 QTOF instrument(s) at various collision energies',
+    'QTrap' => 'Consensus spectrum from AB SCIEX QTRAP 5500 instrument(s)',
     'IT' => 'Consensus spectrum from Ion Trap instrument(s)',
     'IonTrap' => 'Consensus spectrum from Ion Trap instrument(s)',
     'Pred' => 'Predicted spectrum',
-    'QQQ_ch' => 'Chromatogram from QQQ showing ion intensity over time',
-    'QTrap_ch' => 'Chromatogram from QTrap5500 showing ion intensity over time',
+    '6460 QQQ ' => 'Chromatogram from Agilent 6460 QQQ showing ion intensity over time',
+    'QTRAP 5500 ' => 'Chromatogram from AB SCIEX QTRAP 5500 showing ion intensity over time',
+    'QQQ ' => 'Chromatogram from Agilent 6460 QQQ showing ion intensity over time',
+    'QTRAP ' => 'Chromatogram from AB SCIEX QTRAP 5500 showing ion intensity over time',
+    'QQQ_ch' => 'Chromatogram from Agilent 6460 QQQ showing ion intensity over time',
+    'QTrap_ch' => 'Chromatogram from AB SCIEX QTRAP 5500 showing ion intensity over time',
     'N SP Mapping' => 'Number of SwissProt primary protein mapping',
     'N SP-varsplic Mapping' => 'Number of SwissProt primary and alternatively-spliced protein mapping',
     'N SP-nsSNP Mapping' =>  'Number of SwissProt primary and alternatively-spliced protein mapping, plus nsSNP mapping,<BR>wherein all Swiss-Prot-annotated nsSNPs have been expanded out to sequence with context so that any nsSNP-containing peptides are properly mapped.',
