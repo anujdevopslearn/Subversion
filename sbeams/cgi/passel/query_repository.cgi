@@ -150,6 +150,11 @@ foreach my $sample (@{$json_href->{"MS_QueryResponse"}{samples}}){
     $sort_cols_hash{$idx}{sortby} = $sample->{instrumentation};
   }elsif($sortby =~ /publication/i){
     $sort_cols_hash{$idx}{sortby} = $sample->{publication_name};
+  }elsif($sortby =~ /spikein/i){
+    $sort_cols_hash{$idx}{sortby} = $sample->{spikein};
+  }elsif($sortby =~ /mprophet/i){
+    $sort_cols_hash{$idx}{sortby} = $sample->{mprophet};
+
   # sorts are alphabetic, so these numeric columns don't sort correctly
   # So they've been made unsortable (sortable: false) in grid_ISB.js
   }elsif($sortby =~ /runs/i){
@@ -160,10 +165,6 @@ foreach my $sample (@{$json_href->{"MS_QueryResponse"}{samples}}){
     $sort_cols_hash{$idx}{sortby} = $sample->{counts}{peps};
   }elsif($sortby =~ /ions/i){
     $sort_cols_hash{$idx}{sortby} = $sample->{counts}{ions};
-  }elsif($sortby =~ /tx/i){
-    $sort_cols_hash{$idx}{sortby} = $sample->{counts}{transitions};
-  }elsif($sortby =~ /TxGrps/i){
-    $sort_cols_hash{$idx}{sortby} = $sample->{counts}{transition_groups};
   }
 
   $sort_cols_hash{$idx}{sample} = $sample;
@@ -174,7 +175,7 @@ foreach my $sample (@{$json_href->{"MS_QueryResponse"}{samples}}){
 if($cmd eq 'downloadtable'){
   print header( -type => 'application/excel', -attachment => 'PASSEL_SRM_experiments.tsv' ); 
   print "Experiment Title\tSample Tag\tSample Date\tOrganism\tData Contributors\tInstrument\t";
-  print "Runs\tProteins\tPeptides\tIons\tTransitions\t";
+  print "Runs\tProteins\tPeptides\tSpike-in\tmProphet\t";
   print "Publication\tAuthors\tAbstract\n";
   foreach my $idx (sort {$sort_cols_hash{$a}{sortby} cmp $sort_cols_hash{$b}{sortby}} keys %sort_cols_hash ){
     my $title = $sort_cols_hash{$idx}{sample}->{experiment_title};
@@ -187,8 +188,8 @@ if($cmd eq 'downloadtable'){
     my $runs = $sort_cols_hash{$idx}{sample}->{counts}{runs};
     my $proteins = $sort_cols_hash{$idx}{sample}->{counts}{prots};
     my $peptides = $sort_cols_hash{$idx}{sample}->{counts}{peps};
-    my $ions = $sort_cols_hash{$idx}{sample}->{counts}{ions};
-    my $transitions = $sort_cols_hash{$idx}{sample}->{counts}{transitions};
+    my $spikein = $sort_cols_hash{$idx}{sample}->{spikein};
+    my $mprophet = $sort_cols_hash{$idx}{sample}->{mprophet};
 
     my $publication = $sort_cols_hash{$idx}{sample}->{publication}{cite};
     my $authors = $sort_cols_hash{$idx}{sample}->{publication}{author};
@@ -196,7 +197,7 @@ if($cmd eq 'downloadtable'){
     
     my $line =
     "$title\t$sampletag\t$sample_date\t$organism\t$contributors\t$instrument\t".
-    "$runs\t$proteins\t$peptides\t$ions\t$transitions\t".
+    "$runs\t$proteins\t$peptides\t$spikein\t$mprophet\t".
     "$publication\t$authors\t$abstract";
     # Remove all newlines, then add one at the end.
     $line =~ s/\n/ /g;

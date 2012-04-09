@@ -1469,6 +1469,8 @@ var SampleRecord = Ext.data.Record.create([
     { name: 'runs', mapping: 'counts.runs'},
     { name: 'transition_groups', mapping: 'counts.transition_groups'},
     { name: 'transitions', mapping: 'counts.transitions'},
+    { name: 'spikein' },
+    { name: 'mprophet' },
     { name: 'summary' },
     { name: 'contributors'},
     { name: 'sample_date' },
@@ -1676,14 +1678,14 @@ header: "Peps", width: 25, fixed: false, dataIndex: 'peptides',
 	tooltip: 'Distinct peptide sequences measured' 
 },
 { 
-header: "Ions", width: 25, fixed: false, dataIndex: 'ions',  
-	sortable: false,
-	tooltip: 'Distinct peptide ions measured' 
+header: "spike?", width: 25, fixed: false, dataIndex: 'spikein',  
+	sortable: true,
+	tooltip: 'Spike-in experiment?' 
 },
 { 
-header: "Tx", width: 25, fixed: false, dataIndex: 'transitions',  
-	sortable: false,
-	tooltip: 'Distinct transitions measured' 
+header: "mPro", width: 25, fixed: false, dataIndex: 'mprophet',  
+	sortable: true,
+	tooltip: 'mProphet analysis run?' 
 },
 {
 header: "Publication", dataIndex: 'publication_name', width: 100,
