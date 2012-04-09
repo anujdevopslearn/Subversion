@@ -670,8 +670,19 @@ sub encodeSectionTable {
       push @downloads, @{$args{download_links}};
     }
     my $download_links = join( ', ', @downloads );
+    $rs_link = "<SPAN CLASS=info_box>Download as: $download_links</SPAN>";
 
-    $rs_link = "<SPAN CLASS=info_box>Download as: $download_links</SPAN>",
+    if ( $args{download_form} ) {
+      my $hidden = qq~
+      <INPUT TYPE=HIDDEN NAME=rs_set_name VALUE=$rs_name>
+      <INPUT TYPE=HIDDEN NAME=remove_markup VALUE=1>
+      <INPUT TYPE=HIDDEN NAME=tsv_output VALUE=1>
+      ~;
+      $args{download_form} =~ s/HIDDEN_PLACEHOLDER/$hidden/m;
+      $download_links = $args{download_form};
+      $rs_link = $download_links;
+    }
+
   }
 
   return '' unless $args{rows};
