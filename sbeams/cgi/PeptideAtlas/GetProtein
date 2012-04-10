@@ -517,10 +517,15 @@ sub handle_request {
   if ($n_biosequences == 0) {
     if ($sbeams->output_mode() eq 'html') {
       print qq~
-        The protein entered '$protein_name' was not found in the
-        atlas build '$atlas_build_names{$atlas_build_id}'. Please check
-        that the correct build was selected and that the protein name
-        was correctly specified.
+        Protein identifier '$protein_name' not found in
+        atlas build '$atlas_build_names{$atlas_build_id}'.
+	<br>
+	Please check selections and try again.
+        <p>
+	<form method="post" action="https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/Search">
+	Or, search for the identifer across all major PeptideAtlas builds:
+        &nbsp;&nbsp;<input type="text" name="search_key" value="$protein_name" size="20" maxlength="60"/>
+	<input type="submit" name="apply_action" value="GO" /><BR>
       ~;
     } else {
       $sbeams->reportException(

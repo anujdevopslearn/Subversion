@@ -595,7 +595,14 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
         my @rows = $sbeams->selectSeveralColumns($sql)
 
-        or print "Peptide not found.  Please check selections and try again.<br>";
+        or print qq~
+        Peptide not found.  Please check selections and try again.<br>
+	<p>
+	<form method="post" action="https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/Search">
+	Or, search for the peptide across all major PeptideAtlas builds:
+        &nbsp;&nbsp;<input type="text" name="search_key" value="$searchValue" size="25" maxlength="120"/>
+	<input type="submit" name="apply_action" value="GO" /><BR>
+	~;
   $log->debug( "finished running query " . time() );
 
         if (@rows) {
