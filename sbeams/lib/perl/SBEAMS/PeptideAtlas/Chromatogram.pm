@@ -970,7 +970,7 @@ sub traces2json {
       $label .= sprintf (" ERI: %0.1f", $traces{'tx'}->{$q1}->{$q3}->{'eri'} )
 	if ($traces{'tx'}->{$q1}->{$q3}->{'eri'});
       $data_element{'label'} = $label;
-      $data_element{'eri'} = $traces{'tx'}->{$q1}->{$q3}->{'eri'}
+      $data_element{'eri'} = $traces{'tx'}->{$q1}->{$q3}->{'eri'} +0 #force to int
         if ($traces{'tx'}->{$q1}->{$q3}->{'eri'});
       # Write each pair of numbers in Dick's JSON format.
       for my $time (sort {$a <=> $b} keys %{$traces{'tx'}->{$q1}->{$q3}->{'rt'}}) {
