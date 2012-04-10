@@ -43,6 +43,7 @@
 
     function toggle_autoscale_y(checked) {
         chromavis_left.auto_update_scale_y(checked);
+        chromavis_right.auto_update_scale_y(checked);
         max_y_axis_value.disabled = checked;
         return false;
     }
@@ -57,7 +58,7 @@
                     height: 300,
                     auto_scale_x : true,
                     auto_scale_y : true,
-                    auto_update_scale_y : false,
+                    auto_update_scale_y : auto_scale_y.checked,
                     min_y_axis_value : 0,
                     vertical_padding : 20,
                     horizontal_padding: 10,
@@ -110,6 +111,7 @@
 
             config.CONTENTS.PLOT.container = document.getElementById("chromavis_" + side);
             config.CONTENTS.data_array = json.data_json;
+	    config.CONTENTS.PLOT.auto_update_scale_y = auto_scale_y.checked;
             config.CONTENTS.vertical_marker_array = json.vmarker_json;
             chromavis.draw(config);
             updateConnections();

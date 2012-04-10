@@ -497,6 +497,7 @@ function render() {
                         that.window ={x: that.context_posX(that.posX.invert(that.focus_window.x)),
                             dx: that.context_posX(that.posX.invert(that.focus_window.dx)) -
                                     that.context_posX(that.posX.invert(0))};
+                    drawPanel.render();
                             if (dataObj.dispatch_events) {
                                 vq.events.Dispatcher.dispatch(
                                 new vq.events.Event('chromavis_windowchange',that.uuid(),{
@@ -507,7 +508,6 @@ function render() {
                                 }));
                             }
                         that.focus_window = {x:0,dx:0};
-                    drawPanel.render();
         })
             .add(pv.Bar)
             .left(function(d) { return d.x;})
@@ -563,7 +563,7 @@ if (dataObj.data_array[0][dataObj.eri_id] != undefined && !isNaN(dataObj.data_ar
                             return prev +
                                             (norm_eri_ordered[index][dataObj.eri_id]  - curr) *
                                             (norm_eri_ordered[index][dataObj.eri_id] - curr);},0);
-        return [Math.sqrt(mean_square) || 0];
+        return [Math.sqrt(mean_square) || 1];
     }
     var bubble;
     var eri_gauge_height = 0;
