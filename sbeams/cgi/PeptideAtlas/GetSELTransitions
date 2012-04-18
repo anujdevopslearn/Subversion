@@ -194,6 +194,10 @@ sub handle_request {
   my %input_types = 
     $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
 
+  #### Print browser warning
+  if ($sbeams->output_mode() eq 'html') {
+    print "<p><b><i>Works best under Firefox.</i></b><br>";
+  }
 
   #### Read the input parameters for each column
   my $n_params_found = $sbeams->parse_input_parameters(
