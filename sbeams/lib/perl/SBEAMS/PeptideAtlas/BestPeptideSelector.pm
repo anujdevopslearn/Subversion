@@ -2329,6 +2329,7 @@ sub get_pabst_multibuild_observed_peptides {
     $peptides{$curr_prot} ||= {};
     $peptides{$curr_prot}->{$curr_pep} ||= {};
     $peptides{$curr_prot}->{$curr_pep}->{$curr_build} = \@row;
+    $pep_cnt++;
 
   }
 
@@ -2389,8 +2390,7 @@ sub get_pabst_observed_peptides {
 
   # minimum n_obs to consider as observed
   my $nobs_and = $args{min_nobs_clause} || ''; 
-
-  my $name_like = $args{name_like} || '';
+  my $name_like = $args{name_like_clause} || '';
 
   my $pepsql =<<"  END"; 
   SELECT DISTINCT 
@@ -2419,8 +2419,8 @@ sub get_pabst_observed_peptides {
   JOIN $TBAT_BIOSEQUENCE BS ON ( PM.matched_biosequence_id = BS.biosequence_id )
   $build_where
   $nobs_and
-  $name_like
   $name_in
+  $name_like
   ORDER BY biosequence_name, suitability_score DESC
   END
 
@@ -2530,6 +2530,7 @@ sub get_pabst_theoretical_peptides {
   my $where = "WHERE BS.biosequence_set_id = $args{bioseq_set}";
 
   my $name_in = $args{protein_in_clause} || '';
+  my $name_like = $args{name_like_clause} || '';
 
   my $pepsql =<<"  END"; 
   SELECT DISTINCT biosequence_name, 
@@ -2563,6 +2564,7 @@ sub get_pabst_theoretical_peptides {
   JOIN $TBAT_BIOSEQUENCE BS ON ( PM.source_biosequence_id = BS.biosequence_id )
   $where
   $name_in
+  $name_like
   ORDER BY biosequence_name, suitability_score DESC
   END
 
@@ -2650,11 +2652,24 @@ sub merge_pabst_peptides {
     # List of peptides for this protein
     my @peptides; 
 
-    # 
-    my @pep_keys = ( keys( %{$theo->{$prot}} ), keys( %{$obs->{$prot}} ) );
+#    print STDERR scalar ( keys(  %{$theo->{$prot}} ) )  . " Theo peptides \n";
+#    print STDERR scalar ( keys(  %{$obs->{$prot}} ) )  . " Obs peptides \n";
+
+    my %merged_keys;
+    for my $key ( keys( %{$theo->{$prot}} ), keys( %{$obs->{$prot}} ) ) {
+      $merged_keys{$key}++;
+    }
+    my @pep_keys = ( keys( %merged_keys ) );
+
+#    print STDERR "\n\n";
+
+#    print STDERR scalar ( keys( %merged_keys ) )  . " merged peptides \n";
+
+#    my @pep_keys = ( keys( %{$theo->{$prot}} ), keys( %{$obs->{$prot}} ) );
 #    print STDERR scalar @pep_keys . " peptides \n";
-    my %seen;
-    @pep_keys =  grep !$seen{$_}++, @pep_keys;
+#    my %seen;
+#    @pep_keys =  grep !$seen{$_}++, @pep_keys;
+#    print STDERR scalar @pep_keys . "Unseen peptides \n";
 #    print STDERR scalar @pep_keys . " unique peptides \n";
 
 # 0 biosequence_name
@@ -2741,7 +2756,7 @@ sub merge_pabst_peptides {
 #    for my $p ( @peptides ) { print STDERR join( ':', @$p ) . "\n" if $p->[2] eq 'LNLSENYTLSISNAR'; }
 
     # Apply peptide number threshold.  Score threshold too?
-    $args{n_peptides} ||= 100;
+    $args{n_peptides} ||= 5000;
     if ( $args{n_peptides} ) {
       my $cnt = 0;
       for my $pep ( @peptides ) {
@@ -2755,6 +2770,31 @@ sub merge_pabst_peptides {
       push @final_protein_list, @peptides;
     }
 
+    # Bolted on - print on the fly, a bit ugly
+    if ( $args{print_onfly} ) {
+      for my $peptide ( @final_protein_list ) {
+        if ( defined $args{min_score} ) {
+          next if $peptide->[17] <= $args{min_score};
+        }
+        if ( defined $args{no_mc} ) {
+          next if ( $peptide->[14] && $peptide->[14] =~ /MC/ );
+        }
+        if ( defined $args{no_st} ) {
+          next if ( $peptide->[14] && $peptide->[14] =~ /ST/ );
+        }
+  
+        $peptide->[4] = sprintf( "%0.2f", $peptide->[4] ) if $peptide->[4] !~ /na/;
+        $peptide->[5] = sprintf( "%0.2f", $peptide->[5] ) if $peptide->[5] !~ /na/;
+        $peptide->[6] = sprintf( "%0.2f", $peptide->[6] ) if $peptide->[6] !~ /na/;
+        $peptide->[7] = sprintf( "%0.2f", $peptide->[7] ) if $peptide->[7] !~ /na/;
+        $peptide->[15] ||= 'na';
+        $peptide->[16] = sprintf( "%0.2f", $peptide->[16] ) if $peptide->[16];
+        $peptide->[17] = sprintf( "%0.3f", $peptide->[17] );
+
+        print  { $args{tsv_file} } join( "\t", @{$peptide} ) . "\n";
+      }
+      @final_protein_list = ();
+    }
   }
   return \@final_protein_list;
 }
