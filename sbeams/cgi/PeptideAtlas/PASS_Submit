@@ -811,7 +811,7 @@ sub addDataset {
 				   PK => 'dataset_id',
 				   return_PK => 1,
 				   add_audit_parameters => 1,
-				   testonly => 1,
+				   #testonly => 1,
 				   #verbose => 0,
 				  );
 
@@ -830,7 +830,7 @@ sub addDataset {
 					  rowdata_ref => \%rowdata,
 					  PK => 'dataset_id',
 					  PK_value => $PK,
-					  testonly => 1,
+					  #testonly => 1,
 					  #verbose => 0,
 					 );
   print "</PRE>\n";
