@@ -71,9 +71,6 @@ sub main
         parameters_ref=>\%parameters
         );
 
-    if ( $parameters{reset_id} && $parameters{reset_id} eq 'true' ) {
-      $sbeamsMOD->clearBuildSettings();
-    }
 
     ## get project_id to send to HTMLPrinter display
     my $project_id = $sbeamsMOD->getProjectID(
@@ -109,7 +106,7 @@ sub main
 
 
 ###############################################################################
-# Show the main welcome page
+# Show the page
 ###############################################################################
 sub handle_request {
 
@@ -159,20 +156,10 @@ sub handle_request {
     my @accessible_project_ids = $sbeams->getAccessibleProjects();
     my $accessible_project_ids = join( ",", @accessible_project_ids ) || '0';
 
+    #### Get a list of accessible atlas builds
     my $sql = qq~
-    SELECT AB.atlas_build_id, atlas_build_name, atlas_build_description,
-           default_atlas_build_id, organism_specialized_build, organism_name,
-           ( SELECT  COUNT(*) cnt
-	      FROM $TBAT_PEPTIDE_INSTANCE
-	      WHERE atlas_build_id = AB.atlas_build_id ) AS n_distinct,
-           ( SELECT SUM(n_progressive_peptides) 
-             FROM $TBAT_SEARCH_BATCH_STATISTICS SBS JOIN
-                  $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB 
-               ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
-             WHERE atlas_build_id = AB.atlas_build_id ) AS n_distinct_2
-    FROM $TBAT_ATLAS_BUILD AB JOIN $TBAT_BIOSEQUENCE_SET BS
-      ON AB.biosequence_set_id = BS.biosequence_set_id
-    JOIN $TB_ORGANISM O ON BS.organism_id = O.organism_id
+    SELECT AB.atlas_build_id, atlas_build_name, default_atlas_build_id
+    FROM $TBAT_ATLAS_BUILD AB
     LEFT JOIN $TBAT_DEFAULT_ATLAS_BUILD DAB 
       ON DAB.atlas_build_id = AB.atlas_build_id
     WHERE AB.project_id IN ( $accessible_project_ids )
@@ -180,30 +167,31 @@ sub handle_request {
           ( SELECT DISTINCT atlas_build_id FROM $TBAT_PEPTIDE_INSTANCE )
     AND ( DAB.record_status IS NULL OR DAB.record_status != 'D' )
     AND AB.record_status != 'D'
-    AND BS.record_status != 'D'
     AND NOT ( DAB.organism_id IS NULL 
               AND default_atlas_build_id IS NOT NULL ) -- keep global default from showing up 2x
-    ORDER BY BS.organism_id DESC, organism_specialized_build, 
-             AB.atlas_build_id DESC
     ~;
     my @atlas_builds = $sbeams->selectSeveralColumns($sql);
     $log->debug( $sbeams->evalSQL($sql) );
 
-    my $atlas_build_id_idx = 0;
+    my $atlas_atlas_build_id_output_idx = 0;
     my $atlas_build_name_idx = 1;
-    my $atlas_build_descr_idx = 2;
-    my $def_build_id_idx = 3;
-    my $org_spec_build_idx = 4;
-    my $org_name_idx = 5;
-    my $dist_peps_idx = 6;
-    my $dist_peps_2_idx = 7;   #this can undercount; it's based on experiment_contribution_summary.out
+    my $def_atlas_build_id_output_idx = 2;
 
+    # Get name of current (default) atlas build
     my $default_build_name = '';
     foreach my $atlas_build ( @atlas_builds ) {
-      if ($atlas_build->[$atlas_build_id_idx] == $atlas_build_id) {
+      if ($atlas_build->[$atlas_atlas_build_id_output_idx] == $atlas_build_id) {
 	$default_build_name = $atlas_build->[$atlas_build_name_idx];
       }
     }
+
+  # Make hash out of accessible atlas builds
+  my %atlas_build_hash;
+  foreach my $atlas_build ( @atlas_builds ) {
+    my $id = $atlas_build->[$atlas_atlas_build_id_output_idx];
+    $atlas_build_hash{$id} = $atlas_build;
+  }
+
 
     #### If the output_mode is HTML, then display the form
     if ($sbeams->output_mode() eq 'html') {
@@ -235,17 +223,19 @@ sub handle_request {
                                                   showtext => 'View all builds',
                                                   sticky  => 1 );
   print qq~
-  <P>Listing takes 8 - 60 seconds to generate. Screen will be empty until complete.<BR>
-  Number of proteins returned on click may differ from tallies shown here:<BR>
+  <P>Number of proteins returned on click may differ from tallies shown here:<BR>
   &nbsp;&nbsp;--Protein tallies exclude decoy, unmapped, and some contaminant proteins.<BR>
   &nbsp;&nbsp;--Swiss-Prot click returns only 6-char core identifiers, not splice variants.<BR>
   See <i>Protein ID terms</i> in left sidebar for nomenclature.</P>
   ~;
 
+  ### Construct headers for info table
   my $table = SBEAMS::Connection::DataTable->new();
 
   my $this_row = $table->getRowNum();
 
+  ### IF YOU CHANGE THE INDICES BELOW, CHANGE IN EXACTLY THE SAME WAY
+  ### IN BuildInfo.pm
   my $build_name_idx = 0;
   my $org_idx = 1;
   my $smpl_count_idx = 2;
@@ -259,427 +249,67 @@ sub handle_request {
   my $n_swiss_idx = 10;
   my $n_covering_idx = 11;
   my $descr_idx = 12;
-  my $ncols = 13;
+  my $atlas_build_id_output_idx = 13;
+  my $ncols = 14;
 
-  my @headers;
-  $headers[$build_name_idx] = 'Build Name';
-  $headers[$distinct_peps_idx] = 'distinct peptides';
-  $headers[$smpl_count_idx] = 'samples';
-  $headers[$org_idx] = 'Organism';
-  $headers[$descr_idx] = 'Description';
-  $headers[$psm_count_idx] = 'observations';
-  $headers[$spectra_searched_idx] = 'spectra searched';
-  $headers[$n_canonicals_idx] = 'canonical proteins';
-  $headers[$n_canon_dist_idx] = 'canonical + possibly distinguished proteins';
-  $headers[$n_disting_prots_idx] = 'peptide set unique proteins';
-  $headers[$n_seq_unique_prots_idx] = 'sequence unique proteins';
-  $headers[$n_swiss_idx] = 'Core Swiss-Prot identifiers covered';
-  $headers[$n_covering_idx] = 'covering set';
+
+  #Open and read the cached .tsv file.
+  my $tsv_file = "$PHYSICAL_BASE_DIR/tmp/buildInfo.tsv";
+  open (TSV, $tsv_file) || die "$PROG_NAME: cannot open $tsv_file for reading.";
+  my $header = <TSV>;
+  chomp $header;
+  my @headers = split("\t", $header);
 
   # Define header row
   $table ->addRow( \@headers );
   $table->setRowAttr(  COLS => [1..$ncols], ROWS => [1], BGCOLOR => '#bbbbbb', ALIGN=>'CENTER' );
   $table->setHeaderAttr( BOLD => 1 );
 
-  my $nbuilds = scalar @atlas_builds;
-  print "<p>Getting info for each of $nbuilds builds: \n";
-  foreach my $atlas_build ( @atlas_builds ) {
-    my @row;
+  my $selected = '';
+  while (my $line = <TSV>) {
     my @trinfo;
     my $selected = '';
     my $bgcolor = '#dddddd';
 
-    print "#$atlas_build->[$atlas_build_id_idx] \n";
-
-    #### Get the info we want to display
-    my $samples_href = get_sample_info (
-      build_id => $atlas_build->[$atlas_build_id_idx],
-    );
-
-    my $spectra_searched_href = get_spectra_searched (
-      build_id => $atlas_build->[$atlas_build_id_idx],
-    );
-
-    # get 7 different protein counts. could be faster.
-    my $prot_count_href;
-    $prot_count_href = get_protein_identification_count (
-      build_id => $atlas_build->[$atlas_build_id_idx],
-      presence_level => 'canonical',
-    );
-    my $canonical_count = $prot_count_href->{nprots};
-    $prot_count_href = get_protein_identification_count (
-      build_id => $atlas_build->[$atlas_build_id_idx],
-      presence_level => 'possibly_distinguished',
-    );
-    my $poss_dist_count = $prot_count_href->{nprots};
-    $prot_count_href = get_protein_identification_count (
-      build_id => $atlas_build->[$atlas_build_id_idx],
-      presence_level => 'subsumed',
-    );
-    my $subsumed_count = $prot_count_href->{nprots};
-    $prot_count_href = get_protein_identification_count (
-      build_id => $atlas_build->[$atlas_build_id_idx],
-      presence_level => 'ntt-subsumed',
-    );
-    my $ntt_subsumed_count = $prot_count_href->{nprots};
-    $prot_count_href = get_covering_set_count (
-      build_id => $atlas_build->[$atlas_build_id_idx],
-    );
-    my $covering_count = $prot_count_href->{nprots};
-    $prot_count_href = get_protein_relationship_count (
-      build_id => $atlas_build->[$atlas_build_id_idx],
-      relationship_name => 'indistinguishable',
-    );
-    my $indistinguishable_count = $prot_count_href->{nprots};
-    my $swiss_count = get_swissprot_coverage (
-      build_id => $atlas_build->[$atlas_build_id_idx],
-    );
-
-    my $canon_dist_count = $canonical_count + $poss_dist_count || "";
-
-    my $distinguishable_prot_count = 
-	 $canonical_count +
-	 $poss_dist_count +
-	 $subsumed_count +
-	 $ntt_subsumed_count || "";
-
-    my $sequence_unique_prot_count = 
-	 $canonical_count +
-	 $poss_dist_count +
-	 $subsumed_count +
-	 $ntt_subsumed_count +
-	 $indistinguishable_count || "";
-
-
-    if ($atlas_build->[$atlas_build_id_idx] == $atlas_build_id) {
-      $selected = 'CHECKED ';
-    }
-    if ( !$atlas_build->[$def_build_id_idx] ) {
-      if ( $selected ne 'CHECKED ' ) { # We will show the current build regardless
-	$log->debug( "checking is $atlas_build->[$atlas_build_id_idx]" );
-	@trinfo = ( $tr =~ /(NAME)=('[^']+')\s+(ID)=('[^']+')\s+(CLASS)=('[^']+')/ );
-      }
-      $bgcolor = '#eeeeee';
-    } 
-
-    $row[$build_name_idx] =<<"    END";
-    <A HREF=buildDetails?atlas_build_id=$atlas_build->[$atlas_build_id_idx] TITLE="View details of Atlas Build $atlas_build->[$atlas_build_name_idx]">
-    $atlas_build->[$atlas_build_name_idx]</A>
-    END
-
-    $row[$distinct_peps_idx] =<<"    END";
-<A HREF=GetPeptides?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&apply_action=QUERY TITLE="Retrieve distinct peptides for Atlas Build $atlas_build->[$atlas_build_name_idx]">$atlas_build->[$dist_peps_idx]</A>
-    END
-    $row[$org_idx] = $atlas_build->[$org_name_idx];
-    $row[$smpl_count_idx] =<<"    END";
-    <A HREF=buildDetails?atlas_build_id=$atlas_build->[$atlas_build_id_idx] TITLE="View samples included in Atlas Build $atlas_build->[$atlas_build_name_idx]">$samples_href->{smpl_count}</A>
-    END
-    $row[$psm_count_idx] = $samples_href->{psm_count};
-    $row[$spectra_searched_idx] = $spectra_searched_href->{nspec};
-    $row[$n_canonicals_idx] =<<"    END";
-<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&presence_level_constraint=1&redundancy_constraint=4&apply_action=QUERY TITLE="Retrieve canonical protein list for Atlas Build $atlas_build->[$atlas_build_name_idx]">$canonical_count</A>
-    END
-    $row[$n_covering_idx] =<<"    END";
-<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&redundancy_constraint=4&covering_constraint=on&apply_action=QUERY TITLE="Retrieve protein list sufficient to explain all peptides observed in Atlas Build $atlas_build->[$atlas_build_name_idx]">$covering_count</A>
-    END
-    $row[$n_canon_dist_idx] =<<"    END";
-<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&presence_level_constraint=1,2&redundancy_constraint=4&apply_action=QUERY TITLE="Retrieve canonical and possibly-distinguished protein list for Atlas Build $atlas_build->[$atlas_build_name_idx]">$canon_dist_count</A>
-    END
-    $row[$n_disting_prots_idx] =<<"    END";
-<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&redundancy_constraint=4&apply_action=QUERY TITLE="Retrieve one protein per distinct peptide set for Atlas Build $atlas_build->[$atlas_build_name_idx]">$distinguishable_prot_count</A>
-    END
-    $row[$n_seq_unique_prots_idx] =<<"    END";
-<A HREF=GetProteins?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&redundancy_constraint=1&apply_action=QUERY TITLE="Retrieve a list of sequence-unique proteins for Atlas Build $atlas_build->[$atlas_build_name_idx]">$sequence_unique_prot_count</A>
-    END
-# The following query doesn't match splice variants.
-# Correct pattern to match is [ABOPQ]_____;[ABOPQ]_____-%  but the
-# semi-colon is interpreted as a param separator and quotes, backslashes do not
-# escape it effectively. Is problem in DBInterface.pm, parse_input_parameters?
-    if ($swiss_count) {
-      $row[$n_swiss_idx] =<<"    END";
-<A HREF=GetProteins?&atlas_build_id=$atlas_build->[$atlas_build_id_idx]&redundancy_constraint=4&biosequence_name_constraint=[ABOPQ]_____&apply_action=QUERY TITLE="Retrieve all Swiss-Prot identifiers in Atlas Build $atlas_build->[$atlas_build_name_idx]">$swiss_count</A>
-    END
-    } else {
-      $row[$n_swiss_idx] = '';
-    }
-    
-    $row[$descr_idx] = $sbeams->truncateStringWithMouseover( string => $atlas_build->[$atlas_build_descr_idx], len => 50 );
-#      $row[$is_def_idx] = $atlas_build->[$org_spec_build_idx] || '';
-#      $row[$is_def_idx] = ( !$atlas_build->[$def_build_id_idx] ) ? 'N' : ( $row[$is_def_idx] ) ?
-#                "<SPAN CLASS=popup_help TITLE='$atlas_build->[$org_spec_build_idx]'>Y</SPAN>" : 'Y';
-
+    chomp $line;
+    my @row = split("\t", $line);
+    # Check atlas build ID
+    my $id = $row[$atlas_build_id_output_idx];
+    my $atlas_build = $atlas_build_hash{$id};
+    next if (! defined $atlas_build);
+    # Add the row to the table.
     $table->addRow( \@row );
     my $this_row = $table->getRowNum();
+    # This manages which builds are shown for "View default builds"
+    if ($id == $atlas_build_id) {
+      $selected = 'CHECKED ';
+    }   
+    if ( !$atlas_build->[$def_atlas_build_id_output_idx] ) {
+      if ( $selected ne 'CHECKED ' ) { # We will show the current build regardless
+       $log->debug( "checking is $atlas_build->[$atlas_atlas_build_id_output_idx]" );
+       @trinfo = ( $tr =~ /(NAME)=('[^']+')\s+(ID)=('[^']+')\s+(CLASS)=('[^']+')/ );
+      }
+      $bgcolor = '#eeeeee';
+    }
     $table->setRowAttr(  COLS => [1..$ncols], ROWS => [$this_row], BGCOLOR => $bgcolor, @trinfo );
   }
+  close TSV;
 
+  # Set display attributes for the various columns.
   my $nrows = $this_row;
   $table->setColAttr(  COLS => [$build_name_idx+1], ROWS => [2..$nrows], NOWRAP => 1 );
   $table->setColAttr(  COLS => [$descr_idx+1], ROWS => [2..$nrows], NOWRAP => 1 );
   $table->setColAttr(  COLS => [$build_name_idx+1], ROWS => [1..$nrows], ALIGN => 'LEFT' );
   $table->setColAttr(  COLS => [$build_name_idx+2..$descr_idx], ROWS => [1..$nrows], ALIGN => 'CENTER' );
-#    $table->setColAttr(  COLS => [3], ROWS => [1..$nrows], BGCOLOR => '#eeeeee' );
+  $table->setColAttr(  COLS => [$descr_idx+1], ROWS => [1..$nrows], ALIGN => 'LEFT' );
+  $table->setColAttr(  COLS => [$atlas_build_id_output_idx+1], ROWS => [1..$nrows], ALIGN => 'CENTER' );
+  $table->setColAttr(  COLS => [$atlas_build_id_output_idx+1], ROWS => [1..$nrows], HIDDEN => 1 );
 
-  print $link;
+  # Display the table!
+  print $link;  #table toggle
   print "$table";
   print $q->hidden( "apply_action", '');
   print $q->endform;
 
   }
-
-
 } # end showMainPage
-
-#########################################################################
-#
-# Subroutines to fetch the data we want to display.
-#
-#########################################################################
-
-sub get_sample_info
-{
-  my %args = @_;
-
-  #### Process the arguments list
-  my $build_id = $args{'build_id'}
-      || die "atlas_build_id not passed";
-
-  my %result_hash = ();
-
-  my $pep_count = $sbeams->selectrow_hashref( <<"  PEP" );  
-  SELECT COUNT(*) cnt,  SUM(n_observations) obs
-  FROM $TBAT_PEPTIDE_INSTANCE
-  WHERE atlas_build_id = $build_id
-  PEP
-
-  my $multi_pep_count = $sbeams->selectrow_hashref( <<"  MPEP" );
-  SELECT COUNT(*) cnt, SUM(n_observations) obs
-  FROM $TBAT_PEPTIDE_INSTANCE
-  WHERE atlas_build_id = $build_id
-  AND n_observations > 1
-  MPEP
-
-  my $smpl_count = $sbeams->selectrow_hashref( <<"  SMPL" );
-  SELECT COUNT(*) cnt FROM $TBAT_ATLAS_BUILD_SAMPLE
-  WHERE atlas_build_id = $build_id
-  SMPL
-
-
-  %result_hash = (
-    pep_count => $pep_count->{cnt},
-    multi_pep_count => $multi_pep_count->{cnt},
-    smpl_count => $smpl_count->{cnt},
-    psm_count => $pep_count->{obs},
-  );
-
-  return \%result_hash;
-
-}
-
-sub get_spectra_searched
-{
-  my %args = @_;
-
-  my $build_id = $args{'build_id'}
-      || die "atlas_build_id not passed";
-
-  my $sql =<<"  END";
-  SELECT ABS.atlas_build_id ab, SUM(SBS.n_searched_spectra) nspec ,
-         SUM(n_good_spectra) ngoodspec
-  FROM $TBAT_SEARCH_BATCH_STATISTICS SBS JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB
-    ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
-  JOIN $TBAT_SAMPLE S ON s.sample_id = ABSB.sample_id
-  JOIN $TBAT_ATLAS_BUILD_SAMPLE ABS ON ( s.sample_id = ABS.sample_id )
-  JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id )
-  WHERE ABS.atlas_build_id = $build_id
-  AND ABSB.atlas_build_id = $build_id
-  GROUP BY ABS.atlas_build_id
-  END
-
-  my $result_hash = $sbeams->selectrow_hashref( $sql );
- 
-  return $result_hash;
-  
-}
-
-sub get_protein_identification_count
-{
-  my %args = @_;
-
-  my $build_id = $args{'build_id'}
-      || die "atlas_build_id not passed";
-  my $presence_level = $args{'presence_level'}
-      || die "presence_level not passed";
-  my $count_decoys = $args{'count_decoys'} || 0;
-  my $count_crap = $args{'count_crap'} || 0;
-
-  my $decoy_clause = " ";
-  if (! $count_decoys) {
-    $decoy_clause = "AND NOT BS.biosequence_name LIKE \'DECOY%\'";
-  }
-
-  my $crap_clause = " ";
-  if (! $count_crap) {
-    $crap_clause = "AND NOT BS.biosequence_desc LIKE \'%common contaminant%\'";
-  }
-
-  my $sql =<<"  END";
-  SELECT PI.atlas_build_id ab, COUNT(PI.biosequence_id) nprots
-  FROM $TBAT_PROTEIN_IDENTIFICATION PI
-    JOIN $TBAT_PROTEIN_PRESENCE_LEVEL PPL ON
-     PPL.protein_presence_level_id = PI.presence_level_id
-    JOIN $TBAT_BIOSEQUENCE BS ON 
-     BS.biosequence_id = PI.biosequence_id
-  WHERE PI.atlas_build_id = $build_id
-  AND PPL.level_name = \'$presence_level\'
-  $decoy_clause
-  $crap_clause
-  GROUP BY PI.atlas_build_id
-  END
-
-  my $result_hash = $sbeams->selectrow_hashref( $sql );
- 
-  return $result_hash;
-}
-
-  
-sub get_covering_set_count
-{
-  my %args = @_;
-
-  my $build_id = $args{'build_id'}
-      || die "atlas_build_id not passed";
-  my $count_decoys = $args{'count_decoys'} || 0;
-  my $count_crap = $args{'count_crap'} || 0;
-
-  my $decoy_clause = " ";
-  if (! $count_decoys) {
-    $decoy_clause = "AND NOT BS.biosequence_name LIKE \'DECOY%\'";
-  }
-
-  my $crap_clause = " ";
-  if (! $count_crap) {
-    $crap_clause = "AND NOT BS.biosequence_desc LIKE \'%common contaminant%\'";
-  }
-
-  my $sql =<<"  END";
-  SELECT PI.atlas_build_id ab, COUNT(PI.biosequence_id) nprots
-  FROM $TBAT_PROTEIN_IDENTIFICATION PI
-    JOIN $TBAT_BIOSEQUENCE BS ON 
-     BS.biosequence_id = PI.biosequence_id
-  WHERE PI.atlas_build_id = $build_id
-  AND PI.is_covering = 1
-  $decoy_clause
-  $crap_clause
-  GROUP BY PI.atlas_build_id
-  END
-
-  my $result_hash = $sbeams->selectrow_hashref( $sql );
- 
-  return $result_hash;
-}
-
-  
-sub get_protein_relationship_count
-{
-  my %args = @_;
-
-  my $build_id = $args{'build_id'}
-      || die "atlas_build_id not passed";
-  my $relationship_name = $args{'relationship_name'}
-      || die "relationship_name not passed";
-  my $count_decoys = $args{'count_decoys'} || 0;
-  my $count_crap = $args{'count_crap'} || 0;
-
-  my $decoy_clause = " ";
-  if (! $count_decoys) {
-    $decoy_clause = "AND NOT BS.biosequence_name LIKE \'DECOY%\'";
-  }
-
-  my $crap_clause = " ";
-  if (! $count_crap) {
-    $crap_clause = "AND NOT BS.biosequence_desc LIKE \'%common contaminant%\'";
-  }
-
-  my $sql =<<"  END";
-  SELECT BR.atlas_build_id ab, COUNT(BR.related_biosequence_id) nprots
-  FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR  JOIN
-    $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE BRT ON
-     BRT.biosequence_relationship_type_id = BR.relationship_type_id
-    JOIN $TBAT_BIOSEQUENCE BS ON 
-     BS.biosequence_id = BR.related_biosequence_id
-  WHERE BR.atlas_build_id = $build_id
-  AND BRT.relationship_name = \'$relationship_name\'
-  $decoy_clause
-  $crap_clause
-  GROUP BY BR.atlas_build_id
-  END
-
-  my $result_hash = $sbeams->selectrow_hashref( $sql );
- 
-  return $result_hash;
-}
-
-sub get_swissprot_coverage
-{
-  my %args = @_;
-
-  my $build_id = $args{'build_id'}
-      || die "atlas_build_id not passed";
-  my $count_decoys = $args{'count_decoys'} || 0;
-  my $count_crap = $args{'count_crap'} || 0;
-
-  my $decoy_clause = " ";
-  if (! $count_decoys) {
-    $decoy_clause = "AND NOT BS.biosequence_name LIKE \'DECOY%\'";
-  }
-
-  my $crap_clause = " ";
-  if (! $count_crap) {
-    $crap_clause = "AND NOT BS.biosequence_desc LIKE \'%common contaminant%\'";
-  }
-
-  # Get the exhaustive list -- the list of all protein identifiers
-  # in this atlas.
-  my $sql =<<"  END";
-  (
-    SELECT BS.biosequence_name as bsid
-    FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR 
-      JOIN $TBAT_BIOSEQUENCE BS ON 
-       BS.biosequence_id = BR.related_biosequence_id
-    WHERE BR.atlas_build_id = $build_id
-    $decoy_clause
-    $crap_clause
-  )
-  UNION
-  (
-    SELECT BS.biosequence_name as bsid
-    FROM $TBAT_PROTEIN_IDENTIFICATION PID
-      JOIN $TBAT_BIOSEQUENCE BS ON 
-       BS.biosequence_id = PID.biosequence_id
-    WHERE PID.atlas_build_id = $build_id
-    $decoy_clause
-    $crap_clause
-  )
-  END
-
-  my @exhaustive_set = $sbeams->selectOneColumn($sql);
-
-  # Now, count distinct 6-char Swiss-Prot identifiers. If P12345 and P12345-3
-  # are both in the atlas, just count it once.
-  my %swiss_prot_hash;
-  my @swiss_prot_ids = grep( /^[ABOPQ]\w{5}$/ , @exhaustive_set );
-  for my $swiss_id (@swiss_prot_ids) {
-    $swiss_prot_hash{$swiss_id} = 1;
-  }
-  my @swiss_prot_varsplic_ids = grep( /^[ABOPQ]\w{5}-\d{1,3}$/ , @exhaustive_set );
-  for my $swiss_id (@swiss_prot_varsplic_ids) {
-    # Strip off the varsplic suffix to get the basic 6-char identifier.
-    $swiss_id =~ /^([ABOPQ]\w{5})/;
-    $swiss_id = $1;
-    $swiss_prot_hash{$swiss_id} = 1;
-  }
-  my $n_swiss = scalar keys %swiss_prot_hash;
-  
-  return $n_swiss;
-}
