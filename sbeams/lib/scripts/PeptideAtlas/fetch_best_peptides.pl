@@ -4,6 +4,7 @@ use strict;
 use DBI;
 use Getopt::Long;
 use File::Basename;
+use FileHandle;
 use FindBin;
 
 
@@ -32,6 +33,8 @@ $dbh->{RaiseError}++;
 
 
 sub print_process {
+  my $mesg = shift || '';
+  print $mesg;
   my @procs = `ps aux`;
   my $cnt = 0;
   for my $p ( @procs ) {
@@ -46,15 +49,9 @@ sub print_process {
 { # Main 
 
 
-  print STDERR "Starting: " . time() . "\n" if $args->{verbose};
-  print STDERR "Fetching observed peptides\n" if $args->{verbose};
-  print_process() if $args->{verbose};
-  my $observed = get_observed_peptides();
-  print STDERR "Fetching theoretical peptides\n" if $args->{verbose};
-  print_process() if $args->{verbose};
-  my $theoretical = get_theoretical_peptides();
-  print STDERR "Merging peptides ($args->{n_peptides})\n" if $args->{verbose};
-  print_process() if $args->{verbose};
+	my $headings = get_headings();
+  my $tsv_file = new FileHandle ">$args->{tsv_file}" || print_usage( "Unable to open file $args->{tsv_file}" );
+  print $tsv_file join( "\t", @$headings ) . "\n";
 
   my %chk_args;
   if ( $args->{chk_file} && defined $args->{chk_scr} ) {
@@ -63,65 +60,38 @@ sub print_process {
     $chk_args{chk_only} = $args->{chk_only} || 0;
   }
 
-  my $merged = $pep_sel->merge_pabst_peptides(  obs => $observed, 
-                                               theo => $theoretical,
-                                         n_peptides => $args->{n_peptides},
-                                            verbose => $args->{verbose},
-                                            %chk_args
-                                             );
+  for my $first_aa ( 'A' .. 'Z' ) {
 
-  print STDERR "Freeing memory\n" if $args->{verbose};
-  print_process() if $args->{verbose};
-  # Free up some memory!!!
-  undef $observed;
-  undef $theoretical;
+    print STDERR "working on $first_aa\n" if $args->{verbose};
 
-  print STDERR "Printing peptides\n" if $args->{verbose};
-  print_process() if $args->{verbose};
+    print STDERR "Starting: " . time() . "\n" if $args->{verbose};
+    print_process() if $args->{verbose};
+    print STDERR "Fetching observed peptides\n" if $args->{verbose};
+    my $observed = get_observed_peptides( first_aa => $first_aa );
+    print_process( "Done\n" ) if $args->{verbose};
+    print STDERR "Fetching theoretical peptides\n" if $args->{verbose};
+    my $theoretical = get_theoretical_peptides( first_aa => $first_aa );
+    print_process( "Done\n" ) if $args->{verbose};
 
-  my $headings = get_headings();
-  if ( $args->{tsv_file} ) {
-    open( TSV, ">$args->{tsv_file}" ) || print_usage( "Unable to open file $args->{tsv_file}" );
-    print TSV join( "\t", @$headings ) . "\n";
-  } else {
-    print join( "\t", @$headings ) . "\n";
+    print STDERR "Merging peptides ($args->{n_peptides})\n" if $args->{verbose};
+    my $merged = $pep_sel->merge_pabst_peptides(  obs => $observed, 
+                                                 theo => $theoretical,
+                                           n_peptides => $args->{n_peptides},
+                                              verbose => $args->{verbose},
+                                          print_onfly => 1,
+                                            min_score => $args->{min_score},
+                                                no_mc => $args->{no_mc},
+                                                no_st => $args->{no_st},
+                                             tsv_file => $tsv_file,
+                                                %chk_args
+                                               );
+
+    print_process( "Done\n" ) if $args->{verbose};
+    print STDERR scalar( @{$merged} ) . " final peptides\n" if $args->{verbose};
+    print STDERR "Finished with $first_aa\n" if $args->{verbose};
   }
-
-  for my $peptide ( @{$merged} ) {
-    if ( defined $args->{min_score} ) {
-      next if $peptide->[17] <= $args->{min_score};
-    }
-    if ( defined $args->{no_mc} ) {
-      next if ( $peptide->[14] && $peptide->[14] =~ /MC/ );
-    }
-    if ( defined $args->{no_st} ) {
-      next if ( $peptide->[14] && $peptide->[14] =~ /ST/ );
-    }
-
-# Handle in merge_pabst_peptides call.
-#    if ( defined $args->{chk_only} ) {
-#      next if ( $peptide->[14] && $peptide->[14] =~ /ST/ );
-#    }
-
-    $peptide->[4] = sprintf( "%0.2f", $peptide->[4] ) if $peptide->[4] !~ /na/;
-    $peptide->[5] = sprintf( "%0.2f", $peptide->[5] ) if $peptide->[5] !~ /na/;
-    $peptide->[6] = sprintf( "%0.2f", $peptide->[6] ) if $peptide->[6] !~ /na/;
-    $peptide->[7] = sprintf( "%0.2f", $peptide->[7] ) if $peptide->[7] !~ /na/;
-    $peptide->[15] ||= 'na';
-    $peptide->[16] = sprintf( "%0.2f", $peptide->[16] ) if $peptide->[16];
-    $peptide->[17] = sprintf( "%0.3f", $peptide->[17] );
-    if ( $args->{tsv_file} ) {
-      print TSV join( "\t", @{$peptide} ) . "\n";
-    } else {
-        print join( "\t", @{$peptide} ) . "\n";
-      }
-    }
-    close TSV if $args->{tsv_file};
-
-    print STDERR "Finishing: " . time() . "\n" if $args->{verbose};
-
-
-
+  $tsv_file->close();
+  print STDERR "Finishing: " . time() . "\n" if $args->{verbose};
 
 } # End main
 
@@ -177,7 +147,7 @@ sub process_args {
   show_builds( $args{build_name} ) if $args{show_builds};
 
   my $err;
-  for my $k ( qw( atlas_build ) ) {
+  for my $k ( qw( atlas_build tsv_file ) ) {
     $err .= ( $err ) ? ", $err" : "Missing required parameter(s) $k" if !defined $args{$k};
   }
   print_usage( $err ) if $err;
@@ -293,12 +263,17 @@ usage: $sub -a build_id [ -t outfile -o 3 -p proteins_file -v --conf my_config_f
 
 sub get_observed_peptides {
   
+  my %opts = @_;
+  
   my $builds = join( ',', @{$args->{atlas_build}} );
 
   my $build_where = "WHERE PI.atlas_build_id IN ( $builds )";
   my $name_in = ( $args->{protein_file} ) ? get_protein_in_clause() : '';
   my $nobs_and = ( $args->{obs_min} ) ? "AND n_observations > $args->{obs_min}" : ''; 
   my $name_like = ( $args->{name_prefix} ) ? "AND biosequence_name like '$args->{name_prefix}%'" : ''; 
+  if ( !$name_like ) {
+    $name_like = ( $opts{first_aa} ) ? " AND biosequence_name LIKE '$opts{first_aa}%'\n" : '';
+  }
 
   # Short circuit with BestPeptideSelector object method!
   return $pep_sel->get_pabst_multibuild_observed_peptides(   atlas_build => $args->{atlas_build},
@@ -311,9 +286,7 @@ sub get_observed_peptides {
 }
 
 sub get_headings {
-
   return $pep_sel->get_pabst_headings();
-
 }
 
 sub get_chk_hash {
@@ -348,15 +321,23 @@ sub get_protein_in_clause {
 }
 
 sub get_theoretical_peptides {
+
+  my %opts = @_;
   
   my $build_where = "WHERE B.biosequence_set_id = $args->{bioseq_set}";
   my $name_in = ( $args->{protein_file} ) ? get_protein_in_clause() : '';
+
+  my $name_like = ( $args->{name_prefix} ) ? "AND biosequence_name like '$args->{name_prefix}%'" : ''; 
+  if ( !$name_like ) {
+    $name_like = ( $opts{first_aa} ) ? " AND biosequence_name LIKE '$opts{first_aa}%'\n" : '';
+  }
 
   # Short circuit with BestPeptideSelector object method!
   return $pep_sel->get_pabst_theoretical_peptides( 
                                              bioseq_set => $args->{bioseq_set},
                                       protein_in_clause => $name_in, 
-                                                verbose => $args->{verbose}
+                                                verbose => $args->{verbose},
+                                       name_like_clause => $name_like
                                                  );
 }
 
