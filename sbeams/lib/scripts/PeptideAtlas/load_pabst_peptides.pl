@@ -22,6 +22,7 @@ use SBEAMS::PeptideAtlas::PeptideFragmenter;
 use FragmentationComparator;
 use SBEAMS::Proteomics::PeptideMassCalculator;
 
+my $pid = $$;
 
 use constant MIN_FRAGMENT_MZ => 200;
 
@@ -85,15 +86,10 @@ if ( $args->{show_builds} ) {
 
 my $bulk_update = 1;
 if ( $bulk_update ) {
+  die "bulk file exists, exiting" if -e 'bulk_update.bcp';
   open( BULK, ">bulk_update.bcp" );
 }
 
-print "Loading fragment compare\n" if $args->{verbose};
-
-# Load spectrum comparer code
-my %fc;
-my $fc; #DELETEME
-my @trans; #DELETEME
 my %model_map = ( QTrap4000 => '/net/db/projects/spectraComparison/FragModel_4000QTRAP.fragmod',
                   QTOF => '/net/db/projects/spectraComparison/FragModel_AgilentQTOF.fragmod', 
                   QQQ => '/net/db/projects/spectraComparison/FragModel_AgilentQTOF.fragmod', 
@@ -101,6 +97,9 @@ my %model_map = ( QTrap4000 => '/net/db/projects/spectraComparison/FragModel_400
                   QTrap5500 => '/net/db/projects/spectraComparison/FragModel_QTRAP5500.fragmod', 
              );
 
+print "Loading fragment compare\n" if $args->{verbose};
+# Load spectrum comparer code
+my %fc;
 for my $model ( keys( %model_map ) ) {
   print STDERR "loading model for $model\n" if $args->{verbose}; 
   $fc{$model} = new FragmentationComparator;
@@ -637,7 +636,6 @@ sub load_build_peptides {
       print STDERR "Looping over AA, currently $suffix " . &memusage() . " \n" if $args->{verbose}; 
       my %lib_data;
       my %intensity_data;
-  # #   die Dumper( %tmp_files );
       for my $lib_base ( @mrm_libs ) {
   
         my $mrm = $tmp_files{$lib_base}->{$suffix};
@@ -666,8 +664,6 @@ sub load_build_peptides {
                                                      lib => $intensity_data{$type} );
   
       }
-
-#      die Dumper %lib_data;
 
       my %path_data;
       for my $lib_base ( @src_paths ) {
@@ -888,7 +884,7 @@ sub load_build_peptides {
   
               next if ( !$lib_data{$instr}->{$modified_sequence}->{$ec}  );
             }
-            print "In theoretical loop for $modified_sequence, calculated fragments and everything!\n";
+#            print "In theoretical loop for $modified_sequence, calculated fragments and everything!\n";
   
           } else {
   #         print STDERR "Skipping";
@@ -939,7 +935,7 @@ sub load_build_peptides {
                                            max_precursor_intensity => $intensity
                                                           );
 
-                  print "Trans should be ok for $instr and $modseq and $chg: $lib_data{$instr}->{$modseq}->{$chg}\n";
+#                  print "Trans should be ok for $instr and $modseq and $chg: $lib_data{$instr}->{$modseq}->{$chg}\n";
 
                   # Insert transitions here...
                   insert_transitions( transitions_ref => $lib_data{$instr}->{$modseq}->{$chg}, 
@@ -977,17 +973,17 @@ sub load_build_peptides {
   
       } # End read peptide loop
       close OUT;
-      print STDERR "Done at " . time() . " mem usage is " . &memusage . " \n" if $args->{verbose}; 
+      print STDERR "Done with $aa1$aa2 at " . time() . " mem usage is " . &memusage . " \n" if $args->{verbose}; 
     } # End second AA loop
+    print STDERR "Done with $aa1 at " . time() . " mem usage is " . &memusage . " \n" if $args->{verbose}; 
   } # End first AA loop
 } # End load_build_peptides
 
 sub memusage {
-  my @results = `ps -o pmem,pid $$`;
+  my @results = `ps -o pmem,pid $pid`;
   my $mem = '';
   for my $line  ( @results ) {
     chomp $line;
-    my $pid = $$;
     if ( $line =~ /\s*(\d+\.*\d*)\s+$pid/ ) {
       $mem = $1;
       last;
