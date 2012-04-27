@@ -66,6 +66,8 @@ sub new {
     my $class = ref($this) || $this;
     my $self = {};
     bless $self, $class;
+		$self->{_nocache_sql} = 1 if !defined $self->{_nocache_sql};
+    $log->debug( "New" );
     return($self);
 }
 
@@ -1261,32 +1263,38 @@ sub translateSQL{
     } 
   }
 
-  $self->{cached_sql_stmts} ||= [];
-  push @{$self->{cached_sql_stmts}}, $new_statement;
+	unless ( $self->{_nocache_sql} ) {
+   $self->{cached_sql_stmts} ||= {}; 
+   $self->{cached_sql_stmts}->{$new_statement}++;
+	}
   return $new_statement;
 
 } # endtranslateSQL
 
+sub enable_sql_cache {
+	my $self = shift;
+	$self->{_nocache_sql} = 0;
+  $log->debug( "Caching enabled" );
+}
+
 sub profile_sql {
   my $self = shift;
   my %args = @_;
+	
+	unless ( $self->{_nocache_sql} ) {
+		$log->debug( "sql caching disabled, no data to profile" );
+		return;
+	}
+
+  my $n_query = 0;
+  my $t_query = 0;
+	for my $stmt ( keys( %{$self->{cached_sql_stmts}}  ) ) {
+		$n_query++;
+		$t_query += $self->{cached_sql_stmts}->{$stmt};
+    $log->debug( "$self->{cached_sql_stmts}->{$stmt}: $stmt" ) if $args{list};
+	}
   
-  my $n_query = scalar( @{$self->{cached_sql_stmts}} );
-  my %sql;
-  for my $stmt ( @{$self->{cached_sql_stmts}} ) {
-    $sql{$stmt}++;
-  }
-  my $scnt = scalar( keys( %sql ) );
-  $log->debug( "Ran $n_query SQL statements, $scnt were distinct" );
-
-  return unless $args{list};
-
-  for my $dstmt ( keys( %sql ) ) {
-    if ( $sql{$dstmt} > 1 ) {
-      $log->debug( "$sql{$dstmt}: $dstmt" );
-    }
-  }
-
+  $log->debug( "Ran $t_query SQL statements, $n_query were distinct" );
 
 }
 
