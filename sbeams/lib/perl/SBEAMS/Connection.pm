@@ -63,7 +63,7 @@ sub new {
 
   my $this = shift;
   my $class = ref($this) || $this;
-  my $self = {};
+  my $self = { '_nocache_sql' => 1 };
   bless($self,$class);
 
   ## register with Connection::ErrorHandler:
@@ -73,6 +73,12 @@ sub new {
 
 } # end new
 
+sub enable_sql_cache {
+  my $self = shift;
+  $self->{_nocache_sql} = 0;
+  $log->debug( "Caching enabled" );
+  $log->debug( "Caching enabled like I said" ) unless $self->{_nocache_sql};
+}
 
 ###############################################################################
 # Getter/setter for invocation_mode
