@@ -71,6 +71,7 @@ sub getSBEAMS {
 #   Get all precusor/fragment m/z pairs from a spectrum file.
 #   These are all the possible transitions that were measured.
 #   These m/z values are typically rounded.
+#  04/25/12: Olga points out a bug here; see below.
 ###############################################################################
 
 sub collect_tx_from_spectrum_file {
@@ -87,6 +88,7 @@ sub collect_tx_from_spectrum_file {
 
   my $precursor = '';
   my $product = '';
+  my @products;
   if ($spectrum_filepath =~ /\.mzML$/i) {
     my $in_precursor = 0;
     my $in_product = 0;
@@ -108,14 +110,36 @@ sub collect_tx_from_spectrum_file {
     }
   } elsif ($spectrum_filepath =~ /\.mzXML$/i) {
     while (my $line = <SPECFILE>) {
+      ### 04/24/12: According to Olga's bioinformaticist,
+      ###   basePeakMz gives the most intense ion at this point.
+      ### Perhaps all product ions are measured in each <scan>
+      ###   and I should get them from between the brackets in this line:
+      #   filterLine="+ c NSI SRM ms2 574.819 [373.218-373.220, 502.261-502.263, 665.324-665.326, 778.408-778.410, 835.430-835.432, 922.462-922.464]"
+      ### 04/26/12: ... but Simon's data doesn't have that, so I
+      ###  will keep the old method around for his data, even though
+      ###  I'm not certain it's correct!
+
+      if ($line =~ /filterLine=.+\[(.*)\]/) {
+        my $product_string = $1;
+	my @mz_windows = split(", " , $product_string);
+	for my $mz_window (@mz_windows) {
+	  my ($low, $high) = split("-", $mz_window);
+	  my $mz = ($low + $high) / 2;
+	  push (@products, $mz);
+	}
+      }
       if ($line =~ /basePeakMz=\"(\S+)\"/) {
-	$product = $1;
+	my $mz = $1;
+	push (@products, $mz);
       }
       if ($line =~ /<precursorMz.*>(\S+)<.precursorMz>/) {
 	$precursor = $1;
       }
       if ($line =~ /<\/scan>/) {
-	$tx_measured{$precursor}->{$product} = 1;
+	for my $product (@products) {
+	  $tx_measured{$precursor}->{$product} = 1;
+	}
+	@products = ();  #clear/reset
       }
     }
     print "Measured Q1 (found in spectrum file):\n" if $VERBOSE > 2;
@@ -348,8 +372,10 @@ sub read_mquest_peakgroup_file {
     # Hack to see if this is a heavy-labelled TG
     # 11/17/11: learned today that light & heavy combine in same TG
     #   Store info under 'light' always.
+    # 04/26/12: sometimes we only have heavy. Let's store under both.
     #my $isotype =  $line =~ /heavy/i ? 'heavy' : 'light';
-    my $isotype = 'light';
+    #my $isotype = 'light';
+    my $isotype;
 
     # If somehow no peak_group ranking is specified, set to 1.
     # This means that the last peak_group in the file will clobber all the
@@ -381,30 +407,40 @@ sub read_mquest_peakgroup_file {
       } else {
         @chargelist = (1, 2, 3);
       }
-      for my $charge (@chargelist) {
-	my $mpro_pg_href =
-	$mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group};
-	$mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{log10_max_apex_intensity} = $log10_max_apex_intensity;
-	$mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{light_heavy_ratio_maxapex} = $light_heavy_ratio_maxapex;
-	$mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{collision_energy} = $collision_energy;
-	$mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{number_of_peaks} = $number_of_peaks;
-	$mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{relative_pg_intensity} = $relative_pg_intensity;
-	$mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{weighted_xcoor_shape_score} = $weighted_xcoor_shape_score;
-	$mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{pre_discrimination_score} = $pre_discrimination_score;
-	$mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{target_prescore} = $target_prescore;
-	$mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{reference_prescore} = $reference_prescore;
-	$mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{log10_total_xic} = $log10_total_xic;
-	$mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{S_N} = $S_N;
-	$mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{Tr} = $Tr;
 
-	print 'Storing $mpro_href->{',$spectrum_file_basename,'}->{',$pepseq,'}->{',$charge,'}->{',$isotype,'}->{',$decoy,'}->{',$peak_group,'}->{S_N} = ', $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{S_N}, "\n" if ($VERBOSE > 1);
-	print 'Storing $mpro_href->{',$spectrum_file_basename,'}->{',$pepseq,'}->{',$charge,'}->{',$isotype,'}->{',$decoy,'}->{',$peak_group,'}->{number_of_peaks} = ', $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{number_of_peaks}, "\n" if ($VERBOSE > 1);
-	print 'Storing $mpro_href->{',$spectrum_file_basename,'}->{',$pepseq,'}->{',$charge,'}->{',$isotype,'}->{',$decoy,'}->{',$peak_group,'}->{log10_max_apex_intensity} = ', $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{log10_max_apex_intensity}, "\n" if ($VERBOSE > 1);
-	print 'Storing $mpro_href->{',$spectrum_file_basename,'}->{',$pepseq,'}->{',$charge,'}->{',$isotype,'}->{',$decoy,'}->{',$peak_group,'}->{light_heavy_ratio_maxapex} = ', $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{light_heavy_ratio_maxapex}, "\n" if ($VERBOSE > 1);
-	print 'Storing $mpro_href->{',$spectrum_file_basename,'}->{',$pepseq,'}->{',$charge,'}->{',$isotype,'}->{',$decoy,'}->{',$peak_group,'}->{Tr} = ', $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{Tr}, "\n" if ($VERBOSE > 1);
+      my @isotypes;
+      if ($isotype) {
+	@isotypes = ($isotype);
+      } else {
+        @isotypes = ( 'light', 'heavy' );
+      }
+
+      for my $charge (@chargelist) {
+	for my $isotype (@isotypes) {
+	  my $mpro_pg_href =
+	  $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group};
+	  $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{log10_max_apex_intensity} = $log10_max_apex_intensity;
+	  $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{light_heavy_ratio_maxapex} = $light_heavy_ratio_maxapex;
+	  $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{collision_energy} = $collision_energy;
+	  $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{number_of_peaks} = $number_of_peaks;
+	  $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{relative_pg_intensity} = $relative_pg_intensity;
+	  $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{weighted_xcoor_shape_score} = $weighted_xcoor_shape_score;
+	  $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{pre_discrimination_score} = $pre_discrimination_score;
+	  $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{target_prescore} = $target_prescore;
+	  $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{reference_prescore} = $reference_prescore;
+	  $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{log10_total_xic} = $log10_total_xic;
+	  $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{S_N} = $S_N;
+	  $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{Tr} = $Tr;
+
+	  print 'Storing $mpro_href->{',$spectrum_file_basename,'}->{',$pepseq,'}->{',$charge,'}->{',$isotype,'}->{',$decoy,'}->{',$peak_group,'}->{S_N} = ', $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{S_N}, "\n" if ($VERBOSE > 1);
+	  print 'Storing $mpro_href->{',$spectrum_file_basename,'}->{',$pepseq,'}->{',$charge,'}->{',$isotype,'}->{',$decoy,'}->{',$peak_group,'}->{number_of_peaks} = ', $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{number_of_peaks}, "\n" if ($VERBOSE > 1);
+	  print 'Storing $mpro_href->{',$spectrum_file_basename,'}->{',$pepseq,'}->{',$charge,'}->{',$isotype,'}->{',$decoy,'}->{',$peak_group,'}->{log10_max_apex_intensity} = ', $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{log10_max_apex_intensity}, "\n" if ($VERBOSE > 1);
+	  print 'Storing $mpro_href->{',$spectrum_file_basename,'}->{',$pepseq,'}->{',$charge,'}->{',$isotype,'}->{',$decoy,'}->{',$peak_group,'}->{light_heavy_ratio_maxapex} = ', $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{light_heavy_ratio_maxapex}, "\n" if ($VERBOSE > 1);
+	  print 'Storing $mpro_href->{',$spectrum_file_basename,'}->{',$pepseq,'}->{',$charge,'}->{',$isotype,'}->{',$decoy,'}->{',$peak_group,'}->{Tr} = ', $mpro_href->{$spectrum_file_basename}->{$pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{Tr}, "\n" if ($VERBOSE > 1);
+	}
       }
     } else {
-      print "Not storing mQuest scores. file_basename = $spectrum_file_basename pepseq = $pepseq decoy = $decoy isotype = $isotype peak_group = $peak_group\n" if ($VERBOSE > 1);
+      print "Not storing mQuest scores. file_basename = $spectrum_file_basename pepseq = $pepseq decoy = $decoy peak_group = $peak_group\n" if ($VERBOSE > 1);
     }
   }
 }
@@ -2195,6 +2231,7 @@ sub removeSRMExperiment {
       keep_parent_record => 0,
    );
 
+  }
 
 } # end removeSRMExperiment
 
