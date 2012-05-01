@@ -736,7 +736,7 @@ sub read_transition_list {
 			   q1_mz => [ qw( q1 q1_mz ), ],
 			   q3_mz => [ qw( q3 q3_mz ), ],
 			      ce => [ qw( ce ), ],
-			      rt => [ qw( rt ), ],
+			      rt => [ qw( rt ), ],  #04/27/12: not used for anything
 		    protein_name => [ qw( protein_name protein ), 'protein ipi' ],
 	       stripped_sequence => [ qw( stripped_sequence strippedSequence peptide_seq peptide ) ],
 			 isotype => [ qw( isotype heavy/light modified ) ],
@@ -2080,6 +2080,70 @@ sub get_target_transitions_for_measured_Q1 {
 
 }
 
+
+###############################################################################
+# removePeptideIon -- removes records for an single peptide ion in a specific
+#    PASSEL run
+###############################################################################
+sub removePeptideIon {
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+  my $SEL_run_id = $args{'SEL_run_id'} || die "removePeptideIon: need run_id";
+  my $modified_peptide_sequence = $args{'modified_peptide_sequence'} ||
+      die "removePeptideIon: need modified pepseq";
+  my $charge = $args{'charge'} || die "removePeptideIon: need peptide charge";
+  my $VERBOSE = $args{'verbose'} || 0;
+  my $QUIET = $args{'quiet'} || 0;
+  my $TESTONLY = $args{'testonly'} || 0;
+  my $DEBUG = $args{'debug'} || 0;
+
+  my $database_name = $DBPREFIX{PeptideAtlas};
+
+  # Get SEL_peptide_ion records with specified seq/charge
+  # that belong to specfied run. There should be only one.
+  my $sql = qq~
+  SELECT SELPI.SEL_peptide_ion_id
+  FROM $TBAT_SEL_PEPTIDE_ION SELPI
+  JOIN $TBAT_SEL_TRANSITION_GROUP SELTG
+  ON SELTG.SEL_peptide_ion_id = SELPI.SEL_peptide_ion_id
+  WHERE SELTG.SEL_run_id = $SEL_run_id
+  AND SELPI.modified_peptide_sequence = '$modified_peptide_sequence'
+  AND SELPI.peptide_charge = $charge
+  ~;
+  print $sql if $DEBUG;
+  my @peptide_ion_ids = $sbeams->selectOneColumn($sql);
+  my $n_peptide_ions = scalar @peptide_ion_ids;
+  if ($n_peptide_ions > 1) {
+    print "ERROR (removePeptideIon): multiple records for seq '$modified_peptide_sequence', charge $charge, SEL_run_id $SEL_run_id. None deleted.\n";
+    return();
+  } elsif ($n_peptide_ions < 1) {
+    print "ERROR (removePeptideIon): no records found for seq '$modified_peptide_sequence', charge $charge, SEL_run_id $SEL_run_id. None deleted.\n";
+    return();
+  }
+
+  print "\nDeleting SEL_peptide_ion record $peptide_ion_ids[0] and children.\n\n"
+     if $VERBOSE;
+
+  my %table_child_relationship = (
+    SEL_peptide_ion => 'SEL_peptide_ion_protein(C),SEL_transition_group(C)',
+    SEL_transition_group => 'SEL_transition(C),SEL_chromatogram(C)',
+    SEL_chromatogram => 'SEL_peak_group(C)',
+  );
+
+  $sbeams->deleteRecordsAndChildren(
+    table_name => 'SEL_peptide_ion',
+    table_child_relationship => \%table_child_relationship,
+    delete_PKs => \@peptide_ion_ids,
+    delete_batch => 100,
+    database => $database_name,
+    verbose => $VERBOSE,
+    testonly => $TESTONLY,
+    keep_parent_record => 0,
+  );
+
+  print "\n" unless $QUIET;
+
+} # end removeSRMExperiment
 
 ###############################################################################
 # removeSRMExperiment -- removes records for an SRM experiment or
