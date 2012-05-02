@@ -373,11 +373,12 @@ sub get_src_weights {
 }
 
 sub get_rt_select {
-  my $rt_type = shift || 'SSRCalc';
+  my $rt_type = shift || '';
   my $rt_select = "<SELECT NAME=rt_type>\n";
 
   my $sql = qq~
-  SELECT DISTINCT elution_time_type FROM $TBAT_ELUTION_TIME_TYPE 
+  SELECT DISTINCT elution_time_type, elution_time_type_id 
+  FROM $TBAT_ELUTION_TIME_TYPE 
   WHERE record_status != 'D' 
   ~;
 
@@ -386,8 +387,9 @@ sub get_rt_select {
 #  for my $type ( 'SSRCalc', 'RT_catalog Chipcube', 'RT_catalog QTrap5500' ) {
   while ( my @row = $sth->fetchrow_array() ) {
     my $type = $row[0];
-    my $selected = ( $rt_type eq $type ) ? 'selected' : '';
-    $rt_select .= "<OPTION VALUE='$type' $selected>$type</OPTION>\n";
+    my $id = $row[1];
+    my $selected = ( $rt_type eq $id ) ? 'selected' : '';
+    $rt_select .= "<OPTION VALUE='$id' $selected>$type</OPTION>\n";
   }
   $rt_select .= "</SELECT>\n";
   return $rt_select;
@@ -814,14 +816,20 @@ sub fetch_transitions {
 
 #  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs' );
 #  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs', 'Src Adj SS' );
-  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT' );
+  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRTz' );
 #  push @headings, 'SpecLinks', 'Chromat' if $parameters{speclinks};
 
   if ( $parameters{speclinks} ) {
-    if ( $organism != 2 || $sbeams->isGuestUser() ) {
+    if ( $sbeams->isGuestUser() ) {
       push @headings, 'IonTrap';
-    } else {
+    } elsif ( $organism == 2 ) {
       push @headings, 'QTOF', 'QTOF_CE', 'QTRAP', 'QQQ', 'IonTrap', 'QQQ ', 'QTRAP ';
+    } elsif ( $organism == 40 ) {
+      push @headings, 'QTOF', 'QTOF_CE', 'QTRAP', 'QQQ', 'IonTrap', 'QQQ ', 'QTRAP ';
+    } elsif ( $parameters{pabst_build_id} == 154 ) {
+      push @headings, 'QTOF', 'QTOF_CE', 'QTRAP', 'QQQ', 'IonTrap', 'QQQ ', 'QTRAP ';
+    } else {
+      push @headings, 'IonTrap';
     }
   }
 
@@ -834,11 +842,11 @@ sub fetch_transitions {
     $headings[13] = 'RT_Cat';
     $ssr_field = 'elution_time';
     $ssr_join = qq~
-     LEFT JOIN $TBAT_ELUTION_TIME ET ON ET.modified_peptide_sequence = PP.peptide_sequence
-     LEFT JOIN $TBAT_ELUTION_TIME_TYPE ETT ON ET.elution_time_type_id = ETT.elution_time_type_id
+     LEFT JOIN $TBAT_ELUTION_TIME ET ON ( ET.modified_peptide_sequence = PP.peptide_sequence AND elution_time_type_id = '$parameters{rt_type}' )
     ~;
 
-    $ssr_clause = " AND (elution_time_type = '$parameters{rt_type}' OR elution_time_type IS NULL)\n";
+#    $ssr_clause = " AND (elution_time_type = '$parameters{rt_type}' OR elution_time_type IS NULL)\n";
+#--     LEFT JOIN $TBAT_ELUTION_TIME_TYPE ETT ON ( ET.elution_time_type_id = ETT.elution_time_type_id
       
   }
 
@@ -849,7 +857,7 @@ sub fetch_transitions {
     SELECT DISTINCT preceding_residue, PI.modified_peptide_sequence, following_residue,
     synthesis_adjusted_score, instrument_type_name, precursor_ion_mz, 
     precursor_ion_charge, fragment_ion_mz, fragment_ion_charge,
-    fragment_ion_label, ion_rank, relative_intensity, 
+    fragment_ion_label, ion_rank, relative_intensity, SSRCalc_relative_hydrophobicity, 
     $ssr_field, biosequence_id,
     merged_score, PII.n_observations, source_build, PSP.priority, PTI.is_predicted,
     $weight_clause, PII.max_precursor_intensity
@@ -893,21 +901,22 @@ sub fetch_transitions {
     ~;
 
 #   print "<PRE>$lib_sql</PRE>\n";
-  $log->debug( $lib_sql );
+#  $log->debug( $lib_sql );
 
 #  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs' );
-  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT' );
+  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'SSRT' );
 #  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs', 'Src Adj SS' );
   if ( $parameters{speclinks} ) {
-    if ( $organism != 2 || $sbeams->isGuestUser() ) {
+    if ( $sbeams->isGuestUser() ) {
       push @headings, 'IonTrap';
     } else {
       push @headings, 'QTOF', 'QTOF_CE', 'QTRAP', 'QQQ', 'IonTrap', 'QQQ ', 'QTRAP ';
     }
   }
 
-  if ( $parameters{rt_type} && $parameters{rt_type} ne 'SSRCalc' ) {
-    $headings[13] = 'RT_Cat';
+#  if ( $parameters{rt_type} && $parameters{rt_type} ne 'SSRCalc' ) {
+  if ( $parameters{rt_type} ) {
+    $headings[14] = 'RT_Cat';
   }
 
   #  peptides_only
@@ -975,8 +984,8 @@ sub fetch_transitions {
 
 #      my $rowdata = join( ':', @row );
 #      $log->debug( "$row_cnt> $rowdata" );
-      $row[13] = $bioseq2name{$row[13]};
-      my $prot = $row[13];
+      $row[14] = $bioseq2name{$row[14]};
+      my $prot = $row[14];
       
       $counts{row}++;
 
@@ -1021,7 +1030,7 @@ sub fetch_transitions {
       # 1) duplicate ions
 
       # Added biosequence name into seen_key, DSC 2012-01-05
-      my $frag_key = join( ':', @row[1,6,8,9,13] );
+      my $frag_key = join( ':', @row[1,6,8,9,14] );
       if ( $frag_seen{$frag_key}++ ) {
         next;
       }
@@ -1050,7 +1059,7 @@ sub fetch_transitions {
   
       $row[5] = sprintf( "%0.2f", $row[5] );
       $row[4] = $src_name{$row[4]} if $src_name{$row[4]};
-      $row[4] .= '-pred' if $row[18] eq 'Y';
+      $row[4] .= '-pred' if $row[19] eq 'Y';
 
       if ( $row[4] eq 'QTOF' ) {
         $row[7] = sprintf( "%0.4f", $row[7] );
@@ -1058,8 +1067,9 @@ sub fetch_transitions {
         $row[7] = sprintf( "%0.2f", $row[7] );
       }
       $row[3] = sprintf( "%0.2f", $row[3] );
-      $row[19] = sprintf( "%0.2f", $row[19] );
+      $row[20] = sprintf( "%0.2f", $row[20] );
       $row[12] = ( $row[12] ) ? sprintf( "%0.1f", $row[12] ) : '';
+      $row[13] = ( $row[13] ) ? sprintf( "%0.1f", $row[13] ) : '';
       if ( $row[11] ) {
         $row[11] = int( $row[11] );
       } elsif ( $is_html ) {
@@ -1077,11 +1087,11 @@ sub fetch_transitions {
       # protein  sequence Q1_mz Q3_mz RT rank Q1_chg Q3_chg peak_intensity ion_label collision SSR
       push @namelist, join( '::', $prot, @row[1,5,7],'',@row[10,6,8,11,9],$ce, $row[12] );
 
-      if ( $row[15] && $is_html ) {
+      if ( $row[16] && $is_html ) {
         # clean
         my $clean = $row[1];
         $clean =~ s/\[\d+\]//g;
-        $row[15] = "<A HREF='Summarize_Peptide?searchWithinThis=Peptide+Sequence&searchForThis=$clean;action=QUERY'>$row[15]</A>";
+        $row[16] = "<A HREF='Summarize_Peptide?searchWithinThis=Peptide+Sequence&searchForThis=$clean;action=QUERY'>$row[15]</A>";
       }
 
       if ( $is_html ) {
@@ -1096,7 +1106,7 @@ sub fetch_transitions {
 # 9 fragment_ion_charge
 # 10 fragment_ion_label
 #      my  @rowdata = ( $prot, @row[0..12,15,19] );
-      my  @rowdata = ( $prot, @row[0..12] );
+      my  @rowdata = ( $prot, @row[0..13] );
       if ( $parameters{speclinks} ) {
         my $link_key = $row[1] . $row[6];
 
@@ -1175,7 +1185,7 @@ sub fetch_transitions {
               $annot = "K[$mod_aa]";
             }
 
-            my @mod_row = ( $prot, @row[0..12,15] );
+            my @mod_row = ( $prot, @row[0..13,16] );
             # Omit double labels for now
             next if $mod_row[2] =~ /[RK].*K$/;
 
@@ -1444,6 +1454,7 @@ sub get_scan_path {
 
 sub get_consensus_links {
 
+
   my %args = @_;
 
   my $seq = $args{seq};
@@ -1456,8 +1467,10 @@ sub get_consensus_links {
 
   my $link = '';
 
+  my $glyco = ( $parameters{pabst_build_id} == 154 ) ? 1 : 0;
+
   if ( !$parameters{prefetch} ) {
-    $libs = $consensus->getConsensusLinks( modified_sequence => $seq, organism => $organism );
+    $libs = $consensus->getConsensusLinks( modified_sequence => $seq, organism => $organism, glyco => $glyco );
   }
 
   my %instr = ( QQQ => 'Agilent 6460 QQQ', 
@@ -1474,7 +1487,7 @@ sub get_consensus_links {
     push @links, $link;
 
     $link = '';
-    if ( $libs->{medium}->{$spectrum_key} ) {
+    if ( $libs->{medium}->{$spectrum_key} && $parameters{pabst_build_id} != 154 ) {
       my $title = "View +$chg spectra for $seq from $instr{QTOF} at various CE values";
       my $param_str;
       my $xmax = 1200;
