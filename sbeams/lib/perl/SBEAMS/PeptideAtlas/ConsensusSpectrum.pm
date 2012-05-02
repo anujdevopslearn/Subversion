@@ -500,7 +500,7 @@ sub getConsensusLinks {
     return {};
   }
 
-  if ( $args{organism} != 2 || $sbeams->isGuestUser() ) {
+  if ( $sbeams->isGuestUser() ) {
 
     my $project_ids = $sbeams->getAccessibleProjects();
 
@@ -517,17 +517,44 @@ sub getConsensusLinks {
       last;
     }
 
+  } elsif ( $args{organism} eq 40 ) {
+
+    %libmap = ( 
+                329  => 'it',
+                330 => 'qtrap',
+               );
+
   } else {
 
-    %libmap = ( 307 => 'low',
-                308 => 'mlow', 
-                309 => 'medium',
-                310 => 'mhigh', 
-                311 => 'high',
+#    %libmap = ( 307 => 'low',
+#                308 => 'mlow', 
+#                309 => 'medium',
+#                310 => 'mhigh', 
+#                311 => 'high',
+#                 16 => 'it',
+#                312 => 'qqq',
+#                306 => 'qtrap',
+#               );
+    %libmap = ( 320 => 'low',
+                321 => 'mlow', 
+                322 => 'medium',
+                323 => 'mhigh', 
+                324 => 'high',
                  16 => 'it',
-                312 => 'qqq',
+                313 => 'qqq',
                 306 => 'qtrap',
                );
+  }
+
+  if ( $args{glyco} ) {
+
+    %libmap = ( 
+                327 => 'medium',
+                326  => 'it',
+                328 => 'qtrap',
+               );
+
+
   }
 
 	my $libs = join( ',', keys( %libmap ));
