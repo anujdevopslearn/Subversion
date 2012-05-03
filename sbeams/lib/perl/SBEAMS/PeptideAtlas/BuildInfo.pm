@@ -199,9 +199,9 @@ sub pa_build_info_2_tsv {
 
   # Define header row
 
-  # Test: print header into .tsv file
+  # Print header into .tsv file
   my $tsv_file = "$PHYSICAL_BASE_DIR/tmp/buildInfo.tsv";
-  print "Trying to print to $tsv_file.\n";
+  print "Trying to print to $tsv_file.\n" if $VERBOSE;
   open (TSV, ">$tsv_file") || print "<p>Can't open $tsv_file<\p>\n";;
   for (my $i=0; $i<$ncols; $i++) {
     print TSV "$headers[$i]";
@@ -331,7 +331,7 @@ sub pa_build_info_2_tsv {
 #                "<SPAN CLASS=popup_help TITLE='$atlas_build->[$org_spec_build_idx]'>Y</SPAN>" : 'Y';
 
 
-    # Test: print the row into a .tsv file
+    # Print the row into .tsv file
     for (my $i=0; $i< $ncols; $i++) {
       print TSV "$row[$i]";
       if ($i < $ncols-1) {
