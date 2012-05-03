@@ -447,7 +447,7 @@ sub get_column_defs {
     'Q1_mz' => 'Mass to charge ratio of Q1 (precursor) peptide ion.',
     'Q3_mz' => 'Mass to charge ratio of Q3 (fragment) ion.',
     'Q3_chg' => 'Charge on Q3 (fragment) ion.',
-    'Label' => 'Ion-series designation for fragment ion (Q3).',
+    'Ion' => 'Ion-series designation for fragment ion (Q3).',
     'Intensity' => 'Relative intensity of peak in CID spectrum, scaled to 10000 units',
     'CE' => 'Collision energy, the kinetic energy conferred to the peptide ion and resulting in peptide fragmentation. (eV)',
     'RT' => 'Peptide retention time( in minutes ) in the LC/MS system.',
