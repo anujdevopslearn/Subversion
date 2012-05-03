@@ -843,6 +843,7 @@ sub addDataset {
 
   my $metadata = '';
   $metadata .= "identifier:\t$datasetIdentifier\r\n";
+  $metadata .= "type:\t$formParameters->{datasetType}\r\n";
   $metadata .= "tag:\t$formParameters->{datasetTag}\r\n";
   $metadata .= "title:\t$formParameters->{datasetTitle}\r\n";
   $metadata .= "summary:\t$formParameters->{summary}\r\n";
@@ -879,6 +880,7 @@ sub addDataset {
   my $confirmationMessage = qq~<H3>Thank you for submitting to PeptideAtlas</H3>
 Your submission has been assigned the identifier $datasetIdentifier.<PRE>
 Identifier: $datasetIdentifier
+Dataset type: $formParameters->{datasetType}
 Dataset tag: $formParameters->{datasetTag}
 Datset title: $formParameters->{datasetTitle}</PRE>
 All of the information you see here is simultaneously displayed in your browser and sent to you via email.<P>
