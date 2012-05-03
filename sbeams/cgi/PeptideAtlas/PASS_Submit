@@ -877,6 +877,18 @@ sub addDataset {
 
 
   #### Print the information for the user
+
+  my $extra_instructions = "";
+  if ($formParameters->{datasetType} eq "SRM") {
+    $extra_instructions .="Please first prepare your transition list(s) (methods file) in <a href='http://www.mcponline.org/content/early/2011/12/12/mcp.R111.015040.abstract'>TraML</a> format (or, if not possible, using this <a href='http://www.peptideatlas.org/upload/PASSEL_transition_list_template.xlsx'>tsv template</a>).<P>\n";
+  }
+
+  my $extra_upload_files = "";
+  if ($formParameters->{datasetType} eq "SRM") {
+    $extra_upload_files .="transition list(s) in TraML format (or, alternatively, prepared with <a href='http://www.peptideatlas.org/upload/PASSEL_transition_list_template.xlsx'>this template</a>).\n";
+    $extra_upload_files .="mProphet output files if available\n";
+  }
+
   my $confirmationMessage = qq~<H3>Thank you for submitting to PeptideAtlas</H3>
 Your submission has been assigned the identifier $datasetIdentifier.<PRE>
 Identifier: $datasetIdentifier
@@ -884,7 +896,7 @@ Dataset type: $formParameters->{datasetType}
 Dataset tag: $formParameters->{datasetTag}
 Datset title: $formParameters->{datasetTitle}</PRE>
 All of the information you see here is simultaneously displayed in your browser and sent to you via email.<P>
-For SRM datasets, please first prepare your transition list(s) (methods file) in <a href="http://www.mcponline.org/content/early/2011/12/12/mcp.R111.015040.abstract">TraML</a> format (or, if not possible, using this <a href='http://www.peptideatlas.org/upload/PASSEL_transition_list_template.xlsx'>tsv template</a>).<P>
+$extra_instructions
 The next step is to upload your data via FTP.<P>
 You may use any FTP application for this, but we highly recommend FileZilla. It is extremely easy to use and reliable with such advanced features as automatic retry and parallel uploads. It has a very nice graphical user interface for Windows, MacOS, and Linux. Please download and install FileZilla at <a href="http://filezilla-project.org/download.php?type=client">http://filezilla-project.org/download.php?type=client</a> if you don't already have it.<P>
 Here is the FTP information:<PRE>
@@ -897,8 +909,7 @@ Full URL: ftp://$datasetIdentifier:$datasetPassword\@ftp.peptideatlas.org/
 <PRE>
 raw data files
 mzML files, if available
-SRM: transition list(s) in TraML format (or, alternatively, prepared with <a href='http://www.peptideatlas.org/upload/PASSEL_transition_list_template.xlsx'>this template</a>).
-SRM: mProphet output files if available
+$extra_upload_files
 </PRE>
 <P>After you have finished uploading all your data, please return to:<PRE>
     <a href="http://www.peptideatlas.org/PASS/$datasetIdentifier">http://www.peptideatlas.org/PASS/$datasetIdentifier</a></PRE>
