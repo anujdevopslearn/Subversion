@@ -284,6 +284,7 @@ sub print_form {
 
     $parameters{rt_type} ||= 'SSRCalc';
     my $rt_select = get_rt_select( $parameters{rt_type} );
+    my $ion_filters = get_ion_filters( %parameters );
 
     # FINDME
     my ( $sub_form ) = $best_peptide->get_change_form( form_only => 1, hide_buttons => 1, shade_defs => 1, set_params => \%parameters, noop => 1 );
@@ -326,6 +327,7 @@ sub print_form {
     unless ( $sbeams->isGuestUser() ) {
       $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Elution Time Type</B></TD>$rt_help<TD>$rt_select</INPUT></TD></TR> ~;
     }
+    $form .= $ion_filters;
 
 #    open FRM, ">/tmp/form";
 #    print FRM qq~
@@ -380,6 +382,7 @@ sub get_rt_select {
   SELECT DISTINCT elution_time_type, elution_time_type_id 
   FROM $TBAT_ELUTION_TIME_TYPE 
   WHERE record_status != 'D' 
+  AND elution_time_type != 'SSRCalc'
   ~;
 
   my $sth = $sbeams->get_statement_handle( $sql );
@@ -394,6 +397,37 @@ sub get_rt_select {
   $rt_select .= "</SELECT>\n";
   return $rt_select;
 }
+
+sub get_ion_filters {
+
+  my %opts = @_;
+
+  my $b_ions = '';
+  my $y_ions = '';
+  my $n_loss_ions = 'checked';
+
+  # If we already ran a query, update values
+  if ( $opts{b_ions} || $opts{y_ions} || $opts{n_loss_ions} ) {
+    $b_ions = ( $opts{b_ions} ) ? 'checked' : '';
+    $y_ions = ( $opts{y_ions} ) ? 'checked' : '';
+    $n_loss_ions = ( $opts{n_loss_ions} ) ? 'checked' : '';
+  }
+
+  my $ions_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Filter fragment ions types'</TD>";
+  my $b_ions_chk = "<INPUT TYPE=checkbox NAME=b_ions $b_ions></INPUT>";
+  my $y_ions_chk = "<INPUT TYPE=checkbox NAME=y_ions $y_ions></INPUT>";
+  my $n_loss_chk = "<INPUT TYPE=checkbox NAME=n_loss_ions $n_loss_ions></INPUT>";
+
+  my $checks = "<DIV class=clear_info_box>y ions $y_ions_chk<BR>b ions $b_ions_chk<BR>Neutral-loss ions $n_loss_chk</DIV>\n";
+
+  my $filter_element = qq~
+  <TR><TD VALIGN=TOP NOBR><B>Filter ions:</B></TD>$ions_help<TD>$checks</TD></TR> 
+  ~;
+#  <TR><TD VALIGN=TOP NOBR></TD><TD></TD><TD>b ions $b_ions_chk</TD></TR>
+#  <TR><TD VALIGN=TOP NOBR></TD><TD></TD><TD>Neutral-loss ions $n_loss_chk</TD></TR>
+  return $filter_element;
+}
+
 
 sub get_cmod_select {
   my $curr_val = shift || '';
@@ -802,7 +836,7 @@ sub fetch_transitions {
      $log->debug( "done " . time() );
 
      $log->debug( "get_bad_qqq " . time() );
-     $seq2badlinks = get_bad_qqq( sequence_clause => $peptide_sequence_clause, probability => 0.8 );
+#     $seq2badlinks = get_bad_qqq( sequence_clause => $peptide_sequence_clause, probability => 0.8 );
     $log->debug( "done " . time() );
   }
 
@@ -816,7 +850,7 @@ sub fetch_transitions {
 
 #  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs' );
 #  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs', 'Src Adj SS' );
-  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRTz' );
+  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Ion', 'Rank', 'RI', 'SSRTz' );
 #  push @headings, 'SpecLinks', 'Chromat' if $parameters{speclinks};
 
   if ( $parameters{speclinks} ) {
@@ -904,7 +938,7 @@ sub fetch_transitions {
 #  $log->debug( $lib_sql );
 
 #  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs' );
-  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'SSRT' );
+  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Ion', 'Rank', 'RI', 'SSRT', 'SSRT' );
 #  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs', 'Src Adj SS' );
   if ( $parameters{speclinks} ) {
     if ( $sbeams->isGuestUser() ) {
@@ -1039,6 +1073,16 @@ sub fetch_transitions {
       if ( abs( $row[5] * $row[6] - $row[7] * $row[8] ) < 5 ) {
 #        print "rejected $row[1] frag $row[9] for toobigosity<BR>\n";
         next;
+      }
+
+      if ( $parameters{b_ions} ) {
+        next if $row[9] =~ /^b/;
+      }
+      if ( $parameters{y_ions} ) {
+        next if $row[9] =~ /^y/;
+      }
+      if ( $parameters{n_loss_ions} ) {
+        next if $row[9] =~ /\-\d+/;
       }
 
       if ( $parameters{min_mz} ) {
@@ -1460,7 +1504,7 @@ sub get_consensus_links {
   my $seq = $args{seq};
   my $chg = $args{chg};
   my $libs = $args{libs};
-	my $seq2badlinks = $args{badlinks} || {};
+	my $seq2badlinks = {};
 	my $organism = $args{organism};
 
   my $spectrum_key = $seq . $chg;
