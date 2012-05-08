@@ -136,6 +136,7 @@ sub displayInternalResearcherPageHeader {
   $skin =~ s/images\//sbeams\/images\//gm;
 #  $skin =~ s/\/images\//\/sbeams\/images\//gm;
   $self->{'_external_footer'}=join("\n", @page[$cnt..$#page]);
+  $self->{'_external_footer'} =~ s/images\//sbeams\/images\//gm;
  
   print "$http_header\n\n";
   print <<"  END_PAGE";
@@ -239,6 +240,7 @@ sub displayGuestPageHeader {
  
   $self->{'_external_footer'} = join("\n", '<!--SBEAMS_PAGE_OK-->', @page[$cnt..$#page]);
   $skin =~ s#/images/#/sbeams/images/#gm;
+  $self->{'_external_footer'} =~ s#/images/#/sbeams/images/#gm;
   #$skin =~ s#/images/#/dev2/sbeams/images/#gm;
 
   print "$http_header\n\n";
