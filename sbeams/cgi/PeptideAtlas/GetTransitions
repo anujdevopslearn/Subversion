@@ -33,7 +33,6 @@ use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::BestPeptideSelector;
 use SBEAMS::PeptideAtlas::ConsensusSpectrum;
-# use SBEAMS::PeptideAtlas::TraMLParser;
 use SBEAMS::Proteomics::PeptideMassCalculator;
 
 my $massCalculator = new SBEAMS::Proteomics::PeptideMassCalculator;
@@ -62,29 +61,22 @@ my $is_html = 0;
 my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
 
 main();
-$sbeams->profile_sql( list => 1 );
+#$sbeams->profile_sql( list => 1 );
 exit(0);
 
 # Main Program
 sub main 
 {
+
   $log->debug( "in main" . time() );
+
   # Authenticate and exit if a username is not returned
   my $current_username = $sbeams->Authenticate( allow_anonymous_access => 1 );
   exit unless $current_username;
 
-  $is_html = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
-
   #### Read in the default input parameters
   $parameters{uploaded_file_not_saved} = 1;
-  my $n_params_found = $sbeams->parse_input_parameters(
-      q=>$q,parameters_ref=>\%parameters);
-
-  if ( !$parameters{target_instrument} ) {
-    my ( $qqq ) = $sbeams->selectrow_array( "SELECT instrument_type_id FROM $TBAT_INSTRUMENT_TYPE WHERE instrument_type_name = 'QQQ'" );
-    $parameters{target_instrument} = $qqq;
-    $q->param( target_instrument => $qqq );
-  }
+  my $n_params_found = $sbeams->parse_input_parameters( q=>$q,parameters_ref=>\%parameters);
 
   %rs_params = $sbeams->parseResultSetParams(q=>$q);
 
@@ -93,6 +85,17 @@ sub main
 
   # This will look for mod-specific params and do the right thing
   $atlas->processModuleParameters(parameters_ref=>\%parameters);
+
+  $is_html = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
+
+
+  # Set default target instrument
+  if ( !$parameters{target_instrument} ) {
+    my ( $qqq ) = $sbeams->selectrow_array( "SELECT instrument_type_id FROM $TBAT_INSTRUMENT_TYPE WHERE instrument_type_name = 'QQQ'" );
+    $parameters{target_instrument} = $qqq;
+    $q->param( target_instrument => $qqq );
+  }
+
 
   # Fetch pabst_build_id based on params. 
   # 1 - passed pabst_build_id param
@@ -118,16 +121,46 @@ sub main
     $parameters{pabst_build_id} = 12;
   }
 
+
   # Decide what action to take based on information so far
   my $project_id = $atlas->getProjectID(
     atlas_build_id => $parameters{atlas_build_id}
   );
 
-  #### Show current user context information
-#  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
-
   #$sbeams->printUserContext();
   $atlas->display_page_header(project_id => $project_id);
+
+  # Add select list javascript
+  if ( $is_html ) {
+    print "<script type='text/javascript' src='$HTML_BASE_DIR/usr/javascript/jquery/jquery.js'></script>";
+    print q~
+<script type="text/javascript" charset="utf-8">
+$(document).ready(function() {
+
+  window.onload = function() {
+    $.getJSON("AJAXClient.cgi",{pabst_build_id: $("select#pabst_build_id").val(), source: 'GetTransitions_SourceSelect'}, function(j){
+      var options = '';
+      for (var i = 0; i < j.length; i++) {
+        options += '<option value="' + j[i].optionValue + '">' + j[i].optionText + '</option>';
+      }
+     $("select#source_instrument_type_id").html(options);
+    })
+  }
+
+  $("select#pabst_build_id").change(function() {
+    $.getJSON("AJAXClient.cgi",{pabst_build_id: $(this).val(), source: 'GetTransitions_SourceSelect'}, function(j){
+      var options = '';
+      for (var i = 0; i < j.length; i++) {
+        options += '<option value="' + j[i].optionValue + '">' + j[i].optionText + '</option>';
+      }
+     $("select#source_instrument_type_id").html(options);
+    })
+  })
+
+})
+</script>
+  ~;
+  }
 
   #### Get the HTML to display the tabs
   my $tabMenu = $atlas->getTabMenu(
@@ -135,17 +168,21 @@ sub main
       program_name => $PROG_NAME,
   );
 
-  unless ( $atlas->is_srm_mode() ) {
+
+  # SRM mode is if we want to show SRM Atlas skin, currently disabled.
+  unless ( 0 && $atlas->is_srm_mode() ) {
     print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
     print $sbeams->getTabbedPanesDHTML();
   }
+
+# TABs debugging kruft
 #  print $sbeams->addTabbedPane( label => 'best' );
 #  print $sbeams->closeTabbedPane();
 #  print $sbeams->addTabbedPane( label => 'rest' );
 #  print $sbeams->closeTabbedPane();
 
+  # Print form regardless.  A heavily-modified manage table form, 
   print_form ( %parameters );  
-
 
   if ( ! $parameters{pabst_build_id} ) {
 #    print $sbeams->makeErrorText( "<BR>No valid builds found for this user" );
@@ -275,9 +312,10 @@ sub print_form {
         mask_query_constraints => 1,
     );
     my $form = $sbeams->fetchSTDOUT();
+#      <TD><SELECT NAME="pabst_build_id" >
     $form =~ s/QTrap/QTRAP/gm;
-
-    $log->debug( $form );
+    $form =~ s/(NAME="pabst_build_id")/$1 ID="pabst_build_id"/gm;
+    $form =~ s/(NAME="source_instrument_type_id")/$1 ID="source_instrument_type_id"/gm;
 
     my $id = 'ID="protein_name_constraint"';
     $form =~ s/(NAME=\"protein_name_constraint\")/$1 $id/;
@@ -413,7 +451,7 @@ sub get_ion_filters {
     $n_loss_ions = ( $opts{n_loss_ions} ) ? 'checked' : '';
   }
 
-  my $ions_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Filter fragment ions types'</TD>";
+  my $ions_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Checked options will exclude that ion type from MRM list'</TD>";
   my $b_ions_chk = "<INPUT TYPE=checkbox NAME=b_ions $b_ions></INPUT>";
   my $y_ions_chk = "<INPUT TYPE=checkbox NAME=y_ions $y_ions></INPUT>";
   my $n_loss_chk = "<INPUT TYPE=checkbox NAME=n_loss_ions $n_loss_ions></INPUT>";
@@ -421,7 +459,7 @@ sub get_ion_filters {
   my $checks = "<DIV class=clear_info_box>y ions $y_ions_chk<BR>b ions $b_ions_chk<BR>Neutral-loss ions $n_loss_chk</DIV>\n";
 
   my $filter_element = qq~
-  <TR><TD VALIGN=TOP NOBR><B>Filter ions:</B></TD>$ions_help<TD>$checks</TD></TR> 
+  <TR><TD VALIGN=TOP NOBR><B>Exclude ion types:</B></TD>$ions_help<TD>$checks</TD></TR> 
   ~;
 #  <TR><TD VALIGN=TOP NOBR></TD><TD></TD><TD>b ions $b_ions_chk</TD></TR>
 #  <TR><TD VALIGN=TOP NOBR></TD><TD></TD><TD>Neutral-loss ions $n_loss_chk</TD></TR>
@@ -812,10 +850,13 @@ sub fetch_transitions {
   my %pep_ids;
   my %bioseq_ids;
   my %bioseq2name;
+  my %bioseq2peptides;
   while ( my @row = $sth->fetchrow_array() ) {
     $pep_ids{$row[2]}++;
     $bioseq_ids{$row[1]}++;
     $bioseq2name{$row[1]} = $row[0];
+    $bioseq2peptides{$row[1]} ||= {};
+    $bioseq2peptides{$row[1]} ||= {$row[2]};
   }
   my $pep_id_string = join( ',', keys( %pep_ids ) ) || 1;
   my $bioseq_id_string = join( ',', keys( %bioseq_ids ) ) || 1;
@@ -834,10 +875,6 @@ sub fetch_transitions {
      $log->debug( "get_scan_path " . time() );
      $pepion2scanpath = get_scan_path( scan_clause => $scan_clause);
      $log->debug( "done " . time() );
-
-     $log->debug( "get_bad_qqq " . time() );
-#     $seq2badlinks = get_bad_qqq( sequence_clause => $peptide_sequence_clause, probability => 0.8 );
-    $log->debug( "done " . time() );
   }
 
   #########################################################################
@@ -848,40 +885,16 @@ sub fetch_transitions {
 #    my $note = $sbeams->makeInfoText( "Note: masses are mono-isotopic" );
 #    $content .= "<BR>$note\n"  if $is_html;
 
-#  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs' );
-#  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs', 'Src Adj SS' );
-  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Ion', 'Rank', 'RI', 'SSRTz' );
-#  push @headings, 'SpecLinks', 'Chromat' if $parameters{speclinks};
-
-  if ( $parameters{speclinks} ) {
-    if ( $sbeams->isGuestUser() ) {
-      push @headings, 'IonTrap';
-    } elsif ( $organism == 2 ) {
-      push @headings, 'QTOF', 'QTOF_CE', 'QTRAP', 'QQQ', 'IonTrap', 'QQQ ', 'QTRAP ';
-    } elsif ( $organism == 40 ) {
-      push @headings, 'QTOF', 'QTOF_CE', 'QTRAP', 'QQQ', 'IonTrap', 'QQQ ', 'QTRAP ';
-    } elsif ( $parameters{pabst_build_id} == 154 ) {
-      push @headings, 'QTOF', 'QTOF_CE', 'QTRAP', 'QQQ', 'IonTrap', 'QQQ ', 'QTRAP ';
-    } else {
-      push @headings, 'IonTrap';
-    }
-  }
-
   my $ssr_field = 'SSRCalc_relative_hydrophobicity';
   my $ssr_clause = '';
   my $ssr_join = '';
   $parameters{rt_type} ||= 'SSRCalc';
 
   if ( $parameters{rt_type} || $parameters{rt_type} ne 'SSRCalc' ) {
-    $headings[13] = 'RT_Cat';
     $ssr_field = 'elution_time';
     $ssr_join = qq~
      LEFT JOIN $TBAT_ELUTION_TIME ET ON ( ET.modified_peptide_sequence = PP.peptide_sequence AND elution_time_type_id = '$parameters{rt_type}' )
     ~;
-
-#    $ssr_clause = " AND (elution_time_type = '$parameters{rt_type}' OR elution_time_type IS NULL)\n";
-#--     LEFT JOIN $TBAT_ELUTION_TIME_TYPE ETT ON ( ET.elution_time_type_id = ETT.elution_time_type_id
-      
   }
 
   my $limit_clause = $sbeams->buildLimitClause( row_limit => 100000 );
@@ -937,14 +950,24 @@ sub fetch_transitions {
 #   print "<PRE>$lib_sql</PRE>\n";
 #  $log->debug( $lib_sql );
 
-#  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs' );
   my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Ion', 'Rank', 'RI', 'SSRT', 'SSRT' );
-#  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Label', 'Rank', 'RI', 'SSRT', 'n_obs', 'Src Adj SS' );
+
+
+  # Code to get only pertinent headings here...
+  my $consensus_srcs = $consensus->getConsensusSources( pabst_build_id => $pabst_build_id );
+  my $has_ce = $consensus->hasCESet( pabst_build_id => $pabst_build_id );
+
   if ( $parameters{speclinks} ) {
     if ( $sbeams->isGuestUser() ) {
       push @headings, 'IonTrap';
     } else {
-      push @headings, 'QTOF', 'QTOF_CE', 'QTRAP', 'QQQ', 'IonTrap', 'QQQ ', 'QTRAP ';
+      if ( $consensus_srcs->{QTOF} ) {
+        push @headings, 'QTOF';
+        push @headings, 'QTOF_CE' if $has_ce;
+      }
+      for my $instr ( 'QTrap4000', 'QTrap5500', 'QQQ', 'IonTrap' ) {
+        push @headings, $instr if $consensus_srcs->{$instr};
+      }
     }
   }
 
@@ -958,6 +981,8 @@ sub fetch_transitions {
     splice( @headings, 5, 8 );
   }
 
+  my $num_headings = scalar( @headings );
+
   my $headings = $atlas->get_column_defs( labels => \@headings, plain_hash => 1 );
 
   my $headings_ref = ( $sbeams->output_mode() =~ /html/i ) ? 
@@ -968,9 +993,6 @@ sub fetch_transitions {
 
   my $naa = $sbeams->makeInactiveText( 'n/a' );
 
-#  my %src_name = ( P => 'Predicted', Q => 'QQQ-observed', T => 'Predicted', I => 'IT-observed', 'R' => 'PATR-validated' );
-#  my %src_name = ( P => 'Predicted', Q => 'QQQ-observed', T => 'QTOF-observed', I => 'IT-observed', 'R' => 'PATR-validated' );
-#  my $instr2code = $best_peptide->getStaticInstrumentMap();
   my $instr2code = $best_peptide->getInstrumentMap();
   my %src_name;
   for my $src ( keys( %{$instr2code} ) ) {
@@ -985,6 +1007,7 @@ sub fetch_transitions {
   }
 
   $log->debug( "Exec SQL: " . time() );
+#  $log->debug( $lib_sql );
   my $sth = $sbeams->get_statement_handle( $lib_sql );
   $log->debug( "Done : " . time() );
 
@@ -994,17 +1017,15 @@ sub fetch_transitions {
 
   # placeholder, we don't have a source for retention time.
   my $rt = '';
-
-
   my %peps;
   my %patr_peps;
-
-#  my $organism = $best_peptide->getBuildOrganism( pabst_build_id => $parameters{pabst_build_id} );
 
   my %counts;
 
   # If the user has modified any of the weights we have to do this from scratch...
   if ( $is_changed && 0 ) {
+
+    # Do pabst eval on peptide list here.  Use these to modify src-weighted values
 
   # If no params were changed, use static values
   } else {
@@ -1158,7 +1179,10 @@ sub fetch_transitions {
         my $links = $links{$link_key} || get_consensus_links( seq => $row[1], 
                                                               chg => $row[6], 
                                                               libs => $clibs, 
+                                                              pabst_build_id => $pabst_build_id, 
                                                               badlinks => $seq2badlinks,
+                                                              consensrc => $consensus_srcs,
+                                                              has_ce => $has_ce,
                                                               organism => $organism );
 
         $links{$link_key} ||= $links;
@@ -1169,7 +1193,9 @@ sub fetch_transitions {
 				              QQQ => "$HTML_BASE_DIR/images/chromatogram.gif" );
 
         for my $ch_type ( qw( QQQ QTrap5500 ) ) {
-# $chromat_paths{$row[2]}->{$chromat_key} = $row[3];
+
+          # FIXME temporary hack, only builds with CE set will get chromat links.
+          next unless $has_ce;
 
           my $instr_name = ( $ch_type =~ /QQQ/ ) ? 'Agilent 6460 QQQ' : 
                            ( $ch_type =~ /QTrap5500/i ) ? 'ABI SCIEX QTRAP 5500' : $ch_type;
@@ -1335,10 +1361,7 @@ sub fetch_transitions {
 
   my $align = [qw(center center left center center right right right center right left right right)];
 
-#  unshift @headings, 'PSieve';
-#	$log->debug( "later: " . join( "\:", @headings ) ); 
   my $col_info = $atlas->get_column_defs( labels => \@headings );
-#      my $headings = $atlas->get_column_defs( labels => \@headings, plain_hash => 1 );
   my $help_text = $atlas->make_table_help( description => 'Q1/Q3 transition pairs for SRM experiments',
                                                    entries => $col_info,
                                                    ); 
@@ -1498,7 +1521,6 @@ sub get_scan_path {
 
 sub get_consensus_links {
 
-
   my %args = @_;
 
   my $seq = $args{seq};
@@ -1506,6 +1528,8 @@ sub get_consensus_links {
   my $libs = $args{libs};
 	my $seq2badlinks = {};
 	my $organism = $args{organism};
+  my $consensus_srcs = $args{consensrc} || {};
+  my $has_ce = $args{has_ce} || 0;
 
   my $spectrum_key = $seq . $chg;
 
@@ -1514,24 +1538,30 @@ sub get_consensus_links {
   my $glyco = ( $parameters{pabst_build_id} == 154 ) ? 1 : 0;
 
   if ( !$parameters{prefetch} ) {
-    $libs = $consensus->getConsensusLinks( modified_sequence => $seq, organism => $organism, glyco => $glyco );
+    $libs = $consensus->getConsensusLinks( modified_sequence => $seq, 
+                                                    organism => $organism,
+                                                    pabst_build_id => $pabst_build_id,
+                                                       glyco => $glyco );
   }
 
   my %instr = ( QQQ => 'Agilent 6460 QQQ', 
-              QTrap => 'ABI SCIEX QTRAP 5500',
-               QTOF => 'Agilent 6530 QTOF' );
+              QTrap5500 => 'ABI SCIEX QTRAP 5500',
+              QTrap => 'ABI SCIEX QTRAP',
+              QTrap4000 => 'ABI SCIEX QTRAP 4000',
+               QTOF => 'Agilent 6530 QTOF',
+               IonTrap => 'IonTrap' );
 
   my @links;
-  if ( $organism == 2 && !$sbeams->isGuestUser() ) {
+  if ( !$sbeams->isGuestUser() ) {
     my $link = '';
-    if ( $libs->{medium}->{$spectrum_key} ) {
+    if ( $libs->{qtof}->{$spectrum_key} ) {
       my $title = "View +$chg spectrum for $seq in $instr{QTOF} library"; 
       $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{medium}->{$spectrum_key};' TARGET=_qtof_spectrum> <IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
     }
-    push @links, $link;
+    push @links, $link if $consensus_srcs->{QTOF};
 
     $link = '';
-    if ( $libs->{medium}->{$spectrum_key} && $parameters{pabst_build_id} != 154 ) {
+    if ( $libs->{medium}->{$spectrum_key} ) {
       my $title = "View +$chg spectra for $seq from $instr{QTOF} at various CE values";
       my $param_str;
       my $xmax = 1200;
@@ -1542,14 +1572,14 @@ sub get_consensus_links {
       }
       $link = "<A HREF='ShowCESpectralPlot?xmax=$xmax;xmin=$xmin$param_str' TARGET='_CE_spectrum'> <IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'> </A>";
     }
-    push @links, $link;
+    push @links, $link if $has_ce;
 
     $link = '';
     if ( $libs->{qtrap}->{$spectrum_key} ) {
       my $title = "View +$chg spectrum for $seq in $instr{QTrap} library";
       $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{qtrap}->{$spectrum_key};' TARGET=_qtrap_spectrum> <IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'> </A>";
     }
-    push @links, $link;
+    push @links, $link if $consensus_srcs->{QTrap5500} || $consensus_srcs->{QTrap4000};
 
     $link = '';
     if ( $libs->{qqq}->{$spectrum_key} ) {
@@ -1558,15 +1588,15 @@ sub get_consensus_links {
       my $title = "View +$chg spectrum for $seq in $instr{QQQ} library";
       $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{qqq}->{$spectrum_key};' TARGET=_qqq_spectrum> <IMG BORDER=0 SRC='$image' TITLE='$title'> </A>";
     }
-    push @links, $link;
+    push @links, $link if $consensus_srcs->{QQQ};
   }
 
   my $link = '';
   if ( $libs->{it}->{$spectrum_key} ) {
-    my $title = "View +$chg spectrum for $seq in NIST Ion Trap library";
+    my $title = "View +$chg spectrum for $seq in Ion Trap library";
     $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{it}->{$spectrum_key};' TARGET=_it_spectrum> <IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'> </A>";
   }
-  push @links, $link;
+  push @links, $link if $consensus_srcs->{IonTrap};
 
   return \@links;
 
