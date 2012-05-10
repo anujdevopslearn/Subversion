@@ -470,14 +470,56 @@ sub getConsensusLinksSAVE {
 
 }
 
+sub hasCESet {
+  my $self = shift;
+  my %args = @_;
 
-######################## END SAFE
+  return unless $args{pabst_build_id};
+  my $sql = qq~
+  SELECT COUNT(*) 
+  FROM $TBAT_PABST_BUILD_RESOURCE PBR
+  WHERE resource_type = 'qtof_ce_set'
+  AND pabst_build_id = $args{pabst_build_id}
+  ~;
+
+  my $has_ce = 0;
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    $has_ce++ if $row[0];
+  }
+  return $has_ce;
+}
+
+sub getConsensusSources {
+  my $self = shift;
+  my %args = @_;
+
+  return unless $args{pabst_build_id};
+  my $sql = qq~
+  SELECT DISTINCT instrument_type_name, IT.instrument_type_id, resource_id
+  FROM $TBAT_PABST_BUILD_RESOURCE PBR
+  JOIN $TBAT_CONSENSUS_LIBRARY CL ON CL.consensus_library_id = PBR.resource_id
+  JOIN $TBAT_INSTRUMENT_TYPE IT on IT.instrument_type_id = PBR.instrument_type_id
+  WHERE resource_type = 'spectral_lib'
+  AND pabst_build_id = $args{pabst_build_id}
+  ~;
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my %src;
+  while ( my @row = $sth->fetchrow_array() ) {
+    if ( $args{lib_ids} ) {
+      $src{$row[0]} = $row[2];
+    } else {
+      $src{$row[0]} = $row[1];
+    }
+  }
+  return \%src;
+}
 
 
 sub getConsensusLinks {
 
   my $self = shift;
-
   my %args = @_;
   my $seq_and = '';
   if ( $args{modified_sequence} ) {
@@ -494,16 +536,22 @@ sub getConsensusLinks {
   my %libs = ( it => {}, qtof => {}, qtrap => {}, CE => {}, qqq => {},
           low => {}, mlow => {}, medium => {}, mhigh => {}, high=> {} );
 
+  my %imap = ( IonTrap => 'it',
+               QTOF => 'qtof',
+               QTrap4000 => 'qtrap',
+               QTrap5500 => 'qtrap',
+               QQQ => 'qqq' );
+
   my %libmap;
   if ( !$args{organism} ) {
     $log->error( "Missing required argument 'organism'" );
     return {};
   }
+  my $srcs = $self->getConsensusSources( pabst_build_id => $args{pabst_build_id},
+                                                lib_ids => 1 );
 
   if ( $sbeams->isGuestUser() ) {
-
     my $project_ids = $sbeams->getAccessibleProjects();
-
     my $sql = qq~
     SELECT MAX(consensus_library_id) 
     FROM $TBAT_CONSENSUS_LIBRARY
@@ -517,8 +565,14 @@ sub getConsensusLinks {
       last;
     }
 
+  } elsif ( $srcs ) { 
+    for my $src ( keys( %{$srcs} ) ) {
+      $libmap{$srcs->{$src}} = $imap{$src};
+    }
+
   } elsif ( $args{organism} eq 40 ) {
 
+    die "choans";
     %libmap = ( 
                 329  => 'it',
                 330 => 'qtrap',
@@ -564,6 +618,7 @@ sub getConsensusLinks {
   WHERE consensus_library_id IN ( $libs ) 
   $seq_and
   ~;
+
   my $sth = $sbeams->get_statement_handle( $ce_sql );
   while ( my @row = $sth->fetchrow_array() ) {
     $libs{$libmap{$row[3]}}->{$row[0]. $row[2]} = $row[1];
