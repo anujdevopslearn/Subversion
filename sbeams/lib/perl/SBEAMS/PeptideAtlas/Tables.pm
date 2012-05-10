@@ -110,6 +110,7 @@ use vars qw(@ISA @EXPORT
     $TBAT_PABST_TRANSITION
     $TBAT_PABST_BUILD
     $TBAT_PABST_BUILD_FILE
+    $TBAT_PABST_BUILD_RESOURCE
     $TBAT_PABST_TRANSITION_INSTANCE
     $TBAT_INSTRUMENT_TYPE
     $TBAT_TRANSITION_TYPE
@@ -242,6 +243,7 @@ require Exporter;
     $TBAT_PABST_PEPTIDE_ION_INSTANCE
     $TBAT_PABST_TRANSITION
     $TBAT_PABST_BUILD
+    $TBAT_PABST_BUILD_RESOURCE
     $TBAT_PABST_BUILD_FILE
     $TBAT_PABST_TRANSITION_INSTANCE
     $TBAT_INSTRUMENT_TYPE
@@ -380,6 +382,7 @@ $TBAT_PABST_PEPTIDE_ION             = "${mod}pabst_tmp_peptide_ion";
 $TBAT_PABST_PEPTIDE_ION_INSTANCE    = "${mod}pabst_tmp_peptide_ion_instance";
 $TBAT_PABST_TRANSITION              = "${mod}pabst_tmp_transition";
 $TBAT_PABST_BUILD                   = "${mod}pabst_tmp_build";
+$TBAT_PABST_BUILD_RESOURCE          = "${mod}pabst_build_resource";
 $TBAT_PABST_BUILD_FILE              = "${mod}pabst_tmp_build_file";
 $TBAT_PABST_TRANSITION_INSTANCE     = "${mod}pabst_tmp_transition_instance";
 $TBAT_INSTRUMENT_TYPE               = "${mod}instrument_type";
