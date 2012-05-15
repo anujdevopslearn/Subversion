@@ -26,6 +26,7 @@ use FindBin;
 
 use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $accessible_project_ids 
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
@@ -40,9 +41,9 @@ use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::BioLink::Tables;
 
-use lib "$FindBin::Bin";
+#use lib "$FindBin::Bin";     # I'm 90% sure we don't need these
+#use lib "/net/db/projects/PeptideAtlas/pipeline/bin";
 use lib "/net/db/projects/PeptideAtlas/pipeline/lib/ensembl-57/modules";
-use lib "/net/db/projects/PeptideAtlas/pipeline/bin";
 use DBI;
 
 use Bio::Graphics::Panel;
@@ -243,8 +244,7 @@ sub handle_request {
     my $alt_base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$BYPEP_PROGRAM_FILE_NAME";
     my $getProteinsByPep_call = 
 	"\"$alt_base_url\?atlas_build_id=$parameters{atlas_build_id}\&input_form_format=minimum_detail\"";
-    print "<p><b>New GetProteins (formerly GetProteins_beta) rolled out 10-Dec-2009.</b> For our default builds, provides protein presence level information.<br>";
-    print "<b><a href=$getProteinsByPep_call>Pre-2010 version</a></b> provides Best Peptide Probability, N Protein Mappings, N Genome Locations and Sample  constraints.</p>";
+    print "<p><b><a href=$getProteinsByPep_call>Pre-2010 version</a></b> provides Best Peptide Probability, N Protein Mappings, N Genome Locations and Sample  constraints, but no protein presence level information.</p>";
   }
 
   #### Get the columns and input types for this table/query
