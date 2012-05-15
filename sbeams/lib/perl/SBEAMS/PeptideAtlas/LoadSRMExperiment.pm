@@ -479,6 +479,7 @@ sub read_mprophet_peakgroup_file {
                       file_name => [ qw( file_name ) ],  # Ruth 2011 only
 	transition_group_pepseq => [ qw( transition_group_pepseq ) ], #Ruth 2011
         # I think the record below is simply a result of M-Y creating custom file
+	# 05/02/12: no. It's in Ruth's ovarian cancer plasma mPro file.
         transition_group_record => [ qw( transition_group_record ) ], #Ulli
 		             Tr => [ qw( tr ) ],  # Ruth 2011 only?
 		         run_id => [ qw( run_id ) ],  # Added by EWD for final Ruth data 2011-09-30
@@ -607,6 +608,12 @@ sub read_mprophet_peakgroup_file {
       $stripped_pepseq = (defined $idx{transition_group_pepseq}) ?
 	  $fields[$idx{transition_group_pepseq}] : $modified_pepseq;
     }
+
+    # 05/02/12 Olga's second version of ovarian cancer plasma data uses
+    #  'B' for modified cysteines in peakgroup_id and transition_group_record.
+    # Since we get our seqs from one of those, fix them here.
+    $modified_pepseq =~ s/B/C[160]/g;
+    $stripped_pepseq =~ s/B/C/g;
 
     # These values may already have been gleaned from peakgroup_id,
     # but we will prefer those stored in dedicated columns.

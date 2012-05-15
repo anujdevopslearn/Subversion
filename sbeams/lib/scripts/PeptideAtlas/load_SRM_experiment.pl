@@ -234,7 +234,15 @@ if ($purge) {
   );
 }
 
-my @specfiles = split(' ', `ls $data_path/*.{mzXML,mzML} 2> /dev/null`);
+#my $specfiles = `ls ${data_path}/*.{mzXML,mzML}`;
+#print "$specfiles\n";
+#exit;
+my $specfiles = `ls ${data_path}/*.{mzXML,mzML} 2> /dev/null`;
+my @specfiles = split(' ', $specfiles);
+if (! scalar @specfiles) {
+  print "No .mzXML or .mzML files found in $data_path (listing was \'$specfiles\')\n";
+  exit;
+}
 
 # get filenames for all mzML, mzXML files in that directory
 # for each file ...
