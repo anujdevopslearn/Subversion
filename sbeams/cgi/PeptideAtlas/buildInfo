@@ -91,6 +91,7 @@ sub main
  
     } else {
 
+      # zhi says maybe make a new version of this subroutine to put in new style sheet
         $sbeamsMOD->display_page_header(project_id => $project_id);
 
         handle_request(ref_parameters=>\%parameters);
@@ -150,6 +151,8 @@ sub handle_request {
     my $PROGRAM_FILE_NAME = $PROG_NAME;
     my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
     my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
+    my $ppt = $parameters{'ppt'} || 0;
+    my $table_width = $parameters{'width'} || 800;
 
 
     #### Get a list of accessible project_ids
@@ -227,7 +230,10 @@ sub handle_request {
   &nbsp;&nbsp;--Protein tallies exclude decoy, unmapped, and some contaminant proteins.<BR>
   &nbsp;&nbsp;--Swiss-Prot click returns only 6-char core identifiers, not splice variants.<BR>
   See <i>Protein ID terms</i> in left sidebar for nomenclature.</P>
-  ~;
+  ~ unless $ppt;
+  print "<p>To hide any row, click its Build Name. To reset, reload page.</p>\n" if $ppt;
+
+
 
   ### Construct headers for info table
   my $table = SBEAMS::Connection::DataTable->new();
@@ -238,19 +244,55 @@ sub handle_request {
   ### IN BuildInfo.pm
   my $build_name_idx = 0;
   my $org_idx = 1;
-  my $smpl_count_idx = 2;
-  my $spectra_searched_idx = 3;
-  my $psm_count_idx = 4;
-  my $distinct_peps_idx = 5;
-  my $n_canonicals_idx = 6;
-  my $n_canon_dist_idx = 7;
-  my $n_disting_prots_idx = 8;
-  my $n_seq_unique_prots_idx = 9;
-  my $n_swiss_idx = 10;
-  my $n_covering_idx = 11;
-  my $descr_idx = 12;
-  my $atlas_build_id_output_idx = 13;
-  my $ncols = 14;
+  my $peptide_inclusion_idx = 2;
+  my $smpl_count_idx = 3;
+  my $spectra_searched_idx = 4;
+  my $psm_count_idx = 5;
+  my $distinct_peps_idx = 6;
+  my $n_canonicals_idx = 7;
+  my $n_canon_dist_idx = 8;
+  my $n_disting_prots_idx = 9;
+  my $n_seq_unique_prots_idx = 10;
+  my $n_swiss_idx = 11;
+  my $n_covering_idx = 12;
+  my $descr_idx = 13;
+  my $atlas_build_id_output_idx = 14;
+  my $ncols = 15;
+
+  my @ppt_cols;
+  my $build_name_ppt_idx;
+  my $peptide_inclusion_ppt_idx;
+  my $smpl_count_ppt_idx;
+  my $spectra_searched_ppt_idx;
+  my $psm_count_ppt_idx;
+  my $distinct_peps_ppt_idx;
+  my $n_canonicals_ppt_idx;
+  my $n_swiss_ppt_idx;
+  my $descr_ppt_idx;
+  my $ppt_ncols;
+  if ($ppt) {
+    @ppt_cols = (0,2,3,4,5,6,7,11);
+    $build_name_ppt_idx = 0;
+    $peptide_inclusion_ppt_idx = 1;
+    $smpl_count_ppt_idx = 2;
+    $spectra_searched_ppt_idx = 3;
+    $psm_count_ppt_idx = 4;
+    $distinct_peps_ppt_idx = 5;
+    $n_canonicals_ppt_idx = 6;
+    $n_swiss_ppt_idx = 7;
+    $ppt_ncols = 8;
+#--------------------------------------------------
+#   # for testing
+#     @ppt_cols = (0,2,3,6,7,11);
+#     $build_name_ppt_idx = 0;
+#     $peptide_inclusion_ppt_idx = 1;
+#     $smpl_count_ppt_idx = 2;
+#     $distinct_peps_ppt_idx = 3;
+#     $n_canonicals_ppt_idx = 4;
+#     $n_swiss_ppt_idx = 5;
+#     $ppt_ncols = 6;
+#-------------------------------------------------- 
+  }
 
 
   #Open and read the cached .tsv file.
@@ -259,57 +301,178 @@ sub handle_request {
   my $header = <TSV>;
   chomp $header;
   my @headers = split("\t", $header);
+  # Remove unwanted headers for ppt
+  if ($ppt) {
+    my @ppt_headers=();
+    for my $col (@ppt_cols) {
+      my $header = $headers[$col];
+      if (($header =~ /spectra searched/i) ||
+          ($header =~ /observations/i) ||
+          ($header =~ /psms/i) ||
+          ($header =~ /peptide spectrum matches/i)) {
+	$header .= " (1000's)";
+      }
+      push (@ppt_headers, $header);
+    }
+    @headers = @ppt_headers;
+  }
 
   # Define header row
   $table ->addRow( \@headers );
-  $table->setRowAttr(  COLS => [1..$ncols], ROWS => [1], BGCOLOR => '#bbbbbb', ALIGN=>'CENTER' );
-  $table->setHeaderAttr( BOLD => 1 );
+  # setRowAttr does not take a COLS arg.
+  $table->setRowAttr( ROWS => [1], BGCOLOR => '#bbbbbb', ALIGN=>'CENTER', NOWRAP => 0, HEIGHT => 35 );
+  $table->setHeaderAttr(BOLD=>1);   # this actually has effect via sub formatHeader
 
+  # Read in the rows
   my $selected = '';
+  my @rows;
   while (my $line = <TSV>) {
+    chomp $line;
+    my @row = split("\t", $line);
+    push (@rows, \@row);
+  }
+
+  # Sort the rows based on organism.
+  my %organisms = (
+    'Human'=>0,
+    'Chimpanzee'=>1,
+    'Mouse'=>2,
+    'Cow'=>5,
+    'Pig'=>6,
+    'Drosophila'=>10,
+    'Honeybee'=>11,
+    'C Elegans'=>20,
+    'Yeast'=>25,
+    'Fission Yeast'=>26,
+    'Leptospira interrogans'=>31,
+    'Candida albicans'=>33,
+    'Ecoli'=>39,
+    'Streptococcus'=>40,
+    'Halobacterium'=>41,
+    'Mtuberculosis'=>42,
+    'Dengue virus'=>50,
+  );
+
+  @rows = sort { $organisms{$a->[$org_idx]} <=>  $organisms{$b->[$org_idx]}} @rows;
+
+  # Process and output the rows
+  for my $row_aref (@rows) {
+    my @row = @{$row_aref};
+
     my @trinfo;
     my $selected = '';
     my $bgcolor = '#dddddd';
 
-    chomp $line;
-    my @row = split("\t", $line);
     # Check atlas build ID
     my $id = $row[$atlas_build_id_output_idx];
     my $atlas_build = $atlas_build_hash{$id};
     next if (! defined $atlas_build);
+
+
+    # Post-processing for ppt format
+    my $row_id;
+    if ($ppt) {
+      # Remove unwanted columns for ppt
+      my @ppt_row=();
+      for my $col (@ppt_cols) {
+	my $content = $row[$col];
+	# Remove any hyperlink
+	if ($content =~ /<a href=.*>(.*)<\/a>/i ) {
+	  $content = $1;
+	}
+	# Tidy build names
+	if ($col == $build_name_idx) {
+	  $content =~ s/ PeptideAtlas//;   # remove PeptideAtlas
+	  $content =~ s/ Ens..//;          # remove Ensembl version number
+	  $content =~ s/ Milk//;           # "Cow Milk" atlas has much more than milk
+	  $content =~ s/Prob 0.99 //;      # prob is shown in its own column
+	  $content =~ s/Prob 0.9 //;
+	  # tidy species names
+	  $content =~ s/HoneyBee/Honeybee/;
+	  $content =~ s/Pyogenes/pyogenes/;
+	  $content =~ s/Tuberculosis/tuberculosis/;
+	  $content =~ s/CelegansPhospho/C\. elegans Phospho/;
+	  $content =~ s/Celegans/C\. elegans/;
+	  $content =~ s/Leptospira/L\./;
+	  # general tidy
+	  $content =~ s/Yeast_MRM_Atlas_2008-03_P0.9/Yeast SRMAtlas 2008-03/;
+	  # Add padding whitespace
+	  $content .= "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+	  # Add an element for hiding the row.
+	  $row_id = "row_$id";
+	  $content = qq~<span onClick="document.getElementById('$row_id').style.display='none'">$content</span>~;
+	}
+	# Show spectra, obs in 1000's
+	if (($col == $spectra_searched_idx ) || ($col == $psm_count_idx)) {
+	  $content = sprintf("%0.0f", $content/1000);
+	}
+	push (@ppt_row, $content);
+      }
+      @row = @ppt_row;
+    }
     # Add the row to the table.
     $table->addRow( \@row );
-    my $this_row = $table->getRowNum();
+    $this_row = $table->getRowNum();
     # This manages which builds are shown for "View default builds"
     if ($id == $atlas_build_id) {
       $selected = 'CHECKED ';
     }   
     if ( !$atlas_build->[$def_atlas_build_id_output_idx] ) {
       if ( $selected ne 'CHECKED ' ) { # We will show the current build regardless
-       $log->debug( "checking is $atlas_build->[$atlas_atlas_build_id_output_idx]" );
-       @trinfo = ( $tr =~ /(NAME)=('[^']+')\s+(ID)=('[^']+')\s+(CLASS)=('[^']+')/ );
+	$log->debug( "checking is $atlas_build->[$atlas_atlas_build_id_output_idx]" );
+	@trinfo = ( $tr =~ /(NAME)=('[^']+')\s+(ID)=('[^']+')\s+(CLASS)=('[^']+')/ );
       }
-      $bgcolor = '#eeeeee';
+      $bgcolor = '#eeeeee' unless ($ppt);
     }
-    $table->setRowAttr(  COLS => [1..$ncols], ROWS => [$this_row], BGCOLOR => $bgcolor, @trinfo );
+    if (! $ppt) {
+      $table->setRowAttr( ROWS => [$this_row], BGCOLOR => $bgcolor, @trinfo );
+    } else {
+      # overwrites special ID for current atlas build, but should be OK.
+      $table->setRowAttr( ROWS => [$this_row], BGCOLOR => $bgcolor, @trinfo , NOWRAP => 0, HEIGHT => 25, ID=>qq~"$row_id"~,);
+    }
   }
   close TSV;
 
   # Set display attributes for the various columns.
+  # 05/02/12: value below is always zero!
   my $nrows = $this_row;
-  $table->setColAttr(  COLS => [$build_name_idx+1], ROWS => [2..$nrows], NOWRAP => 1 );
-  $table->setColAttr(  COLS => [$descr_idx+1], ROWS => [2..$nrows], NOWRAP => 1 );
-  $table->setColAttr(  COLS => [$build_name_idx+1], ROWS => [1..$nrows], ALIGN => 'LEFT' );
-  $table->setColAttr(  COLS => [$build_name_idx+2..$descr_idx], ROWS => [1..$nrows], ALIGN => 'CENTER' );
-  $table->setColAttr(  COLS => [$descr_idx+1], ROWS => [1..$nrows], ALIGN => 'LEFT' );
-  $table->setColAttr(  COLS => [$atlas_build_id_output_idx+1], ROWS => [1..$nrows], ALIGN => 'CENTER' );
-  $table->setColAttr(  COLS => [$atlas_build_id_output_idx+1], ROWS => [1..$nrows], HIDDEN => 1 );
+
+  if (!$ppt) {
+    $table->setColAttr(  COLS => [$build_name_idx+1], ROWS => [2..$nrows], NOWRAP => 1 );
+    $table->setColAttr(  COLS => [$descr_idx+1], ROWS => [2..$nrows], NOWRAP => 1 );
+    $table->setColAttr(  COLS => [$build_name_idx+1], ROWS => [1..$nrows], ALIGN => 'LEFT' );
+    $table->setColAttr(  COLS => [$build_name_idx+2..$descr_idx], ROWS => [1..$nrows], ALIGN => 'CENTER' );
+    $table->setColAttr(  COLS => [$descr_idx+1], ROWS => [1..$nrows], ALIGN => 'LEFT' );
+    $table->setColAttr(  COLS => [$atlas_build_id_output_idx+1], ROWS => [1..$nrows], HIDDEN => 1 );
+
+    # ppt
+  } else {
+
+    $table->setColAttr(COLS=>[$build_name_ppt_idx+1],ROWS=>[2..$nrows],NOWRAP=>1);
+    $table->setColAttr(COLS=>[$peptide_inclusion_ppt_idx+1],ROWS=>[2..$nrows],NOWRAP=>1);
+    $table->setColAttr(COLS=>[$build_name_ppt_idx+1..$peptide_inclusion_ppt_idx+1],ROWS=>[1..$nrows],ALIGN=>'LEFT');
+    $table->setColAttr(  COLS => [$peptide_inclusion_ppt_idx+2..$n_swiss_ppt_idx+1], ROWS => [1..$nrows], ALIGN => 'RIGHT' );
+    $table->setColAttr(  COLS => [$atlas_build_id_output_idx+1], ROWS => [1..$nrows], HIDDEN => 1 );
+    # this seems to have no effect.
+    #$table->alternateColors(PERIOD => 2, FIRSTROW=> 2, BGCOLOR => '#e0e0e0');
+  }
 
   # Display the table!
-  print $link;  #table toggle
+  print $link unless $ppt;  #table toggle
+  # this is a nasty hack!!
+  my $style = qq~<style type="text/css">
+table.buildtable {
+  font-size:20px;
+}
+</style>
+~;
+
+  $table = $style.$table;
+  $table =~ s/<table/<table width=${table_width}/i if $ppt;
+  $table =~ s/<table/<table class="buildtable"/i if $ppt;
   print "$table";
   print $q->hidden( "apply_action", '');
   print $q->endform;
 
-  }
+}
 } # end showMainPage

@@ -133,7 +133,8 @@ sub pa_build_info_2_tsv {
 	   FROM $TBAT_SEARCH_BATCH_STATISTICS SBS JOIN
 		$TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB 
 	     ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
-	   WHERE atlas_build_id = AB.atlas_build_id ) AS n_distinct_2
+	   WHERE atlas_build_id = AB.atlas_build_id ) AS n_distinct_2,
+	 AB.probability_threshold, AB.protpro_PSM_FDR_per_expt
   FROM $TBAT_ATLAS_BUILD AB JOIN $TBAT_BIOSEQUENCE_SET BS
     ON AB.biosequence_set_id = BS.biosequence_set_id
   JOIN $TB_ORGANISM O ON BS.organism_id = O.organism_id
@@ -160,39 +161,45 @@ sub pa_build_info_2_tsv {
   my $org_name_idx = 5;
   my $dist_peps_idx = 6;
   my $dist_peps_2_idx = 7;   #this can undercount; it's based on experiment_contribution_summary.out
+  my $prob_threshold_idx = 8;
+  my $psm_fdr_cutoff_idx = 9;
 
 
   ### IF YOU CHANGE THE INDICES BELOW, CHANGE IN EXACTLY THE SAME WAY
-  ### IN THE buildInfo CGI.
+  ### IN THE buildInfo CGI. There is surely a better way to do this; feel
+  ### free!
   my $build_name_idx = 0;
   my $org_idx = 1;
-  my $smpl_count_idx = 2;
-  my $spectra_searched_idx = 3;
-  my $psm_count_idx = 4;
-  my $distinct_peps_idx = 5;
-  my $n_canonicals_idx = 6;
-  my $n_canon_dist_idx = 7;
-  my $n_disting_prots_idx = 8;
-  my $n_seq_unique_prots_idx = 9;
-  my $n_swiss_idx = 10;
-  my $n_covering_idx = 11;
-  my $descr_idx = 12;
-  my $atlas_build_id_output_idx = 13;
-  my $ncols = 14;
+  my $peptide_inclusion_idx = 2;
+  my $smpl_count_idx = 3;
+  my $spectra_searched_idx = 4;
+  my $psm_count_idx = 5;
+  my $distinct_peps_idx = 6;
+  my $n_canonicals_idx = 7;
+  my $n_canon_dist_idx = 8;
+  my $n_disting_prots_idx = 9;
+  my $n_seq_unique_prots_idx = 10;
+  my $n_swiss_idx = 11;
+  my $n_covering_idx = 12;
+  my $descr_idx = 13;
+  my $atlas_build_id_output_idx = 14;
+  my $ncols = 15;
 
   my @headers;
   $headers[$build_name_idx] = 'Build Name';
   $headers[$distinct_peps_idx] = 'distinct peptides';
   $headers[$smpl_count_idx] = 'samples';
   $headers[$org_idx] = 'Organism';
+  $headers[$peptide_inclusion_idx] = 'Peptide Inclusion Cutoff';
   $headers[$descr_idx] = 'Description';
-  $headers[$psm_count_idx] = 'observations';
+  $headers[$psm_count_idx] = 'peptide spectrum matches';
   $headers[$spectra_searched_idx] = 'spectra searched';
   $headers[$n_canonicals_idx] = 'canonical proteins';
   $headers[$n_canon_dist_idx] = 'canonical + possibly distinguished proteins';
   $headers[$n_disting_prots_idx] = 'peptide set unique proteins';
   $headers[$n_seq_unique_prots_idx] = 'sequence unique proteins';
-  $headers[$n_swiss_idx] = 'Core Swiss-Prot identifiers covered';
+  #$headers[$n_swiss_idx] = 'Core Swiss-Prot identifiers covered';
+  $headers[$n_swiss_idx] = 'Swiss-Prot IDs covered';
   $headers[$n_covering_idx] = 'covering set';
   $headers[$atlas_build_id_output_idx] = 'Build ID';
 
@@ -290,6 +297,24 @@ sub pa_build_info_2_tsv {
       }
     } 
 
+    # Create a string for Peptide Inclusion Cutoff
+    my $prob = $atlas_build->[$prob_threshold_idx];
+    my $protpro_PSM_FDR_per_expt = $atlas_build->[$psm_fdr_cutoff_idx];
+    $prob = sprintf("%.2f", $prob);
+    my $cutoff_str;
+    if ($protpro_PSM_FDR_per_expt > 0) {
+      $cutoff_str = sprintf "%0.15f", $protpro_PSM_FDR_per_expt;
+      $cutoff_str =~ /0\.(0+)(\d+)/;
+      my $num = length($1) +1 ;
+      my $str = "%.$num".'f';
+      $cutoff_str = sprintf($str, $cutoff_str);
+      $cutoff_str = "PSM FDR = " . $cutoff_str;
+    } elsif ($prob <= 0) {
+      $cutoff_str = "Multiple";
+    } else {
+      $cutoff_str = "P >= $prob";
+    }
+
     # Store the infos into the @row 
 
     $row[$atlas_build_id_output_idx] = $atlas_build->[$atlas_build_id_idx];
@@ -298,6 +323,8 @@ sub pa_build_info_2_tsv {
     $row[$distinct_peps_idx] =qq~<A HREF=GetPeptides?atlas_build_id=$atlas_build->[$atlas_build_id_idx]&apply_action=QUERY TITLE="Retrieve distinct peptides for Atlas Build $atlas_build->[$atlas_build_name_idx]">$atlas_build->[$dist_peps_idx]</A>~;
   
     $row[$org_idx] = $atlas_build->[$org_name_idx];
+    $row[$peptide_inclusion_idx] = $cutoff_str;
+
     $row[$smpl_count_idx] = qq~<A HREF=buildDetails?atlas_build_id=$atlas_build->[$atlas_build_id_idx] TITLE="View samples included in Atlas Build $atlas_build->[$atlas_build_name_idx]">$samples_href->{smpl_count}</A>~;
 
     $row[$psm_count_idx] = $samples_href->{psm_count};
