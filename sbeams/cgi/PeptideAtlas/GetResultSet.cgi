@@ -39,8 +39,7 @@ $sbeams = new SBEAMS::Connection;
 my $atlas = new SBEAMS::PeptideAtlas;
 $atlas->setSBEAMS( $sbeams );
 
-#use CGI;
-#$q = new CGI;
+my $pid = $$;
 
 
 ###############################################################################
@@ -99,6 +98,8 @@ sub main {
     allow_anonymous_access=>1,
   ));
 
+  my $mem = $sbeams->memusage( pid => $pid );
+  $log->debug( "Init: " . $mem );
 
   #### Read in the default input parameters
   my %parameters;
@@ -152,10 +153,18 @@ sub handle_request {
       "happen!  Please report this error.<BR>\n";
     return;
   }
+  my $mem = $sbeams->memusage( pid => $pid );
+  $log->debug( "Read resultset: " . $mem );
 
   #### Read in the result set
-  $sbeams->readResultSet(resultset_file=>$parameters{rs_set_name},
-    resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters);
+  $sbeams->readResultSet(  resultset_file => $parameters{rs_set_name},
+                            resultset_ref => $resultset_ref,
+                     query_parameters_ref => \%parameters,
+                                      pid => $pid,
+                                      debug => 1 );
+
+  $mem = $sbeams->memusage( pid => $pid );
+  $log->debug( "Done: " . $mem );
 
   #### Default format is Tab Separated Value
 	my $content_type = ( $format =~ /tsv/i ) ? "Content-type: text/tab-separated-values\n\n" :
@@ -167,7 +176,16 @@ sub handle_request {
 		                      # will need tweaking if we add xml.
     print $content_type;
 
+    $mem = $sbeams->memusage( pid => $pid );
+    $log->debug( "Convert to TSV: " . $mem );
+
     my $tsv_formatted = get_tsv_format( $resultset_ref, $remove_markup );
+
+    $mem = $sbeams->memusage( pid => $pid );
+    $log->debug( "Done: " . $mem );
+
+    $mem = $sbeams->memusage( pid => $pid );
+    $log->debug( "Convert to mrm format: " . $mem );
 
     if ( $download =~ /AgilentQQQ_dynamic/i ) {
       my $method = $atlas->get_qqq_dynamic_transition_list( $tsv_formatted );
@@ -184,6 +202,9 @@ sub handle_request {
         print join( "\t", @{$row} ) . "\n";
       }
     }
+    $mem = $sbeams->memusage( pid => $pid );
+    $log->debug( "Done: " . $mem );
+
 
   } else {
 
