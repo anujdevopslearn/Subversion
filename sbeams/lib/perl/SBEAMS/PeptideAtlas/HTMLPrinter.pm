@@ -628,6 +628,8 @@ sub encodeSectionTable {
   my $self = shift || die ("self not passed");
   my %args = @_;
 
+  $args{rs_params} ||= {};
+
   my $pre_text = '';
   my $class_def = '';
   my $id = $args{table_id} || '';
@@ -664,7 +666,8 @@ sub encodeSectionTable {
     
     $rs_name = $self->make_resultset( rs_data => \@rs_data, 
                                       headers => $rs_headers,
-                                  file_prefix => $file_prefix );
+                                  file_prefix => $file_prefix,
+                                   rs_params => $args{rs_params} );
 
     my $tsv_link = "<a href='$CGI_BASE_DIR/GetResultSet.cgi/$rs_name.tsv?rs_set_name=$rs_name&format=tsv;remove_markup=1' TITLE='Download table as tab-delimited text file'>TSV</a>";
     my @downloads = ( $tsv_link ); 
