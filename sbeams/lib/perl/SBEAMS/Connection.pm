@@ -455,6 +455,25 @@ sub addUserAndGroups {
   return $contact_id;
 }
 
+sub memusage {
+	my $self = shift;
+	my %args = @_;
+
+	my $pid = $args{pid} || return '';
+
+  my @results = `ps -o pmem,pid $pid`;
+  my $mem = '';
+  for my $line  ( @results ) {
+    chomp $line;
+    if ( $line =~ /\s*(\d+\.*\d*)\s+$pid/ ) {
+      $mem = $1;
+      last;
+    }
+  }
+  $mem .= '% (' . time() . ')';
+  return $mem;
+}
+
 ###############################################################################
 
 1;
