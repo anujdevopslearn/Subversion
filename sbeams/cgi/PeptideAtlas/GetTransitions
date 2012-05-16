@@ -1378,7 +1378,7 @@ sub fetch_transitions {
 
   my ( $html, $rs_name ) = $atlas->encodeSectionTable( header => 1, 
                                                         width => '600',
-                   tr_info => $args{tr},
+                                                      tr_info => $args{tr},
                                                        align  => $align,
                                                   rs_headings => \@headings,
                                                          rows => \@peptides,
@@ -1387,7 +1387,8 @@ sub fetch_transitions {
                                                     help_text => $help_text,
                                                   chg_bkg_idx => $change_on, 
                                                  set_download => 'Download peptides', 
-                                                 download_form => $download_select, 
+                                                download_form => $download_select, 
+                                                    rs_params => \%rs_params,
                                                   file_prefix => 'best_peptides_', 
                                                      bg_color => '#EAEAEA',
                                                      sortable => 1,
