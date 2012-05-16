@@ -1343,7 +1343,7 @@ Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Dwell	Fragmentor	C
     my $q3c = $line[9];
     my $lbl = $line[10];
     my $ion = $q1c . $lbl . '-' . $q3c;
-    my $rt = $line[13];
+    
     my $rtd = 5;
     my $name = $acc . '.' . $seq;
 
@@ -1382,8 +1382,11 @@ Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Fragmentor	Collisi
     my $q3c = $line[9];
     my $lbl = $line[10];
     my $ion = $lbl . '-' . $q3c;
-    my $rt = $line[13];
+
+	  # Changed DSC 2012-05-15 - should use column names!!!
+    my $rt = $line[14];
     my $rtd = 5;
+
     my $name = $acc . '.' . $seq;
 
     my $ce = ( $q1c == 2 ) ? sprintf( "%0.2f", ( 2.93 * $q1 )/100 + 6.72 ) : 
@@ -1415,6 +1418,7 @@ sub make_resultset {
   my %args = @_;
   return undef unless $args{rs_data};
   $args{file_prefix} ||= '';
+  $args{rs_params} ||= {};
 
   # We can either get explicitly passed headers,
   # or an array which includes headers
@@ -1429,7 +1433,7 @@ sub make_resultset {
   $self->getSBEAMS()->writeResultSet( resultset_file_ref => \$rs_name,
                                 resultset_ref => $rs_ref,
                                   file_prefix => $args{file_prefix},
-                         query_parameters_ref => \%args  );
+                         query_parameters_ref => $args{rs_params}  );
 
 
   $self->{_cached_resultsets} ||= {};
