@@ -18,10 +18,7 @@
 ###############################################################################
 # Set up all needed modules and objects
 ###############################################################################
-use GD::Graph;
-use GD::Graph::bars;
 use CGI;
-use strict;
 use strict;
 use Getopt::Long;
 use FindBin;
@@ -171,23 +168,40 @@ sub handle_request {
   my %table_row=(); 
 	@{$table_row{1}} = (
               'Number of Proteins in DB',
-              'Number of SwissProt Primary Proteins',
-              'Number of SP Primary and Varsplic Proteins',
+              'Number of SwissProt Canonical Proteins',
+              'Number of SP Canonical and Varsplic Proteins',
               'Number of Ensembl Proteins',
               'Number of NR Ensembl Proteins',
               'Number of Ensembl Genes',
               'Number of IPI/SGD Proteins');
   @{$table_row{2}} =(
-              'Number of Distinct DMSAT Peptides in SP Primary',
-							'Fraction of DMSAT Peptides that Map Uniquely in SP Primary',
-              'Fraction of DMSAT Peptides that Map Uniquely in SP Primary + Varsplic',
+              'Number of Distinct DMSAT Peptides in SP Canonical Proteins',
+							'Fraction of DMSAT Peptides that Map Uniquely in SP Canonical Proteins',
+              'Fraction of DMSAT Peptides that Map Uniquely in SP Canonical + Varsplic Proteins',
+              #'Fraction of DMSAT Peptides that Map Uniquely in SP Canonical + Varsplic + nsSNP',
+              'Fraction of DMSAT Peptides that Map Uniquely in NR Ensembl Proteins',
+              'Fraction of DMSAT Peptides that Map Uniquely in NR IPI Proteins',
 							'Fraction of DMSAT Peptides that Map to One Chromosomal Location' ,
 							'Fraction of DMSAT Peptides that Map to Human' ,
 							'Fraction of DMSAT Peptides that Map to Mouse' ,
 							'Fraction of DMSAT Peptides that Map to Yeast' ,
 							'Proteotypic DMSAT Peptides With Observability > 0.9' ,
+							'Proteotypic DMSAT Unique SP Mapping Peptides With Observability > 0.9' ,
+							'Proteotypic DMSAT Unique SPvar Mapping Peptides With Observability > 0.9' ,
+							#'Proteotypic DMSAT Unique spsnp Mapping Peptides With Observability > 0.9' ,
+              'Proteotypic DMSAT Unique NR Ensembl Mapping Peptides With Observability > 0.9' ,
+              'Proteotypic DMSAT Unique NR IPI Mapping Peptides With Observability > 0.9' ,
+							'Proteotypic DMSAT Unique Genome Mapping Peptides With Observability > 0.9' ,
 							'Proteotypic DMSAT Peptide With Observability > 0.7' ,
+							'Proteotypic DMSAT Unique SP Mapping Peptide With Observability > 0.7' ,
+							'Proteotypic DMSAT Unique SPvar Mapping Peptide With Observability > 0.7' ,
+							#'Proteotypic DMSAT Unique psnp Mapping Peptide With Observability > 0.7' ,
+              'Proteotypic DMSAT Unique NR Ensembl Mapping Peptide With Observability > 0.7' ,
+              'Proteotypic DMSAT Unique NR IPI Mapping Peptide With Observability > 0.7' ,
+							'Proteotypic DMSAT Unique Genome Mapping Peptide With Observability > 0.7' ,
 		 );
+
+
   my %stat =();
   if( ! -e "$PHYSICAL_BASE_DIR/$tmp_path/$file_name" ){
     open (OUT , ">$PHYSICAL_BASE_DIR/$tmp_path/$file_name" ) or die "cannot open $PHYSICAL_BASE_DIR/$tmp_path/$file_name\n";
@@ -200,6 +214,7 @@ sub handle_request {
      PTP.COMBINED_PREDICTOR_SCORE, 
      PTPM.N_SP_MAPPING,
      PTPM.N_SPVAR_MAPPING,
+     PTPM.N_SPSNP_MAPPING,
      PTPM.N_GENOME_LOCATIONS,
      PTP.SSRCALC_RELATIVE_HYDROPHOBICITY,
      LEN(PTP.PEPTIDE_SEQUENCE) 
@@ -221,7 +236,7 @@ sub handle_request {
 		my %peptide_org_mapping=();
 		my @rows =  $sbeams->selectSeveralColumns($sql);
 		foreach my $row (@rows){
-			my ($biosequence_set_id,$peptide,$score,$n_sp_mapping,$n_spvar_mapping,$n_genome_locations) = @$row;
+			my ($biosequence_set_id,$peptide,$score,$n_sp_mapping,$n_spvar_mapping,$n_spnsp_mapping, $n_genome_locations) = @$row;
 			#print "$biosequence_set_id,$peptide,$score,$n_sp_mapping,$n_genome_locations\n";
 			$peptides{$biosequence_set_id}{$peptide} = {};
 			$peptides{$biosequence_set_id}{$peptide}{"score"} = $score;
@@ -229,10 +244,61 @@ sub handle_request {
 			if($score > 0.7){ $peptides{$biosequence_set_id}{$peptide}{"mhscore"} = 1;}
 			if($n_sp_mapping > 0){$peptides{$biosequence_set_id}{$peptide}{"sp_mapping"} =1;}
 			if($n_sp_mapping == 1){$peptides{$biosequence_set_id}{$peptide}{"uniq_sp_mapping"} = 1;}    
+			if($n_spnsp_mapping == 1){$peptides{$biosequence_set_id}{$peptide}{"uniq_spnsp_mapping"} = 1;}    
       if($n_spvar_mapping == 1){$peptides{$biosequence_set_id}{$peptide}{"uniq_spvar_mapping"} = 1;}
 			if($n_genome_locations == 1){$peptides{$biosequence_set_id}{$peptide}{"uniq_genome_mapping"} = 1;}
 			$peptide_org_mapping{$peptide}{$biosequence_set{$biosequence_set_id}} = 1;
 		}
+
+   for my $pat (qw(ENS IPI)){
+     my $str = " (BS.BIOSEQUENCE_DESC LIKE '\%SGDID\%' and BS.BIOSEQUENCE_DESC LIKE '\%CHROMOSOME\%GENE\%TRANSCRIPT\%') ";
+     my $str2 = '';
+     if($pat eq 'ENS'){
+        $str2= "uniq_nrensp_mapping";
+        $str .= " OR (BS.BIOSEQUENCE_DESC NOT LIKE '\%SGDID\%' and BS.BIOSEQUENCE_DESC like '\%CHROMOSOME\%GENE\%TRANSCRIPT\%')";
+     }else {
+        $str2= "uniq_nripi_mapping";
+        $str .= " OR (BS.BIOSEQUENCE_DESC LIKE '\%SGDID\%' and BS.BIOSEQUENCE_DESC not like '\%CHROMOSOME\%GENE\%TRANSCRIPT\%')";
+     }
+
+		 $sql = qq~
+				 SELECT DISTINCT
+				 BS.BIOSEQUENCE_SET_ID,
+				 PTP.PEPTIDE_SEQUENCE,
+				 CAST(BS.BIOSEQUENCE_SEQ AS CHAR),
+				 COUNT (BS.BIOSEQUENCE_NAME),
+				 PTP.SSRCALC_RELATIVE_HYDROPHOBICITY,
+				 LEN(PTP.PEPTIDE_SEQUENCE)
+				 FROM $TBAT_PROTEOTYPIC_PEPTIDE PTP
+				 LEFT JOIN $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING PTPM
+							ON ( PTP.PROTEOTYPIC_PEPTIDE_ID = PTPM.PROTEOTYPIC_PEPTIDE_ID )
+				 LEFT JOIN $TBAT_BIOSEQUENCE BS
+							ON ( PTPM.SOURCE_BIOSEQUENCE_ID = BS.BIOSEQUENCE_ID )
+				 WHERE 1 = 1
+				 AND BS.BIOSEQUENCE_SET_ID IN ($biosequence_set_ids)
+				 AND (BS.BIOSEQUENCE_NAME LIKE '$pat%' OR $str)
+				 AND PTP.SSRCALC_RELATIVE_HYDROPHOBICITY BETWEEN 4 AND 60
+				 AND LEN(PTP.PEPTIDE_SEQUENCE) BETWEEN 7 AND 30
+				 GROUP BY  BS.BIOSEQUENCE_SET_ID,PTP.PEPTIDE_SEQUENCE, CAST(BS.BIOSEQUENCE_SEQ AS CHAR),
+                   PTP.SSRCALC_RELATIVE_HYDROPHOBICITY,LEN(PTP.PEPTIDE_SEQUENCE)
+				 ORDER BY BS.BIOSEQUENCE_SET_ID, PTP.PEPTIDE_SEQUENCE
+			 ~;
+				my @rows =  $sbeams->selectSeveralColumns($sql);
+				my %tmp = ();
+				foreach my $row (@rows){
+					my ($biosequence_set_id, $peptide, $sequence, $cnt,$ssrcalc, $len) = @$row;
+					$tmp{$biosequence_set_id}{$peptide}++;
+				}
+				foreach my $set (keys %tmp){
+					foreach my $pep (keys %{$tmp{$set}}){
+						if($tmp{$set}{$pep} == 1){
+							$peptides{$set}{$pep}{$str2} = 1;
+						}
+					}
+				}
+   }
+
+
 		foreach my $biosequence_set_id (keys %biosequence_set){
 		  my $count=1;
       my $organism = $biosequence_set{$biosequence_set_id};
@@ -240,9 +306,7 @@ sub handle_request {
 			my $n_distinct_sp_mapping_DMSAT_peptides = 0;
 			my $n_hscore = 0;
 			my $n_mhscore = 0; 
-			my $n_uniq_sp_mapping_peptides = 0;
-      my $n_uniq_spvar_mapping_peptides = 0;
-			my $n_uniq_genome_mapping_peptides = 0;
+			my %uniq_mapping = ();
 			my $n_human_mapping_peptides = 0;
 			my $n_mouse_mapping_peptides = 0;
 			my $n_yeast_mapping_peptides = 0;
@@ -263,6 +327,7 @@ sub handle_request {
 
 			my @rows = $sbeams->selectSeveralColumns($sql);
 			my %nr_Ensembl_entry=();
+      my %nr_IPI_entry = ();
 			my %Ensembl_gene=();
 			foreach my $row (@rows){
 				my ($seq, $acc,$gene,$desc) = @$row;
@@ -275,6 +340,7 @@ sub handle_request {
 						$n_sp_plus_varsplic++;
 					}elsif($acc =~ /^IPI/){
 						$n_ipiandsgd++;
+            push @{$nr_IPI_entry{$seq}} , $acc;
 					}elsif($acc =~ /^ENS/){
 						$n_ensp++;
 						push @{$nr_Ensembl_entry{$seq}} , $acc;
@@ -309,23 +375,32 @@ sub handle_request {
 			$n_distinct_DMSAT_peptides = scalar keys %{$peptides{$biosequence_set_id}};
 			$n_yeast_mapping_peptides = 0;
 
+      my %scores =();
 			foreach my $peptide (keys %{$peptides{$biosequence_set_id}}){
 				if(defined $peptides{$biosequence_set_id}{$peptide}{sp_mapping}){
 					$n_distinct_sp_mapping_DMSAT_peptides++;
-					if(defined $peptides{$biosequence_set_id}{$peptide}{"uniq_sp_mapping"}){
-						$n_uniq_sp_mapping_peptides++;
-					}
-          if(defined $peptides{$biosequence_set_id}{$peptide}{"uniq_spvar_mapping"}){
-            $n_uniq_spvar_mapping_peptides++;
+          foreach my $var (qw (uniq_sp_mapping
+                               uniq_spvar_mapping
+                               #uniq_spsnp_mapping
+                               uniq_genome_mapping
+                               uniq_nrensp_mapping
+                               uniq_nripi_mapping)){ 
+						if(defined $peptides{$biosequence_set_id}{$peptide}{$var}){
+							$uniq_mapping{$var}++;
+							if(defined $peptides{$biosequence_set_id}{$peptide}{"hscore"} ){
+								 $scores{$var}{n_hscore}++;
+							}
+							if(defined $peptides{$biosequence_set_id}{$peptide}{"mhscore"} ){
+								 $scores{$var}{n_mhscore}++;
+							}
+
+						}
           }
-					if(defined $peptides{$biosequence_set_id}{$peptide}{"uniq_genome_mapping"}){
-						$n_uniq_genome_mapping_peptides++;
-					}
 					if(defined $peptides{$biosequence_set_id}{$peptide}{"hscore"} ){
-						 $n_hscore++;
+						 $scores{all}{n_hscore}++;
 					}
 					if(defined $peptides{$biosequence_set_id}{$peptide}{"mhscore"} ){
-						 $n_mhscore++;
+						 $scores{all}{n_mhscore}++;
 					}
 					if(defined $peptide_org_mapping{$peptide}{human}){
 						$n_human_mapping_peptides++;
@@ -347,14 +422,29 @@ sub handle_request {
 		 $count++;
 		 @values =  (
 		   $n_distinct_sp_mapping_DMSAT_peptides,
-			 ($n_uniq_sp_mapping_peptides/$n_distinct_sp_mapping_DMSAT_peptides),
-       ($n_uniq_spvar_mapping_peptides/$n_distinct_sp_mapping_DMSAT_peptides),
-			 ($n_uniq_genome_mapping_peptides/$n_distinct_sp_mapping_DMSAT_peptides),
+			 ($uniq_mapping{uniq_sp_mapping}/$n_distinct_sp_mapping_DMSAT_peptides),
+       ($uniq_mapping{uniq_spvar_mapping}/$n_distinct_sp_mapping_DMSAT_peptides),
+       #($uniq_mapping{uniq_spsnp_mapping}/$n_distinct_sp_mapping_DMSAT_peptides),
+       ($uniq_mapping{uniq_nrensp_mapping}/$n_distinct_sp_mapping_DMSAT_peptides),
+       ($uniq_mapping{uniq_nripi_mapping}/$n_distinct_sp_mapping_DMSAT_peptides),
+			 ($uniq_mapping{uniq_genome_mapping}/$n_distinct_sp_mapping_DMSAT_peptides),
 			 ($n_human_mapping_peptides/$n_distinct_sp_mapping_DMSAT_peptides),
 			 ($n_mouse_mapping_peptides/$n_distinct_sp_mapping_DMSAT_peptides),
 			 ($n_yeast_mapping_peptides/$n_distinct_sp_mapping_DMSAT_peptides),
-			 ($n_hscore/$n_distinct_sp_mapping_DMSAT_peptides),
-			 ($n_mhscore/$n_distinct_sp_mapping_DMSAT_peptides),
+			 ($scores{all}{n_hscore}/$n_distinct_sp_mapping_DMSAT_peptides),
+       ($scores{uniq_sp_mapping}{n_hscore}/$uniq_mapping{uniq_sp_mapping}),
+       ($scores{uniq_spvar_mapping}{n_hscore}/$uniq_mapping{uniq_spvar_mapping}),
+       #($scores{uniq_spsnp_mapping}{n_hscore}/$n_distinct_sp_mapping_DMSAT_peptides),
+       ($scores{uniq_nrensp_mapping}{n_hscore}/$uniq_mapping{uniq_nrensp_mapping}),
+       ($scores{uniq_nripi_mapping}{n_hscore}/$uniq_mapping{uniq_nripi_mapping}),
+       ($scores{uniq_genome_mapping}{n_hscore}/$uniq_mapping{uniq_genome_mapping}),
+			 ($scores{all}{n_mhscore}/$n_distinct_sp_mapping_DMSAT_peptides),
+       ($scores{uniq_sp_mapping}{n_mhscore}/$uniq_mapping{uniq_sp_mapping}),
+       ($scores{uniq_spvar_mapping}{n_mhscore}/$uniq_mapping{uniq_spvar_mapping}),
+       #($scores{uniq_spsnp_mapping}{n_mhscore}/$n_distinct_sp_mapping_DMSAT_peptides),
+       ($scores{uniq_nrensp_mapping}{n_mhscore}/$uniq_mapping{uniq_nrensp_mapping}),
+       ($scores{uniq_nripi_mapping}{n_mhscore}/$uniq_mapping{uniq_nripi_mapping}),
+       ($scores{uniq_genome_mapping}{n_mhscore}/$uniq_mapping{uniq_genome_mapping}),
 		 );
      push @{$stat{$count}{$biosequence_set{$biosequence_set_id}}}, @values;
      print OUT "$count\t$biosequence_set{$biosequence_set_id}\t", join ("\t", @values);
@@ -418,7 +508,8 @@ sub draw_table {
 
     $chart .= "\n" . $GV->getHeaderInfo();
     $chart =~ s/src=".*jsapi/src="https:\/\/www.google.com\/jsapi/;
-    $chart =~ s/<script.*devZS.*<\/script>//g;
+    $chart =~ s/<script.*ga.js.*<\/script>//g;
+    $chart =~ s/<script.*defaultbarchart.js.*<\/script>//g;
 
     print qq~
     <BR>
