@@ -568,6 +568,7 @@ sub getConsensusLinks {
   } elsif ( $srcs ) { 
     for my $src ( keys( %{$srcs} ) ) {
       $libmap{$srcs->{$src}} = $imap{$src};
+      $libmap{$srcs->{$src}} = 'medium' if $imap{$src} eq 'qtof';
     }
 
   } elsif ( $args{organism} eq 40 ) {
@@ -589,15 +590,6 @@ sub getConsensusLinks {
 #                312 => 'qqq',
 #                306 => 'qtrap',
 #               );
-    %libmap = ( 320 => 'low',
-                321 => 'mlow', 
-                322 => 'medium',
-                323 => 'mhigh', 
-                324 => 'high',
-                 16 => 'it',
-                313 => 'qqq',
-                306 => 'qtrap',
-               );
   }
 
   if ( $args{glyco} ) {
@@ -609,6 +601,13 @@ sub getConsensusLinks {
                );
 
 
+  }
+
+  if ( $args{has_ce} ) {
+    $libmap{320} = 'low';
+    $libmap{321} = 'mlow';
+    $libmap{323} = 'mhigh';
+    $libmap{324} = 'high';
   }
 
 	my $libs = join( ',', keys( %libmap ));
