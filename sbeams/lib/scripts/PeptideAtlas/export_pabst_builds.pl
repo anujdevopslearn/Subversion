@@ -205,7 +205,7 @@ sub printUsage {
 sub processArgs {
   my %args;
   unless( GetOptions ( \%args, 'build_id=i@', 'verbose', 'force', 'yonly',
-                       'noneutralloss', 'id=i', 'max_transitions=i' ) ) {
+                       'noneutralloss', 'max_transitions=i' ) ) {
     printUsage("Error with options, please check usage:");
   }
   die "need build_id " unless $args{build_id};
