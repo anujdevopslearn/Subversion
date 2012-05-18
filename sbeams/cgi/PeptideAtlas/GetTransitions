@@ -103,6 +103,7 @@ sub main
   # 3 - cached pabst_build_id cookie
   # 4 - global default
   $pabst_build_id = $best_peptide->get_pabst_build( %parameters );
+  $parameters{organism} ||= $best_peptide->getBuildOrganism( pabst_build_id => $parameters{pabst_build_id} );
 
   # This might have gotten overridden due to permissions.
   my $bad_build_specified = 0;
@@ -182,13 +183,19 @@ $(document).ready(function() {
 #  print $sbeams->closeTabbedPane();
 
   # Print form regardless.  A heavily-modified manage table form, 
+
+  my $err = '';
+  if ( ! $parameters{pabst_build_id} ) {
+    $err = $sbeams->makeErrorText( "<BR>No valid builds found for this user" );
+  } elsif( $bad_build_specified ) {
+    $err = $sbeams->makeErrorText( "<BR>Specified build is not accessible to this user" );
+  }
+
+  print $err if $err;
+
   print_form ( %parameters );  
 
-  if ( ! $parameters{pabst_build_id} ) {
-#    print $sbeams->makeErrorText( "<BR>No valid builds found for this user" );
-   } elsif ( $bad_build_specified ) {
-    print $sbeams->makeErrorText( "<BR>Specified build is not accessible to this user" );
-   } elsif ( $parameters{action} && $parameters{action} eq 'QUERY' ) {
+  if ( $parameters{action} && $parameters{action} eq 'QUERY' ) {
     $log->debug( "  Going to fetch transitions"  . time());
     fetch_transitions( %parameters );  
     $log->debug( "  Done fetching transitions"  . time());
@@ -323,6 +330,7 @@ sub print_form {
     $parameters{rt_type} ||= 'SSRCalc';
     my $rt_select = get_rt_select( $parameters{rt_type} );
     my $ion_filters = get_ion_filters( %parameters );
+    my $mod_filters = get_mod_filters( %parameters );
 
     # FINDME
     my ( $sub_form ) = $best_peptide->get_change_form( form_only => 1, hide_buttons => 1, shade_defs => 1, set_params => \%parameters, noop => 1 );
@@ -330,7 +338,10 @@ sub print_form {
    
     my $peptide_chk = "<INPUT TYPE=checkbox NAME=peptides_only></INPUT>";
     my $peptides_only_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Return peptide list only (no Q3 values)'</TD>";
-    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Get Peptides Only:</B></TD>$peptides_only_help<TD>$peptide_chk</TD></TR> ~;
+#    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Get Peptides Only:</B></TD>$peptides_only_help<TD>$peptide_chk</TD></TR> ~;
+#
+    my $namespace_filters = get_namespace_filters( %parameters );
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Search Proteins From:</B></TD>$namespace_filters </TR> ~;
 
 #    $form =~ s/(\<INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="AT_GetPABSTList"\>)/$1<BR>$sub_form/gm;
 #    $form =~ s/\<\/TABLE\>/<TR><TD COLSPAN=3> $sub_form<\/TD><\/TR><\/TABLE>/i;
@@ -344,7 +355,7 @@ sub print_form {
     $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Heavy label:</B></TD>$cmod_help<TD>$cmod_select</TD></TR> ~;
 
     my $cmod_radio = get_cmod_radio( $parameters{cmod_opts} );
-    my $cmod_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Calculate both light and heavy transitions, or only heavy'</TD>";
+    my $cmod_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Calculate both light and heavy transitions, or heavy.  Only relevant if one or more heavy label options are selected.'</TD>";
     $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Labeled Transitions:</B></TD>$cmod_help<TD>$cmod_radio</TD></TR> ~;
 
     # Min/Max mz values
@@ -370,6 +381,7 @@ sub print_form {
       $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Elution Time Type</B></TD>$rt_help<TD>$rt_select</INPUT></TD></TR> ~;
     }
     $form .= $ion_filters;
+    $form .= $mod_filters;
 
 #    open FRM, ">/tmp/form";
 #    print FRM qq~
@@ -440,6 +452,100 @@ sub get_rt_select {
   return $rt_select;
 }
 
+
+sub get_mod_filters {
+
+  my %opts = @_;
+
+  my %mods = ( 'C[143]' => '',
+               'C[160]' => '',
+               'E[111]' => '',
+               'M[147]' => '',
+               'N[115]' => '',
+               'Q[111]' => '' );
+
+  # If we already ran a query, update values
+  my $mods_set = 0;
+  for my $mod ( sort( keys( %mods ) ) ) {
+    if ( $opts{$mod} ) {
+      $mods{$mod} = 'checked';
+      $mods_set++;
+    }
+  }
+  # Set default values
+  if ( !$mods_set ) {
+    for my $mod ( sort( keys( %mods ) ) ) {
+      next if $mod eq 'C[160]';
+      $mods{$mod} = 'checked';
+    }
+  }
+
+  my $mods_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Checked options will exclude peptides containing specified modification from MRM list'</TD>";
+
+  my $checks = qq~
+    <DIV class=clear_info_box>
+    <TABLE><TR>
+    <TD>
+      <INPUT TYPE=checkbox NAME='C[143]' $mods{'C[143]'}> C[143] </INPUT>
+    </TD>
+    <TD>
+      <INPUT TYPE=checkbox NAME='C[160]' $mods{'C[160]'}> C[160] </INPUT>
+    </TD>
+    </TR><TR>
+    <TD>
+      <INPUT TYPE=checkbox NAME='E[111]' $mods{'E[111]'}> E[111] </INPUT>
+    </TD>
+    <TD>
+      <INPUT TYPE=checkbox NAME='M[147]' $mods{'M[147]'}> M[147] </INPUT>
+    </TD>
+    </TR><TR>
+    <TD>
+      <INPUT TYPE=checkbox NAME='N[115]' $mods{'N[115]'}> N[115] </INPUT>
+    </TD>
+    <TD>
+      <INPUT TYPE=checkbox NAME='Q[111]' $mods{'Q[111]'}> Q[111] </INPUT>
+    </TD>
+    </TR></TABLE>
+    </DIV>
+  ~;
+
+  my $filter_element = qq~
+  <TR><TD VALIGN=TOP NOBR><B>Exclude peptide modifications:</B></TD>$mods_help<TD>$checks</TD></TR> 
+  ~;
+  return $filter_element;
+}
+
+
+sub get_namespace_filters {
+
+  my %opts = @_;
+  return '' unless $opts{organism};
+  return '' unless $opts{organism} == 2;
+
+  my %names = ( SwissProt => '', Ensembl => '', IPI => '' );
+
+  # If we already ran a query, update values
+  my $namespace_set = 0;
+  for my $name ( sort( keys( %names ) ) ) {
+    if ( $opts{$name} ) {
+      $names{$name} = 'checked';
+      $namespace_set++;
+    }
+  }
+
+  $names{SwissProt} = 'checked' unless $namespace_set;
+
+  my $help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Select accession namespace(s) in which you would like to search'</TD>";
+
+  my $checks = "$help<TD><DIV class=clear_info_box>";
+  for my $name ( qw( SwissProt Ensembl IPI ) ) {
+    $checks .= "<INPUT TYPE=checkbox NAME=$name $names{$name}> $name </INPUT>";
+  }
+  $checks .= "</DIV></TD>";
+  return $checks;
+}
+
+
 sub get_ion_filters {
 
   my %opts = @_;
@@ -501,11 +607,11 @@ sub get_cmod_select {
 sub get_cmod_radio {
 
   my $curr_val = shift || 'both';
-  my %sel = ( heavy_only => '', both => '' );
+  my %sel = ( heavy_only => '', 'both' => '' );
   $sel{$curr_val} = 'checked';
 
   my $cmod_radio = qq~
-  <INPUT TYPE=radio name=cmod_opts $sel{both} value=both> Both </INPUT>
+  <INPUT TYPE=radio name=cmod_opts $sel{both} value=both> Light and Heavy </INPUT>
   <INPUT TYPE=radio name=cmod_opts $sel{heavy_only} value=heavy_only> Heavy only </INPUT>
   ~;
   return $cmod_radio;
@@ -520,6 +626,9 @@ sub get_download_form {
       <OPTION VALUE='TSV' >TSV</OPTION>
       <OPTION VALUE='AgilentQQQ' >Agilent QQQ MRM</OPTION>
       <OPTION VALUE='AgilentQQQ_dynamic' >Agilent QQQ dynamic MRM</OPTION>
+      <OPTION VALUE='ABSCIEX_QTRAP_MRM' >ABISCIEX QTRAP MRM</OPTION>
+      <OPTION VALUE='ABSCIEX_QTRAP_MRMMSMS' >ABISCIEX QTRAP MRM-MS2</OPTION>
+      <OPTION VALUE='ThermoTSQ' >Thermo TSQ</OPTION>
     </SELECT>
   ~;
 #      <OPTION VALUE='TraML' >TraML</OPTION>
@@ -645,14 +754,6 @@ sub fetch_transitions {
       constraint_value=>$parameters{consensus_library_id} );
   return if ($consensus_library_clause eq '-1');
 
-  #### Build PEPTIDE_SEQUENCE constraint
-  my $peptide_sequence_clause = $sbeams->parseConstraint2SQL(
-      constraint_column=>"PP.peptide_sequence",
-      constraint_type=>"plain_text",
-      constraint_name=>"Peptide Sequence",
-      constraint_value=>$parameters{peptide_sequence_constraint} );
-  return if ($peptide_sequence_clause eq '-1');
-
   #### Build BEST_PROBABILITY constraint
   my $best_probability_clause = $sbeams->parseConstraint2SQL(
       constraint_column=>"PI.best_probability",
@@ -733,6 +834,53 @@ sub fetch_transitions {
   $parameters{protein_name_constraint} =~ s/\s+/;/g;
 
 
+  #### Build PEPTIDE_SEQUENCE constraint
+  my $peptide_sequence_clause = $sbeams->parseConstraint2SQL(
+      constraint_column=>"PP.peptide_sequence",
+      constraint_type=>"plain_text",
+      constraint_name=>"Peptide Sequence",
+      constraint_value=>$parameters{peptide_sequence_constraint} );
+  return if ($peptide_sequence_clause eq '-1');
+
+  # peptide_sequence field supercedes (obviates) file upload
+  if ( $parameters{peptide_file} && !$peptide_sequence_clause ) {
+
+    ## upload the file to a file handler
+    my $pepfile = $q->upload('peptide_file');
+
+    if (!$pepfile && $q->cgi_error && $is_html) {
+      print $q->header(-status=>$q->cgi_error);
+			exit;
+    }
+
+    my $max_cnt = 1000;
+    my %peptide_hash;
+    # size constraint of 1 MB, restrict $count < $max_cnt
+    if ( (-T $pepfile) && (-s $pepfile < 1000000) ) {
+      my $pep;
+      while ($pep = <$pepfile>) {
+        chomp($pep);
+        $pep =~ s/\s//g;
+        next unless ( $pep =~ /^[A-Z]+$/ );
+        $peptide_hash{$pep}++;
+        last if ( scalar(keys(%peptide_hash)) >= $max_cnt );
+      }
+
+      # secondary param check block
+  		# Make sure this isn't a null constraint if we are counting on it
+	    if ( scalar(keys(%peptide_hash)) ) {
+	      $ok_param{protein_file_constraint}++;
+	      $ok_param{overall}++;
+		  }
+    }
+
+    ## join with a commas:
+    my $peptide_list = "'" . join( "','", keys( %peptide_hash)) . "'";
+
+    $peptide_sequence_clause = "     AND PP.peptide_sequence IN ( $peptide_list )" if $peptide_list;
+  }
+
+
   #### Build PROTEIN_NAME constraint
   my $biosequence_name_clause = $sbeams->parseConstraint2SQL(
         constraint_column=>"BS.biosequence_name",
@@ -744,24 +892,24 @@ sub fetch_transitions {
   my %protein_hash;
 
   # protein name field supercedes (obviates) file upload
-  if ( $parameters{upload_file} && !$biosequence_name_clause ) {
+  if ( $parameters{protein_file} && !$biosequence_name_clause ) {
 
     ## upload the file to a file handler
-    my $fh = $q->upload('upload_file');
+    my $prfile = $q->upload('protein_file');
 
-    if (!$fh && $q->cgi_error && $is_html) {
+    if (!$prfile && $q->cgi_error && $is_html) {
       print $q->header(-status=>$q->cgi_error);
 			exit;
     }
 
     my $max_cnt = 1000;
     # size constraint of 1 MB, restrict $count < $max_cnt
-    if ( (-T $fh) && (-s $fh < 1000000) ) {
+    if ( (-T $prfile) && (-s $prfile < 1000000) ) {
       my $count = 0;
       my $read_file=0;
       ## protein list
       my $prt;
-      while ($prt=<$fh>) {
+      while ($prt=<$prfile>) {
         chomp($prt);
         $prt =~ s/\s+$//;
         if ($prt) {
@@ -781,12 +929,6 @@ sub fetch_transitions {
     ## join with a commas:
     my $protein_list = "'" . join( "','", keys( %protein_hash)) . "'";
 
-#    foreach my $pr (keys %protein_hash) {
-#      $protein_list = "'$protein_hash{$pr}',$protein_list"; 
-#    }
-#    ## trim off last comma:
-#    $protein_list =~ s/(.*)(,)$/$1/;
-
     $biosequence_name_clause = "     AND BS.biosequence_name IN ( $protein_list )" if $protein_list;
   }
 
@@ -803,6 +945,16 @@ sub fetch_transitions {
 
 		return;
 	}
+
+
+  # New filter, remove peptide ions with various mass mods.
+  my $modifications_constraint = '';
+  for my $mod ( 'C[143]', 'C[160]', 'E[111]', 'M[147]', 'N[115]', 'Q[111]' ) {
+    if ( $parameters{$mod} ) {
+      my $stripped_mod = join( '', $mod =~ /\w\[(\d+)\]/ );
+      $modifications_constraint .= " AND PI.modified_peptide_sequence NOT LIKE '%" . $stripped_mod . "%'\n";
+    }
+  }
 
 
   ## n_fragment_ions defaults to 3
@@ -848,6 +1000,29 @@ sub fetch_transitions {
   }
   $log->debug( "    done building constraints"  . time());
 
+  # Filter-based biosequence name clause
+  my $namespace_clause = '';
+  my $limit_ns = 0;
+  for my $ns ( qw ( SwissProt IPI Ensembl ) ) {
+    $limit_ns++ if $parameters{$ns};
+  }
+
+  # We know that this is an option for human
+  $limit_ns++ if $parameters{organism} == 2;
+
+  if ( $limit_ns ) {
+    if ( !$parameters{SwissProt} ) {
+      $namespace_clause .= " AND biosequence_name NOT LIKE '______' \n"; 
+      $namespace_clause .= " AND biosequence_name NOT LIKE '______-_' \n"; 
+    }
+    if ( !$parameters{IPI} ) {
+      $namespace_clause .= " AND biosequence_name NOT LIKE 'IPI%' \n"; 
+    }
+    if ( !$parameters{Ensembl} ) {
+      $namespace_clause .= " AND biosequence_name NOT LIKE 'ENS%' \n"; 
+    }
+  }
+
   # Added 2012-02 
   my $peptide_sql = qq~
   SELECT DISTINCT biosequence_name, BS.biosequence_id, PP.pabst_peptide_id
@@ -862,6 +1037,7 @@ sub fetch_transitions {
   $best_probability_clause
   $peptide_length_clause
   $biosequence_name_clause
+  $namespace_clause
   ~;
   my $sth = $sbeams->get_statement_handle( $peptide_sql );
   my %pep_ids;
@@ -882,8 +1058,7 @@ sub fetch_transitions {
 
   $log->debug( "Done fetching peptides: $pep_id_string"  . time());
 
-  my $organism = $best_peptide->getBuildOrganism( pabst_build_id => $parameters{pabst_build_id} );
-
+  my $organism = $parameters{organism} || $best_peptide->getBuildOrganism( pabst_build_id => $parameters{pabst_build_id} );
   my $scan_clause = $pep_id_string;
 
   my $pepion2scanpath = {};
@@ -905,7 +1080,7 @@ sub fetch_transitions {
   my $ssr_field = 'SSRCalc_relative_hydrophobicity';
   my $ssr_clause = '';
   my $ssr_join = '';
-  $parameters{rt_type} ||= 'SSRCalc';
+  $parameters{rt_type} ||= '4';
 
   if ( $parameters{rt_type} || $parameters{rt_type} ne 'SSRCalc' ) {
     $ssr_field = 'elution_time';
@@ -951,6 +1126,7 @@ sub fetch_transitions {
       $transition_source_clause
       $target_instrument_clause
       $ssr_clause
+      $modifications_constraint
     ORDER BY 
     biosequence_id,
     PTI.is_predicted ASC,
@@ -986,6 +1162,10 @@ sub fetch_transitions {
         push @headings, $instr if $consensus_srcs->{$instr};
       }
     }
+  }
+
+  if ( !$sbeams->isGuestUser() && $organism == 2 ) {
+    push @headings, 'QQQ ', ' QTRAP ';
   }
 
 #  if ( $parameters{rt_type} && $parameters{rt_type} ne 'SSRCalc' ) {
@@ -1567,6 +1747,7 @@ sub get_consensus_links {
     $libs = $consensus->getConsensusLinks( modified_sequence => $seq, 
                                                     organism => $organism,
                                                     pabst_build_id => $pabst_build_id,
+                                                    has_ce => $has_ce,
                                                        glyco => $glyco );
   }
 
