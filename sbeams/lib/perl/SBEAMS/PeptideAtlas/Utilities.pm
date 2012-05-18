@@ -1316,6 +1316,81 @@ sub make_qtrap5500_target_list {
   return $file_path;
 }
 
+# For Thermo TSQ
+sub calculate_thermo_ce {
+  # process args
+  my $self = shift;
+  my %args = @_;
+  for my $req_arg ( qw( mz charge ) ) {
+    unless ( $args{$req_arg} ) {
+      $log->warn( "Missing required argument $req_arg" );
+      return '';
+    }
+  }
+
+  # calculate CE  
+  my $ce;
+  if ($args{charge} == 2) {
+    $ce = ( 0.034 * $args{mz} ) + 3.314;
+  } elsif ($args{charge} == 3) {
+    $ce = ( 0.044 * $args{mz} ) + 3.314;
+  } else {
+    $ce = ( 0.044 * $args{mz} ) + 3.314;
+  }
+  return sprintf( "%0.2f", $ce );
+}
+
+# For Agilent QTOF and QQQ
+sub calculate_agilent_ce {
+  # process args
+  my $self = shift;
+  my %args = @_;
+  for my $req_arg ( qw( mz charge ) ) {
+    unless ( $args{$req_arg} ) {
+      $log->warn( "Missing required argument $req_arg" );
+      return '';
+    }
+  }
+
+  # calculate CE  
+  my $ce;
+  if ( $args{charge} == 2 || $args{charge} == 1 ) {
+    $ce = ( (2.93*$args{mz})/100 ) + 6.72;
+  } else {
+    $ce = ( (3.6*$args{mz} )/100 ) -4.8;
+    $ce = 0 if $ce < 0;
+  }
+  return sprintf( "%0.2f", $ce );
+}
+
+# For ABISCIEX QTRAP4000 and 5500
+sub calculate_abisciex_ce {
+  # process args
+  my $self = shift;
+  my %args = @_;
+  for my $req_arg ( qw( mz charge ) ) {
+    unless ( $args{$req_arg} ) {
+      $log->warn( "Missing required argument $req_arg" );
+      return '';
+    }
+  }
+
+  # calculate CE  
+  my $ce;
+  if    ( $args{charge} == 1 ) { 
+    $ce = 0.058 * $args{mz} + 9; 
+  } elsif ( $args{charge} == 2 ) { 
+    $ce = 0.044 * $args{mz} + 5.5;
+  } elsif ( $args{charge} == 3 ) { 
+    $ce = 0.051 * $args{mz} + 0.5;
+  } elsif ( $args{charge} > 3 )  { 
+    $ce = 0.05 * $args{mz} + 2; 
+#    $ce = 0.003 * $args{mz} + 2; 
+  }
+  $ce = 75 if ( $ce > 75 ); 
+  return sprintf( "%0.2f", $ce );
+}
+
 sub get_qqq_unscheduled_transition_list {
 
   my $self = shift;
@@ -1332,6 +1407,8 @@ Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Dwell	Fragmentor	C
 	my $u = 'Unit';
 	my $p = 'Positive';
 
+  my %ce;
+
 	for my $row ( @{$tsv} ) {
 		my @line = @{$row};
     next if $line[0] eq 'Protein';
@@ -1347,13 +1424,16 @@ Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Dwell	Fragmentor	C
     my $rtd = 5;
     my $name = $acc . '.' . $seq;
 
-    my $ce = ( $q1c == 2 ) ? sprintf( "%0.2f", ( 2.93 * $q1 )/100 + 6.72 ) : 
-				                     sprintf( "%0.2f", ( 3.6 * $q1 )/100 - 4.8 );
+    my $ce_key = $seq . $q1c;
+    $ce{$ce_key} ||= $self->calculate_agilent_ce( mz => $q1, charge => $q1c );
+
+#    my $ce = ( $q1c == 2 ) ? sprintf( "%0.2f", ( 2.93 * $q1 )/100 + 6.72 ) : 
+#				                     sprintf( "%0.2f", ( 3.6 * $q1 )/100 - 4.8 );
 
     my $istd = 'False';
     $istd = 'True'  if $seq =~ /6\]$/;
 
-    $method .= join( "\t", $name, $istd, $q1, $w, $q3, $u, $d, $f, $ce, $v, $p, $ion ) . "\n";
+    $method .= join( "\t", $name, $istd, $q1, $w, $q3, $u, $d, $f, $ce{$ce_key}, $v, $p, $ion ) . "\n";
 	}
   return $method;
 }
@@ -1370,6 +1450,8 @@ Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Fragmentor	Collisi
 
 	my $u = 'Unit';
 	my $p = 'Positive';
+
+  my %ce;
 
 	for my $row ( @{$tsv} ) {
 		my @line = @{$row};
@@ -1389,16 +1471,121 @@ Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Fragmentor	Collisi
 
     my $name = $acc . '.' . $seq;
 
-    my $ce = ( $q1c == 2 ) ? sprintf( "%0.2f", ( 2.93 * $q1 )/100 + 6.72 ) : 
-				                     sprintf( "%0.2f", ( 3.6 * $q1 )/100 - 4.8 );
+    my $ce_key = $seq . $q1c;
+    $ce{$ce_key} ||= $self->calculate_agilent_ce( mz => $q1, charge => $q1c );
+
+#    my $ce = ( $q1c == 2 ) ? sprintf( "%0.2f", ( 2.93 * $q1 )/100 + 6.72 ) : 
+#				                     sprintf( "%0.2f", ( 3.6 * $q1 )/100 - 4.8 );
 
     my $istd = 'False';
     $istd = 'True' if $seq =~ /6\]$/;
-    $method .= join( "\t", $name, $istd, $q1, $u, $q3, $u, 125, $ce, 5, $rt, $rtd, $p, $ion ) . "\n";
+    $method .= join( "\t", $name, $istd, $q1, $u, $q3, $u, 125, $ce{ce_key}, 5, $rt, $rtd, $p, $ion ) . "\n";
 	}
   return $method;
 }
 
+sub get_qtrap_mrmmsms_method {
+
+  my $self = shift;
+  my $tsv = shift || return '';
+
+  my $sep = "\t";
+  $sep = ",";
+
+  my $method = join($sep, qw(Q1 Q3 Dwell peptide.protein.Cso CE)) . "\r\n";
+  
+	my $dwell = 10;
+  my %ce = {};
+	for my $row ( @{$tsv} ) {
+		my @line = @{$row};
+    next if $line[0] eq 'Protein';
+
+    my $acc = $line[0];
+    my $seq = $line[2];
+    my $q1 = $line[6];
+    my $q1c = $line[7];
+    my $q3 = $line[8];
+    my $q3c = $line[9];
+    my $lbl = $line[10];
+    my $label = $seq . '.' . $acc . '.' . $q3c . $lbl . $q3; 
+
+    my $ce_key = $seq . $q1c;
+    $ce{$ce_key} ||= $self->calculate_abisciex_ce( mz => $q1, charge => $q1c );
+
+#  my $method = join($sep, qw(Q1 Q3 Dwell peptide.protein.Cso CE)) . "\r\n";
+    $method .= join( $sep, $q1, $q3, $dwell, $label, $ce{$ce_key} ) . "\r\n";
+  }
+  return $method;
+
+}
+
+sub get_qtrap_mrm_method {
+
+  my $self = shift;
+  my $tsv = shift || return '';
+
+  my $sep = "\t";
+  $sep = ",";
+
+  my $method = join($sep, qw(Q1 Q3 RT peptide.protein.Cso CE)) . "\r\n";
+
+  my %ce = {};
+	for my $row ( @{$tsv} ) {
+		my @line = @{$row};
+    next if $line[0] eq 'Protein';
+
+    my $acc = $line[0];
+    my $seq = $line[2];
+    my $q1 = $line[6];
+    my $q1c = $line[7];
+    my $q3 = $line[8];
+    my $q3c = $line[9];
+    my $lbl = $line[10];
+    my $rt = $line[14];
+
+
+    my $ce_key = $seq . $q1c;
+    $ce{$ce_key} ||= $self->calculate_abisciex_ce( mz => $q1, charge => $q1c );
+
+    my $label = $seq . '.' . $acc . '.' . $q3c . $lbl; 
+    $method .= join($sep, $q1, $q3, $rt, $label, $ce{$ce_key} ) . "\r\n";
+  }
+  return $method;
+}
+
+
+sub get_thermo_tsq_mrm_method {
+
+  my $self = shift;
+  my $tsv = shift || return '';
+
+  my $sep = "\t";
+
+  my $method = join( $sep, ("Q1","Q3","CE","Start time (min)","Stop time (min)","Polarity","Trigger","Reaction category","Name"))."\r\n";
+
+  my %ce = {};
+	for my $row ( @{$tsv} ) {
+		my @line = @{$row};
+    next if $line[0] eq 'Protein';
+
+    my $acc = $line[0];
+    my $seq = $line[2];
+    my $q1 = $line[6];
+    my $q1c = $line[7];
+    my $q3 = $line[8];
+    my $q3c = $line[9];
+    my $lbl = $line[10];
+    my $rt = $line[14];
+    my $rt_delta = 5;
+
+    my $ce_key = $seq . $q1c;
+    $ce{$ce_key} ||= $self->calculate_thermo_ce( mz => $q1, charge => $q1c );
+
+    my $label = $seq . '.' . $acc . '.' . $q3c . $lbl . $q3; 
+  	$method .= join( $sep, $q1, $q3, $ce{$ce_key}, $rt - $rt_delta, $rt + $rt_delta,1,'1.00E+04',1,$label) . "\r\n";
+  }
+  return $method;
+}
 
 
 sub extract_link {
@@ -1586,7 +1773,7 @@ sub get_qtrap5500_ce {
   	}
 		$ce = sprintf( "%0.1f", $m*$args{mz} + $i );
 	}
-	return $ce;
+  return sprintf( "%0.2f", $ce );
 }
 
 sub get_Agilent_ce {
