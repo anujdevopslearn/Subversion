@@ -644,6 +644,7 @@ sub getCurrentAtlasOrganism {
   }
 }
 
+# Routine to return newest protein list available to user based on project
 sub getDefaultProteinListID {
   my $self = shift();
   my %args = @_;
@@ -670,6 +671,90 @@ sub getDefaultProteinListID {
   my @rows = $sbeams->selectrow_array($sql);
   return $rows[0];
 }
+
+sub getProteinListBuild {
+  my $self = shift();
+  my %args = @_;
+  my $username = $args{username} || return '';
+  my $sbeams = $self->getSBEAMS();
+
+  my $sql = qq~
+  SELECT MAX( SRMA_build_id )
+  FROM peptideatlas.dbo.protein_list PL
+  JOIN  peptideatlas.dbo.protein_list_build PLB
+    ON PL.protein_list_id = PLB.protein_list_id
+  JOIN $TB_CONTACT C ON C.contact_id = PL.contributor_contact_id
+  JOIN $TB_USER_LOGIN UL ON C.contact_id = UL.contact_id
+  LEFT JOIN  peptideatlas.dbo.protein_list_peptide PLPEP
+    ON PL.protein_list_id = PLPEP.protein_list_id
+ WHERE username = '$username'
+  ~;
+
+  my @row = $sbeams->selectrow_array($sql);
+  return $row[0];
+}
+
+
+# Routine to return newest protein list available to user based on project
+sub getProteinListInfo {
+  my $self = shift();
+  my %args = @_;
+
+  my %build_info = ( build_ok => 0 );
+
+  my $username = $args{username} || return \%build_info;
+
+  my $build_id = $args{build_id} || $self->getProteinListBuild( max => 1, %args );
+
+  return \%build_info unless $build_id;
+
+  my $sbeams = $self->getSBEAMS();
+
+# 0 protein_list_id
+# 1 protein_list_name
+# 2 contributor_name
+# 3 contributor_contact_id
+# 4 protein_list_description
+# 5 project_id
+
+  my $sql = qq~
+  SELECT PLP.protein_list_id, protein_name, peptide_sequence, PB.build_name
+  FROM peptideatlas.dbo.protein_list PL
+  JOIN peptideatlas.dbo.protein_list_protein PLP 
+    ON PL.protein_list_id = PLP.protein_list_id
+  JOIN  peptideatlas.dbo.protein_list_build PLB
+    ON PL.protein_list_id = PLB.protein_list_id
+  JOIN  $TBAT_PABST_BUILD PB
+    ON PLB.SRMA_build_id = PB.pabst_build_id
+  JOIN $TB_CONTACT C ON C.contact_id = PL.contributor_contact_id
+  JOIN $TB_USER_LOGIN UL ON C.contact_id = UL.contact_id
+  LEFT JOIN  peptideatlas.dbo.protein_list_peptide PLPEP
+    ON PL.protein_list_id = PLPEP.protein_list_id
+  WHERE SRMA_build_id = $build_id
+    AND  username = '$username'
+  ~;
+
+  my $sth = $sbeams->get_statement_handle($sql);
+  while ( my @row = $sth->fetchrow_array() ) {
+
+    $build_info{build_ok}++;
+
+    $build_info{build_id} ||= $build_id;
+    $build_info{build_name} ||= $row[3];
+
+    $build_info{list_id} ||= {};
+    $build_info{list_id}->{$row[0]}++;
+
+    $build_info{proteins} ||= {};
+    $build_info{proteins}->{$row[1]}++;
+
+    $build_info{peptides} ||= {};
+    $build_info{peptides}->{$row[2]}++ if $row[2];
+
+  }
+  return \%build_info;
+}
+
 
 ###############################################################################
 1;
