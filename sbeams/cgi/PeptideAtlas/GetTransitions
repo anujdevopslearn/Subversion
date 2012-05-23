@@ -105,8 +105,42 @@ sub main
   $pabst_build_id = $best_peptide->get_pabst_build( %parameters );
   $parameters{organism} ||= $best_peptide->getBuildOrganism( pabst_build_id => $parameters{pabst_build_id} );
 
+  # Some users have access to a subset of certain builds
+  # FIXME - don't add if already there.  Also, multiple lists?
+  my $restricted_build_js = ''; 
+  my $protein_list_info = $atlas->getProteinListInfo( username => $current_username, build_id => $parameters{pabst_build_id} );
+  if ( $protein_list_info->{build_ok} ) {
+    $restricted_build_js = qq~
+    var pb_select=document.getElementById("pabst_build_id");
+    var new_option=document.createElement("option");
+    new_option.text="$protein_list_info->{build_name}";
+    new_option.value="$protein_list_info->{build_id}";
+    pb_select.add(new_option,pb_select.options[null]);
+    var last_idx = pb_select.length - 1;
+    pb_select.selectedIndex=last_idx;
+    ~;
+
+    if ( !$parameters{pabst_build_id} ) {
+      # Assume that this is the best build, unless they've specified another
+      $pabst_build_id = $protein_list_info->{build_id};
+    } elsif ( $parameters{pabst_build_id} eq $protein_list_info->{build_id} ) {
+      # They specified a build that is legal based on protein list.  Let it be. 
+      $pabst_build_id = $parameters{pabst_build_id};
+    }
+  }
+
+
+
   # This might have gotten overridden due to permissions.
+  my $restricted_proteins = '';
   my $bad_build_specified = 0;
+  if ( $protein_list_info->{build_ok} ) {
+
+    # Could be allowed via a protein list
+    $restricted_proteins = " AND biosequence_name IN ( '" . join( "','", keys( %{$protein_list_info->{proteins}} ) ) . " ' ) \n";
+    $log->info( "Allowed access for $current_username to build $pabst_build_id proteins $restricted_proteins" );
+  }
+
   if ( $parameters{pabst_build_id} && $parameters{pabst_build_id} != $pabst_build_id ) {
     $bad_build_specified++;
   }
@@ -137,8 +171,10 @@ sub main
     print q~
 <script type="text/javascript" charset="utf-8">
 $(document).ready(function() {
-
   window.onload = function() {
+    ~;
+    print "$restricted_build_js\n";
+    print q~
     $.getJSON("AJAXClient.cgi",{pabst_build_id: $("select#pabst_build_id").val(), source: 'GetTransitions_SourceSelect'}, function(j){
       var options = '';
       for (var i = 0; i < j.length; i++) {
@@ -185,19 +221,20 @@ $(document).ready(function() {
   # Print form regardless.  A heavily-modified manage table form, 
 
   my $err = '';
-  if ( ! $parameters{pabst_build_id} ) {
+  if ( !$pabst_build_id ) {
     $err = $sbeams->makeErrorText( "<BR>No valid builds found for this user" );
   } elsif( $bad_build_specified ) {
     $err = $sbeams->makeErrorText( "<BR>Specified build is not accessible to this user" );
   }
-
   print $err if $err;
+
+  print "<DIV id=query_info></DIV>\n";
 
   print_form ( %parameters );  
 
-  if ( $parameters{action} && $parameters{action} eq 'QUERY' ) {
+  if ( $parameters{action} && $parameters{action} eq 'QUERY' && !$err ) {
     $log->debug( "  Going to fetch transitions"  . time());
-    fetch_transitions( %parameters );  
+    fetch_transitions( %parameters, restricted => $restricted_proteins );  
     $log->debug( "  Done fetching transitions"  . time());
   }
   $atlas->display_page_footer( close_tables => 0 ) if $sbeams->isGuestUser();
@@ -671,6 +708,8 @@ sub fetch_transitions {
   # Historical, don't ask.
   my %parameters = %args;
 
+  my $restricted_proteins = $args{restricted} || '';
+
   my $content = '';
 
   #$sbeams->printUserContext();
@@ -1036,9 +1075,11 @@ sub fetch_transitions {
   $peptide_sequence_clause
   $best_probability_clause
   $peptide_length_clause
+  $restricted_proteins
   $biosequence_name_clause
   $namespace_clause
   ~;
+
   my $sth = $sbeams->get_statement_handle( $peptide_sql );
   my %pep_ids;
   my %bioseq_ids;
@@ -1054,7 +1095,18 @@ sub fetch_transitions {
   my $pep_id_string = join( ',', keys( %pep_ids ) ) || 1;
   my $bioseq_id_string = join( ',', keys( %bioseq_ids ) ) || 1;
 
-  $log->debug( "searching for " . scalar( keys( %bioseq_ids ) ) . " biosequences and " . scalar( keys( %pep_ids ) ) . " peptides" );
+  my $nprots = scalar( keys( %bioseq_ids ) );
+  my $npeps = scalar( keys( %pep_ids ) );
+  $log->debug( "searching for $nprots biosequences and $npeps peptides" );
+
+  my $status_txt = "Querying with $nprots proteins and $npeps peptides, estimate a search time of roughly " . sprintf( "%0d", $nprots*$npeps/40 ) . " seconds";
+  print qq~
+  <script type="text/javascript">
+  var info_txt=document.getElementById("query_info");
+  info_txt.innerHTML=" ";
+  info_txt.innerHTML="<BR>$status_txt";
+  </script>
+  ~;
 
   $log->debug( "Done fetching peptides: $pep_id_string"  . time());
 
@@ -1202,11 +1254,13 @@ sub fetch_transitions {
       $src_name{$code} = $src . '-observed';
     }
   }
-
+  my $start = time;
   $log->debug( "Exec SQL: " . time() );
 #  $log->debug( $lib_sql );
   my $sth = $sbeams->get_statement_handle( $lib_sql );
   $log->debug( "Done : " . time() );
+  my $end = time;
+	my $delta = $end - $start;
 
   my %prots;
 
@@ -1500,6 +1554,16 @@ sub fetch_transitions {
   }
   print STDERR "Done 2 " . time()  . "\n";
   my $cnttxt = "Looped over $counts{row} total rows for $counts{prot} proteins and $counts{pepions} peptide ions";
+
+  print qq~
+  <script type="text/javascript">
+  var info_txt=document.getElementById("query_info");
+  info_txt.innerHTML=" Took $delta seconds to loop over $counts{row} rows ";
+	
+  info_txt.innerHTML=" ";
+  </script>
+  ~;
+
   $log->debug( "CNT: $cnttxt\n" );
 
   $log->debug( "Done! " . time() );
