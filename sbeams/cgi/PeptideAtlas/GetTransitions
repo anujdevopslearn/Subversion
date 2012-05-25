@@ -392,7 +392,7 @@ sub print_form {
     $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Heavy label:</B></TD>$cmod_help<TD>$cmod_select</TD></TR> ~;
 
     my $cmod_radio = get_cmod_radio( $parameters{cmod_opts} );
-    my $cmod_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Calculate both light and heavy transitions, or heavy.  Only relevant if one or more heavy label options are selected.'</TD>";
+    my $cmod_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Calculate heavy transitions, heavy and light, or only light.  Only relevant if one or more heavy label options are selected.'</TD>";
     $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Labeled Transitions:</B></TD>$cmod_help<TD>$cmod_radio</TD></TR> ~;
 
     # Min/Max mz values
@@ -643,11 +643,12 @@ sub get_cmod_select {
 
 sub get_cmod_radio {
 
-  my $curr_val = shift || 'both';
-  my %sel = ( heavy_only => '', 'both' => '' );
+  my $curr_val = shift || 'light';
+  my %sel = ( heavy_only => '', 'both' => '', 'light' => '' );
   $sel{$curr_val} = 'checked';
 
   my $cmod_radio = qq~
+  <INPUT TYPE=radio name=cmod_opts $sel{light} value=light> Light only </INPUT>
   <INPUT TYPE=radio name=cmod_opts $sel{both} value=both> Light and Heavy </INPUT>
   <INPUT TYPE=radio name=cmod_opts $sel{heavy_only} value=heavy_only> Heavy only </INPUT>
   ~;
@@ -1099,7 +1100,7 @@ sub fetch_transitions {
   my $npeps = scalar( keys( %pep_ids ) );
   $log->debug( "searching for $nprots biosequences and $npeps peptides" );
 
-  my $status_txt = "Querying with $nprots proteins and $npeps peptides, estimate a search time of roughly " . sprintf( "%0d", $nprots*$npeps/40 ) . " seconds";
+  my $status_txt = "Querying with $nprots proteins and $npeps peptides, estimate a maximum search time of roughly " . sprintf( "%0d", $nprots*$npeps/40 ) . " seconds";
   print qq~
   <script type="text/javascript">
   var info_txt=document.getElementById("query_info");
@@ -1256,7 +1257,7 @@ sub fetch_transitions {
   }
   my $start = time;
   $log->debug( "Exec SQL: " . time() );
-#  $log->debug( $lib_sql );
+  $log->debug( $lib_sql );
   my $sth = $sbeams->get_statement_handle( $lib_sql );
   $log->debug( "Done : " . time() );
   my $end = time;
@@ -1481,10 +1482,12 @@ sub fetch_transitions {
           push @rowdata, @chromat_links;
         }
       }
-      push @peptides, \@rowdata unless $parameters{cmod_opts} && $parameters{cmod_opts} eq 'heavy_only';
+			$parameters{cmod_opts} ||= 'light';
+      push @peptides, \@rowdata unless $parameters{cmod_mass} && $parameters{cmod_opts} eq 'heavy_only';
+
 
       # Manually build Lys/Arg SILAC code
-      if ( $parameters{cmod_mass} && !$parameters{peptides_only} ) {
+      if ( $parameters{cmod_mass} && !$parameters{peptides_only} && $parameters{cmod_opts} ne 'light'  ) {
 
         my %seen;
         for my $mod ( split( ',', $parameters{cmod_mass} ) ) {
@@ -1560,9 +1563,9 @@ sub fetch_transitions {
   var info_txt=document.getElementById("query_info");
   info_txt.innerHTML=" Took $delta seconds to loop over $counts{row} rows ";
 	
-  info_txt.innerHTML=" ";
   </script>
   ~;
+#  info_txt.innerHTML=" ";
 
   $log->debug( "CNT: $cnttxt\n" );
 
