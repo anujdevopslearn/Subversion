@@ -430,10 +430,10 @@ sub print_form {
   print "<TABLE>$form\n";
     #### Display the form action buttons
   $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
-  print "</TABLE>\n";
-  unless ( $args{action} && $args{action} =~ /QUERY/ ) {
+#  print "</TABLE>\n";
+#  unless ( $args{action} && $args{action} =~ /QUERY/ ) {
     print $sbeams->closeTabbedPane( selected => 'form' );
-  }
+#  }
 
 
 } # end print_form
@@ -1105,7 +1105,7 @@ sub fetch_transitions {
   <script type="text/javascript">
   var info_txt=document.getElementById("query_info");
   info_txt.innerHTML=" ";
-  info_txt.innerHTML="<BR>$status_txt";
+  info_txt.innerHTML="<BR>$status_txt<BR>";
   </script>
   ~;
 
@@ -1561,11 +1561,13 @@ sub fetch_transitions {
   print qq~
   <script type="text/javascript">
   var info_txt=document.getElementById("query_info");
-  info_txt.innerHTML=" Took $delta seconds to loop over $counts{row} rows ";
-	
+  info_txt.innerHTML="<BR> Took $delta seconds to loop over $counts{row} rows ";
+	function clear_status() {
+    info_txt.innerHTML=" ";
+	}
+  setTimeout( "clear_status()", 5000 );
   </script>
   ~;
-#  info_txt.innerHTML=" ";
 
   $log->debug( "CNT: $cnttxt\n" );
 
