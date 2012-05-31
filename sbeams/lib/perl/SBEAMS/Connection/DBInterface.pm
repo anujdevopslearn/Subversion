@@ -5316,7 +5316,7 @@ sub display_form_buttons {
   my $pad = '&nbsp;' x 6;
 
   #### Show the QUERY, REFRESH, and Reset buttons
-  print qq~
+  my $buttons = qq~
       <INPUT TYPE="hidden" NAME="set_current_work_group" VALUE="">
       <INPUT TYPE="hidden" NAME="set_current_project_id" VALUE="">
       <INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="$TABLE_NAME">
@@ -5328,7 +5328,10 @@ sub display_form_buttons {
        </TR></TABLE>
        </FORM>
   ~;
-  print $self->closeTabbedPane(selected=>1) if $args{use_tabbed_panes};
+  $buttons .= $self->closeTabbedPane(selected=>1) if $args{use_tabbed_panes};
+	
+	return $buttons if $args{return_text};
+	print $buttons;
 
 } # end display_form_buttons
 
