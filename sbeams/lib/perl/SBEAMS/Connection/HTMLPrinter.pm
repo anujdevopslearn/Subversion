@@ -1829,6 +1829,46 @@ sub get_MSIE_javascript_error {
   return '';
 }
 
+sub getStatusWidget {
+  my $self = shift;
+  my %args = ( text => '',
+               timeout => '', 
+               timeout_text => '', 
+               add_container => 1, 
+               @_ );
+  return '' unless $args{id};
+
+  my $timeout = '';
+  if ( $args{timeout} ) {
+    $timeout = qq~
+	  function clear_status() {
+      info_txt.innerHTML="$args{timeout_text}";
+  	}
+    setTimeout( "clear_status()", $args{timeout} )
+    ~;
+  }
+
+  my $container = '';
+  if ( $args{add_container} ) {
+    $container = "<DIV id=$args{id}></DIV>";
+  }
+
+  my $widget = qq~
+  $container
+  <script type="text/javascript">
+  var info_txt=document.getElementById("$args{id}");
+  info_txt.innerHTML="$args{text}";
+  $timeout
+  </script>
+  ~;
+  return $widget;
+
+}
+
+sub updateStatusWidget {
+  my $self = shift;
+  return $self->getStatusWidget( add_container => 0, @_ );
+}
 
 ###############################################################################
 
