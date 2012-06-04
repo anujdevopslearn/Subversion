@@ -1351,12 +1351,10 @@ sub getSessionAttribute {
     }
   }
 
-  if (defined %session) {
-    if ( $key eq 'returnEntireSessionHash' ) {
-      return \%session;
-    }
-    return($session{$key});
+  if ( $key eq 'returnEntireSessionHash' ) {
+    return \%session;
   }
+  return( $session{$key} ) || '';
 
 } # end getSessionAttribute
 
