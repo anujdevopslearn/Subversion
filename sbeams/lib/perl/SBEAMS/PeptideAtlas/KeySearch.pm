@@ -189,16 +189,17 @@ sub InsertSearchKeyEntity {
 
     #  or die("ERROR[$METHOD]: Parameter GOA_directory not passed");
     print "Loading protein keys from GOA...\n";
-    $self->buildGoaKeyIndex(
-      GOA_directory =>  $GOA_directory,
-      organism_name => lc($organism_name), 
-      biosequence_set_id => $biosequence_set_id,
-    );
+		$self->buildGoaKeyIndex(
+			GOA_directory =>  $GOA_directory,
+				organism_name => lc($organism_name), 
+				biosequence_set_id => $biosequence_set_id,
+			);
   }else{
     $reference_directory = $args{reference_directory} 
       or die("ERROR[$METHOD]: Parameter reference_directory  not passed");
   }
 
+  
   if ($organism_name eq 'Yeast') {
     my $reference_directory = $args{reference_directory}
       or die("ERROR[$METHOD]: Parameter reference_directory not passed");
@@ -265,6 +266,16 @@ sub InsertSearchKeyEntity {
       or die("ERROR[$METHOD]: Parameter reference_directory not passed");
     print "Loading protein keys from SBEAMS and reference files...\n";
     $self->buildMTBKeyIndex(
+      reference_directory => $reference_directory,
+      biosequence_set_id => $biosequence_set_id,
+    );
+  }
+
+  if ($organism_name =~ /Dog/i) {
+    my $reference_directory = $args{reference_directory}
+      or die("ERROR[$METHOD]: Parameter reference_directory not passed");
+    print "Loading protein keys from SBEAMS and reference files...\n";
+    $self->buildDogKeyIndex(
       reference_directory => $reference_directory,
       biosequence_set_id => $biosequence_set_id,
     );
@@ -1577,6 +1588,83 @@ sub buildLeptospiraKeyIndex {
 
 } # end buildLeptospiraKeyIndex
 
+###############################################################################
+# buildDogKeyIndex
+###############################################################################
+sub buildDogKeyIndex {
+  my $METHOD = 'buildDogKeyIndex';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  print "INFO[$METHOD]: Building Dog key index...\n" if ($VERBOSE);
+
+  my $biosequence_set_id  = $args{biosequence_set_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+
+  my $reference_directory = $args{reference_directory}
+    or die("ERROR[$METHOD]: Parameter reference_directory not passed");
+
+  unless (-d $reference_directory) {
+    die("ERROR[$METHOD]: '$reference_directory' is not a directory");
+  }
+
+  my $organism_id = 37;
+
+  
+  my $counter =0;
+  my $proteinList =  $self->getProteinList(
+    biosequence_set_id => $biosequence_set_id,
+  );
+  my $protein_file = "$reference_directory/canis_familiaris_EnsemblXref.txt";
+  open(INFILE,$protein_file) || die("ERROR: Unable to open '$protein_file'");
+  while (my $line = <INFILE>) {
+    $line =~ /GN=(.*),UPSP=(.*)_.*,ENSP=(.*)/;    
+    my $uniprotKB = $2;
+    my $gene = $1;
+    my $ensp = $3;
+
+    my @links;
+    my ($db, $id);
+    my ($resource_name, $resource_type);
+    foreach my $Accession ($uniprotKB, $ensp){
+      my $prot = '';
+      
+			if ($Accession =~ /^ENS/){
+				 $db="Ensembl";
+				 $id = 31;
+         $prot = $ensp;
+         $resource_name = $uniprotKB;
+         $resource_type = 'UniprotKB';         
+			}else{
+				 $db="UniProtKB";
+				 $id=37;
+         $prot = $uniprotKB;
+         $resource_name = $ensp;
+         $resource_type= 'ENSEMBL';
+			}
+      my @tmp = ($db, $Accession, $id );
+			push(@links,\@tmp);
+		  my @tmp = ('Gene Symbol',$gene);
+		  push(@links,\@tmp);
+		  foreach my $link (@links) {
+			  my %rowdata = (
+				  search_key_name => $link->[1],
+				  search_key_type => $link->[0],
+				  search_key_dbxref_id => $link->[2],
+				  resource_name => $resource_name,
+				  resource_type => $resource_type,
+			  	protein_alias_master => $ensp,
+			  );
+			  $self -> insertSearchKeyEntity( rowdata => \%rowdata);
+			}
+     }
+    $counter++;
+    print "$counter... " if ($counter/100 eq int($counter/100));
+	 }
+  $self -> checkCompleteness(proteinList=> $proteinList,
+                             count      => $counter);
+
+}
 ###############################################################################
 # buildMTBKeyIndex
 ###############################################################################
