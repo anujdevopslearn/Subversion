@@ -43,7 +43,13 @@ sub new {
 		if ( -e $name ) {
       $config_file = $name;
 			last;
-		}
+		} else {
+      my $abs_path = "$PHYSICAL_BASE_DIR/$name";
+		  if ( -e $abs_path ) {
+        $config_file = $abs_path;
+	  		last;
+      }
+    }
 	}
 	die ( "Unable to find config file " ) unless $config_file;
 
