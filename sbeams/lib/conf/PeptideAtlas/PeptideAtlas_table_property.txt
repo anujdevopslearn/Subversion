@@ -59,6 +59,7 @@ AT_GetTransitions	Get transition List	QUERY					GetTransitions
 AT_SearchProteins	Search Proteins	QUERY					SearchProteins		
 AT_pabst_tmp_build	PABST Build	PeptideAtlas_infrastructure	YES	$TBAT_PABST_BUILD	pabst_build_id		ManageTable.cgi?TABLE_NAME=AT_PABST_build		
 AT_pabst_tmp_build_file	PABST Build File	PeptideAtlas_infrastructure	NO	$TBAT_PABST_BUILD_FILE	pabst_build_file_id				
+AT_pabst_build_resource	PABST Build Resource	PeptideAtlas_infrastructure	YES	$TBAT_PABST_BUILD_RESOURCE					
 AT_pabst_tmp_peptide	PABST Peptide	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE	pabst_peptide_id				
 AT_pabst_tmp_peptide_mapping	PABST Peptide Mapping	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE_MAPPING	"pabst_peptide_id, biosequence_id"				
 AT_pabst_tmp_peptide_ion	PABST Peptide Ion	PeptideAtlas_infrastructure	NO	$TBAT_PABST_PEPTIDE_ION	pabst_peptide_ion_id				
