@@ -69,13 +69,12 @@ sub getArticleInfo {
 
 
   #### Get the XML data from NCBI
-  my $url = "http://www.ncbi.nlm.nih.gov/entrez/utils/pmfetch.fcgi?".
+  my $url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?".
     "db=PubMed&id=$PubMedID&report=xml&mode=text";
   my $xml = getHTTPData($url);
 
   print "------ Returned XML -------\n$xml\n-----------------------\n"
     if ($verbose > 1);
-
 
   #### Return if no XML was returned
   unless ($xml) {
@@ -84,7 +83,7 @@ sub getArticleInfo {
     return 0;
   }
 
-	%info = ();
+  %info = ();
   #### Set up the XML parser and parse the returned XML
   my $parser = new XML::Parser(
 			       Handlers => {
@@ -98,7 +97,7 @@ sub getArticleInfo {
 
   #### Generate a synthetic PublicationName based on AuthorList
   if ($info{AuthorList} && $info{PublishedYear}) {
-		$info{AuthorList} =~ s/^\,//;
+	$info{AuthorList} =~ s/^\,//;
     my $publication_name = '';
     my @authors = split(', ',$info{AuthorList});
     my $n_authors = scalar(@authors);
@@ -112,9 +111,7 @@ sub getArticleInfo {
     $publication_name = $authors[0].' et al.' if ($n_authors > 3);
     $publication_name .= ' ('.$info{PublishedYear}.')';
     $info{PublicationName} = $publication_name;
-		
   }
-
 
   #### If verbose mode, print out everything we gathered
   if ($verbose) {
@@ -194,7 +191,6 @@ sub characters {
 
   if (defined($element_type{$context}) && $element_type{$context} eq 'reg') {
     $info{$context} = $string;
-
   }
 
   if (defined($element_type{$context}) &&
