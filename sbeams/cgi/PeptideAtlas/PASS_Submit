@@ -889,6 +889,10 @@ sub addDataset {
   if ($formParameters->{datasetType} eq "SRM") {
     $extra_upload_files .="transition list(s) in TraML format (or, alternatively, prepared with <a href='http://www.peptideatlas.org/upload/PASSEL_transition_list_template.xlsx'>this template</a>).\n";
     $extra_upload_files .="mProphet output files if available\n";
+  } else {
+    $extra_upload_files .="search results\n";
+    $extra_upload_files .="search parameter files\n";
+    $extra_upload_files .="reference search database\n";
   }
 
   my $confirmationMessage = qq~<H3>Thank you for submitting to PeptideAtlas</H3>
@@ -912,6 +916,7 @@ Full URL: ftp://$datasetIdentifier:$datasetPassword\@ftp.peptideatlas.org/
 raw data files
 mzML files, if available
 $extra_upload_files
+Any other relevant annotations
 </PRE>
 <P>After you have finished uploading all your data, please return to:<PRE>
     <a href="http://www.peptideatlas.org/PASS/$datasetIdentifier">http://www.peptideatlas.org/PASS/$datasetIdentifier</a></PRE>
