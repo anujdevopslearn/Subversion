@@ -1479,7 +1479,7 @@ Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Fragmentor	Collisi
 
     my $istd = 'False';
     $istd = 'True' if $seq =~ /6\]$/;
-    $method .= join( "\t", $name, $istd, $q1, $u, $q3, $u, 125, $ce{ce_key}, 5, $rt, $rtd, $p, $ion ) . "\n";
+    $method .= join( "\t", $name, $istd, $q1, $u, $q3, $u, 125, $ce{$ce_key}, 5, $rt, $rtd, $p, $ion ) . "\n";
 	}
   return $method;
 }
