@@ -1414,7 +1414,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
       $pep->[$prob_idx] = 1 if $pep->[$prob_idx] == 1;
       $pep->[$inst_idx] =~ s/ +/&nbsp;/g;
       my $img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='View spectrum for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
-      $pep->[$spec_idx] = qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowObservedSpectrum?spectrum_identification_id=$pep->[$spec_idx]&peptide=$pep->[$mseq_idx]&assumed_charge=$pep->[$chrg_idx]" TARGET=blank>$img</A>~;
+      $pep->[$spec_idx] = qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowObservedSpectrum?atlas_build_id=$parameters{atlas_build_id}&spectrum_identification_id=$pep->[$spec_idx]&peptide=$pep->[$mseq_idx]&assumed_charge=$pep->[$chrg_idx]" TARGET=blank>$img</A>~;
 
       $pep->[$chrm_idx] = $chromatogram_entry;
       $pep->[$mseq_idx] = $sbeamsMOD->formatMassMods( $pep->[$mseq_idx] );

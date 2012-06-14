@@ -285,7 +285,8 @@ sub processRequest {
     $parameters{assumed_charge} = $charge;
 
     my %spectrum = get_spectrum(
-        spectrum_id=>$parameters{spectrum_id});
+        spectrum_id=>$parameters{spectrum_id},
+        atlas_build_id=>$parameters{atlas_build_id});
 
     unless (%spectrum) 
     {
@@ -382,20 +383,23 @@ sub get_spectrum
   my %args = @_;
 
   my $spectrum_id = $args{'spectrum_id'};
-  unless ($spectrum_id) {
-    print "\nERROR: spectrum_id not passed.\n\n";
+  my $atlas_build_id = $args{'atlas_build_id'};
+  unless ($spectrum_id && $atlas_build_id) {
+    print "\nERROR: $spectrum_id $atlas_build_id not passed.\n\n";
     return;
   }
 
-
   my $sql = qq~
-    SELECT proteomics_search_batch_id,spectrum_name
+    SELECT proteomics_search_batch_id,spectrum_name,ab.data_path
       FROM $TBAT_SPECTRUM S
       JOIN $TBAT_SPECTRUM_IDENTIFICATION SI
            ON (S.spectrum_id = SI.spectrum_id )
       JOIN $TBAT_ATLAS_SEARCH_BATCH ASB
            ON (SI.atlas_search_batch_id = ASB.atlas_search_batch_id )
-     WHERE S.spectrum_id = $spectrum_id
+      JOIN $TBAT_ATLAS_BUILD_SAMPLE ABS ON (ABS.SAMPLE_ID = ASB.SAMPLE_ID)
+      JOIN $TBAT_ATLAS_BUILD AB ON (AB.ATLAS_BUILD_ID = ABS.ATLAS_BUILD_ID)
+     WHERE S.spectrum_id = $spectrum_id 
+     AND   ab.atlas_build_id = $atlas_build_id
   ~;
 
   my @rows = $sbeams->selectSeveralColumns($sql);
@@ -406,6 +410,7 @@ sub get_spectrum
   }
   my $search_batch_id = $rows[0]->[0];
   my $spectrum_name = $rows[0]->[1];
+  my $build_path = $rows[0]->[2];
   my $fraction_tag;
   if ($spectrum_name =~ /^(.+)\.(\d+)\.(\d+)\.\d$/) {
     $fraction_tag = $1;
@@ -422,11 +427,23 @@ sub get_spectrum
   my $spectra = new SBEAMS::PeptideAtlas::Spectrum;
   $spectra->setSBEAMS($sbeams);
 
-  my @mass_intensities = $spectra->getSpectrumPeaks(
+  my @mass_intensities = ();
+ 
+  $build_path ="/net/db/projects/PeptideAtlas/pipeline/output/$build_path"; 
+  $build_path =~ /.*\/(.*)\/DATA_FILES/;
+  my $library_idx_file ="$build_path/$1_all_raw.specidx";
+  if (-e "$library_idx_file"){
+    @mass_intensities = $spectra->getSpectrumPeaks_Lib(
+    spectrum_name => $spectrum_name,
+    library_idx_file => $library_idx_file,
+   );
+  }else{
+   @mass_intensities = $spectra->getSpectrumPeaks(
     proteomics_search_batch_id => $search_batch_id,
     spectrum_name => $spectrum_name,
     fraction_tag => $fraction_tag,
-  );
+    );
+  }
 
 
   #### If we still have no spectrum data, then bail out
