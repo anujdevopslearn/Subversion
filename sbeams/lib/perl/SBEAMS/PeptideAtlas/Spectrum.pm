@@ -623,6 +623,77 @@ sub get_data_location {
 } # end get_data_location
 
 
+###############################################################################
+# getSpectrumPeaks_Lib --
+###############################################################################
+sub getSpectrumPeaks_Lib {
+  my $METHOD = 'getSpectrumPeaks_Lib';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  #### Process parameters
+  my $spectrum_name = $args{spectrum_name}
+    or die("ERROR[$METHOD]: Parameter spectrum_name not passed");
+  my $library_idx_file = $args{library_idx_file}
+    or die("ERROR[$METHOD]: Parameter library_idx_file not passed");
+
+  #### Infomational/problem message buffer, only printed if get fails
+  my $buffer = '';
+  #### Get the data_location of the spectrum
+
+  $buffer .= "data_location = $library_idx_file\n";
+
+  # If location does not begin with slash, prepend default dir.
+  $buffer .= "library_location = $library_idx_file\n";
+  my $filename = $library_idx_file;
+  open (IDX, "<$filename") or die "cannot open $filename\n";
+
+  my $position;
+  $spectrum_name =~ s/\.\d$//;
+  while (my $line = <IDX>){
+    chomp $line;
+    if ($line =~ /$spectrum_name\t(\d+)/){
+      $position = $1;
+      last;
+    }
+  }
+  close IDX; 
+
+  if ($position eq ''){
+    die ("ERROR: cannot find $spectrum_name in $filename");
+  }
+  $filename =~ s/.specidx/.sptxt/;
+  if ( ! -e "$filename"){
+    die ("ERROR: cannot find file $filename");
+  }
+  #$filename =~ /.*\/(.*)/;
+  #print "get Spetrum from $1<BR>";
+  use SBEAMS::PeptideAtlas::ConsensusSpectrum;
+  my $consensus = new SBEAMS::PeptideAtlas::ConsensusSpectrum;
+  $consensus->setSBEAMS($sbeams);
+  my $peaks = $consensus->get_spectrum_peaks( file_path=>$filename, 
+                                              entry_idx=>$position, 
+                                              denormalize => 0, 
+                                              strip_unknowns => 1 );
+
+  #### Read the spectrum data
+  my @mz_intensities;
+  for (my $i=0; $i< scalar @{$peaks->{masses}}; $i++) {
+    push(@mz_intensities,[($peaks->{masses}[$i],$peaks->{intensities}[$i])]);
+  }
+
+  #### If there were no values, print diagnostics and return
+  unless (@mz_intensities) {
+    $buffer .= "ERROR: No peaks returned from extraction attempt<BR>\n";
+    print $buffer;
+    return;
+  }
+  #### Return result
+  print "   ".scalar(@mz_intensities)." mass-inten pairs loaded\n"
+    if ($VERBOSE);
+  return(@mz_intensities);
+
+} # end getSpectrumPeaks
 
 ###############################################################################
 # getSpectrumPeaks --
