@@ -285,7 +285,7 @@ sub processRequest {
     $parameters{assumed_charge} = $charge;
 
     my %spectrum = get_spectrum(
-        spectrum_identification_id=>$parameters{spectrum_id});
+        spectrum_identification_id=>$parameters{spectrum_identification_id});
 
     unless (%spectrum) 
     {
