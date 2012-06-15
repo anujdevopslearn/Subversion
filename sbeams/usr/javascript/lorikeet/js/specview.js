@@ -49,7 +49,7 @@
 				var parsedStaticMods = [];
 				for(var i = 0; i < options.staticMods.length; i += 1) {
 					var mod = options.staticMods[i];
-					parsedStaticMods[i] = new Modification(AminoAcid.get(mod.aminoAcid), mod.modMass);
+					parsedStaticMods[i] = new Modification(AminoAcid.get("mod.aminoAcid"), "mod.modMass");
 				}
 				options.staticMods = parsedStaticMods;
 				
@@ -58,11 +58,8 @@
 				for(var i = 0; i < options.variableMods.length; i += 1) {
 					// position: 14, modMass: 16.0, aminoAcid: 'M'
 					var mod = options.variableMods[i];
-					parsedVarMods[i] = new VariableModification(
-											mod.index,
-											mod.modMass,
-											AminoAcid.get(mod.aminoAcid)
-										);
+          
+					parsedVarMods[i] = new VariableModification("mod.index","mod.modMass",AminoAcid.get("mod.aminoAcid"));
 				}
 				options.variableMods = parsedVarMods;
 				
