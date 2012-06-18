@@ -3335,7 +3335,7 @@ sub displayExternalLinksSection {
         key => 'Global Proteome Machine',
         tr_info => $tr,
         value => $ensemblProtein,
-        url => "http://gpmdb.rockefeller.edu/thegpm-cgi/dblist_label.pl?label=$ensemblProtein",
+        url => "http://gpmdb.thegpm.org/protein/accession/$ensemblProtein",
       );
     }
   }
