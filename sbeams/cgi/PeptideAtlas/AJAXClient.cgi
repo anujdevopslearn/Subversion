@@ -85,7 +85,7 @@ sub GetTransitions_SourceSelect {
   if ( $params{pabst_build_id} && $params{pabst_build_id} =~ /^\d+$/ ) {
 
     my $sql = qq~
-    SELECT instrument_type_name, IT.instrument_type_id
+    SELECT CASE WHEN instrument_type_name = 'QQQ' THEN 'Agilent QQQ' ELSE instrument_type_name END AS instrument_type_name, IT.instrument_type_id
     FROM $TBAT_PABST_BUILD_RESOURCE PBR
     JOIN $TBAT_CONSENSUS_LIBRARY CL ON CL.consensus_library_id = PBR.resource_id
     JOIN $TBAT_INSTRUMENT_TYPE IT on IT.instrument_type_id = PBR.instrument_type_id
@@ -97,6 +97,7 @@ sub GetTransitions_SourceSelect {
     FROM $TBAT_INSTRUMENT_TYPE IT
     WHERE instrument_type_name = 'Predicted'
     ~;
+		print STDERR $sql;
 
     my $sth = $sbeams->get_statement_handle( $sql );
     while ( my @row = $sth->fetchrow_array() ) {
@@ -108,7 +109,7 @@ sub GetTransitions_SourceSelect {
   if ( scalar( @select ) < 2 ) {
     @select = ();
     my $sql = qq~
-      SELECT instrument_type_name, instrument_type_id
+      SELECT CASE WHEN instrument_type_name = 'QQQ' THEN 'Agilent QQQ' ELSE instrument_type_name END AS instrument_type_name, instrument_type_id
       FROM $TBAT_INSTRUMENT_TYPE
       WHERE is_source_instrument = 'Y'
     ~;
