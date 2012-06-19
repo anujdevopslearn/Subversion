@@ -535,7 +535,7 @@ sub handle_request {
            );
      print "<BR>\n";
      print "<a href=\"$base_url?identifier=$datasetIdentifier&browseArea=upload&path=/\">Browse FTP upload area</a><BR>\n";
-     print "<a href=\"$base_url?identifier=$datasetIdentifier&browseArea=processing&path=/\">Browse AutoQCprocessing area</a><BR>\n";
+     #print "<a href=\"$base_url?identifier=$datasetIdentifier&browseArea=processing&path=/\">Browse AutoQCprocessing area</a><BR>\n";
      print "<BR>\n";
      print "<HR>\n";
 
@@ -910,7 +910,7 @@ sub DisplayPASSDirListing {
   } else {
     $base = $PASS_ACCOUNTS_BASE;
     print "<BR>\n";
-    print "<a href=\"$baseURL?identifier=$identifier&browseArea=processed&path=$path\">[View processing area]</a><BR>\n";
+    #print "<a href=\"$baseURL?identifier=$identifier&browseArea=processed&path=$path\">[View processing area]</a><BR>\n";
   }
   print "<BR>\n";
 
@@ -923,7 +923,7 @@ sub DisplayPASSDirListing {
     return $response;
   }
 
-  my @listing = `ls -lh $fullPath`;
+  my @listing = `ls -lh '$fullPath'`;
 
   print "<PRE>\n";
 
