@@ -728,15 +728,8 @@ sub handle_request {
       );
     }
 
-    #### Display table help
-    # turned off until we can make this compatible with tabbed panes.
-#--------------------------------------------------
-#     my $obs_help = get_table_help( 'transitions' );
-#     my $tr = "";
-#     print qq~ <TABLE><TR $tr><TD ALIGN=left>$obs_help</TD></TR></TABLE>
-#       ~ if ( $sbeams->output_mode() eq 'html' );
-#-------------------------------------------------- 
-
+    #### Construct table help
+    my $obs_help = get_table_help( 'transitions' );
 
     #### Display the resultset
     #### (after getting URLs for select columns)
@@ -752,6 +745,7 @@ sub handle_request {
       hidden_cols_ref=>\%hidden_cols,
       max_widths=>\%max_widths,
       column_titles_ref=>\@column_titles,
+      column_help=>$obs_help,
       base_url=>$base_url,
       use_tabbed_panes=>'1',
     );
@@ -1179,13 +1173,25 @@ sub get_table_help {
   my $description;
   if ( $name eq 'transitions' ) {
     @entries = (
-      { key => 'Expt Protein Name', value => 'Protein name provided by investigator. Click to see PeptideAtlas info on protein.' },
-      { key => 'Stripped Peptide Sequence', value => 'Peptide sequence without modifications. Click to see observations in PeptideAtlas shotgun data.' },
-      { key => 'Modified Peptide Sequence', value => 'Peptide sequence with modifications.' },
+      { key => 'Modified Peptide Sequence', value => 'Peptide sequence with modifications. Click to see all PASSEL measurements of this peptide.' },
+      { key => 'Z', value => 'Precursor charge' },
+      { key => 'Pep in PeptideAtlas', value => 'Click to see peptide observations in PeptideAtlas shotgun data' },
+      { key => 'Pep in SRMAtlas', value => 'Click to measurements of this peptide in synthetic form' },
+      { key => '[Light] Chromatogram', value => 'Click to view chromatogram in separate tab or window' },
+      { key => 'Chromavis Tab Left/Right', value => 'Click to view chromatogram in ChromaVis dual viewer (tab above)' },
+      { key => 'Primary Protein Mapping', value => 'Preferred identifier for protein mapping. Click to see all PASSEL measurements with this mapping.' },
+      { key => 'Protein in PeptideAtlas', value => 'Click to see observations of this protein in PeptideAtlas shotgun data' },
+      { key => 'Instrument', value => 'Mass spectrometer used' },
       { key => 'Targeted Q1 m/z', value => 'If both heavy and light, this refers to light isotype.' },
-      { key => 'Isotype', value => 'heavy / light' },
-      #{ key => 'Experiment', value => 'Experiment ID in PeptideAtlas.' },
-      { key => 'Chromatogram', value => 'Click to view chromatogram for all traces for this Q1 in this run.' },
+      { key => 'fragment_ions', value => 'List of fragment ions measured' },
+      { key => 'd_score, m_score', value => 'mProphet scores. Only available when decoy transitions were measured. High d_score, low m_score are better.' },
+      { key => 'Best Peak Group RT', value => 'Retention time for best peak group as determined by mQuest' },
+      { key => 'Log Max Apex Intens', value => 'Log(10) of the intensity of the tallest peak in the best peak group' },
+      { key => 'Ratio Vs Heavy Max Apex', value => 'When heavy/light isotopes both measured, the ratio of the intensity of the tallest light peak vs. that of the tallest heavy peak,<br>for the best peak group' },
+      { key => 'S/N', value => 'Signal/noise, as determined by mQuest.' },
+      { key => 'Isotype', value => 'heavy / light, or light+heavy when both were measured' },
+      { key => 'Sample', value => 'Click for sample details' },
+      { key => 'Run', value => 'Spectrum filename' },
     );
 
     $showtext = 'show column descriptions';

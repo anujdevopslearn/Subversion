@@ -823,6 +823,8 @@ sub handle_request {
       );
     }
 
+    #### Construct table help
+    my $obs_help = get_table_help( 'peptides' );
 
     #### Display the resultset
     $sbeams->displayResultSet(
@@ -834,6 +836,7 @@ sub handle_request {
       max_widths=>\%max_widths,
       use_tabbed_panes => 1,
       column_titles_ref=>\@column_titles,
+      column_help=>$obs_help,
       base_url=>$base_url,
     );
 
@@ -961,3 +964,45 @@ sub getOrganismFullName
     return $full_name;
 }
 
+#######################################################################
+sub get_table_help {
+  my $name = shift;
+  return '' unless $name;
+  my @entries;
+  my $hidetext;
+  my $showtext;
+  my $heading;
+  my $description;
+  if ( $name eq 'peptides' ) {
+    @entries = (
+      { key => 'Peptide Accession', value => 'Accession within PeptideAtlas. Click for details on peptide.' },
+      { key => 'Peptide Sequence', value => 'Sequence excluding modifications. Click for details on peptide' },
+      { key => 'Best Prob', value => 'PeptideAtlas probability for best observation of this peptide in this atlas build' },
+      { key => 'N Obs', value => 'Number of spectra identified to this peptide in this atlas build' },
+      { key => 'Empirical Proteotypic Score', value => 'In PeptideAtlas, the fraction of observations of this protein that are supported by at least one observation of this peptide. Values range from 0 to 1; close to 1 means that this peptide is likely to be observed whenever this protein is observed.' },
+      { key => 'SSRCalc Relative Hydrophob', value => 'A measure of the hydrophobicity of this peptide' },
+
+      { key => 'N Samples', value => 'Number of samples this peptide was observed in for this atlas build' },
+      { key => 'N Protein Mappings', value => 'Number of protein identifiers that this peptide maps to for the biosequence set associated with this atlas build' },
+      { key => 'N Unique Locations on Genome', value => 'Number of genome locations that this peptide maps to' },
+      { key => 'Spans exons?', value => 'Does the peptide span multiple exons?' },
+      { key => 'Peptides that include this sequence', value => 'Click for peptides that have this peptide as a subsequence' },
+    );
+    
+    $showtext = 'show column descriptions';
+    $hidetext = 'hide column descriptions';
+    $heading = 'Identified Peptides';
+    $description= 'Peptides identifications supported by the data';
+    
+  }
+
+  return unless @entries;
+  my $help = $sbeamsMOD->get_table_help_section( name => $name,
+  description => $description,
+  heading => $heading,
+  entries => \@entries,
+  showtext => $showtext,
+  hidetext => $hidetext  );
+  return $help;
+    
+} # end get_table_help

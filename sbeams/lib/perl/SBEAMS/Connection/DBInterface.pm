@@ -3239,6 +3239,10 @@ sub displayResultSet {
       }
 
       print $self->addTabbedPane(label => "Resultset") if $args{use_tabbed_panes};
+      if ($args{column_help} && $output_mode eq 'html') {
+	my $obs_help = "<TABLE><TR><TD ALIGN=left>$args{column_help}</TD></TR></TABLE>\n";
+	print $obs_help;
+      }
       if ( $args{html_table} ) {
         print "$args{html_table}\n";
       } else {

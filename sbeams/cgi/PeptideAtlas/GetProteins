@@ -156,11 +156,16 @@ sub main {
         );
 
 
-    $sbeamsMOD->display_page_header(project_id => $project_id);
+    $sbeamsMOD->display_page_header(
+      project_id => $project_id,
+      use_tabbed_panes=> '1',
+    );
 
     handle_request(ref_parameters=>\%parameters);
 
-    $sbeamsMOD->display_page_footer();
+    $sbeamsMOD->display_page_footer(
+      use_tabbed_panes=> '1',
+    );
 
   }
 
@@ -329,6 +334,7 @@ sub handle_request {
       hidden_parameter_ref => \%hidden_parameters,
       display_parameters_ref => \%display_parameters,
       mask_user_context=> '1',
+      use_tabbed_panes=> '1',
     );
 
   }else{
@@ -342,16 +348,24 @@ sub handle_request {
       parameters_ref=>\%parameters,
       input_types_ref=>\%input_types,
       mask_user_context=> '1',
+      use_tabbed_panes=> '1',
     );
   }
   #### Display the form action buttons
-  $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
+  $sbeams->display_form_buttons(
+    TABLE_NAME=>$TABLE_NAME,
+    use_tabbed_panes=> '1',
+  );
 
 
   #### Finish the upper part of the page and go begin the full-width
   #### data portion of the page
-  $sbeams->display_page_footer(close_tables=>'YES',
-    separator_bar=>'YES',display_footer=>'NO');
+  $sbeams->display_page_footer(
+    close_tables=>'NO',
+    separator_bar=>'NO',
+    display_footer=>'NO',
+    use_tabbed_panes=> '1',
+  );
 
 
   #########################################################################
@@ -1188,7 +1202,10 @@ sub handle_request {
     if ($apply_action =~ /QUERY/i) {
 
       #### Show the SQL that will be or was executed
-      $sbeams->display_sql(sql=>$sql) if ($show_sql);
+      $sbeams->display_sql(
+	sql=>$sql,
+	use_tabbed_panes=> '1',
+      ) if ($show_sql);
       #### Fetch the results from the database server
       $sbeams->fetchResultSet(
         sql_query=>$sql,
@@ -1691,11 +1708,8 @@ sub handle_request {
     );
 
 
-    #### Display table help
+    #### Construct table help
     my $obs_help = get_table_help( 'proteins' );
-    my $tr = "";
-    print qq~ <TABLE><TR $tr><TD ALIGN=left>$obs_help</TD></TR></TABLE>
-      ~ if ( $sbeams->output_mode() eq 'html' );
 
     #### Display the resultset
     if (! $get_coverage_density_only) {
@@ -1707,7 +1721,9 @@ sub handle_request {
       hidden_cols_ref=>\%hidden_cols,
       max_widths=>\%max_widths,
       column_titles_ref=>\@column_titles,
+      column_help=>$obs_help,
       base_url=>$base_url,
+      use_tabbed_panes=>'1',
     );
     }
     #### Display Graphic and/or various error messages if unable to draw full graphic
@@ -1730,6 +1746,7 @@ sub handle_request {
       query_parameters_ref=>\%parameters,
       rs_params_ref=>\%rs_params,
       base_url=>$base_url,
+      use_tabbed_panes=>'1',
     );
 
 
@@ -1740,6 +1757,7 @@ sub handle_request {
       query_parameters_ref=>\%parameters,
       column_titles_ref=>\@column_titles,
       base_url=>$base_url,
+      use_tabbed_panes=>'1',
     );
 
   #### If QUERY was not selected, then tell the user to enter some parameters
@@ -2060,7 +2078,7 @@ sub get_table_help {
       { key => 'Biosequence Name', value => 'Sequence database accession' },
       { key => 'Covering Set', value => 'Whether this sequence is part of a minimal set explaining all observed peptides' },
       { key => 'Presence Level', value => 'canonical=member of minimally redundant set<br>possibly distinguished=at least one pep diff from all canonicals<br>subsumed=all peps contained in a canon. or poss. dist.<br>ntt-subsumed=subsumed and >=1 pep lacks tryptic terminus' },
-      { key => 'Protein Prophet Prob', value => 'Probability this protein exists in sample, according to Protein Prophet.<br>May be underestimate for large datasets.' },
+      { key => 'Protein Prophet Prob', value => 'Probability this protein exists in sample, according to Protein Prophet.' },
       { key => 'Norm Obs per 100K', value => 'N Obs, normalized to number of observable peptides in protein, expressed per 100K total observations' },
       { key => 'Published plasma ng/ml', value => 'Physiological concentration in human plasma' },
 
@@ -2068,10 +2086,9 @@ sub get_table_help {
       { key => 'N Obs', value => 'ProteinProphet adjusted PSM (peptide-spectrum match) count, usually lower than actual PSM count' },
       { key => 'N Distinct Peptides', value => 'Number of sequence-distinct peptides' },
       { key => 'Genetic Locus', value => 'Provided when available' },
-      { key => 'Start in Chrom', value => 'Starting base number in chromosome' },
-      { key => 'End in Chrom', value => 'Ending base number in chromosome' },
+      { key => 'Start/End in Chrom', value => 'Starting/ending base number in chromosome' },
       { key => 'Strand', value => 'Which strand of chromosome' },
-      { key => 'Source', value => 'Literature source for published ng/ml.<br>&nbsp;&nbsp;&nbsp;Hortin, et al., Clin Chem, 2008<br> &nbsp;&nbsp;&nbsp;Polanski & Anderson, Biomarker Insights, 2006<br>&nbsp;&nbsp;&nbsp;Haab, et al., Proteomics, 2005' },
+      { key => 'Source', value => 'Literature source for published ng/ml; one of Hortin, et al., Clin Chem, 2008; Polanski & Anderson, Biomarker Insights, 2006; Haab, et al., Proteomics, 2005' },
       { key => 'Estimated ng/ml', value => 'Estimated physiological concentration, by spectral counting (only available for some builds)' },
       { key => 'Uncertainty ng/ml', value => 'About 2/3 of estimated concentrations are within +/- this multiplicative factor' },
       { key => 'Redundancy Relationship', value => 'This protein sequence has exactly the same peptides as a sequence with a Presence Level. "identical" if sequence-identical, else "indistinguishable"' },
