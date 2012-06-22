@@ -128,9 +128,10 @@ my $show_image = 0;
       $page = get_build_plots ( $build_id, $chart_div ); 
 	  	print $page;
 		}
-    $page = getSampleMapDisplay ( %{$params}, build_id => $build_id );
-		print $page;
-
+    if($build_id != 277 and $build_id != 278){
+      $page = getSampleMapDisplay ( %{$params}, build_id => $build_id );
+  		print $page;
+    }
 		$atlas->display_page_footer();
 
 } # end main
@@ -174,7 +175,8 @@ sub get_table_help {
                  { key => '#_Proteins', value => 'The number of canonical (highly distinguishable, non-redundant) protein sequences identified from the peptides in this sample.' },
                  { key => '#_Cum_Prots', value => 'Order-dependent cumulative number of canonical proteins contributed to build by this and previous samples.<br>Counts non-human contaminants, so final tally may be greater than Canonical Proteins count in Build Overview. ' },
 #                 { key => 'Sens', value => 'The sensitivity of the Peptide Prophet model at a probablility of 0.9, the percent of true positives that would be included at that threshold was used as a cutoff. ' },
-                 { key => 'FDR_(%)', value => 'The error rate of peptides above the threshold Peptide Prophet model at a probablility of 0.9, the percent of false positives that would be included at the build threshold. ' }
+                 { key => 'FDR_(%)', value => 'The error rate of peptides above the threshold Peptide Prophet model at a probablility of 0.9, the percent of false positives that would be included at the build threshold. ' },
+                 { key => 'Sample_Date', value => ''},
         );
     $heading = 'Sample Overview'; 
     $description = 'These values pertain to individual samples within the atlas';
@@ -272,7 +274,6 @@ sub get_mayu_info {
   }
   $table .= $atlas->encodeSectionTable( rows => [ $headings_ref, @records ], 
 					header => 1, 
-					nowrap => [1..scalar(@headings)], 
 					align => [ qw(center center left
 right center center right right center center left center left center center
 center left center left center center center center left center center center
@@ -741,12 +742,16 @@ sub get_sample_info {
          n_good_spectra, n_distinct_multiobs_peptides,
          n_uniq_contributed_peptides, n_progressive_peptides,
          cumulative_n_peptides, n_canonical_proteins, cumulative_n_proteins,
-         model_90_error_rate
-  FROM $TBAT_SEARCH_BATCH_STATISTICS SBS JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB 
-    ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
+         model_90_error_rate,CONVERT(VARCHAR(10), PE.date_created, 126) AS [YYYY-MM-DD]
+  FROM $TBAT_SEARCH_BATCH_STATISTICS SBS 
+  JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON ABSB.atlas_build_search_batch_id = SBS.atlas_build_search_batch_id
   JOIN $TBAT_SAMPLE S ON s.sample_id = ABSB.sample_id
   JOIN $TBAT_ATLAS_BUILD_SAMPLE ABS ON ( s.sample_id = ABS.sample_id )
   JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( ASB.atlas_search_batch_id = ABSB.atlas_search_batch_id )
+  JOIN PROTEOMICS.DBO.SEARCH_BATCH PSB
+  ON PSB.SEARCH_BATCH_ID = ASB.PROTEOMICS_SEARCH_BATCH_ID
+  JOIN PROTEOMICS.DBO.PROTEOMICS_EXPERIMENT PE
+  ON PE.EXPERIMENT_ID = PSB.EXPERIMENT_ID
   WHERE ABS.atlas_build_id = $build_id
   AND ABSB.atlas_build_id = $build_id
   ORDER BY rownum, cumulative_n_peptides, ABSB.atlas_build_search_batch_id ASC
@@ -796,7 +801,7 @@ sub get_sample_info {
                                         header => 1, 
                                         nowrap => [1..scalar(@headings)], 
                                         table_id => 'sample_contribution',
-                                        align => [ qw(center left right right right right right right right right right) ], 
+                                        align => [ qw(center left right right right right right right right right right center) ], 
                                         tr_info => $tr,
                                         bg_color => '#EAEAEA',
                                         rows_to_show => 25,
