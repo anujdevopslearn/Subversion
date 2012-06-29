@@ -1445,7 +1445,7 @@ sub get_qqq_dynamic_transition_list {
   my $tsv = shift || return '';
 
   my $method = qq~Dynamic MRM
-Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Fragmentor	Collision Energy	Cell Accelerator Voltage	Ret Time (min)	Delta Ret Time	Polarity	Ion type
+Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Fragmentor	Collision Energy	Cell Accelerator Voltage	Ret Time (min)	Delta Ret Time	Polarity	Ion type  EstimatedRT
 ~;
 
 	my $u = 'Unit';
@@ -1477,9 +1477,11 @@ Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Fragmentor	Collisi
 #    my $ce = ( $q1c == 2 ) ? sprintf( "%0.2f", ( 2.93 * $q1 )/100 + 6.72 ) : 
 #				                     sprintf( "%0.2f", ( 3.6 * $q1 )/100 - 4.8 );
 
+
+    my $est_rt = sprintf( "%0.1f", ($line[13]*72.94461-122.83351)/60);
     my $istd = 'False';
     $istd = 'True' if $seq =~ /6\]$/;
-    $method .= join( "\t", $name, $istd, $q1, $u, $q3, $u, 125, $ce{$ce_key}, 5, $rt, $rtd, $p, $ion ) . "\n";
+    $method .= join( "\t", $name, $istd, $q1, $u, $q3, $u, 125, $ce{$ce_key}, 5, $rt, $rtd, $p, $ion, $est_rt ) . "\n";
 	}
   return $method;
 }
