@@ -1235,7 +1235,7 @@ sub handle_request {
     #### Determine whether or not there are any user inputted constraint values that would interfere with drawing the graph, and if so don't draw the graph
     $chrom_num = $parameters{chromosome};
 
-    if (($organism_id == 2) && $chrom_num) {
+    if (0 && ($organism_id == 2) && $chrom_num) {
       ## Do everything invovled with drawing the graph
       #### Connect to Ensembl database
       my $host = 'mysql';
