@@ -52,12 +52,16 @@ $dbh->{RaiseError}++;
       chomp $line;
       my @line = split( "\t", $line, -1 );
       next if $line[0] =~ /Peptide/i;
+      my $clean_seq = $line[0];
+      $clean_seq =~ s/\[\d+\]//g;
       $cnt++;
 
-      my $rowdata = { peptide_sequence => $line[0],
+      my $rowdata = { peptide_sequence => $clean_seq,
                       modified_peptide_sequence => $line[0],
-                      elution_time => $line[3]/60,
-                      elution_time_type_id => $args->{elution_time_type_id} };
+                      elution_time => $line[1]/60,
+                      SIQR => $line[2],
+                      elution_time_type_id => $args->{elution_time_type_id},
+                      elution_time_set => '' };
 
       my $id = $sbeams->updateOrInsertRow( insert => 1,
                                       table_name  => 'peptideatlas.dbo.elution_time',
