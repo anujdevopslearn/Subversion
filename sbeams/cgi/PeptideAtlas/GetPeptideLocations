@@ -98,6 +98,7 @@ sub print_form {
     $type_checked{m} = '';
     $type_checked{w} = 'checked';
   }
+  my $order_select = get_order_select();
 
   print qq~
 	
@@ -129,6 +130,10 @@ sub print_form {
     <div>
      <span class=label>Fuzzy Match?:</span>
      <input type=checkbox id="fuzzy" name="fuzzy" $fuzz_checked></input>
+    </div>
+    <div>
+     <span class=label>Restrict Order:</span>
+     $order_select
     </div>
   </fieldset>
  
@@ -307,6 +312,11 @@ sub print_locations {
 	  $plate_and .= ")\n" unless $params->{fuzzy};
   }
 
+  my $order_and = '';
+  if ( $params->{Order} && $params->{Order} ne 'All' ) {
+    $order_and = "AND orders.name = '$params->{Order}'";
+  }
+
 
   open PEPS, "/net/db/projects/PeptideAtlas/MRMAtlas/current_libs/peptides2proteins.tsv" || die "Unable to open peptide file";
   my %pep2prot;
@@ -335,6 +345,7 @@ sub print_locations {
   WHERE 1 = 1
   $peptide_and
   $plate_and
+  $order_and
   ORDER BY orders.id ASC, plate_barcode_id ASC, row, col
   ~;
   $headings[15] = 'mg/ml';
@@ -411,6 +422,44 @@ print qq~
 
 
 
+}
+
+sub get_order_select {
+  my $driver = 'DBI:mysql:mrmatlas_lims:mslims';
+  my $user = 'mrm_ro';
+  my $pass = 'Tsr3#@gfA356!&5';
+  my %error = ( PrintError => 1, RaiseError => 1);
+  my $dbh = DBI->connect($driver,$user,$pass,\%error);
+#DBI:mysql:$DB_DATABASE:$DB_SERVER
+  my $sql = qq~
+  SELECT DISTINCT orders.name
+  FROM plates JOIN orders ON plates.order_id = orders.id
+  JOIN plate_peptides ON plate_peptides.plate_id = plates.id
+  JOIN peptides  ON peptides.id = plate_peptides.peptide_id
+  WHERE plate_type = 'MASTER'
+  ORDER BY orders.name ASC
+  ~;
+  my $sth = $dbh->prepare( $sql );
+  $sth->execute();
+
+  my $select = qq~
+    <SELECT NAME=Order>
+      <OPTION SELECTED> All </OPTION>
+   ~;
+#      <OPTION> All Thermo</OPTION>
+#      <OPTION> All JPT</OPTION>
+#      <OPTION> All Zurich</OPTION>
+
+  while ( my @row = $sth->fetchrow_array() ) {
+    $select .= "<OPTION>$row[0]</OPTION>\n";
+  }
+  $select .= "</SELECT>\n";
+  $log->debug( $select );
+  return $select;
+  exit;
+
+#  my $dbh = DBI->connect($DB_DRIVER,$DB_RO_USER,$DB_RO_PASS,\%error_attr);
+# mysql -umrm_ro -hmslims -P3306 -p'Tsr3#@gfA356!&5' -Dmrmatlas_lims
 }
 
 
