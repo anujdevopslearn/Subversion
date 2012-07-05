@@ -231,6 +231,17 @@ sub do_tryptic_digestion {
 
   # Store list to pass back
   my @peptides;
+
+  # If we get option to split on '*' peptides, do this with recursive calls
+  if ( $args{split_asterisk} ) {
+    my @seqs = split( /\*/, $args{aa_seq} );
+    for my $seq ( @seqs ) {
+      my $sub_tryp = $self->do_tryptic_digestion( %args, aa_seq => $seq, split_asterisk => 0 );
+      push @peptides, @{$sub_tryp};
+    }
+    return \@peptides;
+  }
+
   
   # previous, current, next amino acid
   my ( $prev, $curr, $next );
