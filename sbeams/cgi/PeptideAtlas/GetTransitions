@@ -499,6 +499,8 @@ sub get_mod_filters {
                'E[111]' => '',
                'M[147]' => '',
                'N[115]' => '',
+               'K[136]' => '',
+               'R[166]' => '',
                'Q[111]' => '' );
 
   # If we already ran a query, update values
@@ -512,7 +514,9 @@ sub get_mod_filters {
   # Set default values
   if ( !$mods_set ) {
     for my $mod ( sort( keys( %mods ) ) ) {
-      next if $mod eq 'C[160]';
+      next unless ( $mod eq 'C[160]' ||
+                    $mod eq 'K[136]' ||
+                    $mod eq 'R[166]' );
       $mods{$mod} = 'checked';
     }
   }
@@ -523,31 +527,38 @@ sub get_mod_filters {
     <DIV class=clear_info_box>
     <TABLE><TR>
     <TD>
-      <INPUT TYPE=checkbox NAME='C[143]' $mods{'C[143]'}> C[143] </INPUT>
-    </TD>
-    <TD>
       <INPUT TYPE=checkbox NAME='C[160]' $mods{'C[160]'}> C[160] </INPUT>
     </TD>
-    </TR><TR>
     <TD>
-      <INPUT TYPE=checkbox NAME='E[111]' $mods{'E[111]'}> E[111] </INPUT>
+      <INPUT TYPE=checkbox NAME='K[136]' $mods{'K[136]'}> K[136] </INPUT>
     </TD>
+    <TD>
+      <INPUT TYPE=checkbox NAME='R[166]' $mods{'R[166]'}> R[166] </INPUT>
+    </TD>
+    <TD>
+      <INPUT TYPE=checkbox NAME='N[115]' $mods{'N[115]'}> N[115] </INPUT>
+    </TD>
+
+    </TR><TR>
     <TD>
       <INPUT TYPE=checkbox NAME='M[147]' $mods{'M[147]'}> M[147] </INPUT>
     </TD>
-    </TR><TR>
     <TD>
-      <INPUT TYPE=checkbox NAME='N[115]' $mods{'N[115]'}> N[115] </INPUT>
+      <INPUT TYPE=checkbox NAME='C[143]' $mods{'C[143]'}> C[143] </INPUT>
     </TD>
     <TD>
       <INPUT TYPE=checkbox NAME='Q[111]' $mods{'Q[111]'}> Q[111] </INPUT>
     </TD>
+    <TD>
+      <INPUT TYPE=checkbox NAME='E[111]' $mods{'E[111]'}> E[111] </INPUT>
+    </TD>
+
     </TR></TABLE>
     </DIV>
   ~;
 
   my $filter_element = qq~
-  <TR><TD VALIGN=TOP NOBR><B>Exclude peptide modifications:</B></TD>$mods_help<TD>$checks</TD></TR> 
+  <TR><TD VALIGN=TOP NOBR><B>Allowed peptide modifications:</B></TD>$mods_help<TD>$checks</TD></TR> 
   ~;
   return $filter_element;
 }
@@ -587,9 +598,9 @@ sub get_ion_filters {
 
   my %opts = @_;
 
-  my $b_ions = '';
-  my $y_ions = '';
-  my $n_loss_ions = 'checked';
+  my $b_ions = 'checked';
+  my $y_ions = 'checked';
+  my $n_loss_ions = '';
 
   # If we already ran a query, update values
   if ( $opts{b_ions} || $opts{y_ions} || $opts{n_loss_ions} ) {
@@ -602,11 +613,12 @@ sub get_ion_filters {
   my $b_ions_chk = "<INPUT TYPE=checkbox NAME=b_ions $b_ions></INPUT>";
   my $y_ions_chk = "<INPUT TYPE=checkbox NAME=y_ions $y_ions></INPUT>";
   my $n_loss_chk = "<INPUT TYPE=checkbox NAME=n_loss_ions $n_loss_ions></INPUT>";
+  my $space = '&nbsp;' x 3;
 
-  my $checks = "<DIV class=clear_info_box>y ions $y_ions_chk<BR>b ions $b_ions_chk<BR>Neutral-loss ions $n_loss_chk</DIV>\n";
+  my $checks = "<DIV class=clear_info_box>$y_ions_chk y ions $space $b_ions_chk b ions $space $n_loss_chk Neutral-loss ions</DIV>\n";
 
   my $filter_element = qq~
-  <TR><TD VALIGN=TOP NOBR><B>Exclude ion types:</B></TD>$ions_help<TD>$checks</TD></TR> 
+  <TR><TD VALIGN=TOP NOBR><B>Allowed ion types:</B></TD>$ions_help<TD>$checks</TD></TR> 
   ~;
 #  <TR><TD VALIGN=TOP NOBR></TD><TD></TD><TD>b ions $b_ions_chk</TD></TR>
 #  <TR><TD VALIGN=TOP NOBR></TD><TD></TD><TD>Neutral-loss ions $n_loss_chk</TD></TR>
@@ -669,10 +681,13 @@ sub get_download_form {
       <OPTION VALUE='ThermoTSQ' >Thermo TSQ</OPTION>
     </SELECT>
   ~;
-#      <OPTION VALUE='TraML' >TraML</OPTION>
+  my $nowrap_style = "<style> .nowrap { white-space: nowrap }; </style>";
+  my $calc_check_help = "<IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Add column with estimated RT for peptides without a RT Catalog value'/>";
+  my $calc_check = "Include calculated RT $calc_check_help <INPUT TYPE=checkbox NAME=calc_rt></INPUT>";
 
   my $button = "<INPUT TYPE=SUBMIT NAME=submit VALUE=Download>";
-  $form .= $select . ' HIDDEN_PLACEHOLDER ' . $button . '</FORM>';
+  my $space = '&nbsp;' x 3;
+  $form .= $nowrap_style . '<DIV style=nowrap>' . $calc_check . $space . $select  . $button . '</DIV></FORM>';
   return $form;
 }
 
@@ -989,8 +1004,8 @@ sub fetch_transitions {
 
   # New filter, remove peptide ions with various mass mods.
   my $modifications_constraint = '';
-  for my $mod ( 'C[143]', 'C[160]', 'E[111]', 'M[147]', 'N[115]', 'Q[111]' ) {
-    if ( $parameters{$mod} ) {
+  for my $mod ( 'C[143]', 'C[160]', 'E[111]', 'M[147]', 'N[115]', 'Q[111]', 'K[136]', 'R[166]' ) {
+    if ( !$parameters{$mod} ) {
       my $stripped_mod = join( '', $mod =~ /\w\[(\d+)\]/ );
       $modifications_constraint .= " AND PI.modified_peptide_sequence NOT LIKE '%" . $stripped_mod . "%'\n";
     }
@@ -1202,6 +1217,7 @@ sub fetch_transitions {
   # Code to get only pertinent headings here...
   my $consensus_srcs = $consensus->getConsensusSources( pabst_build_id => $pabst_build_id );
   my $has_ce = $consensus->hasCESet( pabst_build_id => $pabst_build_id );
+  my $has_chromats = $consensus->hasChromatograms( pabst_build_id => $pabst_build_id );
 
   if ( $parameters{speclinks} ) {
     if ( $sbeams->isGuestUser() ) {
@@ -1217,7 +1233,7 @@ sub fetch_transitions {
     }
   }
 
-  if ( !$sbeams->isGuestUser() && $organism == 2 ) {
+  if ( !$sbeams->isGuestUser() && ( $has_chromats || $has_ce ) ) {
     push @headings, 'QQQ ', ' QTRAP ';
   }
 
@@ -1348,13 +1364,13 @@ sub fetch_transitions {
         next;
       }
 
-      if ( $parameters{b_ions} ) {
+      if ( !$parameters{b_ions} ) {
         next if $row[9] =~ /^b/;
       }
-      if ( $parameters{y_ions} ) {
+      if ( !$parameters{y_ions} ) {
         next if $row[9] =~ /^y/;
       }
-      if ( $parameters{n_loss_ions} ) {
+      if ( !$parameters{n_loss_ions} ) {
         next if $row[9] =~ /\-\d+/;
       }
 
@@ -1447,12 +1463,14 @@ sub fetch_transitions {
         for my $ch_type ( qw( QQQ QTrap5500 ) ) {
 
           # FIXME temporary hack, only builds with CE set will get chromat links.
-          next unless $has_ce;
+          next unless $has_ce || $has_chromats;
 
           my $instr_name = ( $ch_type =~ /QQQ/ ) ? 'Agilent 6460 QQQ' : 
                            ( $ch_type =~ /QTrap5500/i ) ? 'ABI SCIEX QTRAP 5500' : $ch_type;
            
           my $chromat_link = '';
+#          die "link key is $link_key, chtype is $ch_type";
+
           if ( $pepion2scanpath->{$ch_type}->{$link_key} ) {
             my $title = "View +$row[6] chromatogram for $row[1] on $instr_name"; 
 						my $precursor_param = '';
@@ -1478,7 +1496,7 @@ sub fetch_transitions {
         }
 #        push @rowdata, $links, $chromat_link;
         push @rowdata, @{$links};
-        if ( $organism == 2 && !$sbeams->isGuestUser() ) {
+        if ( ( $has_chromats || $organism == 2 ) && !$sbeams->isGuestUser() ) {
           push @rowdata, @chromat_links;
         }
       }
@@ -1765,7 +1783,7 @@ sub get_scan_path {
   if ( $args{scan_clause} ) {
 
     $subclause = qq~
-    WHERE modified_sequence IN (  
+    AND modified_sequence IN (  
     SELECT DISTINCT modified_peptide_sequence FROM 
     $TBAT_PABST_PEPTIDE_ION 
     WHERE pabst_peptide_id IN ( $args{scan_clause}  ) )
@@ -1778,8 +1796,11 @@ sub get_scan_path {
     FROM peptideatlas.dbo.chromatogram_source_file CSF
     JOIN peptideatlas.dbo.instrument_type IT
       ON IT.instrument_type_id = CSF.instrument_type_id
+    WHERE 1 = 1
     $subclause
+
   ~;
+#    AND source_file_set = 4
   $log->debug( "Exec scan path SQL" . time() );
 
   my $sth = $sbeams->get_statement_handle($sql);
@@ -1791,6 +1812,7 @@ sub get_scan_path {
     $pepion2scan{$row[3]}->{$row[0]} = { scan => $row[2], path => $row[1] };
     $pepion2scan{$row[3]}->{$row[0]} = { scan => $row[2], path => $row[1] };
   }
+#  die Dumper( %pepion2scan );
   return \%pepion2scan;
 }
 
