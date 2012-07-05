@@ -490,6 +490,26 @@ sub hasCESet {
   return $has_ce;
 }
 
+sub hasChromatograms {
+  my $self = shift;
+  my %args = @_;
+
+  return unless $args{pabst_build_id};
+  my $sql = qq~
+  SELECT COUNT(*) 
+  FROM $TBAT_PABST_BUILD_RESOURCE PBR
+  WHERE resource_type = 'chromatogram_set'
+  AND pabst_build_id = $args{pabst_build_id}
+  ~;
+
+  my $has_chromats = 0;
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    $has_chromats++ if $row[0];
+  }
+  return $has_chromats;
+}
+
 sub getConsensusSources {
   my $self = shift;
   my %args = @_;
