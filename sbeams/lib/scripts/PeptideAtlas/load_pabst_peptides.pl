@@ -25,6 +25,7 @@ use SBEAMS::Proteomics::PeptideMassCalculator;
 my $pid = $$;
 
 use constant MIN_FRAGMENT_MZ => 200;
+use constant MAX_TRANSITIONS => 16;
 
 $|++; # don't buffer output
 my @letters = qw( A C D E F G H I K L M N P Q R S T V W Y );
@@ -84,8 +85,7 @@ if ( $args->{show_builds} ) {
   exit;
 }
 
-my $bulk_update = 1;
-if ( $bulk_update ) {
+if ( $args->{bulk_update} ) {
   die "bulk file exists, exiting" if -e 'bulk_update.bcp';
   open( BULK, ">bulk_update.bcp" );
 }
@@ -117,13 +117,6 @@ print "done\n" if $args->{verbose};
 
 my $dbh = $sbeams->getDBHandle();
 $dbh->{RaiseError}++;
-my $transition_limit = 10;
-
-# DELETEME
-my $mrm_peak_limit = $transition_limit + 10;
-
-#my %all_mrm_peaks;
-
 
 # Flag for uber-verbose logging.
 my $paranoid = 0;
@@ -247,7 +240,7 @@ my %stats;
     print "$s => $stats{$s}\n";
   }
 
-  close BULK if $bulk_update; 
+  close BULK if $args->{bulk_update}; 
 
 } # End Main
 
@@ -365,7 +358,7 @@ sub insert_transitions {
   my $tcnt = 1;
   for my $t ( @{$args{transitions_ref}} ) {
 
-    my $label = $t->[6] . $t->[7] . '+' x $t->[5];
+    my $label = $t->[6] . $t->[7] . '+' . $t->[5];
 
     # Insert transition only once 
     if ( !$args{transition_id_ref}->{$label} ) {
@@ -406,7 +399,7 @@ sub insert_transitions {
                        is_predicted => $is_predicted,
           source_instrument_type_id => $args{instr_id},
                       };
-      if ( $bulk_update ) {
+      if ( $args->{bulk_update} ) {
         my $inten = $t->[9] || 'NULL';
         my $coll = $t->[8] || 'NULL';
         print BULK join( "\t", $args{transition_id_ref}->{$label},$t->[4],$rowdata->{ion_rank},$inten,$args{instr_id},$t->[4],$coll,$is_predicted ) . "\n";
@@ -558,9 +551,14 @@ sub getPABSTPeptideData {
 
   return \%seq_to_id;
 }
-#MARK
+
+
 sub populate {
   #  populate( $lib_data{$mrm}, $pep, \@trans, $mrm_libs{$mrm}, \%used_trans );
+
+  # Seems to be unused
+  die "A fiery death";
+
   my $trans_lib = shift;
   my $pep = shift;
   my $global_trans = shift;
@@ -585,10 +583,10 @@ sub populate {
         next if $used_transitions->{$seen_key};
         push @{$global_trans}, $t;
         $used_transitions->{$seen_key}++;
-        last if scalar( @{$global_trans} >= $transition_limit );
+        last if scalar( @{$global_trans} ) >= MAX_TRANSITIONS;
       }
     }
-    last if scalar( @{$global_trans} >= $transition_limit );
+    last if scalar( @{$global_trans} ) >= MAX_TRANSITIONS;
   }
 #  print "\nTrans has " . scalar( @$global_trans ) . " transitions!\n" if $paranoid;
 #  exit if $paranoid;
@@ -1040,7 +1038,7 @@ sub populate_theoretical {
     next if $used_transitions->{$seen_key};
     push @{$global_trans}, $trans;
     $used_transitions->{$seen_key}++;
-    last if scalar( @{$global_trans} ) >= $transition_limit;
+    last if scalar( @{$global_trans} ) >= MAX_TRANSITIONS;
   }
 }
 
@@ -1105,9 +1103,10 @@ sub process_args {
               'verbose', 'testonly', 'biosequence_set_id=i', 'name=s',
               'load', 'output_file=s', 'project_id=i', 'organism=i',
               'mapping_build:i', 'delete', 'build_id=i', 'specified_only',
-              'show_builds', 'nobs_build=i', 'use_intensities' );
+              'show_builds', 'nobs_build=i', 'use_intensities', 'quash_bulk' );
 
   my $missing;
+  $args{bulk_update} = ( $args{quash_bulk} ) ? 0 : 1;
 
   $args{mapping_build} ||= 0;
   $args{verbose} ||= 0;
@@ -1189,8 +1188,9 @@ sub readSpectrastSRMFile {
     }
 
 #    print "$seq and $chg has " . scalar( @{$srm{$seq}->{$chg}} ) . " \n";
-    next if scalar( @{$srm{$seq}->{$chg}} ) > $transition_limit;
-#    next if $all_mrm_peaks{$srm{$seq}->{$chg}} > $mrm_peak_limit;
+    # FIXME are these redundant?  Effective?
+    next if scalar( @{$srm{$seq}->{$chg}} ) > MAX_TRANSITIONS;
+#    next if $all_mrm_peaks{$srm{$seq}->{$chg}} > MAX_TRANSITIONS;
 
     my @labels = split( "/", $line[7], -1 );
     my $primary_label = $labels[0];
