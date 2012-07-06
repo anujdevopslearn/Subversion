@@ -680,6 +680,7 @@ sub get_download_form {
       <OPTION VALUE='ABSCIEX_QTRAP_MRMMSMS' >ABISCIEX QTRAP MRM-MS2</OPTION>
       <OPTION VALUE='ThermoTSQ' >Thermo TSQ</OPTION>
     </SELECT>
+    HIDDEN_PLACEHOLDER
   ~;
   my $nowrap_style = "<style> .nowrap { white-space: nowrap }; </style>";
   my $calc_check_help = "<IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Add column with estimated RT for peptides without a RT Catalog value'/>";
