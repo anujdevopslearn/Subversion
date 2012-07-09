@@ -683,9 +683,8 @@ sub encodeSectionTable {
       <INPUT TYPE=HIDDEN NAME=remove_markup VALUE=1>
       <INPUT TYPE=HIDDEN NAME=tsv_output VALUE=1>
       ~;
-      $args{download_form} =~ s/HIDDEN_PLACEHOLDER/$hidden/m;
-      $download_links = $args{download_form};
-      $rs_link = $download_links;
+      $rs_link = $args{download_form};
+      $rs_link =~ s/HIDDEN_PLACEHOLDER/$hidden/m;
     }
 
   }
