@@ -1138,6 +1138,8 @@ sub fetch_transitions {
      $log->debug( "done " . time() );
   }
 
+  my $build_resources = $atlas->fetchBuildResources( pabst_build_id => $parameters{pabst_build_id} );
+
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
   if ($apply_action =~ /QUERY/i ) {
@@ -1152,9 +1154,13 @@ sub fetch_transitions {
   $parameters{rt_type} ||= '4';
 
   if ( $parameters{rt_type} || $parameters{rt_type} ne 'SSRCalc' ) {
+    my $et_and = '';
+    if ( $build_resources->{elution_time_set} ) {
+      $et_and = " AND elution_time_set IN ( " . join( ',', keys( %{$build_resources->{elution_time_set}} ) ) . " ) ";
+    }
     $ssr_field = 'elution_time';
     $ssr_join = qq~
-     LEFT JOIN $TBAT_ELUTION_TIME ET ON ( ET.modified_peptide_sequence = PP.peptide_sequence AND elution_time_type_id = '$parameters{rt_type}' )
+     LEFT JOIN $TBAT_ELUTION_TIME ET ON ( ET.modified_peptide_sequence = PP.peptide_sequence AND elution_time_type_id = '$parameters{rt_type}' $et_and )
     ~;
   }
 
