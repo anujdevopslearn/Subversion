@@ -2003,5 +2003,28 @@ sub listBiosequenceSets {
 
 }
 
+sub fetchBuildResources {
+  my $self = shift;
+  my %args = @_;
+
+  return unless $args{pabst_build_id};
+
+  my $sql = qq~
+  SELECT resource_type, resource_id 
+  FROM $TBAT_PABST_BUILD_RESOURCE PBR
+  WHERE pabst_build_id = $args{pabst_build_id}
+  ~;
+
+  my %resources;
+  my $sbeams = $self->getSBEAMS();
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    $resources{$row[0]} ||= {};
+    $resources{$row[0]}->{$row[1]}++;
+  }
+  return \%resources;
+}
+
 1;
+
 
