@@ -20,7 +20,7 @@
 # Get the script set up with everything it will need
 ###############################################################################
 use strict;
-use vars qw ( $q $sbeams $sbeamsMOD $PROG_NAME
+use vars qw ( $q $sbeams $atlas $PROG_NAME
              $current_contact_id $current_username );
 use lib qw (../../lib/perl);
 
@@ -42,8 +42,8 @@ use SBEAMS::PeptideAtlas::Tables;
 # Global Variables
 ###############################################################################
 $sbeams = new SBEAMS::Connection;
-$sbeamsMOD = new SBEAMS::PeptideAtlas;
-$sbeamsMOD->setSBEAMS($sbeams);
+$atlas = new SBEAMS::PeptideAtlas;
+$atlas->setSBEAMS($sbeams);
 
 my $json = new JSON;
 my %params;
@@ -73,6 +73,8 @@ sub process_query {
 
   if ( $params{source} eq 'GetTransitions_SourceSelect' ) {
     return GetTransitions_SourceSelect();
+  } elsif ( $params{source} eq 'GetTransitions_ElutionTimeSelect' ) {
+    return GetTransitions_ElutionTimeSelect();
   } else {
     return $params{source};
   }
@@ -120,6 +122,42 @@ sub GetTransitions_SourceSelect {
   }
 
   my $json_text = $json->encode( \@select ); 
+  return $json_text;
+}
+
+
+sub GetTransitions_ElutionTimeSelect {
+
+  my @select;
+
+  if ( $params{pabst_build_id} && $params{pabst_build_id} =~ /^\d+$/ ) {
+
+    my $build_resources = $atlas->fetchBuildResources( pabst_build_id => $params{pabst_build_id} );
+
+    my $resource_and = '';
+    if ( $build_resources->{elution_time_set} ) {
+      $resource_and = " AND elution_time_set IN ( " . join( ',', keys( %{$build_resources->{elution_time_set}} ) ) . " ) ";
+    }
+
+    my $sql = qq~
+    SELECT DISTINCT elution_time_type, ET.elution_time_type_id
+    FROM $TBAT_ELUTION_TIME ET 
+    JOIN $TBAT_ELUTION_TIME_TYPE ETT on ET.elution_time_type_id = ETT.elution_time_type_id
+    WHERE elution_time_type NOT LIKE 'SSR%'
+    $resource_and
+    ORDER BY elution_time_type ASC
+    ~;
+    
+
+    my $sth = $sbeams->get_statement_handle( $sql );
+    while ( my @row = $sth->fetchrow_array() ) {
+      push @select, { optionValue => $row[1], optionText => $row[0] };
+    }
+
+  }
+
+  my $json_text = $json->encode( \@select ); 
+  $log->debug( $json_text );
   return $json_text;
 }
 

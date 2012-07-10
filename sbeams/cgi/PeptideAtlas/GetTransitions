@@ -182,9 +182,27 @@ $(document).ready(function() {
       }
      $("select#source_instrument_type_id").html(options);
     })
+
+    $.getJSON("AJAXClient.cgi",{pabst_build_id: $("select#pabst_build_id").val(), source: 'GetTransitions_ElutionTimeSelect'}, function(j){
+      var options = '';
+      for (var i = 0; i < j.length; i++) {
+        options += '<option value="' + j[i].optionValue + '">' + j[i].optionText + '</option>';
+      }
+     $("select#rt_type").html(options);
+    })
+
   }
 
   $("select#pabst_build_id").change(function() {
+
+    $.getJSON("AJAXClient.cgi",{pabst_build_id: $(this).val(), source: 'GetTransitions_ElutionTimeSelect'}, function(j){
+      var options = '';
+      for (var i = 0; i < j.length; i++) {
+        options += '<option value="' + j[i].optionValue + '">' + j[i].optionText + '</option>';
+      }
+     $("select#rt_type").html(options);
+    })
+
     $.getJSON("AJAXClient.cgi",{pabst_build_id: $(this).val(), source: 'GetTransitions_SourceSelect'}, function(j){
       var options = '';
       for (var i = 0; i < j.length; i++) {
@@ -192,6 +210,8 @@ $(document).ready(function() {
       }
      $("select#source_instrument_type_id").html(options);
     })
+
+
   })
 
 })
@@ -467,7 +487,7 @@ sub get_src_weights {
 
 sub get_rt_select {
   my $rt_type = shift || '';
-  my $rt_select = "<SELECT NAME=rt_type>\n";
+  my $rt_select = "<SELECT NAME=rt_type ID=rt_type>\n";
 
   my $sql = qq~
   SELECT DISTINCT elution_time_type, elution_time_type_id 
