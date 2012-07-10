@@ -62,12 +62,12 @@ $sbeams = new SBEAMS::Connection;
 								            STRINGS => [ 'Human Plasma PeptideAtlas ' ] },
 
                 "buildDetails" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/buildDetails",  
-								            PARAMS => { atlas_build_id => 204, '_tab' => 2 },
+								            PARAMS => { atlas_build_id => 335, '_tab' => 2 },
 								            STRINGS => [ 'HUPO28_b2-SERUM' ] },
 
 
                 "GetPeptide" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetPeptide",  PARAMS => { '_tab' => 3, 
-								                                                                                     atlas_build_id => 180,
+								                                                                                     atlas_build_id => 335,
 																																																		 searchWithinThis => 'Peptide+Name',
 																																																		 searchForThis => 'PAp00085360',
 																																																		 action => 'query' }, 
@@ -75,19 +75,19 @@ $sbeams = new SBEAMS::Connection;
 
 								"GetPeptides" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetPeptides",  
 								                   PARAMS => { '_tab' => 4,
-                                               atlas_build_id => 213,
+                                               atlas_build_id => 335,
                                                peptide_sequence_constraint => 'VLHPLEG%25',
                                                QUERY_NAME=> 'AT_GetPeptides',
                                                action=> 'QUERY' },
 																	 STRINGS => [ qw(VLHPLEGAVVIIFK Empirical) ] },
 								"GetProtein" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetProtein", 
-								                  PARAMS => { '_tab' => 5, atlas_build_id => 204, protein_name => 'ENSP00000374576', action=> 'QUERY' },
+								                  PARAMS => { '_tab' => 5, atlas_build_id => 335, protein_name => 'ENSP00000374576', action=> 'QUERY' },
 																	STRINGS => [ qw(CD166_HUMAN ALCAM External observable ) ]  },
 
 
 								"GetProteins" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetProteins",
                                    PARAMS => { '_tab' => 6,
-																	             atlas_build_id => 213,
+																	             atlas_build_id => 335,
                                                biosequence_name_constraint => 'ENSP00000222%25',
                                                QUERY_NAME => 'AT_GetProteins',
 																	             action => 'QUERY' },
@@ -98,7 +98,7 @@ $sbeams = new SBEAMS::Connection;
 #								action=QUERY
 								"Summarize" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/Summarize_Peptide",  PARAMS => { '_tab' => 7 }, STRINGS => [] },
 								"GetMRMList" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetMRMList", PARAMS => { }, STRINGS => [] },
-								"ViewMRMList" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/ViewMRMList", PARAMS => { atlas_build_id => 180, consensus_library_id => 5,
+								"ViewMRMList" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/ViewMRMList", PARAMS => { atlas_build_id => 335, consensus_library_id => 5,
 					 protein_name_constraint => 'YAL044C', 
 					 QUERY_NAME => 'AT_GetMRMList', action => 'QUERY' 
 					}, STRINGS => [ qw( Sequence LGEGVNVEQVEGLMSLEQYEK Spectrum YAL044C ) ] },
