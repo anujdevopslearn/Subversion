@@ -134,19 +134,20 @@ sub GetTransitions_ElutionTimeSelect {
 
     my $build_resources = $atlas->fetchBuildResources( pabst_build_id => $params{pabst_build_id} );
 
-    my $resource_and = '';
+    my $resource_clause = "WHERE elution_time_type LIKE 'SSR%'";
     if ( $build_resources->{elution_time_set} ) {
-      $resource_and = " AND elution_time_set IN ( " . join( ',', keys( %{$build_resources->{elution_time_set}} ) ) . " ) ";
+      $resource_clause = " WHERE elution_time_set IN ( " . join( ',', keys( %{$build_resources->{elution_time_set}} ) ) . " ) ";
     }
 
     my $sql = qq~
     SELECT DISTINCT elution_time_type, ET.elution_time_type_id
     FROM $TBAT_ELUTION_TIME ET 
     JOIN $TBAT_ELUTION_TIME_TYPE ETT on ET.elution_time_type_id = ETT.elution_time_type_id
-    WHERE elution_time_type NOT LIKE 'SSR%'
-    $resource_and
+    $resource_clause
     ORDER BY elution_time_type ASC
     ~;
+
+   $log->debug( $sql );
     
 
     my $sth = $sbeams->get_statement_handle( $sql );
