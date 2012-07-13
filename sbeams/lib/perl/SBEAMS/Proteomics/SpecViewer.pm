@@ -55,6 +55,33 @@ sub convertMods {
 
     my $mass_type = 'monoisotopic';
 
+    # Deal with terminal mods first
+    my $nterm = 0;
+    my $cterm = 0;
+
+    if ($sequence =~ s/(n\[\d+\])//) {
+	my $mod = $1;
+	my $mass_diff = $supported_modifications{$mass_type}->{$mod};
+	if (defined($mass_diff)) {
+	    $nterm = $mass_diff;
+	} else {
+	    print STDERR "ERROR: N-terminal mass modification $mod is not supported yet\n";
+	    return(undef);
+	}
+    }
+
+    if ($sequence =~ s/(c\[\d+\])//) {
+	my $mod = $1;
+	my $mass_diff = $supported_modifications{$mass_type}->{$mod};
+	if (defined($mass_diff)) {
+	    $cterm = $mass_diff;
+	} else {
+	    print STDERR "ERROR: C-terminal mass modification $mod is not supported yet\n";
+	    return(undef);
+	}
+    }
+
+    # ...and now with the rest
     my $modstring = "[ ";
 
     while ($sequence =~ /\[/) {
@@ -66,7 +93,7 @@ sub convertMods {
 	    my $mass_diff = $supported_modifications{$mass_type}->{$mod};
 	    if (defined($mass_diff)) {
 		$modstring .= "{index: $index, modMass: $mass_diff, aminoAcid: \"$aa\"}, ";
-		$sequence =~ s/[A-Znc]\[\d+\]/$aa/;
+		$sequence =~ s/[A-Z]\[\d+\]/$aa/;
 	    } else {
 		print STDERR "ERROR: Mass modification $mod is not supported yet\n";
 		return(undef);
@@ -77,17 +104,12 @@ sub convertMods {
 	}
     }
 
-    ## ToDo!  Deal with terminal mods, Lorikeet-style!
-
-    #### Remove n-term and c-term notation
-    $sequence =~ s/[nc]//g;
-    
     #### Fail if imprecise AA's are present
     return(undef) if ($sequence =~ /[BZX]/);
 
     $modstring .= " ]";
 
-    return ($sequence, $modstring);
+    return ($sequence, $modstring, $nterm, $cterm);
 }
 
 
@@ -114,7 +136,7 @@ sub generateSpectrum {
 
     my $spectrum_aref = $args{'spectrum'};
 
-    my ($sequence,$mods) = &convertMods(modified_sequence => $modified_sequence);
+    my ($sequence,$mods, $nmod, $cmod) = &convertMods(modified_sequence => $modified_sequence);
 
 
     my $lorikeet_resources = "$HTML_BASE_DIR/usr/javascript/lorikeet";
@@ -150,13 +172,13 @@ sub generateSpectrum {
 				      "showY":$showY,
 				      "showZ":$showZ,
 				      "variableMods":$mods,
-				      // ToDo: "ntermMod":0,
-				      // ToDo: "ctermMod":0,
+				      "ntermMod":$nmod,
+				      "ctermMod":$cmod,
 				      "peaks":ms2peaks});
 	});
     %;
 
-    $lorikeet_html .= "var ms2peaks = [";
+    $lorikeet_html .= "var ms2peaks = [\n";
     for my $ar_ref (@{$spectrum_aref}) {
 	my $mz = $ar_ref->[0];	
 	my $in = $ar_ref->[1];
