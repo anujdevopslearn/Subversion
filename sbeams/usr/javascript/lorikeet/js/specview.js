@@ -38,18 +38,12 @@
 			return this.each(function() {
 				
 				options = opts;
-        /*The array may contain an empty entry at the end, such as [1,2,]. In Google
-         * Chrome and Firefox, the length of that example would be 2; however, in IE, the
-         * length is 3. 
-            */
-        if (options.peaks[options.peaks.length-1]==null)
-           options.peaks.pop(); // or a.pop()
 				
 				// read the static modifications
 				var parsedStaticMods = [];
 				for(var i = 0; i < options.staticMods.length; i += 1) {
 					var mod = options.staticMods[i];
-					parsedStaticMods[i] = new Modification(AminoAcid.get("mod.aminoAcid"), "mod.modMass");
+					parsedStaticMods[i] = new Modification(AminoAcid.get(mod.aminoAcid), mod.modMass);
 				}
 				options.staticMods = parsedStaticMods;
 				
@@ -58,8 +52,11 @@
 				for(var i = 0; i < options.variableMods.length; i += 1) {
 					// position: 14, modMass: 16.0, aminoAcid: 'M'
 					var mod = options.variableMods[i];
-          
-					parsedVarMods[i] = new VariableModification("mod.index","mod.modMass",AminoAcid.get("mod.aminoAcid"));
+					parsedVarMods[i] = new VariableModification(
+											mod.index,
+											mod.modMass,
+											AminoAcid.get(mod.aminoAcid)
+										);
 				}
 				options.variableMods = parsedVarMods;
 				
@@ -779,7 +776,7 @@
 			
 			if(ion.type == "a") {
 				if(recalculate() || !ionSeriesMatch.a[ion.charge]) { // re-calculate only if mass error has changed OR
-																		// matching peaks for this series have not been calculated
+										// matching peaks for this series have not been calculated
 					// calculated matching peaks
 					var adata = calculateMatchingPeaks(ionSeries.a[ion.charge], options.peaks, massError, peakAssignmentType);
 					if(adata && adata.length > 0) {
@@ -792,7 +789,7 @@
 			
 			if(ion.type == "b") {
 				if(recalculate() || !ionSeriesMatch.b[ion.charge]) { // re-calculate only if mass error has changed OR
-																		// matching peaks for this series have not been calculated
+											// matching peaks for this series have not been calculated
 					// calculated matching peaks
 					var bdata = calculateMatchingPeaks(ionSeries.b[ion.charge], options.peaks, massError, peakAssignmentType);
 					if(bdata && bdata.length > 0) {
@@ -1000,9 +997,9 @@
 		
 		// placeholder for sequence, m/z, scan number etc
 		parentTable += '<td style="background-color: white; padding:5px; border:1px dotted #cccccc;" valign="bottom" align="center"> '; 
-		parentTable += '<div id="seqinfo" style="width:b.browser.msie ? 103%:100%;"></div> ';
+		parentTable += '<div id="seqinfo" style="width:100%;"></div> ';
 		// placeholder for file name, scan number and charge
-		parentTable += '<div id="fileinfo" style="width:b.browser.msie ? 103%:100%;"></div> ';
+		parentTable += '<div id="fileinfo" style="width:100%;"></div> ';
 		parentTable += '</td> ';
 		
 		
@@ -1036,7 +1033,7 @@
 		// Footer & placeholder for moving ion table
 		parentTable += '<tr> ';
 		parentTable += '<td colspan="3" class="bar noprint" valign="top" align="center" id="ionTableLoc2" > ';
-		parentTable += '<div align="center" style="width:b.browser.msie ? 103%:100%;font-size:10pt;"> ';
+		parentTable += '<div align="center" style="width:100%;font-size:10pt;"> ';
 		parentTable += '</div> ';
 		parentTable += '</td> ';
 		parentTable += '</tr> ';
@@ -1082,6 +1079,7 @@
 		var selectedIonTypes = getSelectedIonTypes();
 		var ntermIons = getSelectedNtermIons(selectedIonTypes);
 		var ctermIons = getSelectedCtermIons(selectedIonTypes);
+		
 		var myTable = '' ;
 		myTable += '<table id="ionTable" cellpadding="2" class="font_small">' ;
 		myTable +=  "<thead>" ;
@@ -1103,6 +1101,7 @@
 		myTable +=  "<tbody>" ;
 		for(var i = 0; i < options.sequence.length; i += 1) {
 			myTable +=   "<tr>";
+			
 			// nterm ions
 			for(var n = 0; n < ntermIons.length; n += 1) {
 				if(i < options.sequence.length - 1) {
@@ -1122,9 +1121,9 @@
 			
 			myTable += "<td class='numCell'>"+(i+1)+"</td>";
 			if(Peptide.varMods[i+1])
-				myTable += "<td class='seq modified'>"+options.sequence.charAt(i)+"</td>";
+				myTable += "<td class='seq modified'>"+options.sequence[i]+"</td>";
 			else
-				myTable += "<td class='seq'>"+options.sequence.charAt(i)+"</td>";
+				myTable += "<td class='seq'>"+options.sequence[i]+"</td>";
 			myTable += "<td class='numCell'>"+(options.sequence.length - i)+"</td>";
 			
 			// cterm ions
@@ -1206,9 +1205,9 @@
 		for(var i = 0; i < options.sequence.length; i += 1) {
 			
 			if(Peptide.varMods[i+1])
-				modSeq += '<span style="background-color:yellow;padding:1px;border:1px dotted #CFCFCF;">'+options.sequence.charAt(i)+"</span>";
+				modSeq += '<span style="background-color:yellow;padding:1px;border:1px dotted #CFCFCF;">'+options.sequence[i]+"</span>";
 			else
-				modSeq += options.sequence.charAt(i);
+				modSeq += options.sequence[i];
 		}
 		
 		return modSeq;
@@ -1302,7 +1301,7 @@
 		
 		// reset zoom option
 		myContent += '<nobr> ';
-		myContent += '<span style="width:b.browser.msie ? 103%:100%; font-size:8pt; margin-top:5px; color:sienna;">Click and drag in the plot to zoom</span> ';
+		myContent += '<span style="width:100%; font-size:8pt; margin-top:5px; color:sienna;">Click and drag in the plot to zoom</span> ';
 		myContent += 'X:<input id="zoom_x" type="checkbox" value="X" checked="checked"/> ';
 		myContent += '&nbsp;Y:<input id="zoom_y" type="checkbox" value="Y" /> ';
 		myContent += '&nbsp;<input id="resetZoom" type="button" value="Zoom Out" /> ';
@@ -1450,6 +1449,7 @@
 		myTable+= '<div> Peak Labels:<br/> ';
 		myTable+= '<input type="radio" name="peakLabelOpt" value="ion" checked="checked"/><b>Ion</b>';
 		myTable+= '<input type="radio" name="peakLabelOpt" value="mz"/><b>m/z</b><br/>';
+		myTable+= '<input type="radio" name="peakLabelOpt" value="both"/><b>Both</b>';
 		myTable+= '<input type="radio" name="peakLabelOpt" value="none"/><b>None</b> ';
 		myTable+= '</div> ';
 		myTable += '</td> </tr> ';

@@ -40,13 +40,13 @@ Peptide.getSeqMassMono = function _seqMassMono(seq, index, term) {
 	if(seq) {
 		if(term == "n") {
 			for( var i = 0; i < index; i += 1) {
-				var aa = aa_obj.get(seq.charAt(i));
+				var aa = aa_obj.get(seq[i]);
 				mass += aa.mono;
 			}
 		}
 		if (term == "c") {
 			for( var i = index; i < seq.length; i += 1) {
-				var aa = aa_obj.get(seq.charAt(i));
+				var aa = aa_obj.get(seq[i]);
 				mass += aa.mono;
 			}
 		}
@@ -61,13 +61,13 @@ Peptide.getSeqMassAvg = function _seqMassAvg(seq, index, term) {
 	if(seq) {
 		if(term == "n") {
 			for( var i = 0; i < index; i += 1) {
-				var aa = aa_obj.get(seq.charAt(i));
+				var aa = aa_obj.get(seq[i]);
 				mass += aa.avg;
 			}
 		}
 		if (term == "c") {
 			for( var i = index; i < seq.length; i += 1) {
-				var aa = aa_obj.get(seq.charAt(i));
+				var aa = aa_obj.get(seq[i]);
 				mass += aa.avg;
 			}
 		}
@@ -88,7 +88,7 @@ function _addModMasses(seqMass, seq, index, term) {
 	// add any static modifications
 	if(term == "n") {
 		for(var i = 0; i < index; i += 1) {
-			var mod = Peptide.staticMods[seq.charAt(i)];
+			var mod = Peptide.staticMods[seq[i]];
 			if(mod) {
 				mass += mod.modMass;
 			}
@@ -96,7 +96,7 @@ function _addModMasses(seqMass, seq, index, term) {
 	}
 	if(term == "c") {
 		for(var i = index; i < seq.length; i += 1) {
-			var mod = Peptide.staticMods[seq.charAt(i)];
+			var mod = Peptide.staticMods[seq[i]];
 			if(mod) {
 				mass += mod.modMass;
 			}
