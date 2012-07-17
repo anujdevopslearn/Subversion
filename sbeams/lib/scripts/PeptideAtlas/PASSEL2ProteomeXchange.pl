@@ -18,6 +18,7 @@ use Getopt::Long;
 use FindBin;
 use XML::Writer;
 use IO::File;
+use Encode;
 $|++;
 
 use lib "$FindBin::Bin/../../perl";
@@ -140,7 +141,9 @@ my $writer = XML::Writer->new(
   OUTPUT=>$output,
   DATA_MODE=>1,
   DATA_INDENT=>2,
-  ENCODING=>'UTF-8',
+  # The below ends up expanding 2-byte special chars into double
+  # 2-byte chars. Go figure. Removing it seems to do no harm.
+  #ENCODING=>'UTF-8',
 );
 
 # Get info on the experiment
@@ -242,40 +245,77 @@ my @repositoryrecords = ();
 
 # Write XML
 my $cv_acc;
+my $cv_ref;
 
 $writer->xmlDecl("UTF-8");
 
 $writer->startTag("ProteomeXchangeDataset",
   "xmlns:xsi"=>"http://www.w3.org/2001/XMLSchema-instance",
-  "xsi:noNamespaceSchemaLocation"=>"proteomeXchange-draft-05.xsd",
+  "xsi:noNamespaceSchemaLocation"=>"proteomeXchange-draft-07.xsd",
   "id"=>"${PX_accession}.${PX_version}",
   "formatVersion"=>"1.0.0",
 );
+
+#--------------------------------------------------
+# $writer->startTag("ChangeLog");
+#   $writer->startTag("ChangeLogEntry",
+#   "version" => 1,
+#   "date" => "2012-05-18" ,);
+#     $writer->characters("Initial submission");
+#   $writer->endTag("ChangeLogEntry");
+# $writer->endTag("ChangeLog");
+#-------------------------------------------------- 
 
 $writer->startTag("DatasetSummary",
   # What is announceDate? We need this.
   "announceDate" => "$release_date",
   "title" => "HUPO PPP2 PE submission" ,
-  "broadcaster" => "PeptideAtlas",
+  "hostingRepository" => "PeptideAtlas",
 );
   $writer->startTag("Description");
-    $writer->characters($expt_description);
+    $writer->characters("$expt_description");
   $writer->endTag("Description");
+
+  ### OR 0000415 for Non peer-reviewed dataset
+  $writer->startTag("ReviewLevel");
+      $cv_ref = 'PRIDE';
+      $cv_acc = '0000414';
+      $writer->emptyTag("cvParam",
+	"cvRef"=>"$cv_ref",
+	"accession"=>"${cv_ref}:$cv_acc",
+	"name"=>"Peer-reviewed dataset",
+      );
+  $writer->endTag("ReviewLevel");
+
+  ### OR 0000417 for Unsupported dataset by repository
+  $writer->startTag("RepositorySupport");
+      $cv_ref = 'PRIDE';
+      $cv_acc = '0000416';
+      $writer->emptyTag("cvParam",
+	"cvRef"=>"$cv_ref",
+	"accession"=>"${cv_ref}:$cv_acc",
+	"name"=>"Supported dataset by respository",
+      );
+  $writer->endTag("RepositorySupport");
+
 $writer->endTag("DatasetSummary");
 
 $writer->startTag("DatasetIdentifierList");
   $writer->startTag("DatasetIdentifier");
-    $cv_acc = 1000000;       # need this
+    $cv_ref = "MS";
+    $cv_acc = 1001919;
     $writer->emptyTag("cvParam",
-      "cvRef"=>'MS',
-      "accession"=>"MS:$cv_acc",
-      "name"=>"ProteomeXchange accession",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
+      "name"=>"ProteomeXchange accession number",
       "value"=>"$PX_accession",
     );
+    $cv_ref = "MS";
+    $cv_acc = 1001921;
     $writer->emptyTag("cvParam",
-      "cvRef"=>'MS',
-      "accession"=>"MS:$cv_acc",
-      "name"=>"ProteomeXchange accession version number",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
+      "name"=>"ProteomeXchange accession number version number",
       "value"=>"$PX_version",
     );
   $writer->endTag("DatasetIdentifier");
@@ -283,34 +323,38 @@ $writer->endTag("DatasetIdentifierList");
 
 $writer->startTag("DatasetOriginList");
   $writer->startTag("DatasetOrigin");
-    $cv_acc = 1000000;       # need this
+    $cv_ref = 'PRIDE';
+    $cv_acc = '0000397';
     $writer->emptyTag("cvParam",
-      "cvRef"=>'MS',
-      "accession"=>"MS:$cv_acc",
-      "name"=>"derived from whole previous dataset",  # what to put here?
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
+      "name"=>"Data derived from previous dataset",
     );
+    $cv_ref = "MS";
+    $cv_acc = "1001919";
     $writer->emptyTag("cvParam",
-      "cvRef"=>'MS',
-      "accession"=>"MS:$cv_acc",
-      "name"=>"ProteomeXchange identifier",
-      "value"=>"PX000048",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
+      "name"=>"ProteomeXchange accession number",
+      "value"=>"${PX_accession}",
     );
   $writer->endTag("DatasetOrigin");
 $writer->endTag("DatasetOriginList");
 
 $writer->startTag("SpeciesList");
   $writer->startTag("Species");
+    $cv_ref = "MS";
     $cv_acc = 1001469;
     $writer->emptyTag("cvParam",
       "cvRef"=>'PSI-MS',
-      "accession"=>"MS:$cv_acc",
+      "accession"=>"${cv_ref}:$cv_acc",
       "name"=>"taxonomy: scientific name",
       "value"=>"$organism_name",
     );
     $cv_acc = 1001467;
     $writer->emptyTag("cvParam",
       "cvRef"=>'PSI-MS',
-      "accession"=>"MS:$cv_acc",
+      "accession"=>"${cv_ref}:$cv_acc",
       "name"=>"taxonomy: NCBI TaxID",
       "value"=>"$ncbi_taxonomy_id",
     );
@@ -319,11 +363,14 @@ $writer->endTag("SpeciesList");
 
 $writer->startTag("InstrumentList");
   # not sure instrument_type_name is what we want.
+  # The value usually doesn't validate. Seems brief "Q-ToF" or "Q-Trap"
+  # is required.
   $writer->startTag("Instrument", "id"=>"$instrument_type_name");
+    $cv_ref = "MS";
     $cv_acc = 1000870;
     $writer->emptyTag("cvParam",
-      "cvRef"=>'MS',
-      "accession"=>"MS:$cv_acc",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
       "name"=>"$instrument_name",
     );
   $writer->endTag("Instrument");
@@ -332,14 +379,15 @@ $writer->endTag("InstrumentList");
 
 $writer->startTag("ModificationList");
 if (! scalar @modifications) {
-  $cv_acc = 1000000;   #need
+  $cv_ref = "PRIDE";
+  $cv_acc = '0000398';
   $writer->emptyTag("cvParam",
-    "cvRef"=>'MS',
-    "accession"=>"MS:$cv_acc",
-    "name"=>"No applicable mass modifications",
+    "cvRef"=>"$cv_ref",
+    "accession"=>"${cv_ref}:$cv_acc",
+    "name"=>"No PTMs are included in the dataset",
   );
 } else {
-  $cv_acc = 1000001;
+  $cv_acc = 1000001;  #need
   for my $mod (@modifications) {
     $writer->emptyTag("cvParam",
       "cvRef"=>'PSI-MOD',
@@ -352,38 +400,40 @@ $writer->endTag("ModificationList");
 
 $writer->startTag("ContactList");
   $writer->startTag("Contact", "id"=>"c001");
-    $cv_acc = 1000000;  #need
+    $cv_ref = "MS";
+    $cv_acc = 1001266;
     $writer->emptyTag("cvParam",
-      "cvRef"=>'MS',
-      "accession"=>"MS:$cv_acc",
-      "name"=>"contact role",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
+      "name"=>"role type", 
       "value"=>"Principal investigator for project (as listed in PeptideAtlas)",
     );
     $cv_acc = 1000586;
     $writer->emptyTag("cvParam",
-      "cvRef"=>'MS',
-      "accession"=>"MS:$cv_acc",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
       "name"=>"contact name",
       "value"=>"$pi_name",
     );
-    $cv_acc = 1000000;  #need
+    $cv_acc = 1000590;
     $writer->emptyTag("cvParam",
-      "cvRef"=>'MS',
-      "accession"=>"MS:$cv_acc",
-      "name"=>"contact affiliation",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
+      #"name"=>"contact affiliation", not found
+      "name"=>"contact organization",
       "value"=>"$pi_affiliation",
-    );
-    $cv_acc = 1000588;
-    $writer->emptyTag("cvParam",
-      "cvRef"=>'MS',
-      "accession"=>"MS:$cv_acc",
-      "name"=>"contact email",
-      "value"=>"$pi_email",
     );
     $cv_acc = 1000589;
     $writer->emptyTag("cvParam",
-      "cvRef"=>'MS',
-      "accession"=>"MS:$cv_acc",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
+      "name"=>"contact email",
+      "value"=>"$pi_email",
+    );
+    $cv_acc = 1000588;
+    $writer->emptyTag("cvParam",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
       "name"=>"contact URL",
       "value"=>"$pi_uri",
     );
@@ -391,39 +441,39 @@ $writer->startTag("ContactList");
   $writer->startTag("Contact", "id"=>"c002");
     $cv_acc = 1000000;  #need
     $writer->emptyTag("cvParam",
-      "cvRef"=>'MS',
-      "accession"=>"MS:$cv_acc",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
       "name"=>"contact role",
       "value"=>"Data submitter",
     );
     $cv_acc = 1000586;
     $writer->emptyTag("cvParam",
-      "cvRef"=>'MS',
-      "accession"=>"MS:$cv_acc",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
       "name"=>"contact name",
       "value"=>"$subm_name",
     );
 #--------------------------------------------------
 #     $cv_acc = 1000000;  #need
 #     $writer->emptyTag("cvParam",
-#       "cvRef"=>'MS',
-#       "accession"=>"MS:$cv_acc",
+#       "cvRef"=>"$cv_ref",
+#       "accession"=>"${cv_ref}:$cv_acc",
 #       "name"=>"contact affiliation",
 #       "value"=>"$subm_affiliation",
 #     );
 #-------------------------------------------------- 
-    $cv_acc = 1000588;
+    $cv_acc = 1000589;
     $writer->emptyTag("cvParam",
-      "cvRef"=>'MS',
-      "accession"=>"MS:$cv_acc",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
       "name"=>"contact email",
       "value"=>"$subm_email",
     );
 #--------------------------------------------------
-#     $cv_acc = 1000589;
+#     $cv_acc = 1000588;
 #     $writer->emptyTag("cvParam",
-#       "cvRef"=>'MS',
-#       "accession"=>"MS:$cv_acc",
+#       "cvRef"=>"$cv_ref",
+#       "accession"=>"${cv_ref}:$cv_acc",
 #       "name"=>"contact URL",
 #       "value"=>"$subm_uri",
 #     );
@@ -434,21 +484,23 @@ $writer->endTag("ContactList");
 $writer->startTag("PublicationList");
 if ($pub_status eq 'submitted') {
   $writer->startTag("Publication", "id"=>"submitted01");
-    $cv_acc = 1000000;  #need
+    $cv_ref = "PRIDE";
+    $cv_acc = "0000067";
     $writer->emptyTag("cvParam",
-      "cvRef"=>'MS',
-      "accession"=>"MS:$cv_acc",
-      "name"=>"Refline",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
+      "name"=>"Reference reporting this experiment",
       "value"=>"$refline",
     );
   $writer->endTag("Publication");
 } elsif ($pub_status eq 'unpublished') {
   $writer->startTag("Publication", "id"=>"unpublished01");
-    $cv_acc = 1000000;  #need
+    $cv_ref = "PRIDE";
+    $cv_acc = '0000412';
     $writer->emptyTag("cvParam",
-      "cvRef"=>'MS',
-      "accession"=>"MS:$cv_acc",
-      "name"=>"unpublished data",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
+      "name"=>"Dataset with no associated published manuscript",
     );
   $writer->endTag("Publication");
 } else {
@@ -477,18 +529,20 @@ if ($pub_status eq 'submitted') {
     my $pub_abstract = $pub_aref->[11];
     my $refline = "$author_list, $title, $journal_name $published_year $volume_number($issue_number):$page_numbers";
     $writer->startTag("Publication", "id"=>"PMID$pubmed_id");
+    $cv_ref = "MS";
       $cv_acc = 1000879;
       $writer->emptyTag("cvParam",
-	"cvRef"=>'MS',
-	"accession"=>"MS:$cv_acc",
+	"cvRef"=>"$cv_ref",
+	"accession"=>"${cv_ref}:$cv_acc",
 	"name"=>"PubMed identifier",
         "value"=>$pubmed_id,
       );
-    $cv_acc = 1000000;  #need
+    $cv_ref = "PRIDE";
+    $cv_acc = "0000067";
     $writer->emptyTag("cvParam",
-      "cvRef"=>'MS',
-      "accession"=>"MS:$cv_acc",
-      "name"=>"Refline",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
+      "name"=>"Reference reporting this experiment",
       "value"=>"$refline",
     );
     $writer->endTag("Publication");
@@ -500,19 +554,20 @@ my @keywords = @curator_keywords, @pub_keywords;
 if (scalar @keywords) {
   $writer->startTag("KeywordList");
   for my $keyword (@curator_keywords) {
-    $cv_acc = 1000000;  #need
+    $cv_ref = "MS";
+    $cv_acc = 1001926;
     $writer->emptyTag("cvParam",
-      "cvRef"=>'MS',
-      "accession"=>"MS:$cv_acc",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
       "name"=>"curator keyword",
       "value"=>"$keyword",
     );
   }
   for my $keyword (@pub_keywords) {
-    $cv_acc = 1000000;  #need
+    $cv_acc = 1001924;
     $writer->emptyTag("cvParam",
-      "cvRef"=>'MS',
-      "accession"=>"MS:$cv_acc",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
       "name"=>"journal article keyword",
       "value"=>"$keyword",
     );
@@ -522,19 +577,20 @@ if (scalar @keywords) {
 
 $writer->startTag("FullDatasetLinkList");
   $writer->startTag("FullDatasetLink");
-    $cv_acc = 1000000;  #need
+    $cv_ref = "MS";
+    $cv_acc = 1000000;  #need; not found
     $writer->emptyTag("cvParam",
-      "cvRef"=>'MS',
-      "accession"=>"MS:$cv_acc",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
       "name"=>"PeptideAtlas dataset URI",
       "value"=>"http://www.PeptideAtlas.org/PASS/$datasetIdentifier",
     );
   $writer->endTag("FullDatasetLink");
   $writer->startTag("FullDatasetLink");
-    $cv_acc = 1000000;  #need
+    $cv_acc = 1000000;  #need; not found in OLS
     $writer->emptyTag("cvParam",
-      "cvRef"=>'MS',
-      "accession"=>"MS:$cv_acc",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
       "name"=>"PASSEL transition group browser URI",
       "value"=>"https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetSELTransitions?row_limit=5000&SEL_experiments=$expt_id&QUERY_NAME=AT_GetSELTransitions&action=QUERY&uploaded_file_not_saved=1&apply_action=QUERY",
     );
