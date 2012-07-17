@@ -1343,7 +1343,15 @@ function style_metaData(d,userT){
 
     details += common.checkIfExists(data.counts)? "<h3>Statistics</h3><div id='box'><p>"+common.print_r(data.counts,{})+"</div>" : '';									 
     //			details += common.checkIfExists(data.cite)? "<h3>Publication</h3><div id='box'><p>"+common.print_r(data.cite,{})+"</div>" : '';									 
-    details += common.checkIfExists(data.publication)? "<h3>Publication</h3><div id='box'><p>"+common.publication_render(data.publication)+"</div>" : '';									 
+    if( common.checkIfExists(data.publication) ) {
+      if (common.checkIfExists(data.pubmed_ids)) {
+	var pubmed_url = "http://www.ncbi.nlm.nih.gov/pubmed/" + data.pubmed_ids.join(',');
+	details += "<h3>Publication</h3><div id='box'><p>"+'<a href="'+ pubmed_url +'">'+common.publication_render(data.publication)+'</a></div>';
+      } else {
+	details += "<h3>Publication</h3><div id='box'><p>"+common.publication_render(data.publication)+"</div>";
+      } 
+    }
+
     details += common.checkIfExists(data.abstract)?  "<h3>Abstract</h3><div id='box'><p>"+common.print_r(data.abstract,{})+"</div>" : '';									 
     //details += common.dateHTMLRenderer(releaseDate,depositDate,metadataUpdateDate,dataDate);		
     //			details += common.dateHTMLRenderer(releaseDate,depositDate,dataDate);
