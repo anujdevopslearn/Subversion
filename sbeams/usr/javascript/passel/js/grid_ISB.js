@@ -1348,11 +1348,11 @@ function style_metaData(d,userT){
     //details += common.dateHTMLRenderer(releaseDate,depositDate,metadataUpdateDate,dataDate);		
     //			details += common.dateHTMLRenderer(releaseDate,depositDate,dataDate);
     //details += common.checkIfExists(data.contact)? "<h3>Contact</h3><div id='box'>"+common.contact_renderer(data.contact)+"</div>" : '';
-    if( common.checkIfExists(data.pubmed_ids) ) {
-      details += '<div id="citations_'+acc+'"></div>'+getPubmedCitation(data.pubmed_ids,acc);
-    }else if( common.checkIfExists(data.link) ){
-      details += '<h3><b>Publications</h3><div id="box"><a href="'+data.link+'">'+data.author+'</a></div>';
-    }
+    // if( common.checkIfExists(data.pubmed_ids) ) {
+      // details += '<div id="citations_'+acc+'"></div>'+getPubmedCitation(data.pubmed_ids,acc);
+    // }else if( common.checkIfExists(data.link) ){
+      // details += '<h3><b>Publications</h3><div id="box"><a href="'+data.link+'">'+data.author+'</a></div>';
+    // }
     details += common.checkIfExists(data.summary)? "<h3>Summary</h3><div id='box'>"+data.summary+"</div>" : '';
 
     details += common.checkIfExists(data.preparation)? "<h3>Preparation</h3><div id='box'>"+common.print_r(data.preparation,{})+"</div>" : '';				
