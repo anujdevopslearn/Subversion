@@ -390,7 +390,7 @@ sub handle_request {
      }
 
 
-     my ($date) = `date '+%F'`;
+     my ($date) = `date '+%F %T'`;
      chomp($date);
      my $sql = qq~
         SELECT datasetIdentifier,datasetTag,firstName+' '+lastName+' ('+emailAddress+')',publicReleaseDate,datasetTitle
