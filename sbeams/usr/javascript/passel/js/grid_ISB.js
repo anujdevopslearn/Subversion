@@ -1338,8 +1338,8 @@ function style_metaData(d,userT){
 
      */
     details += common.checkIfExists(data.datasetIdentifier)? '<h3><a href="http://www.peptideatlas.org/PASS/'+data.datasetIdentifier+'">Download raw data and supporting files</a></h3>' : '';				
-    details += common.checkIfExists(data.description)? "<h3>Description</h3><div id='box'>"+common.print_array(data.description)+"</div>" : '';	
-    details += common.checkIfExists(data.contact)? "<h3>Comment</h3><div id='box'>"+data.comment+"</div>" : '';
+    details += common.checkIfExists(data.comment)? "<h3>Experiment Description</h3><div id='box'>"+data.comment+"</div>" : '';
+    details += common.checkIfExists(data.description)? "<h3>Sample Description</h3><div id='box'>"+data.description+"</div>" : '';	
 
     details += common.checkIfExists(data.counts)? "<h3>Statistics</h3><div id='box'><p>"+common.print_r(data.counts,{})+"</div>" : '';									 
     //			details += common.checkIfExists(data.cite)? "<h3>Publication</h3><div id='box'><p>"+common.print_r(data.cite,{})+"</div>" : '';									 
