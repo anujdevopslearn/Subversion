@@ -109,7 +109,6 @@ if ( @submitter_ids >1 ){
 my ($datasetIdentifier,$success) = addDataset ('submitter_id' => $submitter_id, 'parameters' => \%OPTIONS); 
 
 #my ($datasetIdentifier,$datasetPassword, $password,$email )=qw(PASS00084 SL2975ye QJ7855eu geiger@biochem.mpg.de); 
-#my $link = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/PASS_View?identifier=$datasetIdentifier\n";
 #my $success = 1;
 
 my $str = '';
@@ -133,7 +132,7 @@ my $emai_content = qq~
 	$str	 
 
 	You can accession dataset from here: 
-	$link
+	http://www.peptideatlas.org/PASS/$datasetIdentifier
 ~;
 
 #print "$emai_content\n";
@@ -150,7 +149,7 @@ if ($success and ! $TESTONLY){
   );
   @bccRecipients = ();
 
- SBEAMS::Connection::Utilities::sendEmail(
+  SBEAMS::Connection::Utilities::sendEmail(
     toRecipients=>\@toRecipients,
     ccRecipients=>\@ccRecipients,
     bccRecipients=>\@bccRecipients,
