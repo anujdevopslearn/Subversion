@@ -114,25 +114,30 @@ my ($datasetIdentifier,$success) = addDataset ('submitter_id' => $submitter_id, 
 my $str = '';
 if($password ne ''){ ## we generate the account
   $str = qq~
-	We have created an account for you:
+	We have also created a PeptideAtlas PASS login which you can use to submit
+	additional data to PeptideAtlas in the future:
 	Username: $email
 	Password: $password
+
   ~;
 }
 my $emai_content = qq~
 	Dear $fname $lname,
 
-	Thank you for sending your raw data to PeptideAtlas. We appreciate your willingness to make your data
-	broadly available. Since your submission to Tranche appears to be incomplete and we have received
-	further interest in your dataset, we are depositing your complete dataset to the PeptideAtlas
-	Submission System on your behalf. No action is required on your part. If you receive future emails
-	about problems acquiring the dataset from Tranche, you may direct those interested parties to the
-	PeptideAtlas PASS URL below.
+	Thank you for sending your raw data to PeptideAtlas after we were unable
+	to retrieve it from Tranche. We appreciate your willingness to make your
+	data broadly available.
+	
+	Since others are also likely to have difficulty obtaining your data from
+	Tranche, we are depositing your complete dataset to the PeptideAtlas
+	Submission System (PASS) on your behalf. No action is required on
+	your part. Your data is now available via the following PeptideAtlas PASS URL,
+	which you may pass along to any interested party:
+	http://www.peptideatlas.org/PASS/$datasetIdentifier
 
 	$str	 
-
-	You can accession dataset from here: 
-	http://www.peptideatlas.org/PASS/$datasetIdentifier
+	Sincerely,
+	The PeptideAtlas Team
 ~;
 
 #print "$emai_content\n";
