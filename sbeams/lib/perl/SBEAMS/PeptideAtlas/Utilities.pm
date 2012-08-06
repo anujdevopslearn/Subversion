@@ -1456,10 +1456,10 @@ sub get_qqq_dynamic_transition_list {
   my $tsv = shift || return '';
 
   my $method = qq~Dynamic MRM
-Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Fragmentor	Collision Energy	Cell Accelerator Voltage	Ret Time (min)	Delta Ret Time	Polarity	Ion type  EstimatedRT
+Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Fragmentor	Collision Energy	Cell Accelerator Voltage	Ret Time (min)	Delta Ret Time	Polarity	Ion type	EstimatedRT
 ~;
 
-	my $u = 'Unit';
+ my $u = 'Unit';
 	my $p = 'Positive';
 
   my %ce;
@@ -1474,6 +1474,8 @@ Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Fragmentor	Collisi
     my $q3 = $line[8];
     my $q3c = $line[9];
     my $lbl = $line[10];
+		
+		# Ion for
     my $ion = $lbl . '-' . $q3c;
 
 	  # Changed DSC 2012-05-15 - should use column names!!!
@@ -1520,7 +1522,8 @@ sub get_qtrap_mrmmsms_method {
     my $q3 = $line[8];
     my $q3c = $line[9];
     my $lbl = $line[10];
-    my $label = $seq . '.' . $acc . '.' . $q3c . $lbl . $q3; 
+    my $label = $seq . '.' . $acc . '.' . $q1c . $lbl . $q3; 
+		$label .= '-' . $q3c if $q3c > 1;
 
     my $ce_key = $seq . $q1c;
     $ce{$ce_key} ||= $self->calculate_abisciex_ce( mz => $q1, charge => $q1c );
@@ -1560,7 +1563,8 @@ sub get_qtrap_mrm_method {
     my $ce_key = $seq . $q1c;
     $ce{$ce_key} ||= $self->calculate_abisciex_ce( mz => $q1, charge => $q1c );
 
-    my $label = $seq . '.' . $acc . '.' . $q3c . $lbl; 
+    my $label = $seq . '.' . $acc . '.' . $q1c . $lbl; 
+		$label .= '-' . $q3c if $q3c > 1;
     $method .= join($sep, $q1, $q3, $rt, $label, $ce{$ce_key} ) . "\r\n";
   }
   return $method;
