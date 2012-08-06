@@ -624,10 +624,17 @@ sub getConsensusLinks {
   }
 
   if ( $args{has_ce} ) {
-    $libmap{320} = 'low';
-    $libmap{321} = 'mlow';
-    $libmap{323} = 'mhigh';
-    $libmap{324} = 'high';
+    if ( $libmap{333} ) {
+      $libmap{336} = 'low';
+      $libmap{337} = 'mlow';
+      $libmap{338} = 'mhigh';
+      $libmap{339} = 'high';
+    } else {
+      $libmap{320} = 'low';
+      $libmap{321} = 'mlow';
+      $libmap{323} = 'mhigh';
+      $libmap{324} = 'high';
+    }
   }
 
 	my $libs = join( ',', keys( %libmap ));
