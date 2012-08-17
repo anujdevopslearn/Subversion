@@ -2,59 +2,41 @@
 
 ###############################################################################
 # Program     : PASS_Summary
-# $Id: GetPeptide 6798 2011-07-05 21:35:27Z tfarrah $
+# Author      : Zhi Sun
+# Description : This script shows the PeptideAtlas passel_submission page
 #
-# Description : PeptideAtlas Submission System main summary page
-#
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2011 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
 # LICENSE file distributed with this software.
 #
 ###############################################################################
-
-
-###############################################################################
-# Set up all needed modules and objects
-###############################################################################
 use strict;
-use Getopt::Long;
+use CGI::Carp qw(fatalsToBrowser croak);
 use FindBin;
+use Getopt::Long;
 
-use POSIX qw(ceil);
-
+use POSIX qw(ceil floor);
 use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
-##use CGI::Carp qw(fatalsToBrowser croak);
+
 
 use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
-use SBEAMS::Connection::Tables;
-use SBEAMS::Connection::TabMenu;
+use SBEAMS::Connection::Authenticator;
 
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
-use SBEAMS::PeptideAtlas::ConsensusSpectrum;
-use SBEAMS::PeptideAtlas::ModificationHelper;
-use SBEAMS::PeptideAtlas::Utilities;
-
-use SBEAMS::Proteomics::Tables;
 
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
-my $modification_helper = new SBEAMS::PeptideAtlas::ModificationHelper();
-
-my $current_page = { organism => '', atlas_build_id => '' };
-
-#$q = new CGI;
-
 
 ###############################################################################
 # Set program name and usage banner for command like use
@@ -88,19 +70,17 @@ if ($DEBUG) {
   print "  DEBUG = $DEBUG\n";
 }
 
-     my @datasetTypes = ( 'MSMS' => 'MS/MS dataset',
-			  'SRM' => 'SRM dataset',
-			  'MS1' => 'MS1 dataset',
-			  'QC' => 'Ongoing QC dataset',
-			  'Other' => 'Other',
-			);
-
+my @datasetTypes = ( 'MSMS' => 'MS/MS dataset',
+	'SRM' => 'SRM dataset',
+	'MS1' => 'MS1 dataset',
+	'QC' => 'Ongoing QC dataset',
+	'Other' => 'Other',
+);
 ###############################################################################
 # Set Global Variables and execute main()
 ###############################################################################
 main();
 exit(0);
-
 
 ###############################################################################
 # Main Program:
@@ -108,7 +88,11 @@ exit(0);
 # Call $sbeams->Authenticate() and exit if it fails or continue if it works.
 ###############################################################################
 sub main {
-
+  exit unless ($current_username = $sbeams->Authenticate(
+      permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+      'PeptideAtlas_readonly', 'PeptideAtlas_exec'],
+      allow_anonymous_access=>1,
+  ));
     #### Read in the default input parameters
     my %parameters;
     my $n_params_found = $sbeams->parse_input_parameters(
@@ -125,17 +109,16 @@ sub main {
     ));
 
     #### Decide what action to take based on information so far
-    if ($parameters{action} eq "???") 
+    if ($parameters{action} eq "???")
     {
       # Some action
-    } else 
-    {
+    } else{
         my $project_id = $sbeamsMOD->getProjectID(
             atlas_build_id => $parameters{atlas_build_id}
         );
 
         $sbeamsMOD->display_page_header(project_id => $project_id,
-				                                init_tooltip => 1);
+                                        init_tooltip => 1);
 
         handle_request(ref_parameters=>\%parameters);
 
@@ -144,8 +127,6 @@ sub main {
     $sbeams->profile_sql( list => 0 );
 
 } # end main
-
-
 ###############################################################################
 # Handle Request
 ###############################################################################
@@ -172,652 +153,90 @@ sub handle_request {
 
   print $tabMenu->asHTML() . '<BR>' if ($sbeams->output_mode() eq 'html');
 
-
-  #### Define some generic variables
-  my ($i,$element,$key,$value,$line,$result,$sql);
-
-  #### Define some variables for a query and resultset
-  my %resultset = ();
-  my $resultset_ref = \%resultset;
-  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
-
-
-  #### Read in the standard form values
-  my $action  = $parameters{'action'} || $parameters{'apply_action'};
-
-  my $TABLE_NAME = $parameters{'QUERY_NAME'};
-
-  #### Set some specific settings for this program
-  my $CATEGORY="PASS_View";
-  my $PROGRAM_FILE_NAME = $PROG_NAME;
-  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
-  my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
-
-
-  #### Check the session cookie for a PASS_emailaddress
-  my $cachedEmailAddress = $sbeams->getSessionAttribute( key => 'PASS_emailAddress' );
-  my $cachedPassword = $sbeams->getSessionAttribute( key => 'PASS_xx' );
-  my $emailAddress = $parameters{'emailAddress'};
-  $emailAddress = $cachedEmailAddress if (!$emailAddress && $cachedEmailAddress);
-  my $password = $parameters{'password'};
-  $password = $cachedPassword if (!$password && $cachedPassword);
-  my $firstName;
-  my $lastName;
-
-  #### Compile any error we encounter in an array
-  my @errors;
-
-
-  #### If the request was to LOGOUT, then purge everything
-  if ($action =~ /LOGOUT/i ) {
-    $sbeams->setSessionAttribute( key => 'PASS_emailAddress', value => '' );
-    $sbeams->setSessionAttribute( key => 'PASS_xx', value => ''  );
-    $emailAddress = '';
-    $password = '';
-  }
-
-
-  #### See if we're already logged in
-  my $authentication;
-  if ($emailAddress && $password) {
-    $authentication = authenticateUser(emailAddress=>$emailAddress,password=>$password);
-    if ($authentication->{result} eq 'Success') {
-      $firstName = $authentication->{firstName};
-      $lastName = $authentication->{lastName};
-    }
-  }
-
-
-  #### Check authentication parameters and warn of any problems
-  if ($action =~ /SUBMIT/i || $action =~ /LOGIN/i ) {
-    unless ($emailAddress) {
-      push(@errors,"The submitter email address is not filled in");
-    }
-    unless ($password) {
-      push(@errors,"The submitter password is not filled in");
-    }
-  }
-
-
-  #### Check authentication parameters and warn of any problems
-  if ($action =~ /LOGIN/i && ! @errors ) {
-    if ($authentication->{result} eq 'Success') {
-      $sbeams->setSessionAttribute( key => 'PASS_emailAddress', value => $emailAddress );
-      $sbeams->setSessionAttribute( key => 'PASS_xx', value => $password  );
-    } else {
-      push(@errors,@{$authentication->{errors}});
-    }
-  }
-
-  $log->debug( "end param handling " . time() );
-
-
-
-  #########################################################################
-  #### Print the form
-  if ($sbeams->output_mode() eq 'html') {
-     print "<H3>PASS Datasets Summary</H3>";
-
-     if (@errors) {
-     print "<HR>\n";
-       print "<TABLE cellpadding=\"5\"><TR><TD bgcolor=\"#ff9999\">";
-       foreach my $error ( @errors ) {
-	 print "<LI>$error\n";
-       }
-       print "</TD></TR></TABLE>\n";
-     }
-
-
-     print "<HR>\n";
-     print "<nobr>";
-     print $q->start_form(-method=>"POST",
-                          -action=>"$base_url",
-                          -name=>"MainForm",
-			 );
-
-
-     #### If a studyPassword parameter was specified, then display data for the study
-     if (defined($parameters{studyPassword})) {
-       print "<B><font color=\"red\">Study Password</B></font>";
-       print qq~<input type="password" name="studyPassword" value="$parameters{studyPassword}" size=10 maxlength=50/>~;
-       print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
-
-       print $q->submit(-name => "action",
-			-value => 'VIEW',
-			-label => 'VIEW');
-
-       print "<BR>\n";
-       print "<HR>\n";
-
-       my $sql = qq~
-        SELECT datasetIdentifier,datasetTag,publicReleaseDate,datasetTitle
-        FROM $TBAT_PASS_SUBMITTER S
-        JOIN $TBAT_PASS_DATASET D ON (D.submitter_id = S.submitter_id)
-        WHERE datasetPassword = '$parameters{studyPassword}'
-       ~;
-       my @rows = $sbeams->selectSeveralColumns($sql);
-       foreach my $row ( @rows ) {
-	 $row->[0] = qq~<a href="$CGI_BASE_DIR/PeptideAtlas/PASS_View?identifier=$row->[0]&datasetPassword=$parameters{studyPassword}">$row->[0]</a>~;
-       }
-       my @labels = qw ( identifier datasetTag releaseDate datasetTitle );
-       unshift @rows, \@labels;
-       my $HTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
-                                                      #tr_info => $tr,
-                                                        width => '600',
-                                                       align  => [qw(left left left left )],
-                                                         rows => \@rows );
-       #### Display table
-       print "<B>Study datasets:</B><BR>\n";
-       print "<TABLE WIDTH=600><BR>$HTML</TABLE>\n";
-       print "<BR>\n";
-       print "<HR>\n";
-
-       if (open(PWFILE,"$PHYSICAL_BASE_DIR/lib/conf/SBEAMSentrycodes.conf")) {
-	 while (my $line = <PWFILE>) {
-	   chomp($line);
-	   my @columns = split("\t",$line);
-	   if ($parameters{studyPassword} eq $columns[0]) {
-	     $parameters{SBEAMSentrycode} = $columns[1];
-	   }
-	 }
-	 close(PWFILE);
-       } else {
-	 #print "ERROR: Unable to open $PHYSICAL_BASE_DIR/lib/conf/SBEAMSentrycodes.conf<BR>\n";
-       }
-
-       if ($parameters{SBEAMSentrycode}) {
-	 print qq~
-<table>
-<tr><td><a href="$CGI_BASE_DIR/PeptideAtlas/GetSELExperiments?SBEAMSentrycode=$parameters{SBEAMSentrycode}"><img border="0" src="$HTML_BASE_DIR/images/PASSEL_ExpViewer_thumbnail.png"></a></td>
-<td><a href="$CGI_BASE_DIR/PeptideAtlas/GetSELExperiments?SBEAMSentrycode=$parameters{SBEAMSentrycode}"><font size="+1">Browse SRM experiments</font></a></td></tr>
-
-<tr><td><a href="$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?SBEAMSentrycode=$parameters{SBEAMSentrycode}"><img border="0" src="$HTML_BASE_DIR/images/PASSEL_TxnViewer_thumbnail.png"></a></td>
-<td><a href="$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?SBEAMSentrycode=$parameters{SBEAMSentrycode}"><font size="+1">Query SRM results</font></a></td></tr>
-</table>
-         ~;
-       }
-
-       return;
-     }
-
-
-     if ($authentication->{result} eq 'Success') {
-       print "<B><font color=\"red\">Welcome $firstName $lastName</B></font>\n";
-       print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
-       print $q->submit(-name => "action",
-			-value => 'LOGOUT',
-			-label => 'LOGOUT');
-     } else {
-
-       print "<B><font color=\"red\">Email address</B></font>\n";
-       print qq~<input type="text" name="emailAddress" value="$emailAddress" size=50 maxlength=80/>~;
-       print "&nbsp;&nbsp;&nbsp;&nbsp;\n";
-
-       print "<B><font color=\"red\">Password</B></font>";
-       print qq~<input type="text" name="password" value="$password" size=10 maxlength=50/>~;
-       print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
-
-       print $q->submit(-name => "action",
-			-value => 'LOGIN',
-			-label => 'LOGIN');
-     }
-     print "<BR>\n";
-     print "<HR>\n";
-
-     if ($authentication->{result} eq 'Success') {
-       my $sql = qq~
-        SELECT datasetIdentifier,datasetTag,datasetPassword,publicReleaseDate,datasetTitle
-        FROM $TBAT_PASS_SUBMITTER S
-        JOIN $TBAT_PASS_DATASET D ON (D.submitter_id = S.submitter_id)
-        WHERE emailAddress = '$emailAddress'
-       ~;
-       my @rows = $sbeams->selectSeveralColumns($sql);
-       foreach my $row ( @rows ) {
-	 $row->[0] = qq~<a href="http://www.peptideatlas.org/PASS/$row->[0]">$row->[0]</a>~;
-       }
-       my @labels = qw ( identifier datasetTag datasetPassword releaseDate datasetTitle );
-       unshift @rows, \@labels;
-       my $HTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
-                                                      #tr_info => $tr,
-                                                        width => '600',
-                                                       align  => [qw(left left left left left )],
-                                                         rows => \@rows );
-       #### Display table
-       print "<B>Your datasets:</B><BR>\n";
-       print "<TABLE WIDTH=600><BR>$HTML</TABLE>\n";
-       print "<BR>\n";
-       print "<HR>\n";
-     }
-
-
-     my ($date) = `date '+%F %T'`;
-     chomp($date);
-     my $sql = qq~
-        SELECT datasetIdentifier,datasetTag,firstName+' '+lastName+' ('+emailAddress+')',publicReleaseDate,datasetTitle
-        FROM $TBAT_PASS_SUBMITTER S
-        JOIN $TBAT_PASS_DATASET D ON (D.submitter_id = S.submitter_id)
-        WHERE publicReleaseDate < '$date'
-     ~;
-     my @rows = $sbeams->selectSeveralColumns($sql);
-     foreach my $row ( @rows ) {
-       $row->[0] = qq~<a href="http://www.peptideatlas.org/PASS/$row->[0]">$row->[0]</a>~;
-     }
-     my @labels = qw ( identifier datasetTag submitter releaseDate datasetTitle );
-     unshift @rows, \@labels;
-     my $HTML .= $sbeamsMOD->encodeSectionTable( header => 1, 
-                                                      #tr_info => $tr,
-                                                        width => '600',
-                                                       align  => [qw(left left left left left)],
-                                                         rows => \@rows );
-     #### Display table
-     print "<B>Public datasets:</B><BR>\n";
-     print "<TABLE WIDTH=600><BR>$HTML</TABLE>\n";
-
-     print "<BR>\n";
-     print "<HR>\n";
-
-  }
-
-} # end handle_request
-
-
-
-#######################################################################
-# authenticateUser
-#######################################################################
-sub authenticateUser {
-  my %args = @_;
-  my $SUB_NAME = 'authenticateUser';
-
-  #### Decode the argument list
-  my $emailAddress = $args{'emailAddress'} || die "[$SUB_NAME] ERROR:emailAddress  not passed";
-  my $password = $args{'password'} || die "[$SUB_NAME] ERROR:password  not passed";
-
-  my $response;
-
-  my $sql = qq~
-        SELECT submitter_id,firstName,lastName,password
-        FROM $TBAT_PASS_SUBMITTER
-        WHERE emailAddress = '$emailAddress'
-    ~;
-
-    my @rows = $sbeams->selectSeveralColumns($sql);
-    if ( @rows ) {
-      if (scalar(@rows) == 1) {
-	my $databasePassword = $rows[0]->[3];
-	if ($password eq $databasePassword) {
-	  $response->{result} = 'Success';
-	  $response->{firstName} = $rows[0]->[1];
-	  $response->{lastName} = $rows[0]->[2];
-	  $response->{submitter_id} = $rows[0]->[0];
-	} else {
-	  $response->{result} = 'IncorrectPassword';
-	  push(@{$response->{errors}},'Incorrect password for this email address');
-	}
-
-      } else {
-	die("ERROR: Too many rows returned for email address '$emailAddress'");
-      }
-
-    } else {
-      $response->{result} = 'NoSuchUser';
-      push(@{$response->{errors}},"There is not any user registered to '$emailAddress'");
-    }
-
-    return $response;
-}
-
-
-#######################################################################
-# registerUser
-#######################################################################
-sub registerUser {
-  my %args = @_;
-  my $SUB_NAME = 'registerUser';
-
-  #### Decode the argument list
-  my $emailAddress = $args{'emailAddress'} || die "[$SUB_NAME] ERROR: emailAddress  not passed";
-  my $password = $args{'password'} || die "[$SUB_NAME] ERROR: password not passed";
-  my $firstName = $args{'firstName'} || die "[$SUB_NAME] ERROR: firstName not passed";
-  my $lastName = $args{'lastName'} || die "[$SUB_NAME] ERROR: lastName not passed";
-
-  my $response;
-  my $readyToRegister = 0;
-
-  my $authentication = authenticateUser(emailAddress=>$emailAddress,password=>$password);
-  if ($authentication->{result} eq 'Success') {
-    $response->{result} = 'UserAlreadyExists';
-    push(@{$response->{errors}},"This user '$emailAddress' already exists. Login instead.");
-
-  } elsif ($authentication->{result} eq 'IncorrectPassword') {
-    $response->{result} = 'UserAlreadyExists';
-    push(@{$response->{errors}},"This user '$emailAddress' already exists, although the password provided is incorrect.");
-
-  } elsif ($authentication->{result} eq 'NoSuchUser') {
-    $readyToRegister = 1;
-
-  } else {
-    $response->{result} = 'UnknownError';
-    push(@{$response->{errors}},"Unknown error 456. Please report.");
-  }
-
-
-  my $PK;
-  if ($readyToRegister) {
-    my %rowdata = (
-      emailAddress => $emailAddress,
-      password => $password,
-      firstName => $firstName,
-      lastName => $lastName,
-      emailReminders => 'YES',
-      emailPasswords => 'YES',
-    );
-
-    $PK = $sbeams->updateOrInsertRow(
-					insert => 1,
-					table_name => $TBAT_PASS_SUBMITTER,
-					rowdata_ref => \%rowdata,
-					PK => 'submitter_id',
-					return_PK => 1,
-					add_audit_parameters => 1
-				       );
-
-  }
-
-  if ($PK && $PK > 0) {
-    $response->{result} = 'Success';
-  } else {
-    $response->{result} = 'Failed';
-  }
-
-  return $response;
+  my $html = qq~
+		</head>
+		<body class="datagrid">
+		<br>
+		<script type='text/javascript' src="$CGI_BASE_DIR/../usr/javascript/passel/js/portal.js"></script>
+		<script type="text/javascript" src="$CGI_BASE_DIR/../usr/javascript/passel/js/jig.min.js"></script> 
+
+		<link rel="stylesheet" type="text/css" href="$CGI_BASE_DIR/../usr/javascript/passel/css/ext-all.css" />
+		<script type="text/javascript" src="$CGI_BASE_DIR/../usr/javascript/passel/js/ext-big.js"></script>
+		<script type="text/javascript" src="$CGI_BASE_DIR/../usr/javascript/passel_submission/js/grid_passel.js"></script>
+		<script type="text/javascript">
+							var browseAttributes = {
+							sample: '',
+							}
+		</script>
+
+		<B><font color="red">Email address</B></font>
+		 <input type="text" id="email" value="" size=50 maxlength=80/>
+		 &nbsp;&nbsp;&nbsp;&nbsp;
+
+		 <B><font color="red">Password</B></font>
+		 <input type="text" id="password" value="" size=10 maxlength=50/>
+		 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+		<input type="button" id="login" value="LOGIN" />
+    <p id="msg" style="width: 430px; padding: 5"></p>
+		<BR>
+		<HR>
+		<br>   
+
+		<form style="width: 1000px;overflow:auto;padding: 5px;-ro-width: auto;" enctype="application/x-www-form-urlencoded" action="/" name="EntrezForm" method="post" onsubmit="return false;" id="EntrezForm">
+		<div>
+		</div>
+		<div class="search">
+		<span>&nbsp;&nbsp;Search:&nbsp;</span>
+		<select id="selectedTitle" name="selectedTitle" style="font-size:92%">
+		<option value="all" selected="selected">&nbsp;All </option>
+		<option value="id" >&nbsp;Identifier</option>
+		<option value="title" >&nbsp;Dataset Title</option>
+		<option value="tag" >&nbsp;Dataset Tag</option>
+    <option value="type" >&nbsp;Dataset Type</option>
+		<option value="submitter" >&nbsp;Submitter</option>
+		<option value="email" >&nbsp;Email</option>
+		<!--<option value="date" >&nbsp;Release Date</option>-->
+		</select>
+		<span>for</span>
+		<input type="text" size="38" id="searchq" name="searchq"  >
+		<input type="button" id="searchbtn" name="searchbtn" class="sarchBtnOK" value="Search" >
+
+		<span>&nbsp;&nbsp;Select:&nbsp;</span>
+		<select id="selectFileType" name="selectFileType" style="font-size:92%">
+		<option value="all" selected="selected">&nbsp;All </option>
+		<option value="raw" >&nbsp;RAW</option>
+		<option value="mzXML/mzML" >&nbsp;mzXML/mzML</option>
+		<option value="description" >&nbsp;Description File</option>
+		</select>
+		<span>to</span>
+		<input type="button" id="downloadbtn" name="downloadbtn" value="Get Download List">
+		&nbsp;&nbsp; 
+		<input type="button" id="downloadbtn2" name="downloadbtn2" value="Download Table">
+
+		</div>
+
+		<table cellpadding="0" width="100%" cellspacing="0" id="br1owseWrapper">                    
+		<tr>
+			<td valign="top">
+			 <div class="datagrid"> 
+				<div id="sample-layout"></div>
+				<div id="tabsPanel"></div>
+				<div id="center"></div>
+				<div id="samplestudyWrapper">
+				 <div id="browse"> 
+					<div id="toolbar"></div>
+					<div id="prot-grid"></div>
+				 </div>  <!--"browse"  -->
+				</div>   <!-- "samplestudyWrapper" -->
+				</div> <!-- "datagrid" -->
+			</td>
+			</tr>
+		</table>
+		</form>
+		</body>
+ ~;
+
+  print $html;
 
 }
 
-
-#######################################################################
-# validateDatasetAnnotations
-#######################################################################
-sub validateDatasetAnnotations {
-  my %args = @_;
-  my $SUB_NAME = 'validateDatasetAnnotations';
-
-  #### Decode the argument list
-  my $formParameters = $args{'formParameters'} || die "[$SUB_NAME] ERROR: formParameters not passed";
-
-  my $response;
-  my $test;
-  $response->{result} = 'Success';
-
-  $test = $formParameters->{datasetType};
-  my $result = 0;
-  for (my $i=0; $i < scalar(@datasetTypes); $i+=2) {
-    my ($key,$label) = @datasetTypes[$i..$i+1];
-    $result = 1 if ($test eq $key);
-  }
-  unless ($result) {
-    $response->{result} = 'Failed';
-    push(@{$response->{errors}},"Dataset type is not a legal option");
-  }
-
-
-  $test = $formParameters->{datasetTag};
-  unless (defined($test) && $test =~ /^[A-Za-z0-9\_\-]+$/ && length($test) > 5 && length($test) <= 20) {
-    $response->{result} = 'Failed';
-    push(@{$response->{errors}},"Dataset Tag must be an alphanumeric string with length more than 5 up to 20");
-  }
-
-  $test = $formParameters->{datasetTitle};
-  unless (defined($test) && length($test) > 20 && length($test) <= 200) {
-    $response->{result} = 'Failed';
-    push(@{$response->{errors}},"Dataset Title must be a string with length more than 20 up to 200");
-  }
-
-  $test = $formParameters->{publicReleaseDate};
-  unless (defined($test) && $test =~ /^(\d\d\d\d)\-(\d\d)\-(\d\d)$/ && $1>=2000 && $2>0 && $2<12 && $3>0 && $3<32) {
-    $response->{result} = 'Failed';
-    push(@{$response->{errors}},"Public release data must be a valid date of the form YYYY-MM-DD like 2011-10-25");
-  }
-
-  $test = $formParameters->{contributors};
-  unless (defined($test) && length($test) > 10 && length($test) <= 10000) {
-    $response->{result} = 'Failed';
-    push(@{$response->{errors}},"Contributors must be a string with length more than 10 up to 10000");
-  }
-
-  $test = $formParameters->{publication};
-  unless (defined($test) && length($test) > 5 && length($test) <= 1000) {
-    $response->{result} = 'Failed';
-    push(@{$response->{errors}},"Publication must be a string with length more than 5 up to 1000");
-  }
-
-  $test = $formParameters->{instruments};
-  unless (defined($test) && length($test) > 5 && length($test) <= 1000) {
-    $response->{result} = 'Failed';
-    push(@{$response->{errors}},"Instruments must be a string with length more than 5 up to 1000");
-  }
-
-  $test = $formParameters->{species};
-  unless (defined($test) && length($test) > 3 && length($test) <= 1000) {
-    $response->{result} = 'Failed';
-    push(@{$response->{errors}},"Species must be a string with length more than 3 up to 1000");
-  }
-
-  $test = $formParameters->{massModifications};
-  unless (defined($test) && length($test) > 3 && length($test) <= 1000) {
-    $response->{result} = 'Failed';
-    push(@{$response->{errors}},"Mass modidications must be a string with length more than 3 up to 1000");
-  }
-
-
-  return $response;
-
-}
-
-
-#######################################################################
-# getPASSMetaData
-#######################################################################
-sub getPASSMetaData {
-  my %args = @_;
-  my $SUB_NAME = 'getPASSMetaData';
-
-  #### Decode the argument list
-  my $identifier = $args{'identifier'} || die "[$SUB_NAME] ERROR: identifier not passed";
-
-  my $response;
-
-  my $sql = qq~
-    SELECT datasetIdentifier,submitter_id,datasetType,datasetPassword,datasetTag,datasetTitle,publicReleaseDate,finalizedDate
-      FROM $TBAT_PASS_DATASET
-     WHERE datasetIdentifier = '$identifier'
-  ~;
-  my @rows = $sbeams->selectSeveralColumns($sql);
-  if (@rows) {
-    my ($datasetIdentifier,$submitter_id,$datasetType,$datasetPassword,$datasetTag,$datasetTitle,$publicReleaseDate,$finalizedDate) = 
-      @{$rows[0]};
-
-    my $sql2 = qq~
-      SELECT firstName,lastName,emailAddress
-        FROM $TBAT_PASS_SUBMITTER
-       WHERE submitter_id = '$submitter_id'
-    ~;
-
-    my @rows2 = $sbeams->selectSeveralColumns($sql2);
-    my $submitterStr = '';
-    if (@rows2) {
-      my ($firstName,$lastName,$emailAddress) = @{$rows2[0]};
-      $submitterStr = "$firstName $lastName &lt;$emailAddress&gt;";
-      $response->{emailAddress} = $emailAddress;
-      $response->{submitterStr} = $submitterStr;
-    } else {
-      $response->{results} = 'Failed';
-      push(@{$response->{errors}},"ERROR: Query<PRE>\n$sql2</PRE> failed to return any rows.<BR>");
-    }
-
-    $response->{datasetIdentifier} = $datasetIdentifier;
-    $response->{datasetType} = $datasetType;
-    $response->{submitter} = $submitterStr;
-    $response->{datasetPassword} = $datasetPassword;
-    $response->{datasetTag} = $datasetTag;
-    $response->{datasetTitle} = $datasetTitle;
-    $response->{publicReleaseDate} = $publicReleaseDate;
-    $response->{finalizedDate} = $finalizedDate;
-
-  } else {
-    print "ERROR: Query<PRE>\n$sql</PRE> failed to return any rows.<BR>\n";
-  }
-
-  my $PASS_ACCOUNTS_BASE = '/prometheus/u1/home';
-  unless ( -d "$PASS_ACCOUNTS_BASE/${identifier}" ) {
-    $PASS_ACCOUNTS_BASE = '/regis/passdata/home';
-  }
-
-  my $infile = "$PASS_ACCOUNTS_BASE/${identifier}/${identifier}_DESCRIPTION.txt";
-  unless (open(INFILE,$infile)) {
-    print "ERROR: Unable to read description file for this submission: '$infile'";
-    $response->{result} = 'Success';
-    return $response;
-  }
-
-  my ($key,$value);
-  while (my $line = <INFILE>) {
-    $line =~ s/[\r\n]//g;
-    if ($line =~ /^\s*(\S+):\s*(.*)$/) {
-      $key = $1;
-      $value = $2;
-      $response->{$key} = $value;
-    } else {
-      $response->{$key} .= "<BR><B>Unparsable line: </B>$line\n";
-    }
-  }
-
-  close(INFILE);
-
-  $response->{result} = 'Success';
-  return $response;
-
-}
-
-
-#######################################################################
-# DisplayPASSMetaData
-#######################################################################
-sub DisplayPASSMetaData {
-  my %args = @_;
-  my $SUB_NAME = 'DisplayPASSMetaData';
-
-  #### Decode the argument list
-  my $identifier = $args{'identifier'} || die "[$SUB_NAME] ERROR: identifier not passed";
-
-  my $response;
-
-  my $result = getPASSMetaData(identifier=>$identifier);
-
-  if ($result->{result} eq 'Success') {
-    print "<B><font color=red>datasetIdentifier:</font></B> $result->{datasetIdentifier}<BR>\n";
-    print "<B><font color=red>datasetType:</font></B> $result->{datasetType}<BR>\n";
-    print "<B><font color=red>submitter:</font></B> $result->{submitterStr}<BR>\n";
-    print "<B><font color=red>datasetPassword:</font></B> $result->{datasetPassword}<BR>\n";
-    print "<B><font color=red>datasetTag:</font></B> $result->{datasetTag}<BR>\n";
-    print "<B><font color=red>datasetTitle:</font></B> $result->{datasetTitle}<BR>\n";
-    print "<B><font color=red>publicReleaseDate:</font></B> $result->{publicReleaseDate}<BR>\n";
-    print "<B><font color=red>finalizedDate:</font></B> $result->{finalizedDate}<BR>\n";
-
-    print "<B><font color=red>summary:</font></B> $result->{summary}<BR>\n";
-    print "<B><font color=red>contributors:</font></B> $result->{contributors}<BR>\n";
-    print "<B><font color=red>publication:</font></B> $result->{publication}<BR>\n";
-    print "<B><font color=red>growth:</font></B> $result->{growth}<BR>\n";
-    print "<B><font color=red>treatment:</font></B> $result->{treatment}<BR>\n";
-    print "<B><font color=red>extraction:</font></B> $result->{extraction}<BR>\n";
-    print "<B><font color=red>separation:</font></B> $result->{separation}<BR>\n";
-    print "<B><font color=red>digestion:</font></B> $result->{digestion}<BR>\n";
-    print "<B><font color=red>acquisition:</font></B> $result->{acquisition}<BR>\n";
-    print "<B><font color=red>informatics:</font></B> $result->{informatics}<BR>\n";
-    print "<B><font color=red>instruments:</font></B> $result->{instruments}<BR>\n";
-    print "<B><font color=red>species:</font></B> $result->{species}<BR>\n";
-    print "<B><font color=red>massModifications:</font></B> $result->{massModifications}<BR>\n";
-
-  } else {
-    print "ERROR: Unable to get dataset metadata.<BR>\n";
-  }
-
-
-  return $response;
-
-}
-
-
-#######################################################################
-# DisplayPASSDirListing
-#######################################################################
-sub DisplayPASSDirListing {
-  my %args = @_;
-  my $SUB_NAME = 'DisplayPASSDirListing';
-
-  #### Decode the argument list
-  my $identifier = $args{'identifier'} || die "[$SUB_NAME] ERROR: identifier not passed";
-
-  my $response;
-
-  my $PASS_ACCOUNTS_BASE = '/prometheus/u1/home';
-  unless ( -d "$PASS_ACCOUNTS_BASE/${identifier}" ) {
-    $PASS_ACCOUNTS_BASE = '/regis/passdata/home';
-  }
-
-  my @listing = `ls -lh $PASS_ACCOUNTS_BASE/$identifier/`;
-  print "<PRE>\n";
-  foreach my $line ( @listing ) {
-    chomp($line);
-    if (length($line) > 32) {
-      print substr($line,23,999)."\n";
-    }
-  }
-  print "</PRE>\n";
-
-  return $response;
-
-}
-
-#0123456789012345678901234567890123456789012345678901234567890123456789
-#-rw-r--r--  1 PASS00005 ftpusers    176 Aug 25 23:41 .bash_profile
-
-
-#######################################################################
-# finalizeDataset
-#######################################################################
-sub finalizeDataset {
-  my %args = @_;
-  my $SUB_NAME = 'finalizeDataset';
-
-  #### Decode the argument list
-  my $authentication = $args{'authentication'} || die "[$SUB_NAME] ERROR: authentication not passed";
-  my $identifier = $args{'identifier'} || die "[$SUB_NAME] ERROR: identifier not passed";
-
-  if ($identifier =~ /PASS(\d+)/) {
-    my $PK = $1;
-    my %rowdata = ( finalizedDate => 'CURRENT_TIMESTAMP' );
-    my $result = $sbeams->updateOrInsertRow(
-					  update => 1,
-					  table_name => $TBAT_PASS_DATASET,
-					  rowdata_ref => \%rowdata,
-					  PK => 'dataset_id',
-					  PK_value => $PK,
-					  #testonly => 1,
-					  #verbose => 0,
-					 );
-
-    my $PASS_FTP_AGENT_BASE = '/prometheus/u1/home/PASSftpAgent';
-
-    my $cmdfile = "$PASS_FTP_AGENT_BASE/commands.queue";
-    open(CMDFILE,">>$cmdfile") || die("ERROR: Unable to append to '$cmdfile'");
-    print CMDFILE "FinalizeDataset $identifier\n";
-    close(CMDFILE);
-
-
-  } else {
-    print "ERROR: Unable to parse identifier '$identifier'. Please report this. ERROR449<BR>\n";
-  }
-
-  return;
-}
