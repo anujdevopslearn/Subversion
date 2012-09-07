@@ -638,6 +638,9 @@ sub getConsensusLinks {
   }
 
 	my $libs = join( ',', keys( %libmap ));
+
+	return ( \%libs ) unless $libs;
+
   my $ce_sql = qq~
   SELECT modified_sequence, consensus_library_spectrum_id, charge, consensus_library_id
   FROM peptideatlas.dbo.consensus_library_spectrum 
