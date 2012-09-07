@@ -929,9 +929,8 @@ sub fetch_transitions {
 			exit;
     }
 
-    my $max_cnt = 1000;
+    my $max_peptide_cnt = 5000;
     my %peptide_hash;
-    # size constraint of 1 MB, restrict $count < $max_cnt
     if ( (-T $pepfile) && (-s $pepfile < 1000000) ) {
       my $pep;
       while ($pep = <$pepfile>) {
@@ -939,7 +938,8 @@ sub fetch_transitions {
         $pep =~ s/\s//g;
         next unless ( $pep =~ /^[A-Z]+$/ );
         $peptide_hash{$pep}++;
-        last if ( scalar(keys(%peptide_hash)) >= $max_cnt );
+        # size constraint of 1 MB, restrict $count < $max_peptidnt
+        last if ( scalar(keys(%peptide_hash)) >= $max_peptide_cnt );
       }
 
       # secondary param check block
@@ -1238,7 +1238,7 @@ sub fetch_transitions {
 #   print "<PRE>$lib_sql</PRE>\n";
 #  $log->debug( $lib_sql );
 
-  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Ion', 'Rank', 'RI', 'SSRT', 'SSRT' );
+  my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Ion', 'Rank', 'RI', 'SSRT'  );
 
 
   # Code to get only pertinent headings here...
@@ -1265,7 +1265,7 @@ sub fetch_transitions {
   }
 
 #  if ( $parameters{rt_type} && $parameters{rt_type} ne 'SSRCalc' ) {
-  if ( $parameters{rt_type} ) {
+  if ( $parameters{rt_type} && !$sbeams->isGuestUser() ) {
     $headings[14] = 'RT_Cat';
   }
 
@@ -1467,6 +1467,9 @@ sub fetch_transitions {
 # 10 fragment_ion_label
 #      my  @rowdata = ( $prot, @row[0..12,15,19] );
       my  @rowdata = ( $prot, @row[0..13] );
+      if ( $sbeams->isGuestUser() ) {
+        @rowdata = ( $prot, @row[0..12] );
+      }
       if ( $parameters{speclinks} ) {
         my $link_key = $row[1] . $row[6];
 
@@ -1528,7 +1531,19 @@ sub fetch_transitions {
         }
       }
 			$parameters{cmod_opts} ||= 'light';
-      push @peptides, \@rowdata unless $parameters{cmod_mass} && $parameters{cmod_opts} eq 'heavy_only';
+
+
+      # Here is where we push the 'light' version - unless the peptide is
+      # an observed 'heavy', in which case we are pushing the 'heavy'
+      if ( $parameters{cmod_mass} && $parameters{cmod_opts} eq 'heavy_only' ) {
+        if ( $rowdata[2] =~ /\[1[36]6\]$/ ) {
+          push @peptides, \@rowdata;
+        } else {
+        }
+      } else {
+        push @peptides, \@rowdata;
+      }
+
 
 
       # Manually build Lys/Arg SILAC code
@@ -1537,6 +1552,9 @@ sub fetch_transitions {
         my %seen;
         for my $mod ( split( ',', $parameters{cmod_mass} ) ) {
 
+          if ( $rowdata[2] =~ /\[1[36]6\]$/ ) {
+            # Already labeled, let's skip
+          }
           my ( $aa, $mass ) = $mod =~ /^(\w)(\d+)$/;
   
           if ( $aa && $mass ) {
@@ -1556,8 +1574,9 @@ sub fetch_transitions {
 
 
             my @mod_row = ( $prot, @row[0..14] );
-            # Omit double labels for now
-            next if $mod_row[2] =~ /[RK].*K$/;
+
+            # only allow modified K/R on the terminus 
+#            next if $mod_row[2] =~ /[RK].*K$/;
 
             my $delta_mass = ( $mod eq 'R10' ) ? 10.008269 :
                              ( $mod eq 'K8' ) ?  8.014199 : $mass;
