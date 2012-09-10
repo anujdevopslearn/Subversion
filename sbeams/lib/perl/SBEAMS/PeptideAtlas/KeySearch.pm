@@ -209,6 +209,7 @@ sub InsertSearchKeyEntity {
       biosequence_set_id => $biosequence_set_id,
     );
   }
+  
 
   if ($organism_name =~ /candida/i) {
     my $reference_directory = $args{reference_directory}
@@ -239,7 +240,15 @@ sub InsertSearchKeyEntity {
       biosequence_set_id => $biosequence_set_id,
     );
   }
-
+  if ($organism_name =~ /falciparum/){
+    my $reference_directory = $args{reference_directory}
+      or die("ERROR[$METHOD]: Parameter reference_directory not passed");
+    print "Loading protein keys from SBEAMS and reference files...\n";
+    $self->buildPfalciparumKeyIndex(
+      reference_directory => $reference_directory,
+      biosequence_set_id => $biosequence_set_id,
+    );
+  }
   if ($organism_name eq 'Leptospira interrogans') {
     my $reference_directory = $args{reference_directory}
       or die("ERROR[$METHOD]: Parameter reference_directory not passed");
@@ -1196,6 +1205,126 @@ sub buildHalobacteriumKeyIndex {
 
 } # end buildHalobacteriumKeyIndex
 
+###############################################################################
+# buildPfalciparumKeyIndex
+###############################################################################
+sub buildPfalciparumKeyIndex {
+  my $METHOD = 'buildPfalciparumKeyIndex';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  print "INFO[$METHOD]: Building Pfalciparum key index...\n" if ($VERBOSE);
+
+  my $biosequence_set_id  = $args{biosequence_set_id }
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+
+  my $reference_directory = $args{reference_directory}
+    or die("ERROR[$METHOD]: Parameter reference_directory not passed");
+
+  unless (-d $reference_directory) {
+    die("ERROR[$METHOD]: '$reference_directory' is not a directory");
+  }
+
+  my $organism_id = 44;
+  my %proteins;
+
+  #### Load information from gff file
+  my $reference_file = "$reference_directory/PlasmoDB-9.1_Pfalciparum3D7.gff";
+
+  #### Open file and skip header
+  open(INFILE,$reference_file)
+    or die("ERROR[$METHOD]: Unable to open file '$reference_file'");
+    while (my $line = <INFILE>) {
+      last if ($line !~ /^##/);
+    }
+
+    #### Load data
+    while (my $line = <INFILE>) {
+    next unless ($line =~ /gene.*ID.*Name/);
+    $line =~ s/[\r\n]//g;
+    my @columns = split("\t",$line);
+
+    my $mish_mash = $columns[8];
+    my @keyvaluepairs = split(";",$mish_mash);
+    
+    my ($key,$value,$note,$protein_name);
+    $mish_mash =~ /Name=([^;]+)/;
+    
+    $protein_name = $1;
+    foreach my $keyvaluepair ( @keyvaluepairs ) {
+      if ( $keyvaluepair =~ /(\w+)=(.+)/ ) {
+       	$key = $1;
+	      $value = $2;
+      } else {
+       	print "WARNING: Unable to parse '$keyvaluepair' into key=value\n";
+       	next;
+      }
+      next if($key =~ /(ID|web_id|size|Name)/);
+      if ($key eq 'description') {
+				$note = $value;
+				$note =~ s/\%([A-Fa-f0-9]{2})/pack('C', hex($1))/seg;
+        $note =~ s/\+/ /g;
+      }
+      if ($note) {
+        if (length($note) > 800) {
+        	$note = substr($note,0,800)."....";
+        }
+        $proteins{$protein_name}->{'Functional_Note'} = $note;
+      }else{
+        $proteins{$protein_name}->{$key} = $value;
+
+      }
+
+    }
+  }
+
+  close(INFILE);
+  my $proteinList =  $self->getProteinList(
+    biosequence_set_id => $biosequence_set_id,
+  );
+  #### Loop over all input rows processing information
+  my $counter = 0;
+  foreach my $biosequence_name (keys(%proteins)) {
+
+    #### Build a list of protein links
+    my @links;
+    foreach my $key ( qw (Alias Functional_Note) ) {
+      if (exists($proteins{$biosequence_name}->{$key})) {
+    	  my @tmp = ($key,$proteins{$biosequence_name}->{$key});
+        print "$key $biosequence_name $proteins{$biosequence_name}->{$key}\n";
+      	push(@links,\@tmp);
+      }
+    }
+
+    foreach my $link (@links) {
+      if(defined $proteinList->{$link->[1]}){
+        $proteinList->{$link->[1]} = 1;
+      }
+
+      #print "    ".join("=",@{$link})."\n";
+      my %rowdata = (
+        search_key_name => $link->[1],
+        search_key_type => $link->[0],
+        search_key_dbxref_id => $link->[2],
+        resource_name => $biosequence_name,
+        resource_type => 'ApiDB',
+      );
+      $self->insertSearchKeyEntity( rowdata => \%rowdata);
+    }
+
+
+    $counter++;
+    print "$counter... " if ($counter/100 eq int($counter/100));
+
+    #my $xx=<STDIN>;
+
+  } # endfor each biosequence
+  # check if there is any protein in the proteinList have not been entered into the entity table
+  $self -> checkCompleteness(proteinList=> $proteinList,
+                             count      => $counter);
+
+
+} # end buildPfalciparumKeyIndex
 
 ###############################################################################
 # buildStreptococcusKeyIndex
