@@ -1351,7 +1351,7 @@ sub fetch_transitions {
 
       # Do we have enough peptides already?
       if ( scalar( keys( %{$prots{$prot}} ) ) > $n_peps_per_prot ) {
-        print "Skipping for max peps per prot ($n_peps_per_prot)<BR>\n";
+#        print "Skipping for max peps per prot ($n_peps_per_prot)<BR>\n";
         next; 
       }
 
