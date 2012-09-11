@@ -1243,6 +1243,10 @@ sub fetch_transitions {
 
 
   # Code to get only pertinent headings here...
+  if ( $parameters{rt_type} && !$sbeams->isGuestUser() ) {
+    push @headings, 'RT_Cat';
+  }
+
   my $consensus_srcs = $consensus->getConsensusSources( pabst_build_id => $pabst_build_id );
   my $has_ce = $consensus->hasCESet( pabst_build_id => $pabst_build_id );
   my $has_chromats = $consensus->hasChromatograms( pabst_build_id => $pabst_build_id );
@@ -1266,9 +1270,6 @@ sub fetch_transitions {
   }
 
 #  if ( $parameters{rt_type} && $parameters{rt_type} ne 'SSRCalc' ) {
-  if ( $parameters{rt_type} && !$sbeams->isGuestUser() ) {
-    $headings[14] = 'RT_Cat';
-  }
 
   #  peptides_only
   if ( $parameters{peptides_only} ) {
