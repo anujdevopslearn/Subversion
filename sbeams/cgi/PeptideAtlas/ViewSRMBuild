@@ -46,6 +46,13 @@ $peptide_selector->setAtlas( $atlas );
 $peptide_selector->setSBEAMS( $sbeams );
 
 
+my $instrument_map = $peptide_selector->getInstrumentMap();
+$instrument_map->{Any} = 0;
+my %code2instrument = reverse( %{$instrument_map} );
+
+# Coverage hash keyed by build_id
+my %builds;
+
 ###############################################################################
 # Global Variables
 ###############################################################################
@@ -81,6 +88,7 @@ sub main
 
     # This will look for mod-specific params and do the right thing
     $atlas->processModuleParameters(parameters_ref=>\%parameters);
+    $parameters{cov_level} ||= 'cov_3';
 
     # get project_id
     my $project_id = $atlas->getProjectID(
@@ -133,53 +141,64 @@ sub main
 sub get_build_details {
   my %parameters = @_;
 
-  my @fields = qw( build_name build_comment parameter_string build_date reference_DB
-                   organism n_peptides n_transitions n_qtrap n_iontrap n_qtof
-                   n_predicted pabst_build_id n_proteins );
-  my $field_string = join( ',', @fields );
-  $field_string =~ s/pabst_build_id/PB.pabst_build_id/;
-  $field_string =~ s/organism/full_name AS organism/;
-  $field_string =~ s/reference_DB/set_name AS reference_DB/;
-
-  my $sql = qq~
-  SELECT $field_string
-  FROM $TBAT_PABST_BUILD PB 
-  JOIN peptideatlas.dbo.pabst_tmp_build_statistics PBS 
-    ON PB.pabst_build_id = PBS.pabst_build_id
-  JOIN $TBAT_BIOSEQUENCE_SET BSS 
-    ON PB.biosequence_set_id = BSS.biosequence_set_id
-  JOIN $TB_ORGANISM O 
-    ON PB.organism_id = O.organism_id
-  WHERE PB.pabst_build_id = $parameters{pabst_build_id}
-  ~;
-
-  my $sth = $sbeams->get_statement_handle( $sql );
-  my $items;
-  my $build_name = '';
-  my $field_string = '';
-  while ( my $row = $sth-> fetchrow_hashref() ) {
-    for my $key ( @fields ) {
-      if ( $key eq 'build_name' ) {
-        $build_name = $row->{$key};
-      }
-      $items .= $atlas->encodeSectionItem( key => $key,
-                                               value => $row->{$key} );
-    }
-  }
-
   my $section_header = $atlas->encodeSectionHeader(
-    text => "SRMAtlas Build:  $build_name",
+    text => "SRMAtlas Build: $builds{$parameters{pabst_build_id}}->{name} ($parameters{pabst_build_id})"
   );
 
+  my @instruments = sort {$a <=> $b} keys( %{$builds{$parameters{pabst_build_id}}->{instruments}} );
+  push @instruments, shift( @instruments );
+
+  print "<PRE>";
+#  print Dumper( @instruments );
+  print "</PRE>";
+
+  my @samples;
+  for my $instrument ( @instruments ) {
+    my @inst_row = ( $code2instrument{$instrument} );
+
+    if ( $builds{$parameters{pabst_build_id}}->{bioseq_cnt} < 1000 ) {
+      my $cov_0 = $builds{$parameters{pabst_build_id}}->{instruments}->{$instrument}->{cov_any} - $builds{$parameters{pabst_build_id}}->{bioseq_cnt};
+      $cov_0 = 0 if $cov_0 < 1;
+      push @inst_row, $cov_0;
+    } else {
+      push @inst_row, $builds{$parameters{pabst_build_id}}->{instruments}->{$instrument}->{cov_0};
+    }
+
+    for my $cov ( qw( cov_1 cov_2 cov_3 cov_4 cov_5 ) ) {
+      push @inst_row, $builds{$parameters{pabst_build_id}}->{instruments}->{$instrument}->{$cov};
+    }
+    push @samples, \@inst_row;
+  }
+
+  my ( $chart, $header ) = get_draw_chart_function( \@samples );
   my $content = qq~
   <TABLE width="600">
   $section_header
-  $items
   </TABLE>
+  <BR>
+  $header
+  $chart
   ~;
+#  <TR><TD><TABLE>
+#  </TD></TR></TABLE>
 
   return "$content";
 }
+
+sub get_draw_chart_function {
+	my $samples = shift || return '';
+
+	my $GV = SBEAMS::Connection::GoogleVisualization->new();
+  my ( $chart ) = $GV->setDrawBarChart(  samples => $samples,
+                                    	data_types => [ 'string', 'number', 'number', 'number', 'number', 'number', 'number' ],
+                                      	headings => [ 'Instrument', '0', '1+', '2+', '3+', '4+', '5+' ],
+                                      show_table => 0,
+                                 truncate_labels => 24
+ 	);
+	my $header = $GV->getHeaderInfo();
+  return ( $chart, $header );
+}
+
 
 
 sub get_build_list {
@@ -203,21 +222,66 @@ sub get_build_list {
   my @accessible_project_ids = $sbeams->getAccessibleProjects();
   my $accessible_project_ids = join( ",", @accessible_project_ids ) || '0';
 
-    my $sql = qq~
-		SELECT
-		 PB.pabst_build_id, build_name,
-		 n_proteins,n_peptides, n_transitions, n_qtrap,
-		 n_qtof,
-     n_iontrap,
-     n_predicted,
-     build_comment, n_proteins
-		FROM $TBAT_PABST_BUILD PB
-		JOIN peptideatlas.dbo.pabst_tmp_build_statistics PBS
-      ON PB.pabst_build_id = PBS.pabst_build_id
-    WHERE PB.project_id IN ( $accessible_project_ids )
+  # Get and cache all build stats
+  my $stats_sql = qq~
+  SELECT PBS.* 
+  FROM peptideatlas.dbo.pabst_build_statistics PBS
+  JOIN $TBAT_PABST_BUILD PB
+    ON PB.pabst_build_id = PBS.build_id
+  WHERE project_id IN ( $accessible_project_ids )
+  ~;
+
+  my $sth = $sbeams->get_statement_handle( $stats_sql );
+  use Data::Dumper;
+  my %f;
+  my $cnt;
+  for my $f ( @{$sth->{NAME}} ) {
+    $f{$f} = $cnt++;
+  }
+#  die Dumper( %f );
+
+# builds is a global object
+#  my %builds;
+
+  my %cover;
+	while ( my $row = $sth->fetchrow_hashref() ) {
+    $builds{$row->{build_id}} ||= {};
+    $builds{$row->{build_id}}->{bioseq_id} = $row->{ref_db};
+    $builds{$row->{build_id}}->{bioseq_cnt} = $row->{ref_db_cnt};
+    $builds{$row->{build_id}}->{instruments} ||= {}; 
+    $builds{$row->{build_id}}->{instruments}->{$row->{instrument_id}} ||= {};;
+
+    for my $cov ( qw( cov_0 cov_1 cov_2 cov_3 cov_4 cov_5 cov_any ) ) {
+      $cover{$cov} ||= {};
+      $cover{$cov}->{$row->{instrument_id}} ||= {};
+      $cover{$cov}->{$row->{instrument_id}}->{$row->{build_id}} = $row->{$cov};
+      $builds{$row->{build_id}}->{instruments}->{$row->{instrument_id}}->{$cov} = $row->{$cov};
+    }
+
+  }
+
+  my %cumulative_builds = %builds;
+
+  for my $bid ( keys( %builds ) ) {
+    for my $instr ( keys( %{$builds{$bid}->{instruments}} ) ) {
+      my $above = 0;
+      for my $cov ( qw( cov_5 cov_4 cov_3 cov_2 cov_1 ) ) {
+        my $incr = $above;
+        $above += $builds{$bid}->{instruments}->{$instr}->{$cov};
+        $cumulative_builds{$bid}->{instruments}->{$instr}->{$cov} += $incr;
+      }
+    }
+  }
+  my @instruments = sort {$a <=> $b} keys( %{$cover{cov_any}} );
+  push @instruments, shift( @instruments );
+
+
+  my $sql = qq~
+    SELECT pabst_build_id, build_name, build_comment
+		FROM $TBAT_PABST_BUILD
+    WHERE project_id IN ( $accessible_project_ids )
     ORDER BY build_name ASC
     ~;
-
     my @atlas_builds = $sbeams->selectSeveralColumns($sql);
 
     #### If the output_mode is HTML, then display the form
@@ -236,64 +300,95 @@ sub get_build_list {
                            -action=>"$base_url",
 		                         -name=>"BuildList",
                           );
-
     }
 
 
     my $table = SBEAMS::Connection::DataTable->new();
 
-    my $headings = [ '', 'Build Name', '# Proteins', '# Peptides', '# Transitions', '% QTrap', '% QTOF', '% IonTrap', '% Pred', 'Comment' ];
+    my @inst_headings = @code2instrument{@instruments};
+    my $headings = [ '', 'Build Name', 'RefDB proteins', @inst_headings, 'Comment' ];
     my $heading_defs = { '' => 'Build Selector', 'Build Name' => 'Name of SRMAtlas build',
-                '# Proteins' => 'Number of peptides in (composite) source proteome',
-                '# Peptides' => 'Number of peptides in SRMAtlas build',
-             '# Transitions' => 'Number of transitions in SRMAtlas build',
-                   '% QTrap' => 'Number of proteins in reference set with at least some QTrap data<SUP>&dagger;</SUP>',
-                    '% QTOF' => 'Number of proteins in reference set with at least some QTOF data<SUP>&dagger;</SUP>',
-                 '% IonTrap' => 'Number of proteins in reference set with at least some IonTrap data<SUP>&dagger;</SUP>',
-                    '% Pred' => 'Number of proteins in reference set with at least some Predicted data<SUP>&dagger;</SUP>', ,
+                'RefDB proteins' => 'Number of entries in source proteome - some builds cover only a sub-proteome',
                    'Comment' => 'Description of SRMAtlas build' };
+
+    for my $inst ( @instruments ) {
+      $heading_defs->{$code2instrument{$inst}} = "Number of proteins seen with $code2instrument{$inst} at specified coverage";
+    }
+
     my $full_headings = $atlas->make_annotation_text( label_hash => $heading_defs, label_order => $headings );
-    my $cover_def = $sbeams->makeInfoText( "<SUP>&dagger;</SUP>Instrument coverages are based on the following.  Instruments are considered in order of precedence (usually QTrap > QTOF > IonTrap > Predicted, but some have QTOF and QTrap reversed). <BR> Percentage of first category is calculated, then the percentage of the next highest is calculated from the remaining proteins (i.e. only the ones that were not covered by the first category), and so on." );
+
+    my %cov_defs = ( cov_1 => "Proteins covered by 1 or more peptides of specified instrument",
+                     cov_2 => "Proteins covered by 2 or more peptides of specified instrument",
+                     cov_3 => "Proteins covered by 3 or more peptides of specified instrument",
+                     cov_4 => "Proteins covered by 4 or more peptides of specified instrument",
+                     cov_5 => "Proteins covered by 5 or more peptides of specified instrument" );
+ 
+    print $sbeams->makeInfoText( "Upper table shows $cov_defs{$parameters{cov_level}}. Bottom section shows detailed coverage plot for selected build, use radio buttons to switch <BR><BR><BR>" ); 
+        
 
       my $help_text = $atlas->make_table_help( 
                                                entries => $full_headings,
-                                               footnote => $cover_def
                                           );
-      print $help_text;
+#                                               footnote => $cover_def
+    print $help_text;
 
-#		 PB.pabst_build_id, build_name,
-#		 n_peptides, n_transitions, n_qtrap, n_iontrap, n_predicted,
-#		 n_qtof, build_comment
-#    $table->addRow( [ '', 'Build Name', '# Peptides', '# Transitions', '% QTrap', '% IonTrap', '% QTOF', '% Predicted', 'Comment' ] );
+    my $bioseq_sets = $atlas->getBiosequenceSets();
+
     my @builds = ( $headings );
+    # build has id, name, comment
+    # %builds has the rest, keyed by build_id->instr->cov_depth
     foreach my $build ( @atlas_builds ) {
 #			next unless $build->[9];
+# [ '', 'Build Name', 'RefDB', 'RefDB proteins', @inst_headings, 'Comment' ];
+
+      $builds{$build->[0]}->{name} = $build->[1];
       my $selected = '';
       my $bgcolor = '#dddddd';
       if ($build->[0] == $parameters{pabst_build_id} ) {
         $selected = 'CHECKED ';
       }
-      $build->[0] =<<"      END";
-      <INPUT $selected TYPE="radio" NAME="pabst_build_id" VALUE="$build->[0]" onClick=blur() onChange="switchBuild()">
-      END
+      my $radio = qq~
+        <INPUT $selected TYPE="radio" NAME="pabst_build_id" VALUE="$build->[0]" onClick=blur() onChange="switchBuild()">
+      ~;
 
-      $build->[9] = $sbeams->truncateStringWithMouseover( len => 60, 
-                                                       string => $build->[9],
+      $build->[2] = $sbeams->truncateStringWithMouseover( len => 60, 
+                                                       string => $build->[2],
                                                   add_elipses => 1,
                                                suppress_class => 1 );
 
-      for my $idx ( 5..8 ) {
-        if ( !$build->[4] ) {
-          $build->[$idx] = '0.0'; 
-        } else {
-          $build->[$idx] = sprintf( "%0.1f", ($build->[$idx]/$build->[4])*100 );
-        }
+#          $bioseq_sets->{$builds{$build->[0]}->{bioseq_id}},
+
+      my $ref_db_cnt = $builds{$build->[0]}->{bioseq_cnt};
+      my $ref_supp = '';
+      # Sub proteome!
+      if ( $builds{$build->[0]}->{instruments}->{0}->{cov_any} < 1000 ) {
+        $ref_db_cnt = $builds{$build->[0]}->{instruments}->{0}->{cov_any};
+        $builds{$build->[0]}->{bioseq_cnt} = $ref_db_cnt;
+        $ref_supp = ' (sub-proteome)';
       }
 
-      # Truncate for display
-      $#$build = 9;
+      my @build_row = ( $radio, $build->[1], $ref_db_cnt . $ref_supp );
 
-      push @builds, $build;
+#      print "<PRE>";
+      for my $id ( @instruments ) {
+        my $cnt = '&nbsp;-&nbsp;';
+        if ( $builds{$build->[0]}->{instruments}->{$id} ) {
+#          print "we have $id for $build->[0]\n";
+          if ( $builds{$build->[0]}->{instruments}->{$id}->{$parameters{cov_level}} ) {
+#            print "we have $parameters{cov_level}!!\n";
+#            $cnt = sprintf( "%0.1f", 100*$builds{$build->[0]}->{instruments}->{$id}->{$parameters{cov_level}}/$ref_db_cnt ) . '%'; 
+            $cnt = sprintf( "%0.1f", 100*$cumulative_builds{$build->[0]}->{instruments}->{$id}->{$parameters{cov_level}}/$ref_db_cnt ) . '%'; 
+          }
+        }
+        push @build_row, $cnt;
+      }
+#      print "build is $build->[0], cov is $parameters{cov_level}";
+#      print Dumper( $builds{$build->[0]} );
+#      print "</PRE>";
+
+      push @build_row, $build->[2];
+
+      push @builds, \@build_row;
     }
 
     my ( $html, $rs_name ) = $atlas->encodeSectionTable( header => 1,
@@ -303,7 +398,6 @@ sub get_build_list {
                                                      max_rows => 5000,
                                                     help_text => '',
                                                         align => [ qw( center left right right right right right right right left ) ],
-                                                 set_download => 'SRMAtlas_builds',
                                                   file_prefix => 'SRMAtlas_builds',
                                                      bg_color => '#EAEAEA',
                                                      sortable => 0,
@@ -314,6 +408,10 @@ sub get_build_list {
     $table->setColAttr(  COLS => [2..8], ROWS => [1..$table->getRowNum()], ALIGN => 'RIGHT' );
 #    $table->setColAttr(  COLS => [4,5], ROWS => [1..$rows], ALIGN => 'CENTER' );
 #    $table->setColAttr(  COLS => [3], ROWS => [1..$rows], BGCOLOR => '#eeeeee' );
+
+#    print "<PRE>" . Dumper( %builds ) . "</PRE>";
+
+#  $html =~ s/TABLE NOOP/TABLE style="display:none" NOOP/gm;
 
 
   $content .= "<TABLE>$html</TABLE>";
