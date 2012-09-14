@@ -1987,7 +1987,16 @@ sub make_sort_headings {
 }
 
 sub listBiosequenceSets {
+  my $self = shift || die ("Must call as object method");
+  my %args = @_;
 
+  my $sets = $self->getBiosequenceSets();
+  for my $set ( sort {$a <=> $b } keys( %{$sets} ) ) {
+		print "$set\t$sets->{$set}\n";
+	}
+}
+
+sub getBiosequenceSets {
   my $self = shift || die ("Must call as object method");
   my %args = @_;
 
@@ -2001,10 +2010,11 @@ sub listBiosequenceSets {
   my $sbeams = $self->getSBEAMS();
   my $sth = $sbeams->get_statement_handle( $sql );
 
+  my %sets;
   while ( my @row = $sth->fetchrow_array() ) {
-    print "$row[0]\t$row[1]\n";
+		$sets{$row[0]} = $row[1];
   }
-
+	return \%sets;
 }
 
 sub fetchBuildResources {
