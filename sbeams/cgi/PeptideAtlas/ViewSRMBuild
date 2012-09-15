@@ -35,6 +35,10 @@ use SBEAMS::PeptideAtlas::BestPeptideSelector;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas;
 
+###############################################################################
+# Global Variables
+###############################################################################
+$PROG_NAME = 'ViewSRMBuild';
 $SBEAMS_SUBDIR = 'PeptideAtlas';
 
 
@@ -52,11 +56,14 @@ my %code2instrument = reverse( %{$instrument_map} );
 
 # Coverage hash keyed by build_id
 my %builds;
+my %current_build;
+my %parameters;
 
-###############################################################################
-# Global Variables
-###############################################################################
-$PROG_NAME = 'ViewSRMBuild';
+
+
+
+
+
 main();
 
 
@@ -78,7 +85,6 @@ sub main
 
 
     # Read in the default input parameters
-    my %parameters;
     my $n_params_found = $sbeams->parse_input_parameters(
         q=>$q,
         parameters_ref=>\%parameters
@@ -156,16 +162,16 @@ sub get_build_details {
   for my $instrument ( @instruments ) {
     my @inst_row = ( $code2instrument{$instrument} );
 
-    if ( $builds{$parameters{pabst_build_id}}->{bioseq_cnt} < 1000 ) {
-      my $cov_0 = $builds{$parameters{pabst_build_id}}->{instruments}->{$instrument}->{cov_any} - $builds{$parameters{pabst_build_id}}->{bioseq_cnt};
+    if ( $current_build{bioseq_cnt} < 1000 ) {
+      my $cov_0 = $current_build{instruments}->{$instrument}->{cov_any} - $current_build{bioseq_cnt};
       $cov_0 = 0 if $cov_0 < 1;
       push @inst_row, $cov_0;
     } else {
-      push @inst_row, $builds{$parameters{pabst_build_id}}->{instruments}->{$instrument}->{cov_0};
+      push @inst_row, $current_build{instruments}->{$instrument}->{cov_0};
     }
 
     for my $cov ( qw( cov_1 cov_2 cov_3 cov_4 cov_5 ) ) {
-      push @inst_row, $builds{$parameters{pabst_build_id}}->{instruments}->{$instrument}->{$cov};
+      push @inst_row, $current_build{instruments}->{$instrument}->{$cov};
     }
     push @samples, \@inst_row;
   }
@@ -260,7 +266,18 @@ sub get_build_list {
 
   }
 
-  my %cumulative_builds = %builds;
+  # Copy data prior to making it 'cumulative'
+  my $curr = $builds{$parameters{pabst_build_id}};
+  $current_build{bioseq_id} = $curr->{bioseq_id};
+  $current_build{bioseq_cnt} = $curr->{bioseq_cnt};
+  $current_build{instruments} = {};
+  for my $inst ( keys( %{$curr->{instruments}} ) ) {
+    for my $cov (  qw( cov_0 cov_1 cov_2 cov_3 cov_4 cov_5 cov_any ) ) { 
+      $current_build{instruments}->{$inst}->{$cov} = $curr->{instruments}->{$inst}->{$cov};
+    }
+  }
+
+
 
   for my $bid ( keys( %builds ) ) {
     for my $instr ( keys( %{$builds{$bid}->{instruments}} ) ) {
@@ -268,12 +285,14 @@ sub get_build_list {
       for my $cov ( qw( cov_5 cov_4 cov_3 cov_2 cov_1 ) ) {
         my $incr = $above;
         $above += $builds{$bid}->{instruments}->{$instr}->{$cov};
-        $cumulative_builds{$bid}->{instruments}->{$instr}->{$cov} += $incr;
+        $builds{$bid}->{instruments}->{$instr}->{$cov} += $incr if $incr;
       }
     }
   }
   my @instruments = sort {$a <=> $b} keys( %{$cover{cov_any}} );
   push @instruments, shift( @instruments );
+
+
 
 
   my $sql = qq~
@@ -317,13 +336,13 @@ sub get_build_list {
 
     my $full_headings = $atlas->make_annotation_text( label_hash => $heading_defs, label_order => $headings );
 
-    my %cov_defs = ( cov_1 => "Proteins covered by 1 or more peptides of specified instrument",
-                     cov_2 => "Proteins covered by 2 or more peptides of specified instrument",
-                     cov_3 => "Proteins covered by 3 or more peptides of specified instrument",
-                     cov_4 => "Proteins covered by 4 or more peptides of specified instrument",
-                     cov_5 => "Proteins covered by 5 or more peptides of specified instrument" );
+    my %cov_defs = ( cov_1 => "Proteins covered by 1 or more peptides on specified instrument",
+                     cov_2 => "Proteins covered by 2 or more peptides on specified instrument",
+                     cov_3 => "Proteins covered by 3 or more peptides on specified instrument",
+                     cov_4 => "Proteins covered by 4 or more peptides on specified instrument",
+                     cov_5 => "Proteins covered by 5 or more peptides on specified instrument" );
  
-    print $sbeams->makeInfoText( "Upper table shows $cov_defs{$parameters{cov_level}}. Bottom section shows detailed coverage plot for selected build, use radio buttons to switch <BR><BR><BR>" ); 
+    print $sbeams->makeInfoText( "Upper table shows $cov_defs{$parameters{cov_level}}, coverage can be changed using SELECT list below the table. Bottom section shows detailed coverage plot for selected build, use radio buttons to switch <BR><BR><BR>" ); 
         
 
       my $help_text = $atlas->make_table_help( 
@@ -369,7 +388,7 @@ sub get_build_list {
 
       my @build_row = ( $radio, $build->[1], $ref_db_cnt . $ref_supp );
 
-#      print "<PRE>";
+      print "<PRE>";
       for my $id ( @instruments ) {
         my $cnt = '&nbsp;-&nbsp;';
         if ( $builds{$build->[0]}->{instruments}->{$id} ) {
@@ -377,14 +396,14 @@ sub get_build_list {
           if ( $builds{$build->[0]}->{instruments}->{$id}->{$parameters{cov_level}} ) {
 #            print "we have $parameters{cov_level}!!\n";
 #            $cnt = sprintf( "%0.1f", 100*$builds{$build->[0]}->{instruments}->{$id}->{$parameters{cov_level}}/$ref_db_cnt ) . '%'; 
-            $cnt = sprintf( "%0.1f", 100*$cumulative_builds{$build->[0]}->{instruments}->{$id}->{$parameters{cov_level}}/$ref_db_cnt ) . '%'; 
+            $cnt = sprintf( "%0.1f", 100*$builds{$build->[0]}->{instruments}->{$id}->{$parameters{cov_level}}/$ref_db_cnt ) . '%'; 
           }
         }
         push @build_row, $cnt;
       }
 #      print "build is $build->[0], cov is $parameters{cov_level}";
 #      print Dumper( $builds{$build->[0]} );
-#      print "</PRE>";
+      print "</PRE>";
 
       push @build_row, $build->[2];
 
@@ -398,27 +417,37 @@ sub get_build_list {
                                                      max_rows => 5000,
                                                     help_text => '',
                                                         align => [ qw( center left right right right right right right right left ) ],
-                                                  file_prefix => 'SRMAtlas_builds',
                                                      bg_color => '#EAEAEA',
                                                      sortable => 0,
                                                      table_id => 'SRMAtlas',
                                                      );
 
-#    $table->setColAttr(  COLS => [1..6], ROWS => [1..$rows], NOWRAP => 1 );
-    $table->setColAttr(  COLS => [2..8], ROWS => [1..$table->getRowNum()], ALIGN => 'RIGHT' );
-#    $table->setColAttr(  COLS => [4,5], ROWS => [1..$rows], ALIGN => 'CENTER' );
-#    $table->setColAttr(  COLS => [3], ROWS => [1..$rows], BGCOLOR => '#eeeeee' );
-
-#    print "<PRE>" . Dumper( %builds ) . "</PRE>";
-
+#   $table->setColAttr(  COLS => [2..8], ROWS => [1..$table->getRowNum()], ALIGN => 'RIGHT' );
 #  $html =~ s/TABLE NOOP/TABLE style="display:none" NOOP/gm;
 
 
   $content .= "<TABLE>$html</TABLE>";
-#  $content .= "$table";
+
+  $content .= get_cover_select(); 
   $content .= $q->hidden( "apply_action", '');
   $content .= $q->endform;
 
   return $content;
 } # get_build_list 
 
+sub get_cover_select {
+
+  my %selected = ( cov_1 => '', cov_2 => '', cov_3 => '', cov_4 => '', cov_5 => '' );
+  $selected{$parameters{cov_level}} = 'selected';
+
+  my $select = qq~
+  <SELECT NAME=cov_level onChange="submit()">
+  <OPTION VALUE=cov_1 $selected{cov_1}> Covered by one or more peptide(s) </OPTION>
+  <OPTION VALUE=cov_2 $selected{cov_2}> Covered by two or more peptides </OPTION>
+  <OPTION VALUE=cov_3 $selected{cov_3}> Covered by three or more peptides </OPTION>
+  <OPTION VALUE=cov_4 $selected{cov_4}> Covered by four or more peptides </OPTION>
+  <OPTION VALUE=cov_5 $selected{cov_5}> Covered by five or more peptides </OPTION>
+  </SELECT>
+  ~;
+  return $select;
+}
