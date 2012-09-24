@@ -292,12 +292,12 @@ sub handle_request {
 
   #### If the desired action was to finalize the dataset
   if ($action eq "FINALIZE" && ! @errors ) {
-    if ($authentication->{result} eq 'Success' &&
-        ($emailAddress eq $datasetMetadata->{emailAddress})) {
+    if ( ( $authentication->{result} eq 'Success' &&
+           $emailAddress eq $datasetMetadata->{emailAddress} ) || $isAdmin) {
       finalizeDataset(
 	authentication=>$authentication,
 	identifier=>$parameters{'identifier'},
-        emailAddress=>$emailAddress,
+        emailAddress=>$datasetMetadata->{emailAddress},
       );
       $datasetMetadata = getPASSMetaData(identifier=>$datasetIdentifier);
     } else {
@@ -308,12 +308,12 @@ sub handle_request {
 
   #### If the desired action was to finalize the dataset
   if ($action eq "UNFINALIZE" && ! @errors ) {
-    if ($authentication->{result} eq 'Success' &&
-        ($emailAddress eq $datasetMetadata->{emailAddress})) {
+    if ( ( $authentication->{result} eq 'Success' &&
+           $emailAddress eq $datasetMetadata->{emailAddress} ) || $isAdmin) {
       unFinalizeDataset(
 	authentication=>$authentication,
 	identifier=>$parameters{'identifier'},
-        emailAddress=>$emailAddress,
+        emailAddress=>$datasetMetadata->{emailAddress},
       );
       $datasetMetadata = getPASSMetaData(identifier=>$datasetIdentifier);
     } else {
