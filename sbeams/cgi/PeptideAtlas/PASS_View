@@ -291,10 +291,26 @@ sub handle_request {
 
 
   #### If the desired action was to finalize the dataset
-  if ($action =~ /FINALIZE/i && ! @errors ) {
+  if ($action eq "FINALIZE" && ! @errors ) {
     if ($authentication->{result} eq 'Success' &&
         ($emailAddress eq $datasetMetadata->{emailAddress})) {
       finalizeDataset(
+	authentication=>$authentication,
+	identifier=>$parameters{'identifier'},
+        emailAddress=>$emailAddress,
+      );
+      $datasetMetadata = getPASSMetaData(identifier=>$datasetIdentifier);
+    } else {
+      push(@errors,@{$authentication->{errors}}) if ($authentication->{errors});
+    }
+  }
+
+
+  #### If the desired action was to finalize the dataset
+  if ($action eq "UNFINALIZE" && ! @errors ) {
+    if ($authentication->{result} eq 'Success' &&
+        ($emailAddress eq $datasetMetadata->{emailAddress})) {
+      unFinalizeDataset(
 	authentication=>$authentication,
 	identifier=>$parameters{'identifier'},
         emailAddress=>$emailAddress,
@@ -475,6 +491,7 @@ sub handle_request {
      } else {
      }
 
+
      #### Display the password if the user is the owner or an admin
      if ($isOwner || $isAdmin) {
        print "<B><font color=\"blue\">datasetPassword:</B></font> $datasetMetadata->{datasetPassword}";
@@ -509,11 +526,16 @@ sub handle_request {
        ~;
        print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
        print qq~<INPUT TYPE="button" NAME="publicReleaseDateToday_button" VALUE="TODAY" onClick="ClickedTodayButton(newPublicReleaseDate)">\n~;
-       print "<HR>\n";
+
+       if ($datasetMetadata->{finalizedDate}) {
+         print "<BR><B><font color=\"blue\">This dataset has been finalized, which means the data cannot be changed now. However, as the owner, you may </B></font>";
+         print $q->submit(-name => "action",
+	  		  -value => 'UNFINALIZE',
+		  	  -label => 'UNFINALIZE');
+         print "<font color=\"blue\"><B> if you find you must now make changes.</B></font><BR>\n";
+         print "<HR>\n";
+       }
      }
-
-
-
 
 
      print "<TABLE width=\"800\"><TR><TD>\n";
@@ -1118,6 +1140,94 @@ If for some reason you need to modify your data or add additional data, email us
 The PeptideAtlas receives many data submissions, and only a portion of them are actually processed and incorporated into the PeptideAtlas database. You may see your dataset at www.PeptideAtlas.org sometime in the future. Unfortunately, we do not currently have a system for informing submitters whether and when their data will be incorporated. Feel free to email us using the form at http://www.peptideatlas.org/feedback.php .
 
 Again, many thanks for offering your data to our compendium of proteomics results and adding to the world's global proteomics knowledge store.
+
+Sincerely,
+The PeptideAtlas team at the Institute for Systems Biology
+~;
+  my (@toRecipients,@ccRecipients,@bccRecipients);
+  @toRecipients = (
+    'PeptideAtlas Dataset Submitter',$emailAddress,
+  );
+  @ccRecipients = ();
+  @bccRecipients = (
+    'Eric Deutsch','eric.deutsch@systemsbiology.org',
+  );
+  SBEAMS::Connection::Utilities::sendEmail(
+    toRecipients=>\@toRecipients,
+    ccRecipients=>\@ccRecipients,
+    bccRecipients=>\@bccRecipients,
+    subject=>"PeptideAtlas dataset submission PASS$PK",
+    message=>$confirmationMessage,
+  );
+
+
+  return;
+}
+
+
+#######################################################################
+# unFinalizeDataset
+#######################################################################
+sub unFinalizeDataset {
+  my %args = @_;
+  my $SUB_NAME = 'unFinalizeDataset';
+
+  #### Decode the argument list
+  my $authentication = $args{'authentication'} || die "[$SUB_NAME] ERROR: authentication not passed";
+  my $identifier = $args{'identifier'} || die "[$SUB_NAME] ERROR: identifier not passed";
+  my $emailAddress = $args{'emailAddress'};
+
+  my $PK;
+  if ($identifier =~ /^PASS(\d+)$/) {
+    $PK = $1;
+    my %rowdata = ( finalizedDate => 'NULL' );
+    my $result = $sbeams->updateOrInsertRow(
+					  update => 1,
+					  table_name => $TBAT_PASS_DATASET,
+					  rowdata_ref => \%rowdata,
+					  PK => 'dataset_id',
+					  PK_value => $PK,
+					 );
+
+    my $PASS_FTP_AGENT_BASE = '/prometheus/u1/home/PASSftpAgent';
+
+    my $cmdfile = "$PASS_FTP_AGENT_BASE/commands.queue";
+    open(CMDFILE,">>$cmdfile") || die("ERROR: Unable to append to '$cmdfile'");
+    print CMDFILE "UnFinalizeDataset $identifier\n";
+    close(CMDFILE);
+
+
+  } else {
+    print "ERROR: Unable to parse identifier '$identifier'. Please report this. ERROR449<BR>\n";
+  }
+
+  #### Email PeptideAtlas team about the finalization
+  my @toRecipients = (
+    'Eric Deutsch','eric.deutsch@systemsbiology.org',
+    'Terry Farrah','terry.farrah@systemsbiology.org',
+    'Zhi Sun','zhi.sun@systemsbiology.org',
+  );
+  my @ccRecipients = ();
+  my @bccRecipients = ();
+  my $adminMessage = qq~PASS submission PASS$PK has been unfinalized.\n
+  To view the dataset, go to https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/PASS_View?identifier=PASS$PK
+~;
+  SBEAMS::Connection::Utilities::sendEmail(
+    toRecipients=>\@toRecipients,
+    ccRecipients=>\@ccRecipients,
+    bccRecipients=>\@bccRecipients,
+    subject=>"PeptideAtlas dataset PASS$PK unfinalized",
+    message=>"$adminMessage\n\n",
+  );
+
+  #### Send a nice thank you note to the submitter
+  my $confirmationMessage = qq~Your PeptideAtlas submission PASS$PK has been unfinalized.  This means that you may now update the data files via FTP as necessary again.
+
+When you have finished making changes to the files via FTP, FINALIZE your data again by going to:
+
+http://www.peptideatlas.org/PASS/PASS$PK
+
+Again, many thanks for using the PeptideAtlas PASS data repository.
 
 Sincerely,
 The PeptideAtlas team at the Institute for Systems Biology
