@@ -36,6 +36,7 @@ sub new {
 							 '_functions' => [],
 							 '_charts' => 0,
 							 '_tables' => 0,
+							 '_options' => [],
                @_
              };
   bless $this, $class;
@@ -46,7 +47,7 @@ sub setDrawDataTable {
   # Get passed args
 	my $self = shift;
 	my %args = @_;
-	
+
 	$log->debug( "in setDraw" );
 	if(	$self->{_hide_svg} ) {
 		my $msg = $sbeams->makeInfoText("Your browser appears to be too old to display these graphics, please come back when you have upgraded");
@@ -92,6 +93,7 @@ sub setDrawDataTable {
 	}
   $fx .= qq~
     var table = new google.visualization.Table(document.getElementById('$table_div'));
+
     table.draw(data, {showRowNumber: false});
     }
   ~;
@@ -194,12 +196,18 @@ sub setDrawBarChart {
     END
 	}
 
+  my $options = "{ width: $width, height: $height, is3D: true }";
+  if ( $args{options} ) {
+    $options = "{ width: $width, height: $height, is3D: true, $args{options} }";
+  }
 
   $fx .=<<"  END";
   $sample_list
   $table_js
+
+
   var chart = new google.visualization.BarChart(document.getElementById('$chart_div'));
-  chart.draw(data, {width: $width, height: $height, is3D: true } );
+  chart.draw(data, $options );
   }
   END
 
