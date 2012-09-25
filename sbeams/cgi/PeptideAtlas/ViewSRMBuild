@@ -48,6 +48,7 @@ $atlas->setSBEAMS($sbeams);
 my $peptide_selector = new SBEAMS::PeptideAtlas::BestPeptideSelector;
 $peptide_selector->setAtlas( $atlas );
 $peptide_selector->setSBEAMS( $sbeams );
+my $GV = SBEAMS::Connection::GoogleVisualization->new();
 
 
 my $instrument_map = $peptide_selector->getInstrumentMap();
@@ -58,11 +59,6 @@ my %code2instrument = reverse( %{$instrument_map} );
 my %builds;
 my %current_build;
 my %parameters;
-
-
-
-
-
 
 main();
 
@@ -130,7 +126,8 @@ sub main
 
     my $content = '';
 		$content .= get_build_list(%parameters);
-    $content .= "<BR><BR>\n";
+    $content .= "<BR>\n";
+    $content .= $sbeams->makeInfoText( "Charts shows detailed coverage plots for selected build, use radio buttons in table (above) to switch <BR>" ); 
 		$content .= get_build_details(%parameters);
 
     print "$content";
@@ -159,31 +156,65 @@ sub get_build_details {
   print "</PRE>";
 
   my @samples;
-  for my $instrument ( @instruments ) {
-    my @inst_row = ( $code2instrument{$instrument} );
+  my @csamples;
 
-    if ( $current_build{bioseq_cnt} < 1000 ) {
-      my $cov_0 = $current_build{instruments}->{$instrument}->{cov_any} - $current_build{bioseq_cnt};
-      $cov_0 = 0 if $cov_0 < 1;
-      push @inst_row, $cov_0;
-    } else {
-      push @inst_row, $current_build{instruments}->{$instrument}->{cov_0};
-    }
-
-    for my $cov ( qw( cov_1 cov_2 cov_3 cov_4 cov_5 ) ) {
-      push @inst_row, $current_build{instruments}->{$instrument}->{$cov};
-    }
-    push @samples, \@inst_row;
+  if ( $current_build{instruments}->{0}->{cov_any} < 500 ) {
+    $current_build{bioseq_cnt} = $current_build{instruments}->{0}->{cov_any};
   }
 
-  my ( $chart, $header ) = get_draw_chart_function( \@samples );
+  for my $instrument ( @instruments ) {
+    my @inst_row = ( $code2instrument{$instrument} );
+    my @cumulative_row = ( $code2instrument{$instrument} );
+
+    my $cov_0 = $current_build{instruments}->{$instrument}->{cov_0};
+
+
+    if ( $current_build{bioseq_cnt} < 1000 ) {
+      $cov_0 = $current_build{instruments}->{$instrument}->{cov_any} - $current_build{bioseq_cnt};
+      $cov_0 = 0 if $cov_0 < 1;
+    }
+    # Format
+    $cov_0 = sprintf( "%0.1f", 100*($cov_0/$current_build{bioseq_cnt})) if $cov_0;
+
+    push @inst_row, $cov_0;
+    push @cumulative_row, $cov_0;
+
+    my $cumulative;
+    my @individual;
+    my @cumulative;
+    for my $cov ( reverse( qw( cov_1 cov_2 cov_3 cov_4 cov_5 ) ) ) {
+      $cumulative += $current_build{instruments}->{$instrument}->{$cov};
+
+      my $currcum = ( $cumulative ) ? sprintf( "%0.1f", 100*($cumulative/$current_build{bioseq_cnt}) ) : 0;
+      push @cumulative, $currcum;
+
+      my $currval = $current_build{instruments}->{$instrument}->{$cov};
+      $currval = sprintf( "%0.1f", 100*($currval/$current_build{bioseq_cnt}) ) if $currval;
+      push @individual, $currval; 
+    }
+    push @inst_row, reverse( @individual );
+    push @cumulative_row, reverse( @cumulative );
+    push @samples, \@inst_row;
+    push @csamples, \@cumulative_row;
+  }
+
+  my $ichart = make_individual_chart_function( \@samples );
+  my $cchart = make_cumulative_chart_function( \@csamples );
+
+	my $header = $GV->getHeaderInfo();
+
   my $content = qq~
   <TABLE width="600">
   $section_header
   </TABLE>
-  <BR>
   $header
-  $chart
+  <BR>
+  <H4>Percent peptide per protein coverage (cumulative) for $builds{$parameters{pabst_build_id}}->{name}</H4>
+  $cchart
+  <BR>
+  <BR>
+  <H4>Percent peptide per protein coverage (detailed) for $builds{$parameters{pabst_build_id}}->{name}</H4>
+  $ichart
   ~;
 #  <TR><TD><TABLE>
 #  </TD></TR></TABLE>
@@ -191,18 +222,30 @@ sub get_build_details {
   return "$content";
 }
 
-sub get_draw_chart_function {
+sub make_individual_chart_function {
 	my $samples = shift || return '';
 
-	my $GV = SBEAMS::Connection::GoogleVisualization->new();
+  my ( $chart ) = $GV->setDrawBarChart(  samples => $samples,
+                                    	data_types => [ 'string', 'number', 'number', 'number', 'number', 'number', 'number' ],
+                                      	headings => [ 'Instrument', '0', '1', '2', '3', '4', '5+' ],
+                                      show_table => 0,
+                                 truncate_labels => 24,
+                                         options =>  "hAxis: {title: 'Percentage'}"
+
+ 	);
+  return ( $chart );
+}
+
+sub make_cumulative_chart_function {
+	my $samples = shift || return '';
+
   my ( $chart ) = $GV->setDrawBarChart(  samples => $samples,
                                     	data_types => [ 'string', 'number', 'number', 'number', 'number', 'number', 'number' ],
                                       	headings => [ 'Instrument', '0', '1+', '2+', '3+', '4+', '5+' ],
                                       show_table => 0,
                                  truncate_labels => 24
  	);
-	my $header = $GV->getHeaderInfo();
-  return ( $chart, $header );
+  return ( $chart );
 }
 
 
@@ -292,9 +335,6 @@ sub get_build_list {
   my @instruments = sort {$a <=> $b} keys( %{$cover{cov_any}} );
   push @instruments, shift( @instruments );
 
-
-
-
   my $sql = qq~
     SELECT pabst_build_id, build_name, build_comment
 		FROM $TBAT_PABST_BUILD
@@ -342,14 +382,14 @@ sub get_build_list {
                      cov_4 => "Proteins covered by 4 or more peptides on specified instrument",
                      cov_5 => "Proteins covered by 5 or more peptides on specified instrument" );
  
-    print $sbeams->makeInfoText( "Upper table shows $cov_defs{$parameters{cov_level}}, coverage can be changed using SELECT list below the table. Bottom section shows detailed coverage plot for selected build, use radio buttons to switch <BR><BR><BR>" ); 
+    $content .= $sbeams->makeInfoText( "Table shows $cov_defs{$parameters{cov_level}}, coverage can be changed using SELECT list below the table.<BR>" );
         
 
-      my $help_text = $atlas->make_table_help( 
+    my $help_text = $atlas->make_table_help( 
                                                entries => $full_headings,
                                           );
 #                                               footnote => $cover_def
-    print $help_text;
+    $content .= $help_text;
 
     my $bioseq_sets = $atlas->getBiosequenceSets();
 
