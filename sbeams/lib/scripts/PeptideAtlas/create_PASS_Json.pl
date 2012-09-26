@@ -97,7 +97,6 @@ my $sql = qq~
 				 finalizedDate
 	FROM $TBAT_PASS_SUBMITTER S
 	JOIN $TBAT_PASS_DATASET D ON (D.submitter_id = S.submitter_id)
-	--WHERE publicReleaseDate < '$date'
 ~;
 my @rows = $sbeams->selectSeveralColumns($sql);
 foreach my $row ( @rows ) {
