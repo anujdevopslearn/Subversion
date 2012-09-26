@@ -877,6 +877,12 @@ sub addDataset {
   print CMDFILE "CreateUser $datasetIdentifier with password $datasetPassword\n";
   close(CMDFILE);
 
+  my ($date) = `date '+%F+%H+%m+%s'`;
+  `cp /regis/passdata/PASS.json /regis/passdata/pass_json/PASS.json-$date`;
+
+  my $cmd = "/net/dblocal/www/html/sbeams/lib/scripts/PeptideAtlas/create_PASS_Json.pl";
+  system($cmd);
+
 
   #### Print the information for the user
 
