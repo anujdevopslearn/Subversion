@@ -174,7 +174,7 @@ sub handle_request {
 		 &nbsp;&nbsp;&nbsp;&nbsp;
 
 		 <B><font color="red">Password</B></font>
-		 <input type="text" id="password" value="" size=10 maxlength=50/>
+		 <input type="password" id="password" value="" size=10 maxlength=50/>
 		 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 		<input type="button" id="login" value="LOGIN" />
     <p id="msg" style="width: 430px; padding: 5"></p>
