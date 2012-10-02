@@ -1,0 +1,544 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : GetNextProtChromMapping
+# Author      : Zhi Sun <zsun@systemsbiology.org>
+# $Id: GetNextProtChromMapping 
+#
+# Description : 
+#
+# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    #permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin'],
+    # connect_read_only=>1,
+    allow_anonymous_access=>1,
+  ));
+
+
+  #### Read in the default input parameters
+  my %parameters;
+
+  $parameters{uploaded_file_not_saved} = 1;
+
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+     #$sbeams->printDebuggingInfo($q);
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+  #### Decide what action to take based on information so far
+  if ($parameters{action} eq "???") {
+
+    # Some action
+
+  } else {
+
+    my $project_id = $sbeamsMOD->getProjectID(
+        atlas_build_id => $parameters{atlas_build_id}
+        );
+
+    $sbeamsMOD->display_page_header( project_id => $project_id, 
+                                     use_tabbed_panes => 1
+                                   );
+
+    handle_request(ref_parameters=>\%parameters);
+
+    $sbeamsMOD->display_page_footer( use_tabbed_panes => 1 );
+
+  }
+
+
+} # end main
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+  ### get current public build id
+  my $sql = qq~
+		SELECT atlas_build_id
+		FROM $TBAT_DEFAULT_ATLAS_BUILD
+		WHERE DEFAULT_ATLAS_BUILD_ID = 4
+  ~;
+  my @ids = $sbeams->selectOneColumn($sql);
+  my $atlas_build_id = $ids[0];
+
+
+  #### Show current user context information
+  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+  #$sbeams->printUserContext();
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+    parameters_ref => \%parameters,
+    program_name => $PROG_NAME,
+  );
+  print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+
+
+  #### Define some generic variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+  #### Read in the standard form values
+  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+  #### Set some specific settings for this program
+  my $CATEGORY="Get NextProt Chromsome Mapping";
+  $TABLE_NAME="AT_GetNextProtChromMapping" unless ($TABLE_NAME);
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetNextProtChromMapping";
+
+  #### Get the columns and input types for this table/query
+  my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+
+  my %input_types = 
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+
+
+  #### Read the input parameters for each column
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters,
+    columns_ref=>\@columns,input_types_ref=>\%input_types);
+   #$sbeams->printDebuggingInfo($q);
+
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  if ($apply_action =~ /VIEWRESULTSET|VIEWPLOT/ ) {
+    $sbeams->readResultSet(
+        resultset_file=>$rs_params{set_name},
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters
+    );
+    $n_params_found = 99;
+  }
+
+
+  #### Set some reasonable defaults if no parameters supplied
+  unless ($n_params_found) {
+    $parameters{input_form_format} = "minimum_detail";
+  }
+
+
+  #### Apply any parameter adjustment logic
+  # None
+
+
+  #### Display the user-interaction input form
+  $sbeams->display_input_form(
+    TABLE_NAME=>$TABLE_NAME,
+    CATEGORY=>$CATEGORY,
+    apply_action=>$apply_action,
+    PROGRAM_FILE_NAME=>$PROG_NAME,
+    parameters_ref=>\%parameters,
+    input_types_ref=>\%input_types,
+    use_tabbed_panes => 1,
+    mask_user_context=> '1',
+  );
+
+  #### Display the form action buttons
+  $sbeams->display_form_buttons( TABLE_NAME=>$TABLE_NAME,
+                                 use_tabbed_panes => 1,
+                               );
+
+
+  #### Finish the upper part of the page and go begin the full-width
+  #### data portion of the page
+  $sbeams->display_page_footer( close_tables=>'NO',
+                                use_tabbed_panes => 1,
+                                separator_bar=>'NO',
+                                display_footer=>'NO');
+
+
+  #########################################################################
+  #### Process all the constraints
+
+
+  my %protein_hash;
+  if ( $parameters{upload_file} )
+  {
+     ## upload the file to a file handler
+     my $fh = $q->upload('upload_file');
+     if (!$fh && $q->cgi_error)
+     {
+       print $q->header(-status=>$q->cgi_error);
+     }
+     if ( (-T $fh) && (-s $fh < 1000000)) ##size constraint of 10 MB, restrict $count < 30000
+     {
+       my $count = 0;
+       my $read_file=0;
+       my $prt;
+       ## protein list
+       while ($prt=<$fh>)
+       {
+         chomp($prt);
+         $prt =~ s/\s+$//;
+         if ($prt)
+         {
+             $protein_hash{$prt} = $prt;
+             $count = $count + 1;
+         }
+         last if ($count > 30000);
+      }
+    }
+    %{$parameters{protein_hash}} = %protein_hash;
+  } # if upload file
+
+
+  #### Define some variables needed to build the query
+  my @column_titles = ( 'Gene Name', 
+                        'nextProt AC', 
+                        'Chromosome',
+                        'Start', 
+                        'Stop',
+                        'Protein Evidence', 
+                        'PeptideAtlas', 
+                        'Obs', 
+                        'Description');
+  my %colnameidx = ();
+  my $idx = 0;
+  foreach  (@column_titles){
+    $colnameidx{$_} = $idx;
+    $idx++;
+  }
+
+  #### Certain types of actions should be passed to links
+  my $pass_action = "QUERY";
+  $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
+
+  #### set up display 
+	$resultset_ref->{column_hash_ref} = \%colnameidx;
+	$resultset_ref->{row_pointer} = 0;
+	$resultset_ref->{row_counter} = 0;
+	$resultset_ref->{page_size} = 100;
+
+  foreach my $i (qw (0 1 2 5 6 8)){
+    $resultset_ref->{types_list_ref}->[$i] = 'string';
+    $resultset_ref->{precisions_list_ref}->[$i] =  255;
+  }
+  foreach my $i (qw (3 4 7)){
+    $resultset_ref->{types_list_ref}->[$i] = 'string';
+    $resultset_ref->{precisions_list_ref}->[$i] =  20;
+  }
+  $url_cols{'nextProt AC'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=".$atlas_build_id."&apply_action=$pass_action&protein_name=\%1V"; 
+  #########################################################################
+  #### If QUERY or VIEWRESULTSET was selected, display the data
+  if ($apply_action =~ /QUERY|VIEWRESULTSET|VIEWPLOT/i ) {
+
+    #### If the action contained QUERY, then fetch the results from
+    #### the database
+    if ($apply_action =~ /QUERY/i) {
+
+      #### Post process the resultset
+      getResultset(
+        ddrs_params_ref=>\%rs_params,
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
+      ); 
+
+      #### Store the resultset and parameters to disk resultset cache
+      $rs_params{set_name} = "SETME";
+      $sbeams->writeResultSet(
+        resultset_file_ref=>\$rs_params{set_name},
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
+        resultset_params_ref=>\%rs_params,
+        query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+        column_titles_ref=>\@column_titles,
+      );
+    }
+
+    #### Construct table help
+    my $obs_help = '';# get_table_help( 'peptides' );
+
+    #### Display the resultset
+    $sbeams->displayResultSet(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      url_cols_ref=>\%url_cols,
+      hidden_cols_ref=>\%hidden_cols,
+      max_widths=>\%max_widths,
+      use_tabbed_panes => 1,
+      column_titles_ref=>\@column_titles,
+      column_help=>$obs_help,
+      base_url=>$base_url,
+    );
+
+
+    #### Display the resultset controls
+    $sbeams->displayResultSetControls(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      use_tabbed_panes => 1,
+      base_url=>$base_url,
+    );
+
+
+    #### Display a plot of data from the resultset
+    $sbeams->displayResultSetPlot(
+      rs_params_ref=>\%rs_params,
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      column_titles_ref=>\@column_titles,
+      use_tabbed_panes => 1,
+      base_url=>$base_url,
+    );
+
+
+  #### If QUERY was not selected, then tell the user to enter some parameters
+  } else {
+    if ($sbeams->invocation_mode() eq 'http') {
+      print "<H4>Select parameters above and press QUERY</H4>\n";
+    } else {
+      print "You need to supply some parameters to contrain the query\n";
+    }
+  }
+
+
+} # end handle_request
+
+
+
+###############################################################################
+# evalSQL
+#
+# Callback for translating Perl variables into their values,
+# especially the global table variables to table names
+###############################################################################
+sub evalSQL {
+  my $sql = shift;
+
+  return eval "\"$sql\"";
+
+} # end evalSQL
+
+
+###############################################################################
+# getResultset
+#
+# Perform some additional processing on the resultset that would otherwise
+# be very awkward to do in SQL.
+###############################################################################
+sub getResultset {
+  my %args = @_;
+  my $file = "/net/db/projects/PeptideAtlas/pipeline/../species/Human/NextProt/mapping.txt";
+  open (IN, "<$file");
+
+  #### Process the arguments list
+  my $resultset_ref = $args{'resultset_ref'};
+  my $query_parameters_ref = $args{'query_parameters_ref'};
+
+
+  my %parameters = %{$query_parameters_ref};
+  my %constraint = (
+			 '0'=>'biosequence_gene_name_constraint' ,
+			 '1'=>'biosequence_name_constraint' ,
+			 '2'=>'chromosome' ,
+			 '3'=>'start_in_chromosome' ,
+			 '4'=>'end_in_chromosome',
+       '5'=>'protein_evidence_level_constraint',
+			 '13'=>'peptideatlas_constraint' ,
+			 '14'=>'n_observations_constraint' ,
+			 '15'=>'biosequence_desc_constraint' ,
+  );
+
+  if (defined $parameters{peptideatlas_constraint}){
+    if ($parameters{peptideatlas_constraint} == 1){
+       $parameters{peptideatlas_constraint} = 'Yes';
+    }elsif($parameters{peptideatlas_constraint} == 2) {
+       $parameters{peptideatlas_constraint}= 'No';
+    }else{
+      $parameters{peptideatlas_constraint} == '';
+    }
+  }
+
+  my (%protein_hash, $n_protein);
+  if ( defined  $parameters{protein_hash}){
+    %protein_hash = %{$parameters{protein_hash}};
+    $n_protein = scalar keys %protein_hash;
+  }else{
+    $n_protein =0;
+    %protein_hash = ();
+  }
+  #foreach my $key (keys %parameters){
+  #  print "$key <BR>";
+  #}
+	#$parameters{strand_constraint} ;
+  my $idx = 0;
+  my @data = ();
+  $resultset_ref->{data_ref} = \@data;
+
+  LOOP:while (my $line = <IN>){
+    chomp $line;
+    my @elms = split("\t", $line);
+    $elms[1] =~ s/NX_//;
+    if ($n_protein > 0){
+       next if (not defined $protein_hash{$elms[1]});
+    }
+
+    foreach my $num ( qw(0 1 2 5 13 15)){
+       if ( defined $parameters{$constraint{$num}}){
+         next if ($parameters{$constraint{$num}} eq '');
+         my $pat = $parameters{$constraint{$num}};
+         $pat =~ s/\s+/,/g;
+         $pat =~ s/,+/,/g;
+         $pat =~ s/\,/\|/g;
+         if ($num eq 2){
+           my $chrm  = $elms[$num] ;
+           $chrm =~ s/[a-z].*//;
+           next LOOP if ($chrm !~ /^$pat$/i);
+         }elsif ($elms[$num] !~ /($pat)/i){
+            next LOOP; 
+         }
+       }
+    }
+
+    ## chromosomal postion constraints
+    if ( defined $parameters{$constraint{3}} && $parameters{$constraint{3}} ne '' && $elms[4] < $parameters{$constraint{3}}){
+      next;
+    }
+    if ( defined $parameters{$constraint{4}} && $parameters{$constraint{4}} ne '' && $elms[3] > $parameters{$constraint{4}}){
+      next;
+    }
+    ## number of obervation constraints
+    #print $parameters{'n_observations_constraint'} , "<BR>";
+    my $n_observations_constraint = $parameters{'n_observations_constraint'};
+    my $n_observation = $elms[14];
+    if ($n_observations_constraint ne ''){
+			if ($n_observations_constraint =~ /^(\d+)$/) {
+				 next if($n_observation ne $1);
+			} elsif ($n_observations_constraint =~ /^(not )*between\s+(\d+)\s+and\s+(\d+)$/i) {
+				 next if($n_observation >= $1 && $n_observation <= $2); 
+			} elsif ($n_observations_constraint =~ /^([\d]+)\s*\+\-\s*([\d]+)$/i) {
+				 my $lower = $1 - $2;
+				 my $upper = $1 + $2;
+				 next if( $n_observation < $lower ||  $n_observation > $upper );
+			} elsif ($n_observations_constraint =~ /^([><=][=]*)\s*(\d+)$/) {
+					my $sign = $1;
+					my $num = $2;
+					if ($sign eq  '>'){
+						next if($n_observation <= $num);
+					}elsif ($sign eq '<'){
+						next if($n_observation >= $num);
+					}elsif($sign eq  '>='){
+						next if($n_observation < $num);
+					}elsif ($sign eq '<='){
+						next if($n_observation > $num);
+					}elsif($sign eq '='){
+						next if($n_observation != $num);
+					}
+			} else {
+				print "<H4>Cannot parse peptideAtlas observations constraint ".
+					"'$n_observations_constraint'!  Check syntax.</H4>\n\n";
+				return -1;
+			}
+    }
+    foreach my $i (0..5){
+      $resultset_ref->{data_ref}->[$idx]->[$i] = $elms[$i];
+    }
+    foreach my $i (13..15){
+      $resultset_ref->{data_ref}->[$idx]->[$i-7] = $elms[$i];
+    }
+    $idx++;
+  }
+} # end postProcessResult
+
