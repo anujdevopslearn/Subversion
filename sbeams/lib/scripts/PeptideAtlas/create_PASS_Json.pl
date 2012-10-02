@@ -138,7 +138,7 @@ foreach my $row (@rows){
 				$prevKey = $key;
 			} else {
 				$key = $prevKey;
-				$data{$key} .= $value;
+				$data{$key} .= $line;
 			}
 		}
   }else{
