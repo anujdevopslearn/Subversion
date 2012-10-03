@@ -12,7 +12,7 @@ package SBEAMS::Connection::HTMLPrinter;
 #		there are several different contexts under which the a user
 #		can be in, and the header, button bar, etc. vary by context
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2012 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -1483,7 +1483,13 @@ sub make_toggle_section {
           show.className = 'hidden';
         }
         if ( tgif ) {
-          tgif.src =  '$HTML_BASE_DIR/images/$showimg'
+          var regex = new RegExp( ".*small_gray_plus.gif" );
+          var match = regex.exec( tgif.src );
+          if ( match ) {
+            tgif.src = "$HTML_BASE_DIR/images/small_gray_minus.gif"; 
+          } else {
+            tgif.src =  '$HTML_BASE_DIR/images/$showimg'
+          }
         }
       } else {
         $set_cookie_code;
@@ -1495,7 +1501,13 @@ sub make_toggle_section {
           show.className = 'visible';
         }
         if ( tgif ) {
-          tgif.src =  '$HTML_BASE_DIR/images/$hideimg'
+          var regex = new RegExp( ".*small_gray_minus.gif" );
+          var match = regex.exec( tgif.src );
+          if ( match ) {
+            tgif.src = "$HTML_BASE_DIR/images/small_gray_plus.gif"; 
+          } else {
+            tgif.src =  '$HTML_BASE_DIR/images/$hideimg'
+          }
         }
       }
     }
