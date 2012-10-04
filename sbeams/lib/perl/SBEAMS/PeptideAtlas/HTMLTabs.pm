@@ -119,7 +119,10 @@ sub getTabMenu
     {
        $current_tab=4;
 
-    } elsif( ($PROG_NAME =~ /^GetPeptide/) ||
+    } elsif ($PROG_NAME=~ /^GetNextProtChromMapping/ || 
+     $PROG_NAME =~ /^GetNextProtChromMapping\?(\S+)/ ) {
+       $current_tab=4;
+     }elsif( ($PROG_NAME =~ /^GetPeptide/) ||
     ($PROG_NAME =~ /^GetPeptide\?(\S+)/ ))
     {
        $current_tab=3;
@@ -282,6 +285,11 @@ sub getTabMenu
 			   helptext => 'Multi-constraint browsing of PeptideAtlas Proteins',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/GetProteins"
 			   );
+		$tabmenu->addMenuItem( tablabel => 'Queries',
+			 label => 'Browse NextProt Proteins',
+			 helptext => 'Browsing NextProt Proteins Chromosome mapping and PeptideAtlas observabiligy',
+			 url => "$CGI_BASE_DIR/PeptideAtlas/GetNextProtChromMapping"
+			 );
 
     $tabmenu->addMenuItem( tablabel => 'Queries',
 			   label => 'Compare Proteins in 2 Builds',
