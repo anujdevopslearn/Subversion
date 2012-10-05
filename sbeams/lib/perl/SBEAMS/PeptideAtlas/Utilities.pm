@@ -5,6 +5,7 @@ use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::Proteomics::PeptideMassCalculator;
 
 use constant HYDROGEN_MASS => 1.0078;
+use Storable qw( nstore retrieve );
 use Bio::Graphics::Panel;
 
 use strict;
@@ -1363,6 +1364,21 @@ sub calculate_agilent_ce {
     }
   }
 
+  if ( $args{empirical_ce} && $args{seq} && $args{ion} ) {
+    if ( !$self->{_SRM_CE} ) {
+#      print STDERR "One-time retrieval of CE data\n";
+      $self->{_SRM_CE} = retrieve( "/net/db/projects/PeptideAtlas/MRMAtlas/analysis/CE_extraction/global_values/SRM_CE.sto" );
+#      print STDERR "Done\n";
+    }
+    my $pepion = $args{seq} . '/' . $args{charge};
+#    print STDERR "looking for CE for $pepion and $args{ion}\n";
+    if ( $self->{_SRM_CE}->{$pepion} &&  $self->{_SRM_CE}->{$pepion}->{$args{ion}} ) {
+#      print STDERR "Found $self->{_SRM_CE}->{$pepion}->{$args{ion}}->{max_ce}\n";
+      return sprintf( "%0.1f", $self->{_SRM_CE}->{$pepion}->{$args{ion}}->{max_ce} );
+    }
+#    print STDERR "MIA";
+  }
+
   # calculate CE  
   my $ce;
   if ( $args{charge} == 2 || $args{charge} == 1 ) {
@@ -1371,7 +1387,8 @@ sub calculate_agilent_ce {
     $ce = ( (3.6*$args{mz} )/100 ) -4.8;
     $ce = 0 if $ce < 0;
   }
-  return sprintf( "%0.2f", $ce );
+#  print STDERR "Calc is $ce\n";
+  return sprintf( "%0.1f", $ce );
 }
 
 # For ABISCIEX QTRAP4000 and 5500
@@ -1405,7 +1422,11 @@ sub calculate_abisciex_ce {
 sub get_qqq_unscheduled_transition_list {
 
   my $self = shift;
-  my $tsv = shift || return '';
+  my %opts = @_;
+
+  my $tsv = $opts{method} || return '';
+  $opts{empirical_ce} = $opts{params}->{empirical_ce} || 0;
+  $opts{calc_rt} = $opts{params}->{calc_rt} || 0;
 
   my $method = qq~MRM
 Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Dwell	Fragmentor	Collision Energy	Cell Accelerator Voltage	Polarity	Ion type
@@ -1436,7 +1457,7 @@ Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Dwell	Fragmentor	C
     my $name = $acc . '.' . $seq;
 
     my $ce_key = $seq . $q1c;
-    $ce{$ce_key} ||= $self->calculate_agilent_ce( mz => $q1, charge => $q1c );
+    $ce{$ce_key} ||= $self->calculate_agilent_ce( mz => $q1, charge => $q1c, empirical_ce => $opts{empirical_ce} , seq => $seq, ion => $lbl );
 
 #    my $ce = ( $q1c == 2 ) ? sprintf( "%0.2f", ( 2.93 * $q1 )/100 + 6.72 ) : 
 #				                     sprintf( "%0.2f", ( 3.6 * $q1 )/100 - 4.8 );
@@ -1453,14 +1474,23 @@ Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Dwell	Fragmentor	C
 sub get_qqq_dynamic_transition_list {
 
   my $self = shift;
-  my $tsv = shift || return '';
+  my %opts = @_;
 
-  my $method = qq~Dynamic MRM
-Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Fragmentor	Collision Energy	Cell Accelerator Voltage	Ret Time (min)	Delta Ret Time	Polarity	Ion type	EstimatedRT
-~;
+  my $tsv = $opts{method} || return '';
+  $opts{empirical_ce} = $opts{params}->{empirical_ce} || 0;
+  $opts{calc_rt} = $opts{params}->{calc_rt} || 0;
 
- my $u = 'Unit';
-	my $p = 'Positive';
+  my $method = "Dynamic MRM\n";
+
+  my @headings = ( 'Compound Name', 'ISTD?', 'Precursor Ion', 'MS1 Res', 'Product Ion', 'MS2 Res', 'Fragmentor', 'Collision Energy', 'Cell Accelerator Voltage', 'Ret Time (min)', 'Delta Ret Time', 'Polarity', 'Ion type' );
+  
+  if ( $opts{calc_rt} ) {
+    push @headings, 'EstimatedRT';
+  }
+  $method .= join( "\t", @headings ) . "\n";
+
+  my $u = 'Unit';
+  my $p = 'Positive';
 
   my %ce;
 
@@ -1485,7 +1515,8 @@ Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Fragmentor	Collisi
     my $name = $acc . '.' . $seq;
 
     my $ce_key = $seq . $q1c;
-    $ce{$ce_key} ||= $self->calculate_agilent_ce( mz => $q1, charge => $q1c );
+#    $ce{$ce_key} ||= $self->calculate_agilent_ce( mz => $q1, charge => $q1c );
+    $ce{$ce_key} ||= $self->calculate_agilent_ce( mz => $q1, charge => $q1c, empirical_ce => $opts{empirical_ce} , seq => $seq, ion => $lbl );
 
 #    my $ce = ( $q1c == 2 ) ? sprintf( "%0.2f", ( 2.93 * $q1 )/100 + 6.72 ) : 
 #				                     sprintf( "%0.2f", ( 3.6 * $q1 )/100 - 4.8 );
@@ -1494,7 +1525,11 @@ Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Fragmentor	Collisi
     my $est_rt = sprintf( "%0.1f", ($line[13]*72.94461-122.83351)/60);
     my $istd = 'False';
     $istd = 'True' if $seq =~ /6\]$/;
-    $method .= join( "\t", $name, $istd, $q1, $u, $q3, $u, 125, $ce{$ce_key}, 5, $rt, $rtd, $p, $ion, $est_rt ) . "\n";
+    my @rowdata = ( $name, $istd, $q1, $u, $q3, $u, 125, $ce{$ce_key}, 5, $rt, $rtd, $p, $ion );
+    if ( $opts{calc_rt} ) {
+      push @rowdata, $est_rt;
+    }
+    $method .= join( "\t", @rowdata ) . "\n";
 	}
   return $method;
 }
@@ -1538,7 +1573,8 @@ sub get_qtrap_mrmmsms_method {
 sub get_qtrap_mrm_method {
 
   my $self = shift;
-  my $tsv = shift || return '';
+  my %opts = @_;
+  my $tsv = $opts{method} || return '';
 
   my $sep = "\t";
   $sep = ",";
