@@ -304,6 +304,7 @@ sub handle_request {
   $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
 
   #### set up display 
+  @{$resultset_ref->{column_list_ref}} = @column_titles;
 	$resultset_ref->{column_hash_ref} = \%colnameidx;
 	$resultset_ref->{row_pointer} = 0;
 	$resultset_ref->{row_counter} = 0;
@@ -328,7 +329,7 @@ sub handle_request {
 
       #### Post process the resultset
       getResultset(
-        ddrs_params_ref=>\%rs_params,
+        rs_params_ref=>\%rs_params,
         resultset_ref=>$resultset_ref,
         query_parameters_ref=>\%parameters,
       ); 
