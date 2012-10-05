@@ -351,16 +351,6 @@ sub print_form {
                                                 showtext => 'Show form' );
 
 
-#    my ( $thtml, $tlink ) = $sbeams->make_toggle_section( name => 'pabst_penalty_form',
-#                                                 visible => 1,
-#                                                 tooltip => 'Show/Hide penalty form',
-#                                                  sticky => 1,
-#                                                 imglink => 0,
-#                                                 content => '&nbsp;',
-#                                                textlink => 1,
-#                                                hidetext => 'Hide form',
-#                                                showtext => 'Show form',
-#                                               );
     my @link = split "\n", $link;
     my $script_css = join( "\n", @link[0..$#link-1] );
 
@@ -706,11 +696,34 @@ sub get_download_form {
   ~;
   my $nowrap_style = "<style> .nowrap { white-space: nowrap }; </style>";
   my $calc_check_help = "<IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Add column with estimated RT for peptides without a RT Catalog value'/>";
-  my $calc_check = "Include calculated RT $calc_check_help <INPUT TYPE=checkbox NAME=calc_rt></INPUT>";
+  my $ce_check_help = "<IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Add column with empirically determined best collision entergy for SRMs for which this was determined (Agilent only)'/>";
+
+  my $calc_check = '';
+  my $ce_check = '';
+  my $thtml = '';
+  my $tlink = '';
+
+#                                                    content => "<DIV style=clear_info_box><TABLE><TR><TD>$calc_check</TD></TR><TR><TD>$ce_check</TD></TR></TABLE></DIV>",
+	if ( !$sbeams->isGuestUser() ) {
+    $calc_check = "Include calculated RT $calc_check_help <INPUT TYPE=checkbox NAME=calc_rt></INPUT>";
+    $ce_check = "Include empirical optimized CE $ce_check_help <INPUT TYPE=checkbox NAME=empirical_ce></INPUT>";
+    $thtml = $sbeams->make_toggle_section( name => 'download_options',
+                                                    visible => 0,
+                                                    tooltip => 'Show/Hide advanced download options',
+                                                     sticky => 1,
+                                                    imglink => 1,
+                                                    content => "<DIV class=clear_info_box>$calc_check<BR>$ce_check</DIV>",
+                                                   textlink => 1,
+                                                   hidetext => 'Hide advanced options',
+                                                   showtext => 'Show advanced options',
+                                               );
+  }
+
 
   my $button = "<INPUT TYPE=SUBMIT NAME=submit VALUE=Download>";
   my $space = '&nbsp;' x 3;
-  $form .= $nowrap_style . '<DIV style=nowrap>' . $calc_check . $space . $select  . $button . '</DIV></FORM>';
+#  $form .= $nowrap_style . '<DIV style=nowrap>' . $ce_check . '&nbsp;' . $calc_check . $space . $select  . $button . '</DIV></FORM>';
+  $form .= $nowrap_style . '<DIV style=nowrap>' . $select . $button . "<BR> $thtml" . '</DIV></FORM>';
   return $form;
 }
 
