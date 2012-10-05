@@ -140,7 +140,7 @@ sub handle_request {
   my %resultset = ();
   my $resultset_ref = \%resultset;
 
-  use Data::Dumper;
+#  my $msg = "empirical CE is $parameters{empirical_ce}<BR>\n";
 
   my $apply_action  = $q->param('apply_action');
   my $remove_markup = $parameters{remove_markup};
@@ -156,12 +156,20 @@ sub handle_request {
   my $mem = $sbeams->memusage( pid => $pid );
   $log->debug( "Read resultset: " . $mem );
 
+  my %form_params = %parameters;
+
   #### Read in the result set
   $sbeams->readResultSet(  resultset_file => $parameters{rs_set_name},
                             resultset_ref => $resultset_ref,
                      query_parameters_ref => \%parameters,
                                       pid => $pid,
                                       debug => 1 );
+
+  for my $param ( keys( %form_params ) ) {
+    $parameters{$param} = $form_params{$param};
+  }
+#  $msg .= "empirical CE is now $parameters{empirical_ce}<BR>\n";
+#  die $msg;
 
   $mem = $sbeams->memusage( pid => $pid );
   $log->debug( "Done: " . $mem );
@@ -187,20 +195,22 @@ sub handle_request {
     $mem = $sbeams->memusage( pid => $pid );
     $log->debug( "Convert to mrm format: " . $mem );
 
+#    die Dumper( %parameters );
+
     if ( $download =~ /AgilentQQQ_dynamic/i ) {
-      my $method = $atlas->get_qqq_dynamic_transition_list( $tsv_formatted );
+      my $method = $atlas->get_qqq_dynamic_transition_list( method => $tsv_formatted, params => \%parameters );
       print $method;
     } elsif ( $download =~ /AgilentQQQ/i ) {
-      my $method = $atlas->get_qqq_unscheduled_transition_list( $tsv_formatted );
+      my $method = $atlas->get_qqq_unscheduled_transition_list( method => $tsv_formatted, params => \%parameters );
       print $method;
     } elsif ( $download =~ /ABSCIEX_QTRAP_MRM/i ) {
-      my $method = $atlas->get_qtrap_mrm_method( $tsv_formatted );
+      my $method = $atlas->get_qtrap_mrm_method( method => $tsv_formatted, params => \%parameters );
       print $method;
     } elsif ( $download =~ /ABSCIEX_QTRAP_MRMMSMS/i ) {
-      my $method = $atlas->get_qtrap_mrmms_method( $tsv_formatted );
+      my $method = $atlas->get_qtrap_mrmms_method( method => $tsv_formatted, params => \%parameters);
       print $method;
     } elsif ( $download =~ /ThermoTSQ/i ) {
-      my $method = $atlas->get_thermo_tsq_mrm_method( $tsv_formatted );
+      my $method = $atlas->get_thermo_tsq_mrm_method( method => $tsv_formatted, params => \%parameters );
       print $method;
     } elsif ( $download =~ /TSV/i ) {
       for my $row ( @{$tsv_formatted} ) {
