@@ -185,6 +185,7 @@ sub handle_request {
 	if($filterstr ne '' and $filtercol eq 'all'){
 		$filterstr =~ s/^\s+//;
 		$filterstr =~ s/\s+$//;
+    $filterstr =~ s/[,;]//;
 		my %tmp;
 		my @qts = split (/\s+/, $filterstr);
 		open (IN, "<$file") or die "cannot open $file\n";;
