@@ -1250,14 +1250,17 @@ sub fetch_transitions {
     ion_rank ASC
     ~;
 
-#   print "<PRE>$lib_sql</PRE>\n";
+#   print "<PRE>$lib_sql</PRE>\n";  
+#
+  my ( $ssr_type ) = $sbeams->selectOneColumn( "SELECT elution_time_type_id FROM $TBAT_ELUTION_TIME_TYPE WHERE elution_time_type = 'SSRCalc'" );
+  $parameters{rt_type} ||= $ssr_type;
 
   my @headings = ( 'Protein', 'Pre AA', 'Sequence', 'Fol AA', 'Adj SS', 'Source', 'Q1_mz', 'Q1_chg', 'Q3_mz', 'Q3_chg', 'Ion', 'Rank', 'RI', 'SSRT'  );
 
 
   # Code to get only pertinent headings here...
   if ( $parameters{rt_type} && !$sbeams->isGuestUser() ) {
-    push @headings, 'RT_Cat';
+    push @headings, 'RT_Cat' unless $parameters{rt_type} == $ssr_type;
   }
 
   my $consensus_srcs = $consensus->getConsensusSources( pabst_build_id => $pabst_build_id );
@@ -1484,9 +1487,11 @@ sub fetch_transitions {
 # 9 fragment_ion_charge
 # 10 fragment_ion_label
 #      my  @rowdata = ( $prot, @row[0..12,15,19] );
-      my  @rowdata = ( $prot, @row[0..13] );
-      if ( $sbeams->isGuestUser() ) {
+      my  @rowdata;
+      if ( $sbeams->isGuestUser() || $parameters{rt_type} == $ssr_type ) {
         @rowdata = ( $prot, @row[0..12] );
+      } else {
+        @rowdata = ( $prot, @row[0..13] );
       }
       if ( $parameters{speclinks} ) {
         my $link_key = $row[1] . $row[6];
