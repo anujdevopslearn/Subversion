@@ -337,7 +337,7 @@ sub map_peptide {
     $brute++;
     $stats{short_peptide}++ unless $skip_stats;
   }
-  if ( length( $pepseq ) > 30 ) {
+  if ( length( $pepseq ) > 300 ) {
     $brute++;
     $stats{long_peptide}++ unless $skip_stats;
   }
@@ -536,6 +536,10 @@ sub read_fasta {
     my $seq = uc( $entry->seq() );
     chomp $seq;
     $seq =~ s/\s//gm;
+    if ( $opts->{i_to_l_convert} ) {
+      $seq =~ s/I/L/gm;
+    }
+
 
     if ( defined $seq2acc{$seq} ) {
       die "Duplicate sequences" unless $opts->{duplicates};
@@ -556,7 +560,7 @@ sub read_fasta {
     unless( $opts->{grep_only} ) {
       my $tryptic = $atlas->do_tryptic_digestion( aa_seq => $seq,
                                                  min_len => 6,
-                                                 max_len => 30 );
+                                                 max_len => 300 );
 
       for my $tp ( @{$tryptic} ) {
 #        print STDERR "Adding $tp\n";
@@ -607,7 +611,7 @@ sub get_options {
              'show_degen', 'show_mia', 'nocount_degen', 'show_nomap', 'show_himap=i',
              'show_proteo', 'show_all_pep', 'omit_match_seq', 'suppress_brute',
              'key_calc', 'show_all_flanking', "min_nomap=i", 'c_term_cnt', 'n_term_cnt',
-             'print_context' );
+             'print_context', 'i_to_l_convert' );
 
   print_usage() if $opts{help};
 
@@ -671,6 +675,7 @@ sub print_usage {
   -a, --acc_swiss      Pull swiss prot acc from Uniprot fasta heading.
   -b, --bin_max        Max size of reported prot_count.
   -g, --grep_only      For small peptide lists, forgo the fasta digestion
+      --i_to_l_convert For cached peptide mapping, convert Ile -> Leu (isobaric).
   -k, --key_calc       Run code to determine which prot seqs are unambiguously
                        defined by peptide set.
   -Z, --ZtoC           Convert Z to C in peptide sequences
