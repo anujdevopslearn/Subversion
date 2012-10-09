@@ -337,9 +337,10 @@ sub get_build_list {
 
   my $sql = qq~
     SELECT pabst_build_id, build_name, build_comment
-		FROM $TBAT_PABST_BUILD
-    WHERE project_id IN ( $accessible_project_ids )
-    ORDER BY build_name ASC
+		FROM $TBAT_PABST_BUILD PB 
+		JOIN $TB_ORGANISM O ON O.organism_id = PB.organism_id
+    WHERE PB.project_id IN ( $accessible_project_ids )
+    ORDER BY organism_name ASC, build_name ASC
     ~;
     my @atlas_builds = $sbeams->selectSeveralColumns($sql);
 
