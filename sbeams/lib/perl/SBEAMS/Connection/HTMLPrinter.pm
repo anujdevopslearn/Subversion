@@ -240,6 +240,7 @@ my $module_styles =<<"  END_STYLE";
   .info_box { background: #F0F0F0; border: #000 1px solid; padding: 4px; width: 80%; color: #444444 }
   .small_super_text { vertical-align: super; font-size: ${FONT_SIZE_SM}pt }
   .clear_info_box { border: #000 1px solid; padding: 4px; width: 80%; color: #444444 }
+  .clear_warning_box { border: #F03 1px solid; padding: 4px; width: 80%; color: #444444 }
   .popup_help { cursor: Help; color:#444444; background-color: #E0E0E0 }
   .gaggle-data { display: none }
   
