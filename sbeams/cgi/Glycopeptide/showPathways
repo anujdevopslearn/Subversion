@@ -255,7 +255,7 @@ sub getExpressionValues {
 
   my $sql =<<"  END";
   SELECT  entrez_id, ipi_accessions, 'nada', 'nada', 1
-  FROM dcampbel.dbo.ipi_xrefs IX JOIN $TBGP_IPI_DATA ID 
+  FROM biolink.dbo.ipi_xrefs IX JOIN $TBGP_IPI_DATA ID 
     ON IX.ipi_accessions = ID.ipi_accession_number
   JOIN $TBGP_IDENTIFIED_TO_IPI ITI 
     ON ITI.ipi_data_id = ID.ipi_data_id
