@@ -340,6 +340,7 @@ sub cleanup_tmp {
     for my $aa1 ( @letters ) {
       for my $aa2 ( @letters ) {
         my $suffix = $aa1 . $aa2;
+#        next if $suffix =~ /AP|GP|GG|AA/;
         unlink( $tmp_files{$file}->{$suffix} );
       }
     }
@@ -435,6 +436,9 @@ sub insert_peptide_ion {
                   peptide_charge => $args{ion_ref}->{charge},
                   peptide_mz => $args{ion_ref}->{precursor},
   };
+
+
+#  print "Inserting pepion $args{ion_ref}->{modifiedSequence} as $args{ion_ref}->{charge}\n";
  
   my $peptide_ion_id;
    $peptide_ion_id = $sbeams->updateOrInsertRow( insert => 1,
@@ -471,6 +475,7 @@ sub insert_peptide_ion_instance {
                   n_observations => $nobs,
                   max_precursor_intensity => $intensity,
   };
+#  print "Inserting peption instance for $args{ion_id} on $args{instr_id}\n";
  
   my $peptide_ion_instance_id;
   $peptide_ion_instance_id = $sbeams->updateOrInsertRow( insert => 1,
@@ -650,6 +655,7 @@ sub load_build_peptides {
                                                 type => $type,
                                                  lib => $lib_data{$type} );
   
+#        print Dumper( %lib_data) if $suffix eq 'GG';
         # Added intensity values
         next unless $args->{use_intensities};
         my $inten_base = $lib_base; 
@@ -724,6 +730,7 @@ sub load_build_peptides {
           $modified_sequence =~ s/C([^\[])/C[160]$1/g;
           $modified_sequence =~ s/C$/C[160]/; 
         }
+#        print "$line[2] becomes $modified_sequence\n";
     
         my $pep_key = $line[1] . $line[2] . $line[3];
   
@@ -801,6 +808,10 @@ sub load_build_peptides {
                                                        PK => 'pabst_peptide_id',
                                               testonly    => $args->{testonly} );
           }
+
+#          print "INSERTING $line[2], modseq of $modified_sequence\n";
+          my $stripped_seq = $modified_sequence;
+          $stripped_seq =~ s/\[\d+\]//g;
         
           # Cache this to avoid double insert.
           $seq2id->{$pep_key} = $pep_id;
@@ -809,13 +820,20 @@ sub load_build_peptides {
           my %peptide_ions;
           # loop over instrument types, calc theoretical frag masses for any pepions seen.
           for my $instr ( keys( %lib_data ) ) {
+#            print "SUFX: $suffix $instr\n";
             if  ( $lib_data{$instr} ) {
-              if ( $lib_data{$instr}->{$modified_sequence} || $lib_data{$instr}->{MOD_IONS}->{$modified_sequence} ) {
+              if ( $lib_data{$instr}->{$modified_sequence} || $lib_data{$instr}->{MOD_IONS}->{$stripped_seq} ) {
+#                print "Has lib data for $modified_sequence\t";
+#                print join( ',', keys( %{$lib_data{$instr}} ) ) . "\n";
+#                print join( ',', keys( %{$lib_data{$instr}}, $lib_data{$instr}->{MOD_IONS} ) ) . "\n";
+#                print join( ',', keys( %{$lib_data{$instr}} ), Dumper( $lib_data{$instr}->{MOD_IONS} ) ) . "\n";
 
-                for my $modseq ( $modified_sequence, keys( %{$lib_data{$instr}->{MOD_IONS}->{$modified_sequence}} ) ) {
+                for my $modseq ( $modified_sequence, keys( %{$lib_data{$instr}->{MOD_IONS}->{$stripped_seq}} ) ) {
+#                  print "MSEQ $modseq\n";
 
                   for my $chg ( sort { $a <=> $b } ( keys( %{$lib_data{$instr}->{$modseq}} ) ) ) {
                     my $ion_key = $modseq . $chg;
+#                    print "\tCHG $chg\n";
                     if ( !$peptide_ions{$ion_key} ) {
                       $peptide_ions{$ion_key} ||= { charge => $chg,
                                           modifiedSequence => $modseq
@@ -824,7 +842,8 @@ sub load_build_peptides {
                                                                                           charge => $chg );
     
                       for my $row ( @{$mz_value} ) {
-  #                      print "theo value is $row->{mz} for $row->{label}, original is $peptide_ions{$ion_key}->{$row->{label}}\n";
+#                        print "MZ is $row->{mz} for $row->{label}, original is $peptide_ions{$ion_key}->{$row->{label}} on $instr\n";
+
                         $peptide_ions{$ion_key}->{$row->{label}} ||=  sprintf( "%0.4f", $row->{mz} );
                       }
     
@@ -835,11 +854,13 @@ sub load_build_peptides {
                     }
                   }
                 }
+              } else {
+#                print "Didn't have lib data for $modified_sequence\t";
+#                print join( ',', keys( %{$lib_data{$instr}} ), Dumper( $lib_data{$instr}->{MOD_IONS} ) ) . "\n";
               }
             }
           } # End calc theoretical masses loop
   
-
 
 
           # If we didn't see any peptide ions from any of the mrm databases...
@@ -896,9 +917,10 @@ sub load_build_peptides {
           for my $instr ( keys( %lib_data ) ) {
     
     #       For each instrument type, insert all available peptide ions including mods - cache list
-            if  ( $lib_data{$instr} && ( $lib_data{$instr}->{$modified_sequence} || $lib_data{$instr}->{MOD_IONS}->{$modified_sequence} ) ) {
+            if  ( $lib_data{$instr} && ( $lib_data{$instr}->{$modified_sequence} || $lib_data{$instr}->{MOD_IONS}->{$stripped_seq} ) ) {
 
-              for my $modseq ( $modified_sequence, keys( %{$lib_data{$instr}->{MOD_IONS}->{$modified_sequence}} ) ) {
+              for my $modseq ( $modified_sequence, keys( %{$lib_data{$instr}->{MOD_IONS}->{$stripped_seq}} ) ) {
+#                print "transitions for $modified_sequence\n";
     
                 my $transition_set;
                 if ( $lib_data{$instr}->{$modseq} ) {
