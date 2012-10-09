@@ -712,10 +712,10 @@ sub get_download_form {
                                                     tooltip => 'Show/Hide advanced download options',
                                                      sticky => 1,
                                                     imglink => 1,
-                                                    content => "<DIV class=clear_info_box>$calc_check<BR>$ce_check</DIV>",
+                                                    content => "<DIV class=clear_info_box disply: inline-block>$calc_check<BR>$ce_check</DIV>",
                                                    textlink => 1,
-                                                   hidetext => 'Hide advanced options',
-                                                   showtext => 'Show advanced options',
+                                                   hidetext => 'Hide advanced download options',
+                                                   showtext => 'Show advanced download options',
                                                );
   }
 
@@ -1149,18 +1149,23 @@ sub fetch_transitions {
 
   my $nprots = scalar( keys( %bioseq_ids ) );
   my $npeps = scalar( keys( %pep_ids ) );
-  $log->debug( "searching for $nprots biosequences and $npeps peptides" );
 
-  my $status_txt = "Querying with $nprots proteins and $npeps peptides, estimate a maximum search time of roughly " . sprintf( "%0d", $nprots*$npeps/400 ) . " seconds";
+  
+  my $status_txt = "Running query with $nprots proteins and $npeps peptides ";
+  if ( $nprots > 7 && $nprots < 16 ) {
+    $status_txt = "Querying with $nprots proteins and $npeps peptides, could take up to a minute ";
+  } elsif ( $nprots > 20 ) { 
+    $status_txt = "Querying with $nprots proteins and $npeps peptides, could take over a minute ";
+  }
+  my $t0 = time();
   print qq~
   <script type="text/javascript">
   var info_txt=document.getElementById("query_info");
   info_txt.innerHTML=" ";
-  info_txt.innerHTML="<BR>$status_txt<BR>";
+  info_txt.innerHTML="<BR><DIV class=clear_warning_box><IMG SRC=$HTML_BASE_DIR/images/wait_sm.gif>&nbsp;$status_txt</DIV>";
   </script>
   ~;
 
-  $log->debug( "Done fetching peptides: $pep_id_string"  . time());
 
   my $organism = $parameters{organism} || $best_peptide->getBuildOrganism( pabst_build_id => $parameters{pabst_build_id} );
   my $scan_clause = $pep_id_string;
@@ -1654,10 +1659,12 @@ sub fetch_transitions {
   print STDERR "Done 2 " . time()  . "\n";
   my $cnttxt = "Looped over $counts{row} total rows for $counts{prot} proteins and $counts{pepions} peptide ions";
 
+  $end = time;
+	my $delta = $end - $start;
   print qq~
   <script type="text/javascript">
   var info_txt=document.getElementById("query_info");
-  info_txt.innerHTML="<BR> Took $delta seconds to loop over $counts{row} rows ";
+  info_txt.innerHTML="<BR><DIV class=clear_warning_box> Took $delta seconds to loop over $counts{row} rows </DIV>";
 	function clear_status() {
     info_txt.innerHTML=" ";
 	}
