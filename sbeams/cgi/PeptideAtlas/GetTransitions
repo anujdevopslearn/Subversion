@@ -380,7 +380,7 @@ sub print_form {
     my $mod_filters = get_mod_filters( %parameters );
 
     # FINDME
-    my ( $sub_form ) = $best_peptide->get_change_form( form_only => 1, hide_buttons => 1, shade_defs => 1, set_params => \%parameters, noop => 1 );
+    my ( $sub_form ) = $best_peptide->get_change_form( form_only => 1, hide_buttons => 1, shade_defs => 1, set_params => \%parameters, noop => 0 );
     $sub_form =~ s/tbl_visible/tbl_hidden/gm;
    
     my $peptide_chk = "<INPUT TYPE=checkbox NAME=peptides_only></INPUT>";
@@ -1116,7 +1116,7 @@ sub fetch_transitions {
 
   # Added 2012-02 
   my $peptide_sql = qq~
-  SELECT DISTINCT biosequence_name, BS.biosequence_id, PP.pabst_peptide_id
+  SELECT DISTINCT biosequence_name, BS.biosequence_id, PP.pabst_peptide_id, PP.peptide_sequence
   FROM $TBAT_PABST_PEPTIDE PP 
   JOIN $TBAT_PABST_PEPTIDE_MAPPING PM 
     ON PM.pabst_peptide_id = PP.pabst_peptide_id
@@ -1134,22 +1134,24 @@ sub fetch_transitions {
 
   my $sth = $sbeams->get_statement_handle( $peptide_sql );
   my %pep_ids;
+  my %pep_seqs;
   my %bioseq_ids;
   my %bioseq2name;
   my %bioseq2peptides;
   while ( my @row = $sth->fetchrow_array() ) {
     $pep_ids{$row[2]}++;
+    $pep_seqs{$row[3]}++;
     $bioseq_ids{$row[1]}++;
     $bioseq2name{$row[1]} = $row[0];
     $bioseq2peptides{$row[1]} ||= {};
     $bioseq2peptides{$row[1]} ||= {$row[2]};
   }
   my $pep_id_string = join( ',', keys( %pep_ids ) ) || 1;
+  my $pep_seq_string = "'" . join( "','", keys( %pep_seqs ) ) . "'" || '';
   my $bioseq_id_string = join( ',', keys( %bioseq_ids ) ) || 1;
 
   my $nprots = scalar( keys( %bioseq_ids ) );
   my $npeps = scalar( keys( %pep_ids ) );
-
   
   my $status_txt = "Running query with $nprots proteins and $npeps peptides ";
   if ( $nprots > 7 && $nprots < 16 ) {
@@ -1203,6 +1205,12 @@ sub fetch_transitions {
      LEFT JOIN $TBAT_ELUTION_TIME ET ON ( ET.modified_peptide_sequence = PP.peptide_sequence AND elution_time_type_id = '$parameters{rt_type}' $et_and )
     ~;
   }
+
+  my $peptide_mappings = {};
+  if ( $parameters{SwissProt} && $organism == '2' ) {
+    $peptide_mappings = get_peptide_mappings( $pep_seq_string );
+  }
+  my $has_mappings = ( scalar( keys( %{$peptide_mappings} ) ) ) ? 1 : 0;
 
   my $limit_clause = $sbeams->buildLimitClause( row_limit => 100000 );
   my $weight_clause = get_src_weights( \%parameters );
@@ -1267,6 +1275,11 @@ sub fetch_transitions {
   if ( $parameters{rt_type} && !$sbeams->isGuestUser() ) {
     push @headings, 'RT_Cat' unless $parameters{rt_type} == $ssr_type;
   }
+
+  if ( $has_mappings ) {
+    push @headings, 'N_map';
+  }
+
 
   my $consensus_srcs = $consensus->getConsensusSources( pabst_build_id => $pabst_build_id );
   my $has_ce = $consensus->hasCESet( pabst_build_id => $pabst_build_id );
@@ -1340,24 +1353,91 @@ sub fetch_transitions {
 
   my %counts;
 
-  # If the user has modified any of the weights we have to do this from scratch...
-  if ( $is_changed && 0 ) {
+  my @transitions;
+  my $tcnt = 1;
+  while( my @row = $sth->fetchrow_array() ) {
+    push @row, $tcnt++;
+    $row[14] = $bioseq2name{$row[14]};
+    push @transitions, \@row;
+  }
 
+  # If the user has modified any of the weights we have to do this from scratch...
+  if ( $is_changed  ) {
+    update_status( "PABST parameters have changed, rescoring peptides..." );
+    $best_peptide->set_pabst_penalty_values( %parameters );
+#    print Dumper( @transitions );
+#    my $param = $best_peptide->get_pabst_penalty_values();
     # Do pabst eval on peptide list here.  Use these to modify src-weighted values
+    my $evaluated = $best_peptide->pabst_evaluate_peptides( peptides => \@transitions,
+                                                   previous_idx => 0, 
+                                                        seq_idx => 1, 
+                                                     follow_idx => 2, 
+                                                      score_idx => 20,
+                                                  hydrophob_idx => 12,
+                                                      trim_mods => 1 );
+
+    @transitions = sort { $b->[14] cmp $a->[14] ||
+                          $a->[19] cmp $b->[19] ||  
+                          $b->[25] <=> $a->[25] ||  
+                          $a->[1] cmp $b->[1] ||  
+                          $a->[22] <=> $b->[22] } @{$evaluated};
+
+#    print Dumper( $rows );
+#    die;
+
+# 0 preceding_residue,
+# 1 PI.modified_peptide_sequence,
+# 2 following_residue,
+# 3 synthesis_adjusted_score,
+# 4 instrument_type_name,
+# 5 precursor_ion_mz,
+# 6 precursor_ion_charge,
+# 7 fragment_ion_mz,
+# 8 fragment_ion_charge,
+# 9 fragment_ion_label,
+# 10 ion_rank,
+# 11 relative_intensity,
+# 12 SSRCalc_relative_hydrophobicity,
+# 13 $ssr_field,
+# 14 biosequence_id,
+# 15 merged_score,
+# 16 PII.n_observations,
+# 17 source_build,
+# 18 PSP.priority,
+# 19 PTI.is_predicted,
+# 20 $weight_clause,
+# 21 PII.max_precursor_intensity
+# 22 tcnt
+# 23 annot
+# 24 score
+# 25 adj_score
+
+#    die Dumper( $rows );
+
+  }
 
   # If no params were changed, use static values
-  } else {
      $log->debug( "Iterating over results " . time() );
-    print STDERR "iterating " . time()  . "\n";
+  print STDERR "iterating " . time()  . "\n";
+  update_status( "Selecting optimum transitions" );
 
-    my %frag_seen;
-    my $row_cnt = 0;
-    my %links;
-    while( my @row = $sth->fetchrow_array() ) {
+  my %frag_seen;
+  my $row_cnt = 0;
+  my %links;
+#  my %kseen;
+  for my $row ( @transitions ) {
+    if ( $is_changed ) {
+      $row->[20] = $row->[25];
+      $row->[3] *= $row->[24];
+    }
+#    my $key = join( '__', $row->[14], $row->[1], $row->[19], sprintf( "%0.3f", $row->[20]) );
+#    print "$key  <BR>\n" unless $kseen{$key};
+#    $kseen{$key}++;
+
+    my @row = @{$row};
 
 #      my $rowdata = join( ':', @row );
 #      $log->debug( "$row_cnt> $rowdata" );
-      $row[14] = $bioseq2name{$row[14]};
       my $prot = $row[14];
       
       $counts{row}++;
@@ -1473,11 +1553,12 @@ sub fetch_transitions {
       # protein  sequence Q1_mz Q3_mz RT rank Q1_chg Q3_chg peak_intensity ion_label collision SSR
       push @namelist, join( '::', $prot, @row[1,5,7],'',@row[10,6,8,11,9],$ce, $row[12] );
 
+      # clean
+      my $cleanseq = $row[1];
+      $cleanseq =~ s/\[\d+\]//g;
+
       if ( $row[16] && $is_html ) {
-        # clean
-        my $clean = $row[1];
-        $clean =~ s/\[\d+\]//g;
-        $row[16] = "<A HREF='Summarize_Peptide?searchWithinThis=Peptide+Sequence&searchForThis=$clean;action=QUERY'>$row[15]</A>";
+        $row[16] = "<A HREF='Summarize_Peptide?searchWithinThis=Peptide+Sequence&searchForThis=$cleanseq;action=QUERY'>$row[15]</A>";
       }
 
       if ( $is_html ) {
@@ -1498,6 +1579,15 @@ sub fetch_transitions {
       } else {
         @rowdata = ( $prot, @row[0..13] );
       }
+
+      if ( $has_mappings ) {
+        if ( $peptide_mappings->{$cleanseq} ) {
+          push @rowdata, $peptide_mappings->{$cleanseq};
+        } else {
+          push @rowdata, 'dunno';
+        }
+      }
+
       if ( $parameters{speclinks} ) {
         my $link_key = $row[1] . $row[6];
 
@@ -1652,10 +1742,9 @@ sub fetch_transitions {
         print $sbeams->makeInfoText( "Maximum query size (" . ROW_LIMIT . ") exceeded, results are truncated" );
         last;
       }
-    } # End loop over resultset
-    $log->debug( "Done 1 " . time()  . "\n" );
-
-  }
+  } # End loop over resultset
+  $log->debug( "Done 1 " . time()  . "\n" );
+  
   print STDERR "Done 2 " . time()  . "\n";
   my $cnttxt = "Looped over $counts{row} total rows for $counts{prot} proteins and $counts{pepions} peptide ions";
 
@@ -1832,6 +1921,39 @@ sub fetch_transitions {
 
 } # end fetch_transitions
 
+sub update_status {
+  my $msg = shift || return;
+  print qq~
+  <script type="text/javascript">
+  var info_txt=document.getElementById("query_info");
+  info_txt.innerHTML=" ";
+  info_txt.innerHTML="<BR><DIV class=clear_warning_box><IMG SRC=$HTML_BASE_DIR/images/wait_sm.gif>&nbsp;$msg</DIV>";
+  </script>
+  ~;
+}
+
+sub get_peptide_mappings {
+
+  my %mappings;
+  my $pep_string = shift || return \%mappings;
+
+  my $sql = qq~
+  SELECT DISTINCT peptide_sequence, n_sp_mapping
+  FROM $TBAT_PROTEOTYPIC_PEPTIDE PP 
+  JOIN $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING PPM
+  ON PP.proteotypic_peptide_id = PPM.proteotypic_peptide_id
+  WHERE peptide_sequence IN ( $pep_string )
+  AND n_sp_mapping IS NOT NULL
+  ORDER BY peptide_sequence ASC, n_sp_mapping DESC
+  ~;
+
+  my $sth = $sbeams->get_statement_handle($sql);
+  while ( my @row = $sth->fetchrow_array() ) {
+		$mappings{$row[0]} ||= $row[1];
+	}
+
+  return \%mappings;
+}
 
 sub get_bad_qqq {
   my %args = ( sequence_clause => '',
