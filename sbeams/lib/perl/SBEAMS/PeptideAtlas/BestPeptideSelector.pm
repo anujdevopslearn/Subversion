@@ -2956,6 +2956,10 @@ sub pabst_evaluate_peptides {
     # peptide sequence to consider
     my $seq = uc($pep->[$args{seq_idx}]);
 
+    if ( $args{trim_mods} ) {
+      $seq =~ s/\[\d+\]//gm;
+    }
+
     # PATR peptides get a boost.
     if ( $patr_peps->{$seq} ) {
       $scr *= $pen_defs{PATR};
