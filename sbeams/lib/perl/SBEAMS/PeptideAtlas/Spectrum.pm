@@ -598,6 +598,7 @@ sub get_data_location {
   #### If we haven't loaded all atlas_search_batch_ids into the
   #### cache yet, do so
   our %data_locations;
+
   unless (%data_locations) {
     print "[INFO] Loading all data_locations...\n" if ($VERBOSE);
 
@@ -666,8 +667,8 @@ sub getSpectrumPeaks_Lib {
   if ( ! -e "$filename"){
     die ("ERROR: cannot find file $filename");
   }
-  #$filename =~ /.*\/(.*)/;
-  #print "get Spetrum from $1<BR>";
+  $filename =~ /.*\/(.*)/;
+  print "get Spetrum from $1<BR>";
   use SBEAMS::PeptideAtlas::ConsensusSpectrum;
   my $consensus = new SBEAMS::PeptideAtlas::ConsensusSpectrum;
   $consensus->setSBEAMS($sbeams);
@@ -747,7 +748,7 @@ sub getSpectrumPeaks {
 
   #### First try to fetch the spectrum from an mzXML file
   my $mzXML_filename;
-
+  
   if($fraction_tag =~ /.mzML/){
     $mzXML_filename = "$data_location/$fraction_tag";
     if ( ! -e $mzXML_filename ){
@@ -757,10 +758,18 @@ sub getSpectrumPeaks {
     $mzXML_filename = "$data_location/$fraction_tag.mzML";
   }
 
+  if ( ! -e $mzXML_filename){
+    $mzXML_filename .= ".gz";
+  }
+
   if( ! -e $mzXML_filename){
      $mzXML_filename = "$data_location/$fraction_tag.mzXML";
   }
-  
+
+  if ( ! -e $mzXML_filename){
+    $mzXML_filename .= ".gz";
+  } 
+ 
   $buffer .= "INFO: Looking for '$mzXML_filename'<BR>\n";
   if ( -e $mzXML_filename ) {
     $buffer .= "INFO: Found '$mzXML_filename'<BR>\n";
