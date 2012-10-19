@@ -876,6 +876,10 @@ sub load_build_peptides {
           if ( !scalar( keys( %peptide_ions ) ) ) {
 
             my $ec = $pep_sel->get_expected_charge( sequence => $line[2] );
+
+					  # Charge states > 4 are unlikely to be found
+						$ec = 4 if $ec > 3;
+
             my $ion_key = $modified_sequence . $ec;
 
             $is_predicted++;
