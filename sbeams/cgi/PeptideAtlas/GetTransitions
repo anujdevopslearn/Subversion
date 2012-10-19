@@ -532,7 +532,7 @@ sub get_mod_filters {
     }
   }
 
-  my $mods_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Checked options will exclude peptides containing specified modification from MRM list'</TD>";
+  my $mods_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Checked options will allow peptides containing specified modification in MRM list'</TD>";
 
   my $checks = qq~
     <DIV class=clear_info_box>
@@ -620,7 +620,7 @@ sub get_ion_filters {
     $n_loss_ions = ( $opts{n_loss_ions} ) ? 'checked' : '';
   }
 
-  my $ions_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Checked options will exclude that ion type from MRM list'</TD>";
+  my $ions_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Checked options will allow that ion type in the MRM list'</TD>";
   my $b_ions_chk = "<INPUT TYPE=checkbox NAME=b_ions $b_ions></INPUT>";
   my $y_ions_chk = "<INPUT TYPE=checkbox NAME=y_ions $y_ions></INPUT>";
   my $n_loss_chk = "<INPUT TYPE=checkbox NAME=n_loss_ions $n_loss_ions></INPUT>";
