@@ -60,45 +60,47 @@ sub convertMods {
     my $cterm = 0;
 
     if ($sequence =~ s/(n\[\d+\])//) {
-	my $mod = $1;
-	my $mass_diff = $supported_modifications{$mass_type}->{$mod};
-	if (defined($mass_diff)) {
-	    $nterm = $mass_diff;
-	} else {
-	    print STDERR "ERROR: N-terminal mass modification $mod is not supported yet\n";
-	    return(undef);
-	}
+			my $mod = $1;
+			my $mass_diff = $supported_modifications{$mass_type}->{$mod};
+			if (defined($mass_diff)) {
+					$nterm = $mass_diff;
+			} else {
+					print STDERR "ERROR: N-terminal mass modification $mod is not supported yet\n";
+					return(undef);
+			}
     }
 
     if ($sequence =~ s/(c\[\d+\])//) {
-	my $mod = $1;
-	my $mass_diff = $supported_modifications{$mass_type}->{$mod};
-	if (defined($mass_diff)) {
-	    $cterm = $mass_diff;
-	} else {
-	    print STDERR "ERROR: C-terminal mass modification $mod is not supported yet\n";
-	    return(undef);
-	}
+			my $mod = $1;
+			my $mass_diff = $supported_modifications{$mass_type}->{$mod};
+			if (defined($mass_diff)) {
+					$cterm = $mass_diff;
+			} else {
+					print STDERR "ERROR: C-terminal mass modification $mod is not supported yet\n";
+					return(undef);
+			}
     }
 
     # ...and now with the rest
     my $modstring = "[ ";
-
     while ($sequence =~ /\[/) {
-	my $index = $-[0];
-	if ($sequence =~ /([A-Znc]\[\d+\])/) {
-	    my $mod = $1;
-	    my $aa = substr($mod,0,1);
-
-	    my $mass_diff = $supported_modifications{$mass_type}->{$mod};
-	    if (defined($mass_diff)) {
-		$modstring .= "{index: $index, modMass: $mass_diff, aminoAcid: \"$aa\"}, ";
-		$sequence =~ s/[A-Z]\[\d+\]/$aa/;
-	    } else {
-		print STDERR "ERROR: Mass modification $mod is not supported yet\n";
-		return(undef);
-	    }
-	} else {
+			my $index = $-[0];
+			if ($sequence =~ /([A-Znc]\[\d+\])/) {
+				my $mod = $1;
+				my $aa = substr($mod,0,1);
+				my $mass_diff = $supported_modifications{$mass_type}->{$mod};
+				if (defined($mass_diff)) {
+					if ($modstring eq "[ "){
+						 $modstring .= "{index: $index, modMass: $mass_diff, aminoAcid: \"$aa\"}";
+					}else{
+						 $modstring .= ", {index: $index, modMass: $mass_diff, aminoAcid: \"$aa\"}";
+					}
+					$sequence =~ s/[A-Z]\[\d+\]/$aa/;
+				} else {
+					print STDERR "ERROR: Mass modification $mod is not supported yet\n";
+					return(undef);
+				}
+			} else {
 	    print STDERR "ERROR: Unresolved mass modification in '$sequence'\n";
 	    return(undef);
 	}
