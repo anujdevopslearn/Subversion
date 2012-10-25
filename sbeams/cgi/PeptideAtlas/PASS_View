@@ -43,6 +43,7 @@ use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::ConsensusSpectrum;
 use SBEAMS::PeptideAtlas::ModificationHelper;
 use SBEAMS::PeptideAtlas::Utilities;
+use SBEAMS::PeptideAtlas::PASS;
 
 use SBEAMS::Proteomics::Tables;
 
@@ -51,6 +52,8 @@ $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 my $modification_helper = new SBEAMS::PeptideAtlas::ModificationHelper();
+
+my $PASS = new SBEAMS::PeptideAtlas::PASS;
 
 my $current_page = { organism => '', atlas_build_id => '' };
 
@@ -71,6 +74,12 @@ Options:
  e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
 
 EOU
+
+#### Set some specific settings for this program
+my $CATEGORY="PASS_View";
+my $PROGRAM_FILE_NAME = $PROG_NAME;
+my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
@@ -193,13 +202,6 @@ sub handle_request {
 
   my $TABLE_NAME = $parameters{'QUERY_NAME'};
 
-  #### Set some specific settings for this program
-  my $CATEGORY="PASS_View";
-  my $PROGRAM_FILE_NAME = $PROG_NAME;
-  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
-  my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
-
-
   #### Check the session cookie for a PASS_emailaddress
   my $cachedEmailAddress = $sbeams->getSessionAttribute( key => 'PASS_emailAddress' );
   my $cachedPassword = $sbeams->getSessionAttribute( key => 'PASS_xx' );
@@ -212,6 +214,7 @@ sub handle_request {
 
   #### Compile any error we encounter in an array
   my @errors;
+  my $printForm = 1;
 
 
   #### If the request was to LOGOUT, then purge everything
@@ -232,6 +235,8 @@ sub handle_request {
       $lastName = $authentication->{lastName};
     }
   }
+  #print "--Session cache: =",$cachedEmailAddress,"= --<BR>\n";
+  #print "--Authentication status: =",$authentication->{result},"= ($firstName $lastName) --<BR>\n";
 
 
   #### Check authentication parameters and warn of any problems
@@ -288,6 +293,9 @@ sub handle_request {
     push(@errors,@{$datasetMetadata->{errors}}) if ($datasetMetadata->{errors});
 
   }
+
+  #print "--Status: =",$datasetIdentifier,"= --<BR>\n";
+  #print "--Access status: isAccessible=$isAccessible, isOwner=$isOwner, isAdmin=$isAdmin<BR>\n";
 
 
   #### If the desired action was to finalize the dataset
@@ -358,6 +366,38 @@ sub handle_request {
   }
 
 
+  #########################################################################
+  #### If UPDATE, see if there's enough information to update the dataset
+  if ($action =~ /UPDATE/i && ! @errors) {
+    if (($authentication->{result} eq 'Success' && $isOwner) || $isAdmin) {
+      #### Okay to proceed. Switch to EDIT mode to show the form if data was not right
+      $action = 'EDIT';
+    } else {
+      push(@errors,"Only dataset owners may update a dataset record. If you have additional information about this dataset, please contact the dataset owner or a PeptideAtlas admin");
+    }
+
+    unless (@errors) {
+      my $validation = $PASS->validateDatasetAnnotations(formParameters=>\%parameters);
+      if ($validation->{result} eq 'Success') {
+	my $updateResult = updateDataset(
+          authentication=>$authentication,
+          formParameters=>\%parameters,
+          identifier => $parameters{'identifier'},
+        );
+	if ($updateResult->{result} eq 'Success') {
+	  $printForm = 0;
+	} else {
+	  push(@errors,@{$validation->{errors}});
+	}
+
+      } else {
+	push(@errors,@{$validation->{errors}});
+      }
+    }
+
+  }
+
+
   #### Logging
   $log->debug( "end param handling " . time() );
 
@@ -378,6 +418,36 @@ sub handle_request {
   }
 
 
+  #### If the desired action was to edit a dataset, show the edit form
+  if ($action eq 'EDIT' ) {
+    return unless ($printForm);
+    if (($authentication->{result} eq 'Success' && $isOwner) || $isAdmin) {
+      my $result = displayEditMetaDataForm(
+        authentication => $authentication,
+        identifier => $parameters{'identifier'},
+        parameters => \%parameters,
+        isOwner => $isOwner,
+        isAdmin => $isAdmin,
+        errors => \@errors,
+      );
+      if ($result->{errors}) {
+	push(@errors,@{$result->{errors}});
+      }
+    } else {
+      push(@errors,@{$authentication->{errors}}) if ($authentication->{errors});
+    }
+
+    if (@errors) {
+      print "<HR>\n";
+      print "<TABLE cellpadding=\"5\"><TR><TD bgcolor=\"#ff9999\">";
+      foreach my $error ( @errors ) {
+	print "<LI>$error\n";
+      }
+      print "</TD></TR></TABLE>\n";
+    }
+
+    return;
+  }
 
 
   #########################################################################
@@ -486,6 +556,13 @@ sub handle_request {
 		      -value => 'FINALIZE',
 		      -label => 'FINALIZE');
          print "<BR>\n";
+
+         print "Since the dataset is not currently finalized, you may: ";
+         print $q->submit(-name => "action",
+		      -value => 'EDIT',
+		      -label => 'EDIT');
+         print "<BR>\n";
+
          print "<HR>\n";
        }
      } else {
@@ -533,8 +610,9 @@ sub handle_request {
 	  		  -value => 'UNFINALIZE',
 		  	  -label => 'UNFINALIZE');
          print "<font color=\"blue\"><B> if you find you must now make changes.</B></font><BR>\n";
-         print "<HR>\n";
        }
+
+       print "<HR>\n";
      }
 
 
@@ -562,6 +640,8 @@ sub handle_request {
      print "<HR>\n";
 
   }
+
+  return;
 
 } # end handle_request
 
@@ -594,6 +674,7 @@ sub authenticateUser {
 	  $response->{result} = 'Success';
 	  $response->{firstName} = $rows[0]->[1];
 	  $response->{lastName} = $rows[0]->[2];
+	  $response->{emailAddress} = $emailAddress;
 	  $response->{submitter_id} = $rows[0]->[0];
 	} else {
 	  $response->{result} = 'IncorrectPassword';
@@ -896,6 +977,206 @@ sub DisplayPASSMetaData {
     print "ERROR: Unable to get dataset metadata.<BR>\n";
   }
 
+
+  return $response;
+
+}
+
+
+#######################################################################
+# displayEditMetaDataForm
+#######################################################################
+sub displayEditMetaDataForm {
+  my %args = @_;
+  my $SUB_NAME = 'displayEditMetaDataForm';
+
+  #### Decode the argument list
+  my $identifier = $args{'identifier'} || die "[$SUB_NAME] ERROR: identifier not passed";
+  my $authentication = $args{'authentication'} || die "[$SUB_NAME] ERROR: authentication not passed";
+  my $parameters_ref = $args{'parameters'} || die "[$SUB_NAME] ERROR: parameters not passed";
+  my %parameters = %{$parameters_ref};
+  my $isOwner = $args{'isOwner'} || 0;
+  my $isAdmin = $args{'isAdmin'} || 0;
+  my $errors = $args{'errors'};
+
+  my $response;
+
+  my $result = getPASSMetaData(identifier=>$identifier);
+
+  unless ($result->{result} eq 'Success') {
+    push(@{$response->{errors}},'Unable to get metadata for dataset $identifier');
+    return $response;
+  }
+
+  if ($sbeams->output_mode() eq 'html') {
+     print "<H3>Update Dataset Metadata</H3>";
+
+     $PASS->displayErrors(errors=>$errors);
+
+     if ($response->{errors}) {
+     print "<HR>\n";
+       print "<TABLE cellpadding=\"5\"><TR><TD bgcolor=\"#ff9999\">";
+       foreach my $error ( @{$response->{errors}} ) {
+	 print "<LI>$error\n";
+       }
+       print "</TD></TR></TABLE>\n";
+     }
+
+
+     print "<HR>\n";
+     print "<nobr>";
+     print $q->start_form(-method=>"POST",
+                          -action=>"$base_url",
+                          -name=>"MainForm",
+			 );
+
+     if ($isAdmin) {
+       my $current_username = $sbeams->getCurrent_username;
+       print "<B><font color=\"blue\">Your SBEAMS authentication is $current_username, which has Admin rights. Editing in Admin mode</B></font><BR>\n";
+     } elsif ($authentication->{result} eq 'Success') {
+       print "<B><font color=\"red\">Editing $result->{datasetIdentifier} as its owner: $authentication->{firstName} $authentication->{lastName} &lt;$authentication->{emailAddress}&gt;</B></font><BR>\n";
+     } else {
+       push(@{$response->{errors}},'Unable to authenticate to edit this dataset. You must be the dataset owner to edit this dataset.');
+       return $response;
+     }
+
+
+     print "<B><font color=red>datasetIdentifier:</font></B> $result->{datasetIdentifier}<BR>\n";
+     print $q->hidden(-name=>'identifier',-default=>$result->{datasetIdentifier});
+     print "<B><font color=red>submitter:</font></B> $result->{submitterStr}<BR>\n";
+     print "<HR>\n";
+
+
+     #### If the parameters are not filled in already, fill them in from the previous data
+     my @attributes = qw( datasetType datasetTag datasetTitle publicReleaseDate summary contributors 
+			  publication growth treatment extraction separation digestion 
+			  acquisition informatics instruments species massModifications
+			  );
+     foreach my $attribute ( @attributes ) {
+       if (defined($parameters{$attribute})) {
+	 #### We'll stay with this
+       } else {
+	 if (defined($result->{$attribute})) {
+	   $parameters{$attribute} = $result->{$attribute};
+	 } else {
+	   $parameters{$attribute} = '?';
+	 }
+       }
+     }
+
+     #### Print the entry form
+     print "<B><font color=\"red\">Dataset type</B></font> (Please select the broad category classifying the dataset. This will aid in determining how to process it.)<BR>\n";
+     print qq~<select name="datasetType">~;
+     for (my $i=0; $i < scalar(@datasetTypes); $i+=2) {
+       my ($key,$label) = @datasetTypes[$i..$i+1];
+       my $selected = '';
+       $selected = 'selected="true" ' if ($parameters{'datasetType'} eq $key);
+       print qq~  <option $selected value="$key">$label</option>\n~;
+     }
+     print "</select>\n";
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Dataset tag</B></font> (Enter a short {up to 20 characters} \"tag\" for this dataset)<BR>It should be globally unique. It will be used in lists of datasets where the title might be too long.<BR>\n";
+     print $q->textfield( "datasetTag", $parameters{'datasetTag'}, 20, 20);
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Dataset title</B></font> (Enter a nice descriptive title {up to 200 characters} for this dataset)<BR>\n";
+     print $q->textarea( "datasetTitle", $parameters{'datasetTitle'}, 3, 66);
+     print "<BR>\n";
+
+     print qq~
+       <SCRIPT LANGUAGE="JavaScript">
+       function ClickedTodayButton(input_field) {
+         today = new Date();
+         month = today.getMonth()+1;
+         if (month < 10) { month = "0" + month; }
+         date = today.getDate();
+         if (date < 10) { date = "0" + date; }
+         date_value =
+           today.getFullYear() + "-" + month + "-" + date;
+         document.MainForm.publicReleaseDate.value = date_value;
+         return;
+       }
+       </SCRIPT>
+     ~;
+
+     print "<B><font color=\"red\">Dataset Release Date</B></font> (Enter the date on which the data may be released publicly)<BR>\n";
+     print "(Please use the format  2011-08-16)<BR>\n";
+     print $q->textfield( "publicReleaseDate", $parameters{'publicReleaseDate'}, 10, 10);
+     print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+     print qq~<INPUT TYPE="button" NAME="publicReleaseDate_button" VALUE="TODAY" onClick="ClickedTodayButton(publicReleaseDate)">\n~;
+     print "<BR>\n";
+     print "<HR>\n";
+
+     print "<B><font color=\"red\">Contributors</B></font> (Enter the names of people who are contributing this dataset, including the submitter, if applicable)<BR>\n";
+     print $q->textarea( "contributors", $parameters{'contributors'}, 5, 50);
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Publication</B></font> (Enter the associated publication with this dataset) (Please enter a PubMed ID if available.)<BR>\n";
+     print "(If no PubMed ID is available yet, please use format: Smith, DA, and Wesson, TB, Manuscript Title, Journal, submitted)<BR>\n";
+     print "(Or if no publication is on the horizon, please just enter \"unpublished\")<BR>\n";
+     print $q->textarea( "publication", $parameters{'publication'}, 5, 50);
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Instrument(s) used</B></font> (Enter the model name of the instrument(s) used for this dataset)<BR>\n";
+     print "(Please use the format: Thermo Scientific LTQ Orbitrap, AB Sciex QTRAP 5600, etc.) (You may enter more than one if applicable)<BR>\n";
+     print $q->textarea( "instruments", $parameters{'instruments'}, 2, 40);
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Species studied</B></font> (Enter the name of the species studied)<BR>\n";
+     print "(Please use the format: Human, Mouse, Drosophila melanogaster, etc.) (You may enter more than one if applicable)<BR>\n";
+     print $q->textarea( "species", $parameters{'species'}, 2, 40);
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Mass modifications</B></font> (Enter any mass modifications applied to the sample)<BR>\n";
+     print "(Please use the format: static: C+57.021464, variable: K+8.014199, R+10.008269, or \"none\" if none.)<BR>\n";
+     print $q->textarea( "massModifications", $parameters{'massModifications'}, 2, 40);
+     print "<BR>\n";
+     print "<HR>\n";
+
+     print "<B>Summary</B> (Enter a free-text summary or description of the dataset, experiment, or project)<BR>\n";
+     print $q->textarea( "summary", $parameters{'summary'}, 6, 80);
+     print "<BR>\n";
+
+     print "<B>Growth Protocol</B> (Enter a free-text description of the growth protocol or organism preparation)<BR>\n";
+     print $q->textarea( "growth", $parameters{'growth'}, 6, 80);
+     print "<BR>\n";
+
+     print "<B>Treatment Protocol</B> (Enter a free-text description of the treatments applied to the organism prior to sample acquisition)<BR>\n";
+     print $q->textarea( "treatment", $parameters{'treatment'}, 6, 80);
+     print "<BR>\n";
+
+     print "<B>Extraction Protocol</B> (Enter a free-text description of the extraction of proteins from the treated sample(s))<BR>\n";
+     print $q->textarea( "extraction", $parameters{'extraction'}, 6, 80);
+     print "<BR>\n";
+
+     print "<B>Separation Protocol</B> (Enter a free-text description of the separation of proteins and/or peptides))<BR>\n";
+     print $q->textarea( "separation", $parameters{'separation'}, 6, 80);
+     print "<BR>\n";
+
+     print "<B>Digestion Protocol</B> (Enter a free-text description of the digestion of the proteins into peptides))<BR>\n";
+     print $q->textarea( "digestion", $parameters{'digestion'}, 6, 80);
+     print "<BR>\n";
+
+     print "<B>Acquisition Protocol</B> (Enter a free-text description of the acquisition of mass spectra from the peptide sample))<BR>\n";
+     print $q->textarea( "acquisition", $parameters{'acquisition'}, 6, 80);
+     print "<BR>\n";
+
+     print "<B>Informatics Protocol</B> (Enter a free-text description of the informatics processing of the raw data produced by the instrument(s)))<BR>\n";
+     print $q->textarea( "informatics", $parameters{'informatics'}, 6, 80);
+     print "<BR>\n";
+     print "<HR>\n";
+
+     print $q->submit(-name => "action",
+		      -value => 'UPDATE',
+		      -label => 'UPDATE');
+
+     print $q->endform;
+     print "</nobr>";
+
+     print "</p>";
+
+    }
 
   return $response;
 
@@ -1363,3 +1644,171 @@ sub setNewPublicReleaseDate {
 }
 
 
+#######################################################################
+# updateDataset
+#######################################################################
+sub updateDataset {
+  my %args = @_;
+  my $SUB_NAME = 'updateDataset';
+
+  #### Decode the argument list
+  my $authentication = $args{'authentication'} || die "[$SUB_NAME] ERROR: authentication  not passed";
+  my $formParameters = $args{'formParameters'} || die "[$SUB_NAME] ERROR: formParameters not passed";
+  my $identifier = $args{'identifier'} || die "[$SUB_NAME] ERROR: identifier not passed";
+  my $datasetIdentifier = $identifier;
+
+  my $response;
+  $response->{result} = 'Failure';
+  my $verbose = 0;
+
+  return unless ($authentication->{result} eq 'Success');
+
+  $formParameters->{datasetTitle} =~ s/[\n\r]//g;
+  my $PK = $datasetIdentifier;
+  $PK =~ s/PASS(0*)//;
+
+  my %rowdata = (
+    datasetType => $formParameters->{datasetType},
+    datasetTag => $formParameters->{datasetTag},
+    datasetTitle => $formParameters->{datasetTitle},
+  );
+
+  print "<BR>INFO: Updating database record for primary key $PK...<BR>\n" if ($verbose);
+  print "<PRE>\n";
+  $PK = $sbeams->updateOrInsertRow(
+				   update => 1,
+				   table_name => $TBAT_PASS_DATASET,
+				   rowdata_ref => \%rowdata,
+				   PK => 'dataset_id',
+				   PK_value => $PK,
+				   add_audit_parameters => 1,
+				   #testonly => 1,
+				   #verbose => 1,
+				  );
+
+  if ($PK && $PK > 0) {
+    $response->{result} = 'Success';
+    print "<BR>INFO: Success.<BR>\n" if ($verbose);
+  } else {
+    $response->{result} = 'Failed';
+    print "<BR>INFO: Failed.<BR>\n" if ($verbose);
+    return $response;
+  }
+
+  print "</PRE>\n";
+
+
+  my $PASS_FTP_AGENT_BASE = '/prometheus/u1/home/PASSftpAgent';
+
+  print "<BR>INFO: Writing out DESCRIPTION file.<BR>\n" if ($verbose);
+  my $outfile = "$PASS_FTP_AGENT_BASE/Incoming/${datasetIdentifier}_DESCRIPTION.txt";
+  open(OUTFILE,">$outfile") || die("ERROR: Unable to write to '$outfile'");
+
+  my $metadata = '';
+  $metadata .= "identifier:\t$datasetIdentifier\r\n";
+  $metadata .= "type:\t$formParameters->{datasetType}\r\n";
+  $metadata .= "tag:\t$formParameters->{datasetTag}\r\n";
+  $metadata .= "title:\t$formParameters->{datasetTitle}\r\n";
+  $metadata .= "summary:\t$formParameters->{summary}\r\n";
+  $metadata .= "contributors:\t$formParameters->{contributors}\r\n";
+
+  $metadata .= "publication:\t$formParameters->{publication}\r\n";
+
+  foreach my $tag ( 'growth','treatment','extraction','separation','digestion','acquisition','informatics' ) {
+    my $tmp = $formParameters->{$tag};
+    $tmp =~ s/^\s+//;
+    $tmp =~ s/\s+$//;
+    $metadata .= "$tag:\t$tmp\r\n";
+  }
+
+  foreach my $tag ( 'instruments','species','massModifications' ) {
+    my $tmp = $formParameters->{$tag};
+    $tmp =~ s/^\s+//;
+    $tmp =~ s/\s+$//;
+    $metadata .= "$tag:\t$tmp\r\n";
+  }
+
+  print OUTFILE $metadata;
+  close(OUTFILE);
+
+
+  #### Tell the FTP agent to create the account
+  print "<BR>INFO: Telling FTP agent to update to the new DESCRIPTION file.<BR>\n" if ($verbose);
+  my $cmdfile = "$PASS_FTP_AGENT_BASE/commands.queue";
+  open(CMDFILE,">>$cmdfile") || die("ERROR: Unable to append to '$cmdfile'");
+  print CMDFILE "UpdateDataset $datasetIdentifier\n";
+  close(CMDFILE);
+
+  print "<BR>INFO: Updating the JSON data.<BR>\n" if ($verbose);
+  my ($date) = `date '+%F+%H+%m+%s'`;
+  `cp /regis/passdata/PASS.json /regis/passdata/pass_json/PASS.json-$date`;
+
+  my $cmd = "/net/dblocal/www/html/sbeams/lib/scripts/PeptideAtlas/create_PASS_Json.pl";
+  system($cmd);
+
+
+  #### Print the information for the user
+  print "<BR>INFO: Preparing the confirmation information.<BR>\n" if ($verbose);
+  my $confirmationMessage = qq~<H3>Thank you for updating the metadata for your dataset</H3>
+Your updated information has been saved for dataset $datasetIdentifier.<PRE>
+Identifier: $datasetIdentifier
+Dataset type: $formParameters->{datasetType}
+Dataset tag: $formParameters->{datasetTag}
+Datset title: $formParameters->{datasetTitle}</PRE>
+Thank you again for your contribution. If you have comments about this submission process, please leave us your comments at <a href="http://www.peptideatlas.org/feedback.php">http://www.peptideatlas.org/feedback.php</a><BR><BR>To return to the record, use the dataset's official URL:<BR><a href="http://www.peptideatlas.org/PASS/$datasetIdentifier">http://www.peptideatlas.org/PASS/$datasetIdentifier</a><BR>
+~;
+  print $confirmationMessage;
+
+  #### Reformat the message for email
+  $confirmationMessage =~ s/\<H3\>//g;
+  $confirmationMessage =~ s/\<\/H3\>/\n/g;
+  $confirmationMessage =~ s/\<PRE\>//g;
+  $confirmationMessage =~ s/\<\/PRE\>/\n/g;
+  $confirmationMessage =~ s/\<BR\>/\n/g;
+  $confirmationMessage =~ s/\<P\>/\n/g;
+  $confirmationMessage =~ s/\<a .+?\>//g;
+  $confirmationMessage =~ s/\<\/a\>//g;
+
+  #### Send the submitter the information by email
+  my (@toRecipients,@ccRecipients,@bccRecipients);
+  @toRecipients = (
+    "$authentication->{firstName} $authentication->{lastName}",$authentication->{emailAddress},
+  );
+  @ccRecipients = ();
+  @bccRecipients = (
+    'Eric Deutsch','eric.deutsch@systemsbiology.org',
+  );
+  SBEAMS::Connection::Utilities::sendEmail(
+    toRecipients=>\@toRecipients,
+    ccRecipients=>\@ccRecipients,
+    bccRecipients=>\@bccRecipients,
+    subject=>"PeptideAtlas dataset $datasetIdentifier update",
+    message=>"Dear $authentication->{firstName},\n\n$confirmationMessage\n\n",
+  );
+
+
+  #### Email PeptideAtlas team about the submission
+  @toRecipients = (
+    'Eric Deutsch','eric.deutsch@systemsbiology.org',
+#    'Terry Farrah','terry.farrah@systemsbiology.org',
+#    'Zhi Sun','zhi.sun@systemsbiology.org',
+  );
+  @ccRecipients = ();
+  @bccRecipients = ();
+  my $adminMessage = qq~PASS dataset has been updated:\n
+Submitter: $authentication->{firstName} $authentication->{lastName} <$authentication->{emailAddress}>
+Dataset URL: http://www.peptideatlas.org/PASS/$datasetIdentifier
+
+$metadata
+~;
+  SBEAMS::Connection::Utilities::sendEmail(
+    toRecipients=>\@toRecipients,
+    ccRecipients=>\@ccRecipients,
+    bccRecipients=>\@bccRecipients,
+    subject=>"PeptideAtlas dataset $datasetIdentifier metadata was updated",
+    message=>"$adminMessage\n\n",
+  );
+
+  $response->{result} = 'Success';
+  return $response;
+}
