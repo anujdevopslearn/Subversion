@@ -43,7 +43,7 @@ use SBEAMS::BioLink::Tables;
 
 #use lib "$FindBin::Bin";     # I'm 90% sure we don't need these
 #use lib "/net/db/projects/PeptideAtlas/pipeline/bin";
-use lib "/net/db/projects/PeptideAtlas/pipeline/lib/ensembl-57/modules";
+use lib "/net/db/projects/PeptideAtlas/pipeline/lib/ensembl/modules";
 use DBI;
 
 use Bio::Graphics::Panel;
@@ -792,7 +792,7 @@ sub handle_request {
         ["observed_in","NULL","Observed in"],                                  
         ["n_observations",0,"N Obs"],                                          
         ["n_distinct_peptides",0,"N Distinct Peptides"],
-        ["protein_content",0,"mol %"],                       
+        ["protein_content",0,"mol % (emPAI)"],                       
         ["sequence_coverage",0,"Sequence Coverage %"],                         
         ["seq_unique_prots_in_group","PID.seq_unique_prots_in_group", "Seq Uniq Prots in Grp"], 
         ["protein_group_seq_align_link","NULL","Protein Group Seq Alignmt"],   
@@ -1235,7 +1235,7 @@ sub handle_request {
     #### Determine whether or not there are any user inputted constraint values that would interfere with drawing the graph, and if so don't draw the graph
     $chrom_num = $parameters{chromosome};
 
-    if (0 && ($organism_id == 2) && $chrom_num) {
+    if ( ($organism_id == 2) && $chrom_num) {
       ## Do everything invovled with drawing the graph
       #### Connect to Ensembl database
       my $host = 'mysql';
