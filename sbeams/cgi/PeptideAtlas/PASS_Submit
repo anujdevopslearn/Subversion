@@ -43,6 +43,7 @@ use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::ConsensusSpectrum;
 use SBEAMS::PeptideAtlas::ModificationHelper;
 use SBEAMS::PeptideAtlas::Utilities;
+use SBEAMS::PeptideAtlas::PASS;
 
 use SBEAMS::Proteomics::Tables;
 
@@ -51,6 +52,8 @@ $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 my $modification_helper = new SBEAMS::PeptideAtlas::ModificationHelper();
+
+my $PASS = new SBEAMS::PeptideAtlas::PASS;
 
 my $current_page = { organism => '', atlas_build_id => '' };
 
@@ -332,7 +335,7 @@ sub handle_request {
     }
 
     unless (@errors) {
-      my $validation = validateDatasetAnnotations(formParameters=>\%parameters);
+      my $validation = $PASS->validateDatasetAnnotations(formParameters=>\%parameters);
       if ($validation->{result} eq 'Success') {
 	my $insertResult = addDataset(authentication=>$authentication,formParameters=>\%parameters);
 	if ($insertResult->{result} eq 'Success') {
@@ -667,106 +670,6 @@ sub registerUser {
     $response->{result} = 'Success';
   } else {
     $response->{result} = 'Failed';
-  }
-
-  return $response;
-
-}
-
-
-#######################################################################
-# validateDatasetAnnotations
-#######################################################################
-sub validateDatasetAnnotations {
-  my %args = @_;
-  my $SUB_NAME = 'validateDatasetAnnotations';
-
-  #### Decode the argument list
-  my $formParameters = $args{'formParameters'} || die "[$SUB_NAME] ERROR: formParameters not passed";
-
-  my $response;
-  my $test;
-  $response->{result} = 'Success';
-
-  $test = $formParameters->{datasetType};
-  my $result = 0;
-  for (my $i=0; $i < scalar(@datasetTypes); $i+=2) {
-    my ($key,$label) = @datasetTypes[$i..$i+1];
-    $result = 1 if ($test eq $key);
-  }
-  unless ($result) {
-    $response->{result} = 'Failed';
-    push(@{$response->{errors}},"Dataset type is not a legal option");
-  }
-
-
-  $test = $formParameters->{datasetTag};
-  unless (defined($test) && $test =~ /^[A-Za-z0-9\_\-]+$/ && length($test) > 5 && length($test) <= 20) {
-    $response->{result} = 'Failed';
-    push(@{$response->{errors}},"Dataset Tag must be an alphanumeric string with length more than 5 up to 20");
-  }
-
-  $test = $formParameters->{datasetTitle};
-  unless (defined($test) && length($test) > 20 && length($test) <= 200) {
-    $response->{result} = 'Failed';
-    push(@{$response->{errors}},"Dataset Title must be a string with length more than 20 up to 200");
-  }
-
-  $test = $formParameters->{publicReleaseDate};
-  unless (defined($test) && $test =~ /^(\d\d\d\d)\-(\d\d)\-(\d\d)$/ && $1>=2000 && $2>0 && $2<=12 && $3>0 && $3<=31) {
-    $response->{result} = 'Failed';
-    push(@{$response->{errors}},"Public release data must be a valid date of the form YYYY-MM-DD like 2011-10-25");
-  }
-
-  $test = $formParameters->{contributors};
-  unless (defined($test) && length($test) > 6 && length($test) <= 10000) {
-    $response->{result} = 'Failed';
-    push(@{$response->{errors}},"Contributors must be a string with length more than 6 up to 10000");
-  }
-
-  $test = $formParameters->{publication};
-  unless (defined($test) && length($test) > 5 && length($test) <= 1000) {
-    $response->{result} = 'Failed';
-    push(@{$response->{errors}},"Publication must be a string with length more than 5 up to 1000");
-  }
-
-  $test = $formParameters->{instruments};
-  unless (defined($test) && length($test) > 5 && length($test) <= 1000) {
-    $response->{result} = 'Failed';
-    push(@{$response->{errors}},"Instruments must be a string with length more than 5 up to 1000");
-  }
-
-  $test = $formParameters->{species};
-  unless (defined($test) && length($test) > 3 && length($test) <= 1000) {
-    $response->{result} = 'Failed';
-    push(@{$response->{errors}},"Species must be a string with length more than 3 up to 1000");
-  }
-
-  $test = $formParameters->{massModifications};
-  unless (defined($test) && length($test) > 3 && length($test) <= 1000) {
-    $response->{result} = 'Failed';
-    push(@{$response->{errors}},"Mass modifications must be a string with length more than 3 up to 1000");
-  }
-
-  #### Email Eric about the submission problem
-  if (defined $response->{errors}) {
-    my (@toRecipients,@ccRecipients,@bccRecipients);
-    @toRecipients = (
-      'Eric Deutsch','eric.deutsch@systemsbiology.org',
-    );
-    @ccRecipients = ();
-    @bccRecipients = ();
-    my $adminMessage = qq~A new PASS submission has been having difficulty:\n
-  Submitter: $formParameters->{firstName} $formParameters->{lastName} <$formParameters->{emailAddress}>
-  ~;
-    $adminMessage .= join("\n",@{$response->{errors}});
-    SBEAMS::Connection::Utilities::sendEmail(
-      toRecipients=>\@toRecipients,
-      ccRecipients=>\@ccRecipients,
-      bccRecipients=>\@bccRecipients,
-      subject=>"PeptideAtlas dataset submission difficulty",
-      message=>"$adminMessage\n\n",
-    );
   }
 
   return $response;
