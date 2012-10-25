@@ -1202,7 +1202,7 @@ sub fetch_transitions {
     }
     $ssr_field = 'elution_time';
     $ssr_join = qq~
-     LEFT JOIN $TBAT_ELUTION_TIME ET ON ( ET.modified_peptide_sequence = PP.peptide_sequence AND elution_time_type_id = '$parameters{rt_type}' $et_and )
+     LEFT JOIN $TBAT_ELUTION_TIME ET ON ( ET.peptide_sequence = PP.peptide_sequence AND elution_time_type_id = '$parameters{rt_type}' $et_and )
     ~;
   }
 
@@ -1573,10 +1573,16 @@ sub fetch_transitions {
 # 9 fragment_ion_charge
 # 10 fragment_ion_label
 #      my  @rowdata = ( $prot, @row[0..12,15,19] );
+
+
       my  @rowdata;
       if ( $sbeams->isGuestUser() || $parameters{rt_type} == $ssr_type ) {
         @rowdata = ( $prot, @row[0..12] );
       } else {
+				if ( $build_resources->{atlas_build} ) {
+					my @bids = keys( %{$build_resources->{atlas_build}} );
+          $prot = "<A HREF='GetProtein?atlas_build_id=$bids[0];protein_name=$prot;apply_action=GO&action=GO' TARGET='$prot'>$prot</A>";
+				}
         @rowdata = ( $prot, @row[0..13] );
       }
 
