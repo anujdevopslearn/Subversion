@@ -1414,9 +1414,12 @@ sub finalizeDataset {
   );
 
   #### Send a nice thank you note to the submitter
-  my $confirmationMessage = qq~Your PeptideAtlas submission PASS$PK is now finalized.  The data are now stored on our ftp server, and you may use your username and password to conveniently provide access to anyone you wish.
+  my $confirmationMessage = qq~Your PeptideAtlas submission PASS$PK is now finalized on our ftp server, and you may use your username and password to conveniently provide access to anyone you wish. If the public release date is passed, then no password is necessary.
 
-If for some reason you need to modify your data or add additional data, email us using the form at http://www.peptideatlas.org/feedback.php so that we can un-finalize your submission.
+Please refer to your dataset with the URL:
+http://www.peptideatlas.org/PASS/PASS$PK
+
+If for some reason you need to modify your data or add additional data, you can un-finalize your submission, edit the dataset, and re-finalize.
 
 The PeptideAtlas receives many data submissions, and only a portion of them are actually processed and incorporated into the PeptideAtlas database. You may see your dataset at www.PeptideAtlas.org sometime in the future. Unfortunately, we do not currently have a system for informing submitters whether and when their data will be incorporated. Feel free to email us using the form at http://www.peptideatlas.org/feedback.php .
 
