@@ -284,10 +284,13 @@ sub handle_request {
 
   #### Define some variables needed to build the query
   my @column_titles = ( 'Gene Name', 
-                        'nextProt AC', 
+                        'nextProt AC',
+                        'Ensembl Gene',
+                        'RefSeq',  
                         'Chromosome',
                         'Start', 
                         'Stop',
+                        'N Chromosomal Location',
                         'Protein Evidence', 
                         'PeptideAtlas', 
                         'Obs', 
@@ -310,15 +313,17 @@ sub handle_request {
 	$resultset_ref->{row_counter} = 0;
 	$resultset_ref->{page_size} = 100;
 
-  foreach my $i (qw (0 1 2 5 6 8)){
+  foreach my $i (qw (0 1 2 3 4 8 9 11)){
     $resultset_ref->{types_list_ref}->[$i] = 'string';
     $resultset_ref->{precisions_list_ref}->[$i] =  255;
   }
-  foreach my $i (qw (3 4 7)){
+  foreach my $i (qw (5 6 7 10)){
     $resultset_ref->{types_list_ref}->[$i] = 'string';
     $resultset_ref->{precisions_list_ref}->[$i] =  20;
   }
-  $url_cols{'nextProt AC'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=".$atlas_build_id."&apply_action=$pass_action&protein_name=\%1V"; 
+  #$url_cols{'nextProt AC'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=".$atlas_build_id."&apply_action=$pass_action&protein_name=\%1V"; 
+  $url_cols{'nextProt AC'} = "http://www.uniprot.org/uniprot/\%1V";
+
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
   if ($apply_action =~ /QUERY|VIEWRESULTSET|VIEWPLOT/i ) {
@@ -421,7 +426,7 @@ sub evalSQL {
 ###############################################################################
 sub getResultset {
   my %args = @_;
-  my $file = "/net/db/projects/PeptideAtlas/pipeline/../species/Human/NextProt/mapping.txt";
+  my $file = "/net/db/projects/PeptideAtlas/pipeline/../species/Human/NextProt/mapping_test.txt";
   open (IN, "<$file");
 
   #### Process the arguments list
@@ -433,13 +438,16 @@ sub getResultset {
   my %constraint = (
 			 '0'=>'biosequence_gene_name_constraint' ,
 			 '1'=>'biosequence_name_constraint' ,
-			 '2'=>'chromosome' ,
-			 '3'=>'start_in_chromosome' ,
-			 '4'=>'end_in_chromosome',
-       '5'=>'protein_evidence_level_constraint',
-			 '13'=>'peptideatlas_constraint' ,
-			 '14'=>'n_observations_constraint' ,
-			 '15'=>'biosequence_desc_constraint' ,
+       '2'=>'ensembl_gene_name_constraint',
+       '3'=>'refseq_name_constraint',
+			 '4'=>'chromosome' ,
+			 '5'=>'start_in_chromosome' ,
+			 '6'=>'end_in_chromosome',
+       '7'=>'n_chromosomal_loc',
+       '8'=>'protein_evidence_level_constraint',
+			 '16'=>'peptideatlas_constraint' ,
+			 '17'=>'n_observations_constraint' ,
+			 '18'=>'biosequence_desc_constraint' ,
   );
 
   if (defined $parameters{peptideatlas_constraint}){
@@ -476,67 +484,77 @@ sub getResultset {
        next if (not defined $protein_hash{$elms[1]});
     }
 
-    foreach my $num ( qw(0 1 2 5 13 15)){
+    foreach my $num ( qw(0 1 2 3 4 8 16 18)){
        if ( defined $parameters{$constraint{$num}}){
          next if ($parameters{$constraint{$num}} eq '');
          my $pat = $parameters{$constraint{$num}};
+         $pat =~ s/\s+$//; $pat =~ s/^\s+//;
          $pat =~ s/\s+/,/g;
          $pat =~ s/,+/,/g;
          $pat =~ s/\,/\|/g;
-         if ($num eq 2){
+         if ($num eq 4){
            my $chrm  = $elms[$num] ;
            $chrm =~ s/[a-z].*//;
+           $pat =~ s/^0//;
+
            next LOOP if ($chrm !~ /^$pat$/i);
-         }elsif ($elms[$num] !~ /($pat)/i){
-            next LOOP; 
+         }else {
+           next LOOP  if ($elms[$num] !~ /($pat)/i);
          }
        }
     }
 
     ## chromosomal postion constraints
-    if ( defined $parameters{$constraint{3}} && $parameters{$constraint{3}} ne '' && $elms[4] < $parameters{$constraint{3}}){
+    if ( defined $parameters{$constraint{5}} && $parameters{$constraint{5}} ne '' && $elms[6] < $parameters{$constraint{5}}){
       next;
     }
-    if ( defined $parameters{$constraint{4}} && $parameters{$constraint{4}} ne '' && $elms[3] > $parameters{$constraint{4}}){
+    if ( defined $parameters{$constraint{6}} && $parameters{$constraint{6}} ne '' && $elms[5] > $parameters{$constraint{6}}){
       next;
     }
-    ## number of obervation constraints
+    ## number of obervation constraints and n of chromosomal location 
     #print $parameters{'n_observations_constraint'} , "<BR>";
-    my $n_observations_constraint = $parameters{'n_observations_constraint'};
-    my $n_observation = $elms[14];
-    if ($n_observations_constraint ne ''){
-			if ($n_observations_constraint =~ /^(\d+)$/) {
-				 next if($n_observation ne $1);
-			} elsif ($n_observations_constraint =~ /^(not )*between\s+(\d+)\s+and\s+(\d+)$/i) {
-				 next if($n_observation >= $1 && $n_observation <= $2); 
-			} elsif ($n_observations_constraint =~ /^([\d]+)\s*\+\-\s*([\d]+)$/i) {
-				 my $lower = $1 - $2;
-				 my $upper = $1 + $2;
-				 next if( $n_observation < $lower ||  $n_observation > $upper );
-			} elsif ($n_observations_constraint =~ /^([><=][=]*)\s*(\d+)$/) {
-					my $sign = $1;
-					my $num = $2;
-					if ($sign eq  '>'){
-						next if($n_observation <= $num);
-					}elsif ($sign eq '<'){
-						next if($n_observation >= $num);
-					}elsif($sign eq  '>='){
-						next if($n_observation < $num);
-					}elsif ($sign eq '<='){
-						next if($n_observation > $num);
-					}elsif($sign eq '='){
-						next if($n_observation != $num);
+    foreach my $num ( qw(7 17)){
+		 if ( defined $parameters{$constraint{$num}}){
+				my $constraint = $parameters{$constraint{$num}};
+				chomp $constraint;
+				$constraint =~s/^\s+//;
+				$constraint =~ s/\s+$//;
+				my $m = $elms[$num];
+				if ($constraint ne ''){
+					if ($constraint =~ /^(\d+)$/) {
+						 next LOOP if($m ne $1);
+					} elsif ($constraint =~ /^(not )*between\s+(\d+)\s+and\s+(\d+)$/i) {
+						 next LOOP if($m >= $1 && $m <= $2); 
+					} elsif ($constraint =~ /^([\d]+)\s*\+\-\s*([\d]+)$/i) {
+						 my $lower = $1 - $2;
+						 my $upper = $1 + $2;
+						 next LOOP if( $m < $lower ||  $m > $upper );
+					} elsif ($constraint =~ /^([><=][=]*)\s*(\d+)$/) {
+							my $sign = $1;
+							my $num = $2;
+							if ($sign eq  '>'){
+								next LOOP if($m <= $num);
+							}elsif ($sign eq '<'){
+								next LOOP if($m >= $num);
+							}elsif($sign eq  '>='){
+								next LOOP if($m < $num);
+							}elsif ($sign eq '<='){
+								next LOOP if($m > $num);
+							}elsif($sign eq '='){
+								next LOOP if($m != $num);
+							}
+					} else {
+						print "<H4>Cannot parse peptideAtlas observations constraint ".
+							"'$constraint'!  Check syntax.</H4>\n\n";
+						return -1;
 					}
-			} else {
-				print "<H4>Cannot parse peptideAtlas observations constraint ".
-					"'$n_observations_constraint'!  Check syntax.</H4>\n\n";
-				return -1;
-			}
+			 }
+      }
     }
-    foreach my $i (0..5){
+    foreach my $i (0..8){
       $resultset_ref->{data_ref}->[$idx]->[$i] = $elms[$i];
     }
-    foreach my $i (13..15){
+    foreach my $i (16..18){
       $resultset_ref->{data_ref}->[$idx]->[$i-7] = $elms[$i];
     }
     $idx++;
