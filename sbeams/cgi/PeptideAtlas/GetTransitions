@@ -527,6 +527,7 @@ sub get_mod_filters {
     for my $mod ( sort( keys( %mods ) ) ) {
       next unless ( $mod eq 'C[160]' ||
                     $mod eq 'K[136]' ||
+                    $mod eq 'N[115]' ||
                     $mod eq 'R[166]' );
       $mods{$mod} = 'checked';
     }
@@ -704,7 +705,7 @@ sub get_download_form {
   my $tlink = '';
 
 #                                                    content => "<DIV style=clear_info_box><TABLE><TR><TD>$calc_check</TD></TR><TR><TD>$ce_check</TD></TR></TABLE></DIV>",
-	if ( !$sbeams->isGuestUser() ) {
+	if ( !$sbeams->isGuestUser() && ( $pabst_build_id == 146 || $pabst_build_id == 160 ) ) {
     $calc_check = "Include calculated RT $calc_check_help <INPUT TYPE=checkbox NAME=calc_rt></INPUT>";
     $ce_check = "Include empirical optimized CE $ce_check_help <INPUT TYPE=checkbox NAME=empirical_ce></INPUT>";
     $thtml = $sbeams->make_toggle_section( name => 'download_options',
@@ -1195,14 +1196,16 @@ sub fetch_transitions {
   my $ssr_join = '';
   $parameters{rt_type} ||= '4';
 
+  my $irt = 0;
   if ( $parameters{rt_type} || $parameters{rt_type} ne 'SSRCalc' ) {
     my $et_and = '';
     if ( $build_resources->{elution_time_set} ) {
+      $irt = isIRT( $build_resources ); 
       $et_and = " AND elution_time_set IN ( " . join( ',', keys( %{$build_resources->{elution_time_set}} ) ) . " ) ";
     }
     $ssr_field = 'elution_time';
     $ssr_join = qq~
-     LEFT JOIN $TBAT_ELUTION_TIME ET ON ( ET.peptide_sequence = PP.peptide_sequence AND elution_time_type_id = '$parameters{rt_type}' $et_and )
+     LEFT JOIN $TBAT_ELUTION_TIME ET ON ( ET.modified_peptide_sequence = PI.modified_peptide_sequence AND elution_time_type_id = '$parameters{rt_type}' $et_and )
     ~;
   }
 
@@ -1273,7 +1276,8 @@ sub fetch_transitions {
 
   # Code to get only pertinent headings here...
   if ( $parameters{rt_type} && !$sbeams->isGuestUser() ) {
-    push @headings, 'RT_Cat' unless $parameters{rt_type} == $ssr_type;
+    my $rt_heading = ( $irt ) ? 'iRT' : 'RT_Cat';
+    push @headings, $rt_heading unless $parameters{rt_type} == $ssr_type;
   }
 
   if ( $has_mappings ) {
@@ -1988,6 +1992,28 @@ sub get_bad_qqq {
 	return \%spectra;
 }
 
+sub isIRT {
+  my $build_resources = shift || return 0;
+  my $et = join( ',', keys( %{$build_resources->{elution_time_set}} ) );
+  my $et_sql = qq~
+  SELECT elution_time_type
+  FROM $TBAT_ELUTION_TIME ET join $TBAT_ELUTION_TIME_TYPE ETT
+    ON ET.elution_time_type_id = ETT.elution_time_type_id
+  WHERE ET.elution_time_set IN ( $et );
+  ~;
+  my $sth = $sbeams->get_statement_handle($et_sql);
+
+  my $is_irt = 0;
+  while ( my @row = $sth->fetchrow_array() ) {
+    if ( $row[0] =~ /irt/i ) {
+      $is_irt = 1;
+    } else { 
+      $is_irt = 0;
+      last;
+    }
+	}
+  return $is_irt;
+}
 
 sub get_scan_path {
   my %args = @_;
