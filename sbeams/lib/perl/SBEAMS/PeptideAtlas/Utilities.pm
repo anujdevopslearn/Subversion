@@ -1610,7 +1610,10 @@ sub get_qtrap_mrm_method {
 sub get_thermo_tsq_mrm_method {
 
   my $self = shift;
-  my $tsv = shift || return '';
+
+	my %args = @_;
+
+  my $tsv = $args{method} || return '';
 
   my $sep = "\t";
 
