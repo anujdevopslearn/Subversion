@@ -232,8 +232,8 @@ sub handle_request {
 
   my $sql_clause = "";
   if ($parameters{query}) {
-    if ($parameters{query} =~ /TRUNCATE|DROP|DELETE|GRANT|update/i) {
-      print "<H4>Illegal word in SQL!  Check syntax.</H4>\n\n";
+    if ($parameters{query} =~ / TRUNCATE | DROP | DELETE | GRANT | update /i) {
+      print "<H4>Illegal word in SQL ( $1 ) !  Check syntax.</H4>\n\n";
       return;
     } else {
       $sql_clause = $parameters{query};
@@ -322,6 +322,15 @@ sub handle_request {
       base_url=>$base_url,
     );
 
+    #### Display a plot of data from the resultset
+    $sbeams->displayResultSetPlot(
+      rs_params_ref=>\%rs_params,
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
+    );
+    
 
   #### If QUERY was not selected, then tell the user to enter some parameters
   } else {
