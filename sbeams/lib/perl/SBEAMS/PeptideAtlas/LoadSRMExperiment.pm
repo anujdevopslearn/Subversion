@@ -312,7 +312,7 @@ sub read_mquest_peakgroup_file {
                           decoy => [ qw( decoy ) ],
 		     pg_prerank => [ qw( pg_prerank ) ],
              max_apex_intensity => [ qw( max_apex_intensity ) ],
-      light_heavy_ratio_maxapex => [ qw( light_heavy_ratio_maxapex ) ],
+      light_heavy_ratio_maxapex => [ qw( light_heavy_ratio_maxapex light_heavy_ratio ) ],
 	       collision_energy => [ qw( collision_energy ) ],
 	        number_of_peaks => [ qw( number_of_peaks ) ],
 	  relative_pg_intensity => [ qw( relative_pg_intensity ) ],
@@ -466,7 +466,7 @@ sub read_mprophet_peakgroup_file {
   # We store it this way because it's easy to read and maintain.
   my %possible_headers = (
        log10_max_apex_intensity => [ qw( log10_max_apex_intensity ) ],
-      light_heavy_ratio_maxapex => [ qw( light_heavy_ratio_maxapex ) ],
+      light_heavy_ratio_maxapex => [ qw( light_heavy_ratio_maxapex light_heavy_ratio) ],
                           decoy => [ qw( decoy ) ],
                          charge => [ qw( transition_group_charge ) ],
                         protein => [ qw( protein ) ],
@@ -479,11 +479,11 @@ sub read_mprophet_peakgroup_file {
                       file_name => [ qw( file_name ) ],  # Ruth 2011 only
 	transition_group_pepseq => [ qw( transition_group_pepseq ) ], #Ruth 2011
         # I think the record below is simply a result of M-Y creating custom file
-	# 05/02/12: no. It's in Ruth's ovarian cancer plasma mPro file.
+	# 05/02/12: no. It's also in Ruth's ovarian cancer plasma mPro file.
         transition_group_record => [ qw( transition_group_record ) ], #Ulli
 		             Tr => [ qw( tr ) ],  # Ruth 2011 only?
-		         run_id => [ qw( run_id ) ],  # Added by EWD for final Ruth data 2011-09-30
-		            S_N => [ qw( s_n ) ],  # Added by EWD for final Ruth data 2011-09-30. Can we use this?
+		         run_id => [ qw( run_id ) ],
+		            S_N => [ qw( s_n ) ],
   );
 
   # Now reverse the direction of the hash to make it easier to use.
@@ -507,11 +507,13 @@ sub read_mprophet_peakgroup_file {
   for my $field (@fields) {
     my $header;
 
+    print "$field... " if ($DEBUG);
     # if this header is recognized ...
     if ($header = $header_lookup{ lc $field }) {
       $idx{$header} = $i;
-      print "idx for $header is $i\n" if ($DEBUG);
+      print "header is $header; idx is $i" if ($DEBUG);
     }
+    print "\n" if ($DEBUG);
     $i++;
   }
 
@@ -526,7 +528,7 @@ sub read_mprophet_peakgroup_file {
     $charge, $peak_group,  $m_score, $d_score, $Tr, $S_N, $isotype);
 
   $decoy = 0;
-  my $spectrum_file;
+  my $mpro_specfile;  #used to get specfile basename
   my $counter = 0;
   while ($line = <MPRO_FILE>) {
     chomp $line;
@@ -541,38 +543,40 @@ sub read_mprophet_peakgroup_file {
     # Hack to see if this is a heavy-labelled TG
     $isotype =  $line =~ /heavy/i ? 'heavy' : 'light';
 
-    #if ($special_expt eq 'ruth_prelim') {
-    if ( defined $idx{peak_group_id} ) {  # Ruth
-      $_ = $fields[$idx{peak_group_id}]; #this field has 5 bits of info!
-      ($spectrum_file, $modified_pepseq, $charge, $decoy, $peak_group) =
-      /(\S+) (\S+?)\.(\S+) (\d) (\d+)/;
-      #} elsif ($special_expt eq 'ruth_2011') {
-    } elsif ( defined $idx{peakgroup_id} ) {  # Can we rely on this, omit prev?
-      # we never get here; test is same as
-      # previous test!
-      $_ = $fields[$idx{peakgroup_id}]; #this field has 5 bits of info as well!
-      my $dummy;
-      ($stripped_pepseq, $charge, $decoy, $dummy, $peak_group) =
-      /pg_(\S+?)\.(\d)_(\d)_target_(dummy)?(\d)/;
-      $peak_group += 1; #zero indexing messes up other stuff
+    if ( ( defined $idx{peak_group_id} ) ||   # ruth_prelim
+         ( defined $idx{peakgroup_id} ) ) {    # ruth_2011
+      if ( defined $idx{peak_group_id} ) {
+	$_ = $fields[$idx{peak_group_id}];
+	($mpro_specfile, $modified_pepseq, $charge, $decoy, $peak_group) =
+	/(\S+) (\S+?)\.(\S+) (\d) (\d+)/;
+      } 
+      if ( defined $idx{peakgroup_id} ) {
+	$_ = $fields[$idx{peakgroup_id}];
+	my $dummy;
+	# stripped_pepseq gotten here may include extraneous
+	# dot-separated prefix (Jovanovic/Lukas data).
+	($stripped_pepseq, $charge, $decoy, $dummy, $peak_group) =
+	 /pg_(\S+?)\.(\d)_(\d)_target_(dummy)?(\d)/;
+	$peak_group += 1; #stored with zero indexing
+      }
       $decoy = 0 if !$decoy;   #without this, zero value somehow prints as ''
-      $modified_pepseq = $fields[$idx{transition_group_pepseq}]; #is it really modified?
-      #### EWD: These mProphet files seem to have a funny nomenclature [C160] instead of C[160]. Fix it.
+      $modified_pepseq = $fields[$idx{transition_group_pepseq}]
+         if (defined $idx{transition_group_pepseq}); #is it really modified?
+      # change mods of format [C160] to C[160]
       while ( $modified_pepseq =~ /\[([A-Z])(\d{3})\]/) {
 	$modified_pepseq =~ s/\[([A-Z])(\d{3})\]/$1\[$2\]/;
       }
-
-
-      $spectrum_file = $fields[$idx{file_name}] . ".mzXML";
-      #### EWD: The run_id seems like a better column to use here?
+      # best to get stripped pepseq from modseq if it's available
+      $stripped_pepseq = 
+        SBEAMS::PeptideAtlas::Annotations::strip_mods($modified_pepseq)
+	   if (defined $modified_pepseq);
+      # best to get mpro_specfile from run_id if available
       my $run_id = (defined $idx{run_id}) ? $fields[$idx{run_id}] : undef ;
-      $spectrum_file = $run_id if ($run_id);
-
-      #### EWD: Added S_N
-      $S_N = (defined $idx{S_N}) ? $fields[$idx{S_N}] : 0 ;  # Signal-to-noise correctly interpreted I hope??
+      $mpro_specfile = $run_id if ($run_id);
+      $S_N = (defined $idx{S_N}) ? $fields[$idx{S_N}] : 0 ; 
 
     } elsif ( defined $idx{transition_group_record} ) {   #Ulli's data
-      $spectrum_file = "${spec_file_basename}.mzXML";
+      $mpro_specfile = "${spec_file_basename}.mzXML";
 
       # Get the dilution & replicate from the filename. Really only need to do
       # once per subroutine call, but it's easiest to put this here.
@@ -633,7 +637,7 @@ sub read_mprophet_peakgroup_file {
     };
 
 
-    $spectrum_file =~ /(\S+)\.\S+/;
+    $mpro_specfile =~ /(\S+)\.\S+/;
     my $this_file_basename = $1;
 
     print "$this_file_basename, $stripped_pepseq, $charge, $decoy, $peak_group\n" if ($VERBOSE)>1;
@@ -1137,7 +1141,8 @@ sub map_peps_to_prots {
   # Get ID for latest BSS for this organism
   my $sql = qq~
   SELECT BSS.biosequence_set_id FROM $TBAT_BIOSEQUENCE_SET BSS
-  WHERE BSS.organism_id = '$organism_id';
+  WHERE BSS.organism_id = '$organism_id'
+  AND BSS.record_status != 'D';
   ~;
   my @bss_ids = $sbeams->selectOneColumn($sql);
   if (! scalar @bss_ids) {
@@ -1252,7 +1257,7 @@ sub map_peps_to_prots {
 	my $sql = qq~
 	SELECT * FROM $TBAT_SEL_PEPTIDE_ION_PROTEIN
 	WHERE protein_accession = '$acc'
-	AND SEL_peptide_ion_id = '$peps_href->{$pepseq}->{SEL_peptide_ion_id}'
+	AND SEL_peptide_ion_id = '$SEL_peptide_ion_id'
 	~;
 	my ($SEL_peptide_ion_protein_id) = $sbeams->selectOneColumn($sql);
 
