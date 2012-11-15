@@ -1124,7 +1124,7 @@ sub handle_request {
 			}
 			foreach my $a (@spids){
         my $p = "/proteomics/peptideatlas/archive/rmoritz/HumanMRMAtlas/Origene/Velos/$plate*/".
-                 "method/{XTK,XTK*allmod}/VE*_$tube\_*-ipro.prot.xml";
+                 "method/XTK/VE*_$tube\_*-ipro.prot.xml";
 
 				$PPfile{$a}{path} = $p;
         if($tube =~ /\{(\w+),.*/){
@@ -1146,7 +1146,7 @@ sub handle_request {
         if($parameters{ori_tube} ne ''){
           $parameters{ori_tube} =~ /(ISBHOT\d{3})-(\w)(\d+)/;
           if(length($3) == 1){
-            $str = "$1*/method/{XTK,XTK*allmod}/VE*_{$2".'0'."$3,$2$3}_*-ipro.prot.xml";
+            $str = "$1*/method/XTK/VE*_{$2".'0'."$3,$2$3}_*-ipro.prot.xml";
           }else{
             $str = "$1*/method/{XTK,XTK*allmod}/VE*_$2$3\_*-ipro.prot.xml";
           }
