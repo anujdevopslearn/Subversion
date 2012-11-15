@@ -1245,8 +1245,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
   my $modSQL = qq~
   SELECT modified_peptide_sequence, MPI.peptide_charge,
          SMP.sample_id,I.instrument_name, SI.probability, S.spectrum_name,
-         SI.spectrum_identification_id, precursor_intensity, scan_time,
-         collision_energy
+         SI.spectrum_identification_id, SMP.sample_tag, precursor_intensity, scan_time,
+         collision_energy 
     FROM $TBAT_PEPTIDE_INSTANCE PI
    INNER JOIN $TBAT_PEPTIDE P
          ON ( PI.peptide_id = P.peptide_id )
@@ -1274,10 +1274,11 @@ if ($apply_action =~ /QUERY|GO/i ) {
   ~;
 
   $log->info( "$modSQL" );
-  
   my @mod_peps;
   my $sth = $sbeams->get_statement_handle( $modSQL );
   my $has_header_info = 0;
+  my $is_origene = 0;
+  $is_origene = 1 if ($atlas_build_name =~ /Origene/i);
 
   $mseq_idx = 0;      # modified peptide sequence
   $chrg_idx = 1;      # charge
@@ -1286,19 +1287,21 @@ if ($apply_action =~ /QUERY|GO/i ) {
   $prob_idx = 4;      # probability
   my $name_idx = 5;      # spectrum name: mzML basename, scan, scan, chrg
   $spec_idx = 6;      # spectrum
-  my $chrm_idx = 7;      # chromatogram
-  my $it_idx = 8;        # precursor intensity
-  my $rt_idx = 9;        # retention time
-  my $ce_idx = 10;       # collision energy
+  my $frag_idx = 7;
+  my $chrm_idx = 8;      # chromatogram
+  my $it_idx = 9;        # precursor intensity
+  my $rt_idx = 10;        # retention time
+  my $ce_idx = 11;       # collision energy
 
-
-
-  my $align = [qw(left center right right left center center center)];
+  my $align = [qw(left center right right left center center center center)];
+  push @$align , 'center' if ($is_origene);
+   
   while ( my @row = $sth->fetchrow_array() ) {
     # We only want to display PI and RT cols if we have data!
     if ( !$has_header_info && $row[$it_idx] ) {
       $has_header_info++;
-      $align = [qw(left center right right left center center center center right right)];
+      #$align = [qw(left center right right left center center center center center right right)];
+      push  @$align , qw(center right right);
     }
     push @mod_peps, \@row;
   }
@@ -1312,9 +1315,9 @@ if ($apply_action =~ /QUERY|GO/i ) {
     my @display_peps;
     my $at_least_one_chromatogram = 0;
     for my $pep ( @mod_peps ) {
-
       # Get mzML filename, cycle, and charge from spectrum name
       $pep->[$name_idx] =~ /(\S+)\.(\d+?)\.(\d+?)\.(\d)/;
+      
       my $mzml_basename = $1;
       my $cycle = $2;
       my $cycle2 = $3;
@@ -1324,7 +1327,6 @@ if ($apply_action =~ /QUERY|GO/i ) {
       my $rt;
       my @trace_array;
       my %trace;
-
       my $chromatogram_entry = '';  #empty, unless we can find chromgram info
 
       #### If this is a QTRAP 5500 mzML file, get info from special
@@ -1419,6 +1421,11 @@ if ($apply_action =~ /QUERY|GO/i ) {
       $pep->[$chrm_idx] = $chromatogram_entry;
       $pep->[$mseq_idx] = $sbeamsMOD->formatMassMods( $pep->[$mseq_idx] );
 
+      if ($is_origene){
+         $pep->[$frag_idx] =~ s/.*_//;
+      }else{
+         delete $pep->[$frag_idx];
+      }
       if ( !$has_header_info ) {
         delete $pep->[$ce_idx];
         delete $pep->[$rt_idx];
@@ -1427,8 +1434,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
         $pep->[$it_idx] = ( $pep->[$it_idx] ) ? $sbeams->formatScientific( number=> $pep->[$it_idx], precision=>1, output_mode => $sbeams->get_output_mode() ): $sbeams->makeInactiveText('n/a'); 
         $pep->[$rt_idx] = ( $pep->[$rt_idx] ) ? sprintf( "%0.1f", $pep->[$rt_idx]/60 ) : $sbeams->makeInactiveText('n/a'); 
         $pep->[$ce_idx] = ( $pep->[$ce_idx] ) ? sprintf( "%0.1f", $pep->[$ce_idx] ) : $sbeams->makeInactiveText('n/a'); 
+        
       }
-
       push @display_peps, $pep;
 
     } # end for each pep
@@ -1440,7 +1447,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
       }
     }
 
-    my @headings = ( 'Modified Sequence', 'Chg', 'Smpl', 'Instr', 'Prob', 'Spectrum Name', 'Spectrum' );
+    my @headings = ( 'Modified Sequence', 'Chg', 'Smpl', 'Instr', 'Prob', 'Spectrum Name', 'Spectrum');
+    push @headings, 'Fragmentation Type' if ($is_origene); 
     push @headings, 'Chromatogram' if $at_least_one_chromatogram;
     push @headings, ( 'Precursor Intensity', 'RT', 'CE' ) if $has_header_info;
     #### Add table column headings
