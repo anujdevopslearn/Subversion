@@ -138,6 +138,7 @@ sub handle_request {
 	my $filtercol = $parameters{'filtercol'} || 'all';
 	my $filterstr = $parameters{'filterstr'} || '';
   my $dlfiletype = $parameters{'dlfiletype'} || 'all';
+  my $idOnly =  $parameters{'idOnly'} || 0;
   #### Compile any error we encounter in an array
   $filtercol =~ s/[\n\r]//;
   $filterstr =~ s/[\n\r]//;
@@ -291,12 +292,14 @@ sub handle_request {
 		$idx++;
   }
   my $count;
+ my @ids = ();
  if($sort =~ /ASC/){
     foreach my $idx (sort {$sort_cols_hash{$a}{sortby} cmp $sort_cols_hash{$b}{sortby}} keys %sort_cols_hash ){
       my $sample = $sort_cols_hash{$idx}{sample};
       if($count < $start -1 ){$count++;next;}
       if($pgsize ne '' and $count >= $pgsize + $start -1){$count++; last;}
       push @{$filtered_hash->{"MS_QueryResponse"}{samples}}, $sample;
+      push @ids , $sample->{id};
       $count++;
     }
   }else{
@@ -306,6 +309,7 @@ sub handle_request {
       if($count < $start -1 ){$count++;next;}
       if($pgsize ne '' and $count >= $pgsize + $start -1){$count++; last;}
       push @{$filtered_hash->{"MS_QueryResponse"}{samples}}, $sample;
+      push @ids , $sample->{id};
       $count++;
     }
   }
@@ -380,9 +384,13 @@ sub handle_request {
 
 
 	 $filtered_hash->{"MS_QueryResponse"}{counts}{samples} = $idx;
-		print  $q -> header('application/json');
-		$json = $json->pretty([1]);
-		print   $json->encode($filtered_hash);
+   if ($idOnly){
+      print join("," ,@ids);
+   }else{
+		 print  $q -> header('application/json');
+		 $json = $json->pretty([1]);
+		 print   $json->encode($filtered_hash);
+   }
   }
 }
 
