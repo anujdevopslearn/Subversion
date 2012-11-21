@@ -69,6 +69,7 @@ Options:
 
   --expt_id                   SEL_experiment_id (required)
   --purge                     Purge before loading; keep run records.
+  --noload                    Don't load; useful with --purge.
   --mult_tx_files             One Tx file per spectrum file. Default: single
 				Tx file for all runs, named transition_list.tsv
   --mult_tg_per_q1            Multiple transition groups measured per Q1
@@ -98,7 +99,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
          "expt_id:i", "mult_tx_files", "create_run_records", "mprophet:s",
          "purge", "help", "q1_tolerance:f", "create_expt_record", "data_path:s",
 	 "q3_tolerance:f","sample_id:i","project_id:i","pass_identifier:s",
-	 "title:s", "mult_tg_per_q1", "scores_only",
+	 "title:s", "mult_tg_per_q1", "scores_only", "noload",
     )) {
 
     die "\n$USAGE";
@@ -136,6 +137,7 @@ if ($SEL_experiment_id && $create_expt_record ) {
 }
 
 my $purge = $OPTIONS{"purge"};
+my $noload = $OPTIONS{"noload"};
 my $mult_tx_files = $OPTIONS{"mult_tx_files"};
 my $mult_tg_per_q1 = $OPTIONS{"mult_tg_per_q1"};
 my $q1_tolerance = $OPTIONS{"q1_tolerance"};
@@ -152,7 +154,25 @@ if ($create_expt_record && !$data_path) {
   print "$PROG_NAME: must specify --data_path with --create_expt_record.\n";
   exit;
 }
+
 my $mpro_file = $OPTIONS{"mprophet"};
+if ($mpro_file && $mult_tg_per_q1) {
+  print STDERR "mProphet results will not be loaded properly for multiple ".
+               "transition groups per Q1. Some code changes need to happen. ".
+               "Under read_mprophet_peakgroup_file, in LoadSRMExperiment.pm, ".
+               "mpro scores are currently hashed to the stripped pepseq. ".
+               "Needs to instead hash to, probably, transition_group_pepseq, ".
+               "as is currently done for read_mquest_peakgroup_file(). ".
+               "Before implementing this change, check that this column actually ".
+               "exists in your mProphet file, and that it holds a modseq. ".
+	       "Comment says 'Ruth 2011', suggesting ".
+               "that it's a special column seen only in Ruth's data. ".
+               "If you don't make this change, scores for all peps with the ".
+	       "same Q1 will be stored under the stripped pepseq, overwriting ".
+	       "one another.".
+               "\n";
+  exit;
+}
 
 ###############################################################################
 ###
@@ -162,6 +182,7 @@ my $mpro_file = $OPTIONS{"mprophet"};
 
 
 print "Loading data for PASSEL experiment $SEL_experiment_id\n" if ($VERBOSE);
+print "Allowing multiple transition groups per Q1\n" if ($VERBOSE && $mult_tg_per_q1);
 print "Loading mQuest/mProphet scores only\n" if ($load_scores_only && $VERBOSE);
 
 # Get info about this experiment from the database
@@ -234,6 +255,8 @@ if ($purge) {
   );
 }
 
+exit if ($noload);
+
 #my $specfiles = `ls ${data_path}/*.{mzXML,mzML}`;
 #print "$specfiles\n";
 #exit;
@@ -297,10 +320,12 @@ for my $spectrum_filepath (@specfiles) {
   my $mquest_file = $spectrum_filepath;
   $mquest_file =~ s/$ext/_scores.xls/;
   if (! -r $mquest_file) {
-    print "mQuest file \"$mquest_file\" does not exist or is not readable."
+    print "mQuest file \"$mquest_file\" does not exist or is not readable.\n"
       if $VERBOSE;
     $mquest_file = '';
-  };
+  } else {
+    print "Was able to open mQuest file \"$mquest_file\". Woot!\n" if $VERBOSE; 
+  }
 
   # make an option for load_SRM_run to create the run record?
   $loader-> load_srm_run (

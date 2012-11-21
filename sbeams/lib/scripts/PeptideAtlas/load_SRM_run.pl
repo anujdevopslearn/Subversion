@@ -36,6 +36,8 @@ my $loader = new SBEAMS::PeptideAtlas::LoadSRMExperiment;
 ###############################################################################
 $PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
+Load a single SRM run into PASSEL. Assumes that sample, experiment, and
+ run records already exist; will not create run records.
 Usage: $PROG_NAME --trans trans_file [OPTIONS]
 Options:
   --verbose n                 Set verbosity level.  default is 0

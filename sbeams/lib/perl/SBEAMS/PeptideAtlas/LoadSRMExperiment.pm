@@ -949,6 +949,7 @@ sub store_mprophet_scores_in_transition_hash {
   print "$n_q1 measured Q1 in tx_map\n" if $VERBOSE > 2;
   # For each targeted Q1
   for my $target_q1 (keys %{$transdata_href}) {
+    print "For target Q1 $target_q1...\n" if $VERBOSE>2;
 
     # Get the pepseq(s) and Q3s that were measured in this spectrum file
     # (usually only one, but sometimes multiple, as in phospho data)
@@ -956,10 +957,12 @@ sub store_mprophet_scores_in_transition_hash {
 
     my ($modified_pepseq, $matching_target_q3s_aref);
     for my $measured_q1 (keys %{$tx_map_href}) {
+      print "Checking measured Q1 $measured_q1\n" if $VERBOSE > 2;
       my $matching_modpeps_href = $tx_map_href->{$measured_q1};
       for my $mod_pepseq (keys %{$matching_modpeps_href}) {
 	if ($matching_modpeps_href->{$mod_pepseq}->{'target_q1'} ==
 						      $target_q1) {
+	  print "DOES match Q1 for $mod_pepseq!\n" if $VERBOSE > 2;
 	  $found_matching_measured_q1 = 1;
 	  $modified_pepseq = $mod_pepseq;
 	  $matching_target_q3s_aref =
@@ -969,7 +972,7 @@ sub store_mprophet_scores_in_transition_hash {
 	  # Create stripped sequence, because this is sometimes (always?) what is used
 	  # to index into mProphet score hash
 	  # 02/07/12: TODO can't index by stripped seq with phospho data and
-	  # --mult_tg_per_run.
+	  # --mult_tg_per_q1.
 	  my $stripped_pepseq = 
 	  SBEAMS::PeptideAtlas::Annotations::strip_mods($modified_pepseq);
 	  print "Stripped = $stripped_pepseq Modseq = $modified_pepseq\n" if $VERBOSE > 1;
@@ -1074,11 +1077,16 @@ sub store_mprophet_scores_in_transition_hash {
 	  # Store the max m_score. Store the most recent Tr, intensity 
 	  # (will be for the lowest numbered peak group, #1 except
 	  # in weird cases)
-	  $transdata_href->{$target_q1}->{scores}->{$decoy}->{best_m_score} = $best_m_score;
-	  $transdata_href->{$target_q1}->{scores}->{$decoy}->{best_d_score} = $best_d_score;
+	  $transdata_href->{$target_q1}->{$modified_pepseq}->{scores}->{$decoy}->{best_m_score} = $best_m_score;
+	  $transdata_href->{$target_q1}->{$modified_pepseq}->{scores}->{$decoy}->{best_d_score} = $best_d_score;
 	  #print "Storing best_m_score $best_m_score\n" if ($VERBOSE > 2);
-	  $transdata_href->{$target_q1}->{scores}->{$decoy}->{Tr} = $Tr; $transdata_href->{$target_q1}->{scores}->{$decoy}->{S_N} = $S_N; $transdata_href->{$target_q1}->{scores}->{$decoy}->{log10_max_apex_intensity} = $log10_max_apex_intensity; $transdata_href->{$target_q1}->{scores}->{$decoy}->{light_heavy_ratio_maxapex} = $light_heavy_ratio_maxapex;
+	  $transdata_href->{$target_q1}->{$modified_pepseq}->{scores}->{$decoy}->{Tr} = $Tr;
+          $transdata_href->{$target_q1}->{$modified_pepseq}->{scores}->{$decoy}->{S_N} = $S_N;
+          $transdata_href->{$target_q1}->{$modified_pepseq}->{scores}->{$decoy}->{log10_max_apex_intensity} = $log10_max_apex_intensity;
+          $transdata_href->{$target_q1}->{$modified_pepseq}->{scores}->{$decoy}->{light_heavy_ratio_maxapex} = $light_heavy_ratio_maxapex;
 
+	} else {
+	  print "Doesn't match Q1 for $mod_pepseq.\n" if $VERBOSE > 2;
 	} # end if matches target Q1
       } # end for each modpep
     } # end for each measured Q1
@@ -1566,7 +1574,7 @@ sub load_transition_data {
     # For the modified peptides that go with this Q1 (either just the
     # one with the transition group that best matches this measured
     # Q1 and all the Q3s it was measured with, or all those that
-    # match within tolerance, depending on param --mult_tg_per_run)
+    # match within tolerance, depending on param --mult_tg_per_q1)
     my @mod_pepseqs = keys %{$tx_map_href->{$measured_q1}};
     for my $modified_peptide_sequence (@mod_pepseqs) {
       # 02/06/12: for now, assume just one
@@ -1674,9 +1682,9 @@ sub load_transition_data {
 	      $peptide_ion_id = $existing_peptide_ions[$n_existing_pi-1];
 	    } elsif ($n_existing_pi == 0) {
 	      print "ERROR: no peptide ion found for q1 $rowdata_ref->{q1_mz}, $rowdata_ref->{modified_peptide_sequence}, is_decoy=$is_decoy_char\n";
-	    } else  {
+	    } else {
 	      $peptide_ion_id = $existing_peptide_ions[0];
-	      print "Peptide ion $peptide_ion_id (pepseq $rowdata_ref->{modified_peptide_sequence}, Q1 $rowdata_ref->{q1_mz}), is_decoy=$is_decoy_char  already loaded\n" if $VERBOSE > 2;
+	      print "Peptide ion $peptide_ion_id (pepseq $rowdata_ref->{modified_peptide_sequence}, Q1 $rowdata_ref->{q1_mz}), is_decoy=$is_decoy_char already loaded\n" if ($VERBOSE > 2 && !$load_scores_only);
 	    }
 	  }
 
@@ -1697,7 +1705,7 @@ sub load_transition_data {
 	  }
 
 	  # Score data
-	  my $scores_href = $transdata_href->{$target_q1}->{scores}->{$is_decoy};
+	  my $scores_href = $transdata_href->{$target_q1}->{$modified_peptide_sequence}->{scores}->{$is_decoy};
 	  $rowdata_ref->{m_score} = $scores_href->{best_m_score};
 	  $rowdata_ref->{d_score} = $scores_href->{best_d_score};
 	  $rowdata_ref->{S_N} = $scores_href->{S_N};
@@ -1798,7 +1806,7 @@ sub load_transition_data {
 	    }
 	    if ( $load_scores_only && $n_existing_tg ) {
 	      $transition_group_id = $existing_tgs[0];
-	      print "Updating transition group $transition_group_id!\n"
+	      print "Updating scores for transition group $transition_group_id, peptide $modified_peptide_sequence!\n"
 	          if $VERBOSE > 2;
 	      my $result = $sbeams->updateOrInsertRow(
 		update=>1,
@@ -1848,7 +1856,7 @@ sub load_transition_data {
 
 	  # Load a peak group record for this chromatogram,
 	  # if we have peak group infos.
-	  my $scores_href = $transdata_href->{$target_q1}->{scores}->{$is_decoy};
+	  my $scores_href = $transdata_href->{$target_q1}->{$modified_peptide_sequence}->{scores}->{$is_decoy};
 	  if ($load_chromatograms &&
 	    ( $scores_href->{Tr} ||
 	      $scores_href->{log10_max_apex_intensity} )) {
@@ -1928,7 +1936,7 @@ sub load_transition_data {
 	    my @existing_transitions = $sbeams->selectOneColumn($sql);
 	    my $n_existing_tr = scalar @existing_transitions;
 
-	    if ($n_existing_tr) {
+	    if ($n_existing_tr && ! $load_scores_only) {
 	      $transition_id = $existing_transitions[0];
 	      print "Transition $transition_id (TG_id $transition_group_id, Q3 $q3_mz) already loaded\n" if $VERBOSE > 2;
 	    }
@@ -2204,6 +2212,9 @@ sub removeSRMExperiment {
       WHERE SELTG.SEL_run_id in ($run_id_string)
    ~;
    my @peptide_ion_ids = $sbeams->selectOneColumn($sql);
+   if (! scalar @peptide_ion_ids) {
+     return (0);
+   }
    my $peptide_ion_ids_sql_string = sprintf "( %s", shift @peptide_ion_ids;
    for my $peptide_ion_id (@peptide_ion_ids) {
      $peptide_ion_ids_sql_string .= ", $peptide_ion_id";
@@ -2308,6 +2319,7 @@ sub removeSRMExperiment {
    );
 
   }
+  return (1);
 
 } # end removeSRMExperiment
 
@@ -2358,6 +2370,8 @@ sub encode_transition_group_list {
       return 0 if (lc($b) eq 'y');
       return 1 if (lc($a) eq 'b');
       return 0 if (lc($b) eq 'b');
+      return 1 if (lc($a) eq 'p');  # precursor
+      return 0 if (lc($b) eq 'p');
       return 1 if (lc($a) eq 'x');
       return 0 if (lc($b) eq 'x');
       return 1 if (lc($a) eq 'a');
