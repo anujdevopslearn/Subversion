@@ -218,8 +218,9 @@ sub handle_request {
 		foreach my $id (keys %tmp){
 			if($tmp{$id} == scalar @qts){
 				$selectedID{$id} = 1;
-			}
+     	}
 		}
+    
 	}
 
 
@@ -235,7 +236,6 @@ sub handle_request {
   my $idx=0;
   $date =~ s/\-//g;
   foreach my $dataset (@{$hash->{"MS_QueryResponse"}{samples}}){
-    next if (scalar keys %selectedID > 0 and not defined $selectedID{$dataset->{id}});
     my $email = $dataset->{"email"};
     my $year =  $dataset->{dates}{release}{std}{year};
     my $month = $dataset->{dates}{release}{std}{month};
@@ -269,7 +269,9 @@ sub handle_request {
        }elsif($filtercol eq 'submitter'){
          next if ($dataset->{submitter} !~ /$filterstr/i);
        }
-		  }
+		  }else{
+        next if(not defined $selectedID{$dataset->{id}});
+      }
 		}
 		if($sortby =~ /id/i){
 			$sort_cols_hash{$idx}{sortby} = $dataset->{id} ;
