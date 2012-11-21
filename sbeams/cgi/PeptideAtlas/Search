@@ -391,11 +391,17 @@ sub handle_request {
   }
   
   ### search PASS datasets
-  my $pass_query_result = `/net/dblocal/www/html/devZS/sbeams/cgi/PeptideAtlas/PASS_Query.cgi filterstr=$parameters{search_key} idOnly=1`;
+  my $filterstr='';
+  if ($build_type_name !~ /ALL/i){
+    $filterstr = $parameters{search_key} ." " . $build_type_name;
+  }else{
+    $filterstr = $parameters{search_key};
+  }
+  my $pass_query_result = `/net/dblocal/www/html/devZS/sbeams/cgi/PeptideAtlas/PASS_Query.cgi filterstr=\'$filterstr\' idOnly=1`;
   if ($pass_query_result ne '' and $pass_query_result =~ /PASS\d{5}/i){
     my $link = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/PASS_View?identifier=";
     my @matches = split(",", $pass_query_result); 
-    $pass_query_result = 'PASS submission matches: ';
+    $pass_query_result = "PASS submission matches: ";
     my $seq = '';
     foreach my $m (@matches){
       $pass_query_result .= qq~$seq<a href="$link$m">$m</a>~;
@@ -403,8 +409,9 @@ sub handle_request {
     }
   }
 
-  ### search repository 
-  my $repository_query_result = `/net/dblocal/wwwspecial/peptideatlas/cgi/Repository/query_repository.cgi filterstr=$parameters{search_key} idOnly=1`;
+  ### search repository
+ 
+  my $repository_query_result = `/net/dblocal/wwwspecial/peptideatlas/cgi/Repository/query_repository.cgi filterstr=\'$filterstr\' idOnly=1`;
   if ($repository_query_result ne '' and $repository_query_result =~ /PAe\d{6}/i){
     my $link = "ftp://ftp.peptideatlas.org/pub/PeptideAtlas/Repository/"; 
     my @matches = split(",", $repository_query_result);
