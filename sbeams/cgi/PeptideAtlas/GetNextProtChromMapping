@@ -368,7 +368,6 @@ sub handle_request {
       base_url=>$base_url,
     );
 
-
     #### Display the resultset controls
     $sbeams->displayResultSetControls(
       resultset_ref=>$resultset_ref,
@@ -378,6 +377,11 @@ sub handle_request {
       base_url=>$base_url,
     );
 
+    #### Display summary of the resultset
+    displayTableSummary(
+      resultset_ref=>$resultset_ref,
+      base_url=>$base_url,
+    );
 
     #### Display a plot of data from the resultset
     $sbeams->displayResultSetPlot(
@@ -402,8 +406,54 @@ sub handle_request {
 
 } # end handle_request
 
+###############################################################################
+# displayTableSummary
+# summary table showing how many proteins total, how many canonical, 
+# how many subsumed or indistinguishable, etc. along with percentages.
+###############################################################################
+sub displayTableSummary{
+  my %args = @_;
+  my $resultset_ref = $args{'resultset_ref'};
+  my $base_url = $args{'base_url'} || '';
+  my %protein_level_summary = ();
+  my @rows = @{$resultset_ref->{data_ref}};
+  my $sum = 0;
+  
+  foreach my $row (@rows){
+    my $level = $row->[9];
+    if ($level =~ /(\s+to\s+.*)/){
+      $level =~ s/$1//;
+    }
+    $protein_level_summary{$level}++;
+    $sum++;
+  }
+  my @ratio =(); 
+  push @ratio , ['Protein Present Level','Count', 'Percentage'];
+  foreach my $level(keys %protein_level_summary){
+    my $val = sprintf ("%.3f", ($protein_level_summary{$level}/$sum)*100);
+    push @ratio, [ucfirst($level), $protein_level_summary{$level}, $val];
+  }
+   push @ratio, ['Total', $sum, '100'];
 
+  my $prefix = $sbeams->addTabbedPane(label => "Summary");
+  my $HTML= $sbeamsMOD->encodeSectionTable( header => 1,
+                  set_download => 0,
+                  chg_bkg_idx => 1,
+                  align  => [qw(left right right)],
+                  rows => \@ratio );
 
+    print qq~
+      $prefix
+      <TABLE>
+      $HTML
+      </TABLE>
+    <hr color='black'></div>
+      <SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript">
+       document.getElementById("messagetab").innerHTML = " ";
+       var mytab = 'resultsettab' + (resultsettabs.length - 1);
+    </SCRIPT>
+   ~;
+}
 ###############################################################################
 # evalSQL
 #
@@ -426,7 +476,7 @@ sub evalSQL {
 ###############################################################################
 sub getResultset {
   my %args = @_;
-  my $file = "/net/db/projects/PeptideAtlas/pipeline/../species/Human/NextProt/mapping_test.txt";
+  my $file = "/net/db/projects/PeptideAtlas/pipeline/../species/Human/NextProt/mapping.txt";
   open (IN, "<$file");
 
   #### Process the arguments list
@@ -488,6 +538,7 @@ sub getResultset {
        if ( defined $parameters{$constraint{$num}}){
          next if ($parameters{$constraint{$num}} eq '');
          my $pat = $parameters{$constraint{$num}};
+
          $pat =~ s/\s+$//; $pat =~ s/^\s+//;
          $pat =~ s/\s+/,/g;
          $pat =~ s/,+/,/g;
@@ -496,7 +547,6 @@ sub getResultset {
            my $chrm  = $elms[$num] ;
            $chrm =~ s/[a-z].*//;
            $pat =~ s/^0//;
-
            next LOOP if ($chrm !~ /^$pat$/i);
          }else {
            next LOOP  if ($elms[$num] !~ /($pat)/i);
