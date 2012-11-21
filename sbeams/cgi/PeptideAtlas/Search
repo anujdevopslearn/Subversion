@@ -384,6 +384,38 @@ sub handle_request {
     return '';
   }
 
+  ### identifiy PASS accession search
+  if ($parameters{search_key} =~ /^PASS\d{5}/i){
+     print $q -> redirect("https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/PASS_View?identifier=".$parameters{search_key});
+     exit;
+  }
+  
+  ### search PASS datasets
+  my $pass_query_result = `/net/dblocal/www/html/devZS/sbeams/cgi/PeptideAtlas/PASS_Query.cgi filterstr=$parameters{search_key} idOnly=1`;
+  if ($pass_query_result ne '' and $pass_query_result =~ /PASS\d{5}/i){
+    my $link = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/PASS_View?identifier=";
+    my @matches = split(",", $pass_query_result); 
+    $pass_query_result = 'PASS submission matches: ';
+    my $seq = '';
+    foreach my $m (@matches){
+      $pass_query_result .= qq~$seq<a href="$link$m">$m</a>~;
+      $seq = ', ';
+    }
+  }
+
+  ### search repository 
+  my $repository_query_result = `/net/dblocal/wwwspecial/peptideatlas/cgi/Repository/query_repository.cgi filterstr=$parameters{search_key} idOnly=1`;
+  if ($repository_query_result ne '' and $repository_query_result =~ /PAe\d{6}/i){
+    my $link = "ftp://ftp.peptideatlas.org/pub/PeptideAtlas/Repository/"; 
+    my @matches = split(",", $repository_query_result);
+    $repository_query_result = '<BR>PeptideAtlas repository dataset matches: ';
+    my $seq = '';
+    foreach my $m (@matches){
+      $repository_query_result .= qq~$seq<a href="$link$m">$m</a>~;
+      $seq = ', ';
+    }
+  }
+
 
   #### Build SEARCH_KEY constraint
   my $exact_search_key =  $parameters{search_key};
@@ -555,6 +587,7 @@ sub handle_request {
           if( ! $search_type_param{single_table} ){
             $sbeamsMOD->display_page_header(project_id =>$project_id,init_tooltip =>0,onload=>'sortables_init()');
             print $buffer;
+            print "$pass_query_result$repository_query_result";
             print "<BR>";
             print "Exact search results: <BR>" if($n_exact_results > 1 && $rs_params{page_number} == 0);
             displayTable(
@@ -653,6 +686,9 @@ sub handle_request {
 					if( ! $search_type_param{single_table} ){
 						$sbeamsMOD->display_page_header(project_id =>$project_id,init_tooltip =>0,onload=>'sortables_init()');
 						print $buffer;
+
+            print "$pass_query_result$repository_query_result";
+            print "<BR>";
             print "<BR>Exact search results: None";
 					}else{
 						$sbeamsMOD->display_page_header(project_id => $project_id);
@@ -662,7 +698,11 @@ sub handle_request {
 				}else{
 					 $sbeamsMOD->display_page_header(project_id => $project_id);
            print "$buffer<BR>";
-					 print "There were no matches in the index to match your search key '$search_key'<BR>";
+           if ("$pass_query_result$repository_query_result" ne '' ){
+             print "$pass_query_result$repository_query_result";
+           }else{
+					   print "There were no matches in the index to match your search key '$search_key'<BR>";
+           }
 					 return(0);
         }
 			}
