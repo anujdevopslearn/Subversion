@@ -99,11 +99,16 @@ sub GetTransitions_SourceSelect {
     FROM $TBAT_INSTRUMENT_TYPE IT
     WHERE instrument_type_name = 'Predicted'
     ~;
-		print STDERR $sql;
 
     my $sth = $sbeams->get_statement_handle( $sql );
     while ( my @row = $sth->fetchrow_array() ) {
-      push @select, { optionValue => $row[1], optionText => $row[0] };
+			my $skip = 0;
+			if ( $row[0] =~ /Predicted/ ) {
+				for my $id ( 154, 164, 165 ) {
+					$skip++ if $params{pabst_build_id} == $id;
+  			}
+			}
+      push @select, { optionValue => $row[1], optionText => $row[0] } unless $skip;
     }
 
   }
@@ -117,7 +122,13 @@ sub GetTransitions_SourceSelect {
     ~;
     my $sth = $sbeams->get_statement_handle( $sql );
     while ( my @row = $sth->fetchrow_array() ) {
-      push @select, { optionValue => $row[1], optionText => $row[0] };
+			my $skip = 0;
+			if ( $row[0] =~ /Predicted/ ) {
+				for my $id ( 154, 164, 165 ) {
+					$skip++ if $params{pabst_build_id} == $id;
+  			}
+			}
+      push @select, { optionValue => $row[1], optionText => $row[0] } unless $skip;
     }
   }
 
