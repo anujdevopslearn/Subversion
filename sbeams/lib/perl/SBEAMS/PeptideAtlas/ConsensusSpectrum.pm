@@ -120,6 +120,34 @@ sub spectrum_search {
   return \@rows || [];
 }
 
+sub spectrum_search_origene {
+  my $self = shift;
+  my %args = @_;
+
+  for my $opt ( qw( seq ) ) {
+    die( "Missing required parameter $opt" ) unless defined $args{$opt};
+  }
+
+  my $charge = ( !$args{charge} ) ? '' : "AND charge = '$args{charge}'";
+  my $m_seq = ( !$args{m_seq} ) ? '' : "AND modified_sequence = '$args{m_seq}'";
+  my $lib = ( !$args{lib_id} ) ? '' : "AND CLS.consensus_library_id = '$args{lib_id}'";
+
+  my $sql =<<"  END";
+  SELECT consensus_library_spectrum_id, sequence, charge, modifications, protein_name,
+    mz_exact, consensus_spectrum_type_id, CLS.consensus_library_id, modified_sequence,
+    protein_name_alt, consensus_library_name
+    FROM $TBAT_CONSENSUS_LIBRARY_SPECTRUM CLS
+    JOIN $TBAT_CONSENSUS_LIBRARY CL ON CL.consensus_library_id = CLS.consensus_library_id
+    WHERE sequence = '$args{seq}'
+    AND consensus_library_name like 'origene%' 
+    $charge
+    $m_seq
+    $lib
+  END
+  my @rows = $sbeams->selectSeveralColumns( $sql );
+  return \@rows || [];
+}
+
 
 sub has_QTOF_stepping {
   my $self = shift;

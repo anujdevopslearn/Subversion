@@ -964,13 +964,16 @@ if ($apply_action =~ /QUERY|GO/i ) {
 #  'link' => $link,
 # encodeSectionTable(
 #  tr_info => $tr,
+  my $is_origene = 0;
+  if ($atlas_build_name =~ /Origene/i){
+    $is_origene = 1;
+  }
 
   my $modHTML .= $sbeamsMOD->encodeSectionHeader(
     text => "Modified Peptides",
    'link' => $link,
     bold => 1
   );
-
   my $mseq_idx = 0;      # modified peptide sequence
   my $chrg_idx = 1;      # charge
   my $mz_idx = 2;        # monoisotopic parent m/z
@@ -1017,8 +1020,13 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
   my $cs_obj = SBEAMS::PeptideAtlas::ConsensusSpectrum->new();
   $cs_obj->setSBEAMS( $sbeams );
-  my $consensus = $cs_obj->spectrum_search( seq => $peptide_sequence[0] ); # ,
+  my $consensus;
+  if ($is_origene){
+    $consensus = $cs_obj->spectrum_search_origene( seq => $peptide_sequence[0] ); 
+  }else{
+    $consensus = $cs_obj->spectrum_search( seq => $peptide_sequence[0] ); # ,
                                           #  lib_id => $lib_id );
+  }
 
   #### If a result is returned
   if ( scalar @mod_peps ) {
@@ -1047,24 +1055,32 @@ if ($apply_action =~ /QUERY|GO/i ) {
           } else {
             next if !$c_spectrum->[8] || $c_spectrum->[8] ne $pep->[$mseq_idx];
           }
-
-          my $default_txt = ( $lib_id eq $c_spectrum->[6] ) ? '(Build default)' : '';
+          my $default_txt = ( $lib_id eq $c_spectrum->[7] ) ? '(Build default)' : '';
           my $title = "View consensus spectrum from the $c_spectrum->[9] library $default_txt"; 
 
-					$all_consensus{$c_spectrum->[6]} = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$c_spectrum->[0];ymax=11000' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
+					$all_consensus{$c_spectrum->[7]} = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$c_spectrum->[0];ymax=11000' TARGET=blank><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
         }
       }
 
       my $best = '';
 			my $rest = '';
-      for my $l ( sort { $a <=> $b } ( keys( %all_consensus ) ) ) {
-				if ( $lib_id && $l eq $lib_id ) {
-					$best .= $all_consensus{$l};
-				} else {
-					$rest .= ( $rest ) ? '&nbsp;&nbsp;' . $all_consensus{$l} : $all_consensus{$l};
+      if ( $is_origene){
+        foreach my $l (qw (345 346 347 348 349)){
+          if ($l eq 345){
+             $rest .= $all_consensus{$l};
+          }else{
+            $rest .= "<TD>$all_consensus{$l}</TD>\n"; 
+          }
+        }
+      }else{
+				for my $l ( sort { $a <=> $b } ( keys( %all_consensus ) ) ) {
+					if ( $lib_id && $l eq $lib_id ) {
+						$best .= $all_consensus{$l};
+					} else {
+						$rest .= ( $rest ) ? '&nbsp;&nbsp;' . $all_consensus{$l} : $all_consensus{$l};
+					}
 				}
-			}
-
+      }
       if ( $best ) {
 				$pep->[$spec_idx] = $best;
 				if ( $rest ) {
@@ -1115,7 +1131,25 @@ if ($apply_action =~ /QUERY|GO/i ) {
                                           rows_to_show => 10,
                                                 nowrap => [1..7]
                                                 );
-    #### Display table
+    if ( $is_origene){
+      my $str = qq~
+          <tr ALIGN=CENTER BGCOLOR=#CCCCCC >
+          <td>ITCID</td>
+          <td>FTCID</td>
+          <td>ITETD</td>
+          <td>FTETD</td>
+          <td>HCD</td>
+          </tr>
+     ~;
+      $modHTML =~ s/NOWRAP=1>(Modifi|Charge|Best|Mono|#|Sample)/NOWRAP=1 rowspan="2">$1/g;
+      $modHTML =~ s/<TD>Consensus Spectra<\/TD>/<TD colspan="5">Consensus Spectra<\/TD>/;
+      if ($modHTML =~ /CE_range/){
+        $modHTML =~ s/<TD>CE_range<\/TD>\n\s+<\/TR>/<TD rowspan=2>CE_range<\/TD>\n <\/TR>$str/;
+      }else{
+        $modHTML =~ s/Consensus Spectra<\/TD>/Consensus Spectra<\/TD>\n$str/;
+      }
+    }
+     #### Display table
     print "<TABLE WIDTH=600><BR>$modHTML</TABLE>\n";
     }
 
