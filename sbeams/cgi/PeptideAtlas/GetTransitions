@@ -837,6 +837,7 @@ sub fetch_transitions {
       constraint_name=>"PABST Build",
       constraint_value=>$parameters{pabst_build_id} );
   return if ($pabst_build_clause eq '-1');
+	$pabst_build_clause ||= "AND PP.pabst_build_id = $pabst_build_id";
 
   #### Build consensus_library_id constraint
   my $consensus_library_clause = $sbeams->parseConstraint2SQL(
@@ -1049,8 +1050,8 @@ sub fetch_transitions {
   }
 
 
-  ## n_fragment_ions defaults to 3
-  my $n_fragment_ions = 3;
+  ## n_fragment_ions defaults to 4
+  my $n_fragment_ions = 4;
   if ($parameters{'n_highest_intensity_fragment_ions'} =~ /^(\d+)$/) {
     $n_fragment_ions = $1;
   }
@@ -1058,8 +1059,8 @@ sub fetch_transitions {
     $n_fragment_ions = 1;
   }
 
-  ## n_peptides_per_protein defaults to 3 
-  my $n_peps_per_prot = 3;
+  ## n_peptides_per_protein defaults to 5 
+  my $n_peps_per_prot = 5;
   if ($parameters{'n_peptides_per_protein'} =~ /^([\d]+)$/) {
     $n_peps_per_prot = $1;
   }
