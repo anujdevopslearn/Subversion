@@ -1242,7 +1242,7 @@ sub get_url_cols {
           'Pep in Pep tide Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/pa_tiny.png>",
           'Pep in Pep tide Atlas_OPTIONS' => {embed_html=>1,content_iff_column_values=>[$colnameidx_ref->{pep_in_shotgun}]},
 
-          'Pep in SRM Atlas' => "$CGI_BASE_DIR/PeptideAtlas/GetTransitions?organism_name=\%$colnameidx_ref->{organism}V&peptide_sequence_constraint=\%$colnameidx_ref->{stripped_peptide_sequence}V&action=QUERY",
+          'Pep in SRM Atlas' => "$CGI_BASE_DIR/PeptideAtlas/GetTransitions?organism_name=\%$colnameidx_ref->{organism}V&peptide_sequence_constraint=\%$colnameidx_ref->{stripped_peptide_sequence}V&action=QUERY&SwissProt=on&speclinks=on&y_ions=on&b_ions=on&C[160]=on&K[136]=on&R[166]=on&N[115]=on",
           'Pep in SRM Atlas_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Retrieve transitions for this peptide from SRMAtlas\'; return true"',
           'Pep in SRM Atlas_ISNULL' => "<IMG BORDER=0 SRC=$HTML_BASE_DIR/images/srmatlas-icon.gif>",
           'Pep in SRM Atlas_OPTIONS' => {embed_html=>1,content_iff_column_values=>[$colnameidx_ref->{pep_in_srmatlas}]},
