@@ -1104,7 +1104,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
         $ce_link = "<A HREF='ShowCESpectralPlot?$param_str' TARGET='_CE_spectrum'><IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
 
       }
-      $pep->[$ce_idx] = $ce_link unless $sbeams->isGuestUser();
+      $pep->[$ce_idx] = $ce_link unless ($sbeams->isGuestUser() || $is_origene);
 
 
       # Final formatting for list items
@@ -1119,7 +1119,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
     #### Add table column headings
     my $column_headings = ['Modified Sequence', 'Charge', 'Mono Parent m/z', 'Best Prob', '# Obs', '# Siblings', 'Sample IDs', 'Consensus Spectra' ];
-    push @{$column_headings}, 'CE_range' unless $sbeams->isGuestUser();
+    push @{$column_headings},  'CE_range' unless ($sbeams->isGuestUser() || $is_origene);
     unshift @mod_peps, $column_headings;
 
     #### Format table
@@ -1144,9 +1144,9 @@ if ($apply_action =~ /QUERY|GO/i ) {
       $modHTML =~ s/NOWRAP=1>(Modifi|Charge|Best|Mono|#|Sample)/NOWRAP=1 rowspan="2">$1/g;
       $modHTML =~ s/<TD>Consensus Spectra<\/TD>/<TD colspan="5">Consensus Spectra<\/TD>/;
       if ($modHTML =~ /CE_range/){
-        $modHTML =~ s/<TD>CE_range<\/TD>\n\s+<\/TR>/<TD rowspan=2>CE_range<\/TD>\n <\/TR>$str/;
+        $modHTML =~ s/<TD>CE_range<\/TD>\n\s+<\/TR>/<\/TR>$str/;
       }else{
-        $modHTML =~ s/Consensus Spectra<\/TD>/Consensus Spectra<\/TD>\n$str/;
+        $modHTML =~ s/Consensus Spectra<\/TD>\n\s+<\/TR>/Consensus Spectra<\/TD>\n  <\/TR>\n$str/;
       }
     }
      #### Display table
