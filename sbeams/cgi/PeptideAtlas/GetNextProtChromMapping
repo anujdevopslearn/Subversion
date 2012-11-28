@@ -428,12 +428,12 @@ sub displayTableSummary{
     $sum++;
   }
   my @ratio =(); 
-  push @ratio , ['Protein Present Level','Count', 'Percentage'];
+  push @ratio , ['Protein Identification','Count', 'Percentage'];
   foreach my $level(keys %protein_level_summary){
-    my $val = sprintf ("%.3f", ($protein_level_summary{$level}/$sum)*100);
+    my $val = sprintf ("%.1f%", ($protein_level_summary{$level}/$sum)*100);
     push @ratio, [ucfirst($level), $protein_level_summary{$level}, $val];
   }
-   push @ratio, ['Total', $sum, '100'];
+   push @ratio, ['Total', $sum, '100%'];
 
   my $prefix = $sbeams->addTabbedPane(label => "Summary");
   my $HTML= $sbeamsMOD->encodeSectionTable( header => 1,
@@ -447,6 +447,8 @@ sub displayTableSummary{
       <TABLE>
       $HTML
       </TABLE>
+      <br>Protein Identification Terminology used in PeptideAtlas can be found <a
+href="http://www.peptideatlas.org/docs/protein_ident_terms.php">here<a>  
     <hr color='black'></div>
       <SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript">
        document.getElementById("messagetab").innerHTML = " ";
@@ -502,11 +504,11 @@ sub getResultset {
 
   if (defined $parameters{peptideatlas_constraint}){
     if ($parameters{peptideatlas_constraint} == 1){
-       $parameters{peptideatlas_constraint} = 'Yes';
+       $parameters{peptideatlas_constraint} = 'canonical';
     }elsif($parameters{peptideatlas_constraint} == 2) {
-       $parameters{peptideatlas_constraint}= 'No';
-    }else{
-      $parameters{peptideatlas_constraint} == '';
+       $parameters{peptideatlas_constraint}= 'in PA';
+    }elsif($parameters{peptideatlas_constraint} == 3){
+      $parameters{peptideatlas_constraint} = 'in db';
     }
   }
 
@@ -534,7 +536,7 @@ sub getResultset {
        next if (not defined $protein_hash{$elms[1]});
     }
 
-    foreach my $num ( qw(0 1 2 3 4 8 16 18)){
+    foreach my $num ( qw(0 1 2 3 4 8 18)){
        if ( defined $parameters{$constraint{$num}}){
          next if ($parameters{$constraint{$num}} eq '');
          my $pat = $parameters{$constraint{$num}};
@@ -554,6 +556,17 @@ sub getResultset {
        }
     }
 
+    ## peptideatlas observation constraint
+    if ($parameters{peptideatlas_constraint}){
+      if ($parameters{peptideatlas_constraint} eq 'canonical' and $elms[16] !~ /canonical/i){
+        next;
+      }elsif ($parameters{peptideatlas_constraint} eq 'in PA' and ($elms[16] eq 'not observed' || $elms[16] eq 'not in PA reference database' )){
+        next;
+      }elsif ($parameters{peptideatlas_constraint} eq 'in db' and  $elms[16] eq 'not in PA reference database' ){
+        next;
+      } 
+    }
+      
     ## chromosomal postion constraints
     if ( defined $parameters{$constraint{5}} && $parameters{$constraint{5}} ne '' && $elms[6] < $parameters{$constraint{5}}){
       next;
