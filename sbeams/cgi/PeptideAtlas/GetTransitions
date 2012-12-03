@@ -98,6 +98,7 @@ sub main
 
 	if ( !$parameters{pabst_build_id} && $parameters{SBEAMSentrycode} && $parameters{SBEAMSentrycode} == 'SRM73sFPASS1' ) {
 		$parameters{pabst_build_id} = 164;
+		$parameters{protein_name_constraint} ||= 'P00533';
 	}
 
 
