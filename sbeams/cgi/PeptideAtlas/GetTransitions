@@ -24,7 +24,7 @@ $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
 @MENU_OPTIONS);
 
 use SBEAMS::Connection qw($q $log);
-use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Settings ( qw( :default ) );
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TabMenu;
 
@@ -95,6 +95,10 @@ sub main
     $parameters{target_instrument} = $qqq;
     $q->param( target_instrument => $qqq );
   }
+
+	if ( !$parameters{pabst_build_id} && $parameters{SBEAMSentrycode} && $parameters{SBEAMSentrycode} == 'SRM73sFPASS1' ) {
+		$parameters{pabst_build_id} = 164;
+	}
 
 
   # Fetch pabst_build_id based on params. 
@@ -1267,6 +1271,7 @@ sub fetch_transitions {
     ion_rank ASC
     ~;
 
+#   die Dumper( %CONFIG_SETTINGS )
 #   print "<PRE>$lib_sql</PRE>\n";  
 #
   my ( $ssr_type ) = $sbeams->selectOneColumn( "SELECT elution_time_type_id FROM $TBAT_ELUTION_TIME_TYPE WHERE elution_time_type = 'SSRCalc'" );
@@ -2190,5 +2195,3 @@ sub calculateCE {
   }
   return sprintf( "%0.1f", $ce);
 }
-
-
