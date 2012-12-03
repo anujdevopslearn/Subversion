@@ -321,7 +321,7 @@ sub handle_request {
     $resultset_ref->{types_list_ref}->[$i] = 'string';
     $resultset_ref->{precisions_list_ref}->[$i] =  20;
   }
-  #$url_cols{'nextProt AC'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=".$atlas_build_id."&apply_action=$pass_action&protein_name=\%1V"; 
+  $url_cols{'PeptideAtlas'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=".$atlas_build_id."&apply_action=$pass_action&protein_name=\%1V"; 
   $url_cols{'nextProt AC'} = "http://www.uniprot.org/uniprot/\%1V";
 
   #########################################################################
