@@ -500,7 +500,10 @@ sub getResultset {
 			 '16'=>'peptideatlas_constraint' ,
 			 '17'=>'n_observations_constraint' ,
 			 '18'=>'biosequence_desc_constraint' ,
+       '19'=>'redundancy_constraint',
   );
+
+  my $redundancy_constraint = $parameters{redundancy_constraint};
 
   if (defined $parameters{peptideatlas_constraint}){
     if ($parameters{peptideatlas_constraint} == 1){
@@ -536,6 +539,10 @@ sub getResultset {
        next if (not defined $protein_hash{$elms[1]});
     }
 
+    if ($redundancy_constraint eq 'on'){
+       next if ( $elms[19] !~ /\d+-1$/);
+    }
+
     foreach my $num ( qw(0 1 2 3 4 8 18)){
        if ( defined $parameters{$constraint{$num}}){
          next if ($parameters{$constraint{$num}} eq '');
@@ -555,7 +562,7 @@ sub getResultset {
          }
        }
     }
-
+  
     ## peptideatlas observation constraint
     if ($parameters{peptideatlas_constraint}){
       if ($parameters{peptideatlas_constraint} eq 'canonical' and $elms[16] !~ /canonical/i){
