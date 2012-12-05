@@ -409,7 +409,7 @@ sub read_mquest_peakgroup_file {
       }
 
       my @isotypes;
-      if ($isotype) {
+      if ($isotype) {               #this is always false; $isotype has no value yet.
 	@isotypes = ($isotype);
       } else {
         @isotypes = ( 'light', 'heavy' );
@@ -466,6 +466,7 @@ sub read_mprophet_peakgroup_file {
   # We store it this way because it's easy to read and maintain.
   my %possible_headers = (
        log10_max_apex_intensity => [ qw( log10_max_apex_intensity ) ],
+             max_apex_intensity => [ qw( max_apex_intensity, var_max_apex_intensity ) ],
       light_heavy_ratio_maxapex => [ qw( light_heavy_ratio_maxapex light_heavy_ratio) ],
                           decoy => [ qw( decoy ) ],
                          charge => [ qw( transition_group_charge ) ],
@@ -476,14 +477,14 @@ sub read_mprophet_peakgroup_file {
                         m_score => [ qw( m_score ) ],
 			#mrm_prophet_score is from M-Y's file for Ulli's data
                         d_score => [ qw( d_score mrm_prophet_score ) ],
-                      file_name => [ qw( file_name ) ],  # Ruth 2011 only
+                      file_name => [ qw( file_name ) ],  # Ruth 2011, Filimonov only
 	transition_group_pepseq => [ qw( transition_group_pepseq ) ], #Ruth 2011
         # I think the record below is simply a result of M-Y creating custom file
 	# 05/02/12: no. It's also in Ruth's ovarian cancer plasma mPro file.
         transition_group_record => [ qw( transition_group_record ) ], #Ulli
 		             Tr => [ qw( tr ) ],  # Ruth 2011 only?
 		         run_id => [ qw( run_id ) ],
-		            S_N => [ qw( s_n ) ],
+		            S_N => [ qw( s_n , var_s_n) ],
   );
 
   # Now reverse the direction of the hash to make it easier to use.
@@ -491,7 +492,7 @@ sub read_mprophet_peakgroup_file {
   for my $header (keys %possible_headers) {
     for my $s (@{$possible_headers{$header}}) {
       $header_lookup{$s} = $header;
-      #print "header_lookup for $s is $header\n";
+      print "header_lookup for $s is $header\n" if ($DEBUG);
     }
   }
 
@@ -522,7 +523,7 @@ sub read_mprophet_peakgroup_file {
   ### The mProphet file for Ruth_prelim contains one line per peakgroup.
   ### The one for Ruth's 2011 data contains only one line per pep, for the top
   ### peakgroup! This code seems to stumble along for both.
-  print "Processing mProphet file!\n" if ($VERBOSE);
+  print "Processing mProphet file $mpro_file!\n" if ($VERBOSE);
   my ($decoy, $log10_max_apex_intensity, $light_heavy_ratio_maxapex,
     $protein,  $stripped_pepseq, $modified_pepseq,
     $charge, $peak_group,  $m_score, $d_score, $Tr, $S_N, $isotype);
@@ -534,7 +535,9 @@ sub read_mprophet_peakgroup_file {
     chomp $line;
     @fields = split('\t', $line);
     $log10_max_apex_intensity = (defined $idx{log10_max_apex_intensity}) ?
-         $fields[$idx{log10_max_apex_intensity}] : 0 ;
+         $fields[$idx{log10_max_apex_intensity}] :
+         defined $idx{max_apex_intensity} ?
+	   log10 $fields[$idx{max_apex_intensity}] : 0;
     $light_heavy_ratio_maxapex = (defined $idx{light_heavy_ratio_maxapex}) ?
          $fields[$idx{light_heavy_ratio_maxapex}] : 0 ;
     $protein = (defined $idx{protein}) ? $fields[$idx{protein}] : '' ;
@@ -544,7 +547,7 @@ sub read_mprophet_peakgroup_file {
     $isotype =  $line =~ /heavy/i ? 'heavy' : 'light';
 
     if ( ( defined $idx{peak_group_id} ) ||   # ruth_prelim
-         ( defined $idx{peakgroup_id} ) ) {    # ruth_2011
+         ( defined $idx{peakgroup_id} ) ) {    # ruth_2011; Filimonov
       if ( defined $idx{peak_group_id} ) {
 	$_ = $fields[$idx{peak_group_id}];
 	($mpro_specfile, $modified_pepseq, $charge, $decoy, $peak_group) =
@@ -555,6 +558,8 @@ sub read_mprophet_peakgroup_file {
 	my $dummy;
 	# stripped_pepseq gotten here may include extraneous
 	# dot-separated prefix (Jovanovic/Lukas data).
+	# For Filimonov Dec2012 data, format has several differences.
+	# pg_Q32NC0C5DC.decoy_1_target_dummy0
 	($stripped_pepseq, $charge, $decoy, $dummy, $peak_group) =
 	 /pg_(\S+?)\.(\d)_(\d)_target_(dummy)?(\d)/;
 	$peak_group += 1; #stored with zero indexing
@@ -622,6 +627,10 @@ sub read_mprophet_peakgroup_file {
     # These values may already have been gleaned from peakgroup_id,
     # but we will prefer those stored in dedicated columns.
     $charge = (defined $idx{charge}) ? $fields[$idx{charge}] : $charge ;
+    # added 11/2012 for Zgoda/Filimonov data. They've modified mPro.
+    $mpro_specfile = (defined $idx{file_name}) ?
+        $fields[$idx{file_name}] :
+	$mpro_specfile ;
     $peak_group = (defined $idx{peak_group_rank}) ?
         $fields[$idx{peak_group_rank}] :
         $peak_group ;
@@ -636,9 +645,8 @@ sub read_mprophet_peakgroup_file {
       $charge = $1;
     };
 
-
     $mpro_specfile =~ /(\S+)\.\S+/;
-    my $this_file_basename = $1;
+    my $this_file_basename = defined $1 ? $1 : $mpro_specfile;
 
     print "$this_file_basename, $stripped_pepseq, $charge, $decoy, $peak_group\n" if ($VERBOSE)>1;
     my ($m_score, $d_score);
@@ -647,7 +655,7 @@ sub read_mprophet_peakgroup_file {
     print "  -- m_score = $m_score; d_score = $d_score\n" if ($DEBUG);
 
     # 06/15/11: removed check for !$decoy from below -- why did I have it?
-    if ($this_file_basename && $stripped_pepseq && (defined $peak_group)) {
+    if ($this_file_basename && $modified_pepseq && (defined $peak_group)) {
       my @chargelist;
       if ($charge) {
 	@chargelist = ($charge);
@@ -657,31 +665,37 @@ sub read_mprophet_peakgroup_file {
       for my $charge (@chargelist) {
 	# Don't clobber values that may have been
 	# found in mQuest file.
-	$mpro_href->{$this_file_basename}->{$stripped_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{log10_max_apex_intensity}
+	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{log10_max_apex_intensity}
 	= $log10_max_apex_intensity if $log10_max_apex_intensity;
-	$mpro_href->{$this_file_basename}->{$stripped_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{light_heavy_ratio_maxapex}
+	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{light_heavy_ratio_maxapex}
 	= $light_heavy_ratio_maxapex if $light_heavy_ratio_maxapex;
-	$mpro_href->{$this_file_basename}->{$stripped_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{S_N} = $S_N if $S_N;
-	$mpro_href->{$this_file_basename}->{$stripped_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{Tr} = $Tr if $Tr;
+	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{S_N} = $S_N if $S_N;
+	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{Tr} = $Tr if $Tr;
 
-	$mpro_href->{$this_file_basename}->{$stripped_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{protein} = $protein; #probably unnecessary
-	$mpro_href->{$this_file_basename}->{$stripped_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{m_score} = $m_score;
-	$mpro_href->{$this_file_basename}->{$stripped_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{d_score} = $d_score;
+	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{protein} = $protein; #probably unnecessary
+	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{m_score} = $m_score;
+	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{d_score} = $d_score;
 	print
-	'$mpro_href->{',$this_file_basename,'}->{',$stripped_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$peak_group,'}->{m_score} = ', $mpro_href->{$this_file_basename}->{$stripped_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{m_score}, "\n" if ($VERBOSE > 1);
+	'$mpro_href->{',$this_file_basename,'}->{',$modified_pepseq,'}->{',$charge,'}->{',$isotype,'}->{',$decoy,'}->{',$peak_group,'}->{m_score} = ',
+	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{m_score}, "\n" if ($VERBOSE > 1);
 	print
-	'$mpro_href->{',$this_file_basename,'}->{',$stripped_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$peak_group,'}->{d_score} = ', $mpro_href->{$this_file_basename}->{$stripped_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{d_score}, "\n" if ($VERBOSE > 1);
+	'$mpro_href->{',$this_file_basename,'}->{',$modified_pepseq,'}->{',$charge,'}->{',$isotype,'}->{',$decoy,'}->{',$peak_group,'}->{d_score} = ',
+	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{d_score}, "\n" if ($VERBOSE > 1);
 	print
-	'$mpro_href->{',$this_file_basename,'}->{',$stripped_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$peak_group,'}->{Tr} = ', $mpro_href->{$this_file_basename}->{$stripped_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{Tr}, "\n" if ($VERBOSE > 1);
+	'$mpro_href->{',$this_file_basename,'}->{',$modified_pepseq,'}->{',$charge,'}->{',$isotype,'}->{',$decoy,'}->{',$peak_group,'}->{Tr} = ',
+	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{Tr}, "\n" if ($VERBOSE > 1);
 	print
-	'$mpro_href->{',$this_file_basename,'}->{',$stripped_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$peak_group,'}->{S_N} = ', $mpro_href->{$this_file_basename}->{$stripped_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{S_N}, "\n" if ($VERBOSE > 1);
+	'$mpro_href->{',$this_file_basename,'}->{',$modified_pepseq,'}->{',$charge,'}->{',$isotype,'}->{',$decoy,'}->{',$peak_group,'}->{S_N} = ',
+	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{S_N}, "\n" if ($VERBOSE > 1);
 	print
-	'$mpro_href->{',$this_file_basename,'}->{',$stripped_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$peak_group,'}->{log10_max_apex_intensity} = ', $mpro_href->{$this_file_basename}->{$stripped_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{log10_max_apex_intensity}, "\n" if ($VERBOSE > 1);
+	'$mpro_href->{',$this_file_basename,'}->{',$modified_pepseq,'}->{',$charge,'}->{',$isotype,'}->{',$decoy,'}->{',$peak_group,'}->{log10_max_apex_intensity} = ',
+	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{log10_max_apex_intensity}, "\n" if ($VERBOSE > 1);
 	print
-	'$mpro_href->{',$this_file_basename,'}->{',$stripped_pepseq,'}->{',$charge,'}->{',$decoy,'}->{',$peak_group,'}->{light_heavy_ratio_maxapex} = ', $mpro_href->{$this_file_basename}->{$stripped_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{light_heavy_ratio_maxapex}, "\n" if ($VERBOSE > 1);
+	'$mpro_href->{',$this_file_basename,'}->{',$modified_pepseq,'}->{',$charge,'}->{',$isotype,'}->{',$decoy,'}->{',$peak_group,'}->{light_heavy_ratio_maxapex} = ',
+	$mpro_href->{$this_file_basename}->{$modified_pepseq}->{$charge}->{$isotype}->{$decoy}->{$peak_group}->{light_heavy_ratio_maxapex}, "\n" if ($VERBOSE > 1);
       }
     } else {
-      print "Not storing mProphet scores. file_basename = $this_file_basename stripped_pepseq = $stripped_pepseq decoy = $decoy peak_group = $peak_group\n" if ($VERBOSE > 1);
+      print "Not storing mProphet scores. file_basename = $this_file_basename modified_pepseq = $modified_pepseq decoy = $decoy peak_group = $peak_group\n" if ($VERBOSE > 1);
     }
 
     $counter++;
@@ -1005,13 +1019,19 @@ sub store_mprophet_scores_in_transition_hash {
 	  my $S_N = 0;
 
 	  # See if modified or stripped sequence is used in mpro_href hash.
-	  my $mpro_pepseq;
+	  my $mpro_pepseq = '';
 	  if (defined $mpro_href->{$spec_file_basename}->{$modified_pepseq}) {
 	    $mpro_pepseq = $modified_pepseq;
-	  } elsif (defined $mpro_href->{$spec_file_basename}->{$stripped_pepseq}) {
-	    $mpro_pepseq = $stripped_pepseq;
+	# 11/30/12: this is getting us into trouble. We now store only under modseq.
+	#--------------------------------------------------
+	#   } elsif (defined $mpro_href->{$spec_file_basename}->{$stripped_pepseq}) {
+	#     $mpro_pepseq = $stripped_pepseq;
+	#-------------------------------------------------- 
+	  } elsif (! defined $mpro_href->{$spec_file_basename}) {
+	    print "\$mpro_href->{$spec_file_basename} not defined!\n" if $VERBOSE;
 	  } else {
-	    $mpro_pepseq = '';
+	    #print "\$mpro_href->{$spec_file_basename}->{pepseq} not defined for either modified pepseq |$modified_pepseq| or stripped pepseq |$stripped_pepseq|!\n" if $VERBOSE;
+	    print "\$mpro_href->{$spec_file_basename}->{pepseq} not defined for modified pepseq |$modified_pepseq|!\n" if $VERBOSE;
 	  }
 	  print "Hashing sequence |$mpro_pepseq|\n" if $DEBUG;
 
@@ -1858,7 +1878,7 @@ sub load_transition_data {
 	  # if we have peak group infos.
 	  my $scores_href = $transdata_href->{$target_q1}->{$modified_peptide_sequence}->{scores}->{$is_decoy};
 	  if ($load_chromatograms &&
-	    ( $scores_href->{Tr} ||
+	    ( $load_scores_only || $scores_href->{Tr} ||
 	      $scores_href->{log10_max_apex_intensity} )) {
 	    $rowdata_ref = {};  #reset
 	    $rowdata_ref->{SEL_chromatogram_id} = $chromatogram_id;
@@ -1893,7 +1913,8 @@ sub load_transition_data {
 		  verbose => $VERBOSE,
 		  testonly=> $TESTONLY,
 		);
-	    } elsif (! $n_existing_pg && $chromatogram_id ) {
+	    } elsif (! $n_existing_pg && $chromatogram_id
+	          && ! $load_scores_only) {
 	      $peak_group_id = $sbeams->updateOrInsertRow(
 		insert=>1,
 		table_name=>$TBAT_SEL_PEAK_GROUP,
@@ -1907,7 +1928,7 @@ sub load_transition_data {
 	      print "No peak group loaded or updated for chromatogram $chromatogram_id.\n" if $VERBOSE > 2;
 	    }
 	  } else {
-	      print "No peak group loaded for chromatogram $chromatogram_id; either no scores, or request not to load chromatograms.\n" if $VERBOSE > 2;
+	      print "No peak group loaded for chromatogram $chromatogram_id; either no scores (& not loading scores only), or request not to load chromatograms.\n" if $VERBOSE > 2;
 	  }
 
 
