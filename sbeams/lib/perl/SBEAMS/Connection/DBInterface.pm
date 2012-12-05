@@ -5170,9 +5170,13 @@ sub display_input_form {
       ~;
     }
     if ($input_type eq "checkbox") {
-      my $checked = ( $input_length ) ? 'checked' : '';
+      my $checked = '';
+      if ($parameters{$default_column_name} =~ /on/i){
+        $checked = 'checked="yes"';
+      }
+      #my $checked = ( $parameters{$default_column_name} ) ? 'checked' : '';
       print qq~
-      <TD COLSPAN=2 HEIGHT=32><INPUT TYPE=CHECKBOX NAME="$column_name" $checked>$parameters{$default_column_name}</INPUT></TD>
+      <TD COLSPAN=2 HEIGHT=32><INPUT TYPE=CHECKBOX NAME="$column_name" $checked></INPUT></TD>
       ~;
     }
 
