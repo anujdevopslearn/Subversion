@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/local/bin/perl -w
 
 ###############################################################################
 # Program      : PASSEL2ProteomeXchange.pl
@@ -130,8 +130,8 @@ my $query = qq~
   WHERE SEL_experiment_id = '$expt_id';
 ~;
 
-my ($title) = $sbeams->selectOneColumn($query);
-if (! $title) {
+my ($expt_title) = $sbeams->selectOneColumn($query);
+if (! $expt_title) {
   print "${PROG_NAME}: No such experiment $expt_id\n";
   exit();
 }
@@ -147,7 +147,7 @@ my $writer = XML::Writer->new(
 );
 
 # Get info on the experiment
-my $query = qq~
+$query = qq~
   SELECT
     S.sample_description,
     O.full_name,
@@ -203,10 +203,10 @@ my $middle_name = $info_aref->[6];
 my $pi_name = $first_name;
 $pi_name .= " $middle_name" if $middle_name;
 $pi_name .= " $last_name";
-my $pi_email = $info_aref->[7];
-my $pi_uri = $info_aref->[8];
-my $pi_job_title = $info_aref->[9];
-my $pi_organization = $info_aref->[10];
+my $pi_email = $info_aref->[7] || '';
+my $pi_uri = $info_aref->[8] || '';
+my $pi_job_title = $info_aref->[9] || '';
+my $pi_organization = $info_aref->[10] || '';
 my $experiment_title = $info_aref->[11];
 my $instrument_type_name = $info_aref->[12];
 my $release_date = $info_aref->[13];
@@ -269,7 +269,7 @@ $writer->startTag("ProteomeXchangeDataset",
 $writer->startTag("DatasetSummary",
   # What is announceDate? We need this.
   "announceDate" => "$release_date",
-  "title" => "HUPO PPP2 PE submission" ,
+  "title" => $expt_title,
   "hostingRepository" => "PeptideAtlas",
 );
   $writer->startTag("Description");
@@ -321,14 +321,15 @@ $writer->startTag("DatasetIdentifierList");
   $writer->endTag("DatasetIdentifier");
 $writer->endTag("DatasetIdentifierList");
 
+# Another option is 0000397 Data derived from previous dataset
 $writer->startTag("DatasetOriginList");
   $writer->startTag("DatasetOrigin");
     $cv_ref = 'PRIDE';
-    $cv_acc = '0000397';
+    $cv_acc = '0000402';
     $writer->emptyTag("cvParam",
       "cvRef"=>"$cv_ref",
       "accession"=>"${cv_ref}:$cv_acc",
-      "name"=>"Data derived from previous dataset",
+      "name"=>"Original data",
     );
     $cv_ref = "MS";
     $cv_acc = "1001919";
@@ -361,11 +362,22 @@ $writer->startTag("SpeciesList");
   $writer->endTag("Species");
 $writer->endTag("SpeciesList");
 
+my $instrument_id;
+if ($instrument_name =~ /q.{0,1}tof/i) {
+  $instrument_id = "Q-ToF";
+} elsif ($instrument_name =~ /q.{0,1}trap/i) {
+  $instrument_id = "Q-Trap";
+} elsif ($instrument_name =~ /triple.*quad/i) {
+  $instrument_id = "QQQ";
+} elsif ($instrument_name =~ /tsq/i) {
+  $instrument_id = "TSQ";
+} else {
+  $instrument_id = "other";
+}
+
+
 $writer->startTag("InstrumentList");
-  # not sure instrument_type_name is what we want.
-  # The value usually doesn't validate. Seems brief "Q-ToF" or "Q-Trap"
-  # is required.
-  $writer->startTag("Instrument", "id"=>"$instrument_type_name");
+  $writer->startTag("Instrument", "id"=>"$instrument_id");
     $cv_ref = "MS";
     $cv_acc = 1000870;
     $writer->emptyTag("cvParam",
@@ -514,20 +526,20 @@ if ($pub_status eq 'submitted') {
     ~;
     my @rows = $sbeams->selectSeveralColumns($query);
     my $pub_aref = $rows[0];
-    $pubmed_id = $pub_aref->[0];
-    my $pub_name = $pub_aref->[1];
-    my $pub_keywords = $pub_aref->[2];
-    @pub_keywords = @pub_keywords, split (",", $pub_keywords);
-    my $title = $pub_aref->[3];
-    my $author_list = $pub_aref->[4];
-    my $journal_name = $pub_aref->[5];
-    my $published_year = $pub_aref->[6];
-    my $volume_number = $pub_aref->[7];
-    my $issue_number = $pub_aref->[8];
-    my $page_numbers = $pub_aref->[9];
-    my $pub_uri = $pub_aref->[10];
-    my $pub_abstract = $pub_aref->[11];
-    my $refline = "$author_list, $title, $journal_name $published_year $volume_number($issue_number):$page_numbers";
+    $pubmed_id = $pub_aref->[0] || '';
+    my $pub_name = $pub_aref->[1] || '';
+    my $pub_keywords = $pub_aref->[2] || '';
+    @pub_keywords = ( @pub_keywords, split (",", $pub_keywords) );
+    my $pub_title = $pub_aref->[3] || '';
+    my $author_list = $pub_aref->[4] || '';
+    my $journal_name = $pub_aref->[5] || '';
+    my $published_year = $pub_aref->[6] || '';
+    my $volume_number = $pub_aref->[7] || '';
+    my $issue_number = $pub_aref->[8] || '';
+    my $page_numbers = $pub_aref->[9] || '';
+    my $pub_uri = $pub_aref->[10] || '';
+    my $pub_abstract = $pub_aref->[11] || '';
+    my $refline = "$author_list, $pub_title, $journal_name $published_year $volume_number($issue_number):$page_numbers";
     $writer->startTag("Publication", "id"=>"PMID$pubmed_id");
     $cv_ref = "MS";
       $cv_acc = 1000879;
@@ -550,7 +562,7 @@ if ($pub_status eq 'submitted') {
 }
 $writer->endTag("PublicationList");
 
-my @keywords = @curator_keywords, @pub_keywords;
+my @keywords = ( @curator_keywords, @pub_keywords );
 if (scalar @keywords) {
   $writer->startTag("KeywordList");
   for my $keyword (@curator_keywords) {
