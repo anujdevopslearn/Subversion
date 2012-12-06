@@ -880,7 +880,8 @@ sub printEntryForm {
           print "<nowrap>View File: <A HREF=\"$url&".
             "$PK_COLUMN_NAME=$parameters{$PK_COLUMN_NAME}&".
             "GetFile=$column_name\">".
-            "$file_name</A> </nowrap><BR>\n";
+            "$file_name</A> </nowrap><BR>\n".
+	    "<INPUT TYPE='hidden' NAME='uploaded_file_exists' VALUE='$column_name'>\n";
         }
 
       }
@@ -1763,15 +1764,18 @@ sub processEntryForm {
 	#### also a data column
 	foreach $element (@required_columns) {
 
-	  if ($data_columns_hash{$element}) {
-	    unless (defined($parameters{$element}) &&
-		    $parameters{$element} gt '') {
-	      $error_message .= "<LI> You must provide a <B>$element</B>.";
+	    next if (defined($parameters{uploaded_file_exists}) &&
+		     $parameters{uploaded_file_exists} eq $element);
+
+	    if ($data_columns_hash{$element}) {
+		unless (defined($parameters{$element}) &&
+			$parameters{$element} gt '') {
+		    $error_message .= "<LI> You must provide a <B>$element</B>.";
+		}
 	    }
-	  }
 	}
 
-      }
+    }
 
 
       #### Check that the data entered was valid for the datatype
