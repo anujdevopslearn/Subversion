@@ -110,7 +110,7 @@ sub get_modules {
     $named_modules{$module_names->{$k}} = $modules{$k};
   }
 
-  my $table = SBEAMS::Connection::DataTable->new( BORDER => 0, 
+  my $table = SBEAMS::Connection::DataTable->new( BORDER => 1, 
                                               CELLSPACING => 2,
                                               CELLPADDING => 2
                                                  );
@@ -190,8 +190,10 @@ sub get_tables {
   my @results = $sbeams->selectSeveralColumns( $sql );
   my @tables;
   my %tables;
+  my %dbtables;
 
   for my $row ( @results ) {
+		$dbtables{$row->[1]}++;
     unless ( defined $tables{$row->[0]} ) { # First sighting
       $tables{$row->[0]} = [];
       push @tables, $row->[0];
@@ -199,23 +201,73 @@ sub get_tables {
     push @{$tables{$row->[0]}}, $row;
   }
 
+#	eval "use SBEAMS::${module};";
+#	eval "use SBEAMS::${module}::Tables;";
+
+#	for my $table ( keys( %dbtables ) ) {
+#		my $true_name = eval "$table";
+#		my $sth = $sbeams->get_statement_handle( "Select TOP 1 * from $true_name" );
+#		for my $name ( @{$sth->{NAME};} ) {
+#			$name = uc( $name );
+#		  $t2f{$table}->{$name}++;
+#		}
+#	}
+	use Data::Dumper;
+#	die Dumper( %t2f );
+
   my $space = '&nbsp;' x 5;
   for my $table (@tables) {
-    my $display =  SBEAMS::Connection::DataTable->new( BORDER => 0, 
+    my $display =  SBEAMS::Connection::DataTable->new( BORDER => 1, 
                                                   CELLSPACING => 2,
                                                   CELLPADDING => 2
                                                    );
     my $cnt = 0;
 
+		my %db_fields;
+		my %db_seen;
     for my $column (@{$tables{$table}} ) {
-    unless ( $cnt++ ) {
-      my $db_name = $sbeams->evalSQL( $column->[1] );
-      $content .= "$table ($db_name):<BR>\n"
-    }
+			
+      unless ( $cnt++ ) {
+        my $db_name = $sbeams->evalSQL( $column->[1] );
+
+				if ( !$db_name ) {
+					$log->debug( "nothing for $table!!!" );
+					next;
+        }
+
+	      # Gonna get column info from the db itself!
+  		  my $sth;
+				my $table_error = '';
+				eval { $sth = $sbeams->get_statement_handle( "Select TOP 1 * from $db_name" ); };
+				if ( $@ ) {
+					$log->debug( "Error in eval: " . $@ );
+					$table_error = "<FONT COLOR=RED>Missing in database</FONT>";
+				}
+
+        $content .= "$table ($db_name) $table_error:<BR>\n";
+    		for my $name ( @{$sth->{NAME};} ) {
+          $db_fields{uc($name)}++;
+				}
+      }
 #      $content .= "Column definitions for $table ($column->[1]):<BR>\n" unless $cnt++;
-      $display->addRow( [$space, $column->[2], $column->[3], $column->[4]] );
+		  $column->[2] ||= '&nbsp;';
+		  $column->[3] ||= '&nbsp;';
+		  $column->[4] ||= '&nbsp;';
+			my $mcol = uc( $column->[2] );
+			my $seen = ( $db_fields{$mcol} ) ?  '<FONT COLOR=GREEN>YES</FONT>' : '<FONT COLOR=RED>NO</FONT>';
+			$db_seen{$mcol}++ if $db_fields{$mcol};
+      $display->addRow( [$space, $column->[2], $column->[3], $column->[4], $seen ] );
     }
-    $content .= "$display <BR><BR>\n";
+		my $mia = '';
+		my $sep = ' ';
+		for my $f ( sort( keys( %db_fields ) ) ) {
+			next if $db_seen{$f};
+			$mia ||= ' Missing from driver tables: <FONT COLOR=RED>';
+			$mia .= $sep . $f;
+			$sep = ', ';
+		}
+		$mia .= '</FONT>' if $mia;
+    $content .= "$display $mia<BR><BR>\n";
   }
   return $content;
 
