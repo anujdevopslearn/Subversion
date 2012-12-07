@@ -68,7 +68,6 @@ AT_pabst_tmp_transition	PABST Transition	PeptideAtlas_infrastructure	NO	$TBAT_PA
 AT_pabst_tmp_transition_instance	PABST Transition Instance	PeptideAtlas_infrastructure	NO	$TBAT_PABST_TRANSITION_INSTANCE	pabst_transition_instance_id				
 AT_pabst_tmp_source_priority	PABST Source Priority	PeptideAtlas_infrastructure	YES	$TBAT_PABST_SOURCE_PRIORITY	pabst_source_priority_id		ManageTable.cgi?TABLE_NAME=AT_source_priority		
 AT_instrument_type	Instrument Type	PeptideAtlas_infrastructure	YES	$TBAT_INSTRUMENT_TYPE	instrument_type_id		ManageTable.cgi?TABLE_NAME=AT_instrument_type		
-AT_transition_type	Transition Type	PeptideAtlas_infrastructure	YES	$TBAT_TRANSITION_TYPE	transition_type_id		ManageTable.cgi?TABLE_NAME=AT_transition_type		
 AT_protein_list	Protein List	PeptideAtlas_infrastructure	YES	$TBAT_PROTEIN_LIST	protein_list_id		ManageTable.cgi?TABLE_NAME=AT_Protein_list		
 AT_protein_list_protein	Protein List Protein	PeptideAtlas_infrastructure	NO	$TBAT_PROTEIN_LIST_PROTEIN	protein_list_protein_id				
 AT_SEL_experiment	SEL Experiment	PeptideAtlas_infrastructure	YES	$TBAT_SEL_EXPERIMENT	sel_experiment_id		ManageTable.cgi?TABLE_NAME=AT_SEL_experiment		

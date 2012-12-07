@@ -125,8 +125,8 @@ AT_peptide_instance	19	n_protein_samples	Number of Samples Exhibiting Protein	in
 AT_peptide_instance	20	empirical_proteotypic_score	Empirical Proteotypic Score	real	4	0	Y		N			N	text	10		Y	Y	N	Fraction of samples that exhibit this peptide divided by fraction of samples that exhibit the parent protein		
 AT_peptide_instance	21	predicted_proteotypic_score	Predicted Proteotypic Score	real	4	0	Y		N			N	text	10		Y	Y	N	Theoretically predicted proteotypic score following Mallick et al. 2006		
 AT_peptide_instance	22	n_natural_observations	Number of Natural Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in natural input samples		
-AT_peptide_instance	23	n_synthetic_observations	Number of Synthetic Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in synthetic input samples		
-AT_peptide_instance	24	n_artificial-protein_observations	Number of Artificial-protein Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in artificial protein samples		
+AT_peptide_instance	23	n_synthpep_observations	Number of Synthetic Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in synthetic input samples		
+AT_peptide_instance	24	n_recombinant_observations	Number of Artificial-protein Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in artificial protein samples		
 AT_peptide_instance_sample	1	peptide_instance_sample_id	Peptide Instance Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_peptide_instance_sample	2	peptide_instance_id	Peptide Instance ID	int	4	0	N		N	AT_peptide_instance	peptide_instance_id					N	N		Associated Atlas Build		
 AT_peptide_instance_sample	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
@@ -163,8 +163,8 @@ AT_modified_peptide_instance	13	n_sibling_peptides	Number of Sibling Peptides	re
 AT_modified_peptide_instance	14	sample_ids	Samples Observed in	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of sample_ids in which which peptide was observed		
 AT_modified_peptide_instance	15	search_batch_ids	Search batches	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of proteomics_search_batch ids		
 AT_modified_peptide_instance	16	n_natural_observations	Number of Natural Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in natural input samples		
-AT_modified_peptide_instance	17	n_synthetic_observations	Number of Synthetic Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in synthetic input samples		
-AT_modified_peptide_instance	18	n_artificial-protein_observations	Number of Artificial-protein Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in artificial protein samples		
+AT_modified_peptide_instance	17	n_synthpep_observations	Number of Synthetic Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in synthetic input samples		
+AT_modified_peptide_instance	18	n_recombinant_observations	Number of Artificial-protein Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in artificial protein samples		
 AT_modified_peptide_instance_sample	1	modified_peptide_instance_sample_id	Modified Peptide Instance Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_modified_peptide_instance_sample	2	modified_peptide_instance_id	Modified Peptide Instance ID	int	4	0	N		N	AT_modified_peptide_instance	modified_peptide_instance_id					N	N		Associated Atlas Build		
 AT_modified_peptide_instance_sample	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
@@ -726,7 +726,7 @@ AT_pabst_tmp_build	14	is_default	Is Default	char	1	0	Y		N			N						N
 AT_pabst_build_resource	1	pabst_build_id	PABST Build ID	int	4	0	N		N	AT_pabst_tmp_build	pabst_build_id	Y	optionlist			Y	Y	Y	PABST build with which resource is associated	"SELECT pabst_build_id, build_name FROM $TBAT_PABST_BUILD PB JOIN $TB_ORGANISM O ON O.organism_id = PB.organism_id WHERE is_default = 'T' AND project_id IN ( $accessible_project_ids ) order by build_name "	
 AT_pabst_build_resource	2	instrument_type_id	Instrument type ID	int	4	0	N		Y	AT_instrument_type	instrument_type_id	N	optionlist					Y	Instrument type for this resource	"SELECT instrument_type_id, instrument_type_name FROM $TBAT_INSTRUMENT_TYPE order by instrument_type_name "	
 AT_pabst_build_resource	3	resource_id	Resource ID	int	4	0	N		N			Y	text	24		Y	Y	Y	Primary key of linked resource		
-AT_pabst_build_resource	4	resource_name	Resource Name	varchar	36	0	N		N			Y	optionlist	24		Y	Y	N	"Name of resource, one of qtof_ce_set,instrument_type,spectral_lib,chromatogram_set,pabst_build,elution_set"	"SELECT DISTINCT( resource_type ), DISTINCT( resource_type) FROM $TBAT_PABST_BUILD_RESOURCE order by resource_type "	
+AT_pabst_build_resource	4	resource_type	Resource Name	varchar	36	0	N		N			Y	optionlist	24		Y	Y	N	"Name of resource, one of qtof_ce_set,instrument_type,spectral_lib,chromatogram_set,pabst_build,elution_set"	"SELECT DISTINCT( resource_type ), DISTINCT( resource_type) FROM $TBAT_PABST_BUILD_RESOURCE order by resource_type "	
 AT_pabst_tmp_build_file	1	pabst_build_file_id	PABST Build File Id	int	4	0	N		Y			N						Y	Primary Key		
 AT_pabst_tmp_build_file	1	pabst_build_id	PABST Build Id	int	4	0	N		N	AT_pabst_tmp_build	pabst_build_id	Y	optionlist			Y	Y	Y	PABST build with which file is associated	"SELECT pabst_build_id, build_name FROM $TBAT_PABST_BUILD PB JOIN $TB_ORGANISM O ON O.organism_id = PB.organism_id WHERE is_default = 'T' AND project_id IN ( $accessible_project_ids ) order by build_name "	
 AT_pabst_tmp_build_file	1	file_order	File Order	int	4	0	N		N			Y	text	24		Y	Y	Y	Order in which file was considered		
@@ -773,8 +773,6 @@ AT_pabst_tmp_transition	5	precursor_ion_charge	Precursor Ion Charge	int	4	0	Y		N
 AT_pabst_tmp_transition	6	fragment_ion_mz	Fragment Ion Mz	float	8	0	Y		N			N						N			
 AT_pabst_tmp_transition	7	fragment_ion_charge	Fragment Ion Charge	int	4	0	Y		N			N						N			
 AT_pabst_tmp_transition	8	fragment_ion_label	Fragment Ion Label	varchar	36	0	Y		N			N						N			
-AT_transition_type	1	transition_type_id	Transition Type Id	int	4	0	N		Y			N						Y			
-AT_transition_type	2	transition_type	Transition Type	varchar	36	0	Y		N			N						N			
 AT_pabst_tmp_transition_instance	1	pabst_transition_instance_id	PABST Transition Instance Id	int	4	0	N		Y			N						Y			
 AT_pabst_tmp_transition_instance	2	pabst_transition_id	PABST Transition ID	int	4	0	Y		N	AT_pabst_tmp_transition	pabst_transition_id	N						N			
 AT_pabst_tmp_transition_instance	3	precursor_ion_mass	Precursor Ion Mass	float	8	0	Y		N			N						N			
