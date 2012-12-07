@@ -259,6 +259,8 @@ AT_biosequence_property_set	20	is_immunoglobulin	Is an Immunoglobulin	char	1	0	Y
 AT_biosequence_property_set	21	is_keratin	Is a Keratin	char	1	0	Y		N			N	text	50		Y	Y	N	Is this protein annotated to be a keratin?		
 AT_biosequence_property_set	22	published_ng_per_ml	Published plasma concentration	real	4	0	Y		N			N	text	50		Y	Y	N	Measured plasma concentration as noted in literature		
 AT_biosequence_property_set	23	pub_ng_ml_source	Source of published plasma concentration	varchar	20	0	Y		N			N	text	50		Y	Y	N	"Literature source of published concentration: Haab et al. 2005, Polanski & Anderson 2006, or Hortin et al. 2008."		
+AT_biosequence_property_set	24	origene_sku	Origene SKU 	varchar	20	0	Y		N			N									
+AT_biosequence_property_set	25	origene_tube	Origene tube	varchar	20	0	Y		N			N									
 AT_biosequence_annotated_gene	1	biosequence_id	BioSequence ID	int	4	0	N		N	AT_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		
 AT_biosequence_annotated_gene	2	annotated_gene_id	Annotated Gene ID	int	4	0	N		N	BL_annotated_gene	annotated_gene_id					N	N	Y	Gene ID associated with Biosequence ID		
 AT_biosequence_annotation	1	biosequence_annotation_id	Domain Match Type	int	4	0	N		Y							N	N				pkDEFAULT
@@ -643,7 +645,7 @@ AT_proteotypic_peptide	8	peptidesieve_score	PeptideSieve Score	float	8	0	Y		N			
 AT_proteotypic_peptide	9	espp_score	ESPP Score	float	8	0	Y		N										"Peptide score from ESPP predictor, Carr et. Al"		
 AT_proteotypic_peptide	10	apex_score	APEX Score	float	8	0	Y		N										"Peptide score from APEX predictor, Vogel and Marcotte  "		
 AT_proteotypic_peptide	11	detectabilitypredictor_score	Detectability Predictor Score	float	8	0	Y		N										"Peptide score from Detectability Predictor, Tang et. al"		
-AT_proteotypic_peptide	12	merged_predictor_score	Merged Predictor Score	float	8	0	Y		N										Merged peptide score from all predictors		
+AT_proteotypic_peptide	12	combined_predictor_score	Combined Predictor Score	float	8	0	Y		N										Merged peptide score from all predictors		
 AT_proteotypic_peptide	13	peptide_isoelectric_point	Isoelectric Point	real	4	0	Y		N										Calculated isoelectric point of the peptide		
 AT_proteotypic_peptide	14	molecular_weight	Molecular Weight	real	4	0	Y		N										Calculated molecular weight of the peptide		
 AT_proteotypic_peptide	15	SSRCalc_relative_hydrophobicity	SSRCalc Relative Hydrophobicity	real	4	0	Y		N										Calculated hydrophobicity of the peptide using SSRCalc algorithm		
@@ -693,6 +695,9 @@ AT_protein_identification	13	abundance_uncertainty	Uncertainty ng/ml	varchar	100
 AT_protein_identification	14	seq_unique_prots_in_group	Sequence Unique Proteins in Group	int	4	0	N		N										Number of sequence-unique proteins in this protein group		
 AT_protein_identification	15	is_covering	Is in Covering Set	int	4	0	N	0	N	N									Belongs to covering set for atlas build		
 AT_protein_identification	16	norm_PSMs_per_100K	Normalized PSMs per 100K total	real	4	0	Y		N										"ProteinProphet adjusted PSM count (n_observations), normalized to total observable peps in this protein, per 100K total PSMs in this atlas build"		
+AT_protein_identification	17	observed_in_origenetube	oberved in origene tube name	varchar	20	0	Y		N												
+AT_protein_identification	18	origenetube_emPAI	empai score	float	8	0	Y		N												
+AT_protein_identification	19	sequence_coverage	protein sequence coverage	float	8	0	Y		N												
 AT_biosequence_relationship	1	biosequence_relationship_id	Biosequence Relationship ID	int	4	0	N		Y												pkDEFAULT
 AT_biosequence_relationship	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id								Atlas build ID which this protein belongs to		
 AT_biosequence_relationship	3	protein_group_number	Protein Group ID	int	4	0	N		N										Protein group number from ProteinProphet		
@@ -989,3 +994,4 @@ AT_GetNextProtChromMapping	10	start_in_chromosome	Start Position in Chromosome	i
 AT_GetNextProtChromMapping	11	end_in_chromosome	End Position in Chromosome	int	4	0	N		N			N	text	20		Y	Y	N	Constrain to proteins whose genes end at a particular region of the chromosome		
 AT_GetNextProtChromMapping	12	protein_evidence_level_constraint	Protein Evidence Level Constraint									N	text	40		Y	Y	N	Constraint for the Protein Evidence Level.  		
 AT_GetNextProtChromMapping	13	peptideatlas_constraint	PeptideAtlas Observation					No constraint				N	optionlist	4		Y	Y	N	"<a href=""http://www.peptideatlas.org/docs/protein_ident_terms.php"">Protein Identification Terminology</a>"	"select '01' ,'In PA reference DB & observed & canonical' union select '02','In PA reference DB & observed'  union select '03','In PA reference DB' union select '04','No constraint'"	
+AT_GetNextProtChromMapping	14	redundancy_constraint	No Redundancy in Each Chromosome									N	checkbox	0		Y	Y	N	remove redundant nextprot accession entries in each chromosome		
