@@ -53,14 +53,26 @@ Options:
   --fname
   --lname                 
   --project_id 
+
+  --datasetType
+  --datasetTag
+  --datasetTitle
+  --dataLocation
+  --descriptionFile
+  
  
  e.g.:  $PROG_NAME --verbose 3 --debug 1 
  ./transfer_PAsample_to_PASS.pl --fname Tamar --lname Geiger --project_id 1120 --test 1 --debug 1 --verbose 1
+  ./transfer_PAsample_to_PASS.pl --fname Albert --lname Heck  --test 1 --debug 1 --verbose 1 --datasetType MSMS \
+                                 --datasetTag Mm_StemCell --datasetTitle Mm_StemCell --dataLocation  \
+                                 /regis/sbeams5/archive/aheck/MouseStemCell/raw/ --descriptionFile \
+                                 /regis/sbeams5/archive/aheck/MouseStemCell/readme --species mouse
 EOU
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-        "fname:s", "lname:s", "project_id:s",
+         "datasetType:s","datasetTitle:s","datasetTag:s","dataLocation:s",
+        "fname:s", "lname:s", "project_id:s","descriptionFile:s","species:s"
     )) {
 
     die "\n$USAGE";
@@ -106,7 +118,13 @@ if ( @submitter_ids >1 ){
   ($submitter_id, $email, $password) = create_account('fname' => $fname, 'lname' => $lname);
 }
 
-my ($datasetIdentifier,$success) = addDataset ('submitter_id' => $submitter_id, 'parameters' => \%OPTIONS); 
+
+my ($datasetIdentifier,$success);
+if ($OPTIONS{project_id}){
+  ($datasetIdentifier,$success) = addDataset_pid ('submitter_id' => $submitter_id, 'parameters' => \%OPTIONS); 
+}elsif ($OPTIONS{datasetType} && $OPTIONS{datasetTag} && $OPTIONS{datasetTitle}){
+  ($datasetIdentifier,$success) == addDataset('submitter_id' => $submitter_id, 'parameters' => \%OPTIONS);
+} 
 
 #my ($datasetIdentifier,$datasetPassword, $password,$email )=qw(PASS00084 SL2975ye QJ7855eu geiger@biochem.mpg.de); 
 #my $success = 1;
@@ -118,7 +136,6 @@ if($password ne ''){ ## we generate the account
 	additional data to PeptideAtlas in the future:
 	Username: $email
 	Password: $password
-
   ~;
 }
 my $emai_content = qq~
@@ -141,7 +158,6 @@ my $emai_content = qq~
 ~;
 
 #print "$emai_content\n";
-
 if ($success and ! $TESTONLY){
   my (@toRecipients,@ccRecipients,@bccRecipients);
   @toRecipients = (
@@ -167,6 +183,160 @@ exit;
 # addDataset
 #######################################################################
 sub addDataset{
+  my %args = @_;
+  my $SUB_NAME = 'generatePassword';
+  my $submitter_id = $args{submitter_id};
+  my $parameters = $args{parameters};
+  my $fname = $parameters->{fname};
+  my $lname = $parameters->{lname};
+  my $datasetType = $parameters->{datasetType} || die "need datasetType\n";
+  my $datasetTag = $parameters->{datasetTag} || die "need datasetTag\n";
+  my $datasetTitle = $parameters->{datasetTitle} || die "need datasetTitle\n";
+  my $datadir =  $parameters->{dataLocation} || die "need datalocation\n";
+  my $des_file = $parameters->{descriptionFile} || die "need description file\n";
+  my $species = $parameters->{species} ||  die "need species\n";
+
+
+  my $passdir = "/regis/passdata/"; 
+  if ($TESTONLY){
+    $passdir .= "test";
+  }else{
+    $passdir .= "home";
+  }
+
+
+  my $datasetIdentifiers = '';
+  #my %description = ();
+	#$description{publication} =  $parameters->{publication};
+	#$description{instrument} =  $parameters->{instrument};
+  
+  my ($PK,$datasetPassword,$datasetIdentifier);
+	my %rowdata = (
+		submitter_id => $submitter_id, 
+		datasetIdentifier => "tmp_XXXXX",
+		datasetType => $datasetType,
+		datasetPassword => '',
+		datasetTag => $datasetTag, 
+		datasetTitle => $datasetTitle, 
+		publicReleaseDate => 'CURRENT_TIMESTAMP',
+		finalizedDate => 'NULL',
+	);
+	$PK = $sbeams->updateOrInsertRow(
+				 insert => 1,
+				 table_name => $TBAT_PASS_DATASET,
+				 rowdata_ref => \%rowdata,
+				 PK => 'dataset_id',
+				 return_PK => 1,
+				 add_audit_parameters => 0,
+				 testonly => $TESTONLY,
+				 verbose => $VERBOSE,
+				);
+
+    if (! $PK || $PK < 0) {
+      die "failed to insert\n";;
+    }
+     
+  $datasetPassword = generatePassword();
+	$datasetIdentifier = "PASS".substr('000000',0,5-length($PK)).$PK;
+	%rowdata = ( datasetIdentifier => $datasetIdentifier,datasetPassword=>$datasetPassword );
+	my $result = $sbeams->updateOrInsertRow(
+						update => 1,
+						table_name => $TBAT_PASS_DATASET,
+						rowdata_ref => \%rowdata,
+						PK => 'dataset_id',
+						PK_value => $PK,
+						testonly => $TESTONLY,
+						verbose => $VERBOSE,
+				 );
+ 
+  my $PASS_FTP_AGENT_BASE = '/prometheus/u1/home/PASSftpAgent';
+
+  #### Tell the FTP agent to create the account
+	my $cmdfile = "$PASS_FTP_AGENT_BASE/commands.queue";
+  if ($TESTONLY){
+    $datasetPassword = 'test';
+	  mkdir "$passdir/$datasetIdentifier";
+  }else{
+		open(CMDFILE,">>$cmdfile") || die("ERROR: Unable to append to '$cmdfile'");
+		print CMDFILE "CreateUser $datasetIdentifier with password $datasetPassword \n";
+		close(CMDFILE);
+  }
+
+  my $success = 1;
+
+  if ($TESTONLY){goto HERE;}
+  for my $i (1..3){
+    if ( ! -d "$passdir/$datasetIdentifier" ){
+      sleep 10;
+    }
+  }
+  if (! -d "$passdir/$datasetIdentifier" ){
+    die "cannot create $passdir/$datasetIdentifier\n";
+  } 
+
+  print "$datasetIdentifier $datasetPassword\n";
+
+  ### transfer files
+	my $ftp = Net::FTP->new("ftp.peptideatlas.org", Debug => 0) or die "Cannot connect to ftp.peptideatlas.org: $@";
+	$ftp->login("$datasetIdentifier","$datasetPassword")	or die "Cannot login ", $ftp->message;
+
+	my $outfile = "${datasetIdentifier}_DESCRIPTION.txt";
+  if ( -e "$des_file" ) {
+    $ftp->put($des_file, $outfile); 
+  }else{
+    die "$des_file not found\n";
+  }
+
+	my %filelist = ();
+	find(sub{$filelist{abs_path($_)} = 1 if (-f and /(RAW|mzML|mzXML|raw)/) }, "$datadir");
+	my $cnt = 0;
+	my $cnt_file_to_copy = scalar keys %filelist;
+	foreach my $abs_path_file (keys %filelist){
+		my $file = $abs_path_file;
+    print "$abs_path_file\n";
+		$file =~ s/.*\///;
+		if ( ! -e "$passdir/$datasetIdentifier/$file"){
+			my $msg = $ftp->put("$abs_path_file");
+			$cnt++;
+			if($file !~ /$msg/) {## file transfer failure
+				print  "cannot put file $file, ";
+				$success=0;
+				## delete file 
+				$ftp->delete ($file);
+			}
+		}
+		print sprintf ("%.2f%", ($cnt/$cnt_file_to_copy)*100);
+		print "\tfinished\n"; 
+	}
+
+	$ftp->quit;
+  print "transfered $cnt files\n";
+
+  HERE: 
+
+  if ( $success and ! $TESTONLY){
+    ## finalized
+    my %rowdata = ( finalizedDate => 'CURRENT_TIMESTAMP' );
+    my $result = $sbeams->updateOrInsertRow(
+            update => 1,
+            table_name => $TBAT_PASS_DATASET,
+            rowdata_ref => \%rowdata,
+            PK => 'dataset_id',
+            PK_value => $PK,
+            testonly => $TESTONLY,
+            verbose => $VERBOSE,
+           );
+
+    open(CMDFILE2,">>$cmdfile") || die("ERROR: Unable to append to '$cmdfile'");
+    print CMDFILE2 "FinalizeDataset $datasetIdentifiers\n";
+    close(CMDFILE2);
+  }  
+  return ($datasetIdentifiers,$success);
+
+}
+
+
+sub addDataset_pid{
   my %args = @_;
   my $SUB_NAME = 'generatePassword';
   my $submitter_id = $args{submitter_id};
@@ -201,10 +371,15 @@ sub addDataset{
 
   my @rows = $sbeams -> selectSeveralColumns ($sql);
   my $PK;
-  my $passdir = "/regis/passdata/test/"; 
   my $datasetIdentifiers = ();
   my %datadirs = ();
   my %description = ();
+  my $passdir = "/regis/passdata/";
+  if ($TESTONLY){
+    $passdir .= "test";
+  }else{
+    $passdir .= "home";
+  }
 
   foreach my $row (@rows){
     
@@ -262,10 +437,9 @@ sub addDataset{
       die "failed to insert\n";;
     }
 
-
-	#my $datasetIdentifier = "PASS".substr('000000',0,5-length($PK)).$PK;
-  my $datasetIdentifier = 'PASS00084';
-	%rowdata = ( datasetIdentifier => $datasetIdentifier );
+  my $datasetPassword = generatePassword();
+  my $datasetIdentifier = "PASS".substr('000000',0,5-length($PK)).$PK;
+  %rowdata = ( datasetIdentifier => $datasetIdentifier,datasetPassword=>$datasetPassword );
 	my $result = $sbeams->updateOrInsertRow(
 						update => 1,
 						table_name => $TBAT_PASS_DATASET,
@@ -279,7 +453,13 @@ sub addDataset{
   my $PASS_FTP_AGENT_BASE = '/prometheus/u1/home/PASSftpAgent';
 
 	#mkdir "$passdir/$datasetIdentifier";
-	my $outfile = "$PASS_FTP_AGENT_BASE/Incoming/${datasetIdentifier}_DESCRIPTION.txt";
+
+	my $outfile;
+  if ($TESTONLY){
+     $outfile = "$passdir/$datasetIdentifier/${datasetIdentifier}_DESCRIPTION.txt";
+  }else{
+     $outfile = "$PASS_FTP_AGENT_BASE/Incoming/${datasetIdentifier}_DESCRIPTION.txt";
+  }
 	open(OUTFILE,">$outfile") || die("ERROR: Unable to write to '$outfile'");
 	my $metadata .= "identifier:\t$datasetIdentifier\n";
 	$metadata .= "type:\tMSMS\n";
@@ -332,26 +512,31 @@ sub addDataset{
   close(OUTFILE);
 
   #### Tell the FTP agent to create the account
-  #my $datasetPassword = generatePassword();
-  my $datasetPassword = 'SL2975ye';
+  my $datasetPassword = generatePassword();
   my $cmdfile = "$PASS_FTP_AGENT_BASE/commands.queue";
-  open(CMDFILE,">>$cmdfile") || die("ERROR: Unable to append to '$cmdfile'");
-  print CMDFILE "CreateUser $datasetIdentifier with password $datasetPassword \n";
-  close(CMDFILE);
-
+  if ($TESTONLY){
+    $datasetPassword = 'test';
+    mkdir "$passdir/$datasetIdentifier";
+  }else{
+    open(CMDFILE,">>$cmdfile") || die("ERROR: Unable to append to '$cmdfile'");
+    print CMDFILE "CreateUser $datasetIdentifier with password $datasetPassword \n";
+    close(CMDFILE);
+  }
   for my $i (1..3){
-    if ( ! -d "/regis/passdata/home/$datasetIdentifier" ){
+    if ( ! -d "$passdir/$datasetIdentifier" ){
       sleep 10;
     }
   }
-  if (! -d "/regis/passdata/home/$datasetIdentifier" ){
-    die "cannot create /regis/passdata/home/$datasetIdentifier\n";
+  if (! -d "$passdir/$datasetIdentifier" ){
+    die "cannot create $passdir/$datasetIdentifier\n";
   } 
+
+  my $success = 1;   
+  if ($TESTONLY){goto HERE;}
 
   ### transfer files
 	my $ftp = Net::FTP->new("ftp.peptideatlas.org", Debug => 0) or die "Cannot connect to ftp.peptideatlas.org: $@";
 	$ftp->login("$datasetIdentifier","$datasetPassword")	or die "Cannot login ", $ftp->message;
-  my $success = 1;
   foreach my $sample_accession (keys %datadirs){
     my $dir = $datadirs{$sample_accession};
 		my %filelist = ();
@@ -364,9 +549,9 @@ sub addDataset{
       my $file = $abs_path_file;
       $file =~ s/.*\///;
 			if ($TESTONLY){
-				print "copy $abs_path_file to /regis/passdata/home/$datasetIdentifier/$sample_accession/ \n";
+				print "copy $abs_path_file to $passdir/$datasetIdentifier/$sample_accession/ \n";
 			}else{
-        if ( ! -e "/regis/passdata/home/$datasetIdentifier/$sample_accession/$file"){
+        if ( ! -e "$passdir/$datasetIdentifier/$sample_accession/$file"){
 					my $msg = $ftp->put("$abs_path_file");
           $cnt++;
 					if($file !~ /$msg/) {## file transfer failure
@@ -376,13 +561,16 @@ sub addDataset{
 						$ftp->delete ($file);
 					}
         }
-        print sprintf ("%.2f%", $cnt/$cnt_file_to_copy);
+        print sprintf ("%.2f%", ($cnt/$cnt_file_to_copy)*100);
         print "\tfinished\n"; 
 			}
     }
     $ftp->cwd("../") or die "Cannot change working directory ", $ftp->message;
 	}
 	$ftp->quit;
+
+  HERE:
+
   if ( $success and ! $TESTONLY){
     ## finalized
     my %rowdata = ( finalizedDate => 'CURRENT_TIMESTAMP' );
@@ -392,6 +580,8 @@ sub addDataset{
             rowdata_ref => \%rowdata,
             PK => 'dataset_id',
             PK_value => $PK,
+            testonly => $TESTONLY,
+            verbose => $VERBOSE,
            );
     open(CMDFILE2,">>$cmdfile") || die("ERROR: Unable to append to '$cmdfile'");
     print CMDFILE2 "FinalizeDataset $datasetIdentifiers\n";
@@ -400,7 +590,6 @@ sub addDataset{
   return ($datasetIdentifiers,$success);
 
 }
-
 
 #######################################################################
 # generatePassword
