@@ -273,8 +273,13 @@ sub handle_request {
         next if(not defined $selectedID{$dataset->{id}});
       }
 		}
-		if($sortby =~ /id/i){
-			$sort_cols_hash{$idx}{sortby} = $dataset->{id} ;
+ 		if($sortby =~ /id/i){
+      if ($authentication->{result} eq 'Success' && 
+         $emailAddress =~ /$email/i) {
+	  		 $sort_cols_hash{$idx}{sortby} = "0.$dataset->{id}" ;
+      }else{
+          $sort_cols_hash{$idx}{sortby} = $dataset->{id};
+      }
 		}elsif($sortby =~ /tag/i){
 			 $sort_cols_hash{$idx}{sortby} = uc ($dataset->{datasettag}) ;
 		}elsif($sortby =~ /title/i){
@@ -294,7 +299,9 @@ sub handle_request {
 		$idx++;
   }
   my $count;
- my @ids = ();
+  my @ids = ();
+  
+ 
  if($sort =~ /ASC/){
     foreach my $idx (sort {$sort_cols_hash{$a}{sortby} cmp $sort_cols_hash{$b}{sortby}} keys %sort_cols_hash ){
       my $sample = $sort_cols_hash{$idx}{sample};
@@ -350,9 +357,7 @@ sub handle_request {
     }, $dir );
 
     if($dlfiletype eq 'all'){
-      #foreach my $file (@files){
         print "$url\n";
-      #}
     }else{
       foreach my $file (@files){
         if ($dlfiletype =~ /ML/i){
@@ -406,6 +411,7 @@ sub authenticateUser {
   #### Decode the argument list
   my $emailAddress = $args{'emailAddress'} || die "[$SUB_NAME] ERROR:emailAddress  not passed";
   my $password = $args{'password'} || die "[$SUB_NAME] ERROR:password  not passed";
+
 
   my $response;
   my $sql = qq~
