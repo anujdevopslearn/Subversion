@@ -459,18 +459,12 @@ function sortFileSz(a,b){
     		}		
     		return html;
     	}
-      this.id_renderer = function(id){
-        /*var html = '<a href="http://www.peptideatlas.org/PASS/' + 
-                   id + 
-                   '?emailAddress=' + 
-                   details.params.email+
-                   '&password=' +
-                   details.params.password +
-                   '">' + 
-                   id + 
-                   '</a>';
-        */
-        var html = '<a target="_blank" href="http://www.peptideatlas.org/PASS/' + id + '">' + id + '</a>';
+      this.id_renderer = function(id, metaData, record, rowIndex ){
+        var html= '<a target="_blank"  href="' +
+                 'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/PASS_View\?'
+                 + 'datasetPassword=' + record.data.datapassword + '\&identifier='
+                 + id + '">' + id + '</a>';
+
         return html;
       }
     	this.msgNotAuth = function (id){
@@ -983,8 +977,10 @@ var sampleClass = function(settings){
 			var closeTable = '</p></td></tr></table>';
 			var inbetweenTD = '</p></b></td><td id="bottomAlign"><p>';
 					
-			details += '<h3 style="border:none;"><a target="_blank"  href="http://www.peptideatlas.org/PASS/' + id + '">' +
-id + '</a>: ' + title + '</h3>';
+			details += '<h3 style="border:none;"><a target="_blank"  href="' + 
+                 'https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/PASS_View\?'
+                 + 'datasetPassword=' + data.datapassword + '\&identifier='
+                 + id + '">' + id + '</a>: ' + title + '</h3>';
 			
 			//details += common.dateHTMLRenderer(releaseDate,depositDate,metadataUpdateDate,dataDate);		
 			//details += common.dateHTMLRenderer(releaseDate,depositDate,dataDate);
@@ -1100,6 +1096,7 @@ id + '</a>: ' + title + '</h3>';
 			{ name: 'email' },
       { name: 'type', mapping: 'type'},
 			{ name: 'dates' },
+      { name: 'datapassword'},
       { name: 'summary' },
       { name: 'contributors' },
       { name: 'publication' },
@@ -1173,7 +1170,7 @@ id + '</a>: ' + title + '</h3>';
 			{ 
 				header: "Identifier", width: 60, fixed: false, dataIndex: 'id',  
 				tooltip: 'id',
-        renderer: common.id_renderer 
+        renderer: common.id_renderer
 			},
 			{ 
 				header: "Dataset Tag", dataIndex: 'datasettag', width: 100, 
