@@ -12,6 +12,7 @@ function sortFileSz(a,b){
     
     return (aVal > bVal) ? this.options.sortColumnDir : (aVal < bVal) ? -this.options.sortColumnDir : 0;    
  }
+
  
 (function($) {
 	
@@ -469,7 +470,7 @@ function sortFileSz(a,b){
                    id + 
                    '</a>';
         */
-        var html = '<a href="http://www.peptideatlas.org/PASS/' + id + '">' + id + '</a>';
+        var html = '<a target="_blank" href="http://www.peptideatlas.org/PASS/' + id + '">' + id + '</a>';
         return html;
       }
     	this.msgNotAuth = function (id){
@@ -806,6 +807,8 @@ jQuery(document).ready( function() {
 	var c = new jQuery.ui.PAcommon;
 });
 
+
+
 var sampleClass = function(settings){
 	var options = {
 		view: 'multi', //  multi = grid type. single = single data view (meta data)	
@@ -980,7 +983,7 @@ var sampleClass = function(settings){
 			var closeTable = '</p></td></tr></table>';
 			var inbetweenTD = '</p></b></td><td id="bottomAlign"><p>';
 					
-			details += '<h3 style="border:none;"><a href="http://www.peptideatlas.org/PASS/' + id + '">' +
+			details += '<h3 style="border:none;"><a target="_blank"  href="http://www.peptideatlas.org/PASS/' + id + '">' +
 id + '</a>: ' + title + '</h3>';
 			
 			//details += common.dateHTMLRenderer(releaseDate,depositDate,metadataUpdateDate,dataDate);		
