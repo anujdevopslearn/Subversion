@@ -87,12 +87,15 @@ sub find_q3_ion {
 
 	# find only closest match -- add logic to select in rank order: y, y++, b, b++ ?
 	my $mdiff = ($q3_mz - $ion->{mz});
-	if ( abs($mdiff) < $closest ) {
-	    $ann = "$ion->{label_st}/".sprintf "%.2f", $mdiff;
-
-	    print "We may have a match! [q3=$q3_mz] [$ann=$ion->{mz}]\n" if $opts{verbose};
-	    $closest = abs($mdiff);
+	if ( abs($mdiff) < $opts{q3_mass_tolerance} ) {
+	    my $tmpann = "$ion->{label_st}/".sprintf "%.2f", $mdiff;
+	    print "We may have a match! [q3=$q3_mz] [$tmpann=$ion->{mz}]\n" if $opts{verbose};
 	    $matches++;
+
+	    if ( abs($mdiff) < $closest ) {
+		$ann = $tmpann;
+		$closest = abs($mdiff);
+	    }
 	}
     }
 
