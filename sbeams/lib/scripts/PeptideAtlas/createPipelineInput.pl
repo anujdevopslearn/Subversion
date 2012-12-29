@@ -2815,18 +2815,6 @@ sub writeProtIdentificationListFile {
     print OUTFILE
 "protein_group_number,biosequence_names,probability,confidence,n_observations,n_distinct_peptides,level_name,represented_by_biosequence_name,subsumed_by_biosequence_names,estimated_ng_per_ml,abundance_uncertainty,covering\n";
 
-#  my $abundance_conversion_slope = $OPTIONS{"slope_for_abundance"};
-#  my $abundance_conversion_yint = $OPTIONS{"yint_for_abundance"};
-  my $abundance_conversion_slope;
-  my $abundance_conversion_yint;
-  my $calculate_abundances = 0;
-  if ( defined $abundance_conversion_slope &&
-       defined $abundance_conversion_yint ) {
-    $calculate_abundances = 1;
-    print "Protein abundances will be estimated using y-intercept $abundance_conversion_yint and slope $abundance_conversion_slope.\n";
-  } else {
-    print "Slope and/or y-intercept for protein abundance calculation not provided; protein abundances will not be calculated.\n";
-  }
   my $group_num;
   my @prot_name_list = keys %{$ProteinProphet_prot_data->{atlas_prot_list}};
 
@@ -2853,27 +2841,9 @@ sub writeProtIdentificationListFile {
     my $biosequence_attributes =
         getBiosequenceAttributes(biosequence_name => $prot_name);
 
-    ### Estimate abundance, if requested
-    ### 12/30/10: disabled; moved to estimate_abundances.pl
-    ### This code can be removed in March 2011.
-
     my ($formatted_estimated_ng_per_ml, $abundance_uncertainty) = ("", "");
 
     my $is_prot_group_rep = ($prot_name eq $prot_href->{represented_by});
-
-    if ( $calculate_abundances &&
-         ( defined $biosequence_attributes ) &&
-         ( $apportion_PSMs || $is_prot_group_rep )) {
-	    ($formatted_estimated_ng_per_ml, $abundance_uncertainty) =
-	      SBEAMS::PeptideAtlas::SpectralCounting::get_estimated_abundance(
-		prot_name=>$prot_name,
-		sequence=>$biosequence_attributes->[5],
-		PSM_count=>$PSM_count,
-		abundance_conversion_slope=>$abundance_conversion_slope,
-		abundance_conversion_yint=>$abundance_conversion_yint,
-		glyco_atlas=>$glyco_atlas,
-	      );
-    }
 
     my $covering;
     if (in_covering_set(prot=>$prot_name)) {
