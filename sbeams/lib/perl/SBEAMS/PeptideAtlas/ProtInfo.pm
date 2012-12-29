@@ -852,18 +852,25 @@ sub read_protid_preferences {
 ###############################################################################
 # Given info on two protein identifications, return the one with the
 # properties making it more likely to actually have been observed:
-# higher prob, or if equal, more
-# observations. Or, if equal, more distinct peptides. Or, if equal,
-# more total enzymatic termini. Or, if equal, return the one that is
-# in the covering set. If all is equal, return protID with the more
-# preferred name.
+# 0. Swiss-Prot identifier
+# 1. higher prob
+# 2. more observations
+# 3. more distinct peptides
+# 4. more total enzymatic termini
+# 5. in the covering set
+# 6. more preferred name (e.g. Ensembl > IPI)
+# 12/27/12: element 0 added to top of list
+
 sub more_likely_protein_identification {
   my %args = @_;
   my $preferred_patterns_aref = $args{'preferred_patterns_aref'};
   my $protid1 = $args{'protid1'};
   my $protid2 = $args{'protid2'};
   return $protid1 if ($protid1 eq $protid2);
+  my $swiss_prot_overrides_all_else = 1;  #added 12/27/12
 
+  my $is_swiss1 = is_swiss_prot_identifier($protid1);
+  my $is_swiss2 = is_swiss_prot_identifier($protid2);
   my $prob1 = $args{'prob1'} || 0;
   my $prob2 = $args{'prob2'} || 0;
   my $nobs1 = $args{'nobs1'} || 0;
@@ -875,6 +882,10 @@ sub more_likely_protein_identification {
   my $presence_level1 = $args{'presence_level1'} || 'none';
   my $presence_level2 = $args{'presence_level2'} || 'none';
 
+  if ($swiss_prot_overrides_all_else) {
+    return $protid1 if ($is_swiss1 > $is_swiss2);
+    return $protid2 if ($is_swiss1 < $is_swiss2);
+  }
   return $protid1 if ($prob1 > $prob2);
   return $protid2 if ($prob1 < $prob2);
   return $protid1 if ($nobs1 > $nobs2);
@@ -920,6 +931,16 @@ sub stronger_presence_level {
   }
 }
 
+###############################################################################
+# is_swiss_prot_identifier
+###############################################################################
+# The regex below works for human, mouse, pig, and cow, at least.
+sub is_swiss_prot_identifier {
+  my $protid = shift;
+  # regex's identical to those in $PIPELINE/etc/protid_priorities.csv
+  return (($protid =~ /^[ABCDEFOPQ]\w{5}$/) ||
+          ($protid =~ /^[ABCDEFOPQ]\w{5}-\d{1,2}$/));
+}
 
 ###############################################################################
 =head1 BUGS
