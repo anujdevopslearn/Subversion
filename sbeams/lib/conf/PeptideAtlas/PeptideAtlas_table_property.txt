@@ -83,3 +83,4 @@ AT_elution_time	Elution time	PeptideAtlas_infrastructure	YES	$TBAT_ELUTION_TIME	
 AT_PASS_submitter	PASS Submitter	PeptideAtlas_infrastructure	YES	$TBAT_PASS_SUBMITTER	submitter_id		ManageTable.cgi?TABLE_NAME=AT_PASS_submitter	"AT_PASS_submitter,AT_PASS_dataset"	
 AT_PASS_dataset	PASS Dataset	PeptideAtlas_infrastructure	YES	$TBAT_PASS_DATASET	dataset_id		ManageTable.cgi?TABLE_NAME=AT_PASS_dataset	"AT_PASS_submitter,AT_PASS_dataset"	
 AT_GetPTPPeptides	Get PTP Peptides	QUERY					GetPTPPeptides		
+AT_spectrum_ptm_identification	Spectrum PTM Identification	PeptideAtlas_infrastructure	NO	$TBAT_SPECTRUM_PTM_IDENTIFICATION	spectrum_ptm_identification_id				
