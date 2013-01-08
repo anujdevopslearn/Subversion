@@ -811,6 +811,19 @@ sub getStaticInstrumentMap {
   return \%instruments;
 }
 
+sub isGlycoBuild {
+	my $self = shift;
+	my %args = @_;
+	if ( $args{pabst_build_id} ) {
+		for my $build ( 154,164,165 ) {
+			if ( $build == $args{pabst_build_id} ) {
+				return 1;
+			}
+		}
+	}
+	return 0;
+}
+
 
 sub getInstrumentMap {
   my $self = shift;
@@ -830,6 +843,9 @@ sub getInstrumentMap {
 
   my %instr;
   while( my @row = $sth->fetchrow_array() ) {
+		if ( $args{inhibit_predicted} ) {
+			next if $row[1] =~ /Predicted/;
+		}
     $instr{$row[1]} = $row[0];
   }
 	if ( $args{invert} ) {
@@ -1524,6 +1540,24 @@ sub get_pabst_mapped_id {
 }
 
 
+sub get_pabst_bss_id {
+  my $self = shift;
+  my %params = @_;
+
+  my $build_id = $params{pabst_build_id} || return '';
+
+  my $sql = qq~
+  SELECT biosequence_set_id
+  FROM $TBAT_PABST_BUILD PB 
+  WHERE PB.pabst_build_id = $params{pabst_build_id} 
+  ~;
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  while ( my @row = $sth->fetchrow_array() ) {
+    return $row[0];
+  }
+	return '';
+}
 
 #+
 # Returns best legal pabst build id based on 
