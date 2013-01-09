@@ -115,7 +115,8 @@ Options:
                        /net/db/projects/PeptideAtlas/species/StrepPyogenes/NCBI
                        /regis/sbeams3/nobackup/Celegans/db
                        /net/db/projects/PeptideAtlas/doc/PaperDrafts/Yeast/create_NR_FASTA/annotations 
-                        
+                       /net/db/projects/PeptideAtlas/species/Dog/ 
+                       /net/db/projects/PeptideAtlas/species/Pfalciparum/ 
  e.g.:  $PROG_NAME --check_status
 
 EOU
@@ -250,7 +251,6 @@ sub main {
     $work_group = "SolexaTrans_admin";
     $DATABASE = $DBPREFIX{$module};
   }
-print "$DATABASE\n"; #zhi
  #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($current_username = $sbeams->Authenticate(
     work_group=>$work_group,
@@ -495,7 +495,7 @@ sub handleRequest {
 
               %table_child_relationship = (
                   biosequence_set => 'biosequence(C)',
-                  biosequence =>'biosequence_property_set(C),biosequence_annotation(C),biosequence_annotated_gene(C)',
+                  biosequence =>'biosequence_property_set(C),biosequence_annotated_gene(C)',
               );
           } elsif ( $module eq 'Proteomics' ||
           $module eq 'ProteinStructure' || $module eq 'BioLink')
@@ -516,11 +516,15 @@ sub handleRequest {
           {
               $keepParent = 0;
           }
-        
-          $result = $sbeams->deleteRecordsAndChildren(
+          my %table_PK_column_names = ();
+
+					$table_PK_column_names{biosequence_annotated_gene} = 'biosequence_id';
+				  	
+					$result = $sbeams->deleteRecordsAndChildren(
               table_name => 'biosequence_set',
               table_child_relationship => \%table_child_relationship,
-              delete_PKs => [ $biosequence_set_id ],
+              table_PK_column_names    => \%table_PK_column_names,
+							delete_PKs => [ $biosequence_set_id ],
               delete_batch => 10000,
               database => $DATABASE,
               verbose => $VERBOSE,
@@ -535,7 +539,6 @@ sub handleRequest {
       and !$load_all 
       and !$update_existing
       and !$load ){
-
     print "biosequence_set_id $biosequence_set_ids[0]\n" if $VERBOSE;
     update_biosequence_annotated_gene(biosequence_set_id => $biosequence_set_ids[0]);
   }
@@ -578,8 +581,10 @@ sub handleRequest {
                   #### If it's determined that we need to do a load, do it
                   $result = loadBiosequenceSet(
                       set_name=>$status->{set_name},
+          reference_directory => $OPTIONS{reference_directory},
                       source_file=>$file_prefix.$status->{set_path},
-                      organism_id=>$status->{organism_id});
+                      organism_id=>$status->{organism_id}),
+                      gene_annotation => $gene_annotation,
               } else {
                 print "There are records in biosequence_set_id $biosequence_set_id".
                     " so need to delete them first\n";
@@ -690,6 +695,8 @@ sub loadBiosequenceSet {
   my $source_file = $args{'source_file'}
    || die "ERROR[$SUB_NAME]: source_file not passed";
   my $organism_id = $args{'organism_id'} || "";
+  my $gene_annotation = $args{'gene_annotation'} || 0;
+  my $reference_directory = $args{'reference_directory'} || ""; 
 
   #### Define standard variables
   my ($i,$element,$key,$value,$line,$result,$sql);
@@ -856,14 +863,17 @@ sub loadBiosequenceSet {
 
   close(INFILE);
   print "\n$counter rows INSERT/UPDATed\n";
-  update_biosequence_annotated_gene(biosequence_set_id => $biosequence_set_id);
-
-  print "Insert SearchKey to SearchKeyEntity table for the Biosequence set\n";
-  $keySearch->InsertSearchKeyEntity( 
+  
+  if($gene_annotation){
+    update_biosequence_annotated_gene(biosequence_set_id => $biosequence_set_id);
+    print "Insert SearchKey to SearchKeyEntity table for the Biosequence set\n";
+    $keySearch->InsertSearchKeyEntity( 
              biosequence_set_id => $biosequence_set_id,
+            reference_directory => $reference_directory,
                         verbose => $VERBOSE,
                        testonly => $TESTONLY,);
 
+  }
   updateSourceFileDate(
     biosequence_set_id => $biosequence_set_id,
     source_file => $source_file,
@@ -883,7 +893,6 @@ sub update_biosequence_annotated_gene{
    || die "ERROR[$SUB_NAME]: biosequence_set_id not passed";
 
   print "deleting old biosequence_annotation mapping for set $biosequence_set_id\n";
-
   my $sql;
   $sql = qq~
       WHILE EXISTS (
@@ -958,6 +967,7 @@ sub update_biosequence_annotated_gene{
   }
   print "\n$counter rows INSERT/UPDATed\n";
 
+
   return if(! $OPTIONS{"gene_annotation_searchkey"});
 
   $sql = qq~
@@ -1013,7 +1023,7 @@ sub update_biosequence_annotated_gene{
 			if($organism_namespace =~ /blast2go/i){
 				$gene_annotation_type_tag .= "/Blast2GO";
 			}
-			#print "$gene_name,Gene Ontology/$organism_namespace,$external_accession:$annotation\n";
+			print "$gene_name,Gene Ontology/$organism_namespace,$external_accession:$annotation\n" if ($VERBOSE);
 			my %rowdata = (
 				search_key_name => "$external_accession:$annotation",
 				search_key_type =>  $gene_annotation_type_tag,
