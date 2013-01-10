@@ -96,11 +96,22 @@ sub main
     $q->param( target_instrument => $qqq );
   }
 
+  my $all_params = qq~
+https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst_build_id=164&protein_name_constraint=P00533&protein_file=&peptide_sequence_constraint=&peptide_file=&peptide_length=&n_highest_intensity_fragment_ions=4&n_peptides_per_protein=5&target_instrument=2&exclusion_range=&SwissProt=on&4H=1&5H=1&Hper=1&ssr_p=0.5&C=1&D=1&M=1&P=1&R=1&S=1&W=1&nQ=1&NxST=1&nE=1&nM=1&Xc=1&nX=1&BA=1&obs=2&PATR=10&min_l=7&min_p=0.2&max_l=25&max_p=0.2&cmod_opts=light&min_mz=&max_mz=&speclinks=on&rt_type=7&y_ions=on&b_ions=on&C[160]=on&N[115]=on&set_current_work_group=&set_current_project_id=&QUERY_NAME=AT_GetTransitions&apply_action_hidden=&action=QUERY
+  ~;
+
 	if ( !$parameters{pabst_build_id} && $parameters{SBEAMSentrycode} && $parameters{SBEAMSentrycode} == 'SRM73sFPASS1' ) {
 		$parameters{pabst_build_id} = 164;
 		$parameters{protein_name_constraint} ||= 'P00533';
+		$parameters{SwissProt} ||= 'checked';
+    $parameters{action} ||= 'QUERY';
+    $parameters{rt_type} ||= 7;
+    $parameters{y_ions} ||= 'on';
+    $parameters{b_ions} ||= 'on';
+    $parameters{'C[160]'} ||= 'on';
+    $parameters{'N[115]'} ||= 'on';
+    $parameters{'N[115]'} ||= 'on';
 	}
-
 
   # Fetch pabst_build_id based on params. 
   # 1 - passed pabst_build_id param
