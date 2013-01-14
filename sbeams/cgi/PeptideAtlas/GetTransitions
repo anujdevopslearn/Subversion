@@ -119,7 +119,9 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
   # 3 - cached pabst_build_id cookie
   # 4 - global default
   $pabst_build_id = $best_peptide->get_pabst_build( %parameters );
-  $parameters{organism} ||= $best_peptide->getBuildOrganism( pabst_build_id => $parameters{pabst_build_id} );
+#  $parameters{organism} ||= $best_peptide->getBuildOrganism( pabst_build_id => $parameters{pabst_build_id} );
+  $parameters{organism} ||= $best_peptide->getBuildOrganism( pabst_build_id => $pabst_build_id );
+	$parameters{build_bss_id} = $best_peptide->get_pabst_bss_id( pabst_build_id => $pabst_build_id );  
 
   # Some users have access to a subset of certain builds
   # FIXME - don't add if already there.  Also, multiple lists?
@@ -404,7 +406,9 @@ sub print_form {
 #    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Get Peptides Only:</B></TD>$peptides_only_help<TD>$peptide_chk</TD></TR> ~;
 #
     my $namespace_filters = get_namespace_filters( %parameters );
-    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Search Proteins From:</B></TD>$namespace_filters </TR> ~;
+    if ( $namespace_filters ) {
+      $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Search Proteins From:</B></TD>$namespace_filters </TR> ~;
+    }
 
 #    $form =~ s/(\<INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="AT_GetPABSTList"\>)/$1<BR>$sub_form/gm;
 #    $form =~ s/\<\/TABLE\>/<TR><TD COLSPAN=3> $sub_form<\/TD><\/TR><\/TABLE>/i;
@@ -1227,10 +1231,13 @@ sub fetch_transitions {
   }
 
   my $peptide_mappings = {};
-  if ( $parameters{SwissProt} && $organism == '2' ) {
-    $peptide_mappings = get_peptide_mappings( $pep_seq_string );
-  }
+#  if ( $parameters{SwissProt} && $organism == '2' ) {
+    $peptide_mappings = get_peptide_mappings( $pep_seq_string, $organism );
+#  }
   my $has_mappings = ( scalar( keys( %{$peptide_mappings} ) ) ) ? 1 : 0;
+
+	my $quant_info = get_quant_info( $pep_seq_string );
+  my $has_quant = ( scalar( keys( %{$quant_info} ) ) ) ? 1 : 0;
 
   my $limit_clause = $sbeams->buildLimitClause( row_limit => 100000 );
   my $weight_clause = get_src_weights( \%parameters );
@@ -1300,6 +1307,9 @@ sub fetch_transitions {
 
   if ( $has_mappings ) {
     push @headings, 'N_map';
+  }
+  if ( $has_quant ) {
+    push @headings, 'Quant';
   }
 
 
@@ -1612,7 +1622,14 @@ sub fetch_transitions {
         if ( $peptide_mappings->{$cleanseq} ) {
           push @rowdata, $peptide_mappings->{$cleanseq};
         } else {
-          push @rowdata, 'dunno';
+          push @rowdata, 'n/a';
+        }
+      }
+      if ( $has_quant ) {
+        if ( $quant_info->{$cleanseq} ) {
+          push @rowdata, "<A HREF=quant_info?peptide_sequence=$cleanseq TARGET='_quant'><IMG SRC=$HTML_BASE_DIR/images/quant.png BORDER=0></A>";
+        } else {
+          push @rowdata, '&nbsp;';
         }
       }
 
@@ -1960,24 +1977,81 @@ sub update_status {
   ~;
 }
 
+sub get_quant_info {
+
+  my %quant;
+  my $pep_string = shift || return \%quant;
+
+  my $sql = qq~
+  SELECT DISTINCT peptide_sequence, lod, loq, quantitative 
+  FROM peptideatlas.dbo.mtb_quant_info
+  WHERE peptide_sequence IN ( $pep_string )
+  ~;
+
+  my $sth = $sbeams->get_statement_handle($sql);
+  while ( my @row = $sth->fetchrow_array() ) {
+		$quant{$row[0]} = { lod => sprintf( "%0.2f", $row[1] ) || 'n/a',
+                        loq => sprintf( "%0.2f", $row[2] ) || 'n/a',
+                        isq => $row[3] || 'n/a',
+		                  };
+	}
+	return \%quant;
+}
+
 sub get_peptide_mappings {
 
   my %mappings;
   my $pep_string = shift || return \%mappings;
 
   my $sql = qq~
-  SELECT DISTINCT peptide_sequence, n_sp_mapping
+  SELECT DISTINCT peptide_sequence,
+	CASE WHEN n_sp_mapping IS NULL THEN n_protein_mappings ELSE n_sp_mapping END AS mappings ,
+	source_biosequence_id
   FROM $TBAT_PROTEOTYPIC_PEPTIDE PP 
   JOIN $TBAT_PROTEOTYPIC_PEPTIDE_MAPPING PPM
   ON PP.proteotypic_peptide_id = PPM.proteotypic_peptide_id
-  WHERE peptide_sequence IN ( $pep_string )
-  AND n_sp_mapping IS NOT NULL
-  ORDER BY peptide_sequence ASC, n_sp_mapping DESC
+  JOIN $TBAT_BIOSEQUENCE B
+  ON PPM.source_biosequence_id = B.biosequence_id
+  WHERE biosequence_set_id = $parameters{build_bss_id}   
+  AND peptide_sequence IN ( $pep_string )
   ~;
 
+  my %bioseqs;
   my $sth = $sbeams->get_statement_handle($sql);
   while ( my @row = $sth->fetchrow_array() ) {
 		$mappings{$row[0]} ||= $row[1];
+		$bioseqs{$row[2]} ||= {};
+		$bioseqs{$row[2]}->{$row[0]}++;
+	}
+
+  my $bioseq_str = join( ',', keys( %bioseqs ) );
+  $parameters{show_mapping_acc} = 1;
+  if ( $parameters{show_mapping_acc} ) {
+
+    my %pep2accstr;
+
+    my $sql = qq~
+    SELECT DISTINCT biosequence_accession, biosequence_id
+    FROM $TBAT_BIOSEQUENCE 
+    WHERE biosequence_id IN ( $bioseq_str )
+    ~;
+
+    my $sth = $sbeams->get_statement_handle($sql);
+    while ( my @row = $sth->fetchrow_array() ) {
+			for my $pep ( keys( %{$bioseqs{$row[1]}} ) ) {
+		    my $sep = ( $pep2accstr{$pep} ) ? ',' : '';
+				$pep2accstr{$pep} .= $sep . $row[0];
+			}
+	  }
+
+    for my $pep ( keys( %mappings ) ) {
+			if ( $pep2accstr{$pep} ) {
+#				die "pepppy!";
+			  my $cnt = $mappings{$pep};
+			  $mappings{$pep} = "<SPAN TITLE='$pep2accstr{$pep}'>$cnt</SPAN>";
+			} else {
+			}
+		}
 	}
 
   return \%mappings;
