@@ -321,10 +321,10 @@ sub handle_request {
       <TD WIDTH=10% ALIGN=LEFT>
       <DT>
       <INPUT ID="exact_match" TYPE=radio $search_type_param{exact_match} NAME="exact_match"
-          ONCLICK=toggle_radiobutton(this) />
+          ONCLICK=toggle_radiobutton(this)>
           Exact Match
       <DT><INPUT ID="single_table" TYPE=radio $search_type_param{single_table}  NAME="single_table"
-          ONCLICK=toggle_radiobutton(this) />
+          ONCLICK=toggle_radiobutton(this)>
           Tabular Results 
       </TD>
       <TR VALIGN=LEFT ><TD>&nbsp;&nbsp;
