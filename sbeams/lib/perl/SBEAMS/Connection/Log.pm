@@ -146,8 +146,8 @@ sub logCGI {
 
 	open SLOG, ">>$PHYSICAL_BASE_DIR/var/logs/CGI_run.log";
 #	`chmod a+w "$PHYSICAL_BASE_DIR/var/logs/CGI_run.log"`;
-#	print SLOG join ("\t", qw( Mode Script Time PID Mem Host Params ) ) . "\n";
-	print SLOG join( "\t", $args{mode}, $dir, $time, $pid, $mem, $host, $args{paramstr} ) . "\n";
+	print SLOG join ("\t", qw( Mode Script Module Time PID Mem Host Params ) ) . "\n";
+	print SLOG join( "\t", $args{mode}, $cgi, $dir, $time, $pid, $mem, $host, $args{paramstr} ) . "\n";
 	close SLOG;
 
 }
