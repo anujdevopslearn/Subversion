@@ -125,12 +125,15 @@ sub main {
  #   print "$_ \t $parameters{$_} <BR>";
  # }
   #### Decide what action to take based on information so far
-  if ($parameters{action} eq "???") {
-      # Some action
 
+  if ( !$parameters{action} && !$parameters{apply_action} ) {
+    handle_request(ref_parameters=>\%parameters);
   } else {
-      handle_request(ref_parameters=>\%parameters);
-      $sbeamsMOD->display_page_footer();
+		my $paramstr = join( ',', %parameters );
+		$log->logCGI( paramstr => $paramstr, mode => 'start' );
+    handle_request(ref_parameters=>\%parameters);
+		$log->logCGI( paramstr => $paramstr, mode => 'done' );
+    $sbeamsMOD->display_page_footer();
   }
 
 
