@@ -127,6 +127,47 @@ sub setLogLevel {
   $this->_setLogVal();
 }
 
+sub logCGI {
+	my $this = shift;
+	my %args = ( paramstr => '',
+	          mode => '',
+	          @_ );
+	
+	my ( $p, $f, $l, $s ) = caller( 0 );
+	my $cgi = basename($f);
+	my @dir = split( /\//, dirname($f), -1 );
+	my $dir = $dir[$#dir] || 'Unknown';
+
+  use POSIX qw/strftime/;
+  my $time = strftime "%D %H:%M:%S", localtime;
+	my $pid = $$;
+	my $mem = memusage( $pid );
+	my $host = $ENV{REMOTE_HOST} || $ENV{REMOTE_ADDR};
+
+	open SLOG, ">>$PHYSICAL_BASE_DIR/var/logs/CGI_run.log";
+#	`chmod a+w "$PHYSICAL_BASE_DIR/var/logs/CGI_run.log"`;
+#	print SLOG join ("\t", qw( Mode Script Time PID Mem Host Params ) ) . "\n";
+	print SLOG join( "\t", $args{mode}, $dir, $time, $pid, $mem, $host, $args{paramstr} ) . "\n";
+	close SLOG;
+
+}
+
+sub memusage {
+	my $pid = shift;
+  my @results = `ps -o pmem,pid $pid`;
+  my $mem = '';
+  for my $line  ( @results ) {
+    chomp $line;
+    if ( $line =~ /\s*(\d+\.*\d*)\s+$pid/ ) {
+      $mem = $1;
+      last;
+    }
+  }
+  $mem .= '%';
+  return $mem;
+}
+
+
 #+
 # prints out call stack
 #-
