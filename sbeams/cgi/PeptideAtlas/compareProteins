@@ -138,6 +138,7 @@ sub get_alignment_display {
       return ( "$errstr <BR><BR>  $clustal_display" );
     }
     $args{bioseq_id} = join( ",", @bioseq_ids);
+  $log->debug( "Ran protein group query:" .time() );
 
   } elsif ( $args{protein_list_id} && $args{key_accession} ) {
     my $sql = qq~
@@ -160,11 +161,13 @@ sub get_alignment_display {
     }
     $args{bioseq_id} = join( ",", @bioseq_ids);
   }
+  $log->debug( "Ran bioseq query:" .time() );
   if ( $args{protein_list} ) {
 		$args{protein_list} =~ s/;/,/g;
 		my $list_ids = $sbeamsMOD->getBioseqIDsFromProteinList( protein_list => $args{protein_list}, build_id => $curr_bid );
 		$args{bioseq_id} = ( !$args{bioseq_id} ) ? $list_ids : 
 		                   ( $list_ids ) ? $args{bioseq_id} . ',' . $list_ids : $args{bioseq_id};
+  $log->debug( "Ran bioseq_id query:" .time() );
 	}
 
 
@@ -203,6 +206,7 @@ sub get_alignment_display {
   END_SQL
 
   my $sth = $sbeams->get_statement_handle( $sql );
+  $log->debug( "got big query stmt handle:" .time() );
 
 	# hash of biosequence_ids -> seq or name
 	my %bioseq_id2seq;
@@ -243,6 +247,7 @@ sub get_alignment_display {
   my %seen;
 	my %coverage;
 	my @seqs;
+  $log->debug( "loopin:" .time() );
   while ( my @row = $sth->fetchrow_array() ) {
 
     # clustal W quietly changes ':' to '_' in accessions.  Should we fix here? 
@@ -256,12 +261,16 @@ sub get_alignment_display {
     $seen{$acc}++;
 		push @seqs, $seq;
 
+  $log->debug( "Get build coverage " .time() );
 		my $peptide_list = $sbeamsMOD->get_protein_build_coverage( build_id => $curr_bid,
 		                                                    biosequence_ids => $row[4] );
 
 
+  $log->debug( "Done.  Now get coverage hash " .time() );
     $coverage{$acc} = $sbeamsMOD->get_coverage_hash(      seq => $seq,         
                                                      peptides => $peptide_list->{$row[4]} ); 
+ 
+  $log->debug( "Done " .time() );
     # Check this out later for dups...
 		$seq2acc{$seq} ||= {};
 		$seq2acc{$seq}->{$acc}++;
@@ -378,14 +387,34 @@ sub get_clustal_display {
 		if ( $seq->[0] eq 'consensus'  ) {
 		  $sequence =~ s/ /&nbsp;/g 
 		} else {
+#  		my $posn = $sbeamsMOD->get_site_positions( pattern => $args{pepseq}, seq => $sequence );
 			$sequence = highlight_sites( seq => $sequence, 
                                    acc => $seq->[0], 
 			                             coverage => $args{coverage}->{$seq->[0]}
 																 );
 
-			# Poor man's bait coverage!
- 	    $sequence =~ s/$args{pepseq}/<\/SPAN><SPAN CLASS=sec_obs_seq_bg_font>$args{pepseq}<\/SPAN>/g;
-# 	    $sequence =~ s/$args{pepseq}/<\/SPAN><SPAN CLASS=sec_obs_seq_bg_font>$args{pepseq}<\/SPAN><SPAN CLASS=obs_seq_bg_font>/g;
+# Commented section does a more direct 'nesting' of SPANs, but the simple method
+# below is sufficicent if assumptions are correct.
+#      my $pre_posn = '';
+#			if ( $posn->[0] ) {
+#				$pre_posn = $posn->[0] - 1;
+#			}
+
+#      my $post_posn = '';
+#			if ( defined $posn->[0] ) {
+#				$post_posn = $posn->[0] + length( $args{pepseq} ) + 1;
+#			}
+
+#			if ( $post_posn && $args{coverage}->{$seq->[0]}->{$post_posn} ) {
+# 	      $sequence =~ s/$args{pepseq}/<\/span><SPAN CLASS=sec_obs_seq_bg_font>$args{pepseq}<\/SPAN><span class=obs_seq_bg_font>/g;
+#			} else {
+# 	      $sequence =~ s/$args{pepseq}/<\/SPAN><SPAN CLASS=sec_obs_seq_bg_font>$args{pepseq}<\/SPAN>/g;
+#			}
+
+			# Poor man's bait coverage!  Assumes that there are no span junctions in 
+      # bait sequence.  This is true if the entire thing is in coverage (or out
+			# of it, but that should not be possible).
+ 	    $sequence =~ s/$args{pepseq}/<SPAN CLASS=sec_obs_seq_bg_font>$args{pepseq}<\/SPAN>/g;
 
 		}
 		my $dup = '';
