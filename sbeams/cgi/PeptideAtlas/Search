@@ -400,11 +400,8 @@ sub handle_request {
   }else{
     $filterstr = $search_key; 
   }
-	open (my $fh, "/net/dblocal/www/html/sbeams/cgi/PeptideAtlas/PASS_Query.cgi filterstr='$filterstr' idOnly=1|" ) 
-  or die "cannot run command: $!";
-	my $pass_query_result = <$fh>;
-	close $fh;
-
+  my $pass_query_result = query_repository (file => "/regis/passdata/PASS.json", 
+                                            filterstr=>$filterstr);
 
   if ($pass_query_result ne '' and $pass_query_result =~ /PASS\d{5}/i){
     my $link = "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/PASS_View?identifier=";
@@ -418,10 +415,8 @@ sub handle_request {
   }
   
   ### search repository
-  open (my $fh2, "/net/dblocal/wwwspecial/peptideatlas/cgi/Repository/query_repository.cgi filterstr='$filterstr' idOnly=1|" ) 
-  or die "cannot run command: $!"; 
-  my $repository_query_result =  <$fh2>;
-  close $fh2;
+  my $repository_query_result  =  query_repository (file => "/net/dblocal/wwwspecial/peptideatlas/cgi/Repository/PA_Samples_entries.json",
+                                            filterstr=>$filterstr);
 
   if ($repository_query_result ne '' and $repository_query_result =~ /PAe\d{6}/i){
     my $link = "ftp://ftp.peptideatlas.org/pub/PeptideAtlas/Repository/"; 
@@ -815,6 +810,85 @@ sub handle_request {
   }
 } # end handle_request
 
+
+#####################################################################################
+# query repositroy and pass_summary page 
+# not using cgi call to reduce memory usage
+#####################################################################################
+sub query_repository{
+  my %args = @_;
+  my $file = $args{file};
+  my $filterstr = $args{filterstr};
+  my ($date) = `date '+%F'`;
+  chomp($date);
+  my %selectedID=();
+  return '' if ($filterstr eq '');
+
+	$filterstr =~ s/^\s+//;
+	$filterstr =~ s/\s+$//;
+	$filterstr =~ s/[,;]//g;
+	my %tmp;
+	my @qts = split (/\s+/, $filterstr);
+	open (IN, "<$file");
+	my $first = 1;
+	my $str = '';
+	my $id = '';
+	my $releaseDate='';
+	#           "release" : {
+	#              "std" : {
+	#                 "month" : "12",
+	#                 "day" : "30",
+	#                 "year" : "2013"
+	#              }
+	#           },
+
+	while (my $l = <IN>){
+		if($l =~ /^\s{9}\{$/){
+			if($first){
+				$first = 0;
+			}else{
+				$str =~ s/[\{\}\[\]\s+]/ /g;
+				foreach my $q (@qts){
+				if($str =~ /$q/i){
+								$tmp{$id}++;
+				}
+			}
+		 }
+		 $str = '';
+		}elsif($l =~ /"id"\s+:\s+"(PASS\d{5})/ || $l =~ /"acc"\s+:\s+"(PAe\d{6})/){
+			$str .= $1;
+			$id = $1;
+		}else{
+			if ($l =~ /"release"/){
+		   	while ($l !~ /\}/){
+					$l = <IN>;
+					if ($l =~ /"month"\s+:"(\d+)/){
+						 $releaseDate = $1;
+					}elsif($l =~ /"day"\s+:"(\d+)/){
+						 $releaseDate = "$releaseDate-$1";
+					}elsif($l =~ /"year"\s+:"(\d+)/){
+						 $releaseDate = "$1-$$releaseDate";
+					}
+				 $l =~ s/"\w+"\s+://;
+				 $str .= $l;
+				}
+			}else{
+				$l =~ s/"\w+"\s+://;
+				$str .= $l;
+      }
+    }
+  }
+	foreach my $id (keys %tmp){
+		if($tmp{$id} == scalar @qts){
+      if ($date > $releaseDate and $file =~ /passdata/i){
+				$selectedID{$id} = 1;
+      }else{
+        $selectedID{$id} = 1;
+      }
+    }
+  }
+  return join(",", sort {$a cmp $b} keys %selectedID);
+}
 
 sub displayTable{
    my %args = @_;
