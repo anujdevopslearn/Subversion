@@ -143,11 +143,12 @@ sub logCGI {
 	my $pid = $$;
 	my $mem = memusage( $pid );
 	my $host = $ENV{REMOTE_HOST} || $ENV{REMOTE_ADDR};
+	my $referrer = $ENV{REFERRER} || 'N/A';
 
 	open SLOG, ">>$PHYSICAL_BASE_DIR/var/logs/CGI_run.log";
 #	`chmod a+w "$PHYSICAL_BASE_DIR/var/logs/CGI_run.log"`;
-	print SLOG join ("\t", qw( Mode Script Module Time PID Mem Host Params ) ) . "\n";
-	print SLOG join( "\t", $args{mode}, $cgi, $dir, $time, $pid, $mem, $host, $args{paramstr} ) . "\n";
+	print SLOG join ("\t", qw( Mode Script Module Time PID Mem Host Referrer Params ) ) . "\n";
+	print SLOG join( "\t", $args{mode}, $cgi, $dir, $time, $pid, $mem, $host, $referrer, $args{paramstr} ) . "\n";
 	close SLOG;
 
 }
@@ -164,6 +165,16 @@ sub memusage {
     }
   }
   $mem .= '%';
+   
+	my $free = `free -m | grep buffer `;
+	$free =~ /.*:\s+(\d+)\s+(\d+)/m;
+	if ( defined $1 and defined $2 ) {
+		$free = '(' . sprintf( "%0.1f", (1-($2/($1+$2)))*100 ) . ' %)';
+	} else { 
+		$free = '(NA)';
+	}
+	$mem .= " $free";
+
   return $mem;
 }
 
