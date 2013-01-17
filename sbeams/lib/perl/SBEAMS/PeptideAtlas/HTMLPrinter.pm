@@ -1150,8 +1150,13 @@ sub make_pa_tooltip {
 sub formatMassMods { 
   my $self = shift;
   my $sequence = shift || return undef;
-  $sequence =~ s/\[/<SPAN CLASS=aa_mod>\[/gm;
-  $sequence =~ s/\]/\]<\/SPAN>/gm;
+  $sequence =~ s/\[/<SPAN CLASS="aa_mod">\[/gm;
+  if ($sequence =~ /\)/){
+    $sequence =~ s/\)/\)<\/SPAN>/gm;
+    $sequence =~ s/\](\w|$)/\]<\/SPAN>$1/gm;
+  }else{
+    $sequence =~ s/\]/\]<\/SPAN>/gm;
+  }
   return $sequence;
 }
 

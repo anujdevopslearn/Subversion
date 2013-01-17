@@ -574,6 +574,12 @@ sub pepXML_start_element {
   if ($localname eq 'interprophet_result') {
     $self->{pepcache}->{scores}->{probability} = $attrs{probability};
   }
+  ### ptm result
+  if ($localname eq 'ptmprophet_result'){
+    #prior="0.285714" ptm="PTMProphet_STY79.9663"
+    #ptm_peptide="AY(0.000)VY(0.000)ADWVEHAT(0.026)S(0.026)EIEPGT(0.961)T(0.493)T(0.493)VLR">
+    $self->{pepcache}->{ptm_peptide} = $attrs{ptm_peptide};
+  }
 
   #### Push information about this element onto the stack
   my $tmp;
@@ -800,6 +806,24 @@ sub pepXML_end_element {
       #### Create the modified peptide string
       my $prepend_charge = 0;
       my $charge = $self->{pepcache}->{charge};
+
+      if ($self->{pepcache}->{ptm_peptide}){
+        my @ss1 =  split(/\)/, $self->{pepcache}->{ptm_peptide});
+        my $pos = 0;
+        foreach my $s (@ss1){
+          if ($s =~ /(.*)\(([\d\.]+)/){
+            $pos += length($1);
+            if ($self->{pepcache}->{modifications}{$pos}){
+               $self->{pepcache}->{modifications}{$pos} .= "($2)";
+             }else{
+               $self->{pepcache}->{modifications}{$pos} = "($2)";
+             }
+          }else{
+            $pos += length($1);
+          }
+        }
+      }
+
       my $modified_peptide = modified_peptide_string($self, $peptide_sequence, $charge,
           $self->{pepcache}->{modifications}, $prepend_charge);
 
@@ -1118,12 +1142,18 @@ sub modified_peptide_string {
     if ($modifications->{$i}) {
       $modified_peptide .= 'n['.int($modifications->{$i}).']';
     }
-    for ($i=1; $i<=length($peptide_sequence); $i++) {
-      my $aa = substr($peptide_sequence,$i-1,1);
-      if ($modifications->{$i}) {
-        $aa .= '['.int($modifications->{$i}).']';
-      }
-      $modified_peptide .= $aa;
+	 for ($i=1; $i<=length($peptide_sequence); $i++) {
+		 my $aa = substr($peptide_sequence,$i-1,1);
+		 if ($modifications->{$i}) {
+			if ($modifications->{$i} =~ /([\d\.]+)\((.*)/){
+				$aa .= '['.int($1).']('.$2;
+			}elsif($modifications->{$i} =~ /^\((.*)\)$/){
+				 $aa .= "($1)";
+			}else{
+				$aa .= '['.int($modifications->{$i}).']';
+			}
+		 }
+		 $modified_peptide .= $aa;
     }
     if ($modifications->{$i}) {
       $modified_peptide .= 'c['.int($modifications->{$i}).']';
@@ -1131,6 +1161,7 @@ sub modified_peptide_string {
   } else {
     $modified_peptide = $peptide_sequence;
   }
+
 
   # If there is a charge, and if desired, prepend charge to peptide string
   if ($charge && $prepend_charge) {
@@ -3464,6 +3495,12 @@ sub writeToPAxmlFile {
       each %{$attributes->{modifications}}) {
 
       while (my ($mod_charge,$charge_attributes) = each %{$mod_attributes}) {
+				my $ptm_sequence = '';
+				if ($mod_peptide_sequence =~ /\(/){
+					$ptm_sequence = $mod_peptide_sequence;
+					$mod_peptide_sequence =~ s/\([\d\.]+\)//g;
+					$ptm_sequence =~ s/\[[\d\.]+\]//g;
+				}
 
         my $buffer = encodeXMLEntity(
           entity_name => 'modified_peptide_instance',
@@ -3471,6 +3508,7 @@ sub writeToPAxmlFile {
           entity_type => 'openclose',
           attributes => {
             peptide_string => $mod_peptide_sequence,
+            ptm_string => $ptm_sequence,
             charge_state => $mod_charge,
             best_probability => $charge_attributes->{best_probability},
             n_observations => $charge_attributes->{n_instances},

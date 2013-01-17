@@ -1280,7 +1280,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
   SELECT modified_peptide_sequence, MPI.peptide_charge,
          SMP.sample_id,I.instrument_name, SI.probability, S.spectrum_name,
          SI.spectrum_identification_id, SMP.sample_tag, precursor_intensity, scan_time,
-         collision_energy 
+         collision_energy, SPI.ptm_sequence
     FROM $TBAT_PEPTIDE_INSTANCE PI
    INNER JOIN $TBAT_PEPTIDE P
          ON ( PI.peptide_id = P.peptide_id )
@@ -1294,6 +1294,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
          ON ( BSS.organism_id = O.organism_id )
    INNER JOIN $TBAT_SPECTRUM_IDENTIFICATION SI
          ON ( MPI.modified_peptide_instance_id = SI.modified_peptide_instance_id )
+    LEFT JOIN $TBAT_SPECTRUM_PTM_IDENTIFICATION SPI
+         ON ( SI.spectrum_identification_id = SPI.spectrum_identification_id)
     LEFT JOIN $TBAT_SPECTRUM S
          ON ( SI.spectrum_id = S.spectrum_id )
     LEFT JOIN $TBAT_SAMPLE SMP
@@ -1307,26 +1309,26 @@ if ($apply_action =~ /QUERY|GO/i ) {
   ORDER BY modified_peptide_sequence, MPI.peptide_charge, S.spectrum_name ASC
   ~;
 
+
   $log->info( "$modSQL" );
   my @mod_peps;
   my $sth = $sbeams->get_statement_handle( $modSQL );
   my $has_header_info = 0;
   my $is_origene = 0;
   $is_origene = 1 if ($atlas_build_name =~ /Origene/i);
-
-  $mseq_idx = 0;      # modified peptide sequence
-  $chrg_idx = 1;      # charge
+  $mseq_idx = 0;         # modified peptide sequence
+  $chrg_idx = 1;         # charge
   my $smpl_idx = 2;      # sample
   my $inst_idx = 3;      # instrument
-  $prob_idx = 4;      # probability
+  $prob_idx = 4;         # probability
   my $name_idx = 5;      # spectrum name: mzML basename, scan, scan, chrg
-  $spec_idx = 6;      # spectrum
+  $spec_idx = 6;         # spectrum
   my $frag_idx = 7;
   my $chrm_idx = 8;      # chromatogram
   my $it_idx = 9;        # precursor intensity
-  my $rt_idx = 10;        # retention time
+  my $rt_idx = 10;       # retention time
   my $ce_idx = 11;       # collision energy
-
+  my $ptm_idx = 12;      # ptm sequence
   my $align = [qw(left center right right left center center center center)];
   push @$align , 'center' if ($is_origene);
    
@@ -1384,66 +1386,66 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
         my @rows = $sbeams->selectSeveralColumns($sql);
         if (scalar @rows) {
-	  my $first_row = shift @rows;
-	  my ($qt5500_transition_group_id,
-              $mzml_filename, $mzml_pathname, $cycle, $precursor_charge,
-	       $precursor_mz, $rt) = @{$first_row};
-          $mzml_pathname .= "/$mzml_filename";
+					my $first_row = shift @rows;
+					my ($qt5500_transition_group_id,
+										$mzml_filename, $mzml_pathname, $cycle, $precursor_charge,
+							 $precursor_mz, $rt) = @{$first_row};
+								$mzml_pathname .= "/$mzml_filename";
         
 
-	  my ($q1, $q1_charge2, $q1_charge3, $precursor_neutral_mass);
+					my ($q1, $q1_charge2, $q1_charge3, $precursor_neutral_mass);
 
-	  # Compute precursor neutral mass for this peptide
-	  # (Could also compute theoretical mass from pepseq + mods)
-	  my $precursor_charged_mass = $precursor_mz * $precursor_charge;
-	  # Subtract mass for each proton added when precursor was charged
-	  $precursor_neutral_mass = $precursor_charged_mass -
-		   ($precursor_charge * 1.00727638);
+					# Compute precursor neutral mass for this peptide
+					# (Could also compute theoretical mass from pepseq + mods)
+					my $precursor_charged_mass = $precursor_mz * $precursor_charge;
+					# Subtract mass for each proton added when precursor was charged
+					$precursor_neutral_mass = $precursor_charged_mass -
+						 ($precursor_charge * 1.00727638);
 
-	  # We must invent the ion because we don't have transition list
-	  my $ion = "y1";        ### INVENTED!!!
-	  my $ion_charge = '1';    ### INVENTED!!!
-	  # remove mods from pepseq
-	  my $modified_pepseq = $pep->[$mseq_idx];
-	  my $pepseq = $modified_pepseq;
-	  $pepseq =~ s/\[.+?\]//g;
-	  my $fragmentor = 125;  ### INVENTED!!! but maybe unused.
-	  # There are fields for CE & RT in the Spectrum table,
-	  # but unfortunately for SRM atlas these values are not loaded.
-	  my $ce = $pep->[$ce_idx] ?  $pep->[$ce_idx] : 99;
-	  if (! $rt ) {
-	    $rt = $pep->[$rt_idx] ?  $pep->[$rt_idx] : 99;
-	  }
-	  my $delta_rt = 5.00;   ### INVENTED!!! but maybe unused.
+					# We must invent the ion because we don't have transition list
+					my $ion = "y1";        ### INVENTED!!!
+					my $ion_charge = '1';    ### INVENTED!!!
+					# remove mods from pepseq
+					my $modified_pepseq = $pep->[$mseq_idx];
+					my $pepseq = $modified_pepseq;
+					$pepseq =~ s/\[.+?\]//g;
+					my $fragmentor = 125;  ### INVENTED!!! but maybe unused.
+					# There are fields for CE & RT in the Spectrum table,
+					# but unfortunately for SRM atlas these values are not loaded.
+					my $ce = $pep->[$ce_idx] ?  $pep->[$ce_idx] : 99;
+					if (! $rt ) {
+						$rt = $pep->[$rt_idx] ?  $pep->[$rt_idx] : 99;
+					}
+					my $delta_rt = 5.00;   ### INVENTED!!! but maybe unused.
 
-	  $at_least_one_chromatogram = 1;
-	  my $chrom_img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/chromatogram.gif' TITLE='View chromatogram for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
+					$at_least_one_chromatogram = 1;
+					my $chrom_img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/chromatogram.gif' TITLE='View chromatogram for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
 
-	  
-	  #print "<p>Charge $precursor_charge Precursor Neutral Mass $precursor_neutral_mass Precursor Charged Mass $precursor_charged_mass<br>\n";
+					
+					#print "<p>Charge $precursor_charge Precursor Neutral Mass $precursor_neutral_mass Precursor Charged Mass $precursor_charged_mass<br>\n";
 
-	  $chromatogram_entry =
-	    qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?~;
-	  $chromatogram_entry .= ""
-  #	."&ion=$ion"  #multiple; different per trace.
-  #	."&ion_charge=$ion_charge"  #multiple
-#	  ."&precursor_charge=$precursor_charge"  #both +2 & +3 will be shown.
-	  ."&pepseq=$pepseq"
-	  ."&modified_pepseq=$modified_pepseq"
-  #	."&q1=$q1"  #multiple
-  #	."&q3=$q3"  #multiple
-	  ."&spectrum_basename=$mzml_basename"
-	  ."&spectrum_pathname=$mzml_pathname"
-  #	."&ce=$ce"
-#	  ."&rt=$rt"  #multiple
-	  ."&delta_rt=$delta_rt"
-	  ."&fragmentor=$fragmentor"
-	  ."&precursor_neutral_mass=$precursor_neutral_mass";
+					$chromatogram_entry =
+						qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowChromatogram?~;
+					$chromatogram_entry .= ""
+				#	."&ion=$ion"  #multiple; different per trace.
+				#	."&ion_charge=$ion_charge"  #multiple
+			#	  ."&precursor_charge=$precursor_charge"  #both +2 & +3 will be shown.
+					."&pepseq=$pepseq"
+					."&modified_pepseq=$modified_pepseq"
+				#	."&q1=$q1"  #multiple
+				#	."&q3=$q3"  #multiple
+					."&spectrum_basename=$mzml_basename"
+					."&spectrum_pathname=$mzml_pathname"
+				#	."&ce=$ce"
+			#	  ."&rt=$rt"  #multiple
+					."&delta_rt=$delta_rt"
+					."&fragmentor=$fragmentor"
+					."&precursor_neutral_mass=$precursor_neutral_mass";
 
-	   $chromatogram_entry =
-	    qq~$chromatogram_entry" TARGET=blank>$chrom_img</A>~;
+					 $chromatogram_entry =
+						qq~$chromatogram_entry" TARGET=blank>$chrom_img</A>~;
 
-	} # end if there is info for this pep in the QT5500_transition_group table
+				} # end if there is info for this pep in the QT5500_transition_group table
       } # end if Qtrap 5500
 
       $pep->[$prob_idx] = sprintf("%0.3f", $pep->[$prob_idx]) unless $pep->[$prob_idx] == 1;
@@ -1454,7 +1456,44 @@ if ($apply_action =~ /QUERY|GO/i ) {
       $pep->[$spec_idx] = qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowObservedSpectrum?atlas_build_id=$build_id&spectrum_identification_id=$pep->[$spec_idx]&peptide=$pep->[$mseq_idx]&assumed_charge=$pep->[$chrg_idx]" TARGET=blank>$img</A>~;
 
       $pep->[$chrm_idx] = $chromatogram_entry;
-      $pep->[$mseq_idx] = $sbeamsMOD->formatMassMods( $pep->[$mseq_idx] );
+
+			my $modified_pepseq = $pep->[$mseq_idx];
+			if ($pep->[11]){
+				my $ptm_sequence = $pep->[11];
+				my $newseq = '';
+				my %mods = ();
+				my $pos = -1;
+				my @elms = split(/\]/, $modified_pepseq);
+				foreach my $str (@elms){
+					if ($str =~ /(.*)\[(.*)/){
+					  $pos += length ($1);
+					  $mods{$pos} = $2;
+          }else{
+            $pos += length ($str);
+          }
+				}
+
+				@elms = split(/\)/, $ptm_sequence);
+        $pos = -1;
+				foreach my $str (@elms){
+          if ($str =~ /(.*)\((.*)/){
+					  $pos += length ($1);
+					  if (defined $mods{$pos} ){
+					    $newseq .= $1."[$mods{$pos}]($2)";
+					  }else{
+						   $newseq .= $str.")";
+					  }
+				  }else{
+             $newseq .= $str;
+             $pos += length ($str);
+          }
+        }
+        $newseq =~ s/(\w)\)$/$1/;
+				$modified_pepseq = $newseq;
+      }
+      $pep->[$mseq_idx] = $sbeamsMOD->formatMassMods($modified_pepseq);
+      $pep->[$mseq_idx] =~ s/"aa_mod">(\[[\d\.]+\])(\([\d\.]+\))/"supsub"><sup class="superscript">$1<\/sup><sub class="subscript">$2<\/sub>/g;
+      $pep->[$mseq_idx] =~ s/([A-Z])(\([\d\.]+\))/$1<scan class="supsub"><sup class="superscript">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/sup><sub class="subscript">$2<\/sub><\/scan>/g;
 
       if ($is_origene){
          $pep->[$frag_idx] =~ s/.*_//;
@@ -1481,6 +1520,22 @@ if ($apply_action =~ /QUERY|GO/i ) {
         delete $pep->[$chrm_idx];
       }
     }
+    print qq~ 
+     <style>
+			.supsub {font-size: 9; color: darkslategray}
+			.superscript {	
+				position: relative;
+        left 0;
+				top: -0.4em;
+				}
+
+			.subscript {	
+				position: relative;
+        margin-left:-2.5em;
+				top: 0.4em;
+			}
+    </style>
+    ~;
 
     my @headings = ( 'Modified Sequence', 'Chg', 'Smpl', 'Instr', 'Prob', 'Spectrum Name', 'Spectrum');
     push @headings, 'Fragmentation Type' if ($is_origene); 
@@ -1496,7 +1551,8 @@ if ($apply_action =~ /QUERY|GO/i ) {
                                                 align  => $align,
                                                   rows => \@display_peps,
                                           rows_to_show => 10,
-                                              max_rows => 500
+                                              max_rows => 500,
+                                              nowrap => [1],
                                               );
     #### Display table
     print "<TABLE WIDTH=600><BR>$modHTML</TABLE>\n";

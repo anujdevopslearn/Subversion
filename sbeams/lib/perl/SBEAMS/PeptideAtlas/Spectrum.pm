@@ -182,7 +182,7 @@ sub loadBuildSpectra {
         $preceding_residue,$modified_sequence,$following_residue,$charge,
         $probability,$massdiff,$protein_name,$proteinProphet_probability,
         $n_proteinProphet_observations,$n_sibling_peptides,
-        $SpectraST_probability);
+        $SpectraST_probability, $ptm_sequence);
     if ($filetype eq 'peplist') {
       ($search_batch_id,$peptide_sequence,$modified_sequence,$charge,
         $probability,$protein_name,$spectrum_name) = @columns;
@@ -197,10 +197,19 @@ sub loadBuildSpectra {
     } else {
       die("ERROR: Unexpected filetype '$filetype'");
     }
+    
+    $ptm_sequence = '';
+    if ($modified_sequence =~ /\(/){
+      $ptm_sequence = $modified_sequence;
+      $modified_sequence =~ s/\([\d\.]+\)//g;
+      $ptm_sequence =~ s/\[[\d\.]+\]//g;
+    }
+
     $self->insertSpectrumIdentification(
        atlas_build_id => $atlas_build_id,
        search_batch_id => $search_batch_id,
        modified_sequence => $modified_sequence,
+       ptm_sequence => $ptm_sequence,
        charge => $charge,
        probability => $probability,
        protein_name => $protein_name,
@@ -230,6 +239,7 @@ sub insertSpectrumIdentification {
     or die("ERROR[$METHOD]: Parameter search_batch_id not passed");
   my $modified_sequence = $args{modified_sequence}
     or die("ERROR[$METHOD]: Parameter modified_sequence not passed");
+  my $ptm_sequence = $args{ptm_sequence} || ''; 
   my $charge = $args{charge}
     or die("ERROR[$METHOD]: Parameter charge not passed");
   my $protein_name = $args{protein_name}
@@ -296,6 +306,13 @@ sub insertSpectrumIdentification {
       probability => $probability,
       massdiff => $massdiff,
     );
+    if ($ptm_sequence ne ''){
+			my $spectrum_ptm_identification_id = $self->insertSpectrumPTMIdentificationRecord(
+				spectrum_identification_id => $spectrum_identification_id,
+				ptm_sequence => $ptm_sequence,
+			);
+    }
+
   }
 
   $counter++;
@@ -983,6 +1000,40 @@ sub insertSpectrumIdentificationRecord {
 
 } # end insertSpectrumIdentificationRecord
 
+
+###############################################################################
+# insertSpectrumPTMIdentificationRecord --
+###############################################################################
+sub insertSpectrumPTMIdentificationRecord {
+  my $METHOD = 'insertSpectrumPTMIdentificationRecord';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  my $spectrum_identification_id = $args{spectrum_identification_id}
+    or die("ERROR[$METHOD]: Parameter spectrum_identification_id not passed");
+  my $ptm_sequence = $args{ptm_sequence}
+    or die("ERROR[$METHOD]: Parameter ptm_sequence not passed");
+
+  #### Define the attributes to insert
+  my %rowdata = (
+    ptm_sequence => $ptm_sequence,
+    spectrum_identification_id => $spectrum_identification_id,
+  );
+
+  #### Insert spectrum PTM identification record
+  my $spectrum_ptm_identification_id = $sbeams->updateOrInsertRow(
+    insert=>1,
+    table_name=>$TBAT_SPECTRUM_PTM_IDENTIFICATION,
+    rowdata_ref=>\%rowdata,
+    PK => 'spectrum_ptm_identification_id',
+    return_PK => 1,
+    verbose=>$VERBOSE,
+    testonly=>$TESTONLY,
+  );
+
+  return($spectrum_ptm_identification_id);
+
+} # end insertSpectrumPTMIdentificationRecord
 
 
 
