@@ -1,0 +1,339 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : buildInfo
+# Author      : Terry Farrah and Zhi Sun (tfarrah@systemsbiology.org)
+# $Id: $
+#
+# Description : This script displays details about a single quant SRM Atlas peptide
+#
+# SBEAMS is Copyright (C) 2000-2013 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Get the script set up with everything it will need
+###############################################################################
+use strict;
+use vars qw ($q $sbeams $atlas $PROG_NAME
+             $current_contact_id $current_username);
+use lib qw (../../lib/perl);
+use CGI::Carp qw(fatalsToBrowser croak);
+use Statistics::LineFit;
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::DataTable;
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$atlas = new SBEAMS::PeptideAtlas;
+$atlas->setSBEAMS($sbeams);
+
+
+###############################################################################
+# Global Variables
+###############################################################################
+$PROG_NAME = 'quant_info';
+main();
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authentication and stop immediately if authentication
+# fails else continue.
+###############################################################################
+sub main
+{
+    #### Do the SBEAMS authentication and exit if a username is not returned
+    exit unless ($current_username = $sbeams->Authenticate(
+        permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+        'PeptideAtlas_readonly', 'PeptideAtlas_exec'],
+        #connect_read_only=>1,
+        allow_anonymous_access=>1,
+    ));
+
+
+    #### Read in the default input parameters
+    my %parameters;
+    my $n_params_found = $sbeams->parse_input_parameters(
+        q=>$q,
+        parameters_ref=>\%parameters
+        );
+
+
+    ## get project_id to send to HTMLPrinter display
+    my $project_id = $atlas->getProjectID(
+        atlas_build_name => $parameters{atlas_build_name},
+        atlas_build_id => $parameters{atlas_build_id}
+        );
+
+
+    #### Process generic "state" parameters before we start
+    $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+#    $sbeams->printCGIParams($q);
+
+
+    #### Decide what action to take based on information so far
+    if ($parameters{action} eq "???") {
+
+        # Some action
+ 
+    } else {
+
+      # zhi says maybe make a new version of this subroutine to put in new style sheet
+        $atlas->display_page_header(project_id => $project_id);
+
+        print $sbeams->getGifSpacer(800);
+
+        handle_request(ref_parameters=>\%parameters);
+
+        $atlas->display_page_footer();
+
+    }
+
+
+
+
+} # end main
+
+
+###############################################################################
+# Show the page
+###############################################################################
+sub handle_request {
+
+    my %args = @_;
+
+    #### Process the arguments list
+    my $ref_parameters = $args{'ref_parameters'}
+        || die "ref_parameters not passed";
+
+    my %parameters = %{$ref_parameters};
+
+
+  #### Get the current atlas_build_id based on parameters or session
+  my $atlas_build_id = $atlas->getCurrentAtlasBuildID(
+    parameters_ref => \%parameters,
+  );
+  if (defined($atlas_build_id) && $atlas_build_id < 0) {
+    #### Don't return. Let the user pick from a valid one.
+    #return;
+  }
+
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $atlas->getTabMenu(
+    parameters_ref => \%parameters,
+    program_name => $PROG_NAME,
+  );
+  if ($sbeams->output_mode() eq 'html') {
+    print "<BR>\n";
+    print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+    print "<BR>\n";
+  }
+
+
+    #### Read in the standard form values
+    my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+    my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+
+    #### Set some specific settings for this program
+    my $PROGRAM_FILE_NAME = $PROG_NAME;
+    my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+    my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
+    my $ppt = $parameters{'ppt'} || 0;
+    my $table_width = $parameters{'width'} || 800;
+
+
+    #### Get a list of accessible project_ids
+    my @accessible_project_ids = $sbeams->getAccessibleProjects();
+    my $accessible_project_ids = join( ",", @accessible_project_ids ) || '0';
+
+    my $sql = qq~
+    SELECT peptide_sequence, precursor_mz, titr_min, titr_max, r_sq, lod, loq, linear_min, linear_max, fold, quantitative
+    FROM peptideatlas.dbo.mtb_quant_info
+    WHERE peptide_sequence = '$parameters{peptide_sequence}'
+    ~;
+	  my @row = $sbeams->selectSeveralColumns($sql);
+		my @quant = @{$row[0]};
+
+    my @entries = ( { key => 'Peptide Sequence', value => 'Amino acid sequence of target peptide' },
+                    { key => 'Precursor m/z', value => 'Mass to charge ratio of intact precursor' },
+                    { key => 'Titration range', value => 'Range of concentration of calibration curve (femtomoles)' },
+                    { key => 'R-squared value', value => 'R-squared measure of correlation from calibration curve' },
+                    { key => 'LOD', value => 'Limit of detection (LOD) in femtomoles' },
+                    { key => 'LOQ', value => 'Limit of quantitation (LOQ) in femtomoles' },
+                    { key => 'Linear range', value => 'Range of concentration of linear portion of calibration curve (femtomoles)' },
+                    { key => 'Fold', value => 'Fold concentration of linear range' },
+                    { key => 'Is quantitative', value => 'Is assay considered to be quantiative' },
+    );
+
+    my $showtext = 'show row descriptions';
+    my $hidetext = 'hide row descriptions';
+    my $heading = 'Quantation Information (no matrix)';
+    my $description= 'Quantiation information determined for this peptide in buffer background (no matrix)';
+
+    my $help = $atlas->get_table_help_section( name => 'Quantitation',
+                                        description => $description,
+                                            heading => $heading,
+                                            entries => \@entries,
+                                           showtext => $showtext,
+                                           hidetext => $hidetext  );
+
+
+
+    my $table = "<TABLE WIDTH=800>\n";
+
+    my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'overview',
+                                                  visible => 1,
+                                                  tooltip => 'Show/Hide Section',
+                                                  imglink => 1,
+                                                  sticky  => 1 );
+
+    $table .= $atlas->encodeSectionHeader(
+      text => 'Quantitation information',
+      span => 4,
+      link => $link
+    );
+    my $spc = $sbeams->getGifSpacer(400);
+
+    my @entries = ( { key => 'Peptide Sequence', value => 'Amino acid sequence of target peptide' },
+                    { key => 'Precursor m/z', value => 'Mass to charge ratio of intact precursor' },
+                    { key => 'Titration range', value => 'Range of concentration of calibration curve (femtomoles)' },
+                    { key => 'R-squared value', value => 'R-squared measure of correlation from calibration curve' },
+                    { key => 'LOD', value => 'Limit of detection (LOD) in femtomoles' },
+                    { key => 'LOQ', value => 'Limit of quantitation (LOQ) in femtomoles' },
+                    { key => 'Linear range', value => 'Range of concentration of linear portion of calibration curve (femtomoles)' },
+                    { key => 'Fold change', value => 'Fold concentration of linear range' },
+                    { key => 'Is quantitative', value => 'Is assay considered to be quantiative' }  );
+
+
+  $table .= $atlas->encodeSectionItem( key => 'Peptide Sequence', tr_info => $tr, value => $quant[0] ) . "\n";
+  $table .= $atlas->encodeSectionItem( key => 'Precursor m/z', tr_info => $tr, value => sprintf( "%0.3f", $quant[1] ) ) . "\n";
+  $table .= $atlas->encodeSectionItem( key => 'Titration range', tr_info => $tr, value => sprintf( "%0.2f", $quant[2] ) . '-' . sprintf( "%0.2f", $quant[3] ) ) . "\n";
+  $table .= $atlas->encodeSectionItem( key => 'R-squared value', tr_info => $tr, value => sprintf( "%0.4f", $quant[4] ) ) . "\n";
+  $table .= $atlas->encodeSectionItem( key => 'LOD', tr_info => $tr, value => sprintf( "%0.3f", $quant[5] ) ) . "\n";
+  $table .= $atlas->encodeSectionItem( key => 'LOQ', tr_info => $tr, value => sprintf( "%0.3f", $quant[6] ) ) . "\n";
+  $table .= $atlas->encodeSectionItem( key => 'Linear range', tr_info => $tr, value => sprintf( "%0.3f", $quant[7] )  . '-' . sprintf( "%0.2f", $quant[8]  ) ) . "\n";
+  $table .= $atlas->encodeSectionItem( key => 'Fold change', tr_info => $tr, value => sprintf( "%0.1f", $quant[9] ) ) . "\n";
+
+	my $is_quant = ( $quant[10] eq 'N' ) ? "No $spc" : "Yes $spc";
+  $table .= $atlas->encodeSectionItem( key => 'Is quantitative', tr_info => $tr, value => $is_quant ) . "\n";
+
+  $table .= "</TABLE>\n";
+
+  print $help;
+  print $table;
+
+
+  # If we have quant data, show a plot.
+	my $pre_mz = sprintf( "%0.4f", $quant[1] );
+	my $mz_low = int( $quant[1] );
+	my $mz_hi = $mz_low + 1;
+  my $qsql = qq~
+	SELECT precursor_mz, product_mz, area, dilution, concentration
+	FROM peptideatlas.dbo.quant_data 
+	WHERE peptide_sequence = '$quant[0]'
+  AND precursor_mz BETWEEN $mz_low AND $mz_hi 
+  ORDER by precursor_mz, product_mz, dilution DESC
+	~;
+
+  my $sth = $sbeams->get_statement_handle( $qsql );
+	my %data;
+	my %ldata;
+  while ( my @row = $sth->fetchrow_array() ) {
+		my $mz = sprintf( "%0.4f", $row[1] );
+		my $area = sprintf( "%0.1f", $row[2] );
+		my $conc = sprintf( "%0.2f", $row[4]/1000 );
+    $data{$mz} ||= {};
+    $data{$mz}->{$conc} = $area;
+    $ldata{$mz} ||= {};
+    $ldata{$mz}->{$conc} = $area;
+	}
+
+	return unless %data; 
+
+  my $div_strings = '';
+	my $chart_functions = '';
+	my $chart_callbacks = '';
+
+	for my $frag ( sort{ $a <=> $b } keys( %data ) ) {
+	  my @concs = sort{ $a <=> $b } keys( %{$data{$frag}} );
+    my $js_data = "['Conc','$frag','fit']";
+
+	  my @areas;
+  	for my $conc ( @concs ) {
+		  push @areas, $data{$frag}->{$conc};
+    }
+
+    my $lineFit = Statistics::LineFit->new();
+    $lineFit->setData (\@concs, \@areas) or die "Invalid data";
+    my ($intercept, $slope) = $lineFit->coefficients();
+    my $rSquared = $lineFit->rSquared();
+    my @predicted_areas = $lineFit->predictedYs();
+
+		$intercept = sprintf( "%0.1f", $intercept );
+		$slope = sprintf( "%0.1f", $slope );
+		$rSquared = sprintf( "%0.4f", $rSquared );
+
+    my $idx = 0;
+  	for my $conc ( @concs ) {
+	  	$js_data .= ",\n[$conc,$data{$frag}->{$conc},$predicted_areas[$idx] ]";
+			$idx++;
+    }
+
+		my $div_name = $sbeams->getRandomString( num_chars => 20 );
+
+		my $line_info = "<BR> r-squared = $rSquared,  y=$slope*x + $intercept";
+		$div_strings .= qq~<BR><DIV style="border: 1px solid gray; width: 500px" > <div id="$div_name" style="width: 500px; height: 360px" > </div><CENTER>$line_info</CENTER></DIV>~;
+#		$div_strings .= qq~<BR><DIV style="width: 500px; height: 360px; border: 1px solid gray"   <div id="$div_name" style="width: 500px; height: 360px; border: 1px solid gray" > </div>~;
+
+    $chart_callbacks .= "google.setOnLoadCallback(draw_${div_name}_Chart);\n";
+		$chart_functions .= qq~
+      function draw_${div_name}_Chart() {
+        var data = google.visualization.arrayToDataTable([
+				$js_data
+        ]);
+
+        var options = {
+          title: "$quant[0] product ion $frag",
+					pointSize:  3,
+					hAxis: {title: 'Femtomoles on Column'  },
+					vAxis: {title: 'Intensity (area under chromatogram)' },
+					series: [{ pointSize: 4, visibleInLegend: false}, { pointSize: 0, lineWidth: 1, visibleInLegend: false}]
+        };
+
+        var chart = new google.visualization.ScatterChart(document.getElementById('$div_name'));
+        chart.draw(data, options);
+      }
+		~;
+	}
+
+  print qq~
+    $div_strings
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+    <script type="text/javascript">
+      google.load("visualization", "1", {packages:["corechart"]});
+			$chart_callbacks
+			$chart_functions
+    </script>
+   <BR><BR>
+	~;
+
+
+
+
+} # end showMainPage
