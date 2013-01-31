@@ -75,6 +75,8 @@ sub process_query {
     return GetTransitions_SourceSelect();
   } elsif ( $params{source} eq 'GetTransitions_ElutionTimeSelect' ) {
     return GetTransitions_ElutionTimeSelect();
+  } elsif ( $params{source} eq 'GetTransitions_NamespaceFilters' ) {
+    return GetTransitions_NamespaceFilters();
   } else {
     return $params{source};
   }
@@ -133,9 +135,43 @@ sub GetTransitions_SourceSelect {
   }
 
   my $json_text = $json->encode( \@select ); 
+
+  
+
+	$log->debug( $json_text );
   return $json_text;
 }
 
+sub GetTransitions_NamespaceFilters {
+
+  my $div_text = '&nbsp;' x 4 . $sbeams->makeInactiveText( 'N/A' );
+#  my $json_text = $json->encode( [$div_text] );
+#  return $json_text;
+
+  if ( $params{pabst_build_id} && $params{pabst_build_id} =~ /^\d+$/ ) {
+
+    my $sql = qq~
+    SELECT organism_id
+    FROM $TBAT_PABST_BUILD
+    WHERE pabst_build_id = $params{pabst_build_id}
+    ~;
+    my $sth = $sbeams->get_statement_handle( $sql );
+    while ( my @row = $sth->fetchrow_array() ) {
+      if ( $row[0] == 2 || $row[0] == 6 ) {
+        $div_text = '<INPUT TYPE=checkbox NAME=SwissProt checked> SwissProt </INPUT><INPUT TYPE=checkbox NAME=Ensembl checked> Ensembl </INPUT><INPUT TYPE=checkbox NAME=IPI checked> IPI </INPUT>';
+      } elsif ( $row[0] == 3 ) {
+        $div_text = '<INPUT TYPE=checkbox NAME=SGD checked  disabled> SGD </INPUT>';
+      } elsif ( $row[0] == 40 ) {
+        $div_text = '<INPUT TYPE=checkbox NAME=Tuberculist checked disabled> Tubercululist </INPUT>';
+      } elsif ( $row[0] == 43 ) {
+        $div_text = '<INPUT TYPE=checkbox NAME=Dengue checked disabled> Dengue </INPUT>';
+			}
+    }
+  }
+  my $json_text = $json->encode( [$div_text] );
+	$log->debug( $json_text );
+  return $json_text;
+}
 
 sub GetTransitions_ElutionTimeSelect {
 
