@@ -239,7 +239,8 @@ my $module_styles =<<"  END_STYLE";
 	.sortheader{ font-size: ${FONT_SIZE}pt; font-weight: bold; line-height: 25px; color:white }
   .info_box { background: #F0F0F0; border: #000 1px solid; padding: 4px; width: 80%; color: #444444 }
   .small_super_text { vertical-align: super; font-size: ${FONT_SIZE_SM}pt }
-  .clear_info_box { border: #000 1px solid; padding: 4px; width: 80%; color: #444444 }
+  .clear_info_box { border: #000 1px solid; padding: 4px; width: 100%; color: #444444 }
+  .nowrap_clear_info_box { border: #000 1px solid; padding: 4px; width: 100%; white-space: nowrap; color: #444444 }
   .clear_warning_box { border: #F03 1px solid; padding: 4px; width: 80%; color: #444444 }
   .popup_help { cursor: Help; color:#444444; background-color: #E0E0E0 }
   .gaggle-data { display: none }
