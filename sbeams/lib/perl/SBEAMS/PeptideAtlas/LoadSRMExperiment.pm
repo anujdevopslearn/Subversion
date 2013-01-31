@@ -1913,8 +1913,8 @@ sub load_transition_data {
 		  verbose => $VERBOSE,
 		  testonly=> $TESTONLY,
 		);
-	    } elsif (! $n_existing_pg && $chromatogram_id
-	          && ! $load_scores_only) {
+	    } elsif (! $n_existing_pg && $chromatogram_id ) {
+#	          && ! $load_scores_only) {
 	      $peak_group_id = $sbeams->updateOrInsertRow(
 		insert=>1,
 		table_name=>$TBAT_SEL_PEAK_GROUP,

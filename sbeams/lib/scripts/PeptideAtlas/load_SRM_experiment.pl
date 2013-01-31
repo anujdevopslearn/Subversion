@@ -89,7 +89,8 @@ Options:
   --create_run_records        Create run records. Default: already created.
   --mprophet                  mProphet output filename
   --scores_only               Load mQuest/mProphet scores only; everything else
-                                already loaded.
+                                already loaded. (peak_group records
+                                will be created if not prev. created)
 
  e.g.:  $PROG_NAME --expt_id 78 --mpro mProphet_peakgroups.tsv
 EOU
