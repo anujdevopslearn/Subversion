@@ -143,14 +143,14 @@ sub logCGI {
 	my $pid = $$;
 	my $mem = memusage( $pid );
 	my $host = $ENV{REMOTE_HOST} || $ENV{REMOTE_ADDR};
-	my $referrer = $ENV{REFERRER} || 'N/A';
 
 	open SLOG, ">>$PHYSICAL_BASE_DIR/var/logs/CGI_run.log";
-#	`chmod a+w "$PHYSICAL_BASE_DIR/var/logs/CGI_run.log"`;
-	print SLOG join ("\t", qw( Mode Script Module Time PID Mem Host Referrer Params ) ) . "\n";
-	print SLOG join( "\t", $args{mode}, $cgi, $dir, $time, $pid, $mem, $host, $referrer, $args{paramstr} ) . "\n";
+	if ( $args{init_logfile} ) {
+  	`chmod a+w "$PHYSICAL_BASE_DIR/var/logs/CGI_run.log"`;
+  	print SLOG join ("\t", qw( Mode Script Module Time PID Mem Host Params ) ) . "\n";
+	}
+	print SLOG join( "\t", $args{mode}, $cgi, $dir, $time, $pid, $mem, $host, $args{paramstr} ) . "\n";
 	close SLOG;
-
 }
 
 sub memusage {
