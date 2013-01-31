@@ -1068,7 +1068,8 @@ sub rs_has_data {
 
 
 #### Get biosequence_accession, biosequence_gene_name, and dbxref_id
-####  for a biosequence by parsing its descriptor
+####  for a biosequence by parsing its descriptor, and store the info
+####  in rowdata_ref hash.
 
 sub parseBiosequenceDescriptor {
   my $self = shift;
@@ -1105,17 +1106,17 @@ sub parseBiosequenceDescriptor {
      $rowdata_ref->{dbxref_id} = '1';
   }
 
-  # swiss-prot, from http://www.expasy.ch/sprot/userman.html#AC_line
+  # Uniprot, from http://www.expasy.ch/sprot/userman.html#AC_line
   # includes varsplic accessions (e.g. P12345-2)
   if ($rowdata_ref->{biosequence_name} =~ /(^[O-Q]\d\w{3}\d$)/ ||
       $rowdata_ref->{biosequence_name} =~ /(^[O-Q]\d\w{3}\d-\d+$)/ ||
-      $rowdata_ref->{biosequence_name} =~ /(^[A-Z]\d[A-Z]\w\w\d$)/ ||
-      $rowdata_ref->{biosequence_name} =~ /(^[A-Z]\d[A-Z]\w\w\d-\d+$)/) {
+      $rowdata_ref->{biosequence_name} =~ /(^[A-N,R-Z]\d[A-Z]\w\w\d$)/ ||
+      $rowdata_ref->{biosequence_name} =~ /(^[A-N,R-Z]\d[A-Z]\w\w\d-\d+$)/) {
     $rowdata_ref->{biosequence_accession} = $1;
     if ($rowdata_ref->{biosequence_desc} =~ /GN=(\S+)/ ) {
       $rowdata_ref->{biosequence_gene_name} = $1;
     }
-    $rowdata_ref->{dbxref_id} = '1';
+    $rowdata_ref->{dbxref_id} = '35';  #01/15/13: this used to be 1, which means Swiss-Prot
   }
 
   if ($rowdata_ref->{biosequence_name} =~ /^PIR.\:(.+)$/ ) {
