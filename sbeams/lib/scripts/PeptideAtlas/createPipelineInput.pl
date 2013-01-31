@@ -304,6 +304,7 @@ my $year = -100 + $yearOffset;
 my $date_string = sprintf("%02d%s%02d", $dayOfMonth, $months[$month], $year);
 
 my $organism_id;
+my $swiss_prot_href;
 
 #### Fetch the biosequence data for writing into APD file
 ####  and for estimating protein abundances.
@@ -318,7 +319,8 @@ if ( defined $bssid ) {
 
   $sql = qq~
      SELECT biosequence_id,biosequence_name,biosequence_gene_name,
-	    biosequence_accession,biosequence_desc,biosequence_seq
+	    biosequence_accession,biosequence_desc,biosequence_seq,
+            dbxref_id
        FROM $TBAT_BIOSEQUENCE
       WHERE biosequence_set_id = $bssid
   ~;
@@ -326,11 +328,19 @@ if ( defined $bssid ) {
   print "$sql";
   my @rows = $sbeams->selectSeveralColumns($sql);
   foreach my $row (@rows) {
-    # Hash each biosequence_id to its row
-    $biosequence_attributes{$row->[1]} = $row;
+    # Hash each biosequence_name to its row
+    my $biosequence_name = $row->[1];
+    $biosequence_attributes{$biosequence_name} = $row;
     #print "$row->[1]\n";
+    # Populate a special hash of Swiss-Prot biosequence_names,
+    # which have a dbxref_id of 1.
+    my $dbxref_id = $row->[6];
+    $swiss_prot_href->{$biosequence_name} = 1
+       if ((defined $dbxref_id) && ($dbxref_id eq '1'));
   }
   print "  Loaded ".scalar(@rows)." biosequences.\n";
+
+  
 
   #### Just in case the table is empty, put in a bogus hash entry
   #### to prevent triggering a reload attempt
@@ -351,13 +361,14 @@ my $preferred_patterns_aref =
     organism_id=>$effective_organism_id,
 );
 
-print  "preferred_patterns_aref: ". total_size($preferred_patterns_aref) ,"\n"; 
-
 my $n_patterns = scalar @{$preferred_patterns_aref};
+
 if ( $n_patterns == 0 ) {
 print "WARNING: No protein identifier patterns found ".
       "for organism $effective_organism_id! ".
       "Human protein identifier preferences will be utilized.\n";
+} else {
+  print "%n_patterns protid patterns read.\n";
 }
 
 
@@ -706,6 +717,7 @@ sub protXML_start_element {
 	  SBEAMS::PeptideAtlas::ProtInfo::get_preferred_protid_from_list(
 	    protid_list_ref=>\@indis,
 	    preferred_patterns_aref => $preferred_patterns_aref,
+	    swiss_prot_href => $swiss_prot_href,
         );
         if ($preferred_protein_name ne $original_protein_name) {
 	  delete($self->{protcache}->{indist_prots}->{$preferred_protein_name});
@@ -839,6 +851,7 @@ sub pepXML_end_element {
       SBEAMS::PeptideAtlas::ProtInfo::get_preferred_protid_from_list(
         protid_list_ref=>$self->{pepcache}->{protein_name},
 	preferred_patterns_aref => $preferred_patterns_aref,
+	swiss_prot_href => $swiss_prot_href,
       );
       #### Store the information for this peptide into an array for caching
       push(@{ $self->{pep_identification_list} },
@@ -1205,6 +1218,7 @@ sub assignProteinID {
     return ( 
       SBEAMS::PeptideAtlas::ProtInfo::more_likely_protein_identification (
         preferred_patterns_aref=>$preferred_patterns_aref,
+	swiss_prot_href => $swiss_prot_href,
 	protid1=>$pepProtInfo->{protein_name},
 	protid2=>$self->{protein_name},
 	prob1=>$pepProtInfo->{protein_probability},
@@ -1627,7 +1641,7 @@ sub main {
 							$decoy_corrections{$document->{search_batch_id}} = $decoy_correction;
 						}
 					}
-					close(DECOY_FILE);
+					close(DECOYFILE);
 				} else {
 					#print "WARNING: No decoy correction\n";
 				}
@@ -1830,6 +1844,7 @@ sub main {
 	    my $most_likely = 
 	    SBEAMS::PeptideAtlas::ProtInfo::more_likely_protein_identification(
 	      preferred_patterns_aref=>$preferred_patterns_aref,
+	      swiss_prot_href => $swiss_prot_href,
 	      protid1=>$prot_group_rep,
 	      protid2=>$protein,
 	      prob1=>$highest_prob,
@@ -1948,6 +1963,7 @@ sub main {
 		  return
       ( SBEAMS::PeptideAtlas::ProtInfo::more_likely_protein_identification(
 			preferred_patterns_aref=>$preferred_patterns_aref,
+			swiss_prot_href => $swiss_prot_href,
 			protid1=>$prot1,
 			protid2=>$prot2,
 			prob1=>$protinfo1->{probability},
@@ -2090,6 +2106,7 @@ sub main {
 		my $most_likely = 
 	  SBEAMS::PeptideAtlas::ProtInfo::more_likely_protein_identification(
 		  preferred_patterns_aref=>$preferred_patterns_aref,
+		  swiss_prot_href => $swiss_prot_href,
 		  protid1=>$protein3,
 		  protid2=>$most_likely__prot,
 		  prob1=>$prot_href3->{probability},
@@ -2190,6 +2207,7 @@ sub main {
               $most_likely_id =
 	SBEAMS::PeptideAtlas::ProtInfo::more_likely_protein_identification(
 		preferred_patterns_aref=>$preferred_patterns_aref,
+		swiss_prot_href => $swiss_prot_href,
 		protid1=>$most_likely_id,
 		protid2=>$protid,
 		prob1=>$most_likely_id_info->{probability},
@@ -2771,7 +2789,7 @@ sub writePepIdentificationListFile {
   #### Print.
   my $counter = 0;
   $idx = 0;
-  my $line = <INFILE>;
+  $line = <INFILE>;
   while ($line = <INFILE>){
     chomp $line;
     my @columns = split("\t", $line);

@@ -42,6 +42,7 @@ our @EXPORT = qw(
  read_protid_preferences
  more_likely_protein_identification
  stronger_presence_level
+ is_uniprot_identifier
 );
 
 
@@ -737,6 +738,7 @@ sub get_preferred_protid_from_list {
   my %args = @_;
   my $protid_list_ref = $args{'protid_list_ref'};
   my $preferred_patterns_aref = $args{'preferred_patterns_aref'};
+  my $swiss_prot_href = $args{'swiss_prot_href'};
   my $debug = 0;
 
   # if no list of preferred patterns given, just return the first protID
@@ -756,7 +758,18 @@ sub get_preferred_protid_from_list {
   my $n_protids = scalar @protid_list;
   print "$n_protids protids\n" if ($debug);
 
-  # check for protID regex's in order of preference
+  # If we were given a hash of Swiss-Prot ids, see if we have one
+  # of those. If so, this is the most preferred.
+  if (defined $swiss_prot_href) {
+    for $protid (@protid_list) {
+      print "  Checking $protid in Swiss-Prot hash\n" if ($debug);
+      if ((defined $swiss_prot_href->{$protid}) && ($protid !~ /UNMAPPED/)) {
+	return $protid;
+      }
+    }
+  }
+
+  # Next, check for protID regex's in order of preference
   for my $pattern (@preferred_patterns) {
     print "Checking pattern: $pattern\n" if ($debug);
     # skip empty patterns (some priority slots may be empty)
@@ -860,17 +873,24 @@ sub read_protid_preferences {
 # 5. in the covering set
 # 6. more preferred name (e.g. Ensembl > IPI)
 # 12/27/12: element 0 added to top of list
+# 01/17/13: Swiss-Prot differentiated from Uniprot via hash
 
 sub more_likely_protein_identification {
   my %args = @_;
   my $preferred_patterns_aref = $args{'preferred_patterns_aref'};
+  my $swiss_prot_href = $args{'swiss_prot_href'};
   my $protid1 = $args{'protid1'};
   my $protid2 = $args{'protid2'};
   return $protid1 if ($protid1 eq $protid2);
   my $swiss_prot_overrides_all_else = 1;  #added 12/27/12
 
-  my $is_swiss1 = is_swiss_prot_identifier($protid1);
-  my $is_swiss2 = is_swiss_prot_identifier($protid2);
+  # Note that if no hash of Swiss-Prot idents is provided,
+  # we will prefer *all* Uniprot idents over all else.
+  # Careful, this may not be what we want.
+  my $is_swiss1 = (defined $swiss_prot_href)?
+      (defined $swiss_prot_href->{$protid1}) : is_uniprot_identifier($protid1);
+  my $is_swiss2 = (defined $swiss_prot_href)?
+      (defined $swiss_prot_href->{$protid2}) : is_uniprot_identifier($protid2);
   my $prob1 = $args{'prob1'} || 0;
   my $prob2 = $args{'prob2'} || 0;
   my $nobs1 = $args{'nobs1'} || 0;
@@ -904,6 +924,7 @@ sub more_likely_protein_identification {
     SBEAMS::PeptideAtlas::ProtInfo::get_preferred_protid_from_list(
       protid_list_ref=>\@protid_list,
       preferred_patterns_aref => $preferred_patterns_aref,
+      swiss_prot_href => $swiss_prot_href,
   );
   return $preferred_protein_name;
 }
@@ -931,17 +952,50 @@ sub stronger_presence_level {
   }
 }
 
+
+
 ###############################################################################
-# is_swiss_prot_identifier
+# is_uniprot_identifier
 ###############################################################################
 # The regex below works for human, mouse, pig, and cow, at least.
-sub is_swiss_prot_identifier {
+sub is_uniprot_identifier {
   my $protid = shift;
   # regex's identical to those in $PIPELINE/etc/protid_priorities.csv
-  return (($protid =~ /^[ABCDEFOPQ]\w{5}$/) ||
-          ($protid =~ /^[ABCDEFOPQ]\w{5}-\d{1,2}$/));
+  # and originally gotten from swiss-prot website
+  return (($protid =~ /^[O-Q]\d\w{3}\d$/) ||
+          ($protid =~ /^[O-Q]\d\w{3}\d-\d+$/) ||
+          ($protid =~ /^[A-N,R-Z]\d[A-Z]\w\w\d$/) ||
+          ($protid =~ /^[A-N,R-Z]\d[A-Z]\w\w\d-\d+$/));
 }
 
+
+###############################################################################
+# get_swiss_prot_species
+#   Return the string used by Swiss-Prot in its ABC_HUMAN style identifiers
+###############################################################################
+sub get_swiss_prot_species {
+  my $genus_species = shift;
+
+  if ($genus_species =~ /homo.*sapiens/i) {
+    return "HUMAN";
+  } elsif ($genus_species =~ /mus.*musculus/i) {
+    return "MOUSE";
+  } elsif ($genus_species =~ /bos.*taurus/i) {
+    return "BOVIN";
+  } elsif ($genus_species =~ /sus.*scrofa/i) {
+    return "PIG";
+  } elsif ($genus_species =~ /saccharomyces.*cerevisiae/i) {
+    return "YEAST";
+  } elsif ($genus_species =~ /drosophila.*melanogaster/i) {
+    return "DROME";
+  } elsif ($genus_species =~ /eschericia.*coli/i) {
+    return "ECOLI";
+  } elsif ($genus_species =~ /rattus.*norvegicus/i) {
+    return "RAT";
+  } else {
+    return "";
+  }
+}
 ###############################################################################
 =head1 BUGS
 
