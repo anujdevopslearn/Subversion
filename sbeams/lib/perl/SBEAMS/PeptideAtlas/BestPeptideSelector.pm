@@ -913,6 +913,7 @@ sub get_pabst_scoring_defs {
                    nX => ' Any N-terminal peptide',
 
                    BA => ' More than 4 basic (protonatable) sites: H, K, R, n-term',
+                   EC2 => ' More than 2 basic (protonatable) sites: H, K, R, n-term, each addional charge is penalized more strongly',
 
                   obs => ' Peptides observed in Peptide Atlas',
                  PATR => ' Peptide exists in PA transition resource',
@@ -960,6 +961,7 @@ sub get_default_pabst_scoring {
                    W => 1,
                    P => 1,
                   BA => 1,
+                 EC2 => 1,
                 '4H' => 1,
                 '5H' => 1,
               'Hper' => 1,
@@ -3021,6 +3023,12 @@ sub pabst_evaluate_peptides {
       }
     }
 
+
+    my $lys = $seq =~ tr/K/K/;
+    my $arg = $seq =~ tr/R/R/;
+    my $his = $seq =~ tr/H/H/;
+    my $bnum = 1 + $lys + $arg + $his;
+
     # Time to run the gauntlet!
     for my $k ( keys( %pen_defs ) ) {
       if ( $k eq 'Xc' ) {
@@ -3042,6 +3050,7 @@ sub pabst_evaluate_peptides {
           $scr *= $pen_defs{NxST};
           push @pen_codes, '!NxST';
         }
+
       } elsif ( $k eq 'nX' ) {
         # Can only analyze nX peptides if previous_idx is given
         if ( defined $args{previous_idx} && ( $pep->[$args{previous_idx}] eq '*' || $pep->[$args{previous_idx}] eq '-' ) ) {
@@ -3059,16 +3068,18 @@ sub pabst_evaluate_peptides {
 
       } elsif( $k eq 'BA' && $is_penalized{$k} ) {
          
-         my $lys = $seq =~ tr/K/K/;
-         my $arg = $seq =~ tr/R/R/;
-         my $his = $seq =~ tr/H/H/;
+        if ( $bnum > 4 || (length($seq)*115/$bnum < 300) ) {
+          $scr *= $pen_defs{$k};
+          push @pen_codes, $k;
+        }
 
-         my $bnum = 1 + $lys + $arg + $his;
+      } elsif ( $k eq 'EC2' && $is_penalized{$k} ) {  # each step away is penalized more heavily
 
-         if ( $bnum > 4 || (length($seq)*115/$bnum < 300) ) {
-           $scr *= $pen_defs{$k};
-           push @pen_codes, $k;
-         }
+        my $delta = abs( $bnum - 2 );
+        if ( $delta ) {
+          $scr *= $pen_defs{$k}**$delta;
+          push @pen_codes, $k;
+        }
 
       } elsif( $k eq 'Hper' && $is_penalized{$k} ) {
          my $safe_seq = $seq;
