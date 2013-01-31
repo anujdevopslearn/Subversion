@@ -25,10 +25,10 @@ use vars qw ($sbeams $sbeamsMOD $q
 	     $TESTONLY $module
              $current_contact_id $current_username
 	     $fav_codon_frequency $n_transmembrane_regions
-             $chrom_coords
+             $prot_info_href
 	     $rosetta_lookup $pfam_search_results $ginzu_search_results
              $mamSum_search_results $InterProScan_search_results
-	     $COG_search_results $pI_results $swissprot_db
+	     $COG_search_results $pI_results
              %domain_match_types %domain_match_sources
             );
 
@@ -80,8 +80,9 @@ Options:
                        favored codon frequency values
   --n_transmembrane_regions_file   Full path name of a file from which to load
                        number of transmembrane regions values
-  --chrom_coords_file  Full path name of a file from which to load
-                       chromosomal coordinates and genetic loci.
+  --prot_info_file     Full path name of .tsv file from which to load
+                       chromosomal coordinates, genetic loci, and
+                       keratin/Ig/is_swiss info
   --rosetta_lookup_file   Full path name of a file which containts
                        lookup information for converting rosetta names
                        to biosequence_names
@@ -97,9 +98,6 @@ Options:
                        from which to load the COG search results
   --pI_summary_file    Full path name of a file
                        from which to load pI information
-  --swissprot_file     Full path name of Swiss-Prot fasta file; when possible
-                       use Swiss-Prot names as biosequence descriptions.
-                       Not yet fully implemented.
   --gene_annotation    load gene ontology information for the set
   --gene_annotation_searchkey insert gene ontology information into the searchkeyentity table
   --biosequence_searchkey  insert biosequence name and it is xref info into the searchkeyentity table
@@ -126,12 +124,12 @@ EOU
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
     "load","load_all","delete","purge","skip_sequence","update_existing",
     "set_tag:s","file_prefix:s","check_status","fav_codon_frequency_file:s",
-    "chrom_coords_file:s","n_transmembrane_regions_file:s",
+    "prot_info_file:s","n_transmembrane_regions_file:s",
     "rosetta_lookup_file:s","pfam_search_results_summary_file:s",
     "ginzu_search_results_dir:s","mamSum_search_results_summary_file:s",
     "InterProScan_search_results_summary_file:s",
     "COG_search_results_summary_file:s","pI_summary_file:s",
-    "swissprot_file:s","gene_annotation","gene_annotation_searchkey",
+    "gene_annotation","gene_annotation_searchkey",
     "biosequence_searchkey","reference_directory:s",
   )) {
   print "$USAGE";
@@ -290,8 +288,8 @@ sub handleRequest {
   my $fav_codon_frequency_file = $OPTIONS{"fav_codon_frequency_file"} || '';
   my $n_transmembrane_regions_file =
     $OPTIONS{"n_transmembrane_regions_file"} || '';
-  my $chrom_coords_file =
-    $OPTIONS{"chrom_coords_file"} || '';
+  my $prot_info_file =
+    $OPTIONS{"prot_info_file"} || '';
   my $rosetta_lookup_file =
     $OPTIONS{"rosetta_lookup_file"} || '';
   my $pfam_search_results_summary_file =
@@ -305,7 +303,6 @@ sub handleRequest {
   my $COG_search_results_summary_file =
     $OPTIONS{"COG_search_results_summary_file"} || '';
   my $pI_summary_file = $OPTIONS{"pI_summary_file"} || '';
-  my $swissprot_file = $OPTIONS{"swissprot_file"} || '';
   my $gene_annotation = $OPTIONS{"gene_annotation"} || 0;
   my $biosequence_searchkey =  $OPTIONS{"biosequence_searchkey"} || 0;
 
@@ -456,15 +453,6 @@ sub handleRequest {
   }
 
 
-  #### If a swissprot_file was specified,
-  #### load it for later processing
-  if ($swissprot_file) {
-    $swissprot_db = readSPFile(
-      source_file => $swissprot_file,
-    );
-  }
-
-
   #### If a n_transmembrane_regions_file was specified,
   #### load it for later processing
   if ($n_transmembrane_regions_file) {
@@ -474,11 +462,11 @@ sub handleRequest {
       n_transmembrane_regions => $n_transmembrane_regions);
   }
 
-  #### If a chrom_coords_file was specified,
-  #### load it for later processing
-  if ($chrom_coords_file) {
-    readChromCoordsFile(
-      source_file => $chrom_coords_file,
+  #### If a prot_info_file was specified,
+  #### load it into $prot_info_href hash for later processing
+  if ($prot_info_file) {
+    readProtInfoFile(
+      source_file => $prot_info_file,
     );
   }
 
@@ -793,11 +781,25 @@ sub loadBiosequenceSet {
       $rowdata{organism_id} = $organism_id if ($DATABASE eq 'sbeams.dbo.');
 
       $fav_codon_frequency ||= {};
-      # Get gene name and accession from descriptor
+      # Get gene name and accession from descriptor.
+      # Also, groom the biosequence name and get the dbxref_id.
       $sbeams->parseBiosequenceDescriptor( biosequence_set_name => $set_name,
                                                     rowdata_ref => \%rowdata,
                                             fav_codon_frequency => $fav_codon_frequency
                                          );
+
+      #### A fix especially for the Human PeptideAtlas:
+      #### If we've read a prot_info_file and it does NOT say that 
+      #### this biosequence is Swiss-Prot, but the dbxref_id is 1
+      #### (for Swiss-Prot), change the dbxref_id to that for Uniprot.
+      my $biosequence_name = $rowdata{biosequence_name};
+      if (defined $prot_info_href->{$biosequence_name}) {
+	if ($rowdata{dbxref_id} == 1) {
+	  if (!$prot_info_href->{$biosequence_name}->{is_swiss}) {
+	    $rowdata{dbxref_id} = '35';   # 35 is the ID for UniProt
+	  }
+	}
+      }
 
       #### If we're updating, then try to find the appropriate record
       #### The whole program could be sped up quite a bit by doing a single
@@ -823,6 +825,13 @@ sub loadBiosequenceSet {
 
       } else {
         #### Insert the data into the database
+	if ($DEBUG) {
+	  if (defined $rowdata{dbxref_id}) {
+	    print "$rowdata{biosequence_name}: dbxref_id is $rowdata{dbxref_id}\n";
+	  } else {
+	    print "$rowdata{biosequence_name}: \$rowdata{dbxref_id} undefined!\n";
+	  }
+	}
         loadBiosequence(insert=>$insert,update=>$update,
           table_name=>"${DATABASE}biosequence",
           rowdata_ref=>\%rowdata,PK=>"biosequence_id",
@@ -1389,17 +1398,18 @@ sub loadBiosequence {
 
   }
 
-  #### See if we have CC data to add
+  #### See if we have chromosomal coord. and other prot info data to add
   my $have_cc_data = 0;
-  if (defined($chrom_coords) && $biosequence_id) {
-    if (defined($chrom_coords->
+  if (defined($prot_info_href) && $biosequence_id) {
+    if (defined($prot_info_href->
 	      {$rowdata_ref->{biosequence_name}}->{chromosome})) {
       $have_cc_data = 1;
-      #print "Found CC data for $rowdata_ref->{biosequence_name}.\n";
+      #print "Found chrom coord and other prot info data for $rowdata_ref->{biosequence_name}.\n";
     }
   }
 
-  #### If we have CC data, INSERT or UPDATE extra biosequence properties
+  #### If we have CC/prot info data,
+  #### INSERT or UPDATE extra biosequence properties
   if ($have_cc_data || %property_set) {
 
     #### See if there's already a record there
@@ -1424,34 +1434,44 @@ sub loadBiosequence {
     my %rowdata = %property_set;
     $rowdata{biosequence_id} = $biosequence_id;
 
-    #### If there's CC data
+    #### If there's CC and other prot info data
     if ($have_cc_data) {
       # print "Storing rowdata for $rowdata_ref->{biosequence_name}.\n";
 
-      $rowdata{start_in_chromosome} = $chrom_coords->
+      $rowdata{start_in_chromosome} = $prot_info_href->
         {$rowdata_ref->{biosequence_name}}->{start_in_chromosome}
-        if (defined($chrom_coords->
+        if (defined($prot_info_href->
           {$rowdata_ref->{biosequence_name}}->{start_in_chromosome}));
 
-      $rowdata{end_in_chromosome} = $chrom_coords->
+      $rowdata{end_in_chromosome} = $prot_info_href->
         {$rowdata_ref->{biosequence_name}}->{end_in_chromosome}
-        if (defined($chrom_coords->
+        if (defined($prot_info_href->
           {$rowdata_ref->{biosequence_name}}->{end_in_chromosome}));
 
-      $rowdata{chromosome} = $chrom_coords->
+      $rowdata{chromosome} = $prot_info_href->
         {$rowdata_ref->{biosequence_name}}->{chromosome}
-        if (defined($chrom_coords->
+        if (defined($prot_info_href->
           {$rowdata_ref->{biosequence_name}}->{chromosome}));
 
-      $rowdata{strand} = $chrom_coords->
+      $rowdata{strand} = $prot_info_href->
         {$rowdata_ref->{biosequence_name}}->{strand}
-        if (defined($chrom_coords->
+        if (defined($prot_info_href->
           {$rowdata_ref->{biosequence_name}}->{strand}));
 
-      $rowdata{genetic_locus} = $chrom_coords->
+      $rowdata{genetic_locus} = $prot_info_href->
         {$rowdata_ref->{biosequence_name}}->{genetic_locus}
-        if (defined($chrom_coords->
+        if (defined($prot_info_href->
           {$rowdata_ref->{biosequence_name}}->{genetic_locus}));
+
+      $rowdata{is_immunoglobulin} = $prot_info_href->
+        {$rowdata_ref->{biosequence_name}}->{is_immunoglobulin}
+        if (defined($prot_info_href->
+          {$rowdata_ref->{biosequence_name}}->{is_immunoglobulin}));
+
+      $rowdata{is_keratin} = $prot_info_href->
+        {$rowdata_ref->{biosequence_name}}->{is_keratin}
+        if (defined($prot_info_href->
+          {$rowdata_ref->{biosequence_name}}->{is_keratin}));
 
     }
 
@@ -2024,595 +2044,6 @@ sub loadBiosequence {
 }
 
 
-
-###############################################################################
-# additionalParsing: fill in the gene_name and accession fields based on
-#                    data in the id and description, depending on particular
-#                    set being loaded.
-###############################################################################
-sub specialParsing {
-  my %args = @_;
-  my $SUB_NAME = "specialParsing";
-
-
-  #### Decode the argument list
-  my $biosequence_set_name = $args{'biosequence_set_name'}
-   || die "ERROR[$SUB_NAME]: biosequence_set_name not passed";
-  my $rowdata_ref = $args{'rowdata_ref'}
-   || die "ERROR[$SUB_NAME]: rowdata_ref not passed";
-
-
-  #### Define a few variables
-  my ($n_other_names,@other_names);
-
-
-  #### Failing anything else, make the accession and gene_name the name
-  $rowdata_ref->{biosequence_gene_name} = $rowdata_ref->{biosequence_name};
-  $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
-
-
-  #### Encoding popular among a bunch of databases
-  #### Can be overridden later on a case-by-case basis
-  if ($rowdata_ref->{biosequence_name} =~ /^SW.{0,1}\:(.+)$/ ) {
-     $rowdata_ref->{biosequence_gene_name} = $1;
-     $rowdata_ref->{biosequence_accession} = $1;
-     $rowdata_ref->{dbxref_id} = '1';
-  }
-
-  if ($rowdata_ref->{biosequence_name} =~ /^PIR.\:(.+)$/ ) {
-     $rowdata_ref->{biosequence_gene_name} = $1;
-     $rowdata_ref->{biosequence_accession} = $1;
-     $rowdata_ref->{dbxref_id} = '6';
-  }
-
-  if ($rowdata_ref->{biosequence_name} =~ /^GP.{0,1}\:(.+)_\d+$/ ) {
-     $rowdata_ref->{biosequence_gene_name} = $1;
-     $rowdata_ref->{biosequence_accession} = $1;
-     $rowdata_ref->{dbxref_id} = '8';
-  }
-
-  if ($rowdata_ref->{biosequence_name} =~ /^(UPSP|UPTR)\:(.+)$/ ) {
-     $rowdata_ref->{biosequence_gene_name} = $2;
-     $rowdata_ref->{biosequence_accession} = $2;
-     $rowdata_ref->{dbxref_id} = '35';
-  }
-
-
-  #### Conversion rules for the older ENSEMBL Human Protein databases v <= 19
-  if ($rowdata_ref->{biosequence_name} =~ /^Translation:(ENSP\d+)$/ ) {
-     $rowdata_ref->{biosequence_name} = $1;
-     $rowdata_ref->{biosequence_accession} = $1;
-     if ($rowdata_ref->{biosequence_desc} =~ /(ENSG\d+)/ ) {
-       $rowdata_ref->{biosequence_gene_name} = $1;
-     }
-     $rowdata_ref->{dbxref_id} = '20';
-  }
-
-  #### Conversion rules for the  ENSEMBL Human and Mouse Protein database v 22 - 28
-  if ($rowdata_ref->{biosequence_desc} =~ /^.*(ENS\w+\d+)\s.*$/) {
-     $rowdata_ref->{biosequence_gene_name} = $1;
-     $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
-     $rowdata_ref->{dbxref_id} = '20';
-  }
-
-
-  #### Conversion rules for the ENSEMBL Drosophila Protein database
-  if ($rowdata_ref->{biosequence_name} =~ /^Translation:(.+)$/ ) { ## parse for old format 
-     $rowdata_ref->{biosequence_name} = $1;
-     $rowdata_ref->{biosequence_accession} = $1;
-     if ($rowdata_ref->{biosequence_name} =~ /Gene:(.+)$/ ) {
-       $rowdata_ref->{biosequence_gene_name} = $1;
-     }
-  } elsif ($rowdata_ref->{biosequence_name} =~ /^(CG.+)/ ) { ## updated parse
-     $rowdata_ref->{biosequence_name} = $1;
-     $rowdata_ref->{biosequence_accession} = $1;
-     if ($rowdata_ref->{biosequence_name} =~ /(CG\d+)/ ) {
-       $rowdata_ref->{biosequence_gene_name} = $1;
-     }
-     $rowdata_ref->{dbxref_id} = '25';
-  }
-
-  ### Conversion rules for the Honeybee Protein database
-  if ($rowdata_ref->{biosequence_name} =~ /^(GB\d+)\-\w+$/){
-     $rowdata_ref->{biosequence_gene_name} = $1;
-     $rowdata_ref->{biosequence_accession} = $1;
-  }
-  if ($rowdata_ref->{biosequence_name} =~ /^gnl\|Amel\|(GB\d+)\-\w+$/ ) {
-     $rowdata_ref->{biosequence_gene_name} = $1;
-     $rowdata_ref->{biosequence_accession} = $1;
-  }
-  ### Conversion rules for Drosophila Flybase  database
-  if ($rowdata_ref->{biosequence_desc} =~ /.*gene\:(FBgn\d+)\s+.*/ ) {
-     $rowdata_ref->{biosequence_gene_name} = $1;
-     $rowdata_ref->{biosequence_accession} = $1;
-  }
-
-  #### Conversion rules for the SGD yeast orf fasta
-  ## >YAL003W EFB1 SGDID:S0000003, Chr I from 142176-142255,142622-143162, Verified ORF
-  if ($rowdata_ref->{biosequence_desc} =~ /^(\S+)\s(SGDID:.*)$/ ) {
-     $rowdata_ref->{biosequence_gene_name} = $1;
-     $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
-     $rowdata_ref->{dbxref_id} = '5';
-  }
-
-  ### Conversion rules for WB 
-  print "$rowdata_ref->{biosequence_desc}\n";
-  if($rowdata_ref->{biosequence_desc} =~ /(WBGene\d+)/){
-     $rowdata_ref->{biosequence_accession} = $1;
-     $rowdata_ref->{dbxref_id} = '41'; 
-     print "$1\n";
-  }
-
-  #### Conversion rules for the IPI database
-  if ($rowdata_ref->{biosequence_name} =~ /^IPI:(IPI[\d\.]+)$/ ) {
-     $rowdata_ref->{biosequence_accession} = $1;
-     if ($rowdata_ref->{biosequence_name} =~ /^IPI:(IPI[\d]+)\.\d+$/ ) {
-       $rowdata_ref->{biosequence_gene_name} = $1;
-     }
-     $rowdata_ref->{dbxref_id} = '9';
-  }
-
-
-  #### Conversion rules for the new IPI database
-  if ($rowdata_ref->{biosequence_name} =~ /^(IPI[\d\.]+)$/ ) {
-     $rowdata_ref->{biosequence_accession} = $1;
-     $rowdata_ref->{biosequence_gene_name} = $1;
-     $rowdata_ref->{dbxref_id} = '9';
-  }
-
-  #### Conversion rules for the new IPI database 2 (dreiss)
-  if ($rowdata_ref->{biosequence_name} =~ /^IPI:(IPI[\d\.]+)\|/ ) {
-     $rowdata_ref->{biosequence_accession} = $1;
-     $rowdata_ref->{biosequence_gene_name} = $1;
-     $rowdata_ref->{dbxref_id} = '9';
-  }
-  #### Conversion rules for the new IPI database 3  
-  if($rowdata_ref->{biosequence_desc} =~ /^IPI:Gene_Symbol=(\S+)/){
-    $rowdata_ref->{biosequence_gene_name} = $1;
-    $rowdata_ref->{biosequence_accession} = $1;
-    $rowdata_ref->{dbxref_id} = '9';
-  }
-  
-
-  #### Conversion rules for some generic GenBank IDs  
-  if ($rowdata_ref->{biosequence_name} =~ /gb\|([A-Z\d\.]+)\|/ ) {
-     $rowdata_ref->{biosequence_gene_name} = $1;
-     $rowdata_ref->{biosequence_accession} = $1;
-     $rowdata_ref->{dbxref_id} = '7';
-  }
-
-
-  #### Conversion rules for some generic GenBank IDs
-  if ($rowdata_ref->{biosequence_name} =~ /gi\|(\d+)/ ) {
-     $rowdata_ref->{biosequence_accession} = $1;
-     $rowdata_ref->{dbxref_id} = '12';
-  }
-
-  #### Conversion rules for RefSeq IDs
-  if ($rowdata_ref->{biosequence_name} =~ /^NM_|NR_/) {
-    $rowdata_ref->{dbxref_id} = '39';
-  }
-
-  #### Special Conversion rules for yeast orf names from GB (dreiss)
-  if ($rowdata_ref->{biosequence_desc} =~ /\s(\S+)p\s\[Saccharomyces cerevisiae/ ) {
-      $rowdata_ref->{biosequence_gene_name} = $1;
-  }
-
-
-  #### Special conversion rules for Haloarcula
-  #### >hmvng0001	rrnAC1199-1066585_1069440
-  if ($biosequence_set_name eq "Haloarcula Proteins") {
-      if ($rowdata_ref->{biosequence_desc} =~ /^(.+)-(\d+)_(\d+)(\sGenbank_ID=\"(\d+)\")?$/) {
-	  my $gene_tag = $1;
-	  $rowdata_ref->{former_names} = $rowdata_ref->{biosequence_name};
-	  $rowdata_ref->{biosequence_name} = $1;
-	  $rowdata_ref->{gene_symbol} = $1;
-	  $rowdata_ref->{full_gene_name} = $1;
-	  $rowdata_ref->{biosequence_gene_name} = $gene_tag;
-	  $rowdata_ref->{start_in_chromosome} = $2;
-	  $rowdata_ref->{end_in_chromosome} = $3;
-	  if ($gene_tag =~ /^(rrnAC)/) {
-	    $rowdata_ref->{chromosome} = $1;
-	  } elsif ($gene_tag =~ /^(rrnB)/) {
-	    $rowdata_ref->{chromosome} = $1;
-	  } elsif ($gene_tag =~ /^(pNG\d)/) {
-	    $rowdata_ref->{chromosome} = $1.'00';
-	  } else {
-	    print "WARNING: Unable to parse gene_tag '$gene_tag'\n";
-	  }
-	  
-
-	  if ($rowdata_ref->{biosequence_desc} =~ /.*Genbank_ID=\"(\d+)\"/) {
-		$rowdata_ref->{biosequence_accession} = $1;
-	  }else {
-		$rowdata_ref->{biosequence_accession} = "";
-	  }
-	  $rowdata_ref->{dbxref_id} = '36';
-
-      } else {
-	print "WARNING: The following description cannot be parsed:\n  ==".
-	  $rowdata_ref->{biosequence_desc}."==\n";
-      }
-
-  }
-
-  
-  #### Special conversion rules for Haloarcula Genes
-  #### >png1001 pNG100 817 170
-  if ($biosequence_set_name eq "haloarcula open reading frames" || 
-      $biosequence_set_name eq "halobacterium open reading frames") {
-      if ($rowdata_ref->{biosequence_desc} =~ /^(.+)\s(\d+)\s(\d+)$/) {
-	  my $gene_tag = $rowdata_ref->{biosequence_name};
-
-      if($3 > $2) {
-		$rowdata_ref->{strand} = 'F';
-      }else{
-        $rowdata_ref->{strand} = 'R';
-	  }
-
-	  $rowdata_ref->{start_in_chromosome} = $2;
-	  $rowdata_ref->{end_in_chromosome} = $3;
-	  $rowdata_ref->{chromosome} = $1;
-	  unless($1) {
-	    print "Chromosome not found: $1\n";
-	  }
-	  $rowdata_ref->{biosequence_accession} = $gene_tag;
-          #$rowdata_ref->{dbxref_id} = '24';
-
-      } else {
-	      print "WARNING: The following description cannot be parsed:\n  ==".
-	      $rowdata_ref->{biosequence_desc}."==\n";
-      }
-  }
-
-  #### Special conversion rules for Halobacterium halo_ORFs.fasta
-  #### >VNG0021H common_name="VNG0021H" Genbank_ID="15789357" COG_ID="COG3436" location="Chromosome 16342 17706";VNG5087H common_name="VNG5087H" aliases="H0698,H1655,VNG7063,VNG7146" location="pNRC100 63303 64667";VNG5210H common_name="VNG5210H" location="pNRC100 160086 158722";VNG6084H common_name="VNG6084H" Genbank_ID="16120048" COG_ID="COG3436" location="pNRC200 63303 64667";VNG6442H common_name="VNG6442H" Genbank_ID="16120314" COG_ID="COG3436" location="pNRC200 334165 332801";
-  if ($biosequence_set_name eq "Halobacterium ORFs" ||
-	  $biosequence_set_name eq "Halobacterium Proteins") {
-	my @redundant_orfs = split ";", $rowdata_ref->{biosequence_desc};
-
-	$rowdata_ref->{biosequence_desc} = $redundant_orfs[0];
-
-	# get ORF name
-	$rowdata_ref->{full_gene_name} = $rowdata_ref->{biosequence_name};
-	
-	# get common name
-	if ($redundant_orfs[0] =~ /common_name=\"(.*?)\"/) {
-	  my $common_name = $1;
-	  $rowdata_ref->{biosequence_gene_name} = $common_name;
-	  $rowdata_ref->{gene_symbol} = $common_name; 
-	}
-
-	# get function
-	if ($redundant_orfs[0] =~ /function=\"(.*?)\"/){
-	  $rowdata_ref->{functional_description}= $1;
-	}
-
-	# get comment
-	if ($redundant_orfs[0] =~ /comments=\"(.*?)\"/){
-	  $rowdata_ref->{comment}= $1;
-	}
-
-	# get location
-	$redundant_orfs[0] =~ /location=\"(\w+)\s(\d+)\s(\d+)\"/;
-	$rowdata_ref->{chromosome} = $1;
-	$rowdata_ref->{start_in_chromosome} = $2;
-	$rowdata_ref->{end_in_chromosome} = $3;
-
-	# get aliases
-	my @aliases;
-	if ($redundant_orfs[0] =~ /common_name=\"(.*?)\"/) {
-	  push @aliases, $1;
-	}
-	if ($redundant_orfs[0] =~ /Genbank_ID=\"(.*?)\"/) {
-	  my $id = $1;
-	  $rowdata_ref->{dbxref_id} = '36';
-	  $rowdata_ref->{biosequence_accession} = $id;
-	  push @aliases, $id;
-	}
-	if ($redundant_orfs[0] =~ /COG_ID=\"(.*?)\"/) {
-	  push @aliases, $1;
-	}
-	if ($redundant_orfs[0] =~ /aliases=\"(.*?)\"/) {
-	  push @aliases, $1;
-	}
-	if (@aliases) {
-	  $rowdata_ref->{aliases} = join ",", @aliases;
-	}
-
-	# identify redundant VNG names
-	my @red_orf_names;
-	foreach my $red_orf (@redundant_orfs) {
-	  if ($red_orf =~ /^(VNG\d{4}\w\w?)/) {
-		push @red_orf_names, $1;
-	  }
-	}
-	if (@red_orf_names) {
-	  $rowdata_ref->{duplicate_biosequences} = join ",", @red_orf_names;
-	}
-  }
-
-
-  #### Special conversion rules for Halobacterium HALOprot_clean.fasta
-  #### >VNG1023c chp-1013_1023-1023
-#  if ($biosequence_set_name eq "Halobacterium Proteins") {
-#    $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
-#  }
-
-
-
-  #### Special conversion rules for Halobacterium
-  #### >gabT   , from VNG6210g 
-  if ($biosequence_set_name eq "Halo Biosequences") {
-      if ($rowdata_ref->{biosequence_desc} =~ /from (\S+)/) {
-	  my $temp_gene_name = $1;
-	  $rowdata_ref->{biosequence_gene_name} = $rowdata_ref->{biosequence_name};
-	  delete($rowdata_ref->{biosequence_name}); #delete old name
-	  $rowdata_ref->{biosequence_name} = $temp_gene_name; #add new name
-      }
-
-  }
-
-
-  #### Special conversion rules for Halobacterium
-  #### >VNG1667G_cdc48c CDCH_HALN1 (Q9HPF0) CdcH protein
-  if ($biosequence_set_name eq "halo092602_pA") {
-    $rowdata_ref->{biosequence_gene_name} = $rowdata_ref->{biosequence_name};
-    $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
-    if ($rowdata_ref->{biosequence_desc} =~ /([\w_]+_HALN1)/) {
-      $rowdata_ref->{biosequence_gene_name} = $1;
-      $rowdata_ref->{biosequence_accession} = $1;
-      $rowdata_ref->{dbxref_id} = '1';
-    } elsif ($rowdata_ref->{biosequence_desc} =~ /\((\w+?)\)/) {
-      $rowdata_ref->{biosequence_gene_name} = $1;
-      $rowdata_ref->{biosequence_accession} = $1;
-      $rowdata_ref->{dbxref_id} = '1';
-    } else {
-      $rowdata_ref->{dbxref_id} = '17';
-    }
-  }
-
-
-  #### Special conversion rules for new Halobacterium proteins
-  #### >VNG0008G graD5;Glucose-1-phosphate thymidylyltransferase
-  if ($biosequence_set_name =~ "Halobacterium-20") {
-    $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
-    $rowdata_ref->{dbxref_id} = '12';
-    if ($rowdata_ref->{biosequence_desc} =~ /(.+?);(.+)/) {
-      $rowdata_ref->{biosequence_gene_name} = $1;
-      $rowdata_ref->{dbxref_id} = '1';
-    }
-  }
-
-
-  #### Special conversion rules for Drosophila genome R2, e.g.:
-  #### >Scr|FBgn0003339|CT1096|FBan0001030 "transcription factor" mol_weight=44264  located on: 3R 84A6-84B1; 
-  if ($biosequence_set_name eq "Drosophila aa_gadfly Protein Database R2" ||
-      $biosequence_set_name eq "Drosophila na_gadfly Nucleotide Database R2") {
-    @other_names = split('\|',$rowdata_ref->{biosequence_name});
-    $n_other_names = scalar(@other_names);
-    if ($n_other_names > 1) {
-       $rowdata_ref->{biosequence_gene_name} = $other_names[0];
-       $rowdata_ref->{biosequence_accession} = $other_names[1];
-       $rowdata_ref->{dbxref_id} = '2';
-       $rowdata_ref->{biosequence_desc} =~ s/^\s+//;
-    }
-  }
-
-
-  #### Special conversion rules for Drosophila genome R3, e.g.:
-  #### >Scr|FBgn0003339|CT1096|FBan0001030 "transcription factor" mol_weight=44264  located on: 3R 84A6-84B1; 
-  if ($biosequence_set_name eq "Drosophila aa_gadfly Protein Database R3 Non-redundant" ||
-      $biosequence_set_name eq "Drosophila aa_gadfly Protein Database R3 Original" ||
-      $biosequence_set_name eq "Drosophila na_gadfly Nucleotide Database R3") {
-
-    if ($rowdata_ref->{biosequence_desc} =~
-                      /gene_info:\[.*gene symbol:(\S+) .*?(FBgn\d+) /) {
-       #print "******\ndesc: $rowdata_ref->{biosequence_desc}\n1: $1\n2: $2\n*****\n";
-       $rowdata_ref->{biosequence_gene_name} = $1;
-       $rowdata_ref->{biosequence_accession} = $2;
-       $rowdata_ref->{dbxref_id} = '2';
-    } else {
-       $rowdata_ref->{biosequence_gene_name} = undef;
-       $rowdata_ref->{biosequence_accession} = undef;
-       $rowdata_ref->{dbxref_id} = undef;
-    }
-  }
-
-
-  #### Special conversion rules for Drosophila genome R3 genome, e.g.:
-  if ($biosequence_set_name eq "Drosophila genome_gadfly Nucleotide Database R3") {
-    $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
-  }
-
-
-  #### Special conversion rules for Human Contig, e.g.:
-  #### >Contig109 fasta_990917.300k.no_chimeric_4.Contig38095 1 767 REPEAT: 15 318 REPEAT: 320 531 REPEAT: 664 765
-
-
-  #### Special conversion rules for NRP, e.g.:
-  #### >SWN:AAC2_MOUSE Q9ji91 mus musculus (mouse). alpha-actinin 2 (alpha actinin skeletal muscle isoform 2) (f-actin cross linking protein). 8/2001
-
-
-  #### Special conversion rules for Human NCI, e.g.:
-  #### >SWN:3BP1_HUMAN Q9y3l3 homo sapiens (human). sh3-domain binding protein 1 (3bp-1). 3/2002 [MASS=66765]
-  #### >SW:AKA7_HUMAN O43687 homo sapiens (human). a-kinase anchor protein 7 (a-kinase anchor protein 9 kda). 5/2000 [MASS=8838]
-  #### >PIR1:SNHUC3 multicatalytic endopeptidase complex (EC 3.4.99.46) chain C3 - human [MASS=25899]
-  #### >PIR2:S17526 aconitate hydratase (EC 4.2.1.3) - human (fragments) [MASS=6931]
-  #### >PIR4:T01781 probable pol protein pseudogene - human (fragment) [MASS=13740]
-  #### >GPN:AF345332_1 Homo sapiens SWAN mRNA, complete cds; SH3/WW domain anchor protein in the nucleus. [MASS=97395]
-  #### >GP:AF119839_1 Homo sapiens PRO0889 mRNA, complete cds; predicted protein of HQ0889. [MASS=6643]
-  #### >GP:BC001812_1 Homo sapiens, clone IMAGE:2959521, mRNA, partial cds. [MASS=5769]
-  #### >3D:2clrA HUMAN CLASS I HISTOCOMPATIBILITY ANTIGEN (HLA-A 0201) COMPLEXED WITH A DECAMERIC [MASS=31808]
-  #### >TFD:TFDP00561 : HOX 2.2 ((human)) polypeptide [MASS=25574]
-  if ($biosequence_set_name eq "Human NCI Database") {
-    #### Nothing special, uses generic SW, PIR, etc. encodings above
-  }
-
-
-  #### Special conversion rules for Yeast NCI from regis, e.g.:
-  #### SW:ACEA_YEAST P28240 saccharomyces cerevisiae (baker's yeast). isocitrate lyase (ec 4.1.3.1) (isocitrase) (isocitratase) (icl). 2/1996 [MASS=62409]
-
-  if ($biosequence_set_name eq "Yeast NCI Database") {
-    #### Nothing special, uses generic SW, PIR, etc. encodings above
-  }
-
-  if ($biosequence_set_name eq "ISB Yeast Database") {
-      $rowdata_ref->{biosequence_gene_name} = $rowdata_ref->{biosequence_name};
-  }
-
-  #### Special conversion rules for Yeast genome, e.g.:
-  #### >ORFN:YAL014C YAL014C, Chr I from 128400-129017, reverse complement
-  if ($biosequence_set_name eq "yeast_orf_coding" ||
-      $biosequence_set_name eq "Yeast ORFs Database" ||
-      $biosequence_set_name eq "Yeast ORFs Common Name Database" ||
-      $biosequence_set_name eq "Yeast ORF Proteins" ||
-      $biosequence_set_name eq "Yeast ORFs Database 2003-12-17" ||
-      $biosequence_set_name eq "Yeast ORFs Database 200210" ||
-      $biosequence_set_name eq "Yeast ORFs Database 20040422") {
-    if ($rowdata_ref->{biosequence_desc} =~ /([\w\-\:]+)\s([\w\-\:]+), .+/ ) {
-      if ($biosequence_set_name eq "Yeast ORFs Common Name Database" ||
-          $biosequence_set_name eq "Yeast ORFs Database 200210" ) {
-        $rowdata_ref->{biosequence_gene_name} = $rowdata_ref->{biosequence_name};
-        #$rowdata_ref->{biosequence_accession} = $1;
-        $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
-      } else {
-        $rowdata_ref->{biosequence_gene_name} = $1;
-        #$rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
-        $rowdata_ref->{biosequence_accession} = $1;
-      }
-      $rowdata_ref->{dbxref_id} = '5'; 
-    }
-  }
-
-  #### Conversion Rules for SGD:
-  #### >ORFN:YAL001C TFC3 SGDID:S0000001, Chr I from 147591-147660,147751-151163, reverse complement
-  if ($biosequence_set_name eq "SGD Yeast ORF Database"){
-    if ($rowdata_ref->{biosequence_desc} =~ /([\w-]+)\sSGDID\:([\w-]+), .+/ ) {
-	$rowdata_ref->{biosequence_gene_name} = $1;
-	$rowdata_ref->{biosequence_accession} = $2;
-	$rowdata_ref->{dbxref_id} = '5';
-    }
-  }
-  ####
-  ####[YCL052C;UPSP:PBN1_YEAST;GENSCAN00000000189;gi|6319797|ref|NP_009878.1|]PBN1 SGDID:S000000557,
-  if ($rowdata_ref->{biosequence_desc} =~ /.*](\S+)\s+SGDID\:([\w-]+), .+/ ) {
-    $rowdata_ref->{biosequence_gene_name} = $1;
-    $rowdata_ref->{biosequence_accession} = $2;
-    $rowdata_ref->{dbxref_id} = '5';
-  }
-  
-  #### Special conversion rules for DQA, DBQ, DRB exons, e.g.:
-  #### >DQB1_0612_exon1
-  if ($biosequence_set_name =~ /Allelic exons/) {
-    if ($rowdata_ref->{biosequence_name} =~ /^([A-Za-z0-9]+)_/ ) {
-       $rowdata_ref->{biosequence_gene_name} = $1;
-    }
-    $rowdata_ref->{biosequence_desc} = $rowdata_ref->{biosequence_name};
-  }
-
-  #### Special conversion rules for Halobacterium genome, e.g.:
-  #### >gene-275_2467-rpl31e
-  if ($biosequence_set_name eq "halobacterium_orf_coding") {
-    if ($rowdata_ref->{biosequence_name} =~ /-(\w+)$/ ) {
-       $rowdata_ref->{biosequence_gene_name} = $1;
-   }
-  }
-
-  #### Special conversion rules for Human FASTA file, e.g.:
-  ####>ACC:AA406372|zv10c10.s1 Soares_NhHMPu_S1 Homo sapiens cDNA clone IMAGE:753234 3' similar to gb:X59739_rna1 ZINC FINGER X-CHROMOSOMAL PROTEIN (HUMAN );, mRNA sequence.
-  if ($biosequence_set_name eq "Human BioSequence Database") {
-    if ($rowdata_ref->{biosequence_name} =~ /^ACC\:([\w-]+)\|/) {
-	$rowdata_ref->{biosequence_gene_name} = $1;
-	$rowdata_ref->{biosequence_accession} = $1;
-	$rowdata_ref->{dbxref_id} = '8';
-    }
-  }
-
-  #### Special conversion rules for Human genome, e.g.:
-  #### >gnl|UG|Hs#S35 Human mRNA for ferrochelatase (EC 4.99.1.1) /cds=(29,1300) /gb=D00726 /gi=219655 /ug=Hs.26 /len=2443
-  if ($biosequence_set_name eq "Human unique sequences") {
-    if ($rowdata_ref->{biosequence_desc} =~ /\/gi=(\d+) / ) {
-       $rowdata_ref->{biosequence_accession} = $1;
-    }
-    if ($rowdata_ref->{biosequence_name} =~ /\|(Hs\S+)$/ ) {
-       $rowdata_ref->{biosequence_gene_name} = $1;
-    }
-  }
-
-
-  #### Conversion Rules for ATH1.pep (TAIR):
-  #### >At1g79800.1 hypothetical protein   /  contains similarity to phytocyanin/early nodulin-like protein GI:4559346 from [Arabidopsis thaliana]
-  if ($biosequence_set_name eq "Arabidopsis Protein Database") {
-    $rowdata_ref->{biosequence_gene_name} = $rowdata_ref->{biosequence_name};
-    $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
-    $rowdata_ref->{dbxref_id} = '10';
-  }
-
-  #### Conversion Rules for ATH1.pep.2004061 (TIGR R5, Jan 2004):
-  #### >At1g79800.1 hypothetical protein   /  contains similarity to phytocyanin/early nodulin-like protein GI:4559346 from [Arabidopsis thaliana]
-  if ($biosequence_set_name eq "Arabidopsis Protein Database R5") {
-    $rowdata_ref->{biosequence_gene_name} = $rowdata_ref->{biosequence_name};
-    $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
-    $rowdata_ref->{dbxref_id} = '10';
-  }
-
-
-  #### Conversion Rules for wormpep92 (C Elegans):
-  #### >B0285.7 CE00646   Aminopeptidase status:Partially_confirmed SW:P46557 protein_id:CAA84298.1
-  if ($biosequence_set_name eq "C Elegans Protein Database") {
-    $rowdata_ref->{biosequence_gene_name} = $rowdata_ref->{biosequence_name};
-    if ($rowdata_ref->{biosequence_desc} =~ /^(\S+)\s+(.+)/ ) {
-      $rowdata_ref->{biosequence_accession} = $1;
-      $rowdata_ref->{dbxref_id} = '11';
-    }
-  }
-
-  #### Conversion Rules for Entrez Gene:
-  #### Created Fasta file format:
-  #### >Entrez_Gene_ID Hugo_Symbol Description
-  if ($biosequence_set_name =~ "Entrez Gene") {
-    my @info = split(/\s+/, $rowdata_ref->{biosequence_desc});
-    my $gene_name = shift(@info);
-    $rowdata_ref->{biosequence_gene_name} = $gene_name;
-    my $desc = join(" ", @info);
-    $rowdata_ref->{biosequence_desc} = $desc;
-    $rowdata_ref->{dbxref_id} = '37';
-  }
-
-  #### If there's favored codon frequency lookup information, set it
-  if (defined($fav_codon_frequency)) {
-    if ($fav_codon_frequency->{$rowdata_ref->{biosequence_name}}) {
-      $rowdata_ref->{fav_codon_frequency} =
-        $fav_codon_frequency->{$rowdata_ref->{biosequence_name}};
-    }
-  }
-
-
-#  #### If there's n_transmembrane_regions lookup information, set it
-#  if (defined($n_transmembrane_regions)) {
-#    if ($n_transmembrane_regions->{$rowdata_ref->{biosequence_name}}) {
-#      $rowdata_ref->{n_transmembrane_regions} =
-#	 $n_transmembrane_regions->{$rowdata_ref->{biosequence_name}}->
-#	   {n_tmm};
-#    }
-#  }
-#
-#
-#  #### If the calc_n_transmembrane_regions flag is set, do the calculation
-#  if (defined($OPTIONS{"calc_n_transmembrane_regions"}) &&
-#      defined($rowdata_ref->{biosequence_seq}) &&
-#      $rowdata_ref->{biosequence_seq} ) {
-#    $rowdata_ref->{n_transmembrane_regions} = 
-#      SBEAMS::Proteomics::Utilities::calcNTransmembraneRegions(
-#	 peptide=>$rowdata_ref->{biosequence_seq},
-#	 calc_method=>'NewMethod');
-#  }
-
-
-}
-
-
 ###############################################################################
 # get_biosequence_id: Obtain the biosequence_id from the available parameters
 ###############################################################################
@@ -2721,11 +2152,11 @@ sub readFavCodonFrequencyFile {
 
 
 ###############################################################################
-# readChromCoordsFile -- store chromosomal info in a hash by protein ID
+# readProtInfoFile -- store chromosomal info in a hash by protein ID
 ###############################################################################
-sub readChromCoordsFile {
+sub readProtInfoFile {
   my %args = @_;
-  my $SUB_NAME = "readChromCoordsFile";
+  my $SUB_NAME = "readProtInfoFile";
 
 
   #### Decode the argument list
@@ -2733,12 +2164,12 @@ sub readChromCoordsFile {
    || die "ERROR[$SUB_NAME]: source_file not passed";
 
   unless ( -f $source_file ) {
-    $chrom_coords->{return_status} = 'FAIL';
-    die("Unable to find chrom_coords file '$source_file'");
+    $prot_info_href->{return_status} = 'FAIL';
+    die("Unable to find prot_info file '$source_file'");
   }
 
   open(CCFILE,"$source_file") ||
-    die("Unable to open chrom_coords file '$source_file'");
+    die("Unable to open prot_info file '$source_file'");
 
   my $line;
 
@@ -2748,7 +2179,9 @@ sub readChromCoordsFile {
     next if ($line =~ /^\#/);
     $line =~ s/[\r\n]//g;
     my ($biosequence_name, $start_in_chromosome, $end_in_chromosome,
-        $strand, $chromosome, $genetic_locus) = split(/\t/,$line);
+        $strand, $chromosome, $genetic_locus, $is_immunoglobulin,
+	$is_keratin, $is_swiss) =
+             split(/\t/,$line);
 
     my %properties;
     $properties{start_in_chromosome} = $start_in_chromosome;
@@ -2756,14 +2189,17 @@ sub readChromCoordsFile {
     $properties{strand} = $strand;
     $properties{chromosome} = $chromosome;
     $properties{genetic_locus} = $genetic_locus;
+    $properties{is_immunoglobulin} = $is_immunoglobulin;
+    $properties{is_keratin} = $is_keratin;
+    $properties{is_swiss} = $is_swiss;
 
     #print "  $biosequence_name in chromosome $properties{chromosome}\n";
-    $chrom_coords->{$biosequence_name} = \%properties;
+    $prot_info_href->{$biosequence_name} = \%properties;
   }
 
   close(CCFILE);
 
-  $chrom_coords->{return_status} = 'SUCCESS';
+  $prot_info_href->{return_status} = 'SUCCESS';
   return;
 
 }
@@ -3678,63 +3114,3 @@ sub readpIFile {
   return \%data;
 
 } # end readpIFile
-
-
-
-
-###############################################################################
-# readSPFile -- get protein names from Swiss-Prot fasta file
-# (copied 10/15/08 from readpIFile; needs to be modified)
-###############################################################################
-sub readSPFile {
-  #my $self = shift;
-  my %args = @_;
-
-
-  #### Decode the argument list
-  my $source_file = $args{'source_file'} ||
-    die ("ERROR: Must supply source_file");
-  my $verbose = $args{'verbose'} || '';
-
-  #### Define a hash to hold the contents of the file
-  my %data;
-  $data{SUCCESS} = 0;
-
-  #### Open the specified file
-  unless ( open(INFILE, "$source_file") ) {
-    die("Cannot open input file $source_file\n");
-  }
-
-  #### Read every other line, starting with the first.
-  my $line = <INFILE>;
-  while (!eof(INFILE)) {
-    #### Parse out the accession number (id1), the Swiss-Prot
-    #### identifier (id2), and the name for this entry
-    my @tokens = split(/\|/,$line);
-    my $id1 = $tokens[1];
-    my $remainder = $tokens[2];
-    my $i = index($remainder,' '); # first space
-    my $id2 = substr($remainder, 0, $i);
-    my $j = index($remainder,' OS=');
-    my $name = substr($remainder, $i+1, $j-$i-1);
-    #print $id2, ": ", $name, "\n";
-    #### Store the name in a hash twice, indexed by both identifiers
-    $data{$id1} = $name;
-    $data{$id2} = $name;
-    #### Read and discard the sequence line
-    $line = <INFILE>;
-    while ((!eof(INFILE)) && !($line =~ />/)) {
-      $line = <INFILE>;
-    }
-  }
-  close(INFILE);
-  #### Done
-
-
-  #### Set SUCCESS flag and return
-  $data{SUCCESS} = 1;
-  return \%data;
-
-} # end readSPFile
-
-
