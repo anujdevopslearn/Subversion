@@ -229,6 +229,14 @@ $(document).ready(function() {
      $("select#source_instrument_type_id").html(options);
     })
 
+    $.getJSON("AJAXClient.cgi",{pabst_build_id: $(this).val(), source: 'GetTransitions_NamespaceFilters'}, function(j){
+      var options = '';
+      for (var i = 0; i < j.length; i++) {
+        options += j[i];
+      }
+      var namespace = document.getElementById( 'NamespaceFilters' );
+      namespace.innerHTML = options;
+    })
 
   })
 
@@ -407,8 +415,14 @@ sub print_form {
 #
     my $namespace_filters = get_namespace_filters( %parameters );
     if ( $namespace_filters ) {
-      $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Search Proteins From:</B></TD>$namespace_filters </TR> ~;
+      $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Search Proteins From:</B></TD> $namespace_filters </TR> ~;
     }
+
+	  my $multimap_filters = get_multimap_filters( %parameters );
+    if ( $multimap_filters ) {
+      $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Duplicate Peptides:</B></TD>$multimap_filters </TR> ~;
+    }
+
 
 #    $form =~ s/(\<INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="AT_GetPABSTList"\>)/$1<BR>$sub_form/gm;
 #    $form =~ s/\<\/TABLE\>/<TR><TD COLSPAN=3> $sub_form<\/TD><\/TR><\/TABLE>/i;
@@ -424,7 +438,7 @@ sub print_form {
     my $cmod_radio = get_cmod_radio( $parameters{cmod_opts} );
     my $cmod_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Calculate heavy transitions, heavy and light, or only light.  Only relevant if one or more heavy label options are selected.'</TD>";
 
-    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Labeled Transitions:</B></TD>$cmod_help<TD NOWRAP><DIV class=clear_info_box>$cmod_radio &nbsp;</DIV></TD></TR> ~;
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Labeled Transitions:</B></TD>$cmod_help<TD NOWRAP><DIV class=nowrap_clear_info_box>$cmod_radio &nbsp;</DIV></TD></TR> ~;
 
     # Min/Max mz values
     my $min_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Set minimum m/z threshold for transitions, applies to both precursor (Q1) and fragment ion (Q3) m/z'</TD>";
@@ -595,32 +609,70 @@ sub get_mod_filters {
   return $filter_element;
 }
 
+sub get_multimap_filters {
+  my %opts = @_;
+
+  my %names = ( all => '', results => '', global => '' );
+
+  # If we already ran a query, update values
+  my $multimap_set = 0;
+  for my $name ( sort( keys( %names ) ) ) {
+    if ( $opts{multimap} && $opts{multimap} eq $name ) {
+      $names{$name} = 'checked';
+      $multimap_set++;
+    }
+  }
+
+  $names{results} = 'checked' unless $multimap_set;
+
+  my $help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Limit peptides that map to multiple proteins - Allow all does not limit the list, unique to results ensures that a particular peptide is shown only once in a given set of results, and no multi-mapping keeps out any peptides that map to more than one peptide in the targeted namespace'</TD>";
+
+  my $checks = "$help<TD><DIV class=nowrap_clear_info_box >";
+	my %name2param = ('Allow all' => 'all', 'Unique in results' => 'results', 'No multi-mapping' => 'global' );
+  for my $name ( 'Allow all', 'Unique in results', 'No multi-mapping' ) {
+    $checks .= "<INPUT TYPE=radio NAME=multimap value=$name2param{$name} $names{$name2param{$name}}> $name </INPUT>";
+  }
+  $checks .= "</DIV></TD>";
+  return $checks;
+}
 
 sub get_namespace_filters {
 
   my %opts = @_;
-  return '' unless $opts{organism};
-  return '' unless $opts{organism} == 2;
 
-  my %names = ( SwissProt => '', Ensembl => '', IPI => '' );
 
-  # If we already ran a query, update values
-  my $namespace_set = 0;
-  for my $name ( sort( keys( %names ) ) ) {
-    if ( $opts{$name} ) {
-      $names{$name} = 'checked';
-      $namespace_set++;
-    }
-  }
-
-  $names{SwissProt} = 'checked' unless $namespace_set;
+  # Only Mouse/Human currently have hybrid reference databases
+  return '' unless ( $opts{organism} );
 
   my $help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Select accession namespace(s) in which you would like to search'</TD>";
+  my $checks = "$help <TD><DIV class=clear_info_box ID=NamespaceFilters>";
 
-  my $checks = "$help<TD><DIV class=clear_info_box>";
-  for my $name ( qw( SwissProt Ensembl IPI ) ) {
-    $checks .= "<INPUT TYPE=checkbox NAME=$name $names{$name}> $name </INPUT>";
+  if ( $opts{organism} == 2 || $opts{organism} == 6 ) {
+
+    my %names = ( SwissProt => '', Ensembl => '', IPI => '' );
+
+    # If we already ran a query, update values
+    my $namespace_set = 0;
+    for my $name ( sort( keys( %names ) ) ) {
+      if ( $opts{$name} ) {
+        $names{$name} = 'checked';
+        $namespace_set++;
+      }
+    }
+    $names{SwissProt} = 'checked' unless $namespace_set;
+    for my $name ( qw( SwissProt Ensembl IPI ) ) {
+      $checks .= "<INPUT TYPE=checkbox NAME=$name $names{$name}> $name </INPUT>";
+    }
+  } elsif ( $opts{organism} == 3 ) {
+    $checks .= '<INPUT TYPE=checkbox NAME=SGD checked disabled> SGD </INPUT>';
+  } elsif ( $opts{organism} == 40 ) {
+    $checks .= '<INPUT TYPE=checkbox NAME=Tuberculist checked disabled> Tubercululist </INPUT>';
+  } elsif ( $opts{organism} == 43 ) {
+    $checks .= '<INPUT TYPE=checkbox NAME=Dengue checked disabled> Dengue </INPUT>';
+  } else {
+    $checks .= '&nbsp;' x 4 . $sbeams->makeInactiveText( 'N/A' );
   }
+
   $checks .= "</DIV></TD>";
   return $checks;
 }
@@ -1454,9 +1506,15 @@ sub fetch_transitions {
   update_status( "Selecting optimum transitions" );
 
   my %frag_seen;
+  my %pepion_used;
+  my %peptide_used;
+	my %skipped_multimap;
+
   my $row_cnt = 0;
   my %links;
 #  my %kseen;
+
+  $parameters{multimap} ||= 'results';
   for my $row ( @transitions ) {
     if ( $is_changed ) {
       $row->[20] = $row->[25];
@@ -1550,6 +1608,37 @@ sub fetch_transitions {
 				}
       }
 
+      # clean
+      my $cleanseq = $row[1];
+      $cleanseq =~ s/\[\d+\]//g;
+
+      if ( $parameters{multimap} eq 'results' ) {
+  			my $pepion = $row[1] . '__' . $row[6];
+	  		$pepion_used{$pepion} ||= {};
+	  		$peptide_used{$cleanseq} ||= {};
+				my $skip_protein = 0;
+		  	for my $used_prot ( keys( %{$peptide_used{$cleanseq}} ) ) {
+#		  	for my $used_prot ( keys( %{$pepion_used{$pepion}} ) ) {
+			  	if ( $used_prot !~ /$prot/ ) {
+						$skip_protein++;
+						last;
+					}
+  			}
+				if ( $skip_protein ) {
+					$skipped_multimap{$prot} ||= {};
+					$skipped_multimap{$prot}->{$cleanseq}++;
+					next;
+				}
+	  		$pepion_used{$pepion}->{$prot}++;
+	  		$peptide_used{$cleanseq}->{$prot}++;
+			} elsif ( $parameters{multimap} eq 'global' ) {
+				if ( $peptide_mappings->{$cleanseq} && $peptide_mappings->{$cleanseq} !~ />1</ ) {
+					$log->info( "Skipping $cleanseq for global doppletude" );
+					$skipped_multimap{$prot}->{$cleanseq}++;
+					next;
+				}
+			}
+
       $peps{$pep_key}++;
 
       $row[10] = $peps{$pep_key};
@@ -1584,10 +1673,6 @@ sub fetch_transitions {
       # Cache for xfer to ATAQs
       # protein  sequence Q1_mz Q3_mz RT rank Q1_chg Q3_chg peak_intensity ion_label collision SSR
       push @namelist, join( '::', $prot, @row[1,5,7],'',@row[10,6,8,11,9],$ce, $row[12] );
-
-      # clean
-      my $cleanseq = $row[1];
-      $cleanseq =~ s/\[\d+\]//g;
 
       if ( $row[16] && $is_html ) {
         $row[16] = "<A HREF='Summarize_Peptide?searchWithinThis=Peptide+Sequence&searchForThis=$cleanseq;action=QUERY'>$row[15]</A>";
@@ -1788,6 +1873,7 @@ sub fetch_transitions {
         last;
       }
   } # End loop over resultset
+
   $log->debug( "Done 1 " . time()  . "\n" );
   
   print STDERR "Done 2 " . time()  . "\n";
@@ -1805,6 +1891,21 @@ sub fetch_transitions {
   setTimeout( "clear_status()", 5000 );
   </script>
   ~;
+
+  if ( scalar( keys( %skipped_multimap ) ) ) {
+		my $mesg = 'Some multiple-mapping peptides were skipped: ';
+		for my $prot ( sort( keys( %skipped_multimap ) ) ) {
+			$mesg .= "$prot (";
+			my $sep = '';
+		  for my $pep ( sort( keys( %{$skipped_multimap{$prot}} ) ) ) {
+				$mesg .= $sep . $pep;
+			  $sep = ',';	
+		  }
+			$mesg .= ") ";
+		}
+		update_status( $mesg );
+	}
+
 
   $log->debug( "CNT: $cnttxt\n" );
 
@@ -2030,19 +2131,24 @@ sub get_peptide_mappings {
 
     my %pep2accstr;
 
-    my $sql = qq~
-    SELECT DISTINCT biosequence_accession, biosequence_id
-    FROM $TBAT_BIOSEQUENCE 
-    WHERE biosequence_id IN ( $bioseq_str )
-    ~;
+    if ( $bioseq_str ) {
 
-    my $sth = $sbeams->get_statement_handle($sql);
-    while ( my @row = $sth->fetchrow_array() ) {
-			for my $pep ( keys( %{$bioseqs{$row[1]}} ) ) {
-		    my $sep = ( $pep2accstr{$pep} ) ? ',' : '';
-				$pep2accstr{$pep} .= $sep . $row[0];
-			}
-	  }
+      my $sql = qq~
+      SELECT DISTINCT biosequence_accession, biosequence_id
+      FROM $TBAT_BIOSEQUENCE 
+      WHERE biosequence_id IN ( $bioseq_str )
+      ~;
+
+      my $sth = $sbeams->get_statement_handle($sql);
+      while ( my @row = $sth->fetchrow_array() ) {
+			  for my $pep ( keys( %{$bioseqs{$row[1]}} ) ) {
+		      my $sep = ( $pep2accstr{$pep} ) ? ',' : '';
+  				$pep2accstr{$pep} .= $sep . $row[0];
+	  		}
+	    }
+    
+    }
+
 
     for my $pep ( keys( %mappings ) ) {
 			if ( $pep2accstr{$pep} ) {
@@ -2143,7 +2249,6 @@ sub get_scan_path {
     $pepion2scan{$row[3]}->{$row[0]} = { scan => $row[2], path => $row[1] };
     $pepion2scan{$row[3]}->{$row[0]} = { scan => $row[2], path => $row[1] };
   }
-#  die Dumper( %pepion2scan );
   return \%pepion2scan;
 }
 
