@@ -1456,8 +1456,17 @@ Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Dwell	Fragmentor	C
     my $rtd = 5;
     my $name = $acc . '.' . $seq;
 
+    my $full_lbl = $lbl;
+    $full_lbl .= '^' . $q3c if $q3c > 1;
+
     my $ce_key = $seq . $q1c;
-    $ce{$ce_key} ||= $self->calculate_agilent_ce( mz => $q1, charge => $q1c, empirical_ce => $opts{empirical_ce} , seq => $seq, ion => $lbl );
+    my $curr_ce = $ce{$ce_key};
+    if ( !$curr_ce ) {
+      my $deisotoped_sequence = $self->clear_isotope( sequence => $seq );
+      $curr_ce = $self->calculate_agilent_ce( mz => $q1, charge => $q1c, empirical_ce => $opts{empirical_ce},
+                                             seq => $deisotoped_sequence, ion => $full_lbl );
+    }
+    $ce{$ce_key} = $curr_ce unless $opts{empirical_ce};
 
 #    my $ce = ( $q1c == 2 ) ? sprintf( "%0.2f", ( 2.93 * $q1 )/100 + 6.72 ) : 
 #				                     sprintf( "%0.2f", ( 3.6 * $q1 )/100 - 4.8 );
@@ -1465,7 +1474,7 @@ Compound Name	ISTD?	Precursor Ion	MS1 Res	Product Ion	MS2 Res	Dwell	Fragmentor	C
     my $istd = 'False';
     $istd = 'True'  if $seq =~ /6\]$/;
 
-    $method .= join( "\t", $name, $istd, $q1, $w, $q3, $u, $d, $f, $ce{$ce_key}, $v, $p, $ion ) . "\n";
+    $method .= join( "\t", $name, $istd, $q1, $w, $q3, $u, $d, $f, $curr_ce, $v, $p, $ion ) . "\n";
 	}
   return $method;
 }
@@ -1514,9 +1523,18 @@ sub get_qqq_dynamic_transition_list {
 
     my $name = $acc . '.' . $seq;
 
+    my $full_lbl = $lbl;
+    $full_lbl .= '^' . $q3c if $q3c > 1;
+
     my $ce_key = $seq . $q1c;
-#    $ce{$ce_key} ||= $self->calculate_agilent_ce( mz => $q1, charge => $q1c );
-    $ce{$ce_key} ||= $self->calculate_agilent_ce( mz => $q1, charge => $q1c, empirical_ce => $opts{empirical_ce} , seq => $seq, ion => $lbl );
+    my $curr_ce = $ce{$ce_key};
+    if ( !$curr_ce ) {
+      my $deisotoped_sequence = $self->clear_isotope( sequence => $seq ); 
+      die "$seq becomes $deisotoped_sequence\n";
+      $curr_ce = $self->calculate_agilent_ce( mz => $q1, charge => $q1c, empirical_ce => $opts{empirical_ce},
+                                             seq => $deisotoped_sequence, ion => $full_lbl );
+    }
+    $ce{$ce_key} = $curr_ce unless $opts{empirical_ce};
 
 #    my $ce = ( $q1c == 2 ) ? sprintf( "%0.2f", ( 2.93 * $q1 )/100 + 6.72 ) : 
 #				                     sprintf( "%0.2f", ( 3.6 * $q1 )/100 - 4.8 );
@@ -1525,13 +1543,23 @@ sub get_qqq_dynamic_transition_list {
     my $est_rt = sprintf( "%0.1f", ($line[13]*72.94461-122.83351)/60);
     my $istd = 'False';
     $istd = 'True' if $seq =~ /6\]$/;
-    my @rowdata = ( $name, $istd, $q1, $u, $q3, $u, 125, $ce{$ce_key}, 5, $rt, $rtd, $p, $ion );
+    my @rowdata = ( $name, $istd, $q1, $u, $q3, $u, 125, $curr_ce, 5, $rt, $rtd, $p, $ion );
     if ( $opts{calc_rt} ) {
       push @rowdata, $est_rt;
     }
     $method .= join( "\t", @rowdata ) . "\n";
 	}
   return $method;
+}
+
+sub clear_isotope {
+  my $self = shift;
+  my %args = @_;
+  return '' unless $args{sequence};
+  my $sequence = $args{sequence};
+  $sequence =~ s/R\[166\]/R/g;
+  $sequence =~ s/K\[136\]/K/g;
+  return $sequence;
 }
 
 sub get_qtrap_mrmmsms_method {
