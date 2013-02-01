@@ -81,6 +81,7 @@ use vars qw(@ISA @EXPORT
     $TBAT_NIST_SPECTRUM_TYPE
 
     $TBAT_SPECTRUM_IDENTIFICATION
+    $TBAT_SPECTRUM_PTM_IDENTIFICATION
     $TBAT_SPECTRUM
     $TBAT_SPECTRUM_PEAK
 
@@ -216,6 +217,7 @@ require Exporter;
     $TBAT_NIST_SPECTRUM_TYPE
 
     $TBAT_SPECTRUM_IDENTIFICATION
+    $TBAT_SPECTRUM_PTM_IDENTIFICATION
     $TBAT_SPECTRUM
     $TBAT_SPECTRUM_PEAK
     $TBAT_SEARCH_BATCH_STATISTICS
@@ -348,6 +350,7 @@ $TBAT_NIST_SPECTRUM_TYPE             = "${mod}consensus_spectrum_type";
 $TBAT_SEARCH_BATCH_STATISTICS   = "${mod}search_batch_statistics";
 
 $TBAT_SPECTRUM_IDENTIFICATION    = "${mod}spectrum_identification";
+$TBAT_SPECTRUM_PTM_IDENTIFICATION    = "${mod}spectrum_ptm_identification";
 $TBAT_SPECTRUM                   = "${mod}spectrum";
 $TBAT_SPECTRUM_PEAK              = "${mod}spectrum_peak";
 
