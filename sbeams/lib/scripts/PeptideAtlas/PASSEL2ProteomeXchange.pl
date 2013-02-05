@@ -71,12 +71,13 @@ Options:
   --expt_id                   PASSEL SEL_experiment_id (required)
   --PX_accession              ProteomeXchange accession (required)
   --PX_version                Version number (default 1)
+  --npr                       Not a peer-reviewed dataset
 
 EOU
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly","help",
-        "expt_id:i", "PX_accession:s", "PX_version:i",
+        "expt_id:i", "PX_accession:s", "PX_version:i", "npr",
     )) {
 
     die "\n$USAGE";
@@ -193,34 +194,54 @@ my @rows = $sbeams->selectSeveralColumns($query);
 my $n_rows = scalar @rows;
 print "$n_rows rows returned\n" if $DEBUG;
 my $info_aref = $rows[0];
-my $expt_description = $info_aref->[0];
+my $expt_description = $info_aref->[0]||'';
 my $organism_name = $info_aref->[1];
 my $ncbi_taxonomy_id = $info_aref->[2];
 my $instrument_name = $info_aref->[3];
 my $last_name = $info_aref->[4];
-my $first_name = $info_aref->[5];
+my $first_name = $info_aref->[5] || '';
 my $middle_name = $info_aref->[6];
 my $pi_name = $first_name;
 $pi_name .= " $middle_name" if $middle_name;
-$pi_name .= " $last_name";
+$pi_name .= " $last_name" if $last_name;
 my $pi_email = $info_aref->[7] || '';
 my $pi_uri = $info_aref->[8] || '';
 my $pi_job_title = $info_aref->[9] || '';
 my $pi_organization = $info_aref->[10] || '';
 my $experiment_title = $info_aref->[11];
 my $instrument_type_name = $info_aref->[12];
-my $release_date = $info_aref->[13];
+my $release_date = $info_aref->[13] || '';
 # trim away the time; leave only the date
 $release_date =~ /(\d{4}-\d{2}-\d{2}) \d{2}:\d{2}:\d{2}/;
 $release_date = $1;
 $last_name = $info_aref->[14];
-$first_name = $info_aref->[15];
+$first_name = $info_aref->[15] || '';
 my $subm_name = $first_name;
-$subm_name .= " $last_name";
+$subm_name .= " $last_name" if $last_name;
 my $subm_email = $info_aref->[16];
-my $datasetIdentifier = $info_aref->[17];
+my $datasetIdentifier = $info_aref->[17] || '';
 my $publication_ids = $info_aref->[18];
 
+
+### Parse out some infos from the PASS description file
+my $passdir = "/regis/passdata/home/$datasetIdentifier";
+my $pass_descr = "$passdir/${datasetIdentifier}_DESCRIPTION.txt";
+print "PASS description file is $pass_descr\n" if $VERBOSE;
+my $publication_name;
+my $mod_string;
+open (my $infh, $pass_descr) || die "Can't open $pass_descr for reading.\n";
+while (my $line = <$infh>) {
+  chomp $line;
+  $line =~ s/[\r\n]+//g;  # get rid of all flavors of newlines
+  if ($line =~ /^publication:\t(.*)/) {
+    $publication_name = $1;
+  } elsif ($line =~ /^massModifications:\t(.*)/) {
+    $mod_string = $1;
+  }
+}
+print "PASS publication: $publication_name\n" if $VERBOSE;
+print "PASS mods: $mod_string\n" if $VERBOSE;
+close $infh;
 
 
 ### Need to get appropriate contact info, perhaps from PASS instead of from
@@ -230,10 +251,70 @@ my $pi_affiliation = '';  #TODO
 my $subm_affiliation = '';  #TODO
 
 # Get modifications TODO
-my @modifications = ();
+my %modifications = ();
+if (($mod_string =~ /C\+57/)) {
+  $modifications{'S-carboxamidomethyl-L-cysteine'} = '01060';
+}
+if (($mod_string =~ /M\+16/) || ($mod_string =~ /M+15/)) {
+  $modifications{'L-methionine sulfoxide'} = '00719';
+}
+if (($mod_string =~ /K\+6/)) {
+  $modifications{'6x(13)C labeled L-lysine'} = '01334';
+}
+if (($mod_string =~ /K\+8/)) {
+  $modifications{'6x(13)C,2x(15)N labeled L-lysine'} = '00582';
+}
+if (($mod_string =~ /R\+6/)) {
+  $modifications{'6x(13)C labeled L-arginine'} = '01331';
+}
+if (($mod_string =~ /R\+10/)) {
+  $modifications{'6x(13)C,4x(15)N labeled L-arginine'} = '00587';
+}
+if (($mod_string =~ /S\+80/) || ($mod_string =~ /S\+79/)) {
+  $modifications{'O-phosphorylated L-serine'} = '00046';
+}
+if (($mod_string =~ /L\+6/)) {
+  $modifications{'6x(13)C labeled L-leucine'} = '01332';
+}
+if (($mod_string =~ /0.997/) || ($mod_string =~ /1.994/) ||
+         ($mod_string =~ /2.991/) || ($mod_string =~ /3.988/)) {
+  $modifications{'isotope labeled residue '} = '00702';
+}
+if (($mod_string =~ /C\+105/)) {
+  $modifications{'L-selenocysteine (Cys)'} = '00686';
+  $modifications{'iodoacetamide derivitized residue'} = '00397';
+}
+
 
 my $refline = '';
-my $pub_status = 'published';
+# Check publication IDs to see if any are submitted (79) or unpublished (62).
+# 12/07/12: we are retiring the use of submitted.
+my @publication_ids = split (",", $publication_ids);
+my %pubid_hash = map { $_ => 1 } @publication_ids;
+my $pub_status = 'unpublished'; #default to unpublished
+if ($pubid_hash{79}) {
+  $pub_status = 'submitted';
+  delete $pubid_hash{79};
+} elsif ($pubid_hash{62}) {
+  $pub_status = 'unpublished';
+  delete $pubid_hash{62};
+}
+if (scalar keys %pubid_hash) {
+  if ($VERBOSE>1) {
+    print "Publication IDs: ";
+    for my $key (keys %pubid_hash) {
+      print "$key ";
+    }
+    print "\n";
+  }
+  $pub_status = 'published';
+} else {
+  if ($VERBOSE>1) {
+    print "No publication IDs other than 62 or 79.\n";
+  }
+}
+print "Publication record in PeptideAtlas is $pub_status\n" if $VERBOSE;
+
 my $pubmed_id = '';
 
 my @curator_keywords = ('selected reaction monitoring', 'SRM', 'targeted');
@@ -265,10 +346,15 @@ $writer->startTag("ProteomeXchangeDataset",
 #   $writer->endTag("ChangeLogEntry");
 # $writer->endTag("ChangeLog");
 #-------------------------------------------------- 
+my ($sec,$min,$hour,$mday,$mon,$year,
+          $wday,$yday,$isdst) = gmtime time;
+$year += 1900;
+$mon++;
+my $today_gmt_date = sprintf "%4d-%2d-%02d\n", $year, $mon, $mday;
+
 
 $writer->startTag("DatasetSummary",
-  # What is announceDate? We need this.
-  "announceDate" => "$release_date",
+  "announceDate" => "$today_gmt_date",
   "title" => $expt_title,
   "hostingRepository" => "PeptideAtlas",
 );
@@ -276,14 +362,15 @@ $writer->startTag("DatasetSummary",
     $writer->characters("$expt_description");
   $writer->endTag("Description");
 
-  ### OR 0000415 for Non peer-reviewed dataset
   $writer->startTag("ReviewLevel");
       $cv_ref = 'PRIDE';
-      $cv_acc = '0000414';
+      $cv_acc = $OPTIONS{'npr'} ? '0000415': '0000414';
+      my $cv_name = $OPTIONS{'npr'} ? "Non peer-reviewed dataset" :
+          "Peer-reviewed dataset";
       $writer->emptyTag("cvParam",
 	"cvRef"=>"$cv_ref",
 	"accession"=>"${cv_ref}:$cv_acc",
-	"name"=>"Peer-reviewed dataset",
+	"name"=>$cv_name,
       );
   $writer->endTag("ReviewLevel");
 
@@ -390,7 +477,7 @@ $writer->endTag("InstrumentList");
 
 
 $writer->startTag("ModificationList");
-if (! scalar @modifications) {
+if (! scalar keys %modifications) {
   $cv_ref = "PRIDE";
   $cv_acc = '0000398';
   $writer->emptyTag("cvParam",
@@ -399,11 +486,11 @@ if (! scalar @modifications) {
     "name"=>"No PTMs are included in the dataset",
   );
 } else {
-  $cv_acc = 1000001;  #need
-  for my $mod (@modifications) {
+  for my $mod (keys %modifications) {
+    $cv_acc = $modifications{$mod};  #need
     $writer->emptyTag("cvParam",
       "cvRef"=>'PSI-MOD',
-      "accession"=>"PSI-MOD:$cv_acc",
+      "accession"=>"MOD:$cv_acc",
       "name"=>"$mod",
     );
   }
@@ -494,30 +581,15 @@ $writer->startTag("ContactList");
 $writer->endTag("ContactList");
 
 $writer->startTag("PublicationList");
-if ($pub_status eq 'submitted') {
-  $writer->startTag("Publication", "id"=>"submitted01");
-    $cv_ref = "PRIDE";
-    $cv_acc = "0000067";
-    $writer->emptyTag("cvParam",
-      "cvRef"=>"$cv_ref",
-      "accession"=>"${cv_ref}:$cv_acc",
-      "name"=>"Reference reporting this experiment",
-      "value"=>"$refline",
-    );
-  $writer->endTag("Publication");
-} elsif ($pub_status eq 'unpublished') {
-  $writer->startTag("Publication", "id"=>"unpublished01");
-    $cv_ref = "PRIDE";
-    $cv_acc = '0000412';
-    $writer->emptyTag("cvParam",
-      "cvRef"=>"$cv_ref",
-      "accession"=>"${cv_ref}:$cv_acc",
-      "name"=>"Dataset with no associated published manuscript",
-    );
-  $writer->endTag("Publication");
-} else {
-  my @publication_ids = split (",", $publication_ids);
-  for my $pub (@publication_ids) {
+
+# Accepted manuscript is 0000399 ( for possible future reference )
+
+# If there is a publication record ($pub_status eq 'published), use that.
+#  (and if no PubMed ID, call it pending).
+# Else, call it unpublished.
+
+if ($pub_status eq 'published') {
+  for my $pub (keys %pubid_hash) {
     my $query = qq~
       SELECT pubmed_ID, publication_name, keywords, title, author_list, journal_name,
 	published_year, volume_number, issue_number, page_numbers, uri, abstract
@@ -539,16 +611,45 @@ if ($pub_status eq 'submitted') {
     my $page_numbers = $pub_aref->[9] || '';
     my $pub_uri = $pub_aref->[10] || '';
     my $pub_abstract = $pub_aref->[11] || '';
-    my $refline = "$author_list, $pub_title, $journal_name $published_year $volume_number($issue_number):$page_numbers";
-    $writer->startTag("Publication", "id"=>"PMID$pubmed_id");
-    $cv_ref = "MS";
-      $cv_acc = 1000879;
-      $writer->emptyTag("cvParam",
-	"cvRef"=>"$cv_ref",
-	"accession"=>"${cv_ref}:$cv_acc",
-	"name"=>"PubMed identifier",
-        "value"=>$pubmed_id,
-      );
+    my $refline = "$author_list,";
+    $refline .= " $pub_title" if $pub_title;
+    $refline .= ", $journal_name" if $journal_name;
+    $refline .= " $published_year" if $published_year;
+    if ($volume_number) {
+      $refline .= " $volume_number";
+      if ($issue_number) {
+        $refline .= "($issue_number)";
+        if ($page_numbers) {
+          $refline .= ":$page_numbers";
+        }
+      }
+    }
+    # If pub_name has "submitted", then alone should be our refline.
+    if ($pub_name =~ /submitted/i) {
+      $refline = $pub_name;
+    }
+    $refline =~ s/[\r\n]+//g;  # get rid of all flavors of newlines
+    if ($pubmed_id) {
+      print "Pubmed ID is $pubmed_id\n" if $VERBOSE;
+      $writer->startTag("Publication", "id"=>"PMID$pubmed_id");
+      $cv_ref = "MS";
+	$cv_acc = 1000879;
+	$writer->emptyTag("cvParam",
+	  "cvRef"=>"$cv_ref",
+	  "accession"=>"${cv_ref}:$cv_acc",
+	  "name"=>"PubMed identifier",
+	  "value"=>$pubmed_id,
+	);
+    } else {
+      $writer->startTag("Publication", "id"=>"submitted01");
+	$cv_ref = "PRIDE";
+	$cv_acc = "0000000";    # need to update in future
+	$writer->emptyTag("cvParam",
+	  "cvRef"=>"$cv_ref",
+	  "accession"=>"${cv_ref}:$cv_acc",
+	  "name"=>"Dataset with its publication still pending",
+	);
+    }
     $cv_ref = "PRIDE";
     $cv_acc = "0000067";
     $writer->emptyTag("cvParam",
@@ -559,6 +660,37 @@ if ($pub_status eq 'submitted') {
     );
     $writer->endTag("Publication");
   }
+
+} elsif ($pub_status eq 'submitted' && $publication_name !~ /unpublished/i 
+        && $publication_name !~ /not published/i) {
+  $writer->startTag("Publication", "id"=>"submitted01");
+    $cv_ref = "PRIDE";
+    $cv_acc = "0000000";    # need to update in future
+    $writer->emptyTag("cvParam",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
+      "name"=>"Dataset with its publication still pending",
+    );
+  $cv_ref = "PRIDE";
+  $cv_acc = "0000067";
+  $writer->emptyTag("cvParam",
+    "cvRef"=>"$cv_ref",
+    "accession"=>"${cv_ref}:$cv_acc",
+    "name"=>"Reference reporting this experiment",
+    "value"=>"$publication_name",
+  );
+  $writer->endTag("Publication");
+
+} else {
+  $writer->startTag("Publication", "id"=>"unpublished01");
+    $cv_ref = "PRIDE";
+    $cv_acc = '0000412';
+    $writer->emptyTag("cvParam",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
+      "name"=>"Dataset with no associated published manuscript",
+    );
+  $writer->endTag("Publication");
 }
 $writer->endTag("PublicationList");
 
