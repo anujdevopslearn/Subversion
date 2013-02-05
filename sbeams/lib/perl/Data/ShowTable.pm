@@ -1266,7 +1266,7 @@ sub ShowHTMLTable {
 		      #### this time for Atag. Added for PASSEL.
 		      #### As long as there continue to be modifications to
 		      #### the URL, keep looping through it, processing codes
-		      my $modflag = 1;
+		      $modflag = 1;
 		      while ($modflag) {
   			$modflag = 0;
   			if ($Atag =~ /%(\d{1,2})V/) {
