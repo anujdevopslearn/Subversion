@@ -1530,7 +1530,6 @@ sub get_qqq_dynamic_transition_list {
     my $curr_ce = $ce{$ce_key};
     if ( !$curr_ce ) {
       my $deisotoped_sequence = $self->clear_isotope( sequence => $seq ); 
-      die "$seq becomes $deisotoped_sequence\n";
       $curr_ce = $self->calculate_agilent_ce( mz => $q1, charge => $q1c, empirical_ce => $opts{empirical_ce},
                                              seq => $deisotoped_sequence, ion => $full_lbl );
     }
