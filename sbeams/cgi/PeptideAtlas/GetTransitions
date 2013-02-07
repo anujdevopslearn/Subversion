@@ -86,6 +86,10 @@ sub main
   # This will look for mod-specific params and do the right thing
   $atlas->processModuleParameters(parameters_ref=>\%parameters);
 
+# Wrap this in a warn level... IDEA!
+#  my $paramstr = join( ',', %parameters );
+#  $log->logCGI( paramstr => $paramstr, mode => 'start' );
+
   $is_html = ( $sbeams->output_mode() eq 'html' ) ? 1 : 0;
 
 
@@ -1172,9 +1176,6 @@ sub fetch_transitions {
     $limit_ns++ if $parameters{$ns};
   }
 
-  # We know that this is an option for human
-  $limit_ns++ if $parameters{organism} == 2;
-
   if ( $limit_ns ) {
     if ( !$parameters{SwissProt} ) {
       $namespace_clause .= " AND biosequence_name NOT LIKE '______' \n"; 
@@ -1368,6 +1369,7 @@ sub fetch_transitions {
   my $consensus_srcs = $consensus->getConsensusSources( pabst_build_id => $pabst_build_id );
   my $has_ce = $consensus->hasCESet( pabst_build_id => $pabst_build_id );
   my $has_chromats = $consensus->hasChromatograms( pabst_build_id => $pabst_build_id );
+	
 
   if ( $parameters{speclinks} ) {
     if ( $sbeams->isGuestUser() ) {
@@ -1731,6 +1733,7 @@ sub fetch_transitions {
                                                               has_ce => $has_ce,
                                                               organism => $organism );
 
+
         $links{$link_key} ||= $links;
         my $mass = $massCalculator->getPeptideMass( sequence => $row[1], mass_type => 'monoisotopic' );
 
@@ -1768,7 +1771,13 @@ sub fetch_transitions {
 
             $instr_name = $q->escape( $instr_name );
 
-            $chromat_link = "<A HREF=ShowChromatogram?${scan_param}precursor_neutral_mass=$mass;pepseq=$row[1]$precursor_param;precursor_mz=$row[5];limit_smoothing_options=1;default_smoothing_factor=5;spectrum_pathname=$pepion2scanpath->{$ch_type}->{$link_key}->{path};peptide=$row[1];no_specfile=1;no_mquest=1;instrument_name=$instr_name TARGET=$ch_type> <IMG BORDER=0 SRC='$image{$ch_type}' TITLE='$title'> </A>";
+            if ( $instr_name =~ /QQQ/i && !grep /qqq_spectrum/, @{$links{$link_key}} ) {
+              $chromat_link = '';
+            } elsif ( $instr_name =~ /5500/i && !grep /qtrap_spectrum/, $links{$link_key} ) {
+              $chromat_link = '';
+            } else {
+              $chromat_link = "<A HREF=ShowChromatogram?${scan_param}precursor_neutral_mass=$mass;pepseq=$row[1]$precursor_param;precursor_mz=$row[5];limit_smoothing_options=1;default_smoothing_factor=5;spectrum_pathname=$pepion2scanpath->{$ch_type}->{$link_key}->{path};peptide=$row[1];no_specfile=1;no_mquest=1;instrument_name=$instr_name TARGET=$ch_type> <IMG BORDER=0 SRC='$image{$ch_type}' TITLE='$title'> </A>";
+            }
           }
           push @chromat_links, $chromat_link;
         }
