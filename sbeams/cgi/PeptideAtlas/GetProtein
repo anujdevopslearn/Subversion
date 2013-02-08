@@ -1093,14 +1093,20 @@ sub handle_request {
     # TMF: added for special need
 #    print STDERR "$protein_name\t";
 
-    displayAnnotatedSequence(
-           %parameters,
-         peptides => $peptides,
-      biosequence => $biosequence,
-      resultset_ref=>$resultset_ref,
-      protein_structure => $protein_structure,
-           glyco => $motif_params{glyco},
-    );
+  if ( defined $parameters{show_clustal} ) {
+    $sbeams->setSessionAttribute( key => 'GetProtein_ShowVars', 
+                                value => $parameters{show_clustal} );
+  } else {
+    $parameters{show_clustal} = $sbeams->getSessionAttribute( key => 'GetProtein_ShowVars' );
+  }
+
+  displayAnnotatedSequence( %parameters,  
+                            peptides => $peptides,
+                         biosequence => $biosequence,
+                       resultset_ref => $resultset_ref,
+                   protein_structure => $protein_structure,
+                               glyco => $motif_params{glyco},
+                           );
 
   ### show sequence coverage for difference method
   if ($htmlmode and $atlas_build_names{$atlas_build_id} =~ /Origene/i){
@@ -1816,6 +1822,9 @@ sub get_sequence_graphic {
   my $tmhmm = $args{protein_data}->{transmembrane_topology};
   my $id =  $args{protein_data}->{biosequence_id};
   my $protseq = $args{protein_data}->{biosequence_seq};
+  my @concat = split( /\*/, $protseq );
+	$protseq = $concat[0];
+
   my $protlen = length( $protseq );
   my $peptide_instance_constraint = $args{peptide_instance_constraint} || '';
   my $n_observation_clause ='PI.n_observations';
@@ -2524,7 +2533,7 @@ sub displayAnnotatedSequence {
     text=>'Sequence',
     link =>$link,
   );
-  print qq~ <TABLE width="600"> $section_header <TR $tr><TD> ~ if $htmlmode;
+  print qq~ <TABLE width="600" BORDER=0> $section_header <TR $tr><TD> ~ if $htmlmode;
 
 
   my $sequence = $biosequence->{biosequence_seq};
@@ -2586,7 +2595,12 @@ sub displayAnnotatedSequence {
 # print "<PRE>\n";
 
 
+  my @concat = split( /\*/, $sequence );
+  my $concat_length = length($concat[0]);
   my $seq_length = length($sequence);
+	$seq_length = $concat_length;
+#	die ( "orig is $seq_length, becomes $concat_length" );
+
   my $i = 0;
   my $color_level = 0;
   my $observed_residues = 0;
@@ -2682,10 +2696,51 @@ sub displayAnnotatedSequence {
   }
 
 
-#  print "</PRE></TD></TR>\n";
-  print "<TR $tr><TD>" . $sbeamsMOD->get_html_seq( $sequence, $tags ) . "</TD></TR></TABLE>\n";
-  print "\n\n";
-  print "<TABLE><TR $tr><TD>Protein Coverage = ",int($observed_residues/$seq_length*1000)/10,"%";
+#  print "</PRE></TD></TR>\n";  
+  my $html_seq = $sbeamsMOD->get_html_seq_vars( seq => $sequence,
+                                          tags => $tags, 
+                                      peptides => \@peptides, 
+                                  show_clustal => $args{show_clustal} );
+
+  print "<TR $tr><TD> $html_seq->{seq_display} </TD></TR>\n";
+  if ( $html_seq->{clustal_display} ) { # If we have any variants
+
+    print "<TR $tr><TD>&nbsp;</TD></TR>\n";
+    print "<TR $tr><TD><B>Annotated Variants:</B> </TD></TR>\n";
+    my $variant_list = '';
+    my $cnt;
+    for my $var (  @{$html_seq->{variant_list}} ) {
+      $cnt++;
+      $variant_list .= join( '', @{$var} );
+      $variant_list .= '<SPAN style="display:none" ID=var_list>' if $cnt == 11;
+    }
+    my $var_toggle_link = '';
+    if ( $cnt > 10 ) {
+      $variant_list .= "</SPAN>";
+      $var_toggle_link =  qq~ <A NAME=vars HREF="javascript:void(0)" onClick=showVariants() ID=vars_toggle>Show More</A>\n ~;
+      print qq~
+      <SCRIPT TYPE="text/javascript">
+      function showVariants() {
+        var showVar = document.getElementById( "var_list" );
+        if ( showVar.style.display == 'block' ) {
+          showVar.style.display = 'none';
+          document.getElementById( "vars_toggle" ).innerHTML = 'Show More';
+        } else {
+          showVar.style.display = 'block';
+          document.getElementById( "vars_toggle" ).innerHTML = 'Show Fewer';
+        }
+      }
+    </SCRIPT>
+      ~;
+    }
+
+    print qq~ <TR $tr><TD> <PRE>$variant_list</PRE> $var_toggle_link </TD></TR> ~;
+    print "<TR $tr><TD>&nbsp;</TD></TR>\n";
+    print "<TR $tr><TD><B>Variants in Sequence Context:</B> </TD></TR>\n";
+    print "<TR $tr><TD> $html_seq->{clustal_display} </TD></TR>\n";
+  }
+  print "</TABLE>\n\n";
+  print "<TABLE><TR $tr><TD>Protein Coverage = ",int($observed_residues/$seq_length*1000)/10,"% ";
   print ' (' . int(($observed_residues)/($seq_length-$cnt)*1000)/10,"% of likely observable sequence)</TD></TR></TABLE>";
   #print "<BR><BR>Notes:<BR>\n$notes_buffer" if ($notes_buffer);
 
