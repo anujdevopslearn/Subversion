@@ -7,6 +7,7 @@ use SBEAMS::Proteomics::PeptideMassCalculator;
 use constant HYDROGEN_MASS => 1.0078;
 use Storable qw( nstore retrieve );
 use Bio::Graphics::Panel;
+use Data::Dumper;
 
 use strict;
 
@@ -652,7 +653,7 @@ sub get_coverage_hash {
 		$log->error( $error );
 		return;
 	}
-	$log->debug( "We be sushi" );
+  $args{offset} ||= 0;
 
   my $seq = $args{seq};
   $seq =~ s/[^a-zA-Z]//g;
@@ -663,7 +664,7 @@ sub get_coverage_hash {
 
     for my $p ( @$posn ) {
       for ( my $i = 0; $i < length($peptide); $i++ ){
-        my $covered_posn = $p + $i;
+        my $covered_posn = $p + $i + $args{offset};
         $coverage->{$covered_posn}++;
     	}
 		}
@@ -1238,6 +1239,7 @@ sub make_tags {
   return $tags;
 }
 
+
 sub get_html_seq {
   my $self = shift;
   my $seq = shift;
@@ -1270,6 +1272,350 @@ sub get_html_seq {
   }
   return $str;
 }
+
+sub get_html_seq_vars {
+  my $self = shift;
+  my %args = @_;
+
+  my %return = ( seq_display => '',
+                 clustal_display => '',
+                 variant_list => [] );
+
+  my $full_seq = $args{seq} || return '';
+  my @seqs = split( /\*/, $full_seq );
+
+  my $seq = shift @seqs;
+  my $fasta = ">Primary\n$seq\n";
+  my $tags = $args{tags};
+  my $peps = $args{peptides} || [];
+
+  my %peps;
+  for my $pep ( @{$peps} ) {
+    $peps{$pep}++;
+  }
+  my $whitespace = '<SPAN CLASS=white_bg>&nbsp;</SPAN>';
+
+  my $cnt = 0;
+  my $line_len = 0;
+  my $prev_aa = '-';
+
+  my %values = ( tryp =>  [ ['<PRE><SPAN CLASS=pa_sequence_font>'] ],
+                 inter => [ ['<PRE><SPAN CLASS=pa_sequence_font>'] ],
+                 nosp =>  [ ['<PRE><SPAN CLASS=pa_sequence_font>'] ] );
+
+  for my $aa ( split( "", $seq ) ) {
+    my @posn;
+    if ( $tags->{$cnt} && $tags->{$cnt} ne '</SPAN>' ) {
+      push @posn, $tags->{$cnt};
+    }
+    push @posn, $aa;
+    if ( $tags->{$cnt} && $tags->{$cnt} eq '</SPAN>' ) {
+      push @posn, $tags->{$cnt};
+    }
+
+    $cnt++;
+
+    my @iposn = @posn;
+    my @tposn = @posn;
+
+    unless ( $cnt % 10 ) {
+      push @iposn, $whitespace;
+    }
+    push @posn, "\n" unless ( $cnt % 70 );
+    push @iposn, "\n" unless ( $cnt % 70 );
+
+    if ( $prev_aa =~ /[KR]/ && $aa ne 'P' ) {
+      my $idx = scalar( @{$values{tryp}} );
+      push @{$values{tryp}->[$idx]}, $whitespace;
+      if ( $line_len > 70 ) {
+        push @{$values{tryp}->[$idx]}, "\n";
+        $line_len = 0;
+      }
+    }
+
+    push @{$values{tryp}}, \@tposn;
+    push @{$values{nosp}}, \@posn;
+    push @{$values{inter}}, \@iposn;
+    $prev_aa = $aa;
+    $line_len++;
+  }
+  push @{$values{tryp}},  ['</SPAN></PRE>'];
+  push @{$values{nosp}},  ['</SPAN></PRE>'];
+  push @{$values{inter}}, ['</SPAN></PRE>'];
+  my $str = qq~
+    <SCRIPT TYPE="text/javascript">
+    function setSeqView() {
+      var seqView = document.getElementById( "seqView" );
+      var seqViewVal = seqView.value;
+
+      var newContent = document.getElementById( seqViewVal ).innerHTML;
+      document.getElementById( "seq_display" ).innerHTML = newContent;
+    }
+    </SCRIPT>
+  ~;
+  my %divs = ( tryp => '<DIV ID=tryp style="display:none">',
+               nosp => '<DIV ID=nosp style="display:none">',
+               inter => '<DIV ID=inter style="display:none">'  );
+
+  my %div_txt;
+  for my $seq_type ( qw( tryp nosp inter ) ) {
+    $div_txt{$seq_type} = $divs{$seq_type};
+    for my $a ( @{$values{$seq_type}} ) {
+      $div_txt{$seq_type} .= join( "", @{$a} );
+    }
+    $div_txt{$seq_type} .= '</DIV>';
+  }
+  my $display_div = $div_txt{tryp};
+  $display_div =~ s/display:none/display:block/g;
+  $display_div =~ s/ID=tryp/ID=seq_display/;
+
+  $str .= qq~
+    <FORM>
+    <B>Sequence Display Mode:</B> 
+    <SELECT onChange=setSeqView() NAME=seqView ID="seqView">
+      <OPTION VALUE=tryp>  Tryptic
+      <OPTION VALUE=inter> Interval
+      <OPTION VALUE=nosp>  No Space
+    </SELECT>
+    </FORM>
+  ~;
+
+
+  $str .= $display_div;
+  $str .= $div_txt{tryp};
+  $str .= $div_txt{inter};
+  $str .= $div_txt{nosp};
+  $return{seq_display} = $str;
+
+  # Short circuit return
+  # If we aren't going to show the alignment
+  return \%return unless $args{show_clustal};
+
+  # Or if there are no variants.
+  return \%return unless scalar(@seqs);
+
+  my %global_clustal;
+  my @global_clustal;
+  my %coverage_coords;
+  my $primary_clustal;
+  my $MSF = SBEAMS::BioLink::MSF->new();
+  my $pepcnt = 1;
+  for my $alt ( @seqs ) {
+    my $pepname = "Variant_$pepcnt";
+
+    my $pfasta = $fasta . ">$pepname\n$alt\n";
+    my $clustal = $MSF->runClustalW( sequences => $pfasta );
+    if ( ref $clustal eq 'ARRAY' ) {
+      my $coords = $self->get_clustal_coordinates( $clustal->[1] );
+      if ( !$primary_clustal ) {
+        $primary_clustal = $clustal->[0];
+        $coverage_coords{$primary_clustal->[0]} = $self->get_coverage_hash( seq => $primary_clustal->[1], 
+                                                                       peptides => $peps, 
+                                                                         offset => 0 );
+      }
+      if ( $coords->{seq} ) {
+        $global_clustal{$coords->{start}} ||= [];
+        push @{$global_clustal{$coords->{start}}}, $clustal->[1];
+      }
+      $coverage_coords{$pepname} = $self->get_coverage_hash( seq => $coords->{seq}, 
+                                                        peptides => $peps, 
+                                                          offset => $coords->{start} );
+    }
+
+    my $tryp = $self->do_tryptic_digestion( aa_seq => $alt, split_asterisk => 0 );
+    my $var_string = '';
+    for my $tryp ( @{$tryp} ) {
+      my $open_tag = ( $peps{$tryp} ) ? '<SPAN class=pa_observed_sequence>' : '<SPAN class=pa_sequence_font>'; 
+      $var_string .= $whitespace  . $open_tag . $tryp . "</SPAN>";  
+    }
+    $pepcnt++;
+    push @{$return{variant_list}}, ["$pepname : $var_string\n"];
+  }
+
+
+  push @global_clustal, $primary_clustal;
+  for my $start ( sort { $a <=> $b } keys( %global_clustal ) ) {
+    for my $entry ( @{$global_clustal{$start}} ) {
+      push @global_clustal, $entry;
+    }
+  }
+
+	my $clustal_display .= $self->get_clustal_display( alignments => \@global_clustal, 
+			                                                dup_seqs => {},
+			                                                  pepseq => 'ZORRO',
+																					       			coverage => \%coverage_coords,
+																       			 		acc2bioseq_id => {},
+																			      			         %args );
+
+  $return{clustal_display} = $clustal_display;
+  return \%return;
+}
+
+
+sub get_clustal_coordinates {
+  my $self = shift;
+  my $coords = { start => 999, len => 999, seq => '' };
+	my $clustal = shift || return $coords;  
+  my $seq = $clustal->[1];
+  $seq =~ /^(-*)([^-]+)(-*)/;
+  $coords->{start} = length( $1 );
+  $coords->{seq} = $2;
+  $coords->{len} = length( $2 );
+#  die Dumper("$clustal \ngives $1, $2, and $3 and coords are\n" . $coords );
+  return $coords;
+}
+
+sub get_clustal_display {
+
+  my $self = shift;
+	my %args = ( acc_color => '#0090D0',
+	              @_  
+						 );
+
+  my $sbeams = $self->getSBEAMS();
+
+  my $align_spc;
+  my $name_spc;
+  my $table_rows = '';
+  my $scroll_class = ( scalar( @{$args{alignments}} ) > 10 ) ? 'clustal_peptide' : 'clustal';
+	for my $seq ( @{$args{alignments}} ) {
+		my $sequence = $seq->[1];
+		if ( $seq->[0] eq 'NOOP'  ) {
+      $align_spc = 'A' x length( $sequence );
+      $name_spc = 'A' x ( length( $seq->[0] ) + 5 );
+		  $sequence =~ s/ /&nbsp;/g 
+		} else {
+ 			$sequence = $self->highlight_sites( seq => $sequence, 
+                                          acc => $seq->[0], 
+			                               coverage => $args{coverage}->{$seq->[0]}
+																 );
+    }
+
+		$table_rows .= qq~
+		<TR>
+	      <TD ALIGN=right class=sequence_font>$seq->[0]:</TD>
+				<TD NOWRAP=1 class=sequence_font>$sequence</TD>
+		</TR>
+		~;
+	}
+
+
+#	<DIV ID=clustal_dummy STYLE="width: 1000px; overflow-x: scroll; scrollbar-arrow-color: blue; scrollbar- face-color: #e7e7e7; scrollbar-3dlight-color: #a0a0a0; scrollbar-darkshadow-color: #888888">
+#    .clustal {width:1000px; height: 200px; background-color: #88FF88; overflow: auto;}
+
+  my $scroll_js = q(
+  <SCRIPT TYPE="text/javascript">
+  </SCRIPT>
+  );
+
+  my $xsjs = q(
+  function postpos (e) {
+//    alert( $(".clustal").scrollLeft() );
+  }
+  var skip = false;
+  $("#clustal_dummy_wrap").scroll(function () {
+    alert( "scroll dummy" )
+    $("#clustal_wrap").scrollLeft($("#clustal_dummy_wrap").scrollLeft());
+  });
+  $("#clustal_wrap").scroll(function () { 
+    alert( "scroll wrap" )
+    $("#clustal_dummy_wrap").scrollLeft($("#clustal_wrap").scrollLeft());
+  });
+  $("#clustal_dummy_wrap").scroll(function () {
+    if (skip){skip=false; return;} else skip=true; 
+    $("#clustal_wrap").scrollLeft($("#clustal_dummy_wrap").scrollLeft());
+  });
+  $("#clustal_wrap").scroll(function () { 
+    $("#clustal_dummy_wrap").scrollLeft($("#clustal_wrap").scrollLeft());
+  });
+
+
+  $(function(){
+   $(".clustal_dummy_wrap").scroll(function(){
+    $(".clustal").scrollLeft($(".clustal_dummy_wrap").scrollLeft());
+   });
+   $(".clustal").scroll(function(){
+    $(".clustal_dummy_wrap").scrollLeft($(".clustal").scrollLeft());
+   });
+   });
+	<DIV CLASS="clustal_dummy_wrap">
+ 	  <DIV CLASS="clustal_dummy">
+    </DIV>
+  </DIV>
+	<DIV CLASS="clustal_wrap">
+  </DIV>
+  );
+
+	my $display = qq~
+  <script type='text/javascript' src='https://db.systemsbiology.net/sbeams/usr/javascript/jquery/jquery.js'></script>
+
+  $scroll_js
+
+	<DIV CLASS="$scroll_class" ID="clustal">
+   <FORM METHOD=POST NAME=custom_alignment>
+  	<TABLE BORDER=0 CELLPADDNG=3>
+    $table_rows
+    </TABLE>
+  </DIV>
+	~;
+
+
+
+	return $display;
+}
+
+
+sub highlight_sites {
+
+  my $self = shift;
+  my %args = @_;
+#  die Dumper( %args ) if $args{seq} =~ /-LEC/;
+	my $coverage = $args{coverage};
+  my @aa = split( '', $args{seq} );
+  my $return_seq = '';
+  my $cnt = 0;
+	my $in_coverage = 0;
+	my $span_closed = 1;
+  for my $aa ( @aa ) {
+    if ( $aa eq '_' ) {
+			if ( $in_coverage && !$span_closed ) {
+				$return_seq .= "</span>$aa";
+				$span_closed++;
+			} else {
+				$return_seq .= $aa;
+			}
+		} else { # it is an amino acid
+			if ( $coverage->{$cnt} ) {
+				if ( $in_coverage ) { # already in
+					if ( $span_closed ) {  # Must have been jumping a --- gap
+					  $span_closed = 0;
+				    $return_seq .= "<span class=obs_seq_font>$aa";
+					} else {
+				    $return_seq .= $aa;
+					}
+				} else {
+					$in_coverage++;
+					$span_closed = 0;
+				  $return_seq .= "<span class=obs_seq_font>$aa";
+				}
+			} else { # posn not covered!
+				if ( $in_coverage ) { # were in, close now
+				  $return_seq .= "</span>$aa";
+					$in_coverage = 0;
+					$span_closed++;
+				} else {
+				  $return_seq .= $aa;
+				}
+			}
+		  $cnt++;
+		}
+	}
+	if ( $in_coverage && !$span_closed ) {
+		$return_seq .= '</span>';
+	}
+	return $return_seq;
+}
+
 
 sub make_qtrap5500_target_list {
   my $self = shift;
