@@ -401,7 +401,7 @@ sub handle_request {
 
   #############################################################################
   # Widget to allow show/hide of overview section
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_overview',
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getptp_overview',
                                                 visible => 1,
                                                 tooltip => 'Show/Hide Section',
                                                 imglink => 1,
@@ -536,7 +536,7 @@ sub handle_request {
   my $motif = $sbeamsMOD->getBuildMotif(build_id => $atlas_build_id);
 
   # Widget to allow show/hide of graphic section
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_graphic',
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getptp_graphic',
                                                 visible => 1,
                                                 tooltip => 'Show/Hide Section',
                                                 imglink => 1,
@@ -580,7 +580,7 @@ sub handle_request {
 
 
     #### Widget to allow show/hide of section
-    my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_highlyobservablelist',
+    my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getptp_highlyobservablelist',
       visible => 0,
       tooltip => 'Show/Hide Section',
       imglink => 1,
@@ -1453,7 +1453,7 @@ sub displayAnnotatedSequence {
   my @peptides = @{$args{peptides}};
 
   # Widget to allow show/hide of sequence display section
-  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_sequence',
+  my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getptp_sequence',
                                                 visible => 1,
                                                 tooltip => 'Show/Hide Section',
                                                 imglink => 1,
@@ -1601,12 +1601,10 @@ sub displayAnnotatedSequence {
   
   #}
 
-#  print "<TR $tr><TD>" . $sbeamsMOD->get_html_seq( $sequence, $tags ) .
-  print "<TR $tr><TD>" . $sbeamsMOD->get_html_seq( $sequence,  ) .
-  "</TD></TR></TABLE>\n";
-  print "\n\n";
-#  print "<TABLE><TR $tr><TD>Protein Coverage =",int($observed_residues/$seq_length*1000)/10,"%";
-#  print ' (' . int(($observed_residues)/($seq_length-$cnt)*1000)/10,"% of likely observable sequence)</TD></TR></TABLE>";
+  my $html_seq = $sbeamsMOD->get_html_seq_vars( seq => $sequence );
+  use Data::Dumper;
+  print "<TR $tr><TD>$html_seq->{seq_display}</TD></TR></TABLE>\n\n\n";
+
 
   if ( $args{show_aa_content} ) {
     my $tot = length( $sequence );
@@ -2208,7 +2206,7 @@ sub displayExternalLinksSection {
   my $biosequence = $args{biosequence} || die("ERROR: No biosequence passed");
 
   #### Create widget to allow show/hide of overview section
-  my ($tr,$link) = $sbeams->make_table_toggle( name => 'getprotein_ExternalLinks',
+  my ($tr,$link) = $sbeams->make_table_toggle( name => 'getptp_ExternalLinks',
 					       visible => 1,
 					       tooltip => 'Show/Hide Section',
 					       imglink => 1,
