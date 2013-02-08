@@ -277,6 +277,12 @@ my $module_styles =<<"  END_STYLE";
   .right_text { text-align: right }
   .header_text { color: white; text-align: left }
   .topbound_text { vertical-align: top }
+  .clustal_dummy_wrap {width: 900px; overflow-x: scroll; overflow-y:hidden; height: 20px;}
+  .clustal_wrap {width: 900px; overflow-x: scroll; overflow-y:hidden; height: 200px;}
+  .clustal_dummy {width:1000px; height: 20px; }
+  .clustalx {width:1000px; }
+  .clustal {width: 1000px; overflow-x: scroll; scrollbar-arrow-color: blue; scrollbar- face-color: #e7e7e7; scrollbar-3dlight-color: #a0a0a0; scrollbar-darkshadow-color: #888888}
+  .clustal_peptide {width: 1000px; height: 400px; overflow-x: scroll; overflow-y: scroll; scrollbar-arrow-color: blue; scrollbar- face-color: #e7e7e7; scrollbar-3dlight-color: #a0a0a0; scrollbar-darkshadow-color: #888888}
 	
 
   /* Glycopeptide */
@@ -322,6 +328,8 @@ my $module_styles =<<"  END_STYLE";
   div.visible { display: inline; white-space: nowrap;         }
   div.visilink { color: blue; display: inline; white-space: nowrap;         }
   div.hidden { display: none; }
+  span.visible { display: inline; white-space: nowrap;         }
+  span.hidden { display: none; }
   table.tbl_visible { display: table; }
   table.tbl_hidden { display: none; }
   tr.tbl_visible { display: table-row; }
