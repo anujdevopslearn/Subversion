@@ -103,6 +103,8 @@ use vars qw(@ISA @EXPORT
     $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE
     $TBAT_PROTEIN_IDENTIFICATION
     $TBAT_BIOSEQUENCE_RELATIONSHIP
+    $TBAT_UNIPROT_DB
+    $TBAT_UNIPROT_DB_ENTRY
 
     $TBAT_PABST_PEPTIDE
     $TBAT_PABST_PEPTIDE_MAPPING
@@ -238,6 +240,8 @@ require Exporter;
     $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE
     $TBAT_PROTEIN_IDENTIFICATION
     $TBAT_BIOSEQUENCE_RELATIONSHIP
+    $TBAT_UNIPROT_DB
+    $TBAT_UNIPROT_DB_ENTRY
 
     $TBAT_PABST_PEPTIDE
     $TBAT_PABST_PEPTIDE_MAPPING
@@ -378,6 +382,8 @@ $TBAT_PROTEIN_PRESENCE_LEVEL        = "${mod}protein_presence_level";
 $TBAT_BIOSEQUENCE_RELATIONSHIP_TYPE = "${mod}biosequence_relationship_type";
 $TBAT_PROTEIN_IDENTIFICATION        = "${mod}protein_identification";
 $TBAT_BIOSEQUENCE_RELATIONSHIP      = "${mod}biosequence_relationship";
+$TBAT_UNIPROT_DB                    = "${mod}uniprot_db";
+$TBAT_UNIPROT_DB_ENTRY              = "${mod}uniprot_db_entry";
 
 $TBAT_PABST_PEPTIDE                 = "${mod}pabst_tmp_peptide";
 $TBAT_PABST_PEPTIDE_MAPPING         = "${mod}pabst_tmp_peptide_mapping";
