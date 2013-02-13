@@ -1286,6 +1286,21 @@ sub get_html_seq_vars {
 
   my $seq = shift @seqs;
   my $fasta = ">Primary\n$seq\n";
+  my $ruler = '';
+  my $ruler_cnt = ' ';
+  my $acnt = 1;
+  for my $aa ( split //, $seq ) {
+    if ( $acnt % 10 ) {
+      $ruler .= '-';
+    } else {
+      $ruler_cnt .= sprintf( "% 10d", $acnt );;
+      $ruler .= '|';
+    }
+    
+    $acnt++;
+  }
+  $ruler_cnt =~ s/ /\&nbsp;/g;
+
   my $tags = $args{tags};
   my $peps = $args{peptides} || [];
 
@@ -1395,7 +1410,7 @@ sub get_html_seq_vars {
   return \%return unless scalar(@seqs);
 
   my %global_clustal;
-  my @global_clustal;
+  my @global_clustal = ( [ '', $ruler_cnt], [ '', $ruler ] );
   my %coverage_coords;
   my $primary_clustal;
   my $MSF = SBEAMS::BioLink::MSF->new();
@@ -1406,7 +1421,8 @@ sub get_html_seq_vars {
     my $pfasta = $fasta . ">$pepname\n$alt\n";
     my $clustal = $MSF->runClustalW( sequences => $pfasta );
     if ( ref $clustal eq 'ARRAY' ) {
-      my $coords = $self->get_clustal_coordinates( $clustal->[1] );
+      my $coords = $self->get_clustal_coordinates( $clustal );
+
       if ( !$primary_clustal ) {
         $primary_clustal = $clustal->[0];
         $coverage_coords{$primary_clustal->[0]} = $self->get_coverage_hash( seq => $primary_clustal->[1], 
@@ -1454,14 +1470,23 @@ sub get_html_seq_vars {
 
 sub get_clustal_coordinates {
   my $self = shift;
-  my $coords = { start => 999, len => 999, seq => '' };
+  my $coords = { start => 999, len => 999, seq => '', alignment => {} };
 	my $clustal = shift || return $coords;  
-  my $seq = $clustal->[1];
+
+  my $seq = $clustal->[1]->[1];
   $seq =~ /^(-*)([^-]+)(-*)/;
   $coords->{start} = length( $1 );
   $coords->{seq} = $2;
   $coords->{len} = length( $2 );
-#  die Dumper("$clustal \ngives $1, $2, and $3 and coords are\n" . $coords );
+
+  my $align = substr( $clustal->[2]->[1], $coords->{start}, $coords->{len} );
+#  die "$align from $coords->{seq} and $clustal->[2]->[1]";
+
+  my $acnt = 1;
+  for my $ro ( split( //, $align ) ) {
+    $coords->{alignment}->{$acnt}++ unless $ro =~ /\*/;
+    $acnt++;
+  }
   return $coords;
 }
 
@@ -1469,7 +1494,7 @@ sub get_clustal_display {
 
   my $self = shift;
 	my %args = ( acc_color => '#0090D0',
-	              @_  
+	             @_  
 						 );
 
   my $sbeams = $self->getSBEAMS();
@@ -1480,10 +1505,10 @@ sub get_clustal_display {
   my $scroll_class = ( scalar( @{$args{alignments}} ) > 10 ) ? 'clustal_peptide' : 'clustal';
 	for my $seq ( @{$args{alignments}} ) {
 		my $sequence = $seq->[1];
-		if ( $seq->[0] eq 'NOOP'  ) {
-      $align_spc = 'A' x length( $sequence );
-      $name_spc = 'A' x ( length( $seq->[0] ) + 5 );
-		  $sequence =~ s/ /&nbsp;/g 
+		if ( $seq->[0] =~ /\&nbsp;/  ) {
+#      $align_spc = 'A' x length( $sequence );
+#      $name_spc = 'A' x ( length( $seq->[0] ) + 5 );
+#		  $sequence =~ s/ /&nbsp;/g 
 		} else {
  			$sequence = $self->highlight_sites( seq => $sequence, 
                                           acc => $seq->[0], 
@@ -1491,12 +1516,21 @@ sub get_clustal_display {
 																 );
     }
 
-		$table_rows .= qq~
-		<TR>
-	      <TD ALIGN=right class=sequence_font>$seq->[0]:</TD>
-				<TD NOWRAP=1 class=sequence_font>$sequence</TD>
-		</TR>
-		~;
+    if ( $seq->[0] ) {
+      $table_rows .= qq~
+      <TR>
+        <TD ALIGN=right class=sequence_font>$seq->[0]:</TD>
+        <TD NOWRAP=1 class=sequence_font>$sequence</TD>
+      </TR>
+      ~;
+    } else {
+      $table_rows .= qq~
+      <TR>
+        <TD ALIGN=right class=sequence_font></TD>
+        <TD NOWRAP=1 class=sequence_font>$sequence</TD>
+      </TR>
+      ~;
+    }
 	}
 
 
