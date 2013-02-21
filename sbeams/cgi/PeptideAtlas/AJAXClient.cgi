@@ -162,7 +162,7 @@ sub GetTransitions_NamespaceFilters {
       } elsif ( $row[0] == 3 ) {
         $div_text = '<INPUT TYPE=checkbox NAME=SGD checked  disabled> SGD </INPUT>';
       } elsif ( $row[0] == 40 ) {
-        $div_text = '<INPUT TYPE=checkbox NAME=Tuberculist checked disabled> Tubercululist </INPUT>';
+        $div_text = '<INPUT TYPE=checkbox NAME=Tuberculist checked disabled> TubercuList </INPUT>';
       } elsif ( $row[0] == 43 ) {
         $div_text = '<INPUT TYPE=checkbox NAME=Dengue checked disabled> Dengue </INPUT>';
 			}

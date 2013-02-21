@@ -670,7 +670,7 @@ sub get_namespace_filters {
   } elsif ( $opts{organism} == 3 ) {
     $checks .= '<INPUT TYPE=checkbox NAME=SGD checked disabled> SGD </INPUT>';
   } elsif ( $opts{organism} == 40 ) {
-    $checks .= '<INPUT TYPE=checkbox NAME=Tuberculist checked disabled> Tubercululist </INPUT>';
+    $checks .= '<INPUT TYPE=checkbox NAME=Tuberculist checked disabled> TubercuList </INPUT>';
   } elsif ( $opts{organism} == 43 ) {
     $checks .= '<INPUT TYPE=checkbox NAME=Dengue checked disabled> Dengue </INPUT>';
   } else {
