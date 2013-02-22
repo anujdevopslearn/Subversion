@@ -180,7 +180,7 @@ sub InsertSearchKeyEntity {
 
   my $reference_directory;
 
-  if ($organism_name =~ /^Human$|^Mouse$|^COW$/i ) {
+  if ($organism_name =~ /^Human$|^Mouse$|^COW$|^horse$/i ) {
     #my $GOA_directory = $args{GOA_directory}
     my $uc_organism_name = uc($organism_name);
     my $GOA_directory = `ls -dlrt /net/db/src/GOA/* | grep '^d' | tail -1`;
@@ -240,7 +240,7 @@ sub InsertSearchKeyEntity {
       biosequence_set_id => $biosequence_set_id,
     );
   }
-  if ($organism_name =~ /falciparum/){
+  if ($organism_name =~ /(falciparum|yoelii)/){
     my $reference_directory = $args{reference_directory}
       or die("ERROR[$METHOD]: Parameter reference_directory not passed");
     print "Loading protein keys from SBEAMS and reference files...\n";
@@ -389,8 +389,6 @@ sub buildGoaKeyIndex {
   #my $GOA_file = "$GOA_directory/${organism_name}.xrefs";
   my $GOA_file = "$GOA_directory/ipi.".uc($organism_name).".xrefs";
   
-  open(INFILE,$GOA_file)
-    or die("ERROR[$METHOD]: Unable to open file '$GOA_file'");
 
   #### Read the GOA gene_associations file
   my $associations = $self->readGOAAssociations(
@@ -405,216 +403,252 @@ sub buildGoaKeyIndex {
   #### Read all the GOA xrefs
   my $line;
   my $counter = 0;
+  if ( -e $GOA_file){
+    open(INFILE,$GOA_file)  or die("ERROR[$METHOD]: Unable to open file '$GOA_file'");
+		while ($line=<INFILE>) {
+			chomp($line);
+			my ($Database,$Accession,$IPI,$UniProtSP,$UniProtTR,$Ensembl,$RefSeqNP,
+					$RefSeqXP,$Hinv,$proteins,$HGNCgenew,$EntrezGene,$UNIPARC,
+					$UniGene) = split(/\t/,$line);
+			my $UniProtKB;
+			my $protein_alias_master;
+			my $protein_alias_master_source; 
+			if (0) {
+				print "-------------------------------------------------\n";
+				print "Database=$Database\n";
+				print "Accession=$Accession\n";
+				print "IPI=$IPI\n";
+				print "UniProtSP=$UniProtSP\n";
+				print "UniProtTR=$UniProtTR\n";
+				print "Ensembl=$Ensembl\n";
+				print "RefSeqNP=$RefSeqNP\n";
+				print "RefSeqXP=$RefSeqXP\n";
+				print "Hinv=$Hinv\n";
+				print "proteins=$proteins\n";
+				print "HGNCgenew=$HGNCgenew\n";
+				print "EntrezGene=$EntrezGene\n";
+				print "UNIPARC=$UNIPARC\n";
+				print "UniGene=$UniGene\n";
+			}
 
-  while ($line=<INFILE>) {
-    chomp($line);
-    my ($Database,$Accession,$IPI,$UniProtSP,$UniProtTR,$Ensembl,$RefSeqNP,
-        $RefSeqXP,$Hinv,$proteins,$HGNCgenew,$EntrezGene,$UNIPARC,
-      	$UniGene) = split(/\t/,$line);
-    my $UniProtKB;
-    my $protein_alias_master;
-    my $protein_alias_master_source; 
-    if (0) {
-      print "-------------------------------------------------\n";
-      print "Database=$Database\n";
-      print "Accession=$Accession\n";
-      print "IPI=$IPI\n";
-      print "UniProtSP=$UniProtSP\n";
-      print "UniProtTR=$UniProtTR\n";
-      print "Ensembl=$Ensembl\n";
-      print "RefSeqNP=$RefSeqNP\n";
-      print "RefSeqXP=$RefSeqXP\n";
-      print "Hinv=$Hinv\n";
-      print "proteins=$proteins\n";
-      print "HGNCgenew=$HGNCgenew\n";
-      print "EntrezGene=$EntrezGene\n";
-      print "UNIPARC=$UNIPARC\n";
-      print "UniGene=$UniGene\n";
-    }
+			#### Map Ensembl and RefSeqNP accessions to themselves
+			if ($Database && $Accession) {
+				if ($Database =~ /ENSEMBL/) {
+				$Ensembl = $Accession;
+				} elsif ($Database =~ /REFSEQ/) {
+				$RefSeqNP = $Accession;
+				} elsif ($Database eq 'SP') {
+					$UniProtKB = $Accession;     
+				}
+			}
 
-    #### Map Ensembl and RefSeqNP accessions to themselves
-    if ($Database && $Accession) {
-      if ($Database =~ /ENSEMBL/) {
-    	$Ensembl = $Accession;
-      } elsif ($Database =~ /REFSEQ/) {
-    	$RefSeqNP = $Accession;
-      } elsif ($Database eq 'SP') {
-        $UniProtKB = $Accession;     
+
+			#### Skip if we don't have an ENSP number
+			unless ($Ensembl) {
+				#print "WARNING[$METHOD]: No ENSP for $Database:$Accession. Ignoring..\n";
+				#next;
+				$Ensembl = '';
+			}
+
+			#### Build a list of protein links
+			my @links;
+
+			if ($Database and $Accession) {
+				$Database = 'UniProt' if ($Database eq 'SP');
+				$Database = 'TrEMBL' if ($Database eq 'TR');
+				my @tmp = ($Database,$Accession,40);
+				push(@links,\@tmp) unless ($Database =~ /ENSEMBL/);
+			}
+
+			# added UniProtSP 07/06/09 TMF.
+			if ($UniProtSP) {
+				my @list = splitEntities(list=>$UniProtSP);
+				$protein_alias_master = $list[0];
+				$protein_alias_master_source = 'UniProt/Swiss-Prot';
+				foreach my $item ( @list ) {
+					my @tmp = ('UniProt/Swiss-Prot',$item,1);
+					push(@links,\@tmp);
+				}
+			}
+
+			if ($UniProtKB) {
+				my @list = splitEntities(list=>$UniProtKB);
+			}
+
+			#### Split the Ensembl ID's
+			my @Ensembl_IDS = splitEntities(list=>$Ensembl,delimiter=>';');
+
+			if(! $protein_alias_master and @Ensembl_IDS > 0 ){
+				$Ensembl_IDS[0] =~ s/HAVANA://;
+				$protein_alias_master = $Ensembl_IDS[0];
+				$protein_alias_master_source = 'Ensembl Protein';
+			}
+			if ($IPI) {
+				my @list = splitEntities(list=>$IPI,delimiter=>';');
+				if(! $protein_alias_master ){
+					$protein_alias_master = $list[0];
+					$protein_alias_master_source = 'IPI';
+				}
+
+				foreach my $item ( @list ) {
+					my @tmp = ('IPI',$item,9);
+					push(@links,\@tmp);
+				}
+			}
+			if ($UniProtTR) {
+				my @list = splitEntities(list=>$UniProtTR);
+				foreach my $item ( @list ) {
+					my @tmp = ('UniProt/TrEMBL',$item,35);
+					push(@links,\@tmp);
+				}
+			}
+			if ($RefSeqNP) {
+				my @list = splitEntities(list=>$RefSeqNP,delimiter=>';');
+				if(! $protein_alias_master ){
+					$protein_alias_master = $list[0];
+					$protein_alias_master_source = 'RefSeq';
+				}
+				foreach my $item ( @list ) {
+				$item =~ s/^\w+://;
+					my @tmp = ('RefSeq',$item,39);
+					push(@links,\@tmp);
+				}
+			}
+			if ($RefSeqXP) {
+				my @list = splitEntities(list=>$RefSeqXP,delimiter=>';');
+				foreach my $item ( @list ) {
+				$item =~ s/^\w+://;
+					my @tmp = ('RefSeq',$item,39);
+					push(@links,\@tmp);
+				}
+			}
+			if ($EntrezGene) {
+				my @list = splitEntities(list=>$EntrezGene,delimiter=>';');
+				foreach my $item ( @list ) {
+					my @pair = split(/,/,$item);
+					my @tmp = ('Entrez GeneID',$pair[0],37);
+					push(@links,\@tmp);
+					my @tmp2 = ('Entrez Gene Symbol',$pair[1],38);
+					push(@links,\@tmp2);
+				}
+			}
+			if ($UniGene) {
+				my @list = splitEntities(list=>$UniGene,delimiter=>';');
+				foreach my $item ( @list ) {
+					my @tmp = ('UniGene',$item);
+					push(@links,\@tmp);
+				}
+			}
+			my $handle = "$Database:$Accession";
+			if ($associations->{$handle}) {
+				if ($associations->{$handle}->{Symbol} &&
+					$associations->{$handle}->{Symbol} ne $Accession) {
+					my @tmp = ('UniProt Symbol',$associations->{$handle}->{Symbol},35);
+					push(@links,\@tmp);
+				}
+				if ($associations->{$handle}->{DB_Object_Name}) {
+					my @tmp = ('Full Name',$associations->{$handle}->{DB_Object_Name});
+					push(@links,\@tmp);
+				}
+			}
+			#### Write the links for each Ensembl ID
+			### find protein_alias_master (go through the Ensembl, IPI and UniProt combined 
+			### list and find the first one that is in the biosequence set
+			foreach my $Ensembl_ID (@Ensembl_IDS) {
+				#### Strip HAVANA prefix
+				$Ensembl_ID =~ s/HAVANA://;
+				if(defined $proteinList->{$Ensembl_ID}){
+					$proteinList->{$Ensembl_ID} = 1;
+				}
+				#### Insert an entry for the Ensembl ID itself
+				my %rowdata = (
+					search_key_name => $Ensembl_ID,
+					search_key_type => 'Ensembl Protein',
+					search_key_dbxref_id => 20,
+					resource_name => $Ensembl_ID,
+					resource_type => 'Ensembl Protein',
+					protein_alias_master => $protein_alias_master,
+				);
+				$self->insertSearchKeyEntity( rowdata => \%rowdata);
+			}  
+			foreach my $link (@links) {
+				my $resource_name = $link->[1];
+				my $resource_type = $link->[0];
+				if(defined $proteinList->{$link->[1]}{flag}){
+					$proteinList->{$link->[1]}{flag} = 1;
+				}else {
+					$resource_name = $protein_alias_master;
+					$resource_type = $protein_alias_master_source;
+				}
+				my %rowdata = (
+						search_key_name => $link->[1],
+						search_key_type => $link->[0],
+						search_key_dbxref_id => $link->[2],
+						resource_name => $resource_name,
+						resource_type => $resource_type,
+						protein_alias_master => $protein_alias_master,
+					);
+				$self->insertSearchKeyEntity( rowdata => \%rowdata);
+			}
+
+			$counter++;
+			print "$counter... " if ($counter/100 eq int($counter/100));
+
+			#my $xx=<STDIN>;
+
+		} # endwhile ($line=<INFILE>)
+    close(INFILE);
+  }## haveing INFILE
+  else{ # using GOA mapping 
+     my %goamapping = ();
+     foreach my $handle(keys %{$associations}){
+       my ($database, $acc ) = split(":", $handle);
+       $goamapping{$acc}{database} = $database;
+       $goamapping{$acc}{DB_Object_Name} = $associations->{$handle}->{DB_Object_Name};  
+       $goamapping{$acc}{'Gene Symbol'} = $associations->{$handle}->{Symbol};
+     }
+     foreach my $acc(keys %$proteinList){
+        my @links;
+        my $resource_type='Protein Accession';
+        if (defined $goamapping{$acc}){
+          foreach my $type (keys %{$goamapping{$acc}}){
+            my @tmp = ($type, $goamapping{$acc}{$type});
+            push @links, \@tmp;
+          }
+          my @tmp = ('UniProtKB', $acc, 54);
+          push @links, \@tmp; 
+          $resource_type = 'UniProtKB';
+        }else{
+          $proteinList->{$acc}{desc} =~ s/>$acc//g;
+          $proteinList->{$acc}{desc} =~ s/OS=.*//;
+          $proteinList->{$acc}{desc} =~ s/pep:known.*//;
+          $proteinList->{$acc}{desc} =~ s/\'//g;
+          if($proteinList->{$acc}{desc} ne ''){
+            my @tmp = ('Description', $proteinList->{$acc}{desc});
+            push @links, \@tmp;
+          }
+        }
+        foreach my $link (@links) {
+          if(defined $proteinList->{$link->[1]}{flag}){
+            $proteinList->{$link->[1]}{flag} = 1;
+          }
+          my %rowdata = (
+            search_key_name => $link->[1],
+            search_key_type => $link->[0],
+            search_key_dbxref_id => $link->[2],
+            resource_name => $acc,
+            resource_type => $resource_type,
+            protein_alias_master => $acc, 
+          );
+          $self->insertSearchKeyEntity( rowdata => \%rowdata);
+          $counter++;
       }
-    }
-
-
-    #### Skip if we don't have an ENSP number
-    unless ($Ensembl) {
-      #print "WARNING[$METHOD]: No ENSP for $Database:$Accession. Ignoring..\n";
-      #next;
-      $Ensembl = '';
-    }
-
-    #### Build a list of protein links
-    my @links;
-
-    if ($Database and $Accession) {
-      $Database = 'UniProt' if ($Database eq 'SP');
-      $Database = 'TrEMBL' if ($Database eq 'TR');
-      my @tmp = ($Database,$Accession,40);
-      push(@links,\@tmp) unless ($Database =~ /ENSEMBL/);
-    }
-
-    # added UniProtSP 07/06/09 TMF.
-    if ($UniProtSP) {
-      my @list = splitEntities(list=>$UniProtSP);
-      $protein_alias_master = $list[0];
-      $protein_alias_master_source = 'UniProt/Swiss-Prot';
-      foreach my $item ( @list ) {
-        my @tmp = ('UniProt/Swiss-Prot',$item,1);
-        push(@links,\@tmp);
-      }
-    }
-
-    if ($UniProtKB) {
-      my @list = splitEntities(list=>$UniProtKB);
-    }
-
-    #### Split the Ensembl ID's
-    my @Ensembl_IDS = splitEntities(list=>$Ensembl,delimiter=>';');
-
-    if(! $protein_alias_master and @Ensembl_IDS > 0 ){
-      $Ensembl_IDS[0] =~ s/HAVANA://;
-      $protein_alias_master = $Ensembl_IDS[0];
-      $protein_alias_master_source = 'Ensembl Protein';
-    }
-     
-    if ($IPI) {
-      my @list = splitEntities(list=>$IPI,delimiter=>';');
-      if(! $protein_alias_master ){
-        $protein_alias_master = $list[0];
-        $protein_alias_master_source = 'IPI';
-      }
-
-      foreach my $item ( @list ) {
-        my @tmp = ('IPI',$item,9);
-        push(@links,\@tmp);
-      }
-    }
-
-
-    if ($UniProtTR) {
-      my @list = splitEntities(list=>$UniProtTR);
-      foreach my $item ( @list ) {
-        my @tmp = ('UniProt/TrEMBL',$item,35);
-        push(@links,\@tmp);
-      }
-    }
-
-
-    if ($RefSeqNP) {
-      my @list = splitEntities(list=>$RefSeqNP,delimiter=>';');
-      if(! $protein_alias_master ){
-        $protein_alias_master = $list[0];
-        $protein_alias_master_source = 'RefSeq';
-      }
-      foreach my $item ( @list ) {
-    	$item =~ s/^\w+://;
-        my @tmp = ('RefSeq',$item,39);
-        push(@links,\@tmp);
-      }
-    }
-
-    if ($RefSeqXP) {
-      my @list = splitEntities(list=>$RefSeqXP,delimiter=>';');
-      foreach my $item ( @list ) {
-    	$item =~ s/^\w+://;
-        my @tmp = ('RefSeq',$item,39);
-        push(@links,\@tmp);
-      }
-    }
-
-    if ($EntrezGene) {
-      my @list = splitEntities(list=>$EntrezGene,delimiter=>';');
-      foreach my $item ( @list ) {
-        my @pair = split(/,/,$item);
-        my @tmp = ('Entrez GeneID',$pair[0],37);
-        push(@links,\@tmp);
-        my @tmp2 = ('Entrez Gene Symbol',$pair[1],38);
-        push(@links,\@tmp2);
-      }
-    }
-
-    if ($UniGene) {
-      my @list = splitEntities(list=>$UniGene,delimiter=>';');
-      foreach my $item ( @list ) {
-        my @tmp = ('UniGene',$item);
-        push(@links,\@tmp);
-      }
-    }
-
-
-    my $handle = "$Database:$Accession";
-    if ($associations->{$handle}) {
-      if ($associations->{$handle}->{Symbol} &&
-        $associations->{$handle}->{Symbol} ne $Accession) {
-        my @tmp = ('UniProt Symbol',$associations->{$handle}->{Symbol},35);
-        push(@links,\@tmp);
-      }
-      if ($associations->{$handle}->{DB_Object_Name}) {
-        my @tmp = ('Full Name',$associations->{$handle}->{DB_Object_Name});
-        push(@links,\@tmp);
-      }
-    }
-
-
-    #### Write the links for each Ensembl ID
-    ### find protein_alias_master (go through the Ensembl, IPI and UniProt combined 
-    ### list and find the first one that is in the biosequence set
-
-    foreach my $Ensembl_ID (@Ensembl_IDS) {
-      #### Strip HAVANA prefix
-      $Ensembl_ID =~ s/HAVANA://;
-      if(defined $proteinList->{$Ensembl_ID}){
-        $proteinList->{$Ensembl_ID} = 1;
-      }
-
-      #### Insert an entry for the Ensembl ID itself
-      my %rowdata = (
-        search_key_name => $Ensembl_ID,
-        search_key_type => 'Ensembl Protein',
-        search_key_dbxref_id => 20,
-        resource_name => $Ensembl_ID,
-        resource_type => 'Ensembl Protein',
-        protein_alias_master => $protein_alias_master,
-      );
-
-      $self->insertSearchKeyEntity( rowdata => \%rowdata);
-    }  
-    foreach my $link (@links) {
-      my $resource_name = $link->[1];
-      my $resource_type = $link->[0];
-      if(defined $proteinList->{$link->[1]}){
-        $proteinList->{$link->[1]} = 1;
-      }else {
-        $resource_name = $protein_alias_master;
-        $resource_type = $protein_alias_master_source;
-      }
-      my %rowdata = (
-          search_key_name => $link->[1],
-    	    search_key_type => $link->[0],
-    	    search_key_dbxref_id => $link->[2],
-	        resource_name => $resource_name,
-    	    resource_type => $resource_type,
-          protein_alias_master => $protein_alias_master,
-        );
-      $self->insertSearchKeyEntity( rowdata => \%rowdata);
-    }
-
-    $counter++;
-    print "$counter... " if ($counter/100 eq int($counter/100));
-
-    #my $xx=<STDIN>;
-
-  } # endwhile ($line=<INFILE>)
-  close(INFILE);
+      print "$counter... " if ($counter/100 eq int($counter/100));
+  
+     }
+  }
   # check if there is any protein in the proteinList have not been entered into the entity table
+  exit;
   $self -> checkCompleteness(proteinList=> $proteinList,
                              count      => $counter); 
 
@@ -628,7 +662,7 @@ sub checkCompleteness{
   my $counter = $args{count};
 
   foreach my $prot (keys %{$proteinList}){
-    if(! $proteinList->{$prot}){
+    if(! $proteinList->{$prot}{flag}){
 
      my %rowdata = (
         search_key_name => $prot,
@@ -641,9 +675,7 @@ sub checkCompleteness{
      $counter++;
      print "$counter... " if ($counter/100 eq int($counter/100));
     }
-
   }
-
 }
 
 sub insertSearchKeyEntity {
@@ -663,7 +695,6 @@ sub insertSearchKeyEntity {
 
   $search_key_name =~ s/'/''/g;
  
-  
   my $sql = qq~
      SELECT SEARCH_KEY_ID
      FROM $TBAT_SEARCH_KEY_ENTITY
@@ -854,8 +885,8 @@ sub buildCANALKeyIndex {
 
     my $protein_alias_master = $protein_synonyms[0];
     foreach my $link (@links) {
-      if(defined $proteinList->{$link->[1]}){
-        $proteinList->{$link->[1]} = 1;
+      if(defined $proteinList->{$link->[1]}{flag}){
+        $proteinList->{$link->[1]}{flag} = 1;
       }
 
       my %rowdata = (
@@ -1029,8 +1060,8 @@ sub buildSGDKeyIndex {
     my $protein_alias_master = $protein_synonyms[0];
     foreach my $link (@links) {
       #print "    ".join("=",@{$link})."\n";
-      if(defined $proteinList->{$link->[1]}){
-        $proteinList->{$link->[1]} = 1;
+      if(defined $proteinList->{$link->[1]}{flag}){
+        $proteinList->{$link->[1]}{flag} = 1;
       }
 
       my %rowdata = (
@@ -1229,15 +1260,14 @@ sub buildPfalciparumKeyIndex {
   my %proteins;
 
   #### Load information from gff file
-  my $reference_file = "$reference_directory/PlasmoDB-9.1_Pfalciparum3D7.gff";
-
+  my $reference_file = `ls -rt $reference_directory/*.gff  | tail -1`;
+print "$reference_file\n";
   #### Open file and skip header
   open(INFILE,$reference_file)
     or die("ERROR[$METHOD]: Unable to open file '$reference_file'");
     while (my $line = <INFILE>) {
       last if ($line !~ /^##/);
     }
-
     #### Load data
     while (my $line = <INFILE>) {
     next unless ($line =~ /gene.*ID.*Name/);
@@ -1297,8 +1327,8 @@ sub buildPfalciparumKeyIndex {
     }
 
     foreach my $link (@links) {
-      if(defined $proteinList->{$link->[1]}){
-        $proteinList->{$link->[1]} = 1;
+      if(defined $proteinList->{$link->[1]}{flag}){
+        $proteinList->{$link->[1]}{flag} = 1;
       }
 
       #print "    ".join("=",@{$link})."\n";
@@ -1489,8 +1519,8 @@ sub buildStreptococcusKeyIndex {
     }
 
     foreach my $link (@links) {
-      if(defined $proteinList->{$link->[1]}){
-        $proteinList->{$link->[1]} = 1;
+      if(defined $proteinList->{$link->[1]}{flag}){
+        $proteinList->{$link->[1]}{flag} = 1;
       }
 
       #print "    ".join("=",@{$link})."\n";
@@ -1688,8 +1718,8 @@ sub buildLeptospiraKeyIndex {
     }
 
     foreach my $link (@links) {
-      if(defined $proteinList->{$link->[1]}){
-        $proteinList->{$link->[1]} = 1;
+      if(defined $proteinList->{$link->[1]}{flag}){
+        $proteinList->{$link->[1]}{flag} = 1;
       }
       #print "    ".join("=",@{$link})."\n";
       my %rowdata = (
@@ -1878,8 +1908,8 @@ sub buildMTBKeyIndex {
 
     foreach my $link (@links) {
       #print "    ".join("=",@{$link})."\n";
-      if(defined $proteinList->{$link->[1]}){
-        $proteinList->{$link->[1]} = 1;
+      if(defined $proteinList->{$link->[1]}{flag}){
+        $proteinList->{$link->[1]}{flag} = 1;
       }
 
       my $resource_name = $link->[1];
@@ -2116,8 +2146,8 @@ sub buildDrosophilaKeyIndex {
           }
         }
         foreach my $link (@temp_links) {
-          if(defined $proteinList->{$link->[1]}){
-            $proteinList->{$link->[1]} = 1;
+          if(defined $proteinList->{$link->[1]}{flag}){
+            $proteinList->{$link->[1]}{flag} = 1;
           }
 				#print "    ".join("=",@{$link})."\n";
 					my %rowdata = (
@@ -2244,8 +2274,8 @@ sub buildPigKeyIndex {
 
     foreach my $link (@links) {
 
-      if(defined $proteinList->{$link->[1]}){
-        $proteinList->{$link->[1]} = 1;
+      if(defined $proteinList->{$link->[1]}{flag}){
+        $proteinList->{$link->[1]}{flag} = 1;
       }
 
       #print "    ".join("=",@{$link})."\n";
@@ -2380,8 +2410,8 @@ sub buildEcoliKeyIndex {
 
     foreach my $link (@links) {
 
-      if(defined $proteinList->{$link->[1]}){
-        $proteinList->{$link->[1]} = 1;
+      if(defined $proteinList->{$link->[1]}{flag}){
+        $proteinList->{$link->[1]}{flag} = 1;
       }
       #print "    ".join("=",@{$link})."\n";
       my %rowdata = (
@@ -2546,8 +2576,8 @@ sub buildCelegansKeyIndex {
 
     foreach my $link (@links) {
       #print "    ".join("=",@{$link})."\n";
-      if(defined $proteinList->{$link->[1]}){
-        $proteinList->{$link->[1]} = 1;
+      if(defined $proteinList->{$link->[1]}{flag}){
+        $proteinList->{$link->[1]}{flag} = 1;
       }
       my %rowdata = (
         search_key_name => substr($link->[1],0,255),
@@ -2722,8 +2752,8 @@ sub buildHoneyBeeKeyIndex {
     }  
     foreach my $link (@links) {
 
-      if(defined $proteinList->{$link->[1]}){
-        $proteinList->{$link->[1]} = 1;
+      if(defined $proteinList->{$link->[1]}{flag}){
+        $proteinList->{$link->[1]}{flag} = 1;
       }
       my %rowdata = (
         search_key_name => $link->[1],
@@ -2957,16 +2987,18 @@ sub getProteinList {
 
   #### Get all the protein in the biosequence set
   my $sql = qq~
-         SELECT B.biosequence_name
+         SELECT B.biosequence_name, B.biosequence_desc
          FROM $TBAT_BIOSEQUENCE B
          WHERE B.biosequence_set_id= $biosequence_set_id
   ~;
 
-  my @proteins = $sbeams->selectOneColumn($sql);
+  my @rows = $sbeams->selectSeveralColumns($sql);
   my %proteins = ();
-  foreach (@proteins){
-   next if($_ =~ /DECOY/);
-   $proteins{$_} = 0;
+  foreach my $row(@rows){
+   my ($protein, $desc) = @$row;
+   next if($protein =~ /DECOY/);
+   $proteins{$protein}{desc} = $desc;
+   $proteins{$protein}{flag} = 0;
   }
   return(\%proteins);
 
