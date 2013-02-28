@@ -1285,7 +1285,7 @@ sub get_html_seq_vars {
 
   my %return = ( seq_display => '',
                  clustal_display => '',
-                 variant_list => [ [qw( Name Type Start End Info )] ] );
+                 variant_list => [ [qw( Type Num Start End Info )] ] );
 
   my $full_seq = $args{seq} || return '';
   my @seqs = split( /\*/, $full_seq );
@@ -2338,6 +2338,13 @@ sub clear_isotope {
   return $sequence;
 }
 
+sub clear_massmods {
+  my $self = shift;
+  my $sequence = shift || return '';
+  $sequence =~ s/\[\d+\]//g;
+  return $sequence;
+}
+
 sub get_qtrap_mrmmsms_method {
 
   my $self = shift;
@@ -2409,6 +2416,37 @@ sub get_qtrap_mrm_method {
   }
   return $method;
 }
+
+
+sub get_skyline_export {
+
+  my $self = shift;
+
+	my %args = @_;
+
+  my $tsv = $args{method} || return '';
+
+  my $sep = "\t";
+
+#  my $method = join( $sep, qw( Accession Sequence Precursor_mz Product_mz ModSequence )  ) . "\n";
+  my $method = '';
+
+	for my $row ( @{$tsv} ) {
+		my @line = @{$row};
+    next if $line[0] eq 'Protein';
+
+    my $acc = $line[0];
+    my $mod_seq = $line[2];
+    my $clean_seq = $self->clear_massmods( $line[2] );
+    my $q1 = $line[6];
+    my $q3 = $line[8];
+
+  	$method .= join( $sep, $acc, $clean_seq, $q1, $q3, $mod_seq ) . "\n";
+  }
+  return $method;
+}
+
+
 
 
 sub get_thermo_tsq_mrm_method {

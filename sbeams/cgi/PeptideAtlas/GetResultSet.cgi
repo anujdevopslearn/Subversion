@@ -8,7 +8,7 @@
 # Description : This CGI program dumps the ResultSet data to the user
 #               in various formats
 #
-# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2013 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -211,6 +211,9 @@ sub handle_request {
       print $method;
     } elsif ( $download =~ /ThermoTSQ/i ) {
       my $method = $atlas->get_thermo_tsq_mrm_method( method => $tsv_formatted, params => \%parameters );
+      print $method;
+    } elsif ( $download =~ /Skyline/i ) {
+      my $method = $atlas->get_skyline_export( method => $tsv_formatted, params => \%parameters );
       print $method;
     } elsif ( $download =~ /TSV/i ) {
       for my $row ( @{$tsv_formatted} ) {
