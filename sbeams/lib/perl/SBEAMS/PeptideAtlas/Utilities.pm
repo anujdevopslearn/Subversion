@@ -1,5 +1,9 @@
 package SBEAMS::PeptideAtlas::Utilities;
 
+use lib "/net/db/projects/PeptideAtlas/lib/Swissknife_1.68/lib";
+
+use SWISS::Entry;
+use SWISS::FTs;
 use SBEAMS::Connection qw( $log );
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::Proteomics::PeptideMassCalculator;
@@ -1277,9 +1281,11 @@ sub get_html_seq_vars {
   my $self = shift;
   my %args = @_;
 
+#  die Dumper( %args );
+
   my %return = ( seq_display => '',
                  clustal_display => '',
-                 variant_list => [] );
+                 variant_list => [ [qw( Name Type Start End Info )] ] );
 
   my $full_seq = $args{seq} || return '';
   my @seqs = split( /\*/, $full_seq );
@@ -1406,59 +1412,84 @@ sub get_html_seq_vars {
   # If we aren't going to show the alignment
   return \%return unless $args{show_clustal};
 
+  my $swiss = {};
+  if ( $args{accession} ) {
+    $swiss = $self->get_uniprot_annotation( %args );
+  }
+#  print '<PRE>' . Dumper( $swiss  ) . '</PRE>' . "\n";
+
   # Or if there are no variants.
-  return \%return unless scalar(@seqs);
+  return \%return unless scalar(@seqs) || $swiss->{success};
+
+  my $snp_cover = $self->get_snp_coverage( swiss => $swiss );
 
   my %global_clustal;
   my @global_clustal = ( [ '', $ruler_cnt], [ '', $ruler ] );
   my %coverage_coords;
   my $primary_clustal;
   my $MSF = SBEAMS::BioLink::MSF->new();
-  my $pepcnt = 1;
-  for my $alt ( @seqs ) {
-    my $pepname = "Variant_$pepcnt";
-
-    my $pfasta = $fasta . ">$pepname\n$alt\n";
-    my $clustal = $MSF->runClustalW( sequences => $pfasta );
-    if ( ref $clustal eq 'ARRAY' ) {
-      my $coords = $self->get_clustal_coordinates( $clustal );
-
-      if ( !$primary_clustal ) {
-        $primary_clustal = $clustal->[0];
-        $coverage_coords{$primary_clustal->[0]} = $self->get_coverage_hash( seq => $primary_clustal->[1], 
-                                                                       peptides => $peps, 
-                                                                         offset => 0 );
+  my %type2display = ( VARIANT => 'SNP', CHAIN => 'Chain', INIT_MET => 'InitMet', SIGNAL => 'Signal' );
+  for my $type ( qw( INIT_MET SIGNAL CHAIN VARIANT ) ) {
+    my $pepcnt = 1;
+    for my $entry ( @{$swiss->{$type}} ) {
+      my $alt = $entry->{seq};
+     
+      my $pepname = $type2display{$type} .  '_' . $pepcnt;
+   
+      my $pfasta = $fasta . ">$pepname\n$alt\n";
+      my $clustal = $MSF->runClustalW( sequences => $pfasta );
+      if ( ref $clustal eq 'ARRAY' ) {
+        my $coords = $self->get_clustal_coordinates( $clustal );
+ 
+        if ( !$primary_clustal ) {
+          $primary_clustal = $clustal->[0];
+          $coverage_coords{$primary_clustal->[0]} = $self->get_coverage_hash( seq => $primary_clustal->[1], 
+                                                                         peptides => $peps, 
+                                                                           offset => 0 );
+          push @global_clustal, $primary_clustal;
+        }
+        if ( $coords->{seq} ) {
+          $global_clustal{$coords->{start}} ||= [];
+          push @{$global_clustal{$coords->{start}}}, $clustal->[1];
+          push @global_clustal, $clustal->[1];
+        }
+#        if ( $type ne 'sVARIANT' ) {
+          $coverage_coords{$pepname} = $self->get_coverage_hash( seq => $coords->{seq}, 
+                                                            peptides => $peps, 
+                                                              offset => $coords->{start} );
+#        } else {
+#          $coverage_coords{$pepname} = $coverage_coords{$primary_clustal->[0]}; 
+#        }
       }
-      if ( $coords->{seq} ) {
-        $global_clustal{$coords->{start}} ||= [];
-        push @{$global_clustal{$coords->{start}}}, $clustal->[1];
+
+      my $tryp = $self->do_tryptic_digestion( aa_seq => $alt, split_asterisk => 0 );
+      my $var_string = '';
+      for my $tryp ( @{$tryp} ) {
+        my $open_tag = ( $peps{$tryp} ) ? '<SPAN class=pa_observed_sequence>' : '<SPAN class=pa_sequence_font>'; 
+        $var_string .= $whitespace  . $open_tag . $tryp . "</SPAN>";  
       }
-      $coverage_coords{$pepname} = $self->get_coverage_hash( seq => $coords->{seq}, 
-                                                        peptides => $peps, 
-                                                          offset => $coords->{start} );
+      $pepcnt++;
+      my ( $vtype, $vnum ) = split( /_/, $pepname );
+      push @{$return{variant_list}}, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info} ];
     }
+  } 
 
-    my $tryp = $self->do_tryptic_digestion( aa_seq => $alt, split_asterisk => 0 );
-    my $var_string = '';
-    for my $tryp ( @{$tryp} ) {
-      my $open_tag = ( $peps{$tryp} ) ? '<SPAN class=pa_observed_sequence>' : '<SPAN class=pa_sequence_font>'; 
-      $var_string .= $whitespace  . $open_tag . $tryp . "</SPAN>";  
-    }
-    $pepcnt++;
-    push @{$return{variant_list}}, ["$pepname : $var_string\n"];
-  }
-
-
-  push @global_clustal, $primary_clustal;
-  for my $start ( sort { $a <=> $b } keys( %global_clustal ) ) {
-    for my $entry ( @{$global_clustal{$start}} ) {
-      push @global_clustal, $entry;
-    }
-  }
+# For sorting by position, no longer necessary
+#  push @global_clustal, $primary_clustal;
+#  for my $start ( sort { $a <=> $b } keys( %global_clustal ) ) {
+#    for my $entry ( @{$global_clustal{$start}} ) {
+#      push @global_clustal, $entry;
+#    }
+#  }
+  my $trypsites = $primary_clustal->[1];
+  $trypsites =~ s/[KR]P/--/g;
+  $trypsites =~ s/[^KR]/-/g;
+  push @global_clustal, [ 'TrypticSites', $trypsites ];
 
 	my $clustal_display .= $self->get_clustal_display( alignments => \@global_clustal, 
 			                                                dup_seqs => {},
 			                                                  pepseq => 'ZORRO',
+                                                        snp_cover => $snp_cover,
 																					       			coverage => \%coverage_coords,
 																       			 		acc2bioseq_id => {},
 																			      			         %args );
@@ -1467,6 +1498,352 @@ sub get_html_seq_vars {
   return \%return;
 }
 
+sub get_snp_coverage {
+  my $self = shift;
+  my %args = @_;
+#  die Dumper( %args );
+  my $cnt = 1;
+  my %snp_cover;
+  for my $item ( @{$args{swiss}->{VARIANT}} ) {
+    my $key = 'SNP_' . $cnt++; 
+    $snp_cover{$key} = $item->{annot};
+  }
+  return \%snp_cover;
+}
+
+
+
+sub add_snp_cover_css {
+  my $self = shift;
+  my %args = @_;
+  my $cnt = 0;
+  my @seq = split( '', $args{seq} );
+  my @ret_seq;
+  my $in_tag = 0;
+  for my $aa ( @seq ) {
+    if ( $aa =~ /\</ ) {
+      $in_tag++;
+    } elsif ( $aa =~ /\>/ ) {
+      $in_tag--;
+    } elsif ( $in_tag ) {
+      # no-op
+    } else {
+      $cnt++;
+      if ( $args{cover}->{$cnt} ) {
+        $aa = $args{cover}->{$cnt};
+      }
+    }
+    push @ret_seq, $aa;
+  }
+  return join( '', @ret_seq );
+}
+
+
+sub get_uniprot_variant_seq {
+  my $self = shift;
+  my %args = @_;
+
+  my $seq = { seq => '', annot => {} };
+  my $dash_seq = $args{fasta_seq};
+  $dash_seq =~ s/\w/\-/g;
+
+  my $bar = qq~
+                            'info' => '', 'type' => 'SIGNAL', 'end' => '34', 'start' => '1'
+                            'info' => 'Platelet basic protein', 'type' => 'CHAIN', 'end' => '128', 'start' => '35'
+                            'info' => 'S -> T', 'type' => 'CHAIN', 'end' => '128', 'start' => '44'
+                            'info' => 'Neutrophil-activating peptide 2(1-66)', 'type' => 'INIT_MET', 'end' => '1', 'start' => '1'
+  ~;
+
+  my $seqlen = length( $args{fasta_seq} );
+  my $context_len = 40;
+  my $context_start = 40;
+  if ( $args{type} eq 'INIT_MET' ) {
+    # Sequence is 2..31 (or end)
+    my $seqend = ( $seqlen < $context_len ) ? $seqlen : $context_len;
+    $seq->{seq} = substr( $args{fasta_seq}, 0, 1 );
+  } elsif ( $args{type} eq 'CHAIN' ) {
+    $seq->{seq} = substr( $args{fasta_seq}, $args{start} - 1, $args{end} - $args{start} + 1 );
+  } elsif ( $args{type} eq 'VARIANT' ) {
+
+    my $startpos = $args{start} - $context_len - 1;
+    $startpos = 0 if $startpos < 0;
+    my $startlen = $args{start} - $startpos;
+
+    my $endpos = $args{end} + $context_len;
+    $endpos = $seqlen if $endpos > $seqlen;
+
+    my $endlen = $endpos - $startpos;
+
+    my $snpseq = substr( $args{fasta_seq}, $startpos, $endlen );
+    my $tryp = $self->do_tryptic_digestion( aa_seq => $snpseq );
+    
+    my $snp_context = 15;
+    my $snp_location;
+
+    my @included_peptides;
+    my $tpos = 0;
+    my $stat = "Tpos = $tpos\n";
+    my $post_snp = 0;
+    for my $pep ( @{$tryp} ) {
+      $tpos += length( $pep );
+      $stat .= "Tpos = $tpos after adding $pep.  context is $snp_context and locale is $snp_location.  start $startlen, end $endlen\n";
+      if ( $startlen > $tpos ) {
+        if ( $startlen - $tpos <= $snp_context ) {
+          $stat .= "Added pre!\n";
+          push @included_peptides, $pep;
+        }
+      } else {
+        if ( !$post_snp ) {  # First time through
+          $snp_location = ( $tpos - $startlen ) - 1;
+          my $snp_aa = substr( $pep, $snp_location, 1 );
+          $snp_location = $tpos - length( $pep ) + $snp_location;
+
+          $stat .= "Snp AA is $snp_aa \n";
+          $post_snp++;
+        }
+        $stat .= "Added post!\n";
+        push @included_peptides, $pep;
+        last if ( $tpos >= ( ($endlen - $startlen) + $snp_context ) )
+      }
+    }
+
+#    
+my $data = qq~
+
+
+  Debugging stuff that can go away...
+  
+  Tpos = 0
+Tpos = 18 after adding LALENYITALQAVPPRPR
+Tpos = 25 after adding HVFNMLK
+Tpos = 26 after adding K
+Tpos = 29 after adding YVR
+Tpos = 33 after adding AEQK
+Tpos = 35 after adding DR
+Tpos = 40 after adding QHTLK
+Tpos = 46 after adding HFEHVR
+Tpos = 51 after adding MVDPK
+Tpos = 52 after adding K
+Tpos = 57 after adding AAQIR
+Tpos = 61 after adding SQVM
+  die "end $endpos len $endlen, start $startpos, len = $startlen from $args{start}\n";
+  end 531 len 61, start 470, len = 31 from 501
+  'VARIANT' => [
+                         {
+                           'info' => 'E -> K (in dbSNP:rs45588932)',
+                           'type' => 'VARIANT',
+                           'seq' => 'LALENYITALQAVPPRPRHVFNMLKKYVRA
+                                     K
+                                     QKDRQHTLKHFEHVRMVDPKKAAQIRSQVM',
+                           'annot' => {
+                                        '501' => 'K'
+                                      },
+                           'end' => '501',
+                           'start' => '501'
+
+        'LALENYITALQAVPPRPR',
+          'HVFNMLK',
+          'K',
+          'YVR',
+          'AEQK',
+          'DR',
+          'QHTLK',
+          'HFEHVR',
+          'MVDPK',
+          'K',
+          'AAQIR',
+          'SQVM'
+
+VAR1 = [
+          'LALENYITALQAVPPRPR',
+          'HVFNMLK',
+          'K',
+          'YVR',
+          'AEQK',
+          'DR',
+          'QHTLK',
+          'HFEHVR',
+          'MVDPK',
+          'K',
+          'AAQIR',
+          'SQVM'
+        ];
+
+    
+~;
+
+    my $snpseq = join( '', @included_peptides );
+    my $snp_aa = substr( $snpseq, $snp_location, 1 );
+    $stat .= "SNP aa is $snp_aa in the final sequence ( $snpseq )\n";
+#    die ( $stat );
+
+    $args{info} =~ /^\s*(\w)\s*\-\>\s*(\w)/;
+    my $pre = $1;
+    my $post = $2;
+    my @aa = split( '', $snpseq );
+    $aa[$snp_location-1] = $post;
+    $seq->{seq} = join( '', @aa );
+    $seq->{annot} = { $args{start} => qq~<span class=pa_snp_font TITLE="$args{info}">$post</span>~ }
+
+
+  } elsif ( $args{type} eq 'SIGNAL' ) {
+    # Sequence is 2..31 (or end)
+    my $seqend = ( $seqlen < $context_len ) ? $seqlen : $context_len;
+    $seq->{seq} = substr( $args{fasta_seq}, 0, $args{end} );
+  } else {
+    die Dumper( %args );
+  }
+  return $seq;
+}
+
+
+
+sub get_uniprot_annotation {
+  my $self = shift;
+  my %args = @_;
+
+  my %annot = ( success => 0 );
+
+  return \%annot unless $args{accession};
+
+  my $sql = qq~
+  SELECT file_path, entry_offset, entry_name
+  FROM $TBAT_UNIPROT_DB UD 
+  JOIN $TBAT_UNIPROT_DB_ENTRY UDE
+  ON UD.uniprot_db_id = UDE.uniprot_db_id
+  WHERE entry_accession = '$args{accession}'
+  ~;
+
+
+  my $sbeams = $self->getSBEAMS();
+  my @results = $sbeams->selectrow_array( $sql );
+
+  my $entry = $self->read_uniprot_dat_entry( path => $results[0],
+                                           offset => $results[1] );
+
+  # Read the entry
+  if ( $entry ) {
+    my $swiss = SWISS::Entry->fromText($entry);
+    $swiss->fullParse();
+    my $fasta = $swiss->toFasta();
+    my @fasta = split( /\n/, $fasta );
+    my $fasta_seq = join( '', @fasta[1..$#fasta] );
+    $annot{all_vars} ||= [];
+    if ( $swiss->{FTs} ) {
+      for my $var ( @{$swiss->{FTs}->{list}} ) {
+        if ( $var->[0] =~ /SIGNAL|CHAIN|INIT_MET/ || 
+             $var->[0] =~ /VARIANT/ && $var->[3] =~ /dbSNP/ ) {
+#          next if $var->[0] eq 'CHAIN' && $var->[1] == 2;
+          next if $var->[0] eq 'CHAIN' && $var->[1] == 1 && $var->[2] == length($fasta_seq);
+
+          my %var = ( type => $var->[0],
+                     start => $var->[1],
+                       end => $var->[2],
+                      info => $var->[3] );
+
+          my $var_seq = $self->get_uniprot_variant_seq ( %var, fasta_seq => $fasta_seq ); 
+
+          $var{seq} = $var_seq->{seq};
+          $var{annot} = $var_seq->{annot};
+
+          $annot{$var{type}} ||= [];
+          push @{$annot{$var{type}}}, \%var; 
+
+        }
+      }
+    }
+
+    my $foo = qq~
+                 'list' => [
+                             [
+                               'SIGNAL',
+                               '1',
+                               '34',
+                               '',
+                               '',
+                               '',
+                               '{}'
+                             ],
+                             [
+                               'CHAIN',
+                               '35',
+                               '128',
+                               'Platelet basic protein',
+                               '',
+                               '/FTId=PRO_0000005088',
+                               '{}'
+                             ],
+                                [
+                               'REGION',
+                               '135',
+                               '139',
+                               'Thyroid hormone binding',
+                               '',
+                               '',
+                               '{}'
+                             ],
+                             [
+                               'BINDING',
+                               '35',
+                               '35',
+                               'Thyroid hormones',
+                               '',
+                               '',
+                               '{}'
+                             ],
+                             [
+                               'MOD_RES',
+                               '62',
+                               '62',
+                               '4-carboxyglutamate; in a patient with Moyamoya disease',
+                               '',
+                               '',
+                               '{}'
+                             ],
+                             [
+                               'CARBOHYD',
+                               '118',
+                               '118',
+                               'N-linked (GlcNAc...)',
+                               '',
+                               '',
+                               '{}'
+                             ],
+                             [
+                               'VARIANT',
+                               '26',
+                               '26',
+                               'G -> S (common polymorphism; dbSNP:rs1800458)',
+                               '',
+                               '/FTId=VAR_007546',
+                               '{}'
+                             ],
+    ~;
+
+    $annot{success}++;
+  }
+  return \%annot;
+}
+
+sub read_uniprot_dat_entry {
+  my $self = shift;
+  my %args = @_;
+  return '' unless $args{path} && defined( $args{offset} );
+
+  # Reset local record separator, read an entire record at a time
+  local $/ = "\n//\n";
+
+  open DAT, $args{path} || return '';
+  seek( DAT, $args{offset}, 0 );
+
+  my $entry = '';
+  while ( my $record = <DAT> ) {
+    $entry = $record;
+    last;
+  }
+  close DAT;
+  return $entry;
+}
 
 sub get_clustal_coordinates {
   my $self = shift;
@@ -1490,6 +1867,9 @@ sub get_clustal_coordinates {
   return $coords;
 }
 
+
+
+
 sub get_clustal_display {
 
   my $self = shift;
@@ -1504,16 +1884,26 @@ sub get_clustal_display {
   my $table_rows = '';
   my $scroll_class = ( scalar( @{$args{alignments}} ) > 10 ) ? 'clustal_peptide' : 'clustal';
 	for my $seq ( @{$args{alignments}} ) {
+#    die Dumper( $seq ) if $seq->[0] =~ /SNP/i;
 		my $sequence = $seq->[1];
 		if ( $seq->[0] =~ /\&nbsp;/  ) {
 #      $align_spc = 'A' x length( $sequence );
 #      $name_spc = 'A' x ( length( $seq->[0] ) + 5 );
 #		  $sequence =~ s/ /&nbsp;/g 
 		} else {
+# 			$sequence = $self->highlight_sequence( seq => $sequence, 
  			$sequence = $self->highlight_sites( seq => $sequence, 
                                           acc => $seq->[0], 
+                                          nogaps => 1,
 			                               coverage => $args{coverage}->{$seq->[0]}
 																 );
+    }
+
+    if ( $args{snp_cover} ) {
+#      die Dumper( $args{snp_cover} );
+      if ( $args{snp_cover}->{$seq->[0]} ) {
+        $sequence = $self->add_snp_cover_css( seq => $sequence, cover => $args{snp_cover}->{$seq->[0]} );
+      }
     }
 
     if ( $seq->[0] ) {
@@ -1603,51 +1993,58 @@ sub highlight_sites {
 
   my $self = shift;
   my %args = @_;
-#  die Dumper( %args ) if $args{seq} =~ /-LEC/;
+#  die Dumper( %args ) 
 	my $coverage = $args{coverage};
   my @aa = split( '', $args{seq} );
   my $return_seq = '';
   my $cnt = 0;
 	my $in_coverage = 0;
-	my $span_closed = 1;
+  my $seq_started = 0;
   for my $aa ( @aa ) {
-    if ( $aa eq '_' ) {
-			if ( $in_coverage && !$span_closed ) {
-				$return_seq .= "</span>$aa";
-				$span_closed++;
-			} else {
-				$return_seq .= $aa;
-			}
+
+    if ( $args{nogaps} && $aa eq '-' ) {
+      if ( $seq_started ) {
+    	  if ( $in_coverage ) {
+	    	  $return_seq .= "</span>$aa";
+          $in_coverage = 0;
+       	} else {
+    		 	$return_seq .= $aa;
+  	  	}
+      } else {
+    		$return_seq .= $aa;
+      }
 		} else { # it is an amino acid
+      $seq_started++;
 			if ( $coverage->{$cnt} ) {
 				if ( $in_coverage ) { # already in
-					if ( $span_closed ) {  # Must have been jumping a --- gap
-					  $span_closed = 0;
-				    $return_seq .= "<span class=obs_seq_font>$aa";
-					} else {
-				    $return_seq .= $aa;
-					}
+			    $return_seq .= $aa;
 				} else {
 					$in_coverage++;
-					$span_closed = 0;
 				  $return_seq .= "<span class=obs_seq_font>$aa";
 				}
 			} else { # posn not covered!
 				if ( $in_coverage ) { # were in, close now
 				  $return_seq .= "</span>$aa";
 					$in_coverage = 0;
-					$span_closed++;
 				} else {
 				  $return_seq .= $aa;
 				}
 			}
-		  $cnt++;
 		}
+		$cnt++;
 	}
-	if ( $in_coverage && !$span_closed ) {
+	if ( $in_coverage ) {
 		$return_seq .= '</span>';
 	}
 	return $return_seq;
+
+  my $dump = "$return_seq\n";
+  if ( $args{acc} =~ /Chain/ ) {
+    for my $site ( sort { $a <=> $b }(  keys( %{$args{coverage}} ) ) ) {
+      $dump .= "$site => $args{coverage}->{$site}\n";
+    }
+#    die Dumper( $dump );
+  }
 }
 
 
