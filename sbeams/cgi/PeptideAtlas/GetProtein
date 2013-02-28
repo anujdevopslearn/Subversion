@@ -2698,6 +2698,7 @@ sub displayAnnotatedSequence {
 
 #  print "</PRE></TD></TR>\n";  
   my $html_seq = $sbeamsMOD->get_html_seq_vars( seq => $sequence,
+                                          accession => $biosequence->{biosequence_name},
                                           tags => $tags, 
                                       peptides => \@peptides, 
                                   show_clustal => $args{show_clustal} );
@@ -2711,7 +2712,7 @@ sub displayAnnotatedSequence {
     my $cnt;
     for my $var (  @{$html_seq->{variant_list}} ) {
       $cnt++;
-      $variant_list .= join( '', @{$var} );
+      $variant_list .= join( "\t", @{$var} ) . "\n";
       $variant_list .= '<SPAN style="display:none" ID=var_list>' if $cnt == 11;
     }
     my $var_toggle_link = '';
