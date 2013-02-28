@@ -94,7 +94,12 @@ sub runClustalW {
 	$align_file =~ s/fsa$/aln/;
 	if ( !-e $align_file ) {
 		return "Output not produced";
-	}
+	} elsif ( !-s $align_file ) {
+		return "Output file is empty";
+  }
+
+
+
 	my $alignment = '';
 	my %aligned_seqs;
 	my @aligned_order;
