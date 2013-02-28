@@ -266,6 +266,7 @@ my $module_styles =<<"  END_STYLE";
   .aa_mod { vertical-align: top; font-size: ${FONT_SIZE}; color: darkslategray }
   .pa_sequence_font{font-family:courier; font-size: ${FONT_SIZE}pt;  letter-spacing:0.5; font-weight: bold; }	
   .pa_observed_sequence{font-family:courier; font-size: ${FONT_SIZE}pt; color: red;  letter-spacing:0.5; font-weight: bold;}	
+  .pa_snp_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; letter-spacing:0.5; font-weight: bold; background-color: #66CCFF}	
   .section_heading {  font-family: Helvetica, Arial, sans-serif; font-size: 10pt; font-weight: Bold; }
   .description { font-family: Helvetica, Arial, sans-serif; color:#333333; font-size: 9pt; font-style: italic;  }
   .help_key {  font-family: Helvetica, Arial, sans-serif; font-size: 9pt; font-weight: Bold; }
