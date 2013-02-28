@@ -522,7 +522,7 @@ sub handle_request {
 	<br>
 	Please check selections and try again.
         <p>
-	<form method="post" action="https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/Search">
+	<form method="post" action="Search">
 	Or, search for the identifer across all major PeptideAtlas builds:
         &nbsp;&nbsp;<input type="text" name="search_key" value="$protein_name" size="20" maxlength="60"/>
 	<input type="submit" name="apply_action" value="GO" /><BR>
