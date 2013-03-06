@@ -104,6 +104,14 @@ sub get_alignment_display {
 	$clustal_display .= "$select[0] </FORM></P>\n";
 
   my $bioseq_clause = '';
+  my $bioseq_name_clause = '';
+  if ( $args{decoys} ) {
+    if ( $args{decoys} =~ /y/i ) {
+      $bioseq_name_clause = "AND biosequence_name LIKE 'DECOY%'";
+    } else {
+      $bioseq_name_clause = "AND biosequence_name NOT LIKE 'DECOY%'";
+    }
+  }
 
 	if ( $args{restore} ) {
     # my $ids = $sbeamsMOD->get_mapped_biosequences( build_id => $curr_bid,
@@ -196,6 +204,7 @@ sub get_alignment_display {
 --				OR search_key_type LIKE '%Symbol' )
   WHERE AB.project_id IN ( $all_projects )
 	$bioseq_clause
+  $bioseq_name_clause
 --  AND search_key_type = CASE WHEN organism_name = 'human' THEN 'Full Name'
 --                             WHEN organism_name = 'Mouse' THEN 'Full Name'
 --														 WHEN organism_name = 'Drosophila' THEN 'Full Name'
@@ -203,6 +212,7 @@ sub get_alignment_display {
 --													   ELSE resource_name
 --											  END
   ORDER BY LEN(CAST(biosequence_seq AS VARCHAR(4000) ) ) DESC, biosequence_name DESC
+
   END_SQL
 
   my $sth = $sbeams->get_statement_handle( $sql );
@@ -248,11 +258,18 @@ sub get_alignment_display {
 	my %coverage;
 	my @seqs;
   $log->debug( "loopin:" .time() );
+  my %seqtype = ( decoy => 0, fwd => 0 ); 
   while ( my @row = $sth->fetchrow_array() ) {
 
     # clustal W quietly changes ':' to '_' in accessions.  Should we fix here? 
 		my $acc = $row[0];
 		$acc =~ s/:/_/g;
+
+    if ( $acc =~ /^DECOY/ ) {
+      $seqtype{decoy}++;
+    } else {
+      $seqtype{fwd}++;
+    }
 
     my $seq = $row[3];
 		$seq =~ s/[^a-zA-Z]//g;
@@ -350,7 +367,16 @@ sub get_alignment_display {
 	} else {
 	  my $clustal = $MSF->runClustalW( sequences => $fasta );
 	  if ( ref $clustal ne 'ARRAY' ) {
-	    $clustal_display = $sbeams->makeErrorText( "Error running Clustal: $clustal" );
+      my $rerun_link = '';
+      if ( $seqtype{decoy} && $seqtype{fwd} ) {
+        my $url = $q->self_url();
+        $rerun_link = qq~
+&nbsp;        Try re-running clustalW <A HREF=$url;decoys=no>without DECOY </A> sequences?<BR>
+&nbsp;        Try re-running clustalW with <A HREF=$url;decoys=yes> only DECOY</A> sequences?<BR>
+        ~;
+      }
+	    $clustal_display = "<BR>" . $sbeams->makeErrorText( "Error running Clustal: $clustal" );
+	    $clustal_display .= "<BR> $rerun_link";
 	  } else {
 	    $clustal_display .= get_clustal_display( alignments => $clustal, 
 			                                          dup_seqs => \%dup_seqs,
