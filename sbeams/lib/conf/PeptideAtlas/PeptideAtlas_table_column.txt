@@ -902,7 +902,7 @@ AT_SEL_peak_group	13	reference_prescore	Reference Prescore	real	8	0	Y		N			N				
 AT_SEL_peak_group	14	log10_total_xic	Log  Total XIC	real	8	0	Y		N			N					N	N	Base 10 log of total extracted ion current		
 AT_elution_time_type	1	elution_time_type_id	Elution Time Type ID	int	4	0	N		Y			Y					N	Y	Primary Key		pkDEFAULT
 AT_elution_time_type	2	elution_time_type	Elution Time Type	varchar	255	0	N		N			Y	text	20		Y	Y	N	"Type of elution time represented, SSRCalc, RTCatalog, etc"		
-AT_elution_time_type	3	opt	Source Instrument Type	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N	optionlist			Y	Y	Y	"type of intrument observed on, foreign key to instrument type table"	"select instrument_type_id, instrument_type_name from $TBAT_INSTRUMENT_TYPE"	
+AT_elution_time_type	3	source_instrument_type_id	Source Instrument Type ID	int	4	0	Y		N	AT_instrument_type	instrument_type_id	N	optionlist			Y	Y	Y	"type of intrument observed on, foreign key to instrument type table"	"select instrument_type_id, instrument_type_name from $TBAT_INSTRUMENT_TYPE"	
 AT_elution_time_type	4	is_observed	Is Observed	char	1	0	Y		N			Y	optionlist			Y	Y	N	Whether this is an observed type (T/F)	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 AT_elution_time_type	5	date_created	date_created	datetime	8	0	Y		N			N					Y	N			
 AT_elution_time_type	6	created_by_id	created_by_id	int	4	0	Y		N			N					Y	N			
@@ -998,3 +998,23 @@ AT_GetNextProtChromMapping	14	redundancy_constraint	No Redundancy in Each Chromo
 AT_spectrum_ptm_identification	1	spectrum_ptm_identification_id	Spectrum PTM Identification ID	int	4	0	N		Y			Y							spectrum_ptm_identification_id		
 AT_spectrum_ptm_identification	2	spectrum_identification_id	Spectrum Identification ID	int	4	0	N		N	AT_spectrum_identification	spectrum_identification_id	Y							spectrum_identification_id		
 AT_spectrum_ptm_identification	3	ptm_sequence	PTM sequence	varchar	255	0	N		N			Y							ptm_sequence		
+AT_public_data_repository	1	dataset_id	Dataset	int	4	0	N		Y							N	Y				pkDEFAULT
+AT_public_data_repository	2	dataset_identifier	Dataset Identifier	varchar	20	0	N		N			Y	text			Y	Y	N	source idenfier		
+AT_public_data_repository	3	source_repository	Source	varchar	100	0	N		N			Y	text			Y	Y	N	source repository		
+AT_public_data_repository	4	datasetTitle	Dataset Title	varchar	255	0	N		N			Y	text	40		Y	Y	N	Title for this dataset		
+AT_public_data_repository	5	datasetType	Dataset Type	varchar	20	0	N		N			Y	text	3		Y	Y	N	Dataset type		
+AT_public_data_repository	6	instrument	Instrument	varchar	100	0	Y		N			N	text	20		Y	Y	N	Instrument		
+AT_public_data_repository	7	datasetDescription	Dataset Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional Description		
+AT_public_data_repository	8	species	Species	varchar	100	0	N		N			Y	text	40		Y	Y	N	Species		
+AT_public_data_repository	9	contributor	Contributor	varchar	255	0	Y		N			Y	text	40		Y	Y	N			
+AT_public_data_repository	10	publication	Publication	varchar	255	0	Y		N				text	50		Y	Y	N	Publication		
+AT_public_data_repository	11	publicReleaseDate	Public Release Date	datetime	8	0	N		N			Y	text	20		Y	Y	N	Date on which the data becomes publicly available		
+AT_public_data_repository	12	classfication	Classfication	char	1	0	N	N	N				optionlist			Y	Y	N		"select '1' ,  'Should process' union  select '2' ,  'Not interesting' union  select '3' , 'Has been processed' union select '4', 'Unclassified'"	
+AT_public_data_repository	13	local_data_location	dataset location	varchar	255	0	N		N			N	text	50		Y	Y	N	Absolute or relative location of the data		
+AT_public_data_repository	14	pa_sample_accession	Peptide Atlas Sample Accession	varchar	255	0	Y		N			N	text	20		Y	Y	N	stable accession identifier for the sample (e.g. PAe000001)		
+AT_public_data_repository	15	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_public_data_repository	16	date_created	date_created	datetime	8	0	Y		N			N					Y	N			
+AT_public_data_repository	17	created_by_id	created_by_id	int	4	0	Y		N			N					Y	N			
+AT_public_data_repository	18	date_modified	date_modified	datetime	8	0	Y		N			N					Y	N			
+AT_public_data_repository	19	modified_by_id	modified_by_id	int	4	0	Y		N			N					Y	N			
+AT_public_data_repository	20	owner_group_id	owner_group_id	int	4	0	Y		N			N					Y	N			
