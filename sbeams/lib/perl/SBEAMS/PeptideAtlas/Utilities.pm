@@ -660,7 +660,7 @@ sub get_coverage_hash {
   $args{offset} ||= 0;
 
   my $seq = $args{seq};
-  $seq =~ s/[^a-zA-Z]//g;
+  $seq =~ s/[^a-zA-Z]//g unless $args{nostrip};
   for my $peptide ( @{$args{peptides}}  )  {
 
     my $posn = $self->get_site_positions( pattern => $peptide,
@@ -1415,19 +1415,20 @@ sub get_html_seq_vars {
   my $swiss = {};
   if ( $args{accession} ) {
     $swiss = $self->get_uniprot_annotation( %args );
+#        die Dumper( $swiss ) ;
   }
 #  print '<PRE>' . Dumper( $swiss  ) . '</PRE>' . "\n";
 
   # Or if there are no variants.
-  return \%return unless scalar(@seqs) || $swiss->{success};
+  return \%return unless $swiss->{success} && $swiss->{has_variants};
 
   my $snp_cover = $self->get_snp_coverage( swiss => $swiss );
 
-  my %global_clustal;
+#  my %global_clustal;
   my @global_clustal = ( [ '', $ruler_cnt], [ '', $ruler ] );
   my %coverage_coords;
   my $primary_clustal;
-  my $MSF = SBEAMS::BioLink::MSF->new();
+#  my $MSF = SBEAMS::BioLink::MSF->new();
   my %type2display = ( VARIANT => 'SNP', CHAIN => 'Chain', INIT_MET => 'InitMet', SIGNAL => 'Signal' );
   for my $type ( qw( INIT_MET SIGNAL CHAIN VARIANT ) ) {
     my $pepcnt = 1;
@@ -1436,43 +1437,51 @@ sub get_html_seq_vars {
      
       my $pepname = $type2display{$type} .  '_' . $pepcnt;
    
-      my $pfasta = $fasta . ">$pepname\n$alt\n";
-      my $clustal = $MSF->runClustalW( sequences => $pfasta );
-      if ( ref $clustal eq 'ARRAY' ) {
-        my $coords = $self->get_clustal_coordinates( $clustal );
+#      my $pfasta = $fasta . ">$pepname\n$alt\n";
+#      my $clustal = $MSF->runClustalW( sequences => $pfasta );
+#      if ( ref $clustal eq 'ARRAY' ) {
+        
+#        my $coords = $self->get_clustal_coordinates( $clustal );
  
         if ( !$primary_clustal ) {
-          $primary_clustal = $clustal->[0];
+          $primary_clustal = [ 'Primary', $seq ];
           $coverage_coords{$primary_clustal->[0]} = $self->get_coverage_hash( seq => $primary_clustal->[1], 
                                                                          peptides => $peps, 
-                                                                           offset => 0 );
+                                                                           offset => 0,
+                                                                           nostrip => 1 );
           push @global_clustal, $primary_clustal;
         }
-        if ( $coords->{seq} ) {
-          $global_clustal{$coords->{start}} ||= [];
-          push @{$global_clustal{$coords->{start}}}, $clustal->[1];
-          push @global_clustal, $clustal->[1];
-        }
+#        if ( $coords->{seq} ) {
+#          $global_clustal{$coords->{start}} ||= [];
+#          push @{$global_clustal{$coords->{start}}}, $clustal->[1];
+#          push @global_clustal, $clustal->[1];
+          push @global_clustal, [ $pepname, $entry->{seq} ];
+#        }
 #        if ( $type ne 'sVARIANT' ) {
-          $coverage_coords{$pepname} = $self->get_coverage_hash( seq => $coords->{seq}, 
+          $coverage_coords{$pepname} = $self->get_coverage_hash( seq => $entry->{seq}, 
                                                             peptides => $peps, 
-                                                              offset => $coords->{start} );
+                                                              offset => 0,
+                                                              nostrip => 1 );
+          if ( $type eq 'VARIANT' ) {
+#            print Dumper( $entry );
+          }
 #        } else {
 #          $coverage_coords{$pepname} = $coverage_coords{$primary_clustal->[0]}; 
 #        }
-      }
+#      }
 
-      my $tryp = $self->do_tryptic_digestion( aa_seq => $alt, split_asterisk => 0 );
+#      my $tryp = $self->do_tryptic_digestion( aa_seq => $alt, split_asterisk => 0 );
       my $var_string = '';
-      for my $tryp ( @{$tryp} ) {
-        my $open_tag = ( $peps{$tryp} ) ? '<SPAN class=pa_observed_sequence>' : '<SPAN class=pa_sequence_font>'; 
-        $var_string .= $whitespace  . $open_tag . $tryp . "</SPAN>";  
-      }
+#      for my $tryp ( @{$tryp} ) {
+#        my $open_tag = ( $peps{$tryp} ) ? '<SPAN class=pa_observed_sequence>' : '<SPAN class=pa_sequence_font>'; 
+#        $var_string .= $whitespace  . $open_tag . $tryp . "</SPAN>";  
+#      }
       $pepcnt++;
       my ( $vtype, $vnum ) = split( /_/, $pepname );
       push @{$return{variant_list}}, [ $vtype, $vnum, $entry->{start}, $entry->{end}, $entry->{info} ];
     }
   } 
+#  print Dumper( %coverage_coords );
 
 # For sorting by position, no longer necessary
 #  push @global_clustal, $primary_clustal;
@@ -1558,138 +1567,96 @@ sub get_uniprot_variant_seq {
   my $context_len = 40;
   my $context_start = 40;
   if ( $args{type} eq 'INIT_MET' ) {
-    # Sequence is 2..31 (or end)
-    my $seqend = ( $seqlen < $context_len ) ? $seqlen : $context_len;
-    $seq->{seq} = substr( $args{fasta_seq}, 0, 1 );
+    # Sequence is 2..end
+    my @aa = split( //, $args{fasta_seq} );
+    $aa[0] = '-';
+    $seq->{seq} = join( '', @aa );
+#    $seq->{seq} = substr( $args{fasta_seq}, 0, 1 );
   } elsif ( $args{type} eq 'CHAIN' ) {
-    $seq->{seq} = substr( $args{fasta_seq}, $args{start} - 1, $args{end} - $args{start} + 1 );
+    $seq->{seq} = '-' x ( $args{start} - 1 ) . 
+                  substr( $args{fasta_seq}, $args{start} - 1, $args{end} - $args{start} + 1 ) .
+                  '-' x ($seqlen - $args{end});
+#   print qq~
+#   <PRE>
+#   $args{fasta_seq}
+#   $seq->{seq}
+#   </PRE>
+#     ~;
+
+
+#    die "Seq is $seq->{seq} from $args{start}, $args{end}, and $seqlen\n";
+
   } elsif ( $args{type} eq 'VARIANT' ) {
 
-    my $startpos = $args{start} - $context_len - 1;
-    $startpos = 0 if $startpos < 0;
-    my $startlen = $args{start} - $startpos;
-
-    my $endpos = $args{end} + $context_len;
-    $endpos = $seqlen if $endpos > $seqlen;
-
-    my $endlen = $endpos - $startpos;
-
-    my $snpseq = substr( $args{fasta_seq}, $startpos, $endlen );
-    my $tryp = $self->do_tryptic_digestion( aa_seq => $snpseq );
-    
-    my $snp_context = 15;
-    my $snp_location;
-
-    my @included_peptides;
-    my $tpos = 0;
-    my $stat = "Tpos = $tpos\n";
-    my $post_snp = 0;
-    for my $pep ( @{$tryp} ) {
-      $tpos += length( $pep );
-      $stat .= "Tpos = $tpos after adding $pep.  context is $snp_context and locale is $snp_location.  start $startlen, end $endlen\n";
-      if ( $startlen > $tpos ) {
-        if ( $startlen - $tpos <= $snp_context ) {
-          $stat .= "Added pre!\n";
-          push @included_peptides, $pep;
+    my $tryp = $self->do_tryptic_digestion( aa_seq => $args{fasta_seq} );
+    my @pre;
+    my @post;
+    my $snp_seq;
+    my $pos = 0;
+    my $rnd = 1;
+    my $found = 0;
+    my $relpos;
+    print "<PRE>";
+    for my $tryptic ( @{$tryp} ) {
+      $pos += length( $tryptic );
+#      print "round $rnd, added $tryptic, len is $pos and start is $args{start}\n";
+      if ( $pos >= $args{start} ) {
+        if ( !$found ) {
+          $args{info} =~ /^\s*(\w)\s*\-\>\s*(\w)/;
+          my $original = $1;
+          my $altered = $2;
+#          print "Found our baby: $tryptic contains $args{info}?\n";
+          my $prev = $pos - length( $tryptic );
+          my @aa = split( //, $tryptic );
+          $relpos = $args{start} - $prev - 1;
+#          print "Changing $aa[$relpos] to $altered at position $relpos\n";
+          die "Arrgh!" unless $aa[$relpos] eq $original;
+          $aa[$relpos] = $altered;
+          $snp_seq = join( '', @aa ); 
+          $seq->{annot} = { $args{start} => qq~<span class=pa_snp_font TITLE="$args{info}">$altered</span>~ };
+          $found++;
+        } else {
+          push @post, $tryptic;
         }
       } else {
-        if ( !$post_snp ) {  # First time through
-          $snp_location = ( $tpos - $startlen ) - 1;
-          my $snp_aa = substr( $pep, $snp_location, 1 );
-          $snp_location = $tpos - length( $pep ) + $snp_location;
-
-          $stat .= "Snp AA is $snp_aa \n";
-          $post_snp++;
-        }
-        $stat .= "Added post!\n";
-        push @included_peptides, $pep;
-        last if ( $tpos >= ( ($endlen - $startlen) + $snp_context ) )
+        push @pre, $tryptic;
+      }
+      $rnd++;
+    }
+    my $snp_context = 15;
+    my $nside = $relpos;
+    my $cside = length( $snp_seq ) - $relpos;
+    my $c_context = '';
+    my $n_context = '';
+    for my $pep ( reverse( @pre ) ) {
+      if ( $nside < $snp_context ) {
+        $snp_seq = $pep . $snp_seq;
+        $nside += length( $pep );
+#        print "NSide is $nside, context is $snp_context\n";
+      } else {
+        $n_context .= '-' x length( $pep );
+#        print "N context is now $n_context\n";
       }
     }
-
-#    
-my $data = qq~
-
-
-  Debugging stuff that can go away...
-  
-  Tpos = 0
-Tpos = 18 after adding LALENYITALQAVPPRPR
-Tpos = 25 after adding HVFNMLK
-Tpos = 26 after adding K
-Tpos = 29 after adding YVR
-Tpos = 33 after adding AEQK
-Tpos = 35 after adding DR
-Tpos = 40 after adding QHTLK
-Tpos = 46 after adding HFEHVR
-Tpos = 51 after adding MVDPK
-Tpos = 52 after adding K
-Tpos = 57 after adding AAQIR
-Tpos = 61 after adding SQVM
-  die "end $endpos len $endlen, start $startpos, len = $startlen from $args{start}\n";
-  end 531 len 61, start 470, len = 31 from 501
-  'VARIANT' => [
-                         {
-                           'info' => 'E -> K (in dbSNP:rs45588932)',
-                           'type' => 'VARIANT',
-                           'seq' => 'LALENYITALQAVPPRPRHVFNMLKKYVRA
-                                     K
-                                     QKDRQHTLKHFEHVRMVDPKKAAQIRSQVM',
-                           'annot' => {
-                                        '501' => 'K'
-                                      },
-                           'end' => '501',
-                           'start' => '501'
-
-        'LALENYITALQAVPPRPR',
-          'HVFNMLK',
-          'K',
-          'YVR',
-          'AEQK',
-          'DR',
-          'QHTLK',
-          'HFEHVR',
-          'MVDPK',
-          'K',
-          'AAQIR',
-          'SQVM'
-
-VAR1 = [
-          'LALENYITALQAVPPRPR',
-          'HVFNMLK',
-          'K',
-          'YVR',
-          'AEQK',
-          'DR',
-          'QHTLK',
-          'HFEHVR',
-          'MVDPK',
-          'K',
-          'AAQIR',
-          'SQVM'
-        ];
-
-    
-~;
-
-    my $snpseq = join( '', @included_peptides );
-    my $snp_aa = substr( $snpseq, $snp_location, 1 );
-    $stat .= "SNP aa is $snp_aa in the final sequence ( $snpseq )\n";
-#    die ( $stat );
-
-    $args{info} =~ /^\s*(\w)\s*\-\>\s*(\w)/;
-    my $pre = $1;
-    my $post = $2;
-    my @aa = split( '', $snpseq );
-    $aa[$snp_location-1] = $post;
-    $seq->{seq} = join( '', @aa );
-    $seq->{annot} = { $args{start} => qq~<span class=pa_snp_font TITLE="$args{info}">$post</span>~ }
-
+    for my $pep ( @post ) {
+      if ( $cside < $snp_context ) {
+        $snp_seq .= $pep;
+        $cside += length( $pep );
+      } else {
+        $c_context .= '-' x length( $pep );
+#        print "C context is now $c_context\n";
+      }
+    }
+#    print "Final sequence is $snp_seq\n";
+    $seq->{seq} = $n_context . $snp_seq . $c_context;
+#    print "$args{fasta_seq}\n";
+#    print "$seq->{seq}\n";
+#    print "</PRE>";
 
   } elsif ( $args{type} eq 'SIGNAL' ) {
     # Sequence is 2..31 (or end)
     my $seqend = ( $seqlen < $context_len ) ? $seqlen : $context_len;
-    $seq->{seq} = substr( $args{fasta_seq}, 0, $args{end} );
+    $seq->{seq} = substr( $args{fasta_seq}, 0, $args{end} ) . '-' x ( $seqlen - $args{end} );
   } else {
     die Dumper( %args );
   }
@@ -1729,11 +1696,12 @@ sub get_uniprot_annotation {
     my @fasta = split( /\n/, $fasta );
     my $fasta_seq = join( '', @fasta[1..$#fasta] );
     $annot{all_vars} ||= [];
+    my $varcnt = 0;
     if ( $swiss->{FTs} ) {
       for my $var ( @{$swiss->{FTs}->{list}} ) {
         if ( $var->[0] =~ /SIGNAL|CHAIN|INIT_MET/ || 
              $var->[0] =~ /VARIANT/ && $var->[3] =~ /dbSNP/ ) {
-#          next if $var->[0] eq 'CHAIN' && $var->[1] == 2;
+          next if $var->[0] eq 'CHAIN' && $var->[1] == 2 && $var->[2] == length($fasta_seq);
           next if $var->[0] eq 'CHAIN' && $var->[1] == 1 && $var->[2] == length($fasta_seq);
 
           my %var = ( type => $var->[0],
@@ -1748,79 +1716,14 @@ sub get_uniprot_annotation {
 
           $annot{$var{type}} ||= [];
           push @{$annot{$var{type}}}, \%var; 
+          $varcnt++;
 
         }
       }
     }
 
-    my $foo = qq~
-                 'list' => [
-                             [
-                               'SIGNAL',
-                               '1',
-                               '34',
-                               '',
-                               '',
-                               '',
-                               '{}'
-                             ],
-                             [
-                               'CHAIN',
-                               '35',
-                               '128',
-                               'Platelet basic protein',
-                               '',
-                               '/FTId=PRO_0000005088',
-                               '{}'
-                             ],
-                                [
-                               'REGION',
-                               '135',
-                               '139',
-                               'Thyroid hormone binding',
-                               '',
-                               '',
-                               '{}'
-                             ],
-                             [
-                               'BINDING',
-                               '35',
-                               '35',
-                               'Thyroid hormones',
-                               '',
-                               '',
-                               '{}'
-                             ],
-                             [
-                               'MOD_RES',
-                               '62',
-                               '62',
-                               '4-carboxyglutamate; in a patient with Moyamoya disease',
-                               '',
-                               '',
-                               '{}'
-                             ],
-                             [
-                               'CARBOHYD',
-                               '118',
-                               '118',
-                               'N-linked (GlcNAc...)',
-                               '',
-                               '',
-                               '{}'
-                             ],
-                             [
-                               'VARIANT',
-                               '26',
-                               '26',
-                               'G -> S (common polymorphism; dbSNP:rs1800458)',
-                               '',
-                               '/FTId=VAR_007546',
-                               '{}'
-                             ],
-    ~;
-
     $annot{success}++;
+    $annot{has_variants} = $varcnt;
   }
   return \%annot;
 }
@@ -1878,6 +1781,8 @@ sub get_clustal_display {
 						 );
 
   my $sbeams = $self->getSBEAMS();
+
+#  print "<PRE>" . Dumper( %args ) . "</PRE>\n";
 
   my $align_spc;
   my $name_spc;
