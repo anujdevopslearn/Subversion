@@ -2712,11 +2712,11 @@ sub displayAnnotatedSequence {
     my $cnt;
     for my $var (  @{$html_seq->{variant_list}} ) {
       $cnt++;
+      $variant_list .= '<SPAN style="display:none" ID=var_list>' if $cnt == 12;
       $variant_list .= join( "\t", @{$var} ) . "\n";
-      $variant_list .= '<SPAN style="display:none" ID=var_list>' if $cnt == 11;
     }
     my $var_toggle_link = '';
-    if ( $cnt > 10 ) {
+    if ( $cnt > 11 ) {
       $variant_list .= "</SPAN>";
       $var_toggle_link =  qq~ <A NAME=vars HREF="javascript:void(0)" onClick=showVariants() ID=vars_toggle>Show More</A>\n ~;
       print qq~
