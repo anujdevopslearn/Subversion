@@ -62,6 +62,9 @@ sub runClustalW {
 	return 'no data provided' unless $args{sequences};
 
 	$args{sequences} =~ s/^>\s+/>_spc_/g;
+
+
+
 	my $checksum = md5_hex( $args{sequences} );
 	my $dirname = ( $self->{_alignment_dir} ) ? $self->{_alignment_dir} . '/' : '';
 	$dirname .= $checksum;
@@ -95,7 +98,7 @@ sub runClustalW {
 	if ( !-e $align_file ) {
 		return "Output not produced";
 	} elsif ( !-s $align_file ) {
-		return "Output file is empty";
+		return "Output file is empty ";
   }
 
 
