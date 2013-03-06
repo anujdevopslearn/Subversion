@@ -260,13 +260,19 @@ my $module_styles =<<"  END_STYLE";
   .rev_gray_head{background-color: #888888; font-size: ${FONT_SIZE}pt; font-weight: bold; color:white; line-height: 25px;}
   .blue_bg{ font-family: Helvetica, Arial, sans-serif; background-color: #4455cc; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; color: white}
   .pa_predicted_pep{ background-color: lightcyan; font-size: ${FONT_SIZE}pt; font-family:courier; letter-spacing:0.5;	border-style: solid; border-width: 0.1px; border-color: black }
-  .pa_glycosite{ background-color: #ee9999; border-style: solid; font-size: ${FONT_SIZE}pt; font-family:courier; border-width: 0px; letter-spacing:0.5 }	
   .spaced_text { line-height: 1.2em; }
   .spaced_text SUB, .spaced SUP { line-height: 1; }
   .aa_mod { vertical-align: top; font-size: ${FONT_SIZE}; color: darkslategray }
+
   .pa_sequence_font{font-family:courier; font-size: ${FONT_SIZE}pt;  letter-spacing:0.5; font-weight: bold; }	
   .pa_observed_sequence{font-family:courier; font-size: ${FONT_SIZE}pt; color: red;  letter-spacing:0.5; font-weight: bold;}	
-  .pa_snp_font{font-family:courier; font-size: ${FONT_SIZE_LG}pt; letter-spacing:0.5; font-weight: bold; background-color: #66CCFF}	
+
+  .pa_snp_font{font-family:courier; font-size: ${FONT_SIZE}pt; letter-spacing:0.5; font-weight: bold; background-color: #66CCFF}	
+  .pa_acetylated_font{font-family:courier; font-size: ${FONT_SIZE}pt; letter-spacing:0.5; font-weight: bold; background-color: #FFCC66}	
+  .pa_phospho_font{font-family:courier; font-size: ${FONT_SIZE}pt; letter-spacing:0.5; font-weight: bold; background-color: #009966}	
+  .pa_modified_aa_font{font-family:courier; font-size: ${FONT_SIZE}pt; letter-spacing:0.5; font-weight: bold; background-color: #999999}	
+  .pa_glycosite{ background-color: #EE9999; border-style: solid; font-size: ${FONT_SIZE}pt; font-family:courier; border-width: 0px; letter-spacing:0.5 }	
+
   .section_heading {  font-family: Helvetica, Arial, sans-serif; font-size: 10pt; font-weight: Bold; }
   .description { font-family: Helvetica, Arial, sans-serif; color:#333333; font-size: 9pt; font-style: italic;  }
   .help_key {  font-family: Helvetica, Arial, sans-serif; font-size: 9pt; font-weight: Bold; }
