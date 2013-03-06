@@ -703,7 +703,7 @@ sub highlight_sequence {
 	}
 
   # Default value
-	my $class = $args{cov_class} || 'obs_seq_font';
+	my $class = $args{cov_class} || 'pa_observed_sequence';
 	$args{sec_cover} ||= {};
 
 	if ( $args{sec_cover} ) {
@@ -1419,6 +1419,7 @@ sub get_html_seq_vars {
 
   # Or if there are no variants.
   return \%return unless $swiss->{success} && $swiss->{has_variants};
+#  die Dumper( $swiss );
 
   my $snp_cover = $self->get_snp_coverage( swiss => $swiss );
 
@@ -1454,6 +1455,13 @@ sub get_html_seq_vars {
     }
   } 
 
+  # Add modified residues track
+  my $cover = $self->get_modres_coverage( $swiss );
+  if ( scalar( keys( %$cover ) ) ) {
+    my $modres_seq = $self->add_modres_cover_css( seq => $seq, cover => $cover );
+    push @global_clustal, [ 'ModifiedResidues', $modres_seq ];
+  }
+
   my $trypsites = $primary_clustal->[1];
   $trypsites =~ s/[KR]P/--/g;
   $trypsites =~ s/[^KR]/-/g;
@@ -1471,6 +1479,23 @@ sub get_html_seq_vars {
   return \%return;
 }
 
+sub get_modres_coverage {
+  my $self = shift;
+  my $swiss = shift;
+
+  my %cover;
+  for my $item ( @{$swiss->{CARBOHYD}} ) {
+    $cover{$item->{start}} = qq~<span class=pa_glycosite TITLE="$item->{info}">MODIFIED_AA_PLACEHOLDER</span>~;
+  }
+  for my $item ( @{$swiss->{MOD_RES}} ) {
+    my $class = ( $item->{info} =~ /phospho/i ) ? 'pa_phospho_font' :
+                ( $item->{info} =~ /acetyl/i ) ? 'pa_acetylated_font' : 'pa_modified_aa_font' ;
+
+    $cover{$item->{start}} = qq~<span class=$class TITLE="$item->{info}">MODIFIED_AA_PLACEHOLDER</span>~;
+  }
+  return \%cover;
+}
+
 sub get_snp_coverage {
   my $self = shift;
   my %args = @_;
@@ -1484,6 +1509,32 @@ sub get_snp_coverage {
   return \%snp_cover;
 }
 
+sub add_modres_cover_css {
+  my $self = shift;
+  my %args = @_;
+  my $cnt = 0;
+  my @seq = split( '', $args{seq} );
+  my @ret_seq;
+  my $in_tag = 0;
+  for my $aa ( @seq ) {
+    if ( $aa =~ /\</ ) {
+      $in_tag++;
+    } elsif ( $aa =~ /\>/ ) {
+      $in_tag--;
+    } elsif ( $in_tag ) {
+      # no-op
+    } else {
+      $cnt++;
+      if ( $args{cover}->{$cnt} ) {
+        my $new_aa = $args{cover}->{$cnt};
+        $new_aa =~ s/MODIFIED_AA_PLACEHOLDER/$aa/;
+        $aa = $new_aa;
+      }
+    }
+    push @ret_seq, $aa;
+  }
+  return join( '', @ret_seq );
+}
 
 
 sub add_snp_cover_css {
@@ -1595,7 +1646,7 @@ sub get_uniprot_variant_seq {
     $seq->{seq} = substr( $args{fasta_seq}, 0, $args{end} ) . '-' x ( $seqlen - $args{end} );
 
   } else { # Should never get here...
-    die Dumper( %args );
+#    die Dumper( %args );
   }
   return $seq;
 }
@@ -1635,7 +1686,10 @@ sub get_uniprot_annotation {
     if ( $swiss->{FTs} ) {
       for my $var ( @{$swiss->{FTs}->{list}} ) {
         if ( $var->[0] =~ /SIGNAL|CHAIN|INIT_MET/ || 
-             $var->[0] =~ /VARIANT/ && $var->[3] =~ /dbSNP/ ) {
+             $var->[0] =~ /VARIANT/ && $var->[3] =~ /dbSNP/ ||
+             $var->[0] =~ /MOD_RES/ ||
+             $var->[0] =~ /CARBOHYD/
+            ) {
           next if $var->[0] eq 'CHAIN' && $var->[1] == 2 && $var->[2] == length($fasta_seq);
           next if $var->[0] eq 'CHAIN' && $var->[1] == 1 && $var->[2] == length($fasta_seq);
 
@@ -1719,7 +1773,7 @@ sub get_clustal_display {
   my $align_spc;
   my $name_spc;
   my $table_rows = '';
-  my $scroll_class = ( scalar( @{$args{alignments}} ) > 10 ) ? 'clustal_peptide' : 'clustal';
+  my $scroll_class = ( scalar( @{$args{alignments}} ) > 16 ) ? 'clustal_peptide' : 'clustal';
 	for my $seq ( @{$args{alignments}} ) {
 		my $sequence = $seq->[1];
 		if ( $seq->[0] =~ /\&nbsp;/  ) {
@@ -1740,15 +1794,15 @@ sub get_clustal_display {
     if ( $seq->[0] ) {
       $table_rows .= qq~
       <TR>
-        <TD ALIGN=right class=sequence_font>$seq->[0]:</TD>
-        <TD NOWRAP=1 class=sequence_font>$sequence</TD>
+        <TD ALIGN=right class=pa_sequence_font>$seq->[0]:</TD>
+        <TD NOWRAP=1 class=pa_sequence_font>$sequence</TD>
       </TR>
       ~;
     } else {
       $table_rows .= qq~
       <TR>
-        <TD ALIGN=right class=sequence_font></TD>
-        <TD NOWRAP=1 class=sequence_font>$sequence</TD>
+        <TD ALIGN=right class=pa_sequence_font></TD>
+        <TD NOWRAP=1 class=pa_sequence_font>$sequence</TD>
       </TR>
       ~;
     }
@@ -1851,7 +1905,7 @@ sub highlight_sites {
 			    $return_seq .= $aa;
 				} else {
 					$in_coverage++;
-				  $return_seq .= "<span class=obs_seq_font>$aa";
+				  $return_seq .= "<span class=pa_observed_sequence>$aa";
 				}
 			} else { # posn not covered!
 				if ( $in_coverage ) { # were in, close now
