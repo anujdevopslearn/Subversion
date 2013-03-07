@@ -1408,10 +1408,6 @@ sub get_html_seq_vars {
   $str .= $div_txt{nosp};
   $return{seq_display} = $str;
 
-  # Short circuit return
-  # If we aren't going to show the alignment
-  return \%return unless $args{show_clustal};
-
   my $swiss = {};
   if ( $args{accession} ) {
     $swiss = $self->get_uniprot_annotation( %args );
@@ -1588,7 +1584,7 @@ sub get_uniprot_variant_seq {
 
   } elsif ( $args{type} eq 'VARIANT' ) { # SNP shown in context of tryptic sites >= snp_context (15)
 
-    my $snp_context = 15;
+    my $snp_context = 1;
 
     my $tryp = $self->do_tryptic_digestion( aa_seq => $args{fasta_seq} );
     my @pre;
