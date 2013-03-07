@@ -2742,7 +2742,8 @@ sub displayAnnotatedSequence {
   }
   print "</TABLE>\n\n";
   print "<TABLE><TR $tr><TD>Protein Coverage = ",int($observed_residues/$seq_length*1000)/10,"% ";
-  print ' (' . int(($observed_residues)/($seq_length-$cnt)*1000)/10,"% of likely observable sequence)</TD></TR></TABLE>";
+  my $likely = ( $seq_length-$cnt ) ? int(($observed_residues)/($seq_length-$cnt)*1000)/10 : 0;
+  print " ($likely% of likely observable sequence)</TD></TR></TABLE>";
   #print "<BR><BR>Notes:<BR>\n$notes_buffer" if ($notes_buffer);
 
 
