@@ -1291,7 +1291,6 @@ sub get_html_seq_vars {
   my @seqs = split( /\*/, $full_seq );
 
   my $seq = shift @seqs;
-  my $fasta = ">Primary\n$seq\n";
   my $ruler = '';
   my $ruler_cnt = ' ';
   my $acnt = 1;
@@ -1414,14 +1413,21 @@ sub get_html_seq_vars {
   }
 
   # Or if there are no variants.
-  return \%return unless $swiss->{success} && $swiss->{has_variants};
-#  die Dumper( $swiss );
+  return \%return unless $swiss->{success};
+  $return{has_variants} = $swiss->{has_variants};
+  $return{has_modres} = $swiss->{has_modres};
 
   my $snp_cover = $self->get_snp_coverage( swiss => $swiss );
 
-  my @global_clustal = ( [ '', $ruler_cnt], [ '', $ruler ] );
   my %coverage_coords;
-  my $primary_clustal;
+  my @global_clustal = ( [ '', $ruler_cnt], [ '', $ruler ] );
+  my $primary_clustal = [ 'Primary', $seq ];
+  $coverage_coords{$primary_clustal->[0]} = $self->get_coverage_hash( seq => $seq, 
+                                                                 peptides => $peps, 
+                                                                   offset => 0,
+                                                                  nostrip => 1 );
+  push @global_clustal, $primary_clustal;
+
   my %type2display = ( VARIANT => 'SNP', CHAIN => 'Chain', INIT_MET => 'InitMet', SIGNAL => 'Signal' );
   for my $type ( qw( INIT_MET SIGNAL CHAIN VARIANT ) ) {
     my $pepcnt = 1;
@@ -1430,14 +1436,6 @@ sub get_html_seq_vars {
      
       my $pepname = $type2display{$type} .  '_' . $pepcnt;
  
-      if ( !$primary_clustal ) {
-        $primary_clustal = [ 'Primary', $seq ];
-        $coverage_coords{$primary_clustal->[0]} = $self->get_coverage_hash( seq => $primary_clustal->[1], 
-                                                                         peptides => $peps, 
-                                                                           offset => 0,
-                                                                           nostrip => 1 );
-        push @global_clustal, $primary_clustal;
-      }
 
       push @global_clustal, [ $pepname, $entry->{seq} ];
       $coverage_coords{$pepname} = $self->get_coverage_hash( seq => $entry->{seq}, 
@@ -1453,7 +1451,7 @@ sub get_html_seq_vars {
 
   # Add modified residues track
   my $cover = $self->get_modres_coverage( $swiss );
-  if ( scalar( keys( %$cover ) ) ) {
+  if ( $swiss->{has_modres} ) {
     my $modres_seq = $self->add_modres_cover_css( seq => $seq, cover => $cover );
     push @global_clustal, [ 'ModifiedResidues', $modres_seq ];
   }
@@ -1593,13 +1591,23 @@ sub get_uniprot_variant_seq {
     my $pos = 0;
     my $found = 0;
     my $relpos;
-    for my $tryptic ( @{$tryp} ) {
+    for ( my $idx = 0; $idx < scalar( @{$tryp} ); $idx++ ) {
+      my $tryptic = $tryp->[$idx];
       $pos += length( $tryptic );
       if ( $pos >= $args{start} ) {
         if ( !$found ) {
           $args{info} =~ /^\s*(\w)\s*\-\>\s*(\w)/;
           my $original = $1;
           my $altered = $2;
+
+          # A bit of trickery if we changed from a basic to a non-basic AA
+          if ( $original =~ /[KR]/ && $altered !~ /[KR]/ && $args{start} == $pos && $tryptic !~ /P[KR]$/ ) {
+            $idx++;
+            my $new_tryp = $tryp->[$idx];
+            $pos += length( $new_tryp );
+            $tryptic .= $new_tryp;
+          }
+
           my $prev = $pos - length( $tryptic );
           my @aa = split( //, $tryptic );
           $relpos = $args{start} - $prev - 1;
@@ -1651,7 +1659,11 @@ sub get_uniprot_annotation {
   my $self = shift;
   my %args = @_;
 
-  my %annot = ( success => 0 );
+  my %annot = ( success => 0,
+                all_vars => [], 
+                has_modres => 0,
+                has_variants => 0,
+               );
 
   return \%annot unless $args{accession};
 
@@ -1677,15 +1689,18 @@ sub get_uniprot_annotation {
     my $fasta = $swiss->toFasta();
     my @fasta = split( /\n/, $fasta );
     my $fasta_seq = join( '', @fasta[1..$#fasta] );
-    $annot{all_vars} ||= [];
-    my $varcnt = 0;
     if ( $swiss->{FTs} ) {
       for my $var ( @{$swiss->{FTs}->{list}} ) {
         if ( $var->[0] =~ /SIGNAL|CHAIN|INIT_MET/ || 
              $var->[0] =~ /VARIANT/ && $var->[3] =~ /dbSNP/ ||
              $var->[0] =~ /MOD_RES/ ||
-             $var->[0] =~ /CARBOHYD/
-            ) {
+             $var->[0] =~ /CARBOHYD/ ) {
+
+          # Start and end should always be numeric, but somehow are not...
+          for my $key ( 1, 2 ) {
+            $var->[$key] =~ s/\D//g;
+          }
+
           next if $var->[0] eq 'CHAIN' && $var->[1] == 2 && $var->[2] == length($fasta_seq);
           next if $var->[0] eq 'CHAIN' && $var->[1] == 1 && $var->[2] == length($fasta_seq);
 
@@ -1694,6 +1709,7 @@ sub get_uniprot_annotation {
                        end => $var->[2],
                       info => $var->[3] );
 
+
           my $var_seq = $self->get_uniprot_variant_seq ( %var, fasta_seq => $fasta_seq ); 
 
           $var{seq} = $var_seq->{seq};
@@ -1701,14 +1717,16 @@ sub get_uniprot_annotation {
 
           $annot{$var{type}} ||= [];
           push @{$annot{$var{type}}}, \%var; 
-          $varcnt++;
 
+          if ( $var->[0] =~ /MOD_RES|CARBOHYD/ ) {
+            $annot{has_modres}++;
+          } else {
+            $annot{has_variants}++;
+          }
+          $annot{success}++;
         }
       }
     }
-
-    $annot{success}++;
-    $annot{has_variants} = $varcnt;
   }
   return \%annot;
 }
