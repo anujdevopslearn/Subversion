@@ -2707,35 +2707,37 @@ sub displayAnnotatedSequence {
   if ( $html_seq->{clustal_display} ) { # If we have any variants
 
     print "<TR $tr><TD>&nbsp;</TD></TR>\n";
-    print "<TR $tr><TD><B>Annotated Variants:</B> </TD></TR>\n";
     my $variant_list = '';
     my $cnt;
-    for my $var (  @{$html_seq->{variant_list}} ) {
-      $cnt++;
-      $variant_list .= '<SPAN style="display:none" ID=var_list>' if $cnt == 12;
-      $variant_list .= join( "\t", @{$var} ) . "\n";
-    }
-    my $var_toggle_link = '';
-    if ( $cnt > 11 ) {
-      $variant_list .= "</SPAN>";
-      $var_toggle_link =  qq~ <A NAME=vars HREF="javascript:void(0)" onClick=showVariants() ID=vars_toggle>Show More</A>\n ~;
-      print qq~
-      <SCRIPT TYPE="text/javascript">
-      function showVariants() {
-        var showVar = document.getElementById( "var_list" );
-        if ( showVar.style.display == 'block' ) {
-          showVar.style.display = 'none';
-          document.getElementById( "vars_toggle" ).innerHTML = 'Show More';
-        } else {
-          showVar.style.display = 'block';
-          document.getElementById( "vars_toggle" ).innerHTML = 'Show Fewer';
-        }
-      }
-    </SCRIPT>
-      ~;
-    }
 
-    print qq~ <TR $tr><TD> <PRE>$variant_list</PRE> $var_toggle_link </TD></TR> ~;
+    if ( $html_seq->{has_variants} ) {
+      print "<TR $tr><TD><B>Annotated Variants:</B> </TD></TR>\n";
+      for my $var (  @{$html_seq->{variant_list}} ) {
+        $cnt++;
+        $variant_list .= '<SPAN style="display:none" ID=var_list>' if $cnt == 12;
+        $variant_list .= join( "\t", @{$var} ) . "\n";
+      }
+      my $var_toggle_link = '';
+      if ( $cnt > 11 ) {
+        $variant_list .= "</SPAN>";
+        $var_toggle_link =  qq~ <A NAME=vars HREF="javascript:void(0)" onClick=showVariants() ID=vars_toggle>Show More</A>\n ~;
+        print qq~
+        <SCRIPT TYPE="text/javascript">
+        function showVariants() {
+          var showVar = document.getElementById( "var_list" );
+          if ( showVar.style.display == 'block' ) {
+            showVar.style.display = 'none';
+            document.getElementById( "vars_toggle" ).innerHTML = 'Show More';
+          } else {
+            showVar.style.display = 'block';
+            document.getElementById( "vars_toggle" ).innerHTML = 'Show Fewer';
+          }
+        }
+      m </SCRIPT>
+        ~;
+      }
+      print qq~ <TR $tr><TD> <PRE>$variant_list</PRE> $var_toggle_link </TD></TR> ~;
+    }
     print "<TR $tr><TD>&nbsp;</TD></TR>\n";
     print "<TR $tr><TD><B>Variants in Sequence Context:</B> </TD></TR>\n";
     print "<TR $tr><TD> $html_seq->{clustal_display} </TD></TR>\n";
