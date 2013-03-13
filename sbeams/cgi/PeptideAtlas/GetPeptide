@@ -986,7 +986,9 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
   my $modSQL = qq~
   SELECT distinct
-  modified_peptide_sequence, MPI.peptide_charge, MPI.monoisotopic_parent_mz,
+  modified_peptide_sequence, 
+  MPI.peptide_charge, 
+  MPI.monoisotopic_parent_mz,
   MPI.best_probability, 
   MPI.n_observations, MPI.n_sibling_peptides, MPI.sample_ids  
   FROM $TBAT_PEPTIDE_INSTANCE PI
@@ -1012,6 +1014,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
   ORDER BY modified_peptide_sequence, MPI.peptide_charge ASC
   ~;
 
+  #$sbeams->display_sql(sql=>$modSQL);
   my @mod_peps = $sbeams->selectSeveralColumns( $modSQL );
 
   # Use build-specific library if warranted
@@ -1458,10 +1461,12 @@ if ($apply_action =~ /QUERY|GO/i ) {
       $pep->[$chrm_idx] = $chromatogram_entry;
 
 			my $modified_pepseq = $pep->[$mseq_idx];
+
 			if ($pep->[11]){
 				my $ptm_sequence = $pep->[11];
 				my $newseq = '';
 				my %mods = ();
+        my %ptm_score = ();
 				my $pos = -1;
 				my @elms = split(/\]/, $modified_pepseq);
 				foreach my $str (@elms){
@@ -1475,23 +1480,32 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
 				@elms = split(/\)/, $ptm_sequence);
         $pos = -1;
-				foreach my $str (@elms){
+        foreach my $str (@elms){
           if ($str =~ /(.*)\((.*)/){
-					  $pos += length ($1);
-					  if (defined $mods{$pos} ){
-					    $newseq .= $1."[$mods{$pos}]($2)";
-					  }else{
-						   $newseq .= $str.")";
-					  }
-				  }else{
-             $newseq .= $str;
-             $pos += length ($str);
+            $pos += length ($1);
+            $ptm_score{$pos} = $2;
+          }else{
+            $pos += length ($str);
           }
         }
-        $newseq =~ s/(\w)\)$/$1/;
+        my $pepseq = $modified_pepseq;
+        $pepseq =~ s/\[[\d\.]+\]//g;
+        my @aas = split(//, $pepseq);
+        for(my $i=0; $i<$#aas; $i++){
+          if(defined $mods{$i} && defined $ptm_score{$i}){
+            $newseq .= "$aas[$i]\[$mods{$i}\]($ptm_score{$i})";
+          }elsif(defined $mods{$i} && not defined $ptm_score{$i}){
+            $newseq .= "$aas[$i]\[$mods{$i}\]";
+          }elsif(defined $ptm_score{$i} && not defined $mods{$i}){
+            $newseq .= "$aas[$i]($ptm_score{$i})";
+          }else{
+            $newseq .= $aas[$i];
+          }
+        }
 				$modified_pepseq = $newseq;
       }
       $pep->[$mseq_idx] = $sbeamsMOD->formatMassMods($modified_pepseq);
+
       $pep->[$mseq_idx] =~ s/"aa_mod">(\[[\d\.]+\])(\([\d\.]+\))/"supsub"><sup class="superscript">$1<\/sup><sub class="subscript">$2<\/sub>/g;
       $pep->[$mseq_idx] =~ s/([A-Z])(\([\d\.]+\))/$1<scan class="supsub"><sup class="superscript">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<\/sup><sub class="subscript">$2<\/sub><\/scan>/g;
 
@@ -1522,17 +1536,21 @@ if ($apply_action =~ /QUERY|GO/i ) {
     }
     print qq~ 
      <style>
-			.supsub {font-size: 9; color: darkslategray}
-			.superscript {	
+			.supsub {
+        font-size: 9px;
+        color: darkslategray;
+				vertical-align: baseline;
 				position: relative;
+      }
+			.superscript {	
         left 0;
-				top: -0.4em;
+			  top: -0.5em; 
 				}
 
-			.subscript {	
-				position: relative;
-        margin-left:-2.5em;
-				top: 0.4em;
+			.subscript {
+        color: darkslategray;	
+        margin-left:-2.2em;
+        top: 0.5em;
 			}
     </style>
     ~;
