@@ -2635,7 +2635,11 @@ sub writePepIdentificationListFile {
       my $info = $ProteinProphet_pep_data->{$pep_key};
       if ($best_prob_per_pep) {
         # subtract .001 since DS does this in ProteinProphet
-        $initial_probability = $best_prob_per_pep->{$pep_key} - .001;
+        if (defined $best_prob_per_pep->{$pep_key}){
+          $initial_probability = $best_prob_per_pep->{$pep_key} - .001;
+        }else{
+          $initial_probability = -0.001;
+        }
         # debugging: check whether probs from pepXML match
         # init_probs from protXML. In a small fraction of cases,
         # they don't, and I don't know why. TMF 02/09.
@@ -3383,6 +3387,7 @@ sub coalesceIdentifications {
 
     #### Now store information for this modification of the peptide
     my $modified_sequence = $row->[$columns->{modified_peptide_sequence}];
+    $modified_sequence =~ s/\([\d\.]+\)//g;
     my $charge = $row->[$columns->{charge}];
     $info->{modifications}->{$modified_sequence}->{$charge}->{n_instances}++;
     my $modinfo = $info->{modifications}->{$modified_sequence}->{$charge};
@@ -3513,20 +3518,12 @@ sub writeToPAxmlFile {
       each %{$attributes->{modifications}}) {
 
       while (my ($mod_charge,$charge_attributes) = each %{$mod_attributes}) {
-				my $ptm_sequence = '';
-				if ($mod_peptide_sequence =~ /\(/){
-					$ptm_sequence = $mod_peptide_sequence;
-					$mod_peptide_sequence =~ s/\([\d\.]+\)//g;
-					$ptm_sequence =~ s/\[[\d\.]+\]//g;
-				}
-
         my $buffer = encodeXMLEntity(
           entity_name => 'modified_peptide_instance',
           indent => 8,
           entity_type => 'openclose',
           attributes => {
             peptide_string => $mod_peptide_sequence,
-            ptm_string => $ptm_sequence,
             charge_state => $mod_charge,
             best_probability => $charge_attributes->{best_probability},
             n_observations => $charge_attributes->{n_instances},
