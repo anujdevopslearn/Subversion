@@ -158,7 +158,7 @@ sub handle_request {
     my $table_width = $parameters{'width'} || 800;
 
     my $aslog = ( $parameters{plottype} && $parameters{plottype} eq 'linear' ) ? 'false' : 'true';
-
+    my $expt_id = $parameters{expt_id} || 1;
 
     #### Get a list of accessible project_ids
     my @accessible_project_ids = $sbeams->getAccessibleProjects();
@@ -245,67 +245,110 @@ sub handle_request {
 	my $pre_mz = sprintf( "%0.4f", $quant[1] );
 	my $mz_low = int( $quant[1] );
 	my $mz_hi = $mz_low + 1;
+
+
+#  mysql -h mslims -D mrmatlas_lims -u mrm_ro -p 'Tsr3#@gfA356!&5'
+#  mysql -uAutoCalibUser -p --protocol=TCP --port=3306 --host=moog -DAutoCalib
+
+  my $driver = 'DBI:mysql:AutoCalib:moog';
+  my $user = 'AutoCalibUser';
+  my $pass = 'MGmyPWD';
+  my %error = ( PrintError => 1, RaiseError => 1);
+  my $mydbh = DBI->connect($driver,$user,$pass,\%error);
+
   my $qsql = qq~
-	SELECT precursor_mz, product_mz, area, dilution, concentration
-	FROM peptideatlas.dbo.quant_data 
-	WHERE peptide_sequence = '$quant[0]'
-  AND precursor_mz BETWEEN $mz_low AND $mz_hi 
-  ORDER by precursor_mz, product_mz, dilution DESC
+  SELECT DISTINCT prm.mz AS precursor_mz, pm.mz AS product_mz, area, dilutions ,concentration, replicate_number
+  FROM proteins pr  JOIN protein_peptides pp ON pp.protein_id = pr.id
+  JOIN peptides pe ON pp.peptide_id = pe.id 
+  JOIN peptide_precursor_mz pprm ON pprm.peptide_id = pe.id 
+  JOIN precursor_mz prm    ON prm.id = pprm.precursor_mz_id  
+  JOIN peptide_product_mz ppm    ON ppm.peptide_id = pe.id  
+  JOIN product_mz pm    ON pm.id = ppm.product_mz_id  
+  JOIN replicate_product_mz rpm    ON rpm.product_mz_id = pm.id  
+  JOIN replicates r    ON rpm.replicate_id = r.id 
+  JOIN experiment_proteins EP on EP.protein_id = pr.id  
+  WHERE peptide_sequence = '$parameters{peptide_sequence}' 
+  AND EP.experiment_id = $expt_id 
+  ORDER by prm.mz, pm.mz, dilutions, concentration
 	~;
 
-  my $sth = $sbeams->get_statement_handle( $qsql );
+  my $sth = $mydbh->prepare( $qsql );
+  $sth->execute();
+
 	my %data;
 	my %ldata;
+  my $cnt = 1;
+  my @data;
+
+  my %dil = ( 5 => 1,
+              4 => 4,
+              3 => 16,
+              2 => 64,
+              1 => 256,
+              0 => 1024 );
+
   while ( my @row = $sth->fetchrow_array() ) {
 		my $mz = sprintf( "%0.4f", $row[1] );
 		my $area = sprintf( "%0.1f", $row[2] );
-		my $conc = sprintf( "%0.2f", $row[4]/1000 );
+		my $conc = sprintf( "%0.2f", $row[4]/$dil{$row[3]} );
+    my $rep = $row[5];
+
+#    push @data, [ $mz, $area, $row[3], $dil{$row[3]}, $conc, $row[5] ];
     $data{$mz} ||= {};
-    $data{$mz}->{$conc} = $area;
-    $ldata{$mz} ||= {};
-    $ldata{$mz}->{$conc} = $area;
+    $data{$mz}->{$conc} ||= {};
+    $data{$mz}->{$conc}->{$rep} = $area;
+    $cnt++;
 	}
+  use Data::Dumper;
 
 	return unless %data; 
 
   my $div_strings = '';
 	my $chart_functions = '';
 	my $chart_callbacks = '';
+#  die Dumper( %data );
 
 	for my $frag ( sort{ $a <=> $b } keys( %data ) ) {
-	  my @concs = sort{ $a <=> $b } keys( %{$data{$frag}} );
-    my $js_data = "['Conc','$frag','fit']";
+    my $js_data = '';
+    my $conc_str .= "begin: ";
+    for my $conc ( sort{ $b <=> $a } keys( %{$data{$frag}} ) ) {
+      $conc_str .= "$conc... ";
+#      print "conc is $conc<BR>\n";
+      my @reps = sort { $a <=> $b } ( keys( %{$data{$frag}->{$conc}} ) );
 
-	  my @areas;
-  	for my $conc ( @concs ) {
-		  push @areas, $data{$frag}->{$conc};
+      if ( !$js_data ) {
+        $js_data .= "['Conc'";
+        for my $rep ( @reps ) {
+          $js_data .= ", 'rep_$rep'";
+        }
+        $js_data .= ",'Avg']";
+      }
+
+      my @areas;
+      my $tot = 0;
+      my $cnt = 0;
+    	for my $rep ( @reps ) {
+        my $val = $data{$frag}->{$conc}->{$rep};
+        $val = 1 if $val < 1;
+        $tot += $val;
+	  	  push @areas, $val;
+        $cnt++;
+      }
+      my $avg = int( abs($tot/$cnt) );
+      $avg ||= 1;
+      push @areas, $avg;
+	  	$js_data .= ",\n[$conc," . join( ',', @areas ) . ']';
     }
-
-    my $lineFit = Statistics::LineFit->new();
-    $lineFit->setData (\@concs, \@areas) or die "Invalid data";
-    my ($intercept, $slope) = $lineFit->coefficients();
-    my $rSquared = $lineFit->rSquared();
-    my @predicted_areas = $lineFit->predictedYs();
-
-		$intercept = sprintf( "%0.1f", $intercept );
-		$slope = sprintf( "%0.1f", $slope );
-		$rSquared = sprintf( "%0.4f", $rSquared );
-
-    my $idx = 0;
-  	for my $conc ( @concs ) {
-	  	$js_data .= ",\n[$conc,$data{$frag}->{$conc},$predicted_areas[$idx] ]";
-			$idx++;
-    }
-    use Data::Dumper;
 #    die Dumper( $js_data );
 
-		my $div_name = $sbeams->getRandomString( num_chars => 20 );
+  		my $div_name = $sbeams->getRandomString( num_chars => 20 );
 
-		my $line_info = "<BR> r-squared = $rSquared,  y=$slope*x + $intercept";
-		$div_strings .= qq~<BR><DIV style="border: 1px solid gray; width: 500px" > <div id="$div_name" style="width: 500px; height: 360px" > </div><CENTER>$line_info</CENTER></DIV>~;
+#	 	my $line_info = "<BR> r-squared = $rSquared,  y=$slope*x + $intercept";
+      my $line_info = '';
+  		$div_strings .= qq~<BR><DIV style="border: 1px solid gray; width: 500px" > <div id="$div_name" style="width: 500px; height: 360px" > </div><CENTER>$line_info</CENTER></DIV>~;
 #		$div_strings .= qq~<BR><DIV style="width: 500px; height: 360px; border: 1px solid gray"   <div id="$div_name" style="width: 500px; height: 360px; border: 1px solid gray" > </div>~;
 
-    $chart_callbacks .= "google.setOnLoadCallback(draw_${div_name}_Chart);\n";
+      $chart_callbacks .= "google.setOnLoadCallback(draw_${div_name}_Chart);\n";
 		$chart_functions .= qq~
       function draw_${div_name}_Chart() {
         var data = google.visualization.arrayToDataTable([
@@ -317,7 +360,7 @@ sub handle_request {
 					pointSize:  3,
 					hAxis: {title: 'Femtomoles on Column', logScale: $aslog   },
 					vAxis: {title: 'Intensity (area under chromatogram)', logScale: $aslog },
-					series: [{ pointSize: 4, visibleInLegend: false}, { pointSize: 0, lineWidth: 1, visibleInLegend: false}]
+					series: [{ pointSize: 4 },{ pointSize: 4 },{ pointSize: 4 },{ pointSize: 4 },{ pointSize: 4 },  { pointSize: 2, lineWidth: 1, visibleInLegend: true}]
         };
 
         var chart = new google.visualization.ScatterChart(document.getElementById('$div_name'));
