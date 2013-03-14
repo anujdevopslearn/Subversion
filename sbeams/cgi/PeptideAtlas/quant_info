@@ -287,10 +287,12 @@ sub handle_request {
               1 => 256,
               0 => 1024 );
 
+  my $microliters_injected = 2;
+
   while ( my @row = $sth->fetchrow_array() ) {
 		my $mz = sprintf( "%0.4f", $row[1] );
 		my $area = sprintf( "%0.1f", $row[2] );
-		my $conc = sprintf( "%0.2f", $row[4]/$dil{$row[3]} );
+		my $conc = sprintf( "%0.2f", $microliters_injected * ($row[4]/$dil{$row[3]}) );
     my $rep = $row[5];
 
 #    push @data, [ $mz, $area, $row[3], $dil{$row[3]}, $conc, $row[5] ];
