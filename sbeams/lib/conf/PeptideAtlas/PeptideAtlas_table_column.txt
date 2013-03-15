@@ -103,6 +103,15 @@ AT_peptide	4	peptide_length	Peptide Length	int	4	0	N		N			Y	text	10		Y	Y	N	Lengt
 AT_peptide	5	peptide_isoelectric_point	Isoelectric Point	real	4	0	Y		N			Y	text	10		Y	Y	N	Calculated isoelectric point of the peptide		
 AT_peptide	6	molecular_weight	Molecular Weight	real	4	0	Y		N			Y	text	10		Y	Y	N	Calculated molecular weight of the peptide		
 AT_peptide	7	SSRCalc_relative_hydrophobicity	SSRCalc Relative Hydrophobicity	real	4	0	Y		N			Y	text	10		Y	Y	N	Calculated hydrophobicity of the peptide using SSRCalc algorithm		
+AT_peptide_mapping	1	peptide_mapping_id	Peptide Mapping ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_peptide_mapping	2	peptide_instance_id	Peptide Instance	int	4	0	N		N	AT_peptide_instance	peptide_instance_id	Y	optionlist			Y	Y	Y	Peptide Instance that was mapped		
+AT_peptide_mapping	3	matched_biosequence_id	Matched Biosequence	int	4	0	N		N	AT_biosequence	biosequence_id	Y	optionlist			Y	Y	Y	Biosequence to which the peptide was successfully mapped		
+AT_peptide_mapping	4	start_in_biosequence	Start Position in Biosequence	int	4	0	N		N			Y	text	10		Y	Y	Y	Start position of the peptide in the matched biosequence		
+AT_peptide_mapping	5	end_in_biosequence	End Position in Biosequence	int	4	0	N		N			Y	text	10		Y	Y	N	End position of the peptide in the matched biosequence		
+AT_peptide_mapping	6	chromosome	Chromosome	varchar	50	0	N		N			Y	text	50		Y	Y	N	Chromosome in which this mapping occurs		
+AT_peptide_mapping	7	start_in_chromosome	Start Position in Chromosome	int	4	0	N		N			Y	text	20		Y	Y	N	Start position of the peptide in the chromosome which the peptide matches the biosequence		
+AT_peptide_mapping	8	end_in_chromosome	End Position in Chromosome	int	4	0	N		N			Y	text	20		Y	Y	N	End position of the peptide in the chromosome which the peptide matches the biosequence		
+AT_peptide_mapping	9	strand	Strand	char	1	0	N		N			Y	text	10		Y	Y	N	"Strand (+,-) of the peptide in the chromosome"		
 AT_peptide_instance	1	peptide_instance_id	Peptide Instance ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_peptide_instance	2	atlas_build_id	Atlas Build	int	4	0	N		N	AT_atlas_build	atlas_build_id	Y	optionlist			Y	Y	Y	Associated Atlas Build		
 AT_peptide_instance	3	peptide_id	Peptide	int	4	0	N		N	AT_peptide	peptide_id	Y	optionlist			Y	Y	Y	Peptide		
@@ -998,6 +1007,41 @@ AT_GetNextProtChromMapping	14	redundancy_constraint	No Redundancy in Each Chromo
 AT_spectrum_ptm_identification	1	spectrum_ptm_identification_id	Spectrum PTM Identification ID	int	4	0	N		Y			Y							spectrum_ptm_identification_id		
 AT_spectrum_ptm_identification	2	spectrum_identification_id	Spectrum Identification ID	int	4	0	N		N	AT_spectrum_identification	spectrum_identification_id	Y							spectrum_identification_id		
 AT_spectrum_ptm_identification	3	ptm_sequence	PTM sequence	varchar	255	0	N		N			Y							ptm_sequence		
+AT_putative_protein	1	putative_protein_id	PutativeProteinID	int	4	0	N		Y												pkDEFAULT
+AT_putative_protein	2	biosequence_id	BiosequenceID	int	4	0	N		N	AT_biosequence	biosequence_id	Y	text	20		Y	Y	N	biosequence_id		
+AT_putative_protein	3	spectrum_annotation_level_id	SpectrumAnnotationLevelID	int	4	0	Y		N	AT_spectrum_annotation_level	spectrum_annotation_level_id	N	optionlist			Y	Y	N	Confidence level		
+AT_putative_protein	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_putative_protein	5	added_to_nextprot	AddedToNeXtProt	char	1	0	N	N	N			Y	optionlist			Y	Y	N	Has this protein been added to neXtProt?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+AT_putative_peptide	1	putative_peptide_id	PutativePeptideID	int	4	0	N		Y												pkDEFAULT
+AT_putative_peptide	2	peptide_id	PeptideID	int	4	0	N		N	AT_peptide	peptide_id	Y	text	20		Y	Y	N	peptide_id		
+AT_putative_peptide	3	spectrum_annotation_level_id	SpectrumAnnotationLevelID	int	4	0	Y		N	AT_spectrum_annotation_level	spectrum_annotation_level_id	N	optionlist			Y	Y	N	Confidence level		
+AT_putative_peptide	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_putative_peptide	5	added_to_nextprot	AddedToNeXtProt	char	1	0	N	N	N			Y	optionlist			Y	Y	N	Has a protein containing this peptide been added to neXtProt?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+AT_putative_protein_peptide	1	putative_protein_peptide_id	PutativeProteinPeptideID	int	4	0	N		Y												pkDEFAULT
+AT_putative_protein_peptide	2	putative_protein_id	PutativeProteinID	int	4	0	N		N	AT_putative_protein	putative_protein_id	Y	text	20		Y	Y	N	putative_protein_id		
+AT_putative_protein_peptide	3	peptide_id	PeptideID	int	4	0	N		N	AT_peptide	peptide_id	Y	text	20		Y	Y	N	peptide_id		
+AT_peptide_instance_annotation	1	peptide_instance_annotation_id	Spectrum Annotation ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_peptide_instance_annotation	2	peptide_instance_id	PeptideInstanceID	int	4	0	N		N	AT_peptide_instance	peptide_instance_id					Y	Y	Y	PeptideInstanceID		
+AT_peptide_instance_annotation	3	spectrum_annotation_level_id	Spectrum Annotation Level	int	4	0	Y		N	AT_spectrum_annotation_level	spectrum_annotation_level_id	N	optionlist	5		Y	Y	N	User annotation	"SELECT spectrum_annotation_level_id, level_name FROM $TB_SPECTRUM_ANNOTATION_LEVEL ORDER BY sort_order,level_name"	
+AT_peptide_instance_annotation	4	annotator_contact_id	Annotator Contact	int	4	0	N		N	contact	contact_id	N	optionlist			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+AT_peptide_instance_annotation	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_peptide_instance_annotation	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_peptide_instance_annotation	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_peptide_instance_annotation	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_peptide_instance_annotation	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_peptide_instance_annotation	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_peptide_instance_annotation	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_protein_identification_annotation	1	protein_identification_annotation_id	ProteinIdentificationAnnotationID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_protein_identification_annotation	2	protein_identification_id	ProteinIdentificationID	int	4	0	N		N	AT_protein_identification	protein_identification_id					Y	Y	Y	ProteinIdentificationID		
+AT_protein_identification_annotation	3	spectrum_annotation_level_id	Spectrum Annotation Level	int	4	0	N		N	AT_spectrum_annotation_level	spectrum_annotation_level_id	Y	optionlist	5		Y	Y	N	User annotation	"SELECT spectrum_annotation_level_id, level_name FROM $TB_SPECTRUM_ANNOTATION_LEVEL ORDER BY sort_order,level_name"	
+AT_protein_identification_annotation	4	annotator_contact_id	Annotator Contact	int	4	0	N		N	contact	contact_id	N	optionlist			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+AT_protein_identification_annotation	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_protein_identification_annotation	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_protein_identification_annotation	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_protein_identification_annotation	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_protein_identification_annotation	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_protein_identification_annotation	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_protein_identification_annotation	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_public_data_repository	1	dataset_id	Dataset	int	4	0	N		Y							N	Y				pkDEFAULT
 AT_public_data_repository	2	dataset_identifier	Dataset Identifier	varchar	20	0	N		N			Y	text			Y	Y	N	source idenfier		
 AT_public_data_repository	3	source_repository	Source	varchar	100	0	N		N			Y	text			Y	Y	N	source repository		
