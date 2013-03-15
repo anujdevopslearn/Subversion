@@ -43,6 +43,7 @@ use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::ConsensusSpectrum;
 use SBEAMS::PeptideAtlas::ModificationHelper;
 use SBEAMS::PeptideAtlas::Utilities;
+use SBEAMS::PeptideAtlas::ProtInfo qw(is_uniprot_identifier);
 
 use SBEAMS::Proteomics::Tables;
 
@@ -128,7 +129,8 @@ sub main {
         my $project_id = $sbeamsMOD->getProjectID(
             atlas_build_id => $parameters{atlas_build_id}
         );
-
+	# TMF
+	processDatabaseActions();
         $sbeamsMOD->display_page_header(project_id => $project_id,
 				                                init_tooltip => 1);
 
@@ -139,6 +141,104 @@ sub main {
     $sbeams->profile_sql( list => 0 );
 
 } # end main
+
+
+###############################################################################
+# Process insert/update/delete, if any, then redirect
+# TMF: copied this sub from ShowObservedSpectrum, then made a few
+# changes
+###############################################################################
+sub processDatabaseActions {
+    my $redirect = 0;
+    my %parameters;
+
+    $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
+    $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+    my $apply_action  = $q->param('apply_action');
+
+    if ($apply_action eq "UPDATE ANNOTATION") {
+	my %rowdata = (
+		       spectrum_annotation_level_id => $parameters{user_spectrum_annotation},
+		       comment => $parameters{user_spectrum_commment}
+		       );
+
+	my $PK = $sbeams->updateOrInsertRow(
+					    update => 1,
+					    # TMF
+					    table_name => $TBAT_PEPTIDE_INSTANCE_ANNOTATION,
+					    rowdata_ref => \%rowdata,
+					    # TMF next 2 lines
+					    PK => 'peptide_instance_annotation_id',
+					    PK_value => $parameters{peptide_instance_annotation_id},
+					    return_PK => 1,
+					    add_audit_parameters => 1
+					    );
+
+	if ($PK) { $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been updated." ); }
+	else     { $sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem updating your annotation record." ); }
+
+	$redirect++;
+
+      } elsif ($apply_action eq "ADD ANNOTATION") {
+	my $PK;
+	my $error_reason= '';
+	if ( ! $parameters{peptide_instance_id} ) {
+	  $error_reason .= "Need peptide_instance_id for ADD ANNOTATION.";
+	} else {
+	  my %rowdata = (
+	    annotator_contact_id => $sbeams->getCurrent_contact_id(),
+	    # TMF
+	    #spectrum_identification_id => $parameters{spectrum_identification_id},
+	    peptide_instance_id => $parameters{peptide_instance_id},
+	    spectrum_annotation_level_id => $parameters{user_spectrum_annotation},
+	    comment => $parameters{user_spectrum_commment}
+	  );
+
+	  $PK = $sbeams->updateOrInsertRow(
+	    insert => 1,
+	    # TMF
+	    table_name => $TBAT_PEPTIDE_INSTANCE_ANNOTATION,
+	    rowdata_ref => \%rowdata,
+	    return_PK => 1,
+	    add_audit_parameters => 1
+	  );
+	}
+
+	if ($PK) { $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been added." ); }
+	else     { $sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem inserting your annotation record. $error_reason" ); }
+
+	$redirect++;
+
+      } elsif ($apply_action eq "DELETE ANNOTATION") {
+	my %rowdata = (
+		       record_status => 'D'
+		       );
+
+	my $PK = $sbeams->updateOrInsertRow(
+					    update => 1,
+					    #TMF
+					    table_name => $TBAT_PEPTIDE_INSTANCE_ANNOTATION,
+					    rowdata_ref => \%rowdata,
+					    PK => 'peptide_instance_annotation_id',
+					    PK_value => $parameters{peptide_instance_annotation_id},
+					    return_PK => 1,
+					    add_audit_parameters => 1
+					    );
+
+	if ($PK) { $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been deleted." ); }
+	else     { $sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem deleting your annotation record." ); }
+
+	$redirect++;
+    }
+
+    if ($redirect) {
+	$q->delete( 'apply_action' );
+	print $q->redirect( $q->self_url() );
+	exit;
+    }
+
+}
 
 
 ###############################################################################
@@ -355,6 +455,16 @@ sub handle_request {
     exit;
   }
 
+  # Get peptide_instance_id for this atlas build and peptide sequence
+  $sql = qq~
+  select pi.peptide_instance_id
+  from $TBAT_PEPTIDE_INSTANCE pi
+  join $TBAT_PEPTIDE p
+  on p.peptide_id = pi.peptide_id
+  where pi.atlas_build_id = $atlas_build_id
+    and p.peptide_sequence = 
+  ~;
+
   # Cache values
   if ($atlas_build_name) {
     $sbeams->setSessionAttribute( value => $atlas_build_name,
@@ -532,7 +642,6 @@ unless ( $apply_action eq "QUERY" || $apply_action eq "GO" ) { ## if receive fro
         constraint_value=>$parameters{peptide_sequence_constraint} );
     return if ($peptide_sequence_clause eq '-1');
 
-
    
     my $atlas_project_clause = "AND AB.project_id IN ( $project_string )";
 
@@ -555,9 +664,7 @@ unless ( $apply_action eq "QUERY" || $apply_action eq "GO" ) { ## if receive fro
          PI.n_samples, PI.n_protein_samples, PI.empirical_proteotypic_score,
          O.full_name, PI.original_protein_name,
          P.SSRCalc_relative_hydrophobicity, CAST(biosequence_seq AS VARCHAR) biosequence_seq,
-				 BS.biosequence_id,
-         PA.peptide_sequence, PA.peptide_annotation, PA.peptide_annotation_id, 
-         PA.annotator_name, CAST(PA.comment AS VARCHAR) comment
+				 BS.biosequence_id
          FROM $TBAT_PEPTIDE_INSTANCE PI
          INNER JOIN $TBAT_PEPTIDE P
           ON ( PI.peptide_id = P.peptide_id )
@@ -572,7 +679,6 @@ unless ( $apply_action eq "QUERY" || $apply_action eq "GO" ) { ## if receive fro
          LEFT JOIN $TBAT_BIOSEQUENCE BS
           ON ( PM.matched_biosequence_id = BS.biosequence_id )
          LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
-         LEFT JOIN $TBAT_PEPTIDE_ANNOTATION PA ON ( PA.peptide_id = PI.peptide_id )
          WHERE 1 = 1
             $atlas_build_clause
             $peptide_name_clause
@@ -604,6 +710,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
 	<input type="submit" name="apply_action" value="GO" /><BR>
 	~;
   $log->debug( "finished running query " . time() );
+
 
         if (@rows) {
 
@@ -687,9 +794,14 @@ if ($apply_action =~ /QUERY|GO/i ) {
                                           tr_info => $tr,
                                           key_width => '20%'
                                          );
+  my $link="http://proteininformationresource.org/cgi-bin/peptidematch?peptide=$peptide_sequence[0]";
+  my $peptide_pir_html_link="<A HREF=$link TARGET=_BLANK color=blue>$peptide_sequence[0]</A>";
+  my $tooltip = $sbeamsMOD->make_pa_tooltip( link_text => $peptide_pir_html_link,
+                                        tip_text => "Retrieve all peptide hits in Swiss-Prot (all species)",
+                                        link_class => 'pseudo_link' );
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Peptide Sequence',
                                           tr_info => $tr,
-                                          value => $peptide_sequence[0],
+                                          value => $tooltip,
                                          );
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Best Probability',
                                           tr_info => $tr,
@@ -744,7 +856,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
                                                                   peptide_clause=>$peptide_clause );
 
 
-  my $link="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Summarize_Peptide?searchForThis=$peptide_sequence[0]&apply_action=QUERY";
+  $link="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Summarize_Peptide?searchForThis=$peptide_sequence[0]&apply_action=QUERY";
   my $build_html_link="<A HREF=$link TARGET=_BLANK color=blue>$no_distinct_builds</A>";
   my $org_html_link="<A HREF=$link  TARGET=_BLANK >$no_organisms</A>";
   
@@ -803,8 +915,13 @@ if ($apply_action =~ /QUERY|GO/i ) {
     my $tmp_strand = $map[3];
     my $peptide_sequence = $map[4];
 
-    # Defer...    my $current_prot = $map[$i];
-    my $current_prot = $chrom_map{$key}->[0]; # For now just use the first
+    # Select Uniprot ident if available (prev. to March 2013, selected 1st ident).
+    my $current_prot_num=0;
+    for (my $i=0; $i < scalar @{ $chrom_map{$key} }; $i++ ) {
+      $current_prot_num = $i;
+      last if ( SBEAMS::PeptideAtlas::ProtInfo::is_uniprot_identifier ( $chrom_map{$key}->[$i] ) );
+    }
+    my $current_prot = $chrom_map{$key}->[$current_prot_num];
     push @prots, $current_prot;
       
     # This indicates an unmapped peptide
@@ -1578,7 +1695,6 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
   $log->debug( "End spectra " . time() );
 
-
   #############################################################################
   #### Samples Section
 
@@ -1960,3 +2076,5 @@ sub get_atlas_build_name
 
     return $atlas_build_name;
 }
+
+
