@@ -222,6 +222,7 @@ sub _printMessage {
   $f = basename( $f ) if $f;
 
   my $time = $this->_getTimestamp();
+  my $pid = $$;
   my $lname = $mode . '_log';
   my $lfile = new IO::File ">> $this->{$lname}";
   unless ( defined $lfile ) {
@@ -229,7 +230,7 @@ sub _printMessage {
     print STDERR "$msg";
     return undef;
   }
-  my $info = ucfirst( $mode ) . " [$time] ($f line $l): ";
+  my $info = ucfirst( $mode ) . " [$time] ($f line $l, $pid): ";
   print $lfile "$info" unless $stack;
   print $lfile "$msg";
   $lfile->flush();
