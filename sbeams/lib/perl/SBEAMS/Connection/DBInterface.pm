@@ -1220,7 +1220,7 @@ sub translateSQL{
   # Temporarily log this to find where the existing concats are.  This will
   # catch some extras (where + is +) but will hopefully be useful in   
   # tracking down SQL using the deprecated concat symbol.
-  $log->info( "ConcatSQL: $sql" ) if $sql =~ /\+/;
+  # $log->info( "ConcatSQL: $sql" ) if $sql =~ /\+/;
 
   #### Conversion syntax from MS SQL Server to PostgreSQL
   if ($DBType =~ /PostgreSQL/i) {
