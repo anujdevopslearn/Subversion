@@ -1,8 +1,7 @@
 #!/usr/local/bin/perl
 
 ###############################################################################
-# Program     : buildInfo
-# Author      : Terry Farrah and Zhi Sun (tfarrah@systemsbiology.org)
+# Program     : quant_info
 # $Id: $
 #
 # Description : This script displays details about a single quant SRM Atlas peptide
@@ -16,9 +15,6 @@
 ###############################################################################
 
 
-###############################################################################
-# Get the script set up with everything it will need
-###############################################################################
 use strict;
 use vars qw ($q $sbeams $atlas $PROG_NAME
              $current_contact_id $current_username);
@@ -246,34 +242,14 @@ sub handle_request {
 	my $mz_low = int( $quant[1] );
 	my $mz_hi = $mz_low + 1;
 
-
-#  mysql -h mslims -D mrmatlas_lims -u mrm_ro -p 'Tsr3#@gfA356!&5'
-#  mysql -uAutoCalibUser -p --protocol=TCP --port=3306 --host=moog -DAutoCalib
-
-  my $driver = 'DBI:mysql:AutoCalib:moog';
-  my $user = 'AutoCalibUser';
-  my $pass = 'MGmyPWD';
-  my %error = ( PrintError => 1, RaiseError => 1);
-  my $mydbh = DBI->connect($driver,$user,$pass,\%error);
-
   my $qsql = qq~
-  SELECT DISTINCT prm.mz AS precursor_mz, pm.mz AS product_mz, area, dilutions ,concentration, replicate_number
-  FROM proteins pr  JOIN protein_peptides pp ON pp.protein_id = pr.id
-  JOIN peptides pe ON pp.peptide_id = pe.id 
-  JOIN peptide_precursor_mz pprm ON pprm.peptide_id = pe.id 
-  JOIN precursor_mz prm    ON prm.id = pprm.precursor_mz_id  
-  JOIN peptide_product_mz ppm    ON ppm.peptide_id = pe.id  
-  JOIN product_mz pm    ON pm.id = ppm.product_mz_id  
-  JOIN replicate_product_mz rpm    ON rpm.product_mz_id = pm.id  
-  JOIN replicates r    ON rpm.replicate_id = r.id 
-  JOIN experiment_proteins EP on EP.protein_id = pr.id  
+  SELECT DISTINCT precursor_mz, product_mz, area, dilution ,concentration, replicate_number
+  FROM  peptideatlas.dbo.quant_data 
   WHERE peptide_sequence = '$parameters{peptide_sequence}' 
-  AND EP.experiment_id = $expt_id 
-  ORDER by prm.mz, pm.mz, dilutions, concentration
+  ORDER by precursor_mz, product_mz, dilution, concentration
 	~;
 
-  my $sth = $mydbh->prepare( $qsql );
-  $sth->execute();
+  my $sth = $sbeams->get_statement_handle( $qsql );
 
 	my %data;
 	my %ldata;
