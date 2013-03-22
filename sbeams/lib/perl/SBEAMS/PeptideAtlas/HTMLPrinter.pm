@@ -548,6 +548,7 @@ sub encodeSectionHeader {
 
   my $link = $args{link} || '';
 
+  $args{anchor} ||= $args{text};
   my $anchor = ( $args{anchor} ) ? "<A NAME='$args{anchor}'></A>" : '';
 
   my $buffer = qq~
@@ -1134,6 +1135,7 @@ sub make_pa_tooltip {
   }
 
   # Issue warning if tooltip js wasn't printed (well, fetched anyway).
+  $self->init_pa_tooltip();
   $log->warn( "Failed to itialize tooltip!" ) if !$self->{_tooltip_init};
 
   my $class = $args{class} || 'pseudo_link';
