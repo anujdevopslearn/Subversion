@@ -1428,8 +1428,8 @@ sub get_html_seq_vars {
                                                                   nostrip => 1 );
   push @global_clustal, $primary_clustal;
 
-  my %type2display = ( VARIANT => 'SNP', CHAIN => 'Chain', INIT_MET => 'InitMet', SIGNAL => 'Signal' );
-  for my $type ( qw( INIT_MET SIGNAL CHAIN VARIANT ) ) {
+  my %type2display = ( VARIANT => 'SNP', CHAIN => 'Chain', INIT_MET => 'InitMet', SIGNAL => 'Signal', PROPEP => 'Propep', PEPTIDE => 'Chain' );
+  for my $type ( qw( INIT_MET SIGNAL PROPEP PEPTIDE CHAIN VARIANT ) ) {
     my $pepcnt = 1;
     for my $entry ( @{$swiss->{$type}} ) {
       my $alt = $entry->{seq};
@@ -1575,7 +1575,7 @@ sub get_uniprot_variant_seq {
     $seq->{seq} = join( '', @aa );
 #    $seq->{seq} = substr( $args{fasta_seq}, 0, 1 );
 
-  } elsif ( $args{type} eq 'CHAIN' ) { # Sequence is annotated chain sequence
+  } elsif ( $args{type} =~ /CHAIN|PEPTIDE|PROPEP/ ) { # Sequence is annotated chain sequence
     $seq->{seq} = '-' x ( $args{start} - 1 ) . 
                   substr( $args{fasta_seq}, $args{start} - 1, $args{end} - $args{start} + 1 ) .
                   '-' x ($seqlen - $args{end});
@@ -1694,6 +1694,8 @@ sub get_uniprot_annotation {
         if ( $var->[0] =~ /SIGNAL|CHAIN|INIT_MET/ || 
              $var->[0] =~ /VARIANT/ && $var->[3] =~ /dbSNP/ ||
              $var->[0] =~ /MOD_RES/ ||
+             $var->[0] =~ /PROPEP/ || 
+             $var->[0] =~ /PEPTIDE/ || 
              $var->[0] =~ /CARBOHYD/ ) {
 
           # Start and end should always be numeric, but somehow are not...
@@ -1703,6 +1705,9 @@ sub get_uniprot_annotation {
 
           next if $var->[0] eq 'CHAIN' && $var->[1] == 2 && $var->[2] == length($fasta_seq);
           next if $var->[0] eq 'CHAIN' && $var->[1] == 1 && $var->[2] == length($fasta_seq);
+
+          next unless ( defined $var->[1] && defined $var->[2] &&
+                        $var->[1] =~ /^\d+$/ && $var->[2] =~ /^\d+$/  );
 
           my %var = ( type => $var->[0],
                      start => $var->[1],
