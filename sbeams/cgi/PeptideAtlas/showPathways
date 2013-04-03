@@ -29,6 +29,7 @@ use SBEAMS::BioLink::KeggMaps;
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
+use Data::Dumper;
 
 ## Globals ##
 my $sbeams = new SBEAMS::Connection;
@@ -83,19 +84,17 @@ $|++;
   # Decision block, what type of page are we going to display?
   if ( $params->{apply_action} eq 'list_pathways' ) {
     $content .= list_pathways( $params );
-
   } elsif ( $params->{apply_action} eq 'pathway_details' ) {
 
     # Until caching is available, will print out as we go.
+#    $atlas->printPageHeader();
     $atlas->printPageHeader( onload => 'hideTimerInfo()' );
-    $content .= pathway_details( $params );
     print $content;
+    $content = pathway_details( $params );
     $atlas->printPageFooter( close_tables=>'NO');
     exit;
-
   } else {
     $content .= list_pathways( $params );
-
   }
 
   # Print cgi headers
@@ -213,9 +212,15 @@ sub pathway_details {
   my $t0 = new Benchmark;
 
   $keggmap->setPathway( pathway => $params->{path_id} );
-  my $gene_list = $keggmap->getPathwayGenes(); # pathway => $params->{path_id} );
-  my $relationships = $keggmap->getPathwayRelationships();
-  
+
+
+#  my $relationships = $keggmap->getPathwayRelationships();
+
+  # Get info from pathway XML
+  my $processed = $keggmap->parsePathwayXML();
+
+  my $gene_list = $keggmap->getPathwayGenes( source => 'xml' );
+
   my $tot = scalar( @{$gene_list} );
   my $t1 = new Benchmark;
   $log->debug( parseTime( $t1, $t0, "seconds to fetch genes for $params->{path_def}" ) );
@@ -224,7 +229,7 @@ sub pathway_details {
   print "3) Found $tot genes in pathway, looking up data in Peptide Atlas - ";
 
   # Fetches expression info from db, returns arrays of bg/fg colors
-  my ( $bg, $fg, $atlas_hits, $cnt ) = getExpressionValues($gene_list);
+  my ( $seen, $atlas_hits, $cnt ) = getExpressionValues($gene_list);
 
   my $t2 = new Benchmark;
   $log->debug( parseTime( $t2, $t1, "seconds to get Atlas data for $params->{path_def}" ) );
@@ -240,7 +245,7 @@ sub pathway_details {
   for my $gene ( @{$gene_list} ) {
     my $cnt = 0;
     if ( $atlas_hits->{$gene} ) {
-      $cnt = scalar( @{$atlas_hits->{$gene}} );
+      $cnt += $atlas_hits->{$gene};
     }
     my $chk = ( $cnt ) ? 'checked' : '';
     my $chk_box = "<INPUT TYPE=checkbox NAME=accession VALUE=$gene $chk></INPUT>"; 
@@ -267,9 +272,9 @@ sub pathway_details {
 
   print "1) Getting colored map from KEGG - ";
   # Send gene/color info to kegg for a map
-  my $url = $keggmap->getColoredPathway( bg => $bg,
-                                         fg => $fg,
-                                      genes => $gene_list,
+  my $url = $keggmap->getColoredPathway( seen => $seen,
+                               atlas_build_id => $atlas_build_id,
+                                        genes => $gene_list,
                                        );
   
   my $t4 = new Benchmark;
@@ -304,9 +309,6 @@ sub pathway_details {
 
 
 
-  # Get info from pathway XML
-  my $processed = $keggmap->parsePathwayXML();
-
   my $organism = keggOrg2Std( $kegg_organism );
   my @links;
   my @text;
@@ -334,6 +336,7 @@ sub pathway_details {
   my $image_map = $keggmap->get_image_map( coords => $processed->{coords},
                                         name   => 'kegg_map',
                                         links  => \@links,
+                                        colors  => $seen, 
                                         text   => \@text,
                                         img_src => $url );
   my $legend = getExpressionLegend();
@@ -351,56 +354,72 @@ sub pathway_details {
 
 sub getExpressionValues {
 
+  # Short-circuit
+  if ( 0 ) {
+    my @bg;
+    my @fg;
+    my %atlas_hits;
+    my $gene_cnt;
+    return ( \@bg, \@fg, \%atlas_hits, $gene_cnt );
+  }
+
   my $gene_list = shift;
   
   my $gene_string = join( ", ", @{$gene_list} );
 
   my $search_type = ( $kegg_organism =~ /hsa|mmu/ ) ? 'Entrez GeneID' : 'ORF NAME';
 
-  my $sql =<<"  END";
-  select DISTINCT search_key_name, resource_name, search_key_id,
-           PI.n_observations, n_protein_mappings
-     FROM $TBAT_PEPTIDE_INSTANCE PI
-    INNER JOIN $TBAT_PEPTIDE P
-          ON ( PI.peptide_id = P.peptide_id )
-     LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
-          ON ( PI.peptide_instance_id = PM.peptide_instance_id )
-    INNER JOIN $TBAT_ATLAS_BUILD AB
-          ON ( PI.atlas_build_id = AB.atlas_build_id )
-     LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
-          ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
-     LEFT JOIN $TB_ORGANISM O
-          ON ( BSS.organism_id = O.organism_id )
-     LEFT JOIN $TBAT_BIOSEQUENCE BS
-          ON ( PM.matched_biosequence_id = BS.biosequence_id )
-     LEFT JOIN $TBAT_SEARCH_KEY SK
-          ON ( SK.resource_name = BS.biosequence_name AND SK.atlas_build_id = AB.atlas_build_id )
-    WHERE 1 = 1
-    AND search_key_name IN ( $gene_string )
+  my $sk_sql = qq~
+    SELECT DISTINCT resource_name, search_key_name
+    FROM $TBAT_SEARCH_KEY_ENTITY 
+    WHERE search_key_name IN ( $gene_string )
     AND search_key_type = '$search_type'
-          AND AB.atlas_build_id IN ( $atlas_build_id )
-    ORDER BY search_key_name, n_protein_mappings ASC
-  END
+  ~;
+  my $sth = $sbeams->get_statement_handle( $sk_sql );
+  my %kegg2other;
+  my %other2kegg;
+  while ( my @row = $sth->fetchrow_array() ) {
+    $kegg2other{$row[1]} ||= {};
+    $kegg2other{$row[1]}->{$row[0]}++;
 
-  # ref to hash keyed by gene_id, points to arrayref of one or more peptides
-  my %atlas_hits;
-  my @rows;
-  if ( $gene_string ) {
-    @rows = $sbeams->selectSeveralColumns( $sql );
+    $other2kegg{$row[0]} ||= {};
+    $other2kegg{$row[0]}->{$row[1]}++;
   }
-  for my $row ( @rows ) {
-    # just need to look at the first one
-    next if $atlas_hits{$row->[0]}; 
-    $atlas_hits{$row->[0]} = $row; 
-#    push @{$atlas_hits{$row->[0]}}, $row;
+  my $protstr = "'" . join( "','", keys( %other2kegg ) ) . "'\n";
+
+  my $sql =<<"  END";
+    SELECT DISTINCT biosequence_name, SUM(PI.n_observations), SUM(n_protein_mappings)
+    FROM $TBAT_PEPTIDE_INSTANCE PI
+    LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
+      ON ( PI.peptide_instance_id = PM.peptide_instance_id )
+    LEFT JOIN $TBAT_BIOSEQUENCE BS
+      ON ( PM.matched_biosequence_id = BS.biosequence_id )
+    LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
+      ON ( BS.biosequence_set_id = BSS.biosequence_set_id )
+    WHERE biosequence_name IN  ( $protstr ) 
+    AND atlas_build_id = $atlas_build_id
+    AND biosequence_name NOT LIKE 'ENS%'
+    GROUP BY biosequence_name
+    ORDER BY biosequence_name
+  END
+  $sth = $sbeams->get_statement_handle( $sql );
+
+  my %atlas_hits;
+  if ( $gene_string ) {
+    while ( my @row = $sth->fetchrow_array() ) {
+      for my $prot ( keys( %{$other2kegg{$row[0]}} ) ) {
+        $atlas_hits{$prot} += $row[1];
+      }
+    }
+  } else {
   }
 
   # define colors
-  my $seen = 'yellow';
-  my $uniq = 'green';
+  my $seen = 'green';
   my @bg;
   my @fg;
   my $gene_cnt = 0;
+  my @seen;
   for my $gene ( @{$gene_list} ) {
     # Has quotes if it is a string
     $gene =~ s/\'//g;
@@ -408,12 +427,15 @@ sub getExpressionValues {
     my $color = '#E0FFFF';
     if ( $atlas_hits{$gene} ) {
       $gene_cnt++;
-      $color = ( $atlas_hits{$gene}->[4] > 1 ) ? $seen : $uniq;
+      $color = $seen;
+      push @seen, 1; 
+    } else {
+      push @seen, 0; 
     }
     push @bg, $color;
     push @fg, 'black';
   }
-  return ( \@bg, \@fg, \%atlas_hits, $gene_cnt );
+  return ( \@seen, \%atlas_hits, $gene_cnt );
 }
 
 sub getExpressionLegend {
@@ -421,16 +443,12 @@ sub getExpressionLegend {
   my $table =<<"  END";
   <TABLE BORDER=0>
    <TR> 
-    <TD> Unique peptides observed </TD>
-    <TD BGCOLOR='#7CFC00'> <SPAN> $cell </SPAN> </TD>
+    <TD> Peptides Observed </TD>
+    <TD BGCOLOR='#98FB98'> <SPAN> $cell </SPAN> </TD>
    </TR>
    <TR> 
-    <TD> Peptides observed </TD>
-    <TD BGCOLOR='yellow'> <SPAN> $cell </SPAN> </TD>
-   </TR>
-   <TR> 
-    <TD> No peptides observed </TD>
-    <TD BGCOLOR='#E0FFFF'> <SPAN> $cell </SPAN> </TD>
+    <TD> No Peptides observed </TD>
+    <TD BGCOLOR='#FF0'> <SPAN> $cell </SPAN> </TD>
    </TR>
    <TR> 
     <TD> N/A </TD>
@@ -439,6 +457,10 @@ sub getExpressionLegend {
   </TABLE>
   END
   return $table;
+#   <TR> 
+#    <TD> No peptides observed </TD>
+#    <TD BGCOLOR='#E0FFFF'> <SPAN> $cell </SPAN> </TD>
+#   </TR>
 }
 
 #+
