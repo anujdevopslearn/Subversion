@@ -3,7 +3,7 @@
 #
 # Description : Module to support fetch and  display gene expression on Kegg pathway maps.
 #
-# SBEAMS is Copyright (C) 2000-2006 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2013 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -21,8 +21,10 @@ use strict;
 #our @EXPORT_OK = qw();
 use LWP::UserAgent;
 use SOAP::Lite;
+    use Data::Dumper;
 
 use lib "../..";
+#use vars qw( @EXPORT_OK $PHYSICAL_BASE_DIR );
 use SBEAMS::Connection qw( $log );
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
@@ -42,6 +44,14 @@ $sbeams->setRaiseError(1);
 my $sbeamsMOD = new SBEAMS::BioLink;
 $sbeamsMOD->setSBEAMS($sbeams);
 
+# my $keggmap = SBEAMS::BioLink::KeggMaps->new();
+# my $pathways = $keggmap->getKeggPathways( organism => $kegg_organism );
+# $keggmap->setPathway( pathway => $params->{path_id} );
+# my $gene_list = $keggmap->getPathwayGenes(); # pathway => $params->{path_id} );
+#  my $relationships = $keggmap->getPathwayRelationships();
+# my $url = $keggmap->getColoredPathway( bg => $bg,
+# my $processed = $keggmap->parsePathwayXML();
+# my $image_map = $keggmap->get_image_map( coords => $processed->{coords},
 
 ### Class Methods ###
 #+
@@ -84,6 +94,10 @@ sub getWSDL {
 #-
 sub get_service {
   my $this = shift;
+  $this->{_service} ||= Service->new();
+  return $this->{_service};
+
+  # Deprecated by KEGG as of 2012-12-31
   my $wsdl = $this->getWSDL() || die "Missing required WSDL";
 
   eval {
@@ -93,7 +107,6 @@ sub get_service {
     $log->error( "Unable to connect to KEGG SOAP service" );
     $log->error( $@ );
   }
-  return $this->{_service};
 }
 
 #+
@@ -188,21 +201,59 @@ sub processEntries {
     my $genelist = $en->{name};
     $genelist =~ s/\s+/ /g;
     my @genes = split( " ", $genelist );
-    
+
     for my $gene ( @genes ) {
       $allgenes{$gene}++;
       $gene2entries{$gene} ||= [];
       push @{$gene2entries{$gene}}, $en->{id};
-      
       $entry2genes{$en->{id}} ||= [];
       push @{$entry2genes{$en->{id}}}, $gene;
     }
- }
+  }
+  my @allgenes = keys( %allgenes );
+  my $gene2uniprot = $self->translateKeggAccessions( genes => \@allgenes );
+ 
+
+  my %uniprot;
+  for my $lgene ( @allgenes ) {
+    my $gene = $lgene;
+    $gene =~ s/$self->{_organism}://;
+    next unless $gene2uniprot->{$gene};
+    for my $uniprot ( keys( %{$gene2uniprot->{$gene}} ) ) {
+      $uniprot{$uniprot}++;
+    }
+  }
+
+  my %entry2uniprot_href;
+  for my $entry ( keys( %entry2genes ) ) {
+    $entry2uniprot_href{$entry} ||= {};
+    for my $lgene ( @{$entry2genes{$entry}} ) {
+      my $gene = $lgene;
+      $gene =~ s/$self->{_organism}://;
+      next unless $gene2uniprot->{$gene};
+      for my $uniprot ( keys( %{$gene2uniprot->{$gene}} ) ) {
+        $uniprot{$uniprot}++;
+        $entry2uniprot_href{$entry}->{$uniprot}++;
+      }
+    }
+  }
+  my %entry2uniprot;
+  for my $entry ( keys( %entry2uniprot_href ) ) {
+    my @entry_keys = keys( %{$entry2uniprot_href{$entry}} );
+    $entry2uniprot{$entry} = \@entry_keys;
+  }
+
   my %processed = ( entries  => \@entries,
                     coords   => \@coordinates,
                     allgenes => [keys(%allgenes)],
                 gene2entries => \%gene2entries,
-                 entry2genes => \%entry2genes );
+                 entry2genes => \%entry2genes,
+                     uniprot => [keys(%uniprot)],
+               entry2uniprot => \%entry2uniprot,
+                gene2uniprot => $gene2uniprot,
+                   );
+
+  $self->{_processed} = \%processed;
 
   return \%processed;
 }
@@ -241,7 +292,7 @@ sub get_image_map {
     my $href = ( $links[$cnt] ) ? "HREF=$links[$cnt]" : 'HREF=www.peptideatlas.org';
     my $text = ( $text[$cnt] ) ? "$text[$cnt]" : '';
     $colors[$cnt] ||= 'red';
-    $map .= "<AREA SHAPE='RECT' CLASS='expressed_gene' COLOR=$colors[$cnt] COORDS='$coords' TITLE='$text' TARGET='_evidence' $href>\n";
+    $map .= "<DIV background-color: green><AREA SHAPE='RECT' CLASS='expressed_gene' BACKGROUND=$colors[$cnt] COORDS='$coords' TITLE='$text' TARGET='_evidence' $href></DIV>\n";
     $cnt++;
   }
   $map .= "</MAP>\n";
@@ -252,7 +303,7 @@ sub get_image_map {
 
 sub kegg_tables_exist {
   my $self = shift;
-#  return 0;
+  return 0;
   unless ( defined $self->{_kegg_tables_exist} ) {
     eval {
       $sbeams->selectrow_array( "SELECT TOP 1 * FROM $TBBL_KEGG_GENE" );
@@ -301,6 +352,12 @@ sub getKeggPathways {
 
     my $service = $self->get_service();
     $result = $service->list_pathways( $args{organism} ); 
+    my @results;
+    for my $line ( split( /\n/, $result ) ) {
+      $line =~ /^(path:\w+\d+)\s+(\w+.*)$/;
+      push @results, { entry_id => $1, definition => $2 }; 
+    }
+    return \@results;
 
   } elsif (  $args{source} =~ /db/i ) {
     # Fetch info from the database
@@ -346,7 +403,7 @@ sub getGeneInfo {
       if ( $symbol =~ /,/ ) {
         my @syms = split( /,/, $symbol );
         $symbol = $syms[0];
-        $defn = "(AKA " . join /,/, @syms[1..$#syms] . ") $defn";
+        $defn = "(AKA " . join ',', @syms[1..$#syms] . ") $defn";
       }
       push @genes, { gene_id => $gene_id, symbol => $symbol,
                         defn => $defn, annotline => $line };
@@ -382,25 +439,16 @@ sub fetch_image {
     die "Missing required parameter" unless $req;
   }
 
-  my $base = $CONFIG_SETTING{KEGG_IMAGE_URL} || 
-    "ftp://ftp.genome.ad.jp/pub/kegg/pathways/__KEGG_ORG__/BASE.gif";
-
-  $base =~ s/BASE/$path/g;
-  $base =~ s/__KEGG_ORG__/$org/g;
-
-  my $image_path = "/net/dblocal/data/sbeams/KEGG_MAPS/$org/$path.gif";
+  my $image_path = "/net/dblocal/data/sbeams/KEGG_MAPS/$org/$path.png";
 
   return $image_path if -e $image_path;  #short circuit if image is already there.
 
-  # Fetch response
-  my $ua = LWP::UserAgent->new();
-  my $response = $ua->get( $base );
-
-
-  my $image = $response->content;
+  die "In fetch_image";
+  my $service = $self->get_service();
+  my $img = $service->get_pathway_image( $path );
 
   open( IMAGE, ">$image_path" );
-  print IMAGE $image;
+  print IMAGE $img;
   close IMAGE;
 
   return $image_path;
@@ -446,46 +494,51 @@ sub parsePathwayXML {
   # Sort out the arguments
   my $path = $args{pathway} || $self->{_pathway}; 
   $path =~ s/path://g;
+  $path =~ /(\w\w\w)(.+)/;
+
+  $self->{_organism} = $1;
+
   my $org = $args{organism} || $self->{_organism}; 
   for my $req ( $path, $org ) {
-    die "Missing required parameter" unless $req;
+    die "Missing required parameter $req" unless $req;
   }
 
   my $parser = SBEAMS::BioLink::KGMLParser->new();
 
   $args{source} ||= 'db';
+  my $kgml = '';
   if ( $args{source} eq 'db' && $self->kegg_tables_exist() ) {
     my $sql = <<"    END"; 
     SELECT kgml FROM $TBBL_KEGG_PATHWAY
     WHERE kegg_pathway_name = 'path:$path'
     END
-    my ( $kgml ) = $sbeams->selectrow_array( $sql );
+    ( $kgml ) = $sbeams->selectrow_array( $sql );
     if ( !$kgml ) {
       $log->warn( "Failed to fetch KGML db:\n $sql" );
       $log->warn( "Falling back to direct fetch from KEGG" );
-			my $from_kegg = $self->fetchPathwayXML( %args );
-			$kgml = $from_kegg->{xml};
+      my $service = $self->get_service();
+      $kgml = $service->get_pathway_kgml( $path );
 		}
 
-    if ( $kgml ) {
-      $parser->set_string( xml => $kgml );
-    } else {
-      $log->error( "Unable to retrieve KGML from db or KEGG" );
-      return;
-    }
   } else {
-    my $base = $CONFIG_SETTING{KGML_URL} || 
-      "ftp://ftp.genome.jp/pub/kegg/xml/organisms/$org/BASE.xml";
-
-    $base =~ s/BASE/$path/g;
-    $base =~ s/__KEGG_ORG__/$org/g;
-
-
-    $parser->set_url( url => $base );
-    if ( !$parser->fetch_url() ) {
-      $log->error( "Failed to fetch KGML from KEGG" );
-      return undef;
+    if ( -e "$PHYSICAL_BASE_DIR/tmp/images/kegg/$org/$path.kgml" ) {
+      undef local $/;
+      open KGML, "$PHYSICAL_BASE_DIR/tmp/images/kegg/$org/$path.kgml";
+      $kgml = <KGML>;
+      close KGML;
+    } else {
+      my $service = $self->get_service();
+      $kgml = $service->get_pathway_kgml( $path );
+      open KGML, ">$PHYSICAL_BASE_DIR/tmp/images/kegg/$org/$path.kgml";
+      print KGML $kgml;
+      close KGML;
     }
+  }
+  if ( $kgml ) {
+    $parser->set_string( xml => $kgml );
+  } else {
+    $log->error( "Unable to retrieve KGML from db or KEGG" );
+    return;
   }
   $parser->parse() || $log->debug("xml failed to parse, eh");
   return $self->processEntries( entries => $parser->{_entries} );
@@ -510,12 +563,12 @@ sub getPathwayGenes {
   }
 
   my $result;
-  if ( $args{source} eq 'db' && $self->kegg_tables_exist() ) {
+#  if ( $args{source} eq 'db' && $self->kegg_tables_exist() ) {
+  if ( $args{source} eq 'db' ) {
     $result = $self->get_db_pathway_genes( pathway => $pathway,
                                            organism => $self->{_organism} );
   } else {
-    my $service = $self->get_service();
-    $result = $service->get_genes_by_pathway($pathway);
+    $result = $self->{_processed}->{allgenes};
   }
 
   my @gene_list;
@@ -536,7 +589,7 @@ sub getPathwayGenes {
 sub getColoredPathway {
   my $self = shift;
   my %args = @_;
-  for my $key ( qw( genes bg fg ) ) {
+  for my $key ( qw( genes seen ) ) {
     if ( !$args{$key} ) {
       $log->error( "Missing required parameter $key" );
       exit;
@@ -552,8 +605,6 @@ sub getColoredPathway {
     $pathway = 'path:' .  $pathway;
   }
 
-   $log->debug( "path is $pathway" );
-
   my $cnt = 0;
   my $all = '';
   for my $g ( @{$args{genes}} ) {
@@ -562,21 +613,104 @@ sub getColoredPathway {
   }
   $log->debug( $cnt . ' genes ' . $all );
 
-
-  my $genes = SOAP::Data->type( array => $args{genes} );
-  my $fg = SOAP::Data->type( array => $args{fg} );
-  my $bg = SOAP::Data->type( array => $args{bg} );
-
   my $service = $self->get_service();
-  my $url = $service->color_pathway_by_objects("$pathway", $genes, $fg, $bg ) ;
-  return $url if $url;
-  $log->info( "Initial fetch for $pathway failed!" );
-  $url = $service->color_pathway_by_objects("$pathway", $genes, $fg, $bg ) ;
-  return $url if $url;
+  my $path = $service->get_pathway_image( pathway => $pathway ) ;
+
+#  open( IMAGE, ">$image_path" );
+#  print IMAGE $img;
+#  close IMAGE;
+#  die $url;
+
+  my @path = split( /\//, $path );
+  my $file = pop( @path );
+  my $colored_file = 'PA_' . $args{atlas_build_id} . '_' . $file;
+  my $colored_path = join( '/', @path ) . "/$colored_file";
+
+  if ( -e $colored_path ) {
+    return "$HTML_BASE_DIR/$colored_file";
+  }
+  my $color_image = $self->color_pathway( path => $path, color_path => $colored_path, %args );
+  return "$HTML_BASE_DIR/$colored_path"; 
+
   print "</DIV>Unable to fetch pathway from KEGG, please try again later.</BODY></HTML>\n";
   exit;
-
 }
+
+sub color_pathway { 
+  my $self = shift;
+  my %args = @_;
+
+# URL
+# seen
+# path
+# color_path
+# genes
+# _processed
+# ( entries  => \@entries,
+# coords   => \@coordinates,
+# allgenes => [keys(%allgenes)],
+# gene2entries => \%gene2entries,
+# entry2genes => \%entry2genes,
+# uniprot => [keys(%uniprot)],
+# entry2uniprot => \%entry2uniprot,
+# gene2uniprot => $gene2uniprot,
+# );
+
+  my %local_gene2entry;
+  for my $long_entry ( keys( %{$self->{_processed}->{gene2entries}} ) ) {
+    my $short_entry = $long_entry;
+    $short_entry =~ s/$self->{_organism}://g;
+    $local_gene2entry{$short_entry} = $self->{_processed}->{gene2entries}->{$long_entry};
+  }
+
+  my $idx = 0;
+  my %entries;
+  for my $gene ( @{$args{genes}} ) {
+    my $seen = $args{seen}->[$idx];
+    next unless $local_gene2entry{$gene};
+    for my $entry ( @{$local_gene2entry{$gene}} ) {
+      $entries{$entry} += $seen;
+    }
+    $idx++;
+  }
+  $self->{_args} = \%args;
+  $self->{_entries_obs} = \%entries;
+
+  my $idx = 0;
+  my $seen_cmd = "convert $PHYSICAL_BASE_DIR/$args{path} -strokewidth 0 -fill 'rgba(152,251,152,0.50)' -draw ";
+  my $unseen_cmd = "convert $PHYSICAL_BASE_DIR/$args{path}.tmp -strokewidth 0 -fill 'rgba(255,255,0,0.50)' -draw ";
+
+  my $seen_sep = '';
+  my $unseen_sep = '';
+
+  for my $entry ( @{$self->{_processed}->{entries}} ) {
+    my $coords = $self->{_processed}->{coords}->[$idx];
+    if ( $entries{$entry} ) {
+      $seen_cmd = $seen_cmd . $seen_sep . '"rectangle ' . $coords . '"';
+      $seen_sep = ',';
+    } else {
+      $unseen_cmd = $unseen_cmd . $unseen_sep . '"rectangle ' . $coords . '"';
+      $unseen_sep = ',';
+    }
+    $idx++;
+  }
+  $seen_cmd .= " $PHYSICAL_BASE_DIR/$args{path}.tmp";
+  $unseen_cmd .= " $PHYSICAL_BASE_DIR/$args{color_path}";
+  if ( $seen_sep ) {
+    `$seen_cmd`;
+  } else {
+    `cp $PHYSICAL_BASE_DIR/$args{path} $PHYSICAL_BASE_DIR/$args{path}.tmp`
+  }
+
+  if ( $unseen_sep ) {
+    `$unseen_cmd`;
+  } else {
+    `cp $PHYSICAL_BASE_DIR/$args{path}.tmp $PHYSICAL_BASE_DIR/$args{color_path}`
+  }
+  unlink "$PHYSICAL_BASE_DIR/$args{path}.tmp";
+  return $args{color_path}
+}
+
 
 sub getSupportedOrganisms {
   my $self = shift;
@@ -832,7 +966,7 @@ sub getPathwayRelationships {
   # Fetch elements and relationships from KEGG
   my $elements_by_path = $service->get_elements_by_pathway($pathway);
   my $relations_by_path = $service->get_element_relations_by_pathway($pathway);
-  
+
   my %elements; # hash of elements and associated genes/connections
   my @groups;   # Temp storage for 'groups' of genes
   my %genes;    # List of gene entities, we return only these 
@@ -934,6 +1068,169 @@ sub getPathwayRelationships {
 }
 
 
-### Private Methods ###
+sub translateKeggAccessions {
+  my $self = shift; 
+  my %args = @_;
+  my $genes = $args{genes} || return {};
+  return {} unless ( $genes && ref( $genes ) eq 'ARRAY' );
+
+  my $genestr = "'" . join( "','", @{$genes} ) . "'";
+  $genestr =~ s/$self->{_organism}://g;
+
+  my $sql = qq~
+  SELECT kegg_accession, uniprot_accession 
+  FROM biolink.dbo.kegg_accession 
+  WHERE kegg_accession IN ( $genestr )
+  ~;
+
+  my $sth = $sbeams->get_statement_handle( $sql );
+  my %gene2uniprot;
+  while ( my @row = $sth->fetchrow_array ) {
+    $gene2uniprot{$row[0]} ||= {};
+    $gene2uniprot{$row[0]}->{$row[1]}++;
+  }
+  return \%gene2uniprot;
+}
+
+
+# Inner class Service
+# Abstracts conversion of KEGG API from SOAP to REST
+{
+package Service;
+use SBEAMS::Connection::Settings;
+use Data::Dumper;
+use File::Copy qw( copy move );
+
+#  http://rest.kegg.jp/list/pathway/hsa
+#  http://rest.kegg.jp/get/path:hsa00010/image
+#  http://rest.kegg.jp/get/path:hsa00010/kgml
+
+sub new {
+  my $class = shift;
+  my $self = { @_ };
+
+  $self->{_user_agent} = LWP::UserAgent->new();
+
+  # Objectification.
+  bless $self, $class;
+
+  return $self;
+}
+
+# Get list of pathways - from db or kegg?
+sub list_pathways {
+  my $self = shift;
+  my $org = shift || return '';
+  my $url = "http://rest.kegg.jp/list/pathway/$org";
+  my $response = $self->{_user_agent}->get( $url );
+  return $response->{_content};
+}
+
+
+    
+sub btit {
+  my $self = shift;
+  my $gene_string = shift || return '';
+}
+
+sub get_elements_by_pathway {
+  my $self = shift;
+  my $pathway = shift || return '';
+}
+
+sub get_element_relations_by_pathway {
+  my $self = shift;
+  my $pathway = shift || return '';
+}
+
+sub get_genes_by_pathway {
+  my $self = shift;
+  my $pathway = shift || return '';
+}
+
+sub color_pathway_by_objects {
+}
+
+sub get_pathway_image {
+  my $self = shift;
+  my %args = @_;
+
+  # Sort out the arguments
+  my $path = $args{pathway} || $self->{_pathway}; 
+  my $short_path = $path;
+  $short_path =~ s/path://g;
+
+  my $org = $args{organism} || $self->{_organism}; 
+  $short_path =~ /([a-z]+)(\d+)/;
+  $org ||= $1;
+
+  for my $req ( $short_path, $org ) {
+    die "Missing required parameter" unless $req;
+  }
+
+  my $image_path = "/tmp/images/kegg/$org/$short_path.png";
+
+  if ( -e "$PHYSICAL_BASE_DIR/$image_path" ) {  #short circuit if image is already there.
+    return $image_path; 
+  } else { 
+    my $img = $self->get_kegg_pathway_image( $path );
+    open( IMAGE, ">$PHYSICAL_BASE_DIR/$image_path" );
+    print IMAGE $img;
+    close IMAGE;
+    return $image_path; 
+  }
+
+  # De-greening no longer the way to go
+
+  # The images from KEGG have green color, the following steps remove it, and
+  # rely on having imageMagick 'convert' function available.
+  my $pre_path = "$PHYSICAL_BASE_DIR/tmp/images/kegg/proc/$short_path" . "_pre.png";
+  my $post_path = "$PHYSICAL_BASE_DIR/tmp/images/kegg/proc/$short_path" . ".png";
+
+  eval {
+    system( 'convert ' . $pre_path . ' -channel alpha -fill white -transparent rgb\(191,255,191\) ' . $post_path );
+  };
+  if ( $@ ) {
+    # Error with color stripping.
+    print STDERR "Error with convert: $@";
+    copy ( $pre_path, $post_path );
+  }
+  if ( ! -e $post_path ) {
+    # Error with color stripping.
+    copy ( $pre_path, $post_path );
+  }
+
+  print "moving $post_path to $image_path";
+  move ( $post_path, "$PHYSICAL_BASE_DIR/$image_path" ) || die $!; 
+  unlink $pre_path;
+  
+}
+
+sub get_kegg_pathway_image {
+  my $self = shift;
+  my $pathway = shift || return '';
+  my $url = "http://rest.kegg.jp/get/$pathway/image";
+  my $response = $self->{_user_agent}->get( $url );
+  return $response->{_content};
+}
+
+sub get_pathway_kgml {
+  my $self = shift;
+  my $pathway = shift || return '';
+  my $url = "http://rest.kegg.jp/get/$pathway/kgml";
+  my $response = $self->{_user_agent}->get( $url );
+
+  return $response->{_content};
+}
+
+#  my $gene_info = $service->btit( $gene_string ); 
+#  $result = $service->list_pathways( $args{organism} ); 
+#  my $elements_by_path = $service->get_elements_by_pathway($pathway);
+#  my $relations_by_path = $service->get_element_relations_by_pathway($pathway);
+#  my $url = $service->color_pathway_by_objects("$pathway", $genes, $fg, $bg ) ;
+#  $result = $service->get_genes_by_pathway($pathway);
+  
+
+} # End inner class Service
 
 1;
