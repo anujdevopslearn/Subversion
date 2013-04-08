@@ -139,6 +139,12 @@ use vars qw(@ISA @EXPORT
     $TBAT_PASS_SUBMITTER
     $TBAT_PASS_DATASET
 
+    $TBAT_PUTATIVE_PROTEIN
+    $TBAT_PUTATIVE_PEPTIDE
+    $TBAT_PUTATIVE_PROTEIN_PEPTIDE
+    $TBAT_PEPTIDE_INSTANCE_ANNOTATION
+    $TBAT_PROTEIN_IDENTIFICATION_ANNOTATION
+
 );
 
 
@@ -275,6 +281,11 @@ require Exporter;
     $TBAT_PASS_SUBMITTER
     $TBAT_PASS_DATASET
 
+    $TBAT_PUTATIVE_PROTEIN
+    $TBAT_PUTATIVE_PEPTIDE
+    $TBAT_PUTATIVE_PROTEIN_PEPTIDE
+    $TBAT_PEPTIDE_INSTANCE_ANNOTATION
+    $TBAT_PROTEIN_IDENTIFICATION_ANNOTATION
 );
 
 
@@ -416,3 +427,9 @@ $TBAT_QT5500_TRANSITION_GROUP       = "${mod}QT5500_transition_group";
 
 $TBAT_PASS_SUBMITTER                = "${mod}PASS_submitter";
 $TBAT_PASS_DATASET                  = "${mod}PASS_dataset";
+
+$TBAT_PUTATIVE_PROTEIN              = "${mod}putative_protein";
+$TBAT_PUTATIVE_PEPTIDE              = "${mod}putative_peptide";
+$TBAT_PUTATIVE_PROTEIN_PEPTIDE      = "${mod}putative_protein_peptide";
+$TBAT_PEPTIDE_INSTANCE_ANNOTATION   = "${mod}peptide_instance_annotation";
+$TBAT_PROTEIN_IDENTIFICATION_ANNOTATION   = "${mod}protein_identification_annotation";

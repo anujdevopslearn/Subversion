@@ -810,10 +810,13 @@ if ($apply_action =~ /QUERY|GO/i ) {
                                           tr_info => $tr,
                                           value => $bestp,
                                          );
+  # TMF: remove this conditional if/when want to release this feature to production.
+  if ($parameters{'ann'}) {
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'User Assessment',
                                           tr_info => $tr,
                                           value => '<div ID="annotations_summary">-- No annotations here --</div>',
                                          );
+				       }
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Times Observed:',
                                           tr_info => $tr,
                                           value => $n_observations[0],
@@ -1703,13 +1706,17 @@ if ($apply_action =~ /QUERY|GO/i ) {
   $log->debug( "End spectra " . time() );
 
   #############################################################################
-  #### User Annotations Section  TMF
+  #### User Annotations Section
+
+  # TMF: remove this conditional if/when want to release this feature to production.
+  if ($parameters{'ann'}) {
     print &printUserAnnotations(
       peptide_sequence => $parameters{'peptide_sequence_constraint'},
       peptide_name => $parameters{'peptide_name_constraint'},
       parameters_href => \%parameters,
       #form_fields => $hidden_form_fields
-				);
+    );
+  }
 
 
   #############################################################################
