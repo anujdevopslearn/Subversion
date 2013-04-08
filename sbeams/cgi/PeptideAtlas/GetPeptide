@@ -797,14 +797,9 @@ if ($apply_action =~ /QUERY|GO/i ) {
                                           tr_info => $tr,
                                           key_width => '20%'
                                          );
-  my $link="http://proteininformationresource.org/cgi-bin/peptidematch?peptide=$peptide_sequence[0]";
-  my $peptide_pir_html_link="<A HREF=$link TARGET=_BLANK color=blue>$peptide_sequence[0]</A>";
-  my $tooltip = $sbeamsMOD->make_pa_tooltip( link_text => $peptide_pir_html_link,
-                                        tip_text => "Retrieve all peptide hits from UniProtKB (all species)",
-                                        link_class => 'pseudo_link' );
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Peptide Sequence',
                                           tr_info => $tr,
-                                          value => $tooltip,
+                                          value => $peptide_sequence[0],
                                          );
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Best Probability',
                                           tr_info => $tr,
@@ -883,6 +878,11 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
 ### End first section
   $log->debug( "End overview " . time() );
+
+  #############################################################################
+  #### Display the External Links section
+  displayExternalLinksSection( pepseq =>$peptide_sequence[0],);
+
 
 
   #############################################################################
@@ -2392,3 +2392,67 @@ sub printUserAnnotationsForm {
     return $buffer;
 
 }
+
+
+###############################################################################
+# displayExternalLinksSection
+#
+# Display a section for information about this peptide in other resources
+###############################################################################
+sub displayExternalLinksSection {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $pepseq = $args{pepseq} || die("ERROR: No peptide sequence passed");
+
+  #### Create widget to allow show/hide of overview section
+  my ($tr,$link) = $sbeams->make_table_toggle( name => 'getpeptide_ExternalLinks',
+					       visible => 1,
+					       tooltip => 'Show/Hide Section',
+					       imglink => 1,
+					       sticky => 1 );
+
+  my $external_links = '';
+  my $section_header = $sbeamsMOD->encodeSectionHeader(
+      text => 'External Links',
+      link => $link,
+  );
+
+
+  #### Link to Google
+  $link="http://www.google.com/#q=$pepseq&nfpr=1";
+  my $peptide_google_link="<A HREF=$link TARGET=_BLANK color=blue>$pepseq</A>";
+  my $tooltip = $sbeamsMOD->make_pa_tooltip( link_text => $peptide_google_link,
+                                        tip_text => "Query Google with this peptide sequence",
+                                        link_class => 'pseudo_link' );
+  $external_links .= $sbeamsMOD->encodeSectionItem( key   => 'Google',
+                                          tr_info => $tr,
+                                          value => $tooltip,
+                                         );
+
+  #### Link to all instances of this peptide in Swiss-Prot (from PIR)
+  $link="http://proteininformationresource.org/cgi-bin/peptidematch?peptide=$pepseq";
+  my $peptide_pir_html_link="<A HREF=$link TARGET=_BLANK color=blue>$pepseq</A>";
+  my $tooltip = $sbeamsMOD->make_pa_tooltip( link_text => $peptide_pir_html_link,
+                                        tip_text => "Retrieve all peptide hits from UniProtKB (all species)",
+                                        link_class => 'pseudo_link' );
+  $external_links .= $sbeamsMOD->encodeSectionItem( key   => 'UniProtKB',
+                                          tr_info => $tr,
+                                          value => $tooltip,
+                                         );
+
+
+
+  #### Close section
+  if ($sbeams->output_mode() eq 'html' && $external_links ) {
+    print qq~
+      <TABLE width="600">
+        $section_header
+				$external_links
+      </TABLE>
+    ~;
+  }
+
+  return 1;
+
+} # end displayExternalLinksSection
