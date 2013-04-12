@@ -685,7 +685,7 @@ sub getSpectrumPeaks_Lib {
     die ("ERROR: cannot find file $filename");
   }
   $filename =~ /.*\/(.*)/;
-  print "get Spetrum from $1<BR>";
+  print "get spectrum from $1<BR>";
   use SBEAMS::PeptideAtlas::ConsensusSpectrum;
   my $consensus = new SBEAMS::PeptideAtlas::ConsensusSpectrum;
   $consensus->setSBEAMS($sbeams);
@@ -711,7 +711,7 @@ sub getSpectrumPeaks_Lib {
     if ($VERBOSE);
   return(@mz_intensities);
 
-} # end getSpectrumPeaks
+} # end getSpectrumPeaks_Lib
 
 ###############################################################################
 # getSpectrumPeaks --
@@ -737,27 +737,37 @@ sub getSpectrumPeaks {
   my $data_location = $self->get_data_location(
     proteomics_search_batch_id => $proteomics_search_batch_id,
   );
+  $buffer .= "data_location = $data_location<br>\n";
 
-  # For absolute paths, leading slash is not being stored in
-  # data_location field of atlas_search_batch table. Until that is
-  # fixed, we have this nice kludge.
-  if ($data_location =~ /^regis/) {
-    $data_location = "/$data_location";
-  }
-  $buffer .= "data_location = $data_location\n";
+  ($data_location, $buffer) = $self->groom_data_location(
+    data_location => $data_location,
+    history_buffer => $buffer,
+  );
+  $buffer .= "data_location = $data_location<br>\n";
 
-  # If location does not begin with slash, prepend default dir.
-  $buffer .= "data_location = $data_location\n";
-  unless ($data_location =~ /^\//) {
-    $data_location = $RAW_DATA_DIR{Proteomics}."/$data_location";
-  }
-  $buffer .= "data_location = $data_location\n";
-
-  #### Sometimes a data_location will be a specific xml file
-  if ($data_location =~ /^(.+)\/interac.+xml$/i) {
-    $data_location = $1;
-  }
-  $buffer .= "data_location = $data_location\n";
+  ### extracted into groom_data_location() -- can delete after 2/1/13
+#--------------------------------------------------
+#   # For absolute paths, leading slash is not being stored in
+#   # data_location field of atlas_search_batch table. Until that is
+#   # fixed, we have this nice kludge.
+#   if ($data_location =~ /^regis/) {
+#     $data_location = "/$data_location";
+#   }
+#   $buffer .= "data_location = $data_location<br>\n";
+# 
+#   # If location does not begin with slash, prepend default dir.
+#   $buffer .= "data_location = $data_location\n";
+#   unless ($data_location =~ /^\//) {
+#     $data_location = $RAW_DATA_DIR{Proteomics}."/$data_location";
+#   }
+#   $buffer .= "data_location = $data_location<br>\n";
+# 
+#   #### Sometimes a data_location will be a specific xml file
+#   if ($data_location =~ /^(.+)\/interac.+xml$/i) {
+#     $data_location = $1;
+#   }
+# $buffer .= "data_location = $data_location<br>\n";
+#-------------------------------------------------- 
 
 
   my $filename;
@@ -878,6 +888,41 @@ sub getSpectrumPeaks {
 
 } # end getSpectrumPeaks
 
+
+###############################################################################
+# groom_data_location --
+###############################################################################
+sub groom_data_location {
+  my $METHOD = 'groom_data_location';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+  my $data_location = $args{data_location};
+  my $history_buffer = $args{history_buffer} || '';
+
+  # For absolute paths, leading slash is not being stored in
+  # data_location field of atlas_search_batch table. Until that is
+  # fixed, we have this nice kludge.
+  if ($data_location =~ /^regis/) {
+    $data_location = "/$data_location";
+  }
+  $history_buffer .= "data_location = $data_location\n";
+
+  # If location does not begin with slash, prepend default dir.
+  $history_buffer .= "data_location = $data_location\n";
+  unless ($data_location =~ /^\//) {
+    $data_location = $RAW_DATA_DIR{Proteomics}."/$data_location";
+  }
+  $history_buffer .= "data_location = $data_location\n";
+
+  #### Sometimes a data_location will be a specific xml file
+  if ($data_location =~ /^(.+)\/interac.+xml$/i) {
+    $data_location = $1;
+  }
+
+  $history_buffer .= "data_location = $data_location\n";
+
+  return ($data_location, $history_buffer);
+}
 
 
 ###############################################################################
@@ -1034,10 +1079,6 @@ sub insertSpectrumPTMIdentificationRecord {
   return($spectrum_ptm_identification_id);
 
 } # end insertSpectrumPTMIdentificationRecord
-
-
-
-
 
 ###############################################################################
 =head1 BUGS
