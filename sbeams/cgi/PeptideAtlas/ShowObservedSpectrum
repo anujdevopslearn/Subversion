@@ -28,6 +28,7 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::PeptideFragmenter;
 
 use SBEAMS::Proteomics::PeptideMassCalculator;
 #$massCalculator = new SBEAMS::Proteomics::PeptideMassCalculator;
@@ -187,6 +188,11 @@ sub processRequest {
 
     my $apply_action  = $q->param('apply_action');
 
+    unless ($parameters{'atlas_build_id'}) {
+      print "ERROR: need atlas_build_id parameter.\n";
+      return;
+    }
+
     #$sbeams->printDebuggingInfo($q);
 
     my $assumed_charge = $parameters{'assumed_charge'};
@@ -256,6 +262,9 @@ sub processRequest {
             $parameters{'spectrum_name'} = $spectrum_name;
             $parameters{'start_scan'} = $start_scan;
         }
+    } else {
+      print "ERROR: need spectrum_identification_id\n";
+      return;
     }
 
     if ( $parameters{peptide} ) {
@@ -284,9 +293,10 @@ sub processRequest {
 
     $parameters{assumed_charge} = $charge;
 
-    my %spectrum = get_spectrum(
+    my ($proteomics_search_batch_id, %spectrum) = get_spectrum(
         spectrum_identification_id=>$parameters{spectrum_identification_id},
-        atlas_build_id=>$parameters{atlas_build_id});
+        atlas_build_id=>$parameters{atlas_build_id}
+    );
 
     unless (%spectrum) 
     {
@@ -305,6 +315,57 @@ sub processRequest {
       $massmin = $mass if ($i == 0);
       $massmax = $mass if ($mass > $massmax);
       $intenmax = $intensity if ($intensity > $intenmax);
+    }
+
+    ### Run the heuristic PSM evaluator if requested
+    if ($parameters{'eval'}) {
+      print "<b>Heuristic PSM evaluation:</b><br>\n";
+
+      #### Get the expected fragments for this peptide
+      #### returns \@sortedProductIons where each ion is a hash ref
+      #### with mz, series (e.g. y), ordinal, charge, label, label_st,
+      #### bond (dipeptide)
+      #### label has ^2 notation. label_st has ++ notation.
+      my $fragmenter = new SBEAMS::PeptideAtlas::PeptideFragmenter;
+      my $sortedProductIons_aref = $fragmenter->getExpectedFragments(
+	modifiedSequence =>$modified_sequence,
+	charge=>$charge,
+      );
+      my @sortedProductIons = @{$sortedProductIons_aref};
+
+
+      #### Get the observed fragments for this spectrum from the spectrast file.
+
+      #### Get the data_location of the spectrum and raw speclib file
+      use SBEAMS::PeptideAtlas::Spectrum;
+      my $spectrum = new SBEAMS::PeptideAtlas::Spectrum;
+      my $data_location = $spectrum->get_data_location(
+	proteomics_search_batch_id => $proteomics_search_batch_id,
+      );
+      ($data_location) = $spectrum->groom_data_location(
+	data_location => $data_location,
+      );
+      #### Get peaks and annotations from raw library text file, if exists
+      use SBEAMS::PeptideAtlas::PSMEvaluator;
+      my $evaluator = new SBEAMS::PeptideAtlas::PSMEvaluator;
+      my @annotated_peaks = $evaluator->get_annotated_peaks_from_speclib(
+	data_location => $data_location,
+	spectrum_name => $parameters{spectrum_name},
+      );
+
+      #### Hand the expected and observed fragments to the heuristic PSM
+      #### evaluator!!!
+      if (scalar @annotated_peaks) {
+	my $evaluation = $evaluator->evaluate_PSM_heuristically(
+	  annotated_peaks_aref => \@annotated_peaks,
+	  sorted_product_ions_aref => $sortedProductIons_aref,
+	  modified_sequence => $modified_sequence,
+	  charge => $charge,
+	);
+	print "$evaluation<br>\n";
+      } else {
+	print "Cannot retrieve annotated peaks; cannot evaluate.<br>\n";
+      }
     }
 
     my $prec = sprintf ("%0.1f", $precursor_mass);
@@ -384,8 +445,14 @@ sub get_spectrum
 
   my $spectrum_identification_id = $args{'spectrum_identification_id'};
   my $atlas_build_id = $args{'atlas_build_id'};
-  unless ($spectrum_identification_id && $atlas_build_id) {
-    print "\nERROR: $spectrum_identification_id $atlas_build_id not passed.\n\n";
+  unless ($spectrum_identification_id) {
+    print "\nERROR: get_spectrum needs spectrum_identification_id. ".
+          "Got atlas_build_id $atlas_build_id.\n\n";
+    return;
+  }
+  unless ($atlas_build_id) {
+    print "\nERROR: get_spectrum needs atlas_build_id. ".
+          "Got spectrum_identification_id $spectrum_identification_id.\n\n";
     return;
   }
 
@@ -468,8 +535,9 @@ sub get_spectrum
   $spectrum{mz} = \@masses;
   $spectrum{intensities} = \@intensities;
 
-  return %spectrum;
 
+  # have to return scalar before hash
+  return ($search_batch_id, %spectrum);
 
 }
 
