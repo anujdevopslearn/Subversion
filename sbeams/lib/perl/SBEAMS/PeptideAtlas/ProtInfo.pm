@@ -50,11 +50,12 @@ our @EXPORT = qw(
 # Constructor
 ###############################################################################
 sub new {
-    my $this = shift;
-    my $class = ref($this) || $this;
-    my $self = {};
-    bless $self, $class;
-    $VERBOSE = 0;
+    # TMF: forgive my self-tutorial comments below.
+    my $this = shift;  #either this package, or a reference to it.
+    my $class = ref($this) || $this;  #if a ref, deref it.
+    my $self = {};  # a hash ref to an empty hash
+    bless $self, $class; # assoc a class with the hash: this is the magic! now we can call methods on self. 
+    $VERBOSE = 0;  # initialize these two global variables
     $TESTONLY = 0;
     return($self);
 } # end new
@@ -996,6 +997,98 @@ sub get_swiss_prot_species {
     return "";
   }
 }
+
+
+###############################################################################
+# filter_swiss_prot
+#   Given list of biosequence IDs, return only those in Swiss-Prot.
+#   Assumes the dbxref_id field for Swiss-Prot biosequences has been set to 1
+#   (for some builds, it's set to the value for Uniprot, which is 35)
+###############################################################################
+sub filter_swiss_prot {
+  my $self = shift;
+  my %args = @_;
+  my $bssid = $args{bssid};
+  my $atlas_build_id = $args{atlas_build_id};
+  my $protid_aref = $args{protid_aref} ||
+     die "filter_swiss_prot: need protid_aref<br>\n";
+  my @swiss_bsids = ();
+
+  die "filter_swiss_prot: need either bssid or atlas_build_id.\n"
+    if (! (defined $bssid || defined $atlas_build_id));
+
+  if (@{$protid_aref}) {
+    if ( ! defined $bssid ) {
+      my $sql = qq~
+      SELECT biosequence_set_id
+      FROM $TBAT_ATLAS_BUILD
+      WHERE atlas_build_id = $atlas_build_id
+      ~;
+      ($bssid) = $sbeams->selectOneColumn($sql);
+      die "filter_swiss_prot: can't get bssid for atlas $atlas_build_id<br>\n"
+      if (! $bssid);
+    }
+
+    my $protids = "'" . join ("','", @{$protid_aref}) . "'" ;
+    my $sql = qq~
+      SELECT biosequence_id
+      FROM $TBAT_BIOSEQUENCE
+      WHERE biosequence_set_id = $bssid
+      AND biosequence_id in ($protids)
+      AND dbxref_id = 1;
+    ~;
+    @swiss_bsids = $sbeams->selectOneColumn($sql);
+  }
+  return \@swiss_bsids;
+}
+
+###############################################################################
+# get_swiss_prot_hash
+#   Return a hash of Swiss-Prot identifiers for a given biosequence set.
+#   Assumes the dbxref_id field for Swiss-Prot biosequences has been set to 1
+#   (for some builds, it's set to the value for Uniprot, which is 35)
+#   Not used (yet), but could be called from createPipelineInfo.pl TMF April '13
+###############################################################################
+sub get_swiss_prot_hash {
+  my $self = shift;
+  my %args = @_;
+  my $bssid = $args{bssid};
+  my $atlas_build_id = $args{atlas_build_id};
+  my $swiss_prot_href;
+
+  die "get_swiss_prot_hash: need either bssid or atlas_build_id.\n"
+    if (! (defined $bssid || defined $atlas_build_id));
+
+  if ( ! defined $bssid ) {
+    if ( defined $atlas_build_id ) {
+      my $sql = qq~
+	SELECT biosequence_set_id
+	FROM $TBAT_ATLAS_BUILD
+	WHERE atlas_build_id = $atlas_build_id
+      ~;
+      ($bssid) = $sbeams->selectOneColumn($sql);
+    }
+  }
+
+  if ( defined $bssid ) {
+    my $sql = qq~
+    SELECT biosequence_id,biosequence_name, dbxref_id
+    FROM $TBAT_BIOSEQUENCE
+    WHERE biosequence_set_id = $bssid
+    ~;
+    my @rows = $sbeams->selectSeveralColumns($sql);
+    foreach my $row (@rows) {
+      my $biosequence_id = $row->[0];   #not currently used
+      my $biosequence_name = $row->[1];
+      my $dbxref_id = $row->[2];
+      if ((defined $dbxref_id) && ($dbxref_id == 1)) {
+	$swiss_prot_href->{$biosequence_name} = 1
+      }
+    }
+  }
+  return $swiss_prot_href;
+}
+
 ###############################################################################
 =head1 BUGS
 

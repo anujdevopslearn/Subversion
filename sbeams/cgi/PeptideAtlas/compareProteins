@@ -31,6 +31,7 @@ use SBEAMS::BioLink::MSF;
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::ProtInfo;
 use SBEAMS::Connection::TabMenu;
 
 
@@ -121,31 +122,63 @@ sub get_alignment_display {
 	}
 
   if ( $args{protein_group_number} ) {
+
     my $sql = qq~
       (
-	SELECT PID.biosequence_id
+	SELECT PID.biosequence_id, BS.biosequence_name
 	FROM $TBAT_PROTEIN_IDENTIFICATION PID
 	JOIN $TBAT_ATLAS_BUILD AB
 	ON (AB.atlas_build_id = PID.atlas_build_id)
+	JOIN $TBAT_BIOSEQUENCE BS
+	ON (BS.biosequence_id = PID.biosequence_id)
 	where AB.atlas_build_id ='$curr_bid' AND
 	      PID.protein_group_number = '$args{protein_group_number}'
       ) UNION (
-	SELECT BR.related_biosequence_id
+	SELECT BR.related_biosequence_id, BS.biosequence_name
 	FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR
 	JOIN $TBAT_ATLAS_BUILD AB
 	ON (AB.atlas_build_id = BR.atlas_build_id)
+	JOIN $TBAT_BIOSEQUENCE BS
+	ON (BS.biosequence_id = BR.related_biosequence_id)
 	where AB.atlas_build_id ='$curr_bid' AND
 	      BR.protein_group_number = '$args{protein_group_number}'
       )
       ~;
 
-    my @bioseq_ids = $sbeams->selectOneColumn($sql);
+    my @results = $sbeams->selectSeveralColumns($sql);
+    my %proteins;
+    # make a hash of biosequence_id to biosequence_name
+    for my $result_aref (@results) {
+      $proteins{$result_aref->[0]} = $result_aref->[1];
+    }
+    my @bioseq_ids = keys %proteins;
 
-    if ( !@bioseq_ids ) {
-      my $errstr = $sbeams->makeErrorText( "No proteins found in current build in protein group $args{protein_group_number}");
+    # Filter to include only Swiss-Prot IDs if requested.
+    my @swiss_prot_ids = ();
+    if ( $args{swiss_prot_only} ) {
+      my $prot_info = new SBEAMS::PeptideAtlas::ProtInfo;
+      $prot_info->setSBEAMS($sbeams);
+      my $swiss_bsids_aref = $prot_info->filter_swiss_prot(
+ 	 atlas_build_id => $curr_bid,
+	 protid_aref => \@bioseq_ids,
+       );
+      @bioseq_ids = @{$swiss_bsids_aref};
+    }
+
+    # Add to whatever additional bioseq_ids (if any) were specified in parameters.
+    $clustal_display .= "<b>Highlighting evidence for $proteins{$args{bioseq_id}} , peps $args{pepseq}</b><br>\n" if $args{eval_prot_evidence};
+    $args{bioseq_id} .= ',' if ($args{bioseq_id} && @bioseq_ids);
+    $args{bioseq_id} .= join( ",", @bioseq_ids);
+    #print "<br>bioseq_id = |$args{bioseq_id}|<br>\n";
+    my @ids = split (",", $args{bioseq_id});
+    @bioseq_ids = @bioseq_ids, @ids;
+
+    my $n_ids = scalar @bioseq_ids;
+    if ( $n_ids < 2 ) {
+    # if ( !$args{bioseq_id} ) {
+      my $errstr = $sbeams->makeErrorText( "Fewer than 2 proteins to align (build $curr_bid, protein group $args{protein_group_number})");
       return ( "$errstr <BR><BR>  $clustal_display" );
     }
-    $args{bioseq_id} = join( ",", @bioseq_ids);
   $log->debug( "Ran protein group query:" .time() );
 
   } elsif ( $args{protein_list_id} && $args{key_accession} ) {
@@ -314,6 +347,7 @@ sub get_alignment_display {
 #		}
 
     $cnt++;
+
 	}
 	$log->debug( "Iterated $cnt rows: " .time() );
 
@@ -365,7 +399,10 @@ sub get_alignment_display {
   if ( $cnt > 1000 ) {
 		$clustal_display = $sbeams->makeErrorText( "Too many sequences to run alignment, skipping" );
 	} else {
+	  #print "$fasta<br>";
 	  my $clustal = $MSF->runClustalW( sequences => $fasta );
+	  my $nseqs = scalar @{$clustal};
+	  #print "nseqs=$nseqs<br>";
 	  if ( ref $clustal ne 'ARRAY' ) {
       my $rerun_link = '';
       if ( $seqtype{decoy} && $seqtype{fwd} ) {
@@ -440,7 +477,11 @@ sub get_clustal_display {
 			# Poor man's bait coverage!  Assumes that there are no span junctions in 
       # bait sequence.  This is true if the entire thing is in coverage (or out
 			# of it, but that should not be possible).
- 	    $sequence =~ s/$args{pepseq}/<SPAN CLASS=sec_obs_seq_bg_font>$args{pepseq}<\/SPAN>/g;
+			# TMF 06/14/13: allow multiple bait sequences
+			my @pepseqs = split(",", $args{pepseq});
+			for my $pepseq (@pepseqs) {
+			  $sequence =~ s/${pepseq}/<SPAN CLASS=sec_obs_seq_bg_font>$pepseq<\/SPAN>/g;
+			}
 
 		}
 		my $dup = '';
