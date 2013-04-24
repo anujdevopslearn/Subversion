@@ -221,11 +221,23 @@ sub handle_request {
 
   $table .= $atlas->encodeSectionItem( key => 'Peptide Sequence', tr_info => $tr, value => $quant[0] ) . "\n";
   $table .= $atlas->encodeSectionItem( key => 'Precursor m/z', tr_info => $tr, value => sprintf( "%0.3f", $quant[1] ) ) . "\n";
-  $table .= $atlas->encodeSectionItem( key => 'Titration range', tr_info => $tr, value => sprintf( "%0.2f", $quant[2] ) . '-' . sprintf( "%0.2f", $quant[3] ) ) . "\n";
+
+  # Minimal format
+  my $mf = ( $quant[2] < 1 ) ? 2 : 1;
+  $table .= $atlas->encodeSectionItem( key => 'Titration range', tr_info => $tr, value => sprintf( "%0.${mf}f", $quant[2] ) . '-' . sprintf( "%0.1f", $quant[3] ) ) . "\n";
+
   $table .= $atlas->encodeSectionItem( key => 'R-squared value', tr_info => $tr, value => sprintf( "%0.4f", $quant[4] ) ) . "\n";
-  $table .= $atlas->encodeSectionItem( key => 'LOD', tr_info => $tr, value => sprintf( "%0.3f", $quant[5] ) ) . "\n";
-  $table .= $atlas->encodeSectionItem( key => 'LOQ', tr_info => $tr, value => sprintf( "%0.3f", $quant[6] ) ) . "\n";
-  $table .= $atlas->encodeSectionItem( key => 'Linear range', tr_info => $tr, value => sprintf( "%0.3f", $quant[7] )  . '-' . sprintf( "%0.2f", $quant[8]  ) ) . "\n";
+
+  $mf = ( $quant[5] < 1 ) ? 2 : 1;
+  $table .= $atlas->encodeSectionItem( key => 'LOD', tr_info => $tr, value => sprintf( "%0.${mf}f", $quant[5] ) ) . "\n";
+  
+  $mf = ( $quant[6] < 1 ) ? 2 : 1;
+  $table .= $atlas->encodeSectionItem( key => 'LOQ', tr_info => $tr, value => sprintf( "%0.${mf}f", $quant[6] ) ) . "\n";
+
+  $mf = ( $quant[7] < 1 ) ? 2 : 1;
+  $table .= $atlas->encodeSectionItem( key => 'Linear range', tr_info => $tr, value => sprintf( "%0.${mf}f", $quant[7] )  . '-' . sprintf( "%0.1f", $quant[8]  ) ) . "\n";
+
+
   $table .= $atlas->encodeSectionItem( key => 'Fold change', tr_info => $tr, value => sprintf( "%0.1f", $quant[9] ) ) . "\n";
 
 	my $is_quant = ( $quant[10] eq 'N' ) ? "No $spc" : "Yes $spc";
@@ -246,6 +258,8 @@ sub handle_request {
   SELECT DISTINCT precursor_mz, product_mz, area, dilution ,concentration, replicate_number
   FROM  peptideatlas.dbo.quant_data 
   WHERE peptide_sequence = '$parameters{peptide_sequence}' 
+  AND precursor_mz > $pre_mz - 1
+  AND precursor_mz < $pre_mz + 1
   ORDER by precursor_mz, product_mz, dilution, concentration
 	~;
 
@@ -265,11 +279,22 @@ sub handle_request {
 
   my $microliters_injected = 2;
 
+  my %avg;
+              
   while ( my @row = $sth->fetchrow_array() ) {
+
+    
+
 		my $mz = sprintf( "%0.4f", $row[1] );
 		my $area = sprintf( "%0.1f", $row[2] );
 		my $conc = sprintf( "%0.2f", $microliters_injected * ($row[4]/$dil{$row[3]}) );
     my $rep = $row[5];
+
+    my $pre_mz = sprintf( "%0.4f", $row[0] );
+    $avg{$conc} ||= { total => 0 };
+    $avg{$conc}->{total} += $area;
+
+    $avg{$conc}->{$mz} += $area;
 
 #    push @data, [ $mz, $area, $row[3], $dil{$row[3]}, $conc, $row[5] ];
     $data{$mz} ||= {};
@@ -278,13 +303,10 @@ sub handle_request {
     $cnt++;
 	}
   use Data::Dumper;
-
+#  die Dumper( %data );
 	return unless %data; 
 
-  my $div_strings = '';
-	my $chart_functions = '';
-	my $chart_callbacks = '';
-#  die Dumper( %data );
+  my ( $div_strings, $chart_functions, $chart_callbacks ) = get_avg_plot( \%avg );
 
 	for my $frag ( sort{ $a <=> $b } keys( %data ) ) {
     my $js_data = '';
@@ -359,6 +381,63 @@ sub handle_request {
 	~;
 
 
-
-
 } # end showMainPage
+
+sub get_avg_plot {
+  my $avg = shift;
+  
+  my $aslog = 'true';
+  my @quant;
+  my $frag;
+
+  my @concs;
+  my $js_data;
+  my @data_pts;
+  my $titles = "['Conc',";
+  my $h_seen = 0;
+  for my $conc ( sort { $a <=> $b } keys( %{$avg} ) ) {
+    my $sep = '';
+    my $data_pt = "[$conc,";
+    for my $pt ( sort { $a <=> $b } keys( %{$avg->{$conc}} ) ) {
+      $avg->{$conc}->{$pt} ||= 5;
+      my $val = int( $avg->{$conc}->{$pt} / 5 );
+      $titles .= $sep . "'$pt'" unless $h_seen;
+      $data_pt .= $sep . "$val";
+      $sep ||= ',';
+    }
+    $titles .= "],\n" unless $h_seen;
+    $data_pt .= "]";
+    push @data_pts, $data_pt;
+    $h_seen++;
+  }
+#  die Dumper( $titles );
+  $js_data = $titles . join( ",\n", @data_pts ) . "\n";
+#  die Dumper( $js_data );
+
+
+  my $div_name = $sbeams->getRandomString( num_chars => 20 );
+
+  my $line_info = '';
+  my $div_strings .= qq~<BR><DIV style="border: 1px solid gray; width: 500px" > <div id="$div_name" style="width: 500px; height: 360px" > </div><CENTER>$line_info</CENTER></DIV>~;
+
+  my $chart_callbacks .= "google.setOnLoadCallback(draw_${div_name}_Chart);\n";
+  my $chart_functions .= qq~
+  function draw_${div_name}_Chart() {
+    var data = google.visualization.arrayToDataTable([
+      $js_data
+    ]);
+
+    var options = {
+      title: "$quant[0] product ion $frag",
+      pointSize:  3,
+      hAxis: {title: 'Femtomoles on Column', logScale: $aslog   },
+      vAxis: {title: 'Intensity (area under chromatogram)', logScale: $aslog },
+      series: [{ pointSize: 4, lineWidth: 1 },{ pointSize: 4, lineWidth: 1 },{ pointSize: 4, lineWidth: 1 },{ pointSize: 4, lineWidth: 1 },{ pointSize: 4, lineWidth: 1 },  { pointSize: 4, lineWidth: 1, visibleInLegend: true}]
+    };
+
+    var chart = new google.visualization.ScatterChart(document.getElementById('$div_name'));
+    chart.draw(data, options);
+  }
+~;
+  return( $div_strings, $chart_callbacks, $chart_functions );
+}
