@@ -396,7 +396,7 @@ sub handle_request {
      my $fh = $q->upload('upload_file');
      if (!$fh && $q->cgi_error)
      {
-       print $q->header(-status=>$q->cgi_error);
+       print $q->header(-status=>$q->cgi_error) if ($sbeams->output_mode() eq 'html');
      }
      if ( (-T $fh) && (-s $fh < 1000000)) ##size constraint of 10 MB, restrict $count < 30000
      {
@@ -634,7 +634,7 @@ sub handle_request {
     my $use_tabbed_panes = 1;
 		if ( $help_text ) {
        my $prefix = $sbeams->addTabbedPane(label => "Result");
-       print "$prefix$help_text\n";
+       print "$prefix$help_text\n" if ($sbeams->output_mode() eq 'html');
        $use_tabbed_panes = 0;
     }
     #### Display the resultset
@@ -660,7 +660,7 @@ sub handle_request {
       use_tabbed_panes=>$use_tabbed_panes,
     );
     if(! $use_tabbed_panes ){
-      print $sbeams->closeTabbedPane() , "\n";
+      print $sbeams->closeTabbedPane() , "\n" if ($sbeams->output_mode() eq 'html');
     }
 
 
