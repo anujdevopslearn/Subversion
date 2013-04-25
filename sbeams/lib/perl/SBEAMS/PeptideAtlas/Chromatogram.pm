@@ -32,6 +32,8 @@ use SBEAMS::Connection;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::Settings;
 use SBEAMS::PeptideAtlas::Tables;
+#use IO::Uncompress;  # supercedes Compress::Zlib, but we don't have it.
+use Compress::Zlib;
 use JSON;
 
 
@@ -486,7 +488,7 @@ sub mzML2traces {
 
       # If this is close to our target Q1 ...
       if (($q1 <= $target_q1+$q1_tolerance) &&
-	  ($q1 >= $target_q1-$q1_tolerance)) {
+	($q1 >= $target_q1-$q1_tolerance)) {
 
 	# If tx_info provided, check to see if this is one of the Q3s we want
 	if ($tx_info) {
@@ -497,10 +499,14 @@ sub mzML2traces {
 	    q3_found_aref => \@q3_found_array,
 	  );
 	  next unless $q3_match;
-  if ($q3_match > 1) {
-    print "<p>WARNING: mzML Q3 $q3 matched >1 target Q3 for target Q1=${target_q1}.<br>Q1 tolerance = $q1_tolerance  Q3 tolerance = $q3_tolerance</p>\n";
-  }
+	  if ($q3_match > 1) {
+	    print "<p>WARNING: mzML Q3 $q3 matched >1 target Q3 for target Q1=${target_q1}.<br>Q1 tolerance = $q1_tolerance  Q3 tolerance = $q3_tolerance</p>\n";
+	  }
 	}
+
+	#### The code below should duplicate code in
+	#### mMap.pl (of the mProphet suite). Updates, fixes to one
+	#### should be copied to the other.
 
 	# Process the time and intensity arrays for this cgram
 	my @binaryDataArrayLists =
@@ -508,50 +514,91 @@ sub mzML2traces {
 
 	my $n = scalar @binaryDataArrayLists;
 	my @binaryDataArrays =
-	  $binaryDataArrayLists[0]->find_by_tag_name('binaryDataArray');
+	$binaryDataArrayLists[0]->find_by_tag_name('binaryDataArray');
 	$n = scalar @binaryDataArrays;
 
 
-	my ($n_time, $n_int, $time_aref, $int_aref);
+	my ( $time_aref, $int_aref);
+	my $n_time = 0;
+	my $n_int = 0;
 
-	#Get times
-	my @cvParam = $binaryDataArrays[0]->find_by_tag_name('cvParam');
-	my $time_unit = 'second';
-	for my $cvParam (@cvParam) {
-	  if ((defined $cvParam->{'name'}) &&
-	      ($cvParam->{'name'} eq 'time array')) {
-	    $time_unit = $cvParam->{'unitName'};
+	my $n_data_arrays = scalar @binaryDataArrays;
+
+	# Process the time and intensity arrays for this cgram.
+	# Usually, time is first and intensity second.
+	for (my $i=0; $i < $n_data_arrays; $i++) {
+
+	  my @cvParam = $binaryDataArrays[$i]->find_by_tag_name('cvParam');
+	  my @binary = $binaryDataArrays[$i]->find_by_tag_name('binary');
+
+	  my $compression = 'no';
+	  my $unit_name;
+	  my $array_type;
+	  my $precision;
+
+	  # Process the cvParams for this binaryDataArray
+	  for my $cvParam (@cvParam) {
+	    if (defined $cvParam->{'name'}) {
+		if ($cvParam->{'name'} =~ '(\S+) compression') {
+		$compression = $1;
+	      } elsif ($cvParam->{'name'} =~ '(\d+)-bit float') {
+		$precision = $1;
+	      } elsif ($cvParam->{'name'} =~ '(\S+) array') {
+		$array_type = $1;
+		$unit_name = $cvParam->{'unitName'};
+	      }
+	    }
+	  }
+
+	  # Decode the binary array
+	  if (defined $binary[0]->content) {
+	    my $aref = decode_base64binaryArray(
+	      binaryArray=>$binary[0]->content->[0],
+	      compression=>$compression,
+	      precision=>$precision,
+	      swap=>0,
+	    );
+
+	    # Get times
+	    if ($array_type eq 'time') {
+	      my $time_unit = defined $unit_name ? $unit_name : 'second';
+	      my $time_factor = 1.0;
+	      $time_factor *= 60.0 if ($time_unit eq 'hour');
+	      $time_factor /= 60 if ($time_unit eq 'second');
+	      $time_aref = $aref;
+	      $n_time = scalar @{$time_aref};
+	      # convert all times to minutes
+	      for (my $i=0; $i<$n_time; $i++) {
+		$time_aref->[$i] *= $time_factor;
+	      }
+	    # Get intensities
+	    } elsif ($array_type eq 'intensity') {
+	      $int_aref = $aref;
+	      $n_int = scalar @{$int_aref};
+	    } else {
+	      print "Warning: unknown binaryDataArray type ${array_type}.\n";
+	    }
+	  } else {
+	    print "Warning: binaryDataArray lacks content element.\n";
 	  }
 	}
-	my $time_factor = 1.0;
-	$time_factor *= 60.0 if ($time_unit eq 'hour');
-	$time_factor /= 60 if ($time_unit eq 'second');
-	my @binary = $binaryDataArrays[0]->find_by_tag_name('binary');
-	$n = scalar @binary;
-	if (defined $binary[0]->content) {
-	  $time_aref = decode_mzMLtimeArray($binary[0]->content->[0]);
-	  $n_time = scalar @{$time_aref};
-	  # convert all times to minutes
-	  for (my $i=0; $i<$n_time; $i++) {
-	    $time_aref->[$i] *= $time_factor;
-	  }
-	} else {
-	  $n_time = 0;
-	}
 
-	#Get intensities
-	@binary = $binaryDataArrays[1]->find_by_tag_name('binary');
-	$n = scalar @binary;
-	if (defined $binary[0]->content) {
-	  $int_aref = decode_mzMLintensityArray($binary[0]->content->[0]);
-	  $n_int = scalar @{$int_aref};
-	  for (my $i=0; $i<$n_int; $i++) {
-	  }
-	} else {
-	  $n_int = 0;
-	}
-
+	#--------------------------------------------------
+	# print "<br>Times:&nbsp;";
+	# for (my $i=0; $i<$n_time; $i++) {
+	#   print "$time_aref->[$i]&nbsp;&nbsp;";
+	# }
+	# print "<br>Intensities:&nbsp;";
+	# for (my $i=0; $i<$n_int; $i++) {
+	#   print "$int_aref->[$i]&nbsp;&nbsp;";
+	# }
+	# print "<br>";
+	#-------------------------------------------------- 
 	die "$n_time timepoints, $n_int intensities!" if ($n_time != $n_int);
+
+	####
+	#### End of duplicated code
+	####
 
 	# Store info in traces hash
 	for (my $i=0; $i<$n_time; $i++) {
@@ -672,7 +719,12 @@ sub mzXML2traces {
       # sometimes, multiple peaks are encoded in a single <scan>
     } elsif ($line =~ /compressedLen.*\>(.+)\<.peaks>/) {
       #print $1, "\n";
-      $intensity_aref = decode_mzXMLScan($1);
+      $intensity_aref = decode_base64binaryArray(
+	binary=>$1,
+        swap=>1,
+        compression=>0,    # is compression possible? Check schema.
+        precision=>64,
+      );
       #for my $elt (@{$intensity_aref}) { print "$elt\n"; }
     } elsif ($line =~ /<precursorMz.*>(\S+)<.precursorMz>/) {
       $q1 = $1;
@@ -954,33 +1006,33 @@ sub traces2json {
   my $count = 0;
   for my $q1 ( @sorted_q1_list ) {
     my $q3 = shift @sorted_q3_list ;
-      $count++;
-      my %data_element;
-      my $str = sprintf "COUNT: %2.2d Q1:%0.3f Q3:%0.3f", $count, $traces{'tx'}->{$q1}->{$q3}->{'q1'}, $q3;
-      $data_element{'full'} = $str;
-      my $label = '';
-      if ($tx_info) {
-	$label .= sprintf "%-5s ", $traces{'tx'}->{$q1}->{$q3}->{frg_ion};
-      } else {
-	$label .= sprintf "%3.3d ", $count;
-      }
+    $count++;
+    my %data_element;
+    my $str = sprintf "COUNT: %2.2d Q1:%0.3f Q3:%0.3f", $count, $traces{'tx'}->{$q1}->{$q3}->{'q1'}, $q3;
+    $data_element{'full'} = $str;
+    my $label = '';
+    if ($tx_info) {
+      $label .= sprintf "%-5s ", $traces{'tx'}->{$q1}->{$q3}->{frg_ion};
+    } else {
+      $label .= sprintf "%3.3d ", $count;
+    }
 
 
-      $label .=  sprintf "%7.3f / %7.3f",  $traces{'tx'}->{$q1}->{$q3}->{'q1'}, $q3;
-      $label .= sprintf (" ERI: %0.1f", $traces{'tx'}->{$q1}->{$q3}->{'eri'} )
-	if ($traces{'tx'}->{$q1}->{$q3}->{'eri'});
-      $data_element{'label'} = $label;
-      $data_element{'eri'} = $traces{'tx'}->{$q1}->{$q3}->{'eri'} +0 #force to int
-        if ($traces{'tx'}->{$q1}->{$q3}->{'eri'});
-      # Write each pair of numbers in Dick's JSON format.
-      for my $time (sort {$a <=> $b} keys %{$traces{'tx'}->{$q1}->{$q3}->{'rt'}}) {
-	my $intensity = $traces{'tx'}->{$q1}->{$q3}->{'rt'}->{$time};
-	my %timepoint;
-	$timepoint{'time'} = $time + 0;
-	$timepoint{'intensity'} = $intensity + 0;
-        push @{$data_element{'data'}}, {%timepoint};
-      }
-      push @{$json_href->{'data_json'}}, {%data_element};
+    $label .=  sprintf "%7.3f / %7.3f",  $traces{'tx'}->{$q1}->{$q3}->{'q1'}, $q3;
+    $label .= sprintf (" ERI: %0.1f", $traces{'tx'}->{$q1}->{$q3}->{'eri'} )
+    if ($traces{'tx'}->{$q1}->{$q3}->{'eri'});
+    $data_element{'label'} = $label;
+    $data_element{'eri'} = $traces{'tx'}->{$q1}->{$q3}->{'eri'} +0 #force to int
+    if ($traces{'tx'}->{$q1}->{$q3}->{'eri'});
+    # Write each pair of numbers in Dick's JSON format.
+    for my $time (sort {$a <=> $b} keys %{$traces{'tx'}->{$q1}->{$q3}->{'rt'}}) {
+      my $intensity = $traces{'tx'}->{$q1}->{$q3}->{'rt'}->{$time};
+      my %timepoint;
+      $timepoint{'time'} = $time + 0;
+      $timepoint{'intensity'} = $intensity + 0;
+      push @{$data_element{'data'}}, {%timepoint};
+    }
+    push @{$json_href->{'data_json'}}, {%data_element};
   }
 
   # Write the retention time marker, if value provided
@@ -1052,48 +1104,40 @@ sub store_tx_info_in_traces_hash {
 }
 
 ###############################################################################
-# decode_mzMLtimeArray
-# A 64-bit base 64 string encodes a list of time values. Return that list.
+# decode_base64binaryArray
 ###############################################################################
 
-sub decode_mzMLtimeArray {
-  my $base64_string = shift ||
-    die ("decode_mzMLtimeArray: no argument");
-  #my $decoded = Base64::b64decode($base64_string);
-	my $decoded = decode_base64($base64_string);
-	my $swapped = $decoded;
-	# $swapped = byteSwap($decoded, 64);  #don't need to swap
-  my @array = unpack("d*", $swapped);
-  return \@array;
-}
+sub decode_base64binaryArray {
+  my %args = @_;
+  my $base64_string = $args{binaryArray} ||
+    die ("decode_mzMLbinaryArray: need binaryArray argument");
+  my $precision = $args{precision} || 32;
+  my $compression = $args{compression} || 0;
+  $compression = 0 if ($compression =~ /^no$/i);
+  my $swap = $args{swap} || 0;
+  my $format;
 
-###############################################################################
-# decode_mzMLintensityArray
-# A 32-bit base 64 string encodes a list of intensity values. Return that list.
-###############################################################################
-
-sub decode_mzMLintensityArray {
-  my $base64_string = shift ||
-     die ("decode_mzMLintensityArray: no argument");
-  #my $decoded = Base64::b64decode($base64_string);
-	my $decoded = decode_base64($base64_string);
-	my $swapped = $decoded;
-	# $swapped = byteSwap($decoded, 32);  #don't need to swap
-  my @array = unpack("f*", $swapped);
-  return \@array;
-}
-
-###############################################################################
-# decode_mzXMLScan
-# A base 64 string encodes a list of q3, intensity pairs. Return that list.
-###############################################################################
-
-sub decode_mzXMLScan {
-  my $base64_string = shift || die ("decode_mzXMLScan: no argument");
   my $decoded = decode_base64($base64_string);
-  my @array = unpack("f*", byteSwap($decoded));
+  if ($compression) {
+    if ($compression =~ /^zlib$/i) {
+      $decoded = uncompress($decoded);
+    } else {
+      die "Unknown compression type |$compression|";
+    }
+  }
+  $decoded = byteSwap($decoded, $precision) if $swap;
+  if ($precision == 32) {
+    $format = "f*";  #float
+  } elsif ($precision == 64) {
+    $format = "d*";  #double
+  } else {
+    die "Unknown precision $precision";
+  }
+  my @array = unpack($format, $decoded);
   return \@array;
 }
+
+
 
 ###############################################################################
 # byteSwap: Exchange the order of each pair of bytes in a string.
