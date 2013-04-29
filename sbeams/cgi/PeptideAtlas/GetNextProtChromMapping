@@ -322,7 +322,7 @@ sub handle_request {
     $resultset_ref->{precisions_list_ref}->[$i] =  20;
   }
   $url_cols{'PeptideAtlas'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=".$atlas_build_id."&apply_action=$pass_action&protein_name=\%1V"; 
-  $url_cols{'neXtprot AC'} = "http://www.nextprot.org/db/entry/\%1V";
+  $url_cols{'neXtprot AC'} = "http://www.nextprot.org/db/entry/NX_\%1V";
   $url_cols{'neXtprot AC_ATAG'} = qq~ TARGET=_neXtprot ONMOUSEOVER="window.status=\'View entry at neXtPro\'; return true;" ~;
 
   #########################################################################
@@ -535,7 +535,7 @@ sub getResultset {
   LOOP:while (my $line = <IN>){
     chomp $line;
     my @elms = split("\t", $line);
-#    $elms[1] =~ s/NX_//;
+    $elms[1] =~ s/NX_//;
     if ($n_protein > 0){
        next if (not defined $protein_hash{$elms[1]});
     }
