@@ -189,7 +189,7 @@ sub handle_request {
     AND NOT ( DAB.organism_id IS NULL 
               AND default_atlas_build_id IS NOT NULL ) -- keep global default from showing up 2x
     ORDER BY organism_name ASC, 
-              atlas_build_name DESC,AB.atlas_build_id DESC
+              atlas_build_name ASC, organism_specialized_build ASC, AB.atlas_build_id DESC
     ~;
     my @atlas_builds = $sbeams->selectSeveralColumns($sql);
 
