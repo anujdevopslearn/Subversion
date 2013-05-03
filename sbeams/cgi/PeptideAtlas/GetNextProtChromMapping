@@ -291,7 +291,7 @@ sub handle_request {
                         'Start', 
                         'Stop',
                         'N Chromosomal Location',
-                        'Protein Evidence', 
+                        'neXtprot Protein Evidence', 
                         'PeptideAtlas', 
                         'Obs', 
                         'Description');
