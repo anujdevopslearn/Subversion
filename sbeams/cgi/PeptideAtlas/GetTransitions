@@ -1715,7 +1715,8 @@ sub fetch_transitions {
       }
       if ( $has_quant ) {
         if ( $quant_info->{$cleanseq} ) {
-          push @rowdata, "<A HREF=quant_info?peptide_sequence=$cleanseq TARGET='_quant'><IMG SRC=$HTML_BASE_DIR/images/quant.png BORDER=0></A>";
+          my $precursor = int($row[5]);
+          push @rowdata, "<A HREF=quant_info?peptide_sequence=$cleanseq;precursor=$precursor TARGET='_quant'><IMG SRC=$HTML_BASE_DIR/images/quant.png BORDER=0></A>";
         } else {
           push @rowdata, '&nbsp;';
         }
@@ -2094,16 +2095,17 @@ sub get_quant_info {
   my $pep_string = shift || return \%quant;
 
   my $sql = qq~
-  SELECT DISTINCT peptide_sequence, lod, loq, quantitative 
-  FROM peptideatlas.dbo.mtb_quant_info
-  WHERE peptide_sequence IN ( $pep_string )
+  SELECT DISTINCT peptide_sequence, lod, loq 
+  FROM peptideatlas.dbo.quant_info
+  WHERE product_mz IS NULL
+  AND fail_mode = 'PASSED'
+  AND peptide_sequence IN ( $pep_string )
   ~;
 
   my $sth = $sbeams->get_statement_handle($sql);
   while ( my @row = $sth->fetchrow_array() ) {
 		$quant{$row[0]} = { lod => sprintf( "%0.2f", $row[1] ) || 'n/a',
                         loq => sprintf( "%0.2f", $row[2] ) || 'n/a',
-                        isq => $row[3] || 'n/a',
 		                  };
 	}
 	return \%quant;
