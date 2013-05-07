@@ -151,6 +151,12 @@ sub getTabMenu
        $current_tab=5;
        $current_subtab=1;
 
+    } elsif ( ($PROG_NAME =~ /^quant_info/) ||
+    ($PROG_NAME =~ /ViewSRMList\?(\S+)/ ))
+    {
+       $current_tab=5;
+       $current_subtab=1;
+
     } elsif ( ($PROG_NAME =~ /^GetProtein/) ||
     ($PROG_NAME =~ /GetProtein\?(\S+)/ ))
     {
@@ -286,8 +292,8 @@ sub getTabMenu
 			   url => "$CGI_BASE_DIR/PeptideAtlas/GetProteins"
 			   );
 		$tabmenu->addMenuItem( tablabel => 'Queries',
-			 label => 'Browse NextProt Proteins',
-			 helptext => 'Browsing NextProt Proteins Chromosome mapping and PeptideAtlas observabiligy',
+			 label => 'Browse neXtProt Proteins',
+			 helptext => 'Browsing neXtProt Proteins Chromosome mapping and PeptideAtlas observabiligy',
 			 url => "$CGI_BASE_DIR/PeptideAtlas/GetNextProtChromMapping"
 			 );
 
