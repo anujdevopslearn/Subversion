@@ -181,7 +181,7 @@ sub handle_request {
   my $TABLE_NAME = $parameters{'QUERY_NAME'};
 
   #### Set some specific settings for this program
-  my $CATEGORY="Get neXtprot Chromsome Mapping";
+  my $CATEGORY="Get neXtProt Chromsome Mapping";
   $TABLE_NAME="AT_GetNextProtChromMapping" unless ($TABLE_NAME);
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetNextProtChromMapping";
 
@@ -284,14 +284,14 @@ sub handle_request {
 
   #### Define some variables needed to build the query
   my @column_titles = ( 'Gene Name', 
-                        'neXtprot AC',
+                        'neXtProt AC',
                         'Ensembl Gene',
                         'RefSeq',  
                         'Chromosome',
                         'Start', 
                         'Stop',
                         'N Chromosomal Location',
-                        'neXtprot Protein Evidence', 
+                        'neXtProt Protein Evidence', 
                         'PeptideAtlas', 
                         'Obs', 
                         'Description');
@@ -322,8 +322,8 @@ sub handle_request {
     $resultset_ref->{precisions_list_ref}->[$i] =  20;
   }
   $url_cols{'PeptideAtlas'} = "$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=".$atlas_build_id."&apply_action=$pass_action&protein_name=\%1V"; 
-  $url_cols{'neXtprot AC'} = "http://www.nextprot.org/db/entry/NX_\%1V";
-  $url_cols{'neXtprot AC_ATAG'} = qq~ TARGET=_neXtprot ONMOUSEOVER="window.status=\'View entry at neXtPro\'; return true;" ~;
+  $url_cols{'neXtProt AC'} = "http://www.nextprot.org/db/entry/NX_\%1V";
+  $url_cols{'neXtProt AC_ATAG'} = qq~ TARGET=_neXtProt ONMOUSEOVER="window.status=\'View entry at neXtProt\'; return true;" ~;
 
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
