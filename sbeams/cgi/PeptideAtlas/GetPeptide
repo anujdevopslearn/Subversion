@@ -1618,7 +1618,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
         my $pepseq = $modified_pepseq;
         $pepseq =~ s/\[[\d\.]+\]//g;
         my @aas = split(//, $pepseq);
-        for(my $i=0; $i<$#aas; $i++){
+        for(my $i=0; $i<=$#aas; $i++){
           if(defined $mods{$i} && defined $ptm_score{$i}){
             $newseq .= "$aas[$i]\[$mods{$i}\]($ptm_score{$i})";
           }elsif(defined $mods{$i} && not defined $ptm_score{$i}){
