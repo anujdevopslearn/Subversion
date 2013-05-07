@@ -4,7 +4,6 @@ use strict;
 
 my $DEBUG = 0;
 
-#use lib "/net/dblocal/www/html/devDC/sbeams/lib/perl";
 use SBEAMS::Proteomics::AminoAcidModifications;
 my $AAmodifications = new SBEAMS::Proteomics::AminoAcidModifications;
 
