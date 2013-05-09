@@ -758,10 +758,23 @@ sub get_cmod_radio {
 
 sub get_download_form {
 
-  my $form = '<FORM NAME=DWNLD ACTION=GetResultSet.cgi/PeptideData.tsv>';
+  my $form = '<FORM NAME=DWNLD ID=DWNLD ACTION=GetResultSet.cgi/PeptideData.tsv onSubmit="setMethodName()">';
 
   my $select = qq~
-    <SELECT NAME=download>
+    <SCRIPT TYPE=text/javascript>
+    function setMethodName() {
+      var selval = document.getElementById('download').value;
+      var selreg = /ABSCIEX/;
+
+      if ( selreg.exec( selval ) ) {
+        var action = document.getElementById('DWNLD').action;
+        action = action.replace( '.tsv', '.csv' );
+        document.getElementById('DWNLD').action = action;
+      }
+    }
+
+    </SCRIPT>
+    <SELECT NAME=download ID=download>
       <OPTION VALUE='TSV' >TSV</OPTION>
       <OPTION VALUE='AgilentQQQ' >Agilent QQQ MRM</OPTION>
       <OPTION VALUE='AgilentQQQ_dynamic' >Agilent QQQ dynamic MRM</OPTION>
