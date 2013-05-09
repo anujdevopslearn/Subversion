@@ -180,6 +180,10 @@ sub handle_request {
 
   $content_type = "Content-type: text/tab-separated-values\n\n" if $parameters{tsv_output};
 
+  if ( $download && $download =~ /ABSCIEX/ ) {
+    $content_type = "Content-type: text/comma-separated-values\n\n";
+  }
+
   if ( $content_type )  { # Works now since downloads can be tsv or excel,
 		                      # will need tweaking if we add xml.
     print $content_type;
@@ -195,6 +199,7 @@ sub handle_request {
     $mem = $sbeams->memusage( pid => $pid );
     $log->debug( "Convert to mrm format: " . $mem );
 
+#    use Data::Dumper;
 #    die Dumper( %parameters );
 
     if ( $download =~ /AgilentQQQ_dynamic/i ) {
