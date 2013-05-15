@@ -84,6 +84,7 @@ use vars qw(@ISA @EXPORT
     $TBAT_SPECTRUM_PTM_IDENTIFICATION
     $TBAT_SPECTRUM
     $TBAT_SPECTRUM_PEAK
+    $TBAT_FRAGMENTATION_TYPE
 
     $TBAT_SEARCH_BATCH_STATISTICS
 
@@ -138,7 +139,8 @@ use vars qw(@ISA @EXPORT
 
     $TBAT_PASS_SUBMITTER
     $TBAT_PASS_DATASET
-
+    
+    $TBAT_PUBLIC_DATA_REPOSITORY
     $TBAT_PUTATIVE_PROTEIN
     $TBAT_PUTATIVE_PEPTIDE
     $TBAT_PUTATIVE_PROTEIN_PEPTIDE
@@ -235,7 +237,7 @@ require Exporter;
     $TBAT_PEPTIDE_ANNOTATION
     $TBAT_MODIFIED_PEPTIDE_ANNOTATION
     $TBAT_TRANSITION_SUITABILITY_LEVEL
-
+    $TBAT_FRAGMENTATION_TYPE
     $TBAT_SRM_TRANSITION_SET
     $TBAT_SRM_TRANSITION
 
@@ -280,7 +282,7 @@ require Exporter;
 
     $TBAT_PASS_SUBMITTER
     $TBAT_PASS_DATASET
-
+    $TBAT_PUBLIC_DATA_REPOSITORY
     $TBAT_PUTATIVE_PROTEIN
     $TBAT_PUTATIVE_PEPTIDE
     $TBAT_PUTATIVE_PROTEIN_PEPTIDE
@@ -368,6 +370,7 @@ $TBAT_SPECTRUM_IDENTIFICATION    = "${mod}spectrum_identification";
 $TBAT_SPECTRUM_PTM_IDENTIFICATION    = "${mod}spectrum_ptm_identification";
 $TBAT_SPECTRUM                   = "${mod}spectrum";
 $TBAT_SPECTRUM_PEAK              = "${mod}spectrum_peak";
+$TBAT_FRAGMENTATION_TYPE         = "${mod}fragmentation_type";
 
 $TBAT_SPECTRUM_ANNOTATION           = "${mod}spectrum_annotation";
 $TBAT_SPECTRUM_ANNOTATION_LEVEL     = "${mod}spectrum_annotation_level";
@@ -427,6 +430,8 @@ $TBAT_QT5500_TRANSITION_GROUP       = "${mod}QT5500_transition_group";
 
 $TBAT_PASS_SUBMITTER                = "${mod}PASS_submitter";
 $TBAT_PASS_DATASET                  = "${mod}PASS_dataset";
+
+$TBAT_PUBLIC_DATA_REPOSITORY        = "${mod}public_data_repository";
 
 $TBAT_PUTATIVE_PROTEIN              = "${mod}putative_protein";
 $TBAT_PUTATIVE_PEPTIDE              = "${mod}putative_peptide";

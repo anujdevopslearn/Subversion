@@ -513,6 +513,7 @@ AT_spectrum	10	normalized_precursor_intensity	Normalized Precursor Intensity	rea
 AT_spectrum	11	normalized_scan_time	Normalized Scan Time	real	4	0	Y		N			N				Y	Y	N	Normalized scan time for MS/MS spectra		
 AT_spectrum	12	collision_energy	Collision Energy	real	4	0	Y		N			N		 		Y	Y	N	Instrument collision energy 		
 AT_spectrum	13	ionization_energy	Ionization Energy	real	4	0	Y		N			N		 		Y	Y	N	Ionization Energy 		
+AT_spectrum	14	fragmentation_type_id	Fragmentation Type id	int	4	0	Y		N	AT_fragmentation_type	fragmentation_type_id	N					N	N	Fragmentation Type id		
 AT_spectrum_peak	1	spectrum_peak_id	Spectrum Peak ID	int	4	0	N		Y							N	N				PkDEFAULT
 AT_spectrum_peak	2	spectrum_id	Spectrum ID	int	4	0	N		N	AT_spectrum	spectrum_id	Y	text	10		Y	Y		spectrum_id		
 AT_spectrum_peak	3	mz	M/Z	float	8	0	N		N			Y	text	10		Y	Y	N	Fragment ion M/Z		
@@ -1045,20 +1046,30 @@ AT_protein_identification_annotation	11	record_status	Record Status	char	1	0	N	N
 AT_public_data_repository	1	dataset_id	Dataset	int	4	0	N		Y							N	Y				pkDEFAULT
 AT_public_data_repository	2	dataset_identifier	Dataset Identifier	varchar	20	0	N		N			Y	text			Y	Y	N	source idenfier		
 AT_public_data_repository	3	source_repository	Source	varchar	100	0	N		N			Y	text			Y	Y	N	source repository		
-AT_public_data_repository	4	datasetTitle	Dataset Title	varchar	255	0	N		N			Y	text	40		Y	Y	N	Title for this dataset		
-AT_public_data_repository	5	datasetType	Dataset Type	varchar	20	0	N		N			Y	text	3		Y	Y	N	Dataset type		
-AT_public_data_repository	6	instrument	Instrument	varchar	100	0	Y		N			N	text	20		Y	Y	N	Instrument		
-AT_public_data_repository	7	datasetDescription	Dataset Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional Description		
-AT_public_data_repository	8	species	Species	varchar	100	0	N		N			Y	text	40		Y	Y	N	Species		
-AT_public_data_repository	9	contributor	Contributor	varchar	255	0	Y		N			Y	text	40		Y	Y	N			
-AT_public_data_repository	10	publication	Publication	varchar	255	0	Y		N				text	50		Y	Y	N	Publication		
-AT_public_data_repository	11	publicReleaseDate	Public Release Date	datetime	8	0	N		N			Y	text	20		Y	Y	N	Date on which the data becomes publicly available		
-AT_public_data_repository	12	classfication	Classfication	char	1	0	N	N	N				optionlist			Y	Y	N		"select '1' ,  'Should process' union  select '2' ,  'Not interesting' union  select '3' , 'Has been processed' union select '4', 'Unclassified'"	
-AT_public_data_repository	13	local_data_location	dataset location	varchar	255	0	N		N			N	text	50		Y	Y	N	Absolute or relative location of the data		
-AT_public_data_repository	14	pa_sample_accession	Peptide Atlas Sample Accession	varchar	255	0	Y		N			N	text	20		Y	Y	N	stable accession identifier for the sample (e.g. PAe000001)		
-AT_public_data_repository	15	record_status	Record Status	char	1	0	N	N	N							N	N				
-AT_public_data_repository	16	date_created	date_created	datetime	8	0	Y		N			N					Y	N			
-AT_public_data_repository	17	created_by_id	created_by_id	int	4	0	Y		N			N					Y	N			
-AT_public_data_repository	18	date_modified	date_modified	datetime	8	0	Y		N			N					Y	N			
-AT_public_data_repository	19	modified_by_id	modified_by_id	int	4	0	Y		N			N					Y	N			
-AT_public_data_repository	20	owner_group_id	owner_group_id	int	4	0	Y		N			N					Y	N			
+AT_public_data_repository	4	species	Species	varchar	100	0	N		N			Y	text	40		Y	Y	N	Species		
+AT_public_data_repository	5	classfication	Classfication	char	1	0	N	N	N				optionlist			Y	Y	N		"select '1' ,  'Should process' union  select '2' ,  'Not interesting' union  select '3' , 'Has been processed' union select '4', 'Unclassified'"	
+AT_public_data_repository	6	pa_sample_accession	Peptide Atlas Sample Accession	varchar	255	0	Y		N			N	text	20		Y	Y	N	stable accession identifier for the sample (e.g. PAe000001)		
+AT_public_data_repository	7	local_data_location	dataset location	varchar	255	0	N		N			N	text	50		Y	Y	N	Absolute or relative location of the data		
+AT_public_data_repository	8	datasetTitle	Dataset Title	varchar	255	0	N		N			Y	text	40		Y	Y	N	Title for this dataset		
+AT_public_data_repository	9	datasetType	Dataset Type	varchar	20	0	N		N			Y	text	3		Y	Y	N	Dataset type		
+AT_public_data_repository	10	instrument	Instrument	varchar	1000	0	Y		N			N	text	20		Y	Y	N	Instrument		
+AT_public_data_repository	11	datasetDescription	Dataset Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional Description		
+AT_public_data_repository	12	contributor	Contributor	varchar	255	0	Y		N			Y	text	40		Y	Y	N			
+AT_public_data_repository	13	publication	Publication	varchar	1000	0	Y		N				text	50		Y	Y	N	Publication		
+AT_public_data_repository	14	project_id	Owner Project	int	4	0	Y		N	project	project_id	N	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
+AT_public_data_repository	15	publicReleaseDate	Public Release Date	datetime	8	0	N		N			Y	text	20		Y	N	N	Date on which the data becomes publicly available		
+AT_public_data_repository	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_public_data_repository	17	date_created	date_created	datetime	8	0	Y		N			N					Y	N			
+AT_public_data_repository	18	created_by_id	created_by_id	int	4	0	Y		N			N					N	N			
+AT_public_data_repository	19	date_modified	date_modified	datetime	8	0	Y		N			N					N	N			
+AT_public_data_repository	20	modified_by_id	modified_by_id	int	4	0	Y		N			N					N	N			
+AT_public_data_repository	21	owner_group_id	owner_group_id	int	4	0	Y		N			N					N	N			
+AT_fragmentation_type	1	fragmentation_type_id	Fragmentation Type ID	int	4	0	Y		Y			Y					N	Y	Primary Key		pkDEFAULT
+AT_fragmentation_type	2	fragmentation_type	Fragmentation Type	varchar	255	0	N		N			Y	text	20		Y	Y	N	Type of Fragmentation		
+AT_fragmentation_type	3	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_fragmentation_type	4	date_created	date_created	datetime	8	0	Y		N			N					Y	N			
+AT_fragmentation_type	5	created_by_id	created_by_id	int	4	0	Y		N			N					Y	N			
+AT_fragmentation_type	6	date_modified	date_modified	datetime	8	0	Y		N			N					Y	N			
+AT_fragmentation_type	7	modified_by_id	modified_by_id	int	4	0	Y		N			N					Y	N			
+AT_fragmentation_type	8	owner_group_id	owner_group_id	int	4	0	Y		N			N					Y	N			
+AT_fragmentation_type	9	record_status	record_status	char	1	0	Y		N			N					Y	N			

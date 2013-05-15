@@ -358,7 +358,10 @@ sub displayStandardPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=AT_publication"><nobr>&nbsp;&nbsp;&nbsp;Publications</nobr></a></td></tr>
   <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=AT_elution_time_type"><nobr>&nbsp;&nbsp;&nbsp;Elution Time Type</nobr></a></td></tr>
   <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=AT_instrument_type"><nobr>&nbsp;&nbsp;&nbsp;Instrument Type</nobr></a></td></tr>
+  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=AT_fragmentation_type"><nobr>&nbsp;&nbsp;&nbsp;Fragmentation Type</nobr></a></td></tr>
+
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=AT_PASS_submitter"><nobr>&nbsp;&nbsp;&nbsp;PASS</nobr></a></td></tr>
+  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=AT_public_data_repository"><nobr>&nbsp;&nbsp;&nbsp;Public data repository</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Annotations:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=AT_spectrum_annotation"><nobr>&nbsp;&nbsp;&nbsp;Spectra</nobr></a></td></tr>
