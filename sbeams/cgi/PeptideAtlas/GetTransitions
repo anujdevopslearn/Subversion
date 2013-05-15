@@ -1303,8 +1303,12 @@ sub fetch_transitions {
 #  }
   my $has_mappings = ( scalar( keys( %{$peptide_mappings} ) ) ) ? 1 : 0;
 
-	my $quant_info = get_quant_info( $pep_seq_string );
-  my $has_quant = ( scalar( keys( %{$quant_info} ) ) ) ? 1 : 0;
+  my $quant_info;
+  my $has_quant;
+  unless ( $sbeams->isGuestUser() ) {
+	  $quant_info = get_quant_info( $pep_seq_string );
+    $has_quant = ( scalar( keys( %{$quant_info} ) ) ) ? 1 : 0;
+  }
 
   my $limit_clause = $sbeams->buildLimitClause( row_limit => 100000 );
   my $weight_clause = get_src_weights( \%parameters );
