@@ -718,12 +718,12 @@ sub mzXML2traces {
       $q3 = $1;
       # sometimes, multiple peaks are encoded in a single <scan>
     } elsif ($line =~ /compressedLen.*\>(.+)\<.peaks>/) {
-      #print $1, "\n";
+      #print $1, "<br>\n";
       $intensity_aref = decode_base64binaryArray(
-	binary=>$1,
-        swap=>1,
+	binaryArray=>$1,
         compression=>0,    # is compression possible? Check schema.
-        precision=>64,
+        precision=>32,
+        swap=>1,
       );
       #for my $elt (@{$intensity_aref}) { print "$elt\n"; }
     } elsif ($line =~ /<precursorMz.*>(\S+)<.precursorMz>/) {
