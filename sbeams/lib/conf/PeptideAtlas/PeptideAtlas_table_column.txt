@@ -1073,3 +1073,12 @@ AT_fragmentation_type	6	date_modified	date_modified	datetime	8	0	Y		N			N					Y	
 AT_fragmentation_type	7	modified_by_id	modified_by_id	int	4	0	Y		N			N					Y	N			
 AT_fragmentation_type	8	owner_group_id	owner_group_id	int	4	0	Y		N			N					Y	N			
 AT_fragmentation_type	9	record_status	record_status	char	1	0	Y		N			N					Y	N			
+AT_uniprot_db	1	uniprot_db_id	Uniprot db ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_uniprot_db	2	md5sum	md5 Checksum	varchar	64	0	Y		N				text	32		Y	Y	N	md5 checksum of uniprot dat file		
+AT_uniprot_db	3	file_path	File Path	varchar	255	0	y		N				text	50		Y	Y	N	Path to Uniprot dat file		
+AT_uniprot_db	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		Date created		
+AT_uniprot_db_entry	1	uniprot_db_entry_id	Uniprot DB Entry ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_uniprot_db_entry	2	uniprot_db_id	Uniprot DB ID	int	4	0	N		N	AT_uniprot_db	uniprot_db_id	Y				N	N	Y	Uniprot db ID		
+AT_uniprot_db_entry	3	entry_accession	Entry Accession	varchar	255	0	N		N			Y	text	50		Y	Y	N	Entry Accession		
+AT_uniprot_db_entry	4	entry_name	Entry Name	varchar	255	0	Y		N			N	text	50		Y	Y	N	Entry Name		
+AT_uniprot_db_entry	5	entry_offset	Entry Offset	bigint	8	0	N		N			N				Y	Y	N	File offset of Entry record		
