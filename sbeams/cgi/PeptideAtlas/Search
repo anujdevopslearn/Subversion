@@ -388,9 +388,9 @@ sub handle_request {
   }
 
   ### identifiy PASS accession search
-  if ($search_key =~ /^PASS\d{5}/i){
-     print $q -> redirect("https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/PASS_View?identifier=$search_key");
-     exit;
+  if ($search_key =~ /^PASS\d{5}/i && $parameters{action} ){
+    print $q -> redirect("PASS_View?identifier=$search_key");
+    exit;
   }
   
   ### search PASS datasets
