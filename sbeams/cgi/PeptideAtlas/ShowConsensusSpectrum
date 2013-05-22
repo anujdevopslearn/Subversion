@@ -86,6 +86,7 @@ sub main {
     my $start_scan = 1;
     my $spectrum_name = $spectrum->{modified_sequence} . '+' . $spectrum->{charge};
     $content = "<TABLE>";
+    $parameters{peakDetect} ||= 'true';
 
     #### Lorikeet me! ##################################################
     my $lorikeet = new SBEAMS::Proteomics::SpecViewer;
@@ -100,6 +101,7 @@ sub main {
               c_ions            => $parameters{'ShowC'},
               x_ions            => $parameters{'ShowX'},
               y_ions            => $parameters{'ShowY'},
+              peakDetect        => $parameters{'peakDetect'},
               z_ions            => $parameters{'ShowZ'},
               spectrum          => \@peak_array 
               );
