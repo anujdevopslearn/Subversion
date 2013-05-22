@@ -879,6 +879,13 @@ sub fetch_transitions {
 
   my $clibs;
 
+  if ( $parameters{defaults} ) {
+    $parameters{b_ions}++;
+    $parameters{y_ions}++;
+    $parameters{'C[160]'}++;
+    $parameters{'M[147]'}++;
+  }
+  
   if ( $args{speclinks} && $args{prefetch} ) {
 #    print "Getting libs<BR>\n";
 #    print time() . "\n";
