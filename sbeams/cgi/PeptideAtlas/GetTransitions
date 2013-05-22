@@ -2326,7 +2326,7 @@ sub get_consensus_links {
     my $link = '';
     if ( $libs->{qtof}->{$spectrum_key} ) {
       my $title = "View +$chg spectrum for $seq in $instr{QTOF} library"; 
-      $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{medium}->{$spectrum_key};' TARGET=_qtof_spectrum> <IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
+      $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{medium}->{$spectrum_key};peakDetect=true' TARGET=_qtof_spectrum> <IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'></A>";
     }
     push @links, $link if $consensus_srcs->{QTOF};
 
@@ -2347,7 +2347,7 @@ sub get_consensus_links {
     $link = '';
     if ( $libs->{qtrap}->{$spectrum_key} ) {
       my $title = "View +$chg spectrum for $seq in $instr{QTrap} library";
-      $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{qtrap}->{$spectrum_key};' TARGET=_qtrap_spectrum> <IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'> </A>";
+      $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{qtrap}->{$spectrum_key};peakDetect=true' TARGET=_qtrap_spectrum> <IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'> </A>";
     }
     push @links, $link if $consensus_srcs->{QTrap5500} || $consensus_srcs->{QTrap4000};
 
@@ -2356,7 +2356,7 @@ sub get_consensus_links {
 			my $image = "$HTML_BASE_DIR/images/spectrum.gif";
 			$image = "$HTML_BASE_DIR/images/redqmark.gif" if $seq2badlinks->{$spectrum_key};
       my $title = "View +$chg spectrum for $seq in $instr{QQQ} library";
-      $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{qqq}->{$spectrum_key};' TARGET=_qqq_spectrum> <IMG BORDER=0 SRC='$image' TITLE='$title'> </A>";
+      $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{qqq}->{$spectrum_key};peakDetect=false' TARGET=_qqq_spectrum> <IMG BORDER=0 SRC='$image' TITLE='$title'> </A>";
     }
     push @links, $link if $consensus_srcs->{QQQ};
   }
@@ -2364,7 +2364,7 @@ sub get_consensus_links {
   my $link = '';
   if ( $libs->{it}->{$spectrum_key} ) {
     my $title = "View +$chg spectrum for $seq in Ion Trap library";
-    $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{it}->{$spectrum_key};' TARGET=_it_spectrum> <IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'> </A>";
+    $link = "<A HREF='ShowConsensusSpectrum?consensus_library_spectrum_id=$libs->{it}->{$spectrum_key};peakDetect=true' TARGET=_it_spectrum> <IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='$title'> </A>";
   }
   push @links, $link if $consensus_srcs->{IonTrap};
 
