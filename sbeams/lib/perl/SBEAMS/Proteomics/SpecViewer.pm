@@ -133,6 +133,7 @@ sub generateSpectrum {
     my $showZ    = $args{'z_ions'} || '[0,0,0]';
     my $scanNum  = $args{'scan'} || '0';
     my $fileName = $args{'name'} || '';
+    my $peakDetect = $args{'peakDetect'} || 'true';
     my $modified_sequence = $args{'modified_sequence'};
     my $precursorMz = $args{'precursor_mass'};
 
@@ -173,6 +174,7 @@ sub generateSpectrum {
 				      "showX":$showX,
 				      "showY":$showY,
 				      "showZ":$showZ,
+				      "peakDetect":$peakDetect,
 				      "variableMods":$mods,
 				      "ntermMod":$nmod,
 				      "ctermMod":$cmod,
