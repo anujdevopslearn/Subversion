@@ -1153,23 +1153,27 @@ sub modified_peptide_string {
   if ($modifications) {
     my $i = 0;
     if ($modifications->{$i}) {
-      $modified_peptide .= 'n['.int($modifications->{$i}).']';
+      #$modified_peptide .= 'n['.int($modifications->{$i}).']';
+      $modified_peptide .= 'n['. sprintf("%.0f", $modifications->{$i}) .']';
     }
 	 for ($i=1; $i<=length($peptide_sequence); $i++) {
 		 my $aa = substr($peptide_sequence,$i-1,1);
 		 if ($modifications->{$i}) {
 			if ($modifications->{$i} =~ /([\d\.]+)\((.*)/){
-				$aa .= '['.int($1).']('.$2;
+				#$aa .= '['.int($1).']('.$2;
+        $aa .= '['. sprintf("%.0f", $1) .']('.$2;
 			}elsif($modifications->{$i} =~ /^\((.*)\)$/){
 				 $aa .= "($1)";
 			}else{
-				$aa .= '['.int($modifications->{$i}).']';
+				#$aa .= '['.int($modifications->{$i}).']';
+        $aa .= '['. sprintf("%.0f", $modifications->{$i}) .']';
 			}
 		 }
 		 $modified_peptide .= $aa;
     }
     if ($modifications->{$i}) {
-      $modified_peptide .= 'c['.int($modifications->{$i}).']';
+      #$modified_peptide .= 'c['.int($modifications->{$i}).']';
+      $modified_peptide .= 'c['. sprintf("%.0f", $modifications->{$i}) .']';
     }
   } else {
     $modified_peptide = $peptide_sequence;
@@ -2681,7 +2685,6 @@ sub writePepIdentificationListFile {
     if ($spectral_library_data && $spectrast_formatted_sequence) {
       if ($spectral_library_data->{$spectrast_formatted_sequence}) {
         #print "$peptide_sequence\t$initial_probability\t$spectral_library_data->{$peptide_sequence}\n";
-
 				# This adds a 15th column, which gums up the works during the load
 				#	    $identification->[14] = $spectral_library_data->{$spectrast_formatted_sequence};
 				push @{$consensus_lib{found}}, $spectrast_formatted_sequence;
