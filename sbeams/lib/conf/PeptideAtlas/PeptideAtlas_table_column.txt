@@ -1082,3 +1082,27 @@ AT_uniprot_db_entry	2	uniprot_db_id	Uniprot DB ID	int	4	0	N		N	AT_uniprot_db	uni
 AT_uniprot_db_entry	3	entry_accession	Entry Accession	varchar	255	0	N		N			Y	text	50		Y	Y	N	Entry Accession		
 AT_uniprot_db_entry	4	entry_name	Entry Name	varchar	255	0	Y		N			N	text	50		Y	Y	N	Entry Name		
 AT_uniprot_db_entry	5	entry_offset	Entry Offset	bigint	8	0	N		N			N				Y	Y	N	File offset of Entry record		
+AT_domain_protein_list	1	protein_list_id	Protein List ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_domain_protein_list	2	Title	Title	varchar	255	0	N		N		 		text			Y	Y	Y	 		
+AT_domain_protein_list	3	Description	Description	varchar	2056	0	Y		N		 	N	textarea	5		Y	Y	N	 	 	
+AT_domain_protein_list	4	owner_contact_id	Owner Contact ID	int	4	0	N		N	contact	contact_id	N	optionlist			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+AT_domain_protein_list	2	project_id	Owner Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
+AT_domain_protein_list	9	original_file	Original File	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of list file to be uploaded via the web interface		
+AT_domain_protein_list	2	N_Proteins	Number of proteins	int	4	0	Y		N	 	 	Y	text			Y	Y	N	 	 	
+AT_domain_protein_list	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_domain_protein_list	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_domain_protein_list	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_domain_protein_list	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_domain_protein_list	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_domain_protein_list	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_domain_protein_list	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_domain_list_protein	1	list_protein_id	Domain list protein ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_domain_list_protein	1	protein_list_id	Protein List ID	int	4	0	N		N	domain_protein_list	protein_list_id					N	N				pkDEFAULT
+AT_domain_list_protein	4	original_name	Original Name	varchar	255	0	N		N	contact	contact_id	N	optionlist			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+AT_domain_list_protein	2	original_accession	Original Accession	varchar	255	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
+AT_domain_list_protein	3	uniprot_accession	UniProt Accession	varchar	255	0	Y		N		 	N	textarea	5		Y	Y	N	 	 	
+AT_domain_list_protein	4	protein_symbol	Protein Symbol	varchar	36	0	N		N	 	 	N	text			Y	Y	N	Full contact information of the annotator	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+AT_domain_list_protein	2	gene_symbol	Gene Symbol	varchar	36	0	N		N	 	 	Y	text			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
+AT_domain_list_protein	9	protein_full_name	Protein Full Name	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of list file to be uploaded via the web interface		
+AT_domain_list_protein	2	priority	Priority	int	4	0	Y		N	 	 	Y	text			Y	Y	N	 	 	
+AT_domain_list_protein	5	comment	Comment	varchar	1024	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
