@@ -216,6 +216,23 @@ sub returnTableInfo {
       END_QUERY
     }
 
+  } elsif ( uc($table_name) eq 'AT_DOMAIN_PROTEIN_LIST' ) {
+    if ($info_key eq "BASICQuery") {
+      return( <<"      END_QUERY" ); 
+     	SELECT protein_list_id, title, description, owner_contact_id, project_id, n_proteins
+      FROM $TBAT_DOMAIN_PROTEIN_LIST
+      WHERE record_status!='D'
+      END_QUERY
+    }
+
+  } elsif ( uc($table_name) eq 'AT_DOMAIN_LIST_PROTEIN' ) {
+    if ($info_key eq "BASICQuery") {
+      return( <<"      END_QUERY" ); 
+     	SELECT list_protein_id, original_name, original_accession, protein_symbol, gene_symbol, protein_full_name, priority, comment
+      FROM $TBAT_DOMAIN_LIST_PROTEIN
+      WHERE record_status!='D'
+      END_QUERY
+    }
   }
 
   #### Obtain main SBEAMS object and fall back to its TableInfo handler
