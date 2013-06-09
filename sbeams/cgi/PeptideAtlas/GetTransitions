@@ -463,9 +463,9 @@ sub print_form {
 
     my $rt_help =  "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Select type of RT value to show in results'</TD>";
 
-    unless ( $sbeams->isGuestUser() ) {
+#    unless ( $sbeams->isGuestUser() ) {
       $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Elution Time Type</B></TD>$rt_help<TD>$rt_select</INPUT></TD></TR> ~;
-    }
+#    }
     $form .= $ion_filters;
     $form .= $mod_filters;
 
@@ -1378,9 +1378,13 @@ sub fetch_transitions {
 
 
   # Code to get only pertinent headings here...
-  if ( $parameters{rt_type} && !$sbeams->isGuestUser() ) {
+  if ( $parameters{rt_type} ) {
     my $rt_heading = ( $irt ) ? 'iRT' : 'RT_Cat';
-    push @headings, $rt_heading unless $parameters{rt_type} == $ssr_type;
+    if ( $rt_heading eq 'RT_Cat' && !$sbeams->isGuestUser() ) {
+      push @headings, $rt_heading unless $parameters{rt_type} == $ssr_type;
+    } elsif ( $rt_heading eq 'iRT' ) {
+      push @headings, $rt_heading unless $parameters{rt_type} == $ssr_type;
+    }
   }
 
   if ( $has_mappings ) {
@@ -1720,7 +1724,7 @@ sub fetch_transitions {
 
 
       my  @rowdata;
-      if ( $sbeams->isGuestUser() || $parameters{rt_type} == $ssr_type ) {
+      if ( $sbeams->isGuestUser() && $parameters{rt_type} eq 'iRT' || $parameters{rt_type} == $ssr_type ) {
         @rowdata = ( $prot, @row[0..12] );
       } else {
 				if ( $build_resources->{atlas_build} ) {
