@@ -1281,8 +1281,6 @@ sub get_html_seq_vars {
   my $self = shift;
   my %args = @_;
 
-#  die Dumper( %args );
-
   my %return = ( seq_display => '',
                  clustal_display => '',
                  variant_list => [ [qw( Type Num Start End Info )] ] );
@@ -1493,7 +1491,6 @@ sub get_modres_coverage {
 sub get_snp_coverage {
   my $self = shift;
   my %args = @_;
-#  die Dumper( %args );
   my $cnt = 1;
   my %snp_cover;
   for my $item ( @{$args{swiss}->{VARIANT}} ) {
@@ -1897,7 +1894,6 @@ sub highlight_sites {
 
   my $self = shift;
   my %args = @_;
-#  die Dumper( %args ) 
 	my $coverage = $args{coverage};
   my @aa = split( '', $args{seq} );
   my $return_seq = '';
@@ -2823,6 +2819,136 @@ sub fetchBuildResources {
   }
   return \%resources;
 }
+
+sub calculate_antigenic_index {
+  my $self = shift;
+  my %args = @_;
+
+  my $seq = $args{sequence} || die "Missing required argument sequence";
+
+	$seq=~s/[^ ACDEFGHIKLMNPQRSTVWY]//g;
+	$seq=~s/ //g;
+	my $lenseq=length($seq);
+
+  my %AP;
+
+	$AP{'A'}=1.064;
+	$AP{'C'}=1.412;
+	$AP{'D'}=0.866;
+	$AP{'E'}=0.851;
+	$AP{'F'}=1.091;
+	$AP{'G'}=0.874;
+	$AP{'H'}=1.105;
+	$AP{'I'}=1.152;
+	$AP{'K'}=0.930;
+	$AP{'L'}=1.250;
+	$AP{'M'}=0.826;
+	$AP{'N'}=0.776;
+	$AP{'P'}=1.064;
+	$AP{'Q'}=1.015;
+	$AP{'R'}=0.873;
+	$AP{'S'}=1.012;
+	$AP{'T'}=0.909;
+	$AP{'V'}=1.383;
+	$AP{'W'}=0.893;
+	$AP{'Y'}=1.161;
+
+	#STEP 2
+	my $total=0;
+	for ( my $n=0;$n<$lenseq;$n++) {
+		my $char=substr($seq,$n,1);
+		$total+=$AP{$char};	
+	}
+	my $aap=$total/$lenseq;
+
+	
+  my @av;
+	#STEP 1
+	my $ymax=0;
+	my $window_width=7;
+	my $firstone=int($window_width/2)+1;
+	my $w=$firstone-1;
+  my $negw = $w * -1;
+	my $n=$firstone;
+	my $lastone=$lenseq-$firstone;
+	for (my $n=$firstone;$n<=$lastone;$n++) {
+		my $sum=0;
+		for (my $k=$negw;$k<=$w;$k++) {
+			my $thispos=$n+$k;
+			my $char=substr($seq,$thispos,1);
+			$sum+=$AP{$char};
+		}
+		$av[$n]=$sum/$window_width;
+		if($av[$n]>$ymax) { $ymax=$av[$n]; }
+	}
+
+	#STEP 3  
+  my @par;
+	if ($aap>=1.0) {
+		for (my $n=$firstone;$n<=$lastone;$n++) {
+			if ($av[$n]>1.0) {
+				$par[$n]=1;
+			} else {
+				$par[$n]=0;
+			}
+		}
+	} else {
+		for (my $n=$firstone;$n<=$lastone;$n++) {
+			if ($av[$n]>$aap) {
+				$par[$n]=1;
+			} else {
+				$par[$n]=0;
+			}
+		}			
+	}
+
+	#STEP 4
+	my $numinarow=0;
+	my $nagd=0;
+  my @agd;
+  my @agd_start;
+  my @agd_end;
+  my $first1;
+  my $lastn;
+	for (my $n=$firstone;$n<=$lastone;$n++) {
+		$agd[$n]=0;
+		if ($par[$n]==1) {
+			if($numinarow==0) {	$first1=$n;	}
+			$numinarow++;
+		} else {
+			if ($numinarow>=7) {
+				for(my $j=$first1;$j<$n;$j++) {
+					$agd[$j]=1;
+				}
+				$nagd++;
+				$agd_start[$nagd]=$first1;
+				$agd_end[$nagd]=$n-1;
+			}
+			$numinarow=0;
+		}
+    $lastn = $n;
+	}
+	if ($numinarow>=7) {
+		for(my $j=$first1;$j<$lastn;$j++) {
+			$agd[$j]=1;
+		}
+		$nagd++;
+		$agd_start[$nagd]=$first1;
+		$agd_end[$nagd]=$lastn;
+	}		
+	
+  my @antigenic_determinants;
+
+	for (my $k=1;$k<=$nagd;$k++) {
+    my $ini = $agd_start[$k] -1;
+		my $ter = $agd_end[$k] - $ini;
+		my $pep = substr($seq, $ini, $ter);
+    push @antigenic_determinants, [ $agd_start[$k], $pep, $agd_end[$k] ];
+	}
+  return \@antigenic_determinants;
+
+}
+
 
 1;
 
