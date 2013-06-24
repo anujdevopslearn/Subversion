@@ -244,6 +244,7 @@ my $module_styles =<<"  END_STYLE";
   .clear_warning_box { border: #F03 1px solid; padding: 4px; width: 80%; color: #444444 }
   .popup_help { cursor: Help; color:#444444; background-color: #E0E0E0 }
   .gaggle-data { display: none }
+  .bold_text { font-weight: bold; white-space: nowrap }
   
   /* Style info below organized by originating module
   /* Peptide Atlas */
@@ -1449,16 +1450,11 @@ sub make_toggle_section {
   unless ( $self->{_toggle_section_exists} ) {
     $self->{_toggle_section_exists}++;
     $html =<<"    END"
-    <STYLE TYPE="text/css" media="all">
-    div.visible {
-    display: inline;
-    color: #FF0000;
-    white-space: nowrap;         
-    }
-    div.hidden {
-    display: none;
-    }
-    </STYLE>
+    <style TYPE="text/css" media="all"> 
+    div.visible { display: inline; white-space: nowrap; }
+    div.hidden { display: none; }
+    </style>
+
     <SCRIPT TYPE="text/javascript">
     function make_sticky_toggle( div_name, appearance ) {
       var cookie = document.cookie;
@@ -1796,6 +1792,9 @@ sub truncateStringWithMouseover {
     $shorty .= '...' if $args{add_elipses};
   }
   my $class = ( $args{suppress_class} ) ? '' : 'CLASS=popup_help';
+  if ( $args{nowrap} ) {
+    $class = "CLASS=anno_cell";
+  }
   return qq~<SPAN $class TITLE="$string">$shorty</SPAN>~;
 }
 #+
