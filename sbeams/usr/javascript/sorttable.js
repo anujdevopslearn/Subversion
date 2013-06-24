@@ -84,11 +84,11 @@ function ts_resortTable(lnk,clid) {
     newRows.sort(sortfn);
 
     if (span.getAttribute("sortdir") == 'down') {
-        ARROW = '&nbsp;&darr;';
+        ARROW = '&nbsp;&#9663;';
         newRows.reverse();
         span.setAttribute('sortdir','up');
     } else {
-        ARROW = '&nbsp;&uarr;';
+        ARROW = '&nbsp;&#9653;';
         span.setAttribute('sortdir','down');
     }
     
