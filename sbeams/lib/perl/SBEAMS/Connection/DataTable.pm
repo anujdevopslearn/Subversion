@@ -274,6 +274,11 @@ sub asHTML {
   my $rnum = 1;
   foreach my $row ( @{$this->{__rowvals}} ) {
     my $cnum = 1;
+
+    if ( $rnum == 1 && $this->{__use_thead} ) {
+      $html .= "<THEAD>\n";
+    }
+
     $html .= $this->_getTR( $rnum );
 
     foreach my $cell ( @$row ) {
@@ -282,7 +287,13 @@ sub asHTML {
       $html .= $this->_getTD( $rnum, $cnum++ ) . "$cell</TD>\n"
     }
     $html .= "  </TR>\n";
+    if ( $rnum == 1 && $this->{__use_thead} ) {
+      $html .= "</THEAD><TBODY>\n";
+    }
     $rnum++;
+  }
+  if ( $this->{__use_thead} ) {
+    $html .= "</TBODY>\n";
   }
   $html .= "</TABLE>\n";
   return $html;
