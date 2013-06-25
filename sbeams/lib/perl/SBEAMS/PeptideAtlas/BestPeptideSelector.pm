@@ -1988,7 +1988,7 @@ sub make_sort_headings {
     my $head = shift @{$args{headings}};
     my $arrow = '';
     if ( $args{default} && $args{default} eq $head ) {
-      $arrow = '&darr;';
+      $arrow = '&#9663;';
     }
     my $title = shift @{$args{headings}};
     my $link = qq~ <DIV TITLE="$title" ONCLICK="ts_resortTable(this,'$cnt');return false;" class=sortheader>$head<span class=sortarrow>&nbsp;$arrow</span></DIV>~;
