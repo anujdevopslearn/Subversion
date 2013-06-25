@@ -177,6 +177,15 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
     $parameters{action} = 'QUERY';
     $parameters{pabst_build_id} = 12;
   }
+  if ( $parameters{default_search} ) {
+    $log->debug( "in the auto-setting mode, command-line only!"  . time());
+    $parameters{y_ions} ||= 'on';
+    $parameters{b_ions} ||= 'on';
+    $parameters{C160} ||= 'on';
+    $parameters{speclinks} ||= 'on';
+    $parameters{SwissProt} ||= 'checked';
+  }
+
 
 
   # Decide what action to take based on information so far
@@ -259,6 +268,23 @@ $(document).ready(function() {
   # SRM mode is if we want to show SRM Atlas skin, currently disabled.
   unless ( 0 && $atlas->is_srm_mode() ) {
     print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+
+    if ( my $msg = $q->cookie( 'GetTransitionsMessage' ) ) {
+      print qq~
+      <br>
+      <div class=info_box id=gt_info>$msg</div>
+      <script type="text/javascript">
+        setTimeout(function() {
+          var gt_info = document.getElementById( 'gt_info' );
+          gt_info.style.display = 'none';
+        }, 5000);
+      </script>
+      <br>
+      ~
+    }
+
+
+
     print $sbeams->getTabbedPanesDHTML();
   }
 
