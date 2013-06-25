@@ -36,7 +36,8 @@ sub run_data_export {
 
   my $synstr = 'matched_biosequence_id=biosequence_id,lab_id=organization_id,primary_contact_id=contact_id,supervisor_contact_id=contact_id,PI_contact_id=contact_id,parent_organization_id=organization_id,department_id=organization_id,group_id=organization_id';
 
-  my $cmd = "$Bin/../Core/DataExport.pl -c $expfile -o $outfile -r -q --synonym $synstr -p 0";
+  my $sql_only = ( $args->{sql_only} ) ? " --sql_only " : ''; 
+  my $cmd = "$Bin/../Core/DataExport.pl -c $expfile -o $outfile -r -q --synonym $synstr -p 0 $sql_only";
   my @result = system( "$cmd" );
 
   my $pcmd = "perl -pi -e 's/(atlas_build_id=)$args->{build_id}(&amp)/" . '${1}1${2}' . "/' $outfile";
@@ -90,7 +91,7 @@ sub printUsage {
 
 sub processArgs {
   my %args;
-  unless( GetOptions ( \%args, 'build_id:i' ) ) {
+  unless( GetOptions ( \%args, 'build_id:i', 'sql_only' ) ) {
     printUsage("Error with options, please check usage:");
   }
 
