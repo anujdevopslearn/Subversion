@@ -170,15 +170,13 @@ sub displayGuestPageHeader {
 
 
 	my $sbeams = $self->getSBEAMS();
-  my $message = $sbeams->get_page_message();
+  my $message = $sbeams->get_page_message( q => $q );
  	$current_username ||= $sbeams->getCurrent_username();
 
 	my $cswitcher = '';
 	if ( -e "$PHYSICAL_BASE_DIR/lib/perl/SBEAMS/PeptideAtlas/ContextWidget.pm" ) {
-		$log->debug( "it exists, lets use it!" );
 		require SBEAMS::PeptideAtlas::ContextWidget;
 		my $cwidget = SBEAMS::PeptideAtlas::ContextWidget->new();
-		$log->debug( "got a new one" );
 		$cswitcher = $cwidget->getContextSwitcher( username => $current_username,
 		                                           cookie_path => $HTML_BASE_DIR );
 
@@ -268,7 +266,7 @@ sub displayStandardPageHeader {
   my $sbeams = $self->getSBEAMS();
   my $http_header = $sbeams->get_http_header();
 
-  my $message = $sbeams->get_page_message();
+  my $message = $sbeams->get_page_message( q => $q );
 
   my $doctype = '<!DOCTYPE HTML>' . "\n";
   $doctype = '' unless $args{show_doctype}; 
@@ -645,7 +643,7 @@ sub encodeSectionTable {
       ~;
       $self->{_included_sortable}++;
     }
-    $class_def = 'PA_sort_table';
+    $class_def = $args{class} || 'PA_sort_table';
   }
 
   my @table_attrs = ( 'BORDER' => 0, );
