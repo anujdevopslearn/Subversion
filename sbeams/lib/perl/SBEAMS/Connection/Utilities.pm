@@ -22,7 +22,7 @@ use POSIX;
 
 use SBEAMS::Connection::Log;
 use SBEAMS::Connection::Settings qw( $DBADMIN $PHYSICAL_BASE_DIR );
-use vars qw(@ERRORS);
+use vars qw( $q @ERRORS);
 my $log = SBEAMS::Connection::Log->new();
 
 ###############################################################################
@@ -816,6 +816,11 @@ sub get_page_message {
                 Info => $args{info_color} || 'green' );
 
   my $sbeams_msg = $this->getSessionAttribute( key => '_SBEAMS_message' );
+
+  if ( !$sbeams_msg && $args{q} ) {
+    $sbeams_msg = $args{q}->cookie( '__SBEAMS_message' );
+  }
+
   return '' unless $sbeams_msg;
   $sbeams_msg =~ /(\w+)(::)/;
   my $mode = $1;
