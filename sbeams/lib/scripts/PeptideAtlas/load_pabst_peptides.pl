@@ -303,11 +303,24 @@ sub segregate_file {
     next if !$cnt++ && $args{header};
     my @line = split( /\t/, $line );
 
-    $line[$args{index}] =~ /^(\w).*$/;
+    $line[$args{'index'}] =~ /^(\w).*$/;
     my $key = $1;
 
     if ( !defined $fh{$key} ) {
       my $sequence = $line[$args{index}];
+
+      if  ( $args->{mod_reject} ) {
+        my ( $seq, $chg ) = split( /\//, $sequence );
+        my @mods = $seq =~ /(\d+)/g;
+        for my $mod ( @mods ) {
+          if ( $mod != 160 ) {
+            print STDERR "REJECT peptide $seq due to mods\n";
+            $stats{mod_reject}++;
+            next;
+          }
+        }
+      }
+
       $sequence =~ s/^n\[\d+\]//;
       $sequence =~ s/\[\d+\]//g;
       $sequence =~ s/\r//;
@@ -1129,7 +1142,7 @@ sub process_args {
               'verbose', 'testonly', 'biosequence_set_id=i', 'name=s',
               'load', 'output_file=s', 'project_id=i', 'organism=i',
               'mapping_build:i', 'delete', 'build_id=i', 'specified_only',
-              'show_builds', 'nobs_build=i', 'use_intensities', 'quash_bulk' );
+              'show_builds', 'nobs_build=i', 'use_intensities', 'quash_bulk', 'mod_reject' );
 
   my $missing;
   $args{bulk_update} = ( $args{quash_bulk} ) ? 0 : 1;
