@@ -352,7 +352,6 @@ sub doesSBEAMSTempFileExist {
 	my $tmp_path = "$PHYSICAL_BASE_DIR/tmp/" . $args{dirname};
 	$tmp_path .= '/' . $args{filename} if $args{filename};
 
-	$log->info( "Checking on $tmp_path" );
 	if ( -e $tmp_path ) {
 		return $tmp_path;
 	} else {
