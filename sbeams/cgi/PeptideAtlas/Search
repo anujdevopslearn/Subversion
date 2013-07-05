@@ -1035,7 +1035,7 @@ sub displayTable{
 						 if(length($search_key) > 80){
 							 if(length($2) > 80){
 								 if($1){$pre_str = '...';}
-								 if($2){$aft_str = '...';}
+								 if($3){$aft_str = '...';}
 							 }
 							 else{   
 								 my $len = int((80 - length($2))/2);
@@ -1057,8 +1057,8 @@ sub displayTable{
 							 $search_key =~ /(.*)$search_key_str(.*)/i;
 							 #if($1 ne ''){ $str1 = qq~<font style="BACKGROUND-COLOR: FFFF99">$1</font>~;}
 							 #if($2 ne ''){ $str2 = qq~<font style="BACKGROUND-COLOR: FFFF99">$2</font>~;}
-               if($1 ne ''){ $str1 = $1; }
-               if($2 ne ''){ $str1 = $2;}
+               if($1){ $str1 = $1;}
+               if($2){ $str2 = $2;}
 						 }
 
 						 foreach (@searchKeys){
