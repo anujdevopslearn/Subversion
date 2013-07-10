@@ -63,6 +63,9 @@ sub countPepsInProt
   my $aa = "";
   my $Nterm_aa_is_in_pepseq = 0;
 
+  # chop off anything after any asterisk. (PAB appended peptides July 2013)
+  $seq =~ s/\*.*//;
+
   # process sequence from C-term to N-term (backwards)
   while ($seq || $Nterm_aa_is_in_pepseq ) {
     $aa = uc(chop($seq)) if (!$Nterm_aa_is_in_pepseq);
@@ -195,7 +198,20 @@ sub get_estimated_abundance {
   my $norm_PSMs_per_100K = 0;
   $norm_PSMs_per_100K = ($adjusted_PSM_count / $total_PSMs) *
 	100000 if $total_PSMs;
-  my $formatted_norm_PSMs_per_100K = sprintf("%.3f", $norm_PSMs_per_100K);
+
+  my $format;
+  if ($norm_PSMs_per_100K >= 0.001) {
+    $format = "%.3f";
+  } elsif ($norm_PSMs_per_100K >= 0.0001) {
+    $format = "%.4f";
+  } elsif ($norm_PSMs_per_100K >= 0.00001) {
+    $format = "%.5f";
+  } elsif ($norm_PSMs_per_100K >= 0.000001) {
+    $format = "%.6f";
+  } else {         # $norm_PSMs_per_100K is zero or < 0.000001
+    $format = "%.3f";
+  }
+  my $formatted_norm_PSMs_per_100K = sprintf($format, $norm_PSMs_per_100K);
   $formatted_norm_PSMs_per_100K = "" if ($norm_PSMs_per_100K == 0);
 
   my $formatted_estimated_ng_per_ml = "";
@@ -214,6 +230,7 @@ sub get_estimated_abundance {
 
     ### Schulz/Schirmer in table 1-1 say 108.7 is the weighted mean aa wt.
     ### A bit kludgey, but this whole abundance estimation is kludgey.
+    $sequence =~ s/\*.*//;   # remove anything after any asterisk  July 2013
     my $protMW = length($sequence) * 108.7;
     ### If we couldn't get the seq somehow, set protMW to an avg. value
     if ( $protMW == 0 ) {
