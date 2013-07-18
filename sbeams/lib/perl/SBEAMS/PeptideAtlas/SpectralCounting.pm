@@ -200,15 +200,15 @@ sub get_estimated_abundance {
 	100000 if $total_PSMs;
 
   my $format;
-  if ($norm_PSMs_per_100K >= 0.001) {
+  if ($norm_PSMs_per_100K >= 0.003) {
     $format = "%.3f";
-  } elsif ($norm_PSMs_per_100K >= 0.0001) {
+  } elsif ($norm_PSMs_per_100K >= 0.0003) {
     $format = "%.4f";
-  } elsif ($norm_PSMs_per_100K >= 0.00001) {
+  } elsif ($norm_PSMs_per_100K >= 0.00003) {
     $format = "%.5f";
-  } elsif ($norm_PSMs_per_100K >= 0.000001) {
+  } elsif ($norm_PSMs_per_100K >= 0.000003) {
     $format = "%.6f";
-  } else {         # $norm_PSMs_per_100K is zero or < 0.000001
+  } else {         # $norm_PSMs_per_100K is zero or < 0.000003
     $format = "%.3f";
   }
   my $formatted_norm_PSMs_per_100K = sprintf($format, $norm_PSMs_per_100K);
