@@ -2759,6 +2759,12 @@ sub writePepIdentificationListFile {
     foreach my $identification ( @sorted_prob_array ) {
       $counter++;
       $probability = $identification->[0];
+      ## 2013-07-19 
+      ## force prob_cutoff >= 0.9
+      if( $probability < 0.9){
+        $fdr = 1 - ($prob_sum /($counter -1));
+        $prob_cutoff = $last_probability;
+      } 
       # If we exceed the FDR threshold, note the probability of the
       # last PSM. Then let in any additional PSMs with exact same
       # probability.
@@ -2777,7 +2783,7 @@ sub writePepIdentificationListFile {
                  " prob %0.10f, protein %s, FDR %0.10f\n",
               $counter-1, $prob_cutoff, $last_protid, $fdr);
 					# truncate the list after the previous entry
-					$#sorted_prob_array = $counter-1;
+					$#sorted_prob_array = $counter-2;
 					last;
         }
       }
