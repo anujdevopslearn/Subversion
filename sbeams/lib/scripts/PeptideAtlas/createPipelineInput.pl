@@ -368,7 +368,7 @@ print "WARNING: No protein identifier patterns found ".
       "for organism $effective_organism_id! ".
       "Human protein identifier preferences will be utilized.\n";
 } else {
-  print "%n_patterns protid patterns read.\n";
+  print "$n_patterns protid patterns read.\n";
 }
 
 
@@ -1928,80 +1928,83 @@ sub main {
 	  # Find one such subset
 
 	  my @canonical_set = ($prot_group_rep);
-	  my $done = 0;
-	  my $found_canonical;
-	  while (! $done ) {
-	    $found_canonical = 0;
-            # sort remaining proteins by probability so we will favor
-            # high prob proteins for canonicals
-            sub protids_by_decreasing_probability {
-              my $a_info = get_protinfo_href ($a);
-              my $b_info = get_protinfo_href ($b);
-              - ( $a_info->{probability} <=> $b_info->{probability} );
-            }
 
-	    @remaining_proteins =
-	       (sort protids_by_decreasing_probability @remaining_proteins);
-
-	    for my $prot (@remaining_proteins) {
-              # if this prot is independent from all canonicals in set
-              # so far, add it to the set.
-	      if (is_independent_from_set($prot, \@canonical_set,
-		       $proteins_href)) {
-		push (@canonical_set, $prot);
-		my $found = remove_string_from_array($prot, \@remaining_proteins);
-		if (! $found) {
-		  print "BUG: $prot_group_rep not found in @protein_list\n";
-		}
-		$found_canonical = 1;
-		last;
-              # if this prot has the same peps as a canonical in the
-              # set, but has a better prob or ntt, swap it in.
-	      } else {
-
-		sub prot1_is_better_than_prot2 {
-                  my $prot1 = shift;
-                  my $prot2 = shift;
-                  my $protinfo1 = get_protinfo_href ($prot1);
-                  my $protinfo2 = get_protinfo_href ($prot2);
-		  return
-      ( SBEAMS::PeptideAtlas::ProtInfo::more_likely_protein_identification(
-			preferred_patterns_aref=>$preferred_patterns_aref,
-			swiss_prot_href => $swiss_prot_href,
-			protid1=>$prot1,
-			protid2=>$prot2,
-			prob1=>$protinfo1->{probability},
-			prob2=>$protinfo2->{probability},
-			npeps1=>$protinfo1->{npeps},
-			npeps2=>$protinfo2->{npeps},
-			nobs1=>$protinfo1->{PSM_count},
-			nobs2=>$protinfo2->{PSM_count},
-			enz_termini1=>$protinfo1->{total_enzymatic_termini},
-			enz_termini2=>$protinfo2->{total_enzymatic_termini},
-		      ) eq $prot1 );
-		};
-
-                sub replace_in_list {
-                  my $prot1 = shift; # we want this in the list
-                  my $prot2 = shift; # we want to remove this from list
-                  my $list_aref = shift;
-                  remove_string_from_array ( $prot2, $list_aref );
-                  push  (@{$list_aref}, $prot1);
-                }
-                for my $prot2 (@canonical_set) {
-                  if ( same_pep_set($prot, $prot2) ) {
-                    if ( prot1_is_better_than_prot2($prot, $prot2) ) {
-                      replace_in_list($prot, $prot2, \@canonical_set);
-                      # add the one being replaced back into the list
-		      remove_string_from_array ( $prot, \@remaining_proteins );
-                      push ( @remaining_proteins, $prot2 );
-                    }
-                  }
-                }
-              }
-	    }
-	    $done = ! $found_canonical;
+	  # Sort remaining proteins by probability so we will favor
+	  # high prob proteins for canonicals
+	  sub protids_by_decreasing_probability {
+	    my $a_info = get_protinfo_href ($a);
+	    my $b_info = get_protinfo_href ($b);
+	    - ( $a_info->{probability} <=> $b_info->{probability} );
 	  }
+
+	  @remaining_proteins =
+	     (sort protids_by_decreasing_probability @remaining_proteins);
+
+	  my @remaining_proteins_copy = @remaining_proteins;
+
+	  # Find canonicals and remove from list
+	  for my $prot (@remaining_proteins_copy) {
+	    # if this prot is independent from all canonicals in set
+	    # so far, add it to the set.
+	    if (is_independent_from_set($prot, \@canonical_set,
+		     $proteins_href)) {
+	      push (@canonical_set, $prot);
+	      my $found = remove_string_from_array($prot, \@remaining_proteins);
+	      if (! $found) {
+		print "BUG: $prot not found in @remaining_proteins\n";
+	      }
+	    }
+	  }
+
+	  @remaining_proteins_copy = @remaining_proteins;
+
+	  # For each non-canonical, check to see whether it has same peptide
+	  # set to any canonical, but better ntt or probability.
+	  # If so, swap in.
+	  for my $prot (@remaining_proteins_copy) {
+
+	    sub prot1_is_better_than_prot2 {
+	      my $prot1 = shift;
+	      my $prot2 = shift;
+	      my $protinfo1 = get_protinfo_href ($prot1);
+	      my $protinfo2 = get_protinfo_href ($prot2);
+	      return
+	      ( SBEAMS::PeptideAtlas::ProtInfo::more_likely_protein_identification(
+		  preferred_patterns_aref=>$preferred_patterns_aref,
+		  swiss_prot_href => $swiss_prot_href,
+		  protid1=>$prot1,
+		  protid2=>$prot2,
+		  prob1=>$protinfo1->{probability},
+		  prob2=>$protinfo2->{probability},
+		  npeps1=>$protinfo1->{npeps},
+		  npeps2=>$protinfo2->{npeps},
+		  nobs1=>$protinfo1->{PSM_count},
+		  nobs2=>$protinfo2->{PSM_count},
+		  enz_termini1=>$protinfo1->{total_enzymatic_termini},
+		  enz_termini2=>$protinfo2->{total_enzymatic_termini},
+		) eq $prot1 );
+	    };
+
+	    sub replace_in_list {
+	      my $prot1 = shift; # we want this in the list
+	      my $prot2 = shift; # we want to remove this from list
+	      my $list_aref = shift;
+	      remove_string_from_array ( $prot2, $list_aref );
+	      push  (@{$list_aref}, $prot1);
+	    }
+
+	    for my $prot2 (@canonical_set) {
+	      if ( same_pep_set($prot, $prot2) ) {
+		if ( prot1_is_better_than_prot2($prot, $prot2) ) {
+		  replace_in_list($prot, $prot2, \@canonical_set);
+		  # add the one being replaced back into the list
+		  remove_string_from_array ( $prot, \@remaining_proteins );
+		  push ( @remaining_proteins, $prot2 );
+		}
+	      }
+	    }
+	  }
+
 	  my $n_canonicals = scalar(@canonical_set);
 	  my $n_others = scalar(@remaining_proteins);
 	  if (0 && $n_canonicals > 2) {
@@ -2759,12 +2762,14 @@ sub writePepIdentificationListFile {
     foreach my $identification ( @sorted_prob_array ) {
       $counter++;
       $probability = $identification->[0];
-      ## 2013-07-19 
+
+      ## 2013-07-19
       ## force prob_cutoff >= 0.9
       if( $probability < 0.9){
         $fdr = 1 - ($prob_sum /($counter -1));
         $prob_cutoff = $last_probability;
-      } 
+      }
+
       # If we exceed the FDR threshold, note the probability of the
       # last PSM. Then let in any additional PSMs with exact same
       # probability.
@@ -2783,7 +2788,7 @@ sub writePepIdentificationListFile {
                  " prob %0.10f, protein %s, FDR %0.10f\n",
               $counter-1, $prob_cutoff, $last_protid, $fdr);
 					# truncate the list after the previous entry
-					$#sorted_prob_array = $counter-2;
+					$#sorted_prob_array = $counter-1;
 					last;
         }
       }
