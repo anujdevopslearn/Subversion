@@ -1044,10 +1044,10 @@ sub filter_swiss_prot {
 
 ###############################################################################
 # get_swiss_prot_hash
-#   Return a hash of Swiss-Prot identifiers for a given biosequence set.
+#   Return a hash of Swiss-Prot identifiers for a given biosequence set,
+#    including any varsplic idents in the set.
 #   Assumes the dbxref_id field for Swiss-Prot biosequences has been set to 1
 #   (for some builds, it's set to the value for Uniprot, which is 35)
-#   Not used (yet), but could be called from createPipelineInfo.pl TMF April '13
 ###############################################################################
 sub get_swiss_prot_hash {
   my $self = shift;
@@ -1090,6 +1090,100 @@ sub get_swiss_prot_hash {
 }
 
 ###############################################################################
+# get_swiss_idents_in_build
+#   Returns a hash of Swiss-Prot identifiers seen in an atlas build at
+#   any presence level.
+###############################################################################
+sub get_swiss_idents_in_build {
+  my $self = shift;
+  my %args = @_;
+  my $atlas_build_id = $args{atlas_build_id} || die
+      "get_swiss_idents_in_build: need atlas_build_id";
+  my $canonical = $args{canonical};
+
+  my $swiss_prot_href = $self->get_swiss_prot_hash(
+    atlas_build_id => $atlas_build_id,
+  );
+  my $all_idents_in_build_href = $self->get_all_idents_in_build(
+    atlas_build_id => $atlas_build_id,
+  );
+  my $swiss_idents_in_build_href = ();
+  for my $ident (keys %{$all_idents_in_build_href}) {
+    $swiss_idents_in_build_href->{$ident} = 1
+      if defined $swiss_prot_href->{$ident};
+  }
+  
+  if ($canonical) {
+    my %canonical_idents;
+    for my $ident (keys %{$swiss_idents_in_build_href}) {
+      my $canonical = substr($ident, 0, 6);
+      $canonical_idents{$canonical} = 1;
+    }
+    $swiss_idents_in_build_href = \%canonical_idents;
+  }
+
+  return $swiss_idents_in_build_href;
+}
+
+###############################################################################
+# get_all_idents_in_build
+#   Returns a hash of all protein identifiers seen in an atlas build at
+#   any presence level.  Also called the exhaustive list.
+###############################################################################
+sub get_all_idents_in_build {
+  my $self = shift;
+  my %args = @_;
+  my $atlas_build_id = $args{atlas_build_id} ||
+      "get_all_idents_in_build: need atlas_build_id";
+
+  # Get all idents with presence level (canonical, possibly_distinguished, etc.)
+  my $sql = qq~
+    select bs.biosequence_name
+    from $TBAT_BIOSEQUENCE bs
+    join $TBAT_PROTEIN_IDENTIFICATION pi
+    on pi.biosequence_id = bs.biosequence_id
+    where pi.atlas_build_id = $atlas_build_id;
+  ~;
+  my @idents = $sbeams->selectOneColumn($sql);
+
+  # Get all idents that are indistinguishable or identical
+  $sql = qq~
+    select bs.biosequence_name
+    from $TBAT_BIOSEQUENCE bs
+    join $TBAT_BIOSEQUENCE_RELATIONSHIP br
+    on br.related_biosequence_id = bs.biosequence_id
+    where br.atlas_build_id = $atlas_build_id;
+  ~;
+  my @related_idents = $sbeams->selectOneColumn($sql);
+#--------------------------------------------------
+#   my %all_idents_in_build_test = map {$_ => 1 } @related_idents;
+#   my $n_idents = scalar keys %all_idents_in_build_test;
+#   print STDERR "$n_idents idents in related_idents\n";
+#   print STDERR "A6NC86 is in hash\n" if $all_idents_in_build_test{'A6NC86'};
+#   print STDERR "A8MXU9 is in hash\n" if $all_idents_in_build_test{'A8MXU9'};
+#   print STDERR "P43487 is in hash\n" if $all_idents_in_build_test{'P43487'};
+#   print STDERR "A0A5B9 is in hash\n" if $all_idents_in_build_test{'A0A5B9'};
+#-------------------------------------------------- 
+
+  @idents = (@idents, @related_idents);
+  my $n_idents = scalar @idents;
+  print STDERR "$n_idents ident in combined idents, related_idents\n";
+  my %all_idents_in_build = map {$_ => 1 } @idents;
+#--------------------------------------------------
+#   my $n_idents = scalar keys %all_idents_in_build;
+#   print STDERR "$n_idents ident in nonredundant hash\n";
+#   print STDERR "A6NC86 is in hash\n" if $all_idents_in_build{'A6NC86'};
+#   print STDERR "A8MXU9 is in hash\n" if $all_idents_in_build{'A8MXU9'};
+#   print STDERR "P43487 is in hash\n" if $all_idents_in_build{'P12314'};
+#   print STDERR "A0A5B9 is in hash\n" if $all_idents_in_build{'A0A5B9'};
+#-------------------------------------------------- 
+
+
+  return \%all_idents_in_build;
+
+}
+
+
 =head1 BUGS
 
 Please send bug reports to SBEAMS-devel@lists.sourceforge.net
