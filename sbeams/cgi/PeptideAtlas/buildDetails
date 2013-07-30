@@ -48,6 +48,7 @@ my $show_image = 0;
 
 { # Main 
 
+	my $t0 = time;
     # Authenticate or exit
     my $username = $sbeams->Authenticate( permitted_work_groups_ref => 
                                                       ['PeptideAtlas_user',
@@ -125,14 +126,19 @@ my $show_image = 0;
     # Add graphic
 
 		if ( $show_image ) {
-      $page = get_build_plots ( $build_id, $chart_div ); 
-	  	print $page;
+      my $plots = $page = get_build_plots ( $build_id, $chart_div ); 
+	  	print $plots;
 		}
-    if($build_id != 277 and $build_id != 278){
-      $page = getSampleMapDisplay ( %{$params}, build_id => $build_id );
-  		print $page;
+    
+    if ( 1 ) {
+      my $map_display = getSampleMapDisplay ( %{$params}, build_id => $build_id );
+    	print $map_display;
     }
 		$atlas->display_page_footer();
+    
+	my $tx = time;
+  my $td = $tx - $t0;
+  $log->debug("No SQL, time is $td for the whole page\n");
 
 } # end main
 
@@ -374,7 +380,9 @@ sub get_build_plots {
     return $table;
   }
 
-# Dave Campbell's dynamically drawn experiment contribution plot
+  return $table if ( -e "$cp_img_path/${build_id}_$gif_filename" );
+
+#  dynamically drawn experiment contribution plot
 #		<DIV ALIGN=center><H3>Experiment Contribution Plot</H3></DIV>
 #  <TR $tr><TD><IMG SRC=buildPlot?atlas_build_id=$build_id></IMG></TD></TR>
 #    $chart_div
@@ -412,7 +420,7 @@ sub getSampleMapDisplay {
   
   my $html = '';
   
-	my $top = ( $args{show_all_prots} ) ? 20000 : 250;
+	my $top = ( $args{show_all_prots} ) ? 20000 : 200;
   my $prot_sql = qq~
 	SELECT TOP $top matched_biosequence_id, CAST(biosequence_seq AS VARCHAR(2000)) seq, biosequence_name
   FROM  $TBAT_PEPTIDE_INSTANCE PI 
@@ -426,6 +434,7 @@ sub getSampleMapDisplay {
   my @prots = $sbeams->selectSeveralColumns($prot_sql);
 	my $t2 = time;
 	my $td = $t2 - $t1;
+  $log->debug( "Top 200 proteins SQL: $td" );
 	my @ordered_prots;
 	my %seen_sequences;
   my @bioseq_ids;
@@ -437,7 +446,7 @@ sub getSampleMapDisplay {
 		$cntr++;
 		push @ordered_prots, $row->[2];
 		push @bioseq_ids, $row->[0];
-		last if scalar( @ordered_prots ) >= 100 && !$args{show_all_prots};
+		last if scalar( @ordered_prots ) >= 25 && !$args{show_all_prots};
 		$cntr++;
 	}
   my $bioseq_ids = join( ',', @bioseq_ids );
@@ -464,6 +473,7 @@ sub getSampleMapDisplay {
   my @samples = $sbeams->selectSeveralColumns($sql);
 	my $t2 = time;
 	my $td = $t2 - $t1;
+  $log->debug( "Sum observations SQL: $td" );
   
   my %samples;
   my %proteins;
@@ -760,6 +770,7 @@ sub get_sample_info {
   my @sample_info = $sbeams->selectSeveralColumns ( $sql );
 	my $t2 = time;
 	my $td = $t2 - $t1;
+  $log->debug( "build table SQL: $td" );
 
   # Massage/format some of the columns in the sample info just retrieved
   my @samples;
