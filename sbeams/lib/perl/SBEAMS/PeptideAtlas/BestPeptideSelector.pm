@@ -911,6 +911,7 @@ sub get_pabst_scoring_defs {
                    nM => ' N-terminal Methionine',
                    Xc => ' Any C-terminal peptide',
                    nX => ' Any N-terminal peptide',
+                  bAA => ' Any non-standard amino acid (BJOUXZ)',
 
                    BA => ' More than 4 basic (protonatable) sites: H, K, R, n-term',
                    EC2 => ' More than 2 basic (protonatable) sites: H, K, R, n-term, each addional charge is penalized more strongly',
@@ -975,6 +976,7 @@ sub get_default_pabst_scoring {
                max_l => 25,
                max_p => 0.2,
                ssr_p => 0.5,
+                 bAA => 0,
                 );
 
 	if ( !$args{show_defs} ) {
@@ -3085,6 +3087,11 @@ sub pabst_evaluate_peptides {
          my $safe_seq = $seq;
          my $cnt = $safe_seq =~ tr/FILVWM/FILVWM/;
          if ( $cnt && $cnt/length($seq) > 0.75 ) {
+           $scr *= $pen_defs{$k};
+           push @pen_codes, $k;
+         }
+      } elsif( $k eq 'bAA' && $is_penalized{$k} ) {
+         if ( $seq !~ /^[ACDEFGHIKLMNPQRSTVWY]+$/ ) {
            $scr *= $pen_defs{$k};
            push @pen_codes, $k;
          }
