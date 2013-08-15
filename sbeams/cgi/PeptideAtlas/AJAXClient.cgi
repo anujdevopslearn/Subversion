@@ -65,6 +65,8 @@ sub main
                                                         );
   print $sbeams->get_http_header();
   print process_query();
+  $log->error( "got here" );
+  $log->error( Dumper( \%params ) );
 
 } # end main
 
@@ -77,6 +79,8 @@ sub process_query {
     return GetTransitions_ElutionTimeSelect();
   } elsif ( $params{source} eq 'GetTransitions_NamespaceFilters' ) {
     return GetTransitions_NamespaceFilters();
+  } elsif ( $params{source} eq 'SEL_Transitions_Run_Select' ) {
+    return SEL_Transitions_Run_Select();
   } else {
     return $params{source};
   }
@@ -85,6 +89,7 @@ sub process_query {
 sub GetTransitions_SourceSelect {
 
   my @select;
+  $log->error( Dumper( %params ) );
 
   if ( $params{pabst_build_id} && $params{pabst_build_id} =~ /^\d+$/ ) {
 
@@ -208,4 +213,43 @@ sub GetTransitions_ElutionTimeSelect {
   $log->debug( $json_text );
   return $json_text;
 }
+
+
+sub SEL_Transitions_Run_Select {
+
+  my $div_text = { optionValue=>'', optionText => '&nbsp;' x 20 };
+  my @select;
+  $log->error( $div_text );
+  my $json_text;
+
+  my $runs;
+  if ( $params{'sel_run_id[]'} && $params{'sel_run_id[]'} =~ /^\d+/ ) {
+    for my $run ( split( /,/, $params{'sel_run_id[]'} )) {
+      $run =~ s/\s//g;
+      $runs->{$run}++;
+    }
+  }
+
+  if ( $params{'sel_experiment_id[]'} && $params{'sel_experiment_id[]'} =~ /^\d+/ ) {
+
+  my $sql = qq~
+  SELECT DISTINCT SEL_run_id, spectrum_filename
+    FROM $TBAT_SEL_RUN 
+    WHERE SEL_experiment_id IN ( $params{'sel_experiment_id[]'} )
+    ORDER BY spectrum_filename ASC
+    ~;
+    
+    my $sth = $sbeams->get_statement_handle( $sql );
+    while ( my @row = $sth->fetchrow_array() ) {
+      my $selected = ( $runs->{$row[0]} ) ? ' selected ' : '';
+      push @select, { optionValue => $row[0], optionText => $row[1], optionSelected => $selected };
+    }
+
+  } else {
+      push @select, $div_text;
+  }
+  $json_text = $json->encode( \@select );
+  return $json_text;
+}
+__DATA__
 
