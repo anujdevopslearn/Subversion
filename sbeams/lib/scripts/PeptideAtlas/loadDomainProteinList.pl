@@ -40,7 +40,8 @@ $PROG_NAME = basename( $0 );
 
 ## Process options
 GetOptions( \%opts,"verbose:s","quiet","debug:s","testonly", 'list_file:s', 
-            'domain_list_id:i', 'help' ) || usage( "Error processing options" );
+            'domain_list_id:i', 'help', 'force' ) 
+            || usage( "Error processing options" );
 
 $VERBOSE = $opts{"verbose"} || 0;
 $QUIET = $opts{"quiet"} || 0;
@@ -85,11 +86,42 @@ sub main {
   #### Do the SBEAMS authentication and exit if a username is not returned
   $current_username = $sbeams->Authenticate( work_group=>'PeptideAtlas_admin' ) || exit;
 
+  if ( $opts{domain_list_id} ) {
+    check_list( $opts{domain_list_id} );
+
+  } else {
+    die "Must provide domain_list_id\n";
+  }
+
   print "Fill table\n";
   fillTable(  );
   return;
 
 } # end main
+
+sub check_list {
+  my $list_id = shift;
+
+  my $sql = "SELECT COUNT(*) FROM $TBAT_DOMAIN_PROTEIN_LIST WHERE protein_list_id = $list_id";
+  my $result = $sbeams->selectrow_arrayref( $sql );
+  if ( $result->[0] ) {
+    my $sql = "SELECT COUNT(*) FROM $TBAT_DOMAIN_LIST_PROTEIN WHERE protein_list_id = $list_id";
+    my $result = $sbeams->selectrow_arrayref( $sql );
+    if ( $result->[0] ) {
+      if ( !$opts{force} ) {
+        usage( "This domain protein list already has data, use --force option to purge and load new records" );
+      } else {
+        $sbeams->do( "DELETE FROM $TBAT_DOMAIN_LIST_PROTEIN WHERE protein_list_id = $list_id" );
+        return 1;
+      }
+    } else {
+      return 1;
+    }
+  } else {
+    usage( "You must first load the list data via the ManageTable interface" );
+  }
+
+}
 
 
 ###############################################################################
@@ -135,6 +167,13 @@ sub fillTable{
 
     for my $id ( keys( %valid ) ) {
       $rowdata{$id} = '' if !defined $rowdata{$id};
+      if ( $id eq 'protein_full_name' && length( $rowdata{$id} ) > 255 ) {
+        $rowdata{$id} = substr( $rowdata{$id}, 0, 255 );
+      }
+    }
+    if ( !$rowdata{uniprot_accession} ) {
+      print STDERR "Skipping $line, no uniprot accession\n";
+      next;
     }
 
     $sbeams->updateOrInsertRow( insert => 1,
@@ -150,28 +189,29 @@ sub fillTable{
 
 sub usage {
   my $msg = shift || '';
+#'list_file:s', 'domain_list_id:i', 'help', 'force' ) || usage( "Error processing options" );
+
   print <<"  EOU";
+
   $msg
 
 
   Usage: $PROG_NAME [opts]
   Options:
+
+    --list_file            Name of file 
+    --domain_list_id       ID of domain_list, already added via ManageTable (numeric);                  
+
     --verbose n            Set verbosity level.  default is 0
     --quiet                Set flag to print nothing at all except errors
     --debug n              Set debug flag
     --testonly             If set, rows in the database are not changed or added
     --help                 print this usage and exit.
-    --input_file           Name of file 
-    --instrument_name           QTOF,QQQ,QTrap5500,QTrap4000,TSQ,IonTrap                  
-    --elution_time_type    RT_catalog Chipcube, RT_catalog QTrap5500, RT_calc, SSRCalc
 
-   e.g.: $PROG_NAME --list
-         $PROG_NAME --input_file 'QT55_allTHR_noGRAD_MAXRT3600_CHROMS.rtcat' --instrument_name 'QTrap5500' \
-                     --elution_time_type 'RT_catalog QTrap5500'
+   e.g.: $PROG_NAME --list listfile --domain domain_id
+
   EOU
   exit;
 }
 
 __DATA__
-Peptide  Median  SIQR  Mean  Stdev  Min  N
-ADRPFWICLTGFTTDSPLYEECVR        2457.81 3.304   2457.85 5.19127 2451.3  5
