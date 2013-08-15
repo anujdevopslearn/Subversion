@@ -21,7 +21,7 @@ use strict;
 #our @EXPORT_OK = qw();
 use LWP::UserAgent;
 use SOAP::Lite;
-    use Data::Dumper;
+use Data::Dumper;
 
 use lib "../..";
 #use vars qw( @EXPORT_OK $PHYSICAL_BASE_DIR );
@@ -623,7 +623,7 @@ sub getColoredPathway {
 
   my @path = split( /\//, $path );
   my $file = pop( @path );
-  my $colored_file = 'PA_' . $args{atlas_build_id} . '_' . $file;
+  my $colored_file = 'PA_' . $args{atl_as_build_id} . '_' . $file;
   my $colored_path = join( '/', @path ) . "/$colored_file";
 
   if ( -e $colored_path ) {
@@ -677,8 +677,8 @@ sub color_pathway {
   $self->{_entries_obs} = \%entries;
 
   my $idx = 0;
-  my $seen_cmd = "convert $PHYSICAL_BASE_DIR/$args{path} -strokewidth 0 -fill 'rgba(152,251,152,0.50)' -draw ";
-  my $unseen_cmd = "convert $PHYSICAL_BASE_DIR/$args{path}.tmp -strokewidth 0 -fill 'rgba(255,255,0,0.50)' -draw ";
+  my $seen_cmd = "convert $PHYSICAL_BASE_DIR/$args{path} -strokewidth 0 -fill 'rgba(152,251,152,0.60)' -draw ";
+  my $unseen_cmd = "convert $PHYSICAL_BASE_DIR/$args{path}.tmp -strokewidth 0 -fill 'rgba(255,255,0,0.60)' -draw ";
 
   my $seen_sep = '';
   my $unseen_sep = '';
@@ -1097,6 +1097,7 @@ sub translateKeggAccessions {
 # Abstracts conversion of KEGG API from SOAP to REST
 {
 package Service;
+use SBEAMS::Connection qw( $log );
 use SBEAMS::Connection::Settings;
 use Data::Dumper;
 use File::Copy qw( copy move );
@@ -1169,6 +1170,7 @@ sub get_pathway_image {
   }
 
   my $image_path = "/tmp/images/kegg/$org/$short_path.png";
+  my $new_image_path = "/tmp/images/kegg/$org/$short_path" . "_new.png";
 
   if ( -e "$PHYSICAL_BASE_DIR/$image_path" ) {  #short circuit if image is already there.
     return $image_path; 
@@ -1177,19 +1179,28 @@ sub get_pathway_image {
     open( IMAGE, ">$PHYSICAL_BASE_DIR/$image_path" );
     print IMAGE $img;
     close IMAGE;
+  # The images from KEGG have green color, the following steps remove it, and
+  # rely on having imageMagick 'convert' function available.
+    system( 'convert ' . "$PHYSICAL_BASE_DIR/$image_path" . ' -channel alpha -fill white -transparent rgb\(191,255,191\) ' . "$PHYSICAL_BASE_DIR/$new_image_path" );
+    system( " mv $PHYSICAL_BASE_DIR/$new_image_path $PHYSICAL_BASE_DIR/$image_path" );
     return $image_path; 
   }
 
-  # De-greening no longer the way to go
+  # No longer get to this code.
+#
 
   # The images from KEGG have green color, the following steps remove it, and
   # rely on having imageMagick 'convert' function available.
   my $pre_path = "$PHYSICAL_BASE_DIR/tmp/images/kegg/proc/$short_path" . "_pre.png";
   my $post_path = "$PHYSICAL_BASE_DIR/tmp/images/kegg/proc/$short_path" . ".png";
+  my $gif_path = "$PHYSICAL_BASE_DIR/tmp/images/kegg/proc/$short_path" . ".gif";
 
   eval {
     system( 'convert ' . $pre_path . ' -channel alpha -fill white -transparent rgb\(191,255,191\) ' . $post_path );
+    system( 'convert ' . $post_path . ' ' . $gif_path );
+    system( 'convert ' . $gif_path . ' ' . $post_path );
   };
+  die;
   if ( $@ ) {
     # Error with color stripping.
     print STDERR "Error with convert: $@";
