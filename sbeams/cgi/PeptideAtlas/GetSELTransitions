@@ -130,6 +130,7 @@ sub main {
       use_tabbed_panes=> '1',
     );
 
+
     handle_request(ref_parameters=>\%parameters);
 
     $sbeamsMOD->display_page_footer(
@@ -163,7 +164,10 @@ sub handle_request {
     parameters_ref => \%parameters,
     program_name => $PROG_NAME,
   );
-  print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+  if ($sbeams->output_mode() eq 'html') {
+    print $tabMenu->asHTML();
+    print get_AJAX();
+  }
 
 
   #### Define some generic variables
@@ -234,6 +238,9 @@ sub handle_request {
   # Probably more appropriately solved by modifying display_input_form.
   my $save_expts = $parameters{SEL_experiments};
 
+
+  $sbeams->collectSTDOUT();
+
   #### Display the user-interaction input form
   $sbeams->display_input_form(
     TABLE_NAME=>$TABLE_NAME,
@@ -245,6 +252,12 @@ sub handle_request {
     mask_user_context=> '1',
     use_tabbed_panes=> '1',
   );
+
+  my $sbeams_form = $sbeams->fetchSTDOUT();
+  $sbeams_form =~ s/onChange="refreshDocument\(\)"//gm;
+  $sbeams_form =~ s/(NAME="SEL_runs")/$1 ID="SEL_runs"/gm;
+  $sbeams_form =~ s/(NAME="SEL_experiments")/$1 ID="SEL_experiments"/gm;
+  print $sbeams_form;
 
   # Completion of hack above.
   $parameters{SEL_experiments} = $save_expts;
@@ -1284,4 +1297,44 @@ sub get_url_cols {
       );
 
   return \%url_cols;
+}
+
+sub get_AJAX {
+
+
+my $ajax = q~
+<script type='text/javascript' src='/sbeams/usr/javascript/jquery/jquery.js'></script>
+<script type="text/javascript" charset="utf-8">
+$(document).ready( function() {
+  window.onload = function() {
+
+    $.getJSON("AJAXClient.cgi",{sel_experiment_id: $("select#sel_experiments").val(), sel_run_id: $("select#sel_runs").val(), source: 'SEL_Transitions_Run_Select'}, function(j){
+      var options = '';
+      for (var i = 0; i < j.length; i++) {
+        var newopt = '<option value="' + j[i].optionValue + '" ' + j[i].optionSelected + '>' + j[i].optionText + '</option>';
+        options += newopt;
+      }
+     $("select#SEL_runs").html(options);
+    })
+  }
+
+  $("select#SEL_experiments").change(function() {
+
+    $.getJSON("AJAXClient.cgi",{sel_experiment_id: $("select#sel_experiments").val(), source: 'SEL_Transitions_Run_Select', sel_run_id: $("select#sel_runs").val() }  , function(j){
+      var options = '';
+      for (var i = 0; i < j.length; i++) {
+        var newopt = '<option value="' + j[i].optionValue + '" ' + j[i].optionSelected + '>' + j[i].optionText + '</option>';
+        options += newopt;
+      }
+     $("select#SEL_runs").html(options);
+    })
+
+  })
+
+})
+
+</script>
+  ~;
+return $ajax;
+
 }
