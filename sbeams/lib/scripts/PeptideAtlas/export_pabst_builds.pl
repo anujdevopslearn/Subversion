@@ -154,6 +154,12 @@ sub export_build {
     while ( my @row = $prep_sth->fetchrow_array() ) {
       unshift( @row, $peprow[0] );
 
+      if( $args->{empirical_only} ) {
+        next if $row[17] eq 'Y';
+      }
+
+
+
       my $ion_key = join( ':', @row[2,7] );
       $max_ions{$ion_key}++;
       if ( $args->{max_transitions} && $max_ions{$ion_key} > $args->{max_transitions} ) {
@@ -173,8 +179,8 @@ sub export_build {
         $row[$i] = sprintf( "%0.1f", $row[$i] );
       }
       $row[12] = int( $row[12] );
-      $row[5] .= '(pred)' if $row[16] eq 'Y';
-      print FIL join( "\t", @row[0..15] ) . "\n";
+      $row[5] .= '(pred)' if $row[17] eq 'Y';
+      print FIL join( "\t", @row[0..16] ) . "\n";
 
       
     }
@@ -205,7 +211,7 @@ sub printUsage {
 sub processArgs {
   my %args;
   unless( GetOptions ( \%args, 'build_id=i@', 'verbose', 'force', 'yonly',
-                       'noneutralloss', 'max_transitions=i' ) ) {
+                       'noneutralloss', 'max_transitions=i', 'empirical_only' ) ) {
     printUsage("Error with options, please check usage:");
   }
   die "need build_id " unless $args{build_id};
