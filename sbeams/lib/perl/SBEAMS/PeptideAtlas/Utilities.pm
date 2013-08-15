@@ -1825,8 +1825,6 @@ sub get_clustal_display {
 	}
 
 
-#	<DIV ID=clustal_dummy STYLE="width: 1000px; overflow-x: scroll; scrollbar-arrow-color: blue; scrollbar- face-color: #e7e7e7; scrollbar-3dlight-color: #a0a0a0; scrollbar-darkshadow-color: #888888">
-#    .clustal {width:1000px; height: 200px; background-color: #88FF88; overflow: auto;}
 
   my $scroll_js = q(
   <SCRIPT TYPE="text/javascript">
