@@ -912,10 +912,12 @@ sub get_search_batch_and_sample_id_hash
        {
             $sql = qq~
                 SELECT distinct SB.search_batch_id, PE.experiment_name, PE.experiment_tag,
-                SB.data_location
+                SB.data_location, P.project_id, P.publication_id
                 FROM $TBPR_PROTEOMICS_EXPERIMENT PE
                 JOIN $TBPR_SEARCH_BATCH SB
-                ON ( PE.experiment_id = SB.experiment_id)
+                ON ( PE.EXPERIMENT_ID = SB.EXPERIMENT_ID)
+                JOIN $TB_PROJECT P
+                ON ( P.PROJECT_ID = PE.PROJECT_ID)
                 WHERE SB.search_batch_id = '$loading_sb_id'
                 AND PE.record_status != 'D'
             ~;
@@ -926,7 +928,7 @@ sub get_search_batch_and_sample_id_hash
 
             foreach my $row (@rows)
             {
-                my ($sb_id, $exp_name, $exp_tag, $d_l) = @{$row};
+                my ($sb_id, $exp_name, $exp_tag, $d_l, $p_id, $pub_id) = @{$row};
 
                 ## create [sample] record if it doesn't exist:
                 if ($sample_exists eq "false")
@@ -939,7 +941,8 @@ sub get_search_batch_and_sample_id_hash
                         sample_description => $exp_name,
                         is_public => 'N',
               peptide_source_type => 'Natural',
-                        project_id => $default_sample_project_id,
+                        project_id => $p_id,
+                        sample_publication_ids => $pub_id
                     );
 
                     $sample_id = insert_sample( rowdata_ref => \%rowdata );
@@ -1271,6 +1274,7 @@ sub create_atlas_search_batch_parameter_recs
       "$search_batch_path/../sequest.params", "$search_batch_path/comet.def",
       "$search_batch_path/tandem.params", "$search_batch_path/tandem.xml",
       "$search_batch_path/spectrast.params",
+      "$search_batch_path/comet.params",
     );
 
     #### Try to find the files in order
@@ -1762,6 +1766,22 @@ sub insert_spectra_description_set
         $n_spectra = $sum;
 
     }
+    ## if didn't get instrument_model_id from file 
+    ## use the one in proteomics table
+    if ( ! $instrument_model_id){
+      my $sql = qq~;
+        SELECT I.INSTRUMENT_ID
+        FROM $TBAT_ATLAS_SEARCH_BATCH ASB 
+        JOIN $TBPR_SEARCH_BATCH PSB ON (PSB.SEARCH_BATCH_ID = ASB.PROTEOMICS_SEARCH_BATCH_ID)
+        JOIN $TBPR_PROTEOMICS_EXPERIMENT PE ON (PSB.EXPERIMENT_ID = PE.EXPERIMENT_ID)
+        LEFT JOIN $TBPR_INSTRUMENT I ON (I.INSTRUMENT_ID = PE.INSTRUMENT_ID)
+        WHERE ASB.SAMPLE_ID = $sample_id
+     ~;
+      my @rows = $sbeams->selectOneColumn($sql);
+      if(@rows){
+        $instrument_model_id = $rows[0];
+      }
+    }
 
 
     ## insert [spectra_description_set] record
@@ -1995,108 +2015,97 @@ sub readCoords_updateRecords_calcAttributes {
       my @columns = split(/\t/,$line);
       my $peptideAccession = $columns[0];
       if ($previousPeptideAccession && $peptideAccession ne $previousPeptideAccession) {
-	if ($hasNonDecoyMapping) {
-	  print OUTFILE $bufferWithoutDecoys;
-	} else {
-	  print OUTFILE $bufferWithDecoys;
-	}
-	$bufferWithDecoys = '';
-	$bufferWithoutDecoys = '';
-	$hasNonDecoyMapping = 0;
-      }
+				if ($hasNonDecoyMapping) {
+					print OUTFILE $bufferWithoutDecoys;
+				} else {
+					print OUTFILE $bufferWithDecoys;
+				}
+				$bufferWithDecoys = '';
+				$bufferWithoutDecoys = '';
+				$hasNonDecoyMapping = 0;
+			}
 
-      if ($line =~ /DECOY/) {
-      } else {
-	$hasNonDecoyMapping = 1;
-	$bufferWithoutDecoys .= $line;
-      }
-      $bufferWithDecoys .= $line;
-      $previousPeptideAccession = $peptideAccession;
-    }
-    if ($hasNonDecoyMapping) {
-      print OUTFILE $bufferWithoutDecoys;
-    } else {
-      print OUTFILE $bufferWithDecoys;
-    }
-    close(INFILE);
-    close(OUTFILE);
-    $infile = $outfile;
-
-
-    open(INFILE, $infile) or die "ERROR: Unable to open for reading $infile ($!)";
-    #### READ  coordinate_mapping.txt  ##############
-    print "\nReading $infile\n";
-
-    my $line;
+			if ($line =~ /DECOY/) {
+				} else {
+					$hasNonDecoyMapping = 1;
+					$bufferWithoutDecoys .= $line;
+				}
+				$bufferWithDecoys .= $line;
+				$previousPeptideAccession = $peptideAccession;
+		}
+		if ($hasNonDecoyMapping) {
+			print OUTFILE $bufferWithoutDecoys;
+		} else {
+			print OUTFILE $bufferWithDecoys;
+		}
+		close(INFILE);
+		close(OUTFILE);
+		$infile = $outfile;
 
 
-    ## hash with key = peptide_accession, value = peptide_sequence
-    my %peptideAccession_peptideSequence = get_peptide_accession_sequence_hash(
-        atlas_build_id => $atlas_build_id );
+		open(INFILE, $infile) or die "ERROR: Unable to open for reading $infile ($!)";
+		#### READ  coordinate_mapping.txt  ##############
+		print "\nReading $infile\n";
 
-    #### Load information from the coordinate mapping file:
-    #### into a series of arrays, one element per row
-    my $ind=0;
-    while ($line = <INFILE>) {
-        chomp($line);
-
-        my @columns = split(/\t/,$line);
-        my $pep_acc = $columns[0];
-
-        push(@peptide_accession, $columns[0]);
-        push(@biosequence_name, $columns[2]);
-        push(@start_in_biosequence, $columns[5]);
-        push(@end_in_biosequence, $columns[6]);
-
-        my $tmp_chromosome = $columns[8]; 
-        ## parsing for chromosome:   this is set for Ens 21 and 22 notation...
-        if ($tmp_chromosome =~ /^(chromosome:)(NCBI.+:)(.+)(:.+:.+:.+)/ ) {
-            $tmp_chromosome = $3;
-        }
-        if ($tmp_chromosome =~ /^(chromosome:)(DROM.+:)(.+)(:.+:.+:.+)/ ) {
-            $tmp_chromosome = $3;
-        }
-        ## and for yeast and halo:
-        if ( ($tmp_chromosome =~ /^S/) || ($organism_abbrev eq "Hbt")) {
-            $tmp_chromosome = $columns[12];
-        }
-
-        ### For Ens 32 and on, we are storing chromsome in column 8, so no need for parsing
-        #if ( ($tmp_chromosome =~ /^(\d+)$/) || ($tmp_chromosome =~ /^((X)|(Y))$/) ) {
-        #    $tmp_chromosome = $tmp_chromosome;
-        #}
-        ### Additional match for the novel chromosomes such as 17_NT_079568 X_NT_078116
-        #if ( ($tmp =~ /^(\d+)_NT_(\d+)$/) || ($tmp_chromosome =~ /^((X)|(Y))_NT_(\d+)$/) ) {
-        #    $tmp_chromosome = $tmp_chromosome;
-        #}
+		my $line;
 
 
-        push(@chromosome, $tmp_chromosome);
-        push(@strand,$columns[9]);
-        push(@start_in_chromosome,$columns[10]);
-        push(@end_in_chromosome,$columns[11]);
+		## hash with key = peptide_accession, value = peptide_sequence
+		my %peptideAccession_peptideSequence = get_peptide_accession_sequence_hash(
+				atlas_build_id => $atlas_build_id );
 
+		#### Load information from the coordinate mapping file:
+		#### into a series of arrays, one element per row
+		my $ind=0;
+		while ($line = <INFILE>) {
+				chomp($line);
+				my @columns = split(/\t/,$line);
+				my $pep_acc = $columns[0];
 
-        ## hash with
-        ## keys =  peptide accession
-        ## values = space-separated string list of array indices (of the arrays above, holding pep_accession)
-        if ( exists $index_hash{$pep_acc} ) {
+				push(@peptide_accession, $columns[0]);
+				push(@biosequence_name, $columns[2]);
+				push(@start_in_biosequence, $columns[5]);
+				push(@end_in_biosequence, $columns[6]);
 
-            $index_hash{$pep_acc} = 
-                join " ", $index_hash{$pep_acc}, $ind;
+				my $tmp_chromosome = $columns[8]; 
+				## parsing for chromosome:   this is set for Ens 21 and 22 notation...
+				if ($tmp_chromosome =~ /^(chromosome:)(NCBI.+:)(.+)(:.+:.+:.+)/ ) {
+						$tmp_chromosome = $3;
+				}
+				if ($tmp_chromosome =~ /^(chromosome:)(DROM.+:)(.+)(:.+:.+:.+)/ ) {
+						$tmp_chromosome = $3;
+				}
+				## and for yeast and halo:
+				if ( ($tmp_chromosome =~ /^S/) || ($organism_abbrev eq "Hbt")) {
+						$tmp_chromosome = $columns[12];
+				}
+				### For Ens 32 and on, we are storing chromsome in column 8, so no need for parsing
+				#if ( ($tmp_chromosome =~ /^(\d+)$/) || ($tmp_chromosome =~ /^((X)|(Y))$/) ) {
+				#    $tmp_chromosome = $tmp_chromosome;
+				#}
+				### Additional match for the novel chromosomes such as 17_NT_079568 X_NT_078116
+				#if ( ($tmp =~ /^(\d+)_NT_(\d+)$/) || ($tmp_chromosome =~ /^((X)|(Y))_NT_(\d+)$/) ) {
+				#    $tmp_chromosome = $tmp_chromosome;
 
-        } else {
+				push(@chromosome, $tmp_chromosome);
+				push(@strand,$columns[9]);
+				push(@start_in_chromosome,$columns[10]);
+				push(@end_in_chromosome,$columns[11]);
 
-           $index_hash{$pep_acc} = $ind;
+				## hash with
+				## keys =  peptide accession
+				## values = space-separated string list of array indices (of the arrays above, holding pep_accession)
+				if ( exists $index_hash{$pep_acc} ) {
+						$index_hash{$pep_acc} = join " ", $index_hash{$pep_acc}, $ind;
 
-        }
+				} else {
+					 $index_hash{$pep_acc} = $ind;
+				}
+				push(@n_protein_mappings, 1);  ##unless replaced in next section
+				push(@n_genome_locations, 1);  ##unless replaced in next section
+				push(@is_exon_spanning, 'N');  ##unless replaced in next section
 
-
-        push(@n_protein_mappings, 1);  ##unless replaced in next section
-        push(@n_genome_locations, 1);  ##unless replaced in next section
-        push(@is_exon_spanning, 'N');  ##unless replaced in next section
-
-        $ind++;
+				$ind++;
 
     }   ## END reading coordinate mapping file
 
@@ -2153,68 +2162,68 @@ sub readCoords_updateRecords_calcAttributes {
         my @tmp_ind_array = split(" ", $tmp_ind_str);
 
         my (%protein_mappings_hash, %chromosomal_mappings_hash);
-	my %distinct_proteins_hash;
+				my %distinct_proteins_hash;
 
         my $peptide = $peptide_accession[$tmp_ind_array[0]];
         my $protein;
 
 
         #### Loop over all the rows for this peptide
-	my $first_index = -1;
+				my $first_index = -1;
         for (my $ii = 0; $ii <= $#tmp_ind_array; $ii++) {
 
             my $i_ind=$tmp_ind_array[$ii];
-	    if ($ii == 0) {
-	      $first_index = $i_ind;
-	    }
+						if ($ii == 0) {
+							$first_index = $i_ind;
+						}
 
-		  $protein = $biosequence_name[$i_ind];
+						$protein = $biosequence_name[$i_ind];
 
-		  my $chrom = $chromosome[$i_ind];
-		  my $start = $start_in_chromosome[$i_ind];
-		  my $end = $end_in_chromosome[$i_ind];
-		  my $coord_str = "$chrom:$start:$end";
+						my $chrom = $chromosome[$i_ind];
+						my $start = $start_in_chromosome[$i_ind];
+						my $end = $end_in_chromosome[$i_ind];
+						my $coord_str = "$chrom:$start:$end";
 
-		  my $diff_coords = abs($start - $end);
+						my $diff_coords = abs($start - $end);
 
-		  my $seq_length = 
-			  length($peptideAccession_peptideSequence{$peptide});
+						my $seq_length = 
+							length($peptideAccession_peptideSequence{$peptide});
 
-		  ## If entire sequence fits between coordinates, the protein has
-		  ## redundant sequences.  If the sequence doesn't fit between
-		  ## coordinates, it's exon spanning:
-		  if ( $diff_coords > 0 ) {
-	      if ( ($diff_coords + 1) != ($seq_length * 3) ) {
-                $is_exon_spanning[$first_index] = 'Y';
-	      }
+						## If entire sequence fits between coordinates, the protein has
+						## redundant sequences.  If the sequence doesn't fit between
+						## coordinates, it's exon spanning:
+						if ( $diff_coords > 0 ) {
+							if ( ($diff_coords + 1) != ($seq_length * 3) ) {
+											$is_exon_spanning[$first_index] = 'Y';
+							}
 
-	      #### Only count a chromosomal mapping the first time it is seen
-          #### with different start/end coords for a protein
-	      #### FIXME: Note if a peptide legitimately maps to two different places
-	      #### in a protein, then this logic fails. Always has and continues to...
+						#### Only count a chromosomal mapping the first time it is seen
+							#### with different start/end coords for a protein
+						#### FIXME: Note if a peptide legitimately maps to two different places
+						#### in a protein, then this logic fails. Always has and continues to...
 
-          #### 
-          my @prev_coords = split(":", $protein_mappings_hash{$protein});
-	      if ( ! $protein_mappings_hash{$protein} ||
-               ($prev_coords[1] eq $prev_coords[2] )) {  # this means mapping wasn't stored last time
-		    $chromosomal_mappings_hash{$coord_str} = $protein;
-	      } 
-	    } 
+							#### 
+							my @prev_coords = split(":", $protein_mappings_hash{$protein});
+						if ( ! $protein_mappings_hash{$protein} ||
+									 ($prev_coords[1] eq $prev_coords[2] )) {  # this means mapping wasn't stored last time
+						$chromosomal_mappings_hash{$coord_str} = $protein;
+						} 
+					} 
 
-        if (! defined $protein_mappings_hash{$protein} || $coord_str ne "0:0:0") {
-            $protein_mappings_hash{$protein} = $coord_str;
-        }
+						if (! defined $protein_mappings_hash{$protein} || $coord_str ne "0:0:0") {
+								$protein_mappings_hash{$protein} = $coord_str;
+						}
 
-	    #### If this protein is really a duplicate of another, then reset the
-	    #### protein name to the primary refernce for counting purposes
-	    if ($duplicate_proteins{$protein}) {
-	      $protein = $duplicate_proteins{$protein};
-	    }
+						#### If this protein is really a duplicate of another, then reset the
+						#### protein name to the primary refernce for counting purposes
+						if ($duplicate_proteins{$protein}) {
+							$protein = $duplicate_proteins{$protein};
+						}
 
-        if (! defined $distinct_proteins_hash{$protein} || $coord_str ne "0:0:0") {
-            $distinct_proteins_hash{$protein} = $coord_str;
-        }
-	  }
+							if (! defined $distinct_proteins_hash{$protein} || $coord_str ne "0:0:0") {
+									$distinct_proteins_hash{$protein} = $coord_str;
+							}
+					}
 
 
         ## Count the number of chromosomal mappings and protein_mappings
@@ -2287,48 +2296,56 @@ sub readCoords_updateRecords_calcAttributes {
        }
    }
 
-
+    
     ## Calculate is_subpeptide_of
+    print "\nCalculating is_subpeptide_of\n";
 
     ## hash with key = peptide_accession, value = sub-peptide string list
     my %peptideAccession_subPeptide;
+    
+    my @peptideAccession_peptideSequence ='';
+    foreach my $pep_acc (keys %peptideAccession_peptideSequence){
+      push @peptideAccession_peptideSequence, "$pep_acc.$peptideAccession_peptideSequence{$pep_acc}";
+    }
+    foreach my $sub_pep_acc (keys %peptideAccession_peptideSequence){
+      my $sub_pep = $peptideAccession_peptideSequence{$sub_pep_acc};
+      my @matches = grep (/$sub_pep/, @peptideAccession_peptideSequence);
+      foreach my $m (@matches){
+        $m =~ /(.*)\.(.*)/;
+        if($1 ne $sub_pep_acc){
+          if ( exists $peptideAccession_subPeptide{$sub_pep_acc} ){
+            $peptideAccession_subPeptide{$sub_pep_acc} =join ",", $peptideAccession_subPeptide{$sub_pep_acc},
+                                                         $peptides{$1};
+          }else{
+            $peptideAccession_subPeptide{$sub_pep_acc} = $peptides{$1};
+          }
+        } 
+      }     
 
-    foreach my $sub_pep_acc (keys %peptideAccession_peptideSequence)
-    {
-
-        for my $super_pep_acc (keys %peptideAccession_peptideSequence)
-        {
-
-            if ( ( index($peptideAccession_peptideSequence{$super_pep_acc}, 
-                $peptideAccession_peptideSequence{$sub_pep_acc}) >= 0) 
-                && ($super_pep_acc ne $sub_pep_acc) ) {
-
-                if ( exists $peptideAccession_subPeptide{$sub_pep_acc} )
-                {
-
-                    $peptideAccession_subPeptide{$sub_pep_acc} =
-                        join ",", $peptideAccession_subPeptide{$sub_pep_acc},
-                        $peptides{$super_pep_acc};
-
-                } else { 
-
-                    $peptideAccession_subPeptide{$sub_pep_acc} = 
-                    $peptides{$super_pep_acc};
-
-                }
-
-            }
-
-        }
+    #foreach my $sub_pep_acc (keys %peptideAccession_peptideSequence){
+    #   for my $super_pep_acc (keys %peptideAccession_peptideSequence){
+    #        if ( ( index($peptideAccession_peptideSequence{$super_pep_acc}, 
+    #            $peptideAccession_peptideSequence{$sub_pep_acc}) >= 0) 
+    #            && ($super_pep_acc ne $sub_pep_acc) ) {
+    #            if ( exists $peptideAccession_subPeptide{$sub_pep_acc} ){
+    #                $str =
+    #                    join ",", $peptideAccession_subPeptide{$sub_pep_acc},
+    #                    $peptides{$super_pep_acc};
+    #
+    #            } else { 
+    #                $peptideAccession_subPeptide{$sub_pep_acc} = $peptides{$super_pep_acc};
+    #            }
+    #       }
+    #    }
 			 if(length($peptideAccession_subPeptide{$sub_pep_acc}) > 1023){
 				 print "truncate super_pep from $peptideAccession_subPeptide{$sub_pep_acc}\n";
 				 my $str = substr ($peptideAccession_subPeptide{$sub_pep_acc} , 0, 1015);
 				 $str =~ s/\,\w+$//;
 				 $peptideAccession_subPeptide{$sub_pep_acc} = $str. ",...";
 				 print "to $peptideAccession_subPeptide{$sub_pep_acc}\n";
-
 			 }
     }
+    undef @peptideAccession_peptideSequence;
 
 
    if ($TESTVARS) {
@@ -2850,7 +2867,7 @@ sub getMzXMLFileNamesFromPepXMLFileOld
         $file =~ s/\.fract\.mzXML/.mzXML/;
         if ( -e $file ) {
           $mzXMLFileNames[$i] = $file;
-        } else {
+        }else {
           print "ERROR: Unable to determine location of file '$mzXMLFileNames[$i]'\n";
           print "  (also tried: $file)\n";
         }
@@ -2898,7 +2915,7 @@ sub getSpectrumXMLFileNamesFromPepXMLFile
 	      next;
 	    }
             $spectrumXMLFileName = "$basename$extension";
-            print "got spectrumXMLFileName $spectrumXMLFileName\n";
+            #print "got spectrumXMLFileName $spectrumXMLFileName\n";
             push (@spectrumXMLFileNames, $spectrumXMLFileName);
 	}
     }
@@ -2961,7 +2978,9 @@ sub getSpectrumXMLFileNames
         $file =~ s/\.fract\.mzXML/.mzXML/;
         if ( -e $file ) {
           push (@foundmzXMLFiles, $file);
-        } else {
+        }elsif ( -e $file.".gz" ){
+           push (@foundmzXMLFiles, $file.".gz"); 
+        }else {
           print "ERROR: Unable to determine location of file '$mzXMLFileNames[$i]'\n";
           print "  (also tried: $file)\n";
         }

@@ -20,6 +20,7 @@ things related to PeptideAtlas spectra
 ###############################################################################
 
 use strict;
+use DB_File ;
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK);
 require Exporter;
 @ISA = qw();
@@ -36,6 +37,7 @@ use SBEAMS::PeptideAtlas::Tables;
 # Global variables
 ###############################################################################
 use vars qw($VERBOSE $TESTONLY $sbeams);
+use Time::HiRes qw( usleep ualarm gettimeofday tv_interval);
 
 
 ###############################################################################
@@ -161,20 +163,23 @@ sub loadBuildSpectra {
 
   #### Loop through all spectrum identifications and load
   my @columns;
+  my ($start, $diff, $pre_search_batch_id, $n);
+  $start = [gettimeofday];
+  $n=0;
   while ( my $line = <INFILE>) {
     chomp $line;
     @columns = split(/\t/,$line);
     #print "cols = ".scalar(@columns)."\n";
     unless (scalar(@columns) == $expected_n_columns) {
       if ($expected_n_columns == 14 && scalar(@columns) == 11) {
-	print "WARNING: Unexpected number of columns (".
-	  scalar(@columns)."!=$expected_n_columns) in\n$line\n".
-	  "This is likely missing ProteinProphet information, which is bad, but we will allow it until this bug is fixed.\n";
+				print "WARNING: Unexpected number of columns (".
+				scalar(@columns)."!=$expected_n_columns) in\n$line\n".
+					"This is likely missing ProteinProphet information, which is bad, but we will allow it until this bug is fixed.\n";
       } elsif (scalar(@columns) == 15) {
-	#### This is okay for now: experimental SpectraST addition
+				#### This is okay for now: experimental SpectraST addition
       } else {
-	die("ERROR: Unexpected number of columns (".
-	    scalar(@columns)."!=$expected_n_columns) in\n$line");
+				die("ERROR: Unexpected number of columns (".
+				scalar(@columns)."!=$expected_n_columns) in\n$line");
       }
     }
 
@@ -214,11 +219,18 @@ sub loadBuildSpectra {
        probability => $probability,
        protein_name => $protein_name,
        spectrum_name => $spectrum_name,
-       massdiff => $massdiff,
-    );
+       massdiff => $massdiff,);
 
+    $n++;
+    if($pre_search_batch_id ne $search_batch_id){
+      $diff = tv_interval ( $start, [gettimeofday]);
+      print "\nsearch_batch_id: $pre_search_batch_id, time per entry: " . $diff/$n ;
+			print "s\n";
+			$start = [gettimeofday];
+      $n=0;
+    }
+    $pre_search_batch_id = $search_batch_id;
   }
-
 
 } # end loadBuildSpectra
 
@@ -250,6 +262,7 @@ sub insertSpectrumIdentification {
   
   my $probability = $args{probability};
   die("ERROR[$METHOD]: Parameter probability not passed") if($probability eq '');
+
   our $counter;
 
   #### Get the modified_peptide_instance_id for this peptide
@@ -264,19 +277,16 @@ sub insertSpectrumIdentification {
     proteomics_search_batch_id => $search_batch_id,
   );
 
-
   #### Get the atlas_search_batch_id for this search_batch_id
   my $atlas_search_batch_id = $self->get_atlas_search_batch_id(
     proteomics_search_batch_id => $search_batch_id,
   );
-
 
   #### Check to see if this spectrum is already in the database
   my $spectrum_id = $self->get_spectrum_id(
     sample_id => $sample_id,
     spectrum_name => $spectrum_name,
   );
-
 
   #### If not, INSERT it
   unless ($spectrum_id) {
@@ -296,7 +306,8 @@ sub insertSpectrumIdentification {
     atlas_build_id => $atlas_build_id,
   );
 
-
+  $counter++;
+  print "$counter..." if ($counter/100 == int($counter/100));
   #### If not, INSERT it
   unless ($spectrum_identification_id) {
     $spectrum_identification_id = $self->insertSpectrumIdentificationRecord(
@@ -312,11 +323,8 @@ sub insertSpectrumIdentification {
 				ptm_sequence => $ptm_sequence,
 			);
     }
-
   }
 
-  $counter++;
-  print "$counter..." if ($counter/100 == int($counter/100));
 
 } # end insertSpectrumIdentification
 
@@ -358,20 +366,24 @@ sub get_modified_peptide_instance_id {
     while ( my $row = $sth->fetchrow_arrayref() ) {
       $cnt++;
       my $modified_peptide_instance_id = $row->[0];
-      my $key = $row->[1].'/'.$row->[2];
-      $modified_peptide_instance_ids{$key} = $modified_peptide_instance_id;
+      #my $key = $row->[1].'/'.$row->[2];
+      #$modified_peptide_instance_ids{$key} = $modified_peptide_instance_id;
+      $modified_peptide_instance_ids{$row->[2]}{$row->[1]} = $modified_peptide_instance_id;
     }
     print "       $cnt loaded...\n";
   }
 
 
   #### Lookup and return modified_peptide_instance_id
-  my $key = "$modified_sequence/$charge";
-  if ($modified_peptide_instance_ids{$key}) {
-    return($modified_peptide_instance_ids{$key});
+  #my $key = "$modified_sequence/$charge";
+  #if ($modified_peptide_instance_ids{$key}) {
+  #  return($modified_peptide_instance_ids{$key});
+  #};
+  if ($modified_peptide_instance_ids{$charge}{$modified_sequence}) {
+    return($modified_peptide_instance_ids{$charge}{$modified_sequence});
   };
 
-  die("ERROR: Unable to find '$key' in modified_peptide_instance_ids hash. ".
+  die("ERROR: Unable to find '$modified_sequence/$charge' in modified_peptide_instance_ids hash. ".
       "This should never happen.");
 
 } # end get_modified_peptide_instance_id
@@ -488,11 +500,13 @@ sub get_spectrum_id {
     ~;
 
     my $sth = $sbeams->get_statement_handle( $sql );
+    my $num_ids =0;
     while ( my $row = $sth->fetchrow_arrayref() ) {
-      my $key = "$row->[0]-$row->[1]";
-      $spectrum_ids{$key} = $row->[2];
+      #my $key = "$row->[0]-$row->[1]";
+      $spectrum_ids{$row->[0]}{$row->[1]} = $row->[2];
+      $num_ids++;
     }
-    my $num_ids = scalar(keys(%spectrum_ids));
+    #my $num_ids = scalar(keys(%spectrum_ids));
     print "       $num_ids spectrum IDs loaded for sample_id $sample_id...\n";
 
     #### Put a dummy entry in the hash so load won't trigger twice if
@@ -511,10 +525,10 @@ sub get_spectrum_id {
 
 
   #### Lookup and return spectrum_id
-  my $key = "$sample_id-$spectrum_name";
+  #my $key = "$sample_id-$spectrum_name";
   #print "key = $key  spectrum_ids{key} = $spectrum_ids{$key}\n";
-  if ($spectrum_ids{$key}) {
-    return($spectrum_ids{$key});
+  if ($spectrum_ids{$sample_id}{$spectrum_name}) {
+    return($spectrum_ids{$sample_id}{$spectrum_name});
   };
 
   #### Else we don't have it yet
@@ -951,6 +965,7 @@ sub get_spectrum_identification_id {
     print "\n[INFO] Loading all spectrum_identification_ids for atlas_search_batch_id $atlas_search_batch_id...\n";
     $processed_atlas_search_batch_id{$atlas_search_batch_id} = 1;
     %spectrum_identification_ids = ();
+ 
     my $sql = qq~
       SELECT SI.modified_peptide_instance_id,SI.spectrum_id,
              SI.atlas_search_batch_id,SI.spectrum_identification_id
@@ -964,33 +979,31 @@ sub get_spectrum_identification_id {
     ~;
 
     my $sth = $sbeams->get_statement_handle( $sql );
-
+    my $n = 0;
     #### Create a hash out of it
     while ( my $row = $sth->fetchrow_arrayref() ) {
-      my $key = "$row->[0]-$row->[1]-$row->[2]";
-      $spectrum_identification_ids{$key} = $row->[3];
+      #my $key = "$row->[0]-$row->[1]-$row->[2]";
+      $spectrum_identification_ids{$row->[2]}{$row->[0]}{$row->[1]} = $row->[3];
+      $n++;
     }
 
-    print "       ".scalar(keys(%spectrum_identification_ids))." loaded...\n";
+    print "       $n loaded...\n";
 
     #### Put a dummy entry in the hash so load won't trigger twice if
     #### table is empty at this point
     $spectrum_identification_ids{DUMMY} = -1;
   }
 
-
   #### Lookup and return spectrum_id
-  my $key = "$modified_peptide_instance_id-$spectrum_id-$atlas_search_batch_id";
-  if ($spectrum_identification_ids{$key}) {
-    return($spectrum_identification_ids{$key});
+  #my $key = "$modified_peptide_instance_id-$spectrum_id-$atlas_search_batch_id";
+  if ($spectrum_identification_ids{$atlas_search_batch_id}{$modified_peptide_instance_id}{$spectrum_id}) {
+    return($spectrum_identification_ids{$atlas_search_batch_id}{$modified_peptide_instance_id}{$spectrum_id});
   };
 
   #### Else we don't have it yet
   return();
 
 } # end get_spectrum_identification_id
-
-
 
 ###############################################################################
 # insertSpectrumIdentificationRecord --
@@ -1022,7 +1035,7 @@ sub insertSpectrumIdentificationRecord {
     massdiff => $massdiff,
   );
 
-
+  
   #### Insert spectrum identification record
   my $spectrum_identification_id = $sbeams->updateOrInsertRow(
     insert=>1,
@@ -1039,7 +1052,6 @@ sub insertSpectrumIdentificationRecord {
   our %spectrum_identification_ids;
   my $key = "$modified_peptide_instance_id - $spectrum_id - $atlas_search_batch_id";
   $spectrum_identification_ids{$key} = $spectrum_identification_id;
-
 
   return($spectrum_identification_id);
 
