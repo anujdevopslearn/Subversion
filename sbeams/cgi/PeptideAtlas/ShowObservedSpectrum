@@ -205,7 +205,7 @@ sub processRequest {
       my $icharge = 1;
       while ($icharge <= $assumed_charge && $icharge < 4) {
         push(@displayCharges,$icharge);
-	$icharge++;
+				$icharge++;
       }
       $displayCharges = join(",",@displayCharges);
     }
@@ -217,24 +217,25 @@ sub processRequest {
     }
     for my $nl (@neutral_loss) {
       if ($nl eq '17') {
-	push (@neutral_loss_masses, 17.031);
+				push (@neutral_loss_masses, 17.031);
       } elsif ($nl eq '18') {
-	push (@neutral_loss_masses, 18.015);
+				push (@neutral_loss_masses, 18.015);
       } elsif ($nl eq '35') {
-	push (@neutral_loss_masses, 35.046);
+				push (@neutral_loss_masses, 35.046);
       } elsif ($nl eq '45') {
-	push (@neutral_loss_masses, 45.04);
+				push (@neutral_loss_masses, 45.04);
       }
     }
 
 
     #### If we have a spectrum_id, find the mass modifications
+    
     if ($parameters{'spectrum_identification_id'})
     {
         my $sql = qq~
             SELECT peptide_sequence,peptide_charge,average_parent_mz,
                    MPI.modified_peptide_sequence,
-	           S.spectrum_id, S.spectrum_name, S.start_scan
+	           S.spectrum_id, S.spectrum_name, S.start_scan, S.fragmentation_type_id
               FROM $TBAT_SPECTRUM_IDENTIFICATION SI
               JOIN $TBAT_MODIFIED_PEPTIDE_INSTANCE MPI
                    ON ( SI.modified_peptide_instance_id = MPI.modified_peptide_instance_id )
@@ -251,7 +252,7 @@ sub processRequest {
 
         foreach my $row (@rows)
         {
-            my ($seq, $chg, $mz, $mod_seq, $spectrum_id, $spectrum_name, $start_scan) = @{$row};
+            my ($seq, $chg, $mz, $mod_seq, $spectrum_id, $spectrum_name, $start_scan,$fragmentation_type_id) = @{$row};
             $parameters{'peptide'} = $mod_seq;
             $parameters{'assumed_charge'} = $chg;
             $parameters{'precursor_mass'} = $mz;
@@ -261,6 +262,7 @@ sub processRequest {
             $parameters{'spectrum_id'} = $spectrum_id;
             $parameters{'spectrum_name'} = $spectrum_name;
             $parameters{'start_scan'} = $start_scan;
+            $parameters{'fragmentation_type_id'} = $fragmentation_type_id;
         }
     } else {
       print "ERROR: need spectrum_identification_id\n";
@@ -268,8 +270,8 @@ sub processRequest {
     }
 
     if ( $parameters{peptide} ) {
-	print "<H2 CLASS=section_description ALIGN=CENTER>Spectrum for $parameters{modified_sequence} <SUP>+$parameters{assumed_charge}</SUP></H2>\n";
-	print '<h3 ID="annotations_head" style="display:none"><div ID="annotations_summary" COLSPAN="2">-- No annotations here --</div></h3>';
+			print "<H2 CLASS=section_description ALIGN=CENTER>Spectrum for $parameters{modified_sequence} <SUP>+$parameters{assumed_charge}</SUP></H2>\n";
+			print '<h3 ID="annotations_head" style="display:none"><div ID="annotations_summary" COLSPAN="2">-- No annotations here --</div></h3>';
     }
 
     # still some lint here...
@@ -283,14 +285,28 @@ sub processRequest {
     my $modified_sequence = $parameters{'modified_sequence'};
 
     # default ion series
+    my $series = '1,1,0';
+    if ($charge == 2){
+      $series = "1,0,0";
+    }
+
     $parameters{'ShowA'} ||= '[0,0,0]';
-    $parameters{'ShowB'} ||= '[1,1,0]';
+    $parameters{'ShowB'} ||= "[$series]";
     $parameters{'ShowC'} ||= '[0,0,0]';
     $parameters{'ShowX'} ||= '[0,0,0]';
-    $parameters{'ShowY'} ||= '[1,1,0]';
+    $parameters{'ShowY'} ||= "[$series]";
     $parameters{'ShowZ'} ||= '[0,0,0]';
 
 
+    # 2: HR IT ETD 6: LR IT ETD
+    if($parameters{'fragmentation_type_id'} == 2 || $parameters{'fragmentation_type_id'} == 6){
+      $parameters{'ShowA'} = '[0,0,0]';
+      $parameters{'ShowB'} = '[0,0,0]';
+      $parameters{'ShowC'} = "[$series]";
+      $parameters{'ShowX'} = '[0,0,0]';
+      $parameters{'ShowY'} = '[0,0,0]';
+      $parameters{'ShowZ'} = "[$series]";
+    }
     $parameters{assumed_charge} = $charge;
 
     my ($proteomics_search_batch_id, %spectrum) = get_spectrum(
@@ -328,8 +344,8 @@ sub processRequest {
       #### label has ^2 notation. label_st has ++ notation.
       my $fragmenter = new SBEAMS::PeptideAtlas::PeptideFragmenter;
       my $sortedProductIons_aref = $fragmenter->getExpectedFragments(
-	modifiedSequence =>$modified_sequence,
-	charge=>$charge,
+				modifiedSequence =>$modified_sequence,
+				charge=>$charge,
       );
       my @sortedProductIons = @{$sortedProductIons_aref};
 
@@ -340,31 +356,31 @@ sub processRequest {
       use SBEAMS::PeptideAtlas::Spectrum;
       my $spectrum = new SBEAMS::PeptideAtlas::Spectrum;
       my $data_location = $spectrum->get_data_location(
-	proteomics_search_batch_id => $proteomics_search_batch_id,
+				proteomics_search_batch_id => $proteomics_search_batch_id,
       );
       ($data_location) = $spectrum->groom_data_location(
-	data_location => $data_location,
+				data_location => $data_location,
       );
       #### Get peaks and annotations from raw library text file, if exists
       use SBEAMS::PeptideAtlas::PSMEvaluator;
       my $evaluator = new SBEAMS::PeptideAtlas::PSMEvaluator;
       my @annotated_peaks = $evaluator->get_annotated_peaks_from_speclib(
-	data_location => $data_location,
-	spectrum_name => $parameters{spectrum_name},
+				data_location => $data_location,
+				spectrum_name => $parameters{spectrum_name},
       );
 
       #### Hand the expected and observed fragments to the heuristic PSM
       #### evaluator!!!
       if (scalar @annotated_peaks) {
-	my $evaluation = $evaluator->evaluate_PSM_heuristically(
-	  annotated_peaks_aref => \@annotated_peaks,
-	  sorted_product_ions_aref => $sortedProductIons_aref,
-	  modified_sequence => $modified_sequence,
-	  charge => $charge,
-	);
-	print "$evaluation<br>\n";
+				my $evaluation = $evaluator->evaluate_PSM_heuristically(
+				annotated_peaks_aref => \@annotated_peaks,
+				sorted_product_ions_aref => $sortedProductIons_aref,
+				modified_sequence => $modified_sequence,
+				charge => $charge,
+				);
+				print "$evaluation<br>\n";
       } else {
-	print "Cannot retrieve annotated peaks; cannot evaluate.<br>\n";
+				print "Cannot retrieve annotated peaks; cannot evaluate.<br>\n";
       }
     }
 

@@ -23,6 +23,12 @@
                 ntermMod: 0, // additional mass to be added to the n-term
                 ctermMod: 0, // additional mass to be added to the c-term
                 peaks: [],
+                showA:[],
+                showB:[],
+                showC:[],
+                showX:[],
+                showY:[],
+                showZ:[],
                 sparsePeaks: null,
                 ms1peaks: null,
                 ms1scanLabel: null,
@@ -38,15 +44,13 @@
                 showOptionsTable: true,
                 showSequenceInfo: true
         };
-			
+		
+      	
 	    var options = $.extend(true, {}, defaults, opts); // this is a deep copy
-
-        return this.each(function() {
-
-            index = index + 1;
-            init($(this), options);
-
-        });
+      return this.each(function() {
+        index = index + 1;
+        init($(this), options);
+      });
 	};
 
     var index = 0;
@@ -85,6 +89,7 @@
             seqinfo: "seqinfo",
             peakDetect: "peakDetect"
 	};
+
 
     function getElementId(container, elementId){
         return elementId+"_"+container.data("index");
@@ -153,6 +158,19 @@
             showFileInfo(container, options);
             showModInfo(container, options);
         }
+      // if defined ShowA to ShowZ not empty
+       var ion_choice = new Object();
+       set_ion_choice(options, ion_choice)
+
+       var ionChoiceContainer = $(getElementSelector(container, elementIds.ion_choice));
+       ionChoiceContainer.find("input:checkbox").each(function() {
+         var id = $(this).attr('id');
+         if( ion_choice[id] == 1){
+           $(this).attr('checked', 'checked');
+         }else{
+           $(this).attr('checked', "");
+         }
+       });
 
         createPlot(container, getDatasets(container)); // Initial MS/MS Plot
 
@@ -225,6 +243,28 @@
         }
     }
 
+    function set_ion_choice(options,ion_choice){ 
+       var showion = new Array();
+       var ion_type = new Array('a','b','c','x','y','z');
+       showion[0]=options.showA;
+       showion[1]=options.showB;
+       showion[2]=options.showC;
+       showion[3]=options.showX;
+       showion[4]=options.showY;
+       showion[5]=options.showZ; 
+       for (i=0; i<6; i++){
+         for (j=0; j<3; j++){
+           var n=j+1;
+           if (showion[i][j] == 1){
+             ion_choice[ion_type[i]+'_'+n] = 1;
+           }else{
+             ion_choice[ion_type[i]+'_'+n] = 0;
+           }
+         }
+       }
+
+
+    }
     // trim any 0 intensity peaks from the end of the ms/ms peaks array
     function trimPeaksArray(options)
     {
@@ -842,7 +882,6 @@
 	function calculateTheoreticalSeries(container, selectedIons) {
 
 		if(selectedIons) {
-		
 			var todoIonSeries = [];
 			var todoIonSeriesData = [];
             var ionSeries = container.data("ionSeries");
