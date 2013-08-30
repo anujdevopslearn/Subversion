@@ -87,6 +87,7 @@ my $sql = qq~
 	SELECT datasetidentifier,
 				 datasetTag,
 				 datasetTitle,
+         datasetType,
          datasetPassword, 
 				 UPPER(left(lastname,1))+ 
          LOWER(SUBSTRING(lastname,2,len(lastname)))+','+
@@ -102,7 +103,7 @@ my @rows = $sbeams->selectSeveralColumns($sql);
 foreach my $row ( @rows ) {
  #$row->[0] = qq~<a href="http://www.peptideatlas.org/PASS/$row->[0]">$row->[0]</a>~;
 }
-my @labels = qw ( id datasettag title datapassword submitter email release finalize);
+my @labels = qw ( id datasettag title type datapassword submitter email release finalize);
 #unshift @rows, \@labels;
 use JSON;
 my $json = new JSON;
@@ -110,7 +111,7 @@ my $hash;
 foreach my $row (@rows){
 	my %data=();
 	foreach my $i (0..$#labels){
-		if ($i == 6 || $i == 7){
+		if ($i == 7 || $i == 8){
 		 my $date = $row->[$i];
 		 $date =~ /(\d{4})-0?(\d+)-0?(\d+)\D+/;
 			$data{dates}{$labels[$i]}{std}{year} = $1;
