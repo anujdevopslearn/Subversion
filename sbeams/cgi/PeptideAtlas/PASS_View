@@ -303,8 +303,8 @@ sub handle_request {
     if ( ( $authentication->{result} eq 'Success' &&
            $emailAddress eq $datasetMetadata->{emailAddress} ) || $isAdmin) {
       finalizeDataset(
-	authentication=>$authentication,
-	identifier=>$parameters{'identifier'},
+				authentication=>$authentication,
+				identifier=>$parameters{'identifier'},
         emailAddress=>$datasetMetadata->{emailAddress},
       );
       $datasetMetadata = getPASSMetaData(identifier=>$datasetIdentifier);
@@ -339,9 +339,10 @@ sub handle_request {
         newDatasetPassword => $parameters{'newDatasetPassword'},
       );
       if ($result->{errors}) {
-	push(@errors,@{$result->{errors}});
+				push(@errors,@{$result->{errors}});
       }
       $datasetMetadata = getPASSMetaData(identifier=>$datasetIdentifier);
+      # update json file
     } else {
       push(@errors,@{$authentication->{errors}}) if ($authentication->{errors});
     }
@@ -357,7 +358,7 @@ sub handle_request {
         newPublicReleaseDate => $parameters{'newPublicReleaseDate'},
       );
       if ($result->{errors}) {
-	push(@errors,@{$result->{errors}});
+       	push(@errors,@{$result->{errors}});
       }
       $datasetMetadata = getPASSMetaData(identifier=>$datasetIdentifier);
     } else {
@@ -640,7 +641,9 @@ sub handle_request {
      print "<HR>\n";
 
   }
-
+  if ($action !~ /LOG(OUT|IN)/i && $action !~ /(VIEW|SET)$/i ) {
+    my $str = do '/local/www/html/sbeams/lib/scripts/PeptideAtlas/create_PASS_Json.pl';
+  }
   return;
 
 } # end handle_request
@@ -1741,14 +1744,6 @@ sub updateDataset {
   open(CMDFILE,">>$cmdfile") || die("ERROR: Unable to append to '$cmdfile'");
   print CMDFILE "UpdateDataset $datasetIdentifier\n";
   close(CMDFILE);
-
-  print "<BR>INFO: Updating the JSON data.<BR>\n" if ($verbose);
-  my ($date) = `date '+%F+%H+%m+%s'`;
-  `cp /regis/passdata/PASS.json /regis/passdata/pass_json/PASS.json-$date`;
-
-  my $cmd = "/net/dblocal/www/html/sbeams/lib/scripts/PeptideAtlas/create_PASS_Json.pl";
-  system($cmd);
-
 
   #### Print the information for the user
   print "<BR>INFO: Preparing the confirmation information.<BR>\n" if ($verbose);
