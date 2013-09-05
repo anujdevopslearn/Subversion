@@ -225,6 +225,9 @@ sub get_list_overview {
   AND project_id IN ( $project_ids );
   BUILD
 
+
+  $log->info( "$info" );
+
   my $table = "<TABLE WIDTH=800>\n";
 
   my ( $tr, $link ) = $sbeams->make_table_toggle( name    => 'build_overview',
@@ -241,6 +244,7 @@ sub get_list_overview {
   for my $key ( keys( %{$info} ) ) {
     $info->{lc($key)} = $info->{$key};
   }
+
 
   my $spc = $sbeams->getGifSpacer(500);
 
@@ -656,6 +660,8 @@ sub get_btxt {
 }
 sub get_list_selector {
 
+#  <div id=gradient style="background-image: -linear-gradient(to left,#FF5A00,#FFAE00})"> Foofoo </div>
+
   my $sql =<<"  END";
   SELECT title, first_name, last_name, protein_list_id
   FROM $TBAT_DOMAIN_PROTEIN_LIST DPL
@@ -665,13 +671,12 @@ sub get_list_selector {
 
   my $sth = $sbeams->get_statement_handle( $sql );
   my $help = qq~
-  This page shows the proteins from various Human Proteome Project Disease-related protein lists. You can select any list<br>
-  to view its details, and browse the proteins on the list. You can select protein(s) of interest and search for the best assays<br>
-  in the SRM Atlas.
-  <br>
-  <br>
+   <div style="font-family:Helvetica, Arial, sans-serif;font-size:200%;font-weight:bold" id=heading> Protein List Query </div>
+   <br>
+   <div id=help style="width:800px"> This tool helps you select proteins to explore in PeptideAtlas or SRMAtlas based on lists of high-priority proteins from the various participating groups of the Biology/Disease-driven Human Proteome Project (B/D-HPP).
 
-  <I> Choose an HPP B/D protein list to explore </I>
+  </div>
+  <br>
   <br>
   ~;
 
@@ -679,7 +684,7 @@ sub get_list_selector {
   $help
   <br>
   <form method=post id=list_selector>
-  <select name=protein_list_id onchange=load_list();>
+  <I> Choose an HPP B/D protein list to explore:</I> &nbsp;&nbsp; <select name=protein_list_id onchange=load_list();>
   ~;
 
   while( my @row = $sth->fetchrow_array() ) {
