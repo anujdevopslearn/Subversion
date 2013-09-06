@@ -2453,7 +2453,12 @@ sub getFile {
 
 
     #### Send the HTTP header
-    print "Content-type: $content_type\n\n";
+    print "Content-type: $content_type\n";
+
+    if ( $parameters{ForceDownload} ) {
+      print "Content-Disposition: attachment\n";
+    }
+    print "\n";
 
     #### Send the contents of the file
     my $buffer;
