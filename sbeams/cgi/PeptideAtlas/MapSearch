@@ -1,0 +1,522 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : main.cgi
+# $Id: main.cgi 6972 2012-02-28 06:50:02Z dcampbel $
+#
+# Description : This script authenticates the user, and then
+#               displays the opening access page.
+#
+# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Get the script set up with everything it will need
+###############################################################################
+use strict;
+use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
+             $current_contact_id $current_username);
+use lib qw (../../lib/perl);
+use CGI::Carp qw(fatalsToBrowser croak);
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::DataTable;
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+
+
+###############################################################################
+# Global Variables
+###############################################################################
+$PROG_NAME = 'MapSearch';
+main();
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authentication and stop immediately if authentication
+# fails else continue.
+###############################################################################
+sub main
+{
+    #### Do the SBEAMS authentication and exit if a username is not returned
+    exit unless ($current_username = $sbeams->Authenticate(
+        permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+        'PeptideAtlas_readonly', 'PeptideAtlas_exec'],
+        #connect_read_only=>1,
+        allow_anonymous_access=>1,
+    ));
+
+
+    #### Read in the default input parameters
+    my %parameters;
+    my $n_params_found = $sbeams->parse_input_parameters(
+        q=>$q,
+        parameters_ref=>\%parameters
+        );
+
+    if ( $parameters{reset_id} && $parameters{reset_id} eq 'true' ) {
+      $sbeamsMOD->clearBuildSettings();
+    }
+
+    ## get project_id to send to HTMLPrinter display
+    my $project_id = $sbeamsMOD->getProjectID(
+        atlas_build_name => $parameters{atlas_build_name},
+        atlas_build_id => $parameters{atlas_build_id}
+        );
+
+
+    #### Process generic "state" parameters before we start
+    $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+#    $sbeams->printCGIParams($q);
+
+
+    #### Decide what action to take based on information so far
+    if ($parameters{action} eq "???") {
+
+        # Some action
+ 
+    } else {
+
+        $sbeamsMOD->display_page_header(project_id => $project_id);
+
+        handle_request(ref_parameters=>\%parameters);
+
+        $sbeamsMOD->display_page_footer();
+
+    }
+
+
+
+
+} # end main
+
+
+###############################################################################
+# Show the main welcome page
+###############################################################################
+sub handle_request {
+
+    my %args = @_;
+
+    #### Process the arguments list
+    my $ref_parameters = $args{'ref_parameters'}
+        || die "ref_parameters not passed";
+
+    my %parameters = %{$ref_parameters};
+
+
+  #### Get the current atlas_build_id based on parameters or session
+  my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+    parameters_ref => \%parameters,
+  );
+  if (defined($atlas_build_id) && $atlas_build_id < 0) {
+    #### Don't return. Let the user pick from a valid one.
+    #return;
+  }
+
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+    parameters_ref => \%parameters,
+    program_name => $PROG_NAME,
+  );
+  if ($sbeams->output_mode() eq 'html') {
+    print "<BR>\n";
+    print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+    print "<BR>\n";
+  }
+
+my $results = $q->param( 'cmd' );
+$results =~ s/\s+/ /g;
+$results =~ s/ $//g;
+$results =~ s/\s+/,/g;
+
+my $selected = '';
+my $link = '';
+
+
+  my %s2u = ( Bravo => 'Q92823',
+               GLDN => 'Q6ZMI3',
+               ANK2 => 'Q01484',
+               GFAP => 'P14136',
+               ALCAM => 'Q13740',
+               CNTN2 => 'Q02246',
+               LEF1 => 'Q9UJU2',
+               PTPB => 'P23467',
+               NF => 'P21359',
+               CNTN1 => 'Q12860',
+               ANK3 => 'Q12955',
+           'Insulin' => 'P01308',
+         'TNF_alpha' => 'P01375', 
+          'IL-15' => 'P40933', 
+          'IL-6' => 'P05231', 
+          'IL-23' => 'Q9NPF7', 
+          'IL-2' => 'P60568', 
+          'IL-1RA' => 'P18510', 
+          'IL-12' => 'P29460', 
+          'IL-10' => 'P22301', 
+          'IFN_gamma' => 'P01579', 
+          'IL-1_beta' => 'P01584', 
+          'TGF_beta' => 'P01137,P61812,P10600', 
+          'CD2' => 'P06729', 
+          'A1AT' => 'P01009', 
+          'CD3' => 'P09693,P04234,P07766,P20963', 
+          'TCR' => 'Q13747,Q2L9S7,A7L8C5', 
+          'CD20' => 'P11836' 
+               );
+
+  my %title;
+  for my $key ( keys( %s2u ) ) {
+    $log->warn( qq~ symbol2sp["$key"] = "$s2u{$key}"; ~ );
+    $title{$key} = "Add $key ($s2u{$key}) to list";
+  }
+
+
+my $build_id = ( $sbeams->isGuestUser() ) ? 120 : 146;
+
+print qq~
+   
+
+   <BR>
+   <BR>
+   <table border=0>
+    <tr><td colspan=2 align=center>
+          <h3>Targets of immune intervention in type 1 diabetes</h3>
+
+   <DIV CLASS=info_box>  
+This schematic taken from Bluestone, Herold & Eisenbarth (2010) [<a href=http://www.nature.com/nature/journal/v464/n7293/abs/nature08933.html>Nature</a>, 464, 1293] provides an overview of the pathogenesis of type 1 diabetes, highlighting a number of key pathways that are being targeted by current therapeutics. Although not exhaustive, this figure shows that both non-specific and antigen-specific therapies are being tested, which inhibit effector cells and antigen presentation as well as boost regulatory pathways.
+<BR><BR>
+    Click on any area outlined with a dashed rectangle to add the protein(s) to the search list; click again to remove. Click SRM Atlas button to search for selected proteins in the SRM Atlas.
+   
+   </DIV>
+   <BR>
+        </td>
+    </tr>
+    <tr>
+       <td valign=top width="5%">
+       <BR>
+       $link
+       <BR>
+       <BR>
+       Selected List <BR>
+    <FORM NAME=mapform method=post action=GetTransitions id=working_list target=_GetTransitions>
+      <TEXTAREA NAME=cmd COLS=10 ROWS=25 ID=maplist onClick=blur()></TEXTAREA>
+      <input type=hidden name=pabst_build_id value=$build_id>
+      <input type=hidden name=protein_name_constraint id=protein_name value='tmp'>
+      <input type=hidden name=biosequence_name_constraint id=biosequence_name value='tmp'>
+      <input type=hidden name=default_search value=yes>
+      <BR>
+      <div width=200><div {float: right;}><button id=submit class=submit_button onClick=submit_form('SRM')>Search&nbsp;SRM&nbsp;Atlas</button></div><div {float: left;} ><button id=submit class=submit_button onClick=submit_form('Peptide')>Search&nbsp;Peptide&nbsp;Atlas</button></div></div>
+    </FORM>
+      </td>
+      <td align=left>
+
+
+<style type="text/css">
+		.highlighted { background: lightskyblue; }
+    .form_button { -moz-box-shadow:inset 0px 1px 14px -1px #bbdaf7; -webkit-box-shadow:inset 0px 1px 14px -1px #bbdaf7; box-shadow:inset 0px 1px 14px -1px #bbdaf7; background:-webkit-gradient( linear, left top, left bottom, color-stop(0.05, #79bbff), color-stop(1, #378de5) ); background:-moz-linear-gradient( center top, #79bbff 5%, #378de5 100% ); filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#79bbff', endColorstr='#378de5'); background-color:#79bbff; -moz-border-radius:6px; -webkit-border-radius:6px; border-radius:6px; border:1px solid #84bbf3; display:inline-block; color:#ffffff; font-family:Monospace; font-size:12px; font-weight:bold; padding:4px 22px; text-decoration:none; text-shadow:1px 1px 5px #528ecc; }
+    .form_button:hover { background:-webkit-gradient( linear, left top, left bottom, color-stop(0.05, #378de5), color-stop(1, #79bbff) ); background:-moz-linear-gradient( center top, #378de5 5%, #79bbff 100% ); filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#378de5', endColorstr='#79bbff'); background-color:#378de5; }
+    .form_button:active { position:relative; top:1px; }
+
+
+	dl.image_map {display:block; width:800; height:583; background:url(/devDC/sbeams/images/diabetes_scaled.png); position:relative; margin:2px auto 2px auto;}
+	a.LINK0 {left:515px; top:31px; background:transparent;}
+	a.LINK0 {display:block; width:77px; height:0; padding-top:35px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK0:hover  {background:transparent; border:2px dashed black; color:black;}
+	a.LINK1 {left:570px; top:0px; background:transparent;}
+	a.LINK1 {display:block; width:77px; height:0; padding-top:30px; overflow:hidden; position:absolute;  border:1px dashed gray;}
+	a.LINK1:hover  {background:transparent; border:2px dashed black; color:black;}
+	a.LINK2 {left:640px; top:25px; background:transparent;}
+	a.LINK2 {display:block; width:62px; height:0; padding-top:34px; overflow:hidden; position:absolute;  border:1px dashed gray;}
+	a.LINK2:hover  {background:transparent; border:2px dashed black; color:black;}
+	a.LINK3 {left:227px; top:265px; background:transparent;}
+	a.LINK3 {display:block; width:62px; height:0; padding-top:34px; overflow:hidden; position:absolute;  border:1px dashed gray;}
+	a.LINK3:hover  {background:transparent; border:2px dashed black; color:black;}
+	a.LINK4 {left:61px; top:292px; background:transparent;}
+	a.LINK4 {display:block; width:57px; height:0; padding-top:45px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK4:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK5 {left:476px; top:267px; background:transparent;}
+	a.LINK5 {display:block; width:66px; height:0; padding-top:43px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK5:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK6 {left:716px; top:128px; background:transparent;}
+	a.LINK6 {display:block; width:63px; height:0; padding-top:37px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK6:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK7 {left:735px; top:160px; background:transparent;}
+	a.LINK7 {display:block; width:57px; height:0; padding-top:33px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK7:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK8 {left:300px; top:389px; background:transparent;}
+	a.LINK8 {display:block; width:51px; height:0; padding-top:46px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK8:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK9 {left:254px; top:389px; background:transparent;}
+	a.LINK9 {display:block; width:51px; height:0; padding-top:46px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK9:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK10 {left:162px; top:291px; background:transparent;}
+	a.LINK10 {display:block; width:51px; height:0; padding-top:46px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK10:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK11 {left:495px; top:105px; background:transparent;}
+	a.LINK11 {display:block; width:51px; height:0; padding-top:46px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK11:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK12 {left:479px; top:154px; background:transparent;}
+	a.LINK12 {display:block; width:51px; height:0; padding-top:46px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK12:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK13 {left:434px; top:107px; background:transparent;}
+	a.LINK13 {display:block; width:51px; height:0; padding-top:46px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK13:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK14 {left:15px; top:152px; background:transparent;}
+	a.LINK14 {display:block; width:59px; height:0; padding-top:57px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK14:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK15 {left:350px; top:291px; background:transparent;}
+	a.LINK15 {display:block; width:54px; height:0; padding-top:50px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK15:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK16 {left:693px; top:272px; background:transparent;}
+	a.LINK16 {display:block; width:93px; height:0; padding-top:33px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK16:hover  {background:transparent; border:1px dashed black; color:black;}
+
+
+</style>
+
+<dl class="image_map">
+	<dd><a class="LINK0" title="$title{'TNF_alpha'}" onClick="addItem('TNF_alpha', 'LINK0' )"></a></dd>
+	<dd><a class="LINK1" title="$title{'IL-15'}" onClick="addItem('IL-15', 'LINK1' )"></a></dd>
+	<dd><a class="LINK2" title="$title{'IL-6'}"  onClick="addItem('IL-6', 'LINK2' )"></a></dd>
+	<dd><a class="LINK3" title="$title{'CD3'}"  onClick="addItem('CD3', 'LINK3' )"></a></dd>
+	<dd><a class="LINK4" title="$title{'CD20'}"  onClick="addItem('CD20', 'LINK4' )"></a></dd>
+	<dd><a class="LINK5" title="$title{'CD2'}"  onClick="addItem('CD2', 'LINK5' )"></a></dd>
+	<dd><a class="LINK6" title="$title{'IL-23'}"  onClick="addItem('IL-23', 'LINK6' )"></a></dd>
+	<dd><a class="LINK7" title="$title{'IL-12'}"  onClick="addItem('IL-12', 'LINK7' )"></a></dd>
+	<dd><a class="LINK8" title="$title{'TGF_beta'}"  onClick="addItem('TGF_beta', 'LINK8' )"></a></dd>
+	<dd><a class="LINK9" title="$title{'IL-10'}"  onClick="addItem('IL-10', 'LINK9' )"></a></dd>
+	<dd><a class="LINK10" title="$title{'TCR'}"  onClick="addItem('TCR', 'LINK10' )"></a></dd>
+	<dd><a class="LINK11" title="$title{'IL-1_beta'}"  onClick="addItem('IL-1_beta', 'LINK11' )"></a></dd>
+	<dd><a class="LINK12" title="$title{'IFN_gamma'}"  onClick="addItem('IFN_gamma', 'LINK12' )"></a></dd>
+	<dd><a class="LINK13" title="$title{'IL-1RA'}"  onClick="addItem('IL-1RA', 'LINK13' )"></a></dd>
+	<dd><a class="LINK14" title="$title{'Insulin'}"  onClick="addItem('Insulin', 'LINK14' )"></a></dd>
+	<dd><a class="LINK15" title="$title{'IL-2'}"  onClick="addItem('IL-2', 'LINK15' )"></a></dd>
+	<dd><a class="LINK16" title="$title{'A1AT'}"  onClick="addItem('A1AT', 'LINK16' )"></a></dd>
+</dl>    
+      </td>
+    </tr>
+  </table>
+
+
+
+  <SCRIPT LANGUAGE='javascript'>
+  function submit_form( search_space ) {
+
+    var symbol2sp = new Array();
+    symbol2sp["LEF1"] = "Q9UJU2";
+    symbol2sp["IL-12"] = "P29460";
+    symbol2sp["TCR"] = "Q13747;Q2L9S7;A7L8C5";
+    symbol2sp["CD2"] = "P06729";
+    symbol2sp["Bravo"] = "Q92823";
+    symbol2sp["IL-1_beta"] = "P01584";
+    symbol2sp["ALCAM"] = "Q13740";
+    symbol2sp["TGF_beta"] = "P01137;P61812;P10600";
+    symbol2sp["IL-6"] = "P05231";
+    symbol2sp["GLDN"] = "Q6ZMI3";
+    symbol2sp["IFN_gamma"] = "P01579";
+    symbol2sp["CNTN2"] = "Q02246";
+    symbol2sp["CD3"] = "P09693;P04234;P07766;P20963";
+    symbol2sp["ANK3"] = "Q12955";
+    symbol2sp["CD20"] = "P11836";
+    symbol2sp["A1AT"] = "P01009";
+    symbol2sp["IL-1RA"] = "P18510";
+    symbol2sp["IL-2"] = "P60568";
+    symbol2sp["IL-10"] = "P22301";
+    symbol2sp["PTPB"] = "P23467";
+    symbol2sp["IL-23"] = "Q9NPF7";
+    symbol2sp["TNF_alpha"] = "P01375";
+    symbol2sp["Insulin"] = "P01308";
+    symbol2sp["IL-15"] = "P40933";
+    symbol2sp["NF"] = "P21359";
+    symbol2sp["ANK2"] = "Q01484";
+    symbol2sp["GFAP"] = "P14136";
+    symbol2sp["CNTN1"] = "Q12860";
+    
+    var cmdbox = document.getElementById( 'maplist' );
+    var proteinlist = cmdbox.innerHTML;
+    var splitem = proteinlist.split( "\\n" );
+    var protein_name_str = '';
+    var sep = '';
+    for ( var i = 0; i < splitem.length; i++ ) {
+      if ( symbol2sp[splitem[i]] ) {
+        protein_name_str = protein_name_str + sep + symbol2sp[splitem[i]];
+        sep = ';';
+      }
+    }
+    if ( protein_name_str ) {
+      if ( search_space == 'SRM' ) {
+        var protein_constraint = document.getElementById( 'protein_name' );
+        protein_constraint.value = protein_name_str;
+      } else {
+        var biosequence_constraint = document.getElementById( 'biosequence_name' );
+        biosequence_constraint.value = protein_name_str;
+      }
+    } else {
+      alert( "Please select on or more proteins to conduct and SRM Atlas search");
+      return false;
+    }
+
+    if ( search_space == 'Peptide' ) {
+      var working_list = document.getElementById('working_list')
+      working_list.action = 'GetProteins';
+      working_list.target = '_GetProteins';
+      working_list.submit();
+      return true;
+    }
+
+    // Send a message to GetTransitions via a cookie that expires in 5 seconds (only wanna see it once, yo).
+    var name = 'GetTransitionsMessage';
+    value = 'The selected proteins have been imported%2C please make any desired parameter changes and submit to search the SRM Atlas';
+    var date = new Date();
+    date.setTime(date.getTime()+(5*1000));
+    var expires = "; expires="+date.toGMTString();
+    var cookie = name+"="+value+expires+"; path=/";
+    document.cookie = cookie;
+
+    document.getElementById('working_list').submit();
+    return true;
+
+    var working_list = document.getElementById('working_list');
+    alert( working_list );
+    working_list.submit();
+//    document.getElementById('working_list').submit();
+    return true;
+
+  }
+
+
+
+  function addItem(myitem, mylink) {
+
+    var link_obj = document.getElementsByTagName( "a" );
+
+    var cmdbox = document.getElementById( 'maplist' );
+    var regex = new RegExp( myitem + "\\n" );
+
+    var currval = cmdbox.innerHTML;
+    var match = regex.exec( currval );
+    if ( !match ) {
+      cmdbox.innerHTML += myitem+'\\n';
+      for(var i=0;i<link_obj.length;i++) {
+        if ( link_obj[i].className === mylink ) {
+          link_obj[i].style.border = "2px dashed black";
+        }
+      }  
+    } else {
+      var oldtxt = cmdbox.innerHTML;
+      var newtxt = oldtxt.replace( myitem+'\\n','' );
+      cmdbox.innerHTML = newtxt; 
+      for(var i=0;i<link_obj.length;i++) {
+        if ( link_obj[i].className === mylink ) {
+          link_obj[i].style.border = "1px dashed gray";
+        }
+      }  
+    }
+
+
+  }
+  </SCRIPT>
+~;
+
+
+} # end showMainPage
+
+
+my $foo = qq~
+<div style="text-align:center; width:800px; margin-left:auto; margin-right:auto;">
+<img id="Image-Maps_6201307251408468" src="/devDC/sbeams/images/diabetes_scaled.png" usemap="#diabetes" border="0" width="1199" height="874" alt="" />
+<map id="diabetes" name="diabetes">
+<area class="LINK1" shape="rect" coords="773,46,886,96" alt="TNF Alpha" title="TNF Alpha"  onClick="addItem('TNF_alpha')"  />
+<area shape="rect" coords="855,0,968,43" -15" alt="IL-15" title="IL-15"  onClick="addItem('IL-15')"  />
+<area shape="rect" coords="960,38,1051,87" alt="IL-6" title="IL-6"  onClick="addItem('IL-6')"  />
+<area shape="rect" coords="340,397,431,446" alt="CD3" title="CD3"  onClick="addItem('CD3')"  />
+<area shape="rect" coords="91,438,174,504" alt="CD20" title="CD20"  onClick="addItem('CD20')"  />
+<area shape="rect" coords="714,401,811,463" alt="CD2" title="CD2"  onClick="addItem('CD2')"  />
+<area shape="rect" coords="1074,192,1166,246" alt="IL-23" title="IL-23"  onClick="addItem('IL-23')"  />
+<area shape="rect" coords="1102,240,1185,288" alt="IL-12" title="IL-12"  onClick="addItem('IL-12')"  />
+<area shape="rect" coords="450,584,525,651"  alt="TGF-Beta" title="TGF-Beta"  onClick="addItem('TGF_beta')"  />
+<area shape="rect" coords="381,583,456,650"  alt="IL-10" title="IL-10"  onClick="addItem('IL-10')"  />
+<area shape="rect" coords="243,437,318,504"  alt="T-Cell Receptor" title="T-Cell Receptor"  onClick="addItem('TCR')"  />
+<area shape="rect" coords="743,157,818,224"  alt="IL-1 Beta" title="IL-1 Beta"  onClick="addItem('IL-1_beta')"  />
+<area shape="rect" coords="719,231,794,298"  alt="Interferon Gamma" title="Interferon Gamma"   onClick="addItem('IFN_gamma')" />
+<area shape="rect" coords="651,161,726,228" alt="IL-1 Receptor Antagonist" title="IL-1 Receptor Antagonist" onClink="addItem('IL-1ra')"   />
+<area shape="rect" coords="23,228,109,312"  alt="Insulin" title="Insulin"  onClick="addItem('Insulin')"  />
+<area shape="rect" coords="525,436,604,509"  alt="IL-2" title="IL-2"  onClick="addItem('IL-2')"  />
+<area shape="rect" coords="1040,408,1178,456"  alt="Alpha-1 Anti-trypsin" title="Alpha-1 Anti-trypsin"  onClick="addItem('A1_antitrypsin')"  />
+<area shape="rect" coords="1197,872,1199,874" href="http://www.image-maps.com/index.php?aff=mapped_users_6201307251408468" alt="Image Map" title="Image Map" />
+</map>
+</div>
+
+~;
+__DATA__
+	a.LINK0 {left:773px; top:46px; background:transparent;}
+	a.LINK0 {display:block; width:115px; height:0; padding-top:52px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK0:hover  {background:transparent; border:2px dashed black; color:black;}
+	a.LINK1 {left:855px; top:0px; background:transparent;}
+	a.LINK1 {display:block; width:115px; height:0; padding-top:45px; overflow:hidden; position:absolute;  border:1px dashed gray;}
+	a.LINK1:hover  {background:transparent; border:2px dashed black; color:black;}
+	a.LINK2 {left:960px; top:38px; background:transparent;}
+	a.LINK2 {display:block; width:93px; height:0; padding-top:51px; overflow:hidden; position:absolute;  border:1px dashed gray;}
+	a.LINK2:hover  {background:transparent; border:2px dashed black; color:black;}
+	a.LINK3 {left:340px; top:397px; background:transparent;}
+	a.LINK3 {display:block; width:93px; height:0; padding-top:51px; overflow:hidden; position:absolute;  border:1px dashed gray;}
+	a.LINK3:hover  {background:transparent; border:2px dashed black; color:black;}
+	a.LINK4 {left:91px; top:438px; background:transparent;}
+	a.LINK4 {display:block; width:85px; height:0; padding-top:68px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK4:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK5 {left:714px; top:401px; background:transparent;}
+	a.LINK5 {display:block; width:99px; height:0; padding-top:64px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK5:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK6 {left:1074px; top:192px; background:transparent;}
+	a.LINK6 {display:block; width:94px; height:0; padding-top:56px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK6:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK7 {left:1102px; top:240px; background:transparent;}
+	a.LINK7 {display:block; width:85px; height:0; padding-top:50px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK7:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK8 {left:450px; top:584px; background:transparent;}
+	a.LINK8 {display:block; width:77px; height:0; padding-top:69px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK8:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK9 {left:381px; top:583px; background:transparent;}
+	a.LINK9 {display:block; width:77px; height:0; padding-top:69px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK9:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK10 {left:243px; top:437px; background:transparent;}
+	a.LINK10 {display:block; width:77px; height:0; padding-top:69px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK10:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK11 {left:743px; top:157px; background:transparent;}
+	a.LINK11 {display:block; width:77px; height:0; padding-top:69px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK11:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK12 {left:719px; top:231px; background:transparent;}
+	a.LINK12 {display:block; width:77px; height:0; padding-top:69px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK12:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK13 {left:651px; top:161px; background:transparent;}
+	a.LINK13 {display:block; width:77px; height:0; padding-top:69px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK13:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK14 {left:23px; top:228px; background:transparent;}
+	a.LINK14 {display:block; width:88px; height:0; padding-top:86px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK14:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK15 {left:525px; top:436px; background:transparent;}
+	a.LINK15 {display:block; width:81px; height:0; padding-top:75px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK15:hover  {background:transparent; border:1px dashed black; color:black;}
+	a.LINK16 {left:1040px; top:408px; background:transparent;}
+	a.LINK16 {display:block; width:140px; height:0; padding-top:50px; overflow:hidden; position:absolute; border:1px dashed gray;}
+	a.LINK16:hover  {background:transparent; border:1px dashed black; color:black;}
+
+
