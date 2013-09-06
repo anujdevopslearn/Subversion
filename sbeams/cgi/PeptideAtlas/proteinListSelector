@@ -65,7 +65,7 @@ my $show_image = 0;
     # Get the HTML to display the tabs
     my $tabMenu = $atlas->getTabMenu(
       parameters_ref => $params,
-      program_name => 'domainProteinList',
+      program_name => 'proteinList',
     );
 
     $page .=<<"    END";
@@ -240,7 +240,7 @@ sub get_list_overview {
     my $spc = $sbeams->getGifSpacer(5);
     my $tab = $sbeams->getGifSpacer(20);
 
-    my $contributor = $atlas->encodeSectionItem( key   => 'Contributor',
+    my $contributor = $atlas->encodeSectionItem( key   => 'Contributors',
                               value => "$info->{contributors}" . $spc, vspan => 3 ) . "\n";
     $contributor =~ s/NOWRAP/>$tab<\/TD><TD NOWRAP/;
     $log->info( "contributor is $contributor" );
@@ -255,7 +255,7 @@ sub get_list_overview {
 
     my $url = '';
     if ( $info->{url} ) {
-      $url = $atlas->encodeSectionItem( key   => 'Origin', 
+      $url = $atlas->encodeSectionItem( key   => 'Reference', 
                              value => "<A HREF='$info->{url}'>$info->{url}</A>", vspan => 3 ) . "\n";
       $url =~ s/NOWRAP/>$tab<\/TD><TD NOWRAP/;
     }
