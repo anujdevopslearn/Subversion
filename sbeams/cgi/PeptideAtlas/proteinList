@@ -15,10 +15,8 @@
 # Get the script set up with everything it will need
 ###############################################################################
 use strict;
-#use vars qw ($sbeams);
 use lib qw (../../lib/perl);
-#use CGI::Carp qw(fatalsToBrowser croak);
-  use Data::Dumper;
+use Data::Dumper;
 
 use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
@@ -65,7 +63,7 @@ my $show_image = 0;
     # Get the HTML to display the tabs
     my $tabMenu = $atlas->getTabMenu(
       parameters_ref => $params,
-      program_name => 'domainProteinList',
+      program_name => 'proteinList',
     );
 
     $page .=<<"    END";
@@ -89,7 +87,7 @@ my $show_image = 0;
     $page .= get_list_selector();
     $page .= get_list_overview();
 
-    $page .= "<BR><BR>";
+    $page .= "<BR>";
 
     $page .= get_list_table();
 
@@ -218,15 +216,14 @@ sub get_list_overview {
   my $project_ids = join( ",", @project_ids ) || '0';
 
   my $info = $sbeams->selectrow_hashref( <<"  BUILD" );
-  SELECT title, description, n_proteins, original_file
+  SELECT title, description, n_proteins, original_file, protein_list_id,
+         contributors, url, image_path, abstract, image_caption
   FROM $TBAT_DOMAIN_PROTEIN_LIST 
   WHERE protein_list_id = $params->{protein_list_id}
   AND record_status <> 'D'
   AND project_id IN ( $project_ids );
   BUILD
 
-
-  $log->info( "$info" );
 
   my $table = "<TABLE WIDTH=800>\n";
 
@@ -245,18 +242,42 @@ sub get_list_overview {
     $info->{lc($key)} = $info->{$key};
   }
 
+  my $file_url = "$CGI_BASE_DIR/PeptideAtlas/ManageTable.cgi/$info->{original_file}?TABLE_NAME=AT_Domain_Protein_list;ForceDownload=1;protein_list_id=" . $info->{protein_list_id} . ";GetFile=original_file";
+  my $file_link = "<a href='$file_url'>$info->{original_file}</a>";
 
   my $spc = $sbeams->getGifSpacer(500);
+  my $tab = $sbeams->getGifSpacer(25);
+
+  my $img = '';
+  my $caption = '';
+  if ( $info->{image_path} ) {
+    my @path = split( /\//, $info->{image_path});
+    my $web_path = "/devDC/sbeams/images/$path[$#path]";
+    $img = "$tab<img src=$web_path height=80 width=80></img>\n";
+    $caption = $info->{image_caption} || '';
+  }
+
+  my $abstract = '';
+  if ( $info->{abstract} ) {
+    $abstract = $info->{abstract};
+    $abstract =~ s/\r//;
+    $abstract =~ s/\n/<br>/g;
+  }
+
 
   $table .= $atlas->encodeSectionItem( key   => 'List Name', tr_info => $tr,
                             value => $info->{title} . $spc, vspan => 3 ) . "\n";
+  $table .= $atlas->encodeSectionItem( key   => 'Contributors', tr_info => $tr,
+                            value => $info->{contributors}, vspan => 3 ) . "\n";
   $table .= $atlas->encodeSectionItem( key   => 'Description', tr_info => $tr,
                             value => $info->{description}, vspan => 3 ) . "\n";
   $table .= $atlas->encodeSectionItem( key   => 'Number of Proteins', tr_info => $tr,
                             value => $info->{n_proteins}, vspan => 3 ) . "\n";
-  $table .= $atlas->encodeSectionItem( key   => 'Source File', tr_info => $tr,
-                            value => $info->{original_file}, vspan => 3 ) . "\n";
+  $table .= $atlas->encodeSectionItem( key   => 'Original File', tr_info => $tr,
+                            value => $file_link, vspan => 3 ) . "\n";
 
+  $table .= "<tr><td>$img</td><td>$caption</td></tr>";
+  $table .= "<tr><td colspan=2>$abstract</td></tr>";
   $table .= "</TABLE>\n";
   return $table;
 
