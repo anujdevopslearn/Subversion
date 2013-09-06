@@ -288,7 +288,7 @@ sub get_list_overview {
     }
   
     $table .= "<tr><td colspan=3 valign=top>$sub_table</td></tr>\n";
-    $table .= "<tr><td></td><td valign=top><a href=MapSearchDiabetes title='Use image-based interface to build sub-list' target='_map_search'>$img</a></td><td valign=top>$caption</td></tr>\n";
+    $table .= "<tr><td></td><td valign=top><a href=MapSearch title='Use image-based interface to build sub-list' target='_map_search'>$img</a></td><td valign=top>$caption</td></tr>\n" if $img;
     $table .= "<tr><td>$tab</td><td colspan=2 valign=top>$tab $abstract</td></tr>\n";
     $table .= "<tr><td colspan=3 valign=top>$spc</td></tr>\n";
     $table .= "<tr><td colspan=3 valign=top>$spc</td></tr>\n";
