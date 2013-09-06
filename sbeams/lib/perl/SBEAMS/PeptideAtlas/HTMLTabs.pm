@@ -107,7 +107,7 @@ sub getTabMenu
     ($PROG_NAME =~ /SearchProteins\?(\S+)/ ))
     {
        $current_tab=4;
-       $current_subtab=4;
+       $current_subtab=5;
 
     } elsif( ($PROG_NAME =~ /^Search/) ||
     ($PROG_NAME =~ /^Search\?(\S+)/ ))
@@ -122,6 +122,8 @@ sub getTabMenu
     } elsif ($PROG_NAME=~ /^GetNextProtChromMapping/ || 
      $PROG_NAME =~ /^GetNextProtChromMapping\?(\S+)/ ) {
        $current_tab=4;
+       $current_subtab=3;
+
      }elsif( ($PROG_NAME =~ /^GetPeptide/) ||
     ($PROG_NAME =~ /^GetPeptide\?(\S+)/ ))
     {
@@ -137,13 +139,17 @@ sub getTabMenu
     ($PROG_NAME =~ /CompareBuildsProteins\?(\S+)/ ))
     {
        $current_tab=4;
-       $current_subtab=3;
+       $current_subtab=4;
 
     } elsif ( ($PROG_NAME =~ /^showPathways/) ||
     ($PROG_NAME =~ /showPathways\?(\S+)/ ))
     {
        $current_tab=4;
-       $current_subtab=5;
+       $current_subtab=6;
+
+    } elsif ( ($PROG_NAME =~ /proteinList/) || ($PROG_NAME =~ /MapSearch/ )) {
+       $current_tab=4;
+       $current_subtab=7;
 
     } elsif ( ($PROG_NAME =~ /^GetTransitions/) ||
     ($PROG_NAME =~ /ViewSRMList\?(\S+)/ ))
@@ -308,11 +314,15 @@ sub getTabMenu
 			   helptext => 'Search for a list of proteins',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/SearchProteins"
 			   );
-
     $tabmenu->addMenuItem( tablabel => 'Queries',
 			   label => 'Pathways',
 			   helptext => 'Show PeptideAtlas coverage for a KEGG pathway',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/showPathways"
+			   );
+    $tabmenu->addMenuItem( tablabel => 'Queries',
+			   label => 'HPP Protein Lists',
+			   helptext => 'HPP B/D Protein Lists',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/proteinListSelector"
 			   );
 
     $tabmenu->addTab( label => 'SRMAtlas' );
