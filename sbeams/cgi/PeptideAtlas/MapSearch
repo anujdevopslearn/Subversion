@@ -219,6 +219,7 @@ This schematic taken from Bluestone, Herold & Eisenbarth (2010) [<a href=http://
     <FORM NAME=mapform method=post action=GetTransitions id=working_list >
       <TEXTAREA NAME=cmd COLS=10 ROWS=25 ID=maplist onClick=blur()></TEXTAREA>
       <input type=hidden name=pabst_build_id value=$build_id>
+      <input type=hidden name=organism_name value=human>
       <input type=hidden name=protein_name_constraint id=protein_name value='tmp'>
       <input type=hidden name=biosequence_name_constraint id=biosequence_name value='tmp'>
       <input type=hidden name=default_search value=yes>
