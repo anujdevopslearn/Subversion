@@ -269,7 +269,7 @@ $(document).ready(function() {
   unless ( 0 && $atlas->is_srm_mode() ) {
     print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
 
-    if ( my $msg = $q->cookie( 'GetTransitionsMessage' ) ) {
+    if ( my $msg = $q->cookie( 'SubmitMessage' ) ) {
       print qq~
       <br>
       <div class=info_box id=gt_info>$msg</div>
@@ -277,7 +277,7 @@ $(document).ready(function() {
         setTimeout(function() {
           var gt_info = document.getElementById( 'gt_info' );
           gt_info.style.display = 'none';
-        }, 5000);
+        }, 10000);
       </script>
       <br>
       ~
