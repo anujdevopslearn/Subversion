@@ -372,7 +372,8 @@ sub get_list_table {
 
   my $spc = '&nbsp;' x 3;
   my $fbox = "<span title='Text entered into the box will filter the protein list (all fields)'>Filter List: $spc</span>";
-  my $submit = "<span title='This will submit the selected proteins to query the SRM Atlas'>SRM Atlas: $spc</span>";
+  my $atlas_select = "<select name=atlas id=atlas><option value='SRM' selected>SRM Atlas</option><option value='Peptide'>Peptide Atlas</option></select>";
+  my $submit = "<span title='This will submit the selected proteins to query the SRM or Peptide Atlas'>$atlas_select $spc</span>";
   my $show = "<span title='Controls which subset of the protein list is visible'>Show: $spc</span>";
 
   my $build_id = ( $sbeams->isGuestUser() ) ? 120 : 146;
@@ -549,6 +550,7 @@ sub get_list_table {
   }
 
   function submit_form ( table ) {
+
     toggle_table = document.getElementById( table );
     var chk = 0;
     var proteins = '';
@@ -564,8 +566,7 @@ sub get_list_table {
       }
     }
 
-    var protein_constraint = document.getElementById( 'protein_name' );
-    protein_constraint.value = proteins;
+
     if ( chk > 100 ) {
       alert( 'You submitted ' + chk + ' proteins, interface is currently limited to 100 or fewer' );
       return false;
@@ -574,6 +575,21 @@ sub get_list_table {
       alert( 'Please select one or more proteins before submitting' );
       return false;
     }
+
+    var atlas_select = document.getElementById('atlas');
+    if ( atlas_select[atlas_select.selectedIndex].value == 'SRM' ) {
+      var protein_constraint = document.getElementById( 'protein_name' );
+      protein_constraint.value = proteins;
+    } else {
+      var biosequence_constraint = document.getElementById( 'biosequence_name' );
+      biosequence_constraint.value = proteins;
+      var working_list = document.getElementById('working_list')
+      working_list.action = 'GetProteins';
+      working_list.target = '_GetProteins';
+      working_list.submit();
+      return true;
+    }
+
 
     // Send a message to GetTransitions via a cookie that expires in 5 seconds (only wanna see it once, yo).
     var name = 'GetTransitionsMessage';
@@ -611,6 +627,7 @@ sub get_list_table {
   <input type=hidden name=organism value=human>
   <input type=hidden name=pabst_build_id value=$build_id>
   <input type=hidden name=protein_name_constraint id=protein_name value='tmp'>
+  <input type=hidden name=biosequence_name_constraint id=biosequence_name value='tmp'>
   <input type=hidden name=default_search value=yes>
   <script type="text/javascript" src="$HTML_BASE_DIR/usr/javascript/filterTable/filterTable.js"></script>
   <script LANGUAGE=javascript SRC="$HTML_BASE_DIR/usr/javascript/sorttable.js"></script>
