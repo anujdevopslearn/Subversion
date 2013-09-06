@@ -263,7 +263,7 @@ sub get_list_overview {
 
     $log->info($url);
   
-    $table .= "<TR><TD colspan=3> <div style='font-family:Helvetica, Arial, sans-serif;font-size:120%;font-weight:bold;color:#FF8700' id=heading>$info->{list_title}&nbsp;&nbsp;<a href=proteinList?protein_list_id=$info->{protein_list_id} target='_proteinListQuery' title='Search proteins in the $info->{list_title} HPP B/D List'><img src=/devDC/sbeams/images/search_icon_small.png></img></a></div> </TD></TR>\n";
+    $table .= "<TR><TD colspan=3> <div style='font-family:Helvetica, Arial, sans-serif;font-size:120%;font-weight:bold;color:#FF8700' id=heading>$info->{list_title}&nbsp;&nbsp;<a href=proteinList?protein_list_id=$info->{protein_list_id} title='Search proteins in the $info->{list_title} HPP B/D List'><img src=/devDC/sbeams/images/search_icon_small.png></img></a></div> </TD></TR>\n";
     my $sub_table = "<table>\n";
     $sub_table .= "$contributor\n";
     $sub_table .= "$nprot\n";
@@ -288,7 +288,7 @@ sub get_list_overview {
     }
   
     $table .= "<tr><td colspan=3 valign=top>$sub_table</td></tr>\n";
-    $table .= "<tr><td></td><td valign=top><a href=MapSearch title='Use image-based interface to build sub-list' target='_map_search'>$img</a></td><td valign=top>$caption</td></tr>\n" if $img;
+    $table .= "<tr><td></td><td valign=top><a href=MapSearch title='Use image-based interface to build sub-list' >$img</a></td><td valign=top>$caption</td></tr>\n" if $img;
     $table .= "<tr><td>$tab</td><td colspan=2 valign=top>$tab $abstract</td></tr>\n";
     $table .= "<tr><td colspan=3 valign=top>$spc</td></tr>\n";
     $table .= "<tr><td colspan=3 valign=top>$spc</td></tr>\n";
@@ -622,7 +622,7 @@ sub get_list_table {
 
  </script>
 
-  <form id=working_list action='GetTransitions' target='_GetTransitions' method='post'>
+  <form id=working_list action='GetTransitions' method='post'>
   <input type=hidden name=organism value=human>
   <input type=hidden name=pabst_build_id value=$build_id>
   <input type=hidden name=protein_name_constraint id=protein_name value='tmp'>

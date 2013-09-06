@@ -216,7 +216,7 @@ This schematic taken from Bluestone, Herold & Eisenbarth (2010) [<a href=http://
        <BR>
        <BR>
        Selected List <BR>
-    <FORM NAME=mapform method=post action=GetTransitions id=working_list target=_GetTransitions>
+    <FORM NAME=mapform method=post action=GetTransitions id=working_list >
       <TEXTAREA NAME=cmd COLS=10 ROWS=25 ID=maplist onClick=blur()></TEXTAREA>
       <input type=hidden name=pabst_build_id value=$build_id>
       <input type=hidden name=protein_name_constraint id=protein_name value='tmp'>
@@ -374,24 +374,21 @@ This schematic taken from Bluestone, Herold & Eisenbarth (2010) [<a href=http://
       return false;
     }
 
-    if ( search_space == 'Peptide' ) {
-      var working_list = document.getElementById('working_list')
-      working_list.action = 'GetProteins';
-      working_list.target = '_GetProteins';
-      working_list.submit();
-      return true;
-    }
 
-    // Send a message to GetTransitions via a cookie that expires in 5 seconds (only wanna see it once, yo).
-    var name = 'GetTransitionsMessage';
-    value = 'The selected proteins have been imported%2C please make any desired parameter changes and submit to search the SRM Atlas';
+    // Send a message to search page via a cookie that expires in 5 seconds (only wanna see it once, yo).
+    var name = 'SubmitMessage';
+    value = 'The selected proteins have been imported%2C please make any desired parameter changes and submit to search the Atlas';
     var date = new Date();
     date.setTime(date.getTime()+(5*1000));
     var expires = "; expires="+date.toGMTString();
     var cookie = name+"="+value+expires+"; path=/";
     document.cookie = cookie;
 
-    document.getElementById('working_list').submit();
+    var working_list = document.getElementById('working_list')
+    if ( search_space == 'Peptide' ) {
+      working_list.action = 'GetProteins';
+    }
+    working_list.submit();
     return true;
 
     var working_list = document.getElementById('working_list');
