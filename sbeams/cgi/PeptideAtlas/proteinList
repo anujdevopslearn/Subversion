@@ -73,16 +73,6 @@ my $show_image = 0;
     END
 
 
-    my $build_id = $params->{atlas_build_id} || $atlas->getCurrentAtlasBuildID(parameters_ref => $params);
-    my $valid_build = 1;
-    if ( !grep /^$build_id$/, $atlas->getAccessibleBuilds() ) {
-#       $atlas->display_page_header();
-#       $build_id = $atlas->getCurrentAtlasBuildID(parameters_ref => $params);
-#		   $atlas->display_page_footer();
-#       exit;
-    }
-
-
     # Add general section 
     $page .= get_list_selector();
     $page .= get_list_overview();
@@ -376,7 +366,7 @@ sub get_list_table {
   my $submit = "<span title='This will submit the selected proteins to query the SRM or Peptide Atlas'>$atlas_select $spc</span>";
   my $show = "<span title='Controls which subset of the protein list is visible'>Show: $spc</span>";
 
-  my $build_id = ( $sbeams->isGuestUser() ) ? 120 : 146;
+  my $build_id = ( $sbeams->isGuestUser() ) ? 146 : 146;
 
   my $form = qq~
   <script type="text/javascript">
