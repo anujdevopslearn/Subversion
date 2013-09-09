@@ -189,7 +189,7 @@ my $link = '';
   }
 
 
-my $build_id = ( $sbeams->isGuestUser() ) ? 120 : 146;
+my $build_id = ( $sbeams->isGuestUser() ) ? 146 : 146;
 
 print qq~
    
