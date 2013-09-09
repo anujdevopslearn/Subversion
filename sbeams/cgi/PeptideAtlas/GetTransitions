@@ -60,6 +60,9 @@ my %rs_params;
 my $is_html = 0;
 my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
 
+my $guest = 1;
+my $super_guest = 0;
+
 main();
 #$sbeams->profile_sql( list => 1 );
 exit(0);
@@ -85,6 +88,16 @@ sub main
 
   # This will look for mod-specific params and do the right thing
   $atlas->processModuleParameters(parameters_ref=>\%parameters);
+
+  $guest = $sbeams->isGuestUser();
+  $parameters{apply_action_hidden} ||= '';
+  my $referrer = $q->referer();
+  if ( $referrer =~ /MapSearch|proteinList/ || ( $parameters{apply_action_hidden} =~ /HPPBD/ ) ) {
+    if ( $guest ) {
+      $super_guest = 1;
+      $parameters{apply_action_hidden} ||= '<INPUT TYPE="hidden" NAME="apply_action_hidden" VALUE="HPPBD"\>';
+    }
+  }
 
 # Wrap this in a warn level... IDEA!
 #  my $paramstr = join( ',', %parameters );
@@ -131,7 +144,7 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
   # FIXME - don't add if already there.  Also, multiple lists?
   my $restricted_build_js = ''; 
   my $protein_list_info = $atlas->getProteinListInfo( username => $current_username, build_id => $parameters{pabst_build_id} );
-  if ( $protein_list_info->{build_ok} ) {
+  if ( $protein_list_info->{build_ok} && ( !$guest || $super_guest ) ) {
     $restricted_build_js = qq~
     var pb_select=document.getElementById("pabst_build_id");
     var new_option=document.createElement("option");
@@ -313,7 +326,7 @@ $(document).ready(function() {
     fetch_transitions( %parameters, restricted => $restricted_proteins );  
     $log->debug( "  Done fetching transitions"  . time());
   }
-  $atlas->display_page_footer( close_tables => 0 ) if $sbeams->isGuestUser();
+  $atlas->display_page_footer( close_tables => 0 ) if $guest;
 
 } # end main
 
@@ -438,6 +451,7 @@ sub print_form {
     # FINDME
     my ( $sub_form ) = $best_peptide->get_change_form( form_only => 1, hide_buttons => 1, shade_defs => 1, set_params => \%parameters, noop => 0 );
     $sub_form =~ s/tbl_visible/tbl_hidden/gm;
+
    
     my $peptide_chk = "<INPUT TYPE=checkbox NAME=peptides_only></INPUT>";
     my $peptides_only_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Return peptide list only (no Q3 values)'</TD>";
@@ -458,7 +472,7 @@ sub print_form {
 #    $form =~ s/\<\/TABLE\>/<TR><TD COLSPAN=3> $sub_form<\/TD><\/TR><\/TABLE>/i;
 #    $form .= "<TR><TD COLSPAN=3>$sub_form</TD></TR>\n";
     my $change_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Adjust PABST peptide parameters to fine-tune peptide list (advanced)'</TD>";
-    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Adjust weights:</B></TD>$change_help<TD>$link$sub_form</TD></TR> ~;
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Adjust weights:</B></TD>$change_help<TD>$link$sub_form $parameters{apply_action_hidden}</TD></TR> ~;
 
 
     my $cmod_select = get_cmod_select( $parameters{cmod_mass} );
@@ -482,18 +496,15 @@ sub print_form {
     my $splinks_chk = ( $parameters{speclinks} ) ? 'checked' : 'checked';
 
     my $spec_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Set minimum m/z threshold for transitions, applies to both precursor (Q1) and fragment ion (Q3) m/z'</TD>";
-#    unless ( $sbeams->isGuestUser() ) {
-      $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Show spectral links</B></TD>$spec_help<TD><INPUT TYPE=CHECKBOX NAME=speclinks SIZE=10 $splinks_chk></INPUT></TD></TR> ~;
-#    }
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Show spectral links</B></TD>$spec_help<TD><INPUT TYPE=CHECKBOX NAME=speclinks SIZE=10 $splinks_chk></INPUT></TD></TR> ~;
     
 
     my $rt_help =  "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Select type of RT value to show in results'</TD>";
 
-#    unless ( $sbeams->isGuestUser() ) {
-      $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Elution Time Type</B></TD>$rt_help<TD>$rt_select</INPUT></TD></TR> ~;
-#    }
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Elution Time Type</B></TD>$rt_help<TD>$rt_select</INPUT></TD></TR> ~;
     $form .= $ion_filters;
     $form .= $mod_filters;
+
 
 #    open FRM, ">/tmp/form";
 #    print FRM qq~
@@ -821,7 +832,7 @@ sub get_download_form {
   my $tlink = '';
 
 #                                                    content => "<DIV style=clear_info_box><TABLE><TR><TD>$calc_check</TD></TR><TR><TD>$ce_check</TD></TR></TABLE></DIV>",
-	if ( !$sbeams->isGuestUser() && ( $pabst_build_id == 146 || $pabst_build_id == 160 ) ) {
+	if ( ( !$guest || $super_guest ) && ( $pabst_build_id == 146 || $pabst_build_id == 160 ) ) {
     $calc_check = "Include calculated RT $calc_check_help <INPUT TYPE=checkbox NAME=calc_rt></INPUT>";
     $ce_check = "Include empirical optimized CE $ce_check_help <INPUT TYPE=checkbox NAME=empirical_ce></INPUT>";
     $thtml = $sbeams->make_toggle_section( name => 'download_options',
@@ -916,7 +927,7 @@ sub fetch_transitions {
 #    print "Getting libs<BR>\n";
 #    print time() . "\n";
     $log->debug( "Prefetching consensus links " . time() );
-    $clibs = $consensus->getConsensusLinks();
+    $clibs = $consensus->getConsensusLinks( super_guest => $super_guest );
     $log->debug( "Done " . time() );
 #    print "<BR>Done<BR>\n";
 #    print time() . "\n";
@@ -1338,7 +1349,7 @@ sub fetch_transitions {
 
   my $quant_info;
   my $has_quant;
-  unless ( $sbeams->isGuestUser() ) {
+  unless ( $guest ) {
 	  $quant_info = get_quant_info( $pep_seq_string );
     $has_quant = ( scalar( keys( %{$quant_info} ) ) ) ? 1 : 0;
   }
@@ -1406,7 +1417,7 @@ sub fetch_transitions {
   # Code to get only pertinent headings here...
   if ( $parameters{rt_type} ) {
     my $rt_heading = ( $irt ) ? 'iRT' : 'RT_Cat';
-    if ( $rt_heading eq 'RT_Cat' && !$sbeams->isGuestUser() ) {
+    if ( $rt_heading eq 'RT_Cat' && ( !$guest || $super_guest ) ) {
       push @headings, $rt_heading unless $parameters{rt_type} == $ssr_type;
     } elsif ( $rt_heading eq 'iRT' ) {
       push @headings, $rt_heading unless $parameters{rt_type} == $ssr_type;
@@ -1425,9 +1436,8 @@ sub fetch_transitions {
   my $has_ce = $consensus->hasCESet( pabst_build_id => $pabst_build_id );
   my $has_chromats = $consensus->hasChromatograms( pabst_build_id => $pabst_build_id );
 	
-
   if ( $parameters{speclinks} ) {
-    if ( $sbeams->isGuestUser() ) {
+    if ( $guest && !$super_guest ) {
       push @headings, 'IonTrap';
     } else {
       if ( $consensus_srcs->{QTOF} ) {
@@ -1440,7 +1450,7 @@ sub fetch_transitions {
     }
   }
 
-  if ( !$sbeams->isGuestUser() && ( $has_chromats || $has_ce ) ) {
+  if ( ( !$guest || $super_guest ) && ( $has_chromats || $has_ce ) ) {
     push @headings, 'QQQ ', ' QTRAP ';
   }
 
@@ -1750,7 +1760,7 @@ sub fetch_transitions {
 
 
       my  @rowdata;
-      if ( $sbeams->isGuestUser() && $parameters{rt_type} eq 'iRT' || $parameters{rt_type} == $ssr_type ) {
+      if ( ( $guest && !$super_guest && $parameters{rt_type} eq 'iRT' ) || $parameters{rt_type} == $ssr_type ) {
         @rowdata = ( $prot, @row[0..12] );
       } else {
 				if ( $build_resources->{atlas_build} ) {
@@ -1839,7 +1849,7 @@ sub fetch_transitions {
         }
 #        push @rowdata, $links, $chromat_link;
         push @rowdata, @{$links};
-        if ( ( $has_chromats || $organism == 2 ) && !$sbeams->isGuestUser() ) {
+        if ( ( $has_chromats || $organism == 2 ) && ( !$guest || $super_guest ) ) {
           push @rowdata, @chromat_links;
         }
       }
@@ -2341,7 +2351,8 @@ sub get_consensus_links {
                                                     organism => $organism,
                                                     pabst_build_id => $pabst_build_id,
                                                     has_ce => $has_ce,
-                                                       glyco => $glyco );
+                                                       glyco => $glyco,
+                                                    super_guest => $super_guest );
   }
 
   my %instr = ( QQQ => 'Agilent 6460 QQQ', 
@@ -2352,7 +2363,7 @@ sub get_consensus_links {
                IonTrap => 'IonTrap' );
 
   my @links;
-  if ( !$sbeams->isGuestUser() ) {
+  if ( !$guest || $super_guest ) {
     my $link = '';
     if ( $libs->{qtof}->{$spectrum_key} ) {
       my $title = "View +$chg spectrum for $seq in $instr{QTOF} library"; 
