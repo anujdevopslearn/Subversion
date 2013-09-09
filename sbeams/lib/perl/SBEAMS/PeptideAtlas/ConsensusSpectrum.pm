@@ -597,8 +597,7 @@ sub getConsensusLinks {
   }
   my $srcs = $self->getConsensusSources( pabst_build_id => $args{pabst_build_id},
                                                 lib_ids => 1 );
-
-  if ( $sbeams->isGuestUser() ) {
+  if ( $sbeams->isGuestUser() && !$args{super_guest} ) {
     my $project_ids = $sbeams->getAccessibleProjects();
     my $sql = qq~
     SELECT MAX(consensus_library_id) 
@@ -621,7 +620,6 @@ sub getConsensusLinks {
 
   } elsif ( $args{organism} eq 40 ) {
 
-    die "choans";
     %libmap = ( 
                 329  => 'it',
                 330 => 'qtrap',
