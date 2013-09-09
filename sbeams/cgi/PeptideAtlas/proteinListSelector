@@ -74,17 +74,6 @@ my $show_image = 0;
     $list_help
     END
 
-
-    my $build_id = $params->{atlas_build_id} || $atlas->getCurrentAtlasBuildID(parameters_ref => $params);
-    my $valid_build = 1;
-    if ( !grep /^$build_id$/, $atlas->getAccessibleBuilds() ) {
-#       $atlas->display_page_header();
-#       $build_id = $atlas->getCurrentAtlasBuildID(parameters_ref => $params);
-#		   $atlas->display_page_footer();
-#       exit;
-    }
-
-
     # Add general section 
     $page .= get_list_selector();
     $page .= get_list_overview();
