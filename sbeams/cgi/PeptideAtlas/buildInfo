@@ -339,6 +339,9 @@ sub handle_request {
     'Mouse'=>2,
     'Cow'=>5,
     'Pig'=>6,
+    'Horse'=>7,
+    'Canine'=>8,
+    'Dog'=>8,
     'Drosophila'=>10,
     'Honeybee'=>11,
     'C Elegans'=>20,
@@ -353,7 +356,18 @@ sub handle_request {
     'Dengue virus'=>50,
   );
 
-  @rows = sort { $organisms{$a->[$org_idx]} <=>  $organisms{$b->[$org_idx]}} @rows;
+  # Put any additional organisms at the end
+  for my $row (@rows) {
+    if (! defined $organisms{$row->[$org_idx]} ) {
+      $organisms{$row->[$org_idx]} = 100;
+    }
+  }
+
+  @rows = sort { $organisms{$a->[$org_idx]} <=>  $organisms{$b->[$org_idx]}
+    # This is supposed to do an alphabetical sub-sort, but it's not working
+    #|| $a->[$build_name_idx] cmp  $b->[$build_name_idx]
+	       }
+                  @rows;
 
   # Process and output the rows
   for my $row_aref (@rows) {

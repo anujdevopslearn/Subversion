@@ -33,11 +33,14 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::AtlasBuild;
+use SBEAMS::PeptideAtlas::ProtInfo;
 
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 
+my $protinfo = new SBEAMS::PeptideAtlas::ProtInfo;
+$protinfo->setSBEAMS($sbeams);
 
 
 ###############################################################################
@@ -208,14 +211,16 @@ sub pa_build_info_2_tsv {
 
   # Print header into .tsv file
   my $tsv_file = "$PHYSICAL_BASE_DIR/tmp/buildInfo.tsv";
+  my $scratch_file = $tsv_file . "_scratch";
+  my $save_file = $tsv_file . "_save";
   print "Trying to print to $tsv_file.\n" if $VERBOSE;
-  open (TSV, ">$tsv_file") || print "<p>Can't open $tsv_file<\p>\n";;
+  open (SCRATCH, ">$scratch_file") || print "<p>Can't open $scratch_file<\p>\n";;
   for (my $i=0; $i<$ncols; $i++) {
-    print TSV "$headers[$i]";
+    print SCRATCH "$headers[$i]";
     if ($i < $ncols-1) {
-      print TSV "\t";
+      print SCRATCH "\t";
     } else {
-      print TSV "\n";
+      print SCRATCH "\n";
     }
   }
 
@@ -271,6 +276,7 @@ sub pa_build_info_2_tsv {
     my $swiss_count = get_swissprot_coverage (
       build_id => $atlas_build->[$atlas_build_id_idx],
     );
+    print "$atlas_build->[$atlas_build_name_idx] $swiss_count\n";
 
     my $canon_dist_count = $canonical_count + $poss_dist_count || "";
 
@@ -360,16 +366,21 @@ sub pa_build_info_2_tsv {
 
     # Print the row into .tsv file
     for (my $i=0; $i< $ncols; $i++) {
-      print TSV "$row[$i]";
+      print SCRATCH "$row[$i]";
       if ($i < $ncols-1) {
-	print TSV "\t";
+	print SCRATCH "\t";
       } else {
-	print TSV "\n";
+	print SCRATCH "\n";
       }
     }
   }
   print "\n" if $VERBOSE;
-  close TSV;
+  close SCRATCH;
+
+  if (-e $tsv_file) {
+    `mv $tsv_file $save_file`;
+  }
+  `mv $scratch_file $tsv_file`;
 
 } # end pa_build_info_2_tsv
 
@@ -571,53 +582,58 @@ sub get_swissprot_coverage
 
   my $build_id = $args{'build_id'}
       || die "atlas_build_id not passed";
-  my $count_decoys = $args{'count_decoys'} || 0;
-  my $count_crap = $args{'count_crap'} || 0;
+#--------------------------------------------------
+#   my $count_decoys = $args{'count_decoys'} || 0;
+#   my $count_crap = $args{'count_crap'} || 0;
+# 
+#   my $decoy_clause = " ";
+#   if (! $count_decoys) {
+#     $decoy_clause = "AND NOT BS.biosequence_name LIKE \'DECOY%\'";
+#   }
+# 
+#   my $crap_clause = " ";
+#   if (! $count_crap) {
+#     $crap_clause = "AND NOT BS.biosequence_desc LIKE \'%common contaminant%\'";
+#   }
+# 
+#   # Get the exhaustive list -- the list of all protein identifiers
+#   # in this atlas.
+#   my $sql =<<"  END";
+#   (
+#     SELECT BS.biosequence_name as bsid
+#     FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR 
+#       JOIN $TBAT_BIOSEQUENCE BS ON 
+#        BS.biosequence_id = BR.related_biosequence_id
+#     WHERE BR.atlas_build_id = $build_id
+#     $decoy_clause
+#     $crap_clause
+#   )
+#   UNION
+#   (
+#     SELECT BS.biosequence_name as bsid
+#     FROM $TBAT_PROTEIN_IDENTIFICATION PID
+#       JOIN $TBAT_BIOSEQUENCE BS ON 
+#        BS.biosequence_id = PID.biosequence_id
+#     WHERE PID.atlas_build_id = $build_id
+#     $decoy_clause
+#     $crap_clause
+#   )
+#   END
+# 
+#   my @exhaustive_set = $sbeams->selectOneColumn($sql);
+#-------------------------------------------------- 
 
-  my $decoy_clause = " ";
-  if (! $count_decoys) {
-    $decoy_clause = "AND NOT BS.biosequence_name LIKE \'DECOY%\'";
-  }
-
-  my $crap_clause = " ";
-  if (! $count_crap) {
-    $crap_clause = "AND NOT BS.biosequence_desc LIKE \'%common contaminant%\'";
-  }
-
-  # Get the exhaustive list -- the list of all protein identifiers
-  # in this atlas.
-  my $sql =<<"  END";
-  (
-    SELECT BS.biosequence_name as bsid
-    FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR 
-      JOIN $TBAT_BIOSEQUENCE BS ON 
-       BS.biosequence_id = BR.related_biosequence_id
-    WHERE BR.atlas_build_id = $build_id
-    $decoy_clause
-    $crap_clause
-  )
-  UNION
-  (
-    SELECT BS.biosequence_name as bsid
-    FROM $TBAT_PROTEIN_IDENTIFICATION PID
-      JOIN $TBAT_BIOSEQUENCE BS ON 
-       BS.biosequence_id = PID.biosequence_id
-    WHERE PID.atlas_build_id = $build_id
-    $decoy_clause
-    $crap_clause
-  )
-  END
-
-  my @exhaustive_set = $sbeams->selectOneColumn($sql);
+  my $build_swiss_href = $protinfo->get_swiss_idents_in_build(
+      atlas_build_id=>$build_id);
 
   # Now, count distinct 6-char Swiss-Prot identifiers. If P12345 and P12345-3
   # are both in the atlas, just count it once.
   my %swiss_prot_hash;
-  my @swiss_prot_ids = grep( /^[ABOPQ]\w{5}$/ , @exhaustive_set );
-  for my $swiss_id (@swiss_prot_ids) {
-    $swiss_prot_hash{$swiss_id} = 1;
+  for my $protid (keys %{$build_swiss_href}) {
+    $swiss_prot_hash{$protid} = 1 if $protid =~ /^[ABCOPQ]\w{5}$/;
   }
-  my @swiss_prot_varsplic_ids = grep( /^[ABOPQ]\w{5}-\d{1,3}$/ , @exhaustive_set );
+  my @swiss_prot_varsplic_ids = grep( /^[ABOPQ]\w{5}-\d{1,3}$/ ,
+    keys %{$build_swiss_href} );
   for my $swiss_id (@swiss_prot_varsplic_ids) {
     # Strip off the varsplic suffix to get the basic 6-char identifier.
     $swiss_id =~ /^([ABOPQ]\w{5})/;
