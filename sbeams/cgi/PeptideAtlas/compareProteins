@@ -304,7 +304,11 @@ sub get_alignment_display {
       $seqtype{fwd}++;
     }
 
-    my $seq = $row[3];
+# As of 12/2012 sequences from Uniprot can have varsplic and snp information
+# appended to the end of the main sequence. This simply takes the base seq,
+# an implementation that includes the variants may come in the future.
+    my @subseqs = split( /\*/, $row[3] );
+    my $seq = $subseqs[0];
 		$seq =~ s/[^a-zA-Z]//g;
 
     next if $seen{$acc};
@@ -325,10 +329,10 @@ sub get_alignment_display {
 		$seq2acc{$seq} ||= {};
 		$seq2acc{$seq}->{$acc}++;
 
-    $bioseq_id2seq{$row[4]} = $row[3]; 
+    $bioseq_id2seq{$row[4]} = $seq; 
     $bioseq_id2name{$row[4]} = $acc; 
 
-		$fasta .= ">$acc\n$row[3]\n";
+		$fasta .= ">$acc\n$seq\n";
 
     $acc2bioseq_id{"$acc"} = $row[4];
     # Clustal W alignment file can only take 30 chars
