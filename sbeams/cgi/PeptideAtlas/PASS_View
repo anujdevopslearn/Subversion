@@ -388,7 +388,8 @@ sub handle_request {
 	if ($updateResult->{result} eq 'Success') {
 	  $printForm = 0;
 	} else {
-	  push(@errors,@{$validation->{errors}});
+	  push(@errors,"updateResult returned $updateResult->{result}");
+	  push(@errors,@{$updateResult->{errors}}) if ($updateResult->{errors});
 	}
 
       } else {
@@ -875,8 +876,9 @@ sub getPASSMetaData {
 
     my @rows2 = $sbeams->selectSeveralColumns($sql2);
     my $submitterStr = '';
+    my ($firstName,$lastName,$emailAddress);
     if (@rows2) {
-      my ($firstName,$lastName,$emailAddress) = @{$rows2[0]};
+      ($firstName,$lastName,$emailAddress) = @{$rows2[0]};
       $submitterStr = "$firstName $lastName &lt;$emailAddress&gt;";
       $response->{emailAddress} = $emailAddress;
       $response->{submitterStr} = $submitterStr;
@@ -888,6 +890,9 @@ sub getPASSMetaData {
     $response->{datasetIdentifier} = $datasetIdentifier;
     $response->{datasetType} = $datasetType;
     $response->{submitter} = $submitterStr;
+    $response->{firstName} = $firstName;
+    $response->{lastName} = $lastName;
+    $response->{emailAddress} = $emailAddress;
     $response->{datasetPassword} = $datasetPassword;
     $response->{datasetTag} = $datasetTag;
     $response->{datasetTitle} = $datasetTitle;
@@ -1667,7 +1672,8 @@ sub updateDataset {
   $response->{result} = 'Failure';
   my $verbose = 0;
 
-  return unless ($authentication->{result} eq 'Success');
+  #We never really get here unless authentication was valid, so skip check. This check fails if $isAdmin anyway
+  #return $response unless ($authentication->{result} eq 'Success');
 
   $formParameters->{datasetTitle} =~ s/[\n\r]//g;
   my $PK = $datasetIdentifier;
@@ -1767,10 +1773,13 @@ Thank you again for your contribution. If you have comments about this submissio
   $confirmationMessage =~ s/\<a .+?\>//g;
   $confirmationMessage =~ s/\<\/a\>//g;
 
+  #### Get all current metadata from the submission, mostly to get the original submitter
+  my $datasetMetadata = getPASSMetaData(identifier=>$datasetIdentifier);
+
   #### Send the submitter the information by email
   my (@toRecipients,@ccRecipients,@bccRecipients);
   @toRecipients = (
-    "$authentication->{firstName} $authentication->{lastName}",$authentication->{emailAddress},
+    "$datasetMetadata->{firstName} $datasetMetadata->{lastName}",$datasetMetadata->{emailAddress},
   );
   @ccRecipients = ();
   @bccRecipients = (
@@ -1781,7 +1790,7 @@ Thank you again for your contribution. If you have comments about this submissio
     ccRecipients=>\@ccRecipients,
     bccRecipients=>\@bccRecipients,
     subject=>"PeptideAtlas dataset $datasetIdentifier update",
-    message=>"Dear $authentication->{firstName},\n\n$confirmationMessage\n\n",
+    message=>"Dear $datasetMetadata->{firstName},\n\n$confirmationMessage\n\n",
   );
 
 
@@ -1794,7 +1803,7 @@ Thank you again for your contribution. If you have comments about this submissio
   @ccRecipients = ();
   @bccRecipients = ();
   my $adminMessage = qq~PASS dataset has been updated:\n
-Submitter: $authentication->{firstName} $authentication->{lastName} <$authentication->{emailAddress}>
+Submitter: $datasetMetadata->{submitter}
 Dataset URL: http://www.peptideatlas.org/PASS/$datasetIdentifier
 
 $metadata
