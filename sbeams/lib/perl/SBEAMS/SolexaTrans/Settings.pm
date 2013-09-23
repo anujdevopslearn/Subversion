@@ -66,9 +66,9 @@ my $solexa_file_types = $CONFIG_SETTING{ST_SOLEXA_DEFAULT_FILES} || '';
 @SOLEXA_DEFAULT_FILES = split ( /\s/, $solexa_file_types);
 
 # Convert any relative paths to absolute paths
-for my $k qw(ST_LOG_BASE_DIR SOLEXA_DELIVERY_PATH
+for my $k ( qw(ST_LOG_BASE_DIR SOLEXA_DELIVERY_PATH
              SOLEXA_TMP_DIR ST_SOLEXA_ZIP_REQUEST_DIR
-             ) {
+             ) ) {
   next unless defined $CONFIG_SETTING{$k};
   if ( $CONFIG_SETTING{$k} !~ /^\// ) {
     my $delim = ($PHYSICAL_BASE_DIR =~ /\/$/) ? '' : '/';
