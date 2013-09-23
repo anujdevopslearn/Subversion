@@ -53,9 +53,9 @@ my $affy_file_types = $CONFIG_SETTING{MA_AFFY_DEFAULT_FILES} || '';
 
 
 # Convert any relative paths to absolute paths
-for my $k qw(MA_LOG_BASE_DIR MA_AFFY_PROBE_DIR MA_BIOC_DELIVERY_PATH
+for my $k ( qw(MA_LOG_BASE_DIR MA_AFFY_PROBE_DIR MA_BIOC_DELIVERY_PATH
              MA_ANNOTATION_OUT_PATH MA_AFFY_TMP_DIR MA_AFFY_ZIP_REQUEST_DIR
-             MA_AFFY_ANNOTATION_PATH ) {
+             MA_AFFY_ANNOTATION_PATH ) ) {
   next unless defined $CONFIG_SETTING{$k};
   if ( $CONFIG_SETTING{$k} !~ /^\// ) {
     my $delim = ($PHYSICAL_BASE_DIR =~ /\/$/) ? '' : '/';
