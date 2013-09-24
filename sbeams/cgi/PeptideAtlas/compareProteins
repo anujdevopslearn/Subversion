@@ -594,7 +594,7 @@ sub get_clustal_display {
   Sequence highlighted with blue: <SPAN CLASS=obs_seq_bg_font>PEPTIDE</SPAN> denotes peptides observed in specified build.<BR>
   Sequence highlighted with green: <SPAN CLASS=sec_obs_seq_bg_font>PEPTIDE</SPAN> denotes 'bait' peptide for this set of sequences.<BR>
   <br>
-  Save <a href='$CGI_BASE_DIR/shortURL?key=$short_url'> link </a> to recall current alignment.
+  Save link to recall current <a href='$CGI_BASE_DIR/shortURL?key=$short_url'>sequence alignment</a>.
 	~;
 
 	return $display;
