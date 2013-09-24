@@ -88,6 +88,7 @@ sub new {
       'V[104]' => 5.016774,     # 13C(5) Silac label (Unimod)
       'V[105]' => 6.013809,     # 13C(5)15N(1) Silac label (Unimod)
       'Y[243]' => 79.966331,    # Phosphorylation (UniMod)
+      'Y[307]' => 144.1059,     # 4 plex
 			},
     'average' => {
       'n[29]'  => 28.0532,      # di-Methylation (Unimod)
@@ -143,6 +144,7 @@ sub new {
       'V[104]' => 4.9633,     # 13C(5) Silac label (Unimod)
       'V[105]' => 5.9567,     # 13C(5)15N(1) Silac label (Unimod)
       'Y[243]' => 79.9799,    # Phosphorylation (UniMod)
+      'Y[307]' =>	144.1680,   # 4plex
     },
   );
 
