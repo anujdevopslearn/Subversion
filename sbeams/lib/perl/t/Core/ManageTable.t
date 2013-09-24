@@ -46,10 +46,8 @@ my %form = ( username => 'dcampbel',
              TABLE_NAME => 'contact'
            );
 my $response = $ua->post( $url, \%form );
-#print "\t" . $response->content() . "\n";
 
 # Add login for this user
-print "Before the script, there was... BEGIN\n";
 } # End setup test
 } # End BEGIN
 END {
@@ -57,7 +55,6 @@ breakdown();
 }
 
 sub breakdown {
-print "After the script, there was... END\n";
 }
 
 ok( sbeams_connect(), 'sbeams connection' );
@@ -93,30 +90,21 @@ $sbeams->Authenticate();
 }
 
 sub check_authentication_info {
-print STDERR "\tCurrent contact ID is " . $sbeams->getCurrent_contact_id() . "\n";
-print STDERR "\tCurrent username ID is " . $sbeams->getCurrent_username() . "\n";
-print STDERR "\tCurrent work group ID is " . $sbeams->getCurrent_work_group_id() . "\n";
-print STDERR "\tCurrent work group is " . $sbeams->getCurrent_work_group_name() . "\n";
-print STDERR "\tCurrent project is " . $sbeams->getCurrent_project_name() . "\n";
-print STDERR "\tCurrent project ID is " . $sbeams->getCurrent_project_id() . "\n";
-1;
+return 1;
 }
 
 sub sbeams_get_best_permission {
 my $p = $sbeams->get_best_permission();
-print "\tBest permission is $p\n";
 return $p;
 }
 
 sub sbeams_get_best_permission_withID {
 my $p = $sbeams->get_best_permission( project_id => 122 );
-print "\tBest permission is with proj 122 is $p\n";
 return $p;
 }
 
 sub sbeams_get_best_permission_with_contact {
 my $p = $sbeams->get_best_permission( contact_id => 108 );
-print "\tBest permission is with contact_id 108 is $p\n";
 return $p;
 }
 
@@ -126,7 +114,6 @@ my $p = $sbeams->calculateTablePermission( table_name => 'project',
                                      contact_id => $sbeams->getCurrent_contact_id(),
                                      work_group_id => $sbeams->getCurrent_work_group_id()
  );
-print "\tTable permission for sbeams.dbo.project is $p\n ";
 }
 
 

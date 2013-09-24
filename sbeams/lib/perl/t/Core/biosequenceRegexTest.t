@@ -3,11 +3,12 @@
 #$Id:  $
 
 use DBI;
-use Test::More tests => 629;
+use Test::More tests => 627;
 use Test::Harness;
 use strict;
 use FindBin qw ( $Bin );
 use lib( "$Bin/../.." );
+my $line_cnt = 0;
 
 $|++; # do not buffer output
 my $sbeams;
@@ -32,6 +33,10 @@ sub parse_line {
   my $line = shift;
   my %rowdata;
   $line =~ /^(.*?)>(\S+)/;
+
+#  die $line unless $2;
+
+  $rowdata{original_line} = $line;
   $rowdata{biosequence_name} = $2;
   #### Print a warning if malformed
   return 0 if $1; 
@@ -52,7 +57,10 @@ sub parse_line {
 }
 
 sub read_file {
+  my $cnt = 68;
   while ( my $line = <DATA> ) {
+    die $cnt if $line =~ /^\s*$/;
+    $cnt++;
     push @fasta, $line;
   }
   return 1;
@@ -147,7 +155,6 @@ __DATA__
 >GENSCAN00000003812 [GENSCAN00000003812;GENEFINDER00000006414]pep:Genscan chromosome:SGD1.01:XIII:368093:370513:-1  transcript:GENSCAN00000003812  
 >YNL143C [YNL143C;UPSP:YNO3_YEAST;gi|1078059|pir||S55141]YNL143C SGDID:S000005087, Chr XIV from 357188-356796, reverse complement, Dubious ORF, "Hypothetical protein"
 >gi|51247804|pdb|1U4C|A unnamed protein product [Saccharomyces cerevisiae]; gi|51247805|pdb|1U4C|B unnamed protein product [Saccharomyces cerevisiae]
-
 >gi|4164061|gb|AAD05325.1| [gi|4164061|gb|AAD05325.1|;IPI:IPI00707789.1|SWISS-PROT:O97827-6]latrophilin 3 splice variant abbg [Bos taurus]
 >ENSBTAP00000006413 pep:known chromosome:Btau_4.0:22:51292564:51304081:1 gene:ENSBTAG00000004878 transcript:ENSBTAT00000006413
 >IPI:IPI00686239.1|TREMBL:Q08DK8|ENSEMBL:ENSBTAP00000006413|REFSEQ:NP_001069344 [IPI:IPI00686239.1|TREMBL:Q08DK8|ENSEMBL:ENSBTAP00000006413|REFSEQ:NP_001069344;ENSBTAP00000006413]Tax_Id=9913 Gene_Symbol=CAMKV CaM kinase-like vesicle-associated

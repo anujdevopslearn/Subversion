@@ -51,7 +51,11 @@ sub retrieve_key {
 sub delete_key {
   $sbeams->deleteSessionAttribute( key => $key );
   my $newval = $sbeams->getSessionAttribute( key => $key );
-  return ( !defined $newval );
+  if ( $newval ) {
+    return 0;
+  } else {
+    return 1;
+  }
 }
 
 sub breakdown {
