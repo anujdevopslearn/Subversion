@@ -569,6 +569,7 @@ sub get_clustal_display {
     $orig_bioseq_field = "<INPUT TYPE=HIDDEN NAME=orig_bioseq_id VALUE=$args{orig_bioseq_id}></INPUT>";
   }
   my $self_url = $q->self_url();
+  my $short_url = $sbeams->setShortURL( $self_url );
 
 	$display .= qq~
 	$pHTML
@@ -593,7 +594,7 @@ sub get_clustal_display {
   Sequence highlighted with blue: <SPAN CLASS=obs_seq_bg_font>PEPTIDE</SPAN> denotes peptides observed in specified build.<BR>
   Sequence highlighted with green: <SPAN CLASS=sec_obs_seq_bg_font>PEPTIDE</SPAN> denotes 'bait' peptide for this set of sequences.<BR>
   <br>
-  Save <a href='$self_url'> link </a> to recall current alignment.
+  Save <a href='$CGI_BASE_DIR/shortURL?key=$short_url'> link </a> to recall current alignment.
 	~;
 
 	return $display;
