@@ -54,6 +54,7 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
   my %params;
   $sbeams->parse_input_parameters( q=>$q, parameters_ref=>\%params );
   $sbeams->processStandardParameters(parameters_ref=>\%params);
+
   
   ## get project_id to send to HTMLPrinter display
   my $project_id = $sbeams->getCurrent_project_id();
@@ -68,6 +69,7 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
   $sbeamsMOD->display_page_header(project_id => $project_id);
+
   $log->debug( "Begin page:" .time() );
   if ( $params{bioseq_id} || $params{restore} || $params{protein_list} ||
        $params{protein_group_number} || $params{protein_list_id} ) {
@@ -566,6 +568,7 @@ sub get_clustal_display {
   } else {
     $orig_bioseq_field = "<INPUT TYPE=HIDDEN NAME=orig_bioseq_id VALUE=$args{orig_bioseq_id}></INPUT>";
   }
+  my $self_url = $q->self_url();
 
 	$display .= qq~
 	$pHTML
@@ -589,6 +592,8 @@ sub get_clustal_display {
 	<H3> Legend </H3>
   Sequence highlighted with blue: <SPAN CLASS=obs_seq_bg_font>PEPTIDE</SPAN> denotes peptides observed in specified build.<BR>
   Sequence highlighted with green: <SPAN CLASS=sec_obs_seq_bg_font>PEPTIDE</SPAN> denotes 'bait' peptide for this set of sequences.<BR>
+  <br>
+  Save <a href='$self_url'> link </a> to recall current alignment.
 	~;
 
 	return $display;
