@@ -676,7 +676,7 @@ sub color_pathway {
   $self->{_args} = \%args;
   $self->{_entries_obs} = \%entries;
 
-  my $idx = 0;
+  $idx = 0;
   my $seen_cmd = "convert $PHYSICAL_BASE_DIR/$args{path} -strokewidth 0 -fill 'rgba(152,251,152,0.60)' -draw ";
   my $unseen_cmd = "convert $PHYSICAL_BASE_DIR/$args{path}.tmp -strokewidth 0 -fill 'rgba(255,255,0,0.60)' -draw ";
 
