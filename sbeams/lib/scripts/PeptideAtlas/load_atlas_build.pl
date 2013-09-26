@@ -96,6 +96,7 @@ Options:
                               the atlas_build table) into which to load the data
   --default_sample_project_id default project_id  needed for auto-creation of tables (best to set
                               default to dev/private access and open access later)
+  --spectrum_fragmentation_type
 
  e.g.:  ./load_atlas_build.pl --atlas_build_name \'Human_P0.9_Ens26_NCBI35\' --organism_abbrev \'Hs\' --load --default_sample_project_id 476
 
@@ -106,7 +107,8 @@ EOU
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
         "testvars","delete", "purge", "load", "check_tables",
         "atlas_build_name:s", "organism_abbrev:s", "default_sample_project_id:s",
-        "list","spectra","prot_info","coordinates","instance_searchbatch_obs"
+        "list","spectra","prot_info","coordinates","instance_searchbatch_obs",
+        "spectrum_fragmentation_type",
     )) {
 
     die "\n$USAGE";
@@ -442,7 +444,17 @@ sub handleRequest {
     print "\n";
   }
 
-
+ #### If spectrum_fragmentation_type loading was requested
+  if ($OPTIONS{"spectrum_fragmentation_type"}) {
+    use SBEAMS::PeptideAtlas::Spectrum;
+    my $spectra = new SBEAMS::PeptideAtlas::Spectrum;
+    $spectra->setSBEAMS($sbeams);
+    $spectra->setVERBOSE($VERBOSE);
+    $spectra->setTESTONLY($TESTONLY);
+    $spectra->loadSpectrum_Fragmentation_Type(
+      atlas_build_id => $ATLAS_BUILD_ID,
+    );
+  }
 
   ## handle --delete:
   if ($del) {

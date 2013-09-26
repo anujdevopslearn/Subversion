@@ -31,7 +31,7 @@ use SBEAMS::Connection;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::Settings;
 use SBEAMS::PeptideAtlas::Tables;
-
+use SBEAMS::Proteomics::Tables;
 
 ###############################################################################
 # Global variables
@@ -571,7 +571,6 @@ sub insertSpectrumRecord {
     die("ERROR: Unable to parse fraction name from '$spectrum_name'");
   }
 
-
   #### Define the attributes to insert
   my %rowdata = (
     sample_id => $sample_id,
@@ -1092,6 +1091,285 @@ sub insertSpectrumPTMIdentificationRecord {
 
 } # end insertSpectrumPTMIdentificationRecord
 
+
+
+###############################################################################
+# loadSpectrum_Fragmentation_Type -- Loads all Spectrum_Fragmentation_Type for specified build
+###############################################################################
+sub loadSpectrum_Fragmentation_Type {
+  my $METHOD = 'loadBuildSpectra';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  #### Process parameters
+  my $atlas_build_id = $args{atlas_build_id}
+    or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
+
+  my $sql = qq~
+		SELECT SP.SPECTRUM_ID,
+           SP.SPECTRUM_NAME, 
+           ASB.DATA_LOCATION, 
+           ASB.SEARCH_BATCH_SUBDIR, 
+           IT.INSTRUMENT_TYPE_NAME
+		FROM $TBAT_SPECTRUM SP
+		JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON (SP.SAMPLE_ID = ASB.SAMPLE_ID)
+		JOIN $TBAT_ATLAS_BUILD_SEARCH_BATCH ABSB ON (ABSB.ATLAS_SEARCH_BATCH_ID  = ASB.ATLAS_SEARCH_BATCH_ID )
+		JOIN $TBAT_SAMPLE  S ON (ABSB.SAMPLE_ID = S.SAMPLE_ID)
+		JOIN $TBPR_INSTRUMENT I ON (I.INSTRUMENT_ID = S.INSTRUMENT_MODEL_ID)
+		JOIN $TBPR_INSTRUMENT_TYPE IT ON (I.INSTRUMENT_TYPE_ID = IT.INSTRUMENT_TYPE_ID)
+		WHERE ABSB.ATLAS_BUILD_ID = $atlas_build_id 
+		AND SP.FRAGMENTATION_TYPE_ID IS NULL 
+		ORDER BY SP.SPECTRUM_NAME, DATA_LOCATION
+  ~;
+
+  print "Loading SPECTRUM_ID ";
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  print scalar @rows ." loaded\n";
+  my %spectrum=();
+  my %fragmentation_type=();
+  my $pre_file='';
+  my $cnt = 0;
+  my $cnt_update = 0;
+
+  foreach my $row (@rows){
+    my ($spectrum_id, $spectrum_name,$data_location,$subdir, $instrument_type_name)= @$row;
+    $spectrum_name=~ /^(.*)\.(\d+)\.(\d+)\.\d+$/;
+    my $filename = $1;
+    my $scan = $2;
+    $scan =~ s/^0+//g;
+
+    my $file ="/regis/sbeams/archive/$data_location/$subdir/$filename.mzML";
+    chomp $file;
+    if(! -e $file){
+      $file ="/regis/sbeams/archive/$data_location/$subdir/$filename.mzXML";
+      if(! -e $file){
+        $file ="/regis/sbeams/archive/$data_location/$subdir/$filename.mzML.gz";
+        if(! -e $file){
+           $file ="/regis/sbeams/archive/$data_location/$subdir/$filename.mzXML.gz";
+        }else{
+          die "cannot found mzXML/mzML file: /regis/sbeams/archive/$data_location/$subdir/$filename\n";
+        }
+      }
+    }
+
+    my $type = 0;
+    ## decide type 4 
+    if ($instrument_type_name  =~ /tof/i){$type= 4;};
+    ## if not type 4, read file
+    if ($pre_file ne $file && ! $type ){ 
+      %fragmentation_type = ();
+      print "$file\n";
+      get_fragmentation_type( file => $file,
+                            fragmentation_type => \%fragmentation_type);
+      print scalar keys %fragmentation_type , "\n";
+      if(scalar keys %fragmentation_type == 0){
+        print "no update: $file\n";
+      }
+    }
+    $pre_file = $file;
+    if( $type == 4 || defined $fragmentation_type{$scan}){ 
+      if(defined $fragmentation_type{$scan}){
+        $type = $fragmentation_type{$scan};
+      }
+			my %rowdata = (
+				 fragmentation_type_id => $type,
+			);
+			my $response = $sbeams->updateOrInsertRow(
+				 update=>1,
+				 table_name=>$TBAT_SPECTRUM,
+				 rowdata_ref=>\%rowdata,
+				 PK => 'spectrum_id',
+				 PK_value=> $spectrum_id,
+				 return_PK => 1,
+				 verbose=>$VERBOSE,
+				 testonly=> $TESTONLY
+			);
+			if($cnt_update % 1000 == 0){
+				print "$cnt_update...";
+			}
+			$cnt_update++;
+    }
+    $cnt++;
+  }  
+  print "\n$cnt_update of $cnt updated\n";
+}
+
+sub get_fragmentation_type {
+  my %args = @_;
+  my $file = $args{file};
+  my $fragmentation_type = $args{fragmentation_type};
+  my $fh;
+  if($file =~ /.gz$/){
+   	open ($fh, "zcat $file|") or die "cannot open $file\n";
+  }else{
+    open ($fh, "<$file");
+  }
+	my %filterstr = ();
+  my %instrumentConfiguration =();
+	##  1 HR IT CID  (FTICR or Orbitrap)
+	##  2 HR IT ETD (FTICR or Orbitrap)
+	##  3 HR IT HCD (FTICR or Orbitrap)
+	##  4 HR Q-TOF  (Agilent Q-TOF or AB SCIEX 5600 or QSTAR)
+	##  5 LR IT CID (QTRAP 4000, 5500, LTQ, LCQ, Equire, etc.)
+	##  6 LR IT ETD (LTQ)
+  my ($insconf,$insconfid);
+	while (my $line = <$fh>){
+    ## below parsing needs to be refined, cause I am not sure if some tags will be missing or have differt names.
+		if($line =~ /<instrumentConfigurationList/){  # mzML
+			while ($line !~ /<\/instrumentConfigurationList/){
+				$line = <$fh>;
+				if($line =~ /instrumentConfiguration id="([^"]+)"/){
+					$insconf = $1;
+				}elsif($line =~ /<analyzer/){
+					$line = <$fh>;
+					if ($line =~ /.*name="([^"]+)"/){
+						$instrumentConfiguration{$insconf} = $1;
+						$insconf = '';
+					}
+				}
+			}
+      next;
+    }
+    if($line =~ /<msInstrument id="([^"]+)/){ #mzXML
+      $insconfid = $1;
+      while ($line !~ /<scan/){
+        $line = <$fh>;
+        if($line =~ /.*category="msMassAnalyzer" value="([^"]+)"/){
+          $instrumentConfiguration{$insconfid} = $1;
+        }
+        $insconf = '';
+      }
+      next;
+    }elsif($line =~ /<msInstrument>/){
+       $insconfid = 'all';
+       while ($line !~ /<\/msInstrument/){
+        $line = <$fh>;
+        if($line =~ /.*category="msMassAnalyzer" value="([^"]+)"/){
+          $instrumentConfiguration{$insconfid} = $1;
+        }
+        $insconf = '';
+      }
+      next;
+    }
+
+		if($line =~ /<spectrum index="(\d+)".*/){ ## mzML 
+	    my ($ms1,$scan, $insconf, $insid,$analyzer, $activation);
+			$scan = $1 + 1;
+      while ($line !~/<\/spectrum/){
+        $line = <$fh>;
+        if($line =~ /ms level" value="1"/){
+          last;
+        }
+				if($line =~ /name="filter string" value="(.*)"/){
+					my $str = $1;
+					my $type = '';
+					if($str =~ /FTMS.*\@cid/){
+						$type = 1;
+					}elsif($str =~ /FTMS.*\@etd/){
+						$type = 2;
+					}elsif($str =~ /ITMS.*\@etd/){
+						$type = 6;
+					}elsif($str =~ /ITMS.*\@cid/){
+						$type = 5;
+					}elsif($str =~ /FTMS.*\@hcd/){
+						$type = 3;
+					}
+					$fragmentation_type->{$scan} = $type;
+				}elsif($line =~ /scan instrumentConfigurationRef="([^"]+)"/){
+					$insid = $1;
+				}elsif($line =~ /<activation>/ && not defined $fragmentation_type ->{$scan} ){
+           if( $insid eq ''){
+             if (scalar keys %instrumentConfiguration == 1){
+               my @insids = keys %instrumentConfiguration;
+               $insid = $insids[0];
+             }
+           }
+ 					 while ($line !~ /dissociation/ && $line !~ /binaryDataArrayList/){
+						 $line = <$fh>;
+					 }
+					 $line =~ /name="([^"]+)"/;
+           $activation = $1;
+           if ($insid && $activation){
+             $analyzer = $instrumentConfiguration{$insid};
+             $fragmentation_type->{$scan} = get_type_id($analyzer, $activation);
+             #print "$analyzer,$activation, ". $fragmentation_type ->{$scan} ."\n";
+           }
+        }
+      }
+    }elsif($line =~ /<scan num="(\d+)"/){## mzXML
+	    my ($ms1,$scan, $insconf, $insid,$analyzer, $activation);
+      $scan = $1;
+      while ($line !~/<\/scan/){
+        $line = <$fh>;
+        if($line =~ /msLevel="1"/){
+          last;
+        }
+          
+        if($line =~ /filterLine="(.*)"/){
+          my $str = $1;
+          my $type = '';
+          if($str =~ /FTMS.*\@cid/){
+            $type = 1;
+          }elsif($str =~ /FTMS.*\@etd/){
+            $type = 2;
+          }elsif($str =~ /ITMS.*\@etd/){
+            $type = 6;
+          }elsif($str =~ /ITMS.*\@cid/){
+            $type = 5;
+          }elsif($str =~ /FTMS.*\@hcd/){
+            $type = 3;
+          }
+          $fragmentation_type->{$scan} = $type;
+        }elsif($line =~ /msInstrumentID="([^"]+)"/){
+           $insid = $1;
+        }elsif($line =~ /activationMethod="(\w+)"/){
+           $activation = $1;
+        }elsif($line =~ /<peak/ && not defined $fragmentation_type ->{$scan}){
+          if($insid eq ''){
+            $insid = 'all';
+          }
+          if(! $activation){
+            $activation = 'CID';
+          }
+          #print "$insid, $instrumentConfiguration{$insid} , $activation\n";
+          if(defined $instrumentConfiguration{$insid}){
+						$analyzer = $instrumentConfiguration{$insid};
+						$fragmentation_type->{$scan} = get_type_id($analyzer, $activation);
+          }
+        }
+      }
+    }
+  }
+  close $fh;
+
+}
+
+sub get_type_id{
+  my $analyzer = shift;
+  my $activation = shift;
+  my $type = '';
+
+ if($activation =~ /(electron transfer|ETD)/i){
+	 if ($analyzer !~ /(orbi|FT|fourier)/i && $analyzer !~ /tof/i ){
+		 $type = 6;
+	 }elsif($analyzer =~ /tof/i){
+			$type = 4; 
+	 }else{
+		 $type = 2;
+	 }
+ }elsif ($activation =~ /(collision.induced|CID)/i){
+	 if ($analyzer !~ /(orbi|FT|fourier)/i ){
+		 $type = 5;
+	 }elsif($analyzer =~ /tof/i){
+			$type = 4;
+	 }else{
+		 $type = 1;
+	 }
+ }elsif($activation =~ /(high.energy collision.induced|HCD)/i){
+	 $type = 3;
+ }
+  return $type;
+}
 ###############################################################################
 =head1 BUGS
 
