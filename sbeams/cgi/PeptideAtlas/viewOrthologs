@@ -3,7 +3,7 @@
 ###############################################################################
 # $Id: $
 #
-# SBEAMS is Copyright (C) 2000-2008 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2013 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -126,21 +126,22 @@ sub get_ortholog_display {
   JOIN $TB_ORGANISM ORG ON O.ortholog_organism_id = ORG.organism_id
   LEFT JOIN $TBAT_SEARCH_KEY SK ON SK.resource_name = B.biosequence_name
   WHERE ortholog_group = '$args{group_id}'
+    AND ( search_key_type = 'Full Name'
+     OR search_key_type = 'Description'
+     OR search_key_type LIKE '%Symbol'
+     OR search_key_type LIKE 'Annotation ID'
+     OR search_key_type IS NULL
+     OR search_key_type = 'RefSeq'
+     OR search_key_type = 'ORF Name'
+    )
 	$bioseq_clause
-  AND ( search_key_type = 'Full Name'
-	      OR search_key_type = 'Description'
-				OR search_key_type LIKE '%Symbol'
-				OR search_key_type LIKE 'Annotation ID'
-        OR search_key_type IS NULL
-				OR search_key_type = 'ORF Name')
--- Would love to use a structured query like this, but some acc (mouse) fail.
---  AND search_key_type = CASE WHEN organism_name = 'human' THEN 'Full Name'
---                             WHEN organism_name = 'Mouse' THEN 'Full Name'
---														 WHEN organism_name = 'Drosophila' THEN 'Full Name'
---													   WHEN organism_name = 'Yeast' THEN 'Description'
---													   ELSE resource_name
---											  END
-  ORDER BY organism_name, biosequence_name, search_key_name DESC
+--  AND ( search_key_type = 'Full Name'
+--	      OR search_key_type = 'Description'
+--				OR search_key_type LIKE '%Symbol'
+--				OR search_key_type LIKE 'Annotation ID'
+--        OR search_key_type IS NULL
+--				OR search_key_type = 'ORF Name')
+  ORDER BY organism_name, biosequence_name ASC
   END_SQL
 
 # 0     ortholog_group,
@@ -150,7 +151,7 @@ sub get_ortholog_display {
 # 4     CAST( biosequence_seq AS VARCHAR(4000) ),
 # 5     biosequence_id
 # 6     biosequence_set_id
-#	$log->debug( "prepare stmt: $sql " . time() );
+	$log->debug( "prepare stmt: $sql " . time() );
   my $sth = $sbeams->get_statement_handle( $sql );
 #	$log->debug( "prepare stmt done: " .time() );
 
@@ -570,7 +571,7 @@ sub get_ortholog_display {
   <BR>
   <H4>Protein Occurrence by Build</H4>
   <P class=lg_body_text>
-  The table below shows information about homologous(ortholog/paralog) proteins in the $args{group_id} ortholog group.  The groups were computed using <A HREF='http://www.orthomcl.org/cgi-bin/OrthoMclWeb.cgi'>OrthoMCL version 2</A>, and are based on BLAST homology.  The numbers shown in the columns under each build are the total number of observations of peptides that can be mapped to a given protein, and the total number of distinct peptides seen: total obs ( num distinct ).  You can add information about additional builds by clicking the 'Add builds' link below and selecting the desired build(s).  Builds used to highlight the multiple sequence alignment below are shown with a dagger symbol (<SUP><BOLD>&#8224;</BOLD></SUP>).  $duplicate_text
+  The table below shows information about homologous(ortholog/paralog) proteins in the $args{group_id} ortholog group.  The groups were computed using <A HREF='http://www.orthomcl.org/cgi-bin/OrthoMclWeb.cgi'>OrthoMCL version 5</A>, and are based on BLAST homology.  The numbers shown in the columns under each build are the total number of observations of peptides that can be mapped to a given protein, and the total number of distinct peptides seen: total obs ( num distinct ).  You can add information about additional builds by clicking the 'Add builds' link below and selecting the desired build(s).  Builds used to highlight the multiple sequence alignment below are shown with a dagger symbol (<SUP><BOLD>&#8224;</BOLD></SUP>).  $duplicate_text
 
   </P>
   $table 
