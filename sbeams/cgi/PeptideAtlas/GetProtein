@@ -3842,6 +3842,20 @@ sub displayExternalLinksSection {
   }
 
 
+  #### Display a link to Protter by Bernd Wollscheid
+  my $uniprotProtein = $biosequence->{synonyms}->{'UniProt'};
+  if ($uniprotProtein) {
+    if ($sbeams->output_mode() eq 'html') {
+      $external_links .= $sbeamsMOD->encodeSectionItem(
+        key => 'Protter (Interactive Protein visualization)',
+        tr_info => $tr,
+        value => $uniprotProtein,
+        url => "http://wlab.ethz.ch/protter/#up=${uniprotProtein}&tm=auto",
+      );
+    }
+  }
+
+
   #### Close section
   if ($sbeams->output_mode() eq 'html' && $external_links ) {
     print qq~
