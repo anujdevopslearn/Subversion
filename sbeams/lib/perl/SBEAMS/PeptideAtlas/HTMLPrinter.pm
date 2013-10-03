@@ -61,6 +61,13 @@ sub display_page_header {
     $sbeams->printTextHeader();
     return;
   }
+  #### If the output mode is interactive text, display text header
+  if ($output_mode =~ 'xml') {
+    my $xml_header = $sbeams->get_http_header( mode => 'xml', filename => 'peptide_export.xml' );
+    print STDERR $xml_header;
+    print $xml_header;
+    return;
+  }
 
   #### If the output mode is not html, then we may not want a header here
   if ($output_mode ne 'html') {
@@ -531,6 +538,54 @@ sub display_page_footer {
 
 }
 
+#+
+# @narg header_text - Text to render as HTML
+# @narg header_element - XML friendly header element
+# @narg anchor - text to create <A> anchor in HTML mode
+# @narg bold - header bold text
+# @narg list_items - ref to array of anon hashes of form key=>value for two column table
+# @narg width - fixed pixel width for table
+# @narg header_width - fixed pixel width for heading
+# @narg key_width - fixed percentage of width for key
+sub encodeFullSectionList {
+  my $self = shift || die ("self not passed");
+  my %args = ( width => 600,
+               header_width => 900,
+               bold => 1,
+               key_width => 20,
+               @_
+             );
+  
+  # Default to BOLD
+  unless ( $args{header_text} && $args{list_items} ) {
+    $log->error( "Required parameters not supplied" );
+    return '';
+  }
+  $args{header_element} ||= $args{header_text};
+
+  my $buffer;
+  my $sbeams = $self->getSBEAMS();
+  if ( $sbeams->output_mode() =~ /html/i ) {
+    $buffer = "<table width=$args{width}>\n";
+    $buffer .= $self->encodeSectionHeader( %args, text => $args{header_text} );
+    for my $item ( @{$args{list_items}} ) {
+      $buffer .= $self->encodeSectionItem( key => $item->{key}, value => $item->{value}, key_width => $args{key_width} . "%" ) . "\n";
+    } 
+    $buffer .= "</table>\n";
+
+  } elsif ( $sbeams->output_mode() =~ /xml/i ) {
+    $buffer = "<$args{header_element}>\n";
+    for my $item ( @{$args{list_items}} ) {
+      my $key = $item->{key};
+      $key =~ s/\s//g;
+      $buffer .= "<li $key='$item->{value}'/>\n";
+    } 
+    $buffer .= "</$args{header_element}>\n";
+  } else {
+    $buffer = 'Sorry, yet to be implemented!';
+  }
+  return $buffer;
+}
 
 
 ###############################################################################
@@ -1358,6 +1413,8 @@ SBEAMS::WebInterface::HTMLPrinter - Perl extension for common HTML printing meth
     $adb->printPageHeader();
 
     $adb->printPageFooter();
+
+    $adb->getGoBackButton();
 
     $adb->getGoBackButton();
 
