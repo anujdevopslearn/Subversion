@@ -1105,6 +1105,11 @@ sub get_content_type {
   return $ctypes{$type};
 }
 
+sub getXMLEncodingStatement {
+  my $encoding = qq~<?xml version="1.0" encoding="UTF-8"?>\n~;
+  return $encoding;
+}
+
 sub getTableXML {
   my $self = shift;
   my %args = @_;
@@ -1287,6 +1292,9 @@ sub get_http_header {
   } else {
 #    $header = $q->header( -type => $type );
   }
+#  use Data::Dumper;
+#  die Dumper( %param_hash );
+
   $header = $q->header( '-type' => $type, %param_hash );
   return $header;
 }
