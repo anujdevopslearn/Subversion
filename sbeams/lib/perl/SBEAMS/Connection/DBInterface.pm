@@ -3046,10 +3046,11 @@ sub displayResultSet {
     if ($output_mode eq 'xml') {
 
       #### If the invocation_mode is http, provide a header
-      print $header if $self->invocation_mode() eq 'http';
-
+      unless ( $args{suppress_header} ) {
+        print $header if $self->invocation_mode() eq 'http';
+        print "<?xml version=\"1.0\" standalone=\"yes\"?>\n";
+      }
       my $identifier = $rs_params_ref->{'set_name'} || 'unknown';
-      print "<?xml version=\"1.0\" standalone=\"yes\"?>\n";
       print "<resultset identifier=\"$identifier\">\n";
       my @row;
       my $irow;
