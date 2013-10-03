@@ -1409,6 +1409,7 @@ sub get_html_seq_vars {
   if ( $args{accession} ) {
     $swiss = $self->get_uniprot_annotation( %args );
   }
+#  $log->info( Dumper( $swiss ) );
 
   # Or if there are no variants.
   return \%return unless $swiss->{success};
@@ -1416,6 +1417,10 @@ sub get_html_seq_vars {
   $return{has_modres} = $swiss->{has_modres};
 
   my $snp_cover = $self->get_snp_coverage( swiss => $swiss );
+  my $conflict_cover = $self->get_conflict_coverage( swiss => $swiss );
+  for my $cnf ( keys( %{$conflict_cover} ) ) {
+    $snp_cover->{$cnf} ||= $conflict_cover->{$cnf};
+  }
 
   my %coverage_coords;
   my @global_clustal = ( [ '', $ruler_cnt], [ '', $ruler ] );
@@ -1426,8 +1431,8 @@ sub get_html_seq_vars {
                                                                   nostrip => 1 );
   push @global_clustal, $primary_clustal;
 
-  my %type2display = ( VARIANT => 'SNP', CHAIN => 'Chain', INIT_MET => 'InitMet', SIGNAL => 'Signal', PROPEP => 'Propep', PEPTIDE => 'Chain' );
-  for my $type ( qw( INIT_MET SIGNAL PROPEP PEPTIDE CHAIN VARIANT ) ) {
+  my %type2display = ( VARIANT => 'SNP', CHAIN => 'Chain', INIT_MET => 'InitMet', SIGNAL => 'Signal', PROPEP => 'Propep', PEPTIDE => 'Chain', CONFLICT => 'SeqConflict' );
+  for my $type ( qw( INIT_MET SIGNAL PROPEP PEPTIDE CHAIN VARIANT CONFLICT ) ) {
     my $pepcnt = 1;
     for my $entry ( @{$swiss->{$type}} ) {
       my $alt = $entry->{seq};
@@ -1458,6 +1463,7 @@ sub get_html_seq_vars {
   $trypsites =~ s/[KR]P/--/g;
   $trypsites =~ s/[^KR]/-/g;
   push @global_clustal, [ 'TrypticSites', $trypsites ];
+
 
 	my $clustal_display .= $self->get_clustal_display( alignments => \@global_clustal, 
 			                                                dup_seqs => {},
@@ -1495,6 +1501,18 @@ sub get_snp_coverage {
   my %snp_cover;
   for my $item ( @{$args{swiss}->{VARIANT}} ) {
     my $key = 'SNP_' . $cnt++; 
+    $snp_cover{$key} = $item->{annot};
+  }
+  return \%snp_cover;
+}
+
+sub get_conflict_coverage {
+  my $self = shift;
+  my %args = @_;
+  my $cnt = 1;
+  my %snp_cover;
+  for my $item ( @{$args{swiss}->{CONFLICT}} ) {
+    my $key = 'SeqConflict_' . $cnt++; 
     $snp_cover{$key} = $item->{annot};
   }
   return \%snp_cover;
@@ -1577,7 +1595,38 @@ sub get_uniprot_variant_seq {
                   substr( $args{fasta_seq}, $args{start} - 1, $args{end} - $args{start} + 1 ) .
                   '-' x ($seqlen - $args{end});
 
-  } elsif ( $args{type} eq 'VARIANT' ) { # SNP shown in context of tryptic sites >= snp_context (15)
+  } elsif ( $args{type} eq 'VARIAT' ) { # SNP showz as stand-alone peptide 
+
+    my $tryp = $self->do_tryptic_digestion( aa_seq => $args{fasta_seq} );
+    my $pos = -1;
+    my $snp_pep = '';
+    my $idx = 0;
+    my $newtryp = 0;
+    $args{info} =~ /^\s*(\w)\s*\-\>\s*(\w)/;
+    my $original = $1;
+    my $altered = $2;
+    for my $pep ( @{$tryp} ) {
+      $pos += length( $pep );
+      if ( $pos >= $args{start} ) {
+        $args{match} = $pep; 
+        $args{'pos'} = $pos; 
+        my $sub_idx = $pos - $args{start};
+        my @aa = split( '', $pep );
+        $log->debug( "AA is $aa[$sub_idx] from $sub_idx in $pos and $args{start} - $args{info}, tryp is $pep" );
+#        die "Mismatch in SNP sequence $args{info}" unless $aa[$sub_idx] eq $original;
+        $aa[$sub_idx] = $altered;
+        $seq->{annot} = { $args{start} => qq~<span class=pa_snp_font TITLE="$args{info}">$altered</span>~ };
+        $seq->{seq} = join( '', @aa );
+        if ( $#aa == $sub_idx ) {
+          $newtryp++;
+        }
+        last;
+      }
+      $idx++;
+    }
+    $seq->{seq} .= $tryp->[$idx++] if $newtryp;
+
+  } elsif ( $args{type} eq 'VARIANT' || $args{type} eq 'CONFLICT' ) { # with snp_context (15)
 
     my $snp_context = 1;
 
@@ -1588,6 +1637,7 @@ sub get_uniprot_variant_seq {
     my $pos = 0;
     my $found = 0;
     my $relpos;
+    my $newtryp_added = 0;
     for ( my $idx = 0; $idx < scalar( @{$tryp} ); $idx++ ) {
       my $tryptic = $tryp->[$idx];
       $pos += length( $tryptic );
@@ -1596,6 +1646,9 @@ sub get_uniprot_variant_seq {
           $args{info} =~ /^\s*(\w)\s*\-\>\s*(\w)/;
           my $original = $1;
           my $altered = $2;
+
+          $args{altered} = $altered;
+          $args{original} = $original;
 
           # A bit of trickery if we changed from a basic to a non-basic AA
           if ( $original =~ /[KR]/ && $altered !~ /[KR]/ && $args{start} == $pos && $tryptic !~ /P[KR]$/ ) {
@@ -1614,7 +1667,12 @@ sub get_uniprot_variant_seq {
           $seq->{annot} = { $args{start} => qq~<span class=pa_snp_font TITLE="$args{info}">$altered</span>~ };
           $found++;
         } else {
-          push @post, $tryptic;
+          if ( $args{altered} !~ /[KR]/ && $args{original} =~ /[KR]/ && !$newtryp_added ) {
+            $newtryp_added++;
+            $snp_seq .= $tryptic;
+          } else {
+            push @post, $tryptic;
+          }
         }
       } else {
         push @pre, $tryptic;
@@ -1649,6 +1707,10 @@ sub get_uniprot_variant_seq {
   } else { # Should never get here...
 #    die Dumper( %args );
   }
+#  for my $arg ( keys( %args ) ) {
+#    $seq->{$arg} ||= $args{$arg};
+#  }
+#  $log->info( Dumper( $seq ) );
   return $seq;
 }
 
@@ -1689,10 +1751,12 @@ sub get_uniprot_annotation {
     if ( $swiss->{FTs} ) {
       for my $var ( @{$swiss->{FTs}->{list}} ) {
         if ( $var->[0] =~ /SIGNAL|CHAIN|INIT_MET/ || 
-             $var->[0] =~ /VARIANT/ && $var->[3] =~ /dbSNP/ ||
+             $var->[0] =~ /VARIANT/ ||
+             $var->[0] =~ /VARIANT/ && $var->[3] =~ /dbSNP/ ||  # rm dbsnp req.
              $var->[0] =~ /MOD_RES/ ||
              $var->[0] =~ /PROPEP/ || 
              $var->[0] =~ /PEPTIDE/ || 
+             $var->[0] =~ /CONFLICT/ || 
              $var->[0] =~ /CARBOHYD/ ) {
 
           # Start and end should always be numeric, but somehow are not...
