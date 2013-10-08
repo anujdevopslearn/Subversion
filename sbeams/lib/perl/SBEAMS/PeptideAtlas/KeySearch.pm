@@ -398,7 +398,7 @@ sub buildGoaKeyIndex {
   my $proteinList =  $self->getProteinList(
     biosequence_set_id => $biosequence_set_id,
   );
-    
+  
 
   #### Read all the GOA xrefs
   my $line;
@@ -599,15 +599,17 @@ sub buildGoaKeyIndex {
 		} # endwhile ($line=<INFILE>)
     close(INFILE);
   }## haveing INFILE
-  else{ # using GOA mapping 
+  #else{ # using GOA mapping 
      my %goamapping = ();
      foreach my $handle(keys %{$associations}){
        my ($database, $acc ) = split(":", $handle);
-       $goamapping{$acc}{database} = $database;
+       #$goamapping{$acc}{database} = $database;
        $goamapping{$acc}{DB_Object_Name} = $associations->{$handle}->{DB_Object_Name};  
        $goamapping{$acc}{'Gene Symbol'} = $associations->{$handle}->{Symbol};
      }
      foreach my $acc(keys %$proteinList){
+        next if($acc =~ /(IPI|ENSP)/);
+        $proteinList->{$acc}{flag} =1;    
         my @links;
         my $resource_type='Protein Accession';
         if (defined $goamapping{$acc}){
@@ -646,9 +648,8 @@ sub buildGoaKeyIndex {
       print "$counter... " if ($counter/100 eq int($counter/100));
   
      }
-  }
+  #}
   # check if there is any protein in the proteinList have not been entered into the entity table
-  exit;
   $self -> checkCompleteness(proteinList=> $proteinList,
                              count      => $counter); 
 
@@ -694,6 +695,7 @@ sub insertSearchKeyEntity {
   my $sbeams = $self->getSBEAMS();
 
   $search_key_name =~ s/'/''/g;
+  $resource_name =~ s/'/''/g;
  
   my $sql = qq~
      SELECT SEARCH_KEY_ID
@@ -727,6 +729,7 @@ sub insertSearchKeyEntity {
   }
 }
 
+
 ###############################################################################
 # readGOAAssociations
 ###############################################################################
@@ -749,11 +752,12 @@ sub readGOAAssociations {
   my %associations;
 
   while ($line=<ASSOCINFILE>) {
+    next if($line =~ /^!/);
     chomp($line);
     my ($Database,$Accession,$Symbol,$Qualifier,$GOid,$Reference,$Evidence,
         $With,$Aspect,$DB_Object_Name,$Synonym,$DB_Object_Type,
         ) = split(/\t/,$line);
-
+ 
     if (0) {
       print "-------------------------------------------------\n";
       print "Database=$Database\n";
@@ -768,6 +772,7 @@ sub readGOAAssociations {
       print "Synonym=$Synonym\n";
       print "DB_Object_Name=$DB_Object_Name\n";
     }
+
     if($Database eq 'UniProtKB'){
        $Database = 'UniProt';
     }
@@ -1848,7 +1853,7 @@ sub buildMTBKeyIndex {
 
   
   my %proteins = ();
-  my $protein_file = "$reference_directory/TubercuList_v2-3.fasta";
+  my $protein_file = "$reference_directory/TubercuList.fasta";
   open(INFILE,$protein_file) || die("ERROR: Unable to open '$protein_file'");
   while (my $line = <INFILE>) {
     if ($line =~ /^>/) {
@@ -2477,7 +2482,7 @@ sub buildCelegansKeyIndex {
 		    );
 
   #### Load information from fasta file
-  my $reference_file = "$reference_directory/wormpep215.fasta";
+  my $reference_file = "$reference_directory/wormpep.fasta";
   print "Reading $reference_file\n" if ($VERBOSE);
   open(INFILE,$reference_file)
     or die("ERROR[$METHOD]: Unable to open file '$reference_file'");
@@ -2607,7 +2612,6 @@ sub buildHoneyBeeKeyIndex {
   my $METHOD = 'buildHoneyBeeIndex';
   my $self = shift || die ("self not passed");
   my %args = @_;
-
   print "INFO[$METHOD]: Building HoneyBee key index...\n" if ($VERBOSE);
 
   my $biosequence_set_id = $args{biosequence_set_id }
