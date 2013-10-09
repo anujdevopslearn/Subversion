@@ -102,7 +102,7 @@ sub rebuildKeyIndex {
       atlas_build_id => $atlas_build_id,
   );
 
-  #### Get the list of proteins that have a peptide in this atlas build
+  #### Get the list of proteins, and n observed peptides in this atlas build
   my $matched_proteins = $self->getNProteinHits(
     organism_id => $organism_id,
     atlas_build_id => $atlas_build_id,
@@ -2959,17 +2959,28 @@ sub getNProteinHits {
     or die("ERROR[$METHOD]: Parameter atlas_build_id not passed");
 
   #### Get all the peptides in the database, regardless of build
+#  my $sql = qq~
+#       SELECT biosequence_name,SUM(n_observations) AS N_obs
+#         FROM $TBAT_PEPTIDE_INSTANCE PI
+#         JOIN $TBAT_ATLAS_BUILD AB ON (AB.atlas_build_id = PI.atlas_build_id)
+#         JOIN $TBAT_PEPTIDE_MAPPING PIM
+#              ON (PIM.peptide_instance_id = PI.peptide_instance_id)
+#         RIGHT JOIN $TBAT_BIOSEQUENCE B
+#              ON (B.biosequence_id = PIM.matched_biosequence_id)
+#        WHERE AB.atlas_build_id = '$atlas_build_id'
+#        GROUP BY biosequence_name
+#  ~;
   my $sql = qq~
-       SELECT biosequence_name,SUM(n_observations) AS N_obs
-         FROM $TBAT_PEPTIDE_INSTANCE PI
-         JOIN $TBAT_ATLAS_BUILD AB ON (AB.atlas_build_id = PI.atlas_build_id)
-         JOIN $TBAT_PEPTIDE_MAPPING PIM
-              ON (PIM.peptide_instance_id = PI.peptide_instance_id)
-         JOIN $TBAT_BIOSEQUENCE B
-              ON (B.biosequence_id = PIM.matched_biosequence_id)
-        WHERE AB.atlas_build_id = '$atlas_build_id'
-        GROUP BY biosequence_name
+      SELECT B.BIOSEQUENCE_NAME, SUM(N_OBSERVATIONS) AS N_obs
+      FROM $TBAT_BIOSEQUENCE B 
+      LEFT JOIN $TBAT_PEPTIDE_MAPPING PIM  ON (B.BIOSEQUENCE_ID = PIM.MATCHED_BIOSEQUENCE_ID)
+      LEFT JOIN $TBAT_PEPTIDE_INSTANCE PI ON (PIM.PEPTIDE_INSTANCE_ID = PI.PEPTIDE_INSTANCE_ID 
+                                        AND PI.ATLAS_BUILD_ID = '$atlas_build_id')
+      WHERE B.BIOSEQUENCE_SET_ID IN
+      (SELECT A.BIOSEQUENCE_SET_ID FROM $TBAT_ATLAS_BUILD A WHERE A.ATLAS_BUILD_ID='$atlas_build_id')
+      GROUP BY B.BIOSEQUENCE_NAME
   ~;
+
   my %proteins = $sbeams->selectTwoColumnHash($sql);
 
   return(\%proteins);
