@@ -209,6 +209,11 @@ sub handle_request {
   $password = $cachedPassword if (!$password && $cachedPassword);
   my $firstName = $parameters{'firstName'};
   my $lastName = $parameters{'lastName'};
+  my $submitter_organization = $parameters{'submitter_organization'};
+  my $lab_head_full_name = $parameters{'lab_head_full_name'};
+  my $lab_head_email = $parameters{'lab_head_email'};
+  my $lab_head_organization = $parameters{'lab_head_organization'};
+  my $lab_head_country = $parameters{'lab_head_country'};
   my $confirmingPassword = $parameters{'confirmingPassword'};
 
   #### Compile any error we encounter in an array
@@ -225,6 +230,7 @@ sub handle_request {
     $confirmingPassword = '';
     $firstName = '';
     $lastName = '';
+    $submitter_organization = '';
   }
 
 
@@ -283,7 +289,7 @@ sub handle_request {
 
       unless (@errors) {
 	my $regResult = registerUser(emailAddress=>$emailAddress,password=>$password,
-				     firstName=>$firstName,lastName=>$lastName);
+				     firstName=>$firstName,lastName=>$lastName,);
 	if ($regResult->{result} eq 'Success') {
 	  $sbeams->setSessionAttribute( key => 'PASS_emailAddress', value => $emailAddress );
 	  $sbeams->setSessionAttribute( key => 'PASS_xx', value => $password  );
@@ -320,7 +326,7 @@ sub handle_request {
 
       unless (@errors) {
 	my $regResult = registerUser(emailAddress=>$emailAddress,password=>$password,
-				     firstName=>$firstName,lastName=>$lastName);
+				     firstName=>$firstName,lastName=>$lastName,);
 	if ($regResult->{result} eq 'Success') {
 	  $sbeams->setSessionAttribute( key => 'PASS_emailAddress', value => $emailAddress );
 	  $sbeams->setSessionAttribute( key => 'PASS_xx', value => $password  );
@@ -475,6 +481,26 @@ sub handle_request {
 
      print "<B><font color=\"red\">Contributors</B></font> (Enter the names of people who are contributing this dataset, including the submitter, if applicable)<BR>\n";
      print $q->textarea( "contributors", $parameters{'contributors'}, 5, 50);
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Submitter organization</B></font> (Enter submitter's organization)<BR>\n";
+     print qq~<input type="text" name="submitter_organization" value="$submitter_organization" size=100 maxlength=255/>~;
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Lab head</B></font> (Enter full name of lab head)<BR>\n";
+     print qq~<input type="text" name="lab_head_full_name" value="$lab_head_full_name" size=100 maxlength=255/>~;
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Lab head email</B></font> (Enter email of lab head)<BR>\n";
+     print qq~<input type="text" name="lab_head_email" value="$lab_head_email" size=100 maxlength=255/>~;
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Lab head organization</B></font> (Enter organization of lab head)<BR>\n";
+     print qq~<input type="text" name="lab_head_organization" value="$lab_head_organization" size=100 maxlength=255/>~;
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Lab head country</B></font> (Enter country of lab head's organization)<BR>\n";
+     print qq~<input type="text" name="lab_head_country" value="$lab_head_country" size=100 maxlength=255/>~;
      print "<BR>\n";
 
      print "<B><font color=\"red\">Publication</B></font> (Enter the associated publication with this dataset) (Please enter a PubMed ID if available.)<BR>\n";
@@ -705,6 +731,11 @@ sub addDataset {
     datasetTag => $formParameters->{datasetTag},
     datasetTitle => $formParameters->{datasetTitle},
     publicReleaseDate => $formParameters->{publicReleaseDate},
+    submitter_organization => $formParameters->{submitter_organization},
+    lab_head_full_name => $formParameters->{lab_head_full_name},
+    lab_head_email => $formParameters->{lab_head_email},
+    lab_head_organization => $formParameters->{lab_head_organization},
+    lab_head_country => $formParameters->{lab_head_country},
     finalizedDate => 'NULL',
   );
 
