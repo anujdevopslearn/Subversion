@@ -209,11 +209,11 @@ sub get_PASSEL_info {
   WHERE sele.SEL_experiment_id = '$expt_id';
   ~;
   my @rows = $sbeams->selectSeveralColumns($query);
-  my ($expt_title, $sample_accession) = @{$rows[0]};
-  if (! $expt_title) {
+  if (! @rows) {
     print "${PROG_NAME}: No such experiment $expt_id\n";
     exit();
   }
+  my ($expt_title, $sample_accession) = @{$rows[0]};
   $px_info_href->{expt_title} = $expt_title;
 
   # Get sample infos
@@ -560,11 +560,11 @@ sub get_sample_info {
   $px_info_href->{publication_ids} = $info_aref->[18];
   my $search_batch_subdir = $info_aref->[19];
   if ($data_location && $search_batch_subdir) {
-  $px_info_href->{data_directory} =
-    '/regis/sbeams/archive/'.${data_location}.'/'.${search_batch_subdir};
+    $px_info_href->{data_directory} =
+      '/regis/sbeams/archive/'.${data_location}.'/'.${search_batch_subdir};
     print "dir = $px_info_href->{data_directory}\n" if $DEBUG;
   } else {
-    print "Unable to retreive data_location and/or search_batch_subdir.\n";
+    print "Unable to retrieve data_location and/or search_batch_subdir, therefore cannot extract mods from search result files.\n";
   }
 }
 
@@ -579,7 +579,12 @@ sub get_PASS_info {
   PASSD.publicReleaseDate,
   PASSS.lastName, PASSS.firstName,
   PASSS.emailAddress,
-  PASSD.datasetIdentifier
+  PASSD.datasetIdentifier,
+  PASSD.submitter_organization,
+  PASSD.lab_head_full_name,
+  PASSD.lab_head_email,
+  PASSD.lab_head_organization,
+  PASSD.lab_head_country
   FROM $TBAT_SEL_EXPERIMENT SELE
   JOIN $TBAT_PASS_DATASET PASSD
   ON PASSD.datasetIdentifier = SELE.datasetIdentifier
@@ -606,6 +611,11 @@ sub get_PASS_info {
     $px_info_href->{subm_email} = $info_aref->[3];
     my $datasetIdentifier = $info_aref->[4] || '';
     $px_info_href->{datasetIdentifier} = $datasetIdentifier;
+    $px_info_href->{submitter_organization} = $info_aref->[5] || '';
+    $px_info_href->{lab_head_full_name} = $info_aref->[6] || '';
+    $px_info_href->{lab_head_email} = $info_aref->[7] || '';
+    $px_info_href->{lab_head_organization} = $info_aref->[8] || '';
+    $px_info_href->{lab_head_country} = $info_aref->[9] || '';
 
     ### Parse out some infos from the PASS description file
     my $passdir = "/regis/passdata/home/$datasetIdentifier";
@@ -890,14 +900,14 @@ sub write_PX_XML {
     "cvRef"=>"$cv_ref",
     "accession"=>"${cv_ref}:$cv_acc",
     "name"=>"role type", 
-    "value"=>"Principal investigator for project (as listed in PeptideAtlas)",
+    "value"=>"Lab head",
   );
   $cv_acc = 1000586;
   $writer->emptyTag("cvParam",
     "cvRef"=>"$cv_ref",
     "accession"=>"${cv_ref}:$cv_acc",
     "name"=>"contact name",
-    "value"=>"$px_info_href->{pi_name}",
+    "value"=>"$px_info_href->{lab_head_full_name}",
   );
   $cv_acc = 1000590;
   $writer->emptyTag("cvParam",
@@ -905,31 +915,42 @@ sub write_PX_XML {
     "accession"=>"${cv_ref}:$cv_acc",
     #"name"=>"contact affiliation", not found
     "name"=>"contact organization",
-    "value"=>"$px_info_href->{pi_affiliation}",
+    "value"=>"$px_info_href->{lab_head_organization}",
   );
   $cv_acc = 1000589;
   $writer->emptyTag("cvParam",
     "cvRef"=>"$cv_ref",
     "accession"=>"${cv_ref}:$cv_acc",
     "name"=>"contact email",
-    "value"=>"$px_info_href->{pi_email}",
+    "value"=>"$px_info_href->{lab_head_email}",
   );
-  $cv_acc = 1000588;
-  $writer->emptyTag("cvParam",
-    "cvRef"=>"$cv_ref",
-    "accession"=>"${cv_ref}:$cv_acc",
-    "name"=>"contact URL",
-    "value"=>"$px_info_href->{pi_uri}",
-  );
+#--------------------------------------------------
+#   $cv_acc = 1000588;
+#   $writer->emptyTag("cvParam",
+#     "cvRef"=>"$cv_ref",
+#     "accession"=>"${cv_ref}:$cv_acc",
+#     "name"=>"contact URL",
+#     "value"=>"$px_info_href->{pi_uri}",
+#   );
+#-------------------------------------------------- 
   $writer->endTag("Contact");
   $writer->startTag("Contact", "id"=>"c002");
-  $cv_acc = 1000000;  #need
+  $cv_acc = 1001266;
   $writer->emptyTag("cvParam",
     "cvRef"=>"$cv_ref",
     "accession"=>"${cv_ref}:$cv_acc",
-    "name"=>"contact role",
+    "name"=>"role type", 
     "value"=>"Data submitter",
   );
+#--------------------------------------------------
+#   $cv_acc = 1000000;  #need
+#   $writer->emptyTag("cvParam",
+#     "cvRef"=>"$cv_ref",
+#     "accession"=>"${cv_ref}:$cv_acc",
+#     "name"=>"contact role",
+#     "value"=>"Data submitter",
+#   );
+#-------------------------------------------------- 
   $cv_acc = 1000586;
   $writer->emptyTag("cvParam",
     "cvRef"=>"$cv_ref",
@@ -937,15 +958,13 @@ sub write_PX_XML {
     "name"=>"contact name",
     "value"=>"$px_info_href->{subm_name}",
   );
-#--------------------------------------------------
-#     $cv_acc = 1000000;  #need
-#     $writer->emptyTag("cvParam",
-#       "cvRef"=>"$cv_ref",
-#       "accession"=>"${cv_ref}:$cv_acc",
-#       "name"=>"contact affiliation",
-#       "value"=>"$px_info_href->{subm_affiliation}",
-#     );
-#-------------------------------------------------- 
+  $cv_acc = 1000590;
+  $writer->emptyTag("cvParam",
+    "cvRef"=>"$cv_ref",
+    "accession"=>"${cv_ref}:$cv_acc",
+    "name"=>"contact organization",
+      "value"=>"$px_info_href->{submitter_organization}",
+    );
   $cv_acc = 1000589;
   $writer->emptyTag("cvParam",
     "cvRef"=>"$cv_ref",
@@ -995,6 +1014,8 @@ sub write_PX_XML {
 	  "name"=>"PubMed identifier",
 	  "value"=>$ph->{pubmed_id},
 	);
+      # Show as "submitted" if no PubMed ID (not exactly correct
+      #  because pubmed ID is delayed somewhat after publication)
       } else {
 	$writer->startTag("Publication", "id"=>"submitted01");
 	$cv_ref = "PRIDE";
@@ -1054,39 +1075,37 @@ sub write_PX_XML {
   ###
   ### Keywords
   ###
-  # Create a combined list of keywords from all publications
+  # Assume there are at least some keywords,
+  #  and open a KeywordList element.
+  $writer->startTag("KeywordList");
+  # Print the curator keywords
+  for my $keyword ( @{$px_info_href->{curator_keywords_aref}} ) {
+    $cv_ref = "MS";
+    $cv_acc = 1001926;
+    $writer->emptyTag("cvParam",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
+      "name"=>"curator keyword",
+      "value"=>"$keyword",
+    );
+  }
+  # Create and print a combined list of keywords from all publications
   my @pub_keywords;
   for my $pub (keys %{$px_info_href->{pub_href}}) {
     @pub_keywords = ( @pub_keywords, split (",",
 	$px_info_href->{pub_href}->{$pub}->{pub_keywords}) );
-
-    # Only open a KeywordList element if there are any keywords
-    my @keywords = ( @{$px_info_href->{curator_keywords_aref}},
-		     @pub_keywords,        );
-    if (scalar @keywords) {
-      $writer->startTag("KeywordList");
-      for my $keyword ( @{$px_info_href->{curator_keywords_aref}} ) {
-	$cv_ref = "MS";
-	$cv_acc = 1001926;
-	$writer->emptyTag("cvParam",
-	  "cvRef"=>"$cv_ref",
-	  "accession"=>"${cv_ref}:$cv_acc",
-	  "name"=>"curator keyword",
-	  "value"=>"$keyword",
-	);
-      }
-      for my $keyword ( @pub_keywords  ) {
-	$cv_acc = 1001924;
-	$writer->emptyTag("cvParam",
-	  "cvRef"=>"$cv_ref",
-	  "accession"=>"${cv_ref}:$cv_acc",
-	  "name"=>"journal article keyword",
-	  "value"=>"$keyword",
-	);
-      }
-      $writer->endTag("KeywordList");
-    }
   }
+
+  for my $keyword ( @pub_keywords  ) {
+    $cv_acc = 1001924;
+    $writer->emptyTag("cvParam",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
+      "name"=>"journal article keyword",
+      "value"=>"$keyword",
+    );
+  }
+  $writer->endTag("KeywordList");
 
   ###
   ### Dataset links.
