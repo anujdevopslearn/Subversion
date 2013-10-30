@@ -3,7 +3,7 @@
 #$Id:  $
 
 use DBI;
-use Test::More tests => 29;
+use Test::More tests => 30;
 use Test::Harness;
 use strict;
 use FindBin qw ( $Bin );
@@ -49,6 +49,7 @@ ok( test_orig_lysc_digest() , 'Test Original LysC Digestion' );
 ok( test_charge_matrix(), 'Test Charge Matrix' );
 ok( test_spectrum_comparator(), 'Test Spectrum comparator' );
 ok( test_antigenic_predictor(), 'Test Antigenic Predictor' );
+ok( test_uniprot_vars(), 'Test Uniprot Vars' );
 
 sub test_bad_peptide {
 # A very bad peptide, should hit the following penalties!
@@ -263,6 +264,20 @@ sub get_peptide_fragmentor {
 
 sub authenticate {
   return $sbeams->Authenticate();
+}
+
+
+
+sub test_uniprot_vars {
+  my $sequence = 'MVGSLNCIVAVSQNMGIGKNGDLPWPPLRNEFRYFQRMTTTSSVEGKQNLVIMGKKTWFSIPEKNRPLKG
+RINLVLSRELKEPPQGAHFLSRSLDDALKLTEQPELANKVDMVWIVGGSSVYKEAMNHPGHLKLFVTRIM
+QDFESDTFFPEIDLEKYKLLPEYPGVLSDVQEEKGIKYKFEVYEKND';
+  my $html_seq = $atlas->get_html_seq_vars( seq => $sequence,
+                                          accession => 'P00374' );
+                                          
+  my $var_list = $html_seq->{variant_list};
+
+  return $var_list;
 }
 
 
