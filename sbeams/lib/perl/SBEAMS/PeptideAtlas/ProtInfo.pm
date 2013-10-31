@@ -1167,7 +1167,7 @@ sub get_all_idents_in_build {
 
   @idents = (@idents, @related_idents);
   my $n_idents = scalar @idents;
-  print STDERR "$n_idents ident in combined idents, related_idents\n";
+  #print STDERR "$n_idents ident in combined idents, related_idents\n";
   my %all_idents_in_build = map {$_ => 1 } @idents;
 #--------------------------------------------------
 #   my $n_idents = scalar keys %all_idents_in_build;
