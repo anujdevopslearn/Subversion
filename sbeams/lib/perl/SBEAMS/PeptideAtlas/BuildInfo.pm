@@ -276,7 +276,7 @@ sub pa_build_info_2_tsv {
     my $swiss_count = get_swissprot_coverage (
       build_id => $atlas_build->[$atlas_build_id_idx],
     );
-    print "$atlas_build->[$atlas_build_name_idx] $swiss_count\n";
+    print "$atlas_build->[$atlas_build_name_idx] $swiss_count\n" if $VERBOSE;
 
     my $canon_dist_count = $canonical_count + $poss_dist_count || "";
 
