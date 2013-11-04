@@ -1431,7 +1431,14 @@ sub get_html_seq_vars {
                                                                   nostrip => 1 );
   push @global_clustal, $primary_clustal;
 
-  my %type2display = ( VARIANT => 'SNP', CHAIN => 'Chain', INIT_MET => 'InitMet', SIGNAL => 'Signal', PROPEP => 'Propep', PEPTIDE => 'Chain', CONFLICT => 'SeqConflict' );
+  my %type2display = ( VARIANT => 'SNP',
+                         CHAIN => 'Chain',
+                      INIT_MET => 'InitMet',
+                        SIGNAL => 'Signal',
+                        PROPEP => 'Propep',
+                       PEPTIDE => 'Chain',
+                      CONFLICT => 'SeqConflict' );
+
   for my $type ( qw( INIT_MET SIGNAL PROPEP PEPTIDE CHAIN VARIANT CONFLICT ) ) {
     my $pepcnt = 1;
     for my $entry ( @{$swiss->{$type}} ) {
@@ -1630,6 +1637,20 @@ sub get_uniprot_variant_seq {
 
     my $snp_context = 1;
 
+    $args{info} =~ /^\s*(\w+)\s*\-\>\s*(\w+)/;
+    my $original = $1;
+    my $altered = $2;
+
+
+    if ( $args{type} eq 'CONFLICT' && length( $original ) != length( $altered ) ) {
+#      $log->debug( "Skipping CONFLICT $args{info} because $original and $altered are different!" );
+      next;
+    }
+    if ( length( $original ) > 1 || length( $altered ) > 1 )  {
+#      $log->debug( "Skipping $args{info} because $original or $altered are > 1" );
+      next;
+    }
+
     my $tryp = $self->do_tryptic_digestion( aa_seq => $args{fasta_seq} );
     my @pre;
     my @post;
@@ -1643,9 +1664,6 @@ sub get_uniprot_variant_seq {
       $pos += length( $tryptic );
       if ( $pos >= $args{start} ) {
         if ( !$found ) {
-          $args{info} =~ /^\s*(\w)\s*\-\>\s*(\w)/;
-          my $original = $1;
-          my $altered = $2;
 
           $args{altered} = $altered;
           $args{original} = $original;
@@ -1661,7 +1679,8 @@ sub get_uniprot_variant_seq {
           my $prev = $pos - length( $tryptic );
           my @aa = split( //, $tryptic );
           $relpos = $args{start} - $prev - 1;
-          die "Arrgh!" unless $aa[$relpos] eq $original;
+          next if $relpos < 0;
+          next unless $aa[$relpos] eq $original;
           $aa[$relpos] = $altered;
           $snp_seq = join( '', @aa ); 
           $seq->{annot} = { $args{start} => qq~<span class=pa_snp_font TITLE="$args{info}">$altered</span>~ };
@@ -1716,7 +1735,7 @@ sub get_uniprot_variant_seq {
 
 sub get_uniprot_annotation {
   my $self = shift;
-  my %args = @_;
+  my %args = ( show_all_snps => 0, @_ );
 
   my %annot = ( success => 0,
                 all_vars => [], 
@@ -1751,8 +1770,8 @@ sub get_uniprot_annotation {
     if ( $swiss->{FTs} ) {
       for my $var ( @{$swiss->{FTs}->{list}} ) {
         if ( $var->[0] =~ /SIGNAL|CHAIN|INIT_MET/ || 
-             $var->[0] =~ /VARIANT/ ||
-             $var->[0] =~ /VARIANT/ && $var->[3] =~ /dbSNP/ ||  # rm dbsnp req.
+             $var->[0] =~ /VARIANT/ && $var->[3] =~ /dbSNP/ || 
+             $var->[0] =~ /VARIANT/  && $args{show_all_snps} || # dbsnp conditionally req.
              $var->[0] =~ /MOD_RES/ ||
              $var->[0] =~ /PROPEP/ || 
              $var->[0] =~ /PEPTIDE/ || 
@@ -1782,6 +1801,7 @@ sub get_uniprot_annotation {
           $var{annot} = $var_seq->{annot};
 
           $annot{$var{type}} ||= [];
+
           push @{$annot{$var{type}}}, \%var; 
 
           if ( $var->[0] =~ /MOD_RES|CARBOHYD/ ) {
@@ -1854,6 +1874,8 @@ sub get_clustal_display {
   my $name_spc;
   my $table_rows = '';
   my $scroll_class = ( scalar( @{$args{alignments}} ) > 16 ) ? 'clustal_peptide' : 'clustal';
+
+
 	for my $seq ( @{$args{alignments}} ) {
 		my $sequence = $seq->[1];
 		if ( $seq->[0] =~ /\&nbsp;/  ) {
@@ -2723,7 +2745,7 @@ sub calc_ions {
 
 #+
 # calculate theoretical ions (including modified masses).  Borrowed 
-# from ShowOneSpectrum cgi.
+# from howOneSpectrum cgi.
 # 
 # @narg Residues  ref to array of single AA (with optional mass mod signature)
 # @narg Charge    Ion series to calculate, defaults to 1 
