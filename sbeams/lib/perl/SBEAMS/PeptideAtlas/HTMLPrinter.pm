@@ -625,7 +625,9 @@ sub encodeSectionItem {
   my %args = @_;
 
   my $key = $args{key} || '';
-  my $value = $args{value} || '';
+
+  my $value = $args{value};
+  $value = '' if !defined $value;
 
   my $desc_nowrap = ( $args{nowrap_description} ) ? 'NOWRAP' : '';
 
