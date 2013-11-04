@@ -27,6 +27,7 @@ use SBEAMS::PeptideAtlas::Tables;
 
 
 my $log = SBEAMS::Connection::Log->new();
+my $sbeams;
 
 ##our $VERSION = '0.20'; can get this from Settings::get_sbeams_version
 
@@ -71,7 +72,7 @@ sub getTabMenu
 
     my $self = shift;
 
-    my $sbeams = $self->getSBEAMS();
+    $sbeams = $self->getSBEAMS();
 
     my %args = @_;
 
@@ -175,6 +176,12 @@ sub getTabMenu
        $current_tab=2;
        $current_subtab=4;
 
+    }elsif ( ($PROG_NAME =~ /^viewOrthologs/) ||
+    ($PROG_NAME =~ /viewOrthologs\?(\S+)/ ))
+    {
+       $current_tab=2;
+       $current_subtab=5;
+
     }elsif ( ($PROG_NAME =~ /^GetTransitionLists/) ||
     ($PROG_NAME =~ /GetTransitionLists\?(\S+)/ ))
     {
@@ -268,6 +275,13 @@ sub getTabMenu
 			   helptext => 'Browsing the basic information about a peptide',
 			   url => "$CGI_BASE_DIR/PeptideAtlas/Summarize_Peptide"
 			   );
+
+    $tabmenu->addMenuItem( tablabel => 'All Builds',
+			   label => 'View Ortholog Group',
+			   helptext => 'View OrthoMCL orthologs group',
+			   url => "$CGI_BASE_DIR/PeptideAtlas/viewOrthologs?use_default=1"
+			   );
+
 
     $tabmenu->addTab( label => 'Current Build' );
 
@@ -376,6 +390,35 @@ if ($activate_PASSEL) {
          label => 'Get Database Statistics',
          url => "$CGI_BASE_DIR/PeptideAtlas/GetPTPAtlasStat"
          );
+
+
+    #### SWATH tabs
+    if ( 0 && !$sbeams->isGuestUser() ) {
+    $tabmenu->addTab( label => 'SWATH/DIA',
+         helptext => 'Resource for data independent analysis',
+        );
+    $tabmenu->addMenuItem( tablabel => 'SWATH/DIA',
+         label => 'SWATH Libraries',
+         helptext => 'Download libraries in various formats',
+         url => "$CGI_BASE_DIR/PeptideAtlas/DIA_libs?mode=download_libs"
+         );
+    $tabmenu->addMenuItem( tablabel => 'SWATH/DIA',
+         label => 'Custom Libraries',
+         helptext => 'Generate custom subset libraries',
+         url => "$CGI_BASE_DIR/PeptideAtlas/DIA_libs?mode=subset_libs"
+         );
+    $tabmenu->addMenuItem( tablabel => 'SWATH/DIA',
+         label => 'Search datasets',
+         helptext => 'Search contributed datasets with your SWATH libs',
+         url => "$CGI_BASE_DIR/PeptideAtlas/DIA_search"
+         );
+    $tabmenu->addMenuItem( tablabel => 'SWATH/DIA',
+         label => 'Virtual MS',
+         helptext => 'Conduct online database search',
+         url => "$CGI_BASE_DIR/PeptideAtlas/DIA_processing"
+         );
+    }
+
 
 
 
