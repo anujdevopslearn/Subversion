@@ -428,6 +428,7 @@ sub processRequest {
         <INPUT TYPE="hidden" NAME="spectrum_identification_id" VALUE="$parameters{spectrum_identification_id}">
         <INPUT TYPE="hidden" NAME="assumed_charge" VALUE="$parameters{assumed_charge}">
         <INPUT TYPE="hidden" NAME="peptide" VALUE="$parameters{peptide}">
+        <INPUT TYPE="hidden" NAME="atlas_build_id" VALUE="$parameters{atlas_build_id}">
 	~;
 
     my $spectext = '(enter alternate sequence)';
