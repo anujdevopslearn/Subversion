@@ -788,9 +788,13 @@ sub handle_request {
     # Eventually, will move 3D resources to PeptideAtlas server area
     # and URL will change.
     my $acc=$biosequence->{biosequence_name};
-    my $available_viz_acc = `wget -q -O - http://ec2-204-236-255-114.compute-1.amazonaws.com/peptides/protein/`;
-    my @acc_is_present = grep (/${acc}.html/, ($available_viz_acc));
-    my $acc_is_present = scalar @acc_is_present;
+    my $acc_is_present = 0;
+#--------------------------------------------------
+#  Disable because not maintained. TMF 11/05/13
+#     my $available_viz_acc = `wget -q -O - http://ec2-204-236-255-114.compute-1.amazonaws.com/peptides/protein/`;
+#     my @acc_is_present = grep (/${acc}.html/, ($available_viz_acc));
+#     my $acc_is_present = scalar @acc_is_present;
+#-------------------------------------------------- 
     my $url = $acc_is_present ?  "http://ec2-204-236-255-114.compute-1.amazonaws.com/peptides/protein/pages/${acc}.html": '';
     my $key = $acc_is_present ? "Protein Name and Visualization" : "Protein Name";
     print $sbeamsMOD->encodeSectionItem(
@@ -1017,7 +1021,7 @@ sub handle_request {
   push @labels, 'Avg Eval' if $parameters{'ann'};
 
   my @column_array = (
-    ["peptide_accession","P.peptide_accession","Accession"],
+    ["peptide_accession","P.peptide_accession","<DIV TITLE='PeptideAtlas accession for peptide'>Accession</DIV>"],
     ["preceding_residue","PI.preceding_residue","<DIV TITLE='Preceding (towards the N terminus) amino acid'>Pre AA</DIV>"],
     ["peptide_sequence","P.peptide_sequence","<DIV TITLE='Amino Acid sequence of this peptide'>Sequence</DIV>"],
     ["following_residue","PI.following_residue","<DIV TITLE='Following (towards the C terminus) amino acid'>Fol AA</DIV>"],
@@ -1103,6 +1107,7 @@ sub handle_request {
     LEFT JOIN $TBAT_SPECTRUM_ANNOTATION_LEVEL  SAL
          ON  SAL.spectrum_annotation_level_id =
 	     PIA.spectrum_annotation_level_id 
+	  AND PIA.record_status != 'D'
     WHERE 1 = 1
           AND AB.atlas_build_id IN ( $atlas_build_id )
 	  AND BS.biosequence_id = $biosequence_id
@@ -3421,70 +3426,75 @@ sub getProteinInformationForPeptides {
 }
 
 
-sub get_table_help {
-  my $name = shift;
-  return '' unless $name;
-  my @entries;
-  my $hidetext;
-  my $showtext;
-  my $heading;
-  my $description;
-  if ( $name eq 'observed_peptides' ) {
-    @entries = (
-    { key => "Peptide Accession", value => 'Peptide Atlas accession number, beginning with PAp followed by 9 digits.' },
-    { value => 'Preceding (towards the N terminus) amino acid', key => 'Pre AA' },
-    { value => 'Amino Acid sequence of this peptide', key => 'Peptide Sequence'}, 
-    { value => 'Following (towards the C terminus) amino acid', key => 'Fol AA' },
-    { value => 'Score derived from peptide probability, EOS, and sequence characteristics such as missed cleavage <SUP><FONT COLOR=RED>[MC]</FONT></SUP> or semi-tryptic <SUP><FONT COLOR=RED>[ST]</FONT></SUP>, or <BR> multiple genome locations <SUP><FONT COLOR=RED>[MGL]</FONT></SUP>.  These are annotated in red as shown.', key => 'Suitability Score' },
-    { value => 'Highest PeptideProphet probability for this observed sequence', key => 'Best Prob' },
-    { value => '', key => 'Best Adjusted Prob'},
-    { value => 'Total number of observations in all modified forms and charge states', key => 'N Obs' },
-    { value => 'Empirical Observability Score', key => 'EOS' },
-    { value => 'SSRCalc Relative Hydrophobicity score', key => 'RHS' },
-    { value => 'Number of proteins in the reference database to which this peptide maps', key => 'N Protein Mappings' },
-    { value => 'Number of discrete genome locations which encode this amino acid sequence', key => 'N Genome Locations' },
-    { value => 'Samples in which this sequence was seen', key => 'Sample IDs' },
-    { value => 'Observed peptides of which this peptide is a subsequence', key => 'Parent Peptides' },
-
-    );
-    
-    $showtext = 'show column descriptions';
-    $hidetext = 'hide column descriptions';
-    $heading = 'Observed Peptides';
-    $description= 'Peptides observed in MS/MS experiments';
-    
-  } elsif ( $name eq 'annotated_transitions' ) {
-    @entries = (
-      { key => 'Sequence', value => 'Amino acid sequence of detected pepide, including any mass modifications.' },
-      { key => 'Charge', value => 'Charge on Q1 (precursor) peptide ion.' },
-      { key => 'q1_mz', value => 'Mass to charge ratio of precursor peptide ion.' },
-      { key => 'q3_mz', value => 'Mass to charge ratio of fragment ion.' },
-      { key => 'Label', value => 'Ion-series designation for fragment ion (Q3).' },
-      { key => 'Intensity', value => 'Intensity of peak in CID spectrum' },
-      { key => 'CE', value => 'Collision energy, the kinetic energy conferred to the peptide ion and resulting in peptide fragmentation. (eV)' },
-      { key => 'RT', value => 'Peptide retention time( in minutes ) in the LC/MS system.' },
-      { key => 'SSRCalc', value => "Sequence Specific Retention Factor provides a hydrophobicity measure for each peptide using the algorithm of Krohkin et al. Version 3.0 <A HREF=http://hs2.proteome.ca/SSRCalc/SSRCalc.html target=_blank>[more]</A>" },
-      { key => 'Instr', value => 'Model of mass spectrometer on which transition pair was validated.' },
-      { key => 'Annotator', value => 'Person/lab who contributed validated transition.' },
-      { key => 'Quality', value => 'Crude scale of quality for the observation, currently one of Best, OK, and No. ' },
-      );
-
-    $showtext = 'show column descriptions';
-    $hidetext = 'hide column descriptions';
-    $heading = 'Annotated Tranitions';
-    $description= 'Contributed Q1/Q3 transition pairs for SRM experiments';
-	}
-
-  return unless @entries;
-  my $help = $sbeamsMOD->get_table_help_section( name => $name,
-  description => $description,
-  heading => $heading,
-  entries => \@entries,
-  showtext => $showtext,
-  hidetext => $hidetext  );
-  return $help;
-    
-} # end get_table_help
+#### 04/30/13: Superceded by make_table_help in Annotations.pm.
+####  Enter new column definitions in %coldefs therein.
+#--------------------------------------------------
+# sub get_table_help {
+#   my $name = shift;
+#   return '' unless $name;
+#   my @entries;
+#   my $hidetext;
+#   my $showtext;
+#   my $heading;
+#   my $description;
+#   if ( $name eq 'observed_peptides' ) {
+#     @entries = (
+#     { key => "Peptide Accession", value => 'Peptide Atlas accession number, beginning with PAp followed by 9 digits.' },
+#     { value => 'Preceding (towards the N terminus) amino acid', key => 'Pre AA' },
+#     { value => 'Amino Acid sequence of this peptide', key => 'Peptide Sequence'}, 
+#     { value => 'Following (towards the C terminus) amino acid', key => 'Fol AA' },
+#     { value => 'Score derived from peptide probability, EOS, and sequence characteristics such as missed cleavage <SUP><FONT COLOR=RED>[MC]</FONT></SUP> or semi-tryptic <SUP><FONT COLOR=RED>[ST]</FONT></SUP>, or <BR> multiple genome locations <SUP><FONT COLOR=RED>[MGL]</FONT></SUP>.  These are annotated in red as shown.', key => 'Suitability Score' },
+#     { value => 'Highest PeptideProphet probability for this observed sequence', key => 'Best Prob' },
+#     { value => '', key => 'Best Adjusted Prob'},
+#     { value => 'Total number of observations in all modified forms and charge states', key => 'N Obs' },
+#     { value => 'Empirical Observability Score', key => 'EOS' },
+#     { value => 'SSRCalc Relative Hydrophobicity score', key => 'RHS' },
+#     { value => 'Number of proteins in the reference database to which this peptide maps', key => 'N Protein Mappings' },
+#     { value => 'Number of discrete genome locations which encode this amino acid sequence', key => 'N Genome Locations' },
+#     { value => 'Samples in which this sequence was seen', key => 'Sample IDs' },
+#     { value => 'Observed peptides of which this peptide is a subsequence', key => 'Parent Peptides' },
+#     { value => 'Observed peptides of which this peptide is a subsequence', key => 'Parent Peptides' },
+# 
+#     );
+#     
+#     $showtext = 'show column descriptions';
+#     $hidetext = 'hide column descriptions';
+#     $heading = 'Observed Peptides';
+#     $description= 'Peptides observed in MS/MS experiments';
+#     
+#   } elsif ( $name eq 'annotated_transitions' ) {
+#     @entries = (
+#       { key => 'Sequence', value => 'Amino acid sequence of detected pepide, including any mass modifications.' },
+#       { key => 'Charge', value => 'Charge on Q1 (precursor) peptide ion.' },
+#       { key => 'q1_mz', value => 'Mass to charge ratio of precursor peptide ion.' },
+#       { key => 'q3_mz', value => 'Mass to charge ratio of fragment ion.' },
+#       { key => 'Label', value => 'Ion-series designation for fragment ion (Q3).' },
+#       { key => 'Intensity', value => 'Intensity of peak in CID spectrum' },
+#       { key => 'CE', value => 'Collision energy, the kinetic energy conferred to the peptide ion and resulting in peptide fragmentation. (eV)' },
+#       { key => 'RT', value => 'Peptide retention time( in minutes ) in the LC/MS system.' },
+#       { key => 'SSRCalc', value => "Sequence Specific Retention Factor provides a hydrophobicity measure for each peptide using the algorithm of Krohkin et al. Version 3.0 <A HREF=http://hs2.proteome.ca/SSRCalc/SSRCalc.html target=_blank>[more]</A>" },
+#       { key => 'Instr', value => 'Model of mass spectrometer on which transition pair was validated.' },
+#       { key => 'Annotator', value => 'Person/lab who contributed validated transition.' },
+#       { key => 'Quality', value => 'Crude scale of quality for the observation, currently one of Best, OK, and No. ' },
+#       );
+# 
+#     $showtext = 'show column descriptions';
+#     $hidetext = 'hide column descriptions';
+#     $heading = 'Annotated Tranitions';
+#     $description= 'Contributed Q1/Q3 transition pairs for SRM experiments';
+# 	}
+# 
+#   return unless @entries;
+#   my $help = $sbeamsMOD->get_table_help_section( name => $name,
+#   description => $description,
+#   heading => $heading,
+#   entries => \@entries,
+#   showtext => $showtext,
+#   hidetext => $hidetext  );
+#   return $help;
+#     
+# } # end get_table_help
+#-------------------------------------------------- 
 
 ###############################################################################
 # printUserAnnotations
