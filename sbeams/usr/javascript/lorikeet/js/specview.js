@@ -22,6 +22,7 @@
                 variableMods: [],
                 ntermMod: 0, // additional mass to be added to the n-term
                 ctermMod: 0, // additional mass to be added to the c-term
+                maxNeutralLossCount: 1,
                 peaks: [],
                 showA:[],
                 showB:[],
@@ -44,13 +45,15 @@
                 showOptionsTable: true,
                 showSequenceInfo: true
         };
-		
-      	
+			
 	    var options = $.extend(true, {}, defaults, opts); // this is a deep copy
-      return this.each(function() {
-        index = index + 1;
-        init($(this), options);
-      });
+
+        return this.each(function() {
+
+            index = index + 1;
+            init($(this), options);
+
+        });
 	};
 
     var index = 0;
@@ -90,7 +93,6 @@
             peakDetect: "peakDetect"
 	};
 
-
     function getElementId(container, elementId){
         return elementId+"_"+container.data("index");
     }
@@ -112,7 +114,7 @@
         var parsedStaticMods = [];
         for(var i = 0; i < options.staticMods.length; i += 1) {
             var mod = options.staticMods[i];
-            parsedStaticMods[i] = new Modification(AminoAcid.get(mod.aminoAcid), mod.modMass);
+            parsedStaticMods[i] = new Modification(AminoAcid.get(mod.aminoAcid), mod.modMass, mod.losses);
         }
         options.staticMods = parsedStaticMods;
 
@@ -124,13 +126,14 @@
             parsedVarMods[i] = new VariableModification(
                                     mod.index,
                                     mod.modMass,
-                                    AminoAcid.get(mod.aminoAcid)
+                                    AminoAcid.get(mod.aminoAcid),
+                                    mod.losses
                                 );
         }
         options.variableMods = parsedVarMods;
 
         var peptide = new Peptide(options.sequence, options.staticMods, options.variableMods,
-                                options.ntermMod, options.ctermMod);
+                                options.ntermMod, options.ctermMod, options.maxNeutralLossCount);
         options.peptide = peptide;
 
         // Calculate a theoretical m/z from the given sequence and charge
@@ -597,6 +600,8 @@
 		var neutralLossContainer = $(getElementSelector(container, elementIds.nl_choice));
 		neutralLossContainer.find("input").click(function() {
 			container.data("selectedNeutralLossChanged", true);
+            var selectedNeutralLosses = getNeutralLosses(container);
+            container.data("options").peptide.recalculateLossOptions(selectedNeutralLosses, container.data("options").maxNeutralLossCount);
 			plotAccordingToChoices(container);
 		});
 		
@@ -889,6 +894,7 @@
 	function calculateTheoreticalSeries(container, selectedIons) {
 
 		if(selectedIons) {
+		
 			var todoIonSeries = [];
 			var todoIonSeriesData = [];
             var ionSeries = container.data("ionSeries");
@@ -946,8 +952,8 @@
 
 			if(container.data("options").sequence) {
 
-                var sequence =  container.data("options").sequence
-				var massType = container.find("input[name='"+getRadioName(container, "massTypeOpt")+"']:checked").val();
+                var sequence = container.data("options").sequence
+				var massType = getMassType(container);
 				
 				for(var i = 1; i < sequence.length; i += 1) {
 					
@@ -964,7 +970,11 @@
 		}
 	}
 
-	
+    function getMassType(container)
+    {
+        return container.find("input[name='"+getRadioName(container, "massTypeOpt")+"']:checked").val();
+    }
+
 	// -----------------------------------------------
 	// MATCH THEORETICAL MASSES WITH PEAKS IN THE SCAN
 	// -----------------------------------------------
@@ -981,6 +991,7 @@
 		
 		var peakAssignmentType = container.find("input[name='"+getRadioName(container, "peakAssignOpt")+"']:checked").val();
 		var peakLabelType = container.find("input[name='"+getRadioName(container, "peakLabelOpt")+"']:checked").val();
+        var massType = getMassType(container);
 
         var ionSeriesMatch = container.data("ionSeriesMatch");
         var ionSeries = container.data("ionSeries");
@@ -998,7 +1009,7 @@
 				if(recalculate(container) || !ionSeriesMatch.a[ion.charge]) { // re-calculate only if mass error has changed OR
 																		// matching peaks for this series have not been calculated
 					// calculated matching peaks
-					var adata = calculateMatchingPeaks(container, ionSeries.a[ion.charge], peaks, massError, peakAssignmentType);
+					var adata = calculateMatchingPeaks(container, ionSeries.a[ion.charge], peaks, massError, peakAssignmentType, massType);
 					if(adata && adata.length > 0) {
 						ionSeriesMatch.a[ion.charge] = adata[0];
 						ionSeriesLabels.a[ion.charge] = adata[1];
@@ -1011,7 +1022,7 @@
 				if(recalculate(container) || !ionSeriesMatch.b[ion.charge]) { // re-calculate only if mass error has changed OR
 																		// matching peaks for this series have not been calculated
 					// calculated matching peaks
-					var bdata = calculateMatchingPeaks(container, ionSeries.b[ion.charge], peaks, massError, peakAssignmentType);
+					var bdata = calculateMatchingPeaks(container, ionSeries.b[ion.charge], peaks, massError, peakAssignmentType, massType);
 					if(bdata && bdata.length > 0) {
 						ionSeriesMatch.b[ion.charge] = bdata[0];
 						ionSeriesLabels.b[ion.charge] = bdata[1];
@@ -1024,7 +1035,7 @@
 				if(recalculate(container) || !ionSeriesMatch.c[ion.charge]) { // re-calculate only if mass error has changed OR
 																		// matching peaks for this series have not been calculated
 					// calculated matching peaks
-					var cdata = calculateMatchingPeaks(container, ionSeries.c[ion.charge], peaks, massError, peakAssignmentType);
+					var cdata = calculateMatchingPeaks(container, ionSeries.c[ion.charge], peaks, massError, peakAssignmentType, massType);
 					if(cdata && cdata.length > 0) {
 						ionSeriesMatch.c[ion.charge] = cdata[0];
 						ionSeriesLabels.c[ion.charge] = cdata[1];
@@ -1037,7 +1048,7 @@
 				if(recalculate(container) || !ionSeriesMatch.x[ion.charge]) { // re-calculate only if mass error has changed OR
 																		// matching peaks for this series have not been calculated
 					// calculated matching peaks
-					var xdata = calculateMatchingPeaks(container, ionSeries.x[ion.charge], peaks, massError, peakAssignmentType);
+					var xdata = calculateMatchingPeaks(container, ionSeries.x[ion.charge], peaks, massError, peakAssignmentType, massType);
 					if(xdata && xdata.length > 0) {
 						ionSeriesMatch.x[ion.charge] = xdata[0];
 						ionSeriesLabels.x[ion.charge] = xdata[1];
@@ -1050,7 +1061,7 @@
 				if(recalculate(container) || !ionSeriesMatch.y[ion.charge]) { // re-calculate only if mass error has changed OR
 																		// matching peaks for this series have not been calculated
 					// calculated matching peaks
-					var ydata = calculateMatchingPeaks(container, ionSeries.y[ion.charge], peaks, massError, peakAssignmentType);
+					var ydata = calculateMatchingPeaks(container, ionSeries.y[ion.charge], peaks, massError, peakAssignmentType, massType);
 					if(ydata && ydata.length > 0) {
 						ionSeriesMatch.y[ion.charge] = ydata[0];
 						ionSeriesLabels.y[ion.charge] = ydata[1];
@@ -1063,7 +1074,7 @@
 				if(recalculate(container) || !ionSeriesMatch.z[ion.charge]) { // re-calculate only if mass error has changed OR
 																		// matching peaks for this series have not been calculated
 					// calculated matching peaks
-					var zdata = calculateMatchingPeaks(container, ionSeries.z[ion.charge], peaks, massError, peakAssignmentType);
+					var zdata = calculateMatchingPeaks(container, ionSeries.z[ion.charge], peaks, massError, peakAssignmentType, massType);
 					if(zdata && zdata.length > 0) {
 						ionSeriesMatch.z[ion.charge] = zdata[0];
 						ionSeriesLabels.z[ion.charge] = zdata[1];
@@ -1075,7 +1086,35 @@
 		return dataSeries;
 	}
 
-	function calculateMatchingPeaks(container, ionSeries, allPeaks, massTolerance, peakAssignmentType) {
+    function getNeutralLosses(container) {
+        var neutralLosses = [];
+        $(getElementSelector(container, elementIds.nl_choice)).find("input:checked").each(function() {
+            var lossLabel = $(this).val();
+            var loss = container.data("options").peptide.getLossForLabel(lossLabel);
+            neutralLosses.push(loss);
+        });
+        return neutralLosses;
+    }
+
+    function getLabel(sion, neutralLosses) {
+        var label = sion.label;
+        if(neutralLosses) {
+            label += neutralLosses.getLabel();
+        }
+        return label;
+    }
+
+    function ionMz(sion, neutralLosses, massType) {
+        var ionmz;
+        if(!neutralLosses)
+            ionmz = sion.mz;
+        else {
+            ionmz = Ion.getIonMzWithLoss(sion, neutralLosses, massType);
+        }
+        return ionmz;
+    }
+
+	function calculateMatchingPeaks(container, ionSeries, allPeaks, massTolerance, peakAssignmentType, massType) {
 
         // console.log("calculating matching peaks");
 		var peakIndex = 0;
@@ -1083,21 +1122,31 @@
 		var matchData = [];
 		matchData[0] = []; // peaks
 		matchData[1] = []; // labels -- ions;
-		
-		var neutralLosses = [];
-		$(getElementSelector(container, elementIds.nl_choice)).find("input:checked").each(function() {
-			neutralLosses.push($(this).val());
-		});
+
+        var peptide = container.data("options").peptide;
 		for(var i = 0; i < ionSeries.length; i += 1) {
 			
 			var sion = ionSeries[i];
 			
-			// get match for water and or ammonia loss
-			for(var n = 0; n < neutralLosses.length; n += 1) {
-				getMatchForIon(sion, matchData, allPeaks, peakIndex, massTolerance, peakAssignmentType, neutralLosses[n]);
-			}
-			// get match for the ion
-			peakIndex = getMatchForIon(sion, matchData, allPeaks, peakIndex, massTolerance, peakAssignmentType);
+			// get match for water and / or ammonia loss.
+            var minIndex = Number.MAX_VALUE;
+            var neutralLossOptions = peptide.getPotentialLosses(sion);
+
+            var index = getMatchForIon(sion, matchData, allPeaks, peakIndex, massTolerance, peakAssignmentType, null, massType);
+            minIndex = Math.min(minIndex, index);
+
+            for(var n = 1; n < neutralLossOptions.length; n += 1)
+            {
+                var loss_options_with_n_losses = neutralLossOptions[n];
+                for(var k = 0; k < loss_options_with_n_losses.lossCombinationCount(); k += 1)
+                {
+                    var lossCombination = loss_options_with_n_losses.getLossCombination(k);
+                    var index = getMatchForIon(sion, matchData, allPeaks, peakIndex, massTolerance, peakAssignmentType, lossCombination, massType);
+                    minIndex = Math.min(minIndex, index);
+                }
+            }
+
+            peakIndex = minIndex;
 		}
 		
 		return matchData;
@@ -1108,26 +1157,17 @@
 	// allPeaks -- array with all the scan peaks
 	// peakIndex -- current index in peaks array
 	// Returns the index of the matching peak, if one is found
-	function getMatchForIon(sion, matchData, allPeaks, peakIndex, massTolerance, peakAssignmentType, neutralLoss) {
+	function getMatchForIon(sion, matchData, allPeaks, peakIndex, massTolerance, peakAssignmentType, neutralLosses, massType) {
 		
 		var bestPeak = null;
-		if(!neutralLoss)
+		if(!neutralLosses)
 			sion.match = false; // reset;
-		var ionmz;
-		if(!neutralLoss)
-			ionmz = sion.mz;
-		else {
-			if(neutralLoss == 'h2o') {
-				ionmz = Ion.getWaterLossMz(sion);
-			}
-			else if(neutralLoss = 'nh3') {
-				ionmz = Ion.getAmmoniaLossMz(sion);
-			}
-		}
+		var ionmz = ionMz(sion, neutralLosses, massType);
+        var peakLabel = getLabel(sion, neutralLosses);
 		var bestDistance;
 		
 		for(var j = peakIndex; j < allPeaks.length; j += 1) {
-			
+			 
 			var peak = allPeaks[j];
 			
 			// peak is before the current ion we are looking at
@@ -1136,26 +1176,8 @@
 				
 			// peak is beyond the current ion we are looking at
 			if(peak[0] > ionmz + massTolerance) {
-			
-				// if we found a matching peak for the current ion, save it
-				if(bestPeak) {
-					//console.log("found match "+sion.label+", "+ionmz+";  peak: "+bestPeak[0]);
-					matchData[0].push([bestPeak[0], bestPeak[1]]);
-					if(!neutralLoss) {
-						matchData[1].push(sion.label);
-						sion.match = true;
-					}
-					else {
-						if(neutralLoss == 'h2o') {
-							matchData[1].push(sion.label+'-H2O');
-						}
-						else if(neutralLoss = 'nh3') {
-							matchData[1].push(sion.label+'-NH3');
-						}
-					}
-				}
-				peakIndex = j;
-				break;
+                peakIndex = j;
+			    break;
 			}
 				
 			// peak is within +/- massTolerance of the current ion we are looking at
@@ -1185,7 +1207,17 @@
 				}
 			}
 		}
-		
+
+        // if we found a matching peak for the current ion, save it
+        if(bestPeak) {
+            //console.log("found match "+sion.label+", "+ionmz+";  peak: "+bestPeak[0]);
+            matchData[0].push([bestPeak[0], bestPeak[1]]);
+            matchData[1].push(peakLabel);
+            if(!neutralLosses) {
+                sion.match = true;
+            }
+        }
+
 		return peakIndex;
 	}
 	
@@ -1214,39 +1246,63 @@
         var peaks = container.data("options").peaks;
         var sparsePeaks = [];
 
+        var intensities = [];
+        for(var i = 0; i < peaks.length; i+= 1)
+        {
+            intensities.push(peaks[i][1]);
+        }
+        intensities.sort(function(a,b){return b-a});
+        var max_50_intensity = intensities[Math.min(intensities.length - 1, 49)];
+
+
+        var window = 50.0;
         for(var i = 0; i < peaks.length; i += 1) {
 
 			var peak = peaks[i];
 
             var intensity = peak[1];
+
+            // If this is one of the 50 most intense peaks, add it to sparse peaks
+            if(intensity >= max_50_intensity)
+            {
+                sparsePeaks.push(peak);
+                continue;
+            }
+
             var mz = peak[0];
-            var minMz = mz;
-            var maxMz = mz;
             var j = i-1;
             var totalIntensity = intensity;
             var peakCount = 1;
             // sum up the intensities in the +/- 50Da window of this peak
             var maxIntensity = intensity;
-            while((minMz >= mz - 50.0) && j >= 0)
+            var minIndex = i;
+            var maxIndex = i;
+            while(j >= 0)
             {
+                if(peaks[j][0] < mz - window)
+                    break;
+
                 if(peaks[j][1] > maxIntensity)
                 {
                     maxIntensity = peaks[j][1];
                 }
                 totalIntensity += peaks[j][1];
-                minMz = peaks[j][0];
+                minIndex = j;
                 j -= 1;
                 peakCount += 1;
             }
             j = i+1;
-            while(maxMz <= mz + 50.0 && j < peaks.length)
+            while(j < peaks.length)
             {
+                if(peaks[j][0] > mz + window)
+                    break;
+
                 if(peaks[j][1] > maxIntensity)
                 {
                     maxIntensity = peaks[j][1];
                 }
                 totalIntensity += peaks[j][1];
-                maxMz = peaks[j][0];
+                maxIndex = j;
                 j += 1;
                 peakCount += 1;
             }
@@ -1261,19 +1317,9 @@
             {
                 // calculate the standard deviation
                 var sdev = 0;
-                j = i - 1;
-                while((minMz >= mz - 50.0) && j >= 0)
+                for(var k = minIndex; k <= maxIndex; k += 1)
                 {
-                    sdev += Math.pow((peaks[j][1] - mean), 2);
-                    minMz = peaks[j][0];
-                    j -= 1;
-                }
-                j = i+1;
-                while(maxMz <= mz + 50.0 && j < peaks.length)
-                {
-                    sdev += Math.pow((peaks[j][1] - mean), 2);
-                    maxMz = peaks[j][0];
-                    j += 1;
+                    sdev += Math.pow((peaks[k][1] - mean), 2);
                 }
                 sdev = Math.sqrt(sdev / peakCount);
 
@@ -1281,7 +1327,7 @@
                 {
                     sparsePeaks.push(peak);
                 }
-                //console.log(intensity+"  "+mean+"  "+sdev);
+                // console.log(intensity+"  "+mean+"  "+sdev);
             }
 		}
         // console.log("Sparse Peak count: "+sparsePeaks.length);
@@ -1519,9 +1565,7 @@
 			
 			specinfo += '<div>';
 			specinfo += '<span style="font-weight:bold; color:#8B0000;">'+getModifiedSequence(options)+'</span>';
-			
-			var massType = container.find("input[name='"+getRadioName(container, "massTypeOpt")+"']:checked").val();
-			
+
 			var neutralMass = 0;
 			
 			if(options.precursorMassType == 'mono')
@@ -1610,14 +1654,22 @@
 		modInfo += '</div>';
 		
 		if(options.staticMods && options.staticMods.length > 0) {
-			modInfo += '<div style="margin-top:5px;">';
-			modInfo += 'Static Modifications: ';
+			var sm_modInfo = '<div style="margin-top:5px;">';
+			sm_modInfo += 'Static Modifications: ';
+            var count = 0;
 			for(var i = 0; i < options.staticMods.length; i += 1) {
 				var mod = options.staticMods[i];
+                if(mod.modMass == 0.0)
+                    continue;
 				//if(i > 0) modInfo += ', ';
-				modInfo += "<div><b>"+mod.aa.code+": "+mod.modMass+"</b></div>";
+				sm_modInfo += "<div><b>"+mod.aa.code+": "+mod.modMass+"</b></div>";
+                count += 1;
 			}
-			modInfo += '</div>';
+			sm_modInfo += '</div>';
+            if(count > 0)
+            {
+                modInfo += sm_modInfo;
+            }
 		}
 		
 		if(options.variableMods && options.variableMods.length > 0) {
@@ -1645,10 +1697,10 @@
             keys.sort();
 
 			modInfo += '<div style="margin-top:5px;">';
-			modInfo += 'Modifications: '; // JKE: 'Variable Modifications' in Lorikeet code
+			modInfo += 'Variable Modifications: ';
             modInfo += "<table class='varModsTable'>";
-			for(var i in keys) {
-				var varmods = uniqVarMods[keys[i]];
+			for(var k = 0; k < keys.length; k++) {
+				var varmods = uniqVarMods[keys[k]];
                 modInfo += "<tr><td><span style='font-weight: bold;'>";
                 modInfo += varmods[0].aa.code+": "+varmods[0].modMass;
                 modInfo += "</span></td>";
@@ -1784,13 +1836,28 @@
 		
 		myTable += '<span style="font-weight: bold;">Neutral Loss:</span> ';
 		myTable += '<div id="'+getElementId(container, elementIds.nl_choice)+'"> ';
-		myTable += '<nobr> <input type="checkbox" value="h2o" id="h2o"/> ';
-		myTable += ' H<sub>2</sub>O (<span style="font-weight: bold;">-18</span>)';
-		myTable += '</nobr> ';
-		myTable += '<br> ';
-		myTable += '<nobr> <input type="checkbox" value="nh3" id="nh3"/> ';
-		myTable += ' NH<sub>3</sub> (<span style="font-weight: bold;">-17</span>)';
-		myTable += '</nobr> ';
+        var peptide = container.data("options").peptide;
+        var idx = 0;
+        for (lossKey in peptide.lorikeetPotentialLosses)
+        {
+            var loss = peptide.lorikeetPotentialLosses[lossKey];
+            if(!loss)
+                continue;
+            if(idx++ != 0)myTable += '<br> ';
+            myTable += '<nobr> <input type="checkbox" value="'+loss.label()+'" id="'+loss.label()+'"/> ';
+            myTable += loss.htmlLabel();
+            myTable += '</nobr> ';
+        }
+        for(var lossKey in peptide.customPotentialLosses)
+        {
+            var loss = peptide.customPotentialLosses[lossKey];
+            if(!loss)
+                continue;
+            if(idx++ != 0)myTable += '<br> ';
+            myTable += '<nobr> <input type="checkbox" value="'+loss.label()+'" id="'+loss.label()+ '" checked = "checked"/> ';
+            myTable += loss.htmlLabel();
+            myTable += '</nobr> ';
+        }
 		myTable += '</div> ';
 		
 		myTable += '</td> </tr> ';
