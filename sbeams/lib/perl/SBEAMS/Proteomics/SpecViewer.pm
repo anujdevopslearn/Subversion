@@ -125,6 +125,8 @@ sub generateSpectrum {
 
     my $html_id  = $args{'htmlID'} || 'lorikeet';
     my $charge   = $args{'charge'};
+    my $massTolerance   = $args{'massTolerance'} || 0.5;
+    my $peakDetect   = $args{'peakDetect'} || 'false';
     my $showA    = $args{'a_ions'} || '[0,0,0]';
     my $showB    = $args{'b_ions'} || '[1,1,0]';
     my $showC    = $args{'c_ions'} || '[0,0,0]';
@@ -136,8 +138,8 @@ sub generateSpectrum {
     my $peakDetect = $args{'peakDetect'} || 'true';
     my $modified_sequence = $args{'modified_sequence'};
     my $precursorMz = $args{'precursor_mass'};
-
     my $spectrum_aref = $args{'spectrum'};
+    my $jsArrayName = $args{'jsArrayName'} || 'ms2peaks';
 
     my ($sequence,$mods, $nmod, $cmod) = &convertMods(modified_sequence => $modified_sequence);
 
@@ -164,6 +166,8 @@ sub generateSpectrum {
 	    \$("#$html_id").specview({"sequence":"$sequence",
 				      "scanNum":$scanNum,
 				      "charge":$charge,
+				      "massError":$massTolerance,
+				      "peakDetect":$peakDetect,
 				      "precursorMz":$precursorMz,
 				      "fileName":"$fileName",
 				      "width": 650,
@@ -178,11 +182,11 @@ sub generateSpectrum {
 				      "variableMods":$mods,
 				      "ntermMod":$nmod,
 				      "ctermMod":$cmod,
-				      "peaks":ms2peaks});
+				      "peaks":$jsArrayName});
 	});
     %;
 
-    $lorikeet_html .= "var ms2peaks = [\n";
+    $lorikeet_html .= "var $jsArrayName = [\n";
     for my $ar_ref (@{$spectrum_aref}) {
 	my $mz = $ar_ref->[0];	
 	my $in = $ar_ref->[1];
