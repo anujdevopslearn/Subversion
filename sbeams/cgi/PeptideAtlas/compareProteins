@@ -125,6 +125,15 @@ sub get_alignment_display {
 
   if ( $args{protein_group_number} ) {
 
+    my $excl = '';
+    if ( $args{exclude_ipi} ) {
+      $excl .= "AND biosequence_name NOT LIKE 'IPI%'\n";
+    }
+    if ( $args{exclude_ens} ) {
+      $excl .= "AND biosequence_name NOT LIKE 'ENS%'\n";
+    }
+
+
     my $sql = qq~
       (
 	SELECT PID.biosequence_id, BS.biosequence_name
@@ -135,6 +144,7 @@ sub get_alignment_display {
 	ON (BS.biosequence_id = PID.biosequence_id)
 	where AB.atlas_build_id ='$curr_bid' AND
 	      PID.protein_group_number = '$args{protein_group_number}'
+        $excl
       ) UNION (
 	SELECT BR.related_biosequence_id, BS.biosequence_name
 	FROM $TBAT_BIOSEQUENCE_RELATIONSHIP BR
@@ -144,6 +154,7 @@ sub get_alignment_display {
 	ON (BS.biosequence_id = BR.related_biosequence_id)
 	where AB.atlas_build_id ='$curr_bid' AND
 	      BR.protein_group_number = '$args{protein_group_number}'
+        $excl
       )
       ~;
 
