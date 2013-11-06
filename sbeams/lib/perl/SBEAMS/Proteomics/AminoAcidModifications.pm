@@ -38,10 +38,12 @@ sub new {
       'n[29]'  => 28.031300,    # di-Methylation  (Unimod)
       'n[33]'  => 32.056407,    # DiMethyl-CHD2   (Unimod)
       'n[37]'  => 36.07567,     # Dimethyl-Heavy  (Unimod)
-      'n[43]'  => 43.005814,    # Carbamylation    (Unimod)
+      'n[43]'  => 42.010565,    # Acetylation     (Unimod)
+      'n[44]'  => 43.005814,    # Carbamylation   (Unimod)
       'n[145]' => 144.102063,   # ABI iTRAQ (UniMod)
-			'n[230]' => 229.162932,   # 6 plex
+      'n[230]' => 229.162932,   # 6 plex
       'n[305]' => 304.199040,   # 8 plex
+
       'C[143]' => 39.994915,    # Pyro-carbamidonmethyl (Unimod)
       'C[148]' => 45.987721,    # Beta-methylthiolation (UniMod)
       'C[160]' => 57.021464,    # Carbamidomethyl (UniMod)Cys_CAM
@@ -57,7 +59,9 @@ sub new {
       'C[339]' => 236.157185,   # ABI cl-ICAT heavy (Unimod)
       'C[517]' => 414.193691,   # Glycopeptide capture ?? (UniMod)
       'C[545]' => 442.224991,   # ABI old ICAT light (UniMod)
+      'C[546]' => 442.224991,   # ABI old ICAT light (UniMod)
       'C[553]' => 450.275205,   # ABI old ICAT heavy (UniMod)
+      'C[554]' => 450.275205,   # ABI old ICAT heavy (UniMod)
       'E[111]' => -18.010565,   # Pyro-glu from E (UniMod)
       'F[157]' => 10.027228,    # 13C(9)15N(1) Silac label (Unimod)
       'I[119]' => 6.020129,     # 13C(6) Silac label (Unimod)
@@ -94,7 +98,8 @@ sub new {
       'n[29]'  => 28.0532,      # di-Methylation (Unimod)
       'n[33]'  => 32.0778,      # DiMethyl-CHD2  (Unimod)
       'n[37]'  => 36.0754,      # Dimethyl-Heavy (Unimod)
-      'n[43]'  => 43.0247,      # Carbamylation    (Unimod)
+      'n[43]'  => 42.0367,      # Acetylation    (Unimod)
+      'n[44]'  => 43.0247,      # Carbamylation  (Unimod)
       'n[145]' => 144.1544,     # ABI iTRAQ (UniMod)
       'n[230]' => 229.2634,     # 6 plex
       'n[305]' => 304.3081,     # 8 plex
@@ -113,7 +118,9 @@ sub new {
       'C[339]' => 236.1942,   # ABI cl-ICAT heavy (Unimod)
       'C[517]' => 414.5196,   # Glycopeptide capture ?? (Unimod)
       'C[545]' => 442.5728,   # ABI old ICAT light (UniMod)
+      'C[546]' => 442.5728,   # ABI old ICAT light (UniMod)
       'C[553]' => 450.6221,   # ABI old ICAT heavy (UniMod)
+      'C[554]' => 450.6221,   # ABI old ICAT heavy (UniMod)
       'E[111]' => -18.0153,   # Pyro-glu from E (UniMod)
       'F[157]' => 9.9273,     # 13C(9)15N(1) Silac label (Unimod)
       'I[119]' => 5.9559,     # 13C(6) Silac label (Unimod)
