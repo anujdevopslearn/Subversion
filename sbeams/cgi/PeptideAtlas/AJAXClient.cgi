@@ -7,7 +7,7 @@
 # Description : Script responds to AJAX requests from Peptide Atlas scripts and 
 # returns desired information as JSON object.
 #
-# SBEAMS is Copyright (C) 2000-2012 Institute for Systems Biology
+# SBEAMS is Copyright (C) 2000-2014 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -81,10 +81,32 @@ sub process_query {
     return GetTransitions_NamespaceFilters();
   } elsif ( $params{source} eq 'SEL_Transitions_Run_Select' ) {
     return SEL_Transitions_Run_Select();
+  } elsif ( $params{source} eq 'GetProtein_VariantDisplay' ) {
+    return GetProtein_VariantDisplay();
   } else {
     return $params{source};
   }
 }
+
+
+# +
+# Routine to update variant display in GetProtein (show all snps vs dbsnp only)
+# -
+sub GetProtein_VariantDisplay {
+
+  # Do something with parameters
+  $log->debug( Dumper( %params ) );
+
+  # Build select list
+  my @select;
+#  push @select, { optionValue => $row[1], optionText => $row[0] }; 
+
+  my $json_text = $json->encode( \@select ); 
+
+	$log->debug( $json_text );
+  return $json_text;
+}
+
 
 sub GetTransitions_SourceSelect {
 
