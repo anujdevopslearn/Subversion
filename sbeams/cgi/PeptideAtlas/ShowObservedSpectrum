@@ -513,9 +513,22 @@ sub get_spectrum
 
   my @mass_intensities = ();
  
-  $build_path ="/net/db/projects/PeptideAtlas/pipeline/output/$build_path"; 
-  $build_path =~ /.*\/(.*)\/DATA_FILES/;
-  my $library_idx_file ="$build_path/$1_all_raw.specidx";
+  #### Get the data_location of the spectrum
+  my $data_location = $spectra->get_data_location(
+    proteomics_search_batch_id => $search_batch_id,
+  );
+  if ($data_location =~ /.*archive\//){
+    $data_location =~ s/.*archive\///;
+  }
+
+  my $library_idx_file = "/regis/sbeams/archive/$data_location/RAW.specidx";
+
+  if ( ! -e $library_idx_file) { 
+    $build_path ="/net/db/projects/PeptideAtlas/pipeline/output/$build_path"; 
+    $build_path =~ /.*\/(.*)\/DATA_FILES/;
+    $library_idx_file ="$build_path/$1_all_raw.specidx";
+  }
+
   if (-e "$library_idx_file"){
     @mass_intensities = $spectra->getSpectrumPeaks_Lib(
     spectrum_name => $spectrum_name,
