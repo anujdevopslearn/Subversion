@@ -16,6 +16,7 @@
 ###############################################################################
 use strict;
 use CGI::Carp qw(fatalsToBrowser croak);
+use Data::Dumper;
 
 use lib qw (../../lib/perl);
 use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
@@ -61,12 +62,19 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
   my $tabMenu = $sbeamsMOD->getTabMenu(
     parameters_ref => \%params,
-    program_name => 'GetProtein',
+    program_name => 'viewOrthologs',
   );
   $page .= "$tabMenu";
 
   $sbeamsMOD->display_page_header(project_id => $project_id);
   $log->debug( "Begin page:" .time() );
+
+
+  # Use default if requested
+  if ( $params{use_default} ) {
+    $params{group_id} = 'OG5_126932';
+  }
+
   if ( $params{group_id} ) {
     $page .= get_ortholog_display( %params );
   } elsif ( $params{list_groups} ) {
@@ -103,12 +111,14 @@ sub get_ortholog_display {
   # limit by bioseq_id?
 	my $bioseq_clause = '';
 	if( $args{restore} ) {
+    $log->info( "Restoring" );
 		$args{bioseq_id} = '';
 	} elsif( $args{bioseq_id} && !$args{search_groups} ) {
     $bioseq_clause = "AND B.biosequence_id IN ( $args{bioseq_id} )";
   }
 
   my $all_projects = join( ",", $sbeams->getAccessibleProjects() );
+
   my $curr_bid = $sbeamsMOD->getCurrentAtlasBuildID( parameters_ref => \%args );
 #  my $null_clause = ( $args{show_all} ) ? 'OR search_key_type IS NULL' : '';
 
@@ -120,12 +130,15 @@ sub get_ortholog_display {
 									search_key_name,
 									CAST( biosequence_seq AS VARCHAR(4000) ),
 									biosequence_id,
-									biosequence_set_id
+									B.biosequence_set_id,
+                  ORG.organism_id
   FROM biolink.dbo.ortholog O
   JOIN $TBAT_BIOSEQUENCE B ON O.entry_accession = B.biosequence_name
+  JOIN $TBAT_ATLAS_BUILD AB ON AB.biosequence_set_id = B.biosequence_set_id
   JOIN $TB_ORGANISM ORG ON O.ortholog_organism_id = ORG.organism_id
   LEFT JOIN $TBAT_SEARCH_KEY SK ON SK.resource_name = B.biosequence_name
   WHERE ortholog_group = '$args{group_id}'
+--  AND AB.project_id IN ( $all_projects )
     AND ( search_key_type = 'Full Name'
      OR search_key_type = 'Description'
      OR search_key_type LIKE '%Symbol'
@@ -135,15 +148,11 @@ sub get_ortholog_display {
      OR search_key_type = 'ORF Name'
     )
 	$bioseq_clause
---  AND ( search_key_type = 'Full Name'
---	      OR search_key_type = 'Description'
---				OR search_key_type LIKE '%Symbol'
---				OR search_key_type LIKE 'Annotation ID'
---        OR search_key_type IS NULL
---				OR search_key_type = 'ORF Name')
-  ORDER BY organism_name, biosequence_name ASC
+--  AND ORG.organism_id = 38
+  ORDER BY organism_name, B.biosequence_name ASC
   END_SQL
 
+  
 # 0     ortholog_group,
 # 1     biosequence_name,
 # 2     organism_name,
@@ -151,9 +160,10 @@ sub get_ortholog_display {
 # 4     CAST( biosequence_seq AS VARCHAR(4000) ),
 # 5     biosequence_id
 # 6     biosequence_set_id
+# 7     organism_id
 	$log->debug( "prepare stmt: $sql " . time() );
   my $sth = $sbeams->get_statement_handle( $sql );
-#	$log->debug( "prepare stmt done: " .time() );
+	$log->debug( "prepare stmt done: " .time() );
 
   # array of protein/ortholog info
 	my @all_proteins;
@@ -171,11 +181,13 @@ sub get_ortholog_display {
 
   # Store organism for each biosequence set
 	my %bss2org;
+  my %organisms;
 
   # Counter
 	my $cnt = 0;
 
   while ( my @row = $sth->fetchrow_array() ) {
+    $organisms{$row[7]}++;
     my $seq = $row[4];
 		$seq =~ s/[^a-zA-Z]//g;
 
@@ -223,141 +235,160 @@ sub get_ortholog_display {
 	my $bioseq_ids = join( ",", sort{ $a <=> $b } keys( %bioseq_id2name ) );
 
 	if ( !$bioseq_ids ) {
-		print $sbeams->makeInfoText( "No matching sequences found for this ortholog group" );
-    return;
+		return "<br><br><br\n" . $sbeams->makeInfoText( "No matching sequences found for ortholog group $args{group_id}" );
 	}
 
-	my $is_default_build = get_default_builds();
+  my $organisms = join( ',', keys( %organisms ) );
+	my $default_builds = get_default_builds( $all_projects, $organisms );
 
-  # Define SQL to fetch info about builds in which a peptide has been observed
-	my $sql =<<"  ENDSQL";
-	SELECT distinct 
-	       PI.peptide_instance_id,
-	       n_observations,
-				 PM.matched_biosequence_id,
-         PI.atlas_build_id,
-				 atlas_build_name,
-				 peptide_sequence,
-				 biosequence_set_id
-	FROM $TBAT_PEPTIDE_MAPPING PM
-  JOIN $TBAT_PEPTIDE_INSTANCE PI ON PI.peptide_instance_id = PM.peptide_instance_id
-  JOIN $TBAT_PEPTIDE P ON ( PI.peptide_id = P.peptide_id )
-  JOIN $TBAT_ATLAS_BUILD AB ON ( PI.atlas_build_id = AB.atlas_build_id )
-  WHERE PM.matched_biosequence_id IN ( $bioseq_ids )
-	AND project_id IN ( $all_projects )
-  ORDER BY PI.atlas_build_id DESC
-  ENDSQL
-#  $log->debug( "prepare instance stmt: " . time() );
-  my $sth = $sbeams->get_statement_handle( $sql );
-#	$log->debug( "prepare instance stmt done: " .time() );
+#	We will get just one build per organism for now #Punt
+#	my $accessible_builds = get_accessible_builds( $all_projects, $organisms );
 
-# 0   count(distinct PI.peptide_id),
-# 1   sum( n_observations ),
-# 2   PM.matched_biosequence_id,
-# 3   PI.atlas_build_id,
-# 4   atlas_build_name,
-# 5   peptide_sequence
-# 6   fizzle
-# 7   biosequence_set_id
+	# Fixed order list of builds - first use default builds, then any 
+  # accessible build
+	my @build_ids = sort { $default_builds->{$a} cmp $default_builds->{$b} } keys( %{$default_builds} );
+#	push @build_ids, sort { $accessible_builds->{$a} cmp $accessible_builds->{$b} } keys( %{$accessible_builds} );
+  my %bseen;
+  my $build_str;
+  for my $id ( @build_ids ) {
+    next if $bseen{$id}++;
+    my $sep = ( $build_str ) ? ',' : '';
+    $build_str .= $sep . $id;
+  }
 
-# 0 new	       PI.peptide_instance_id,
-# 1 new	       n_observations,
-# 2 new				 PM.matched_biosequence_id,
-# 3 new         PI.atlas_build_id,
-# 4 new				 atlas_build_name,
-# 5 new				 peptide_sequence,
-# 6 new				 biosequence_set_id,
-  # hash of info keyed by build_id
-	my %build_seqs;
 
-	# To be passed to checkbox list routine.
-	my %build_info;
-
-	my %view_org2build;
-	my %view_build2org;
+    # hash of info keyed by build_id
+  	my %build_seqs;
   
-	# Skip non-default builds, this var controls debug stmt
-	my %skippy;
-
-	$cnt = 0;
-	# Loop to calculate coverate, per prot n_obs for each build
-	$log->debug( "Iterate, calc coverage: " .time() );
-  while ( my @row = $sth->fetchrow_array() ) {
-
-		# Effectively eliminate non-default builds
-		if ( $is_default_build->{!$row[3]} ) {
-			$log->debug( "skipping $row[3] 'cause its not default" ) if !$skippy{$row[3]}; 
-			$skippy{$row[3]}++;
-			next;
-		}
-
-    my $org = $bss2org{$row[6]};
-		$build_info{$row[3]} ||= {};
-		$build_info{$row[3]}->{name} = $row[4];
-		$build_info{$row[3]}->{org} = $org;
-		$build_info{$row[3]}->{is_default} = ( $row[6] ) ? 'yes' : 'no';
-		$build_info{$row[3]}->{is_curr} = ( $row[3] == $curr_bid ) ? 1 : 0;
-		$build_info{$row[3]}->{bss} = $row[7];
-
-    # Simplistic initial view mechanism
-		if ( !$view_org2build{$org} ) {
-		  $build_info{$row[3]}->{visible}++;
-		  $build_info{$row[3]}->{view}++;
-			$view_org2build{$org} = $row[3];
-			$view_build2org{$row[3]} = $org;
-#			$log->debug( "View build for $org is $row[3] ( $row[4] )" );
-		} elsif ( $row[3] == $curr_bid ) {
-		  $build_info{$row[3]}->{visible}++;
-		  $build_info{$row[3]}->{view}++;
-
-      # Gotta unset the build
-			my $deprecated = $view_org2build{$org};
-#			$log->debug( "Replacing info from $build_info{$deprecated}->{name} with info from  $build_info{$row[3]}->{name}, 'cause its current!" );
-
-			$build_info{$deprecated}->{visible} = 0;
-			$build_info{$deprecated}->{view} = 0;
-			delete $view_build2org{$deprecated};
-			$view_org2build{$org} = $row[3];
-			$view_build2org{$row[3]} = $org;
-		}
-
-    # error cases, shouldn't happen?
-		next unless $row[0];
-#	  if ( $row[0] > 1 ) {
-#			$log->warn( "count peptide_id > 1" );
-#			$log->warn( join( ", ", @row ) );
-#		}
-
-    $build_seqs{$row[3]} ||= {};
-    $build_seqs{$row[3]}->{$row[2]} ||= {};
-    $build_seqs{$row[3]}->{$row[2]}->{count}++;
-    $build_seqs{$row[3]}->{$row[2]}->{n_obs} += $row[1];
-
-	  # Calc coverage for this build/protein combination
-    $build_seqs{$row[3]}->{$row[2]}->{coverage} ||= {};
-		my $posn = $sbeamsMOD->get_site_positions( pattern => $row[5],
-		                                               seq => $bioseq_id2seq{$row[2]} );
-		for my $p ( @$posn ) {
-			for ( my $i = 0; $i < length($row[5]); $i++ ){
-				my $covered_posn = $p + $i;
-				$build_seqs{$row[3]}->{$row[2]}->{coverage}->{$covered_posn}++;
-			}
-		}
-	  # Going to cache with accession for ease of use!
- 		$build_seqs{$row[3]}->{$bioseq_id2name{$row[2]}}->{coverage} = $build_seqs{$row[3]}->{$row[2]}->{coverage};
-
-    #           build_id                  bioseq_id
-		                       # accession ----------#
-    $build_seqs{$row[3]}->{$bioseq_id2name{$row[2]}}->{bioseq} = $row[2];
-
-		$cnt++;
-	}
-	$log->debug( "Iterated $cnt rows: " .time() );
-
-
-	# Fixed order list of builds
-	my @build_ids = sort { $a <=> $b } keys( %build_seqs );
-
+  	# To be passed to checkbox list routine.
+  	my %build_info;
+  
+  	my %view_org2build;
+  	my %view_build2org;
+    
+  	# Skip non-default builds, this var controls debug stmt
+  	my %skippy;
+  if ( $build_str ) {
+    # Define SQL to fetch info about builds in which a peptide has been observed
+  	my $sql =<<"    ENDSQL";
+  	SELECT distinct 
+  	       PI.peptide_instance_id,
+  	       n_observations,
+  				 PM.matched_biosequence_id,
+           PI.atlas_build_id,
+  				 atlas_build_name,
+  				 peptide_sequence,
+  				 AB.biosequence_set_id
+  --				 AB.biosequence_set_id,
+  --         O.organism_name
+  	FROM $TBAT_PEPTIDE_MAPPING PM
+    JOIN $TBAT_PEPTIDE_INSTANCE PI ON PI.peptide_instance_id = PM.peptide_instance_id
+    JOIN $TBAT_PEPTIDE P ON ( PI.peptide_id = P.peptide_id )
+    JOIN $TBAT_ATLAS_BUILD AB ON ( PI.atlas_build_id = AB.atlas_build_id )
+  --  JOIN $TBAT_BIOSEQUENCE_SET BS ON ( AB.biosequence_set_id = BS.biosequence_set_id )
+  --  JOIN $TB_ORGANISM O ON ( O.organism_id = BS.organism_id )
+    WHERE PM.matched_biosequence_id IN ( $bioseq_ids )
+  	AND AB.atlas_build_id IN ( $build_str )
+    ORDER BY PI.atlas_build_id DESC
+  --  ORDER BY organism_name ASC, PI.atlas_build_id DESC
+    ENDSQL
+    $log->debug( "prepare instance stmt: " . time() );
+  #  $log->debug( $sql );
+    my $sth = $sbeams->get_statement_handle( $sql );
+  	$log->debug( "prepare instance stmt done: " .time() );
+  
+  # 0   count(distinct PI.peptide_id),
+  # 1   sum( n_observations ),
+  # 2   PM.matched_biosequence_id,
+  # 3   PI.atlas_build_id,
+  # 4   atlas_build_name,
+  # 5   peptide_sequence
+  # 6   fizzle
+  # 7   biosequence_set_id
+  
+  # 0 new	       PI.peptide_instance_id,
+  # 1 new	       n_observations,
+  # 2 new				 PM.matched_biosequence_id,
+  # 3 new         PI.atlas_build_id,
+  # 4 new				 atlas_build_name,
+  # 5 new				 peptide_sequence,
+  # 6 new				 biosequence_set_id,
+  
+  	$cnt = 0;
+  	# Loop to calculate coverate, per prot n_obs for each build
+  	$log->debug( "Iterate, calc coverage: " .time() );
+  
+  
+    while ( my @row = $sth->fetchrow_array() ) {
+  
+  		# Effectively eliminate non-default builds
+  #		if ( !$default_builds->{$row[3]} ) {
+  #			$log->debug( "skipping $row[3] 'cause its not default" ) if !$skippy{$row[3]}++; 
+  #			next;
+  #		}
+  
+      my $org = $bss2org{$row[6]};
+  		$build_info{$row[3]} ||= {};
+  		$build_info{$row[3]}->{name} = $row[4];
+  		$build_info{$row[3]}->{org} = $org;
+  		$build_info{$row[3]}->{is_default} = ( $row[6] ) ? 'yes' : 'no';
+  		$build_info{$row[3]}->{is_curr} = ( $row[3] == $curr_bid ) ? 1 : 0;
+  		$build_info{$row[3]}->{bss} = $row[7];
+  
+      # Simplistic initial view mechanism
+  		if ( !$view_org2build{$org} ) {
+  		  $build_info{$row[3]}->{visible}++;
+  		  $build_info{$row[3]}->{view}++;
+  			$view_org2build{$org} = $row[3];
+  			$view_build2org{$row[3]} = $org;
+  #			$log->debug( "View build for $org is $row[3] ( $row[4] )" );
+  		} elsif ( $row[3] == $curr_bid ) {
+  		  $build_info{$row[3]}->{visible}++;
+  		  $build_info{$row[3]}->{view}++;
+  
+        # Gotta unset the build
+  			my $deprecated = $view_org2build{$org};
+  #			$log->debug( "Replacing info from $build_info{$deprecated}->{name} with info from  $build_info{$row[3]}->{name}, 'cause its current!" );
+  
+  			$build_info{$deprecated}->{visible} = 0;
+  			$build_info{$deprecated}->{view} = 0;
+  			delete $view_build2org{$deprecated};
+  			$view_org2build{$org} = $row[3];
+  			$view_build2org{$row[3]} = $org;
+  		}
+  
+      # error cases, shouldn't happen?
+  		next unless $row[0];
+  #	  if ( $row[0] > 1 ) {
+  #			$log->warn( "count peptide_id > 1" );
+  #			$log->warn( join( ", ", @row ) );
+  #		}
+  
+      $build_seqs{$row[3]} ||= {};
+      $build_seqs{$row[3]}->{$row[2]} ||= {};
+      $build_seqs{$row[3]}->{$row[2]}->{count}++;
+      $build_seqs{$row[3]}->{$row[2]}->{n_obs} += $row[1];
+  
+  	  # Calc coverage for this build/protein combination
+      $build_seqs{$row[3]}->{$row[2]}->{coverage} ||= {};
+  		my $posn = $sbeamsMOD->get_site_positions( pattern => $row[5],
+  		                                               seq => $bioseq_id2seq{$row[2]} );
+  		for my $p ( @$posn ) {
+  			for ( my $i = 0; $i < length($row[5]); $i++ ){
+  				my $covered_posn = $p + $i;
+  				$build_seqs{$row[3]}->{$row[2]}->{coverage}->{$covered_posn}++;
+  			}
+  		}
+  	  # Going to cache with accession for ease of use!
+   		$build_seqs{$row[3]}->{$bioseq_id2name{$row[2]}}->{coverage} = $build_seqs{$row[3]}->{$row[2]}->{coverage};
+  
+      $build_seqs{$row[3]}->{$bioseq_id2name{$row[2]}}->{bioseq} = $row[2];
+  		$cnt++;
+  	}
+  	$log->debug( "Iterated $cnt rows: " .time() );
+  }
+  
+  
   # Table headings
 	my @headings = ( 'Accession', 'Organism' );
 
@@ -366,7 +397,10 @@ sub get_ortholog_display {
 	my %build_posn;
 	
 	$log->debug( "Iterate, prepare display: " .time() );
+  # Seen builds skipped, allows us to use composite of default and accessible.
+  my %seen;
 	for my $build_id ( @build_ids ) {
+    next if $seen{$build_id}++;
 
 		$build_posn{$b_cnt++} = $build_id;
 		my $dag = '';
@@ -556,27 +590,26 @@ sub get_ortholog_display {
 				                                      content => $search_help
 																					);
 
-  my $search_groups = get_group_search_section( %args, help => "($toggle[1])" );
+#  my $search_groups = get_group_search_section( %args, help => "($toggle[1])" );
+#  $toggle[0]
+#  $search_groups
 
-
+# Removed text
+#   You can add information about additional builds by clicking the 'Add builds' link below and selecting the desired build(s).  Builds used to highlight the multiple sequence alignment below are shown with a dagger symbol (<SUP><BOLD>&#8224;</BOLD></SUP>).  $duplicate_text
   if ( $table->getRowNum() == 1 ) {
     return $sbeams->makeInfoText( "Unable to find an OrthoMCL group for this protein" );
   }
 	$subject{name} ||= 'n/a';
+  my $group_link = qq~ <a href="http://orthomcl.org/orthomcl/showRecord.do?name=GroupRecordClasses.GroupRecordClass&group_name=$args{group_id}" target="_OMCL" title="View group $args{group_id} at the OrthoMCL DB website">OG5_126932</a></H4> ~;
+#	$add_builds
   return( <<"  END" );
-  <P>
-  $toggle[0]
-  $search_groups
-  </P>
-  <BR>
-  <H4>Protein Occurrence by Build</H4>
+  <h4>Cross-species comparison of OrthoMCL orthlog group $args{group_id} </h4>
   <P class=lg_body_text>
-  The table below shows information about homologous(ortholog/paralog) proteins in the $args{group_id} ortholog group.  The groups were computed using <A HREF='http://www.orthomcl.org/cgi-bin/OrthoMclWeb.cgi'>OrthoMCL version 5</A>, and are based on BLAST homology.  The numbers shown in the columns under each build are the total number of observations of peptides that can be mapped to a given protein, and the total number of distinct peptides seen: total obs ( num distinct ).  You can add information about additional builds by clicking the 'Add builds' link below and selecting the desired build(s).  Builds used to highlight the multiple sequence alignment below are shown with a dagger symbol (<SUP><BOLD>&#8224;</BOLD></SUP>).  $duplicate_text
+  The table below shows information about homologous(ortholog/paralog) proteins in the $group_link ortholog group.  The groups were computed by <A HREF='http://www.orthomcl.org/' target="_OMCL" title="Visit OrthoMCL DB Site">OrthoMCL version 5</A>, and are based on BLAST homology.  The numbers shown in the columns under each build are the total number of observations of peptides that can be mapped to a given protein, and the total number of distinct peptides seen: total observations ( number distinct peptides ).
 
   </P>
   $table 
 	<BR>
-	$add_builds
 	<BR>
   <H4>Homologous Sequence Alignment</H4>
   <P>
@@ -584,27 +617,67 @@ sub get_ortholog_display {
 	</P>
   $clustal_display
   <BR>
+  <INPUT TYPE=HIDDEN NAME=group_id VALUE=$args{group_id}>
   <INPUT TYPE=HIDDEN NAME=entry_accession VALUE=$args{entry_accession}>
  	<INPUT TYPE=SUBMIT VALUE='Align selected sequences'>
  	<INPUT TYPE=SUBMIT VALUE='Restore Original' NAME=restore>
-	</FORM>
+  
+	</form>
   </P>
+  <form>
+    See alignment for a specific OrthoMCL 5 ortholog group: <input type=text name=group_id value="$args{group_id}"></input> <input type=submit VALUE='View Group'> 
+  </form>
+  <br>
   $alignment_text
 	<BR>
   END
 }
 
 sub get_default_builds {
+  my $accessible_projects = shift;
+  my $organism_str = shift;
 	my $sql = qq~
-	SELECT atlas_build_id
-	FROM $TBAT_DEFAULT_ATLAS_BUILD 
-	WHERE record_status = 'N';
+	SELECT DAB.atlas_build_id, organism_name
+	FROM $TBAT_DEFAULT_ATLAS_BUILD DAB 
+  JOIN $TBAT_ATLAS_BUILD AB ON AB.atlas_build_id = DAB.atlas_build_id 
+  JOIN $TB_ORGANISM O ON O.organism_id = DAB.organism_id
+	WHERE AB.record_status = 'N'
+  AND AB.project_id IN ( $accessible_projects )
+  AND DAB.organism_id IN ( $organism_str )
+  ORDER BY organism_specialized_build ASC, O.organism_id ASC
 	~;
 
   my $sth = $sbeams->get_statement_handle( $sql );
 	my %mapping;
+	my %organism;
 	while ( my @row = $sth->fetchrow_array() ) {
-		$mapping{$row[0]}++;
+    next if $organism{$row[1]}++; # Just one per organism
+		$mapping{$row[0]} = $row[1];
+	}
+#  die Dumper %mapping;
+	return \%mapping;
+}
+
+sub get_accessible_builds {
+  my $accessible_projects = shift;
+  my $organism_str = shift;
+	my $sql = qq~
+	SELECT AB.atlas_build_id, DAB.organism_id
+	FROM $TBAT_DEFAULT_ATLAS_BUILD DAB 
+  JOIN $TBAT_ATLAS_BUILD AB ON AB.atlas_build_id = DAB.atlas_build_id 
+	WHERE DAB.record_status = 'N'
+  AND DAB.organism_id IN ( $organism_str ) 
+  AND AB.project_id IN ( $accessible_projects )
+  ORDER BY DAB.organism_id ASC, AB.atlas_build_id DESC
+	~;
+
+  my $max_builds = 3;
+  my $sth = $sbeams->get_statement_handle( $sql );
+	my %mapping;
+	my %organism;
+	while ( my @row = $sth->fetchrow_array() ) {
+    next if $organism{$row[1]}++ >= $max_builds; # Just $max_builds per organism
+		$mapping{$row[0]} = $row[1];
 	}
 	return \%mapping;
 }
@@ -739,6 +812,7 @@ sub get_clustal_display {
 	my $display = qq~
 	<DIV STYLE="width: 1000px; overflow-x: scroll; scrollbar-arrow-color: blue; scrollbar- face-color: #e7e7e7; scrollbar-3dlight-color: #a0a0a0; scrollbar-darkshadow-color: #888888">
 	<TABLE BORDER=0 CELLPADDNG=3>
+  <form>
 	~;
 	for my $seq ( @{$args{alignments}} ) {
 #		$log->debug( "After passing we have $seq->[0] and $seq->[1]!" );
