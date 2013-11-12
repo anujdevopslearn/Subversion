@@ -1021,7 +1021,7 @@ sub handle_request {
   push @labels, 'Avg Eval' if $parameters{'ann'};
 
   my @column_array = (
-    ["peptide_accession","P.peptide_accession","<DIV TITLE='PeptideAtlas accession for peptide'>Accession</DIV>"],
+    ["peptide_accession","P.peptide_accession","Accession"],
     ["preceding_residue","PI.preceding_residue","<DIV TITLE='Preceding (towards the N terminus) amino acid'>Pre AA</DIV>"],
     ["peptide_sequence","P.peptide_sequence","<DIV TITLE='Amino Acid sequence of this peptide'>Sequence</DIV>"],
     ["following_residue","PI.following_residue","<DIV TITLE='Following (towards the C terminus) amino acid'>Fol AA</DIV>"],
