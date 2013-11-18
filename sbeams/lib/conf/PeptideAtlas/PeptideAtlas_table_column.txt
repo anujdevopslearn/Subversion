@@ -848,6 +848,7 @@ AT_SEL_experiment	14	heavy_label	Heavy Label	varchar	255	0	Y		N			N	text	100		Y	
 AT_SEL_experiment	15	datasetIdentifier	Dataset Identifier	varchar	50	0	Y		N			N	text	20		Y	Y	Y	Foreign Key		
 AT_SEL_experiment	16	q1_tolerance	Q1 tolerance	float	8	0	Y		N			N							Tolerance for matching exact Q1 from transition list to rounded Q1 in spectrum file.		
 AT_SEL_experiment	17	q3_tolerance	Q3 tolerance	float	8	0	Y		N			N							Tolerance for matching exact Q3 from transition list to rounded Q3 in spectrum file.		
+AT_SEL_experiment	18	PX_identifier	ProteomeXchange Identifier	varchar	50	0	Y		N			N	text	20		Y	Y	Y	ProtemeExchange identifier, e.g. PXD000105		
 AT_SEL_run	1	SEL_run_id	SEL Run ID	int	4	0	N		Y			N					N	Y	Primary Key		pkDEFAULT
 AT_SEL_run	2	SEL_experiment_id	SEL Experiment ID	int	4	0	Y		N	AT_SEL_experiment	SEL_experiment_id	N	text	50		Y	Y	Y	Foreign key		
 AT_SEL_run	3	spectrum_filename	Spectrum Filename	varchar	255	0	Y		N			N	text	100		Y	Y	N	Spectrum filename		
