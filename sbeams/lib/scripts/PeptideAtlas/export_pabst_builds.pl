@@ -102,6 +102,15 @@ sub export_build {
   my $cnt = 0;
   my $pep_id;
 
+  my $empirical_constraint = '';
+  if ( $args->{empirical_only} ) {
+    $empirical_constraint = "AND PTI.is_predicted <> 'Y'";
+  }
+  my $source_constraint = '';
+  if ( $args->{instrument_type} ) {
+    $source_constraint = "AND PTI.source_instrument_type_id = $args->{instrument_type}";
+  }
+
 
     my $sql = qq~
     SELECT DISTINCT  
@@ -129,6 +138,8 @@ sub export_build {
     
     WHERE  PP.pabst_build_id IN ( $args{build_id} )
     AND PP.pabst_peptide_id = ? 
+    $source_constraint
+    $empirical_constraint
     ORDER BY 
     PTI.is_predicted ASC,
     synthesis_adjusted_score DESC,
@@ -158,8 +169,6 @@ sub export_build {
         next if $row[17] eq 'Y';
       }
 
-
-
       my $ion_key = join( ':', @row[2,7] );
       $max_ions{$ion_key}++;
       if ( $args->{max_transitions} && $max_ions{$ion_key} > $args->{max_transitions} ) {
@@ -185,8 +194,8 @@ sub export_build {
       
     }
     $cnt++;
-    print "." unless $cnt % 10;
-    print STDERR  time() . "\n" unless $cnt % 200;
+    print "." unless $cnt % 100;
+    print STDERR  time() . "\n" unless $cnt % 2000;
 
   } # End peptide_id loop
 #  print "maximum id is $pep_id at " . time() . "\n";
@@ -211,7 +220,7 @@ sub printUsage {
 sub processArgs {
   my %args;
   unless( GetOptions ( \%args, 'build_id=i@', 'verbose', 'force', 'yonly',
-                       'noneutralloss', 'max_transitions=i', 'empirical_only' ) ) {
+                       'noneutralloss', 'max_transitions=i', 'empirical_only', 'instrument_type:i' ) ) {
     printUsage("Error with options, please check usage:");
   }
   die "need build_id " unless $args{build_id};
