@@ -954,7 +954,7 @@ sub handle_request {
     AND AB.atlas_build_id IN ( $atlas_build_id )
 	  AND BS.biosequence_id = $biosequence_id
 	  $group_by_clause
-    ORDER BY P.peptide_accession
+    ORDER BY P.peptide_accession, SUM(MPI.n_observations) DESC
   ~;
   #### Define the hypertext links for columns that need them
   %url_cols = (
@@ -974,6 +974,7 @@ sub handle_request {
   #### If QUERY or VIEWRESULTSET was selected, display the data
   if ($apply_action =~ /(QUERY|GO|VIEWRESULTSET)/) {
 
+#    $show_sql++;
     #### Show the SQL that will be or was executed
     $sbeams->display_sql(sql=>$sql) if ($show_sql);
 
@@ -2777,9 +2778,26 @@ sub get_peptide_table {
   my $members = shift;
 
   return '' unless scalar( keys( %{$members} ) );
-  my @headings = ( 'peptide_accession', 'preceding_residue', 'mod_seq', 'following_residue', 'posn', 'n_genome_locations', 'best_probability', 'SSRCalc_relative_hydrophobicity', 'n_mod_obs', 'N Samples'  );
+  my @headings = ( 'peptide_accession', 'preceding_residue', 'peptide_sequence', 'following_residue', 'mod_seq', 'posn', 'n_genome_locations', 'best_probability', 'SSRCalc_relative_hydrophobicity', 'n_mod_obs', 'N Samples'  );
+  my %head2display = ( peptide_accession => 'Accession',
+                       preceding_residue => 'Pre AA',
+                       following_residue => 'Fol AA',
+                       SSRCalc_relative_hydrophobicity => 'SSR',
+                       mod_seq => 'Modified Sequence',
+                       peptide_sequence => 'Sequence',
+                       n_genome_locations => '# Gen Loc',
+                       n_mod_obs => 'N Obs',
 
-  my @table_data = ( \@headings );
+
+                     );
+  my @display_headings;
+  for my $head ( @headings ) {
+    my $dhead = $head2display{$head} || $head;
+    push @display_headings, $dhead;
+  }
+
+#  my @table_data = ( \@headings );
+  my @table_data = ( \@display_headings );
   my $pep_link_base = "<a href=GetPeptide?_tab=3&atlas_build_id=$parameters{atlas_build_id}&searchWithinThis=Peptide+Name&action=QUERY&searchForThis=PEPTIDENAME>PEPTIDENAME</a>";
   my %seen;
   for my $modpep ( sort{ $pcounts->{peptides}->{$a} <=> $pcounts->{peptides}->{$b} || $a <=> $b } keys( %{$pcounts->{peptides}} ) ) {
@@ -2805,7 +2823,7 @@ sub get_peptide_table {
                                                  rows_to_show => 50,
                                                      max_rows => 50,
                                                     help_text => '',
-                                                        align => [ qw( left center left center right right right right right right) ],
+                                                        align => [ qw( left center left center right right right right right right right) ],
                                                      bg_color => '#EAEAEA',
                                                      sortable => 0,
                                                      table_id => '$mode Evidence',
