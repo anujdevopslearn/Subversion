@@ -153,9 +153,13 @@ while( my $line = <PEPS> ) {
   my $prot_cnt = 0;
   if ( $peps{$matching_seq} ) {
     $prot_str = $peps{$matching_seq};
-    $prot_cnt = $prot_str =~ tr/,/./;
+    $prot_cnt = $prot_str =~ tr/,/,/;
     $prot_cnt += 1;
   } 
+
+  if ( $opts->{acc_sep_char} ne ',' ) {
+    $prot_str =~ s/,/$opts->{acc_sep_char}/g;
+  }
 
   if ( $opts->{mapping_out} ) {
     if ( $opts->{omit_match_seq} ) {
@@ -611,7 +615,7 @@ sub get_options {
              'show_degen', 'show_mia', 'nocount_degen', 'show_nomap', 'show_himap=i',
              'show_proteo', 'show_all_pep', 'omit_match_seq', 'suppress_brute',
              'key_calc', 'show_all_flanking', "min_nomap=i", 'c_term_cnt', 'n_term_cnt',
-             'print_context', 'i_to_l_convert' );
+             'print_context', 'i_to_l_convert', 'acc_sep_char=s' );
 
   print_usage() if $opts{help};
 
@@ -621,6 +625,8 @@ sub get_options {
       $missing = ( $missing ) ? "$missing, $arg" : "missing required option(s): $arg"
     }
   }
+
+  $opts{acc_sep_char} ||= ',';
 
   if ( defined $opts{column_labels} ) {
     $opts{column_labels} ||= 1;
@@ -684,7 +690,8 @@ sub print_usage {
       --show_all_pep   List all peptides
       --omit_match_seq List all peptides
       --show_mia       List missing peptides
-      --show_nomap     List proteins for which there are no peptides
+      --show_nomap     List proteins for which there are less than min_nomap for (default 0)
+      --min_nomap     List proteins for which there are no peptides
       --show_himap     List proteins for which there are more than show_himap peptides for 
       --nocount_degen  Omit degenerate peptides in counting protein bins
   ~;
@@ -695,6 +702,14 @@ sub print_usage {
 
 
 __DATA__
+  GetOptions(\%opts, "verbose", "fasta_file=s", 'help', 'seq_idx=i',
+             'peptide_file=s', 'n_convert', 'duplicates', 'pipe_acc',
+             'mapping_out', 'trim_acc', 'output_file=s', 'column_labels:i',
+             'acc_swiss', 'ZtoC', 'bin_max=i', 'grep_only', 'init_mapping=i',
+             'show_degen', 'show_mia', 'nocount_degen', 'show_nomap', 'show_himap=i',
+             'show_proteo', 'show_all_pep', 'omit_match_seq', 'suppress_brute',
+             'key_calc', 'show_all_flanking', "min_nomap=i", 'c_term_cnt', 'n_term_cnt',
+             'print_context', 'i_to_l_convert' );
 
 ==> virus_peptides <==
 WTTNTETGAPQLNPIDGPLPEDNEPSGYAQTDCVLEAMAFLEESHPGIFENSCIETMEVVQQTR
