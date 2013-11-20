@@ -254,6 +254,8 @@ my $module_styles =<<"  END_STYLE";
   .pseudo_link    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration:none; color: blue; CURSOR: help;}
   .white_bg{background-color: #FFFFFF }
   .grey_bg{ background-color: #CCCCCC }
+  .bold_italic_text{font-weight:bold;font-style:italic}
+  .inactive_text {color:#AAAAAA}
   .med_gray_bg{ background-color: #CCCCCC; font-size: ${FONT_SIZE_LG}pt; font-weight: bold; Padding:2}
   .grey_header{ font-family: Helvetica, Arial, sans-serif; color: #000000; font-size: ${FONT_SIZE_HG}pt; background-color: #CCCCCC; font-weight: bold; padding:1 2}
   .section_description{ font-family: Helvetica, Arial, sans-serif; color: #666666; font-size: ${FONT_SIZE_HG}pt; font-weight: bold; padding:1}
