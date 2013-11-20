@@ -251,8 +251,6 @@ sub handle_request {
 
   print "</PeptideSummary>\n" if ( $is_xml );
 
-  exit;
-
 }
 
 
