@@ -3,6 +3,7 @@ ALTER TABLE dbo.biosequence ADD CONSTRAINT biosequence_set_name_uk UNIQUE (biose
 ALTER TABLE dbo.peptide ADD CONSTRAINT peptide_accession_uk UNIQUE (peptide_accession)
 ALTER TABLE dbo.peptide ADD CONSTRAINT peptide_sequence_uk UNIQUE (peptide_sequence)
 
+CREATE NONCLUSTERED INDEX idx_atlas_build_id ON dbo.atlas_build ( atlas_build_id ) --WITH DROP_EXISTING
 
 CREATE NONCLUSTERED INDEX idx_atlas_build_id ON dbo.peptide_instance ( atlas_build_id ) --WITH DROP_EXISTING
 CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_instance ( peptide_instance_id ) --WITH DROP_EXISTING
@@ -37,6 +38,7 @@ CREATE NONCLUSTERED INDEX relative_intensity ON dbo.consensus_library_spectrum_p
 
 -- Proteotypic Peptide
 CREATE INDEX idx_source_biosequence_id ON dbo.proteotypic_peptide( source_biosequence_id );
+CREATE INDEX idx_proteotypic_peptide_id ON dbo.proteotypic_peptide_mapping( proteotypic_peptide_id );
 
 CREATE NONCLUSTERED INDEX idx_atlas_search_batch_id ON dbo.peptide_instance_search_batch ( atlas_search_batch_id ) --WITH DROP_EXISTING
 CREATE NONCLUSTERED INDEX idx_peptide_id ON dbo.peptide_instance ( peptide_id )  --WITH DROP_EXISTING
@@ -90,4 +92,10 @@ CREATE NONCLUSTERED INDEX idx_modified_peptide_sequence ON dbo.elution_time ( mo
 
 -- PASSEL
 CREATE NONCLUSTERED INDEX idx_SEL_peptide_ion_id ON dbo.SEL_peptide_ion_protein ( SEL_peptide_ion_id )   --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_stripped_peptide_sequence ON dbo.SEL_peptide_ion ( stripped_peptide_sequence )   --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_SEL_transition_group_id ON dbo.SEL_chromatogram ( SEL_transition_group_id )   --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_SEL_experiment_project_id ON dbo.SEL_experiment ( project_id )   --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_SEL_chromatogram_id ON dbo.SEL_peak_group ( SEL_chromatogram_id )   --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_SEL_run_id ON dbo.SEL_transition_group ( SEL_run_id )   --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_SEL_peptide_ion_id ON dbo.SEL_transition_group ( SEL_peptide_ion_id )   --WITH DROP_EXISTING
 
