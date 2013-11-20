@@ -75,6 +75,7 @@ my @sp_rows;
 my $sp_rationale;
 
 my $current_page = { organism => '', atlas_build_id => '' };
+my $parameters;
 
 
 use constant MIN_OBS_LENGTH => 6;
@@ -140,6 +141,7 @@ sub main {
 
   #### Read in the default input parameters
   my %parameters;
+  $parameters = \%parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
       q=>$q,
       parameters_ref=>\%parameters);
@@ -328,6 +330,8 @@ sub handle_request {
   }
   $parameters{atlas_build_id} = $atlas_build_id;
   $current_page->{atlas_build_id} = $atlas_build_id;
+
+  $parameters->{motif} = $sbeamsMOD->getBuildMotif( build_id => $atlas_build_id ) || '';
 
   #### Get the search keyword
   my $protein_name = $parameters{"protein_name"};
@@ -1014,14 +1018,16 @@ sub handle_request {
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
 #    ["peptide_accession","P.peptide_accession","<DIV TITLE='PeptideAtlas accession number for this peptide'>Accession</DIV>"],
+#    ["peptide_accession","P.peptide_accession","<DIV TITLE='PeptideAtlas accession for peptide'>Accession</DIV>"],
 #
+#    ["peptide_accession","P.peptide_accession","Accession DIV"],
 #
   my $group_by_clause = '';
   my @labels = ( 'Accession', 'Pre AA', 'Sequence', 'Fol AA', 'ESS','Best Prob', 'Best Adj Prob', 'N Obs', 'EOS', 'SSRT', 'N Prot Map', 'N Gen Loc', 'N Samples', 'Subpep of' );
   push @labels, 'Avg Eval' if $parameters{'ann'};
 
   my @column_array = (
-    ["peptide_accession","P.peptide_accession","Accession"],
+    ["peptide_accession","P.peptide_accession","<DIV TITLE='PeptideAtlas accession for peptide'>Accession</DIV>"],
     ["preceding_residue","PI.preceding_residue","<DIV TITLE='Preceding (towards the N terminus) amino acid'>Pre AA</DIV>"],
     ["peptide_sequence","P.peptide_sequence","<DIV TITLE='Amino Acid sequence of this peptide'>Sequence</DIV>"],
     ["following_residue","PI.following_residue","<DIV TITLE='Following (towards the C terminus) amino acid'>Fol AA</DIV>"],
@@ -1116,7 +1122,8 @@ sub handle_request {
   ~;
   #### Define the hypertext links for columns that need them
   %url_cols = (
-    'Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
+    'Accession DIV' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
+    "<DIV TITLE='PeptideAtlas accession for peptide'>Accession</DIV>" => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY"
   );
 #  \%$colnameidx{biosequence_gene_name}V&
 
@@ -1196,7 +1203,6 @@ sub handle_request {
   #############################################################
   ## Display the sequence graphic ##
 
-  my $motif = $sbeamsMOD->getBuildMotif( build_id => $current_page->{atlas_build_id} );
 
   # Widget to allow show/hide of graphic section
   my ( $tr, $link ) = $sbeams->make_table_toggle( name => 'getprotein_graphic',
@@ -1206,6 +1212,8 @@ sub handle_request {
                                                 sticky => 1 );
 
   my %motif_params;
+  my $motif = $parameters->{motif};
+
   if ( $motif eq 'glyco' ) {
     my $pred = $sbeamsMOD->getGlycoPeptides( seq => $biosequence->{biosequence_seq},
                                              annot => 1,
@@ -1625,7 +1633,7 @@ sub handle_request {
        tr_info => $tr,
      );
 
-    if ( $htmlmode && $pabst_display ) {
+    if ( $htmlmode && $pabst_display && $parameters->{motif} ne 'glyco'  ) {
       print qq~ 
  <TABLE width="600">
   $PabstHeader
@@ -1663,7 +1671,9 @@ sub handle_request {
       biosequence_id => $biosequence_id,
     );
 
-    if ( $htmlmode && $sbeams->rs_has_data( resultset_ref => $best_peptide_information->{resultset_ref}) ) {
+    if ( $htmlmode 
+         && $sbeams->rs_has_data( resultset_ref => $best_peptide_information->{resultset_ref}) 
+         && $parameters->{motif} ne 'glyco' ) {
 
       #### Display the best peptide information
       my $samples = $bestPeptideSelector->getHighlyObservablePeptidesDisplay(
@@ -2843,15 +2853,18 @@ sub displayAnnotatedSequence {
     }
     $tags = $sbeamsMOD->make_tags( \%gsite, $tags );
 
-    my %predicted = ( start => [], end => [], class => 'pa_predicted_pep', number => 0 );
-    for my $k ( sort { $a <=> $b } keys( %{$args{glyco}} ) ) {
-      push @{$predicted{start}}, $k - 1;
-      my $peptide = $args{glyco}->{$k};
-      $peptide =~ s/\W//g;
-      push @{$predicted{end}}, $k + length( $peptide ) - 2;
-      $predicted{number}++;
-    } 
-    $tags = $sbeamsMOD->make_tags( \%predicted, $tags ); 
+    # Commented out code that was drawing a box around predicted N-glyco 
+    # peptides; had bugs rendering in some circumstances and is largely
+    # obviated by tryptic digest display code
+#    my %predicted = ( start => [], end => [], class => 'pa_predicted_pep', number => 0 );
+#    for my $k ( sort { $a <=> $b } keys( %{$args{glyco}} ) ) {
+#      push @{$predicted{start}}, $k - 1;
+#      my $peptide = $args{glyco}->{$k};
+#      $peptide =~ s/\W//g;
+#      push @{$predicted{end}}, $k + length( $peptide ) - 2;
+#      $predicted{number}++;
+#    } 
+#    $tags = $sbeamsMOD->make_tags( \%predicted, $tags ); 
    
   }
 
@@ -2875,6 +2888,10 @@ sub displayAnnotatedSequence {
       for my $var (  @{$html_seq->{variant_list}} ) {
         $cnt++;
         $variant_list .= '<SPAN style="display:none" ID=var_list>' if $cnt == 12;
+        if ( $var->[0] eq 'InitMet' ) {
+          push @{$var}, "<a href='GetVariantEvidence?type=init_met;protein_name=$biosequence->{biosequence_name};atlas_build_id=$args{atlas_build_id};action=GO' title='View evidence for Initiator Methionine cleavage in $biosequence->{biosequence_name}'><img src=$HTML_BASE_DIR/images/search_icon_small.png /></a>";
+
+        }
         $variant_list .= join( "\t", @{$var} ) . "\n";
       }
       my $var_toggle_link = '';
