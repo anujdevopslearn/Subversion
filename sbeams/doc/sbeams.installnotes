@@ -728,17 +728,30 @@ mysql> create database sbeams;
 
 mysql> use mysql;
 
--- create users sbeamsadmin, sbeams, and sbeamsro
+-- create users sbeamsadmin, sbeams, and sbeamsro, chaning password to an appropriate value
 mysql> grant all privileges on sbeams.* to 'sbeamsadmin'@'%' 
 identified by 'password' with grant option;
-
 mysql> grant select,create,insert on sbeams.* to 'sbeams'@'%' identified by 'password' ;
-
 mysql> grant select on sbeams.* to 'sbeamsro'@'%' identified by 'password' ;
+
+# As of 2012, had to also explicitly add localhost; also added hostname.domain.com, but not
+# sure if that would be required.
+mysql> grant all privileges on sbeams.* to 'sbeamsadmin'localhost'; 
+mysql> grant select,create,insert on sbeams.* to 'sbeams'@'localhost';
+mysql> grant select on sbeams.* to 'sbeamsro'@'localhost';
+# 2012
 
 mysql> flush privileges;
 
 mysql> exit;
+
+# We recommend that you use innodb as the default storage engine, in mysql versions less than 
+# 5.5, you can add the following line to /etc/my.cnf:
+default-storage-engine=innodb
+
+# then restart the mysql daemon
+sudo /etc/init.d/mysqld  stop
+sudo /etc/init.d/mysqld  start
 
 
 ******** OR USE MySQL GUI ***************
