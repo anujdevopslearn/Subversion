@@ -211,15 +211,31 @@ sub getTabMenu
     }elsif($PROG_NAME =~ /^GetPTPAtlasS.*/){
       $current_tab=6;
       $current_subtab=3;
-    #### PeptideAtlas Submission System PASS tabs
-    } elsif ($PROG_NAME =~ /^PASS_Summary/) {
+
+    #### SWATH Atlas tabs
+    } elsif ($PROG_NAME =~ /DIA_library_download/) {
        $current_tab=7;
        $current_subtab=1;
-    } elsif ($PROG_NAME =~ /^PASS_Submit/) {
+    } elsif ($PROG_NAME =~ /DIA_library_subset/) {
        $current_tab=7;
        $current_subtab=2;
-    } elsif ($PROG_NAME =~ /^PASS_View/) {
+    } elsif ($PROG_NAME =~ /DIA_search/) {
        $current_tab=7;
+       $current_subtab=3;
+    } elsif ($PROG_NAME =~ /DIA_processing/) {
+       $current_tab=7;
+       $current_subtab=4;
+
+
+    #### PeptideAtlas Submission System PASS tabs
+    } elsif ($PROG_NAME =~ /^PASS_Summary/) {
+       $current_tab=8;
+       $current_subtab=1;
+    } elsif ($PROG_NAME =~ /^PASS_Submit/) {
+       $current_tab=8;
+       $current_subtab=2;
+    } elsif ($PROG_NAME =~ /^PASS_View/) {
+       $current_tab=8;
        $current_subtab=3;
     }
 
@@ -393,19 +409,19 @@ if ($activate_PASSEL) {
 
 
     #### SWATH tabs
-    if ( 0 && !$sbeams->isGuestUser() ) {
+    if ( 0 || !$sbeams->isGuestUser() ) {
     $tabmenu->addTab( label => 'SWATH/DIA',
          helptext => 'Resource for data independent analysis',
         );
     $tabmenu->addMenuItem( tablabel => 'SWATH/DIA',
          label => 'SWATH Libraries',
          helptext => 'Download libraries in various formats',
-         url => "$CGI_BASE_DIR/PeptideAtlas/DIA_libs?mode=download_libs"
+         url => "$CGI_BASE_DIR/PeptideAtlas/GetDIALibs?mode=download_libs"
          );
     $tabmenu->addMenuItem( tablabel => 'SWATH/DIA',
          label => 'Custom Libraries',
          helptext => 'Generate custom subset libraries',
-         url => "$CGI_BASE_DIR/PeptideAtlas/DIA_libs?mode=subset_libs"
+         url => "$CGI_BASE_DIR/PeptideAtlas/GetDIALibs?mode=subset_libs"
          );
     $tabmenu->addMenuItem( tablabel => 'SWATH/DIA',
          label => 'Search datasets',
