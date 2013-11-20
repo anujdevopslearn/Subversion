@@ -55,19 +55,19 @@ $sbeams = new SBEAMS::Connection;
   # Add in some CGI params to /make these more useful!
 
 	my %links = ( "Search" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/Search", 
-	                            PARAMS => {search_key=>'ENSP00000374576', build_type_name=>'Any', action=>'GO' }, 
-															STRINGS => ['ENSP00000374576', 'Human Plasma' ] },
+	                            PARAMS => {search_key=>'ENSP00000371493', build_type_name=>'Any', action=>'GO' }, 
+															STRINGS => ['Human ' ] },
                 "Main" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/main.cgi",  
 								            PARAMS => { '_tab' => 2 },
-								            STRINGS => [ 'Human Plasma PeptideAtlas ' ] },
+								            STRINGS => [ qw(Human) ] },
 
                 "buildDetails" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/buildDetails",  
-								            PARAMS => { atlas_build_id => 335, '_tab' => 2 },
-								            STRINGS => [ 'HUPO28_b2-SERUM' ] },
+								            PARAMS => { atlas_build_id => 393, '_tab' => 2 },
+								            STRINGS => [ ] },
 
 
                 "GetPeptide" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetPeptide",  PARAMS => { '_tab' => 3, 
-								                                                                                     atlas_build_id => 335,
+								                                                                                     atlas_build_id => 377,
 																																																		 searchWithinThis => 'Peptide+Name',
 																																																		 searchForThis => 'PAp00085360',
 																																																		 action => 'query' }, 
@@ -75,19 +75,15 @@ $sbeams = new SBEAMS::Connection;
 
 								"GetPeptides" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetPeptides",  
 								                   PARAMS => { '_tab' => 4,
-                                               atlas_build_id => 335,
+                                               atlas_build_id => 393,
                                                peptide_sequence_constraint => 'VLHPLEG%25',
                                                QUERY_NAME=> 'AT_GetPeptides',
                                                action=> 'QUERY' },
 																	 STRINGS => [ qw(VLHPLEGAVVIIFK Empirical) ] },
-								"GetProtein" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetProtein", 
-								                  PARAMS => { '_tab' => 5, atlas_build_id => 335, protein_name => 'ENSP00000374576', action=> 'QUERY' },
-																	STRINGS => [ qw(CD166_HUMAN ALCAM External observable ) ]  },
-
 
 								"GetProteins" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetProteins",
                                    PARAMS => { '_tab' => 6,
-																	             atlas_build_id => 335,
+																	             atlas_build_id => 393,
                                                biosequence_name_constraint => 'ENSP00000222%25',
                                                QUERY_NAME => 'AT_GetProteins',
 																	             action => 'QUERY' },
@@ -96,25 +92,22 @@ $sbeams = new SBEAMS::Connection;
 #								biosequence_name_constraint=ENSP00000222%25
 #								QUERY_NAME=AT_GetProteins
 #								action=QUERY
-								"Summarize" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/Summarize_Peptide",  PARAMS => { '_tab' => 7 }, STRINGS => [] },
-								"GetMRMList" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetMRMList", PARAMS => { }, STRINGS => [] },
-								"ViewMRMList" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/ViewMRMList", PARAMS => { atlas_build_id => 335, consensus_library_id => 5,
-					 protein_name_constraint => 'YAL044C', 
-					 QUERY_NAME => 'AT_GetMRMList', action => 'QUERY' 
-					}, STRINGS => [ qw( Sequence LGEGVNVEQVEGLMSLEQYEK Spectrum YAL044C ) ] },
-# http://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/ViewMRMList
-#								atlas_build_id=83
-#								consensus_library_id=5
-#								protein_name_constraint=YAL044C
-#								QUERY_NAME=AT_GetMRMList
-#								action=QUERY
+								"Summarize" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/Summarize_Peptide",  PARAMS => { searchForThis=>'VSFLSALEEYTK', output_mode=>'html', Submit=>'Submit' }, STRINGS => [ 'Human' ] },
+								"GetTransitions" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetTransitions", PARAMS => { pabst_build_id=>'120',protein_name_constraint=>'P06731',action=>'QUERY' }, STRINGS => [ qw(Source) ] },
 
 								"ShowPathways" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/showPathways",
 								                    PARAMS => { apply_action => 'pathway_details',
                                                      path_id => 'path:hsa02010',
                                                     path_def => 'ABC transporters - General - Homo sapiens (human)'
 																							},
-																	  STRINGS => [] }
+																	  STRINGS => [] },
+
+								"GetProtein" => { URI => "$base/$CGI_BASE_DIR/PeptideAtlas/GetProtein", 
+								                  PARAMS => { '_tab' => 5, atlas_build_id => 393, protein_name => 'ENSP00000371493', action=> 'QUERY' },
+																	STRINGS => [ 'Alpha-2-antiplasmin' ]  },
+
+
+
  		 );
 
   $sbeams->display_page_header( minimal_header => "YES",
@@ -133,6 +126,7 @@ $sbeams = new SBEAMS::Connection;
 
 
 	for my $l ( sort ( keys( %links ) ) ) {
+#  for my $l ( 'Summarize' )  {  
     my $params = '';
 		my $sep = '?';
 		for my $p ( keys( %{$links{$l}->{PARAMS}} ) ) {
@@ -159,9 +153,10 @@ $sbeams = new SBEAMS::Connection;
 		my $post = time();
 		my $time = ( $post - $pre ) || 1;
 		if ( $section =~ /SBEAMS_PAGE_OK/gmi ) { 
-
 			$style = 'grn_bg' 
-		}
+		} else {
+      die "Arrgh!";
+    }
 
 		my $size = sprintf( "%0.1f", (length( $section )/1000) );
 
@@ -170,6 +165,7 @@ $sbeams = new SBEAMS::Connection;
 				$style = 'yel_bg' unless $style eq 'red_bg';
 				$status = 'STR';
 				$log->warn( "page $l missing $string!" );
+        last;
 			}
 		}
 
