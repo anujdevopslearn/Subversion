@@ -214,7 +214,7 @@ sub pa_build_info_2_tsv {
   my $scratch_file = $tsv_file . "_scratch";
   my $save_file = $tsv_file . "_save";
   print "Trying to print to $tsv_file.\n" if $VERBOSE;
-  open (SCRATCH, ">$scratch_file") || print "<p>Can't open $scratch_file<\p>\n";;
+  open (SCRATCH, ">$scratch_file") || print "Can't open $scratch_file for writing.\n";
   for (my $i=0; $i<$ncols; $i++) {
     print SCRATCH "$headers[$i]";
     if ($i < $ncols-1) {
