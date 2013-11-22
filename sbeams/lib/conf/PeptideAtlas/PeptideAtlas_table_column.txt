@@ -6,16 +6,17 @@ AT_atlas_build	4	biosequence_set_id	Biosequence Set	int	4	0	N		N	AT_biosequence_
 AT_atlas_build	5	probability_threshold	Probability Threshold	real	4	0	Y		N			Y	text	10		Y	Y	N	Minimum probability threshold used for build (pre-2009 builds)		
 AT_atlas_build	6	APD_id	APD ID	int	4	0	Y		N			Y	text	10		Y	Y	N	The peptide_summary_id of the APD		
 AT_atlas_build	7	data_path	Data Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	Path to the data relative to base directory		
-AT_atlas_build	8	build_date	Build Date	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y	text	20		Y	Y	N	Date that this PeptideAtlas build was started		
-AT_atlas_build	9	atlas_build_description	Atlas Build Description	text	16	0	Y		N			N	textarea	10		Y	Y	N	Full description of this PeptideAtlas build		
-AT_atlas_build	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-AT_atlas_build	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_atlas_build	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_atlas_build	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_atlas_build	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_atlas_build	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_atlas_build	16	record_status	Record Status	char	1	0	N	N	N							N	N				
-AT_atlas_build	17	protpro_PSM_FDR_per_expt	PSM FDR Cutoff Applied Per Experiment	real	4	0	Y		N			Y	text	10		Y	Y	N	PSM FDR threshold used for build		
+AT_atlas_build	8	trypsin_build	Do most of samples use trypsin?	char	1	0	Y		N			Y	optionlist			Y	Y	N	Indicates whether the dataset is public	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+AT_atlas_build	9	build_date	Build Date	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y	text	20		Y	Y	N	Date that this PeptideAtlas build was started		
+AT_atlas_build	10	atlas_build_description	Atlas Build Description	text	16	0	Y		N			N	textarea	10		Y	Y	N	Full description of this PeptideAtlas build		
+AT_atlas_build	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_atlas_build	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_atlas_build	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_atlas_build	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_atlas_build	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_atlas_build	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_atlas_build	17	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_atlas_build	18	protpro_PSM_FDR_per_expt	PSM FDR Cutoff Applied Per Experiment	real	4	0	Y		N			Y	text	10		Y	Y	N	PSM FDR threshold used for build		
 AT_default_atlas_build	1	default_atlas_build_id	Default Atlas Build ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_default_atlas_build	2	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	Y	Organism for which this default applies.  Leave empty for overall default	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 AT_default_atlas_build	3	organism_specialized_build	Organism Specialized Build	varchar	50	0	Y		N			N	text	40		Y	Y	Y	"If not NULL, a specialized build within this organism, e.g. Human Plasma"		
@@ -37,8 +38,8 @@ AT_sample	7	original_experiment_tag	Original Experiment Tag	varchar	50	0	Y		N			
 AT_sample	8	sample_date	Sample Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	textdate	20		Y	Y	N	Date on which this sample was prepared		
 AT_sample	9	sample_description	Sample Description	text	16	0	Y		N			N	textarea	10		Y	Y	N	Full description of this sample		
 AT_sample	10	instrument_model_id	Instrument Model ID	int	4	0	Y		N	PR_instrument	instrument_id	N	optionlist			Y	Y	N	Instrument (mass spectrometer) manufacturer model name	"SELECT instrument_id,instrument_name FROM $TBPR_INSTRUMENT WHERE record_status != 'D' ORDER BY instrument_name"	
-AT_sample	11	proteases_id	Proteases ID	int	4	0	Y		N	AT_proteases	id	N	optionlist			y	y	N	Proteases	"SELECT id, name FROM $TBAT_proteases order by name"	
-AT_sample	12	fragmentation_type_ids	Fragmentation Type ID	varchar	100	0	Y		N			N	multioptionlist	3		Y	Y	N	Comma-separated list of fragmentation_type_ids	"SELECT fragmentation_type_id, fragmentation_type FROM $TBAT_fragmentation_type "	
+AT_sample	11	protease_id	Protease ID	int	4	0	Y		N	AT_proteases	id	N	optionlist			y	y	N	Protease	"SELECT id, name FROM $TBAT_PROTEASES order by name"	
+AT_sample	12	fragmentation_type_ids	Fragmentation Type ID	varchar	100	0	Y		N			N	multioptionlist	3		Y	Y	N	Comma-separated list of fragmentation_type_ids	"SELECT fragmentation_type_id, fragmentation_type FROM $TBAT_FRAGMENTATION_TYPE"	
 AT_sample	13	search_batch_id	Search Batch ID	int	4	0	N		N				text	10		Y	P	N	Search Batch ID		
 AT_sample	14	sample_publication_ids	Sample Publications	varchar	255	0	Y		N	AT_sample_publication	sample_publication_id	N	multilink	4		Y	Y	N	Select all publications that apply to this sample.	"SELECT P.publication_id,P.publication_name FROM $TBAT_PUBLICATION P WHERE P.record_status != 'D' ORDER BY P.publication_name"	
 AT_sample	15	data_contributors	Data Contributors	text	16	0	Y		N			Y	textarea	10		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
@@ -848,8 +849,8 @@ AT_SEL_experiment	12	project_id	Project Id	int	4	0	Y		N	project	project_id	Y	opt
 AT_SEL_experiment	13	mprophet_analysis	mProphet Analysis	char	1	0	Y		N			N	optionlist			Y	Y		Was this experiment analyzed using mProphet?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 AT_SEL_experiment	14	heavy_label	Heavy Label	varchar	255	0	Y		N			N	text	100		Y	Y		"Heavy label used, if any"		
 AT_SEL_experiment	15	datasetIdentifier	Dataset Identifier	varchar	50	0	Y		N			N	text	20		Y	Y	Y	Foreign Key		
-AT_SEL_experiment	16	q1_tolerance	Q1 tolerance	float	8	0	Y		N			N							Tolerance for matching exact Q1 from transition list to rounded Q1 in spectrum file.		
-AT_SEL_experiment	17	q3_tolerance	Q3 tolerance	float	8	0	Y		N			N							Tolerance for matching exact Q3 from transition list to rounded Q3 in spectrum file.		
+AT_SEL_experiment	16	q1_tolerance	Q1 tolerance	float	8	0	Y		N			N	text	10		Y	Y	N	Tolerance for matching exact Q1 from transition list to rounded Q1 in spectrum file.		
+AT_SEL_experiment	17	q3_tolerance	Q3 tolerance	float	8	0	Y		N			N	text	10		Y	Y	N	Tolerance for matching exact Q3 from transition list to rounded Q3 in spectrum file.		
 AT_SEL_experiment	18	PX_identifier	ProteomeXchange Identifier	varchar	50	0	Y		N			N	text	20		Y	Y	Y	"ProtemeExchange identifier, e.g. PXD000105"		
 AT_SEL_run	1	SEL_run_id	SEL Run ID	int	4	0	N		Y			N					N	Y	Primary Key		pkDEFAULT
 AT_SEL_run	2	SEL_experiment_id	SEL Experiment ID	int	4	0	Y		N	AT_SEL_experiment	SEL_experiment_id	N	text	50		Y	Y	Y	Foreign key		
