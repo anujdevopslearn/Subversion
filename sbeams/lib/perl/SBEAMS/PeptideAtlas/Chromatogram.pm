@@ -1430,7 +1430,11 @@ sub getTopHTMLforChromatogramViewer {
      if $param_href->{instrument_name};
   $top_html .= "<br><b>Experiment: </b> $param_href->{experiment_title}\n"
      if $param_href->{experiment_title};
-  $top_html .= "<br><b>Spectrum file:</b> $spectrum_basename\n" unless $param_href->{no_specfile};
+  unless ($param_href->{no_specfile}) {
+    $top_html .= "<br><b>Spectrum file:</b> ";
+    $top_html .= "<br>" if (length($spectrum_basename) > 55); 
+    $top_html .= "$spectrum_basename\n";
+  }
   if ($precursor_rt) {
     $precursor_rt = sprintf "%0.3f", ${precursor_rt}/60;
     $top_html .= "<br>Precursor RT\: $precursor_rt\n";
@@ -1438,28 +1442,36 @@ sub getTopHTMLforChromatogramViewer {
   $top_html .= "<br><b>Chromatogram ID: </b>$param_href->{SEL_chromatogram_id}\n"
      if $param_href->{SEL_chromatogram_id};
   $top_html .= "<br><b><u>mQuest:</u></b>&nbsp;" unless $param_href->{no_mquest};
+  my $mquest_params_displayed=0;
   if ($best_peak_group_rt) {
     my $best_peak_group_rt_s = sprintf "%0.3f", ${best_peak_group_rt}/60;
-    $top_html .= "<b>best pg RT</b>=$best_peak_group_rt_s&nbsp;\n"
+    $top_html .= "<b>best pg RT</b>=$best_peak_group_rt_s&nbsp;\n";
+    $mquest_params_displayed++;
   }
   if ($S_N) {
     my $S_N_s = sprintf "%0.3f", $S_N;
-    $top_html .= "<b>S/N</b>=$S_N_s&nbsp;\n"
+    $top_html .= "<b>S/N</b>=$S_N_s&nbsp;\n";
+    $mquest_params_displayed++;
   }
   if ($max_apex_intensity) {
     my $max_apex_intensity_s = sprintf "%0.3f", $max_apex_intensity;
-    $top_html .= "<b>log max apex intens</b>=$max_apex_intensity_s&nbsp;\n"
+    $top_html .= "<b>log max apex intens</b>=$max_apex_intensity_s&nbsp;\n";
+    $mquest_params_displayed++;
   }
+  $top_html .= "<br>" if $mquest_params_displayed == 3;
   if ($light_heavy_ratio_maxapex) {
     my $light_heavy_ratio_maxapex_s = sprintf "%0.3f",
         $light_heavy_ratio_maxapex;
     $top_html .=
-        "<b>light/heavy maxapex</b>=$light_heavy_ratio_maxapex_s&nbsp;\n"
+        "<b>light/heavy maxapex</b>=$light_heavy_ratio_maxapex_s&nbsp;\n";
+    $mquest_params_displayed++;
   }
+  $top_html .= "<br>" if $mquest_params_displayed == 3;
   if ($m_score) {
     $top_html .= "<br><b>mProphet:</b> ";
     my $m_score_s = sprintf "%0.3f", $m_score;
     $top_html .= "m_score=$m_score_s\n";
+    $mquest_params_displayed++;
   }
   return $top_html;
 }
