@@ -37,23 +37,25 @@ AT_sample	7	original_experiment_tag	Original Experiment Tag	varchar	50	0	Y		N			
 AT_sample	8	sample_date	Sample Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	textdate	20		Y	Y	N	Date on which this sample was prepared		
 AT_sample	9	sample_description	Sample Description	text	16	0	Y		N			N	textarea	10		Y	Y	N	Full description of this sample		
 AT_sample	10	instrument_model_id	Instrument Model ID	int	4	0	Y		N	PR_instrument	instrument_id	N	optionlist			Y	Y	N	Instrument (mass spectrometer) manufacturer model name	"SELECT instrument_id,instrument_name FROM $TBPR_INSTRUMENT WHERE record_status != 'D' ORDER BY instrument_name"	
-AT_sample	11	search_batch_id	Search Batch ID	int	4	0	N		N				text	10		Y	P	N	Search Batch ID		
-AT_sample	12	sample_publication_ids	Sample Publications	varchar	255	0	Y		N	AT_sample_publication	sample_publication_id	N	multilink	4		Y	Y	N	Select all publications that apply to this sample.	"SELECT P.publication_id,P.publication_name FROM $TBAT_PUBLICATION P WHERE P.record_status != 'D' ORDER BY P.publication_name"	
-AT_sample	13	data_contributors	Data Contributors	text	16	0	Y		N			Y	textarea	10		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
-AT_sample	14	peptide_source_type	Peptide Source Type	varchar	255	0	Y	Natural	N			Y	optionlist	20		Y	Y	N	"Source of peptides in this sample, one of Natural (default), Synthetic, or ArtificialProtein"	"SELECT 'Natural',' Natural' UNION SELECT 'SyntheticPeptide', 'SyntheticPeptide' UNION SELECT 'RecombinantProtein', 'RecombinantProtein'"	   
-AT_sample	15	primary_contact_email	Primary Email Contact	text	16	0	Y		N			Y	text	40		Y	P	N	Email address of primary contact for data		
-AT_sample	16	is_public	Is the dataset publicly available?	char	1	0	Y		N			Y	optionlist			Y	Y	N	Indicates whether the dataset is public	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
-AT_sample	17	anatomical_site_term	Anatomical Site (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Anatomical site from which this sample was obtained	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"	
-AT_sample	18	developmental_stage_term	Developmental Stage (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Developmental stage of the sample donor individual	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"	
-AT_sample	19	pathology_term	Pathology (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Pathology of the sample	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"	
-AT_sample	20	cell_type_term	Cell Type (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Cell type of the sample	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"	
-AT_sample	21	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-AT_sample	22	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_sample	23	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_sample	24	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_sample	25	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_sample	26	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_sample	27	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_sample	11	proteases_id	Proteases ID	int	4	0	Y		N	AT_proteases	id	N	optionlist			y	y	N	Proteases	"SELECT id, name FROM $TBAT_proteases order by name"	
+AT_sample	12	fragmentation_type_ids	Fragmentation Type ID	varchar	100	0	Y		N			N	multioptionlist	3		Y	Y	N	Comma-separated list of fragmentation_type_ids	"SELECT fragmentation_type_id, fragmentation_type FROM $TBAT_fragmentation_type "	
+AT_sample	13	search_batch_id	Search Batch ID	int	4	0	N		N				text	10		Y	P	N	Search Batch ID		
+AT_sample	14	sample_publication_ids	Sample Publications	varchar	255	0	Y		N	AT_sample_publication	sample_publication_id	N	multilink	4		Y	Y	N	Select all publications that apply to this sample.	"SELECT P.publication_id,P.publication_name FROM $TBAT_PUBLICATION P WHERE P.record_status != 'D' ORDER BY P.publication_name"	
+AT_sample	15	data_contributors	Data Contributors	text	16	0	Y		N			Y	textarea	10		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
+AT_sample	16	peptide_source_type	Peptide Source Type	varchar	255	0	Y	Natural	N			Y	optionlist	20		Y	Y	N	"Source of peptides in this sample, one of Natural (default), Synthetic, or ArtificialProtein"	"SELECT 'Natural',' Natural' UNION SELECT 'SyntheticPeptide', 'SyntheticPeptide' UNION SELECT 'RecombinantProtein', 'RecombinantProtein'"	   
+AT_sample	17	primary_contact_email	Primary Email Contact	text	16	0	Y		N			Y	text	40		Y	P	N	Email address of primary contact for data		
+AT_sample	18	is_public	Is the dataset publicly available?	char	1	0	Y		N			Y	optionlist			Y	Y	N	Indicates whether the dataset is public	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+AT_sample	19	anatomical_site_term	Anatomical Site (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Anatomical site from which this sample was obtained	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"	
+AT_sample	20	developmental_stage_term	Developmental Stage (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Developmental stage of the sample donor individual	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"	
+AT_sample	21	pathology_term	Pathology (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Pathology of the sample	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"	
+AT_sample	22	cell_type_term	Cell Type (not yet used)	varchar	255	0	Y		N			N	optionlist			Y	Y	N	Cell type of the sample	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"	
+AT_sample	23	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_sample	24	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_sample	24	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_sample	26	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_sample	27	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_sample	28	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_sample	29	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_atlas_build_sample	1	atlas_build_sample_id	Atlas Build Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_atlas_build_sample	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id					N	N		Associated Atlas Build		
 AT_atlas_build_sample	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
@@ -848,7 +850,7 @@ AT_SEL_experiment	14	heavy_label	Heavy Label	varchar	255	0	Y		N			N	text	100		Y	
 AT_SEL_experiment	15	datasetIdentifier	Dataset Identifier	varchar	50	0	Y		N			N	text	20		Y	Y	Y	Foreign Key		
 AT_SEL_experiment	16	q1_tolerance	Q1 tolerance	float	8	0	Y		N			N							Tolerance for matching exact Q1 from transition list to rounded Q1 in spectrum file.		
 AT_SEL_experiment	17	q3_tolerance	Q3 tolerance	float	8	0	Y		N			N							Tolerance for matching exact Q3 from transition list to rounded Q3 in spectrum file.		
-AT_SEL_experiment	18	PX_identifier	ProteomeXchange Identifier	varchar	50	0	Y		N			N	text	20		Y	Y	Y	ProtemeExchange identifier, e.g. PXD000105		
+AT_SEL_experiment	18	PX_identifier	ProteomeXchange Identifier	varchar	50	0	Y		N			N	text	20		Y	Y	Y	"ProtemeExchange identifier, e.g. PXD000105"		
 AT_SEL_run	1	SEL_run_id	SEL Run ID	int	4	0	N		Y			N					N	Y	Primary Key		pkDEFAULT
 AT_SEL_run	2	SEL_experiment_id	SEL Experiment ID	int	4	0	Y		N	AT_SEL_experiment	SEL_experiment_id	N	text	50		Y	Y	Y	Foreign key		
 AT_SEL_run	3	spectrum_filename	Spectrum Filename	varchar	255	0	Y		N			N	text	100		Y	Y	N	Spectrum filename		
@@ -967,11 +969,11 @@ AT_PASS_dataset	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIM
 AT_PASS_dataset	14	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
 AT_PASS_dataset	15	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 AT_PASS_dataset	16	record_status	Record Status	char	1	0	N	N	N							N	N				
-AT_PASS_dataset	17	submitter_organization	Submitter Organization	varchar	255	0	N		N			Y	text	80		Y	Y	N	Organization of data submitter
-AT_PASS_dataset	18	lab_head_full_name	Lab Head Full Name	varchar	255	0	N		N			Y	text	80		Y	Y	N	Name of lab head
-AT_PASS_dataset	19	lab_head_email	Lab Head Email	varchar	50	0	N		N			Y	text	80		Y	Y	N	Email for lab head
-AT_PASS_dataset	20	lab_head_organization	Lab Head Organization	varchar	255	0	N		N			Y	text	80		Y	Y	N	Organization of lab head
-AT_PASS_dataset	21	lab_head_country	Lab Head Country	varchar	50	0	N		N			Y	text	80		Y	Y	N	Country of lab head's organization
+AT_PASS_dataset	17	submitter_organization	Submitter Organization	varchar	255	0	N		N			Y	text	80		Y	Y	N	Organization of data submitter		
+AT_PASS_dataset	18	lab_head_full_name	Lab Head Full Name	varchar	255	0	N		N			Y	text	80		Y	Y	N	Name of lab head		
+AT_PASS_dataset	19	lab_head_email	Lab Head Email	varchar	50	0	N		N			Y	text	80		Y	Y	N	Email for lab head		
+AT_PASS_dataset	20	lab_head_organization	Lab Head Organization	varchar	255	0	N		N			Y	text	80		Y	Y	N	Organization of lab head		
+AT_PASS_dataset	21	lab_head_country	Lab Head Country	varchar	50	0	N		N			Y	text	80		Y	Y	N	Country of lab head's organization		
 AT_GetPTPPeptides	1	organism_id	Organism	int	4	0	N	2	N			Y	optionlist			Y	Y	N	Organism for which this default applies. 	"SELECT organism_id, organism_name FROM $TB_ORGANISM where organism_name in ( 'human', 'mouse', 'yeast' ) ORDER BY organism_name "	
 AT_GetPTPPeptides	2	biosequence_name_constraint	Protein Name Constraint									N	text	40		Y	Y	N	Constraint for the Protein Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
 AT_GetPTPPeptides	3	upload_file	Upload File Of Proteins	varchar	255	0	Y		N			N	file	40		Y	Y	N	"Path to file with list of Protein Names, one per line, to be uploaded via the web interface (NOTE: if proteins are not found, search defaults to printing all proteins of the selected Atlas build)"		
@@ -1062,7 +1064,7 @@ AT_public_data_repository	10	instrument	Instrument	varchar	1000	0	Y		N			N	text	
 AT_public_data_repository	11	datasetDescription	Dataset Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional Description		
 AT_public_data_repository	12	contributor	Contributor	varchar	255	0	Y		N			Y	text	40		Y	Y	N			
 AT_public_data_repository	13	publication	Publication	varchar	1000	0	Y		N				text	50		Y	Y	N	Publication		
-AT_public_data_repository	14	project_id	Owner Project	int	4	0	Y		N	project	project_id	N	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
+AT_public_data_repository	14	project_id	Owner Project	int	4	0	Y	NULL	N	project	project_id	N	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
 AT_public_data_repository	15	publicReleaseDate	Public Release Date	datetime	8	0	N		N			Y	text	20		Y	N	N	Date on which the data becomes publicly available		
 AT_public_data_repository	16	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_public_data_repository	17	date_created	date_created	datetime	8	0	Y		N			N					Y	N			
@@ -1070,7 +1072,7 @@ AT_public_data_repository	18	created_by_id	created_by_id	int	4	0	Y		N			N					N	
 AT_public_data_repository	19	date_modified	date_modified	datetime	8	0	Y		N			N					N	N			
 AT_public_data_repository	20	modified_by_id	modified_by_id	int	4	0	Y		N			N					N	N			
 AT_public_data_repository	21	owner_group_id	owner_group_id	int	4	0	Y		N			N					N	N			
-AT_public_data_repository	22	related_database_entries	related_database_entries	varchar	4000	0	N		N			N	text	400		Y	Y	N	Comma-separated identifiers from, e.g., ProteomeExchange
+AT_public_data_repository	22	related_database_entries	related_database_entries	varchar	4000	0	N		N			N	text	400		Y	Y	N	"Comma-separated identifiers from, e.g., ProteomeExchange"		
 AT_fragmentation_type	1	fragmentation_type_id	Fragmentation Type ID	int	4	0	Y		Y			Y					N	Y	Primary Key		pkDEFAULT
 AT_fragmentation_type	2	fragmentation_type	Fragmentation Type	varchar	255	0	N		N			Y	text	20		Y	Y	N	Type of Fragmentation		
 AT_fragmentation_type	3	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
@@ -1113,3 +1115,6 @@ AT_domain_list_protein	2	gene_symbol	Gene Symbol	varchar	36	0	N		N	 	 	Y	text			
 AT_domain_list_protein	9	protein_full_name	Protein Full Name	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of list file to be uploaded via the web interface		
 AT_domain_list_protein	2	priority	Priority	int	4	0	Y		N	 	 	Y	text			Y	Y	N	 	 	
 AT_domain_list_protein	5	comment	Comment	varchar	1024	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_proteases	1	id	id	int	4	0	N		Y							N	Y	Y			pkDEFAULT
+AT_proteases	2	name	Name	varchar	100	0	N		N			Y	text	20		Y	Y	N	Protease Name		
+AT_proteases	3	cleavage_specificity	Cleavage Specificity	varchar	255	0	Y		N			Y	textarea	4		Y	Y	N	Cleavage Specificity		

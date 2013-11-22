@@ -44,6 +44,10 @@ use SBEAMS::Connection::TableInfo;
 #$q = new CGI;
 $sbeams = new SBEAMS::Connection;
 
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::PeptideAtlas::TableInfo;
+
 use SBEAMS::Proteomics;
 use SBEAMS::Proteomics::Settings;
 use SBEAMS::Proteomics::Tables;
@@ -115,7 +119,6 @@ sub main {
     #connect_read_only=>1,
     #allow_anonymous_access=>1,
   ));
-
   #### Read in the default input parameters
   my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
@@ -308,7 +311,6 @@ sub preUpdateDataCheck {
                      tname => $TABLE_NAME );
 
   if ( $parameters{project_id} ) { # General mechanism for tables w/ project_id
-
     my $errstr = checkProjectPermission( param_ref => $query_parameters_ref,
                                          tname => $TABLE_NAME,
                                          dbtname => $DB_TABLE_NAME );
