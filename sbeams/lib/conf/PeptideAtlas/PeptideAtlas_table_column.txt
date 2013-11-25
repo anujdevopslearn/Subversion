@@ -6,7 +6,7 @@ AT_atlas_build	4	biosequence_set_id	Biosequence Set	int	4	0	N		N	AT_biosequence_
 AT_atlas_build	5	probability_threshold	Probability Threshold	real	4	0	Y		N			Y	text	10		Y	Y	N	Minimum probability threshold used for build (pre-2009 builds)		
 AT_atlas_build	6	APD_id	APD ID	int	4	0	Y		N			Y	text	10		Y	Y	N	The peptide_summary_id of the APD		
 AT_atlas_build	7	data_path	Data Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	Path to the data relative to base directory		
-AT_atlas_build	8	trypsin_build	Do most of samples use trypsin?	char	1	0	Y		N			Y	optionlist			Y	Y	N	Indicates whether the dataset is public	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+AT_atlas_build	8	is_trypsin_build	Do most of samples use trypsin?	char	1	0	Y		N			Y	optionlist			Y	Y	N	Indicates whether most of datasets use trypsin	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 AT_atlas_build	9	build_date	Build Date	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y	text	20		Y	Y	N	Date that this PeptideAtlas build was started		
 AT_atlas_build	10	atlas_build_description	Atlas Build Description	text	16	0	Y		N			N	textarea	10		Y	Y	N	Full description of this PeptideAtlas build		
 AT_atlas_build	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		

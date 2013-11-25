@@ -1280,7 +1280,7 @@ sub get_html_seq {
 sub get_html_seq_vars {
   my $self = shift;
   my %args = @_;
-
+  my $is_trypsin_build = $args{is_trypsin_build} || 'Y';
   my %return = ( seq_display => '',
                  clustal_display => '',
                  variant_list => [ [qw( Type Num Start End Info )] ] );
@@ -1383,16 +1383,25 @@ sub get_html_seq_vars {
     }
     $div_txt{$seq_type} .= '</DIV>';
   }
-  my $display_div = $div_txt{tryp};
-  $display_div =~ s/display:none/display:block/g;
-  $display_div =~ s/ID=tryp/ID=seq_display/;
+  my $display_div;
+  my $selected = '';
+  if($is_trypsin_build eq 'Y'){
+    $display_div = $div_txt{tryp};
+    $display_div =~ s/display:none/display:block/g;
+    $display_div =~ s/ID=tryp/ID=seq_display/;
+  }else{
+    $display_div = $div_txt{inter};
+    $display_div =~ s/display:none/display:block/g;
+    $display_div =~ s/ID=inter/ID=seq_display/;
+    $selected = "selected";
+  }
 
   $str .= qq~
     <FORM>
     <B>Sequence Display Mode:</B> 
     <SELECT onChange=setSeqView() NAME=seqView ID="seqView">
       <OPTION VALUE=tryp>  Tryptic
-      <OPTION VALUE=inter> Interval
+      <OPTION VALUE=inter $selected> Interval
       <OPTION VALUE=nosp>  No Space
     </SELECT>
     </FORM>

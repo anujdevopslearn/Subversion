@@ -1248,10 +1248,24 @@ sub handle_request {
     $parameters{show_clustal} = $sbeams->getSessionAttribute( key => 'GetProtein_ShowVars' );
   }
 
+  $sql = qq~ 
+    SELECT IS_TRYPSIN_BUILD 
+    FROM $TBAT_ATLAS_BUILD 
+    WHERE ATLAS_BUILD_ID = $atlas_build_id
+  ~ ;
+
+  my @row = $sbeams->selectOneColumn($sql);
+  my $is_trypsin_build = 'Y';
+  if(@row){
+    if ($row[0] eq 'N'){
+      $is_trypsin_build = 'N';
+    }
+  }
   displayAnnotatedSequence( %parameters,  
                             peptides => $peptides,
                          biosequence => $biosequence,
                        resultset_ref => $resultset_ref,
+                    is_trypsin_build => $is_trypsin_build,
                    protein_structure => $protein_structure,
                                glyco => $motif_params{glyco},
                            );
@@ -1434,6 +1448,7 @@ sub handle_request {
 
     my @pa_accessions;
     my @sample_list;
+
     for my $row ( @{$resultset_ref->{data_ref}} ) {
       push @pa_accessions, $row->[0];
 			my $ntt = 0;
@@ -1474,7 +1489,7 @@ sub handle_request {
 			push @errs, 'ntt' if $ntt < 2;
 			push @errs, 'mgl' if $mgl;
 			my $annot = '';
-			if ( @errs ) {
+			if ( @errs && $is_trypsin_build eq 'Y') {
 				$annot = '[' . join( ',', @errs ) . ']';
 #			} else {
 #        $instance_ids{$row->[14]}++;
@@ -2872,7 +2887,8 @@ sub displayAnnotatedSequence {
   my $html_seq = $sbeamsMOD->get_html_seq_vars( seq => $sequence,
                                           accession => $biosequence->{biosequence_name},
                                           tags => $tags, 
-                                      peptides => \@peptides, 
+                                      peptides => \@peptides,
+                              is_trypsin_build => $args{is_trypsin_build}, 
                                   show_clustal => $args{show_clustal} );
 
   print "<TR $tr><TD> $html_seq->{seq_display} </TD></TR>\n";
