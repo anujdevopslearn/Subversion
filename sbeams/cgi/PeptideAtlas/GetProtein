@@ -1438,7 +1438,7 @@ sub handle_request {
       query_parameters_ref=>\%parameters,
       resultset_ref => $resultset_ref,
       column_titles_ref=>\@column_titles,
-      is_trypsin_buld => $is_trypsin_build,
+      is_trypsin_build => $is_trypsin_build,
       no_escape => 1
     );
 #    use Data::Dumper;
