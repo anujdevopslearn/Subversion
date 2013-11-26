@@ -209,32 +209,34 @@ sub getBestPeptides {
 #      push @annot, 'ST';
 #    }
 #
-    my $ntt = 0;
-    # N Terminal side
-    if ( $preceding_residue =~ /[RK]/ && $peptide_sequence !~ /^P/ ) {
-      $ntt++;
-    } elsif ( $preceding_residue =~ /-/ ) {
-      $ntt++;
-    }
+    if($args{is_trypsin_build} eq 'Y'){
+			my $ntt = 0;
+			# N Terminal side
+			if ( $preceding_residue =~ /[RK]/ && $peptide_sequence !~ /^P/ ) {
+				$ntt++;
+			} elsif ( $preceding_residue =~ /-/ ) {
+				$ntt++;
+			}
 
-      # CTerminal side
-    if ( $following_residue eq '-' ) {
-      $ntt++;
-    } elsif ( $peptide_sequence =~ /[RK]$/ && $following_residue ne 'P' ) {
-      $ntt++;
-    }
+				# CTerminal side
+			if ( $following_residue eq '-' ) {
+				$ntt++;
+			} elsif ( $peptide_sequence =~ /[RK]$/ && $following_residue ne 'P' ) {
+				$ntt++;
+			}
 
-    unless ( $ntt == 2 ) {
-      $suitability_score *= 0.2;
-      push @annot, 'ST';
-    }
+			unless ( $ntt == 2 ) {
+				$suitability_score *= 0.2;
+				push @annot, 'ST';
+			}
 
-    ## Penalty if missed cleavages
-#    if (substr($peptide_sequence,0,length($peptide_sequence)) =~ /([KR][^P])/) {
-    if ( $peptide_sequence =~ /([KR][^P])/) {
-      $suitability_score *= 0.67;
-      push @annot, 'MC';
-		}
+			## Penalty if missed cleavages
+	#    if (substr($peptide_sequence,0,length($peptide_sequence)) =~ /([KR][^P])/) {
+			if ( $peptide_sequence =~ /([KR][^P])/) {
+				$suitability_score *= 0.67;
+				push @annot, 'MC';
+			}
+    }## if not trypsin build skip, this step. 
 
     if ( $args{build_weight} ) {
       my $build_id = $resultset_ref->{data_ref}->[$i]->[$cols->{atlas_build}];

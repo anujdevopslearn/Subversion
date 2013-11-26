@@ -520,7 +520,7 @@ sub handle_request {
 
       print $q->textfield( "protein_name", $protein_name);
       if( $atlas_build_names{$atlas_build_id} =~ /Origene/i){
-        print "&nbsp;&nbsp;&nbsp;";
+      print "&nbsp;&nbsp;&nbsp;";
         print "Origene Tube: ";
         print $q->textfield( -name => "ori_tube",
                              -value => $tube,
@@ -580,6 +580,27 @@ sub handle_request {
   }
 
 
+  my $sql = qq~ 
+    SELECT IS_TRYPSIN_BUILD 
+    FROM $TBAT_ATLAS_BUILD 
+    WHERE ATLAS_BUILD_ID = $atlas_build_id
+  ~ ;
+
+  my @row = $sbeams->selectOneColumn($sql);
+  my $is_trypsin_build = 'Y';
+  if(@row){
+    if ($row[0] eq 'N'){
+      $is_trypsin_build = 'N';
+    }
+  }
+  if($is_trypsin_build eq 'N'){
+    print qq~
+          <div  style="border:5px double; color:white;  background-color: CC0000; width: 600px;"  >
+          WARNING: This build contains many samples that are not digested with trypsin 
+          and therefore the usual trypsin-centric display elements are turned off.
+          </div>
+    ~;
+  }
 
   #### Build ATLAS_BUILD constraint
   my $atlas_build_clause = $sbeams->parseConstraint2SQL(
@@ -1248,19 +1269,6 @@ sub handle_request {
     $parameters{show_clustal} = $sbeams->getSessionAttribute( key => 'GetProtein_ShowVars' );
   }
 
-  $sql = qq~ 
-    SELECT IS_TRYPSIN_BUILD 
-    FROM $TBAT_ATLAS_BUILD 
-    WHERE ATLAS_BUILD_ID = $atlas_build_id
-  ~ ;
-
-  my @row = $sbeams->selectOneColumn($sql);
-  my $is_trypsin_build = 'Y';
-  if(@row){
-    if ($row[0] eq 'N'){
-      $is_trypsin_build = 'N';
-    }
-  }
   displayAnnotatedSequence( %parameters,  
                             peptides => $peptides,
                          biosequence => $biosequence,
@@ -1430,6 +1438,7 @@ sub handle_request {
       query_parameters_ref=>\%parameters,
       resultset_ref => $resultset_ref,
       column_titles_ref=>\@column_titles,
+      is_trypsin_buld => $is_trypsin_build,
       no_escape => 1
     );
 #    use Data::Dumper;
@@ -1485,11 +1494,13 @@ sub handle_request {
 
       my %sample_list = @sample_list;
 			my @errs;
-			push @errs, 'mc' if $mc;
-			push @errs, 'ntt' if $ntt < 2;
+      if($is_trypsin_build eq 'Y'){
+			  push @errs, 'mc' if $mc;
+			  push @errs, 'ntt' if $ntt < 2;
+      }
 			push @errs, 'mgl' if $mgl;
 			my $annot = '';
-			if ( @errs && $is_trypsin_build eq 'Y') {
+			if ( @errs) {
 				$annot = '[' . join( ',', @errs ) . ']';
 #			} else {
 #        $instance_ids{$row->[14]}++;
