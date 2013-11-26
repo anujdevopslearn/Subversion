@@ -9,7 +9,7 @@ use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::Proteomics::PeptideMassCalculator;
 
 use constant HYDROGEN_MASS => 1.0078;
-use Storable qw( nstore retrieve );
+use Storable qw( nstore retrieve dclone );
 use Bio::Graphics::Panel;
 use Data::Dumper;
 
@@ -83,7 +83,7 @@ sub do_simple_digestion {
 
   my $enz = lc( $args{enzyme} );
 
-  if ( !grep /$enz/, qw( gluc trypsin lysc cnbr aspn ) ) {
+  if ( !grep /$enz/, qw( gluc trypsin lysc cnbr aspn chymotrypsin ) ) {
     $log->debug( "Unknown enzyme $enz" );
     return;
   }
@@ -98,9 +98,12 @@ sub do_simple_digestion {
                 gluc => 'E',
                 lysc => 'K',
                 cnbr => 'M',
+             trypsin => '[RK][^P]',
+        chymotrypsin => '[FWY][^P]',
               );
-
+  
   my @peps = split( /$regex{$enz}/, $args{aa_seq} );
+
 
   my @fullpeps;
   my $cnt = 0;
@@ -127,6 +130,16 @@ sub do_simple_digestion {
   }
   if ( $term eq 'N' && $args{aa_seq} =~ /$regex{$enz}$/ ) {
     push @fullpeps, $regex{$enz} unless ( $args{min_len} && 1 < $args{min_len} ); 
+  }
+
+  if ( $args{positions} ) {
+    my @posns;
+    my $currpos = 0;
+    for my $pep ( @fullpeps ) {
+      $currpos += length( $pep ); 
+      push @posns, $currpos;
+    }
+    return \@posns;
   }
   return \@fullpeps;
   
@@ -1318,7 +1331,8 @@ sub get_html_seq_vars {
   my $prev_aa = '-';
 
   my %values = ( tryp =>  [ ['<PRE><SPAN CLASS=pa_sequence_font>'] ],
-                 inter => [ ['<PRE><SPAN CLASS=pa_sequence_font>'] ],
+                inter => [ ['<PRE><SPAN CLASS=pa_sequence_font>'] ],
+              alt_enz => [ ['<PRE><SPAN CLASS=pa_sequence_font>'] ],
                  nosp =>  [ ['<PRE><SPAN CLASS=pa_sequence_font>'] ] );
 
   for my $aa ( split( "", $seq ) ) {
@@ -1335,11 +1349,12 @@ sub get_html_seq_vars {
 
     my @iposn = @posn;
     my @tposn = @posn;
+    my @nsposn = @posn;
 
     unless ( $cnt % 10 ) {
       push @iposn, $whitespace;
     }
-    push @posn, "\n" unless ( $cnt % 70 );
+    push @nsposn, "\n" unless ( $cnt % 70 );
     push @iposn, "\n" unless ( $cnt % 70 );
 
     if ( $prev_aa =~ /[KR]/ && $aa ne 'P' ) {
@@ -1352,13 +1367,22 @@ sub get_html_seq_vars {
     }
 
     push @{$values{tryp}}, \@tposn;
-    push @{$values{nosp}}, \@posn;
+    push @{$values{nosp}}, \@nsposn;
+    push @{$values{alt_enz}}, \@posn;
     push @{$values{inter}}, \@iposn;
     $prev_aa = $aa;
     $line_len++;
   }
+
+  
+  my $alt_enzyme_info = {};
+  if( $is_trypsin_build eq 'N'){
+    $alt_enzyme_info = $self->get_alt_enzyme( %args );
+  }
+
   push @{$values{tryp}},  ['</SPAN></PRE>'];
   push @{$values{nosp}},  ['</SPAN></PRE>'];
+  push @{$values{alt_enz}},  ['</SPAN></PRE>'];
   push @{$values{inter}}, ['</SPAN></PRE>'];
   my $str = qq~
     <SCRIPT TYPE="text/javascript">
@@ -1375,14 +1399,38 @@ sub get_html_seq_vars {
                nosp => '<DIV ID=nosp style="display:none">',
                inter => '<DIV ID=inter style="display:none">'  );
 
+  my @alt_enz;
+  for my $enz ( sort( keys( %{$alt_enzyme_info} ) ) ) {
+    next if $enz =~ /^trypsin/;
+    $divs{$enz} = "<DIV ID=$enz style='display:none'>",
+    push @alt_enz, $enz; 
+    $values{$enz} = dclone( $values{alt_enz} );
+
+    my $row_posn = 0;
+    my $prev = 0;
+    for my $posn ( @{$alt_enzyme_info->{$enz}} ) {
+      push @{$values{$enz}->[$posn]}, $whitespace; 
+      $row_posn += $posn - $prev;
+#      $log->warn( "enz is $enz, posn is $posn, prev is $prev, and rowposn $row_posn" );
+      if ( $row_posn >= 70 ) {
+#        $log->warn( "Adding newline" );
+        push @{$values{$enz}->[$posn]}, "\n"; 
+        $row_posn = 0;
+      }
+      $prev = $posn;
+    }
+  }
+
   my %div_txt;
-  for my $seq_type ( qw( tryp nosp inter ) ) {
+  for my $seq_type ( qw( tryp nosp inter ), @alt_enz ) {
+    next if $seq_type =~ /trypsin/;
     $div_txt{$seq_type} = $divs{$seq_type};
     for my $a ( @{$values{$seq_type}} ) {
       $div_txt{$seq_type} .= join( "", @{$a} );
     }
     $div_txt{$seq_type} .= '</DIV>';
   }
+
   my $display_div;
   my $selected = '';
   if($is_trypsin_build eq 'Y'){
@@ -1403,16 +1451,36 @@ sub get_html_seq_vars {
       <OPTION VALUE=tryp>  Tryptic
       <OPTION VALUE=inter $selected> Interval
       <OPTION VALUE=nosp>  No Space
+  ~;
+
+  my %lc2name = ( aspn => 'AspN', 
+                  gluc => 'GluC',
+                  lysc => 'LysC',
+               trypsin => 'Trypsin',
+          chymotrypsin => 'Chymotrypsin' );
+
+  for my $enz ( @alt_enz ) {
+    next if $enz =~ /trypsin/;
+    $str .= "    <OPTION VALUE=$enz> $lc2name{$enz} \n";
+  }
+
+  $str .= qq~
     </SELECT>
     </FORM>
-  ~;
+   ~;
 
 
   $str .= $display_div;
   $str .= $div_txt{tryp};
   $str .= $div_txt{inter};
   $str .= $div_txt{nosp};
+  for my $enz ( @alt_enz ) {
+    next if $enz =~ /trypsin/;
+    $str .= $div_txt{$enz};
+  }
   $return{seq_display} = $str;
+
+#  die Dumper( $str );
 
   my $swiss = {};
   if ( $args{accession} ) {
@@ -1490,6 +1558,21 @@ sub get_html_seq_vars {
 																			      			         %args );
 
   $return{clustal_display} = $clustal_display;
+  return \%return;
+}
+
+sub get_alt_enzyme {
+  my $self = shift;
+  my %args = @_;
+  my %return;
+  return \%return unless $args{alt_enz};
+  return \%return unless $args{seq};
+  for my $enz( sort( @{$args{alt_enz}} ) ) {
+    my $posn = $self->do_simple_digestion( aa_seq => $args{seq},
+                                           enzyme => $enz,
+                                        positions => 1 );
+    $return{$enz} = $posn;
+  }
   return \%return;
 }
 
