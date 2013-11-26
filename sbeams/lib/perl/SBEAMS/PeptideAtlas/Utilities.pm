@@ -88,6 +88,12 @@ sub do_simple_digestion {
     return;
   }
 
+  if ( $enz =~ /chymotrypsin/ ) {
+    return $self->do_chymotryptic_digestion( %args );
+  } elsif (  $enz =~ /trypsin/ ) {
+    return $self->do_tryptic_digestion( %args );
+  }
+
   # trypsin, GluC, LysC, and CNBr clip Cterminally
   my $term = 'C';
 
@@ -98,8 +104,6 @@ sub do_simple_digestion {
                 gluc => 'E',
                 lysc => 'K',
                 cnbr => 'M',
-             trypsin => '[RK][^P]',
-        chymotrypsin => '[FWY][^P]',
               );
   
   my @peps = split( /$regex{$enz}/, $args{aa_seq} );
@@ -324,6 +328,17 @@ sub do_tryptic_digestion {
       push @peptides, $aa[$i] if $args{min_len} < 2;
     }
   }
+
+  if ( $args{positions} ) {
+    my @posns;
+    my $currpos = 0;
+    for my $pep ( @peptides ) {
+      $currpos += length( $pep ); 
+      push @posns, $currpos;
+    }
+    return \@posns;
+  }
+
   return \@peptides;
 }
 
@@ -404,6 +419,15 @@ sub do_chymotryptic_digestion {
       $peptide .= $curr; 
 #      die "What the, i:$i, prev:$prev, curr:$curr, next:$next, aa:$#aa, pep:$peptide, len:$length\n";
     }
+  }
+  if ( $args{positions} ) {
+    my @posns;
+    my $currpos = 0;
+    for my $pep ( @peptides ) {
+      $currpos += length( $pep ); 
+      push @posns, $currpos;
+    }
+    return \@posns;
   }
   return \@peptides;
 }
@@ -1422,8 +1446,8 @@ sub get_html_seq_vars {
   }
 
   my %div_txt;
-  for my $seq_type ( qw( tryp nosp inter ), @alt_enz ) {
-    next if $seq_type =~ /trypsin/;
+  for my $seq_type ( qw( nosp inter tryp ), @alt_enz ) {
+    next if $seq_type =~ /^trypsin/;
     $div_txt{$seq_type} = $divs{$seq_type};
     for my $a ( @{$values{$seq_type}} ) {
       $div_txt{$seq_type} .= join( "", @{$a} );
@@ -1448,9 +1472,9 @@ sub get_html_seq_vars {
     <FORM>
     <B>Sequence Display Mode:</B> 
     <SELECT onChange=setSeqView() NAME=seqView ID="seqView">
-      <OPTION VALUE=tryp>  Tryptic
       <OPTION VALUE=inter $selected> Interval
       <OPTION VALUE=nosp>  No Space
+      <OPTION VALUE=tryp>  Trypsin
   ~;
 
   my %lc2name = ( aspn => 'AspN', 
@@ -1460,7 +1484,7 @@ sub get_html_seq_vars {
           chymotrypsin => 'Chymotrypsin' );
 
   for my $enz ( @alt_enz ) {
-    next if $enz =~ /trypsin/;
+    next if $enz =~ /^trypsin/;
     $str .= "    <OPTION VALUE=$enz> $lc2name{$enz} \n";
   }
 
@@ -1475,7 +1499,7 @@ sub get_html_seq_vars {
   $str .= $div_txt{inter};
   $str .= $div_txt{nosp};
   for my $enz ( @alt_enz ) {
-    next if $enz =~ /trypsin/;
+    next if $enz =~ /^trypsin/;
     $str .= $div_txt{$enz};
   }
   $return{seq_display} = $str;
