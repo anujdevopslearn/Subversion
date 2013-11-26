@@ -135,7 +135,9 @@ sub setVERBOSE {
 sub getBestPeptides {
   my $METHOD = 'getBestPeptides';
   my $self = shift || die ("self not passed");
-  my %args = @_;
+  
+  # Set default build type to tryptic
+  my %args = ( is_trypsin_build => 'Y', @_ );
 
   # Validate parameters
   my $resultset_ref = $args{resultset_ref}
@@ -225,18 +227,18 @@ sub getBestPeptides {
 				$ntt++;
 			}
 
+			## Penalty for ntt < 2 
 			unless ( $ntt == 2 ) {
 				$suitability_score *= 0.2;
 				push @annot, 'ST';
 			}
 
-			## Penalty if missed cleavages
-	#    if (substr($peptide_sequence,0,length($peptide_sequence)) =~ /([KR][^P])/) {
+			## Penalty for missed cleavage
 			if ( $peptide_sequence =~ /([KR][^P])/) {
 				$suitability_score *= 0.67;
 				push @annot, 'MC';
 			}
-    }## if not trypsin build skip, this step. 
+    } ## if not trypsin build skip, this step. 
 
     if ( $args{build_weight} ) {
       my $build_id = $resultset_ref->{data_ref}->[$i]->[$cols->{atlas_build}];
