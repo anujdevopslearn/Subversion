@@ -132,7 +132,7 @@ foreach my $row (@rows){
 		my $prevKey = '';
 		while (my $line = <INFILE>) {
 			$line =~ s/[\r\n]//g;
-			if ($line =~ /^\s*(\S+):\s*(.*)$/) {
+			if ($line =~ /^\s*(\S.*?):\s*(.*)$/) {
 				$key = $1;
 				$value = $2;
 				$data{$key} = $value;
