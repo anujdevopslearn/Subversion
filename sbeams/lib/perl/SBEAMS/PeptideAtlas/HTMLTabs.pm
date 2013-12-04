@@ -409,7 +409,7 @@ if ($activate_PASSEL) {
 
 
     #### SWATH tabs
-    if ( 0 || !$sbeams->isGuestUser() ) {
+    if ( 0 && !$sbeams->isGuestUser() ) {
     $tabmenu->addTab( label => 'SWATH/DIA',
          helptext => 'Resource for data independent analysis',
         );
