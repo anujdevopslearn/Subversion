@@ -902,28 +902,34 @@ sub write_PX_XML {
     "name"=>"role type", 
     "value"=>"Lab head",
   );
-  $cv_acc = 1000586;
-  $writer->emptyTag("cvParam",
-    "cvRef"=>"$cv_ref",
-    "accession"=>"${cv_ref}:$cv_acc",
-    "name"=>"contact name",
-    "value"=>"$px_info_href->{lab_head_full_name}",
-  );
-  $cv_acc = 1000590;
-  $writer->emptyTag("cvParam",
-    "cvRef"=>"$cv_ref",
-    "accession"=>"${cv_ref}:$cv_acc",
-    #"name"=>"contact affiliation", not found
-    "name"=>"contact organization",
-    "value"=>"$px_info_href->{lab_head_organization}",
-  );
-  $cv_acc = 1000589;
-  $writer->emptyTag("cvParam",
-    "cvRef"=>"$cv_ref",
-    "accession"=>"${cv_ref}:$cv_acc",
-    "name"=>"contact email",
-    "value"=>"$px_info_href->{lab_head_email}",
-  );
+  if (defined $px_info_href->{lab_head_full_name}) {
+    $cv_acc = 1000586;
+    $writer->emptyTag("cvParam",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
+      "name"=>"contact name",
+      "value"=>"$px_info_href->{lab_head_full_name}",
+    );
+  }
+  if (defined $px_info_href->{lab_head_organization}) {
+    $cv_acc = 1000590;
+    $writer->emptyTag("cvParam",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
+      #"name"=>"contact affiliation", not found
+      "name"=>"contact organization",
+      "value"=>"$px_info_href->{lab_head_organization}",
+    );
+  }
+  if (defined $px_info_href->{lab_head_email}) {
+    $cv_acc = 1000589;
+    $writer->emptyTag("cvParam",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
+      "name"=>"contact email",
+      "value"=>"$px_info_href->{lab_head_email}",
+    );
+  }
 #--------------------------------------------------
 #   $cv_acc = 1000588;
 #   $writer->emptyTag("cvParam",
@@ -958,13 +964,15 @@ sub write_PX_XML {
     "name"=>"contact name",
     "value"=>"$px_info_href->{subm_name}",
   );
-  $cv_acc = 1000590;
-  $writer->emptyTag("cvParam",
-    "cvRef"=>"$cv_ref",
-    "accession"=>"${cv_ref}:$cv_acc",
-    "name"=>"contact organization",
+  if (defined $px_info_href->{submitter_organization}) {
+    $cv_acc = 1000590;
+    $writer->emptyTag("cvParam",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
+      "name"=>"contact organization",
       "value"=>"$px_info_href->{submitter_organization}",
     );
+  }
   $cv_acc = 1000589;
   $writer->emptyTag("cvParam",
     "cvRef"=>"$cv_ref",
