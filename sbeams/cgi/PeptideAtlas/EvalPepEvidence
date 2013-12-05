@@ -1,0 +1,458 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : EvalPepEvidence
+# Author      : Terry Farrah <tfarrah@systemsbiology.org>
+# $Id: main.cgi 6972 2012-02-28 06:50:02Z dcampbel $
+#
+# Description : Interface for manual evaluation of peptide evidence.
+#
+# SBEAMS is Copyright (C) 2000-2013 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Get the script set up with everything it will need
+###############################################################################
+use strict;
+use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
+             $current_contact_id $current_username);
+use lib qw (../../lib/perl);
+use CGI::Carp qw(fatalsToBrowser croak);
+use FindBin;
+use lib "$FindBin::Bin/../../lib/perl";
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::DataTable;
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+
+
+###############################################################################
+# Global Variables
+###############################################################################
+$PROG_NAME = 'EvalPepEvidence';
+main();
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authentication and stop immediately if authentication
+# fails else continue.
+###############################################################################
+sub main
+{
+    #### Do the SBEAMS authentication and exit if a username is not returned
+    exit unless ($current_username = $sbeams->Authenticate(
+        permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+        'PeptideAtlas_readonly', 'PeptideAtlas_exec'],
+        #connect_read_only=>1,
+        allow_anonymous_access=>1,
+    ));
+
+
+    #### Read in the default input parameters
+    my %parameters;
+    my $n_params_found = $sbeams->parse_input_parameters(
+        q=>$q,
+        parameters_ref=>\%parameters
+        );
+
+    if ( $parameters{reset_id} && $parameters{reset_id} eq 'true' ) {
+      $sbeamsMOD->clearBuildSettings();
+    }
+
+    ## get project_id to send to HTMLPrinter display
+    my $project_id = $sbeamsMOD->getProjectID(
+        atlas_build_name => $parameters{atlas_build_name},
+        atlas_build_id => $parameters{atlas_build_id}
+        );
+
+
+    #### Process generic "state" parameters before we start
+    $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+#    $sbeams->printCGIParams($q);
+
+
+    #### Decide what action to take based on information so far
+    if ($parameters{action} eq "???") {
+
+        # Some action
+ 
+    } else {
+
+        $sbeamsMOD->display_page_header(project_id => $project_id);
+
+        handle_request(ref_parameters=>\%parameters);
+
+        $sbeamsMOD->display_page_footer();
+
+    }
+
+
+
+
+} # end main
+
+
+###############################################################################
+# Show the main welcome page
+###############################################################################
+sub handle_request {
+
+    my %args = @_;
+
+    #### Process the arguments list
+    my $ref_parameters = $args{'ref_parameters'}
+        || die "ref_parameters not passed";
+
+    my %parameters = %{$ref_parameters};
+
+
+  #### Get the current atlas_build_id based on parameters or session
+  my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+    parameters_ref => \%parameters,
+  );
+  if (defined($atlas_build_id) && $atlas_build_id < 0) {
+    #### Don't return. Let the user pick from a valid one.
+    #return;
+  }
+
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+    parameters_ref => \%parameters,
+    program_name => $PROG_NAME,
+  );
+  if ($sbeams->output_mode() eq 'html') {
+    print "<BR>\n";
+    print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+    print "<BR>\n";
+  }
+
+
+    #### Read in the standard form values
+    my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+    my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+
+    #### Set some specific settings for this program
+    my $PROGRAM_FILE_NAME = $PROG_NAME;
+    my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+    my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
+
+
+    #### Get a list of accessible project_ids
+    my @accessible_project_ids = $sbeams->getAccessibleProjects();
+    my $accessible_project_ids = join( ",", @accessible_project_ids ) || '0';
+
+    my $ATLAS_BUILD_ID = 368;
+    my $biosequence_id = $parameters{'biosequence_id'};
+
+    #### Get a list of putative peptides mapping to a putative protein
+    my $sql = qq~
+      select
+      bs.biosequence_name,
+      p.peptide_sequence,
+      ppep.spectrum_annotation_level_id,
+      ppep.added_to_nextprot,
+      ppep.added_to_nextprot,
+      count(distinct si.spectrum_identification_id) as n_obs,
+      count(distinct mpis.sample_id),
+      count(distinct pia.peptide_instance_annotation_id),
+      avg(sal.level_probability)
+
+      from $TBAT_PUTATIVE_PROTEIN pprot
+      join $TBAT_BIOSEQUENCE bs
+      on bs.biosequence_id = pprot.biosequence_id
+      join $TBAT_PUTATIVE_PROTEIN_PEPTIDE ppp
+      on ppp.putative_protein_id = pprot.putative_protein_id
+      join $TBAT_PEPTIDE p
+      on p.peptide_id = ppp.peptide_id
+      join $TBAT_PUTATIVE_PEPTIDE ppep
+      on ppep.peptide_id = p.peptide_id
+      join $TBAT_PEPTIDE_INSTANCE pi
+      on pi.peptide_id = p.peptide_id
+	and pi.atlas_build_id = $ATLAS_BUILD_ID
+      left join $TBAT_PEPTIDE_INSTANCE_ANNOTATION pia
+      on pia.peptide_instance_id = pi.peptide_instance_id
+      and pia.record_status = 'N'
+      left join $TBAT_SPECTRUM_ANNOTATION_LEVEL sal
+      on sal.spectrum_annotation_level_id =
+         pia.spectrum_annotation_level_id
+      join $TBAT_MODIFIED_PEPTIDE_INSTANCE mpi
+      on mpi.peptide_instance_id = pi.peptide_instance_id
+      join $TBAT_MODIFIED_PEPTIDE_INSTANCE_SAMPLE mpis
+      on mpis.modified_peptide_instance_id = mpi.modified_peptide_instance_id
+      join $TBAT_SPECTRUM_IDENTIFICATION si
+      on si.modified_peptide_instance_id = mpi.modified_peptide_instance_id
+      where pprot.biosequence_id = '$biosequence_id'
+        group by
+	  bs.biosequence_name,
+	  p.peptide_sequence,
+	  ppep.spectrum_annotation_level_id,
+	  ppep.added_to_nextprot
+	order by
+	  p.peptide_sequence
+  ~;
+
+  my @results = $sbeams->selectSeveralColumns($sql);
+
+  # Extract pepseqs from results and store in array & hash
+  my %unique_peps_hash = ();
+  my @unique_peps_array = ();
+  foreach my $result_aref ( @results ) {
+    my $pepseq = $result_aref->[1];
+    push @unique_peps_array, $pepseq;
+    $unique_peps_hash{$pepseq} = 1;
+  }
+  my $n_unique_peps = scalar @unique_peps_array;
+
+
+  ### TODO : break out subroutines eval_sample_congruence and cluster_peptides.
+  ###  issue: variable scoping. Why can't I just cut/paste the code below
+  ###  into the subroutines and have it work? e.g. $biosequence_id undefined.
+
+  my %n_matching_samples;
+  #eval_sample_congruence();
+
+  my %sample_ids_for_other_peps;
+  my %sample_ids_by_unique_peps;
+
+  # Get all pepseqs that map to this protein
+  my $sql = qq~
+  select p.peptide_sequence
+  from $TBAT_PEPTIDE_MAPPING pm
+  join $TBAT_PEPTIDE_INSTANCE pi
+  on pi.peptide_instance_id = pm.peptide_instance_id
+  join $TBAT_PEPTIDE p
+  on p.peptide_id = pi.peptide_id
+  where pm.matched_biosequence_id = '$biosequence_id'
+    and pi.atlas_build_id = $ATLAS_BUILD_ID
+  ~;
+  my @all_peps = $sbeams->selectOneColumn($sql);
+  my $n_all_peps = scalar @all_peps;
+  my $n_other_peps = $n_all_peps - $n_unique_peps;
+
+  # For each pep that maps to this protein
+  for my $pep (sort @all_peps) {
+
+    # Get its sample_ids
+    my $sql = qq~
+    select mpis.sample_id
+    from  $TBAT_PEPTIDE p
+    join $TBAT_PEPTIDE_INSTANCE pi
+    on pi.peptide_id = p.peptide_id
+      and pi.atlas_build_id = $ATLAS_BUILD_ID
+    join $TBAT_MODIFIED_PEPTIDE_INSTANCE mpi
+    on mpi.peptide_instance_id = pi.peptide_instance_id
+    join $TBAT_MODIFIED_PEPTIDE_INSTANCE_SAMPLE mpis
+    on mpis.modified_peptide_instance_id = mpi.modified_peptide_instance_id
+    where p.peptide_sequence = '$pep'
+    ~;
+    my @sample_ids = $sbeams->selectOneColumn($sql);
+
+    # Store sample_ids according to whether pep is seen
+    # in Swiss-Prot or is a "unique" pep
+    for my $id (@sample_ids) {
+      if ( defined $unique_peps_hash{$pep} ) {
+	$sample_ids_by_unique_peps{$pep}->{$id} = 1;
+      } else {
+	$sample_ids_for_other_peps{$id} = 1;
+      }
+    }
+  }
+
+  # Print sample_ids for unique & other peps:
+  my $n_other_samples = scalar keys %sample_ids_for_other_peps;
+  #print "Sample congruence:<br>\n";
+  print "$n_other_samples sample IDs for $n_other_peps other (mapping to Swiss-Prot) peps:<br>\n";
+#--------------------------------------------------
+#   for my $sample_id (keys %sample_ids_for_other_peps) {
+#     print "$sample_id ";
+#   }
+#   print "<br>\n";
+#-------------------------------------------------- 
+
+  # For each unique pepseq
+  for my $pep (@unique_peps_array) {
+    my $nsamples = 0;
+    my $nmatches = 0;
+    # For each sample
+    for my $sample_id (keys %{$sample_ids_by_unique_peps{$pep}}) {
+      $nsamples++;
+      # Is this sample seen for any of the other pepseqs?
+      if (defined $sample_ids_for_other_peps{$sample_id}) {
+	$nmatches++;
+      }
+    }
+    $n_matching_samples{$pep} = $nmatches;
+    #print "$pep $nmatches/$nsamples<br>\n";
+  }
+  print "<br>\n";
+
+  my %clustering;
+  my @clusters;
+  #cluster_peptides();
+  my %overlap;
+  for (my $i=0; $i < $n_unique_peps; $i++) {
+    my $pep1 = $unique_peps_array[$i];
+    for (my $j=$i+1; $j < $n_unique_peps; $j++) {
+      my $pep2 = $unique_peps_array[$j];
+      if (pep_overlap($pep1, $pep2)) {
+	$overlap{$pep1}->{$pep2} = 1;
+	$overlap{$pep2}->{$pep1} = 1;
+	# printf "Overlap:<br>&nbsp;&nbsp;&nbsp;&nbsp;%d: ".
+	#        "$unique_peps_array[$i]<br>&nbsp;&nbsp;&nbsp;&nbsp;%d: ".
+	#        "$unique_peps_array[$j]<br>\n", $i+1, $j+1;
+      }
+    }
+  }
+  my $n_clusters=0;
+  for my $pep (@unique_peps_array) {
+    my $cluster_number;
+    if (defined $clustering{$pep}) {
+      $cluster_number = $clustering{$pep};
+    } else {
+      $cluster_number = $n_clusters;
+      $clustering{$pep} = $cluster_number;
+      $n_clusters++;
+    }
+    for my $pep2 (keys %{$overlap{$pep}}) {
+      if (defined $clustering{$pep2} ) {
+	my $cluster_number_2 = $clustering{$pep2};
+	# merge clusters
+	if ($cluster_number_2 != $cluster_number) {
+	  for my $pep3 (@unique_peps_array) {
+	    if ((defined $clustering{$pep3}) &&
+                $clustering{$pep3} == $cluster_number_2) {
+		$clustering{$pep3} = $cluster_number;
+	    }
+	  }
+	}
+      } else {
+	$clustering{$pep2} = $cluster_number;
+      }
+    }
+  }
+
+  for my $pep (@unique_peps_array) {
+    $clusters[$clustering{$pep}]->{$pep} = 1;
+  }
+
+  #### If the output_mode is HTML, then display the form
+  if ($sbeams->output_mode() eq 'html') {
+    print "Go to <a href='EvalProtEvidence'>EvalProtEvidence</a> page<br>&nbsp;<br>\n";
+    my $table = SBEAMS::Connection::DataTable->new();
+    my $rows = $table->getRowNum();
+
+    # Can add Comments back once I change their datatype from text to
+    # varchar in the schema! need to add back to SELECT and GROUP BY
+    # as well.
+    $table->addRow( [  'Biosequence', 'PepSeq', 'Cluster', 'Status', 'in NP?', 'Comments', 'N Obs', 'Samples', 'Matching', 'N User Evals', 'Avg User Eval'] );
+    $table->setRowAttr(  COLS => [1..11], ROWS => [1], BGCOLOR => '#bbbbbb', ALIGN=>'CENTER' );
+    $table->setHeaderAttr( BOLD => 1 );
+
+    foreach my $result_aref ( @results ) {
+      my @row;
+      my @trinfo;
+      my $bgcolor = '#dddddd';
+ 
+      $row[0] =<<"      END";
+      <A HREF=GetProtein?atlas_build_id=$ATLAS_BUILD_ID&protein_name=$result_aref->[0]&action=GO&apply_action=QUERY&ann=1>
+      $result_aref->[0]</A>
+      END
+
+      $row[1] =<<"      END";
+      <A HREF=GetPeptide?atlas_build_id=$ATLAS_BUILD_ID&peptide_sequence_constraint=$result_aref->[1]&action=GO&apply_action=QUERY&ann=1>
+      $result_aref->[1]</A>
+      END
+
+      my $pepseq = $result_aref->[1];
+      my $cluster_number = $clustering{$pepseq};
+      my $n_members = scalar keys %{$clusters[$cluster_number]};
+      $row[2] = ($n_members > 1) ? $cluster_number+1 : '';
+      $row[3] = $result_aref->[2];
+      $row[4] = $result_aref->[3];
+      #$row[4] = $sbeams->truncateStringWithMouseover( string => $result_aref->[4], len => 50 );
+      $row[6] = $result_aref->[5];
+      $row[7] = $result_aref->[6];
+      $row[8] = $n_matching_samples{$pepseq};
+      $row[9] = $result_aref->[7];
+      $row[10] = sprintf "%0.2f", $result_aref->[8];
+
+      $table->addRow( \@row );
+      $rows = $table->getRowNum();
+      $table->setRowAttr(  COLS => [1..11], ROWS => [$rows], BGCOLOR => $bgcolor, @trinfo );
+    }
+
+    $table->setColAttr(  COLS => [1..11], ROWS => [1..$rows], NOWRAP => 1 );
+    $table->setColAttr(  COLS => [3], ROWS => [1..$rows], ALIGN => 'RIGHT' );
+    $table->setColAttr(  COLS => [4,5], ROWS => [1..$rows], ALIGN => 'CENTER' );
+    print "$table";
+
+
+    print $q->hidden( "apply_action", '');
+    print $q->endform;
+
+  }
+
+
+} # end showMainPage
+
+
+###########################################################################
+# eval_sample_congruence -- For each peptide, of all the samples it's seen
+#  in, how many are samples in which other peptides for this protein,
+#  mapping to Swiss-Prot, have been seen? Non-zero is good.
+###########################################################################
+
+#sub eval_sample_congruence {
+#}
+
+###########################################################################
+# cluster_peptides -- cluster peptides that share 5 contiguous residues
+###########################################################################
+
+#sub cluster_peptides {
+#}
+
+###########################################################################
+# pep_overlap
+# Simple-minded function to return whether two peptides overlap each other.
+# Take the first 5 residues and last 5 residues of each, and see if those
+# appear anywhere in the other.
+###########################################################################
+sub pep_overlap {
+  my $pep1 = shift;
+  my $pep2 = shift;
+
+  #print "pep_overlap |$pep1| |$pep2|<br>\n";
+
+  my $first_five_residues_1 = substr($pep1, 0, 5);
+  my $last_five_residues_1 = substr($pep1, length($pep1)-5, 5);
+  #print "$pep1 $first_five_residues_1 $last_five_residues_1<br>\n";
+  my $first_five_residues_2 = substr($pep2, 0, 5);
+  my $last_five_residues_2 = substr($pep2, length($pep2)-5, 5);
+  #print "$pep2 $first_five_residues_2 $last_five_residues_2<br>\n";
+
+  return (($pep1 =~ /$first_five_residues_2/ ) ||
+          ($pep1 =~ /$last_five_residues_2/ ) ||
+          ($pep2 =~ /$first_five_residues_1/ ) ||
+          ($pep2 =~ /$last_five_residues_1/ ));
+}
