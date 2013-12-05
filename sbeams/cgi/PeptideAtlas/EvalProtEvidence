@@ -1,0 +1,307 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : EvalProtEvidence
+# Author      : Terry Farrah <tfarrah@systemsbiology.org>
+# $Id: main.cgi 6972 2012-02-28 06:50:02Z dcampbel $
+#
+# Description : Interface for manual evaluation of protein evidence.
+#
+# SBEAMS is Copyright (C) 2000-2013 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Get the script set up with everything it will need
+###############################################################################
+use strict;
+use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
+             $current_contact_id $current_username);
+use lib qw (../../lib/perl);
+use CGI::Carp qw(fatalsToBrowser croak);
+use FindBin;
+use lib "$FindBin::Bin/../../lib/perl";
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::DataTable;
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+
+
+###############################################################################
+# Global Variables
+###############################################################################
+$PROG_NAME = 'EvalProtEvidence';
+main();
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authentication and stop immediately if authentication
+# fails else continue.
+###############################################################################
+sub main
+{
+    #### Do the SBEAMS authentication and exit if a username is not returned
+    exit unless ($current_username = $sbeams->Authenticate(
+        permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+        'PeptideAtlas_readonly', 'PeptideAtlas_exec'],
+        #connect_read_only=>1,
+        allow_anonymous_access=>1,
+    ));
+
+
+    #### Read in the default input parameters
+    my %parameters;
+    my $n_params_found = $sbeams->parse_input_parameters(
+        q=>$q,
+        parameters_ref=>\%parameters
+        );
+
+    if ( $parameters{reset_id} && $parameters{reset_id} eq 'true' ) {
+      $sbeamsMOD->clearBuildSettings();
+    }
+
+    ## get project_id to send to HTMLPrinter display
+    my $project_id = $sbeamsMOD->getProjectID(
+        atlas_build_name => $parameters{atlas_build_name},
+        atlas_build_id => $parameters{atlas_build_id}
+        );
+
+
+    #### Process generic "state" parameters before we start
+    $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+#    $sbeams->printCGIParams($q);
+
+
+    #### Decide what action to take based on information so far
+    if ($parameters{action} eq "???") {
+
+        # Some action
+ 
+    } else {
+
+        $sbeamsMOD->display_page_header(project_id => $project_id);
+
+        handle_request(ref_parameters=>\%parameters);
+
+        $sbeamsMOD->display_page_footer();
+
+    }
+
+
+
+
+} # end main
+
+
+###############################################################################
+# Show the main welcome page
+###############################################################################
+sub handle_request {
+
+    my %args = @_;
+
+    #### Process the arguments list
+    my $ref_parameters = $args{'ref_parameters'}
+        || die "ref_parameters not passed";
+
+    my %parameters = %{$ref_parameters};
+
+
+  #### Get the current atlas_build_id based on parameters or session
+  my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+    parameters_ref => \%parameters,
+  );
+  if (defined($atlas_build_id) && $atlas_build_id < 0) {
+    #### Don't return. Let the user pick from a valid one.
+    #return;
+  }
+
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+    parameters_ref => \%parameters,
+    program_name => $PROG_NAME,
+  );
+  if ($sbeams->output_mode() eq 'html') {
+    print "<BR>\n";
+    print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+    print "<BR>\n";
+  }
+
+
+    #### Read in the standard form values
+    my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+    my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+
+    #### Set some specific settings for this program
+    my $PROGRAM_FILE_NAME = $PROG_NAME;
+    my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+    my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
+
+
+    #### Get a list of accessible project_ids
+    my @accessible_project_ids = $sbeams->getAccessibleProjects();
+    my $accessible_project_ids = join( ",", @accessible_project_ids ) || '0';
+
+    my $ATLAS_BUILD_ID = 368;
+
+    #### Get a list of putative proteins
+    my $sql = qq~
+      select
+      bs.biosequence_name,
+      pprot.spectrum_annotation_level_id,
+      pprot.added_to_nextprot,
+      pprot.added_to_nextprot,
+      pid.protein_group_number,
+      bs.biosequence_id,
+      count(ppp.putative_protein_id) as n_novel_peps,
+      count(distinct pia.protein_identification_annotation_id),
+      avg(sal.level_probability)
+
+      from $TBAT_PUTATIVE_PROTEIN pprot
+      join $TBAT_BIOSEQUENCE bs
+      on bs.biosequence_id = pprot.biosequence_id
+      join $TBAT_PROTEIN_IDENTIFICATION pid
+      on pid.biosequence_id = bs.biosequence_id
+	and pid.atlas_build_id = $ATLAS_BUILD_ID
+      join $TBAT_PUTATIVE_PROTEIN_PEPTIDE ppp
+      on ppp.putative_protein_id = pprot.putative_protein_id
+      left join $TBAT_PROTEIN_IDENTIFICATION_ANNOTATION pia
+      on pia.protein_identification_id = pid.protein_identification_id
+      left join $TBAT_SPECTRUM_ANNOTATION_LEVEL sal
+      on sal.spectrum_annotation_level_id =
+         pia.spectrum_annotation_level_id
+
+        group by
+	  bs.biosequence_name,
+	  pprot.spectrum_annotation_level_id,
+	  pprot.added_to_nextprot,
+	  pid.protein_group_number,
+	  bs.biosequence_id
+	order by
+	  bs.biosequence_name
+  ~;
+  my @results = $sbeams->selectSeveralColumns($sql);
+
+  ### Get biosequence descriptions (they are of type text, so can't
+  ### be retrieved in the above query due to the GROUP BY)
+  $sql = qq~
+    select
+    bs.biosequence_name, bs.biosequence_desc
+      from $TBAT_PUTATIVE_PROTEIN pprot
+      join $TBAT_BIOSEQUENCE bs
+      on bs.biosequence_id = pprot.biosequence_id
+      join $TBAT_PROTEIN_IDENTIFICATION pid
+      on pid.biosequence_id = bs.biosequence_id
+	and pid.atlas_build_id = $ATLAS_BUILD_ID
+    ~;
+  my %descr;
+  my @results_descr = $sbeams->selectSeveralColumns($sql);
+  foreach my $result_aref ( @results_descr ) {
+    $descr{$result_aref->[0]} = $result_aref->[1];
+  }
+
+  #### Get a list of putative peptides mapping to a each protein
+  my $sql = qq~
+    select
+    bs.biosequence_id,
+    p.peptide_sequence
+    from $TBAT_PUTATIVE_PROTEIN pprot
+    join $TBAT_BIOSEQUENCE bs
+    on bs.biosequence_id = pprot.biosequence_id
+    join $TBAT_PUTATIVE_PROTEIN_PEPTIDE ppp
+    on ppp.putative_protein_id = pprot.putative_protein_id
+    join $TBAT_PEPTIDE p
+    on p.peptide_id = ppp.peptide_id
+  ~;
+  my %peps;
+  my @results_pep = $sbeams->selectSeveralColumns($sql);
+  foreach my $result_aref ( @results_pep ) {
+    #print "Hashing $result_aref->[0] to $result_aref->[1]<br>\n";
+    $peps{$result_aref->[0]}->{$result_aref->[1]} = 1;
+  }
+
+  #### If the output_mode is HTML, then display the form
+  if ($sbeams->output_mode() eq 'html') {
+    my $table = SBEAMS::Connection::DataTable->new();
+    my $rows = $table->getRowNum();
+
+    # Can add Comments back once I change their datatype from text to
+    # varchar in the schema! need to add back to SELECT and GROUP BY
+    # as well.
+    $table->addRow( [  'Biosequence', 'Status', 'in NP?', 'Comments', 'Novel Peptides', 'Protein Group', 'Algn w/SP in grp', 'N Evals', 'Avg Eval', 'Description' ] );
+    $table->setRowAttr(  COLS => [1..7], ROWS => [1], BGCOLOR => '#bbbbbb', ALIGN=>'CENTER' );
+    $table->setHeaderAttr( BOLD => 1 );
+
+    foreach my $result_aref ( @results ) {
+       my @row;
+       my @trinfo;
+       my $bgcolor = '#dddddd';
+
+       my $bioseq_name = $result_aref->[0];
+       my $bioseq_id = $result_aref->[5];
+ 
+       $row[0] =<<"      END";
+       <A HREF=GetProtein?atlas_build_id=$ATLAS_BUILD_ID&protein_name=$result_aref->[0]&action=GO&apply_action=QUERY&ann=1>
+       $result_aref->[0]</A>
+      END
+
+       $row[1] = $result_aref->[1];
+       $row[2] = $result_aref->[2];
+       #$row[3] = $sbeams->truncateStringWithMouseover( string => $result_aref->[3], len => 50 );
+       $row[4] =<<"      END";
+       <A HREF=EvalPepEvidence?biosequence_id=$bioseq_id>
+       $result_aref->[6]</A>
+      END
+       $row[5] =<<"      END";
+       <A HREF=GetProteins?atlas_build_id=$ATLAS_BUILD_ID&protein_group_number_constraint=$result_aref->[4]&apply_action=QUERY>
+       $result_aref->[4]</A>
+      END
+       my $pepseq_csv = join(',', keys %{$peps{$bioseq_id}});
+       $row[6] =<<"      END";
+       <A HREF=compareProteins?bioseq_id=$bioseq_id&swiss_prot_only=1&protein_group_number=$result_aref->[4]&pepseq=${pepseq_csv}&eval_prot_evidence=1><IMG BORDER="0" SRC="/sbeams/images/compareProteins.png"></A>
+      END
+
+
+#       $row[4] = ( !$atlas_build->[3] ) ? 'N' : ( $row[4] ) ?
+# 		"<SPAN CLASS=popup_help TITLE='$atlas_build->[4]'>Y</SPAN>" : 'Y';
+      $row[7] = $result_aref->[7];
+      $row[8] = sprintf "%0.2f", $result_aref->[8];
+
+      my $biosequence_description = $descr{$result_aref->[0]};
+       $row[9] = $sbeams->truncateStringWithMouseover( string => $biosequence_description, len => 50 );
+
+      $table->addRow( \@row );
+      $rows = $table->getRowNum();
+      $table->setRowAttr(  COLS => [1..8], ROWS => [$rows], BGCOLOR => $bgcolor, @trinfo );
+    }
+
+    $table->setColAttr(  COLS => [1..8], ROWS => [1..$rows], NOWRAP => 1 );
+    $table->setColAttr(  COLS => [3], ROWS => [1..$rows], ALIGN => 'RIGHT' );
+    $table->setColAttr(  COLS => [4,5], ROWS => [1..$rows], ALIGN => 'CENTER' );
+    print "$table";
+    print $q->hidden( "apply_action", '');
+    print $q->endform;
+
+  }
+
+
+} # end showMainPage
