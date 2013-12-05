@@ -517,7 +517,15 @@ sub handle_request {
     constraint_value=>$parameters{n_distinct_peptides_constraint} );
   return if ($n_distinct_peptides_clause eq '-1');
 
-  #### Build PROTEIN_GROUP constraint
+  #### Build PROTEIN_GROUP_NUMBER constraint
+  my $protein_group_number_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PID.protein_group_number",
+    constraint_type=>"plain_text",
+    constraint_name=>"Protein Group Number",
+    constraint_value=>$parameters{protein_group_number_constraint} );
+  return if ($protein_group_number_clause eq '-1');
+
+  #### Build PROTEIN_GROUP_REPRESENTATIVE constraint
   my $protein_group_representative_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"BS_REP.biosequence_name",
     constraint_type=>"plain_text",
@@ -1035,6 +1043,7 @@ sub handle_request {
          $estimated_ng_per_ml_clause
          $probability_clause
          $protein_group_representative_clause
+         $protein_group_number_clause
          $presence_level_clause
          $special_clauses[$i]
        )
