@@ -860,12 +860,17 @@ sub getPASSMetaData {
 
   my $sql = qq~
     SELECT datasetIdentifier,submitter_id,datasetType,datasetPassword,datasetTag,datasetTitle,publicReleaseDate,finalizedDate
+    ,submitter_organization,lab_head_full_name,lab_head_email,
+    lab_head_organization,lab_head_country
       FROM $TBAT_PASS_DATASET
      WHERE datasetIdentifier = '$identifier'
   ~;
   my @rows = $sbeams->selectSeveralColumns($sql);
   if (@rows) {
-    my ($datasetIdentifier,$submitter_id,$datasetType,$datasetPassword,$datasetTag,$datasetTitle,$publicReleaseDate,$finalizedDate) = 
+    my ($datasetIdentifier,$submitter_id,$datasetType,$datasetPassword,$datasetTag,$datasetTitle,$publicReleaseDate,$finalizedDate
+    ,$submitter_organization,$lab_head_full_name,$lab_head_email,
+    $lab_head_organization,$lab_head_country
+    ,) = 
       @{$rows[0]};
 
     my $sql2 = qq~
@@ -898,6 +903,11 @@ sub getPASSMetaData {
     $response->{datasetTitle} = $datasetTitle;
     $response->{publicReleaseDate} = $publicReleaseDate;
     $response->{finalizedDate} = $finalizedDate;
+    $response->{submitter_organization} = $submitter_organization;
+    $response->{lab_head_full_name} = $lab_head_full_name;
+    $response->{lab_head_email} = $lab_head_email;
+    $response->{lab_head_organization} = $lab_head_organization;
+    $response->{lab_head_country} = $lab_head_country;
 
   } else {
     if ($identifier =~ /^PASS\d{5}$/) {
@@ -925,7 +935,7 @@ sub getPASSMetaData {
   my $prevKey = '';
   while (my $line = <INFILE>) {
     $line =~ s/[\r\n]//g;
-    if ($line =~ /^\s*(\S+):\s*(.*)$/) {
+    if ($line =~ /^\s*(\S.*):\s*(.*)$/) {
       $key = $1;
       $value = $2;
       $response->{$key} = $value;
@@ -962,6 +972,11 @@ sub DisplayPASSMetaData {
     print "<B><font color=red>datasetIdentifier:</font></B> $result->{datasetIdentifier}<BR>\n";
     print "<B><font color=red>datasetType:</font></B> $result->{datasetType}<BR>\n";
     print "<B><font color=red>submitter:</font></B> $result->{submitterStr}<BR>\n";
+    print "<B><font color=red>submitter_organization</font></B> $result->{submitter_organization}<BR>\n";
+    print "<B><font color=red>lab_head_full_name:</font></B> $result->{lab_head_full_name}<BR>\n";
+    print "<B><font color=red>lab_head_email:</font></B> $result->{lab_head_email}<BR>\n";
+    print "<B><font color=red>lab_head_organization:</font></B> $result->{lab_head_organization}<BR>\n";
+    print "<B><font color=red>lab_head_country:</font></B> $result->{lab_head_country}<BR>\n";
     print "<B><font color=red>datasetTag:</font></B> $result->{datasetTag}<BR>\n";
     print "<B><font color=red>datasetTitle:</font></B> $result->{datasetTitle}<BR>\n";
     print "<B><font color=red>publicReleaseDate:</font></B> $result->{publicReleaseDate}<BR>\n";
@@ -1057,8 +1072,11 @@ sub displayEditMetaDataForm {
 
      #### If the parameters are not filled in already, fill them in from the previous data
      my @attributes = qw( datasetType datasetTag datasetTitle publicReleaseDate summary contributors 
+                          submitter_organization lab_head_full_name lab_head_email
+			  lab_head_organization lab_head_country
 			  publication growth treatment extraction separation digestion 
 			  acquisition informatics instruments species massModifications
+			  submitter_organization lab_head_full_name lab_head_email lab_head_organization lab_head_country
 			  );
      foreach my $attribute ( @attributes ) {
        if (defined($parameters{$attribute})) {
@@ -1067,7 +1085,12 @@ sub displayEditMetaDataForm {
 	 if (defined($result->{$attribute})) {
 	   $parameters{$attribute} = $result->{$attribute};
 	 } else {
-	   $parameters{$attribute} = '?';
+	   # 12/05/13 TMF: after adding new fields (e.g. lab head full name)
+	   # the code below was activated and ended up storing a question
+	   # mark for any new field for which user did not provide a value.
+	   # Empty string seems better; hope it doesn't break anything.
+	   #$parameters{$attribute} = '?';
+	   $parameters{$attribute} = '';
 	 }
        }
      }
@@ -1118,6 +1141,26 @@ sub displayEditMetaDataForm {
 
      print "<B><font color=\"red\">Contributors</B></font> (Enter the names of people who are contributing this dataset, including the submitter, if applicable)<BR>\n";
      print $q->textarea( "contributors", $parameters{'contributors'}, 5, 50);
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Submitter organization</B></font> (Enter submitter's organization)<BR>\n";
+     print qq~<input type="text" name="submitter_organization" value="$parameters{submitter_organization}" size=100 maxlength=255/>~;
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Lab head</B></font> (Enter full name of lab head)<BR>\n";
+     print qq~<input type="text" name="lab_head_full_name" value="$parameters{lab_head_full_name}" size=100 maxlength=255/>~;
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Lab head email</B></font> (Enter email of lab head)<BR>\n";
+     print qq~<input type="text" name="lab_head_email" value="$parameters{lab_head_email}" size=100 maxlength=255/>~;
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Lab head organization</B></font> (Enter organization of lab head)<BR>\n";
+     print qq~<input type="text" name="lab_head_organization" value="$parameters{lab_head_organization}" size=100 maxlength=255/>~;
+     print "<BR>\n";
+
+     print "<B><font color=\"red\">Lab head country</B></font> (Enter country of lab head's organization)<BR>\n";
+     print qq~<input type="text" name="lab_head_country" value="$parameters{lab_head_country}" size=100 maxlength=255/>~;
      print "<BR>\n";
 
      print "<B><font color=\"red\">Publication</B></font> (Enter the associated publication with this dataset) (Please enter a PubMed ID if available.)<BR>\n";
@@ -1683,6 +1726,12 @@ sub updateDataset {
     datasetType => $formParameters->{datasetType},
     datasetTag => $formParameters->{datasetTag},
     datasetTitle => $formParameters->{datasetTitle},
+    publicReleaseDate => $formParameters->{publicReleaseDate},
+    submitter_organization => $formParameters->{submitter_organization},
+    lab_head_full_name => $formParameters->{lab_head_full_name},
+    lab_head_email => $formParameters->{lab_head_email},
+    lab_head_organization => $formParameters->{lab_head_organization},
+    lab_head_country => $formParameters->{lab_head_country},
   );
 
   print "<BR>INFO: Updating database record for primary key $PK...<BR>\n" if ($verbose);
@@ -1723,6 +1772,11 @@ sub updateDataset {
   $metadata .= "title:\t$formParameters->{datasetTitle}\r\n";
   $metadata .= "summary:\t$formParameters->{summary}\r\n";
   $metadata .= "contributors:\t$formParameters->{contributors}\r\n";
+  $metadata .= "submitter organization:\t$formParameters->{submitter_organization}\r\n";
+  $metadata .= "lab head:\t$formParameters->{lab_head_full_name}\r\n";
+  $metadata .= "lab head email:\t$formParameters->{lab_head_email}\r\n";
+  $metadata .= "lab head organization:\t$formParameters->{lab_head_organization}\r\n";
+  $metadata .= "lab head country:\t$formParameters->{lab_head_country}\r\n";
 
   $metadata .= "publication:\t$formParameters->{publication}\r\n";
 
