@@ -5,7 +5,7 @@
 # Author      : Terry Farrah and Zhi Sun (tfarrah@systemsbiology.org)
 # $Id: main.cgi 5994 2009-03-06 08:01:38Z dcampbel $
 #
-# Description : This script displays details about all Atlas builds
+# Description : This script displays details about all default Atlas builds
 #
 # SBEAMS is Copyright (C) 2000-2009 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
