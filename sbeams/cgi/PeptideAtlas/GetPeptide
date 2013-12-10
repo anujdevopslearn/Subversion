@@ -149,94 +149,94 @@ sub main {
 # changes
 ###############################################################################
 sub processDatabaseActions {
-    my $redirect = 0;
-    my %parameters;
+  my $redirect = 0;
+  my %parameters;
 
-    $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
-    $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+  $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
-    my $apply_action  = $q->param('apply_action');
+  my $apply_action  = $q->param('apply_action');
 
-    if ($apply_action eq "UPDATE ANNOTATION") {
-	my %rowdata = (
-		       spectrum_annotation_level_id => $parameters{user_spectrum_annotation},
-		       comment => $parameters{user_spectrum_commment}
-		       );
+  if ($apply_action eq "UPDATE ANNOTATION") {
+    my %rowdata = (
+      spectrum_annotation_level_id => $parameters{user_spectrum_annotation},
+      comment => $parameters{user_spectrum_commment}
+    );
 
-	my $PK = $sbeams->updateOrInsertRow(
-					    update => 1,
-					    # TMF
-					    table_name => $TBAT_PEPTIDE_INSTANCE_ANNOTATION,
-					    rowdata_ref => \%rowdata,
-					    # TMF next 2 lines
-					    PK => 'peptide_instance_annotation_id',
-					    PK_value => $parameters{peptide_instance_annotation_id},
-					    return_PK => 1,
-					    add_audit_parameters => 1
-					    );
+    my $PK = $sbeams->updateOrInsertRow(
+      update => 1,
+      # TMF
+      table_name => $TBAT_PEPTIDE_INSTANCE_ANNOTATION,
+      rowdata_ref => \%rowdata,
+      # TMF next 2 lines
+      PK => 'peptide_instance_annotation_id',
+      PK_value => $parameters{peptide_instance_annotation_id},
+      return_PK => 1,
+      add_audit_parameters => 1
+    );
 
-	if ($PK) { $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been updated." ); }
-	else     { $sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem updating your annotation record." ); }
+    if ($PK) { $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been updated." ); }
+    else     { $sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem updating your annotation record." ); }
 
-	$redirect++;
+    $redirect++;
 
-      } elsif ($apply_action eq "ADD ANNOTATION") {
-	my $PK;
-	my $error_reason= '';
-	if ( ! $parameters{peptide_instance_id} ) {
-	  $error_reason .= "Need peptide_instance_id for ADD ANNOTATION.";
-	} else {
-	  my %rowdata = (
-	    annotator_contact_id => $sbeams->getCurrent_contact_id(),
-	    # TMF
-	    #spectrum_identification_id => $parameters{spectrum_identification_id},
-	    peptide_instance_id => $parameters{peptide_instance_id},
-	    spectrum_annotation_level_id => $parameters{user_spectrum_annotation},
-	    comment => $parameters{user_spectrum_commment}
-	  );
+  } elsif ($apply_action eq "ADD ANNOTATION") {
+    my $PK;
+    my $error_reason= '';
+    if ( ! $parameters{peptide_instance_id} ) {
+      $error_reason .= "Need peptide_instance_id for ADD ANNOTATION.";
+    } else {
+      my %rowdata = (
+	annotator_contact_id => $sbeams->getCurrent_contact_id(),
+	# TMF
+	#spectrum_identification_id => $parameters{spectrum_identification_id},
+	peptide_instance_id => $parameters{peptide_instance_id},
+	spectrum_annotation_level_id => $parameters{user_spectrum_annotation},
+	comment => $parameters{user_spectrum_commment}
+      );
 
-	  $PK = $sbeams->updateOrInsertRow(
-	    insert => 1,
-	    # TMF
-	    table_name => $TBAT_PEPTIDE_INSTANCE_ANNOTATION,
-	    rowdata_ref => \%rowdata,
-	    return_PK => 1,
-	    add_audit_parameters => 1
-	  );
-	}
-
-	if ($PK) { $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been added." ); }
-	else     { $sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem inserting your annotation record. $error_reason" ); }
-
-	$redirect++;
-
-      } elsif ($apply_action eq "DELETE ANNOTATION") {
-	my %rowdata = (
-		       record_status => 'D'
-		       );
-
-	my $PK = $sbeams->updateOrInsertRow(
-					    update => 1,
-					    #TMF
-					    table_name => $TBAT_PEPTIDE_INSTANCE_ANNOTATION,
-					    rowdata_ref => \%rowdata,
-					    PK => 'peptide_instance_annotation_id',
-					    PK_value => $parameters{peptide_instance_annotation_id},
-					    return_PK => 1,
-					    add_audit_parameters => 1
-					    );
-
-	if ($PK) { $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been deleted." ); }
-	else     { $sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem deleting your annotation record." ); }
-
-	$redirect++;
+      $PK = $sbeams->updateOrInsertRow(
+	insert => 1,
+	# TMF
+	table_name => $TBAT_PEPTIDE_INSTANCE_ANNOTATION,
+	rowdata_ref => \%rowdata,
+	return_PK => 1,
+	add_audit_parameters => 1
+      );
     }
 
-    if ($redirect) {
-	$q->delete( 'apply_action' );
-	print $q->redirect( $q->self_url() );
-	exit;
-    }
+    if ($PK) { $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been added." ); }
+    else     { $sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem inserting your annotation record. $error_reason" ); }
+
+    $redirect++;
+
+  } elsif ($apply_action eq "DELETE ANNOTATION") {
+    my %rowdata = (
+      record_status => 'D'
+    );
+
+    my $PK = $sbeams->updateOrInsertRow(
+      update => 1,
+      #TMF
+      table_name => $TBAT_PEPTIDE_INSTANCE_ANNOTATION,
+      rowdata_ref => \%rowdata,
+      PK => 'peptide_instance_annotation_id',
+      PK_value => $parameters{peptide_instance_annotation_id},
+      return_PK => 1,
+      add_audit_parameters => 1
+    );
+
+    if ($PK) { $sbeams->set_page_message( type => 'Info',  msg => "Your annotation record has been deleted." ); }
+    else     { $sbeams->set_page_message( type => 'Error', msg => "ERROR: There was a problem deleting your annotation record." ); }
+
+    $redirect++;
+  }
+
+  if ($redirect) {
+    $q->delete( 'apply_action' );
+    print $q->redirect( $q->self_url() );
+    exit;
+  }
 
 }
 
@@ -809,7 +809,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
   if ($parameters{'ann'}) {
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'User Assessment',
                                           tr_info => $tr,
-                                          value => '<div ID="annotations_summary">-- No annotations here --</div>',
+                                          value => '<div ID="annotations_summary">-- please wait for page load --</div>',
                                          );
 				       }
   $summ .= $sbeamsMOD->encodeSectionItem( key   => 'Times Observed:',
@@ -1409,8 +1409,10 @@ if ($apply_action =~ /QUERY|GO/i ) {
   my $modSQL = qq~
   SELECT modified_peptide_sequence, MPI.peptide_charge,
          SMP.sample_id,I.instrument_name, SI.probability, S.spectrum_name,
+	 AVG(SAL.level_probability),
          SI.spectrum_identification_id, SMP.sample_tag, precursor_intensity, scan_time,
-         collision_energy, SPI.ptm_sequence
+         collision_energy, SPI.ptm_sequence,
+	 COUNT(SAL.level_probability)
     FROM $TBAT_PEPTIDE_INSTANCE PI
    INNER JOIN $TBAT_PEPTIDE P
          ON ( PI.peptide_id = P.peptide_id )
@@ -1432,10 +1434,20 @@ if ($apply_action =~ /QUERY|GO/i ) {
          ON ( S.sample_id = SMP.sample_id )
     LEFT JOIN $TBPR_INSTRUMENT I
          ON ( SMP.instrument_model_id = I.instrument_id )
+    LEFT JOIN $TBAT_SPECTRUM_ANNOTATION SA
+         ON ( SA.spectrum_identification_id = SI.spectrum_identification_id AND
+	      SA.spectrum_id = S.spectrum_id )
+	 AND SA.record_status != 'D'
+    LEFT JOIN $TBAT_SPECTRUM_ANNOTATION_LEVEL  SAL
+         ON ( SAL.spectrum_annotation_level_id = SA.spectrum_annotation_level_id )
    WHERE 1 = 1
      $atlas_build_clause
      $peptide_name_clause
      $peptide_sequence_clause
+  GROUP BY modified_peptide_sequence, MPI.peptide_charge,
+         SMP.sample_id,I.instrument_name, SI.probability, S.spectrum_name,
+         SI.spectrum_identification_id, SMP.sample_tag, precursor_intensity, scan_time,
+         collision_energy, SPI.ptm_sequence
   ORDER BY modified_peptide_sequence, MPI.peptide_charge, S.spectrum_name ASC
   ~;
 
@@ -1446,25 +1458,67 @@ if ($apply_action =~ /QUERY|GO/i ) {
   my $has_header_info = 0;
   my $is_origene = 0;
   $is_origene = 1 if ($atlas_build_name =~ /Origene/i);
+
+
+  # 04/09/13: these $blah_idx variables confused me so I
+  #  added some comments. Should really be rewritten, but I'm
+  #  afraid to re-write and break someone else's stuff. TMF
+
+#--------------------------------------------------
+# 0 modified_peptide_sequence
+# 1 MPI.peptide_charge
+# 2 SMP.sample_id
+# 3 I.instrument_name
+# 4 SI.probability
+# 5 S.spectrum_name,
+# 6 AVG(SAL.level_probability),
+# 7 SI.spectrum_identification_id
+# 8 SMP.sample_tag
+# 9 precursor_intensity
+# 10 scan_time,
+# 11 collision_energy
+# 12 SPI.ptm_sequence,
+# 13 COUNT(SAL.level_probability)
+#-------------------------------------------------- 
+
+
+
+  # First few $blah_idx variables refer both to query results
+  # and column of results table
   $mseq_idx = 0;         # modified peptide sequence
   $chrg_idx = 1;         # charge
   my $smpl_idx = 2;      # sample
   my $inst_idx = 3;      # instrument
   $prob_idx = 4;         # probability
   my $name_idx = 5;      # spectrum name: mzML basename, scan, scan, chrg
-  $spec_idx = 6;         # spectrum
-  my $frag_idx = 7;
-  my $chrm_idx = 8;      # chromatogram
-  my $it_idx = 9;        # precursor intensity
-  my $rt_idx = 10;       # retention time
-  my $ce_idx = 11;       # collision energy
-  my $ptm_idx = 12;      # ptm sequence
+  my $ann_idx = 6;      # avg user annotation value
+
+  # The following three don't correspond to any query result, only
+  # to results table
+  $spec_idx = 7;         # link to spectrum display
+  my $frag_idx = 8;      # 
+  my $chrm_idx = 9;      # chromatogram.
+
+  # The remaining $blah_idx variables refer to optional columns
+  # of the results table,
+  # and are 1 greater than the sql query result index.
+  # I think this "1 greater" issue arose recently and
+  # is not always handled properly below.
+  # These columns are deleted in loop below if they are not to be displayed.
+  my $it_idx = 10;        # precursor intensity
+  my $rt_idx = 11;       # retention time
+  my $ce_idx = 12;       # collision energy
+  my $ptm_idx = 13;      # ptm sequence
+
+  # This variable doesn't refer to any results table column.
+  my $ann_count_idx = 14;      # n user annotations
+
   my $align = [qw(left center right right left center center center center)];
   push @$align , 'center' if ($is_origene);
    
   while ( my @row = $sth->fetchrow_array() ) {
     # We only want to display PI and RT cols if we have data!
-    if ( !$has_header_info && $row[$it_idx] ) {
+    if ( !$has_header_info && $row[$it_idx-1] ) {
       $has_header_info++;
       #$align = [qw(left center right right left center center center center center right right)];
       push  @$align , qw(center right right);
@@ -1583,14 +1637,21 @@ if ($apply_action =~ /QUERY|GO/i ) {
       $pep->[$inst_idx] =~ s/ +/&nbsp;/g;
       my $build_id = $parameters{atlas_build_id};
       my $img = "<IMG BORDER=0 SRC='$HTML_BASE_DIR/images/spectrum.gif' TITLE='View spectrum for $pep->[$mseq_idx] (+$pep->[$chrg_idx])'>";
-      $pep->[$spec_idx] = qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowObservedSpectrum?atlas_build_id=$build_id&spectrum_identification_id=$pep->[$spec_idx]&peptide=$pep->[$mseq_idx]&assumed_charge=$pep->[$chrg_idx]" TARGET=blank>$img</A>~;
+      my $eval_string = $parameters{'ann'}? 'eval=1&' : '' ;
+      $pep->[$spec_idx] = qq~<A HREF="$CGI_BASE_DIR/PeptideAtlas/ShowObservedSpectrum?${eval_string}atlas_build_id=$build_id&spectrum_identification_id=$pep->[$spec_idx]&peptide=$pep->[$mseq_idx]&assumed_charge=$pep->[$chrg_idx]" TARGET=blank>$img</A>~;
+      $pep->[$ann_idx] = sprintf("%0.2f", $pep->[$ann_idx]);
+      $pep->[$ann_idx] =~ s/^0// if ($pep->[$ann_idx] > 0);  #remove any zero before decimal
+      $pep->[$ann_idx] = "0" if ($pep->[$ann_idx] == 0);
+      $pep->[$ann_idx] .= "($pep->[$ann_count_idx-1])";
+      $pep->[$ann_idx] = "none" if (!$pep->[$ann_count_idx-1]);
+      delete $pep->[$ann_count_idx-1];
 
       $pep->[$chrm_idx] = $chromatogram_entry;
 
 			my $modified_pepseq = $pep->[$mseq_idx];
 
-			if ($pep->[11]){
-				my $ptm_sequence = $pep->[11];
+			if ($pep->[$ptm_idx-1]){
+				my $ptm_sequence = $pep->[$ptm_idx-1];
 				my $newseq = '';
 				my %mods = ();
         my %ptm_score = ();
@@ -1682,7 +1743,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
     </style>
     ~;
 
-    my @headings = ( 'Modified Sequence', 'Chg', 'Smpl', 'Instr', 'Prob', 'Spectrum Name', 'Spectrum');
+    my @headings = ( 'Modified Sequence', 'Chg', 'Smpl', 'Instr', 'Prob', 'Spectrum Name', 'Avg Eval', 'Spectrum');
     push @headings, 'Fragmentation Type' if ($is_origene); 
     push @headings, 'Chromatogram' if $at_least_one_chromatogram;
     push @headings, ( 'Precursor Intensity', 'RT', 'CE' ) if $has_header_info;
@@ -1710,11 +1771,14 @@ if ($apply_action =~ /QUERY|GO/i ) {
 
   # TMF: remove this conditional if/when want to release this feature to production.
   if ($parameters{'ann'}) {
+    my $hidden_form_fields = qq~
+        <INPUT TYPE="hidden" NAME="ann" VALUE="1">
+	~;
     print &printUserAnnotations(
       peptide_sequence => $parameters{'peptide_sequence_constraint'},
       peptide_name => $parameters{'peptide_name_constraint'},
       parameters_href => \%parameters,
-      #form_fields => $hidden_form_fields
+      form_fields => $hidden_form_fields
     );
   }
 
@@ -2156,8 +2220,6 @@ sub printUserAnnotations {
             ON ( UL.contact_id = annotator_contact_id )
     INNER JOIN $TBAT_PEPTIDE_INSTANCE PI
             ON ( PI.peptide_instance_id = PIA.peptide_instance_id )
-    INNER JOIN $TBAT_PEPTIDE P
-            ON ( P.peptide_id = PI.peptide_id )
 	 WHERE PIA.record_status = 'N'
 	   AND PIA.peptide_instance_id = '$peptide_instance_id'
       ORDER BY PIA.date_modified DESC
@@ -2205,6 +2267,7 @@ sub printUserAnnotations {
 		    <br /><div align='right'><a href='javascript:showEditForm();'>Edit my annotation</a> | <a href='javascript:confirm_delete();'>Delete</a>
 		    <FORM NAME="delete_annotation" METHOD="post" action="$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME">
 		    $args{form_fields}
+		    <INPUT TYPE='hidden' NAME='peptide_instance_annotation_id' VALUE='$annot_id'>
    		    <INPUT TYPE='hidden' NAME='apply_action' VALUE='DELETE ANNOTATION'></FORM>
 		    </div>
 		    ~;
