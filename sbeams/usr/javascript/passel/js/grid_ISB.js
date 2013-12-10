@@ -1365,7 +1365,6 @@ function style_metaData(d,userT){
 
     details += common.checkIfExists(data.preparation)? "<h3>Preparation</h3><div id='box'>"+common.print_r(data.preparation,{})+"</div>" : '';				
     details += common.checkIfExists(data.sample_tag)? "<h3>Sample Tag</h3><div id='box'>"+common.print_r(data.sampletag,{})+"</div>" : '';				
-    details += common.checkIfExists(data.data_path)? "<h3>ISB Internal Data Path</h3><div id='box'>"+common.print_r(data.data_path,{})+"</div>" : '';				
 
     details += common.checkIfExists(data.characteristics)? "<h3>Characteristics</h3><div id='box'>"+common.characteristics_renderer(data.characteristics,{})+"</div>" : '';	
     details += common.checkIfExists(data.sample_date)? "<h3>Sample Date</h3><div id='box'>"+common.print_r(data.sample_date,{})+"</div>" : '';				
@@ -1488,7 +1487,6 @@ var SampleRecord = Ext.data.Record.create([
     { name: 'experiment_title'},
     { name: 'datasetIdentifier'},
     { name: 'taxonomy' },
-    { name: 'data_path' },
     { name: 'description' },
     { name: 'comment' },
     { name: 'publication_name' },
