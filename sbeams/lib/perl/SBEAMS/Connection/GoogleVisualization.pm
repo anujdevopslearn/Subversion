@@ -48,7 +48,6 @@ sub setDrawDataTable {
 	my $self = shift;
 	my %args = @_;
 
-	$log->debug( "in setDraw" );
 	if(	$self->{_hide_svg} ) {
 		my $msg = $sbeams->makeInfoText("Your browser appears to be too old to display these graphics, please come back when you have upgraded");
 		$log->debug( $msg );
@@ -109,7 +108,6 @@ sub setDrawBarChart {
 	my $self = shift;
 	my %args = @_;
 	
-	$log->debug( "in setDraw" );
 	if(	$self->{_hide_svg} ) {
 		my $msg = $sbeams->makeInfoText("Your browser appears to be too old to display these graphics, please come back when you have upgraded");
 		$log->debug( $msg );
@@ -149,7 +147,7 @@ sub setDrawBarChart {
   my $chart = 'chart' . $self->{'_charts'}; 
   my $table = 'table' . $self->{'_tables'}; 
   # Just want the div name for now...
-  my $chart_div = $chart . '_div'; 
+  my $chart_div = $args{chart_div} || $chart . '_div'; 
   my $table_div = $table . '_div'; 
   my $chart_fx = 'draw_' . $chart; 
   my $table_fx = 'draw_' . $table; 
@@ -201,13 +199,13 @@ sub setDrawBarChart {
     $options = "{ width: $width, height: $height, is3D: true, $args{options} }";
   }
 
+  my $callback = $args{callback} || '';
   $fx .=<<"  END";
   $sample_list
   $table_js
-
-
   var chart = new google.visualization.BarChart(document.getElementById('$chart_div'));
-  chart.draw(data, $options );
+  var options = $options
+  chart.draw(data, options );
   }
   END
 
@@ -215,6 +213,7 @@ sub setDrawBarChart {
 
 	# Put divs into markup for return to caller
   $chart_div = '<DIV id="' . $chart . '_div' . '"></DIV>'; 
+  $chart_div = '' if $args{no_div};
   $table_div = '<DIV id="' . $table . '_div' . '"></DIV>'; 
   
 	if ( $args{show_table} ) {
@@ -251,6 +250,11 @@ sub getHeaderInfo {
 	for my $callback ( @{$self->{'_callbacks'}} ) {
 		$callbacks .= "google.setOnLoadCallback($callback);";
 	}
+  if ( $args{callbacks} ) {
+	  for my $callback ( @{$args{callbacks}} ) {
+		  $callbacks .= "google.setOnLoadCallback($callback);";
+  	}
+  }
 	my $functions = '';
 	for my $function ( @{$self->{'_functions'}} ) {
 		$functions .= "$function\n";
