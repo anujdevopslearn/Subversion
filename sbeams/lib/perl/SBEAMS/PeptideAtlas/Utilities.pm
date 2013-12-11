@@ -1450,6 +1450,8 @@ sub get_html_seq_vars {
     next if $seq_type =~ /^trypsin/;
     $div_txt{$seq_type} = $divs{$seq_type};
     for my $a ( @{$values{$seq_type}} ) {
+      next unless ref($a);
+      next unless ref($a) == 'ARRAY';
       $div_txt{$seq_type} .= join( "", @{$a} );
     }
     $div_txt{$seq_type} .= '</DIV>';
@@ -2243,17 +2245,12 @@ sub calculate_agilent_ce {
 
   if ( $args{empirical_ce} && $args{seq} && $args{ion} ) {
     if ( !$self->{_SRM_CE} ) {
-#      print STDERR "One-time retrieval of CE data\n";
       $self->{_SRM_CE} = retrieve( "/net/db/projects/PeptideAtlas/MRMAtlas/analysis/CE_extraction/global_values/SRM_CE.sto" );
-#      print STDERR "Done\n";
     }
     my $pepion = $args{seq} . '/' . $args{charge};
-#    print STDERR "looking for CE for $pepion and $args{ion}\n";
     if ( $self->{_SRM_CE}->{$pepion} &&  $self->{_SRM_CE}->{$pepion}->{$args{ion}} ) {
-#      print STDERR "Found $self->{_SRM_CE}->{$pepion}->{$args{ion}}->{max_ce}\n";
       return sprintf( "%0.1f", $self->{_SRM_CE}->{$pepion}->{$args{ion}}->{max_ce} );
     }
-#    print STDERR "MIA";
   }
 
   # calculate CE  
@@ -2264,7 +2261,6 @@ sub calculate_agilent_ce {
     $ce = ( (3.6*$args{mz} )/100 ) -4.8;
     $ce = 0 if $ce < 0;
   }
-#  print STDERR "Calc is $ce\n";
   return sprintf( "%0.1f", $ce );
 }
 
