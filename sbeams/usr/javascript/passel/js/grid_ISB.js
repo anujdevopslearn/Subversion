@@ -546,6 +546,11 @@ this.transitions_renderer = function (value,  metadata, record, rowIndex ) {
   return html;
 }
 
+this.experiment_title = function (value,  metadata, record, rowIndex ) {
+  var html = '<a href="GetSELExperiments?SEL_experiment_id='+record.data.SEL_experiment_id+'">'+value+'</a>';
+  return html;
+}
+
 this.date_renderer = function( value, metaData, record, rowIndex ){
   var html = value;
 
@@ -1648,6 +1653,7 @@ var sample_cm = new xg.ColumnModel(
     {
 header: "Experiment Title", dataIndex: 'experiment_title', width: 190,
 tooltip: 'Experiment Title',
+renderer: common.experiment_title,
 sortable: true
 }, 
 { 
