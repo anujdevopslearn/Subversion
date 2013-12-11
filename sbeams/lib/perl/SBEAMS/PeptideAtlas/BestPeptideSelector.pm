@@ -3507,6 +3507,59 @@ sub get_charge_matrix {
 
 }
 
+
+sub get_pabst_build_select {
+
+  my $self = shift || die ("self not passed");
+  my %args = ( build_id => '', @_ );
+
+	my $project_string = join( ', ', $sbeams->getAccessibleProjects() );
+	return unless $project_string;
+
+
+	if ( $args{build_id} && $args{build_id} =~ /^\d+$/ ) {
+	  my $sth = $sbeams->get_statement_handle( "SELECT build_name FROM $TBAT_PABST_BUILD WHERE pabst_build_id = $args{build_id}" );
+    while ( my @row = $sth->fetchrow_array() ) {
+      $args{build_name} = $row[0];
+      last;
+    }
+  }
+
+	my $project_string = join( ', ', $sbeams->getAccessibleProjects() );
+	return unless $project_string;
+
+	my $onchange_script = '';
+	my $onchange = '';
+  if ($args{set_onchange}) {
+	  $onchange = 'onchange="switchAtlasBuild()"';
+		$onchange_script =  qq~
+		<SCRIPT LANGUAGE=javascript TYPE=text/javascript>
+		function switchAtlasBuild() {
+			document.$args{form_name}.submit();
+		}
+		</SCRIPT>
+		~;
+	}
+
+  my $sql = qq~
+    SELECT pabst_build_id, build_name 
+      FROM $TBAT_PABST_BUILD
+		 WHERE project_id IN ( $project_string )
+     ORDER BY build_name
+  ~;
+	my $sth = $sbeams->get_statement_handle( $sql );
+	my $select = "<SELECT NAME=build_id $onchange>\n";
+	while ( my @row = $sth->fetchrow_array() ) {
+		# default to first one
+		$args{build_name} ||= $row[1];
+		my $selected = ( $row[1] =~ /^$args{build_name}$/ ) ? 'SELECTED' : '';
+		$select .= "<OPTION VALUE=$row[0] $selected> $row[1] </OPTION>";
+	}
+	$select .= "</SELECT>\n";
+
+	return ( wantarray() ) ? ($select, $onchange_script) :  $select . $onchange_script; 
+}
+
 ###############################################################################
 =head1 BUGS
 
