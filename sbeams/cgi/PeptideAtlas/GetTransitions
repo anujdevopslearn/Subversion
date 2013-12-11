@@ -471,36 +471,39 @@ sub print_form {
 #    $form =~ s/(\<INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="AT_GetPABSTList"\>)/$1<BR>$sub_form/gm;
 #    $form =~ s/\<\/TABLE\>/<TR><TD COLSPAN=3> $sub_form<\/TD><\/TR><\/TABLE>/i;
 #    $form .= "<TR><TD COLSPAN=3>$sub_form</TD></TR>\n";
-    my $change_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Adjust PABST peptide parameters to fine-tune peptide list (advanced)'</TD>";
+    my $change_help = mk_help_link( title => 'Pabst Parameters', text => 'Adjust PABST peptide parameters to fine-tune peptide list (advanced)' );
     $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Adjust weights:</B></TD>$change_help<TD>$link$sub_form $parameters{apply_action_hidden}</TD></TR> ~;
 
 
     my $cmod_select = get_cmod_select( $parameters{cmod_mass} );
-    my $cmod_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Fetch heavy-labeled (or light, if source data is heavy) versions of selected peptides'</TD>";
+    my $cmod_help = mk_help_link( title => 'Heavy Label', text => 'Fetch heavy-labeled (or light, if source data is heavy) versions of selected peptides' );
     $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Heavy label:</B></TD>$cmod_help<TD>$cmod_select</TD></TR> ~;
 
     my $cmod_radio = get_cmod_radio( $parameters{cmod_opts} );
-    my $cmod_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Calculate heavy transitions, heavy and light, or only light.  Only relevant if one or more heavy label options are selected.'</TD>";
+    my $cmod_help = mk_help_link( title => 'Heavy/Light Peptides', text => 'Calculate heavy transitions, heavy and light, or only light.  Only relevant if one or more heavy label options are selected.' );
 
     $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Labeled Transitions:</B></TD>$cmod_help<TD NOWRAP><DIV class=nowrap_clear_info_box>$cmod_radio &nbsp;</DIV></TD></TR> ~;
 
     # Min/Max mz values
-    my $min_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Set minimum m/z threshold for transitions, applies to both precursor (Q1) and fragment ion (Q3) m/z'</TD>";
-    my $max_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Set maximum m/z threshold for transitions, applies to both precursor (Q1) and fragment ion (Q3) m/z'</TD>";
+    my $min_help = mk_help_link( title => 'Minimum m/z', text => 'Set minimum m/z threshold for transitions, applies to both precursor (Q1) and fragment ion (Q3) m/z' );
+    my $max_help = mk_help_link( title => 'Maximum m/z', text => 'Set maximum m/z threshold for transitions, applies to both precursor (Q1) and fragment ion (Q3) m/z' );
+    my $exclude_help = mk_help_link( title => 'Exclude Ions', text =>  'Semicolon-separated list of ions to exclude, generally the smallest, e.g. y2;y3;b2;b3' );
     $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Minimum m/z:</B></TD>$min_help<TD><INPUT TYPE=TEXT NAME=min_mz SIZE=10 VALUE=$parameters{min_mz}></INPUT></TD></TR> ~;
     $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Maximum m/z:</B></TD>$max_help<TD><INPUT TYPE=TEXT NAME=max_mz SIZE=10 VALUE=$parameters{max_mz}></INPUT></TD></TR> ~;
+    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Exclude Ions:</B></TD>$exclude_help<TD><INPUT TYPE=TEXT NAME=exclude_ions SIZE=10 VALUE=$parameters{exclude_ions}></INPUT></TD></TR> ~;
 #    $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Allowable Modifications:</B></TD><TD BGCOLOR=E0E0E0></TD><TD>$select_lists->[1]</TD></TR> ~;
 #
     
     # Add spectral links
     my $splinks_chk = ( $parameters{speclinks} ) ? 'checked' : 'checked';
 
-    my $spec_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Set minimum m/z threshold for transitions, applies to both precursor (Q1) and fragment ion (Q3) m/z'</TD>";
+    my $spec_help = mk_help_link( title => 'Spectra Link Display', text => 'Show links to various spectra in results' );
     $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Show spectral links</B></TD>$spec_help<TD><INPUT TYPE=CHECKBOX NAME=speclinks SIZE=10 $splinks_chk></INPUT></TD></TR> ~;
     
 
     my $rt_help =  "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Select type of RT value to show in results'</TD>";
 
+    my $rt_help = mk_help_link( title => 'Elution Time', text => 'Select RT values to show in results' );
     $form .= qq~ <TR><TD VALIGN=TOP NOBR><B>Elution Time Type</B></TD>$rt_help<TD>$rt_select</INPUT></TD></TR> ~;
     $form .= $ion_filters;
     $form .= $mod_filters;
@@ -523,6 +526,13 @@ sub print_form {
 
 
 } # end print_form
+
+sub mk_help_link {
+  my %args = @_;
+  my $title = $q->escape( $args{title} );
+  my $text = $q->escape( $args{text} );
+  return qq~<TD BGCOLOR=E0E0E0><span title='$args{text}' class=popup><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' BORDER=0 ONCLICK="popitup('$CGI_BASE_DIR/help_popup.cgi?title=$title;text=$text;email_link=no');"></SPAN></TD>~;
+}
 
 sub get_src_weights {
   my $params = shift;
@@ -608,7 +618,7 @@ sub get_mod_filters {
     }
   }
 
-  my $mods_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Checked options will allow peptides containing specified modification in MRM list'</TD>";
+    my $mods_help = mk_help_link( title => 'Allowed Modifications', text => 'Checking options will allow peptides containing specified modification(s) in MRM list' );
 
   my $checks = qq~
     <DIV class=clear_info_box>
@@ -666,8 +676,9 @@ sub get_multimap_filters {
 
   $names{results} = 'checked' unless $multimap_set;
 
-  my $help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Limit peptides that map to multiple proteins - Allow all does not limit the list, unique to results ensures that a particular peptide is shown only once in a given set of results, and no multi-mapping keeps out any peptides that map to more than one peptide in the targeted namespace'</TD>";
 
+  my $help = mk_help_link( title => 'Peptide Mapping Filter', text => 'Limit peptides that map to multiple proteins - Allow all does not limit the list, unique to results ensures that a particular peptide is shown only once in a given set of results, and no multi-mapping keeps out any peptides that map to more than one peptide in the targeted namespace' );
+      
   my $checks = "$help<TD><DIV class=nowrap_clear_info_box >";
 	my %name2param = ('Allow all' => 'all', 'Unique in results' => 'results', 'No multi-mapping' => 'global' );
   for my $name ( 'Allow all', 'Unique in results', 'No multi-mapping' ) {
@@ -685,7 +696,7 @@ sub get_namespace_filters {
   # Only Mouse/Human currently have hybrid reference databases
   return '' unless ( $opts{organism} );
 
-  my $help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Select accession namespace(s) in which you would like to search'</TD>";
+  my $help = mk_help_link( title => "Accession Namespace", text => "Select protein accession namespace(s) in which to search. Can help limit redundancies." );
   my $checks = "$help <TD><DIV class=clear_info_box ID=NamespaceFilters>";
 
   if ( $opts{organism} == 2 || $opts{organism} == 6 ) {
@@ -734,7 +745,7 @@ sub get_ion_filters {
     $n_loss_ions = ( $opts{n_loss_ions} ) ? 'checked' : '';
   }
 
-  my $ions_help = "<TD BGCOLOR=E0E0E0><IMG SRC='$HTML_BASE_DIR/images/greyqmark.gif' TITLE='Checked options will allow that ion type in the MRM list'</TD>";
+  my $ions_help = mk_help_link( title => 'Ion Types', text => 'Checking options will allow that ion type in the MRM list' );
   my $b_ions_chk = "<INPUT TYPE=checkbox NAME=b_ions $b_ions></INPUT>";
   my $y_ions_chk = "<INPUT TYPE=checkbox NAME=y_ions $y_ions></INPUT>";
   my $n_loss_chk = "<INPUT TYPE=checkbox NAME=n_loss_ions $n_loss_ions></INPUT>";
@@ -1582,6 +1593,15 @@ sub fetch_transitions {
 #  my %kseen;
 
   $parameters{multimap} ||= 'results';
+
+  my %ex;
+  if ( $parameters{exclude_ions} ) {
+    for my $ion ( split( /;/, $parameters{exclude_ions} ) ) {
+      $ex{lc($ion)}++;
+    }
+  }
+
+
   for my $row ( @transitions ) {
     if ( $is_changed ) {
       $row->[20] = $row->[25];
@@ -1663,6 +1683,11 @@ sub fetch_transitions {
       if ( !$parameters{n_loss_ions} ) {
         next if $row[9] =~ /\-\d+/;
       }
+
+      if ( keys(%ex) ) {
+        next if $ex{$row[9]};
+      }
+
 
       if ( $parameters{min_mz} ) {
         if ( $parameters{min_mz} > $row[5] ||  $parameters{min_mz} > $row[7] ) {
