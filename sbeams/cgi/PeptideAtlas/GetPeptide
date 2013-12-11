@@ -132,6 +132,7 @@ sub main {
 	# TMF
 	processDatabaseActions();
         $sbeamsMOD->display_page_header(project_id => $project_id,
+#  onload => 'toggle_plot();',
 				                                init_tooltip => 1);
 
         handle_request(ref_parameters=>\%parameters);
@@ -1558,6 +1559,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
       #### for all QT_ZH* files (see /Appears that all the QT files/ in
       #### Terry's log), so for now
       #### we won't display chromatogram icons/links for them.  07/05/11
+      my $none = $sbeams->makeInactiveText( 'n/a' );
       if ( ( ($mzml_fname =~ /^5Q/) ||
            #( $mzml_fname =~ /^QT_ZH/) ||
            ( $mzml_fname =~ /^Z5Q/) ) ) {
@@ -1643,7 +1645,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
       $pep->[$ann_idx] =~ s/^0// if ($pep->[$ann_idx] > 0);  #remove any zero before decimal
       $pep->[$ann_idx] = "0" if ($pep->[$ann_idx] == 0);
       $pep->[$ann_idx] .= "($pep->[$ann_count_idx-1])";
-      $pep->[$ann_idx] = "none" if (!$pep->[$ann_count_idx-1]);
+      $pep->[$ann_idx] = $none if (!$pep->[$ann_count_idx-1]);
       delete $pep->[$ann_count_idx-1];
 
       $pep->[$chrm_idx] = $chromatogram_entry;
@@ -1808,6 +1810,7 @@ if ($apply_action =~ /QUERY|GO/i ) {
      $atlas_build_clause
      $peptide_name_clause
      $peptide_sequence_clause
+     ORDER BY sample_title ASC
   ~;
 
   my @samples = $sbeams->selectSeveralColumns( $sampleSQL );
@@ -1851,9 +1854,15 @@ if ($apply_action =~ /QUERY|GO/i ) {
                                                            'link' => $link,
                                                            tr_info => $tr );
 
-  my ($theader, $tHTML) = $sbeamsMOD->getSampleDisplay( sample_ids => $table_samples,
+  my $peptide_clause = $peptide_name_clause || $peptide_sequence_clause || '';
+  $atlas_build_clause =~ s/AB/PI/g;
+
+  my ($theader, $tHTML) = $sbeamsMOD->getDetailedSampleDisplay( sample_ids => $table_samples,
                                                            'link' => $link,
+                                                          tr_info => $tr,
                                                            'no_header' => 1,
+                                                           build_clause => $atlas_build_clause,
+                                                           peptide_clause => $peptide_clause,
                                                            tr_info => $tr );
 
   print qq~
