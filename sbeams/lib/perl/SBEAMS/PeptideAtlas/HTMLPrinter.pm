@@ -30,6 +30,7 @@ use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::TableInfo;
 use SBEAMS::PeptideAtlas::Tables;
 
+use SBEAMS::Proteomics::Tables;
 
 ###############################################################################
 # printPageHeader
@@ -902,20 +903,48 @@ sub getSamplePlotDisplay {
   my $trinfo = $args{tr_info} || '';
 	my $height = 50  + scalar( @{$args{n_obs}} ) * 12;
 
+  # unable to hide legend as desired. Works on google viz playground, but not here (Alas!).
   my $GV = SBEAMS::Connection::GoogleVisualization->new();
   my $chart = $GV->setDrawBarChart(  samples => $args{n_obs},
+                                     options => '', # qq~ legend: { position: 'none'}, title: "Number of Observations" ~, 
                                   data_types => [ 'string', 'number' ],
                                     headings => [ 'Sample Name', 'Number of Observations' ],
                                   );
   my $chart_2 = $GV->setDrawBarChart(  samples => $args{obs_per_million},
+                                     options => '', # qq~ legend: { position: 'none'}, title: "Obs per million spectra" ~,
                                   data_types => [ 'string', 'number' ],
                                     headings => [ 'Sample Name', 'Obs per million spectra' ],
-  
+                                    chart_div => 'chart1_div',
+                                    no_div => 1,
+
 	);
-  $chart .= $chart_2 . ' ' . $GV->getHeaderInfo();
-	$chart = "<TR $trinfo><TD></TD><TD>&nbsp;&nbsp;$chart</TD></TR>";
-
-
+  my $h_info = $GV->getHeaderInfo();
+	$chart = qq~
+    <script type='text/javascript'>
+    function toggle_plot() { 
+      if ( window['next_plot'] == undefined ) {
+        window['next_plot'] = 'chart1_div';
+      }
+      if ( window['next_plot'] == 'chart1_div' ) {
+        draw_chart1();
+        window['next_plot'] = 'chart2_div';
+        document.getElementById('toggle_button').innerHTML = 'Show Obs Per Million Spectra Plot';
+      } else {
+        draw_chart2();
+        window['next_plot'] = 'chart1_div';
+        document.getElementById('toggle_button').innerHTML = 'Show Total Obs Plot';
+      }
+    } 
+  </script>
+    $h_info
+    <TR $trinfo>
+      <TD></TD>
+      <TD><button type='button' id='toggle_button' onclick=toggle_plot()>Show Total Obs Plot</button> 
+          &nbsp;$chart_2
+          &nbsp;$chart 
+      </TD>
+    </TR>
+  ~;
   return ( wantarray() ) ? ($header, $chart) : $header . "\n" . $chart;
 }
 
@@ -1043,6 +1072,59 @@ sub getSampleMapDisplay {
 
 } # end getSampleMapDisplay
 
+
+###############################################################################
+# display enhance sample info
+###############################################################################
+sub getDetailedSampleDisplay {
+  my $self = shift;
+  my $sbeams = $self->getSBEAMS();
+  my %args = @_;
+  my $SUB_NAME = 'getDetailedSampleDisplay';
+
+  my $mia = '';
+  for my $arg ( qw ( sample_ids build_clause peptide_clause ) ) {
+    next if defined $args{$arg};
+    my $sep = ( $mia ) ? ',' : '';
+    $mia .= $mia . $sep . $arg;
+  }
+  $args{tr_info} ||= '';
+  if ( $mia ) {
+    $log->error( "Missing required argument(s} $mia" );
+    return;
+  }
+  my $in = join( ", ", @{$args{sample_ids}} );
+  return unless $in;
+
+  my $sql = qq~
+  	SELECT DISTINCT S.sample_id, sample_title, PISB.n_observations,
+           instrument_name, CASE WHEN ENZ.name IS NULL THEN 'Trypsin' ELSE ENZ.name END AS Enzyme
+		FROM $TBAT_ATLAS_SEARCH_BATCH SB 
+	  JOIN $TBAT_SAMPLE S ON s.sample_id = SB.sample_id
+	  JOIN $TBAT_PEPTIDE_INSTANCE_SEARCH_BATCH PISB ON PISB.atlas_search_batch_id = SB.atlas_search_batch_id
+	  JOIN $TBAT_PEPTIDE_INSTANCE PI ON PI.peptide_instance_id = PISB.peptide_instance_id
+	  JOIN $TBAT_PEPTIDE P ON P.peptide_id = PI.peptide_id
+	  LEFT JOIN $TBPR_INSTRUMENT I ON S.instrument_model_id = I.instrument_id 
+	  LEFT JOIN $TBAT_PROTEASES ENZ ON ENZ.id = S.protease_id 
+    WHERE S.sample_id IN ( $in )
+    $args{build_clause}
+    $args{peptide_clause}
+    AND S.record_status != 'D'
+    ORDER BY sample_title
+  ~;
+  my @samples = $sbeams->selectSeveralColumns($sql);
+  unshift @samples, [qw( SampleID SampleName NObs Instrument Enzyme )];
+  my $table = $self->encodeSectionTable( header => 1, 
+                                          width => '600',
+                                        tr_info => $args{tr_info},
+                                         align  => [qw(center left right left left)],
+                                           rows => \@samples );
+  return $table;
+
+}
+
+
+
 ###############################################################################
 # displaySamples
 ###############################################################################
@@ -1065,7 +1147,7 @@ sub getSampleDisplay {
       FROM $TBAT_SAMPLE
      WHERE sample_id IN ( $in )
      AND record_status != 'D'
-     ORDER BY sample_id ASC
+     ORDER BY sample_title ASC
   ~;
 
   my @samples = $sbeams->selectSeveralColumns($sql);
