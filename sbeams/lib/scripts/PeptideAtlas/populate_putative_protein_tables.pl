@@ -48,7 +48,21 @@ my $VERBOSE = 0;
 
 my $atlas_output_dir = "/net/db/projects/PeptideAtlas/pipeline/output";
 my $atlas_build_dir = "HumanPublic_201301_PAB";
+
+# We need a list of non-Swiss-Prot identifiers that we have evidence for
+# Can be created thusly:
+# (1) Using any method you wish, create a file named sprot.list that contains all identifiers, INCLUDING VARSPLIC, in the Swiss-Prot version of interest.
+# Be sure to include varsplic! There should be about 37,000 identifiers in the file (one per line).
+# (2) Create the covering list for the atlas build
+# egrep '1,[0-9]{0,9},[0-9\.]{0,9}$' DATA_FILES/PeptideAtlasInput.PAprotIdentlist | awk 'BEGIN{FS=","}{print $2}' | sort | grep -v DECOY | grep -v UNMAPPED  >| PAprotlist_covering_protids
+# (3) Take the difference between the two lists:
+# comm -3 -2 PAprotlist_covering_protids DATA_FILES/sprot.list | grep -v "^......-." >| PAprotlist_covering_protids_not_Swiss
 my $protein_file = "${atlas_output_dir}/${atlas_build_dir}/DATA_FILES/PAprotlist_covering_protids_not_Swiss";
+
+# We need the entries from the peptide_mapping.tsv file that map to those identifiers but not to Swiss-Prot.
+# Needs file peptides_mappable_to_swiss.tsv, created thusly:
+# (1) awk 'BEGIN{FS="\t"}{print $2}' peptide_mapping_swiss.tsv | sort | uniq >| peptides_mappable_to_swiss.tsv
+# (2) $SBEAMS/lib/scripts/PeptideAtlas/find_peps_not_in_swiss.pl > peptide_mapping_not_swiss.tsv # Must run in same directory as peptide_mapping.tsv and peptides_mappable_to_swiss.tsv
 my $peptide_file = "${atlas_output_dir}/${atlas_build_dir}/DATA_FILES/peptide_mapping_not_swiss.tsv";
 
 # open data files
