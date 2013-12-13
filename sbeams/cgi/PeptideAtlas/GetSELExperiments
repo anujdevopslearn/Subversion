@@ -17,6 +17,7 @@ use CGI::Carp qw(fatalsToBrowser croak);
 use Getopt::Long;
 use FindBin;
 use POSIX qw(ceil floor);
+use LWP::Simple;
 use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
@@ -37,6 +38,9 @@ $sbeams = new SBEAMS::Connection;
 my $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+use  SBEAMS::PeptideAtlas::PASSEL;
+use SBEAMS::Connection::PubMedFetcher;
 
 ###############################################################################
 # Set program name and usage banner for command line use
@@ -117,9 +121,11 @@ sub main {
         );
 
     $sbeamsMOD->display_page_header(project_id => $project_id);
-
-    handle_request(ref_parameters=>\%parameters);
-
+    if(defined $parameters{SEL_experiment_id}){
+      showSELExperiment(ref_parameters=>\%parameters);
+    }else{ 
+      handle_request(ref_parameters=>\%parameters);
+    }
     $sbeamsMOD->display_page_footer();
 
   }
@@ -131,6 +137,128 @@ sub main {
 ###############################################################################
 # Handle Request
 ###############################################################################
+sub showSELExperiment{
+  my %args = @_;
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+  my $SEL_experiment_id = $parameters{SEL_experiment_id};
+  my $passel = new SBEAMS::PeptideAtlas::PASSEL;
+  my $json = new JSON;
+
+  # Collect a JSON hash containing data from all of the experiments.
+  # Store also in string form to use for searching, sorting.
+  my $json_filename_all = "$PHYSICAL_BASE_DIR/tmp/PASSEL_experiments_all.json";
+  $passel->srm_experiments_2_json_all() if (! -e $json_filename_all);
+  open (JSONFILE, "$json_filename_all") ||
+    die "Can't open $json_filename_all for reading\n";
+  my $json_href = $json->decode(join(" ",<JSONFILE>));
+  close JSONFILE;
+
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+    parameters_ref => \%parameters,
+    program_name => $PROG_NAME,
+  );
+  
+  my %labels = (
+     experiment_title => 'Experiment Title',
+     comment => 'Experiment Description',
+     description => 'Sample Description',
+     publication_name => 'Publication',
+     abstract => 'Abstract',
+     sample_date => 'Sample Date',
+     contributors => 'Contributors',
+     taxonomy => 'Organism',
+     instrumentation => 'Instrument',
+     spikein => 'Spikein',
+     
+  );
+
+  if ($sbeams->output_mode() eq 'html'){
+    print $tabMenu->asHTML() ; 
+    print "<TABLE width=\"800\"><TR><TD><BR>\n";
+    #print "<B>Metadata:</B><P>\n";
+		foreach my $sample (@{$json_href->{"MS_QueryResponse"}{samples}}){
+			next if($sample->{SEL_experiment_id} != $SEL_experiment_id);
+			my $datasetIdentifier = $sample->{datasetIdentifier};
+      print "<div align=\"center\"><font size=3><B>$datasetIdentifier</B></font></div>\n";
+      my $link = "http://www.PeptideAtlas.org/PASS/$datasetIdentifier"; #$HTML_BASE_DIR ."/PASS/$datasetIdentifier";
+
+      print qq~ <B><font color=blue>
+            <a href="$link">
+            Download raw data and supporting files
+            </a>       
+            </font></B><BR><BR>
+            ~;
+
+			foreach my $key (qw(experiment_title
+                          comment
+													description
+													publication_name
+													abstract
+													taxonomy
+													instrumentation
+													spikein
+													counts
+                          contributors
+													sample_date)){ 
+        if($key !~ /(publication|counts)/){
+          if($sample->{$key} ne ''){
+				    print "<B><font color=blue>$labels{$key}:</font></B> $sample->{$key}<BR>\n";
+          }
+        }elsif($key =~ /count/){
+          print qq~
+                <B><font color=blue>Experiment Summary:</font></B>
+                <ul>
+                <li>Transition Group Measured: $sample->{counts}{"transition_groups"} 
+                <a href="$CGI_BASE_DIR/PeptideAtlas/GetSELTransitions?SEL_experiments=$SEL_experiment_id\&row_limit=5000\&QUERY_NAME=AT_GetSELTransitions\&action=QUERY\&apply_action=QUERY">[Explore Transition Groups]</a></li>
+                <li>Number of Ms Runs: $sample->{counts}{"runs"}</li>
+                <li>Number of Proteins: $sample->{counts}{"prots"}</li>
+                <li>Distinct Peptide Sequences: $sample->{counts}{"peps"}</li>
+                </ul>
+                ~;
+        }elsif($key =~ /publication/){
+           if(defined $sample->{publication}{ids}){
+             my @ids = @{$sample->{publication}{ids}};
+             print "<B><font color=blue>Publication:</font></B>";
+             foreach my $id (@ids){
+                #### Get the XML data from NCBI
+                my $url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?".
+                  "db=pubmed&id=$id&retmode=text&rettype=abstract";
+                my $content = get $url or die "Couldn't get $url";
+                my $ref = '';
+                if($content !~ /Cannot process ID/){
+                   my @lines = split("\n", $content);
+                   shift @lines;
+                   $ref = shift @lines;
+                   $ref =~ s/^\d+\.\s+//;
+                   shift @lines;
+                   $ref = $lines[0] . " ". $ref;
+                    print qq~ $ref
+                             <a href="http://www.ncbi.nlm.nih.gov/pubmed/?term=$id">$id</a>
+                             <BR>
+                          ~;
+                }else{ 
+                  if(defined $sample->{publication_name}){
+                    print " $sample->{publication_name}<BR>";
+                  }
+               }
+             }
+			    }else{
+            if(defined $sample->{publication_name}){
+              print "<B><font color=blue>Publication:</font></B> $sample->{publication_name}<BR>";
+            }
+
+          }
+		    }
+       }
+     }
+		print "<BR>\n";
+		print "</TR></TD></TABLE>\n";
+  }
+}
+
+
 sub handle_request {
   my %args = @_;
 
@@ -279,7 +407,6 @@ sub handle_request {
 	  </body>
   ~;
   print $html;
-
 
   $sbeamsMOD->display_page_footer();
 }
