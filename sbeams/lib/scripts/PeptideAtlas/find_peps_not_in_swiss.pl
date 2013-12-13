@@ -2,23 +2,49 @@
 use strict;
 $|++;
 
-open (my $infh, "peptides_mappable_to_swiss.tsv");
-my %swiss_peps;
-while (my $line = <$infh>) {
-  chomp $line;
-  $swiss_peps{$line} = 1;
-}
-close $infh;
+my $sprot_file = shift;
+open (P , "<$sprot_file");
 
-open ($infh, "peptide_mapping.tsv");
-%swiss_peps;
-while (my $line = <$infh>) {
+my %sprot= ();
+foreach my $line (<P>){
   chomp $line;
+  $sprot{$line} = 1;
+}
+
+my $infh;
+open ($infh, "<peptide_mapping.tsv");
+my %pep = ();
+while (my $line = <$infh>) {
+ chomp $line;
   my @fields = split("\t", $line);
   my $pepseq = $fields[1];
-  if (! defined $pepseq) {
-    print STDERR "$line\n";
-  } elsif (!defined $swiss_peps{$pepseq}) {
-    print $line, "\n";
+  my $prot = $fields[2]; 
+  next if(! $prot );
+  if(not defined $pep{$pepseq}){
+    $pep{$pepseq} = 0;
+  }
+  if(defined $sprot{$prot}){
+    $pep{$pepseq}++;
   }
 }
+seek ($infh, 0,0);
+open (OUT, ">peptide_mapping_not_swiss.tsv");
+while (my $line = <$infh>) {
+ chomp $line;
+  my @fields = split("\t", $line);
+  next if (@fields < 3);
+  my $pepseq = $fields[1];
+  if(defined $pep{$pepseq}){
+    if($pep{$pepseq} < 1 ){
+      print OUT "$line\n";
+    }
+  }else{
+    print OUT "$line\n";
+  }
+}
+
+
+close P;
+close $infh;
+exit;
+
