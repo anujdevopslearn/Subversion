@@ -62,6 +62,8 @@ $current_work_group_name = $sbeams->getCurrent_work_group_name;
 $PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
 Usage: $PROG_NAME --expt_id 73 --PX_acc PXD000296
+     : $PROG_NAME --npr 1 --PX_accession PXD000111 --verbose 3 --PA_accession PAe003970,PAe003971 --RPX_accession RPXD000111
+
 Options:
   --verbose n                 Set verbosity level.  default is 0
   --quiet                     Set flag to print nothing at all except errors
@@ -74,18 +76,19 @@ Options:
                                comma separated
 
   --PX_accession              ProteomeXchange accession (required)
+  --RPX_accession             Reprocessed ProteomeXchange dataset accession
   --title                     Submission title (default: title retrieved from
 				database for first expt_id/PA_accession)
 
   --PX_version                Version number (default 1)
   --npr                       Not a peer-reviewed dataset
-
+  --changeLog                 add change log
 EOU
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly","help",
         "expt_id:s", "PX_accession:s", "PX_version:i", "npr", "PA_accession:s",
-	"title:s",
+	"title:s", 'RPX_accession:s',"changeLog:s"
     )) {
 
     die "\n$USAGE";
@@ -118,6 +121,7 @@ if (! ( $PA_accession || $expt_id ) ) {
 }
 
 my $title = $OPTIONS{"title"} || '';
+my $RPX_accession = $OPTIONS{"RPX_accession"};
   
 my $PX_accession = $OPTIONS{"PX_accession"};
 if (! $PX_accession) {
@@ -127,7 +131,7 @@ if (! $PX_accession) {
 }
 
 my $PX_version = $OPTIONS{"PX_version"} || 1;
-  
+my $changeLog = $OPTIONS{"changeLog"} || ''; 
 
 ###############################################################################
 ###
@@ -136,7 +140,12 @@ my $PX_version = $OPTIONS{"PX_version"} || 1;
 ###############################################################################
 
 # Open output file and create an instance of the XML writer
-my $output = IO::File->new(">ProteomeXchange_submission_${PX_accession}.xml");
+my $output;
+if($RPX_accession){
+  $output= IO::File->new(">ProteomeXchange_submission_${RPX_accession}.xml");
+}else{
+  $output = IO::File->new(">ProteomeXchange_submission_${PX_accession}.xml");
+}
 my $writer = XML::Writer->new(
   OUTPUT=>$output,
   DATA_MODE=>1,
@@ -151,38 +160,61 @@ my $writer = XML::Writer->new(
 my %px_info = ();
 my $combined_px_info_href = \%px_info;
 
-if ($expt_id) {
-  my @list = split(",",$expt_id);
-  for my $id (@list) {
-    my $px_info_href = {};
-    get_PASSEL_info(
-      expt_id => $id,
-      px_info_href => $px_info_href,
-    );
-    $combined_px_info_href =
-      merge_px_info($combined_px_info_href, $px_info_href);
+if ( ! $RPX_accession ){
+	if ($expt_id) {
+		my @list = split(",",$expt_id);
+		for my $id (@list) {
+			my $px_info_href = {};
+			get_PASSEL_info(
+				expt_id => $id,
+				px_info_href => $px_info_href,
+			);
+			$combined_px_info_href =
+				merge_px_info($combined_px_info_href, $px_info_href);
+		}
+	}elsif ($PA_accession ){
+		my @list = split(",",$PA_accession);
+		for my $id (@list) {
+			my $px_info_href = {};
+			get_PeptideAtlas_info(
+				PA_accession => $id,
+				px_info_href => $px_info_href,
+			);
+			$combined_px_info_href =
+				merge_px_info($combined_px_info_href, $px_info_href);
+		}
   }
-} elsif ($PA_accession) {
-  my @list = split(",",$PA_accession);
-  for my $id (@list) {
-    my $px_info_href = {};
-    get_PeptideAtlas_info(
-      PA_accession => $id,
-      px_info_href => $px_info_href,
-    );
-    $combined_px_info_href =
-      merge_px_info($combined_px_info_href, $px_info_href);
+	# Write the info to an XML file
+	write_PX_XML (
+		writer => $writer,
+		px_info_href => $combined_px_info_href,
+		PX_accession => $PX_accession,
+		PX_version => $PX_version,
+		title => $title,
+    changeLog => $changeLog,
+	);
+}else{
+  if (! ($PX_accession && $PA_accession)){
+    die "need PXD and PA accession\n";
   }
-}
-
-# Write the info to an XML file
-write_PX_XML (
-  writer => $writer,
-  px_info_href => $combined_px_info_href,
-  PX_accession => $PX_accession,
-  PX_version => $PX_version,
-  title => $title,
-);
+  my $px_info_href = {};
+  get_PXD_info(
+    PA_accession => $PA_accession,
+    px_info_href => $px_info_href,
+    PX_accession => $PX_accession,
+    RPX_accession => $RPX_accession,
+  );
+  $combined_px_info_href = merge_px_info($combined_px_info_href, $px_info_href);
+  # Write the info to an XML file
+  write_PX_XML (
+    writer => $writer,
+    px_info_href => $combined_px_info_href,
+    PX_accession => $RPX_accession,
+    PX_version => $PX_version,
+    original_PX_acc => $PX_accession,
+    changeLog => $changeLog,
+  ); 
+}     
 
 # Close the output file
 $output->close();
@@ -194,6 +226,101 @@ $output->close();
 ### Subroutines
 ###
 ###############################################################################
+
+## get infomation from original PXD submission
+sub get_PXD_info {
+  my %args = @_;
+  my $px_info_href =$args{px_info_href};
+
+  ## get xml file from 
+  ## http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=$PX_accession&outputMode=XML&test=no
+  use LWP::Simple;
+  use XML::Simple;
+
+  my $url = "http://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=$PX_accession&outputMode=XML&test=no";
+  my $content = get $url or die "Couldn't get $url";
+  my $xml = new XML::Simple;
+  my $result = $xml->XMLin($content);  
+  #use Data::Dumper;
+  #print Dumper($result);
+  #my ($sec,$min,$hour,$mday,$mon,$year, $wday,$yday,$isdst) = localtime time;
+  #$year += 1900;
+  #$mon++;
+  #my $date = "$year\-$mon\-$mday";
+
+  #$px_info_href->{announceDatae} = $date; 
+  $px_info_href->{subm_name} = 'Zhi Sun';
+  $px_info_href->{subm_email} = 'zhi.sun@systemsbiology.org';
+  $px_info_href->{datasetIdentifier} = $args{RPX_accession}; 
+	$px_info_href->{submitter_organization} = 'Institute for Systems Biology'; 
+	$px_info_href->{lab_head_full_name} = 'Eric Deutsch';
+	$px_info_href->{lab_head_email} = 'edeutsch@systemsbiology.org'; 
+	$px_info_href->{lab_head_organization} = 'Institute for Systems Biology';
+	$px_info_href->{lab_head_country} = '';
+  $px_info_href->{hostingRepository} = 'PeptideAtlas';
+  $px_info_href->{expt_description} = $result->{DatasetSummary}{Description} ." Reprocessed by PeptideAtlas;";
+  $px_info_href->{expt_title} = 'Reprocessed: ' . $result->{DatasetSummary}{title};
+  $px_info_href->{ReviewLevel} = 'not peer reviewed';  
+  $px_info_href->{RepositorySupport} = 'Supported  dataset by repository';
+  $px_info_href->{DatasetOrigin} = $args{PXD_accession};
+  $px_info_href->{organism_name} = $result->{SpeciesList}{Species}{cvParam}{'taxonomy: scientific name'}{value};
+  $px_info_href->{ncbi_taxonomy_id} = $result->{SpeciesList}{Species}{cvParam}{'taxonomy: NCBI TaxID'}{value};
+  $px_info_href->{instrument_name} = $result->{InstrumentList}{Instrument}{cvParam}{name};
+  #@{$px_info_href->{modifications_href}} = '';
+
+  $px_info_href->{pub_status} = 'unpublished';
+  push @{$px_info_href->{curator_keywords_aref}}, $result->{KeywordList}{cvParam}{value} ;
+  my @list = split(",",$PA_accession);
+  my @tmp;
+  my $cnt = '';
+  foreach my $acc (@list){
+    push @tmp , "PeptideAtlas_raw";
+    push @tmp , "ftp://ftp.peptideatlas.org/pub/PeptideAtlas/Repository/$acc";
+    $cnt++;
+  }
+  $px_info_href->{fulldatasetlinks_aref} = \@tmp;
+  @{$px_info_href->{datasetfiles_aref}} = ();
+  @{$px_info_href->{repositoryrecords_aref}} = ();
+  ## get modification from iprophet file
+	my @mod_hash = ();
+  foreach my $acc (@list){
+    my $sql = qq~
+      SELECT S.SAMPLE_ACCESSION,
+      ASB.DATA_LOCATION + '/' + ASB.SEARCH_BATCH_SUBDIR
+			FROM $TBAT_SAMPLE S
+			JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( S.SAMPLE_ID = ASB.SAMPLE_ID)
+      WHERE S.SAMPLE_ACCESSION = '$acc'
+    ~;
+    my %data_location = $sbeams->selectTwoColumnHash($sql);
+    my $dir = '/regis/sbeams/archive/'.$data_location{$acc} ;
+    if ($dir) {
+			opendir DIR, $dir;
+			my @mods ;
+			while(my $entry = readdir DIR) {
+				next if($entry !~ /.xml$/ || $entry =~ /prot/ || ! -e "$dir/$entry");
+				print "Checking $entry for mods\n" if $VERBOSE >2;
+				@mods  = `egrep '<aminoacid_modification|search_engine' $dir/$entry`;
+				last;
+			}
+			my $nmods = scalar @mods;
+			print "Found $nmods mods\n" if $VERBOSE >1;
+			foreach my $mod (@mods){
+				my $residue;
+				my $mass;
+				print "$mod\n" if $VERBOSE > 2;
+				if($mod =~ /aminoacid="(\w)" massdiff="([\d\.]+)" mass="([\d\.]+)"\s+variable="."/){
+					$residue = $1;
+					$mass = sprintf "%d", int($2 + 0.5);
+					print "Parsed a mod! $residue $mass\n" if $VERBOSE > 1;
+					@mod_hash = ( @mod_hash, get_modification_hash(residue=>$residue,mass=>$mass,) ) ;
+				}
+      }
+    }
+  }
+  my %mod_hash = @mod_hash;
+  $px_info_href->{modifications_href} = \%mod_hash;
+}
+
 
 sub get_PASSEL_info {
   my %args = @_;
@@ -236,7 +363,7 @@ sub get_PASSEL_info {
   # Get modifications from PASS description file
   my ( $residue, $mass, @mod_hash );
   my $mod_string = $px_info_href->{PASS_mod_string};
-  while ($mod_string =~ /([A-Z])\+(\d{1,3})/g) {
+  while ($mod_string =~ /([A-Z])([+-]\d{1,3})/g) {
     $residue = $1;
     $mass = $2;
     @mod_hash = ( @mod_hash, get_modification_hash(residue=>$residue,mass=>$mass,) ) ;
@@ -256,8 +383,8 @@ sub get_PASSEL_info {
   $px_info_href->{fulldatasetlinks_aref} = [
   "PASSEL_raw",
     "http://www.PeptideAtlas.org/PASS/$px_info_href->{datasetIdentifier}",
-  "PASSEL_catalog",
-    "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetSELExperiments",
+  "PASSEL_experiment",
+    "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetSELExperiments?SEL_experiment_id=$expt_id",
   "PASSEL_results",
     "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetSELTransitions?row_limit=5000&SEL_experiments=$expt_id&QUERY_NAME=AT_GetSELTransitions&action=QUERY&uploaded_file_not_saved=1&apply_action=QUERY",
   ];
@@ -348,9 +475,9 @@ sub get_PeptideAtlas_info {
 }
 
 
-
 # Given a residue and a massdiff, push a string and a code onto
 # an array. Strings & codes come from PSI OBO.
+# http://www.ontobee.org/browser/rdf.php?o=MI&iri=http://purl.obolibrary.org/obo/MI_0192
 sub get_modification_hash {
   my %args = @_;
   my $residue = $args{residue};
@@ -368,6 +495,9 @@ sub get_modification_hash {
   }
   if ($residue eq 'K' && $massdiff == 8) {
     push ( @mods, '6x(13)C,2x(15)N labeled L-lysine', '00582' );
+  }
+  if ($residue eq 'K' && $massdiff == 42){
+    push ( @mods, 'acetylation reaction', '0192'); 
   }
   if ($residue eq 'R' && $massdiff == 6) {
     push ( @mods, '6x(13)C labeled L-arginine', '01331' );
@@ -422,7 +552,7 @@ sub get_publication_info {
     if ($VERBOSE>1) {
       print "Publication IDs: ";
       for my $key (keys %pubid_hash) {
-	print "$key ";
+				print "$key ";
       }
       print "\n";
     }
@@ -443,10 +573,15 @@ sub get_publication_info {
       SELECT pubmed_ID, publication_name, keywords, title, author_list, journal_name,
       published_year, volume_number, issue_number, page_numbers, uri, abstract
       FROM $TBAT_PUBLICATION
-      WHERE publication_id = '$pub';
+      WHERE publication_id = '$pub'
       ~;
       my @rows = $sbeams->selectSeveralColumns($query);
       my $pub_aref = $rows[0]; #TODO do we know for sure there's only one?
+      print "$pub_aref->[1] \n";
+      if ($pub_aref->[0] eq '' && $pub_aref->[3]  eq '' && $pub_aref->[1] ne ''){
+        $px_info_href->{pub_href}->{$pub}->{refline} .= "$pub_aref->[1]";
+        next;
+      }
       $px_info_href->{pub_href}->{$pub} = {};
       $px_info_href->{pub_href}->{$pub}->{pubmed_id} = $pub_aref->[0] || '';
       $px_info_href->{pub_href}->{$pub}->{pub_name} = $pub_aref->[1] || '';
@@ -465,13 +600,13 @@ sub get_publication_info {
       $px_info_href->{pub_href}->{$pub}->{journal_name} = "$journal_name" if $journal_name;
       $px_info_href->{pub_href}->{$pub}->{refline} .= " $published_year" if $published_year;
       if ($volume_number) {
-	$px_info_href->{pub_href}->{$pub}->{refline} .= " $volume_number";
-	if ($issue_number) {
-	  $px_info_href->{pub_href}->{$pub}->{refline} .= "($issue_number)";
-	  if ($page_numbers) {
-	    $px_info_href->{pub_href}->{$pub}->{refline} .= ":$page_numbers";
-	  }
-	}
+				$px_info_href->{pub_href}->{$pub}->{refline} .= " $volume_number";
+				if ($issue_number) {
+					$px_info_href->{pub_href}->{$pub}->{refline} .= "($issue_number)";
+					if ($page_numbers) {
+						$px_info_href->{pub_href}->{$pub}->{refline} .= ":$page_numbers";
+					}
+				}
       }
     }
   }
@@ -507,18 +642,12 @@ sub get_sample_info {
   ASB.search_batch_subdir,
   I2.instrument_name
   FROM $TBAT_SAMPLE S
-  LEFT JOIN $TB_ORGANISM O
-  ON O.organism_id = S.organism_id
-  LEFT JOIN $TBPR_INSTRUMENT I
-  ON I.instrument_id = S.instrument_model_id
-  LEFT JOIN $TBPR_INSTRUMENT_TYPE IT
-  ON IT.instrument_type_id = I.instrument_type_id
-  LEFT JOIN $TB_PROJECT PROJ
-  ON PROJ.project_id = S.project_id
-  LEFT JOIN $TB_CONTACT C_PROJ
-  ON C_PROJ.contact_id = PROJ.PI_contact_id
-  LEFT JOIN $TB_ORGANIZATION ORG_PROJ
-  ON ORG_PROJ.organization_id = C_PROJ.organization_id
+  LEFT JOIN $TB_ORGANISM O ON O.organism_id = S.organism_id
+  LEFT JOIN $TBPR_INSTRUMENT I ON I.instrument_id = S.instrument_model_id
+  LEFT JOIN $TBPR_INSTRUMENT_TYPE IT ON IT.instrument_type_id = I.instrument_type_id
+  LEFT JOIN $TB_PROJECT PROJ ON PROJ.project_id = S.project_id
+  LEFT JOIN $TB_CONTACT C_PROJ ON C_PROJ.contact_id = PROJ.PI_contact_id
+  LEFT JOIN $TB_ORGANIZATION ORG_PROJ ON ORG_PROJ.organization_id = C_PROJ.organization_id
   LEFT JOIN $TBAT_ATLAS_SEARCH_BATCH ASB ON ( S.SAMPLE_ID = ASB.SAMPLE_ID)
   LEFT JOIN $TBPR_SEARCH_BATCH  PSB ON (ASB.PROTEOMICS_SEARCH_BATCH_ID = PSB.SEARCH_BATCH_ID)
   LEFT JOIN $TBPR_PROTEOMICS_EXPERIMENT PE ON (PSB.EXPERIMENT_ID = PE.EXPERIMENT_ID)
@@ -628,9 +757,9 @@ sub get_PASS_info {
       chomp $line;
       $line =~ s/[\r\n]+//g;  # get rid of all flavors of newlines
       if ($line =~ /^publication:\t(.*)/) {
-	$publication_name = $1;
+				$publication_name = $1;
       } elsif ($line =~ /^massModifications:\t(.*)/) {
-	$mod_string = $1;
+				$mod_string = $1;
       }
     }
     $px_info_href->{PASS_publication_name} = $publication_name;
@@ -668,8 +797,7 @@ sub merge_px_info {
     for my $name (keys %new_fulldatasetlinks_hash) {
       my $value = $new_fulldatasetlinks_hash{$name};
       if (($name =~ /_raw/) || ($name =~ /_results/)) {
-	push ( @{$combined_px_info_href->{fulldatasetlinks_aref}}, $name, $value
-	);
+				push ( @{$combined_px_info_href->{fulldatasetlinks_aref}}, $name, $value);
       }
     }
 
@@ -697,7 +825,8 @@ sub write_PX_XML {
   my $title = $args{title} || $px_info_href->{expt_title};
   my $PX_accession = $args{PX_accession};
   my $PX_version = $args{PX_version};
-
+  my $original_PX_acc = $args{original_PX_acc} || '';
+  my $changeLog = $args{changeLog} || '';
   my $cv_acc;
   my $cv_ref;
 
@@ -709,11 +838,13 @@ sub write_PX_XML {
 
   $writer->startTag("ProteomeXchangeDataset",
     "xmlns:xsi"=>"http://www.w3.org/2001/XMLSchema-instance",
-    "xsi:noNamespaceSchemaLocation"=>"proteomeXchange-draft-07.xsd",
+    "xsi:noNamespaceSchemaLocation"=>"proteomeXchange-1.1.0.xsd",
     "id"=>"${PX_accession}.${PX_version}",
-    "formatVersion"=>"1.0.0",
+    "formatVersion"=>"1.1.0",
   );
 
+     
+         
 #--------------------------------------------------
 # $writer->startTag("ChangeLog");
 #   $writer->startTag("ChangeLogEntry",
@@ -728,8 +859,37 @@ sub write_PX_XML {
   $year += 1900;
   $mon++;
   my $today_gmt_date = sprintf "%4d-%02d-%02d", $year, $mon, $mday;
+  $writer->startTag("CvList");
+  $writer->emptyTag("Cv",
+            id => 'MS' ,
+            fullName => 'Proteomics Standards Initiative Mass Spectrometry Ontology',
+            version => "3.57.0",
+            uri => 'http://psidev.cvs.sourceforge.net/*checkout*/psidev/psi/psi-ms/mzML/controlledVocabulary/psi-ms.obo',
+            );
+  $writer->emptyTag("Cv",
+            id => 'PRIDE' ,
+            fullName=> 'PRIDE Ontology',
+            version=> "noVersion", 
+            uri=>"http://ebi-pride.googlecode.com/svn/trunk/pride-core/schema/pride_cv.obo",
+            );
+  $writer->emptyTag("Cv",
+            id => 'MOD' ,
+            fullName=>"Proteomics Standards Initiative Mass Modifications Ontology", 
+            version=>"1.012.0",
+            uri=>"http://psidev.cvs.sourceforge.net/*checkout*/psidev/psi/mod/data/PSI-MOD.obo",
+            );
+  $writer->endTag("CvList");
 
 
+  if($changeLog){
+    $writer->startTag("ChangeLog");
+    $writer->startTag("ChangeLogEntry",
+       date => "$today_gmt_date",
+    );
+    $writer->characters("$changeLog");
+    $writer->endTag("ChangeLogEntry");
+    $writer->endTag("ChangeLog");
+  }
   ###
   ### Dataset info
   ###
@@ -761,7 +921,7 @@ sub write_PX_XML {
   $writer->emptyTag("cvParam",
     "cvRef"=>"$cv_ref",
     "accession"=>"${cv_ref}:$cv_acc",
-    "name"=>"Supported dataset by respository",
+    "name"=>"Supported dataset by repository",
   );
   $writer->endTag("RepositorySupport");
 
@@ -792,20 +952,37 @@ sub write_PX_XML {
   $writer->startTag("DatasetOriginList");
   $writer->startTag("DatasetOrigin");
   $cv_ref = 'PRIDE';
-  $cv_acc = '0000402';
-  $writer->emptyTag("cvParam",
-    "cvRef"=>"$cv_ref",
-    "accession"=>"${cv_ref}:$cv_acc",
-    "name"=>"Original data",
-  );
-  $cv_ref = "MS";
-  $cv_acc = "1001919";
-  $writer->emptyTag("cvParam",
-    "cvRef"=>"$cv_ref",
-    "accession"=>"${cv_ref}:$cv_acc",
-    "name"=>"ProteomeXchange accession number",
-    "value"=>"${PX_accession}",
-  );
+  if($PX_accession =~ /^RPX[DT]/){
+    $cv_acc = '0000397';
+    $writer->emptyTag("cvParam",
+      "cvRef"=>"$cv_ref",
+      "accession"=>"${cv_ref}:$cv_acc",
+      "name"=>"Data derived from previous dataset",
+    );
+		$cv_ref = "MS";
+		$cv_acc = "1001919";
+		$writer->emptyTag("cvParam",
+			"cvRef"=>"$cv_ref",
+			"accession"=>"${cv_ref}:$cv_acc",
+			"name"=>"ProteomeXchange accession number",
+			"value"=>"$original_PX_acc",
+		);
+  }else{
+		$cv_acc = '0000402';
+		$writer->emptyTag("cvParam",
+			"cvRef"=>"$cv_ref",
+			"accession"=>"${cv_ref}:$cv_acc",
+			"name"=>"Original data",
+		);
+		#$cv_ref = "MS";
+		#$cv_acc = "1001919";
+		#$writer->emptyTag("cvParam",
+		#	"cvRef"=>"$cv_ref",
+		#	"accession"=>"${cv_ref}:$cv_acc",
+		#	"name"=>"ProteomeXchange accession number",
+		#	"value"=>"${PX_accession}",
+		#);
+  }
   $writer->endTag("DatasetOrigin");
   $writer->endTag("DatasetOriginList");
 
@@ -818,14 +995,14 @@ sub write_PX_XML {
   $cv_ref = "MS";
   $cv_acc = 1001469;
   $writer->emptyTag("cvParam",
-    "cvRef"=>'PSI-MS',
+    "cvRef"=>$cv_ref,
     "accession"=>"${cv_ref}:$cv_acc",
     "name"=>"taxonomy: scientific name",
     "value"=>"$px_info_href->{organism_name}",
   );
   $cv_acc = 1001467;
   $writer->emptyTag("cvParam",
-    "cvRef"=>'PSI-MS',
+    "cvRef"=>$cv_ref,
     "accession"=>"${cv_ref}:$cv_acc",
     "name"=>"taxonomy: NCBI TaxID",
     "value"=>"$px_info_href->{ncbi_taxonomy_id}",
@@ -837,6 +1014,7 @@ sub write_PX_XML {
   ###
   ### Instruments
   ###
+  ### http://www-bs2.informatik.uni-tuebingen.de/services/OpenMS/analysisXML/psi-ms.obo
   my $instrument_id;
   my $instrument_name = $px_info_href->{instrument_name};
   if ($instrument_name =~ /q.{0,1}tof/i) {
@@ -854,12 +1032,39 @@ sub write_PX_XML {
   $writer->startTag("InstrumentList");
   $writer->startTag("Instrument", "id"=>"$instrument_id");
   $cv_ref = "MS";
-  $cv_acc = 1000870;
-  $writer->emptyTag("cvParam",
-    "cvRef"=>"$cv_ref",
-    "accession"=>"${cv_ref}:$cv_acc",
-    "name"=>"$instrument_name",
+  #$cv_acc = 1000870;
+  my %instrument_cv_acc = (
+    '4000 QTRAP' => 1000139,
+    'Q TRAP' => 1000187,
+    'Q-Tof micro' => 1000189,
+    'QSTAR' => 1000190,
+    'TSQ Quantum' => 1000199,
+    'LTQ' => 1000447,
+    'LTQ FT' => 1000448,
+    'LTQ Orbitrap' => 1000449,
+    'LTQ Orbitrap XL' => 1000556,
+    'LTQ FT Ultra' => 1000557,
+    'QSTAR Elite' => 1000655,
+    'QSTAR XL' => 1000657,
+    'QTRAP 5500' => 1000931,
+    'TripleTOF 5600' => 1000932,
   );
+  if($instrument_name =~ /AB SCIEX 5500 QTrap/){
+    $instrument_name = 'QTRAP 5500';
+  }
+  if(defined $instrument_cv_acc{$instrument_name}){
+    $cv_acc = $instrument_cv_acc{$instrument_name};
+		$writer->emptyTag("cvParam",
+			"cvRef"=>"$cv_ref",
+			"accession"=>"${cv_ref}:$cv_acc",
+			"name"=>"$instrument_name",
+		);
+  }else{
+    die "cannot find cv_acc for $instrument_name\nplease look up here\n".
+        "http://www-bs2.informatik.uni-tuebingen.de/services/OpenMS/analysisXML/psi-ms.obo\n";
+  }
+
+
   $writer->endTag("Instrument");
   $writer->endTag("InstrumentList");
 
@@ -880,9 +1085,9 @@ sub write_PX_XML {
     for my $mod (keys %{$px_info_href->{modifications_href}}) {
       $cv_acc = $px_info_href->{modifications_href}->{$mod};  #need
       $writer->emptyTag("cvParam",
-	"cvRef"=>'PSI-MOD',
-	"accession"=>"MOD:$cv_acc",
-	"name"=>"$mod",
+			"cvRef"=>'MOD',
+			"accession"=>"MOD:$cv_acc",
+			"name"=>"$mod",
       );
     }
   }
@@ -895,12 +1100,12 @@ sub write_PX_XML {
   $writer->startTag("ContactList");
   $writer->startTag("Contact", "id"=>"c001");
   $cv_ref = "MS";
-  $cv_acc = 1001266;
+  #$cv_acc = 1001266;
+  $cv_acc = 1002332;
   $writer->emptyTag("cvParam",
     "cvRef"=>"$cv_ref",
     "accession"=>"${cv_ref}:$cv_acc",
-    "name"=>"role type", 
-    "value"=>"Lab head",
+    "name"=>"lab head", 
   );
   if (defined $px_info_href->{lab_head_full_name}) {
     $cv_acc = 1000586;
@@ -917,7 +1122,7 @@ sub write_PX_XML {
       "cvRef"=>"$cv_ref",
       "accession"=>"${cv_ref}:$cv_acc",
       #"name"=>"contact affiliation", not found
-      "name"=>"contact organization",
+      "name"=>"contact affiliation",
       "value"=>"$px_info_href->{lab_head_organization}",
     );
   }
@@ -941,12 +1146,11 @@ sub write_PX_XML {
 #-------------------------------------------------- 
   $writer->endTag("Contact");
   $writer->startTag("Contact", "id"=>"c002");
-  $cv_acc = 1001266;
+  $cv_acc = 1002037;
   $writer->emptyTag("cvParam",
     "cvRef"=>"$cv_ref",
     "accession"=>"${cv_ref}:$cv_acc",
-    "name"=>"role type", 
-    "value"=>"Data submitter",
+    "name"=>"dataset submitter",
   );
 #--------------------------------------------------
 #   $cv_acc = 1000000;  #need
@@ -969,7 +1173,7 @@ sub write_PX_XML {
     $writer->emptyTag("cvParam",
       "cvRef"=>"$cv_ref",
       "accession"=>"${cv_ref}:$cv_acc",
-      "name"=>"contact organization",
+      "name"=>"contact affiliation",
       "value"=>"$px_info_href->{submitter_organization}",
     );
   }
@@ -1012,57 +1216,58 @@ sub write_PX_XML {
       #   ?????
       #if ($ph->{pub_name} !~ /submitted/i) {
       if ($ph->{pubmed_id}) {
-	print "Pubmed ID is $ph->{pubmed_id}\n" if $VERBOSE;
-	$writer->startTag("Publication", "id"=>"PMID$ph->{pubmed_id}");
-	$cv_ref = "MS";
-	$cv_acc = 1000879;
-	$writer->emptyTag("cvParam",
-	  "cvRef"=>"$cv_ref",
-	  "accession"=>"${cv_ref}:$cv_acc",
-	  "name"=>"PubMed identifier",
-	  "value"=>$ph->{pubmed_id},
-	);
+				print "Pubmed ID is $ph->{pubmed_id}\n" if $VERBOSE;
+				$writer->startTag("Publication", "id"=>"PMID$ph->{pubmed_id}");
+				$cv_ref = "MS";
+				$cv_acc = 1000879;
+				$writer->emptyTag("cvParam",
+					"cvRef"=>"$cv_ref",
+					"accession"=>"${cv_ref}:$cv_acc",
+					"name"=>"PubMed identifier",
+					"value"=>$ph->{pubmed_id},
+				);
       # Show as "submitted" if no PubMed ID (not exactly correct
       #  because pubmed ID is delayed somewhat after publication)
       } else {
-	$writer->startTag("Publication", "id"=>"submitted01");
-	$cv_ref = "PRIDE";
-	$cv_acc = "0000000";    # need to update in future
-	$writer->emptyTag("cvParam",
-	  "cvRef"=>"$cv_ref",
-	  "accession"=>"${cv_ref}:$cv_acc",
-	  "name"=>"Dataset with its publication still pending",
-	);
+				$writer->startTag("Publication", "id"=>"submitted01");
+				$cv_ref = "PRIDE";
+				$cv_acc = "0000432";   
+				$writer->emptyTag("cvParam",
+					"cvRef"=>"$cv_ref",
+					"accession"=>"${cv_ref}:$cv_acc",
+					"name"=>"Dataset with its publication pending",
+				); 
+        $refline =~ s/\s?\(\d{4}\)/, submitted/;
       }
       $cv_ref = "PRIDE";
-      $cv_acc = "0000067";
+      $cv_acc = "0000400";
       $writer->emptyTag("cvParam",
-	"cvRef"=>"$cv_ref",
-	"accession"=>"${cv_ref}:$cv_acc",
-	"name"=>"Reference reporting this experiment",
-	"value"=>"$refline",
+				"cvRef"=>"$cv_ref",
+				"accession"=>"${cv_ref}:$cv_acc",
+				"name"=>"Reference",
+				"value"=>"$refline",
       );
       $writer->endTag("Publication");
     }
   } elsif ($px_info_href->{pub_status} eq 'submitted' &&
            $px_info_href->{publication_name} &&
            $px_info_href->{publication_name} !~ /unpublished/i &&
-	   $px_info_href->{publication_name} !~ /not published/i) {
-    $writer->startTag("Publication", "id"=>"submitted01");
-    $cv_ref = "PRIDE";
-    $cv_acc = "0000000";    # need to update in future
-    $writer->emptyTag("cvParam",
-      "cvRef"=>"$cv_ref",
-      "accession"=>"${cv_ref}:$cv_acc",
-      "name"=>"Dataset with its publication still pending",
-    );
-    $cv_ref = "PRIDE";
-    $cv_acc = "0000067";
-    $writer->emptyTag("cvParam",
-      "cvRef"=>"$cv_ref",
-      "accession"=>"${cv_ref}:$cv_acc",
-      "name"=>"Reference reporting this experiment",
-      "value"=>"$px_info_href->{publication_name}",
+			 $px_info_href->{publication_name} !~ /not published/i) {
+				$writer->startTag("Publication", "id"=>"submitted01");
+				$cv_ref = "PRIDE";
+				$cv_acc = "0000432";    # need to update in future
+				$writer->emptyTag("cvParam",
+				"cvRef"=>"$cv_ref",
+				"accession"=>"${cv_ref}:$cv_acc",
+				"name"=>"Dataset with its publication pending",
+			);
+			$cv_ref = "PRIDE";
+			$cv_acc = "0000400";
+			$writer->emptyTag("cvParam",
+				"cvRef"=>"$cv_ref",
+				"accession"=>"${cv_ref}:$cv_acc",
+				"name"=>"Reference",
+				"value"=>"$px_info_href->{publication_name} , submitted",
     );
     $writer->endTag("Publication");
 
@@ -1128,8 +1333,8 @@ sub write_PX_XML {
       "PeptideAtlas dataset repository catalog URI",
     PeptideAtlas_raw =>
       "PeptideAtlas dataset URI",
-    PASSEL_catalog =>
-      "PASSEL experiment browser URI",
+    PASSEL_experiment =>
+      "PASSEL experiment URI",
     PASSEL_results =>
       "PASSEL transition group browser URI",
     PASSEL_raw =>
@@ -1142,6 +1347,7 @@ sub write_PX_XML {
     # Here is the clunky part.
     $cv_acc = 1002031 if ($name =~ /PASSEL_results/);
     $cv_acc = 1002032 if ($name =~ /_raw/);
+    $cv_acc = 1002420 if ($name =~ /PASSEL_experiment/);
     $writer->startTag("FullDatasetLink");
     $writer->emptyTag("cvParam",
       "cvRef"=>"$cv_ref",
