@@ -154,8 +154,6 @@ $sbeams = new SBEAMS::Connection;
 		my $time = ( $post - $pre ) || 1;
 		if ( $section =~ /SBEAMS_PAGE_OK/gmi ) { 
 			$style = 'grn_bg' 
-		} else {
-      die "Arrgh!";
     }
 
 		my $size = sprintf( "%0.1f", (length( $section )/1000) );
