@@ -136,7 +136,6 @@ https://db.systemsbiology.net/devDC/sbeams/cgi/PeptideAtlas/GetTransitions?pabst
   # 3 - cached pabst_build_id cookie
   # 4 - global default
   $pabst_build_id = $best_peptide->get_pabst_build( %parameters );
-#  $parameters{organism} ||= $best_peptide->getBuildOrganism( pabst_build_id => $parameters{pabst_build_id} );
   $parameters{organism} ||= $best_peptide->getBuildOrganism( pabst_build_id => $pabst_build_id );
 	$parameters{build_bss_id} = $best_peptide->get_pabst_bss_id( pabst_build_id => $pabst_build_id );  
 
@@ -1059,6 +1058,16 @@ sub fetch_transitions {
         constraint_value=>$parameters{source_instrument_type_id} );
   return if ($transition_source_clause eq '-1');
 
+  if ( $parameters{omit_predicted} ) {
+    if ( $transition_source_clause ) {
+      # AND PTI.source_instrument_type_id IN ( '1','6','7' )
+      $transition_source_clause =~ s/\'7\'//g;
+    } else {
+#      $transition_source_clause = "AND PTI.source_instrument_type_id NOT IN ( '7' )";
+		  $transition_source_clause .= "\nAND PTI.is_predicted = 'N'";
+    }
+  }
+
   # FIXME, we should handle this more robustly
 	if ( $transition_source_clause && $transition_source_clause !~ /7/  ) {
 		$transition_source_clause .= "\nAND PTI.is_predicted = 'N'";
@@ -1517,6 +1526,9 @@ sub fetch_transitions {
 
   my @transitions;
   my $tcnt = 1;
+
+  my $id2name = $sbeams->get_organism_hash( key => 'organism_id' );
+
   while( my @row = $sth->fetchrow_array() ) {
     push @row, $tcnt++;
     $row[14] = $bioseq2name{$row[14]};
@@ -1785,13 +1797,33 @@ sub fetch_transitions {
 
 
       my  @rowdata;
+      my $pa_link = '';
+      my $srm_link = '';
+      my $organism_name = $id2name->{$organism} || 'unknown';
+
+      if ( !$guest ) {
+        my @bids = keys( %{$build_resources->{atlas_build}} );
+        my $pa_img = "<img src='$HTML_BASE_DIR/images/pa_tiny_clear.png' border=0 />";
+        my $srm_img = "<img src='$HTML_BASE_DIR/images/srm_icon_clear.gif' border=0 />";
+        $q->delete( 'protein_name_constraint', 'n_peptides_per_protein', 'n_highest_intensity_fragment_ions' );
+        my $recall_url = $q->self_url();
+        $recall_url .= ";protein_name_constraint=$prot;n_peptides_per_protein=500;n_highest_intensity_fragment_ions=1;omit_predicted=1";
+        $pa_link = qq~
+        <A HREF='GetProtein?organism_name=$organism_name;protein_name=$prot;apply_action=GO&action=GO#Sequence%20Motifs' TARGET='_peptideatlas' title='Look up protein in the Peptide Atlas' class='popup'>$pa_img</A>
+        ~;
+        $srm_link = qq~
+        <A HREF='$recall_url' TARGET='_srmatlas' title='Find all peptides for this protein in SRM Atlas' class='popup'>$srm_img</A>
+        ~;
+        $prot .= "$pa_link$srm_link";
+        $prot =~ s/\n//g;
+        $prot = "<span class=nowrap_text>$prot</span>";
+      } else {
+        $prot = "<A HREF='GetProtein?organism_name=$organism_name;protein_name=$prot;apply_action=GO&action=GO#Sequence%20Motifs' TARGET='_peptideatlas' title='Look up protein in the Peptide Atlas'>$prot</A>";
+      }
+
       if ( ( $guest && !$super_guest && $parameters{rt_type} eq 'iRT' ) || $parameters{rt_type} == $ssr_type ) {
         @rowdata = ( $prot, @row[0..12] );
       } else {
-				if ( $build_resources->{atlas_build} ) {
-					my @bids = keys( %{$build_resources->{atlas_build}} );
-          $prot = "<A HREF='GetProtein?atlas_build_id=$bids[0];protein_name=$prot;apply_action=GO&action=GO' TARGET='$prot'>$prot</A>";
-				}
         @rowdata = ( $prot, @row[0..13] );
       }
 
