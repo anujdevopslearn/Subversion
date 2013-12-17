@@ -4234,7 +4234,7 @@ sub parseResultSetParams {
 sub readResultSet {
     my $self = shift;
     my %args = @_;
-    $log->info( "Reading rs $args{resultset_file}" );
+    $log->debug( "Reading rs $args{resultset_file}" );
 
     #### Process the arguments list
     my $resultset_file = $args{'resultset_file'};
@@ -4336,7 +4336,7 @@ sub readResultSet {
 sub writeResultSet {
     my $self = shift;
     my %args = @_;
-    $log->info( "Writing rs" );
+    $log->debug( "Writing rs" );
 
     #### Process the arguments list
     my $resultset_file_ref = $args{'resultset_file_ref'};
