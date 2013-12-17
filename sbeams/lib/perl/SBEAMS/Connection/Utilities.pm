@@ -1846,6 +1846,18 @@ sub sendEmail {
   return(1);
 }
 
+sub time_stmt {
+  my $self = shift;
+  my $msg = shift || '';
+  $self->{_previous_stmt_time} ||= 0;
+  my $curr_time = time;
+  my $delta = 'n/a';
+  if ( $self->{_previous_stmt_time} ) {
+    $delta = $curr_time - $self->{_previous_stmt_time};
+  }
+  $self->{_previous_stmt_time} = $curr_time;
+  $log->info( join( "\t", $delta, $msg ) );
+}
 
 1;
 
