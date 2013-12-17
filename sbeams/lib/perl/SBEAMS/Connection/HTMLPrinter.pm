@@ -245,6 +245,7 @@ my $module_styles =<<"  END_STYLE";
   .popup_help { cursor: Help; color:#444444; background-color: #E0E0E0 }
   .gaggle-data { display: none }
   .bold_text { font-weight: bold; white-space: nowrap }
+  .nowrap_text { white-space: nowrap }
   
   /* Style info below organized by originating module
   /* Peptide Atlas */
