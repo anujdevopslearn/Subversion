@@ -50,6 +50,7 @@ CREATE NONCLUSTERED INDEX idx_biosequence_set_id ON dbo.pabst_tmp_build ( bioseq
 
 CREATE NONCLUSTERED INDEX idx_pabst_build_id ON dbo.pabst_tmp_peptide ( pabst_build_id ) -- WITH DROP_EXISTING
 CREATE NONCLUSTERED INDEX idx_peptide_sequence ON dbo.pabst_tmp_peptide ( peptide_sequence ) -- WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_build_and_sequence ON dbo.pabst_tmp_peptide ( pabst_build_id, peptide_sequence ) -- WITH DROP_EXISTING
 
 CREATE NONCLUSTERED INDEX idx_biosequence_id ON dbo.pabst_tmp_peptide_mapping ( biosequence_id )   -- WITH DROP_EXISTING
 CREATE NONCLUSTERED INDEX idx_pabst_peptide_id ON dbo.pabst_tmp_peptide_mapping ( pabst_peptide_id )   -- WITH DROP_EXISTING
@@ -62,6 +63,7 @@ CREATE NONCLUSTERED INDEX idx_peptide_ion_id ON dbo.pabst_tmp_peptide_ion_instan
 CREATE NONCLUSTERED INDEX idx_source_instrument_type_id ON dbo.pabst_tmp_peptide_ion_instance ( source_instrument_type_id ) -- WITH DROP_EXISTING
 
 CREATE NONCLUSTERED INDEX idx_pabst_peptide_ion_id ON dbo.pabst_tmp_transition ( pabst_peptide_ion_id ) -- WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_transition_mz_crude ON dbo.pabst_tmp_transition ( precursor_ion_mz_crude, fragment_ion_mz_crude ) -- WITH DROP_EXISTING
 
 CREATE NONCLUSTERED INDEX idx_pabst_transition_id ON dbo.pabst_tmp_transition_instance ( pabst_transition_id ) -- WITH DROP_EXISTING
 CREATE NONCLUSTERED INDEX idx_source_instrument_type_id ON dbo.pabst_tmp_transition_instance ( source_instrument_type_id ) -- WITH DROP_EXISTING
